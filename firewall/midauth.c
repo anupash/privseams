@@ -18,25 +18,26 @@
  * @param data a pointer to the IPv4 header
  * @param len new payload length
  */
-static void update_ipv4_header (struct iphdr *ip, int len) {
-    unsigned short *w= (unsigned short *) ip;
-    int hdrlen, checksum;
+static void update_ipv4_header (struct iphdr *ip, int len)
+{
+	unsigned short *w= (unsigned short *) ip;
+	int hdrlen, checksum;
 
-    ip->tot_len = htons(len);
-    ip->check = 0;
-    
-    for (hdrlen = ip->ihl * 4, checksum = 0; hdrlen > 1; hdrlen -= 2)
-        checksum += *w++;
-    if (hdrlen == 1) {
-        unsigned short padding = 0;
-        *(unsigned char *)(&padding)=*(unsigned char *)w;
-        checksum += padding;
-    }
+	ip->tot_len = htons(len);
+	ip->check = 0;
 
-    checksum = (checksum >> 16) + (checksum & 0xffff);
-    checksum += (checksum >> 16);
+	for (hdrlen = ip->ihl * 4, checksum = 0; hdrlen > 1; hdrlen -= 2)
+		checksum += *w++;
+	if (hdrlen == 1) {
+		unsigned short padding = 0;
+		*(unsigned char *)(&padding)=*(unsigned char *)w;
+		checksum += padding;
+	}
 
-    ip->check = ~checksum;
+	checksum = (checksum >> 16) + (checksum & 0xffff);
+	checksum += (checksum >> 16);
+
+	ip->check = ~checksum;
 }
 
 /**
@@ -45,8 +46,9 @@ static void update_ipv4_header (struct iphdr *ip, int len) {
  * @param ip a pointer to the IPv6 header
  * @param len new IPv6 packet length
  */
-static void update_ipv6_header (struct ip6_hdr *ip, int len) {
-    ip->ip6_ctlun.ip6_un1.ip6_un1_plen = htons(len - sizeof(struct ip6_hdr));
+static void update_ipv6_header (struct ip6_hdr *ip, int len)
+{
+	ip->ip6_ctlun.ip6_un1.ip6_un1_plen = htons(len - sizeof(struct ip6_hdr));
 }
 
 #define CHECKSUM_CARRY(x) \
@@ -58,40 +60,40 @@ static void update_ipv6_header (struct ip6_hdr *ip, int len) {
  * @param ip a pointer to the IPv4 header, not the UDP header
  * @param len total length of the IPv4 packet
  */
-static void update_udp_header(struct iphdr *ip, int len) {
-    unsigned long sum;
-    u_int16_t *w = (u_int16_t *)((unsigned char*)ip + (ip->ihl * 4));
-    u_int16_t protocol = ntohs(IPPROTO_UDP);
-    int i;
-    struct udphdr *udp = (struct udphdr *) w;
+static void update_udp_header(struct iphdr *ip, int len)
+{
+	unsigned long sum;
+	u_int16_t *w = (u_int16_t *)((unsigned char*)ip + (ip->ihl * 4));
+	u_int16_t protocol = ntohs(IPPROTO_UDP);
+	int i;
+	struct udphdr *udp = (struct udphdr *) w;
 
-    len -= ip->ihl * 4;
+	len -= ip->ihl * 4;
 
-    udp->check = 0;
-    udp->len = htons(len);
+	udp->check = 0;
+	udp->len = htons(len);
 
-    /* UDP header and data */
-    sum = 0;
-    while (len > 0) {
-	sum += *w++;
-	len -= 2;
-    }
-    if (len == 1) {
-        unsigned short padding = 0;
-        *(unsigned char *)(&padding)=*(unsigned char *)w;
-        sum += padding;
-    }
+	/* UDP header and data */
+	sum = 0;
+	while (len > 0) {
+		sum += *w++;
+		len -= 2;
+	}
+	if (len == 1) {
+		unsigned short padding = 0;
+		*(unsigned char *)(&padding)=*(unsigned char *)w;
+		sum += padding;
+	}
 
-    /* add UDP pseudoheader */
-    w = (u_int16_t *) &ip->saddr;
-    for (i = 0; i < 4; w++, i++) {
-	sum += *w;
-    }
-    sum += protocol;
-    sum += udp->len;
+	/* add UDP pseudoheader */
+	w = (u_int16_t *) &ip->saddr;
+	for (i = 0; i < 4; w++, i++)
+		sum += *w;
+	sum += protocol;
+	sum += udp->len;
 
-    /* set the checksum */
-    udp->check = (CHECKSUM_CARRY(sum));
+	/* set the checksum */
+	udp->check = (CHECKSUM_CARRY(sum));
 }
 
 /**
@@ -101,23 +103,25 @@ static void update_udp_header(struct iphdr *ip, int len) {
  *
  * @param ip the modified IP packet
  */
-static void update_hip_checksum_ipv4(struct iphdr *ip) {
-    struct sockaddr_in src, dst;
-    struct hip_common *msg = (struct hip_common *)((char*)ip + (ip->ihl * 4));
+static void update_hip_checksum_ipv4(struct iphdr *ip)
+{
+	struct sockaddr_in src, dst;
+	struct hip_common *msg = (struct hip_common *)((char*)ip +
+	                         (ip->ihl * 4));
 
-    memset(&src, 0, sizeof(src));
-    memset(&dst, 0, sizeof(dst));
+	memset(&src, 0, sizeof(src));
+	memset(&dst, 0, sizeof(dst));
 
-    src.sin_family = AF_INET;
-    memcpy(&src.sin_addr, &ip->saddr, sizeof (u_int32_t));
-    
-    dst.sin_family = AF_INET;
-    memcpy(&dst.sin_addr, &ip->daddr, sizeof (u_int32_t));
+	src.sin_family = AF_INET;
+	memcpy(&src.sin_addr, &ip->saddr, sizeof (u_int32_t));
 
-    hip_zero_msg_checksum(msg);
-    msg->checksum = hip_checksum_packet((char*)msg,
-					(struct sockaddr *) &src,
-                                        (struct sockaddr *) &dst);
+	dst.sin_family = AF_INET;
+	memcpy(&dst.sin_addr, &ip->daddr, sizeof (u_int32_t));
+
+	hip_zero_msg_checksum(msg);
+	msg->checksum = hip_checksum_packet((char*)msg,
+	                                    (struct sockaddr *) &src,
+	                                    (struct sockaddr *) &dst);
 }
 
 /**
@@ -125,23 +129,25 @@ static void update_hip_checksum_ipv4(struct iphdr *ip) {
  *
  * @param ip the modified IP packet
  */
-static void update_hip_checksum_ipv6(struct ip6_hdr *ip) {
-    struct sockaddr_in6 src, dst;
-    struct hip_common *msg = (struct hip_common *)((char*)ip + sizeof(struct ip6_hdr));
+static void update_hip_checksum_ipv6(struct ip6_hdr *ip)
+{
+	struct sockaddr_in6 src, dst;
+	struct hip_common *msg = (struct hip_common *)((char*)ip +
+	                         sizeof(struct ip6_hdr));
 
-    memset(&src, 0, sizeof(src));
-    memset(&dst, 0, sizeof(dst));
+	memset(&src, 0, sizeof(src));
+	memset(&dst, 0, sizeof(dst));
 
-    src.sin6_family = AF_INET6;
-    memcpy(&src.sin6_addr, &ip->ip6_src, sizeof (struct in6_addr));
-    
-    dst.sin6_family = AF_INET6;
-    memcpy(&dst.sin6_addr, &ip->ip6_dst, sizeof (struct in6_addr));
+	src.sin6_family = AF_INET6;
+	memcpy(&src.sin6_addr, &ip->ip6_src, sizeof (struct in6_addr));
 
-    hip_zero_msg_checksum(msg);
-    msg->checksum = hip_checksum_packet((char*)msg,
-					(struct sockaddr *) &src,
-                                        (struct sockaddr *) &dst);
+	dst.sin6_family = AF_INET6;
+	memcpy(&dst.sin6_addr, &ip->ip6_dst, sizeof (struct in6_addr));
+
+	hip_zero_msg_checksum(msg);
+	msg->checksum = hip_checksum_packet((char*)msg,
+	                                    (struct sockaddr *) &src,
+	                                    (struct sockaddr *) &dst);
 }
 
 /**
@@ -151,32 +157,34 @@ static void update_hip_checksum_ipv6(struct ip6_hdr *ip) {
  *
  * @param p the modified midauth packet
  */
-static void update_all_headers(struct midauth_packet *p) {
-    struct iphdr *ipv4 = NULL;
-    struct ip6_hdr *ipv6 = NULL;
+static void update_all_headers(struct midauth_packet *p)
+{
+	struct iphdr *ipv4 = NULL;
+	struct ip6_hdr *ipv6 = NULL;
 
-    switch (p->ip_version) {
+	switch (p->ip_version) {
 	case 4:
-	    ipv4 = (struct iphdr *) p->buffer;
-	    p->size += ipv4->ihl * 4;
-	    if (ipv4->protocol == IPPROTO_UDP) {
-		p->size += sizeof(struct udphdr);
-		update_udp_header(ipv4, p->size);
-	    } else {
-		update_hip_checksum_ipv4(ipv4);
-	    }
-	    update_ipv4_header(ipv4, p->size);    
-	    break;
+		ipv4 = (struct iphdr *) p->buffer;
+		p->size += ipv4->ihl * 4;
+		if (ipv4->protocol == IPPROTO_UDP) {
+			p->size += sizeof(struct udphdr);
+			update_udp_header(ipv4, p->size);
+		} else {
+			update_hip_checksum_ipv4(ipv4);
+		}
+		update_ipv4_header(ipv4, p->size);    
+		break;
 	case 6:
-	    ipv6 = (struct ip6_hdr *) p->buffer;
-	    p->size += sizeof(struct ip6_hdr);
-	    update_hip_checksum_ipv6(ipv6);
-	    update_ipv6_header(ipv6, p->size);
-	    break;
+		ipv6 = (struct ip6_hdr *) p->buffer;
+		p->size += sizeof(struct ip6_hdr);
+		update_hip_checksum_ipv6(ipv6);
+		update_ipv6_header(ipv6, p->size);
+		break;
 	default:
-	    HIP_ERROR("Unknown IP version. %i, expected 4 or 6.\n", p->ip_version);
-	    break;
-    }
+		HIP_ERROR("Unknown IP version. %i, expected 4 or 6.\n", 
+		          p->ip_version);
+		break;
+	}
 }
 
 /**
@@ -186,20 +194,22 @@ static void update_all_headers(struct midauth_packet *p) {
  * @param s the solution to be checked
  * @return 0 if correct, nonzero otherwise
  */
-static int midauth_verify_solution_m(struct hip_common *hip, struct hip_solution_m *s) {
-    int err = 0;
-    struct hip_solution solution;
+static int midauth_verify_solution_m(struct hip_common *hip,
+                                     struct hip_solution_m *s)
+{
+	int err = 0;
+	struct hip_solution solution;
 
-    solution.K = s->K;
-    solution.reserved = s->reserved;
-    solution.I = s->I;
-    solution.J = s->J;
+	solution.K = s->K;
+	solution.reserved = s->reserved;
+	solution.I = s->I;
+	solution.J = s->J;
 
-    HIP_IFEL(hip_solve_puzzle(&solution, hip, HIP_VERIFY_PUZZLE) == 0, -1,
-	"Solution is wrong\n");
+	HIP_IFEL(hip_solve_puzzle(&solution, hip, HIP_VERIFY_PUZZLE) == 0,
+	         -1, "Solution is wrong\n");
 
 out_err:
-    return 0;
+	return 0;
 }
 
 /**
@@ -210,39 +220,40 @@ out_err:
  * @param hip the HIP packet
  * @return 0 on success
  */
-static int midauth_relocate_last_hip_parameter(struct hip_common *hip) {
-    int err = 0, len, total_len, offset;
-    char buffer[HIP_MAX_PACKET], *ptr = (char *) hip;
-    struct hip_tlv_common *iterate = NULL, *last = NULL;
-    hip_tlv_type_t type;
+static int midauth_relocate_last_hip_parameter(struct hip_common *hip)
+{
+	int err = 0, len, total_len, offset;
+	char buffer[HIP_MAX_PACKET], *ptr = (char *) hip;
+	struct hip_tlv_common *i = NULL, *last = NULL;
+	hip_tlv_type_t type;
 
-    while((iterate = (struct hip_tlv_common *)hip_get_next_param(hip, iterate)))
-	last = iterate;
+	while((i = (struct hip_tlv_common *)hip_get_next_param(hip, i)))
+		last = i;
 
-    HIP_IFEL(last == NULL, -1, "Trying to relocate in an empty packet!\n");
+	HIP_IFEL(last == NULL, -1, "Trying to relocate in an empty packet!\n");
 
-    total_len = hip_get_msg_total_len(hip);
-    len = hip_get_param_total_len(last);
-    type = hip_get_param_type(last);
+	total_len = hip_get_msg_total_len(hip);
+	len = hip_get_param_total_len(last);
+	type = hip_get_param_type(last);
 
-    HIP_IFEL(len > sizeof(buffer), -1,
-             "Last parameter's length exceeds HIP_MAX_PACKET\n");
+	HIP_IFEL(len > sizeof(buffer), -1,
+	         "Last parameter's length exceeds HIP_MAX_PACKET\n");
 
-    memcpy(buffer, last, len);
-    iterate = NULL;
+	memcpy(buffer, last, len);
+	i = NULL;
 
-    while ((iterate = (struct hip_tlv_common *)hip_get_next_param(hip, iterate))) {
-	if (hip_get_param_type(iterate) > type)	{
-	    offset = (char *)iterate - (char *)hip;
+	while ((i = (struct hip_tlv_common *)hip_get_next_param(hip, i))) {
+		if (hip_get_param_type(i) > type) {
+			offset = (char *)i - (char *)hip;
 
-	    memmove(ptr + offset + len, ptr + offset, total_len - offset - len);
-	    memcpy(ptr + offset, buffer, len);
-	    break;
+			memmove(ptr+offset+len, ptr+offset, total_len-offset-len);
+			memcpy(ptr+offset, buffer, len);
+			break;
+		}
 	}
-    }
-    
+
 out_err:
-    return err;
+	return err;
 }
 
 /**
@@ -252,16 +263,17 @@ out_err:
  * @param nonce the string to add
  * @return 
  */
-static int add_echo_request_m(struct hip_common *hip, char *nonce) {
-    int err = 0;
+static int add_echo_request_m(struct hip_common *hip, char *nonce)
+{
+	int err = 0;
 
-    HIP_IFEL(hip_build_param_echo_m(hip, nonce, strlen(nonce), 1),
-             -1, "Failed to build echo_request_m parameter\n");
-    HIP_IFEL(midauth_relocate_last_hip_parameter(hip), -1,
-             "Failed to relocate new echo_request_m parameter\n");
+	HIP_IFEL(hip_build_param_echo_m(hip, nonce, strlen(nonce), 1),
+	         -1, "Failed to build echo_request_m parameter\n");
+	HIP_IFEL(midauth_relocate_last_hip_parameter(hip), -1,
+	         "Failed to relocate new echo_request_m parameter\n");
 
 out_err:
-    return err;
+	return err;
 } 
 
 /**
@@ -275,16 +287,17 @@ out_err:
  * @return 
  */
 static int add_puzzle_m(struct hip_common *hip, uint8_t val_K,
-                        uint8_t lifetime, uint8_t *opaque, uint64_t random_i) {
-    int err = 0;
+                        uint8_t lifetime, uint8_t *opaque, uint64_t random_i)
+{
+	int err = 0;
 
-    HIP_IFEL(hip_build_param_puzzle_m(hip, val_K, lifetime, opaque, random_i),
-             -1, "Failed to build puzzle_m parameter\n");
-    HIP_IFEL(midauth_relocate_last_hip_parameter(hip), -1,
-             "Failed to relocate new puzzle_m parameter\n");
+	HIP_IFEL(hip_build_param_puzzle_m(hip, val_K, lifetime, opaque, random_i),
+	         -1, "Failed to build puzzle_m parameter\n");
+	HIP_IFEL(midauth_relocate_last_hip_parameter(hip), -1,
+	         "Failed to relocate new puzzle_m parameter\n");
 
 out_err:
-    return err;
+	return err;
 }
 
 /**
@@ -294,31 +307,33 @@ out_err:
  * @param p the modified packet
  * @return the verdict, either NF_ACCEPT or NF_DROP
  */
-static int filter_midauth_r1(ipq_packet_msg_t *m, struct midauth_packet *p) {
-    int verdict = NF_ACCEPT;
-    struct hip_common *hip = (struct hip_common *)(((char*)p->buffer) + p->hdr_size);
-    char *nonce1 = "abcedfgh";
-    char *nonce2 = "foobar";
+static int filter_midauth_r1(ipq_packet_msg_t *m, struct midauth_packet *p)
+{
+	int verdict = NF_ACCEPT;
+	struct hip_common *hip = (struct hip_common *)(((char*)p->buffer) +
+	                         p->hdr_size);
+	char *nonce1 = "abcedfgh";
+	char *nonce2 = "foobar";
 
-    /* start with a copy of the original packet */
+	/* start with a copy of the original packet */
 
-    memcpy(p->buffer, m->payload, m->data_len);
+	memcpy(p->buffer, m->payload, m->data_len);
 
-    /* beware: black magic & dragons ahead */
+	/* beware: black magic & dragons ahead */
 
-    add_echo_request_m(hip, nonce1);
-    add_puzzle_m(hip, 1, 2, "hello!", 0xFF00FF00FF00FF00LL);
-    add_echo_request_m(hip, nonce2);
-    add_puzzle_m(hip, 3, 4, "byebye", 0xDEADBEEFDEADBEEFLL);
+	add_echo_request_m(hip, nonce1);
+	add_puzzle_m(hip, 1, 2, "hello!", 0xFF00FF00FF00FF00LL);
+	add_echo_request_m(hip, nonce2);
+	add_puzzle_m(hip, 3, 4, "byebye", 0xDEADBEEFDEADBEEFLL);
 
-    /* no more dragons & black magic*/
+	/* no more dragons & black magic*/
 
-    p->size = hip_get_msg_total_len(hip);
-    update_all_headers(p);
+	p->size = hip_get_msg_total_len(hip);
+	update_all_headers(p);
 
-    hip_check_network_msg(hip);
+	hip_check_network_msg(hip);
 
-    return verdict;
+	return verdict;
 }
 
 /**
@@ -328,35 +343,38 @@ static int filter_midauth_r1(ipq_packet_msg_t *m, struct midauth_packet *p) {
  * @param p the modified packet
  * @return the verdict, either NF_ACCEPT or NF_DROP
  */
-static int filter_midauth_i2(ipq_packet_msg_t *m, struct midauth_packet *p) {
-    int verdict = NF_ACCEPT;
-    struct hip_common *hip = (struct hip_common *)(((char*)p->buffer) + p->hdr_size);
-    struct hip_solution_m *solution;
-    char *nonce1 = "hello";
-    char *nonce2 = "world";
+static int filter_midauth_i2(ipq_packet_msg_t *m, struct midauth_packet *p)
+{
+	int verdict = NF_ACCEPT;
+	struct hip_common *hip = (struct hip_common *)(((char*)p->buffer) +
+	                         p->hdr_size);
+	struct hip_solution_m *solution;
+	char *nonce1 = "hello";
+	char *nonce2 = "world";
 
-    /* just copy it for testing */
+	/* just copy it for testing */
 
-    memcpy(p->buffer, m->payload, m->data_len);
+	memcpy(p->buffer, m->payload, m->data_len);
 
-    solution = (struct hip_solution_m *)hip_get_param(hip, HIP_PARAM_SOLUTION_M);
-    if (solution) {
-	if (midauth_verify_solution_m(hip, solution) == 0)
-	    HIP_DEBUG("found correct hip_solution_m\n");
-	else
-	    HIP_DEBUG("found wrong hip_solution_m\n");
-    } else
-	HIP_DEBUG("found no hip_solution_m\n");
+	solution = (struct hip_solution_m *)hip_get_param(hip, HIP_PARAM_SOLUTION_M);
+	if (solution) {
+		if (midauth_verify_solution_m(hip, solution) == 0)
+			HIP_DEBUG("found correct hip_solution_m\n");
+		else
+			HIP_DEBUG("found wrong hip_solution_m\n");
+	} else {
+		HIP_DEBUG("found no hip_solution_m\n");
+	}
 
-    add_echo_request_m(hip, nonce1);
-    add_echo_request_m(hip, nonce2);
-    add_puzzle_m(hip, 1, 2, "i2i2i2", 0xAABBCCDDEEFFFFFFLL);
-    add_puzzle_m(hip, 3, 4, "I2I2I2", 0xABCDABCDABCDABCDLL);
+	add_echo_request_m(hip, nonce1);
+	add_echo_request_m(hip, nonce2);
+	add_puzzle_m(hip, 1, 2, "i2i2i2", 0xAABBCCDDEEFFFFFFLL);
+	add_puzzle_m(hip, 3, 4, "I2I2I2", 0xABCDABCDABCDABCDLL);
 
-    p->size = hip_get_msg_total_len(hip);
-    update_all_headers(p);
+	p->size = hip_get_msg_total_len(hip);
+	update_all_headers(p);
 
-    return verdict;
+	return verdict;
 }
 
 /**
@@ -366,26 +384,29 @@ static int filter_midauth_i2(ipq_packet_msg_t *m, struct midauth_packet *p) {
  * @param p the modified packet
  * @return the verdict, either NF_ACCEPT or NF_DROP
  */
-static int filter_midauth_r2(ipq_packet_msg_t *m, struct midauth_packet *p) {
-    int verdict = NF_ACCEPT;
-    struct hip_common *hip = (struct hip_common *)(((char*)p->buffer) + p->hdr_size);
-    struct hip_solution_m *solution;
+static int filter_midauth_r2(ipq_packet_msg_t *m, struct midauth_packet *p)
+{
+	int verdict = NF_ACCEPT;
+	struct hip_common *hip = (struct hip_common *)(((char*)p->buffer) +
+	                         p->hdr_size);
+	struct hip_solution_m *solution;
 
-    /* don't copy here, packet will not be modified anyway */
-    memcpy(p->buffer, m->payload, m->data_len);
+	/* don't copy here, packet will not be modified anyway */
+	memcpy(p->buffer, m->payload, m->data_len);
 
-    /* check for ECHO_REPLY_M and SOLUTION_M here */
-    solution = (struct hip_solution_m *)hip_get_param(hip, HIP_PARAM_SOLUTION_M);
-    if (solution)
-    {
-	if (midauth_verify_solution_m(hip, solution) == 0)
-	    HIP_DEBUG("found correct hip_solution_m\n");
-	else
-	    HIP_DEBUG("found wrong hip_solution_m\n");
-    } else
-	HIP_DEBUG("found no hip_solution_m\n");
+	/* check for ECHO_REPLY_M and SOLUTION_M here */
+	solution = (struct hip_solution_m *)hip_get_param(hip, HIP_PARAM_SOLUTION_M);
+	if (solution)
+	{
+		if (midauth_verify_solution_m(hip, solution) == 0)
+			HIP_DEBUG("found correct hip_solution_m\n");
+		else
+			HIP_DEBUG("found wrong hip_solution_m\n");
+	} else {
+		HIP_DEBUG("found no hip_solution_m\n");
+	}
 
-    return verdict;
+	return verdict;
 }
 
 /**
@@ -395,31 +416,33 @@ static int filter_midauth_r2(ipq_packet_msg_t *m, struct midauth_packet *p) {
  * @param p the modified packet
  * @return the verdict, either NF_ACCEPT or NF_DROP
  */
-static int filter_midauth_u1(ipq_packet_msg_t *m, struct midauth_packet *p) {
-    int verdict = NF_ACCEPT;
-    struct hip_common *hip = (struct hip_common *)(((char*)p->buffer) + p->hdr_size);
-    char *nonce1 = "abcedfgh";
-    char *nonce2 = "foobar";
+static int filter_midauth_u1(ipq_packet_msg_t *m, struct midauth_packet *p)
+{
+	int verdict = NF_ACCEPT;
+	struct hip_common *hip = (struct hip_common *)(((char*)p->buffer) +
+	                         p->hdr_size);
+	char *nonce1 = "abcedfgh";
+	char *nonce2 = "foobar";
 
-    HIP_DEBUG("filtering U1\n");
+	HIP_DEBUG("filtering U1\n");
 
-    /* start with a copy of the original packet */
+	/* start with a copy of the original packet */
 
-    memcpy(p->buffer, m->payload, m->data_len);
+	memcpy(p->buffer, m->payload, m->data_len);
 
-    /* beware: black magic & dragons ahead */
+	/* beware: black magic & dragons ahead */
 
-    add_echo_request_m(hip, nonce1);
-    add_echo_request_m(hip, nonce2);
-    add_puzzle_m(hip, 1, 2, "hello!", 0xFF00FF00FF00FF00LL);
-    add_puzzle_m(hip, 3, 4, "byebye", 0xDEADBEEFDEADBEEFLL);
+	add_echo_request_m(hip, nonce1);
+	add_echo_request_m(hip, nonce2);
+	add_puzzle_m(hip, 1, 2, "hello!", 0xFF00FF00FF00FF00LL);
+	add_puzzle_m(hip, 3, 4, "byebye", 0xDEADBEEFDEADBEEFLL);
 
-    /* no more dragons & black magic*/
+	/* no more dragons & black magic*/
 
-    p->size = hip_get_msg_total_len(hip);
-    update_all_headers(p);
+	p->size = hip_get_msg_total_len(hip);
+	update_all_headers(p);
 
-    return verdict;
+	return verdict;
 }
 
 /**
@@ -429,37 +452,40 @@ static int filter_midauth_u1(ipq_packet_msg_t *m, struct midauth_packet *p) {
  * @param p the modified packet
  * @return the verdict, either NF_ACCEPT or NF_DROP
  */
-static int filter_midauth_u2(ipq_packet_msg_t *m, struct midauth_packet *p) {
-    int verdict = NF_ACCEPT;
-    struct hip_common *hip = (struct hip_common *)(((char*)p->buffer) + p->hdr_size);
-    struct hip_solution_m *solution;
-    char *nonce1 = "hello";
-    char *nonce2 = "world";
+static int filter_midauth_u2(ipq_packet_msg_t *m, struct midauth_packet *p)
+{
+	int verdict = NF_ACCEPT;
+	struct hip_common *hip = (struct hip_common *)(((char*)p->buffer) +
+	                         p->hdr_size);
+	struct hip_solution_m *solution;
+	char *nonce1 = "hello";
+	char *nonce2 = "world";
 
-    HIP_DEBUG("filtering U2\n");
+	HIP_DEBUG("filtering U2\n");
 
-    /* just copy it for testing */
+	/* just copy it for testing */
 
-    memcpy(p->buffer, m->payload, m->data_len);
+	memcpy(p->buffer, m->payload, m->data_len);
 
-    solution = (struct hip_solution_m *)hip_get_param(hip, HIP_PARAM_SOLUTION_M);
-    if (solution) {
-	if (midauth_verify_solution_m(hip, solution) == 0)
-	    HIP_DEBUG("found correct hip_solution_m\n");
-	else
-	    HIP_DEBUG("found wrong hip_solution_m\n");
-    } else
-	HIP_DEBUG("found no hip_solution_m\n");
+	solution = (struct hip_solution_m *)hip_get_param(hip, HIP_PARAM_SOLUTION_M);
+	if (solution) {
+		if (midauth_verify_solution_m(hip, solution) == 0)
+			HIP_DEBUG("found correct hip_solution_m\n");
+		else
+			HIP_DEBUG("found wrong hip_solution_m\n");
+	} else {
+		HIP_DEBUG("found no hip_solution_m\n");
+	}
 
-    add_echo_request_m(hip, nonce1);
-    add_echo_request_m(hip, nonce2);
-    add_puzzle_m(hip, 1, 2, "u2u2u2", 0xAABBCCDDEEFFFFFFLL);
-    add_puzzle_m(hip, 3, 4, "U2U2U2", 0xABCDABCDABCDABCDLL);
+	add_echo_request_m(hip, nonce1);
+	add_echo_request_m(hip, nonce2);
+	add_puzzle_m(hip, 1, 2, "u2u2u2", 0xAABBCCDDEEFFFFFFLL);
+	add_puzzle_m(hip, 3, 4, "U2U2U2", 0xABCDABCDABCDABCDLL);
 
-    p->size = hip_get_msg_total_len(hip);
-    update_all_headers(p);
+	p->size = hip_get_msg_total_len(hip);
+	update_all_headers(p);
 
-    return verdict;
+	return verdict;
 }
 
 /**
@@ -469,27 +495,30 @@ static int filter_midauth_u2(ipq_packet_msg_t *m, struct midauth_packet *p) {
  * @param p the modified packet
  * @return the verdict, either NF_ACCEPT or NF_DROP
  */
-static int filter_midauth_u3(ipq_packet_msg_t *m, struct midauth_packet *p) {
-    int verdict = NF_ACCEPT;
-    struct hip_common *hip = (struct hip_common *)(((char*)p->buffer) + p->hdr_size);
-    struct hip_solution_m *solution;
+static int filter_midauth_u3(ipq_packet_msg_t *m, struct midauth_packet *p)
+{
+	int verdict = NF_ACCEPT;
+	struct hip_common *hip = (struct hip_common *)(((char*)p->buffer) +
+	                         p->hdr_size);
+	struct hip_solution_m *solution;
 
-    HIP_DEBUG("filtering U3\n");
+	HIP_DEBUG("filtering U3\n");
 
-    /* don't copy here, packet will not be modified anyway */
-    memcpy(p->buffer, m->payload, m->data_len);
+	/* don't copy here, packet will not be modified anyway */
+	memcpy(p->buffer, m->payload, m->data_len);
 
-    /* check for ECHO_REPLY_M and SOLUTION_M here */
-    solution = (struct hip_solution_m *)hip_get_param(hip, HIP_PARAM_SOLUTION_M);
-    if (solution) {
-	if (midauth_verify_solution_m(hip, solution) == 0)
-	    HIP_DEBUG("found correct hip_solution_m\n");
-	else
-	    HIP_DEBUG("found wrong hip_solution_m\n");
-    } else
-	HIP_DEBUG("found no hip_solution_m\n");
+	/* check for ECHO_REPLY_M and SOLUTION_M here */
+	solution = (struct hip_solution_m *)hip_get_param(hip, HIP_PARAM_SOLUTION_M);
+	if (solution) {
+		if (midauth_verify_solution_m(hip, solution) == 0)
+			HIP_DEBUG("found correct hip_solution_m\n");
+		else
+			HIP_DEBUG("found wrong hip_solution_m\n");
+	} else {
+		HIP_DEBUG("found no hip_solution_m\n");
+	}
 
-    return verdict;
+	return verdict;
 }
 
 
@@ -500,52 +529,55 @@ static int filter_midauth_u3(ipq_packet_msg_t *m, struct midauth_packet *p) {
  * @param p the modified packet
  * @return the verdict, either NF_ACCEPT or NF_DROP
  */
-static int filter_midauth_update(ipq_packet_msg_t *m, struct midauth_packet *p) {
-    struct hip_common *hip = (struct hip_common *)(((char*)m->payload) + p->hdr_size);
+static int filter_midauth_update(ipq_packet_msg_t *m, struct midauth_packet *p)
+{
+	struct hip_common *hip = (struct hip_common *)(((char*)m->payload) +
+	                         p->hdr_size);
 
-    HIP_DEBUG("UPDATE received\n");
+	HIP_DEBUG("UPDATE received\n");
 
-    if (hip_get_param(hip, HIP_PARAM_LOCATOR))
-	return filter_midauth_u1(m, p);
-    if (hip_get_param(hip, HIP_PARAM_ECHO_REQUEST))
-	return filter_midauth_u2(m, p);
-    if (hip_get_param(hip, HIP_PARAM_ECHO_RESPONSE))
-	return filter_midauth_u3(m, p);
+	if (hip_get_param(hip, HIP_PARAM_LOCATOR))
+		return filter_midauth_u1(m, p);
+	if (hip_get_param(hip, HIP_PARAM_ECHO_REQUEST))
+		return filter_midauth_u2(m, p);
+	if (hip_get_param(hip, HIP_PARAM_ECHO_RESPONSE))
+		return filter_midauth_u3(m, p);
 
-    HIP_ERROR("Unknown UPDATE format, rejecting the request!\n");
-    return NF_DROP;
+	HIP_ERROR("Unknown UPDATE format, rejecting the request!\n");
+	return NF_DROP;
 }
 
-int filter_midauth(ipq_packet_msg_t *m, struct midauth_packet *p) {
-    int verdict = NF_ACCEPT;
+int filter_midauth(ipq_packet_msg_t *m, struct midauth_packet *p)
+{
+	int verdict = NF_ACCEPT;
 
-    p->size = 0; /* default: do not change packet */
+	p->size = 0; /* default: do not change packet */
 
-    switch (p->hip_common->type_hdr) {
+	switch (p->hip_common->type_hdr) {
 	case HIP_I1:
-	    break;
+		break;
 	case HIP_R1:
-	    verdict = filter_midauth_r1(m, p);
-	    break;
+		verdict = filter_midauth_r1(m, p);
+		break;
 	case HIP_I2:
-	    verdict = filter_midauth_i2(m, p);
-	    break;
+		verdict = filter_midauth_i2(m, p);
+		break;
 	case HIP_R2:
-	    verdict = filter_midauth_r2(m, p);
-	    break;
+		verdict = filter_midauth_r2(m, p);
+		break;
 	case HIP_UPDATE:
-	    verdict = filter_midauth_update(m, p);
-	    break;
+		verdict = filter_midauth_update(m, p);
+		break;
 	default:
-	    HIP_DEBUG("filtering default message type\n");
-	    break;
-    }
+		HIP_DEBUG("filtering default message type\n");
+		break;
+	}
 
-    /* do not change packet when it is dropped */
-    if (verdict != NF_ACCEPT)
-	p->size = 0;
+	/* do not change packet when it is dropped */
+	if (verdict != NF_ACCEPT)
+		p->size = 0;
 
-    return verdict;
+	return verdict;
 }
 
 #endif
