@@ -8,8 +8,8 @@
 
 #ifdef CONFIG_HIP_MIDAUTH
 
-#include "midauth.h"
 #include "ife.h"
+#include "midauth.h"
 #include <string.h>
 
 /**
@@ -187,6 +187,7 @@ static void update_all_headers(struct midauth_packet *p) {
  * @return 0 if correct, nonzero otherwise
  */
 static int midauth_verify_solution_m(struct hip_common *hip, struct hip_solution_m *s) {
+    int err = 0;
     struct hip_solution solution;
 
     solution.K = s->K;
@@ -194,9 +195,10 @@ static int midauth_verify_solution_m(struct hip_common *hip, struct hip_solution
     solution.I = s->I;
     solution.J = s->J;
 
-    if (hip_solve_puzzle(&solution, hip, HIP_VERIFY_PUZZLE) == 0)
-	return 1;
+    HIP_IFEL(hip_solve_puzzle(&solution, hip, HIP_VERIFY_PUZZLE) == 0, -1,
+	"Solution is wrong\n");
 
+out_err:
     return 0;
 }
 
@@ -208,8 +210,7 @@ static int midauth_verify_solution_m(struct hip_common *hip, struct hip_solution
  * @param hip the HIP packet
  * @return 0 on success
  */
-static int midauth_relocate_last_hip_parameter(struct hip_common *hip)
-{
+static int midauth_relocate_last_hip_parameter(struct hip_common *hip) {
     int err = 0, len, total_len, offset;
     char buffer[HIP_MAX_PACKET], *ptr = (char *) hip;
     struct hip_tlv_common *iterate = NULL, *last = NULL;
@@ -230,10 +231,8 @@ static int midauth_relocate_last_hip_parameter(struct hip_common *hip)
     memcpy(buffer, last, len);
     iterate = NULL;
 
-    while ((iterate = (struct hip_tlv_common *)hip_get_next_param(hip, iterate)))
-    {
-	if (hip_get_param_type(iterate) > type)
-	{
+    while ((iterate = (struct hip_tlv_common *)hip_get_next_param(hip, iterate))) {
+	if (hip_get_param_type(iterate) > type)	{
 	    offset = (char *)iterate - (char *)hip;
 
 	    memmove(ptr + offset + len, ptr + offset, total_len - offset - len);
@@ -247,7 +246,7 @@ out_err:
 }
 
 /**
- * Insert a ECHO_REQUEST_M parameter into a HIP packet.
+ * Insert an ECHO_REQUEST_M parameter into a HIP packet.
  *
  * @param p the modified packet
  * @param nonce the string to add
@@ -269,12 +268,14 @@ out_err:
  * Insert a PUZZLE_M parameter into a HIP packet.
  *
  * @param p the modified packet
- * @param nonce the string to add
+ * @param val_K puzzle parameter val_K
+ * @param lifetime puzzle parameter lifetime
+ * @param opaque puzzle parameter opaque
+ * @param random_i puzzle parameter random_i
  * @return 
  */
 static int add_puzzle_m(struct hip_common *hip, uint8_t val_K,
-                        uint8_t lifetime, uint8_t *opaque, uint64_t random_i)
-{
+                        uint8_t lifetime, uint8_t *opaque, uint64_t random_i) {
     int err = 0;
 
     HIP_IFEL(hip_build_param_puzzle_m(hip, val_K, lifetime, opaque, random_i),
@@ -339,8 +340,7 @@ static int filter_midauth_i2(ipq_packet_msg_t *m, struct midauth_packet *p) {
     memcpy(p->buffer, m->payload, m->data_len);
 
     solution = (struct hip_solution_m *)hip_get_param(hip, HIP_PARAM_SOLUTION_M);
-    if (solution)
-    {
+    if (solution) {
 	if (midauth_verify_solution_m(hip, solution) == 0)
 	    HIP_DEBUG("found correct hip_solution_m\n");
 	else
@@ -443,8 +443,7 @@ static int filter_midauth_u2(ipq_packet_msg_t *m, struct midauth_packet *p) {
     memcpy(p->buffer, m->payload, m->data_len);
 
     solution = (struct hip_solution_m *)hip_get_param(hip, HIP_PARAM_SOLUTION_M);
-    if (solution)
-    {
+    if (solution) {
 	if (midauth_verify_solution_m(hip, solution) == 0)
 	    HIP_DEBUG("found correct hip_solution_m\n");
 	else
@@ -482,8 +481,7 @@ static int filter_midauth_u3(ipq_packet_msg_t *m, struct midauth_packet *p) {
 
     /* check for ECHO_REPLY_M and SOLUTION_M here */
     solution = (struct hip_solution_m *)hip_get_param(hip, HIP_PARAM_SOLUTION_M);
-    if (solution)
-    {
+    if (solution) {
 	if (midauth_verify_solution_m(hip, solution) == 0)
 	    HIP_DEBUG("found correct hip_solution_m\n");
 	else
@@ -514,8 +512,8 @@ static int filter_midauth_update(ipq_packet_msg_t *m, struct midauth_packet *p) 
     if (hip_get_param(hip, HIP_PARAM_ECHO_RESPONSE))
 	return filter_midauth_u3(m, p);
 
-    /* Unknown UPDATE format, reject the request */
-    return NF_ACCEPT;
+    HIP_ERROR("Unknown UPDATE format, rejecting the request!\n");
+    return NF_DROP;
 }
 
 int filter_midauth(ipq_packet_msg_t *m, struct midauth_packet *p) {
