@@ -128,6 +128,7 @@ rm -rf %{buildroot}
 %{prefix}/bin/hosts.py
 %{prefix}/bin/pyip6.py
 %{prefix}/bin/util.py
+%defattr(755,root,root)
 
 %files test
 %{prefix}/bin/conntest-client
