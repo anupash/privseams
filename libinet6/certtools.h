@@ -15,7 +15,7 @@
 
 /** Struct used to deliver the minimal needed information to build SPKI cert*/
 struct hip_cert_spki_header{
-	struct char * cert[4096];
+	char cert[4096]; // just to be sure that the size is enough
 	struct in6_addr * issuer;
 	struct in6_addr * subject;
 	struct timeval * not_before = NULL;

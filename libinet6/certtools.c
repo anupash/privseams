@@ -26,7 +26,9 @@
  */
 int hip_cert_spki_build_cert(struct hip_cert_spki_header * minimal_content) {
 	int err = 0;
-   
+	char needed = "(cert )";
+	memset(minimal_content.cert, '\0', sizeof(minimal_content.cert));
+
 out_err:
 	return (err);
 }
