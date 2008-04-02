@@ -642,11 +642,14 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit, hip_hit_t *dst_hit,
 	addr = (struct sockaddr*) &ss_addr;
 
 	if (!src_hit) {
-		HIP_DEBUG("Using default source hit\n");
+		HIP_DEBUG("........Using default source hit.........\n");
 		HIP_IFEL(hip_get_default_hit(&default_hit), -1,
 			 "default hit\n");
 		src_hit = &default_hit;
 	}
+
+	HIP_DEBUG_HIT("src hit is from hip_get_default_hit: ", src_hit);
+
 
 	/* Sometimes we get deformed HITs from kernel, skip them */
 	HIP_IFEL(!(ipv6_addr_is_hit(src_hit) && ipv6_addr_is_hit(dst_hit) &&
