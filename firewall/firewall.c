@@ -1021,8 +1021,8 @@ static void *handle_ip_traffic(void *ptr){
 	struct hip_esp * esp_data = NULL;
 	struct hip_esp_packet * esp = NULL;
 	struct hip_common * hip_common = NULL;
-	struct in6_addr * src_addr = NULL;
-	struct in6_addr * dst_addr = NULL;
+	struct in6_addr src_addr;
+	struct in6_addr dst_addr;
 	struct ipq_handle *hndl;
 	int ipv4Traffic = 0, ipv6Traffic = 0;
 	int type = *((int *) ptr);
@@ -1038,11 +1038,6 @@ static void *handle_ip_traffic(void *ptr){
 		ipv6Traffic = 1;
 		hndl = h6;
 	}
-
-	src_addr = HIP_MALLOC(sizeof(struct in6_addr), 0);
-	dst_addr = HIP_MALLOC(sizeof(struct in6_addr), 0);
-	if (!src_addr || !dst_addr)
-		goto out_err;
 
 	do{
 		status = ipq_read(hndl, buf, BUFSIZE, 0);
@@ -1073,8 +1068,8 @@ static void *handle_ip_traffic(void *ptr){
 					hdr_size += sizeof(struct udphdr);
 				}
                 		_HIP_DEBUG("header size: %d\n", hdr_size);
-               		 	IPV4_TO_IPV6_MAP(&iphdr->ip_src, src_addr);
-                		IPV4_TO_IPV6_MAP(&iphdr->ip_dst, dst_addr);
+               		 	IPV4_TO_IPV6_MAP(&iphdr->ip_src, &src_addr);
+                		IPV4_TO_IPV6_MAP(&iphdr->ip_dst, &dst_addr);
         		}
         		else if(ipv6Traffic){
                 		_HIP_DEBUG("ipv6\n");
@@ -1082,8 +1077,8 @@ static void *handle_ip_traffic(void *ptr){
                 		packet_hdr = (void *)ip6_hdr;
                		 	hdr_size = sizeof(struct ip6_hdr);
                		 	_HIP_DEBUG("header size: %d\n", hdr_size);
-                		ipv6_addr_copy(src_addr, &ip6_hdr->ip6_src);
-                		ipv6_addr_copy(dst_addr, &ip6_hdr->ip6_dst);
+                		ipv6_addr_copy(&src_addr, &ip6_hdr->ip6_src);
+                		ipv6_addr_copy(&dst_addr, &ip6_hdr->ip6_dst);
         		}
       
       			if(is_hip_packet(packet_hdr, type)){
@@ -1113,8 +1108,8 @@ static void *handle_ip_traffic(void *ptr){
 	  				_HIP_DEBUG("signature exists\n");
 
 
-				if(filter_hip(src_addr, 
-					      dst_addr, 
+				if(filter_hip(&src_addr, 
+					      &dst_addr, 
 					      hip_common, 
 					      m->hook,
 					      m->indev_name,
@@ -1161,8 +1156,6 @@ static void *handle_ip_traffic(void *ptr){
 out_err:  
 	//if (hip_common)
 		free(hip_common);
-	free(src_addr);
-        free(dst_addr);
         if (esp) {
 		if (esp_data) {
 	    	esp->esp_data = NULL;
@@ -1172,10 +1165,6 @@ out_err:
 	}
   	ipq_destroy_handle(hndl);
 
-	if(src_addr)
- 		HIP_FREE(src_addr);
-	if(dst_addr)
- 		HIP_FREE(dst_addr);
 	return;
 }
 
