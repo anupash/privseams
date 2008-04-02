@@ -1010,6 +1010,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 			return -1;
 			break;
 		case XFRM_MSG_ACQUIRE:
+		        HIP_DEBUG("handled msg XFRM_MSG_ACQUIRE\n");
 			return hip_netdev_handle_acquire(msg);
 			break;
 		case XFRM_MSG_EXPIRE:

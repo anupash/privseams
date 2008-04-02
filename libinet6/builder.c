@@ -1,3 +1,4 @@
+
 /** @file
  * This file defines building and parsing functions for Host Identity Protocol
  * (HIP) kernel module and user messages <span style="color:#f00">(Update the
@@ -1289,7 +1290,6 @@ int hip_build_param_contents(struct hip_common *msg,
 			     hip_tlv_len_t contents_size)
 {
 	struct hip_tlv_common param;
-
 	hip_set_param_type(&param, param_type);
 	hip_set_param_contents_len(&param, contents_size);
 

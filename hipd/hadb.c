@@ -2739,54 +2739,43 @@ int hip_hadb_find_lsi(hip_ha_t *entry, void *lsi)
 
 /**
  * This function simply goes through all HADB to find an entry that
- * matches the current lsi and
- * the given peer lsi. First matching HADB entry is then returned.
+ * matches the given lsi. First matching HADB entry is then returned.
  *
  * @note This way of finding HA entries doesn't work properly if we have 
  * multiple entries with the same peer_lsi. Currently, that's not the case.
  * Our implementation doesn't allow repeated lsi's.
  */
-hip_ha_t *hip_hadb_try_to_find_by_peer_lsi(hip_lsi_t *lsi)
-{
-	hip_list_t *item, *tmp;
-	struct hip_host_id_entry *e;
-	hip_ha_t *entry = NULL;
-	hip_lsi_t our_lsi;
+hip_ha_t *hip_hadb_try_to_find_by_peer_lsi(hip_lsi_t *lsi){
+	hip_list_t *item;
+	hip_ha_t *tmp;
 	int i;
 
-	memset(&our_lsi, 0, sizeof(our_lsi));
-
-	list_for_each_safe(item, tmp, hip_local_hostid_db, i)
+	list_for_each_safe(item, tmp, hadb_hit, i)
 	{
-		e = list_entry(item);
-		ipv4_addr_copy(&our_lsi, &e->lsi);
-		entry = hip_hadb_find_bylsis(lsi, &our_lsi);
-		if (!entry)
+		tmp = list_entry(item);
+		HIP_DEBUG_LSI("Are they equal? ", &tmp->lsi_peer);
+		HIP_DEBUG_LSI("== ", lsi);
+		if(!hip_lsi_are_equal(&tmp->lsi_peer, lsi)){
+			HIP_DEBUG("NO TROBAT, CONTINUA BUSCANT \n");
 			continue;
-		else
-			return entry;
+		}
+		else{
+			HIP_DEBUG_HIT("Ya lo tenemos oeeee!!",&tmp->hit_peer);
+			HIP_DEBUG("TROBAT!!! i surt \n");
+			return tmp;
+		}
 	}
 	return NULL;
 }
 
 
-/**
- * This function searches for a hip_ha_t entry from the hip_hadb_hit
- * by an LSI pair (local,peer).
- */
-hip_ha_t *hip_hadb_find_bylsis(hip_lsi_t *lsi, hip_lsi_t *lsi2)
-{
-	hip_ha_t ha, *ret;
-	memcpy(&ha.lsi_our, lsi, sizeof(hip_lsi_t));
-	memcpy(&ha.lsi_peer, lsi2, sizeof(hip_lsi_t));
+hip_hit_t *hip_hadb_get_peer_hit_by_peer_lsi(hip_lsi_t *lsi){
+	hip_ha_t *entry = hip_hadb_try_to_find_by_peer_lsi(lsi);
+	if (entry)
+      		return &(entry->hit_peer);
+    	else
+      		return NULL;
 
-	ret = hip_ht_find(hadb_hit, &ha);
-	if (!ret) {
-		memcpy(&ha.lsi_peer, lsi, sizeof(hip_lsi_t));
-		memcpy(&ha.lsi_our, lsi2, sizeof(hip_lsi_t));
-		ret = hip_ht_find(hadb_hit, &ha);
-	}
-
-	return ret;
 }
+
 

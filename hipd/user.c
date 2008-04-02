@@ -22,7 +22,7 @@
  */ 
 int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 {
-	hip_hit_t *hit, *src_hit, *dst_hit;
+	hip_hit_t *hit, *src_hit, *dst_hit = NULL;
 	hip_lsi_t *lsi;
 	struct in6_addr *src_ip, *dst_ip;
 	hip_ha_t *entry = NULL;
@@ -540,6 +540,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		lsi = (hip_lsi_t *)hip_get_param_contents(msg, HIP_PARAM_LSI);
 
 		if (!lsi){
+			HIP_DEBUG(">Param is not an lsi!!\n");
 			dst_hit = (struct in6_addr *)hip_get_param_contents(msg, HIP_PARAM_HIT);
 			HIP_IFEL(hip_add_peer_map(msg), -1, "trigger bex\n");
 			/* Fetch the hadb entry just created. */
@@ -547,9 +548,17 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 				 -1, "internal error: no hadb entry found\n");
 		}else{
 			//hit_peer already mapped because hipconf command and non-opportunistic mode
+			HIP_DEBUG_LSI(">Param is an lsi!!", lsi);
 			HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_lsi(lsi)),
 				 -1, "internal error: no hadb entry found\n");
+			HIP_DEBUG_HIT("Ya lo tenemos oeeee!!",&entry->hit_peer);
+
+			HIP_IFEL(!(dst_hit = (hip_hit_t *) HIP_MALLOC(sizeof(hip_hit_t),0)),
+				 -ENOMEM, "No memory available for host id\n");
+			memset(dst_hit, 0, sizeof(*dst_hit));
+
 			ipv6_addr_copy(dst_hit, &entry->hit_peer);		
+			HIP_DEBUG("Y aqui no llegas!!");
 		}
 
 		HIP_DEBUG("Sending i1\n");
