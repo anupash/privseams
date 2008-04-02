@@ -56,6 +56,7 @@ int firewall_init();
 void firewall_close(int signal);
 void firewall_exit();
 void firewall_probe_kernel_modules();
+void firewall_increase_netlink_buffers();
 
 #endif
 

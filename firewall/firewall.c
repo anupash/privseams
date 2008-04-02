@@ -497,7 +497,7 @@ int tcp_packet_has_i1_option(void * tcphdrBytes, int hdrLen){
 		break;
 		//options with one-byte length
 		case 0:
-			break;
+			i++; break;
 		break;
 		case 1: i++; break;
 		case 11: i++; break;
@@ -528,6 +528,7 @@ int tcp_packet_has_i1_option(void * tcphdrBytes, int hdrLen){
 		case 27: len = bytes[i+1]; i += len; break;
 		case 253: len = bytes[i+1]; i += len; break;
 		case 254: len = bytes[i+1]; i += len; break;
+		default:  len = bytes[i+1]; i += len; break;
 		}
 	}
 	return 0;
@@ -1297,6 +1298,7 @@ int main(int argc, char **argv)
 	HIP_DEBUG("starting up with rule_file: %s and connection timeout: %d\n", 
                 rule_file, timeout);
 
+	firewall_increase_netlink_buffers();
 	firewall_probe_kernel_modules();
 
 	if (use_ipv4) {
@@ -1391,4 +1393,24 @@ void firewall_probe_kernel_modules()
 		else waitpid(err, &status, 0);
 	}
 	HIP_DEBUG("Probing completed\n");
+}
+
+/**
+ * Increases the netlink buffer capacity.
+ * 
+ * The previous default values were:
+ *
+ * /proc/sys/net/core/rmem_default - 110592
+ * /proc/sys/net/core/rmem_max     - 131071
+ * /proc/sys/net/core/wmem_default - 110592
+ * /proc/sys/net/core/wmem_max     - 131071
+ *
+ * The new value 1048576=1024*1024 was assigned to all of them
+ *
+ * @return	nothing.
+ */
+void firewall_increase_netlink_buffers(){
+	HIP_DEBUG("Increasing the netlink buffers\n");
+
+	popen("echo 1048576 > /proc/sys/net/core/rmem_default; echo 1048576 > /proc/sys/net/core/rmem_max;echo 1048576 > /proc/sys/net/core/wmem_default;echo 1048576 > /proc/sys/net/core/wmem_max", "r");
 }
