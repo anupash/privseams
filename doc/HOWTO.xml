@@ -889,11 +889,11 @@
       <title>About the HIP Rendezvous and HIP Relay Mechanisms</title>
       
       <para>
-	The rendezvous and HIP relay extensions extend HIP and the HIP
+	The rendezvous and relay extensions extend HIP and the HIP
 	registration extension for initiating communication between HIP nodes
-	via HIP a rendezvous server/HIP relay server. The rendezvous server (RVS) and
+	via a HIP rendezvous server or a HIP relay server. The rendezvous server (RVS) and
 	the HIP relay server serve as an initial contact point ("rendezvous
-	point") for its clients. The clients of an RVS/HIP relay server are
+	point") for its clients. The clients of an RVS / HIP relay server are
 	HIP nodes that use the HIP Registration Protocol to register their
 	HIT->IP address mappings with the server. After this registration,
 	other HIP nodes can initiate a base exchange using the IP address of the
@@ -904,11 +904,11 @@
       <para>
 	The primary objective of the rendezvous extension is to improve
 	reachability and operation when HIP hosts are mobile or multi-homed.
-	However, the rendezvous extension is necessary when a middlebox
+	In addition, the rendezvous extension is necessary when a middlebox
 	separates the responder from the public realm. In a Network Address
 	Translator (NAT), session establishment is uni-directional from
 	private address realm to public address realm. Therefore, if a host has
-	detected that it is behind a NAT, it must first register with the RVS
+	detected that it is behind a NAT, the host must first register with the RVS
 	when it is going to act as a responder of a base exchange. The
 	rendezvous extension allows HIP initiators to reach the responder when
 	the NAT devices involved all perform address independent mapping. Such
@@ -920,7 +920,7 @@
 	by a NAT device that performs address dependent mapping. Such NATs are
 	commonly referred to as "bad" NATs. In practice, the HIP relay servers
 	are used to relay the Interactive Connectivity Establishment (ICE)
-	address candidates.
+	address candidates that are encapsulated in HIP messages.
       </para>
       <para>
 	The main difference between the rendezvous server and the HIP relay
@@ -952,7 +952,7 @@
 	  <para>
 	    A NAT device that performs endpoint dependent is enroute between the
 	    initiator and the responder. Note that it does not make a
-	    difference whether the NAT device is at initiator's side or
+	    difference whether the NAT device is at initiator's side or at
 	    responder's side. A single "bad" NAT enroute is enough to make the
 	    communication impossible between the initiator and the responder
 	    unless a HIP relay is used.
@@ -967,9 +967,9 @@
 	configuration file: "/etc/hip/relay_config". This file is shared between
 	the RVS and the HIP relay because both of these services use the same
 	internal database to store the HIT->IP mappings. A default configuration
-	file is created once the HIP daemon is started first time, thus if the
+	file is created once the HIP daemon is started the first time, thus if the
 	daemon hasn't been started before, please start and stop the daemon
-	once to create the default file. In the configuration file you have the
+	once to create the default file. In the configuration file we have the
 	following options:
 	<programlisting>
 	  whitelist_enabled = "yes"
@@ -977,16 +977,16 @@
 	  minimum_lifetime = "60"
 	  maximum_lifetime = "3600"</programlisting>
 	  
-	HIPL supports RVS / Relay Server client whitelisting which means that
+	HIPL supports RVS / relay server client whitelisting which means that
 	only those clients whose HITs are listed in the whitelist are allowed to
-	register to the RVS / Relay Server. So before R can register with the
+	register to the RVS / relay server. So before R can register with the
 	server, R's HIT must be added to the whitelist. To do this, please start
 	the HIP daemon at the responder and use the hipconf tool from another
 	shell at the responder to get the default hi:
 	<programlisting>
 	  tools/hipconf get hi default</programlisting>
 	Now, add this HIT in between the whitelist quotation marks in the
-	configuration file:
+	configuration file of the RVS / relay server (not at R):
 	<programlisting>
 	  whitelist = "2001:0018:8321:4e1a:c009:1ff8:fed4:8e9c"</programlisting>
 	,where 2001:0018:8321:4e1a:c009:1ff8:fed4:8e9c is the HIT of the
@@ -1008,8 +1008,8 @@
 	<programlisting>
 	  minimum_lifetime = "60"
 	  maximum_lifetime = "3600"</programlisting>
-	These values are in seconds. Note that since the registration extension
-	uses an 8-bit enconding to represent the lifetimes, the values that are
+	These values are in seconds. However, the registration extension
+	uses an 8-bit enconding to represent the lifetimes. The values that are
 	given in the configuration file are used to calculate the real life
 	time and therefore do not represent the real life time a such. The
 	formula for the calculations is given in the registration draft:
