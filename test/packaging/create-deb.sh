@@ -225,6 +225,9 @@ copy_and_package_files ()
     cp tools/hosts.py $PKGDIR/usr/bin/
     cp tools/pyip6.py $PKGDIR/usr/bin/
     cp tools/util.py $PKGDIR/usr/bin/
+
+    chmod ugo+rx $PKGDIR/usr/bin/*.py
+
     PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
     create_sub_package;
    
