@@ -1008,7 +1008,7 @@
 	<programlisting>
 	  minimum_lifetime = "60"
 	  maximum_lifetime = "3600"</programlisting>
-	These values are in seconds. However, the registration extension
+	These values are seconds. However, the registration extension
 	uses an 8-bit enconding to represent the lifetimes. The values that are
 	given in the configuration file are used to calculate the real life
 	time and therefore do not represent the real life time a such. The
@@ -1055,40 +1055,61 @@
 	information.
       </para>
       <para>
-	"/etc/hosts" and "/etc/hip/hosts" configurations:
+	Next, the "/etc/hosts" and "/etc/hip/hosts" files are configured. Please
+	notice, that you can leave all non-HIP-related values in "/etc/hosts"
+	intact.
       </para>
-      <para>
-	INITIATOR: At the initiator, you must modify the "/etc/hosts" file. In the
-	file, responder's hostname must be mapped to the IP address of the rendezvous
-	server. It must not be mapped to the responder's IP address, or otherwise the
-	rendezvous server is not used at all! Thus in /etc/hosts you should have:
-	&lt;RVS IP&gt; &lt;RESPONDER NAME&gt;. The "/etc/hip/hosts" file should
-	contain the hostname and the HIT of the responder as in the normal base
-	exchange execution: &lt;RESPONDER HIT&gt; &lt;RESPONDER NAME&gt;. Notice
-	that there are currently four different HITs at each machine's "dummy0"
-	interface. When the responder registers to the rendezvous server, it can
-	choose any one four HITs. Please make sure that you use the same HIT here as
-	&lt;RESPONDER HIT&gt; as what the responder chooses to register. You can
-	check which HIT is used with the hipconf tool. To do this, start HIP daemon
-	at the responder: "hipd/hipd". Next type "tools/hipconf get hi default" at
-	the responder and the default HIT is printed on screen. This is also the
-      HIT that is registered to the RVS.</para>
-      
-      <para>
-	RVS: At the rendezvous server both files,"/etc/hosts" and "/etc/hip/hosts"
-	are left blank ("/etc/hosts" can of course contain the non-hiprelated
-	mappings). These files are left blank because the rendezvous server
-	is assumed to have no information of its clients beforehand, it just
-	offers the rendezvous service, and the responder then registers its
-	HIT->IP mapping to the rendezvous server.
-      </para>
-      <para>
-	RESPONDER: Also at the responder both files,"/etc/hosts" and 
-	"/etc/hip/hosts" are left blank ("/etc/hosts" can of course contain the
-	non-hiprelated mappings). The responder is assumed to know the IP address
-	and the HIT of the rendezvous server, but this information is given as
-	commandline parameters of "hipconf" tool.
-      </para>
+      <itemizedlist>
+	<listitem>
+	  <para>INITIATOR</para>
+	  <itemizedlist>
+	    <listitem>
+	      <para>
+		In the "/etc/hosts" file you should have: &lt;RVS IP&gt;
+		&lt;RESPONDER NAME&gt;. In other words the responder's hostname
+		is mapped to the IP address of the rendezvous server. It is
+		important that the responder's host name is mapped to
+		responder's IP address. Otherwise the rendezvous server is not
+		used at all!
+	      </para> 
+	    </listitem>
+	    <listitem>
+	      <para>
+		In the "/etc/hip/hosts" file you should have:
+		&lt;RESPONDER HIT&gt; &lt;RESPONDER NAME&gt;. This is the line
+		that you would have in a normal base exchange execution not
+		involving an RVS. Please make sure that you use the same HIT
+		here as &lt;RESPONDER HIT&gt; as what the "tools/hipconf get hi
+		default" outputs at the responder.</para>
+	    </listitem>
+	  </itemizedlist>
+	</listitem>
+	<listitem>
+	  <para>RVS</para>
+	  <itemizedlist>
+	    <listitem>
+	      <para>
+		At the rendezvous server both files,"/etc/hosts" and "/etc/hip/hosts"
+		are left blank ("/etc/hosts" can of course contain the non-hiprelated
+		mappings). These files are left blank because the rendezvous server
+		is assumed to have no information of its clients beforehand, it just
+		offers the rendezvous service, and the responder then registers its
+		HIT->IP mapping to the rendezvous server.
+	      </para>
+	    </listitem>
+	  </itemizedlist>
+	</listitem>
+	<listitem>
+	  <para>RESPONDER</para>
+	  <para>
+	    Also at the responder both files,"/etc/hosts" and 
+	    "/etc/hip/hosts" are left blank ("/etc/hosts" can of course contain the
+	    non-hiprelated mappings). The responder is assumed to know the IP address
+	    and the HIT of the rendezvous server, but this information is given as
+	    commandline parameters of "hipconf" tool.
+	  </para>
+	</listitem>
+      </itemizedlist>
       <para>
 	Steps:
       </para>
