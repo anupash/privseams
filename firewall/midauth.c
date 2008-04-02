@@ -9,6 +9,7 @@
 #ifdef CONFIG_HIP_MIDAUTH
 
 #include "midauth.h"
+#include "ife.h"
 #include <string.h>
 
 /**
@@ -200,6 +201,52 @@ static int midauth_verify_solution_m(struct hip_common *hip, struct hip_solution
 }
 
 /**
+ * Move the last HIP parameter to the correct position according to its
+ * parameter type. Will probably break the packet if something is moved in
+ * front of a signature.
+ *
+ * @param hip the HIP packet
+ * @return 0 on success
+ */
+static int midauth_relocate_last_hip_parameter(struct hip_common *hip)
+{
+    int err = 0, len, total_len, offset;
+    char buffer[HIP_MAX_PACKET], *ptr = (char *) hip;
+    struct hip_tlv_common *iterate = NULL, *last = NULL;
+    hip_tlv_type_t type;
+
+    while((iterate = (struct hip_tlv_common *)hip_get_next_param(hip, iterate)))
+	last = iterate;
+
+    HIP_IFEL(last == NULL, -1, "Trying to relocate in an empty packet!\n");
+
+    total_len = hip_get_msg_total_len(hip);
+    len = hip_get_param_total_len(last);
+    type = hip_get_param_type(last);
+
+    HIP_IFEL(len > sizeof(buffer), -1,
+             "Last parameter's length exceeds HIP_MAX_PACKET\n");
+
+    memcpy(buffer, last, len);
+    iterate = NULL;
+
+    while ((iterate = (struct hip_tlv_common *)hip_get_next_param(hip, iterate)))
+    {
+	if (hip_get_param_type(iterate) > type)
+	{
+	    offset = (char *)iterate - (char *)hip;
+
+	    memmove(ptr + offset + len, ptr + offset, total_len - offset - len);
+	    memcpy(ptr + offset, buffer, len);
+	    break;
+	}
+    }
+    
+out_err:
+    return err;
+}
+
+/**
  * Insert a ECHO_REQUEST_M parameter into a HIP packet.
  *
  * @param p the modified packet
@@ -207,13 +254,15 @@ static int midauth_verify_solution_m(struct hip_common *hip, struct hip_solution
  * @return 
  */
 static int add_echo_request_m(struct hip_common *hip, char *nonce) {
-    int success = 0;
+    int err = 0;
 
-    /* FIXME - reorder parameters */
+    HIP_IFEL(hip_build_param_echo_m(hip, nonce, strlen(nonce), 1),
+             -1, "Failed to build echo_request_m parameter\n");
+    HIP_IFEL(midauth_relocate_last_hip_parameter(hip), -1,
+             "Failed to relocate new echo_request_m parameter\n");
 
-    hip_build_param_echo_m(hip, nonce, strlen(nonce), 1);
-
-    return success;
+out_err:
+    return err;
 } 
 
 /**
@@ -226,13 +275,15 @@ static int add_echo_request_m(struct hip_common *hip, char *nonce) {
 static int add_puzzle_m(struct hip_common *hip, uint8_t val_K,
                         uint8_t lifetime, uint8_t *opaque, uint64_t random_i)
 {
-    int success = 0;
+    int err = 0;
 
-    /* FIXME - reorder parameters */
+    HIP_IFEL(hip_build_param_puzzle_m(hip, val_K, lifetime, opaque, random_i),
+             -1, "Failed to build puzzle_m parameter\n");
+    HIP_IFEL(midauth_relocate_last_hip_parameter(hip), -1,
+             "Failed to relocate new puzzle_m parameter\n");
 
-    hip_build_param_puzzle_m(hip, val_K, lifetime, opaque, random_i);
-
-    return success;
+out_err:
+    return err;
 }
 
 /**
@@ -255,14 +306,16 @@ static int filter_midauth_r1(ipq_packet_msg_t *m, struct midauth_packet *p) {
     /* beware: black magic & dragons ahead */
 
     add_echo_request_m(hip, nonce1);
-    add_echo_request_m(hip, nonce2);
     add_puzzle_m(hip, 1, 2, "hello!", 0xFF00FF00FF00FF00LL);
+    add_echo_request_m(hip, nonce2);
     add_puzzle_m(hip, 3, 4, "byebye", 0xDEADBEEFDEADBEEFLL);
 
     /* no more dragons & black magic*/
 
     p->size = hip_get_msg_total_len(hip);
     update_all_headers(p);
+
+    hip_check_network_msg(hip);
 
     return verdict;
 }
