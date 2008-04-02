@@ -638,14 +638,22 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit, hip_hit_t *dst_hit,
 	struct in6_addr dst_addr, ha_match;
 	struct sockaddr_storage ss_addr;
 	struct sockaddr *addr;
+	hip_hit_t default_hit;
 	addr = (struct sockaddr*) &ss_addr;
+
+	if (!src_hit) {
+		HIP_DEBUG("Using default source hit\n");
+		HIP_IFEL(hip_get_default_hit(&default_hit), -1,
+			 "default hit\n");
+		src_hit = &default_hit;
+	}
 
 	/* Sometimes we get deformed HITs from kernel, skip them */
 	HIP_IFEL(!(ipv6_addr_is_hit(src_hit) && ipv6_addr_is_hit(dst_hit) &&
 		   hip_hidb_hit_is_our(src_hit) &&
 		   hit_is_real_hit(dst_hit)), -1,
 		 "Received rubbish from netlink, skip\n");
-
+	
 	entry = hip_hadb_find_byhits(src_hit, dst_hit);
 	if (entry) {
 		reuse_hadb_local_address = 1;
@@ -818,8 +826,6 @@ int hip_netdev_trigger_bex_msg(struct hip_common *msg) {
 	struct hip_tlv_common *param;
 	int err = 0;
 	
-	/* XX FIXME: add support for source HITs and IP addresses */
-	
 	HIP_DUMP_MSG( msg);
 	
 	/* Destination HIT */
@@ -827,20 +833,28 @@ int hip_netdev_trigger_bex_msg(struct hip_common *msg) {
 	if (param)
 		peer_hit = hip_get_param_contents_direct(param);
 	
+	HIP_DEBUG_HIT("trigger_msg_peer_hit:", peer_hit);
+	
 	/* Source HIT */
 	param = hip_get_next_param(msg, param);
 	if (param && hip_get_param_type(param) == HIP_PARAM_HIT)
 		our_hit = hip_get_param_contents_direct(param);
+	
+	HIP_DEBUG_HIT("trigger_msg_our_hit:", our_hit);
 	
 	/* Destination IP */
 	param = hip_get_param(msg, HIP_PARAM_IPV6_ADDR);
 	if (param)
 		peer_addr = hip_get_param_contents_direct(param);
 	
+	HIP_DEBUG_IN6ADDR("trigger_msg_peer_addr:", peer_addr);
+
 	/* Source IP */
 	param = hip_get_next_param(msg, param);
-	if (param && hip_get_param_type(param) == HIP_PARAM_HIT)
+	if (param && hip_get_param_type(param) == HIP_PARAM_IPV6_ADDR)
 		our_addr = hip_get_param_contents_direct(param);
+
+	HIP_DEBUG_IN6ADDR("trigger_msg_our_addr:", our_addr);
 	
 	return hip_netdev_trigger_bex(our_hit, peer_hit, our_addr, peer_addr);
 }
