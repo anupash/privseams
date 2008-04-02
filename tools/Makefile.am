@@ -10,7 +10,7 @@ INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
 
 include_HEADERS = hipconftool.h
 
-dist_bin_SCRIPTS = myasn.py parse-key-3.py wget-dht-servers.sh myasn.py parse-key-3.py dnsproxy.py hosts.py pyip6.py util.py
+dist_bin_SCRIPTS = myasn.py parse-key-3.py dnsproxy.py hosts.py pyip6.py util.py wget-dht-servers.sh 
 
 LDFLAGS = -lcrypto $(HIP_XMLL)
 
