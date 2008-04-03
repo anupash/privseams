@@ -1025,7 +1025,7 @@
 	or
 	<programlisting>
 	  tools/hipconf reinit service hiprelay</programlisting>
-	Note that the reinitializion does not have any effect on the existing
+	The reinitializion does not have any effect on the existing
 	RVS / HIP relay server clients, but only affects on clients registering
 	after the reinitializion.
       </para>
@@ -1172,32 +1172,15 @@
 	</listitem>
 	<listitem>
 	  <para>
-	    Phase <xref linkend="listitem_rvs" /> of the connection establishment
-	    described above should launch a base exchange between R and RVS.
-	  </para>
-	</listitem>
-	<listitem>
-	  <para>
 	    The implemented mechanism is simple forwarding of I1 packet with 
 	    source and  destination IP addresses rewritten.
 	  </para>
 	</listitem>
 	<listitem>
 	  <para>
-	    Drafts complied with: Host Identity Protocol (HIP) Registration Extension
-	    draft-ietf-hip-registration-02, Host Identity Protocol (HIP) Rendezvous
-	    Extension draft-ietf-hip-rvs-05.
-	  </para>
-	</listitem>
-	<listitem>
-	  <para>
-	    Parameters used during registration: REG_INFO, REG_REQUEST, REG_RESPONSE,
-	    REG_FAILED.
-	  </para>
-	</listitem>
-	<listitem>
-	  <para>
-	    Parameters used with rendezvous service: RVS_HMAC, FROM, VIA_RVS.
+	    Phase <xref linkend="listitem_rvs" /> of the connection
+	    establishment described above should launch a base exchange between
+	    R and RVS. This base exchange does the registration.
 	  </para>
 	</listitem>
 	<listitem>
@@ -1213,14 +1196,70 @@
 	    with other implementations than HIPL.
 	  </para>
 	</listitem>
+	<listitem>
+	  <para>
+	    Drafts complied with: Host Identity Protocol (HIP) Registration Extension
+	    draft-ietf-hip-registration-02, Host Identity Protocol (HIP) Rendezvous
+	    Extension draft-ietf-hip-rvs-05.
+	  </para>
+	</listitem>
+	<listitem>
+	  <para>
+	    If you wish to cancel the rendezvous service, just use the "hipconf"
+	    tool at the server:
+	    <programlisting>tools/hipconf del service rvs</programlisting>
+	    This will delete all existing rendezvous server registrations.
+	  </para>
+	</listitem>
+	<listitem>
+	  <para>
+	    If you wish to reinitialize the rendezvous service, just use the
+	    "hipconf" tool at the server:
+	    <programlisting>tools/hipconf reinit service rvs</programlisting>
+	    The changes that you have made to the configuration file affect the
+	    on clients registering after the reinitializion.
+	  </para>
+	</listitem>
+	<listitem>
+	  <para>
+	    Client side registration cancellation is not yet implemented.
+	  </para>
+	</listitem>
       </itemizedlist>
     </section>
     <section id="section_relay">
       <title>HIP Relay Mechanisms</title>
       <para>
-	Before you test the rendezvous mechanisms, you should have run the base
-	exchange once without rendezvous server to get familiar how the
-	"/etc/hosts" and "/etc/hip/hosts" files are configured.
+	Before you test the HIP relay mechanisms, you should have run the base
+	exchange once without the HIP relay server to get familiar how the
+	"/etc/hosts" and "/etc/hip/hosts" files are configured. Please see
+	<xref linkend="basictest" /> for information on how to run a base
+	exchange without the HIP relay server.
+      </para>
+      <para>
+	The HIP relay server is intented to be a foolproof method to contact
+	the responder. When the responder has registered to the HIP relay, the
+	responder can be contacted regardless of the Network Address Translators
+	en route between the initiator and the responder. The HIP relay server
+	provides a stable IP for the responder and forwards all HIP control packets to
+	the current location of the responder.
+      </para>
+      <para>
+	The idea is that R wants to be reachable on Host Identity Protocol but R
+	is located behind a NAT device that performs Address Dependent Mapping.
+	The only way to reach R, is to relay all HIP control traffic via a HIP relay.
+	How R finds out that it is behind a NAT device that performs Address
+	Dependent Mapping is irrelevant in this context and is therefore beyond
+	scope. In fact, R does not even need to be behind such a NAT to register
+	to the HIP relay service. The registration just ensures that R is still
+	reachable when R moves to a location that is behind a NAT that performs
+	Address Dependent Mapping.
+      </para>
+      <para>
+	In this section, we show how to use the HIP relay server to establish a
+	HIP connection between two HIP hosts using the "test/conntest-server"
+	connection test server and the "test/conntest-client-gai" connection
+	test client.
       </para>
       <screenshot>
 	<screeninfo>Base exchange via the relay server</screeninfo>
