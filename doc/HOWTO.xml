@@ -5,14 +5,14 @@
   <!-- NOTE: TO GET A TEXT VERSION FROM THIS, TYPE "xmlto txt HOWTO.xml"  -->
   <!-- http://www.docbook.org/tdg/en/html/docbook.html -->
   <title>HIPL User Manual</title>
-  <chapter>
+  <chapter id="ch_disclaimer">
     <title>Warning</title>
     <para>
       HIPL code is currently at a very experimental level. Use at your own
       responsibility!
     </para>
   </chapter>
-  <chapter>
+  <chapter id="ch_requirements">
     <title>Software Requirements</title>
     <para>
       You need to modify your kernel and install HIPL userspace software along
@@ -48,7 +48,7 @@
       </para></listitem>
       <listitem><para>
 	A BEET patched Linux 2.6 kernel with the modules listed in
-	<xref linkend="kernel" />.
+	<xref linkend="ch_kernel" />.
       </para></listitem>
       <listitem><para>
 	OpenSSL-library and developer headers
@@ -142,7 +142,7 @@
     <para>On 64-bit Fedora 8, ln -s /usr/lib64/libipq.a /usr/lib/libipq.a was necessary. This has not been fixed in the HIPL build properly yet.
     </para>
   </chapter>
-  <chapter>
+  <chapter id="ch_building_doc">
     <title> Building the HIPL Documentation</title>
     <para>
       Architectural documentation:
@@ -169,7 +169,7 @@
     </itemizedlist>
 
   </chapter>
-  <chapter id="kernel">
+  <chapter id="ch_kernel">
     <title>Compiling the Kernel</title>
     
     <para>
@@ -298,7 +298,7 @@
       The hipd probes the necessary kernel modules automatically,
     </para>
   </chapter>
-  <chapter>
+  <chapter id="ch_compiling_userspace_apps">
     <title>Compiling Userspace Applications</title>
     <para>
       After you have successfully compiled and installed the HIP kernel and
@@ -333,7 +333,7 @@
       See "./configure --help" for a full list of options.
     </para>
   </chapter>
-  <chapter id="basictest">
+  <chapter id="ch_basictest">
     <title>Testing a HIP connection between two locally connected hosts</title>
     <para>
       You can test HIP with any networking application, but in this
@@ -427,7 +427,7 @@
     </para>
     <para>
       You can also add the mapping to "/etc/hip/hipd_config" and restart hipd.
-      It is also possible to use DNS or OpenDHT (<xref linkend="opendht" />)
+      It is also possible to use DNS or OpenDHT (<xref linkend="ch_opendht" />)
       for the mappings.
     </para>
     <para>
@@ -471,12 +471,12 @@
       kills the previous one.
     </para>
   </chapter>
-  <chapter id="itest">
+  <chapter id="ch_test_servers">
     <title>HIPL Internet Test Servers</title>
     <para>
       Below is a list of HIPL test servers if you want to test HIP over Internet:
     </para>
-    <table frame="all"><title>Test Servers</title>
+    <table id="table_servers" frame="all"><title>Test Servers</title>
     <tgroup cols="1">
       <thead>
 	<row><entry>Server</entry><entry>HIT</entry><entry>IPv4 address</entry><entry>IPv6 address</entry><entry>HI algo</entry></row>
@@ -491,14 +491,14 @@
     </table>
 
   </chapter>
-  <chapter>
+  <chapter id="ch_closing_hip">
     <title>Closing HIP Security Associations Manually</title>
     <para>
       You can use the hipconf tool to reset HIP SAs manually. Type
       "hipconf hip rst all" to close all SAs. 
     </para>
   </chapter>
-  <chapter id="handover">
+  <chapter id="ch_handover">
     <title>Testing Handover</title>
     <para>
       The handover code is based on draft-nikander-hip-mm-00
@@ -513,7 +513,7 @@
     </para>
     <itemizedlist>
       <listitem><para>
-	&lt;first, establish a HIP connection as intructed in <xref linkend="basictest" />&gt;
+	&lt;first, establish a HIP connection as intructed in <xref linkend="ch_basictest" />&gt;
       </para></listitem>
       <listitem><para>
 	oops  # nc6 -l -p 12345
@@ -557,7 +557,7 @@
       restransmitting it. 
     </para>
   </chapter>
-  <chapter>
+  <chapter id="ch_compiling_java">
     <title> Compiling Java Applications</title>
     <para>
       HIPL software bundle includes also a java wrapper library to the HIP
@@ -616,7 +616,7 @@
     </itemizedlist>
     <para>
       You should have setup your networking environment as explained in
-      <xref linkend="basictest" />, that is, you
+      <xref linkend="ch_basictest" />, that is, you
       should have configured your /etc/hosts and /etc/hip/hosts
       properly. However, hipd will automatically create your public keys,
       so you don't have to worry about them.
@@ -660,7 +660,7 @@
       from which to read an application-specified endpoint.
     </para>
   </chapter>
-  <chapter>
+  <chapter id="ch_hip_telnet">
     <title>HIP Enabled Telnet</title>
     <para>
       We have modified netkit-telnet from usagi (www.linux-ipv6.org) to
@@ -711,7 +711,7 @@
       select the correct HIT at the client.
     </para>
   </chapter>
-  <chapter>
+  <chapter id="ch_how_to_use_hip">
 
     <title>How to Use HIP with Applications?</title>
 
@@ -724,7 +724,7 @@
     We have categorized the local methods to "easy"
     and "advanced" here. 
     </para>
-    <section>
+    <section id="sec_easy_methods">
       <title>Easy Methods</title>
       <para>
 	1. Use the opportunistic mode as described in
@@ -775,10 +775,10 @@
 	6. Use external nameservices for HIT-IP mapping. For example, you can use
 	AAAA records in DNS for testing (HI records are not supported yet).
 	Alternatively, use the free OpenDHT name service for automatic host
-	naming as described in <xref linkend="opendht" />.
+	naming as described in <xref linkend="ch_opendht" />.
       </para>
     </section>
-    <section>
+    <section id="sec_advanced_methods">
       <title>Advanced Methods</title>
       <para>These methods assume that you have the source code available
       for the application and the application is IPv6 enabled. You have
@@ -819,9 +819,9 @@
       </para>
     </section>
   </chapter>
-  <chapter>
+  <chapter id="ch_tips_for_hip">
     <title>Tips for Using HIP with Some Applications</title>
-    <section>
+    <section id="sec_using_hip_proxy">
       <title> Using HIP Enabled Proxy Server</title>
       <para>
 	In the deployment phase, it is interesting to set-up a proxy server that 
@@ -871,7 +871,7 @@
 	enabling mobility and enhancing security from your proxy to your host. 
       </para>
     </section>
-    <section>
+    <section id="sec_sendmail">
       <title>Sendmail and Spamassassin</title>
       <para>
 	Sendmail works fine with HIP after you enable IPv6 in sendmail. We
@@ -883,9 +883,9 @@
     </section>
   </chapter>
 
-  <chapter id="chapter_rvs_relay">
+  <chapter id="ch_rvs_relay">
     <title>Testing HIP Rendezvous and HIP Relay Server/Mechanisms</title>
-    <section id="section_rvs_relay">
+    <section id="sec_rvs_relay">
       <title>About the HIP Rendezvous and HIP Relay Mechanisms</title>
       
       <para>
@@ -960,7 +960,7 @@
 	</listitem>
       </itemizedlist>
     </section>
-    <section id="section_relay_conf">
+    <section id="sec_relay_conf">
       <title>The RVS and HIP Relay configuration file</title>
       <para>
 	The rendezvous server and the HIP relay server are configured using a
@@ -1030,13 +1030,13 @@
 	after the reinitialization.
       </para>
     </section>
-    <section id="section_rvs">
+    <section id="sec_rvs">
       <title>HIP Rendezvous Mechanisms</title>
       <para>
 	Before you test the rendezvous mechanisms, you should have run the base
 	exchange once without the rendezvous server to get familiar how the
 	"/etc/hosts" and "/etc/hip/hosts" files are configured. Please see
-	<xref linkend="basictest" /> for information on how to run a base
+	<xref linkend="ch_basictest" /> for information on how to run a base
 	exchange without the rendezvous server.
       </para>
       <para>
@@ -1062,7 +1062,7 @@
       </mediaobject>
       <para>
 	Before you test the connection, the configuration file must be
-	edited appropriately, see <xref linkend="section_relay_conf" /> for more
+	edited appropriately, see <xref linkend="sec_relay_conf" /> for more
 	information.
       </para>
       <para>
@@ -1224,7 +1224,7 @@
 	</listitem>
       </itemizedlist>
     </section>
-    <section id="section_relay">
+    <section id="sec_relay">
       <title>HIP Relay Mechanisms</title>
       <para>
 	NOTE! The HIP relay mechanisms has not been fully implemented yet. The
@@ -1235,7 +1235,7 @@
 	Before you test the HIP relay mechanisms, you should have run the base
 	exchange once without the HIP relay server to get familiar how the
 	"/etc/hosts" and "/etc/hip/hosts" files are configured. Please see
-	<xref linkend="basictest" /> for information on how to run a base
+	<xref linkend="ch_basictest" /> for information on how to run a base
 	exchange without the HIP relay server.
       </para>
       <para>
@@ -1273,7 +1273,7 @@
 	</mediaobject>
       <para>
 	Before you test the connection, the configuration file must be
-	edited appropriately, see <xref linkend="section_relay_conf" /> for more
+	edited appropriately, see <xref linkend="sec_relay_conf" /> for more
 	information.
       </para>
       <para>
@@ -1353,7 +1353,7 @@
     </section>
   </chapter>
 
-  <chapter>
+  <chapter id="ch_hip_bos">
     <title> Using HIP BOS support</title>
     <para>
         To generate a BOS packet (sent to the global multicast address
@@ -1394,7 +1394,7 @@
 	</itemizedlist>
   </chapter>
 -->
-  <chapter>
+  <chapter id="ch_hip_firewall">
     <title>HIP Firewall</title>
         <para>This section describes how to use the HIP firewall. The firewall needs to be compiled with the --enable-firewall option to configure. There is also a Python interface included in the source distribution (hip-fw-mi-*tar.gz).</para>
 
@@ -1495,11 +1495,11 @@
               --accept_mobile option, the firewall may establish state
               for existing connection when a mobile host enters the
               network protected by the firewall. Please see
-              <xref linkend="handover" /> to see how mobility events
+              <xref linkend="ch_handover" /> to see how mobility events
               can be tested. When option --decrypt_contents is set firewall 
               tries to decrypt ESP-packet contents. This can be done if 
               session data has been delivered to firewall. See <xref
-              linkend="escrow" />
+              linkend="ch_escrow" />
                for details. Currently decrypted packet contents 
               can be viewed in firewall output.</para></listitem>
 </varlistentry>
@@ -1556,7 +1556,7 @@
 
   </chapter>
 
-  <chapter>
+  <chapter id="ch_hip_nat">
     <title>HIP NAT Extensions</title>
     <para>HIPL supports also initiating connections from behind a NAT. The
           basic idea is that the initiator encapsulates HIP control packets
@@ -1606,8 +1606,10 @@
 
   </chapter>
 
-<chapter><title>HIP configuration GUI</title>
-	<section><title>General</title>
+<chapter id="ch_hip_configuration_gui">
+  <title>HIP configuration GUI</title>
+	<section id="sec_hip_conf_gui_general">
+	  <title>General</title>
 	<formalpara><title>About</title><para></para></formalpara>
 		<para>Manage HITs with graphical user interface.</para>
 		<para>
@@ -1703,7 +1705,7 @@
 		</para>
 </section>
 
-<section><title>Language files</title>
+<section id="sec_hip_conf_gui_language"><title>Language files</title>
 	<para>
 		As described in previous section,
 		'lang-file=...' can be used to define external language file, which can override some or all compiled-in language strings.
@@ -1721,7 +1723,7 @@
 			</para></listitem>
 		</itemizedlist>
 	</para>
-<example><title>Here is a complete english version of a example language file:</title>
+<example id="ex_hip_conf_gui"><title>Here is a complete english version of a example language file:</title>
 <programlisting>
 
 # Example language file for HIP configuration GUI.
@@ -1876,7 +1878,7 @@ combo-newgroup=&lt;create new...&gt;
 </section>
 </chapter>
   
-<chapter>
+<chapter id="ch_hip_socket_handler">
     <title>HIP socket handler kernel module</title>
     <para>The HIP socket handler is a component of the HIPL HIP
 	  implementation. It is used to intercept HIP socket
@@ -1902,7 +1904,7 @@ combo-newgroup=&lt;create new...&gt;
           kernel module.
      </para>
    </chapter>
-  <chapter id="opendht">
+  <chapter id="ch_opendht">
     <title>OpenDHT Support (Experimental!)</title>
     <itemizedlist>
     <listitem><para>
@@ -1975,7 +1977,7 @@ combo-newgroup=&lt;create new...&gt;
 
   </chapter>
 
-  <chapter>
+  <chapter id="ch_hi3_support">
     <title>Hi3 Support (Experimental!)</title>
     <itemizedlist>
     <listitem><para>
@@ -2033,12 +2035,12 @@ combo-newgroup=&lt;create new...&gt;
             . Using hipconf tool to set HIP Opportunistic mode on both hosts manually. "tools/hipconf set opp on|off" command is used to enable/disable opportunistic mode. By default it is on.
     </para></listitem>
     <listitem><para>
-           Now the opportunistic mode is enabled. To test Opportunistic mode, you need to remove crash's HITs and name from /etc/hip/hosts, and then following the steps in <xref linkend="basictest" />. 
+           Now the opportunistic mode is enabled. To test Opportunistic mode, you need to remove crash's HITs and name from /etc/hip/hosts, and then following the steps in <xref linkend="ch_basictest" />. 
     </para></listitem>
 	</itemizedlist>
 
   </chapter>
-  <chapter>
+  <chapter id="ch_mozilla_showip">
     <title>Mozilla/firefox showip addon</title>
     <itemizedlist>
 
@@ -2066,7 +2068,7 @@ combo-newgroup=&lt;create new...&gt;
 		Original showip-package: <ulink url="https://addons.mozilla.org/firefox/590/" />.
 	</para>
   </chapter>
-  <chapter id="escrow">
+  <chapter id="ch_escrow">
   	<title>Using Key Escrow</title>
   	<para>
   	Secret session keys can be delivered to a middlebox offering escrow service. A host using escrow service 
@@ -2129,7 +2131,7 @@ combo-newgroup=&lt;create new...&gt;
   	During base exchange session data is sent to escrow server in update-messages. 
   	</para>
   </chapter>
-  <chapter>
+  <chapter id="ch_dns_data">
     <title>DNS data manipulation</title>
     <para>
       Tools contains the script parse-key-3.py which converts public
