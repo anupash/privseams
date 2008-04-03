@@ -839,7 +839,7 @@
 	Edit/Preferences/Advanced/Connection Settings, you can choose:
       </para>
       <para>
-	Direct connection to the internet: To disable the usage of any proxy.
+	Direct connection to the Internet: To disable the usage of any proxy.
       </para>
       <para>
 	Auto-detect proxy settings for this network: To enable the auto-detection
@@ -925,7 +925,7 @@
       <para>
 	The main difference between the rendezvous server and the HIP relay
 	server is that the RVS only relays I1 packet of the base exchange while
-	the HIP relay server relays all HIP packets. We can summarise the use
+	the HIP relay server relays all HIP packets. We can summarize the use
 	cases of the RVS and the HIP relay as follows.
       </para>
       <para>
@@ -950,10 +950,10 @@
       <itemizedlist>
 	<listitem>
 	  <para>
-	    A NAT device that performs endpoint dependent is enroute between the
+	    A NAT device that performs endpoint dependent is en route between the
 	    initiator and the responder. Note that it does not make a
 	    difference whether the NAT device is at initiator's side or at
-	    responder's side. A single "bad" NAT enroute is enough to make the
+	    responder's side. A single "bad" NAT en route is enough to make the
 	    communication impossible between the initiator and the responder
 	    unless a HIP relay is used.
 	  </para>
@@ -1009,7 +1009,7 @@
 	  minimum_lifetime = "60"
 	  maximum_lifetime = "3600"</programlisting>
 	These values are seconds. However, the registration extension
-	uses an 8-bit enconding to represent the lifetimes. The values that are
+	uses an 8-bit encoding to represent the lifetimes. The values that are
 	given in the configuration file are used to calculate the real life
 	time and therefore do not represent the real life time a such. The
 	formula for the calculations is given in the registration draft:
@@ -1027,7 +1027,7 @@
 	  tools/hipconf reinit service hiprelay</programlisting>
 	The reinitializion does not have any effect on the existing
 	RVS / HIP relay server clients, but only affects on clients registering
-	after the reinitializion.
+	after the reinitialization.
       </para>
     </section>
     <section id="section_rvs">
@@ -1049,20 +1049,17 @@
 	using the "test/conntest-server" connection test server and the
 	"test/conntest-client-gai" connection test client.
       </para>
-      <screenshot>
-	<screeninfo>Base exchange via the rendezvous server</screeninfo>
-	<mediaobject>
-	  <imageobject>
-	    <imagedata fileref="base-exchange-rvs.png" scale="100" align="center" format="PNG"/>
-	  </imageobject>
-	  <caption>
-	    <para>
-	      Base exchange via the rendezvous server. I = Initiator,
-	      RVS = RendezVous Server, R = Responder
-	    </para>
-	  </caption>
-	</mediaobject>
-      </screenshot>
+      <mediaobject>
+	<imageobject>
+	  <imagedata fileref="base-exchange-rvs.png" scale="100" align="center" format="PNG"/>
+	</imageobject>
+	<caption>
+	  <para>
+	    Base exchange via the rendezvous server. I = Initiator,
+	    RVS = RendezVous Server, R = Responder
+	  </para>
+	</caption>
+      </mediaobject>
       <para>
 	Before you test the connection, the configuration file must be
 	edited appropriately, see <xref linkend="section_relay_conf" /> for more
@@ -1080,7 +1077,7 @@
 	    <listitem>
 	      <para>
 		In the "/etc/hosts" file you should have: &lt;RVS IP&gt;
-		&lt;RESPONDER NAME&gt;. In other words the responder's hostname
+		&lt;RESPONDER NAME&gt;. In other words the responder's host name
 		is mapped to the IP address of the rendezvous server. It is
 		important that the responder's host name is mapped to
 		responder's IP address. Otherwise the rendezvous server is not
@@ -1121,7 +1118,7 @@
 		At the responder, both files,"/etc/hosts" and "/etc/hip/hosts",
 		are left blank also. The responder is assumed to know the IP
 		address and the HIT of the rendezvous server, but this
-		information is given as commandline parameters of "hipconf"
+		information is given as command line parameters of "hipconf"
 		tool.
 	      </para>
 	    </listitem>
@@ -1156,7 +1153,7 @@
 	</para></listitem>
 	<listitem><para>
 	  At the initiator type some text and press CTRL + d. If everything works
-	  ok, the typed text should now be echoed at the responder.
+	  OK, the typed text should now be echoed at the responder.
 	</para></listitem>
       </orderedlist>
       <para>
@@ -1192,7 +1189,7 @@
 	</listitem>
 	<listitem>
 	  <para>
-	    The rendezvous mechanism is not yet guaranteed to be interoperable
+	    The rendezvous mechanism is not yet guaranteed to be compatible
 	    with other implementations than HIPL.
 	  </para>
 	</listitem>
@@ -1217,7 +1214,7 @@
 	    "hipconf" tool at the server:
 	    <programlisting>tools/hipconf reinit service rvs</programlisting>
 	    The changes that you have made to the configuration file affect the
-	    on clients registering after the reinitializion.
+	    on clients registering after the reinitialization.
 	  </para>
 	</listitem>
 	<listitem>
@@ -1242,7 +1239,7 @@
 	exchange without the HIP relay server.
       </para>
       <para>
-	The HIP relay server is intented to be a foolproof method to contact
+	The HIP relay server is intended to be a foolproof method to contact
 	the responder. When the responder has registered to the HIP relay, the
 	responder can be contacted regardless of the network address translators
 	en route between the initiator and the responder. The HIP relay server
@@ -1266,8 +1263,6 @@
 	connection test server and the "test/conntest-client-gai" connection
 	test client.
       </para>
-      <!--<screenshot>
-	<screeninfo>Base exchange via the relay server</screeninfo>-->
 	<mediaobject>
 	  <imageobject>
 	    <imagedata fileref="base-exchange-relay.png" scale="100" align="center" format="PNG"/>
@@ -1276,7 +1271,6 @@
 	    <para>Base exchange via the relay server</para>
 	  </caption>
 	</mediaobject>
-      <!--</screenshot>-->
       <para>
 	Before you test the connection, the configuration file must be
 	edited appropriately, see <xref linkend="section_relay_conf" /> for more
@@ -1285,7 +1279,7 @@
       <para>
 	Next, the "/etc/hosts" and "/etc/hip/hosts" files are configured. Please
 	notice, that you can leave all non-HIP-related values in "/etc/hosts"
-	intact. The configuration of these files is indentical with the RVS test
+	intact. The configuration of these files is identical with the RVS test
 	case, thus if you have already tested the RVS and you are using the same
 	HIP hosts to test the HIP relay, you don't have to edit these files at
 	all but can start testing the connection establishment right away.
@@ -1302,25 +1296,59 @@
 	  At the HIP relay server we have to indicate that we are willing to offer
 	 HIP relay service:<programlisting>tools/hipconf add service hiprelay</programlisting>
 	</para></listitem>
-	<listitem><para>
+	<listitem id="listitem_relay"><para>
 	  At the responder we have to register to the HIP relay server:
 	  <programlisting>tools/hipconf add hiprelay &lt;HIPRELAY-HIT&gt; &lt;HIPRELAY-IP&gt;</programlisting>
 	  This will establish a HIP SA between the HIP relay server and the responder.
 	  Please use the default HIT of the HIP relay server ("tools/hipconf get hi default" at the HIP relay server).
 	</para></listitem>
 	<listitem><para>
-	  At the responder start a server listening for incoming connections:
-	  <programlisting>test/conntest-server tcp 5000</programlisting>
-	</para></listitem>
-	<listitem><para>
-	  At the initiator start a connection:
-	  <programlisting>test/conntest-client-gai &lt;RESPONDER-HOSTNAME&gt; tcp 5000</programlisting>
-	</para></listitem>
-	<listitem><para>
-	  At the initiator type some text and press CTRL + d. If everything works
-	  ok, the typed text should now be echoed at the responder.
+	  Next you would start a test server at R and then connect to that server
+	  with a test client from I, but since the HIP packet forwarding has not
+	  yet been implemented, we stop here.
 	</para></listitem>
       </orderedlist>
+      
+      <para>
+	Notes:
+      </para>
+      <itemizedlist>
+	<listitem>
+	  <para>
+	    Phase <xref linkend="listitem_relay" /> of the connection
+	    establishment described above should launch a base exchange between
+	    R and HIP relay server. This base exchange does the registration.
+	  </para>
+	</listitem>
+	<listitem>
+	  <para>
+	    The HIP relay mechanism is not yet guaranteed to be compatible
+	    with other implementations than HIPL.
+	  </para>
+	</listitem>
+	<listitem>
+	  <para>
+	    If you wish to cancel the HIP relay service, just use the "hipconf"
+	    tool at the server:
+	    <programlisting>tools/hipconf del service hiprelay</programlisting>
+	    This will delete all existing HIP relay server registrations.
+	  </para>
+	</listitem>
+	<listitem>
+	  <para>
+	    If you wish to reinitialize the HIP relay service, just use the
+	    "hipconf" tool at the server:
+	    <programlisting>tools/hipconf reinit service hiprelay</programlisting>
+	    The changes that you have made to the configuration file affect the
+	    on clients registering after the reinitialization.
+	  </para>
+	</listitem>
+	<listitem>
+	  <para>
+	    Client side registration cancellation is not yet implemented.
+	  </para>
+	</listitem>
+      </itemizedlist>
 
     </section>
   </chapter>
