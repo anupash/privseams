@@ -1142,8 +1142,7 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		memcpy(&my_addr, local_addr, sizeof(struct in6_addr));
 	} else {
 		HIP_DEBUG("no local address, selecting one\n");
-		HIP_IFEL(hip_select_source_address(&hip_nl_route,
-						   &my_addr,
+		HIP_IFEL(hip_select_source_address(&my_addr,
 						   peer_addr), -1,
 			 "Cannot find source address\n");
 	}
@@ -1330,12 +1329,12 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 			 "family is currently not supported on UDP/HIP.\n");
 		my_addr_ptr = local_addr;
 		IPV6_TO_IPV4_MAP(local_addr, &src4.sin_addr);
-		src4.sin_addr.s_addr = htonl(src4.sin_addr.s_addr);
+		//src4.sin_addr.s_addr = htonl(src4.sin_addr.s_addr);
 		HIP_DEBUG_INADDR("src4", &src4.sin_addr);
 	} else {
 		HIP_DEBUG("Local address is NOT given, selecting one.\n");
-		HIP_IFEL(hip_select_source_address(
-				 &hip_nl_route, &my_addr, peer_addr), -EADDRNOTAVAIL,
+		HIP_IFEL(hip_select_source_address(&my_addr, peer_addr),
+			 -EADDRNOTAVAIL,
 			 "Cannot find local address.\n");
 		my_addr_ptr = &my_addr;
 		IPV6_TO_IPV4_MAP(&my_addr, &src4.sin_addr);

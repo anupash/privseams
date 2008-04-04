@@ -1117,7 +1117,7 @@ int hip_add_iface_local_route_lsi(const hip_lsi_t lsi)
 	return err;
 }
 
-int hip_select_source_address(struct rtnl_handle *hip_nl_route, struct in6_addr *src, struct in6_addr *dst)
+int hip_select_source_address(struct in6_addr *src, struct in6_addr *dst)
 {
 	int err = 0;
 	int family = AF_INET6;
