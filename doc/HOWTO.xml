@@ -950,7 +950,7 @@
       <itemizedlist>
 	<listitem>
 	  <para>
-	    A NAT device that performs endpoint dependent is en route between the
+	    A NAT device that performs endpoint dependent mapping is en route between the
 	    initiator and the responder. Note that it does not make a
 	    difference whether the NAT device is at initiator's side or at
 	    responder's side. A single "bad" NAT en route is enough to make the
@@ -968,7 +968,7 @@
 	the RVS and the HIP relay because both of these services use the same
 	internal database to store the HIT->IP mappings. A default configuration
 	file is created once the HIP daemon is started the first time, thus if the
-	daemon hasn't been started before, please start and stop the daemon
+	daemon has not been started before, please start and stop the daemon
 	once to create the default file. In the configuration file we have the
 	following options:
 	<programlisting>
@@ -977,16 +977,16 @@
 	  minimum_lifetime = "60"
 	  maximum_lifetime = "3600"</programlisting>
 	  
-	HIPL supports RVS / relay server client whitelisting which means that
+	HIPL supports RVS / HIP relay server client whitelisting which means that
 	only those clients whose HITs are listed in the whitelist are allowed to
-	register to the RVS / relay server. So before R can register with the
+	register to the RVS / HIP relay server. So before R can register with the
 	server, R's HIT must be added to the whitelist. To do this, please start
 	the HIP daemon at the responder and use the hipconf tool from another
 	shell at the responder to get the default hi:
 	<programlisting>
 	  tools/hipconf get hi default</programlisting>
 	Now, add this HIT in between the whitelist quotation marks in the
-	configuration file of the RVS / relay server (not at R):
+	configuration file of the RVS / HIP relay server:
 	<programlisting>
 	  whitelist = "2001:0018:8321:4e1a:c009:1ff8:fed4:8e9c"</programlisting>
 	,where 2001:0018:8321:4e1a:c009:1ff8:fed4:8e9c is the HIT of the
@@ -1002,31 +1002,32 @@
 	rendezvous and HIP relay services, you can disable the whitelist:
 	<programlisting>
 	  whitelist_enabled = "no"</programlisting>
-	When the whitelist is disabled, it does not matter if you have
-	HITs listed in the whitelist or not. Finally, you can set the boundary
-	values for the time window limiting the service lifetime:
+	When the whitelist is disabled, it does not matter if you have HITs
+	listed in the whitelist or not since every HIT is allowed to register.
+	Finally, you can set the boundary values for the time window limiting
+	the service lifetime:
 	<programlisting>
 	  minimum_lifetime = "60"
 	  maximum_lifetime = "3600"</programlisting>
 	These values are seconds. However, the registration extension
 	uses an 8-bit encoding to represent the lifetimes. The values that are
 	given in the configuration file are used to calculate the real life
-	time and therefore do not represent the real life time a such. The
+	time and therefore do not represent the exact life time a such. The
 	formula for the calculations is given in the registration draft:
 	"draft-ietf-hip-registration-02".
       </para>
       <para>
 	If you have already started a HIP daemon that functions as an RVS or a
-	HIP relay server, and you have to add values to the whitelist or
+	HIP relay server and you have to add values to the whitelist or
 	otherwise modify the configuration file, you can reinitialize the server
-	without restarting the daemon itself using "hipconf" tool:
+	without restarting the daemon itself using the "hipconf" tool:
 	<programlisting>
 	  tools/hipconf reinit service rvs</programlisting>
 	or
 	<programlisting>
 	  tools/hipconf reinit service hiprelay</programlisting>
 	The reinitializion does not have any effect on the existing
-	RVS / HIP relay server clients, but only affects on clients registering
+	RVS / HIP relay server clients, but only affects clients registering
 	after the reinitialization.
       </para>
     </section>
@@ -1067,7 +1068,7 @@
       </para>
       <para>
 	Next, the "/etc/hosts" and "/etc/hip/hosts" files are configured. Please
-	notice, that you can leave all non-HIP-related values in "/etc/hosts"
+	notice that you can leave all non-HIP-related values in "/etc/hosts"
 	intact.
       </para>
       <itemizedlist>
@@ -1079,7 +1080,7 @@
 		In the "/etc/hosts" file you should have: &lt;RVS IP&gt;
 		&lt;RESPONDER NAME&gt;. In other words the responder's host name
 		is mapped to the IP address of the rendezvous server. It is
-		important that the responder's host name is mapped to
+		important that the responder's host name is NOT mapped to
 		responder's IP address. Otherwise the rendezvous server is not
 		used at all!
 	      </para> 
@@ -1105,7 +1106,8 @@
 		because the rendezvous server is assumed to have no information
 		of its clients beforehand. The RVS can have some whitelisted
 		HITs as beforehand information but it is not required to have
-		none whatsoever.
+		none whatsoever. Using the whitelist to filter HITs is local
+		policy and as such is not part of the registration procedure.
 	      </para>
 	    </listitem>
 	  </orderedlist>
@@ -1118,8 +1120,8 @@
 		At the responder, both files,"/etc/hosts" and "/etc/hip/hosts",
 		are left blank also. The responder is assumed to know the IP
 		address and the HIT of the rendezvous server, but this
-		information is given as command line parameters of "hipconf"
-		tool.
+		information is given as command line parameters of the
+		"hipconf" tool.
 	      </para>
 	    </listitem>
 	  </orderedlist>
@@ -1133,27 +1135,27 @@
 	  Start HIP daemon in each host:<programlisting>hipd/hipd</programlisting>
 	</para></listitem>
 	<listitem><para>
-	  At the rendezvous server we have to indicate that we are willing to offer
+	  At the rendezvous server, we have to indicate that we are willing to offer
 	  rendezvous service:<programlisting>tools/hipconf add service rvs</programlisting>
 	</para></listitem>
 	<listitem id="listitem_rvs"><para>
-	  At the responder we have to register to the rendezvous server:
+	  At the responder, we have to register to the rendezvous server:
 	  <programlisting>tools/hipconf add rvs &lt;RVS-HIT&gt; &lt;RVS-IP&gt;</programlisting>
 	  This will establish a HIP SA between the rendezvous server and the responder.
 	  Please use the
 	  default HIT of the rendezvous server ("tools/hipconf get hi default" at the RVS).
 	</para></listitem>
 	<listitem><para>
-	  At the responder start a server listening for incoming connections:
+	  At the responder, start a server listening for incoming connections:
 	  <programlisting>test/conntest-server tcp 5000</programlisting>
 	</para></listitem>
 	<listitem><para>
-	  At the initiator start a connection:
+	  At the initiator, start a connection:
 	  <programlisting>test/conntest-client-gai &lt;RESPONDER-HOSTNAME&gt; tcp 5000</programlisting>
 	</para></listitem>
 	<listitem><para>
-	  At the initiator type some text and press CTRL + d. If everything works
-	  OK, the typed text should now be echoed at the responder.
+	  At the initiator, type some text and press CTRL + d. If everything works
+	  OK the typed text should now be echoed at the responder.
 	</para></listitem>
       </orderedlist>
       <para>
@@ -1202,7 +1204,7 @@
 	</listitem>
 	<listitem>
 	  <para>
-	    If you wish to cancel the rendezvous service, just use the "hipconf"
+	    If you wish to cancel the rendezvous service just use the "hipconf"
 	    tool at the server:
 	    <programlisting>tools/hipconf del service rvs</programlisting>
 	    This will delete all existing rendezvous server registrations.
@@ -1210,7 +1212,7 @@
 	</listitem>
 	<listitem>
 	  <para>
-	    If you wish to reinitialize the rendezvous service, just use the
+	    If you wish to reinitialize the rendezvous service just use the
 	    "hipconf" tool at the server:
 	    <programlisting>tools/hipconf reinit service rvs</programlisting>
 	    The changes that you have made to the configuration file affect the
@@ -1252,10 +1254,7 @@
 	The only way to reach R, is to relay all HIP control traffic via a HIP relay.
 	How R finds out that it is behind a NAT device that performs address
 	dependent mapping is irrelevant in this context and is therefore beyond
-	scope. In fact, R does not even need to be behind such a NAT to register
-	to the HIP relay service. The registration just ensures that R is still
-	reachable when R moves to a location that is behind a NAT that performs
-	address dependent mapping.
+	scope.
       </para>
       <para>
 	In this section, we show how to use the HIP relay server to establish a
@@ -1278,7 +1277,7 @@
       </para>
       <para>
 	Next, the "/etc/hosts" and "/etc/hip/hosts" files are configured. Please
-	notice, that you can leave all non-HIP-related values in "/etc/hosts"
+	notice that you can leave all non-HIP-related values in "/etc/hosts"
 	intact. The configuration of these files is identical with the RVS test
 	case, thus if you have already tested the RVS and you are using the same
 	HIP hosts to test the HIP relay, you don't have to edit these files at
@@ -1293,11 +1292,11 @@
 	  Start HIP daemon in each host:<programlisting>hipd/hipd</programlisting>
 	</para></listitem>
 	<listitem><para>
-	  At the HIP relay server we have to indicate that we are willing to offer
+	  At the HIP relay server, we have to indicate that we are willing to offer
 	 HIP relay service:<programlisting>tools/hipconf add service hiprelay</programlisting>
 	</para></listitem>
 	<listitem id="listitem_relay"><para>
-	  At the responder we have to register to the HIP relay server:
+	  At the responder, we have to register to the HIP relay server:
 	  <programlisting>tools/hipconf add hiprelay &lt;HIPRELAY-HIT&gt; &lt;HIPRELAY-IP&gt;</programlisting>
 	  This will establish a HIP SA between the HIP relay server and the responder.
 	  Please use the default HIT of the HIP relay server ("tools/hipconf get hi default" at the HIP relay server).
@@ -1328,7 +1327,7 @@
 	</listitem>
 	<listitem>
 	  <para>
-	    If you wish to cancel the HIP relay service, just use the "hipconf"
+	    If you wish to cancel the HIP relay service just use the "hipconf"
 	    tool at the server:
 	    <programlisting>tools/hipconf del service hiprelay</programlisting>
 	    This will delete all existing HIP relay server registrations.
@@ -1336,7 +1335,7 @@
 	</listitem>
 	<listitem>
 	  <para>
-	    If you wish to reinitialize the HIP relay service, just use the
+	    If you wish to reinitialize the HIP relay service just use the
 	    "hipconf" tool at the server:
 	    <programlisting>tools/hipconf reinit service hiprelay</programlisting>
 	    The changes that you have made to the configuration file affect the
