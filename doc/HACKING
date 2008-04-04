@@ -252,13 +252,7 @@ apt-get for Debian
 
 $ sudo nano /etc/apt/sources.list
 
-deb http://packages.infrahip.net/ hipl-lib main
-deb http://packages.infrahip.net/ hipl-core main
-deb http://packages.infrahip.net/ hipl-tools main
-deb http://packages.infrahip.net/ hipl-doc main
-deb http://packages.infrahip.net/ hipl-agent main
-deb http://packages.infrahip.net/ hipl-firewall main
-deb http://packages.infrahip.net/ hipl-test main
+deb http://packages.infrahip.net/debian hipl main
 
 - update and install packages 
 
@@ -273,17 +267,17 @@ How to create hipl repository on the web server?
 
 - create directory tree for all packages on the web server
 
-$sudo mkdir -p /var/www/html/dists/hipl-lib/main/binary-i386
+$sudo mkdir -p /var/www/html/debian/dists/hipl/main/binary-i386
 
-- create description files of Packages.gz for all packages
+- create overview file of Packages.gz for all hipl packages
 
 $ dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz
 
-- copy all packages and description files onto the web server
+- copy all hipl packages and Packages.gz file onto the web server
 
-$ sudo rsync Packages.gz root@packages.infrahip.net:/var/www/html/dists/hipl-lib/main/binary-i386/
+$ sudo rsync Packages.gz root@packages.infrahip.net:/var/www/html/debian/dists/hipl/main/binary-i386/
 
-$ sudo rsync hipl-lib-1.0-3-i386.deb root@packages.infrahip.net:/var/www/html/
+$ sudo rsync *.deb root@packages.infrahip.net:/var/www/html/debian/
 
 
 DEBUGGING
