@@ -258,8 +258,6 @@ deb http://packages.infrahip.net/debian hipl main
 
 $ sudo apt-get update 
 
-$ sudo apt-get install hipl-lib
-
 $ sudo apt-get install hipl-lib hipl-core hipl-tools hipl-doc
 
 How to create hipl repository on the web server?
