@@ -782,7 +782,7 @@ skip_entry_creation:
 	HIP_DEBUG("Using ifindex %d\n", if_index);
 
 	//add_address_to_list(addr, if_index /*acq->sel.ifindex*/);
-
+ 
 	HIP_IFEL(hip_send_i1(&entry->hit_our, &entry->hit_peer, entry), -1,
 		 "Sending of I1 failed\n");
 
@@ -1119,14 +1119,11 @@ int hip_add_iface_local_route_lsi(const hip_lsi_t lsi)
 
 int hip_select_source_address(struct in6_addr *src, struct in6_addr *dst)
 {
-	int err = 0, dst_mapped, src_mapped, c;
+	int err = 0;
 	int family = AF_INET6;
 //	int rtnl_rtdsfield_init;
 //	char *rtnl_rtdsfield_tab[256] = { 0 };
 	struct idxmap *idxmap[16] = { 0 };
-	struct netdev_address *n;
-	hip_list_t *tmp, *t;
-	struct in6_addr *new_src;
 		
 	/* rtnl_rtdsfield_initialize() */
 //	rtnl_rtdsfield_init = 1;
@@ -1135,30 +1132,9 @@ int hip_select_source_address(struct in6_addr *src, struct in6_addr *dst)
 	HIP_DEBUG_IN6ADDR("dst", dst);
 	HIP_DEBUG_IN6ADDR("src", src);
 
-	HIP_IFEL(hip_iproute_get(&hip_nl_route, src, dst, NULL, NULL, family, idxmap), -1, "Finding ip route failed\n");
+	HIP_IFEL(hip_iproute_get(hip_nl_route, src, dst, NULL, NULL, family, idxmap), -1, "Finding ip route failed\n");
 
 	HIP_DEBUG_IN6ADDR("src", src);
-
-	/* sometimes source address selection selects HITs */
-
-	if (!ipv6_addr_is_hit(src))
-		goto out_err;
-
-	HIP_DEBUG("Source address was HIT\n");
-	dst_mapped = IN6_IS_ADDR_V4MAPPED(dst);
-	list_for_each_safe(tmp, t, addresses, c) {
-		n = list_entry(tmp);
-		new_src = (struct in6_addr *) hip_cast_sa_addr(&n->addr);
-		src_mapped = IN6_IS_ADDR_V4MAPPED(new_src);
-		if (src_mapped == dst_mapped) {
-                        /* same address family */ 
-			memcpy(src, new_src, sizeof(*new_src));
-			HIP_DEBUG_IN6ADDR("New source address\n", new_src);
-			goto out_err;
-		}
-	}
-	err = -1;
-	HIP_ERROR("No IPv6 address found (please add one!)\n");
 
 out_err:
 //	for (i = 0; i < 256; i++) if (rtnl_rtdsfield_tab

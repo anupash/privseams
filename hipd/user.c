@@ -138,7 +138,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 	  	err = hip_set_opportunistic_mode(msg);
 		break;
 	case SO_HIP_GET_PEER_HIT:
-		err = hip_opp_get_peer_hit(msg, src);
+		err = hip_opp_get_peer_hit(msg, src, 0);
 		if(err){
 			_HIP_ERROR("get pseudo hit failed.\n");
 			send_response = 1;
@@ -522,14 +522,42 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		break;
 
 #ifdef CONFIG_HIP_OPPTCP
-        case SO_HIP_SET_OPPTCP_ON:
-                HIP_DEBUG("Setting opptcp on!!\n");
-                hip_set_opportunistic_tcp_status(1);
+	case SO_HIP_GET_PEER_HIT_FROM_FIREWALL:
+		err = hip_opp_get_peer_hit(msg, src, 1);
+		if(err){
+			_HIP_ERROR("get pseudo hit failed.\n");
+			send_response = 1;
+			if (err == -11) /* immediate fallback, do not pass */
+			 	err = 0;
+			goto out_err;
+		} else {
+			send_response = 0;
+                }
+		/* skip sending of return message; will be sent later in R1 */
+		goto out_err;
+	  break;
+	case SO_HIP_SET_OPPTCP_ON:
+		HIP_DEBUG("Setting opptcp on!!\n");
+		hip_set_opportunistic_tcp_status(1);
 		break;
-        case SO_HIP_SET_OPPTCP_OFF:
-                HIP_DEBUG("Setting opptcp off!!\n");
-                hip_set_opportunistic_tcp_status(0);
+
+	case SO_HIP_SET_OPPTCP_OFF:
+		HIP_DEBUG("Setting opptcp off!!\n");
+		hip_set_opportunistic_tcp_status(0);
 		break;
+
+	case SO_HIP_OPPTCP_UNBLOCK_APP:
+		hip_opptcp_unblock(msg, src);
+		break;
+
+	case SO_HIP_OPPTCP_OPPIPDB_ADD_ENTRY:
+		hip_opptcp_add_entry(msg, src);
+		break;
+
+	case SO_HIP_OPPTCP_SEND_TCP_PACKET:
+		hip_opptcp_send_tcp_packet(msg, src);
+		break;
+
 #endif
 	case SO_HIP_TRIGGER_BEX:
 		dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
@@ -542,7 +570,6 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 
 		goto out_err;
 	  break;
-	
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;

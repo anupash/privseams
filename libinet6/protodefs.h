@@ -110,6 +110,15 @@
 #define HIP_PARAM_HA_INFO               32792
 #define HIP_PARAM_OPENDHT_SET           32793
 #define HIP_PARAM_INT                   32794
+#define HIP_PARAM_SRC_TCP_PORT		32795
+#define HIP_PARAM_DST_TCP_PORT		32796
+#define HIP_PARAM_IP_HEADER		32797
+#define HIP_PARAM_PACKET_SIZE		32798
+#define HIP_PARAM_TRAFFIC_TYPE		32799
+#define HIP_PARAM_ADD_HIT		32800
+#define HIP_PARAM_ADD_OPTION		32801
+#define HIP_PARAM_PEER_HIT		32802
+
 /* End of HIPL private parameters. */
 
 #define HIP_PARAM_HMAC                 61505
