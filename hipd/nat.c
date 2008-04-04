@@ -359,7 +359,8 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 	
 	
 	 out_err:
-		return err;
+	  HIP_DEBUG("err");
+		//return err;
 }
 
 
@@ -452,11 +453,11 @@ void* hip_external_ice_init(pj_ice_sess_role role){
 	//DOTO tobe reset
  	unsigned   	 comp_cnt = 1;
  	
- 	const pj_str_t *   	 local_ufrag = NULL;
- 	const pj_str_t *  	local_passwd = NULL;
+ 	const pj_str_t    	 local_ufrag = pj_str("user");
+ 	const pj_str_t   	local_passwd = pj_str("pass");
  	
 	//copy from test
-	  	pj_pool_t *pool;
+	  //	pj_pool_t *pool;
 	    pj_ioqueue_t *ioqueue;
 	    pj_timer_heap_t *timer_heap;
 	   //end copy
@@ -486,8 +487,8 @@ void* hip_external_ice_init(pj_ice_sess_role role){
  	 			ice_role,
  	 			comp_cnt,
  	 			&cb,
- 	 			local_ufrag,
- 	 			local_passwd,
+ 	 			&local_ufrag,
+ 	 			&local_passwd,
  	 			&p_ice	 
  	 		);
  	   
@@ -595,20 +596,56 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 	const pj_str_t *  	rem_ufrag;
 	const pj_str_t *  	rem_passwd;
 	unsigned  	rem_cand_cnt;
-	pj_ice_sess_cand *  	rem_cand;	
+	pj_ice_sess_cand *      temp_cand;
+	pj_ice_sess_cand *  	rem_cand;
 	struct hip_peer_addr_list_item * peer_addr_list_item;
 	int i;
+	hip_list_t *item, *tmp;
+	const pj_str_t    	 local_ufrag = pj_str("user");
+ 	const pj_str_t   	local_passwd = pj_str("pass");
 	
-	rem_cand_cnt = list->num_nodes;
+	
+	
+	HIP_DEBUG("ICE add remote function\n");
+	
+	rem_cand_cnt = 0;
+	HIP_DEBUG("ICE add remote: node number in list %d\n", list->num_nodes);
 	//reserve space for the cand
+	rem_cand = pj_pool_calloc(pool,rem_cand_cnt, sizeof(pj_ice_sess_cand));
 	
+	i=0;
+	
+	temp_cand = rem_cand;
+	
+	list_for_each_safe(item, tmp, list, i) {
+		peer_addr_list_item = list_entry(item);
+		HIP_DEBUG_HIT("add Ice remote", &peer_addr_list_item->address);
+		if (ipv6_addr_is_hit(&peer_addr_list_item->address))
+		    continue;
+		//HIP_DEBUG_HIT("add Ice remote", &peer_addr_list_item->address);
+		if (IN6_IS_ADDR_V4MAPPED(&peer_addr_list_item->address)) {
+			
+			temp_cand->comp_id = 1;
+			
+			pj_sockaddr_in_set_addr(&temp_cand->addr,
+						*((pj_uint32_t *) &peer_addr_list_item->address));
+			pj_sockaddr_in_set_port(&temp_cand->addr.ipv4, peer_addr_list_item->port);
+			
+			temp_cand++;
+			rem_cand_cnt++;
+		}
+	}
+	
+	HIP_DEBUG("complete remote list\n");
+	/*
 	
 	for(i = 0; i< rem_cand_cnt; i ++){
-		peer_addr_list_item = (struct hip_peer_addr_list_item * )list->b[i];
+		peer_addr_list_item = (struct hip_peer_addr_list_item * )list->b[i]->data;
 		
 		//(rem_cand+i)->
 		rem_cand = PJ_POOL_ZALLOC_T(pool, pj_ice_sess_cand);
 		rem_cand->comp_id = 1;
+		
 		//rem_cand.type = 
 	//	foundation
 		//rem_cand.prio= 
@@ -617,18 +654,17 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 		pj_sockaddr_in_set_port(&rem_cand->addr.ipv4, peer_addr_list_item->port);
 		memcpy(&(rem_cand->addr.ipv4.sin_addr),&peer_addr_list_item->address, sizeof(struct in6_addr) );
 	}                          
-	
-	
-	/*
-	 * 
-	 *
-	pj_status_t pj_ice_sess_create_check_list  	(  	pj_ice_sess *   	 ice,
-		const pj_str_t *  	rem_ufrag,
-		const pj_str_t *  	rem_passwd,
-		unsigned  	rem_cand_cnt,
-		const pj_ice_sess_cand  	rem_cand[]	 
-	) 
 	*/
+	pj_status_t t;
+	if(rem_cand_cnt > 0 )
+	t= pj_ice_sess_create_check_list  	(  	session,
+	    &local_ufrag,
+		 &local_passwd,
+		rem_cand_cnt,
+		rem_cand 
+	) ;
+	HIP_DEBUG("add remote result: %d \n", t);
+	
 	return 0;
 }
 /**

@@ -2306,8 +2306,14 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
         	
         	//TODO add relay address
         	// add remote address
-        	struct hip_spi_out_item* spi_out =(struct hip_spi_out_item*) entry->spis_out->b[0];
-        	hip_external_ice_add_remote_candidates(ice_session, spi_out->peer_addr_list);
+        	
+        	HIP_DEBUG("ICE add remote in I2\n");
+        	struct hip_spi_out_item* spi_out;
+        	HIP_DEBUG("number of spi_out : %d", entry->spis_out->num_nodes);
+        	list_for_each_safe(item, tmp, entry->spis_out, i) {
+        		spi_out = list_entry(item);
+        		hip_external_ice_add_remote_candidates(ice_session, spi_out->peer_addr_list);
+        	}
         	hip_ice_start_check(ice_session);
         }
         
@@ -2565,14 +2571,26 @@ int hip_handle_r2(struct hip_common *r2,
         	
         	//TODO add relay address
         	
+        	HIP_DEBUG("ICE add remote IN R2\n");
         	
-        	HIP_DEBUG("ICE add remote \n");
+        	struct hip_spi_out_item* spi_out;
+
+        	HIP_DEBUG("number of spi_out : %d", entry->spis_out->num_nodes);
+        	list_for_each_safe(item, tmp, entry->spis_out, i) {
+        		spi_out = list_entry(item);
+        		hip_external_ice_add_remote_candidates(ice_session, spi_out->peer_addr_list);
+        		
+        	}
+        	/*
+        	
         	// add remote address
-        	struct hip_spi_out_item* spi_out =(struct hip_spi_out_item*) entry->spis_out->b[0];
+        	struct hip_spi_out_item* spi_out =(struct hip_spi_out_item*) entry->spis_out->b[0]->data;
+        	HIP_DEBUG("ICE add remote in R2 2\n");
         	hip_external_ice_add_remote_candidates(ice_session, spi_out->peer_addr_list);
-        	
+        	*/
         	HIP_DEBUG("ICE start checking \n");
-        	hip_ice_start_check(ice_session);
+
+        hip_ice_start_check(ice_session);
         	
         }
         
