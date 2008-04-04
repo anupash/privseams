@@ -198,26 +198,6 @@ libraries.
 cd hipl--main--2.6
 baz changes --link
 
-YUM
----
-
-- to configure yum for Fedora modify configuration
-
-/etc/yum.conf
-
-[package]
-name=package
-baseurl=http://URL/yum/base/package
- 
-- create directory for package and copy rpm package 
-- to directory before update repository for yum
-
-$ sudo createrepo package
-
-- install the HIPL package using command
-
-$ yum install package
-
 ARCH POLICY
 ===========
 
@@ -239,6 +219,70 @@ Some points in the branch quality assurance:
 - UPDATE packet exchange should work
 - the code should not leak memory or do bad locking
 - (all existing unit tests should be run without any errors (see TESTING))
+
+RETRIEVING PACKAGES FROM A REPOSITORY
+=====================================
+
+- tools to retrieve packages are yum and apt-get
+
+yum for Fedora
+--------------
+
+- to configure yum for Fedora modify configuration
+
+/etc/yum.conf
+
+[package]
+name=package
+baseurl=http://URL/yum/base/package
+ 
+- create directory for package and copy rpm package 
+- to directory before update repository for yum
+
+$ sudo createrepo package
+
+- install the HIPL package using command
+
+$ yum install package
+
+apt-get for Debian
+------------------
+
+- to configure apt-get for Debian modify sources.list
+
+$ sudo nano /etc/apt/sources.list
+
+deb http://packages.infrahip.net/ hipl-lib main
+deb http://packages.infrahip.net/ hipl-core main
+deb http://packages.infrahip.net/ hipl-tools main
+deb http://packages.infrahip.net/ hipl-doc main
+deb http://packages.infrahip.net/ hipl-agent main
+deb http://packages.infrahip.net/ hipl-firewall main
+deb http://packages.infrahip.net/ hipl-test main
+
+- update and install packages 
+
+$ sudo apt-get update 
+
+$ sudo apt-get install hipl-lib
+
+How to create hipl repository on the web server?
+------------------------------------------------
+
+- create directory tree for all packages on the web server
+
+$sudo mkdir -p /var/www/html/dists/hipl-lib/main/binary-i386
+
+- create description files of Packages.gz for all packages
+
+$ dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz
+
+- copy all packages and description files onto the web server
+
+$ sudo rsync Packages.gz root@packages.infrahip.net:/var/www/html/dists/hipl-lib/main/binary-i386/
+
+$ sudo rsync hipl-lib-1.0-3-i386.deb root@packages.infrahip.net:/var/www/html/
+
 
 DEBUGGING
 =========
