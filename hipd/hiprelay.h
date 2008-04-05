@@ -1,5 +1,5 @@
 /** @file
- * A header file for hip_relay.c.
+ * A header file for hiprelay.c.
  *
  * The HIP relay combines the functionalites of an rendezvous server (RVS) and
  * a HIP UDP relay. The HIP relay consists of a hashtable for storing IP address
@@ -67,8 +67,8 @@
  *          draft-ietf-hip-nat-traversal-02</a>
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  */
-#ifndef HIP_HIPRELAY_H
-#define HIP_HIPRELAY_H
+#ifndef HIPRELAY_H
+#define HIPRELAY_H
 
 #include <time.h> /* For timing. */
 #include <openssl/lhash.h> /* For LHASH. */
@@ -658,4 +658,4 @@ int hip_relay_read_config();
  */ 
 int hip_relay_write_config();
 
-#endif /* HIP_HIPRELAY_H */
+#endif /* HIPRELAY_H */
