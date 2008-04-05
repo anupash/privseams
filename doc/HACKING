@@ -236,8 +236,7 @@ yum for Fedora
 name=package
 baseurl=http://URL/yum/base/package
  
-- create directory for package and copy rpm package 
-- to directory before update repository for yum
+- create directory for package and copy rpm package to directory before update repository for yum
 
 $ sudo createrepo package
 
@@ -248,13 +247,17 @@ $ yum install package
 apt-get for Debian
 ------------------
 
-- to configure apt-get for Debian modify sources.list
+- to configure apt-get for Debian modify sources.list depending on the architecture of i386 or x64 or armel
 
 $ sudo nano /etc/apt/sources.list
 
-deb http://packages.infrahip.net/debian hipl main
+deb http://packages.infrahip.net/hipl/deb i386 main
 
-- update and install packages 
+deb http://packages.infrahip.net/hipl/deb x64 main
+
+deb http://packages.infrahip.net/hipl/deb armel main
+
+- update and install hipl packages 
 
 $ sudo apt-get update 
 
@@ -263,19 +266,25 @@ $ sudo apt-get install hipl-lib hipl-core hipl-tools hipl-doc
 How to create hipl repository on the web server?
 ------------------------------------------------
 
-- create directory tree for all packages on the web server
+- create directory tree for all packages and the architecture tree on the web server
 
-$sudo mkdir -p /var/www/html/debian/dists/hipl/main/binary-i386
+$ sudo mkdir -p /var/www/html/hipl/deb
+
+$ sudo mkdir -p /var/www/html/hipl/deb/dists/i386/main/binary-i386
+
+$ sudo mkdir -p /var/www/html/hipl/deb/dists/x64/main/binary-i386
+
+$ sudo mkdir -p /var/www/html/hipl/deb/dists/armel/main/binary-i386
 
 - create overview file of Packages.gz for all hipl packages
 
 $ dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz
 
-- copy all hipl packages and Packages.gz file onto the web server
+- copy all Debian hipl packages and Packages.gz file onto directories of the web server
 
-$ sudo rsync Packages.gz root@packages.infrahip.net:/var/www/html/debian/dists/hipl/main/binary-i386/
+$ sudo rsync *.deb root@packages.infrahip.net:/var/www/html/hipl/deb/
 
-$ sudo rsync *.deb root@packages.infrahip.net:/var/www/html/debian/
+$ sudo rsync Packages.gz root@packages.infrahip.net:/var/www/html/hipl/deb/dists/i386/main/binary-i386
 
 
 DEBUGGING
