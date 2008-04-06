@@ -272,15 +272,15 @@ $ sudo mkdir -p /var/www/html/hipl/deb
 
 $ sudo mkdir -p /var/www/html/hipl/deb/dists/i386/main/binary-i386
 
-$ sudo mkdir -p /var/www/html/hipl/deb/dists/x64/main/binary-i386
+$ sudo mkdir -p /var/www/html/hipl/deb/dists/x64/main/binary-x64
 
-$ sudo mkdir -p /var/www/html/hipl/deb/dists/armel/main/binary-i386
+$ sudo mkdir -p /var/www/html/hipl/deb/dists/armel/main/binary-armel
 
 - create overview file of Packages.gz for all hipl packages
 
 $ dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz
 
-- copy all Debian hipl packages and Packages.gz file onto directories of the web server
+- copy all Debian hipl packages and Packages.gz file to directories of the web server
 
 $ sudo rsync *.deb root@packages.infrahip.net:/var/www/html/hipl/deb/
 
