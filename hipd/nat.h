@@ -31,6 +31,7 @@
 #include "debug.h"
 #include "state.h"
 
+#define HIP_NAT_SLEEP_TIME 2
 /** Maximum length of a UDP packet. */
 #define HIP_MAX_LENGTH_UDP_PACKET 2000
 /** Time interval between consecutive NAT Keep-Alive packets in seconds.
