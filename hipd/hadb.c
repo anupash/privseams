@@ -2200,7 +2200,7 @@ void hip_hadb_set_local_controls(hip_ha_t *entry, hip_controls_t mask)
 	  {
 	  case HIP_HA_CTRL_NONE:
 	       entry->local_controls &= mask;
-	  case HIP_HA_CTRL_LOCAL_REQ_HIPUDP:
+	  case HIP_HA_CTRL_LOCAL_REQ_RELAY:
 	  case HIP_HA_CTRL_LOCAL_REQ_RVS:
 	       entry->local_controls |= mask;
 	       break;
@@ -2222,7 +2222,7 @@ void hip_hadb_set_peer_controls(hip_ha_t *entry, hip_controls_t mask)
 	  case HIP_HA_CTRL_NONE:
 	       entry->peer_controls &= mask;
 	  case HIP_HA_CTRL_PEER_RVS_CAPABLE:
-	  case HIP_HA_CTRL_PEER_HIPUDP_CAPABLE:
+	  case HIP_HA_CTRL_PEER_RELAY_CAPABLE:
 	       entry->peer_controls |= mask;
 	       break;
 	  default:
@@ -2505,15 +2505,12 @@ int hip_count_one_entry(hip_ha_t *entry, void *cntr)
 {
 	int *counter = cntr;
 	if (entry->state == HIP_STATE_CLOSING ||
-	    entry->state == HIP_STATE_ESTABLISHED ||
-	    entry->state == HIP_STATE_FILTERING_I2 ||
-	    entry->state == HIP_STATE_FILTERING_R2)
+	    entry->state == HIP_STATE_ESTABLISHED)
 	{
 		(*counter)++;
 	}
 	return 0;
 }
-
 
 /**
  * Return number of open connections by calculating hadb entrys.

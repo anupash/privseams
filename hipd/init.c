@@ -142,7 +142,8 @@ int hipd_init(int flush_ipsec, int killold)
 	signal(SIGCHLD, hip_sig_chld);
  
 	HIP_IFEL(hip_init_oppip_db(), -1,
-	         "Cannot initialize opportunistic mode IP database for non HIP capable hosts!\n");
+	         "Cannot initialize opportunistic mode IP database for "\
+		 "non HIP capable hosts!\n");
 
 	HIP_IFEL((hip_init_cipher() < 0), 1, "Unable to init ciphers.\n");
 
@@ -152,14 +153,12 @@ int hipd_init(int flush_ipsec, int killold)
 
 	hip_init_puzzle_defaults();
 
-/* Initialize a hashtable for services, if any service is enabled. */
+       /* Initialize a hashtable for services, if any service is enabled. */
 	hip_init_services();
 #ifdef CONFIG_HIP_RVS
-	HIP_INFO("Initializing HIP UDP relay database.\n");
-	if(hip_relht_init() == NULL)
-	{
-	     HIP_ERROR("Unable to initialize HIP UDP relay database.\n");
-	}
+	
+	HIP_INFO("Initializing HIP relay / RVS.\n");
+	hip_relay_init();
 #endif
 #ifdef CONFIG_HIP_ESCROW
 	hip_init_keadb();
@@ -610,7 +609,6 @@ void hip_close(int signal)
 	}
 }
 
-
 /**
  * Cleanup and signal handler to free userspace and kernel space
  * resource allocations.
@@ -636,7 +634,7 @@ void hip_exit(int signal)
 
 	set_up_device(HIP_HIT_DEV, 0);
 
-	/* This is needed only if RVS or escrow, hiprelay is in use. */
+	/* Next line is needed only if RVS or escrow, hiprelay is in use. */
 	hip_uninit_services();
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
@@ -648,8 +646,8 @@ void hip_exit(int signal)
 #endif
 
 #ifdef CONFIG_HIP_RVS
-	HIP_INFO("Uninitializing HIP UDP relay database.\n");
-	hip_relht_uninit();
+	HIP_INFO("Uninitializing RVS / HIP relay database and whitelist.\n");
+	hip_relay_uninit();
 #endif
 #ifdef CONFIG_HIP_ESCROW
 	hip_uninit_keadb();
