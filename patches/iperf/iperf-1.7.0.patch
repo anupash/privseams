@@ -1,5 +1,5 @@
-diff -Naur iperf/src/Listener.cpp iperf-1.7.0/src/Listener.cpp
---- iperf/src/Listener.cpp	2008-04-03 11:16:54.000000000 +0300
+diff -Nuar iperf/src/Listener.cpp iperf-1.7.0/src/Listener.cpp
+--- iperf/src/Listener.cpp	2008-04-03 14:25:17.000000000 +0300
 +++ iperf-1.7.0/src/Listener.cpp	2003-03-05 00:47:32.000000000 +0200
 @@ -150,9 +150,6 @@
                      continue;
@@ -16,7 +16,7 @@ diff -Naur iperf/src/Listener.cpp iperf-1.7.0/src/Listener.cpp
                                     sizeof(sockaddr_in) : sizeof(sockaddr_in6)));
  #endif // IPV6
 -                FAIL_errno( rc == SOCKET_ERROR, "connect UDP" ); 
--                fprintf(stderr, "Binding to address that was recieved with the first UDP Packet");
+-                //fprintf(stderr, "Binding to address that was recieved with the first UDP Packet");
 -                rc = bind (mSock, (struct sockaddr*) localhost, 
 -#ifndef IPV6
 -                                  sizeof(sockaddr_in));
@@ -28,8 +28,23 @@ diff -Naur iperf/src/Listener.cpp iperf-1.7.0/src/Listener.cpp
  #ifndef WIN32
                  listtemp = new Iperf_ListEntry;
                  memcpy(listtemp, &peer, sizeof(peer));
-diff -Naur iperf/src/PerfSocket.cpp iperf-1.7.0/src/PerfSocket.cpp
---- iperf/src/PerfSocket.cpp	2008-04-03 11:11:32.000000000 +0300
+@@ -261,14 +250,6 @@
+                                    sizeof(sockaddr_in) : sizeof(sockaddr_in6)));
+ #endif // IPV6
+                 FAIL_errno( rc == SOCKET_ERROR, "connect UDP" );       
+-                //fprintf(stderr, "Binding to address that was recieved with the first UDP Packet");
+-                rc = bind (mSock, (struct sockaddr*) localhost, 
+-#ifndef IPV6
+-                                  sizeof(sockaddr_in));
+-#else
+-                                  (((struct sockaddr*)&peer)->sa_family == AF_INET ? 
+-                                   sizeof(sockaddr_in) : sizeof(sockaddr_in6)));
+-#endif // IPV6
+                 if ( !mSettings->mCompat ) {
+                     Settings::GenerateSpeakerSettings( mSettings, &tempSettings, 
+                                                         hdr, (sockaddr*) &peer );
+diff -Nuar iperf/src/PerfSocket.cpp iperf-1.7.0/src/PerfSocket.cpp
+--- iperf/src/PerfSocket.cpp	2008-04-03 13:28:45.000000000 +0300
 +++ iperf-1.7.0/src/PerfSocket.cpp	2003-03-12 20:54:52.000000000 +0200
 @@ -97,8 +97,8 @@
  PerfSocket::PerfSocket( ext_Settings *inSettings,
@@ -72,8 +87,8 @@ diff -Naur iperf/src/PerfSocket.cpp iperf-1.7.0/src/PerfSocket.cpp
      }
  }
  // end SetSocketOptions
-diff -Naur iperf/src/PerfSocket.hpp iperf-1.7.0/src/PerfSocket.hpp
---- iperf/src/PerfSocket.hpp	2008-04-03 01:14:21.000000000 +0300
+diff -Nuar iperf/src/PerfSocket.hpp iperf-1.7.0/src/PerfSocket.hpp
+--- iperf/src/PerfSocket.hpp	2008-04-03 13:28:45.000000000 +0300
 +++ iperf-1.7.0/src/PerfSocket.hpp	2003-02-27 23:59:05.000000000 +0200
 @@ -62,7 +62,6 @@
  #include "Extractor.hpp"
@@ -101,8 +116,8 @@ diff -Naur iperf/src/PerfSocket.hpp iperf-1.7.0/src/PerfSocket.hpp
  
      // individual and cummulative bytes written
      max_size_t mTotalLen;
-diff -Naur iperf/src/PerfSocket_UDP.cpp iperf-1.7.0/src/PerfSocket_UDP.cpp
---- iperf/src/PerfSocket_UDP.cpp	2008-04-03 11:09:06.000000000 +0300
+diff -Nuar iperf/src/PerfSocket_UDP.cpp iperf-1.7.0/src/PerfSocket_UDP.cpp
+--- iperf/src/PerfSocket_UDP.cpp	2008-04-03 13:28:45.000000000 +0300
 +++ iperf-1.7.0/src/PerfSocket_UDP.cpp	2003-03-05 22:30:50.000000000 +0200
 @@ -87,7 +87,6 @@
   * ------------------------------------------------------------------- */ 
@@ -279,8 +294,8 @@ diff -Naur iperf/src/PerfSocket_UDP.cpp iperf-1.7.0/src/PerfSocket_UDP.cpp
              WARN_errno( rc < 0, "read" ); 
              continue; 
          } 
-diff -Naur iperf/src/UDPMessage.h iperf-1.7.0/src/UDPMessage.h
---- iperf/src/UDPMessage.h	2008-04-03 11:02:01.000000000 +0300
+diff -Nuar iperf/src/UDPMessage.h iperf-1.7.0/src/UDPMessage.h
+--- iperf/src/UDPMessage.h	2008-04-03 14:27:46.000000000 +0300
 +++ iperf-1.7.0/src/UDPMessage.h	1970-01-01 02:00:00.000000000 +0200
 @@ -1,127 +0,0 @@
 -#ifndef UDPMESSAGE_H_
@@ -387,7 +402,7 @@ diff -Naur iperf/src/UDPMessage.h iperf-1.7.0/src/UDPMessage.h
 -					cmsgptr->cmsg_type == DSTADDRV4_SOCKOPT) {
 -					in_addr * addr = (struct in_addr *)dstaddr(cmsgptr);
 -					generic = (struct sockaddr_storage *)addr;
--		            fprintf(stderr, "to %s", inet_ntoa(*(struct in_addr *)dstaddr(cmsgptr)));
+-		            		//fprintf(stderr, "to %s", inet_ntoa(*(struct in_addr *)dstaddr(cmsgptr)));
 -				}
 -			} else {
 -				if (cmsgptr->cmsg_level == IPPROTO_IPV6 &&
