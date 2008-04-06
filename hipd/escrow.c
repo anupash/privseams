@@ -140,6 +140,7 @@ int hip_launch_cancel_escrow_registration(struct hip_host_id_entry * id_entry,
         hip_ha_t * entry = NULL;        
         struct in6_addr * server_hit = server_hit_void;
         HIP_KEA * kea = NULL;
+		in_port_t *peer_port;
         
         HIP_IFEL(!(entry = hip_hadb_find_byhits(&id_entry->lhi.hit, server_hit_void)),
                          -1, "internal error: no hadb entry found\n");

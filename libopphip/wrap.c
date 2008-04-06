@@ -325,6 +325,8 @@ void hip_store_orig_socket_info(hip_opp_socket_t *entry, int is_peer, const int 
 int hip_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
 				   struct in6_addr *peer_hit,
 				   const struct in6_addr *local_hit,
+				   in_port_t *src_tcp_port,//the local TCP port needed for the TCP i1 option negotiation
+				   in_port_t *dst_tcp_port, //the TCP port at the peer needed for the TCP i1 option negotiation
 				   int *fallback,
 				   int *reject)
 {
@@ -346,7 +348,19 @@ int hip_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
 	HIP_IFEL(hip_build_param_contents(msg, (void *)(peer_ip),
 					  HIP_PARAM_IPV6_ADDR,
 					  sizeof(struct in6_addr)), -1,
-		 "build param HIP_PARAM_IPV6_ADDR  failed\n");
+		 "build param HIP_PARAM_IPV6_ADDR failed\n");
+
+#ifdef CONFIG_HIP_OPPTCP
+	HIP_IFEL(hip_build_param_contents(msg, (void *)(src_tcp_port),
+					  HIP_PARAM_SRC_TCP_PORT,
+					  sizeof(in_port_t)), -1,
+		 "build param HIP_PARAM_SRC_TCP_PORT failed\n");
+
+	HIP_IFEL(hip_build_param_contents(msg, (void *)(dst_tcp_port),
+					  HIP_PARAM_DST_TCP_PORT,
+					  sizeof(in_port_t)), -1,
+		 "build param HIP_PARAM_DST_TCP_PORT failed\n");
+#endif
 	
 	/* build the message header */
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT, 0), -1,
@@ -472,7 +486,8 @@ int hip_translate_new(hip_opp_socket_t *entry,
 		      int is_peer, int is_dgram,
 		      int is_translated, int wrap_applicable)
 {
-	int err = 0, pid = getpid(), port;
+	int err = 0, pid = getpid();
+	in_port_t src_opptcp_port, dst_opptcp_port;/*the ports needed to send the TCP SYN i1*/
 	struct sockaddr_in6 src_hit, dst_hit,
 		*hit = (is_peer ? &dst_hit : &src_hit);
 	socklen_t translated_id_len;
@@ -508,24 +523,34 @@ int hip_translate_new(hip_opp_socket_t *entry,
 		IPV4_TO_IPV6_MAP(&((struct sockaddr_in *) orig_id)->sin_addr,
 				 &mapped_addr.sin6_addr);
 		_HIP_DEBUG_SOCKADDR("ipv4 addr", orig_id);
-		port = ((struct sockaddr_in *)orig_id)->sin_port;
+		dst_opptcp_port = ((struct sockaddr_in *)orig_id)->sin_port;
 	} else if (orig_id->sa_family == AF_INET6) {
 		memcpy(&mapped_addr, orig_id, orig_id_len);
 		_HIP_DEBUG_SOCKADDR("ipv6 addr\n", orig_id);
-		port = ((struct sockaddr_in6 *)orig_id)->sin6_port;
+		dst_opptcp_port = ((struct sockaddr_in6 *)orig_id)->sin6_port;
 	} else {
 		HIP_ASSERT("Not an IPv4/IPv6 socket: wrapping_is_applicable failed?\n");
 	}
 	mapped_addr.sin6_family = orig_id->sa_family;
-	mapped_addr.sin6_port = port;
+	mapped_addr.sin6_port = dst_opptcp_port;
 	
-	hit->sin6_port = port;
+	hit->sin6_port = dst_opptcp_port;
 	
-	_HIP_DEBUG("sin_port=%d\n", ntohs(port));
+	_HIP_DEBUG("sin_port=%d\n", ntohs(dst_opptcp_port));
 	_HIP_DEBUG_IN6ADDR("sin6_addr ip = ", ip);
 
+
+	/*find the local TCP port where the
+	application	initiated the connection,
+	we need it for sending the TCP SYN_i1*/
+	struct sockaddr *sa = (struct sockaddr*)&(entry->translated_local_id);
+  	if(sa->sa_family == AF_INET)
+    		src_opptcp_port = ((struct sockaddr_in *) sa)->sin_port;
+  	else//AF_INET6
+    		src_opptcp_port = ((struct sockaddr_in6 *) sa)->sin6_port;
+
+
 	/* Try opportunistic base exchange to retrieve peer's HIT */
-	
 	if (is_peer) {
 		int fallback, reject;
 		/* Request a HIT of the peer from hipd. This will possibly
@@ -538,6 +563,8 @@ int hip_translate_new(hip_opp_socket_t *entry,
 		HIP_IFEL(hip_request_peer_hit_from_hipd(&mapped_addr.sin6_addr,
 							&dst_hit.sin6_addr,
 							&src_hit.sin6_addr,
+							(in_port_t *) &src_opptcp_port,
+							(in_port_t *) &dst_opptcp_port,
 							&fallback,
 							&reject),
 			 -1, "Request from hipd failed\n");

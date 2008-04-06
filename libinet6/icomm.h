@@ -88,46 +88,51 @@
 #define SO_HIP_DHT_SET                          156
 #define SO_HIP_DHT_ON                           157
 #define SO_HIP_DHT_OFF                          158
-#define SO_HIP_SET_OPPTCP_ON                    159
-#define SO_HIP_SET_OPPTCP_OFF                   160
-#define SO_HIP_TRANSFORM_ORDER                  161
+#define SO_HIP_SET_OPPTCP_ON			159
+#define SO_HIP_SET_OPPTCP_OFF			160
+#define SO_HIP_GET_PEER_HIT_FROM_FIREWALL	161
+#define SO_HIP_OPPTCP_UNBLOCK_APP		162
+#define SO_HIP_OPPTCP_OPPIPDB_ADD_ENTRY		163
+#define SO_HIP_OPPTCP_SEND_TCP_PACKET		164
+#define SO_HIP_TRANSFORM_ORDER                  165
+#define SO_HIP_TRIGGER_BEX                      166
+
 /** Socket option for the server to offer the RVS service. (server side) */
-#define SO_HIP_OFFER_RVS			162
+#define SO_HIP_OFFER_RVS			167
 /** Socket option for the server to cancel the RVS service. (server side) */
-#define SO_HIP_CANCEL_RVS                       163
+#define SO_HIP_CANCEL_RVS                       168
 /** Socket option for the server to reinit the RVS service. (server side) */
-#define SO_HIP_REINIT_RVS                       164
+#define SO_HIP_REINIT_RVS                       169
 /** Socket option to ask for the RVS service, i.e.\ send REG_REQUEST parameter
     to the server. (client side) */
-#define SO_HIP_ADD_RVS			        165
+#define SO_HIP_ADD_RVS			        170
 /** Socket option to ask for cancellation of the RVS service, i.e.\ send
     REG_REQUEST parameter with zero lifetime to the server. (client side) */
-#define SO_HIP_DEL_RVS                          166
+#define SO_HIP_DEL_RVS                          171
 /** Socket option for the server to offer the HIP relay service. (server
     side) */
-#define SO_HIP_OFFER_HIPRELAY                   167
+#define SO_HIP_OFFER_HIPRELAY                   172
 /** Socket option for the server to cancel the HIP relay service. (server
     side) */
-#define SO_HIP_CANCEL_HIPRELAY                  168
+#define SO_HIP_CANCEL_HIPRELAY                  173
 /** Socket option for hipconf to reinit the HIP relay service. (server side) */
-#define SO_HIP_REINIT_RELAY                     169
+#define SO_HIP_REINIT_RELAY                     174
 /** Socket option to ask for the HIP relay service, i.e.\ send REG_REQUEST
     parameter to the server. (client side) */
-#define SO_HIP_ADD_RELAY                        170
+#define SO_HIP_ADD_RELAY                        175
 /** Socket option to ask for cancellation of the HIP relay service, i.e.\ send
     REG_REQUEST parameter with zero lifetime to the server. (client side) */
-#define SO_HIP_DEL_RELAY                        171
+#define SO_HIP_DEL_RELAY                        176
 /** Socket option for the server to offer the escrow service. (server side) */
-#define SO_HIP_OFFER_ESCROW			172
+#define SO_HIP_OFFER_ESCROW			177
 /** Socket option for the server to cancel the escrow service. (server side) */
-#define SO_HIP_CANCEL_ESCROW                    173
+#define SO_HIP_CANCEL_ESCROW                    178
 /** Socket option to ask for the escrow service, i.e.\ send REG_REQUEST parameter
     to the server. (client side) */
-#define SO_HIP_ADD_ESCROW			174
+#define SO_HIP_ADD_ESCROW			179
 /** Socket option to ask for cancellation of the escrow service, i.e.\ send
     REG_REQUEST parameter with zero lifetime to the server. (client side) */
-#define SO_HIP_DEL_ESCROW			175
-
+#define SO_HIP_DEL_ESCROW			180
 /** @} */
 
 #endif /* _HIP_ICOMM */

@@ -384,11 +384,23 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
 	       
 			break;
 		}
+        }
+        /*
+          Comparison is as it should and not "==". If changed to "==" it will
+          breaks hipd with "hipconf locator on". This part of the code should 
+          be cleaned up. 
+        */
+#ifdef CONFIG_HIP_HI3 /* @fixme: test and fix this weirdness */
+        if (same_af == 0) {
+                HIP_DEBUG("Did not find any address of same family\n");
+                goto out_of_loop;
 	}
-	if (same_af != 0) {
-		HIP_DEBUG("Did not find any address of same family\n");
-		goto out_of_loop;
+#else
+        if (same_af != 0) {
+                HIP_DEBUG("Did not find any address of same family\n");
+                goto out_of_loop;
 	}
+#endif
 
 	/* look for local address with family == comp_af */
 	list_for_each_safe(item, tmplist, addresses, ii) {
@@ -2572,6 +2584,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 	       if (IN6_IS_ADDR_V4MAPPED(&daddr) == 
 		   IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
                     memcpy(&saddr, hip_cast_sa_addr(&n->addr), sizeof(saddr));
+                    ipv6_addr_copy(&entry->local_address, &saddr); 
                     break;
 	       }
 	  }

@@ -723,8 +723,6 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg){
 		   so using IPv4 here -mk */
 		HIP_DEBUG("No information of peer found, trying broadcast\n");
 		IPV4_TO_IPV6_MAP(&bcast, &dst_addr);
-		/* Broadcast did not work with UDP packets -mk */
-		ha_nat_mode = 0;
 		err = 0;
 	}
 
@@ -795,7 +793,7 @@ skip_entry_creation:
 	HIP_DEBUG("Using ifindex %d\n", if_index);
 
 	//add_address_to_list(addr, if_index /*acq->sel.ifindex*/);
-
+ 
 	HIP_IFEL(hip_send_i1(&entry->hit_our, &entry->hit_peer, entry), -1,
 		 "Sending of I1 failed\n");
 
@@ -1145,7 +1143,7 @@ int hip_select_source_address(struct in6_addr *src, struct in6_addr *dst)
 	HIP_DEBUG_IN6ADDR("dst", dst);
 	HIP_DEBUG_IN6ADDR("src", src);
 
-	HIP_IFEL(hip_iproute_get(&hip_nl_route, src, dst, NULL, NULL, family, idxmap), -1, "Finding ip route failed\n");
+	HIP_IFEL(hip_iproute_get(hip_nl_route, src, dst, NULL, NULL, family, idxmap), -1, "Finding ip route failed\n");
 
 	HIP_DEBUG_IN6ADDR("src", src);
 
