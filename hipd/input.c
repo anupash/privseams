@@ -494,6 +494,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 	switch(type) {
 	case HIP_I1:
 		/* No state. */
+	  HIP_DEBUG("Received HIP_I1 message\n");
 	  err = (hip_get_rcv_default_func_set())->hip_receive_i1(msg, src_addr,
 								 dst_addr,
 								 entry,
@@ -2280,7 +2281,6 @@ int hip_handle_r2(struct hip_common *r2,
 			   &spi_recvd, tfm,
 			   &ctx->esp_out, &ctx->auth_out, 1,
 			   HIP_SPI_DIRECTION_OUT, 0, r2_info->src_port, r2_info->dst_port);
-	  hip_firewall_add_bex_data(entry, &entry->hit_our, &entry->hit_peer);
 	}
 #endif
 	HIP_DEBUG("entry->hip_transform: \n", entry->hip_transform);
@@ -2290,10 +2290,9 @@ int hip_handle_r2(struct hip_common *r2,
 				 &spi_recvd, tfm,
 				 &ctx->esp_out, &ctx->auth_out, 1,
 				 HIP_SPI_DIRECTION_OUT, 0, r2_info->src_port, r2_info->dst_port);
-
-	  hip_firewall_add_bex_data(entry, &ctx->input->hitr, &ctx->input->hits);
 	}
 
+	//hip_firewall_add_bex_data(entry, &entry->hit_our, &entry->hit_peer);
 	/*
 	if (err == -EEXIST) {
 		HIP_DEBUG("SA already exists for the SPI=0x%x\n", spi_recvd);
@@ -2382,14 +2381,8 @@ int hip_handle_r2(struct hip_common *r2,
 	
  out_err:
 
-	if (entry->state == HIP_STATE_ESTABLISHED){
-		if (!hip_blind_get_status()){
-			hip_firewall_add_bex_data(entry, &ctx->input->hitr, &ctx->input->hits);
-		}
-		else{
-			hip_firewall_add_bex_data(entry, &entry->hit_our, &entry->hit_peer);
-		}
-	}
+	if (entry->state == HIP_STATE_ESTABLISHED)
+		hip_firewall_add_bex_data(entry, &entry->hit_our, &entry->hit_peer);
 	else
 		hip_firewall_add_bex_data(entry, NULL, NULL);
 	

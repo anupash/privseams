@@ -1,4 +1,3 @@
-
 /*
  * This code is GNU/GPL.
  *
@@ -166,6 +165,23 @@ void firewall_close(int signal){
 	exit(signal);
 }
 
+void hip_firewall_delete_hldb(void){
+	int i;
+	firewall_hl_t *this;
+	hip_list_t *item, *tmp;
+	
+	HIP_DEBUG("Start hldb delete\n");
+	HIP_LOCK_HT(&firewall_lsi_hit_db);
+
+	list_for_each_safe(item, tmp, firewall_lsi_hit_db, i)
+	{
+		this = list_entry(item);
+		hip_ht_delete(firewall_lsi_hit_db, this);
+	}
+	HIP_UNLOCK_HT(&firewall_lsi_hit_db);
+	HIP_DEBUG("End hldbdb delete\n");
+}
+
 void firewall_exit(){
 	HIP_DEBUG("Firewall exit\n");
 	if (flush_iptables) {
@@ -179,6 +195,7 @@ void firewall_exit(){
 	} else {
 		HIP_DEBUG("Some dagling iptables rules may be present!\n");
 	}
+	hip_firewall_delete_hldb();
 	if (firewall_raw_sock_v6)
 		close(firewall_raw_sock_v6);
 }
@@ -246,6 +263,7 @@ int is_hip_packet(void * hdr, int trafficType){
 
 	if(trafficType == 4){
 		struct ip * iphdr = (struct ip *)hdr;
+		HIP_DEBUG("Packet header type: %d\n",iphdr->ip_p);
 		if(iphdr->ip_p == IPPROTO_HIP) 
 			return 1;
 		if(iphdr->ip_p != IPPROTO_UDP)
@@ -775,13 +793,12 @@ static void *handle_ip_traffic(void *ptr) {
 
 	do{
 		status = ipq_read(hndl, buf, BUFSIZE, 0);
-		HIP_DEBUG("vAMOS A VER SI ME PILLAS con status: %d !!\n", status);
+
 		if (status < 0)
 			die(hndl);
     
 		switch (ipq_message_type(buf)) {
 		case NLMSG_ERROR:
-		  HIP_DEBUG("NLMSG_ERROR Detected!!\n");
 		  fprintf(stderr, "Received error message (%d): %s\n", ipq_get_msgerr(buf), ipq_errstr());
 		break;
       
@@ -795,26 +812,26 @@ static void *handle_ip_traffic(void *ptr) {
 			packetHook = m->hook;
 
 			if(ipv4Traffic){
-                		HIP_DEBUG("ipv4\n");
                 		iphdr = (struct ip *) m->payload; 
                 		packet_hdr = (void *)iphdr;
                 		hdr_size = (iphdr->ip_hl * 4);
 				if (iphdr->ip_p == IPPROTO_UDP)
 					hdr_size += sizeof(struct udphdr);
-                		HIP_DEBUG("header size: %d\n", hdr_size);
+                		HIP_DEBUG("ipv4 and header size: %d\n", hdr_size);
 
 				if(IS_LSI((iphdr->ip_dst).s_addr)){
-				  HIP_DEBUG("IT'S AN LSI \n");
 					if(is_outgoing_packet(packetHook)){
 		                		HIP_DEBUG("It's LSI and outgoing packet\n");
 						firewall_trigger_outgoing_lsi(m, &iphdr->ip_src, &iphdr->ip_dst);
+						drop_packet(hndl, m->packet_id);
+						break;
 					}else if(is_incoming_packet(packetHook)){
 						HIP_DEBUG("It's LSI and incoming packet\n");
 						firewall_trigger_incoming_lsi(m, &iphdr->ip_src, &iphdr->ip_dst);
 					}
 					//drop_packet(hndl, m->packet_id);
 				}
-				break;
+				//break;
  	      		}
         		else if(ipv6Traffic){
                 		_HIP_DEBUG("ipv6\n");
@@ -825,7 +842,7 @@ static void *handle_ip_traffic(void *ptr) {
                 		ipv6_addr_copy(src_addr, &ip6_hdr->ip6_src);
                 		ipv6_addr_copy(dst_addr, &ip6_hdr->ip6_dst);
         		}
-      				
+      	
       			if(is_hip_packet(packet_hdr, type)){
 				HIP_DEBUG("****** Received HIP packet ******\n");
 				int packet_length = 0;
@@ -852,8 +869,10 @@ static void *handle_ip_traffic(void *ptr) {
 				else
 	  				_HIP_DEBUG("signature exists\n");
 
+				HIP_DUMP_MSG(hip_common);
+				allow_packet(hndl, m->packet_id);//test
 
-				if(filter_hip(src_addr, 
+				/*if(filter_hip(src_addr, 
 					      dst_addr, 
 					      hip_common, 
 					      m->hook,
@@ -865,7 +884,7 @@ static void *handle_ip_traffic(void *ptr) {
 				else
 	  			{
 					drop_packet(hndl, m->packet_id);
-	  			}
+					}*/
       			} else {
 				if((ipv4Traffic && iphdr->ip_p != IPPROTO_TCP) ||
 				   (ipv6Traffic && ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt != IPPROTO_TCP)) {
@@ -926,45 +945,37 @@ int firewall_trigger_incoming_lsi(ipq_packet_msg_t *m, struct in_addr *ip_src, s
 int firewall_trigger_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *ip_src, struct in_addr *ip_dst){
 	int err, msg_type;
 	struct in6_addr dst_addr;
-	struct in6_addr *dst_hit = NULL;		
-	firewall_hl_t *lsi_hit_peer;
+	struct in6_addr *src_hit = NULL, *dst_hit = NULL;
+	firewall_hl_t *lsi_hit_peer = NULL;
 
 	HIP_DEBUG("1. FIREWALL_TRIGGERING OUTGOING LSI %s\n",inet_ntoa(*ip_dst));
 	IPV4_TO_IPV6_MAP(ip_dst, &dst_addr);
 
-	/*HIT IF LSI ALREADY IN THE DATABASE*/
 	lsi_hit_peer = firewall_hit_lsi_db_match(ip_dst);
 	//HIP_HEXDUMP("1. FIREWALL_TRIGGERING OUTGOING LSI %s\n", lsi_hit_peer, sizeof(*lsi_hit_peer));
 	if (lsi_hit_peer){
-		// BEX already done
-		// insert the hits in the packet 
-		HIP_DEBUG("ip_dst Present in firewall database \n");
+	        HIP_DEBUG("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<Using cache!!!Oeeeee\n");
 		//reinject_packet(lsi_hit_peer->hit, m);
 	}
 	else{
 	  	HIP_DEBUG("2. LSI_HIT_PEER NULL\n");
-	  
-		// RUN BEX to initialize SP and SA
-		HIP_IFEL(hip_trigger_bex(NULL, dst_hit, NULL, &dst_addr), -1, 
+		// Run bex to initialize SP and SA
+		HIP_IFEL(hip_trigger_bex(&src_hit, &dst_hit, NULL, &dst_addr), -1, 
 			 "Base Exchange Trigger failed");
-			// Waits for R2 answer
-		while (is_bex_done()==0){}
+		firewall_add_hit_lsi(dst_hit, ip_dst);
+		// Waits for R2 answer
 		if (is_bex_done()){
-			HIP_DEBUG("3. Add hit lsi to firewall db\n");
-			firewall_add_hit_lsi(firewall_lsi_hit_db, dst_hit, ip_dst);
-			/*	reinject_packet(dst_hit, m);*/
-		}else{
-			//BEX not done
-			err = -1;
+		  HIP_DEBUG(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>BEX is done. Reinjecting the packet\n");
+		  reinject_packet(*src_hit, *dst_hit, m);
+		  set_bex_done(0);
 		}
-		set_bex_done(0);
 	}
 out_err: 
 	return err;
 }
 
 
-int reinject_packet(struct in6_addr src_hit, ipq_packet_msg_t *m){
+int reinject_packet(struct in6_addr src_hit, struct in6_addr dst_hit, ipq_packet_msg_t *m){
 	int err = 0;
 	int sa_size = sizeof(struct sockaddr_in6);	
 	struct ip *iphdr = (struct ip *) m->payload;
@@ -972,14 +983,17 @@ int reinject_packet(struct in6_addr src_hit, ipq_packet_msg_t *m){
 	struct tcphdr *tcphdr = ((struct tcphdr *) (((char *) iphdr) + hdr_size));
 	struct sockaddr_in6 sock6_src, sock6_dest;
 	struct in6_addr any = IN6ADDR_ANY_INIT;
-
+	
+	//HIP_DEBUG_HIT("............................reinject_packet src_hit ",&src_hit);
+	//HIP_DEBUG_HIT("............................reinject_packet dst_hit ",&dst_hit);
+	
 	sock6_src.sin6_family = AF_INET6;
 	sock6_src.sin6_port = htons(tcphdr->source);
 	sock6_src.sin6_addr = src_hit;
 
 	sock6_dest.sin6_family = AF_INET6;
 	sock6_dest.sin6_port = htons(tcphdr->dest);
-	//sock6_dest.sin6_addr = dst_hit;
+	sock6_dest.sin6_addr = dst_hit;
 
 	HIP_IFEL(bind(firewall_raw_sock_v6, (struct sockaddr *) &sock6_src, sa_size),
 		 -1, "Binding to raw sock failed\n");
@@ -987,12 +1001,12 @@ int reinject_packet(struct in6_addr src_hit, ipq_packet_msg_t *m){
 	HIP_IFEL(sendto(firewall_raw_sock_v6, &tcphdr, sizeof(tcphdr), 0,
 			(struct sockaddr *) &sock6_dest, sa_size), 
 		 -1, "Sent with raw sock failed\n");
-
+	
 out_err:
 	/* Reset the interface to wildcard*/	
 	ipv6_addr_copy(&sock6_src.sin6_addr, &any);
 	bind(firewall_raw_sock_v6, (struct sockaddr *) &sock6_src, sa_size);
-
+	HIP_DEBUG("..............Packet reinjected..............\n");
 	return err;
 }
 
@@ -1007,9 +1021,8 @@ out_err:
  * @return NULL if not found and otherwise the firewall_hl_t structure
  */
 firewall_hl_t *firewall_hit_lsi_db_match(hip_lsi_t *lsi_peer){
-	firewall_hl_t *entry = NULL;
-	entry = hip_ht_find(firewall_lsi_hit_db, lsi_peer);
-	return entry;
+  //hip_firewall_hldb_dump();
+	return (firewall_hl_t *)hip_ht_find(firewall_lsi_hit_db, (void *)lsi_peer);
 }
 
 
@@ -1018,14 +1031,32 @@ firewall_hl_t *hip_create_hl_entry(void){
 	int err = 0;
 	HIP_IFEL(!(entry = (firewall_hl_t *) HIP_MALLOC(sizeof(firewall_hl_t),0)),
 		 -ENOMEM, "No memory available for host id\n");
-  	memset(entry, 0, sizeof(*entry));
-
+  	memset(entry, 0, sizeof(entry));
 out_err:
 	return entry;
 }
 
 
-int firewall_add_hit_lsi(hip_db_struct_t *db, struct in6_addr *hit, hip_lsi_t *lsi){
+void hip_firewall_hldb_dump(void)
+{
+	int i;
+	firewall_hl_t *this;
+	hip_list_t *item, *tmp;
+	
+	HIP_DEBUG("Start hldb dump.:\n");
+	HIP_LOCK_HT(&firewall_lsi_hit_db);
+
+	list_for_each_safe(item, tmp, firewall_lsi_hit_db, i)
+	{
+		this = list_entry(item);
+		HIP_DEBUG_HIT("Dump >>> hit", &this->hit);
+		HIP_DEBUG_LSI("Dump >>> lsi", &this->lsi);
+	}
+	HIP_UNLOCK_HT(&firewall_lsi_hit_db);
+	HIP_DEBUG("end hldbdb dump\n");
+}
+
+int firewall_add_hit_lsi(struct in6_addr *hit, hip_lsi_t *lsi){
 	int err = 0;
 	firewall_hl_t *new_entry = NULL;
 
@@ -1037,12 +1068,15 @@ int firewall_add_hit_lsi(hip_db_struct_t *db, struct in6_addr *hit, hip_lsi_t *l
 	ipv4_addr_copy(&new_entry->lsi, lsi);
 	HIP_DEBUG_HIT("1. entry to add to firewall_db hit ", &new_entry->hit);
 	HIP_DEBUG_LSI("1. entry to add to firewall_db lsi ", &new_entry->lsi);
-	err = hip_ht_add(db, new_entry);
+	err = hip_ht_add(firewall_lsi_hit_db, new_entry);
+
+	HIP_DEBUG("hip_ht_add err = %d\n",err);
 
 out_err:
-	if (new_entry)
-		HIP_FREE(new_entry);
-
+	//hip_firewall_hldb_dump();
+	//if (new_entry)
+	//  HIP_FREE(new_entry);
+	//hip_firewall_hldb_dump();
 	HIP_DEBUG("End firewall_add_hit_lsi\n");
 	return err;
 }
@@ -1057,12 +1091,13 @@ out_err:
  * @return hash information
  */
 unsigned long hip_firewall_hash_lsi(const void *ptr){
-	firewall_hl_t *entry = (firewall_hl_t *)ptr;
+        hip_lsi_t *lsi = &((firewall_hl_t *)ptr)->lsi;
 	uint8_t hash[HIP_AH_SHA_LEN];     
 	     
-	hip_build_digest(HIP_DIGEST_SHA1, entry, sizeof(firewall_hl_t), hash);     
+	hip_build_digest(HIP_DIGEST_SHA1, lsi, sizeof(*lsi), hash);     
 	return *((unsigned long *)hash);
 }
+
 
 /**
  * hip_firewall_match_lsi:

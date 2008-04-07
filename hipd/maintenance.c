@@ -700,7 +700,7 @@ out_err:
 int hip_firewall_add_bex_data(hip_ha_t *entry, struct in6_addr *hit_s, struct in6_addr *hit_r){
 	struct hip_common *msg;
 	int err = 0;
-
+	HIP_DEBUG(">>>>>>>>>>>>>>>>BEX STATE ESTABLISHED SENDING MESSAGE TO FIREWALL hip_firewall_add_bex_data\n");
 	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
 	hip_msg_init(msg);
 	HIP_IFEL(hip_build_user_hdr(msg, HIP_BEX_DONE, 0), -1, 

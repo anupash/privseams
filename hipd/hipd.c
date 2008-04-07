@@ -283,9 +283,10 @@ out_err:
 int hip_sendto_firewall(const struct hip_common *msg){
 #ifdef CONFIG_HIP_FIREWALL
 	int n = 0;
+	HIP_DEBUG("CONFIG_HIP_FIREWALL DEFINED AND STATUS IS %d\n", hip_get_firewall_status());
 	if (hip_get_firewall_status()) {
 		n = sendto(hip_firewall_sock, msg, hip_get_msg_total_len(msg),
-		   0, (struct sockaddr *)&hip_firewall_addr, sizeof(struct sockaddr_un));
+		   0, (struct sockaddr *)&hip_firewall_addr, sizeof(hip_firewall_addr));
 		return n;
 	}
 #else
@@ -415,7 +416,7 @@ int hipd_main(int argc, char *argv[])
 		timeout.tv_sec = HIP_SELECT_TIMEOUT;
 		timeout.tv_usec = 0;
 		
-		_HIP_DEBUG("select loop\n");
+		//HIP_DEBUG("select loop value hip_raw_socket_v4 = %d \n",hip_raw_sock_v4);
 		/* wait for socket activity */
 
                 /* If DHT is on have to use write sets for asynchronic communication */
@@ -493,6 +494,7 @@ int hipd_main(int argc, char *argv[])
                     }
                     
                     if (FD_ISSET(hip_raw_sock_v4, &read_fdset)){
+		        HIP_DEBUG("HIP RAW SOCKET\n");
 			/* Receiving of a raw HIP message from IPv4 socket. */
 			struct in6_addr saddr, daddr;
 			hip_portpair_t pkt_info;
@@ -563,6 +565,7 @@ int hipd_main(int argc, char *argv[])
 		}
                 /* DHT SOCKETS HANDLING */
                 if (hip_opendht_inuse == SO_HIP_DHT_ON && hip_opendht_sock_fqdn != -1) {
+		        HIP_DEBUG("Receiving opendht in use message.\n");
                         if (FD_ISSET(hip_opendht_sock_fqdn, &read_fdset) &&
                             FD_ISSET(hip_opendht_sock_fqdn, &write_fdset) &&
                             (hip_opendht_inuse == SO_HIP_DHT_ON)) {
@@ -628,6 +631,7 @@ int hipd_main(int argc, char *argv[])
                 /* END DHT SOCKETS HANDLING */
 		if (FD_ISSET(hip_agent_sock, &read_fdset))
 		{
+		        HIP_DEBUG("Receiving hip agent socket.\n");
 			err = hip_sock_recv_agent();
 			if (err) HIP_ERROR("Receiving packet from agent socket failed!\n");
 		}

@@ -44,7 +44,8 @@
 
 struct firewall_hl {
 	hip_lsi_t lsi;
-	hip_hit_t hit;	
+	hip_hit_t hit;
+  // int bex_state;
 };
 
 typedef struct firewall_hl firewall_hl_t;
@@ -67,11 +68,11 @@ void firewall_probe_kernel_modules();
 void firewall_init_hldb(void);
 /*Consult/Modify operations in firewall database*/
 firewall_hl_t *firewall_hit_lsi_db_match(hip_lsi_t *lsi_peer);
-int firewall_add_hit_lsi(hip_db_struct_t *db, struct in6_addr *hit, hip_lsi_t *lsi);
+int firewall_add_hit_lsi(struct in6_addr *hit, hip_lsi_t *lsi);
 /*Comparation definition for the db structure*/
 unsigned long firewall_hash_hl(const firewall_hl_t *hl);
 int firewall_compare_hl(const firewall_hl_t *hl1, const firewall_hl_t *hl2);
 /*Using raw_sockets injects the packet in the network with HITs*/
-int reinject_packet(struct in6_addr src_hit, ipq_packet_msg_t *m);
+int reinject_packet(struct in6_addr src_hit, struct in6_addr dst_hit, ipq_packet_msg_t *m);
 int firewall_trigger_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *ip_src, struct in_addr *ip_dst);
 #endif

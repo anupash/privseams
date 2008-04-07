@@ -785,6 +785,7 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	memset(&dst, 0, sizeof(dst));
 	
 	if (dst_is_ipv4) {
+	        HIP_DEBUG("Using IPv4 raw socket\n");
 		hip_raw_sock = hip_raw_sock_v4;
 		sa_size = sizeof(struct sockaddr_in);
 	} else {

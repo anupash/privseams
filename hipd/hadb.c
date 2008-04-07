@@ -2746,28 +2746,22 @@ int hip_hadb_find_lsi(hip_ha_t *entry, void *lsi)
  * Our implementation doesn't allow repeated lsi's.
  */
 hip_ha_t *hip_hadb_try_to_find_by_peer_lsi(hip_lsi_t *lsi){
-	hip_list_t *item;
+        hip_list_t *item, *aux;
 	hip_ha_t *tmp;
 	int i;
 
-	list_for_each_safe(item, tmp, hadb_hit, i)
+	list_for_each_safe(item, aux, hadb_hit, i)
 	{
 		tmp = list_entry(item);
 		HIP_DEBUG_LSI("Are they equal? ", &tmp->lsi_peer);
-		HIP_DEBUG_LSI("== ", lsi);
-		if(!hip_lsi_are_equal(&tmp->lsi_peer, lsi)){
-			HIP_DEBUG("NO TROBAT, CONTINUA BUSCANT \n");
+		HIP_DEBUG_LSI(" == ", lsi);
+		if(!hip_lsi_are_equal(&tmp->lsi_peer, lsi))
 			continue;
-		}
-		else{
-			HIP_DEBUG_HIT("Ya lo tenemos oeeee!!",&tmp->hit_peer);
-			HIP_DEBUG("TROBAT!!! i surt \n");
+		else
 			return tmp;
-		}
 	}
 	return NULL;
 }
-
 
 hip_hit_t *hip_hadb_get_peer_hit_by_peer_lsi(hip_lsi_t *lsi){
 	hip_ha_t *entry = hip_hadb_try_to_find_by_peer_lsi(lsi);

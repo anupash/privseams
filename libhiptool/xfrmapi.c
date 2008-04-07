@@ -480,7 +480,7 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 
 	HIP_DEBUG("%s SA\n", (update ? "updating" : "adding new"));
 
-	HIP_DEBUG_HIT("----------------------------------------src_hit", src_hit);
+	HIP_DEBUG_HIT("src_hit", src_hit);
 	HIP_DEBUG_HIT("dst_hit", dst_hit);
 	HIP_DEBUG_IN6ADDR("saddr", saddr);
 	HIP_DEBUG_IN6ADDR("daddr", daddr);
@@ -530,12 +530,10 @@ int hip_setup_hit_sp_pair(struct in6_addr *src_id, struct in6_addr *dst_id,
 			  int use_full_prefix, int update)
 {
 	HIP_DEBUG("Start\n");
-	HIP_DEBUG_IN6ADDR("----------------------------------src id", src_id);
 
 	int err = 0;
 	u8 prefix = hip_calc_sp_prefix(src_id, use_full_prefix);
 
-	HIP_DEBUG("prefix is %i\n", prefix);
 
 	int cmd = update ? XFRM_MSG_UPDPOLICY : XFRM_MSG_NEWPOLICY;
 

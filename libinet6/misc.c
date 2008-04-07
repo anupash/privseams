@@ -1779,8 +1779,9 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 	return err;
 }
 
-int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit, struct in6_addr *src_ip, struct in6_addr *dst_ip)
+int hip_trigger_bex(struct in6_addr **src_hit, struct in6_addr **dst_hit, struct in6_addr *src_ip, struct in6_addr *dst_ip)
 {
+	struct hip_tlv_common *param = NULL;
 	struct hip_common *msg = NULL;
 	hip_lsi_t dst_ip4;
 	int err = 0, is_lsi = 0;
@@ -1788,32 +1789,26 @@ int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit, struct i
 	HIP_ERROR("Start hip_trigger_bex\n");
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 
-	if (src_hit){
-	  	HIP_ERROR("src_hit hip_trigger_bex\n");
-		HIP_IFEL(hip_build_param_contents(msg, (void *) src_hit,
+	if (*src_hit)
+		HIP_IFEL(hip_build_param_contents(msg, (void *) *src_hit,
 						  HIP_PARAM_HIT,
 						  sizeof(struct in6_addr)), -1,
 			 "build param HIP_PARAM_HIT  failed\n");
-	}
-	if (dst_hit){	
-	        HIP_ERROR("dst_hit hip_trigger_bex\n");
-		HIP_IFEL(hip_build_param_contents(msg, (void *) dst_hit,
-						  HIP_PARAM_HIT,
-						  sizeof(struct in6_addr)), -1,
-			 "build param HIP_PARAM_HIT  failed\n");
-	}
-	if (src_ip){
-	  HIP_DEBUG("src_ip hip_trigger_bex\n");
+       
+	if (*dst_hit)
+	  HIP_IFEL(hip_build_param_contents(msg, (void *) *dst_hit,
+							    HIP_PARAM_HIT,
+							    sizeof(struct in6_addr)), -1,
+				   "build param HIP_PARAM_HIT  failed\n");
+	
+	if (src_ip)
 		HIP_IFEL(hip_build_param_contents(msg, (void *) src_ip,
 						  HIP_PARAM_IPV6_ADDR,
 						  sizeof(struct in6_addr)), -1,
 			 "build param HIP_PARAM_IPV6_ADDR failed\n");
-	  HIP_ERROR("after;;;;;;;;;;;;;;;\n");
-	}
-
+     
 	if (dst_ip){
-		/*Added by Tere -- LSI check*/
-	  HIP_ERROR("dst_ip is defined\n");
+		/* LSI check */
 		if (IN6_IS_ADDR_V4MAPPED(dst_ip)){
 			IPV6_TO_IPV4_MAP(dst_ip, &dst_ip4);
 			HIP_DEBUG_LSI("          lsi is", &dst_ip4);
@@ -1832,6 +1827,7 @@ int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit, struct i
 		}
 	}
 
+
 	/* build the message header */
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_TRIGGER_BEX, 0), -1,
 		 "build hdr failed\n");
@@ -1840,11 +1836,18 @@ int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit, struct i
 	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send_recv msg failed\n");
 	HIP_DEBUG("send_recv msg succeed\n");
 	/* check error value */
-	/*HIP_IFEL(hip_get_msg_err(msg), -1, "Got erroneous message!\n");*/
-	/* assign the hit_peer associated to the peer_lsi*/
-	/*if (is_lsi && !dst_hit)
-		dst_hit = (struct in6_addr *)hip_get_param_contents(msg, HIP_PARAM_HIT);
-	*/
+	HIP_IFEL(hip_get_msg_err(msg), -1, "Got erroneous message!\n");
+
+	if (is_lsi && !(*dst_hit)){
+		while((param = hip_get_next_param(msg, param))){
+	    		if (hip_get_param_type(param) == HIP_PARAM_HIT){
+	      			if (!(*src_hit))
+					*src_hit = (struct in6_addr *)hip_get_param_contents_direct(param);
+	      			else 
+					*dst_hit = (struct in6_addr *)hip_get_param_contents_direct(param);
+	    		}
+	  	} 
+	}
  out_err:
 	if(msg)
 		HIP_FREE(msg);

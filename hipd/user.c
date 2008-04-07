@@ -551,14 +551,14 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 			HIP_DEBUG_LSI(">Param is an lsi!!", lsi);
 			HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_lsi(lsi)),
 				 -1, "internal error: no hadb entry found\n");
-			HIP_DEBUG_HIT("Ya lo tenemos oeeee!!",&entry->hit_peer);
-
 			HIP_IFEL(!(dst_hit = (hip_hit_t *) HIP_MALLOC(sizeof(hip_hit_t),0)),
-				 -ENOMEM, "No memory available for host id\n");
+				 -ENOMEM, "No memory available for dst_hit\n");
+			HIP_IFEL(!(src_hit = (hip_hit_t *) HIP_MALLOC(sizeof(hip_hit_t),0)),
+				 -ENOMEM, "No memory available for src_hit\n");
 			memset(dst_hit, 0, sizeof(*dst_hit));
-
-			ipv6_addr_copy(dst_hit, &entry->hit_peer);		
-			HIP_DEBUG("Y aqui no llegas!!");
+			memset(src_hit, 0, sizeof(*src_hit));
+			ipv6_addr_copy(dst_hit, &entry->hit_peer);
+			ipv6_addr_copy(src_hit, &entry->hit_our);
 		}
 
 		HIP_DEBUG("Sending i1\n");
@@ -576,13 +576,20 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
  out_err:
 
 	if (send_response) {
+	  HIP_DEBUG("Send response\n");
 		if (err)
 			hip_set_msg_err(msg, 1);
-		/* send a response (assuming that it is written to the msg */		
-		if (msg_type == SO_HIP_TRIGGER_BEX && lsi)
-			HIP_IFEL(hip_build_param_contents(msg, (void *)(dst_hit),
-				 HIP_PARAM_HIT, sizeof(struct in6_addr)), -1,
-				 "build param HIP_PARAM_HIT  failed\n");
+		else{
+		        if (msg_type == SO_HIP_TRIGGER_BEX && lsi){
+		                HIP_IFEL(hip_build_param_contents(msg, (void *)src_hit,
+					 HIP_PARAM_HIT, sizeof(struct in6_addr)), -1,
+				 	 "build param HIP_PARAM_HIT  failed\n");
+		    		HIP_IFEL(hip_build_param_contents(msg, (void *)dst_hit,
+					 HIP_PARAM_HIT, sizeof(struct in6_addr)), -1,
+				 	 "build param HIP_PARAM_HIT  failed\n");
+		        }
+		}
+
 		len = hip_get_msg_total_len(msg);
 		n = hip_sendto(msg, src);
 	
@@ -590,12 +597,12 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 			HIP_ERROR("hip_sendto() failed.\n");
 			err = -1;
 		} else {
-			HIP_DEBUG("Response sent ok\n");
-		
+			HIP_DEBUG("Response sent ok\n");	
 		}
 	} else {
 		HIP_DEBUG("No response sent\n");
 	}
-
+	if (dst_hit)
+	  HIP_FREE(dst_hit);
 	return err;
 }
