@@ -869,7 +869,7 @@ static void *handle_ip_traffic(void *ptr) {
 				else
 	  				_HIP_DEBUG("signature exists\n");
 
-				HIP_DUMP_MSG(hip_common);
+				//HIP_DUMP_MSG(hip_common);
 				allow_packet(hndl, m->packet_id);//test
 
 				/*if(filter_hip(src_addr, 
@@ -962,11 +962,11 @@ int firewall_trigger_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *ip_src, s
 		// Run bex to initialize SP and SA
 		HIP_IFEL(hip_trigger_bex(&src_hit, &dst_hit, NULL, &dst_addr), -1, 
 			 "Base Exchange Trigger failed");
-		firewall_add_hit_lsi(dst_hit, ip_dst);
+		firewall_add_hit_lsi(src_hit, dst_hit, ip_dst);
 		// Waits for R2 answer
 		if (is_bex_done()){
 		  HIP_DEBUG(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>BEX is done. Reinjecting the packet\n");
-		  reinject_packet(*src_hit, *dst_hit, m);
+		  //reinject_packet(*src_hit, *dst_hit, m);
 		  set_bex_done(0);
 		}
 	}
@@ -984,8 +984,8 @@ int reinject_packet(struct in6_addr src_hit, struct in6_addr dst_hit, ipq_packet
 	struct sockaddr_in6 sock6_src, sock6_dest;
 	struct in6_addr any = IN6ADDR_ANY_INIT;
 	
-	//HIP_DEBUG_HIT("............................reinject_packet src_hit ",&src_hit);
-	//HIP_DEBUG_HIT("............................reinject_packet dst_hit ",&dst_hit);
+	HIP_DEBUG_HIT("............................reinject_packet src_hit ",&src_hit);
+	HIP_DEBUG_HIT("............................reinject_packet dst_hit ",&dst_hit);
 	
 	sock6_src.sin6_family = AF_INET6;
 	sock6_src.sin6_port = htons(tcphdr->source);
@@ -1049,24 +1049,27 @@ void hip_firewall_hldb_dump(void)
 	list_for_each_safe(item, tmp, firewall_lsi_hit_db, i)
 	{
 		this = list_entry(item);
-		HIP_DEBUG_HIT("Dump >>> hit", &this->hit);
+		HIP_DEBUG_HIT("Dump >>> hit_our", &this->hit_our);
+		HIP_DEBUG_HIT("Dump >>> hit_peer", &this->hit_peer);
 		HIP_DEBUG_LSI("Dump >>> lsi", &this->lsi);
 	}
 	HIP_UNLOCK_HT(&firewall_lsi_hit_db);
 	HIP_DEBUG("end hldbdb dump\n");
 }
 
-int firewall_add_hit_lsi(struct in6_addr *hit, hip_lsi_t *lsi){
+int firewall_add_hit_lsi(struct in6_addr *hit_our, struct in6_addr *hit_peer, hip_lsi_t *lsi){
 	int err = 0;
 	firewall_hl_t *new_entry = NULL;
 
-	HIP_ASSERT(hit != NULL && lsi != NULL);
+	HIP_ASSERT(hit_our != NULL && hit_peer != NULL && lsi != NULL);
 	HIP_DEBUG("Start firewall_add_hit_lsi\n");
 	
 	new_entry = hip_create_hl_entry();
-	ipv6_addr_copy(&new_entry->hit, hit);
+	ipv6_addr_copy(&new_entry->hit_our, hit_our);
+	ipv6_addr_copy(&new_entry->hit_peer, hit_peer);
 	ipv4_addr_copy(&new_entry->lsi, lsi);
-	HIP_DEBUG_HIT("1. entry to add to firewall_db hit ", &new_entry->hit);
+	HIP_DEBUG_HIT("1. entry to add to firewall_db hit_our ", &new_entry->hit_our);
+	HIP_DEBUG_HIT("1. entry to add to firewall_db hit_peer ", &new_entry->hit_peer);
 	HIP_DEBUG_LSI("1. entry to add to firewall_db lsi ", &new_entry->lsi);
 	err = hip_ht_add(firewall_lsi_hit_db, new_entry);
 

@@ -300,6 +300,8 @@ int hipd_init(int flush_ipsec, int killold)
 	HIP_IFEL(bind(hip_agent_sock, (struct sockaddr *)&hip_agent_addr,
 	              sizeof(hip_agent_addr)), -1, "Bind on agent addr failed.");
 	chmod(HIP_AGENTADDR_PATH, 0777);
+
+	hip_firewall_sock = socket(AF_INET6, SOCK_DGRAM, 0);
 	
         dhterr = 0;
         dhterr = hip_init_dht();

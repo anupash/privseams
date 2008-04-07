@@ -200,6 +200,7 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 	        set_escrow_active(0);
                	break;
         case HIP_BEX_DONE:
+	        HIP_DEBUG("Received bex done from hipd\n\n");
 		hit_s = (struct in6_addr *)hip_get_param_contents(msg, HIP_PARAM_HIT);
 		hit_r = (struct in6_addr *)hip_get_param_contents(msg, HIP_PARAM_HIT);
 		if (!hit_r)
@@ -235,6 +236,25 @@ int sendto_hipd(void *msg, size_t len)
 	return (n);
 }
 
+int initialise_firewall_socket(){
+        int err = 0;
+        struct sockaddr_in6 sock_addr;
+	socklen_t alen;
+	
+	/*New UDP socket for communication with HIPD*/
+	hip_firewall_sock = socket(AF_INET6, SOCK_DGRAM, 0);
+	HIP_IFEL((hip_firewall_sock < 0), 1, "Could not create socket for firewall.\n");
+	bzero(&sock_addr, sizeof(sock_addr));
+	sock_addr.sin6_family = AF_INET6;
+	sock_addr.sin6_port = HIP_FIREWALL_PORT;
+	sock_addr.sin6_addr = in6addr_loopback;
+	
+	HIP_IFEL(bind(hip_firewall_sock, (struct sockaddr *)& sock_addr,
+		      sizeof(sock_addr)), -1, "Bind on firewall socket addr failed\n");
+ out_err:
+	return err;
+
+}
 
 int control_thread_init(void)
 {
@@ -253,15 +273,8 @@ int control_thread_init(void)
 		return err;
 	}
 
-	/*New UDP socket for communication with HIPD*/
-	hip_firewall_sock = socket(AF_INET6, SOCK_DGRAM, 0);
-	HIP_IFEL((hip_firewall_sock < 0), 1, "Could not create socket for firewall.\n");
-	bzero(&sock_addr, sizeof(sock_addr));
-	sock_addr.sin6_family = AF_INET6;
-	sock_addr.sin6_port = HIP_FIREWALL_PORT;
-	sock_addr.sin6_addr = in6addr_loopback;
-	HIP_IFEL(bind(hip_firewall_sock, (struct sockaddr *)& sock_addr,
-		      sizeof(sock_addr)), -1, "Bind on firewall socket addr failed\n");
+		
+	HIP_IFEL(initialise_firewall_socket(),-1, "Firewall socket creation failed\n");
 
     	if( !g_thread_supported() )
   		{

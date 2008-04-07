@@ -1851,6 +1851,8 @@ int hip_trigger_bex(struct in6_addr **src_hit, struct in6_addr **dst_hit, struct
  out_err:
 	if(msg)
 		HIP_FREE(msg);
+	HIP_DEBUG_HIT("hip_trigger bex src_hit",*src_hit);
+	HIP_DEBUG_HIT("hip_trigger bex dst_hit",*dst_hit);
 	HIP_DEBUG("End  hip_trigger_bex\n");
 	return err;
 }

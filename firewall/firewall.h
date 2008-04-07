@@ -44,7 +44,8 @@
 
 struct firewall_hl {
 	hip_lsi_t lsi;
-	hip_hit_t hit;
+	hip_hit_t hit_our;
+        hip_hit_t hit_peer;
   // int bex_state;
 };
 
@@ -68,7 +69,7 @@ void firewall_probe_kernel_modules();
 void firewall_init_hldb(void);
 /*Consult/Modify operations in firewall database*/
 firewall_hl_t *firewall_hit_lsi_db_match(hip_lsi_t *lsi_peer);
-int firewall_add_hit_lsi(struct in6_addr *hit, hip_lsi_t *lsi);
+int firewall_add_hit_lsi(struct in6_addr *hit_our, struct in6_addr *hit_peer, hip_lsi_t *lsi);
 /*Comparation definition for the db structure*/
 unsigned long firewall_hash_hl(const firewall_hl_t *hl);
 int firewall_compare_hl(const firewall_hl_t *hl1, const firewall_hl_t *hl2);

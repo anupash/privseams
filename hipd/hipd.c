@@ -46,7 +46,7 @@ int hip_agent_sock = 0, hip_agent_status = 0;
 struct sockaddr_un hip_agent_addr;
 
 struct sockaddr_in6 hip_firewall_addr;
-int hip_firewall_sock = 0;// Extern but compilation error
+int hip_firewall_sock = 0;
 
 /* 
    HIP transform suite order 
@@ -284,9 +284,17 @@ int hip_sendto_firewall(const struct hip_common *msg){
 #ifdef CONFIG_HIP_FIREWALL
 	int n = 0;
 	HIP_DEBUG("CONFIG_HIP_FIREWALL DEFINED AND STATUS IS %d\n", hip_get_firewall_status());
+	socklen_t alen = sizeof(hip_firewall_addr);
+	struct sockaddr_in6 sock_addr;
+ 
+	bzero(&sock_addr, alen);
+	sock_addr.sin6_family = AF_INET6;
+	sock_addr.sin6_port = HIP_FIREWALL_PORT;
+	sock_addr.sin6_addr = in6addr_loopback;
+
 	if (hip_get_firewall_status()) {
 		n = sendto(hip_firewall_sock, msg, hip_get_msg_total_len(msg),
-		   0, (struct sockaddr *)&hip_firewall_addr, sizeof(hip_firewall_addr));
+		   0, (struct sockaddr *)&sock_addr, alen);
 		return n;
 	}
 #else
