@@ -563,7 +563,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 
 		HIP_DEBUG("Sending i1\n");
 		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
-				 -1, "sending i1 failed\n");
+			 -1, "sending i1 failed\n");
 
 		goto out_err;
 	  	break;

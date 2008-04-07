@@ -34,9 +34,7 @@ static inline HIP_HASHTABLE *hip_ht_init(LHASH_HASH_FN_TYPE hashfunc, LHASH_COMP
 static inline int hip_ht_add(HIP_HASHTABLE *head, void *data)
 {
 	if (lh_insert(head, data)) {
-		HIP_DEBUG("hash replace occured\n");
-	}else{
-	        HIP_DEBUG("hash replace not occured\n");
+	        _HIP_DEBUG("hash replace not occured\n");
 	}
 	return 0;
 }
