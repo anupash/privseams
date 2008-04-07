@@ -7,14 +7,24 @@
 #include <stddef.h>
 #include <sys/socket.h>
 #include <netinet/tcp.h>
+#include <netinet/udp.h>
+#include <netinet/ip_icmp.h>
+#include <linux/icmpv6.h>
+
 
 #include "debug.h"
 #include "hidb.h"
 #include "hashtable.h"
 
 HIP_HASHTABLE *hip_proxy_db = NULL;
-int hip_proxy_raw_sock_v4 = 0;
-int hip_proxy_raw_sock_v6 = 0;
+int hip_proxy_raw_sock_tcp_v4 = 0;
+int hip_proxy_raw_sock_tcp_v6 = 0;
+int hip_proxy_raw_sock_udp_v4 = 0;
+int hip_proxy_raw_sock_udp_v6 = 0;
+int hip_proxy_raw_sock_icmp_v4 = 0;
+int hip_proxy_raw_sock_icmp_v6 = 0;
+int hip_proxy_raw_sock_icmp_inbound = 0;
+
 
 typedef struct hip_proxy_t {
 	hip_hit_t hit_our; // hit_proxy_client

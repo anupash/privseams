@@ -55,6 +55,16 @@ typedef struct hip_proxy_t {
 	int hip_capable;
 } hip_proxy_t;
 
+typedef struct hip_conn_t {
+	struct in6_addr addr_client; // addr_proxy_client
+	struct in6_addr addr_peer; // addr_proxy_peer
+	struct in6_addr hit_peer;
+	int protocol;
+	int port_client;
+	int port_peer;
+	int state;
+} hip_conn_t;
+
 #define HIP_FIREWALL_LOCK_FILE	"/var/lock/hip_firewall.lock"
 extern int hipproxy;
 

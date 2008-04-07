@@ -46,7 +46,7 @@ gpointer run_control_thread(gpointer data)
 		} 
 		else if (err == 0) {
 			/* idle cycle - select() timeout */
-			HIP_DEBUG("Idle\n");
+			_HIP_DEBUG("Idle\n");
 		}
 		else if (FD_ISSET(hip_firewall_sock, &read_fdset))
 		{
