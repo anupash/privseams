@@ -54,8 +54,8 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		err = hip_add_peer_map(msg);
 		if(err)
 		{
-		  HIP_ERROR("add peer mapping failed.\n");
-		  goto out_err;
+			HIP_ERROR("add peer mapping failed.\n");
+			goto out_err;
 		}
 		break;
 #if 0
@@ -150,27 +150,27 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
                 }
 		/* skip sending of return message; will be sent later in R1 */
 		goto out_err;
-	  break;
+		break;
 	case SO_HIP_QUERY_IP_HIT_MAPPING:
-	  {
+	{
 	    	err = hip_query_ip_hit_mapping(msg);
 		if(err){
-		  HIP_ERROR("query ip hit mapping failed.\n");
-		  goto out_err;
+			HIP_ERROR("query ip hit mapping failed.\n");
+			goto out_err;
 		}
-	  }
-	  break;	  
+	}
+	break;	  
 	case SO_HIP_QUERY_OPPORTUNISTIC_MODE:
-	  {
+	{
 	    	err = hip_query_opportunistic_mode(msg);
 		if(err){
-		  HIP_ERROR("query opportunistic mode failed.\n");
-		  goto out_err;
+			HIP_ERROR("query opportunistic mode failed.\n");
+			goto out_err;
 		}
 		
 		HIP_DEBUG("opportunistic mode value is sent\n");
-	  }
-	  break;
+	}
+	break;
 #endif
 #ifdef CONFIG_HIP_BLIND
 	case SO_HIP_SET_BLIND_ON:
@@ -183,90 +183,89 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		break;
 #endif
         case SO_HIP_DHT_GW:
-          {
-            char tmp_ip_str[20];
-            int tmp_ttl, tmp_port;
-            const char *pret;
-            int ret;
-            struct in_addr tmp_v4;
-            struct hip_opendht_gw_info *gw_info;
+	{
+		char tmp_ip_str[20];
+		int tmp_ttl, tmp_port;
+		const char *pret;
+		int ret;
+		struct in_addr tmp_v4;
+		struct hip_opendht_gw_info *gw_info;
 
-            HIP_IFEL(!(gw_info = hip_get_param(msg, HIP_PARAM_OPENDHT_GW_INFO)), -1,
-                     "no gw struct found\n");
-            memset(&tmp_ip_str,'\0',20);
-            tmp_ttl = gw_info->ttl;
-            tmp_port = htons(gw_info->port);
+		HIP_IFEL(!(gw_info = hip_get_param(msg, HIP_PARAM_OPENDHT_GW_INFO)), -1,
+			 "No gw struct found\n");
+		memset(&tmp_ip_str,'\0',20);
+		tmp_ttl = gw_info->ttl;
+		tmp_port = htons(gw_info->port);
            
 
-            IPV6_TO_IPV4_MAP(&gw_info->addr, &tmp_v4); 
-	    /** 
-	     * @todo this gives a compiler warning! warning: assignment from
-	     * incompatible pointer type
-	     */
-            pret = inet_ntop(AF_INET, &tmp_v4, tmp_ip_str, 20); 
-            HIP_DEBUG("Got address %s, port %d, TTL %d from hipconf\n", 
-                      tmp_ip_str, tmp_port, tmp_ttl);
-            ret = resolve_dht_gateway_info (tmp_ip_str, &opendht_serving_gateway);
-            if (ret == 0)
-            {
-              HIP_DEBUG("Serving gateway changed\n");
-              hip_opendht_fqdn_sent = 0;
-              hip_opendht_hit_sent = 0;
-              hip_opendht_error_count = 0;
-            }
-            else
-            {
-              HIP_DEBUG("Error in changing the serving gateway!");
-            }
-          }
-          break; 
+		IPV6_TO_IPV4_MAP(&gw_info->addr, &tmp_v4); 
+		/** 
+		 * @todo this gives a compiler warning! warning: assignment from
+		 * incompatible pointer type
+		 */
+		pret = inet_ntop(AF_INET, &tmp_v4, tmp_ip_str, 20); 
+		HIP_DEBUG("Got address %s, port %d, TTL %d from hipconf\n", 
+			  tmp_ip_str, tmp_port, tmp_ttl);
+		ret = resolve_dht_gateway_info (tmp_ip_str, &opendht_serving_gateway);
+		if (ret == 0)
+		{
+			HIP_DEBUG("Serving gateway changed\n");
+			hip_opendht_fqdn_sent = 0;
+			hip_opendht_hit_sent = 0;
+			hip_opendht_error_count = 0;
+		}
+		else
+		{
+			HIP_DEBUG("Error in changing the serving gateway!");
+		}
+	}
+	break; 
         case SO_HIP_DHT_SERVING_GW:
-          {
-            
-            struct in_addr ip_gw;
-            struct in6_addr ip_gw_mapped;
-            int rett = 0, errr = 0;
-            struct sockaddr_in *sa;
-	    if (opendht_serving_gateway == NULL) {
-		    opendht_serving_gateway = malloc(sizeof(struct addrinfo));
-                    memset(opendht_serving_gateway, 0, sizeof(struct addrinfo));
-            }
-	    if (opendht_serving_gateway->ai_addr == NULL) {
-		  opendht_serving_gateway->ai_addr = malloc(sizeof(struct sockaddr_in));
-                  memset(opendht_serving_gateway->ai_addr, 0, sizeof(struct sockaddr_in));
-            }
-	    sa = (struct sockaddr_in*)opendht_serving_gateway->ai_addr;
-            rett = inet_pton(AF_INET, inet_ntoa(sa->sin_addr), &ip_gw);
-            IPV4_TO_IPV6_MAP(&ip_gw, &ip_gw_mapped);
-	    HIP_DEBUG_HIT("dht gateway address (mapped) to be sent", &ip_gw_mapped);
-	    memset(msg, 0, HIP_MAX_PACKET);
-            HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW, 0), -1,
-	      "Building of daemon header failed\n");
-	    _HIP_DUMP_MSG(msg);
-            if (hip_opendht_inuse == SO_HIP_DHT_ON) {
-                    errr = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped, 
-                                                           opendht_serving_gateway_ttl,
-                                                           opendht_serving_gateway_port);
-            } else { /* not in use mark port and ttl to 0 */
-                    errr = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped, 0,0);
-            }
-            
-            if (errr)
-              {
-                HIP_ERROR("Build param hit failed: %s\n", strerror(errr));
-                goto out_err;
-              }
-            errr = hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW, 0);
-            if (errr)
-              {
-                HIP_ERROR("Build hdr failed: %s\n", strerror(errr));
-              }
-            HIP_DEBUG("Building gw_info complete\n");
-          }
-          break;
+	{
+		struct in_addr ip_gw;
+		struct in6_addr ip_gw_mapped;
+		int rett = 0, errr = 0;
+		struct sockaddr_in *sa;
+		if (opendht_serving_gateway == NULL) {
+			opendht_serving_gateway = malloc(sizeof(struct addrinfo));
+			memset(opendht_serving_gateway, 0, sizeof(struct addrinfo));
+		}
+		if (opendht_serving_gateway->ai_addr == NULL) {
+			opendht_serving_gateway->ai_addr = malloc(sizeof(struct sockaddr_in));
+			memset(opendht_serving_gateway->ai_addr, 0, sizeof(struct sockaddr_in));
+		}
+		sa = (struct sockaddr_in*)opendht_serving_gateway->ai_addr;
+		rett = inet_pton(AF_INET, inet_ntoa(sa->sin_addr), &ip_gw);
+		IPV4_TO_IPV6_MAP(&ip_gw, &ip_gw_mapped);
+		HIP_DEBUG_HIT("dht gateway address (mapped) to be sent", &ip_gw_mapped);
+		memset(msg, 0, HIP_MAX_PACKET);
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW, 0), -1,
+			 "Building of daemon header failed\n");
+		_HIP_DUMP_MSG(msg);
+		if (hip_opendht_inuse == SO_HIP_DHT_ON) {
+			errr = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped, 
+							       opendht_serving_gateway_ttl,
+							       opendht_serving_gateway_port);
+		} else { /* not in use mark port and ttl to 0 */
+			errr = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped, 0,0);
+		}
+		
+		if (errr)
+		{
+			HIP_ERROR("Build param hit failed: %s\n", strerror(errr));
+			goto out_err;
+		}
+		errr = hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW, 0);
+		if (errr)
+		{
+			HIP_ERROR("Build hdr failed: %s\n", strerror(errr));
+		}
+		HIP_DEBUG("Building gw_info complete\n");
+	}
+	break;
 
         case SO_HIP_DHT_SET:
-            {
+	{
                 extern char opendht_name_mapping;
                 err = 0;
                 struct hip_opendht_set *name_info; 
@@ -275,10 +274,10 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
                 _HIP_DEBUG("Name in name_info %s\n" , name_info->name);
                 memcpy(&opendht_name_mapping, &name_info->name, HIP_HOST_ID_HOSTNAME_LEN_MAX);
                 HIP_DEBUG("Name received from hipconf %s\n", &opendht_name_mapping);
-            }
-            break;
+	}
+	break;
         case SO_HIP_TRANSFORM_ORDER:
-                {
+	{
                 extern int hip_transform_order;
                 err = 0;
                 struct hip_opendht_set *name_info; 
@@ -287,8 +286,8 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
                 _HIP_DEBUG("Transform order received from hipconf:  %s\n" , name_info->name);
                 hip_transform_order = atoi(name_info->name);
                 hip_recreate_all_precreated_r1_packets();
-                }
-                break;
+	}
+	break;
         case SO_HIP_DHT_ON:
                 HIP_DEBUG("Setting DHT ON\n");
                 hip_opendht_inuse = SO_HIP_DHT_ON;
@@ -313,33 +312,33 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 			 -1, "no ip found\n");
 		HIP_IFEL(hip_add_peer_map(msg), -1, "add escrow map\n");
 		HIP_IFEL(hip_for_each_hi(hip_kea_create_base_entry, dst_hit), 0,
-	         "for_each_hi err.\n");	
+			 "for_each_hi err.\n");	
 		HIP_DEBUG("Added kea base entry.\n");
 		
 		HIP_IFEL(hip_for_each_hi(hip_launch_escrow_registration, dst_hit), 0,
-	         "for_each_hi err.\n");	
+			 "for_each_hi err.\n");	
 		break;
 	
 	case SO_HIP_DEL_ESCROW:
 		HIP_DEBUG("handling escrow user message (delete).\n");
 		HIP_IFEL(!(dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT)),
-				-1, "no hit found\n");
+			 -1, "no hit found\n");
 		HIP_IFEL(!(dst_ip = hip_get_param_contents(msg, 
-				HIP_PARAM_IPV6_ADDR)), -1, "no ip found\n");
+							   HIP_PARAM_IPV6_ADDR)), -1, "no ip found\n");
 		HIP_IFEL(!(server_entry = hip_hadb_try_to_find_by_peer_hit(dst_hit)), 
-				-1, "Could not find server entry");
+			 -1, "Could not find server entry");
 		HIP_IFEL(!(kea = hip_kea_find(&server_entry->hit_our)), -1, 
-			"Could not find kea base entry");
+			 "Could not find kea base entry");
 		if (ipv6_addr_cmp(dst_hit, &kea->server_hit) == 0)
 		{
 			// Cancel registration (REG_REQUEST with zero lifetime)
 			HIP_IFEL(hip_for_each_hi(hip_launch_cancel_escrow_registration, dst_hit), 0,
-					"for_each_hi err.\n");
+				 "for_each_hi err.\n");
 			hip_keadb_put_entry(kea);
 			HIP_IFEL(hip_for_each_ha(hip_remove_escrow_data, dst_hit), 
-					0, "for_each_hi err.\n");	
+				 0, "for_each_hi err.\n");	
 			HIP_IFEL(hip_kea_remove_base_entries(), 0,
-					"Could not remove base entries\n");	
+				 "Could not remove base entries\n");	
 			HIP_DEBUG("Removed kea base entries.\n");	
 		}
 		/** @todo Not filtering I1, when handling escrow user message! */
@@ -351,18 +350,18 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		HIP_DEBUG("Handling add escrow service -user message.\n");
 		
 		HIP_IFEL(hip_services_add(HIP_SERVICE_ESCROW), -1, 
-                        "Error while adding service\n");
+			 "Error while adding service\n");
 	
 		hip_services_set_active(HIP_SERVICE_ESCROW);
 		if (hip_services_is_active(HIP_SERVICE_ESCROW))
 			HIP_DEBUG("Escrow service is now active.\n");
 		HIP_IFEL(hip_recreate_all_precreated_r1_packets(), -1, 
-                        "Failed to recreate R1-packets\n"); 
+			 "Failed to recreate R1-packets\n"); 
 
 		if (hip_firewall_is_alive())
 		{
-				HIP_IFEL(hip_firewall_set_escrow_active(1), -1, 
-						"Failed to deliver activation message to firewall\n");
+			HIP_IFEL(hip_firewall_set_escrow_active(1), -1, 
+				 "Failed to deliver activation message to firewall\n");
 		}
 		break;
 	
@@ -371,122 +370,169 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		if (hip_firewall_is_alive())
 		{
 			HIP_IFEL(hip_firewall_set_escrow_active(0), -1, 
-				"Failed to deliver activation message to firewall\n");
+				 "Failed to deliver activation message to firewall\n");
 		}
 		HIP_IFEL(hip_services_remove(HIP_ESCROW_SERVICE), -1, 
-				"Error while removing service\n");
+			 "Error while removing service\n");
 		HIP_IFEL(hip_recreate_all_precreated_r1_packets(), -1, 
-				"Failed to recreate R1-packets\n"); 
+			 "Failed to recreate R1-packets\n"); 
 		
 		break;
 #endif /* CONFIG_HIP_ESCROW */
 #ifdef CONFIG_HIP_RVS
-	case SO_HIP_ADD_RENDEZVOUS:
-	     /* draft-ietf-hip-registration-02 RVS registration. Responder
-		(of I,RVS,R hierarchy) handles this message. Message
-		indicates that the current machine wants to register to a rvs
-		server. This message is received from hipconf. */
-	     HIP_DEBUG("Handling ADD RENDEZVOUS user message.\n");
+	case SO_HIP_ADD_RVS:
+		/* draft-ietf-hip-registration-02 RVS registration. Responder
+		   (of I,RVS,R hierarchy) handles this message. Message
+		   indicates that the current machine wants to register to a rvs
+		   server. This message is received from hipconf. */
+		HIP_DEBUG("Handling ADD RENDEZVOUS user message.\n");
 		
-	     /* Get rvs ip and hit given as commandline parameters to hipconf. */
-	     HIP_IFEL(!(dst_hit = hip_get_param_contents(
-			     msg, HIP_PARAM_HIT)), -1, "no hit found\n");
-	     HIP_IFEL(!(dst_ip = hip_get_param_contents(
-			     msg, HIP_PARAM_IPV6_ADDR)), -1, "no ip found\n");
-	     /* Add HIT to IP mapping of rvs to hadb. */ 
-	     HIP_IFEL(hip_add_peer_map(msg), -1, "add rvs map\n");
-	     /* Fetch the hadb entry just created. */
-	     HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(dst_hit)),
-		      -1, "internal error: no hadb entry found\n");
+		/* Get rvs ip and hit given as commandline parameters to hipconf. */
+		HIP_IFEL(!(dst_hit = hip_get_param_contents(
+				   msg, HIP_PARAM_HIT)), -1, "no hit found\n");
+		HIP_IFEL(!(dst_ip = hip_get_param_contents(
+				   msg, HIP_PARAM_IPV6_ADDR)), -1, "no ip found\n");
+		/* Add HIT to IP mapping of rvs to hadb. */ 
+		HIP_IFEL(hip_add_peer_map(msg), -1, "add rvs map\n");
+		/* Fetch the hadb entry just created. */
+		HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(dst_hit)),
+			 -1, "internal error: no hadb entry found\n");
 		
-	     /* Set a rvs request flag. */
-	     hip_hadb_set_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_RVS);
+		/* Set a rvs request flag. */
+		hip_hadb_set_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_RVS);
 
-	     /* Send a I1 packet to rvs. */
-	     /** @todo Not filtering I1, when handling rvs message! */
-	     HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
-		      -1, "sending i1 failed\n");
-	     break;
+		/* Send a I1 packet to rvs. */
+		/** @todo Not filtering I1, when handling rvs message! */
+		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
+			 -1, "sending i1 failed\n");
+		break;
 	
-	case SO_HIP_OFFER_RENDEZVOUS:
-	     /* draft-ietf-hip-registration-02 RVS registration. Rendezvous
-		server handles this message. Message indicates that the
-		current machine is willing to offer rendezvous service. This
-		message is received from hipconf. */
-	     HIP_DEBUG("Handling OFFER RENDEZVOUS user message.\n");
+	case SO_HIP_OFFER_RVS:
+		/* draft-ietf-hip-registration-02 RVS registration. Rendezvous
+		   server handles this message. Message indicates that the
+		   current machine is willing to offer rendezvous service. This
+		   message is received from hipconf. */
+		HIP_DEBUG("Handling OFFER RENDEZVOUS user message.\n");
 		
-	     HIP_IFE(hip_services_add(HIP_SERVICE_RENDEZVOUS), -1);
-	     hip_services_set_active(HIP_SERVICE_RENDEZVOUS);
+		HIP_IFE(hip_services_add(HIP_SERVICE_RENDEZVOUS), -1);
+		hip_services_set_active(HIP_SERVICE_RENDEZVOUS);
 		
-	     if (hip_services_is_active(HIP_SERVICE_RENDEZVOUS)){
-		  HIP_DEBUG("Rendezvous service is now active.\n");
-		  we_are_relay = 1;
-	     }
+		if (hip_services_is_active(HIP_SERVICE_RENDEZVOUS)){
+			HIP_DEBUG("Rendezvous service is now active.\n");
+			hip_relay_set_status(HIP_RELAY_ON);
+		}
 	     
-	     err = hip_recreate_all_precreated_r1_packets();
-	     break;
-	
+		err = hip_recreate_all_precreated_r1_packets();
+		break;
 
-	case SO_HIP_ADD_RELAY_UDP_HIP:
-	     /* draft-ietf-hip-registration-02 HIPUDPRELAY registration.
-		Responder (of I,Relay,R hierarchy) handles this message. Message
-		indicates that the current machine wants to register to a rvs
-		server. This message is received from hipconf. */
-	     HIP_DEBUG("Handling ADD HIPUDPRELAY user message.\n");
+	case SO_HIP_ADD_RELAY:
+		/* draft-ietf-hip-registration-02 HIPRELAY registration.
+		   Responder (of I,Relay,R hierarchy) handles this message. Message
+		   indicates that the current machine wants to register to a HIP
+		   relay server. This message is received from hipconf. */
+		HIP_DEBUG("Handling ADD HIPRELAY user message.\n");
 		
-	     /* Get rvs ip and hit given as commandline parameters to hipconf. */
-	     HIP_IFEL(!(dst_hit = hip_get_param_contents(
-			     msg, HIP_PARAM_HIT)), -1, "no hit found\n");
-	     HIP_IFEL(!(dst_ip = hip_get_param_contents(
-			     msg, HIP_PARAM_IPV6_ADDR)), -1, "no ip found\n");
-	     /* Add HIT to IP mapping of relay to hadb. */ 
-	     HIP_IFEL(hip_add_peer_map(msg), -1, "add rvs map\n");
-	     /* Fetch the hadb entry just created. */
-	     HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(dst_hit)),
-		      -1, "internal error: no hadb entry found\n");
-		
-	     /* Set a hipudprelay request flag. */
-	     hip_hadb_set_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_HIPUDP);
-
-	     /* Since we are requesting UDP relay, we assume that we are behind
-		a NAT. Therefore we set the NAT status on. This is needed only
-		for the current host association, but since keep-alives are sent
-		currently only if the global NAT status is on, we must call
-		hip_nat_on() (which in turn sets the NAT status on for all host
-		associations). */
-	     HIP_IFEL(hip_nat_on(), -1, "Error when setting daemon NAT status"\
-		      "to \"on\"\n");
-	     hip_agent_update_status(HIP_NAT_ON, NULL, 0);
-
-	     /* Send a I1 packet to relay. */
-	     HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
-		      -1, "sending i1 failed\n");
-	     break;
+		/* Get HIP relay IP address and HIT that were given as commandline
+		   parameters to hipconf. */
+		HIP_IFEL(!(dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT)),
+			 -1, "Relay server HIT was not found from the message.\n");
+		HIP_IFEL(!(dst_ip = hip_get_param_contents(
+				   msg, HIP_PARAM_IPV6_ADDR)), -1, "Relay server "\
+			 "IP address was not found from the message.\n");
+		/* Create a new host association database entry from the message
+		   received from the hipconf. This creates a HIT to IP mapping
+		   of the relay server. */
+		HIP_IFEL(hip_add_peer_map(msg), -1, "Failed to create a new host "
+			 "association database entry for the relay server.\n");
+		/* Fetch the host association database entry just created. */
+		HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(dst_hit)),
+			 -1, "Unable to find host association database entry "\
+			 "matching relay server's HIT.\n");
 	     
-	case SO_HIP_OFFER_HIPUDPRELAY:
-	     /* draft-ietf-hip-registration-02 HIPUDPRELAY registration. Relay
-		server handles this message. Message indicates that the
-		current machine is willing to offer relay service. This
-		message is received from hipconf. */
-	     HIP_DEBUG("Handling OFFER HIPUDPRELAY user message.\n");
+		/* Set a hiprelay request flag. */
+		hip_hadb_set_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_RELAY);
+
+		/* Since we are requesting UDP relay, we assume that we are behind
+		   a NAT. Therefore we set the NAT status on. This is needed only
+		   for the current host association, but since keep-alives are sent
+		   currently only if the global NAT status is on, we must call
+		   hip_nat_on() (which in turn sets the NAT status on for all host
+		   associations). */
+		HIP_IFEL(hip_nat_on(), -1, "Error when setting daemon NAT status"\
+			 "to \"on\"\n");
+		hip_agent_update_status(HIP_NAT_ON, NULL, 0);
+
+		/* Send a I1 packet to relay. */
+		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
+			 -1, "sending i1 failed\n");
+		break;
+	     
+	case SO_HIP_OFFER_HIPRELAY:
+		/* draft-ietf-hip-registration-02 HIPRELAY registration. Relay
+		   server handles this message. Message indicates that the
+		   current machine is willing to offer relay service. This
+		   message is received from hipconf. */
+		HIP_DEBUG("Handling OFFER HIPRELAY user message.\n");
 		
-	     HIP_IFE(hip_services_add(HIP_SERVICE_RELAY_UDP_HIP), -1);
-	     hip_services_set_active(HIP_SERVICE_RELAY_UDP_HIP);
+		HIP_IFE(hip_services_add(HIP_SERVICE_RELAY), -1);
+		hip_services_set_active(HIP_SERVICE_RELAY);
 		
-	     if (hip_services_is_active(HIP_SERVICE_RELAY_UDP_HIP)){
-		  HIP_DEBUG("UDP relay service for HIP packets"\
-			    "is now active.\n");
-		  we_are_relay = 1;
-	     }
+		if (hip_services_is_active(HIP_SERVICE_RELAY)){
+			HIP_DEBUG("UDP relay service for HIP packets"\
+				  "is now active.\n");
+			hip_relay_set_status(HIP_RELAY_ON);
+		}
 		
-	     err = hip_recreate_all_precreated_r1_packets();
-	     break;
+		err = hip_recreate_all_precreated_r1_packets();
+		break;
+		
+	case SO_HIP_REINIT_RVS:
+	case SO_HIP_REINIT_RELAY:
+		HIP_DEBUG("Handling REINIT RELAY or REINIT RVS user message.\n");
+		HIP_IFEL(hip_relay_reinit(), -1, "Unable to reinitialize "\
+			 "the HIP relay / RVS service.\n");
+		
+		break;
+		
+	case SO_HIP_CANCEL_RVS:
+		HIP_DEBUG("Handling CANCEL RVS user message.\n");
+		HIP_IFEL(hip_services_remove(HIP_SERVICE_RENDEZVOUS), -1,
+			 "Failed to remove HIP_SERVICE_RENDEZVOUS");
+		hip_relht_free_all_of_type(HIP_RVSRELAY);
+		/* If all off the relay records were freed we can set the relay
+		   status "off". */
+		if(hip_relht_size() == 0) {
+			hip_relay_set_status(HIP_RELAY_OFF);
+		}
+		
+		/* We have to recreate the R1 packets so that they do not
+		   advertise the RVS service anymore. I.e. we're removing
+		   the REG_INFO parameters here. */
+		err = hip_recreate_all_precreated_r1_packets();
+		break;
+		
+	case SO_HIP_CANCEL_HIPRELAY:
+		HIP_DEBUG("Handling CANCEL RELAY user message.\n");
+		HIP_IFEL(hip_services_remove(HIP_SERVICE_RELAY), -1,
+			 "Failed to remove HIP_SERVICE_RELAY");
+		hip_relht_free_all_of_type(HIP_FULLRELAY);
+		/* If all off the relay records were freed we can set the relay
+		   status "off". */
+		if(hip_relht_size() == 0) {
+			hip_relay_set_status(HIP_RELAY_OFF);
+		}
+		
+		/* We have to recreate the R1 packets so that they do not
+		   advertise the RVS service anymore. I.e. we're removing
+		   the REG_INFO parameters here. */
+		err = hip_recreate_all_precreated_r1_packets();
+		break;
 #endif
 	case SO_HIP_GET_HITS:		
-	     /** 
-	      * @todo passing argument 1 of 'hip_for_each_hi' from incompatible
-	      * pointer type
-	      */
+		/** 
+		 * @todo passing argument 1 of 'hip_for_each_hi' from incompatible
+		 * pointer type
+		 */
 		hip_msg_init(msg);
 		err = hip_for_each_hi(hip_host_id_entry_to_endpoint, msg);
 		break;	

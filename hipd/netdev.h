@@ -21,6 +21,7 @@
 
 #define HIP_RTDS_TAB_LEN 256
 
+extern int suppress_af_family; /* Defined in hipd/hipd.c*/
 extern int address_count;
 extern HIP_HASHTABLE *addresses;
 struct rtnl_handle;

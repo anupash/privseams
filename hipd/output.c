@@ -655,14 +655,16 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 
 	/********** REG_INFO *********/
 	/* Get service list of all services offered by this system */
+	/** @todo hip_get_services_list() leaks memory... */
 	service_count = hip_get_services_list(&service_list);
 	if (service_count > 0) {
 	     HIP_DEBUG("Adding REG_INFO parameter with %d service(s).\n",
 		       service_count);
-	     HIP_IFEL(hip_build_param_reg_info(
-			   msg, hip_get_service_min_lifetime(), 
-			   hip_get_service_max_lifetime(), service_list,
-			   service_count), 
+	     /* We use hardcoded default values for min and max lifetime
+		here. hip_build_param_reg_info() should be rewritten to support
+		lifetime selection. */
+	     HIP_IFEL(hip_build_param_reg_info(msg, 91, 200, service_list,
+					       service_count), 
 		      -1, "Building of reg_info failed\n");	
 	}
 
@@ -1264,8 +1266,7 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
  * or @c peer_addr is pure (not a IPv4-in-IPv6 format IPv4 address) IPv6
  * address, no message is send. IPv4-in-IPv6 format IPv4 addresses are mapped to
  * pure IPv4 addresses. In case of transmission error, this function tries to
- * retransmit the packet @c HIP_NAT_NUM_RETRANSMISSION times and sleeps for
- * @c HIP_NAT_SLEEP_TIME seconds between retransmissions. The HIP packet
+ * retransmit the packet @c HIP_NAT_NUM_RETRANSMISSION times. The HIP packet
  * checksum is set to zero.  
  * 
  * Used protocol suite is <code>IPv4(UDP(HIP))</code>.
@@ -1289,6 +1290,7 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
  * @note             If retransmit is set other than zero, make sure that the
  *                   entry is not NULL.
  * @todo             remove the sleep code (queuing is enough?)
+ * @todo             Add support to IPv6 address family.
  * @see              hip_send_raw
  */ 
 int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
