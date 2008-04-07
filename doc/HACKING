@@ -220,8 +220,8 @@ Some points in the branch quality assurance:
 - the code should not leak memory or do bad locking
 - (all existing unit tests should be run without any errors (see TESTING))
 
-RETRIEVING PACKAGES FROM A REPOSITORY
-=====================================
+RETRIEVING HIPL PACKAGES FROM A REPOSITORY
+==========================================
 
 - tools to retrieve packages are yum and apt-get
 
@@ -230,19 +230,48 @@ yum for Fedora
 
 - to configure yum for Fedora modify configuration
 
-/etc/yum.conf
+$ sudo /etc/yum.conf
 
 [package]
 name=package
 baseurl=http://URL/yum/base/package
+
+- for example to modify the repository for hipl-lib package
+
+[hipl-lib]
+name=HIPL-LIB
+baseurl=http://packages.infrahip.net/hipl/yum/base/hipl-lib
+gpgcheck=0
+enabled=1
+
+- install hipl package by command
+
+$ yum install package
  
-- create directory for package and copy rpm package to directory before update repository for yum
+Updating yum repository
+-----------------------
+
+- create directory tree for yum
+
+hipl-agent
+hipl-core
+hipl-doc
+hipl-firewall
+hipl-lib
+hipl-test
+hipl-tools
+ 
+- copy all packages to repository for example copy hipl-lib-1.0.3-1.i386.rpm
+
+/var/www/html/hipl/yum/base/hipl-lib/
+
+- create yum repository for a package 
 
 $ sudo createrepo package
 
-- install the HIPL package using command
+- for example to create yum repository for hipl-lib
 
-$ yum install package
+$ sudo createrepo hipl-lib
 
 apt-get for Debian
 ------------------
@@ -259,10 +288,10 @@ $ sudo apt-get update
 
 $ sudo apt-get install hipl-lib hipl-core hipl-tools hipl-doc
 
-Updating hipl repository on the web server
-------------------------------------------------
+Updating dpkg repository 
+--------------------------
 
-- directory tree on the web server
+- create directory tree on the web server
 
 /var/www/html/hipl/dists/gutsy/main/binary-armel
 /var/www/html/hipl/dists/gutsy/main/binary-i386
