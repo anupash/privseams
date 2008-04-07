@@ -827,7 +827,6 @@
   </chapter>
   <chapter id="ch_tips_for_hip">
     <title>Tips for Using HIP with Some Applications</title>
-<<<<<<< TREE
     <section id="sec_using_hip_proxy">
       <title> Using HIP Enabled Proxy Server</title>
       <para>
@@ -888,7 +887,6 @@
 	examples of configuration changes and instructions.
       </para>
     </section>
-=======
     <section>
     <title> Using HIP Enabled Proxy Server</title>
     <para>
@@ -982,7 +980,6 @@
   kernels. <ulink url="http://www.cs.helsinki.fi/u/sklvarjo/manuals.htm" />.
   </para>
   </section>
->>>>>>> MERGE-SOURCE
   </chapter>
 
   <chapter id="ch_rvs_relay">
@@ -1318,7 +1315,7 @@
 	    "hipconf" tool at the server:
 	    <programlisting>tools/hipconf reinit service rvs</programlisting>
 	    The changes that you have made to the configuration file affect the
-	    on clients registering after the reinitialization.
+	    clients registering after the reinitialization.
 	  </para>
 	</listitem>
 	<listitem>
