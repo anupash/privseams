@@ -454,13 +454,13 @@ void hip_relwl_hit_free(hip_hit_t *hit)
 	}
 }
 
-hip_relay_wl_status_t hip_relay_get_wl_status()
+hip_relay_wl_status_t hip_relwl_get_status()
 {
 	return whitelist_enabled;
 }
 
 int hip_rvs_validate_lifetime(uint8_t requested_lifetime,
-				uint8_t *granted_lifetime)
+			      uint8_t *granted_lifetime)
 {
 	if(requested_lifetime < hiprelay_min_lifetime){
 		*granted_lifetime = hiprelay_min_lifetime;
@@ -707,8 +707,8 @@ int hip_relay_read_config(){
 				current = hip_cvl_get_next(&values, current);
 				tmp = atol(current->data);
 				
-				if(get_lifetime_value(tmp, &val) == 0) {
-					/* get_lifetime_value() truncates the
+				if(hip_get_lifetime_value(tmp, &val) == 0) {
+					/* hip_get_lifetime_value() truncates the
 					   value. We want the minimum to be at
 					   least the value specified. */
 					if(val < max) {
@@ -722,7 +722,7 @@ int hip_relay_read_config(){
 				current = hip_cvl_get_next(&values, current);
 				tmp = atol(current->data);
 				
-				if(get_lifetime_value(tmp, &val) == 0) {
+				if(hip_get_lifetime_value(tmp, &val) == 0) {
 					hiprelay_max_lifetime = val;
 				}
 			}

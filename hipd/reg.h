@@ -99,32 +99,6 @@ int hip_cancel_registration(struct in6_addr *hit);
 int hip_cancel_service(void);
 
 /**
- * Translates a service life time from seconds to a 8-bit integer value. The
- * lifetime value in seconds is translated to a 8-bit integer value using
- * following formula: <code>lifetime = (8 * (log(seconds) / log(2)))
- * + 64</code> and truncated. The formula is the inverse of the formula given
- * in the registration draft.
- * 
- * @param  seconds  the lifetime to convert.
- * @param  lifetime a target buffer for the coverted lifetime.
- * @return          zero on success, -1 on error. Error occurs when @c seconds
- *                  is zero or greater than 15384774.
- */ 
-int get_lifetime_value(time_t seconds, uint8_t *lifetime);
-
-/**
- * Translates a service life time from a 8-bit integer value to seconds. The
- * lifetime value is translated to a 8-bit integer value using following
- * formula: <code>seconds = 2^((lifetime - 64)/8)</code>.
- *
- * @param  lifetime the lifetime to convert.
- * @param  seconds  a target buffer for the converted lifetime.
- * @return          zero on success, -1 on error. Error occurs when @c lifetime
- *                  is zero.
- */ 
-int get_lifetime_seconds(uint8_t lifetime, time_t *seconds);
-
-/**
  * Get an array of incompleted registration types. In other words, services
  * that we have requested, but not yet been granted.
  * 

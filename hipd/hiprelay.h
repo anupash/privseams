@@ -76,7 +76,7 @@
 #include <arpa/inet.h> /* For nthos() */
 #include <math.h> /* For pow() */
 #include "misc.h" /* For debuging macros. */
-#include "reg.h" /* For lifetime conversions. */
+#include "registration.h" /* For lifetime conversions. */
 #include "configfilereader.h"
 
 /**
@@ -534,7 +534,7 @@ void hip_relwl_hit_free(hip_hit_t *hit);
  * @return HIP_RELAY_ON if the RVS / relay whitelist is "on", HIP_RELAY_OFF
  *         otherwise.
  */ 
-hip_relay_wl_status_t hip_relay_get_wl_status();
+hip_relay_wl_status_t hip_relwl_get_status();
 
 /**
  * Validates a requested RVS service lifetime. If
