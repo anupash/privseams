@@ -247,15 +247,11 @@ $ yum install package
 apt-get for Debian
 ------------------
 
-- to configure apt-get for Debian modify sources.list depending on the architecture of i386 or x64 or armel
+- to configure apt-get for Debian modify sources.list 
 
 $ sudo nano /etc/apt/sources.list
 
-deb http://packages.infrahip.net/hipl/deb i386 main
-
-deb http://packages.infrahip.net/hipl/deb x64 main
-
-deb http://packages.infrahip.net/hipl/deb armel main
+deb http://packages.infrahip.net/hipl/ gutsy main
 
 - update and install hipl packages 
 
@@ -263,28 +259,26 @@ $ sudo apt-get update
 
 $ sudo apt-get install hipl-lib hipl-core hipl-tools hipl-doc
 
-How to create hipl repository on the web server?
+Updating hipl repository on the web server
 ------------------------------------------------
 
-- create directory tree for all packages and the architecture tree on the web server
+- directory tree on the web server
 
-$ sudo mkdir -p /var/www/html/hipl/deb
-
-$ sudo mkdir -p /var/www/html/hipl/deb/dists/i386/main/binary-i386
-
-$ sudo mkdir -p /var/www/html/hipl/deb/dists/x64/main/binary-x64
-
-$ sudo mkdir -p /var/www/html/hipl/deb/dists/armel/main/binary-armel
+/var/www/html/hipl/dists/gutsy/main/binary-armel
+/var/www/html/hipl/dists/gutsy/main/binary-i386
+/var/www/html/hipl/dists/gutsy/main/binary-x64
 
 - create overview file of Packages.gz for all hipl packages
 
 $ dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz
 
-- copy all Debian hipl packages and Packages.gz file to directories of the web server
+- copy all Debian hipl packages and Packages.gz file to directories 
 
-$ sudo rsync *.deb root@packages.infrahip.net:/var/www/html/hipl/deb/
+$ sudo rsync *.deb root@packages.infrahip.net:/var/www/html/hipl/
 
-$ sudo rsync Packages.gz root@packages.infrahip.net:/var/www/html/hipl/deb/dists/i386/main/binary-i386
+- for example to copy Packages.gz for architecture of i386
+
+$ sudo rsync Packages.gz root@packages.infrahip.net:/var/www/html/hipl/dists/gutsy/main/binary-i386
 
 
 DEBUGGING
