@@ -49,21 +49,19 @@ unsigned long hip_hash_conn_db(const hip_conn_t *p)
 	struct in6_addr *addr_src;
 	uint8_t hash[HIP_AH_SHA_LEN];
 
-	hip_build_digest(HIP_DIGEST_SHA1, (void *)p, sizeof(struct hip_conn_key), hash);
-
-
 	if(p == NULL)
 	{
 		return 0;
 	}
-
+	
+	hip_build_digest(HIP_DIGEST_SHA1, (void *)p, sizeof(struct hip_conn_key), hash);
 	return *((unsigned long *)hash);
 }
 
 int hip_compare_conn_db(const hip_conn_t *ha1, const hip_conn_t *ha2)
 {
-	if(ha1 == NULL || &(ha1->addr_peer) == NULL || &(ha1->protocol) == NULL || &(ha1->port_client) == NULL || &(ha1->port_peer) == NULL ||
-			ha2 == NULL ||  &(ha2->addr_peer) == NULL || &(ha2->protocol) == NULL ||&(ha2->port_client) == NULL || &(ha2->port_peer) == NULL)
+	if(ha1 == NULL || &(ha1->key) == NULL || &(ha1->addr_client) == NULL || &(ha1->addr_peer) == NULL ||
+			ha2 == NULL ||  &(ha2->key) == NULL || &(ha2->addr_client) == NULL ||&(ha2->addr_peer) == NULL )
 	{
 		return 1;
 	}
@@ -125,11 +123,13 @@ int hip_conn_add_entry(struct in6_addr *addr_client,
 	memset(new_item, 0, sizeof(hip_conn_t));
 	ipv6_addr_copy(&new_item->addr_client, addr_client);
 	ipv6_addr_copy(&new_item->addr_peer, addr_peer);
+	ipv6_addr_copy(&new_item->key.hit_proxy, hit_proxy);
+	ipv6_addr_copy(&new_item->key.hit_peer, hit_peer);
 	new_item->key.protocol = protocol;
 	new_item->key.port_client = port_client;
 	new_item->key.port_peer = port_peer;
-	new_item->key.hit_proxy = hit_proxy;
-	new_item->key.hit_peer = hit_peer;
+	//new_item->key.hit_proxy = *hit_proxy;
+	//new_item->key.hit_peer = *hit_peer;
 	new_item->state = state;
 	err = hip_ht_add(hip_conn_db, new_item);
 	HIP_DEBUG("conn adds connection state successfully!\n");
@@ -143,14 +143,15 @@ int hip_conn_add_entry(struct in6_addr *addr_client,
 hip_conn_t *hip_conn_find_by_portinfo(struct in6_addr *hit_proxy, struct in6_addr *hit_peer, int protocol, int port_client, int port_peer)
 {
 	hip_conn_t p, *ret;
-	memcpy(&p.hit_peer, hit_peer, sizeof(struct in6_addr));
-	p.protocol = protocol;
-	p.port_client = port_client;
-	p.port_peer = port_peer;
-
+	memcpy(&p.key.hit_proxy, hit_proxy, sizeof(struct in6_addr));
+	memcpy(&p.key.hit_peer, hit_peer, sizeof(struct in6_addr));
+	p.key.protocol = protocol;
+	p.key.port_client = port_client;
+	p.key.port_peer = port_peer;
 	return hip_ht_find(hip_conn_db, &p);
 }
 
+/*
 int hip_conn_update_state(struct in6_addr *src_addr,
 		struct in6_addr *dst_addr, struct in6_addr* peer_hit,
 		int state)
@@ -166,15 +167,7 @@ int hip_conn_update_state(struct in6_addr *src_addr,
 		if(peer_hit)
 			p->hit_peer = *peer_hit;
 		p->state = state;
-		/*		
-		HIP_DEBUG_IN6ADDR("src_addr",&p-> src_addr);
-		HIP_DEBUG_IN6ADDR("dst_addr", &p->dst_addr);
-		HIP_DEBUG_IN6ADDR("conn_addr",&p-> conn_addr);		
-		HIP_DEBUG_HIT("src_hit", &p->src_hit);
-		HIP_DEBUG_HIT("dst_hit", &p->dst_hit);
-		HIP_DEBUG_HIT("conn_hit", &p->conn_hit);
-		HIP_DEBUG("state: %d", p->state);
-		 */		
+	
 		HIP_DEBUG("Update connection state successfully!\n");
 		//		memcpy(&p->hit_our, src_hit, sizeof(struct in6_addr));
 		//		memcpy(&p->hit_peer, dst_hit, sizeof(struct in6_aadr));
@@ -188,3 +181,4 @@ int hip_conn_update_state(struct in6_addr *src_addr,
 		return 1;
 	}
 }
+*/
