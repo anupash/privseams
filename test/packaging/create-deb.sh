@@ -7,7 +7,7 @@ TYPE=binary
 MAJOR=1
 MINOR=0
 VERSION="$MAJOR.$MINOR"
-RELEASE=3
+RELEASE=4
 SUFFIX="-$VERSION-$RELEASE"
 NAME=hipl
 NAMEGPL=libhiptool
@@ -479,7 +479,7 @@ if [ $TYPE = "binary" ];then
 
     cd "$PKGROOT"
     if ! copy_and_package_files;then
-	echo "** Error: unable to copy files, exiting"
+	echo "** Error: unable to copy files and create packages, exiting"
 	exit 1
     fi
 
