@@ -20,18 +20,19 @@ hip_srv_t hip_services[HIP_NUMBER_OF_EXISTING_SERVICES];
 
 void hip_init_xxx_services()
 {
-	hip_services[0].type = HIP_SERVICE_RENDEZVOUS;
-	hip_services[0].status  = HIP_SERVICE_OFF;
+	hip_services[0].type         = HIP_SERVICE_RENDEZVOUS;
+	hip_services[0].status       = HIP_SERVICE_OFF;
 	hip_services[0].min_lifetime = HIP_RELREC_MIN_LIFETIME;
 	hip_services[0].max_lifetime = HIP_RELREC_MAX_LIFETIME;
-	hip_services[1].type = HIP_SERVICE_ESCROW;
-	hip_services[1].status  = HIP_SERVICE_OFF;
+	hip_services[1].type         = HIP_SERVICE_ESCROW;
+	hip_services[1].status       = HIP_SERVICE_OFF;
 	hip_services[1].min_lifetime = HIP_ESCROW_MIN_LIFETIME;
 	hip_services[1].max_lifetime = HIP_ESCROW_MAX_LIFETIME;
-	hip_services[2].type = HIP_SERVICE_RELAY;
-	hip_services[2].status  = HIP_SERVICE_OFF;
+	hip_services[2].type         = HIP_SERVICE_RELAY;
+	hip_services[2].status       = HIP_SERVICE_OFF;
 	hip_services[2].min_lifetime = HIP_RELREC_MIN_LIFETIME;
 	hip_services[2].max_lifetime = HIP_RELREC_MAX_LIFETIME;
+	HIP_DEBUG("NEW SERVICE INITIALIZATION DONE.\n");
 }
 
 int hip_set_srv_status(uint8_t type, hip_srv_status_t status)
@@ -98,7 +99,7 @@ int hip_get_active_services(hip_srv_t *active_services,
 	for(; i < HIP_NUMBER_OF_EXISTING_SERVICES; i++) {
 		if(hip_services[i].status == HIP_SERVICE_ON) {
 			memcpy(&active_services[j], &hip_services[i],
-			       sizeof(&hip_services[j]));
+			       sizeof(active_services[j]));
 			j++;
 		}
 	}
@@ -142,4 +143,36 @@ int hip_get_lifetime_seconds(uint8_t lifetime, time_t *seconds){
 		*seconds = pow(2, ((double)((lifetime)-64)/8));
 		return 0;
 	}
+}
+
+void hip_srv_info(const hip_srv_t *srv, char *status)
+{
+	if(srv == NULL || status == NULL)
+		return;
+	
+	char *cursor = status;
+	cursor += sprintf(cursor, "Service info:\n");
+	
+	cursor += sprintf(cursor, " type: ");
+	if(srv->type == HIP_SERVICE_RENDEZVOUS){
+		cursor += sprintf(cursor, "rendezvous\n");
+	}else if(srv->type == HIP_SERVICE_ESCROW){
+		cursor += sprintf(cursor, "escrow\n");
+	}else if(srv->type == HIP_SERVICE_RELAY){
+		cursor += sprintf(cursor, "relay\n");
+	}else{
+		cursor += sprintf(cursor, "unknown\n");
+	}
+
+	cursor += sprintf(cursor, " status: ");
+	if(srv->status == HIP_SERVICE_ON){
+		cursor += sprintf(cursor, "on\n");
+	}else if(srv->status == HIP_SERVICE_OFF){
+		cursor += sprintf(cursor, "off\n");
+	}else{
+		cursor += sprintf(cursor, "unknown\n");
+	}
+
+	cursor += sprintf(cursor, " minimum lifetime: %u\n", srv->min_lifetime);
+	cursor += sprintf(cursor, " maximum lifetime: %u\n", srv->max_lifetime);
 }

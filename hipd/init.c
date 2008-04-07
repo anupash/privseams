@@ -155,6 +155,9 @@ int hipd_init(int flush_ipsec, int killold)
 
        /* Initialize a hashtable for services, if any service is enabled. */
 	hip_init_services();
+	/* The new service initialization. */
+	hip_init_xxx_services();
+
 #ifdef CONFIG_HIP_RVS
 	
 	HIP_INFO("Initializing HIP relay / RVS.\n");

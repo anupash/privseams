@@ -353,6 +353,9 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 			 "Error while adding service\n");
 	
 		hip_services_set_active(HIP_SERVICE_ESCROW);
+
+		hip_set_srv_status(HIP_SERVICE_ESCROW, HIP_SERVICE_ON);
+
 		if (hip_services_is_active(HIP_SERVICE_ESCROW))
 			HIP_DEBUG("Escrow service is now active.\n");
 		HIP_IFEL(hip_recreate_all_precreated_r1_packets(), -1, 
@@ -372,6 +375,9 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 			HIP_IFEL(hip_firewall_set_escrow_active(0), -1, 
 				 "Failed to deliver activation message to firewall\n");
 		}
+		
+		hip_set_srv_status(HIP_SERVICE_ESCROW, HIP_SERVICE_OFF);
+		
 		HIP_IFEL(hip_services_remove(HIP_ESCROW_SERVICE), -1, 
 			 "Error while removing service\n");
 		HIP_IFEL(hip_recreate_all_precreated_r1_packets(), -1, 
@@ -416,6 +422,23 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		
 		HIP_IFE(hip_services_add(HIP_SERVICE_RENDEZVOUS), -1);
 		hip_services_set_active(HIP_SERVICE_RENDEZVOUS);
+		
+		hip_set_srv_status(HIP_SERVICE_RENDEZVOUS, HIP_SERVICE_ON);
+
+		/* Some debug prints. */
+		unsigned int cnt = 0;
+		hip_srv_t hip_services[HIP_NUMBER_OF_EXISTING_SERVICES];
+		hip_get_active_services(hip_services, &cnt);
+		
+		char info[1024];
+		int i = 0;
+		for(; i < cnt; i++){
+			memset(info, '\0', sizeof(info));
+			hip_srv_info(&hip_services[i], info);
+
+			HIP_DEBUG("SERVICE INFO:\n%s", info);
+		}
+		/* End of debug prints. */
 		
 		if (hip_services_is_active(HIP_SERVICE_RENDEZVOUS)){
 			HIP_DEBUG("Rendezvous service is now active.\n");
@@ -477,6 +500,8 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		HIP_IFE(hip_services_add(HIP_SERVICE_RELAY), -1);
 		hip_services_set_active(HIP_SERVICE_RELAY);
 		
+		hip_set_srv_status(HIP_SERVICE_RELAY, HIP_SERVICE_ON);
+
 		if (hip_services_is_active(HIP_SERVICE_RELAY)){
 			HIP_DEBUG("UDP relay service for HIP packets"\
 				  "is now active.\n");
@@ -498,6 +523,8 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		HIP_DEBUG("Handling CANCEL RVS user message.\n");
 		HIP_IFEL(hip_services_remove(HIP_SERVICE_RENDEZVOUS), -1,
 			 "Failed to remove HIP_SERVICE_RENDEZVOUS");
+		hip_set_srv_status(HIP_SERVICE_RENDEZVOUS, HIP_SERVICE_OFF);
+		
 		hip_relht_free_all_of_type(HIP_RVSRELAY);
 		/* If all off the relay records were freed we can set the relay
 		   status "off". */
@@ -515,6 +542,8 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		HIP_DEBUG("Handling CANCEL RELAY user message.\n");
 		HIP_IFEL(hip_services_remove(HIP_SERVICE_RELAY), -1,
 			 "Failed to remove HIP_SERVICE_RELAY");
+		hip_set_srv_status(HIP_SERVICE_RELAY, HIP_SERVICE_OFF);
+
 		hip_relht_free_all_of_type(HIP_FULLRELAY);
 		/* If all off the relay records were freed we can set the relay
 		   status "off". */
