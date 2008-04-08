@@ -95,14 +95,23 @@ init_files ()
     mkdir -p "$PKGDIR/DEBIAN"
     
     if [ $TMP = "core" ]; then
-    	for f in control changelog copyright postinst prerm;do
-		cp $DEBIAN/$f "$PKGDIR/DEBIAN" 
-    	done
-    else
-	for f in control changelog copyright;do
+    	for f in postinst prerm;do
 		cp $DEBIAN/$f "$PKGDIR/DEBIAN" 
     	done
     fi
+
+    if [ $TMP = "lib" ]; then
+    	for f in postinst;do
+		cp $DEBIAN/$f "$PKGDIR/DEBIAN" 
+    	done
+	sed -i '2,10d' $PKGDIR\/DEBIAN\/postinst
+        sed -i '$a\ldconfig\' $PKGDIR\/DEBIAN\/postinst
+    fi
+
+    for f in control changelog copyright;do
+	cp $DEBIAN/$f "$PKGDIR/DEBIAN" 
+    done
+   
 
     echo "** Modifying Debian control file for $DEBLIB $TMP and $DEBARCH"
     
@@ -115,7 +124,7 @@ init_files ()
     sed -i '/'"$LINE2"'/ s/.*/&\-'"$TMP"'/' $PKGDIR\/DEBIAN\/control
     sed -i 's/"$LINE3"/&'" $DEBARCH"'/' $PKGDIR\/DEBIAN\/control
 
-    # cp $PKGDIR/DEBIAN/control $PKGROOT/control-$TMP
+    cp $PKGDIR/DEBIAN/postinst $PKGROOT/postinst-$TMP
    
 }
 
