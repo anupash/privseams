@@ -658,19 +658,22 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	hip_srv_t service_xxx_list[HIP_NUMBER_OF_EXISTING_SERVICES];
 	hip_get_active_services(service_xxx_list, &cnt);
 
+	HIP_DEBUG("Adding REG_INFO parameter with %d service(s).\n", cnt);
+	hip_build_param_kala(msg, service_xxx_list, cnt);
+
 	/* Get service list of all services offered by this system */
 	/** @todo hip_get_services_list() leaks memory... */
-	service_count = hip_get_services_list(&service_list);
+	/*service_count = hip_get_services_list(&service_list);
 	if (service_count > 0) {
-	     HIP_DEBUG("Adding REG_INFO parameter with %d service(s).\n",
-		       service_count);
+	HIP_DEBUG("Adding REG_INFO parameter with %d service(s).\n",
+	     service_count);*/
 	     /* We use hardcoded default values for min and max lifetime
 		here. hip_build_param_reg_info() should be rewritten to support
 		lifetime selection. */
-	     HIP_IFEL(hip_build_param_reg_info(msg, 91, 200, service_list,
+	/*     HIP_IFEL(hip_build_param_reg_info(msg, 91, 200, service_list,
 					       service_count), 
 		      -1, "Building of reg_info failed\n");	
-	}
+		      }*/
 
 	/********** ECHO_REQUEST_SIGN (OPTIONAL) *********/
 

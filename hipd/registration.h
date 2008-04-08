@@ -25,15 +25,15 @@ typedef enum{HIP_SERVICE_OFF = 0, HIP_SERVICE_ON = 1}hip_srv_status_t;
 /** HIP service. */
 typedef struct hip_srv_hdr {
 	hip_srv_status_t status;
-	uint8_t type;
+	uint8_t reg_type;
 	uint8_t min_lifetime;
 	uint8_t max_lifetime;
 }hip_srv_t;
 
 void hip_init_xxx_services();
-int hip_set_srv_status(uint8_t type, hip_srv_status_t status);
-int hip_set_srv_min_lifetime(uint8_t type, uint8_t lifetime);
-int hip_set_srv_max_lifetime(uint8_t type, uint8_t lifetime);
+int hip_set_srv_status(uint8_t reg_type, hip_srv_status_t status);
+int hip_set_srv_min_lifetime(uint8_t reg_type, uint8_t lifetime);
+int hip_set_srv_max_lifetime(uint8_t reg_type, uint8_t lifetime);
 int hip_get_active_services(hip_srv_t *active_services,
 			    unsigned int *active_service_count);
 void hip_srv_info(const hip_srv_t *srv, char *status);

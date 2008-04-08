@@ -22,17 +22,26 @@
  * @section sec_links Links
  * <ul>
  * <li><a href="http://infrahip.hiit.fi/">Project home page</a>.</li>
+ * </ul>
+ * <ul>
  * <li><a href="http://linux.die.net/man/">Linux Man Pages</a>. See section 3
  *     for C-library functions.</li>
  * <li><a href="http://www.cppreference.com/">C/C++ Reference</a>.</li>
+ * <li><a href="http://www.acm.uiuc.edu/webmonkeys/book/c_guide/">The C Library Reference Guide</a> by Eric Huss.</li>
  * <li><a href="http://tigcc.ticalc.org/doc/keywords.html">C Language Keywords</a>.</li>
+ * </ul>
+ * <ul>
+ * <li><a href="http://www.dinkumware.com/manuals/default.aspx?manual=compleat&page=index.html#Standard%20C%20Library">Standard C Library</a>
+ *     by Dinkumware Ltd.</li>
+ * <li><a href="http://www.crasseux.com/books/ctutorial/">The GNU C Programming Tutorial</a>.</li>
  * <li><a href="http://www.greenend.org.uk/rjk/2001/02/cfu.html">C Language Gotchas</a>.
  *     A description of some easy-to-make mistakes in C.</li>
  * <li><a href="http://www.greenend.org.uk/rjk/2003/03/inline.html">Inline Functions In C</a>.
  *     Notes on GCC and standard C inline functions.</li>
+ * <li><a href="http://c-faq.com/">Frequently Asked Questions</a> at comp.lang.c.</li>
  * </ul>
  *
- * @date   28.02.2008
+ * @date   08.04.2008
  */ 
 
 /**

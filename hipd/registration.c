@@ -20,27 +20,27 @@ hip_srv_t hip_services[HIP_NUMBER_OF_EXISTING_SERVICES];
 
 void hip_init_xxx_services()
 {
-	hip_services[0].type         = HIP_SERVICE_RENDEZVOUS;
+	hip_services[0].reg_type         = HIP_SERVICE_RENDEZVOUS;
 	hip_services[0].status       = HIP_SERVICE_OFF;
 	hip_services[0].min_lifetime = HIP_RELREC_MIN_LIFETIME;
 	hip_services[0].max_lifetime = HIP_RELREC_MAX_LIFETIME;
-	hip_services[1].type         = HIP_SERVICE_ESCROW;
+	hip_services[1].reg_type         = HIP_SERVICE_ESCROW;
 	hip_services[1].status       = HIP_SERVICE_OFF;
 	hip_services[1].min_lifetime = HIP_ESCROW_MIN_LIFETIME;
 	hip_services[1].max_lifetime = HIP_ESCROW_MAX_LIFETIME;
-	hip_services[2].type         = HIP_SERVICE_RELAY;
+	hip_services[2].reg_type         = HIP_SERVICE_RELAY;
 	hip_services[2].status       = HIP_SERVICE_OFF;
 	hip_services[2].min_lifetime = HIP_RELREC_MIN_LIFETIME;
 	hip_services[2].max_lifetime = HIP_RELREC_MAX_LIFETIME;
 	HIP_DEBUG("NEW SERVICE INITIALIZATION DONE.\n");
 }
 
-int hip_set_srv_status(uint8_t type, hip_srv_status_t status)
+int hip_set_srv_status(uint8_t reg_type, hip_srv_status_t status)
 {
 	int i = 0;
 	
 	for(; i < HIP_NUMBER_OF_EXISTING_SERVICES; i++) {
-		if(hip_services[i].type == type) {
+		if(hip_services[i].reg_type == reg_type) {
 			hip_services[i].status = status;
 			return 0;
 		}
@@ -49,7 +49,7 @@ int hip_set_srv_status(uint8_t type, hip_srv_status_t status)
 	return -1;
 }
 
-int hip_set_srv_min_lifetime(uint8_t type, uint8_t lifetime)
+int hip_set_srv_min_lifetime(uint8_t reg_type, uint8_t lifetime)
 {
 	if(lifetime = 0) {
 		return -1;
@@ -58,7 +58,7 @@ int hip_set_srv_min_lifetime(uint8_t type, uint8_t lifetime)
 	int i = 0;
 	
 	for(; i < HIP_NUMBER_OF_EXISTING_SERVICES; i++) {
-		if(hip_services[i].type == type) {
+		if(hip_services[i].reg_type == reg_type) {
 			hip_services[i].min_lifetime = lifetime;
 			return 0;
 		}
@@ -67,7 +67,7 @@ int hip_set_srv_min_lifetime(uint8_t type, uint8_t lifetime)
 	return -1;
 }
 
-int hip_set_srv_max_lifetime(uint8_t type, uint8_t lifetime)
+int hip_set_srv_max_lifetime(uint8_t reg_type, uint8_t lifetime)
 {
 	if(lifetime = 0) {
 		return -1;
@@ -76,7 +76,7 @@ int hip_set_srv_max_lifetime(uint8_t type, uint8_t lifetime)
 	int i = 0;
 	
 	for(; i < HIP_NUMBER_OF_EXISTING_SERVICES; i++) {
-		if(hip_services[i].type == type) {
+		if(hip_services[i].reg_type == reg_type) {
 			hip_services[i].max_lifetime = lifetime;
 			return 0;
 		}
@@ -153,12 +153,12 @@ void hip_srv_info(const hip_srv_t *srv, char *status)
 	char *cursor = status;
 	cursor += sprintf(cursor, "Service info:\n");
 	
-	cursor += sprintf(cursor, " type: ");
-	if(srv->type == HIP_SERVICE_RENDEZVOUS){
+	cursor += sprintf(cursor, " reg_type: ");
+	if(srv->reg_type == HIP_SERVICE_RENDEZVOUS){
 		cursor += sprintf(cursor, "rendezvous\n");
-	}else if(srv->type == HIP_SERVICE_ESCROW){
+	}else if(srv->reg_type == HIP_SERVICE_ESCROW){
 		cursor += sprintf(cursor, "escrow\n");
-	}else if(srv->type == HIP_SERVICE_RELAY){
+	}else if(srv->reg_type == HIP_SERVICE_RELAY){
 		cursor += sprintf(cursor, "relay\n");
 	}else{
 		cursor += sprintf(cursor, "unknown\n");

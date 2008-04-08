@@ -2133,33 +2133,40 @@ int hip_build_param_kala(hip_common_t *msg,
 {
 	int err = 0, i = 0;
 	struct hip_reg_info reg_info;
-	
+	uint8_t reg_type[service_count];
+
 	if(service_count == 0) {
 		return 0;
-	} else {
-		for( ;i < service_count; i++) {
-			if(service_list[0].min_lifetime !=
-			   service_list[i].min_lifetime ||
-			   service_list[0].max_lifetime !=
-			   service_list[i].max_lifetime) {
-				HIP_INFO("Warning! Multiple min and max "\
-					 "lifetime values for a single "\
-					 "REG_INFO parameter requested. Using "\
-					 "lifetime values from service type "\
-					 "%d with all services.\n",
-					 service_list[0].type);
-				break;
-			}
-				
+	} 
+	
+	for( ;i < service_count; i++) {
+		if(service_list[0].min_lifetime !=
+		   service_list[i].min_lifetime ||
+		   service_list[0].max_lifetime !=
+		   service_list[i].max_lifetime) {
+			HIP_INFO("Warning! Multiple min and max lifetime "\
+				 "values for a single REG_INFO parameter "\
+				 "requested. Using lifetime values from "\
+				 "service reg_type %d with all services.\n",
+				 service_list[0].reg_type);
+			break;
 		}
+				
 	}
 	
+	for(i = 0; i < service_count; i++) {
+		reg_type[i] = service_list[i].reg_type;
+	}
+
 	hip_set_param_type(&reg_info, HIP_PARAM_REG_INFO);
 	/* All services should have the same lifetime... */
 	reg_info.min_lifetime = service_list[0].min_lifetime;
 	reg_info.max_lifetime = service_list[0].max_lifetime;
 	hip_calc_generic_param_len(&reg_info, sizeof(struct hip_reg_info),
-	service_count * sizeof(service_list->type));
+				   service_count * sizeof(service_list[0].reg_type));
+	
+	err = hip_build_generic_param(
+		msg, &reg_info, sizeof(struct hip_reg_info), (void *)reg_type);
 	
  out_err:
 	return err;
