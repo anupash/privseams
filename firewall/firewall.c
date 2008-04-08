@@ -1196,8 +1196,8 @@ static void *handle_ip_traffic(void *ptr)
 					hdr_size += sizeof(struct udphdr);
 				}
                 		_HIP_DEBUG("header size: %d\n", hdr_size);
-               		 	IPV4_TO_IPV6_MAP(&iphdr->ip_src, &src_addr);
-                		IPV4_TO_IPV6_MAP(&iphdr->ip_dst, &dst_addr);
+               		 	IPV4_TO_IPV6_MAP(&iphdr->ip_src, src_addr);
+                		IPV4_TO_IPV6_MAP(&iphdr->ip_dst, dst_addr);
         		}
         		else if(ipv6Traffic){
                 		_HIP_DEBUG("ipv6\n");
@@ -1205,8 +1205,8 @@ static void *handle_ip_traffic(void *ptr)
                 		packet_hdr = (void *)ip6_hdr;
                		 	hdr_size = sizeof(struct ip6_hdr);
                		 	_HIP_DEBUG("header size: %d\n", hdr_size);
-                		ipv6_addr_copy(&src_addr, &ip6_hdr->ip6_src);
-                		ipv6_addr_copy(&dst_addr, &ip6_hdr->ip6_dst);
+                		ipv6_addr_copy(src_addr, &ip6_hdr->ip6_src);
+                		ipv6_addr_copy(dst_addr, &ip6_hdr->ip6_dst);
         		}
       
       			if(is_hip_packet(packet_hdr, type)){
@@ -1525,7 +1525,7 @@ static void *handle_ip_traffic(void *ptr)
 
 #ifdef CONFIG_HIP_OPPTCP
 				}
-//#endif
+#endif
 				
 			}
 			if (status < 0)

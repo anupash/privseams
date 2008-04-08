@@ -192,19 +192,6 @@ int hip_conf_check_action_argc(int action) {
 	case ACTION_HA: case ACTION_HANDOFF: case ACTION_TRANSORDER:
 		count = 2;
 		break;
-	case ACTION_DEBUG:
-		count = 1;
-		break;
-	case ACTION_RESTART:
-		count = 1;
-		break;
-    case ACTION_LOCATOR:
-        break;
-    case ACTION_OPENDHT:
-        break;
-    case ACTION_TRANSORDER:
-        count = 2;
-        break;
 #ifdef CONFIG_HIP_OPPTCP	
     case ACTION_OPPTCP:
         break;
