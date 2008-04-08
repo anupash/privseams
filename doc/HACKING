@@ -240,7 +240,7 @@ baseurl=http://URL/yum/base/package
 
 [hipl]
 name=HIPL
-baseurl=http://packages.infrahip.net/hipl/yum/base/hipl/$basearch
+baseurl=http://packages.infrahip.net/yum/base/hipl/$basearch
 gpgcheck=0
 enabled=1
 
@@ -258,13 +258,13 @@ Updating yum repository
 
 - create directory tree for yum
 
-/var/www/html/hipl/yum/base/hipl/i386
+/var/www/html/yum/base/hipl/i386
 
-/var/www/html/hipl/yum/base/hipl/x86_64
+/var/www/html/yum/base/hipl/x86_64
 
 - copy all hipl packages to the repository depending on the architecture
 
-- for example copy all packages to directory /var/www/html/hipl/yum/base/hipl/i386
+- for example copy all packages to directory /var/www/html/yum/base/hipl/i386/
 
 hipl-agent-1.0.3-1.i386.rpm
 hipl-core-1.0.3-1.i386.rpm
