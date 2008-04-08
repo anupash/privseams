@@ -23,7 +23,7 @@
 typedef enum{HIP_SERVICE_OFF = 0, HIP_SERVICE_ON = 1}hip_srv_status_t;
 
 /** HIP service. */
-typedef struct{
+typedef struct hip_srv_hdr {
 	hip_srv_status_t status;
 	uint8_t type;
 	uint8_t min_lifetime;

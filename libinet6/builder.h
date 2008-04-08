@@ -191,6 +191,6 @@ int rsa_to_hip_endpoint(RSA *rsa, struct endpoint_hip **endpoint,
 int dsa_to_hip_endpoint(DSA *dsa, struct endpoint_hip **endpoint,
 			se_hip_flags_t endpoint_flags, const char *hostname);
 int hip_build_param_kala(hip_common_t *msg,
-			 const hip_srv_t *service_list,
+			 const struct hip_srv_hdr *service_list,
 			 const unsigned int service_count);
 #endif /* HIP_BUILDER */

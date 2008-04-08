@@ -78,6 +78,7 @@
 #include "misc.h" /* For debuging macros. */
 #include "registration.h" /* For lifetime conversions. */
 #include "configfilereader.h"
+#include "state.h"
 
 /**
  * The minimum lifetime the relay / RVS client is granted the service. This
