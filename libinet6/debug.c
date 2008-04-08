@@ -642,14 +642,16 @@ void hip_print_hit(int debug_level, const char *file, int line, const char *func
 	}
 }
 
+#if 0
 void hip_print_key(int debug_level, const char *file, int line, const char *function,
 		   const char *str, const struct hip_crypto_key *key,
 		   int key_len)
 {
-	char dst[key_len];
+	char dst[key_len]; // THIS ALLOCATION IS NOT OK.
 	strncpy(dst, key->key, key_len);
 	hip_print_str(debug_level, file, line, function, "%s: %s\n", str, dst);
 }
+#endif
 
 void uint8_to_binstring(uint8_t val, char *buffer) 
 {
