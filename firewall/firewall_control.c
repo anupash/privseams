@@ -176,60 +176,68 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 		/* now param: spi */
 		spi_ipsec = (uint32_t *) hip_get_param_contents_direct(param);
 		
-		HIP_DEBUG("the spi value is %d \n", spi_ipsec);
+		HIP_DEBUG("the spi value is %d , %d , %d \n", *spi_ipsec, 
+			  spi_ipsec, &spi_ipsec);
+		
+		
+		
+		param =  hip_get_next_param(msg, param);
+		sport = *((unsigned int *) hip_get_param_contents_direct(param));
+		HIP_DEBUG("the source port vaule is %d \n", sport);
+		
+		param =  hip_get_next_param(msg, param);
+		dport = *((unsigned int *) hip_get_param_contents_direct(param));
+		HIP_DEBUG("the destination port value is %d \n", dport);
 
 		
 		
-
-
+		
 		param =  (struct hip_tlv_t *) hip_get_param(msg, HIP_PARAM_KEYS);
 		
-
+		
                  /* now param: enckey */
 		enckey = (struct hip_crypto_key *) hip_get_param_contents_direct(param);
 		
-		HIP_DEBUG_KEY("crypto key is: ", enckey, sizeof(struct hip_crypto_key)); 
+		
+		
 
+		// HIP_DEBUG("crypto key is: \n");
+		HIP_HEXDUMP("crypto key :", enckey, sizeof(struct hip_crypto_key));
 		
 
 		/* now param: anthkey */
 		
 		param =  hip_get_next_param(msg, param);
 		authkey = (struct hip_crypto_key *)hip_get_param_contents_direct(param);
-		HIP_DEBUG_KEY("auth key key is: ", authkey, sizeof(struct hip_crypto_key)); 
-
+		// HIP_DEBUG("auth key key is: \n"); 
+		
+		
+		HIP_HEXDUMP("authen key :", authkey, sizeof(struct hip_crypto_key));
 
 		
 		/* now param: ealg */
 		param =  (struct hip_tlv_t *) hip_get_param(msg, HIP_PARAM_INT);
 		
-		ealg = (int )hip_get_param_contents_direct(param);
+		ealg = *((int *) hip_get_param_contents_direct(param));
 		
 		HIP_DEBUG("ealg  value is %d \n", ealg);
+
 		/* now param: already_acquired */
-		param =  hip_get_next_param(msg, param);		
-		already_acquired = (int) hip_get_param_contents_direct( param);
+		param =  hip_get_next_param(msg, param);x		
+		already_acquired = *((int *) hip_get_param_contents_direct( param));
 		HIP_DEBUG("already_acquired value is %d \n", already_acquired);
 
 		/* now param: direction */
 		param =  hip_get_next_param(msg, param);		
-		direction = (int) hip_get_param_contents_direct(param);
+		direction = *((int *) hip_get_param_contents_direct(param));
 		HIP_DEBUG("the direction value is %d \n", direction);
 		
                 /* now param: update */
 
 		param =  hip_get_next_param(msg, param);
-		update = (int) hip_get_param_contents_direct(param);
-		HIP_DEBUG("the update value is %d \n",update);
-		/* now param: sport */
-
-		param =  hip_get_next_param(msg, param);
-		sport = (int) hip_get_param_contents_direct(param);
-		HIP_DEBUG("the sport vaule is %d \n", sport);
-		/* now param: dport */
-		param =  hip_get_next_param(msg, param);
-		dport = (int) hip_get_param_contents_direct(param);
-		HIP_DEBUG("the dport value is %d \n", dport);
+		update = *((int *) hip_get_param_contents_direct(param));
+		HIP_DEBUG("the update value is %d \n", update);
+		
 		
 		
 		

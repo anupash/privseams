@@ -157,7 +157,8 @@ int hipl_userspace_ipsec_api_wrapper_sadb_add(struct in6_addr *saddr,
 		     ipsec_a_key, ipsec_a_type, ipsec_a_keylen, 100 , hit_magic);
 	
 	// Tell firewall that HIT SRC + DST HAS A SECURITY ASSOCIATION
-	
+
+
 	if(err)
 	{
 		
@@ -165,6 +166,10 @@ int hipl_userspace_ipsec_api_wrapper_sadb_add(struct in6_addr *saddr,
 		goto out_err;
 		
 	} 	
+
+
+	HIP_DEBUG(" HIP user space IPsec security sadb is done \n\n");
+
  out_err:
 	return err;
 	
@@ -228,14 +233,27 @@ uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr,
 					  sizeof(struct in6_addr)), -1, "build param contents failed\n");
 	
 	HIP_DEBUG_HIT("Destination HIT: ", dst_hit);
+
+
+
+	
+	
+
 	
 	HIP_IFEL(hip_build_param_contents(msg, (void *)spi, HIP_PARAM_UINT,
 					  sizeof(unsigned int)), -1, "build param contents failed\n"); 
+
 	
-	HIP_IFEL(hip_build_param_contents(msg, (void *)&ealg, HIP_PARAM_INT,
-					  sizeof(int)), -1, "build param contents failed\n");  
+	HIP_IFEL(hip_build_param_contents(msg, (void *)&sport, HIP_PARAM_UINT,
+					  sizeof(unsigned int)), -1, "build param contents failed\n");
 	
+	HIP_IFEL(hip_build_param_contents(msg, (void *)&dport, HIP_PARAM_UINT,
+					  sizeof(unsigned int)), -1, "build param contents failed\n");  
+
 	
+
+
+
 	HIP_IFEL(hip_build_param_contents(msg, (struct hip_crypto_key *)enckey, HIP_PARAM_KEYS,
 					  sizeof(struct hip_crypto_key)), -1, "build param contents failed\n"); 
 	
@@ -243,6 +261,13 @@ uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr,
 					  sizeof(struct hip_crypto_key)), -1, "build param contents failed\n"); 
 	
 	
+
+
+
+		
+
+	HIP_IFEL(hip_build_param_contents(msg, (void *)&ealg, HIP_PARAM_INT,
+					  sizeof(int)), -1, "build param contents failed\n");  
 	
 	HIP_IFEL(hip_build_param_contents(msg, (void *)&already_acquired, HIP_PARAM_INT,
 					  sizeof(int)), -1, "build param contents failed\n");  
@@ -250,21 +275,22 @@ uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr,
 					  sizeof(int)), -1, "build param contents failed\n");  
 	HIP_IFEL(hip_build_param_contents(msg, (void *)&update, HIP_PARAM_INT,
 					  sizeof(int)), -1, "build param contents failed\n");  
-	HIP_IFEL(hip_build_param_contents(msg, (void *)&sport, HIP_PARAM_INT,
-					  sizeof(int)), -1, "build param contents failed\n");  
-	HIP_IFEL(hip_build_param_contents(msg, (void *)&dport, HIP_PARAM_INT,
-					  sizeof(int)), -1, "build param contents failed\n");  
-	
+		
+
 	
 
 
-	HIP_DEBUG("the spi value is %d \n", spi);
+         // HIP_DEBUG("crypto key is: \n");
+	// HIP_HEXDUMP(enckey);
+	HIP_HEXDUMP("crypto key :", enckey, sizeof(struct hip_crypto_key));
+		
+	// HIP_DEBUG("auth key key is: \n"); 
+	// HIP_HEXDUMP(authkey);
 
-	// HIP_DEBUG_KEY("crypto key is: ", enckey, sizeof(struct hip_crypto_key)); 
+	HIP_HEXDUMP("authen key :", authkey, sizeof(struct hip_crypto_key));
 	
-	// HIP_DEBUG_KEY("auth key key is: ", authkey, sizeof(struct hip_crypto_key)); 
-	
-	
+	//HIP_DEBUG("the spi value is %d \n", *spi);
+	HIP_DEBUG("the spi vaule is : %d \n", *spi);
 		
 	HIP_DEBUG("ealg  value is %d \n", ealg);
 	
@@ -274,12 +300,10 @@ uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr,
 	
 	HIP_DEBUG("the direction value is %d \n", direction);
 	
-        
-	
+        	
 	
 	HIP_DEBUG("the update value is %d \n",update);
-	
-	
+		
 	
 	HIP_DEBUG("the sport vaule is %d \n", sport);
 	
