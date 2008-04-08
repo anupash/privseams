@@ -1114,6 +1114,7 @@ void hip_firewall_userspace_ipsec_output(struct ipq_handle *handle,
 
 	if (hip_sadb_lookup_addr(&ipv6_addr_to_sockaddr_hit) == NULL) {
 		
+		HIP_DEBUG("pfkey send acquire........\n");
 		pfkey_send_acquire(&ipv6_addr_to_sockaddr_hit);
 
 	} else {
@@ -1298,14 +1299,23 @@ static void *handle_ip_traffic(void *ptr){
 				}  
 				else if(is_incoming_packet(packetHook)) {
 					if (hip_userspace_ipsec)
+					{
+						HIP_DEBUG("debug message: HIP firewall userspace ipsec input: \n ");
+						// hip_firewall_userspace_ipsec_output(hndl, m->packet_id, packet_hdr, type); /*added by Tao Wan */
 						hip_firewall_userspace_ipsec_input(); /* added by Tao Wan */
+					
+					}
 					else
 						examine_incoming_tcp_packet(hndl, m->packet_id, packet_hdr, type);
 
 				} else if(is_outgoing_packet(packetHook)) {
 					/*examine_outgoing_tcp_packet(hndl, m->packet_id, packet_hdr, type);*/
 					if (hip_userspace_ipsec)
-						hip_firewall_userspace_ipsec_output(hndl, m->packet_id, packet_hdr, type); /*added by Tao Wan */
+						{
+							HIP_DEBUG("debug message: HIP firewall userspace ipsec output: \n ");
+							// hip_firewall_userspace_ipsec_input(); /* added by Tao Wan */
+							hip_firewall_userspace_ipsec_output(hndl, m->packet_id, packet_hdr, type); /*added by Tao Wan */
+						}
 					else
 						allow_packet(hndl, m->packet_id);
 					

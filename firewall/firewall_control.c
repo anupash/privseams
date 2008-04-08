@@ -129,56 +129,109 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 	{
 
 	
-	case HIP_FIREWALL_BEX_DONE: 
+	case HIP_FIREWALL_BEX_DONE: {
 		
-		HIP_DEBUG("Received base exchange done from hipd\n\n");
 		struct in6_addr *saddr = NULL, *daddr = NULL;
 		struct in6_addr *src_hit = NULL, *dst_hit = NULL;
 		uint32_t *spi_ipsec = NULL;
 		int ealg;
 		struct hip_crypto_key *enckey = NULL, *authkey = NULL;
 		int already_acquired, direction, update, sport, dport;
+		struct hip_tlv_t *param;
 		
+		HIP_DEBUG("Received base exchange done from hipd\n\n");
 		
 		/* now param: src addr */
-		saddr = (struct in6_addr *) hip_get_param(msg, HIP_PARAM_IPV6_ADDR);
 		
-                 /* now param: dst addr */
-		daddr = (struct in6_addr *)hip_get_next_param(msg, param);
+
+		param = (struct hip_tlv_t *) hip_get_param(msg, HIP_PARAM_IPV6_ADDR);
+		saddr = (struct in6_addr *) hip_get_param_contents_direct(param); 
+		HIP_DEBUG_IN6ADDR("Received in6_addr: ", saddr);
 		
+                /* now param: dst addr */
+		 
+		param = hip_get_next_param(msg, param);
+		daddr = (struct in6_addr *) hip_get_param_contents_direct(param);
+		HIP_DEBUG_IN6ADDR("Received in6_addr: ", daddr);		
+
+		
+		
+		param =  (struct hip_tlv_t *) hip_get_param(msg, HIP_PARAM_HIT);
+
 		/* now param: src_hit */
-		src_hit = (struct in6_addr *)hip_get_param(msg, HIP_PARAM_HIT);
+		src_hit = (struct in6_addr *)hip_get_param_contents_direct(param);
+		
+		HIP_DEBUG_HIT("Received src_hit: ", src_hit);
 		
 		/* now param: dst_hit */
-		dst_hit = (struct in6_addr *)hip_get_next_param(msg, param);
+		
+		param =  hip_get_next_param(msg, param);
+		dst_hit = (struct in6_addr *)hip_get_param_contents_direct(param);
+		
+		HIP_DEBUG_HIT("Received dst_hit: ", dst_hit);
 		
 
+		param =  (struct hip_tlv_t *) hip_get_param(msg, HIP_PARAM_UINT);
+		
 		/* now param: spi */
-		spi_ipsec = (uint32_t *) hip_get_param(msg, HIP_PARAM_UINT);
+		spi_ipsec = (uint32_t *) hip_get_param_contents_direct(param);
+		
+		HIP_DEBUG("the spi value is %d \n", spi_ipsec);
+
+		
 		
 
-		/* now param: enckey */
-		enckey = (struct hip_crypto_key *) hip_get_param(msg, HIP_PARAM_KEYS);
+
+		param =  (struct hip_tlv_t *) hip_get_param(msg, HIP_PARAM_KEYS);
 		
+
+                 /* now param: enckey */
+		enckey = (struct hip_crypto_key *) hip_get_param_contents_direct(param);
+		
+		HIP_DEBUG_KEY("crypto key is: ", enckey, sizeof(struct hip_crypto_key)); 
+
+		
+
 		/* now param: anthkey */
-		authkey = (struct hip_crypto_key *)hip_get_next_param(msg, param);
-
-
-		/* now param: ealg */
-		ealg = (int )hip_get_param(msg, HIP_PARAM_INT);
-		/* now param: already_acquired */
-		already_acquired = (int) hip_get_next_param(msg, param);
-		/* now param: direction */
-		direction = (int) hip_get_next_param(msg, param);
-		/* now param: update */
-		update = (int) hip_get_next_param(msg, param);
-		/* now param: sport */
-		sport = (int) hip_get_next_param(msg, param);
-		/* now param: dport */
-		dport = (int) hip_get_next_param(msg, param);
- 
 		
+		param =  hip_get_next_param(msg, param);
+		authkey = (struct hip_crypto_key *)hip_get_param_contents_direct(param);
+		HIP_DEBUG_KEY("auth key key is: ", authkey, sizeof(struct hip_crypto_key)); 
 
+
+		
+		/* now param: ealg */
+		param =  (struct hip_tlv_t *) hip_get_param(msg, HIP_PARAM_INT);
+		
+		ealg = (int )hip_get_param_contents_direct(param);
+		
+		HIP_DEBUG("ealg  value is %d \n", ealg);
+		/* now param: already_acquired */
+		param =  hip_get_next_param(msg, param);		
+		already_acquired = (int) hip_get_param_contents_direct( param);
+		HIP_DEBUG("already_acquired value is %d \n", already_acquired);
+
+		/* now param: direction */
+		param =  hip_get_next_param(msg, param);		
+		direction = (int) hip_get_param_contents_direct(param);
+		HIP_DEBUG("the direction value is %d \n", direction);
+		
+                /* now param: update */
+
+		param =  hip_get_next_param(msg, param);
+		update = (int) hip_get_param_contents_direct(param);
+		HIP_DEBUG("the update value is %d \n",update);
+		/* now param: sport */
+
+		param =  hip_get_next_param(msg, param);
+		sport = (int) hip_get_param_contents_direct(param);
+		HIP_DEBUG("the sport vaule is %d \n", sport);
+		/* now param: dport */
+		param =  hip_get_next_param(msg, param);
+		dport = (int) hip_get_param_contents_direct(param);
+		HIP_DEBUG("the dport value is %d \n", dport);
+		
+		
 		
 		err =  hipl_userspace_ipsec_api_wrapper_sadb_add(saddr, daddr, 
 								 src_hit, dst_hit, 
@@ -194,6 +247,7 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 		}
 		
 		break;
+	}
 
 	case HIP_ADD_ESCROW_DATA:
 		while((param = hip_get_next_param(msg, param)))
@@ -332,7 +386,7 @@ int control_thread_init(void)
 	HIP_IFEL((hip_firewall_sock < 0), 1, "Could not create socket for firewall.\n");
 	bzero(&sock_addr, sizeof(sock_addr));
 	sock_addr.sin6_family = AF_INET6;
-	sock_addr.sin6_port = HIP_FIREWALL_PORT;
+	sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
 	sock_addr.sin6_addr = in6addr_loopback;
 	HIP_IFEL(bind(hip_firewall_sock, (struct sockaddr *)& sock_addr,
 		      sizeof(sock_addr)), -1, "Bind on firewall socket addr failed\n");

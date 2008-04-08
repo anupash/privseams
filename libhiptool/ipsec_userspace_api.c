@@ -78,8 +78,8 @@ int hipl_userspace_ipsec_api_wrapper_sadb_add(struct in6_addr *saddr,
  
 	__u16 hit_magic;
 	
-	struct sockaddr_storage inner_src, inner_dst; /*HIT address -- inner address*/
-	struct sockaddr_storage src, dst; /* IP address*/
+	struct sockaddr_storage  inner_src, inner_dst; /*HIT address -- inner address*/
+	struct sockaddr_storage  src, dst; /* IP address*/
 	
 	__u32 ipsec_spi = (__u32) *spi; /*IPsec SPI*/
 	__u32 ipsec_e_type = (__u32) ealg; /* encryption type */
@@ -187,8 +187,12 @@ uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr,
 	
 /* send the following message to firewall from hipd*/
 	
+
+
+	
+
 	struct hip_common *msg;
-	struct sockaddr_in6 hip_firewall_addr; // XX FIXME TAO: PORT=htons(HIP_FIREWALL_PORT), ADDRESS = IN6ADDR_ANY_INIT
+	struct sockaddr_in6 hip_firewall_addr; 
 	
 	struct in6_addr loopback = in6addr_loopback;
 
@@ -197,7 +201,7 @@ uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr,
 	int n;
 	socklen_t alen;
 	
-	
+	HIP_DEBUG("hip_userspace_ipsec_add_sa function called \n\n");
 
 	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc memory for triggering base exchange\n");
 	hip_msg_init(msg);
@@ -207,17 +211,27 @@ uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr,
 	
 	HIP_IFEL(hip_build_param_contents(msg, (void *)saddr, HIP_PARAM_IPV6_ADDR,
 					  sizeof(struct in6_addr)), -1, "build param contents failed\n"); 
+	
+	HIP_DEBUG_IN6ADDR("Source IP address: ", saddr);
+	
 	HIP_IFEL(hip_build_param_contents(msg, (void *)daddr, HIP_PARAM_IPV6_ADDR,
 					  sizeof(struct in6_addr)), -1, "build param contents failed\n");
+
+	HIP_DEBUG_IN6ADDR("Destination  IP address : ", saddr);	
 	
 	HIP_IFEL(hip_build_param_contents(msg, (void *)src_hit, HIP_PARAM_HIT,
 					  sizeof(struct in6_addr)), -1, "build param contents failed\n"); 
+	
+	HIP_DEBUG_HIT("Source Hit: ", src_hit);
+
 	HIP_IFEL(hip_build_param_contents(msg, (void *)dst_hit, HIP_PARAM_HIT,
 					  sizeof(struct in6_addr)), -1, "build param contents failed\n");
 	
+	HIP_DEBUG_HIT("Destination HIT: ", dst_hit);
 	
 	HIP_IFEL(hip_build_param_contents(msg, (void *)spi, HIP_PARAM_UINT,
 					  sizeof(unsigned int)), -1, "build param contents failed\n"); 
+	
 	HIP_IFEL(hip_build_param_contents(msg, (void *)&ealg, HIP_PARAM_INT,
 					  sizeof(int)), -1, "build param contents failed\n");  
 	
@@ -242,8 +256,37 @@ uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr,
 					  sizeof(int)), -1, "build param contents failed\n");  
 	
 	
-	/* Fixed version here */
+
+
+	HIP_DEBUG("the spi value is %d \n", spi);
+
+	// HIP_DEBUG_KEY("crypto key is: ", enckey, sizeof(struct hip_crypto_key)); 
 	
+	// HIP_DEBUG_KEY("auth key key is: ", authkey, sizeof(struct hip_crypto_key)); 
+	
+	
+		
+	HIP_DEBUG("ealg  value is %d \n", ealg);
+	
+	HIP_DEBUG("already_acquired value is %d \n", already_acquired);
+	
+	
+	
+	HIP_DEBUG("the direction value is %d \n", direction);
+	
+        
+	
+	
+	HIP_DEBUG("the update value is %d \n",update);
+	
+	
+	
+	HIP_DEBUG("the sport vaule is %d \n", sport);
+	
+	HIP_DEBUG("the dport value is %d \n", dport);
+		
+	
+		
 	hip_firewall_addr.sin6_family = AF_INET6;
 	hip_firewall_addr.sin6_port = htons(HIP_FIREWALL_PORT);
 
@@ -252,12 +295,15 @@ uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr,
 	
 	
 	ipv6_addr_copy(&(hip_firewall_addr.sin6_addr.s6_addr), &loopback);
-
-	HIP_DEBUG("Tao Wan: with &: %d, second %d invoked.\n",
-		  sizeof(&hip_firewall_addr.sin6_addr.s6_addr),
-		  sizeof(hip_firewall_addr.sin6_addr.s6_addr));
-
-	HIP_DEBUG_IN6ADDR("hip_firewall_addr.sin6_addr.s6_addr:", 
+	/*
+	
+	* HIP_DEBUG("Tao Wan: with &: %d, second %d invoked.\n",
+	*  sizeof(&hip_firewall_addr.sin6_addr.s6_addr),
+	* sizeof(hip_firewall_addr.sin6_addr.s6_addr));
+	*/ 
+	  
+     
+	HIP_DEBUG_IN6ADDR("send to loopback -->hip_firewall_addr.sin6_addr.s6_addr:", 
 			  hip_firewall_addr.sin6_addr.s6_addr);
 
 	
@@ -276,7 +322,7 @@ uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr,
 		err = -1;
 		goto out_err;
 	}
-	else HIP_DEBUG("Sendto firewall OK.\n");
+	else HIP_DEBUG("hipd ipsec_add_sa--> Sendto firewall OK.\n");
 	
  out_err:
 	return err;
