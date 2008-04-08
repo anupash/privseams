@@ -2314,6 +2314,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
         		spi_out = list_entry(item);
         		hip_external_ice_add_remote_candidates(ice_session, spi_out->peer_addr_list);
         	}
+        	HIP_DEBUG("ICE astart checking in I2\n");
         	hip_ice_start_check(ice_session);
         }
         

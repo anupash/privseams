@@ -536,16 +536,22 @@ int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, 
 	// local_pref = 65536;
 	 
 	 //TODO  this is only for IPv4
+	 /*
 	 pj_sockaddr_in_set_port(&pj_addr, 
 	 					port); 
 
-		 HIP_DEBUG("santtu add 1 \n"); 
+
 	 //TODO check if HIP address is unit 32
 	 pj_sockaddr_in_set_addr(&pj_addr,
 			(pj_uint32_t) hip_addr->s6_addr32);
-	 HIP_DEBUG("santtu add 2 \n"); 
-	 addr_len = sizeof(pj_sockaddr_in);
+	
+	*/
 	 
+	 pj_addr.sin_family=4;
+	 pj_addr.sin_port = port;
+	 pj_addr.sin_addr.s_addr =*((pj_uint32_t*) &hip_addr->s6_addr32[3]);
+	 
+	 addr_len = sizeof(pj_sockaddr_in);
 	 
 	 //pj_sockaddr_t is a void point. we need pj_sockaddr struct.
 	 
@@ -563,7 +569,7 @@ int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, 
 	PJ_ICE_CAND_TYPE_PRFLX 	ICE peer reflexive candidate, which is the address as seen by peer agent during connectivity check.
 	PJ_ICE_CAND_TYPE_RELAYED 	ICE relayed candidate, which represents the address allocated in TURN server.
 	  * */
-	 HIP_DEBUG("santtu add 3 \n"); 
+
 	
 	pj_status =  pj_ice_sess_add_cand  	(   ice,
 			comp_id,
@@ -578,7 +584,7 @@ int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, 
 		) ;
 	HIP_DEBUG("santtu add 4 %d\n", pj_status);
 	if(pj_status == PJ_SUCCESS)	{
-		HIP_DEBUG("santtu add 5 \n"); 
+
 		return 1;
 	}
 	else return 0;
@@ -590,7 +596,7 @@ int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, 
 *this function is called after the local candidates are added. 
 * the check list will created inside the seesion object. 
 */
-int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list){
+int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list, pj_ice_cand_type type){
 	
 	pj_ice_sess *   	 ice = session;
 	const pj_str_t *  	rem_ufrag;
@@ -619,18 +625,45 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 	
 	list_for_each_safe(item, tmp, list, i) {
 		peer_addr_list_item = list_entry(item);
-		HIP_DEBUG_HIT("add Ice remote", &peer_addr_list_item->address);
+		if(peer_addr_list_item->port == 0) continue;
+		HIP_DEBUG_HIT("add Ice remote address:", &peer_addr_list_item->address);
+		hip_print_lsi("add Ice remote address 1: ", ((int *) (&peer_addr_list_item->address)+3));
+		HIP_DEBUG("add Ice remote port: %d \n", peer_addr_list_item->port);
 		if (ipv6_addr_is_hit(&peer_addr_list_item->address))
 		    continue;
 		//HIP_DEBUG_HIT("add Ice remote", &peer_addr_list_item->address);
 		if (IN6_IS_ADDR_V4MAPPED(&peer_addr_list_item->address)) {
 			
 			temp_cand->comp_id = 1;
-			
+			/*
+			 * 
+			 * 
+			pj_addr.sin_family=4;
+	 		pj_addr.sin_port = port;
+	 		pj_addr.sin_addr.s_addr =*((pj_uint32_t*) hip_addr->s6_addr32);
 			pj_sockaddr_in_set_addr(&temp_cand->addr,
 						*((pj_uint32_t *) &peer_addr_list_item->address));
 			pj_sockaddr_in_set_port(&temp_cand->addr.ipv4, peer_addr_list_item->port);
+			pj_sockaddr_in_set_addr(&temp_cand->base_addr,
+									*((pj_uint32_t *) &peer_addr_list_item->address));
+						pj_sockaddr_in_set_port(&temp_cand->base_addr.ipv4, peer_addr_list_item->port);
+			*/
+			temp_cand->addr.ipv4.sin_family = 4;
+			temp_cand->addr.ipv4.sin_port = peer_addr_list_item->port;
+			temp_cand->addr.ipv4.sin_addr.s_addr = *((pj_uint32_t *) &peer_addr_list_item->address.s6_addr32[3]) ;
+			HIP_DEBUG("add remote address in integer is : %d \n", temp_cand->addr.ipv4.sin_addr.s_addr);
 			
+			temp_cand->base_addr.ipv4.sin_family = 4;
+			temp_cand->base_addr.ipv4.sin_port = peer_addr_list_item->port;
+			temp_cand->base_addr.ipv4.sin_addr.s_addr = *((pj_uint32_t*) &peer_addr_list_item->address.s6_addr32[3]);
+						
+			
+			
+			temp_cand->comp_id = 1;
+			temp_cand->type = type;
+			temp_cand->foundation = pj_str("ice");
+			temp_cand->prio = 65535;
+	
 			temp_cand++;
 			rem_cand_cnt++;
 		}
@@ -656,6 +689,7 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 	}                          
 	*/
 	pj_status_t t;
+	HIP_DEBUG("add remote number: %d \n", rem_cand_cnt);
 	if(rem_cand_cnt > 0 )
 	t= pj_ice_sess_create_check_list  	(  	session,
 	    &local_ufrag,
@@ -674,9 +708,41 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 
 int hip_ice_start_check(void* ice){
 	
-	pj_status_t result;
+	pj_ice_sess * session = ice;
 	
-	result = pj_ice_sess_start_check  	(  ice  	 ) ;  
+	HIP_DEBUG("start checking\n");
+	HIP_DEBUG("ice: %s \n", session->obj_name);
+	HIP_DEBUG("ice: local c number %d \n", session->lcand_cnt);
+	HIP_DEBUG("ice: r c number %d \n", session->rcand_cnt);
+	HIP_DEBUG("ice: local c number %d \n", session->lcand_cnt);
+	HIP_DEBUG("Ice: check list number: %d \n\n", session->clist.count);
+		
+	
+	
+	int j;
+	
+	for(j= 0; j< session->lcand_cnt; j++ ){
+		HIP_DEBUG("Ice: check local candidate : %d \n" , j);
+		HIP_DEBUG("candidate 's foundation %s \n" , session->lcand[j].foundation.ptr );
+		HIP_DEBUG("candidate 's 	prio %d \n" , session->lcand[j].prio );
+		hip_print_lsi("candidate 's 	base addr:" , &(session->lcand[j].addr.ipv4.sin_addr.s_addr ));
+		HIP_DEBUG("ca 's 	base addr port: %d \n" , (session->lcand[j].addr.ipv4.sin_port ));
+	}
+	int i;
+	for(i= 0; i< session->rcand_cnt; i++ ){
+		HIP_DEBUG("Ice: check r ca : %d \n" , i);
+		HIP_DEBUG("ca 's foundation %s \n" , session->rcand[i].foundation.ptr );
+		HIP_DEBUG("ca 's 	prio %d \n" , session->rcand[i].prio );
+		hip_print_lsi("ca 's 	base addr:" , &(session->rcand[i].addr.ipv4.sin_addr.s_addr ));
+		HIP_DEBUG("ca 's 	base addr port: %d \n" , (session->rcand[i].addr.ipv4.sin_port ));
+	}
+					
+	pj_status_t result;
+	HIP_DEBUG("Ice: check dump end\n");
+	result = pj_ice_sess_start_check  	(  session  	 ) ; 
+	HIP_DEBUG("Ice: check  end: check list number: %d \n", session->clist.count);
+	
+	
 	if(result == PJ_SUCCESS) return 1;
 	else return 0;
 			

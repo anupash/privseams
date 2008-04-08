@@ -1454,24 +1454,27 @@ static pj_status_t start_periodic_check(pj_timer_heap_t *th,
     pj_ice_sess_checklist *clist;
     unsigned i, start_count=0;
     pj_status_t status;
-
+    pj_log_1("p check", "0");
     td = (struct timer_data*) te->user_data;
+    pj_log_1("p check", "0.1");
     ice = td->ice;
+    pj_log_1("p check", "0.2");
     clist = td->clist;
-
+    pj_log_1("p check", "0.3");
     pj_mutex_lock(ice->mutex);
-
+    pj_log_1("p check", "1");
     /* Set timer ID to FALSE first */
     te->id = PJ_FALSE;
 
     /* Set checklist state to Running */
     clist_set_state(ice, clist, PJ_ICE_SESS_CHECKLIST_ST_RUNNING);
-
+    pj_log_1("p check", "2");
     LOG5((ice->obj_name, "Starting checklist periodic check"));
 
     /* Send STUN Binding request for check with highest priority on
      * Waiting state.
      */
+    pj_log_1("p check", "3");
     for (i=0; i<clist->count; ++i) {
 	pj_ice_sess_check *check = &clist->checks[i];
 
@@ -1486,7 +1489,7 @@ static pj_status_t start_periodic_check(pj_timer_heap_t *th,
 	    break;
 	}
     }
-
+    pj_log_1("p check", "4");
     /* If we don't have anything in Waiting state, perform check to
      * highest priority pair that is in Frozen state.
      */
@@ -1506,7 +1509,7 @@ static pj_status_t start_periodic_check(pj_timer_heap_t *th,
 	    }
 	}
     }
-
+    pj_log_1("p check", "5");
     /* Cannot start check because there's no suitable candidate pair.
      */
     if (start_count!=0) {
@@ -1517,7 +1520,7 @@ static pj_status_t start_periodic_check(pj_timer_heap_t *th,
 	pj_time_val_normalize(&timeout);
 	pj_timer_heap_schedule(th, te, &timeout);
     }
-
+ pj_log_1("p check", "6");
     pj_mutex_unlock(ice->mutex);
     return PJ_SUCCESS;
 }
@@ -1558,7 +1561,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_start_check(pj_ice_sess *ice)
     unsigned i, flist_cnt = 0;
 
     PJ_ASSERT_RETURN(ice, PJ_EINVAL);
-
+    pj_log_1("here, here", "here");
     /* Checklist must have been created */
     PJ_ASSERT_RETURN(ice->clist.count > 0, PJ_EINVALIDOP);
 
@@ -1577,7 +1580,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_start_check(pj_ice_sess *ice)
      */
 
     clist = &ice->clist;
-
+    pj_log_1("here, here", "here1");
     /* Pickup the first pair for component 1. */
     for (i=0; i<clist->count; ++i) {
 	if (clist->checks[i].lcand->comp_id == 1)
@@ -1587,13 +1590,13 @@ PJ_DEF(pj_status_t) pj_ice_sess_start_check(pj_ice_sess *ice)
 	pj_assert(!"Unable to find checklist for component 1");
 	return PJNATH_EICEINCOMPID;
     }
-
+    pj_log_1("here, here", "here2");
     /* Set this check to WAITING */
     check_set_state(ice, &clist->checks[i], 
 		    PJ_ICE_SESS_CHECK_STATE_WAITING, PJ_SUCCESS);
     cand0 = clist->checks[i].lcand;
     flist[flist_cnt++] = &clist->checks[i].lcand->foundation;
-
+    pj_log_1("here, here", "here3");
     /* Find all of the other pairs in that check list with the same
      * component ID, but different foundations, and sets all of their
      * states to Waiting as well.
@@ -1611,7 +1614,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_start_check(pj_ice_sess *ice)
 	    flist[flist_cnt++] = &cand1->foundation;
 	}
     }
-
+    pj_log_1("here, here", "here4");
     /* First, perform all pending triggered checks, simultaneously. */
     rcheck = ice->early_check.next;
     while (rcheck != &ice->early_check) {
@@ -1622,7 +1625,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_start_check(pj_ice_sess *ice)
 	rcheck = rcheck->next;
     }
     pj_list_init(&ice->early_check);
-
+    pj_log_1("here, here", "here5");
     /* Start periodic check */
     return start_periodic_check(ice->stun_cfg.timer_heap, &clist->timer);
 }
