@@ -30,6 +30,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 	hip_ha_t * server_entry = NULL;
 	HIP_KEA * kea = NULL;
 	int send_response = (src ? 1 : 0);
+	struct hip_tlv_common *param = NULL;
 
 	HIP_DEBUG("handling user msg of family=%d from port=%d\n",
 		  src->sin6_family, src->sin6_port);
@@ -567,7 +568,19 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 
 		goto out_err;
 	  	break;
-
+	case SO_HIP_GET_LSI_PEER:
+		while((param = hip_get_next_param(msg, param))){
+			if (hip_get_param_type(param) == HIP_PARAM_HIT){
+		    		if (!src_hit)
+		      			src_hit = (struct in6_addr *)hip_get_param_contents_direct(param);
+		    		else 
+		      			dst_hit = (struct in6_addr *)hip_get_param_contents_direct(param);
+		  	}
+	  	}
+		hip_ha_t *aux = hip_hadb_find_byhits(src_hit, dst_hit);
+		if (aux)
+			lsi = &aux->lsi_peer;
+	        break;
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;
@@ -588,6 +601,10 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 					 HIP_PARAM_HIT, sizeof(struct in6_addr)), -1,
 				 	 "build param HIP_PARAM_HIT  failed\n");
 		        }
+			if (msg_type == SO_HIP_GET_LSI_PEER && lsi)
+		                HIP_IFEL(hip_build_param_contents(msg, (void *)lsi,
+					 HIP_PARAM_LSI, sizeof(hip_lsi_t)), -1,
+				 	 "build param HIP_PARAM_LSI  failed\n")
 		}
 
 		len = hip_get_msg_total_len(msg);

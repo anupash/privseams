@@ -1779,6 +1779,43 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 	return err;
 }
 
+hip_lsi_t *hip_get_lsi_peer_by_hits(struct in6_addr *hit_s, struct in6_addr *hit_r){
+        int err;
+        struct hip_common *msg = NULL;
+	hip_lsi_t *lsi = NULL;
+
+	HIP_IFE(!(msg = hip_msg_alloc()), -1);
+
+	if (hit_s)
+		HIP_IFEL(hip_build_param_contents(msg, (void *) hit_s,
+						  HIP_PARAM_HIT,
+						  sizeof(struct in6_addr)), -1,
+			 "build param HIP_PARAM_HIT  failed\n");
+	if (hit_r)
+	  HIP_IFEL(hip_build_param_contents(msg, (void *) hit_r,
+							    HIP_PARAM_HIT,
+							    sizeof(struct in6_addr)), -1,
+				   "build param HIP_PARAM_HIT  failed\n");
+
+
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_LSI_PEER, 0), -1,
+		 "build hdr failed\n");
+	
+	/* send and receive msg to/from hipd */
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send_recv msg failed\n");
+	HIP_DEBUG("send_recv msg succeed\n");
+	/* check error value */
+	HIP_IFEL(hip_get_msg_err(msg), -1, "Got erroneous message!\n");
+
+	lsi = (hip_lsi_t *)hip_get_param_contents(msg, HIP_PARAM_LSI);
+
+out_err:
+	if(msg)
+		HIP_FREE(msg);
+	return lsi;
+
+}
+
 int hip_trigger_bex(struct in6_addr **src_hit, struct in6_addr **dst_hit, struct in6_addr *src_ip, struct in6_addr *dst_ip)
 {
 	struct hip_tlv_common *param = NULL;

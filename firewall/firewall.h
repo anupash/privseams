@@ -46,7 +46,7 @@ struct firewall_hl {
 	hip_lsi_t lsi;
 	hip_hit_t hit_our;
         hip_hit_t hit_peer;
-  // int bex_state;
+        int bex_state;
 };
 
 typedef struct firewall_hl firewall_hl_t;

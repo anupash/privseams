@@ -203,10 +203,11 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 	        HIP_DEBUG("Received bex done from hipd\n\n");
 		hit_s = (struct in6_addr *)hip_get_param_contents(msg, HIP_PARAM_HIT);
 		hit_r = (struct in6_addr *)hip_get_param_contents(msg, HIP_PARAM_HIT);
-		if (!hit_r)
-			set_bex_done(-1);
-		else
+		if (hit_r)
 			set_bex_done(1);
+		else
+			set_bex_done(-1);
+		       // firewall_update_bex_state(hit_s, hit_r, 1);
 		break;
 	default:
 		HIP_DEBUG("Type of message not handled\n");
@@ -218,6 +219,19 @@ out_err:
 
 }
 
+
+int firewall_update_bex_state(struct in6_addr *hit_s, struct in6_addr *hit_r, int state){
+	int err = 0;
+	hip_lsi_t *lsi_peer = NULL;
+	lsi_peer = hip_get_lsi_peer_by_hits(hit_s, hit_r);
+	if (lsi_peer){
+		//entry_peer->bex_state = state;
+		//hip_ht_add(firewall_lsi_hit_db, entry_peer);
+	}
+	else
+		err = -1;
+	return err;
+}
 
 int sendto_hipd(void *msg, size_t len)
 {
@@ -302,25 +316,6 @@ out_err:
 	return err;			   
 }
 
-
-int firewall_init_raw_sock_v6(int *firewall_raw_sock_v6)
-{
-	int on = 1, off = 0, err = 0;
-
-	*firewall_raw_sock_v6 = socket(AF_INET6, SOCK_RAW, IPPROTO_TCP);
-	HIP_IFEL(*firewall_raw_sock_v6 <= 0, 1, "Raw socket creation failed. Not root?\n");
-
-	/* see bug id 212 why RECV_ERR is off */
-	err = setsockopt(*firewall_raw_sock_v6, IPPROTO_IPV6, IPV6_RECVERR, &off, sizeof(on));
-	HIP_IFEL(err, -1, "setsockopt recverr failed\n");
-	err = setsockopt(*firewall_raw_sock_v6, IPPROTO_IPV6, IPV6_2292PKTINFO, &on, sizeof(on));
-	HIP_IFEL(err, -1, "setsockopt pktinfo failed\n");
-	err = setsockopt(*firewall_raw_sock_v6, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
-	HIP_IFEL(err, -1, "setsockopt v6 reuseaddr failed\n");
-
- out_err:
-	return err;
-}
 
 
 
