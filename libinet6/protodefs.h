@@ -47,7 +47,7 @@
 
 #define HIP_HIT_TYPE_HASH100    1
 #define HIP_HIT_TYPE_HAA_HASH   2
-#define HIP_HIT_TYPE_MASK_HAA   0x00000080 // depracated -miika
+#define HIP_HIT_TYPE_MASK_HAA   0x00000080 /**< depracated -miika */
 #define HIP_HIT_TYPE_MASK_100   0x20010010
 #define HIP_HIT_TYPE_MASK_CLEAR 0x0000000f
 #define HIP_HIT_TYPE_MASK_INV   0xfffffff0
@@ -83,33 +83,31 @@
 #define HIP_PARAM_ECHO_RESPONSE_SIGN   961
 #define HIP_PARAM_ESP_TRANSFORM        4095
 
-/* Range 32768 - 49141 can be used for HIPL private parameters. */
+/* Range 32768 - 49141 can be used for HIPL private parameters i.e. to
+   parameters passed from hipconf to hipdaemon. */
 #define HIP_PARAM_HIT                   32768
 #define HIP_PARAM_IPV6_ADDR             32769
-/** @todo change to digest */
-#define HIP_PARAM_DSA_SIGN_DATA         32770
+#define HIP_PARAM_DSA_SIGN_DATA         32770 /**< @todo change to digest */
 #define HIP_PARAM_HI                    32771
 #define HIP_PARAM_DH_SHARED_KEY         32772
 #define HIP_PARAM_UNIT_TEST             32773
 #define HIP_PARAM_EID_SOCKADDR          32774
-#define HIP_PARAM_EID_ENDPOINT          32775 /* Pass endpoint_hip structures into kernel */
+#define HIP_PARAM_EID_ENDPOINT          32775 /**< Pass endpoint_hip structures into kernel */
 #define HIP_PARAM_EID_IFACE             32776
 #define HIP_PARAM_EID_ADDR              32777
-#define HIP_PARAM_UINT                  32778 /* Unsigned integer */
+#define HIP_PARAM_UINT                  32778 /**< Unsigned integer */
 #define HIP_PARAM_KEYS                  32779
 #define HIP_PSEUDO_HIT                  32780 
 #define HIP_PARAM_REG_INFO		32781
 #define HIP_PARAM_REG_REQUEST		32782
 #define HIP_PARAM_REG_RESPONSE		32783
 #define HIP_PARAM_REG_FAILED		32784
-#define HIP_PARAM_BLIND_NONCE           32785 /* Pass blind nonce */
+#define HIP_PARAM_BLIND_NONCE           32785 /**< Pass blind nonce */
 #define HIP_PARAM_OPENDHT_GW_INFO       32786
-
 #define HIP_PARAM_ENCAPS_MSG		32787
 #define HIP_PARAM_PORTPAIR		32788
 #define HIP_PARAM_SRC_ADDR		32789
 #define HIP_PARAM_DST_ADDR		32790
-
 #define HIP_PARAM_AGENT_REJECT	        32791
 #define HIP_PARAM_HA_INFO               32792
 #define HIP_PARAM_OPENDHT_SET           32793
@@ -176,7 +174,6 @@
 #define HIP_LOWER_TRANSFORM_TYPE 2048
 #define HIP_UPPER_TRANSFORM_TYPE 4095
 
-
 #define HIP_ESP_RESERVED                0
 #define HIP_ESP_AES_SHA1                1
 #define HIP_ESP_3DES_SHA1               2
@@ -197,7 +194,8 @@
 #define HIP_SIG_RSA                   5
 #define HIP_HI_DEFAULT_ALGO           HIP_HI_DSA
 
-/* Kludge: currently set to DSA until bug id 175 is resolved! Should be RSA */
+/** @todo Kludge: currently set to DSA until bug id 175 is resolved!
+    Should be RSA. */
 #define HIP_SIG_DEFAULT_ALGO          HIP_SIG_RSA
 #define HIP_ANY_ALGO                  -1
 
@@ -255,10 +253,10 @@
  * @{
  */
 /* REMEMBER TO UPDATE BITMAP IN DOC/DOXYGEN.H WHEN YOU ADD/CHANGE THESE! */
-#define HIP_HA_CTRL_LOCAL_REQ_HIPUDP     0x4000
+#define HIP_HA_CTRL_LOCAL_REQ_RELAY      0x4000
 #define HIP_HA_CTRL_LOCAL_REQ_RVS        0x8000
 
-#define HIP_HA_CTRL_PEER_HIPUDP_CAPABLE  0x4000 
+#define HIP_HA_CTRL_PEER_RELAY_CAPABLE   0x4000 
 #define HIP_HA_CTRL_PEER_RVS_CAPABLE     0x8000
 /* @} */
 
@@ -273,9 +271,10 @@
  * @{ 
  */
 #define HIP_SERVICE_RENDEZVOUS	         1
-#define HIP_SERVICE_ESCROW	        	 201
-#define HIP_SERVICE_RELAY_UDP_HIP	 202
-#define HIP_SERVICE_RELAY_UDP_ESP	 203
+#define HIP_SERVICE_ESCROW	         201
+#define HIP_SERVICE_RELAY            	 202
+#define HIP_SERVICE_RELAY_UDP_HIP	 203
+#define HIP_SERVICE_RELAY_UDP_ESP	 204
 
 /** @addtogroup hip_proxy
  * @{ 
@@ -284,7 +283,7 @@
 #define HIP_PROXY_TRANSLATE 			1
 
 /* IMPORTANT! This must be the sum of above services. */
-#define HIP_NUMBER_OF_EXISTING_SERVICES  4
+#define HIP_NUMBER_OF_EXISTING_SERVICES  3
 /* @} */
 
 /* Registration failure types as specified in draft-ietf-hip-registration-02.
@@ -321,6 +320,7 @@ typedef struct hip_hadb_xmit_func_set hip_xmit_func_set_t;
 typedef struct hip_hadb_input_filter_func_set hip_input_filter_func_set_t;
 typedef struct hip_hadb_output_filter_func_set hip_output_filter_func_set_t;
 typedef struct hip_common hip_common_t;
+typedef struct hip_tlv_common hip_tlv_common_t;
 
 struct hip_crypto_key {
 	char key[HIP_MAX_KEY_LEN];
@@ -385,7 +385,7 @@ struct hip_locator_info_addr_item {
         uint8_t traffic_type;
         uint8_t locator_type;
         uint8_t locator_length;
-        uint8_t reserved;  /* last bit is P (prefered) */
+        uint8_t reserved;  /**< last bit is P (prefered) */
 	uint32_t lifetime;
 	struct in6_addr address;
 	/* end of fixed part - locator of arbitrary length follows but 

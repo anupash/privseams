@@ -12,20 +12,27 @@
  *
  * @section sec_doc Project Documents
  * <ul>
- * <li>doc/HACKING. This file contains developer information on policies in the HIPL project.</li>
- * <li>HIPL User Manual. Type <code>make HOWTO.html</code> in project root directory.</li> 
+ * <li>doc/HACKING. This file contains developer information on policies in the
+ * HIPL project.</li>
+ * <li>HIPL User Manual. Type <code>make HOWTO.html</code> in "doc" directory.
+ * The user manual is now available at doc/howto-html/index.html</li>.
  * <!--<li><a href=""></a>.</li>-->
  * </ul>
  * 
  * @section sec_links Links
  * <ul>
  * <li><a href="http://infrahip.hiit.fi/">Project home page</a>.</li>
- * <li><a href="http://linux.die.net/man/">Linux Man Pages</a>. See section 3 for C-library functions.</li>
+ * <li><a href="http://linux.die.net/man/">Linux Man Pages</a>. See section 3
+ *     for C-library functions.</li>
  * <li><a href="http://www.cppreference.com/">C/C++ Reference</a>.</li>
  * <li><a href="http://tigcc.ticalc.org/doc/keywords.html">C Language Keywords</a>.</li>
+ * <li><a href="http://www.greenend.org.uk/rjk/2001/02/cfu.html">C Language Gotchas</a>.
+ *     A description of some easy-to-make mistakes in C.</li>
+ * <li><a href="http://www.greenend.org.uk/rjk/2003/03/inline.html">Inline Functions In C</a>.
+ *     Notes on GCC and standard C inline functions.</li>
  * </ul>
  *
- * @date   10.10.2007
+ * @date   28.02.2008
  */ 
 
 /**
@@ -184,6 +191,13 @@
  * </pre>
  *
  * @defgroup ife Error handling macros
+ **/
+
+/** @defgroup debug HIP debug macros
+ *  
+ * Unfortunately Doxygen gets confused when dealing with the extensive '\' and
+ * '#' characters that these macros contain. This documentation is therefore
+ * messed up. You can find the implementation of these macros from libinet/debug.h.
  **/
 
 /** @defgroup params TODOs for parameters */
@@ -495,7 +509,7 @@
  */
 
 /**
- * @defgroup hip_services Additional HIP services. 
+ * @defgroup hip_services Additional HIP services
  *
  * Registration types for registering to a service as specified in
  * draft-ietf-hip-registration-02. These are the registrationion types used in
@@ -510,10 +524,8 @@
  *      Rendezvous service for relaying I1 packets.
  * @def HIP_SERVICE_ESCROW
  *      Escrow services for some key exchange.
- * @def HIP_SERVICE_RELAY_UDP_HIP
+ * @def HIP_SERVICE_RELAY
  *      UDP encapsulated relay service for HIP packets.
- * @def HIP_SERVICE_RELAY_UDP_ESP
- *      UDP encapsulated relay service for ESP packets.
  * @def HIP_NUMBER_OF_EXISTING_SERVICES
  *      Total number of services, which must equal the sum of all existing
  *      services.
@@ -546,7 +558,7 @@
  */
 
 /**
- * @defgroup hip_ha_controls HIP host association controls.
+ * @defgroup hip_ha_controls HIP host association controls
  *
  * These are bitmasks used in the @c hip_hadb_state stucture fields
  * @c local_controls and @c peer_controls.
@@ -605,12 +617,43 @@
  */
 
 /**
- * @defgroup hip_packet_controls HIP packet Controls field values.
+ * @defgroup hip_packet_controls HIP packet Controls field values
  *
  * These are the values that are used in the HIP message Controls field. More
  * importantantly, these are <span style="color:#f00;">the only values allowed
  * in that field.</span> Do not put any other bits on wire in the Controls
  * field.
+ */
+
+/**
+ * @defgroup hip_ha_state HIP association states
+ *
+ * HIP states as specifed in section 4.4.1.\ of draft-ietf-hip-base-10.
+ * 
+ * The states are: UNASSOCIATED, I1-SENT, I2-SENT, R2-SENT ESTABLISHED, CLOSING,
+ * CLOSED, E-FAILED.
+ */
+
+/** 
+ * @file libinet6/state.h
+ * @def HIP_STATE_NONE
+ *      No state, structure unused.
+ * @def HIP_STATE_UNASSOCIATED
+ *      UNASSOCIATED, state machine start.
+ * @def HIP_STATE_I1_SENT
+ *      I1-SENT, initiating base exchange.
+ * @def HIP_STATE_I2_SENT
+ *      I2-SENT, waiting to complete base exchange.
+ * @def HIP_STATE_R2_SENT
+ *      R2-SENT, waiting to complete base exchange.
+ * @def HIP_STATE_ESTABLISHED
+ *      ESTABLISHED, HIP association established.
+ * @def HIP_STATE_CLOSING
+ *      CLOSING, HIP association closing, no data can be sent.
+ * @def HIP_STATE_CLOSED
+ *      CLOSED, HIP association closed, no data can be sent.
+ * @def HIP_STATE_FAILED
+ *      E-FAILED, HIP exchange failed.
  */
 
 #endif /* _DOXYGEN_H */

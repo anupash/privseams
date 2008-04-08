@@ -64,6 +64,12 @@ Summary: hip agent files
 Group: System Environment/Kernel
 %description agent
 
+%package tools
+Requires: hipl-lib, hipl-core
+Summary: hip tools files
+Group: System Environment/Kernel
+%description tools
+
 %package firewall
 Summary: hip firewall files
 Group: System Environment/Kernel
@@ -107,13 +113,15 @@ rm -rf %{buildroot}
 %{_libdir}
 
 %files core
-%{prefix}/sbin/hipconf
 %{prefix}/sbin/hipd
 %{prefix}/bin/hipsetup
 %config /etc/rc.d/init.d/hipd
 
 %files agent
 %{prefix}/bin/hipagent
+
+%files tools
+%{prefix}/sbin/hipconf
 
 %files test
 %{prefix}/bin/conntest-client

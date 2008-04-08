@@ -1,3 +1,11 @@
+/** @file
+ * Miscellaneous utility functions.
+ * 
+ * @author  ?
+ * @version ?
+ * @date    17.01.2008
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ */
 #include "util.h"
 
 void free_gaih_addrtuple(struct gaih_addrtuple *tuple) {
@@ -51,29 +59,24 @@ char *findsubstring(const char *string, const char *substring) {
   return((char *) NULL);
 }
 
-/*
- * Extracts substrings (delimited by ' ') from the string and adds 
- * them into the list.
- */
 void extractsubstrings(char *string, List *list) {
 
-  char *sub_string;
-  char *separator;
-  /* Note: fails if the string includes BOTH spaces and tabs */
-  _HIP_DEBUG("extractsubstrings\n");
-  separator = (strrchr(string, ' ') ? " " : "\t");
-  sub_string = strtok(string, separator);
-  _HIP_DEBUG("%s, length %d\n", sub_string, strlen(sub_string));
-  if(sub_string)
-    insert(list, sub_string);
-  else 
-    return;
-  sub_string = NULL;
-  while ((sub_string=strtok(NULL, separator)) != NULL) {
-    _HIP_DEBUG("%s, length %d\n", sub_string, strlen(sub_string));
-    insert(list, sub_string);
-    sub_string = NULL;
-  }
+	char *sub_string;
+	char delims[] = " \t";
+	
+	sub_string = strtok(string, delims);
+	
+	if(sub_string)
+		insert(list, sub_string);
+	else 
+		return;
+	
+	sub_string = NULL;
+	
+	while ((sub_string = strtok(NULL, delims)) != NULL) {
+		insert(list, sub_string);
+		sub_string = NULL;
+	}
 }
 
 /*

@@ -79,7 +79,7 @@ int send_tcp_packet(void *hdr,
 		    int   sockfd,
 		    int   addOption,
 		    int   addHIT){
-	int    on = 1, i, j, err = 0;
+	int    on = 1, i, j, err = 0, off = 0;
 	int    hdr_size, newHdr_size, twoHdrsSize;
 	char  *packet;
 	char  *bytes =(char*)hdr;
@@ -104,11 +104,6 @@ int send_tcp_packet(void *hdr,
 		newSize = newSize + 4;
 	if(addHIT)
 		newSize = newSize + sizeof(struct in6_addr);
-
-	if(setsockopt(sockfd, IPPROTO_IP, IP_HDRINCL, (char *)&on, sizeof(on)) < 0 ){
-		HIP_DEBUG("Error setting an option to raw socket\n"); 
-		return;
-	}
 
 	//initializing the headers and setting socket settings
 	if(trafficType == 4){
@@ -248,14 +243,19 @@ int send_tcp_packet(void *hdr,
 	//replace the pseudo header bytes with the correct ones
 	memcpy(&newHdr[0], &bytes[0], hdr_size);
 
+	if(setsockopt(sockfd, IPPROTO_IP, IP_HDRINCL, (char *)&on, sizeof(on)) < 0 ){
+		HIP_DEBUG("Error setting an option to raw socket\n"); 
+		return;
+	}
+
 	//finally send through the socket
 	err = sendto(sockfd, &newHdr[0], newSize, 0, (struct sockaddr *)&sin_addr, sizeof(sin_addr));
-	//if(err == -1) 
-		HIP_PERROR("send_tcp_packet");
 
 out_err:
 	if(defaultHit)
 		HIP_FREE(defaultHit);
+
+	setsockopt(sockfd, IPPROTO_IP, IP_HDRINCL, (char *)&off, sizeof(off));
 
 	return err;
 }
@@ -366,19 +366,6 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 		
 	HIP_DEBUG("\n");
 
-#ifdef CONFIG_HIP_OPPTCP
-	HIP_DEBUG_HIT("src_hit", src_hit);
-	//src_hit = NULL;
-	////hip_get_default_hit(src_hit);
-	////HIP_DEBUG_HIT("src_hit", src_hit);
-
-	if(hip_get_opportunistic_tcp_status()        &&
-	   hit_is_opportunistic_hashed_hit(dst_hit)  &&
-	   !((entry->tcp_opptcp_src_port == 0) && (entry->tcp_opptcp_dst_port == 0)))
-		hip_send_opp_tcp_i1(entry);
-	else{
-#endif
-  
 	/* Assign a local private key, public key and HIT to HA */
 	HIP_DEBUG_HIT("src_hit", src_hit);
 	HIP_IFEL(hip_init_us(entry, src_hit), -EINVAL,
@@ -460,7 +447,14 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 
 
 #ifdef CONFIG_HIP_OPPTCP
-	}
+	/*send the TCP SYN_i1 packet*/
+	HIP_DEBUG_HIT("src_hit", src_hit);
+	////hip_get_default_hit(src_hit);
+
+	if(hip_get_opportunistic_tcp_status()        &&
+	   hit_is_opportunistic_hashed_hit(dst_hit) /* &&
+	   !((entry->tcp_opptcp_src_port == 0) && (entry->tcp_opptcp_dst_port == 0))*/)
+		hip_send_opp_tcp_i1(entry);
 #endif
 
 out_err:
@@ -660,14 +654,16 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 
 	/********** REG_INFO *********/
 	/* Get service list of all services offered by this system */
+	/** @todo hip_get_services_list() leaks memory... */
 	service_count = hip_get_services_list(&service_list);
 	if (service_count > 0) {
 	     HIP_DEBUG("Adding REG_INFO parameter with %d service(s).\n",
 		       service_count);
-	     HIP_IFEL(hip_build_param_reg_info(
-			   msg, hip_get_service_min_lifetime(), 
-			   hip_get_service_max_lifetime(), service_list,
-			   service_count), 
+	     /* We use hardcoded default values for min and max lifetime
+		here. hip_build_param_reg_info() should be rewritten to support
+		lifetime selection. */
+	     HIP_IFEL(hip_build_param_reg_info(msg, 91, 200, service_list,
+					       service_count), 
 		      -1, "Building of reg_info failed\n");	
 	}
 
@@ -1147,8 +1143,7 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		memcpy(&my_addr, local_addr, sizeof(struct in6_addr));
 	} else {
 		HIP_DEBUG("no local address, selecting one\n");
-		HIP_IFEL(hip_select_source_address(&hip_nl_route,
-						   &my_addr,
+		HIP_IFEL(hip_select_source_address(&my_addr,
 						   peer_addr), -1,
 			 "Cannot find source address\n");
 	}
@@ -1270,8 +1265,7 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
  * or @c peer_addr is pure (not a IPv4-in-IPv6 format IPv4 address) IPv6
  * address, no message is send. IPv4-in-IPv6 format IPv4 addresses are mapped to
  * pure IPv4 addresses. In case of transmission error, this function tries to
- * retransmit the packet @c HIP_NAT_NUM_RETRANSMISSION times and sleeps for
- * @c HIP_NAT_SLEEP_TIME seconds between retransmissions. The HIP packet
+ * retransmit the packet @c HIP_NAT_NUM_RETRANSMISSION times. The HIP packet
  * checksum is set to zero.  
  * 
  * Used protocol suite is <code>IPv4(UDP(HIP))</code>.
@@ -1295,6 +1289,7 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
  * @note             If retransmit is set other than zero, make sure that the
  *                   entry is not NULL.
  * @todo             remove the sleep code (queuing is enough?)
+ * @todo             Add support to IPv6 address family.
  * @see              hip_send_raw
  */ 
 int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
@@ -1335,12 +1330,12 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 			 "family is currently not supported on UDP/HIP.\n");
 		my_addr_ptr = local_addr;
 		IPV6_TO_IPV4_MAP(local_addr, &src4.sin_addr);
-		src4.sin_addr.s_addr = htonl(src4.sin_addr.s_addr);
+		//src4.sin_addr.s_addr = htonl(src4.sin_addr.s_addr);
 		HIP_DEBUG_INADDR("src4", &src4.sin_addr);
 	} else {
 		HIP_DEBUG("Local address is NOT given, selecting one.\n");
-		HIP_IFEL(hip_select_source_address(
-				 &hip_nl_route, &my_addr, peer_addr), -EADDRNOTAVAIL,
+		HIP_IFEL(hip_select_source_address(&my_addr, peer_addr),
+			 -EADDRNOTAVAIL,
 			 "Cannot find local address.\n");
 		my_addr_ptr = &my_addr;
 		IPV6_TO_IPV4_MAP(&my_addr, &src4.sin_addr);

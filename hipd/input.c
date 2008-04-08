@@ -254,7 +254,7 @@ int hip_produce_keying_material(struct hip_common *msg,
 
 	/* 1024 should be enough for shared secret. The length of the
 	 * shared secret actually depends on the DH Group. */
-	/*! \todo 1024 -> hip_get_dh_size ? */
+	/** @todo 1024 -> hip_get_dh_size ? */
 	HIP_IFEL(!(dh_shared_key = HIP_MALLOC(dh_shared_len, GFP_KERNEL)),
 		 -ENOMEM,  "No memory for DH shared key\n");
 	memset(dh_shared_key, 0, dh_shared_len);
@@ -420,6 +420,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 	/** @todo Check packet csum.*/
 
 	entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
+	
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	if (!entry && opportunistic_mode &&
 	    (type == HIP_I1 || type == HIP_R1)) {
@@ -609,7 +610,6 @@ int hip_receive_udp_control_packet(struct hip_common *msg,
 		saddr_public = &entry->preferred_address;
 	}
 #endif
-
 	HIP_IFEL(hip_receive_control_packet(msg, saddr_public, daddr,info,1), -1,
 		 "receiving of control packet failed\n");
  out_err:
@@ -1177,17 +1177,17 @@ int hip_handle_r1(struct hip_common *r1,
 				    entry, HIP_HA_CTRL_PEER_RVS_CAPABLE);
 			  }
 			  break;
-		     case HIP_SERVICE_RELAY_UDP_HIP:
+		     case HIP_SERVICE_RELAY:
 			  HIP_INFO("Responder offers UDP relay service for "\
 				   "HIP packets.\n");
 			  
 			  /* If we have requested for HIP UDP Relay service in
 			     I1, we store the info of responder's capability
 			     here. */
-			  if(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_HIPUDP)
+			  if(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_RELAY)
 			  {
 			       hip_hadb_set_peer_controls(
-				    entry, HIP_HA_CTRL_PEER_HIPUDP_CAPABLE);
+				    entry, HIP_HA_CTRL_PEER_RELAY_CAPABLE);
 
 			  }
 			  break;
@@ -1433,7 +1433,7 @@ int hip_create_r2(struct hip_context *ctx,
 	/********** REG_REQUEST **********/
 	/* This part should only be executed in HIP relay or in the host
 	   offering escrow service.
-	   (hip_we_are_relay() || we_are_escrow_server()).
+	   (hip_relay_get_status() == HIP_RELAY_ON || we_are_escrow_server()).
 	   But since I don't have a way to detect if we are an escrow server
 	   this part is executed on I and R also. -Lauri 27.09.2007*/
 	hip_handle_regrequest(entry, i2, r2);
@@ -2014,23 +2014,11 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 
 	HIP_DEBUG("state is %d\n", entry->state);
 
-	if (entry && entry->state != HIP_STATE_FILTERING_R2)
+	if (entry)
 	{
 
-/* Hmmm... Now that the RVS is compiled as a default value, we take the first
-   path always. Now, is this how it is meant to be? Notice, that currently
-   CONFIG_HIP_RVS does not mean that we are the RVS, but rather that the
-   extension is in use. Thus we can be I, RVS or R, and as long as the
-   RVS options are compiled, we always take the first path.
-   
-   It might be wise to create compile options for each service, and one compile
-   option to indicate whether we want use the registration extension. This way
-   we would get rid of the stupid dummy hip_we_are_relay(). Also, the #ifdef
-   #else, #endif below would be clarified.
-
-   -Lauri 27.09.2007 18:41.*/
 #ifdef CONFIG_HIP_RVS
-	     if(hip_we_are_relay())
+	     if(hip_relay_get_status() == HIP_RELAY_ON)
 	     {
 		  entry->state = HIP_STATE_ESTABLISHED;
 	     }
@@ -2398,7 +2386,7 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
      ipv6_addr_copy(&dest, &in6addr_any);
      
 #ifdef CONFIG_HIP_RVS
-     if(!hip_we_are_relay())
+     if(!hip_relay_get_status() == HIP_RELAY_ON)
      {
 	  /* This is where the Responder handles the incoming relayed I1 packet.
 	     We need two things from the relayed packet:
@@ -2426,11 +2414,12 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
      return err;
 }
 
+
 int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		   struct in6_addr *i1_daddr, hip_ha_t *entry,
 		   hip_portpair_t *i1_info)
 {
-	int err = 0, state, mask = 0,cmphits=0;
+	int err = 0, state, mask = 0,cmphits=0, src_hit_is_our;
 
 	_HIP_DEBUG("hip_receive_i1() invoked.\n");
 
@@ -2440,18 +2429,36 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 #endif
 
 	HIP_ASSERT(!ipv6_addr_any(&i1->hitr));
+	
+	HIP_DEBUG_IN6ADDR("Source IP", i1_saddr);
+	HIP_DEBUG_IN6ADDR("Destination IP", i1_daddr);
+
+	/* In some environments, a copy of broadcast our own I1 packets
+	   arrive at the local host too. The following variable handles
+	   that special case. Since we are using source HIT (and not
+           destination) it should handle also opportunistic I1 broadcast */
+	src_hit_is_our = hip_hidb_hit_is_our(&i1->hits);
 
 	/* check i1 for broadcast/multicast addresses */
-	if (IN6_IS_ADDR_V4MAPPED(i1_daddr)) {
+	if (IN6_IS_ADDR_V4MAPPED(i1_daddr)) 
+        {
 		struct in_addr addr4;
+
 		IPV6_TO_IPV4_MAP(i1_daddr, &addr4);
-		if (addr4.s_addr == INADDR_BROADCAST) {
+
+		if (addr4.s_addr == INADDR_BROADCAST) 
+		{
 			HIP_DEBUG("Received i1 broadcast\n");
-			HIP_IFEL(hip_select_source_address(&hip_nl_route, i1_daddr, i1_saddr), -1,
+			HIP_IFEL(src_hit_is_our, -1,
+				 "Received a copy of own broadcast, dropping\n");
+			HIP_IFEL(hip_select_source_address(i1_daddr, i1_saddr), -1,
 				 "Could not find source address\n");
 		}
+
 	} else if (IN6_IS_ADDR_MULTICAST(i1_daddr)) {
-			HIP_IFEL(hip_select_source_address(&hip_nl_route, i1_daddr, i1_saddr), -1,
+			HIP_IFEL(src_hit_is_our, -1,
+				 "Received a copy of own broadcast, dropping\n");
+			HIP_IFEL(hip_select_source_address(i1_daddr, i1_saddr), -1,
 				 "Could not find source address\n");
 	}
 
@@ -2465,7 +2472,7 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	else {
 
 #ifdef CONFIG_HIP_RVS
-	     if(hip_we_are_relay())
+	     if(hip_relay_get_status() == HIP_RELAY_ON)
 	     {
 		  hip_relrec_t *rec = NULL, dummy;
 
@@ -2502,16 +2509,15 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		  ->hip_handle_i1(i1, i1_saddr, i1_daddr, entry, i1_info);
 	     break;
 	case HIP_STATE_I1_SENT:
-	     cmphits=hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer);
-	     if (cmphits == 1) {
+	     	cmphits=hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer);
+	     	if (cmphits == 1) {
 		  HIP_IFEL(hip_receive_i1(i1,i1_saddr,i1_daddr,entry,i1_info),
 			   -ENOSYS, "Dropping HIP packet\n");
 		  
-	     } else if (cmphits == 0) {
+	     	} else if (cmphits == 0) {
 		  hip_handle_i1(i1,i1_saddr,i1_daddr,entry,i1_info);
 		
-	     } 
-
+	     	} 
 	     break;
 	case HIP_STATE_UNASSOCIATED:
 	case HIP_STATE_I2_SENT:

@@ -1,20 +1,14 @@
-/*
- * libinet6 wrap.c
+/** @file
+ * HIP wrapper file to override functions. All functions that need to be
+ * overriden should be put here.
  *
- * Licence: GNU/GPL
- * Authors: 
- * - Bing Zhou <bingzhou@cc.hut.fi>
- * - Miika Komu <miika@iki.fi>
- *
+ * @author  Miika Komu <miika_iki.fi>
+ * @author  Bing Zhou <bingzhou_cc.hut.fi>
+ * @version 1.0
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  */
-
-/*
-  Put all the functions you want to override here
-*/
-
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 #include <sys/types.h>
-//#include <sys/socket.h>
 #include <unistd.h>
 #include <errno.h>
 #include <netinet/tcp.h>
@@ -1056,7 +1050,7 @@ int connect(int orig_socket, const struct sockaddr *orig_id,
 	return err;
 }
 
-/* 
+/** 
  * The calls return the number of characters sent, or -1 if an error occurred.
  */
 ssize_t send(int orig_socket, const void * b, size_t c, int flags)
@@ -1155,7 +1149,7 @@ ssize_t writev(int orig_socket, const struct iovec *vector, int count)
 	return chars;
 }
 
-/* 
+/** 
  * The calls return the number of characters sent, or -1 if an error occurred.
  * Untested.
  */
@@ -1192,13 +1186,13 @@ ssize_t sendto(int orig_socket, const void *buf, size_t buf_len, int flags,
   return chars;
 }
 
-/* 
+/** 
  * The calls return the number of characters sent, or -1 if an error occurred.
  */
 ssize_t sendmsg(int a, const struct msghdr *msg, int flags)
 {
 	int charnum;
-	// XX TODO: see hip_get_pktinfo_addr
+	/** @todo See hip_get_pktinfo_addr(). */
 	charnum = dl_function_ptr.sendmsg_dlsym(a, msg, flags);
 	
 	_HIP_DEBUG("Called sendmsg_dlsym with number of returned chars=%d\n", charnum);
@@ -1318,18 +1312,13 @@ ssize_t recvfrom(int orig_socket, void *buf, size_t len, int flags,
 	
 	_HIP_DEBUG("recvfrom: orig sock = %d\n", orig_socket);
 
-	/* XX FIXME: in the case of UDP server, this creates additional
-	   HIP traffic even though the connection is not necessarily
-	   secured */
-
-	err = hip_translate_socket(&orig_socket,
-				   orig_id,
-				   orig_id_len,
-				   &translated_socket,
-				   &translated_id,
-				   &translated_id_len,
-				   0, 1, 0);
-
+	/** @todo In the case of UDP server, this creates additional
+	    HIP traffic even though the connection is not necessarily
+	    secured. */
+	err = hip_translate_socket(&orig_socket, orig_id, orig_id_len,
+				   &translated_socket, &translated_id,
+				   &translated_id_len, 0, 1, 0);
+	
 	if (err) {
 		HIP_ERROR("Translation failure\n");
 		goto out_err;
