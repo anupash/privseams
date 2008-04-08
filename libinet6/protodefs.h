@@ -653,9 +653,9 @@ struct hip_relay_via {
  * @note obsolete.
  */
 struct hip_relay_to_old {
-     hip_tlv_type_t type; /**< Type code for the parameter. */
-     hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
-     uint8_t address_and_port[0]; /**< Rendezvous server addresses and ports. */
+	hip_tlv_type_t type; /**< Type code for the parameter. */
+	hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
+	uint8_t address_and_port[0]; /**< Rendezvous server addresses and ports. */
 } __attribute__ ((packed));
 
 struct hip_eid_endpoint {
@@ -676,13 +676,12 @@ struct hip_eid_sockaddr {
 	struct sockaddr sockaddr;
 } __attribute__ ((packed));
 
-/* ESCROW */
-
 struct hip_reg_info {
-	hip_tlv_type_t type;
-	hip_tlv_len_t  length;
-	uint8_t       min_lifetime;
-	uint8_t       max_lifetime;
+	hip_tlv_type_t type; /**< Type code for the parameter. */
+	hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
+	uint8_t        min_lifetime;
+	uint8_t        max_lifetime;
+	uint8_t        reg_type[0]; 
 } __attribute__ ((packed));
 
 struct hip_reg_request {

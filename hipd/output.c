@@ -654,6 +654,10 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 		 "Building of host id failed\n");
 
 	/********** REG_INFO *********/
+	unsigned int cnt = 0;
+	hip_srv_t service_xxx_list[HIP_NUMBER_OF_EXISTING_SERVICES];
+	hip_get_active_services(service_xxx_list, &cnt);
+
 	/* Get service list of all services offered by this system */
 	/** @todo hip_get_services_list() leaks memory... */
 	service_count = hip_get_services_list(&service_list);

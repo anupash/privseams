@@ -54,6 +54,7 @@
  * @todo <span style="color:#f00">Update the comments of this file.</span>
  */
 #include "builder.h"
+#include "registration.h"
 
 static enum select_dh_key_t select_dh_key = STRONGER_KEY;
 
@@ -2124,6 +2125,44 @@ out_err:
 	if (array)
 		HIP_FREE(array);	
 	return err;	
+}
+
+int hip_build_param_kala(hip_common_t *msg,
+			 const hip_srv_t *service_list,
+			 const unsigned int service_count)
+{
+	int err = 0, i = 0;
+	struct hip_reg_info reg_info;
+	
+	if(service_count == 0) {
+		return 0;
+	} else {
+		for( ;i < service_count; i++) {
+			if(service_list[0].min_lifetime !=
+			   service_list[i].min_lifetime ||
+			   service_list[0].max_lifetime !=
+			   service_list[i].max_lifetime) {
+				HIP_INFO("Warning! Multiple min and max "\
+					 "lifetime values for a single "\
+					 "REG_INFO parameter requested. Using "\
+					 "lifetime values from service type "\
+					 "%d with all services.\n",
+					 service_list[0].type);
+				break;
+			}
+				
+		}
+	}
+	
+	hip_set_param_type(&reg_info, HIP_PARAM_REG_INFO);
+	/* All services should have the same lifetime... */
+	reg_info.min_lifetime = service_list[0].min_lifetime;
+	reg_info.max_lifetime = service_list[0].max_lifetime;
+	hip_calc_generic_param_len(&reg_info, sizeof(struct hip_reg_info),
+	service_count * sizeof(service_list->type));
+	
+ out_err:
+	return err;
 }
 
 /**

@@ -12,8 +12,8 @@
  * @see     hiprelay.h
  * @see     escrow.h
  */
-#ifndef REGISTRATION_H
-#define REGISTRATION_H
+#ifndef HIP_REGISTRATION_H
+#define HIP_REGISTRATION_H
 
 #include "misc.h"
 #include "hiprelay.h" // For relrec lifetimes.
@@ -64,4 +64,4 @@ int hip_get_lifetime_value(time_t seconds, uint8_t *lifetime);
  */ 
 int hip_get_lifetime_seconds(uint8_t lifetime, time_t *seconds);
 
-#endif /* REGISTRATION_H*/
+#endif /* HIP_REGISTRATION_H */
