@@ -37,7 +37,7 @@ int hip_opptcp = 0;
 void print_usage()
 {
 	printf("HIP Firewall\n");
-	printf("Usage: firewall [-f file_name] [-t timeout] [-d|-v] [-F|-H]\n");
+	printf("Usage: firewall [-f file_name] [-t timeout] [-d|-v] [-F] [-H] [-A] [-b] [-k]\n");
 	printf("      - H drop non-HIP traffic by default (default: accept non-hip traffic)\n");
 	printf("      - A accept HIP traffic by default (default: drop all hip traffic)\n");
 	printf("      - f file_name is a path to a file containing firewall filtering rules (default %s)\n", HIP_FW_DEFAULT_RULE_FILE);
@@ -327,6 +327,12 @@ int is_outgoing_packet(unsigned int theHook){
 		return 1;
 	return 0;
 }
+
+/* Missing forward declaration */
+void hip_request_send_i1_to_hip_peer_from_hipd(struct in6_addr *peer_hit,
+					       struct in6_addr *peer_ip);
+void hip_request_unblock_app_from_hipd(const struct in6_addr *peer_ip);
+void hip_request_oppipdb_add_entry(struct in6_addr *peer_ip);
 
 /**
  * Analyzes incoming TCP packets
