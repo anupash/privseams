@@ -1178,7 +1178,7 @@ static void *handle_ip_traffic(void *ptr){
 						drop_packet(hndl, m->packet_id);
 				}  
 				else if(is_incoming_packet(packetHook))
-					examine_incoming_tcp_packet(hndl, m->packet_id, packet_hdr, type)
+					examine_incoming_tcp_packet(hndl, m->packet_id, packet_hdr, type);
 				else if(is_outgoing_packet(packetHook))
 					/*examine_outgoing_tcp_packet(hndl, m->packet_id, packet_hdr, type);*/
 					allow_packet(hndl, m->packet_id);
