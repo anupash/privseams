@@ -744,6 +744,9 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	}
 	/********** SOLUTION_M **********/
 #ifdef CONFIG_HIP_MIDAUTH
+	/* TODO: no caching is done for PUZZLE_M parameters. This may be
+	 * a DOS attack vector.
+	 */
 	HIP_IFEL(hip_solve_puzzle_m(i2, ctx->input, entry), -1, 
 		 "Building of solution_m failed\n");
 #endif
@@ -1481,6 +1484,9 @@ int hip_create_r2(struct hip_context *ctx,
 
 	/********** SOLUTION_M **********/
 #ifdef CONFIG_HIP_MIDAUTH
+	/* TODO: no caching is done for PUZZLE_M parameters. This may be
+	 * a DOS attack vector.
+	 */
 	HIP_IFEL(hip_solve_puzzle_m(r2, ctx->input, entry), -1, 
 		 "Building of solution_m failed\n");
 #endif

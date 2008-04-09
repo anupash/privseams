@@ -990,6 +990,9 @@ int hip_build_verification_pkt(hip_ha_t *entry, hip_common_t *update_packet,
 	/* @todo Handle overflow if (!update_id_out) */
 
 #ifdef CONFIG_HIP_MIDAUTH
+	/* TODO: no caching is done for PUZZLE_M parameters. This may be
+	 * a DOS attack vector.
+	 */
 	if (msg)
 	{
 		HIP_IFEL(hip_solve_puzzle_m(update_packet, msg, entry), -1, 
@@ -1287,6 +1290,9 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, hip_common_t *msg,
 		update_packet, HIP_UPDATE, mask, hitr, hits);
 
 #ifdef CONFIG_HIP_MIDAUTH
+	/* TODO: no caching is done for PUZZLE_M parameters. This may be
+	 * a DOS attack vector.
+	 */
 	HIP_IFEL(hip_solve_puzzle_m(update_packet, msg, entry), -1, 
 		"Building of solution_m failed\n");
 #endif
