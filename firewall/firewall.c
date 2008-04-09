@@ -328,6 +328,12 @@ int is_outgoing_packet(unsigned int theHook){
 	return 0;
 }
 
+/* Missing forward declaration */
+void hip_request_send_i1_to_hip_peer_from_hipd(struct in6_addr *peer_hit,
+					       struct in6_addr *peer_ip);
+void hip_request_unblock_app_from_hipd(const struct in6_addr *peer_ip);
+void hip_request_oppipdb_add_entry(struct in6_addr *peer_ip);
+
 /**
  * Analyzes incoming TCP packets
  * 
