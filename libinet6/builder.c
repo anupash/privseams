@@ -2098,7 +2098,7 @@ int hip_build_param_relay_to(struct hip_common *msg,
  *
  * @return zero for success, or non-zero on error
  */
-int hip_build_param_reg_info(struct hip_common *msg, uint8_t min_lifetime, 
+/*int hip_build_param_reg_info(struct hip_common *msg, uint8_t min_lifetime, 
 			uint8_t max_lifetime, int *type_list, int cnt)
 {
 	struct hip_reg_info rinfo;
@@ -2125,11 +2125,11 @@ out_err:
 	if (array)
 		HIP_FREE(array);	
 	return err;	
-}
+}*/
 
-int hip_build_param_kala(hip_common_t *msg,
-			 const hip_srv_t *service_list,
-			 const unsigned int service_count)
+int hip_build_param_reg_info(hip_common_t *msg,
+			     const hip_srv_t *service_list,
+			     const unsigned int service_count)
 {
 	int err = 0, i = 0;
 	struct hip_reg_info reg_info;

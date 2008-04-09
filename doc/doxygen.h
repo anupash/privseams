@@ -593,8 +593,8 @@
  * |||| |+------------- 0x0400 - free -
  * |||| +-------------- 0x0800 - free -
  * |||+---------------- 0x1000 - free -
- * ||+----------------- 0x2000 - free -
- * |+------------------ 0x4000 We have requested HIPUDPRELAY service.
+ * ||+----------------- 0x2000 We have requested ESCROW service.
+ * |+------------------ 0x4000 We have requested HIP relay service.
  * +------------------- 0x8000 We have requested RVS service.
  * </pre>
  * Bitmask for peer controls:
@@ -613,16 +613,36 @@
  * |||| |+------------- 0x0400 - free -
  * |||| +-------------- 0x0800 - free -
  * |||+---------------- 0x1000 - free -
- * ||+----------------- 0x2000 - free -
- * |+------------------ 0x4000 Peer offers HIPUDPRELAY service.
+ * ||+----------------- 0x2000 Peer offers ESCROW service.
+ * |+------------------ 0x4000 Peer offers HIP relay service.
  * +------------------- 0x8000 Peer offers RVS service.
  * </pre>
  *
- * @note There has been some confusion about which bit does what, and which of
+ * @note There has been some confusion about which bit does what and which of
  * the control fields to alter. To avoid this confusion, please do not alter
  * the @c local_controls and @c peer_controls fields directly. Instead use
  * functions hip_hadb_set_local_controls(), hip_hadb_set_peer_controls(),
  * hip_hadb_cancel_local_controls(), hip_hadb_cancel_peer_controls().
+ * @note Do not confuse these values with HIP packet Controls values.
+ *
+ * @def HIP_HA_CTRL_LOCAL_REQ_ESCROW
+ *      The host association has requested escrow service in a I1 or an UPDATE
+ *      packet.
+ * @def HIP_HA_CTRL_LOCAL_REQ_RELAY
+ *      The host association has requested HIP relay service in a I1 or an
+ *      UPDATE packet.
+ * @def HIP_HA_CTRL_LOCAL_REQ_RVS
+ *      The host association has requested rendezvous service in a I1 or an
+ *      UPDATE packet.
+ * @def HIP_HA_CTRL_PEER_ESCROW_CAPABLE
+ *      The peer has announced in a R1 or UPDATE packet that it offers escrow
+ *      service.
+ * @def HIP_HA_CTRL_PEER_RELAY_CAPABLE
+ *      The peer has announced in a R1 or UPDATE packet that it offers HIP relay
+ *      service.
+ * @def HIP_HA_CTRL_PEER_RVS_CAPABLE
+ *      The peer has announced in a R1 or UPDATE packet that it offers
+ *      rendezvous service.
  */
 
 /**
@@ -632,6 +652,7 @@
  * importantantly, these are <span style="color:#f00;">the only values allowed
  * in that field.</span> Do not put any other bits on wire in the Controls
  * field.
+ * @note Do not confuse these values with HIP host association ontrol values.
  */
 
 /**

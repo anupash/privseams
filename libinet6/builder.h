@@ -101,7 +101,7 @@ int hip_build_param_puzzle(struct hip_common *, uint8_t, uint8_t, uint32_t,
                            uint64_t);
 int hip_build_param_r1_counter(struct hip_common *, uint64_t);
 int hip_build_param_reg_failed(struct hip_common *, uint8_t, uint8_t *, int);
-int hip_build_param_reg_info(struct hip_common *, uint8_t, uint8_t, int *, int);
+//int hip_build_param_reg_info(struct hip_common *, uint8_t, uint8_t, int *, int);
 
 int hip_build_param_reg_request(struct hip_common *, uint8_t, uint8_t[], int, int);
 int hip_build_param_rvs_hmac_contents(struct hip_common *,
@@ -190,7 +190,7 @@ int rsa_to_hip_endpoint(RSA *rsa, struct endpoint_hip **endpoint,
 			se_hip_flags_t endpoint_flags, const char *hostname);
 int dsa_to_hip_endpoint(DSA *dsa, struct endpoint_hip **endpoint,
 			se_hip_flags_t endpoint_flags, const char *hostname);
-int hip_build_param_kala(hip_common_t *msg,
-			 const struct hip_srv_hdr *service_list,
-			 const unsigned int service_count);
+int hip_build_param_reg_info(hip_common_t *msg,
+			     const struct hip_srv_hdr *service_list,
+			     const unsigned int service_count);
 #endif /* HIP_BUILDER */
