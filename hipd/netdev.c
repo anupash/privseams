@@ -1143,7 +1143,7 @@ int hip_select_source_address(struct in6_addr *src, struct in6_addr *dst)
 	HIP_DEBUG_IN6ADDR("dst", dst);
 	HIP_DEBUG_IN6ADDR("src", src);
 
-	HIP_IFEL(hip_iproute_get(hip_nl_route, src, dst, NULL, NULL, family, idxmap), -1, "Finding ip route failed\n");
+	HIP_IFEL(hip_iproute_get(&hip_nl_route, src, dst, NULL, NULL, family, idxmap), -1, "Finding ip route failed\n");
 
 	HIP_DEBUG_IN6ADDR("src", src);
 
