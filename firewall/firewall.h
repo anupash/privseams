@@ -14,6 +14,7 @@
 #include <glib/glist.h>
 #include <string.h>
 #include <netinet/tcp.h>
+#include <linux/netfilter_ipv4.h>
 
 #include "crypto.h"
 #include "ife.h"
@@ -43,6 +44,8 @@
 "#\n"\
 "\n"
 
+#define HIP_FIREWALL_LOCK_FILE	"/var/lock/hip_firewall.lock"
+
 //made public for filter_esp_state function
 int match_hit(struct in6_addr match_hit, 
 	      struct in6_addr packet_hit, 
@@ -54,6 +57,7 @@ int firewall_init();
 void firewall_close(int signal);
 void firewall_exit();
 void firewall_probe_kernel_modules();
+void firewall_increase_netlink_buffers();
 
 #endif
 

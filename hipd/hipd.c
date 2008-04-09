@@ -1,16 +1,9 @@
- 
-/*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- */
-
+/** @file
+ * The HIPL main file containing the daemon main loop. 
+ * 
+ * @date 28.01.2008
+ * @note Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ */ 
 #include "hipd.h" 
 
 /* Defined as a global just to allow freeing in exit(). Do not use outside
@@ -18,28 +11,32 @@
 struct hip_common *hipd_msg = NULL;
 struct hip_common *hipd_msg_v4 = NULL;
 
-int is_active_handover = 1; /* which handover to use active or lazy? */
-int hip_blind_status = 0; /* Blind status */
+int is_active_handover = 1;  /**< Which handover to use active or lazy? */
+int hip_blind_status = 0; /**< Blind status */
+
+/** Suppress advertising of none, AF_INET or AF_INET6 address in UPDATEs.
+    0 = none = default, AF_INET, AF_INET6 */
+int suppress_af_family = 0;
 
 /* For receiving of HIP control messages */
 int hip_raw_sock_v6 = 0;
 int hip_raw_sock_v4 = 0;
-/** File descriptor of the socket used for hip control packet NAT traversal on
+/** File descriptor of the socket used for HIP control packet NAT traversal on
     UDP/IPv4. */
 int hip_nat_sock_udp = 0;
 /** Specifies the NAT status of the daemon. This value indicates if the current
     machine is behind a NAT. */
 int hip_nat_status = 0;
 
-/* Communication interface to userspace apps (hipconf etc) */
+/** Communication interface to userspace apps (hipconf etc) */
 int hip_user_sock = 0;
 struct sockaddr_un hip_user_addr;
 
-/* For receiving netlink IPsec events (acquire, expire, etc) */
+/** For receiving netlink IPsec events (acquire, expire, etc) */
 struct rtnl_handle hip_nl_ipsec  = { 0 };
 
-/* For getting/setting routes and adding HITs (it was not possible to use
-   nf_ipsec for this purpose). */
+/** For getting/setting routes and adding HITs (it was not possible to use
+    nf_ipsec for this purpose). */
 struct rtnl_handle hip_nl_route = { 0 };
 
 int hip_agent_sock = 0, hip_agent_status = 0;

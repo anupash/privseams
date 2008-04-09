@@ -123,39 +123,12 @@ void hip_set_os_dep_variables()
 int hipd_init(int flush_ipsec, int killold)
 {
 	hip_hit_t peer_hit;
-	int err = 0, fd, dhterr;
-	char str[64];
+	int err = 0, dhterr;
 	struct sockaddr_in6 daemon_addr;
 
 	/* Open daemon lock file and read pid from it. */
-//	unlink(HIP_DAEMON_LOCK_FILE);
-	fd = open(HIP_DAEMON_LOCK_FILE, O_RDWR | O_CREAT, 0644);
-
-	/* Write pid to file. */
-	if (fd > 0)
-	{
-		if (lockf(fd, F_TLOCK, 0) < 0)
-		{
-			int pid = 0;
-			memset(str, 0, sizeof(str));
-			read(fd, str, sizeof(str) - 1);
-			pid = atoi(str);
-			
-			if (!killold)
-			{
-				HIP_ERROR("HIP daemon already running with pid %d!\n", pid);
-				HIP_ERROR("Use -k option to kill old daemon.\n");
-				exit(1);
-			}
-		
-			HIP_INFO("Daemon is already running with pid %d?"
-			         "-k option given, terminating old one...\n", pid);
-			kill(pid, SIGKILL);
-		}
-		
-		sprintf(str, "%d\n", getpid());
-		write(fd, str, strlen(str)); /* record pid to lockfile */
-	}
+	HIP_IFEL(hip_create_lock_file(HIP_DAEMON_LOCK_FILE, killold), -1,
+		 "locking failed\n");
 
 	hip_init_hostid_db(NULL);
 
@@ -169,7 +142,8 @@ int hipd_init(int flush_ipsec, int killold)
 	signal(SIGCHLD, hip_sig_chld);
  
 	HIP_IFEL(hip_init_oppip_db(), -1,
-	         "Cannot initialize opportunistic mode IP database for non HIP capable hosts!\n");
+	         "Cannot initialize opportunistic mode IP database for "\
+		 "non HIP capable hosts!\n");
 
 	HIP_IFEL((hip_init_cipher() < 0), 1, "Unable to init ciphers.\n");
 
@@ -179,14 +153,12 @@ int hipd_init(int flush_ipsec, int killold)
 
 	hip_init_puzzle_defaults();
 
-/* Initialize a hashtable for services, if any service is enabled. */
+       /* Initialize a hashtable for services, if any service is enabled. */
 	hip_init_services();
 #ifdef CONFIG_HIP_RVS
-	HIP_INFO("Initializing HIP UDP relay database.\n");
-	if(hip_relht_init() == NULL)
-	{
-	     HIP_ERROR("Unable to initialize HIP UDP relay database.\n");
-	}
+	
+	HIP_INFO("Initializing HIP relay / RVS.\n");
+	hip_relay_init();
 #endif
 #ifdef CONFIG_HIP_ESCROW
 	hip_init_keadb();
@@ -637,7 +609,6 @@ void hip_close(int signal)
 	}
 }
 
-
 /**
  * Cleanup and signal handler to free userspace and kernel space
  * resource allocations.
@@ -663,7 +634,7 @@ void hip_exit(int signal)
 
 	set_up_device(HIP_HIT_DEV, 0);
 
-	/* This is needed only if RVS or escrow, hiprelay is in use. */
+	/* Next line is needed only if RVS or escrow, hiprelay is in use. */
 	hip_uninit_services();
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
@@ -675,8 +646,8 @@ void hip_exit(int signal)
 #endif
 
 #ifdef CONFIG_HIP_RVS
-	HIP_INFO("Uninitializing HIP UDP relay database.\n");
-	hip_relht_uninit();
+	HIP_INFO("Uninitializing RVS / HIP relay database and whitelist.\n");
+	hip_relay_uninit();
 #endif
 #ifdef CONFIG_HIP_ESCROW
 	hip_uninit_keadb();
@@ -717,7 +688,7 @@ void hip_exit(int signal)
 	if (msg)
 		free(msg);
 	
-	unlink(HIP_DAEMON_LOCK_FILE);
+	hip_remove_lock_file(HIP_DAEMON_LOCK_FILE);
         
 	if (opendht_serving_gateway)
 		freeaddrinfo(opendht_serving_gateway);
