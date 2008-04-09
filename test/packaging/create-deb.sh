@@ -124,7 +124,7 @@ init_files ()
     sed -i '/'"$LINE2"'/ s/.*/&\-'"$TMP"'/' $PKGDIR\/DEBIAN\/control
     sed -i 's/"$LINE3"/&'" $DEBARCH"'/' $PKGDIR\/DEBIAN\/control
 
-    cp $PKGDIR/DEBIAN/postinst $PKGROOT/postinst-$TMP
+    # cp $PKGDIR/DEBIAN/postinst $PKGROOT/postinst-$TMP
    
 }
 
