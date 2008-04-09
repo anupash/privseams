@@ -210,11 +210,15 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
     }
     else if (type == HIP_HIPPROXY_ON){
 	        HIP_DEBUG("Received HIP PROXY STATUS: ON message from hipd\n\n");
+	        HIP_DEBUG("Firewall is working on Proxy Mode!\n\n");
 	        hip_proxy_status = 1;
+	        firewall_init();
     }
     else if (type == HIP_HIPPROXY_OFF){
 	        HIP_DEBUG("Received HIP PROXY STATUS: OFF message from hipd\n\n");
+  	        HIP_DEBUG("Firewall is working on Firewall Mode!\n\n");
 	        hip_proxy_status = 0;
+	        firewall_init();
     }
  /*   else if(type == HIP_HIPPROXY_LOCAL_ADDRESS){
 	    	HIP_DEBUG("Received HIP PROXY LOCAL ADDRESS message from hipd\n\n");
