@@ -37,7 +37,7 @@ int hip_opptcp = 0;
 void print_usage()
 {
 	printf("HIP Firewall\n");
-	printf("Usage: firewall [-f file_name] [-t timeout] [-d|-v] [-F|-H]\n");
+	printf("Usage: firewall [-f file_name] [-t timeout] [-d|-v] [-F] [-H] [-A] [-b] [-k]\n");
 	printf("      - H drop non-HIP traffic by default (default: accept non-hip traffic)\n");
 	printf("      - A accept HIP traffic by default (default: drop all hip traffic)\n");
 	printf("      - f file_name is a path to a file containing firewall filtering rules (default %s)\n", HIP_FW_DEFAULT_RULE_FILE);
