@@ -396,21 +396,25 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		/* Get rvs ip and hit given as commandline parameters to hipconf. */
 		HIP_IFEL(!(dst_hit = hip_get_param_contents(
 				   msg, HIP_PARAM_HIT)), -1, "no hit found\n");
+		HIP_DEBUG("1\n");
 		HIP_IFEL(!(dst_ip = hip_get_param_contents(
 				   msg, HIP_PARAM_IPV6_ADDR)), -1, "no ip found\n");
+		HIP_DEBUG("2\n");
 		/* Add HIT to IP mapping of rvs to hadb. */ 
 		HIP_IFEL(hip_add_peer_map(msg), -1, "add rvs map\n");
+		HIP_DEBUG("3\n");
 		/* Fetch the hadb entry just created. */
 		HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(dst_hit)),
 			 -1, "internal error: no hadb entry found\n");
-		
+		HIP_DEBUG("4\n");
 		/* Set a rvs request flag. */
 		hip_hadb_set_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_RVS);
-
+		HIP_DEBUG("5\n");
 		/* Send a I1 packet to rvs. */
 		/** @todo Not filtering I1, when handling rvs message! */
 		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
 			 -1, "sending i1 failed\n");
+		HIP_DEBUG("6\n");
 		break;
 	
 	case SO_HIP_OFFER_RVS:

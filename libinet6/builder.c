@@ -2167,6 +2167,9 @@ int hip_build_param_kala(hip_common_t *msg,
 	
 	err = hip_build_generic_param(
 		msg, &reg_info, sizeof(struct hip_reg_info), (void *)reg_type);
+
+	HIP_DEBUG("Added REG_INFO parameter with %u service%s.\n", service_count,
+		  (service_count > 1) ? "s" : "");
 	
  out_err:
 	return err;
