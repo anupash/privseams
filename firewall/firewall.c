@@ -934,24 +934,18 @@ int firewall_trigger_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *ip_src, s
 	HIP_DEBUG("1. FIREWALL_TRIGGERING OUTGOING LSI %s\n",inet_ntoa(*ip_dst));
 	IPV4_TO_IPV6_MAP(ip_dst, &dst_addr);
 
-
-	HIP_DEBUG("Before searching in the database firewall, how is the table???\n\n");
-	hip_firewall_hldb_dump();
+	//hip_firewall_hldb_dump();
 	entry_peer = firewall_hit_lsi_db_match(ip_dst);
 
 	if (entry_peer){
 		HIP_IFEL(entry_peer->bex_state == -1, -1, "Base Exchange Failed");
 	  	if(entry_peer->bex_state)
-		        reinject_packet(entry_peer->hit_our, entry_peer->hit_peer, m, 4);
+			reinject_packet(entry_peer->hit_our, entry_peer->hit_peer, m, 4);
 	}else{
 	  	// Run bex to initialize SP and SA
 		HIP_IFEL(hip_trigger_bex(&src_hit, &dst_hit, NULL, &dst_addr), -1, 
 			 "Base Exchange Trigger failed");
-		firewall_add_hit_lsi(src_hit, dst_hit, ip_dst);
-		/*if (is_bex_done()){
-		       	reinject_packet(*src_hit, *dst_hit, m, 4);
-			set_bex_done(0);
-		}*/
+		firewall_add_hit_lsi(src_hit, dst_hit, ip_dst);	
 	}
 out_err: 
 	return err;
@@ -1020,12 +1014,6 @@ int reinject_packet(struct in6_addr src_hit, struct in6_addr dst_hit, ipq_packet
 
   return err;	
 }
-
-//----------------------------------FIREWALL DATABASE---------------------------------
-
-
-
-//----------------------------------END FIREWALL DATABASE SUPPORT---------------------------------
 
 
 void check_and_write_default_config() {
