@@ -9,6 +9,7 @@
  */
 
 #include "firewall.h"
+#include "firewalldb.h"
 #include "netdev.h"
 #include <sys/types.h>
 /* #include <libiptc/libiptc.h> */
@@ -18,8 +19,6 @@ extern int errno;
 
 //#define HIP_HEADER_START 128 //bytes
 #define BUFSIZE 2048
-
-HIP_HASHTABLE *firewall_lsi_hit_db;
 
 struct ipq_handle *h4 = NULL, *h6 = NULL;
 int statefulFiltering = 1; 
@@ -165,23 +164,6 @@ void firewall_close(int signal){
 	HIP_DEBUG("Closing firewall...\n");
 	firewall_exit();
 	exit(signal);
-}
-
-void hip_firewall_delete_hldb(void){
-	int i;
-	firewall_hl_t *this;
-	hip_list_t *item, *tmp;
-	
-	HIP_DEBUG("Start hldb delete\n");
-	HIP_LOCK_HT(&firewall_lsi_hit_db);
-
-	list_for_each_safe(item, tmp, firewall_lsi_hit_db, i)
-	{
-		this = list_entry(item);
-		hip_ht_delete(firewall_lsi_hit_db, this);
-	}
-	HIP_UNLOCK_HT(&firewall_lsi_hit_db);
-	HIP_DEBUG("End hldbdb delete\n");
 }
 
 void firewall_exit(){
@@ -953,55 +935,28 @@ int firewall_trigger_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *ip_src, s
 	IPV4_TO_IPV6_MAP(ip_dst, &dst_addr);
 
 
-	//HIP_DEBUG("Before searching in the database firewall, how is the table???\n\n");
-	//hip_firewall_hldb_dump();
+	HIP_DEBUG("Before searching in the database firewall, how is the table???\n\n");
+	hip_firewall_hldb_dump();
 	entry_peer = firewall_hit_lsi_db_match(ip_dst);
 
-	if (entry_peer)
-	        reinject_packet(entry_peer->hit_our, entry_peer->hit_peer, m, 4);
-	else{
+	if (entry_peer){
+		HIP_IFEL(entry_peer->bex_state == -1, -1, "Base Exchange Failed");
+	  	if(entry_peer->bex_state)
+		        reinject_packet(entry_peer->hit_our, entry_peer->hit_peer, m, 4);
+	}else{
 	  	// Run bex to initialize SP and SA
 		HIP_IFEL(hip_trigger_bex(&src_hit, &dst_hit, NULL, &dst_addr), -1, 
 			 "Base Exchange Trigger failed");
 		firewall_add_hit_lsi(src_hit, dst_hit, ip_dst);
-		if (is_bex_done()){
-			reinject_packet(*src_hit, *dst_hit, m, 4);
+		/*if (is_bex_done()){
+		       	reinject_packet(*src_hit, *dst_hit, m, 4);
 			set_bex_done(0);
-		}
+		}*/
 	}
 out_err: 
 	return err;
 }
 
-/*
-unsigned char *create_ipv6_header(struct ip *old_ip4, struct sockaddr_in6 *src, struct sockaddr_in6 *dst)
-{
-	HIP_DEBUG("Creating ipv6 header\n");
-	struct ip6_hdr *ip6_hdr = NULL;
-	int err;
-	
-	HIP_IFEL(!(ip6_hdr = (struct ip6_hdr *) HIP_MALLOC(sizeof(struct ip6_hdr),0)),
-		 -ENOMEM, "No memory available for create ipv6 header\n");
-
-	ip6_hdr->ip6_src = src;
-	ip6_hdr->ip6_dst = dst;
-	ip6_hdr->ip6_vfc = 0x60;
-	ip6_hdr->ip6_flow = 0; // zero the version (4), TC (8), flow-ID (20) 
-	
-	//ip6_hdr->ip6_plen = htons(len);
-	ip6_hdr->ip6_hlim = 255;
-
-	
-	HIP_DEBUG("---------***************--Creating ip header\n");
-	if (old_ip4){
-		ip6_hdr->ip6_flow |=  old_ip4->ip_tos << 24; 
-		ip6_hdr->ip6_hlim = old_ip4->ip_ttl;		
-		//ip6_hdr->ip6_nxt =  protocol;
-	}
-out_err: 
-	return ((unsigned char *)ip6_hdr);
-}
-*/
 
 static inline u16 inchksum(const void *data, u32 length) {
     long sum = 0;
@@ -1068,109 +1023,7 @@ int reinject_packet(struct in6_addr src_hit, struct in6_addr dst_hit, ipq_packet
 
 //----------------------------------FIREWALL DATABASE---------------------------------
 
-/**
- * firewall_hit_lsi_db_match:
- * Search in the database the given lsi
- *
- * @param lsi_peer: entrance that we are searching in the db
- * @return NULL if not found and otherwise the firewall_hl_t structure
- */
-firewall_hl_t *firewall_hit_lsi_db_match(hip_lsi_t *lsi_peer){
-  //hip_firewall_hldb_dump();
-  return (firewall_hl_t *)hip_ht_find(firewall_lsi_hit_db, (void *)lsi_peer);
-  
-}
 
-
-firewall_hl_t *hip_create_hl_entry(void){
-	firewall_hl_t *entry = NULL;
-	int err = 0;
-	HIP_IFEL(!(entry = (firewall_hl_t *) HIP_MALLOC(sizeof(firewall_hl_t),0)),
-		 -ENOMEM, "No memory available for firewall database entry\n");
-  	memset(entry, 0, sizeof(entry));
-out_err:
-	return entry;
-}
-
-
-void hip_firewall_hldb_dump(void)
-{
-	int i;
-	firewall_hl_t *this;
-	hip_list_t *item, *tmp;
-	HIP_DEBUG("/////////////////////////////\n");
-	HIP_DEBUG("//////  Firewall db  ///////\n");
-	HIP_DEBUG("/////////////////////////////\n")
-	HIP_LOCK_HT(&firewall_lsi_hit_db);
-
-	list_for_each_safe(item, tmp, firewall_lsi_hit_db, i)
-	{
-		this = list_entry(item);
-		HIP_DEBUG_HIT("Dump >>> hit_our", &this->hit_our);
-		HIP_DEBUG_HIT("Dump >>> hit_peer", &this->hit_peer);
-		HIP_DEBUG_LSI("Dump >>> lsi", &this->lsi);
-		HIP_DEBUG("Dump >>> bex_state %d \n", this->bex_state);
-	}
-	HIP_UNLOCK_HT(&firewall_lsi_hit_db);
-	HIP_DEBUG("end hldbdb dump\n");
-}
-
-int firewall_add_hit_lsi(struct in6_addr *hit_our, struct in6_addr *hit_peer, hip_lsi_t *lsi){
-	int err = 0;
-	firewall_hl_t *new_entry = NULL;
-
-	HIP_ASSERT(hit_our != NULL && hit_peer != NULL && lsi != NULL);
-	HIP_DEBUG("Start firewall_add_hit_lsi\n");
-	
-	new_entry = hip_create_hl_entry();
-	ipv6_addr_copy(&new_entry->hit_our, hit_our);
-	ipv6_addr_copy(&new_entry->hit_peer, hit_peer);
-	ipv4_addr_copy(&new_entry->lsi, lsi);
-	new_entry->bex_state = 0;
-	HIP_DEBUG_HIT("1. entry to add to firewall_db hit_our ", &new_entry->hit_our);
-	HIP_DEBUG_HIT("1. entry to add to firewall_db hit_peer ", &new_entry->hit_peer);
-	HIP_DEBUG_LSI("1. entry to add to firewall_db lsi ", &new_entry->lsi);
-	hip_ht_add(firewall_lsi_hit_db, new_entry);
-
-out_err:
-	//	hip_firewall_hldb_dump();
-	HIP_DEBUG("End firewall_add_hit_lsi\n");
-	return err;
-}
-
-
-/**
- * hip_firewall_hash_lsi:
- * Generates the hash information that is used to index the table
- *
- * @param ptr: pointer to the lsi used to make the hash
- *
- * @return hash information
- */
-unsigned long hip_firewall_hash_lsi(const void *ptr){
-        hip_lsi_t *lsi = &((firewall_hl_t *)ptr)->lsi;
-	uint8_t hash[HIP_AH_SHA_LEN];     
-	     
-	hip_build_digest(HIP_DIGEST_SHA1, lsi, sizeof(*lsi), hash);     
-	return *((unsigned long *)hash);
-}
-
-/**
- * hip_firewall_match_lsi:
- * Compares two LSIs
- *
- * @param ptr1: pointer to lsi
- * @param ptr2: pointer to lsi
- *
- * @return 0 if hashes identical, otherwise 1
- */
-int hip_firewall_match_lsi(const void *ptr1, const void *ptr2){
-	return (hip_firewall_hash_lsi(ptr1) != hip_firewall_hash_lsi(ptr2));
-}
-
-void firewall_init_hldb(void){
-	firewall_lsi_hit_db = hip_ht_init(hip_firewall_hash_lsi, hip_firewall_match_lsi);
-}
 
 //----------------------------------END FIREWALL DATABASE SUPPORT---------------------------------
 

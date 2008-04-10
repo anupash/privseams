@@ -119,7 +119,7 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 	struct hip_keys *keys = NULL;
 	struct in6_addr *hit_s = NULL;
 	struct in6_addr *hit_r = NULL;	
-
+	
 
 	_HIP_DEBUG("Handling message from hipd\n");
 	type = hip_get_msg_type(msg);
@@ -204,14 +204,25 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 	        set_escrow_active(0);
                	break;
         case HIP_BEX_DONE:
+	        while((param = hip_get_next_param(msg, param))){
+		  if (hip_get_param_type(param) == HIP_PARAM_HIT){
+		    if (!hit_s)
+		      hit_s = (struct in6_addr *)hip_get_param_contents_direct(param);
+		    else 
+		      hit_r = (struct in6_addr *)hip_get_param_contents_direct(param);
+		  	}
+	  	}
+
 	        HIP_DEBUG("Received bex done from hipd\n\n");
-		hit_s = (struct in6_addr *)hip_get_param_contents(msg, HIP_PARAM_HIT);
-		hit_r = (struct in6_addr *)hip_get_param_contents(msg, HIP_PARAM_HIT);
-		if (hit_r)
-			set_bex_done(1);
-		else
-			set_bex_done(-1);
-		       // firewall_update_bex_state(hit_s, hit_r, 1);
+		if (hit_r){
+		  HIP_DEBUG_HIT(">>>>>>>>>>>>>>hit our is ---", hit_s);
+		  HIP_DEBUG_HIT(">>>>>>>>>>>>>>hit peer is ---", hit_r);
+		  firewall_set_bex_state(hit_s, hit_r, 1);
+		  HIP_DEBUG("....................After seting the bex_staterom hipd\n\n");
+		}else{
+		  HIP_DEBUG("Received bex error from hipd\n\n");
+		  firewall_set_bex_state(hit_s, hit_r, -1);
+		}
 		break;
 	default:
 		HIP_DEBUG("Type of message not handled\n");
@@ -224,18 +235,7 @@ out_err:
 }
 
 
-int firewall_update_bex_state(struct in6_addr *hit_s, struct in6_addr *hit_r, int state){
-	int err = 0;
-	hip_lsi_t *lsi_peer = NULL;
-	lsi_peer = hip_get_lsi_peer_by_hits(hit_s, hit_r);
-	if (lsi_peer){
-		//entry_peer->bex_state = state;
-		//hip_ht_add(firewall_lsi_hit_db, entry_peer);
-	}
-	else
-		err = -1;
-	return err;
-}
+
 
 int sendto_hipd(void *msg, size_t len)
 {
@@ -362,6 +362,7 @@ int firewall_send_pkt(struct in6_addr *src_hit, struct in6_addr *dst_hit, u8 *ms
 	
 	switch(proto){
 		case IPPROTO_TCP:
+  		        HIP_DEBUG(">>>>>>>>>>>>>>>>IPPROTO_TCP\n");
 			firewall_raw_sock = firewall_raw_sock_tcp_v6;
 	    		((struct tcphdr*)msg)->check = htons(0);
 			((struct tcphdr*)msg)->check = ipv6_checksum(IPPROTO_TCP, &sock_src6->sin6_addr, 
@@ -369,11 +370,13 @@ int firewall_send_pkt(struct in6_addr *src_hit, struct in6_addr *dst_hit, u8 *ms
 			break;
 
 		case IPPROTO_UDP:
+		        HIP_DEBUG(">>>>>>>>>>>>>>>>IPPROTO_UDP\n");
 			firewall_raw_sock = firewall_raw_sock_udp_v6;
 			((struct udphdr*)msg)->check = ipv6_checksum(IPPROTO_UDP, &sock_src6->sin6_addr, 
 								     &sock_dst6->sin6_addr, msg, len);
 			break;
 		case IPPROTO_ICMP:
+		        HIP_DEBUG(">>>>>>>>>>>>>>>>IPPROTO_ICMP\n");
 			firewall_raw_sock = firewall_raw_sock_icmp_v6;
 			((struct icmp6hdr*)msg)->icmp6_cksum = ipv6_checksum(IPPROTO_ICMPV6, &sock_src6->sin6_addr, 
 									     &sock_dst6->sin6_addr, msg, len);

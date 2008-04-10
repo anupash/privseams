@@ -22,7 +22,7 @@
  */ 
 int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 {
-	hip_hit_t *hit, *src_hit, *dst_hit = NULL;
+	hip_hit_t *hit, *src_hit = NULL, *dst_hit = NULL;
 	hip_lsi_t *lsi;
 	struct in6_addr *src_ip, *dst_ip;
 	hip_ha_t *entry = NULL;
@@ -577,9 +577,12 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		      			dst_hit = (struct in6_addr *)hip_get_param_contents_direct(param);
 		  	}
 	  	}
-		hip_ha_t *aux = hip_hadb_find_byhits(src_hit, dst_hit);
-		if (aux)
-			lsi = &aux->lsi_peer;
+		if (src_hit && dst_hit){
+		  hip_ha_t *aux = hip_hadb_find_byhits(src_hit, dst_hit);
+		  if (aux)
+		    lsi = &aux->lsi_peer;
+		  HIP_DEBUG_LSI("lsi peer is after searching in hip_hadb_find_byhits", lsi);
+		}
 	        break;
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
@@ -619,7 +622,5 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 	} else {
 		HIP_DEBUG("No response sent\n");
 	}
-	if (dst_hit)
-	  HIP_FREE(dst_hit);
 	return err;
 }

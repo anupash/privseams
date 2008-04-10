@@ -111,5 +111,6 @@ int hip_sockaddr_len(void *sockaddr);
 int hip_sa_addr_len(void *sockaddr);
 
 uint64_t hip_solve_puzzle(void *puzzle, struct hip_common *hdr, int mode);
+hip_lsi_t *hip_get_lsi_peer_by_hits(struct in6_addr *hit_s, struct in6_addr *hit_r);
 
 #endif /* HIP_MISC_H */

@@ -9,14 +9,14 @@ CFLAGS = $(hipl_common_cflags) -I/usr/include/libipq/  -L$(HIPL_LIBINET6_LIB) -L
 CFLAGS += `pkg-config --cflags --libs glib-2.0` 
 CFLAGS += `pkg-config --cflags --libs gthread-2.0`
 
-include_HEADERS = firewall.h conntrack.h rule_management.h helpers.h firewall_control.h esp_decrypt.h firewall_defines.h
+include_HEADERS = firewall.h conntrack.h rule_management.h helpers.h firewall_control.h esp_decrypt.h firewall_defines.h firewalldb.h
 INCLUDES = $(hipl_common_include_paths)
 
 if HIP_FIREWALL
 
 sbin_PROGRAMS = firewall
 
-firewall_SOURCES = firewall.c conntrack.c rule_management.c helpers.c firewall_control.c esp_decrypt.c
+firewall_SOURCES = firewall.c conntrack.c rule_management.c helpers.c firewall_control.c firewalldb.c esp_decrypt.c
 
 firewall_LDADD = /usr/lib/libipq.a ../libinet6/.libs/libinet6.a
 if HIP_CORPORATE
