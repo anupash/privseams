@@ -73,20 +73,10 @@ void firewall_close(int signal);
 void firewall_exit();
 void firewall_probe_kernel_modules();
 
-/*** Firewall database functions ***/
-
-/*Initializes the firewall database*/
-void firewall_init_hldb(void);
-
-/*Comparation definition for the db structure*/
-unsigned long hip_firewall_hash_lsi(const void *ptr);
-int hip_firewall_match_lsi(const void *ptr1, const void *ptr2);
-
-/*Consult/Modify operations in firewall database*/
-firewall_hl_t *firewall_hit_lsi_db_match(hip_lsi_t *lsi_peer);
-int firewall_add_hit_lsi(struct in6_addr *hit_our, struct in6_addr *hit_peer, hip_lsi_t *lsi);
+void firewall_traffic_treatment(struct ipq_handle *hndl, unsigned long packetId);
 
 /*Using raw_sockets injects the packet in the network with HITs*/
 int reinject_packet(struct in6_addr src_hit, struct in6_addr dst_hit, ipq_packet_msg_t *m, int ipTraffic);
 int firewall_trigger_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *ip_src, struct in_addr *ip_dst);
+int firewall_trigger_incoming_hit(ipq_packet_msg_t *m, struct in6_addr *ip_src, struct in6_addr *ip_dst);
 #endif

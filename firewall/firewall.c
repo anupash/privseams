@@ -150,7 +150,7 @@ int firewall_init(char *rule_file){
 		system("ip6tables -I INPUT -p 6 -j QUEUE");
 		system("ip6tables -I OUTPUT -p 6 -j QUEUE");
 #endif
-
+		system("ip6tables -I INPUT -d LOCAL_DEFAULT_HIT -j QUEUE");
 		if (!accept_normal_traffic) {
 			system("ip6tables -I FORWARD -j DROP");
 			system("ip6tables -I INPUT -j DROP");
@@ -801,20 +801,6 @@ static void *handle_ip_traffic(void *ptr) {
 				if (iphdr->ip_p == IPPROTO_UDP)
 					hdr_size += sizeof(struct udphdr);
                 		HIP_DEBUG("ipv4 and header size: %d\n", hdr_size);
-
-				if(IS_LSI((iphdr->ip_dst).s_addr)){
-					if(is_outgoing_packet(packetHook)){
-		                		HIP_DEBUG("It's LSI and outgoing packet\n");
-						firewall_trigger_outgoing_lsi(m, &iphdr->ip_src, &iphdr->ip_dst);
-						drop_packet(hndl, m->packet_id);
-						break;
-					}else if(is_incoming_packet(packetHook)){
-						HIP_DEBUG("It's LSI and incoming packet\n");
-						firewall_trigger_incoming_lsi(m, &iphdr->ip_src, &iphdr->ip_dst);
-					}
-					//drop_packet(hndl, m->packet_id);
-				}
-				//break;
  	      		}
         		else if(ipv6Traffic){
                 		_HIP_DEBUG("ipv6\n");
@@ -839,13 +825,12 @@ static void *handle_ip_traffic(void *ptr) {
 	  				packet_length = BUFSIZE - hdr_size;
 	  				_HIP_DEBUG("HIP packet size greater than buffer size\n");
 	  			}
+				
 				hip_common = (struct hip_common *)HIP_MALLOC(packet_length, 0);
-
 				//hip_common = (struct hip_common*) (m->payload + sizeof (struct ip6_hdr));
 
 				memcpy(hip_common, m->payload + hdr_size, packet_length);		
 			
-
 				sig = (struct hip_sig *) hip_get_param(hip_common, HIP_PARAM_HIP_SIGNATURE);
 				if(sig == NULL)
 	  				_HIP_DEBUG("no signature\n");
@@ -853,8 +838,8 @@ static void *handle_ip_traffic(void *ptr) {
 	  				_HIP_DEBUG("signature exists\n");
 
 				//HIP_DUMP_MSG(hip_common);
-				allow_packet(hndl, m->packet_id);//test
-
+				allow_packet(hndl, m->packet_id);//test- barbaridad acceptar siempre todo
+				//filter mirar si esta en hadb o como regla
 				/*if(filter_hip(src_addr, 
 					      dst_addr, 
 					      hip_common, 
@@ -869,13 +854,26 @@ static void *handle_ip_traffic(void *ptr) {
 					drop_packet(hndl, m->packet_id);
 					}*/
       			} else {
-				if((ipv4Traffic && iphdr->ip_p != IPPROTO_TCP) ||
-				   (ipv6Traffic && ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt != IPPROTO_TCP)) {
-					if(accept_normal_traffic)
-						allow_packet(hndl, m->packet_id);
-					else
+				if (ipv4Traffic){
+					if(IS_LSI((iphdr->ip_dst).s_addr) && is_outgoing_packet(packetHook)){
+		                		HIP_DEBUG("It's LSI and outgoing packet\n");
+						firewall_trigger_outgoing_lsi(m, &iphdr->ip_src, &iphdr->ip_dst);
 						drop_packet(hndl, m->packet_id);
-				} /* OPPORTUNISTIC MODE HACKS */ 
+						break;
+					}
+					else if (iphdr->ip_p != IPPROTO_TCP)
+					 	firewall_traffic_treatment(hndl, m->packet_id);
+				} 
+				else if(ipv6Traffic){
+					if (ipv6_addr_is_hit(src_addr)){
+						HIP_DEBUG("IPV6 TRAFFIC AND HIT RECEIVED\n");
+						firewall_trigger_incoming_hit(m, src_addr, dst_addr);
+					}
+					else if(ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt != IPPROTO_TCP)
+						firewall_traffic_treatment(hndl, m->packet_id);
+				}
+
+			  /* OPPORTUNISTIC MODE HACKS */ 
 #ifdef CONFIG_HIP_OPPTCP
 				else if(is_incoming_packet(packetHook))
 					examine_incoming_packet(hndl, m->packet_id, packet_hdr, type);
@@ -888,7 +886,7 @@ static void *handle_ip_traffic(void *ptr) {
 						drop_packet(hndl, m->packet_id);
 				}
 #endif /* CONFIG_HIP_OPPTCP */
-		}
+			}
 
       		if (status < 0)
 				die(hndl);
@@ -919,11 +917,17 @@ out_err:
 	return;
 }
 
-int firewall_trigger_incoming_lsi(ipq_packet_msg_t *m, struct in_addr *ip_src, struct in_addr *ip_dst){
+void firewall_traffic_treatment(struct ipq_handle *hndl, unsigned long packetId){
+  if(accept_normal_traffic)
+  	allow_packet(hndl, packetId);
+  else
+  	drop_packet(hndl, packetId);
+}
+
+int firewall_trigger_incoming_hit(ipq_packet_msg_t *m, struct in6_addr *ip_src, struct in6_addr *ip_dst){
 	int err = 0;
 	return err;
 }
-
 
 int firewall_trigger_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *ip_src, struct in_addr *ip_dst){
 	int err, msg_type;
