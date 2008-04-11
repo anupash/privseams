@@ -233,6 +233,7 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 		tmp = hip_ht_find(hadb_hit, ha);
 		if (!tmp)
 		{
+		        hip_hadb_set_lsi_pair(ha);
 			hip_ht_add(hadb_hit, ha);
 			st |= HIP_HASTATE_HITOK;
 			HIP_DEBUG("New state added\n");
@@ -268,6 +269,13 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 	return st;
 }
 
+void hip_hadb_set_lsi_pair(hip_ha_t *entry){
+  //Assign value to lsi_our searching in hidb by the correspondent hit
+  hip_hidb_get_lsi_by_hit(&entry->hit_our, &entry->lsi_our);
+  //Assign lsi_peer 
+  entry->lsi_peer = hip_generate_peer_lsi();
+}
+
 int hip_print_info_hadb(hip_ha_t *entry, void *cntr)
 {
 	HIP_DEBUG_HIT("Peer HIT ", &entry->hit_peer);
@@ -276,6 +284,7 @@ int hip_print_info_hadb(hip_ha_t *entry, void *cntr)
 	if (&entry->lsi_peer) HIP_DEBUG_LSI("Peer LSI ", &entry->lsi_peer);
 	return 0;
 }
+
 
 void hip_print_debug_info(struct in6_addr *local_addr,
 				    struct in6_addr *peer_addr,
@@ -2704,7 +2713,17 @@ hip_ha_t *hip_hadb_find_by_blind_hits(hip_hit_t *local_blind_hit,
 #endif
 
 struct in_addr hip_generate_peer_lsi(){
-	//while (lsi_assigned(peer_lsi_index++));
+  struct in_addr aux;
+  
+  inet_aton("192.0.0.0", &aux);
+  //lsi_begin &= htonl(HIP_LSI_TYPE_MASK_192);// Set to 192.0.0.0
+  
+  aux.s_addr |= peer_lsi_index.s_addr;// Or with the peer_lsi_index
+  while (lsi_assigned(aux)){
+	    peer_lsi_index.s_addr++;
+	    inet_aton("192.0.0.0", &aux);// Reset to 192.0.0.0
+	    aux.s_addr |= peer_lsi_index.s_addr;// Or with the peer_lsi_index
+  }
 	return peer_lsi_index;
 }
 
