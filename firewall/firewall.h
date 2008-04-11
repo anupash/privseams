@@ -71,6 +71,7 @@ typedef struct hip_conn_t  {
 } hip_conn_t;
 
 #define HIP_FIREWALL_LOCK_FILE	"/var/lock/hip_firewall.lock"
+struct in6_addr proxy_hit;
 extern int hipproxy;
 
 //made public for filter_esp_state function

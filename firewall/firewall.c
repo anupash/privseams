@@ -107,6 +107,8 @@ int firewall_init()
 			system("iptables -I FORWARD -p udp -j QUEUE");
 			//system("iptables -I FORWARD -p icmp -j QUEUE");
 			//system("iptables -I FORWARD -p icmpv6 -j QUEUE");
+			
+			//system("iptables -t nat -A POSTROUTING -o vmnet2 -j SNAT --to-source 10.0.0.1");
 
 			//allow forward hip packets
 			system("ip6tables -I FORWARD -p 139 -j ACCEPT");
@@ -119,6 +121,8 @@ int firewall_init()
 			
 			system("ip6tables -I INPUT -p tcp -d 2001:0010::/28 -j QUEUE");
 			system("ip6tables -I INPUT -p udp -d 2001:0010::/28 -j QUEUE");
+			//system("ip6tables -I INPUT -p tcp  -j QUEUE");
+			//system("ip6tables -I INPUT -p udp -j QUEUE");
 			//system("ip6tables -I INPUT -p icmp -j QUEUE");
 			//system("ip6tables -I INPUT -p icmpv6 -j QUEUE");
 
@@ -207,8 +211,8 @@ int firewall_init()
 void firewall_close(int signal)
 {
 	HIP_DEBUG("Closing firewall...\n");
-	hip_uninit_proxy_db();
-	hip_uninit_conn_db();
+	//hip_uninit_proxy_db();
+	//hip_uninit_conn_db();
 	firewall_exit();
 	exit(signal);
 }
@@ -1494,6 +1498,8 @@ int main(int argc, char **argv)
 	}
 
 	firewall_init();
+	//get default HIT
+	hip_get_local_hit_wrapper(&proxy_hit);
 
 #ifdef G_THREADS_IMPL_POSIX
 	HIP_DEBUG("init_timeout_checking: posix thread implementation\n");
@@ -1599,7 +1605,7 @@ void handle_proxy_inbound_traffic(ipq_packet_msg_t *m, struct ipq_handle *hndl,	
 		int port_peer;
 		int protocol;
 		struct ip6_hdr* ipheader;
-		struct in6_addr proxy_hit;
+		//struct in6_addr proxy_hit;
 		struct hip_conn_t* conn_entry = NULL;
 		ipheader = (struct ip6_hdr*) m->payload;
 		protocol = ipheader->ip6_ctlun.ip6_un1.ip6_un1_nxt;
@@ -1619,7 +1625,7 @@ void handle_proxy_inbound_traffic(ipq_packet_msg_t *m, struct ipq_handle *hndl,	
 	 		port_client = ((struct udphdr *) (m->payload + 40))->dest;
 		 }
 		 
-		hip_get_local_hit_wrapper(&proxy_hit);
+		//hip_get_local_hit_wrapper(&proxy_hit);
 		conn_entry = hip_conn_find_by_portinfo(&proxy_hit, &src_addr, protocol, port_client, port_peer); 
 		
 		if(conn_entry)
@@ -1630,7 +1636,9 @@ void handle_proxy_inbound_traffic(ipq_packet_msg_t *m, struct ipq_handle *hndl,	
 				u16 * msg;
 				int i;
 
-				HIP_DEBUG("We are translating esp packet!\n");									
+				HIP_DEBUG("We are translating esp packet!\n");	
+				HIP_DEBUG_IN6ADDR("inbound address 1:", &conn_entry->addr_peer);
+				HIP_DEBUG_IN6ADDR("inbound address 2:", &conn_entry->addr_client);
 				hip_proxy_send_to_client_pkt(&conn_entry->addr_peer, &conn_entry->addr_client,(u8*) ipheader, m->data_len);
 			}
 			
@@ -1642,7 +1650,8 @@ void handle_proxy_inbound_traffic(ipq_packet_msg_t *m, struct ipq_handle *hndl,	
 			//allow esp packet
 			HIP_DEBUG("Can't find entry in ConnDB!\n");
 			allow_packet(hndl, m->packet_id);
-		}									
+		}
+		drop_packet(hndl, m->packet_id);
 }
 
 int handle_proxy_outbound_traffic(ipq_packet_msg_t *m, struct ipq_handle *hndl, struct in6_addr src_addr, struct in6_addr dst_addr,int hdr_size, int ipv4Traffic, int ipv6Traffic)
@@ -1655,7 +1664,7 @@ int handle_proxy_outbound_traffic(ipq_packet_msg_t *m, struct ipq_handle *hndl, 
 		int port_client;
 		int port_peer;
 		
-		struct in6_addr proxy_hit;
+		//struct in6_addr proxy_hit;
 		struct in6_addr dst_hit;
 		
 		struct in6_addr proxy_addr;
@@ -1683,7 +1692,7 @@ int handle_proxy_outbound_traffic(ipq_packet_msg_t *m, struct ipq_handle *hndl, 
 		 
 		HIP_DEBUG("HIP PROXY OUTBOUND PROCESS:\n");
 		entry = hip_proxy_find_by_addr(&src_addr, &dst_addr);
-		hip_get_local_hit_wrapper(&proxy_hit);
+		//hip_get_local_hit_wrapper(&proxy_hit);
 		if (entry == NULL)
 		{
 			int fallback, reject;
@@ -1730,7 +1739,7 @@ int handle_proxy_outbound_traffic(ipq_packet_msg_t *m, struct ipq_handle *hndl, 
 				if(hip_conn_add_entry(&src_addr, &dst_addr, &proxy_hit, &dst_hit, protocol, port_client, port_peer, HIP_PROXY_TRANSLATE))
 					HIP_DEBUG("ConnDB add entry Failed!\n");;
 											
-				drop_packet(hndl, m->packet_id);	//drop the packet
+				//drop_packet(hndl, m->packet_id);	//drop the packet
 			}
 		}
 		else
@@ -1775,11 +1784,14 @@ int handle_proxy_outbound_traffic(ipq_packet_msg_t *m, struct ipq_handle *hndl, 
 					memcpy(msg, (m->payload) + hdr_size,
 							packet_length);
 
-					HIP_DEBUG("Packet Length: %d\n", packet_length);						
+					HIP_DEBUG("Packet Length: %d\n", packet_length);
+					HIP_HEXDUMP("ipv6 msg dump: ", msg, packet_length);
 					hip_proxy_send_pkt(&proxy_hit, &entry->hit_peer, msg, packet_length, protocol);
 				}
 			}
 		}
+		
+		drop_packet(hndl, m->packet_id);
 		
 		out_err:
 			return err;			

@@ -928,7 +928,7 @@ int hip_proxy_send_to_client_pkt(struct in6_addr *local_addr, struct in6_addr *p
 		
 		if(protocol == IPPROTO_TCP)
 		{
-			HIP_DEBUG("Using IPv6 raw socket\n");
+			HIP_DEBUG("Using IPv6 raw socket (TCP)\n");
 			hip_raw_sock = hip_proxy_raw_sock_tcp_v6;
 			sa_size = sizeof(struct sockaddr_in6);
 			msg = (u8 *) HIP_MALLOC(len, 0);
@@ -940,7 +940,7 @@ int hip_proxy_send_to_client_pkt(struct in6_addr *local_addr, struct in6_addr *p
 		
 		if(protocol == IPPROTO_UDP)
 		{
-			HIP_DEBUG("Using IPv6 raw socket\n");
+			HIP_DEBUG("Using IPv6 raw socket (UDP)\n");
 			hip_raw_sock = hip_proxy_raw_sock_udp_v6;
 			sa_size = sizeof(struct sockaddr_in6);
 			msg = (u8 *) HIP_MALLOC(len, 0);
@@ -952,7 +952,7 @@ int hip_proxy_send_to_client_pkt(struct in6_addr *local_addr, struct in6_addr *p
 		
 		if(protocol == IPPROTO_ICMPV6)
 		{
-			HIP_DEBUG("Using IPv6 raw socket\n");
+			HIP_DEBUG("Using IPv6 raw socket (ICMPV6)\n");
 			hip_raw_sock = hip_proxy_raw_sock_icmp_v6;
 			sa_size = sizeof(struct sockaddr_in6);
 			msg = (u8 *) HIP_MALLOC(len, 0);
@@ -967,9 +967,27 @@ int hip_proxy_send_to_client_pkt(struct in6_addr *local_addr, struct in6_addr *p
 	ip6_hdr = (struct ip6_hdr *) msg;
 
 	//set the IP_HDRINCL flag
-	if(setsockopt(hip_raw_sock, IPPROTO_IP, IP_HDRINCL, &on, sizeof(on)) < 0)
-	{ 
-		HIP_DEBUG("setsockopt IP_HDRINCL ERROR！ \n");
+	if (dst_is_ipv4)
+	{
+		if(setsockopt(hip_raw_sock, IPPROTO_IP, IP_HDRINCL, &on, sizeof(on)) < 0)
+		{ 
+			HIP_DEBUG("setsockopt IP_HDRINCL ERROR！ \n");
+		}
+		else
+		{
+			HIP_DEBUG("setsockopt IP_HDRINCL for ipv4 OK！ \n");
+		}
+	}
+	else
+	{
+		if(setsockopt(hip_raw_sock, IPPROTO_IPV6, IP_HDRINCL, &on, sizeof(on)) < 0)
+		{ 
+			HIP_DEBUG("setsockopt IP_HDRINCL ERROR！ \n");
+		}
+		else
+		{
+			HIP_DEBUG("setsockopt IP_HDRINCL for ipv6 OK！ \n");
+		}
 	}
 	
 	if (src6->sin6_family != dst6->sin6_family) {
@@ -1010,7 +1028,7 @@ int hip_proxy_send_to_client_pkt(struct in6_addr *local_addr, struct in6_addr *p
 		ip6_hdr->ip6_dst = dst6->sin6_addr;
 		ip6_hdr->ip6_ctlun.ip6_un2_vfc = 0x60;
 		ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt = protocol;
-		ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen = htons(len - sizeof(struct ip6_hdr)); ;
+		ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen = len - 40;//htons(len - sizeof(struct ip6_hdr)); ;
 		ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_hlim = 0xff;
 		HIP_DEBUG("src_addr and dst_aadr are ipv6!\n");
 	}
@@ -1065,12 +1083,22 @@ int hip_proxy_send_to_client_pkt(struct in6_addr *local_addr, struct in6_addr *p
 			}
 		}		
 	}
-
-	if(setsockopt(hip_raw_sock, IPPROTO_IP, IP_HDRINCL, &off, sizeof(off)) < 0)
-	{ 
-		HIP_DEBUG("setsockopt IP_HDRINCL ERROR！ \n");
+	
+	if (dst_is_ipv4)
+	{
+		if(setsockopt(hip_raw_sock, IPPROTO_IP, IP_HDRINCL, &off, sizeof(off)) < 0)
+		{ 
+			HIP_DEBUG("setsockopt IP_HDRINCL ERROR！ \n");
+		}
 	}
-
+	else
+	{
+		if(setsockopt(hip_raw_sock, IPPROTO_IPV6, IP_HDRINCL, &off, sizeof(off)) < 0)
+		{ 
+			HIP_DEBUG("setsockopt IP_HDRINCL ERROR！ \n");
+		}	
+	}
+	
 	out_err:
 
 	/* Reset the interface to wildcard or otherwise receiving
