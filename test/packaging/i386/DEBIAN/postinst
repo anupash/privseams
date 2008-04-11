@@ -1,8 +1,12 @@
 #!/bin/sh
-
-ldconfig
-
-invoke-rc.d --force --quiet hipd stopinvoke-rc.d --force --quiet hipd stop
-update-rc.d -f hipd remove
+#ldconfig
+#invoke-rc.d --force --quiet hipd stop 
+update-rc.d -f hipd remove 
 update-rc.d hipd defaults 
-invoke-rc.d hipd start
+invoke-rc.d hipd start 
+#/usr/sbin/hipd hipd -bk 
+pidof hipd 
+
+ 
+
+
