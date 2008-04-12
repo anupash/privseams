@@ -176,8 +176,7 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 		/* now param: spi */
 		spi_ipsec = (uint32_t *) hip_get_param_contents_direct(param);
 		
-		HIP_DEBUG("the spi value is %d , %d , %d \n", *spi_ipsec, 
-			  spi_ipsec, &spi_ipsec);
+		HIP_DEBUG("the spi value is %x \n", *spi_ipsec);
 		
 		
 		
@@ -223,7 +222,7 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 		HIP_DEBUG("ealg  value is %d \n", ealg);
 
 		/* now param: already_acquired */
-		param =  hip_get_next_param(msg, param);x		
+		param =  hip_get_next_param(msg, param);		
 		already_acquired = *((int *) hip_get_param_contents_direct( param));
 		HIP_DEBUG("already_acquired value is %d \n", already_acquired);
 

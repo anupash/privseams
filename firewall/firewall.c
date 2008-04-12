@@ -107,10 +107,16 @@ int firewall_init(){
 
 	//ipv4 traffic
 	if(use_ipv4){
-		if (hip_opptcp || hip_userspace_ipsec) {
+		if (hip_opptcp) {
 			system("iptables -I FORWARD -p 6 -j QUEUE");
 			system("iptables -I INPUT -p 6 -j QUEUE");
 			system("iptables -I OUTPUT -p 6 -j QUEUE");
+		}
+		if (hip_userspace_ipsec) {
+			//system("iptables -I FORWARD -p 6 -j QUEUE"); // do we need this???
+			system("iptables -I INPUT -p 50 -j QUEUE"); /* ESP over IPv4 */
+			//system("iptables -I OUTPUT -p 6 ! -d 127.0.0.1 -j QUEUE"); // XX FIXME: LSI support 
+			//system("iptables -I OUTPUT -p 17 ! -d 127.0.0.1 -j QUEUE"); // XX FIXME: LSI support 
 		}
 		if(!accept_hip_esp_traffic){
 			system("iptables -I FORWARD -p 139 -j QUEUE");
@@ -137,11 +143,21 @@ int firewall_init(){
 
 	//ipv6 traffic
 	if(use_ipv6){
-		if (hip_opptcp || hip_userspace_ipsec) {
+		if (hip_opptcp) {
 			system("ip6tables -I FORWARD -p 6 -j QUEUE");
 			system("ip6tables -I INPUT -p 6 -j QUEUE");
 			system("ip6tables -I OUTPUT -p 6 -j QUEUE");
 		}
+		if (hip_userspace_ipsec) {
+			system("ip6tables -I INPUT -p 50 -j QUEUE"); /* ESP over IPv6 */
+
+			//system("ip6tables -I FORWARD -p 6 ! -d ::1 -j QUEUE"); /* TCP: do we need this?? */
+			system("ip6tables -I OUTPUT -p 6 ! -d ::1 -j QUEUE"); /* TCP over IPv6: possibly HIT based connection */
+
+			//system("ip6tables -I FORWARD -p 17 -j QUEUE"); /* UDP: do we need this ??? */ 
+			system("ip6tables -I OUTPUT -p 17 ! -d ::1 -j QUEUE"); /* UDP over IPv6: possibly HIT based connection */
+                }
+
 		if(!accept_hip_esp_traffic){
 			system("ip6tables -I FORWARD -p 139 -j QUEUE");
 			system("ip6tables -I FORWARD -p 50 -j QUEUE");
@@ -1310,10 +1326,11 @@ static void *handle_ip_traffic(void *ptr){
 
 				} else if(is_outgoing_packet(packetHook)) {
 					/*examine_outgoing_tcp_packet(hndl, m->packet_id, packet_hdr, type);*/
-					if (hip_userspace_ipsec)
+					if (hip_userspace_ipsec /* && if (packet == IPv6 && hip_is_hit(dst && src)*/ )
 						{
 							HIP_DEBUG("debug message: HIP firewall userspace ipsec output: \n ");
 							// hip_firewall_userspace_ipsec_input(); /* added by Tao Wan */
+							// XX FIXME: 
 							hip_firewall_userspace_ipsec_output(hndl, m->packet_id, packet_hdr, type); /*added by Tao Wan */
 						}
 					else

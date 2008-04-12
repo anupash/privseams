@@ -44,7 +44,7 @@ static int hip_verify_hmac(struct hip_common *buffer, u8 *hmac,
 
 	_HIP_HEXDUMP("HMAC", hmac_res, HIP_AH_SHA_LEN);
 	HIP_IFE(memcmp(hmac_res, hmac, HIP_AH_SHA_LEN), -EINVAL);
-	memcmp(hmac_res, hmac, HIP_AH_SHA_LEN);
+	memcmp(hmac_res, hmac, HIP_AH_SHA_LEN); /* why is the same as the line before it?. Tao Wan*/
  out_err:
 	if (hmac_res)
 		HIP_FREE(hmac_res);

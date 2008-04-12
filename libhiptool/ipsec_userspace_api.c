@@ -81,7 +81,7 @@ int hipl_userspace_ipsec_api_wrapper_sadb_add(struct in6_addr *saddr,
 	struct sockaddr_storage  inner_src, inner_dst; /*HIT address -- inner address*/
 	struct sockaddr_storage  src, dst; /* IP address*/
 	
-	__u32 ipsec_spi = (__u32) *spi; /*IPsec SPI*/
+	
 	__u32 ipsec_e_type = (__u32) ealg; /* encryption type */
 	__u32 ipsec_a_type = ipsec_e_type; /* authentication type is equal to encryption type */
 	
@@ -149,6 +149,19 @@ int hipl_userspace_ipsec_api_wrapper_sadb_add(struct in6_addr *saddr,
 	 * */
 	
 	/* Here just give a value 100 to lifetime*/
+
+	if (!already_acquired || *spi == 0) {
+		*spi = hip_userspace_ipsec_acquire_spi((hip_hit_t *) src_hit, 
+						       (hip_hit_t *) dst_hit);
+	
+		HIP_DEBUG("the random spi value is : %x \n", *spi);
+
+
+	}
+
+
+	__u32 ipsec_spi = (__u32) *spi; /*IPsec SPI*/
+	
 	
 	// Tao: check return argument
 	// THIS CALL SHOULD BE CALLED FROM THE FIREWALL HANDLER, NOT HERE
@@ -290,7 +303,7 @@ uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr,
 	HIP_HEXDUMP("authen key :", authkey, sizeof(struct hip_crypto_key));
 	
 	//HIP_DEBUG("the spi value is %d \n", *spi);
-	HIP_DEBUG("the spi vaule is : %d \n", *spi);
+	HIP_DEBUG("the spi value is : %x \n", *spi);
 		
 	HIP_DEBUG("ealg  value is %d \n", ealg);
 	
@@ -379,8 +392,7 @@ int hip_userspace_ipsec_flush_all_sa() {
 }
 
 uint32_t hip_userspace_ipsec_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit) {
-	// call: hip_acquire_spi();
-	/* XX FIXME: TAO */
+	return hip_acquire_spi(srchit, dsthit);
 }
 
 void hip_userspace_ipsec_delete_default_prefix_sp_pair() {
