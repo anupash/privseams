@@ -1640,6 +1640,7 @@ void handle_proxy_inbound_traffic(ipq_packet_msg_t *m, struct ipq_handle *hndl,	
 				HIP_DEBUG_IN6ADDR("inbound address 1:", &conn_entry->addr_peer);
 				HIP_DEBUG_IN6ADDR("inbound address 2:", &conn_entry->addr_client);
 				hip_proxy_send_to_client_pkt(&conn_entry->addr_peer, &conn_entry->addr_client,(u8*) ipheader, m->data_len);
+				drop_packet(hndl, m->packet_id);
 			}
 			
 			if (conn_entry->state == HIP_PROXY_PASSTHROUGH)
@@ -1651,7 +1652,6 @@ void handle_proxy_inbound_traffic(ipq_packet_msg_t *m, struct ipq_handle *hndl,	
 			HIP_DEBUG("Can't find entry in ConnDB!\n");
 			allow_packet(hndl, m->packet_id);
 		}
-		drop_packet(hndl, m->packet_id);
 }
 
 int handle_proxy_outbound_traffic(ipq_packet_msg_t *m, struct ipq_handle *hndl, struct in6_addr src_addr, struct in6_addr dst_addr,int hdr_size, int ipv4Traffic, int ipv6Traffic)
@@ -1739,7 +1739,7 @@ int handle_proxy_outbound_traffic(ipq_packet_msg_t *m, struct ipq_handle *hndl, 
 				if(hip_conn_add_entry(&src_addr, &dst_addr, &proxy_hit, &dst_hit, protocol, port_client, port_peer, HIP_PROXY_TRANSLATE))
 					HIP_DEBUG("ConnDB add entry Failed!\n");;
 											
-				//drop_packet(hndl, m->packet_id);	//drop the packet
+				drop_packet(hndl, m->packet_id);	//drop the packet
 			}
 		}
 		else
@@ -1776,6 +1776,7 @@ int handle_proxy_outbound_traffic(ipq_packet_msg_t *m, struct ipq_handle *hndl, 
 				if((protocol == IPPROTO_ICMP) || (protocol == IPPROTO_ICMPV6))
 				{
 					hip_proxy_send_inbound_icmp_pkt(&proxy_hit, &entry->hit_peer, (u8*) m->payload, m->data_len);
+					drop_packet(hndl, m->packet_id);
 				}
 				else
 				{
@@ -1787,11 +1788,10 @@ int handle_proxy_outbound_traffic(ipq_packet_msg_t *m, struct ipq_handle *hndl, 
 					HIP_DEBUG("Packet Length: %d\n", packet_length);
 					HIP_HEXDUMP("ipv6 msg dump: ", msg, packet_length);
 					hip_proxy_send_pkt(&proxy_hit, &entry->hit_peer, msg, packet_length, protocol);
+					drop_packet(hndl, m->packet_id);
 				}
 			}
 		}
-		
-		drop_packet(hndl, m->packet_id);
 		
 		out_err:
 			return err;			

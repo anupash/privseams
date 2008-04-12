@@ -753,6 +753,7 @@ int hip_proxy_send_pkt(struct in6_addr *local_addr, struct in6_addr *peer_addr,	
 			if (sent != len) {
 				HIP_ERROR("Could not send the all requested"\
 						" data (%d/%d)\n", sent, len);
+				HIP_ERROR("strerror: %s\n", strerror(errno));
 				sleep(2);
 			} else {
 				HIP_DEBUG("sent=%d/%d ipv4=%d\n",
