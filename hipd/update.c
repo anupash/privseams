@@ -2837,10 +2837,15 @@ int hip_update_send_registration_request(hip_ha_t *entry,
 	HIP_IFEL(hip_build_param_seq(update_packet, update_id_out), -1, 
 		 "Building of SEQ param failed\n");
         
+	HIP_IFEL(hip_build_param_reg_request_xxx(update_packet, lifetime,
+						 (uint8_t *)types, type_count),
+		 -1, "Building of REG_REQUEST failed\n");
+	/*
 	HIP_IFEL(hip_build_param_reg_request(
 			 update_packet, lifetime, (uint8_t *)types, type_count, 1),
 		 -1, "Building of REG_REQUEST failed\n");
-     
+	*/
+
 	/* Add HMAC */
 	HIP_IFEL(hip_build_param_hmac_contents(
 			 update_packet, &entry->hip_hmac_out), -1,

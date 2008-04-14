@@ -193,4 +193,8 @@ int dsa_to_hip_endpoint(DSA *dsa, struct endpoint_hip **endpoint,
 int hip_build_param_reg_info(hip_common_t *msg,
 			     const struct hip_srv_hdr *service_list,
 			     const unsigned int service_count);
+int hip_build_param_reg_request_xxx(hip_common_t *msg, uint8_t lifetime,
+				    uint8_t *type_list, int cnt);
+int hip_build_param_reg_response_xxx(hip_common_t *msg, uint8_t lifetime,
+				     uint8_t *type_list, int cnt);
 #endif /* HIP_BUILDER */

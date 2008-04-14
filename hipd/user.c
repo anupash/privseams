@@ -315,6 +315,9 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 			 "for_each_hi err.\n");	
 		HIP_DEBUG("Added kea base entry.\n");
 		
+		/* Set a escrow request flag. Should this be done for every entry? */
+		hip_hadb_set_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_ESCROW);
+
 		HIP_IFEL(hip_for_each_hi(hip_launch_escrow_registration, dst_hit), 0,
 			 "for_each_hi err.\n");	
 		break;
@@ -360,7 +363,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 			HIP_DEBUG("Escrow service is now active.\n");
 		HIP_IFEL(hip_recreate_all_precreated_r1_packets(), -1, 
 			 "Failed to recreate R1-packets\n"); 
-
+		
 		if (hip_firewall_is_alive())
 		{
 			HIP_IFEL(hip_firewall_set_escrow_active(1), -1, 
@@ -396,25 +399,19 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		/* Get rvs ip and hit given as commandline parameters to hipconf. */
 		HIP_IFEL(!(dst_hit = hip_get_param_contents(
 				   msg, HIP_PARAM_HIT)), -1, "no hit found\n");
-		HIP_DEBUG("1\n");
 		HIP_IFEL(!(dst_ip = hip_get_param_contents(
 				   msg, HIP_PARAM_IPV6_ADDR)), -1, "no ip found\n");
-		HIP_DEBUG("2\n");
 		/* Add HIT to IP mapping of rvs to hadb. */ 
 		HIP_IFEL(hip_add_peer_map(msg), -1, "add rvs map\n");
-		HIP_DEBUG("3\n");
 		/* Fetch the hadb entry just created. */
 		HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(dst_hit)),
 			 -1, "internal error: no hadb entry found\n");
-		HIP_DEBUG("4\n");
 		/* Set a rvs request flag. */
 		hip_hadb_set_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_RVS);
-		HIP_DEBUG("5\n");
 		/* Send a I1 packet to rvs. */
 		/** @todo Not filtering I1, when handling rvs message! */
 		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
 			 -1, "sending i1 failed\n");
-		HIP_DEBUG("6\n");
 		break;
 	
 	case SO_HIP_OFFER_RVS:
@@ -429,21 +426,6 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		
 		hip_set_srv_status(HIP_SERVICE_RENDEZVOUS, HIP_SERVICE_ON);
 
-		/* Some debug prints. */
-		unsigned int cnt = 0;
-		hip_srv_t hip_services[HIP_NUMBER_OF_EXISTING_SERVICES];
-		hip_get_active_services(hip_services, &cnt);
-		
-		char info[1024];
-		int i = 0;
-		for(; i < cnt; i++){
-			memset(info, '\0', sizeof(info));
-			hip_srv_info(&hip_services[i], info);
-
-			HIP_DEBUG("SERVICE INFO:\n%s", info);
-		}
-		/* End of debug prints. */
-		
 		if (hip_services_is_active(HIP_SERVICE_RENDEZVOUS)){
 			HIP_DEBUG("Rendezvous service is now active.\n");
 			hip_relay_set_status(HIP_RELAY_ON);

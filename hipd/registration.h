@@ -17,7 +17,7 @@
 
 #include "misc.h"
 #include "hiprelay.h" // For relrec lifetimes.
-#include "escrow.h" // For escrow lifetimes.
+#include "escrow.h" // For escrow lifetimes and other escrow stuff.
 
 /** Possible service states. */
 typedef enum{HIP_SERVICE_OFF = 0, HIP_SERVICE_ON = 1}hip_srv_status_t;
@@ -63,5 +63,7 @@ int hip_get_lifetime_value(time_t seconds, uint8_t *lifetime);
  *                  is zero.
  */ 
 int hip_get_lifetime_seconds(uint8_t lifetime, time_t *seconds);
+
+int hip_handle_param_reg_info(hip_common_t *msg, hip_ha_t *entry);
 
 #endif /* HIP_REGISTRATION_H */

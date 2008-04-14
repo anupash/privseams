@@ -2059,22 +2059,22 @@ int hip_build_param_relay_to(struct hip_common *msg,
 			     const in6_addr_t *addr,
 			     const in_port_t port)
 {
-     /*HIP_DEBUG("hip_build_param_relay_to() invoked.\n");
-     int err = 0;
-     struct hip_relay_to relay_to;
-     struct hip_in6_addr_port tmp;
+	/*HIP_DEBUG("hip_build_param_relay_to() invoked.\n");
+	  int err = 0;
+	  struct hip_relay_to relay_to;
+	  struct hip_in6_addr_port tmp;
 
-     hip_set_param_type(&relay_to, HIP_PARAM_RELAY_TO);
-     hip_calc_generic_param_len(&relay_to, sizeof(struct hip_relay_to),
-				sizeof(in6_addr_t) + sizeof(in_port_t));
+	  hip_set_param_type(&relay_to, HIP_PARAM_RELAY_TO);
+	  hip_calc_generic_param_len(&relay_to, sizeof(struct hip_relay_to),
+	  sizeof(in6_addr_t) + sizeof(in_port_t));
      
-     memcpy(&(tmp.sin6_addr), rvs_addr, sizeof(*rvs_addr));
-     memcpy(&(tmp.sin6_port), &port, sizeof(port));
+	  memcpy(&(tmp.sin6_addr), rvs_addr, sizeof(*rvs_addr));
+	  memcpy(&(tmp.sin6_port), &port, sizeof(port));
 	
-     err = hip_build_generic_param(msg, &relay_to, sizeof(struct hip_relay_to),
-				   (void *)&tmp);
-     return err;
-     */
+	  err = hip_build_generic_param(msg, &relay_to, sizeof(struct hip_relay_to),
+	  (void *)&tmp);
+	  return err;
+	*/
      struct hip_relay_to relay_to;
      int err = 0;
      
@@ -2099,33 +2099,33 @@ int hip_build_param_relay_to(struct hip_common *msg,
  * @return zero for success, or non-zero on error
  */
 /*int hip_build_param_reg_info(struct hip_common *msg, uint8_t min_lifetime, 
-			uint8_t max_lifetime, int *type_list, int cnt)
-{
-	struct hip_reg_info rinfo;
-	int err = 0, i;
-	uint8_t *array = NULL;
+  uint8_t max_lifetime, int *type_list, int cnt)
+  {
+  struct hip_reg_info rinfo;
+  int err = 0, i;
+  uint8_t *array = NULL;
 
-	hip_set_param_type(&rinfo, HIP_PARAM_REG_INFO);
-	hip_calc_generic_param_len(&rinfo, sizeof(struct hip_reg_info),
-				   cnt * sizeof(uint8_t));
+  hip_set_param_type(&rinfo, HIP_PARAM_REG_INFO);
+  hip_calc_generic_param_len(&rinfo, sizeof(struct hip_reg_info),
+  cnt * sizeof(uint8_t));
 	
-	HIP_IFEL(!(array = (uint8_t *) HIP_MALLOC((cnt * sizeof(uint8_t)), GFP_KERNEL)), 
-		-1, "Failed to allocate memory");
-	memset(array, (sizeof(uint8_t) * cnt), 0);
-	for (i = 0; i < cnt; i++) {
-		uint8_t val = (uint8_t)type_list[i];
-		array[i] = val;
-	}
+  HIP_IFEL(!(array = (uint8_t *) HIP_MALLOC((cnt * sizeof(uint8_t)), GFP_KERNEL)), 
+  -1, "Failed to allocate memory");
+  memset(array, (sizeof(uint8_t) * cnt), 0);
+  for (i = 0; i < cnt; i++) {
+  uint8_t val = (uint8_t)type_list[i];
+  array[i] = val;
+  }
 
-	rinfo.min_lifetime = min_lifetime;
-	rinfo.max_lifetime = max_lifetime;
-	err = hip_build_generic_param(msg, &rinfo, sizeof(struct hip_reg_info),
-				      (void *)array);
-out_err: 
-	if (array)
-		HIP_FREE(array);	
-	return err;	
-}*/
+  rinfo.min_lifetime = min_lifetime;
+  rinfo.max_lifetime = max_lifetime;
+  err = hip_build_generic_param(msg, &rinfo, sizeof(struct hip_reg_info),
+  (void *)array);
+  out_err: 
+  if (array)
+  HIP_FREE(array);	
+  return err;	
+  }*/
 
 int hip_build_param_reg_info(hip_common_t *msg,
 			     const hip_srv_t *service_list,
@@ -2175,8 +2175,20 @@ int hip_build_param_reg_info(hip_common_t *msg,
 	return err;
 }
 
+int hip_build_param_reg_request_xxx(hip_common_t *msg, uint8_t lifetime,
+				    uint8_t *type_list, int cnt)
+{
+	return hip_build_param_reg_request(msg, lifetime, type_list, cnt, 1);
+}
+
+int hip_build_param_reg_response_xxx(hip_common_t *msg, uint8_t lifetime,
+				     uint8_t *type_list, int cnt)
+{
+	return hip_build_param_reg_request(msg, lifetime, type_list, cnt, 0);
+}
+
 /**
- * hip_build_param_reg_request - build HIP REG_REQUEST or REG_RESPONSE parameter
+ * build HIP REG_REQUEST or REG_RESPONSE parameter
  * @param msg       the message
  * @param lifetime  lifetime in seconds in host byte order
  * @param type_list list of types to be appended

@@ -593,7 +593,7 @@
  * |||| |+------------- 0x0400 - free -
  * |||| +-------------- 0x0800 - free -
  * |||+---------------- 0x1000 - free -
- * ||+----------------- 0x2000 We have requested ESCROW service.
+ * ||+----------------- 0x2000 We have requested escrow service.
  * |+------------------ 0x4000 We have requested HIP relay service.
  * +------------------- 0x8000 We have requested RVS service.
  * </pre>
@@ -613,7 +613,7 @@
  * |||| |+------------- 0x0400 - free -
  * |||| +-------------- 0x0800 - free -
  * |||+---------------- 0x1000 - free -
- * ||+----------------- 0x2000 Peer offers ESCROW service.
+ * ||+----------------- 0x2000 Peer offers escrow service.
  * |+------------------ 0x4000 Peer offers HIP relay service.
  * +------------------- 0x8000 Peer offers RVS service.
  * </pre>
@@ -625,6 +625,10 @@
  * hip_hadb_cancel_local_controls(), hip_hadb_cancel_peer_controls().
  * @note Do not confuse these values with HIP packet Controls values.
  *
+ * @def HIP_HA_CTRL_NONE
+ *      Clears all control values. To clear all local controls call
+ *      hip_hadb_set_local_controls() with this mask. To clear all peer controls
+ *      call hip_hadb_set_peer_controls() with this mask.
  * @def HIP_HA_CTRL_LOCAL_REQ_ESCROW
  *      The host association has requested escrow service in a I1 or an UPDATE
  *      packet.

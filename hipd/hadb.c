@@ -2194,20 +2194,20 @@ int hip_hadb_set_update_function_set(hip_ha_t * entry,
    for all controls. */
 void hip_hadb_set_local_controls(hip_ha_t *entry, hip_controls_t mask)
 {
-     if(entry != NULL)
-     {
-	  switch(mask)
-	  {
-	  case HIP_HA_CTRL_NONE:
-	       entry->local_controls &= mask;
-	  case HIP_HA_CTRL_LOCAL_REQ_RELAY:
-	  case HIP_HA_CTRL_LOCAL_REQ_RVS:
-	       entry->local_controls |= mask;
-	       break;
-	  default:
-	       HIP_ERROR("Unknown local controls given.\n");
-	  }
-     }
+	if(entry != NULL) {
+		switch(mask) {
+
+		case HIP_HA_CTRL_NONE:
+			entry->local_controls &= mask;
+		case HIP_HA_CTRL_LOCAL_REQ_ESCROW:
+		case HIP_HA_CTRL_LOCAL_REQ_RELAY:
+		case HIP_HA_CTRL_LOCAL_REQ_RVS:
+			entry->local_controls |= mask;
+			break;
+		default:
+			HIP_ERROR("Unknown local controls given.\n");
+		}
+	}
 }
 
 /* NOTE! When modifying this function, remember that some control values may
@@ -2215,35 +2215,33 @@ void hip_hadb_set_local_controls(hip_ha_t *entry, hip_controls_t mask)
    for all controls. */
 void hip_hadb_set_peer_controls(hip_ha_t *entry, hip_controls_t mask)
 {
-     if(entry != NULL)
-     {
-	  switch(mask)
-	  {
-	  case HIP_HA_CTRL_NONE:
-	       entry->peer_controls &= mask;
-	  case HIP_HA_CTRL_PEER_RVS_CAPABLE:
-	  case HIP_HA_CTRL_PEER_RELAY_CAPABLE:
-	       entry->peer_controls |= mask;
-	       break;
-	  default:
-	       HIP_ERROR("Unknown peer controls given.\n");
-	  }
-     }
+	if(entry != NULL) {
+		switch(mask) {
+
+		case HIP_HA_CTRL_NONE:
+			entry->peer_controls &= mask;
+		case HIP_HA_CTRL_PEER_ESCROW_CAPABLE:
+		case HIP_HA_CTRL_PEER_RVS_CAPABLE:
+		case HIP_HA_CTRL_PEER_RELAY_CAPABLE:
+			entry->peer_controls |= mask;
+			break;
+		default:
+			HIP_ERROR("Unknown peer controls given.\n");
+		}
+	}
 }
 
 void hip_hadb_cancel_local_controls(hip_ha_t *entry, hip_controls_t mask)
 {
-     if(entry != NULL)
-     {
-	  entry->local_controls &= (~mask);
-     }
+	if(entry != NULL) {
+		entry->local_controls &= (~mask);
+	}
 }
 
 void hip_hadb_cancel_peer_controls(hip_ha_t *entry, hip_controls_t mask)
 {
-     if(entry != NULL)
-     {
-	  entry->peer_controls &= (~mask);
+     if(entry != NULL) {
+	     entry->peer_controls &= (~mask);
      }
 }
 

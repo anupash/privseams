@@ -242,18 +242,18 @@
 #define HIP_VER_MASK                0xF0
 #define HIP_RES_MASK                0x0F 
 
-#define HIP_HA_CTRL_NONE                 0x0000
-
 /**
  * @addtogroup hip_ha_controls
  * @{
  */
 /* REMEMBER TO UPDATE BITMAP IN DOC/DOXYGEN.H WHEN YOU ADD/CHANGE THESE! */
+#define HIP_HA_CTRL_NONE                 0x0000
+
 #define HIP_HA_CTRL_LOCAL_REQ_ESCROW     0x2000
 #define HIP_HA_CTRL_LOCAL_REQ_RELAY      0x4000
 #define HIP_HA_CTRL_LOCAL_REQ_RVS        0x8000
 
-#define HIP_HA_CTRL_PEER_ESCROW_CAPABLE  0x4000 
+#define HIP_HA_CTRL_PEER_ESCROW_CAPABLE  0x2000 
 #define HIP_HA_CTRL_PEER_RELAY_CAPABLE   0x4000 
 #define HIP_HA_CTRL_PEER_RVS_CAPABLE     0x8000
 /* @} */

@@ -986,22 +986,19 @@ int hip_handle_r1(struct hip_common *r1,
 		  hip_ha_t *entry,
 		  hip_portpair_t *r1_info)
 {
-	int err = 0, retransmission = 0;
-        int n_addrs = 0, loc_size = 0;
-	uint64_t solved_puzzle;
-	uint64_t I;
+	int err = 0, retransmission = 0, n_addrs = 0, loc_size = 0;
+	uint64_t solved_puzzle = 0, I = 0;
 	struct hip_context *ctx = NULL;
-	struct hip_host_id *peer_host_id;
-	struct hip_r1_counter *r1cntr;
-	struct hip_reg_info *reg_info;
+	struct hip_host_id *peer_host_id = NULL;
+	struct hip_r1_counter *r1cntr = NULL;
+	struct hip_reg_info *reg_info = NULL;
 	struct hip_dh_public_value *dhpv = NULL;
-        struct hip_locator *locator;
+        struct hip_locator *locator = NULL;
 #ifdef CONFIG_HIP_HI3
-	struct hip_locator_info_addr_item* first;
-	struct netdev_address *n;
-	hip_list_t *item, *tmp;
-	int ii = 0;
-	int use_ip4 = 1;
+	struct hip_locator_info_addr_item* first = NULL;
+	struct netdev_address *n = NULL;
+	hip_list_t *item = NULL, *tmp = NULL;
+	int ii = 0, use_ip4 = 1;
 #endif
 
 	_HIP_DEBUG("hip_handle_r1() invoked.\n");
@@ -1110,106 +1107,97 @@ int hip_handle_r1(struct hip_common *r1,
         else
             HIP_DEBUG("R1 did not have locator\n");
 
-	/* Check if the incoming R1 has a REG_INFO parameter. */
-	reg_info = hip_get_param(r1, HIP_PARAM_REG_INFO);
-
-	if (reg_info) {
-		int i;
-		uint8_t current_reg_type = 0;
-		uint8_t size_of_lifetimes = sizeof(reg_info->min_lifetime)
-			+ sizeof(reg_info->max_lifetime);
-		int typecount;
+	/* Handle REG_INFO parameter. */
+	hip_handle_param_reg_info(r1, entry);
+	/*
+	  reg_info = hip_get_param(r1, HIP_PARAM_REG_INFO);
 	
-		/* Registration types begin after "Min Lifetime" and "Max
-		   Lifetime" fields. */
-		uint8_t *reg_types = (uint8_t *)
-			(hip_get_param_contents_direct(reg_info)) + size_of_lifetimes;
+	  if (reg_info) {
+	  int i;
+	  uint8_t current_reg_type = 0;
+	  uint8_t size_of_lifetimes = sizeof(reg_info->min_lifetime)
+	  + sizeof(reg_info->max_lifetime);
+	  int typecount;
+	
+	  uint8_t *reg_types = (uint8_t *)
+	  (hip_get_param_contents_direct(reg_info)) + size_of_lifetimes;
 
-		typecount = hip_get_param_contents_len(reg_info) - size_of_lifetimes;
+	  typecount = hip_get_param_contents_len(reg_info) - size_of_lifetimes;
+		
+	  if(typecount == 0){
+	  HIP_DEBUG("REG_INFO had no services listed.\n");
+	  HIP_INFO("Responder is currently unable to provide "\
+	  "services due to transient conditions.\n");
+	  }
 
-		/* Check draft-ietf-hip-registration-02 chapter 3.1. */
-		if(typecount == 0){
-			HIP_DEBUG("REG_INFO had no services listed.\n");
-			HIP_INFO("Responder is currently unable to provide "\
-				 "services due to transient conditions.\n");
-		}
+	  HIP_DEBUG("Responder offers %d %s.\n", typecount,
+	  (typecount == 1) ? "service" : "services");
+	  HIP_HEXDUMP("Reg types are (one byte each): ", reg_types, typecount);
 
-		HIP_DEBUG("Responder offers %d %s.\n", typecount,
-			  (typecount == 1) ? "service" : "services");
-		HIP_HEXDUMP("Reg types are (one byte each): ", reg_types, typecount);
-
-		/* Loop through all the registration types found in REG_INFO parameter. */ 
-		for(i = 0; i < typecount; i++){
-		     current_reg_type = reg_types[i];
+	  for(i = 0; i < typecount; i++){
+	  current_reg_type = reg_types[i];
 		     
-		     switch(current_reg_type){
-#ifdef CONFIG_HIP_ESCROW
-		     case HIP_SERVICE_ESCROW:
-			  HIP_INFO("Responder offers escrow service.\n");
+	  switch(current_reg_type){
+	  #ifdef CONFIG_HIP_ESCROW
+	  case HIP_SERVICE_ESCROW:
+	  HIP_INFO("Responder offers escrow service.\n");
 						
-			  HIP_KEA *kea;
-			  kea = hip_kea_find(&entry->hit_our);
-			  if (kea && kea->keastate == HIP_KEASTATE_REGISTERING) {
-			       HIP_DEBUG("Registering to escrow service.\n");
-			       hip_keadb_put_entry(kea);
-			  } 
-			  else if(kea){
-			       kea->keastate = HIP_KEASTATE_INVALID;
-			       HIP_DEBUG("Not doing escrow registration, "\
-					 "invalid kea state.\n");
-			       hip_keadb_put_entry(kea);	  
-			  }
-			  else{
-			       HIP_DEBUG("Not doing escrow registration.\n");
-			  }
+	  HIP_KEA *kea;
+	  kea = hip_kea_find(&entry->hit_our);
+	  if (kea && kea->keastate == HIP_KEASTATE_REGISTERING) {
+	  HIP_DEBUG("Registering to escrow service.\n");
+	  hip_keadb_put_entry(kea);
+	  } 
+	  else if(kea){
+	  kea->keastate = HIP_KEASTATE_INVALID;
+	  HIP_DEBUG("Not doing escrow registration, "\
+	  "invalid kea state.\n");
+	  hip_keadb_put_entry(kea);	  
+	  }
+	  else{
+	  HIP_DEBUG("Not doing escrow registration.\n");
+	  }
 
-			  break;
-#endif /* CONFIG_HIP_ESCROW */
-#ifdef CONFIG_HIP_RVS
-		     case HIP_SERVICE_RENDEZVOUS:
-			  HIP_INFO("Responder offers rendezvous service.\n");
+	  break;
+	  #endif
+	  #ifdef CONFIG_HIP_RVS
+	  case HIP_SERVICE_RENDEZVOUS:
+	  HIP_INFO("Responder offers rendezvous service.\n");
+		
+	  if(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_RVS)
+	  {
+	  hip_hadb_set_peer_controls(
+	  entry, HIP_HA_CTRL_PEER_RVS_CAPABLE);
+	  }
+	  break;
+	  case HIP_SERVICE_RELAY:
+	  HIP_INFO("Responder offers UDP relay service for "\
+	  "HIP packets.\n");
 			  
-			  /* If we have requested for RVS service in I1, we
-			     store the info of responder's capability here. */
-			  if(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_RVS)
-			  {
-			       hip_hadb_set_peer_controls(
-				    entry, HIP_HA_CTRL_PEER_RVS_CAPABLE);
-			  }
-			  break;
-		     case HIP_SERVICE_RELAY:
-			  HIP_INFO("Responder offers UDP relay service for "\
-				   "HIP packets.\n");
-			  
-			  /* If we have requested for HIP UDP Relay service in
-			     I1, we store the info of responder's capability
-			     here. */
-			  if(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_RELAY)
-			  {
-			       hip_hadb_set_peer_controls(
-				    entry, HIP_HA_CTRL_PEER_RELAY_CAPABLE);
+	  if(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_RELAY)
+	  {
+	  hip_hadb_set_peer_controls(
+	  entry, HIP_HA_CTRL_PEER_RELAY_CAPABLE);
 
-			  }
-			  break;
-#endif /* CONFIG_HIP_RVS */
-		     default:
-			  HIP_INFO("Responder offers unsupported service.\n");
-		     }
-		}
-	}
-#ifdef CONFIG_HIP_ESCROW
-	else {
-		/* No REG_INFO parameter found. Cancelling registration attempt. */
-		HIP_DEBUG("No REG_INFO found in R1: no services available \n");
-		HIP_KEA *kea;
-		kea = hip_kea_find(&entry->hit_our);
-		if (kea && (kea->keastate == HIP_KEASTATE_REGISTERING))
-			kea->keastate = HIP_KEASTATE_INVALID;
-		if (kea)
-			hip_keadb_put_entry(kea);	
-		//TODO: Remove base keas	
-	}
-#endif /* CONFIG_HIP_ESCROW */
+	  }
+	  break;
+	  #endif
+	  default:
+	  HIP_INFO("Responder offers unsupported service.\n");
+	  }
+	  }
+	  }
+	  #ifdef CONFIG_HIP_ESCROW
+	  else {
+	  HIP_DEBUG("No REG_INFO found in R1: no services available \n");
+	  HIP_KEA *kea;
+	  kea = hip_kea_find(&entry->hit_our);
+	  if (kea && (kea->keastate == HIP_KEASTATE_REGISTERING))
+	  kea->keastate = HIP_KEASTATE_INVALID;
+	  if (kea)
+	  hip_keadb_put_entry(kea);	
+	  }
+	  #endif */
 
 	/* R1 generation check */
 
