@@ -233,7 +233,8 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 		tmp = hip_ht_find(hadb_hit, ha);
 		if (!tmp)
 		{
-		        hip_hadb_set_lsi_pair(ha);
+		        if (hip_null_lsi(ha->lsi_peer)) 
+		              hip_hadb_set_lsi_pair(ha);
 			hip_ht_add(hadb_hit, ha);
 			st |= HIP_HASTATE_HITOK;
 			HIP_DEBUG("New state added\n");
@@ -298,7 +299,7 @@ void hip_print_debug_info(struct in6_addr *local_addr,
 
 int hip_null_lsi(hip_lsi_t lsi_peer)
 {
-	return strcmp(inet_ntoa(lsi_peer), "0.0.0.0");
+        return (strcmp(inet_ntoa(lsi_peer), "0.0.0.0") == 0);
 }
 
 
@@ -410,8 +411,8 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	HIP_IFEL(hip_hadb_add_peer_addr(entry, peer_addr, 0, 0, PEER_ADDR_STATE_ACTIVE),
 		 -2, "error while adding a new peer address\n");
 
-	HIP_IFEL(hip_setup_hit_sp_pair(peer_hit, local_hit, peer_lsi, &local_lsi,
-					local_addr, peer_addr, 0, 1, 0),
+	HIP_IFEL(hip_setup_hit_sp_pair(peer_hit, local_hit,
+				       local_addr, peer_addr, 0, 1, 0),
 					-1, "Error in setting the SPs\n");
 
 	if (entry)
@@ -501,6 +502,7 @@ int hip_add_peer_map(const struct hip_common *input)
 		goto out_err;
 	}
 
+	HIP_DEBUG_LSI("lsi value is\n",lsi);
 	ip = (struct in6_addr *)
 		hip_get_param_contents(input, HIP_PARAM_IPV6_ADDR);
 	if (!ip) {
