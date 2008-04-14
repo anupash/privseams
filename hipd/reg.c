@@ -675,7 +675,7 @@ int hip_handle_regrequest(hip_ha_t *entry, hip_common_t *source_msg,
 	/* Building REG_RESPONSE and REG_FAILED parameters. */
 	if(accepted_count > 0)
 	{
-		hip_build_param_reg_response_xxx(
+		hip_build_param_reg_response(
 			target_msg, val_lifetime, accepted_requests,
 			accepted_count);
 		/* hip_build_param_reg_request(target_msg, val_lifetime,
@@ -708,7 +708,7 @@ int hip_handle_registration_attempt(hip_ha_t *entry, hip_common_t *msg,
 		lifetime = 0;
 		HIP_DEBUG("Building REG_RESPONSE parameter with zero lifetime.\n");
 		
-		HIP_IFEL(hip_build_param_reg_response_xxx(
+		HIP_IFEL(hip_build_param_reg_response(
 				 msg, lifetime, requests, request_count), -1,
 			 "Building of REG_RESPONSE failed\n");
 		
@@ -748,7 +748,7 @@ int hip_handle_registration_attempt(hip_ha_t *entry, hip_common_t *msg,
 		if (accept_count > 0) {
 			lifetime = 0;
 			HIP_DEBUG("Building REG_RESPONSE parameter.\n");
-			HIP_IFEL(hip_build_param_reg_response_xxx(
+			HIP_IFEL(hip_build_param_reg_response(
 					 msg, lifetime, (uint8_t*)accepted_requests, 
 					 accept_count),
 				 -1, "Building of REG_RESPONSE failed\n");
@@ -771,7 +771,7 @@ int hip_handle_registration_attempt(hip_ha_t *entry, hip_common_t *msg,
 		if (accepted_count > 0) {
 			hip_escrow_validate_lifetime(reg_request->lifetime, &lifetime);
 			HIP_DEBUG("Building REG_RESPONSE parameter.\n");
-			HIP_IFEL(hip_build_param_reg_response_xxx(
+			HIP_IFEL(hip_build_param_reg_response(
 					 msg, lifetime, (uint8_t*)accepted_requests, 
 					 accepted_count),
 				 -1, "Building of REG_RESPONSE failed\n");

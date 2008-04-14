@@ -521,7 +521,7 @@
  * @defgroup hip_services Additional HIP services
  *
  * Registration types for registering to a service as specified in
- * draft-ietf-hip-registration-02. These are the registrationion types used in
+ * draft-ietf-hip-registration-02. These are the registration types used in
  * @c REG_INFO, @c REG_REQUEST, @c REG_RESPONSE and @c REG_FAILED parameters.
  * Numbers 0-200 are reserved by IANA.
  * Numbers 201 - 255 are reserved by IANA for private use.

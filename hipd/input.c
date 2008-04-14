@@ -901,8 +901,12 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	 HIP_DEBUG("Adding REG_REQUEST parameter with %d reg types.\n", type_count);
 	 /** @todo Service lifetime value usage. Now requesting maximum lifetime
 	     (255 ~= 178 days) always */
-	 HIP_IFEL(hip_build_param_reg_request(i2, 255, services, type_count, 1),
+	 
+	 HIP_IFEL(hip_build_param_reg_request(i2, 255, services, type_count),
 		  -1, "Could not build REG_REQUEST parameter\n");
+	 
+	 /*HIP_IFEL(hip_build_param_reg_request(i2, 255, services, type_count, 1),
+	   -1, "Could not build REG_REQUEST parameter\n");*/
     }
     
     /******** NONCE *************************/
