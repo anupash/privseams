@@ -1,3 +1,4 @@
+
 /** @file
  * This file defines handling functions for incoming packets for the Host
  * Identity Protocol (HIP).

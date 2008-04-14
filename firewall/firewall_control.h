@@ -17,6 +17,15 @@
 #include "protodefs.h"
 #include "firewalldb.h"
 
+typedef struct pseudo_v6 {
+       struct  in6_addr src;
+        struct in6_addr dst;
+        u16 length;
+        u16 zero1;
+        u8 zero2;
+        u8 next;
+} pseudo_v6;
+
 gpointer run_control_thread(gpointer data);
 int control_thread_init(void);
 int sendto_hipd(void *msg, size_t len);

@@ -569,6 +569,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		goto out_err;
 	  	break;
 	case SO_HIP_GET_LSI_PEER:
+	case SO_HIP_GET_LSI_OUR:
 		while((param = hip_get_next_param(msg, param))){
 			if (hip_get_param_type(param) == HIP_PARAM_HIT){
 		    		if (!src_hit)
@@ -578,12 +579,19 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		  	}
 	  	}
 		if (src_hit && dst_hit){
-		  hip_ha_t *aux = hip_hadb_find_byhits(src_hit, dst_hit);
-		  if (aux)
-		    lsi = &aux->lsi_peer;
-		  HIP_DEBUG_LSI("lsi peer is after searching in hip_hadb_find_byhits", lsi);
+		        hip_ha_t *aux = hip_hadb_find_byhits(src_hit, dst_hit);
+		        if (aux){
+			        if(msg_type == SO_HIP_GET_LSI_PEER){
+		                        lsi = &aux->lsi_peer;
+		                        HIP_DEBUG_LSI(">>>>>>>>>>>lsi peer is after searching in hip_hadb_find_byhits", lsi);
+			        }else if(msg_type == SO_HIP_GET_LSI_OUR){
+				        lsi = &aux->lsi_our;
+		                        HIP_DEBUG_LSI(">>>>>>>>>>>>lsi our is after searching in hip_hadb_find_byhits", lsi);
+				}
+		        }
 		}
 	        break;
+
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;
@@ -604,7 +612,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 					 HIP_PARAM_HIT, sizeof(struct in6_addr)), -1,
 				 	 "build param HIP_PARAM_HIT  failed\n");
 		        }
-			if (msg_type == SO_HIP_GET_LSI_PEER && lsi)
+			if ((msg_type == SO_HIP_GET_LSI_PEER || msg_type == SO_HIP_GET_LSI_OUR) && lsi)
 		                HIP_IFEL(hip_build_param_contents(msg, (void *)lsi,
 					 HIP_PARAM_LSI, sizeof(hip_lsi_t)), -1,
 				 	 "build param HIP_PARAM_LSI  failed\n")

@@ -138,7 +138,7 @@ int firewall_init(char *rule_file){
 	if (use_ipv6) {
 		system("ip6tables -I FORWARD -p 139 -j QUEUE");
 		system("ip6tables -I FORWARD -p 50 -j QUEUE");
-		
+       	
 		system("ip6tables -I INPUT -p 139 -j QUEUE");
 		system("ip6tables -I INPUT -p 50 -j QUEUE");
 		
@@ -151,6 +151,9 @@ int firewall_init(char *rule_file){
 		system("ip6tables -I OUTPUT -p 6 -j QUEUE");
 #endif
 		system("ip6tables -I INPUT -d LOCAL_DEFAULT_HIT -j QUEUE");
+		system("ip6tables -I INPUT -d 2001:0010::/28 -j QUEUE");
+                    
+
 		if (!accept_normal_traffic) {
 			system("ip6tables -I FORWARD -j DROP");
 			system("ip6tables -I INPUT -j DROP");
@@ -800,14 +803,13 @@ static void *handle_ip_traffic(void *ptr) {
                 		hdr_size = (iphdr->ip_hl * 4);
 				if (iphdr->ip_p == IPPROTO_UDP)
 					hdr_size += sizeof(struct udphdr);
-                		HIP_DEBUG("ipv4 and header size: %d\n", hdr_size);
+                		_HIP_DEBUG("ipv4 and header size: %d\n", hdr_size);
  	      		}
         		else if(ipv6Traffic){
-                		_HIP_DEBUG("ipv6\n");
                 		ip6_hdr = (struct ip6_hdr *) m->payload;   
                 		packet_hdr = (void *)ip6_hdr;
                		 	hdr_size = sizeof(struct ip6_hdr);
-               		 	_HIP_DEBUG("header size: %d\n", hdr_size);
+               		 	_HIP_DEBUG("ipv6 and header size: %d\n", hdr_size);
                 		ipv6_addr_copy(src_addr, &ip6_hdr->ip6_src);
                 		ipv6_addr_copy(dst_addr, &ip6_hdr->ip6_dst);
         		}
@@ -827,7 +829,6 @@ static void *handle_ip_traffic(void *ptr) {
 	  			}
 				
 				hip_common = (struct hip_common *)HIP_MALLOC(packet_length, 0);
-				//hip_common = (struct hip_common*) (m->payload + sizeof (struct ip6_hdr));
 
 				memcpy(hip_common, m->payload + hdr_size, packet_length);		
 			
@@ -838,9 +839,9 @@ static void *handle_ip_traffic(void *ptr) {
 	  				_HIP_DEBUG("signature exists\n");
 
 				//HIP_DUMP_MSG(hip_common);
-				allow_packet(hndl, m->packet_id);//test- barbaridad acceptar siempre todo
+				//allow_packet(hndl, m->packet_id);//test- barbaridad acceptar siempre todo
 				//filter mirar si esta en hadb o como regla
-				/*if(filter_hip(src_addr, 
+				if(filter_hip(src_addr, 
 					      dst_addr, 
 					      hip_common, 
 					      m->hook,
@@ -852,7 +853,7 @@ static void *handle_ip_traffic(void *ptr) {
 				else
 	  			{
 					drop_packet(hndl, m->packet_id);
-					}*/
+				}
       			} else {
 				if (ipv4Traffic){
 					if(IS_LSI((iphdr->ip_dst).s_addr) && is_outgoing_packet(packetHook)){
@@ -865,6 +866,7 @@ static void *handle_ip_traffic(void *ptr) {
 					 	firewall_traffic_treatment(hndl, m->packet_id);
 				} 
 				else if(ipv6Traffic){
+				  HIP_DEBUG("IPV6 TRAFFIC \n");
 					if (ipv6_addr_is_hit(src_addr)){
 						HIP_DEBUG("IPV6 TRAFFIC AND HIT RECEIVED\n");
 						firewall_trigger_incoming_hit(m, src_addr, dst_addr);
@@ -926,6 +928,23 @@ void firewall_traffic_treatment(struct ipq_handle *hndl, unsigned long packetId)
 
 int firewall_trigger_incoming_hit(ipq_packet_msg_t *m, struct in6_addr *ip_src, struct in6_addr *ip_dst){
 	int err = 0;
+	hip_lsi_t *lsi_our = NULL, *lsi_peer = NULL;
+	struct in6_addr src_addr, dst_addr;
+	
+	lsi_our = (hip_lsi_t *)hip_get_lsi_our_by_hits(ip_src, ip_dst);
+	lsi_peer = (hip_lsi_t *)hip_get_lsi_peer_by_hits(ip_src, ip_dst);
+
+        if(lsi_our && lsi_peer){
+		 HIP_DEBUG_LSI("******LSI_OUR: ", lsi_our);
+		 HIP_DEBUG_LSI("******LSI_PEER: ", lsi_peer);
+	         IPV4_TO_IPV6_MAP(lsi_our, &src_addr);
+	         IPV4_TO_IPV6_MAP(lsi_peer, &dst_addr);
+		 if (IN6_IS_ADDR_V4MAPPED(&src_addr))
+		   HIP_DEBUG("SDADSADADDDDDDDDDDDDDDDDD\n");
+		 HIP_DEBUG_IN6ADDR("******LSI_OUR IPV6: ", &src_addr);
+		 HIP_DEBUG_IN6ADDR("******LSI_PEER IPV6: ", &dst_addr);
+	         reinject_packet(src_addr, dst_addr, m, 6);
+        }
 	return err;
 }
 
@@ -955,68 +974,42 @@ out_err:
 	return err;
 }
 
-
-static inline u16 inchksum(const void *data, u32 length) {
-    long sum = 0;
-    const u16 *wrd =  (u16 *) data;
-    long slen = (long) length;
-
-    while (slen > 1) {
-        sum += *wrd++;
-        slen -= 2;
-    }
-
-    if (slen > 0)
-        sum += * ((u8 *)wrd);
-
-    while (sum >> 16)
-        sum = (sum & 0xffff) + (sum >> 16);
-
-    return (u16) sum;
-}
-
-u16 ipv6_checksum(u8 protocol, struct in6_addr *src, struct in6_addr *dst, void *data, u16 len)
-{   
-    u32 chksum = 0;
-    pseudo_v6 pseudo;
-    memset(&pseudo, 0, sizeof(pseudo_v6));
-
-    pseudo.src = *src;
-    pseudo.dst = *dst;
-    pseudo.length = htons(len);
-    pseudo.next = protocol;
-
-    chksum = inchksum(&pseudo, sizeof(pseudo_v6));
-    chksum += inchksum(data, len);
-
-    chksum = (chksum >> 16) + (chksum & 0xffff);
-    chksum += (chksum >> 16);
-
-    chksum = (u16)(~chksum);
-    if (chksum == 0)
-        chksum = 0xffff;
-
-    return chksum;
-}
-
-
-int reinject_packet(struct in6_addr src_hit, struct in6_addr dst_hit, ipq_packet_msg_t *m, int ipTraffic){
-	int err, ip_hdr_size, packet_length, protocol;
+int reinject_packet(struct in6_addr src_hit, struct in6_addr dst_hit, ipq_packet_msg_t *m, int ipOrigTraffic){
+	int err, ip_hdr_size, packet_length = 0, protocol;
 	u8 *msg;  
-	
-	if (ipTraffic == 4){
-		struct ip *iphdr = (struct ip *) m->payload;
+	HIP_DEBUG("-----1-----Reinject packet--------------\n");	
+	HIP_DEBUG_HIT("******LSI_OUR IPV6: ", &src_hit);
+	HIP_DEBUG_HIT("******LSI_PEER IPV6: ", &dst_hit);
+	HIP_DEBUG("******ipOrigTraffic %d \n", ipOrigTraffic);
+	if (ipOrigTraffic == 4){
+		struct ip *iphdr = (struct ip*) m->payload;
 		ip_hdr_size = (iphdr->ip_hl * 4);  
-		packet_length = m->data_len - ip_hdr_size;
 		protocol = iphdr->ip_p;
-		//create_ipv6_header(src_hit, dst_hit, protocol)
+	}else{
+	        struct ip6_hdr* ip6_hdr = (struct ip6_hdr*) m->payload;
+		ip_hdr_size = sizeof(struct ip6_hdr);
+		protocol = ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt;
+		HIP_DEBUG("Protocol used is ...........%d\n",protocol);
+	}
+	
+
+	if (m->data_len <= (BUFSIZE - ip_hdr_size)){
+	  packet_length = m->data_len - ip_hdr_size; 	
+	  HIP_DEBUG("packet size smaller than buffer size\n");
+	}
+	else { 
+	  packet_length = BUFSIZE - ip_hdr_size;
+	  HIP_DEBUG("HIP packet size greater than buffer size\n");
 	}
 
+	HIP_DEBUG("------2----Reinject packet packet length is %d\n",packet_length);
 	msg = (u8 *)HIP_MALLOC(packet_length, 0);
-  	memcpy(msg, (m->payload)+ip_hdr_size, packet_length);
-  	err = firewall_send_pkt(&src_hit, &dst_hit, msg, packet_length, protocol);
+	memcpy(msg, (m->payload)+ip_hdr_size, packet_length);
 
-  return err;	
+	//HIP_DUMP_MSG(msg);
+  	err = firewall_send_pkt(&src_hit, &dst_hit, msg, packet_length, protocol);
+	
+	return err;	
 }
 
 

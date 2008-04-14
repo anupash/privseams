@@ -269,13 +269,6 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 	return st;
 }
 
-void hip_hadb_set_lsi_pair(hip_ha_t *entry){
-  //Assign value to lsi_our searching in hidb by the correspondent hit
-  hip_hidb_get_lsi_by_hit(&entry->hit_our, &entry->lsi_our);
-  //Assign lsi_peer 
-  entry->lsi_peer = hip_generate_peer_lsi();
-}
-
 int hip_print_info_hadb(hip_ha_t *entry, void *cntr)
 {
 	HIP_DEBUG_HIT("Peer HIT ", &entry->hit_peer);
@@ -303,10 +296,29 @@ void hip_print_debug_info(struct in6_addr *local_addr,
 		HIP_DEBUG_LSI("Peer LSI", peer_lsi);
 }
 
-int hip_null_lsi(hip_lsi_t lsi_peer){
-
-	return strcmp(inet_ntoa(lsi_peer),"0.0.0.0");
+int hip_null_lsi(hip_lsi_t lsi_peer)
+{
+	return strcmp(inet_ntoa(lsi_peer), "0.0.0.0");
 }
+
+
+void hip_hadb_set_lsi_pair(hip_ha_t *entry)
+{
+        hip_lsi_t aux;
+	//Assign value to lsi_our searching in hidb by the correspondent hit
+	HIP_DEBUG("hip_hadb_set_lsi_pair\n");
+	if (entry){
+	  hip_hidb_get_lsi_by_hit(&entry->hit_our, &entry->lsi_our);
+	  //Assign lsi_peer 
+	  HIP_DEBUG("after hip_hidb_get_lsi_by_hit  ....\n");
+	  aux = hip_generate_peer_lsi();
+	  HIP_DEBUG("Before memcpy....");
+	  memcpy(&entry->lsi_peer, &aux, sizeof(hip_lsi_t));
+	  HIP_DEBUG("Before accessing to entry->lsi_peer ....\n");
+	  HIP_DEBUG_LSI(">>>>entry->lsi_peer is...:", &entry->lsi_peer);
+	}
+}
+
 
 /**
  * Practically called only by when adding a HIT-IP mapping before base exchange.
@@ -2712,25 +2724,36 @@ hip_ha_t *hip_hadb_find_by_blind_hits(hip_hit_t *local_blind_hit,
 }
 #endif
 
-struct in_addr hip_generate_peer_lsi(){
-  struct in_addr aux;
+struct in_addr hip_generate_peer_lsi()
+{
+	struct in_addr aux;
+	int oct1 = 0, oct2 = 0, oct3 = 0, oct4 = 0;
+	char inputIpString[16];
+
+	inet_aton("192.0.0.0", &aux);
+	inet_aton("0.0.0.1", &peer_lsi_index);
+	aux.s_addr |= peer_lsi_index.s_addr;
   
-  inet_aton("192.0.0.0", &aux);
-  //lsi_begin &= htonl(HIP_LSI_TYPE_MASK_192);// Set to 192.0.0.0
+	HIP_DEBUG_LSI(">>>Lsi value is \n", &aux);
   
-  aux.s_addr |= peer_lsi_index.s_addr;// Or with the peer_lsi_index
-  while (lsi_assigned(aux)){
-	    peer_lsi_index.s_addr++;
-	    inet_aton("192.0.0.0", &aux);// Reset to 192.0.0.0
-	    aux.s_addr |= peer_lsi_index.s_addr;// Or with the peer_lsi_index
-  }
-	return peer_lsi_index;
+	while (lsi_assigned(aux)){
+        	sscanf(inet_ntoa(aux),"%d.%d.%d.%d",&oct1,&oct2,&oct3,&oct4);
+	    	oct4= oct4 + 1;
+	    	HIP_DEBUG("-----------------oct4 is...%d\n", oct4);
+	    	inet_aton("192.0.0.0", &aux);// Reset to 192.0.0.0
+	    	sprintf(inputIpString,"%d.%d.%d.%d",oct1,oct2,oct3,oct4);
+	    	inet_aton(inputIpString, &aux);
+	    	aux.s_addr |= peer_lsi_index.s_addr;// Or with the peer_lsi_index
+  	}
+  	HIP_DEBUG_LSI(">>>lsi free final value is ", &aux);
+ 	return aux;
 }
 
 /**
 * Checks if exists a local or peer lsi that matches with this prefix 
 */
-int lsi_assigned(struct in_addr add){
+int lsi_assigned(struct in_addr add)
+{
 	int ret = 0;
 	ret = hip_hidb_exists_lsi(&add);
 	if (!ret)
@@ -2738,7 +2761,8 @@ int lsi_assigned(struct in_addr add){
 	return ret;
 }
 
-int hip_hadb_exists_lsi(hip_lsi_t *lsi){
+int hip_hadb_exists_lsi(hip_lsi_t *lsi)
+{
 	int res = 0;
 	hip_lsi_t lsi_aux = *lsi;
 	hip_for_each_ha(hip_hadb_find_lsi, &lsi_aux);
@@ -2790,5 +2814,4 @@ hip_hit_t *hip_hadb_get_peer_hit_by_peer_lsi(hip_lsi_t *lsi){
       		return NULL;
 
 }
-
 

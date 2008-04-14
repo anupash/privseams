@@ -100,6 +100,7 @@
 #define SO_HIP_ADD_PEER_MAP_HIT_IP_LSI          162
 #define SO_HIP_TRIGGER_BEX                      163
 #define SO_HIP_GET_LSI_PEER                     164
+#define SO_HIP_GET_LSI_OUR			165
 /** @} */
 
 #endif /* _HIP_ICOMM */

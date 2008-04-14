@@ -52,15 +52,6 @@ struct firewall_hl {
 
 typedef struct firewall_hl firewall_hl_t;
 
-typedef struct pseudo_v6 {
-       struct  in6_addr src;
-        struct in6_addr dst;
-        u16 length;
-        u16 zero1;
-        u8 zero2;
-        u8 next;
-} pseudo_v6;
-
 //made public for filter_esp_state function
 int match_hit(struct in6_addr match_hit, 
 	      struct in6_addr packet_hit, 
@@ -76,7 +67,7 @@ void firewall_probe_kernel_modules();
 void firewall_traffic_treatment(struct ipq_handle *hndl, unsigned long packetId);
 
 /*Using raw_sockets injects the packet in the network with HITs*/
-int reinject_packet(struct in6_addr src_hit, struct in6_addr dst_hit, ipq_packet_msg_t *m, int ipTraffic);
+int reinject_packet(struct in6_addr src_hit, struct in6_addr dst_hit, ipq_packet_msg_t *m, int ipOrigTraffic);
 int firewall_trigger_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *ip_src, struct in_addr *ip_dst);
 int firewall_trigger_incoming_hit(ipq_packet_msg_t *m, struct in6_addr *ip_src, struct in6_addr *ip_dst);
 #endif
