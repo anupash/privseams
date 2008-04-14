@@ -628,7 +628,30 @@ int filter_hip(const struct in6_addr * ip6_src,
   	//if dynamically changing rules possible 
   	//int hip_packet = is_hip_packet(), ..if(hip_packet && rule->src_hit)
   	//+ filter_state käsittelemään myös esp paketit
-  	_HIP_DEBUG("filter_hip: \n");
+
+
+
+
+
+
+	if (buf->type_hdr == HIP_I1)
+			HIP_DEBUG(">>>>>>>>>>>>>>>>>>>>>>>>>>>>packet type: I1\n");
+        else if (buf->type_hdr == HIP_R1)
+			HIP_DEBUG(">>>>>>>>>>>>>>>>>>>>>>>>>>>packet type: R1\n");
+        else if (buf->type_hdr == HIP_I2)
+			HIP_DEBUG(">>>>>>>>>>>>>>>>>>>>>>>>>>>packet type: I2\n");
+        else if (buf->type_hdr == HIP_R2)
+			HIP_DEBUG(">>>>>>>>>>>>>>>>>>>>>>>>>>>packet type: R2\n");
+        else if (buf->type_hdr == HIP_UPDATE)
+			HIP_DEBUG(">>>>>>>>>>>>>>>>>>>>>>>>>>>packet type: UPDATE\n");
+
+
+
+
+
+
+
+  	HIP_DEBUG("filter_hip: \n");
   	while (list != NULL)
     {
       	match = 1;
@@ -920,6 +943,7 @@ out_err:
 }
 
 void firewall_traffic_treatment(struct ipq_handle *hndl, unsigned long packetId){
+  HIP_DEBUG("***     firewall_traffic_treatment      ***\n");
   if(accept_normal_traffic)
   	allow_packet(hndl, packetId);
   else
@@ -961,11 +985,13 @@ int firewall_trigger_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *ip_src, s
 	entry_peer = firewall_hit_lsi_db_match(ip_dst);
 
 	if (entry_peer){
+	        HIP_DEBUG("Firewall_db HIT ???? %d \n", entry_peer->bex_state);
 		HIP_IFEL(entry_peer->bex_state == -1, -1, "Base Exchange Failed");
 	  	if(entry_peer->bex_state)
 			reinject_packet(entry_peer->hit_our, entry_peer->hit_peer, m, 4);
 	}else{
 	  	// Run bex to initialize SP and SA
+	        HIP_DEBUG("Firewall_db empty. Triggering Base Exchange\n");
 		HIP_IFEL(hip_trigger_bex(&src_hit, &dst_hit, NULL, &dst_addr), -1, 
 			 "Base Exchange Trigger failed");
 		firewall_add_hit_lsi(src_hit, dst_hit, ip_dst);	

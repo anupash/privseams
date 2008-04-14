@@ -640,7 +640,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	int type_count = 0, request_rvs = 0, request_escrow = 0;
         int *reg_type = NULL;
 
-	_HIP_DEBUG("hip_create_i2() invoked.\n");
+	HIP_DEBUG("hip_create_i2() invoked.\n");
 
 	HIP_ASSERT(entry);
 
@@ -1007,7 +1007,7 @@ int hip_handle_r1(struct hip_common *r1,
 	int use_ip4 = 1;
 #endif
 
-	_HIP_DEBUG("hip_handle_r1() invoked.\n");
+	HIP_DEBUG("hip_handle_r1() invoked.\n");
 
 	if (entry->state == HIP_STATE_I2_SENT) {
 		HIP_DEBUG("Retransmission\n");
