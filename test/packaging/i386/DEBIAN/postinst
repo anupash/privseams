@@ -1,11 +1,23 @@
 #!/bin/sh
 #ldconfig
-#invoke-rc.d --force --quiet hipd stop 
-update-rc.d -f hipd remove 
+#invoke-rc.d --force --quiet hipd stop  
+#invoke-rc.d -f hipd stop
+#update-rc.d -f hipd remove  
 update-rc.d hipd defaults 
-invoke-rc.d hipd start 
+#/usr/sbin/hipd hipd -bk
+#invoke-rc.d hipd start 
 #/usr/sbin/hipd hipd -bk 
-pidof hipd 
+#/etc/init.d/hipd start 
+#pidof hipd 
+#/etc/init.d/hipd restart
+ 
+if [ -x /etc/init.d/hipd ]; then 
+ invoke-rc.d hipd force-reload 
+ invoke-rc.d hipd start 
+fi
+ 
+pidof hipd  
+
 
  
 
