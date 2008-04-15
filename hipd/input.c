@@ -893,7 +893,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
        sending the I1 packet to peer (registrar). */
 
     // TODO: check also unregistrations
-    uint8_t services[HIP_NUMBER_OF_EXISTING_SERVICES];
+    uint8_t services[HIP_TOTAL_EXISTING_SERVICES];
     
     type_count = hip_get_incomplete_registrations(&reg_type, entry, 1, services); 
     
@@ -2331,7 +2331,7 @@ int hip_handle_r2(struct hip_common *r2,
 	/* Registration of additional services. Check if we should expect
 	   REG_RESPONSE or REG_FAILED parameter */
 	
-	uint8_t services[HIP_NUMBER_OF_EXISTING_SERVICES];
+	uint8_t services[HIP_TOTAL_EXISTING_SERVICES];
 	
         type_count = hip_get_incomplete_registrations(&reg_types, entry, 1, services); 
         if (type_count > 0) {

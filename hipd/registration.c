@@ -16,7 +16,7 @@
 #include "registration.h"
 
 /** An array for storing all existing services. */
-hip_srv_t hip_services[HIP_NUMBER_OF_EXISTING_SERVICES];
+hip_srv_t hip_services[HIP_TOTAL_EXISTING_SERVICES];
 
 void hip_init_xxx_services()
 {
@@ -39,7 +39,7 @@ int hip_set_srv_status(uint8_t reg_type, hip_srv_status_t status)
 {
 	int i = 0;
 	
-	for(; i < HIP_NUMBER_OF_EXISTING_SERVICES; i++) {
+	for(; i < HIP_TOTAL_EXISTING_SERVICES; i++) {
 		if(hip_services[i].reg_type == reg_type) {
 			hip_services[i].status = status;
 			return 0;
@@ -57,7 +57,7 @@ int hip_set_srv_min_lifetime(uint8_t reg_type, uint8_t lifetime)
 	
 	int i = 0;
 	
-	for(; i < HIP_NUMBER_OF_EXISTING_SERVICES; i++) {
+	for(; i < HIP_TOTAL_EXISTING_SERVICES; i++) {
 		if(hip_services[i].reg_type == reg_type) {
 			hip_services[i].min_lifetime = lifetime;
 			return 0;
@@ -75,7 +75,7 @@ int hip_set_srv_max_lifetime(uint8_t reg_type, uint8_t lifetime)
 	
 	int i = 0;
 	
-	for(; i < HIP_NUMBER_OF_EXISTING_SERVICES; i++) {
+	for(; i < HIP_TOTAL_EXISTING_SERVICES; i++) {
 		if(hip_services[i].reg_type == reg_type) {
 			hip_services[i].max_lifetime = lifetime;
 			return 0;
@@ -96,7 +96,7 @@ int hip_get_active_services(hip_srv_t *active_services,
 	
 	memset(active_services, 0, sizeof(hip_services));
 
-	for(; i < HIP_NUMBER_OF_EXISTING_SERVICES; i++) {
+	for(; i < HIP_TOTAL_EXISTING_SERVICES; i++) {
 		if(hip_services[i].status == HIP_SERVICE_ON) {
 			memcpy(&active_services[j], &hip_services[i],
 			       sizeof(active_services[j]));
@@ -156,18 +156,18 @@ void hip_srv_info(const hip_srv_t *srv, char *status)
 	cursor += sprintf(cursor, " reg_type: ");
 	if(srv->reg_type == HIP_SERVICE_RENDEZVOUS){
 		cursor += sprintf(cursor, "rendezvous\n");
-	}else if(srv->reg_type == HIP_SERVICE_ESCROW){
+	}else if(srv->reg_type == HIP_SERVICE_ESCROW) {
 		cursor += sprintf(cursor, "escrow\n");
-	}else if(srv->reg_type == HIP_SERVICE_RELAY){
+	}else if(srv->reg_type == HIP_SERVICE_RELAY) {
 		cursor += sprintf(cursor, "relay\n");
 	}else{
 		cursor += sprintf(cursor, "unknown\n");
 	}
 
 	cursor += sprintf(cursor, " status: ");
-	if(srv->status == HIP_SERVICE_ON){
+	if(srv->status == HIP_SERVICE_ON) {
 		cursor += sprintf(cursor, "on\n");
-	}else if(srv->status == HIP_SERVICE_OFF){
+	}else if(srv->status == HIP_SERVICE_OFF) {
 		cursor += sprintf(cursor, "off\n");
 	}else{
 		cursor += sprintf(cursor, "unknown\n");

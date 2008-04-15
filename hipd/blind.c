@@ -449,7 +449,7 @@ struct hip_common *hip_blind_create_r1(const struct in6_addr *src_hit,
 	int err = 0, dh_size1 = 0, dh_size2 = 0, written1 = 0, written2 = 0;
 	int mask = 0;
  	u8 *dh_data1 = NULL, *dh_data2 = NULL;
-	hip_srv_t service_list[HIP_NUMBER_OF_EXISTING_SERVICES];
+	hip_srv_t service_list[HIP_TOTAL_EXISTING_SERVICES];
 	unsigned int service_count = 0;
 	
  	/* Supported HIP and ESP transforms. */

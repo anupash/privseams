@@ -273,7 +273,7 @@
 #define HIP_SERVICE_RELAY            	 202
 
 /* IMPORTANT! This must be the sum of above services. */
-#define HIP_NUMBER_OF_EXISTING_SERVICES  3
+#define HIP_TOTAL_EXISTING_SERVICES      3
 /* @} */
 
 /* Registration failure types as specified in draft-ietf-hip-registration-02.

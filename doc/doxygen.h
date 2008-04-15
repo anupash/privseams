@@ -38,10 +38,14 @@
  *     A description of some easy-to-make mistakes in C.</li>
  * <li><a href="http://www.greenend.org.uk/rjk/2003/03/inline.html">Inline Functions In C</a>.
  *     Notes on GCC and standard C inline functions.</li>
+ * <li><a href="http://docs.freebsd.org/info/gcc/gcc.info.Variable_Attributes.html">Specifying Attributes of Variables</a>.
+ *     Information about specifying special attributes of variables or structure
+ *     fields. For example, what does the <code>__attribute__ ((packed))</code>
+ *     after a structure definition really mean.</li>
  * <li><a href="http://c-faq.com/">Frequently Asked Questions</a> at comp.lang.c.</li>
  * </ul>
  *
- * @date   08.04.2008
+ * @date   15.04.2008
  */ 
 
 /**
@@ -535,7 +539,7 @@
  *      Escrow services for some key exchange.
  * @def HIP_SERVICE_RELAY
  *      UDP encapsulated relay service for HIP packets.
- * @def HIP_NUMBER_OF_EXISTING_SERVICES
+ * @def HIP_TOTAL_EXISTING_SERVICES
  *      Total number of services, which must equal the sum of all existing
  *      services.
  */
