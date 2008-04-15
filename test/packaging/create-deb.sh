@@ -95,7 +95,7 @@ init_files ()
     mkdir -p "$PKGDIR/DEBIAN"
     
     if [ $TMP = "core" ]; then
-    	for f in postinst prerm;do
+    	for f in preinst postinst prerm postrm;do
 		cp $DEBIAN/$f "$PKGDIR/DEBIAN" 
     	done
     fi
@@ -108,7 +108,7 @@ init_files ()
         sed -i '$a\ldconfig\' $PKGDIR\/DEBIAN\/postinst
     fi
 
-    for f in preinst control changelog copyright;do
+    for f in control changelog copyright;do
 	cp $DEBIAN/$f "$PKGDIR/DEBIAN" 
     done
    
