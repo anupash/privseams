@@ -22,7 +22,7 @@
  * tunreader portions Copyright (C) 2004 UC Berkeley
  */
 
-#include <stdio.h>		/* printf() */
+#include <stdio.h>		/* HIP_DEBUG() */
 #ifdef __WIN32__
 #include <win32/types.h>
 #include <io.h>
@@ -213,7 +213,7 @@ void add_outgoing_esp_header(__u8 *data, __u32 src, __u32 dst, __u16 len);
 
 /* hit is the in6_addr struct  */
 
-/* Tao: probably we won't need this at all */
+/* Ipsec userspace trigger the base exchange */
 int pfkey_send_acquire(struct sockaddr *target)
 {
         struct sockaddr *sa = (struct sockaddr *) target;
@@ -378,21 +378,11 @@ void init_readsp()
 #else
 	if (socketpair(AF_UNIX, SOCK_DGRAM, PF_UNIX, readsp)) {
 #endif
-		printf("sockpair() failed\n");
+		HIP_DEBUG("sockpair() failed\n");
 	}
 	/* also initialize the Ethernet address table */
 	RAND_bytes(eth_addrs, sizeof(eth_addrs));
 }
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -405,16 +395,22 @@ void init_readsp()
  * connected to the TAP-Win32 interface, and performs necessary ESP
  * encryption. Also handles ARP requests with artificial replies.
  */
+
+
+/* We do not use TAP-Win32 interface here, FIXME: SOCK_RAW IP out 
+* should be rewritten:(
+*/
 #ifdef __WIN32__
 void hip_esp_output(void *arg)
 #else
-void *hip_esp_output(struct sockaddr_storage *ss_lsi)
+void *hip_esp_output(struct sockaddr_storage *ss_lsi, 
+		     u8 *raw_buff, int len)
 #endif
 {
-	int len, err, flags, raw_len, is_broadcast, s, offset=0;
+	int err, flags, raw_len, is_broadcast, s, offset=0;
 	fd_set fd;
 	struct timeval timeout, now;
-	__u8 raw_buff[BUFF_LEN];
+	//__u8 raw_buff[BUFF_LEN];
 	__u8 data[BUFF_LEN]; /* encrypted data buffer */
 	struct ip *iph;
 
@@ -425,36 +421,54 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi)
 	struct ip6_hdr *ip6h;
 	static hip_sadb_entry *entry;
 	//struct sockaddr_storage ss_lsi;
-	struct sockaddr *lsi = (struct sockaddr*)&ss_lsi;
+	struct sockaddr *lsi = (struct sockaddr *) ss_lsi;
+
+	HIP_DEBUG("the AF_INET value is %d\n", AF_INET);
+	HIP_DEBUG("the AF_INET6 value is %d\n", AF_INET6);
+	
+	
+	HIP_DEBUG_SOCKADDR("LSI address is: ",  lsi);
+	
 	__u32 lsi_ip;
 #ifdef __MACOSX__
         __u32 saddr, daddr;
 #endif
 #ifdef RAW_IP_OUT
+	
+	HIP_DEBUG("Get into RAW_IP_OUT\n");
+	
 	int s_raw = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
 	if (s_raw < 0) {
-		printf("*** socket() error for raw socket in hip_esp_output\n");
+		HIP_DEBUG("*** socket() error for raw socket in hip_esp_output\n");
 	}
 	flags = 1;
 	if (setsockopt(s_raw, IPPROTO_IP, IP_HDRINCL, (char *)&flags, 
 				sizeof(flags)) < 0) {
-		printf("*** setsockopt() error for raw socket in "
+		HIP_DEBUG("*** setsockopt() error for raw socket in "
 			"hip_esp_output\n");
 	}
 #endif /* RAW_IP_OUT */
 
 #ifdef DEBUG_EVERY_PACKET
 	if (!(debugfp = fopen("esp.log", "w"))) {
-		printf("********* error opening debug log!\n");
+		HIP_DEBUG("********* error opening debug log!\n");
 	}
 #endif
 	init_readsp();
-	lsi->sa_family = AF_INET;
+
+	HIP_DEBUG("lsi->sa_family value is %d\n",  lsi->sa_family ),
+	
+
+        lsi->sa_family = AF_INET;
 	get_preferred_lsi(lsi);
 	g_tap_lsi = LSI4(lsi);
 	
-	printf("hip_esp_output() thread started...\n");
-	while (g_state == 0) {
+	HIP_DEBUG("hip_esp_output() thread started...\n");
+	//while (g_state == 0) {
+	{
+
+
+#if 0
 		/* periodic select loop */
 		gettimeofday(&now, NULL); /* XXX does this cause perf. hit? */
 		FD_ZERO(&fd);
@@ -473,7 +487,7 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi)
 			if (errno == EINTR)
 #endif
 				continue;
-			printf("hip_esp_output(): select() error\n");
+			HIP_DEBUG("hip_esp_output(): select() error\n");
 		} else if (err == 0) {
 			/* idle cycle */
 			continue;
@@ -492,27 +506,32 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi)
 			if (errno == EINTR)
 #endif
 				continue;
-			printf("hip_esp_output(): read() failed: %s\n",
-				strerror(errno));
+			HIP_DEBUG("hip_esp_output(): read() failed: %s\n",
+				  strerror(errno));
 			exit(0);
 		}
-		/* 
-		 * IPv4 
-		 */
-		if ((raw_buff[12] == 0x08) && (raw_buff[13] == 0x00)) {
-			iph = (struct ip*) &raw_buff[14];
-			/* accept IPv4 traffic to 1.x.x.x here */
-			if (((iph->ip_v) == IPVERSION) &&
+#endif /* 0 */
+			
+			/* 
+			 * IPv4 
+			 */
+			if ((raw_buff[12] == 0x08) && (raw_buff[13] == 0x00)) {
+				iph = (struct ip*) &raw_buff[14];
+				/* accept IPv4 traffic to 1.x.x.x here */
+				if (((iph->ip_v) == IPVERSION) &&
 #if defined(__MACOSX__) && defined(__BIG_ENDIAN__)
-				(iph->ip_dst.s_addr >> 24 & 0xFF)!=0x01)
+				    (iph->ip_dst.s_addr >> 24 & 0xFF)!=0x01)
 #else
-			    (iph->ip_dst.s_addr & 0xFF)!=0x01)
+					(iph->ip_dst.s_addr & 0xFF)!=0x01)
 #endif
-				continue;
-			lsi_ip = ntohl(iph->ip_dst.s_addr);
-			lsi->sa_family = AF_INET;
-			LSI4(lsi) = lsi_ip;
-			is_broadcast = FALSE;
+			
+			     /*  continue; */
+			    return;
+										      
+			    lsi_ip = ntohl(iph->ip_dst.s_addr);
+			    lsi->sa_family = AF_INET;
+			    LSI4(lsi) = lsi_ip;
+			    is_broadcast = FALSE;
 			
 			/* We do not have broadcast packets,  added by Tao
 			Wan on 27th, Feb */
@@ -535,7 +554,8 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi)
 		* already, i.e. a new lsi_entry was created */
 				if (buffer_packet(lsi, raw_buff, len)==TRUE)
 					pfkey_send_acquire(lsi);
-				continue;
+				// continue;
+				return;
 			}
 			raw_len = len;
 			while (entry) {
@@ -605,7 +625,7 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi)
 #endif /* __MACOSX__ */
 #endif /* RAW_IP_OUT */
 				if (err < 0) {
-					printf("hip_esp_output(): sendto() "
+					HIP_DEBUG("hip_esp_output(): sendto() "
 					       "failed: %s\n", strerror(errno));
 				} else {
 					pthread_mutex_lock(&entry->rw_lock);
@@ -628,28 +648,32 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi)
 			ip6h = (struct ip6_hdr*) &raw_buff[14];
 			/* accept IPv6 traffic to 2001:10::/28 here */
 			if ((ip6h->ip6_vfc & 0xF0) != 0x60)
-				continue;
+				// continue;
+				return;
 			/* Look for all-nodes multicast address */
 			if (IN6_IS_ADDR_MC_LINKLOCAL(&ip6h->ip6_dst) &&
 			    (ip6h->ip6_nxt == IPPROTO_ICMPV6)) {
 				err = handle_nsol(raw_buff, len, data,&len,lsi);
 				if (err)
-					continue;
+					//continue;
+					return;
 #ifdef __WIN32__
 				if (!WriteFile(tapfd, data, len, &lenin, 
 							&overlapped)){
-					printf( "hip_esp_output WriteFile() " \
+					HIP_DEBUG( "hip_esp_output WriteFile() " \
 						"failed.\n");
 				}
 #else
 				if (write(tapfd, data, len) < 0) {
-					printf( "hip_esp_output write() " \
+					HIP_DEBUG( "hip_esp_output write() " \
 						"failed.\n");
 				}
 #endif
-				continue;
+				//continue;
+				return;
 			} else if (!IS_HIT(&ip6h->ip6_dst)) {
-				continue;
+				// continue;
+				return;
 			}
 			/* HIT prefix */
 			lsi->sa_family = AF_INET6;
@@ -659,7 +683,8 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi)
 				 * already, i.e. a new lsi_entry was created */
 				if (buffer_packet(lsi, raw_buff, len)==TRUE)
 					pfkey_send_acquire(lsi);
-				continue;
+				//continue;
+				return;
 			} 
 			raw_len = len;
 			pthread_mutex_lock(&entry->rw_lock);
@@ -677,7 +702,7 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi)
 					SA(&entry->dst_addrs->addr), 
 					SALEN(&entry->dst_addrs->addr));
 			if (err < 0) {
-				printf("hip_esp_output IPv6 sendto() failed:"
+				HIP_DEBUG("hip_esp_output IPv6 sendto() failed:"
 					" %s\n",strerror(errno));
 			} else {
 				pthread_mutex_lock(&entry->rw_lock);
@@ -692,27 +717,29 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi)
 		} else if ((raw_buff[12] == 0x08) && (raw_buff[13] == 0x06)) {
 			err = handle_arp(raw_buff, len, data, &len, lsi);
 			if (err)
-				continue;
+				//continue;
+				return;
 #ifdef __WIN32__
 			if (!WriteFile(tapfd, data, len, &lenin, &overlapped)){
-				printf("hip_esp_output WriteFile() failed.\n");
+				HIP_DEBUG("hip_esp_output WriteFile() failed.\n");
 			}
 #else
 			if (write(tapfd, data, len) < 0) {
-				printf("hip_esp_output write() failed.\n");
+				HIP_DEBUG("hip_esp_output write() failed.\n");
 			}
 #endif
 			/* Why send acquire during ARP? */
 			/*if (!hip_sadb_lookup_addr(lsi))
 				pfkey_send_acquire(lsi);*/
-			continue;
+			// continue;
+			return;
 		} else {
 			/* debug other eth headers here */
 			/*int i;
-			printf("<unknown traffic> (len=%d)\n", len);
+			HIP_DEBUG("<unknown traffic> (len=%d)\n", len);
 			for (i = 0; i < len; i++)
-				printf("%x", raw_buff[i] & 0xFF);
-			printf("\n");*/
+				HIP_DEBUG("%x", raw_buff[i] & 0xFF);
+			HIP_DEBUG("\n");*/
 			
 		}
 	
@@ -727,7 +754,7 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi)
 	write(tapfd, data, len);
 	close(tapfd);
 #endif
-	printf("hip_esp_output() thread shutdown.\n");
+	HIP_DEBUG("hip_esp_output() thread shutdown.\n");
 	fflush(stdout);
 	tunreader_shutdown();
 #ifndef __WIN32__
@@ -770,7 +797,7 @@ void *hip_esp_input(void *arg)
 #endif
 	g_read_usec = 1000000;
 	
-	printf("hip_esp_input() thread started...\n");
+	HIP_DEBUG("hip_esp_input() thread started...\n");
 	lsi->sa_family = AF_INET;
 	get_preferred_lsi(lsi);
 	g_tap_lsi = LSI4(lsi);
@@ -796,12 +823,12 @@ void *hip_esp_input(void *arg)
 #ifdef __WIN32__
 			if (WSAGetLastError() == WSAEINTR)
 				continue;
-			printf("hip_esp_input(): select() error %d\n",
+			HIP_DEBUG("hip_esp_input(): select() error %d\n",
 			       WSAGetLastError());
 #else
 			if (errno == EINTR)
 				continue;
-			printf("hip_esp_input(): select() error %s\n",
+			HIP_DEBUG("hip_esp_input(): select() error %s\n",
 			       strerror(errno));
 #endif
 		} else if (FD_ISSET(s_esp, &fd)) {
@@ -815,7 +842,7 @@ void *hip_esp_input(void *arg)
 			spi 	= ntohl(esph->spi);
 			seq_no 	= ntohl(esph->seq_no);
 			if (!(entry = hip_sadb_lookup_spi(spi))) {
-				/*printf("Warning: SA not found for SPI 0x%x\n",
+				/*HIP_DEBUG("Warning: SA not found for SPI 0x%x\n",
 					spi);*/
 				continue;
 			}
@@ -830,12 +857,12 @@ void *hip_esp_input(void *arg)
 #ifdef __WIN32__
 			if (!WriteFile(tapfd, &data[offset], len, &lenin,
 					&overlapped)){
-				printf("hip_esp_input() WriteFile() failed.\n");
+				HIP_DEBUG("hip_esp_input() WriteFile() failed.\n");
 				continue;
 			}
 #else
 			if (write(tapfd, &data[offset], len) < 0) {
-				printf("hip_esp_input() write() failed.\n");
+				HIP_DEBUG("hip_esp_input() write() failed.\n");
 			}
 #endif
 		} else if (FD_ISSET(s_esp_udp, &fd)) {
@@ -853,13 +880,13 @@ void *hip_esp_input(void *arg)
 
 			if (((int)(len - sizeof(struct ip) - sizeof(udphdr)) ==
 				1) && (((__u8*)esph)[0] == 0xFF)) {
-				printf ("Keepalive packet received.\n");
+				HIP_DEBUG ("Keepalive packet received.\n");
 				continue;
 			}
 			spi 	= ntohl(esph->spi);
 			seq_no 	= ntohl(esph->seq_no);
 			if (!(entry = hip_sadb_lookup_spi(spi))) {
-				/*printf("Warning: SA not found for SPI 0x%x\n",
+				/*HIP_DEBUG("Warning: SA not found for SPI 0x%x\n",
 					spi);*/
 				continue;
 			}
@@ -869,14 +896,14 @@ void *hip_esp_input(void *arg)
 
 			if (!(inverse_entry = hip_sadb_lookup_addr(
 				SA( &(entry->inner_src_addrs->addr) )))) {
-				printf ("Corresponding sadb entry for "
+				HIP_DEBUG ("Corresponding sadb entry for "
 					"outgoing packets not found.\n");
 				continue;
 			}
-			/*printf ( "DST_PORT = %u\n", 
+			/*HIP_DEBUG ( "DST_PORT = %u\n", 
 			 * inverse_entry->dst_port);*/
 			if (inverse_entry->dst_port == 0) {
-				printf ("ESP channel - Setting dst_port "
+				HIP_DEBUG ("ESP channel - Setting dst_port "
 					"to %u\n",ntohs(udph->src_port));
 				inverse_entry->dst_port = ntohs(udph->src_port);
 			}
@@ -889,11 +916,11 @@ void *hip_esp_input(void *arg)
 				continue;
 
 			if (len==35 && data[34]==0xFF) {
-				printf ("Reception of udp-tunnel activation "
+				HIP_DEBUG ("Reception of udp-tunnel activation "
 					"packet for spi:0x%x.\n",
 					inverse_entry->spi);
 				if (ntohs(udph->src_port) != 0) {
-					printf ("ESP channel : Updating "
+					HIP_DEBUG ("ESP channel : Updating "
 						"dst_port: %u=>%u.\n",
 						inverse_entry->dst_port,
 						ntohs(udph->src_port));
@@ -903,7 +930,7 @@ void *hip_esp_input(void *arg)
 				continue;
 			}
 			if (inverse_entry->dst_port != ntohs(udph->src_port)) {
-				printf ("ESP channel : unexpected change of "
+				HIP_DEBUG ("ESP channel : unexpected change of "
 					"dst_port : %u=>%u\n",
 					inverse_entry->dst_port,
 					ntohs( udph->src_port ));
@@ -913,12 +940,12 @@ void *hip_esp_input(void *arg)
 #ifdef __WIN32__
 			if (!WriteFile(tapfd, &data[offset], len, &lenin, 
 				&overlapped)){
-				printf("hip_esp_input() WriteFile() failed.\n");
+				HIP_DEBUG("hip_esp_input() WriteFile() failed.\n");
 				continue;
 			}
 #else
 			if (write(tapfd, &data[offset], len) < 0) {
-				printf("hip_esp_input() write() failed.\n");
+				HIP_DEBUG("hip_esp_input() write() failed.\n");
 			}
 #endif
 
@@ -927,13 +954,13 @@ void *hip_esp_input(void *arg)
 			len = read(s_esp6, buff, sizeof(buff));
 			/* there is no IPv6 header supplied */
 #ifdef DEBUG_EVERY_PACKET
-			fprintf(debugfp, "read() %d bytes\n", len);
+			fHIP_DEBUG(debugfp, "read() %d bytes\n", len);
 #endif
 			esph = (struct ip_esp_hdr *) &buff[0];
 			spi 	= ntohl(esph->spi);
 			seq_no 	= ntohl(esph->seq_no);
 			if (!(entry = hip_sadb_lookup_spi(spi))) {
-				printf("Warning: SA not found for SPI 0x%x\n",
+				HIP_DEBUG("Warning: SA not found for SPI 0x%x\n",
 					spi);
 				continue;
 			}
@@ -944,7 +971,7 @@ void *hip_esp_input(void *arg)
 			if (err)
 				continue;
 			if (write(tapfd, &data[offset], len) < 0) {
-				printf("hip_esp_input() write() failed.\n");
+				HIP_DEBUG("hip_esp_input() write() failed.\n");
 			}
 #endif /* !__WIN32__ */
 		} else if (err == 0) {
@@ -955,7 +982,7 @@ void *hip_esp_input(void *arg)
 		}
 	}
 
-	printf("hip_esp_input() thread shutdown.\n");
+	HIP_DEBUG("hip_esp_input() thread shutdown.\n");
 	fflush(stdout);
 #ifndef __WIN32__
 	pthread_exit((void *) 0);
@@ -977,7 +1004,7 @@ void *udp_esp_keepalive (void *arg) {
 	__u8 *data;
 	
 
-	printf("udp_esp_keepalive() thread started...\n");
+	HIP_DEBUG("udp_esp_keepalive() thread started...\n");
 
 	memset(buff,0,sizeof(buff));
 	udph = (udphdr*) buff;
@@ -995,21 +1022,21 @@ void *udp_esp_keepalive (void *arg) {
 				entry && entry->sadb_entry; 
 				entry=entry->next	) {
 				if (entry->sadb_entry->mode != 3) {
-					/*printf ("Keepalive test for non-"
+					/*HIP_DEBUG ("Keepalive test for non-"
 					 * 	"BEET-mode entry.\n");*/
 					continue;
 				}
 				if (entry->sadb_entry->direction != 2) {
-					/*printf ("Keepalive test for non-"
+					/*HIP_DEBUG ("Keepalive test for non-"
 					 * 	"outgoing entry.\n");*/
 					continue;
 				}
 				if (entry->sadb_entry->dst_port == 0) {
-					/*printf("Keepalive test : bad "
+					/*HIP_DEBUG("Keepalive test : bad "
 					 * "dst_port.\n"); */
 					continue;
 				}
-				/*printf ("Keepalive test for BEET-mode "
+				/*HIP_DEBUG ("Keepalive test for BEET-mode "
 				 * 	"outgoing entry.\n");*/
 				/* XXX TODO: clean this up */
 				if (entry->sadb_entry->usetime_ka.tv_sec + 
@@ -1019,10 +1046,10 @@ void *udp_esp_keepalive (void *arg) {
 						(struct sockaddr*)&entry->sadb_entry->dst_addrs->addr,
 						SALEN(&entry->sadb_entry->dst_addrs->addr));
 					if (err < 0) {
-						printf("Keepalive sendto() failed: %s\n",
+						HIP_DEBUG("Keepalive sendto() failed: %s\n",
 							strerror(errno));
 					} else {
-						/*printf("Keepalive sent.\n");*/
+						/*HIP_DEBUG("Keepalive sent.\n");*/
 						entry->sadb_entry->bytes += sizeof(struct ip) + err;
 						entry->sadb_entry->usetime_ka.tv_sec = now.tv_sec;
 						entry->sadb_entry->usetime_ka.tv_usec = now.tv_usec;
@@ -1033,7 +1060,7 @@ void *udp_esp_keepalive (void *arg) {
 		}
 		hip_sleep(1);
 	}
-	printf("udp_esp_keepalive() thread shutdown.\n");
+	HIP_DEBUG("udp_esp_keepalive() thread shutdown.\n");
 #ifndef __WIN32__
 	pthread_exit((void *) 0);
 	return (NULL);
@@ -1047,7 +1074,7 @@ void reset_sadbentry_udp_port (__u32 spi_out)
 	entry = hip_sadb_lookup_spi (spi_out);
 	if (entry) {
 		entry->dst_port = 0;
-		printf ("SADB-entry dst_port reset for spi: 0x%x.\n",spi_out);
+		HIP_DEBUG ("SADB-entry dst_port reset for spi: 0x%x.\n",spi_out);
 	}
 }
 */
@@ -1105,7 +1132,7 @@ int send_udp_esp_tunnel_activation (__u32 spi_out)
 					&len, entry, &now);
 		pthread_mutex_unlock(&entry->rw_lock);
 		if (err) {
-			printf ("Error in send_udp_esp_tunnel_activation(). "
+			HIP_DEBUG ("Error in send_udp_esp_tunnel_activation(). "
 				"hip_esp_encrypt failed.\n");
 			return (-1);
 		}
@@ -1113,12 +1140,12 @@ int send_udp_esp_tunnel_activation (__u32 spi_out)
 			(struct sockaddr*)&entry->dst_addrs->addr,
 			SALEN(&entry->dst_addrs->addr));
 		if (err < 0) {
-			printf("send_udp_esp_tunnel_activation sendto() "
+			HIP_DEBUG("send_udp_esp_tunnel_activation sendto() "
 				"failed: %s\n",
 				strerror(errno));
 			return (-1);
 		} else {
-			printf("send_udp_esp_tunnel_activation packet sent.\n");
+			HIP_DEBUG("send_udp_esp_tunnel_activation packet sent.\n");
 			entry->bytes += sizeof(struct ip) + err;
 			entry->usetime_ka.tv_sec = now.tv_sec;
 			entry->usetime_ka.tv_usec = now.tv_usec;
@@ -1139,7 +1166,7 @@ void tunreader(void *arg)
 	OVERLAPPED overlapped;
 	int status;
 
-	printf("tunreader() thread started...\n");
+	HIP_DEBUG("tunreader() thread started...\n");
 
 	init_readsp();
 	overlapped.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
@@ -1161,16 +1188,16 @@ void tunreader(void *arg)
 				}
 			} else {
 				/* other error, don't exit */
-				printf("tunreader(): error (%d) reading from ",
+				HIP_DEBUG("tunreader(): error (%d) reading from ",
 				    (int)GetLastError());
-				printf("tun device.\n");
+				HIP_DEBUG("tun device.\n");
 				continue;
 			}
 		}
 		send(readsp[0], buf, len, 0);
 	}
 	CloseHandle(tapfd);
-	printf("tunreader() thread shutdown.\n");
+	HIP_DEBUG("tunreader() thread shutdown.\n");
 	fflush(stdout);
 }
 
@@ -1184,7 +1211,7 @@ void *tunreader(void *arg)
 	struct timeval timeout;
 	fd_set read_fdset;
 	
-	printf("tunreader() thread started (%d)...\n", tapfd);
+	HIP_DEBUG("tunreader() thread started (%d)...\n", tapfd);
 
 	init_readsp();
 	while (g_state == 0) {
@@ -1196,15 +1223,15 @@ void *tunreader(void *arg)
 				  NULL, NULL, &timeout) < 0)) {
 			if (err == EINTR) 
 				continue;
-			printf("tunreader: error while reading from tun ");
-			printf("device: %s\n", strerror(errno));
+			HIP_DEBUG("tunreader: error while reading from tun ");
+			HIP_DEBUG("device: %s\n", strerror(errno));
 			fflush(stdout);
 			return 0;
 		} else if (FD_ISSET(tapfd, &read_fdset)) {
 			if ((len = read(tapfd, buf, BUFF_LEN)) > 0) {
 				write(readsp[0], buf, len);
 			} else {
-				printf("tunreader: read() error len=%d %s\n",
+				HIP_DEBUG("tunreader: read() error len=%d %s\n",
 					len, strerror(errno));
 				continue;
 			}
@@ -1214,7 +1241,7 @@ void *tunreader(void *arg)
 		}
 	}
 	close(tapfd);
-	printf("tunreader thread shutdown.\n");
+	HIP_DEBUG("tunreader thread shutdown.\n");
 	fflush(stdout);
 	pthread_exit((void *) 0);
 	return(NULL);
@@ -1460,7 +1487,7 @@ void handle_broadcasts(__u8 *data, int len)
 	setsockopt(s, SOL_SOCKET, SO_BROADCAST, &val, sizeof(val));
 	if (sendto(s, &data[34], len, 0, 
 	    (struct sockaddr *)&to, sizeof(to)) < 0) {
-		printf("broadcast sendto() failed: proto=%d len=%d err:%s\n",
+		HIP_DEBUG("broadcast sendto() failed: proto=%d len=%d err:%s\n",
 			proto, len, strerror(errno));
 	}
 	close(s);
@@ -1547,14 +1574,14 @@ int hip_esp_encrypt(__u8 *in, int len, __u8 *out, int *outlen,
 	case SADB_EALG_3DESCBC:
 		iv_len = 8;
 		if (!entry->e_key || entry->e_keylen==0) {
-			printf("hip_esp_encrypt: 3-DES key missing.\n");
+			HIP_DEBUG("hip_esp_encrypt: 3-DES key missing.\n");
 			return(-1);
 		}
 		break;
 	case SADB_X_EALG_BLOWFISHCBC:
 		iv_len = 8;
 		if (!entry->bf_key) {
-			printf("hip_esp_encrypt: BLOWFISH key missing.\n");
+			HIP_DEBUG("hip_esp_encrypt: BLOWFISH key missing.\n");
 			return(-1);
 		}
 		break;
@@ -1567,10 +1594,10 @@ int hip_esp_encrypt(__u8 *in, int len, __u8 *out, int *outlen,
 			entry->aes_key = malloc(sizeof(AES_KEY));
 			if (AES_set_encrypt_key(entry->e_key, 8*entry->e_keylen,
 						entry->aes_key)) {
-				printf("hip_esp_encrypt: AES key problem!\n");
+				HIP_DEBUG("hip_esp_encrypt: AES key problem!\n");
 			}
 		} else if (!entry->aes_key) {
-			printf("hip_esp_encrypt: AES key missing.\n");
+			HIP_DEBUG("hip_esp_encrypt: AES key missing.\n");
 			return(-1);
 		}
 		break;
@@ -1580,7 +1607,7 @@ int hip_esp_encrypt(__u8 *in, int len, __u8 *out, int *outlen,
 	case SADB_X_EALG_SERPENTCBC:
 	case SADB_X_EALG_TWOFISHCBC:
 	default:
-		printf("Unsupported encryption transform (%d).\n",
+		HIP_DEBUG("Unsupported encryption transform (%d).\n",
 			entry->e_type);
 		return(-1);
 		break;
@@ -1642,7 +1669,7 @@ int hip_esp_encrypt(__u8 *in, int len, __u8 *out, int *outlen,
 	case SADB_AALG_MD5HMAC:
 		alen = HMAC_SHA_96_BITS / 8; /* 12 bytes */
 		if (!entry->a_key || entry->a_keylen==0) {
-			printf("auth err: missing keys\n");
+			HIP_DEBUG("auth err: missing keys\n");
 			return(-1);
 		}
 		elen += sizeof(struct ip_esp_hdr);
@@ -1655,7 +1682,7 @@ int hip_esp_encrypt(__u8 *in, int len, __u8 *out, int *outlen,
 	case SADB_AALG_SHA1HMAC:
 		alen = HMAC_SHA_96_BITS / 8; /* 12 bytes */
 		if (!entry->a_key || entry->a_keylen==0) {
-			printf("auth err: missing keys\n");
+			HIP_DEBUG("auth err: missing keys\n");
 			return(-1);
 		}
 		elen += sizeof(struct ip_esp_hdr);
@@ -1706,7 +1733,7 @@ int hip_esp_encrypt(__u8 *in, int len, __u8 *out, int *outlen,
 				(__u8)(iph ? iph->ip_p : ip6h->ip6_nxt), 
 				iph ? (__u8*)(iph+1) : (__u8*)(ip6h+1),
 				family, 0, now	) < 0)
-		printf("hip_esp_encrypt(): error adding sel entry.\n");
+		HIP_DEBUG("hip_esp_encrypt(): error adding sel entry.\n");
 
 
 	/* Restore the checksum in the input data, in case this is
@@ -1733,7 +1760,7 @@ int hip_esp_encrypt(__u8 *in, int len, __u8 *out, int *outlen,
 		memset (udph, 0, sizeof(udphdr));
 		udph->src_port = htons(HIP_ESP_UDP_PORT);
 		if ( (udph->dst_port = htons(entry->dst_port))==0) {
-			printf ("ESP encrypt : bad UDP dst port number (%u).\n",
+			HIP_DEBUG ("ESP encrypt : bad UDP dst port number (%u).\n",
 				entry->dst_port);
 		}
 		udph->len = htons ((__u16)*outlen);
@@ -1755,12 +1782,12 @@ void print_sadb()
 	for (i=0; i < SADB_SIZE; i++) {
 		for (	entry = &hip_sadb[i]; entry && entry->spi; 
 				entry=entry->next ) {
-			printf("entry(%d): ", i);
-			printf("SPI=0x%x dir=%d magic=0x%x mode=%d lsi=%x ",
+			HIP_DEBUG("entry(%d): ", i);
+			HIP_DEBUG("SPI=0x%x dir=%d magic=0x%x mode=%d lsi=%x ",
 				entry->spi, entry->direction, entry->hit_magic,
 				entry->mode, 
 				((struct sockaddr_in*)&entry->lsi)->sin_addr.s_addr);
-			printf("lsi6= a_type=%d e_type=%d a_keylen=%d "
+			HIP_DEBUG("lsi6= a_type=%d e_type=%d a_keylen=%d "
 				"e_keylen=%d lifetime=%llu seq=%d\n",
 				entry->a_type, entry->e_type,
 				entry->a_keylen, entry->e_keylen,
@@ -1842,14 +1869,14 @@ int hip_esp_decrypt(__u8 *in, int len, __u8 *out, int *offset, int *outlen,
 		if (use_udp) /* HIP_ESP_OVER_UDP */
 			elen -= sizeof(udphdr);
 		if (!entry->a_key || entry->a_keylen==0) {
-			printf("auth err: missing keys\n");
+			HIP_DEBUG("auth err: missing keys\n");
 			return(-1);
 		}
 		HMAC(	EVP_md5(), entry->a_key, entry->a_keylen, 
 			(__u8*)esp, elen + sizeof(struct ip_esp_hdr),
 			hmac_md, &hmac_md_len);
 		if (memcmp(&in[len - alen], hmac_md, alen) != 0) {
-			printf("auth err: MD5 auth failure\n");
+			HIP_DEBUG("auth err: MD5 auth failure\n");
 			return(-1);
 		}
 		break;
@@ -1861,7 +1888,7 @@ int hip_esp_decrypt(__u8 *in, int len, __u8 *out, int *offset, int *outlen,
 		if (use_udp) /* HIP_ESP_OVER_UDP */
 			elen -= sizeof(udphdr);
 		if (!entry->a_key || entry->a_keylen==0) {
-			printf("auth err: missing keys\n");
+			HIP_DEBUG("auth err: missing keys\n");
 			return(-1);
 		}
 #ifdef DEBUG_EVERY_PACKET
@@ -1904,7 +1931,7 @@ int hip_esp_decrypt(__u8 *in, int len, __u8 *out, int *offset, int *outlen,
 		}
 #endif /* DEBUG_EVERY_PACKET */
 		if (memcmp(&in[len - alen], hmac_md, alen) !=0) {
-			printf("auth err: SHA1 auth failure SPI=0x%x\n", 
+			HIP_DEBUG("auth err: SHA1 auth failure SPI=0x%x\n", 
 				entry->spi);
 			return(-1);
 		}
@@ -1926,14 +1953,14 @@ int hip_esp_decrypt(__u8 *in, int len, __u8 *out, int *offset, int *outlen,
 	case SADB_EALG_3DESCBC:
 		iv_len = 8;
 		if (!entry->e_key || entry->e_keylen==0) {
-			printf("hip_esp_decrypt: 3-DES key missing.\n");
+			HIP_DEBUG("hip_esp_decrypt: 3-DES key missing.\n");
 			return(-1);
 		}
 		break;
 	case SADB_X_EALG_BLOWFISHCBC:
 		iv_len = 8;
 		if (!entry->bf_key) {
-			printf("hip_esp_decrypt: BLOWFISH key missing.\n");
+			HIP_DEBUG("hip_esp_decrypt: BLOWFISH key missing.\n");
 			return(-1);
 		}
 		break;
@@ -1946,10 +1973,10 @@ int hip_esp_decrypt(__u8 *in, int len, __u8 *out, int *offset, int *outlen,
 			entry->aes_key = malloc(sizeof(AES_KEY));
 			if (AES_set_decrypt_key(entry->e_key, 8*entry->e_keylen,
 						entry->aes_key)) {
-				printf("hip_esp_decrypt: AES key problem!\n");
+				HIP_DEBUG("hip_esp_decrypt: AES key problem!\n");
 			}
 		} else if (!entry->aes_key) {
-			printf("hip_esp_decrypt: AES key missing.\n");
+			HIP_DEBUG("hip_esp_decrypt: AES key missing.\n");
 			return(-1);
 		}
 		break;
@@ -1959,7 +1986,7 @@ int hip_esp_decrypt(__u8 *in, int len, __u8 *out, int *offset, int *outlen,
 	case SADB_X_EALG_SERPENTCBC:
 	case SADB_X_EALG_TWOFISHCBC:
 	default:
-		printf("Unsupported decryption algorithm (%d)\n", 
+		HIP_DEBUG("Unsupported decryption algorithm (%d)\n", 
 			entry->e_type);
 		break;
 	}

@@ -61,10 +61,13 @@ void firewall_close(int signal);
 void firewall_exit();
 void firewall_probe_kernel_modules();
 
+
 void hip_firewall_userspace_ipsec_output(struct ipq_handle *handle,
-					 unsigned long packetId,
-					 void *hdr,
-					 int trafficType);
+					 unsigned long	    packetId,
+					 void		   *hdr,
+					 int		    trafficType,
+					 ipq_packet_msg_t *ip_packet_in_the_queue);
+
 
 void hip_firewall_userspace_ipsec_input();
 

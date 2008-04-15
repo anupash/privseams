@@ -1046,20 +1046,24 @@ int filter_hip(const struct in6_addr * ip6_src,
  **/
 
 void hip_firewall_userspace_ipsec_output(struct ipq_handle *handle,
-					 unsigned long packetId,
-					 void *hdr,
-					 int trafficType)
+					 unsigned long	    packetId,
+					 void		   *hdr,
+					 int		    trafficType,
+					 ipq_packet_msg_t *ip_packet_in_the_queue)
 {
 	
 // parse the peer HIT from arguments
 
-
-	int i, optLen, hdr_size, optionsLen;
+	int ipv6_hdr_size = 0;
+	int tcp_hdr_size = 0;
+	int length_of_packet = 0;
+        int i, optLen, hdr_size, optionsLen;
 	char 	       *hdrBytes = NULL;
 	struct tcphdr  *tcphdr;
 	struct ip      *iphdr;
 	struct ip6_hdr *ip6_hdr;
-	//fields for temporary values
+	
+        //fields for temporary values
 	// u_int16_t       portTemp;
 	// struct in_addr  addrTemp;
 	// struct in6_addr addr6Temp;
@@ -1079,10 +1083,6 @@ void hip_firewall_userspace_ipsec_output(struct ipq_handle *handle,
 	struct hip_common *msg = NULL;
 	
 	int err = 0;
-	
-
-	
-	
 
 	HIP_DEBUG("Try to get peer_hit\n");
 
@@ -1101,17 +1101,51 @@ void hip_firewall_userspace_ipsec_output(struct ipq_handle *handle,
 		HIP_DEBUG_INADDR("the dst", &iphdr->ip_dst);
 		
 		//peer and local ip needed for sending the i1 through hipd
-		IPV4_TO_IPV6_MAP(&iphdr->ip_src, &peer_ip); //TO  BE FIXED obtain the pseudo hit instead
-	}
+		//IPV4_TO_IPV6_MAP(&iphdr->ip_src, &peer_ip); //TO  BE FIXED obtain the pseudo hit instead
+	
+		/* To be fixed, Need LSI support */
+
+}
 	else if(trafficType == 6){
 		ip6_hdr = (struct ip6_hdr *)hdr;
-		//get the tcp header		
+		
+		ipv6_hdr_size = sizeof(struct ip6_hdr);
+		tcp_hdr_size = sizeof(struct tcphdr);
+
+		
+		if(ip_packet_in_the_queue->data_len >= 
+		   (ipv6_hdr_size + tcp_hdr_size)) 
+		{
+		   
+		   length_of_packet = ip_packet_in_the_queue->data_len;
+		   HIP_DEBUG("length of packet is %d \n", length_of_packet);
+		   _HIP_DEBUG("ipv6 header size  is %d \n", ipv6_hdr_size);
+		   _HIP_DEBUG("tcp header size is %d \n", tcp_hdr_size);
+		   
+		}
+
+		_HIP_HEXDUMP("whole packet content:", 
+			    &ip_packet_in_the_queue->payload, 
+			    ip_packet_in_the_queue->data_len);
+		
+		_HIP_HEXDUMP("whole packet content:", 
+			    ip6_hdr, 
+			    ip_packet_in_the_queue->data_len);
+		
+		 
+	 		
+                 //get the tcp header		
 		hdr_size = (ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen * 4);
 		tcphdr = ((struct tcphdr *) (((char *) ip6_hdr) + hdr_size));
 		hdrBytes = ((char *) ip6_hdr) + hdr_size;
 		
-		//peer and local ip needed for sending the i1 through hipd
+	
+		
+                //peer and local ip needed for sending the i1 through hipd
 		//peer_ip = &ip6_hdr->ip6_src;//TO  BE FIXED obtain the pseudo hit instead
+		
+		
+
 		ipv6_addr_copy(&peer_hit, &ip6_hdr->ip6_dst);
 	}
 	
@@ -1126,37 +1160,50 @@ void hip_firewall_userspace_ipsec_output(struct ipq_handle *handle,
 
 	hip_addr_to_sockaddr(&peer_hit, &ipv6_addr_to_sockaddr_hit);     
 
+
+	HIP_DEBUG_SOCKADDR("ipv6_addr_to_sockaddr_hit value is :", &ipv6_addr_to_sockaddr_hit);
+
+	
+	HIP_DEBUG("Can hip_sadb_lookup_addr() find hip_sadb_entry? : %s\n",
+		hip_sadb_lookup_addr(&ipv6_addr_to_sockaddr_hit) ? "YES" : "NO");
 	
 
 	if (hip_sadb_lookup_addr(&ipv6_addr_to_sockaddr_hit) == NULL) {
 		
 		HIP_DEBUG("pfkey send acquire........\n");
 		pfkey_send_acquire(&ipv6_addr_to_sockaddr_hit);
-
+		
 	} else {
 		// TAO XX FIXME: READ LOCAL HIT AND PASS IT AS SOCKADDR STRUCTURE
 		// TO hip_esp_output
-		
+	
 		//hip_esp_traffic_userspace_handler(&hip_esp_output_id, 
 		//				     hip_esp_output, 
 		//				  NULL);
+	
+	
+		HIP_DEBUG("Sending esp output......");
 	
 		HIP_IFE(!(msg = hip_msg_alloc()), -1);
 		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEFAULT_HIT,0),-1,
 			 "Fail to get hits");
 		HIP_IFEL(hip_send_recv_daemon_info(msg), -1,
 			 "send/recv daemon info\n");
-
-
+		
+		
 		defhit = hip_get_param_contents(msg, HIP_PARAM_HIT);
 		HIP_INFO_HIT("default hi is ",defhit);
 		
 		hip_addr_to_sockaddr(defhit, &sockaddr_local_default_hit);
 		
-		
-		hip_esp_output(&sockaddr_local_default_hit);
+		hip_esp_output(&sockaddr_local_default_hit, 
+			       ip6_hdr, length_of_packet); /* XX FIXME: LSI */
 	}
-
+	
+	HIP_DEBUG("Can hip_sadb_lookup_addr() find hip_sadb_entry? : %s\n",
+		  hip_sadb_lookup_addr(&ipv6_addr_to_sockaddr_hit) ? "YES" : "NO");
+	
+	
  out_err:
 	return;
 	
@@ -1307,13 +1354,15 @@ static void *handle_ip_traffic(void *ptr){
 			} else {
                                 /* OPPORTUNISTIC MODE HACKS */
 				if((ipv4Traffic && iphdr->ip_p != IPPROTO_TCP) ||
-				   (ipv6Traffic && ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt != IPPROTO_TCP)) {
+				   (ipv6Traffic && ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt != IPPROTO_TCP))
+				   /* ip6_un1_nxt ---> next header */
+					
+				{
 					if(accept_normal_traffic)
 						allow_packet(hndl, m->packet_id);
 					else
 						drop_packet(hndl, m->packet_id);
-				}  
-				else if(is_incoming_packet(packetHook)) {
+				}  else if(is_incoming_packet(packetHook)) {
 					if (hip_userspace_ipsec)
 					{
 						HIP_DEBUG("debug message: HIP firewall userspace ipsec input: \n ");
@@ -1326,12 +1375,30 @@ static void *handle_ip_traffic(void *ptr){
 
 				} else if(is_outgoing_packet(packetHook)) {
 					/*examine_outgoing_tcp_packet(hndl, m->packet_id, packet_hdr, type);*/
-					if (hip_userspace_ipsec /* && if (packet == IPv6 && hip_is_hit(dst && src)*/ )
+					
+					HIP_DEBUG("Is this a IPv6 packet: %s\n",
+						  ipv6Traffic ? "YES" : "NO");
+
+					HIP_DEBUG("Is src_addr a HIT: %s\n",
+						  ipv6_addr_is_hit(src_addr) ? "YES" : "NO");
+
+					HIP_DEBUG("Is dst_addr a HIT: %s\n",
+						  ipv6_addr_is_hit(dst_addr) ? "YES" : "NO");
+
+					HIP_DEBUG_IN6ADDR("src addr :\n", src_addr);
+					HIP_DEBUG_IN6ADDR("dst addr  :\n", dst_addr);
+					
+
+
+					
+					if (hip_userspace_ipsec  &&  ipv6Traffic == 1 
+					    && ipv6_addr_is_hit(src_addr) && ipv6_addr_is_hit(dst_addr)) /* && if (packet == IPv6 && hip_is_hit(dst && src)*/ 
 						{
 							HIP_DEBUG("debug message: HIP firewall userspace ipsec output: \n ");
 							// hip_firewall_userspace_ipsec_input(); /* added by Tao Wan */
 							// XX FIXME: 
-							hip_firewall_userspace_ipsec_output(hndl, m->packet_id, packet_hdr, type); /*added by Tao Wan */
+							hip_firewall_userspace_ipsec_output(hndl, m->packet_id, packet_hdr, type, m); /*added by Tao Wan */
+							
 						}
 					else
 						allow_packet(hndl, m->packet_id);

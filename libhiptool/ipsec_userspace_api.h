@@ -32,11 +32,11 @@ typedef __u8 hip_hit [sizeof(hip_hit_t)];  /* 16-byte (128 bit) Host Identity Ta
 
 
 /* For wrapper the API of the usespace IPsec implementation */
-#define TYPE_USERSPACE_IPSEC 0
+#define TYPE_USERSPACE_IPSEC 0 /* Type is not used currently*/
 
 /* 0-default, 1-transport, 2-tunnel, 3 - beet */
 
-#define IPSEC_MODE 0  
+#define IPSEC_MODE 3  
 
 
 

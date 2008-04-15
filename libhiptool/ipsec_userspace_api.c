@@ -81,7 +81,8 @@ int hipl_userspace_ipsec_api_wrapper_sadb_add(struct in6_addr *saddr,
 	struct sockaddr_storage  inner_src, inner_dst; /*HIT address -- inner address*/
 	struct sockaddr_storage  src, dst; /* IP address*/
 	
-	
+	__u32 ipsec_spi = (__u32) *spi; /*IPsec SPI*/
+
 	__u32 ipsec_e_type = (__u32) ealg; /* encryption type */
 	__u32 ipsec_a_type = ipsec_e_type; /* authentication type is equal to encryption type */
 	
@@ -150,17 +151,10 @@ int hipl_userspace_ipsec_api_wrapper_sadb_add(struct in6_addr *saddr,
 	
 	/* Here just give a value 100 to lifetime*/
 
-	if (!already_acquired || *spi == 0) {
-		*spi = hip_userspace_ipsec_acquire_spi((hip_hit_t *) src_hit, 
-						       (hip_hit_t *) dst_hit);
+
+
+
 	
-		HIP_DEBUG("the random spi value is : %x \n", *spi);
-
-
-	}
-
-
-	__u32 ipsec_spi = (__u32) *spi; /*IPsec SPI*/
 	
 	
 	// Tao: check return argument
@@ -171,6 +165,9 @@ int hipl_userspace_ipsec_api_wrapper_sadb_add(struct in6_addr *saddr,
 	
 	// Tell firewall that HIT SRC + DST HAS A SECURITY ASSOCIATION
 
+
+
+	HIP_DEBUG("HIP IPsec userspace SA add return value %d\n", err);
 
 	if(err)
 	{
@@ -184,6 +181,7 @@ int hipl_userspace_ipsec_api_wrapper_sadb_add(struct in6_addr *saddr,
 	HIP_DEBUG(" HIP user space IPsec security sadb is done \n\n");
 
  out_err:
+	
 	return err;
 	
 
@@ -249,9 +247,16 @@ uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr,
 
 
 
+	if (!already_acquired || *spi == 0) {
+		*spi = hip_userspace_ipsec_acquire_spi((hip_hit_t *) src_hit, 
+						       (hip_hit_t *) dst_hit);
+		
+		HIP_DEBUG("the random spi value is : %x \n", *spi);
+		
+		
+	}	
 	
 	
-
 	
 	HIP_IFEL(hip_build_param_contents(msg, (void *)spi, HIP_PARAM_UINT,
 					  sizeof(unsigned int)), -1, "build param contents failed\n"); 
