@@ -970,11 +970,7 @@ int firewall_trigger_incoming_hit(ipq_packet_msg_t *m, struct in6_addr *ip_src, 
 		 HIP_DEBUG_LSI("******LSI_OUR: ", lsi_our);
 		 HIP_DEBUG_LSI("******LSI_PEER: ", lsi_peer);
 	         IPV4_TO_IPV6_MAP(lsi_our, &src_addr);
-	         IPV4_TO_IPV6_MAP(lsi_peer, &dst_addr);
-		 if (IN6_IS_ADDR_V4MAPPED(&src_addr))
-		   HIP_DEBUG("SDADSADADDDDDDDDDDDDDDDDD\n");
-		 HIP_DEBUG_IN6ADDR("******LSI_OUR IPV6: ", &src_addr);
-		 HIP_DEBUG_IN6ADDR("******LSI_PEER IPV6: ", &dst_addr);
+	         IPV4_TO_IPV6_MAP(lsi_peer, &dst_addr);		 
 	         reinject_packet(src_addr, dst_addr, m, 6);
         }
 	return err;
