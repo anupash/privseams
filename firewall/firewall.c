@@ -249,7 +249,7 @@ int is_hip_packet(void * hdr, int trafficType){
 
 	if(trafficType == 4){
 		struct ip * iphdr = (struct ip *)hdr;
-		HIP_DEBUG("Packet header type: %d\n",iphdr->ip_p);
+		_HIP_DEBUG("Packet header type: %d\n",iphdr->ip_p);
 		if(iphdr->ip_p == IPPROTO_HIP) 
 			return 1;
 		if(iphdr->ip_p != IPPROTO_UDP)
@@ -609,6 +609,15 @@ int filter_esp(const struct in6_addr * dst_addr,
 }
 
 
+int bex_traffic(hip_hdr_type_t type_hdr){
+  if (type_hdr == HIP_I1 || type_hdr == HIP_R1 || 
+      type_hdr == HIP_I2 || type_hdr == HIP_R2 ||
+      type_hdr == HIP_UPDATE)
+    return 1;
+  else
+    return 0;
+}
+
 /* filter hip packet according to rules.
  * return verdict
  */
@@ -816,7 +825,7 @@ static void *handle_ip_traffic(void *ptr) {
 			struct ip * iphdr = NULL;
 			void * packet_hdr = NULL;
 			int hdr_size = 0;
-      			HIP_DEBUG("IPQM PACKET Detected!!\n");
+      			_HIP_DEBUG("IPQM PACKET Detected!!\n");
 			ipq_packet_msg_t *m = ipq_get_packet(buf);
 			packetHook = m->hook;
 
@@ -862,14 +871,13 @@ static void *handle_ip_traffic(void *ptr) {
 	  				_HIP_DEBUG("signature exists\n");
 
 				//HIP_DUMP_MSG(hip_common);
-				//allow_packet(hndl, m->packet_id);//test- barbaridad acceptar siempre todo
+				//allow_packet(hndl, m->packet_id);//
 				//filter mirar si esta en hadb o como regla
-				if(filter_hip(src_addr, 
-					      dst_addr, 
-					      hip_common, 
-					      m->hook,
-					      m->indev_name,
-					      m->outdev_name))
+
+				if(filter_hip(src_addr, dst_addr, 
+					      hip_common, m->hook,
+					      m->indev_name, m->outdev_name) || 
+				  	      bex_traffic(hip_get_msg_type(hip_common)))
 	  			{
 					allow_packet(hndl, m->packet_id);
 				}
