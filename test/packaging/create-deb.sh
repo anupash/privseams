@@ -108,7 +108,7 @@ init_files ()
         sed -i '$a\ldconfig\' $PKGDIR\/DEBIAN\/postinst
     fi
 
-    for f in control changelog copyright;do
+    for f in preinst control changelog copyright;do
 	cp $DEBIAN/$f "$PKGDIR/DEBIAN" 
     done
    
