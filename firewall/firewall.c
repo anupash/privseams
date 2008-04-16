@@ -1142,14 +1142,23 @@ static void *handle_ip_traffic(void *ptr){
 					      m->outdev_name))
 				{
 #ifdef CONFIG_HIP_MIDAUTH
+					/* only execute midauth code if the
+					 * user specified it on the
+					 * commandline */
+
 					if (use_midauth) {
 						struct midauth_packet p;
 						int size = 0, verdict = NF_ACCEPT;
 						unsigned char *ptr = NULL;
 
+						/* populate midauth_packet
+						 * with the specific data for
+						 * this packet */
+
 						p.hip_common = hip_common;
 						p.ip_version = type;
 						p.hdr_size = hdr_size;
+						p.hdr_length_adapted = 0;
 						if (filter_midauth(m, &p) == NF_DROP)
 							drop_packet(hndl, m->packet_id);
 						else {
@@ -1160,6 +1169,8 @@ static void *handle_ip_traffic(void *ptr){
 						}
 					}
 #else
+					/* proceed as usual if midauth is not
+					 * specified as a commandline parameter */
 					allow_packet(hndl, m->packet_id);
 #endif
 				}

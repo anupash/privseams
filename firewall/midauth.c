@@ -10,6 +10,7 @@
 
 #include "ife.h"
 #include "midauth.h"
+#include "pisa.h"
 #include <string.h>
 
 /**
@@ -152,15 +153,19 @@ static void update_hip_checksum_ipv6(struct ip6_hdr *ip)
 
 /**
  * Take care of adapting all headers in front of the HIP payload to the new
- * content. Call only once per packet, as it modifies the packet size to
- * include header length.
+ * content.
  *
  * @param p the modified midauth packet
  */
-static void update_all_headers(struct midauth_packet *p)
+void midauth_update_all_headers(struct midauth_packet *p)
 {
 	struct iphdr *ipv4 = NULL;
 	struct ip6_hdr *ipv6 = NULL;
+
+	/* Do not update the headers twice. It would break packet sizes */
+
+	if (p->hdr_length_adapted)
+		return;
 
 	switch (p->ip_version) {
 	case 4:
@@ -185,17 +190,12 @@ static void update_all_headers(struct midauth_packet *p)
 		          p->ip_version);
 		break;
 	}
+
+	p->hdr_length_adapted = 1;
 }
 
-/**
- * Check the correctness of a hip_solution_m
- *
- * @param hip the hip_common that contains the solution
- * @param s the solution to be checked
- * @return 0 if correct, nonzero otherwise
- */
-static int midauth_verify_solution_m(struct hip_common *hip,
-                                     struct hip_solution_m *s)
+int midauth_verify_solution_m(struct hip_common *hip,
+                              struct hip_solution_m *s)
 {
 	int err = 0;
 	struct hip_solution solution;
@@ -239,6 +239,8 @@ static int midauth_relocate_last_hip_parameter(struct hip_common *hip)
 	HIP_IFEL(len > sizeof(buffer), -1,
 	         "Last parameter's length exceeds HIP_MAX_PACKET\n");
 
+	/* @todo check for signature parameter to avoid broken packets */
+
 	memcpy(buffer, last, len);
 	i = NULL;
 
@@ -256,14 +258,7 @@ out_err:
 	return err;
 }
 
-/**
- * Insert an ECHO_REQUEST_M parameter into a HIP packet.
- *
- * @param p the modified packet
- * @param nonce the string to add
- * @return 
- */
-static int add_echo_request_m(struct hip_common *hip, char *nonce)
+int midauth_add_echo_request_m(struct hip_common *hip, char *nonce)
 {
 	int err = 0;
 
@@ -276,18 +271,8 @@ out_err:
 	return err;
 } 
 
-/**
- * Insert a PUZZLE_M parameter into a HIP packet.
- *
- * @param p the modified packet
- * @param val_K puzzle parameter val_K
- * @param lifetime puzzle parameter lifetime
- * @param opaque puzzle parameter opaque
- * @param random_i puzzle parameter random_i
- * @return 
- */
-static int add_puzzle_m(struct hip_common *hip, uint8_t val_K,
-                        uint8_t lifetime, uint8_t *opaque, uint64_t random_i)
+int midauth_add_puzzle_m(struct hip_common *hip, uint8_t val_K, uint8_t lifetime,
+                         uint8_t *opaque, uint64_t random_i)
 {
 	int err = 0;
 
@@ -301,7 +286,53 @@ out_err:
 }
 
 /**
- * Insert the nonce into the R1 packet.
+ * This is an example, how the functions can be employed to insert additional
+ * parameters into a packet
+
+static int filter_midauth_i2(ipq_packet_msg_t *m, struct midauth_packet *p)
+{
+	int verdict = NF_ACCEPT;
+	struct hip_common *hip = (struct hip_common *)(((char*)p->buffer) +
+	                         p->hdr_size);
+	struct hip_solution_m *solution;
+	char *nonce = "hello";
+
+	memcpy(p->buffer, m->payload, m->data_len);
+
+	solution = (struct hip_solution_m *)hip_get_param(hip, HIP_PARAM_SOLUTION_M);
+	if (solution) {
+		if (midauth_verify_solution_m(hip, solution) == 0)
+			HIP_DEBUG("found correct hip_solution_m\n");
+		else
+			HIP_DEBUG("found wrong hip_solution_m\n");
+	} else {
+		HIP_DEBUG("found no hip_solution_m\n");
+	}
+
+	add_echo_request_m(hip, nonce);
+	add_puzzle_m(hip, 1, 2, "i2i2i2", 0xAABBCCDDEEFFFFFFLL);
+
+	p->size = hip_get_msg_total_len(hip);
+	midauth_update_all_headers(p);
+
+	return verdict;
+}
+*/
+
+/**
+ * Handles I1 messages
+ *
+ * @param m the original packet
+ * @param p the modified packet
+ * @return the verdict, either NF_ACCEPT or NF_DROP
+ */
+static int filter_midauth_i1(ipq_packet_msg_t *m, struct midauth_packet *p)
+{
+	return filter_pisa_i1(m, p);
+}
+
+/**
+ * Handles R1 messages
  *
  * @param m the original packet
  * @param p the modified packet
@@ -309,35 +340,11 @@ out_err:
  */
 static int filter_midauth_r1(ipq_packet_msg_t *m, struct midauth_packet *p)
 {
-	int verdict = NF_ACCEPT;
-	struct hip_common *hip = (struct hip_common *)(((char*)p->buffer) +
-	                         p->hdr_size);
-	char *nonce1 = "abcedfgh";
-	char *nonce2 = "foobar";
-
-	/* start with a copy of the original packet */
-
-	memcpy(p->buffer, m->payload, m->data_len);
-
-	/* beware: black magic & dragons ahead */
-
-	add_echo_request_m(hip, nonce1);
-	add_puzzle_m(hip, 1, 2, "hello!", 0xFF00FF00FF00FF00LL);
-	add_echo_request_m(hip, nonce2);
-	add_puzzle_m(hip, 3, 4, "byebye", 0xDEADBEEFDEADBEEFLL);
-
-	/* no more dragons & black magic*/
-
-	p->size = hip_get_msg_total_len(hip);
-	update_all_headers(p);
-
-	hip_check_network_msg(hip);
-
-	return verdict;
+	return filter_pisa_r1(m, p);
 }
 
 /**
- * Insert the nonce into the I2 packet, check the nonce from the R1 packet.
+ * Handles I2 messages
  *
  * @param m the original packet
  * @param p the modified packet
@@ -345,40 +352,11 @@ static int filter_midauth_r1(ipq_packet_msg_t *m, struct midauth_packet *p)
  */
 static int filter_midauth_i2(ipq_packet_msg_t *m, struct midauth_packet *p)
 {
-	int verdict = NF_ACCEPT;
-	struct hip_common *hip = (struct hip_common *)(((char*)p->buffer) +
-	                         p->hdr_size);
-	struct hip_solution_m *solution;
-	char *nonce1 = "hello";
-	char *nonce2 = "world";
-
-	/* just copy it for testing */
-
-	memcpy(p->buffer, m->payload, m->data_len);
-
-	solution = (struct hip_solution_m *)hip_get_param(hip, HIP_PARAM_SOLUTION_M);
-	if (solution) {
-		if (midauth_verify_solution_m(hip, solution) == 0)
-			HIP_DEBUG("found correct hip_solution_m\n");
-		else
-			HIP_DEBUG("found wrong hip_solution_m\n");
-	} else {
-		HIP_DEBUG("found no hip_solution_m\n");
-	}
-
-	add_echo_request_m(hip, nonce1);
-	add_echo_request_m(hip, nonce2);
-	add_puzzle_m(hip, 1, 2, "i2i2i2", 0xAABBCCDDEEFFFFFFLL);
-	add_puzzle_m(hip, 3, 4, "I2I2I2", 0xABCDABCDABCDABCDLL);
-
-	p->size = hip_get_msg_total_len(hip);
-	update_all_headers(p);
-
-	return verdict;
+	return filter_pisa_i2(m, p);
 }
 
 /**
- * Check the nonce from the R2 packet.
+ * Handles R2 messages
  *
  * @param m the original packet
  * @param p the modified packet
@@ -386,31 +364,11 @@ static int filter_midauth_i2(ipq_packet_msg_t *m, struct midauth_packet *p)
  */
 static int filter_midauth_r2(ipq_packet_msg_t *m, struct midauth_packet *p)
 {
-	int verdict = NF_ACCEPT;
-	struct hip_common *hip = (struct hip_common *)(((char*)p->buffer) +
-	                         p->hdr_size);
-	struct hip_solution_m *solution;
-
-	/* don't copy here, packet will not be modified anyway */
-	memcpy(p->buffer, m->payload, m->data_len);
-
-	/* check for ECHO_REPLY_M and SOLUTION_M here */
-	solution = (struct hip_solution_m *)hip_get_param(hip, HIP_PARAM_SOLUTION_M);
-	if (solution)
-	{
-		if (midauth_verify_solution_m(hip, solution) == 0)
-			HIP_DEBUG("found correct hip_solution_m\n");
-		else
-			HIP_DEBUG("found wrong hip_solution_m\n");
-	} else {
-		HIP_DEBUG("found no hip_solution_m\n");
-	}
-
-	return verdict;
+	return filter_pisa_r2(m, p);
 }
 
 /**
- * Insert the nonce and a puzzle into the U1 packet.
+ * Handles U1 messages
  *
  * @param m the original packet
  * @param p the modified packet
@@ -418,35 +376,11 @@ static int filter_midauth_r2(ipq_packet_msg_t *m, struct midauth_packet *p)
  */
 static int filter_midauth_u1(ipq_packet_msg_t *m, struct midauth_packet *p)
 {
-	int verdict = NF_ACCEPT;
-	struct hip_common *hip = (struct hip_common *)(((char*)p->buffer) +
-	                         p->hdr_size);
-	char *nonce1 = "abcedfgh";
-	char *nonce2 = "foobar";
-
-	HIP_DEBUG("filtering U1\n");
-
-	/* start with a copy of the original packet */
-
-	memcpy(p->buffer, m->payload, m->data_len);
-
-	/* beware: black magic & dragons ahead */
-
-	add_echo_request_m(hip, nonce1);
-	add_echo_request_m(hip, nonce2);
-	add_puzzle_m(hip, 1, 2, "hello!", 0xFF00FF00FF00FF00LL);
-	add_puzzle_m(hip, 3, 4, "byebye", 0xDEADBEEFDEADBEEFLL);
-
-	/* no more dragons & black magic*/
-
-	p->size = hip_get_msg_total_len(hip);
-	update_all_headers(p);
-
-	return verdict;
+	return filter_pisa_u1(m, p);
 }
 
 /**
- * Insert the nonce into the U2 packet, check the nonce from the U! packet.
+ * Handles U2 messages
  *
  * @param m the original packet
  * @param p the modified packet
@@ -454,42 +388,11 @@ static int filter_midauth_u1(ipq_packet_msg_t *m, struct midauth_packet *p)
  */
 static int filter_midauth_u2(ipq_packet_msg_t *m, struct midauth_packet *p)
 {
-	int verdict = NF_ACCEPT;
-	struct hip_common *hip = (struct hip_common *)(((char*)p->buffer) +
-	                         p->hdr_size);
-	struct hip_solution_m *solution;
-	char *nonce1 = "hello";
-	char *nonce2 = "world";
-
-	HIP_DEBUG("filtering U2\n");
-
-	/* just copy it for testing */
-
-	memcpy(p->buffer, m->payload, m->data_len);
-
-	solution = (struct hip_solution_m *)hip_get_param(hip, HIP_PARAM_SOLUTION_M);
-	if (solution) {
-		if (midauth_verify_solution_m(hip, solution) == 0)
-			HIP_DEBUG("found correct hip_solution_m\n");
-		else
-			HIP_DEBUG("found wrong hip_solution_m\n");
-	} else {
-		HIP_DEBUG("found no hip_solution_m\n");
-	}
-
-	add_echo_request_m(hip, nonce1);
-	add_echo_request_m(hip, nonce2);
-	add_puzzle_m(hip, 1, 2, "u2u2u2", 0xAABBCCDDEEFFFFFFLL);
-	add_puzzle_m(hip, 3, 4, "U2U2U2", 0xABCDABCDABCDABCDLL);
-
-	p->size = hip_get_msg_total_len(hip);
-	update_all_headers(p);
-
-	return verdict;
+	return filter_pisa_u2(m, p);
 }
 
 /**
- * Check the nonce from the U2 packet.
+ * Handles U3 messages
  *
  * @param m the original packet
  * @param p the modified packet
@@ -497,33 +400,11 @@ static int filter_midauth_u2(ipq_packet_msg_t *m, struct midauth_packet *p)
  */
 static int filter_midauth_u3(ipq_packet_msg_t *m, struct midauth_packet *p)
 {
-	int verdict = NF_ACCEPT;
-	struct hip_common *hip = (struct hip_common *)(((char*)p->buffer) +
-	                         p->hdr_size);
-	struct hip_solution_m *solution;
-
-	HIP_DEBUG("filtering U3\n");
-
-	/* don't copy here, packet will not be modified anyway */
-	memcpy(p->buffer, m->payload, m->data_len);
-
-	/* check for ECHO_REPLY_M and SOLUTION_M here */
-	solution = (struct hip_solution_m *)hip_get_param(hip, HIP_PARAM_SOLUTION_M);
-	if (solution) {
-		if (midauth_verify_solution_m(hip, solution) == 0)
-			HIP_DEBUG("found correct hip_solution_m\n");
-		else
-			HIP_DEBUG("found wrong hip_solution_m\n");
-	} else {
-		HIP_DEBUG("found no hip_solution_m\n");
-	}
-
-	return verdict;
+	return filter_pisa_u3(m, p);
 }
 
-
 /**
- * Distinguish the differnt UPDATE packets.
+ * Distinguish the different UPDATE packets.
  *
  * @param m the original packet
  * @param p the modified packet
@@ -533,8 +414,6 @@ static int filter_midauth_update(ipq_packet_msg_t *m, struct midauth_packet *p)
 {
 	struct hip_common *hip = (struct hip_common *)(((char*)m->payload) +
 	                         p->hdr_size);
-
-	HIP_DEBUG("UPDATE received\n");
 
 	if (hip_get_param(hip, HIP_PARAM_LOCATOR))
 		return filter_midauth_u1(m, p);
@@ -550,11 +429,14 @@ static int filter_midauth_update(ipq_packet_msg_t *m, struct midauth_packet *p)
 int filter_midauth(ipq_packet_msg_t *m, struct midauth_packet *p)
 {
 	int verdict = NF_ACCEPT;
+	/* @todo change this default value to NF_DROP to disallow unknown
+	 * message types */
 
 	p->size = 0; /* default: do not change packet */
 
 	switch (p->hip_common->type_hdr) {
 	case HIP_I1:
+		verdict = filter_midauth_i1(m, p);
 		break;
 	case HIP_R1:
 		verdict = filter_midauth_r1(m, p);
