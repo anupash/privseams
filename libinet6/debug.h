@@ -24,12 +24,21 @@
 // oleg 2006-11-22
 #define SYSLOG_FACILITY   LOG_LOCAL6
 
+/** 
+ * @addtogroup ife
+ * @{
+ */
 #define HIP_INFO(...) hip_print_str(DEBUG_LEVEL_INFO, __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
 #define HIP_ERROR(...) hip_print_str(DEBUG_LEVEL_ERROR, __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
 #define HIP_DIE(...)   hip_die(__FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
 #define HIP_PERROR(s) hip_perror_wrapper(__FILE__, __LINE__, __FUNCTION__, s)
 #define HIP_ASSERT(s) { if (!(s)) HIP_DIE("assertion failed\n"); }
+/** @} */
 
+/** 
+ * @addtogroup debug
+ * @{
+ */
 #ifdef CONFIG_HIP_DEBUG
 #define HIP_DEBUG(...) hip_print_str(DEBUG_LEVEL_DEBUG, __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
 #define HIP_HEXDUMP(prefix, str, len) \
@@ -43,6 +52,7 @@
 //	hip_debug_gl( HIP_DEBUG_GROUP_DEFAULT, HIP_DEBUG_LEVEL_DEFAULT, __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
 # define HIP_DEBUG_GL(debug_group, debug_level, ...)\
 	hip_debug_gl( debug_group, debug_level, __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
+
 #else
 #define HIP_DEBUG(...) do {} while(0)
 #define HIP_HEXDUMP(prefix, str, len) do {} while(0)
@@ -52,7 +62,7 @@
 //	hip_debug_gl( HIP_DEBUG_GROUP_DEFAULT, HIP_DEBUG_LEVEL_DEFAULT, __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
 # define HIP_DEBUG_GL(debug_group, debug_level, ...) do {} while(0)
 #endif
-
+/** @} */
 
 /* Debug groups define groups of debug messages which belong to the
    same logical part of hip. Debug messages can be enabled or disabled more
@@ -91,7 +101,7 @@ enum debug_level { DEBUG_LEVEL_DIE, DEBUG_LEVEL_ERROR, DEBUG_LEVEL_INFO,
 #define HIP_DEBUG_IN6ADDR(str, in6) hip_print_hit(DEBUG_LEVEL_DEBUG, __FILE__, __LINE__, __FUNCTION__, str, in6)
 #define HIP_DEBUG_LSI(str, lsi)  hip_print_lsi(DEBUG_LEVEL_DEBUG, __FILE__, __LINE__, __FUNCTION__, str, lsi)
 #define HIP_DEBUG_INADDR(str, in)  hip_print_lsi(DEBUG_LEVEL_DEBUG, __FILE__, __LINE__, __FUNCTION__, str, in)
-#define HIP_DEBUG_KEY(str, key, key_len) hip_print_key(DEBUG_LEVEL_DEBUG, __FILE__, __LINE__, __FUNCTION__, str, key, key_len)
+//#define HIP_DEBUG_KEY(str, key, key_len) hip_print_key(DEBUG_LEVEL_DEBUG, __FILE__, __LINE__, __FUNCTION__, str, key, key_len)
 //#define HIP_DEBUG_IN6ADDR(str, hit) do {} while(0)
 
 /* these are used for disabling a debugging command temporarily */
@@ -139,14 +149,33 @@ void hip_print_sockaddr(const char *file, int line, const char *function,
 			const char *prefix,
 			const struct sockaddr *sockaddr);
 void hip_print_str(int debug_level, const char *file, int line, const char *function, const char *fmt, ...);
+
+/**
+ * Gets a binary string representation from an uint8_t value.
+ * 
+ * @val    the value to convert.
+ * @buffer a target buffer where to put the binary string.
+ * @note   make sure the buffer has at least size of 8 * sizeof(char).
+ */
+void uint8_to_binstring(uint8_t val, char *buffer);
+
 /**
  * Gets a binary string representation from an uint16_t value.
  * 
- * @param val    the value whose binary string we want.
- * @param buffer a target buffer where to put the binary string.
- * @note         make sure the buffer has at least size of 17 * sizeof(char).
+ * @val    the value to convert.
+ * @buffer a target buffer where to put the binary string.
+ * @note   make sure the buffer has at least size of 17 * sizeof(char).
  */
 void uint16_to_binstring(uint16_t val, char *buffer);
+
+/**
+ * Gets a binary string representation from an uint32_t value.
+ * 
+ * @val    the value to convert.
+ * @buffer a target buffer where to put the binary string.
+ * @note   make sure the buffer has at least size of 33 * sizeof(char).
+ */
+void uint32_to_binstring(uint32_t val, char *buffer);
 
 void hip_print_locator_addresses(struct hip_common *);
 

@@ -642,28 +642,57 @@ void hip_print_hit(int debug_level, const char *file, int line, const char *func
 	}
 }
 
+#if 0
 void hip_print_key(int debug_level, const char *file, int line, const char *function,
 		   const char *str, const struct hip_crypto_key *key,
 		   int key_len)
 {
-	char dst[key_len];
+	char dst[key_len]; // THIS ALLOCATION IS NOT OK.
 	strncpy(dst, key->key, key_len);
 	hip_print_str(debug_level, file, line, function, "%s: %s\n", str, dst);
 }
+#endif
 
-void uint16_to_binstring(uint16_t val, char *buffer)
+void uint8_to_binstring(uint8_t val, char *buffer) 
 {
-     int i = 0;
-     for(; i < 16; i++)
-     {
-	  if(val & 0x8000)
-	       buffer[i] = '1';
-	  else
-	       buffer[i] = '0';
-	  val <<= 1;
-     }
+	int i = 0;
+	for(; i < 8; i++) {
+		if(val & 0x80)
+			buffer[i] = '1';
+		else
+			buffer[i] = '0';
+		val <<= 1;
+	}
+	
+	buffer[i] = '\0';
+}
+
+void uint16_to_binstring(uint16_t val, char *buffer) 
+{
+	int i = 0;
+	for(; i < 16; i++) {
+		if(val & 0x8000)
+			buffer[i] = '1';
+		else
+			buffer[i] = '0';
+		val <<= 1;
+	}
+	
+	buffer[i] = '\0';
+}
      
-     buffer[i] = '\0';
+void uint32_to_binstring(uint32_t val, char *buffer) 
+{
+	int i = 0;
+	for(; i < 32; i++) {
+		if(val & 0x80000000)
+			buffer[i] = '1';
+		else
+			buffer[i] = '0';
+		val <<= 1;
+	}
+	
+	buffer[i] = '\0';
 }
 
 void hip_print_locator_addresses(struct hip_common * in_msg) {
