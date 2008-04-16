@@ -1815,10 +1815,10 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	
 #ifdef CONFIG_HIP_BLIND
 	if (use_blind) {
-	  memcpy(&entry->hit_our_blind, &i2->hitr, sizeof(struct in6_addr));
-	  memcpy(&entry->hit_peer_blind, &i2->hits, sizeof(struct in6_addr));
-	  entry->blind_nonce_i = nonce;
-	  entry->blind = 1;
+		memcpy(&entry->hit_our_blind, &i2->hitr, sizeof(struct in6_addr));
+		memcpy(&entry->hit_peer_blind, &i2->hits, sizeof(struct in6_addr));
+	  	entry->blind_nonce_i = nonce;
+	  	entry->blind = 1;
 	}
 #endif
 
@@ -1921,21 +1921,20 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 
 #ifdef CONFIG_HIP_BLIND
 	if (use_blind) {
-	   err = hip_add_sa(i2_daddr, i2_saddr,
-			   &entry->hit_our, &entry->hit_peer,
-			   &spi_out, esp_tfm, 
-			   &ctx->esp_out, &ctx->auth_out,
-			   1, HIP_SPI_DIRECTION_OUT, 0, i2_info->dst_port, i2_info->src_port);
+		err = hip_add_sa(i2_daddr, i2_saddr,
+			   	 &entry->hit_our, &entry->hit_peer,
+			   	 &spi_out, esp_tfm, 
+			   	 &ctx->esp_out, &ctx->auth_out,
+			   	 1, HIP_SPI_DIRECTION_OUT, 0, i2_info->dst_port, i2_info->src_port);
 	}
 #endif
 
 	if (!use_blind) {
-/*	  err = hip_add_sa(i2_daddr, i2_saddr,
-			   &ctx->input->hitr, &ctx->input->hits,
-			   &spi_out, esp_tfm, 
-			   &ctx->esp_out, &ctx->auth_out,
-			   1, HIP_SPI_DIRECTION_OUT, 0, i2_info->dst_port, i2_info->src_port);
-Tere---temporaly commented*/
+		err = hip_add_sa(i2_daddr, i2_saddr,
+			   	 &ctx->input->hitr, &ctx->input->hits,
+			   	 &spi_out, esp_tfm, 
+			   	 &ctx->esp_out, &ctx->auth_out,
+			   	 1, HIP_SPI_DIRECTION_OUT, 0, i2_info->dst_port, i2_info->src_port);
 	}
 	if (err) {
 		HIP_ERROR("Failed to setup outbound SA with SPI=%d\n",
@@ -1966,10 +1965,10 @@ Tere---temporaly commented*/
 
 #ifdef CONFIG_HIP_BLIND
     if (use_blind) {
-      HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_peer,
-				     &entry->hit_our,
-				     i2_saddr, i2_daddr, IPPROTO_ESP, 1, 1),
-	       -1, "Setting up SP pair failed\n");
+      	HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_peer,
+				       &entry->hit_our,
+				       i2_saddr, i2_daddr, IPPROTO_ESP, 1, 1),
+	       	 -1, "Setting up SP pair failed\n");
     }
 #endif
     if (!use_blind) {

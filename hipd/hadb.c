@@ -142,6 +142,31 @@ hip_ha_t *hip_hadb_find_byhits(hip_hit_t *hit, hip_hit_t *hit2)
 }
 
 /**
+ * This function searches for a hip_ha_t entry from the hip_hadb_hit
+ * by a LSI pair (local,peer).
+ */
+hip_ha_t *hip_hadb_find_bylsis(hip_lsi_t *lsi, hip_lsi_t *lsi2)
+{
+    hip_ha_t ha, *ret;
+    memcpy(&ha.lsi_our, lsi, sizeof(hip_lsi_t));
+    memcpy(&ha.lsi_peer, lsi2, sizeof(hip_lsi_t));
+    HIP_DEBUG_LSI("LSI1", lsi);
+    HIP_DEBUG_LSI("LSI2", lsi2);
+
+    ret = hip_ht_find(hadb_hit, &ha);
+    if (!ret) {
+        memcpy(&ha.lsi_peer, lsi, sizeof(hip_lsi_t));
+        memcpy(&ha.lsi_our, lsi2, sizeof(hip_lsi_t));
+        ret = hip_ht_find(hadb_hit, &ha);
+    }
+    if (ret)
+      HIP_DEBUG(">>>>>>>>>>>>>>>>>>>>>>>>>>>Match, lsi found!!!!!!!!!\n");
+    return ret;
+}
+
+
+
+/**
  * This function simply goes through all local HIs and tries
  * to find a HADB entry that matches the current HI and
  * the given peer hit. First matching HADB entry is then returned.
@@ -2622,7 +2647,9 @@ int hip_handle_get_ha_info(hip_ha_t *entry, struct hip_common *msg)
 	ipv6_addr_copy(&hid.hit_peer, &entry->hit_peer);
 	ipv6_addr_copy(&hid.ip_our, &entry->local_address);
 	ipv6_addr_copy(&hid.ip_peer, &entry->preferred_address);
-			
+	ipv4_addr_copy(&hid.lsi_our, &entry->lsi_our);
+	ipv4_addr_copy(&hid.lsi_peer, &entry->lsi_peer);
+
 	err = hip_build_param_contents(msg, &hid, HIP_PARAM_HA_INFO,
 				       sizeof(hid));
 	if (err)

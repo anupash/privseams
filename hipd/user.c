@@ -23,7 +23,7 @@
 int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 {
 	hip_hit_t *hit, *src_hit = NULL, *dst_hit = NULL;
-	hip_lsi_t *lsi;
+	hip_lsi_t *lsi, *src_lsi = NULL, *dst_lsi = NULL;
 	struct in6_addr *src_ip, *dst_ip;
 	hip_ha_t *entry = NULL;
 	int err = 0, msg_type, n = 0, len = 0, state=0;
@@ -583,15 +583,33 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		        if (aux){
 			        if(msg_type == SO_HIP_GET_LSI_PEER){
 		                        lsi = &aux->lsi_peer;
-		                        HIP_DEBUG_LSI(">>>>>>>>>>>lsi peer is after searching in hip_hadb_find_byhits", lsi);
+		                        _HIP_DEBUG_LSI(">>>>>>>>>>>lsi peer is after searching in hip_hadb_find_byhits", lsi);
 			        }else if(msg_type == SO_HIP_GET_LSI_OUR){
 				        lsi = &aux->lsi_our;
-		                        HIP_DEBUG_LSI(">>>>>>>>>>>>lsi our is after searching in hip_hadb_find_byhits", lsi);
+		                        _HIP_DEBUG_LSI(">>>>>>>>>>>>lsi our is after searching in hip_hadb_find_byhits", lsi);
 				}
 		        }
 		}
 	        break;
-
+	case SO_HIP_GET_STATE_HA:
+		while((param = hip_get_next_param(msg, param))){
+	    		if (hip_get_param_type(param) == HIP_PARAM_LSI){
+	      			if (!src_lsi)
+					src_lsi = (struct in_addr *)hip_get_param_contents_direct(param);
+	      			else 
+					dst_lsi = (struct in_addr *)hip_get_param_contents_direct(param);
+	    		}
+	  	}
+		HIP_DEBUG(">>>hip_hadb_find_bylsis\n");
+	  	HIP_DEBUG_LSI("LSI1", src_lsi);
+	  	HIP_DEBUG_LSI("LSI2", dst_lsi);
+	  	hip_ha_t *aux = hip_hadb_find_bylsis(src_lsi, dst_lsi);
+          	if (aux && aux->state == HIP_STATE_ESTABLISHED){
+	    		HIP_DEBUG("Entry found in the ha database \n\n");
+	      		src_hit = &aux->hit_our;
+	      		dst_hit = &aux->hit_peer;
+	  	}
+	  	break;
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;
@@ -604,7 +622,8 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		if (err)
 			hip_set_msg_err(msg, 1);
 		else{
-		        if (msg_type == SO_HIP_TRIGGER_BEX && lsi){
+		  if ((msg_type == SO_HIP_TRIGGER_BEX && lsi) ||
+		      (msg_type == SO_HIP_GET_STATE_HA &&src_hit && dst_hit)){
 		                HIP_IFEL(hip_build_param_contents(msg, (void *)src_hit,
 					 HIP_PARAM_HIT, sizeof(struct in6_addr)), -1,
 				 	 "build param HIP_PARAM_HIT  failed\n");
@@ -615,7 +634,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 			if ((msg_type == SO_HIP_GET_LSI_PEER || msg_type == SO_HIP_GET_LSI_OUR) && lsi)
 		                HIP_IFEL(hip_build_param_contents(msg, (void *)lsi,
 					 HIP_PARAM_LSI, sizeof(hip_lsi_t)), -1,
-				 	 "build param HIP_PARAM_LSI  failed\n")
+				 	 "build param HIP_PARAM_LSI  failed\n");
 		}
 
 		len = hip_get_msg_total_len(msg);

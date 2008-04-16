@@ -207,7 +207,7 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 	        set_escrow_active(0);
                	break;
         case HIP_BEX_DONE:
-		 HIP_DEBUG("Received bex done from hipd\n\n");
+		HIP_DEBUG("Received bex done from hipd\n\n");
 	        while((param = hip_get_next_param(msg, param))){
 			if (hip_get_param_type(param) == HIP_PARAM_HIT){
 				if (!hit_s)
@@ -216,7 +216,9 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 		      			hit_r = (struct in6_addr *)hip_get_param_contents_direct(param);
 		  	}
 	  	}
-
+		HIP_DEBUG("2. Received bex done from hipd\n\n");
+		HIP_DEBUG_HIT(" hit_s ",hit_s);
+		HIP_DEBUG_HIT(" hit_r ",hit_r);
 		if (hit_r)
 			err = firewall_set_bex_state(hit_s, hit_r, 1);
 		else
@@ -321,70 +323,69 @@ int firewall_init_raw_sock_icmp_v4(int *firewall_raw_sock_v4)
 /*Init functions for raw sockets ipv6*/
 int firewall_init_raw_sock_tcp_v6(int *firewall_raw_sock_v6)
 {
-    int on = 1, off = 0, err = 0;
+    	int on = 1, off = 0, err = 0;
 
-    *firewall_raw_sock_v6 = socket(AF_INET6, SOCK_RAW, IPPROTO_TCP);
-    HIP_IFEL(*firewall_raw_sock_v6 <= 0, 1, "Raw socket creation failed. Not root?\n");
+    	*firewall_raw_sock_v6 = socket(AF_INET6, SOCK_RAW, IPPROTO_TCP);
+    	HIP_IFEL(*firewall_raw_sock_v6 <= 0, 1, "Raw socket creation failed. Not root?\n");
+	
+    	/* see bug id 212 why RECV_ERR is off */
+    	err = setsockopt(*firewall_raw_sock_v6, IPPROTO_IPV6, IPV6_RECVERR, &off, sizeof(on));
+    	HIP_IFEL(err, -1, "setsockopt recverr failed\n");
+    	err = setsockopt(*firewall_raw_sock_v6, IPPROTO_IPV6, IPV6_2292PKTINFO, &on, sizeof(on));
+    	HIP_IFEL(err, -1, "setsockopt pktinfo failed\n");
+    	err = setsockopt(*firewall_raw_sock_v6, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+    	HIP_IFEL(err, -1, "setsockopt v6 reuseaddr failed\n");
 
-    /* see bug id 212 why RECV_ERR is off */
-    err = setsockopt(*firewall_raw_sock_v6, IPPROTO_IPV6, IPV6_RECVERR, &off, sizeof(on));
-    HIP_IFEL(err, -1, "setsockopt recverr failed\n");
-    err = setsockopt(*firewall_raw_sock_v6, IPPROTO_IPV6, IPV6_2292PKTINFO, &on, sizeof(on));
-    HIP_IFEL(err, -1, "setsockopt pktinfo failed\n");
-    err = setsockopt(*firewall_raw_sock_v6, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
-    HIP_IFEL(err, -1, "setsockopt v6 reuseaddr failed\n");
-
-    out_err:
-    return err;
+ out_err:
+	return err;
 }
-
 
 int firewall_init_raw_sock_udp_v6(int *firewall_raw_sock_v6)
 {
-    int on = 1, off = 0, err = 0;
+	int on = 1, off = 0, err = 0;
 
-    *firewall_raw_sock_v6 = socket(AF_INET6, SOCK_RAW, IPPROTO_UDP);
-    HIP_IFEL(*firewall_raw_sock_v6 <= 0, 1, "Raw socket creation failed. Not root?\n");
+	*firewall_raw_sock_v6 = socket(AF_INET6, SOCK_RAW, IPPROTO_UDP);
+    	HIP_IFEL(*firewall_raw_sock_v6 <= 0, 1, "Raw socket creation failed. Not root?\n");
 
-    /* see bug id 212 why RECV_ERR is off */
-    err = setsockopt(*firewall_raw_sock_v6, IPPROTO_IPV6, IPV6_RECVERR, &off, sizeof(on));
-    HIP_IFEL(err, -1, "setsockopt recverr failed\n");
-    err = setsockopt(*firewall_raw_sock_v6, IPPROTO_IPV6, IPV6_2292PKTINFO, &on, sizeof(on));
-    HIP_IFEL(err, -1, "setsockopt pktinfo failed\n");
-    err = setsockopt(*firewall_raw_sock_v6, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
-    HIP_IFEL(err, -1, "setsockopt v6 reuseaddr failed\n");
+    	/* see bug id 212 why RECV_ERR is off */
+	err = setsockopt(*firewall_raw_sock_v6, IPPROTO_IPV6, IPV6_RECVERR, &off, sizeof(on));
+	HIP_IFEL(err, -1, "setsockopt recverr failed\n");
+	err = setsockopt(*firewall_raw_sock_v6, IPPROTO_IPV6, IPV6_2292PKTINFO, &on, sizeof(on));
+	HIP_IFEL(err, -1, "setsockopt pktinfo failed\n");
+	err = setsockopt(*firewall_raw_sock_v6, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+	HIP_IFEL(err, -1, "setsockopt v6 reuseaddr failed\n");
 
-    out_err:
-    return err;
+ out_err:
+	return err;
 }
 
 int firewall_init_raw_sock_icmp_v6(int *firewall_raw_sock_v6)
 {
-    int on = 1, off = 0, err = 0;
+    	int on = 1, off = 0, err = 0;
 
-    *firewall_raw_sock_v6 = socket(AF_INET6, SOCK_RAW, IPPROTO_ICMPV6);
-    HIP_IFEL(*firewall_raw_sock_v6 <= 0, 1, "Raw socket creation failed. Not root?\n");
+    	*firewall_raw_sock_v6 = socket(AF_INET6, SOCK_RAW, IPPROTO_ICMPV6);
+    	HIP_IFEL(*firewall_raw_sock_v6 <= 0, 1, "Raw socket creation failed. Not root?\n");
 
     /* see bug id 212 why RECV_ERR is off */
-    err = setsockopt(*firewall_raw_sock_v6, IPPROTO_IPV6, IPV6_RECVERR, &off, sizeof(on));
-    HIP_IFEL(err, -1, "setsockopt recverr failed\n");
-    err = setsockopt(*firewall_raw_sock_v6, IPPROTO_IPV6, IPV6_2292PKTINFO, &on, sizeof(on));
-    HIP_IFEL(err, -1, "setsockopt pktinfo failed\n");
-    err = setsockopt(*firewall_raw_sock_v6, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
-    HIP_IFEL(err, -1, "setsockopt v6 reuseaddr failed\n");
+    	err = setsockopt(*firewall_raw_sock_v6, IPPROTO_IPV6, IPV6_RECVERR, &off, sizeof(on));
+	HIP_IFEL(err, -1, "setsockopt recverr failed\n");
+	err = setsockopt(*firewall_raw_sock_v6, IPPROTO_IPV6, IPV6_2292PKTINFO, &on, sizeof(on));
+    	HIP_IFEL(err, -1, "setsockopt pktinfo failed\n");
+    	err = setsockopt(*firewall_raw_sock_v6, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+    	HIP_IFEL(err, -1, "setsockopt v6 reuseaddr failed\n");
 
-    out_err:
-    return err;
+ out_err:
+	return err;
 }
 
 void firewall_init_raw_sockets(void)
 {
-  firewall_init_raw_sock_tcp_v4(&firewall_raw_sock_tcp_v4);
-  firewall_init_raw_sock_udp_v4(&firewall_raw_sock_udp_v4);
-  firewall_init_raw_sock_icmp_v4(&firewall_raw_sock_icmp_v4);
-  firewall_init_raw_sock_tcp_v6(&firewall_raw_sock_tcp_v6);
-  firewall_init_raw_sock_udp_v6(&firewall_raw_sock_udp_v6);
-  firewall_init_raw_sock_icmp_v6(&firewall_raw_sock_icmp_v6); 
+	firewall_init_raw_sock_tcp_v4(&firewall_raw_sock_tcp_v4);
+	firewall_init_raw_sock_udp_v4(&firewall_raw_sock_udp_v4);
+	firewall_init_raw_sock_icmp_v4(&firewall_raw_sock_icmp_v4);
+	firewall_init_raw_sock_tcp_v6(&firewall_raw_sock_tcp_v6);
+	firewall_init_raw_sock_udp_v6(&firewall_raw_sock_udp_v6);
+	firewall_init_raw_sock_icmp_v6(&firewall_raw_sock_icmp_v6); 
 }
 
 int initialise_firewall_socket()
@@ -408,22 +409,22 @@ int initialise_firewall_socket()
 }
 
 static inline u16 inchksum(const void *data, u32 length) {
-    long sum = 0;
-    const u16 *wrd =  (u16 *) data;
-    long slen = (long) length;
+	long sum = 0;
+    	const u16 *wrd =  (u16 *) data;
+    	long slen = (long) length;
 
-    while (slen > 1) {
-        sum += *wrd++;
-        slen -= 2;
-    }
+    	while (slen > 1) {
+        	sum += *wrd++;
+        	slen -= 2;
+    	}
 
-    if (slen > 0)
-        sum += * ((u8 *)wrd);
+    	if (slen > 0)
+        	sum += * ((u8 *)wrd);
 
-    while (sum >> 16)
-        sum = (sum & 0xffff) + (sum >> 16);
+    	while (sum >> 16)
+        	sum = (sum & 0xffff) + (sum >> 16);
 
-    return (u16) sum;
+    	return (u16) sum;
 }
 
 u16 ipv4_checksum(u8 protocol, u8 src[], u8 dst[], u8 data[], u16 len)
@@ -467,26 +468,26 @@ u16 ipv4_checksum(u8 protocol, u8 src[], u8 dst[], u8 data[], u16 len)
 
 u16 ipv6_checksum(u8 protocol, struct in6_addr *src, struct in6_addr *dst, void *data, u16 len)
 {   
-    u32 chksum = 0;
-    pseudo_v6 pseudo;
-    memset(&pseudo, 0, sizeof(pseudo_v6));
+	u32 chksum = 0;
+    	pseudo_v6 pseudo;
+    	memset(&pseudo, 0, sizeof(pseudo_v6));
 
-    pseudo.src = *src;
-    pseudo.dst = *dst;
-    pseudo.length = htons(len);
-    pseudo.next = protocol;
+    	pseudo.src = *src;
+    	pseudo.dst = *dst;
+    	pseudo.length = htons(len);
+    	pseudo.next = protocol;
 
-    chksum = inchksum(&pseudo, sizeof(pseudo_v6));
-    chksum += inchksum(data, len);
+    	chksum = inchksum(&pseudo, sizeof(pseudo_v6));
+    	chksum += inchksum(data, len);
 
-    chksum = (chksum >> 16) + (chksum & 0xffff);
-    chksum += (chksum >> 16);
+    	chksum = (chksum >> 16) + (chksum & 0xffff);
+    	chksum += (chksum >> 16);
 
-    chksum = (u16)(~chksum);
-    if (chksum == 0)
-        chksum = 0xffff;
+    	chksum = (u16)(~chksum);
+    	if (chksum == 0)
+    	    chksum = 0xffff;
 
-    return chksum;
+    	return chksum;
 }
 
 int firewall_send_pkt(struct in6_addr *src_hit, struct in6_addr *dst_hit, u8 *msg, u16 len, int proto)
@@ -502,25 +503,21 @@ int firewall_send_pkt(struct in6_addr *src_hit, struct in6_addr *dst_hit, u8 *ms
 
 	HIP_ASSERT(src_hit != NULL && dst_hit != NULL);
 
+	sock_src4 = (struct sockaddr_in *) &src;
+	sock_dst4 = (struct sockaddr_in *) &dst;
+	sock_src6 = (struct sockaddr_in6 *) &src;
+	sock_dst6 = (struct sockaddr_in6 *) &dst;
+
+	memset(&src, 0, sizeof(src));
+	memset(&dst, 0, sizeof(dst));
+
 	if (IN6_IS_ADDR_V4MAPPED(src_hit)){
-		sock_src4 = (struct sockaddr_in *) &src;
-		sock_dst4 = (struct sockaddr_in *) &dst;
-
-		memset(&src, 0, sizeof(src));
-		memset(&dst, 0, sizeof(dst));
-
 		sock_src4->sin_family = AF_INET;
 		IPV6_TO_IPV4_MAP(src_hit, &sock_src4->sin_addr);
 		sock_dst4->sin_family = AF_INET;
 		IPV6_TO_IPV4_MAP(dst_hit, &sock_dst4->sin_addr);
 		sa_size = sizeof(struct sockaddr_in);
 	}else{
-		sock_src6 = (struct sockaddr_in6 *) &src;
-		sock_dst6 = (struct sockaddr_in6 *) &dst;
-
-		memset(&src, 0, sizeof(src));
-		memset(&dst, 0, sizeof(dst));
-
 		sock_src6->sin6_family = AF_INET6;
 		ipv6_addr_copy(&sock_src6->sin6_addr, src_hit);
 		sock_dst6->sin6_family = AF_INET6;
@@ -536,12 +533,17 @@ int firewall_send_pkt(struct in6_addr *src_hit, struct in6_addr *dst_hit, u8 *ms
 			
 			if (is_ipv6){
 			        HIP_DEBUG(".............. IPPROTO_TCP v6\n");
+				HIP_DEBUG_HIT("orig@ ", &sock_src6->sin6_addr);
+				HIP_DEBUG_HIT("dst@ ", &sock_dst6->sin6_addr);
 				firewall_raw_sock = firewall_raw_sock_tcp_v6;
 			  	((struct tcphdr*)msg)->check = ipv6_checksum(IPPROTO_TCP, &sock_src6->sin6_addr, 
 								      	     &sock_dst6->sin6_addr, msg, len);
+				HIP_DEBUG("After ipv6 checksum \n");
 			}else{
 			  	HIP_DEBUG(".............. IPPROTO_TCP v4\n");
 			  	firewall_raw_sock = firewall_raw_sock_tcp_v4;
+				HIP_DEBUG_LSI("&(sock_src4->sin_addr) == ", &(sock_src4->sin_addr));
+				HIP_DEBUG_LSI("&(sock_dst4->sin_addr) == ", &(sock_dst4->sin_addr));
 			  	((struct tcphdr*)msg)->check = ipv4_checksum(IPPROTO_TCP, &(sock_src4->sin_addr), 
 								      	     &(sock_dst4->sin_addr), msg, len);
 			}
@@ -564,6 +566,8 @@ int firewall_send_pkt(struct in6_addr *src_hit, struct in6_addr *dst_hit, u8 *ms
 		        HIP_DEBUG("IPPROTO_ICMP\n");
 			if (is_ipv6){
 			        HIP_DEBUG("............... IPPROTO_ICMP v6\n");
+				HIP_DEBUG_HIT("hit_src", &sock_src6->sin6_addr);
+				HIP_DEBUG_HIT("hit_dst", &sock_dst6->sin6_addr);
 				firewall_raw_sock = firewall_raw_sock_icmp_v6;
 				((struct icmp6hdr*)msg)->icmp6_cksum = htons(0);
 				((struct icmp6hdr*)msg)->icmp6_cksum = ipv6_checksum(IPPROTO_ICMPV6, &sock_src6->sin6_addr, 
@@ -581,13 +585,17 @@ int firewall_send_pkt(struct in6_addr *src_hit, struct in6_addr *dst_hit, u8 *ms
 			break;
 	}
 
+
 	HIP_IFEL(bind(firewall_raw_sock, (struct sockaddr *) &src, sa_size),
 		 -1, "Binding to raw sock failed\n");
-	
+	HIP_DEBUG("After binding the @\n");	
 	for (dupl = 0; dupl < HIP_PACKET_DUPLICATES; dupl++) {
+	  HIP_DEBUG("Inside the first loop\n");
 		for (try_again = 0; try_again < 2; try_again++) {
+		        HIP_DEBUG("Inside the second loop, before sending \n");
 		        sent = sendto(firewall_raw_sock, msg, len, 0,
 			              (struct sockaddr *) &dst, sa_size);
+			HIP_DEBUG("Inside the second loop, after sending \n");
 			if (sent != len) {
                 		HIP_ERROR("Could not send the all requested"\
                         	" data (%d/%d)\n", sent, len);
@@ -598,13 +606,17 @@ int firewall_send_pkt(struct in6_addr *src_hit, struct in6_addr *dst_hit, u8 *ms
                 		break;
             		}
         	}
+		HIP_DEBUG(" dupl are %d\n",dupl);
 	}
+	HIP_DEBUG("\nAfter sending the packet \n");
 
  out_err:
 	/* Reset the interface to wildcard*/
-	if (is_ipv6)
+	if (is_ipv6){
+	  // HIP_DEBUG_HIT("orig@ ", &sock_src6->sin6_addr);
+	  //HIP_DEBUG_HIT("dst@ ", &sock_dst6->sin6_addr);
 		ipv6_addr_copy(&sock_src6->sin6_addr, &any);
-	else{
+	}else{
 		sock_src4->sin_addr.s_addr = INADDR_ANY;
 		sock_src4->sin_family = AF_INET;
 	}

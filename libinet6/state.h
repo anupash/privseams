@@ -366,6 +366,8 @@ struct hip_hadb_user_info_state
 	hip_hit_t            hit_peer;
 	struct in6_addr      ip_our;
 	struct in6_addr      ip_peer;
+        hip_lsi_t            lsi_our;
+        hip_lsi_t            lsi_peer;
 	int                  state;
 };
 

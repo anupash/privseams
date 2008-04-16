@@ -1853,6 +1853,48 @@ out_err:
 
 }
 
+int hip_trigger_is_bex_established(struct in6_addr **src_hit, struct in6_addr **dst_hit, struct in_addr *src_ip, struct in_addr *dst_ip){
+
+  int err = 0, res = 0;
+  hip_lsi_t src_ip4, dst_ip4;
+  struct hip_tlv_common *current_param = NULL;
+  struct hip_common *msg = NULL;
+  struct hip_hadb_user_info_state *ha;
+
+  HIP_ASSERT(src_ip != NULL && dst_ip != NULL);
+     HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
+
+     HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0), -1,
+	      "Building of daemon header failed\n");
+
+     HIP_IFEL(hip_send_recv_daemon_info(msg), -1,
+	      "send recv daemon info\n");
+
+     while((current_param = hip_get_next_param(msg, current_param)) != NULL) {
+	  ha = hip_get_param_contents_direct(current_param);
+
+	  if ( (((ipv4_addr_cmp(src_ip, &ha->lsi_our) == 0) && (ipv4_addr_cmp(dst_ip, &ha->lsi_peer) == 0))
+	       || ((ipv4_addr_cmp(dst_ip, &ha->lsi_our) == 0) &&  (ipv4_addr_cmp(src_ip, &ha->lsi_peer) == 0)))
+	       && ha->state == HIP_STATE_ESTABLISHED){
+	    *src_hit = &(ha->hit_our);
+	    *dst_hit = &(ha->hit_peer);
+	    break;
+	  }
+	
+     }
+        
+  if (*src_hit && *dst_hit){
+        res = 1;
+        _HIP_DEBUG_HIT("hip_trigger_ha src_hit",*src_hit);
+	_HIP_DEBUG_HIT("hip_trigger_ha dst_hit",*dst_hit);
+  }
+ out_err:
+	if(msg)
+		HIP_FREE(msg);	
+	return res;
+
+}
+
 int hip_trigger_bex(struct in6_addr **src_hit, struct in6_addr **dst_hit, struct in6_addr *src_ip, struct in6_addr *dst_ip)
 {
 	struct hip_tlv_common *param = NULL;

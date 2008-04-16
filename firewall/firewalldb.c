@@ -45,7 +45,7 @@ void hip_firewall_hldb_dump(void)
 	HIP_DEBUG("end hldbdb dump\n");
 }
 
-int firewall_add_hit_lsi(struct in6_addr *hit_our, struct in6_addr *hit_peer, hip_lsi_t *lsi){
+int firewall_add_hit_lsi(struct in6_addr *hit_our, struct in6_addr *hit_peer, hip_lsi_t *lsi, int state){
 	int err = 0;
 	firewall_hl_t *new_entry = NULL;
 
@@ -56,7 +56,7 @@ int firewall_add_hit_lsi(struct in6_addr *hit_our, struct in6_addr *hit_peer, hi
 	ipv6_addr_copy(&new_entry->hit_our, hit_our);
 	ipv6_addr_copy(&new_entry->hit_peer, hit_peer);
 	ipv4_addr_copy(&new_entry->lsi, lsi);
-	new_entry->bex_state = 0;
+	new_entry->bex_state = state;
 	HIP_DEBUG_HIT("1. entry to add to firewall_db hit_our ", &new_entry->hit_our);
 	HIP_DEBUG_HIT("1. entry to add to firewall_db hit_peer ", &new_entry->hit_peer);
 	HIP_DEBUG_LSI("1. entry to add to firewall_db lsi ", &new_entry->lsi);
