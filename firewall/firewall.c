@@ -41,7 +41,7 @@ int use_midauth = 0;
 void print_usage()
 {
 	printf("HIP Firewall\n");
-	printf("Usage: firewall [-f file_name] [-t timeout] [-d|-v] [-F|-H]");
+	printf("Usage: firewall [-f file_name] [-t timeout] [-d|-v] [-F] [-H] [-A] [-b] [-k]");
 #ifdef CONFIG_HIP_MIDAUTH
 	printf(" [-m]");
 #endif
@@ -323,6 +323,12 @@ void drop_packet(struct ipq_handle *handle, unsigned long packetId){
 	HIP_DEBUG("Packet dropped \n\n");
 }
 
+
+/* Missing forward declaration */
+void hip_request_send_i1_to_hip_peer_from_hipd(struct in6_addr *peer_hit,
+					       struct in6_addr *peer_ip);
+void hip_request_unblock_app_from_hipd(const struct in6_addr *peer_ip);
+void hip_request_oppipdb_add_entry(struct in6_addr *peer_ip);
 
 /**
  * Returns whether a packet is incoming
