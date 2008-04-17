@@ -22,6 +22,9 @@
  * tunreader portions Copyright (C) 2004 UC Berkeley
  */
 
+
+
+
 #include <stdio.h>		/* HIP_DEBUG() */
 #ifdef __WIN32__
 #include <win32/types.h>
@@ -407,7 +410,8 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 		     u8 *raw_buff, int len)
 #endif
 {
-	int err, flags, raw_len, is_broadcast, s, offset=0;
+	int i, err, flags, raw_len, is_broadcast, s, offset=0;
+	int out_enc_len; /* returned length of encrypted data*/
 	fd_set fd;
 	struct timeval timeout, now;
 	//__u8 raw_buff[BUFF_LEN];
@@ -454,15 +458,120 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 		HIP_DEBUG("********* error opening debug log!\n");
 	}
 #endif
-	init_readsp();
 
-	HIP_DEBUG("lsi->sa_family value is %d\n",  lsi->sa_family ),
+	/* we do not need create a pair of connected scokets*/
+	// init_readsp();
+
+	
+	/* For HIPL implementation,  lsi->sa_family is AF_INET6*/
+	HIP_DEBUG("lsi->sa_family value is %d\n",  lsi->sa_family );
 	
 
-        lsi->sa_family = AF_INET;
-	get_preferred_lsi(lsi);
-	g_tap_lsi = LSI4(lsi);
+	/* HIPL does not use tap driver here */
+
+	// lsi->sa_family = AF_INET;
+	// get_preferred_lsi(lsi);
+	// g_tap_lsi = LSI4(lsi);
 	
+	
+	/* Try to get HIP security association entry (userspace ipsec) */
+	
+
+	/* unicast packets */
+
+
+	
+
+	/* unicast packets */
+	
+
+
+
+
+
+
+
+
+
+	if (!(entry = hip_sadb_lookup_addr(lsi))) {
+		/* No SADB entry. Send ACQUIRE if we haven't
+		 * already, i.e. a new lsi_entry was created */
+		HIP_DEBUG("HIP ipsec userspace sadb is not ready!!1\n");
+
+		if (buffer_packet(lsi, raw_buff, len)==TRUE)
+			pfkey_send_acquire(lsi);
+		// continue;
+		return;
+	}
+
+
+	raw_len = len;
+	
+
+       
+	while (entry) {
+
+
+		
+		
+		pthread_mutex_lock(&entry->rw_lock);
+		
+		/* RAW IP out */
+		offset = sizeof(struct ip);
+		HIP_DEBUG("start encrypt data......\n");
+
+		err = hip_esp_encrypt(raw_buff, raw_len,
+			      &data[offset], &out_enc_len, entry, &now);
+		
+		pthread_mutex_unlock(&entry->rw_lock);
+
+		
+		if (err) { 
+			break;
+		}
+
+		flags = 0;
+
+	HIP_DEBUG_SOCKADDR("src addr: \n", &entry->src_addrs->addr);
+	HIP_DEBUG_SOCKADDR("dst addr: \n", &entry->dst_addrs->addr);
+	
+	
+	/* catch empty entries */
+	if (!entry->src_addrs || !entry->dst_addrs)
+			continue;		
+	
+	HIP_DEBUG_SOCKADDR("src addr: \n", &entry->src_addrs->addr);
+	HIP_DEBUG_SOCKADDR("dst addr: \n", &entry->dst_addrs->addr);
+	
+	
+	}
+	
+
+
+	
+
+
+
+	// if ((raw_buff[12] == 0x08) && (raw_buff[13] == 0x00)) 
+	       
+
+	// HIP_DEBUG("Print out some raw bufer values....\n");
+	//HIP_DEBUG("raw_buffer[12] is Ox%x\n", raw_buff[12]);
+	// HIP_DEBUG("raw_buffer[13] is Ox%x\n", raw_buff[13]);
+	
+/*
+	for(i = 0; i < len ; i++) {
+	
+	HIP_DEBUG("raw_buffer[%d] is Ox%x\n", i, raw_buff[i]);
+	
+	
+	}
+*/
+
+	
+
+
+
 	HIP_DEBUG("hip_esp_output() thread started...\n");
 	//while (g_state == 0) {
 	{
@@ -577,7 +686,7 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 				flags = 0;
 				/* catch empty entries */
 				if (!entry->src_addrs || !entry->dst_addrs)
-					continue;
+					continue;	
 #ifdef RAW_IP_OUT
 				/* Build IPv4 header and send out raw socket.
 				 * Use this to override OS source address
@@ -600,33 +709,33 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 			/* TODO: use offset above, and LSI4 macro instead
 			 *       of calls to inet_addr()
 			 */
-                        memmove(&data[20],&data,len);
-                        saddr = inet_addr(
-			    logaddr((struct sockaddr*)&entry->src_addrs->addr));
-                        daddr = inet_addr(
-			    logaddr((struct sockaddr*)&entry->dst_addrs->addr));
-
-                        add_outgoing_esp_header(data, saddr,daddr,len);
-
-                        err=sendto(s_esp,data,len+sizeof(struct ip),flags,0,0);
-                        if(err < 0)
-                                perror("sendto()");
+				memmove(&data[20],&data,len);
+				saddr = inet_addr(
+					logaddr((struct sockaddr*)&entry->src_addrs->addr));
+				daddr = inet_addr(
+					logaddr((struct sockaddr*)&entry->dst_addrs->addr));
+				
+				add_outgoing_esp_header(data, saddr,daddr,len);
+				
+				err=sendto(s_esp,data,len+sizeof(struct ip),flags,0,0);
+				if(err < 0)
+					perror("sendto()");
 #else /* __MACOSX__ */
 				if (entry->mode == 3)
 					s = s_esp_udp;
 				else if (entry->dst_addrs->addr.ss_family ==
-						AF_INET)
+					 AF_INET)
 					s = s_esp;
 				else
 					s = s_esp6;
 				err = sendto(s, data, len, flags,
-						SA(&entry->dst_addrs->addr),
-						SALEN(&entry->dst_addrs->addr));
+					     SA(&entry->dst_addrs->addr),
+					     SALEN(&entry->dst_addrs->addr));
 #endif /* __MACOSX__ */
 #endif /* RAW_IP_OUT */
 				if (err < 0) {
 					HIP_DEBUG("hip_esp_output(): sendto() "
-					       "failed: %s\n", strerror(errno));
+						  "failed: %s\n", strerror(errno));
 				} else {
 					pthread_mutex_lock(&entry->rw_lock);
 					entry->bytes += sizeof(struct ip) + err;
@@ -641,9 +750,9 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 					break;
 				entry = hip_sadb_get_next(entry);
 			} /* end while */
-		/* 
-		 * IPv6 
-		 */
+			/* 
+			 * IPv6 
+			 */
 		} else if ((raw_buff[12] == 0x86) && (raw_buff[13] == 0xdd)) {
 			ip6h = (struct ip6_hdr*) &raw_buff[14];
 			/* accept IPv6 traffic to 2001:10::/28 here */
@@ -1509,6 +1618,9 @@ void handle_broadcasts(__u8 *data, int len)
  * 
  * Perform actual ESP encryption and authentication of packets.
  */
+
+
+/* rewrite this function to fit the hipl ipsec implementation*/
 int hip_esp_encrypt(__u8 *in, int len, __u8 *out, int *outlen, 
 	hip_sadb_entry *entry, struct timeval *now)
 {
@@ -1527,11 +1639,23 @@ int hip_esp_encrypt(__u8 *in, int len, __u8 *out, int *outlen,
 	int family, use_udp = FALSE;
 
 
+	/* Because we do not have LSI support right now, so 
+	 *  family is only equal to AF_INET6
+	 */
+	
+	family = AF_INET6;
+	
+#if 0 /* start 0*/
 	if ((in[12] == 0x86) && (in[13] == 0xdd))
 		family = AF_INET6;
 	else
 		family = AF_INET;
-
+	
+#endif /* end 0 */
+	
+	
+	
+	
 	switch (family) {
 	case AF_INET:
 		iph = (struct ip*) &in[sizeof(struct eth_hdr)];
@@ -1540,6 +1664,12 @@ int hip_esp_encrypt(__u8 *in, int len, __u8 *out, int *outlen,
 		checksum_fix = rewrite_checksum((__u8*)iph, entry->hit_magic);
 		break;
 	case AF_INET6:
+		
+		
+		/* FIXME, because __u8 *in is a packet, 
+		 * len is the whole packet length
+		 */
+		
 		ip6h = (struct ip6_hdr*) &in[sizeof(struct eth_hdr)];
 		eth_ip_hdr_len = sizeof(struct eth_hdr)+sizeof(struct ip6_hdr);
 		/* assume HITs are used as v6 src/dst, no checksum rewrite */
@@ -1549,7 +1679,28 @@ int hip_esp_encrypt(__u8 *in, int len, __u8 *out, int *outlen,
 	/* elen is length of data to encrypt */
 	elen = len - eth_ip_hdr_len;
 
+
+	/*  HOW to make ESP OVER TCP, openhip use mode 3 for NAT 
+	 *  transverse
+	 *
+	 */
+
+
+
+	/* FOR HIPL */
+
+	if (entry->mode == 0) {
+
+
+	}
+
+
+
+
+
 	/* setup ESP header, common to all algorithms */
+
+
 	if (entry->mode == 3) { /*(HIP_ESP_OVER_UDP)*/
 		udph = (udphdr*) out;
 		esp = (struct ip_esp_hdr*) &out[sizeof(udphdr)];
@@ -1564,6 +1715,8 @@ int hip_esp_encrypt(__u8 *in, int len, __u8 *out, int *outlen,
 	
 	if (use_udp) /* (HIP_ESP_OVER_UDP) */
 		*outlen += sizeof(udphdr);
+
+ 
 
 	/* 
 	 * Encryption 

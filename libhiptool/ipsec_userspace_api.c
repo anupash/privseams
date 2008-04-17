@@ -89,6 +89,7 @@ int hipl_userspace_ipsec_api_wrapper_sadb_add(struct in6_addr *saddr,
 	__u8 *ipsec_e_key; 
 	__u8 *ipsec_a_key;
 	
+
 	__u32 ipsec_e_keylen = HIP_MAX_KEY_LEN; 
 	__u32 ipsec_a_keylen = HIP_MAX_KEY_LEN;
 	
@@ -169,7 +170,7 @@ int hipl_userspace_ipsec_api_wrapper_sadb_add(struct in6_addr *saddr,
 
 	HIP_DEBUG("HIP IPsec userspace SA add return value %d\n", err);
 
-	if(err)
+	if(err == -1)
 	{
 		
 		HIP_ERROR("HIP user_space IPsec security association DB add is not successful\n");

@@ -19,6 +19,7 @@
  * the HIP Security Association database
  *
  */
+
 #ifdef __MACOSX__
 #include <sys/types.h>
 #include <mac/mac_types.h>
@@ -41,7 +42,7 @@
 #include <openssl/aes.h>	/* aes_key */
 #include <openssl/blowfish.h>	/* bf_key */
 #include "hip_usermode.h"
-
+#include "debug.h"
 
 
 

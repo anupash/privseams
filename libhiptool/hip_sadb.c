@@ -225,13 +225,39 @@ int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
 	memcpy(&entry->dst_addrs->addr, dst, SALEN(dst));
 	memset(entry->inner_src_addrs, 0, sizeof(sockaddr_list));
 	memset(entry->inner_dst_addrs, 0, sizeof(sockaddr_list));
-	if (entry->mode == 3) { /* HIP_ESP_OVER_UDP */
+
+/* HIP_ESP_OVER_UDP */ // comments from openhip
+
+/* in our HIPL case, mode 0 is  */
+	
+	
+	if (entry->mode == 0) { 
 		memcpy(&entry->inner_src_addrs->addr, inner_src,
 			SALEN(inner_src));
 		memcpy(&entry->inner_dst_addrs->addr, inner_dst,
-			SALEN(inner_dst));
+		       SALEN(inner_dst));
 	}
+	
+	
+	
+	
+	if (entry->mode == 3) { 
+		memcpy(&entry->inner_src_addrs->addr, inner_src,
+			SALEN(inner_src));
+		memcpy(&entry->inner_dst_addrs->addr, inner_dst,
+		       SALEN(inner_dst));
+	}
+
+	
 	/* copy keys */
+
+	HIP_DEBUG("e_type value is: %d\n", e_type);
+	HIP_DEBUG("a_type value is: %d \n", a_type);
+	
+	HIP_DEBUG("SADB_EALG_3DESCBC value is: %d \n ", SADB_EALG_3DESCBC);
+	HIP_DEBUG("SADB_X_EALG_AESCBC value is:%d \n", SADB_X_EALG_AESCBC);
+	HIP_DEBUG("SADB_X_EALG_BLOWFISHCBC value is: %d \n", SADB_X_EALG_BLOWFISHCBC);
+	
 	memcpy(entry->a_key, a_key, a_keylen);
 	if (e_keylen > 0)
 		memcpy(entry->e_key, e_key, e_keylen);
@@ -247,7 +273,7 @@ int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
 		err += des_set_key_checked((des_cblock*)key2, entry->ks[1]);
 		err += des_set_key_checked((des_cblock*)key3, entry->ks[2]);
 		if (err)
-			printf("hip_sadb_add: Warning - 3DES key problem.\n");
+			HIP_DEBUG("hip_sadb_add: Warning - 3DES key problem.\n");
 	} else if ((e_keylen > 0) && (e_type == SADB_X_EALG_AESCBC)) {
 		/* AES key differs for encryption/decryption, so we set
 		 * it upon first use in the SA */
@@ -262,13 +288,26 @@ int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
 	 * for HIP over UDP, HITs are used and not outer dst addr 
 	 * 	which can be the same for multiple hosts 
 	 */
+
+
+	/* For our HIPL userspace ipsec, mode 3 we do not think 
+	 * we do implement HIP_over_TCP
+	 *
+	 */
+	
+	
+	HIP_DEBUG("IPsec mode is %d \n", entry->mode);
+
 	use_src = (entry->mode == 3) ? inner_src : src;
 	use_dst = (entry->mode == 3) ? inner_dst : dst;
 	if (!use_src || !use_dst)
 		goto hip_sadb_add_error;
 	
+	
 	hip_sadb_add_dst_entry(use_dst, entry);
 
+	
+	/* HIPL does not support LSI right now, FIXME*/
 
 	/* fill in LSI, add entry to destination cache for outbound;
 	 * the LSI is needed for both outbound and inbound SAs */
@@ -277,13 +316,22 @@ int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
 			memcpy(&entry->lsi,  &lsi_entry->lsi4, 
 				SALEN(&lsi_entry->lsi4));
 			hip_sadb_add_dst_entry(SA(&lsi_entry->lsi4), entry);
+		
+			HIP_DEBUG("lsi_entry belongs to AF_INET\n");
+
 		}
 		if (lsi_entry->lsi6.ss_family == AF_INET6) { /* lsi6 exists? */
 			memcpy(&entry->lsi6, &lsi_entry->lsi6,
 				SALEN(&lsi_entry->lsi6));
 			hip_sadb_add_dst_entry(SA(&lsi_entry->lsi6), entry);
+			
+			HIP_DEBUG("lsi_entry belongs to AF_INET6\n");
+
 		}
 	} else if ((lsi_entry = hip_lookup_lsi_by_addr(use_src))) {
+
+		HIP_DEBUG("lsi_entry from use_src\n");
+
 		memcpy(&entry->lsi,  &lsi_entry->lsi4, SALEN(&lsi_entry->lsi4));
 		memcpy(&entry->lsi6, &lsi_entry->lsi6, SALEN(&lsi_entry->lsi6));
 		lsi_entry->send_packets = 1;
