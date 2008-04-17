@@ -1118,7 +1118,7 @@ diff -crN wireshark-1.0.0-orig/epan/dissectors/packet-hip.c wireshark-1.0.0/epan
 + 		proto_tree_add_text(t, tvb, newoffset, 16, "Address: %s",
 + 			ip6_to_str((const struct e_in6_addr*)
 + 				tvb_get_ptr(tvb, newoffset, 16)));
-+ 		newoffset += 16;
++ 		newoffset += 20;
 + 		tlv_len -= 32;
 +             }
 + 	    break;
