@@ -549,9 +549,10 @@ void hip_delete_default_prefix_sp_pair() {
 
 int hip_setup_default_sp_prefix_pair() {
 	int err = 0;
+#ifndef CONFIG_HIP_BUGGYPREFIX
 	hip_hit_t src_hit, dst_hit;
 	struct in6_addr ip;
-#if 1
+
 	memset(&ip, 0, sizeof(hip_hit_t));
 	memset(&src_hit, 0, sizeof(hip_hit_t));
 	memset(&dst_hit, 0, sizeof(hip_hit_t));

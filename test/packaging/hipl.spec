@@ -1,5 +1,5 @@
 Name: hipl
-Version: 1.0.2
+Version: 1.0.3
 Release: 1
 Summary: HIP IPsec key management and mobility daemon.
 URL: http://infrahip.hiit.fi/hipl/
@@ -8,7 +8,8 @@ Packager: hipl-dev@freelists.org
 Vendor: InfraHIP
 License: GPL
 Group: System Environment/Kernel
-Requires: openssl
+Requires: openssl gtk2 libxml2 glib2 iptables-devel
+BuildRequires: openssl-devel gtk2-devel libxml2-devel glib2-devel iptables-devel
 ExclusiveOS: linux
 BuildRoot: %{_tmppath}/%{name}-%{version}-root
 Prefix: /usr
@@ -28,7 +29,7 @@ other related tools and test software.
 
 # Note: in subsequent releases me may want to use --disable-debugging
 %build
-./configure --prefix=%{buildroot}/%{prefix} --enable-opportunistic --enable-rvs && make
+%configure
 make -C doc all
 
 # Currently we are not going to install all includes and test software.
@@ -41,48 +42,99 @@ make -C doc all
 #%define _unpackaged_files_terminate_build 0
 #%define _missing_doc_files_terminate_build 0
 
+# Note: we are not distributing everything from test directory, just essentials
+
+# create subpackage
+# list of files with the name of subpackage
+
+%package lib
+Summary: hip library files
+Group: System Environment/Kernel
+%description lib
+
+%package core
+Requires: hipl-lib
+Summary: hip core files
+Group: System Environment/Kernel
+%description core
+
+%package agent
+Requires: hipl-lib, hipl-core
+Summary: hip agent files
+Group: System Environment/Kernel
+%description agent
+
+%package tools
+Requires: hipl-lib, hipl-core
+Summary: hip tools files
+Group: System Environment/Kernel
+%description tools
+
+%package firewall
+Summary: hip firewall files
+Group: System Environment/Kernel
+%description firewall
+
+%package test
+Requires: hipl-lib, hipl-core
+Summary: hip test files
+Group: System Environment/Kernel
+%description test
+
+%package doc
+Summary: hip doc files
+Group: System Environment/Kernel
+%description doc
+
 %install
 rm -rf %{buildroot}
 install -d %{buildroot}/%{prefix}/bin
 install -d %{buildroot}/%{prefix}/sbin
 install -d %{buildroot}/%{prefix}/lib
-install -d %{buildroot}/doc
 install -d %{buildroot}/etc/rc.d/init.d
-make install
-install -m 644 doc/HOWTO.txt %{buildroot}/doc
+install -d %{buildroot}/doc
+make DESTDIR=%{buildroot} install
 install -m 700 test/packaging/rh-init.d-hipd %{buildroot}/etc/rc.d/init.d/hipd
+install -m 644 doc/HOWTO.txt %{buildroot}/doc
 
-%pre
+%post core
+sudo /sbin/chkconfig --add hipd
+sudo /sbin/chkconfig --level 2 hipd on
+sudo /sbin/service hipd start
 
-%post
-/sbin/chkconfig --add hipd
-/sbin/service hipd start
-
-%preun
+%preun core
 /sbin/service hipd stop
 /sbin/chkconfig --del hipd
-
-%postun
-
 
 %clean
 rm -rf %{buildroot}
 
-# Note: we are not distributing everything from test directory, just essentials
-%files
-%defattr (-, root, root)
-%{prefix}/sbin/hipconf
+%files lib
+%{_libdir}
+
+%files core
 %{prefix}/sbin/hipd
 %{prefix}/bin/hipsetup
+%config /etc/rc.d/init.d/hipd
+
+%files agent
 %{prefix}/bin/hipagent
+
+%files tools
+%{prefix}/sbin/hipconf
+
+%files test
 %{prefix}/bin/conntest-client
 %{prefix}/bin/conntest-client-gai
 %{prefix}/bin/conntest-client-native
 %{prefix}/bin/conntest-client-native-user-key
 %{prefix}/bin/conntest-server
 %{prefix}/bin/conntest-server-native
-%{prefix}/lib/*
-%config /etc/rc.d/init.d/hipd
+
+%files firewall
+%{prefix}/sbin/firewall
+
+%files doc
 %doc doc/HOWTO.txt doc/howto-html
 
 %changelog
@@ -94,3 +146,4 @@ rm -rf %{buildroot}
 - Renamed to hipl.spec (original was from Mika) and modularized
 * Tue Feb 14 2006 Miika Komu <miika@iki.fi>
 - added changelog
+

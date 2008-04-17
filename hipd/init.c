@@ -1,16 +1,10 @@
-
-/*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+/** @file
+ * This file defines initialization functions for the HIP daemon.
+ * 
+ * @date    1.1.2007
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  */
-
+ 
 #include "init.h"
 #include <linux/capability.h>
 #include <sys/prctl.h>
@@ -23,7 +17,6 @@ extern struct hip_common *hipd_msg;
 extern struct hip_common *hipd_msg_v4;
 typedef struct __user_cap_header_struct capheader_t;
 typedef struct __user_cap_data_struct capdata_t;
-
 
 /******************************************************************************/
 /** Catch SIGCHLD. */
@@ -130,40 +123,12 @@ void hip_set_os_dep_variables()
 int hipd_init(int flush_ipsec, int killold)
 {
 	hip_hit_t peer_hit;
-	int err = 0, fd;
-	char str[64];
+	int err = 0, dhterr;
 	struct sockaddr_in6 daemon_addr;
-	extern struct addrinfo * opendht_serving_gateway;
 
 	/* Open daemon lock file and read pid from it. */
-//	unlink(HIP_DAEMON_LOCK_FILE);
-	fd = open(HIP_DAEMON_LOCK_FILE, O_RDWR | O_CREAT, 0644);
-
-	/* Write pid to file. */
-	if (fd > 0)
-	{
-		if (lockf(fd, F_TLOCK, 0) < 0)
-		{
-			int pid = 0;
-			memset(str, 0, sizeof(str));
-			read(fd, str, sizeof(str) - 1);
-			pid = atoi(str);
-			
-			if (!killold)
-			{
-				HIP_ERROR("HIP daemon already running with pid %d!\n", pid);
-				HIP_ERROR("Use -k option to kill old daemon.\n");
-				exit(1);
-			}
-		
-			HIP_INFO("Daemon is already running with pid %d?"
-			         "-k option given, terminating old one...\n", pid);
-			kill(pid, SIGKILL);
-		}
-		
-		sprintf(str, "%d\n", getpid());
-		write(fd, str, strlen(str)); /* record pid to lockfile */
-	}
+	HIP_IFEL(hip_create_lock_file(HIP_DAEMON_LOCK_FILE, killold), -1,
+		 "locking failed\n");
 
 	hip_init_hostid_db(NULL);
 
@@ -177,7 +142,8 @@ int hipd_init(int flush_ipsec, int killold)
 	signal(SIGCHLD, hip_sig_chld);
  
 	HIP_IFEL(hip_init_oppip_db(), -1,
-	         "Cannot initialize opportunistic mode IP database for non HIP capable hosts!\n");
+	         "Cannot initialize opportunistic mode IP database for "\
+		 "non HIP capable hosts!\n");
 
 	HIP_IFEL((hip_init_cipher() < 0), 1, "Unable to init ciphers.\n");
 
@@ -187,16 +153,12 @@ int hipd_init(int flush_ipsec, int killold)
 
 	hip_init_puzzle_defaults();
 
-/* Initialize a hashtable for services, if any service is enabled. */
+       /* Initialize a hashtable for services, if any service is enabled. */
 	hip_init_services();
 #ifdef CONFIG_HIP_RVS
-        hip_rvs_init_rvadb();
-#endif	
-#ifdef CONFIG_HIP_OPENDHT
-        err = resolve_dht_gateway_info(OPENDHT_GATEWAY, &opendht_serving_gateway);
-        if (err < 0) 
-          HIP_DEBUG("Error resolving openDHT gateway!\n");
-        err = 0;
+	
+	HIP_INFO("Initializing HIP relay / RVS.\n");
+	hip_relay_init();
 #endif
 #ifdef CONFIG_HIP_ESCROW
 	hip_init_keadb();
@@ -237,12 +199,26 @@ int hipd_init(int flush_ipsec, int killold)
 
 #if 0
 	{
-		const int ipsec_buf_size = 200000;
-		socklen_t ipsec_buf_sizeof = sizeof(int);
-		setsockopt(hip_nl_ipsec.fd, SOL_SOCKET, SO_RCVBUF,
+                int ret_sockopt = 0, value = 0;
+                socklen_t value_len = sizeof(value);
+		int ipsec_buf_size = 200000;
+		socklen_t ipsec_buf_sizeof = sizeof(ipsec_buf_size);
+                ret_sockopt = getsockopt(hip_nl_ipsec.fd, SOL_SOCKET, SO_RCVBUF,
+                                         &value, &value_len);
+                if (ret_sockopt != 0)
+                    HIP_DEBUG("Getting receive buffer size of hip_nl_ipsec.fd failed\n");
+                ipsec_buf_size = value * 2;
+                HIP_DEBUG("Default setting of receive buffer size for hip_nl_ipsec was %d.\n"
+                          "Setting it to %d.\n", value, ipsec_buf_size);
+		ret_sockopt = setsockopt(hip_nl_ipsec.fd, SOL_SOCKET, SO_RCVBUF,
 			   &ipsec_buf_size, ipsec_buf_sizeof);
-		setsockopt(hip_nl_ipsec.fd, SOL_SOCKET, SO_SNDBUF,
+                if (ret_sockopt !=0 )
+                    HIP_DEBUG("Setting receive buffer size of hip_nl_ipsec.fd failed\n");
+                ret_sockopt = 0;
+		ret_sockopt = setsockopt(hip_nl_ipsec.fd, SOL_SOCKET, SO_SNDBUF,
 			   &ipsec_buf_size, ipsec_buf_sizeof);
+                if (ret_sockopt !=0 )
+                    HIP_DEBUG("Setting send buffer size of hip_nl_ipsec.fd failed\n");
 	}
 #endif
 
@@ -268,6 +244,11 @@ int hipd_init(int flush_ipsec, int killold)
 	set_up_device(HIP_HIT_DEV, 0);
 	HIP_IFE(set_up_device(HIP_HIT_DEV, 1), 1);
 
+#ifdef CONFIG_HIP_HI3
+	if( hip_use_i3 ) {
+		hip_locator_status = SO_HIP_SET_LOCATOR_ON;
+	}
+#endif
 	HIP_IFE(hip_init_host_ids(), 1);
 
 	hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0);
@@ -290,19 +271,9 @@ int hipd_init(int flush_ipsec, int killold)
 	              sizeof(hip_agent_addr)), -1, "Bind on agent addr failed.");
 	chmod(HIP_AGENTADDR_PATH, 0777);
 	
-//	TODO: initialize firewall socket
-	hip_firewall_sock = socket(AF_LOCAL, SOCK_DGRAM, 0);
-	HIP_IFEL(hip_firewall_sock < 0, 1,
-	         "Could not create socket for firewall communication.\n");
-	unlink(HIP_FIREWALLADDR_PATH);
-	bzero(&hip_firewall_addr, sizeof(hip_firewall_addr));
-	hip_firewall_addr.sun_family = AF_LOCAL;
-	strcpy(hip_firewall_addr.sun_path, HIP_FIREWALLADDR_PATH);
-	HIP_IFEL(bind(hip_firewall_sock, (struct sockaddr *)&hip_firewall_addr,
-	              sizeof(hip_firewall_addr)), -1, "Bind on firewall addr failed.");
-	chmod(HIP_FIREWALLADDR_PATH, 0777);
-
-	register_to_dht();
+        dhterr = 0;
+        dhterr = hip_init_dht();
+        if (dhterr < 0) HIP_DEBUG("Initializing DHT returned error\n");
 	hip_load_configuration();
 	
 	HIP_IFEL(hip_set_lowcapability(), -1, "Failed to set capabilities\n");
@@ -310,9 +281,8 @@ int hipd_init(int flush_ipsec, int killold)
 #ifdef CONFIG_HIP_HI3
 	if( hip_use_i3 ) 
 	{
-		hip_get_default_hit(&peer_hit);
-		hip_i3_init(&peer_hit);
-		//cl_init(i3_config_file);
+//		hip_get_default_hit(&peer_hit);
+		hip_i3_init(/*&peer_hit*/);
 	}
 #endif
 
@@ -320,6 +290,86 @@ out_err:
 	return err;
 }
 
+/**
+ * Function initializes needed variables for the OpenDHT
+ *
+ * Returns positive on success negative otherwise
+ */
+int hip_init_dht() 
+{
+        int err = 0, lineno = 0, i = 0, randomno = 0;
+        extern struct addrinfo * opendht_serving_gateway;
+        extern char opendht_name_mapping;
+        extern int hip_opendht_inuse;
+        extern int hip_opendht_error_count;
+        extern int hip_opendht_sock_fqdn;  
+        extern int hip_opendht_sock_hit;  
+        char *serveraddr_str;
+        char *servername_str;
+        FILE *fp = NULL; 
+        char line[500]; 
+        List list;
+        
+        if (hip_opendht_inuse == SO_HIP_DHT_ON) {
+                hip_opendht_error_count = 0;
+                /* check the condition of the sockets, we may have come here in middle
+                 of something so re-initializing might be needed */
+                if (hip_opendht_sock_fqdn > 0) {
+                        close(hip_opendht_sock_fqdn);
+                         hip_opendht_sock_fqdn = init_dht_gateway_socket(hip_opendht_sock_fqdn);
+                         hip_opendht_fqdn_sent = STATE_OPENDHT_IDLE;
+                }
+                 
+                if (hip_opendht_sock_hit > 0) {
+                        close(hip_opendht_sock_hit);
+                         hip_opendht_sock_hit = init_dht_gateway_socket(hip_opendht_sock_hit);
+                         hip_opendht_hit_sent = STATE_OPENDHT_IDLE;
+                }
+
+                fp = fopen(OPENDHT_SERVERS_FILE, "r");
+                if (fp == NULL) {
+                        HIP_DEBUG("No dhtservers file, using %s\n", OPENDHT_GATEWAY);
+                        err = resolve_dht_gateway_info(OPENDHT_GATEWAY, &opendht_serving_gateway);
+                        if (err < 0) HIP_DEBUG("Error resolving openDHT gateway!\n");
+                        err = 0;
+                        memset(&opendht_name_mapping, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
+                        if (gethostname(&opendht_name_mapping, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1))
+                                HIP_DEBUG("gethostname failed\n");
+                } else {
+                        /* dhtservers exists */ 
+                        while (fp && getwithoutnewline(line, 500, fp) != NULL) {
+                                lineno++;
+                        }
+                        fclose(fp);
+                        srand(time(NULL));
+                        randomno = rand() % lineno;
+                        fp = fopen(OPENDHT_SERVERS_FILE, "r");
+                        for (i = 0; i <= randomno; i++)
+                                getwithoutnewline(line, 500, fp);
+                        initlist(&list);
+                        extractsubstrings(line, &list);
+                        servername_str = getitem(&list,0);
+                        serveraddr_str = getitem(&list,1);
+                        HIP_DEBUG("DHT gateway from dhtservers: %s (%s)\n",
+                                  servername_str, serveraddr_str);
+                        /* resolve it */
+                        err = resolve_dht_gateway_info(serveraddr_str, &opendht_serving_gateway);  
+                        if (err < 0) HIP_DEBUG("Error resolving openDHT gateway!\n");
+                        err = 0;
+                        memset(&opendht_name_mapping, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
+                        if (gethostname(&opendht_name_mapping, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1))
+                                HIP_DEBUG("gethostname failed\n");
+                        register_to_dht(); 
+                        destroy(&list);
+                }
+        } else {
+                HIP_DEBUG("DHT is not in use");
+        }
+ out_err:
+        if (fp) 
+                fclose(fp);
+        return (err);
+}
 
 int hip_set_lowcapability() {
 	struct passwd *nobody_pswd;
@@ -510,7 +560,9 @@ int hip_init_nat_sock_udp(int *hip_nat_sock_udp)
 	HIP_IFEL(err, -1, "setsockopt udp recverr failed\n");
 	err = setsockopt(*hip_nat_sock_udp, SOL_UDP, HIP_UDP_ENCAP, &encap_on, sizeof(encap_on));
 	HIP_IFEL(err, -1, "setsockopt udp encap failed\n");
-	err = setsockopt(*hip_nat_sock_udp, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(encap_on));
+	err = setsockopt(*hip_nat_sock_udp, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+	HIP_IFEL(err, -1, "setsockopt udp reuseaddr failed\n");
+	err = setsockopt(*hip_nat_sock_udp, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on));
 	HIP_IFEL(err, -1, "setsockopt udp reuseaddr failed\n");
 
 	myaddr.sin_family=AF_INET;
@@ -557,7 +609,6 @@ void hip_close(int signal)
 	}
 }
 
-
 /**
  * Cleanup and signal handler to free userspace and kernel space
  * resource allocations.
@@ -583,7 +634,7 @@ void hip_exit(int signal)
 
 	set_up_device(HIP_HIT_DEV, 0);
 
-	/* This is needed only if RVS or escrow is in use. */
+	/* Next line is needed only if RVS or escrow, hiprelay is in use. */
 	hip_uninit_services();
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
@@ -591,11 +642,12 @@ void hip_exit(int signal)
 #endif
 
 #ifdef CONFIG_HIP_HI3
-	cl_exit();
+	hip_hi3_clean();
 #endif
 
 #ifdef CONFIG_HIP_RVS
-        hip_rvs_uninit_rvadb();
+	HIP_INFO("Uninitializing RVS / HIP relay database and whitelist.\n");
+	hip_relay_uninit();
 #endif
 #ifdef CONFIG_HIP_ESCROW
 	hip_uninit_keadb();
@@ -636,12 +688,10 @@ void hip_exit(int signal)
 	if (msg)
 		free(msg);
 	
-	unlink(HIP_DAEMON_LOCK_FILE);
-
-#ifdef CONFIG_HIP_OPENDHT
+	hip_remove_lock_file(HIP_DAEMON_LOCK_FILE);
+        
 	if (opendht_serving_gateway)
 		freeaddrinfo(opendht_serving_gateway);
-#endif
 
 	return;
 }
@@ -685,7 +735,8 @@ void hip_probe_kernel_modules()
 		"xfrm6_tunnel", "xfrm4_tunnel",
 		"ip6_tunnel", "ipip", "ip4_tunnel",
 		"xfrm_user", "dummy", "esp6", "esp4",
-		"ipv6", "aes", "crypto_null", "des",
+		"ipv6", "crypto_null", "cbc",
+		"blkcipher", "des", "aes",
 		"xfrm4_mode_beet", "xfrm6_mode_beet", "sha1",
 		"capability"
 	};

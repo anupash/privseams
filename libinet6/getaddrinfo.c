@@ -1,49 +1,54 @@
-/* $USAGI: getaddrinfo.c,v 1.10 2003/01/07 10:22:52 yoshfuji Exp $ */
-
-/* The Inner Net License, Version 2.00
-
-  The author(s) grant permission for redistribution and use in source and
-binary forms, with or without modification, of the software and documentation
-provided that the following conditions are met:
-
-0. If you receive a version of the software that is specifically labelled
-   as not being for redistribution (check the version message and/or README),
-   you are not permitted to redistribute that version of the software in any
-   way or form.
-1. All terms of the all other applicable copyrights and licenses must be
-   followed.
-2. Redistributions of source code must retain the authors' copyright
-   notice(s), this list of conditions, and the following disclaimer.
-3. Redistributions in binary form must reproduce the authors' copyright
-   notice(s), this list of conditions, and the following disclaimer in the
-   documentation and/or other materials provided with the distribution.
-4. All advertising materials mentioning features or use of this software
-   must display the following acknowledgement with the name(s) of the
-   authors as specified in the copyright notice(s) substituted where
-   indicated:
-
-	This product includes software developed by <name(s)>, The Inner
-	Net, and other contributors.
-
-5. Neither the name(s) of the author(s) nor the names of its contributors
-   may be used to endorse or promote products derived from this software
-   without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY ITS AUTHORS AND CONTRIBUTORS ``AS IS'' AND ANY
-EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE AUTHORS OR CONTRIBUTORS BE LIABLE FOR ANY
-DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
-ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-  If these license terms cause you a real problem, contact the author.  */
-
-/* This software is Copyright 1996 by Craig Metz, All Rights Reserved.  */
-
+/** @file
+ * Functions for getting address information. 
+ * 
+ * \$USAGI: getaddrinfo.c,v 1.10 2003/01/07 10:22:52 yoshfuji Exp \$
+ *
+ * The Inner Net License, Version 2.00
+ *
+ * The author(s) grant permission for redistribution and use in source and
+ * binary forms, with or without modification, of the software and documentation
+ * provided that the following conditions are met:
+ *
+ * 0. If you receive a version of the software that is specifically labelled
+ * as not being for redistribution (check the version message and/or README),
+ * you are not permitted to redistribute that version of the software in any
+ * way or form.
+ * 1. All terms of the all other applicable copyrights and licenses must be
+ * followed.
+ * 2. Redistributions of source code must retain the authors' copyright
+ * notice(s), this list of conditions, and the following disclaimer.
+ * 3. Redistributions in binary form must reproduce the authors' copyright
+ * notice(s), this list of conditions, and the following disclaimer in the
+ * documentation and/or other materials provided with the distribution.
+ * 4. All advertising materials mentioning features or use of this software
+ * must display the following acknowledgement with the name(s) of the
+ * authors as specified in the copyright notice(s) substituted where
+ * indicated:
+ *
+ *	This product includes software developed by <name(s)>, The Inner
+ * 	Net, and other contributors.
+ *
+ * 5. Neither the name(s) of the author(s) nor the names of its contributors
+ * may be used to endorse or promote products derived from this software
+ *   without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY ITS AUTHORS AND CONTRIBUTORS ``AS IS'' AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE AUTHORS OR CONTRIBUTORS BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * If these license terms cause you a real problem, contact the author.
+ *
+ * This software is Copyright 1996 by Craig Metz, All Rights Reserved.
+ * 
+ * @author Craig Metz
+ */
 #ifdef _USAGI_LIBINET6
 #include "libc-compat.h"
 #endif
@@ -64,17 +69,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <net/if.h>
 
 #include <ctype.h>
+#include <signal.h>
 #include "builder.h"
 #include "debug.h"
 #include "message.h"
 #include "util.h"
 #include "libhipopendht.h"
-
-/*
-#ifdef CONFIG_HIP_OPENDHT
-#include "dhtresolver.h"
-#endif
-*/
 
 #include "bos.h"
 
@@ -427,213 +427,212 @@ gethosts(const char *name, int _family,
   return no_data;
  }
 
-int 
-gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
- {									
-  struct in6_addr hit;							
-  FILE *fp = NULL;							
-  char *fqdn_str;                                                       
-  char *hit_str;                                                        
-  int lineno = 0, i=0;                                                  
-  char line[500];							
-  List list;
-  int found_hits = 0;
-  struct gaih_addrtuple *aux = NULL;
+static void 
+connect_alarm(int signo)
+{
+  return; /* for interrupting the connect in gethosts_hit */
+}
 
-#ifdef CONFIG_HIP_OPENDHT
- 
-  int s, error, ret_hit, ret_addr;
-  char dht_response_hit[1024];
-  char dht_response_addr[1024];
-  struct in6_addr tmp_hit, tmp_addr;
-  struct addrinfo * serving_gateway;
-  char ownaddr[] = "127.0.0.1";
-
-  /*
-  struct hip_common *msg;
-  struct hip_opendht_gw_info *gw_info;
-  struct in_addr tmp_v4;
-  char tmp_ip_str[21];
-  int tmp_ttl, tmp_port;
-  int *pret;
-  int err;
-  */
-
-  if (flags & AI_NODHT)
-    goto skip_dht;
-
-  memset(dht_response_hit, '\0', sizeof(dht_response_hit));
-  memset(dht_response_addr, '\0', sizeof(dht_response_addr));
-
-  ret_hit = -1;  
-  ret_addr = -1;
-
-  /* ask about the serving gateway from the daemon */
-  
-  //  HIP_DEBUG("Asking serving gateway info from daemon...\n");
-  /*
-  HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "Malloc for msg failed\n");
-  HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW,0),-1, 
-           "Building daemon header failed\n"); 
-  HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "Send recv daemon info failed\n");
-  HIP_IFEL(!(gw_info = hip_get_param(msg, HIP_PARAM_OPENDHT_GW_INFO)),-1, 
-           "No gw struct found\n");
-  memset(&tmp_ip_str,'\0',20);
-  tmp_ttl = gw_info->ttl;
-  tmp_port = htons(gw_info->port);
-  IPV6_TO_IPV4_MAP(&gw_info->addr, &tmp_v4);
-  pret = inet_ntop(AF_INET, &tmp_v4, tmp_ip_str, 20);
-  HIP_DEBUG("Got address %s, port %d, TTL %d from daemon\n",
-            tmp_ip_str, tmp_port, tmp_ttl);
-
- out_err:
-  HIP_DEBUG("OUT ERROROROROROR\n");      
-  */
-
-  s = init_dht_gateway_socket(s);
-  if (s < 0) 
-  {
-    HIP_DEBUG("Socket creation for openDHT failed skipping openDHT\n");
-    goto skip_dht;
-  }
-  error = 0;
-  error = resolve_dht_gateway_info ("opendht.nyuld.net", &serving_gateway);
-  if (error < 0)
-  {
-    HIP_DEBUG("Error in  resolving the openDHT gateway address, skipping openDHT\n");
-    close(s);
-    goto skip_dht;
-  }
-  error = 0;
-  error = connect_dht_gateway(s, serving_gateway, 1);
-  if (error < 0)
-  {
-    HIP_DEBUG("Error on connect to openDHT gateway, skipping openDHT\n");
-    close(s);
-    goto skip_dht;
-  }
-  ret_hit = opendht_get(s, (unsigned char *)name, (unsigned char *)ownaddr, 5851);
-  ret_hit = opendht_read_response(s, dht_response_hit);
-  if (ret_hit == 0)
-    HIP_DEBUG("HIT received from DHT: %s\n", dht_response_hit);
-  close(s);
-  if (ret_hit == 0 && (strlen((char *)dht_response_hit) > 1))
-  {
-    s = init_dht_gateway_socket(s);
-    error = connect_dht_gateway(s, &serving_gateway, 1);
-    if (error < 0)
-    {
-      HIP_DEBUG("Error on connect to openDHT gateway, skipping openDHT\n");
-      goto skip_dht;
-    }
-    ret_addr = opendht_get(s, (unsigned char *)dht_response_hit, (unsigned char *)ownaddr, 5851);
-    ret_addr = opendht_read_response(s, dht_response_addr);
-    if (ret_addr == 0)
-      HIP_DEBUG("Address received from DHT: %s\n",dht_response_addr);
-    close(s);
-  }
-  if ((ret_hit == 0) && (ret_addr == 0) && 
-      (dht_response_hit[0] != '\0') && (dht_response_addr[0] != '\0')) 
-    { 
-
-      if (inet_pton(AF_INET6, dht_response_hit, &tmp_hit) >0 &&
-          inet_pton(AF_INET6, dht_response_addr, &tmp_addr) >0) {
-
-	if (**pat == NULL) {						
-	  if ((**pat = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){
-	    HIP_ERROR("Memory allocation error\n");
-	    exit(-EAI_MEMORY);
-	  }	  
-	  (**pat)->scopeid = 0;				
-	}
-	(**pat)->family = AF_INET6;					
-	memcpy((**pat)->addr, &tmp_hit, sizeof(struct in6_addr));		
-	*pat = &((**pat)->next);				     	
+/**
+ * Gets a HIT for a host.
+ * 
+ * @param  name  a pointer to a hostname for which are get the HIT.
+ * @param  pat   a triple pointer to a ...
+ * @param  flags ...
+ * @retrun       ...
+ */
+int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
+{	 								
+        
+	int s, error, ret_hit, ret_addr, tmp_ttl, tmp_port;
+	int found_hits = 0, lineno = 0, i = 0, err = 0;
 	
-	if ((**pat = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){
-	  HIP_ERROR("Memory allocation error\n");
-	  exit(-EAI_MEMORY);
-	}	  
+	char dht_response_hit[1024], dht_response_addr[1024], line[500];
+	char ownaddr[] = "127.0.0.1", tmp_ip_str[21];
+        char *pret = NULL, *fqdn_str = NULL;
+	hip_hit_t hit, tmp_hit, tmp_addr;
+	
+	hip_common_t *msg = NULL;
+	struct gaih_addrtuple *aux = NULL;
+	struct addrinfo *serving_gateway = NULL;
+	struct hip_opendht_gw_info *gw_info = NULL;
+        struct in_addr tmp_v4;
+	FILE *fp = NULL;						
+	List list;
+        
+        if (flags & AI_NODHT)
+                goto skip_dht;
+        
+        memset(dht_response_hit, '\0', sizeof(dht_response_hit));
+        memset(dht_response_addr, '\0', sizeof(dht_response_addr));
+        
+        ret_hit = -1;  
+        ret_addr = -1;
+        
+	_HIP_DEBUG("Asking serving gateway info from daemon...\n"); 
+	
+        HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "Malloc for msg failed\n");
+        HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW,0),-1, 
+                 "Building daemon header failed\n"); 
+        HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "Send recv daemon info failed\n");
 
-	(**pat)->scopeid = 0;				
-	(**pat)->next = NULL;						
-	(**pat)->family = AF_INET6;					
-	memcpy((**pat)->addr, &tmp_addr, sizeof(struct in6_addr));	
-	*pat = &((**pat)->next);
-        /* dump_pai(*pat); */
-	return 1;
-      }
-    } 
-  /* CONFIG_HIP_OPENDHT */
+        HIP_IFE(!(gw_info = hip_get_param(msg, HIP_PARAM_OPENDHT_GW_INFO)),-1);
+	//"No gw struct found\n");
+        
+        /* Check if DHT was on */
+        if ((gw_info->ttl == 0) && (gw_info->port == 0)) {
+                HIP_DEBUG("DHT is not in use\n");
+                goto skip_dht;
+        }        
+        memset(&tmp_ip_str,'\0',20);
+        tmp_ttl = gw_info->ttl;
+        tmp_port = htons(gw_info->port);
+        IPV6_TO_IPV4_MAP(&gw_info->addr, &tmp_v4);
+        pret = inet_ntop(AF_INET, &tmp_v4, tmp_ip_str, 20);
+        HIP_DEBUG("Got address %s, port %d, TTL %d from daemon\n",
+                  tmp_ip_str, tmp_port, tmp_ttl);
+
+        error = 0;
+        error = resolve_dht_gateway_info(tmp_ip_str, &serving_gateway);
+        if (error < 0) {
+                        HIP_DEBUG("Error in resolving the DHT gateway address, skipping DHT\n");
+                        close(s);
+                        goto skip_dht;
+        }
+        ret_hit = opendht_get_key(serving_gateway, name, dht_response_hit);
+        if (ret_hit == 0)
+                HIP_DEBUG("HIT received from DHT: %s\n", dht_response_hit);
+        /* Where is this opened? */
+	close(s);
+        if (ret_hit == 0 && (strlen((char *)dht_response_hit) > 1)) {
+                ret_addr = opendht_get_key(serving_gateway, 
+                                           dht_response_hit, dht_response_addr);
+                if (ret_addr == 0)
+                        HIP_DEBUG("Address received from DHT: %s\n",dht_response_addr);
+                close(s);
+        }
+        if ((ret_hit == 0) && (ret_addr == 0) && 
+            (dht_response_hit[0] != '\0') && (dht_response_addr[0] != '\0')) { 
+                if (inet_pton(AF_INET6, dht_response_hit, &tmp_hit) >0 &&
+                    inet_pton(AF_INET6, dht_response_addr, &tmp_addr) >0) {
+                        if (**pat == NULL) {						
+                                if ((**pat = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){
+                                        HIP_ERROR("Memory allocation error\n");
+                                        exit(-EAI_MEMORY);
+                                }	  
+                                (**pat)->scopeid = 0;				
+                        }
+                        (**pat)->family = AF_INET6;					
+                        memcpy((**pat)->addr, &tmp_hit, sizeof(struct in6_addr));		
+                        *pat = &((**pat)->next);				     	
+                        
+                        if ((**pat = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){
+                                HIP_ERROR("Memory allocation error\n");
+                                exit(-EAI_MEMORY);
+                        }	  
+                        
+                        (**pat)->scopeid = 0;				
+                        (**pat)->next = NULL;						
+                        (**pat)->family = AF_INET6;					
+                        memcpy((**pat)->addr, &tmp_addr, sizeof(struct in6_addr));	
+                        *pat = &((**pat)->next);
+                        /* dump_pai(*pat); */
+                        return 1;
+                }
+        } 
+ out_err: 
  skip_dht:
-#endif
 									
-  /*! \todo check return values */
-  _HIP_DEBUG("Opening %s\n", _PATH_HIP_HOSTS);
-  fp = fopen(_PATH_HIP_HOSTS, "r");		
-								
-  while (fp && getwithoutnewline(line, 500, fp) != NULL) {		
-    int c;								
-    int ret;
-                                                            
-    lineno++;								
-    if(strlen(line)<=1) continue;                                       
-    initlist(&list);                                                    
-    extractsubstrings(line,&list);                                      
-    for(i=0;i<length(&list);i++) {                                      
-      if (inet_pton(AF_INET6, getitem(&list,i), &hit) <= 0) {		
-	fqdn_str = getitem(&list,i);	               		        
-      }                                                                 
-    }									
-    if ((strlen(name) == strlen(fqdn_str)) &&		         	
-      strcmp(name, fqdn_str) == 0) {				        
-      HIP_DEBUG("** match on line %d **\n", lineno);			
-      found_hits = 1; 
-                                                                        
-      /* add every HIT to linked list */				
-      for(i=0;i<length(&list);i++) {                                    
-	uint32_t lsi = htonl(HIT2LSI((uint8_t *) &hit));	
-	struct gaih_addrtuple *prev_pat = NULL;	
-	_HIP_DEBUG("hit: %x  getitem(&list,i): %s \n", hit, getitem(&list,i));
-        ret = inet_pton(AF_INET6, getitem(&list,i), &hit);
-	_HIP_DEBUG("hit: %x\n", hit);              
-        if (ret < 1) continue;         
- 
-	if ((aux = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){
-	  HIP_ERROR("Memory allocation error\n");
-	  exit(-EAI_MEMORY);
-	}
+	/* Open the file containing HIP hosts for reading. */
+	fp = fopen(_PATH_HIP_HOSTS, "r");
+	if(fp == NULL)
+	{
+		HIP_ERROR("Error opening file '%s' for reading.\n", _PATH_HIP_HOSTS);		
+        }
 
-	//Placing the node at the beginning of the list
-	aux->next = (**pat);
-	(**pat) = aux;
-	aux->scopeid = 0;				
-	aux->family = AF_INET6;
-	memcpy(aux->addr, &hit, sizeof(struct in6_addr));
-
+	/* Loop through all lines in the file. */
+	/** @todo check return values */
+        while (fp && getwithoutnewline(line, 500, fp) != NULL) {		
+                int c, ret;
+		
+		/* Keep track of line number for debuging purposes. */
+		lineno++;
+		/* Skip empty and single character lines. */
+                if(strlen(line) <= 1) 
+			continue;
+		/* Init a list for the substrings of the line. Note that this is
+		   done for every line. Break the line into substrings next. */
+                initlist(&list);
+                extractsubstrings(line,&list);
+		
+		/* Loop through the substrings just created. We try to convert
+		   the list item into an IPv6 address. If the conversion is NOT
+		   successful, we assume that the substring represents a fully
+		   qualified domain name. Note that this omits the possible
+		   aliases that the hosts has. */
+                for(i = 0; i < length(&list); i++) {
+			
+                        if (inet_pton(AF_INET6, getitem(&list,i), &hit) <= 0) {
+				fqdn_str = getitem(&list,i);
+			}                                                                 
+                }
+		/* Here we have the domain name in "fqdn" and the HIT in "hit". */
+                if ((strlen(name) == strlen(fqdn_str)) &&
+		    strcmp(name, fqdn_str) == 0) {
+			HIP_INFO("Found a HIT value for host '%s' on line "\
+				 "%d of file '%s'.\n",
+				 name, lineno, _PATH_HIP_HOSTS);
+                        found_hits = 1; 
+                        
+                        /* "add every HIT to linked list"
+			   What do you mean by "every"? We only have one HIT per
+			   line, don't we? Also, why do we loop through the list
+			   again when we already have the hit stored from the
+			   previous loop?
+			   18.01.2008 16:49 -Lauri. */				
+                        for(i = 0; i <length(&list); i++) {                                    
+                                uint32_t lsi = htonl(HIT2LSI((uint8_t *) &hit));	
+                                struct gaih_addrtuple *prev_pat = NULL;	
+				ret = inet_pton(AF_INET6, getitem(&list,i), &hit);
+                                
+                                if (ret < 1) continue;         
+                                
+                                if ((aux = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){
+                                        HIP_ERROR("Memory allocation error\n");
+                                        exit(-EAI_MEMORY);
+                                }
+                                
+                                //Placing the node at the beginning of the list
+                                aux->next = (**pat);
+                                (**pat) = aux;
+                                aux->scopeid = 0;				
+                                aux->family = AF_INET6;
+                                memcpy(aux->addr, &hit, sizeof(struct in6_addr));
+                                
 #if 0 /* Disabled as this is not support by the daemon yet -miika*/
-	/* AG: add LSI as well */					
-        if (**pat == NULL) {
-	  if ((**pat = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){
-	    HIP_ERROR("Memory allocation error\n");
-	    exit(-EAI_MEMORY);
-	  }
-
-	  (**pat)->scopeid = 0;				
-        }								
-        (**pat)->next = NULL;						
-        (**pat)->family = AF_INET;					
-        memcpy((**pat)->addr, &lsi, sizeof(hip_lsi_t));			
-        *pat = &((**pat)->next);					      
+                                /* AG: add LSI as well */					
+                                if (**pat == NULL) {
+                                        if ((**pat = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){
+                                                HIP_ERROR("Memory allocation error\n");
+                                                exit(-EAI_MEMORY);
+                                        }
+                                        
+                                        (**pat)->scopeid = 0;				
+                                }								
+                                (**pat)->next = NULL;						
+                                (**pat)->family = AF_INET;					
+                                memcpy((**pat)->addr, &lsi, sizeof(hip_lsi_t));			
+                                *pat = &((**pat)->next);					      
 #endif
-      }									
-    } // end of if 
+                        }									
+                } // end of if 
+                
+                destroy(&list);                                                     
+        } // end of while
 
-    destroy(&list);                                                     
-  } // end of while	              							
-  if (fp)                                                               
-    fclose(fp);		
-  return found_hits;	        				
+	if (fp)                                                               
+                fclose(fp);		
+        return found_hits;	        				
 }
 
 
@@ -948,85 +947,115 @@ gaih_inet_get_serv(const struct addrinfo *req, const struct gaih_service *servic
   return 0;
 }
 
-int 
-gaih_inet_get_name(const char *name, const struct addrinfo *req, 
-		   const struct gaih_typeproto *tp, 
-		   struct gaih_servtuple *st, struct gaih_addrtuple **at, 
-		   int hip_transparent_mode) 
+
+/**
+ * Retrieves host information?
+ *
+ * @param  name                host name. 
+ * @param  reg                  a pointer to... 
+ * @param  tp                   a pointer to...
+ * @param  st                   a pointer to...
+ * @param  at                   a pointer to...
+ * @param  hip_transparent_mode ... 
+ * @return zero on success, negative on error.
+ */ 
+int gaih_inet_get_name(const char *name, const struct addrinfo *req,
+		       const struct gaih_typeproto *tp, 
+		       struct gaih_servtuple *st, struct gaih_addrtuple **at,
+		       int hip_transparent_mode) 
 {
-  int rc;
-  int v4mapped = (req->ai_family == PF_UNSPEC || req->ai_family == PF_INET6) &&
-    (req->ai_flags & AI_V4MAPPED);
-  char *namebuf = strdupa (name);
-  _HIP_DEBUG(">> name != NULL\n");
-  
-  *at = malloc (sizeof (struct gaih_addrtuple));
-  
-  (*at)->family = AF_UNSPEC;
-  (*at)->scopeid = 0;
-  (*at)->next = NULL;
-  
-  // is ipv4 address?
-  if (inet_pton (AF_INET, name, (*at)->addr) > 0)
-    {
-      HIP_DEBUG("The name to resolve is an IPv4\n");
-      
-      if (req->ai_family == AF_UNSPEC || req->ai_family == AF_INET || v4mapped)
-	(*at)->family = AF_INET;
-      else
-	return -EAI_FAMILY;
-    }
-  
-  // not ipv4
-  if ((*at)->family == AF_UNSPEC)
-    {
-      char *namebuf = strdupa (name);
-      char *scope_delim;
-      
-      _HIP_DEBUG("not IPv4\n");
-      
-      scope_delim = strchr (namebuf, SCOPE_DELIMITER);
-      if (scope_delim != NULL)
-	*scope_delim = '\0';
-      
-      // is ipv6 address?
-      if (inet_pton (AF_INET6, namebuf, (*at)->addr) > 0)
+	int rc;
+	int v4mapped = (req->ai_family == PF_UNSPEC ||
+			req->ai_family == PF_INET6) &&
+		(req->ai_flags & AI_V4MAPPED);
+	char *namebuf = strdupa(name);
+	
+	*at = malloc (sizeof (struct gaih_addrtuple));
+	
+	(*at)->family = AF_UNSPEC;
+	(*at)->scopeid = 0;
+	(*at)->next = NULL;
+	
+	/* Check if the addredd is an IPv4 address. */
+	if (inet_pton (AF_INET, name, (*at)->addr) > 0)
 	{
-	  HIP_DEBUG("The name to resolve is an IPv6\n");
-	  
-	  if (req->ai_family == AF_UNSPEC || req->ai_family == AF_INET6)
-	    (*at)->family = AF_INET6;
-	  else
-	    return -EAI_FAMILY;
-	  
-	  if (scope_delim != NULL)
-	    {
-	      int try_numericscope = 0;
-	      if (IN6_IS_ADDR_LINKLOCAL ((*at)->addr)
-		  || IN6_IS_ADDR_MC_LINKLOCAL ((*at)->addr))
+		HIP_DEBUG("The name to resolve is an IPv4\n");
+		if (req->ai_family == AF_UNSPEC ||
+		    req->ai_family == AF_INET || v4mapped)
 		{
-		  (*at)->scopeid = if_nametoindex (scope_delim + 1);
-		  if ((*at)->scopeid == 0)
-		    try_numericscope = 1;
-		} 
-	      else
-		try_numericscope = 1;
-	      
-	      if (try_numericscope != 0)
-		{
-		  char *end;
-		  unsigned long scopeid = strtoul (scope_delim + 1, &end,
-						   10);
-		  if (*end != '\0' || 
-		      (sizeof((*at)->scopeid) < sizeof(scopeid) &&
-		       scopeid > 0xffffffff)) 
-		    return GAIH_OKIFUNSPEC | -EAI_NONAME;
-		  (*at)->scopeid = (uint32_t) scopeid;
+			(*at)->family = AF_INET;
 		}
-	    }
+		else
+		{
+			return -EAI_FAMILY;
+		}
 	}
-    }
   
+	/* If the address is not an IPv4 and the family is not specified. */
+	if ((*at)->family == AF_UNSPEC)
+	{
+		char *namebuf = strdupa (name);
+		char *scope_delim;
+		
+		_HIP_DEBUG("not IPv4\n");
+		
+		scope_delim = strchr (namebuf, SCOPE_DELIMITER);
+		if (scope_delim != NULL)
+		{
+			*scope_delim = '\0';
+		}
+		
+		/* Check if the addredd is an IPv6 address. */
+		if (inet_pton (AF_INET6, namebuf, (*at)->addr) > 0)
+		{
+			HIP_DEBUG("The name to resolve is an IPv6\n");
+			
+			if (req->ai_family == AF_UNSPEC ||
+			    req->ai_family == AF_INET6)
+			{
+				(*at)->family = AF_INET6;
+			}
+			else
+			{
+				return -EAI_FAMILY;
+			}
+
+			if (scope_delim != NULL)
+			{
+				int try_numericscope = 0;
+				if (IN6_IS_ADDR_LINKLOCAL ((*at)->addr)
+				    || IN6_IS_ADDR_MC_LINKLOCAL ((*at)->addr))
+				{
+					(*at)->scopeid =
+						if_nametoindex(scope_delim + 1);
+					if ((*at)->scopeid == 0)
+					{
+						try_numericscope = 1;
+					}
+				} 
+				else
+				{
+					try_numericscope = 1;
+				}
+				if (try_numericscope != 0)
+				{
+					char *end;
+					unsigned long scopeid = strtoul(
+						scope_delim + 1, &end, 10);
+					if (*end != '\0' ||
+					    (sizeof((*at)->scopeid) <
+					     sizeof(scopeid) &&
+					     scopeid > 0xffffffff))
+					{
+						return GAIH_OKIFUNSPEC |
+							-EAI_NONAME;
+					}
+					(*at)->scopeid = (uint32_t) scopeid;
+				}
+			}
+		}
+	}
+	
     // host name is not an IP address
     /* Note: Due to problems in some platforms (FC7), it is not possible 
        to use the flag AI_NUMERICHOST to identify whether the name is a 
@@ -1042,7 +1071,8 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
       int old_res_options = _res.options;
       int found_hits = 0;
       
-      HIP_DEBUG("The name is not an IPv4 or IPv6 address, resolve name (!AI_NUMERICHOST)\n");
+      _HIP_DEBUG("The name is not an IPv4 or IPv6 address, resolve name "\
+		"(!AI_NUMERICHOST)\n");
       _HIP_DEBUG("&pat=%p pat=%p *pat=%p **pat=%p\n", &pat, pat, *pat, **pat);
       
 #ifdef UNDEF_CONFIG_HIP_AGENT
@@ -1084,16 +1114,21 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	_HIP_DEBUG("found_hits after gethosts_hit: %d\n", found_hits);
 	
 	if (req->ai_flags & AI_HIP) {
-	  HIP_DEBUG("HIP_TRANSPARENT_API: AI_HIP set: strictly HITs are returned\n");
+	  _HIP_DEBUG("HIP_TRANSPARENT_API: AI_HIP set: strictly HITs are "\
+		    "returned\n");
 	} else {
-	  HIP_DEBUG("HIP_TRANSPARENT_API: AI_HIP unset: if any HITs are found only HITs will be returned; if not, IPs will be returned\n");
+	  _HIP_DEBUG("HIP_TRANSPARENT_API: AI_HIP unset: if any HITs are "\
+		    "found only HITs will be returned; if not, IPs will be "\
+		    "returned\n");
 	}
       } else /* not hip_transparent_mode */ {
 	if (req->ai_flags & AI_HIP) {
-	  HIP_DEBUG("no HIP_TRANSPARENT_API: AI_HIP set: strictly HITs are returned\n");
+	  _HIP_DEBUG("no HIP_TRANSPARENT_API: AI_HIP set: strictly HITs are "\
+		    "returned\n");
 	  found_hits |= gethosts_hit(name, &pat, req->ai_flags);
 	} else {
-	  HIP_DEBUG("no HIP_TRANSPARENT_API: AI_HIP unset: strictly IPs are returned\n");
+	  _HIP_DEBUG("no HIP_TRANSPARENT_API: AI_HIP unset: strictly IPs are "\
+		    "returned\n");
 	}
       }
 
@@ -1137,25 +1172,29 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	return (GAIH_OKIFUNSPEC | -EAI_NONAME);
     
       _HIP_DEBUG("req->ai_flags: %d   AI_HIP: %d  AF_UNSPEC: %d\n", req->ai_flags, AI_HIP, AF_UNSPEC);
+
       _HIP_DEBUG("found_hits: %d\n", found_hits);
-      /* HIP: Finally remove IP addresses from the list to be
-	 returned depending on the AI_HIP flag */ 
+      
+      /* HIP: Finally remove IP addresses from the list to be returned depending
+	 on the AI_HIP flag. */ 
       if ((req->ai_flags & AI_HIP) || found_hits) {
 	struct gaih_addrtuple *a = *at, *p = NULL, *aux = NULL;
-	HIP_DEBUG("HIP: AI_HIP set or HITs were found: removing IP addresses\n");
+	_HIP_DEBUG("HIP: AI_HIP set or HITs were found: removing IP addresses\n");
 	_HIP_DEBUG("(*at)->addr: %s  (*at)->family: %d\n", (*at)->addr, (*at)->family);
 
 	while (a != NULL) {
+	
 	  struct gaih_addrtuple *nxt = a->next;
 	  
 	  _HIP_DEBUG("req->ai_family: %d   a->family: %d   ipv6_addr_is_hit: %d  ", 
 		    req->ai_family, a->family, 
                     ipv6_addr_is_hit((struct in6_addr *)a->addr), a->addr);
-	  if (a->family == AF_INET)
-              hip_print_lsi("\na->addr",a->addr);
-          if (a->family == AF_INET6)
-              hip_print_hit("\na->addr",a->addr);
-
+	  if (a->family == AF_INET) {
+              _HIP_DEBUG_LSI("\na->addr",a->addr);
+	  }
+          if (a->family == AF_INET6) {
+              _HIP_DEBUG_HIT("\na->addr",a->addr);
+	  }
 	  /* do not remove HIT if request is not IPv4 */
 	  if (req->ai_family != AF_INET && 
 	      a->family == AF_INET6 && 
@@ -1173,7 +1212,7 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	      aux = aux->next;
 	    aux->next = a->next;
 	  }
-	  HIP_DEBUG("freeing IP address\n");
+	  _HIP_DEBUG("freeing IP address\n");
 	  free(a);
 	  a = nxt;
 	  _HIP_DEBUG("pointer a: %p\tpointer p: %p\n", a, p);
@@ -1402,167 +1441,158 @@ static struct gaih gaih[] =
   };
 
 /**
- * getaddrinfo - retrieves the info of the specified peer
- * @param name ?
- * @param service ?
- * @param hints ?
- * @param pai ?
- *
- * Process a request for the list of known peers
- *
- * @return zero on success, or negative error value on failure
- * In case of flags set to AI_KERNEL_LIST, on success the number of elements found in the
- * database is returned
+ * Retrieves the info of the specified peer.
+ * 
+ * @param name    a pointer to a host name.
+ * @param service a pointer to port number as a string.
+ * @param hints   a pointer to a socket address structure that is used as a
+ *                search key.
+ * @param pai     a pointer to a target buffer list where the info is to be
+ *                stored. 
+ * @return        zero on success, or negative error value on failure. If the
+ *                flags are set to AI_KERNEL_LIST, the number of the elements
+ *                found in the database is returned on success.
  */
-
-int getaddrinfo (const char *name, const char *service,
-	     const struct addrinfo *hints, struct addrinfo **pai)
+int getaddrinfo(const char *name, const char *service,
+		const struct addrinfo *hints, struct addrinfo **pai)
 {
-  int i = 0, j = 0, last_i = 0;
-  struct addrinfo *p = NULL, **end;
-  struct gaih *g = gaih, *pg = NULL;
-  struct gaih_service gaih_service, *pservice;
-  int hip_transparent_mode;
+	int i = 0, j = 0, last_i = 0;
+	struct addrinfo *p = NULL, **end;
+	struct gaih *g = gaih, *pg = NULL;
+	struct gaih_service gaih_service, *pservice;
+	int hip_transparent_mode;
 
-  _HIP_DEBUG("flags=%d\n", hints->ai_flags);
-  HIP_DEBUG("name='%s' service='%s'\n", name, service);
-  if (hints)
-    _HIP_DEBUG("ai_flags=0x%x ai_family=%d ai_socktype=%d ai_protocol=%d\n", hints->ai_flags, hints->ai_family, hints->ai_socktype, hints->ai_protocol);
-  else
-    _HIP_DEBUG("hints=NULL\n");
+	if (name != NULL && name[0] == '*' && name[1] == 0)
+		name = NULL;
 
-  //  if (*pai)
-  // HIP_DEBUG("pai:ai_flags=%d ai_family=%d ai_socktype=%d ai_protocol=%d\n", (*pai)->ai_flags, (*pai)->ai_family, (*pai)->ai_socktype, (*pai)->ai_protocol);
+	if (service != NULL && service[0] == '*' && service[1] == 0)
+		service = NULL;
 
-  if (name != NULL && name[0] == '*' && name[1] == 0)
-    name = NULL;
+	if (name == NULL && service == NULL)
+		return EAI_NONAME;
 
-  if (service != NULL && service[0] == '*' && service[1] == 0)
-    service = NULL;
+	if (hints == NULL) {
+		hints = &default_hints;
+		_HIP_DEBUG("set hints=default_hints:ai_flags=0x%x "\
+			   "ai_family=%d ai_socktype=%d ai_protocol=%d\n",
+			   hints->ai_flags, hints->ai_family,
+			   hints->ai_socktype, hints->ai_protocol);
+	}
 
-  if (name == NULL && service == NULL)
-    return EAI_NONAME;
+	if (hints->ai_flags & ~(AI_PASSIVE|AI_CANONNAME|AI_NUMERICHOST|
+				AI_ADDRCONFIG|AI_V4MAPPED|AI_ALL|AI_HIP|
+				AI_HIP_NATIVE|AI_KERNEL_LIST|AI_NODHT))
+		return EAI_BADFLAGS;
 
-  if (hints == NULL) {
-    hints = &default_hints;
-    _HIP_DEBUG("set hints=default_hints:ai_flags=0x%x ai_family=%d ai_socktype=%d ai_protocol=%d\n", hints->ai_flags, hints->ai_family, hints->ai_socktype, hints->ai_protocol);
-  }
+	if ((hints->ai_flags & AI_CANONNAME) && name == NULL)
+		return EAI_BADFLAGS;
 
-  _HIP_DEBUG("flags: %x\n", hints->ai_flags);
-  if (hints->ai_flags & ~(AI_PASSIVE|AI_CANONNAME|AI_NUMERICHOST|
-			  AI_ADDRCONFIG|AI_V4MAPPED|AI_ALL|AI_HIP|
-			  AI_HIP_NATIVE|AI_KERNEL_LIST|AI_NODHT))
-    return EAI_BADFLAGS;
-
-  if ((hints->ai_flags & AI_CANONNAME) && name == NULL)
-    return EAI_BADFLAGS;
-
-  if ((hints->ai_flags & AI_HIP) && (hints->ai_flags & AI_HIP_NATIVE))
-    return EAI_BADFLAGS;
+	if ((hints->ai_flags & AI_HIP) && (hints->ai_flags & AI_HIP_NATIVE))
+		return EAI_BADFLAGS;
 
 #ifdef HIP_TRANSPARENT_API
-  /* Transparent mode does not work with HIP native resolver */
-  hip_transparent_mode = !(hints->ai_flags & AI_HIP_NATIVE);
+	/* Transparent mode does not work with HIP native resolver */
+	hip_transparent_mode = !(hints->ai_flags & AI_HIP_NATIVE);
 #else
-  hip_transparent_mode = 0;
+	hip_transparent_mode = 0;
 #endif
   
-  if (service && service[0])
-    {
-      char *c;
-
-      gaih_service.name = service;
-      gaih_service.num = strtoul (gaih_service.name, &c, 10);
-      if (*c)
-	gaih_service.num = -1;
-      else
-	/* Can't specify a numerical socket unless a protocol family was
-	   given. */
-        if (hints->ai_socktype == 0 && hints->ai_protocol == 0)
-          return EAI_SERVICE;
-      pservice = &gaih_service;
-    }
-  else
-    pservice = NULL;
-
-  if (name == NULL && (hints->ai_flags & AI_KERNEL_LIST)) {
-    socklen_t msg_len = NUM_MAX_HITS * sizeof(struct addrinfo);
-    int err = 0, port, i;
-    
-    *pai = calloc(NUM_MAX_HITS, sizeof(struct addrinfo));
-    if (*pai == NULL) {
-      HIP_ERROR("Unable to allocated memory\n");
-      err = -EAI_MEMORY;
-      return err;
-    }
-
-    if (!pservice)
-      port = 0;
-    else
-      port = pservice->num;
-    /* This is the case which is used after BOS packet is processed, as a second parameter
-     * instead of the IPPROTO_HIP we put the port number because it is needed to fill in
-     * the struct sockaddr_in6 list
-     */
-    err = hip_recv_daemon_info(NULL, 0);
-    HIP_ASSERT(0); /* XX FIXME: fix recv_daemon_msg */
-    if (err < 0) {
-      HIP_ERROR("getsockopt failed (%d)\n", err);
-    }
-    return err;
-  }
-
-  if (pai)
-    end = &p;
-  else
-    end = NULL;
-
-  while (g->gaih)
-    {
-      if (hints->ai_family == g->family || hints->ai_family == AF_UNSPEC)
+	if (service && service[0])
 	{
-	  if ((hints->ai_flags & AI_ADDRCONFIG) && !addrconfig(g->family))
-	    continue;
-	  j++;
-	  if (pg == NULL || pg->gaih != g->gaih)
-	    {
-	      pg = g;
-	      i = g->gaih (name, pservice, hints, end, hip_transparent_mode);
-	      if (i != 0)
-		{
-		  last_i = i;
+		char *c;
 
-		  if (hints->ai_family == AF_UNSPEC && (i & GAIH_OKIFUNSPEC))
-		    continue;
-
-		  if (p)
-		    freeaddrinfo (p);
-
-		  return -(i & GAIH_EAI);
-		}
-	      if (end)
-		while(*end) end = &((*end)->ai_next);
-	    }
+		gaih_service.name = service;
+		gaih_service.num = strtoul(gaih_service.name, &c, 10);
+		if (*c)
+			gaih_service.num = -1;
+		else
+			/* Can't specify a numerical socket unless a protocol family was
+			   given. */
+			if (hints->ai_socktype == 0 && hints->ai_protocol == 0)
+				return EAI_SERVICE;
+		pservice = &gaih_service;
 	}
-      ++g;
-    }
+	else
+		pservice = NULL;
 
-  if (j == 0)
-    return EAI_FAMILY;
+	if (name == NULL && (hints->ai_flags & AI_KERNEL_LIST)) {
+		socklen_t msg_len = NUM_MAX_HITS * sizeof(struct addrinfo);
+		int err = 0, port, i;
+    
+		*pai = calloc(NUM_MAX_HITS, sizeof(struct addrinfo));
+		if (*pai == NULL) {
+			HIP_ERROR("Unable to allocated memory\n");
+			err = -EAI_MEMORY;
+			return err;
+		}
 
-  if (p) // here should be true
-    {
-      *pai = p;
-      return 0;
-    }
+		if (!pservice)
+			port = 0;
+		else
+			port = pservice->num;
+		/* This is the case which is used after BOS packet is processed,
+		   as a second parameter instead of the IPPROTO_HIP we put the
+		   port number because it is needed to fill in the struct
+		   sockaddr_in6 list. */
+		err = hip_recv_daemon_info(NULL, 0);
+		HIP_ASSERT(0); /** @todo fix recv_daemon_msg */
+		if (err < 0) {
+			HIP_ERROR("getsockopt failed (%d)\n", err);
+		}
+		return err;
+	}
 
-  if (pai == NULL && last_i == 0)
-    return 0;
+	if (pai)
+		end = &p;
+	else
+		end = NULL;
+	
+	while (g->gaih)
+	{
+		if (hints->ai_family == g->family || hints->ai_family == AF_UNSPEC)
+		{
+			if ((hints->ai_flags & AI_ADDRCONFIG) && !addrconfig(g->family))
+				continue;
+			j++;
+			if (pg == NULL || pg->gaih != g->gaih)
+			{
+				pg = g;
+				i = g->gaih (name, pservice, hints, end, hip_transparent_mode);
+				if (i != 0)
+				{
+					last_i = i;
 
-  if (p)
-    freeaddrinfo (p);
+					if (hints->ai_family == AF_UNSPEC && (i & GAIH_OKIFUNSPEC))
+						continue;
 
-  return last_i ? -(last_i & GAIH_EAI) : EAI_NONAME;
+					if (p)
+						freeaddrinfo(p);
+
+					return -(i & GAIH_EAI);
+				}
+				if (end)
+					while(*end) end = &((*end)->ai_next);
+			}
+		}
+		++g;
+	}
+
+	if (j == 0)
+		return EAI_FAMILY;
+
+	if (p) // here should be true
+	{
+		*pai = p;
+		return 0;
+	}
+
+	if (pai == NULL && last_i == 0)
+		return 0;
+
+	if (p)
+		freeaddrinfo (p);
+
+	return last_i ? -(last_i & GAIH_EAI) : EAI_NONAME;
 }
 
 void

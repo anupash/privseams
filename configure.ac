@@ -1,4 +1,4 @@
-#                                               -*- Autoconf -*-
+r#                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 #
 # Generated with autoscan and manually edited -Miika
@@ -8,7 +8,7 @@ AC_CONFIG_SRCDIR([tools/hipconftool.c])
 AM_INIT_AUTOMAKE(hipl, main)
 
 # Checks for programs.
-AC_PROG_CXX
+#AC_PROG_CXX
 AC_PROG_AWK
 AC_PROG_YACC
 AC_PROG_CC
@@ -19,6 +19,8 @@ AC_PROG_MAKE_SET
 # Checks for libraries.
 AM_PROG_LIBTOOL
 AC_CHECK_LIB(crypto, DSA_generate_key,, AC_MSG_ERROR(openssl lib not found))
+# We need the math lib in the registration extension.
+AC_CHECK_LIB(m, pow,, AC_MSG_ERROR(Math lib not found))
 #AC_CHECK_LIB([gcrypt], [gcry_pk_sign])
 AC_HEADER_SYS_WAIT
 # Checks for header files.
@@ -75,10 +77,10 @@ AC_SUBST(usagi_libc)
 
 AC_ARG_ENABLE(firewall,
              AC_HELP_STRING([--enable-firewall],
-                            [HIP enabled firewall daemon (default is NO)]),
-             [ac_cv_use_firewall=$enableval], [ac_cv_use_firewall=no])
+                            [HIP enabled firewall daemon (default is YES)]),
+             [ac_cv_use_firewall=$enableval], [ac_cv_use_firewall=yes])
 AC_CACHE_CHECK([whether to use firewall],
-               [ac_cv_use_firewall], [ac_cv_use_firewall=no])
+               [ac_cv_use_firewall], [ac_cv_use_firewall=yes])
 if test x"$ac_cv_use_firewall" = x"yes"; then
         AC_CHECK_LIB(ipq, ipq_create_handle,, AC_MSG_ERROR(libipq not found))
         AC_CHECK_LIB(glib-2.0, g_list_append,, AC_MSG_ERROR(glib not found))
@@ -123,6 +125,17 @@ if test x"$ac_cv_use_hi3" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_HI3, AC_PREREQ(2.53))
 fi
 AM_CONDITIONAL(HIP_HI3, test x"$ac_cv_use_hi3" = x"yes")
+
+AC_ARG_ENABLE(opptcp,
+             AC_HELP_STRING([--enable-opptcp],
+                            [Opportunistic TCP extensions support (default is NO)]),
+             [ac_cv_use_opptcp=$enableval], [ac_cv_use_opptcp=no])
+AC_CACHE_CHECK([whether to use opptcp],
+               [ac_cv_use_opptcp], [ac_cv_use_opptcp=no])
+if test x"$ac_cv_use_opptcp" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_OPPTCP, AC_PREREQ(2.53))
+fi
+AM_CONDITIONAL(HIP_OPPTCP, test x"$ac_cv_use_opptcp" = x"yes")
 
 AC_ARG_ENABLE(cookie,
              AC_HELP_STRING([--enable-cookie],
@@ -187,6 +200,16 @@ if test x"$ac_cv_use_buggyipsec" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_BUGGYIPSEC, AC_PREREQ(2.53))
 fi
 
+AC_ARG_ENABLE(buggyprefix,
+             AC_HELP_STRING([--enable-buggyprefix],
+                            [Support for kernels with flawed loopback handling (default is NO)]),
+             [ac_cv_use_buggyprefix=$enableval], [ac_cv_use_buggyprefix=no])
+AC_CACHE_CHECK([whether to use buggyprefix],
+               [ac_cv_use_buggyprefix], [ac_cv_use_buggyprefix=no])
+if test x"$ac_cv_use_buggyprefix" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_BUGGYPREFIX, AC_PREREQ(2.53))
+fi
+
 AM_CONDITIONAL(HIP_PRIVSEP, test x"$ac_cv_use_privsep" = x"yes")
 AC_ARG_ENABLE(privsep,
              AC_HELP_STRING([--enable-privsep],
@@ -228,22 +251,11 @@ AC_CACHE_CHECK([whether to use opendht],
                [ac_cv_use_opendht], [ac_cv_use_opendht=yes])
 if test x"$ac_cv_use_opendht" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_OPENDHT, AC_PREREQ(2.53))
-        AC_CHECK_LIB(xml2, xmlFreeDoc,, AC_MSG_ERROR(libxml2 not found))
         #AC_CHECK_PROG(RPCGEN, rpcgen,,)
 fi
+AC_CHECK_LIB(xml2, xmlFreeDoc,, AC_MSG_ERROR(libxml2 not found))
 AM_CONDITIONAL(HIP_OPENDHT, test x"$ac_cv_use_opendht" = x"yes")
 
-AC_ARG_ENABLE(interfamily,
-             AC_HELP_STRING([--enable-interfamily],
-                            [Interfamily handover support (default is NO)]),
-             [ac_cv_use_interfamily=$enableval], [ac_cv_use_interfamily=no])
-AC_CACHE_CHECK([whether to use interfamily],
-               [ac_cv_use_interfamily], [ac_cv_use_interfamily=no])
-if test x"$ac_cv_use_interfamily" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_INTERFAMILY, AC_PREREQ(2.53))
-fi
-AM_CONDITIONAL(HIP_INTERFAMILY, test x"$ac_cv_use_interfamily" = x"yes")
- 
 AC_ARG_ENABLE(blind,
              AC_HELP_STRING([--enable-blind],
                             [HIP BLIND extensions (default is NO)]),
@@ -266,6 +278,8 @@ if test x"$ac_cv_use_debug" = x"yes"; then
 	AC_DEFINE(CONFIG_HIP_DEBUG, AC_PREREQ(2.53))
 	AC_SUBST(GDB_CFLAG, "-g")
 fi
+
+AC_PREFIX_DEFAULT("/usr/local")
 
 # Path definitions
 AC_SUBST(HIPL, `pwd`)
@@ -321,5 +335,6 @@ AC_CONFIG_FILES([ Makefile
                   firewall/Makefile
                   libhipgui/Makefile
                   agent/Makefile
-		  libipsec/Makefile])
+		  libipsec/Makefile
+                  hipfwmi/Makefile])
 AC_OUTPUT

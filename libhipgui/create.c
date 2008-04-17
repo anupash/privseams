@@ -360,7 +360,7 @@ int _create_status_icon(void)
 //	status_icon = gtk_status_icon_new_from_file(HIP_DEBIAN_DIR_PIXMAPS "/hipmanager.png");
 	status_icon = gtk_status_icon_new_from_icon_name("hipmanager");
 	gtk_status_icon_set_visible(status_icon, TRUE);
-	err = gtk_status_icon_is_embedded(status_icon);
+	err = !gtk_status_icon_is_embedded(status_icon);
 	HIP_DEBUG("Status icon %s.\n", (err ? "is visible" : "could not be shown"));
 	
  	/* When user right clicks status icon. */
@@ -617,7 +617,7 @@ int create_content_main(void)
 	gtk_container_set_border_width(GTK_CONTAINER(window), 3);
 
 	/* Create status icon. */
-	HIP_IFE(_create_status_icon(), -1);
+	HIP_IFE(!_create_status_icon(), -1);
 
 	/* Create main pain. */
 	pane = gtk_vbox_new(FALSE, 1);

@@ -42,11 +42,12 @@ int hip_netlink_receive(struct rtnl_handle *nl,
                 NULL,   0,
                 0
         };
-	int msg_len, status;
+	int msg_len = 0, status = 0;
+
 	char buf[NLMSG_SPACE(HIP_MAX_NETLINK_PACKET)];
 
         msg_len = recvfrom(nl->fd, buf, sizeof(struct nlmsghdr),
-			   MSG_PEEK, NULL, NULL);
+			   MSG_PEEK|MSG_DONTWAIT, NULL, NULL);
 	if (msg_len != sizeof(struct nlmsghdr)) {
 		HIP_ERROR("Bad netlink msg\n");
 		return -1;
@@ -58,15 +59,17 @@ int hip_netlink_receive(struct rtnl_handle *nl,
         nladdr.nl_pid = 0;
         nladdr.nl_groups = 0;
 	iov.iov_base = buf;
-
+ 
 	while (1) {
                 iov.iov_len = sizeof(buf);
+                status = 0;
                 status = recvmsg(nl->fd, &msg, 0);
 
                 if (status < 0) {
                         if (errno == EINTR)
                                 continue;
 			HIP_ERROR("Netlink overrun.\n");
+                        return -1;
                         continue;
                 }
                 if (status == 0) {
@@ -82,7 +85,7 @@ int hip_netlink_receive(struct rtnl_handle *nl,
                         int len = h->nlmsg_len;
                         int l = len - sizeof(*h);
 
-                        if (l<0 || len>status) {
+                        if (l < 0 || len > status) {
                                 if (msg.msg_flags & MSG_TRUNC) {
                                         HIP_ERROR("Truncated netlink message\n");
                                         return -1;
@@ -1173,6 +1176,10 @@ int rtnl_talk(struct rtnl_handle *rtnl, struct nlmsghdr *n, pid_t peer,
                                         if (err < 0)
                                                 return err;
                                 }
+                               /* Don't forget to skip that message. */
+                                status -= NLMSG_ALIGN(len);
+				h = (struct nlmsghdr*)((char*)h + NLMSG_ALIGN(len));
+
                                 continue;
                         }
 
@@ -1294,5 +1301,3 @@ skip_it:
                 }
         }
 }
-
-

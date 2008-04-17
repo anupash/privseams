@@ -1,4 +1,4 @@
-#ifndef _HIP_NLINK_H
+ #ifndef _HIP_NLINK_H
 #define _HIP_NLINK_H
 
 #include <stdio.h>
@@ -11,7 +11,27 @@
 /* Keep this one as the last to avoid some weird compilation problems */
 #include <linux/netlink.h>
 
+struct pseudo_hdr{
+	u32 s_addr;
+	u32 d_addr;
+	u8  zer0;
+	u8  protocol;
+	u16 length;
+};
+
+struct pseudo6_hdr{
+	struct in6_addr s_addr;
+	struct in6_addr d_addr;
+	u8  zer0;
+	u8  protocol;
+	u16 length;
+};
+
+/* New one to prevent netlink overrun */
+#if 0
 #define HIP_MAX_NETLINK_PACKET 3072
+#endif
+#define HIP_MAX_NETLINK_PACKET 65537
 
 #ifndef  SOL_NETLINK
 #  define  SOL_NETLINK 270
@@ -29,6 +49,8 @@
 
 #define NLMSG_TAIL(nmsg) \
 	((struct rtattr *) (((void *) (nmsg)) + NLMSG_ALIGN((nmsg)->nlmsg_len)))
+
+#define HIP_OPTION_KIND 30
 
 struct hip_work_order_hdr {
 	int type;
@@ -102,5 +124,6 @@ int netlink_talk(struct rtnl_handle *nl, struct nlmsghdr *n, pid_t peer,
 int hip_netlink_talk(struct rtnl_handle *nl, struct hip_work_order *req, struct hip_work_order *resp);
 int hip_netlink_send(struct hip_work_order *hwo);
 void hip_netlink_close(struct rtnl_handle *rth);
+//int hip_get_default_hit(struct rtnl_handle *hip_nl_route, struct in6_addr *hit);
 
 #endif /* _HIP_NLINK_H */
