@@ -228,19 +228,9 @@ int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
 
 /* HIP_ESP_OVER_UDP */ // comments from openhip
 
-/* in our HIPL case, mode 0 is  */
+/* in our HIPL case, mode 3 */
 	
-	
-	if (entry->mode == 0) { 
-		memcpy(&entry->inner_src_addrs->addr, inner_src,
-			SALEN(inner_src));
-		memcpy(&entry->inner_dst_addrs->addr, inner_dst,
-		       SALEN(inner_dst));
-	}
-	
-	
-	
-	
+		
 	if (entry->mode == 3) { 
 		memcpy(&entry->inner_src_addrs->addr, inner_src,
 			SALEN(inner_src));

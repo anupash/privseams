@@ -1670,9 +1670,16 @@ int hip_esp_encrypt(__u8 *in, int len, __u8 *out, int *outlen,
 		 * len is the whole packet length
 		 */
 		
+#if 0
+		/*openhip implememtation does not suit for us*/
 		ip6h = (struct ip6_hdr*) &in[sizeof(struct eth_hdr)];
 		eth_ip_hdr_len = sizeof(struct eth_hdr)+sizeof(struct ip6_hdr);
 		/* assume HITs are used as v6 src/dst, no checksum rewrite */
+#endif 		
+		/* For HIPL IPsec implementation */
+		ip6h = (struct ip6_hdr*) in;
+		eth_ip_hdr_len = sizeof(struct ip6_hdr);
+
 		break;
 	}
 
@@ -1689,13 +1696,7 @@ int hip_esp_encrypt(__u8 *in, int len, __u8 *out, int *outlen,
 
 	/* FOR HIPL */
 
-	if (entry->mode == 0) {
-
-
-	}
-
-
-
+	
 
 
 	/* setup ESP header, common to all algorithms */
@@ -1716,7 +1717,6 @@ int hip_esp_encrypt(__u8 *in, int len, __u8 *out, int *outlen,
 	if (use_udp) /* (HIP_ESP_OVER_UDP) */
 		*outlen += sizeof(udphdr);
 
- 
 
 	/* 
 	 * Encryption 

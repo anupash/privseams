@@ -1087,7 +1087,7 @@ void hip_firewall_userspace_ipsec_output(struct ipq_handle *handle,
 	HIP_DEBUG("Try to get peer_hit\n");
 
 	// XX FIXME: TAO ALLOCATE STATICALLY TO AVOID SILLY MEM LEAKS
-	//peer_ip  = HIP_MALLOC(sizeof(struct in6_addr), 0);
+	//peer_ip  = HIP_MALLOC(sizeof(struct in6_xaddr), 0);
 	//peer_hit = HIP_MALLOC(16, 0);
 
 	if(trafficType == 4){
