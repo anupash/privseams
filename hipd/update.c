@@ -277,6 +277,7 @@ int hip_update_add_peer_addr_item(hip_ha_t *entry,
         } else {
         	HIP_DEBUG_HIT("santtu: add a locater item intoin spi list :" , locator_address);
         	HIP_DEBUG("Santtu: adda locater item  into spi list, port %d \n" , port);
+        	HIP_DEBUG("Santtu: adda locater item  into spi list, spi %d \n" , spi);
             HIP_IFE(hip_hadb_add_addr_to_spi(entry, spi, locator_address,
                                              0,
                                              lifetime, is_preferred, port), -1);

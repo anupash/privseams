@@ -532,12 +532,13 @@ int hipd_main(int argc, char *argv[])
 			
 			/* Read in the values to hip_msg, saddr, daddr and
 			   pkt_info. */
-        		if (hip_read_control_msg_v4(hip_nat_sock_udp, hipd_msg,
+        		if (hip_read_control_msg_stun(hip_nat_sock_udp, hipd_msg,
 						    &saddr, &daddr,
-						    &pkt_info, 0)) {
+						    &pkt_info, 0, &hip_external_ice_receive_pkt)) {
                                 HIP_ERROR("Reading network msg failed\n");
 				/* If the values were read in succesfully, we
 				   do the UDP specific stuff next. */
+                                //hip_external_ice_receive_pkt(hipd_msg+1,hipd_msg->payload_len,&saddr,pkt_info.src_port);
                         } else {
 				err =  hip_receive_udp_control_packet(
 					hipd_msg, &saddr, &daddr, &pkt_info);
@@ -556,7 +557,7 @@ int hipd_main(int argc, char *argv[])
 				  "(file descriptor: %d).\n",
 				  hip_user_sock);
 
-			if (hip_read_user_control_msg(hip_user_sock, hipd_msg, &app_src))
+			if (hip_read_user_control_msg(hip_user_sock, hipd_msg, &app_src,&hip_external_ice_receive_pkt))
 				HIP_ERROR("Reading user msg failed\n");
 			else err = hip_handle_user_msg(hipd_msg, &app_src);
 		}

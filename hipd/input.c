@@ -2312,7 +2312,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
         	HIP_DEBUG("number of spi_out : %d", entry->spis_out->num_nodes);
         	list_for_each_safe(item, tmp, entry->spis_out, i) {
         		spi_out = list_entry(item);
-        		hip_external_ice_add_remote_candidates(ice_session, spi_out->peer_addr_list);
+        		hip_external_ice_add_remote_candidates(ice_session, spi_out->peer_addr_list,1);
         	}
         	HIP_DEBUG("ICE astart checking in I2\n");
         	hip_ice_start_check(ice_session);
@@ -2542,61 +2542,8 @@ int hip_handle_r2(struct hip_common *r2,
 
 	HIP_DEBUG("src %d, dst %d\n", r2_info->src_port, r2_info->dst_port);
 
-	
-#ifdef HIP_USE_ICE
-	    HIP_DEBUG("ICE init \n");
-                //init the session right after the locator receivd
-        ice_session = hip_external_ice_init(PJ_ICE_SESS_ROLE_CONTROLLED);
-        if(ice_session){
-        	entry->ice_session = ice_session;
-        	HIP_DEBUG("ICE add local \n");
-        	
-        	//add the type 1 address first
-        	hip_list_t *item, *tmp;
-        	struct netdev_address *n;
-        	i=0;
-        	list_for_each_safe(item, tmp, addresses, i) {
-        		n = list_entry(item);
-        		
-        		
-        		if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
-        		    continue;
-        		HIP_DEBUG_HIT("add Ice local in I2 address", hip_cast_sa_addr(&n->addr));
-        		if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
-        			hip_external_ice_add_local_candidates(ice_session,hip_cast_sa_addr(&n->addr),50500,PJ_ICE_CAND_TYPE_HOST);
-        		}
-        		
-        		
-        	}
-        	//TODO add reflexive address 
-        	
-        	//TODO add relay address
-        	
-        	HIP_DEBUG("ICE add remote IN R2\n");
-        	
-        	struct hip_spi_out_item* spi_out;
 
-        	HIP_DEBUG("number of spi_out : %d", entry->spis_out->num_nodes);
-        	list_for_each_safe(item, tmp, entry->spis_out, i) {
-        		spi_out = list_entry(item);
-        		hip_external_ice_add_remote_candidates(ice_session, spi_out->peer_addr_list);
-        		
-        	}
-        	/*
-        	
-        	// add remote address
-        	struct hip_spi_out_item* spi_out =(struct hip_spi_out_item*) entry->spis_out->b[0]->data;
-        	HIP_DEBUG("ICE add remote in R2 2\n");
-        	hip_external_ice_add_remote_candidates(ice_session, spi_out->peer_addr_list);
-        	*/
-        	HIP_DEBUG("ICE start checking \n");
 
-        hip_ice_start_check(ice_session);
-        	
-        }
-        
-                
-#endif	
 	
 	
 	
@@ -2670,10 +2617,76 @@ int hip_handle_r2(struct hip_common *r2,
             HIP_IFEL(hip_update_handle_locator_parameter(entry, 
                      entry->locator, esp_info),
                      -1, "hip_update_handle_locator_parameter failed\n");
+            
+            
+#ifdef HIP_USE_ICE
+	    HIP_DEBUG("ICE init \n");
+                //init the session right after the locator receivd
+        ice_session = hip_external_ice_init(PJ_ICE_SESS_ROLE_CONTROLLED);
+        if(ice_session){
+        	entry->ice_session = ice_session;
+        	HIP_DEBUG("ICE add local \n");
+        	
+        	//add the type 1 address first
+        	hip_list_t *item, *tmp;
+        	struct netdev_address *n;
+        	i=0;
+        	list_for_each_safe(item, tmp, addresses, i) {
+        		n = list_entry(item);
+        		
+        		
+        		if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
+        		    continue;
+        		HIP_DEBUG_HIT("add Ice local in I2 address", hip_cast_sa_addr(&n->addr));
+        		if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
+        			hip_external_ice_add_local_candidates(ice_session,hip_cast_sa_addr(&n->addr),50500,PJ_ICE_CAND_TYPE_HOST);
+        		}
+        		
+        		
+        	}
+        	//TODO add reflexive address 
+        	
+        	//TODO add relay address
+        	
+        	HIP_DEBUG("ICE add remote IN R2, spi is %d\n", ntohl(esp_info->new_spi));
+        	
+        	struct hip_spi_out_item* spi_out;
+
+        	HIP_IFEL(!(spi_out = hip_hadb_get_spi_list(entry, ntohl(esp_info->new_spi))), -1,
+        		      "Bug: outbound SPI 0x%x does not exist\n", ntohl(esp_info->new_spi)); 
+        	
+        	HIP_DEBUG("ICE add remote IN R2, peer list mem address is %d\n", spi_out->peer_addr_list);
+        	hip_external_ice_add_remote_candidates(ice_session, spi_out->peer_addr_list);
+       /* 	
+        	HIP_DEBUG("number of spi_out : %d", entry->spis_out->num_nodes);
+        	list_for_each_safe(item, tmp, entry->spis_out, i) {
+        		spi_out = list_entry(item);
+        		hip_external_ice_add_remote_candidates(ice_session, spi_out->peer_addr_list);
+        		
+        	}*/
+        	/*
+        	
+        	// add remote address
+        	struct hip_spi_out_item* spi_out =(struct hip_spi_out_item*) entry->spis_out->b[0]->data;
+        	HIP_DEBUG("ICE add remote in R2 2\n");
+        	hip_external_ice_add_remote_candidates(ice_session, spi_out->peer_addr_list);
+        	*/
+        	HIP_DEBUG("ICE start checking \n");
+
+        hip_ice_start_check(ice_session);
+        	
+        }
+        
+                
+#endif	           
         }
     else
         HIP_DEBUG("entry->locator did not have locators from r1\n");
     HIP_DEBUG("santtu: end of handling locator in r2");
+    
+    
+    
+    
 	/*
 	  HIP_DEBUG("clearing the address used during the bex\n");
 	  ipv6_addr_copy(&entry->bex_address, &in6addr_any);

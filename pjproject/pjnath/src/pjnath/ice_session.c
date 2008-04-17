@@ -1255,7 +1255,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_create_check_list(
     pj_strcat(&username, rem_ufrag);
 
     pj_strdup(ice->pool, &ice->rx_uname, &username);
-
+    pj_log_1("create clist", "0");
 
     /* Save remote candidates */
     ice->rcand_cnt = 0;
@@ -1267,6 +1267,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_create_check_list(
 	    continue;
 	}
 
+
 	if (rcand[i].comp_id > highest_comp)
 	    highest_comp = rcand[i].comp_id;
 
@@ -1274,7 +1275,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_create_check_list(
 	pj_strdup(ice->pool, &cn->foundation, &rcand[i].foundation);
 	ice->rcand_cnt++;
     }
-
+    pj_log_1("create clist", "0.1");
     /* Generate checklist */
     clist = &ice->clist;
     for (i=0; i<ice->lcand_cnt; ++i) {
@@ -1309,22 +1310,25 @@ PJ_DEF(pj_status_t) pj_ice_sess_create_check_list(
 	    clist->count++;
 	}
     }
-
+    pj_log_1("create clist", "1");
     /* Sort checklist based on priority */
     sort_checklist(clist);
-
+    pj_log_1("create clist", "2");
     /* Prune the checklist */
-    status = prune_checklist(ice, clist);
+  //  status = prune_checklist(ice, clist);
+    status =PJ_SUCCESS;
+    pj_log_1("create clist", "3");
     if (status != PJ_SUCCESS) {
+    	pj_log_1("create clist", "3.1");
 	pj_mutex_unlock(ice->mutex);
 	return status;
     }
-
+    pj_log_1("create clist", "3.2");
     /* Disable our components which don't have matching component */
     if (ice->comp_cnt==2 && highest_comp==1) {
 	ice->comp_cnt = 1;
     }
-
+    pj_log_1("create clist", "4");
     /* Init timer entry in the checklist. Initially the timer ID is FALSE
      * because timer is not running.
      */
@@ -1334,7 +1338,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_create_check_list(
     td->clist = clist;
     clist->timer.user_data = (void*)td;
     clist->timer.cb = &periodic_timer;
-
+    pj_log_1("create clist", "5");
 
     /* Log checklist */
     dump_checklist("Checklist created:", ice, clist);
@@ -2342,10 +2346,11 @@ PJ_DEF(pj_status_t) pj_ice_sess_on_rx_pkt(pj_ice_sess *ice,
     pj_status_t status = PJ_SUCCESS;
     pj_ice_sess_comp *comp;
     pj_status_t stun_status;
-
+    pj_log_1("pj_ice_sess_on_rx_pkt", "0");
     PJ_ASSERT_RETURN(ice, PJ_EINVAL);
-
+    pj_log_1("pj_ice_sess_on_rx_pkt", "1");
     pj_mutex_lock(ice->mutex);
+    pj_log_1("pj_ice_sess_on_rx_pkt", "2");
 
     comp = find_comp(ice, comp_id);
     if (comp == NULL) {

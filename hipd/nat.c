@@ -377,23 +377,31 @@ pj_status_t hip_on_tx_pkt(pj_ice_sess *ice, unsigned comp_id, const void *pkt, p
 	HIP_DEBUG("hip_on_tx_pkt");
 	
 	struct in6_addr *local_addr = 0;
-	struct in6_addr *peer_addr;
-	in_port_t src_port = 0; 
+	struct in6_addr peer_addr;
+	in_port_t src_port = 50500; 
 	in_port_t dst_port ;
 	pj_sockaddr_in *addr;
 	
 	addr =(pj_sockaddr_in *) dst_addr;
+	hip_print_hit("address is in strun send 1:" , &peer_addr );
 	//only IP_V4 is supported
-	peer_addr  = (struct in6_addr * )&addr->sin_addr;
+	//peer_addr  = (struct in6_addr * )&addr->sin_addr;
+	peer_addr.in6_u.u6_addr32[0] = (uint32_t)0;
+	peer_addr.in6_u.u6_addr32[1] = (uint32_t)0;
+	peer_addr.in6_u.u6_addr32[2] = (uint32_t)htonl (0xffff);
+	peer_addr.in6_u.u6_addr32[3] = (uint32_t)addr->sin_addr.s_addr;
+	//memcpy(peer_addr.in6_u.u6_addr32+3, &addr->sin_addr.s_addr, 4);
+	hip_print_lsi("address is in strun send 2:" , &addr->sin_addr.s_addr );
+	hip_print_hit("address is in strun send 3:" , &peer_addr );
 	dst_port = addr->sin_port;
 	
 	int msg_len ;
 	int retransmit = 0;
 	
-	if(hip_send_stun(local_addr, peer_addr, src_port,dst_port, pkt, size,0) )
-		return PJ_SUCCESS;
+	if(hip_send_stun(local_addr, &peer_addr, src_port,dst_port, pkt, size,0) )
+		return 444;
 	//TODO check out what should be returned
-	else return 44;
+	else return PJ_SUCCESS;
 }
 /**
  * 
@@ -547,7 +555,7 @@ int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, 
 	
 	*/
 	 
-	 pj_addr.sin_family=4;
+	 pj_addr.sin_family=PJ_AF_INET;
 	 pj_addr.sin_port = port;
 	 pj_addr.sin_addr.s_addr =*((pj_uint32_t*) &hip_addr->s6_addr32[3]);
 	 
@@ -625,7 +633,7 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 	
 	list_for_each_safe(item, tmp, list, i) {
 		peer_addr_list_item = list_entry(item);
-		if(peer_addr_list_item->port == 0) continue;
+		if(peer_addr_list_item->port == 0) peer_addr_list_item->port = 50500;
 		HIP_DEBUG_HIT("add Ice remote address:", &peer_addr_list_item->address);
 		hip_print_lsi("add Ice remote address 1: ", ((int *) (&peer_addr_list_item->address)+3));
 		HIP_DEBUG("add Ice remote port: %d \n", peer_addr_list_item->port);
@@ -648,7 +656,7 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 									*((pj_uint32_t *) &peer_addr_list_item->address));
 						pj_sockaddr_in_set_port(&temp_cand->base_addr.ipv4, peer_addr_list_item->port);
 			*/
-			temp_cand->addr.ipv4.sin_family = 4;
+			temp_cand->addr.ipv4.sin_family = PJ_AF_INET;
 			temp_cand->addr.ipv4.sin_port = peer_addr_list_item->port;
 			temp_cand->addr.ipv4.sin_addr.s_addr = *((pj_uint32_t *) &peer_addr_list_item->address.s6_addr32[3]) ;
 			HIP_DEBUG("add remote address in integer is : %d \n", temp_cand->addr.ipv4.sin_addr.s_addr);
@@ -754,6 +762,44 @@ int hip_external_ice_end(){
 		pj_pool_release(pool);
     //destory the pool factory
     pj_caching_pool_destroy(&cp);
+}
+
+int hip_external_ice_receive_pkt(void * pkt, int pkt_size, in6_addr_t * src_addr,in_port_t port ){
+    hip_ha_t *ha_n, *entry;
+    hip_list_t *item = NULL, *tmp = NULL;
+    int i, addr_len;
+    pj_sockaddr_in pj_addr;
+    
+    HIP_DEBUG("receive a stun  len:  %d\n" ,pkt_size);
+    HIP_DEBUG_HIT("receive a stun  from:  " ,src_addr );
+    HIP_DEBUG("receive a stun  port:  %d\n" ,port);
+    //TODO filter out ipv6
+	 pj_addr.sin_family=PJ_AF_INET;
+	 pj_addr.sin_port = port;
+	 pj_addr.sin_addr.s_addr =*((pj_uint32_t*) &src_addr->s6_addr32[3]);
+	 
+	 addr_len = sizeof(pj_sockaddr_in);
+    
+	// found the right entry. 
+	
+    list_for_each_safe(item, tmp, hadb_hit, i) {
+        ha_n = list_entry(item);
+        if(ha_n->ice_session){
+        	pj_ice_sess_on_rx_pkt(ha_n->ice_session,1,pkt, pkt_size, &pj_addr,addr_len);
+        }
+    }
+	
+	return 0;
+	
+	/*
+	pj_status_t pj_ice_sess_on_rx_pkt  	(  	pj_ice_sess *   	 ice,
+			unsigned  	comp_id,
+			void *  	pkt,
+			pj_size_t  	pkt_size,
+			const pj_sockaddr_t *  	src_addr,
+			int  	src_addr_len	 
+	)
+	*/ 	
 }
 
 
