@@ -6,9 +6,9 @@
 
 NS=`grep ^nameserver /etc/resolv.conf|head -1|cut -d' ' -f2`
 SERVER=$1
-PORT=53
-IP=127.0.0.1
 SERVERPORT=53
+IP=127.0.0.1
+PORT=53
 HIP_HOSTS=/etc/hip/hosts
 
 if [ "$SERVER"x = "x" ]
@@ -26,4 +26,6 @@ then
 	exit 1
 fi
 
-exec env SERVER=$SERVER PORT=$PORT IP=$IP SERVERPORT=$SERVERPORT ./dnsproxy.py -H $HIP_HOSTS
+#exec env SERVER=$SERVER PORT=$PORT IP=$IP SERVERPORT=$SERVERPORT ./dnsproxy.py -H $HIP_HOSTS
+#exec env SERVER=$SERVER SERVERPORT=$SERVERPORT
+./dnsproxy.py -H $HIP_HOSTS -s $SERVER -p $SERVERPORT -l $PORT -i $IP
