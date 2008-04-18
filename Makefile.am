@@ -13,7 +13,6 @@ EXTRA_DIST += doc/design_choices_macros.tex doc/catalogue.tex doc/fig
 EXTRA_DIST += libhipgui/hipmanager.png
 EXTRA_DIST += doc/doxygen.h doc/Doxyfile showip/showip-hipmod-0.8.02-fx-mz.xpi
 EXTRA_DIST += doc/docshot-agent-main-window.png doc/docshot-agent-tray-icon.png
-EXTRA_DIST += doc/base-exchange-relay.png doc/base-exchange-rvs.png
 
 EXTRA_DIST += i3-cfg-PL.xml
 

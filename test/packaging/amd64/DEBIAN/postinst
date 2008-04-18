@@ -11,10 +11,7 @@ update-rc.d hipd defaults
 #pidof hipd 
 #/etc/init.d/hipd restart
  
-if [ -x /etc/init.d/hipd ]; then 
- invoke-rc.d hipd force-reload 
- invoke-rc.d hipd start 
-fi
+invoke-rc.d hipd start 
  
 pidof hipd  
 
