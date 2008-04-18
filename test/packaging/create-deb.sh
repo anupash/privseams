@@ -538,7 +538,6 @@ if [ $TYPE = "source" ];then
     echo "** Creating the Debian Source package of $PKGDIR"
     cd "${PKGDIR_SRC}"
     
-
     if dpkg-source -b "${NAME}${SUFFIX}";then
 
 	rm -rf "${NAME}${SUFFIX}"
