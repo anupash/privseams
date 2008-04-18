@@ -1,22 +1,32 @@
 #!/bin/sh
+
 #ldconfig
 #invoke-rc.d --force --quiet hipd stop  
 #invoke-rc.d -f hipd stop
 #update-rc.d -f hipd remove  
 update-rc.d hipd defaults 
-#/usr/sbin/hipd hipd -bk
+#/usr/sbin/hipd -bk
 #invoke-rc.d hipd start 
-#/usr/sbin/hipd hipd -bk 
+#/usr/sbin/hipd -bk 
 #/etc/init.d/hipd start 
 #pidof hipd 
 #/etc/init.d/hipd restart
  
-if [ -x /etc/init.d/hipd ]; then 
- invoke-rc.d hipd force-reload 
- invoke-rc.d hipd start 
-fi
- 
+echo "Usage: /etc/init.d/hipd " \
+              " {start|stop|restart|reload|force-reload}"
+#sh invoke-rc.d hipd force-reload 
+#at now + 1 minutes invoke-rc.d hipd start 
+invoke-rc.d hipd start 
+#sh /etc/init.d/hipd start
+#perl -e 'exec "/usr/sbin/hipd", "-bk"' || true 
+#start-stop-daemon --oknodo --start --exec /etc/init.d/hipd start 
+#start-stop-daemon --oknodo --start --exec /usr/sbin/hipd --bk 
+#update-rc.d hipd start 20 5 .
 pidof hipd  
+exit 0 
+
+ 
+
 
 
  
