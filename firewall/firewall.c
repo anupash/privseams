@@ -1040,7 +1040,7 @@ int filter_hip(const struct in6_addr * ip6_src,
 
 
 
-/* added by Tao Wan, This is the function for hip userspace ipsec output 
+/* added by Tao Wan, This is the function for hip userspace ipsec output
  * Todo: How to do hip_sadb_lookup_addr() or  hip_sadb_lookup_spi(spi)
  *   hip_sadb_lookup_addr(struct sockaddr *addr)
  **/

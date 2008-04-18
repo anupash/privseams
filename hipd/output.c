@@ -1260,7 +1260,7 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	if (err)
 		HIP_ERROR("strerror: %s\n", strerror(errno));
 
-	return err;
+	return err; 
 }
 
 /**

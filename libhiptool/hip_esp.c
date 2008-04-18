@@ -412,7 +412,24 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 {
 	int i, err, flags, raw_len, is_broadcast, s, offset=0;
 	int out_enc_len; /* returned length of encrypted data*/
+	int ipv4_s_raw = 0; /* ipv4 raw socket */
+	int ipv6_s_raw = 0; /* ipv6 raw socket */
+	struct sockaddr_in *ipv4_binding;
+	struct sockaddr_in6 *ipv6_binding;
+
+	struct sockaddr_in ipv4_src_addr;
+	struct sockaddr_in6 ipv6_src_addr;
+
+	
+	size_t sa_size_v4 = sizeof(struct sockaddr_in);
+	size_t sa_size_v6 = sizeof(struct sockaddr_in6);
+	size_t sent = 0; 
+	
+	int dst_is_ipv4 = 0;
+
+
 	fd_set fd;
+	
 	struct timeval timeout, now;
 	//__u8 raw_buff[BUFF_LEN];
 	__u8 data[BUFF_LEN]; /* encrypted data buffer */
@@ -427,11 +444,22 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 	//struct sockaddr_storage ss_lsi;
 	struct sockaddr *lsi = (struct sockaddr *) ss_lsi;
 
+
+
+	
+	
+
+
+
 	HIP_DEBUG("the AF_INET value is %d\n", AF_INET);
 	HIP_DEBUG("the AF_INET6 value is %d\n", AF_INET6);
 	
 	
 	HIP_DEBUG_SOCKADDR("LSI address is: ",  lsi);
+
+
+
+
 	
 	__u32 lsi_ip;
 #ifdef __MACOSX__
@@ -439,6 +467,7 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 #endif
 #ifdef RAW_IP_OUT
 	
+
 	HIP_DEBUG("Get into RAW_IP_OUT\n");
 	
 	int s_raw = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
@@ -447,10 +476,14 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 	}
 	flags = 1;
 	if (setsockopt(s_raw, IPPROTO_IP, IP_HDRINCL, (char *)&flags, 
-				sizeof(flags)) < 0) {
+		       sizeof(flags)) < 0) {
 		HIP_DEBUG("*** setsockopt() error for raw socket in "
-			"hip_esp_output\n");
+			  "hip_esp_output\n");
 	}
+	
+
+	
+	
 #endif /* RAW_IP_OUT */
 
 #ifdef DEBUG_EVERY_PACKET
@@ -479,24 +512,13 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 
 	/* unicast packets */
 
-
+	/* we only do the unicast, the entry length is only 1 */
 	
-
-	/* unicast packets */
-	
-
-
-
-
-
-
-
-
 
 	if (!(entry = hip_sadb_lookup_addr(lsi))) {
 		/* No SADB entry. Send ACQUIRE if we haven't
 		 * already, i.e. a new lsi_entry was created */
-		HIP_DEBUG("HIP ipsec userspace sadb is not ready!!1\n");
+		HIP_DEBUG("HIP ipsec userspace sadb is not ready!!\n");
 
 		if (buffer_packet(lsi, raw_buff, len)==TRUE)
 			pfkey_send_acquire(lsi);
@@ -509,7 +531,7 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 	
 
        
-	while (entry) {
+	while(entry) {
 
 
 		
@@ -517,37 +539,126 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 		pthread_mutex_lock(&entry->rw_lock);
 		
 		/* RAW IP out */
-		offset = sizeof(struct ip);
+
+		/* This is for IPv4, need LSI support */
+		// offset = sizeof(struct ip);
+		
+		/* This is for IPv6 header */
+		// offset = sizeof(struct ip6_hdr);
+
 		HIP_DEBUG("start encrypt data......\n");
 
 		err = hip_esp_encrypt(raw_buff, raw_len,
-			      &data[offset], &out_enc_len, entry, &now);
+				      data, &out_enc_len, entry, &now);
 		
 		pthread_mutex_unlock(&entry->rw_lock);
 
+                 /*
+		   
+		 
+		 if (err) { 
+		 break;
+		 }
+			
+		 flags = 0;
+		 */
 		
-		if (err) { 
-			break;
-		}
-
-		flags = 0;
-
-	HIP_DEBUG_SOCKADDR("src addr: \n", &entry->src_addrs->addr);
-	HIP_DEBUG_SOCKADDR("dst addr: \n", &entry->dst_addrs->addr);
-	
-	
 	/* catch empty entries */
 	if (!entry->src_addrs || !entry->dst_addrs)
 			continue;		
 	
-	HIP_DEBUG_SOCKADDR("src addr: \n", &entry->src_addrs->addr);
-	HIP_DEBUG_SOCKADDR("dst addr: \n", &entry->dst_addrs->addr);
+
+
+	HIP_DEBUG_SOCKADDR("src addr: ", &entry->src_addrs->addr);
+	HIP_DEBUG_SOCKADDR("dst addr: ", &entry->dst_addrs->addr);
 	
 	
+
+
+	
+	
+	/* FIXME if src family is IPv4, dst family is IPv6
+	*  or src family is IPv6, dst family is IPv4
+	*
+	*/
+
+	if ((entry->src_addrs->addr).ss_family == AF_INET
+	    && (entry->dst_addrs->addr).ss_family == AF_INET)	
+	{
+		HIP_DEBUG(" Both IP addresses belong to IPv4\n"); 
+	
+
+		dst_is_ipv4 = 1; /* Here we know dst is IPv4 address*/
+
+		ipv4_s_raw = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
+		if (ipv4_s_raw < 0) {
+			HIP_DEBUG("*** ipv4_s_raw socket() error for raw socket in hip_esp_output\n");
+		}
+		
+		ipv4_binding = (struct sockaddr_in *) &entry->src_addrs->addr;
+		HIP_IFEL(bind(ipv4_s_raw, (struct sockaddr *) ipv4_binding, sa_size_v4), -1,
+		     "Binding to ipv4 raw sock failed");
+		flags = 0;
+		
+		err = sendto(ipv4_s_raw, data, out_enc_len, flags,
+			     SA(&entry->dst_addrs->addr),
+			     SALEN(&entry->dst_addrs->addr));
+		
+		if (err < 0)
+		{	
+			HIP_DEBUG("hip_esp_output IPv4 sendto() failed:"
+				  " %s\n",strerror(errno));
+			err = -1;
+			goto out_err;
+			
+		}
+		
+	 	
+		
+
 	}
 	
+	if ((entry->src_addrs->addr).ss_family == AF_INET6
+	    &&(entry->dst_addrs->addr).ss_family == AF_INET6)	 
+		
+	{
+		HIP_DEBUG(" Both IP addresses belong to IPv6\n"); 
+		
+
+		ipv6_s_raw = socket(AF_INET6, SOCK_RAW, IPPROTO_RAW);
+		if (ipv6_s_raw < 0) {
+			HIP_DEBUG("*** ipv6_s_raw socket() error for raw socket in hip_esp_output\n");
+		}
+		
+		ipv6_binding = (struct sockaddr_in6 *) &entry->src_addrs->addr;
+		HIP_IFEL(bind(ipv6_s_raw, (struct sockaddr *) ipv6_binding, sa_size_v6), -1,
+			 "Binding to ipv4 raw sock failed");
+		flags = 0;
+		
+		err = sendto(ipv6_s_raw, data, out_enc_len, flags,
+			     SA(&entry->dst_addrs->addr),
+			     SALEN(&entry->dst_addrs->addr));
+		
+		if (err < 0)
+		{	
+			HIP_DEBUG("hip_esp_output IPv4 sendto() failed:"
+				  " %s\n",strerror(errno));
+			goto out_err;
+			
+		}
+		
+		
+	}
+	
+	
+	entry=hip_sadb_get_next(entry);
 
 
+	}
+
+
+
+	
 	
 
 
@@ -865,11 +976,47 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 #endif
 	HIP_DEBUG("hip_esp_output() thread shutdown.\n");
 	fflush(stdout);
-	tunreader_shutdown();
+ out_err:
+
+	/* added by Tao Wan*/
+
+	/* Reset the interface to wildcard or otherwise receiving
+	   broadcast messages fails from the raw sockets. A better
+	   solution would be to have separate sockets for sending
+	   and receiving because we cannot receive a broadcast while
+	   sending */ 
+	if (dst_is_ipv4) {
+		ipv4_src_addr.sin_addr.s_addr = INADDR_ANY;
+		ipv4_src_addr.sin_family = AF_INET;
+		bind(ipv4_s_raw, (struct sockaddr *) &ipv4_binding, sa_size_v4);
+
+		
+	} else {
+		struct in6_addr any = IN6ADDR_ANY_INIT;
+		ipv6_src_addr.sin6_family = AF_INET6;
+		ipv6_addr_copy(&ipv6_src_addr.sin6_addr, &any);
+		bind(ipv6_s_raw, (struct sockaddr *) &ipv6_binding, sa_size_v6);
+		
+	}
+	
+	
+	
+	return (NULL);
+	
+
+// tunreader_shutdown();
+
 #ifndef __WIN32__
 	pthread_exit((void *) 0);
 	return(NULL);
 #endif
+
+
+
+
+
+
+
 }
 
 
@@ -1704,7 +1851,8 @@ int hip_esp_encrypt(__u8 *in, int len, __u8 *out, int *outlen,
 
 	if (entry->mode == 3) { /*(HIP_ESP_OVER_UDP)*/
 		udph = (udphdr*) out;
-		esp = (struct ip_esp_hdr*) &out[sizeof(udphdr)];
+		/*esp pointer points to out address*/
+		esp = (struct ip_esp_hdr*) &out[sizeof(udphdr)]; 
 		use_udp = TRUE;
 	} else {
 		esp = (struct ip_esp_hdr*) out;
@@ -1781,6 +1929,9 @@ int hip_esp_encrypt(__u8 *in, int len, __u8 *out, int *outlen,
 		in[location + i] = i+1;
 	padinfo = (struct ip_esp_padinfo*) &in[location + padlen];
 	padinfo->pad_length = padlen;
+	
+
+	/* where is ip6h->ip6_nxt from? added by Tao Wan*/
 	padinfo->next_hdr = (family == AF_INET) ? iph->ip_p : ip6h->ip6_nxt;
 	/* padinfo is encrypted too */
 	elen += padlen + 2;
