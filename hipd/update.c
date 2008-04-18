@@ -1975,11 +1975,14 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 	if (locator)
 		//handle locator parameter
 		err = entry->hadb_update_func->hip_handle_update_plain_locator(
-			entry,msg, src_ip, dst_ip, esp_info, seq);
+			entry, msg, src_ip, dst_ip, esp_info, seq);
 	else if (echo) {
 		//handle echo_request
 		err = entry->hadb_update_func->hip_handle_update_addr_verify(
 			entry, msg, src_ip, dst_ip);
+		/* Check the peer learning case. Can you find the src_ip 
+		   from spi_out->peer_addr_list if the addr is not found add it
+		   -- SAMU */
 	}
 	else if (echo_response) {
 		//handle echo response
