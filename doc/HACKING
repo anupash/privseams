@@ -657,11 +657,15 @@ $ sudo yum install hipl-lib hipl-core hipl-tools
 Updating yum repository
 -----------------------
 
-- create a directory tree for yum
+- install repository tool to the web server 
 
-/var/www/html/yum/base/hipl/i386
+$ yum -y install createrepo
 
-/var/www/html/yum/base/hipl/x86_64
+- create a directory tree for yum repository
+
+$ mkdir -p /var/www/html/yum/base/hipl/i386
+
+$ mkdir -p /var/www/html/yum/base/hipl/x86_64
 
 - copy all hipl packages to the repository depending on the architecture
 
@@ -677,11 +681,11 @@ hipl-tools-1.0.3-1.i386.rpm
 
 - create yum repository for all packages 
 
-$ sudo createrepo repository
+$ createrepo repository
 
-- for example to create yum repository for all packages on i386 directory
+- for example to create yum repository for all packages 
 
-$ sudo createrepo i386
+$ createrepo yum/base/hipl/i386
 
 
 apt-get for Debian
@@ -689,15 +693,20 @@ apt-get for Debian
 
 - to configure apt-get for Debian modify sources.list 
 
-$ sudo nano /etc/apt/sources.list
+$ nano /etc/apt/sources.list
 
 deb http://packages.infrahip.net/hipl/ gutsy main
+deb-src http://packages.infrahip.net/hipl/ gutsy main
 
 - update and install hipl packages 
 
-$ sudo apt-get update 
+$ apt-get update 
 
-$ sudo apt-get install hipl-lib hipl-core hipl-tools hipl-doc
+$ apt-get install hipl-lib hipl-core hipl-tools hipl-doc
+
+- to fetch source package by apt-get
+
+$ apt-get source hipl 
 
 
 Updating dpkg repository 
@@ -705,9 +714,9 @@ Updating dpkg repository
 
 - create a directory tree on the web server
 
-/var/www/html/hipl/dists/gutsy/main/binary-armel
-/var/www/html/hipl/dists/gutsy/main/binary-i386
-/var/www/html/hipl/dists/gutsy/main/binary-x64
+$ mkdir -p /var/www/html/hipl/dists/gutsy/main/binary-armel
+$ mkdir -p /var/www/html/hipl/dists/gutsy/main/binary-i386
+$ mkdir -p /var/www/html/hipl/dists/gutsy/main/binary-amd64
 
 - to create overview file of Packages.gz for all hipl packages
 
@@ -715,15 +724,39 @@ $ dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz
 
 - option -m for all -multiversions of hipl packages
   
-$ sudo dpkg-scanpackages -m . /dev/null | sudo gzip -9c > Packages.gz
+$ dpkg-scanpackages -m . /dev/null | sudo gzip -9c > Packages.gz
 
 - copy all Debian hipl packages and Packages.gz file to directories 
 
-$ sudo rsync *.deb root@packages.infrahip.net:/var/www/html/hipl/
+$ rsync *.deb root@packages.infrahip.net:/var/www/html/hipl/
 
 - for example to copy Packages.gz for architecture of i386
 
-$ sudo rsync Packages.gz root@packages.infrahip.net:/var/www/html/hipl/dists/gutsy/main/binary-i386
+$ rsync Packages.gz root@packages.infrahip.net:/var/www/html/hipl/dists/gutsy/main/binary-i386
+
+- to change owner of all files for web server
+
+$ sudo chown apache.apache *
+
+- to copy files with extension of .tar.gz .orig.tar.gz .diff.gz .dsc to a temporal directory
+
+$ cp *.tar.gz *.orig.tar.gz *.diff.gz *.dsc ~/../../source-i386/.
+
+- to create overview file for source packages
+
+$ sudo dpkg-scansources . /dev/null | sudo gzip -9c > Sources.gz
+
+- to create a directory tree on the web server
+
+$ mkdir -p /var/www/html/hipl/dists/gutsy/main/source 
+
+- to copy all previous files to the web server
+
+$ sudo rsync Sources.gz *.tar.gz .orig.tar.gz *.diff.gz *.dsc root@packages.infrahip.net:/tmp/.
+
+- to change owner of all files on the web server
+
+$ sudo chown apache:apache *
 
 
 TEST MATRIX
