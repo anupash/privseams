@@ -8,7 +8,7 @@
 //#include <net/if.h> /* Excluded for RH/Fedora compilation */
 #ifndef __u32
 /* Fedore Core 3/4 and Enterprise linux 4 is broken. */
-#  include <linux/types.h>
+#include <linux/types.h>
 #endif
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
@@ -24,7 +24,17 @@
 #include "protodefs.h"
 #include "hipd.h"
 
+/* used for mapping HIPL ESP ecnryption INDEX to SADB encryption INDEX */
 
+
+
+#include <openssl/hmac.h>	/* HMAC algorithms */
+#include <openssl/sha.h>	/* SHA1 algorithms */
+#include <openssl/des.h>	/* 3DES algorithms */
+#include <openssl/rand.h>	/* RAND_bytes() */
+#include "win32-pfkeyv2.h"
+
+// #include "hip_usermode.h"
 
 
 

@@ -121,6 +121,8 @@ int send_tcp_packet(void *hdr,
 		//socket settings
 		sin_addr.sin_family = AF_INET;
 		sin_addr.sin_port   = htons(tcphdr->dest);
+		
+		/* Is that right to copy address? */
 		sin_addr.sin_addr   = iphdr->ip_dst;
 	}
 	else if(trafficType == 6){

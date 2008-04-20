@@ -55,7 +55,7 @@
 #include <openssl/sha.h>	/* SHA1 algorithms */
 #include <openssl/des.h>	/* 3DES algorithms */
 #include <openssl/rand.h>	/* RAND_bytes() */
-#include "win32-pfkeyv2.h"
+
 //#include <hip/hip_types.h>
 //#include <hip/hip_funcs.h>
 #include "hip_usermode.h"
@@ -125,6 +125,9 @@ int g_state = 0;
 /* defined RAW socket IP out */
 #define RAW_IP_OUT 1
 
+
+/*HIP ESP output using socket binding */
+#define USE_BINDING 1
 
 
 /* 
@@ -411,6 +414,7 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 #endif
 {
 	int i, err, flags, raw_len, is_broadcast, s, offset=0;
+	int on = 1;
 	int out_enc_len; /* returned length of encrypted data*/
 	int ipv4_s_raw = 0; /* ipv4 raw socket */
 	int ipv6_s_raw = 0; /* ipv6 raw socket */
@@ -427,7 +431,16 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 	
 	int dst_is_ipv4 = 0;
 
+	struct ip *iphdr; 
+	struct ip6_hdr *ip6_hdr;
+	struct tcphdr *tcphdr;
+	
 
+
+	int hdr_size;
+
+
+	
 	fd_set fd;
 	
 	struct timeval timeout, now;
@@ -589,26 +602,89 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 	
 
 		dst_is_ipv4 = 1; /* Here we know dst is IPv4 address*/
+		
+		
+		
+		/* raw_buff only includes HITS, FIXME, if support LSI */
+		
+		//get the ip header
+		ip6_hdr = (struct ip6_hdr *) &raw_buff[0];
+
+		
+		//get the tcp header		
+		hdr_size = (ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen * 4);
+		tcphdr = ((struct tcphdr *) (((char *) ip6_hdr) + hdr_size));
+
+		
+		//socket settings
+		/*
+
+		ipv4_src_addr.sin_family = AF_INET;
+		ipv4_src_addr.sin_port   = htons(tcphdr->dest);
+		
+		
+		
+		memcpy(&ipv4_src_addr.sin_addr, 
+		&((struct sockaddr_in *) &entry->dst_addrs->addr)->sin_addr,
+		sizeof(struct in_addr));
+		       
+				       
+		HIP_DEBUG_INADDR("send to addr\n", &ipv4_src_addr.sin_addr);
+		HIP_DEBUG("send to IP family is %d\n", 	ipv4_src_addr.sin_family);
+		HIP_DEBUG("socket port is %d\n",  ipv4_src_addr.sin_port);
+
+		*/
+
 
 		ipv4_s_raw = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
 		if (ipv4_s_raw < 0) {
 			HIP_DEBUG("*** ipv4_s_raw socket() error for raw socket in hip_esp_output\n");
 		}
 		
-		ipv4_binding = (struct sockaddr_in *) &entry->src_addrs->addr;
+#ifdef USE_BINDING /* Using binding */
+
+		/* my localhost address is entry->dst_addrs->addr */
+		ipv4_binding = (struct sockaddr_in *) &entry->dst_addrs->addr;
+		
+
+		HIP_DEBUG_SOCKADDR("src addr: ", ipv4_binding);
+		
 		HIP_IFEL(bind(ipv4_s_raw, (struct sockaddr *) ipv4_binding, sa_size_v4), -1,
-		     "Binding to ipv4 raw sock failed");
+			 "Binding to ipv4 raw sock failed\n");
 		flags = 0;
 		
-		err = sendto(ipv4_s_raw, data, out_enc_len, flags,
-			     SA(&entry->dst_addrs->addr),
-			     SALEN(&entry->dst_addrs->addr));
+#else
+
+		/* Todo: add IP header here FIXME*/
 		
+		if(setsockopt(ipv4_s_raw, IPPROTO_IP, IP_HDRINCL, 
+			      (char *)&on, sizeof(on)) < 0 )
+		{
+			HIP_DEBUG("ipv4 Error setting an option to raw socket\n"); 
+			goto out_err;
+			
+		}
+		/* the peer address is entry->src_addrs->addr*/
+		
+		
+
+		/* This is used to build own ip header FIXME, later*/
+		char new_raw_ip_output[sizeof(struct ip) + out_enc_len];
+
+
+#endif 
+
+
+		err = sendto(ipv4_s_raw, data, out_enc_len, flags,
+			     SA(&entry->src_addrs->addr),
+			     SALEN(&entry->src_addrs->addr));
+ 
+
+
 		if (err < 0)
 		{	
 			HIP_DEBUG("hip_esp_output IPv4 sendto() failed:"
 				  " %s\n",strerror(errno));
-			err = -1;
 			goto out_err;
 			
 		}
@@ -629,15 +705,19 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 		if (ipv6_s_raw < 0) {
 			HIP_DEBUG("*** ipv6_s_raw socket() error for raw socket in hip_esp_output\n");
 		}
+#ifdef USE_BINDING 
 		
-		ipv6_binding = (struct sockaddr_in6 *) &entry->src_addrs->addr;
+		ipv6_binding = (struct sockaddr_in6 *) &entry->dst_addrs->addr;
 		HIP_IFEL(bind(ipv6_s_raw, (struct sockaddr *) ipv6_binding, sa_size_v6), -1,
 			 "Binding to ipv4 raw sock failed");
 		flags = 0;
 		
+#endif 
+
+
 		err = sendto(ipv6_s_raw, data, out_enc_len, flags,
-			     SA(&entry->dst_addrs->addr),
-			     SALEN(&entry->dst_addrs->addr));
+			     SA(&entry->src_addrs->addr),
+			     SALEN(&entry->src_addrs->addr));
 		
 		if (err < 0)
 		{	
@@ -985,6 +1065,12 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 	   solution would be to have separate sockets for sending
 	   and receiving because we cannot receive a broadcast while
 	   sending */ 
+	
+
+	HIP_DEBUG("in hip_esp_output something is failed:"
+		  " %s\n",strerror(errno));
+
+
 	if (dst_is_ipv4) {
 		ipv4_src_addr.sin_addr.s_addr = INADDR_ANY;
 		ipv4_src_addr.sin_family = AF_INET;

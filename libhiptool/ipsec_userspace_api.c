@@ -82,10 +82,26 @@ int hipl_userspace_ipsec_api_wrapper_sadb_add(struct in6_addr *saddr,
 	struct sockaddr_storage  src, dst; /* IP address*/
 	
 	__u32 ipsec_spi = (__u32) *spi; /*IPsec SPI*/
+	__u32 ipsec_e_type ; /* encryption type */
+	__u32 ipsec_a_type ; /* authentication type is equal to encryption type */
 
-	__u32 ipsec_e_type = (__u32) ealg; /* encryption type */
-	__u32 ipsec_a_type = ipsec_e_type; /* authentication type is equal to encryption type */
-	
+	/* MAP HIP ESP ecnryption INDEX to SADB encryption INDEX */
+	switch(ealg) {
+	case  HIP_ESP_AES_SHA1:
+		ipsec_e_type = SADB_X_EALG_AESCBC;
+		ipsec_a_type = SADB_AALG_SHA1HMAC;
+		break;
+	case HIP_HIP_3DES_SHA1:
+		ipsec_e_type = SADB_EALG_3DESCBC;
+		ipsec_a_type = SADB_AALG_SHA1HMAC;
+		break;
+	case HIP_HIP_BLOWFISH_SHA1:
+		ipsec_e_type =  SADB_X_EALG_BLOWFISHCBC;
+		ipsec_a_type = SADB_AALG_SHA1HMAC;
+		break;
+	}
+
+
 	__u8 *ipsec_e_key; 
 	__u8 *ipsec_a_key;
 	
