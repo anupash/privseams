@@ -458,20 +458,11 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 	struct sockaddr *lsi = (struct sockaddr *) ss_lsi;
 
 
-
-	
-	
-
-
-
 	HIP_DEBUG("the AF_INET value is %d\n", AF_INET);
 	HIP_DEBUG("the AF_INET6 value is %d\n", AF_INET6);
 	
 	
 	HIP_DEBUG_SOCKADDR("LSI address is: ",  lsi);
-
-
-
 
 	
 	__u32 lsi_ip;
@@ -479,7 +470,8 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
         __u32 saddr, daddr;
 #endif
 #ifdef RAW_IP_OUT
-	
+
+#if 0	
 
 	HIP_DEBUG("Get into RAW_IP_OUT\n");
 	
@@ -495,7 +487,7 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 	}
 	
 
-	
+#endif 	
 	
 #endif /* RAW_IP_OUT */
 
@@ -542,7 +534,7 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 
 	raw_len = len;
 	
-
+	HIP_DEBUG("hip_esp_output() thread started...\n");
        
 	while(entry) {
 
@@ -611,7 +603,9 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 		ip6_hdr = (struct ip6_hdr *) &raw_buff[0];
 
 		
-		//get the tcp header		
+		/* get the tcp header, which is used for manually used
+		* for IP header adding
+		*/		
 		hdr_size = (ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen * 4);
 		tcphdr = ((struct tcphdr *) (((char *) ip6_hdr) + hdr_size));
 
@@ -762,13 +756,15 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 	
 
 
+#if 0
 
-	HIP_DEBUG("hip_esp_output() thread started...\n");
+
+
 	//while (g_state == 0) {
 	{
 
 
-#if 0
+#if 0 /* disable OPENHIP implemenation */
 		/* periodic select loop */
 		gettimeofday(&now, NULL); /* XXX does this cause perf. hit? */
 		FD_ZERO(&fd);
@@ -1054,6 +1050,12 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 	write(tapfd, data, len);
 	close(tapfd);
 #endif
+	
+
+#endif /* end disable OPENHIP implementation */
+
+
+
 	HIP_DEBUG("hip_esp_output() thread shutdown.\n");
 	fflush(stdout);
  out_err:
@@ -1085,7 +1087,7 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 		
 	}
 	
-	
+	HIP_DEBUG("hip_esp_output() thread started...\n");
 	
 	return (NULL);
 	
