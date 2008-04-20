@@ -489,6 +489,8 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 
 #endif 	
 	
+
+
 #endif /* RAW_IP_OUT */
 
 #ifdef DEBUG_EVERY_PACKET
