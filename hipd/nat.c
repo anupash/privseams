@@ -296,6 +296,40 @@ void hip_nat_randomize_nat_ports()
 
 //TODO
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+hip_ha_t * hip_get_entry_from_ice(void * ice){ 
+
+	hip_ha_t *ha_n, *entry;
+	hip_list_t *item = NULL, *tmp = NULL;
+	int i;
+	
+	entry = NULL;
+	// found the right entry. 
+	
+	list_for_each_safe(item, tmp, hadb_hit, i) {
+	    ha_n = list_entry(item);
+	    if(ha_n->ice_session == ice){
+	    	entry = ha_n;
+	    }
+	}
+	
+	return entry;
+}
+
+
+
 pj_caching_pool cp;
 pj_status_t status;
 pj_pool_t *pool = 0;
@@ -314,18 +348,22 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 	pj_sockaddr		 addr;
     hip_ha_t *ha_n, *entry;
     hip_list_t *item = NULL, *tmp = NULL;
+	struct hip_peer_addr_list_item * peer_addr_list_item;
     
     
 	// found the right entry. 
-	
+	/*
     list_for_each_safe(item, tmp, hadb_hit, i) {
         ha_n = list_entry(item);
         if(ha_n->ice_session == ice){
         	entry = ha_n;
         }
     }
+    */
     
-    if(entry)
+    
+    entry = hip_get_entry_from_ice(ice);
+    if(entry != NULL)
     	HIP_DEBUG("hip_on_ice_complete, entry found");
     
 	// the verified list 
@@ -340,13 +378,37 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 				rcand = valid_list.checks[i].rcand;
 				addr = rcand->addr;
 				
+				i= 0;
+				list_for_each_safe(item, tmp, entry->spis_out, i) {
+					peer_addr_list_item = list_entry(item);
+
+					
+					if((*((pj_uint32_t *) &peer_addr_list_item->address.s6_addr32[3])
+							== addr.ipv4.sin_addr.s_addr) && 
+							peer_addr_list_item->port == addr.ipv4.sin_port)
+						peer_addr_list_item->address_state = PEER_ADDR_STATE_ACTIVE;
+						peer_addr_list_item->is_preferred = 1;
+						memcpy(&entry->preferred_address, &peer_addr_list_item->address, sizeof(struct in6_addr));
+						entry->peer_udp_port = peer_addr_list_item->port;
+					
+				}
 				//
 			}
 			else{
 				if(valid_list.checks[i].state == PJ_ICE_SESS_CHECK_STATE_SUCCEEDED){
-					//rcand = valid_list.checks[i].rcand;
+						rcand = valid_list.checks[i].rcand;
+						i= 0;
+						list_for_each_safe(item, tmp, entry->spis_out, i) {
+							peer_addr_list_item = list_entry(item);
+
+							
+							if(*((pj_uint32_t *) &peer_addr_list_item->address.s6_addr32[3])
+									==addr.ipv4.sin_addr.s_addr && 
+									peer_addr_list_item->port == addr.ipv4.sin_port)
+								peer_addr_list_item->address_state = PEER_ADDR_STATE_ACTIVE;	
+									}	
+						
 				}
-				//set the flag for the peer list
 			}
 				
 			
@@ -359,10 +421,9 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 	
 	
 	 out_err:
-	  HIP_DEBUG("err");
+	  HIP_DEBUG("err\n");
 		//return err;
 }
-
 
 
 
@@ -374,7 +435,31 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
  * this is the call back interface to send package.
  * */
 pj_status_t hip_on_tx_pkt(pj_ice_sess *ice, unsigned comp_id, const void *pkt, pj_size_t size, const pj_sockaddr_t *dst_addr, unsigned dst_addr_len){
-	HIP_DEBUG("hip_on_tx_pkt");
+	struct hip_common *msg = NULL;
+	pj_status_t err = PJ_SUCCESS;
+	hip_ha_t *entry;
+//	int error = 0;
+	
+	HIP_IFEL(!(msg = hip_msg_alloc()), -ENOMEM, "Out of memory\n");
+	
+	entry = hip_get_entry_from_ice(ice);
+	if(entry==NULL) {
+		err = -1;
+		goto out_err;
+	}
+	
+	hip_build_network_hdr(msg, 0, 0, &entry->hit_our, &entry->hit_peer);
+//	hip_set_msg_total_len(msg,sizeof(struct hip_common) + size);
+	msg->payload_len = sizeof(struct hip_common) + size;
+	memcpy(msg +1, pkt, size );  
+	
+	
+	
+	HIP_DEBUG("hip_on_tx_pkt : \n");
+	
+	HIP_DEBUG("hip_on_tx_pkt ice current valid number: %d\n", ice->valid_list.count);
+	
+	
 	
 	struct in6_addr *local_addr = 0;
 	struct in6_addr peer_addr;
@@ -383,7 +468,6 @@ pj_status_t hip_on_tx_pkt(pj_ice_sess *ice, unsigned comp_id, const void *pkt, p
 	pj_sockaddr_in *addr;
 	
 	addr =(pj_sockaddr_in *) dst_addr;
-	hip_print_hit("address is in strun send 1:" , &peer_addr );
 	//only IP_V4 is supported
 	//peer_addr  = (struct in6_addr * )&addr->sin_addr;
 	peer_addr.in6_u.u6_addr32[0] = (uint32_t)0;
@@ -391,17 +475,27 @@ pj_status_t hip_on_tx_pkt(pj_ice_sess *ice, unsigned comp_id, const void *pkt, p
 	peer_addr.in6_u.u6_addr32[2] = (uint32_t)htonl (0xffff);
 	peer_addr.in6_u.u6_addr32[3] = (uint32_t)addr->sin_addr.s_addr;
 	//memcpy(peer_addr.in6_u.u6_addr32+3, &addr->sin_addr.s_addr, 4);
-	hip_print_lsi("address is in strun send 2:" , &addr->sin_addr.s_addr );
-	hip_print_hit("address is in strun send 3:" , &peer_addr );
+	hip_print_lsi("address is in stun send 2:" , &addr->sin_addr.s_addr );
+	hip_print_hit("address is in stun send 3:" , &peer_addr );
+	HIP_DEBUG("length of the stun package is %d\n", size );
 	dst_port = addr->sin_port;
 	
 	int msg_len ;
 	int retransmit = 0;
 	
-	if(hip_send_stun(local_addr, &peer_addr, src_port,dst_port, pkt, size,0) )
-		return 444;
+	if(err = hip_send_stun(local_addr, &peer_addr, src_port,dst_port, msg, msg->payload_len,0) )
+		goto out_err;
 	//TODO check out what should be returned
 	else return PJ_SUCCESS;
+	
+out_err:
+		//	if (host_id_pub)
+		//	HIP_FREE(host_id_pub);
+	 	if (msg)
+	 		HIP_FREE(msg);
+
+
+	  	return err;
 }
 /**
  * 
@@ -409,7 +503,9 @@ pj_status_t hip_on_tx_pkt(pj_ice_sess *ice, unsigned comp_id, const void *pkt, p
  * we ignire here.
  * */
 void hip_on_rx_data(pj_ice_sess *ice, unsigned comp_id, void *pkt, pj_size_t size, const pj_sockaddr_t *src_addr, unsigned src_addr_len){
-	HIP_DEBUG("hip_on_rx_data");
+	HIP_DEBUG("hip_on_rx_data Len:%d \ndata: ", size);
+	HIP_DEBUG("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n");
+	
 }
 
 
@@ -643,19 +739,8 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 		if (IN6_IS_ADDR_V4MAPPED(&peer_addr_list_item->address)) {
 			
 			temp_cand->comp_id = 1;
-			/*
-			 * 
-			 * 
-			pj_addr.sin_family=4;
-	 		pj_addr.sin_port = port;
-	 		pj_addr.sin_addr.s_addr =*((pj_uint32_t*) hip_addr->s6_addr32);
-			pj_sockaddr_in_set_addr(&temp_cand->addr,
-						*((pj_uint32_t *) &peer_addr_list_item->address));
-			pj_sockaddr_in_set_port(&temp_cand->addr.ipv4, peer_addr_list_item->port);
-			pj_sockaddr_in_set_addr(&temp_cand->base_addr,
-									*((pj_uint32_t *) &peer_addr_list_item->address));
-						pj_sockaddr_in_set_port(&temp_cand->base_addr.ipv4, peer_addr_list_item->port);
-			*/
+
+		
 			temp_cand->addr.ipv4.sin_family = PJ_AF_INET;
 			temp_cand->addr.ipv4.sin_port = peer_addr_list_item->port;
 			temp_cand->addr.ipv4.sin_addr.s_addr = *((pj_uint32_t *) &peer_addr_list_item->address.s6_addr32[3]) ;
@@ -764,11 +849,11 @@ int hip_external_ice_end(){
     pj_caching_pool_destroy(&cp);
 }
 
-int hip_external_ice_receive_pkt(void * pkt, int pkt_size, in6_addr_t * src_addr,in_port_t port ){
-    hip_ha_t *ha_n, *entry;
-    hip_list_t *item = NULL, *tmp = NULL;
+int hip_external_ice_receive_pkt(struct hip_common * msg, int pkt_size, in6_addr_t * src_addr,in_port_t port ){
+    hip_ha_t  *entry;
     int i, addr_len;
     pj_sockaddr_in pj_addr;
+   
     
     HIP_DEBUG("receive a stun  len:  %d\n" ,pkt_size);
     HIP_DEBUG_HIT("receive a stun  from:  " ,src_addr );
@@ -781,25 +866,17 @@ int hip_external_ice_receive_pkt(void * pkt, int pkt_size, in6_addr_t * src_addr
 	 addr_len = sizeof(pj_sockaddr_in);
     
 	// found the right entry. 
-	
-    list_for_each_safe(item, tmp, hadb_hit, i) {
-        ha_n = list_entry(item);
-        if(ha_n->ice_session){
-        	pj_ice_sess_on_rx_pkt(ha_n->ice_session,1,pkt, pkt_size, &pj_addr,addr_len);
-        }
+	entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
+    
+    if(entry->ice_session){
+    	pj_ice_sess_on_rx_pkt(entry->ice_session,1,msg+1, pkt_size-sizeof(struct hip_common), &pj_addr,addr_len);
     }
+    else{
+    	HIP_DEBUG("ice is not init in entry.\n");
+    }
+    
 	
 	return 0;
-	
-	/*
-	pj_status_t pj_ice_sess_on_rx_pkt  	(  	pj_ice_sess *   	 ice,
-			unsigned  	comp_id,
-			void *  	pkt,
-			pj_size_t  	pkt_size,
-			const pj_sockaddr_t *  	src_addr,
-			int  	src_addr_len	 
-	)
-	*/ 	
 }
 
 

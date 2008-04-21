@@ -257,9 +257,10 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
         iov.iov_base = hip_msg;
 
 	pktinfo.pktinfo_in4 = NULL;
-
+	HIP_DEBUG("pkg len 1: %d\n", len);
 	len = recvmsg(socket, &msg, 0);
-
+	HIP_DEBUG("pkg len 2: %d\n", len);
+	
 	HIP_IFEL((len < 0), -1, "ICMP%s error: errno=%d, %s\n",
 		 (is_ipv4 ? "v4" : "v6"), errno, strerror(errno));
 
@@ -350,7 +351,10 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
 		if (ice_func&& msg_info->src_port){
 				HIP_DEBUG("STUN found: len is %d\n", len);
 				HIP_IFEL(ice_func(hip_msg,len,saddr,msg_info->src_port), -1,
-						"ICE handling returned error\n");}
+						"ICE handling returned error\n");
+				//err = -1;
+				goto out_err;
+				}
 	}
 
 	if (saddr)

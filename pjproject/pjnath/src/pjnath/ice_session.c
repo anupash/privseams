@@ -558,12 +558,10 @@ PJ_DEF(pj_status_t) pj_ice_sess_add_cand(pj_ice_sess *ice,
     pj_ice_sess_cand *lcand;
     pj_status_t status = PJ_SUCCESS;
     char tmp[128];
-    PJ_LOG(1,("1","",""));
     PJ_ASSERT_RETURN(ice && comp_id && 
 		     foundation && addr && base_addr && addr_len,
 		     PJ_EINVAL);
     PJ_ASSERT_RETURN(comp_id <= ice->comp_cnt, PJ_EINVAL);
-    PJ_LOG(1,("2","",""));
     pj_mutex_lock(ice->mutex);
 
     if (ice->lcand_cnt >= PJ_ARRAY_SIZE(ice->lcand)) {
@@ -582,7 +580,6 @@ PJ_DEF(pj_status_t) pj_ice_sess_add_cand(pj_ice_sess *ice,
 	pj_memcpy(&lcand->rel_addr, rel_addr, addr_len);
     else
 	pj_bzero(&lcand->rel_addr, sizeof(lcand->rel_addr));
-    PJ_LOG(1,("3","",""));
 
     pj_ansi_strcpy(tmp, pj_inet_ntoa(lcand->addr.ipv4.sin_addr));
     LOG4((ice->obj_name, 
@@ -598,12 +595,10 @@ PJ_DEF(pj_status_t) pj_ice_sess_add_cand(pj_ice_sess *ice,
 	 pj_inet_ntoa(lcand->base_addr.ipv4.sin_addr),
 	 (int)pj_htons(lcand->base_addr.ipv4.sin_port),
 	 lcand->prio, lcand->prio));
-    PJ_LOG(1,("4","",""));
     if (p_cand_id)
 	*p_cand_id = ice->lcand_cnt;
 
     ++ice->lcand_cnt;
-    PJ_LOG(1,("5","",""));
 on_error:
     pj_mutex_unlock(ice->mutex);
     return status;
@@ -1255,7 +1250,6 @@ PJ_DEF(pj_status_t) pj_ice_sess_create_check_list(
     pj_strcat(&username, rem_ufrag);
 
     pj_strdup(ice->pool, &ice->rx_uname, &username);
-    pj_log_1("create clist", "0");
 
     /* Save remote candidates */
     ice->rcand_cnt = 0;
@@ -1275,7 +1269,6 @@ PJ_DEF(pj_status_t) pj_ice_sess_create_check_list(
 	pj_strdup(ice->pool, &cn->foundation, &rcand[i].foundation);
 	ice->rcand_cnt++;
     }
-    pj_log_1("create clist", "0.1");
     /* Generate checklist */
     clist = &ice->clist;
     for (i=0; i<ice->lcand_cnt; ++i) {
@@ -1310,25 +1303,19 @@ PJ_DEF(pj_status_t) pj_ice_sess_create_check_list(
 	    clist->count++;
 	}
     }
-    pj_log_1("create clist", "1");
     /* Sort checklist based on priority */
     sort_checklist(clist);
-    pj_log_1("create clist", "2");
     /* Prune the checklist */
   //  status = prune_checklist(ice, clist);
     status =PJ_SUCCESS;
-    pj_log_1("create clist", "3");
     if (status != PJ_SUCCESS) {
-    	pj_log_1("create clist", "3.1");
 	pj_mutex_unlock(ice->mutex);
 	return status;
     }
-    pj_log_1("create clist", "3.2");
     /* Disable our components which don't have matching component */
     if (ice->comp_cnt==2 && highest_comp==1) {
 	ice->comp_cnt = 1;
     }
-    pj_log_1("create clist", "4");
     /* Init timer entry in the checklist. Initially the timer ID is FALSE
      * because timer is not running.
      */
@@ -1338,7 +1325,6 @@ PJ_DEF(pj_status_t) pj_ice_sess_create_check_list(
     td->clist = clist;
     clist->timer.user_data = (void*)td;
     clist->timer.cb = &periodic_timer;
-    pj_log_1("create clist", "5");
 
     /* Log checklist */
     dump_checklist("Checklist created:", ice, clist);
@@ -1458,27 +1444,20 @@ static pj_status_t start_periodic_check(pj_timer_heap_t *th,
     pj_ice_sess_checklist *clist;
     unsigned i, start_count=0;
     pj_status_t status;
-    pj_log_1("p check", "0");
     td = (struct timer_data*) te->user_data;
-    pj_log_1("p check", "0.1");
     ice = td->ice;
-    pj_log_1("p check", "0.2");
     clist = td->clist;
-    pj_log_1("p check", "0.3");
     pj_mutex_lock(ice->mutex);
-    pj_log_1("p check", "1");
     /* Set timer ID to FALSE first */
     te->id = PJ_FALSE;
 
     /* Set checklist state to Running */
     clist_set_state(ice, clist, PJ_ICE_SESS_CHECKLIST_ST_RUNNING);
-    pj_log_1("p check", "2");
     LOG5((ice->obj_name, "Starting checklist periodic check"));
 
     /* Send STUN Binding request for check with highest priority on
      * Waiting state.
      */
-    pj_log_1("p check", "3");
     for (i=0; i<clist->count; ++i) {
 	pj_ice_sess_check *check = &clist->checks[i];
 
@@ -1493,7 +1472,7 @@ static pj_status_t start_periodic_check(pj_timer_heap_t *th,
 	    break;
 	}
     }
-    pj_log_1("p check", "4");
+
     /* If we don't have anything in Waiting state, perform check to
      * highest priority pair that is in Frozen state.
      */
@@ -1513,7 +1492,6 @@ static pj_status_t start_periodic_check(pj_timer_heap_t *th,
 	    }
 	}
     }
-    pj_log_1("p check", "5");
     /* Cannot start check because there's no suitable candidate pair.
      */
     if (start_count!=0) {
@@ -1524,7 +1502,6 @@ static pj_status_t start_periodic_check(pj_timer_heap_t *th,
 	pj_time_val_normalize(&timeout);
 	pj_timer_heap_schedule(th, te, &timeout);
     }
- pj_log_1("p check", "6");
     pj_mutex_unlock(ice->mutex);
     return PJ_SUCCESS;
 }
@@ -1565,7 +1542,6 @@ PJ_DEF(pj_status_t) pj_ice_sess_start_check(pj_ice_sess *ice)
     unsigned i, flist_cnt = 0;
 
     PJ_ASSERT_RETURN(ice, PJ_EINVAL);
-    pj_log_1("here, here", "here");
     /* Checklist must have been created */
     PJ_ASSERT_RETURN(ice->clist.count > 0, PJ_EINVALIDOP);
 
@@ -1584,7 +1560,6 @@ PJ_DEF(pj_status_t) pj_ice_sess_start_check(pj_ice_sess *ice)
      */
 
     clist = &ice->clist;
-    pj_log_1("here, here", "here1");
     /* Pickup the first pair for component 1. */
     for (i=0; i<clist->count; ++i) {
 	if (clist->checks[i].lcand->comp_id == 1)
@@ -1594,13 +1569,11 @@ PJ_DEF(pj_status_t) pj_ice_sess_start_check(pj_ice_sess *ice)
 	pj_assert(!"Unable to find checklist for component 1");
 	return PJNATH_EICEINCOMPID;
     }
-    pj_log_1("here, here", "here2");
     /* Set this check to WAITING */
     check_set_state(ice, &clist->checks[i], 
 		    PJ_ICE_SESS_CHECK_STATE_WAITING, PJ_SUCCESS);
     cand0 = clist->checks[i].lcand;
     flist[flist_cnt++] = &clist->checks[i].lcand->foundation;
-    pj_log_1("here, here", "here3");
     /* Find all of the other pairs in that check list with the same
      * component ID, but different foundations, and sets all of their
      * states to Waiting as well.
@@ -1618,7 +1591,6 @@ PJ_DEF(pj_status_t) pj_ice_sess_start_check(pj_ice_sess *ice)
 	    flist[flist_cnt++] = &cand1->foundation;
 	}
     }
-    pj_log_1("here, here", "here4");
     /* First, perform all pending triggered checks, simultaneously. */
     rcheck = ice->early_check.next;
     while (rcheck != &ice->early_check) {
@@ -1629,7 +1601,6 @@ PJ_DEF(pj_status_t) pj_ice_sess_start_check(pj_ice_sess *ice)
 	rcheck = rcheck->next;
     }
     pj_list_init(&ice->early_check);
-    pj_log_1("here, here", "here5");
     /* Start periodic check */
     return start_periodic_check(ice->stun_cfg.timer_heap, &clist->timer);
 }
@@ -2346,11 +2317,8 @@ PJ_DEF(pj_status_t) pj_ice_sess_on_rx_pkt(pj_ice_sess *ice,
     pj_status_t status = PJ_SUCCESS;
     pj_ice_sess_comp *comp;
     pj_status_t stun_status;
-    pj_log_1("pj_ice_sess_on_rx_pkt", "0");
     PJ_ASSERT_RETURN(ice, PJ_EINVAL);
-    pj_log_1("pj_ice_sess_on_rx_pkt", "1");
     pj_mutex_lock(ice->mutex);
-    pj_log_1("pj_ice_sess_on_rx_pkt", "2");
 
     comp = find_comp(ice, comp_id);
     if (comp == NULL) {
@@ -2360,15 +2328,17 @@ PJ_DEF(pj_status_t) pj_ice_sess_on_rx_pkt(pj_ice_sess *ice,
 
     stun_status = pj_stun_msg_check((const pj_uint8_t*)pkt, pkt_size, 
     				    PJ_STUN_IS_DATAGRAM);
+    pj_log_1("check received", "stun 0");
     if (stun_status == PJ_SUCCESS) {
+    pj_log_1("check received", "stun 1");
 	status = pj_stun_session_on_rx_pkt(comp->stun_sess, pkt, pkt_size,
 					   PJ_STUN_IS_DATAGRAM,
 					   NULL, src_addr, src_addr_len);
 	if (status != PJ_SUCCESS) {
 	    char errmsg[PJ_ERR_MSG_SIZE];
 	    pj_strerror(status, errmsg, sizeof(errmsg));
-	    LOG4((ice->obj_name, "Error processing incoming message: %s",
-		  errmsg));
+	    pj_log_1("err", "Error processing incoming message: "
+		  );
 	}
     } else {
 	(*ice->cb.on_rx_data)(ice, comp_id, pkt, pkt_size, 

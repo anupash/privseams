@@ -103,7 +103,7 @@ int hip_nat_on_for_ha(hip_ha_t *, void *);
 void hip_nat_randomize_nat_ports();
 int hip_nat_refresh_port();
 int hip_nat_send_keep_alive(hip_ha_t *, void *);
-int hip_external_ice_receive_pkt(void * pkt, int pkt_size, in6_addr_t * src_addr,in_port_t port );
+int hip_external_ice_receive_pkt(struct hip_common *, int pkt_size, in6_addr_t * src_addr,in_port_t port );
  
 #endif /* __NAT_H__ */
 
