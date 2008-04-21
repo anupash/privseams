@@ -483,12 +483,11 @@ int convert_string_to_address(const char *str, struct in6_addr *ip6) {
 	struct in_addr ip4;
 
 	ret = inet_pton(AF_INET6, str, ip6);
-	HIP_IFEL((ret < 0 && errno == EAFNOSUPPORT),
-		 err = -1,
-		 "inet_pton: not a valid address family\n");
+	HIP_IFEL((ret < 0 && errno == EAFNOSUPPORT), -1,
+		 "\"%s\" is not of valid address family.\n", str);
 	if (ret > 0) {
                 /* IPv6 address conversion was ok */
-		HIP_DEBUG_IN6ADDR("id", ip6);
+		HIP_DEBUG_IN6ADDR("Converted IPv6", ip6);
 		goto out_err;
 	}
 
@@ -496,12 +495,12 @@ int convert_string_to_address(const char *str, struct in6_addr *ip6) {
 		
 	ret = inet_pton(AF_INET, str, &ip4);
 	HIP_IFEL((ret < 0 && errno == EAFNOSUPPORT), -1,
-		 "inet_pton: not a valid address family\n");
+		 "\"%s\" is not of valid address family.\n", str);
 	HIP_IFEL((ret == 0), -1,
-		 "inet_pton: %s: not a valid network address\n", str);
+		 "\"%s\" is not a valid network address.\n", str);
 		
 	IPV4_TO_IPV6_MAP(&ip4, ip6);
-	HIP_DEBUG("Mapped v4 to v6\n");
+	HIP_DEBUG("Mapped v4 to v6.\n");
 	HIP_DEBUG_IN6ADDR("mapped v6", ip6); 	
 
  out_err:

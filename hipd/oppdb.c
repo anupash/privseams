@@ -479,13 +479,13 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_in6 *src,
 	HIP_ASSERT(hit_is_opportunistic_hashed_hit(&phit)); 
 	HIP_DEBUG_HIT("phit", &phit);
 
-	HIP_IFEL(hip_select_source_address(&hip_nl_route, &our_addr,
+	HIP_IFEL(hip_select_source_address(&our_addr,
 					   &dst_ip), -1,
 		 "Cannot find source address\n");
 	
 	err = hip_hadb_add_peer_info_complete(&hit_our, &phit, &our_addr, &dst_ip);
 	HIP_IFEL(!(ha = hip_hadb_find_byhits(&hit_our, &phit)), -1,
-		 "Did not find entry\n")
+		 "Did not find entry\n");
 
 	/* Override the receiving function */
 	ha->hadb_rcv_func->hip_receive_r1 = hip_receive_opp_r1;
@@ -540,8 +540,10 @@ int hip_opptcp_unblock(struct hip_common *msg, const struct sockaddr_in6 *src){
 
 	hip_msg_init(msg);//?????
 
-	err = hip_for_each_opp(hip_handle_opp_reject, &dst_ip);
+	err = hip_for_each_opp(hip_handle_opptcp_fallback, &dst_ip);
 	HIP_IFEL(err, 0, "for_each_ha err.\n");
+
+	HIP_DEBUG("Unblock returned %d\n", err);
 
  out_err:
 	return err;
@@ -654,6 +656,26 @@ int hip_opptcp_send_tcp_packet(struct hip_common *msg, const struct sockaddr_in6
 	return err;
 }
 
+
+int hip_handle_opptcp_fallback(hip_opp_block_t *entry, void *data)
+{
+	int err = 0;
+	struct in6_addr *resp_ip = data;
+	
+	if (ipv6_addr_cmp(&entry->peer_ip, resp_ip)) goto out_err;
+
+	HIP_DEBUG_HIT("entry initiator hit:", &entry->our_real_hit);
+	HIP_DEBUG_HIT("entry responder ip:", &entry->peer_ip);
+	HIP_DEBUG("Rejecting blocked opp entry\n");
+	err = hip_opp_unblock_app(&entry->caller, NULL, 0);
+	HIP_DEBUG("Reject returned %d\n", err);
+	err = hip_oppdb_entry_clean_up(entry);
+	
+out_err:
+	return err;
+}
+
+
 #endif
 
 
@@ -680,7 +702,7 @@ int hip_handle_opp_fallback(hip_opp_block_t *entry,
 		hip_oppipdb_add_entry(addr);
 		HIP_DEBUG("Timeout for opp entry, falling back to\n");
 		err = hip_opp_unblock_app(&entry->caller, NULL, 0);
-		HIP_DEBUG("Unblock returned %d\n", err);
+		HIP_DEBUG("Fallback returned %d\n", err);
 		err = hip_oppdb_entry_clean_up(entry);
 		memset(&now,0,sizeof(now));
 		
@@ -703,7 +725,7 @@ int hip_handle_opp_reject(hip_opp_block_t *entry, void *data)
 	HIP_DEBUG_HIT("entry responder ip:", &entry->peer_ip);
 	HIP_DEBUG("Rejecting blocked opp entry\n");
 	err = hip_opp_unblock_app(&entry->caller, NULL, 1);
-	HIP_DEBUG("Unblock returned %d\n", err);
+	HIP_DEBUG("Reject returned %d\n", err);
 	err = hip_oppdb_entry_clean_up(entry);
 	
 out_err:

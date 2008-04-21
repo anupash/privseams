@@ -46,7 +46,7 @@ int hip_userspace_ipsec = 1;
 void print_usage()
 {
 	printf("HIP Firewall\n");
-	printf("Usage: firewall [-f file_name] [-t timeout] [-d|-v] [-F|-H]\n");
+	printf("Usage: firewall [-f file_name] [-t timeout] [-d|-v] [-F] [-H] [-A] [-b] [-k]\n");
 	printf("      - H drop non-HIP traffic by default (default: accept non-hip traffic)\n");
 	printf("      - A accept HIP traffic by default (default: drop all hip traffic)\n");
 	printf("      - f file_name is a path to a file containing firewall filtering rules (default %s)\n", HIP_FW_DEFAULT_RULE_FILE);
@@ -312,7 +312,7 @@ int is_hip_packet(void * hdr, int trafficType){
 
 
 /**
- * Not allow a packet to pass
+ * Allow a packet to pass
  * 
  * @param handle	the handle for the packets.
  * @param packetId	the packet ID.
@@ -361,6 +361,12 @@ int is_outgoing_packet(unsigned int theHook){
 		return 1;
 	return 0;
 }
+
+/* Missing forward declaration */
+void hip_request_send_i1_to_hip_peer_from_hipd(struct in6_addr *peer_hit,
+					       struct in6_addr *peer_ip);
+void hip_request_unblock_app_from_hipd(const struct in6_addr *peer_ip);
+void hip_request_oppipdb_add_entry(struct in6_addr *peer_ip);
 
 /**
  * Analyzes incoming TCP packets
@@ -439,7 +445,7 @@ void examine_incoming_tcp_packet(struct ipq_handle *handle,
 
 	if((tcphdr->syn == 1) && (tcphdr->ack == 0)){	//incoming, syn=1 and ack=0
 		if(tcp_packet_has_i1_option(hdrBytes, 4*tcphdr->doff)){
-			//swap the ports
+			/*//swap the ports
 			portTemp = tcphdr->source;
 			tcphdr->source = tcphdr->dest;
 			tcphdr->dest = portTemp;
@@ -462,15 +468,14 @@ void examine_incoming_tcp_packet(struct ipq_handle *handle,
 			tcphdr->syn = 1;
 			tcphdr->ack = 1;
 
-			/* send packet out after adding HIT
-			 * the option is already there but
-			 * it has to be added again since
-			 * if only the HIT is added, it will
-			 * overwrite the i1 option that is
-			 * in the options of TCP
-			 */
+			// send packet out after adding HIT
+			// the option is already there but
+			// it has to be added again since
+			// if only the HIT is added, it will
+			// overwrite the i1 option that is
+			// in the options of TCP
 			hip_request_send_tcp_packet(hdr, hdr_size + 4*tcphdr->doff, trafficType, 1, 1);
-
+			*/
 			//drop original packet
 			drop_packet(handle, packetId);
 			return;
@@ -532,7 +537,7 @@ int tcp_packet_has_i1_option(void * tcphdrBytes, int hdrLen){
 		break;
 		//options with one-byte length
 		case 0:
-			break;
+			i++; break;
 		break;
 		case 1: i++; break;
 		case 11: i++; break;
@@ -563,6 +568,7 @@ int tcp_packet_has_i1_option(void * tcphdrBytes, int hdrLen){
 		case 27: len = bytes[i+1]; i += len; break;
 		case 253: len = bytes[i+1]; i += len; break;
 		case 254: len = bytes[i+1]; i += len; break;
+		default:  len = bytes[i+1]; i += len; break;
 		}
 	}
 	return 0;
@@ -952,7 +958,8 @@ int filter_hip(const struct in6_addr * ip6_src,
 	    		if(!match_hit(rule->src_hit->value, 
 			  		buf->hits, 
 			  		rule->src_hit->boolean))
-	      			match = 0;	
+	      			match = 0;
+		}
 	    	//if HIT has matched and HI defined, verify signature 
 	    	if(match && rule->src_hi)
 	      	{
@@ -960,7 +967,6 @@ int filter_hip(const struct in6_addr * ip6_src,
 			if(!match_hi(rule->src_hi, buf))
 		  		match = 0;	
 	      	}
-	  	}
       		if(match && rule->dst_hit)
 		{
         		HIP_DEBUG("filter_hip: dst_hit \n");
@@ -1244,8 +1250,8 @@ static void *handle_ip_traffic(void *ptr){
 	struct hip_esp * esp_data = NULL;
 	struct hip_esp_packet * esp = NULL;
 	struct hip_common * hip_common = NULL;
-	struct in6_addr * src_addr = NULL;
-	struct in6_addr * dst_addr = NULL;
+	struct in6_addr src_addr;
+	struct in6_addr dst_addr;
 	struct ipq_handle *hndl;
 	int ipv4Traffic = 0, ipv6Traffic = 0;
 	int type = *((int *) ptr);
@@ -1261,11 +1267,6 @@ static void *handle_ip_traffic(void *ptr){
 		ipv6Traffic = 1;
 		hndl = h6;
 	}
-
-	src_addr = HIP_MALLOC(sizeof(struct in6_addr), 0);
-	dst_addr = HIP_MALLOC(sizeof(struct in6_addr), 0);
-	if (!src_addr || !dst_addr)
-		goto out_err;
 
 	do{
 		status = ipq_read(hndl, buf, BUFSIZE, 0);
@@ -1296,12 +1297,12 @@ static void *handle_ip_traffic(void *ptr){
 					hdr_size += sizeof(struct udphdr);
 				}
                 		_HIP_DEBUG("header size: %d\n", hdr_size);
-               		 	IPV4_TO_IPV6_MAP(&iphdr->ip_src, src_addr);
-                		IPV4_TO_IPV6_MAP(&iphdr->ip_dst, dst_addr);
+               		 	IPV4_TO_IPV6_MAP(&iphdr->ip_src, &src_addr);
+                		IPV4_TO_IPV6_MAP(&iphdr->ip_dst, &dst_addr);
         		
 
-				HIP_DEBUG_IN6ADDR("IPv4 source address is ", src_addr);
-				HIP_DEBUG_IN6ADDR("IPv4 source address is ", dst_addr);
+				HIP_DEBUG_IN6ADDR("IPv4 source address is ", &src_addr);
+				HIP_DEBUG_IN6ADDR("IPv4 source address is ", &dst_addr);
 				
 			}
         		else if(ipv6Traffic){
@@ -1310,11 +1311,11 @@ static void *handle_ip_traffic(void *ptr){
                 		packet_hdr = (void *)ip6_hdr;
                		 	hdr_size = sizeof(struct ip6_hdr);
                		 	_HIP_DEBUG("header size: %d\n", hdr_size);
-                		ipv6_addr_copy(src_addr, &ip6_hdr->ip6_src);
-                		ipv6_addr_copy(dst_addr, &ip6_hdr->ip6_dst);
+                		ipv6_addr_copy(&src_addr, &ip6_hdr->ip6_src);
+                		ipv6_addr_copy(&dst_addr, &ip6_hdr->ip6_dst);
 								
-				HIP_DEBUG_IN6ADDR("IPv6 source address is ", src_addr);
-				HIP_DEBUG_IN6ADDR("IPv6 source address is ", dst_addr);
+				HIP_DEBUG_IN6ADDR("IPv6 source address is ", &src_addr);
+				HIP_DEBUG_IN6ADDR("IPv6 source address is ", &dst_addr);
         		}
 
 			HIP_DEBUG("Is this a HIP packet: %s\n",
@@ -1347,8 +1348,8 @@ static void *handle_ip_traffic(void *ptr){
 	  				_HIP_DEBUG("signature exists\n");
 
 
-				if(filter_hip(src_addr, 
-					      dst_addr, 
+				if(filter_hip(&src_addr, 
+					      &dst_addr, 
 					      hip_common, 
 					      m->hook,
 					      m->indev_name,
@@ -1389,19 +1390,19 @@ static void *handle_ip_traffic(void *ptr){
 						  ipv6Traffic ? "YES" : "NO");
 
 					HIP_DEBUG("Is src_addr a HIT: %s\n",
-						  ipv6_addr_is_hit(src_addr) ? "YES" : "NO");
+						  ipv6_addr_is_hit(&src_addr) ? "YES" : "NO");
 
 					HIP_DEBUG("Is dst_addr a HIT: %s\n",
-						  ipv6_addr_is_hit(dst_addr) ? "YES" : "NO");
+						  ipv6_addr_is_hit(&dst_addr) ? "YES" : "NO");
 
-					HIP_DEBUG_IN6ADDR("src addr :\n", src_addr);
-					HIP_DEBUG_IN6ADDR("dst addr  :\n", dst_addr);
+					HIP_DEBUG_IN6ADDR("src addr :\n", &src_addr);
+					HIP_DEBUG_IN6ADDR("dst addr  :\n", &dst_addr);
 					
 
 
 					
 					if (hip_userspace_ipsec  &&  ipv6Traffic == 1 
-					    && ipv6_addr_is_hit(src_addr) && ipv6_addr_is_hit(dst_addr)) /* && if (packet == IPv6 && hip_is_hit(dst && src)*/ 
+					    && ipv6_addr_is_hit(&src_addr) && ipv6_addr_is_hit(&dst_addr)) /* && if (packet == IPv6 && hip_is_hit(dst && src)*/ 
 						{
 							HIP_DEBUG("debug message: HIP firewall userspace ipsec output: \n ");
 							// hip_firewall_userspace_ipsec_input(); /* added by Tao Wan */
@@ -1418,8 +1419,8 @@ static void *handle_ip_traffic(void *ptr){
 					else
 						drop_packet(hndl, m->packet_id);
 				}
-		}
-      		if (status < 0)
+			}
+      			if (status < 0)
 				die(hndl);
 		break;
     		}
@@ -1431,10 +1432,8 @@ static void *handle_ip_traffic(void *ptr){
 	}while (1);
 
 out_err:  
-	//if (hip_common)
-	free(hip_common);
-	free(src_addr);
-        free(dst_addr);
+	if (hip_common)
+		free(hip_common);
         if (esp) {
 		if (esp_data) {
 	    	esp->esp_data = NULL;
@@ -1444,10 +1443,6 @@ out_err:
 	}
   	ipq_destroy_handle(hndl);
 
-	if(src_addr)
- 		HIP_FREE(src_addr);
-	if(dst_addr)
- 		HIP_FREE(dst_addr);
 	return;
 }
 
@@ -1570,6 +1565,7 @@ int main(int argc, char **argv)
 	HIP_DEBUG("starting up with rule_file: %s and connection timeout: %d\n", 
                 rule_file, timeout);
 
+	firewall_increase_netlink_buffers();
 	firewall_probe_kernel_modules();
 
 	if (use_ipv4) {
@@ -1666,7 +1662,6 @@ void firewall_probe_kernel_modules()
 	HIP_DEBUG("Probing completed\n");
 }
 
-
 int hip_esp_traffic_userspace_handler(pthread_t *hip_esp_userspace_id_param, 
 				      void (*hip_esp_userspace_traffic)(void *), 
 				      void *thread_param)
@@ -1692,5 +1687,23 @@ int hip_esp_traffic_userspace_handler(pthread_t *hip_esp_userspace_id_param,
 
 }
 
+/**
+ * Increases the netlink buffer capacity.
+ * 
+ * The previous default values were:
+ *
+ * /proc/sys/net/core/rmem_default - 110592
+ * /proc/sys/net/core/rmem_max     - 131071
+ * /proc/sys/net/core/wmem_default - 110592
+ * /proc/sys/net/core/wmem_max     - 131071
+ *
+ * The new value 1048576=1024*1024 was assigned to all of them
+ *
+ * @return	nothing.
+ */
+void firewall_increase_netlink_buffers(){
+	HIP_DEBUG("Increasing the netlink buffers\n");
 
+	popen("echo 1048576 > /proc/sys/net/core/rmem_default; echo 1048576 > /proc/sys/net/core/rmem_max;echo 1048576 > /proc/sys/net/core/wmem_default;echo 1048576 > /proc/sys/net/core/wmem_max", "r");
+}
 

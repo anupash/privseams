@@ -89,7 +89,7 @@ extern int g_state;
 	sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)
 /* get IP address length in bytes */
 #define SAIPLEN(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? 4 : 16
-#define IS_LSI32(a) ((a & 0xFF) == 0x01)
+//#define IS_LSI32(a) ((a & 0xFF) == 0x01)
 
 /* Tao add 27th, Feb */
 #define SA(x) ((struct sockaddr*)x)
