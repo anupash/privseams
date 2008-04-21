@@ -305,7 +305,7 @@ int is_hip_packet(void * hdr, int trafficType){
 
 	if((udphdr->source == ntohs(HIP_NAT_UDP_PORT)) || 
 	   (udphdr->dest   == ntohs(HIP_NAT_UDP_PORT)))
-		return 1;
+		return !hip_check_network_msg((struct hip_common *) (((char *)udphdr) + 8));
 	else
 		return 0;
 }
@@ -1322,10 +1322,10 @@ static void *handle_ip_traffic(void *ptr){
 				  is_hip_packet(packet_hdr, type) ? "YES" : "NO");
 			
       			if(is_hip_packet(packet_hdr, type)){
-      				HIP_DEBUG("****** Received HIP packet ******\n");
 				int packet_length = 0;
 				struct hip_sig * sig = NULL;
 
+      				HIP_DEBUG("****** Received HIP packet ******\n");
 				if (m->data_len <= (BUFSIZE - hdr_size)){
 	  				packet_length = m->data_len - hdr_size; 	
 	  				_HIP_DEBUG("HIP packet size smaller than buffer size\n");
@@ -1359,20 +1359,23 @@ static void *handle_ip_traffic(void *ptr){
 				}
 				else
 	  			{
-					drop_packet(hndl, m->packet_id);
+					// !!!!!XX FIXME: UGLY KLUDGE!!!!!!!!!
+					allow_packet(hndl, m->packet_id);
+					//drop_packet(hndl, m->packet_id);
+					// !!!!!XX FIXME: UGLY KLUDGE!!!!!!!!!
 	  			}
-			} else {
-                                /* OPPORTUNISTIC MODE HACKS */
-				if((ipv4Traffic && iphdr->ip_p != IPPROTO_TCP) ||
-				   (ipv6Traffic && ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt != IPPROTO_TCP))
+			} else {	
 				   /* ip6_un1_nxt ---> next header */
-					
-				{
-					if(accept_normal_traffic)
-						allow_packet(hndl, m->packet_id);
-					else
-						drop_packet(hndl, m->packet_id);
-				}  else if(is_incoming_packet(packetHook)) {
+				int is_tcp = 
+					((ipv4Traffic && iphdr->ip_p == IPPROTO_TCP) ||
+					 (ipv6Traffic && ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt == IPPROTO_TCP));
+
+				HIP_DEBUG("Received non-hip traffic is_tcp=%d in=%d\n", is_tcp,
+					  is_incoming_packet(packetHook));
+
+                                /* OPPORTUNISTIC MODE HACKS */
+				if(!is_tcp && is_incoming_packet(packetHook)) {
+					HIP_DEBUG("Received non-TCP traffic\n");
 					if (hip_userspace_ipsec)
 					{
 						HIP_DEBUG("debug message: HIP firewall userspace ipsec input: \n ");
@@ -1380,8 +1383,15 @@ static void *handle_ip_traffic(void *ptr){
 						hip_firewall_userspace_ipsec_input(); /* added by Tao Wan */
 					
 					}
-					else
+					else {
 						examine_incoming_tcp_packet(hndl, m->packet_id, packet_hdr, type);
+					}
+				} else if(is_tcp) {
+					HIP_DEBUG("Received TCP traffic\n");
+					if(accept_normal_traffic)
+						allow_packet(hndl, m->packet_id);
+					else
+						drop_packet(hndl, m->packet_id);
 
 				} else if(is_outgoing_packet(packetHook)) {
 					/*examine_outgoing_tcp_packet(hndl, m->packet_id, packet_hdr, type);*/
