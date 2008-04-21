@@ -1672,7 +1672,7 @@ int hip_create_lock_file(char *filename, int killold) {
        
 	if (lockf(fd, F_TLOCK, 0) < 0)
 	{ 
-		HIP_IFEL(!killold, -1,
+		HIP_IFEL(!killold, -12,
 			 "HIP daemon already running with pid %d"
 			 " Give -k option to kill old daemon.\n",old_pid);
 		
@@ -1698,6 +1698,11 @@ int hip_create_lock_file(char *filename, int killold) {
 		 "Writing new pid failed\n", -1);
 
 out_err:
+	if (err == -12)
+	{
+	  exit(0);
+	}
+
 	return err;
 }
 
