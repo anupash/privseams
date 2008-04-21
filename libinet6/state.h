@@ -171,6 +171,8 @@ struct hip_peer_addr_list_item
 	uint8_t  		transport_protocol; /*value 1 for UDP*/
 	
 	uint16_t 		port /*port number for transport protocol*/;
+	
+	uint32_t 		priority;
     
     
 };

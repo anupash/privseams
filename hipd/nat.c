@@ -755,6 +755,7 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 			temp_cand->comp_id = 1;
 			temp_cand->type = type;
 			temp_cand->foundation = pj_str("ice");
+			//TODO we use the max for all the candidate for now, but it is saved into peer_list already, 
 			temp_cand->prio = 65535;
 	
 			temp_cand++;
@@ -832,12 +833,13 @@ int hip_ice_start_check(void* ice){
 					
 	pj_status_t result;
 	HIP_DEBUG("Ice: check dump end\n");
+	pj_log_set_level(4);
 	result = pj_ice_sess_start_check  	(  session  	 ) ; 
 	HIP_DEBUG("Ice: check  end: check list number: %d \n", session->clist.count);
 	
 	
-	if(result == PJ_SUCCESS) return 1;
-	else return 0;
+	if(result == PJ_SUCCESS) return 0;
+	else return -1;
 			
 }
 

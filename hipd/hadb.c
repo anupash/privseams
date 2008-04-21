@@ -1609,7 +1609,8 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 			     struct in6_addr *addr,
 			     int is_bex_address, uint32_t lifetime,
 			     int is_preferred_addr,
-			     uint16_t port)
+			     uint16_t port,
+			     uint32_t priority)
 {
 	int err = 0, new = 1, i;
 	struct hip_spi_out_item *spi_list;
@@ -1661,6 +1662,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 	if (new) {
 		ipv6_addr_copy(&new_addr->address, addr);
 		new_addr->port = port;
+		new_addr->priority = priority;
 	}
 
 	/* If the address is already bound, its lifetime is updated.

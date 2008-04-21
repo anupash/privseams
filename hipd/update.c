@@ -222,12 +222,15 @@ int hip_update_add_peer_addr_item(hip_ha_t *entry,
 	uint32_t spi = *((uint32_t *) _spi);
 	struct hip_locator_info_addr_item2 * locator_address_item2;
 	uint16_t port = 0;
+	uint32_t priority;
 	
 	if(locator_address_item->locator_type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI){
 		locator_address =
 			&locator_address_item->address;
 		lifetime = ntohl(locator_address_item->lifetime);
 	   	is_preferred = htonl(locator_address_item->reserved) == (1 << 7);
+	   	//TODO change into constacnt
+	   	priority = 126;
 	}
 	else if(locator_address_item->locator_type == HIP_LOCATOR_LOCATOR_TYPE_UDP) {
 		locator_address_item2 = (struct hip_locator_info_addr_item2 * ) locator_address_item;
@@ -236,6 +239,7 @@ int hip_update_add_peer_addr_item(hip_ha_t *entry,
 		lifetime = ntohl(locator_address_item2->lifetime);
 	   	is_preferred = htonl(locator_address_item2->reserved) == (1 << 7);
 	   	port = ntohs(locator_address_item2->port);
+	   	priority = ntohl(locator_address_item2->priority);
 	   	/**transport protocol has not been checked. only udp for now*/
 	}
 	
@@ -273,14 +277,14 @@ int hip_update_add_peer_addr_item(hip_ha_t *entry,
         	HIP_DEBUG("santtu: found a locater item already in spi list, port %d \n" , port);
             HIP_IFE(hip_hadb_add_addr_to_spi(entry, spi, locator_address,
                                              0,
-                                             lifetime, 1, port), -1);
+                                             lifetime, 1, port,priority), -1);
         } else {
         	HIP_DEBUG_HIT("santtu: add a locater item intoin spi list :" , locator_address);
         	HIP_DEBUG("Santtu: adda locater item  into spi list, port %d \n" , port);
         	HIP_DEBUG("Santtu: adda locater item  into spi list, spi %d \n" , spi);
             HIP_IFE(hip_hadb_add_addr_to_spi(entry, spi, locator_address,
                                              0,
-                                             lifetime, is_preferred, port), -1);
+                                             lifetime, is_preferred, port,priority), -1);
         }
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC

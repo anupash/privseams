@@ -2170,7 +2170,8 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 
 	/* Source IPv6 address is implicitly the preferred address after the
 	   base exchange. */
-	HIP_IFEL(hip_hadb_add_addr_to_spi(entry, spi_out, i2_saddr, 1, 0, 1, i2_info->src_port),
+    //TODO we make the priority the highest here, check it later
+	HIP_IFEL(hip_hadb_add_addr_to_spi(entry, spi_out, i2_saddr, 1, 0, 1, i2_info->src_port, 127),
 		 -1,  "Failed to add an address to SPI list\n");
 
 	memset(&spi_in_data, 0, sizeof(struct hip_spi_in_item));
@@ -2592,8 +2593,9 @@ int hip_handle_r2(struct hip_common *r2,
 
         /* source IPv6 address is implicitly the preferred
 	 * address after the base exchange */
+    //TODO we make the priority highest here, check it later
 	err = hip_hadb_add_addr_to_spi(entry, spi_recvd, r2_saddr,
-				       1, 0, 1, r2_info->src_port);
+				       1, 0, 1, r2_info->src_port, 127);
 	if (err)
 		HIP_ERROR("hip_hadb_add_addr_to_spi err=%d not handled\n", err);
 	entry->default_spi_out = spi_recvd;

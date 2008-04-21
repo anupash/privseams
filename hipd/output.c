@@ -564,6 +564,8 @@ int hip_build_locators(struct hip_common *msg)
                 locs2[ii].kind = 0;
                 locs2[ii].priority = 126,
                 locs2[ii].spi = 1;
+                //TODO change into constant
+                locs2[ii].priority = htonl(120);
                 ii++;
                 // if there are more addresses than we can take, just break it.
                if (ii>= addr_count2)
@@ -573,6 +575,7 @@ int hip_build_locators(struct hip_common *msg)
             // check it the peer is a full relay server
             //assume the peer address is IPv4
             //assume the peer protocol is UDP
+            /* we should search TURN server address not HIP full relay
             if(ha_n->peer_controls & HIP_HA_CTRL_PEER_HIPUDP_CAPABLE){
             	HIP_DEBUG_HIT("santtu: UDP full relay, prefered addres  : ",&ha_n->preferred_address );
             	HIP_DEBUG_HIT("santtu: UDP full relay, local addres  : ",&ha_n->local_address );
@@ -591,7 +594,8 @@ int hip_build_locators(struct hip_common *msg)
                 locs2[ii].priority = 126,
                 locs2[ii].spi = 1;
                 ii++;
-            }
+            }*/
+            
         }
         HIP_DEBUG("hip_build_locators: find relay address account:%d \n", ii);
         //ii is the real amount of type2 locator.addr_count2 is the max value we can accept
