@@ -115,6 +115,8 @@ int firewall_init(){
 		if (hip_userspace_ipsec) {
 			//system("iptables -I FORWARD -p 6 -j QUEUE"); // do we need this???
 			system("iptables -I INPUT -p 50 -j QUEUE"); /* ESP over IPv4 */
+			system("iptables -I INPUT -p 17 --dport 50500 -j QUEUE");
+			system("iptables -I INPUT -p 17 --sport 50500 -j QUEUE");
 			//system("iptables -I OUTPUT -p 6 ! -d 127.0.0.1 -j QUEUE"); // XX FIXME: LSI support 
 			//system("iptables -I OUTPUT -p 17 ! -d 127.0.0.1 -j QUEUE"); // XX FIXME: LSI support 
 		}
@@ -126,8 +128,7 @@ int firewall_init(){
 			
 			system("iptables -I INPUT -p 139 -j QUEUE");
 			system("iptables -I INPUT -p 50 -j QUEUE");
-			system("iptables -I INPUT -p 17 --dport 50500 -j QUEUE");
-			system("iptables -I INPUT -p 17 --sport 50500 -j QUEUE");
+			
 			
 			system("iptables -I OUTPUT -p 139  -j QUEUE");
 			system("iptables -I OUTPUT -p 50 -j QUEUE");
@@ -1297,7 +1298,12 @@ static void *handle_ip_traffic(void *ptr){
                 		_HIP_DEBUG("header size: %d\n", hdr_size);
                		 	IPV4_TO_IPV6_MAP(&iphdr->ip_src, src_addr);
                 		IPV4_TO_IPV6_MAP(&iphdr->ip_dst, dst_addr);
-        		}
+        		
+
+				HIP_DEBUG_IN6ADDR("IPv4 source address is ", src_addr);
+				HIP_DEBUG_IN6ADDR("IPv4 source address is ", dst_addr);
+				
+			}
         		else if(ipv6Traffic){
                 		_HIP_DEBUG("ipv6\n");
                 		ip6_hdr = (struct ip6_hdr *) m->payload;   
@@ -1306,6 +1312,9 @@ static void *handle_ip_traffic(void *ptr){
                		 	_HIP_DEBUG("header size: %d\n", hdr_size);
                 		ipv6_addr_copy(src_addr, &ip6_hdr->ip6_src);
                 		ipv6_addr_copy(dst_addr, &ip6_hdr->ip6_dst);
+								
+				HIP_DEBUG_IN6ADDR("IPv6 source address is ", src_addr);
+				HIP_DEBUG_IN6ADDR("IPv6 source address is ", dst_addr);
         		}
 
 			HIP_DEBUG("Is this a HIP packet: %s\n",
