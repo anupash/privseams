@@ -1678,8 +1678,7 @@ int hip_create_lock_file(char *filename, int killold) {
 		
 		HIP_INFO("Daemon is already running with pid %d"
 			 "-k option given, terminating old one...\n", old_pid);
-
-		HIP_IFEL(kill(old_pid, SIGKILL), -1, "kill failed\n");
+                /* HIP_IFEL(kill(old_pid, SIGKILL), -1, "kill failed\n"); */
 		/* Erase the old lock file to avoid having multiple pids
 		   in the file */
 		lockf(fd, F_ULOCK, 0);
@@ -1690,7 +1689,8 @@ int hip_create_lock_file(char *filename, int killold) {
                 /* don't close file descriptor because new started process is running */
 		HIP_IFEL((fd <= 0), -1, "opening lock file failed\n");
 		HIP_IFEL(lockf(fd, F_TLOCK, 0), -1,"lock attempt failed\n");
-		
+ 	        err = kill(old_pid, SIGKILL);
+		HIP_INFO("pid %d not found kill returns error %d\n", old_pid, err);
 	}
 	
 	lseek(fd,0,SEEK_SET);
