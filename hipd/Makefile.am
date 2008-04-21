@@ -15,7 +15,7 @@ INCLUDES = $(hipl_common_include_paths)
 
 sbin_PROGRAMS = hipd
 hipd_SOURCES = reg.c update.c hipd.c keymat.c blind.c hiprelay.c registration.c
-hipd_SOURCES += user.c hadb.c oppdb.c close.c configfilereader.c
+hipd_SOURCES += user.c hadb.c oppdb.c close.c configfilereader.c linkedlist.c
 hipd_SOURCES += input.c output.c hidb.c cookie.c netdev.c bos.c nat.c icookie.c
 hipd_SOURCES += escrow.c init.c maintenance.c accessor.c oppipdb.c dh.c
 
@@ -79,3 +79,4 @@ blind.c: blind.h
 hiprelay.c: hiprelay.h
 configfilereader.c: configfilereader.h
 registration.c: registration.h
+linkedlist.c: linkedlist.h
