@@ -988,10 +988,12 @@ static void on_ice_complete(pj_ice_sess *ice, pj_status_t status)
 	    ice->completion_timer.cb = &on_completion_timer;
 	    ice->completion_timer.user_data = (void*) ice;
 	    ice->completion_timer.id = PJ_TRUE;
-
+	    (*ice->cb.on_ice_complete)(ice,PJ_TRUE);
+/*
 	    pj_timer_heap_schedule(ice->stun_cfg.timer_heap, 
 				   &ice->completion_timer,
 				   &delay);
+				   */
 	}
     }
 }

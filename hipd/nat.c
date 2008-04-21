@@ -340,15 +340,17 @@ pj_pool_t *pool = 0;
  * this the call back interface when check complete.
  * */
 void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
-	HIP_DEBUG("hip_on_ice_complete");
-	pj_ice_sess_checklist 	valid_list;
+	HIP_DEBUG("hip_on_ice_complete\n");
+	pj_ice_sess_checklist *	valid_list;
 	int err = 0;
-	int i =0;
+	int i =0, j =0, k=0;
 	pj_ice_sess_cand	*rcand;
 	pj_sockaddr		 addr;
     hip_ha_t *ha_n, *entry;
     hip_list_t *item = NULL, *tmp = NULL;
+    hip_list_t *item1 = NULL, *tmp1 = NULL;
 	struct hip_peer_addr_list_item * peer_addr_list_item;
+	struct hip_spi_out_item* spi_out;
     
     
 	// found the right entry. 
@@ -363,50 +365,69 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
     
     
     entry = hip_get_entry_from_ice(ice);
-    if(entry != NULL)
+    if(entry == NULL)
     	HIP_DEBUG("hip_on_ice_complete, entry found");
     
 	// the verified list 
-	if(status == PJ_SUCCESS){
-		valid_list = ice->valid_list;
-	}
+	//if(status == PJ_TRUE){
+		valid_list = &ice->valid_list;
+	//}
+	
+	HIP_DEBUG("there are %d pairs in valid list\n", valid_list->count);
+	HIP_DEBUG("there are %d pairs in valid list\n", ice->valid_list.count);
 	//read all the element from the list
-	if(valid_list.count > 0){
-		for(i = 0; i< valid_list.count; i++){
-			if (valid_list.checks[i].nominated == PJ_TRUE){
+	if(valid_list->count > 0){
+		for(i = 0; i< valid_list->count; i++){
+			if (valid_list->checks[i].nominated == PJ_TRUE){
 				//set the prefered peer
-				rcand = valid_list.checks[i].rcand;
+				HIP_DEBUG("find a nominated candiate\n");
+				rcand = valid_list->checks[i].rcand;
 				addr = rcand->addr;
 				
-				i= 0;
-				list_for_each_safe(item, tmp, entry->spis_out, i) {
-					peer_addr_list_item = list_entry(item);
-
-					
-					if((*((pj_uint32_t *) &peer_addr_list_item->address.s6_addr32[3])
-							== addr.ipv4.sin_addr.s_addr) && 
-							peer_addr_list_item->port == addr.ipv4.sin_port)
-						peer_addr_list_item->address_state = PEER_ADDR_STATE_ACTIVE;
-						peer_addr_list_item->is_preferred = 1;
-						memcpy(&entry->preferred_address, &peer_addr_list_item->address, sizeof(struct in6_addr));
-						entry->peer_udp_port = peer_addr_list_item->port;
-					
+				hip_print_lsi("set prefered the peer_addr : ", &addr.ipv4.sin_addr.s_addr );
+				HIP_DEBUG("set prefered the peer_addr port: %d\n", addr.ipv4.sin_port );
+				k= 0;
+				list_for_each_safe(item1, tmp1, entry->spis_out, k) {
+					spi_out = list_entry(item1);
+					j=0;
+					list_for_each_safe(item, tmp, spi_out->peer_addr_list, j) {
+						peer_addr_list_item = list_entry(item);
+						
+						HIP_DEBUG_HIT(" peer_addr : ", &peer_addr_list_item->address );
+						HIP_DEBUG(" peer_addr port: %d\n", peer_addr_list_item->port );
+						
+						if((*((pj_uint32_t *) &peer_addr_list_item->address.s6_addr32[3])
+								== addr.ipv4.sin_addr.s_addr) && 
+								peer_addr_list_item->port == addr.ipv4.sin_port){
+							HIP_DEBUG_HIT("found & set prefered the peer_addr : ", &peer_addr_list_item->address );
+							peer_addr_list_item->address_state = PEER_ADDR_STATE_ACTIVE;
+							peer_addr_list_item->is_preferred = 1;
+							memcpy(&entry->preferred_address, &peer_addr_list_item->address, sizeof(struct in6_addr));
+							entry->peer_udp_port = peer_addr_list_item->port;
+						}
+						
+					}
 				}
 				//
 			}
 			else{
-				if(valid_list.checks[i].state == PJ_ICE_SESS_CHECK_STATE_SUCCEEDED){
-						rcand = valid_list.checks[i].rcand;
-						i= 0;
-						list_for_each_safe(item, tmp, entry->spis_out, i) {
+				if(valid_list->checks[i].state == PJ_ICE_SESS_CHECK_STATE_SUCCEEDED){
+						rcand = valid_list->checks[i].rcand;
+						j= 0;
+						
+						HIP_DEBUG("find a valid candiate\n");
+						
+						list_for_each_safe(item, tmp, entry->spis_out, j) {
 							peer_addr_list_item = list_entry(item);
 
 							
 							if(*((pj_uint32_t *) &peer_addr_list_item->address.s6_addr32[3])
 									==addr.ipv4.sin_addr.s_addr && 
-									peer_addr_list_item->port == addr.ipv4.sin_port)
-								peer_addr_list_item->address_state = PEER_ADDR_STATE_ACTIVE;	
-									}	
+									peer_addr_list_item->port == addr.ipv4.sin_port){
+								HIP_DEBUG_HIT("set active the peer_addr : ", &peer_addr_list_item->address );
+								peer_addr_list_item->address_state = PEER_ADDR_STATE_ACTIVE;
+							}
+						}	
 						
 				}
 			}
@@ -420,8 +441,8 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 
 	
 	
-	 out_err:
-	  HIP_DEBUG("err\n");
+	// out_err:
+	 // HIP_DEBUG("err\n");
 		//return err;
 }
 
