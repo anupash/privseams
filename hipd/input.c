@@ -1921,20 +1921,20 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 
 #ifdef CONFIG_HIP_BLIND
 	if (use_blind) {
-		err = hip_add_sa(i2_daddr, i2_saddr,
-			   	 &entry->hit_our, &entry->hit_peer,
-			   	 &spi_out, esp_tfm, 
-			   	 &ctx->esp_out, &ctx->auth_out,
-			   	 1, HIP_SPI_DIRECTION_OUT, 0, i2_info->dst_port, i2_info->src_port);
+	   err = hip_add_sa(i2_daddr, i2_saddr,
+			   &entry->hit_our, &entry->hit_peer,
+			   &spi_out, esp_tfm, 
+			   &ctx->esp_out, &ctx->auth_out,
+			   1, HIP_SPI_DIRECTION_OUT, 0, i2_info->dst_port, i2_info->src_port);
 	}
 #endif
 
 	if (!use_blind) {
-		err = hip_add_sa(i2_daddr, i2_saddr,
-			   	 &ctx->input->hitr, &ctx->input->hits,
-			   	 &spi_out, esp_tfm, 
-			   	 &ctx->esp_out, &ctx->auth_out,
-			   	 1, HIP_SPI_DIRECTION_OUT, 0, i2_info->dst_port, i2_info->src_port);
+	  err = hip_add_sa(i2_daddr, i2_saddr,
+			   &ctx->input->hitr, &ctx->input->hits,
+			   &spi_out, esp_tfm, 
+			   &ctx->esp_out, &ctx->auth_out,
+			   1, HIP_SPI_DIRECTION_OUT, 0, i2_info->dst_port, i2_info->src_port);
 	}
 	if (err) {
 		HIP_ERROR("Failed to setup outbound SA with SPI=%d\n",

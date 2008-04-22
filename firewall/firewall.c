@@ -802,20 +802,18 @@ static void *handle_ip_traffic(void *ptr) {
                 		hdr_size = (iphdr->ip_hl * 4);
 				if (iphdr->ip_p == IPPROTO_UDP)
 					hdr_size += sizeof(struct udphdr);
-                		HIP_DEBUG("ipv4 and header size: %d\n", hdr_size);
+                		_HIP_DEBUG("ipv4 and header size: %d\n", hdr_size);
  	      		}
         		else if(ipv6Traffic){
                 		ip6_hdr = (struct ip6_hdr *) m->payload;   
                 		packet_hdr = (void *)ip6_hdr;
                		 	hdr_size = sizeof(struct ip6_hdr);
-               		 	HIP_DEBUG("ipv6 and header size: %d\n", hdr_size);
+               		 	_HIP_DEBUG("ipv6 and header size: %d\n", hdr_size);
                 		ipv6_addr_copy(src_addr, &ip6_hdr->ip6_src);
                 		ipv6_addr_copy(dst_addr, &ip6_hdr->ip6_dst);
         		}
 			
-			if(is_incoming_packet(packetHook)) HIP_DEBUG("It's an incoming packet\n");
-			else if(is_outgoing_packet(packetHook)) HIP_DEBUG("It's an outgoing packet\n");  	
-
+			
       			if(is_hip_packet(packet_hdr, type)){
 				HIP_DEBUG("****** Received HIP packet ******\n");
 				int packet_length = 0;
@@ -840,10 +838,7 @@ static void *handle_ip_traffic(void *ptr) {
 				else
 	  				_HIP_DEBUG("signature exists\n");
 
-				//HIP_DUMP_MSG(hip_common);
-				//allow_packet(hndl, m->packet_id);//
-				//filter mirar si esta en hadb o como regla
-
+				
 				if(filter_hip(src_addr, dst_addr, 
 					      hip_common, m->hook,
 					      m->indev_name, m->outdev_name) || 
@@ -858,9 +853,16 @@ static void *handle_ip_traffic(void *ptr) {
       			} else {
 				if (ipv4Traffic){
 					if(IS_LSI((iphdr->ip_dst).s_addr) && is_outgoing_packet(packetHook)){
-		                		HIP_DEBUG("It's LSI and outgoing packet\n");
-						firewall_trigger_outgoing_lsi(m, &iphdr->ip_src, &iphdr->ip_dst);
-						drop_packet(hndl, m->packet_id);
+					  HIP_DEBUG("It's LSI and outgoing packet\n");
+						HIP_DEBUG_LSI(" lsi source --- ",&iphdr->ip_src);
+						HIP_DEBUG_LSI(" lsi dest   --- ",&iphdr->ip_dst);
+						if (is_packet_reinjection(&iphdr->ip_dst)){
+						  HIP_DEBUG("This is a packet reinjection!!!\n");
+						  allow_packet(hndl, m->packet_id);
+						}else{
+						  firewall_trigger_outgoing_lsi(m, &iphdr->ip_src, &iphdr->ip_dst);
+						  drop_packet(hndl, m->packet_id);
+						}
 						break;
 					}
 					else if (iphdr->ip_p != IPPROTO_TCP)
@@ -868,7 +870,7 @@ static void *handle_ip_traffic(void *ptr) {
 				} 
 				else if(ipv6Traffic){
 				  HIP_DEBUG("IPV6 TRAFFIC \n");
-					if (ipv6_addr_is_hit(src_addr)){
+					if (ipv6_addr_is_hit(src_addr) && is_incoming_packet(packetHook)){
 						HIP_DEBUG("IPV6 TRAFFIC AND HIT RECEIVED\n");
 						firewall_trigger_incoming_hit(m, src_addr, dst_addr);
 						drop_packet(hndl, m->packet_id);
@@ -924,11 +926,17 @@ out_err:
 
 void firewall_traffic_treatment(struct ipq_handle *hndl, unsigned long packetId)
 {
-	HIP_DEBUG("***     firewall_traffic_treatment      ***\n");
+	_HIP_DEBUG("***     firewall_traffic_treatment      ***\n");
   	if(accept_normal_traffic)
   		allow_packet(hndl, packetId);
   	else
   		drop_packet(hndl, packetId);
+}
+
+
+int is_packet_reinjection(struct in_addr *ip_src){
+  HIP_DEBUG_LSI("is_packet already reinjected with lsi dst",ip_src);
+  return hip_find_local_lsi(ip_src);
 }
 
 int firewall_trigger_incoming_hit(ipq_packet_msg_t *m, struct in6_addr *ip_src, struct in6_addr *ip_dst)
@@ -943,9 +951,9 @@ int firewall_trigger_incoming_hit(ipq_packet_msg_t *m, struct in6_addr *ip_src, 
         if(lsi_our && lsi_peer){
 	         IPV4_TO_IPV6_MAP(lsi_our, &src_addr);
 	         IPV4_TO_IPV6_MAP(lsi_peer, &dst_addr);
-		 _HIP_DEBUG_IN6ADDR("******LSI_OUR IPV6: ", &src_addr);
-		 _HIP_DEBUG_IN6ADDR("******LSI_PEER IPV6: ", &dst_addr);
-	         reinject_packet(src_addr, dst_addr, m, 6);
+		 _HIP_DEBUG_LSI("******lsi_src : ", lsi_our);
+		 _HIP_DEBUG_LSI("******lsi_dst : ", lsi_peer);
+	         reinject_packet(dst_addr, src_addr, m, 6, 1);
         }
 	return err;
 }
@@ -960,7 +968,7 @@ int firewall_trigger_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *ip_src, s
 
 	IPV4_TO_IPV6_MAP(ip_dst, &dst_addr);
 
-	//hip_firewall_hldb_dump();
+	hip_firewall_hldb_dump();
 	entry_peer = (firewall_hl_t *)firewall_hit_lsi_db_match(ip_dst);
 
 	HIP_DEBUG("1. FIREWALL_TRIGGERING OUTGOING LSI %s\n",inet_ntoa(*ip_dst));
@@ -969,18 +977,18 @@ int firewall_trigger_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *ip_src, s
 	        HIP_DEBUG("Firewall_db HIT ???? %d \n", entry_peer->bex_state);
 		HIP_IFEL(entry_peer->bex_state == -1, -1, "Base Exchange Failed");
 	  	if(entry_peer->bex_state)
-			reinject_packet(entry_peer->hit_our, entry_peer->hit_peer, m, 4);
+		  reinject_packet(entry_peer->hit_our, entry_peer->hit_peer, m, 4, 0);
 	}else{
 	        //Check if bex is already established: Server case
 	        int state_ha = hip_trigger_is_bex_established(&src_hit, &dst_hit, ip_src, ip_dst);
 		if (state_ha){
 			HIP_DEBUG("ha is ESTABLISHED!\n");
 			firewall_add_hit_lsi(src_hit, dst_hit, ip_dst, state_ha);
-			reinject_packet(*src_hit, *dst_hit, m, 4);
+			reinject_packet(*src_hit, *dst_hit, m, 4, 0);
 		}
 		else{
 			// Run bex to initialize SP and SA
-			HIP_DEBUG("Firewall_db empty. Triggering Base Exchange\n");
+			HIP_DEBUG("Firewall_db empty and no ha. Triggering Base Exchange\n");
 			HIP_IFEL(hip_trigger_bex(&src_hit, &dst_hit, NULL, &dst_addr), -1, 
 			 	 "Base Exchange Trigger failed");
 		  	firewall_add_hit_lsi(src_hit, dst_hit, ip_dst, 0);
@@ -990,7 +998,7 @@ out_err:
 	return err;
 }
 
-int reinject_packet(struct in6_addr src_hit, struct in6_addr dst_hit, ipq_packet_msg_t *m, int ipOrigTraffic)
+int reinject_packet(struct in6_addr src_hit, struct in6_addr dst_hit, ipq_packet_msg_t *m, int ipOrigTraffic, int incoming)
 {
 	int err, ip_hdr_size, packet_length = 0, protocol;
 	u8 *msg;  
@@ -1005,6 +1013,7 @@ int reinject_packet(struct in6_addr src_hit, struct in6_addr dst_hit, ipq_packet
 	        struct ip6_hdr* ip6_hdr = (struct ip6_hdr*) m->payload;
 		ip_hdr_size = sizeof(struct ip6_hdr);
 		protocol = ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt;
+		HIP_DEBUG("ip_hdr_size %d\n",ip_hdr_size);
 		HIP_DEBUG_IN6ADDR("Orig packet src address: ", &(ip6_hdr->ip6_src));
 		HIP_DEBUG_IN6ADDR("Orig packet dst address: ", &(ip6_hdr->ip6_dst));
 		HIP_DEBUG_IN6ADDR("New packet src address:", &src_hit);
@@ -1028,7 +1037,10 @@ int reinject_packet(struct in6_addr src_hit, struct in6_addr dst_hit, ipq_packet
 	memcpy(msg, (m->payload)+ip_hdr_size, packet_length);
 
 	//HIP_DUMP_MSG(msg);
-  	err = firewall_send_pkt(&src_hit, &dst_hit, msg, packet_length, protocol);
+	if (incoming)
+	  err = firewall_send_incoming_pkt(&src_hit, &dst_hit, msg, packet_length, protocol);
+	else
+	   err = firewall_send_outgoing_pkt(&src_hit, &dst_hit, msg, packet_length, protocol);
 	HIP_DEBUG("After sendin the packet to the stack again \n");
 	return err;	
 }

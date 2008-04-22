@@ -102,6 +102,7 @@
 #define SO_HIP_GET_LSI_PEER                     164
 #define SO_HIP_GET_LSI_OUR			165
 #define SO_HIP_GET_STATE_HA			166
+#define SO_HIP_IS_OUR_LSI                       167
 /** @} */
 
 #endif /* _HIP_ICOMM */

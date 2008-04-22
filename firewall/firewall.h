@@ -67,7 +67,7 @@ void firewall_probe_kernel_modules();
 void firewall_traffic_treatment(struct ipq_handle *hndl, unsigned long packetId);
 
 /*Using raw_sockets injects the packet in the network with HITs*/
-int reinject_packet(struct in6_addr src_hit, struct in6_addr dst_hit, ipq_packet_msg_t *m, int ipOrigTraffic);
+int reinject_packet(struct in6_addr src_hit, struct in6_addr dst_hit, ipq_packet_msg_t *m, int ipOrigTraffic, int incoming);
 int firewall_trigger_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *ip_src, struct in_addr *ip_dst);
 int firewall_trigger_incoming_hit(ipq_packet_msg_t *m, struct in6_addr *ip_src, struct in6_addr *ip_dst);
 #endif

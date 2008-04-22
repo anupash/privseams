@@ -1861,7 +1861,9 @@ int hip_trigger_is_bex_established(struct in6_addr **src_hit, struct in6_addr **
   struct hip_common *msg = NULL;
   struct hip_hadb_user_info_state *ha;
 
+  
   HIP_ASSERT(src_ip != NULL && dst_ip != NULL);
+
      HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
 
      HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0), -1,
@@ -1971,4 +1973,38 @@ int hip_trigger_bex(struct in6_addr **src_hit, struct in6_addr **dst_hit, struct
 	HIP_DEBUG_HIT("hip_trigger bex dst_hit",*dst_hit);
 	HIP_DEBUG("End  hip_trigger_bex\n");
 	return err;
+}
+
+int hip_find_local_lsi(hip_lsi_t * dst_lsi){
+  int err = 0, exist = 0;
+  hip_lsi_t *aux_lsi = NULL;
+
+  struct hip_common *msg = NULL;
+
+  HIP_IFE(!(msg = hip_msg_alloc()), -1);
+
+  if (dst_lsi)
+    HIP_IFEL(hip_build_param_contents(msg, (void *) dst_lsi,
+						  HIP_PARAM_LSI,
+						  sizeof(struct in_addr)), -1,
+				 "build param HIP_PARAM_LSI failed\n");
+
+    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_IS_OUR_LSI, 0), -1,
+	     "build hdr failed\n");
+	
+    /* send and receive msg to/from hipd */
+    HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send_recv msg failed\n");
+    HIP_DEBUG("send_recv msg succeed\n");
+    /* check error value */
+    HIP_IFEL(hip_get_msg_err(msg), -1, "Got erroneous message!\n");
+
+    aux_lsi = hip_get_param_contents_direct(HIP_PARAM_LSI);
+    if (aux_lsi)
+      exist = 1;
+    //exist = hip_hidb_exists_lsi(dst_lsi);
+    // exist = hip_hidb_hit_is_our(NULL);
+ out_err:
+    if(msg)
+      HIP_FREE(msg);
+    return exist;
 }

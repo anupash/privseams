@@ -591,25 +591,30 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		        }
 		}
 	        break;
+	case SO_HIP_IS_OUR_LSI:
+	  lsi = (hip_lsi_t *)hip_get_param_contents(msg, HIP_PARAM_LSI);
+	  if (!hip_hidb_exists_lsi(lsi))
+	    lsi = NULL;
+	  break;
 	case SO_HIP_GET_STATE_HA:
-		while((param = hip_get_next_param(msg, param))){
-	    		if (hip_get_param_type(param) == HIP_PARAM_LSI){
-	      			if (!src_lsi)
-					src_lsi = (struct in_addr *)hip_get_param_contents_direct(param);
-	      			else 
-					dst_lsi = (struct in_addr *)hip_get_param_contents_direct(param);
-	    		}
-	  	}
-		HIP_DEBUG(">>>hip_hadb_find_bylsis\n");
-	  	HIP_DEBUG_LSI("LSI1", src_lsi);
-	  	HIP_DEBUG_LSI("LSI2", dst_lsi);
-	  	hip_ha_t *aux = hip_hadb_find_bylsis(src_lsi, dst_lsi);
-          	if (aux && aux->state == HIP_STATE_ESTABLISHED){
-	    		HIP_DEBUG("Entry found in the ha database \n\n");
-	      		src_hit = &aux->hit_our;
-	      		dst_hit = &aux->hit_peer;
-	  	}
-	  	break;
+	  while((param = hip_get_next_param(msg, param))){
+	    if (hip_get_param_type(param) == HIP_PARAM_LSI){
+	      if (!src_lsi)
+		src_lsi = (struct in_addr *)hip_get_param_contents_direct(param);
+	      else 
+		dst_lsi = (struct in_addr *)hip_get_param_contents_direct(param);
+	    }
+	  }
+	  HIP_DEBUG(">>>hip_hadb_find_bylsis\n");
+	  HIP_DEBUG_LSI("LSI1", src_lsi);
+	  HIP_DEBUG_LSI("LSI2", dst_lsi);
+	  hip_ha_t *aux = hip_hadb_find_bylsis(src_lsi, dst_lsi);
+          if (aux && aux->state == HIP_STATE_ESTABLISHED){
+	    HIP_DEBUG("Entry found in the ha database \n\n");
+	      src_hit = &aux->hit_our;
+	      dst_hit = &aux->hit_peer;
+	  }
+	  break;
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;
@@ -633,6 +638,10 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		        }
 			if ((msg_type == SO_HIP_GET_LSI_PEER || msg_type == SO_HIP_GET_LSI_OUR) && lsi)
 		                HIP_IFEL(hip_build_param_contents(msg, (void *)lsi,
+					 HIP_PARAM_LSI, sizeof(hip_lsi_t)), -1,
+				 	 "build param HIP_PARAM_LSI  failed\n");
+			if (msg_type == SO_HIP_IS_OUR_LSI)
+			        HIP_IFEL(hip_build_param_contents(msg, (void *)lsi,
 					 HIP_PARAM_LSI, sizeof(hip_lsi_t)), -1,
 				 	 "build param HIP_PARAM_LSI  failed\n");
 		}
