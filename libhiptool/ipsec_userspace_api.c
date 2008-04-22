@@ -101,7 +101,6 @@ int hipl_userspace_ipsec_api_wrapper_sadb_add(struct in6_addr *saddr,
 		break;
 	}
 
-
 	__u8 *ipsec_e_key; 
 	__u8 *ipsec_a_key;
 	

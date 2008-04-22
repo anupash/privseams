@@ -452,7 +452,7 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 	DWORD lenin;
 	OVERLAPPED overlapped = {0};
 #endif
-	struct ip6_hdr *ip6h;
+	//struct ip6_hdr *ip6h;
 	static hip_sadb_entry *entry;
 	//struct sockaddr_storage ss_lsi;
 	struct sockaddr *lsi = (struct sockaddr *) ss_lsi;
@@ -1117,19 +1117,28 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
  * them, adding HIT or LSI headers and sending them out the TAP-Win32 interface.
  * Also, expires temporary LSI entries and retransmits buffered packets.
  */
+
+
+
+/* This does not support HIPL ipsec userspace, it needs to write */
+
+
 #ifdef __WIN32__
 void hip_esp_input(void *arg)
 #else
-void *hip_esp_input(void *arg)
+// void *hip_esp_input(void *arg)
+/* beuff: raw encrypted data buffer 
+ * len: /*length of buffer */
+void *hip_esp_input(struct sockaddr_storage *ss_lsi, u8 *buff, int len)
 #endif
 {
-	int err, len, max_fd, offset;
+	int err, max_fd, offset;
 	fd_set fd;
 	struct timeval timeout, now;
-	__u8 buff[BUFF_LEN]; /* raw, encrypted data buffer */
+	// __u8 buff[BUFF_LEN]; /* raw, encrypted data buffer */
 	__u8 data[BUFF_LEN]; /* decrypted data buffer */
-	struct sockaddr_storage ss_lsi;
-	struct sockaddr *lsi = (struct sockaddr*) &ss_lsi;
+	// struct sockaddr_storage ss_lsi;
+	struct sockaddr *lsi = (struct sockaddr*) ss_lsi;
 	struct ip *iph;
 	struct ip_esp_hdr *esph;
 	hip_sadb_entry *inverse_entry;
@@ -1137,6 +1146,120 @@ void *hip_esp_input(void *arg)
 
 	__u32 spi, seq_no;
 	hip_sadb_entry *entry;
+
+
+
+	HIP_DEBUG("what is the number of sa_family: %d\n", lsi->sa_family);
+
+	memset(data, 0, sizeof(data)); /* memset zero */
+
+	/* Firewall checking is it ipv4 or ipv6 address */
+
+
+
+
+
+	
+	if (lsi->sa_family == AF_INET) {
+
+		HIP_DEBUG("It is the IPv4 traffic\n");
+		iph = (struct ip*) &buff[0];
+		udph = (udphdr*) &buff[sizeof(struct ip)];
+		esph = (struct ip_esp_hdr *) &buff[sizeof(struct ip)+sizeof(udphdr)];
+		
+		if (((int)(len - sizeof(struct ip) - sizeof(udphdr)) ==
+		     1) && (((__u8*)esph)[0] == 0xFF)) {
+			HIP_DEBUG ("Keepalive packet received.\n");
+			goto out_err;
+	}
+	
+	}
+
+
+
+	if(lsi->sa_family == AF_INET6) {
+		HIP_DEBUG("It is the IPv6 traffic\n");
+		iph = (struct ip6_hdr *) &buff[0];
+		udph = (udphdr*) &buff[sizeof(struct ip6_hdr)];
+		esph = (struct ip_esp_hdr *) &buff[sizeof(struct ip6_hdr)
+						   + sizeof(udphdr)];
+		if (((int)(len - sizeof(struct ip6_hdr) - sizeof(udphdr)) ==
+			     1) && (((__u8*)esph)[0] == 0xFF)) {
+			HIP_DEBUG ("Keepalive packet received.\n");
+			goto out_err;
+		}
+		
+	}
+	
+	
+	
+	
+	spi 	= ntohl(esph->spi);
+
+	HIP_DEBUG("SPI value is 0x%x\n", spi);
+	seq_no 	= ntohl(esph->seq_no);
+	if (!(entry = hip_sadb_lookup_spi(spi))) {
+		HIP_DEBUG("Warning: SA not found for SPI 0x%x\n", spi);
+		goto out_err;
+	}
+
+	HIP_DEBUG("entry->SPI value is 0x%x\n", entry->spi);
+	
+	if (!entry->inner_src_addrs) { 
+		HIP_DEBUG("we do not have inner src addrs \n");
+		goto out_err; 
+	}
+	
+
+
+	
+	while(entry) {
+		
+		HIP_DEBUG_HIT("local hit ", &entry->inner_dst_addrs->addr);
+		HIP_DEBUG_HIT("remote hit ", &entry->inner_src_addrs->addr);
+		
+		entry=hip_sadb_get_next(entry);
+	}
+	
+	if (!(inverse_entry = hip_sadb_lookup_addr(
+		      SA( &(entry->inner_src_addrs->addr) )))) {
+		HIP_DEBUG ("Corresponding sadb entry for "
+			   "outgoing packets not found.\n");
+		goto out_err;
+	}
+	/*HIP_DEBUG ( "DST_PORT = %u\n", 
+	 * inverse_entry->dst_port);*/
+	if (inverse_entry->dst_port == 0) {
+		HIP_DEBUG ("ESP channel - Setting dst_port "
+			   "to %u\n",ntohs(udph->src_port));
+		inverse_entry->dst_port = ntohs(udph->src_port);
+	}
+	
+	pthread_mutex_lock(&entry->rw_lock);
+	err = hip_esp_decrypt(buff, len, data, &offset, &len,
+			      entry, iph, &now);
+	pthread_mutex_unlock(&entry->rw_lock);
+	if (err) 
+	{   HIP_DEBUG("HIP ESP decryption is not successful\n");
+	goto out_err;
+	}
+
+
+
+
+	
+
+	HIP_DEBUG("DO I come here?\n");
+		
+	
+
+
+
+	
+
+
+#if 0 /*disable openhip implementation */
+
 #ifdef __WIN32__
 	DWORD lenin;
 	OVERLAPPED overlapped = {0};
@@ -1302,6 +1425,7 @@ void *hip_esp_input(void *arg)
 #ifdef DEBUG_EVERY_PACKET
 			fHIP_DEBUG(debugfp, "read() %d bytes\n", len);
 #endif
+
 			esph = (struct ip_esp_hdr *) &buff[0];
 			spi 	= ntohl(esph->spi);
 			seq_no 	= ntohl(esph->seq_no);
@@ -1334,6 +1458,14 @@ void *hip_esp_input(void *arg)
 	pthread_exit((void *) 0);
 	return(NULL);
 #endif
+
+#endif /* the endif of disable openhip implementation */
+
+ out_err:
+	
+	HIP_DEBUG("hip_esp_input() thread shutdown.\n");
+	fflush(stdout);
+
 }
 
 
@@ -2230,6 +2362,7 @@ int hip_esp_decrypt(__u8 *in, int len, __u8 *out, int *offset, int *outlen,
 		return(-1);
 
 
+
 	if (entry->mode == 3) {	/*(HIP_ESP_OVER_UDP) */
 		use_udp = TRUE;
 		udph = (udphdr*) &in[sizeof(struct ip)];
@@ -2241,6 +2374,17 @@ int hip_esp_decrypt(__u8 *in, int len, __u8 *out, int *offset, int *outlen,
 			esp = (struct ip_esp_hdr*) &in[0];
 		}
 	}
+
+
+	HIP_DEBUG("ESP authtication type is %d\n", entry->a_type);
+	HIP_DEBUG("ESP encryption type is %d\n", entry->e_type);
+	
+	
+	
+	HIP_DEBUG("Is the IPv6 or IPv4 address to sent: %s \n",  
+		  (entry->dst_addrs->addr).ss_family == AF_INET ? 
+		  "IPv4" : "IPv6");	
+	
 	/* if (ntohl(esp->spi) != entry->spi)
 		return(-1); *//* this check might be excessive */
 
@@ -2464,13 +2608,18 @@ int hip_esp_decrypt(__u8 *in, int len, __u8 *out, int *offset, int *outlen,
 	else	/* offset = 0 */
 		*offset -= (sizeof(struct eth_hdr) + sizeof(struct ip6_hdr));
 	
+
+
 	/* Ethernet header */
+
+/* For HIPL we do not use ethernet header for TAP driver */
+
+/*
 	dst_mac = get_eth_addr(family_out, 
-				(family_out==AF_INET) ? SA2IP(&entry->lsi) : 
-							SA2IP(&entry->lsi6));
+	(family_out==AF_INET) ? SA2IP(&entry->lsi) : SA2IP(&entry->lsi6));
 	add_eth_header(&out[*offset], dst_mac, g_tap_mac, 
-			(family_out == AF_INET) ? 0x0800 : 0x86dd);
-	
+	(family_out == AF_INET) ? 0x0800 : 0x86dd);
+*/
 	/* IP header */
 	if (family_out == AF_INET) {
 		add_ipv4_header(&out[*offset+sizeof(struct eth_hdr)],
