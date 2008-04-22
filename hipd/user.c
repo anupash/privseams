@@ -29,6 +29,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 	hip_ha_t * server_entry = NULL;
 	HIP_KEA * kea = NULL;
 	int send_response = (src ? 1 : 0);
+	uint8_t lifetime = 0;
 
 	HIP_DEBUG("handling user msg of family=%d from port=%d\n",
 		  src->sin6_family, src->sin6_port);
@@ -394,13 +395,21 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		   (of I,RVS,R hierarchy) handles this message. Message
 		   indicates that the current machine wants to register to a rvs
 		   server. This message is received from hipconf. */
+		
+		
 		HIP_DEBUG("Handling ADD RENDEZVOUS user message.\n");
 		
-		/* Get rvs ip and hit given as commandline parameters to hipconf. */
+		/* Get RVS IP address, HIT and requested lifetime given as
+		   commandline parameters to hipconf. */
 		HIP_IFEL(!(dst_hit = hip_get_param_contents(
-				   msg, HIP_PARAM_HIT)), -1, "no hit found\n");
+				   msg,HIP_PARAM_HIT)), -1,
+			 "No HIT value found from the user message.\n");
 		HIP_IFEL(!(dst_ip = hip_get_param_contents(
-				   msg, HIP_PARAM_IPV6_ADDR)), -1, "no ip found\n");
+				   msg, HIP_PARAM_IPV6_ADDR)), -1,
+			 "No IP address value found from the user message.\n");
+
+		// Get req_request...
+		
 		/* Add HIT to IP mapping of rvs to hadb. */ 
 		HIP_IFEL(hip_add_peer_map(msg), -1, "add rvs map\n");
 		/* Fetch the hadb entry just created. */

@@ -24,6 +24,8 @@
 #  include "state.h"
 #endif
 
+//typedef struct hip_srv hip_srv_t;
+
 /* ARRAY_SIZE is defined in linux/kernel.h, but it is in #ifdef __KERNEL__ */
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
@@ -149,6 +151,33 @@ struct hip_dh_public_value *hip_dh_select_key(
 	const struct hip_diffie_hellman *);
 uint8_t hip_get_host_id_algo(const struct hip_host_id *);
 int hip_get_locator_addr_item_count(struct hip_locator *);
+
+/**
+ * Translates a service life time from seconds to a 8-bit integer value. The
+ * lifetime value in seconds is translated to a 8-bit integer value using
+ * following formula: <code>lifetime = (8 * (log(seconds) / log(2)))
+ * + 64</code> and truncated. The formula is the inverse of the formula given
+ * in the registration draft.
+ * 
+ * @param  seconds  the lifetime to convert.
+ * @param  lifetime a target buffer for the coverted lifetime.
+ * @return          zero on success, -1 on error. Error occurs when @c seconds
+ *                  is zero or greater than 15384774.
+ */ 
+int hip_get_lifetime_value(time_t seconds, uint8_t *lifetime);
+
+/**
+ * Translates a service life time from a 8-bit integer value to seconds. The
+ * lifetime value is translated to a 8-bit integer value using following
+ * formula: <code>seconds = 2^((lifetime - 64)/8)</code>.
+ *
+ * @param  lifetime the lifetime to convert.
+ * @param  seconds  a target buffer for the converted lifetime.
+ * @return          zero on success, -1 on error. Error occurs when @c lifetime
+ *                  is zero.
+ */ 
+int hip_get_lifetime_seconds(uint8_t lifetime, time_t *seconds);
+
 struct hip_locator_info_addr_item *hip_get_locator_first_addr_item(
         struct hip_locator *);
 uint16_t hip_get_msg_contents_len(const struct hip_common *);
@@ -198,7 +227,7 @@ int dsa_to_hip_endpoint(DSA *dsa, struct endpoint_hip **endpoint,
  * @return              zero on success, non-zero otherwise.
  */
 int hip_build_param_reg_info(hip_common_t *msg,
-			     const struct hip_srv_hdr *service_list,
+			     const struct hip_srv *service_list,
 			     const unsigned int service_count);
 /**
  * Builds a REG_REQUEST parameter.

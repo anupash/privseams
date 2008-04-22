@@ -18,12 +18,15 @@
 #include "misc.h"
 #include "hiprelay.h" // For relrec lifetimes.
 #include "escrow.h" // For escrow lifetimes and other escrow stuff.
+#include "builder.h" // For lifetime conversions.
+#include "protodefs.h" // For service type values.
 
 /** Possible service states. */
 typedef enum{HIP_SERVICE_OFF = 0, HIP_SERVICE_ON = 1}hip_srv_status_t;
 
+/* Need to define a name here too for a stupid linking error in builder.h */
 /** HIP service. */
-typedef struct hip_srv_hdr {
+typedef struct hip_srv{
 	hip_srv_status_t status;
 	uint8_t reg_type;
 	uint8_t min_lifetime;
@@ -37,32 +40,6 @@ int hip_set_srv_max_lifetime(uint8_t reg_type, uint8_t lifetime);
 int hip_get_active_services(hip_srv_t *active_services,
 			    unsigned int *active_service_count);
 void hip_srv_info(const hip_srv_t *srv, char *status);
-
-/**
- * Translates a service life time from seconds to a 8-bit integer value. The
- * lifetime value in seconds is translated to a 8-bit integer value using
- * following formula: <code>lifetime = (8 * (log(seconds) / log(2)))
- * + 64</code> and truncated. The formula is the inverse of the formula given
- * in the registration draft.
- * 
- * @param  seconds  the lifetime to convert.
- * @param  lifetime a target buffer for the coverted lifetime.
- * @return          zero on success, -1 on error. Error occurs when @c seconds
- *                  is zero or greater than 15384774.
- */ 
-int hip_get_lifetime_value(time_t seconds, uint8_t *lifetime);
-
-/**
- * Translates a service life time from a 8-bit integer value to seconds. The
- * lifetime value is translated to a 8-bit integer value using following
- * formula: <code>seconds = 2^((lifetime - 64)/8)</code>.
- *
- * @param  lifetime the lifetime to convert.
- * @param  seconds  a target buffer for the converted lifetime.
- * @return          zero on success, -1 on error. Error occurs when @c lifetime
- *                  is zero.
- */ 
-int hip_get_lifetime_seconds(uint8_t lifetime, time_t *seconds);
 
 int hip_handle_param_reg_info(hip_common_t *msg, hip_ha_t *entry);
 

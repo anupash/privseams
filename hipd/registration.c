@@ -109,42 +109,6 @@ int hip_get_active_services(hip_srv_t *active_services,
 	return 0;
 } 
 
-int hip_get_lifetime_value(time_t seconds, uint8_t *lifetime)
-{
-	/* Check that we get a lifetime value between 1 and 255. The minimum
-	   lifetime according to the registration draft is 0.004 seconds, but
-	   the reverse formula gives zero for that. 15384774.906 seconds is the
-	   maximum value. The boundary checks done here are just curiosities
-	   since services are usually granted for minutes to a couple of days,
-	   but not for milliseconds and days. However, log() gives a range error
-	   if "seconds" is zero. */
-	if(seconds == 0) {
-		*lifetime = 0;
-		return -1;
-	}else if(seconds > 15384774) {
-		*lifetime = 255;
-		return -1;
-	}else {
-		*lifetime = (8 * (log(seconds) / log(2))) + 64;
-		return 0;
-	}
-}
-
-int hip_get_lifetime_seconds(uint8_t lifetime, time_t *seconds){
-	if(lifetime == 0) {
-		*seconds = 0;
-		return -1;
-	}
-	/* All values between from 1 to 63 give just fractions of a second. */
-	else if(lifetime < 64) {
-		*seconds = 1;
-		return 0;
-	} else {
-		*seconds = pow(2, ((double)((lifetime)-64)/8));
-		return 0;
-	}
-}
-
 void hip_srv_info(const hip_srv_t *srv, char *status)
 {
 	if(srv == NULL || status == NULL)

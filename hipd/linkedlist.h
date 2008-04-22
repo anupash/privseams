@@ -4,7 +4,6 @@
  * @author  Lauri Silvennoinen
  * @version 1.0
  * @date    21.04.2008
- * @note    Related drafts:
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  */
 #ifndef HIP_LL_H
