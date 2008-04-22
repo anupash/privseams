@@ -137,7 +137,7 @@ struct ip_esp_hdr {
 	__u32 spi;
 	__u32 seq_no;
 	__u8 enc_data[0];
-};
+}__attribute__ ((packed)) ;
 
 struct ip_esp_padinfo {
 	__u8 pad_length;
@@ -148,7 +148,7 @@ struct eth_hdr {
 	__u8 dst[6];
 	__u8 src[6];
 	__u16 type;
-};
+}__attribute__ ((packed));
 
 /* ARP header - RFC 826, STD 37 */
 struct arp_hdr {
@@ -1157,15 +1157,26 @@ void *hip_esp_input(struct sockaddr_storage *ss_lsi, u8 *buff, int len)
 
 
 
+	HIP_HEXDUMP("hello: the whole packet\n", buff, len); 
+
 
 
 	
 	if (lsi->sa_family == AF_INET) {
 
 		HIP_DEBUG("It is the IPv4 traffic\n");
-		iph = (struct ip*) &buff[0];
-		udph = (udphdr*) &buff[sizeof(struct ip)];
-		esph = (struct ip_esp_hdr *) &buff[sizeof(struct ip)+sizeof(udphdr)];
+		iph = (struct ip*) buff;
+
+		HIP_HEXDUMP("hello: the IPv4 header\n", iph, sizeof(struct ip)); 
+		
+		udph = (udphdr*) (buff + sizeof(struct ip));
+
+		HIP_HEXDUMP("hellp: the UDP header\n", udph, sizeof(struct udphdr));
+
+
+		/*hard coded, FIXME offset with 8 bytes!!!!! */
+		esph = (struct ip_esp_hdr *) (((char *)udph) + sizeof(udphdr) + 
+					      8 );
 		
 		if (((int)(len - sizeof(struct ip) - sizeof(udphdr)) ==
 		     1) && (((__u8*)esph)[0] == 0xFF)) {
@@ -1175,6 +1186,11 @@ void *hip_esp_input(struct sockaddr_storage *ss_lsi, u8 *buff, int len)
 	
 	}
 
+	HIP_HEXDUMP("hello: the whole esp packet\n", esph, len - sizeof(struct ip) - sizeof(struct udphdr));
+
+	
+	
+	/* FIXME when using IPv6 header*/
 
 
 	if(lsi->sa_family == AF_INET6) {
@@ -1212,21 +1228,37 @@ void *hip_esp_input(struct sockaddr_storage *ss_lsi, u8 *buff, int len)
 	
 
 
+	/* THis only is used for multi-cast */
 	
-	while(entry) {
-		
-		HIP_DEBUG_HIT("local hit ", &entry->inner_dst_addrs->addr);
-		HIP_DEBUG_HIT("remote hit ", &entry->inner_src_addrs->addr);
-		
+
+	/*
+	while(entry) {	
+
+	HIP_DEBUG_SOCKADDR("local inner addr ", &entry->inner_dst_addrs->addr);
+	HIP_DEBUG_SOCKADDR("remote inner addr ", &entry->inner_src_addrs->addr);
+	
 		entry=hip_sadb_get_next(entry);
 	}
+	*/	
+
+	HIP_DEBUG_SOCKADDR("local inner addr ", &entry->inner_dst_addrs->addr);
+	HIP_DEBUG_SOCKADDR("remote inner addr ", &entry->inner_src_addrs->addr);
+	
 	
 	if (!(inverse_entry = hip_sadb_lookup_addr(
-		      SA( &(entry->inner_src_addrs->addr) )))) {
+		      SA( &entry->inner_src_addrs->addr )))) {
+		
 		HIP_DEBUG ("Corresponding sadb entry for "
 			   "outgoing packets not found.\n");
 		goto out_err;
 	}
+
+	
+	HIP_DEBUG("destination port is %d\n", inverse_entry->dst_port);
+
+	HIP_DEBUG("get src port from udp header is %d\n", ntohs(udph->src_port));
+		  
+
 	/*HIP_DEBUG ( "DST_PORT = %u\n", 
 	 * inverse_entry->dst_port);*/
 	if (inverse_entry->dst_port == 0) {
@@ -2362,18 +2394,42 @@ int hip_esp_decrypt(__u8 *in, int len, __u8 *out, int *offset, int *outlen,
 		return(-1);
 
 
+	HIP_HEXDUMP("hello: the whole packet:", in, len);
+	
+	HIP_HEXDUMP("hello: the IP header:", in, sizeof (struct ip));
 
 	if (entry->mode == 3) {	/*(HIP_ESP_OVER_UDP) */
 		use_udp = TRUE;
-		udph = (udphdr*) &in[sizeof(struct ip)];
-		esp = (struct ip_esp_hdr*)&in[sizeof(struct ip)+sizeof(udphdr)];
-	} else { 		/* not UDP-encapsulated */
+		udph = (udphdr*) (in + sizeof(struct ip));
+		
+		
+		HIP_HEXDUMP("hello: the udp header:", udph, 
+			    sizeof(struct udphdr)); 
+		
+		/* hard code here, if the offset is added 8 more bytes  
+		 * FIXME, why do we need that 8 more bytes?
+		 */
+		
+		
+		esp = (struct ip_esp_hdr*) (((char *) udph) + 
+					    sizeof(udphdr) 
+					    + 8);
+	} else { 		
+		/* Todo: Test if it is not UDP-encapsulated */
+		/* not UDP-encapsulated */
+		HIP_DEBUG("It does not use this HIP_ESP_OVER_UDP\n");
+
 		if ( iph ) {	/* IPv4 */
 			esp = (struct ip_esp_hdr*) &in[sizeof(struct ip)];
 		} else { 	/* IPv6 - header not included */
 			esp = (struct ip_esp_hdr*) &in[0];
 		}
 	}
+
+
+	
+
+	HIP_DEBUG("the decrypt SPI value is Ox%x\n", ntohl(esp->spi));
 
 
 	HIP_DEBUG("ESP authtication type is %d\n", entry->a_type);
@@ -2391,7 +2447,14 @@ int hip_esp_decrypt(__u8 *in, int len, __u8 *out, int *offset, int *outlen,
 	/* An IPv6 header is larger than an IPv4 header, so data
 	 * is decrypted into a buffer at the larger offset, since
 	 * we do not know the (inner) IP version before decryption. */
-	*offset = sizeof(struct eth_hdr) + sizeof(struct ip6_hdr); /* 54 */
+	
+
+	// *offset = sizeof(struct eth_hdr) + sizeof(struct ip6_hdr); /* 54 */
+
+
+	/* since HIPL does not need test ethernet header here */
+	
+	 *offset = sizeof(struct ip6_hdr); 
 
 	/* 
 	 *   Authentication 
@@ -2468,6 +2531,12 @@ int hip_esp_decrypt(__u8 *in, int len, __u8 *out, int *offset, int *outlen,
 			fprintf(debugfp, "\n\n");
 		}
 #endif /* DEBUG_EVERY_PACKET */
+		
+		HIP_HEXDUMP("data from buffer:", &in[len - alen], alen);
+		HIP_HEXDUMP("data from hmac_md:", hmac_md, alen);
+		
+		
+
 		if (memcmp(&in[len - alen], hmac_md, alen) !=0) {
 			HIP_DEBUG("auth err: SHA1 auth failure SPI=0x%x\n", 
 				entry->spi);

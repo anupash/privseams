@@ -71,7 +71,7 @@ typedef struct _udphdr {
       __u16 dst_port;
       __u16 len;
       __u16 checksum;
-} udphdr;
+} udphdr __attribute__ ((packed));
 
 #define HIP_ESP_UDP_PORT 50500
 #define HIP_KEEPALIVE_TIMEOUT 20

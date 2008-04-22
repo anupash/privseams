@@ -1484,14 +1484,7 @@ static void *handle_ip_traffic(void *ptr){
 					else {
 						examine_incoming_tcp_packet(hndl, m->packet_id, packet_hdr, type);
 					}
-				} else if(is_tcp) {
-					HIP_DEBUG("Received TCP traffic\n");
-					if(accept_normal_traffic)
-						allow_packet(hndl, m->packet_id);
-					else
-						drop_packet(hndl, m->packet_id);
-
-				} else if(is_outgoing_packet(packetHook)) {
+				}  else if(is_outgoing_packet(packetHook)) {
 					/*examine_outgoing_tcp_packet(hndl, m->packet_id, packet_hdr, type);*/
 					
 					HIP_DEBUG("Is this a IPv6 packet: %s\n",
@@ -1521,7 +1514,16 @@ static void *handle_ip_traffic(void *ptr){
 					else
 						allow_packet(hndl, m->packet_id);
 					
-				} else {
+				} else if(is_tcp) {
+					HIP_DEBUG("Received TCP traffic\n");
+					if(accept_normal_traffic)
+						allow_packet(hndl, m->packet_id);
+					else
+						drop_packet(hndl, m->packet_id);
+				}
+				
+				
+				else {
 					if(accept_normal_traffic)
 						allow_packet(hndl, m->packet_id);
 					else
