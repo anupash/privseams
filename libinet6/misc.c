@@ -1673,10 +1673,10 @@ int hip_create_lock_file(char *filename, int killold) {
 	if (lockf(fd, F_TLOCK, 0) < 0)
 	{ 
 		HIP_IFEL(!killold, -12,
-			 "HIP daemon already running with pid %d\n"
+			 "\nHIP daemon already running with pid %d\n"
 			 "Give: -k option to kill old daemon.\n",old_pid);
 		
-		HIP_INFO("Daemon is already running with pid %d\n"
+		HIP_INFO("\nDaemon is already running with pid %d\n"
 			 "-k option given, terminating old one...\n", old_pid);
                 /* HIP_IFEL(kill(old_pid, SIGKILL), -1, "kill failed\n"); */
 		/* Erase the old lock file to avoid having multiple pids
@@ -1692,7 +1692,7 @@ int hip_create_lock_file(char *filename, int killold) {
  	        err = kill(old_pid, SIGKILL);
 		if (err != 0)
 		{
-		 HIP_INFO("Error %d while trying to kill pid %d\n", err,old_pid);
+		 HIP_INFO("\nError %d while trying to kill pid %d\n", err,old_pid);
                  HIP_IFEL(kill(old_pid, SIGKILL),-12,"Usage: /usr/sbin/hipd -bk\n")
 		}
 	}
