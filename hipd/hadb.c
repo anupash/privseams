@@ -1708,12 +1708,13 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 		} else {
 			HIP_DEBUG("address's state is set in state UNVERIFIED\n");
 			new_addr->address_state = PEER_ADDR_STATE_UNVERIFIED;
+			/*
 #ifndef HIP_USE_ICE 
 			//if ice is used, then not need to send update
 			err = entry->hadb_update_func->hip_update_send_echo(entry, spi, new_addr);
 			// @todo: check! If not acctually a problem (during Handover). Andrey.
 			if( err==-ECOMM ) err = 0;
-#endif
+#endif*/
 		}
 		//}
 

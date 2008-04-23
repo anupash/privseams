@@ -410,7 +410,7 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 				}
 				//
 			}
-			else{
+			else{/*
 				if(valid_list->checks[i].state == PJ_ICE_SESS_CHECK_STATE_SUCCEEDED){
 						rcand = valid_list->checks[i].rcand;
 						j= 0;
@@ -428,12 +428,58 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 								peer_addr_list_item->address_state = PEER_ADDR_STATE_ACTIVE;
 							}
 						}	
-						
-				}
+					
+				}*/
 			}
 				
 			
 		}
+
+		int err;
+		uint32_t spi_in, spi_out;
+		if (entry->state == HIP_STATE_ESTABLISHED)
+					spi_in = hip_hadb_get_latest_inbound_spi(entry);
+		
+		err =hip_add_sa(&entry->local_address, &entry->preferred_address,
+						 &entry->hit_our, &entry->hit_peer,
+						 &entry->default_spi_out, entry->esp_transform,
+						 &entry->esp_out, &entry->auth_out, 1,
+						 HIP_SPI_DIRECTION_OUT, 0, 50500, entry->peer_udp_port,1);
+		if (err) {
+			HIP_ERROR("Failed to setup outbound SA with SPI=%d\n",
+					entry->default_spi_out);
+			hip_hadb_delete_inbound_spi(entry, 0);
+			hip_hadb_delete_outbound_spi(entry, 0);
+			}
+		
+		err =hip_add_sa(&entry->preferred_address,&entry->local_address, 
+						&entry->hit_peer,&entry->hit_our, 
+						&spi_in,
+						entry->esp_transform,
+						 &entry->esp_in, &entry->auth_in, 1,
+						 HIP_SPI_DIRECTION_IN, 0, entry->peer_udp_port, 50500,1 );
+		if (err) {
+				HIP_ERROR("Failed to setup inbound SA with SPI=%d\n", spi_in);
+				/* if (err == -EEXIST)
+				   HIP_ERROR("SA for SPI 0x%x already exists, this is perhaps a bug\n",
+				   spi_in); */
+				err = -1;
+				hip_hadb_delete_inbound_spi(entry, 0);
+				hip_hadb_delete_outbound_spi(entry, 0);
+				//goto out_err;
+		}
+		
+		
+	
+		err = hip_setup_hit_sp_pair(&entry->hit_peer, &entry->hit_our,
+						&entry->preferred_address,
+						 &entry->local_address,  IPPROTO_ESP, 1, 1);
+		if(err) 
+			HIP_DEBUG("Setting up SP pair failed\n");
+		
+		
+		
+		
 	}
 	//we set the flag in the peer list to verified.
 	
@@ -890,7 +936,7 @@ int hip_external_ice_receive_pkt(struct hip_common * msg, int pkt_size, in6_addr
     
 	// found the right entry. 
 	entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
-    
+    if(entry == NULL) return -1;
     if(entry->ice_session){
     	pj_ice_sess_on_rx_pkt(entry->ice_session,1,msg+1, pkt_size-sizeof(struct hip_common), &pj_addr,addr_len);
     }

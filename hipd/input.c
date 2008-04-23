@@ -968,7 +968,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 			      &spi_in, transform_esp_suite, 
 			      &ctx->esp_in, &ctx->auth_in, 0,
 			      HIP_SPI_DIRECTION_IN, 0,
-			      r1_info->src_port, r1_info->dst_port), -1, 
+			      r1_info->src_port, r1_info->dst_port,0), -1, 
 		   "Failed to setup IPsec SPD/SA entries, peer:src\n");
 	}
 #endif
@@ -983,7 +983,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 			      &spi_in, transform_esp_suite, 
 			      &ctx->esp_in, &ctx->auth_in, 0,
 			      HIP_SPI_DIRECTION_IN, 0,
-			      r1_info->src_port, r1_info->dst_port), -1, 
+			      r1_info->src_port, r1_info->dst_port,0), -1, 
 		   "Failed to setup IPsec SPD/SA entries, peer:src\n");
 	}
 	/* XXX: -EAGAIN */
@@ -997,13 +997,14 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		   "Setting up SP pair failed\n");
 	}
 #endif
+#ifndef HIP_USE_ICE
 	if (!hip_blind_get_status()) {
 	  HIP_IFEL(hip_setup_hit_sp_pair(&ctx->input->hits,
 					 &ctx->input->hitr,
 					 r1_saddr, r1_daddr, IPPROTO_ESP, 1, 1), -1,
 		   "Setting up SP pair failed\n");
 	}
-
+#endif
  	esp_info = hip_get_param(i2, HIP_PARAM_ESP_INFO);
  	HIP_ASSERT(esp_info); /* Builder internal error */
 	esp_info->new_spi = htonl(spi_in);
@@ -2067,10 +2068,11 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 			   &spi_in,
 			   esp_tfm,  &ctx->esp_in, &ctx->auth_in,
 			   retransmission, HIP_SPI_DIRECTION_IN, 0, i2_info->src_port, 
-			   i2_info->dst_port);
+			   i2_info->dst_port,0);
 	}
 #endif
 
+	//disable direct connection when ice is used
 	if (!use_blind) {
 	/* Set up IPsec associations */
 	err = hip_add_sa(i2_saddr, i2_daddr,
@@ -2078,8 +2080,9 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 			 &spi_in,
 			 esp_tfm,  &ctx->esp_in, &ctx->auth_in,
 			 retransmission, HIP_SPI_DIRECTION_IN, 0, i2_info->src_port, 
-				i2_info->dst_port);
+				i2_info->dst_port,0);
 	}
+
 	if (err) {
 		HIP_ERROR("Failed to setup inbound SA with SPI=%d\n", spi_in);
 		/* if (err == -EEXIST)
@@ -2090,6 +2093,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 		hip_hadb_delete_outbound_spi(entry, 0);
 		goto out_err;
 	}
+
 	/** @todo Check -EAGAIN */
 	
 	/* ok, found an unused SPI to use */
@@ -2115,16 +2119,15 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 			   &entry->hit_our, &entry->hit_peer,
 			   &spi_out, esp_tfm, 
 			   &ctx->esp_out, &ctx->auth_out,
-			   1, HIP_SPI_DIRECTION_OUT, 0, i2_info->dst_port, i2_info->src_port);
+			   1, HIP_SPI_DIRECTION_OUT, 0, i2_info->dst_port, i2_info->src_port,0);
 	}
 #endif
-
 	if (!use_blind) {
 	  err = hip_add_sa(i2_daddr, i2_saddr,
 			   &ctx->input->hitr, &ctx->input->hits,
 			   &spi_out, esp_tfm, 
 			   &ctx->esp_out, &ctx->auth_out,
-			   1, HIP_SPI_DIRECTION_OUT, 0, i2_info->dst_port, i2_info->src_port);
+			   1, HIP_SPI_DIRECTION_OUT, 0, i2_info->dst_port, i2_info->src_port,0);
 	}
 	if (err) {
 		HIP_ERROR("Failed to setup outbound SA with SPI=%d\n",
@@ -2161,13 +2164,14 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	       -1, "Setting up SP pair failed\n");
     }
 #endif
+#ifndef HIP_USE_ICE
     if (!use_blind) {
 	    HIP_IFEL(hip_setup_hit_sp_pair(&ctx->input->hits,
 					   &ctx->input->hitr,
 					   i2_saddr, i2_daddr, IPPROTO_ESP, 1, 1),
 		     -1, "Setting up SP pair failed\n");
     }
-
+#endif
 	/* Source IPv6 address is implicitly the preferred address after the
 	   base exchange. */
     //TODO we make the priority the highest here, check it later
@@ -2280,43 +2284,47 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
                          -1, "hip_update_handle_locator_parameter failed\n");
                 
 #ifdef HIP_USE_ICE
-                //init the session right after the locator receivd
+                //no ice when peer is requesting rvs or udp relay
+        if(!((entry->peer_controls & HIP_HA_CTRL_LOCAL_REQ_RVS) || 
+        	    		(entry->peer_controls & HIP_HA_CTRL_LOCAL_REQ_HIPUDP))){
+        //init the session right after the locator receivd
                 HIP_DEBUG("init Ice in I2\n");
-        ice_session = hip_external_ice_init(ICE_ROLE_CONTROLLING);
-        		HIP_DEBUG("end init Ice in I2\n");
-        if(ice_session){
-        	entry->ice_session = ice_session;
-        	//add the type 1 address first
-        	hip_list_t *item, *tmp;
-        	struct netdev_address *n;
-        	i=0;
-        	list_for_each_safe(item, tmp, addresses, i) {
-        		n = list_entry(item);
-        		
-        		
-        		if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
-        		    continue;
-        		HIP_DEBUG_HIT("add Ice local in I2 address", hip_cast_sa_addr(&n->addr));
-        		if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
-        			hip_external_ice_add_local_candidates(ice_session,hip_cast_sa_addr(&n->addr),50500,1);
-        		}
-        		
-        		
-        	}
-        	//TODO add reflexive address 
-        	
-        	//TODO add relay address
-        	// add remote address
-        	
-        	HIP_DEBUG("ICE add remote in I2\n");
-        	struct hip_spi_out_item* spi_out;
-        	HIP_DEBUG("number of spi_out : %d", entry->spis_out->num_nodes);
-        	list_for_each_safe(item, tmp, entry->spis_out, i) {
-        		spi_out = list_entry(item);
-        		hip_external_ice_add_remote_candidates(ice_session, spi_out->peer_addr_list,1);
-        	}
-        	HIP_DEBUG("ICE astart checking in I2\n");
-        	hip_ice_start_check(ice_session);
+		        ice_session = hip_external_ice_init(ICE_ROLE_CONTROLLING);
+		        		HIP_DEBUG("end init Ice in I2\n");
+		        if(ice_session){
+		        	entry->ice_session = ice_session;
+		        	//add the type 1 address first
+		        	hip_list_t *item, *tmp;
+		        	struct netdev_address *n;
+		        	i=0;
+		        	list_for_each_safe(item, tmp, addresses, i) {
+		        		n = list_entry(item);
+		        		
+		        		
+		        		if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
+		        		    continue;
+		        		HIP_DEBUG_HIT("add Ice local in I2 address", hip_cast_sa_addr(&n->addr));
+		        		if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
+		        			hip_external_ice_add_local_candidates(ice_session,hip_cast_sa_addr(&n->addr),50500,1);
+		        		}
+		        		
+		        		
+		        	}
+		        	//TODO add reflexive address 
+		        	
+		        	//TODO add relay address
+		        	// add remote address
+		        	
+		        	HIP_DEBUG("ICE add remote in I2\n");
+		        	struct hip_spi_out_item* spi_out;
+		        	HIP_DEBUG("number of spi_out : %d", entry->spis_out->num_nodes);
+		        	list_for_each_safe(item, tmp, entry->spis_out, i) {
+		        		spi_out = list_entry(item);
+		        		hip_external_ice_add_remote_candidates(ice_session, spi_out->peer_addr_list,1);
+		        	}
+		        	HIP_DEBUG("ICE astart checking in I2\n");
+		        	hip_ice_start_check(ice_session);
+		        }
         }
         
                 
@@ -2554,17 +2562,19 @@ int hip_handle_r2(struct hip_common *r2,
 			   &entry->hit_our, &entry->hit_peer,
 			   &spi_recvd, tfm,
 			   &ctx->esp_out, &ctx->auth_out, 1,
-			   HIP_SPI_DIRECTION_OUT, 0, r2_info->src_port, r2_info->dst_port);
+			   HIP_SPI_DIRECTION_OUT, 0, r2_info->src_port, r2_info->dst_port,0);
 	}
 #endif
 	HIP_DEBUG("entry->hip_transform: \n", entry->hip_transform);
-	if (!hip_blind_get_status()) {
+
+	if (!hip_blind_get_status()) {		
 	  err = hip_add_sa(r2_daddr, r2_saddr,
 				 &ctx->input->hitr, &ctx->input->hits,
 				 &spi_recvd, tfm,
 				 &ctx->esp_out, &ctx->auth_out, 1,
-				 HIP_SPI_DIRECTION_OUT, 0, r2_info->src_port, r2_info->dst_port);
+				 HIP_SPI_DIRECTION_OUT, 0, r2_info->src_port, r2_info->dst_port,0);
 	}
+
 
 	/*
 	if (err == -EEXIST) {
@@ -2579,6 +2589,7 @@ int hip_handle_r2(struct hip_common *r2,
 		err = -1;
 		goto out_err;
 	}
+
 	/* XXX: Check for -EAGAIN */
 	HIP_DEBUG("set up outbound IPsec SA, SPI=0x%x (host)\n", spi_recvd);
 
@@ -2622,60 +2633,51 @@ int hip_handle_r2(struct hip_common *r2,
             
             
 #ifdef HIP_USE_ICE
-	    HIP_DEBUG("ICE init \n");
+	    // no ice when RVS or UDP relay request
+	    if(!((entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_RVS) || 
+	    		(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_HIPUDP))){
                 //init the session right after the locator receivd
-        ice_session = hip_external_ice_init(PJ_ICE_SESS_ROLE_CONTROLLED);
-        if(ice_session){
-        	entry->ice_session = ice_session;
-        	HIP_DEBUG("ICE add local \n");
-        	
-        	//add the type 1 address first
-        	hip_list_t *item, *tmp;
-        	struct netdev_address *n;
-        	i=0;
-        	list_for_each_safe(item, tmp, addresses, i) {
-        		n = list_entry(item);
-        		
-        		
-        		if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
-        		    continue;
-        		HIP_DEBUG_HIT("add Ice local in I2 address", hip_cast_sa_addr(&n->addr));
-        		if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
-        			hip_external_ice_add_local_candidates(ice_session,hip_cast_sa_addr(&n->addr),50500,PJ_ICE_CAND_TYPE_HOST);
-        		}
-        		
-        		
-        	}
-        	//TODO add reflexive address 
-        	
-        	//TODO add relay address
-        	
-        	HIP_DEBUG("ICE add remote IN R2, spi is %d\n", ntohl(esp_info->new_spi));
-        	
-        	struct hip_spi_out_item* spi_out;
-
-        	HIP_IFEL(!(spi_out = hip_hadb_get_spi_list(entry, ntohl(esp_info->new_spi))), -1,
-        		      "Bug: outbound SPI 0x%x does not exist\n", ntohl(esp_info->new_spi)); 
-        	
-        	HIP_DEBUG("ICE add remote IN R2, peer list mem address is %d\n", spi_out->peer_addr_list);
-        	hip_external_ice_add_remote_candidates(ice_session, spi_out->peer_addr_list);
-       /* 	
-        	HIP_DEBUG("number of spi_out : %d", entry->spis_out->num_nodes);
-        	list_for_each_safe(item, tmp, entry->spis_out, i) {
-        		spi_out = list_entry(item);
-        		hip_external_ice_add_remote_candidates(ice_session, spi_out->peer_addr_list);
-        		
-        	}*/
-        	/*
-        	
-        	// add remote address
-        	struct hip_spi_out_item* spi_out =(struct hip_spi_out_item*) entry->spis_out->b[0]->data;
-        	HIP_DEBUG("ICE add remote in R2 2\n");
-        	hip_external_ice_add_remote_candidates(ice_session, spi_out->peer_addr_list);
-        	*/
-        	HIP_DEBUG("ICE start checking \n");
-
-        hip_ice_start_check(ice_session);
+	    	HIP_DEBUG("ICE init \n");
+	    	ice_session = hip_external_ice_init(PJ_ICE_SESS_ROLE_CONTROLLED);
+	        if(ice_session){
+	        	entry->ice_session = ice_session;
+	        	HIP_DEBUG("ICE add local \n");
+	        	
+	        	//add the type 1 address first
+	        	hip_list_t *item, *tmp;
+	        	struct netdev_address *n;
+	        	i=0;
+	        	list_for_each_safe(item, tmp, addresses, i) {
+	        		n = list_entry(item);
+	        		
+	        		
+	        		if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
+	        		    continue;
+	        		HIP_DEBUG_HIT("add Ice local in R2 address", hip_cast_sa_addr(&n->addr));
+	        		if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
+	        			hip_external_ice_add_local_candidates(ice_session,hip_cast_sa_addr(&n->addr),50500,PJ_ICE_CAND_TYPE_HOST);
+	        		}
+	        		
+	        		
+	        	}
+	        	//TODO add reflexive address 
+	        	
+	        	//TODO add relay address
+	        	
+	        	HIP_DEBUG("ICE add remote IN R2, spi is %d\n", ntohl(esp_info->new_spi));
+	        	
+	        	struct hip_spi_out_item* spi_out;
+	
+	        	HIP_IFEL(!(spi_out = hip_hadb_get_spi_list(entry, ntohl(esp_info->new_spi))), -1,
+	        		      "Bug: outbound SPI 0x%x does not exist\n", ntohl(esp_info->new_spi)); 
+	        	
+	        	HIP_DEBUG("ICE add remote IN R2, peer list mem address is %d\n", spi_out->peer_addr_list);
+	        	hip_external_ice_add_remote_candidates(ice_session, spi_out->peer_addr_list);
+	
+	        	HIP_DEBUG("ICE start checking \n");
+	
+	        hip_ice_start_check(ice_session);
+	        }
         	
         }
         

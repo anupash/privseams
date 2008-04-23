@@ -606,6 +606,8 @@ int hip_relay_handle_from(hip_common_t *source_msg,
      
      if (rvs_ha_entry == NULL)
      {
+      HIP_DEBUG_HIT("rvs hit not found in the entry table rvs_ip:", rvs_ip);
+      HIP_DEBUG_HIT("rvs hit not found in the entry table &source_msg->hitr:", &source_msg->hitr);
 	  HIP_DEBUG("The I1 packet was received from RVS, but the host "\
 		    "association created during registration is not found. "
 		    "RVS_HMAC cannot be verified.\n");
