@@ -13,6 +13,8 @@
 #include "pisa.h"
 #include <string.h>
 
+static struct midauth_handlers handlers;
+
 /**
  * Changes IPv4 header to match new length and updates the checksum.
  *
@@ -157,7 +159,7 @@ static void update_hip_checksum_ipv6(struct ip6_hdr *ip)
  *
  * @param p the modified midauth packet
  */
-void midauth_update_all_headers(struct midauth_packet *p)
+static void midauth_update_all_headers(struct midauth_packet *p)
 {
 	struct iphdr *ipv4 = NULL;
 	struct ip6_hdr *ipv6 = NULL;
@@ -258,27 +260,42 @@ out_err:
 	return err;
 }
 
-int midauth_add_echo_request_m(struct hip_common *hip, char *nonce)
+static void midauth_copy_packet_data(struct midauth_packet *p)
+{
+	if (p->hip_copied)
+		return;
+
+	memcpy(p->buffer, p->original_message->payload,
+	       p->original_message->data_len);
+	p->hip_copied = 1;
+	p->hip = (struct hip_common *)(((char*)p->buffer) + p->hdr_size);
+}
+
+int midauth_add_echo_request_m(struct midauth_packet *p, char *nonce)
 {
 	int err = 0;
 
-	HIP_IFEL(hip_build_param_echo_m(hip, nonce, strlen(nonce), 1),
+	midauth_copy_packet_data(p);
+
+	HIP_IFEL(hip_build_param_echo_m(p->hip, nonce, strlen(nonce), 1),
 	         -1, "Failed to build echo_request_m parameter\n");
-	HIP_IFEL(midauth_relocate_last_hip_parameter(hip), -1,
+	HIP_IFEL(midauth_relocate_last_hip_parameter(p->hip), -1,
 	         "Failed to relocate new echo_request_m parameter\n");
 
 out_err:
 	return err;
 } 
 
-int midauth_add_puzzle_m(struct hip_common *hip, uint8_t val_K, uint8_t lifetime,
+int midauth_add_puzzle_m(struct midauth_packet *p, uint8_t val_K, uint8_t lifetime,
                          uint8_t *opaque, uint64_t random_i)
 {
 	int err = 0;
 
-	HIP_IFEL(hip_build_param_puzzle_m(hip, val_K, lifetime, opaque, random_i),
+	midauth_copy_packet_data(p);
+
+	HIP_IFEL(hip_build_param_puzzle_m(p->hip, val_K, lifetime, opaque, random_i),
 	         -1, "Failed to build puzzle_m parameter\n");
-	HIP_IFEL(midauth_relocate_last_hip_parameter(hip), -1,
+	HIP_IFEL(midauth_relocate_last_hip_parameter(p->hip), -1,
 	         "Failed to relocate new puzzle_m parameter\n");
 
 out_err:
@@ -289,15 +306,13 @@ out_err:
  * This is an example, how the functions can be employed to insert additional
  * parameters into a packet
 
-static int filter_midauth_i2(ipq_packet_msg_t *m, struct midauth_packet *p)
+static int filter_midauth_i2(struct midauth_packet *p)
 {
 	int verdict = NF_ACCEPT;
 	struct hip_common *hip = (struct hip_common *)(((char*)p->buffer) +
 	                         p->hdr_size);
 	struct hip_solution_m *solution;
 	char *nonce = "hello";
-
-	memcpy(p->buffer, m->payload, m->data_len);
 
 	solution = (struct hip_solution_m *)hip_get_param(hip, HIP_PARAM_SOLUTION_M);
 	if (solution) {
@@ -319,147 +334,87 @@ static int filter_midauth_i2(ipq_packet_msg_t *m, struct midauth_packet *p)
 }
 */
 
-/**
- * Handles I1 messages
- *
- * @param m the original packet
- * @param p the modified packet
- * @return the verdict, either NF_ACCEPT or NF_DROP
- */
-static int filter_midauth_i1(ipq_packet_msg_t *m, struct midauth_packet *p)
+int midauth_handler_accept(struct midauth_packet *p)
 {
-	return filter_pisa_i1(m, p);
+	return NF_ACCEPT;
 }
 
-/**
- * Handles R1 messages
- *
- * @param m the original packet
- * @param p the modified packet
- * @return the verdict, either NF_ACCEPT or NF_DROP
- */
-static int filter_midauth_r1(ipq_packet_msg_t *m, struct midauth_packet *p)
+int midauth_handler_drop(struct midauth_packet *p)
 {
-	return filter_pisa_r1(m, p);
-}
-
-/**
- * Handles I2 messages
- *
- * @param m the original packet
- * @param p the modified packet
- * @return the verdict, either NF_ACCEPT or NF_DROP
- */
-static int filter_midauth_i2(ipq_packet_msg_t *m, struct midauth_packet *p)
-{
-	return filter_pisa_i2(m, p);
-}
-
-/**
- * Handles R2 messages
- *
- * @param m the original packet
- * @param p the modified packet
- * @return the verdict, either NF_ACCEPT or NF_DROP
- */
-static int filter_midauth_r2(ipq_packet_msg_t *m, struct midauth_packet *p)
-{
-	return filter_pisa_r2(m, p);
-}
-
-/**
- * Handles U1 messages
- *
- * @param m the original packet
- * @param p the modified packet
- * @return the verdict, either NF_ACCEPT or NF_DROP
- */
-static int filter_midauth_u1(ipq_packet_msg_t *m, struct midauth_packet *p)
-{
-	return filter_pisa_u1(m, p);
-}
-
-/**
- * Handles U2 messages
- *
- * @param m the original packet
- * @param p the modified packet
- * @return the verdict, either NF_ACCEPT or NF_DROP
- */
-static int filter_midauth_u2(ipq_packet_msg_t *m, struct midauth_packet *p)
-{
-	return filter_pisa_u2(m, p);
-}
-
-/**
- * Handles U3 messages
- *
- * @param m the original packet
- * @param p the modified packet
- * @return the verdict, either NF_ACCEPT or NF_DROP
- */
-static int filter_midauth_u3(ipq_packet_msg_t *m, struct midauth_packet *p)
-{
-	return filter_pisa_u3(m, p);
+	return NF_DROP;
 }
 
 /**
  * Distinguish the different UPDATE packets.
  *
- * @param m the original packet
  * @param p the modified packet
  * @return the verdict, either NF_ACCEPT or NF_DROP
  */
-static int filter_midauth_update(ipq_packet_msg_t *m, struct midauth_packet *p)
+static midauth_handler filter_midauth_update(struct midauth_packet *p)
 {
-	struct hip_common *hip = (struct hip_common *)(((char*)m->payload) +
-	                         p->hdr_size);
-
-	if (hip_get_param(hip, HIP_PARAM_LOCATOR))
-		return filter_midauth_u1(m, p);
-	if (hip_get_param(hip, HIP_PARAM_ECHO_REQUEST))
-		return filter_midauth_u2(m, p);
-	if (hip_get_param(hip, HIP_PARAM_ECHO_RESPONSE))
-		return filter_midauth_u3(m, p);
+	if (hip_get_param(p->hip, HIP_PARAM_LOCATOR))
+		return handlers.u1;
+	if (hip_get_param(p->hip, HIP_PARAM_ECHO_REQUEST))
+		return handlers.u2;
+	if (hip_get_param(p->hip, HIP_PARAM_ECHO_RESPONSE))
+		return handlers.u3;
 
 	HIP_ERROR("Unknown UPDATE format, rejecting the request!\n");
-	return NF_DROP;
+	return midauth_handler_drop;
 }
 
-int filter_midauth(ipq_packet_msg_t *m, struct midauth_packet *p)
+int filter_midauth(struct midauth_packet *p)
 {
 	int verdict = NF_ACCEPT;
-	/* @todo change this default value to NF_DROP to disallow unknown
-	 * message types */
+	midauth_handler h = NULL;
+	midauth_handler h_default = midauth_handler_accept;
+	/* @todo change this default value to midauth_handler_drop to 
+	 * disallow unknown message types */
 
-	p->size = 0; /* default: do not change packet */
-
-	switch (p->hip_common->type_hdr) {
+	switch (p->hip->type_hdr) {
 	case HIP_I1:
-		verdict = filter_midauth_i1(m, p);
+		h = handlers.i1;
 		break;
 	case HIP_R1:
-		verdict = filter_midauth_r1(m, p);
+		h = handlers.r1;
 		break;
 	case HIP_I2:
-		verdict = filter_midauth_i2(m, p);
+		h = handlers.i2;
 		break;
 	case HIP_R2:
-		verdict = filter_midauth_r2(m, p);
+		h = handlers.r2;
 		break;
 	case HIP_UPDATE:
-		verdict = filter_midauth_update(m, p);
+		h = filter_midauth_update(p);
 		break;
 	default:
 		HIP_DEBUG("filtering default message type\n");
 		break;
 	}
 
+	if (!h) {
+		h = h_default;
+	}
+	verdict = h(p);
+
 	/* do not change packet when it is dropped */
-	if (verdict != NF_ACCEPT)
+	if (verdict != NF_ACCEPT) {
 		p->size = 0;
+		p->hip_copied = 0;
+	}
+
+	/* if packet was modified correct every necessary part */
+	if (p->hip_copied) {
+		p->size = hip_get_msg_total_len(p->hip);
+		midauth_update_all_headers(p);
+	}
 
 	return verdict;
+}
+
+void midauth_init(void)
+{
+	pisa_init(&handlers);
 }
 
 #endif

@@ -8,50 +8,48 @@
 #include "pisa.h"
 #include <string.h>
 
-int filter_pisa_i1(ipq_packet_msg_t *m, struct midauth_packet *p)
-{
-	return NF_ACCEPT;
-}
+static char pisa_random_data[2][40];
+static int pisa_random_current = 0;
 
-int filter_pisa_r1(ipq_packet_msg_t *m, struct midauth_packet *p)
+static int pisa_insert_nonce(struct midauth_packet *p)
 {
-	return NF_ACCEPT;
-}
-
-int filter_pisa_i2(ipq_packet_msg_t *m, struct midauth_packet *p)
-{
-	int verdict = NF_ACCEPT;
-	struct hip_common *hip = (struct hip_common *)(((char*)p->buffer) +
-	                         p->hdr_size);
-	struct hip_solution_m *solution;
+	int err = 0;
 	char *nonce1 = "nonce-text";
 
-	memcpy(p->buffer, m->payload, m->data_len);
+	err = midauth_add_echo_request_m(p, nonce1);
+out_err:
+	return err;
+}
 
-	midauth_add_echo_request_m(hip, nonce1);
-	midauth_add_puzzle_m(hip, 3, 4, "puzzle", 0xABCDABCDABCDABCDLL);
+static int pisa_insert_puzzle(struct midauth_packet *p)
+{
+	int err = 0;
 
-	p->size = hip_get_msg_total_len(hip);
-	midauth_update_all_headers(p);
+	err = midauth_add_puzzle_m(p, 3, 4, "puzzle", 0xABCDABCDABCDABCDLL);
+out_err:
+	return err;
+}
+
+int pisa_handler_i2(struct midauth_packet *p)
+{
+	int verdict = NF_ACCEPT;
+
+	pisa_insert_nonce(p);
+	pisa_insert_puzzle(p);
 
 	return verdict;
 }
 
-int filter_pisa_r2(ipq_packet_msg_t *m, struct midauth_packet *p)
+int pisa_handler_r2(struct midauth_packet *p)
 {
 	int verdict = NF_ACCEPT;
-	struct hip_common *hip = (struct hip_common *)(((char*)p->buffer) +
-	                         p->hdr_size);
 	struct hip_solution_m *solution;
 
-	/* don't copy here, packet will not be modified anyway */
-	memcpy(p->buffer, m->payload, m->data_len);
-
 	/* check for ECHO_REPLY_M and SOLUTION_M here */
-	solution = (struct hip_solution_m *)hip_get_param(hip, HIP_PARAM_SOLUTION_M);
+	solution = (struct hip_solution_m *)hip_get_param(p->hip, HIP_PARAM_SOLUTION_M);
 	if (solution)
 	{
-		if (midauth_verify_solution_m(hip, solution) == 0)
+		if (midauth_verify_solution_m(p->hip, solution) == 0)
 			HIP_DEBUG("found correct hip_solution_m\n");
 		else
 			HIP_DEBUG("found wrong hip_solution_m\n");
@@ -62,19 +60,15 @@ int filter_pisa_r2(ipq_packet_msg_t *m, struct midauth_packet *p)
 	return verdict;
 }
 
-int filter_pisa_u1(ipq_packet_msg_t *m, struct midauth_packet *p)
+void pisa_init(struct midauth_handlers *h)
 {
-	return NF_ACCEPT;
-}
-
-int filter_pisa_u2(ipq_packet_msg_t *m, struct midauth_packet *p)
-{
-	return NF_ACCEPT;
-}
-
-int filter_pisa_u3(ipq_packet_msg_t *m, struct midauth_packet *p)
-{
-	return NF_ACCEPT;
+	h->i1 = midauth_handler_accept;
+	h->r1 = midauth_handler_accept;
+	h->i2 = pisa_handler_i2;
+	h->r2 = pisa_handler_r2;
+	h->u1 = midauth_handler_accept;
+	h->u2 = midauth_handler_accept;
+	h->u3 = midauth_handler_accept;
 }
 
 #endif

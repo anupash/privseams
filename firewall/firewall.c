@@ -1161,14 +1161,17 @@ static void *handle_ip_traffic(void *ptr){
 						 * with the specific data for
 						 * this packet */
 
-						p.hip_common = hip_common;
+						p.size = 0;
 						p.ip_version = type;
 						p.hdr_size = hdr_size;
 						p.hdr_length_adapted = 0;
-						if (filter_midauth(m, &p) == NF_DROP)
+						p.hip = hip_common;
+						p.hip_copied = 0;
+						p.original_message = m;
+						if (filter_midauth(&p) == NF_DROP)
 							drop_packet(hndl, m->packet_id);
 						else {
-							if (p.size)
+							if (p.hip_copied && p.size)
 								allow_modified_packet(hndl, m->packet_id, p.size, p.buffer);
 							else
 								allow_packet(hndl, m->packet_id);
@@ -1394,6 +1397,10 @@ int main(int argc, char **argv)
   
   	init_timeout_checking(timeout);
   	control_thread_init();
+
+#ifdef CONFIG_HIP_MIDAUTH
+	midauth_init();
+#endif
 
 
 	if (use_ipv4) {

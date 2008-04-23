@@ -3,13 +3,12 @@
 
 #include "midauth.h"
 
-int filter_pisa_i1(ipq_packet_msg_t *m, struct midauth_packet *p);
-int filter_pisa_r1(ipq_packet_msg_t *m, struct midauth_packet *p);
-int filter_pisa_i2(ipq_packet_msg_t *m, struct midauth_packet *p);
-int filter_pisa_r2(ipq_packet_msg_t *m, struct midauth_packet *p);
-int filter_pisa_u1(ipq_packet_msg_t *m, struct midauth_packet *p);
-int filter_pisa_u2(ipq_packet_msg_t *m, struct midauth_packet *p);
-int filter_pisa_u3(ipq_packet_msg_t *m, struct midauth_packet *p);
+/**
+ * Register PISA handlers with midauth and initialize data structures.
+ *
+ * @param h pointer to the handlers
+ */
+void pisa_init(struct midauth_handlers *h);
 
 #endif
 

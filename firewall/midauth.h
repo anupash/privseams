@@ -17,7 +17,21 @@ struct midauth_packet {
 	int hdr_size;
 	int hdr_length_adapted;
 	unsigned char buffer[MIDAUTH_PACKET_SIZE]; /* space for a modified packet */
-	struct hip_common *hip_common; /* in the old packet, don't write there */
+	struct hip_common *hip; /* refers to old and new packet */
+	int hip_copied; /* 0 if unmodified, 1 if modified */
+	ipq_packet_msg_t *original_message;
+};
+
+typedef int (*midauth_handler)(struct midauth_packet *p);
+
+struct midauth_handlers {
+	midauth_handler i1;
+	midauth_handler r1;
+	midauth_handler i2;
+	midauth_handler r2;
+	midauth_handler u1;
+	midauth_handler u2;
+	midauth_handler u3;
 };
 
 /* public functions for midauth */
@@ -25,20 +39,26 @@ struct midauth_packet {
 /**
  * Filters accepted packets for middlebox authentication.
  *
- * @param m pointer to the packet that will be filtered
- * @param 
+ * @param p the packet ready for modification
  * @return verdict, either NF_ACCEPT or NF_DROP
  */
-int filter_midauth(ipq_packet_msg_t *m, struct midauth_packet *p);
+int filter_midauth(struct midauth_packet *p);
 
 /**
- * Take care of adapting all headers in front of the HIP payload to the new
- * content. Call only once per packet, as it modifies the packet size to
- * include header length.
+ * Accepts a packet. Used in midauth_handlers as a default handler.
  *
- * @param p the modified midauth packet
+ * @param p the packet
+ * @return NF_ACCEPT
  */
-void midauth_update_all_headers(struct midauth_packet *p);
+int midauth_handler_accept(struct midauth_packet *p);
+
+/**
+ * Drops a packet. Used in midauth_handlers as a default handler.
+ *
+ * @param p the packet
+ * @return NF_DROP
+ */
+int midauth_handler_drop(struct midauth_packet *p);
 
 /**
  * Check the correctness of a hip_solution_m
@@ -53,24 +73,29 @@ int midauth_verify_solution_m(struct hip_common *hip,
 /**
  * Insert an ECHO_REQUEST_M parameter into a HIP packet.
  *
- * @param p the modified packet
+ * @param p the packet to be modified
  * @param nonce the string to add
  * @return 
  */
-int midauth_add_echo_request_m(struct hip_common *hip, char *nonce);
+int midauth_add_echo_request_m(struct midauth_packet *p, char *nonce);
 
 /**
  * Insert a PUZZLE_M parameter into a HIP packet.
  *
- * @param p the modified packet
+ * @param p the packet to be modified
  * @param val_K puzzle parameter val_K
  * @param lifetime puzzle parameter lifetime
  * @param opaque puzzle parameter opaque
  * @param random_i puzzle parameter random_i
  * @return 
  */
-int midauth_add_puzzle_m(struct hip_common *hip, uint8_t val_K, uint8_t lifetime,
+int midauth_add_puzzle_m(struct midauth_packet *p, uint8_t val_K, uint8_t lifetime,
                          uint8_t *opaque, uint64_t random_i);
+
+/**
+ * Initialize midauth infrastructure.
+ */
+void midauth_init(void);
 
 #endif
 
