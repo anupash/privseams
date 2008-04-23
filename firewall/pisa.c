@@ -8,8 +8,15 @@
 #include "pisa.h"
 #include <string.h>
 
-static char pisa_random_data[2][40];
+#define PISA_RANDOM_LEN 40
+
+static char pisa_random_data[2][PISA_RANDOM_LEN];
 static int pisa_random_current = 0;
+
+static void pisa_generate_random(int position)
+{
+	get_random_bytes(&pisa_random_data[position][0], PISA_RANDOM_LEN);
+}
 
 static int pisa_insert_nonce(struct midauth_packet *p)
 {
@@ -69,6 +76,9 @@ void pisa_init(struct midauth_handlers *h)
 	h->u1 = midauth_handler_accept;
 	h->u2 = midauth_handler_accept;
 	h->u3 = midauth_handler_accept;
+
+	pisa_generate_random(0);
+	pisa_generate_random(1);
 }
 
 #endif
