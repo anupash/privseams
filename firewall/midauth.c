@@ -271,13 +271,13 @@ static void midauth_copy_packet_data(struct midauth_packet *p)
 	p->hip = (struct hip_common *)(((char*)p->buffer) + p->hdr_size);
 }
 
-int midauth_add_echo_request_m(struct midauth_packet *p, char *nonce)
+int midauth_add_echo_request_m(struct midauth_packet *p, void *nonce, int len)
 {
 	int err = 0;
 
 	midauth_copy_packet_data(p);
 
-	HIP_IFEL(hip_build_param_echo_m(p->hip, nonce, strlen(nonce), 1),
+	HIP_IFEL(hip_build_param_echo_m(p->hip, nonce, len, 1),
 	         -1, "Failed to build echo_request_m parameter\n");
 	HIP_IFEL(midauth_relocate_last_hip_parameter(p->hip), -1,
 	         "Failed to relocate new echo_request_m parameter\n");

@@ -74,10 +74,11 @@ int midauth_verify_solution_m(struct hip_common *hip,
  * Insert an ECHO_REQUEST_M parameter into a HIP packet.
  *
  * @param p the packet to be modified
- * @param nonce the string to add
+ * @param nonce data to add
+ * @param len length of data to add
  * @return 
  */
-int midauth_add_echo_request_m(struct midauth_packet *p, char *nonce);
+int midauth_add_echo_request_m(struct midauth_packet *p, void *nonce, int len);
 
 /**
  * Insert a PUZZLE_M parameter into a HIP packet.
