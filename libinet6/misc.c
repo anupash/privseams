@@ -1678,7 +1678,6 @@ int hip_create_lock_file(char *filename, int killold) {
 		
 		HIP_INFO("\nDaemon is already running with pid %d\n"
 			 "-k option given, terminating old one...\n", old_pid);
-                /* HIP_IFEL(kill(old_pid, SIGKILL), -1, "kill failed\n"); */
 		/* Erase the old lock file to avoid having multiple pids
 		   in the file */
 		lockf(fd, F_ULOCK, 0);
@@ -1688,15 +1687,23 @@ int hip_create_lock_file(char *filename, int killold) {
 		fd = open(filename, O_RDWR | O_CREAT | O_TRUNC, 0644);
                 /* don't close file descriptor because new started process is running */
 		HIP_IFEL((fd <= 0), -1, "Opening lock file failed\n");
-		HIP_IFEL(lockf(fd, F_TLOCK, 0), -1,"lock attempt failed\n");
- 	        err = kill(old_pid, SIGKILL);
+		HIP_IFEL(lockf(fd, F_TLOCK, 0), -1,"lock attempt failed\n");  
+                 /* HIP_IFEL(kill(old_pid, SIGKILL), -1, "kill failed\n"); */
+		err = kill(old_pid, SIGKILL);
 		if (err != 0)
 		{
-		 HIP_INFO("\nError %d while trying to kill pid %d\n", err,old_pid);
-                 HIP_IFEL(kill(old_pid, SIGKILL),-12,"Usage: /usr/sbin/hipd -bk\n")
-		}
+                 HIP_INFO("\nError %d while trying to kill pid %d\n", err,old_pid);
+		} 
 	}
-	
+	/* else if (killold)
+	{	
+		lseek(fd,0,SEEK_SET);
+		write(fd, new_pid_str, new_pid_str_len);
+                system("NEW_PID=$(sudo awk NR==1 /var/lock/hipd.lock)");
+		system("OLD_PID=$(/bin/pidof -o $NEW_PID hipd)");
+		system("kill -9 $OLD_PID"); 
+	} */
+
 	lseek(fd,0,SEEK_SET);
 	HIP_IFEL((write(fd, new_pid_str, new_pid_str_len) != new_pid_str_len),
 		 "Writing new pid failed\n", -1);
