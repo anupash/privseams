@@ -142,7 +142,7 @@ struct ip_esp_hdr {
 struct ip_esp_padinfo {
 	__u8 pad_length;
 	__u8 next_hdr;
-};
+}__attribute__ ((packed)) ;
 
 struct eth_hdr {
 	__u8 dst[6];
@@ -669,8 +669,20 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 
 
 #endif 
+		
+		
 
 
+
+		HIP_HEXDUMP("The output encrypted packet is ", data, out_enc_len);
+
+		struct ip_esp_hdr *esph = (struct ip_esp_hdr *) (((char *)data) 
+								 + sizeof(udphdr));
+
+
+		HIP_DEBUG("output packet spi value is 0x%x\n", ntohl(esph->spi));
+
+		
 		err = sendto(ipv4_s_raw, data, out_enc_len, flags,
 			     SA(&entry->src_addrs->addr),
 			     SALEN(&entry->src_addrs->addr));
@@ -709,6 +721,8 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 		flags = 0;
 		
 #endif 
+
+		
 
 
 		err = sendto(ipv6_s_raw, data, out_enc_len, flags,
@@ -2041,11 +2055,15 @@ int hip_esp_encrypt(__u8 *in, int len, __u8 *out, int *outlen,
 
 
 	/* Because we do not have LSI support right now, so 
-	 *  family is only equal to AF_INET6
+	 *  family is only equal to AF_INET6. FIXME!!!
 	 */
 	
 	family = AF_INET6;
 	
+
+
+/* openHIP uses this hard coded that we do not want*/
+
 #if 0 /* start 0*/
 	if ((in[12] == 0x86) && (in[13] == 0xdd))
 		family = AF_INET6;
@@ -2388,6 +2406,11 @@ int hip_esp_decrypt(__u8 *in, int len, __u8 *out, int *offset, int *outlen,
 	__u16 sum;
 	int family_out;
 	struct sockaddr_storage taplsi6;
+	// struct sockaddr_storage hit_ip_hdr;
+
+	struct sockaddr_in6 *src_hit;
+	struct sockaddr_in6 *dst_hit;
+
 	int use_udp = FALSE;
 	
 	if (!in || !out || !entry)
@@ -2441,6 +2464,9 @@ int hip_esp_decrypt(__u8 *in, int len, __u8 *out, int *offset, int *outlen,
 		  (entry->dst_addrs->addr).ss_family == AF_INET ? 
 		  "IPv4" : "IPv6");	
 	
+	
+
+
 	/* if (ntohl(esp->spi) != entry->spi)
 		return(-1); *//* this check might be excessive */
 
@@ -2629,8 +2655,50 @@ int hip_esp_decrypt(__u8 *in, int len, __u8 *out, int *offset, int *outlen,
 	/* determine address family for new packet based on 
 	 * decrypted upper layer protocol header
 	 */
+	
+
+	
+
+	/* LSI is not used here, FIXME if used later !!! */ 
+	
+	HIP_DEBUG_SOCKADDR("local HIT ", &entry->inner_dst_addrs->addr);
+	HIP_DEBUG_SOCKADDR("remote HIT ", &entry->inner_src_addrs->addr);
+	
+	src_hit =  &entry->inner_src_addrs->addr;
+	dst_hit =  &entry->inner_src_addrs->addr;
+
+       
+	switch (padinfo->next_hdr) {
+
+	case IPPROTO_TCP:
+		tcp = (struct tcphdr*)&out[*offset];
+		sum = htons(tcp->check);
+		sum = csum_hip_revert6 (&src_hit->sin6_addr,
+					&dst_hit->sin6_addr,
+					sum, htons(entry->hit_magic));
+		tcp->check = htons(sum);
+		break;
+	case IPPROTO_UDP:
+		udp = (struct udphdr*)&out[*offset];
+		sum = htons(udp->check);
+		sum = csum_hip_revert6 (&src_hit->sin6_addr,
+					&dst_hit->sin6_addr,
+					sum, htons(entry->hit_magic));
+		udp->check = htons(sum);
+		break;
+	default:
+
+		HIP_DEBUG("It does not belong to neither TCP or UDP packet \n");
+		break;
+
+	}
+ 
+
+
+#if 0 /* disable LSI code */
+
 	family_out = hip_select_family_by_proto(LSI4(&entry->lsi), 
-					padinfo->next_hdr, &out[*offset], now);
+						padinfo->next_hdr, &out[*offset], now);
 	
 	/* rewrite upper-layer checksum 
 	 * checksum based on HITs --> based on LSIs */
@@ -2671,13 +2739,29 @@ int hip_esp_decrypt(__u8 *in, int len, __u8 *out, int *offset, int *outlen,
 		}
 	}
 	
+
+#endif 0  /* end of LSI */
+
+
+
+	/* HIPL does not use TAP driver, eth_hdr is not needed */
+	
 	/* set offset to index the beginning of the packet */
+
+
+#if 0
+
 	if (family_out == AF_INET) /* offset = 20 */
 		*offset -= (sizeof(struct eth_hdr) + sizeof(struct ip));
 	else	/* offset = 0 */
 		*offset -= (sizeof(struct eth_hdr) + sizeof(struct ip6_hdr));
 	
+#endif 
 
+
+	/* HIPL compatiable  code */
+	*offset -= sizeof(struct ip6_hdr);
+	
 
 	/* Ethernet header */
 
@@ -2690,6 +2774,23 @@ int hip_esp_decrypt(__u8 *in, int len, __u8 *out, int *offset, int *outlen,
 	(family_out == AF_INET) ? 0x0800 : 0x86dd);
 */
 	/* IP header */
+
+
+
+/* add IP header for HIPL with HITS, FIXME, LSI support */
+	
+	
+	add_ipv6_header(&out[*offset],
+			SA(src_hit), SA(dst_hit),
+			NULL, iph, (__u16)elen, padinfo->next_hdr);
+	*outlen = sizeof(struct ip6_hdr)+ elen;
+	
+
+
+
+
+#if 0 /* openhip code does not support HIPL */
+
 	if (family_out == AF_INET) {
 		add_ipv4_header(&out[*offset+sizeof(struct eth_hdr)],
 				LSI4(&entry->lsi), htonl(g_tap_lsi), iph,
@@ -2705,6 +2806,7 @@ int hip_esp_decrypt(__u8 *in, int len, __u8 *out, int *offset, int *outlen,
 		*outlen = sizeof(struct eth_hdr) + sizeof(struct ip6_hdr)+ elen;
 	}
 
+#endif 	
 	/* previously, this happened after write(), but there
 	 * is some problem with using the entry ptr then */
 	entry->bytes += *outlen - sizeof(struct eth_hdr);

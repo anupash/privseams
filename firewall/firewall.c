@@ -1455,13 +1455,19 @@ static void *handle_ip_traffic(void *ptr){
 	  			{
 					allow_packet(hndl, m->packet_id);
 				}
+				
+
+
 				else
 	  			{
+					/* FIX ME */
 					// !!!!!XX FIXME: UGLY KLUDGE!!!!!!!!!
 					allow_packet(hndl, m->packet_id);
 					//drop_packet(hndl, m->packet_id);
 					// !!!!!XX FIXME: UGLY KLUDGE!!!!!!!!!
 	  			}
+
+
 			} else {	
 				   /* ip6_un1_nxt ---> next header */
 				int is_tcp = 
