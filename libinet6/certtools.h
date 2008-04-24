@@ -14,13 +14,13 @@
  */
 
 /** Struct used to deliver the minimal needed information to build SPKI cert*/
-struct hip_cert_spki_header{
+struct hip_cert_spki_header {
 	char cert[4096]; // just to be sure that the size is enough
 	struct in6_addr * issuer;
 	struct in6_addr * subject;
-	struct timeval * not_before = NULL;
-	struct timeval * not_after = NULL;
-}
+	struct timeval * not_before;;
+	struct timeval * not_after;
+};
 
 /************************************************************************************
  * BUILDING FUNCTIONS FOR SPKI                                                      *
@@ -28,7 +28,7 @@ struct hip_cert_spki_header{
 	
 int hip_cert_spki_build_cert(struct hip_cert_spki_header *);
 int hip_cert_spki_build_signature(char *, char *);
-int hip_cert_spki_inject(struct hip_cert_spki_header *, char *);
+int hip_cert_spki_inject(struct hip_cert_spki_header *, char *, char *);
 
 /************************************************************************************
  * VERIFICATION FUNCTIONS FOR SPKI                                                  *

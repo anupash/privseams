@@ -67,6 +67,7 @@ bin_PROGRAMS += hashtest
 #bin_PROGRAMS += hipconf
 bin_PROGRAMS += listtest
 bin_PROGRAMS += opendhtteststub
+bin_PROGRAMS += certteststub
 
 #sbin_SCRIPTS = hipsetup
 
@@ -90,6 +91,7 @@ hashtest_SOURCES = hashtest.c
 #hipconf_SOURCE = hipconftool.c
 listtest_SOURCES = listtest.c
 opendhtteststub_SOURCES = opendhtteststub.c
+certteststub_SOURCES = certteststub.c
 
 #EXTRA_DIST = $(sbin_SCRIPTS)
 
