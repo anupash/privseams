@@ -6,6 +6,7 @@
 
 #include "ife.h"
 #include "midauth.h"
+#include "misc.h"
 #include "pisa.h"
 #include <string.h>
 
@@ -42,13 +43,9 @@ static void pisa_create_nonce_hash(struct in6_addr *a, struct in6_addr *b,
 		return;
 	}
 
-	memcpy(raw, a, 16);
-	memcpy(raw+16, b, 16);
-	/* @todo FIXME: use this function?
-	 * ipv6_addr_copy((hip_hit_t *)(raw+16), &p->hip->hits);
-	 */
-	memcpy(raw+32, &pisa_random_data[rnd][0], 
-	       PISA_RANDOM_LEN);
+	ipv6_addr_copy((struct in6_addr *)raw, a);
+	ipv6_addr_copy((struct in6_addr *)(raw+16), b);
+	memcpy(raw+32, &pisa_random_data[rnd][0], PISA_RANDOM_LEN);
 
 	hip_build_digest(HIP_DIGEST_SHA1, raw, 32 + PISA_RANDOM_LEN, digest);
 }
@@ -62,6 +59,12 @@ static void pisa_create_nonce_hash(struct in6_addr *a, struct in6_addr *b,
 static int pisa_insert_nonce(struct midauth_packet *p)
 {
 	u8 sha[HIP_AH_SHA_LEN];
+
+	/* @todo FIXME BEGIN --- for testing purposes only */
+	char *nonce1 = "asdfasdfasdf", *nonce2 = "01234567890123456789";
+	midauth_add_echo_request_m(p, nonce1, strlen(nonce1));
+	midauth_add_echo_request_m(p, nonce2, strlen(nonce2));
+	/* @todo FIXME END --- for testing purposes only */
 
 	pisa_create_nonce_hash(&p->hip->hits, &p->hip->hitr, 1, sha);
 	return midauth_add_echo_request_m(p, sha, HIP_AH_SHA_LEN);
@@ -83,9 +86,10 @@ out_err:
 }
 
 /**
- * Check the validity of a PISA nonce. Check against current random value, if
- * that fails, check against old random value. If that fails too, consider the
- * nonce to be invalid.
+ * Check the validity of a PISA nonce. Check against current random value
+ * first. If that fails, check against old random value. If that fails too, 
+ * consider the nonce to be invalid (either too old or not correct at any 
+ * previous point in time).
  *
  * @param p packet with the nonce to check
  * @return success (0) or failure
@@ -93,42 +97,38 @@ out_err:
 static int pisa_check_nonce(struct midauth_packet *p)
 {
 	int err = 0;
-	struct hip_echo_response_m *nonce;
-	u8 sha[HIP_AH_SHA_LEN], *nonce_data;
+	struct hip_tlv_common *nonce;
+	u8 sha[2][HIP_AH_SHA_LEN], *nonce_data;
 	int nonce_len;
 
-	/* @todo find our nonce out of multiple items */
+	/* get the two values we will accept */
+	pisa_create_nonce_hash(&p->hip->hitr, &p->hip->hits, 0, &sha[0][0]);
+	pisa_create_nonce_hash(&p->hip->hitr, &p->hip->hits, 1, &sha[1][0]);
 
-	nonce = (struct hip_echo_response_m *)
-	        hip_get_param(p->hip, HIP_PARAM_ECHO_RESPONSE_M);
+	nonce = hip_get_param(p->hip, HIP_PARAM_ECHO_RESPONSE_M);
 
-	HIP_IFEL(!nonce, -1, "No PISA nonce found.\n");
+	while (nonce) {
+		/* loop over all HIP_PARAM_ECHO_RESPONSE_M */
+		if (hip_get_param_type(nonce) != HIP_PARAM_ECHO_RESPONSE_M)
+			break;
 
-	nonce_len = hip_get_param_contents_len(nonce);
-	nonce_data = (u8 *)hip_get_param_contents_direct(nonce);
+		nonce_len = hip_get_param_contents_len(nonce);
+		nonce_data = (u8 *)hip_get_param_contents_direct(nonce);
 
-	HIP_IFEL(nonce_len != HIP_AH_SHA_LEN, -1, 
-	        "PISA nonce had size %d, expected %d.\n", nonce_len,
-	        HIP_AH_SHA_LEN);
-
-	/* first check the current random value ... */
-	pisa_create_nonce_hash(&p->hip->hitr, &p->hip->hits, 1, sha);
-	if (!memcmp(sha, nonce_data, HIP_AH_SHA_LEN)) {
-		HIP_DEBUG("PISA nonce was correct.\n");
-	} else {
-		/* ... and if that failed the old random value ... */
-		pisa_create_nonce_hash(&p->hip->hitr, &p->hip->hits, 0, sha);
-		if (!memcmp(sha, nonce_data, HIP_AH_SHA_LEN)) {
-			HIP_DEBUG("PISA nonce was correct.\n");
-		} else {
-			/* ... if that fails too, you were too slow */
-			HIP_ERROR("PISA nonce was wrong (perhaps too old).\n");
-			err = -1;
+		/* if the payload has the size of a SHA1 digest ... */
+		if (nonce_len == HIP_AH_SHA_LEN) {
+			/* ... first check the current random value ... */
+			if (!memcmp(&sha[1][0], nonce_data, HIP_AH_SHA_LEN))
+				return 0;
+			/* ... and if that failed the old random value */
+			if (!memcmp(&sha[0][0], nonce_data, HIP_AH_SHA_LEN))
+				return 0;
 		}
+
+		nonce = hip_get_next_param(p->hip, (struct hip_tlv_common *)nonce);
 	}
 
-out_err:
-	return err;
+	return -1;
 }
 
 /**
@@ -149,9 +149,9 @@ static int pisa_check_solution(struct midauth_packet *p)
 
 	HIP_IFEL(!solution, -1, "No PISA solution found.\n");
 
-	HIP_IFEL(midauth_verify_solution_m(p->hip, solution), -1, "PISA solution was wrong");
+	HIP_IFEL(midauth_verify_solution_m(p->hip, solution), -1, "PISA solution was wrong.");
 
-	HIP_DEBUG("PISA solution was correct\n");
+	HIP_DEBUG("PISA solution was correct.\n");
 
 out_err:
 	return err;
@@ -170,8 +170,12 @@ int pisa_handler_i2(struct midauth_packet *p)
 int pisa_handler_r2(struct midauth_packet *p)
 {
 	int verdict = NF_ACCEPT;
+
 	pisa_check_solution(p);
-	pisa_check_nonce(p);
+	if (pisa_check_nonce(p) == 0)
+		HIP_DEBUG("A PISA nonce was accepted.\n");
+	else
+		HIP_DEBUG("No PISA nonce was accepted.\n");
 
 	return verdict;
 }
