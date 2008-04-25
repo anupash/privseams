@@ -397,9 +397,9 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		HIP_DEBUG("Handling ADD RENDEZVOUS user message.\n");
 
 		struct hip_reg_request *reg_req = NULL;
-		uint8_t *reg_types = NULL, reg_type = 0, lifetime = 0;
-		unsigned int type_count = 0;
-		int i = 0;
+		hip_pending_request_t *pending_req = NULL;
+		uint8_t *reg_types = NULL;
+		int i = 0, type_count = 0;
 		
 		/* Get RVS IP address, HIT and requested lifetime given as
 		   commandline parameters to hipconf. */
@@ -424,21 +424,67 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 			err = -1;
 			goto out_err;
 		}
-
-		lifetime   = reg_req->lifetime;
-		reg_types  = reg_req->reg_type;
-		type_count = hip_get_param_contents_len(reg_req) -
-			sizeof(reg_req->lifetime);
 		
 		/* Add HIT to IP address mapping of RVS to haDB. */ 
 		HIP_IFEL(hip_add_peer_map(msg), -1, "Error on adding server "\
 			 "HIT to IP address mapping to the haDB.\n");
+		
 		/* Fetch the haDB entry just created. */
-		HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(dst_hit)),
-			 -1, "Error on fetching server HIT to IP address "\
-			 "mapping from the haDB.\n");
+		entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
+		
+		if(entry == NULL) {
+			HIP_ERROR("Error on fetching server HIT to IP address "\
+				  "mapping from the haDB.\n");
+			err = -1;
+			goto out_err;
+		}
+		
+		reg_types  = reg_req->reg_type;
+		type_count = hip_get_param_contents_len(reg_req) -
+			sizeof(reg_req->lifetime);
+		
+		for(;i < type_count; i++) {
+			pending_req = (hip_pending_request_t *)
+				malloc(sizeof(hip_pending_request_t));
+			if(pending_req == NULL) {
+				HIP_ERROR("Error on allocating memory for a "\
+					  "pending registration request.\n");
+				err = -1;
+				goto out_err;	
+			}
+
+			pending_req->entry    = entry;
+			pending_req->reg_type = reg_types[i];
+			pending_req->lifetime = reg_req->lifetime;
+			
+			HIP_DEBUG("Adding pending request.\n");
+			hip_add_pending_request(pending_req);
+
+			/* Set the request flag. */
+			switch(reg_types[i]){
+			case HIP_SERVICE_RENDEZVOUS:
+				hip_hadb_set_local_controls(
+					entry, HIP_HA_CTRL_LOCAL_REQ_RVS);
+				break;
+			case HIP_SERVICE_RELAY:
+				hip_hadb_set_local_controls(
+					entry, HIP_HA_CTRL_LOCAL_REQ_RELAY);
+				break;
+			case HIP_SERVICE_ESCROW:
+				hip_hadb_set_local_controls(
+					entry, HIP_HA_CTRL_LOCAL_REQ_ESCROW);
+				break;
+			default:
+				HIP_INFO("Undefined service type requested in "\
+					 "the service request.\n");
+				break;
+			}
+		}
+
+		HIP_DEBUG("KING KONG.\n");
+		
 		/* Set a RVS request flag. */
-		hip_hadb_set_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_RVS);
+		//hip_hadb_set_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_RVS);
 		/* Send a I1 packet to RVS. */
 		/** @todo Not filtering I1, when handling RVS message! */
 		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),

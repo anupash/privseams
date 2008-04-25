@@ -17,6 +17,8 @@
 
 /** An array for storing all existing services. */
 hip_srv_t hip_services[HIP_TOTAL_EXISTING_SERVICES];
+/** A linked list for storing pending requests on the client side. */
+hip_ll_t pending_requests;
 
 void hip_init_xxx_services()
 {
@@ -32,7 +34,16 @@ void hip_init_xxx_services()
 	hip_services[2].status       = HIP_SERVICE_OFF;
 	hip_services[2].min_lifetime = HIP_RELREC_MIN_LIFETIME;
 	hip_services[2].max_lifetime = HIP_RELREC_MAX_LIFETIME;
+
+	hip_ll_init(&pending_requests);
+	
 	HIP_DEBUG("NEW SERVICE INITIALIZATION DONE.\n");
+}
+
+void hip_uninit_xxx_services()
+{
+	hip_ll_uninit(&pending_requests, free);
+	HIP_DEBUG("NEW SERVICE UNINITIALIZATION DONE.\n");
 }
 
 int hip_set_srv_status(uint8_t reg_type, hip_srv_status_t status)
@@ -139,6 +150,37 @@ void hip_srv_info(const hip_srv_t *srv, char *status)
 
 	cursor += sprintf(cursor, " minimum lifetime: %u\n", srv->min_lifetime);
 	cursor += sprintf(cursor, " maximum lifetime: %u\n", srv->max_lifetime);
+}
+
+int hip_add_pending_request(hip_pending_request_t *request)
+{
+	int err = 0;
+	
+	HIP_IFEL(hip_ll_add_last(&pending_requests, request), -1,
+		 "Failed to add a pending registration request.\n");
+
+ out_err:
+	return err;
+}
+
+int hip_del_pending_request(hip_pending_request_t *request)
+{
+	int index = 0;
+	hip_ll_node_t *iter = NULL;
+	
+	while((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
+		if(((hip_pending_request_t*)(iter->ptr))->entry
+		   == request->entry) {
+			
+			HIP_DEBUG("Deleting a pending request at index %u.\n", index);
+			hip_ll_del(&pending_requests, index, free);
+			return 0;
+		}
+		
+		index++;
+	} 
+
+	return -1;
 }
 
 int hip_handle_param_reg_info(hip_common_t *msg, hip_ha_t *entry)

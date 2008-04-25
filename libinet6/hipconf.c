@@ -373,16 +373,17 @@ int hip_conf_handle_rvs(hip_common_t *msg, int action, const char *opt[],
 
 	hip_get_lifetime_seconds(lifetime, &seconds_from_lifetime);
 
-	HIP_IFEL(hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
-					  sizeof(in6_addr_t)),
-		 -1, "Failed to build parameter HIT.\n");
+	HIP_IFEL(hip_build_param_contents(
+			 msg, (void *) &hit, HIP_PARAM_HIT,
+			 sizeof(in6_addr_t)), -1,
+		 "Failed to build parameter HIT.\n");
 	
-	HIP_IFEL(hip_build_param_contents(msg, (void *) &ipv6,
-					  HIP_PARAM_IPV6_ADDR,
-					  sizeof(in6_addr_t)),
-		 -1, "Failed to build parameter IPv6.\n");
+	HIP_IFEL(hip_build_param_contents(
+			 msg, (void *) &ipv6, HIP_PARAM_IPV6_ADDR,
+			 sizeof(in6_addr_t)), -1,
+		 "Failed to build parameter IPv6.\n");
 	
-	HIP_IFEL(hip_build_param_reg_request(msg, lifetime, &type_list ,1), -1,
+	HIP_IFEL(hip_build_param_reg_request(msg, lifetime, &type_list , 1), -1,
 		 "Failed to build REQ_REQUEST parameter to hipconf user "\
 		 "message.\n");
 

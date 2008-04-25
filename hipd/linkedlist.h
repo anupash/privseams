@@ -225,12 +225,11 @@ void *hip_ll_get(hip_ll_t *linkedlist, const unsigned int index);
  * Enumerate each element in the list. Returns a pointer to the next linked list
  * node in the @c linkedlist or NULL if the list end has been reached. If
  * @c current is NULL, the first node in the list is returned. Do not delete
- * items from the list using this function or you'll be skipping nodes.
+ * items from the list using this function or you will break the list.
  *
  * <pre>
  * hip_ll_node_t *iter = NULL;
- * while((iter = hip_ll_iterate(&list, iter)) != NULL)
- * {
+ * while((iter = hip_ll_iterate(&list, iter)) != NULL) {
  *         ... Do stuff with iter ... 
  * } 
  * </pre>

@@ -639,6 +639,7 @@ void hip_exit(int signal)
 
 	/* Next line is needed only if RVS or escrow, hiprelay is in use. */
 	hip_uninit_services();
+	hip_uninit_xxx_services();
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	hip_oppdb_uninit();
