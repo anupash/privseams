@@ -391,38 +391,62 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 #endif /* CONFIG_HIP_ESCROW */
 #ifdef CONFIG_HIP_RVS
 	case SO_HIP_ADD_RVS:
+	{
 		/* draft-ietf-hip-registration-02 RVS registration. Responder
 		   (of I,RVS,R hierarchy) handles this message. Message
 		   indicates that the current machine wants to register to a rvs
 		   server. This message is received from hipconf. */
-		
-		
 		HIP_DEBUG("Handling ADD RENDEZVOUS user message.\n");
+
+		struct hip_reg_request *reg_req = NULL;
+		uint8_t *reg_types = NULL, reg_type = 0, lifetime = 0;
+		unsigned int type_count = 0;
+		int i = 0;
 		
 		/* Get RVS IP address, HIT and requested lifetime given as
 		   commandline parameters to hipconf. */
-		HIP_IFEL(!(dst_hit = hip_get_param_contents(
-				   msg,HIP_PARAM_HIT)), -1,
-			 "No HIT value found from the user message.\n");
-		HIP_IFEL(!(dst_ip = hip_get_param_contents(
-				   msg, HIP_PARAM_IPV6_ADDR)), -1,
-			 "No IP address value found from the user message.\n");
-
-		// Get req_request...
 		
-		/* Add HIT to IP mapping of rvs to hadb. */ 
-		HIP_IFEL(hip_add_peer_map(msg), -1, "add rvs map\n");
-		/* Fetch the hadb entry just created. */
+		dst_hit = hip_get_param_contents(msg,HIP_PARAM_HIT);
+		dst_ip  = hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR);
+		reg_req = hip_get_param(msg, HIP_PARAM_REG_REQUEST);
+				
+		if(dst_hit == NULL) {
+			HIP_ERROR("No HIT parameter found from the user "\
+				  "message.\n");
+			err = -1;
+			goto out_err;
+		}else if(dst_ip == NULL) {
+			HIP_ERROR("No IPV6 parameter found from the user "\
+				  "message.\n");
+			err = -1;
+			goto out_err;
+		} else if(reg_req == NULL) {
+			HIP_ERROR("No REG_REQUEST parameter found from the "\
+				  "user message.\n");
+			err = -1;
+			goto out_err;
+		}
+
+		lifetime   = reg_req->lifetime;
+		reg_types  = reg_req->reg_type;
+		type_count = hip_get_param_contents_len(reg_req) -
+			sizeof(reg_req->lifetime);
+		
+		/* Add HIT to IP address mapping of RVS to haDB. */ 
+		HIP_IFEL(hip_add_peer_map(msg), -1, "Error on adding server "\
+			 "HIT to IP address mapping to the haDB.\n");
+		/* Fetch the haDB entry just created. */
 		HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(dst_hit)),
-			 -1, "internal error: no hadb entry found\n");
-		/* Set a rvs request flag. */
+			 -1, "Error on fetching server HIT to IP address "\
+			 "mapping from the haDB.\n");
+		/* Set a RVS request flag. */
 		hip_hadb_set_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_RVS);
-		/* Send a I1 packet to rvs. */
-		/** @todo Not filtering I1, when handling rvs message! */
+		/* Send a I1 packet to RVS. */
+		/** @todo Not filtering I1, when handling RVS message! */
 		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
-			 -1, "sending i1 failed\n");
+			 -1, "Error on sending I1 packet to the server.\n");
 		break;
-	
+	}
 	case SO_HIP_OFFER_RVS:
 		/* draft-ietf-hip-registration-02 RVS registration. Rendezvous
 		   server handles this message. Message indicates that the

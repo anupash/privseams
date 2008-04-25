@@ -173,7 +173,7 @@ int hip_handle_param_reg_info(hip_common_t *msg, hip_ha_t *entry)
 		return 0;
 	}
 	
-	/* Get a pointer registration types. */
+	/* Get a pointer registration types and the type count. */
 	reg_types =
 		((uint8_t *) hip_get_param_contents_direct(reg_info)) +
 		sizeof(reg_info->min_lifetime) + sizeof(reg_info->max_lifetime);

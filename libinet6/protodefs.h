@@ -689,14 +689,14 @@ struct hip_reg_info {
 struct hip_reg_request {
 	hip_tlv_type_t type;
 	hip_tlv_len_t  length;
-	uint8_t       lifetime;
+	uint8_t        lifetime;
 	uint8_t        reg_type[0];
 } __attribute__ ((packed));
 
 struct hip_reg_response {
 	hip_tlv_type_t type;
 	hip_tlv_len_t  length;
-	uint8_t       lifetime;
+	uint8_t        lifetime;
 	uint8_t        reg_type[0];
 } __attribute__ ((packed));
 
