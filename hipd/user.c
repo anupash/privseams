@@ -22,14 +22,12 @@
  */ 
 int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 {
-	hip_hit_t *hit, *src_hit, *dst_hit;
-	struct in6_addr *src_ip, *dst_ip;
-	hip_ha_t *entry = NULL;
-	int err = 0, msg_type, n = 0, len = 0, state=0;
-	hip_ha_t * server_entry = NULL;
+	hip_hit_t *hit = NULL, *src_hit = NULL, *dst_hit = NULL;
+	in6_addr_t *src_ip = NULL, *dst_ip = NULL;
+	hip_ha_t *entry = NULL, *server_entry = NULL;
+	int err = 0, msg_type = 0, n = 0, len = 0, state=0;
 	HIP_KEA * kea = NULL;
 	int send_response = (src ? 1 : 0);
-	uint8_t lifetime = 0;
 
 	HIP_DEBUG("handling user msg of family=%d from port=%d\n",
 		  src->sin6_family, src->sin6_port);

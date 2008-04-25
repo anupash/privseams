@@ -357,7 +357,7 @@
  * @def HIP_PARAM_UINT
  *      Unsigned integer.
  * @def HIP_PARAM_KEYS
- * @def HIP_PSEUDO_HIT
+ * @def HIP_PARAM_PSEUDO_HIT
  * @def HIP_PARAM_REG_INFO
  * @def HIP_PARAM_REG_REQUEST
  * @def HIP_PARAM_REG_RESPONSE

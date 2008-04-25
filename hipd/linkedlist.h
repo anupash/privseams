@@ -1,6 +1,18 @@
 /** @file
  * A header file for linkedlist.c
  *
+ * We are using following notation in this file:
+ * <pre>
+ * +------------+   head   +---------+   next   +---------+
+ * | linkedlist |--------->|   node  |--------->|   node  |--  ...  --> NULL
+ * +------------+          +--------+-          +---------+
+ *                              |                    |
+ *                              | ptr                | ptr
+ *                              v                    v
+ *                         +---------+          +---------+
+ *                         | element |          | element |
+ *                         +---------+          +---------+
+ * </pre>where element contains the payload data.
  * @author  Lauri Silvennoinen
  * @version 1.0
  * @date    21.04.2008
@@ -14,14 +26,14 @@
 
 /** Linked list node. */
 typedef struct hip_ll_node{
-	void *ptr; /**< A pointer to node data. */
+	void *ptr; /**< A pointer to node payload data. */
 	struct hip_ll_node *next; /**< A pointer to next node. */ 
 }hip_ll_node_t;
 
 /** Linked list. */
 typedef struct{
 	unsigned int element_count; /**< Total number of nodes in the list. */
-	hip_ll_node_t *head; /**< A pointer to the first item of the list. */
+	hip_ll_node_t *head; /**< A pointer to the first node of the list. */
 }hip_ll_t;
 
 /** Linked list element memory deallocator function pointer. */
@@ -39,14 +51,19 @@ void hip_ll_init(hip_ll_t *linkedlist);
 /**
  * Uninitializes a linked list. Removes each node from the parameter
  * @c linkedlist and frees the memory allocated for the nodes. The parameter
- * @c linkedlist is not itself freed. If @c free_element is non-NULL the
- * memory allocated for the element itself is also freed. When @c free_element
- * is non-NULL, make sure that there are no duplicate entries (i.e. nodes whose
- * @c ptr is pointing to the same memory region) in the @c list. 
+ * @c linkedlist is not itself freed.
  *
+ * <ul><li>When @c free_element is <b>non-NULL</b> the memory allocated for the
+ * elements itself is also freed by calling the @c free_element function for
+ * each node. Make sure that there are no duplicate entries (i.e. nodes whose
+ * @c ptr is pointing to the same memory region) in the @c list.</li>
+ * <li>When @c free_element is <b>NULL</b> the memory allocated for the elements
+ * is not freed, but only the nodes are freed.</li>
+ * </ul>
+ * 
  * @param linkedlist   the list to uninitialize.
  * @param free_element a function pointer to a function for freeing the memory
- *                     allocated for an element at a node.
+ *                     allocated for an element stored in a node.
  * @note               If you're storing elements that have different memory
  *                     deallocator functions in the list, you should deallocate
  *                     the memory allocated for the elements manually before
@@ -64,9 +81,10 @@ void hip_ll_uninit(hip_ll_t *linkedlist, free_elem_fn_t free_element);
 unsigned int hip_ll_get_size(const hip_ll_t *linkedlist);
 
 /**
- * Adds a new element to a linked list. Adds a new element at @c index to the
- * parameter @c linkedlist. If there are less than (<code>index  -1</code>) elements in
- * the list, the element will be added as the last element of the list.
+ * Adds a new node to a linked list. Adds a new node at @c index to the
+ * parameter @c linkedlist with payload data @c ptr. If there are less than
+ * (<code>index  -1</code>) elements in the list, the element will be added as
+ * the last element of the list.
  * 
  * <b>Example:</b>
  * 
@@ -75,25 +93,25 @@ unsigned int hip_ll_get_size(const hip_ll_t *linkedlist);
  * When there are less than two items in the list @c mydata will be added as
  * the last element of @c mylist.
  * 
- * @param  linkedlist the list where to add the new element.
+ * @param  linkedlist the list where to add the new node.
  * @param  index      the list index where to store the node. Indexing starts
  *                    from zero.
  * @param  ptr        a pointer to the data to be stored.
  * @return            zero on success, -1 if @c linkedlist or @c ptr is NULL or
  *                    if there was an error when allocating memory to the new
- *                    element.
+ *                    node.
  */
 int hip_ll_add(hip_ll_t *linkedlist, const unsigned int index, void *ptr);
 
 /**
- * Adds a new element to a linked list. Adds a new element as the first item of
- * the @c linkedlist.
+ * Adds a new node to a linked list. Adds a new node as the first item of
+ * the @c linkedlist with payload data @c ptr.
  *
- * @param  linkedlist the list where to add the new element.
+ * @param  linkedlist the list where to add the new node.
  * @param  ptr        a pointer to the data to be stored.
  * @return            zero on success, -1 if @c linkedlist or @c ptr is NULL or
  *                    if there was an error when allocating memory to the new
- *                    element.
+ *                    node.
  */
 static inline int hip_ll_add_first(hip_ll_t *linkedlist, void *ptr)
 {
@@ -101,14 +119,14 @@ static inline int hip_ll_add_first(hip_ll_t *linkedlist, void *ptr)
 }
 
 /**
- * Adds a new element to a linked list. Adds a new element as the last item of
- * the @c linkedlist.
+ * Adds a new node to a linked list. Adds a new node as the last item of
+ * the @c linkedlist with payload data @c ptr.
  *
- * @param  linkedlist the list where to add the new element.
+ * @param  linkedlist the list where to add the new node.
  * @param  ptr        a pointer to the data to be stored.
  * @return            zero on success, -1 if @c linkedlist or @c ptr is NULL or
  *                    if there was an error when allocating memory to the new
- *                    element.
+ *                    node.
  */
 static inline int hip_ll_add_last(hip_ll_t *linkedlist, void *ptr)
 {
@@ -191,18 +209,17 @@ static inline void *hip_ll_del_last(hip_ll_t *linkedlist,
 }
 
 /**
- * Gets an element from a linked list. Returns a pointer to the data stored in
- * node at @c index. When there are less than (<code>index  -1</code>) nodes in
- * the list, no action will be taken.
+ * Gets an element from a linked list. Returns a pointer to the payload data
+ * stored in node at @c index. When there are less than (<code>index  -1</code>)
+ * nodes in the list, no action will be taken.
  *
- * @param  linkedlist the linked list from where to retrieve the element.  
- * @param index       the list index of the @c node to be retrieved. Indexing
- *                    starts from zero.
- * @return            the next element or NULL if the list end has been reached
- *                    or @c linkedlist is NULL.
+ * @param linkedlist the linked list from where to retrieve the element.  
+ * @param index      the list index of the @c node from where the element is to
+ *                   be retrieved. Indexing starts from zero.
+ * @return           the next element or NULL if the list end has been reached
+ *                   or if @c linkedlist is NULL.
  */
 void *hip_ll_get(hip_ll_t *linkedlist, const unsigned int index);
-
 
 /**
  * Enumerate each element in the list. Returns a pointer to the next linked list

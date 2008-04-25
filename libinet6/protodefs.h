@@ -76,6 +76,10 @@
 #define HIP_PARAM_CERT                 768
 #define HIP_PARAM_NOTIFICATION         832
 #define HIP_PARAM_ECHO_REQUEST_SIGN    897
+#define HIP_PARAM_REG_INFO	       930
+#define HIP_PARAM_REG_REQUEST	       932
+#define HIP_PARAM_REG_RESPONSE	       934
+#define HIP_PARAM_REG_FAILED	       936
 #define HIP_PARAM_ECHO_RESPONSE_SIGN   961
 #define HIP_PARAM_ESP_TRANSFORM        4095
 
@@ -93,11 +97,7 @@
 #define HIP_PARAM_EID_ADDR              32777
 #define HIP_PARAM_UINT                  32778 /**< Unsigned integer */
 #define HIP_PARAM_KEYS                  32779
-#define HIP_PSEUDO_HIT                  32780 
-#define HIP_PARAM_REG_INFO		32781
-#define HIP_PARAM_REG_REQUEST		32782
-#define HIP_PARAM_REG_RESPONSE		32783
-#define HIP_PARAM_REG_FAILED		32784
+#define HIP_PARAM_PSEUDO_HIT            32780 
 #define HIP_PARAM_BLIND_NONCE           32785 /**< Pass blind nonce */
 #define HIP_PARAM_OPENDHT_GW_INFO       32786
 #define HIP_PARAM_ENCAPS_MSG		32787
