@@ -636,6 +636,7 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 		if (ipv4_s_raw < 0) {
 			HIP_DEBUG("*** ipv4_s_raw socket() error for raw socket in hip_esp_output\n");
 		}
+
 		
 #ifdef USE_BINDING /* Using binding */
 
@@ -719,6 +720,8 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 		HIP_IFEL(bind(ipv6_s_raw, (struct sockaddr *) ipv6_binding, sa_size_v6), -1,
 			 "Binding to ipv4 raw sock failed");
 		flags = 0;
+
+
 		
 #endif 
 
@@ -731,7 +734,7 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 		
 		if (err < 0)
 		{	
-			HIP_DEBUG("hip_esp_output IPv4 sendto() failed:"
+			HIP_DEBUG("hip_esp_output IPv6 sendto() failed:"
 				  " %s\n",strerror(errno));
 			goto out_err;
 			
@@ -1143,6 +1146,7 @@ void hip_esp_input(void *arg)
 // void *hip_esp_input(void *arg)
 /* beuff: raw encrypted data buffer 
  * len: /*length of buffer */
+/* ss_lsi is the source ip address structure for hipl*/
 void *hip_esp_input(struct sockaddr_storage *ss_lsi, u8 *buff, int len)
 #endif
 {
@@ -1162,8 +1166,40 @@ void *hip_esp_input(struct sockaddr_storage *ss_lsi, u8 *buff, int len)
 	hip_sadb_entry *entry;
 
 
+	int ipv4_s_raw = 0; /* ipv4 raw socket */
+	int ipv6_s_raw = 0; /* ipv6 raw socket */
+	int flags;
+	struct sockaddr_in6 *to_local_hit;
+	
+	socklen_t sa_size_v6 = sizeof(struct sockaddr_in6);
 
-	HIP_DEBUG("what is the number of sa_family: %d\n", lsi->sa_family);
+	
+
+
+	
+
+
+	HIP_DEBUG("open a raw socket! \n");
+
+	/* hipl uses HITs,  open IPv6 raw socket 
+	 * FIXME if using LSI
+	 */
+
+	ipv6_s_raw = socket(AF_INET6, SOCK_RAW, IPPROTO_RAW);
+	if (ipv6_s_raw < 0) {
+		HIP_DEBUG("--- socket() error for ipv6 (HITs) raw socket in hip_esp_output\n");
+	}
+	flags = 1;
+	if (setsockopt(ipv6_s_raw, IPPROTO_IP, IP_HDRINCL, (char *)&flags,
+		       sizeof(flags)) < 0) {
+		HIP_DEBUG("*** setsockopt() error for raw socket in "
+		  "hip_input_output\n");
+
+	}
+
+	
+	HIP_DEBUG("what is the value of sa_family: %d\n", lsi->sa_family);
+
 
 	memset(data, 0, sizeof(data)); /* memset zero */
 
@@ -1292,6 +1328,20 @@ void *hip_esp_input(struct sockaddr_storage *ss_lsi, u8 *buff, int len)
 
 
 
+
+	to_local_hit = (struct sockaddr_in6 *)  &entry->inner_dst_addrs->addr;
+
+	err = sendto(ipv6_s_raw, data, len, 0,
+		     SA(to_local_hit),
+		     SALEN(to_local_hit));
+	
+	if (err < 0)
+		{	
+			HIP_DEBUG("hip_esp_input IPv6 sendto() failed:"
+				  " %s\n",strerror(errno));
+			goto out_err;
+			
+		}
 
 	
 
@@ -2558,8 +2608,10 @@ int hip_esp_decrypt(__u8 *in, int len, __u8 *out, int *offset, int *outlen,
 		}
 #endif /* DEBUG_EVERY_PACKET */
 		
-		HIP_HEXDUMP("data from buffer:", &in[len - alen], alen);
-		HIP_HEXDUMP("data from hmac_md:", hmac_md, alen);
+
+
+		HIP_HEXDUMP("data from buffer: ", &in[len - alen], alen);
+		HIP_HEXDUMP("data from hmac_md: ", hmac_md, alen);
 		
 		
 
@@ -2666,6 +2718,10 @@ int hip_esp_decrypt(__u8 *in, int len, __u8 *out, int *offset, int *outlen,
 	
 	src_hit =  &entry->inner_src_addrs->addr;
 	dst_hit =  &entry->inner_src_addrs->addr;
+
+	HIP_DEBUG(" Is it TCP and UDP packet:?  %s ", 
+		 padinfo->next_hdr == IPPROTO_TCP? "TCP" : "UDP");
+
 
        
 	switch (padinfo->next_hdr) {

@@ -1284,7 +1284,8 @@ void hip_firewall_userspace_ipsec_input(struct ipq_handle *handle,
 
 		hip_addr_to_sockaddr(&ipv4_to_ipv6_conversion, &ipv4_src_addr);
 		
-		HIP_DEBUG("hello: the number of sa_family is %s\n", ipv4_src_addr.ss_family == AF_INET? "ipv4" : "ipv6");
+		HIP_DEBUG("hello: the number of sa_family is %s\n", 
+			  ipv4_src_addr.ss_family == AF_INET? "ipv4" : "ipv6");
 
 		hip_esp_input(&ipv4_src_addr, 
 			       iphdr, length_of_packet); 
