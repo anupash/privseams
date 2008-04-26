@@ -623,7 +623,7 @@ void hip_request_send_i1_to_hip_peer_from_hipd(struct in6_addr *peer_hit,
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT_FROM_FIREWALL, 0), -1, "build hdr failed\n");
 	HIP_DUMP_MSG(msg);
 	//send msg to hipd
-	HIP_IFEL(hip_send_daemon_info_wrapper(msg,1), -1, "send msg failed\n");
+	HIP_IFEL(hip_send_daemon_info_wrapper(msg, 1), -1, "send msg failed\n");
 	_HIP_DEBUG("send msg succeed\n");
 
  out_err:
@@ -657,7 +657,7 @@ void hipd_unblock_app_AND_oppipdb_add_entry(const struct in6_addr *peer_ip){
 		 -1, "build hdr failed\n");
 	HIP_DUMP_MSG(msg);
 	//send msg to hipd
-	HIP_IFEL(hip_send_daemon_info_wrapper(msg), -1, "send msg failed\n");
+	HIP_IFEL(hip_send_daemon_info_wrapper(msg, 1), -1, "send msg failed\n");
 	_HIP_DEBUG("send msg succeed\n");
 
  out_err:
@@ -717,7 +717,7 @@ void hip_request_send_tcp_packet(void *hdr,
 		-1, "build hdr failed\n");
 	HIP_DUMP_MSG(msg);
 	/* send and receive msg to/from hipd */
-	HIP_IFEL(hip_send_daemon_info_wrapper(msg), -1, "send_recv msg failed\n");
+	HIP_IFEL(hip_send_daemon_info_wrapper(msg, 1), -1, "send_recv msg failed\n");
 	_HIP_DEBUG("send_recv msg succeed\n");
 	/* check error value */
 	//HIP_IFEL(hip_get_msg_err(msg), -1, "Got erroneous message!\n");

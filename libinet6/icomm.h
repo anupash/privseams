@@ -99,3 +99,40 @@
 
 #endif /* _HIP_ICOMM */
 
+/** Socket option for the server to offer the RVS service. (server side) */
+#define SO_HIP_OFFER_RVS			166
+/** Socket option for the server to cancel the RVS service. (server side) */
+#define SO_HIP_CANCEL_RVS                       167
+/** Socket option for the server to reinit the RVS service. (server side) */
+#define SO_HIP_REINIT_RVS                       168
+/** Socket option to ask for the RVS service, i.e.\ send REG_REQUEST parameter
+    to the server. (client side) */
+#define SO_HIP_ADD_RVS			        169
+/** Socket option to ask for cancellation of the RVS service, i.e.\ send
+    REG_REQUEST parameter with zero lifetime to the server. (client side) */
+#define SO_HIP_DEL_RVS                          170
+/** Socket option for the server to offer the HIP relay service. (server
+    side) */
+#define SO_HIP_OFFER_HIPRELAY                   171
+/** Socket option for the server to cancel the HIP relay service. (server
+    side) */
+#define SO_HIP_CANCEL_HIPRELAY                  172
+/** Socket option for hipconf to reinit the HIP relay service. (server side) */
+#define SO_HIP_REINIT_RELAY                     173
+/** Socket option to ask for the HIP relay service, i.e.\ send REG_REQUEST
+    parameter to the server. (client side) */
+#define SO_HIP_ADD_RELAY                        174
+/** Socket option to ask for cancellation of the HIP relay service, i.e.\ send
+    REG_REQUEST parameter with zero lifetime to the server. (client side) */
+#define SO_HIP_DEL_RELAY                        175
+/** Socket option for the server to offer the escrow service. (server side) */
+#define SO_HIP_OFFER_ESCROW			176
+/** Socket option for the server to cancel the escrow service. (server side) */
+#define SO_HIP_CANCEL_ESCROW                    177
+/** Socket option to ask for the escrow service, i.e.\ send REG_REQUEST parameter
+    to the server. (client side) */
+#define SO_HIP_ADD_ESCROW			178
+/** Socket option to ask for cancellation of the escrow service, i.e.\ send
+    REG_REQUEST parameter with zero lifetime to the server. (client side) */
+#define SO_HIP_DEL_ESCROW			179
+
