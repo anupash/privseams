@@ -592,12 +592,8 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		hip_set_opportunistic_tcp_status(0);
 		break;
 
-	case SO_HIP_OPPTCP_UNBLOCK_APP:
-		hip_opptcp_unblock(msg, src);
-		break;
-
-	case SO_HIP_OPPTCP_OPPIPDB_ADD_ENTRY:
-		hip_opptcp_add_entry(msg, src);
+	case SO_HIP_OPPTCP_UNBLOCK_APP_and_OPPIPDB_ADD_ENTRY:
+		hip_opptcp_unblock_AND_opptcp_add_entry(msg, src);
 		break;
 
 	case SO_HIP_OPPTCP_SEND_TCP_PACKET:
