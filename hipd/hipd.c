@@ -101,7 +101,7 @@ int hip_use_i3 = 0; // false
  * userspace ipsec or not. If it is 1, hip uses the user space ipesec.
  * It will not use if hip_use_userspace_ipsec = 0. Added By Tao Wan
  */
-int hip_use_userspace_ipsec = 1;
+int hip_use_userspace_ipsec = 0;
 
 
 #ifdef CONFIG_HIP_OPPTCP
