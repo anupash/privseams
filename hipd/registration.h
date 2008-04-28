@@ -50,7 +50,7 @@ int hip_set_srv_max_lifetime(uint8_t reg_type, uint8_t lifetime);
 int hip_get_active_services(hip_srv_t *active_services,
 			    unsigned int *active_service_count);
 int hip_add_pending_request(hip_pending_request_t *request);
-int hip_del_pending_request(hip_pending_request_t *request);
+int hip_del_pending_request(hip_ha_t *entry);
 int hip_get_pending_requests(hip_ha_t *entry,
 			     hip_pending_request_t *requests[]);
 int hip_get_pending_request_count(hip_ha_t *entry);

@@ -165,7 +165,7 @@ int hip_add_pending_request(hip_pending_request_t *request)
 	return err;
 }
 
-int hip_del_pending_request(hip_pending_request_t *request)
+int hip_del_pending_request(hip_ha_t *entry)
 {
 	int index = 0;
 	hip_ll_node_t *iter = NULL;
@@ -174,16 +174,14 @@ int hip_del_pending_request(hip_pending_request_t *request)
 	   even though we use an iterator here, but it's okay, since we do not
 	   use the iterator after the deletion. */
 	while((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
-		if(((hip_pending_request_t *)(iter->ptr))->entry
-		   == request->entry) {
+		if(((hip_pending_request_t *)(iter->ptr))->entry == entry) {
 			
 			HIP_DEBUG("Deleting a pending request at index %u.\n", index);
 			hip_ll_del(&pending_requests, index, free);
 			return 0;
 		}
-		
 		index++;
-	} 
+	}
 
 	return -1;
 }
