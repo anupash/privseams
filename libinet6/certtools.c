@@ -12,6 +12,8 @@
  *
  */
 #include <sys/types.h>
+#include <sys/time.h>
+#include <time.h>
 #include <regex.h>
 #include <stdio.h>
 #include <string.h>
@@ -23,6 +25,62 @@
  * BUILDING FUNCTIONS FOR SPKI                                                 *
  *******************************************************************************/
 
+/**  
+ * Function to build the create minimal SPKI cert  
+ * @param minimal_content holds the struct hip_cert_spki_header containing 
+ *                        the minimal needed information for cert object, 
+ *                        also contains the char table where the cert object 
+ *                        is to be stored
+ * @param issuer_type With HIP its HIT
+ * @param issuer HIT in representation encoding 2001:001...
+ * @param subject_type With HIP its HIT
+ * @param subject HIT in representation encoding 2001:001...
+ * @param not_before time in timeval before which the cert should not be used
+ * @param not_after time in timeval after which the cert should not be used
+ *
+ * @return 0 if ok -1 if error
+ */
+int hip_cert_spki_create_cert(struct hip_cert_spki_header * minimal_content,
+                              char * issuer_type, char * issuer,
+                              char * subject_type, char * subject,
+                              struct timeval * not_before,
+                              struct timeval * not_after) {
+	int err = 0;
+        char * tmp_issuer;
+        char * tmp_subject;
+
+        tmp_issuer = malloc(128);
+        if (!tmp_issuer) goto out_err;
+        tmp_subject = malloc(128);
+        if (!tmp_subject) goto out_err;
+        HIP_IFEL(!memset(tmp_issuer, '\0', sizeof(tmp_issuer)), -1,
+                 "failed to memset memory for tmp variables\n");
+        HIP_IFEL(!memset(tmp_subject, '\0', sizeof(tmp_subject)), -1,
+                 "failed to memset memory for tmp variables\n");
+        sprintf(tmp_issuer, "(hash %s %s)", issuer_type, issuer);
+        sprintf(tmp_subject, "(hash %s %s)", subject_type, subject);
+
+        HIP_IFEL(hip_cert_spki_build_cert(minimal_content), -1, 
+                 "hip_cert_spki_build_cert failed\n");
+
+        HIP_IFEL(hip_cert_spki_inject(minimal_content, "cert", "(subject )"), -1, 
+                 "hip_cert_spki_inject failed to inject\n");
+
+        HIP_IFEL(hip_cert_spki_inject(minimal_content, "subject", tmp_subject), -1, 
+                 "hip_cert_spki_inject failed to inject\n");
+
+        HIP_IFEL(hip_cert_spki_inject(minimal_content, "cert", "(issuer )"), -1, 
+                 "hip_cert_spki_inject failed to inject\n");
+
+        HIP_IFEL(hip_cert_spki_inject(minimal_content, "issuer", tmp_issuer), -1, 
+                 "hip_cert_spki_inject failed to inject\n");
+
+out_err:
+        free(tmp_issuer);
+        free(tmp_subject);
+	return (err);
+} 
+ 
 /**
  * Function to build the basic cert object of SPKI
  * @param minimal_content holds the struct hip_cert_spki_header containing 
@@ -67,6 +125,8 @@ out_err:
  * @param what is char pointer of what to 
  *
  * @return 0 if ok and negative if error. -1 returned for example when after is NOT found
+ *
+ * @note Remember to inject in order last first first last, its easier
  */
 int hip_cert_spki_inject(struct hip_cert_spki_header * to, 
                          char * after, char * what) {
@@ -75,8 +135,7 @@ int hip_cert_spki_inject(struct hip_cert_spki_header * to,
         regmatch_t pm[1];
         char * tmp_cert;        
 
-        HIP_DEBUG("Before inject:\n"
-                  "%s\n",to->cert);
+        _HIP_DEBUG("Before inject:\n%s\n",to->cert);
         HIP_DEBUG("Inserting \"%s\" after \"%s\"\n", what, after);       
         tmp_cert = malloc(strlen(to->cert) + strlen(what) + 1);
         if (!tmp_cert) return(-1);
@@ -88,17 +147,20 @@ int hip_cert_spki_inject(struct hip_cert_spki_header * to,
         /* Running the regular expression */
         HIP_IFEL((status = regexec(&re, to->cert, 1, pm, 0)), -1,
                  "Handling of regular expression failed\n");
-        HIP_DEBUG("Found \"%s\" at %d and it ends at %d\n",
-                  what, pm[0].rm_so, pm[0].rm_eo);
-        snprintf(tmp_cert, pm[0].rm_eo, "%s", to->cert); 
-        snprintf(&tmp_cert[pm[0].rm_eo - 1], strlen(what), "%s", what);
-        snprintf(&tmp_cert[pm[0].rm_eo + strlen(what) -1 ], 
-                (strlen(to->cert) - pm[0].rm_eo), "%s", to->cert);
+        _HIP_DEBUG("Found \"%s\" at %d and it ends at %d\n",
+                  after, pm[0].rm_so, pm[0].rm_eo);
+        /* Using tmp char table to do the inject (remember the terminators)
+           first the beginning */
+        snprintf(tmp_cert, pm[0].rm_eo + 2, "%s", to->cert);
+        /* Then the middle part to be injected */
+        snprintf(&tmp_cert[pm[0].rm_eo + 1], strlen(what) + 1, "%s", what);
+        /* then glue back the rest of the original at the end */
+        snprintf(&tmp_cert[(pm[0].rm_eo + strlen(what) + 1)], 
+                (strlen(to->cert) - pm[0].rm_eo), "%s", &to->cert[pm[0].rm_eo + 1]);
+        /* move tmp to the result */
         sprintf(to->cert, "%s", tmp_cert);
-        HIP_DEBUG("After inject:\n"
-                  "%s\n",to->cert);
+        _HIP_DEBUG("After inject:\n%s\n",to->cert);
 out_err:
-        regfree(&re);
         free(tmp_cert);
 	return (err);
 }

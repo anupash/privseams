@@ -11,6 +11,8 @@
  * @date 31.3.2008
  *
  */
+#include <sys/time.h>
+#include <time.h>
 #include "ife.h"
 #include "debug.h"
 #include "certtools.h"
@@ -19,27 +21,35 @@ int main(int argc, char *argv[])
 {
         int err = 0;
         struct hip_cert_spki_header * cert;
+        struct timeval not_before;
+        struct timeval not_after;
 
         HIP_DEBUG("Starting to test SPKI certficate tools\n");
         
         cert = malloc(sizeof(struct hip_cert_spki_header));
         if (!cert) goto out_err;
         
-        //building the outermost sequence
-        HIP_IFEL(hip_cert_spki_build_cert(cert), -1, 
-                 "hip_cert_spki_build_cert failed\n");
-        
-        HIP_DEBUG("Certificate contents:\n"
-                  "%s\n"
-                  "First inject\n", cert->cert);
-        
-        HIP_IFEL(hip_cert_spki_inject(cert, "rt", "injected"), -1, 
-                 "hip_cert_spki_inject failed to inject\n");
+        memset(&not_before, 0, sizeof(struct timeval));
+        memset(&not_after, 0, sizeof(struct timeval));
+
+        gettimeofday(&not_before, NULL);
+        gettimeofday(&not_after, NULL);
+
+        hip_cert_spki_create_cert(cert, 
+                                  "hit", "2001:0011",
+                                  "hit", "2001:0012",
+                                  &not_before,
+                                  &not_after);
+
+        HIP_DEBUG("Certificate contents after create cert:\n"
+                  "%s\n", cert->cert);
 
         HIP_DEBUG("If there was no errors above, \"everything\" is OK\n");
+        free(cert);
         exit(EXIT_SUCCESS);
 
  out_err:
         HIP_DEBUG("Something failed, see above\n");
+        free(cert);
         exit(-1);
 }

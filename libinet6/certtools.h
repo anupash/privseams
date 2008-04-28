@@ -25,7 +25,11 @@ struct hip_cert_spki_header {
 /************************************************************************************
  * BUILDING FUNCTIONS FOR SPKI                                                      *
  ***********************************************************************************/
-	
+int hip_cert_spki_create_cert(struct hip_cert_spki_header * minimal_content,
+                              char * issuer_type, char * issuer,
+                              char * subject_type, char * subject,
+                              struct timeval * not_before,
+                              struct timeval * not_after);	
 int hip_cert_spki_build_cert(struct hip_cert_spki_header *);
 int hip_cert_spki_build_signature(char *, char *);
 int hip_cert_spki_inject(struct hip_cert_spki_header *, char *, char *);
