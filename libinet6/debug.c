@@ -722,3 +722,22 @@ void hip_print_locator_addresses(struct hip_common * in_msg) {
     }
 }
 
+void hip_print_peer_addresses(hip_ha_t *entry) {
+	hip_list_t *item = NULL, *tmp = NULL, *item_outer = NULL, *tmp_outer = NULL; 
+	struct hip_peer_addr_list_item *addr_li;
+	struct hip_spi_out_item *spi_out;
+	int i = 0, ii = 0;
+
+	list_for_each_safe(item_outer, tmp_outer, entry->spis_out, i) {
+		spi_out = list_entry(item_outer);
+		HIP_DEBUG("SPI out is %d\n", spi_out->spi);
+		ii = 0;
+		tmp = NULL;
+		item = NULL;
+		list_for_each_safe(item, tmp, spi_out->peer_addr_list, ii) {
+			addr_li = list_entry(item);
+			HIP_DEBUG_HIT("SPI out address", &addr_li->address);
+		
+		}
+	}
+}
