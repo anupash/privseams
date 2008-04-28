@@ -2178,156 +2178,139 @@ int hip_handle_r2(struct hip_common *r2,
 	struct hip_context *ctx = NULL;
  	struct hip_esp_info *esp_info = NULL;
 	struct hip_spi_out_item spi_out_data;
-	int tfm, err = 0;
-	uint32_t spi_recvd, spi_in;
-	int retransmission = 0;
-        int * reg_types = NULL;
-        int type_count = 0;
-        
-
+	int err = 0, tfm = 0, retransmission = 0, type_count = 0;
+	int *reg_types = NULL;
+	uint32_t spi_recvd = 0, spi_in = 0;
+	
 #ifdef CONFIG_HIP_HI3
-	if( r2_info->hi3_in_use ) 
-	{
-		// In hi3 real addresses should already be in entry, received on r1 phase. 
-		// 
+	if( r2_info->hi3_in_use ) {
+		/* In hi3 real addresses should already be in entry, received on
+		   r1 phase. */
 		memcpy(r2_saddr, &entry->preferred_address, sizeof(struct in6_addr));
 		memcpy(r2_daddr, &entry->local_address, sizeof(struct in6_addr));
 	}
 #endif
-
-	_HIP_DEBUG("hip_handle_r2() invoked.\n");
 	if (entry->state == HIP_STATE_ESTABLISHED) {
 		retransmission = 1;
 		HIP_DEBUG("Retransmission\n");
 	} else {
 		HIP_DEBUG("Not a retransmission\n");
 	}
-
+	
 	/* assume already locked entry */
 	HIP_IFE(!(ctx = HIP_MALLOC(sizeof(struct hip_context), GFP_ATOMIC)), -ENOMEM);
 	memset(ctx, 0, sizeof(struct hip_context));
         ctx->input = r2;
-
+	
 #ifdef CONFIG_HIP_BLIND
 	if (use_blind) {
-	  HIP_IFEL(hip_blind_verify_r2(r2, entry), -1, "hip_blind_verify_host_id failed\n"); 
+		HIP_IFEL(hip_blind_verify_r2(r2, entry), -1,
+			 "hip_blind_verify_host_id() failed.\n"); 
 	}
 #endif
-
+	
         /* Verify HMAC */
 	if (entry->is_loopback) {
-		HIP_IFEL(hip_verify_packet_hmac2(r2, &entry->hip_hmac_out,
-						 entry->peer_pub), -1, 
-		 "HMAC validation on R2 failed\n");
+		HIP_IFEL(hip_verify_packet_hmac2(
+				 r2, &entry->hip_hmac_out, entry->peer_pub), -1,
+			 "HMAC validation on R2 failed.\n");
 	} else {
-		HIP_IFEL(hip_verify_packet_hmac2(r2, &entry->hip_hmac_in,
-						 entry->peer_pub), -1, 
-		 "HMAC validation on R2 failed\n");
+		HIP_IFEL(hip_verify_packet_hmac2(
+				 r2, &entry->hip_hmac_in, entry->peer_pub), -1,
+			 "HMAC validation on R2 failed.\n");
 	}
-
-	/* Assign a local private key to HA */
-	//HIP_IFEL(hip_init_our_hi(entry), -EINVAL, "Could not assign a local host id\n");
-
+	
 	/* Signature validation */
- 	HIP_IFEL(entry->verify(entry->peer_pub, r2), -EINVAL, "R2 signature verification failed\n");
-
+ 	HIP_IFEL(entry->verify(entry->peer_pub, r2), -EINVAL,
+		 "R2 signature verification failed.\n");
+	
         /* The rest */
  	HIP_IFEL(!(esp_info = hip_get_param(r2, HIP_PARAM_ESP_INFO)), -EINVAL,
-		 "Parameter SPI not found\n");
-
+		 "Parameter SPI not found.\n");
+	
 	spi_recvd = ntohl(esp_info->new_spi);
 	memset(&spi_out_data, 0, sizeof(struct hip_spi_out_item));
 	spi_out_data.spi = spi_recvd;
-	HIP_IFE(hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_OUT, &spi_out_data), -1);
-
+	HIP_IFE(hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_OUT, &spi_out_data),
+		-1);
+	
 	memcpy(&ctx->esp_out, &entry->esp_out, sizeof(ctx->esp_out));
 	memcpy(&ctx->auth_out, &entry->auth_out, sizeof(ctx->auth_out));
 	HIP_DEBUG("entry should have only one spi_in now, test\n");
 	spi_in = hip_hadb_get_latest_inbound_spi(entry);
 	tfm = entry->esp_transform;
-
-	HIP_DEBUG("src %d, dst %d\n", r2_info->src_port, r2_info->dst_port);
+	
+	HIP_DEBUG("R2 packet source port: %d, destination port %d.\n",
+		  r2_info->src_port, r2_info->dst_port);
 
 #ifdef CONFIG_HIP_BLIND
 	if (use_blind) {
-	  err = hip_add_sa(r2_daddr, r2_saddr,
-			   &entry->hit_our, &entry->hit_peer,
-			   &spi_recvd, tfm,
-			   &ctx->esp_out, &ctx->auth_out, 1,
-			   HIP_SPI_DIRECTION_OUT, 0, r2_info->src_port, r2_info->dst_port);
+		err = hip_add_sa(r2_daddr, r2_saddr, &entry->hit_our,
+				 &entry->hit_peer, &spi_recvd, tfm,
+				 &ctx->esp_out, &ctx->auth_out, 1,
+				 HIP_SPI_DIRECTION_OUT, 0, r2_info->src_port,
+				 r2_info->dst_port);
 	}
 #endif
-	HIP_DEBUG("entry->hip_transform: \n", entry->hip_transform);
 	if (!hip_blind_get_status()) {
-	  err = hip_add_sa(r2_daddr, r2_saddr,
-				 &ctx->input->hitr, &ctx->input->hits,
-				 &spi_recvd, tfm,
+		err = hip_add_sa(r2_daddr, r2_saddr, &ctx->input->hitr,
+				 &ctx->input->hits, &spi_recvd, tfm,
 				 &ctx->esp_out, &ctx->auth_out, 1,
-				 HIP_SPI_DIRECTION_OUT, 0, r2_info->src_port, r2_info->dst_port);
+				 HIP_SPI_DIRECTION_OUT, 0, r2_info->src_port,
+				 r2_info->dst_port);
 	}
-
-	/*
-	if (err == -EEXIST) {
-		HIP_DEBUG("SA already exists for the SPI=0x%x\n", spi_recvd);
-		HIP_DEBUG("TODO: what to do ? currently ignored\n");
-	} else 	if (err) {
-	*/
-
+	
 	if (err) {
-		HIP_ERROR("hip_add_sa failed, peer:dst (err=%d)\n", err);
-		HIP_ERROR("** TODO: remove inbound IPsec SA**\n");
+		/** @todo Remove inbound IPsec SA. */
+		HIP_ERROR("hip_add_sa() failed, peer:dst (err = %d).\n", err);
 		err = -1;
 		goto out_err;
 	}
-	/* XXX: Check for -EAGAIN */
-	HIP_DEBUG("set up outbound IPsec SA, SPI=0x%x (host)\n", spi_recvd);
-
+	/** @todo Check for -EAGAIN */
+	HIP_DEBUG("Set up outbound IPsec SA, SPI = 0x%x (host).\n", spi_recvd);
+	
 #ifdef CONFIG_HIP_ESCROW
-    if (hip_deliver_escrow_data(r2_daddr, r2_saddr, &ctx->input->hitr, 
-        &ctx->input->hits, &spi_recvd, tfm, &ctx->esp_out, 
-        HIP_ESCROW_OPERATION_ADD) != 0)
-    {  
-        HIP_DEBUG("Could not deliver escrow data to server\n");
-    }
+	if (hip_deliver_escrow_data(r2_daddr, r2_saddr, &ctx->input->hitr, 
+				    &ctx->input->hits, &spi_recvd, tfm,
+				    &ctx->esp_out, HIP_ESCROW_OPERATION_ADD)
+	    != 0) {  
+		HIP_DEBUG("Could not deliver escrow data to server.\n");
+	}
 #endif //CONFIG_HIP_ESCROW                          
-
-        /* source IPv6 address is implicitly the preferred
-	 * address after the base exchange */
-	err = hip_hadb_add_addr_to_spi(entry, spi_recvd, r2_saddr,
-				       1, 0, 1);
-	if (err)
-		HIP_ERROR("hip_hadb_add_addr_to_spi err=%d not handled\n", err);
+	
+        /* Source IPv6 address is implicitly the preferred address after the
+	   base exchange. */
+	err = hip_hadb_add_addr_to_spi(entry, spi_recvd, r2_saddr, 1, 0, 1);
+	if (err) {
+		HIP_ERROR("hip_hadb_add_addr_to_spi() err = %d not handled.\n",
+			  err);
+	}
+	
 	entry->default_spi_out = spi_recvd;
-	HIP_DEBUG("set default SPI out=0x%x\n", spi_recvd);
-	_HIP_DEBUG("add spi err ret=%d\n", err);
-	//if(IN6_IS_ADDR_V4MAPPED(r2_daddr))
-	//	err = hip_ipv4_devaddr2ifindex(r2_daddr);
-	//else
+	HIP_DEBUG("Set default SPI out = 0x%x\n", spi_recvd);
+		
 	err = hip_devaddr2ifindex(r2_daddr);
+	
 	if (err != 0) {
-	     HIP_DEBUG("ifindex=%d\n", err);
+		HIP_DEBUG("ifindex = %d\n", err);
 		hip_hadb_set_spi_ifindex(entry, spi_in, err);
-	} else
+	} else {
 		HIP_ERROR("Couldn't get device ifindex of address\n");
+	}
+	
 	err = 0;
 
         /***** LOCATOR PARAMETER ******/
 	//#ifndef CONFIG_HIP_HI3
-        if (entry->locator)
-            {
-                HIP_IFEL(hip_update_handle_locator_parameter(entry, 
-                         entry->locator, esp_info),
-                         -1, "hip_update_handle_locator_parameter failed\n");
-            }
-        else
-            HIP_DEBUG("entry->locator did not have locators from r1\n");
+        if (entry->locator) {
+                HIP_IFEL(hip_update_handle_locator_parameter(
+				 entry, entry->locator, esp_info), -1,
+			 "hip_update_handle_locator_parameter failed\n");
+	} else {
+		HIP_DEBUG("entry->locator did not have locators from r1\n");
+	}
 	//#endif /* CONFIG_HIP_HI3 */
-
-	/*
-	  HIP_DEBUG("clearing the address used during the bex\n");
-	  ipv6_addr_copy(&entry->bex_address, &in6addr_any);
-	*/
-        
+	
 	/* Registration of additional services. Check if we should expect
 	   REG_RESPONSE or REG_FAILED parameter */
 	
@@ -2336,17 +2319,17 @@ int hip_handle_r2(struct hip_common *r2,
         type_count = hip_get_incomplete_registrations(&reg_types, entry, 1, services); 
         if (type_count > 0) {
                 HIP_IFEL(hip_handle_registration_response(entry, r2), -1, 
-                        "Error handling reg_response\n"); 
+			 "Error handling reg_response\n"); 
         }
 
-	/* these will change SAs' state from ACQUIRE to VALID, and
-	 * wake up any transport sockets waiting for a SA */
-	//	hip_finalize_sa(&entry->hit_peer, spi_recvd);
-	//hip_finalize_sa(&entry->hit_our, spi_in);
-
+	/* These will change SAs' state from ACQUIRE to VALID, and wake up any
+	   transport sockets waiting for a SA. */
+	// hip_finalize_sa(&entry->hit_peer, spi_recvd);
+	// hip_finalize_sa(&entry->hit_our, spi_in);
+	
 	entry->state = HIP_STATE_ESTABLISHED;
 	hip_hadb_insert_state(entry);
-
+	
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	/* Check and remove the IP of the peer from the opp non-HIP database */
 	hip_oppipdb_delentry(&(entry->preferred_address));
@@ -2354,10 +2337,12 @@ int hip_handle_r2(struct hip_common *r2,
 	HIP_DEBUG("Reached ESTABLISHED state\n");
 	
  out_err:
-	if (ctx)
+	if (ctx) {
 		HIP_FREE(ctx);
-        if (reg_types)
+	}
+        if (reg_types) {
                 HIP_FREE(reg_types);
+	}
         return err;
 }
 

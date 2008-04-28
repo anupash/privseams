@@ -418,7 +418,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 				  "message.\n");
 			err = -1;
 			goto out_err;
-		} else if(reg_req == NULL) {
+		}else if(reg_req == NULL) {
 			HIP_ERROR("No REG_REQUEST parameter found from the "\
 				  "user message.\n");
 			err = -1;

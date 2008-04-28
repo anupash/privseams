@@ -17,7 +17,9 @@
 
 /** An array for storing all existing services. */
 hip_srv_t hip_services[HIP_TOTAL_EXISTING_SERVICES];
-/** A linked list for storing pending requests on the client side. */
+/** A linked list for storing pending requests on the client side.
+ *  @note This assumes a single threded model. We are not using mutexes here.
+ */
 hip_ll_t pending_requests;
 
 void hip_init_xxx_services()
@@ -216,10 +218,7 @@ int hip_handle_param_reg_info(hip_common_t *msg, hip_ha_t *entry)
 	}
 	
 	/* Get a pointer registration types and the type count. */
-	reg_types =
-		((uint8_t *) hip_get_param_contents_direct(reg_info)) +
-		sizeof(reg_info->min_lifetime) + sizeof(reg_info->max_lifetime);
-	
+	reg_types  = reg_info->reg_type;
 	type_count = hip_get_param_contents_len(reg_info) -
 		(sizeof(reg_info->min_lifetime) + sizeof(reg_info->max_lifetime));
 	
@@ -243,13 +242,13 @@ int hip_handle_param_reg_info(hip_common_t *msg, hip_ha_t *entry)
 					entry, HIP_HA_CTRL_PEER_RVS_CAPABLE);
 			}
 			break;
-		
+
+#ifdef CONFIG_HIP_ESCROW		
 		case HIP_SERVICE_ESCROW:
 			/* The escrow part is just a copy paste from the
 			   previous HIPL registration implementation. It is not
 			   tested to work. -Lauri */
 			HIP_INFO("Responder offers escrow service.\n");
-#ifdef CONFIG_HIP_ESCROW
 			HIP_KEA *kea;
 			
 			/* If we have requested for escrow service in I1, we
@@ -259,8 +258,8 @@ int hip_handle_param_reg_info(hip_common_t *msg, hip_ha_t *entry)
 				hip_hadb_set_peer_controls(
 					entry, HIP_HA_CTRL_PEER_ESCROW_CAPABLE);
 			}
-			/
-						kea = hip_kea_find(&entry->hit_our);
+			
+			kea = hip_kea_find(&entry->hit_our);
 			if (kea && kea->keastate == HIP_KEASTATE_REGISTERING) {
 				HIP_DEBUG("Registering to escrow service.\n");
 				hip_keadb_put_entry(kea);
@@ -272,9 +271,9 @@ int hip_handle_param_reg_info(hip_common_t *msg, hip_ha_t *entry)
 			} else {
 				HIP_DEBUG("Not doing escrow registration.\n");
 			}
-#endif /* CONFIG_HIP_ESCROW */			
+
 			break;
-				
+#endif /* CONFIG_HIP_ESCROW */				
 		case HIP_SERVICE_RELAY:
 			HIP_INFO("Responder offers relay service.\n");
 			/* If we have requested for relay service in I1, we
