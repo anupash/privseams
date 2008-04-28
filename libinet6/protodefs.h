@@ -252,6 +252,12 @@
 #define HIP_HA_CTRL_LOCAL_REQ_ESCROW     0x2000
 #define HIP_HA_CTRL_LOCAL_REQ_RELAY      0x4000
 #define HIP_HA_CTRL_LOCAL_REQ_RVS        0x8000
+/* Keep inside parentheses. */
+#define HIP_HA_CTRL_LOCAL_REQ_ALL        (\
+                                         HIP_HA_CTRL_LOCAL_REQ_ESCROW |\
+                                         HIP_HA_CTRL_LOCAL_REQ_RELAY |\
+                                         HIP_HA_CTRL_LOCAL_REQ_RVS\
+                                         )
 
 #define HIP_HA_CTRL_PEER_ESCROW_CAPABLE  0x2000 
 #define HIP_HA_CTRL_PEER_RELAY_CAPABLE   0x4000 

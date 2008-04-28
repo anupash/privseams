@@ -51,6 +51,9 @@ int hip_get_active_services(hip_srv_t *active_services,
 			    unsigned int *active_service_count);
 int hip_add_pending_request(hip_pending_request_t *request);
 int hip_del_pending_request(hip_pending_request_t *request);
+int hip_get_pending_requests(hip_ha_t *entry,
+			     hip_pending_request_t *requests[]);
+int hip_get_pending_request_count(hip_ha_t *entry);
 void hip_srv_info(const hip_srv_t *srv, char *status);
 
 int hip_handle_param_reg_info(hip_common_t *msg, hip_ha_t *entry);

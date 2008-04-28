@@ -170,8 +170,11 @@ int hip_del_pending_request(hip_pending_request_t *request)
 	int index = 0;
 	hip_ll_node_t *iter = NULL;
 	
+	/* Iterate through the linked list. We're deleting a node from the list
+	   even though we use an iterator here, but it's okay, since we do not
+	   use the iterator after the deletion. */
 	while((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
-		if(((hip_pending_request_t*)(iter->ptr))->entry
+		if(((hip_pending_request_t *)(iter->ptr))->entry
 		   == request->entry) {
 			
 			HIP_DEBUG("Deleting a pending request at index %u.\n", index);
@@ -185,9 +188,50 @@ int hip_del_pending_request(hip_pending_request_t *request)
 	return -1;
 }
 
+int hip_get_pending_requests(hip_ha_t *entry, hip_pending_request_t *requests[])
+{
+	if(requests == NULL) {
+		return -1;
+	}
+
+	hip_ll_node_t *iter = 0;
+	int request_count = 0;
+	
+	while((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
+		if(((hip_pending_request_t *)(iter->ptr))->entry
+		   == entry) {
+			requests[request_count] =
+				(hip_pending_request_t *)(iter->ptr);
+			request_count++;
+		}
+	}
+	
+	if(request_count == 0) {
+		return -1;
+	}
+			
+	return 0;
+}
+
+int hip_get_pending_request_count(hip_ha_t *entry)
+{
+	hip_ll_node_t *iter = 0;
+	int request_count = 0;
+	
+	while((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
+		if(((hip_pending_request_t *)(iter->ptr))->entry
+		   == entry) {
+			request_count++;
+		}
+	}
+
+	return request_count;
+}
+
 int hip_handle_param_reg_info(hip_common_t *msg, hip_ha_t *entry)
 {
 	struct hip_reg_info *reg_info = NULL;
+	//hip_pending_request_t *pending_request = NULL;
 	uint8_t *reg_types = NULL, reg_type = 0;
 	unsigned int type_count = 0;
 	int i = 0;
@@ -229,6 +273,11 @@ int hip_handle_param_reg_info(hip_common_t *msg, hip_ha_t *entry)
 		return 0;
 	}
 	
+	/*if((pending_request = hip_get_pending_request(entry)) != NULL)
+		HIP_DEBUG("Found pending request! :)\n");
+	else
+	HIP_DEBUG("Didn't found pending request! :(\n");*/
+
 	/* Loop through all the registration types found in REG_INFO parameter. */ 
 	for(i = 0; i < type_count; i++){
 		

@@ -642,6 +642,8 @@
  * @def HIP_HA_CTRL_LOCAL_REQ_RVS
  *      The host association has requested rendezvous service in a I1 or an
  *      UPDATE packet.
+ * @def HIP_HA_CTRL_LOCAL_REQ_ALL
+ *      An AND mask of every existing local request mask.
  * @def HIP_HA_CTRL_PEER_ESCROW_CAPABLE
  *      The peer has announced in a R1 or UPDATE packet that it offers escrow
  *      service.

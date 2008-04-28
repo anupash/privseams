@@ -623,53 +623,51 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	          hip_portpair_t *r1_info,
 		  struct hip_dh_public_value *dhpv)
 {
-	int err = 0, host_id_in_enc_len, written;
-	uint32_t spi_in = 0;
+	
 	hip_transform_suite_t transform_hip_suite, transform_esp_suite; 
+	struct hip_spi_in_item spi_in_data;
+	in6_addr_t daddr;
+	struct hip_param *param = NULL;
+	struct hip_diffie_hellman *dh_req = NULL;
+	struct hip_esp_info *esp_info = NULL;
+	hip_common_t *i2 = NULL;
 	char *enc_in_msg = NULL, *host_id_in_enc = NULL;
 	unsigned char *iv = NULL;
-	struct in6_addr daddr;
-	struct hip_esp_info *esp_info;
-	struct hip_common *i2 = NULL;
-	struct hip_param *param;
-	struct hip_diffie_hellman *dh_req;
-	struct hip_spi_in_item spi_in_data;
+	int err = 0, host_id_in_enc_len = 0, written = 0;
 	uint16_t mask = 0;
-	int type_count = 0, request_rvs = 0, request_escrow = 0;
-        int *reg_type = NULL;
-
+	uint32_t spi_in = 0;
+	
 	_HIP_DEBUG("hip_create_i2() invoked.\n");
 
 	HIP_ASSERT(entry);
 
-	/* allocate space for new I2 */
-	HIP_IFEL(!(i2 = hip_msg_alloc()), -ENOMEM, "Allocation of I2 failed\n")
-
-
+	/* Allocate space for a new I2 message. */
+	HIP_IFEL(!(i2 = hip_msg_alloc()), -ENOMEM, "Allocation of I2 failed\n");
+	
 	/* TLV sanity checks are are already done by the caller of this
 	   function. Now, begin to build I2 piece by piece. */
-
+	
 	/* Delete old SPDs and SAs, if present */
 	hip_hadb_delete_inbound_spi(entry, 0);
 	hip_hadb_delete_outbound_spi(entry, 0);
 
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status()) {
-	  HIP_DEBUG("Build blinded I2\n");
-	  mask |= HIP_PACKET_CTRL_BLIND;
-	  // Build network header by using blinded HITs
-	  entry->hadb_misc_func->
-	       hip_build_network_hdr(i2, HIP_I2, mask, &entry->hit_our_blind,
-				     &entry->hit_peer_blind);
+		HIP_DEBUG("Build blinded I2\n");
+		mask |= HIP_PACKET_CTRL_BLIND;
+		// Build network header by using blinded HITs
+		entry->hadb_misc_func->hip_build_network_hdr(
+			i2, HIP_I2, mask, &entry->hit_our_blind,
+			&entry->hit_peer_blind);
 	}
 #endif
-
+	
 	if (!hip_blind_get_status()) {
-	  HIP_DEBUG("Build normal I2\n");
-	  /* create I2 */
-	  entry->hadb_misc_func->
-	       hip_build_network_hdr(i2, HIP_I2, mask, &(ctx->input->hitr),
-				     &(ctx->input->hits));
+		HIP_DEBUG("Build normal I2.\n");
+		/* create I2 */
+		entry->hadb_misc_func->
+			hip_build_network_hdr(i2, HIP_I2, mask, &(ctx->input->hitr),
+					      &(ctx->input->hits));
 	}
 
 	/********** ESP_INFO **********/
@@ -880,35 +878,42 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
         &ctx->input->hitr, &spi_in, transform_esp_suite, &ctx->esp_in, 
         HIP_ESCROW_OPERATION_ADD) != 0)
     {  
-        HIP_DEBUG("Could not deliver escrow data to server\n");
+        HIP_DEBUG("Could not deliver escrow data to server.\n");
     }             
 #endif //CONFIG_HIP_ESCROW
-    
-    /* Check if the incoming R1 has a REG_REQUEST parameter. */
 
-    /* Add service types to which the current machine wishes to
-       register into the outgoing I2 packet. Each service type
-       should check here if the current machines hadb is in correct
-       state regarding to registering. This state is set before
-       sending the I1 packet to peer (registrar). */
-
-    // TODO: check also unregistrations
-    uint8_t services[HIP_TOTAL_EXISTING_SERVICES];
-    
-    type_count = hip_get_incomplete_registrations(&reg_type, entry, 1, services); 
-    
-    if (type_count > 0) {
-	 HIP_DEBUG("Adding REG_REQUEST parameter with %d reg types.\n", type_count);
-	 /** @todo Service lifetime value usage. Now requesting maximum lifetime
-	     (255 ~= 178 days) always */
-	 
-	 HIP_IFEL(hip_build_param_reg_request(i2, 255, services, type_count),
-		  -1, "Could not build REG_REQUEST parameter\n");
-	 
-	 /*HIP_IFEL(hip_build_param_reg_request(i2, 255, services, type_count, 1),
-	   -1, "Could not build REG_REQUEST parameter\n");*/
+    /* Check if we have requested any services. The request bits are set in
+       user.c. */
+    if(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_ALL) {
+	    int request_count = hip_get_pending_request_count(entry);
+	    if(request_count > 0) {
+		    int i = 0;
+		    uint8_t reg_types[request_count];
+		    hip_pending_request_t *requests[request_count];
+		    hip_get_pending_requests(entry, requests);
+		    
+		    /* Copy the reg_types to an array. */
+		    for(;i < request_count; i++) {
+			    reg_types[i] = requests[i]->reg_type;
+		    }
+		    
+		    HIP_IFEL(hip_build_param_reg_request(
+				     i2, requests[0]->lifetime, reg_types,
+				     request_count), -1,
+			     "Failed to build a REG_REQUEST parameter.\n");
+	    }
     }
-    
+
+    /* Old crap soon to be removed...
+    uint8_t services[HIP_TOTAL_EXISTING_SERVICES];
+    type_count = hip_get_incomplete_registrations(&reg_type, entry, 1, services); 
+    if (type_count > 0) {
+    HIP_DEBUG("Adding REG_REQUEST parameter with %d reg types.\n", type_count);
+    HIP_IFEL(hip_build_param_reg_request(i2, 255, services, type_count),
+    -1, "Could not build REG_REQUEST parameter\n");
+    }
+    */
+
     /******** NONCE *************************/
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status()) {
@@ -962,8 +967,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 	entry->esp_transform = transform_esp_suite;
 	HIP_DEBUG("Saving base exchange encryption data to entry \n");
-	HIP_DEBUG_HIT("our_hit: ", &entry->hit_our);
-	HIP_DEBUG_HIT("peer_hit: ", &entry->hit_peer);
+	HIP_DEBUG_HIT("Our HIT: ", &entry->hit_our);
+	HIP_DEBUG_HIT("Peer HIT: ", &entry->hit_peer);
 	/* Store the keys until we receive R2 */
 	HIP_IFEB(hip_store_base_exchange_keys(entry, ctx, 1), -1, HIP_UNLOCK_HA(entry));
 
@@ -984,11 +989,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	return err;
 }
 
-int hip_handle_r1(struct hip_common *r1,
-		  struct in6_addr *r1_saddr,
-		  struct in6_addr *r1_daddr,
-		  hip_ha_t *entry,
-		  hip_portpair_t *r1_info)
+int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
+		  hip_ha_t *entry, hip_portpair_t *r1_info)
 {
 	int err = 0, retransmission = 0, n_addrs = 0, loc_size = 0;
 	uint64_t solved_puzzle = 0, I = 0;
@@ -1004,32 +1006,31 @@ int hip_handle_r1(struct hip_common *r1,
 	hip_list_t *item = NULL, *tmp = NULL;
 	int ii = 0, use_ip4 = 1;
 #endif
-
 	_HIP_DEBUG("hip_handle_r1() invoked.\n");
-
+	
 	if (entry->state == HIP_STATE_I2_SENT) {
 		HIP_DEBUG("Retransmission\n");
 		retransmission = 1;
 	} else {
 		HIP_DEBUG("Not a retransmission\n");
 	}
-
-	HIP_IFEL(!(ctx = HIP_MALLOC(sizeof(struct hip_context), GFP_KERNEL)), -ENOMEM,
-		 "Could not allocate memory for context\n");
+	
+	HIP_IFEL(!(ctx = HIP_MALLOC(sizeof(struct hip_context), GFP_KERNEL)),
+		 -ENOMEM, "Could not allocate memory for context\n");
 	memset(ctx, 0, sizeof(struct hip_context));
 	ctx->input = r1;
-
+	
 	/* According to the section 8.6 of the base draft, we must first check
 	   signature. */
 	
-	/* Blinded R1 packets do not contain HOST ID parameters,
-	 * so the verification must be delayd to the R2 */
+	/* Blinded R1 packets do not contain HOST ID parameters, so the
+	 * verification must be delayed to the R2 */
 	if (!hip_blind_get_status()) {
 		/* Store the peer's public key to HA and validate it */
 		/** @todo Do not store the key if the verification fails. */
-		HIP_IFEL(!(peer_host_id = hip_get_param(r1, HIP_PARAM_HOST_ID)), -ENOENT,
-			 "No HOST_ID found in R1\n");
-	
+		HIP_IFEL(!(peer_host_id = hip_get_param(r1, HIP_PARAM_HOST_ID)),
+			 -ENOENT, "No HOST_ID found in R1\n");
+		
 		HIP_IFE(hip_init_peer(entry, r1, peer_host_id), -EINVAL); 
 		HIP_IFEL(entry->verify(entry->peer_pub, r1), -EINVAL,
 			 "Verification of R1 signature failed\n");
@@ -1205,13 +1206,13 @@ int hip_handle_r1(struct hip_common *r1,
 
 	/* R1 generation check */
 
-	/* we have problems with creating precreated R1s in reasonable
-	   fashion... so we don't mind about generations */
+	/* We have problems with creating precreated R1s in reasonable
+	   fashion... so we don't mind about generations. */
 	r1cntr = hip_get_param(r1, HIP_PARAM_R1_COUNTER);
-
+	
 	/* Do control bit stuff here... */
-
-	/* We must store the R1 generation counter, _IF_ it exists */
+	
+	/* We must store the R1 generation counter, _IF_ it exists. */
 	if (r1cntr) {
 		HIP_DEBUG("Storing R1 generation counter\n");
 		HIP_LOCK_HA(entry);
@@ -1219,15 +1220,16 @@ int hip_handle_r1(struct hip_common *r1,
 		HIP_UNLOCK_HA(entry);
 	}
 
-	/* solve puzzle: if this is a retransmission, we have to preserve
-	   the old solution */
+	/* Solve puzzle: if this is a retransmission, we have to preserve
+	   the old solution. */
 	if (!retransmission) {
 		struct hip_puzzle *pz = NULL;
-
+		
 		HIP_IFEL(!(pz = hip_get_param(r1, HIP_PARAM_PUZZLE)), -EINVAL,
 			 "Malformed R1 packet. PUZZLE parameter missing\n");
 		HIP_IFEL((solved_puzzle =
-			  entry->hadb_misc_func->hip_solve_puzzle(pz, r1, HIP_SOLVE_PUZZLE)) == 0, 
+			  entry->hadb_misc_func->hip_solve_puzzle(
+				  pz, r1, HIP_SOLVE_PUZZLE)) == 0, 
 			 -EINVAL, "Solving of puzzle failed\n");
 		I = pz->I;
 		entry->puzzle_solution = solved_puzzle;
@@ -1250,24 +1252,22 @@ int hip_handle_r1(struct hip_common *r1,
 	 * so the saving peer's HOST ID mus be delayd to the R2
 	 */
 	if (!hip_blind_get_status()) {
-	  /* Everything ok, save host id to HA */
-	  {
-	    char *str;
-	    int len;
-	    HIP_IFE(hip_get_param_host_id_di_type_len(peer_host_id, &str, &len) < 0, -1);
-	    HIP_DEBUG("Identity type: %s, Length: %d, Name: %s\n",
-		      str, len, hip_get_param_host_id_hostname(peer_host_id));
-	  }
+		/* Everything ok, save host id to HA */
+		char *str = NULL;
+		int len;
+		HIP_IFE(hip_get_param_host_id_di_type_len(
+				peer_host_id, &str, &len) < 0, -1);
+		HIP_DEBUG("Identity type: %s, Length: %d, Name: %s\n", str,
+			  len, hip_get_param_host_id_hostname(peer_host_id));
 	}
-
+	
  	err = entry->hadb_misc_func->
 	     hip_create_i2(ctx, solved_puzzle, r1_saddr, r1_daddr, entry,
 			   r1_info, dhpv);
 	
 	HIP_IFEL(err < 0, -1, "Creation of I2 failed\n");
 
-	if (entry->state == HIP_STATE_I1_SENT)
-	{
+	if (entry->state == HIP_STATE_I1_SENT) {
 		entry->state = HIP_STATE_I2_SENT;
 	}
 
@@ -2169,11 +2169,8 @@ int hip_receive_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
      return err;
 }
 
-int hip_handle_r2(struct hip_common *r2,
-		  struct in6_addr *r2_saddr,
-		  struct in6_addr *r2_daddr,
-		  hip_ha_t *entry,
-		  hip_portpair_t *r2_info)
+int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
+		  hip_ha_t *entry, hip_portpair_t *r2_info)
 {
 	struct hip_context *ctx = NULL;
  	struct hip_esp_info *esp_info = NULL;
