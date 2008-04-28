@@ -1,4 +1,3 @@
-
 #include "nlink.h"
 
 /* 
@@ -593,13 +592,11 @@ int hip_parse_src_addr(struct nlmsghdr *n, struct in6_addr *src_addr)
 	HIP_HEXDUMP("tb[RTA_SRC] : ", &tb[RTA_SRC],sizeof(struct rtattr));
 	//entry = (tb[RTA_SRC] ? RTA_SRC : RTA_PREFSRC);
 	addr.in6 = (struct in6_addr *) RTA_DATA(tb[2]);
-	entry=7;
+	entry = 7;
 	addr.in6 = (struct in6_addr *) RTA_DATA(tb[entry]);
-	if(r->rtm_family == AF_INET) {
-		HIP_DEBUG_LSI("addr.in = ", addr.in);
+	if(r->rtm_family == AF_INET){
 		IPV4_TO_IPV6_MAP(addr.in, src_addr);
-	        HIP_DEBUG_HIT("src_addr = ", src_addr);
-	} else
+	}else
 		memcpy(src_addr, addr.in6, sizeof(struct in6_addr));
 
  out_err:
@@ -688,12 +685,12 @@ int convert_ipv6_slash_to_ipv4_slash(char *ip, struct in_addr *ip4){
 		strcpy(aux_slash, slash);
              	*slash = 0;
 	}
-	HIP_DEBUG(".............>>>>>>>>>>>1. ip value is %s\n", ip);
+
 	inet_pton(AF_INET6, ip, &ip6_aux);
 
 	if (err = IN6_IS_ADDR_V4MAPPED(&ip6_aux)){
 		IPV6_TO_IPV4_MAP(&ip6_aux, ip4);
-		HIP_DEBUG(".............>>>>>>>>>>>------ ip4 value is %s\n", inet_ntoa(*ip4));
+		_HIP_DEBUG("ip4 value is %s\n", inet_ntoa(*ip4));
 	}
 	*slash = *aux_slash;
 
@@ -722,16 +719,13 @@ int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
 	char *res = NULL;
 
         memset(&req, 0, sizeof(req));
-	HIP_DEBUG("The ip address that we are going to modify is %s\n", ip);
 	if(convert_ipv6_slash_to_ipv4_slash(ip, &ip4)){
 		family = AF_INET;		
 		ip_is_v4 = 1;
 		lsi_total++;		
 		ip = strcat(inet_ntoa(ip4), HIP_LSI_FULL_PREFIX_STR);
 		sprintf(label, ":%d", lsi_total);
-		// Convertir ipv6 to ipv4
-		HIP_DEBUG("------------------------------------------Label is:%d\n", lsi_total);
-		HIP_DEBUG("------------------------------------------Label is:%s\n", ip);
+		HIP_DEBUG("Label %s:%d\n", ip, lsi_total);
 	}
 
 	req.n.nlmsg_len = NLMSG_LENGTH(sizeof(struct ifaddrmsg)); 
@@ -748,7 +742,7 @@ int hip_ipaddr_modify(struct rtnl_handle *rth, int cmd, int family, char *ip,
 		memset(res,'\0',size_dev+1);
 		strcat(res, dev);
 		strcat(res, label);
-		HIP_DEBUG("---------------------------------Name device inserted %s\n", res);
+		_HIP_DEBUG("Name device inserted %s\n", res);
 		addattr_l(&req.n, sizeof(req), IFA_LABEL, res, strlen(dev) + strlen(label)+1);		
 	}	
 
