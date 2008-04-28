@@ -31,6 +31,7 @@ void delete_all_addresses(void);
 int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg);
 int filter_address(struct sockaddr *addr, int ifindex);
 int hip_get_default_hit(struct in6_addr *hit);
+int hip_get_default_lsi(struct in_addr *lsi);
 
 void add_address_to_list(struct sockaddr *addr, int ifindex);
 #endif /* NETDEV_H */

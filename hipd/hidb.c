@@ -797,8 +797,9 @@ int hip_for_each_hi(int (*func)(struct hip_host_id_entry *entry, void *opaq), vo
 	list_for_each_safe(curr, iter, hip_local_hostid_db, c)
 	{
 		tmp = list_entry(curr);
-		HIP_HEXDUMP("Found HIT", &tmp->lhi.hit, 16);
-	
+		//HIP_HEXDUMP("Found HIT", &tmp->lhi.hit, 16);
+		HIP_DEBUG_HIT("Found HIT", &tmp->lhi.hit);
+		HIP_DEBUG_LSI("Found LSI", &tmp->lsi);
 		err = func(tmp, opaque);
 		if (err)
 		  goto out_err;
@@ -808,6 +809,45 @@ out_err:
 	HIP_READ_UNLOCK_DB(hip_local_hostid_db);
 
 	return (err);
+}
+
+struct hip_host_id_entry *hip_hidb_get_entry_by_lsi(
+     hip_db_struct_t *db, const struct in_addr *lsi)
+{
+	struct hip_host_id_entry *id_entry;
+	hip_list_t *item;
+	int c;
+
+	list_for_each(item, db, c) {
+		id_entry = list_entry(item);
+		if (!ipv4_addr_cmp(&id_entry->lsi, lsi)){
+		  return id_entry;
+		}
+	}
+	return NULL;
+}
+
+int hip_associate_default_hit_lsi(hip_hit_t *default_hit, hip_lsi_t *default_lsi){
+  int err = 0;
+  hip_lsi_t aux_lsi; 
+  struct hip_host_id_entry *tmp1;
+  struct hip_host_id_entry *tmp2;
+
+  //1. Check if default_hit already associated with default_lsi
+  err = hip_hidb_get_lsi_by_hit(default_hit, &aux_lsi);
+  
+  if (!err){
+    if(ipv4_addr_cmp(&aux_lsi, default_lsi)){
+      HIP_IFEL(!(tmp1 = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID, default_hit, HIP_ANY_ALGO, -1)),
+	       -1,"Default hit not found in hidb\n");
+      tmp2 = hip_hidb_get_entry_by_lsi(HIP_DB_LOCAL_HID, default_lsi);
+      memcpy(&tmp2->lsi, &tmp1->lsi, sizeof(tmp1->lsi));
+      memcpy(&tmp1->lsi, default_lsi, sizeof(tmp2->lsi));
+
+    }
+  }
+out_err:
+    return err;
 }
 
 //#ifdef CONFIG_HIP_BLIND

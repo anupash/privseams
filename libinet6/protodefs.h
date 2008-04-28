@@ -56,7 +56,7 @@
 #define HIP_LSI_PREFIX_LEN	24	/* bits */
 #define HIP_HIT_FULL_PREFIX_STR "/128"
 #define HIP_HIT_PREFIX_STR      "/28"
-#define HIP_LSI_FULL_PREFIX_STR "/32"
+#define HIP_LSI_FULL_PREFIX_STR "/24"
 #define HIP_LSI_PREFIX_STR	"/24"
 #define HIP_KHI_CONTEXT_ID_INIT { 0xF0,0xEF,0xF0,0x2F,0xBF,0xF4,0x3D,0x0F, \
                                   0xE7,0x93,0x0C,0x3C,0x6E,0x61,0x74,0xEA }

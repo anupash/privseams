@@ -1587,11 +1587,13 @@ int hip_conf_handle_handoff(struct hip_common *msg, int action,const char *opt[]
 int hip_get_all_hits(struct hip_common *msg,char *argv[])
 {	
      struct hip_tlv_common *current_param = NULL;
-     struct endpoint_hip *endp=NULL;
-     int err=0;
+     struct endpoint_hip *endp = NULL;
+     int err = 0;
      struct sockaddr_in6 addr;
      struct in6_addr *defhit;
+     struct in_addr *deflsi;
      struct hip_hadb_user_info_state *ha;
+     hip_tlv_type_t param_type;
 	
      if (strcmp(argv[1], "get") == 0)
      {
@@ -1620,9 +1622,17 @@ int hip_get_all_hits(struct hip_common *msg,char *argv[])
 	
 	       while((current_param = hip_get_next_param(msg, current_param)) != NULL)
 	       {
-		    defhit = (struct in6_addr *)hip_get_param_contents_direct(current_param);
-		    set_hit_prefix(defhit);
-		    HIP_INFO_HIT("default hi is ",defhit);
+		    param_type = hip_get_param_type(current_param);
+
+		    if (param_type == HIP_PARAM_HIT){
+		           defhit = (struct in6_addr *)hip_get_param_contents_direct(current_param);
+			   set_hit_prefix(defhit);
+			   HIP_INFO_HIT("default hi is ", defhit);
+		    }
+		    else if (param_type == HIP_PARAM_LSI){
+		           deflsi = (struct in_addr *)hip_get_param_contents_direct(current_param);
+			   HIP_DEBUG_LSI("default lsi is ", deflsi);
+		    }
 	       }
 	  }
      }

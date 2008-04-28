@@ -122,7 +122,8 @@ void hip_set_os_dep_variables()
  */
 int hipd_init(int flush_ipsec, int killold)
 {
-	hip_hit_t peer_hit;
+	hip_hit_t default_hit;
+	hip_lsi_t default_lsi;
 	int err = 0, fd, dhterr;
 	char str[64];
 	struct sockaddr_in6 daemon_addr;
@@ -309,15 +310,16 @@ int hipd_init(int flush_ipsec, int killold)
 	hip_load_configuration();
 	
 	HIP_IFEL(hip_set_lowcapability(), -1, "Failed to set capabilities\n");
+	
+	hip_get_default_hit(&default_hit);
+	hip_get_default_lsi(&default_lsi);
+	hip_associate_default_hit_lsi(&default_hit, &default_lsi);
 
 #ifdef CONFIG_HIP_HI3
 	if( hip_use_i3 ) 
-	{
-		hip_get_default_hit(&peer_hit);
-		hip_i3_init(&peer_hit);
-	}
+		hip_i3_init(&default_hit);
 #endif
-
+      
 out_err:
 	return err;
 }

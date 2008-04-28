@@ -856,28 +856,29 @@ static void *handle_ip_traffic(void *ptr) {
 					  HIP_DEBUG("It's LSI and outgoing packet\n");
 						HIP_DEBUG_LSI(" lsi source --- ",&iphdr->ip_src);
 						HIP_DEBUG_LSI(" lsi dest   --- ",&iphdr->ip_dst);
-						if (is_packet_reinjection(&iphdr->ip_dst)){
+						/*	if (is_packet_reinjection(&iphdr->ip_dst)){
 						  HIP_DEBUG("This is a packet reinjection!!!\n");
 						  allow_packet(hndl, m->packet_id);
-						}else{
+						  }else{*/
 						  firewall_trigger_outgoing_lsi(m, &iphdr->ip_src, &iphdr->ip_dst);
 						  drop_packet(hndl, m->packet_id);
-						}
+						  //}
 						break;
 					}
-					else if (iphdr->ip_p != IPPROTO_TCP)
-					 	firewall_traffic_treatment(hndl, m->packet_id);
+					else{ //if (iphdr->ip_p != IPPROTO_TCP)
+					  firewall_traffic_treatment(hndl, m->packet_id);
+					}
 				} 
 				else if(ipv6Traffic){
 				  HIP_DEBUG("IPV6 TRAFFIC \n");
 					if (ipv6_addr_is_hit(src_addr) && is_incoming_packet(packetHook)){
-						HIP_DEBUG("IPV6 TRAFFIC AND HIT RECEIVED\n");
+						HIP_DEBUG("ipv6 traffic and incoming packet\n");
 						firewall_trigger_incoming_hit(m, src_addr, dst_addr);
 						drop_packet(hndl, m->packet_id);
 						
 					}
-					else if(ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt != IPPROTO_TCP)
-						firewall_traffic_treatment(hndl, m->packet_id);
+					//else if(ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt != IPPROTO_TCP)
+					firewall_traffic_treatment(hndl, m->packet_id);
 				}
 
 			  /* OPPORTUNISTIC MODE HACKS */ 
@@ -892,6 +893,7 @@ static void *handle_ip_traffic(void *ptr) {
 					else
 						drop_packet(hndl, m->packet_id);
 				}
+				HIP_DEBUG("Opportunistic mode is defined \n");
 #endif /* CONFIG_HIP_OPPTCP */
 			}
 

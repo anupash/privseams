@@ -107,12 +107,13 @@ int hip_blind_find_local_hi(uint16_t *nonce, struct in6_addr *test_hit,
 /*lsi support*/
 int hip_add_lsi(hip_db_struct_t *db, const struct hip_host_id_entry *id_entry);
 int hip_hidb_exists_lsi(hip_lsi_t *lsi);
+struct hip_host_id_entry *hip_hidb_get_entry_by_lsi(hip_db_struct_t *db, const struct in_addr *lsi);
+int hip_associate_default_hit_lsi(hip_hit_t *default_hit, hip_lsi_t *default_lsi);
+int hip_hidb_get_lsi_by_hit(const hip_hit_t *our, hip_lsi_t *our_lsi);
 
 /* existence */
 int hip_hidb_hit_is_our(const hip_hit_t *src);
-/*----Test*/
-int hip_hidb_get_lsi_by_hit(const hip_hit_t *our, hip_lsi_t *our_lsi);
-/*----EndTest*/
+
 unsigned long hip_hidb_hash(const void *ptr);
 int hip_hidb_match(const void *ptr1, const void *ptr2);
 
