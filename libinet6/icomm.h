@@ -28,6 +28,11 @@
  * HIP socket options.
  * @{
  */
+#define HIP_SO_ROOT_MIN 			64
+#define HIP_SO_ROOT_MAX 			255
+#define HIP_SO_ANY_MIN 				1
+#define HIP_SO_ANY_MAX 				63
+
 #define SO_HIP_ADD_LOCAL_HI                     101
 #define SO_HIP_DEL_LOCAL_HI                     102
 #define SO_HIP_ADD_PEER_MAP_HIT_IP              103
