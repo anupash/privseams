@@ -1915,15 +1915,16 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 #endif
 
 	if (!use_blind) {
-	  err = hip_add_sa(i2_daddr, i2_saddr,
-			   &ctx->input->hitr, &ctx->input->hits,
-			   &spi_out, esp_tfm, 
-			   &ctx->esp_out, &ctx->auth_out,
-			   1, HIP_SPI_DIRECTION_OUT, 0, i2_info->dst_port, i2_info->src_port);
+		err = hip_add_sa(i2_daddr, i2_saddr, &ctx->input->hitr,
+				 &ctx->input->hits, &spi_out, esp_tfm,
+				 &ctx->esp_out, &ctx->auth_out, 1,
+				 HIP_SPI_DIRECTION_OUT, 0, i2_info->dst_port,
+				 i2_info->src_port);
 	}
 	if (err) {
-		HIP_ERROR("Failed to setup outbound SA with SPI=%d\n", spi_out);
-
+		HIP_ERROR("Failed to setup outbound SA with SPI = %d.\n",
+			  spi_out);
+		
 		/* delete all IPsec related SPD/SA for this entry*/
 		hip_hadb_delete_inbound_spi(entry, 0);
 		hip_hadb_delete_outbound_spi(entry, 0);
@@ -1931,66 +1932,58 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	}
 	
 	/* @todo Check if err = -EAGAIN... */
-	HIP_DEBUG("set up outbound IPsec SA, SPI=0x%x\n", spi_out);
+	HIP_DEBUG("Set up outbound IPsec SA, SPI=0x%x\n", spi_out);
 
 #ifdef CONFIG_HIP_BLIND
-    if (use_blind) {
-      HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_peer,
-				     &entry->hit_our,
-				     i2_saddr, i2_daddr, IPPROTO_ESP, 1, 1),
-	       -1, "Setting up SP pair failed\n");
-    }
+	if (use_blind) {
+		HIP_IFEL(hip_setup_hit_sp_pair(
+				 &entry->hit_peer, &entry->hit_our, i2_saddr,
+				 i2_daddr, IPPROTO_ESP, 1, 1), -1,
+			 "Setting up SP pair failed.\n");
+	}
 #endif
-    if (!use_blind) {
-	    HIP_IFEL(hip_setup_hit_sp_pair(&ctx->input->hits,
-					   &ctx->input->hitr,
-					   i2_saddr, i2_daddr, IPPROTO_ESP, 1, 1),
-		     -1, "Setting up SP pair failed\n");
-    }
+	if (!use_blind) {
+		HIP_IFEL(hip_setup_hit_sp_pair(
+				 &ctx->input->hits, &ctx->input->hitr,
+				 i2_saddr, i2_daddr, IPPROTO_ESP, 1, 1), -1,
+			 "Setting up SP pair failed.\n");
+	}
 
 	/* Source IPv6 address is implicitly the preferred address after the
 	   base exchange. */
 	HIP_IFEL(hip_hadb_add_addr_to_spi(entry, spi_out, i2_saddr, 1, 0, 1),
 		 -1,  "Failed to add an address to SPI list\n");
-
+	
 	memset(&spi_in_data, 0, sizeof(struct hip_spi_in_item));
 	spi_in_data.spi = spi_in;
 	spi_in_data.ifindex = hip_devaddr2ifindex(i2_daddr);
+	
 	if (spi_in_data.ifindex) {
-		HIP_DEBUG("ifindex=%d\n", spi_in_data.ifindex);
-	} else
-		HIP_ERROR("Couldn't get device ifindex of address\n");
-
+		HIP_DEBUG("spi_in_data.ifindex = %d.\n", spi_in_data.ifindex);
+	} else {
+		HIP_ERROR("Could not get device ifindex of address.\n");
+	}
+	
 	err = hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_IN, &spi_in_data);
 	if (err) {
 		HIP_UNLOCK_HA(entry);
-		HIP_ERROR("Adding of SPI failed\n");
+		HIP_ERROR("Adding of SPI failed. Not creating an R2 packet.\n");
 		goto out_err;
 	}
-
+	
 	entry->default_spi_out = spi_out;
-	HIP_DEBUG("set default SPI out=0x%x\n", spi_out);
-
-	
 	HIP_IFE(hip_store_base_exchange_keys(entry, ctx, 0), -1);
-
 	hip_hadb_insert_state(entry);
-	HIP_DEBUG("state %s\n", hip_state_str(entry->state));
-	HIP_IFEL(entry->hadb_misc_func->
-		 hip_create_r2(ctx, i2_saddr, i2_daddr, entry, i2_info), -1, 
-		 "Creation of R2 failed\n");
 	
-	/* change SA state from ACQ -> VALID, and wake up sleepers */
-	//hip_finalize_sa(&entry->hit_peer, spi_out);
-	//hip_finalize_sa(&entry->hit_our, spi_in);
-
-	/* we cannot do this outside (in hip_handle_i2) since we don't have
-	   the entry there and looking it up there would be unneccesary waste
-	   of cycles. */
-
-	HIP_DEBUG("state is %d\n", entry->state);
-
-
+	HIP_DEBUG("\nInserted a new host association state.\n"
+		  "\tHIP state: %s\n"\
+		  "\tDefault outgoing SPI 0x%x.\n"
+		  "\tCreating a R2 packet in response next.\n",
+		  hip_state_str(entry->state), entry->default_spi_out);
+	
+	HIP_IFEL(entry->hadb_misc_func->hip_create_r2(
+			 ctx, i2_saddr, i2_daddr, entry, i2_info), -1, 
+		 "Creation of R2 failed\n");
 
 #ifdef CONFIG_HIP_ESCROW
 	if (hip_deliver_escrow_data(
@@ -2000,72 +1993,87 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		HIP_DEBUG("Could not deliver escrow data to server\n");
 	}
 #endif //CONFIG_HIP_ESCROW
-	
-#ifdef CONFIG_HIP_RVS
+/*      #ifdef CONFIG_HIP_RVS
 	if (entry != NULL) {
-		if(hip_relay_get_status() == HIP_RELAY_ON) {
-			entry->state = HIP_STATE_ESTABLISHED;
-		} else {
-			if (entry->state == HIP_STATE_UNASSOCIATED) {
-				HIP_DEBUG("TODO: should wait for ESP here or "
-					  "wait for implementation specific time, "
-					  "moving to ESTABLISHED\n");
-				entry->state = HIP_STATE_ESTABLISHED;
-			} else if (entry->state == HIP_STATE_ESTABLISHED) {
-				HIP_DEBUG("Initiator rebooted, but base exchange completed\n");
-				HIP_DEBUG("Staying in ESTABLISHED.\n");
-			}
-		}
+	if(hip_relay_get_status() == HIP_RELAY_ON) {
+	entry->state = HIP_STATE_ESTABLISHED;
+	} else {
+	if (entry->state == HIP_STATE_UNASSOCIATED) {
+	entry->state = HIP_STATE_ESTABLISHED;
+	} else if (entry->state == HIP_STATE_ESTABLISHED) {
+	HIP_DEBUG("Initiator rebooted, but base "\
+	"exchange completed. Staying in "\
+	"ESTABLISHED.\n");
 	}
-#else
-	if (entry) {
-		if (entry->state == HIP_STATE_UNASSOCIATED) {
-			HIP_DEBUG("TODO: should wait for ESP here or "
-				  "wait for implementation specific time, "
-				  "moving to ESTABLISHED\n");
-			entry->state = HIP_STATE_ESTABLISHED;
-		} else if (entry->state == HIP_STATE_ESTABLISHED) {
-			HIP_DEBUG("Initiator rebooted, but base exchange completed\n");
-			HIP_DEBUG("Staying in ESTABLISHED.\n");
-		}
 	}
-#endif /* CONFIG_HIP_RVS */
+	}
+	#else
+	if (entry != NULL) {
+	if (entry->state == HIP_STATE_UNASSOCIATED) {
+			
+	entry->state = HIP_STATE_ESTABLISHED;
+	} else if (entry->state == HIP_STATE_ESTABLISHED) {
+	HIP_DEBUG("Initiator rebooted, but base "\
+	"exchange completed. Staying in "\
+	"ESTABLISHED.\n");
+	}
+	}
+	#endif */ /* CONFIG_HIP_RVS */
 	
+	/** @todo Should wait for ESP here or wait for implementation specific
+	    time. */
+	
+	/* As for the above todo item:
+
+	   Where is it said, that we should wait for ESP or implementation
+	   specific time here. This far we have succesfully verified and
+	   processed the I2 message (except the LOCATOR parameter) and sent an
+	   R2 as an response. We are here at state UNASSOCIATED. From Section
+	   4.4.2. of RFC 5201 we learn that if I2 processing was successful, we
+	   should "send R2 and go to R2-SENT" or if I2 processing failed, we
+	   should "stay at UNASSOCIATED". -Lauri 29.04.2008 */
+
+	entry->state = HIP_STATE_ESTABLISHED;
+
         /***** LOCATOR PARAMETER ******/
-	//#ifndef CONFIG_HIP_HI3
-        locator = hip_get_param(i2, HIP_PARAM_LOCATOR);
-        if (locator && esp_info) {
+	/* Why do we process the LOCATOR parameter only after R2 has been sent?
+	   -Lauri 29.04.2008. */
+	locator = hip_get_param(i2, HIP_PARAM_LOCATOR);
+        
+	if (locator != NULL && esp_info != NULL) {
                 HIP_IFEL(hip_update_handle_locator_parameter(
 				 entry, locator, esp_info), -1,
 			 "hip_update_handle_locator_parameter() failed.\n");
 	} else {
-		HIP_DEBUG("I2 did not have LOCATOR or ESP_INFO parameter.\n");
+		HIP_DEBUG("Both LOCATOR and ESP_INFO parameters were missing "\
+			  "from the incoming I2 packet.\n");
 	}
 	
 	HIP_DEBUG("Reached %s state\n", hip_state_str(entry->state));
-	//#endif /* CONFIG_HIP_HI3 */
-
+	
  out_err:
 	/* 'ha' is not NULL if hip_receive_i2() fetched the HA for us. In that
 	   case we must not release our reference to it. Otherwise, if 'ha' is
 	   NULL, then we created the HIP HA in this function and we should free
 	   the reference. */
-	if(!ha && entry) {
+	/* 'entry' cannot be NULL here anymore since it has been used in this
+	   function directly without NULL check. -Lauri. */
+	if(ha == NULL && entry != NULL) {
 		/* unlock the entry created in this function */
 		HIP_UNLOCK_HA(entry);
 		hip_put_ha(entry);
 	}
-	if (tmp_enc)
+	if (tmp_enc != NULL)
 		free(tmp_enc);
-	if (ctx->dh_shared_key)
+	if (ctx->dh_shared_key != NULL)
 		free(ctx->dh_shared_key);
-	if (ctx)
+	if (ctx != NULL)
 		free(ctx);
-	if (plain_local_hit)
+	if (plain_local_hit != NULL)
 		free(plain_local_hit);
-	if (plain_peer_hit)
+	if (plain_peer_hit != NULL)
 		free(plain_peer_hit);
-
+	
 	return err;
 }
 

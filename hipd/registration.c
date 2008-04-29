@@ -229,7 +229,6 @@ int hip_get_pending_request_count(hip_ha_t *entry)
 int hip_handle_param_reg_info(hip_common_t *msg, hip_ha_t *entry)
 {
 	struct hip_reg_info *reg_info = NULL;
-	//hip_pending_request_t *pending_request = NULL;
 	uint8_t *reg_types = NULL, reg_type = 0;
 	unsigned int type_count = 0;
 	int i = 0;
@@ -270,11 +269,6 @@ int hip_handle_param_reg_info(hip_common_t *msg, hip_ha_t *entry)
 			 "due to transient conditions.\n");
 		return 0;
 	}
-	
-	/*if((pending_request = hip_get_pending_request(entry)) != NULL)
-		HIP_DEBUG("Found pending request! :)\n");
-	else
-	HIP_DEBUG("Didn't found pending request! :(\n");*/
 
 	/* Loop through all the registration types found in REG_INFO parameter. */ 
 	for(i = 0; i < type_count; i++){

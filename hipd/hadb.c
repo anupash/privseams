@@ -216,28 +216,24 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 {
 	hip_hastate_t st;
 	hip_ha_t *tmp;
-
+	
 	HIP_DEBUG("hip_hadb_insert_state() invoked.\n");
-
+	
 	/* assume already locked ha */
-
+	
 	HIP_ASSERT(!(ipv6_addr_any(&ha->hit_peer)));
-
+	
 	st = ha->hastate;
 
-	if (!ipv6_addr_any(&ha->hit_peer) && !(st & HIP_HASTATE_HITOK))
-	{
+	if (!ipv6_addr_any(&ha->hit_peer) && !(st & HIP_HASTATE_HITOK)) {
 		HIP_HEXDUMP("ha->hit_our is: ", &ha->hit_our, 16);
 		HIP_HEXDUMP("ha->hit_peer is: ", &ha->hit_peer, 16);
 		tmp = hip_ht_find(hadb_hit, ha);
-		if (!tmp)
-		{
+		if (tmp == NULL) {
 			hip_ht_add(hadb_hit, ha);
 			st |= HIP_HASTATE_HITOK;
 			HIP_DEBUG("New state added\n");
-		}
-		else
-		{
+		} else {
 			hip_db_put_ha(tmp, hip_hadb_delete_state);
 			HIP_DEBUG("HIT already taken\n");
 		}
