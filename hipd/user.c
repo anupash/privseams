@@ -39,9 +39,68 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		HIP_ERROR("HIP socket option was invalid\n");
 		goto out_err;
 	}
-
+	
 	msg_type = hip_get_msg_type(msg);
 	HIP_DEBUG("Message type %d\n", msg_type);
+      
+        /* if port < 1024 the root operator is allowed for every operation 
+           otherwise it is non-root and we have to check what is allowed. */
+
+	/* (((struct sockaddr_in6 *)(&msg->msg_name))->sin6_family == AF_UNIX */
+	
+	/*if ((strcmp(???,HIP_AGENTADDR_PATH) == 0) && (src->sin6_family == AF_UNIX))
+	{
+		HIP_DEBUG("Operation is allowed.\n");
+	}		
+	else*/ 
+        if (src->sin6_port > 1023)
+	{
+		switch(msg_type)
+		{
+		case HIP_SO_ANY_MIN:
+			break;
+		case HIP_SO_ANY_MAX:
+			break;
+		case SO_HIP_GET_PEER_HIT:
+			break;
+		case SO_HIP_GET_HA_INFO:
+			break;
+		case SO_HIP_GET_HITS:
+			break;	
+		case SO_HIP_GET_PEER_HIT_FROM_FIREWALL:
+			break;
+		case SO_HIP_ADD_PEER_MAP_HIT_IP:
+			break;
+		case SO_HIP_DEL_PEER_MAP_HIT_IP:
+			break;
+		case SO_HIP_SET_MY_EID:
+			break;
+		case SO_HIP_SET_PEER_EID:
+			break;
+		case SO_HIP_NULL_OP:
+			break;
+		case SO_HIP_QUERY_OPPORTUNISTIC_MODE:
+			break;
+		case SO_HIP_ANSWER_OPPORTUNISTIC_MODE_QUERY:
+			break;
+		case SO_HIP_SET_PSEUDO_HIT:
+			break;
+		case SO_HIP_QUERY_IP_HIT_MAPPING:
+			break;             
+		case SO_HIP_ANSWER_IP_HIT_MAPPING_QUERY:
+			break;      
+		case SO_HIP_SET_PEER_HIT:
+			break;                     
+		case SO_HIP_DEFAULT_HIT:
+			break;                      
+		case SO_HIP_TRIGGER_BEX:
+			break;
+		default:
+			HIP_ERROR("The operation isn't allowed.\n");
+			goto out_err;
+		}
+	}
+	
 	switch(msg_type)
 	{
 	case SO_HIP_ADD_LOCAL_HI:
