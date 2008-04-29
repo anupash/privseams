@@ -65,13 +65,48 @@ int hip_daemon_connect(int hip_user_sock, struct hip_common *msg) {
 }
 
 int hip_send_recv_daemon_info(struct hip_common *msg) {
-	int hip_user_sock = 0, err = 0, n, len;
+	int hip_user_sock = 0, err = 0, n, len, port = 0;
+
+	struct sockaddr_in6 addr;
+        addr.sin6_family = AF_INET6;
+        addr.sin6_addr = in6addr_loopback;
+
+	/* Displays all debugging messages. */
+	HIP_DEBUG("Handling DEBUG ALL user message.\n");
+	HIP_IFEL(hip_set_logdebug(LOGDEBUG_ALL), -1,
+			 "Error when setting daemon DEBUG status to ALL\n");
 
 	HIP_IFE(((hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0)) < 0), -1);
 
+	err = 0;
+	for(port=1023; port--; (port > 25 && err != EACCES)) 
+	{
+		addr.sin6_port = htons(port);
+		err = bind(hip_user_sock,(struct sockaddr *)&addr, sizeof(struct sockaddr_in6));
+	}
+
+	if (err == -1) {
+		HIP_ERROR("Error bind() wasn't succesful.\n");
+		err = -1;
+		goto out_err;
+	}
+	else
+	{
+		HIP_INFO("Trying bind()\n", port);
+		_HIP_DEBUG("bind() to port %d was succesful.\n");
+
+	}
+
+	if (port == 26) {
+		HIP_ERROR("All low ports were occupied?\n");
+		err = -1;
+		goto out_err;
+	}
+	
+	
 	HIP_IFEL(err = hip_daemon_connect(hip_user_sock, msg), -1,
 		 "Sending of msg failed (no rcv)\n");
-
+	
 	len = hip_get_msg_total_len(msg);
 	n = send(hip_user_sock, msg, len, 0);
 	if (n < len) {
