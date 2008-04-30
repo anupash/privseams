@@ -1,5 +1,5 @@
 Name: hipl
-Version: 1.0.3
+Version: 1.0.4
 Release: 1
 Summary: HIP IPsec key management and mobility daemon.
 URL: http://infrahip.hiit.fi/hipl/
@@ -97,10 +97,13 @@ make DESTDIR=%{buildroot} install
 install -m 700 test/packaging/rh-init.d-hipd %{buildroot}/etc/rc.d/init.d/hipd
 install -m 644 doc/HOWTO.txt %{buildroot}/doc
 
+%post lib
+/sbin/ldconfig 
+
 %post core
-sudo /sbin/chkconfig --add hipd
-sudo /sbin/chkconfig --level 2 hipd on
-sudo /sbin/service hipd start
+/sbin/chkconfig --add hipd
+/sbin/chkconfig --level 2 hipd on
+/sbin/service hipd start
 
 %preun core
 /sbin/service hipd stop
@@ -122,6 +125,13 @@ rm -rf %{buildroot}
 
 %files tools
 %{prefix}/sbin/hipconf
+%{prefix}/bin/myasn.py
+%{prefix}/bin/parse-key-3.py
+%{prefix}/bin/dnsproxy.py
+%{prefix}/bin/hosts.py
+%{prefix}/bin/pyip6.py
+%{prefix}/bin/util.py
+%defattr(755,root,root)
 
 %files test
 %{prefix}/bin/conntest-client

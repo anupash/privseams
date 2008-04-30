@@ -1,6 +1,9 @@
 #! /bin/sh
 # /etc/init.d/hipd: start and stop the HIP daemon
 
+#DAEMON="/usr/sbin/hipd"
+#OPTIONS="-bk"
+
 HIPD_OPTS="-bk"
 #PIDFILE=/var/run/hipd.pid
 PID=`pidof -o $$ hipd`
@@ -28,6 +31,7 @@ case "$1" in
   start)
         echo -n "Starting hipd"
 	start-stop-daemon --start --quiet --exec /usr/sbin/hipd -- $HIPD_OPTS
+        #$DAEMON $OPTIONS
         echo "."
 	;;
   stop)
