@@ -344,7 +344,7 @@ int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
 		 peer_name, port_name);
 	
 	HIP_INFO("Please input some text to be sent to '%s'.\n"\
-		 "Empty row or \"CTRL+d\" sends data.\n", peer_name);
+		 "Empty row or \"CTRL+d\" twice sends data.\n", peer_name);
 	
 	/* Read user input from the standard input. */
 	while((c = getc(stdin)) != EOF && (datalen < IP_MAXPACKET))
