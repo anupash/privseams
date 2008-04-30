@@ -20,7 +20,7 @@
  * @return zero on success, or negative error value on error.
  * @see    hip_so.
  */ 
-int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
+int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src, const struct sockaddr_un *buf)
 {
 	hip_hit_t *hit, *src_hit, *dst_hit;
 	struct in6_addr *src_ip, *dst_ip;
@@ -43,17 +43,17 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 	msg_type = hip_get_msg_type(msg);
 	HIP_DEBUG("Message type %d\n", msg_type);
       
-        /* if port < 1024 the root operator is allowed for every operation 
-           otherwise it is non-root and we have to check what is allowed. */
+	/* if the src is a AF_UNIX socket and the name is HIP_AGENTADDR_PATH. Then all operations are allowed. but if port < 1024 the root operator is allowed for every operation  otherwise it is non-root and we have to check what is allowed. */
 
 	/* (((struct sockaddr_in6 *)(&msg->msg_name))->sin6_family == AF_UNIX */
-	
-	/*if ((strcmp(???,HIP_AGENTADDR_PATH) == 0) && (src->sin6_family == AF_UNIX))
+	/* /agent/connhipd.c:     strcpy(agent_addr.sun_path, HIP_AGENTADDR_PATH); */
+	/* struct sockaddr_un {char sun_path[108]; } */
+
+	if ((strcmp(*buf->sun_path,HIP_AGENTADDR_PATH) == 0) && (src->sin6_family == AF_UNIX))
 	{
 		HIP_DEBUG("Operation is allowed.\n");
 	}		
-	else*/ 
-        if (src->sin6_port > 1023)
+	else if (src->sin6_port > 1023)
 	{
 		switch(msg_type)
 		{
