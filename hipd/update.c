@@ -2967,7 +2967,7 @@ int hip_peer_learning(struct hip_esp_info * esp_info,
 	HIP_DEBUG_HIT("Peer learning: Did not find the address,"
 		      " adding it", src_ip);
 	HIP_IFE(hip_hadb_add_addr_to_spi(entry, spi_out->spi, src_ip,
-					 0, 0, 0), -1);
+					 0, 0, 0, NULL), -1);
 	//lifetime is 0 in above figure out what it should be
 	return (0);	
 out_err:
