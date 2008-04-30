@@ -21,7 +21,12 @@ class Global:
     def __init__(gp):
         gp.resolv_conf = '/etc/resolv.conf'
         gp.hostsnames = []
+	gp.server_ip = '127.0.0.1' # xx fixme
+	gp.server_port = 53
+	gp.bind_ip = '127.0.0.1'
+	gp.bind_port = 53
         return
+
     def hosts_recheck(gp):
         for h in gp.hosts:
             h.recheck()
@@ -41,20 +46,20 @@ class Global:
         util.init_wantdown()
         fout = sys.stdout
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        IP = os.environ['IP']
-        PORT = int(os.environ['PORT'])
-        s.bind((IP,PORT))
+        #IP = os.environ['IP']
+        #PORT = int(os.environ['PORT'])
+        s.bind((gp.bind_ip,gp.bind_port))
 
-        server = os.environ['SERVER']
-        serverport = int(os.environ['SERVERPORT'])
+ 	#server = os.environ['SERVER']
+        #serverport = int(os.environ['SERVERPORT'])
 
         args0 = {'server': '127.0.0.1',
                 }
 
-        d2 = DNS.DnsRequest(server=server,port=serverport,timeout=0.2)
+        d2 = DNS.DnsRequest(server=gp.server_ip,port=gp.server_port,timeout=0.2)
 
         s2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s2.connect((server,serverport))
+        s2.connect((gp.server_ip,gp.server_port))
 
         while not util.wantdown():
             gp.hosts_recheck()
@@ -124,12 +129,15 @@ def main(argv):
     gp = Global()
     try:
         opts, args = getopt.getopt(argv[1:],
-                                   'hf:c:H:',
+                                   'hf:c:H:s:p:l:i:',
                                    ['help',
                                     'file=',
                                     'count=',
                                     'hosts=',
-                                    'resolv-conf=',
+                                    'server=',
+                                    'serverport=',
+                                    'ip=',
+                                    'port=',
                                     ])
     except getopt.error, msg:
         usage(1, msg)
@@ -145,6 +153,14 @@ def main(argv):
             gp.hostsnames.append(arg)
         elif opt in ('--resolv-conf',):
             gp.resolv_conf = arg
+        elif opt in ('-s', '--server'):
+            gp.server_ip = arg
+        elif opt in ('-p', '--serverport'):
+            gp.server_port = int(arg)
+        elif opt in ('-i', '--ip'):
+            gp.bind_ip = arg
+        elif opt in ('-l', '--port'):
+            gp.bind_port = int(arg)
 
     gp.doit(args)
         

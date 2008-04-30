@@ -3,7 +3,7 @@
 $using_hip = 0;
 $domain = $_SERVER['REMOTE_ADDR'];
 $server_hit = $_SERVER['SERVER_ADDR'];
-if (substr($domain, 0, 6) == "2001:7")
+if (substr($domain, 0, 6) == "2001:1")
 {
 	$using_hip = 1;
 }
