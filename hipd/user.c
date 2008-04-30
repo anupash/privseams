@@ -20,20 +20,39 @@
  * @return zero on success, or negative error value on error.
  * @see    hip_so.
  */ 
-int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src, const struct sockaddr_un *buf)
+int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr *originator)
 {
+	typedef union {
+		struct sockaddr_in6 in6;
+		struct sockaddr_un un;
+        } src;
+
 	hip_hit_t *hit, *src_hit, *dst_hit;
 	struct in6_addr *src_ip, *dst_ip;
 	hip_ha_t *entry = NULL;
 	int err = 0, msg_type, n = 0, len = 0, state=0;
 	hip_ha_t * server_entry = NULL;
 	HIP_KEA * kea = NULL;
-	int send_response = (src ? 1 : 0);
+	int send_response = 0;
+
+	int root_port = 0;	
+	
+	int is_un = 0;
+
+	memcpy((struct sockaddr_un *)(&src.un), originator, hip_sockaddr_len(originator));
+
+	if (src.sin6_port < 1024)
+	 root_port = 1;
+	else
+	 root_port = 0;
+
+	is_un = ((originator->sa_family == AF_UNIX) ? 1 : 0);
 
 	HIP_DEBUG("handling user msg of family=%d from port=%d\n",
-		  src->sin6_family, src->sin6_port);
+		  src.sin6_family, src.sin6_port);
 
 	err = hip_check_userspace_msg(msg);
+
 	if (err)
 	{
 		HIP_ERROR("HIP socket option was invalid\n");
@@ -49,11 +68,11 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src, 
 	/* /agent/connhipd.c:     strcpy(agent_addr.sun_path, HIP_AGENTADDR_PATH); */
 	/* struct sockaddr_un {char sun_path[108]; } */
 
-	if ((strcmp(*buf->sun_path,HIP_AGENTADDR_PATH) == 0) && (src->sin6_family == AF_UNIX))
+	if (root_port || ((strcmp(&src.un.sun_path,HIP_AGENTADDR_PATH) == 0) && is_un))
 	{
-		HIP_DEBUG("Operation is allowed.\n");
+		HIP_DEBUG("The operation is allowed.\n");
 	}		
-	else if (src->sin6_port > 1023)
+	else
 	{
 		switch(msg_type)
 		{
