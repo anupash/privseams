@@ -558,7 +558,7 @@ int hipd_main(int argc, char *argv[])
 
 			if (hip_read_user_control_msg(hip_user_sock, hipd_msg, &app_src))
 				HIP_ERROR("Reading user msg failed\n");
-			else err = hip_handle_user_msg(hipd_msg, &app_src);
+			else err = hip_handle_user_msg(hipd_msg, &app_src, &app_src);
 		}
                 /* DHT SOCKETS HANDLING */
                 if (hip_opendht_inuse == SO_HIP_DHT_ON && hip_opendht_sock_fqdn != -1) {
