@@ -12,6 +12,14 @@
 
 #define PISA_RANDOM_LEN 16
 
+union pisa_puzzle_hash {
+	u8 sha[HIP_AH_SHA_LEN];
+	struct {
+		uint64_t random;
+		u8 opaque[6];
+	} pz;
+};
+
 static char pisa_random_data[2][PISA_RANDOM_LEN];
 
 /**
@@ -78,11 +86,18 @@ static int pisa_insert_nonce(struct midauth_packet *p)
  */
 static int pisa_insert_puzzle(struct midauth_packet *p)
 {
-	int err = 0;
+	union pisa_puzzle_hash hash;
 
-	err = midauth_add_puzzle_m(p, 3, 4, "puzzle", 0xABCDABCDABCDABCDLL);
-out_err:
-	return err;
+	/* here we switch order of initiator and receiver to obtain an other
+	 * SHA1 hash */
+	pisa_create_nonce_hash(&p->hip->hitr, &p->hip->hits, 1, hash.sha);
+
+	/* @todo FIXME BEGIN --- for testing purposes only */
+	midauth_add_puzzle_m(p, 3, 4, "puzzle", 0xABCDABCDABCDABCDLL);
+	midauth_add_puzzle_m(p, 3, 4, "abcdef", 0x0123456789ABCDEFLL);
+	/* @todo FIXME END --- for testing purposes only */
+
+	return midauth_add_puzzle_m(p, 3, 4, hash.pz.opaque, hash.pz.random);
 }
 
 /**
@@ -96,7 +111,6 @@ out_err:
  */
 static int pisa_check_nonce(struct midauth_packet *p)
 {
-	int err = 0;
 	struct hip_tlv_common *nonce;
 	u8 sha[2][HIP_AH_SHA_LEN], *nonce_data;
 	int nonce_len;
@@ -125,7 +139,7 @@ static int pisa_check_nonce(struct midauth_packet *p)
 				return 0;
 		}
 
-		nonce = hip_get_next_param(p->hip, (struct hip_tlv_common *)nonce);
+		nonce = hip_get_next_param(p->hip, nonce);
 	}
 
 	return -1;
@@ -139,25 +153,42 @@ static int pisa_check_nonce(struct midauth_packet *p)
  */
 static int pisa_check_solution(struct midauth_packet *p)
 {
-	int err = 0;
 	struct hip_solution_m *solution;
+	union pisa_puzzle_hash hash[2];
 
-	/* @todo find our solution out of multiple items */
+	pisa_create_nonce_hash(&p->hip->hits, &p->hip->hitr, 1, hash[0].sha);
+	pisa_create_nonce_hash(&p->hip->hits, &p->hip->hitr, 1, hash[1].sha);
 
 	solution = (struct hip_solution_m *)
 	           hip_get_param(p->hip, HIP_PARAM_SOLUTION_M);
 
-	HIP_IFEL(!solution, -1, "No PISA solution found.\n");
+	while (solution) {
+		/* loop over all HIP_PARAM_SOLUTION_M */
+		if (hip_get_param_type(solution) != HIP_PARAM_SOLUTION_M)
+			break;
 
-	HIP_IFEL(midauth_verify_solution_m(p->hip, solution), -1, "PISA solution was wrong.");
+		if ((!memcmp(solution->opaque, hash[1].pz.opaque, 6)
+		      && solution->I == hash[1].pz.random) ||
+		    (!memcmp(solution->opaque, hash[0].pz.opaque, 6)
+		      && solution->I == hash[0].pz.random)) {
+			if (midauth_verify_solution_m(p->hip, solution) == 0)
+				return 0;
+		}
 
-	HIP_DEBUG("PISA solution was correct.\n");
+		solution = (struct hip_solution_m *) hip_get_next_param(p->hip, 
+		             (struct hip_tlv_common *) solution);
+	}
 
-out_err:
-	return err;
+	return -1;
 }
 
-int pisa_handler_i2(struct midauth_packet *p)
+/**
+ * Insert a PISA nonce and a PISA puzzle into the packet.
+ *
+ * @param p packet to modify
+ * @return verdict, either NF_ACCEPT or NF_DROP
+ */
+static int pisa_handler_i2(struct midauth_packet *p)
 {
 	int verdict = NF_ACCEPT;
 
@@ -167,15 +198,25 @@ int pisa_handler_i2(struct midauth_packet *p)
 	return verdict;
 }
 
-int pisa_handler_r2(struct midauth_packet *p)
+/**
+ * Check for a PISA nonce and a PISA puzzle in the packet.
+ *
+ * @param p packet to check
+ * @return verdict, either NF_ACCEPT or NF_DROP
+ */
+static int pisa_handler_r2(struct midauth_packet *p)
 {
 	int verdict = NF_ACCEPT;
 
-	pisa_check_solution(p);
 	if (pisa_check_nonce(p) == 0)
 		HIP_DEBUG("A PISA nonce was accepted.\n");
 	else
 		HIP_DEBUG("No PISA nonce was accepted.\n");
+
+	if (pisa_check_solution(p) == 0)
+		HIP_DEBUG("A PISA solution was accepted.\n");
+	else
+		HIP_DEBUG("No PISA solution was accepted.\n");
 
 	return verdict;
 }
