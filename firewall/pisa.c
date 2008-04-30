@@ -183,6 +183,30 @@ static int pisa_check_solution(struct midauth_packet *p)
 }
 
 /**
+ * Accept a connection via PISA. Update firewall to allow further packages to
+ * pass through.
+ *
+ * @param p packet that belongs to that connection
+ */
+static void pisa_accept_connection(struct midauth_packet *p)
+{
+	/* @todo: FIXME - implement this stub */
+	HIP_INFO("PISA accepted packet.\n");
+}
+
+/**
+ * Reject a connection via PISA. Update firewall to allow no further packages
+ * to pass through.
+ *
+ * @param p packet that belongs to that connection
+ */
+static void pisa_reject_connection(struct midauth_packet *p)
+{
+	/* @todo: FIXME - implement this stub */
+	HIP_INFO("PISA rejected packet.\n");
+}
+
+/**
  * Insert a PISA nonce and a PISA puzzle into the packet.
  *
  * @param p packet to modify
@@ -206,17 +230,21 @@ static int pisa_handler_i2(struct midauth_packet *p)
  */
 static int pisa_handler_r2(struct midauth_packet *p)
 {
-	int verdict = NF_ACCEPT;
+	int verdict = NF_DROP, nonce = 0, solution = 0;
 
-	if (pisa_check_nonce(p) == 0)
-		HIP_DEBUG("A PISA nonce was accepted.\n");
-	else
-		HIP_DEBUG("No PISA nonce was accepted.\n");
+	nonce = pisa_check_nonce(p);
+	solution = pisa_check_solution(p);
 
-	if (pisa_check_solution(p) == 0)
-		HIP_DEBUG("A PISA solution was accepted.\n");
-	else
-		HIP_DEBUG("No PISA solution was accepted.\n");
+	if (nonce != 0 || solution != 0) {
+		/* disallow further communication if either nonce or solution
+		 * were not correct */
+		pisa_reject_connection(p);
+		verdict = NF_DROP;
+	} else {
+		/* allow futher communication otherwise */
+		pisa_accept_connection(p);
+		verdict = NF_ACCEPT;
+	}
 
 	return verdict;
 }
