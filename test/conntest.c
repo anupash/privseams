@@ -249,7 +249,7 @@ int hip_connect_func(struct addrinfo *peer_ai, int *sock){
 	for(ai = peer_ai; ai != NULL; ai = ai->ai_next) {
 		
 		/* Currently only IPv6 socket structures are supported. */
-		if (ai->ai_family != AF_INET || ai->ai_family != AF_INET6) {
+		if (!(ai->ai_family == AF_INET || ai->ai_family == AF_INET6)) {
 			HIP_INFO("Trying to connect to a non-inet address "\
 				 "family address. Skipping.\n");
 			continue;
