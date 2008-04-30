@@ -156,7 +156,7 @@ static int pisa_check_solution(struct midauth_packet *p)
 	struct hip_solution_m *solution;
 	union pisa_puzzle_hash hash[2];
 
-	pisa_create_nonce_hash(&p->hip->hits, &p->hip->hitr, 1, hash[0].sha);
+	pisa_create_nonce_hash(&p->hip->hits, &p->hip->hitr, 0, hash[0].sha);
 	pisa_create_nonce_hash(&p->hip->hits, &p->hip->hitr, 1, hash[1].sha);
 
 	solution = (struct hip_solution_m *)
@@ -228,8 +228,8 @@ void pisa_init(struct midauth_handlers *h)
 	h->i2 = pisa_handler_i2;
 	h->r2 = pisa_handler_r2;
 	h->u1 = midauth_handler_accept;
-	h->u2 = midauth_handler_accept;
-	h->u3 = midauth_handler_accept;
+	h->u2 = pisa_handler_i2;
+	h->u3 = pisa_handler_r2;
 
 	pisa_generate_random();
 	pisa_generate_random();
