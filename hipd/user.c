@@ -22,11 +22,6 @@
  */ 
 int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr *originator)
 {
-	typedef union {
-		struct sockaddr_in6 in6;
-		struct sockaddr_un un;
-        } src;
-
 	hip_hit_t *hit, *src_hit, *dst_hit;
 	struct in6_addr *src_ip, *dst_ip;
 	hip_ha_t *entry = NULL;
@@ -34,22 +29,25 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr *originato
 	hip_ha_t * server_entry = NULL;
 	HIP_KEA * kea = NULL;
 	int send_response = 0;
-
+	union {
+		struct sockaddr_in6 in6;
+		struct sockaddr_un un;
+        } src;
 	int root_port = 0;	
-	
 	int is_un = 0;
-
-	memcpy((struct sockaddr_un *)(&src.un), originator, hip_sockaddr_len(originator));
-
-	if (src.sin6_port < 1024)
-	 root_port = 1;
-	else
-	 root_port = 0;
 
 	is_un = ((originator->sa_family == AF_UNIX) ? 1 : 0);
 
+	memcpy(&src.un, originator, hip_sockaddr_len(originator));
+
+	if (!is_un && src.in6.sin6_port < 1024)
+		root_port = 1;
+	else
+		root_port = 0;
+
 	HIP_DEBUG("handling user msg of family=%d from port=%d\n",
-		  src.sin6_family, src.sin6_port);
+		  (is_un ? 0 : src.in6.sin6_family),
+		  (is_un ? 0 : src.in6.sin6_port));
 
 	err = hip_check_userspace_msg(msg);
 
