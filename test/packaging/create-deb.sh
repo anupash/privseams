@@ -8,7 +8,8 @@ MAJOR=1
 MINOR=0
 VERSION="$MAJOR.$MINOR"
 RELEASE=4
-SUFFIX="-$VERSION-$RELEASE"
+REVISION=/usr/bin/lsb_release -c | /usr/bin/cut -f 2
+SUFFIX="-$VERSION-$RELEASE-$REVISION"
 NAME=hipl
 NAMEGPL=libhiptool
 
