@@ -8,7 +8,8 @@ MAJOR=1
 MINOR=0
 VERSION="$MAJOR.$MINOR"
 RELEASE=4
-REVISION=/usr/bin/lsb_release -c | /usr/bin/cut -f 2
+REVISION=`/usr/bin/lsb_release -c | /usr/bin/awk '{print $2}'`
+echo $REVISION
 SUFFIX="-$VERSION-$RELEASE-$REVISION"
 NAME=hipl
 NAMEGPL=libhiptool
@@ -29,7 +30,7 @@ SRCDIR=${PKGDIR_SRC}/${NAME}${SUFFIX}
 HIPL=$PWD
 
 POSTFIX="deb"
-TMPNAME="${VERSION}-${RELEASE}-${DEBARCH}"
+TMPNAME="${VERSION}-${RELEASE}-$REVISION-${DEBARCH}"
 if dpkg --print-architecture|grep armel;then TMPNAME="${VERSION}-${RELEASE}-armel"; fi
 PKGNAME="${NAME}-${TMPNAME}.${POSTFIX}"
 TMP=""
