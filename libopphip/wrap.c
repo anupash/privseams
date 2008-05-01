@@ -209,7 +209,7 @@ inline int hip_wrapping_is_applicable(const struct sockaddr *sa, hip_opp_socket_
 	if (!(entry->protocol == 0 ||
 	      entry->protocol == IPPROTO_TCP ||
 	      entry->protocol == IPPROTO_UDP ||
-	      entry->protocol == IPPROTO_ICMPV4 ||
+	      entry->protocol == IPPROTO_ICMP ||
 	      entry->protocol == IPPROTO_ICMPV6))
 		return 0;	
 
@@ -222,7 +222,7 @@ inline int hip_wrapping_is_applicable(const struct sockaddr *sa, hip_opp_socket_
 		return 0;
 
 	if(entry->type == SOCK_RAW){
-		if(!(entry->protocol == IPPROTO_ICMPV4 ||
+		if(!(entry->protocol == IPPROTO_ICMP ||
 		     entry->protocol == IPPROTO_ICMPV6))
 			return 0;
 	}
