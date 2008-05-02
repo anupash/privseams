@@ -8,19 +8,24 @@ MAJOR=1
 MINOR=0
 VERSION="$MAJOR.$MINOR"
 RELEASE=4
-REVISION=`/usr/bin/lsb_release -c | /usr/bin/awk '{print $2}'`
-echo $REVISION
-SUFFIX="-$VERSION-$RELEASE-$REVISION"
-NAME=hipl
-NAMEGPL=libhiptool
 
 DEBARCH="i386"
 if uname -m|grep x86_64; then DEBARCH=amd64; fi
 # if uname -m|grep arm*; then DEBARCH=armel; fi 
 if dpkg --print-architecture|grep armel;then DEBARCH=armel;fi
 
-DEBIAN=${DEBARCH}/DEBIAN
+if [ $DEBARCH = "armel" ]; then
+SUFFIX="-$VERSION-$RELEASE"
+else
+REVISION=`/usr/bin/lsb_release -c | /usr/bin/awk '{print $2}'`
+echo $REVISION
+SUFFIX="-$VERSION-$RELEASE-$REVISION"
+fi
 
+NAME=hipl
+NAMEGPL=libhiptool
+
+DEBIAN=${DEBARCH}/DEBIAN
 DEBIANGPL=$DEBARCH/DEBIAN-hiptool
 CORPORATE=
 PKGROOT=$PWD/test/packaging
@@ -30,7 +35,12 @@ SRCDIR=${PKGDIR_SRC}/${NAME}${SUFFIX}
 HIPL=$PWD
 
 POSTFIX="deb"
+if [ $DEBARCH = "armel" ]; then
+TMPNAME="${VERSION}-${RELEASE}-${DEBARCH}"
+else
 TMPNAME="${VERSION}-${RELEASE}-$REVISION-${DEBARCH}"
+fi
+
 if dpkg --print-architecture|grep armel;then TMPNAME="${VERSION}-${RELEASE}-armel"; fi
 PKGNAME="${NAME}-${TMPNAME}.${POSTFIX}"
 TMP=""
