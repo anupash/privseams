@@ -573,7 +573,6 @@ int firewall_send_incoming_pkt(struct in6_addr *src_hit, struct in6_addr *dst_hi
 				HIP_DEBUG_LSI("dst@ ",&(sock_dst4->sin_addr));
 			  	tcp = (struct tcphdr *)msg;
 
-				sa_size = sizeof(struct sockaddr_in);
 				msg = (u8 *) HIP_MALLOC((len + sizeof(struct ip)), 0);
 				memset(msg, 0, (len + sizeof(struct ip)));
 
@@ -583,25 +582,15 @@ int firewall_send_incoming_pkt(struct in6_addr *src_hit, struct in6_addr *dst_hi
 			}	
 			break;
 		case IPPROTO_ICMP:
-		        HIP_DEBUG(" IPPROTO_ICMP v4\n");
-			firewall_raw_sock = firewall_raw_sock_icmp_v4;
+		        HIP_DEBUG(" IPPROTO_ICMP\n");
+
 			HIP_DEBUG_LSI("src@ ",&(sock_src4->sin_addr));
 			HIP_DEBUG_LSI("dst@ ",&(sock_dst4->sin_addr));
-			icmp = (struct tcphdr *)msg;
 
-			sa_size = sizeof(struct sockaddr_in);
-			msg = (u8 *) HIP_MALLOC((len + sizeof(struct ip)), 0);
-			memset(msg, 0, (len + sizeof(struct ip)));
-
-		   	icmp->checksum = htons(0);
-			icmp->checksum = inchksum(icmp, len);		
-			memcpy((msg+sizeof(struct ip)), (u8*)icmp, len);
-			break;
-
-		        HIP_DEBUG("IPPROTO_ICMP\n");
 			if (is_ipv6){
 				HIP_DEBUG(".............. IPPROTO_icmp v6\n");
 			  	firewall_raw_sock = firewall_raw_sock_icmp_v6;
+				msg = (u8 *) HIP_MALLOC((len + 40), 0);//40 sizeof ip6header
 			  	((struct icmp6hdr*)msg)->icmp6_cksum = htons(0);
 			  	((struct icmp6hdr*)msg)->icmp6_cksum = ipv6_checksum(IPPROTO_ICMPV6, &sock_src6->sin6_addr, 
 								     	     &sock_dst6->sin6_addr, msg, len);
@@ -612,7 +601,6 @@ int firewall_send_incoming_pkt(struct in6_addr *src_hit, struct in6_addr *dst_hi
 				HIP_DEBUG_LSI("dst@ ",&(sock_dst4->sin_addr));
 			  	icmp = (struct icmphdr *)msg;
 
-				sa_size = sizeof(struct sockaddr_in);
 				msg = (u8 *) HIP_MALLOC((len + sizeof(struct ip)), 0);
 				memset(msg, 0, (len + sizeof(struct ip)));
 
@@ -624,14 +612,16 @@ int firewall_send_incoming_pkt(struct in6_addr *src_hit, struct in6_addr *dst_hi
 		case IPPROTO_ICMPV6:
 		        HIP_DEBUG(".............. IPPROTO_icmp v6\n");
 			if (is_ipv6){
-			  firewall_raw_sock = firewall_raw_sock_icmp_v6;
-			  icmpv6 = ((struct icmp6hdr*)msg);
-			  icmpv6->icmp6_cksum = htons(0);
-			  icmpv6->icmp6_cksum = ipv6_checksum(IPPROTO_ICMPV6, &sock_src6->sin6_addr, 
-			 			     	    &sock_dst6->sin6_addr, icmpv6, len);
-			  memcpy((msg+sizeof(struct ip6_hdr)), (u8*)icmpv6, len);
+			        HIP_DEBUG(".............. IPPROTO_icmp6 v6\n");
+				firewall_raw_sock = firewall_raw_sock_icmp_v6;
+				icmpv6 = ((struct icmp6hdr*)msg);
+				icmpv6->icmp6_cksum = htons(0);
+				icmpv6->icmp6_cksum = ipv6_checksum(IPPROTO_ICMPV6, &sock_src6->sin6_addr, 
+			 			     	    	    &sock_dst6->sin6_addr, icmpv6, len);
+				memcpy((msg+sizeof(struct ip6_hdr)), (u8*)icmpv6, len);
 			}
 			else{
+			        HIP_DEBUG(".............. IPPROTO_icmp6 v4\n");
 			        firewall_raw_sock = firewall_raw_sock_icmp_v4;
 				HIP_DEBUG_LSI("src@ ",&(sock_src4->sin_addr));
 				HIP_DEBUG_LSI("dst@ ",&(sock_dst4->sin_addr));
@@ -708,7 +698,6 @@ int firewall_send_outgoing_pkt(struct in6_addr *src_hit, struct in6_addr *dst_hi
 {
         int err, dupl, try_again, sent, sa_size;
 	int firewall_raw_sock = 0, is_ipv6 = 0, on = 1;
-	struct udphdr *udp = NULL;
 	struct ip *iphdr = NULL;
 
 	struct sockaddr_storage src, dst;
@@ -780,7 +769,6 @@ int firewall_send_outgoing_pkt(struct in6_addr *src_hit, struct in6_addr *dst_hi
 			  	firewall_raw_sock = firewall_raw_sock_udp_v4;
 				HIP_DEBUG_LSI("src@ ",&(sock_src4->sin_addr));
 				HIP_DEBUG_LSI("dst@ ",&(sock_dst4->sin_addr));
-			  	udp = (struct udphdr *)(msg + 40);
 			}
 			break;
 		case IPPROTO_ICMP:
@@ -789,6 +777,8 @@ int firewall_send_outgoing_pkt(struct in6_addr *src_hit, struct in6_addr *dst_hi
 			        HIP_DEBUG("............... IPPROTO_ICMP v6\n");
 				HIP_DEBUG_HIT("hit_src", &sock_src6->sin6_addr);
 				HIP_DEBUG_HIT("hit_dst", &sock_dst6->sin6_addr);
+				HIP_DEBUG("icmp6_type: %d  icmp6_code:%d\n", 
+					  ((struct icmp6hdr*)msg)->icmp6_type,((struct icmp6hdr*)msg)->icmp6_code);
 				firewall_raw_sock = firewall_raw_sock_icmp_v6;
 				((struct icmp6hdr*)msg)->icmp6_cksum = htons(0);
 				((struct icmp6hdr*)msg)->icmp6_cksum = ipv6_checksum(IPPROTO_ICMPV6, &sock_src6->sin6_addr, 
@@ -800,6 +790,8 @@ int firewall_send_outgoing_pkt(struct in6_addr *src_hit, struct in6_addr *dst_hi
 			firewall_raw_sock = firewall_raw_sock_icmp_v4;
 			((struct icmphdr*)msg)->checksum = htons(0);
 			((struct icmphdr*)msg)->checksum = inchksum(msg, len);
+			HIP_DEBUG("icmp_type:%d icmp_code:%d \n", 
+				  ((struct icmphdr*)msg)->type, ((struct icmphdr*)msg)->code);
 	                break;
 		default:
 		        HIP_DEBUG("No protocol family found\n");

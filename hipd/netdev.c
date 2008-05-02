@@ -1171,8 +1171,8 @@ int hip_get_default_lsi(struct in_addr *lsi){
 
         rtnl_tab_initialize("/etc/iproute2/rt_dsfield",rtnl_rtdsfield_tab, 256);
 	memset(&lsi_tmpl, 0, sizeof(lsi_tmpl));
-	//set_lsi_prefix(&lsi_tmpl);
-	inet_aton("192.0.0.10", &lsi_tmpl);
+	set_lsi_prefix(&lsi_tmpl);
+	//inet_aton("192.0.0.10", &lsi_tmpl);
 	IPV4_TO_IPV6_MAP(&lsi_tmpl, &lsi_addr);
 	HIP_IFEL(hip_iproute_get(&hip_nl_route, &lsi_aux6, &lsi_addr, NULL, NULL, family, idxmap),
 		 -1,"Finding ip route failed\n");

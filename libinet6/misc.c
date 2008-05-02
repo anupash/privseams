@@ -1866,6 +1866,8 @@ int hip_trigger_is_bex_established(struct in6_addr **src_hit, struct in6_addr **
 
      HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
 
+     hip_msg_init(msg);
+
      HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0), -1,
 	      "Building of daemon header failed\n");
 

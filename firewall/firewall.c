@@ -852,30 +852,31 @@ static void *handle_ip_traffic(void *ptr) {
 				}
       			} else {
 				if (ipv4Traffic){
-					if(IS_LSI((iphdr->ip_dst).s_addr) && is_outgoing_packet(packetHook)){
-					  HIP_DEBUG("It's LSI and outgoing packet\n");
+					if (IS_LSI((iphdr->ip_dst).s_addr) && is_outgoing_packet(packetHook)){
+						HIP_DEBUG("It's LSI and outgoing packet\n");
 						HIP_DEBUG_LSI(" lsi source --- ",&iphdr->ip_src);
 						HIP_DEBUG_LSI(" lsi dest   --- ",&iphdr->ip_dst);
-						/*	if (is_packet_reinjection(&iphdr->ip_dst)){
-						  HIP_DEBUG("This is a packet reinjection!!!\n");
-						  allow_packet(hndl, m->packet_id);
-						  }else{*/
-						  firewall_trigger_outgoing_lsi(m, &iphdr->ip_src, &iphdr->ip_dst);
-						  drop_packet(hndl, m->packet_id);
-						  //}
+						if (is_packet_reinjection(&iphdr->ip_dst)){
+							HIP_DEBUG("This is a packet reinjection!!!\n");
+							firewall_traffic_treatment(hndl, m->packet_id);
+						}else{
+							HIP_DEBUG(" indev_name %s \n", m->indev_name);
+							HIP_DEBUG(" outdev_name %s \n", m->outdev_name);
+						  	firewall_trigger_outgoing_lsi(m, &iphdr->ip_src, &iphdr->ip_dst);
+						  	drop_packet(hndl, m->packet_id);
+						}
 						break;
 					}
 					else{ //if (iphdr->ip_p != IPPROTO_TCP)
-					  firewall_traffic_treatment(hndl, m->packet_id);
+						firewall_traffic_treatment(hndl, m->packet_id);
 					}
 				} 
 				else if(ipv6Traffic){
-				  HIP_DEBUG("IPV6 TRAFFIC \n");
+					HIP_DEBUG("IPV6 TRAFFIC \n");
 					if (ipv6_addr_is_hit(src_addr) && is_incoming_packet(packetHook)){
 						HIP_DEBUG("ipv6 traffic and incoming packet\n");
 						firewall_trigger_incoming_hit(m, src_addr, dst_addr);
-						drop_packet(hndl, m->packet_id);
-						
+						drop_packet(hndl, m->packet_id);	
 					}
 					//else if(ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt != IPPROTO_TCP)
 					firewall_traffic_treatment(hndl, m->packet_id);
@@ -887,12 +888,8 @@ static void *handle_ip_traffic(void *ptr) {
 					examine_incoming_packet(hndl, m->packet_id, packet_hdr, type);
 				else if(is_outgoing_packet(packetHook))
 					examine_outgoing_packet(hndl, m->packet_id, packet_hdr, type);
-				else{
-					if(accept_normal_traffic)
-						allow_packet(hndl, m->packet_id);
-					else
-						drop_packet(hndl, m->packet_id);
-				}
+				else
+					firewall_traffic_treatment(hndl, m->packet_id);
 				HIP_DEBUG("Opportunistic mode is defined \n");
 #endif /* CONFIG_HIP_OPPTCP */
 			}
@@ -909,7 +906,7 @@ static void *handle_ip_traffic(void *ptr) {
 	}while (1);
 
 out_err:
-	HIP_DEBUG("We are going out, this is finishing....\n");
+
 	//if (hip_common)
 		free(hip_common);
 	free(src_addr);
@@ -936,9 +933,10 @@ void firewall_traffic_treatment(struct ipq_handle *hndl, unsigned long packetId)
 }
 
 
-int is_packet_reinjection(struct in_addr *ip_src){
-  HIP_DEBUG_LSI("is_packet already reinjected with lsi dst",ip_src);
-  return hip_find_local_lsi(ip_src);
+int is_packet_reinjection(struct in_addr *ip_src)
+{
+	HIP_DEBUG_LSI("is_packet already reinjected with lsi dst",ip_src);
+	return hip_find_local_lsi(ip_src);
 }
 
 int firewall_trigger_incoming_hit(ipq_packet_msg_t *m, struct in6_addr *ip_src, struct in6_addr *ip_dst)
@@ -979,7 +977,7 @@ int firewall_trigger_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *ip_src, s
 	        HIP_DEBUG("Firewall_db HIT ???? %d \n", entry_peer->bex_state);
 		HIP_IFEL(entry_peer->bex_state == -1, -1, "Base Exchange Failed");
 	  	if(entry_peer->bex_state)
-		  reinject_packet(entry_peer->hit_our, entry_peer->hit_peer, m, 4, 0);
+			reinject_packet(entry_peer->hit_our, entry_peer->hit_peer, m, 4, 0);
 	}else{
 	        //Check if bex is already established: Server case
 	        int state_ha = hip_trigger_is_bex_established(&src_hit, &dst_hit, ip_src, ip_dst);
@@ -1040,9 +1038,9 @@ int reinject_packet(struct in6_addr src_hit, struct in6_addr dst_hit, ipq_packet
 
 	//HIP_DUMP_MSG(msg);
 	if (incoming)
-	  err = firewall_send_incoming_pkt(&src_hit, &dst_hit, msg, packet_length, protocol);
+		err = firewall_send_incoming_pkt(&src_hit, &dst_hit, msg, packet_length, protocol);
 	else
-	   err = firewall_send_outgoing_pkt(&src_hit, &dst_hit, msg, packet_length, protocol);
+		err = firewall_send_outgoing_pkt(&src_hit, &dst_hit, msg, packet_length, protocol);
 	HIP_DEBUG("After sendin the packet to the stack again \n");
 	return err;	
 }
