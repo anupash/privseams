@@ -115,7 +115,7 @@ init_files ()
     if [ $TMP = "lib" ]; then
 	echo '#!/bin/sh' > $PKGDIR/DEBIAN/postinst
 	chmod a+rx  $PKGDIR/DEBIAN/postinst
-	echo ldconfig >> $PKGDIR/DEBIAN/postinst
+	echo "ldconfig" >> $PKGDIR/DEBIAN/postinst
     	#for f in postinst;do
 	#	cp $DEBIAN/$f "$PKGDIR/DEBIAN" 
     	#done
