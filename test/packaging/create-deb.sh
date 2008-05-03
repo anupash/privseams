@@ -113,11 +113,14 @@ init_files ()
     fi
 
     if [ $TMP = "lib" ]; then
-    	for f in postinst;do
-		cp $DEBIAN/$f "$PKGDIR/DEBIAN" 
-    	done
-	sed -i '2,10d' $PKGDIR\/DEBIAN\/postinst
-        sed -i '$a\ldconfig\' $PKGDIR\/DEBIAN\/postinst
+	echo '#!/bin/sh' > $PKGDIR/DEBIAN/postinst
+	chmod a+rx  $PKGDIR/DEBIAN/postinst
+	echo ldconfig >> $PKGDIR/DEBIAN/postinst
+    	#for f in postinst;do
+	#	cp $DEBIAN/$f "$PKGDIR/DEBIAN" 
+    	#done
+	#sed -i '2,10d' $PKGDIR\/DEBIAN\/postinst
+        #sed -i '$a\ldconfig\' $PKGDIR\/DEBIAN\/postinst
     fi
 
     for f in control changelog copyright;do
