@@ -11,8 +11,7 @@ update-rc.d hipd defaults
 #/etc/init.d/hipd start 
 #pidof hipd 
 #/etc/init.d/hipd restart
- 
-invoke-rc.d hipd start 
+invoke-rc.d hipd start
  
 
 
