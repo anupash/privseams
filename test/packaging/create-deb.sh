@@ -106,7 +106,7 @@ init_files ()
     set -e
     mkdir -p "$PKGDIR/DEBIAN"
     
-    if [ $TMP = "core" ]; then
+    if [ $TMP = "daemon" ]; then
     	for f in preinst postinst prerm postrm;do
 		cp $DEBIAN/$f "$PKGDIR/DEBIAN" 
     	done
@@ -184,8 +184,8 @@ copy_and_package_files ()
     PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
     create_sub_package;
 
-    TMP="core"
-    #hipl-core hipd: depends on hipl-lib
+    TMP="daemon"
+    #hipl-daemon hipd: depends on hipl-lib
     DEBLIB="$NAME-lib"
     init_files;
     
@@ -227,8 +227,8 @@ copy_and_package_files ()
     create_sub_package;
 
     TMP="tools"
-    #hipl-tools (depends on hipl-lib and hipl-core)
-    DEBLIB="$NAME-lib, $NAME-core"
+    #hipl-tools (depends on hipl-lib and hipl-daemon)
+    DEBLIB="$NAME-lib, $NAME-daemon"
     init_files;
 
     echo "** Making directory to '$PKGDIR'"
@@ -253,7 +253,7 @@ copy_and_package_files ()
     create_sub_package;
    
     TMP="test"
-    DEBLIB="$NAME-lib, $NAME-core"
+    DEBLIB="$NAME-lib, $NAME-daemon"
     init_files;
     
     echo "** Making directory to '$PKGDIR'"
@@ -277,7 +277,7 @@ copy_and_package_files ()
     create_sub_package;
 
     TMP="agent"
-    DEBLIB="$NAME-lib, $NAME-core"
+    DEBLIB="$NAME-lib, $NAME-daemon"
     init_files;
 
     echo "** Making directory to '$PKGDIR'"
