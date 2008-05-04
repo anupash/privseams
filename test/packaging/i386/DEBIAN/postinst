@@ -1,35 +1,9 @@
 #!/bin/sh
 
-#ldconfig
-#invoke-rc.d --force --quiet hipd stop  
-#invoke-rc.d -f hipd stop
-#update-rc.d -f hipd remove 
-echo "Usage: /etc/init.d/hipd " \
-              " {start|stop|restart|reload|force-reload}"  
-#/usr/sbin/hipd -bk
-#invoke-rc.d hipd start 
-#/usr/sbin/hipd -bk 
-#/etc/init.d/hipd start 
-#pidof hipd 
-#/etc/init.d/hipd restart
-#sh invoke-rc.d hipd force-reload  
-#sh /etc/init.d/hipd start
-#perl -e 'exec "/usr/sbin/hipd", "-bk"' || true 
-#start-stop-daemon --oknodo --start --exec /etc/init.d/hipd start 
-#start-stop-daemon --oknodo --start --exec /usr/sbin/hipd --bk 
-#update-rc.d hipd start 20 5 .
-# won't write /var/lock/hipd.loc file pid of hipd
-#invoke-rc.d hipd start 
-# /usr/sbin/hipd writes pid into /var/lock/hipd.lock 
 update-rc.d hipd defaults 
-/usr/sbin/hipd -bk 
-
-exit 0 
-
- 
-
-
-
- 
-
+# For some weird reason, hipd is killed silently in ubuntu hardy and gutsy
+# without the at kludge when installing the package with apt-get/aptitude
+# from a remote repository. Until the problem is properly solve, this
+# workaround stays here. --miika
+echo "invoke-rc.d --quiet hipd start" | at now + 1 min 2>/dev/null
 

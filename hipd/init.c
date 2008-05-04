@@ -371,6 +371,9 @@ int hip_init_dht()
         return (err);
 }
 
+/*
+ * Note: this function does not go well with valgrind
+ */
 int hip_set_lowcapability() {
 	struct passwd *nobody_pswd;
 	int err = 0;
