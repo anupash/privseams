@@ -631,25 +631,13 @@ yum for Fedora
 
 - to configure yum for Fedora modify configuration
 
-$ sudo /etc/yum.conf
-
-[package]
-name=package
-baseurl=http://URL/yum/base/package
-
-- for example to modify the configuration for hipl packages
-
 [hipl]
 name=HIPL
-baseurl=http://packages.infrahip.net/yum/base/hipl/$basearch
+baseurl=http://packages.infrahip.net/fedora/base/hipl/$basearch
 gpgcheck=0
 enabled=1
 
 - install hipl package by command
-
-$ yum install package
- 
-- for example to install hipl-lib and hipl-core and hipl-tools
 
 $ sudo yum install hipl-lib hipl-core hipl-tools
 
@@ -663,13 +651,13 @@ $ yum -y install createrepo
 
 - create a directory tree for yum repository
 
-$ mkdir -p /var/www/html/yum/base/hipl/i386
+$ mkdir -p /var/www/html/fedora/base/hipl/i386
 
-$ mkdir -p /var/www/html/yum/base/hipl/x86_64
+$ mkdir -p /var/www/html/fedora/base/hipl/x86_64
 
 - copy all hipl packages to the repository depending on the architecture
 
-- for example copy all packages to directory /var/www/html/yum/base/hipl/i386/
+- for example copy all packages to directory /var/www/html/fedora/base/hipl/i386/
 
 hipl-agent-1.0.3-1.i386.rpm
 hipl-core-1.0.3-1.i386.rpm
@@ -685,7 +673,7 @@ $ createrepo repository
 
 - for example to create yum repository for all packages 
 
-$ createrepo yum/base/hipl/i386
+$ createrepo fedora/base/hipl/i386
 
 
 apt-get for Debian
@@ -695,8 +683,8 @@ apt-get for Debian
 
 $ nano /etc/apt/sources.list
 
-deb http://packages.infrahip.net/hipl/ gutsy main
-deb-src http://packages.infrahip.net/hipl/ gutsy main
+deb http://packages.infrahip.net/ubuntu/ gutsy main
+deb-src http://packages.infrahip.net/ubuntu/ gutsy main
 
 - update and install hipl packages 
 
@@ -714,9 +702,9 @@ Updating dpkg repository
 
 - create a directory tree on the web server
 
-$ mkdir -p /var/www/html/hipl/dists/gutsy/main/binary-armel
-$ mkdir -p /var/www/html/hipl/dists/gutsy/main/binary-i386
-$ mkdir -p /var/www/html/hipl/dists/gutsy/main/binary-amd64
+$ mkdir -p /var/www/html/ubuntu/dists/gutsy/main/binary-armel
+$ mkdir -p /var/www/html/ubuntu/dists/gutsy/main/binary-i386
+$ mkdir -p /var/www/html/ubuntu/dists/gutsy/main/binary-amd64
 
 - to create overview file of Packages.gz for all hipl packages
 
@@ -728,11 +716,11 @@ $ dpkg-scanpackages -m . /dev/null | sudo gzip -9c > Packages.gz
 
 - copy all Debian hipl packages and Packages.gz file to directories 
 
-$ rsync *.deb root@packages.infrahip.net:/var/www/html/hipl/
+$ rsync *.deb root@packages.infrahip.net:/var/www/html/ubuntu/
 
 - for example to copy Packages.gz for architecture of i386
 
-$ rsync Packages.gz root@packages.infrahip.net:/var/www/html/hipl/dists/gutsy/main/binary-i386
+$ rsync Packages.gz root@packages.infrahip.net:/var/www/html/ubuntu/dists/gutsy/main/binary-i386
 
 - to change owner of all files for web server
 
@@ -748,7 +736,7 @@ $ sudo dpkg-scansources . /dev/null | sudo gzip -9c > Sources.gz
 
 - to create a directory tree on the web server
 
-$ mkdir -p /var/www/html/hipl/dists/gutsy/main/source 
+$ mkdir -p /var/www/html/ubuntu/dists/gutsy/main/source 
 
 - to copy all previous files to the web server
 
