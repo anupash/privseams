@@ -286,7 +286,7 @@ int is_hip_packet(void * hdr, int trafficType){
 	_HIP_DEBUG("the UDP port number is %d\n",IPPROTO_UDP);
 
 	if(trafficType == 4){
-		struct ip * iphdr = (struct ip *)hdr;
+		struct ip *iphdr = (struct ip *)hdr;
 		
 		_HIP_DEBUG("the IPv4 port number is %d\n", iphdr->ip_p);
 
@@ -298,8 +298,12 @@ int is_hip_packet(void * hdr, int trafficType){
 
 		//the udp src and dest ports are analysed
 		hdr_size = (iphdr->ip_hl * 4);
+		
+		HIP_DEBUG("size of hdr_size is %d\n", hdr_size);
 		plen = iphdr->ip_len;
 		udphdr = ((struct udphdr *) (((char *) iphdr) + hdr_size));
+		
+
 	}
 	if(trafficType == 6){
 		struct ip6_hdr * ip6_hdr = (struct ip6_hdr *)hdr;
@@ -321,22 +325,34 @@ int is_hip_packet(void * hdr, int trafficType){
 	if (trafficType == 4 &&
 	    (plen >= sizeof (struct ip) + sizeof(udphdr) + HIP_UDP_ZERO_BYTES_LEN)) {
 		uint32_t *zero_bytes = NULL;
-		zero_bytes = (uint32_t *) (udphdr + 1);
+		// uint32_t *ip_esp_hdr = NULL;
 		
-		_HIP_DEBUG("zero_bytes address is Ox%x, vaule is %d\n", zero_bytes, 
+		/* something wrong here?*/
+		// zero_bytes = (uint32_t *) ((char *)udphdr + 1);
+
+		zero_bytes = (uint32_t *) ((char *)udphdr + sizeof(struct udphdr));
+	  
+		HIP_DEBUG("zero_bytes address is Ox%x, vaule is %d\n", zero_bytes, 
 			  *zero_bytes);
+		
+
+		/*Check whethere SPI number is zero or not */
+
 
 		if (*zero_bytes == 0) {
 			udp_spi_is_zero = 1;
 			HIP_DEBUG("Zero SPI found\n");
 		}
+	
+
+
 	}
 
 	if(udphdr && ((udphdr->source == ntohs(HIP_NAT_UDP_PORT)) || 
 		      (udphdr->dest   == ntohs(HIP_NAT_UDP_PORT))) && udp_spi_is_zero)
 		
 	{		
-		_HIP_DEBUG("UDP header size  is %d\n", sizeof(struct udphdr));
+		HIP_DEBUG("UDP header size  is %d\n", sizeof(struct udphdr));
 		
 		return !hip_check_network_msg((struct hip_common *) (((char *)udphdr) 
 								     + 

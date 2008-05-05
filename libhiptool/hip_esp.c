@@ -460,8 +460,8 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 	struct sockaddr *lsi = (struct sockaddr *) ss_lsi;
 
 
-	HIP_DEBUG("the AF_INET value is %d\n", AF_INET);
-	HIP_DEBUG("the AF_INET6 value is %d\n", AF_INET6);
+	_HIP_DEBUG("the AF_INET value is %d\n", AF_INET);
+	_HIP_DEBUG("the AF_INET6 value is %d\n", AF_INET6);
 	
 	
 	HIP_DEBUG_SOCKADDR("LSI address is: ",  lsi);
