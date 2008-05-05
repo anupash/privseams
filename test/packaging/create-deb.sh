@@ -30,8 +30,8 @@ SRCDIR=${PKGDIR_SRC}/${NAME}${SUFFIX}
 HIPL=$PWD
 POSTFIX="deb"
 
-TMPNAME="${VERSION}-${RELEASE}-$REVISION-${DEBARCH}"
-if dpkg --print-architecture|grep armel;then TMPNAME="${VERSION}-${RELEASE}-$REVISION-armel"; fi
+TMPNAME="${VERSION}-${RELEASE}-${REVISION}-${DEBARCH}"
+if dpkg --print-architecture|grep armel;then TMPNAME="${VERSION}-${RELEASE}-${REVISION}-armel"; fi
 
 PKGNAME="${NAME}-${TMPNAME}.${POSTFIX}"
 TMP=""
@@ -52,8 +52,11 @@ copy_tarball ()
 	
 	echo "** Copying the tarball"
 	#cd ${PKGDIR}
-	cp ${HIPL}/hipl-main.tar.gz ${PKGDIR_SRC}/${NAME}_${VERSION}.orig.tar.gz
-	
+        cp ${HIPL}/hipl-main.tar.gz ${PKGDIR_SRC}/${NAME}_${VERSION}.orig.tar.gz
+
+	#cp ${HIPL}/hipl-main.tar.gz ${HIPL}/hipl-main-${REVISION}.tar.gz 
+	#cp ${HIPL}/hipl-main-${REVISION}.tar.gz ${PKGDIR_SRC}/${NAME}_${VERSION}-${REVISION}.orig.tar.gz
+
 	echo "** Copying Debian control files to '${SRCDIR}/debian'"
 	mkdir -p "${SRCDIR}/debian"
 	cp ${PKGROOT}/$DEBIAN/control-src ${SRCDIR}/debian/control
@@ -554,7 +557,7 @@ if [ $TYPE = "source" ];then
 	echo "** and they are named:"
 	echo "${NAME}-${VERSION}.diff.gz"
 	echo "${NAME}-${VERSION}.dsc"
- 	echo "${NAME}-${VERSION}.orig.tar.gz"
+ 	echo "${NAME}-${VERSION}-${REVISION}.orig.tar.gz"
     else
 	echo "** Error: unable to build package, exiting"
 	rm -rf "${PKGDIR_SRC}"
