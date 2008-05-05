@@ -641,7 +641,7 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 #ifdef USE_BINDING /* Using binding */
 
 		/* my localhost address is entry->dst_addrs->addr */
-		ipv4_binding = (struct sockaddr_in *) &entry->dst_addrs->addr;
+		ipv4_binding = (struct sockaddr_in *) &entry->src_addrs->addr;
 		
 
 		HIP_DEBUG_SOCKADDR("src addr: ", ipv4_binding);
@@ -685,8 +685,8 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 
 		
 		err = sendto(ipv4_s_raw, data, out_enc_len, flags,
-			     SA(&entry->src_addrs->addr),
-			     SALEN(&entry->src_addrs->addr));
+			     SA(&entry->dst_addrs->addr),
+			     SALEN(&entry->dst_addrs->addr));
  
 
 
