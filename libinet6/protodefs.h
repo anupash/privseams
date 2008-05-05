@@ -285,6 +285,8 @@
 #define HIP_LEN_PAD(len) \
     ((((len) & 0x07) == 0) ? (len) : ((((len) >> 3) << 3) + 8))
 
+#define HIP_UDP_ZERO_BYTES_LEN 4 /* in bytes */
+
 typedef uint8_t hip_hdr_type_t;
 typedef uint8_t hip_hdr_len_t;
 typedef uint16_t se_family_t;
