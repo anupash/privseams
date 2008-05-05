@@ -1400,8 +1400,8 @@ static void *handle_ip_traffic(void *ptr){
                 		IPV4_TO_IPV6_MAP(&iphdr->ip_dst, &dst_addr);
         		
 
-				HIP_DEBUG_IN6ADDR("IPv4 source address is ", &src_addr);
-				HIP_DEBUG_IN6ADDR("IPv4 destination address is ", &dst_addr);
+				HIP_DEBUG_IN6ADDR("Source address is ", &src_addr);
+				HIP_DEBUG_IN6ADDR("Destination address is ", &dst_addr);
 				
 			}
         		else if(ipv6Traffic){
