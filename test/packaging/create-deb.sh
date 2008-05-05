@@ -15,16 +15,15 @@ if uname -m|grep x86_64; then DEBARCH=amd64; fi
 if dpkg --print-architecture|grep armel;then DEBARCH=armel;fi
 
 if [ $DEBARCH = "armel" ]; then
-SUFFIX="-$VERSION-$RELEASE"
+REVISION=chinook
 else
 REVISION=`/usr/bin/lsb_release -c | /usr/bin/awk '{print $2}'`
 echo $REVISION
-SUFFIX="-$VERSION-$RELEASE-$REVISION"
 fi
 
+SUFFIX="-$VERSION-$RELEASE-$REVISION"
 NAME=hipl
 NAMEGPL=libhiptool
-
 DEBIAN=${DEBARCH}/DEBIAN
 DEBIANGPL=$DEBARCH/DEBIAN-hiptool
 CORPORATE=
@@ -33,13 +32,8 @@ PKGDIR=$PKGROOT/${NAME}${SUFFIX}-deb
 PKGDIR_SRC=$PKGROOT/${NAME}${SUFFIX}-deb-src
 SRCDIR=${PKGDIR_SRC}/${NAME}${SUFFIX}
 HIPL=$PWD
-
 POSTFIX="deb"
-if [ $DEBARCH = "armel" ]; then
-TMPNAME="${VERSION}-${RELEASE}-${DEBARCH}"
-else
 TMPNAME="${VERSION}-${RELEASE}-$REVISION-${DEBARCH}"
-fi
 
 if dpkg --print-architecture|grep armel;then TMPNAME="${VERSION}-${RELEASE}-armel"; fi
 PKGNAME="${NAME}-${TMPNAME}.${POSTFIX}"
