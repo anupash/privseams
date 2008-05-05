@@ -275,8 +275,10 @@ static void die(struct ipq_handle *h){
  * @return            One if @c hdr is a HIP packet, zero otherwise.
  */ 
 int is_hip_packet(void * hdr, int trafficType){
-	struct udphdr *udphdr;
+	struct udphdr *udphdr = NULL;
 	int hdr_size;
+	int udp_spi_is_zero = 0;
+	uint16_t plen;
 
 	HIP_DEBUG("\n");
 
@@ -289,6 +291,7 @@ int is_hip_packet(void * hdr, int trafficType){
 
 		//the udp src and dest ports are analysed
 		hdr_size = (iphdr->ip_hl * 4);
+		plen = iphdr->ip_len;
 		udphdr = ((struct udphdr *) (((char *) iphdr) + hdr_size));
 	}
 	if(trafficType == 6){
@@ -300,11 +303,22 @@ int is_hip_packet(void * hdr, int trafficType){
 
 		//the udp src and dest ports are analysed		
 		hdr_size = (ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen * 4);
+		plen = ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen;
 		udphdr = ((struct udphdr *) (((char *) ip6_hdr) + hdr_size));
 	}
 
-	if((udphdr->source == ntohs(HIP_NAT_UDP_PORT)) || 
-	   (udphdr->dest   == ntohs(HIP_NAT_UDP_PORT)))
+	if (trafficType == 4 &&
+	    (plen >= sizeof (struct ip) + sizeof(udphdr) + HIP_UDP_ZERO_BYTES_LEN)) {
+		uint32_t *zero_bytes = NULL;
+		zero_bytes = (uint32_t *) (udphdr + 1);
+		if (zero_bytes == 0) {
+			udp_spi_is_zero = 1;
+			HIP_DEBUG("Zero SPI found\n");
+		}
+	}
+
+	if(udphdr && ((udphdr->source == ntohs(HIP_NAT_UDP_PORT)) || 
+		      (udphdr->dest   == ntohs(HIP_NAT_UDP_PORT))) && udp_spi_is_zero)
 		return !hip_check_network_msg((struct hip_common *) (((char *)udphdr) + 8));
 	else
 		return 0;
