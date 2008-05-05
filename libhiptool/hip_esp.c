@@ -1088,8 +1088,8 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 	   sending */ 
 	
 
-	HIP_DEBUG("in hip_esp_output something failed:"
-		  " %s\n",strerror(errno));
+	if (err)
+		HIP_DEBUG("something failed:%s\n",strerror(errno));
 
 
 	if (dst_is_ipv4) {
