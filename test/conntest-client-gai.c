@@ -27,7 +27,7 @@
 #include "ife.h"
 #include "conntest.h"
 
-#define MINPORTNUM 1024
+#define MINPORTNUM 1
 #define MAXPORTNUM 65535
 
 /**
