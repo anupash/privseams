@@ -246,7 +246,7 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
 		 "Could not determine dst addr, dropping\n");
 
 	/* UDP port numbers */
-	if (is_ipv4 && encap_hdr_size == 0) {
+	if (is_ipv4 && encap_hdr_size == 4) {
 		/* Destination port is known from the bound socket. */
 		HIP_DEBUG("hip_read_control_msg_all() source port = %d\n",
 			  ntohs(addr_from4->sin_port));
