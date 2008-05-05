@@ -271,10 +271,11 @@ int hipd_init(int flush_ipsec, int killold)
 	              sizeof(hip_agent_addr)), -1, "Bind on agent addr failed.");
 	chmod(HIP_AGENTADDR_PATH, 0777);
 	
+	hip_load_configuration();
+
         dhterr = 0;
         dhterr = hip_init_dht();
         if (dhterr < 0) HIP_DEBUG("Initializing DHT returned error\n");
-	hip_load_configuration();
 	
 	/* init new tcptimeout parameters, added by Tao Wan on 14.Jan.2008*/
 
