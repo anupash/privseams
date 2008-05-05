@@ -1307,8 +1307,14 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	/* If local address is not given, we fetch one in my_addr. my_addr_ptr
 	   points to the final source address (my_addr or local_addr). */
 	struct in6_addr my_addr, *my_addr_ptr = NULL;
+	int memmoved = 1;
 	
 	_HIP_DEBUG("hip_send_udp() invoked.\n");
+
+	/* There are four zeroed bytes between UDP and HIP headers. We
+	   use shifting later in this function */
+	HIP_ASSERT(hip_get_msg_total_len(msg) <= HIP_MAX_PACKET - 4);
+
 	/* Verify the existence of obligatory parameters. */
 	HIP_ASSERT(peer_addr != NULL && msg != NULL);
 	HIP_DEBUG("Sending %s packet on UDP.\n",
@@ -1370,6 +1376,12 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	
 	/* Get the packet total length for sendto(). */
 	packet_length = hip_get_msg_total_len(msg);
+
+	/* Insert 32 bits of zero bytes between UDP and HIP */
+	memmove(((char *)msg) + 4, msg, packet_length);
+	memset(msg, 0, 4);
+	packet_length += 4;
+	memmoved = 1;
 	
 	HIP_DEBUG("Trying to send %u bytes on UDP with source port: %u and "\
 		  "destination port: %u.\n",
@@ -1432,6 +1444,14 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 
 	if (sockfd)
 		close(sockfd);
+
+	if (memmoved) {
+		/* Remove 32 bits of zero bytes between UDP and HIP */
+		packet_length -= 4;
+		memmove(msg, ((char *)msg) + 4, packet_length);
+		memset(((char *)msg) + packet_length, 0, 4);
+	}
+		
 	return err;
 }
 
