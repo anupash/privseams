@@ -1401,7 +1401,7 @@ static void *handle_ip_traffic(void *ptr){
         		
 
 				HIP_DEBUG_IN6ADDR("IPv4 source address is ", &src_addr);
-				HIP_DEBUG_IN6ADDR("IPv4 source address is ", &dst_addr);
+				HIP_DEBUG_IN6ADDR("IPv4 destination address is ", &dst_addr);
 				
 			}
         		else if(ipv6Traffic){

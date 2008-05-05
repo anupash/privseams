@@ -1088,7 +1088,7 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 	   sending */ 
 	
 
-	HIP_DEBUG("in hip_esp_output something is failed:"
+	HIP_DEBUG("in hip_esp_output something failed:"
 		  " %s\n",strerror(errno));
 
 
