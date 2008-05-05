@@ -282,7 +282,7 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
 		   Let's remove it here. */
 		memmove(hip_msg, ((char *)hip_msg) + IPV4_HDR_SIZE,
 			HIP_MAX_PACKET - IPV4_HDR_SIZE);
-	} else if (is_ipv4 && encap_hdr_size == 0) {
+	} else if (is_ipv4 && encap_hdr_size == 4) {
 		/* remove 32-bits of zeroes between UDP and HIP headers */
 		memmove(hip_msg, ((char *)hip_msg) + 4,
 			HIP_MAX_PACKET - 4);

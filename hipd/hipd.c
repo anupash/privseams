@@ -531,7 +531,7 @@ int hipd_main(int argc, char *argv[])
 			/* Read in the values to hip_msg, saddr, daddr and
 			   pkt_info. */
         		/* if ( hip_read_control_msg_v4(hip_nat_sock_udp, hipd_msg,&saddr, &daddr,&pkt_info, 0) ) */
-			err = hip_read_control_msg_v4(hip_nat_sock_udp, hipd_msg,&saddr, &daddr,&pkt_info,0);			
+			err = hip_read_control_msg_v4(hip_nat_sock_udp, hipd_msg,&saddr, &daddr,&pkt_info, 4);			
 			if (err) 			
 			{
                                 HIP_ERROR("Reading network msg failed\n");
