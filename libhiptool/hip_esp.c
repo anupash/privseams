@@ -2188,9 +2188,9 @@ int hip_esp_encrypt(__u8 *in, int len, __u8 *out, int *outlen,
 	*outlen = sizeof(struct ip_esp_hdr);
 	
 	if (use_udp) /* (HIP_ESP_OVER_UDP) */
-		*outlen += sizeof(udphdr + HIP_UDP_ZERO_BYTES_LEN);
-
-
+		*outlen += (sizeof(udphdr)  + sizeof(HIP_UDP_ZERO_BYTES_LEN));
+		
+	
 	/* 
 	 * Encryption 
 	 */
