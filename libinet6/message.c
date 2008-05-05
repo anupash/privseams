@@ -246,7 +246,7 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
 		 "Could not determine dst addr, dropping\n");
 
 	/* UDP port numbers */
-	if (is_ipv4 && encap_hdr_size == 4) {
+	if (is_ipv4 && encap_hdr_size == HIP_UDP_ZERO_BYTES_LEN) {
 		/* Destination port is known from the bound socket. */
 		HIP_DEBUG("hip_read_control_msg_all() source port = %d\n",
 			  ntohs(addr_from4->sin_port));
@@ -282,10 +282,10 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
 		   Let's remove it here. */
 		memmove(hip_msg, ((char *)hip_msg) + IPV4_HDR_SIZE,
 			HIP_MAX_PACKET - IPV4_HDR_SIZE);
-	} else if (is_ipv4 && encap_hdr_size == 4) {
+	} else if (is_ipv4 && encap_hdr_size == HIP_UDP_ZERO_BYTES_LEN) {
 		/* remove 32-bits of zeroes between UDP and HIP headers */
-		memmove(hip_msg, ((char *)hip_msg) + 4,
-			HIP_MAX_PACKET - 4);
+		memmove(hip_msg, ((char *)hip_msg) + HIP_UDP_ZERO_BYTES_LEN,
+			HIP_MAX_PACKET - HIP_UDP_ZERO_BYTES_LEN);
 	}
 
 	HIP_IFEL(hip_verify_network_header(hip_msg,

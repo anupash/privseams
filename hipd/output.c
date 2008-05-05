@@ -1313,7 +1313,8 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 
 	/* There are four zeroed bytes between UDP and HIP headers. We
 	   use shifting later in this function */
-	HIP_ASSERT(hip_get_msg_total_len(msg) <= HIP_MAX_PACKET - 4);
+	HIP_ASSERT(hip_get_msg_total_len(msg) <=
+		   HIP_MAX_PACKET - HIP_UDP_ZERO_BYTES_LEN);
 
 	/* Verify the existence of obligatory parameters. */
 	HIP_ASSERT(peer_addr != NULL && msg != NULL);
@@ -1388,9 +1389,9 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	}
 
 	/* Insert 32 bits of zero bytes between UDP and HIP */
-	memmove(((char *)msg) + 4, msg, packet_length);
-	memset(msg, 0, 4);
-	packet_length += 4;
+	memmove(((char *)msg) + HIP_UDP_ZERO_BYTES_LEN, msg, packet_length);
+	memset(msg, 0, HIP_UDP_ZERO_BYTES_LEN);
+	packet_length += HIP_UDP_ZERO_BYTES_LEN;
 	memmoved = 1;
 
 	/*
@@ -1447,9 +1448,11 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 
 	if (memmoved) {
 		/* Remove 32 bits of zero bytes between UDP and HIP */
-		packet_length -= 4;
-		memmove(msg, ((char *)msg) + 4, packet_length);
-		memset(((char *)msg) + packet_length, 0, 4);
+		packet_length -= HIP_UDP_ZERO_BYTES_LEN;
+		memmove(msg, ((char *)msg) + HIP_UDP_ZERO_BYTES_LEN,
+			packet_length);
+		memset(((char *)msg) + packet_length, 0,
+		       HIP_UDP_ZERO_BYTES_LEN);
 	}
 		
 	return err;
