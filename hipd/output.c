@@ -1377,12 +1377,6 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	/* Get the packet total length for sendto(). */
 	packet_length = hip_get_msg_total_len(msg);
 
-	/* Insert 32 bits of zero bytes between UDP and HIP */
-	memmove(((char *)msg) + 4, msg, packet_length);
-	memset(msg, 0, 4);
-	packet_length += 4;
-	memmoved = 1;
-	
 	HIP_DEBUG("Trying to send %u bytes on UDP with source port: %u and "\
 		  "destination port: %u.\n",
 		  packet_length, ntohs(src4.sin_port), ntohs(dst4.sin_port));
@@ -1392,6 +1386,12 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		HIP_IFEL(hip_queue_packet(my_addr_ptr, peer_addr, msg,
 					  entry), -1, "Queueing failed.\n");
 	}
+
+	/* Insert 32 bits of zero bytes between UDP and HIP */
+	memmove(((char *)msg) + 4, msg, packet_length);
+	memset(msg, 0, 4);
+	packet_length += 4;
+	memmoved = 1;
 
 	/*
 	  Currently disabled because I could not make this work -miika
