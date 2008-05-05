@@ -448,6 +448,8 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 	__u8 data[BUFF_LEN]; /* encrypted data buffer */
 	struct ip *iph;
 
+	memset(data, 0, sizeof(data));
+
 #ifdef __WIN32__
 	DWORD lenin;
 	OVERLAPPED overlapped = {0};
@@ -2175,6 +2177,7 @@ int hip_esp_encrypt(__u8 *in, int len, __u8 *out, int *outlen,
 		udph = (udphdr*) out;
 		/*esp pointer points to out address*/
 		esp = (struct ip_esp_hdr*) &out[sizeof(udphdr)]; 
+		esp += HIP_UDP_ZERO_BYTES_LEN;
 		use_udp = TRUE;
 	} else {
 		esp = (struct ip_esp_hdr*) out;
@@ -2185,7 +2188,7 @@ int hip_esp_encrypt(__u8 *in, int len, __u8 *out, int *outlen,
 	*outlen = sizeof(struct ip_esp_hdr);
 	
 	if (use_udp) /* (HIP_ESP_OVER_UDP) */
-		*outlen += sizeof(udphdr);
+		*outlen += sizeof(udphdr + HIP_UDP_ZERO_BYTES_LEN);
 
 
 	/* 
@@ -2485,7 +2488,8 @@ int hip_esp_decrypt(__u8 *in, int len, __u8 *out, int *offset, int *outlen,
 		
 		
 		esp = (struct ip_esp_hdr*) (((char *) udph) + 
-					    sizeof(udphdr) 
+					    sizeof(udphdr) +
+					    HIP_UDP_ZERO_BYTES_LEN +
 					    + 8);
 	} else { 		
 		/* Todo: Test if it is not UDP-encapsulated */
