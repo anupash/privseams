@@ -973,8 +973,9 @@ int filter_hip(const struct in6_addr * ip6_src,
     	{
       		match = 1;
       		rule = (struct rule *) list->data;
-      		_HIP_DEBUG("   filter_hip: checking for \n");     
-      		//print_rule(rule);
+      		HIP_DEBUG("   filter_hip: checking for \n");     
+      		HIP_DEBUG("HIP type number is %d\n", buf->type_hdr);
+		//print_rule(rule);
         	if (buf->type_hdr == HIP_I1)
 			HIP_DEBUG("packet type: I1\n");
         	else if (buf->type_hdr == HIP_R1)
