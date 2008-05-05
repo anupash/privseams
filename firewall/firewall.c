@@ -1407,7 +1407,7 @@ static void *handle_ip_traffic(void *ptr){
                 		hdr_size = (iphdr->ip_hl * 4);
 
 				if (iphdr->ip_p == IPPROTO_UDP){
-					hdr_size += sizeof(struct udphdr);
+					hdr_size += sizeof(struct udphdr) + HIP_UDP_ZERO_BYTES_LEN;
 				}
                 		_HIP_DEBUG("header size: %d\n", hdr_size);
                		 	IPV4_TO_IPV6_MAP(&iphdr->ip_src, &src_addr);
