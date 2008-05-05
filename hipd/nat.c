@@ -201,7 +201,7 @@ int hip_nat_send_keep_alive(hip_ha_t *entry, void *not_used)
 	int err = 0;
 	struct hip_common *msg = NULL;
 
-	HIP_IFEL((msg = hip_msg_alloc()), -1, "Alloc\n");
+	HIP_IFEL(!(msg = hip_msg_alloc()), -1, "Alloc\n");
 	
 	_HIP_DEBUG("hip_nat_send_keep_alive() invoked.\n");
 	_HIP_DEBUG("entry @ %p, entry->nat_mode %d.\n",
