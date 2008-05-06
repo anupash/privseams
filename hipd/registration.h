@@ -56,7 +56,8 @@ int hip_get_pending_requests(hip_ha_t *entry,
 int hip_get_pending_request_count(hip_ha_t *entry);
 void hip_srv_info(const hip_srv_t *srv, char *status);
 int hip_handle_param_reg_info(hip_common_t *msg, hip_ha_t *entry);
-int hip_handle_param_rrq(hip_common_t *msg, hip_ha_t *entry);
+int hip_handle_param_rrq(hip_ha_t *entry, hip_common_t *source_msg,
+			 hip_common_t *target_msg);
 int hip_has_duplicate_services(uint8_t *values, int type_count);
 
 #endif /* HIP_REGISTRATION_H */

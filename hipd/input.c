@@ -1398,7 +1398,7 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 		  hip_portpair_t *i2_info)
 {
 	struct hip_reg_request *reg_request = NULL;
- 	struct hip_common *r2 = NULL, *i2;
+ 	struct hip_common *r2 = NULL, *i2 = NULL;
  	int err = 0, clear = 0;
 	uint16_t mask = 0;
 	uint8_t lifetime;
@@ -1407,10 +1407,6 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 	_HIP_DEBUG("hip_create_r2() invoked.\n");
 	/* Assume already locked entry */
 	i2 = ctx->input;
-
-	/* Handle REG_REQUEST parameter. */
-	hip_handle_param_rrq(i2, entry);
-
 
 	/* Build and send R2: IP ( HIP ( SPI, HMAC, HIP_SIGNATURE ) ) */
 	HIP_IFEL(!(r2 = hip_msg_alloc()), -ENOMEM, "No memory for R2\n");
@@ -1458,6 +1454,10 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 	   But since I don't have a way to detect if we are an escrow server
 	   this part is executed on I and R also. -Lauri 27.09.2007*/
 	hip_handle_regrequest(entry, i2, r2);
+	
+	/* Handle REG_REQUEST parameter. */
+	HIP_DEBUG("Entering new REG_REQUEST handler.\n");
+	hip_handle_param_rrq(entry, i2, r2);
 #endif	
  	/* HMAC2 */
 	{
@@ -2016,14 +2016,19 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	HIP_IFE(hip_store_base_exchange_keys(entry, ctx, 0), -1);
 	hip_hadb_insert_state(entry);
 	
-	 
-
 	HIP_DEBUG("\nInserted a new host association state.\n"
 		  "\tHIP state: %s\n"\
 		  "\tDefault outgoing SPI 0x%x.\n"
 		  "\tCreating an R2 packet in response next.\n",
 		  hip_state_str(entry->state), entry->default_spi_out);
 	
+	/* Note that we haven't handled the REG_REQUEST yet. This is because we
+	   must create an REG_RESPONSE parameter into the R2 packet based on the
+	   REG_REQUEST parameter. We could allocate a new R2 here and store it
+	   to the context, but since the allocation is done in hip_create_r2(),
+	   we choose handle the REG_REQUEST parameter there - although that is
+	   somewhat illogical. -Lauri 06.05.2008 */
+
 	/* Create an R2 packet in response. */
 	HIP_IFEL(entry->hadb_misc_func->hip_create_r2(
 			 ctx, i2_saddr, i2_daddr, entry, i2_info), -1, 

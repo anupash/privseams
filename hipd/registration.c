@@ -340,16 +340,19 @@ int hip_handle_param_reg_info(hip_common_t *msg, hip_ha_t *entry)
 	return 0;
 }
 
-int hip_handle_param_rrq(hip_common_t *msg, hip_ha_t *entry)
+int hip_handle_param_rrq(hip_ha_t *entry, hip_common_t *source_msg,
+			 hip_common_t *target_msg)
 {
 	int err = 0, type_count = 0;
 	struct hip_reg_request *reg_request = NULL;
 	uint8_t *values = NULL;
 
-	reg_request = hip_get_param(msg, HIP_PARAM_REG_REQUEST);
+	reg_request = hip_get_param(source_msg, HIP_PARAM_REG_REQUEST);
 	
 	if(reg_request == NULL) {
-		return -1;
+		err = -1;
+		_HIP_DEBUG("No REG_REQUEST parameter found.\n");
+		goto out_err;
 	}
 	
 	HIP_DEBUG("REG_REQUEST parameter found.\n");
@@ -363,7 +366,13 @@ int hip_handle_param_rrq(hip_common_t *msg, hip_ha_t *entry)
 	HIP_IFEL(hip_has_duplicate_services(values, type_count), -1,
 		 "The REG_REQUEST parameter has duplicate services. The whole "\
 		 "parameter is omitted.\n");
-
+	
+	if(reg_request->lifetime == 0) {
+		HIP_DEBUG("Client is cancelling registration.\n");
+	} else {
+		HIP_DEBUG("Client is registrating for new services.\n");
+	}
+	
  out_err:
 	return err;
 }
