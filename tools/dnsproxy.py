@@ -17,15 +17,55 @@ def usage(utyp, *msg):
         sys.stderr.write('Error: %s\n' % `msg`)
     sys.exit(1)
 
+path = os.environ.get('PATH',None)
+if path != None:
+    path = path.split(':')
+else:
+    path = []
+
+def has_resolvconf0():
+    path2 = list(path)
+    if not '/sbin' in path2:
+        path2.append('/sbin')
+    for d in path2:
+        if os.path.exists(os.path.join(d,'resolvconf')):
+            return True
+    return False
+
+has_resolvconf = has_resolvconf0()
+
 class Global:
     def __init__(gp):
         gp.resolv_conf = '/etc/resolv.conf'
         gp.hostsnames = []
-	gp.server_ip = '127.0.0.1' # xx fixme
-	gp.server_port = 53
-	gp.bind_ip = '127.0.0.1'
-	gp.bind_port = 53
+	gp.server_ip = None
+	gp.server_port = None
+	gp.bind_ip = None
+	gp.bind_port = None
         return
+
+    def parameter_defaults(gp):
+        env = os.environ
+        if gp.server_ip == None:
+            gp.server_ip = env.get('SERVER',None)
+        if gp.server_ip == None:
+            gp.server_ip = '127.0.0.1' # xx fixme
+	if gp.server_port == None:
+            server_port = env.get('SERVERPORT',None)
+            if server_port != None:
+                gp.server_port = int(server_port)
+	if gp.server_port == None:
+            gp.server_port = 53
+	if gp.bind_ip == None:
+            gp.bind_ip = env.get('IP',None)
+	if gp.bind_ip == None:
+            gp.bind_ip = '127.0.0.1'
+	if gp.bind_port == None:
+            bind_port = env.get('PORT',None)
+            if bind_port != None:
+                gp.bind_port = int(bind_port)
+	if gp.bind_port == None:
+            gp.bind_port = 53
 
     def hosts_recheck(gp):
         for h in gp.hosts:
@@ -40,18 +80,15 @@ class Global:
         return None
 
     def doit(gp,args):
+        gp.parameter_defaults()
         gp.hosts = []
         for hn in gp.hostsnames:
             gp.hosts.append(hosts.Hosts(hn))
         util.init_wantdown()
         fout = sys.stdout
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        #IP = os.environ['IP']
-        #PORT = int(os.environ['PORT'])
         s.bind((gp.bind_ip,gp.bind_port))
 
- 	#server = os.environ['SERVER']
-        #serverport = int(os.environ['SERVERPORT'])
 
         args0 = {'server': '127.0.0.1',
                 }
@@ -62,65 +99,77 @@ class Global:
         s2.connect((gp.server_ip,gp.server_port))
 
         while not util.wantdown():
-            gp.hosts_recheck()
-            buf,from_a = s.recvfrom(2048)
-            fout.write('Up %s\n' % (util.tstamp(),))
-            fout.write('%s %s\n' % (from_a,repr(buf)))
-            fout.flush()
-            u = DNS.Lib.Munpacker(buf)
-            r = DNS.Lib.DnsResult(u,args0)
-            fout.write('%s %s\n' % (r.header,r.questions,))
-            q1 = r.questions[0]
-            qtype = q1['qtype']
-            if qtype == 28:     # AAAA
-                nam = q1['qname']
-                lr = gp.getbyname(nam)
-                if lr:
-                    a2 = {'name': nam,
-                          'data': lr,
-                          'type': 28,
-                          'class': 1,
-                          'ttl': 10,
-                          }
-                    fout.write('Hosts A2  %s\n' % (a2,))
-                    m = DNS.Lib.Mpacker()
-                    m.addHeader(r.header['id'],
-                                0, 0, 0, 0, 1, 0, 0, 0,
-                                1, 1, 0, 0)
-                    m.addQuestion(nam,qtype,1)
-                else:
-                    r1 = d2.req(name=q1['qname'],qtype=55) # 55 is HIP RR
-                    fout.write('%s\n' % (r1.answers,))
-                    a1 = r1.answers[0]
-                    aa1d = a1['data']
-                    aa1 = aa1d[4:4+16]
-                    a2 = {'name': a1['name'],
-                          'data': pyip6.inet_ntop(aa1),
-                          'type': 28,
-                          'class': 1,
-                          'ttl': a1['ttl'],
-                          }
-                    fout.write('DNS A2  %s\n' % (a2,))
-                    m = DNS.Lib.Mpacker()
-                    m.addHeader(r.header['id'],
-                                0, r1.header['opcode'], 0, 0, r1.header['rd'], 0, 0, 0,
-                                1, 1, 0, 0)
-                    m.addQuestion(a1['name'],qtype,1)
-                m.addAAAA(a2['name'],a2['class'],a2['ttl'],a2['data'])
-                s.sendto(m.buf,from_a)
-            else:
-                s2.send(buf)
-                r2 = s2.recv(2048)
-
-                u = DNS.Lib.Munpacker(r2)
+            try:
+                gp.hosts_recheck()
+                buf,from_a = s.recvfrom(2048)
+                fout.write('Up %s\n' % (util.tstamp(),))
+                fout.write('%s %s\n' % (from_a,repr(buf)))
+                fout.flush()
+                u = DNS.Lib.Munpacker(buf)
                 r = DNS.Lib.DnsResult(u,args0)
-                fout.write('Bypass %s %s %s\n' % (r.header,r.questions,r.answers,))
+                fout.write('%s %s\n' % (r.header,r.questions,))
+                q1 = r.questions[0]
+                qtype = q1['qtype']
+                sent_anser = 0
+                m = None
+                if qtype == 28:     # AAAA
+                    nam = q1['qname']
+                    lr = gp.getbyname(nam)
+                    if lr:
+                        a2 = {'name': nam,
+                              'data': lr,
+                              'type': 28,
+                              'class': 1,
+                              'ttl': 10,
+                              }
+                        fout.write('Hosts A2  %s\n' % (a2,))
+                        m = DNS.Lib.Mpacker()
+                        m.addHeader(r.header['id'],
+                                    0, 0, 0, 0, 1, 0, 0, 0,
+                                    1, 1, 0, 0)
+                        m.addQuestion(nam,qtype,1)
+                    else:
+                        r1 = d2.req(name=q1['qname'],qtype=55) # 55 is HIP RR
+                        fout.write('r1: %s\n' % (dir(r1),))
+                        fout.write('r1.answers: %s\n' % (r1.answers,))
+                        if r1.answers:
+                            a1 = r1.answers[0]
+                            aa1d = a1['data']
+                            aa1 = aa1d[4:4+16]
+                            a2 = {'name': a1['name'],
+                                  'data': pyip6.inet_ntop(aa1),
+                                  'type': 28,
+                                  'class': 1,
+                                  'ttl': a1['ttl'],
+                                  }
+                            fout.write('DNS A2  %s\n' % (a2,))
+                            m = DNS.Lib.Mpacker()
+                            m.addHeader(r.header['id'],
+                                        0, r1.header['opcode'], 0, 0, r1.header['rd'], 0, 0, 0,
+                                        1, 1, 0, 0)
+                            m.addQuestion(a1['name'],qtype,1)
+                        else:
+                            m = None
+                    if m:
+                        m.addAAAA(a2['name'],a2['class'],a2['ttl'],a2['data'])
+                        s.sendto(m.buf,from_a)
+                        sent_anser = 1
 
-                if r.header.get('status') != 'NXDOMAIN':
-                    s.sendto(r2,from_a)
+                if not sent_anser:
+                    s2.send(buf)
+                    r2 = s2.recv(2048)
 
-            fout.flush()
+                    u = DNS.Lib.Munpacker(r2)
+                    r = DNS.Lib.DnsResult(u,args0)
+                    fout.write('Bypass %s %s %s\n' % (r.header,r.questions,r.answers,))
 
+                    if r.header.get('status') != 'NXDOMAIN':
+                        s.sendto(r2,from_a)
+
+                fout.flush()
+            except Exception,e:
+                fout.write('Exception %s\n' % (e,))
+                
         fout.write('Wants down\n')
         fout.flush()
         return

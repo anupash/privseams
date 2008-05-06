@@ -7,4 +7,3 @@ update-rc.d hipd defaults
 # workaround stays here. --miika
 echo "hipd will start in one minute"
 echo "invoke-rc.d --quiet hipd start" | at now + 1 min 2>/dev/null
-

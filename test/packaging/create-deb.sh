@@ -104,6 +104,8 @@ init_files ()
     	for f in preinst postinst prerm postrm;do
 		cp $DEBIAN/$f "$PKGDIR/DEBIAN" 
     	done
+	sed -i '2,10d' $PKGDIR\/DEBIAN\/postinst
+        sed -i '$a\ldconfig\' $PKGDIR\/DEBIAN\/postinst
     fi
 
     if [ $TMP = "lib" ]; then

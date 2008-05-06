@@ -27,7 +27,7 @@
 #include "ife.h"
 #include "conntest.h"
 
-#define MINPORTNUM 1024
+#define MINPORTNUM 1
 #define MAXPORTNUM 65535
 
 /**
@@ -82,7 +82,7 @@ int main(int argc, char *argv[]) {
 		 argv[3]);
 
 	/* Call the main function to do the actual logic. */
-	err = main_client_gai(socktype, argv[1], argv[3], AI_HIP);
+	err = main_client_gai(socktype, argv[1], argv[3], 0);
 
  out_err:
 	if(err == 0) {

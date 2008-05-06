@@ -231,9 +231,10 @@ int hip_connect_func(struct addrinfo *peer_ai, int *sock){
 	struct addrinfo *ai = NULL;
 	struct timeval stats_before, stats_after;
 	struct sockaddr_storage local_addr;
-	struct sockaddr_in6 *sin6 = NULL;
 	unsigned long microseconds = 0;
 	char addr_str[INET6_ADDRSTRLEN];
+	struct sockaddr_in *sin4 = NULL;
+	struct sockaddr_in6 *sin6 = NULL;
 	
 	/* Reset the global error value. */
 	errno = 0;
@@ -248,22 +249,28 @@ int hip_connect_func(struct addrinfo *peer_ai, int *sock){
 	for(ai = peer_ai; ai != NULL; ai = ai->ai_next) {
 		
 		/* Currently only IPv6 socket structures are supported. */
-		if (ai->ai_family != AF_INET6) {
-			HIP_INFO("Trying to connect to a non-INET6 address "\
+		if (!(ai->ai_family == AF_INET || ai->ai_family == AF_INET6)) {
+			HIP_INFO("Trying to connect to a non-inet address "\
 				 "family address. Skipping.\n");
 			continue;
 		}
 		
+		sin4 = (struct sockaddr_in *) ai->ai_addr;
 		sin6 = (struct sockaddr_in6 *) ai->ai_addr;
 		
-		inet_ntop(AF_INET6, (char *) &sin6->sin6_addr, addr_str,
-			  sizeof(addr_str));
-		
+		if (!inet_ntop(AF_INET6, (char *) &sin6->sin6_addr, addr_str,
+			       sizeof(addr_str)))
+		    inet_ntop(AF_INET, (char *) &sin4->sin_addr, addr_str,
+			      sizeof(addr_str));
+		    
 		HIP_IFEL(((*sock) = socket(ai->ai_family, ai->ai_socktype,
-					ai->ai_protocol)) < 0,
+					   ai->ai_protocol)) < 0,
 			 -EFAULT, "Unable to get a socket for sending.\n");
-		
-		HIP_DEBUG_HIT("Connecting to HIT", &sin6->sin6_addr);
+		    
+		if (ai->ai_family == AF_INET)
+			HIP_DEBUG_LSI("Connecting to", &sin4->sin_addr);
+		else
+			HIP_DEBUG_HIT("Connecting to", &sin6->sin6_addr);
 		
 		gettimeofday(&stats_before, NULL);
 		HIP_IFE((e = connect(*sock, ai->ai_addr, ai->ai_addrlen)) != 0,
@@ -337,7 +344,7 @@ int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
 		 peer_name, port_name);
 	
 	HIP_INFO("Please input some text to be sent to '%s'.\n"\
-		 "Empty row or \"CTRL+d\" sends data.\n", peer_name);
+		 "Empty row or \"CTRL+d\" twice sends data.\n", peer_name);
 	
 	/* Read user input from the standard input. */
 	while((c = getc(stdin)) != EOF && (datalen < IP_MAXPACKET))
