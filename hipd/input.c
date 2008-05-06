@@ -26,7 +26,7 @@ extern int hip_build_param_esp_info(struct hip_common *msg,
 				    uint16_t keymat_index, uint32_t old_spi,
 				    uint32_t new_spi);
 
-/* Fix the packet len before calling this function! */
+/** @note Fix the packet len before calling this function! */
 static int hip_verify_hmac(struct hip_common *buffer, u8 *hmac,
 			   void *hmac_key, int hmac_type)
 {
@@ -56,10 +56,10 @@ int hip_verify_packet_hmac(struct hip_common *msg,
 			   struct hip_crypto_key *crypto_key)
 {
 	HIP_DEBUG("hip_verify_packet_hmac() invoked.\n");
-	int err = 0, len, orig_len;
-	u8 orig_checksum;
+	int err = 0, len = 0, orig_len = 0;
+	u8 orig_checksum = 0;
 	struct hip_crypto_key tmpkey;
-	struct hip_hmac *hmac;
+	struct hip_hmac *hmac = NULL;
 
 	HIP_IFEL(!(hmac = hip_get_param(msg, HIP_PARAM_HMAC)),
 		 -ENOMSG, "No HMAC parameter\n");
@@ -75,12 +75,11 @@ int hip_verify_packet_hmac(struct hip_common *msg,
 	len = (u8 *) hmac - (u8*) msg;
 	hip_set_msg_total_len(msg, len);
 
-	HIP_HEXDUMP("HMAC key", crypto_key->key,
+	_HIP_HEXDUMP("HMAC key", crypto_key->key,
 		    hip_hmac_key_length(HIP_ESP_AES_SHA1));
+	_HIP_HEXDUMP("HMACced data:", msg, len);
 
-	HIP_HEXDUMP("HMACced data", msg, len);
 	memcpy(&tmpkey, crypto_key, sizeof(tmpkey));
-
 	HIP_IFEL(hip_verify_hmac(msg, hmac->hmac_data, tmpkey.key,
 				 HIP_DIGEST_SHA1_HMAC), 
 		 -1, "HMAC validation failed\n");
@@ -117,6 +116,8 @@ int hip_verify_packet_rvs_hmac(struct hip_common *msg,
 	len = (u8 *) hmac - (u8*) msg;
 	hip_set_msg_total_len(msg, len);
 
+	/* Substringed the following debug prints to reduce the excessive jargon
+	   that these functions produce. -Lauri 06.05.2008. */
 	HIP_HEXDUMP("HMAC key", crypto_key->key,
 		    hip_hmac_key_length(HIP_ESP_AES_SHA1));
 
@@ -170,10 +171,8 @@ int hip_verify_packet_hmac2(struct hip_common *msg,
 	return err;
 }
 
-int hip_produce_keying_material(struct hip_common *msg,
-				struct hip_context *ctx,
-				uint64_t I,
-				uint64_t J,
+int hip_produce_keying_material(struct hip_common *msg, struct hip_context *ctx,
+				uint64_t I, uint64_t J,
 				struct hip_dh_public_value **dhpv)
 {
 	char *dh_shared_key = NULL;
@@ -212,54 +211,66 @@ int hip_produce_keying_material(struct hip_common *msg,
 	esp_transf_length = hip_enc_key_length(esp_tfm);
 	auth_transf_length = hip_auth_key_length_esp(esp_tfm);
 
-	HIP_DEBUG("transform lengths: hip=%d, hmac=%d, esp=%d, auth=%d\n",
+	HIP_DEBUG("Transform lengths are:\n"\
+		  "\tHIP = %d, HMAC = %d, ESP = %d, auth = %d\n",
 		  hip_transf_length, hmac_transf_length, esp_transf_length,
 		  auth_transf_length);
 
-	HIP_DEBUG("I=0x%llx J=0x%llx\n", I, J);
+	HIP_DEBUG("I and J values from the puzzle and its solution are:\n"\
+		  "\tI = 0x%llx\n\tJ = 0x%llx\n", I, J);
 
-	/* Create only minumum amount of KEYMAT for now. From draft
-	 * chapter HIP KEYMAT we know how many bytes we need for all
-	 * keys used in the base exchange. */
+	/* Create only minumum amount of KEYMAT for now. From draft chapter
+	   HIP KEYMAT we know how many bytes we need for all keys used in the
+	   base exchange. */
 	keymat_len_min = hip_transf_length + hmac_transf_length +
 		hip_transf_length + hmac_transf_length + esp_transf_length +
 		auth_transf_length + esp_transf_length + auth_transf_length;
 
-	/* assume esp keys are after authentication keys */
+	/* Assume ESP keys are after authentication keys */
 	esp_default_keymat_index = hip_transf_length + hmac_transf_length +
 		hip_transf_length + hmac_transf_length;
 
 	/* R1 contains no ESP_INFO */
 	esp_info = hip_get_param(msg, HIP_PARAM_ESP_INFO);
-	if (esp_info)
+	
+	if (esp_info != NULL){
 		esp_keymat_index = ntohs(esp_info->keymat_index);
-	else
+	} else {
 		esp_keymat_index = esp_default_keymat_index;
-
+	}
+	
 	if (esp_keymat_index != esp_default_keymat_index) {
-		/* XX FIXME */
-		HIP_ERROR("Varying keymat slices not supported yet\n");
+		/** @todo Add support for keying material. */
+		HIP_ERROR("Varying keying material slices are not supported "\
+			  "yet.\n");
 		err = -1;
 		goto out_err;
 	}
 
 	keymat_len = keymat_len_min;
-	if (keymat_len % HIP_AH_SHA_LEN)
+	
+	if (keymat_len % HIP_AH_SHA_LEN) {
 		keymat_len += HIP_AH_SHA_LEN - (keymat_len % HIP_AH_SHA_LEN);
-
-	HIP_DEBUG("keymat_len_min=%u keymat_len=%u\n", keymat_len_min,
-		  keymat_len);
+	}
+	
+	HIP_DEBUG("Keying material:\n\tminimum length = %u\n\t"\
+		  "keying material length = %u.\n", keymat_len_min, keymat_len);
+	
 	HIP_IFEL(!(keymat = HIP_MALLOC(keymat_len, GFP_KERNEL)), -ENOMEM,
-		 "No memory for KEYMAT\n");
-
-	/* 1024 should be enough for shared secret. The length of the
-	 * shared secret actually depends on the DH Group. */
+		 "Error on allocating memory for keying material.\n");
+	
+	/* 1024 should be enough for shared secret. The length of the shared
+	   secret actually depends on the DH Group. */
 	/** @todo 1024 -> hip_get_dh_size ? */
 	HIP_IFEL(!(dh_shared_key = HIP_MALLOC(dh_shared_len, GFP_KERNEL)),
-		 -ENOMEM,  "No memory for DH shared key\n");
+		 -ENOMEM,
+		 "Error on allocating memory for Diffie-Hellman shared key.\n");
+
 	memset(dh_shared_key, 0, dh_shared_len);
-	HIP_IFEL(!(dhf= (struct hip_diffie_hellman*)hip_get_param(msg, HIP_PARAM_DIFFIE_HELLMAN)),
-		 -ENOENT,  "No Diffie-Hellman param found\n");
+
+	HIP_IFEL(!(dhf = (struct hip_diffie_hellman*)hip_get_param(
+			   msg, HIP_PARAM_DIFFIE_HELLMAN)),
+		 -ENOENT,  "No Diffie-Hellman parameter found.\n");
 
 	/* If the message has two DH keys, select (the stronger, usually) one. */
 	*dhpv = hip_dh_select_key(dhf);
@@ -268,12 +279,15 @@ int hip_produce_keying_material(struct hip_common *msg,
 	_HIP_DEBUG("dhpv->pub_len= %d\n", ntohs((*dhpv)->pub_len));
 
 	HIP_IFEL((dh_shared_len = hip_calculate_shared_secret(
-	     (*dhpv)->public_value,(*dhpv)->group_id, ntohs((*dhpv)->pub_len), 
-	     dh_shared_key, dh_shared_len)) < 0,
-	     -EINVAL, "Calculation of shared secret failed\n");
-	HIP_DEBUG("dh_shared_len=%u\n", dh_shared_len);
-	HIP_HEXDUMP("DH SHARED PARAM", param, hip_get_param_total_len(param));
-	HIP_HEXDUMP("DH SHARED KEY", dh_shared_key, dh_shared_len);
+			  (*dhpv)->public_value, (*dhpv)->group_id,
+			  ntohs((*dhpv)->pub_len), dh_shared_key,
+			  dh_shared_len)) < 0,
+		 -EINVAL, "Calculation of shared secret failed.\n");
+	
+	_HIP_HEXDUMP("Diffie-Hellman shared parameter:\n", param,
+		    hip_get_param_total_len(param));
+	_HIP_HEXDUMP("Diffie-Hellman shared key:\n", dh_shared_key,
+		     dh_shared_len);
 
 #ifdef CONFIG_HIP_BLIND
 	HIP_DEBUG_HIT("key_material msg->hits (responder)", &msg->hits);
@@ -330,7 +344,8 @@ int hip_produce_keying_material(struct hip_common *msg,
 #endif
 	/* Draw keys: */
 	we_are_HITg = hip_hit_is_bigger(&msg->hitr, &msg->hits);
-	HIP_DEBUG("we are HIT%c\n", we_are_HITg ? 'g' : 'l');
+	HIP_DEBUG("We are %s HIT.\n", we_are_HITg ? "greater" : "lesser");
+	
 	if (we_are_HITg) {
 		hip_keymat_draw_and_copy(ctx->hip_enc_out.key, &km,	hip_transf_length);
 		hip_keymat_draw_and_copy(ctx->hip_hmac_out.key,&km,	hmac_transf_length);
@@ -385,7 +400,7 @@ int hip_produce_keying_material(struct hip_common *msg,
 	if (keymat)
 		HIP_FREE(keymat);
 	if (plain_local_hit)
-	  HIP_FREE(plain_local_hit);
+		HIP_FREE(plain_local_hit);
 	return err;
 }
 
@@ -1393,6 +1408,10 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 	/* Assume already locked entry */
 	i2 = ctx->input;
 
+	/* Handle REG_REQUEST parameter. */
+	hip_handle_param_rrq(i2, entry);
+
+
 	/* Build and send R2: IP ( HIP ( SPI, HMAC, HIP_SIGNATURE ) ) */
 	HIP_IFEL(!(r2 = hip_msg_alloc()), -ENOMEM, "No memory for R2\n");
 
@@ -1442,16 +1461,19 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 #endif	
  	/* HMAC2 */
 	{
-	     struct hip_crypto_key hmac;
-	     if (entry->our_pub == NULL) HIP_DEBUG("entry->our_pub is null\n");
-	     else HIP_HEXDUMP("host id for HMAC2", entry->our_pub,
-			      hip_get_param_total_len(entry->our_pub));
-
-	     memcpy(&hmac, &entry->hip_hmac_out, sizeof(hmac));
-	     HIP_IFEL(hip_build_param_hmac2_contents(r2, &hmac, entry->our_pub), -1,
-		      "Building of hmac failed\n");
+		struct hip_crypto_key hmac;
+		if (entry->our_pub == NULL) {
+			HIP_DEBUG("entry->our_pub is null\n");
+		} else {
+			_HIP_HEXDUMP("Host id for HMAC2", entry->our_pub,
+				    hip_get_param_total_len(entry->our_pub));
+		}
+		
+		memcpy(&hmac, &entry->hip_hmac_out, sizeof(hmac));
+		HIP_IFEL(hip_build_param_hmac2_contents(r2, &hmac, entry->our_pub), -1,
+			 "Building of hmac failed\n");
 	}
-
+	
 	HIP_IFEL(entry->sign(entry->our_priv, r2), -EINVAL, "Could not sign R2. Failing\n");
 
 	err = entry->hadb_xmit_func->hip_send_pkt(i2_daddr, i2_saddr,
@@ -1502,6 +1524,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	struct hip_dh_public_value *dhpv = NULL;
 	struct hip_spi_in_item spi_in_data;
 	struct hip_locator *locator = NULL;
+	struct hip_solution *sol = NULL;
 	hip_tlv_common_t *param = NULL;
 	in6_addr_t *plain_peer_hit = NULL, *plain_local_hit = NULL;
 	hip_ha_t *entry = ha;
@@ -1538,22 +1561,26 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		goto out_err;
 	}
 	
-	/* Assume already locked ha, if ha is not NULL. */
-	/*HIP_IFEL(!(ctx = HIP_MALLOC(sizeof(struct hip_context), 0)),
-	  -ENOMEM, "Alloc failed\n");*/
-	
 	memset(ctx, 0, sizeof(struct hip_context));
+	/* Store a pointer to the incoming i2 message in the context just
+	   allocted. From the context struct we can then access the I2 in
+	   hip_create_r2() later. */
+	ctx->input = i2;
 	
+	r1cntr = hip_get_param(ctx->input, HIP_PARAM_R1_COUNTER);
+
 	/* Check packet validity. We MUST check that the responder HIT is one
 	   of ours. Check the generation counter. We do not support generation
 	   counter (our precreated R1s suck). */
-	ctx->input = i2;
-	r1cntr = hip_get_param(ctx->input, HIP_PARAM_R1_COUNTER);
 	
 	/* check solution for cookie */
-	struct hip_solution *sol;
-	HIP_IFEL(!(sol = hip_get_param(ctx->input, HIP_PARAM_SOLUTION)),
-		 -EINVAL, "Invalid I2: SOLUTION parameter missing.\n");
+	sol = hip_get_param(ctx->input, HIP_PARAM_SOLUTION);
+	if(sol == NULL) {
+		err = -EINVAL;
+		HIP_ERROR("Invalid I2: SOLUTION parameter missing.\n");
+		goto out_err;
+	}
+	
 	I = sol->I;
 	J = sol->J;
 	HIP_IFEL(!hip_verify_cookie(i2_saddr, i2_daddr, i2, sol),
@@ -1635,7 +1662,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	   from hadb. Usually you shouldn't have state here, right? */
 	
 	HIP_IFEL(hip_produce_keying_material(ctx->input, ctx, I, J, &dhpv), -1,
-		 "Unable to produce keying material. Dropping I2\n");
+		 "Unable to produce keying material. Dropping I2.\n");
 
 	/* Verify HMAC. */
 	if (hip_hidb_hit_is_our(&i2->hits)) {
@@ -1736,6 +1763,9 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 #endif
 
 	/* HMAC cannot be validated until we draw key material */
+
+	/* Haven't we already verified the HMAC on line 1675 or so...?
+	   -Lauri 06.05.2008 */
 	
 	/* NOTE! The original packet has the data still encrypted. But this is
 	   not a problem, since we have decrypted the data into a temporary
@@ -1986,8 +2016,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	HIP_IFE(hip_store_base_exchange_keys(entry, ctx, 0), -1);
 	hip_hadb_insert_state(entry);
 	
-	/* Handle REG_REQUEST parameter. */
-	hip_handle_param_rrq(i2, entry);
+	 
 
 	HIP_DEBUG("\nInserted a new host association state.\n"
 		  "\tHIP state: %s\n"\

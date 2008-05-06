@@ -1639,8 +1639,8 @@ int hip_build_param_hmac2_contents(struct hip_common *msg,
 		goto out_err;
 	}
 
-	HIP_HEXDUMP("HMAC data", tmp, hip_get_msg_total_len(tmp));
-	HIP_HEXDUMP("HMAC key\n", key->key, 20);
+	_HIP_HEXDUMP("HMAC data", tmp, hip_get_msg_total_len(tmp));
+	_HIP_HEXDUMP("HMAC key\n", key->key, 20);
 
 	if (!hip_write_hmac(HIP_DIGEST_SHA1_HMAC, key->key, tmp,
 			    hip_get_msg_total_len(tmp),
