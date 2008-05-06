@@ -28,8 +28,8 @@ int create_serversocket(int type, int port) {
 	addr.sin6_flowinfo = 0;
 	/* the following gives error "structure has no member named 
 	   sin6_scope_id'" on gaijin:
-	   addr.sin6_scope_id = 0 ; */
-
+	   addr.sin6_scope_id = 0; */
+	
 	if (bind(fd, (struct sockaddr *)&addr, sizeof(struct sockaddr_in6)) < 0) {
 		perror("bind");
 		close(fd);
@@ -57,20 +57,23 @@ int main_server_tcp(int serversock) {
 	char addrstr[INET6_ADDRSTRLEN];
 
 	peerlen = sizeof(struct sockaddr_in6);
-  
+
+	HIP_DEBUG("SERVER 1, serversock: %d.\n", serversock);
 	peerfd = accept(serversock, (struct sockaddr *)&peeraddr, &peerlen);
+	HIP_DEBUG("SERVER 2.\n");
 	if (peerfd < 0) {
 		perror("accept");
 		err = -1;
 		goto out_err;
 	}
-	
+	HIP_DEBUG("SERVER 3.\n");
 	locallen = sizeof(localaddr);
 	if (!getsockname(serversock,
 			 (struct sockaddr *)&localaddr,
 			 &locallen))
 		HIP_DEBUG_HIT("local addr", &localaddr.sin6_addr);
 	HIP_DEBUG_HIT("peer addr", &peeraddr.sin6_addr);
+	HIP_DEBUG("SERVER 4.\n");
 	
 	while((recvnum = recv(peerfd, mylovemostdata,
 			      sizeof(mylovemostdata), 0)) > 0 ) {
@@ -92,7 +95,7 @@ int main_server_tcp(int serversock) {
 		}
 		printf("Client has been replied.\n");
 	}
-
+	HIP_DEBUG("SERVER 5.\n");
 	if (peerfd)
 		close(peerfd);
 
@@ -248,7 +251,6 @@ int hip_connect_func(struct addrinfo *peer_ai, int *sock){
 	/* Loop through every address in the address info. */
 	for(ai = peer_ai; ai != NULL; ai = ai->ai_next) {
 		
-		/* Currently only IPv6 socket structures are supported. */
 		if (!(ai->ai_family == AF_INET || ai->ai_family == AF_INET6)) {
 			HIP_INFO("Trying to connect to a non-inet address "\
 				 "family address. Skipping.\n");
@@ -273,8 +275,10 @@ int hip_connect_func(struct addrinfo *peer_ai, int *sock){
 			HIP_DEBUG_HIT("Connecting to", &sin6->sin6_addr);
 		
 		gettimeofday(&stats_before, NULL);
+		HIP_DEBUG("OLINKO EKA, *sock %d?\n", *sock);
 		HIP_IFE((e = connect(*sock, ai->ai_addr, ai->ai_addrlen)) != 0,
 			err = -errno);
+		HIP_DEBUG("VAI TOKA?\n");
 		gettimeofday(&stats_after, NULL);
 		
 		microseconds  =
@@ -351,6 +355,7 @@ int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
 	{
 		datalen++;
 		if((sendbuffer[datalen-1] = c) == '\n'){
+			/* First character is a newlinefeed. */
 			if(datalen == 1){
 				break;
 			}
@@ -361,9 +366,8 @@ int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
 				ungetc(c, stdin);
 			}
 		}
-		
 	}
-
+	
 	if(datalen == 0) {
 		HIP_INFO("No input data given.\nRunning plain connection test "\
 			 "with no payload data exchange.\n");

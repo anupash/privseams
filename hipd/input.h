@@ -33,10 +33,11 @@
 #include "util.h"
 #include "state.h"
 #include "oppdb.h"
+#include "registration.h"
+
 #if defined CONFIG_HIP_HI3
 #include "i3_client_api.h"
 #include "oppipdb.h"
-
 
 struct hi3_ipv4_addr {
 	u8 sin_family;
@@ -48,8 +49,7 @@ struct hi3_ipv6_addr {
 	struct in6_addr sin6_addr;
 };
 
-#endif
-
+#endif // CONFIG_HIP_HI3
 
 struct pseudo_header6
 {
@@ -71,7 +71,7 @@ struct pseudo_header
 
 #ifdef CONFIG_HIP_HI3
 void hip_inbound(cl_trigger *t, void *data, void *ctx);
-#endif
+#endif // CONFIG_HIP_HI3
 
 /**
  * Gets name for a message type

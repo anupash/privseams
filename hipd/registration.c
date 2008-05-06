@@ -21,6 +21,10 @@ hip_srv_t hip_services[HIP_TOTAL_EXISTING_SERVICES];
  *  @note This assumes a single threded model. We are not using mutexes here.
  */
 hip_ll_t pending_requests;
+/** A linked list for storing pending responses on the server side.
+ *  @note This assumes a single threded model. We are not using mutexes here.
+ */
+hip_ll_t pending_responses;
 
 void hip_init_xxx_services()
 {
@@ -38,6 +42,7 @@ void hip_init_xxx_services()
 	hip_services[2].max_lifetime = HIP_RELREC_MAX_LIFETIME;
 
 	hip_ll_init(&pending_requests);
+	hip_ll_init(&pending_responses);
 	
 	HIP_DEBUG("NEW SERVICE INITIALIZATION DONE.\n");
 }
@@ -45,6 +50,7 @@ void hip_init_xxx_services()
 void hip_uninit_xxx_services()
 {
 	hip_ll_uninit(&pending_requests, free);
+	hip_ll_uninit(&pending_responses, free);
 	HIP_DEBUG("NEW SERVICE UNINITIALIZATION DONE.\n");
 }
 
@@ -133,11 +139,11 @@ void hip_srv_info(const hip_srv_t *srv, char *status)
 	cursor += sprintf(cursor, " reg_type: ");
 	if(srv->reg_type == HIP_SERVICE_RENDEZVOUS){
 		cursor += sprintf(cursor, "rendezvous\n");
-	}else if(srv->reg_type == HIP_SERVICE_ESCROW) {
+	} else if(srv->reg_type == HIP_SERVICE_ESCROW) {
 		cursor += sprintf(cursor, "escrow\n");
-	}else if(srv->reg_type == HIP_SERVICE_RELAY) {
+	} else if(srv->reg_type == HIP_SERVICE_RELAY) {
 		cursor += sprintf(cursor, "relay\n");
-	}else{
+	} else {
 		cursor += sprintf(cursor, "unknown\n");
 	}
 
@@ -233,8 +239,6 @@ int hip_handle_param_reg_info(hip_common_t *msg, hip_ha_t *entry)
 	unsigned int type_count = 0;
 	int i = 0;
 	
-	HIP_DEBUG("REG_INFO parameter found.\n");
-
 	reg_info = hip_get_param(msg, HIP_PARAM_REG_INFO);
 	
 	if(reg_info == NULL) {
@@ -244,7 +248,7 @@ int hip_handle_param_reg_info(hip_common_t *msg, hip_ha_t *entry)
 		   Besides, it makes no sense to do anything except return
 		   zero here. Why should we take action if the responder does
 		   NOT offer the service? -Lauri. */ 
-		HIP_DEBUG("No REG_INFO parameter found. The Responder offfers "\
+		HIP_DEBUG("No REG_INFO parameter found. The Responder offers "\
 			  "no services.\n");
 		HIP_KEA *kea;
 		kea = hip_kea_find(&entry->hit_our);
@@ -258,6 +262,8 @@ int hip_handle_param_reg_info(hip_common_t *msg, hip_ha_t *entry)
 		return 0;
 	}
 	
+	HIP_DEBUG("REG_INFO parameter found.\n");
+
 	/* Get a pointer registration types and the type count. */
 	reg_types  = reg_info->reg_type;
 	type_count = hip_get_param_contents_len(reg_info) -
@@ -331,5 +337,52 @@ int hip_handle_param_reg_info(hip_common_t *msg, hip_ha_t *entry)
 		}
 	}
 	
+	return 0;
+}
+
+int hip_handle_param_rrq(hip_common_t *msg, hip_ha_t *entry)
+{
+	int err = 0, type_count = 0;
+	struct hip_reg_request *reg_request = NULL;
+	uint8_t *values = NULL;
+
+	reg_request = hip_get_param(msg, HIP_PARAM_REG_REQUEST);
+	
+	if(reg_request == NULL) {
+		return -1;
+	}
+	
+	HIP_DEBUG("REG_REQUEST parameter found.\n");
+	
+	/* Get the registration lifetime and count of registration types. */
+	type_count = hip_get_param_contents_len(reg_request) -
+		sizeof(reg_request->lifetime);
+	values = hip_get_param_contents_direct(reg_request) +
+		sizeof(reg_request->lifetime);
+
+	HIP_IFEL(hip_has_duplicate_services(values, type_count), -1,
+		 "The REG_REQUEST parameter has duplicate services. The whole "\
+		 "parameter is omitted.\n");
+
+ out_err:
+	return err;
+}
+
+int hip_has_duplicate_services(uint8_t *values, int type_count)
+{
+	if(values == NULL || type_count <= 0) {
+		return -1;
+	}
+	
+	int i = 0, j = 0;
+
+	for(; i < type_count; i++) {
+		for(j = i + 1; j < type_count; j++) {
+			if(values[i] = values[j]) {
+				return -1;
+			}
+		}
+	}
+
 	return 0;
 }

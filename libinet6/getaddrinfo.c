@@ -488,6 +488,8 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
         tmp_ttl = gw_info->ttl;
         tmp_port = htons(gw_info->port);
         IPV6_TO_IPV4_MAP(&gw_info->addr, &tmp_v4);
+        /* Compiler warning:
+	   assignment discards qualifiers from pointer target type. */
         pret = inet_ntop(AF_INET, &tmp_v4, tmp_ip_str, 20);
         HIP_DEBUG("Got address %s, port %d, TTL %d from daemon\n",
                   tmp_ip_str, tmp_port, tmp_ttl);
@@ -499,6 +501,9 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
                         //close(s);
                         goto skip_dht;
         }
+	/* Compiler warning:
+	   passing argument 2 of 'opendht_get_key' discards qualifiers from
+	   pointer target type. */
         ret_hit = opendht_get_key(serving_gateway, name, dht_response_hit);
         if (ret_hit == 0)
                 HIP_DEBUG("HIT received from DHT: %s\n", dht_response_hit);

@@ -93,7 +93,7 @@ int hip_relay_init()
 	}
 	
  out_err:
-	if(hiprelay_wl == NULL){
+	if(hiprelay_wl == NULL) {
 		hip_relht_uninit();
 	}
 	
@@ -276,8 +276,7 @@ hip_relrec_t *hip_relrec_alloc(const hip_relrec_type_t type,
 
 	hip_relrec_t *rec = (hip_relrec_t*) malloc(sizeof(hip_relrec_t));
      
-	if(rec == NULL)
-	{
+	if(rec == NULL) {
 		HIP_ERROR("Error allocating memory for HIP relay record.\n");
 		return NULL;
 	}
@@ -302,8 +301,7 @@ void hip_relrec_set_mode(hip_relrec_t *rec, const hip_relrec_type_t type)
 
 void hip_relrec_set_lifetime(hip_relrec_t *rec, const uint8_t lifetime)
 {
-	if(rec != NULL)
-	{
+	if(rec != NULL) {
 		rec->lifetime = pow(2, ((double)(lifetime-64)/8));
 	}
 }

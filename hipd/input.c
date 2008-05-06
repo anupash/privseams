@@ -1368,16 +1368,18 @@ int hip_receive_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 }
 
 /**
- * hip_create_r2 - Creates and transmits R2 packet.
- * @param ctx Context of processed I2 packet.
- * @param entry HA
- *
- * @return 0 on success, < 0 on error.
+ * Creates and transmits an R2 packet.
+ * 
+ * @param  ctx      a pointer to the context of processed I2 packet.
+ * @param  i2_saddr a pointer to I2 packet source IP address.
+ * @param  i2_daddr a pointer to I2 packet destination IP address.
+ * @param  entry    a pointer to the current host association database state.
+ * @param  i2_info  a pointer to the source and destination ports (when NAT is
+ *                  in use).
+ * @return zero on success, negative otherwise.
  */
-int hip_create_r2(struct hip_context *ctx,
-		  struct in6_addr *i2_saddr,
-		  struct in6_addr *i2_daddr,
-		  hip_ha_t *entry,
+int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
+		  in6_addr_t *i2_daddr, hip_ha_t *entry,
 		  hip_portpair_t *i2_info)
 {
 	struct hip_reg_request *reg_request = NULL;
@@ -1527,9 +1529,18 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		use_blind = 1;
 	}
 	
+	/* Allocate memory for the context created from the processing of the I2
+	   packet. */
+	ctx = (struct hip_context *) malloc(sizeof(struct hip_context));
+	if (ctx == NULL) {
+		err = -ENOMEM;
+		HIP_ERROR("Error allocating memory for HIP context.\n");
+		goto out_err;
+	}
+	
 	/* Assume already locked ha, if ha is not NULL. */
-	HIP_IFEL(!(ctx = HIP_MALLOC(sizeof(struct hip_context), 0)),
-		 -ENOMEM, "Alloc failed\n");
+	/*HIP_IFEL(!(ctx = HIP_MALLOC(sizeof(struct hip_context), 0)),
+	  -ENOMEM, "Alloc failed\n");*/
 	
 	memset(ctx, 0, sizeof(struct hip_context));
 	
@@ -1975,12 +1986,16 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	HIP_IFE(hip_store_base_exchange_keys(entry, ctx, 0), -1);
 	hip_hadb_insert_state(entry);
 	
+	/* Handle REG_REQUEST parameter. */
+	hip_handle_param_rrq(i2, entry);
+
 	HIP_DEBUG("\nInserted a new host association state.\n"
 		  "\tHIP state: %s\n"\
 		  "\tDefault outgoing SPI 0x%x.\n"
-		  "\tCreating a R2 packet in response next.\n",
+		  "\tCreating an R2 packet in response next.\n",
 		  hip_state_str(entry->state), entry->default_spi_out);
 	
+	/* Create an R2 packet in response. */
 	HIP_IFEL(entry->hadb_misc_func->hip_create_r2(
 			 ctx, i2_saddr, i2_daddr, entry, i2_info), -1, 
 		 "Creation of R2 failed\n");
@@ -1993,7 +2008,8 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		HIP_DEBUG("Could not deliver escrow data to server\n");
 	}
 #endif //CONFIG_HIP_ESCROW
-/*      #ifdef CONFIG_HIP_RVS
+        /*      
+	#ifdef CONFIG_HIP_RVS
 	if (entry != NULL) {
 	if(hip_relay_get_status() == HIP_RELAY_ON) {
 	entry->state = HIP_STATE_ESTABLISHED;
@@ -2025,14 +2041,14 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	
 	/* As for the above todo item:
 
-	   Where is it said, that we should wait for ESP or implementation
-	   specific time here. This far we have succesfully verified and
+	   Where is it said that we should wait for ESP or implementation
+	   specific time here? This far we have succesfully verified and
 	   processed the I2 message (except the LOCATOR parameter) and sent an
 	   R2 as an response. We are here at state UNASSOCIATED. From Section
 	   4.4.2. of RFC 5201 we learn that if I2 processing was successful, we
 	   should "send R2 and go to R2-SENT" or if I2 processing failed, we
 	   should "stay at UNASSOCIATED". -Lauri 29.04.2008 */
-
+	
 	entry->state = HIP_STATE_ESTABLISHED;
 
         /***** LOCATOR PARAMETER ******/
