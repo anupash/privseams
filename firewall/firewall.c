@@ -279,8 +279,13 @@ int is_hip_packet(void * hdr, int trafficType){
 	int hdr_size;
 	int udp_spi_is_zero = 0;
 	uint16_t plen;
+	int return_val; // return value
+	
+
 
 	HIP_DEBUG("\n");
+
+
 
 	
 	_HIP_DEBUG("the UDP port number is %d\n",IPPROTO_UDP);
@@ -354,11 +359,14 @@ int is_hip_packet(void * hdr, int trafficType){
 	{		
 		HIP_DEBUG("UDP header size  is %d\n", sizeof(struct udphdr));
 		
-		return !hip_check_network_msg((struct hip_common *) (((char *)udphdr) 
-								     + 
-								     sizeof(struct udphdr) 
-								     + 
-								     HIP_UDP_ZERO_BYTES_LEN));
+		
+		return_val = !hip_check_network_msg((struct hip_common *) (((char *)udphdr) 
+									   + 
+									   sizeof(struct udphdr) 
+									   + 
+									   HIP_UDP_ZERO_BYTES_LEN));
+		HIP_DEBUG("return_val is in the is_hip_packet function: %d\n", return_val);
+		return return_val;
 	}
 	else
 		return 0;
