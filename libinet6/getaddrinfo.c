@@ -444,7 +444,7 @@ connect_alarm(int signo)
 int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 {	 								
         
-	int s, error, ret_hit, ret_addr, tmp_ttl, tmp_port;
+	int error, ret_hit, ret_addr, tmp_ttl, tmp_port;
 	int found_hits = 0, lineno = 0, i = 0, err = 0;
 	
 	char dht_response_hit[1024], dht_response_addr[1024], line[500];
@@ -496,20 +496,20 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
         error = resolve_dht_gateway_info(tmp_ip_str, &serving_gateway);
         if (error < 0) {
                         HIP_DEBUG("Error in resolving the DHT gateway address, skipping DHT\n");
-                        close(s);
+                        //close(s);
                         goto skip_dht;
         }
         ret_hit = opendht_get_key(serving_gateway, name, dht_response_hit);
         if (ret_hit == 0)
                 HIP_DEBUG("HIT received from DHT: %s\n", dht_response_hit);
         /* Where is this opened? */
-	close(s);
+	//close(s);
         if (ret_hit == 0 && (strlen((char *)dht_response_hit) > 1)) {
                 ret_addr = opendht_get_key(serving_gateway, 
                                            dht_response_hit, dht_response_addr);
                 if (ret_addr == 0)
                         HIP_DEBUG("Address received from DHT: %s\n",dht_response_addr);
-                close(s);
+                //close(s);
         }
         if ((ret_hit == 0) && (ret_addr == 0) && 
             (dht_response_hit[0] != '\0') && (dht_response_addr[0] != '\0')) { 
