@@ -927,7 +927,7 @@ void hip_send_notify(hip_ha_t *entry)
 {
 	int err = 0; /* actually not needed, because we can't do
 		      * anything if packet sending fails */
-	struct hip_common *notify_packet;
+	struct hip_common *notify_packet = NULL;
 	struct in6_addr daddr;
 
 	HIP_IFE(!(notify_packet = hip_msg_alloc()), -ENOMEM);
@@ -1294,7 +1294,7 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	/* If local address is not given, we fetch one in my_addr. my_addr_ptr
 	   points to the final source address (my_addr or local_addr). */
 	struct in6_addr my_addr, *my_addr_ptr = NULL;
-	int memmoved = 1;
+	int memmoved = 0;
 	
 	_HIP_DEBUG("hip_send_udp() invoked.\n");
 
