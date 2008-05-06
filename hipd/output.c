@@ -940,7 +940,7 @@ void hip_send_notify(hip_ha_t *entry)
 {
 	int err = 0; /* actually not needed, because we can't do
 		      * anything if packet sending fails */
-	struct hip_common *notify_packet;
+	struct hip_common *notify_packet = NULL;
 	struct in6_addr daddr;
 
 	HIP_IFE(!(notify_packet = hip_msg_alloc()), -ENOMEM);
