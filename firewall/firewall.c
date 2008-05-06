@@ -1002,6 +1002,9 @@ int filter_hip(const struct in6_addr * ip6_src,
 			HIP_DEBUG("packet type: R2\n");
         	else if (buf->type_hdr == HIP_UPDATE)
 			HIP_DEBUG("packet type: UPDATE\n");
+		else if (buf->type_hdr == HIP_NOTIFY)
+			HIP_DEBUG("packet type: NOTIFY\n");
+
 
                           
 		HIP_DEBUG_HIT("src hit: ", &(buf->hits));

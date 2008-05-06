@@ -1264,14 +1264,14 @@ void *hip_esp_input(struct sockaddr_storage *ss_lsi, u8 *buff, int len)
 	
 	spi 	= ntohl(esph->spi);
 
-	HIP_DEBUG("SPI value is 0x%x\n", spi);
+	HIP_DEBUG("Input esp packet SPI value is 0x%x\n", spi);
 	seq_no 	= ntohl(esph->seq_no);
 	if (!(entry = hip_sadb_lookup_spi(spi))) {
 		HIP_DEBUG("Warning: SA not found for SPI 0x%x\n", spi);
 		goto out_err;
 	}
 
-	HIP_DEBUG("entry->SPI value is 0x%x\n", entry->spi);
+	HIP_DEBUG("input entry->SPI value is 0x%x\n", entry->spi);
 	
 	if (!entry->inner_src_addrs) { 
 		HIP_DEBUG("we do not have inner src addrs \n");
@@ -2177,7 +2177,7 @@ int hip_esp_encrypt(__u8 *in, int len, __u8 *out, int *outlen,
 		udph = (udphdr*) out;
 		/*esp pointer points to out address*/
 		esp = (struct ip_esp_hdr*) &out[sizeof(udphdr)]; 
-		esp += HIP_UDP_ZERO_BYTES_LEN;
+		// esp += HIP_UDP_ZERO_BYTES_LEN;
 		use_udp = TRUE;
 	} else {
 		esp = (struct ip_esp_hdr*) out;
@@ -2188,7 +2188,8 @@ int hip_esp_encrypt(__u8 *in, int len, __u8 *out, int *outlen,
 	*outlen = sizeof(struct ip_esp_hdr);
 	
 	if (use_udp) /* (HIP_ESP_OVER_UDP) */
-		*outlen += (sizeof(udphdr)  + sizeof(HIP_UDP_ZERO_BYTES_LEN));
+		// *outlen += (sizeof(udphdr)  + sizeof(HIP_UDP_ZERO_BYTES_LEN));
+		*outlen += sizeof(udphdr);
 		
 	
 	/* 
