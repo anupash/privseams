@@ -1468,19 +1468,16 @@ int getaddrinfo(const char *name, const char *service,
 	struct gaih *g = gaih, *pg = NULL;
 	struct gaih_service gaih_service, *pservice = NULL;
 
-	/* This will segfault if parameter 'name' is less than 2 bytes
-	   long... Should the length of name also be provied as an argument? */
-	if (name != NULL && name[0] == '*' && name[1] == 0)
+	/*if (name != NULL && name[0] == '*' && name[1] == 0)
 		name = NULL;
-	/* This will segfault if parameter 'service' is less than 2 bytes
-	   long... */
 	if (service != NULL && service[0] == '*' && service[1] == 0)
-		service = NULL;
+	service = NULL;*/
+
 	/* Return "NAME or SERVICE is unknown." error value. */
 	if (name == NULL && service == NULL)
 		return EAI_NONAME;
 
-	/* If no searh key is given, we use the global default address
+	/* If no search key is given, we use the global default address
 	   structure as a searh key. */
 	if (hints == NULL) {
 		hints = &default_hints;
@@ -1507,13 +1504,12 @@ int getaddrinfo(const char *name, const char *service,
 #else
 	hip_transparent_mode = 0;
 #endif
-	if (service && service[0])
-	{
-		HIP_DEBUG("Service is: %s\n", service);
-		char *c;
-		
+	if (service != NULL) {
+		char *c = NULL;
+				
 		gaih_service.name = service;
 		gaih_service.num = strtoul(gaih_service.name, &c, 10);
+		
 		if (*c)
 			gaih_service.num = -1;
 		else
