@@ -1421,6 +1421,8 @@ static void *handle_ip_traffic(void *ptr){
 	int ipv4Traffic = 0, ipv6Traffic = 0;
 	int type = *((int *) ptr);
 	unsigned int packetHook;
+	int ret_val_filter_hip;
+
 
 	HIP_DEBUG("thread for type=IPv%d traffic started\n", type);
 
@@ -1513,13 +1515,17 @@ static void *handle_ip_traffic(void *ptr){
 	  				_HIP_DEBUG("signature exists\n");
 
 
-				if(filter_hip(&src_addr, 
+				if(ret_val_filter_hip = filter_hip(&src_addr, 
 					      &dst_addr, 
 					      hip_common, 
 					      m->hook,
 					      m->indev_name,
 					      m->outdev_name))
 	  			{
+					
+					HIP_DEBUG("ret_val_filter_hip value is %d (filter_hip)\n", 
+						 ret_val_filter_hip);
+
 					allow_packet(hndl, m->packet_id);
 				}
 				
@@ -1527,6 +1533,10 @@ static void *handle_ip_traffic(void *ptr){
 
 				else
 	  			{
+					
+					HIP_DEBUG("ret_val_filter_hip value is %d (filter_hip)\n", 
+						  ret_val_filter_hip);
+
 					/* FIX ME */
 					// !!!!!XX FIXME: UGLY KLUDGE!!!!!!!!!
 					allow_packet(hndl, m->packet_id);
