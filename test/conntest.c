@@ -58,22 +58,20 @@ int main_server_tcp(int serversock) {
 
 	peerlen = sizeof(struct sockaddr_in6);
 
-	HIP_DEBUG("SERVER 1, serversock: %d.\n", serversock);
 	peerfd = accept(serversock, (struct sockaddr *)&peeraddr, &peerlen);
-	HIP_DEBUG("SERVER 2.\n");
+	
 	if (peerfd < 0) {
 		perror("accept");
 		err = -1;
 		goto out_err;
 	}
-	HIP_DEBUG("SERVER 3.\n");
+
 	locallen = sizeof(localaddr);
 	if (!getsockname(serversock,
 			 (struct sockaddr *)&localaddr,
 			 &locallen))
 		HIP_DEBUG_HIT("local addr", &localaddr.sin6_addr);
 	HIP_DEBUG_HIT("peer addr", &peeraddr.sin6_addr);
-	HIP_DEBUG("SERVER 4.\n");
 	
 	while((recvnum = recv(peerfd, mylovemostdata,
 			      sizeof(mylovemostdata), 0)) > 0 ) {
@@ -95,7 +93,6 @@ int main_server_tcp(int serversock) {
 		}
 		printf("Client has been replied.\n");
 	}
-	HIP_DEBUG("SERVER 5.\n");
 	if (peerfd)
 		close(peerfd);
 
@@ -132,7 +129,7 @@ int main_server_udp(int serversock) {
 	memset(&peeraddr, 0, sizeof(peeraddr));
 
 	printf("=== Server listening IN6ADDR_ANY ===\n");
-
+	
 	while((recvnum = recvmsg(serversock, &msg, 0)) > 0) {
 		fprintf(stderr,"=== received string: %s ===\n",
 			mylovemostdata);
@@ -275,10 +272,10 @@ int hip_connect_func(struct addrinfo *peer_ai, int *sock){
 			HIP_DEBUG_HIT("Connecting to", &sin6->sin6_addr);
 		
 		gettimeofday(&stats_before, NULL);
-		HIP_DEBUG("OLINKO EKA, *sock %d?\n", *sock);
+		
 		HIP_IFE((e = connect(*sock, ai->ai_addr, ai->ai_addrlen)) != 0,
 			err = -errno);
-		HIP_DEBUG("VAI TOKA?\n");
+		
 		gettimeofday(&stats_after, NULL);
 		
 		microseconds  =
@@ -348,7 +345,7 @@ int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
 		 peer_name, port_name);
 	
 	HIP_INFO("Please input some text to be sent to '%s'.\n"\
-		 "Empty row or \"CTRL+d\" twice sends data.\n", peer_name);
+		 "Empty row or \"CTRL+d\" sends data.\n", peer_name);
 	
 	/* Read user input from the standard input. */
 	while((c = getc(stdin)) != EOF && (datalen < IP_MAXPACKET))
@@ -360,7 +357,7 @@ int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
 				break;
 			}
 			c = getc(stdin);
-			if(c == '\n'){
+			if(c == '\n' || c == EOF){
 				break;
 			} else {
 				ungetc(c, stdin);

@@ -202,7 +202,36 @@
  * EOWNERDEAD      130      Owner died
  * ENOTRECOVERABLE 131      State not recoverable
  * </pre>
- *
+ * Following error values are defined in /usr/include/netdb.h:
+ * <pre>
+ * NETDB_INTERNAL  -1       See errno. 
+ * NETDB_SUCCESS   0        No problem.
+ * HOST_NOT_FOUND  1        Authoritative Answer Host not found.
+ * TRY_AGAIN       2        Non-Authoritative Host not found, or SERVERFAIL.
+ * NO_RECOVERY     3        Non recoverable errors, FORMERR, REFUSED,NOTIMP.
+ * NO_DATA         4        Valid name, no data record of requested type.
+ * NO_ADDRESS      NO_DATA  No address, look for MX record.
+ * EKEYREJECTED    129      Key was rejected by service
+ * EOWNERDEAD      130      Owner died
+ * ENOTRECOVERABLE 131      State not recoverable
+ * </pre>
+ * Following error values for `getaddrinfo' function are defined in
+ * /usr/include/netdb.h:
+ * <pre>
+ * EAI_BADFLAGS    -1       Invalid value for `ai_flags' field.
+ * EAI_NONAME      -2       NAME or SERVICE is unknown.
+ * EAI_AGAIN       -3       Temporary failure in name resolution.
+ * EAI_FAIL        -4       Non-recoverable failure in name res.
+ * EAI_NODATA      -5       No address associated with NAME.
+ * EAI_FAMILY      -6       `ai_family' not supported.
+ * EAI_SOCKTYPE    -7       `ai_socktype' not supported.
+ * EAI_SERVICE     -8       SERVICE not supported for `ai_socktype'.
+ * EAI_ADDRFAMILY  -9       Address family for NAME not
+ * EAI_MEMORY      -10      Memory allocation failure.
+ * EAI_SYSTEM      -11      System error returned in `errno'.
+ * EAI_OVERFLOW    -12      Argument buffer overflow.
+ * </pre>
+ * 
  * @defgroup ife Error handling macros
  **/
 
