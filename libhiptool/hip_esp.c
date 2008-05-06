@@ -682,7 +682,7 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 		struct ip_esp_hdr *esph = (struct ip_esp_hdr *) (((char *)data) 
 								 + sizeof(udphdr));
 
-
+ 
 		HIP_DEBUG("output packet spi value is 0x%x\n", ntohl(esph->spi));
 
 		
