@@ -323,7 +323,7 @@ int is_hip_packet(void * hdr, int trafficType){
 	}
 
 	if (trafficType == 4 &&
-	    (plen >= sizeof (struct ip) + sizeof(udphdr) + HIP_UDP_ZERO_BYTES_LEN)) {
+	    (plen >= sizeof (struct ip) + sizeof(struct udphdr) + HIP_UDP_ZERO_BYTES_LEN)) {
 		uint32_t *zero_bytes = NULL;
 		// uint32_t *ip_esp_hdr = NULL;
 		
