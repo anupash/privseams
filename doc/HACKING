@@ -633,7 +633,7 @@ yum for Fedora
 
 [hipl]
 name=HIPL
-baseurl=http://packages.infrahip.net/fedora/base/hipl/$basearch
+baseurl=http://packages.infrahip.net/fedora/base/$releasever/$basearch
 gpgcheck=0
 enabled=1
 
@@ -651,9 +651,9 @@ $ yum -y install createrepo
 
 - create a directory tree for yum repository
 
-$ mkdir -p /var/www/html/fedora/base/hipl/i386
+$ mkdir -p /var/www/html/fedora/base/8/i386
 
-$ mkdir -p /var/www/html/fedora/base/hipl/x86_64
+$ mkdir -p /var/www/html/fedora/base/8/x86_64
 
 - copy all hipl packages to the repository depending on the architecture
 
@@ -673,7 +673,7 @@ $ createrepo repository
 
 - for example to create yum repository for all packages 
 
-$ createrepo fedora/base/hipl/i386
+$ createrepo fedora/base/8/i386
 
 
 apt-get for Debian
