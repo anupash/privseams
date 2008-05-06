@@ -637,9 +637,13 @@ baseurl=http://packages.infrahip.net/fedora/base/$releasever/$basearch
 gpgcheck=0
 enabled=1
 
-- install hipl package by command
+- if exists sub-directory for packages in repository tree
 
-$ sudo yum install hipl-lib hipl-core hipl-tools
+baseurl=http://packages.infrahip.net/fedora/base/$releasever/$basearch/RPMS
+
+- install hipl package by command yum
+
+$ sudo yum install hipl-lib hipl-daemon hipl-tools
 
 
 Updating yum repository
@@ -660,7 +664,7 @@ $ mkdir -p /var/www/html/fedora/base/8/x86_64
 - for example copy all packages to directory /var/www/html/fedora/base/hipl/i386/
 
 hipl-agent-1.0.3-1.i386.rpm
-hipl-core-1.0.3-1.i386.rpm
+hipl-daemon-1.0.3-1.i386.rpm
 hipl-doc-1.0.3-1.i386.rpm
 hipl-firewall-1.0.3-1.i386.rpm
 hipl-lib-1.0.3-1.i386.rpm
