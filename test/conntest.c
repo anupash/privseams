@@ -345,11 +345,13 @@ int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
 	search_key.ai_family = AF_UNSPEC;
 	search_key.ai_socktype = socktype;
 	
-	/* Get the peer's address info.
-	   Lets use the "NAME or SERVICE is unknown." error value from
-	   /usr/include/netdb.h. Note that it is defined negative, -2. */
+	/* Get the peer's address info. If we get an error, getaddrinfo
+	   returns a negative error value, but does not neccesarily set the
+	   global errno accordingly. Also, since getaddrinfo error values
+	   overlap negative errno values, we just set the errno as a generic
+	   -1000 in an error case.*/
 	HIP_IFEL(getaddrinfo(peer_name, port_name, &search_key, &peer_ai),
-		 EAI_NONAME, "Name '%s' or service '%s' is unknown.",
+		 -1000, "Name '%s' or service '%s' is unknown.",
 		 peer_name, port_name);
 	
 	HIP_INFO("Please input some text to be sent to '%s'.\n"\
@@ -376,9 +378,6 @@ int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
 	if(datalen == 0) {
 		HIP_INFO("No input data given.\nRunning plain connection test "\
 			 "with no payload data exchange.\n");
-		/* Set sendnum and recvnum > 0 to avoid perror() at out_err. */
-		sendnum = 1;
-		recvnum = 1;
 	}
 	
 	/* Get a socket for sending and receiving data. */
@@ -392,11 +391,11 @@ int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
 			/* send() returns the number of bytes sent or negative
 			   on error. */
 			if (bytes_sent < datalen) {
-				HIP_IFEL( ((sendnum =
-					    send(sock, sendbuffer + bytes_sent,
-						 datalen - bytes_sent, 0)) < 0),
-					  -ECOMM,
-					  "Communication error on send.\n");
+				HIP_IFEL(((sendnum =
+					   send(sock, sendbuffer + bytes_sent,
+						datalen - bytes_sent, 0)) < 0),
+					 err = -errno,
+					 "Communication error on send.\n");
 				bytes_sent += sendnum;
 			}
 		
@@ -413,7 +412,7 @@ int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
 						 "orderly shutdown.\n");
 					goto out_err;
 				} else if(recvnum < 0) {
-					err = -EIO;
+					err = -errno;
 					HIP_ERROR("Communication error on "\
 						  "receive.\n");
 				}
@@ -435,10 +434,8 @@ int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
 	HIP_INFO("Sent/received %d/%d bytes payload data to/from '%s'.\n",
 		 bytes_sent, bytes_received, peer_name);
 	
-	if (memcmp(sendbuffer, receivebuffer, IP_MAXPACKET) == 0) {
-		err = 0;
-	} else {
-		err = -EIO;
+	if (memcmp(sendbuffer, receivebuffer, IP_MAXPACKET) != 0) {
+		err = -1001;
 	}
 
  out_err:
@@ -448,7 +445,7 @@ int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
 	if (sock != 0) {
 		close(sock);
 	}
-	
+
 	return err;
 }
 

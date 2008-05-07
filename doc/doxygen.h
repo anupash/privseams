@@ -226,7 +226,7 @@
  * EAI_FAMILY      -6       `ai_family' not supported.
  * EAI_SOCKTYPE    -7       `ai_socktype' not supported.
  * EAI_SERVICE     -8       SERVICE not supported for `ai_socktype'.
- * EAI_ADDRFAMILY  -9       Address family for NAME not
+ * EAI_ADDRFAMILY  -9       Address family for NAME not supported.
  * EAI_MEMORY      -10      Memory allocation failure.
  * EAI_SYSTEM      -11      System error returned in `errno'.
  * EAI_OVERFLOW    -12      Argument buffer overflow.
