@@ -1,17 +1,16 @@
-/*
+/** @file
  * HIP userspace communication mechanism between userspace and kernelspace.
  * The mechanism is used by hipd, hipconf and unittest.
  * 
- * Authors:
- * - Miika Komu <miika@iki.fi>
- * - Bing Zhou <bingzhou@cc.hut.fi>
- *
- * TODO
- * - asynchronous term should be replaced with a better one
- * - async messages should also have a counterpart that receives
- *   a response from kernel
+ * @author  Miika Komu <miika_iki.fi>
+ * @author  Bing Zhou <bingzhou_cc.hut.fi>
+ * @version 1.0
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @see     message.h
+ * @todo    Asynchronous term should be replaced with a better one.
+ * @todo    Asynchronous messages should also have a counterpart that receives
+ *          a response from kernel.
  */
-
 #include "message.h"
 
 int hip_peek_recv_total_len(int socket, int encap_hdr_size)
@@ -26,7 +25,8 @@ int hip_peek_recv_total_len(int socket, int encap_hdr_size)
 	
 	HIP_IFEL(((bytes = recvfrom(socket, msg, hdr_size, MSG_PEEK,
 				    NULL, NULL)) != hdr_size), -1,
-		 "recv peek\n");
+		 "Receive peek error when trying to communicate with the HIP "\
+		 "daemon.\nIs the daemon running?\n");
 	
 	hip_hdr = (struct hip_common *) (msg + encap_hdr_size);
 	bytes = hip_get_msg_total_len(hip_hdr);
@@ -35,7 +35,7 @@ int hip_peek_recv_total_len(int socket, int encap_hdr_size)
 	bytes += encap_hdr_size;
 	
  out_err:
-	HIP_DEBUG("bytes= %d  hdr_size = %d\n", bytes, hdr_size);
+	_HIP_DEBUG("bytes= %d  hdr_size = %d\n", bytes, hdr_size);
 	if (err)
 		bytes = -1;
 	if (msg)
@@ -80,7 +80,7 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 		goto out_err;
 	}
 
-	HIP_DEBUG("waiting to receive daemon info\n");
+	_HIP_DEBUG("Waiting to receive daemon info.\n");
 
 	n = recv(hip_user_sock, msg,
 		 hip_peek_recv_total_len(hip_user_sock, 0), 0);
@@ -89,12 +89,12 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 		err = -1;
 		goto out_err;
 	} else {
-		HIP_DEBUG("%d bytes received\n", n); 
+		_HIP_DEBUG("%d bytes received\n", n); 
 		
 	}
-
+	
 	if (hip_get_msg_err(msg)) {
-		HIP_ERROR("msg contained error\n");
+		HIP_ERROR("Message contained an error.\n");
 	}
 
  out_err:
@@ -107,7 +107,7 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 
 int hip_send_daemon_info_wrapper(struct hip_common *msg, int send_only) {
 	int hip_user_sock = 0, err = 0, n, len;
-
+	
 	if (!send_only)
 		return hip_send_recv_daemon_info(msg);
 	
@@ -135,7 +135,6 @@ int hip_recv_daemon_info(struct hip_common *msg, uint16_t info_type) {
 	/** @todo required by the native HIP API */
 	/* Call first send_daemon_info with info_type and then recvfrom */
 	return -1;
-  	//hip_send_daemon_info(msg);
 }
 
 int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,
@@ -153,9 +152,9 @@ int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,
 	
 	_HIP_DEBUG("msg total length = %d\n", total);
 	
-	/* TODO: Compiler warning;
-	   warning: pointer targets in passing argument 6 of 'recvfrom'
-	   differ in signedness. */
+	/** @todo Compiler warning;
+	    warning: pointer targets in passing argument 6 of 'recvfrom'
+	    differ in signedness. */
 	HIP_IFEL(((bytes = recvfrom(socket, hip_msg, total, 0,
 				    (struct sockaddr *) saddr,
 				    &len)) != total), -1, "recv\n");
@@ -171,32 +170,7 @@ int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,
 	return err;
 }
 
-/**
- * Prepares a @c hip_common struct based on information received from a socket.
- * 
- * Prepares a @c hip_common struct, allocates memory for buffers and nested
- * structs. Receives a message from socket and fills the @c hip_common struct
- * with the values from this message.
- *
- * @param socket         a socket to read from.
- * @param hip_msg        a pointer to a buffer where to put the received HIP
- *                       common header. This is returned as filled struct.
- * @param read_addr      a flag whether the adresses should be read from the
- *                       received packet. <b>1</b>:read addresses,
- *                       <b>0</b>:don't read addresses.
- * @param saddr          a pointer to a buffer where to put the source IP
- *                       address of the received message (if @c read_addr is set
- *                       to 1).
- * @param daddr          a pointer to a buffer where to put the destination IP
- *                       address of the received message (if @c read_addr is set
- *                       to 1).
- * @param msg_info       a pointer to a buffer where to put the source and 
- *                       destination ports of the received message.
- * @param encap_hdr_size size of encapsulated header in bytes.
- * @param is_ipv4        a boolean value to indicate whether message is received
- *                       on IPv4.
- * @return               -1 in case of an error, 0 otherwise.
- */
+/* Moved function doxy descriptor to the header file. Lauri 11.03.2008 */
 int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
                              struct in6_addr *saddr,
                              struct in6_addr *daddr,
@@ -272,7 +246,7 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
 		 "Could not determine dst addr, dropping\n");
 
 	/* UDP port numbers */
-	if (is_ipv4 && encap_hdr_size == 0) {
+	if (is_ipv4 && encap_hdr_size == HIP_UDP_ZERO_BYTES_LEN) {
 		/* Destination port is known from the bound socket. */
 		HIP_DEBUG("hip_read_control_msg_all() source port = %d\n",
 			  ntohs(addr_from4->sin_port));
@@ -308,6 +282,10 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
 		   Let's remove it here. */
 		memmove(hip_msg, ((char *)hip_msg) + IPV4_HDR_SIZE,
 			HIP_MAX_PACKET - IPV4_HDR_SIZE);
+	} else if (is_ipv4 && encap_hdr_size == HIP_UDP_ZERO_BYTES_LEN) {
+		/* remove 32-bits of zeroes between UDP and HIP headers */
+		memmove(hip_msg, ((char *)hip_msg) + HIP_UDP_ZERO_BYTES_LEN,
+			HIP_MAX_PACKET - HIP_UDP_ZERO_BYTES_LEN);
 	}
 
 	HIP_IFEL(hip_verify_network_header(hip_msg,

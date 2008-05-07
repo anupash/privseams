@@ -633,4 +633,16 @@ int hip_update_send_registration_request(hip_ha_t *entry,
 int hip_update_send_ack(hip_ha_t *entry, hip_common_t *msg,
 			in6_addr_t *src_ip, in6_addr_t *dst_ip);
 
+/**
+ * This function checks if the address in the ECHO_REQUEST is in the 
+ * SPIs peer_addr_list. If not found it adds it into the list
+ * 
+ * @param esp_info  Structure pointer telling the SPI to use when adding.
+ * @param entry  a pointer to a hadb entry corresponding to the peer.
+ * @param src_ip a pointer to source IP address.
+ *
+ * @return       zero on success, non-zero otherwise.
+ */
+int hip_peer_learning(struct hip_esp_info * esp_info, hip_ha_t *entry, in6_addr_t * src_ip);
+
 #endif /* HIP_UPDATE_H */

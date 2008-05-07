@@ -1,13 +1,12 @@
 #ifndef _HIP_IFE
 #define _HIP_IFE
 
+#define GOTO_OUT -3
 
 /** 
  * @addtogroup ife
  * @{
  */
-
-#define GOTO_OUT -3
 
 /**
  * Use this macro to detect failures and exit function in case
@@ -77,8 +76,10 @@
         }\
 }
 
-/* HIP_IFCS takes a pointer and an command to execute.
-   it executes the command exec if cond != NULL */ 
+/**
+ * HIP_IFCS takes a pointer and an command to execute and executes the
+ * @c command if @c condition is @b not NULL.
+ */ 
 #define HIP_IFCS(condition, consequence)\
 	 if( condition ) {	\
 	 	consequence ; 						\
@@ -86,7 +87,7 @@
 	 	HIP_ERROR("No state information found.\n");		\
 	 }
 
-/* @} addtogroup ife*/
+/** @} */
 
 #endif /* _HIP_IFE */
 

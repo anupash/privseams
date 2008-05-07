@@ -26,9 +26,9 @@ int create_serversocket(int type, int port) {
 	addr.sin6_port = htons(port);
 	addr.sin6_addr = in6addr_any;
 	addr.sin6_flowinfo = 0;
-	// the following gives error "structure has no member named `sin6_scope_id'"
-	// on gaijin:
-	// addr.sin6_scope_id = 0 ;
+	/* the following gives error "structure has no member named 
+	   sin6_scope_id'" on gaijin:
+	   addr.sin6_scope_id = 0 ; */
 
 	if (bind(fd, (struct sockaddr *)&addr, sizeof(struct sockaddr_in6)) < 0) {
 		perror("bind");
@@ -75,7 +75,7 @@ int main_server_tcp(int serversock) {
 	while((recvnum = recv(peerfd, mylovemostdata,
 			      sizeof(mylovemostdata), 0)) > 0 ) {
 		mylovemostdata[recvnum] = '\0';
-		printf("Client sends: %s", mylovemostdata);
+		printf("Client sends:\n%s", mylovemostdata);
 		fflush(stdout);
 		if (recvnum == 0) {
 			close(peerfd);
@@ -212,233 +212,237 @@ int main_server(int type, int port)
 	return err;
 }
 
- /**
-  * hip_connect_func - allows to connect to the addresses specified by res
-  * @param proto type of protocol
-  * @param res list containing the peers addresses
-  * @param filename ?
-  *
-  * @return 0 on error, the sockid on success
-  */
- int hip_connect_func(struct addrinfo *res, const char* filename)
- {
-	 struct addrinfo *ai, hints;
-	 int sock = 0;
-	 struct timeval stats_before, stats_after;
-	 unsigned long stats_diff_sec, stats_diff_usec;
-	 FILE *fp = NULL;
-
-	 if (filename)
-		 if ((fp = fopen(filename, "a")) == NULL) {
-			 HIP_ERROR("Error opening file\n");
-			 goto out_err;
-		 }
-	 /* connect */
-
-	 for(ai = res; ai != NULL; ai = ai->ai_next) {
-		 struct sockaddr_in6 *sin6 =
-			 (struct sockaddr_in6 *) ai->ai_addr;
-		 struct sockaddr_in *sin =
-			 (struct sockaddr_in *) ai->ai_addr;
-		 struct sockaddr_in6 localaddr;
-		 char addr_str[INET6_ADDRSTRLEN];
-		 socklen_t locallen;
-		 int e;
-		
-		 /* Currently only IPv6 socket structures are supported */
-		 sock = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
-		 if (sock < 0) {
-			 sock = 0;
-			 printf("socket creation failed\n");
-			 goto out_err;
-		 }
-		 
-		 HIP_DEBUG("ai_flags %d\n",ai->ai_flags );
-		 HIP_DEBUG("ai_family %d\n",ai->ai_family); 
-		 HIP_DEBUG("ai_socktype %d\n",ai->ai_socktype); 
-		 HIP_DEBUG("ai_protocol%d\n",ai->ai_protocol); 
-		 HIP_DEBUG("ai_addrlen %d\n",ai->ai_addrlen); 
-		 HIP_DEBUG("ai_canonname %s\n",ai->ai_canonname); 
-		 
-		 
-		 if (!inet_ntop(AF_INET6, (char *) &sin6->sin6_addr, addr_str,
-				sizeof(addr_str))) {
-			 if (!inet_ntop(AF_INET, (char *) &sin->sin_addr,
-					addr_str, sizeof(addr_str))) {
-				 perror("inet_ntop\n");
-				 goto out_err;
-			 }
-		 }
-		 
-		 locallen = sizeof(localaddr);
-		 if (!getsockname(sock,
-				  (struct sockaddr *)&localaddr,
-				  &locallen))
-			 HIP_DEBUG_HIT("local addr", &localaddr.sin6_addr);
-		 
-		 if (ai->ai_family == AF_INET6)
-			 HIP_DEBUG_IN6ADDR("Trying to connect to IPv6", hip_cast_sa_addr(sin6));
-		 else
-			 HIP_DEBUG_INADDR("Trying to connect to IPv4", hip_cast_sa_addr(sin6));
-		 
-		 gettimeofday(&stats_before, NULL);
-		 e = connect(sock, ai->ai_addr, ai->ai_addrlen);
-		 printf("After call conntest.c: connect to %s\n", addr_str);
-		 
-		 gettimeofday(&stats_after, NULL);
-		 stats_diff_sec  = (stats_after.tv_sec - stats_before.tv_sec) * 1000000;
-		 stats_diff_usec = stats_after.tv_usec - stats_before.tv_usec;
-
-		 locallen = sizeof(localaddr);
-		 printf("connect ret=%d errno=%d\n", e, errno);
-		 if (e < 0) {
-			 strerror(errno);
-			 close(sock);
-			 sock = 0;
-			 printf("trying next\n");
-			 continue; /* Try next address */
-		 }
-
-		 printf("connect took %.3f sec\n",
-			(stats_diff_sec+stats_diff_usec) / 1000000.0);
-
-		 if (filename)
-		   fprintf(fp, "%.3f\n",
-			   (stats_diff_sec+stats_diff_usec) / 1000000.0);
-		 else
-		   printf("connect took %.3f sec\n",
-			  (stats_diff_sec+stats_diff_usec) / 1000000.0);
-		 break; /* Connect succeeded and data can be sent/received. */
-		 
-	 }
-	 if (sock == 0) {
-		 printf("failed to connect\n");
-		 goto out_err;
-	 }
-	 
+/**
+ * Creates a socket and connects it a remote socket address. The connection is
+ * tried using addresses in the @c peer_ai in the order specified by the linked
+ * list of the structure. If a connection is successful, the rest of the
+ * addresses are omitted. The socket is bound to the peer HIT, not to the peer
+ * IP addresses. This function does not support Local Scope Indentifiers
+ * (LSIs). Therefore, all addresses that are not of INET6 address family are
+ * skipped.
+ *
+ * @param peer_ai a pointer to peer address info.
+ * @param sock    a target buffer where the socket file descriptor is to be
+ *                stored.
+ * @return        zero on success, negative on failure.
+ */
+int hip_connect_func(struct addrinfo *peer_ai, int *sock){
+	int err = 0, e = 0;
+	struct addrinfo *ai = NULL;
+	struct timeval stats_before, stats_after;
+	struct sockaddr_storage local_addr;
+	unsigned long microseconds = 0;
+	char addr_str[INET6_ADDRSTRLEN];
+	struct sockaddr_in *sin4 = NULL;
+	struct sockaddr_in6 *sin6 = NULL;
 	
-out_err:
-	 if (filename && fp)
-		 fclose(fp);
-	 return sock;
+	/* Reset the global error value. */
+	errno = 0;
+
+	/* Set the memory allocated from the stack to zeros. */
+	memset(&stats_before, 0, sizeof(stats_before));
+	memset(&stats_after, 0, sizeof(stats_after));
+	memset(addr_str, 0, sizeof(addr_str));
+	memset(&local_addr, 0, sizeof(addr_str));
+
+	/* Loop through every address in the address info. */
+	for(ai = peer_ai; ai != NULL; ai = ai->ai_next) {
+		
+		/* Currently only IPv6 socket structures are supported. */
+		if (!(ai->ai_family == AF_INET || ai->ai_family == AF_INET6)) {
+			HIP_INFO("Trying to connect to a non-inet address "\
+				 "family address. Skipping.\n");
+			continue;
+		}
+		
+		sin4 = (struct sockaddr_in *) ai->ai_addr;
+		sin6 = (struct sockaddr_in6 *) ai->ai_addr;
+		
+		if (!inet_ntop(AF_INET6, (char *) &sin6->sin6_addr, addr_str,
+			       sizeof(addr_str)))
+		    inet_ntop(AF_INET, (char *) &sin4->sin_addr, addr_str,
+			      sizeof(addr_str));
+		    
+		HIP_IFEL(((*sock) = socket(ai->ai_family, ai->ai_socktype,
+					   ai->ai_protocol)) < 0,
+			 -EFAULT, "Unable to get a socket for sending.\n");
+		    
+		if (ai->ai_family == AF_INET)
+			HIP_DEBUG_LSI("Connecting to", &sin4->sin_addr);
+		else
+			HIP_DEBUG_HIT("Connecting to", &sin6->sin6_addr);
+		
+		gettimeofday(&stats_before, NULL);
+		HIP_IFE((e = connect(*sock, ai->ai_addr, ai->ai_addrlen)) != 0,
+			err = -errno);
+		gettimeofday(&stats_after, NULL);
+		
+		microseconds  =
+			((stats_after.tv_sec - stats_before.tv_sec) * 1000000)
+			+ (stats_after.tv_usec - stats_before.tv_usec);
+		
+		HIP_INFO("Connecting socket to remote socket address took "\
+			 "%.5f seconds.\n", microseconds / 1000000.0 );
+		
+		if (e < 0) {
+			HIP_IFEL(close(*sock) != 0, err = -errno,
+				 "Failing to close socket.\n");
+			/* Try next address in peer_ai. */
+			continue;
+		} else {
+			/* Connect succeeded and data can be sent/received. */
+			break;
+		}
+	}
+		
+ out_err:
+	return err;
 }
 
 /**
- * main_client_gai - it handles the functionality of the client-gai
- * @param proto type of protocol
- * @param socktype the type of socket
- * @param peer_name the peer name
- * @param peer_port_name the prot number
+ * Does the logic of the "conntest-client-gai" command line utility. 
  *
- * @return 1 with success, 0 otherwise.
+ * @param socktype  the type of socket (SOCK_STREAM or SOCK_DGRAM)
+ * @param peer_name the host name of the peer as read from the command lien
+ * @param port_name the port number as a string as read from the command line
+ * @param flags     flags that are set to addrinfo flags.
+ *
+ * @return          zero on success, non-zero otherwise.
  */
-int main_client_gai(int socktype, char *peer_name, char *peer_port_name, int flags)
+int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
 {
+	int recvnum = 0, sendnum = 0, datalen = 0, port = 0, bytes_sent = 0;
+	int bytes_received = 0, c = 0, sock = 0, err = 0;
+	char sendbuffer[IP_MAXPACKET], receivebuffer[IP_MAXPACKET];
+	unsigned long microseconds = 0;
+	struct addrinfo search_key, *peer_ai = NULL;
 	struct timeval stats_before, stats_after;
-	unsigned long stats_diff_sec, stats_diff_usec;
-	char mylovemostdata[IP_MAXPACKET], receiveddata[IP_MAXPACKET];
-	int recvnum, sendnum, datalen = 0, port = 0, datasent = 0;
-	int datareceived = 0, ch, gai_err, sock = 0;
-	struct addrinfo hints, *res = NULL, *ai;
 	
-	/* lookup host */
-	memset(&hints, 0, sizeof(struct addrinfo));
-	hints.ai_flags = flags;
-	/* If peer_name is not specified the destination is looked in the hadb */
-	if (!peer_name)
-		hints.ai_flags |= AI_KERNEL_LIST;
-	hints.ai_family = AF_UNSPEC; /* Legacy API supports only HIT-in-IPv6 */
-	hints.ai_socktype = socktype;
+	/* Set the memory allocated from the stack to zeros. */
+	memset(&search_key, 0, sizeof(search_key));
+	memset(&stats_before, 0, sizeof(stats_before));
+	memset(&stats_after, 0, sizeof(stats_after));
+	memset(sendbuffer, 0, sizeof(sendbuffer));
+	memset(receivebuffer, 0, sizeof(receivebuffer));
 	
-	gai_err = getaddrinfo(peer_name, peer_port_name, &hints, &res);
+	/* Fill in the socket address structure to host and service name. */
+	search_key.ai_flags = flags;
+	/* If peer_name is not specified the destination is looked in the
+	   hadb. (?) */
+	if (peer_name == NULL)
+		search_key.ai_flags |= AI_KERNEL_LIST;
+
+	/* Legacy API supports only HIT-in-IPv6 */
+	search_key.ai_family = AF_UNSPEC;
+	search_key.ai_socktype = socktype;
 	
-	if (gai_err < 0) {
-		printf("GAI ERROR %d: %s\n", gai_err, gai_strerror(gai_err));
-		return(1);
-	}
-
-	/* data from stdin to buffer */
-	bzero(receiveddata, IP_MAXPACKET);
-	bzero(mylovemostdata, IP_MAXPACKET);
-
-	printf("Input some text, press enter and ctrl+d\n");
-
-	/* horrible code */
-	while ((ch = fgetc(stdin)) != EOF && (datalen < IP_MAXPACKET)) {
-		mylovemostdata[datalen] = (unsigned char) ch;
+	/* Get the peer's address info.
+	   Lets use the "NAME or SERVICE is unknown." error value from
+	   /usr/include/netdb.h. Note that it is defined negative, -2. */
+	HIP_IFEL(getaddrinfo(peer_name, port_name, &search_key, &peer_ai),
+		 EAI_NONAME, "Name '%s' or service '%s' is unknown.",
+		 peer_name, port_name);
+	
+	HIP_INFO("Please input some text to be sent to '%s'.\n"\
+		 "Empty row or \"CTRL+d\" twice sends data.\n", peer_name);
+	
+	/* Read user input from the standard input. */
+	while((c = getc(stdin)) != EOF && (datalen < IP_MAXPACKET))
+	{
 		datalen++;
+		if((sendbuffer[datalen-1] = c) == '\n'){
+			if(datalen == 1){
+				break;
+			}
+			c = getc(stdin);
+			if(c == '\n'){
+				break;
+			} else {
+				ungetc(c, stdin);
+			}
+		}
+		
 	}
-	/*
-	HIP_HEXDUMP("addr: ", res, sizeof(*res));
-        */
-        if (res->ai_family == AF_INET)
-            {
-                struct sockaddr_in *ad;
-                ad = (struct sockaddr_in *)res->ai_addr;
-		HIP_DEBUG_LSI("Addr given to connect", &ad->sin_addr);
-            }
-        if (res->ai_family == AF_INET6)
-            {
-                struct sockaddr_in6 * ad6;
-                ad6 = (struct sockaddr_in6 *)res->ai_addr;
-		HIP_DEBUG_HIT("Addr given to connect", &ad6->sin6_addr);
-            }
+
+	if(datalen == 0) {
+		HIP_INFO("No input data given.\nRunning plain connection test "\
+			 "with no payload data exchange.\n");
+		/* Set sendnum and recvnum > 0 to avoid perror() at out_err. */
+		sendnum = 1;
+		recvnum = 1;
+	}
+	
+	/* Get a socket for sending and receiving data. */
+	HIP_IFE((hip_connect_func(peer_ai, &sock) != 0), -EFAULT);
 
 	gettimeofday(&stats_before, NULL);
-	/* Connecting... */
-	HIP_INFO("!!!! conntest.c Connecting...\n");
-	sock = hip_connect_func(res, NULL);
-	if (!sock)
-		goto out_err;
-	HIP_INFO("!!!! conntest.c got sock %d\n", sock);
+	
+	if(datalen > 0) {
+		/* Send and receive data from the socket. */
+		while((bytes_sent < datalen) || (bytes_received < datalen)) {
+			/* send() returns the number of bytes sent or negative
+			   on error. */
+			if (bytes_sent < datalen) {
+				HIP_IFEL( ((sendnum =
+					    send(sock, sendbuffer + bytes_sent,
+						 datalen - bytes_sent, 0)) < 0),
+					  -ECOMM,
+					  "Communication error on send.\n");
+				bytes_sent += sendnum;
+			}
+		
+			/* receive() returns the number of bytes sent, negative
+			   on error or zero when the peer has performed an
+			   orderly shutdown. */
+			if (bytes_received < datalen) {
+				recvnum = recv(sock,
+					       receivebuffer + bytes_received,
+					       datalen - bytes_received, 0);
+			
+				if (recvnum == 0) {
+					HIP_INFO("The peer has performed an "\
+						 "orderly shutdown.\n");
+					goto out_err;
+				} else if(recvnum < 0) {
+					err = -EIO;
+					HIP_ERROR("Communication error on "\
+						  "receive.\n");
+				}
+				
+				bytes_received += recvnum;
+			}
+		}
+	}
+
 	gettimeofday(&stats_after, NULL);
-	stats_diff_sec  = (stats_after.tv_sec - stats_before.tv_sec) * 1000000;
-	stats_diff_usec = stats_after.tv_usec - stats_before.tv_usec;
-#if 0
-	printf("connect took %.3f sec\n",
-	       (stats_diff_sec+stats_diff_usec) / 1000000.0);
-#endif
+	
+	microseconds  =
+		((stats_after.tv_sec - stats_before.tv_sec) * 1000000)
+		+ (stats_after.tv_usec - stats_before.tv_usec);
+	
+	HIP_INFO("Data exchange took %.5f seconds.\n",
+		 microseconds / 1000000.0 );
 
-	/* send and receive data */
-
-	while((datasent < datalen) || (datareceived < datalen)) {
-
-		if (datasent < datalen) {
-			sendnum = send(sock, mylovemostdata+datasent, datalen-datasent, 0);
-
-			if (sendnum < 0) {
-				perror("send");
-				printf("FAIL\n");
-				goto out_err;
-			}
-			datasent += sendnum;
-		}
-
-		if (datareceived < datalen) {
-			recvnum = recv(sock, receiveddata+datareceived, datalen-datareceived, 0);
-			if (recvnum <= 0) {
-				perror("recv");
-				goto out_err;
-			}
-			datareceived += recvnum;
-		}
-	}
-
-	printf("=== connection test result: ");
-	if (!memcmp(mylovemostdata, receiveddata, IP_MAXPACKET)) {
-		printf("OK ===\n");
+	HIP_INFO("Sent/received %d/%d bytes payload data to/from '%s'.\n",
+		 bytes_sent, bytes_received, peer_name);
+	
+	if (memcmp(sendbuffer, receivebuffer, IP_MAXPACKET) == 0) {
+		err = 0;
 	} else {
-		printf("FAIL ===\n");
-		return(1);
+		err = -EIO;
 	}
 
-out_err:
-
-	if (res)
-		freeaddrinfo(res);
-	if (sock)
+ out_err:
+	
+	if(sendnum < 0 || recvnum <= 0) {
+		perror(NULL);
+	}
+	if (peer_ai != NULL)
+		freeaddrinfo(peer_ai);
+	if (sock != 0)
 		close(sock);
-	return 0;
+	
+	return err;
 }
 
 /**

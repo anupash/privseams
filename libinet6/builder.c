@@ -1,7 +1,6 @@
 /** @file
  * This file defines building and parsing functions for Host Identity Protocol
- * (HIP) kernel module and user messages <span style="color:#f00">(Update the
- * comments of this file)</span>.
+ * (HIP) kernel module and user messages.
  * 
  * These functions work both in the userspace and in the kernel.
  * 
@@ -906,7 +905,7 @@ void hip_dump_msg(const struct hip_common *msg)
 	       hip_get_msg_type(msg));
      HIP_DEBUG("Msg length:     %d\n", hip_get_msg_total_len(msg));
      HIP_DEBUG("Msg err:        %d\n", hip_get_msg_err(msg));
-     HIP_DEBUG("Msg controls: 0x%04x\n", msg->control);
+     HIP_DEBUG("Msg controls:   0x%04x\n", msg->control);
 	
      while((current_param = hip_get_next_param(msg, current_param)) != NULL)
      {
@@ -937,34 +936,55 @@ void hip_dump_msg(const struct hip_common *msg)
  **/
 char* hip_message_type_name(const uint8_t msg_type){
 	switch (msg_type) {
-	case HIP_I1:        return "HIP_I1";
-	case HIP_R1:        return "HIP_R1";
-	case HIP_I2:        return "HIP_I2";
-	case HIP_R2:        return "HIP_R2";
-	case HIP_CER:       return "HIP_CER";
-	case HIP_UPDATE:    return "HIP_UPDATE";
-	case HIP_NOTIFY:    return "HIP_NOTIFY";
-	case HIP_CLOSE:     return "HIP_CLOSE";
+	case HIP_ADD_DB_HI: return "HIP_ADD_DB_HI";
+	case HIP_ADD_ESCROW_DATA: return "HIP_ADD_ESCROW_DATA";
+	case HIP_AGENT_PING_REPLY: return "HIP_AGENT_PING_REPLY";
+	case HIP_AGENT_PING: return "HIP_AGENT_PING";
+	case HIP_AGENT_QUIT: return "HIP_AGENT_QUIT";
+	case HIP_BOS: return "HIP_BOS";
+	case HIP_CER: return "HIP_CER";
 	case HIP_CLOSE_ACK: return "HIP_CLOSE_ACK";
-	case HIP_BOS:       return "HIP_BOS";
-	case HIP_PSIG:      return "HIP_PSIG";
-	case HIP_TRIG:      return "HIP_TRIG";
+	case HIP_CLOSE: return "HIP_CLOSE";
+	case HIP_DAEMON_QUIT: return "HIP_DAEMON_QUIT";
+	case HIP_DELETE_ESCROW_DATA: return "HIP_DELETE_ESCROW_DATA";
+	case HIP_FIREWALL_PING_REPLY: return "HIP_FIREWALL_PING_REPLY";
+	case HIP_FIREWALL_PING: return "HIP_FIREWALL_PING";
+	case HIP_FIREWALL_QUIT: return "HIP_FIREWALL_QUIT";
+	case HIP_I1_REJECT: return "HIP_I1_REJECT";
+	case HIP_I1: return "HIP_I1";
+	case HIP_I2: return "HIP_I2";
+	case HIP_NAT_OFF: return "HIP_NAT_OFF";
+	case HIP_NAT_ON: return "HIP_NAT_ON";
+	case HIP_NOTIFY: return "HIP_NOTIFY";
+	case HIP_PAYLOAD: return "HIP_PAYLOAD";
+	case HIP_PSIG: return "HIP_PSIG";
+	case HIP_R1: return "HIP_R1";
+	case HIP_R2: return "HIP_R2";
+	case HIP_SET_ESCROW_ACTIVE: return "HIP_SET_ESCROW_ACTIVE";
+	case HIP_SET_ESCROW_INACTIVE: return "HIP_SET_ESCROW_INACTIVE";
+	case HIP_TRIG: return "HIP_TRIG";
+	case HIP_UPDATE_HIU: return "HIP_UPDATE_HIU";
+	case HIP_UPDATE: return "HIP_UPDATE";
 	default:            return "UNDEFINED";
 	}
 }
 
 /**
- * hip_message_type_name - returns a string for a given parameter type number
+ * Returns a string for a given parameter type number.
+ * 
  * @param param_type parameter type number
- * @return name of the message type
+ * @return      name of the message type
  **/
 char* hip_param_type_name(const hip_tlv_type_t param_type){
 	switch (param_type) {
 	case HIP_PARAM_ACK: return "HIP_PARAM_ACK";
+	case HIP_PARAM_AGENT_REJECT: return "HIP_PARAM_AGENT_REJECT";
 	case HIP_PARAM_BLIND_NONCE: return "HIP_PARAM_BLIND_NONCE";
 	case HIP_PARAM_CERT: return "HIP_PARAM_CERT";
 	case HIP_PARAM_DH_SHARED_KEY: return "HIP_PARAM_DH_SHARED_KEY";
 	case HIP_PARAM_DIFFIE_HELLMAN: return "HIP_PARAM_DIFFIE_HELLMAN";
+	case HIP_PARAM_DSA_SIGN_DATA: return "HIP_PARAM_DSA_SIGN_DATA";
+	case HIP_PARAM_DST_ADDR: return "HIP_PARAM_DST_ADDR";
 	case HIP_PARAM_ECHO_REQUEST: return "HIP_PARAM_ECHO_REQUEST";
 	case HIP_PARAM_ECHO_REQUEST_SIGN: return "HIP_PARAM_ECHO_REQUEST_SIGN";
 	case HIP_PARAM_ECHO_RESPONSE: return "HIP_PARAM_ECHO_RESPONSE";
@@ -973,11 +993,13 @@ char* hip_param_type_name(const hip_tlv_type_t param_type){
 	case HIP_PARAM_EID_ENDPOINT: return "HIP_PARAM_EID_ENDPOINT";
 	case HIP_PARAM_EID_IFACE: return "HIP_PARAM_EID_IFACE";
 	case HIP_PARAM_EID_SOCKADDR: return "HIP_PARAM_EID_SOCKADDR";
+	case HIP_PARAM_ENCAPS_MSG: return "HIP_PARAM_ENCAPS_MSG";
 	case HIP_PARAM_ENCRYPTED: return "HIP_PARAM_ENCRYPTED";
 	case HIP_PARAM_ESP_INFO: return "HIP_PARAM_ESP_INFO";
 	case HIP_PARAM_ESP_TRANSFORM: return "HIP_PARAM_ESP_TRANSFORM";
+	case HIP_PARAM_FROM_PEER: return "HIP_PARAM_FROM_PEER";
 	case HIP_PARAM_FROM: return "HIP_PARAM_FROM";
-	case HIP_PARAM_RELAY_FROM: return "HIP_PARAM_RELAY_FROM";
+	case HIP_PARAM_HA_INFO: return "HIP_PARAM_HA_INFO";
 	case HIP_PARAM_HASH_CHAIN_ANCHORS: return "HIP_PARAM_HASH_CHAIN_ANCHORS";
 	case HIP_PARAM_HASH_CHAIN_PSIG: return "HIP_PARAM_HASH_CHAIN_PSIG";
 	case HIP_PARAM_HASH_CHAIN_VALUE: return "HIP_PARAM_HASH_CHAIN_VALUE";
@@ -985,26 +1007,37 @@ char* hip_param_type_name(const hip_tlv_type_t param_type){
 	case HIP_PARAM_HIP_SIGNATURE: return "HIP_PARAM_HIP_SIGNATURE";
 	case HIP_PARAM_HIP_TRANSFORM: return "HIP_PARAM_HIP_TRANSFORM";
 	case HIP_PARAM_HI: return "HIP_PARAM_HI";
+	case HIP_PARAM_HIT: return "HIP_PARAM_HIT";
 	case HIP_PARAM_HMAC2: return "HIP_PARAM_HMAC2";
 	case HIP_PARAM_HMAC: return "HIP_PARAM_HMAC";
 	case HIP_PARAM_HOST_ID: return "HIP_PARAM_HOST_ID";
-	case HIP_PARAM_IPV6_ADDR: return "HIP_PARAM_HIT";
+	case HIP_PARAM_INT: return "HIP_PARAM_INT";
+	case HIP_PARAM_IPV6_ADDR: return "HIP_PARAM_IPV6_ADDR";
 	case HIP_PARAM_KEYS: return "HIP_PARAM_KEYS";
 	case HIP_PARAM_LOCATOR: return "HIP_PARAM_LOCATOR";
 	case HIP_PARAM_NOTIFICATION: return "HIP_PARAM_NOTIFICATION";
+	case HIP_PARAM_OPENDHT_GW_INFO: return "HIP_PARAM_OPENDHT_GW_INFO";
+	case HIP_PARAM_OPENDHT_SET: return "HIP_PARAM_OPENDHT_SET";
+	case HIP_PARAM_PORTPAIR: return "HIP_PARAM_PORTPAIR";
 	case HIP_PARAM_PUZZLE: return "HIP_PARAM_PUZZLE";
 	case HIP_PARAM_R1_COUNTER: return "HIP_PARAM_R1_COUNTER";
 	case HIP_PARAM_REG_FAILED: return "HIP_PARAM_REG_FAILED";
+	case HIP_PARAM_REG_FROM: return "HIP_PARAM_REG_FROM";
 	case HIP_PARAM_REG_INFO: return "HIP_PARAM_REG_INFO";
 	case HIP_PARAM_REG_REQUEST: return "HIP_PARAM_REG_REQUEST";
 	case HIP_PARAM_REG_RESPONSE: return "HIP_PARAM_REG_RESPONSE";
+	case HIP_PARAM_RELAY_FROM: return "HIP_PARAM_RELAY_FROM";
+	case HIP_PARAM_RELAY_HMAC: return "HIP_PARAM_RELAY_HMAC";
+	case HIP_PARAM_RELAY_TO: return "HIP_PARAM_RELAY_TO";
 	case HIP_PARAM_RVS_HMAC: return "HIP_PARAM_RVS_HMAC";
 	case HIP_PARAM_SEQ: return "HIP_PARAM_SEQ";
 	case HIP_PARAM_SOLUTION: return "HIP_PARAM_SOLUTION";
+	case HIP_PARAM_SRC_ADDR: return "HIP_PARAM_SRC_ADDR";
+	case HIP_PARAM_TO_PEER: return "HIP_PARAM_TO_PEER";
 	case HIP_PARAM_UINT: return "HIP_PARAM_UINT";
 	case HIP_PARAM_UNIT_TEST: return "HIP_PARAM_UNIT_TEST";
 	case HIP_PARAM_VIA_RVS: return "HIP_PARAM_VIA_RVS";
-	case HIP_PARAM_RELAY_TO: return "HIP_PARAM_RELAY_TO";
+	case HIP_PSEUDO_HIT: return "HIP_PSEUDO_HIT";	
 	}
 	return "UNDEFINED";
 }
@@ -1704,10 +1737,10 @@ int hip_verify_network_header(struct hip_common *hip_common,
 	} else {
 #ifdef CONFIG_HIP_RVS
                 HIP_DEBUG("Received HIT is ours or we are RVS\n");
-#else
+#elif HIPL_HIPD
 		HIP_IFEL(!hip_hidb_hit_is_our(&hip_common->hitr), -EFAULT,
 			 "Receiver HIT is not ours\n");
-#endif
+#endif /* CONFIG_HIP_RVS */
 	}
 
 #if 0
