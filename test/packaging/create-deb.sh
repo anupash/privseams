@@ -218,7 +218,7 @@ copy_and_package_files ()
     cd "$HIPL"
 
     echo "** Copying firewall to $PKGDIR"
-    cp firewall/firewall $PKGDIR/usr/sbin/
+    cp firewall/hipfw $PKGDIR/usr/sbin/
 
     PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
     create_sub_package;
@@ -233,16 +233,19 @@ copy_and_package_files ()
     cd "$PKGDIR"
 
     mkdir -p usr/sbin usr/bin
+    mkdir -p usr/share/pyshared/DNS
 
     cd "$HIPL"
 
     cp tools/hipconf $PKGDIR/usr/sbin/
     cp tools/myasn.py $PKGDIR/usr/bin/
     cp tools/parse-key-3.py $PKGDIR/usr/bin/
+
     cp tools/dnsproxy.py $PKGDIR/usr/bin/
     cp tools/hosts.py $PKGDIR/usr/bin/
     cp tools/pyip6.py $PKGDIR/usr/bin/
     cp tools/util.py $PKGDIR/usr/bin/
+    cp tools/DNS/*py* $PKGDIR/usr/share/pyshared/DNS
 
     chmod ugo+rx $PKGDIR/usr/bin/*.py
 
