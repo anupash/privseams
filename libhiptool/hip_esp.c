@@ -1235,7 +1235,7 @@ void *hip_esp_input(struct sockaddr_storage *ss_lsi, u8 *buff, int len)
 		HIP_DEBUG("--- socket() error for ipv6 (HITs) raw socket in hip_esp_output\n");
 	}
 	on = 1;
-	if (setsockopt(ipv6_s_raw, IPPROTO_IP, IP_HDRINCL, (char *)&on,
+	if (setsockopt(ipv6_s_raw, IPPROTO_IPV6, IP_HDRINCL, (char *)&on,
 		       sizeof(on)) < 0) {
 		HIP_DEBUG("*** setsockopt() error for raw socket in "
 		  "hip_input_output\n");
@@ -1381,7 +1381,9 @@ void *hip_esp_input(struct sockaddr_storage *ss_lsi, u8 *buff, int len)
 
 
 
-	to_local_hit = (struct sockaddr_in6 *)  &entry->inner_dst_addrs->addr;
+	to_local_hit = (struct sockaddr_in6 *)  &entry->inner_src_addrs->addr;
+	
+	HIP_DEBUG_SOCKADDR("to_local HIT is", to_local_hit);
 
 	err = sendto(ipv6_s_raw, data, len, 0,
 		     SA(to_local_hit),
@@ -2775,11 +2777,11 @@ int hip_esp_decrypt(__u8 *in, int len, __u8 *out, int *offset, int *outlen,
 
 	/* LSI is not used here, FIXME if used later !!! */ 
 	
-	HIP_DEBUG_SOCKADDR("local HIT ", &entry->inner_dst_addrs->addr);
-	HIP_DEBUG_SOCKADDR("remote HIT ", &entry->inner_src_addrs->addr);
+	HIP_DEBUG_SOCKADDR("local HIT ", &entry->inner_src_addrs->addr);
+	HIP_DEBUG_SOCKADDR("remote HIT ", &entry->inner_dst_addrs->addr);
 	
-	src_hit =  &entry->inner_dst_addrs->addr;
-	dst_hit =  &entry->inner_src_addrs->addr;
+	src_hit =  &entry->inner_src_addrs->addr;
+	dst_hit =  &entry->inner_dst_addrs->addr;
 
 	HIP_DEBUG(" Is it TCP and UDP packet:?  %s ", 
 		 padinfo->next_hdr == IPPROTO_TCP? "TCP" : "UDP");
