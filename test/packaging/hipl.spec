@@ -163,7 +163,7 @@ rm -rf %{buildroot}
 %{prefix}/bin/conntest-server-native
 
 %files firewall
-%{prefix}/sbin/firewall
+%{prefix}/sbin/hipfw
 
 %files doc
 %doc doc/HOWTO.txt doc/howto-html

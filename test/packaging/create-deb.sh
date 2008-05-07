@@ -209,7 +209,7 @@ copy_and_package_files ()
     cd "$HIPL"
 
     echo "** Copying firewall to $PKGDIR"
-    cp firewall/firewall $PKGDIR/usr/sbin/
+    cp firewall/hipfw $PKGDIR/usr/sbin/
 
     PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
     create_sub_package;
