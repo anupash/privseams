@@ -719,7 +719,7 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 
 
 
-		HIP_HEXDUMP("The output encrypted packet is ", data, out_enc_len);
+		HIP_HEXDUMP("The output encrypted packet (UDP + ESP)  is ", data, out_enc_len);
 
 		struct ip_esp_hdr *esph = (struct ip_esp_hdr *) (((char *)data) 
 								 + sizeof(udphdr));
@@ -1196,6 +1196,7 @@ void *hip_esp_input(struct sockaddr_storage *ss_lsi, u8 *buff, int len)
 #endif
 {
 	int err, max_fd, offset;
+	int dec_len; /*lenth of HIT pairs + tcp header + payload */
 	fd_set fd;
 	struct timeval timeout, now;
 	// __u8 buff[BUFF_LEN]; /* raw, encrypted data buffer */
@@ -1343,8 +1344,8 @@ void *hip_esp_input(struct sockaddr_storage *ss_lsi, u8 *buff, int len)
 	}
 	*/	
 
-	HIP_DEBUG_SOCKADDR("local inner addr ", &entry->inner_dst_addrs->addr);
-	HIP_DEBUG_SOCKADDR("remote inner addr ", &entry->inner_src_addrs->addr);
+	HIP_DEBUG_SOCKADDR("local inner addr ", &entry->inner_src_addrs->addr);
+	HIP_DEBUG_SOCKADDR("remote inner addr ", &entry->inner_dst_addrs->addr);
 	
 	
 	if (!(inverse_entry = hip_sadb_lookup_addr(
@@ -1370,7 +1371,7 @@ void *hip_esp_input(struct sockaddr_storage *ss_lsi, u8 *buff, int len)
 	}
 	
 	pthread_mutex_lock(&entry->rw_lock);
-	err = hip_esp_decrypt(buff, len, data, &offset, &len,
+	err = hip_esp_decrypt(buff, len, data, &offset, &dec_len,
 			      entry, iph, &now);
 	pthread_mutex_unlock(&entry->rw_lock);
 	if (err) 
@@ -1383,9 +1384,42 @@ void *hip_esp_input(struct sockaddr_storage *ss_lsi, u8 *buff, int len)
 
 	to_local_hit = (struct sockaddr_in6 *)  &entry->inner_src_addrs->addr;
 	
-	HIP_DEBUG_SOCKADDR("to_local HIT is", to_local_hit);
+	HIP_DEBUG_SOCKADDR("hip_esp_input: to_local HIT is", to_local_hit);
 
-	err = sendto(ipv6_s_raw, data, len, 0,
+
+	
+
+	HIP_HEXDUMP("hip_esp_input: content of HITs + TCP + payload:", data, 
+		    dec_len); 
+	
+	/* Test contetnt of HITs + TCP + payload*/
+
+	struct ip6_hdr *test_ip6_hdr = (struct ip6_hdr *) data;
+	
+	HIP_DEBUG_IN6ADDR("HIT pairs src hit: ", &test_ip6_hdr->ip6_src);
+	HIP_DEBUG_IN6ADDR("HIT pairs dst hit: ", &test_ip6_hdr->ip6_dst);
+	
+	
+	struct tcphdr *test_tcphdr  = (struct tcphdr *) &data[sizeof(struct ip6_hdr)];
+	HIP_DEBUG("size of struct ipv6_hdr is: %d\n ", sizeof(struct ip6_hdr));
+
+
+	HIP_HEXDUMP("hip_esp_input: content of HITs (IP header):", data, 
+		    sizeof(struct ip6_hdr)); 
+	HIP_HEXDUMP("hip_esp_input: rest of pakcet: TCP + payload:" ,
+		    &data[sizeof(struct ip6_hdr)], 
+		    dec_len - sizeof(struct ip6_hdr)); 
+
+
+	HIP_DEBUG("hip_esp_input: TCP soruce port is %hu\n", ntohs(test_tcphdr->source));
+	HIP_DEBUG("hip_esp_input: TCP dst port is %hu\n", ntohs(test_tcphdr->dest));
+	
+	
+	
+	
+	/* Firewall will capture this again,	* deadloop should happen. FIXME:!!!
+	*/
+	err = sendto(ipv6_s_raw, data, dec_len, 0,
 		     SA(to_local_hit),
 		     SALEN(to_local_hit));
 	
@@ -2901,7 +2935,7 @@ int hip_esp_decrypt(__u8 *in, int len, __u8 *out, int *offset, int *outlen,
 	
 	
 	add_ipv6_header(&out[*offset],
-			SA(src_hit), SA(dst_hit),
+			SA(src_hit),SA(dst_hit),
 			NULL, iph, (__u16)elen, padinfo->next_hdr);
 	*outlen = sizeof(struct ip6_hdr)+ elen;
 	
@@ -3083,8 +3117,10 @@ void add_ipv6_header(__u8 *data, struct sockaddr *src, struct sockaddr *dst,
 	ip6h->ip6_plen = htons(len);
 	ip6h->ip6_nxt = proto;
 	ip6h->ip6_hlim = 255;
-	memcpy(&ip6h->ip6_src, SA2IP(src), sizeof(struct in6_addr));
-	memcpy(&ip6h->ip6_dst, SA2IP(dst), sizeof(struct in6_addr));
+	//memcpy(&ip6h->ip6_src, SA2IP(src), sizeof(struct in6_addr));
+	//memcpy(&ip6h->ip6_dst, SA2IP(dst), sizeof(struct in6_addr));
+	memcpy(&ip6h->ip6_src, SA2IP(dst), sizeof(struct in6_addr));
+	memcpy(&ip6h->ip6_dst, SA2IP(src), sizeof(struct in6_addr));
 
 	/* Try to preserve flow label and hop limit where possible. */
 	if (old) {
