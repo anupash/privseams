@@ -251,14 +251,30 @@ static void die(struct ipq_handle *h){
   	firewall_close(1);
 }
 
+/**
+ * Tests whether a packet is a HIP packet.
+ *
+ * @param  hdr        a pointer to a HIP packet.
+ * @param trafficType ?
+ * @return            One if @c hdr is a HIP packet, zero otherwise.
+ */ 
 int is_hip_packet(void * hdr, int trafficType){
-	struct udphdr *udphdr;
+	struct udphdr *udphdr = NULL;
 	int hdr_size;
+	int udp_spi_is_zero = 0;
+	uint16_t plen;
 
 	HIP_DEBUG("\n");
 
+	
+	_HIP_DEBUG("the UDP port number is %d\n",IPPROTO_UDP);
+
 	if(trafficType == 4){
-		struct ip * iphdr = (struct ip *)hdr;
+		struct ip *iphdr = (struct ip *)hdr;
+		
+		_HIP_DEBUG("the IPv4 port number is %d\n", iphdr->ip_p);
+
+
 		if(iphdr->ip_p == IPPROTO_HIP) 
 			return 1;
 		if(iphdr->ip_p != IPPROTO_UDP)
@@ -266,10 +282,19 @@ int is_hip_packet(void * hdr, int trafficType){
 
 		//the udp src and dest ports are analysed
 		hdr_size = (iphdr->ip_hl * 4);
+		
+		HIP_DEBUG("size of hdr_size is %d\n", hdr_size);
+		plen = iphdr->ip_len;
 		udphdr = ((struct udphdr *) (((char *) iphdr) + hdr_size));
+		
+
 	}
 	if(trafficType == 6){
 		struct ip6_hdr * ip6_hdr = (struct ip6_hdr *)hdr;
+
+		HIP_DEBUG("the IPv6 port number is %d\n",
+			  ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt);
+
 		if(ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt == IPPROTO_HIP)
 			return 1;
 		if(ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt != IPPROTO_UDP)
@@ -277,12 +302,50 @@ int is_hip_packet(void * hdr, int trafficType){
 
 		//the udp src and dest ports are analysed		
 		hdr_size = (ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen * 4);
+		plen = ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen;
 		udphdr = ((struct udphdr *) (((char *) ip6_hdr) + hdr_size));
 	}
 
-	if((udphdr->source == ntohs(HIP_NAT_UDP_PORT)) || 
-	   (udphdr->dest   == ntohs(HIP_NAT_UDP_PORT)))
-		return 1;
+	HIP_DEBUG("%d %d %d\n", plen, sizeof (struct ip), sizeof(struct udphdr));
+
+	if (trafficType == 4 &&
+	    (plen >= sizeof (struct ip) + sizeof(struct udphdr) + HIP_UDP_ZERO_BYTES_LEN)) {
+		uint32_t *zero_bytes = NULL;
+		// uint32_t *ip_esp_hdr = NULL;
+		
+		/* something wrong here?*/
+		// zero_bytes = (uint32_t *) ((char *)udphdr + 1);
+
+		zero_bytes = (uint32_t *) ((char *)udphdr + sizeof(struct udphdr));
+	  
+		HIP_DEBUG("zero_bytes address is Ox%x, vaule is %d\n", zero_bytes, 
+			  *zero_bytes);
+		
+
+		/*Check whethere SPI number is zero or not */
+
+
+		if (*zero_bytes == 0) {
+			udp_spi_is_zero = 1;
+			HIP_DEBUG("Zero SPI found\n");
+		}
+	
+
+
+	}
+
+	if(udphdr && ((udphdr->source == ntohs(HIP_NAT_UDP_PORT)) || 
+		      (udphdr->dest   == ntohs(HIP_NAT_UDP_PORT))) && udp_spi_is_zero)
+		
+	{		
+		HIP_DEBUG("UDP header size  is %d\n", sizeof(struct udphdr));
+		
+		return !hip_check_network_msg((struct hip_common *) (((char *)udphdr) 
+								     + 
+								     sizeof(struct udphdr) 
+								     + 
+								     HIP_UDP_ZERO_BYTES_LEN));
+	}
 	else
 		return 0;
 }
@@ -1098,7 +1161,7 @@ static void *handle_ip_traffic(void *ptr){
                 		hdr_size = (iphdr->ip_hl * 4);
 
 				if (iphdr->ip_p == IPPROTO_UDP){
-					hdr_size += sizeof(struct udphdr);
+					hdr_size += sizeof(struct udphdr) + HIP_UDP_ZERO_BYTES_LEN;
 				}
                 		_HIP_DEBUG("header size: %d\n", hdr_size);
                		 	IPV4_TO_IPV6_MAP(&iphdr->ip_src, &src_addr);

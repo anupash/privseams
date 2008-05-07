@@ -2158,6 +2158,11 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
             HIP_DEBUG("I2 did not have locator or esp_info\n");
 
 	HIP_DEBUG("Reached %s state\n", hip_state_str(entry->state));
+	if (entry->hip_msg_retrans.buf) {
+		free(entry->hip_msg_retrans.buf);
+		entry->hip_msg_retrans.buf = NULL;
+	}
+
 	//#endif /* CONFIG_HIP_HI3 */
 
  out_err:
@@ -2447,6 +2452,10 @@ int hip_handle_r2(struct hip_common *r2,
 	hip_oppipdb_delentry(&(entry->preferred_address));
 #endif
 	HIP_DEBUG("Reached ESTABLISHED state\n");
+	if (entry->hip_msg_retrans.buf) {
+		free(entry->hip_msg_retrans.buf);
+		entry->hip_msg_retrans.buf = NULL;
+	}
 	
  out_err:
 	if (ctx)

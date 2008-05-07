@@ -82,14 +82,16 @@ int main(int argc, char *argv[]) {
 		 argv[3]);
 
 	/* Call the main function to do the actual logic. */
-	err = main_client_gai(socktype, argv[1], argv[3], AI_HIP);
+	err = main_client_gai(socktype, argv[1], argv[3], 0);
 
  out_err:
 	if(err == 0) {
-		HIP_INFO("=== Connection test result: SUCCESS ===\n");
+		HIP_INFO("=== Connection test result: "\
+			 "\e[92mSUCCESS\e[00m ===\n");
 		return EXIT_SUCCESS;
 	} else {
-		HIP_INFO("=== Connection test result: FAILURE ===\n");
+		HIP_INFO("=== Connection test result: "\
+			 "\e[91mFAILURE\e[00m ===\n");
 		return EXIT_FAILURE;
 	}
 }
