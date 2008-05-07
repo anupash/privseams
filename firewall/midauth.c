@@ -174,7 +174,7 @@ static void midauth_update_all_headers(struct midauth_packet *p)
 		ipv4 = (struct iphdr *) p->buffer;
 		p->size += ipv4->ihl * 4;
 		if (ipv4->protocol == IPPROTO_UDP) {
-			p->size += sizeof(struct udphdr);
+			p->size += sizeof(struct udphdr) + HIP_UDP_ZERO_BYTES_LEN;
 			update_udp_header(ipv4, p->size);
 		} else {
 			update_hip_checksum_ipv4(ipv4);
