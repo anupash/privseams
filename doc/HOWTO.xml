@@ -2084,7 +2084,7 @@ combo-newgroup=&lt;create new...&gt;
     from the security and mobility features of HIP.
     </para></listitem>
     <listitem><para>
-           Opportunistic mode is not compiled by default.  In order to use Opportunistic mode enabled HIP, the following steps are needed:
+           Opportunistic mode is compiled on by default.  In order to use Opportunistic mode enabled HIP, the following steps are needed:
     </para></listitem>
     <listitem><para>
               Move to top level of HIPL
@@ -2116,12 +2116,25 @@ combo-newgroup=&lt;create new...&gt;
     <listitem><para>
            Now the opportunistic mode is enabled. To test Opportunistic mode, you need to remove crash's HITs and name from /etc/hip/hosts, and then following the steps in <xref linkend="ch_basictest" />. 
     </para></listitem>
-	</itemizedlist>
+    </itemizedlist>
+
+    <para>
+    HIPL supports also opportunistic mode that is uses TCP options to
+    detect whether peer supports HIP or not. This is particularly
+    useful in networking environments without HIP look up
+    infrastructure (OpenDHT/DNS/etc) and where the number of HIP hosts
+    is small. This "advanced" version of the opportunistic mode
+    enables fast and backwards compatible fallback to non-HIP
+    communications for TCP connections when the peer does not support
+    HIP.  To use the opportunistic mode, compile HIPL with
+    --enable-opptcp, start both the hipd and firewall (with option -A).
+    Then run hipconf opptcp on and use the opportunistic mode as instructed
+    earlier in this section.
+</para>
 
   </chapter>
   <chapter id="ch_mozilla_showip">
-    <title>Mozilla/firefox showip addon</title>
-    <itemizedlist>
+    <title>Mozilla/firefox showip addon</title> <itemizedlist>
 
      <listitem><para>
 		&nbsp; HIP modified firefox showip addon can be used for firefox to show when
