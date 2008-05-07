@@ -45,9 +45,11 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 	if(*now - HIP_RETRANSMIT_WAIT > entry->hip_msg_retrans.last_transmit){
 		_HIP_DEBUG("%d %d %d\n",entry->hip_msg_retrans.count,
 			  entry->state, entry->retrans_state);
-		if ((entry->hip_msg_retrans.count > 0) &&
-		    (entry->state != HIP_STATE_ESTABLISHED && entry->retrans_state != entry->state) ||
-		    (entry->update_state != 0 && entry->retrans_state != entry->update_state)) {
+		if ((entry->hip_msg_retrans.count > 0) && entry->hip_msg_retrans.buf &&
+		    ((entry->state != HIP_STATE_ESTABLISHED && entry->retrans_state != entry->state) ||
+		     (entry->update_state != 0 && entry->retrans_state != entry->update_state))) {
+			HIP_DEBUG("state=%d, retrans_state=%d, update_state=%d\n",
+				  entry->state, entry->retrans_state, entry->update_state, entry->retrans_state);
 
 			/* @todo: verify that this works over slow ADSL line */
 			err = entry->hadb_xmit_func->
@@ -69,8 +71,7 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 			entry->hip_msg_retrans.count--;
 			/* set the last transmission time to the current time value */
 			time(&entry->hip_msg_retrans.last_transmit);
-		}
-		else {
+		} else {
 		  	HIP_FREE(entry->hip_msg_retrans.buf);
 			entry->hip_msg_retrans.buf = NULL;
 			entry->hip_msg_retrans.count = 0;

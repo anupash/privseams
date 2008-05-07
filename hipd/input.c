@@ -2100,7 +2100,11 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	}
 	
 	HIP_DEBUG("Reached %s state\n", hip_state_str(entry->state));
-	
+	if (entry->hip_msg_retrans.buf) {
+		free(entry->hip_msg_retrans.buf);
+		entry->hip_msg_retrans.buf = NULL;
+	}
+
  out_err:
 	/* 'ha' is not NULL if hip_receive_i2() fetched the HA for us. In that
 	   case we must not release our reference to it. Otherwise, if 'ha' is
@@ -2363,6 +2367,10 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	hip_oppipdb_delentry(&(entry->preferred_address));
 #endif
 	HIP_DEBUG("Reached ESTABLISHED state\n");
+	if (entry->hip_msg_retrans.buf) {
+		free(entry->hip_msg_retrans.buf);
+		entry->hip_msg_retrans.buf = NULL;
+	}
 	
  out_err:
 	if (ctx) {
