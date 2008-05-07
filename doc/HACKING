@@ -704,7 +704,7 @@ $ apt-get source hipl
 Updating dpkg repository 
 --------------------------
 
-- create a directory tree on the web server
+- create a directory tree on the web server for executable files 
 
 $ mkdir -p /var/www/html/ubuntu/dists/gutsy/main/binary-armel
 $ mkdir -p /var/www/html/ubuntu/dists/gutsy/main/binary-i386
@@ -730,23 +730,27 @@ $ rsync Packages.gz root@packages.infrahip.net:/var/www/html/ubuntu/dists/gutsy/
 
 $ sudo chown apache.apache *
 
-- to copy files with extension of .tar.gz .orig.tar.gz .diff.gz .dsc to a temporal directory
-
-$ cp *.tar.gz *.orig.tar.gz *.diff.gz *.dsc ~/../../source-i386/.
-
-- to create overview file for source packages
-
-$ sudo dpkg-scansources . /dev/null | sudo gzip -9c > Sources.gz
-
-- to create a directory tree on the web server
+- create a directory tree for source package on the web server
 
 $ mkdir -p /var/www/html/ubuntu/dists/gutsy/main/source 
 
-- to copy all previous files to the web server
+- copy source package to the web server 
+
+$ rsync hipl-main.tar.gz root@packages.infrahip.net:/var/www/html/ubuntu/
+
+- change to the sub-directory where overview files are located 
+
+$ cd test/packaging/*-deb-src
+
+- and copy all overview files to the web server
 
 $ rsync Sources.gz root@packages.infrahip.net:/var/www/html/ubuntu/dists/gutsy/main/source
 
-$ rsync * root@packages.infrahip.net:/var/www/html/ubuntu/
+$ rsync *.dsc *.orig.tar.gz *.diff.gz root@packages.infrahip.net:/var/www/html/ubuntu/
+
+- if Sources.gz is not found then create overview file for hipl-main.tar.gz source package
+
+$ sudo dpkg-scansources . /dev/null | sudo gzip -9c > Sources.gz
 
 
 
