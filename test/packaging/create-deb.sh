@@ -18,14 +18,15 @@ REVISION=`/usr/bin/lsb_release -c | /usr/bin/awk '{print $2}'`
 if [ $DEBARCH = "armel" ]; then REVISION=chinook; fi
 
 SUFFIX="-$VERSION-$RELEASE-$REVISION"
+PKG_SUFFIX="-$VERSION-$RELEASE"
 NAME=hipl
 NAMEGPL=libhiptool
 DEBIAN=${DEBARCH}/DEBIAN
 DEBIANGPL=$DEBARCH/DEBIAN-hiptool
 CORPORATE=
 PKGROOT=$PWD/test/packaging
-PKGDIR=$PKGROOT/${NAME}${SUFFIX}-deb
-PKGDIR_SRC=$PKGROOT/${NAME}${SUFFIX}-deb-src
+PKGDIR=$PKGROOT/${NAME}${PKG_SUFFIX}-deb
+PKGDIR_SRC=$PKGROOT/${NAME}${PKG_SUFFIX}-deb-src
 
 SRCDIR=${PKGDIR_SRC}/${NAME}${SUFFIX}
 HIPL=$PWD
@@ -58,7 +59,7 @@ copy_tarball ()
 	echo "** Copying Debian control files to '${SRCDIR}/debian'"
 	mkdir -p "${SRCDIR}/debian"
 	cp ${PKGROOT}/$DEBIAN/control-src ${SRCDIR}/debian/control
-	for f in changelog copyright;do
+	for f in changelog copyright rules;do
 	cp ${PKGROOT}/$DEBIAN/$f "${SRCDIR}/debian"
 	done
 	
