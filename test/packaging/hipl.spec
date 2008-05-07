@@ -127,10 +127,25 @@ rm -rf %{buildroot}
 %{prefix}/sbin/hipconf
 %{prefix}/bin/myasn.py
 %{prefix}/bin/parse-key-3.py
-%{prefix}/bin/dnsproxy.py
-%{prefix}/bin/hosts.py
-%{prefix}/bin/pyip6.py
-%{prefix}/bin/util.py
+#%{prefix}/bin/dnsproxy.py
+#%{prefix}/bin/hosts.py
+#%{prefix}/bin/pyip6.py
+#%{prefix}/bin/util.py
+#%{prefix}/bin/DNS/Base.py
+#%{prefix}/bin/DNS/Base.pyc
+#%{prefix}/bin/DNS/Class.py
+#%{prefix}/bin/DNS/Class.pyc
+#%{prefix}/bin/DNS/Lib.py
+#%{prefix}/bin/DNS/Status.py
+#%{prefix}/bin/DNS/Status.pyc
+#%{prefix}/bin/DNS/Type.py
+#%{prefix}/bin/DNS/Type.pyc
+#%{prefix}/bin/DNS/__init__.py
+#%{prefix}/bin/DNS/__init__.pyc
+#%{prefix}/bin/DNS/lazy.py
+#%{prefix}/bin/DNS/lazy.pyc
+#%{prefix}/bin/DNS/pyip6.py
+#%{prefix}/bin/DNS/win32dns.py
 %defattr(755,root,root)
 
 %files test
