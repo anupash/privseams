@@ -551,11 +551,12 @@ if [ $TYPE = "source" ];then
 	rm -rf "${NAME}${SUFFIX}"
 
 	echo "** Successfully finished building the source Debian package"
-	echo "** The debian packages are located in $PKGDIR_SRC"
+	echo "** The debian packages are located in" 
+        echo "$PKGDIR_SRC"
 	echo "** and they are named:"
 	echo "${NAME}-${VERSION}.diff.gz"
 	echo "${NAME}-${VERSION}.dsc"
- 	echo "${NAME}-${VERSION}-${REVISION}.orig.tar.gz"
+ 	echo "${NAME}-${VERSION}.orig.tar.gz"
         
         sudo dpkg-scansources . /dev/null | sudo gzip -9c > Sources.gz
     else
