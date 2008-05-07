@@ -2142,6 +2142,9 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
              }
      }
  out_of_loop:
+
+     HIP_IFEL((IN6_IS_ADDR_V4MAPPED(&srcaddr) != IN6_IS_ADDR_V4MAPPED(&destaddr)), -1,
+	     "Different address families, not adding SAs\n");
      
      HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_our, &entry->hit_peer,
 				    &srcaddr, &destaddr, IPPROTO_ESP, 1, 0),
@@ -2198,6 +2201,11 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 
 	HIP_DEBUG("\n");
 	
+	/* Peer's preferred address. Can be changed by the source address
+	   selection below if we don't find any addresses of the same family
+	   as peer's preferred address (intrafamily handover). */
+	HIP_IFE(hip_hadb_get_peer_addr(entry, daddr), -1);
+
 	/* avoid advertising the same address set */
 	/* (currently assumes that lifetime or reserved field do not
 	 * change, later store only addresses) */
@@ -2216,11 +2224,6 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 	} else {
 		HIP_DEBUG("Address set has changed, continue\n");
 	}
-
-	/* Peer's preferred address. Can be changed by the source address
-	   selection below if we don't find any addresses of the same family
-	   as peer's preferred address (intrafamily handover). */
-	HIP_IFE(hip_hadb_get_peer_addr(entry, daddr), -1);
 
 	/* dont go to out_err but to ... */
 	if(!addr_list) {
@@ -2377,6 +2380,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 	struct hip_own_addr_list_item *own_address_item, *tmp;
 
 	HIP_DEBUG("\n");
+	HIP_IFE(hip_hadb_get_peer_addr(entry, &daddr), -1);
 
 	HIP_IFEL(entry->is_loopback, 0, "Skipping loopback\n");
 	
@@ -2603,6 +2607,7 @@ int hip_send_update(struct hip_hadb_state *entry,
              struct hip_peer_addr_list_item *addr_lij;
              struct hip_spi_out_item *spi_outj;
              int ij = 0, iij = 0;
+	     HIP_DEBUG("is add and address count > 1\n");
              list_for_each_safe(item_outerj, tmp_outerj, entry->spis_out, ij) {
                      spi_outj = list_entry(item_outerj);
                      iij = 0;
@@ -2621,13 +2626,18 @@ int hip_send_update(struct hip_hadb_state *entry,
      }
 
      if(IN6_IS_ADDR_V4MAPPED(&entry->local_address) 
-	== IN6_IS_ADDR_V4MAPPED(&daddr))
-	  memcpy(&saddr, &entry->local_address, sizeof(saddr));
-     else {
+	== IN6_IS_ADDR_V4MAPPED(&daddr)) {
+	     HIP_DEBUG_IN6ADDR("saddr", &saddr);
+	     HIP_DEBUG_IN6ADDR("daddr", &daddr);
+	     HIP_DEBUG("Same address family\n");
+	     memcpy(&saddr, &entry->local_address, sizeof(saddr));
+     } else {
+	  HIP_DEBUG("Different address family\n");
 	  list_for_each_safe(item, tmp_li, addresses, i) {
 	       n = list_entry(item);
 	       if (IN6_IS_ADDR_V4MAPPED(&daddr) == 
 		   IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
+		    HIP_DEBUG_IN6ADDR("chose address", hip_cast_sa_addr(&n->addr)); 
                     memcpy(&saddr, hip_cast_sa_addr(&n->addr), sizeof(saddr));
                     ipv6_addr_copy(&entry->local_address, &saddr); 
                     break;
