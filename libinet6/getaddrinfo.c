@@ -488,6 +488,8 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
         tmp_ttl = gw_info->ttl;
         tmp_port = htons(gw_info->port);
         IPV6_TO_IPV4_MAP(&gw_info->addr, &tmp_v4);
+        /* Compiler warning:
+	   assignment discards qualifiers from pointer target type. */
         pret = inet_ntop(AF_INET, &tmp_v4, tmp_ip_str, 20);
         HIP_DEBUG("Got address %s, port %d, TTL %d from daemon\n",
                   tmp_ip_str, tmp_port, tmp_ttl);
@@ -499,6 +501,9 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
                         //close(s);
                         goto skip_dht;
         }
+	/* Compiler warning:
+	   passing argument 2 of 'opendht_get_key' discards qualifiers from
+	   pointer target type. */
         ret_hit = opendht_get_key(serving_gateway, name, dht_response_hit);
         if (ret_hit == 0)
                 HIP_DEBUG("HIT received from DHT: %s\n", dht_response_hit);
@@ -1441,7 +1446,9 @@ static struct gaih gaih[] =
   };
 
 /**
- * Retrieves the info of the specified peer.
+ * Retrieves a socket address structure for specified host. Retrieves a addrinfo
+ * linked list for a host using host name @c name and/or portnumber @c service
+ * as a search key.
  * 
  * @param name    a pointer to a host name.
  * @param service a pointer to port number as a string.
@@ -1456,37 +1463,38 @@ static struct gaih gaih[] =
 int getaddrinfo(const char *name, const char *service,
 		const struct addrinfo *hints, struct addrinfo **pai)
 {
-	int i = 0, j = 0, last_i = 0;
-	struct addrinfo *p = NULL, **end;
+	int i = 0, j = 0, last_i = 0, hip_transparent_mode = 0;
+	struct addrinfo *p = NULL, **end = NULL;
 	struct gaih *g = gaih, *pg = NULL;
-	struct gaih_service gaih_service, *pservice;
-	int hip_transparent_mode;
+	struct gaih_service gaih_service, *pservice = NULL;
 
-	if (name != NULL && name[0] == '*' && name[1] == 0)
+	/*if (name != NULL && name[0] == '*' && name[1] == 0)
 		name = NULL;
-
 	if (service != NULL && service[0] == '*' && service[1] == 0)
-		service = NULL;
+	service = NULL;*/
 
+	/* Return "NAME or SERVICE is unknown." error value. */
 	if (name == NULL && service == NULL)
 		return EAI_NONAME;
 
+	/* If no search key is given, we use the global default address
+	   structure as a searh key. */
 	if (hints == NULL) {
 		hints = &default_hints;
-		_HIP_DEBUG("set hints=default_hints:ai_flags=0x%x "\
-			   "ai_family=%d ai_socktype=%d ai_protocol=%d\n",
-			   hints->ai_flags, hints->ai_family,
-			   hints->ai_socktype, hints->ai_protocol);
 	}
-
-	if (hints->ai_flags & ~(AI_PASSIVE|AI_CANONNAME|AI_NUMERICHOST|
-				AI_ADDRCONFIG|AI_V4MAPPED|AI_ALL|AI_HIP|
-				AI_HIP_NATIVE|AI_KERNEL_LIST|AI_NODHT))
+	
+	/* Check if the search key has flags that are not allowed. The flags
+	   that are ORed are the allowed flags. */
+	if (hints->ai_flags &
+	    ~(AI_PASSIVE|AI_CANONNAME|AI_NUMERICHOST|AI_ADDRCONFIG|AI_V4MAPPED|
+	      AI_ALL|AI_HIP|AI_HIP_NATIVE|AI_KERNEL_LIST|AI_NODHT)) {
 		return EAI_BADFLAGS;
-
+	}
+	/* A canonical name is a properly denoted host name of a computer or
+	   network server. If the flag is set, a name must have been provided. */
 	if ((hints->ai_flags & AI_CANONNAME) && name == NULL)
 		return EAI_BADFLAGS;
-
+	/* A socket address structure is either HIP or HIP native. */
 	if ((hints->ai_flags & AI_HIP) && (hints->ai_flags & AI_HIP_NATIVE))
 		return EAI_BADFLAGS;
 
@@ -1496,13 +1504,12 @@ int getaddrinfo(const char *name, const char *service,
 #else
 	hip_transparent_mode = 0;
 #endif
-  
-	if (service && service[0])
-	{
-		char *c;
-
+	if (service != NULL) {
+		char *c = NULL;
+				
 		gaih_service.name = service;
 		gaih_service.num = strtoul(gaih_service.name, &c, 10);
+		
 		if (*c)
 			gaih_service.num = -1;
 		else
@@ -1557,7 +1564,7 @@ int getaddrinfo(const char *name, const char *service,
 			if (pg == NULL || pg->gaih != g->gaih)
 			{
 				pg = g;
-				i = g->gaih (name, pservice, hints, end, hip_transparent_mode);
+				i = g->gaih(name, pservice, hints, end, hip_transparent_mode);
 				if (i != 0)
 				{
 					last_i = i;
@@ -1595,18 +1602,22 @@ int getaddrinfo(const char *name, const char *service,
 	return last_i ? -(last_i & GAIH_EAI) : EAI_NONAME;
 }
 
-void
-freeaddrinfo (struct addrinfo *ai)
+
+/**
+ * Frees memory allocated for a addrinfo structure. The addrinfo @c ai is
+ * actually a linked list. This function frees all of the addrinfo elements in
+ * the list @c ai.
+ *
+ * @param   ai a pointer to a addrinfo structure to be freed. 
+ */ 
+void freeaddrinfo (struct addrinfo *ai)
 {
-  struct addrinfo *p;
-
-  _HIP_DEBUG("ai=%p\n", ai);
-
-  while (ai != NULL)
-    {
-      p = ai;
-      ai = ai->ai_next;
-      free (p);
-    }
+	struct addrinfo *p = NULL;
+	
+	while (ai != NULL)
+	{
+		p = ai;
+		ai = ai->ai_next;
+		free (p);
+	}
 }
-
