@@ -1530,6 +1530,7 @@ static void *handle_ip_traffic(void *ptr){
 				}
 				
 
+				
 
 				else
 	  			{
@@ -1542,7 +1543,7 @@ static void *handle_ip_traffic(void *ptr){
 					allow_packet(hndl, m->packet_id);
 					//drop_packet(hndl, m->packet_id);
 					// !!!!!XX FIXME: UGLY KLUDGE!!!!!!!!!
-	  			}
+				}
 
 
 			} else {	

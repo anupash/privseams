@@ -726,6 +726,10 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 
  
 		HIP_DEBUG("output packet spi value is 0x%x\n", ntohl(esph->spi));
+		
+		HIP_HEXDUMP("the output IPv4 header + UDP header + ESP packet is",
+			    new_raw_ip_output, sizeof(struct ip) + out_enc_len);
+
 
 		
 		err = sendto(ipv4_s_raw, new_raw_ip_output, 
@@ -1266,9 +1270,16 @@ void *hip_esp_input(struct sockaddr_storage *ss_lsi, u8 *buff, int len)
 
 
 		/*hard coded, FIXME offset with 8 bytes!!!!! */
-		esph = (struct ip_esp_hdr *) (((char *)udph) + sizeof(udphdr) + 
-					      8 );
+		/* When Testing HIPL kernel IPsec and HIPL userspace it needs add
+		 * 8 bytes. Why????????
+		 */
+
+		// esph = (struct ip_esp_hdr *) (((char *)udph) + sizeof(udphdr) + 8);
+		esph = (struct ip_esp_hdr *) (((char *)udph) + sizeof(udphdr));
 		
+		
+
+
 		if (((int)(len - sizeof(struct ip) - sizeof(udphdr)) ==
 		     1) && (((__u8*)esph)[0] == 0xFF)) {
 			HIP_DEBUG ("Keepalive packet received.\n");
@@ -2524,13 +2535,20 @@ int hip_esp_decrypt(__u8 *in, int len, __u8 *out, int *offset, int *outlen,
 		
 		/* hard code here, if the offset is added 8 more bytes  
 		 * FIXME, why do we need that 8 more bytes?
+		 *
+		 * Why need add 8 bytes
+		 *
 		 */
 		
+		/*
+		esp = (struct ip_esp_hdr*) (((char *) udph) + 
+		                            sizeof(udphdr) +
+					    8);
+		*/
 		
 		esp = (struct ip_esp_hdr*) (((char *) udph) + 
-					    sizeof(udphdr) +
-					    HIP_UDP_ZERO_BYTES_LEN +
-					    + 8);
+		                         sizeof(udphdr));
+		
 	} else { 		
 		/* Todo: Test if it is not UDP-encapsulated */
 		/* not UDP-encapsulated */
