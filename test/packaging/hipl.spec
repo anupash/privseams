@@ -41,6 +41,8 @@ make -C doc all
 #
 #%define _unpackaged_files_terminate_build 0
 #%define _missing_doc_files_terminate_build 0
+%define python_sitelib %(%{__python} -c 'from distutils import sysconfig; print sysconfig.get_python_lib()')
+
 
 # Note: we are not distributing everything from test directory, just essentials
 
@@ -96,6 +98,8 @@ install -d %{buildroot}/doc
 make DESTDIR=%{buildroot} install
 install -m 700 test/packaging/rh-init.d-hipd %{buildroot}/etc/rc.d/init.d/hipd
 install -m 644 doc/HOWTO.txt %{buildroot}/doc
+install -d %{buildroot}/%{python_sitelib}/DNS
+install -t %{buildroot}/%{python_sitelib}/DNS tools/DNS/*py*
 
 %post lib
 /sbin/ldconfig 
@@ -123,14 +127,6 @@ rm -rf %{buildroot}
 %files agent
 %{prefix}/bin/hipagent
 
-%files tools
-%{prefix}/sbin/hipconf
-%{prefix}/bin/myasn.py
-%{prefix}/bin/parse-key-3.py
-#%{prefix}/bin/dnsproxy.py
-#%{prefix}/bin/hosts.py
-#%{prefix}/bin/pyip6.py
-#%{prefix}/bin/util.py
 #%{prefix}/bin/DNS/Base.py
 #%{prefix}/bin/DNS/Base.pyc
 #%{prefix}/bin/DNS/Class.py
@@ -146,6 +142,16 @@ rm -rf %{buildroot}
 #%{prefix}/bin/DNS/lazy.pyc
 #%{prefix}/bin/DNS/pyip6.py
 #%{prefix}/bin/DNS/win32dns.py
+
+%files tools
+%{prefix}/sbin/hipconf
+%{prefix}/bin/myasn.py
+%{prefix}/bin/parse-key-3.py
+%{prefix}/bin/dnsproxy.py
+%{prefix}/bin/hosts.py
+%{prefix}/bin/pyip6.py
+%{prefix}/bin/util.py
+%{python_sitelib}/DNS
 %defattr(755,root,root)
 
 %files test
