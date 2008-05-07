@@ -127,7 +127,7 @@ int g_state = 0;
 
 
 /*HIP ESP output using socket binding */
-#define USE_BINDING 1
+// #define USE_BINDING 1
 
 
 /* 
@@ -445,7 +445,14 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 	
 	struct timeval timeout, now;
 	//__u8 raw_buff[BUFF_LEN];
-	__u8 data[BUFF_LEN]; /* encrypted data buffer */
+	
+	/* encrypted data buffer + udp header -> udp header  + ESP  
+	* HIP_ESP_OVER_UDP
+	*/
+	__u8 data[BUFF_LEN];
+
+	
+
 	struct ip *iph;
 
 	memset(data, 0, sizeof(data));
@@ -491,6 +498,17 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 
 #endif 	
 	
+	/* open ipv4 raw socket */
+	ipv4_s_raw = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
+	if (ipv4_s_raw < 0) {
+		HIP_DEBUG("*** ipv4_s_raw socket() error for raw socket in hip_esp_output\n");
+	}
+	
+	/* open ipv6 raw socket*/
+	ipv6_s_raw = socket(AF_INET6, SOCK_RAW, IPPROTO_RAW);
+	if (ipv6_s_raw < 0) {
+		HIP_DEBUG("*** ipv6_s_raw socket() error for raw socket in hip_esp_output\n");
+	}
 
 
 #endif /* RAW_IP_OUT */
@@ -634,15 +652,15 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 		*/
 
 
-		ipv4_s_raw = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
-		if (ipv4_s_raw < 0) {
-			HIP_DEBUG("*** ipv4_s_raw socket() error for raw socket in hip_esp_output\n");
-		}
+		
 
 		
 #ifdef USE_BINDING /* Using binding */
 
-		/* my localhost address is entry->dst_addrs->addr */
+		/* my localhost address is entry->dst_addrs->addr 
+		 * FIX ME if using UDP socket, can not use raw_socket here!!!!!!
+		 *
+		 */
 		ipv4_binding = (struct sockaddr_in *) &entry->dst_addrs->addr;
 		
 
@@ -654,7 +672,7 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 		
 #else
 
-		/* Todo: add IP header here FIXME*/
+		/* Todo: add IP header here FIXME by using raw socket */
 		
 		if(setsockopt(ipv4_s_raw, IPPROTO_IP, IP_HDRINCL, 
 			      (char *)&on, sizeof(on)) < 0 )
@@ -663,12 +681,36 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 			goto out_err;
 			
 		}
+		
+		flags = 0;
+
 		/* the peer address is entry->src_addrs->addr*/
 		
 		
 
 		/* This is used to build own ip header FIXME, later*/
-		char new_raw_ip_output[sizeof(struct ip) + out_enc_len];
+		/* IP header + udp header + ESP packet */
+    
+		__u8 new_raw_ip_output[sizeof(struct ip) + out_enc_len];
+
+		iph = (struct ip *) new_raw_ip_output;
+		
+
+		/* copy memory (data) udp header + ESP packet */
+		memcpy(&new_raw_ip_output[sizeof(struct ip)], data, out_enc_len);
+
+
+		/* Local IP address: &entry->dst_addrs->addr  */
+		/* Remote IP address: &entry->src_addrs->addr */
+
+	       add_ipv4_header(new_raw_ip_output,
+			       ntohl(LSI4(&entry->dst_addrs->addr)), 
+			       ntohl(LSI4(&entry->src_addrs->addr)), 
+			       (struct ip*) NULL,
+			       sizeof(struct ip) + out_enc_len,
+			       IPPROTO_UDP);
+		
+		
 
 
 #endif 
@@ -686,12 +728,12 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 		HIP_DEBUG("output packet spi value is 0x%x\n", ntohl(esph->spi));
 
 		
-		err = sendto(ipv4_s_raw, data, out_enc_len, flags,
+		err = sendto(ipv4_s_raw, new_raw_ip_output, 
+			     sizeof(struct ip) + out_enc_len , 
+			     flags,
 			     SA(&entry->src_addrs->addr),
 			     SALEN(&entry->src_addrs->addr));
  
-
-
 		if (err < 0)
 		{	
 			HIP_DEBUG("hip_esp_output IPv4 sendto() failed:"
@@ -712,10 +754,7 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 		HIP_DEBUG(" Both IP addresses belong to IPv6\n"); 
 		
 
-		ipv6_s_raw = socket(AF_INET6, SOCK_RAW, IPPROTO_RAW);
-		if (ipv6_s_raw < 0) {
-			HIP_DEBUG("*** ipv6_s_raw socket() error for raw socket in hip_esp_output\n");
-		}
+		
 #ifdef USE_BINDING 
 		
 		ipv6_binding = (struct sockaddr_in6 *) &entry->dst_addrs->addr;
@@ -1077,8 +1116,8 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 
 
 
-	HIP_DEBUG("hip_esp_output() thread shutdown.\n");
-	fflush(stdout);
+	
+	
  out_err:
 
 	/* added by Tao Wan*/
@@ -1090,8 +1129,8 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 	   sending */ 
 	
 
-	if (err)
-		HIP_DEBUG("something failed:%s\n",strerror(errno));
+	
+	HIP_DEBUG("Print out any erro message :%s\n",strerror(errno));
 
 
 	if (dst_is_ipv4) {
@@ -1108,8 +1147,8 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 		
 	}
 	
-	HIP_DEBUG("hip_esp_output() thread started...\n");
-	
+	HIP_DEBUG("hip_esp_output() thread shutdown...\n");
+	fflush(stdout);
 	return (NULL);
 	
 
@@ -1170,7 +1209,7 @@ void *hip_esp_input(struct sockaddr_storage *ss_lsi, u8 *buff, int len)
 
 	int ipv4_s_raw = 0; /* ipv4 raw socket */
 	int ipv6_s_raw = 0; /* ipv6 raw socket */
-	int flags;
+	int on;
 	struct sockaddr_in6 *to_local_hit;
 	
 	socklen_t sa_size_v6 = sizeof(struct sockaddr_in6);
@@ -1191,9 +1230,9 @@ void *hip_esp_input(struct sockaddr_storage *ss_lsi, u8 *buff, int len)
 	if (ipv6_s_raw < 0) {
 		HIP_DEBUG("--- socket() error for ipv6 (HITs) raw socket in hip_esp_output\n");
 	}
-	flags = 1;
-	if (setsockopt(ipv6_s_raw, IPPROTO_IP, IP_HDRINCL, (char *)&flags,
-		       sizeof(flags)) < 0) {
+	on = 1;
+	if (setsockopt(ipv6_s_raw, IPPROTO_IP, IP_HDRINCL, (char *)&on,
+		       sizeof(on)) < 0) {
 		HIP_DEBUG("*** setsockopt() error for raw socket in "
 		  "hip_input_output\n");
 
@@ -2721,7 +2760,7 @@ int hip_esp_decrypt(__u8 *in, int len, __u8 *out, int *offset, int *outlen,
 	HIP_DEBUG_SOCKADDR("local HIT ", &entry->inner_dst_addrs->addr);
 	HIP_DEBUG_SOCKADDR("remote HIT ", &entry->inner_src_addrs->addr);
 	
-	src_hit =  &entry->inner_src_addrs->addr;
+	src_hit =  &entry->inner_dst_addrs->addr;
 	dst_hit =  &entry->inner_src_addrs->addr;
 
 	HIP_DEBUG(" Is it TCP and UDP packet:?  %s ", 
@@ -2976,6 +3015,7 @@ void add_ipv4_header(__u8 *data, __u32 src, __u32 dst, struct ip *old,
 	iph->ip_sum = ip_fast_csum((__u8*)iph, iph->ip_hl);
 #endif	
 }
+
 
 /*
  * add_ipv6_pseudo_header()
