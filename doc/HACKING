@@ -744,11 +744,10 @@ $ mkdir -p /var/www/html/ubuntu/dists/gutsy/main/source
 
 - to copy all previous files to the web server
 
-$ sudo rsync Sources.gz *.tar.gz .orig.tar.gz *.diff.gz *.dsc root@packages.infrahip.net:/tmp/.
+$ rsync Sources.gz root@packages.infrahip.net:/var/www/html/ubuntu/dists/gutsy/main/source
 
-- to change owner of all files on the web server
+$ rsync * root@packages.infrahip.net:/var/www/html/ubuntu/
 
-$ sudo chown apache:apache *
 
 
 TEST MATRIX
