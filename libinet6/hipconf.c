@@ -473,7 +473,7 @@ int hip_conf_handle_hi(hip_common_t *msg, int action, const char *opt[],
      HIP_IFEL((euid != 0 && action == ACTION_SET), -1,
 	      "New default HI must be created as root.\n");
 
-     _HIP_INFO("action=%d optc=%d\n", action, optc);
+     _HIP_DEBUG("action=%d optc=%d\n", action, optc);
 
      if (action == ACTION_DEL)
 	  return hip_conf_handle_hi_del(msg, action, opt, optc);

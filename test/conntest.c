@@ -224,7 +224,9 @@ int main_server(int type, int port)
  * @param peer_ai a pointer to peer address info.
  * @param sock    a target buffer where the socket file descriptor is to be
  *                stored.
- * @return        zero on success, negative on failure.
+ * @return        zero on success, negative on failure. Possible error values
+ *                are the @c errno values of socket(), connect() and close()
+ *                with a minus sign.
  */
 int hip_connect_func(struct addrinfo *peer_ai, int *sock){
 	int err = 0, e = 0;
@@ -236,7 +238,8 @@ int hip_connect_func(struct addrinfo *peer_ai, int *sock){
 	struct sockaddr_in *sin4 = NULL;
 	struct sockaddr_in6 *sin6 = NULL;
 	
-	/* Reset the global error value. */
+	/* Reset the global error value since at out_err we set err as
+	   -errno. */
 	errno = 0;
 
 	/* Set the memory allocated from the stack to zeros. */
@@ -264,16 +267,21 @@ int hip_connect_func(struct addrinfo *peer_ai, int *sock){
 		    
 		HIP_IFEL(((*sock) = socket(ai->ai_family, ai->ai_socktype,
 					   ai->ai_protocol)) < 0,
-			 -EFAULT, "Unable to get a socket for sending.\n");
-		    
-		if (ai->ai_family == AF_INET)
-			HIP_DEBUG_LSI("Connecting to", &sin4->sin_addr);
-		else
-			HIP_DEBUG_HIT("Connecting to", &sin6->sin6_addr);
+			 err = -errno, "Unable to get a socket for sending.\n");
+		
+		if (ai->ai_family == AF_INET) {
+			HIP_INFO_LSI("Connecting to", &sin4->sin_addr);
+		} else if(ipv6_addr_is_hit(&sin6->sin6_addr)){
+			HIP_INFO_HIT("Connecting to HIT", &sin6->sin6_addr);
+		} else if (IN6_IS_ADDR_V4MAPPED(&sin6->sin6_addr)) {
+			HIP_INFO_HIT("Connecting to IPv4 address", &sin6->sin6_addr);
+		} else {
+			HIP_INFO_HIT("Connecting to IPv6 address", &sin6->sin6_addr);
+		}
 		
 		gettimeofday(&stats_before, NULL);
 		
-		HIP_IFE((e = connect(*sock, ai->ai_addr, ai->ai_addrlen)) != 0,
+		HIP_IFE((e = connect(*sock, ai->ai_addr, ai->ai_addrlen)),
 			err = -errno);
 		
 		gettimeofday(&stats_after, NULL);
@@ -374,7 +382,7 @@ int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
 	}
 	
 	/* Get a socket for sending and receiving data. */
-	HIP_IFE((hip_connect_func(peer_ai, &sock) != 0), -EFAULT);
+	HIP_IFE(err = (hip_connect_func(peer_ai, &sock)), err);
 
 	gettimeofday(&stats_before, NULL);
 	
@@ -434,14 +442,12 @@ int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
 	}
 
  out_err:
-	
-	if(sendnum < 0 || recvnum <= 0) {
-		perror(NULL);
-	}
-	if (peer_ai != NULL)
+	if (peer_ai != NULL) {
 		freeaddrinfo(peer_ai);
-	if (sock != 0)
+	}
+	if (sock != 0) {
 		close(sock);
+	}
 	
 	return err;
 }

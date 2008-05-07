@@ -1,5 +1,5 @@
 /** @file
- * A test client for testing HIP connection between hosts. Use this in context
+ * A test client for testing connection between hosts. Use this in context
  * with conntest-server. "gai" stands for "give all information" :D
  *
  * @author  Lauri Silvennoinen
@@ -90,8 +90,18 @@ int main(int argc, char *argv[]) {
 			 "\e[92mSUCCESS\e[00m ===\n");
 		return EXIT_SUCCESS;
 	} else {
+		if(errno == ECONNREFUSED) {
+			HIP_INFO("The peer was reached but it refused the "\
+				 "connection.\nThere is no one listening on "\
+				 "the remote address.\nDo you have a server "\
+				 "running at the other end?\n");
+		} else {
+			perror(NULL);
+		}
+
 		HIP_INFO("=== Connection test result: "\
 			 "\e[91mFAILURE\e[00m ===\n");
+		
 		return EXIT_FAILURE;
 	}
 }

@@ -1099,11 +1099,11 @@ int load_dsa_private_key(const char *filenamebase, DSA **dsa) {
     err = -EINVAL;
     goto out_err;
   }
-  _HIP_INFO("Loaded host DSA pubkey=%s\n", BN_bn2hex((*dsa)->pub_key));
-  _HIP_INFO("Loaded host DSA privkey=%s\n", BN_bn2hex((*dsa)->priv_key));
-  _HIP_INFO("Loaded host DSA p=%s\n", BN_bn2hex((*dsa)->p));
-  _HIP_INFO("Loaded host DSA q=%s\n", BN_bn2hex((*dsa)->q));
-  _HIP_INFO("Loaded host DSA g=%s\n", BN_bn2hex((*dsa)->g));
+  _HIP_DEBUG("Loaded host DSA pubkey=%s\n", BN_bn2hex((*dsa)->pub_key));
+  _HIP_DEBUG("Loaded host DSA privkey=%s\n", BN_bn2hex((*dsa)->priv_key));
+  _HIP_DEBUG("Loaded host DSA p=%s\n", BN_bn2hex((*dsa)->p));
+  _HIP_DEBUG("Loaded host DSA q=%s\n", BN_bn2hex((*dsa)->q));
+  _HIP_DEBUG("Loaded host DSA g=%s\n", BN_bn2hex((*dsa)->g));
 
  out_err:
 
@@ -1164,11 +1164,11 @@ int load_rsa_private_key(const char *filenamebase, RSA **rsa) {
     err = -EINVAL;
     goto out_err;
   }
-  _HIP_INFO("Loaded host RSA n=%s\n", BN_bn2hex((*rsa)->n));
-  _HIP_INFO("Loaded host RSA e=%s\n", BN_bn2hex((*rsa)->e));
-  _HIP_INFO("Loaded host RSA d=%s\n", BN_bn2hex((*rsa)->d));
-  _HIP_INFO("Loaded host RSA p=%s\n", BN_bn2hex((*rsa)->p));
-  _HIP_INFO("Loaded host RSA q=%s\n", BN_bn2hex((*rsa)->q));
+  _HIP_DEBUG("Loaded host RSA n=%s\n", BN_bn2hex((*rsa)->n));
+  _HIP_DEBUG("Loaded host RSA e=%s\n", BN_bn2hex((*rsa)->e));
+  _HIP_DEBUG("Loaded host RSA d=%s\n", BN_bn2hex((*rsa)->d));
+  _HIP_DEBUG("Loaded host RSA p=%s\n", BN_bn2hex((*rsa)->p));
+  _HIP_DEBUG("Loaded host RSA q=%s\n", BN_bn2hex((*rsa)->q));
 
  out_err:
 
@@ -1248,10 +1248,10 @@ int load_dsa_public_key(const char *filename, DSA **dsa) {
     goto out_err;
   }
 
-  _HIP_INFO("Loaded host DSA pubkey=%s\n", BN_bn2hex((*dsa)->pub_key));
-  _HIP_INFO("Loaded host DSA p=%s\n", BN_bn2hex((*dsa)->p));
-  _HIP_INFO("Loaded host DSA q=%s\n", BN_bn2hex((*dsa)->q));
-  _HIP_INFO("Loaded host DSA g=%s\n", BN_bn2hex((*dsa)->g));
+  _HIP_DEBUG("Loaded host DSA pubkey=%s\n", BN_bn2hex((*dsa)->pub_key));
+  _HIP_DEBUG("Loaded host DSA p=%s\n", BN_bn2hex((*dsa)->p));
+  _HIP_DEBUG("Loaded host DSA q=%s\n", BN_bn2hex((*dsa)->q));
+  _HIP_DEBUG("Loaded host DSA g=%s\n", BN_bn2hex((*dsa)->g));
 
  out_err:
   if (err && *dsa)
@@ -1330,8 +1330,8 @@ int load_rsa_public_key(const char *filename, RSA **rsa) {
     goto out_err;
   }
 
-  _HIP_INFO("Loaded host RSA n=%s\n", BN_bn2hex((*rsa)->n));
-  _HIP_INFO("Loaded host RSA e=%s\n", BN_bn2hex((*rsa)->e));
+  _HIP_DEBUG("Loaded host RSA n=%s\n", BN_bn2hex((*rsa)->n));
+  _HIP_DEBUG("Loaded host RSA e=%s\n", BN_bn2hex((*rsa)->e));
 
  out_err:
   if (err && *rsa)

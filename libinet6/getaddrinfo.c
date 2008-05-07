@@ -443,26 +443,25 @@ connect_alarm(int signo)
  */
 int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 {	 								
-        
-	int error, ret_hit, ret_addr, tmp_ttl, tmp_port;
+	int error = 0, ret_hit = 0, ret_addr = 0, tmp_ttl = 0, tmp_port = 0;
 	int found_hits = 0, lineno = 0, i = 0, err = 0;
-	
+	hip_hit_t hit, tmp_hit, tmp_addr;
+	struct in_addr tmp_v4;
 	char dht_response_hit[1024], dht_response_addr[1024], line[500];
 	char ownaddr[] = "127.0.0.1", tmp_ip_str[21];
         char *pret = NULL, *fqdn_str = NULL;
-	hip_hit_t hit, tmp_hit, tmp_addr;
-	
 	hip_common_t *msg = NULL;
 	struct gaih_addrtuple *aux = NULL;
 	struct addrinfo *serving_gateway = NULL;
 	struct hip_opendht_gw_info *gw_info = NULL;
-        struct in_addr tmp_v4;
-	FILE *fp = NULL;						
+	FILE *fp = NULL;				
 	List list;
         
-        if (flags & AI_NODHT)
+        if (flags & AI_NODHT) {
+		HIP_INFO("Distributed hash table (DHT) is not in use.\n");
                 goto skip_dht;
-        
+        }
+	
         memset(dht_response_hit, '\0', sizeof(dht_response_hit));
         memset(dht_response_addr, '\0', sizeof(dht_response_addr));
         
@@ -481,9 +480,10 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
         
         /* Check if DHT was on */
         if ((gw_info->ttl == 0) && (gw_info->port == 0)) {
-                HIP_DEBUG("DHT is not in use\n");
+                HIP_INFO("Distributed hash table (DHT) is not in use.\n");
                 goto skip_dht;
-        }        
+        }
+        
         memset(&tmp_ip_str,'\0',20);
         tmp_ttl = gw_info->ttl;
         tmp_port = htons(gw_info->port);
@@ -497,23 +497,25 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
         error = 0;
         error = resolve_dht_gateway_info(tmp_ip_str, &serving_gateway);
         if (error < 0) {
-                        HIP_DEBUG("Error in resolving the DHT gateway address, skipping DHT\n");
-                        //close(s);
-                        goto skip_dht;
+		HIP_DEBUG("Error in resolving the DHT gateway address, skipping DHT.\n");
+		//close(s);
+		goto skip_dht;
         }
 	/* Compiler warning:
 	   passing argument 2 of 'opendht_get_key' discards qualifiers from
 	   pointer target type. */
         ret_hit = opendht_get_key(serving_gateway, name, dht_response_hit);
-        if (ret_hit == 0)
-                HIP_DEBUG("HIT received from DHT: %s\n", dht_response_hit);
+	
+        if (ret_hit == 0) {
+                HIP_INFO("HIT received from DHT: %s.\n", dht_response_hit);
+	}
         /* Where is this opened? */
 	//close(s);
         if (ret_hit == 0 && (strlen((char *)dht_response_hit) > 1)) {
                 ret_addr = opendht_get_key(serving_gateway, 
                                            dht_response_hit, dht_response_addr);
                 if (ret_addr == 0)
-                        HIP_DEBUG("Address received from DHT: %s\n",dht_response_addr);
+                        HIP_INFO("Address received from DHT: %s.\n",dht_response_addr);
                 //close(s);
         }
         if ((ret_hit == 0) && (ret_addr == 0) && 
@@ -682,9 +684,30 @@ send_hipd_addr(struct gaih_addrtuple * orig_at)
       else 
 	addr6 = *(struct in6_addr *) at_ip->addr;
 
-      hip_msg_init(msg);	
-      HIP_DEBUG_IN6ADDR("HIT", (struct in6_addr *)at_hit->addr);
-      HIP_DEBUG_IN6ADDR("IP", &addr6);
+      hip_msg_init(msg);
+      
+      /* Clarified the printed output as this is used in conntest-client-gai.
+	 -Lauri 07.05.2008. */
+      char hit_string[INET6_ADDRSTRLEN];
+      char ipv6_string[INET6_ADDRSTRLEN];
+      memset(hit_string, 0, INET6_ADDRSTRLEN);
+      memset(ipv6_string, 0, INET6_ADDRSTRLEN);
+      
+      inet_ntop(AF_INET6, (struct in6_addr *)at_hit->addr, hit_string,
+		INET6_ADDRSTRLEN);
+
+      if (IN6_IS_ADDR_V4MAPPED(&addr6)) {
+	      struct in_addr in_addr;
+	      IPV6_TO_IPV4_MAP(&addr6, &in_addr);
+	      inet_ntop(AF_INET, &in_addr, ipv6_string, INET6_ADDRSTRLEN);
+	      HIP_INFO("Mapped a HIT to an IPv4 address:\n"\
+		       "%s -> %s.\n", hit_string, ipv6_string);
+      } else {
+	      inet_ntop(AF_INET6, &addr6, ipv6_string, INET6_ADDRSTRLEN);
+	      HIP_INFO("Mapped a HIT to an IPv6 address:\n"\
+		       "%s -> %s.\n", hit_string, ipv6_string);
+      }
+      
       hip_build_param_contents(msg, (void *) at_hit->addr, HIP_PARAM_HIT, sizeof(struct in6_addr));
       hip_build_param_contents(msg, (void *) &addr6, HIP_PARAM_IPV6_ADDR, sizeof(struct in6_addr));
       hip_build_user_hdr(msg, SO_HIP_ADD_PEER_MAP_HIT_IP, 0);
