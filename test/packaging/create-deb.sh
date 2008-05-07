@@ -26,6 +26,7 @@ CORPORATE=
 PKGROOT=$PWD/test/packaging
 PKGDIR=$PKGROOT/${NAME}${SUFFIX}-deb
 PKGDIR_SRC=$PKGROOT/${NAME}${SUFFIX}-deb-src
+
 SRCDIR=${PKGDIR_SRC}/${NAME}${SUFFIX}
 HIPL=$PWD
 POSTFIX="deb"
@@ -53,9 +54,6 @@ copy_tarball ()
 	echo "** Copying the tarball"
 	#cd ${PKGDIR}
         cp ${HIPL}/hipl-main.tar.gz ${PKGDIR_SRC}/${NAME}_${VERSION}.orig.tar.gz
-
-	#cp ${HIPL}/hipl-main.tar.gz ${HIPL}/hipl-main-${REVISION}.tar.gz 
-	#cp ${HIPL}/hipl-main-${REVISION}.tar.gz ${PKGDIR_SRC}/${NAME}_${VERSION}-${REVISION}.orig.tar.gz
 
 	echo "** Copying Debian control files to '${SRCDIR}/debian'"
 	mkdir -p "${SRCDIR}/debian"
@@ -560,6 +558,8 @@ if [ $TYPE = "source" ];then
 	echo "${NAME}-${VERSION}.diff.gz"
 	echo "${NAME}-${VERSION}.dsc"
  	echo "${NAME}-${VERSION}-${REVISION}.orig.tar.gz"
+        
+        sudo dpkg-scansources . /dev/null | sudo gzip -9c > Sources.gz
     else
 	echo "** Error: unable to build package, exiting"
 	rm -rf "${PKGDIR_SRC}"
