@@ -10,6 +10,7 @@ import DNS
 import pyip6
 import binascii
 import hosts
+import re
 
 def usage(utyp, *msg):
     sys.stderr.write('Usage: %s\n' % os.path.split(sys.argv[0])[1])
@@ -35,6 +36,7 @@ def has_resolvconf0():
 has_resolvconf = has_resolvconf0()
 
 class Global:
+    re_nameserver = re.compile(r'nameserver\s([0-9\.]+)$')
     def __init__(gp):
         gp.resolv_conf = '/etc/resolv.conf'
         gp.hostsnames = []
@@ -44,12 +46,28 @@ class Global:
 	gp.bind_port = None
         return
 
+    def read_resolv_conf(gp):
+        d = {}
+        gp.resolvconfd = d
+        f = file(gp.resolv_conf)
+        for l in f.xreadlines():
+            l = l.strip()
+            if not d.has_key('nameserver'):
+                r1 = gp.re_nameserver.match(l)
+                if r1:
+                    d['nameserver'] = r1.group(1)
+        return d
+
     def parameter_defaults(gp):
         env = os.environ
         if gp.server_ip == None:
             gp.server_ip = env.get('SERVER',None)
         if gp.server_ip == None:
-            gp.server_ip = '127.0.0.1' # xx fixme
+            s_ip = gp.resolvconfd.get('nameserver')
+            if s_ip:
+                gp.server_ip = s_ip
+            else:
+                gp.server_ip = '127.0.0.1' # xx fixme
 	if gp.server_port == None:
             server_port = env.get('SERVERPORT',None)
             if server_port != None:
@@ -80,6 +98,7 @@ class Global:
         return None
 
     def doit(gp,args):
+        gp.read_resolv_conf()
         gp.parameter_defaults()
         gp.hosts = []
         for hn in gp.hostsnames:
