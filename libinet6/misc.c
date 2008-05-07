@@ -483,12 +483,11 @@ int convert_string_to_address(const char *str, struct in6_addr *ip6) {
 	struct in_addr ip4;
 
 	ret = inet_pton(AF_INET6, str, ip6);
-	HIP_IFEL((ret < 0 && errno == EAFNOSUPPORT),
-		 err = -1,
-		 "inet_pton: not a valid address family\n");
+	HIP_IFEL((ret < 0 && errno == EAFNOSUPPORT), -1,
+		 "\"%s\" is not of valid address family.\n", str);
 	if (ret > 0) {
                 /* IPv6 address conversion was ok */
-		HIP_DEBUG_IN6ADDR("id", ip6);
+		HIP_DEBUG_IN6ADDR("Converted IPv6", ip6);
 		goto out_err;
 	}
 
@@ -496,12 +495,12 @@ int convert_string_to_address(const char *str, struct in6_addr *ip6) {
 		
 	ret = inet_pton(AF_INET, str, &ip4);
 	HIP_IFEL((ret < 0 && errno == EAFNOSUPPORT), -1,
-		 "inet_pton: not a valid address family\n");
+		 "\"%s\" is not of valid address family.\n", str);
 	HIP_IFEL((ret == 0), -1,
-		 "inet_pton: %s: not a valid network address\n", str);
+		 "\"%s\" is not a valid network address.\n", str);
 		
 	IPV4_TO_IPV6_MAP(&ip4, ip6);
-	HIP_DEBUG("Mapped v4 to v6\n");
+	HIP_DEBUG("Mapped v4 to v6.\n");
 	HIP_DEBUG_IN6ADDR("mapped v6", ip6); 	
 
  out_err:
@@ -1645,6 +1644,77 @@ int hip_sa_addr_len(void *sockaddr) {
     len = 0;
   }
   return len;
+}
+
+int hip_remove_lock_file(char *filename) {
+	return unlink(filename);
+}
+
+int hip_create_lock_file(char *filename, int killold) {
+	int err = 0, fd = 0, old_pid = 0;
+	char old_pid_str[64], new_pid_str[64];
+	int new_pid_str_len;
+	
+	memset(old_pid_str, 0, sizeof(old_pid_str));
+	memset(new_pid_str, 0, sizeof(new_pid_str));
+
+	/* New pid */
+	snprintf(new_pid_str, sizeof(new_pid_str)-1, "%d\n", getpid());
+	new_pid_str_len = strnlen(new_pid_str, sizeof(new_pid_str)-1);
+	HIP_IFEL((new_pid_str_len <= 0), -1, "pid length\n");
+		
+	/* Read old pid */
+	fd = open(filename, O_RDWR | O_CREAT, 0644);
+	HIP_IFEL((fd <= 0), -1, "opening lock file failed\n");
+
+	read(fd, old_pid_str, sizeof(old_pid_str) - 1);
+	old_pid = atoi(old_pid_str);
+       
+	if (lockf(fd, F_TLOCK, 0) < 0)
+	{ 
+		HIP_IFEL(!killold, -12,
+			 "\nHIP daemon already running with pid %d\n"
+			 "Give: -k option to kill old daemon.\n",old_pid);
+		
+		HIP_INFO("\nDaemon is already running with pid %d\n"
+			 "-k option given, terminating old one...\n", old_pid);
+		/* Erase the old lock file to avoid having multiple pids
+		   in the file */
+		lockf(fd, F_ULOCK, 0);
+		close(fd);
+		HIP_IFEL(hip_remove_lock_file(filename), -1,"remove lock file\n");
+                /* fd = open(filename, O_RDWR | O_CREAT, 0644); */
+		fd = open(filename, O_RDWR | O_CREAT | O_TRUNC, 0644);
+                /* don't close file descriptor because new started process is running */
+		HIP_IFEL((fd <= 0), -1, "Opening lock file failed\n");
+		HIP_IFEL(lockf(fd, F_TLOCK, 0), -1,"lock attempt failed\n");  
+                 /* HIP_IFEL(kill(old_pid, SIGKILL), -1, "kill failed\n"); */
+		err = kill(old_pid, SIGKILL);
+		if (err != 0)
+		{
+                 HIP_INFO("\nError %d while trying to kill pid %d\n", err,old_pid);
+		} 
+	}
+	/* else if (killold)
+	{	
+		lseek(fd,0,SEEK_SET);
+		write(fd, new_pid_str, new_pid_str_len);
+                system("NEW_PID=$(sudo awk NR==1 /var/lock/hipd.lock)");
+		system("OLD_PID=$(/bin/pidof -o $NEW_PID hipd)");
+		system("kill -9 $OLD_PID"); 
+	} */
+
+	lseek(fd,0,SEEK_SET);
+	HIP_IFEL((write(fd, new_pid_str, new_pid_str_len) != new_pid_str_len),
+		 "Writing new pid failed\n", -1);
+
+out_err:
+	if (err == -12)
+	{
+	  exit(0);
+	}
+
+	return err;
 }
 
 #endif /* ! __KERNEL__ */

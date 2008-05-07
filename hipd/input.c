@@ -254,7 +254,7 @@ int hip_produce_keying_material(struct hip_common *msg,
 
 	/* 1024 should be enough for shared secret. The length of the
 	 * shared secret actually depends on the DH Group. */
-	/*! \todo 1024 -> hip_get_dh_size ? */
+	/** @todo 1024 -> hip_get_dh_size ? */
 	HIP_IFEL(!(dh_shared_key = HIP_MALLOC(dh_shared_len, GFP_KERNEL)),
 		 -ENOMEM,  "No memory for DH shared key\n");
 	memset(dh_shared_key, 0, dh_shared_len);
@@ -1177,17 +1177,17 @@ int hip_handle_r1(struct hip_common *r1,
 				    entry, HIP_HA_CTRL_PEER_RVS_CAPABLE);
 			  }
 			  break;
-		     case HIP_SERVICE_RELAY_UDP_HIP:
+		     case HIP_SERVICE_RELAY:
 			  HIP_INFO("Responder offers UDP relay service for "\
 				   "HIP packets.\n");
 			  
 			  /* If we have requested for HIP UDP Relay service in
 			     I1, we store the info of responder's capability
 			     here. */
-			  if(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_HIPUDP)
+			  if(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_RELAY)
 			  {
 			       hip_hadb_set_peer_controls(
-				    entry, HIP_HA_CTRL_PEER_HIPUDP_CAPABLE);
+				    entry, HIP_HA_CTRL_PEER_RELAY_CAPABLE);
 
 			  }
 			  break;
@@ -1433,7 +1433,7 @@ int hip_create_r2(struct hip_context *ctx,
 	/********** REG_REQUEST **********/
 	/* This part should only be executed in HIP relay or in the host
 	   offering escrow service.
-	   (hip_we_are_relay() || we_are_escrow_server()).
+	   (hip_relay_get_status() == HIP_RELAY_ON || we_are_escrow_server()).
 	   But since I don't have a way to detect if we are an escrow server
 	   this part is executed on I and R also. -Lauri 27.09.2007*/
 	hip_handle_regrequest(entry, i2, r2);
@@ -2014,23 +2014,11 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 
 	HIP_DEBUG("state is %d\n", entry->state);
 
-	if (entry && entry->state != HIP_STATE_FILTERING_R2)
+	if (entry)
 	{
 
-/* Hmmm... Now that the RVS is compiled as a default value, we take the first
-   path always. Now, is this how it is meant to be? Notice, that currently
-   CONFIG_HIP_RVS does not mean that we are the RVS, but rather that the
-   extension is in use. Thus we can be I, RVS or R, and as long as the
-   RVS options are compiled, we always take the first path.
-   
-   It might be wise to create compile options for each service, and one compile
-   option to indicate whether we want use the registration extension. This way
-   we would get rid of the stupid dummy hip_we_are_relay(). Also, the #ifdef
-   #else, #endif below would be clarified.
-
-   -Lauri 27.09.2007 18:41.*/
 #ifdef CONFIG_HIP_RVS
-	     if(hip_we_are_relay())
+	     if(hip_relay_get_status() == HIP_RELAY_ON)
 	     {
 		  entry->state = HIP_STATE_ESTABLISHED;
 	     }
@@ -2083,6 +2071,11 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
             HIP_DEBUG("I2 did not have locator or esp_info\n");
 
 	HIP_DEBUG("Reached %s state\n", hip_state_str(entry->state));
+	if (entry->hip_msg_retrans.buf) {
+		free(entry->hip_msg_retrans.buf);
+		entry->hip_msg_retrans.buf = NULL;
+	}
+
 	//#endif /* CONFIG_HIP_HI3 */
 
  out_err:
@@ -2372,6 +2365,10 @@ int hip_handle_r2(struct hip_common *r2,
 	hip_oppipdb_delentry(&(entry->preferred_address));
 #endif
 	HIP_DEBUG("Reached ESTABLISHED state\n");
+	if (entry->hip_msg_retrans.buf) {
+		free(entry->hip_msg_retrans.buf);
+		entry->hip_msg_retrans.buf = NULL;
+	}
 	
  out_err:
 	if (ctx)
@@ -2395,7 +2392,7 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
      ipv6_addr_copy(&dest, &in6addr_any);
      
 #ifdef CONFIG_HIP_RVS
-     if(!hip_we_are_relay())
+     if(!hip_relay_get_status() == HIP_RELAY_ON)
      {
 	  /* This is where the Responder handles the incoming relayed I1 packet.
 	     We need two things from the relayed packet:
@@ -2481,7 +2478,7 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 	else {
 
 #ifdef CONFIG_HIP_RVS
-	     if(hip_we_are_relay())
+	     if(hip_relay_get_status() == HIP_RELAY_ON)
 	     {
 		  hip_relrec_t *rec = NULL, dummy;
 

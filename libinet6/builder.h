@@ -1,12 +1,14 @@
+/** @file
+ * A header file for builder.c.
+ * 
+ * @author  Miika Komu <miika_iki.fi>
+ * @author  Mika Kousa <mkousa_iki.fi>
+ * @author  Tobias Heer <heer_tobibox.de>
+ * @version 1.0
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ */
 #ifndef HIP_BUILDER
 #define HIP_BUILDER
-
-/*
- * Authors:
- * - Miika Komu <miika@iki.fi>
- * - Mika Kousa <mkousa@iki.fi>
- * - Tobias Heer <heer@tobibox.de>
- */
 
 #include <openssl/rsa.h>
 #include <openssl/dsa.h>

@@ -7,7 +7,7 @@ TYPE=binary
 MAJOR=1
 MINOR=0
 VERSION="$MAJOR.$MINOR"
-RELEASE=3
+RELEASE=4
 SUFFIX="-$VERSION-$RELEASE"
 NAME=hipl
 NAMEGPL=libhiptool
@@ -95,14 +95,23 @@ init_files ()
     mkdir -p "$PKGDIR/DEBIAN"
     
     if [ $TMP = "core" ]; then
-    	for f in control changelog copyright postinst prerm;do
-		cp $DEBIAN/$f "$PKGDIR/DEBIAN" 
-    	done
-    else
-	for f in control changelog copyright;do
+    	for f in preinst postinst prerm postrm;do
 		cp $DEBIAN/$f "$PKGDIR/DEBIAN" 
     	done
     fi
+
+    if [ $TMP = "lib" ]; then
+    	for f in postinst;do
+		cp $DEBIAN/$f "$PKGDIR/DEBIAN" 
+    	done
+	sed -i '2,10d' $PKGDIR\/DEBIAN\/postinst
+        sed -i '$a\ldconfig\' $PKGDIR\/DEBIAN\/postinst
+    fi
+
+    for f in control changelog copyright;do
+	cp $DEBIAN/$f "$PKGDIR/DEBIAN" 
+    done
+   
 
     echo "** Modifying Debian control file for $DEBLIB $TMP and $DEBARCH"
     
@@ -115,7 +124,7 @@ init_files ()
     sed -i '/'"$LINE2"'/ s/.*/&\-'"$TMP"'/' $PKGDIR\/DEBIAN\/control
     sed -i 's/"$LINE3"/&'" $DEBARCH"'/' $PKGDIR\/DEBIAN\/control
 
-    # cp $PKGDIR/DEBIAN/control $PKGROOT/control-$TMP
+    # cp $PKGDIR/DEBIAN/postinst $PKGROOT/postinst-$TMP
    
 }
 
@@ -214,11 +223,20 @@ copy_and_package_files ()
     mkdir -p "$PKGDIR/usr"
     cd "$PKGDIR"
 
-    mkdir -p usr/sbin
+    mkdir -p usr/sbin usr/bin
+
     cd "$HIPL"
 
     cp tools/hipconf $PKGDIR/usr/sbin/
-    
+    cp tools/myasn.py $PKGDIR/usr/bin/
+    cp tools/parse-key-3.py $PKGDIR/usr/bin/
+    cp tools/dnsproxy.py $PKGDIR/usr/bin/
+    cp tools/hosts.py $PKGDIR/usr/bin/
+    cp tools/pyip6.py $PKGDIR/usr/bin/
+    cp tools/util.py $PKGDIR/usr/bin/
+
+    chmod ugo+rx $PKGDIR/usr/bin/*.py
+
     PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
     create_sub_package;
    
@@ -470,7 +488,7 @@ if [ $TYPE = "binary" ];then
 
     cd "$PKGROOT"
     if ! copy_and_package_files;then
-	echo "** Error: unable to copy files, exiting"
+	echo "** Error: unable to copy files and create packages, exiting"
 	exit 1
     fi
 
@@ -520,7 +538,6 @@ if [ $TYPE = "source" ];then
     echo "** Creating the Debian Source package of $PKGDIR"
     cd "${PKGDIR_SRC}"
     
-
     if dpkg-source -b "${NAME}${SUFFIX}";then
 
 	rm -rf "${NAME}${SUFFIX}"
@@ -538,11 +555,5 @@ if [ $TYPE = "source" ];then
     fi
 fi
 
-# jk: what is this??
-#cd $HIPL
-#echo "Resetting compilation environment, please wait..."
-#./configure >/dev/null
-#make clean >/dev/null
-#echo "Done."
 exit 0
 
