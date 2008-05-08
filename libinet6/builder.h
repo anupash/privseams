@@ -20,6 +20,7 @@
 #  include "icomm.h"
 #  include "state.h"
 #endif
+#include "certtools.h"
 
 /* ARRAY_SIZE is defined in linux/kernel.h, but it is in #ifdef __KERNEL__ */
 #ifndef ARRAY_SIZE

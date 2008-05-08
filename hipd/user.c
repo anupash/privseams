@@ -271,6 +271,11 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
                 HIP_DEBUG("Name received from hipconf %s\n", &opendht_name_mapping);
             }
             break;
+        case SO_HIP_CERT_SPKI:
+                {
+                        HIP_DEBUG("Got an request to sign SPKI cert sequence\n");
+                }
+                break;
         case SO_HIP_TRANSFORM_ORDER:
                 {
                 extern int hip_transform_order;

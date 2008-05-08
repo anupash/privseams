@@ -10,6 +10,7 @@
  * @author  Bing Zhou <bingzhou_cc.hut.fi>
  * @author  Anu Markkola
  * @author  Lauri Silvennoinen
+ * @author  Samu Varjonen
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>
  * @todo    add/del map
  * @todo    fix the rst kludges
@@ -1567,7 +1568,7 @@ int hip_conf_handle_handoff(struct hip_common *msg, int action,const char *opt[]
 }
 
 
-int hip_get_all_hits(struct hip_common *msg,char *argv[])
+int hip_get_all_hits(struct hip_common *msg ,char *argv[])
 {	
      struct hip_tlv_common *current_param = NULL;
      struct endpoint_hip *endp=NULL;

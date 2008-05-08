@@ -865,13 +865,13 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
       goto out;
     }
     dsa_filenamebase_pub = malloc(HOST_ID_FILENAME_MAX_LEN);
-    if (!dsa_filenamebase) {
+    if (!dsa_filenamebase_pub) {
       HIP_ERROR("Could allocate DSA (pub) file name\n");
       err = -ENOMEM;
       goto out;
     }
     rsa_filenamebase_pub = malloc(HOST_ID_FILENAME_MAX_LEN);
-    if (!rsa_filenamebase) {
+    if (!rsa_filenamebase_pub) {
       HIP_ERROR("Could allocate RSA (pub) file name\n");
       err = -ENOMEM;
       goto out;
