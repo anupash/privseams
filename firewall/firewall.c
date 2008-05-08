@@ -35,7 +35,8 @@ pthread_t ipv4Thread, ipv6Thread;
 pthread_t hip_esp_ouput_id, hip_esp_input_id;
 
 
-
+/*Default HIT*/
+struct in6_addr *default_HIT = NULL;
 
 
 int counter = 0;
@@ -1118,17 +1119,32 @@ int filter_hip(const struct in6_addr * ip6_src,
 
 
 /* Get default HIT*/
-static struct in6_addr *hip_get_default_local_hit_from_hipd()
+static struct in6_addr_t *hip_get_default_local_hit_from_hipd()
 {
 	 
 	int err = 0;
 	struct hip_common *msg = NULL;
+	struct hip_tlv_common *current_param = NULL;
+	in6_addr_t *defhit;	
+	 struct endpoint_hip *endp=NULL;
+	
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEFAULT_HIT,0),-1,
 		 "Fail to get hits");
 	HIP_IFEL(hip_send_recv_daemon_info(msg), -1,
 		 "send/recv daemon info\n");
-	return (struct in6_addr*) hip_get_param_contents(msg, HIP_PARAM_HIT);
+	
+	while((current_param = hip_get_next_param(msg, current_param)) != NULL)
+	{
+		defhit = (in6_addr_t *)hip_get_param_contents_direct(current_param);
+		set_hit_prefix(defhit);
+		HIP_INFO_HIT("default hi is ",defhit);
+	}
+
+
+	return defhit;
+	
+
 out_err:
 	return NULL;
 
@@ -1289,10 +1305,10 @@ void hip_firewall_userspace_ipsec_output(struct ipq_handle *handle,
 		defhit = hip_get_param_contents(msg, HIP_PARAM_HIT);
 		*/
 
-		defhit = hip_get_default_local_hit_from_hipd();
-		HIP_INFO_HIT("default hi is ",defhit);
+		// defhit = hip_get_default_local_hit_from_hipd();
+		HIP_INFO_HIT("hip_esp_out: default hit is ",default_HIT);
 		
-		hip_addr_to_sockaddr(defhit, &sockaddr_local_default_hit);
+		hip_addr_to_sockaddr(default_HIT, &sockaddr_local_default_hit);
 		
 		hip_esp_output(&sockaddr_local_default_hit, 
 			       ip6_hdr, length_of_packet); /* XX FIXME: LSI */
@@ -1303,8 +1319,11 @@ void hip_firewall_userspace_ipsec_output(struct ipq_handle *handle,
 	
 	
  out_err:
+	
+	drop_packet(handle, packetId);
 	return;
 	
+
   
 }
 
@@ -1427,6 +1446,8 @@ void hip_firewall_userspace_ipsec_input(struct ipq_handle *handle,
 			       ip6_hdr, length_of_packet); 
 	}
 			
+
+	drop_packet(handle, packetId);
 }
 
 
@@ -1455,15 +1476,14 @@ static void *handle_ip_traffic(void *ptr){
 	int type = *((int *) ptr);
 	unsigned int packetHook;
 	int ret_val_filter_hip;
-	/*Default HIT*/
-	struct in6_addr *default_HIT = NULL;
+
 
 
 	HIP_DEBUG("thread for type=IPv%d traffic started\n", type);
 	
 	if(default_HIT) {
 	
-	HIP_DEBUG_IN6ADDR("Default HIT is ", &default_HIT);
+	HIP_DEBUG_IN6ADDR("Default HIT is ", default_HIT);
 
 	}
 
@@ -1643,8 +1663,7 @@ static void *handle_ip_traffic(void *ptr){
 					HIP_DEBUG_IN6ADDR("src addr :\n", &src_addr);
 					HIP_DEBUG_IN6ADDR("dst addr  :\n", &dst_addr);
 
-					default_HIT = hip_get_default_local_hit_from_hipd() ;
-					HIP_INFO_HIT("Default hi is ",default_HIT);
+					
 					
 
 					/* if dst_addr is a HIT and default_local_hit is the same as dst_addr, 
@@ -1755,10 +1774,30 @@ int main(int argc, char **argv)
 	int errflg = 0, killold = 0;
 	
 	
+
+	/*FIXME, it should check whether hipd running or not*/
+
+
+	default_HIT = hip_get_default_local_hit_from_hipd() ;
+	HIP_INFO_HIT("Default hi is ",default_HIT);
+
+	if(!default_HIT)
+	{
+
+		HIP_DEBUG("Running HIPD at first\n");
+		goto out_err;
+	}
+	
+	
 	
 	check_and_write_default_config();
-
+	
 	hip_set_logdebug(LOGDEBUG_NONE);
+	
+	
+
+	
+
 
 	while ((ch = getopt(argc, argv, "f:t:vdFHAbk")) != -1) {
 		switch(ch) {
