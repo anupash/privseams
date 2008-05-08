@@ -54,6 +54,8 @@
 #define HIP_UDP_ENCAP_ESPINUDP 2
 /** UDP encapsulation type. */ 
 #define HIP_UDP_ENCAP_ESPINUDP_NONIKE 1 
+/** NAT TRANSFER OFFSET FOR ICE */
+#define HIP_NAT_TRANSFORM_ICE 0x00000001
 /** Boolean which indicates if random port simulation is on.
     <ul>
     <li>0: port randomizing is off.</li>

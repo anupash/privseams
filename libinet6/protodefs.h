@@ -62,7 +62,7 @@
 #define HIP_PARAM_ESP_INFO             65
 #define HIP_PARAM_R1_COUNTER           128
 #define HIP_PARAM_LOCATOR              193
-#define HIP_PARAM_LOCATOR2             194
+#define HIP_PARAM_NAT_TRANSFORM        194
 #define HIP_PARAM_HASH_CHAIN_VALUE     221
 #define HIP_PARAM_HASH_CHAIN_ANCHORS   222
 #define HIP_PARAM_HASH_CHAIN_PSIG      223
@@ -599,6 +599,12 @@ struct hip_locator {
 	hip_tlv_type_t type;
 	hip_tlv_len_t length;
 	/* fixed part ends */
+} __attribute__ ((packed));
+
+struct hip_nat_transform {
+	hip_tlv_type_t type;
+	hip_tlv_len_t length;
+	uint8_t nat_control;
 } __attribute__ ((packed));
 
 struct hip_hmac {

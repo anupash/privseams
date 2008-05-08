@@ -366,6 +366,7 @@ struct hip_hadb_state
      /* true when agent is prompting user and fallback is disabled */
      int hip_opp_fallback_disable; 
      void* ice_session;
+     uint8_t nat_control;
 #ifdef CONFIG_HIP_HI3
 	int is_hi3_state ; /* If the state for hi3, then this flag is 1, otherwise it is zero*/
 #endif

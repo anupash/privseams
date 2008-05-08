@@ -2029,6 +2029,33 @@ int hip_build_param_r1_counter(struct hip_common *msg, uint64_t generation)
 }
 
 /**
+ * Builds a @c NAT TRANSFORM parameter.
+ *
+ * Builds a @c NAT_TRANSFORM parameter to the HIP packet @c msg.
+ *
+ * @param msg  a pointer to a HIP packet common header
+ * @param transform_control control message      
+ * @return     zero on success, or negative error value on error.
+ * 
+ */
+int hip_build_param_nat_transform(struct hip_common *msg,
+			     const uint8_t nat_control)
+{
+
+     struct hip_nat_transform transform;
+     int err = 0;
+     
+     hip_set_param_type(&transform, HIP_PARAM_NAT_TRANSFORM);
+     transform.nat_control = nat_control;
+     hip_calc_generic_param_len(&transform, sizeof(transform), 0);
+     err = hip_build_param(msg, &transform);
+     
+     return err;
+
+}
+
+
+/**
  * Builds a @c FROM parameter.
  *
  * Builds a @c FROM parameter to the HIP packet @c msg.
@@ -2152,6 +2179,9 @@ int hip_build_param_relay_to(struct hip_common *msg,
 
 }
 
+
+
+
 /**
  * Builds a @c RELAY_TO parameter.
  *
@@ -2183,6 +2213,7 @@ int hip_build_param_reg_from(struct hip_common *msg,
      return err;
 
 }
+
 
 
 /**

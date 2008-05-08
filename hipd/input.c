@@ -1134,6 +1134,7 @@ int hip_handle_r1(struct hip_common *r1,
     char  *locator_address = NULL;
     struct hip_locator_info_addr_item *address1 = NULL; 
     struct hip_locator_info_addr_item2 *address2 = NULL;
+    struct hip_nat_transform *nat_transform  = NULL;
 #ifdef CONFIG_HIP_HI3
 	struct hip_locator_info_addr_item* first;
 	struct netdev_address *n;
@@ -1248,7 +1249,12 @@ int hip_handle_r1(struct hip_common *r1,
         	HIP_IFEL(!(entry->locator = malloc(loc_size)), 
         		                       -1, "Malloc for entry->locators failed\n"); 
             memcpy(entry->locator, locator, loc_size);
-                
+            
+            nat_transform = hip_get_param(r1, HIP_PARAM_NAT_TRANSFORM);
+            if(nat_transform){
+            	entry->nat_control = nat_transform->nat_control;
+            }
+            
 
 #ifdef CONFIG_HIP_HI3
 		if( r1_info->hi3_in_use && n_addrs > 0 ) 
@@ -1650,6 +1656,20 @@ int hip_create_r2(struct hip_context *ctx,
 	  if(send_reg_from)
 	 		hip_build_param_reg_from(r2,i2_saddr, i2_info->src_port);
 #endif
+	/***
+	 * add nat transform parameter
+	 * */  
+	  if(entry->nat_control){
+#ifdef HIP_USE_ICE
+		  if(entry->nat_control & HIP_NAT_TRANSFORM_ICE){
+			  hip_build_param_nat_transform(r2,HIP_NAT_TRANSFORM_ICE);
+			  entry->nat_control = HIP_NAT_TRANSFORM_ICE;
+		  }
+#else
+		  entry->nat_control = 0; 
+#endif
+	  }
+	  
 	err = entry->hadb_xmit_func->hip_send_pkt(i2_daddr, i2_saddr,
 						  (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
 	                                          entry->peer_udp_port, r2, entry, 1);
@@ -1707,7 +1727,8 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 	uint32_t spi_in, spi_out;
 	uint16_t crypto_len, nonce;
 	int err = 0, retransmission = 0, replay = 0, use_blind = 0, i=0;
-        struct hip_locator *locator;
+    struct hip_locator *locator;
+    struct hip_nat_transform * nat_transform;
 #ifdef HIP_USE_ICE
     void * ice_session = 0;
 #endif
@@ -2276,6 +2297,14 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
 
         /***** LOCATOR PARAMETER ******/
         locator = hip_get_param(i2, HIP_PARAM_LOCATOR);
+        nat_transform = hip_get_param(i2, HIP_PARAM_NAT_TRANSFORM);
+        if(nat_transform){
+        	
+        	entry->nat_control = nat_transform->nat_control;
+        }
+        else{
+        	entry->nat_control = 0;
+        }
         if (locator && esp_info)
             {
         		
@@ -2284,7 +2313,17 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
                          -1, "hip_update_handle_locator_parameter failed\n");
                 
 #ifdef HIP_USE_ICE
-                //no ice when peer is requesting rvs or udp relay
+                //if the client  choose to use ICE 
+        if(!(entry->nat_control & HIP_NAT_TRANSFORM_ICE)){
+        	//TODO check other nat control type. currently only ICE 
+        	 if (!use_blind) {
+        		    HIP_IFEL(hip_setup_hit_sp_pair(&ctx->input->hits,
+        						   &ctx->input->hitr,
+        						   i2_saddr, i2_daddr, IPPROTO_ESP, 1, 1),
+        			     -1, "Setting up SP pair failed\n");
+        	    }
+        }else
+          //no ice when peer is requesting rvs or udp relay
         if(!((entry->peer_controls & HIP_HA_CTRL_LOCAL_REQ_RVS) || 
         	    		(entry->peer_controls & HIP_HA_CTRL_LOCAL_REQ_HIPUDP))){
         //init the session right after the locator receivd
@@ -2566,7 +2605,7 @@ int hip_handle_r2(struct hip_common *r2,
 	}
 #endif
 	HIP_DEBUG("entry->hip_transform: \n", entry->hip_transform);
-
+#ifndef HIP_USE_ICE
 	if (!hip_blind_get_status()) {		
 	  err = hip_add_sa(r2_daddr, r2_saddr,
 				 &ctx->input->hitr, &ctx->input->hits,
@@ -2574,7 +2613,7 @@ int hip_handle_r2(struct hip_common *r2,
 				 &ctx->esp_out, &ctx->auth_out, 1,
 				 HIP_SPI_DIRECTION_OUT, 0, r2_info->src_port, r2_info->dst_port,0);
 	}
-
+#endif
 
 	/*
 	if (err == -EEXIST) {
@@ -2633,6 +2672,19 @@ int hip_handle_r2(struct hip_common *r2,
             
             
 #ifdef HIP_USE_ICE
+            
+        //check the nat transform mode
+        if(!(entry->nat_control && HIP_NAT_TRANSFORM_ICE)){
+        	//make the connectin directly
+        	if (!hip_blind_get_status()) {		
+        	  err = hip_add_sa(r2_daddr, r2_saddr,
+        				 &ctx->input->hitr, &ctx->input->hits,
+        				 &spi_recvd, tfm,
+        				 &ctx->esp_out, &ctx->auth_out, 1,
+        				 HIP_SPI_DIRECTION_OUT, 0, r2_info->src_port, r2_info->dst_port,0);
+        	}
+        }
+        else    
 	    // no ice when RVS or UDP relay request
 	    if(!((entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_RVS) || 
 	    		(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_HIPUDP))){

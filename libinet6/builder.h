@@ -91,6 +91,8 @@ int hip_build_param_keys(struct hip_common *, uint16_t, uint16_t,
                          struct in6_addr *, struct in6_addr *, 
                          struct in6_addr *, uint32_t, uint32_t, uint16_t, 
                          struct hip_crypto_key *);
+int hip_build_param_nat_transform(struct hip_common *,
+			     			const uint8_t);
 int hip_build_param_locator(struct hip_common *,
                             struct hip_locator_info_addr_item *, int);
 int hip_build_param_locator2(struct hip_common *,

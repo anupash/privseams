@@ -948,13 +948,14 @@ int hip_external_ice_receive_pkt(struct hip_common * msg, int pkt_size, in6_addr
 	return 0;
 }
 
+uint8_t hip_get_nat_control(){
+#ifdef HIP_USE_ICE
+	return 1;
+#else
+	return 0;
+#endif
 
-/*
-pj_ice_sess_add_cand()
-
-pj_ice_sess_start_check() 
-
-*/
+}
 
 
 
