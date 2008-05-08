@@ -1623,7 +1623,7 @@ static void *handle_ip_traffic(void *ptr){
 						HIP_DEBUG("debug message: HIP firewall userspace ipsec input: \n ");
 						// hip_firewall_userspace_ipsec_output(hndl, m->packet_id, packet_hdr, type); /*added by Tao Wan */
 						hip_firewall_userspace_ipsec_input(hndl, m->packet_id, packet_hdr, type, m); /* added by Tao Wan */
-						
+						drop_packet(hndl, m->packet_id);
 					}
 					else {
 						examine_incoming_tcp_packet(hndl, m->packet_id, packet_hdr, type);
@@ -1665,7 +1665,7 @@ static void *handle_ip_traffic(void *ptr){
 							// hip_firewall_userspace_ipsec_input(); /* added by Tao Wan */
 							// XX FIXME: 
 							hip_firewall_userspace_ipsec_output(hndl, m->packet_id, packet_hdr, type, m); /*added by Tao Wan */
-							
+							drop_packet(hndl, m->packet_id);
 						}
 					else
 						allow_packet(hndl, m->packet_id);
