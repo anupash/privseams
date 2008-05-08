@@ -718,6 +718,8 @@ int hip_add_orig_socket_to_db(int socket_fd, int domain, int type,
 	return err;
 }
 
+/** @todo It would be nice if this function would return some distinct error
+    value when the daemon is not running. */
 int hip_translate_socket(const int *orig_socket,
 			 const struct sockaddr *orig_id,
 			 const socklen_t *orig_id_len,
@@ -1324,10 +1326,10 @@ ssize_t recvfrom(int orig_socket, void *buf, size_t len, int flags,
 		goto out_err;
 	}
 	
-	chars = dl_function_ptr.recvfrom_dlsym(*translated_socket, buf, len,
-					       flags,
-					       translated_id,
-					       translated_id_len);
+	chars = dl_function_ptr.recvfrom_dlsym(
+		*translated_socket, buf, len, flags, translated_id,
+		translated_id_len);
+	
 	_HIP_DEBUG("recvfrom: chars = %d\n", chars);
  out_err:
 	return chars;

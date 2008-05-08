@@ -1140,8 +1140,8 @@ int hip_select_source_address(struct in6_addr *src, struct in6_addr *dst)
 //	rtnl_rtdsfield_init = 1;
 	
 //	rtnl_tab_initialize("/etc/iproute2/rt_dsfield", rtnl_rtdsfield_tab, 256);
-	HIP_DEBUG_IN6ADDR("dst", dst);
-	HIP_DEBUG_IN6ADDR("src", src);
+	HIP_DEBUG_IN6ADDR("Source", src);
+	HIP_DEBUG_IN6ADDR("Destination", dst);
 
 	HIP_IFEL(hip_iproute_get(&hip_nl_route, src, dst, NULL, NULL, family, idxmap), -1, "Finding ip route failed\n");
 

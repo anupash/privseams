@@ -39,9 +39,9 @@
 #include "crypto.h"
 #include "builder.h"
 #include "hipd.h"
-
 #include "util.h"
 #include "libhipopendht.h"
+#include "registration.h"
 
 /*
  * DO NOT TOUCH THESE, unless you know what you are doing.

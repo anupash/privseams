@@ -99,7 +99,7 @@ make DESTDIR=%{buildroot} install
 install -m 700 test/packaging/rh-init.d-hipd %{buildroot}/etc/rc.d/init.d/hipd
 install -m 644 doc/HOWTO.txt %{buildroot}/doc
 install -d %{buildroot}/%{python_sitelib}/DNS
-install -t %{buildroot}/%{python_sitelib}/DNS tools/DNS/*py*
+install -t %{buildroot}/%{python_sitelib}/DNS tools/DNS/*py
 
 %post lib
 /sbin/ldconfig 
@@ -163,7 +163,7 @@ rm -rf %{buildroot}
 %{prefix}/bin/conntest-server-native
 
 %files firewall
-%{prefix}/sbin/firewall
+%{prefix}/sbin/hipfw
 
 %files doc
 %doc doc/HOWTO.txt doc/howto-html

@@ -243,13 +243,13 @@ struct hip_host_id_entry {
 	void *arg;
 };
 
+/* If you need to add a new boolean type variable to this structure, consider
+   adding a control value to the local_controls and/or peer_controls bitmask
+   field(s) instead of adding yet another integer. Lauri 24.01.2008. */
 /** A data structure defining host association database state i.e.\ a HIP
     association between two hosts. Each successful base exchange between two
     different hosts leads to a new @c hip_hadb_state with @c state set to
     @c HIP_STATE_ESTABLISHED. */
-/* If you need to add a new boolean type variable to this structure, consider
-   adding a control value to the local_controls and/or peer_controls bitmask
-   field(s) instead of adding yet another integer. Lauri 24.01.2008. */
 struct hip_hadb_state
 {	
         /** Our Host Identity Tag (HIT). */
@@ -304,7 +304,8 @@ struct hip_hadb_state
 	int                          esp_transform;
 	/** HIP transform type */
 	int                          hip_transform;
-	/** Something to do with the birthday paradox. */
+	/** Something to do with the birthday paradox.
+	    @todo Please clarify what this field is. */
 	uint64_t                     birthday;
 	/** A pointer to the Diffie-Hellman shared key. */
 	char                         *dh_shared_key;
@@ -317,7 +318,8 @@ struct hip_hadb_state
 	in_port_t	             peer_udp_port;
 	/** Non-zero if the escrow service is in use. */ 
 	int                          escrow_used;
-	struct in6_addr	             escrow_server_hit; /**< Escrow server HIT. */ 
+	/** Escrow server HIT. */ 
+	struct in6_addr	             escrow_server_hit;
 	/* The Initiator computes the keys when it receives R1. The keys are
 	   needed only when R2 is received. We store them here in the mean
 	   time. */
@@ -414,10 +416,12 @@ struct hip_hadb_state
 	int                          is_hi3_state ;
 #endif
 #ifdef CONFIG_HIP_OPPTCP
-	/* Non-zero if opportunistic TCP mode is on. */
+	/** Non-zero if opportunistic TCP mode is on. */
 	int                          hip_is_opptcp_on;
-	in_port_t tcp_opptcp_src_port;/*the local port from where the TCP SYN i1 packet will be sent*/
-	in_port_t tcp_opptcp_dst_port;/*the port at the peer where the TCP SYN i1 packet will be sent*/
+	/** The local port from where the TCP SYN I1 packet will be sent */
+	in_port_t                    tcp_opptcp_src_port;
+	/** the port at the peer where the TCP SYN I1 packet will be sent */
+	in_port_t                    tcp_opptcp_dst_port;
 #endif
 };
 
