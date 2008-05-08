@@ -9,8 +9,8 @@
 # Author:       Thomas Jansen <mithi@mithi.net>
 #
 diff -crN wireshark-1.0.0-hip/epan/dissectors/packet-hip.c wireshark-1.0.0-hip-midauth/epan/dissectors/packet-hip.c
-*** wireshark-1.0.0-hip/epan/dissectors/packet-hip.c	2008-04-23 14:43:25.000000000 +0200
---- wireshark-1.0.0-hip-midauth/epan/dissectors/packet-hip.c	2008-04-23 14:50:13.000000000 +0200
+*** wireshark-1.0.0-hip/epan/dissectors/packet-hip.c	2008-05-08 16:30:53.000000000 +0200
+--- wireshark-1.0.0-hip-midauth/epan/dissectors/packet-hip.c	2008-05-08 15:25:18.000000000 +0200
 ***************
 *** 1,7 ****
   /* packet-hip.c
@@ -74,8 +74,8 @@ diff -crN wireshark-1.0.0-hip/epan/dissectors/packet-hip.c wireshark-1.0.0-hip-m
   #define PARAM_RVS_HMAC			65500
   #define PARAM_VIA_RVS			65502
 ***************
-*** 525,530 ****
---- 534,554 ----
+*** 537,542 ****
+--- 546,566 ----
   	        { &hf_hip_tlv_puzzle_j,
   		{ "Puzzle Solution J",    "hip.tlv_puzzle_j", FT_BYTES, BASE_HEX, NULL, 0x0, "", HFILL }},
   		
@@ -98,8 +98,8 @@ diff -crN wireshark-1.0.0-hip/epan/dissectors/packet-hip.c wireshark-1.0.0-hip-m
   		{ "Reserved", "hip.tlv_ei_res", FT_UINT16, BASE_HEX, NULL, 0x0, "", HFILL }},
   		
 ***************
-*** 785,790 ****
---- 809,826 ----
+*** 797,802 ****
+--- 821,838 ----
   	case PARAM_ECHO_RESPONSE_NOSIG:
   	    sprintf(s, "ECHO_RESPONSE (No sig.)");
   	    break;
@@ -119,8 +119,8 @@ diff -crN wireshark-1.0.0-hip/epan/dissectors/packet-hip.c wireshark-1.0.0-hip-m
   	    sprintf(s, "?UNKNOWN?");
   	    break;
 ***************
-*** 960,965 ****
---- 996,1018 ----
+*** 972,977 ****
+--- 1008,1030 ----
   			data);
   	    }
   	    break;
@@ -145,8 +145,8 @@ diff -crN wireshark-1.0.0-hip/epan/dissectors/packet-hip.c wireshark-1.0.0-hip-m
   	    t = proto_item_add_subtree(ti, ett_hip_tlv_data);
   	    proto_tree_add_uint(t, hf_hip_tlv_seq_updid, tvb, offset+4, 4,
 ***************
-*** 1163,1168 ****
---- 1216,1223 ----
+*** 1175,1180 ****
+--- 1228,1235 ----
   	    break;
   	case PARAM_ECHO_REQUEST: /* ECHO REQUEST */
   	case PARAM_ECHO_RESPONSE: /* ECHO RESPONSE */
