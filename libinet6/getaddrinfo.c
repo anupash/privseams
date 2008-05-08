@@ -439,7 +439,8 @@ connect_alarm(int signo)
  * @param  name  a pointer to a hostname for which are get the HIT.
  * @param  pat   a triple pointer to a ...
  * @param  flags ...
- * @retrun       ...
+ * @return       Number of found HITs on success or a negative error value
+ *               on error.
  */
 int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 {	 								
@@ -470,14 +471,18 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
         
 	_HIP_DEBUG("Asking serving gateway info from daemon...\n"); 
 	
-        HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "Malloc for msg failed\n");
-        HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW,0),-1, 
+        HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -ENOMEM,
+		 "Malloc for msg failed\n");
+        HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW,0), EHIP, 
                  "Building daemon header failed\n"); 
-        HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "Send recv daemon info failed\n");
 
-        HIP_IFE(!(gw_info = hip_get_param(msg, HIP_PARAM_OPENDHT_GW_INFO)),-1);
-	//"No gw struct found\n");
-        
+        if((err = hip_send_recv_daemon_info(msg)) < 0) {
+		return err; 
+	}
+	
+        HIP_IFE(!(gw_info = hip_get_param(msg, HIP_PARAM_OPENDHT_GW_INFO)),
+		EHIP);
+	        
         /* Check if DHT was on */
         if ((gw_info->ttl == 0) && (gw_info->port == 0)) {
                 HIP_INFO("Distributed hash table (DHT) is not in use.\n");
@@ -546,7 +551,9 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
                         /* dump_pai(*pat); */
                         return 1;
                 }
-        } 
+        }
+/* HORRIBLE! Why is skip_dht under out_err? This effectively renders our IFE macros
+   useless. :( -Lauri 08.05.2008 */
  out_err: 
  skip_dht:
 									
@@ -992,7 +999,7 @@ int gaih_inet_get_name(const char *name, const struct addrinfo *req,
 		       struct gaih_servtuple *st, struct gaih_addrtuple **at,
 		       int hip_transparent_mode) 
 {
-	int rc;
+	int err = 0, rc = 0;
 	int v4mapped = (req->ai_family == PF_UNSPEC ||
 			req->ai_family == PF_INET6) &&
 		(req->ai_flags & AI_V4MAPPED);
@@ -1133,12 +1140,23 @@ int gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	  (v4mapped && (no_inet6_data != 0 || (req->ai_flags & AI_ALL)))
   	  || hip_transparent_mode || req->ai_flags & AI_HIP & AI_NODHT)
 	no_data = gethosts (name, AF_INET, &pat);
-
+      
       if (hip_transparent_mode) {
 	_HIP_DEBUG("HIP_TRANSPARENT_API: fetch HIT addresses\n");
-       
+	
 	_HIP_DEBUG("found_hits before gethosts_hit: %d\n", found_hits);
-	found_hits |= gethosts_hit(name, &pat, req->ai_flags);
+	
+	/* What is the point to bitwise OR from a function return value that
+	   can implicate also an error value? Anyhows, had to fix this a little
+	   to allow the error value to be passed to the caller of this function.
+	   -Lauri 07.05.2008. */
+	err = gethosts_hit(name, &pat, req->ai_flags);
+	if((err) < 0) {
+		return err;
+	}
+	found_hits |= err;
+	err = 0;
+	
 	_HIP_DEBUG("found_hits after gethosts_hit: %d\n", found_hits);
 	
 	if (req->ai_flags & AI_HIP) {
@@ -1253,8 +1271,8 @@ int gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	  _HIP_DEBUG("pointer a: %p\tpointer p: %p\n", a, p);	
 	}
 	if (p == NULL){  /* no HITs or LSIs were found */
-	  HIP_DEBUG("No HITs or LSIs were found\n");
-	  return (GAIH_OKIFUNSPEC | -EAI_NONAME);
+		HIP_INFO("No HITs or LSIs were found.\n");
+		return (GAIH_OKIFUNSPEC | -EAI_NONAME);
 	}
 	
 	*at = p;
@@ -1577,19 +1595,16 @@ int getaddrinfo(const char *name, const char *service,
 	else
 		end = NULL;
 	
-	while (g->gaih)
-	{
-		if (hints->ai_family == g->family || hints->ai_family == AF_UNSPEC)
-		{
-			if ((hints->ai_flags & AI_ADDRCONFIG) && !addrconfig(g->family))
+	while (g->gaih) {
+		if (hints->ai_family == g->family || hints->ai_family == AF_UNSPEC) {
+			if ((hints->ai_flags & AI_ADDRCONFIG) && !addrconfig(g->family)) {
 				continue;
+			}
 			j++;
-			if (pg == NULL || pg->gaih != g->gaih)
-			{
+			if (pg == NULL || pg->gaih != g->gaih) {
 				pg = g;
 				i = g->gaih(name, pservice, hints, end, hip_transparent_mode);
-				if (i != 0)
-				{
+				if (i != 0) {
 					last_i = i;
 
 					if (hints->ai_family == AF_UNSPEC && (i & GAIH_OKIFUNSPEC))
@@ -1600,15 +1615,17 @@ int getaddrinfo(const char *name, const char *service,
 
 					return -(i & GAIH_EAI);
 				}
-				if (end)
+				if (end) {
 					while(*end) end = &((*end)->ai_next);
+				}
 			}
 		}
 		++g;
 	}
 
-	if (j == 0)
+	if (j == 0) {
 		return EAI_FAMILY;
+	}
 
 	if (p) // here should be true
 	{

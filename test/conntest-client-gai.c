@@ -97,7 +97,8 @@ int main(int argc, char *argv[]) {
 				 "running at the other end?\n");
 		} else if(err == -1000) {
 			HIP_INFO("Error when retrieving address information for "\
-				 "the peer.\n");
+				 "the peer.\nDo you have a local HIP daemon up "\
+				 "and running?\n");
 		} else if(err == -1001) {
 			HIP_INFO("Error when communicating with the peer.\n"\
 				 "The peer is supposed to echo back the sent "\

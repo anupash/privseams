@@ -351,7 +351,7 @@ int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
 	   overlap negative errno values, we just set the errno as a generic
 	   -1000 in an error case.*/
 	HIP_IFEL(getaddrinfo(peer_name, port_name, &search_key, &peer_ai),
-		 -1000, "Name '%s' or service '%s' is unknown.",
+		 -1000, "Name '%s' or service '%s' is unknown.\n",
 		 peer_name, port_name);
 	
 	HIP_INFO("Please input some text to be sent to '%s'.\n"\
