@@ -216,28 +216,24 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 {
 	hip_hastate_t st;
 	hip_ha_t *tmp;
-
+	
 	HIP_DEBUG("hip_hadb_insert_state() invoked.\n");
-
+	
 	/* assume already locked ha */
-
+	
 	HIP_ASSERT(!(ipv6_addr_any(&ha->hit_peer)));
-
+	
 	st = ha->hastate;
 
-	if (!ipv6_addr_any(&ha->hit_peer) && !(st & HIP_HASTATE_HITOK))
-	{
+	if (!ipv6_addr_any(&ha->hit_peer) && !(st & HIP_HASTATE_HITOK)) {
 		HIP_HEXDUMP("ha->hit_our is: ", &ha->hit_our, 16);
 		HIP_HEXDUMP("ha->hit_peer is: ", &ha->hit_peer, 16);
 		tmp = hip_ht_find(hadb_hit, ha);
-		if (!tmp)
-		{
+		if (tmp == NULL) {
 			hip_ht_add(hadb_hit, ha);
 			st |= HIP_HASTATE_HITOK;
 			HIP_DEBUG("New state added\n");
-		}
-		else
-		{
+		} else {
 			hip_db_put_ha(tmp, hip_hadb_delete_state);
 			HIP_DEBUG("HIT already taken\n");
 		}
@@ -403,10 +399,10 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
 
 	memcpy(&peer_map.peer_addr, peer_addr, sizeof(struct in6_addr));
 	memcpy(&peer_map.peer_hit, peer_hit, sizeof(hip_hit_t));
-
-	HIP_IFEL(hip_select_source_address(&peer_map.our_addr,
-					   &peer_map.peer_addr), -1,
-		 "Cannot find source address\n");
+	
+	HIP_IFEL(hip_select_source_address(
+			 &peer_map.our_addr, &peer_map.peer_addr),
+		 -1, "Cannot find source address\n");
 
 	HIP_DEBUG("Source address found\n");
 
@@ -2194,20 +2190,20 @@ int hip_hadb_set_update_function_set(hip_ha_t * entry,
    for all controls. */
 void hip_hadb_set_local_controls(hip_ha_t *entry, hip_controls_t mask)
 {
-     if(entry != NULL)
-     {
-	  switch(mask)
-	  {
-	  case HIP_HA_CTRL_NONE:
-	       entry->local_controls &= mask;
-	  case HIP_HA_CTRL_LOCAL_REQ_RELAY:
-	  case HIP_HA_CTRL_LOCAL_REQ_RVS:
-	       entry->local_controls |= mask;
-	       break;
-	  default:
-	       HIP_ERROR("Unknown local controls given.\n");
-	  }
-     }
+	if(entry != NULL) {
+		switch(mask) {
+
+		case HIP_HA_CTRL_NONE:
+			entry->local_controls &= mask;
+		case HIP_HA_CTRL_LOCAL_REQ_ESCROW:
+		case HIP_HA_CTRL_LOCAL_REQ_RELAY:
+		case HIP_HA_CTRL_LOCAL_REQ_RVS:
+			entry->local_controls |= mask;
+			break;
+		default:
+			HIP_ERROR("Unknown local controls given.\n");
+		}
+	}
 }
 
 /* NOTE! When modifying this function, remember that some control values may
@@ -2215,35 +2211,33 @@ void hip_hadb_set_local_controls(hip_ha_t *entry, hip_controls_t mask)
    for all controls. */
 void hip_hadb_set_peer_controls(hip_ha_t *entry, hip_controls_t mask)
 {
-     if(entry != NULL)
-     {
-	  switch(mask)
-	  {
-	  case HIP_HA_CTRL_NONE:
-	       entry->peer_controls &= mask;
-	  case HIP_HA_CTRL_PEER_RVS_CAPABLE:
-	  case HIP_HA_CTRL_PEER_RELAY_CAPABLE:
-	       entry->peer_controls |= mask;
-	       break;
-	  default:
-	       HIP_ERROR("Unknown peer controls given.\n");
-	  }
-     }
+	if(entry != NULL) {
+		switch(mask) {
+
+		case HIP_HA_CTRL_NONE:
+			entry->peer_controls &= mask;
+		case HIP_HA_CTRL_PEER_ESCROW_CAPABLE:
+		case HIP_HA_CTRL_PEER_RVS_CAPABLE:
+		case HIP_HA_CTRL_PEER_RELAY_CAPABLE:
+			entry->peer_controls |= mask;
+			break;
+		default:
+			HIP_ERROR("Unknown peer controls given.\n");
+		}
+	}
 }
 
 void hip_hadb_cancel_local_controls(hip_ha_t *entry, hip_controls_t mask)
 {
-     if(entry != NULL)
-     {
-	  entry->local_controls &= (~mask);
-     }
+	if(entry != NULL) {
+		entry->local_controls &= (~mask);
+	}
 }
 
 void hip_hadb_cancel_peer_controls(hip_ha_t *entry, hip_controls_t mask)
 {
-     if(entry != NULL)
-     {
-	  entry->peer_controls &= (~mask);
+     if(entry != NULL) {
+	     entry->peer_controls &= (~mask);
      }
 }
 

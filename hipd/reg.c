@@ -503,7 +503,7 @@ int hip_handle_regrequest(hip_ha_t *entry, hip_common_t *source_msg,
 				}
 				/* Check that the client's HIT is on the
 				   whitelist if the whitelist is in use. */
-				else if (hip_relay_get_wl_status()
+				else if (hip_relwl_get_status()
 					 == HIP_RELAY_WL_ON &&
 					 hip_relwl_get(&source_msg->hits)
 					 == NULL) {
@@ -597,7 +597,7 @@ int hip_handle_regrequest(hip_ha_t *entry, hip_common_t *source_msg,
 				
 				/* Check that the client's HIT is on the
 				   whitelist if the whitelist is in use. */
-				else if (hip_relay_get_wl_status()
+				else if (hip_relwl_get_status()
 					 == HIP_RELAY_WL_ON &&
 					 hip_relwl_get(&source_msg->hits)
 					 == NULL) {
@@ -675,9 +675,11 @@ int hip_handle_regrequest(hip_ha_t *entry, hip_common_t *source_msg,
 	/* Building REG_RESPONSE and REG_FAILED parameters. */
 	if(accepted_count > 0)
 	{
-		hip_build_param_reg_request(target_msg, val_lifetime,
-					    accepted_requests, accepted_count,
-					    0);
+		hip_build_param_reg_response(
+			target_msg, val_lifetime, accepted_requests,
+			accepted_count);
+		/* hip_build_param_reg_request(target_msg, val_lifetime,
+		   accepted_requests, accepted_count, 0); */
 	}
 	/** @todo Determine failure type using some indicator. */
 	if(rejected_count > 0)
@@ -705,9 +707,14 @@ int hip_handle_registration_attempt(hip_ha_t *entry, hip_common_t *msg,
 	if (!reg_request) {
 		lifetime = 0;
 		HIP_DEBUG("Building REG_RESPONSE parameter with zero lifetime.\n");
-		HIP_IFEL(hip_build_param_reg_request(
-				 msg, lifetime, requests, request_count, 0), -1,
+		
+		HIP_IFEL(hip_build_param_reg_response(
+				 msg, lifetime, requests, request_count), -1,
 			 "Building of REG_RESPONSE failed\n");
+		
+		/*HIP_IFEL(hip_build_param_reg_request(
+				 msg, lifetime, requests, request_count, 0), -1,
+				 "Building of REG_RESPONSE failed\n");*/
 	}
      
 	/* This is a cancel message (lifetime = 0) */
@@ -741,8 +748,12 @@ int hip_handle_registration_attempt(hip_ha_t *entry, hip_common_t *msg,
 		if (accept_count > 0) {
 			lifetime = 0;
 			HIP_DEBUG("Building REG_RESPONSE parameter.\n");
-			HIP_IFEL(hip_build_param_reg_request(msg, lifetime, (uint8_t*)accepted_requests, 
-							     accept_count, 0), -1, "Building of REG_RESPONSE failed\n");
+			HIP_IFEL(hip_build_param_reg_response(
+					 msg, lifetime, (uint8_t*)accepted_requests, 
+					 accept_count),
+				 -1, "Building of REG_RESPONSE failed\n");
+			/*HIP_IFEL(hip_build_param_reg_request(msg, lifetime, (uint8_t*)accepted_requests, 
+			  accept_count, 0), -1, "Building of REG_RESPONSE failed\n");*/
 		}
 	}
 	/* This is a registration message (lifetime != 0) */
@@ -760,8 +771,12 @@ int hip_handle_registration_attempt(hip_ha_t *entry, hip_common_t *msg,
 		if (accepted_count > 0) {
 			hip_escrow_validate_lifetime(reg_request->lifetime, &lifetime);
 			HIP_DEBUG("Building REG_RESPONSE parameter.\n");
-			HIP_IFEL(hip_build_param_reg_request(msg, lifetime, (uint8_t*)accepted_requests, 
-							     accepted_count, 0), -1, "Building of REG_RESPONSE failed\n");
+			HIP_IFEL(hip_build_param_reg_response(
+					 msg, lifetime, (uint8_t*)accepted_requests, 
+					 accepted_count),
+				 -1, "Building of REG_RESPONSE failed\n");
+			/*HIP_IFEL(hip_build_param_reg_request(msg, lifetime, (uint8_t*)accepted_requests, 
+			  accepted_count, 0), -1, "Building of REG_RESPONSE failed\n");*/
 		}
 		if (rejected_count > 0) {
 			HIP_DEBUG("Building REG_FAILED parameter");
@@ -799,42 +814,6 @@ int hip_cancel_service(void)
 {
 	// TODO: notify registered clients (REG_RESPONSE with zero lifetime) 
 	return 0;
-}
-
-int get_lifetime_value(time_t seconds, uint8_t *lifetime)
-{
-	/* Check that we get a lifetime value between 1 and 255. The minimum
-	   lifetime according to the registration draft is 0.004 seconds, but
-	   the reverse formula gives zero for that. 15384774.906 seconds is the
-	   maximum value. The boundary checks done here are just curiosities
-	   since services are usually granted for minutes to a couple of days,
-	   but not for milliseconds and days. However, log() gives a range error
-	   if "seconds" is zero. */
-	if(seconds == 0) {
-		*lifetime = 0;
-		return -1;
-	}else if(seconds > 15384774) {
-		*lifetime = 255;
-		return -1;
-	}else {
-		*lifetime = (8 * (log(seconds) / log(2))) + 64;
-		return 0;
-	}
-}
-
-int get_lifetime_seconds(uint8_t lifetime, time_t *seconds){
-	if(lifetime == 0) {
-		*seconds = 0;
-		return -1;
-	}
-	/* All values between from 1 to 63 give just fractions of a second. */
-	else if(lifetime < 64) {
-		*seconds = 1;
-		return 0;
-	} else {
-		*seconds = pow(2, ((double)((lifetime)-64)/8));
-		return 0;
-	}
 }
 
 /* TODO: Move to more appropriate place */

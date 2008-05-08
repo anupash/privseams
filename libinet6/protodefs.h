@@ -76,6 +76,10 @@
 #define HIP_PARAM_CERT                 768
 #define HIP_PARAM_NOTIFICATION         832
 #define HIP_PARAM_ECHO_REQUEST_SIGN    897
+#define HIP_PARAM_REG_INFO	       930
+#define HIP_PARAM_REG_REQUEST	       932
+#define HIP_PARAM_REG_RESPONSE	       934
+#define HIP_PARAM_REG_FAILED	       936
 #define HIP_PARAM_ECHO_RESPONSE_SIGN   961
 #define HIP_PARAM_ESP_TRANSFORM        4095
 
@@ -93,11 +97,7 @@
 #define HIP_PARAM_EID_ADDR              32777
 #define HIP_PARAM_UINT                  32778 /**< Unsigned integer */
 #define HIP_PARAM_KEYS                  32779
-#define HIP_PSEUDO_HIT                  32780 
-#define HIP_PARAM_REG_INFO		32781
-#define HIP_PARAM_REG_REQUEST		32782
-#define HIP_PARAM_REG_RESPONSE		32783
-#define HIP_PARAM_REG_FAILED		32784
+#define HIP_PARAM_PSEUDO_HIT            32780 
 #define HIP_PARAM_BLIND_NONCE           32785 /**< Pass blind nonce */
 #define HIP_PARAM_OPENDHT_GW_INFO       32786
 #define HIP_PARAM_ENCAPS_MSG		32787
@@ -242,16 +242,24 @@
 #define HIP_VER_MASK                0xF0
 #define HIP_RES_MASK                0x0F 
 
-#define HIP_HA_CTRL_NONE                 0x0000
-
 /**
  * @addtogroup hip_ha_controls
  * @{
  */
 /* REMEMBER TO UPDATE BITMAP IN DOC/DOXYGEN.H WHEN YOU ADD/CHANGE THESE! */
+#define HIP_HA_CTRL_NONE                 0x0000
+
+#define HIP_HA_CTRL_LOCAL_REQ_ESCROW     0x2000
 #define HIP_HA_CTRL_LOCAL_REQ_RELAY      0x4000
 #define HIP_HA_CTRL_LOCAL_REQ_RVS        0x8000
+/* Keep inside parentheses. */
+#define HIP_HA_CTRL_LOCAL_REQ_ALL        (\
+                                         HIP_HA_CTRL_LOCAL_REQ_ESCROW |\
+                                         HIP_HA_CTRL_LOCAL_REQ_RELAY |\
+                                         HIP_HA_CTRL_LOCAL_REQ_RVS\
+                                         )
 
+#define HIP_HA_CTRL_PEER_ESCROW_CAPABLE  0x2000 
 #define HIP_HA_CTRL_PEER_RELAY_CAPABLE   0x4000 
 #define HIP_HA_CTRL_PEER_RVS_CAPABLE     0x8000
 /* @} */
@@ -271,7 +279,7 @@
 #define HIP_SERVICE_RELAY            	 202
 
 /* IMPORTANT! This must be the sum of above services. */
-#define HIP_NUMBER_OF_EXISTING_SERVICES  3
+#define HIP_TOTAL_EXISTING_SERVICES      3
 /* @} */
 
 /* Registration failure types as specified in draft-ietf-hip-registration-02.
@@ -655,9 +663,9 @@ struct hip_relay_via {
  * @note obsolete.
  */
 struct hip_relay_to_old {
-     hip_tlv_type_t type; /**< Type code for the parameter. */
-     hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
-     uint8_t address_and_port[0]; /**< Rendezvous server addresses and ports. */
+	hip_tlv_type_t type; /**< Type code for the parameter. */
+	hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
+	uint8_t address_and_port[0]; /**< Rendezvous server addresses and ports. */
 } __attribute__ ((packed));
 
 struct hip_eid_endpoint {
@@ -678,19 +686,26 @@ struct hip_eid_sockaddr {
 	struct sockaddr sockaddr;
 } __attribute__ ((packed));
 
-/* ESCROW */
-
 struct hip_reg_info {
-	hip_tlv_type_t type;
-	hip_tlv_len_t  length;
-	uint8_t       min_lifetime;
-	uint8_t       max_lifetime;
+	hip_tlv_type_t type; /**< Type code for the parameter. */
+	hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
+	uint8_t        min_lifetime;
+	uint8_t        max_lifetime;
+	uint8_t        reg_type[0];
 } __attribute__ ((packed));
 
 struct hip_reg_request {
 	hip_tlv_type_t type;
 	hip_tlv_len_t  length;
-	uint8_t       lifetime;
+	uint8_t        lifetime;
+	uint8_t        reg_type[0];
+} __attribute__ ((packed));
+
+struct hip_reg_response {
+	hip_tlv_type_t type;
+	hip_tlv_len_t  length;
+	uint8_t        lifetime;
+	uint8_t        reg_type[0];
 } __attribute__ ((packed));
 
 struct hip_reg_failed {
