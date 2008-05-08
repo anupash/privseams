@@ -254,7 +254,7 @@ copy_and_package_files ()
     mkdir -p usr/bin usr/sbin
     cd "$HIPL"
 
-    for suffix in "" -gai -native -native-user-key;do
+    for suffix in -opp -hip -native -native-user-key;do
 	cp test/conntest-client$suffix $PKGDIR/usr/bin/
     done
 

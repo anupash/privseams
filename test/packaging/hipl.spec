@@ -155,8 +155,8 @@ rm -rf %{buildroot}
 %defattr(755,root,root)
 
 %files test
-%{prefix}/bin/conntest-client
-%{prefix}/bin/conntest-client-gai
+%{prefix}/bin/conntest-client-opp
+%{prefix}/bin/conntest-client-hip
 %{prefix}/bin/conntest-client-native
 %{prefix}/bin/conntest-client-native-user-key
 %{prefix}/bin/conntest-server
