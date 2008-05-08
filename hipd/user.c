@@ -22,11 +22,10 @@
  */ 
 int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr *originator)
 {
-	hip_hit_t *hit, *src_hit, *dst_hit;
-	struct in6_addr *src_ip, *dst_ip;
-	hip_ha_t *entry = NULL;
-	int err = 0, msg_type, n = 0, len = 0, state=0;
-	hip_ha_t * server_entry = NULL;
+	hip_hit_t *hit = NULL, *src_hit = NULL, *dst_hit = NULL;
+	in6_addr_t *src_ip = NULL, *dst_ip = NULL;
+	hip_ha_t *entry = NULL, *server_entry = NULL;
+	int err = 0, msg_type = 0, n = 0, len = 0, state=0;
 	HIP_KEA * kea = NULL;
 	int send_response = 0;
 	union {
@@ -391,6 +390,9 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr *originato
 			 "for_each_hi err.\n");	
 		HIP_DEBUG("Added kea base entry.\n");
 		
+		/* Set a escrow request flag. Should this be done for every entry? */
+		hip_hadb_set_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_ESCROW);
+
 		HIP_IFEL(hip_for_each_hi(hip_launch_escrow_registration, dst_hit), 0,
 			 "for_each_hi err.\n");	
 		break;
@@ -429,11 +431,14 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr *originato
 			 "Error while adding service\n");
 	
 		hip_services_set_active(HIP_SERVICE_ESCROW);
+
+		hip_set_srv_status(HIP_SERVICE_ESCROW, HIP_SERVICE_ON);
+
 		if (hip_services_is_active(HIP_SERVICE_ESCROW))
 			HIP_DEBUG("Escrow service is now active.\n");
 		HIP_IFEL(hip_recreate_all_precreated_r1_packets(), -1, 
 			 "Failed to recreate R1-packets\n"); 
-
+		
 		if (hip_firewall_is_alive())
 		{
 			HIP_IFEL(hip_firewall_set_escrow_active(1), -1, 
@@ -448,6 +453,9 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr *originato
 			HIP_IFEL(hip_firewall_set_escrow_active(0), -1, 
 				 "Failed to deliver activation message to firewall\n");
 		}
+		
+		hip_set_srv_status(HIP_SERVICE_ESCROW, HIP_SERVICE_OFF);
+		
 		HIP_IFEL(hip_services_remove(HIP_ESCROW_SERVICE), -1, 
 			 "Error while removing service\n");
 		HIP_IFEL(hip_recreate_all_precreated_r1_packets(), -1, 
@@ -457,32 +465,108 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr *originato
 #endif /* CONFIG_HIP_ESCROW */
 #ifdef CONFIG_HIP_RVS
 	case SO_HIP_ADD_RVS:
+	{
 		/* draft-ietf-hip-registration-02 RVS registration. Responder
 		   (of I,RVS,R hierarchy) handles this message. Message
 		   indicates that the current machine wants to register to a rvs
 		   server. This message is received from hipconf. */
 		HIP_DEBUG("Handling ADD RENDEZVOUS user message.\n");
-		
-		/* Get rvs ip and hit given as commandline parameters to hipconf. */
-		HIP_IFEL(!(dst_hit = hip_get_param_contents(
-				   msg, HIP_PARAM_HIT)), -1, "no hit found\n");
-		HIP_IFEL(!(dst_ip = hip_get_param_contents(
-				   msg, HIP_PARAM_IPV6_ADDR)), -1, "no ip found\n");
-		/* Add HIT to IP mapping of rvs to hadb. */ 
-		HIP_IFEL(hip_add_peer_map(msg), -1, "add rvs map\n");
-		/* Fetch the hadb entry just created. */
-		HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(dst_hit)),
-			 -1, "internal error: no hadb entry found\n");
-		
-		/* Set a rvs request flag. */
-		hip_hadb_set_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_RVS);
 
-		/* Send a I1 packet to rvs. */
-		/** @todo Not filtering I1, when handling rvs message! */
+		struct hip_reg_request *reg_req = NULL;
+		hip_pending_request_t *pending_req = NULL;
+		uint8_t *reg_types = NULL;
+		int i = 0, type_count = 0;
+		
+		/* Get RVS IP address, HIT and requested lifetime given as
+		   commandline parameters to hipconf. */
+		
+		dst_hit = hip_get_param_contents(msg,HIP_PARAM_HIT);
+		dst_ip  = hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR);
+		reg_req = hip_get_param(msg, HIP_PARAM_REG_REQUEST);
+				
+		if(dst_hit == NULL) {
+			HIP_ERROR("No HIT parameter found from the user "\
+				  "message.\n");
+			err = -1;
+			goto out_err;
+		}else if(dst_ip == NULL) {
+			HIP_ERROR("No IPV6 parameter found from the user "\
+				  "message.\n");
+			err = -1;
+			goto out_err;
+		}else if(reg_req == NULL) {
+			HIP_ERROR("No REG_REQUEST parameter found from the "\
+				  "user message.\n");
+			err = -1;
+			goto out_err;
+		}
+		
+		/* Add HIT to IP address mapping of RVS to haDB. */ 
+		HIP_IFEL(hip_add_peer_map(msg), -1, "Error on adding server "\
+			 "HIT to IP address mapping to the haDB.\n");
+		
+		/* Fetch the haDB entry just created. */
+		entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
+		
+		if(entry == NULL) {
+			HIP_ERROR("Error on fetching server HIT to IP address "\
+				  "mapping from the haDB.\n");
+			err = -1;
+			goto out_err;
+		}
+		
+		reg_types  = reg_req->reg_type;
+		type_count = hip_get_param_contents_len(reg_req) -
+			sizeof(reg_req->lifetime);
+		
+		for(;i < type_count; i++) {
+			pending_req = (hip_pending_request_t *)
+				malloc(sizeof(hip_pending_request_t));
+			if(pending_req == NULL) {
+				HIP_ERROR("Error on allocating memory for a "\
+					  "pending registration request.\n");
+				err = -1;
+				goto out_err;	
+			}
+
+			pending_req->entry    = entry;
+			pending_req->reg_type = reg_types[i];
+			pending_req->lifetime = reg_req->lifetime;
+			
+			HIP_DEBUG("Adding pending request.\n");
+			hip_add_pending_request(pending_req);
+
+			/* Set the request flag. */
+			switch(reg_types[i]){
+			case HIP_SERVICE_RENDEZVOUS:
+				hip_hadb_set_local_controls(
+					entry, HIP_HA_CTRL_LOCAL_REQ_RVS);
+				break;
+			case HIP_SERVICE_RELAY:
+				hip_hadb_set_local_controls(
+					entry, HIP_HA_CTRL_LOCAL_REQ_RELAY);
+				break;
+			case HIP_SERVICE_ESCROW:
+				hip_hadb_set_local_controls(
+					entry, HIP_HA_CTRL_LOCAL_REQ_ESCROW);
+				break;
+			default:
+				HIP_INFO("Undefined service type requested in "\
+					 "the service request.\n");
+				break;
+			}
+		}
+
+		HIP_DEBUG("KING KONG.\n");
+		
+		/* Set a RVS request flag. */
+		//hip_hadb_set_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_RVS);
+		/* Send a I1 packet to RVS. */
+		/** @todo Not filtering I1, when handling RVS message! */
 		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
-			 -1, "sending i1 failed\n");
+			 -1, "Error on sending I1 packet to the server.\n");
 		break;
-	
+	}
 	case SO_HIP_OFFER_RVS:
 		/* draft-ietf-hip-registration-02 RVS registration. Rendezvous
 		   server handles this message. Message indicates that the
@@ -493,6 +577,8 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr *originato
 		HIP_IFE(hip_services_add(HIP_SERVICE_RENDEZVOUS), -1);
 		hip_services_set_active(HIP_SERVICE_RENDEZVOUS);
 		
+		hip_set_srv_status(HIP_SERVICE_RENDEZVOUS, HIP_SERVICE_ON);
+
 		if (hip_services_is_active(HIP_SERVICE_RENDEZVOUS)){
 			HIP_DEBUG("Rendezvous service is now active.\n");
 			hip_relay_set_status(HIP_RELAY_ON);
@@ -553,6 +639,8 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr *originato
 		HIP_IFE(hip_services_add(HIP_SERVICE_RELAY), -1);
 		hip_services_set_active(HIP_SERVICE_RELAY);
 		
+		hip_set_srv_status(HIP_SERVICE_RELAY, HIP_SERVICE_ON);
+
 		if (hip_services_is_active(HIP_SERVICE_RELAY)){
 			HIP_DEBUG("UDP relay service for HIP packets"\
 				  "is now active.\n");
@@ -574,6 +662,8 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr *originato
 		HIP_DEBUG("Handling CANCEL RVS user message.\n");
 		HIP_IFEL(hip_services_remove(HIP_SERVICE_RENDEZVOUS), -1,
 			 "Failed to remove HIP_SERVICE_RENDEZVOUS");
+		hip_set_srv_status(HIP_SERVICE_RENDEZVOUS, HIP_SERVICE_OFF);
+		
 		hip_relht_free_all_of_type(HIP_RVSRELAY);
 		/* If all off the relay records were freed we can set the relay
 		   status "off". */
@@ -591,6 +681,8 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr *originato
 		HIP_DEBUG("Handling CANCEL RELAY user message.\n");
 		HIP_IFEL(hip_services_remove(HIP_SERVICE_RELAY), -1,
 			 "Failed to remove HIP_SERVICE_RELAY");
+		hip_set_srv_status(HIP_SERVICE_RELAY, HIP_SERVICE_OFF);
+
 		hip_relht_free_all_of_type(HIP_FULLRELAY);
 		/* If all off the relay records were freed we can set the relay
 		   status "off". */

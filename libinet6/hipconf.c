@@ -24,9 +24,9 @@ const char *hipconf_usage =
 "add|del escrow <hit>\n"
 #endif
 "add|del map <hit> <ipv6>\n"
-"add|del service escrow|rvs|hiprelay\n"
-"reinit service rvs|hiprelay\n"
-"add rvs|hiprelay <hit> <ipv6>\n"
+"Server side:\n\tadd|del service escrow|rvs|hiprelay\n"
+"\treinit service rvs|hiprelay\n"
+"Client side:\n\tadd rvs|hiprelay <hit> <ipv6> <lifetime in seconds>\n"
 "del hi <hit>\n"
 "get hi default\n"
 #ifdef CONFIG_HIP_ICOOKIE
@@ -341,30 +341,59 @@ int hip_conf_handle_rvs(hip_common_t *msg, int action, const char *opt[],
 {
 	hip_hit_t hit;
 	in6_addr_t ipv6;
-	int err = 0;
+	int err = 0, seconds = 0;
+	uint8_t lifetime = 0;
+	time_t seconds_from_lifetime = 0;
+	uint8_t type_list[1];
+	
+	type_list[0] = HIP_SERVICE_RENDEZVOUS;
 
 	HIP_DEBUG("hip_conf_handle_rvs() invoked.\n");
 		
 	HIP_IFEL((action != ACTION_ADD), -1,
 		 "Only action \"add\" is supported for \"rvs\".\n");
 	
-	HIP_IFEL((optc < 2), -1, "Missing arguments.\n");
-	HIP_IFEL((optc > 2), -1, "Too many arguments.\n");
+	HIP_IFEL((optc < 3), -1, "Missing arguments.\n");
+	HIP_IFEL((optc > 3), -1, "Too many arguments.\n");
 	
 	HIP_IFE(convert_string_to_address(opt[0], &hit), -1);
 	HIP_IFE(convert_string_to_address(opt[1], &ipv6), -1);
 	
-	HIP_IFEL(hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
-					  sizeof(in6_addr_t)), -1,
+	seconds = atoi(opt[2]);
+	
+	if(seconds <= 0 || seconds > 15384774) {
+		HIP_ERROR("Invalid lifetime value \"%s\" given.\n"\
+			  "Please give a lifetime value between 1 and "\
+			  "15384774 seconds.\n", opt[2]);
+		goto out_err;
+	}
+
+	HIP_IFEL(hip_get_lifetime_value(seconds, &lifetime), -1,
+		 "Unable to convert seconds to a lifetime value.\n");
+
+	hip_get_lifetime_seconds(lifetime, &seconds_from_lifetime);
+
+	HIP_IFEL(hip_build_param_contents(
+			 msg, (void *) &hit, HIP_PARAM_HIT,
+			 sizeof(in6_addr_t)), -1,
 		 "Failed to build parameter HIT.\n");
 	
-	HIP_IFEL(hip_build_param_contents(msg, (void *) &ipv6,
-					  HIP_PARAM_IPV6_ADDR,
-					  sizeof(in6_addr_t)), -1,
+	HIP_IFEL(hip_build_param_contents(
+			 msg, (void *) &ipv6, HIP_PARAM_IPV6_ADDR,
+			 sizeof(in6_addr_t)), -1,
 		 "Failed to build parameter IPv6.\n");
 	
+	HIP_IFEL(hip_build_param_reg_request(msg, lifetime, &type_list , 1), -1,
+		 "Failed to build REQ_REQUEST parameter to hipconf user "\
+		 "message.\n");
+
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_RVS, 0), -1,
 		 "Failed to build user message header.\n");
+
+	HIP_INFO("\tRequesting RVS service for %d seconds (lifetime 0x%x) from\n"\
+		 "\tHIT %s located at\n\tIP address %s.\n",
+		 seconds_from_lifetime, lifetime, opt[0], opt[1]);
+	
  out_err:
 	return err;
 }
@@ -444,7 +473,7 @@ int hip_conf_handle_hi(hip_common_t *msg, int action, const char *opt[],
      HIP_IFEL((euid != 0 && action == ACTION_SET), -1,
 	      "New default HI must be created as root.\n");
 
-     _HIP_INFO("action=%d optc=%d\n", action, optc);
+     _HIP_DEBUG("action=%d optc=%d\n", action, optc);
 
      if (action == ACTION_DEL)
 	  return hip_conf_handle_hi_del(msg, action, opt, optc);
@@ -1317,7 +1346,7 @@ int hip_conf_handle_service(hip_common_t *msg, int action, const char *opt[],
      
 	HIP_IFEL((optc < 1), -1, "Missing arguments.\n");
 	HIP_IFEL((optc > 1), -1, "Too many arguments.\n");
-     
+	
 	if(action == ACTION_ADD){
 		if (strcmp(opt[0], "escrow") == 0) {
 			HIP_INFO("Adding escrow service.\n");

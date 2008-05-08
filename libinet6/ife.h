@@ -2,6 +2,9 @@
 #define _HIP_IFE
 
 #define GOTO_OUT -3
+/** A generic HIP error. This should be a value whose absolute value does not
+    overlap with the global errno values. */
+#define EHIP     -500
 
 /** 
  * @addtogroup ife

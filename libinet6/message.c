@@ -13,33 +13,55 @@
  */
 #include "message.h"
 
+/**
+ * Does something?
+ *
+ * @param  socket         a file descriptor.
+ * @param  encap_hdr_size ?
+ * @return Number of bytes received on success or a negative error value on
+ *         error.
+ */ 
 int hip_peek_recv_total_len(int socket, int encap_hdr_size)
 {
 	int bytes = 0, err = 0;
 	int hdr_size = encap_hdr_size + sizeof(struct hip_common);
 	char *msg = NULL;
-	struct hip_common *hip_hdr = NULL;
+	hip_common_t *hip_hdr = NULL;
 	
-	HIP_IFEL(!(msg = malloc(hdr_size)), -1, "malloc (%d)failed\n",
-		 hdr_size);
+	msg = (char*) malloc(hdr_size);
 	
-	HIP_IFEL(((bytes = recvfrom(socket, msg, hdr_size, MSG_PEEK,
-				    NULL, NULL)) != hdr_size), -1,
-		 "Receive peek error when trying to communicate with the HIP "\
-		 "daemon.\nIs the daemon running?\n");
+	if(msg == NULL) {
+		HIP_ERROR("Error allocating memory.\n");
+		err = -ENOMEM;
+	}
+	
+	HIP_IFE(((bytes =
+		  recvfrom(socket, msg, hdr_size, MSG_PEEK, NULL, NULL))
+		 != hdr_size), err = -errno);
+	
+	/* Switched from IFEL to IFE above to clean conntest-client-gai
+	   output. Previous IFEL output here:
+	   "Receive peek error when trying to communicate with the HIP "\
+	   "daemon.\nIs the daemon running?\n"); */
 	
 	hip_hdr = (struct hip_common *) (msg + encap_hdr_size);
 	bytes = hip_get_msg_total_len(hip_hdr);
-	HIP_IFEL((bytes > HIP_MAX_PACKET), -1, "packet too long\n");
-	HIP_IFEL((bytes == 0), -1, "packet length is zero\n");
+	
+	HIP_IFEL((bytes > HIP_MAX_PACKET), -EMSGSIZE,
+		 "HIP message max length exceeded.\n");
+	HIP_IFEL((bytes == 0), -EBADMSG,
+		 "HIP message is of zero length\n");
+
 	bytes += encap_hdr_size;
 	
  out_err:
-	_HIP_DEBUG("bytes= %d  hdr_size = %d\n", bytes, hdr_size);
-	if (err)
-		bytes = -1;
-	if (msg)
+	if (msg != NULL) {
 		free(msg);
+	}
+	if (err != 0) {
+		return err;
+	}
+
 	return bytes;
 }
 
@@ -65,7 +87,7 @@ int hip_daemon_connect(int hip_user_sock, struct hip_common *msg) {
 }
 
 int hip_send_recv_daemon_info(struct hip_common *msg) {
-	int hip_user_sock = 0, err = 0, n, len, port = 0;
+	int hip_user_sock = 0, err = 0, n = 0, len = 0, port = 0;
 
 	struct sockaddr_in6 addr;
         addr.sin6_family = AF_INET6;
@@ -76,7 +98,7 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 	HIP_IFEL(hip_set_logdebug(LOGDEBUG_ALL), -1,
 			 "Error when setting daemon DEBUG status to ALL\n");
 
-	HIP_IFE(((hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0)) < 0), -1);
+	HIP_IFE(((hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0)) < 0), EHIP);
 
 	err = 0;
 	for(port=1023; port--; (port > 25 && err != EACCES)) 
@@ -106,36 +128,45 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 	
 	HIP_IFEL(err = hip_daemon_connect(hip_user_sock, msg), -1,
 		 "Sending of msg failed (no rcv)\n");
+
+	if ((len = hip_get_msg_total_len(msg)) < 0) {
+		err = -EBADMSG;
+		goto out_err;
+	}
 	
-	len = hip_get_msg_total_len(msg);
 	n = send(hip_user_sock, msg, len, 0);
+	
 	if (n < len) {
 		HIP_ERROR("Could not send message to daemon.\n");
-		err = -1;
+		err = -errno;
 		goto out_err;
 	}
 
 	_HIP_DEBUG("Waiting to receive daemon info.\n");
+	
+	if((len = hip_peek_recv_total_len(hip_user_sock, 0)) < 0) {
+		err = len;
+		goto out_err;
+	}
 
-	n = recv(hip_user_sock, msg,
-		 hip_peek_recv_total_len(hip_user_sock, 0), 0);
+	n = recv(hip_user_sock, msg, len, 0);
+			
 	if (n < sizeof(struct hip_common)) {
 		HIP_ERROR("Could not receive message from daemon.\n");
-		err = -1;
+		err = -errno;
 		goto out_err;
-	} else {
-		_HIP_DEBUG("%d bytes received\n", n); 
-		
 	}
 	
 	if (hip_get_msg_err(msg)) {
 		HIP_ERROR("Message contained an error.\n");
+		err = EHIP;
 	}
 
  out_err:
 
 	if (hip_user_sock)
 		close(hip_user_sock);
+	
 	return err;
 }
 

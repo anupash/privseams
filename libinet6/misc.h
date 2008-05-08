@@ -7,6 +7,7 @@
 #  include "kerncompat.h"
 #endif
 
+#include "registration.h"
 #include "utils.h"
 #include "hidb.h"
 
