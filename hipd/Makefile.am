@@ -7,7 +7,7 @@ CFLAGS = $(hipl_common_cflags)
 # Note: libinet6 cannot be included here because it has a bad dependency
 # with netlink headers.
 include_HEADERS =  hadb.h oppdb.h hipd.h netdev.h user.h hiprelay.h
-include_HEADERS += bos.h input.h output.h icookie.h blind.h
+include_HEADERS += bos.h input.h output.h icookie.h blind.h linkedlist.h
 include_HEADERS += close.h hi3.h keymat.h timer.h configfilereader.h
 include_HEADERS += cookie.h hidb.h nat.h update.h dh.h registration.h
 include_HEADERS += escrow.h reg.h init.h maintenance.h accessor.h oppipdb.h
