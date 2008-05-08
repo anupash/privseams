@@ -1675,9 +1675,10 @@ static void *handle_ip_traffic(void *ptr){
 						HIP_DEBUG("Reinjection packet passed\n");
 
 						allow_packet(hndl, m->packet_id);
+						
 					}
 					
-					if (hip_userspace_ipsec  &&  ipv6Traffic == 1 
+					else if (hip_userspace_ipsec  &&  ipv6Traffic == 1 
 					    && ipv6_addr_is_hit(&src_addr) && ipv6_addr_is_hit(&dst_addr)) /* && if (packet == IPv6 && hip_is_hit(dst && src)*/ 
 						{
 							HIP_DEBUG("debug message: HIP firewall userspace ipsec output: \n ");
