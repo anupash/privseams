@@ -41,6 +41,8 @@ make -C doc all
 #
 #%define _unpackaged_files_terminate_build 0
 #%define _missing_doc_files_terminate_build 0
+%define python_sitelib %(%{__python} -c 'from distutils import sysconfig; print sysconfig.get_python_lib()')
+
 
 # Note: we are not distributing everything from test directory, just essentials
 
@@ -96,6 +98,8 @@ install -d %{buildroot}/doc
 make DESTDIR=%{buildroot} install
 install -m 700 test/packaging/rh-init.d-hipd %{buildroot}/etc/rc.d/init.d/hipd
 install -m 644 doc/HOWTO.txt %{buildroot}/doc
+install -d %{buildroot}/%{python_sitelib}/DNS
+install -t %{buildroot}/%{python_sitelib}/DNS tools/DNS/*py
 
 %post lib
 /sbin/ldconfig 
@@ -123,6 +127,22 @@ rm -rf %{buildroot}
 %files agent
 %{prefix}/bin/hipagent
 
+#%{prefix}/bin/DNS/Base.py
+#%{prefix}/bin/DNS/Base.pyc
+#%{prefix}/bin/DNS/Class.py
+#%{prefix}/bin/DNS/Class.pyc
+#%{prefix}/bin/DNS/Lib.py
+#%{prefix}/bin/DNS/Status.py
+#%{prefix}/bin/DNS/Status.pyc
+#%{prefix}/bin/DNS/Type.py
+#%{prefix}/bin/DNS/Type.pyc
+#%{prefix}/bin/DNS/__init__.py
+#%{prefix}/bin/DNS/__init__.pyc
+#%{prefix}/bin/DNS/lazy.py
+#%{prefix}/bin/DNS/lazy.pyc
+#%{prefix}/bin/DNS/pyip6.py
+#%{prefix}/bin/DNS/win32dns.py
+
 %files tools
 %{prefix}/sbin/hipconf
 %{prefix}/bin/myasn.py
@@ -131,18 +151,19 @@ rm -rf %{buildroot}
 %{prefix}/bin/hosts.py
 %{prefix}/bin/pyip6.py
 %{prefix}/bin/util.py
+%{python_sitelib}/DNS
 %defattr(755,root,root)
 
 %files test
-%{prefix}/bin/conntest-client
-%{prefix}/bin/conntest-client-gai
+%{prefix}/bin/conntest-client-opp
+%{prefix}/bin/conntest-client-hip
 %{prefix}/bin/conntest-client-native
 %{prefix}/bin/conntest-client-native-user-key
 %{prefix}/bin/conntest-server
 %{prefix}/bin/conntest-server-native
 
 %files firewall
-%{prefix}/sbin/firewall
+%{prefix}/sbin/hipfw
 
 %files doc
 %doc doc/HOWTO.txt doc/howto-html
