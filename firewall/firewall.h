@@ -30,7 +30,7 @@
 #include "utils.h"
 #include "hip_usermode.h"
 #include "misc.h"
-
+#include "netdev.h"
 
 #define HIP_FW_DEFAULT_RULE_FILE "/etc/hip/firewall.conf"
 #define HIP_FW_DEFAULT_TIMEOUT   1

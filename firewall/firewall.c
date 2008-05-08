@@ -10,6 +10,7 @@
 
 #include "firewall.h"
 #include <sys/types.h>
+
 /* #include <libiptc/libiptc.h> */
 
 //#include <hipd/netdev.h>
@@ -32,6 +33,9 @@ pthread_t ipv4Thread, ipv6Thread;
  * Added by Tao, 13, Mar, 2008
  * */
 pthread_t hip_esp_ouput_id, hip_esp_input_id;
+
+
+
 
 
 int counter = 0;
@@ -1113,6 +1117,24 @@ int filter_hip(const struct in6_addr * ip6_src,
 
 
 
+/* Get default HIT*/
+static struct in6_addr *hip_get_default_local_hit_from_hipd()
+{
+	 
+	int err = 0;
+	struct hip_common *msg = NULL;
+	HIP_IFE(!(msg = hip_msg_alloc()), -1);
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEFAULT_HIT,0),-1,
+		 "Fail to get hits");
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1,
+		 "send/recv daemon info\n");
+	return (struct in6_addr*) hip_get_param_contents(msg, HIP_PARAM_HIT);
+out_err:
+	return NULL;
+
+}
+
+
 /* added by Tao Wan, This is the function for hip userspace ipsec output
  * Todo: How to do hip_sadb_lookup_addr() or  hip_sadb_lookup_spi(spi)
  *   hip_sadb_lookup_addr(struct sockaddr *addr)
@@ -1153,7 +1175,7 @@ void hip_firewall_userspace_ipsec_output(struct ipq_handle *handle,
 	struct hip_tlv_common *current_param = NULL;
 	struct in6_addr *defhit;
 	
-	struct hip_common *msg = NULL;
+	
 	
 	int err = 0;
 
@@ -1254,17 +1276,20 @@ void hip_firewall_userspace_ipsec_output(struct ipq_handle *handle,
 		//				     hip_esp_output, 
 		//				  NULL);
 	
-	
+		/*
 		HIP_DEBUG("Sending esp output......");
-	
+		
 		HIP_IFE(!(msg = hip_msg_alloc()), -1);
 		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEFAULT_HIT,0),-1,
-			 "Fail to get hits");
+		"Fail to get hits");
 		HIP_IFEL(hip_send_recv_daemon_info(msg), -1,
-			 "send/recv daemon info\n");
+		"send/recv daemon info\n");
 		
 		
 		defhit = hip_get_param_contents(msg, HIP_PARAM_HIT);
+		*/
+
+		defhit = hip_get_default_local_hit_from_hipd();
 		HIP_INFO_HIT("default hi is ",defhit);
 		
 		hip_addr_to_sockaddr(defhit, &sockaddr_local_default_hit);
@@ -1282,6 +1307,11 @@ void hip_firewall_userspace_ipsec_output(struct ipq_handle *handle,
 	
   
 }
+
+
+
+
+
 
 
 
@@ -1400,6 +1430,9 @@ void hip_firewall_userspace_ipsec_input(struct ipq_handle *handle,
 }
 
 
+
+
+
 /**
  * Analyzes outgoing TCP packets. We decided to send the TCP SYN_i1
  * from hip_send_i1 in hipd, so for the moment this is not being used.
@@ -1422,9 +1455,17 @@ static void *handle_ip_traffic(void *ptr){
 	int type = *((int *) ptr);
 	unsigned int packetHook;
 	int ret_val_filter_hip;
+	/*Default HIT*/
+	struct in6_addr *default_HIT = NULL;
 
 
 	HIP_DEBUG("thread for type=IPv%d traffic started\n", type);
+	
+	if(default_HIT) {
+	
+	HIP_DEBUG_IN6ADDR("Default HIT is ", &default_HIT);
+
+	}
 
 	if(type == 4){
 		ipv4Traffic = 1;
@@ -1468,9 +1509,16 @@ static void *handle_ip_traffic(void *ptr){
                 		IPV4_TO_IPV6_MAP(&iphdr->ip_dst, &dst_addr);
         		
 
+
+				/*LSI support might need here*/
+				
 				HIP_DEBUG_IN6ADDR("Source address is ", &src_addr);
 				HIP_DEBUG_IN6ADDR("Destination address is ", &dst_addr);
+
+
 				
+				
+
 			}
         		else if(ipv6Traffic){
                 		_HIP_DEBUG("ipv6\n");
@@ -1480,10 +1528,21 @@ static void *handle_ip_traffic(void *ptr){
                		 	_HIP_DEBUG("header size: %d\n", hdr_size);
                 		ipv6_addr_copy(&src_addr, &ip6_hdr->ip6_src);
                 		ipv6_addr_copy(&dst_addr, &ip6_hdr->ip6_dst);
-								
-				HIP_DEBUG_IN6ADDR("IPv6 source address is ", &src_addr);
-				HIP_DEBUG_IN6ADDR("IPv6 source address is ", &dst_addr);
-        		}
+				
+				if(ipv6_addr_is_hit(&src_addr))
+				
+					HIP_DEBUG_IN6ADDR("Source HIT is ", &src_addr);
+				else 
+					HIP_DEBUG_IN6ADDR("Source address is ", &src_addr);
+
+				if(ipv6_addr_is_hit(&dst_addr))
+				
+					HIP_DEBUG_IN6ADDR("Destination HIT is ", &dst_addr);
+				else
+					HIP_DEBUG_IN6ADDR("Destination address is ", &dst_addr);				
+
+				
+			}
 
 			HIP_DEBUG("Is this a HIP packet: %s\n",
 				  is_hip_packet(packet_hdr, type) ? "YES" : "NO");
@@ -1558,6 +1617,7 @@ static void *handle_ip_traffic(void *ptr){
                                 /* OPPORTUNISTIC MODE HACKS */
 				if(!is_tcp && is_incoming_packet(packetHook)) {
 					HIP_DEBUG("Received non-TCP traffic\n");
+
 					if (hip_userspace_ipsec)
 					{
 						HIP_DEBUG("debug message: HIP firewall userspace ipsec input: \n ");
@@ -1582,9 +1642,21 @@ static void *handle_ip_traffic(void *ptr){
 
 					HIP_DEBUG_IN6ADDR("src addr :\n", &src_addr);
 					HIP_DEBUG_IN6ADDR("dst addr  :\n", &dst_addr);
+
+					default_HIT = hip_get_default_local_hit_from_hipd() ;
+					HIP_INFO_HIT("Default hi is ",default_HIT);
 					
 
+					/* if dst_addr is a HIT and default_local_hit is the same as dst_addr, 
+					 *  allow it pass.
+					 */
+					if(ipv6_addr_is_hit(&dst_addr) && 
+					   IN6_ARE_ADDR_EQUAL(&dst_addr, default_HIT))
+					{
+						HIP_DEBUG("Reinjection packet passed\n");
 
+						allow_packet(hndl, m->packet_id);
+					}
 					
 					if (hip_userspace_ipsec  &&  ipv6Traffic == 1 
 					    && ipv6_addr_is_hit(&src_addr) && ipv6_addr_is_hit(&dst_addr)) /* && if (packet == IPv6 && hip_is_hit(dst && src)*/ 
@@ -1681,7 +1753,9 @@ int main(int argc, char **argv)
 	extern char *optarg;
 	extern int optind, optopt;
 	int errflg = 0, killold = 0;
-
+	
+	
+	
 	check_and_write_default_config();
 
 	hip_set_logdebug(LOGDEBUG_NONE);
@@ -1792,7 +1866,12 @@ int main(int argc, char **argv)
       	HIP_DEBUG("init_timeout_checking: no thread implementation\n");
 #endif //G_THREADS_IMPL_NONE
 		//HIP_DEBUG("Timeout val = %d", timeout_val);
-      	g_thread_init(NULL);
+      	
+	/* Get the default_HIT gloable value*/
+	
+	// hip_get_default_hit(&default_HIT);
+	
+	g_thread_init(NULL);
   
   	init_timeout_checking(timeout);
   	control_thread_init();
