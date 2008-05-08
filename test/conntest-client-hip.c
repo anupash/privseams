@@ -42,6 +42,7 @@ int main(int argc, char *argv[]) {
 	int socktype = -1, err = 0;
 	const char *cfile = "default";
 	char usage[100];
+	char ping_help[512];
 	in_port_t port = 0;
 
 	sprintf(usage, "Usage: %s <host> tcp|udp <port>", argv[0]);
@@ -90,11 +91,36 @@ int main(int argc, char *argv[]) {
 			 "\e[92mSUCCESS\e[00m ===\n");
 		return EXIT_SUCCESS;
 	} else {
+		HIP_DEBUG("err: %d, errno: %d .\n", err, errno);
+
+		/* Get a help string for pinging etc. */
+		in6_addr_t tmp;
+		if(inet_pton(AF_INET, argv[1], &tmp) > 0) {
+			sprintf(ping_help, "You can try 'ping %s' or\n"
+				"'traceroute %s' to track down the problem.\n",
+				argv[1], argv[1]);
+		} else if (inet_pton(AF_INET6, argv[1], &tmp) > 0) {
+			sprintf(ping_help, "You can try 'ping6 %s' or\n"
+				"'traceroute6 %s' to track down the problem.\n",
+				argv[1], argv[1]);
+		} else {
+			sprintf(ping_help, "You can try the 'ping', 'ping6', "\
+				"'traceroute' or 'traceroute6' programs to\n"\
+				"track down the problem.\n");
+		}
+		
 		if(err == -ECONNREFUSED) {
 			HIP_INFO("The peer was reached but it refused the "\
 				 "connection.\nThere is no one listening on "\
 				 "the remote address.\nDo you have a server "\
 				 "running at the other end?\n");
+		} else if(err == -ENETUNREACH) {
+			HIP_INFO("Network is unreachable.\n%s", ping_help);
+		} else if(err == -EBADF) {
+			HIP_INFO("Bad file descriptor.\nThe file descriptor "\
+				 "used when trying to connect to the remote "\
+				 "host is not a valid index in the "\
+				 "descriptor table.\n");
 		} else if(err == -1000) {
 			HIP_INFO("Error when retrieving address information for "\
 				 "the peer.\nDo you have a local HIP daemon up "\
