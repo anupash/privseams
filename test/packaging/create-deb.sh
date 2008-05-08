@@ -245,7 +245,7 @@ copy_and_package_files ()
     cp tools/hosts.py $PKGDIR/usr/bin/
     cp tools/pyip6.py $PKGDIR/usr/bin/
     cp tools/util.py $PKGDIR/usr/bin/
-    cp tools/DNS/*py* $PKGDIR/usr/share/pyshared/DNS
+    cp tools/DNS/*py $PKGDIR/usr/share/pyshared/DNS
 
     chmod ugo+rx $PKGDIR/usr/bin/*.py
 
