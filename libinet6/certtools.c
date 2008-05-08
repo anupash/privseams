@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <netinet/in.h>
+#include <openssl/rsa.h>
 #include "certtools.h"
 #include "debug.h"
 #include "ife.h"
@@ -29,7 +30,7 @@
 
 /**  
  * Function to build the create minimal SPKI cert  
- * @param minimal_content holds the struct hip_cert_spki_header containing 
+ * @param minimal_content holds the struct hip_cert_spki_info containing 
  *                        the minimal needed information for cert object, 
  *                        also contains the char table where the cert object 
  *                        is to be stored
@@ -201,7 +202,7 @@ out_err:
 /**
  * Function for injecting objects to cert object
  *
- * @param to hip_cert_spki_header containing the char table where to insert
+ * @param to hip_cert_spki_info containing the char table where to insert
  * @param after is a char pointer for the regcomp after which the inject happens
  * @param what is char pointer of what to 
  *

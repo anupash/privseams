@@ -93,8 +93,9 @@ struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(
 	list_for_each(item, db, c) {
 		id_entry = list_entry(item);
                 
-		HIP_DEBUG("ALGO VALUE :%d, algo value of id entry :%d\n",
+		_HIP_DEBUG("ALGO VALUE :%d, algo value of id entry :%d\n",
 			  algo, hip_get_host_id_algo(id_entry->host_id));
+                _HIP_DEBUG_HIT("Comparing HIT", &id_entry->lhi.hit);
                 
 		if ((hit == NULL || !ipv6_addr_cmp(&id_entry->lhi.hit, hit)) &&
 		    (algo == HIP_ANY_ALGO ||

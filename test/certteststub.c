@@ -26,6 +26,7 @@ int main(int argc, char *argv[])
         struct hip_common *msg;
         struct in6_addr *defhit;
         struct hip_tlv_common *current_param = NULL;
+        struct endpoint_hip *endp = NULL;
 
         HIP_DEBUG("Starting to test SPKI certficate tools\n");
         HIP_DEBUG("Hipd has to run otherwise this will hang\n");
@@ -39,13 +40,17 @@ int main(int argc, char *argv[])
         time(&not_before);
         time(&not_after);
 
-        HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEFAULT_HIT,0),-1, "Fail to get hits");
+        /* get the first RSA HIT */
+        HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HITS,0),-1, "Fail to get hits");
         hip_send_recv_daemon_info(msg);
 	
         while((current_param = hip_get_next_param(msg, current_param)) != NULL) {
-                defhit = (struct in6_addr *)hip_get_param_contents_direct(current_param);
-                set_hit_prefix(defhit);
-                HIP_INFO_HIT("default hi is ",defhit);
+                endp = (struct endpoint_hip *)
+                        hip_get_param_contents_direct(current_param);
+                if (endp->algo == HIP_HI_RSA) {
+                        defhit = &endp->id.hit;
+                        break;
+                }
         }
         HIP_DEBUG("Add 3 000 000 seconds to time now (for not_after)\n");
         not_after += 3000000;
@@ -55,7 +60,7 @@ int main(int argc, char *argv[])
                                   &not_before,
                                   &not_after);
 
-        HIP_DEBUG("Certificate contents after create cert:\n"
+        HIP_DEBUG("Certificate contents after all is done:\n"
                   "%s\n", cert->cert);
 
         HIP_DEBUG("If there was no errors above, \"everything\" is OK\n");
