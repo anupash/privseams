@@ -100,7 +100,7 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 
 	HIP_IFE(((hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0)) < 0), EHIP);
 
-	err = 0, errno = 0;
+	errno = 0;
 	for(port=1023; port > 25 && err != EACCES && errno != 13 && errno != 22; port-- ) 
 	{
 		addr.sin6_port = htons(port);
@@ -109,9 +109,14 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 	}
 	
 	if (err == -1) {
-		HIP_ERROR("Error %d bind() wasn't succesful.\n",errno);
-		err = -1;
-		goto out_err;
+		if (errno == 13) {
+			HIP_DEBUG("Using ephemeral port number\n");
+			errno = 0;
+		} else {
+			HIP_ERROR("Error %d bind() wasn't succesful.\n",errno);
+			err = -1;
+			goto out_err;
+		}
 	}
 	else
 	{
