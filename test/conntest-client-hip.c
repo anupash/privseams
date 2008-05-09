@@ -94,20 +94,9 @@ int main(int argc, char *argv[]) {
 		HIP_DEBUG("err: %d, errno: %d .\n", err, errno);
 
 		/* Get a help string for pinging etc. */
-		in6_addr_t tmp;
-		if(inet_pton(AF_INET, argv[1], &tmp) > 0) {
-			sprintf(ping_help, "You can try 'ping %s' or\n"
-				"'traceroute %s' to track down the problem.\n",
-				argv[1], argv[1]);
-		} else if (inet_pton(AF_INET6, argv[1], &tmp) > 0) {
-			sprintf(ping_help, "You can try 'ping6 %s' or\n"
-				"'traceroute6 %s' to track down the problem.\n",
-				argv[1], argv[1]);
-		} else {
-			sprintf(ping_help, "You can try the 'ping', 'ping6', "\
-				"'traceroute' or 'traceroute6' programs to\n"\
-				"track down the problem.\n");
-		}
+		sprintf(ping_help, "You can try the 'ping', 'ping6', "\
+			"'traceroute' or 'traceroute6' programs to\n"\
+			"track down the problem.\n");
 		
 		if(err == -ECONNREFUSED) {
 			HIP_INFO("The peer was reached but it refused the "\

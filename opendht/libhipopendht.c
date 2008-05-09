@@ -50,7 +50,7 @@ int init_dht_gateway_socket(int sockfd)
 /** 
  * resolve_dht_gateway_info - Resolves the gateway address
  * @param gateway_name FQDN of the gateway
- * @param gateway Addrinfo struct here the result will be stored
+ * @param gateway Addrinfo struct where the result will be stored
  *
  * @return Returns 0 on success otherwise -1
  */

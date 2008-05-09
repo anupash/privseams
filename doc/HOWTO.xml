@@ -1110,8 +1110,8 @@
 	  maximum_lifetime = "3600"</programlisting>
 	These values are seconds. However, the registration extension
 	uses an 8-bit encoding to represent the lifetimes. The values that are
-	given in the configuration file are used to calculate the real life
-	time and therefore do not represent the exact life time a such. The
+	given in the configuration file are used to calculate the reallife
+	time and therefore do not represent the exact life time as such. The
 	formula for the calculations is given in the registration draft:
 	"draft-ietf-hip-registration-02".
       </para>

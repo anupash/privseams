@@ -1509,10 +1509,10 @@ int getaddrinfo(const char *name, const char *service,
 	struct gaih *g = gaih, *pg = NULL;
 	struct gaih_service gaih_service, *pservice = NULL;
 
-	/*if (name != NULL && name[0] == '*' && name[1] == 0)
+	if (name != NULL && name[0] == '*' && name[1] == 0)
 		name = NULL;
 	if (service != NULL && service[0] == '*' && service[1] == 0)
-	service = NULL;*/
+	service = NULL;
 
 	/* Return "NAME or SERVICE is unknown." error value. */
 	if (name == NULL && service == NULL)

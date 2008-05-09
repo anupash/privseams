@@ -28,29 +28,39 @@ int hip_peek_recv_total_len(int socket, int encap_hdr_size)
 	char *msg = NULL;
 	hip_common_t *hip_hdr = NULL;
 	
-	msg = (char*) malloc(hdr_size);
+        /* We're using system call here add thus reseting errno. */
+	errno = 0;
+	
+	msg = (char *)malloc(hdr_size);
 	
 	if(msg == NULL) {
 		HIP_ERROR("Error allocating memory.\n");
 		err = -ENOMEM;
+		goto out_err;
 	}
 	
-	HIP_IFE(((bytes =
-		  recvfrom(socket, msg, hdr_size, MSG_PEEK, NULL, NULL))
-		 != hdr_size), err = -errno);
+
+	bytes = recvfrom(socket, msg, hdr_size, MSG_PEEK, NULL, NULL);
 	
-	/* Switched from IFEL to IFE above to clean conntest-client-gai
-	   output. Previous IFEL output here:
-	   "Receive peek error when trying to communicate with the HIP "\
-	   "daemon.\nIs the daemon running?\n"); */
-	
+	if(bytes != hdr_size) {
+		err = bytes;
+		goto out_err;
+	}
+
 	hip_hdr = (struct hip_common *) (msg + encap_hdr_size);
 	bytes = hip_get_msg_total_len(hip_hdr);
 	
-	HIP_IFEL((bytes > HIP_MAX_PACKET), -EMSGSIZE,
-		 "HIP message max length exceeded.\n");
-	HIP_IFEL((bytes == 0), -EBADMSG,
-		 "HIP message is of zero length\n");
+	if(bytes == 0) {
+		err = -EBADMSG;
+		errno = EBADMSG;
+		HIP_ERROR("HIP message is of zero length.\n");
+		goto out_err;
+	} else if(bytes > HIP_MAX_PACKET) {
+		err = -EMSGSIZE;
+		errno = EMSGSIZE;
+		HIP_ERROR("HIP message max length exceeded.\n");
+		goto out_err;
+	}
 
 	bytes += encap_hdr_size;
 	
@@ -65,22 +75,22 @@ int hip_peek_recv_total_len(int socket, int encap_hdr_size)
 	return bytes;
 }
 
-int hip_daemon_connect(int hip_user_sock, struct hip_common *msg) {
-	int err = 0, n, len; // app_fd = 0;
+int hip_daemon_connect(int hip_user_sock) {
+	int err = 0, n = 0, len = 0;
 	int hip_agent_sock = 0;
-	//socklen_t alen = 0;
-	//struct sockaddr_un app_addr, daemon_addr;
 	struct sockaddr_in6 daemon_addr;
+	/* We're using system call here add thus reseting errno. */
+	errno = 0;
 
-        bzero(&daemon_addr, sizeof(daemon_addr));
-        daemon_addr.sin6_family = AF_INET6;
-        daemon_addr.sin6_port = HIP_DAEMON_LOCAL_PORT;
-        daemon_addr.sin6_addr = in6addr_loopback;
-
-	HIP_IFEL(connect(hip_user_sock, (struct sockaddr *) &daemon_addr,
-			 sizeof(daemon_addr)), -1,
-		 "connection to daemon failed\n");
-
+	memset(&daemon_addr, 0, sizeof(daemon_addr));
+	daemon_addr.sin6_family = AF_INET6;
+        daemon_addr.sin6_port   = HIP_DAEMON_LOCAL_PORT;
+        daemon_addr.sin6_addr   = in6addr_loopback;
+	
+	HIP_IFE(connect(hip_user_sock, (struct sockaddr *) &daemon_addr,
+			sizeof(daemon_addr)), -1);
+	
+	
  out_err:
 
 	return err;
@@ -89,12 +99,19 @@ int hip_daemon_connect(int hip_user_sock, struct hip_common *msg) {
 int hip_send_recv_daemon_info(struct hip_common *msg) {
 	
 	int hip_user_sock = 0, err = 0, n = 0, len = 0;
-	
-	HIP_IFE(((hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0)) < 0), EHIP);
-	
-	HIP_IFEL(err = hip_daemon_connect(hip_user_sock, msg), -1,
-		 "Sending of msg failed (no rcv)\n");
+	/* We're using system call here add thus reseting errno. */
+	errno = 0;
 
+	hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0);
+	
+	if(hip_user_sock < 0){
+		err = -1;
+		goto out_err;
+	}
+	
+	HIP_IFEL(hip_daemon_connect(hip_user_sock), -1,
+		 "Connecting socket to daemon failed.\n");
+	
 	if ((len = hip_get_msg_total_len(msg)) < 0) {
 		err = -EBADMSG;
 		goto out_err;
@@ -104,10 +121,10 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 	
 	if (n < len) {
 		HIP_ERROR("Could not send message to daemon.\n");
-		err = -errno;
+		err = -ECOMM;
 		goto out_err;
 	}
-
+	
 	_HIP_DEBUG("Waiting to receive daemon info.\n");
 	
 	if((len = hip_peek_recv_total_len(hip_user_sock, 0)) < 0) {
@@ -116,10 +133,15 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 	}
 
 	n = recv(hip_user_sock, msg, len, 0);
-			
-	if (n < sizeof(struct hip_common)) {
+	
+	if (n == 0) {
+		HIP_INFO("The HIP daemon has performed an "\
+			 "orderly shutdown.\n");
+		err = EHIP;
+		goto out_err;
+	} else if(n < sizeof(struct hip_common)) {
+		err = -1;
 		HIP_ERROR("Could not receive message from daemon.\n");
-		err = -errno;
 		goto out_err;
 	}
 	
@@ -145,7 +167,7 @@ int hip_send_daemon_info_wrapper(struct hip_common *msg, int send_only) {
 	
 	HIP_IFE(((hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0)) < 0), -1);
 
-	HIP_IFEL(err = hip_daemon_connect(hip_user_sock, msg), -1,
+	HIP_IFEL(err = hip_daemon_connect(hip_user_sock), -1,
 		 "Sending of msg failed (no rcv)\n");
 
 	len = hip_get_msg_total_len(msg);

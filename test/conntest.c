@@ -427,7 +427,7 @@ int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
 				bytes_sent += sendnum;
 			}
 		
-			/* receive() returns the number of bytes sent, negative
+			/* recv() returns the number of bytes sent, negative
 			   on error or zero when the peer has performed an
 			   orderly shutdown. */
 			if (bytes_received < datalen) {
