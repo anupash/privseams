@@ -25,7 +25,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 	hip_hit_t *hit, *src_hit, *dst_hit;
 	struct in6_addr *src_ip, *dst_ip;
 	hip_ha_t *entry = NULL;
-	int err = 0, msg_type, n = 0, len = 0, state=0;
+	int err = 0, msg_type, n = 0, len = 0, state = 0;
 	hip_ha_t * server_entry = NULL;
 	HIP_KEA * kea = NULL;
 	int send_response = (src ? 1 : 0);
@@ -68,18 +68,12 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 	case SO_HIP_BOS:
 		err = hip_send_bos(msg);
 		break;
-	case SO_HIP_SET_NAT_ON:
-		/* Sets a flag for each host association that the current
-		   machine is behind a NAT. */
+	case SO_HIP_SET_NAT_PLAIN_UDP:
+	case SO_HIP_SET_NAT_ICE_UDP:
+	case SO_HIP_SET_NAT_NONE:
 		HIP_DEBUG("Handling NAT ON user message.\n");
-		HIP_IFEL(hip_nat_on(), -1, "Error when setting daemon NAT status to \"on\"\n");
-		hip_agent_update_status(HIP_NAT_ON, NULL, 0);
-		break;
-	case SO_HIP_SET_NAT_OFF:
-		/* Removes the NAT flag from each host association. */
-		HIP_DEBUG("Handling NAT OFF user message.\n");
-		HIP_IFEL(hip_nat_off(), -1, "Error when setting daemon NAT status to \"off\"\n");
-		hip_agent_update_status(HIP_NAT_OFF, NULL, 0);
+		HIP_IFEL(hip_user_nat_mode(msg_type), -1, "Error when setting daemon NAT status to \"on\"\n");
+		hip_agent_update_status(msg_type, NULL, 0);
 		break;
         case SO_HIP_SET_LOCATOR_ON:
                 HIP_DEBUG("Setting LOCATOR ON\n");
@@ -448,9 +442,8 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		currently only if the global NAT status is on, we must call
 		hip_nat_on() (which in turn sets the NAT status on for all host
 		associations). */
-	     HIP_IFEL(hip_nat_on(), -1, "Error when setting daemon NAT status"\
-		      "to \"on\"\n");
-	     hip_agent_update_status(HIP_NAT_ON, NULL, 0);
+	     hip_set_nat_mode(HIP_NAT_MODE_ICE_UDP);
+	     hip_agent_update_status(hip_get_nat_mode(), NULL, 0);
 	     
 	     entry->peer_udp_port = HIP_NAT_UDP_PORT;
 	     /* Send a I1 packet to relay. */

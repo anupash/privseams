@@ -97,11 +97,9 @@ extern int hip_nat_status;
 
 #define ICE_ROLE_CONTROLLING  PJ_ICE_SESS_ROLE_CONTROLLING
 
-int hip_nat_on();
-int hip_nat_off();
-int hip_nat_is();
-int hip_nat_off_for_ha(hip_ha_t *, void *);
-int hip_nat_on_for_ha(hip_ha_t *, void *);
+int hip_ha_set_nat_mode(hip_ha_t *entry, void *mode);
+int hip_get_nat_mode();
+void hip_set_nat_mode(int mode);
 void hip_nat_randomize_nat_ports();
 int hip_nat_refresh_port();
 int hip_nat_send_keep_alive(hip_ha_t *, void *);

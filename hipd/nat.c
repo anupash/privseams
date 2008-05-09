@@ -46,9 +46,9 @@ in_port_t hip_nat_rand_port1 = HIP_NAT_UDP_PORT;
 in_port_t hip_nat_rand_port2 = HIP_NAT_UDP_PORT;
 
 /**
- * Sets NAT status "on".
+ * Sets NAT status
  * 
- * Sets NAT status "on" for each host association in the host association
+ * Sets NAT mode for each host association in the host association
  * database.
  *
  * @return zero on success, or negative error value on error.
@@ -56,16 +56,28 @@ in_port_t hip_nat_rand_port2 = HIP_NAT_UDP_PORT;
  *         <code>"hipconf hip nat peer_hit"</code> This would be helpful in
  *         multihoming case.
  */ 
-int hip_nat_on()
+int hip_user_nat_mode(int nat_mode)
 {
-	int err = 0;
+	int err = 0, nat;
 	_HIP_DEBUG("hip_nat_on() invoked.\n");
 #if HIP_UDP_PORT_RANDOMIZING 
 	hip_nat_randomize_nat_ports();
 #endif
-	hip_nat_status = 1;
-	
-	HIP_IFEL(hip_for_each_ha(hip_nat_on_for_ha, NULL), 0,
+	switch (nat) {
+	case SO_HIP_SET_NAT_PLAIN_UDP:
+		nat = HIP_NAT_MODE_PLAIN_UDP;
+		break;
+	case SO_HIP_SET_NAT_NONE:
+		nat = HIP_NAT_MODE_NONE;
+		break;
+	case SO_HIP_SET_NAT_ICE_UDP:
+		nat = HIP_NAT_MODE_ICE_UDP;
+		break;
+	default:
+		err = -1;
+		HIP_IFEL(1, -1, "Unknown nat mode %d\n", nat_mode);
+	} 
+	HIP_IFEL(hip_for_each_ha(hip_ha_set_nat_mode, &nat), 0,
 	         "Error from for_each_ha().\n");
 
 out_err:
@@ -73,34 +85,19 @@ out_err:
 }
 
 /**
- * Sets NAT status "off".
- *
- * Sets NAT status "off" for each host association in the host association
- * database.
- * 
- * @return zero on success, or negative error value on error.
- * @todo   Extend this to handle peer_hit case for
- *         <code>"hipconf hip nat peer_hit"</code> This would be helpful in
- *         multihoming case.
+ * Get HIP NAT status.
  */
-int hip_nat_off()
+int hip_get_nat_mode()
 {
-	int err = 0;
-
-	hip_nat_status = 0;
-	HIP_IFEL(hip_for_each_ha(hip_nat_off_for_ha, NULL), 0,
-		 "Error from for_each_ha().\n");
- out_err:
-	return err;
+	return hip_nat_status;
 }
-
 
 /**
  * Get HIP NAT status.
  */
-int hip_nat_is()
+void hip_set_nat_mode(int mode)
 {
-	return hip_nat_status;
+	hip_nat_status = mode;
 }
 
 
@@ -108,52 +105,24 @@ int hip_nat_is()
  * Sets NAT status "on" for a single host association.
  *
  * @param entry    a pointer to a host association for which to set NAT status.
- * @param not_used this parameter is not used (but it's needed).
+ * @param mode     nat mode
  * @return         zero.
  * @note           the status is changed just for the parameter host 
  *                 association. This function does @b not insert the host
  *                 association into the host association database.
  */
-int hip_nat_on_for_ha(hip_ha_t *entry, void *not_used)
+int hip_ha_set_nat_mode(hip_ha_t *entry, void *mode)
 {
-	/* Parameter not_used is needed because this function is called from
-	   hip_nat_on() which calls hip_for_each_ha(). hip_for_each_ha()
-	   requires a function pointer as parameter which in turn has two
-	   parameters. */
 	int err = 0;
-	HIP_DEBUG("hip_nat_on_for_ha() invoked.\n");
+	int nat_mode = *((int *) mode);
+	HIP_DEBUG("\n");
 
 	if(entry)
 	{
 		hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
-		entry->nat_mode = 1;
+		entry->nat_mode = nat_mode;
 		HIP_DEBUG("NAT status of host association %p: %d\n",
 			  entry, entry->nat_mode);
-	}
- out_err:
-	return err;
-}
-
-/**
- * Sets NAT status "off" for a single host association.
- *
- * @param entry    a pointer to a host association for which to set NAT status.
- * @param not_used this parameter is not used (but it's needed).
- * @return         zero.
- * @note           the status is changed just for the parameter host 
- *                 association. This function does @b not insert the host
- *                 association into the host association database.
- */
-int hip_nat_off_for_ha(hip_ha_t *entry, void *not_used)
-{
-	/* Check hip_nat_on_for_ha() for further explanation on "not_used". */
-	int err = 0;
-	_HIP_DEBUG("hip_nat_off_for_ha() invoked.\n");
-
-	if(entry)
-	{
-		entry->nat_mode = 0;
-		hip_hadb_set_xmit_function_set(entry, &default_xmit_func_set);
 	}
  out_err:
 	return err;

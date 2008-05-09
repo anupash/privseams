@@ -68,6 +68,10 @@
 #define HIP_DEFAULT_AUTH             HIP_AUTH_SHA    /* AUTH transform in R1 */
 #define HIP_DEFAULT_RVA_LIFETIME     600             /* in seconds? */
 
+#define HIP_NAT_MODE_NONE               0
+#define HIP_NAT_MODE_PLAIN_UDP          1
+#define HIP_NAT_MODE_ICE_UDP            2 
+
 /** @todo remove HIP_HASTATE_SPIOK */
 typedef enum { 
 	HIP_HASTATE_INVALID = 0,

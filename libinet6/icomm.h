@@ -57,8 +57,8 @@
 #define SO_HIP_CONF_PUZZLE_SET                  123
 #define SO_HIP_CONF_PUZZLE_INC                  124
 #define SO_HIP_CONF_PUZZLE_DEC                  125
-#define SO_HIP_SET_NAT_ON			126
-#define SO_HIP_SET_NAT_OFF			127
+#define SO_HIP_SET_NAT_PLAIN_UDP		126
+#define SO_HIP_SET_NAT_NONE			127
 #define SO_HIP_SET_OPPORTUNISTIC_MODE           128 /*Bing, trial */
 #define SO_HIP_QUERY_OPPORTUNISTIC_MODE         129
 #define SO_HIP_ANSWER_OPPORTUNISTIC_MODE_QUERY  130
@@ -97,6 +97,7 @@
 #define SO_HIP_SET_OPPTCP_ON                    159
 #define SO_HIP_SET_OPPTCP_OFF                   160
 #define SO_HIP_TRANSFORM_ORDER                  161
+#define SO_HIP_SET_NAT_ICE_UDP			162
 /** @} */
 
 #endif /* _HIP_ICOMM */
