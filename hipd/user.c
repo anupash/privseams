@@ -65,6 +65,8 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr *originato
 	/* /agent/connhipd.c:     strcpy(agent_addr.sun_path, HIP_AGENTADDR_PATH); */
 	/* struct sockaddr_un {char sun_path[108]; } */
 
+	err = 0;
+
 	if (root_port || ((strcmp(&src.un.sun_path,HIP_AGENTADDR_PATH) == 0) && is_un))
 	{
 		HIP_DEBUG("The operation is allowed.\n");
@@ -113,6 +115,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr *originato
 			break;
 		default:
 			HIP_ERROR("The operation isn't allowed.\n");
+			err = -1;
 			goto out_err;
 		}
 	}
