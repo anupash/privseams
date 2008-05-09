@@ -263,6 +263,12 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
             HIP_DEBUG("LOCATOR2 parameter building failed\n");
        		_HIP_DUMP_MSG(msg);
         }
+ 		  
+ 	     /**
+ 	      * NAT transform parameter is added in r1
+ 	      * 
+ 	      * */
+ 		hip_build_param_nat_transform(msg, hip_get_nat_control());
  	/********** PUZZLE ************/
 	HIP_IFEL(hip_build_param_puzzle(msg, cookie_k,
 					42 /* 2^(42-32) sec lifetime */, 
@@ -722,11 +728,7 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 	     }
 	}
 #endif
-     /**
-      * NAT transform parameter is added in r1
-      * 
-      * */
-	hip_build_param_nat_transform(r1pkt, hip_get_nat_control());
+
 	/* R1 is send on UDP if R1 destination port is 50500. This is if:
 	   a) the I1 was received on UDP.
 	   b) the received I1 packet had a RELAY_FROM parameter. */

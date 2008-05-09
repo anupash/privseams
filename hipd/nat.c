@@ -950,7 +950,10 @@ int hip_external_ice_receive_pkt(struct hip_common * msg, int pkt_size, in6_addr
 
 uint8_t hip_get_nat_control(){
 #ifdef HIP_USE_ICE
-	return 1;
+	 if(hip_we_are_relay())
+		 return 0;
+	 else 
+		 return 1;
 #else
 	return 0;
 #endif

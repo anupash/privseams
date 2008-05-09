@@ -831,6 +831,22 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
             if ((err = hip_build_locators(i2)) < 0) 
                 HIP_DEBUG("LOCATOR parameter building failed\n");
         }
+        
+    	/***
+    	 * add nat transform parameter
+    	 * */  
+    	  if(entry->nat_control){
+    #ifdef HIP_USE_ICE
+    		  if(entry->nat_control & HIP_NAT_TRANSFORM_ICE){
+    			  HIP_DEBUG("send nat transform in I2\n");
+    			  hip_build_param_nat_transform(i2,HIP_NAT_TRANSFORM_ICE);
+    			  entry->nat_control = HIP_NAT_TRANSFORM_ICE;
+    		  }
+    #else
+    		  entry->nat_control = 0; 
+    #endif
+    	  }        
+        
 	/********** SOLUTION **********/
 	{
 		struct hip_puzzle *pz;
@@ -1184,76 +1200,17 @@ int hip_handle_r1(struct hip_common *r1,
 		HIP_UNLOCK_HA(entry);
 	}
 
-        /***** LOCATOR PARAMETER ******/
+        /***** LOCATOR PARAMETER ******
         locator = hip_get_param(r1, HIP_PARAM_LOCATOR);
         if (locator)
-            {   /*
-        		HIP_DEBUG_LOCATOR(locator);
-                // Lets save the LOCATOR to the entry 'till we
-                 //  get the esp_info in r2 then handle it 
-              	n_addrs1 = hip_get_locator_addr_item1_count(locator);
-              	_HIP_DEBUG("hip_handle_r1() count type1 locators1 &d.\n" , n_addrs1);
-                n_addrs2 = hip_get_locator_addr_item2_count(locator);
-                _HIP_DEBUG("hip_handle_r1() count type2 locators2 &d.\n" , n_addrs2);
-             //   loc_size= hip_get_param_contents_len(locator);
-                loc_size1 = sizeof(struct hip_locator) +
-                    (n_addrs1 * sizeof(struct hip_locator_info_addr_item));
-                    
-                
-                loc_size2 = sizeof(struct hip_locator) +
-                    (n_addrs1 * sizeof(struct hip_locator_info_addr_item2));
-                //reserve space for raw addresses
-                if(n_addrs1){
-                	
-	                HIP_IFEL(!(entry->locator = malloc(loc_size1)), 
-	                       -1, "Malloc for entry->locators failed\n");  
-	                //copy the header       
-	                memcpy(entry->locator, locator, sizeof(struct hip_locator)); 
-	                //modify the length
-	                hip_set_locator_addr_length(entry->locator, loc_size1);
-	                // save the starting address for the first locator address.
-	                address1= (struct hip_locator_info_addr_item*) (entry->locator + 1);
-                } 
-                //reserve space for transport addresses
-                if(n_addrs2){
-		            HIP_IFEL(!(entry->locator2 = malloc(loc_size2)), 
-		                   -1, "Malloc for entry->locator2s failed\n");
-		            memcpy(entry->locator2, locator, sizeof(struct hip_locator)); 
-                	hip_set_locator_addr_length(entry->locator2, loc_size2);
-                	address2 = (struct hip_locator_info_addr_item2* ) (entry->locator2 + 1);
-                }
-                
-                //set the first locator address pointer.
-                locator_address = (( char*)locator) + sizeof(struct hip_locator);
-                
-                //copy type 1 locator into entry->locator
-                //copy type2 into entry->locator2
-                for(;locator_address <((char*)locator) + hip_get_param_contents_len(locator);){
-                	if(((struct hip_locator_info_addr_item*)locator_address)->locator_type == 1){
-                		memcpy(address1, locator_address, sizeof(struct hip_locator_info_addr_item));
-                		locator_address += sizeof(struct hip_locator_info_addr_item);
-                		address1 += 1;
-                	}
-                	else if(((struct hip_locator_info_addr_item*)locator_address)->locator_type == 2){
-                		memcpy(address2, locator_address, sizeof(struct hip_locator_info_addr_item2));
-                		locator_address += sizeof(struct hip_locator_info_addr_item2);
-                		address2 += 1;
-                	}else 
-                	//unknow address type
-                	locator_address += sizeof(struct hip_locator_info_addr_item);
-                	
-                }
-              */
+            {   
         	n_addrs = hip_get_locator_addr_item_count(locator);
         	loc_size= hip_get_param_contents_len(locator);
         	HIP_IFEL(!(entry->locator = malloc(loc_size)), 
         		                       -1, "Malloc for entry->locators failed\n"); 
             memcpy(entry->locator, locator, loc_size);
             
-            nat_transform = hip_get_param(r1, HIP_PARAM_NAT_TRANSFORM);
-            if(nat_transform){
-            	entry->nat_control = nat_transform->nat_control;
-            }
+          
             
 
 #ifdef CONFIG_HIP_HI3
@@ -1281,6 +1238,12 @@ int hip_handle_r1(struct hip_common *r1,
 	    }
         else
             HIP_DEBUG("R1 did not have locator\n");
+        */
+      nat_transform = hip_get_param(r1, HIP_PARAM_NAT_TRANSFORM);
+	  if(nat_transform){
+	  	entry->nat_control = nat_transform->nat_control;
+	  }    
+        
 
 	/* Check if the incoming R1 has a REG_INFO parameter. */
 	reg_info = hip_get_param(r1, HIP_PARAM_REG_INFO);
@@ -1617,6 +1580,15 @@ int hip_create_r2(struct hip_context *ctx,
 	  	   -1, "hip_blind_build_r2 failed\n");
 	}
 #endif
+	
+
+    HIP_DEBUG("Building LOCATOR parameter in R2\n");
+    if ((err = hip_build_locators(r2)) < 0) 
+        HIP_DEBUG("LOCATOR parameter building failed\n");	
+	
+	
+	
+	
 
 #if defined(CONFIG_HIP_RVS) || defined(CONFIG_HIP_ESCROW)
 	/********** REG_REQUEST **********/
@@ -1649,26 +1621,14 @@ int hip_create_r2(struct hip_context *ctx,
 #ifdef CONFIG_HIP_RVS
 	if(param_type == HIP_PARAM_RELAY_FROM)
 	 {  	   
-	      HIP_INFO("create replay_to parameter in R2");
+	      HIP_INFO("create replay_to parameter in R2\n");
 		  hip_build_param_relay_to(
 		       r2, dest, dest_port);
 	  }
 	  if(send_reg_from)
 	 		hip_build_param_reg_from(r2,i2_saddr, i2_info->src_port);
 #endif
-	/***
-	 * add nat transform parameter
-	 * */  
-	  if(entry->nat_control){
-#ifdef HIP_USE_ICE
-		  if(entry->nat_control & HIP_NAT_TRANSFORM_ICE){
-			  hip_build_param_nat_transform(r2,HIP_NAT_TRANSFORM_ICE);
-			  entry->nat_control = HIP_NAT_TRANSFORM_ICE;
-		  }
-#else
-		  entry->nat_control = 0; 
-#endif
-	  }
+
 	  
 	err = entry->hadb_xmit_func->hip_send_pkt(i2_daddr, i2_saddr,
 						  (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
@@ -2299,10 +2259,11 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
         locator = hip_get_param(i2, HIP_PARAM_LOCATOR);
         nat_transform = hip_get_param(i2, HIP_PARAM_NAT_TRANSFORM);
         if(nat_transform){
-        	
+        	HIP_DEBUG("handle I2 nat transform %d\n",nat_transform->nat_control);
         	entry->nat_control = nat_transform->nat_control;
         }
         else{
+        	HIP_DEBUG("handle I2 nat transform not found \n");
         	entry->nat_control = 0;
         }
         if (locator && esp_info)
@@ -2316,6 +2277,7 @@ int hip_handle_i2(struct hip_common *i2, struct in6_addr *i2_saddr,
                 //if the client  choose to use ICE 
         if(!(entry->nat_control & HIP_NAT_TRANSFORM_ICE)){
         	//TODO check other nat control type. currently only ICE 
+        	 HIP_DEBUG("ice is not selected\n");
         	 if (!use_blind) {
         		    HIP_IFEL(hip_setup_hit_sp_pair(&ctx->input->hits,
         						   &ctx->input->hitr,
@@ -2517,6 +2479,7 @@ int hip_handle_r2(struct hip_common *r2,
 	struct hip_context *ctx = NULL;
  	struct hip_esp_info *esp_info = NULL;
 	struct hip_spi_out_item spi_out_data;
+	struct hip_locator *locator = NULL;
 	int tfm, err = 0;
 	uint32_t spi_recvd, spi_in;
 	int retransmission = 0;
@@ -2591,7 +2554,7 @@ int hip_handle_r2(struct hip_common *r2,
 	HIP_DEBUG("src %d, dst %d\n", r2_info->src_port, r2_info->dst_port);
 
 
-
+	locator = hip_get_param(r2, HIP_PARAM_LOCATOR);
 	
 	
 	
@@ -2663,12 +2626,16 @@ int hip_handle_r2(struct hip_common *r2,
 	err = 0;
 
     /***** LOCATOR PARAMETER ******/
-    if (entry->locator)
+	
+	
+	
+    if (locator)
         {
-    		
+    		HIP_DEBUG("handling locators in R2\n");
             HIP_IFEL(hip_update_handle_locator_parameter(entry, 
-                     entry->locator, esp_info),
+                     locator, esp_info),
                      -1, "hip_update_handle_locator_parameter failed\n");
+        
             
             
 #ifdef HIP_USE_ICE
@@ -2737,7 +2704,7 @@ int hip_handle_r2(struct hip_common *r2,
 #endif	           
         }
     else
-        HIP_DEBUG("entry->locator did not have locators from r1\n");
+        HIP_DEBUG("locator did not have locators from R2\n");
     HIP_DEBUG("santtu: end of handling locator in r2");
     
     
