@@ -56,6 +56,8 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr *originato
 		goto out_err;
 	}
 	
+	/* htons(port); */
+
 	msg_type = hip_get_msg_type(msg);
 	HIP_DEBUG("Message type %d\n", msg_type);
       
@@ -114,9 +116,11 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr *originato
 		case SO_HIP_TRIGGER_BEX:
 			break;
 		default:
-			HIP_ERROR("The operation isn't allowed.\n");
+			HIP_ERROR("The operation isn't allowed.\n",msg_type);
+			send_response = 1;
 			err = -1;
 			goto out_err;
+			
 		}
 	}
 	
