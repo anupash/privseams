@@ -100,22 +100,23 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 
 	HIP_IFE(((hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0)) < 0), EHIP);
 
-	err = 0;
-	for(port=1023; port--; (port > 25 && err != EACCES)) 
+	err = 0, errno = 0;
+	for(port=1023; port > 25 && err != EACCES && errno != 13 && errno != 22; port-- ) 
 	{
 		addr.sin6_port = htons(port);
 		err = bind(hip_user_sock,(struct sockaddr *)&addr, sizeof(struct sockaddr_in6));
+                HIP_DEBUG("trying bind() to port %d.\n", port);
 	}
-
+	
 	if (err == -1) {
-		HIP_ERROR("Error bind() wasn't succesful.\n");
+		HIP_ERROR("Error %d bind() wasn't succesful.\n",errno);
 		err = -1;
 		goto out_err;
 	}
 	else
 	{
-		HIP_INFO("Trying bind()\n", port);
-		_HIP_DEBUG("bind() to port %d was succesful.\n");
+		HIP_INFO("Trying to bind() %d\n", port);
+		_HIP_DEBUG("bind() to port %d was succesful.\n", port);
 
 	}
 
