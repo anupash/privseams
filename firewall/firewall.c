@@ -1268,6 +1268,9 @@ void hip_firewall_userspace_ipsec_output(struct ipq_handle *handle,
 	
 	
 	HIP_DEBUG_HIT("peer hit from ipsec_output: ", &peer_hit);
+	HIP_DEBUG_HIT("source hit from ipsec_output: ", &ip6_hdr->ip6_src);
+	
+	
 
 	hip_addr_to_sockaddr(&peer_hit, &ipv6_addr_to_sockaddr_hit);     
 
@@ -1309,6 +1312,7 @@ void hip_firewall_userspace_ipsec_output(struct ipq_handle *handle,
 		HIP_INFO_HIT("hip_esp_out: default hit is ",default_HIT);
 		
 		hip_addr_to_sockaddr(default_HIT, &sockaddr_local_default_hit);
+		//hip_addr_to_sockaddr(&ip6_hdr->ip6_src, &sockaddr_local_default_hit);
 		
 		hip_esp_output(&sockaddr_local_default_hit, 
 			       ip6_hdr, length_of_packet); /* XX FIXME: LSI */
@@ -1607,16 +1611,11 @@ static void *handle_ip_traffic(void *ptr){
 
 					allow_packet(hndl, m->packet_id);
 				}
-				
-
-				
-
 				else
 	  			{
 					
 					HIP_DEBUG("ret_val_filter_hip value is %d (filter_hip)\n", 
 						  ret_val_filter_hip);
-
 					/* FIX ME */
 					// !!!!!XX FIXME: UGLY KLUDGE!!!!!!!!!
 					allow_packet(hndl, m->packet_id);
@@ -1673,9 +1672,7 @@ static void *handle_ip_traffic(void *ptr){
 					   IN6_ARE_ADDR_EQUAL(&dst_addr, default_HIT))
 					{
 						HIP_DEBUG("Reinjection packet passed\n");
-
 						allow_packet(hndl, m->packet_id);
-						
 					}
 					
 					else if (hip_userspace_ipsec  &&  ipv6Traffic == 1 
