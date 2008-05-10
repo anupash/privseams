@@ -30,53 +30,91 @@ int hip_opptcp = 1;
 int hip_opptcp = 0;
 #endif
 
+
 /* VARABLES FOR SYNCHRONIZATION */
-pthread_t tcp_examiner;
+pthread_t tcp_examinerV4;
 /* the variable turn determines if it's
  * the turn of the firewall loop or of
  * the thread that * examines each tcp packet
  * 1 - the firewall loop
  * 2 - the thread
  */
-int turn = 1;
-pthread_mutex_t turn_mutex           = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t turn_condition_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t  turn_condition_cond  = PTHREAD_COND_INITIALIZER;
+int turnV4 = 1;
+pthread_mutex_t turn_mutexV4           = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t turn_condition_mutexV4 = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t  turn_condition_condV4  = PTHREAD_COND_INITIALIZER;
+
+pthread_t tcp_examinerV6;
+int turnV6 = 1;
+pthread_mutex_t turn_mutexV6           = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t turn_condition_mutexV6 = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t  turn_condition_condV6  = PTHREAD_COND_INITIALIZER;
 
 struct {
 	struct ipq_handle *handle;
 	unsigned long	   packetId;
 	void	  *hdr;
-	int		   trafficType;
+	////int		   trafficType;
 	int		   header_size;
-} examine_data;
+} examine_dataV4, examine_dataV6;
 
 
-static void *tcp_examine_function(){
-	while(1){
-		//lock
-		pthread_mutex_lock(&turn_condition_mutex);
-		while(turn == 1)
-		{
-			pthread_cond_wait(&turn_condition_cond,
-					  &turn_condition_mutex);
+static void *tcp_examine_function(void *ptr){
+	int type = *((int *) ptr);
+
+	if(type == 4){
+		while(1){
+			//lock
+			pthread_mutex_lock(&turn_condition_mutexV4);
+			while(turnV4 == 1)
+			{
+				pthread_cond_wait(&turn_condition_condV4,
+						  &turn_condition_mutexV4);
+			}
+			pthread_mutex_unlock(&turn_condition_mutexV4);
+
+			//critical section
+			examine_incoming_tcp_packet(examine_dataV4.handle,
+						    examine_dataV4.packetId,
+						    examine_dataV4.hdr,
+						    type,//examine_dataV4.trafficType,
+						    examine_dataV4.header_size);
+
+			//unlock
+			pthread_mutex_lock(&turn_mutexV4);
+			turnV4 = 1;
+			pthread_mutex_unlock(&turn_mutexV4);
+			pthread_mutex_lock(&turn_condition_mutexV4);
+			pthread_cond_signal(&turn_condition_condV4);
+			pthread_mutex_unlock(&turn_condition_mutexV4);
 		}
-		pthread_mutex_unlock(&turn_condition_mutex);
+	}
+	else if(type == 6){
+		while(1){
+			//lock
+			pthread_mutex_lock(&turn_condition_mutexV6);
+			while(turnV6 == 1)
+			{
+				pthread_cond_wait(&turn_condition_condV6,
+						  &turn_condition_mutexV6);
+			}
+			pthread_mutex_unlock(&turn_condition_mutexV6);
 
-		//critical section
-		examine_incoming_tcp_packet(examine_data.handle,
-					    examine_data.packetId,
-					    examine_data.hdr,
-					    examine_data.trafficType,
-					    examine_data.header_size);
+			//critical section
+			examine_incoming_tcp_packet(examine_dataV6.handle,
+						    examine_dataV6.packetId,
+						    examine_dataV6.hdr,
+						    type,//examine_dataV6.trafficType,
+						    examine_dataV6.header_size);
 
-		//unlock
-		pthread_mutex_lock(&turn_mutex);
-		turn = 1;
-		pthread_mutex_unlock(&turn_mutex);
-		pthread_mutex_lock(&turn_condition_mutex);
-		pthread_cond_signal(&turn_condition_cond);
-		pthread_mutex_unlock(&turn_condition_mutex);
+			//unlock
+			pthread_mutex_lock(&turn_mutexV6);
+			turnV6 = 1;
+			pthread_mutex_unlock(&turn_mutexV6);
+			pthread_mutex_lock(&turn_condition_mutexV6);
+			pthread_cond_signal(&turn_condition_condV6);
+			pthread_mutex_unlock(&turn_condition_mutexV6);
+		}
 	}
 }
 
@@ -1142,34 +1180,70 @@ static void *handle_ip_traffic(void *ptr){
 						drop_packet(hndl, m->packet_id);
 				}  
 				else if(is_incoming_packet(packetHook)){
-				/*START synchronization with the thread that examines tcp packets*/
-					//lock
-					pthread_mutex_lock(&turn_condition_mutex);
-					while(turn == 2)
-					{
-						pthread_cond_wait(&turn_condition_cond,
-								  &turn_condition_mutex);
+					if(type == 4){
+						/* START synchronization with the thread
+						 * that examines tcp packets V4*/
+						//lock
+						pthread_mutex_lock(&turn_condition_mutexV4);
+						while(turnV4 == 2)
+						{
+							pthread_cond_wait(&turn_condition_condV4,
+									  &turn_condition_mutexV4);
+						}
+						pthread_mutex_unlock(&turn_condition_mutexV4);
+
+						//critical section
+						memcpy(examine_dataV4.handle, hndl,
+							sizeof(struct ipq_handle));
+						examine_dataV4.packetId    = m->packet_id;
+						free(examine_dataV4.hdr);
+						examine_dataV4.hdr    	 = HIP_MALLOC(m->data_len, 0);
+						memcpy(examine_dataV4.hdr, m->payload, m->data_len);
+						////examine_dataV.trafficType = type;
+						examine_dataV4.header_size = hdr_size;
+
+						//unlock
+						pthread_mutex_lock(&turn_mutexV4);
+						turnV4 = 2;
+						pthread_mutex_unlock(&turn_mutexV4);
+						pthread_mutex_lock(&turn_condition_mutexV4);
+						pthread_cond_signal(&turn_condition_condV4);
+						pthread_mutex_unlock(&turn_condition_mutexV4);
+						/* END synchronization with the thread
+						 * that examines tcp packets V4*/
 					}
-					pthread_mutex_unlock(&turn_condition_mutex);
+					else if(type == 6){
+						/* START synchronization with the thread
+						 * that examines tcp packets V6*/
+						//lock
+						pthread_mutex_lock(&turn_condition_mutexV6);
+						while(turnV6 == 2)
+						{
+							pthread_cond_wait(&turn_condition_condV6,
+									  &turn_condition_mutexV6);
+						}
+						pthread_mutex_unlock(&turn_condition_mutexV6);
 
-					//critical section
-					memcpy(examine_data.handle, hndl, sizeof(struct ipq_handle));
-					examine_data.packetId    = m->packet_id;
-					free(examine_data.hdr);
-					examine_data.hdr    	 = HIP_MALLOC(m->data_len, 0);
-					memcpy(examine_data.hdr, m->payload, m->data_len);
-					examine_data.trafficType = type;
-					examine_data.header_size = hdr_size;
+						//critical section
+						memcpy(examine_dataV6.handle, hndl,
+							sizeof(struct ipq_handle));
+						examine_dataV6.packetId    = m->packet_id;
+						free(examine_dataV6.hdr);
+						examine_dataV6.hdr    	 = HIP_MALLOC(m->data_len, 0);
+						memcpy(examine_dataV6.hdr, m->payload, m->data_len);
+						////examine_dataV.trafficType = type;
+						examine_dataV6.header_size = hdr_size;
 
-					//unlock
-					pthread_mutex_lock(&turn_mutex);
-					turn = 2;
-					pthread_mutex_unlock(&turn_mutex);
-					pthread_mutex_lock(&turn_condition_mutex);
-					pthread_cond_signal(&turn_condition_cond);
-					pthread_mutex_unlock(&turn_condition_mutex);
-				/*END synchronization with the thread that examines tcp packets*/
-
+						//unlock
+						pthread_mutex_lock(&turn_mutexV6);
+						turnV6 = 2;
+						pthread_mutex_unlock(&turn_mutexV6);
+						pthread_mutex_lock(&turn_condition_mutexV6);
+						pthread_cond_signal(&turn_condition_condV6);
+						pthread_mutex_unlock(&turn_condition_mutexV6);
+						/* END synchronization with the thread
+						 * that examines tcp packets V6*/
+					}
 				}
 				else if(is_outgoing_packet(packetHook))
 					/*examine_outgoing_tcp_packet(hndl, m->packet_id, packet_hdr, type);*/
@@ -1365,6 +1439,24 @@ int main(int argc, char **argv)
   	control_thread_init();
 
 
+	//threads that examine the packets
+	examine_dataV4.handle = NULL;
+	examine_dataV4.hdr    = NULL;
+	examine_dataV4.handle = HIP_MALLOC(sizeof(struct ipq_handle), 0);
+	examine_dataV4.hdr    = HIP_MALLOC(1, 0);
+	
+	examine_dataV6.handle = NULL;
+	examine_dataV6.hdr    = NULL;
+	examine_dataV6.handle = HIP_MALLOC(sizeof(struct ipq_handle), 0);
+	examine_dataV6.hdr    = HIP_MALLOC(1, 0);
+
+	pthread_create(&tcp_examinerV4, NULL, &tcp_examine_function,
+			(void*) &family4);
+	pthread_create(&tcp_examinerV6, NULL, &tcp_examine_function,
+			(void*) &family6);
+
+
+	//threads that go through the all the packets
 	if (use_ipv4) {
                 pthread_create(&ipv4Thread, NULL, &handle_ip_traffic,
 			       (void*) &family4);
@@ -1374,19 +1466,15 @@ int main(int argc, char **argv)
 			       (void*) &family6);
         }
 
-	examine_data.handle = NULL;
-	examine_data.hdr    = NULL;
-	examine_data.handle = HIP_MALLOC(sizeof(struct ipq_handle), 0);
-	examine_data.hdr    = HIP_MALLOC(1, 0);
-	
 
-	pthread_create(&tcp_examiner, NULL, &tcp_examine_function, NULL);
-	pthread_join(tcp_examiner, NULL);
-
+	//wait for all the threads to finish
 	if (use_ipv4)
 		pthread_join(ipv4Thread, NULL);
 	if (use_ipv6)
 		pthread_join(ipv6Thread, NULL);
+
+	pthread_join(tcp_examinerV4, NULL);
+	pthread_join(tcp_examinerV6, NULL);
 
 out_err:
 

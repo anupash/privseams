@@ -109,8 +109,8 @@ void hip_initialize_db_when_not_exist()
 
 	srand(getpid());
 	
-	//hip_set_logtype(LOGTYPE_SYSLOG);
-	hip_set_logtype(LOGTYPE_STDERR);
+	hip_set_logtype(LOGTYPE_SYSLOG);
+	//hip_set_logtype(LOGTYPE_STDERR);
 	hip_set_logfmt(LOGFMT_LONG);
 	HIP_IFEL(hip_set_auto_logdebug(cfile), -1,
 	  "Error: Cannot set the debugging parameter.\n");
