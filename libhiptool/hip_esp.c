@@ -16,6 +16,7 @@
  *  hip_esp.c
  *
  *  Authors: Jeff Ahrenholz <jeffrey.m.ahrenholz@boeing.com>
+ *           Tao Wan        <simonwantao@yahoo.com>  
  * 
  * User-mode HIP ESP implementation.
  *
@@ -1226,6 +1227,7 @@ void *hip_esp_input(struct sockaddr_storage *ss_lsi, u8 *buff, int len)
 	// struct sockaddr_storage ss_lsi;
 	struct sockaddr *lsi = (struct sockaddr*) ss_lsi;
 	struct ip *iph;
+	struct ip6_hdr *ip6_header;
 	struct ip_esp_hdr *esph;
 	hip_sadb_entry *inverse_entry;
 	udphdr *udph;
@@ -1320,7 +1322,7 @@ void *hip_esp_input(struct sockaddr_storage *ss_lsi, u8 *buff, int len)
 
 	if(lsi->sa_family == AF_INET6) {
 		HIP_DEBUG("It is the IPv6 traffic\n");
-		iph = (struct ip6_hdr *) &buff[0];
+		ip6_header = (struct ip6_hdr *) &buff[0];
 		udph = (udphdr*) &buff[sizeof(struct ip6_hdr)];
 		esph = (struct ip_esp_hdr *) &buff[sizeof(struct ip6_hdr)
 						   + sizeof(udphdr)];
@@ -1331,11 +1333,9 @@ void *hip_esp_input(struct sockaddr_storage *ss_lsi, u8 *buff, int len)
 		}
 		
 	}
+			
 	
-	
-	
-	
-	spi 	= ntohl(esph->spi);
+	spi = ntohl(esph->spi);
 
 	HIP_DEBUG("Input esp packet SPI value is 0x%x\n", spi);
 	seq_no 	= ntohl(esph->seq_no);
