@@ -1303,6 +1303,9 @@ void *hip_esp_input(struct sockaddr_storage *ss_lsi, u8 *buff, int len)
 		HIP_DEBUG("It is the IPv4 traffic\n");
 		iph = (struct ip*) buff;
 
+		
+		/* ESP_OVER_UDP */
+
 		HIP_HEXDUMP("hello: the IPv4 header\n", iph, sizeof(struct ip)); 
 		
 		udph = (udphdr*) (buff + sizeof(struct ip));
@@ -1325,13 +1328,31 @@ void *hip_esp_input(struct sockaddr_storage *ss_lsi, u8 *buff, int len)
 		     1) && (((__u8*)esph)[0] == 0xFF)) {
 			HIP_DEBUG ("Keepalive packet received.\n");
 			goto out_err;
-	}
-	
+		}
+
+
 	}
 
 	HIP_HEXDUMP("hello: the whole esp packet\n", esph, len - sizeof(struct ip) - sizeof(struct udphdr));
 
+	spi = ntohl(esph->spi);
 	
+	HIP_DEBUG("Input esp packet SPI value is 0x%x with UDP encapuslation\n", spi);
+	seq_no 	= ntohl(esph->seq_no);
+	if (!(entry = hip_sadb_lookup_spi(spi))) {
+		HIP_DEBUG("Warning: SA not found for SPI 0x%x  with UDP encapuslation\n", spi);
+		esph = (struct ip_esp_hdr *) (buff + sizeof(struct ip));
+		spi = ntohl(esph->spi);
+		seq_no 	= ntohl(esph->seq_no);
+		HIP_DEBUG("Input esp packet SPI value is 0x%x\n", spi);
+		if (!(entry = hip_sadb_lookup_spi(spi))) {
+			HIP_DEBUG("Warning: SA not found for SPI 0x%x\n", spi);
+			goto out_err;
+		}
+
+	}
+	
+
 	
 	/* FIXME when using IPv6 header*/
 
@@ -1351,14 +1372,7 @@ void *hip_esp_input(struct sockaddr_storage *ss_lsi, u8 *buff, int len)
 	}
 			
 	
-	spi = ntohl(esph->spi);
-
-	HIP_DEBUG("Input esp packet SPI value is 0x%x\n", spi);
-	seq_no 	= ntohl(esph->seq_no);
-	if (!(entry = hip_sadb_lookup_spi(spi))) {
-		HIP_DEBUG("Warning: SA not found for SPI 0x%x\n", spi);
-		goto out_err;
-	}
+	
 
 	HIP_DEBUG("input entry->SPI value is 0x%x\n", entry->spi);
 	
