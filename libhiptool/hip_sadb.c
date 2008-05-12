@@ -228,7 +228,7 @@ int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
 
 /* HIP_ESP_OVER_UDP */ // comments from openhip
 
-/* in our HIPL case, mode 3 */
+/* in our HIPL case, mode 3, HIP_ESP_OVER_UDP */
 	
 		
 	if (entry->mode == 3) { 
@@ -237,6 +237,17 @@ int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
 		memcpy(&entry->inner_dst_addrs->addr, inner_dst,
 		       SALEN(inner_dst));
 	}
+	
+
+	/* mode 0 ->  default, IP + ESP + payload*/
+	if (entry->mode == 0) { 
+		memcpy(&entry->inner_src_addrs->addr, inner_src,
+		       SALEN(inner_src));
+		memcpy(&entry->inner_dst_addrs->addr, inner_dst,
+		       SALEN(inner_dst));
+	}
+
+	
 
 	
 	/* copy keys */
@@ -295,6 +306,10 @@ int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
 	
 	
 	hip_sadb_add_dst_entry(use_dst, entry);
+
+
+
+	/*FIXME, if LSI supported */
 
 	
 	/* HIPL does not support LSI right now, FIXME*/
