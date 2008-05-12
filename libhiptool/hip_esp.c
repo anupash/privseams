@@ -3192,8 +3192,8 @@ void add_ipv6_header(__u8 *data, struct sockaddr *src, struct sockaddr *dst,
 	memcpy(&ip6h->ip6_src, SA2IP(dst), sizeof(struct in6_addr));
 	memcpy(&ip6h->ip6_dst, SA2IP(src), sizeof(struct in6_addr));
 	
-	HIP_DEBUG_SOCKADDR("add ip6h->ip6_src addr: ", &ip6h->ip6_src);
-	HIP_DEBUG_SOCKADDR("add ip6h->ip6_dst addr: ", &ip6h->ip6_dst);
+	HIP_DEBUG_IN6ADDR("add ip6h->ip6_src addr: ", &ip6h->ip6_src);
+	HIP_DEBUG_IN6ADDR("add ip6h->ip6_dst addr: ", &ip6h->ip6_dst);
 
 
 	/* Try to preserve flow label and hop limit where possible. */
