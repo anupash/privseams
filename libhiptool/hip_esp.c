@@ -1329,18 +1329,15 @@ void *hip_esp_input(struct sockaddr_storage *ss_lsi, u8 *buff, int len)
 			HIP_DEBUG ("Keepalive packet received.\n");
 			goto out_err;
 		}
-
-
-	}
-
-	HIP_HEXDUMP("hello: the whole esp packet\n", esph, len - sizeof(struct ip) - sizeof(struct udphdr));
-
-	spi = ntohl(esph->spi);
 	
-	HIP_DEBUG("Input esp packet SPI value is 0x%x with UDP encapuslation\n", spi);
-	seq_no 	= ntohl(esph->seq_no);
-	if (!(entry = hip_sadb_lookup_spi(spi))) {
-		HIP_DEBUG("Warning: SA not found for SPI 0x%x  with UDP encapuslation\n", spi);
+		HIP_HEXDUMP("hello: the whole esp packet\n", esph, len - sizeof(struct ip) - sizeof(struct udphdr));
+
+		spi = ntohl(esph->spi);
+	
+		HIP_DEBUG("Input esp packet SPI value is 0x%x with UDP encapuslation\n", spi);
+		seq_no 	= ntohl(esph->seq_no);
+		if (!(entry = hip_sadb_lookup_spi(spi))) {
+			HIP_DEBUG("Warning: SA not found for SPI 0x%x  with UDP encapuslation\n", spi);
 		esph = (struct ip_esp_hdr *) (buff + sizeof(struct ip));
 		spi = ntohl(esph->spi);
 		seq_no 	= ntohl(esph->seq_no);
@@ -1349,6 +1346,8 @@ void *hip_esp_input(struct sockaddr_storage *ss_lsi, u8 *buff, int len)
 			HIP_DEBUG("Warning: SA not found for SPI 0x%x\n", spi);
 			goto out_err;
 		}
+		
+	}
 
 	}
 	
@@ -1360,16 +1359,34 @@ void *hip_esp_input(struct sockaddr_storage *ss_lsi, u8 *buff, int len)
 	if(lsi->sa_family == AF_INET6) {
 		HIP_DEBUG("It is the IPv6 traffic\n");
 		iph = (struct ip6_hdr *) &buff[0];
-		udph = (udphdr*) &buff[sizeof(struct ip6_hdr)];
-		esph = (struct ip_esp_hdr *) &buff[sizeof(struct ip6_hdr)
-						   + sizeof(udphdr)];
-		if (((int)(len - sizeof(struct ip6_hdr) - sizeof(udphdr)) ==
-			     1) && (((__u8*)esph)[0] == 0xFF)) {
-			HIP_DEBUG ("Keepalive packet received.\n");
+		/*
+		  udph = (udphdr*) &buff[sizeof(struct ip6_hdr)];
+		esph = (struct ip_esp_hdr *) &buff[sizeof(struct ip6_hdr) + sizeof(udphdr)]
+		*/
+		
+		esph = (struct ip_esp_hdr *) &buff[sizeof(struct ip6_hdr)];
+		
+		HIP_HEXDUMP("hello: the whole esp packet with UDP encapsulation\n", esph, 
+			    len - sizeof(struct ip6_hdr));
+
+		spi = ntohl(esph->spi);
+	
+		HIP_DEBUG("IPV6 input esp packet SPI value is 0x%x\n", spi);
+		seq_no 	= ntohl(esph->seq_no);
+		if (!(entry = hip_sadb_lookup_spi(spi))) {
+			HIP_DEBUG("Warning: IPv6 SA not found for SPI 0x%xn", spi);
 			goto out_err;
 		}
 		
+		if (((int)(len - sizeof(struct ip6_hdr) - sizeof(udphdr)) ==
+		     1) && (((__u8*)esph)[0] == 0xFF)) {
+			HIP_DEBUG ("Keepalive packet received.\n");
+			goto out_err;
+		}
+
 	}
+		
+	
 			
 	
 	
