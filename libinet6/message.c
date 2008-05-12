@@ -137,10 +137,10 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 	if (n == 0) {
 		HIP_INFO("The HIP daemon has performed an "\
 			 "orderly shutdown.\n");
-		err = EHIP;
+		/* Note. This is not an error condition, thus we return zero. */
 		goto out_err;
 	} else if(n < sizeof(struct hip_common)) {
-		err = -1;
+		err = -ENODATA;
 		HIP_ERROR("Could not receive message from daemon.\n");
 		goto out_err;
 	}

@@ -71,13 +71,16 @@ int main(int argc, char *argv[]) {
 	
 	port = atoi(argv[3]);
 
+	/* Disabled since this comparison is always true with the current
+	   port number boundaries.
 	if(port < MINPORTNUM || port > MAXPORTNUM){
 		HIP_INFO("Invalid port number, allowed port numbers are "\
 			 "from %d to %d.\n%s\n", MINPORTNUM, MAXPORTNUM,
 			 usage);
 		return EXIT_FAILURE;
 	}
-	
+	*/
+
 	HIP_INFO("=== Testing %s connection to '%s' on port %s ===\n",
 		 (socktype == SOCK_STREAM ? "TCP" : "UDP"), argv[1],
 		 argv[3]);
@@ -98,28 +101,42 @@ int main(int argc, char *argv[]) {
 			"'traceroute' or 'traceroute6' programs to\n"\
 			"track down the problem.\n");
 		
-		if(err == -ECONNREFUSED) {
-			HIP_INFO("The peer was reached but it refused the "\
-				 "connection.\nThere is no one listening on "\
-				 "the remote address.\nDo you have a server "\
-				 "running at the other end?\n");
-		} else if(err == -ENETUNREACH) {
-			HIP_INFO("Network is unreachable.\n%s", ping_help);
-		} else if(err == -EBADF) {
-			HIP_INFO("Bad file descriptor.\nThe file descriptor "\
-				 "used when trying to connect to the remote "\
-				 "host is not a valid index in the "\
-				 "descriptor table.\n");
-		} else if(err == -1000) {
-			HIP_INFO("Error when retrieving address information for "\
-				 "the peer.\nDo you have a local HIP daemon up "\
-				 "and running?\n");
+		/* getaddrinfo() returns an error value as defined in
+		   /usr/include/netdb.h. We have stored that error value in
+		   errno. */
+		if(err == -EHADDRINFO) {
+			HIP_ERROR("Error when retrieving address information "\
+				  "for the peer.\n");
+			if(errno == EAI_NONAME) {
+				HIP_ERROR("Connection refused.\nDo you have a "\
+					  "local HIP daemon up and running?\n");
+			} else if(errno == EAI_AGAIN) {
+				HIP_ERROR("Temporary failure in name "\
+					  "resolution.\n");
+			}
+		} else if(errno == ECONNREFUSED) {
+			HIP_ERROR("The peer was reached but it "\
+				  "refused the connection.\nThere is "\
+				  "no one listening on the remote "\
+				  "address.\nDo you have a server "\
+				  "running at the other end?\n");
+		} else if(errno == ENOTSOCK) {
+			HIP_ERROR("Socket operation on non-socket.\n"\
+				  "Is the host you are trying to connect local");
+			
+		} else if(errno == ENETUNREACH) {
+			HIP_ERROR("Network is unreachable.\n%s", ping_help);
+		} else if(errno == EBADF) {
+			HIP_ERROR("Bad file descriptor.\nThe file descriptor "\
+				  "used when trying to connect to the remote "\
+				  "host is not a\nvalid index in the "\
+				  "descriptor table.\n");
 		} else if(err == -1001) {
 			HIP_INFO("Error when communicating with the peer.\n"\
 				 "The peer is supposed to echo back the sent "\
 				 "data,\nbut the sent and received data do "\
 				 "not match.\n");
-		} else {
+		} else if (errno != 0){
 			perror(NULL);
 		}
 

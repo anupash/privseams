@@ -236,10 +236,6 @@ int hip_connect_func(struct addrinfo *peer_ai, int *sock)
 	struct in_addr *ipv4 = NULL;
 	struct in6_addr *ipv6 = NULL;
 
-	/* Reset the global error value since at out_err we set err as
-	   -errno. */
-	errno = 0;
-
 	/* Set the memory allocated from the stack to zeros. */
 	memset(&stats_before, 0, sizeof(stats_before));
 	memset(&stats_after, 0, sizeof(stats_after));
@@ -278,15 +274,21 @@ int hip_connect_func(struct addrinfo *peer_ai, int *sock)
 		} else {
 			HIP_INFO("Trying to connect to a non-inet address "\
 				 "family address. Skipping.\n");
+			err = -1;
 			continue;
 		}
 
+		err = 0;
+		/* Reset the global error value since at out_err we set err as
+		   -errno. */
+		errno = 0;
+		
 		/* Get a socket for sending. */
 		*sock = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
 
 		if(*sock < 3) {
 			HIP_ERROR("Unable to get a socket for sending.\n");
-			err = -errno;
+			err = -1;
 			goto out_err;
 		}
 		
@@ -300,11 +302,11 @@ int hip_connect_func(struct addrinfo *peer_ai, int *sock)
 			HIP_ERROR("Unable to connect to the remote address.\n");
 			if(close(*sock) != 0) {
 				HIP_ERROR("Unable to close a socket.\n");
-				err = -errno;
+				err = -1;
 				break;
 			}
 			*sock = 0;
-			err = -errno;
+			err = -1;
 			continue;
 		}
 	
@@ -320,7 +322,7 @@ int hip_connect_func(struct addrinfo *peer_ai, int *sock)
 		if (connect_err != 0) {
 			if(close(*sock) != 0) {
 				HIP_ERROR("Unable to close a socket.\n");
-				err = -errno;
+				err = -1;
 				break;
 			}
 			*sock = 0;
@@ -373,15 +375,15 @@ int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
 	search_key.ai_family = AF_UNSPEC;
 	search_key.ai_socktype = socktype;
 	
-	/* Get the peer's address info. If we get an error, getaddrinfo
-	   returns a negative error value, but does not neccesarily set the
-	   global errno accordingly. Also, since getaddrinfo error values
-	   overlap negative errno values, we just set the errno as a generic
-	   -1000 in an error case.*/
-	HIP_IFEL(getaddrinfo(peer_name, port_name, &search_key, &peer_ai),
-		 -1000, "Name '%s' or service '%s' is unknown.\n",
+	HIP_DEBUG("ERR: %d ERRNO %d.\n", err, errno);
+
+	/* Get the peer's address info. Set a generic -EHADDRINFO for */
+	HIP_IFEL(errno = getaddrinfo(peer_name, port_name, &search_key, &peer_ai),
+		 -EHADDRINFO, "Name '%s' or service '%s' is unknown.\n",
 		 peer_name, port_name);
 	
+	HIP_DEBUG("ERR: %d ERRNO %d.\n", err, errno);
+
 	HIP_INFO("Please input some text to be sent to '%s'.\n"\
 		 "Empty row or \"CTRL+d\" sends data.\n", peer_name);
 	
@@ -422,7 +424,7 @@ int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
 				HIP_IFEL(((sendnum =
 					   send(sock, sendbuffer + bytes_sent,
 						datalen - bytes_sent, 0)) < 0),
-					 err = -errno,
+					 err = -ECOMM,
 					 "Communication error on send.\n");
 				bytes_sent += sendnum;
 			}
@@ -440,7 +442,7 @@ int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
 						 "orderly shutdown.\n");
 					goto out_err;
 				} else if(recvnum < 0) {
-					err = -errno;
+					err = -ENODATA;
 					HIP_ERROR("Communication error on "\
 						  "receive.\n");
 				}
@@ -463,7 +465,7 @@ int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
 		 bytes_sent, bytes_received, peer_name);
 	
 	if (memcmp(sendbuffer, receivebuffer, IP_MAXPACKET) != 0) {
-		err = -1001;
+		err = -EBADMSG;
 	}
 
  out_err:

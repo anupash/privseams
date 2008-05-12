@@ -1603,7 +1603,9 @@ int getaddrinfo(const char *name, const char *service,
 			j++;
 			if (pg == NULL || pg->gaih != g->gaih) {
 				pg = g;
+				HIP_DEBUG("2ERRNO %d.\n", errno);
 				i = g->gaih(name, pservice, hints, end, hip_transparent_mode);
+				HIP_DEBUG("2ERRNO %d.\n", errno);
 				if (i != 0) {
 					last_i = i;
 
