@@ -783,7 +783,8 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 		/* Local IP address: &entry->dst_addrs->addr  */
 		/* Remote IP address: &entry->src_addrs->addr */
 	       
-
+		
+		HIP_DEBUG("The IPPROTO_ESP value is %d\n", IPPROTO_ESP);
 		
 		
 		add_ipv6_header(new_raw_ip_output, 
