@@ -34,10 +34,9 @@ int hip_peek_recv_total_len(int socket, int encap_hdr_size);
  * .
  *
  * @param  hip_user_sock a socket file descriptor.
- * @param  msg           a pointer to a HIP message. 
  * @return 
  */
-int hip_daemon_connect(int hip_user_sock, struct hip_common *msg);
+int hip_daemon_connect(int hip_user_sock);
 
 /**
  * .

@@ -123,11 +123,9 @@ void usage() {
 	fprintf(stderr, "\n");
 }
 
-int hip_sendto(const struct hip_common *msg, const struct sockaddr_in6 *dst){
-        int n = 0;
-        n = sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
-                   0,(struct sockaddr *)dst, sizeof(struct sockaddr_in6));
-        return n;
+int hip_sendto(const struct hip_common *msg, const struct sockaddr *dst){
+        return sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
+                   0, (struct sockaddr *)dst, hip_sockaddr_len(dst));
 }
 
 /**
@@ -549,7 +547,6 @@ int hipd_main(int argc, char *argv[])
 		{
 			/* Receiving of a message from user socket. */
 			struct sockaddr_storage app_src;
-			struct sockaddr_un app_src2;
 			HIP_DEBUG("Receiving user message.\n");
 			hip_msg_init(hipd_msg);
 
@@ -562,8 +559,7 @@ int hipd_main(int argc, char *argv[])
 				HIP_ERROR("Reading user msg failed\n");
 			}
 			else { 
-				hip_read_user_control_msg(hip_user_sock, hipd_msg, &app_src2);
-				err = hip_handle_user_msg(hipd_msg, &app_src, &app_src2);
+				err = hip_handle_user_msg(hipd_msg, &app_src);
 			}
 		}
                 /* DHT SOCKETS HANDLING */
