@@ -299,8 +299,8 @@ int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
 	
 	HIP_DEBUG("IPsec mode is %d \n", entry->mode);
 
-	use_src = (entry->mode == 3) ? inner_src : src;
-	use_dst = (entry->mode == 3) ? inner_dst : dst;
+	use_src = (entry->mode == 3 || entry->mode == 0 ) ? inner_src : src;
+	use_dst = (entry->mode == 3 || entry->mode == 0 ) ? inner_dst : dst;
 	if (!use_src || !use_dst)
 		goto hip_sadb_add_error;
 	
