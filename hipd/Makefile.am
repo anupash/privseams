@@ -10,14 +10,14 @@ include_HEADERS =  hadb.h oppdb.h hipd.h netdev.h user.h hiprelay.h
 include_HEADERS += bos.h input.h output.h icookie.h blind.h
 include_HEADERS += close.h hi3.h keymat.h timer.h
 include_HEADERS += cookie.h hidb.h nat.h update.h dh.h
-include_HEADERS += escrow.h reg.h init.h maintenance.h accessor.h oppipdb.h
+include_HEADERS += escrow.h reg.h init.h maintenance.h accessor.h oppipdb.h cert.h
 INCLUDES = $(hipl_common_include_paths)
 
 sbin_PROGRAMS = hipd
 hipd_SOURCES = reg.c update.c hipd.c keymat.c blind.c hiprelay.c
 hipd_SOURCES += user.c hadb.c oppdb.c close.c
 hipd_SOURCES += input.c output.c hidb.c cookie.c netdev.c bos.c nat.c icookie.c
-hipd_SOURCES += escrow.c init.c maintenance.c accessor.c oppipdb.c dh.c
+hipd_SOURCES += escrow.c init.c maintenance.c accessor.c oppipdb.c dh.c cert.c
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
 hipd_LDADD = ../libinet6/.libs/libinet6.a

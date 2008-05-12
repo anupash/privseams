@@ -277,8 +277,6 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
                         struct hip_cert_spki_info *cert;
                         char sha_digest[21];
                         unsigned char *sha_retval;
-                        struct hip_host_id * pub = NULL;
-                        struct hip_host_id * priv = NULL;
                         RSA *rsa = NULL;
                         
                         rsa = malloc(sizeof(RSA));
@@ -295,14 +293,11 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 
                         HIP_DEBUG_HIT("Getting keys for HIT",&cert->issuer_hit);
         
-                        /* Get the keys for the cert->issuer_hit */
-                        pub = hip_get_hostid_entry_by_lhi_and_algo(hip_local_hostid_db, 
-                                                                   &cert->issuer_hit,
-                                                                   HIP_HI_RSA, -1);
-                        //pub = hip_get_rsa_public_key(pub);
-                        priv = hip_get_hostid_entry_by_lhi_and_algo(hip_local_hostid_db, 
-                                                                    &cert->issuer_hit, 
-                                                                    HIP_HI_RSA, -1);                        
+                        reti = hip_cert_spki_construct_keys(hip_local_hostid_db,
+                                                            &cert->issuer_hit,
+                                                            rsa);
+                        HIP_IFEL((reti), -1, 
+                                 "Error constructing the keys from hidb entry\n");
                         /* build sha1 digest that will be signed */
                         sha_retval = SHA1(cert->cert, 
                                           strlen(cert->cert),

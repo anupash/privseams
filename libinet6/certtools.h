@@ -15,6 +15,19 @@
  * @date 31.3.2008
  *
  */
+#include <sys/types.h>
+#include <sys/time.h>
+#include <time.h>
+#include <regex.h>
+#include <stdio.h>
+#include <string.h>
+#include <netinet/in.h>
+#include <openssl/rsa.h>
+#include "debug.h"
+#include "ife.h"
+#include "misc.h"
+#include "hidb.h"
+#include "hashtable.h"
 
 /** Struct used to deliver the minimal needed information to build SPKI cert*/
 struct hip_cert_spki_info {
@@ -35,6 +48,7 @@ int hip_cert_spki_create_cert(struct hip_cert_spki_info *,
 int hip_cert_spki_build_cert(struct hip_cert_spki_info *);
 int hip_cert_spki_build_signature(char *, char *);
 int hip_cert_spki_inject(struct hip_cert_spki_info *, char *, char *);
+int hip_cert_spki_construct_keys(HIP_HASHTABLE *, hip_hit_t *, RSA *);
 
 /************************************************************************************
  * VERIFICATION FUNCTIONS FOR SPKI                                                  *

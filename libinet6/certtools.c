@@ -11,18 +11,7 @@
  * @date 31.3.2008
  *
  */
-#include <sys/types.h>
-#include <sys/time.h>
-#include <time.h>
-#include <regex.h>
-#include <stdio.h>
-#include <string.h>
-#include <netinet/in.h>
-#include <openssl/rsa.h>
 #include "certtools.h"
-#include "debug.h"
-#include "ife.h"
-#include "misc.h"
 
 /*******************************************************************************
  * BUILDING FUNCTIONS FOR SPKI                                                 *
@@ -148,7 +137,7 @@ int hip_cert_spki_create_cert(struct hip_cert_spki_info * content,
                   "daemon and waiting for answer\n");
         hip_send_recv_daemon_info(msg);
         
-        /* get the struct from the message */
+        /* get the struct from the messag hip_db_struct_t;e */
 
 out_err:
         /* free everything malloced */

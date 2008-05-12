@@ -47,11 +47,11 @@ int connhipd_init(void)
 	HIP_IFEL(hip_agent_sock < 0, -1, "Failed to create socket.\n");
 
 	bzero(&agent_addr, sizeof(agent_addr));
-	agent_addr.sun_family = AF_LOCAL;
-	HIP_IFEL((hip_tmpname_gui(agent_addr.sun_path)), -1,  "Failed hip_tmpname_gui.\n");
+	agent_addr.sun_family = AF_LOCAL;      
+	HIP_IFEL(hip_tmpname_gui(agent_addr.sun_path), -1,  "Failed hip_tmpname.\n");
 	HIP_IFEL(bind(hip_agent_sock, (struct sockaddr *)&agent_addr,
 	         sizeof(agent_addr)), -1, "Bind failed.\n");
-	chmod(agent_addr.sun_path, 0777);
+ 	chmod(agent_addr.sun_path, 0777);
 
 /*	bzero(&agent_addr, sizeof(agent_addr));
 	alen = sizeof(agent_addr);
