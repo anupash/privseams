@@ -675,13 +675,29 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 
 	      
 		/* FIXME, Replace NULL pointer with LSI if LSI support*/
-		/* UDP over ESP */
+		/*  ESP_OVER_UDP */
+		
+		if(entry->mode == 3) 
+		{
 		add_ipv4_header(new_raw_ip_output,
 			       ntohl(LSI4(&entry->dst_addrs->addr)), 
 			       ntohl(LSI4(&entry->src_addrs->addr)), 
 			       (struct ip*) NULL,
 			       sizeof(struct ip) + out_enc_len,
 			       IPPROTO_UDP);
+		
+		} else 
+		{
+			
+			add_ipv4_header(new_raw_ip_output,
+					ntohl(LSI4(&entry->dst_addrs->addr)), 
+					ntohl(LSI4(&entry->src_addrs->addr)), 
+					(struct ip*) NULL,
+					sizeof(struct ip) + out_enc_len,
+					IPPROTO_ESP);
+		}
+
+		
 		
 #endif 
 		
