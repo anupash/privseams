@@ -784,14 +784,12 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 		/* Remote IP address: &entry->src_addrs->addr */
 	       
 
-		/*UDP over ESP */
-
-
+		
 		
 		add_ipv6_header(new_raw_ip_output, 
 				SA(&entry->dst_addrs->addr),
 				SA(&entry->src_addrs->addr),
-				ip6_hdr, (struct ip*) NULL,
+				(struct ip6_hdr *) NULL, (struct ip*) NULL,
 				sizeof(struct ip6_hdr) + out_enc_len,
 				IPPROTO_ESP);
 		
@@ -799,7 +797,8 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 #endif 
 
 
-	       HIP_HEXDUMP("The output encrypted packet (UDP + ESP)  is ", data, out_enc_len);
+		HIP_HEXDUMP("The output encrypted packet ( if ESP_OVER_UDP /UDP + ESP)  is ", 
+			    data, out_enc_len);
 	       
 	       struct ip_esp_hdr *esph = (struct ip_esp_hdr *) ((char *) data);
 	       
