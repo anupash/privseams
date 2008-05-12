@@ -1322,7 +1322,7 @@ void *hip_esp_input(struct sockaddr_storage *ss_lsi, u8 *buff, int len)
 
 	if(lsi->sa_family == AF_INET6) {
 		HIP_DEBUG("It is the IPv6 traffic\n");
-		ip6_header = (struct ip6_hdr *) &buff[0];
+		iph = (struct ip6_hdr *) &buff[0];
 		udph = (udphdr*) &buff[sizeof(struct ip6_hdr)];
 		esph = (struct ip_esp_hdr *) &buff[sizeof(struct ip6_hdr)
 						   + sizeof(udphdr)];
@@ -1457,11 +1457,6 @@ void *hip_esp_input(struct sockaddr_storage *ss_lsi, u8 *buff, int len)
 
 	HIP_DEBUG("DO I come here?\n");
 		
-	
-
-
-
-	
 
 
 #if 0 /*disable openhip implementation */
@@ -2216,6 +2211,8 @@ int hip_esp_encrypt(__u8 *in, int len, __u8 *out, int *outlen,
 
 	/* Because we do not have LSI support right now, so 
 	 *  family is only equal to AF_INET6. FIXME!!!
+	 *  checksum_fix is probably needed if using LSI.
+	 *
 	 */
 	
 	family = AF_INET6;
@@ -2985,7 +2982,8 @@ int hip_esp_decrypt(__u8 *in, int len, __u8 *out, int *offset, int *outlen,
 #endif 	
 	/* previously, this happened after write(), but there
 	 * is some problem with using the entry ptr then */
-	entry->bytes += *outlen - sizeof(struct eth_hdr);
+	//entry->bytes += *outlen - sizeof(struct eth_hdr);
+	entry->bytes += *outlen;
 	entry->usetime.tv_sec = now->tv_sec;
 	entry->usetime.tv_usec = now->tv_usec;
 	entry->usetime_ka.tv_sec = now->tv_sec;
