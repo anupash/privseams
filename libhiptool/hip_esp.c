@@ -787,8 +787,8 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 		
 		
 		add_ipv6_header(new_raw_ip_output, 
-				SA(&entry->dst_addrs->addr),
 				SA(&entry->src_addrs->addr),
+				SA(&entry->dst_addrs->addr),
 				(struct ip6_hdr *) ip6_hdr, (struct ip*) NULL,
 				sizeof(struct ip6_hdr) + out_enc_len,
 				IPPROTO_ESP);
