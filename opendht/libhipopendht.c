@@ -42,7 +42,7 @@ int init_dht_gateway_socket(int sockfd)
 {
     if ((sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
         HIP_PERROR("OpenDHT socket:");
-    else HIP_DEBUG("\n OpenDHT communication socket created successfully \n");
+    else HIP_DEBUG("\nOpenDHT communication socket created successfully.\n");
     
     return(sockfd);      
 }
@@ -73,7 +73,7 @@ int resolve_dht_gateway_info(char * gateway_name,
     else
 	{
             sa = (struct sockaddr_in *) (*gateway)->ai_addr;
-            HIP_DEBUG("OpenDHT gateway IPv4/ %s\n", inet_ntoa(sa->sin_addr));
+            HIP_DEBUG("OpenDHT gateway IPv4: %s\n", inet_ntoa(sa->sin_addr));
 	}
     
     return error;

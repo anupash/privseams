@@ -101,6 +101,7 @@ int main(int argc, char *argv[]) {
 			"'traceroute' or 'traceroute6' programs to\n"\
 			"track down the problem.\n");
 		
+		/* Check our specially tailored 'err' values first.
 		/* getaddrinfo() returns an error value as defined in
 		   /usr/include/netdb.h. We have stored that error value in
 		   errno. */
@@ -114,12 +115,22 @@ int main(int argc, char *argv[]) {
 				HIP_ERROR("Temporary failure in name "\
 					  "resolution.\n");
 			}
-		} else if(errno == ECONNREFUSED) {
-			HIP_ERROR("The peer was reached but it "\
-				  "refused the connection.\nThere is "\
-				  "no one listening on the remote "\
-				  "address.\nDo you have a server "\
-				  "running at the other end?\n");
+		} else if(err == -EBADMSG) {
+			HIP_INFO("Error when communicating with the peer.\n"\
+				 "The peer is supposed to echo back the sent "\
+				 "data,\nbut the sent and received data do "\
+				 "not match.\n");
+		}
+		/* Then move to errno handling. Note that the errno is set
+		   in somewhat randomly in libinet6 functions and therefore
+		   these error messages do not neccessarily hold. Well, better
+		   than nothing... */
+		else if(errno == ECONNREFUSED) {
+			HIP_ERROR("The peer was reached but it refused the "\
+				  "connection.\nThere is no one listening on "\
+				  "the remote address.\nDo you have a HIP "\
+				  "daemon and a server running at the other "\
+				  "end?\n");
 		} else if(errno == ENOTSOCK) {
 			HIP_ERROR("Socket operation on non-socket.\n"\
 				  "Is the host you are trying to connect local");
@@ -131,13 +142,8 @@ int main(int argc, char *argv[]) {
 				  "used when trying to connect to the remote "\
 				  "host is not a\nvalid index in the "\
 				  "descriptor table.\n");
-		} else if(err == -1001) {
-			HIP_INFO("Error when communicating with the peer.\n"\
-				 "The peer is supposed to echo back the sent "\
-				 "data,\nbut the sent and received data do "\
-				 "not match.\n");
 		} else if (errno != 0){
-			perror(NULL);
+			HIP_PERROR(NULL);
 		}
 
 		HIP_INFO("=== Connection test result: "\

@@ -375,15 +375,11 @@ int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
 	search_key.ai_family = AF_UNSPEC;
 	search_key.ai_socktype = socktype;
 	
-	HIP_DEBUG("ERR: %d ERRNO %d.\n", err, errno);
-
 	/* Get the peer's address info. Set a generic -EHADDRINFO for */
 	HIP_IFEL(errno = getaddrinfo(peer_name, port_name, &search_key, &peer_ai),
 		 -EHADDRINFO, "Name '%s' or service '%s' is unknown.\n",
 		 peer_name, port_name);
 	
-	HIP_DEBUG("ERR: %d ERRNO %d.\n", err, errno);
-
 	HIP_INFO("Please input some text to be sent to '%s'.\n"\
 		 "Empty row or \"CTRL+d\" sends data.\n", peer_name);
 	

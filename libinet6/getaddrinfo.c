@@ -449,15 +449,22 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 	hip_hit_t hit, tmp_hit, tmp_addr;
 	struct in_addr tmp_v4;
 	char dht_response_hit[1024], dht_response_addr[1024], line[500];
-	char ownaddr[] = "127.0.0.1", tmp_ip_str[21];
-        char *pret = NULL, *fqdn_str = NULL;
+	char ownaddr[] = "127.0.0.1", tmp_ip_str[INET_ADDRSTRLEN];
+        char *fqdn_str = NULL;
 	hip_common_t *msg = NULL;
 	struct gaih_addrtuple *aux = NULL;
 	struct addrinfo *serving_gateway = NULL;
 	struct hip_opendht_gw_info *gw_info = NULL;
 	FILE *fp = NULL;				
 	List list;
-        
+       
+	errno = 0;
+
+	/* Can't use the IFE macros here, since labe skip_dht is under label
+	   out_err. */
+
+	/* This should be the other way around. I.e. look first from 
+	   /etc/hip/hosts and only then from DHT server. */
         if (flags & AI_NODHT) {
 		HIP_INFO("Distributed hash table (DHT) is not in use.\n");
                 goto skip_dht;
@@ -465,37 +472,54 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 	
         memset(dht_response_hit, '\0', sizeof(dht_response_hit));
         memset(dht_response_addr, '\0', sizeof(dht_response_addr));
-        
+        memset(&tmp_ip_str, '\0', INET_ADDRSTRLEN);
+
         ret_hit = -1;  
         ret_addr = -1;
         
 	_HIP_DEBUG("Asking serving gateway info from daemon...\n"); 
 	
-        HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -ENOMEM,
-		 "Malloc for msg failed\n");
-        HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW,0), EHIP, 
-                 "Building daemon header failed\n"); 
-
+	msg = (hip_common_t *) malloc(HIP_MAX_PACKET);
+	if(msg == NULL) {
+		HIP_ERROR("Error when allocating memory to a HIP message.\n");
+		err = -ENOMEM;
+		return err;
+	}
+        if(hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW, 0) != 0) {
+		HIP_ERROR("Error when building HIP daemon message header.\n");
+		return -EHIP;
+	}
+	
+	/* Send a user message to the HIP daemon to receive Open DHT server
+	   gateway whereabouts. */
         if((err = hip_send_recv_daemon_info(msg)) < 0) {
 		return err; 
 	}
 	
-        HIP_IFE(!(gw_info = hip_get_param(msg, HIP_PARAM_OPENDHT_GW_INFO)),
-		EHIP);
-	        
+	gw_info = hip_get_param(msg, HIP_PARAM_OPENDHT_GW_INFO);
+	if(gw_info == NULL) {
+		HIP_ERROR("Error. No Open DHT gateway information "\
+			  "available.\n");
+		return -EHIP;
+	}
+	
         /* Check if DHT was on */
         if ((gw_info->ttl == 0) && (gw_info->port == 0)) {
                 HIP_INFO("Distributed hash table (DHT) is not in use.\n");
                 goto skip_dht;
         }
         
-        memset(&tmp_ip_str,'\0',20);
         tmp_ttl = gw_info->ttl;
         tmp_port = htons(gw_info->port);
         IPV6_TO_IPV4_MAP(&gw_info->addr, &tmp_v4);
-        /* Compiler warning:
-	   assignment discards qualifiers from pointer target type. */
-        pret = inet_ntop(AF_INET, &tmp_v4, tmp_ip_str, 20);
+
+	/* Todo check for IN_ADDR_ANY gateway. */
+
+        if(inet_ntop(AF_INET, &tmp_v4, tmp_ip_str, 20) == NULL) {
+		err = -1;
+		goto out_err;
+	}
+
         HIP_DEBUG("Got address %s, port %d, TTL %d from daemon\n",
                   tmp_ip_str, tmp_port, tmp_ttl);
 
@@ -503,7 +527,6 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
         error = resolve_dht_gateway_info(tmp_ip_str, &serving_gateway);
         if (error < 0) {
 		HIP_DEBUG("Error in resolving the DHT gateway address, skipping DHT.\n");
-		//close(s);
 		goto skip_dht;
         }
 	/* Compiler warning:
@@ -1509,11 +1532,14 @@ int getaddrinfo(const char *name, const char *service,
 	struct gaih *g = gaih, *pg = NULL;
 	struct gaih_service gaih_service, *pservice = NULL;
 
+	/* These will segfault if lenght of name is one, but since this
+	   is well defined standard function, there must be a good reason
+	   for this behavior? */
 	if (name != NULL && name[0] == '*' && name[1] == 0)
 		name = NULL;
 	if (service != NULL && service[0] == '*' && service[1] == 0)
-	service = NULL;
-
+		service = NULL;
+	
 	/* Return "NAME or SERVICE is unknown." error value. */
 	if (name == NULL && service == NULL)
 		return EAI_NONAME;
@@ -1596,40 +1622,45 @@ int getaddrinfo(const char *name, const char *service,
 		end = NULL;
 	
 	while (g->gaih) {
-		if (hints->ai_family == g->family || hints->ai_family == AF_UNSPEC) {
-			if ((hints->ai_flags & AI_ADDRCONFIG) && !addrconfig(g->family)) {
+		
+		if (hints->ai_family == g->family ||
+		    hints->ai_family == AF_UNSPEC) {
+			
+			if ((hints->ai_flags & AI_ADDRCONFIG)
+			    && !addrconfig(g->family)) {
 				continue;
 			}
+			
 			j++;
 			if (pg == NULL || pg->gaih != g->gaih) {
 				pg = g;
-				HIP_DEBUG("2ERRNO %d.\n", errno);
-				i = g->gaih(name, pservice, hints, end, hip_transparent_mode);
-				HIP_DEBUG("2ERRNO %d.\n", errno);
+				i = g->gaih(name, pservice, hints, end,
+					    hip_transparent_mode);
 				if (i != 0) {
 					last_i = i;
 
-					if (hints->ai_family == AF_UNSPEC && (i & GAIH_OKIFUNSPEC))
+					if (hints->ai_family == AF_UNSPEC &&
+					    (i & GAIH_OKIFUNSPEC)) {
 						continue;
-
-					if (p)
+					}
+					if (p != NULL) {
 						freeaddrinfo(p);
-
+					}
 					return -(i & GAIH_EAI);
 				}
-				if (end) {
+				if (end != NULL) {
 					while(*end) end = &((*end)->ai_next);
 				}
 			}
 		}
 		++g;
 	}
-
+	
 	if (j == 0) {
 		return EAI_FAMILY;
 	}
-
-	if (p) // here should be true
+	
+	if (p != NULL) // here should be true
 	{
 		*pai = p;
 		return 0;
@@ -1638,9 +1669,11 @@ int getaddrinfo(const char *name, const char *service,
 	if (pai == NULL && last_i == 0)
 		return 0;
 
-	if (p)
+	if (p != NULL) {
 		freeaddrinfo (p);
-
+	}
+	
+	/* Okay... What exactly are we returning here? An error value? */
 	return last_i ? -(last_i & GAIH_EAI) : EAI_NONAME;
 }
 
