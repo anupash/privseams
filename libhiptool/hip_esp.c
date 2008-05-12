@@ -786,26 +786,27 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 
 		/*UDP over ESP */
 
-	       add_ipv6_header(new_raw_ip_output, 
-			       SA(&entry->dst_addrs->addr),
-			       SA(&entry->src_addrs->addr),
-			       ip6_hdr, (struct ip*) NULL,
-			       sizeof(struct ip6_hdr) + out_enc_len,
-			       IPPROTO_UDP);
 
+		
+		add_ipv6_header(new_raw_ip_output, 
+				SA(&entry->dst_addrs->addr),
+				SA(&entry->src_addrs->addr),
+				ip6_hdr, (struct ip*) NULL,
+				sizeof(struct ip6_hdr) + out_enc_len,
+				IPPROTO_ESP);
+		
 
 #endif 
 
 
 	       HIP_HEXDUMP("The output encrypted packet (UDP + ESP)  is ", data, out_enc_len);
 	       
-	       struct ip_esp_hdr *esph = (struct ip_esp_hdr *) (((char *)data) 
-								+ sizeof(udphdr));
+	       struct ip_esp_hdr *esph = (struct ip_esp_hdr *) ((char *) data);
 	       
 	       
 	       HIP_DEBUG("output packet spi value is 0x%x\n", ntohl(esph->spi));
 	       
-	       HIP_HEXDUMP("the output IPv6 header + UDP header + ESP packet is",
+	       HIP_HEXDUMP("the output IPv6 header +  ESP packet is",
 			   new_raw_ip_output, sizeof(struct ip6_hdr) + out_enc_len);
 	       
 	       
