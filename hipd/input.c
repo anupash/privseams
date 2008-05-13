@@ -745,17 +745,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	
 	HIP_DEBUG("HIP transform: %d\n", transform_hip_suite);
 	
-	/********** ESP-ENC transform. **********/
-	HIP_IFE(!(param = hip_get_param(ctx->input, HIP_PARAM_ESP_TRANSFORM)), -ENOENT);
-
-	/* Select only one transform */
-	HIP_IFEL((transform_esp_suite =
-		  hip_select_esp_transform((struct hip_esp_transform *) param)) == 0,
-		 -1, "Could not find acceptable hip transform suite\n");
-	HIP_IFEL(hip_build_param_transform(i2, HIP_PARAM_ESP_TRANSFORM,
-					   &transform_esp_suite, 1), -1,
-		 "Building of ESP transform failed\n");
-
 	/************ Encrypted ***********/
 	switch (transform_hip_suite) {
 	case HIP_HIP_AES_SHA1:
@@ -791,6 +780,17 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
  		HIP_IFEL(1, -ENOSYS, "HIP transform not supported (%d)\n",
 			 transform_hip_suite);
 	}
+
+	/********** ESP-ENC transform. **********/
+	HIP_IFE(!(param = hip_get_param(ctx->input, HIP_PARAM_ESP_TRANSFORM)), -ENOENT);
+
+	/* Select only one transform */
+	HIP_IFEL((transform_esp_suite =
+		  hip_select_esp_transform((struct hip_esp_transform *) param)) == 0,
+		 -1, "Could not find acceptable hip transform suite\n");
+	HIP_IFEL(hip_build_param_transform(i2, HIP_PARAM_ESP_TRANSFORM,
+					   &transform_esp_suite, 1), -1,
+		 "Building of ESP transform failed\n");
 
 	HIP_HEXDUMP("enc(host_id)", host_id_in_enc,
 		    hip_get_param_total_len(host_id_in_enc));

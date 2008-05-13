@@ -569,7 +569,7 @@ int hip_init_nat_sock_udp(int *hip_nat_sock_udp)
 	err = bind(*hip_nat_sock_udp, (struct sockaddr *)&myaddr, sizeof(myaddr));
 	if (err < 0)
 	{
-		HIP_ERROR("Unable to bind udp socket to port\n");
+		HIP_PERROR("Unable to bind udp socket to port\n");
 		err = -1;
 		goto out_err;
 	}

@@ -638,18 +638,18 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 					   sizeof(hip_transform_suite_t)), -1, 
 		 "Building of HIP transform failed\n");
 
+	/********** HOST_ID **********/
+	_HIP_DEBUG("This HOST ID belongs to: %s\n", 
+		   hip_get_param_host_id_hostname(host_id_pub));
+	HIP_IFEL(hip_build_param(msg, host_id_pub), -1, 
+		 "Building of host id failed\n");
+
  	/********** ESP-ENC transform. **********/
  	HIP_IFEL(hip_build_param_transform(msg, HIP_PARAM_ESP_TRANSFORM,  
 					   transform_esp_suite,
 					   sizeof(transform_esp_suite) /
 					   sizeof(hip_transform_suite_t)), -1, 
 		 "Building of ESP transform failed\n");
-
-	/********** HOST_ID **********/
-	_HIP_DEBUG("This HOST ID belongs to: %s\n", 
-		   hip_get_param_host_id_hostname(host_id_pub));
-	HIP_IFEL(hip_build_param(msg, host_id_pub), -1, 
-		 "Building of host id failed\n");
 
 	/********** REG_INFO *********/
 	hip_get_active_services(service_list, &service_count);
