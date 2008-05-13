@@ -49,15 +49,15 @@ static int count_if_addresses(int ifindex)
  */
 int filter_address(struct sockaddr *addr, int ifindex)
 {
-	HIP_DEBUG("ifindex=%d, address family=%d\n",
-		  ifindex, addr->sa_family);
-	HIP_HEXDUMP("testing address=", hip_cast_sa_addr(addr),
-		    hip_sa_addr_len(addr));
-
 	/* used as a buffer for inet_ntop */
 #define sLEN 40
 	char s[sLEN];
 	
+	_HIP_DEBUG("ifindex=%d, address family=%d\n",
+		  ifindex, addr->sa_family);
+	_HIP_HEXDUMP("testing address=", hip_cast_sa_addr(addr),
+		    hip_sa_addr_len(addr));
+
 	switch (addr->sa_family) {
 	case AF_INET6:
 		inet_ntop(AF_INET6, &((struct sockaddr_in6*)addr)->sin6_addr, s,
@@ -425,8 +425,8 @@ int static add_address(const struct nlmsghdr *h, int len, void *arg)
  */
 int hip_netdev_init_addresses(struct rtnl_handle *nl)
 {
-	struct ifaddrs *g_ifaces = NULL, *g_iface;
-	int err = 0, if_index;
+	struct ifaddrs *g_ifaces = NULL, *g_iface = NULL;
+	int err = 0, if_index = 0;
 
 	/* Initialize address list */
 	HIP_DEBUG("Initializing addresses...\n");

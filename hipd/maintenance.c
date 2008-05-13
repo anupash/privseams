@@ -123,7 +123,8 @@ int hip_agent_add_lhit(struct hip_host_id_entry *entry, void *msg)
 {
 	int err = 0;
 
-	err = hip_build_param_contents(msg, (void *)&entry->lhi.hit, HIP_PARAM_HIT,
+	err = hip_build_param_contents(msg, (void *)&entry->lhi.hit,
+				       HIP_PARAM_HIT,
 	                               sizeof(struct in6_addr));
 	if (err)
 	{
@@ -141,7 +142,7 @@ out_err:
  */
 int hip_agent_add_lhits(void)
 {
-	struct hip_common *msg;
+	struct hip_common *msg = NULL;
 	int err = 0, n;
 	socklen_t alen;
 
@@ -169,24 +170,22 @@ int hip_agent_add_lhits(void)
 		goto out_err;
 	}
 
-	HIP_DEBUG("Sending local HITs to agent,"
-	          " message body size is %d bytes...\n",
-	          hip_get_msg_total_len(msg) - sizeof(struct hip_common));
-
-	alen = sizeof(hip_agent_addr);                      
-	n = sendto(hip_agent_sock, msg, hip_get_msg_total_len(msg),
-	           0, (struct sockaddr *)&hip_agent_addr, alen);
+	n = hip_send_agent(msg);
 	if (n < 0)
 	{
 		HIP_ERROR("Sendto() failed.\n");
 		err = -1;
 		goto out_err;
 	}
-	else HIP_DEBUG("Sendto() OK.\n");
+	else {
+		HIP_DEBUG("Sendto() OK.\n");
+	}
 
 #endif
 
 out_err:
+	if (msg)
+		free(msg);
 	return (err);
 }
 
@@ -220,9 +219,8 @@ out_err:
  */
 int hip_agent_send_remote_hits(void)
 {
-	struct hip_common *msg;
+	struct hip_common *msg = NULL;
 	int err = 0, n;
-	socklen_t alen;
 
 #ifdef CONFIG_HIP_AGENT
 	msg = malloc(HIP_MAX_PACKET);
@@ -243,9 +241,7 @@ int hip_agent_send_remote_hits(void)
 		goto out_err;
 	}
 
-	alen = sizeof(hip_agent_addr);                      
-	n = sendto(hip_agent_sock, msg, hip_get_msg_total_len(msg),
-	           0, (struct sockaddr *)&hip_agent_addr, alen);
+	n = hip_send_agent(msg);
 	if (n < 0)
 	{
 		HIP_ERROR("Sendto() failed.\n");
@@ -257,6 +253,8 @@ int hip_agent_send_remote_hits(void)
 #endif
 
 out_err:
+	if (msg)
+		free(msg);
 	return (err);
 }
 
@@ -272,7 +270,6 @@ int hip_agent_filter(struct hip_common *msg,
 	struct hip_common *user_msg = NULL;
 	int err = 0;
 	int n, sendn;
-	socklen_t alen;
 	hip_ha_t *ha_entry;
 	struct in6_addr hits;
 	
@@ -297,9 +294,7 @@ int hip_agent_filter(struct hip_common *msg,
 	HIP_IFE(hip_build_param_contents(user_msg, msg_info, HIP_PARAM_PORTPAIR,
 	                                 sizeof(*msg_info)), -1);
 
-	alen = sizeof(hip_agent_addr);
-	n = sendto(hip_agent_sock, user_msg, hip_get_msg_total_len(user_msg),
-	           0, (struct sockaddr *)&hip_agent_addr, alen);
+	n = hip_send_agent(user_msg);
 	if (n < 0)
 	{
 		HIP_ERROR("Sendto() failed.\n");
@@ -310,6 +305,8 @@ int hip_agent_filter(struct hip_common *msg,
 	HIP_DEBUG("Sent %d bytes to agent for handling.\n", n);
 	
 out_err:
+	if (user_msg)
+		free(user_msg);
 	return (err);
 }
 
@@ -337,8 +334,7 @@ int hip_agent_update_status(int msg_type, void *data, size_t size)
 		                                 size), -1);
 	}
 
-	n = sendto(hip_agent_sock, user_msg, hip_get_msg_total_len(user_msg),
-	           0, (struct sockaddr *)&hip_agent_addr, sizeof(hip_agent_addr));
+	n = hip_send_agent(user_msg);
 	if (n < 0)
 	{
 		HIP_ERROR("Sendto() failed.\n");
@@ -347,6 +343,8 @@ int hip_agent_update_status(int msg_type, void *data, size_t size)
 	}
 
 out_err:
+	if (user_msg)
+		free(user_msg);
 	return err;
 }
 
@@ -403,8 +401,10 @@ void register_to_dht ()
                 }
         }
  out_err:
-        if (tmp_hit_str) free(tmp_hit_str);
-        if (tmp_addr_str) free(tmp_addr_str);
+        if (tmp_hit_str)
+		free(tmp_hit_str);
+        if (tmp_addr_str)
+		free(tmp_addr_str);
         return;
 }
 

@@ -54,20 +54,20 @@ Summary: hip library files
 Group: System Environment/Kernel
 %description lib
 
-%package core
+%package daemon
 Requires: hipl-lib
-Summary: hip core files
+Summary: hip daemon files
 Group: System Environment/Kernel
-%description core
+%description daemon
 
 %package agent
-Requires: hipl-lib, hipl-core
+Requires: hipl-lib, hipl-daemon
 Summary: hip agent files
 Group: System Environment/Kernel
 %description agent
 
 %package tools
-Requires: hipl-lib, hipl-core
+Requires: hipl-lib, hipl-daemon
 Summary: hip tools files
 Group: System Environment/Kernel
 %description tools
@@ -78,7 +78,7 @@ Group: System Environment/Kernel
 %description firewall
 
 %package test
-Requires: hipl-lib, hipl-core
+Requires: hipl-lib, hipl-daemon
 Summary: hip test files
 Group: System Environment/Kernel
 %description test
@@ -104,12 +104,12 @@ install -t %{buildroot}/%{python_sitelib}/DNS tools/DNS/*py
 %post lib
 /sbin/ldconfig 
 
-%post core
+%post daemon
 /sbin/chkconfig --add hipd
 /sbin/chkconfig --level 2 hipd on
 /sbin/service hipd start
 
-%preun core
+%preun daemon
 /sbin/service hipd stop
 /sbin/chkconfig --del hipd
 
@@ -119,7 +119,7 @@ rm -rf %{buildroot}
 %files lib
 %{_libdir}
 
-%files core
+%files daemon
 %{prefix}/sbin/hipd
 %{prefix}/bin/hipsetup
 %config /etc/rc.d/init.d/hipd

@@ -20,17 +20,17 @@
  * @return zero on success, or negative error value on error.
  * @see    hip_so.
  */ 
-int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
+int hip_handle_user_msg(struct hip_common *msg,
+			struct sockaddr_in6 *src)
 {
 	hip_hit_t *hit = NULL, *src_hit = NULL, *dst_hit = NULL;
 	in6_addr_t *src_ip = NULL, *dst_ip = NULL;
 	hip_ha_t *entry = NULL, *server_entry = NULL;
-	int err = 0, msg_type = 0, n = 0, len = 0, state=0;
+	int err = 0, msg_type = 0, n = 0, len = 0, state = 0;
+	int access_ok = 0, send_response = 1, is_root;
 	HIP_KEA * kea = NULL;
-	int send_response = (src ? 1 : 0);
 
-	HIP_DEBUG("handling user msg of family=%d from port=%d\n",
-		  src->sin6_family, src->sin6_port);
+	HIP_ASSERT(src->sin6_family == AF_INET6);
 
 	err = hip_check_userspace_msg(msg);
 	if (err)
@@ -38,9 +38,38 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		HIP_ERROR("HIP socket option was invalid\n");
 		goto out_err;
 	}
-
+	
 	msg_type = hip_get_msg_type(msg);
 	HIP_DEBUG("Message type %d\n", msg_type);
+
+	HIP_DEBUG("handling user msg of family=%d from port=%d\n",
+		  src->sin6_family, ntohs(src->sin6_port));
+
+	is_root = (ntohs(src->sin6_port) < 1024);
+
+	if (is_root)
+		access_ok = 1;
+	else if (!is_root &&
+		 (msg_type >= HIP_SO_ANY_MIN && msg_type <= HIP_SO_ANY_MAX))
+		access_ok = 1;
+
+	/* const struct sockaddr_in6 *src */
+
+	if (access_ok)
+	{
+		HIP_DEBUG("The operation is allowed.\n");
+	}		
+	else
+	{
+		HIP_ERROR("The operation isn't allowed.\n", msg_type);
+		err = -1;
+		goto out_err;
+			
+	}
+
+	if (ntohs(src->sin6_port) == HIP_AGENT_PORT)
+		return hip_recv_agent(msg);
+	
 	switch(msg_type)
 	{
 	case SO_HIP_ADD_LOCAL_HI:
@@ -138,6 +167,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		break;
 	case SO_HIP_GET_PEER_HIT:
 		err = hip_opp_get_peer_hit(msg, src, 0);
+	
 		if(err){
 			_HIP_ERROR("get pseudo hit failed.\n");
 			send_response = 1;
@@ -662,6 +692,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 #ifdef CONFIG_HIP_OPPTCP
 	case SO_HIP_GET_PEER_HIT_FROM_FIREWALL:
 		err = hip_opp_get_peer_hit(msg, src, 1);
+		
 		if(err){
 			_HIP_ERROR("get pseudo hit failed.\n");
 			send_response = 1;
@@ -685,15 +716,18 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		break;
 
 	case SO_HIP_OPPTCP_UNBLOCK_APP:
+		
 		hip_opptcp_unblock(msg, src);
 		break;
 
 	case SO_HIP_OPPTCP_OPPIPDB_ADD_ENTRY:
 		hip_opptcp_add_entry(msg, src);
+		
 		break;
 
 	case SO_HIP_OPPTCP_SEND_TCP_PACKET:
-		hip_opptcp_send_tcp_packet(msg, src);
+		hip_opptcp_send_tcp_packet(msg, src); 
+		
 		break;
 
 #endif
@@ -721,7 +755,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		/* send a response (assuming that it is written to the msg */
 		len = hip_get_msg_total_len(msg);
 		n = hip_sendto(msg, src);
-	
+		
 		if(n != len) {
 			HIP_ERROR("hip_sendto() failed.\n");
 			err = -1;

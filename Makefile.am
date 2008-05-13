@@ -29,6 +29,7 @@ rpm:
 deb:
 	test/packaging/create-deb.sh
 	test/packaging/create-deb.sh -s
+#	cd test/packaging && dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz
 source-deb:
 	test/packaging/create-deb.sh -s
 corporate-deb:
