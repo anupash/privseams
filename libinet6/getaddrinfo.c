@@ -466,7 +466,7 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 	/* This should be the other way around. I.e. look first from 
 	   /etc/hip/hosts and only then from DHT server. */
         if (flags & AI_NODHT) {
-		HIP_INFO("Distributed hash table (DHT) is not in use.\n");
+		HIP_INFO("Distributed Hash Table (DHT) is not in use.\n");
                 goto skip_dht;
         }
 	
@@ -476,9 +476,7 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 
         ret_hit = -1;  
         ret_addr = -1;
-        
-	_HIP_DEBUG("Asking serving gateway info from daemon...\n"); 
-	
+        	
 	msg = (hip_common_t *) malloc(HIP_MAX_PACKET);
 	if(msg == NULL) {
 		HIP_ERROR("Error when allocating memory to a HIP message.\n");
@@ -490,6 +488,9 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 		return -EHIP;
 	}
 	
+	HIP_INFO("Asking serving Distributed Hash Table (DHT) gateway info "\
+		 "from the HIP daemon...\n"); 
+
 	/* Send a user message to the HIP daemon to receive Open DHT server
 	   gateway whereabouts. */
         if((err = hip_send_recv_daemon_info(msg)) < 0) {
@@ -512,16 +513,22 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
         tmp_ttl = gw_info->ttl;
         tmp_port = htons(gw_info->port);
         IPV6_TO_IPV4_MAP(&gw_info->addr, &tmp_v4);
-
-	/* Todo check for IN_ADDR_ANY gateway. */
-
-        if(inet_ntop(AF_INET, &tmp_v4, tmp_ip_str, 20) == NULL) {
+	
+        if(inet_ntop(AF_INET, &tmp_v4, tmp_ip_str,
+		     sizeof(tmp_ip_str)) == NULL) {
 		err = -1;
 		goto out_err;
 	}
-
-        HIP_DEBUG("Got address %s, port %d, TTL %d from daemon\n",
-                  tmp_ip_str, tmp_port, tmp_ttl);
+	
+	/* Check for IN_ADDR_ANY gateway. This happens for example on virtual
+	   machines. */	
+	if((tmp_v4.s_addr | INADDR_ANY) == 0) {
+		HIP_DEBUG("DHT gateway is INADDR_ANY.\n");
+		//goto skip_dht;
+	}
+	
+        HIP_INFO("DHT server is located at %s:%d with TTL %d.\n",
+		 tmp_ip_str, tmp_port, tmp_ttl);
 
         error = 0;
         error = resolve_dht_gateway_info(tmp_ip_str, &serving_gateway);
@@ -529,23 +536,19 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 		HIP_DEBUG("Error in resolving the DHT gateway address, skipping DHT.\n");
 		goto skip_dht;
         }
-	/* Compiler warning:
-	   passing argument 2 of 'opendht_get_key' discards qualifiers from
-	   pointer target type. */
+
         ret_hit = opendht_get_key(serving_gateway, name, dht_response_hit);
 	
         if (ret_hit == 0) {
                 HIP_INFO("HIT received from DHT: %s.\n", dht_response_hit);
 	}
-        /* Where is this opened? */
-	//close(s);
+        
         if (ret_hit == 0 && (strlen((char *)dht_response_hit) > 1)) {
                 ret_addr = opendht_get_key(serving_gateway, 
                                            dht_response_hit, dht_response_addr);
                 if (ret_addr == 0)
                         HIP_INFO("Address received from DHT: %s.\n",dht_response_addr);
-                //close(s);
-        }
+	}
         if ((ret_hit == 0) && (ret_addr == 0) && 
             (dht_response_hit[0] != '\0') && (dht_response_addr[0] != '\0')) { 
                 if (inet_pton(AF_INET6, dht_response_hit, &tmp_hit) >0 &&

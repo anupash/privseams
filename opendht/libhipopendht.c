@@ -361,7 +361,8 @@ int opendht_get(int sockfd,
  *
  * @return integer -1 on error, on success 0
  */
-int opendht_get_key(struct addrinfo * gateway, unsigned char * key, unsigned char *value)
+int opendht_get_key(struct addrinfo * gateway, const unsigned char * key,
+		    unsigned char *value)
 {
         int err = 0, sfd = -1, n_addrs = 0;
         int locator_item_count = 0;

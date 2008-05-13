@@ -128,9 +128,11 @@ int main(int argc, char *argv[]) {
 		else if(errno == ECONNREFUSED) {
 			HIP_ERROR("The peer was reached but it refused the "\
 				  "connection.\nThere is no one listening on "\
-				  "the remote address.\nDo you have a HIP "\
-				  "daemon and a server running at the other "\
-				  "end?\n");
+				  "the remote address.\nIf you are trying to "\
+				  "establish a HIP connection,\nyou need both "\
+				  "a HIP daemon and a server running at the "\
+				  "other end.\nFor an IP connection you only "\
+				  "need a server running at the other end.\n");
 		} else if(errno == ENOTSOCK) {
 			HIP_ERROR("Socket operation on non-socket.\n"\
 				  "Is the host you are trying to connect local");
@@ -142,8 +144,16 @@ int main(int argc, char *argv[]) {
 				  "used when trying to connect to the remote "\
 				  "host is not a\nvalid index in the "\
 				  "descriptor table.\n");
-		} else if (errno != 0){
-			HIP_PERROR(NULL);
+		} else if(errno == EAFNOSUPPORT) {
+			HIP_ERROR("Address family not supported by protocol.\n"\
+				  "Only IPv4 and IPv6 address families are "\
+				  "supported.\nAre you trying to communicate "\
+				  "between processes on the same machine?\n");
+		}
+		/* Just to make sure we don't print 'success' when the
+		   connection test has actually failed we check errno != 0. */
+		else if (errno != 0) {
+			HIP_PERROR("");
 		}
 
 		HIP_INFO("=== Connection test result: "\

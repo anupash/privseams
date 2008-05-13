@@ -273,12 +273,14 @@ int hip_connect_func(struct addrinfo *peer_ai, int *sock)
 			}
 		} else {
 			HIP_INFO("Trying to connect to a non-inet address "\
-				 "family address. Skipping.\n");
+				 "family address. Skipping. %d\n", ai->ai_family);
+			errno = EAFNOSUPPORT;
 			err = -1;
 			continue;
 		}
 
 		err = 0;
+		
 		/* Reset the global error value since at out_err we set err as
 		   -errno. */
 		errno = 0;
@@ -407,7 +409,7 @@ int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
 	}
 	
 	/* Get a socket for sending and receiving data. */
-	HIP_IFE(err = (hip_connect_func(peer_ai, &sock)), err);
+	HIP_IFE(err = hip_connect_func(peer_ai, &sock), err);
 
 	gettimeofday(&stats_before, NULL);
 	
