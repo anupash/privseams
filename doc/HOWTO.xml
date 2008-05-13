@@ -1739,8 +1739,7 @@
 			</para></listitem>
 		</itemizedlist>
 		<para>
-			The configuration GUI executable is called "hipagent". You should run it using
-			normal user (non-root) priviledges.
+			The configuration GUI executable is called "hipagent". You should run it using sudo.
 		</para>
 
 	<screenshot>
