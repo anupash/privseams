@@ -74,7 +74,7 @@ gpointer run_control_thread(gpointer data)
 			{
 				HIP_ERROR("Error receiving message parameters from daemon.\n");
 				err = -1;
-				goto out_err;
+				continue;
 			}
 
 			HIP_ASSERT(n == len);
@@ -82,12 +82,13 @@ gpointer run_control_thread(gpointer data)
 			if (ntohs(sock_addr.sin6_port) != HIP_DAEMON_LOCAL_PORT) {
 				HIP_DEBUG("Drop, message not from hipd\n");
 				err = -1;
-				goto out_err;
+				continue;
 				
 			}
 			err = handle_msg(msg, &sock_addr);
 			if (err < 0){
 				HIP_ERROR("Error handling message\n");
+				continue;
 				//goto out_err;	 
 			}
 		}
