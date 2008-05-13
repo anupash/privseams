@@ -74,7 +74,7 @@ int hip_daemon_connect(int hip_user_sock) {
 
         bzero(&daemon_addr, sizeof(daemon_addr));
         daemon_addr.sin6_family = AF_INET6;
-        daemon_addr.sin6_port = HIP_DAEMON_LOCAL_PORT;
+        daemon_addr.sin6_port = htons(HIP_DAEMON_LOCAL_PORT);
         daemon_addr.sin6_addr = in6addr_loopback;
 
 	HIP_IFEL(connect(hip_user_sock, (struct sockaddr *) &daemon_addr,
