@@ -268,7 +268,8 @@ typedef struct hip_peer_opaque {
 
 struct hip_peer_map_info {
 	hip_hit_t peer_hit;
-	struct in6_addr our_addr, peer_addr;
+	struct in6_addr our_addr;
+	struct in6_addr peer_addr;
 };
 
 void hip_hadb_remove_hs(uint32_t spi);

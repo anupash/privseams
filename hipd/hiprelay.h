@@ -67,8 +67,8 @@
  *          draft-ietf-hip-nat-traversal-02</a>
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  */
-#ifndef HIPRELAY_H
-#define HIPRELAY_H
+#ifndef HIP_HIPRELAY_H
+#define HIP_HIPRELAY_H
 
 #include <time.h> /* For timing. */
 #include <openssl/lhash.h> /* For LHASH. */
@@ -76,8 +76,9 @@
 #include <arpa/inet.h> /* For nthos() */
 #include <math.h> /* For pow() */
 #include "misc.h" /* For debuging macros. */
-#include "reg.h" /* For lifetime conversions. */
+#include "registration.h" /* For lifetime conversions. */
 #include "configfilereader.h"
+#include "state.h"
 
 /**
  * The minimum lifetime the relay / RVS client is granted the service. This
@@ -534,7 +535,7 @@ void hip_relwl_hit_free(hip_hit_t *hit);
  * @return HIP_RELAY_ON if the RVS / relay whitelist is "on", HIP_RELAY_OFF
  *         otherwise.
  */ 
-hip_relay_wl_status_t hip_relay_get_wl_status();
+hip_relay_wl_status_t hip_relwl_get_status();
 
 /**
  * Validates a requested RVS service lifetime. If
@@ -658,4 +659,4 @@ int hip_relay_read_config();
  */ 
 int hip_relay_write_config();
 
-#endif /* HIPRELAY_H */
+#endif /* HIP_HIPRELAY_H */

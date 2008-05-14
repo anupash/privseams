@@ -124,7 +124,6 @@ void findkeyfiles(char *path, List *files) {
 
 
 /* functions for simple linked list */
-
 void initlist(List *ilist) {
   ilist->head = NULL;
 }

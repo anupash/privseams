@@ -12,6 +12,7 @@
 
 #include <openssl/rsa.h>
 #include <openssl/dsa.h>
+
 #ifdef __KERNEL__
 #  include "usercompat.h"
 #  include "protodefs.h"
@@ -22,6 +23,8 @@
 #  include "icomm.h"
 #  include "state.h"
 #endif
+
+//typedef struct hip_srv hip_srv_t;
 
 /* ARRAY_SIZE is defined in linux/kernel.h, but it is in #ifdef __KERNEL__ */
 #ifndef ARRAY_SIZE
@@ -104,8 +107,8 @@ int hip_build_param_puzzle_m(struct hip_common *, uint8_t, uint8_t, uint8_t *,
 #endif
 int hip_build_param_r1_counter(struct hip_common *, uint64_t);
 int hip_build_param_reg_failed(struct hip_common *, uint8_t, uint8_t *, int);
-int hip_build_param_reg_info(struct hip_common *, uint8_t, uint8_t, int *, int);
-int hip_build_param_reg_request(struct hip_common *, uint8_t, uint8_t[], int, int);
+//int hip_build_param_reg_info(struct hip_common *, uint8_t, uint8_t, int *, int);
+
 int hip_build_param_rvs_hmac_contents(struct hip_common *,
                                       struct hip_crypto_key *);
 int hip_build_param_seq(struct hip_common *, uint32_t);
@@ -156,6 +159,33 @@ struct hip_dh_public_value *hip_dh_select_key(
 	const struct hip_diffie_hellman *);
 uint8_t hip_get_host_id_algo(const struct hip_host_id *);
 int hip_get_locator_addr_item_count(struct hip_locator *);
+
+/**
+ * Translates a service life time from seconds to a 8-bit integer value. The
+ * lifetime value in seconds is translated to a 8-bit integer value using
+ * following formula: <code>lifetime = (8 * (log(seconds) / log(2)))
+ * + 64</code> and truncated. The formula is the inverse of the formula given
+ * in the registration draft.
+ * 
+ * @param  seconds  the lifetime to convert.
+ * @param  lifetime a target buffer for the coverted lifetime.
+ * @return          zero on success, -1 on error. Error occurs when @c seconds
+ *                  is zero or greater than 15384774.
+ */ 
+int hip_get_lifetime_value(time_t seconds, uint8_t *lifetime);
+
+/**
+ * Translates a service life time from a 8-bit integer value to seconds. The
+ * lifetime value is translated to a 8-bit integer value using following
+ * formula: <code>seconds = 2^((lifetime - 64)/8)</code>.
+ *
+ * @param  lifetime the lifetime to convert.
+ * @param  seconds  a target buffer for the converted lifetime.
+ * @return          zero on success, -1 on error. Error occurs when @c lifetime
+ *                  is zero.
+ */ 
+int hip_get_lifetime_seconds(uint8_t lifetime, time_t *seconds);
+
 struct hip_locator_info_addr_item *hip_get_locator_first_addr_item(
         struct hip_locator *);
 uint16_t hip_get_msg_contents_len(const struct hip_common *);
@@ -196,5 +226,40 @@ int rsa_to_hip_endpoint(RSA *rsa, struct endpoint_hip **endpoint,
 			se_hip_flags_t endpoint_flags, const char *hostname);
 int dsa_to_hip_endpoint(DSA *dsa, struct endpoint_hip **endpoint,
 			se_hip_flags_t endpoint_flags, const char *hostname);
+/**
+ * Builds a REG_INFO parameter.
+ * 
+ * @param msg           a pointer to a HIP message where to build the parameter.
+ * @param service_list  a pointer to a structure containing all active services.
+ * @param service_count number of registration services in @c service_list.
+ * @return              zero on success, non-zero otherwise.
+ */
+int hip_build_param_reg_info(hip_common_t *msg,
+			     const struct hip_srv *service_list,
+			     const unsigned int service_count);
+/**
+ * Builds a REG_REQUEST parameter.
+ * 
+ * @param msg        a pointer to a HIP message where to build the parameter.
+ * @param lifetime   the lifetime to be put into the parameter.
+ * @param type_list  a pointer to an array containing the registration types to
+ *                   be put into the parameter.
+ * @param type_count number of registration types in @c type_list.
+ * @return           zero on success, non-zero otherwise.
+ */
+int hip_build_param_reg_request(hip_common_t *msg, const uint8_t lifetime,
+				const uint8_t *type_list, const int type_count);
+/**
+ * Builds a REG_RESPONSE parameter.
+ * 
+ * @param msg        a pointer to a HIP message where to build the parameter.
+ * @param lifetime   the lifetime to be put into the parameter.
+ * @param type_list  a pointer to an array containing the registration types to
+ *                   be put into the parameter.
+ * @param type_count number of registration types in @c type_list.
+ * @return           zero on success, non-zero otherwise.
+ */
+int hip_build_param_reg_response(hip_common_t *msg, const uint8_t lifetime,
+				 const uint8_t *type_list, const int type_count);
 
 #endif /* HIP_BUILDER */

@@ -16,28 +16,382 @@
 #include "registration.h"
 
 /** An array for storing all existing services. */
-hip_service_xxx_t hip_services[HIP_NUMBER_OF_EXISTING_SERVICES];
+hip_srv_t hip_services[HIP_TOTAL_EXISTING_SERVICES];
+/** A linked list for storing pending requests on the client side.
+ *  @note This assumes a single threded model. We are not using mutexes here.
+ */
+hip_ll_t pending_requests;
+/** A linked list for storing pending responses on the server side.
+ *  @note This assumes a single threded model. We are not using mutexes here.
+ */
+hip_ll_t pending_responses;
 
-void hip_reg_init_services()
+void hip_init_xxx_services()
 {
-	hip_services[0].service = HIP_SERVICE_RENDEZVOUS;
-	hip_services[0].status  = HIP_SERVICE_OFF;
-	hip_services[1].service = HIP_SERVICE_ESCROW;
-	hip_services[1].status  = HIP_SERVICE_OFF;
-	hip_services[2].service = HIP_SERVICE_RELAY;
-	hip_services[2].status  = HIP_SERVICE_OFF;
+	hip_services[0].reg_type     = HIP_SERVICE_RENDEZVOUS;
+	hip_services[0].status       = HIP_SERVICE_OFF;
+	hip_services[0].min_lifetime = HIP_RELREC_MIN_LIFETIME;
+	hip_services[0].max_lifetime = HIP_RELREC_MAX_LIFETIME;
+	hip_services[1].reg_type     = HIP_SERVICE_ESCROW;
+	hip_services[1].status       = HIP_SERVICE_OFF;
+	hip_services[1].min_lifetime = HIP_ESCROW_MIN_LIFETIME;
+	hip_services[1].max_lifetime = HIP_ESCROW_MAX_LIFETIME;
+	hip_services[2].reg_type     = HIP_SERVICE_RELAY;
+	hip_services[2].status       = HIP_SERVICE_OFF;
+	hip_services[2].min_lifetime = HIP_RELREC_MIN_LIFETIME;
+	hip_services[2].max_lifetime = HIP_RELREC_MAX_LIFETIME;
+
+	hip_ll_init(&pending_requests);
+	hip_ll_init(&pending_responses);
+	
+	HIP_DEBUG("NEW SERVICE INITIALIZATION DONE.\n");
 }
 
-int hip_reg_set_srv_status(uint8_t service, hip_service_status_t status)
+void hip_uninit_xxx_services()
+{
+	hip_ll_uninit(&pending_requests, free);
+	hip_ll_uninit(&pending_responses, free);
+	HIP_DEBUG("NEW SERVICE UNINITIALIZATION DONE.\n");
+}
+
+int hip_set_srv_status(uint8_t reg_type, hip_srv_status_t status)
 {
 	int i = 0;
 	
-	for(; i < HIP_NUMBER_OF_EXISTING_SERVICES; i++) {
-		if(hip_services[i].service == service) {
+	for(; i < HIP_TOTAL_EXISTING_SERVICES; i++) {
+		if(hip_services[i].reg_type == reg_type) {
 			hip_services[i].status = status;
 			return 0;
 		}
 	}
 	
 	return -1;
+}
+
+int hip_set_srv_min_lifetime(uint8_t reg_type, uint8_t lifetime)
+{
+	if(lifetime = 0) {
+		return -1;
+	}
+	
+	int i = 0;
+	
+	for(; i < HIP_TOTAL_EXISTING_SERVICES; i++) {
+		if(hip_services[i].reg_type == reg_type) {
+			hip_services[i].min_lifetime = lifetime;
+			return 0;
+		}
+	}
+	
+	return -1;
+}
+
+int hip_set_srv_max_lifetime(uint8_t reg_type, uint8_t lifetime)
+{
+	if(lifetime = 0) {
+		return -1;
+	}
+	
+	int i = 0;
+	
+	for(; i < HIP_TOTAL_EXISTING_SERVICES; i++) {
+		if(hip_services[i].reg_type == reg_type) {
+			hip_services[i].max_lifetime = lifetime;
+			return 0;
+		}
+	}
+	
+	return -1;
+}
+
+int hip_get_active_services(hip_srv_t *active_services,
+			    unsigned int *active_service_count)
+{
+	if(active_services == NULL) {
+		return -1;
+	}
+
+	int i = 0, j = 0;
+	
+	memset(active_services, 0, sizeof(hip_services));
+
+	for(; i < HIP_TOTAL_EXISTING_SERVICES; i++) {
+		if(hip_services[i].status == HIP_SERVICE_ON) {
+			memcpy(&active_services[j], &hip_services[i],
+			       sizeof(active_services[j]));
+			j++;
+		}
+	}
+	
+	*active_service_count = j;
+
+	return 0;
+} 
+
+void hip_srv_info(const hip_srv_t *srv, char *status)
+{
+	if(srv == NULL || status == NULL)
+		return;
+	
+	char *cursor = status;
+	cursor += sprintf(cursor, "Service info:\n");
+	
+	cursor += sprintf(cursor, " reg_type: ");
+	if(srv->reg_type == HIP_SERVICE_RENDEZVOUS){
+		cursor += sprintf(cursor, "rendezvous\n");
+	} else if(srv->reg_type == HIP_SERVICE_ESCROW) {
+		cursor += sprintf(cursor, "escrow\n");
+	} else if(srv->reg_type == HIP_SERVICE_RELAY) {
+		cursor += sprintf(cursor, "relay\n");
+	} else {
+		cursor += sprintf(cursor, "unknown\n");
+	}
+
+	cursor += sprintf(cursor, " status: ");
+	if(srv->status == HIP_SERVICE_ON) {
+		cursor += sprintf(cursor, "on\n");
+	}else if(srv->status == HIP_SERVICE_OFF) {
+		cursor += sprintf(cursor, "off\n");
+	}else{
+		cursor += sprintf(cursor, "unknown\n");
+	}
+
+	cursor += sprintf(cursor, " minimum lifetime: %u\n", srv->min_lifetime);
+	cursor += sprintf(cursor, " maximum lifetime: %u\n", srv->max_lifetime);
+}
+
+int hip_add_pending_request(hip_pending_request_t *request)
+{
+	int err = 0;
+	
+	HIP_IFEL(hip_ll_add_last(&pending_requests, request), -1,
+		 "Failed to add a pending registration request.\n");
+
+ out_err:
+	return err;
+}
+
+int hip_del_pending_request(hip_ha_t *entry)
+{
+	int index = 0;
+	hip_ll_node_t *iter = NULL;
+	
+	/* Iterate through the linked list. We're deleting a node from the list
+	   even though we use an iterator here, but it's okay, since we do not
+	   use the iterator after the deletion. */
+	while((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
+		if(((hip_pending_request_t *)(iter->ptr))->entry == entry) {
+			
+			HIP_DEBUG("Deleting a pending request at index %u.\n", index);
+			hip_ll_del(&pending_requests, index, free);
+			return 0;
+		}
+		index++;
+	}
+
+	return -1;
+}
+
+int hip_get_pending_requests(hip_ha_t *entry, hip_pending_request_t *requests[])
+{
+	if(requests == NULL) {
+		return -1;
+	}
+
+	hip_ll_node_t *iter = 0;
+	int request_count = 0;
+	
+	while((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
+		if(((hip_pending_request_t *)(iter->ptr))->entry
+		   == entry) {
+			requests[request_count] =
+				(hip_pending_request_t *)(iter->ptr);
+			request_count++;
+		}
+	}
+	
+	if(request_count == 0) {
+		return -1;
+	}
+			
+	return 0;
+}
+
+int hip_get_pending_request_count(hip_ha_t *entry)
+{
+	hip_ll_node_t *iter = 0;
+	int request_count = 0;
+	
+	while((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
+		if(((hip_pending_request_t *)(iter->ptr))->entry
+		   == entry) {
+			request_count++;
+		}
+	}
+
+	return request_count;
+}
+
+int hip_handle_param_reg_info(hip_common_t *msg, hip_ha_t *entry)
+{
+	struct hip_reg_info *reg_info = NULL;
+	uint8_t *reg_types = NULL, reg_type = 0;
+	unsigned int type_count = 0;
+	int i = 0;
+	
+	reg_info = hip_get_param(msg, HIP_PARAM_REG_INFO);
+	
+	if(reg_info == NULL) {
+#ifdef CONFIG_HIP_ESCROW
+		/* The escrow part is just a copy paste from the previous HIPL
+		   registration implementation. It is not tested to work.
+		   Besides, it makes no sense to do anything except return
+		   zero here. Why should we take action if the responder does
+		   NOT offer the service? -Lauri. */ 
+		HIP_DEBUG("No REG_INFO parameter found. The Responder offers "\
+			  "no services.\n");
+		HIP_KEA *kea;
+		kea = hip_kea_find(&entry->hit_our);
+		
+		if (kea && (kea->keastate == HIP_KEASTATE_REGISTERING))
+			kea->keastate = HIP_KEASTATE_INVALID;
+		if (kea)
+			hip_keadb_put_entry(kea);	
+		/** @todo remove base keas */
+#endif /* CONFIG_HIP_ESCROW */		
+		return 0;
+	}
+	
+	HIP_DEBUG("REG_INFO parameter found.\n");
+
+	/* Get a pointer registration types and the type count. */
+	reg_types  = reg_info->reg_type;
+	type_count = hip_get_param_contents_len(reg_info) -
+		(sizeof(reg_info->min_lifetime) + sizeof(reg_info->max_lifetime));
+	
+	/* Check draft-ietf-hip-registration-02 chapter 3.1. */
+	if(type_count == 0){
+		HIP_INFO("The server is currently unable to provide services "\
+			 "due to transient conditions.\n");
+		return 0;
+	}
+
+	/* Loop through all the registration types found in REG_INFO parameter. */ 
+	for(i = 0; i < type_count; i++){
+		
+		switch(reg_types[i]) {
+		case HIP_SERVICE_RENDEZVOUS:
+			HIP_INFO("Responder offers rendezvous service.\n");
+			/* If we have requested for RVS service in I1, we store
+			   the information of responder's capability here. */
+			if(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_RVS) {
+				hip_hadb_set_peer_controls(
+					entry, HIP_HA_CTRL_PEER_RVS_CAPABLE);
+			}
+			break;
+
+#ifdef CONFIG_HIP_ESCROW		
+		case HIP_SERVICE_ESCROW:
+			/* The escrow part is just a copy paste from the
+			   previous HIPL registration implementation. It is not
+			   tested to work. -Lauri */
+			HIP_INFO("Responder offers escrow service.\n");
+			HIP_KEA *kea;
+			
+			/* If we have requested for escrow service in I1, we
+			   store the information of responder's capability
+			   here. */
+			if(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_ESCROW) {
+				hip_hadb_set_peer_controls(
+					entry, HIP_HA_CTRL_PEER_ESCROW_CAPABLE);
+			}
+			
+			kea = hip_kea_find(&entry->hit_our);
+			if (kea && kea->keastate == HIP_KEASTATE_REGISTERING) {
+				HIP_DEBUG("Registering to escrow service.\n");
+				hip_keadb_put_entry(kea);
+			} else if(kea){
+				kea->keastate = HIP_KEASTATE_INVALID;
+				HIP_DEBUG("Not doing escrow registration, "\
+					  "invalid kea state.\n");
+				hip_keadb_put_entry(kea);	  
+			} else {
+				HIP_DEBUG("Not doing escrow registration.\n");
+			}
+
+			break;
+#endif /* CONFIG_HIP_ESCROW */				
+		case HIP_SERVICE_RELAY:
+			HIP_INFO("Responder offers relay service.\n");
+			/* If we have requested for relay service in I1, we
+			   store the information of responder's capability
+			   here. */
+			if(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_RELAY) {
+				hip_hadb_set_peer_controls(
+					entry, HIP_HA_CTRL_PEER_RELAY_CAPABLE);
+			}
+			break;
+			
+		default:
+			HIP_INFO("Responder offers unsupported service.\n");
+		}
+	}
+	
+	return 0;
+}
+
+int hip_handle_param_rrq(hip_ha_t *entry, hip_common_t *source_msg,
+			 hip_common_t *target_msg)
+{
+	int err = 0, type_count = 0;
+	struct hip_reg_request *reg_request = NULL;
+	uint8_t *values = NULL;
+
+	reg_request = hip_get_param(source_msg, HIP_PARAM_REG_REQUEST);
+	
+	if(reg_request == NULL) {
+		err = -1;
+		_HIP_DEBUG("No REG_REQUEST parameter found.\n");
+		goto out_err;
+	}
+	
+	HIP_DEBUG("REG_REQUEST parameter found.\n");
+	
+	/* Get the registration lifetime and count of registration types. */
+	type_count = hip_get_param_contents_len(reg_request) -
+		sizeof(reg_request->lifetime);
+	values = hip_get_param_contents_direct(reg_request) +
+		sizeof(reg_request->lifetime);
+
+	HIP_IFEL(hip_has_duplicate_services(values, type_count), -1,
+		 "The REG_REQUEST parameter has duplicate services. The whole "\
+		 "parameter is omitted.\n");
+	
+	if(reg_request->lifetime == 0) {
+		HIP_DEBUG("Client is cancelling registration.\n");
+	} else {
+		HIP_DEBUG("Client is registrating for new services.\n");
+	}
+	
+ out_err:
+	return err;
+}
+
+int hip_has_duplicate_services(uint8_t *values, int type_count)
+{
+	if(values == NULL || type_count <= 0) {
+		return -1;
+	}
+	
+	int i = 0, j = 0;
+
+	for(; i < type_count; i++) {
+		for(j = i + 1; j < type_count; j++) {
+			if(values[i] = values[j]) {
+				return -1;
+			}
+		}
+	}
+
+	return 0;
 }

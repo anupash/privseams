@@ -54,6 +54,7 @@
  * @todo <span style="color:#f00">Update the comments of this file.</span>
  */
 #include "builder.h"
+#include "registration.h"
 
 static enum select_dh_key_t select_dh_key = STRONGER_KEY;
 
@@ -411,6 +412,42 @@ int hip_get_locator_addr_item_count(struct hip_locator *locator) {
 		(sizeof(struct hip_locator) -
 		 sizeof(struct hip_tlv_common))) /
 		sizeof(struct hip_locator_info_addr_item);
+}
+
+int hip_get_lifetime_value(time_t seconds, uint8_t *lifetime)
+{
+	/* Check that we get a lifetime value between 1 and 255. The minimum
+	   lifetime according to the registration draft is 0.004 seconds, but
+	   the reverse formula gives zero for that. 15384774.906 seconds is the
+	   maximum value. The boundary checks done here are just curiosities
+	   since services are usually granted for minutes to a couple of days,
+	   but not for milliseconds and days. However, log() gives a range error
+	   if "seconds" is zero. */
+	if(seconds == 0) {
+		*lifetime = 0;
+		return -1;
+	}else if(seconds > 15384774) {
+		*lifetime = 255;
+		return -1;
+	}else {
+		*lifetime = (8 * (log(seconds) / log(2))) + 64;
+		return 0;
+	}
+}
+
+int hip_get_lifetime_seconds(uint8_t lifetime, time_t *seconds){
+	if(lifetime == 0) {
+		*seconds = 0;
+		return -1;
+	}
+	/* All values between from 1 to 63 give just fractions of a second. */
+	else if(lifetime < 64) {
+		*seconds = 1;
+		return 0;
+	} else {
+		*seconds = pow(2, ((double)((lifetime)-64)/8));
+		return 0;
+	}
 }
 
 /**
@@ -1047,7 +1084,7 @@ char* hip_param_type_name(const hip_tlv_type_t param_type){
 	case HIP_PARAM_UINT: return "HIP_PARAM_UINT";
 	case HIP_PARAM_UNIT_TEST: return "HIP_PARAM_UNIT_TEST";
 	case HIP_PARAM_VIA_RVS: return "HIP_PARAM_VIA_RVS";
-	case HIP_PSEUDO_HIT: return "HIP_PSEUDO_HIT";
+	case HIP_PARAM_PSEUDO_HIT: return "HIP_PARAM_PSEUDO_HIT";
 	}
 	return "UNDEFINED";
 }
@@ -1207,11 +1244,13 @@ int hip_check_network_msg(const struct hip_common *msg)
  *
  * This is the root function of all parameter building functions.
  * hip_build_param() and hip_build_param_contents() both  use this function to
- * actually append the parameter into the HIP message. This function updates the
- * message header length to keep the next free parameter slot quickly accessible
- * for faster writing of the parameters. This function also automagically adds
- * zero filled paddign to the parameter, to keep its total length in multiple of
- * 8 bytes.
+ * append the parameter into the HIP message. This function updates the message
+ * header length to keep the next free parameter slot quickly accessible for
+ * faster writing of the parameters. This function also automagically adds zero
+ * filled padding to the parameter, to keep its total length in multiple of 8
+ * bytes. Parameter contents are copied from the function parameter @c contents,
+ * thus the contents can and should be allocated from the stack instead of the
+ * heap (i.e. allocated with malloc()).
  * 
  * @param msg            the message where the parameter is to be appended
  * @param parameter_hdr  pointer to the header of the parameter
@@ -1610,8 +1649,8 @@ int hip_build_param_hmac2_contents(struct hip_common *msg,
 		goto out_err;
 	}
 
-	HIP_HEXDUMP("HMAC data", tmp, hip_get_msg_total_len(tmp));
-	HIP_HEXDUMP("HMAC key\n", key->key, 20);
+	_HIP_HEXDUMP("HMAC data", tmp, hip_get_msg_total_len(tmp));
+	_HIP_HEXDUMP("HMAC key\n", key->key, 20);
 
 	if (!hip_write_hmac(HIP_DIGEST_SHA1_HMAC, key->key, tmp,
 			    hip_get_msg_total_len(tmp),
@@ -2096,22 +2135,22 @@ int hip_build_param_relay_to(struct hip_common *msg,
 			     const in6_addr_t *addr,
 			     const in_port_t port)
 {
-     /*HIP_DEBUG("hip_build_param_relay_to() invoked.\n");
-     int err = 0;
-     struct hip_relay_to relay_to;
-     struct hip_in6_addr_port tmp;
+	/*HIP_DEBUG("hip_build_param_relay_to() invoked.\n");
+	  int err = 0;
+	  struct hip_relay_to relay_to;
+	  struct hip_in6_addr_port tmp;
 
-     hip_set_param_type(&relay_to, HIP_PARAM_RELAY_TO);
-     hip_calc_generic_param_len(&relay_to, sizeof(struct hip_relay_to),
-				sizeof(in6_addr_t) + sizeof(in_port_t));
+	  hip_set_param_type(&relay_to, HIP_PARAM_RELAY_TO);
+	  hip_calc_generic_param_len(&relay_to, sizeof(struct hip_relay_to),
+	  sizeof(in6_addr_t) + sizeof(in_port_t));
      
-     memcpy(&(tmp.sin6_addr), rvs_addr, sizeof(*rvs_addr));
-     memcpy(&(tmp.sin6_port), &port, sizeof(port));
+	  memcpy(&(tmp.sin6_addr), rvs_addr, sizeof(*rvs_addr));
+	  memcpy(&(tmp.sin6_port), &port, sizeof(port));
 	
-     err = hip_build_generic_param(msg, &relay_to, sizeof(struct hip_relay_to),
-				   (void *)&tmp);
-     return err;
-     */
+	  err = hip_build_generic_param(msg, &relay_to, sizeof(struct hip_relay_to),
+	  (void *)&tmp);
+	  return err;
+	*/
      struct hip_relay_to relay_to;
      int err = 0;
      
@@ -2125,83 +2164,112 @@ int hip_build_param_relay_to(struct hip_common *msg,
 
 }
 
+/* NOTE! Keep this function before REG_REQUEST and REG_RESPONSE parameter
+ * builders but after hip_calc_generic_param_len() and
+ * hip_build_generic_param. */
 /**
- * hip_build_param_reg_info - build HIP REG_INFO parameter
- * @param msg the message
- * @param min_lifetime minimum lifetime in seconds in host byte order
- * @param max_lifetime maximum lifetime in seconds in host byte order
- * @param type_list list of types to be appended
- * @param cnt number of addresses in type_list
- *
- * @return zero for success, or non-zero on error
+ * Builds REG_REQUEST and REG_RESPONSE parameters common parts. This function is
+ * called from hip_build_param_reg_request() and hip_build_param_reg_response(),
+ * and should not be called from anywhere else.
+ * 
+ * @param msg        a pointer to a HIP message where to build the parameter.
+ * @param param      a pointer to the parameter to be appended to the HIP
+ *                   message @c msg.
+ * @param lifetime   the lifetime to be put into the parameter.
+ * @param type_list  a pointer to an array containing the registration types to
+ *                   be put into the parameter.
+ * @param type_count number of registration types in @c type_list.
+ * @return           zero on success, non-zero otherwise.
+ * @note             This is an static inline function that has no prototype in
+ *                   the header file. There is no prototype because this
+ *                   function is not to be called outside this file.
  */
-int hip_build_param_reg_info(struct hip_common *msg, uint8_t min_lifetime, 
-			uint8_t max_lifetime, int *type_list, int cnt)
+static inline int hip_reg_param_core(hip_common_t *msg, void *param,
+				     const uint8_t lifetime,
+				     const uint8_t *type_list,
+				     const int type_count)
 {
-	struct hip_reg_info rinfo;
-	int err = 0, i;
-	uint8_t *array = NULL;
-
-	hip_set_param_type(&rinfo, HIP_PARAM_REG_INFO);
-	hip_calc_generic_param_len(&rinfo, sizeof(struct hip_reg_info),
-				   cnt * sizeof(uint8_t));
+	struct hip_reg_request *rreq = (struct hip_reg_request *) param;
 	
-	HIP_IFEL(!(array = (uint8_t *) HIP_MALLOC((cnt * sizeof(uint8_t)), GFP_KERNEL)), 
-		-1, "Failed to allocate memory");
-	memset(array, (sizeof(uint8_t) * cnt), 0);
-	for (i = 0; i < cnt; i++) {
-		uint8_t val = (uint8_t)type_list[i];
-		array[i] = val;
-	}
-
-	rinfo.min_lifetime = min_lifetime;
-	rinfo.max_lifetime = max_lifetime;
-	err = hip_build_generic_param(msg, &rinfo, sizeof(struct hip_reg_info),
-				      (void *)array);
-out_err: 
-	if (array)
-		HIP_FREE(array);	
-	return err;	
+	hip_calc_generic_param_len(rreq, sizeof(struct hip_reg_request),
+				   type_count * sizeof(uint8_t));
+	rreq->lifetime = lifetime;
+	
+	return hip_build_generic_param(msg, rreq, sizeof(struct hip_reg_request),
+				       type_list);	
 }
 
-/**
- * hip_build_param_reg_request - build HIP REG_REQUEST or REG_RESPONSE parameter
- * @param msg       the message
- * @param lifetime  lifetime in seconds in host byte order
- * @param type_list list of types to be appended
- * @param cnt number of addresses in type_list
- * @param request non-zero if parameter is REG_REQUEST, otherwise parameter is
- *        a REG_RESPONSE
- *
- * @return zero for success, or non-zero on error
- */
-int hip_build_param_reg_request(struct hip_common *msg, uint8_t lifetime, 
-				uint8_t type_list[], int cnt, int request)
+int hip_build_param_reg_info(hip_common_t *msg, const hip_srv_t *service_list,
+			     const unsigned int service_count)
 {
-	int err = 0;
-	int i;
-	struct hip_reg_request rreq;
-	uint8_t *array = NULL;
-	
-	hip_set_param_type(&rreq, (request ? HIP_PARAM_REG_REQUEST : HIP_PARAM_REG_RESPONSE));
-	hip_calc_generic_param_len(&rreq, sizeof(struct hip_reg_request),
-				   cnt * sizeof(uint8_t));
+	int err = 0, i = 0;
+	struct hip_reg_info reg_info;
+	uint8_t reg_type[service_count];
 
-	HIP_IFEL(!(array = (uint8_t *) HIP_MALLOC((cnt * sizeof(uint8_t)), GFP_KERNEL)),
-		-1, "Failed to allocate memory");
-	memset(array, (sizeof(uint8_t) * cnt), 0);
-	for (i = 0; i < cnt; i++) {
-		uint8_t val = (uint8_t)type_list[i];
-		array[i] = val;
+	if(service_count == 0) {
+		return 0;
+	} 
+	
+	for( ;i < service_count; i++) {
+		if(service_list[0].min_lifetime !=
+		   service_list[i].min_lifetime ||
+		   service_list[0].max_lifetime !=
+		   service_list[i].max_lifetime) {
+			HIP_INFO("Warning! Multiple min and max lifetime "\
+				 "values for a single REG_INFO parameter "\
+				 "requested. Using lifetime values from "\
+				 "service reg_type %d with all services.\n",
+				 service_list[0].reg_type);
+			break;
+		}
+				
+	}
+	
+	for(i = 0; i < service_count; i++) {
+		reg_type[i] = service_list[i].reg_type;
 	}
 
-	rreq.lifetime = lifetime;
-	err = hip_build_generic_param(msg, &rreq, sizeof(struct hip_reg_request),
-				      (void *)array);	
-out_err: 
-	if (array)
-		HIP_FREE(array);	
-	return err;		
+	hip_set_param_type(&reg_info, HIP_PARAM_REG_INFO);
+	/* All services should have the same lifetime... */
+	reg_info.min_lifetime = service_list[0].min_lifetime;
+	reg_info.max_lifetime = service_list[0].max_lifetime;
+	hip_calc_generic_param_len(&reg_info, sizeof(struct hip_reg_info),
+				   service_count * sizeof(service_list[0].reg_type));
+	
+	err = hip_build_generic_param(
+		msg, &reg_info, sizeof(struct hip_reg_info), (void *)reg_type);
+
+	HIP_DEBUG("Added REG_INFO parameter with %u service%s.\n", service_count,
+		  (service_count > 1) ? "s" : "");
+	
+ out_err:
+	return err;
+}
+
+int hip_build_param_reg_request(hip_common_t *msg, const uint8_t lifetime,
+				const uint8_t *type_list, const int type_count)
+{
+	int err = 0;
+	struct hip_reg_request rreq;
+	
+	hip_set_param_type(&rreq, HIP_PARAM_REG_REQUEST);
+	err = hip_reg_param_core(msg, &rreq, lifetime, type_list, type_count);
+	
+ out_err:
+	return err;
+}
+
+int hip_build_param_reg_response(hip_common_t *msg, const uint8_t lifetime,
+				 const uint8_t *type_list, const int type_count)
+{
+	int err = 0;
+	struct hip_reg_response rres;
+	
+	hip_set_param_type(&rres, HIP_PARAM_REG_RESPONSE);
+	err = hip_reg_param_core(msg, &rres, lifetime, type_list, type_count);
+		
+ out_err:
+	return err;
 }
 
 /**

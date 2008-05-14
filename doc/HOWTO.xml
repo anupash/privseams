@@ -353,7 +353,7 @@
     <para>
       We expect that you have two hosts for testing HIP which will be
       referred to as "crash" and "oops". You should run these commands in
-      the testing hosts as root. conntest-client-gai and
+      the testing hosts as root. conntest-client-hip and
       conntest-server can also be run as a non-root user, with
       conntest-server using port numbers less than 1024 still requires root
       privileges.
@@ -405,7 +405,7 @@
 	hipd/hipd
       </para></listitem>
       <listitem><para>
-	test/conntest-client-gai oops tcp 1111
+	test/conntest-client-hip oops tcp 1111
       </para></listitem>
       <listitem><para>
 	;&lt;type some text in crash, press enter and ctrl+d and you
@@ -1147,7 +1147,7 @@
 	address (and that RVS is representing R). In this section, we show how
 	to use the RVS to establish a HIP connection between two HIP hosts
 	using the "test/conntest-server" connection test server and the
-	"test/conntest-client-gai" connection test client.
+	"test/conntest-client-hip" connection test client.
       </para>
       <mediaobject>
 	<imageobject>
@@ -1250,7 +1250,7 @@
 	</para></listitem>
 	<listitem><para>
 	  At the initiator, start a connection:
-	  <programlisting>test/conntest-client-gai &lt;RESPONDER-HOSTNAME&gt; tcp 5000</programlisting>
+	  <programlisting>test/conntest-client-hip &lt;RESPONDER-HOSTNAME&gt; tcp 5000</programlisting>
 	</para></listitem>
 	<listitem><para>
 	  At the initiator, type some text and press CTRL + d. If everything works
@@ -1358,7 +1358,7 @@
       <para>
 	In this section, we show how to use the HIP relay server to establish a
 	HIP connection between two HIP hosts using the "test/conntest-server"
-	connection test server and the "test/conntest-client-gai" connection
+	connection test server and the "test/conntest-client-hip" connection
 	test client.
       </para>
 	<mediaobject>
@@ -1496,7 +1496,7 @@
     <title>HIP Firewall</title>
         <para>This section describes how to use the HIP firewall. The firewall needs to be compiled with the --enable-firewall option to configure. There is also a Python interface included in the source distribution (hip-fw-mi-*tar.gz).</para>
 
-        <para>Firewall can be started with "./firewall &lt;file_name&gt;"
+        <para>Firewall can be started with "hipfw &lt;file_name&gt;"
               "timeout value" at firewall directory, where file_name
               is path of the file containing the firewall rules and
               timeout value is the connection timeout value in
@@ -1653,7 +1653,7 @@
           has not been implemented yet.
     </para>
     <para>If you have problems in even getting I1 triggered using NAT code
-          e.g. with conntest-client-gai (occurred on 2.6.16.5), you may have
+          e.g. with conntest-client-hip (occurred on 2.6.16.5), you may have
           to specify the source HIT explicitly. The procedure to initiate a connection
 	  behind NAT is as follows:
     </para>
@@ -1739,8 +1739,7 @@
 			</para></listitem>
 		</itemizedlist>
 		<para>
-			The configuration GUI executable is called "hipagent". You should run it using
-			normal user (non-root) priviledges.
+			The configuration GUI executable is called "hipagent". You should run it using sudo.
 		</para>
 
 	<screenshot>
@@ -1999,7 +1998,7 @@ combo-newgroup=&lt;create new...&gt;
     </para></listitem>
     <listitem><para>
            To test, just run normally conntest-server 
-	and conntest-client-gai between hosts. You would see messages 
+	and conntest-client-hip between hosts. You would see messages 
 	from hipd and conntest showing DNS->HIT->IP lookups. Everything 
         should work without additional actions.
     </para></listitem>
@@ -2067,7 +2066,7 @@ combo-newgroup=&lt;create new...&gt;
     </para></listitem>
     <listitem><para>
           Wait until the trigger is inserted (see log file) and continue with e.g.
-          ping6 or conntest-client-gai with testing.
+          ping6 or conntest-client-hip with testing.
     </para></listitem>
 	</itemizedlist>
 
@@ -2127,7 +2126,7 @@ combo-newgroup=&lt;create new...&gt;
     enables fast and backwards compatible fallback to non-HIP
     communications for TCP connections when the peer does not support
     HIP.  To use the opportunistic mode, compile HIPL with
-    --enable-opptcp, start both the hipd and firewall (with option -A).
+    --enable-opptcp, start both the hipd and hipfw (with option -A).
     Then run hipconf opptcp on and use the opportunistic mode as instructed
     earlier in this section.
 </para>
@@ -2213,11 +2212,11 @@ combo-newgroup=&lt;create new...&gt;
   	&nbsp; ./tools/hipconf add escrow hit address
   	</para>
   	<para>
-  	After this connection between client and the other host can be tested using conntest-server and conntest-client-gai. 
+  	After this connection between client and the other host can be tested using conntest-server and conntest-client-hip. 
   	</para>
   	<para>
   	&nbsp; ./test/conntest-server tcp 5000 
-  	&nbsp; ./test/conntest-client-gai hostname tcp 5000 
+  	&nbsp; ./test/conntest-client-hip hostname tcp 5000 
   	</para>
   	<para>
   	During base exchange session data is sent to escrow server in update-messages. 

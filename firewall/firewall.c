@@ -318,7 +318,7 @@ int is_hip_packet(void * hdr, int trafficType){
 
 		zero_bytes = (uint32_t *) ((char *)udphdr + sizeof(struct udphdr));
 	  
-		HIP_DEBUG("zero_bytes address is Ox%x, vaule is %d\n", zero_bytes, 
+		HIP_DEBUG("zero_bytes address is Ox%x, value is %d\n", zero_bytes, 
 			  *zero_bytes);
 		
 
