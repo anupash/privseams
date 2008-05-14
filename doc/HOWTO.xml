@@ -1496,7 +1496,7 @@
     <title>HIP Firewall</title>
         <para>This section describes how to use the HIP firewall. The firewall needs to be compiled with the --enable-firewall option to configure. There is also a Python interface included in the source distribution (hip-fw-mi-*tar.gz).</para>
 
-        <para>Firewall can be started with "./firewall &lt;file_name&gt;"
+        <para>Firewall can be started with "hipfw &lt;file_name&gt;"
               "timeout value" at firewall directory, where file_name
               is path of the file containing the firewall rules and
               timeout value is the connection timeout value in
@@ -1739,8 +1739,7 @@
 			</para></listitem>
 		</itemizedlist>
 		<para>
-			The configuration GUI executable is called "hipagent". You should run it using
-			normal user (non-root) priviledges.
+			The configuration GUI executable is called "hipagent". You should run it using sudo.
 		</para>
 
 	<screenshot>
@@ -2127,7 +2126,7 @@ combo-newgroup=&lt;create new...&gt;
     enables fast and backwards compatible fallback to non-HIP
     communications for TCP connections when the peer does not support
     HIP.  To use the opportunistic mode, compile HIPL with
-    --enable-opptcp, start both the hipd and firewall (with option -A).
+    --enable-opptcp, start both the hipd and hipfw (with option -A).
     Then run hipconf opptcp on and use the opportunistic mode as instructed
     earlier in this section.
 </para>
