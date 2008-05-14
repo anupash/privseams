@@ -78,8 +78,10 @@ class dbHandle:
 		self.connection=apsw.Connection(database_file)
 		self.cursor=self.connection.cursor()
 		
+		"""
 		self.cursor.execute(creat_table)		
-
+		"""
+		
 		try:
 			self.cursor.execute(creat_table)		
 		except:
