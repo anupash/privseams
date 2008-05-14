@@ -718,20 +718,19 @@ int hip_add_orig_socket_to_db(int socket_fd, int domain, int type,
 	return err;
 }
 
-/** @todo It would be nice if this function would return some distinct error
-    value when the daemon is not running. */
-int hip_translate_socket(const int *orig_socket,
-			 const struct sockaddr *orig_id,
-			 const socklen_t *orig_id_len,
-			 int **translated_socket,
+int hip_translate_socket(const int *orig_socket, const struct sockaddr *orig_id,
+			 const socklen_t *orig_id_len, int **translated_socket,
 			 struct sockaddr **translated_id,
-			 socklen_t **translated_id_len,
-			 int is_peer, int is_dgram, int force_orig)
+			 socklen_t **translated_id_len, int is_peer,
+			 int is_dgram, int force_orig)
 {
-	int err = 0, pid = getpid(), is_translated, wrap_applicable;
-	hip_opp_socket_t * entry;
+	int err = 0, pid = 0, is_translated = 0, wrap_applicable = 0;
+	hip_opp_socket_t *entry = NULL;
 	int fu = 0;
-	pthread_t tid = pthread_self();
+	pthread_t tid;
+
+	pid = getpid();
+	tid = pthread_self();
 
 	hip_initialize_db_when_not_exist();
 
@@ -1307,9 +1306,9 @@ ssize_t readv(int orig_socket, const struct iovec *vector, int count)
 ssize_t recvfrom(int orig_socket, void *buf, size_t len, int flags, 
 		 struct sockaddr *orig_id, socklen_t *orig_id_len)
 {
-	int err = 0, *translated_socket;
-	socklen_t *translated_id_len;
-	struct sockaddr *translated_id;
+	int err = 0, *translated_socket = NULL;
+	socklen_t *translated_id_len = NULL;
+	struct sockaddr *translated_id = NULL;
 	ssize_t chars = -1;
 	
 	_HIP_DEBUG("recvfrom: orig sock = %d\n", orig_socket);
@@ -1323,6 +1322,7 @@ ssize_t recvfrom(int orig_socket, void *buf, size_t len, int flags,
 	
 	if (err) {
 		HIP_ERROR("Translation failure\n");
+		chars = err;
 		goto out_err;
 	}
 	
@@ -1331,6 +1331,7 @@ ssize_t recvfrom(int orig_socket, void *buf, size_t len, int flags,
 		translated_id_len);
 	
 	_HIP_DEBUG("recvfrom: chars = %d\n", chars);
+
  out_err:
 	return chars;
 }

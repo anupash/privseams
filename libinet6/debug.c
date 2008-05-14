@@ -369,7 +369,7 @@ void hip_error(const char *file, int line, const char *function,
  */
 void hip_perror_wrapper(const char *file, int line, const char *function,
 			const char *s) {
-	hip_error(file, line, function, "%s %s\n", s, strerror(errno));
+	hip_error(file, line, function, "%s%s\n", s, strerror(errno));
 }
 
 /**
