@@ -76,7 +76,6 @@ int hip_peek_recv_total_len(int socket, int encap_hdr_size)
 }
 
 int hip_daemon_connect(int hip_user_sock) {
-int hip_daemon_connect(int hip_user_sock) {
 	int err = 0, n, len;
 	int hip_agent_sock = 0;
 	struct sockaddr_in6 daemon_addr;
@@ -165,7 +164,8 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 	memset(&addr, 0, sizeof(addr));
         addr.sin6_family = AF_INET6;
         addr.sin6_addr = in6addr_loopback;
-	HIP_IFEL(hip_daemon_bind_socket(hip_user_sock, &addr), -1,
+	HIP_IFEL(hip_daemon_bind_socket(hip_user_sock,
+					(struct sockaddr *) &addr), -1,
 		 "bind failed\n");
 
 	HIP_IFEL(hip_daemon_connect(hip_user_sock), -1,
@@ -228,7 +228,8 @@ int hip_send_daemon_info_wrapper(struct hip_common *msg, int send_only) {
         addr.sin6_family = AF_INET6;
         addr.sin6_addr = in6addr_loopback;
 
-	HIP_IFEL(hip_daemon_bind_socket(hip_user_sock, &addr), -1,
+	HIP_IFEL(hip_daemon_bind_socket(hip_user_sock,
+					(struct sockaddr *) &addr), -1,
 		 "bind failed\n");
 
 	HIP_IFEL(hip_daemon_connect(hip_user_sock), -1,
@@ -429,7 +430,6 @@ int hip_read_control_msg_v6(int socket, struct hip_common *hip_msg,
 {
 	return hip_read_control_msg_all(socket, hip_msg, saddr,
 					daddr, msg_info, encap_hdr_size, 0);
-
 }
 
 int hip_read_control_msg_v4(int socket, struct hip_common *hip_msg,
@@ -440,5 +440,5 @@ int hip_read_control_msg_v4(int socket, struct hip_common *hip_msg,
 {
 	return hip_read_control_msg_all(socket, hip_msg, saddr,
 					daddr, msg_info, encap_hdr_size, 1);
-
 }
+
