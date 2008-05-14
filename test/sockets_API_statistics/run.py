@@ -4,16 +4,17 @@ from file_input import *
 from directory_walking import *
 from fetch_files import fetchNetApps
 from database_engine import dbHandle
-
+import sys
 
 reader = ConfReader('sockets_analysis.conf')
 
 
+constants = reader.getItems('constants')
 functions = reader.getItems('functions')
 structures = reader.getItems('structures')
 applications = reader.getItems('applications')
 
-all_socket_api = functions + structures 
+all_socket_api = constants + functions + structures 
 
 fetchnetapps = fetchNetApps(applications)
 fetchnetapps.download_apps()
@@ -21,7 +22,7 @@ fetchnetapps.decompress_apps()
 
 
 
-dbhandle = dbHandle(functions, structures, applications)
+dbhandle = dbHandle(constants, functions, structures, applications)
 
 apps_in_analysis_db = dbhandle.apps_analysis_is_done()
 
@@ -66,4 +67,4 @@ for name in os.listdir(apps_dir):
 #search_engine.print_counts()
 
 dbhandle.close()
-
+sys.exit()

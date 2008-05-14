@@ -13,7 +13,7 @@ from conf_reader import ConfReader
 
 class dbHandle:
 
-	def __init__(self, func_list, struc_list, apps_list):
+	def __init__(self, cons_list, func_list, struc_list, apps_list):
 
 		print "Using APSW file",apsw.__file__     # from the extension module
 		print "APSW version",apsw.apswversion()  # from the extension module
@@ -35,26 +35,31 @@ class dbHandle:
 		
 		self.functions = func_list
 		self.structures = struc_list
+		self.constants = cons_list
 		function_temp = ""
 		
 		structure_temp = ""
+		constant_temp = ""
 
-	
+		for constant in self.constants:
+			constant_temp = constant_temp + constant[0].strip() + " int,"
 		
 		for function in self.functions:
-			function_temp = function_temp + function[0] + " int,"
+			function_temp = function_temp + function[0].strip() + " int,"
 
 		i = 0
 		len_item = len(self.structures) # length of items 
 		for structure in self.structures:
 			if i < len_item - 1:
-				structure_temp = structure_temp + structure[0] + " int,"
+				structure_temp = structure_temp + structure[0].strip() + " int,"
 			else:
-				structure_temp = structure_temp + structure[0] + " int"
+				structure_temp = structure_temp + structure[0].strip() + " int"
 
 			i = i + 1
 		
-		creat_table = "CREATE TABLE socket_statistic (name varchar PRIMARY KEY, " + function_temp  + structure_temp + ")"
+		creat_table = "CREATE TABLE socket_statistic (name varchar PRIMARY KEY, " + constant_temp + function_temp  + structure_temp + ")"
+
+		print creat_table
 
 		#print creat_table		
 		
@@ -73,10 +78,12 @@ class dbHandle:
 		self.connection=apsw.Connection(database_file)
 		self.cursor=self.connection.cursor()
 		
+		self.cursor.execute(creat_table)		
+
 		try:
 			self.cursor.execute(creat_table)		
 		except:
-			print "socket_statistic table is already there!!!"
+			print "socket_statistic table is already there or something wrong with creating DB!!!"
 		#Create table
 
 

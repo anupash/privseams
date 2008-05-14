@@ -14,7 +14,8 @@ class ConfReader:
 		conf_filename = os.path.join(os.environ['PWD'], config_file)
 	#conf_filename = os.path.join(os.environ['HOME'], config_file)
 		
-		self.config = ConfigParser()		
+		self.config = ConfigParser()
+		self.config.add_section("constants")
 		self.config.add_section("functions")
 		self.config.add_section("structures")
 		self.config.add_section("applications")
