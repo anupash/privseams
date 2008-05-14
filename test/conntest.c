@@ -259,7 +259,8 @@ int hip_connect_func(struct addrinfo *peer_ai, int *sock)
 				HIP_INFO("Connecting to IPv4 address %s.\n",
 					 ip_str);
 			}
-		} else if(ai->ai_family == AF_INET6) {
+		} else if(ai->ai_family == AF_INET6 ||
+			  ai->ai_family == AF_HIP) {
 			inet_ntop(AF_INET6, ipv6, ip_str, sizeof(ip_str));
 			
 			if(ipv6_addr_is_hit(ipv6)){
@@ -272,17 +273,16 @@ int hip_connect_func(struct addrinfo *peer_ai, int *sock)
 					 ip_str);
 			}
 		} else {
-			HIP_INFO("Trying to connect to a non-inet address "\
-				 "family address. Skipping. %d\n", ai->ai_family);
+			_HIP_DEBUG("Trying to connect to a non-inet address "\
+				  "family address. Skipping.\n");
+			/* If there are no more address in peer_ai, these err
+			   and errno values are returned. */
 			errno = EAFNOSUPPORT;
 			err = -1;
 			continue;
 		}
 
 		err = 0;
-		
-		/* Reset the global error value since at out_err we set err as
-		   -errno. */
 		errno = 0;
 		
 		/* Get a socket for sending. */
@@ -301,7 +301,7 @@ int hip_connect_func(struct addrinfo *peer_ai, int *sock)
 		   address in peer_ai. We back off if the closing of the socket
 		   fails. */
 		if(connect_err != 0){
-			HIP_ERROR("Unable to connect to the remote address.\n");
+			_HIP_ERROR("Unable to connect to the remote address.\n");
 			if(close(*sock) != 0) {
 				HIP_ERROR("Unable to close a socket.\n");
 				err = -1;

@@ -146,7 +146,7 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 	}
 	
 	if (hip_get_msg_err(msg)) {
-		HIP_ERROR("Message contained an error.\n");
+		HIP_ERROR("HIP message contained an error.\n");
 		err = -EHIP;
 	}
 

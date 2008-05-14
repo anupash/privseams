@@ -94,7 +94,7 @@ int main(int argc, char *argv[]) {
 			 "\e[92mSUCCESS\e[00m ===\n");
 		return EXIT_SUCCESS;
 	} else {
-		HIP_DEBUG("err: %d, errno: %d .\n", err, errno);
+		_HIP_DEBUG("err: %d, errno: %d .\n", err, errno);
 
 		/* Get a help string for pinging etc. */
 		sprintf(ping_help, "You can try the 'ping', 'ping6', "\
@@ -146,9 +146,10 @@ int main(int argc, char *argv[]) {
 				  "descriptor table.\n");
 		} else if(errno == EAFNOSUPPORT) {
 			HIP_ERROR("Address family not supported by protocol.\n"\
-				  "Only IPv4 and IPv6 address families are "\
-				  "supported.\nAre you trying to communicate "\
-				  "between processes on the same machine?\n");
+				  "Only IPv4, IPv6 and HIP address families "\
+				  "are supported.\nAre you trying to "\
+				  "communicate between processes on the same "\
+				  "machine?\n");
 		}
 		/* Just to make sure we don't print 'success' when the
 		   connection test has actually failed we check errno != 0. */

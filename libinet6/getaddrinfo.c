@@ -445,7 +445,7 @@ connect_alarm(int signo)
 int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 {	 								
 	int error = 0, ret_hit = 0, ret_addr = 0, tmp_ttl = 0, tmp_port = 0;
-	int found_hits = 0, lineno = 0, i = 0, err = 0;
+	int found_hits = -1, lineno = 0, i = 0, err = 0;
 	hip_hit_t hit, tmp_hit, tmp_addr;
 	struct in_addr tmp_v4;
 	char dht_response_hit[1024], dht_response_addr[1024], line[500];
@@ -488,19 +488,23 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 		return -EHIP;
 	}
 	
-	HIP_INFO("Asking serving Distributed Hash Table (DHT) gateway info "\
-		 "from the HIP daemon...\n"); 
+	HIP_INFO("Asking serving Distributed Hash Table (DHT) gateway "\
+		 "information\nfrom the HIP daemon...\n"); 
 
 	/* Send a user message to the HIP daemon to receive Open DHT server
 	   gateway whereabouts. */
         if((err = hip_send_recv_daemon_info(msg)) < 0) {
-		return err; 
+		HIP_ERROR("Unable to receive DHT gateway information from the "\
+			  "HIP daemon.\nDo you have a local HIP daemon up and "\
+			  "running?\n");
+		goto skip_dht; 
 	}
 	
 	gw_info = hip_get_param(msg, HIP_PARAM_OPENDHT_GW_INFO);
 	if(gw_info == NULL) {
 		HIP_ERROR("Error. No Open DHT gateway information "\
 			  "available.\n");
+		errno = EPROTO;
 		return -EHIP;
 	}
 	
@@ -523,8 +527,8 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 	/* Check for IN_ADDR_ANY gateway. This happens for example on virtual
 	   machines. */	
 	if((tmp_v4.s_addr | INADDR_ANY) == 0) {
-		HIP_DEBUG("DHT gateway is INADDR_ANY.\n");
-		//goto skip_dht;
+		HIP_ERROR("DHT gateway is 0.0.0.0. Skipping.\n");
+		goto skip_dht;
 	}
 	
         HIP_INFO("DHT server is located at %s:%d with TTL %d.\n",
@@ -587,8 +591,12 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 	fp = fopen(_PATH_HIP_HOSTS, "r");
 	if(fp == NULL)
 	{
-		HIP_ERROR("Error opening file '%s' for reading.\n", _PATH_HIP_HOSTS);		
+		HIP_ERROR("Error opening file '%s' for reading.\n",
+			  _PATH_HIP_HOSTS);
         }
+
+	HIP_INFO("Searching for a HIT value for host '%s' from file '%s'.\n",
+		 name,_PATH_HIP_HOSTS);
 
 	/* Loop through all lines in the file. */
 	/** @todo check return values */
@@ -630,48 +638,57 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 			   again when we already have the hit stored from the
 			   previous loop?
 			   18.01.2008 16:49 -Lauri. */				
-                        for(i = 0; i <length(&list); i++) {                                    
+                        for(i = 0; i <length(&list); i++) {
                                 uint32_t lsi = htonl(HIT2LSI((uint8_t *) &hit));	
                                 struct gaih_addrtuple *prev_pat = NULL;	
 				ret = inet_pton(AF_INET6, getitem(&list,i), &hit);
                                 
-                                if (ret < 1) continue;         
+                                if (ret < 1) {
+					continue;
+				}
                                 
-                                if ((aux = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){
+				aux = (struct gaih_addrtuple *)
+					malloc(sizeof(struct gaih_addrtuple));
+				
+                                if (aux == NULL){
                                         HIP_ERROR("Memory allocation error\n");
                                         exit(-EAI_MEMORY);
                                 }
                                 
-                                //Placing the node at the beginning of the list
+                                /* Placing the node at the beginning of the
+				   list. */
                                 aux->next = (**pat);
                                 (**pat) = aux;
                                 aux->scopeid = 0;				
                                 aux->family = AF_INET6;
                                 memcpy(aux->addr, &hit, sizeof(struct in6_addr));
-                                
-#if 0 /* Disabled as this is not support by the daemon yet -miika*/
-                                /* AG: add LSI as well */					
+/* AG: add LSI as well */
+/* Disabled as this is not support by the daemon yet. -Miika */
+                                /*
                                 if (**pat == NULL) {
-                                        if ((**pat = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){
-                                                HIP_ERROR("Memory allocation error\n");
-                                                exit(-EAI_MEMORY);
-                                        }
-                                        
-                                        (**pat)->scopeid = 0;				
-                                }								
-                                (**pat)->next = NULL;						
-                                (**pat)->family = AF_INET;					
-                                memcpy((**pat)->addr, &lsi, sizeof(hip_lsi_t));			
-                                *pat = &((**pat)->next);					      
-#endif
-                        }									
-                } // end of if 
+				**pat = (struct gaih_addrtuple *)
+				malloc(sizeof(struct gaih_addrtuple));
+				if (**pat == NULL){
+				HIP_ERROR("Memory allocation error\n");
+				exit(-EAI_MEMORY);
+				}
+				
+				(**pat)->scopeid = 0;				
+                                }
+				(**pat)->next = NULL;
+                                (**pat)->family = AF_INET;
+                                memcpy((**pat)->addr, &lsi, sizeof(hip_lsi_t));
+                                *pat = &((**pat)->next);
+				*/
+                        }
+                } // end of if
                 
                 destroy(&list);                                                     
         } // end of while
-
+	
 	if (fp)                                                               
-                fclose(fp);		
+                fclose(fp);
+		
         return found_hits;	        				
 }
 
@@ -1031,6 +1048,8 @@ int gaih_inet_get_name(const char *name, const struct addrinfo *req,
 		(req->ai_flags & AI_V4MAPPED);
 	char *namebuf = strdupa(name);
 	
+	_HIP_DEBUG("gaih_inet_get_name() invoked.\n");
+
 	*at = malloc (sizeof (struct gaih_addrtuple));
 	
 	(*at)->family = AF_UNSPEC;
@@ -1177,9 +1196,11 @@ int gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	   to allow the error value to be passed to the caller of this function.
 	   -Lauri 07.05.2008. */
 	err = gethosts_hit(name, &pat, req->ai_flags);
+
 	if((err) < 0) {
 		return err;
 	}
+	
 	found_hits |= err;
 	err = 0;
 	
@@ -1624,6 +1645,7 @@ int getaddrinfo(const char *name, const char *service,
 	else
 		end = NULL;
 	
+	/* What does this freaky loop do? */
 	while (g->gaih) {
 		
 		if (hints->ai_family == g->family ||
@@ -1641,7 +1663,6 @@ int getaddrinfo(const char *name, const char *service,
 					    hip_transparent_mode);
 				if (i != 0) {
 					last_i = i;
-
 					if (hints->ai_family == AF_UNSPEC &&
 					    (i & GAIH_OKIFUNSPEC)) {
 						continue;
