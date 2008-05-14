@@ -1190,6 +1190,8 @@ static void *handle_ip_traffic(void *ptr){
 	  			{
 					drop_packet(hndl, m->packet_id);
 	  			}
+				HIP_FREE(hip_common);
+				hip_common = NULL;
 			} else {
                                 /* OPPORTUNISTIC MODE HACKS */
 				if((ipv4Traffic && iphdr->ip_p != IPPROTO_TCP) ||
@@ -1223,7 +1225,7 @@ static void *handle_ip_traffic(void *ptr){
 	}while (1);
 
 out_err:  
-	//if (hip_common)
+	if (hip_common)
 		free(hip_common);
         if (esp) {
 		if (esp_data) {
