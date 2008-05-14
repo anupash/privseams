@@ -59,10 +59,12 @@ in_port_t hip_nat_rand_port2 = HIP_NAT_UDP_PORT;
 int hip_user_nat_mode(int nat_mode)
 {
 	int err = 0, nat;
-	_HIP_DEBUG("hip_nat_on() invoked.\n");
+	HIP_DEBUG("hip_user_nat_mode() invoked. mode: %d\n", nat_mode);
 #if HIP_UDP_PORT_RANDOMIZING 
 	hip_nat_randomize_nat_ports();
 #endif
+	
+	nat = nat_mode;
 	switch (nat) {
 	case SO_HIP_SET_NAT_PLAIN_UDP:
 		nat = HIP_NAT_MODE_PLAIN_UDP;
@@ -79,6 +81,10 @@ int hip_user_nat_mode(int nat_mode)
 	} 
 	HIP_IFEL(hip_for_each_ha(hip_ha_set_nat_mode, &nat), 0,
 	         "Error from for_each_ha().\n");
+	//set the nat mode for the host
+	hip_set_nat_mode(nat);
+	
+	HIP_DEBUG("hip_user_nat_mode() end. mode: %d\n", hip_nat_status);
 
 out_err:
 	return err;
@@ -634,10 +640,9 @@ void* hip_external_ice_init(pj_ice_sess_role role){
  	   
  	   
  	 if(PJ_SUCCESS ==  status){
- 		 HIP_DEBUG("santtu ice 6 \n"); 
  		 return p_ice;
  	  }
- 	 else HIP_DEBUG("santtu ice 7 %d \n", status); 
+ 	 else HIP_DEBUG("ice init fail %d \n", status); 
  	
 
  	return 0;
@@ -672,43 +677,13 @@ int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, 
 	 comp_id = PJ_COM_ID;
 	 type = addr_type;
 	 foundation = pj_str("ice");
-//for preference calculation
-	// local_pref = 65536;
-	 
-	 //TODO  this is only for IPv4
-	 /*
-	 pj_sockaddr_in_set_port(&pj_addr, 
-	 					port); 
 
-
-	 //TODO check if HIP address is unit 32
-	 pj_sockaddr_in_set_addr(&pj_addr,
-			(pj_uint32_t) hip_addr->s6_addr32);
-	
-	*/
 	 
 	 pj_addr.sin_family=PJ_AF_INET;
 	 pj_addr.sin_port = port;
 	 pj_addr.sin_addr.s_addr =*((pj_uint32_t*) &hip_addr->s6_addr32[3]);
 	 
 	 addr_len = sizeof(pj_sockaddr_in);
-	 
-	 //pj_sockaddr_t is a void point. we need pj_sockaddr struct.
-	 
-	 /*
-		pj_sockaddr_in addr;
-
-		pj_sockaddr_in_init(&addr, pj_cstr(&a, cand[i].addr), (pj_uint16_t)cand[i].port);
-		status = pj_ice_strans_add_cand(ice_st, cand[i].comp_id, cand[i].type,
-					    65535, &addr, PJ_FALSE);
-	 */
-	 
-	 /**
-	PJ_ICE_CAND_TYPE_HOST 	ICE host candidate. A host candidate represents the actual local transport address in the host.
-	PJ_ICE_CAND_TYPE_SRFLX 	ICE server reflexive candidate, which represents the public mapped address of the local address, and is obtained by sending STUN Binding request from the host candidate to a STUN server.
-	PJ_ICE_CAND_TYPE_PRFLX 	ICE peer reflexive candidate, which is the address as seen by peer agent during connectivity check.
-	PJ_ICE_CAND_TYPE_RELAYED 	ICE relayed candidate, which represents the address allocated in TURN server.
-	  * */
 
 	
 	pj_status =  pj_ice_sess_add_cand  	(   ice,
@@ -722,7 +697,6 @@ int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, 
 			addr_len,
 			&p_cand_id	 
 		) ;
-	HIP_DEBUG("santtu add 4 %d\n", pj_status);
 	if(pj_status == PJ_SUCCESS)	{
 
 		return 1;
@@ -800,24 +774,7 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 	}
 	
 	HIP_DEBUG("complete remote list\n");
-	/*
-	
-	for(i = 0; i< rem_cand_cnt; i ++){
-		peer_addr_list_item = (struct hip_peer_addr_list_item * )list->b[i]->data;
-		
-		//(rem_cand+i)->
-		rem_cand = PJ_POOL_ZALLOC_T(pool, pj_ice_sess_cand);
-		rem_cand->comp_id = 1;
-		
-		//rem_cand.type = 
-	//	foundation
-		//rem_cand.prio= 
-		//memcpy(&rem_cand->addr.pj_sockaddr_in.sin_family, &peer_addr_list_item->address sizeof(struct in6_addr));
-	//	rem_cand->addr.pj_sockaddr_in.sin_family = peer_addr_list_item->address ;
-		pj_sockaddr_in_set_port(&rem_cand->addr.ipv4, peer_addr_list_item->port);
-		memcpy(&(rem_cand->addr.ipv4.sin_addr),&peer_addr_list_item->address, sizeof(struct in6_addr) );
-	}                          
-	*/
+
 	pj_status_t t;
 	HIP_DEBUG("add remote number: %d \n", rem_cand_cnt);
 	if(rem_cand_cnt > 0 )
@@ -921,8 +878,9 @@ uint8_t hip_get_nat_control(){
 #ifdef HIP_USE_ICE
 	 if(hip_we_are_relay())
 		 return 0;
-	 else 
-		 return 1;
+	 else if(hip_get_nat_mode()== SO_HIP_SET_NAT_ICE_UDP)
+		 	return 1;
+		  else return 0;
 #else
 	return 0;
 #endif
