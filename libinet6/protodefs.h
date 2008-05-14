@@ -404,12 +404,12 @@ struct hip_locator_info_addr_item2 {
 
 /**
  * it is a union of both type1 and type2 locator.
- */
+ *
 union hip_locator_info_addr {
 	struct hip_locator_info_addr_item type1;
 	struct hip_locator_info_addr_item2 type2;
 }__attribute__ ((packed));
-
+*/
 /** Structure describing an endpoint. This structure is used by the resolver in
  * the userspace, so it is not length-padded like HIP parameters. All of the
  * members are in network byte order.

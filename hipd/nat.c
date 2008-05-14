@@ -328,17 +328,6 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 	struct hip_spi_out_item* spi_out;
     
     
-	// found the right entry. 
-	/*
-    list_for_each_safe(item, tmp, hadb_hit, i) {
-        ha_n = list_entry(item);
-        if(ha_n->ice_session == ice){
-        	entry = ha_n;
-        }
-    }
-    */
-    
-    
     entry = hip_get_entry_from_ice(ice);
     if(entry == NULL)
     	HIP_DEBUG("hip_on_ice_complete, entry found");
@@ -456,15 +445,9 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 		
 		
 	}
-	//we set the flag in the peer list to verified.
 	
 	//TODO decide if we should save the paired local address also.
 
-	
-	
-	// out_err:
-	 // HIP_DEBUG("err\n");
-		//return err;
 }
 
 
@@ -494,14 +477,8 @@ pj_status_t hip_on_tx_pkt(pj_ice_sess *ice, unsigned comp_id, const void *pkt, p
 //	hip_set_msg_total_len(msg,sizeof(struct hip_common) + size);
 	msg->payload_len = sizeof(struct hip_common) + size;
 	memcpy(msg +1, pkt, size );  
-	
-	
-	
+		
 	HIP_DEBUG("hip_on_tx_pkt : \n");
-	
-	HIP_DEBUG("hip_on_tx_pkt ice current valid number: %d\n", ice->valid_list.count);
-	
-	
 	
 	struct in6_addr *local_addr = 0;
 	struct in6_addr peer_addr;
@@ -545,8 +522,6 @@ out_err:
  * we ignire here.
  * */
 void hip_on_rx_data(pj_ice_sess *ice, unsigned comp_id, void *pkt, pj_size_t size, const pj_sockaddr_t *src_addr, unsigned src_addr_len){
-	HIP_DEBUG("hip_on_rx_data Len:%d \ndata: ", size);
-	HIP_DEBUG("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n");
 	
 }
 
@@ -796,7 +771,7 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 int hip_ice_start_check(void* ice){
 	
 	pj_ice_sess * session = ice;
-	
+	/*
 	HIP_DEBUG("start checking\n");
 	HIP_DEBUG("ice: %s \n", session->obj_name);
 	HIP_DEBUG("ice: local c number %d \n", session->lcand_cnt);
@@ -823,7 +798,7 @@ int hip_ice_start_check(void* ice){
 		hip_print_lsi("ca 's 	base addr:" , &(session->rcand[i].addr.ipv4.sin_addr.s_addr ));
 		HIP_DEBUG("ca 's 	base addr port: %d \n" , (session->rcand[i].addr.ipv4.sin_port ));
 	}
-					
+	*/				
 	pj_status_t result;
 	HIP_DEBUG("Ice: check dump end\n");
 	pj_log_set_level(4);
