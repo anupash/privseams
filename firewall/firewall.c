@@ -145,17 +145,17 @@ int firewall_init()
 			{
 				if (!accept_hip_esp_traffic)
 				{
-					system("iptables -I FORWARD -p 253 -j QUEUE");
+					system("iptables -I FORWARD -p 139 -j QUEUE");
 					system("iptables -I FORWARD -p 50 -j QUEUE");
 					system("iptables -I FORWARD -p 17 --dport 50500 -j QUEUE");
 					system("iptables -I FORWARD -p 17 --sport 50500 -j QUEUE");
 	
-					system("iptables -I INPUT -p 253 -j QUEUE");
+					system("iptables -I INPUT -p 139 -j QUEUE");
 					system("iptables -I INPUT -p 50 -j QUEUE");
 					system("iptables -I INPUT -p 17 --dport 50500 -j QUEUE");
 					system("iptables -I INPUT -p 17 --sport 50500 -j QUEUE");
 	
-					system("iptables -I OUTPUT -p 253  -j QUEUE");
+					system("iptables -I OUTPUT -p 139  -j QUEUE");
 					system("iptables -I OUTPUT -p 50 -j QUEUE");
 					system("iptables -I OUTPUT -p 17 --dport 50500 -j QUEUE");
 					system("iptables -I OUTPUT -p 17 --sport 50500 -j QUEUE");
@@ -181,17 +181,17 @@ int firewall_init()
 			{
 				if (!accept_hip_esp_traffic)
 				{
-					system("ip6tables -I FORWARD -p 253 -j QUEUE");
+					system("ip6tables -I FORWARD -p 139 -j QUEUE");
 					system("ip6tables -I FORWARD -p 50 -j QUEUE");
 					system("ip6tables -I FORWARD -p 17 --dport 50500 -j QUEUE");
 					system("ip6tables -I FORWARD -p 17 --sport 50500 -j QUEUE");
 	
-					system("ip6tables -I INPUT -p 253 -j QUEUE");
+					system("ip6tables -I INPUT -p 139 -j QUEUE");
 					system("ip6tables -I INPUT -p 50 -j QUEUE");
 					system("ip6tables -I INPUT -p 17 --dport 50500 -j QUEUE");
 					system("ip6tables -I INPUT -p 17 --sport 50500 -j QUEUE");
 	
-					system("ip6tables -I OUTPUT -p 253  -j QUEUE");
+					system("ip6tables -I OUTPUT -p 139  -j QUEUE");
 					system("ip6tables -I OUTPUT -p 50 -j QUEUE");
 					system("ip6tables -I OUTPUT -p 17 --dport 50500 -j QUEUE");
 					system("ip6tables -I OUTPUT -p 17 --sport 50500 -j QUEUE");
