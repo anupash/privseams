@@ -1281,6 +1281,8 @@ int main(int argc, char **argv)
 	extern int optind, optopt;
 	int errflg = 0, killold = 0;
 
+	HIP_IFEL((geteuid() != 0), -1, "firewall must be started with sudo\n");
+
 	check_and_write_default_config();
 
 	hip_set_logdebug(LOGDEBUG_NONE);
