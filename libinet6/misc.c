@@ -1623,6 +1623,9 @@ int hip_sockaddr_len(void *sockaddr) {
   case AF_INET6:
     len = sizeof(struct sockaddr_in6);
     break;
+  case_AF_UNIX:
+    len = sizeof(struct sockaddr_un);
+    break;
   default:
     len = 0;
   }

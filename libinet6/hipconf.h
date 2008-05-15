@@ -39,9 +39,9 @@
 #include "crypto.h"
 #include "builder.h"
 #include "hipd.h"
-
 #include "util.h"
 #include "libhipopendht.h"
+#include "registration.h"
 
 /*
  * DO NOT TOUCH THESE, unless you know what you are doing.
@@ -105,8 +105,9 @@
 #define ACTION_OPENDHT 20
 #define ACTION_OPPTCP  21
 #define ACTION_TRANSORDER 22
-#define ACTION_REINIT 23
-#define ACTION_MAX 24 /* exclusive */
+#define ACTION_HIPPROXY 23
+#define ACTION_REINIT 24
+#define ACTION_MAX 25 /* exclusive */
 
 /* Important! These values are used as array indexes, so keep in this order.
    Add values after the last value and increment TYPE_MAX. */
@@ -137,7 +138,8 @@
 #define TYPE_DHT           24
 #define TYPE_OPPTCP	   25
 #define TYPE_ORDER         26
-#define TYPE_MAX           27 /* exclusive */
+#define TYPE_HIPPROXY	   27
+#define TYPE_MAX           28 /* exclusive */
 
 /* for handle_hi() only */
 #define OPT_HI_TYPE 0
@@ -149,10 +151,10 @@
 "# Format of this file is as with hipconf, but without hipconf prefix.\n\
 # add map HIT IP    # preload some HIT-to-IP mappings to hipd \n\
 # add service rvs   # the host acts as HIP rendezvous\n\
-# nat on            # the host is behind a NAT\n\
 # dht gw host port port TTL # set dht gw hostname|ip port default=5851\n\
 # locator on # host sends all of its locators in base exchange \n\
 opendht off # Jan 2007: OpenDHT infrastructure is flaky -Samu/Miika\n\
+nat on              # the host is behind a NAT\n\
 debug medium        # debug verbosity: all, medium or none\n"
 
 #define HIPD_HOSTS_FILE     "/etc/hip/hosts"
@@ -197,5 +199,6 @@ int hip_conf_handle_ha(hip_common_t *msg, int action,const char *opt[], int optc
 int hip_conf_handle_handoff(hip_common_t *msg, int action,const char *opt[], int optc);
 int hip_conf_handle_opptcp(hip_common_t *, int type, const char *opt[], int optc);
 int hip_do_hipconf(int argc, char *argv[], int send_only);
-
+int hip_conf_handle_opptcp(struct hip_common *, int type, const char *opt[], int optc);
+int hip_conf_handle_hipproxy(struct hip_common *msg, int action, const char *opt[], int optc);
 #endif /* HIPCONF */

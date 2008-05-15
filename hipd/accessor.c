@@ -151,7 +151,7 @@ int hip_query_ip_hit_mapping(struct hip_common *msg)
 	hip_ha_t *entry = NULL;
 	
 	
-	hit = (struct in6_addr *) hip_get_param_contents(msg, HIP_PSEUDO_HIT);
+	hit = (struct in6_addr *) hip_get_param_contents(msg, HIP_PARAM_PSEUDO_HIT);
 	HIP_ASSERT(hit_is_opportunistic_hashed_hit(hit));
 	
 	entry = hip_hadb_try_to_find_by_peer_hit(hit);
@@ -175,3 +175,25 @@ int hip_query_ip_hit_mapping(struct hip_common *msg)
 }
 #endif // CONFIG_HIP_OPPORTUNISTIC
 
+int hip_get_hip_proxy_status(void)
+{
+	return hipproxy;
+}
+
+int hip_set_hip_proxy_on(void)
+{
+	int err = 0;
+	hipproxy = 1;
+	HIP_DEBUG("hip_set_hip_proxy_on() invoked.\n");
+ out_err:
+	return err;
+}
+
+int hip_set_hip_proxy_off(void)
+{
+	int err = 0;
+	hipproxy = 0;
+	HIP_DEBUG("hip_set_hip_proxy_off() invoked.\n");
+ out_err:
+	return err;
+}
