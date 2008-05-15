@@ -34,18 +34,19 @@ int foreground = 1;
 void print_usage()
 {
 	printf("HIP Firewall\n");
-	printf("Usage: hipfw [-f file_name] [-t timeout] [-d|-v] [-F] [-H] [-A] [-b] [-k]\n");
-	printf("      - H drop non-HIP traffic by default (default: accept non-hip traffic)\n");
-	printf("      - A accept HIP traffic by default (default: drop all hip traffic)\n");
-	printf("      - f file_name is a path to a file containing firewall filtering rules (default %s)\n", HIP_FW_DEFAULT_RULE_FILE);
-	printf("      - timeout is connection timeout value in seconds\n");
-	printf("      - d = debugging output\n");
-	printf("      - v = verbose output\n");
-	printf("      - t = timeout for packet capture (default %d secs)\n", 
+	printf("Usage: hipfw [-f file_name] [-t timeout] [-d|-v] [-F] [-H] [-A] [-b] [-k] [-h]\n");
+	printf("      -H drop non-HIP traffic by default (default: accept non-hip traffic)\n");
+	printf("      -A accept HIP traffic by default (default: drop all hip traffic)\n");
+	printf("      -f file_name is a path to a file containing firewall filtering rules (default %s)\n", HIP_FW_DEFAULT_RULE_FILE);
+	printf("      -t timeout is connection timeout value in seconds\n");
+	printf("      -d = debugging output\n");
+	printf("      -v = verbose output\n");
+	printf("      -t = timeout for packet capture (default %d secs)\n", 
 	HIP_FW_DEFAULT_TIMEOUT);
-	printf("      - F = do not flush iptables rules\n");
-	printf("      - b = fork the firewall to background\n");
-	printf("      - k = kill running firewall pid\n\n");
+	printf("      -F = do not flush iptables rules\n");
+	printf("      -b = fork the firewall to background\n");
+	printf("      -k = kill running firewall pid\n");
+	printf("      -h = print this help\n\n");
 }
 
 //currently done at all times, rule_management 
@@ -1462,7 +1463,7 @@ int main(int argc, char **argv)
 	int errflg = 0, killold = 0;
 
 	if (geteuid() != 0) {
-		HIP_ERROR("firewall must be started with sudo\n");
+		HIP_ERROR("firewall must be run as root\n");
 		exit(-1);
 	}
 
@@ -1470,7 +1471,7 @@ int main(int argc, char **argv)
 
 	hip_set_logdebug(LOGDEBUG_NONE);
 
-	while ((ch = getopt(argc, argv, "f:t:vdFHAbk")) != -1)
+	while ((ch = getopt(argc, argv, "f:t:vdFHAbkh")) != -1)
 	{
 		switch (ch)
 		{
@@ -1486,7 +1487,6 @@ int main(int argc, char **argv)
 		case 'A':
 			accept_hip_esp_traffic = 1;
 			break;
-
 		case 'f':
 			rule_file = optarg;
 			break;
@@ -1505,6 +1505,10 @@ int main(int argc, char **argv)
 			break;
 		case 'k':
 			killold = 1;
+			break;
+		case 'h':
+			print_usage();
+			exit(2);
 			break;
 		case '?':
 			printf("Unrecognized option: -%c\n", optopt);
