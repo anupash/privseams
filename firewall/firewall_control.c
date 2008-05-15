@@ -75,14 +75,22 @@ gpointer run_control_thread(gpointer data)
 			{
 				HIP_ERROR("Error receiving message parameters from daemon.\n");
 				err = -1;
-				goto out_err;
+				continue;
 			}
 
 			HIP_ASSERT(n == len);
 
+			if (ntohs(sock_addr.sin6_port) != HIP_DAEMON_LOCAL_PORT) {
+				HIP_DEBUG("Drop, message not from hipd\n");
+				err = -1;
+				continue;
+				
+			}
+
 			err = handle_msg(msg, &sock_addr);
 			if (err < 0){
 				HIP_ERROR("Error handling message\n");
+				continue;
 				//goto out_err;	 
 			}
 		}
@@ -96,8 +104,10 @@ out_err:
 	n = sendto_hipd(msg, sizeof(struct hip_common));
 	if (n < 0) HIP_ERROR("Could not send quit message to daemon.\n");
 	
-	if (hip_firewall_sock) close(hip_firewall_sock);
-	if (msg != NULL) HIP_FREE(msg);
+	if (hip_firewall_sock)
+		close(hip_firewall_sock);
+	if (msg != NULL)
+		HIP_FREE(msg);
 
 	control_thread_started = 0;
 	
@@ -243,11 +253,12 @@ int sendto_hipd(void *msg, size_t len)
 	
 	bzero(&sock_addr, sizeof(sock_addr));
 	sock_addr.sin6_family = AF_INET6;
-	sock_addr.sin6_port = HIP_DAEMON_LOCAL_PORT;
+	sock_addr.sin6_port = htons(HIP_DAEMON_LOCAL_PORT);
 	sock_addr.sin6_addr = in6addr_loopback;
     
 	alen = sizeof(sock_addr);
-	n = sendto(hip_firewall_sock, msg, len, 0, (struct sockaddr *)&sock_addr, alen);
+	n = sendto(hip_firewall_sock, msg, len, 0,
+		   (struct sockaddr *)&sock_addr, alen);
 
 	return (n);
 }
@@ -255,10 +266,10 @@ int sendto_hipd(void *msg, size_t len)
 
 int control_thread_init(void)
 {
-   int err = 0;
+	int err = 0;
 	int n;
 	int len;
-    struct sockaddr_in6 sock_addr;
+	struct sockaddr_in6 sock_addr;
     
 	struct hip_common *msg = NULL;
 	socklen_t alen;
@@ -275,37 +286,39 @@ int control_thread_init(void)
 	HIP_IFEL((hip_firewall_sock < 0), 1, "Could not create socket for firewall.\n");
 	bzero(&sock_addr, sizeof(sock_addr));
 	sock_addr.sin6_family = AF_INET6;
-	sock_addr.sin6_port = HIP_FIREWALL_PORT;
+	sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
 	sock_addr.sin6_addr = in6addr_loopback;
 	HIP_IFEL(bind(hip_firewall_sock, (struct sockaddr *)& sock_addr,
 		      sizeof(sock_addr)), -1, "Bind on firewall socket addr failed\n");
+
 	
 #ifdef CONFIG_HIP_HIPPROXY	
 	request_hipproxy_status(); //send hipproxy status request before the control thread running.
 #endif /* CONFIG_HIP_HIPPROXY */
-	
-	if( !g_thread_supported() )
+
+    	if( !g_thread_supported() )
 	{
- 		g_thread_init(NULL);
- 		HIP_DEBUG("control_thread_init: initialized thread system\n");
+		g_thread_init(NULL);
+     		HIP_DEBUG("control_thread_init: initialized thread system\n");
 	}
 	else
 	{
- 		HIP_DEBUG("control_thread_init: thread system already initialized\n");
+     		HIP_DEBUG("control_thread_init: thread system already initialized\n");
 	}
-	control_thread_started = 1;
-	control_thread = g_thread_create(run_control_thread, 
-				   (gpointer)msg, 
-				   FALSE,
-				   NULL);   
+    	control_thread_started = 1;
+    	control_thread = g_thread_create(run_control_thread, 
+					   (gpointer)msg, 
+					   FALSE,
+					   NULL);   
 	if (!control_thread)
-	HIP_DEBUG("Could not initialize control_thread\n");			   
-
+		HIP_DEBUG("Could not initialize control_thread\n");			   
 	return 0;
 
 out_err:
-	if (hip_firewall_sock) close(hip_firewall_sock);
-	if (msg != NULL) HIP_FREE(msg);
+	if (hip_firewall_sock)
+		close(hip_firewall_sock);
+	if (msg != NULL)
+		HIP_FREE(msg);
 
 	return err;			   
 }

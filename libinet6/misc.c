@@ -1623,6 +1623,9 @@ int hip_sockaddr_len(void *sockaddr) {
   case AF_INET6:
     len = sizeof(struct sockaddr_in6);
     break;
+  case_AF_UNIX:
+    len = sizeof(struct sockaddr_un);
+    break;
   default:
     len = 0;
   }
@@ -1654,7 +1657,7 @@ int hip_create_lock_file(char *filename, int killold) {
 	int err = 0, fd = 0, old_pid = 0;
 	char old_pid_str[64], new_pid_str[64];
 	int new_pid_str_len;
-
+	
 	memset(old_pid_str, 0, sizeof(old_pid_str));
 	memset(new_pid_str, 0, sizeof(new_pid_str));
 
@@ -1666,35 +1669,53 @@ int hip_create_lock_file(char *filename, int killold) {
 	/* Read old pid */
 	fd = open(filename, O_RDWR | O_CREAT, 0644);
 	HIP_IFEL((fd <= 0), -1, "opening lock file failed\n");
+
 	read(fd, old_pid_str, sizeof(old_pid_str) - 1);
 	old_pid = atoi(old_pid_str);
-
+       
 	if (lockf(fd, F_TLOCK, 0) < 0)
-	{
-		HIP_IFEL(!killold, -1,
-			 "HIP daemon already running with pid %d!"
-			 " Give -k option to kill old daemon.\n");
+	{ 
+		HIP_IFEL(!killold, -12,
+			 "\nHIP daemon already running with pid %d\n"
+			 "Give: -k option to kill old daemon.\n",old_pid);
 		
-		HIP_INFO("Daemon is already running with pid %d?"
+		HIP_INFO("\nDaemon is already running with pid %d\n"
 			 "-k option given, terminating old one...\n", old_pid);
-		HIP_IFEL(kill(old_pid, SIGKILL), -1, "kill failed\n");
-
 		/* Erase the old lock file to avoid having multiple pids
 		   in the file */
 		lockf(fd, F_ULOCK, 0);
 		close(fd);
-		HIP_IFEL(hip_remove_lock_file(filename), -1,
-			 "remove lock file\n")
-			fd = open(filename, O_RDWR | O_CREAT, 0644);
-		HIP_IFEL((fd <= 0), -1, "opening lock file failed\n");
-		HIP_IFEL(lockf(fd, F_TLOCK, 0), -1,
-			 "lock attempt failed\n")
+		HIP_IFEL(hip_remove_lock_file(filename), -1,"remove lock file\n");
+                /* fd = open(filename, O_RDWR | O_CREAT, 0644); */
+		fd = open(filename, O_RDWR | O_CREAT | O_TRUNC, 0644);
+                /* don't close file descriptor because new started process is running */
+		HIP_IFEL((fd <= 0), -1, "Opening lock file failed\n");
+		HIP_IFEL(lockf(fd, F_TLOCK, 0), -1,"lock attempt failed\n");  
+                 /* HIP_IFEL(kill(old_pid, SIGKILL), -1, "kill failed\n"); */
+		err = kill(old_pid, SIGKILL);
+		if (err != 0)
+		{
+                 HIP_INFO("\nError %d while trying to kill pid %d\n", err,old_pid);
+		} 
 	}
-	
+	/* else if (killold)
+	{	
+		lseek(fd,0,SEEK_SET);
+		write(fd, new_pid_str, new_pid_str_len);
+                system("NEW_PID=$(sudo awk NR==1 /var/lock/hipd.lock)");
+		system("OLD_PID=$(/bin/pidof -o $NEW_PID hipd)");
+		system("kill -9 $OLD_PID"); 
+	} */
+
+	lseek(fd,0,SEEK_SET);
 	HIP_IFEL((write(fd, new_pid_str, new_pid_str_len) != new_pid_str_len),
 		 "Writing new pid failed\n", -1);
 
 out_err:
+	if (err == -12)
+	{
+	  exit(0);
+	}
 
 	return err;
 }

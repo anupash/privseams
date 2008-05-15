@@ -151,7 +151,7 @@ int hip_query_ip_hit_mapping(struct hip_common *msg)
 	hip_ha_t *entry = NULL;
 	
 	
-	hit = (struct in6_addr *) hip_get_param_contents(msg, HIP_PSEUDO_HIT);
+	hit = (struct in6_addr *) hip_get_param_contents(msg, HIP_PARAM_PSEUDO_HIT);
 	HIP_ASSERT(hit_is_opportunistic_hashed_hit(hit));
 	
 	entry = hip_hadb_try_to_find_by_peer_hit(hit);

@@ -1277,10 +1277,10 @@ void read_file(char * file_name)
 	  else 
 	    HIP_DEBUG("unable to parse rule: %s\n", original_line);
 	  free(original_line);
-	  free(line);
-	  line = NULL;
 	  original_line = NULL;
       }
+      free(line);
+      line = NULL;
       fclose(file);
     }
   else

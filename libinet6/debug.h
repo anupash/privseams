@@ -93,16 +93,15 @@
 enum debug_level { DEBUG_LEVEL_DIE, DEBUG_LEVEL_ERROR, DEBUG_LEVEL_INFO,
 		   DEBUG_LEVEL_DEBUG, DEBUG_LEVEL_MAX };
 
-/* XX FIXME: implement! */
-//#define HIP_DEBUG_HIT(str, hit) do {} while(0)
 #define HIP_INFO_HIT(str, hit)  hip_print_hit(DEBUG_LEVEL_INFO, __FILE__, __LINE__, __FUNCTION__, str, hit)
-#define HIP_DEBUG_HIT(str, hit)  hip_print_hit(DEBUG_LEVEL_INFO, __FILE__, __LINE__, __FUNCTION__, str, hit)
 #define HIP_INFO_IN6ADDR(str, in6) hip_print_hit(DEBUG_LEVEL_INFO, __FILE__, __LINE__, __FUNCTION__, str, in6)
+#define HIP_INFO_LSI(str, lsi)  hip_print_lsi(DEBUG_LEVEL_INFO, __FILE__, __LINE__, __FUNCTION__, str, lsi)
+#define HIP_INFO_INADDR(str, in)  hip_print_lsi(DEBUG_LEVEL_INFO, __FILE__, __LINE__, __FUNCTION__, str, in)
+
+#define HIP_DEBUG_HIT(str, hit)  hip_print_hit(DEBUG_LEVEL_INFO, __FILE__, __LINE__, __FUNCTION__, str, hit)
 #define HIP_DEBUG_IN6ADDR(str, in6) hip_print_hit(DEBUG_LEVEL_DEBUG, __FILE__, __LINE__, __FUNCTION__, str, in6)
 #define HIP_DEBUG_LSI(str, lsi)  hip_print_lsi(DEBUG_LEVEL_DEBUG, __FILE__, __LINE__, __FUNCTION__, str, lsi)
 #define HIP_DEBUG_INADDR(str, in)  hip_print_lsi(DEBUG_LEVEL_DEBUG, __FILE__, __LINE__, __FUNCTION__, str, in)
-//#define HIP_DEBUG_KEY(str, key, key_len) hip_print_key(DEBUG_LEVEL_DEBUG, __FILE__, __LINE__, __FUNCTION__, str, key, key_len)
-//#define HIP_DEBUG_IN6ADDR(str, hit) do {} while(0)
 
 /* these are used for disabling a debugging command temporarily */
 #define _HIP_DEBUG(...) do {} while(0)
@@ -178,6 +177,7 @@ void uint16_to_binstring(uint16_t val, char *buffer);
 void uint32_to_binstring(uint32_t val, char *buffer);
 
 void hip_print_locator_addresses(struct hip_common *);
+void hip_print_peer_addresses(hip_ha_t *);
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 

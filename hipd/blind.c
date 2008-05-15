@@ -445,10 +445,13 @@ struct hip_common *hip_blind_create_r1(const struct in6_addr *src_hit,
 				 const struct hip_host_id *host_id_pub,
 				 int cookie_k)
 {
-	struct hip_common *msg;
-	int err = 0, dh_size1, dh_size2, written1, written2, mask = 0;
+	hip_common_t *msg = NULL;
+	int err = 0, dh_size1 = 0, dh_size2 = 0, written1 = 0, written2 = 0;
+	int mask = 0;
  	u8 *dh_data1 = NULL, *dh_data2 = NULL;
-
+	hip_srv_t service_list[HIP_TOTAL_EXISTING_SERVICES];
+	unsigned int service_count = 0;
+	
  	/* Supported HIP and ESP transforms. */
  	hip_transform_suite_t transform_hip_suite[] = {
 		HIP_HIP_AES_SHA1,
@@ -460,6 +463,7 @@ struct hip_common *hip_blind_create_r1(const struct in6_addr *src_hit,
 		HIP_ESP_AES_SHA1,
 		HIP_ESP_NULL_SHA1
 	};
+	
  	HIP_DEBUG("hip_blind_create_r1() invoked.\n");
 
 	HIP_IFEL(!(msg = hip_msg_alloc()), -ENOMEM, "Out of memory\n");
@@ -530,28 +534,28 @@ struct hip_common *hip_blind_create_r1(const struct in6_addr *src_hit,
 	/********** Host_id  is not included in the the blinded R1 **********/
 
 
-	/* REG_INFO */
-	/* @todo Get service-list from some function which lists all services
-	   offered by this system. */
+	/********** REG_INFO *********/
+	hip_get_active_services(service_list, &service_count);
+	hip_build_param_reg_info(msg, service_list, service_count);
 	
-	int *list;
-	int count = 0;
+	/*
+	  int *list;
+	  int count = 0;
 		
-	count = hip_get_services_list(&list);
+	  count = hip_get_services_list(&list);
 	
-	HIP_DEBUG("Amount of services is %d.\n", count);
+	  HIP_DEBUG("Amount of services is %d.\n", count);
 	
-	int i;
-	for (i = 0; i < count; i++) {
-		HIP_DEBUG("Service is %d.\n", list[i]);
-	}
+	  int i;
+	  for (i = 0; i < count; i++) {
+	  HIP_DEBUG("Service is %d.\n", list[i]);
+	  }
 	
-	if (count > 0) {
-		HIP_DEBUG("Adding REG_INFO parameter.\n");
-		/** @todo Min and max lifetime of registration. */
-		HIP_IFEL(hip_build_param_reg_info(msg,  0, 0, list, count), -1, 
-		 	"Building of reg_info failed\n");	
-	}
+	  if (count > 0) {
+	  HIP_DEBUG("Adding REG_INFO parameter.\n");
+	  HIP_IFEL(hip_build_param_reg_info(msg,  0, 0, list, count), -1, 
+	  "Building of reg_info failed\n");	
+	  }*/
 
 	/********** ECHO_REQUEST_SIGN (OPTIONAL) *********/
 

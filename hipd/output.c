@@ -484,23 +484,22 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 				 int cookie_k)
 {
         extern int hip_transform_order;
-	struct hip_common *msg = NULL;
 	struct hip_locator_info_addr_item *addr_list = NULL;
 	struct hip_locator *locator = NULL;
  	struct hip_locator_info_addr_item *locators = NULL;
 	struct netdev_address *n = NULL;
- 	int err = 0, dh_size1, dh_size2, written1, written2, mask = 0;
- 	u8 *dh_data1 = NULL, *dh_data2 = NULL;
-	hip_ha_t *entry = NULL;
-       	uint32_t spi = 0;
-	int * service_list = NULL;
-	int service_count = 0;
-	int *list = NULL;
-	int  l = 0, is_add = 0, ii = 0;
-	hip_list_t *item, *tmp;
+ 	hip_ha_t *entry = NULL;
+	hip_common_t *msg = NULL;
+ 	hip_list_t *item = NULL, *tmp = NULL;
+	hip_srv_t service_list[HIP_TOTAL_EXISTING_SERVICES];
+	u8 *dh_data1 = NULL, *dh_data2 = NULL;
+	uint32_t spi = 0;
+	int err = 0, dh_size1 = 0, dh_size2 = 0, written1 = 0, written2 = 0;
+	int mask = 0, l = 0, is_add = 0, ii = 0, *list = NULL;
+	unsigned int service_count = 0;
 
 	/* Supported HIP and ESP transforms. */
-        hip_transform_suite_t transform_hip_suite[] = {
+	hip_transform_suite_t transform_hip_suite[] = {
                 HIP_HIP_AES_SHA1,
                 HIP_HIP_3DES_SHA1,
                 HIP_HIP_NULL_SHA1	};
@@ -638,6 +637,12 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 					   sizeof(hip_transform_suite_t)), -1, 
 		 "Building of HIP transform failed\n");
 
+	/********** HOST_ID **********/
+	_HIP_DEBUG("This HOST ID belongs to: %s\n", 
+		   hip_get_param_host_id_hostname(host_id_pub));
+	HIP_IFEL(hip_build_param(msg, host_id_pub), -1, 
+		 "Building of host id failed\n");
+
  	/********** ESP-ENC transform. **********/
  	HIP_IFEL(hip_build_param_transform(msg, HIP_PARAM_ESP_TRANSFORM,  
 					   transform_esp_suite,
@@ -645,27 +650,9 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 					   sizeof(hip_transform_suite_t)), -1, 
 		 "Building of ESP transform failed\n");
 
-	/********** Host_id **********/
-
-	_HIP_DEBUG("This HOST ID belongs to: %s\n", 
-		   hip_get_param_host_id_hostname(host_id_pub));
-	HIP_IFEL(hip_build_param(msg, host_id_pub), -1, 
-		 "Building of host id failed\n");
-
 	/********** REG_INFO *********/
-	/* Get service list of all services offered by this system */
-	/** @todo hip_get_services_list() leaks memory... */
-	service_count = hip_get_services_list(&service_list);
-	if (service_count > 0) {
-	     HIP_DEBUG("Adding REG_INFO parameter with %d service(s).\n",
-		       service_count);
-	     /* We use hardcoded default values for min and max lifetime
-		here. hip_build_param_reg_info() should be rewritten to support
-		lifetime selection. */
-	     HIP_IFEL(hip_build_param_reg_info(msg, 91, 200, service_list,
-					       service_count), 
-		      -1, "Building of reg_info failed\n");	
-	}
+	hip_get_active_services(service_list, &service_count);
+	hip_build_param_reg_info(msg, service_list, service_count);
 
 	/********** ECHO_REQUEST_SIGN (OPTIONAL) *********/
 
@@ -693,7 +680,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 		pz->opaque[0] = 'H';
 		pz->opaque[1] = 'I';
 		//pz->opaque[2] = 'P';
-		/* todo: remove random_i variable */
+		/** @todo Remove random_i variable. */
 		get_random_bytes(&random_i,sizeof(random_i));
 		pz->I = random_i;
 	}
@@ -939,7 +926,7 @@ void hip_send_notify(hip_ha_t *entry)
 {
 	int err = 0; /* actually not needed, because we can't do
 		      * anything if packet sending fails */
-	struct hip_common *notify_packet;
+	struct hip_common *notify_packet = NULL;
 	struct in6_addr daddr;
 
 	HIP_IFE(!(notify_packet = hip_msg_alloc()), -ENOMEM);
@@ -1306,8 +1293,15 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	/* If local address is not given, we fetch one in my_addr. my_addr_ptr
 	   points to the final source address (my_addr or local_addr). */
 	struct in6_addr my_addr, *my_addr_ptr = NULL;
+	int memmoved = 0;
 	
 	_HIP_DEBUG("hip_send_udp() invoked.\n");
+
+	/* There are four zeroed bytes between UDP and HIP headers. We
+	   use shifting later in this function */
+	HIP_ASSERT(hip_get_msg_total_len(msg) <=
+		   HIP_MAX_PACKET - HIP_UDP_ZERO_BYTES_LEN);
+
 	/* Verify the existence of obligatory parameters. */
 	HIP_ASSERT(peer_addr != NULL && msg != NULL);
 	HIP_DEBUG("Sending %s packet on UDP.\n",
@@ -1369,7 +1363,7 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	
 	/* Get the packet total length for sendto(). */
 	packet_length = hip_get_msg_total_len(msg);
-	
+
 	HIP_DEBUG("Trying to send %u bytes on UDP with source port: %u and "\
 		  "destination port: %u.\n",
 		  packet_length, ntohs(src4.sin_port), ntohs(dst4.sin_port));
@@ -1379,6 +1373,12 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		HIP_IFEL(hip_queue_packet(my_addr_ptr, peer_addr, msg,
 					  entry), -1, "Queueing failed.\n");
 	}
+
+	/* Insert 32 bits of zero bytes between UDP and HIP */
+	memmove(((char *)msg) + HIP_UDP_ZERO_BYTES_LEN, msg, packet_length);
+	memset(msg, 0, HIP_UDP_ZERO_BYTES_LEN);
+	packet_length += HIP_UDP_ZERO_BYTES_LEN;
+	memmoved = 1;
 
 	/*
 	  Currently disabled because I could not make this work -miika
@@ -1431,6 +1431,16 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 
 	if (sockfd)
 		close(sockfd);
+
+	if (memmoved) {
+		/* Remove 32 bits of zero bytes between UDP and HIP */
+		packet_length -= HIP_UDP_ZERO_BYTES_LEN;
+		memmove(msg, ((char *)msg) + HIP_UDP_ZERO_BYTES_LEN,
+			packet_length);
+		memset(((char *)msg) + packet_length, 0,
+		       HIP_UDP_ZERO_BYTES_LEN);
+	}
+		
 	return err;
 }
 

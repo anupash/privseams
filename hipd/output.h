@@ -22,6 +22,7 @@
 #include "user.h"
 #include "string.h"
 #include "nat.h"
+#include "registration.h"
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
 /* #include <libiptc/libiptc.h> */
