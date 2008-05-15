@@ -69,9 +69,9 @@ static int pisa_insert_nonce(struct midauth_packet *p)
 	u8 sha[HIP_AH_SHA_LEN];
 
 	/* @todo FIXME BEGIN --- for testing purposes only */
-	char *nonce1 = "asdfasdfasdf", *nonce2 = "01234567890123456789";
+/*	char *nonce1 = "asdfasdfasdf", *nonce2 = "01234567890123456789";
 	midauth_add_echo_request_m(p, nonce1, strlen(nonce1));
-	midauth_add_echo_request_m(p, nonce2, strlen(nonce2));
+	midauth_add_echo_request_m(p, nonce2, strlen(nonce2));*/
 	/* @todo FIXME END --- for testing purposes only */
 
 	pisa_create_nonce_hash(&p->hip->hits, &p->hip->hitr, 1, sha);
@@ -93,8 +93,8 @@ static int pisa_insert_puzzle(struct midauth_packet *p)
 	pisa_create_nonce_hash(&p->hip->hitr, &p->hip->hits, 1, hash.sha);
 
 	/* @todo FIXME BEGIN --- for testing purposes only */
-	midauth_add_puzzle_m(p, 3, 4, "puzzle", 0xABCDABCDABCDABCDLL);
-	midauth_add_puzzle_m(p, 3, 4, "abcdef", 0x0123456789ABCDEFLL);
+/*	midauth_add_puzzle_m(p, 3, 4, "puzzle", 0xABCDABCDABCDABCDLL);
+	midauth_add_puzzle_m(p, 3, 4, "abcdef", 0x0123456789ABCDEFLL);*/
 	/* @todo FIXME END --- for testing purposes only */
 
 	return midauth_add_puzzle_m(p, 3, 4, hash.pz.opaque, hash.pz.random);
@@ -191,7 +191,7 @@ static int pisa_check_solution(struct midauth_packet *p)
 static void pisa_accept_connection(struct midauth_packet *p)
 {
 	/* @todo: FIXME - implement this stub */
-	HIP_INFO("PISA accepted packet.\n");
+	HIP_INFO("PISA accepted the connection.\n");
 }
 
 /**
@@ -203,7 +203,7 @@ static void pisa_accept_connection(struct midauth_packet *p)
 static void pisa_reject_connection(struct midauth_packet *p)
 {
 	/* @todo: FIXME - implement this stub */
-	HIP_INFO("PISA rejected packet.\n");
+	HIP_INFO("PISA rejected the connection.\n");
 }
 
 /**

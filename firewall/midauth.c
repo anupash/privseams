@@ -302,38 +302,6 @@ out_err:
 	return err;
 }
 
-/**
- * This is an example, how the functions can be employed to insert additional
- * parameters into a packet
-
-static int filter_midauth_i2(struct midauth_packet *p)
-{
-	int verdict = NF_ACCEPT;
-	struct hip_common *hip = (struct hip_common *)(((char*)p->buffer) +
-	                         p->hdr_size);
-	struct hip_solution_m *solution;
-	char *nonce = "hello";
-
-	solution = (struct hip_solution_m *)hip_get_param(hip, HIP_PARAM_SOLUTION_M);
-	if (solution) {
-		if (midauth_verify_solution_m(hip, solution) == 0)
-			HIP_DEBUG("found correct hip_solution_m\n");
-		else
-			HIP_DEBUG("found wrong hip_solution_m\n");
-	} else {
-		HIP_DEBUG("found no hip_solution_m\n");
-	}
-
-	add_echo_request_m(hip, nonce);
-	add_puzzle_m(hip, 1, 2, "i2i2i2", 0xAABBCCDDEEFFFFFFLL);
-
-	p->size = hip_get_msg_total_len(hip);
-	midauth_update_all_headers(p);
-
-	return verdict;
-}
-*/
-
 int midauth_handler_accept(struct midauth_packet *p)
 {
 	return NF_ACCEPT;
