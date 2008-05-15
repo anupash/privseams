@@ -102,13 +102,13 @@ int hip_handle_user_msg(struct hip_common *msg,
 		   machine is behind a NAT. */
 		HIP_DEBUG("Handling NAT ON user message.\n");
 		HIP_IFEL(hip_nat_on(), -1, "Error when setting daemon NAT status to \"on\"\n");
-		hip_agent_update_status(HIP_NAT_ON, NULL, 0);
+		hip_agent_update_status(SO_HIP_NAT_ON, NULL, 0);
 		break;
 	case SO_HIP_SET_NAT_OFF:
 		/* Removes the NAT flag from each host association. */
 		HIP_DEBUG("Handling NAT OFF user message.\n");
 		HIP_IFEL(hip_nat_off(), -1, "Error when setting daemon NAT status to \"off\"\n");
-		hip_agent_update_status(HIP_NAT_OFF, NULL, 0);
+		hip_agent_update_status(SO_HIP_NAT_OFF, NULL, 0);
 		break;
         case SO_HIP_SET_LOCATOR_ON:
                 HIP_DEBUG("Setting LOCATOR ON\n");
@@ -576,7 +576,7 @@ int hip_handle_user_msg(struct hip_common *msg,
 		   associations). */
 		HIP_IFEL(hip_nat_on(), -1, "Error when setting daemon NAT status"\
 			 "to \"on\"\n");
-		hip_agent_update_status(HIP_NAT_ON, NULL, 0);
+		hip_agent_update_status(SO_HIP_NAT_ON, NULL, 0);
 
 		/* Send a I1 packet to relay. */
 		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),

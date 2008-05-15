@@ -137,6 +137,22 @@
 /** Socket option to ask for cancellation of the escrow service, i.e.\ send
     REG_REQUEST parameter with zero lifetime to the server. (client side) */
 #define SO_HIP_DEL_ESCROW			114
+#define SO_HIP_ADD_DB_HI                        115
+#define SO_HIP_ADD_ESCROW_DATA                  116
+#define SO_HIP_DELETE_ESCROW_DATA               117
+#define SO_HIP_SET_ESCROW_ACTIVE                118
+#define SO_HIP_SET_ESCROW_INACTIVE              119
+#define SO_HIP_FIREWALL_PING                    120
+#define SO_HIP_FIREWALL_PING_REPLY              121
+#define SO_HIP_FIREWALL_QUIT                    122
+#define SO_HIP_AGENT_PING                       123
+#define SO_HIP_AGENT_PING_REPLY                 124
+#define SO_HIP_AGENT_QUIT                       125
+#define SO_HIP_DAEMON_QUIT                      126
+#define SO_HIP_I1_REJECT                        127
+#define SO_HIP_UPDATE_HIU                       128
+#define SO_HIP_NAT_ON                           129
+#define SO_HIP_NAT_OFF                          130
 /** @} */
 /* inclusive */
 #define HIP_SO_ROOT_MAX 			255
