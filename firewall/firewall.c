@@ -1000,19 +1000,21 @@ out_err:
 
 int reinject_packet(struct in6_addr src_hit, struct in6_addr dst_hit, ipq_packet_msg_t *m, int ipOrigTraffic, int incoming)
 {
-	int err, ip_hdr_size, packet_length = 0, protocol;
+        int err, ip_hdr_size, packet_length = 0, protocol, ttl;
 	u8 *msg;  
 
 	if (ipOrigTraffic == 4){
 		struct ip *iphdr = (struct ip*) m->payload;
 		ip_hdr_size = (iphdr->ip_hl * 4);  
 		protocol = iphdr->ip_p;
+		ttl = iphdr->ip_ttl;
         	HIP_DEBUG_LSI("Ipv4 address src ", &(iphdr->ip_src));
 	        HIP_DEBUG_LSI("Ipv4 address dst ", &(iphdr->ip_dst));
 	}else{
 	        struct ip6_hdr* ip6_hdr = (struct ip6_hdr*) m->payload;
 		ip_hdr_size = sizeof(struct ip6_hdr);
-		protocol = ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt;
+		protocol = ip6_hdr->ip6_nxt;
+		ttl = ip6_hdr->ip6_hlim;
 		HIP_DEBUG("ip_hdr_size %d\n",ip_hdr_size);
 		HIP_DEBUG_IN6ADDR("Orig packet src address: ", &(ip6_hdr->ip6_src));
 		HIP_DEBUG_IN6ADDR("Orig packet dst address: ", &(ip6_hdr->ip6_dst));
@@ -1037,11 +1039,34 @@ int reinject_packet(struct in6_addr src_hit, struct in6_addr dst_hit, ipq_packet
 	memcpy(msg, (m->payload)+ip_hdr_size, packet_length);
 
 	//HIP_DUMP_MSG(msg);
-	if (incoming)
+
+
+	if (protocol == IPPROTO_ICMP && incoming){
+	  HIP_DEBUG("protocol == IPPROTO_ICMP && incoming\n");
+	  struct icmphdr *icmp = NULL;
+	  icmp = (struct icmphdr *)msg;
+	  if (icmp->type == ICMP_ECHO){
+	    icmp->type = ICMP_ECHOREPLY;
+	    err = firewall_send_outgoing_pkt(&dst_hit, &src_hit, msg, packet_length, protocol);
+	  }
+	  else{
+	    err = firewall_send_incoming_pkt(&src_hit, &dst_hit, msg, packet_length, protocol, ttl);
+	  }
+	}else{
+	  if (incoming){
+	    HIP_DEBUG("Firewall send to the kernel an incoming packet\n");
+	    err = firewall_send_incoming_pkt(&src_hit, &dst_hit, msg, packet_length, protocol, ttl);
+	  }else{
+	    HIP_DEBUG("Firewall send to the kernel an outgoing packet\n");
+	    err = firewall_send_outgoing_pkt(&src_hit, &dst_hit, msg, packet_length, protocol);
+	  }
+	}
+
+	/*if (incoming)
 		err = firewall_send_incoming_pkt(&src_hit, &dst_hit, msg, packet_length, protocol);
 	else
-		err = firewall_send_outgoing_pkt(&src_hit, &dst_hit, msg, packet_length, protocol);
-	HIP_DEBUG("After sendin the packet to the stack again \n");
+	err = firewall_send_outgoing_pkt(&src_hit, &dst_hit, msg, packet_length, protocol);*/
+
 	return err;	
 }
 
