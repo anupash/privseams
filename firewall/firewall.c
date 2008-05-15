@@ -34,7 +34,7 @@ int foreground = 1;
 void print_usage()
 {
 	printf("HIP Firewall\n");
-	printf("Usage: firewall [-f file_name] [-t timeout] [-d|-v] [-F] [-H] [-A] [-b] [-k]\n");
+	printf("Usage: hipfw [-f file_name] [-t timeout] [-d|-v] [-F] [-H] [-A] [-b] [-k]\n");
 	printf("      - H drop non-HIP traffic by default (default: accept non-hip traffic)\n");
 	printf("      - A accept HIP traffic by default (default: drop all hip traffic)\n");
 	printf("      - f file_name is a path to a file containing firewall filtering rules (default %s)\n", HIP_FW_DEFAULT_RULE_FILE);
@@ -1460,6 +1460,11 @@ int main(int argc, char **argv)
 	extern char *optarg;
 	extern int optind, optopt;
 	int errflg = 0, killold = 0;
+
+	if (geteuid() != 0) {
+		HIP_ERROR("firewall must be started with sudo\n");
+		exit(-1);
+	}
 
 	check_and_write_default_config();
 
