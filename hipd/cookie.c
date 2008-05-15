@@ -1,10 +1,9 @@
-/*
- * HIP cookie handling
+/**
+ * @file
+ * HIP cookie handling. Licence: GNU/GPL
  * 
- * Licence: GNU/GPL
- * Authors: Kristian Slavov <ksl@iki.fi>
- *          Miika Komu <miika@iki.fi>
- *
+ * @author Kristian Slavov <ksl#iki.fi>
+ * @author Miika Komu <miika#iki.fi>
  */
 
 #include "cookie.h"
@@ -49,7 +48,7 @@ int hip_dec_cookie_difficulty(hip_hit_t *not_used) {
  * @param ip_r Responder's IPv6 address
  * @param hit_i Initiators HIT
  *
- * Return 0 <= x < HIP_R1TABLESIZE
+ * @return 0 <= x < HIP_R1TABLESIZE
  */
 int hip_calc_cookie_idx(struct in6_addr *ip_i, struct in6_addr *ip_r,
 			       struct in6_addr *hit_i)
@@ -155,113 +154,6 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r,
 }
 
 
-/**
- * hip_solve_puzzle - Solve puzzle.
- * @param puzzle_or_solution Either a pointer to hip_puzzle or hip_solution structure
- * @param hdr The incoming R1/I2 packet header.
- * @param mode Either HIP_VERIFY_PUZZLE of HIP_SOLVE_PUZZLE
- *
- * The K and I is read from the @puzzle_or_solution. 
- *
- * The J that solves the puzzle is returned, or 0 to indicate an error.
- * NOTE! I don't see why 0 couldn't solve the puzzle too, but since the
- * odds are 1/2^64 to try 0, I don't see the point in improving this now.
- */
-uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
-			  int mode)
-{
-	uint64_t mask = 0;
-	uint64_t randval = 0;
-	uint64_t maxtries = 0;
-	uint64_t digest = 0;
-	u8 cookie[48];
-	int err = 0;
-	union {
-		struct hip_puzzle pz;
-		struct hip_solution sl;
-	} *u;
-
-	HIP_HEXDUMP("puzzle", puzzle_or_solution,
-		    (mode == HIP_VERIFY_PUZZLE ? sizeof(struct hip_solution) : sizeof(struct hip_puzzle)));
-
-	_HIP_DEBUG("\n");
-	/* pre-create cookie */
-	u = puzzle_or_solution;
-
-	_HIP_DEBUG("current hip_cookie_max_k_r1=%d\n", max_k);
-	HIP_IFEL(u->pz.K > HIP_PUZZLE_MAX_K, 0, 
-		 "Cookie K %u is higher than we are willing to calculate"
-		 " (current max K=%d)\n", u->pz.K, HIP_PUZZLE_MAX_K);
-
-	mask = hton64((1ULL << u->pz.K) - 1);
-	memcpy(cookie, (u8 *)&(u->pz.I), sizeof(uint64_t));
-
-	HIP_DEBUG("(u->pz.I: 0x%llx\n", u->pz.I);
-
-	if (mode == HIP_VERIFY_PUZZLE) {
-		ipv6_addr_copy((hip_hit_t *)(cookie+8), &hdr->hits);
-		ipv6_addr_copy((hip_hit_t *)(cookie+24), &hdr->hitr);
-		//randval = ntoh64(u->sl.J);
-		randval = u->sl.J;
-		_HIP_DEBUG("u->sl.J: 0x%llx\n", randval);
-		maxtries = 1;
-	} else if (mode == HIP_SOLVE_PUZZLE) {
-		ipv6_addr_copy((hip_hit_t *)(cookie+8), &hdr->hitr);
-		ipv6_addr_copy((hip_hit_t *)(cookie+24), &hdr->hits);
-		maxtries = 1ULL << (u->pz.K + 3);
-		get_random_bytes(&randval, sizeof(u_int64_t));
-	} else {
-		HIP_IFEL(1, 0, "Unknown mode: %d\n", mode);
-	}
-
-	HIP_DEBUG("K=%u, maxtries (with k+2)=%llu\n", u->pz.K, maxtries);
-	/* while loops should work even if the maxtries is unsigned
-	 * if maxtries = 1 ---> while(1 > 0) [maxtries == 0 now]... 
-	 * the next round while (0 > 0) [maxtries > 0 now]
-	 */
-	while(maxtries-- > 0) {
-	 	u8 sha_digest[HIP_AH_SHA_LEN];
-		
-		/* must be 8 */
-		memcpy(cookie + 40, (u8*) &randval, sizeof(uint64_t));
-
-		hip_build_digest(HIP_DIGEST_SHA1, cookie, 48, sha_digest);
-
-                /* copy the last 8 bytes for checking */
-		memcpy(&digest, sha_digest + 12, sizeof(uint64_t));
-
-		/* now, in order to be able to do correctly the bitwise
-		 * AND-operation we have to remember that little endian
-		 * processors will interpret the digest and mask reversely.
-		 * digest is the last 64 bits of the sha1-digest.. how that is
-		 * ordered in processors registers etc.. does not matter to us.
-		 * If the last 64 bits of the sha1-digest is
-		 * 0x12345678DEADBEEF, whether we have 0xEFBEADDE78563412
-		 * doesn't matter because the mask matters... if the mask is
-		 * 0x000000000000FFFF (or in other endianness
-		 * 0xFFFF000000000000). Either ways... the result is
-		 * 0x000000000000BEEF or 0xEFBE000000000000, which the cpu
-		 * interprets as 0xBEEF. The mask is converted to network byte
-		 * order (above).
-		 */
-		if ((digest & mask) == 0) {
-			_HIP_DEBUG("*** Puzzle solved ***: 0x%llx\n",randval);
-			_HIP_HEXDUMP("digest", sha_digest, HIP_AH_SHA_LEN);
-			_HIP_HEXDUMP("cookie", cookie, sizeof(cookie));
-			return randval;
-		}
-
-		/* It seems like the puzzle was not correctly solved */
-		HIP_IFEL(mode == HIP_VERIFY_PUZZLE, 0, "Puzzle incorrect\n");
-		randval++;
-	}
-
-	HIP_ERROR("Could not solve the puzzle, no solution found\n");
- out_err:
-	return err;
-}
-
-
 struct hip_r1entry * hip_init_r1(void)
 {
 	struct hip_r1entry *err;
@@ -327,51 +219,51 @@ void hip_uninit_r1(struct hip_r1entry *hip_r1table)
 }
 
 /**
- * hip_verify_cookie - Verify solution to the puzzle
- * @param ip_i Initiator's IPv6
- * @param ip_r Responder's IPv6
- * @param hdr Received HIP packet
- * @param solution Solution structure
- *
- * First we check that K and I are the same as in the puzzle we sent.
- * If not, then we check the previous ones (since the puzzle might just
- * have been expired). 
- *
- * Returns 1 if puzzle ok, 0 if !ok.
+ * Verifies the solution of a puzzle. First we check that K and I are the same
+ * as in the puzzle we sent. If not, then we check the previous ones (since the
+ * puzzle might just have been expired). 
+ * 
+ * @param ip_i     a pointer to Initiator's IP address.
+ * @param ip_r     a pointer to Responder's IP address.
+ * @param hdr      a pointer to HIP packet common header
+ * @param solution a pointer to a solution structure
+ * @return         1 if puzzle ok, 0 if not-ok.
+ * @todo           the return value of this function is in conflict with HIPL
+ *                 coding convention.
  */ 
-int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r, 
-		      struct hip_common *hdr, struct hip_solution *solution)
+int hip_verify_cookie(in6_addr_t *ip_i, in6_addr_t *ip_r, 
+		      hip_common_t *hdr, struct hip_solution *solution)
 {
-	struct hip_puzzle *puzzle;
-	struct hip_r1entry *result;
-	struct hip_host_id_entry *hid;
+	struct hip_puzzle *puzzle = NULL;
+	struct hip_r1entry *result = NULL;
+	struct hip_host_id_entry *hid = NULL;
 	struct in6_addr *plain_local_hit = NULL;
 	int err = 1;
-	uint16_t nonce;
+	uint16_t nonce = 0;
 
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status()) {
-	  HIP_IFEL((plain_local_hit = HIP_MALLOC(sizeof(struct in6_addr), 0)) == NULL,
-		   -1, "Couldn't allocate memory\n");
-	  HIP_IFEL(hip_blind_get_nonce(hdr, &nonce), -1, "hip_blind_get_nonce failed\n");
-	  HIP_IFEL(hip_plain_fingerprint(&nonce, &hdr->hitr, plain_local_hit), 
-		   -1, "hip_plain_fingerprint failed\n");
-	  HIP_DEBUG_HIT("plain_local_hit", plain_local_hit);
-	  
-	  /* Find the proper R1 table, use plain hit */
-	  HIP_READ_LOCK_DB(HIP_DB_LOCAL_HID);
-	  HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID, plain_local_hit, HIP_ANY_ALGO, -1)), 
-		   0, "Requested source HIT not (any more) available.\n");
-	  result = &hid->blindr1[hip_calc_cookie_idx(ip_i, ip_r, &hdr->hits)];
+		HIP_IFEL((plain_local_hit = HIP_MALLOC(sizeof(struct in6_addr), 0)) == NULL,
+			 -1, "Couldn't allocate memory.\n");
+		HIP_IFEL(hip_blind_get_nonce(hdr, &nonce), -1, "hip_blind_get_nonce failed\n");
+		HIP_IFEL(hip_plain_fingerprint(&nonce, &hdr->hitr, plain_local_hit), 
+			 -1, "hip_plain_fingerprint failed\n");
+		HIP_DEBUG_HIT("plain_local_hit", plain_local_hit);
+		
+		/* Find the proper R1 table, use plain hit */
+		HIP_READ_LOCK_DB(HIP_DB_LOCAL_HID);
+		HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID, plain_local_hit, HIP_ANY_ALGO, -1)), 
+			 0, "Requested source HIT not (any more) available.\n");
+		result = &hid->blindr1[hip_calc_cookie_idx(ip_i, ip_r, &hdr->hits)];
 	}
 #endif
-
+	
 	/* Find the proper R1 table, no blind used */
 	if (!hip_blind_get_status()) {
-	  HIP_READ_LOCK_DB(HIP_DB_LOCAL_HID);
-	  HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID, &hdr->hitr, HIP_ANY_ALGO, -1)), 
-		   0, "Requested source HIT not (any more) available.\n");
-	  result = &hid->r1[hip_calc_cookie_idx(ip_i, ip_r, &hdr->hits)];
+		HIP_READ_LOCK_DB(HIP_DB_LOCAL_HID);
+		HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID, &hdr->hitr, HIP_ANY_ALGO, -1)), 
+			 0, "Requested source HIT not (any more) available.\n");
+		result = &hid->r1[hip_calc_cookie_idx(ip_i, ip_r, &hdr->hits)];
 	}
 
 	puzzle = hip_get_param(result->r1, HIP_PARAM_PUZZLE);
@@ -379,7 +271,7 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 
 	_HIP_HEXDUMP("opaque in solution", solution->opaque,
 		     HIP_PUZZLE_OPAQUE_LEN);
-	_HIP_HEXDUMP("opaque in result", result->Copaque,
+	_HIP_HEXDUMP("Copaque in result", result->Copaque,
 		     HIP_PUZZLE_OPAQUE_LEN);
 	_HIP_HEXDUMP("opaque in puzzle", puzzle->opaque,
 		     HIP_PUZZLE_OPAQUE_LEN);
@@ -403,7 +295,7 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 			 solution->K, puzzle->K);
 		
 		HIP_IFEL(solution->K != result->Ck, 0,
-			"Solution's K did not match any sent Ks.\n");
+			 "Solution's K did not match any sent Ks.\n");
 		HIP_IFEL(solution->I != result->Ci, 0, 
 			 "Solution's I did not match the sent I\n");
 		HIP_IFEL(memcmp(solution->opaque, result->Copaque, HIP_PUZZLE_OPAQUE_LEN), 0,
@@ -421,7 +313,7 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 	}
 
 	HIP_IFEL(!hip_solve_puzzle(solution, hdr, HIP_VERIFY_PUZZLE), 0, 
-	 "Puzzle incorrectly solved\n");
+		 "Puzzle incorrectly solved\n");
 	
  out_err:
 	HIP_READ_UNLOCK_DB(HIP_DB_LOCAL_HID);
@@ -475,4 +367,6 @@ int hip_recreate_all_precreated_r1_packets()
 		hip_ht_add(HIP_DB_LOCAL_HID, tmp);
 		list_del(tmp, ht);
 	}
+
+	return 0;
 }

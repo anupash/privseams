@@ -30,7 +30,8 @@ int opendht_rm(int, unsigned char *, unsigned char *,
 
 int opendht_get(int, unsigned char *, unsigned char *, int);
 
-int opendht_get_key(struct addrinfo *, unsigned char *, unsigned char *);
+int opendht_get_key(struct addrinfo *, const unsigned char *,
+		    unsigned char *);
 
 int opendht_handle_key(char *, char *);
 

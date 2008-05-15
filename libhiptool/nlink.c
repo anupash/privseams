@@ -47,7 +47,7 @@ int hip_netlink_receive(struct rtnl_handle *nl,
 	char buf[NLMSG_SPACE(HIP_MAX_NETLINK_PACKET)];
 
         msg_len = recvfrom(nl->fd, buf, sizeof(struct nlmsghdr),
-			   MSG_PEEK, NULL, NULL);
+			   MSG_PEEK|MSG_DONTWAIT, NULL, NULL);
 	if (msg_len != sizeof(struct nlmsghdr)) {
 		HIP_ERROR("Bad netlink msg\n");
 		return -1;
@@ -85,7 +85,7 @@ int hip_netlink_receive(struct rtnl_handle *nl,
                         int len = h->nlmsg_len;
                         int l = len - sizeof(*h);
 
-                        if (l<0 || len>status) {
+                        if (l < 0 || len > status) {
                                 if (msg.msg_flags & MSG_TRUNC) {
                                         HIP_ERROR("Truncated netlink message\n");
                                         return -1;
@@ -1176,6 +1176,10 @@ int rtnl_talk(struct rtnl_handle *rtnl, struct nlmsghdr *n, pid_t peer,
                                         if (err < 0)
                                                 return err;
                                 }
+                               /* Don't forget to skip that message. */
+                                status -= NLMSG_ALIGN(len);
+				h = (struct nlmsghdr*)((char*)h + NLMSG_ALIGN(len));
+
                                 continue;
                         }
 
@@ -1297,5 +1301,3 @@ skip_it:
                 }
         }
 }
-
-

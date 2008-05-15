@@ -1,20 +1,14 @@
-/*
- * libinet6 wrap.c
+/** @file
+ * HIP wrapper file to override functions. All functions that need to be
+ * overriden should be put here.
  *
- * Licence: GNU/GPL
- * Authors: 
- * - Bing Zhou <bingzhou@cc.hut.fi>
- * - Miika Komu <miika@iki.fi>
- *
+ * @author  Miika Komu <miika_iki.fi>
+ * @author  Bing Zhou <bingzhou_cc.hut.fi>
+ * @version 1.0
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  */
-
-/*
-  Put all the functions you want to override here
-*/
-
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 #include <sys/types.h>
-//#include <sys/socket.h>
 #include <unistd.h>
 #include <errno.h>
 #include <netinet/tcp.h>
@@ -331,6 +325,8 @@ void hip_store_orig_socket_info(hip_opp_socket_t *entry, int is_peer, const int 
 int hip_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
 				   struct in6_addr *peer_hit,
 				   const struct in6_addr *local_hit,
+				   in_port_t *src_tcp_port,//the local TCP port needed for the TCP i1 option negotiation
+				   in_port_t *dst_tcp_port, //the TCP port at the peer needed for the TCP i1 option negotiation
 				   int *fallback,
 				   int *reject)
 {
@@ -352,7 +348,19 @@ int hip_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
 	HIP_IFEL(hip_build_param_contents(msg, (void *)(peer_ip),
 					  HIP_PARAM_IPV6_ADDR,
 					  sizeof(struct in6_addr)), -1,
-		 "build param HIP_PARAM_IPV6_ADDR  failed\n");
+		 "build param HIP_PARAM_IPV6_ADDR failed\n");
+
+#ifdef CONFIG_HIP_OPPTCP
+	HIP_IFEL(hip_build_param_contents(msg, (void *)(src_tcp_port),
+					  HIP_PARAM_SRC_TCP_PORT,
+					  sizeof(in_port_t)), -1,
+		 "build param HIP_PARAM_SRC_TCP_PORT failed\n");
+
+	HIP_IFEL(hip_build_param_contents(msg, (void *)(dst_tcp_port),
+					  HIP_PARAM_DST_TCP_PORT,
+					  sizeof(in_port_t)), -1,
+		 "build param HIP_PARAM_DST_TCP_PORT failed\n");
+#endif
 	
 	/* build the message header */
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT, 0), -1,
@@ -478,7 +486,8 @@ int hip_translate_new(hip_opp_socket_t *entry,
 		      int is_peer, int is_dgram,
 		      int is_translated, int wrap_applicable)
 {
-	int err = 0, pid = getpid(), port;
+	int err = 0, pid = getpid();
+	in_port_t src_opptcp_port, dst_opptcp_port;/*the ports needed to send the TCP SYN i1*/
 	struct sockaddr_in6 src_hit, dst_hit,
 		*hit = (is_peer ? &dst_hit : &src_hit);
 	socklen_t translated_id_len;
@@ -514,24 +523,34 @@ int hip_translate_new(hip_opp_socket_t *entry,
 		IPV4_TO_IPV6_MAP(&((struct sockaddr_in *) orig_id)->sin_addr,
 				 &mapped_addr.sin6_addr);
 		_HIP_DEBUG_SOCKADDR("ipv4 addr", orig_id);
-		port = ((struct sockaddr_in *)orig_id)->sin_port;
+		dst_opptcp_port = ((struct sockaddr_in *)orig_id)->sin_port;
 	} else if (orig_id->sa_family == AF_INET6) {
 		memcpy(&mapped_addr, orig_id, orig_id_len);
 		_HIP_DEBUG_SOCKADDR("ipv6 addr\n", orig_id);
-		port = ((struct sockaddr_in6 *)orig_id)->sin6_port;
+		dst_opptcp_port = ((struct sockaddr_in6 *)orig_id)->sin6_port;
 	} else {
 		HIP_ASSERT("Not an IPv4/IPv6 socket: wrapping_is_applicable failed?\n");
 	}
 	mapped_addr.sin6_family = orig_id->sa_family;
-	mapped_addr.sin6_port = port;
+	mapped_addr.sin6_port = dst_opptcp_port;
 	
-	hit->sin6_port = port;
+	hit->sin6_port = dst_opptcp_port;
 	
-	_HIP_DEBUG("sin_port=%d\n", ntohs(port));
+	_HIP_DEBUG("sin_port=%d\n", ntohs(dst_opptcp_port));
 	_HIP_DEBUG_IN6ADDR("sin6_addr ip = ", ip);
 
+
+	/*find the local TCP port where the
+	application	initiated the connection,
+	we need it for sending the TCP SYN_i1*/
+	struct sockaddr *sa = (struct sockaddr*)&(entry->translated_local_id);
+  	if(sa->sa_family == AF_INET)
+    		src_opptcp_port = ((struct sockaddr_in *) sa)->sin_port;
+  	else//AF_INET6
+    		src_opptcp_port = ((struct sockaddr_in6 *) sa)->sin6_port;
+
+
 	/* Try opportunistic base exchange to retrieve peer's HIT */
-	
 	if (is_peer) {
 		int fallback, reject;
 		/* Request a HIT of the peer from hipd. This will possibly
@@ -544,6 +563,8 @@ int hip_translate_new(hip_opp_socket_t *entry,
 		HIP_IFEL(hip_request_peer_hit_from_hipd(&mapped_addr.sin6_addr,
 							&dst_hit.sin6_addr,
 							&src_hit.sin6_addr,
+							(in_port_t *) &src_opptcp_port,
+							(in_port_t *) &dst_opptcp_port,
 							&fallback,
 							&reject),
 			 -1, "Request from hipd failed\n");
@@ -697,18 +718,19 @@ int hip_add_orig_socket_to_db(int socket_fd, int domain, int type,
 	return err;
 }
 
-int hip_translate_socket(const int *orig_socket,
-			 const struct sockaddr *orig_id,
-			 const socklen_t *orig_id_len,
-			 int **translated_socket,
+int hip_translate_socket(const int *orig_socket, const struct sockaddr *orig_id,
+			 const socklen_t *orig_id_len, int **translated_socket,
 			 struct sockaddr **translated_id,
-			 socklen_t **translated_id_len,
-			 int is_peer, int is_dgram, int force_orig)
+			 socklen_t **translated_id_len, int is_peer,
+			 int is_dgram, int force_orig)
 {
-	int err = 0, pid = getpid(), is_translated, wrap_applicable;
-	hip_opp_socket_t * entry;
+	int err = 0, pid = 0, is_translated = 0, wrap_applicable = 0;
+	hip_opp_socket_t *entry = NULL;
 	int fu = 0;
-	pthread_t tid = pthread_self();
+	pthread_t tid;
+
+	pid = getpid();
+	tid = pthread_self();
 
 	hip_initialize_db_when_not_exist();
 
@@ -1029,7 +1051,7 @@ int connect(int orig_socket, const struct sockaddr *orig_id,
 	return err;
 }
 
-/* 
+/** 
  * The calls return the number of characters sent, or -1 if an error occurred.
  */
 ssize_t send(int orig_socket, const void * b, size_t c, int flags)
@@ -1128,7 +1150,7 @@ ssize_t writev(int orig_socket, const struct iovec *vector, int count)
 	return chars;
 }
 
-/* 
+/** 
  * The calls return the number of characters sent, or -1 if an error occurred.
  * Untested.
  */
@@ -1165,13 +1187,13 @@ ssize_t sendto(int orig_socket, const void *buf, size_t buf_len, int flags,
   return chars;
 }
 
-/* 
+/** 
  * The calls return the number of characters sent, or -1 if an error occurred.
  */
 ssize_t sendmsg(int a, const struct msghdr *msg, int flags)
 {
 	int charnum;
-	// XX TODO: see hip_get_pktinfo_addr
+	/** @todo See hip_get_pktinfo_addr(). */
 	charnum = dl_function_ptr.sendmsg_dlsym(a, msg, flags);
 	
 	_HIP_DEBUG("Called sendmsg_dlsym with number of returned chars=%d\n", charnum);
@@ -1284,35 +1306,32 @@ ssize_t readv(int orig_socket, const struct iovec *vector, int count)
 ssize_t recvfrom(int orig_socket, void *buf, size_t len, int flags, 
 		 struct sockaddr *orig_id, socklen_t *orig_id_len)
 {
-	int err = 0, *translated_socket;
-	socklen_t *translated_id_len;
-	struct sockaddr *translated_id;
+	int err = 0, *translated_socket = NULL;
+	socklen_t *translated_id_len = NULL;
+	struct sockaddr *translated_id = NULL;
 	ssize_t chars = -1;
 	
 	_HIP_DEBUG("recvfrom: orig sock = %d\n", orig_socket);
 
-	/* XX FIXME: in the case of UDP server, this creates additional
-	   HIP traffic even though the connection is not necessarily
-	   secured */
-
-	err = hip_translate_socket(&orig_socket,
-				   orig_id,
-				   orig_id_len,
-				   &translated_socket,
-				   &translated_id,
-				   &translated_id_len,
-				   0, 1, 0);
-
+	/** @todo In the case of UDP server, this creates additional
+	    HIP traffic even though the connection is not necessarily
+	    secured. */
+	err = hip_translate_socket(&orig_socket, orig_id, orig_id_len,
+				   &translated_socket, &translated_id,
+				   &translated_id_len, 0, 1, 0);
+	
 	if (err) {
 		HIP_ERROR("Translation failure\n");
+		chars = err;
 		goto out_err;
 	}
 	
-	chars = dl_function_ptr.recvfrom_dlsym(*translated_socket, buf, len,
-					       flags,
-					       translated_id,
-					       translated_id_len);
+	chars = dl_function_ptr.recvfrom_dlsym(
+		*translated_socket, buf, len, flags, translated_id,
+		translated_id_len);
+	
 	_HIP_DEBUG("recvfrom: chars = %d\n", chars);
+
  out_err:
 	return chars;
 }

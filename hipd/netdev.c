@@ -9,6 +9,7 @@
 #include "libinet6/util.h"
 #include "libinet6/include/netdb.h"
 #include "libinet6/hipconf.h"
+#include <netinet/in.h>
 
 unsigned long hip_netdev_hash(const void *ptr) {
 	struct netdev_address *na = (struct netdev_address *) ptr;
@@ -41,89 +42,100 @@ static int count_if_addresses(int ifindex)
 
 #define FA_IGNORE 0
 #define FA_ADD 1
-/*
- * Returns FA_ADD if the given address @addr is allowed to be one of the
+
+/**
+ * @return FA_ADD if the given address @c addr is allowed to be one of the
  * addresses of this host, FA_IGNORE otherwise
  */
 int filter_address(struct sockaddr *addr, int ifindex)
 {
-	HIP_DEBUG("ifindex=%d, address family=%d\n",
-		  ifindex, addr->sa_family);
-	HIP_HEXDUMP("testing address=", hip_cast_sa_addr(addr), hip_sa_addr_len(addr));
-
 	/* used as a buffer for inet_ntop */
 #define sLEN 40
 	char s[sLEN];
+	
+	_HIP_DEBUG("ifindex=%d, address family=%d\n",
+		  ifindex, addr->sa_family);
+	_HIP_HEXDUMP("testing address=", hip_cast_sa_addr(addr),
+		    hip_sa_addr_len(addr));
 
 	switch (addr->sa_family) {
-		case AF_INET6:
-			inet_ntop(AF_INET6, &((struct sockaddr_in6*)addr)->sin6_addr, s, sLEN);
-			HIP_DEBUG("IPv6 addr: %s\n", s);
+	case AF_INET6:
+		inet_ntop(AF_INET6, &((struct sockaddr_in6*)addr)->sin6_addr, s,
+			  sLEN);
+		HIP_DEBUG("IPv6 addr: %s\n", s);
 
-			struct in6_addr *a_in6 = hip_cast_sa_addr(addr);
-
-			if (IN6_IS_ADDR_UNSPECIFIED(a_in6)) {
-				HIP_DEBUG("Ignore: UNSPECIFIED\n");
-				return FA_IGNORE;
-			} else if (IN6_IS_ADDR_LOOPBACK(a_in6)) {
-				HIP_DEBUG("Ignore: IPV6_LOOPBACK\n");
-				return FA_IGNORE;
-			} else if (IN6_IS_ADDR_MULTICAST(a_in6)) {
-				HIP_DEBUG("Ignore: MULTICAST\n");
-				return FA_IGNORE;
-			} else if (IN6_IS_ADDR_LINKLOCAL(a_in6)) {
-				HIP_DEBUG("Ignore: LINKLOCAL\n");
-				return FA_IGNORE;
-#if 0 /* For Juha-Matti's experiments  */
-			} else if (IN6_IS_ADDR_SITELOCAL(a_in6)) {
-				HIP_DEBUG("Ignore: SITELOCAL\n");
-				return FA_IGNORE;
-#endif
-			} else if (IN6_IS_ADDR_V4MAPPED(a_in6)) {
-				HIP_DEBUG("Ignore: V4MAPPED\n");
-				return FA_IGNORE;
-			} else if (IN6_IS_ADDR_V4COMPAT(a_in6)) {
-				HIP_DEBUG("Ignore: V4COMPAT\n");
-				return FA_IGNORE;
-			} else if (ipv6_addr_is_hit(a_in6)) {
-				HIP_DEBUG("Ignore: hit\n");
-				return FA_IGNORE;
-			} else
-				return FA_ADD;
-			break;
-			/* XX FIXME: DISCARD LSIs with IN6_IS_ADDR_V4MAPPED AND IS_LSI32 */
-
-		case AF_INET:
-			/* AG FIXME more IPv4 address checking
-			 * DO we need any more checks here ? -- Abi
-			 */
-			inet_ntop(AF_INET, &((struct sockaddr_in*)addr)->sin_addr, s, sLEN);
-			HIP_DEBUG("IPv4 addr: %s \n", s);
-
-			in_addr_t a_in = ((struct sockaddr_in *)addr)->sin_addr.s_addr;
-
-			if (a_in == INADDR_ANY) {
-				HIP_DEBUG("Ignore: INADDR_ANY\n");
-				return FA_IGNORE;
-			} else if (a_in == INADDR_BROADCAST) {
-				HIP_DEBUG("Ignore: INADDR_BROADCAST\n");
-				return FA_IGNORE;
-			} else if (IN_MULTICAST(ntohs(a_in))) {
-				HIP_DEBUG("Ignore: MULTICAST\n");
-				return FA_IGNORE;
-			} else if (IS_LSI32(a_in)) {
-				HIP_DEBUG("Ignore: LSI32\n");
-				return FA_IGNORE;
-			} else if (IS_IPV4_LOOPBACK(a_in)) {
-				HIP_DEBUG("Ignore: IPV4_LOOPBACK\n");
-				return FA_IGNORE;
-			} else 
-				return FA_ADD;
-			break;
-
-		default:
-			
+		struct in6_addr *a_in6 = hip_cast_sa_addr(addr);
+		
+		if(suppress_af_family == AF_INET) {
+			HIP_DEBUG("Ignore: Address family suppression set to "\
+				  " IPv4 addresses.\n");
 			return FA_IGNORE;
+		} else if (IN6_IS_ADDR_UNSPECIFIED(a_in6)) {
+			HIP_DEBUG("Ignore: UNSPECIFIED\n");
+			return FA_IGNORE;
+		} else if (IN6_IS_ADDR_LOOPBACK(a_in6)) {
+			HIP_DEBUG("Ignore: IPV6_LOOPBACK\n");
+			return FA_IGNORE;
+		} else if (IN6_IS_ADDR_MULTICAST(a_in6)) {
+			HIP_DEBUG("Ignore: MULTICAST\n");
+			return FA_IGNORE;
+		} else if (IN6_IS_ADDR_LINKLOCAL(a_in6)) {
+			HIP_DEBUG("Ignore: LINKLOCAL\n");
+			return FA_IGNORE;
+#if 0 /* For Juha-Matti's experiments  */
+		} else if (IN6_IS_ADDR_SITELOCAL(a_in6)) {
+			HIP_DEBUG("Ignore: SITELOCAL\n");
+			return FA_IGNORE;
+#endif
+		} else if (IN6_IS_ADDR_V4MAPPED(a_in6)) {
+			HIP_DEBUG("Ignore: V4MAPPED\n");
+			return FA_IGNORE;
+		} else if (IN6_IS_ADDR_V4COMPAT(a_in6)) {
+			HIP_DEBUG("Ignore: V4COMPAT\n");
+			return FA_IGNORE;
+		} else if (ipv6_addr_is_hit(a_in6)) {
+			HIP_DEBUG("Ignore: hit\n");
+			return FA_IGNORE;
+		} else
+			return FA_ADD;
+		break;
+		/* XX FIXME: DISCARD LSIs with IN6_IS_ADDR_V4MAPPED AND IS_LSI32 */
+
+	case AF_INET:
+		/* AG FIXME more IPv4 address checking
+		 * DO we need any more checks here ? -- Abi
+		 */
+		inet_ntop(AF_INET, &((struct sockaddr_in*)addr)->sin_addr, s, sLEN);
+		HIP_DEBUG("IPv4 addr: %s \n", s);
+
+		in_addr_t a_in = ((struct sockaddr_in *)addr)->sin_addr.s_addr;
+		
+		if(suppress_af_family == AF_INET6) {
+			HIP_DEBUG("Ignore: Address family suppression set to "\
+				  " IPv6 addresses.\n");
+			return FA_IGNORE;
+		} else if (a_in == INADDR_ANY) {
+			HIP_DEBUG("Ignore: INADDR_ANY\n");
+			return FA_IGNORE;
+		} else if (a_in == INADDR_BROADCAST) {
+			HIP_DEBUG("Ignore: INADDR_BROADCAST\n");
+			return FA_IGNORE;
+		} else if (IN_MULTICAST(ntohs(a_in))) {
+			HIP_DEBUG("Ignore: MULTICAST\n");
+			return FA_IGNORE;
+		} else if (IS_LSI32(a_in)) {
+			HIP_DEBUG("Ignore: LSI32\n");
+			return FA_IGNORE;
+		} else if (IS_IPV4_LOOPBACK(a_in)) {
+			HIP_DEBUG("Ignore: IPV4_LOOPBACK\n");
+			return FA_IGNORE;
+		} else 
+			return FA_ADD;
+		break;
+
+	default:
+			
+		return FA_IGNORE;
 	}
 }
 
@@ -249,7 +261,7 @@ static void delete_address_from_list(struct sockaddr *addr, int ifindex)
             memcpy(&addr_sin6, addr, sizeof(addr_sin6));
 	}       
 
-        hip_print_hit("deleting_address=",hip_cast_sa_addr(&addr_sin6));
+        HIP_DEBUG_HIT("deleting_address=",hip_cast_sa_addr(&addr_sin6));
 	HIP_DEBUG("address_count at entry=%d\n", address_count);
 
 	list_for_each_safe(item, tmp, addresses, i) {
@@ -263,9 +275,9 @@ static void delete_address_from_list(struct sockaddr *addr, int ifindex)
                 }
             } else {
                 /* remove from list if address matches */
-                hip_print_hit("interface address",
+                HIP_DEBUG_HIT("interface address",
                               hip_cast_sa_addr(&n->addr));
-                hip_print_hit("address to be removed",hip_cast_sa_addr(&addr_sin6));                
+                HIP_DEBUG_HIT("address to be removed",hip_cast_sa_addr(&addr_sin6));                
                 if(ipv6_addr_cmp(hip_cast_sa_addr(&n->addr), 
                                  hip_cast_sa_addr(&addr_sin6))==0) {
                     list_del(n, addresses);
@@ -413,8 +425,8 @@ int static add_address(const struct nlmsghdr *h, int len, void *arg)
  */
 int hip_netdev_init_addresses(struct rtnl_handle *nl)
 {
-	struct ifaddrs *g_ifaces = NULL, *g_iface;
-	int err = 0, if_index;
+	struct ifaddrs *g_ifaces = NULL, *g_iface = NULL;
+	int err = 0, if_index = 0;
 
 	/* Initialize address list */
 	HIP_DEBUG("Initializing addresses...\n");
@@ -632,7 +644,9 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg){
         in_port_t ha_peer_port;
 	hip_ha_t *entry;
 	hip_hit_t *src_hit, *dst_hit;
-
+	
+	int is_loopback = 0;
+	struct in6_addr src_addr;
 	struct xfrm_user_acquire *acq;
 	struct in6_addr dst_addr, ha_match;
 	struct sockaddr_storage ss_addr;
@@ -650,7 +664,7 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg){
 
 	/* Sometimes we get deformed HITs from kernel, skip them */
 	HIP_IFEL(!(ipv6_addr_is_hit(src_hit) && ipv6_addr_is_hit(dst_hit) &&
-		   !hip_hidb_hit_is_our(src_hit) &&
+		   hip_hidb_hit_is_our(src_hit) &&
 		   hit_is_real_hit(dst_hit)), -1,
 		 "Received rubbish from netlink, skip\n");
 
@@ -666,8 +680,10 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg){
 
 #ifdef CONFIG_HIP_HI3
 	if(hip_use_i3) {
-		struct in_addr lpback = { INADDR_LOOPBACK };
-		IPV4_TO_IPV6_MAP(&lpback, &dst_addr);
+		struct in6_addr lpback = { IN6ADDR_LOOPBACK_INIT };
+		memcpy(&dst_addr, &lpback, sizeof(struct in6_addr));
+		/*struct in_addr lpback = { INADDR_LOOPBACK };
+		  IPV4_TO_IPV6_MAP(&lpback, &dst_addr);*/
 		err = 0;
 	}
 	else {
@@ -690,6 +706,16 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg){
 		}
 	}
 
+	/* map to loopback if hit is ours  */
+	if (err && hip_hidb_hit_is_our(dst_hit)) {
+		struct in6_addr lpback = IN6ADDR_LOOPBACK_INIT;
+		ipv6_addr_copy(&dst_addr, &lpback);
+		ipv6_addr_copy(&src_addr, &lpback);
+		is_loopback = 1;
+		reuse_hadb_local_address = 1;
+		err = 0;
+	}
+
 	/* broadcast I1 as a last resource */
 	if (err) {
 		struct in_addr bcast = { INADDR_BROADCAST };
@@ -697,8 +723,6 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg){
 		   so using IPv4 here -mk */
 		HIP_DEBUG("No information of peer found, trying broadcast\n");
 		IPV4_TO_IPV6_MAP(&bcast, &dst_addr);
-		/* Broadcast did not work with UDP packets -mk */
-		ha_nat_mode = 0;
 		err = 0;
 	}
 
@@ -713,6 +737,9 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg){
 	HIP_IFEL(!(entry = hip_hadb_find_byhits(src_hit, dst_hit)), -1,
 		 "Internal lookup error\n");
 
+	if (is_loopback)
+		ipv6_addr_copy(&(entry->local_address), &src_addr);
+	
 	/* Preserve NAT status with peer */
 	entry->peer_udp_port = ha_peer_port;
 	entry->nat_mode = ha_nat_mode;
@@ -766,7 +793,7 @@ skip_entry_creation:
 	HIP_DEBUG("Using ifindex %d\n", if_index);
 
 	//add_address_to_list(addr, if_index /*acq->sel.ifindex*/);
-
+ 
 	HIP_IFEL(hip_send_i1(&entry->hit_our, &entry->hit_peer, entry), -1,
 		 "Sending of I1 failed\n");
 
@@ -959,6 +986,8 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 				hip_send_update_all(locators, i,
 						    ifa->ifa_index,
 						    SEND_UPDATE_LOCATOR, is_add, addr);
+                                if (hip_locator_status == SO_HIP_SET_LOCATOR_ON)
+                                    hip_recreate_all_precreated_r1_packets();    
 				free(locators);
 				break;
 			}
@@ -1111,8 +1140,8 @@ int hip_select_source_address(struct in6_addr *src, struct in6_addr *dst)
 //	rtnl_rtdsfield_init = 1;
 	
 //	rtnl_tab_initialize("/etc/iproute2/rt_dsfield", rtnl_rtdsfield_tab, 256);
-	HIP_DEBUG_IN6ADDR("dst", dst);
-	HIP_DEBUG_IN6ADDR("src", src);
+	HIP_DEBUG_IN6ADDR("Source", src);
+	HIP_DEBUG_IN6ADDR("Destination", dst);
 
 	HIP_IFEL(hip_iproute_get(&hip_nl_route, src, dst, NULL, NULL, family, idxmap), -1, "Finding ip route failed\n");
 

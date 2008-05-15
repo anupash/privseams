@@ -10,6 +10,7 @@
 #define HIP_WORKQUEUE
 
 #include <stdio.h>
+#include <stdint.h> // For uint8_t
 //#include <asm/byteorder.h>   // use instead #include <endian.h>
 #include "list.h"
 //#include "debug.h"
@@ -17,6 +18,8 @@
 #include "bos.h"
 #include "close.h"
 #include "accessor.h"
+#include "registration.h"
+
 
 extern struct addrinfo * opendht_serving_gateway;
 extern int opendht_serving_gateway_port;
@@ -26,6 +29,5 @@ extern int hip_opendht_hit_sent;
 extern int hip_locator_status;
 extern int hip_opendht_inuse;
 extern int hip_opendht_error_count;
-extern int we_are_relay;
 
 #endif /* HIP_WORKQUEUE */

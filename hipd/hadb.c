@@ -196,14 +196,14 @@ hip_ha_t *hip_hadb_try_to_find_by_peer_hit(hip_hit_t *hit)
  *
  * @todo SPI STUFF IS DEPRECATED
  *
- * Adds @ha to either SPI or HIT hash table, or _BOTH_.
- * As a side effect updates the hastate of the @ha.
+ * Adds @c ha to either SPI or HIT hash table, or _BOTH_.
+ * As a side effect updates the hastate of the @c ha.
  *
  * Function can be called even if the HA is in either or
  * both hash tables already.
  *
- * PRECONDITIONS: To add to the SPI hash table the @ha->spi_in
- * must be non-zero. To add to the HIT hash table the @ha->hit_peer
+ * PRECONDITIONS: To add to the SPI hash table the @c ha->spi_in
+ * must be non-zero. To add to the HIT hash table the @c ha->hit_peer
  * must be non-zero (tested with ipv6_addr_any).
  *
  * Returns the hastate of the HA:
@@ -216,28 +216,24 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 {
 	hip_hastate_t st;
 	hip_ha_t *tmp;
-
+	
 	HIP_DEBUG("hip_hadb_insert_state() invoked.\n");
-
+	
 	/* assume already locked ha */
-
+	
 	HIP_ASSERT(!(ipv6_addr_any(&ha->hit_peer)));
-
+	
 	st = ha->hastate;
 
-	if (!ipv6_addr_any(&ha->hit_peer) && !(st & HIP_HASTATE_HITOK))
-	{
+	if (!ipv6_addr_any(&ha->hit_peer) && !(st & HIP_HASTATE_HITOK)) {
 		HIP_HEXDUMP("ha->hit_our is: ", &ha->hit_our, 16);
 		HIP_HEXDUMP("ha->hit_peer is: ", &ha->hit_peer, 16);
 		tmp = hip_ht_find(hadb_hit, ha);
-		if (!tmp)
-		{
+		if (tmp == NULL) {
 			hip_ht_add(hadb_hit, ha);
 			st |= HIP_HASTATE_HITOK;
 			HIP_DEBUG("New state added\n");
-		}
-		else
-		{
+		} else {
 			hip_db_put_ha(tmp, hip_hadb_delete_state);
 			HIP_DEBUG("HIT already taken\n");
 		}
@@ -268,8 +264,6 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 }
 
 /**
- * .
- *
  * Practically called only by when adding a HIT-IP mapping before base exchange.
  *
  * @param  local_hit  a pointer to... 
@@ -374,7 +368,7 @@ out_err:
  *
  * @param  entry         a pointer to...
  * @param  peer_map_void a pointer to...
- * @return ...
+ * @return               ...
  */ 
 int hip_hadb_add_peer_info_wrapper(struct hip_host_id_entry *entry,
 				   void *peer_map_void)
@@ -405,10 +399,10 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr)
 
 	memcpy(&peer_map.peer_addr, peer_addr, sizeof(struct in6_addr));
 	memcpy(&peer_map.peer_hit, peer_hit, sizeof(hip_hit_t));
-
-	HIP_IFEL(hip_select_source_address(&peer_map.our_addr,
-					   &peer_map.peer_addr), -1,
-		 "Cannot find source address\n");
+	
+	HIP_IFEL(hip_select_source_address(
+			 &peer_map.our_addr, &peer_map.peer_addr),
+		 -1, "Cannot find source address\n");
 
 	HIP_DEBUG("Source address found\n");
 
@@ -457,7 +451,7 @@ int hip_add_peer_map(const struct hip_common *input)
 /**
  * Allocates and initializes a new HA structure.
  * 
- * @gfpmask a mask passed directly to HIP_MALLOC().
+ * @param  gfpmask a mask passed directly to HIP_MALLOC().
  * @return NULL if memory allocation failed, otherwise the HA.
  */
 hip_ha_t *hip_hadb_create_state(int gfpmask)
@@ -519,8 +513,10 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
 
 /* END OF PRIMITIVE FUNCTIONS */
 
-/* select the preferred address within the addresses of the given SPI */
-/* selected address is copied to @addr, it is is non-NULL */
+/**
+ * Selects the preferred address within the addresses of the given SPI.
+ * The selected address is copied to @c addr, it is is non-NULL.
+ */
 int hip_hadb_select_spi_addr(hip_ha_t *entry, struct hip_spi_out_item *spi_out, struct in6_addr *addr)
 {
 	int err = 0, i;
@@ -570,7 +566,7 @@ int hip_hadb_select_spi_addr(hip_ha_t *entry, struct hip_spi_out_item *spi_out, 
 }
 
 /**
- * hip_hadb_get_peer_addr - Get some of the peer's usable IPv6 address
+ * Gets some of the peer's usable IPv6 address.
  * @param entry corresponding hadb entry of the peer
  * @param addr where the selected IPv6 address of the peer is copied to
  *
@@ -599,17 +595,20 @@ int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr)
 }
 
 /**
- * hip_hadb_get_peer_addr_info - get infomation on the given peer IPv6 address
- * @param entry corresponding hadb entry of the peer
- * @param addr the IPv6 address for which the information is to be retrieved
- * @param spi where the outbound SPI of @c addr is copied to
- * @param lifetime where the lifetime of @c addr is copied to
- * @param modified_time where the time when @c addr was added or updated is copied to
- *
- * @return if @c entry has the address @c addr in its peer address list
- * parameters @c spi, @lifetime, and @c modified_time are
- * assigned if they are non-NULL and 1 is returned, else @c interface_id
- * and @c lifetime are not assigned a value and 0 is returned.
+ * Gets infomation on the given peer IPv6 address.
+ * 
+ * @param entry         corresponding hadb entry of the peer.
+ * @param addr          the IPv6 address for which the information is to be
+ *                      retrieved.
+ * @param spi           where the outbound SPI of @c addr is copied to.
+ * @param lifetime      where the lifetime of @c addr is copied to.
+ * @param modified_time where the time when @c addr was added or updated is
+ *                      copied to.
+ * @return              If @c entry has the address @c addr in its peer address
+ *                      list parameters @c spi, @c lifetime, and
+ *                      @c modified_time are assigned if they are non-NULL and 1
+ *                      is returned, else @c interface_id and @c lifetime are
+ *                      not assigned a value and 0 is returned.
  */
 int hip_hadb_get_peer_addr_info(hip_ha_t *entry, struct in6_addr *addr,
 				uint32_t *spi, uint32_t *lifetime,
@@ -740,8 +739,8 @@ out_err:
 }
 
 /**
- * hip_hadb_delete_peer_address_list_one - delete IPv6 address from the entry's list 
- * of peer addresses
+ * Deletes IPv6 address from the entry's list of peer addresses
+ * 
  * @param entry corresponding hadb entry of the peer
  * @param addr IPv6 address to be deleted
  */
@@ -794,6 +793,7 @@ int hip_del_peer_info_entry(hip_ha_t *ha)
 	hip_hadb_delete_state(ha);
 	//hip_db_put_ha(ha, hip_hadb_delete_state);
 	/* and now zero --> deleted*/
+	return 0;
 }
 
 /**
@@ -1256,9 +1256,10 @@ void hip_update_set_status(hip_ha_t *entry, uint32_t spi, int set_flags,
 }
 
 
-/* returns 1 if given SPI belongs to the SA having direction
- * @direction, else 0. If @test_new_spi is 1 then test new_spi instead
- * of spi */
+/**
+ * If @c test_new_spi is 1 then test new_spi instead of spi.
+ * @return 1 if given SPI belongs to the SA having direction, else 0.
+ */
 int hip_update_exists_spi(hip_ha_t *entry, uint32_t spi,
 			       int direction, int test_new_spi)
 {
@@ -1712,7 +1713,8 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 #ifndef HIP_USE_ICE 
 			//if ice is used, then not need to send update
 			err = entry->hadb_update_func->hip_update_send_echo(entry, spi, new_addr);
-			// @todo: check! If not acctually a problem (during Handover). Andrey.
+ 
+			/** @todo: check! If not actually a problem (during Handover). Andrey. */
 			if( err==-ECOMM ) err = 0;
 #endif*/
 		}
@@ -1823,12 +1825,12 @@ void hip_hadb_dump_spis_out(hip_ha_t *entry)
 }
 
 /**
- * hip_store_base_exchange_keys - store the keys negotiated in base exchange
- * @param ctx the context inside which the key data will copied around
- * @param is_initiator true if the localhost is the initiator, or false if
- *                   the localhost is the responder
- *
- * @return 0 if everything was stored successfully, otherwise < 0.
+ * Stores the keys negotiated in base exchange.
+ * 
+ * @param ctx          the context inside which the key data will copied around.
+ * @param is_initiator true if the localhost is the initiator, or false if the
+ *                     localhost is the Responder
+ * @return             0 if everything was stored successfully, otherwise < 0.
  */
 int hip_store_base_exchange_keys(struct hip_hadb_state *entry, 
 				  struct hip_context *ctx, int is_initiator)
@@ -1864,7 +1866,7 @@ int hip_store_base_exchange_keys(struct hip_hadb_state *entry,
 	}
 
 	entry->dh_shared_key_len = 0;
-	/* todo: reuse pointer, no HIP_MALLOC */
+	/** @todo reuse pointer, no HIP_MALLOC */
 	entry->dh_shared_key = (char *)HIP_MALLOC(ctx->dh_shared_key_len, GFP_ATOMIC);
 	if (!entry->dh_shared_key)
 	{
@@ -1886,8 +1888,13 @@ out_err:
 	return err;
 }
 
-/*
- * @msg for future purposes (KeyNote)
+/**
+ * .
+ * 
+ * @param entry ...
+ * @param msg for future purposes (KeyNote)
+ * @param peer ...
+ * @return     ...
  */
 int hip_init_peer(hip_ha_t *entry, struct hip_common *msg, 
 		  struct hip_host_id *peer)
@@ -2104,31 +2111,30 @@ hip_update_func_set_t *hip_get_update_default_func_set() {
 }
 
 /**
- * hip_hadb_set_rcv_function_set - set function pointer set for an hadb record.
- *				   Pointer values will not be copied!
- * @param entry e pointer to the hadb record
- * @param new_func_set pointer to the new function set
+ * Sets function pointer set for an hadb record. Pointer values will not be
+ * copied!
  *
- * @return 0 if everything was stored successfully, otherwise < 0.
+ * @param entry         a pointer to the hadb record
+ * @param new_func_set  a pointer to the new function set
+ * @return              0 if everything was stored successfully, otherwise < 0.
  */
 int hip_hadb_set_rcv_function_set(hip_ha_t * entry,
 				   hip_rcv_func_set_t * new_func_set){
-	/*! \todo add check whether all function pointers are set */
-	if( entry ){
-		entry->hadb_rcv_func = new_func_set;
-		return 0;
-	}
-	//HIP_ERROR("Func pointer set malformed. Func pointer set NOT appied.");
-	return -1;
+     /** @todo add check whether all function pointers are set */
+     if( entry ){
+	  entry->hadb_rcv_func = new_func_set;
+	  return 0;
+     }
+      return -1;
 }
 
 /**
- * hip_hadb_set_handle_function_set - set function pointer set for an
- * hadb record. Pointer values will not be copied!
- * @param entry pointer to the hadb record
- * @param new_func_set pointer to the new function set
- *
- * @return 0 if everything was stored successfully, otherwise < 0.
+ * Sets function pointer set for an hadb record. Pointer values will not be
+ * copied!
+ * 
+ * @param entry        a pointer to the hadb record.
+ * @param new_func_set a pointer to the new function set.
+ * @return             0 if everything was stored successfully, otherwise < 0.
  */
 int hip_hadb_set_handle_function_set(hip_ha_t * entry,
 				     hip_handle_func_set_t * new_func_set){
@@ -2137,17 +2143,16 @@ int hip_hadb_set_handle_function_set(hip_ha_t * entry,
 		entry->hadb_handle_func = new_func_set;
 		return 0;
 	}
-	//HIP_ERROR("Func pointer set malformed. Func pointer set NOT appied.");
 	return -1;
 }
 
 /**
- * hip_hadb_set_misc_function_set - set function pointer set for an hadb record.
- * Pointer values will not be copied!
- * @param entry pointer to the hadb record
- * @param new_func_set pointer to the new function set
- *
- * @return 0 if everything was stored successfully, otherwise < 0.
+ * Sets function pointer set for an hadb record. Pointer values will not be
+ * copied!
+ * 
+ * @param entry        pointer to the hadb record.
+ * @param new_func_set pointer to the new function set.
+ * @return             0 if everything was stored successfully, otherwise < 0.
  */
 int hip_hadb_set_misc_function_set(hip_ha_t * entry,
 				   hip_misc_func_set_t * new_func_set){
@@ -2156,7 +2161,6 @@ int hip_hadb_set_misc_function_set(hip_ha_t * entry,
 		entry->hadb_misc_func = new_func_set;
 		return 0;
 	}
-	//HIP_ERROR("Func pointer set malformed. Func pointer set NOT appied.");
 	return -1;
 }
 
@@ -2187,12 +2191,12 @@ int hip_hadb_set_output_filter_function_set(hip_ha_t * entry,
 }
 
 /**
- * hip_hadb_set_update_function_set - set function pointer set for an hadb record.
- * Pointer values will not be copied!
- * @param entry pointer to the hadb record
- * @param new_func_set pointer to the new function set
+ * Sets function pointer set for an hadb record. Pointer values will not be
+ * copied!
  *
- * @return 0 if everything was stored successfully, otherwise < 0.
+ * @param entry        a pointer to the hadb record.
+ * @param new_func_set a pointer to the new function set.
+ * @return             0 if everything was stored successfully, otherwise < 0.
  */
 int hip_hadb_set_update_function_set(hip_ha_t * entry,
 				     hip_update_func_set_t * new_func_set){
@@ -2210,20 +2214,20 @@ int hip_hadb_set_update_function_set(hip_ha_t * entry,
    for all controls. */
 void hip_hadb_set_local_controls(hip_ha_t *entry, hip_controls_t mask)
 {
-     if(entry != NULL)
-     {
-	  switch(mask)
-	  {
-	  case HIP_HA_CTRL_NONE:
-	       entry->local_controls &= mask;
-	  case HIP_HA_CTRL_LOCAL_REQ_HIPUDP:
-	  case HIP_HA_CTRL_LOCAL_REQ_RVS:
-	       entry->local_controls |= mask;
-	       break;
-	  default:
-	       HIP_ERROR("Unknown local controls given.\n");
-	  }
-     }
+	if(entry != NULL) {
+		switch(mask) {
+
+		case HIP_HA_CTRL_NONE:
+			entry->local_controls &= mask;
+		case HIP_HA_CTRL_LOCAL_REQ_ESCROW:
+		case HIP_HA_CTRL_LOCAL_REQ_RELAY:
+		case HIP_HA_CTRL_LOCAL_REQ_RVS:
+			entry->local_controls |= mask;
+			break;
+		default:
+			HIP_ERROR("Unknown local controls given.\n");
+		}
+	}
 }
 
 /* NOTE! When modifying this function, remember that some control values may
@@ -2231,35 +2235,33 @@ void hip_hadb_set_local_controls(hip_ha_t *entry, hip_controls_t mask)
    for all controls. */
 void hip_hadb_set_peer_controls(hip_ha_t *entry, hip_controls_t mask)
 {
-     if(entry != NULL)
-     {
-	  switch(mask)
-	  {
-	  case HIP_HA_CTRL_NONE:
-	       entry->peer_controls &= mask;
-	  case HIP_HA_CTRL_PEER_RVS_CAPABLE:
-	  case HIP_HA_CTRL_PEER_HIPUDP_CAPABLE:
-	       entry->peer_controls |= mask;
-	       break;
-	  default:
-	       HIP_ERROR("Unknown peer controls given.\n");
-	  }
-     }
+	if(entry != NULL) {
+		switch(mask) {
+
+		case HIP_HA_CTRL_NONE:
+			entry->peer_controls &= mask;
+		case HIP_HA_CTRL_PEER_ESCROW_CAPABLE:
+		case HIP_HA_CTRL_PEER_RVS_CAPABLE:
+		case HIP_HA_CTRL_PEER_RELAY_CAPABLE:
+			entry->peer_controls |= mask;
+			break;
+		default:
+			HIP_ERROR("Unknown peer controls given.\n");
+		}
+	}
 }
 
 void hip_hadb_cancel_local_controls(hip_ha_t *entry, hip_controls_t mask)
 {
-     if(entry != NULL)
-     {
-	  entry->local_controls &= (~mask);
-     }
+	if(entry != NULL) {
+		entry->local_controls &= (~mask);
+	}
 }
 
 void hip_hadb_cancel_peer_controls(hip_ha_t *entry, hip_controls_t mask)
 {
-     if(entry != NULL)
-     {
-	  entry->peer_controls &= (~mask);
+     if(entry != NULL) {
+	     entry->peer_controls &= (~mask);
      }
 }
 
@@ -2308,17 +2310,14 @@ void hip_delete_all_sp()
 
 
 /**
-* hip_list_peers_add - private function to add an entry to the peer list
-* @addr: IPv6 address
-* @entry: peer list entry
-* @last: pointer to pointer to end of peer list linked list
+* A private function to add an entry to the peer list. Add an IPv6 address
+* (if valid) to the peer list and update the tail pointer.
 *
-* Add an IPv6 address (if valid) to the peer list and update the tail
-* pointer.
-*
-* Returns: zero on success, or negative error value on failure
+* @param addr  IPv6 address
+* @param entry peer list entry
+* @param last  pointer to pointer to end of peer list linked list
+* @return      zero on success, or negative error value on failure
 */
-
 int hip_list_peers_add(struct in6_addr *address,
 			      hip_peer_entry_opaque_t *entry,
 			      hip_peer_addr_opaque_t **last)
@@ -2348,13 +2347,13 @@ int hip_list_peers_add(struct in6_addr *address,
 }
 
 /**
- * hip_hadb_list_peers_func - private function to process a hadb entry
- * @param entry hadb table entry
- * @param opaque private data for the function (contains record keeping structure)
+ * A private function to process a hadb entry Process a hadb entry, extracting
+ * the HOST ID, HIT, and IPv6 addresses.
  *
- * Process a hadb entry, extracting the HOST ID, HIT, and IPv6 addresses.
- *
- * @return zero on success, or negative error value on failure
+ * @param entry  hadb table entry
+ * @param opaque private data for the function (contains record keeping
+ *               structure)
+ * @return       zero on success, or negative error value on failure
  */
 int hip_hadb_list_peers_func(hip_ha_t *entry, void *opaque)
 {
@@ -2373,8 +2372,8 @@ void hip_hadb_delete_inbound_spi(hip_ha_t *entry, uint32_t spi)
 	HIP_DEBUG("SPI=0x%x\n", spi);
 	int counter = 0;
 
-	/* @todo: check that the deletion below actually works (hits and addresses are
-	   used inconsistenly) */
+	/** @todo check that the deletion below actually works (hits and
+	    addresses are used inconsistenly). */
 	list_for_each_safe(item, tmp, entry->spis_in, i)
 	{ 
 		spi_item = list_entry(item);
@@ -2446,15 +2445,13 @@ void hip_hadb_delete_outbound_spi(hip_ha_t *entry, uint32_t spi)
 }
 
 /** 
- * hip_hadb_delete_state - Delete HA state (and deallocate memory)
+ * Deletes a HA state (and deallocate memory) Deletes all associates IPSEC SAs
+ * and frees the memory occupied by the HA state.
+ * 
  * @param ha HA
- *
- * Deletes all associates IPSEC SAs and frees the memory occupied
- * by the HA state.
- *
- * ASSERT: The HA must be unlinked from the global hadb hash tables
- * (SPI and HIT). This function should only be called when absolutely 
- * sure that nobody else has a reference to it.
+ * @note     ASSERT: The HA must be unlinked from the global hadb hash tables
+ *           (SPI and HIT). This function should only be called when absolutely
+ *           sure that nobody else has a reference to it.
  */
 void hip_hadb_delete_state(hip_ha_t *ha)
 {
@@ -2480,24 +2477,20 @@ void hip_hadb_delete_state(hip_ha_t *ha)
 		HIP_FREE(ha->our_pub);
 	if (ha)
 		HIP_FREE(ha);
-
-
 }
 
-
 /**
- * hip_for_each_ha - Map function @func to every HA in HIT hash table
- * @param func Mapper function
- * @param opaque Opaque data for the mapper function.
+ * Maps function @c func to every HA in HIT hash table. The hash table is
+ * LOCKED while we process all the entries. This means that the mapper function
+ * MUST be very short and _NOT_ do any operations that might sleep!
  *
- * The hash table is LOCKED while we process all the entries. This means
- * that the mapper function MUST be very short and _NOT_ do any operations
- * that might sleep!
- *
- * Returns negative if an error occurs. If an error occurs during traversal of
- * a the HIT hash table, then the traversal is stopped and function returns.
- * Returns the last return value of applying the mapper function to the last
- * element in the hash table.
+ * @param func a mapper function.
+ * @param opaque opaque data for the mapper function.
+ * @return       negative if an error occurs. If an error occurs during
+ *               traversal of a the HIT hash table, then the traversal is
+ *               stopped and function returns. Returns the last return value of
+ *               applying the mapper function to the last element in the hash
+ *               table.
  */
 int hip_for_each_ha(int (*func)(hip_ha_t *entry, void *opaq), void *opaque)
 {
@@ -2530,15 +2523,12 @@ int hip_count_one_entry(hip_ha_t *entry, void *cntr)
 {
 	int *counter = cntr;
 	if (entry->state == HIP_STATE_CLOSING ||
-	    entry->state == HIP_STATE_ESTABLISHED ||
-	    entry->state == HIP_STATE_FILTERING_I2 ||
-	    entry->state == HIP_STATE_FILTERING_R2)
+	    entry->state == HIP_STATE_ESTABLISHED)
 	{
 		(*counter)++;
 	}
 	return 0;
 }
-
 
 /**
  * Return number of open connections by calculating hadb entrys.
@@ -2575,8 +2565,8 @@ int hip_handle_get_ha_info(hip_ha_t *entry, struct hip_common *msg)
 
 }
 
-/*
- * @todo: we could scan through all of the alternative locators as well
+/**
+ * @todo We could scan through all of the alternative locators as well
  */
 int hip_hadb_map_ip_to_hit(hip_ha_t *entry, void *id2)
 {

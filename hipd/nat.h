@@ -32,6 +32,7 @@
 #include "state.h"
 #include "output.h"
 
+#define HIP_NAT_SLEEP_TIME 2
 /** Maximum length of a UDP packet. */
 #define HIP_MAX_LENGTH_UDP_PACKET 2000
 /** Time interval between consecutive NAT Keep-Alive packets in seconds.
@@ -42,8 +43,6 @@
 #define HIP_NAT_KEEP_ALIVE_INTERVAL 20
 /** Number of retransmissions to try if hip_send_udp() fails. */
 #define HIP_NAT_NUM_RETRANSMISSION 2
-/** Amount of time to sleep between transmission and retransmissions. */
-#define HIP_NAT_SLEEP_TIME 2
 /** Port number for NAT traversal of hip control packets. */
 #define HIP_NAT_UDP_PORT 50500
 /** Virtual Port number for hip raw control packets. */

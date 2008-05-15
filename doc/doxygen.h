@@ -1,30 +1,51 @@
 #ifndef _DOXYGEN_H
 #define _DOXYGEN_H
-/** @file
- * There should be no need to include this file anywhere!
- * This is only for defining doxygen related things, such as
- * groups and lists.
+/**
+ * @file
+ * There should be no need to include this file anywhere! This is only for
+ * defining doxygen related things, such as groups and lists.
  */
 
-/** @mainpage
+/**
+ * @mainpage
  * Welcome to Host Identity Protocol for Linux (HIPL) Doxygen page.
  *
  * @section sec_doc Project Documents
  * <ul>
- * <li>doc/HACKING. This file contains developer information on policies in the HIPL project.</li>
- * <li>HIPL User Manual. Type <code>make HOWTO.html</code> in project root directory.</li> 
+ * <li>doc/HACKING. This file contains developer information on policies in the
+ * HIPL project.</li>
+ * <li>HIPL User Manual. Type <code>make HOWTO.html</code> in "doc" directory.
+ * The user manual is now available at doc/howto-html/index.html</li>.
  * <!--<li><a href=""></a>.</li>-->
  * </ul>
  * 
  * @section sec_links Links
  * <ul>
  * <li><a href="http://infrahip.hiit.fi/">Project home page</a>.</li>
- * <li><a href="http://linux.die.net/man/">Linux Man Pages</a>. See section 3 for C-library functions.</li>
+ * </ul>
+ * <ul>
+ * <li><a href="http://linux.die.net/man/">Linux Man Pages</a>. See section 3
+ *     for C-library functions.</li>
  * <li><a href="http://www.cppreference.com/">C/C++ Reference</a>.</li>
+ * <li><a href="http://www.acm.uiuc.edu/webmonkeys/book/c_guide/">The C Library Reference Guide</a> by Eric Huss.</li>
  * <li><a href="http://tigcc.ticalc.org/doc/keywords.html">C Language Keywords</a>.</li>
  * </ul>
+ * <ul>
+ * <li><a href="http://www.dinkumware.com/manuals/default.aspx?manual=compleat&page=index.html#Standard%20C%20Library">Standard C Library</a>
+ *     by Dinkumware Ltd.</li>
+ * <li><a href="http://www.crasseux.com/books/ctutorial/">The GNU C Programming Tutorial</a>.</li>
+ * <li><a href="http://www.greenend.org.uk/rjk/2001/02/cfu.html">C Language Gotchas</a>.
+ *     A description of some easy-to-make mistakes in C.</li>
+ * <li><a href="http://www.greenend.org.uk/rjk/2003/03/inline.html">Inline Functions In C</a>.
+ *     Notes on GCC and standard C inline functions.</li>
+ * <li><a href="http://docs.freebsd.org/info/gcc/gcc.info.Variable_Attributes.html">Specifying Attributes of Variables</a>.
+ *     Information about specifying special attributes of variables or structure
+ *     fields. For example, what does the <code>__attribute__ ((packed))</code>
+ *     after a structure definition really mean.</li>
+ * <li><a href="http://c-faq.com/">Frequently Asked Questions</a> at comp.lang.c.</li>
+ * </ul>
  *
- * @date   10.10.2007
+ * @date   15.04.2008
  */ 
 
 /**
@@ -181,15 +202,51 @@
  * EOWNERDEAD      130      Owner died
  * ENOTRECOVERABLE 131      State not recoverable
  * </pre>
- *
+ * Following error values are defined in /usr/include/netdb.h:
+ * <pre>
+ * NETDB_INTERNAL  -1       See errno. 
+ * NETDB_SUCCESS   0        No problem.
+ * HOST_NOT_FOUND  1        Authoritative Answer Host not found.
+ * TRY_AGAIN       2        Non-Authoritative Host not found, or SERVERFAIL.
+ * NO_RECOVERY     3        Non recoverable errors, FORMERR, REFUSED,NOTIMP.
+ * NO_DATA         4        Valid name, no data record of requested type.
+ * NO_ADDRESS      NO_DATA  No address, look for MX record.
+ * EKEYREJECTED    129      Key was rejected by service
+ * EOWNERDEAD      130      Owner died
+ * ENOTRECOVERABLE 131      State not recoverable
+ * </pre>
+ * Following error values for `getaddrinfo' function are defined in
+ * /usr/include/netdb.h:
+ * <pre>
+ * EAI_BADFLAGS    -1       Invalid value for `ai_flags' field.
+ * EAI_NONAME      -2       NAME or SERVICE is unknown.
+ * EAI_AGAIN       -3       Temporary failure in name resolution.
+ * EAI_FAIL        -4       Non-recoverable failure in name res.
+ * EAI_NODATA      -5       No address associated with NAME.
+ * EAI_FAMILY      -6       `ai_family' not supported.
+ * EAI_SOCKTYPE    -7       `ai_socktype' not supported.
+ * EAI_SERVICE     -8       SERVICE not supported for `ai_socktype'.
+ * EAI_ADDRFAMILY  -9       Address family for NAME not supported.
+ * EAI_MEMORY      -10      Memory allocation failure.
+ * EAI_SYSTEM      -11      System error returned in `errno'.
+ * EAI_OVERFLOW    -12      Argument buffer overflow.
+ * </pre>
+ * 
  * @defgroup ife Error handling macros
+ **/
+
+/** @defgroup debug HIP debug macros
+ *  
+ * Unfortunately Doxygen gets confused when dealing with the extensive '\' and
+ * '#' characters that these macros contain. This documentation is therefore
+ * messed up. You can find the implementation of these macros from libinet/debug.h.
  **/
 
 /** @defgroup params TODOs for parameters */
 
 /**
  * @defgroup hip_msg HIP daemon message types
- * @note <span style="color:#f00">Don't make these values higher than 255.</span>
+ * @note Don't make these values higher than 255.
  *       The variable, which stores this type, is 8 bits.
  */
 
@@ -329,7 +386,7 @@
  * @def HIP_PARAM_UINT
  *      Unsigned integer.
  * @def HIP_PARAM_KEYS
- * @def HIP_PSEUDO_HIT
+ * @def HIP_PARAM_PSEUDO_HIT
  * @def HIP_PARAM_REG_INFO
  * @def HIP_PARAM_REG_REQUEST
  * @def HIP_PARAM_REG_RESPONSE
@@ -491,20 +548,13 @@
  *       and the Responder is willing to set up an association
  *       but has currently a number of I2s in processing queue.
  *       R2 will be sent after the I2 has been processed.
- * @def  HIP_NTF_RVS_NAT
- *       Sent in response by a Rendezvous Server to a Initiator behind a NAT.
- *       An extension value introduced in draft-schmitt-hip-nat-traversal-03.
- *       In the scenario where a NATted HIP node uses rendezvous service to
- *       contact another HIP node in a publicly addressable network, the
- *       Rendezvous Server replies to the Initiator with a NOTIFY message
- *       having a NOTIFICATION parameter of this type.
  */
 
 /**
- * @defgroup hip_services Additional HIP services. 
+ * @defgroup hip_services Additional HIP services
  *
  * Registration types for registering to a service as specified in
- * draft-ietf-hip-registration-02. These are the registrationion types used in
+ * draft-ietf-hip-registration-02. These are the registration types used in
  * @c REG_INFO, @c REG_REQUEST, @c REG_RESPONSE and @c REG_FAILED parameters.
  * Numbers 0-200 are reserved by IANA.
  * Numbers 201 - 255 are reserved by IANA for private use.
@@ -516,11 +566,9 @@
  *      Rendezvous service for relaying I1 packets.
  * @def HIP_SERVICE_ESCROW
  *      Escrow services for some key exchange.
- * @def HIP_SERVICE_RELAY_UDP_HIP
+ * @def HIP_SERVICE_RELAY
  *      UDP encapsulated relay service for HIP packets.
- * @def HIP_SERVICE_RELAY_UDP_ESP
- *      UDP encapsulated relay service for ESP packets.
- * @def HIP_NUMBER_OF_EXISTING_SERVICES
+ * @def HIP_TOTAL_EXISTING_SERVICES
  *      Total number of services, which must equal the sum of all existing
  *      services.
  */
@@ -552,12 +600,12 @@
  */
 
 /**
- * @defgroup hip_ha_controls HIP host association controls.
+ * @defgroup hip_ha_controls HIP host association controls
  *
  * These are bitmasks used in the @c hip_hadb_state stucture fields
  * @c local_controls and @c peer_controls.
  *
- * @local_controls defines the flags of the current host, while peer_controls
+ * @c local_controls defines the flags of the current host, while peer_controls
  * define the flags of the peer. The flags are used to indicate the state or
  * status of the host. A status can be, for example, that we have requested
  * for a service or that we are capable of offering a service.
@@ -578,8 +626,8 @@
  * |||| |+------------- 0x0400 - free -
  * |||| +-------------- 0x0800 - free -
  * |||+---------------- 0x1000 - free -
- * ||+----------------- 0x2000 - free -
- * |+------------------ 0x4000 We have requested HIPUDPRELAY service.
+ * ||+----------------- 0x2000 We have requested escrow service.
+ * |+------------------ 0x4000 We have requested HIP relay service.
  * +------------------- 0x8000 We have requested RVS service.
  * </pre>
  * Bitmask for peer controls:
@@ -598,25 +646,83 @@
  * |||| |+------------- 0x0400 - free -
  * |||| +-------------- 0x0800 - free -
  * |||+---------------- 0x1000 - free -
- * ||+----------------- 0x2000 - free -
- * |+------------------ 0x4000 Peer offers HIPUDPRELAY service.
+ * ||+----------------- 0x2000 Peer offers escrow service.
+ * |+------------------ 0x4000 Peer offers HIP relay service.
  * +------------------- 0x8000 Peer offers RVS service.
  * </pre>
  *
- * @note There has been some confusion about which bit does what, and which of
+ * @note There has been some confusion about which bit does what and which of
  * the control fields to alter. To avoid this confusion, please do not alter
  * the @c local_controls and @c peer_controls fields directly. Instead use
  * functions hip_hadb_set_local_controls(), hip_hadb_set_peer_controls(),
  * hip_hadb_cancel_local_controls(), hip_hadb_cancel_peer_controls().
+ * @note Do not confuse these values with HIP packet Controls values.
+ *
+ * @def HIP_HA_CTRL_NONE
+ *      Clears all control values. To clear all local controls call
+ *      hip_hadb_set_local_controls() with this mask. To clear all peer controls
+ *      call hip_hadb_set_peer_controls() with this mask.
+ * @def HIP_HA_CTRL_LOCAL_REQ_ESCROW
+ *      The host association has requested escrow service in a I1 or an UPDATE
+ *      packet.
+ * @def HIP_HA_CTRL_LOCAL_REQ_RELAY
+ *      The host association has requested HIP relay service in a I1 or an
+ *      UPDATE packet.
+ * @def HIP_HA_CTRL_LOCAL_REQ_RVS
+ *      The host association has requested rendezvous service in a I1 or an
+ *      UPDATE packet.
+ * @def HIP_HA_CTRL_LOCAL_REQ_ALL
+ *      An AND mask of every existing local request mask.
+ * @def HIP_HA_CTRL_PEER_ESCROW_CAPABLE
+ *      The peer has announced in a R1 or UPDATE packet that it offers escrow
+ *      service.
+ * @def HIP_HA_CTRL_PEER_RELAY_CAPABLE
+ *      The peer has announced in a R1 or UPDATE packet that it offers HIP relay
+ *      service.
+ * @def HIP_HA_CTRL_PEER_RVS_CAPABLE
+ *      The peer has announced in a R1 or UPDATE packet that it offers
+ *      rendezvous service.
  */
 
 /**
- * @defgroup hip_packet_controls HIP packet Controls field values.
+ * @defgroup hip_packet_controls HIP packet Controls field values
  *
  * These are the values that are used in the HIP message Controls field. More
  * importantantly, these are <span style="color:#f00;">the only values allowed
  * in that field.</span> Do not put any other bits on wire in the Controls
  * field.
+ * @note Do not confuse these values with HIP host association ontrol values.
+ */
+
+/**
+ * @defgroup hip_ha_state HIP association states
+ *
+ * HIP states as specifed in section 4.4.1.\ of draft-ietf-hip-base-10.
+ * 
+ * The states are: UNASSOCIATED, I1-SENT, I2-SENT, R2-SENT ESTABLISHED, CLOSING,
+ * CLOSED, E-FAILED.
+ */
+
+/** 
+ * @file libinet6/state.h
+ * @def HIP_STATE_NONE
+ *      No state, structure unused.
+ * @def HIP_STATE_UNASSOCIATED
+ *      UNASSOCIATED, state machine start.
+ * @def HIP_STATE_I1_SENT
+ *      I1-SENT, initiating base exchange.
+ * @def HIP_STATE_I2_SENT
+ *      I2-SENT, waiting to complete base exchange.
+ * @def HIP_STATE_R2_SENT
+ *      R2-SENT, waiting to complete base exchange.
+ * @def HIP_STATE_ESTABLISHED
+ *      ESTABLISHED, HIP association established.
+ * @def HIP_STATE_CLOSING
+ *      CLOSING, HIP association closing, no data can be sent.
+ * @def HIP_STATE_CLOSED
+ *      CLOSED, HIP association closed, no data can be sent.
+ * @def HIP_STATE_FAILED
+ *      E-FAILED, HIP exchange failed.
  */
 
 #endif /* _DOXYGEN_H */

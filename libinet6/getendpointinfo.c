@@ -2175,7 +2175,8 @@ int get_local_hits(const char *servname, struct gaih_addrtuple **adr) {
 }
 
 /**
- * Handles the hipconf commands where the type is @c load. This function is in this file due to some interlibrary dependencies -miika
+ * Handles the hipconf commands where the type is @c load. This function is in
+ * this file due to some interlibrary dependencies -miika
  *
  * @param msg    a pointer to the buffer where the message for hipd will
  *               be written.

@@ -475,7 +475,7 @@ struct hit_option * parse_hit(char * token)
       return NULL;
     }
   option->value = *hit;
-  HIP_DEBUG("hit %d  %s ok\n", option, addr_to_numeric(hit));
+  HIP_DEBUG_HIT("hit ok: ", hit);
   return option;
 }
 
@@ -1231,11 +1231,24 @@ void read_file(char * file_name)
     {
       while(getline(&line, &s, file ) > 0)	  
 	{
+	  char *comment;
 	  original_line = (char *) malloc(strlen(line) + sizeof(char) + 1);
 	  original_line = strcpy(original_line, line);
 	  _HIP_DEBUG("line read: %s", line);
+
+	  /* terminate the line to comment sign */
+	  comment = index(line, '#');
+	  if (comment)
+		  *comment = 0;
+	  
+	  if (strlen(line) == 0) {
+		  free(original_line);
+		  continue;
+	  }
+
 	  //remove trailing new line
 	  line = (char *) strtok(line, "\n");
+
 	  rule = parse_rule(line);
 	  if(rule)
 	    {
@@ -1264,10 +1277,10 @@ void read_file(char * file_name)
 	  else 
 	    HIP_DEBUG("unable to parse rule: %s\n", original_line);
 	  free(original_line);
-	  free(line);
-	  line = NULL;
 	  original_line = NULL;
       }
+      free(line);
+      line = NULL;
       fclose(file);
     }
   else

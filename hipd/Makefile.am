@@ -7,15 +7,15 @@ CFLAGS = $(hipl_common_cflags)
 # Note: libinet6 cannot be included here because it has a bad dependency
 # with netlink headers.
 include_HEADERS =  hadb.h oppdb.h hipd.h netdev.h user.h hiprelay.h
-include_HEADERS += bos.h input.h output.h icookie.h blind.h
-include_HEADERS += close.h hi3.h keymat.h timer.h
-include_HEADERS += cookie.h hidb.h nat.h update.h dh.h
+include_HEADERS += bos.h input.h output.h icookie.h blind.h linkedlist.h
+include_HEADERS += close.h hi3.h keymat.h timer.h configfilereader.h
+include_HEADERS += cookie.h hidb.h nat.h update.h dh.h registration.h
 include_HEADERS += escrow.h reg.h init.h maintenance.h accessor.h oppipdb.h
 INCLUDES = $(hipl_common_include_paths)
 
 sbin_PROGRAMS = hipd
-hipd_SOURCES = reg.c update.c hipd.c keymat.c blind.c hiprelay.c
-hipd_SOURCES += user.c hadb.c oppdb.c close.c
+hipd_SOURCES = reg.c update.c hipd.c keymat.c blind.c hiprelay.c registration.c
+hipd_SOURCES += user.c hadb.c oppdb.c close.c configfilereader.c linkedlist.c
 hipd_SOURCES += input.c output.c hidb.c cookie.c netdev.c bos.c nat.c icookie.c
 hipd_SOURCES += escrow.c init.c maintenance.c accessor.c oppipdb.c dh.c
 
@@ -52,12 +52,11 @@ hipd_LDADD += ../pjproject/pjlib-util/lib/libpjlib-util-${host}.a
 ../pjproject/pjmedia/lib/libpjmedia-${host}.a:
 ../pjproject/pjmedia/lib/libpjmedia-codec-${host}.a:
 
-hipd_LDFLAGS = -lcrypto $(HIPL_XMLL) -lm
+hipd_LDFLAGS = -lcrypto $(HIPL_XMLL) -lm -DHIPL_HIPD
 
 if HIP_HI3
  hipd_SOURCES += hi3.c
  INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
-# hipd_LDADD += ../i3/utils/libutils.a ../i3/i3/libi3.a ../i3/i3_client/libi3client.a ../i3/aeshash/libaes.a
  hipd_LDADD += ../i3/i3_client/libi3client.a ../i3/i3/libi3.a ../i3/utils/libutils.a ../i3/aeshash/libaes.a -lpthread
 endif
 
@@ -103,3 +102,6 @@ escrow.c: escrow.h
 reg.c: reg.h
 blind.c: blind.h
 hiprelay.c: hiprelay.h
+configfilereader.c: configfilereader.h
+registration.c: registration.h
+linkedlist.c: linkedlist.h

@@ -1,14 +1,12 @@
-/*
+/**
+ * @file
  * This file contains KEYMAT handling functions for HIPL.
- *  
  * Licence: GNU/GPL
- * Authors:
- * - Mika Kousa <mkousa@iki.fi>
- * - Kristian Slavov <ksl@iki.fi>
- * - Tobias Heer <heer@tobibox.de>
- *
+ * 
+ * @author Mika Kousa <mkousa#iki.fi>
+ * @author Kristian Slavov <ksl#iki.fi>
+ * @author Tobias Heer <heer#tobibox.de>
  */
-
 #include "keymat.h"
 
 u8 *hip_create_keymat_buffer(char *kij, size_t kij_len, size_t hash_len, 
@@ -180,7 +178,7 @@ void* hip_keymat_draw(struct hip_keymat_keymat* keymat, int length)
 	void *ret = NULL;
 
 	if (length > keymat->keymatlen - keymat->offset) {
-		_HIP_INFO("Tried to draw more keys than are available\n");
+		_HIP_DEBUG("Tried to draw more keys than are available\n");
 		goto out_err;
 	}
 
@@ -211,29 +209,29 @@ int hip_keymat_draw_and_copy(char *dst,
 out_err:
 	return err;
 }
-/** hip_keymat_get_new - calculate new keying material
- * @param key buffer where the created KEYMAT is stored
- * @param key_len length of @key in bytes
- * @param kij Kij, shared key
- * @param kij_len length of @kij in bytes
- * @param keymat_index Keymat Index
- * @param calc_index the one byte index value
- * @param calc_index_keymat Kn
- * @param Kn_is_at the byte offset where @calc_index_keymat starts
+/** 
+ * Calculates new keying material.
  *
- * This function gets next @key_len bytes of KEYMAT to @key starting
- * from requested offset @keymat_index. On entry of this function
- * @calc_index tells the one byte index value which is related to
- * @calc_index_keymat (for example, if @calc_index_keymat is K3, then
- * @calc_index is 3).
+ * This function gets next @c key_len bytes of KEYMAT to @c key starting from
+ * requested offset @c keymat_index. On entry of this function @c calc_index
+ * tells the one byte index value which is related to @c calc_index_keymat (for
+ * example, if @c calc_index_keymat is K3, then @c calc_index is 3).
  *
- * On successful return @keymat_index and @calc_index contain the
- * values used in the last round of calculating Kn of KEYMAT,
- * @calc_index_keymat contains the last Kn, and @Kn_is_at contains the
- * byte offset value of @calc_index_keymat.
+ * On successful return, @c keymat_index and @c calc_index contain the values
+ * used in the last round of calculating Kn of KEYMAT, @c calc_index_keymat
+ * contains the last Kn, and @c Kn_is_at contains the byte offset value of
+ * @c calc_index_keymat.
  *
- * @return 0 on success, < 0 otherwise.
-*/
+ * @param key               buffer where the created KEYMAT is stored.
+ * @param key_len           length of @c key in bytes.
+ * @param kij               shared key.
+ * @param kij_len           length of @c kij in bytes.
+ * @param keymat_index      keymat index.
+ * @param calc_index        the one byte index value.
+ * @param calc_index_keymat Kn.
+ * @param Kn_is_at          the byte offset where @c calc_index_keymat starts.
+ * @return                  0 on success, < 0 otherwise.
+ */
 int hip_keymat_get_new(void *key, size_t key_len, char *kij, size_t kij_len,
 		       uint16_t *keymat_index, uint8_t *calc_index,
 		       unsigned char *calc_index_keymat, uint16_t *Kn_is_at)
@@ -263,8 +261,9 @@ int hip_keymat_get_new(void *key, size_t key_len, char *kij, size_t kij_len,
 		err = -EINVAL;
 		goto out_err;
 	}
-	/* todo: check here if we have to test *keymat_index < entry->current_keymat_index ? */
-
+	/** @todo Check here if we have to test *keymat_index <
+	    entry->current_keymat_index ? */
+	
 	/* before calculating any hashes test if we already have
 	 * needed amount of ready keymat
 	 *
@@ -357,8 +356,7 @@ int hip_keymat_get_new(void *key, size_t key_len, char *kij, size_t kij_len,
  * @param entry HADB entry to be update
  * @param new_keymat_index new Keymat Index value
  * @param new_calc_index new one byte value
- * @param new_current_keymat Kn related to @new_calc_index
- *
+ * @param new_current_keymat Kn related to @c new_calc_index
  */
 void hip_update_entry_keymat(struct hip_hadb_state *entry, 
 			     uint16_t new_keymat_index,

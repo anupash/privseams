@@ -177,7 +177,9 @@ int hip_nat_refresh_port()
 int hip_nat_send_keep_alive(hip_ha_t *entry, void *not_used)
 {
 	int err = 0;
-	struct hip_common update_packet;
+	struct hip_common *msg = NULL;
+
+	HIP_IFEL(!(msg = hip_msg_alloc()), -1, "Alloc\n");
 	
 	_HIP_DEBUG("hip_nat_send_keep_alive() invoked.\n");
 	_HIP_DEBUG("entry @ %p, entry->nat_mode %d.\n",
@@ -203,15 +205,14 @@ int hip_nat_send_keep_alive(hip_ha_t *entry, void *not_used)
 		goto out_err;
 	}
 
-	memset(&update_packet, 0, sizeof(update_packet)); 
 
 	entry->hadb_misc_func->
-		hip_build_network_hdr(&update_packet, HIP_NOTIFY,
+		hip_build_network_hdr(msg, HIP_NOTIFY,
 				      0, &entry->hit_our,
 				      &entry->hit_peer);
 	
 	/* Calculate the HIP header length */
-	hip_calc_hdr_len(&update_packet);
+	hip_calc_hdr_len(msg);
 
 	/* Send the UPDATE packet using 50500 as source and destination ports.
 	   Only outgoing traffic acts refresh the NAT port state. We could
@@ -220,10 +221,13 @@ int hip_nat_send_keep_alive(hip_ha_t *entry, void *not_used)
 	   50500 as source port also, we choose to do so here. */
 	entry->hadb_xmit_func->
 		hip_send_pkt(&entry->local_address, &entry->preferred_address,
-			     HIP_NAT_UDP_PORT, HIP_NAT_UDP_PORT, &update_packet,
+			     HIP_NAT_UDP_PORT, HIP_NAT_UDP_PORT, msg,
 			     entry, 0);
 
  out_err:
+	if (msg)
+		free(msg);
+
 	return err;
 }
 
