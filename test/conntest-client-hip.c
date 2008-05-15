@@ -42,6 +42,7 @@ int main(int argc, char *argv[]) {
 	int socktype = -1, err = 0;
 	const char *cfile = "default";
 	char usage[100];
+	char ping_help[512];
 	in_port_t port = 0;
 
 	sprintf(usage, "Usage: %s <host> tcp|udp <port>", argv[0]);
@@ -70,13 +71,16 @@ int main(int argc, char *argv[]) {
 	
 	port = atoi(argv[3]);
 
+	/* Disabled since this comparison is always true with the current
+	   port number boundaries.
 	if(port < MINPORTNUM || port > MAXPORTNUM){
 		HIP_INFO("Invalid port number, allowed port numbers are "\
 			 "from %d to %d.\n%s\n", MINPORTNUM, MAXPORTNUM,
 			 usage);
 		return EXIT_FAILURE;
 	}
-	
+	*/
+
 	HIP_INFO("=== Testing %s connection to '%s' on port %s ===\n",
 		 (socktype == SOCK_STREAM ? "TCP" : "UDP"), argv[1],
 		 argv[3]);
@@ -90,22 +94,67 @@ int main(int argc, char *argv[]) {
 			 "\e[92mSUCCESS\e[00m ===\n");
 		return EXIT_SUCCESS;
 	} else {
-		if(err == -ECONNREFUSED) {
-			HIP_INFO("The peer was reached but it refused the "\
-				 "connection.\nThere is no one listening on "\
-				 "the remote address.\nDo you have a server "\
-				 "running at the other end?\n");
-		} else if(err == -1000) {
-			HIP_INFO("Error when retrieving address information for "\
-				 "the peer.\nDo you have a local HIP daemon up "\
-				 "and running?\n");
-		} else if(err == -1001) {
+		_HIP_DEBUG("err: %d, errno: %d .\n", err, errno);
+
+		/* Get a help string for pinging etc. */
+		sprintf(ping_help, "You can try the 'ping', 'ping6', "\
+			"'traceroute' or 'traceroute6' programs to\n"\
+			"track down the problem.\n");
+		
+		/* Check our specially tailored 'err' values first.
+		/* getaddrinfo() returns an error value as defined in
+		   /usr/include/netdb.h. We have stored that error value in
+		   errno. */
+		if(err == -EHADDRINFO) {
+			HIP_ERROR("Error when retrieving address information "\
+				  "for the peer.\n");
+			if(errno == EAI_NONAME) {
+				HIP_ERROR("Connection refused.\nDo you have a "\
+					  "local HIP daemon up and running?\n");
+			} else if(errno == EAI_AGAIN) {
+				HIP_ERROR("Temporary failure in name "\
+					  "resolution.\n");
+			}
+		} else if(err == -EBADMSG) {
 			HIP_INFO("Error when communicating with the peer.\n"\
 				 "The peer is supposed to echo back the sent "\
 				 "data,\nbut the sent and received data do "\
 				 "not match.\n");
-		} else {
-			perror(NULL);
+		}
+		/* Then move to errno handling. Note that the errno is set
+		   in somewhat randomly in libinet6 functions and therefore
+		   these error messages do not neccessarily hold. Well, better
+		   than nothing... */
+		else if(errno == ECONNREFUSED) {
+			HIP_ERROR("The peer was reached but it refused the "\
+				  "connection.\nThere is no one listening on "\
+				  "the remote address.\nIf you are trying to "\
+				  "establish a HIP connection,\nyou need both "\
+				  "a HIP daemon and a server running at the "\
+				  "other end.\nFor an IP connection you only "\
+				  "need a server running at the other end.\n");
+		} else if(errno == ENOTSOCK) {
+			HIP_ERROR("Socket operation on non-socket.\n"\
+				  "Is the host you are trying to connect local");
+			
+		} else if(errno == ENETUNREACH) {
+			HIP_ERROR("Network is unreachable.\n%s", ping_help);
+		} else if(errno == EBADF) {
+			HIP_ERROR("Bad file descriptor.\nThe file descriptor "\
+				  "used when trying to connect to the remote "\
+				  "host is not a\nvalid index in the "\
+				  "descriptor table.\n");
+		} else if(errno == EAFNOSUPPORT) {
+			HIP_ERROR("Address family not supported by protocol.\n"\
+				  "Only IPv4, IPv6 and HIP address families "\
+				  "are supported.\nAre you trying to "\
+				  "communicate between processes on the same "\
+				  "machine?\n");
+		}
+		/* Just to make sure we don't print 'success' when the
+		   connection test has actually failed we check errno != 0. */
+		else if (errno != 0) {
+			HIP_PERROR("");
 		}
 
 		HIP_INFO("=== Connection test result: "\
