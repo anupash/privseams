@@ -28,7 +28,10 @@ int hip_nat_sock_udp = 0;
     machine is behind a NAT. */
 int hip_nat_status = 0;
 
-/** Communication interface to userspace apps (hipconf etc) */
+/** Specifies the HIP PROXY status of the daemon. This value indicates if the HIP PROXY is running. */
+int hipproxy = 0;
+
+/* Communication interface to userspace apps (hipconf etc) */
 int hip_user_sock = 0;
 struct sockaddr_un hip_user_addr;
 
@@ -41,9 +44,9 @@ struct rtnl_handle hip_nl_route = { 0 };
 
 int hip_agent_status = 0;
 
-#if 0
+//#if 0
 int hip_firewall_sock = -1;
-#endif
+//#endif
 struct sockaddr_in6 hip_firewall_addr;
 
 /* 

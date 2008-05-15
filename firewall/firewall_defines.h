@@ -6,6 +6,7 @@
 #include <glib/gtypes.h>
 #include <glib/gthread.h>
 
+//int hip_proxy_status;
 
 /********** State table structures **************/
 
@@ -51,6 +52,9 @@ struct tuple {
   int direction;
   struct connection * connection;
   int state; 
+#ifdef CONFIG_HIP_HIPPROXY
+  int hipproxy;
+#endif
 };
 
 struct connection {

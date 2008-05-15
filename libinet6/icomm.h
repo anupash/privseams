@@ -153,6 +153,10 @@
 #define SO_HIP_UPDATE_HIU                       128
 #define SO_HIP_NAT_ON                           129
 #define SO_HIP_NAT_OFF                          130
+#define SO_HIP_SET_HIPPROXY_ON		      	131
+#define SO_HIP_SET_HIPPROXY_OFF			132
+#define SO_HIP_GET_PROXY_LOCAL_ADDRESS		133
+#define SO_HIP_HIPPROXY_STATUS_REQUEST		134
 /** @} */
 /* inclusive */
 #define HIP_SO_ROOT_MAX 			255

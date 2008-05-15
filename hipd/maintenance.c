@@ -789,3 +789,8 @@ int opendht_put_locator(int sockfd,
  out_err:
     return(err);
 }
+
+int hip_get_firewall_status()
+{
+	return hip_firewall_status;
+}

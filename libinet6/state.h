@@ -423,6 +423,9 @@ struct hip_hadb_state
 	/** the port at the peer where the TCP SYN I1 packet will be sent */
 	in_port_t                    tcp_opptcp_dst_port;
 #endif
+#ifdef CONFIG_HIP_HIPPROXY
+	int hipproxy;
+#endif
 };
 
 /** A data structure defining host association information that is sent

@@ -333,6 +333,10 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 #ifdef CONFIG_HIP_OPPTCP
      	entry->hip_is_opptcp_on = hip_get_opportunistic_tcp_status();
 #endif
+     	
+#ifdef CONFIG_HIP_HIPPROXY
+     	entry->hipproxy = hip_get_hip_proxy_status();
+#endif
 
 
 	hip_hadb_insert_state(entry);
@@ -472,6 +476,9 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
 	entry->spis_in = hip_ht_init(hip_hash_spi, hip_match_spi);
 	entry->spis_out = hip_ht_init(hip_hash_spi, hip_match_spi);
 	
+#ifdef CONFIG_HIP_HIPPROXY
+	entry->hipproxy = 0;
+#endif
 	HIP_LOCK_INIT(entry);
 	//atomic_set(&entry->refcnt,0);
 
@@ -2633,3 +2640,41 @@ hip_ha_t *hip_hadb_find_by_blind_hits(hip_hit_t *local_blind_hit,
 	return result;
 }
 #endif
+
+int hip_get_local_addr(struct hip_common *msg)
+{
+	hip_ha_t* entry;
+	int err;
+    	struct in6_addr local_address;
+    	hip_hit_t* src_hit;
+    	hip_hit_t* dst_hit;
+	
+    	src_hit = (hip_hit_t *) hip_get_param_contents(msg, HIP_PARAM_HIT);
+	dst_hit = (hip_hit_t *) hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR);
+	HIP_DEBUG_HIT("src_hit from local address request: ", src_hit);
+	HIP_DEBUG_HIT("dst_hit from local address request: ", dst_hit);
+/*	if (ptr) {
+		memcpy(peer_hit, ptr, sizeof(hip_hit_t));
+		HIP_DEBUG_HIT("peer_hit", peer_hit);
+		*fallback = 0;
+	}	
+*/			
+	memset(&local_address, 0, sizeof(struct in6_addr));
+	entry = hip_hadb_find_byhits(src_hit, dst_hit);
+	
+	hip_msg_init(msg);
+	HIP_DEBUG_IN6ADDR(" local address: ", &entry->local_address);
+	
+	if(!entry)
+		HIP_DEBUG("Can't find local address because of no entry in hadb!\n");
+
+    	ipv6_addr_copy(&local_address, &entry->local_address);
+    	
+    	//hip_build_user_hdr(msg, HIP_HIPPROXY_LOCAL_ADDRESS, 0);
+	err = hip_build_param_contents(msg, &local_address, HIP_PARAM_IPV6_ADDR,
+				       sizeof(struct in6_addr));
+	if (err)
+		HIP_ERROR("Building local address info failed\n");
+	
+	return 0;	
+}
