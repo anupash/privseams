@@ -102,13 +102,13 @@ int hip_handle_user_msg(struct hip_common *msg,
 		   machine is behind a NAT. */
 		HIP_DEBUG("Handling NAT ON user message.\n");
 		HIP_IFEL(hip_nat_on(), -1, "Error when setting daemon NAT status to \"on\"\n");
-		hip_agent_update_status(HIP_NAT_ON, NULL, 0);
+		hip_agent_update_status(SO_HIP_NAT_ON, NULL, 0);
 		break;
 	case SO_HIP_SET_NAT_OFF:
 		/* Removes the NAT flag from each host association. */
 		HIP_DEBUG("Handling NAT OFF user message.\n");
 		HIP_IFEL(hip_nat_off(), -1, "Error when setting daemon NAT status to \"off\"\n");
-		hip_agent_update_status(HIP_NAT_OFF, NULL, 0);
+		hip_agent_update_status(SO_HIP_NAT_OFF, NULL, 0);
 		break;
         case SO_HIP_SET_LOCATOR_ON:
                 HIP_DEBUG("Setting LOCATOR ON\n");
@@ -348,7 +348,7 @@ int hip_handle_user_msg(struct hip_common *msg,
         		
         		HIP_DEBUG("Setting HIP PROXY ON\n");
         		hip_set_hip_proxy_on();
-      			hip_build_user_hdr(msg, HIP_HIPPROXY_ON, 0);
+      			hip_build_user_hdr(msg, SO_HIP_SET_HIPPROXY_ON, 0);
         		
         		n = hip_sendto(msg, &sock_addr);
     			
@@ -374,7 +374,7 @@ int hip_handle_user_msg(struct hip_common *msg,
         		
         		HIP_DEBUG("Setting HIP PROXY OFF\n");
         		hip_set_hip_proxy_off();
-      			hip_build_user_hdr(msg, HIP_HIPPROXY_OFF, 0);
+      			hip_build_user_hdr(msg, SO_HIP_SET_HIPPROXY_OFF, 0);
         		
         		n = hip_sendto(msg, &sock_addr);
     			
@@ -387,7 +387,7 @@ int hip_handle_user_msg(struct hip_common *msg,
         	}
         	break; 
         		
-        case HIP_HIPPROXY_STATUS_REQUEST:
+        case SO_HIP_HIPPROXY_STATUS_REQUEST:
         	{
         		int n, err;
         		
@@ -403,10 +403,10 @@ int hip_handle_user_msg(struct hip_common *msg,
         		memset(msg, 0, sizeof(struct hip_common));
         		
         		if(hip_get_hip_proxy_status() == 0)
-        			hip_build_user_hdr(msg, HIP_HIPPROXY_OFF, 0);
+        			hip_build_user_hdr(msg, SO_HIP_SET_HIPPROXY_OFF, 0);
         		
         		if(hip_get_hip_proxy_status() == 1)
-        			hip_build_user_hdr(msg, HIP_HIPPROXY_ON, 0);
+        			hip_build_user_hdr(msg, SO_HIP_SET_HIPPROXY_ON, 0);
         		
         		n = hip_sendto(msg, &sock_addr);
  //   			HIP_DEBUG("SENDTO ERRNO: 0x%x\n", errno);
@@ -667,7 +667,7 @@ int hip_handle_user_msg(struct hip_common *msg,
 		   associations). */
 		HIP_IFEL(hip_nat_on(), -1, "Error when setting daemon NAT status"\
 			 "to \"on\"\n");
-		hip_agent_update_status(HIP_NAT_ON, NULL, 0);
+		hip_agent_update_status(SO_HIP_NAT_ON, NULL, 0);
 
 		/* Send a I1 packet to relay. */
 		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),

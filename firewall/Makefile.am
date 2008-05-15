@@ -16,7 +16,7 @@ if HIP_FIREWALL
 
 sbin_PROGRAMS = hipfw
 
-hipfw_SOURCES = firewall.c conntrack.c rule_management.c helpers.c firewall_control.c esp_decrypt.c proxydb.c
+hipfw_SOURCES = firewall.c conntrack.c rule_management.c helpers.c firewall_control.c esp_decrypt.c proxydb.c conndb.c
 
 hipfw_LDADD = /usr/lib/libipq.a ../libinet6/.libs/libinet6.a
 if HIP_CORPORATE

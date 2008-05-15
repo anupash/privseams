@@ -205,7 +205,8 @@ int firewall_init()
 		}
 
 	}
-	out_err: return 0;
+ out_err:
+	return 0;
 }
 
 void firewall_close(int signal)
@@ -754,7 +755,7 @@ void hip_request_send_i1_to_hip_peer_from_hipd(struct in6_addr *peer_hit,
 	/* check error value */
 	HIP_IFEL(hip_get_msg_err(msg), -1, "Got erroneous message!\n");
 
-	out_err:
+ out_err:
 	return err;
 }
 
@@ -1400,7 +1401,6 @@ static void *handle_ip_traffic(void *ptr)
 
  out_err:
 
-out_err:  
 	if (hip_common)
 		free(hip_common);
 	if (esp)
@@ -1599,7 +1599,7 @@ int main(int argc, char **argv)
 	if (use_ipv6)
 		pthread_join(ipv6Thread, NULL);
 
-	out_err:
+ out_err:
 
 	firewall_exit();
 	return 0;

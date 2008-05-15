@@ -100,7 +100,7 @@ gpointer run_control_thread(gpointer data)
 	}
 out_err:
 	/* Send quit message to daemon. */
-	hip_build_user_hdr(msg, HIP_FIREWALL_QUIT, 0);
+	hip_build_user_hdr(msg, SO_HIP_FIREWALL_QUIT, 0);
 	n = sendto_hipd(msg, sizeof(struct hip_common));
 	if (n < 0) HIP_ERROR("Could not send quit message to daemon.\n");
 	
@@ -129,7 +129,7 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 	HIP_DEBUG("Handling message from hipd\n");
 	type = hip_get_msg_type(msg);
 	
-	if (type == HIP_ADD_ESCROW_DATA)
+	if (type == SO_HIP_ADD_ESCROW_DATA)
 	{
 		struct hip_keys * keys = NULL;
 		struct in6_addr * hit_s = NULL;
@@ -184,7 +184,7 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 			}
 		}
 	}
-	else if (type == HIP_DELETE_ESCROW_DATA) {
+	else if (type == SO_HIP_DELETE_ESCROW_DATA) {
                 HIP_DEBUG("Received delete message from hipd\n\n");
                 struct in6_addr * addr = NULL;
                 uint32_t * spi = NULL;
@@ -209,22 +209,23 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
                 }
                 
 	}
-    else if (type == HIP_SET_ESCROW_ACTIVE) {
+
+    else if (type == SO_HIP_SET_ESCROW_ACTIVE) {
             HIP_DEBUG("Received activate escrow message from hipd\n\n");
             set_escrow_active(1);
             
     }
-    else if (type == HIP_SET_ESCROW_INACTIVE) {
+    else if (type == SO_HIP_SET_ESCROW_INACTIVE) {
             HIP_DEBUG("Received deactivate escrow message from hipd\n\n");
             set_escrow_active(0);
     }
-    else if (type == HIP_HIPPROXY_ON){
+    else if (type == SO_HIP_SET_HIPPROXY_ON){
 	        HIP_DEBUG("Received HIP PROXY STATUS: ON message from hipd\n\n");
 	        HIP_DEBUG("Firewall is working on Proxy Mode!\n\n");
 	        hip_proxy_status = 1;
 	        firewall_init();
     }
-    else if (type == HIP_HIPPROXY_OFF){
+    else if (type == SO_HIP_SET_HIPPROXY_OFF){
 	        HIP_DEBUG("Received HIP PROXY STATUS: OFF message from hipd\n\n");
   	        HIP_DEBUG("Firewall is working on Firewall Mode!\n\n");
 	        hip_proxy_status = 0;
@@ -239,6 +240,7 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 		}
     }
 */	
+
 out_err:	
 	return err;
 
@@ -334,7 +336,7 @@ int request_hipproxy_status(void)
         HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
         hip_msg_init(msg);
         HIP_IFEL(hip_build_user_hdr(msg, 
-                HIP_HIPPROXY_STATUS_REQUEST, 0), 
+                SO_HIP_HIPPROXY_STATUS_REQUEST, 0), 
                 -1, "Build hdr failed\n");
                 
         //n = hip_sendto(msg, &hip_firewall_addr);

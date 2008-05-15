@@ -23,26 +23,7 @@
 #define HIP_PSIG                20 /* lightweight HIP pre signature */
 #define HIP_TRIG                21 /* lightweight HIP signature trigger*/
 #define HIP_PAYLOAD             64
-#define HIP_AGENT_PING          70
-#define HIP_AGENT_PING_REPLY    71
-#define HIP_AGENT_QUIT          72
-#define HIP_ADD_DB_HI           73
-#define HIP_I1_REJECT           74
-#define HIP_UPDATE_HIU          75
-#define HIP_FIREWALL_PING       80
-#define HIP_FIREWALL_PING_REPLY 81
-#define HIP_FIREWALL_QUIT       82
-#define HIP_ADD_ESCROW_DATA     83
-#define HIP_DELETE_ESCROW_DATA  84
-#define HIP_SET_ESCROW_ACTIVE   85
-#define HIP_SET_ESCROW_INACTIVE 86
-#define HIP_NAT_ON              87
-#define HIP_NAT_OFF             88
-#define HIP_HIPPROXY_ON			89
-#define HIP_HIPPROXY_OFF		90
-#define HIP_HIPPROXY_STATUS_REQUEST 91
-#define HIP_HIPPROXY_LOCAL_ADDRESS 92
-#define HIP_DAEMON_QUIT         127
+/* only hip network message types here */
 /* @} */
 
 #define HIP_HIT_TYPE_HASH100    1
