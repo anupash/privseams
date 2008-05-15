@@ -669,7 +669,7 @@ void hip_exit(int signal)
 	msg = hip_msg_alloc();
 	if (msg)
 	{
-		hip_build_user_hdr(msg, HIP_DAEMON_QUIT, 0);
+		hip_build_user_hdr(msg, SO_HIP_DAEMON_QUIT, 0);
 		hip_send_agent(msg);
 		free(msg);
 	}

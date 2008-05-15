@@ -156,10 +156,10 @@ int hip_recv_agent(struct hip_common *msg)
 
 	msg_type = hip_get_msg_type(msg);
 	
-	if (msg_type == HIP_AGENT_PING)
+	if (msg_type == SO_HIP_AGENT_PING)
 	{
 		memset(msg, 0, HIP_MAX_PACKET);
-		hip_build_user_hdr(msg, HIP_AGENT_PING_REPLY, 0);
+		hip_build_user_hdr(msg, SO_HIP_AGENT_PING_REPLY, 0);
 		n = hip_send_agent(msg);
 		HIP_IFEL(n < 0, 0, "sendto() failed on agent socket\n");
 
@@ -174,7 +174,7 @@ int hip_recv_agent(struct hip_common *msg)
 			hip_agent_status = 1;
 		}
 	}
-	else if (msg_type == HIP_AGENT_QUIT)
+	else if (msg_type == SO_HIP_AGENT_QUIT)
 	{
 		HIP_DEBUG("Agent quit.\n");
 		hip_agent_status = 0;

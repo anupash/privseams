@@ -1034,34 +1034,34 @@ void hip_dump_msg(const struct hip_common *msg)
  **/
 char* hip_message_type_name(const uint8_t msg_type){
 	switch (msg_type) {
-	case HIP_ADD_DB_HI: return "HIP_ADD_DB_HI";
-	case HIP_ADD_ESCROW_DATA: return "HIP_ADD_ESCROW_DATA";
-	case HIP_AGENT_PING_REPLY: return "HIP_AGENT_PING_REPLY";
-	case HIP_AGENT_PING: return "HIP_AGENT_PING";
-	case HIP_AGENT_QUIT: return "HIP_AGENT_QUIT";
+	case SO_HIP_ADD_DB_HI: return "SO_HIP_ADD_DB_HI";
+	case SO_HIP_ADD_ESCROW_DATA: return "SO_HIP_ADD_ESCROW_DATA";
+	case SO_HIP_AGENT_PING_REPLY: return "HIP_SO_AGENT_PING_REPLY";
+	case SO_HIP_AGENT_PING: return "HIP_SO_AGENT_PING";
+	case SO_HIP_AGENT_QUIT: return "SO_HIP_AGENT_QUIT";
 	case HIP_BOS: return "HIP_BOS";
 	case HIP_CER: return "HIP_CER";
 	case HIP_CLOSE_ACK: return "HIP_CLOSE_ACK";
 	case HIP_CLOSE: return "HIP_CLOSE";
-	case HIP_DAEMON_QUIT: return "HIP_DAEMON_QUIT";
-	case HIP_DELETE_ESCROW_DATA: return "HIP_DELETE_ESCROW_DATA";
-	case HIP_FIREWALL_PING_REPLY: return "HIP_FIREWALL_PING_REPLY";
-	case HIP_FIREWALL_PING: return "HIP_FIREWALL_PING";
-	case HIP_FIREWALL_QUIT: return "HIP_FIREWALL_QUIT";
-	case HIP_I1_REJECT: return "HIP_I1_REJECT";
+	case SO_HIP_DAEMON_QUIT: return "SO_HIP_DAEMON_QUIT";
+	case SO_HIP_DELETE_ESCROW_DATA: return "HIP_DELETE_ESCROW_DATA";
+	case SO_HIP_FIREWALL_PING_REPLY: return "HIP_FIREWALL_PING_REPLY";
+	case SO_HIP_FIREWALL_PING: return "HIP_FIREWALL_PING";
+	case SO_HIP_FIREWALL_QUIT: return "HIP_FIREWALL_QUIT";
+	case SO_HIP_I1_REJECT: return "HIP_I1_REJECT";
 	case HIP_I1: return "HIP_I1";
 	case HIP_I2: return "HIP_I2";
-	case HIP_NAT_OFF: return "HIP_NAT_OFF";
-	case HIP_NAT_ON: return "HIP_NAT_ON";
+	case SO_HIP_NAT_OFF: return "HIP_NAT_OFF";
+	case SO_HIP_NAT_ON: return "HIP_NAT_ON";
 	case HIP_NOTIFY: return "HIP_NOTIFY";
 	case HIP_PAYLOAD: return "HIP_PAYLOAD";
 	case HIP_PSIG: return "HIP_PSIG";
 	case HIP_R1: return "HIP_R1";
 	case HIP_R2: return "HIP_R2";
-	case HIP_SET_ESCROW_ACTIVE: return "HIP_SET_ESCROW_ACTIVE";
-	case HIP_SET_ESCROW_INACTIVE: return "HIP_SET_ESCROW_INACTIVE";
+	case SO_HIP_SET_ESCROW_ACTIVE: return "HIP_SET_ESCROW_ACTIVE";
+	case SO_HIP_SET_ESCROW_INACTIVE: return "HIP_SET_ESCROW_INACTIVE";
 	case HIP_TRIG: return "HIP_TRIG";
-	case HIP_UPDATE_HIU: return "HIP_UPDATE_HIU";
+	case SO_HIP_UPDATE_HIU: return "HIP_UPDATE_HIU";
 	case HIP_UPDATE: return "HIP_UPDATE";
 	default:            return "UNDEFINED";
 	}
