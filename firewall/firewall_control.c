@@ -646,12 +646,12 @@ int firewall_send_incoming_pkt(struct in6_addr *src_hit, struct in6_addr *dst_hi
 		for (dupl = 0; dupl < HIP_PACKET_DUPLICATES; dupl++) {
 			for (try_again = 0; try_again < 2; try_again++) {
 		    		sent = sendto(firewall_raw_sock, iphdr, 
-					      (len + sizeof(struct ip)), 0,
+					      iphdr->ip_len, 0,
 					      (struct sockaddr *) &dst, sa_size);
 			   	if (sent !=(len + sizeof(struct ip))) {
 			     		HIP_ERROR("Could not send the all requested" \
 				       		  " data (%d/%d)\n", sent, 
-						  (len + sizeof(struct ip)));
+						  iphdr->ip_len);
 			     		HIP_DEBUG("ERROR NUMBER: %d\n", errno);
 			     		sleep(2);
 			    	} else {
