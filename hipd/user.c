@@ -274,41 +274,10 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
         case SO_HIP_CERT_SPKI:
                 {
                         int reti = 0;
-                        struct hip_cert_spki_info *cert;
-                        char sha_digest[21];
-                        unsigned char *sha_retval;
-                        RSA *rsa = NULL;
-                        
-                        rsa = malloc(sizeof(RSA));
-                        HIP_IFEL(!rsa, -1, "Failed to malloc RSA\n");
-
-                        memset(sha_digest, '\0', sizeof(sha_digest));
-                        
                         HIP_DEBUG("Got an request to sign SPKI cert sequence\n");
-
-                        HIP_IFEL(!(cert = hip_get_param(msg,HIP_PARAM_CERT_SPKI_INFO)), 
-                                 -1, "No cert_info struct found\n");
-                        _HIP_DEBUG("\n\n** CONTENTS of cert sequence to be signed **\n"
-                                  "%s\n\n", cert->cert);
-
-                        HIP_DEBUG_HIT("Getting keys for HIT",&cert->issuer_hit);
-        
-                        reti = hip_cert_spki_construct_keys(hip_local_hostid_db,
-                                                            &cert->issuer_hit,
-                                                            rsa);
-                        HIP_IFEL((reti), -1, 
-                                 "Error constructing the keys from hidb entry\n");
-                        /* build sha1 digest that will be signed */
-                        sha_retval = SHA1(cert->cert, 
-                                          strlen(cert->cert),
-                                          sha_digest);
-                        _HIP_HEXDUMP("SHA1 digest of cert sequence ", sha_digest, 20);
-                        if (!sha_retval) {
-                                HIP_DEBUG("SHA1 error when creating digest.\n");        
-                        }
-
-                        /* copy needed info back to public-key and signature 
-                           sequences and let the code send it back */
+                        reti = hip_cert_spki_sign(msg, hip_local_hostid_db);   
+                        HIP_IFEL(reti, -1, "Signing SPKI cert returned an error\n");
+                        HIP_DEBUG("SPKI cert signed sending it back to requester\n");
                 }
                 break;
         case SO_HIP_TRANSFORM_ORDER:

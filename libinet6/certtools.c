@@ -207,7 +207,7 @@ int hip_cert_spki_inject(struct hip_cert_spki_info * to,
         char * tmp_cert;        
 
         _HIP_DEBUG("Before inject:\n%s\n",to->cert);
-        HIP_DEBUG("Inserting \"%s\" after \"%s\"\n", what, after);       
+        _HIP_DEBUG("Inserting \"%s\" after \"%s\"\n", what, after);       
         tmp_cert = malloc(strlen(to->cert) + strlen(what) + 1);
         if (!tmp_cert) return(-1);
         HIP_IFEL(!memset(tmp_cert, 0, sizeof(tmp_cert)), -1,

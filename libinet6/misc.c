@@ -587,6 +587,7 @@ int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
        return err;
 }
 
+/* Useless abstraction, goes to the same function anyway -- SAMU*/
 int hip_rsa_host_id_to_hit(const struct hip_host_id *host_id,
 			   struct in6_addr *hit, int hit_type)
 {
@@ -1540,16 +1541,21 @@ int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr) {
   
   HIP_ASSERT(BN_num_bytes(rsa->e) < 255); // is this correct?
   
-  //let's check if the RSA key is public or private
-  //private exponent is NULL in public keys
-  if(rsa->d == NULL){ 
+  /* let's check if the RSA key is public or private
+     private exponent is NULL in public keys */
+  if(rsa->d == NULL) { 
     public = 1;
   
-    // see RFC 2537
-  
-    //FIXME there may be something funny
-    rsa_key_rr_len = 4; // 4 four bytes for flags, protocol and algorithm // XX CHECK: LAURA
-    rsa_key_rr_len += 1; // public key exponent length 
+    /* 
+       See RFC 2537 for flags, protocol and algorithm and check RFC 3110 for 
+       the RSA public key part ( 1-3 octets defining length of the exponent,
+       exponent is as many octets as the length defines and the modulus is 
+       all the rest of the bytes).
+
+       2 bytes for flags, 1 byte for protocol and 1 byte for algorithm = 4 bytes       
+    */
+    rsa_key_rr_len = 4; 
+    rsa_key_rr_len += 1; // public key exponent length (1 byte or octet) 
     rsa_key_rr_len += BN_num_bytes(rsa->e); // public key exponent (3 bytes)
     rsa_key_rr_len += BN_num_bytes(rsa->n); // public key modulus (128 bytes)
     
@@ -1559,6 +1565,7 @@ int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr) {
       BN_num_bytes(rsa->d) + BN_num_bytes(rsa->p) + BN_num_bytes(rsa->q);
     
   }
+
   *rsa_key_rr = malloc(rsa_key_rr_len);
   if (!*rsa_key_rr) {
     HIP_ERROR("malloc\n");
@@ -1572,21 +1579,24 @@ int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr) {
   *c = (unsigned char) BN_num_bytes(rsa->e);
   c++; // = e_length 
 
-  len = bn2bin_safe(rsa->e, c, 3);
+  len = bn2bin_safe(rsa->e, c, HIP_RSA_PUBLIC_EXPONENT_E_LEN); //with 1024 key 3
   c += len;
 
-  len = bn2bin_safe(rsa->n, c, 128);
+  len = bn2bin_safe(rsa->n, c, HIP_RSA_PUBLIC_MODULUS_N_LEN); //with 1024 key 128
   c += len;  
 
   if(!public){
-    len = bn2bin_safe(rsa->d, c, 128);
-    c += len;
+          len = bn2bin_safe(rsa->d, c, 
+                            HIP_RSA_PRIVATE_EXPONENT_D_LEN); //with 1024 key 128
+          c += len;
+          
+          len = bn2bin_safe(rsa->p, c, 
+                            HIP_RSA_SECRET_PRIME_FACTOR_P_LEN); //with 1024 key 64
+          c += len;
     
-    len = bn2bin_safe(rsa->p, c, 64);
-    c += len;
-    
-    len = bn2bin_safe(rsa->q, c, 64);
-    c += len;
+          len = bn2bin_safe(rsa->q, c, 
+                            HIP_RSA_SECRET_PRIME_FACTOR_Q_LEN); //with 1024 key 64
+          c += len;
   }
   
   rsa_key_rr_len = c - *rsa_key_rr;

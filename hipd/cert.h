@@ -27,5 +27,6 @@
 #include "hashtable.h"
 
 int hip_cert_spki_construct_keys(HIP_HASHTABLE *, hip_hit_t *, RSA *);
+int hip_cert_spki_sign(struct hip_common *, HIP_HASHTABLE *);
 
 #endif /* HIP_CERT_H */

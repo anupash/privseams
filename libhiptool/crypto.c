@@ -857,7 +857,7 @@ RSA *create_rsa_key(int bits) {
     goto err_out;
   }
 
-  HIP_DEBUG("*****************Creting RSA of %d bits\n\n\n", bits);
+  HIP_DEBUG("*****************Creating RSA of %d bits\n\n\n", bits);
   return rsa;
 
  err_out:

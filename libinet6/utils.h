@@ -45,14 +45,10 @@ static int hip_tmpname(char *fname) {
  * -Alberto
  */
 static int hip_tmpname_gui(char *fname) {
-	memcpy(fname, HIP_TMP_FNAME_TEMPLATE, HIP_TMP_FNAME_LEN);
-	//return (mkstemp(fname));
-        
-	if (mktemp(fname) == NULL)
-		return -1;
-	else
-		return 0;
-        
+        int ret = 0;
+	memcpy(fname, HIP_TMP_FNAME_TEMPLATE, HIP_TMP_FNAME_LEN);        
+	if (mktemp(fname) == NULL) ret = -1;
+       	return(ret); 
 } 
 
 /*
