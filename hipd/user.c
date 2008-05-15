@@ -127,7 +127,7 @@ int hip_handle_user_msg(struct hip_common *msg,
                 break;
 	case SO_HIP_SET_DEBUG_ALL:
 		/* Displays all debugging messages. */
-		HIP_DEBUG("Handling DEBUG ALL user message.\n");
+		_HIP_DEBUG("Handling DEBUG ALL user message.\n");
 		HIP_IFEL(hip_set_logdebug(LOGDEBUG_ALL), -1,
 			 "Error when setting daemon DEBUG status to ALL\n");
 		break;

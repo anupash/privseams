@@ -151,11 +151,11 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 	int hip_user_sock = 0, err = 0, n = 0, len = 0;
 	struct sockaddr_in6 addr;
 
-	/* We're using system call here add thus reseting errno. */
+	/* We're using system call here and thus reseting errno. */
 	errno = 0;
 
 	/* Displays all debugging messages. */
-	HIP_DEBUG("Handling DEBUG ALL user message.\n");
+	_HIP_DEBUG("Handling DEBUG ALL user message.\n");
 	HIP_IFEL(hip_set_logdebug(LOGDEBUG_ALL), -1,
 			 "Error when setting daemon DEBUG status to ALL\n");
 
