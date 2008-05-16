@@ -91,5 +91,10 @@ void firewall_exit();
 void firewall_probe_kernel_modules();
 void firewall_increase_netlink_buffers();
 void examine_incoming_tcp_packet(struct ipq_handle *, unsigned long, void *, int, int);
+void hip_request_send_i1_to_hip_peer_from_hipd(struct in6_addr *peer_hit,
+					       struct in6_addr *peer_ip);
+void hip_request_unblock_app_from_hipd(const struct in6_addr *peer_ip);
+void hip_request_oppipdb_add_entry(struct in6_addr *peer_ip);
+
 #endif
 
