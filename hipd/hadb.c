@@ -2835,6 +2835,27 @@ hip_ha_t *hip_hadb_try_to_find_by_peer_lsi(hip_lsi_t *lsi){
 	return NULL;
 }
 
+
+hip_ha_t *hip_hadb_try_to_find_by_pair_lsi(hip_lsi_t *lsi_src, hip_lsi_t *lsi_dst){
+        hip_list_t *item, *aux;
+	hip_ha_t *tmp;
+	int i;
+
+	list_for_each_safe(item, aux, hadb_hit, i)
+	{
+		tmp = list_entry(item);
+		HIP_DEBUG_LSI("Are they equal? ", &tmp->lsi_peer);
+		HIP_DEBUG_LSI(" == ", lsi_dst);
+		if(!hip_lsi_are_equal(&tmp->lsi_peer, lsi_dst))
+			continue;
+		else if (hip_lsi_are_equal(&tmp->lsi_our, lsi_src))
+			return tmp;
+		else
+		        continue;
+	}
+	return NULL;
+}
+
 hip_hit_t *hip_hadb_get_peer_hit_by_peer_lsi(hip_lsi_t *lsi){
 	hip_ha_t *entry = hip_hadb_try_to_find_by_peer_lsi(lsi);
 	if (entry)

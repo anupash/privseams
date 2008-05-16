@@ -1179,6 +1179,8 @@ int hip_get_default_lsi(struct in_addr *lsi){
 
 	if(IN6_IS_ADDR_V4MAPPED(&lsi_aux6))
 	        IPV6_TO_IPV4_MAP(&lsi_aux6, lsi);
+	HIP_DEBUG_LSI("lsi_prefix to search in route table\n",&lsi_tmpl);
+	HIP_DEBUG_LSI("lsi default\n",lsi);
  out_err:
 	return err;
 }

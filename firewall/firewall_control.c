@@ -613,6 +613,8 @@ int firewall_send_incoming_pkt(struct in6_addr *src_hit, struct in6_addr *dst_hi
 			icmp->checksum = htons(0);
 			icmp->checksum = inchksum(icmp, len);
 			memcpy((msg+sizeof(struct ip)), (u8*)icmp, len);
+			HIP_DEBUG("icmp->type = %d\n",icmp->type);
+			HIP_DEBUG("icmp->code = %d\n",icmp->code);
 			break;
 	        case IPPROTO_ICMPV6:
 			  HIP_DEBUG(".............. IPPROTO_icmp v6\n");

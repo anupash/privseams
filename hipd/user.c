@@ -540,7 +540,19 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 		hip_firewall_status = 1;
 		lsi = (hip_lsi_t *)hip_get_param_contents(msg, HIP_PARAM_LSI);
 
-		if (!lsi){
+
+		while((param = hip_get_next_param(msg, param))){
+	    		if (hip_get_param_type(param) == HIP_PARAM_LSI){
+	      			if (!src_lsi)
+					src_lsi = (hip_lsi_t *)hip_get_param_contents_direct(param);
+	      			else {
+					dst_lsi = (hip_lsi_t *)hip_get_param_contents_direct(param);
+					break;
+				}
+	    		}
+	  	} 
+
+		if (!src_lsi){
 			HIP_DEBUG(">Param is not an lsi!!\n");
 			dst_hit = (struct in6_addr *)hip_get_param_contents(msg, HIP_PARAM_HIT);
 			HIP_IFEL(hip_add_peer_map(msg), -1, "trigger bex\n");
@@ -549,9 +561,12 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 				 -1, "internal error: no hadb entry found\n");
 		}else{
 			//hit_peer already mapped because hipconf command and non-opportunistic mode
-			HIP_DEBUG_LSI(">Param is an lsi!!", lsi);
-			HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_lsi(lsi)),
+			HIP_DEBUG_LSI(">Param is an lsi!!", src_lsi);
+			HIP_DEBUG_LSI(">Param is an lsi!!", dst_lsi);
+			HIP_IFEL(!(entry = hip_hadb_try_to_find_by_pair_lsi(src_lsi, dst_lsi)),
 				 -1, "internal error: no hadb entry found\n");
+			HIP_DEBUG_LSI("---------********------------lsi\n",lsi);
+			HIP_DEBUG_HIT("---------********------------src_hit\n",src_hit);
 			HIP_IFEL(!(dst_hit = (hip_hit_t *) HIP_MALLOC(sizeof(hip_hit_t),0)),
 				 -ENOMEM, "No memory available for dst_hit\n");
 			HIP_IFEL(!(src_hit = (hip_hit_t *) HIP_MALLOC(sizeof(hip_hit_t),0)),

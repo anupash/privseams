@@ -833,8 +833,10 @@ int hip_associate_default_hit_lsi(hip_hit_t *default_hit, hip_lsi_t *default_lsi
 	struct hip_host_id_entry *tmp2;
 
 	//1. Check if default_hit already associated with default_lsi
-  	HIP_IFEL(!(err = hip_hidb_get_lsi_by_hit(default_hit, &aux_lsi)), -1, "Error no lsi associated to hit\n");
-  
+  	HIP_IFEL((err = hip_hidb_get_lsi_by_hit(default_hit, &aux_lsi)), -1, "Error no lsi associated to hit\n");
+	HIP_DEBUG_LSI("hip_hidb_get_lsi_by_hit\n",&aux_lsi);
+	HIP_DEBUG_LSI("default lsi\n",default_lsi);
+  	//HIP_IFEL(!(err = hip_hidb_get_lsi_by_hit(default_hit, &aux_lsi)), -1, "Error no lsi associated to hit\n");
     	if(ipv4_addr_cmp(&aux_lsi, default_lsi)){
       		HIP_IFEL(!(tmp1 = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID, default_hit, HIP_ANY_ALGO, -1)),
 	       		 -1,"Default hit not found in hidb\n");

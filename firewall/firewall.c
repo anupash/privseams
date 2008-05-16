@@ -961,12 +961,13 @@ int firewall_trigger_incoming_hit(ipq_packet_msg_t *m, struct in6_addr *ip_src, 
 int firewall_trigger_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *ip_src, struct in_addr *ip_dst)
 {
 	int err, msg_type;
-	struct in6_addr dst_addr;
+	struct in6_addr src_addr, dst_addr;
 	struct in6_addr *src_hit = NULL, *dst_hit = NULL;
 	firewall_hl_t *entry_peer = NULL;
 
 
 	IPV4_TO_IPV6_MAP(ip_dst, &dst_addr);
+	IPV4_TO_IPV6_MAP(ip_src, &src_addr);
 
 	hip_firewall_hldb_dump();
 	entry_peer = (firewall_hl_t *)firewall_hit_lsi_db_match(ip_dst);
@@ -989,7 +990,7 @@ int firewall_trigger_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *ip_src, s
 		else{
 			// Run bex to initialize SP and SA
 			HIP_DEBUG("Firewall_db empty and no ha. Triggering Base Exchange\n");
-			HIP_IFEL(hip_trigger_bex(&src_hit, &dst_hit, NULL, &dst_addr), -1, 
+			HIP_IFEL(hip_trigger_bex(&src_hit, &dst_hit, &src_addr, &dst_addr), -1, 
 			 	 "Base Exchange Trigger failed");
 		  	firewall_add_hit_lsi(src_hit, dst_hit, ip_dst, 0);
 		}

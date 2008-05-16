@@ -1903,7 +1903,7 @@ int hip_trigger_bex(struct in6_addr **src_hit, struct in6_addr **dst_hit, struct
 {
 	struct hip_tlv_common *param = NULL;
 	struct hip_common *msg = NULL;
-	hip_lsi_t dst_ip4;
+	hip_lsi_t src_ip4, dst_ip4;
 	int err = 0, is_lsi = 0;
 
 	HIP_ERROR("Start hip_trigger_bex\n");
@@ -1921,12 +1921,24 @@ int hip_trigger_bex(struct in6_addr **src_hit, struct in6_addr **dst_hit, struct
 							    sizeof(struct in6_addr)), -1,
 				   "build param HIP_PARAM_HIT  failed\n");
 	
-	if (src_ip)
-		HIP_IFEL(hip_build_param_contents(msg, (void *) src_ip,
-						  HIP_PARAM_IPV6_ADDR,
-						  sizeof(struct in6_addr)), -1,
-			 "build param HIP_PARAM_IPV6_ADDR failed\n");
-     
+	if (src_ip){
+	        /* LSI check */
+	        if (IN6_IS_ADDR_V4MAPPED(src_ip)){
+			IPV6_TO_IPV4_MAP(src_ip, &src_ip4);
+			HIP_DEBUG_LSI("          lsi is", &src_ip4);
+
+			HIP_IFEL(hip_build_param_contents(msg, (void *) &src_ip4,
+						  HIP_PARAM_LSI,
+						  sizeof(struct in_addr)), -1,
+				 "build param HIP_PARAM_LSI failed\n");
+		}
+		else{
+		        HIP_IFEL(hip_build_param_contents(msg, (void *) src_ip,
+							  HIP_PARAM_IPV6_ADDR,
+							  sizeof(struct in6_addr)), -1,
+				 "build param HIP_PARAM_IPV6_ADDR failed\n");
+		}
+	}
 	if (dst_ip){
 		/* LSI check */
 		if (IN6_IS_ADDR_V4MAPPED(dst_ip)){
