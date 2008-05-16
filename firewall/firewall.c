@@ -90,106 +90,98 @@ int firewall_init_rules()
 	signal(SIGINT, firewall_close);
 	signal(SIGTERM, firewall_close);
 
-
+	// TARGET (-j) QUEUE will transfer matching packets to userspace
+	// these packets will be handled using libipq
+	
 	if(hip_proxy_status)
 	{
-			//allow forward hip packets
-			system("iptables -I FORWARD -p 139 -j ACCEPT");
-			system("iptables -I FORWARD -p 139 -j ACCEPT");
-			
-			system("iptables -I FORWARD -p tcp -j QUEUE");
-			system("iptables -I FORWARD -p udp -j QUEUE");
-			//system("iptables -I FORWARD -p icmp -j QUEUE");
-			//system("iptables -I FORWARD -p icmpv6 -j QUEUE");
-			
-			//system("iptables -t nat -A POSTROUTING -o vmnet2 -j SNAT --to-source 10.0.0.1");
+		//allow forward hip packets
+		system("iptables -I FORWARD -p 139 -j ACCEPT");
+		system("iptables -I FORWARD -p 139 -j ACCEPT");
+		
+		system("iptables -I FORWARD -p tcp -j QUEUE");
+		system("iptables -I FORWARD -p udp -j QUEUE");
+		//system("iptables -I FORWARD -p icmp -j QUEUE");
+		//system("iptables -I FORWARD -p icmpv6 -j QUEUE");
+		
+		//system("iptables -t nat -A POSTROUTING -o vmnet2 -j SNAT --to-source 10.0.0.1");
 
-			//allow forward hip packets
-			system("ip6tables -I FORWARD -p 139 -j ACCEPT");
-			system("ip6tables -I FORWARD -p 139 -j ACCEPT");
-			
-			system("ip6tables -I FORWARD -p tcp -j QUEUE");
-			system("ip6tables -I FORWARD -p udp -j QUEUE");
-			//system("ip6tables -I FORWARD -p icmp -j QUEUE");
-			//system("ip6tables -I FORWARD -p icmpv6 -j QUEUE");
-			
-			system("ip6tables -I INPUT -p tcp -d 2001:0010::/28 -j QUEUE");
-			system("ip6tables -I INPUT -p udp -d 2001:0010::/28 -j QUEUE");
-			//system("ip6tables -I INPUT -p tcp  -j QUEUE");
-			//system("ip6tables -I INPUT -p udp -j QUEUE");
-			//system("ip6tables -I INPUT -p icmp -j QUEUE");
-			//system("ip6tables -I INPUT -p icmpv6 -j QUEUE");
+		//allow forward hip packets
+		system("ip6tables -I FORWARD -p 139 -j ACCEPT");
+		system("ip6tables -I FORWARD -p 139 -j ACCEPT");
+		
+		system("ip6tables -I FORWARD -p tcp -j QUEUE");
+		system("ip6tables -I FORWARD -p udp -j QUEUE");
+		//system("ip6tables -I FORWARD -p icmp -j QUEUE");
+		//system("ip6tables -I FORWARD -p icmpv6 -j QUEUE");
+		
+		system("ip6tables -I INPUT -p tcp -d 2001:0010::/28 -j QUEUE");
+		system("ip6tables -I INPUT -p udp -d 2001:0010::/28 -j QUEUE");
+		//system("ip6tables -I INPUT -p tcp  -j QUEUE");
+		//system("ip6tables -I INPUT -p udp -j QUEUE");
+		//system("ip6tables -I INPUT -p icmp -j QUEUE");
+		//system("ip6tables -I INPUT -p icmpv6 -j QUEUE");
 
-			hip_init_proxy_db();
-			hip_init_conn_db();
+		hip_init_proxy_db();
+		hip_init_conn_db();
 	}
 	else
 	{
-			if (!accept_normal_traffic)
-			{
-				system("iptables -I FORWARD -j DROP");
-				system("iptables -I INPUT -j DROP");
-				system("iptables -I OUTPUT -j DROP");
-			}
-			else
-			{
-				if (!accept_hip_esp_traffic)
-				{
-					system("iptables -I FORWARD -p 139 -j QUEUE");
-					system("iptables -I FORWARD -p 50 -j QUEUE");
-					system("iptables -I FORWARD -p 17 --dport 50500 -j QUEUE");
-					system("iptables -I FORWARD -p 17 --sport 50500 -j QUEUE");
-	
-					system("iptables -I INPUT -p 139 -j QUEUE");
-					system("iptables -I INPUT -p 50 -j QUEUE");
-					system("iptables -I INPUT -p 17 --dport 50500 -j QUEUE");
-					system("iptables -I INPUT -p 17 --sport 50500 -j QUEUE");
-	
-					system("iptables -I OUTPUT -p 139  -j QUEUE");
-					system("iptables -I OUTPUT -p 50 -j QUEUE");
-					system("iptables -I OUTPUT -p 17 --dport 50500 -j QUEUE");
-					system("iptables -I OUTPUT -p 17 --sport 50500 -j QUEUE");
-				}
-#ifdef CONFIG_HIP_OPPTCP//tcp over ipv4
-				system("iptables -I FORWARD -p 6 -j QUEUE");
-				system("iptables -I INPUT -p 6 -j QUEUE");
-				system("iptables -I OUTPUT -p 6 -j QUEUE");
-#endif
-			}
+		if (!accept_normal_traffic)
+		{
+			system("iptables -I FORWARD -j DROP");
+			system("iptables -I INPUT -j DROP");
+			system("iptables -I OUTPUT -j DROP");
+			
+			system("ip6tables -I FORWARD -j DROP");
+			system("ip6tables -I INPUT -j DROP");
+			system("ip6tables -I OUTPUT -j DROP");
 		}
-	
-			if (!accept_normal_traffic)
-			{
-				system("ip6tables -I FORWARD -j DROP");
-				system("ip6tables -I INPUT -j DROP");
-				system("ip6tables -I OUTPUT -j DROP");
-			}
-			else
-			{
-				if (!accept_hip_esp_traffic)
-				{
-					system("ip6tables -I FORWARD -p 139 -j QUEUE");
-					system("ip6tables -I FORWARD -p 50 -j QUEUE");
-					system("ip6tables -I FORWARD -p 17 --dport 50500 -j QUEUE");
-					system("ip6tables -I FORWARD -p 17 --sport 50500 -j QUEUE");
-	
-					system("ip6tables -I INPUT -p 139 -j QUEUE");
-					system("ip6tables -I INPUT -p 50 -j QUEUE");
-					system("ip6tables -I INPUT -p 17 --dport 50500 -j QUEUE");
-					system("ip6tables -I INPUT -p 17 --sport 50500 -j QUEUE");
-	
-					system("ip6tables -I OUTPUT -p 139  -j QUEUE");
-					system("ip6tables -I OUTPUT -p 50 -j QUEUE");
-					system("ip6tables -I OUTPUT -p 17 --dport 50500 -j QUEUE");
-					system("ip6tables -I OUTPUT -p 17 --sport 50500 -j QUEUE");
-				}
-	#ifdef CONFIG_HIP_OPPTCP//tcp over ipv6
-				system("ip6tables -I FORWARD -p 6 -j QUEUE");
-				system("ip6tables -I INPUT -p 6 -j QUEUE");
-				system("ip6tables -I OUTPUT -p 6 -j QUEUE");
-	#endif
+
+		if (!accept_hip_esp_traffic)
+		{
+			system("iptables -I FORWARD -p 139 -j QUEUE");
+			system("iptables -I FORWARD -p 50 -j QUEUE");
+			system("iptables -I FORWARD -p 17 --dport 50500 -j QUEUE");
+			system("iptables -I FORWARD -p 17 --sport 50500 -j QUEUE");
+
+			system("iptables -I INPUT -p 139 -j QUEUE");
+			system("iptables -I INPUT -p 50 -j QUEUE");
+			system("iptables -I INPUT -p 17 --dport 50500 -j QUEUE");
+			system("iptables -I INPUT -p 17 --sport 50500 -j QUEUE");
+
+			system("iptables -I OUTPUT -p 139  -j QUEUE");
+			system("iptables -I OUTPUT -p 50 -j QUEUE");
+			system("iptables -I OUTPUT -p 17 --dport 50500 -j QUEUE");
+			system("iptables -I OUTPUT -p 17 --sport 50500 -j QUEUE");
+			
+			system("ip6tables -I FORWARD -p 139 -j QUEUE");
+			system("ip6tables -I FORWARD -p 50 -j QUEUE");
+			system("ip6tables -I FORWARD -p 17 --dport 50500 -j QUEUE");
+			system("ip6tables -I FORWARD -p 17 --sport 50500 -j QUEUE");
+
+			system("ip6tables -I INPUT -p 139 -j QUEUE");
+			system("ip6tables -I INPUT -p 50 -j QUEUE");
+			system("ip6tables -I INPUT -p 17 --dport 50500 -j QUEUE");
+			system("ip6tables -I INPUT -p 17 --sport 50500 -j QUEUE");
+
+			system("ip6tables -I OUTPUT -p 139  -j QUEUE");
+			system("ip6tables -I OUTPUT -p 50 -j QUEUE");
+			system("ip6tables -I OUTPUT -p 17 --dport 50500 -j QUEUE");
+			system("ip6tables -I OUTPUT -p 17 --sport 50500 -j QUEUE");
 				
-			}
+// TODO Rene: Miika, I don't think this should be dependent on "accept_hip_esp_traffic"
+#ifdef CONFIG_HIP_OPPTCP//tcp over ipv4
+			system("iptables -I FORWARD -p 6 -j QUEUE");
+			system("iptables -I INPUT -p 6 -j QUEUE");
+			system("iptables -I OUTPUT -p 6 -j QUEUE");
+			
+			system("ip6tables -I FORWARD -p 6 -j QUEUE");
+			system("ip6tables -I INPUT -p 6 -j QUEUE");
+			system("ip6tables -I OUTPUT -p 6 -j QUEUE");
+#endif
+		}
+	}
 
  out_err:
 	return 0;
@@ -289,13 +281,21 @@ static void die(struct ipq_handle *h)
 }
 
 /**
- * Tests whether a packet is a HIP packet.
+ * Returns the packet type of an IP packet.
+ * 
+ * Currently supported types:				type
+ * - plain HIP control packet				  1
+ * - STUN packet				  			  1 (UDP encapsulated HIP control)
+ * - ESP packet								  2
+ * - TCP packet								  3 (for opportunistic TCP handshake)
+ * 
+ * Unsupported types -> type 0
  *
- * @param  hdr        a pointer to a HIP packet.
- * @param trafficType ?
+ * @param  hdr        a pointer to a IP packet.
+ * @param ipVersion	  the IP version for this packet
  * @return            One if @c hdr is a HIP packet, zero otherwise.
  */ 
-int is_hip_packet(void * hdr, int trafficType){
+int return_packet_type(void * hdr, int ipVersion){
 	struct udphdr *udphdr = NULL;
 	int hdr_size;
 	int udp_spi_is_zero = 0;
@@ -303,87 +303,123 @@ int is_hip_packet(void * hdr, int trafficType){
 
 	HIP_DEBUG("\n");
 
-	_HIP_DEBUG("the UDP port number is %d\n",IPPROTO_UDP);
-
-	if(trafficType == 4){
+	if(ipVersion == 4){
 		struct ip *iphdr = (struct ip *)hdr;
 		
-		_HIP_DEBUG("the IPv4 port number is %d\n", iphdr->ip_p);
+		_HIP_DEBUG("the IPv4 next header protocol number is %d\n", iphdr->ip_p);
 
-
-		if(iphdr->ip_p == IPPROTO_HIP) 
+		if(iphdr->ip_p == IPPROTO_HIP)
+		{
+			// we have found a plain HIP control packet
+			HIP_DEBUG("plain HIP packet\n");
 			return 1;
-		if (iphdr->ip_p != IPPROTO_UDP)
+		} else if (iphdr->ip_p == IPPROTO_ESP)
+		{
+			// this is an ESP packet
+			HIP_DEBUG("plain ESP packet\n");
+			return 2;
+#ifdef CONFIG_HIP_OPPTCP
+		} else if(iphdr->ip_p == IPPROTO_TCP)
+		{
+			return 3;
+#endif
+		} else if (iphdr->ip_p != IPPROTO_UDP)
+		{
+			// if it's not UDP either, it's unsupported
 			return 0;
+		}
 
-		//the udp src and dest ports are analysed
+		// need UDP header to look for encapsulated ESP or STUN
 		hdr_size = (iphdr->ip_hl * 4);
 		
-		HIP_DEBUG("size of hdr_size is %d\n", hdr_size);
+		HIP_DEBUG("hdr_size is %d\n", hdr_size);
 		plen = iphdr->ip_len;
 		udphdr = ((struct udphdr *) (((char *) iphdr) + hdr_size));
-		
-
-	}
-	if (trafficType == 6)
+	} else if (ipVersion == 6)
 	{
 		struct ip6_hdr * ip6_hdr = (struct ip6_hdr *)hdr;
 
-		HIP_DEBUG("the IPv6 port number is %d\n",
+		HIP_DEBUG("the IPv6 next header protocol number is %d\n",
 			  ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt);
 
 		if(ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt == IPPROTO_HIP)
+		{
 			return 1;
-		if (ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt != IPPROTO_UDP)
+		} else if (ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt == IPPROTO_ESP)
+		{
+			return 2;
+#ifdef CONFIG_HIP_OPPTCP
+		} else if(ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt == IPPROTO_TCP)
+		{
+			return 3;
+#endif
+		} else if (ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt != IPPROTO_UDP)
+		{
 			return 0;
-
-		//the udp src and dest ports are analysed		
+		}
+	
 		hdr_size = (ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen * 4);
 		plen = ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen;
 		udphdr = ((struct udphdr *) (((char *) ip6_hdr) + hdr_size));
 	}
 
-	_HIP_DEBUG("%d %d %d\n", plen, sizeof (struct ip), sizeof(struct udphdr));
-	if (trafficType == 4 &&
-	    (plen >= sizeof (struct ip) + sizeof(struct udphdr) + HIP_UDP_ZERO_BYTES_LEN)) {
+	HIP_DEBUG("UDP header size  is %d\n", sizeof(struct udphdr));
+
+	// TODO what does that "if" check?
+	if (ipVersion == 4 &&
+	    (plen >= sizeof(struct ip) + sizeof(struct udphdr) + HIP_UDP_ZERO_BYTES_LEN))
+	{
 		uint32_t *zero_bytes = NULL;
 		// uint32_t *ip_esp_hdr = NULL;
 		
 		/* something wrong here?*/
 		// zero_bytes = (uint32_t *) ((char *)udphdr + 1);
 
+		// FIXME this does _NOT_ work
 		zero_bytes = (uint32_t *) ((char *)udphdr + sizeof(struct udphdr));
 	  
 		HIP_DEBUG("zero_bytes address is Ox%x, value is %d\n", zero_bytes, 
 			  *zero_bytes);
 		
-
-		/*Check whethere SPI number is zero or not */
-
-
+		/*Check whether SPI number is zero or not */
 		if (*zero_bytes == 0) {
+			// we have most probably found a STUN message
 			udp_spi_is_zero = 1;
 			HIP_DEBUG("Zero SPI found\n");
 		}
-	
-
-
 	}
 
-	if(udphdr && ((udphdr->source == ntohs(HIP_NAT_UDP_PORT)) || 
-		      (udphdr->dest   == ntohs(HIP_NAT_UDP_PORT))) && udp_spi_is_zero)
+	if(udphdr
+			&& ((udphdr->source == ntohs(HIP_NAT_UDP_PORT)) || 
+		        (udphdr->dest == ntohs(HIP_NAT_UDP_PORT)))
+		    && udp_spi_is_zero)
 		
-	{		
-		HIP_DEBUG("UDP header size  is %d\n", sizeof(struct udphdr));
-		
-		return !hip_check_network_msg((struct hip_common *) (((char *)udphdr) 
+	{	
+		/* check for HIP control message */
+		if (!hip_check_network_msg((struct hip_common *) (((char *)udphdr) 
 								     + 
 								     sizeof(struct udphdr) 
 								     + 
-								     HIP_UDP_ZERO_BYTES_LEN));
+								     HIP_UDP_ZERO_BYTES_LEN)))
+		{
+			HIP_DEBUG("STUN packet\n");
+			return 1;
+		}
+		HIP_DEBUG("FIXME zero bytes recognition obbiously not working\n");
+	} else if (udphdr
+				&& ((udphdr->source == ntohs(HIP_NAT_UDP_PORT)) || 
+		            (udphdr->dest == ntohs(HIP_NAT_UDP_PORT)))
+		        && !udp_spi_is_zero)
+    {
+    	/* from the ports and the non zero SPI we can tell that this
+    	 * is an ESP packet */
+		HIP_DEBUG("UDP encapsulated ESP packet\n");
+   		return 2;
 	}
-	else
-		return 0;
+	
+	// plain UDP packet -> nothing to play around with
+	HIP_DEBUG("unsupported UDP packet\n");
+	return 0;
 }
 
 /**
@@ -1190,15 +1226,17 @@ static void *handle_ip_traffic(struct ipq_handle *hndl, int traffic_type)
 
 	do
 	{
+		/* waits for queue messages to arrive from ip_queue and
+		 * copies them into a supplied buffer */
 		status = ipq_read(hndl, buf, BUFSIZE, 0);
 		if (status < 0)
 			die(hndl);
-
+		/* queued messages may be a packet messages or an error messages */
 		switch (ipq_message_type(buf))
 		{
-		case NLMSG_ERROR:
-			fprintf(stderr, "Received error message (%d): %s\n", ipq_get_msgerr(buf), ipq_errstr());
-			break;
+			case NLMSG_ERROR:
+				fprintf(stderr, "Received error message (%d): %s\n", ipq_get_msgerr(buf), ipq_errstr());
+				break;
 
 		case IPQM_PACKET:
 		{
@@ -1210,95 +1248,158 @@ static void *handle_ip_traffic(struct ipq_handle *hndl, int traffic_type)
 
 			ipq_packet_msg_t *m = ipq_get_packet(buf);
 			packetHook = m->hook;
-
+			
+			// HIP and ESP headers have different offset for IPv4 and IPv6
 			if (traffic_type == 4){
-                		_HIP_DEBUG("ipv4\n");
-                		iphdr = (struct ip *) m->payload; 
+               	_HIP_DEBUG("ipv4\n");
+               	iphdr = (struct ip *) m->payload; 
 				//fields needed for analysis of tcp packets
-                		packet_hdr = (void *)iphdr;
-                		hdr_size = (iphdr->ip_hl * 4);
+               	packet_hdr = (void *)iphdr;
+               	hdr_size = (iphdr->ip_hl * 4);
 
-				if (iphdr->ip_p == IPPROTO_UDP){
+               	// IPv4 traffic might be UDP encasulated HIP or ESP
+               	// TODO check where used due to zero bytes
+               	if (iphdr->ip_p == IPPROTO_UDP){
 					hdr_size += sizeof(struct udphdr) + HIP_UDP_ZERO_BYTES_LEN;
 				}
-                		_HIP_DEBUG("header size: %d\n", hdr_size);
-               		 	IPV4_TO_IPV6_MAP(&iphdr->ip_src, &src_addr);
-                		IPV4_TO_IPV6_MAP(&iphdr->ip_dst, &dst_addr);
-        		}
-        		else if(traffic_type == 6){
-                		_HIP_DEBUG("ipv6\n");
-                		ip6_hdr = (struct ip6_hdr *) m->payload;
+               	
+                _HIP_DEBUG("header size: %d\n", hdr_size);
+               	IPV4_TO_IPV6_MAP(&iphdr->ip_src, &src_addr);
+                IPV4_TO_IPV6_MAP(&iphdr->ip_dst, &dst_addr);
+        	} else if(traffic_type == 6)
+        	{
+            	_HIP_DEBUG("ipv6\n");
+            	ip6_hdr = (struct ip6_hdr *) m->payload;
 				//fields needed for analysis of tcp packets
-                		packet_hdr = (void *)ip6_hdr;
+                packet_hdr = (void *)ip6_hdr;
 				hdr_size = sizeof(struct ip6_hdr);
 
-               		 	_HIP_DEBUG("header size: %d\n", hdr_size);
-                		ipv6_addr_copy(&src_addr, &ip6_hdr->ip6_src);
-                		ipv6_addr_copy(&dst_addr, &ip6_hdr->ip6_dst);
-        		}
+               	_HIP_DEBUG("header size: %d\n", hdr_size);
+                ipv6_addr_copy(&src_addr, &ip6_hdr->ip6_src);
+                ipv6_addr_copy(&dst_addr, &ip6_hdr->ip6_dst);
+        	}
       
-      			if(is_hip_packet(packet_hdr, traffic_type)){
+			// handle all different kind of packets
+			switch (return_packet_type(packet_hdr, traffic_type))
+			{
+				case 1:
+				{
+      				// handle HIP packets
       				HIP_DEBUG("****** Received HIP packet ******\n");
-				int packet_length = 0;
-				struct hip_sig * sig = NULL;
+					int packet_length = 0;
+					struct hip_sig * sig = NULL;
 
-				if (m->data_len <= (BUFSIZE - hdr_size)){
-	  				packet_length = m->data_len - hdr_size; 	
-	  				_HIP_DEBUG("HIP packet size smaller than buffer size\n");
-	  			}
-	  			else { 
-	  				packet_length = BUFSIZE - hdr_size;
-	  				_HIP_DEBUG("HIP packet size greater than buffer size\n");
-	  			}
-				hip_common = (struct hip_common *)HIP_MALLOC(packet_length, 0);
-
-				//hip_common = (struct hip_common*) (m->payload + sizeof (struct ip6_hdr));
-
-				memcpy(hip_common, m->payload + hdr_size, packet_length);		
-			
-
-				sig = (struct hip_sig *) hip_get_param(hip_common, HIP_PARAM_HIP_SIGNATURE);
-				if(sig == NULL)
-	  				_HIP_DEBUG("no signature\n");
-				else
-	  				_HIP_DEBUG("signature exists\n");
-
-
-				if(filter_hip(&src_addr, 
-					      &dst_addr, 
-					      hip_common, 
-					      m->hook,
-					      m->indev_name,
-					      m->outdev_name))
-	  			{
-					allow_packet(hndl, m->packet_id);
-				}
-				else
-	  			{
-					drop_packet(hndl, m->packet_id);
-	  			}
-				HIP_FREE(hip_common);
-				hip_common = NULL;
-			} else {
-				/* OPPORTUNISTIC MODE HACKS */
+					if (m->data_len <= (BUFSIZE - hdr_size))
+					{
+		  				packet_length = m->data_len - hdr_size; 	
+		  				_HIP_DEBUG("HIP packet size smaller than buffer size\n");
+		  			} else
+		  			{
+		  				/* packet is too long -> drop as max_size is well defined in RFC */
+		  				//packet_length = BUFSIZE - hdr_size;
+		  				_HIP_DEBUG("HIP packet size greater than buffer size\n");
+		  				drop_packet(hndl, m->packet_id);
+		  				
+		  				break;
+		  			}
+				
+					hip_common = (struct hip_common *)HIP_MALLOC(packet_length, 0);
+	
+					//hip_common = (struct hip_common*) (m->payload + sizeof (struct ip6_hdr));
+	
+					memcpy(hip_common, m->payload + hdr_size, packet_length);		
+				
+					// TODO check if signature is verified somewhere
+					sig = (struct hip_sig *) hip_get_param(hip_common, HIP_PARAM_HIP_SIGNATURE);
+					if(sig == NULL)
+		  				_HIP_DEBUG("no signature\n");
+					else
+		  				_HIP_DEBUG("signature exists\n");
+	
+					// check HIP packet against firewall rules
+					if(filter_hip(&src_addr, 
+						      &dst_addr, 
+						      hip_common, 
+						      m->hook,
+						      m->indev_name,
+						      m->outdev_name))
+		  			{
+						allow_packet(hndl, m->packet_id);
+					} else
+		  			{
+						drop_packet(hndl, m->packet_id);
+		  			}
+					
+					HIP_FREE(hip_common);
+					hip_common = NULL;
+					
+					break;
+      			}
+				case 2:
+				{
+					// handle ESP packet for HITs
+      				HIP_DEBUG("****** Received ESP packet ******\n");
+      				
+      				//TODO prettier way to get spi
+      				uint32_t spi_val;
+      				memcpy(&spi_val, 
+      						(m->payload + sizeof(struct ip6_hdr)), 
+      						sizeof(__u32));
+      				/*
+      				if(filter_esp(&ip6_hdr->ip6_dst, 
+      						spi_val,
+      						m->hook,
+      						m->indev_name,
+      						m->outdev_name))
+      				{
+      				*/
+      				
+      					allow_packet(hndl, m->packet_id);
+      					
+      				/*
+      				} else
+      				{
+      					drop_packet(hndl, m->packet_id);
+      				}
+      				*/
+      				break;
+				}	
 #ifdef CONFIG_HIP_OPPTCP
-				if((traffic_type == 4 && iphdr->ip_p != IPPROTO_TCP) ||
+				/* OPPORTUNISTIC MODE HACKS */
+				/*
+				if((ipv4Traffic && iphdr->ip_p != IPPROTO_TCP) ||
 						(ipv6Traffic && ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt != IPPROTO_TCP))
 				{
 					if(accept_normal_traffic)
-					allow_packet(hndl, m->packet_id);
+						allow_packet(hndl, m->packet_id);
 					else
-					drop_packet(hndl, m->packet_id);
-				}
-				else if(is_incoming_packet(packetHook))
-					examine_incoming_tcp_packet(hndl, m->packet_id, packet_hdr, traffic_type);
-				else if(is_outgoing_packet(packetHook))
-				/*examine_outgoing_tcp_packet(hndl, m->packet_id, packet_hdr, traffic_type);*/
-				allow_packet(hndl, m->packet_id);
-				else
+						drop_packet(hndl, m->packet_id);
+				} else if(is_incoming_packet(packetHook))
 				{
+					examine_incoming_tcp_packet(hndl, m->packet_id, packet_hdr, type);
+				} else if(is_outgoing_packet(packetHook))
+				{
+					//examine_outgoing_tcp_packet(hndl, m->packet_id, packet_hdr, type);
+					allow_packet(hndl, m->packet_id);
+				} else
+				{
+				*/
+				case 3:
+				{
+					// TODO what happens to normal TCP?
+					if(is_incoming_packet(packetHook))
+					{
+						examine_incoming_tcp_packet(hndl, m->packet_id, packet_hdr, type);
+					} else if(is_outgoing_packet(packetHook))
+					{
+						//examine_outgoing_tcp_packet(hndl, m->packet_id, packet_hdr, type);
+						allow_packet(hndl, m->packet_id);
+					}
+				}
 #endif
-					/******************************************************************************************************************/
+					
+				default:
+				{
 //#ifdef CONFIG_HIP_HIPPROXY
 					//inbound process
 					//static int ipv6_addr_is_hit(const struct in6_addr *hit);
@@ -1331,7 +1432,7 @@ static void *handle_ip_traffic(struct ipq_handle *hndl, int traffic_type)
 						{
 							//struct in6_addr client_addr;
 							//HIP PROXY INBOUND PROCESS
-							handle_proxy_inbound_traffic(m, hndl,	src_addr);
+							handle_proxy_inbound_traffic(m, hndl, src_addr);
 						}
 						else
 						{		
@@ -1340,31 +1441,32 @@ static void *handle_ip_traffic(struct ipq_handle *hndl, int traffic_type)
 							//if the destination ip does not support hip, drop the packet						
 							if(handle_proxy_outbound_traffic(m, hndl,	src_addr, dst_addr, hdr_size, traffic_type))
 								HIP_DEBUG("handle proxy outbound traffic error!\n");
-						}					
-					}
-					else
+						}
+						
+						// TODO check default behaviour
+					} else
 					{
 //#else
-							/******************************************************************************************************************/
+						// default behaviour depends on command line options being set
 						if (accept_normal_traffic)
 							allow_packet(hndl, m->packet_id);
 						else
 							drop_packet(hndl, m->packet_id);
 //#endif //ifdef CONFIG_HIP_HIPPROXY
-					}
-
-#ifdef CONFIG_HIP_OPPTCP
 				}
-#endif
-				
+
+//#ifdef CONFIG_HIP_OPPTCP
 			}
-			if (status < 0)
-				die(hndl);
-			break;
+//#endif
+			
 		}
-		default:
-			HIP_DEBUG("unknown msg\n");
-			fprintf(stderr, "Unknown message type!\n");
+		if (status < 0)
+			die(hndl);
+		break;
+	}
+	default:
+		HIP_DEBUG("unknown msg\n");
+		fprintf(stderr, "Unknown message type!\n");
 			break;
 		}
 	} while (1);
@@ -1711,7 +1813,7 @@ void firewall_increase_netlink_buffers(){
 	popen("echo 1048576 > /proc/sys/net/core/rmem_default; echo 1048576 > /proc/sys/net/core/rmem_max;echo 1048576 > /proc/sys/net/core/wmem_default;echo 1048576 > /proc/sys/net/core/wmem_max", "r");
 }
 
-void handle_proxy_inbound_traffic(ipq_packet_msg_t *m, struct ipq_handle *hndl,	struct in6_addr src_addr)
+void handle_proxy_inbound_traffic(ipq_packet_msg_t *m, struct ipq_handle *hndl,	struct in6_addr *src_addr)
 {
 		//struct in6_addr client_addr;
 		//HIP PROXY INBOUND PROCESS
