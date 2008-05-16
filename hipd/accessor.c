@@ -175,3 +175,25 @@ int hip_query_ip_hit_mapping(struct hip_common *msg)
 }
 #endif // CONFIG_HIP_OPPORTUNISTIC
 
+int hip_get_hip_proxy_status(void)
+{
+	return hipproxy;
+}
+
+int hip_set_hip_proxy_on(void)
+{
+	int err = 0;
+	hipproxy = 1;
+	HIP_DEBUG("hip_set_hip_proxy_on() invoked.\n");
+ out_err:
+	return err;
+}
+
+int hip_set_hip_proxy_off(void)
+{
+	int err = 0;
+	hipproxy = 0;
+	HIP_DEBUG("hip_set_hip_proxy_off() invoked.\n");
+ out_err:
+	return err;
+}

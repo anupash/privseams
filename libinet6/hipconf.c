@@ -65,6 +65,9 @@ const char *hipconf_usage =
 #ifdef CONFIG_HIP_OPPTCP
 "opptcp on|off\n"
 #endif
+#ifdef CONFIG_HIP_HIPPROXY
+"hipproxy on|off\n"
+#endif
 ;
 
 /** Function pointer array containing pointers to handler functions.
@@ -101,7 +104,8 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc) 
         hip_conf_handle_dht_toggle,
 	hip_conf_handle_opptcp,
         hip_conf_handle_trans_order,
-	NULL /* run */
+        hip_conf_handle_hipproxy,
+	NULL, /* run */
 };
 
 /**
@@ -141,16 +145,16 @@ int hip_conf_get_action(char *text)
 		ret = ACTION_LOAD;
 	else if (!strcmp("dht", text))
 		ret = ACTION_DHT;
-        else if (!strcmp("opendht", text))
-                ret = ACTION_OPENDHT;
-        else if (!strcmp("locator", text))
-                ret = ACTION_LOCATOR; 
+    else if (!strcmp("opendht", text))
+        ret = ACTION_OPENDHT;
+    else if (!strcmp("locator", text))
+        ret = ACTION_LOCATOR; 
 	else if (!strcmp("debug", text))
 		ret = ACTION_DEBUG;
 	else if (!strcmp("handoff", text))
 		ret = ACTION_HANDOFF;
-        else if (!strcmp("transform", text))
-                ret = ACTION_TRANSORDER;
+    else if (!strcmp("transform", text))
+        ret = ACTION_TRANSORDER;
 	else if (!strcmp("restart", text))
 		ret = ACTION_RESTART;
 	else if (!strcmp("reinit", text))
@@ -159,6 +163,11 @@ int hip_conf_get_action(char *text)
 	else if (!strcmp("opptcp", text))
                 ret = ACTION_OPPTCP;
 #endif
+#ifdef CONFIG_HIP_HIPPROXY
+	else if (!strcmp("hipproxy", text))
+		ret = ACTION_HIPPROXY;
+#endif
+	
         return ret;
 }
 
@@ -184,8 +193,12 @@ int hip_conf_check_action_argc(int action) {
 		count = 2;
 		break;
 #ifdef CONFIG_HIP_OPPTCP	
-	case ACTION_OPPTCP:
-                break;
+    case ACTION_OPPTCP:
+        break;
+#endif
+#ifdef CONFIG_HIP_HIPPROXY
+    case ACTION_HIPPROXY:
+		break;
 #endif
 	default:
 	        break;
@@ -230,7 +243,7 @@ int hip_conf_get_type(char *text,char *argv[]) {
 	else if	(strcmp("nat",argv[1])==0) 
 		ret = TYPE_NAT;
         else if (strcmp("locator", argv[1])==0)
-                ret = TYPE_LOCATOR;
+		ret = TYPE_LOCATOR;
 	else if ((!strcmp("all", text)) && (strcmp("bos",argv[1])==0))
 		ret = TYPE_BOS;
 	else if (!strcmp("debug", text))
@@ -253,10 +266,10 @@ int hip_conf_get_type(char *text,char *argv[]) {
 	else if (!strcmp("escrow", text))
 		ret = TYPE_ESCROW;
 #endif		
-        else if (!strcmp("order", text))
-                ret = TYPE_ORDER;
+    else if (!strcmp("order", text))
+        ret = TYPE_ORDER;
 	else if (strcmp("opendht", argv[1])==0)
-                ret = TYPE_DHT;
+        ret = TYPE_DHT;
 	else if (!strcmp("ttl", text))
 		ret = TYPE_TTL;
 	else if (!strcmp("gw", text))
@@ -264,12 +277,16 @@ int hip_conf_get_type(char *text,char *argv[]) {
 	else if (!strcmp("get", text))
 		ret = TYPE_GET;
 	else if (!strcmp("set", text))
-                ret = TYPE_SET;
+        ret = TYPE_SET;
 	else if (!strcmp("config", text))
 		ret = TYPE_CONFIG;
 #ifdef CONFIG_HIP_OPPTCP
 	else if (strcmp("opptcp", argv[1])==0)
 		ret = TYPE_OPPTCP;
+#endif
+#ifdef CONFIG_HIP_HIPPROXY
+	else if (strcmp("hipproxy", argv[1])==0)
+		ret = TYPE_HIPPROXY;
 #endif
      return ret;
 }
@@ -291,15 +308,18 @@ int hip_conf_get_type_arg(int action)
 	case ACTION_RUN:
 	case ACTION_LOAD:
 	case ACTION_DHT:
-        case ACTION_OPENDHT:
-        case ACTION_LOCATOR:
+    case ACTION_OPENDHT:
+    case ACTION_LOCATOR:
 	case ACTION_RST:
 	case ACTION_BOS:
 	case ACTION_HANDOFF:
         case ACTION_TRANSORDER:
 	case ACTION_REINIT:
 #ifdef CONFIG_HIP_OPPTCP
-        case ACTION_OPPTCP:
+    case ACTION_OPPTCP:
+#endif
+#ifdef CONFIG_HIP_HIPPROXY
+	case ACTION_HIPPROXY:
 #endif
 	case ACTION_RESTART:
 		type_arg = 2;
@@ -1831,4 +1851,29 @@ int hip_conf_handle_opptcp(hip_common_t *msg, int action, const char *opt[],
 
 /*	hip_set_opportunistic_tcp_status(1);*/
 /*	hip_set_opportunistic_tcp_status(0);*/
+}
+
+/**
+ * Function that is used to set HIP PROXY on or off
+ *
+ * @return       zero on success, or negative error value on error.
+ */
+int hip_conf_handle_hipproxy(struct hip_common *msg, int action, const char *opt[], int optc)
+{
+        int err = 0, status = 0;
+ 
+#ifdef CONFIG_HIP_HIPPROXY
+        if (!strcmp("on",opt[0])) {
+                status = SO_HIP_SET_HIPPROXY_ON; 
+        } else if (!strcmp("off",opt[0])) {
+                status = SO_HIP_SET_HIPPROXY_OFF;
+        } else {
+                HIP_IFEL(1, -1, "bad args\n");
+        }
+        HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, 
+                 "build hdr failed: %s\n", strerror(err));          
+#endif
+        
+ out_err:
+        return(err);
 }

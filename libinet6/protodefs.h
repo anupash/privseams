@@ -263,6 +263,14 @@
 #define HIP_SERVICE_RENDEZVOUS	         1
 #define HIP_SERVICE_ESCROW	         201
 #define HIP_SERVICE_RELAY            	 202
+#define HIP_SERVICE_RELAY_UDP_HIP	 203
+#define HIP_SERVICE_RELAY_UDP_ESP	 204
+
+/** @addtogroup hip_proxy
+ * @{ 
+ */
+#define HIP_PROXY_PASSTHROUGH		0
+#define HIP_PROXY_TRANSLATE 			1
 
 /* IMPORTANT! This must be the sum of above services. */
 #define HIP_TOTAL_EXISTING_SERVICES      3

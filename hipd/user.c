@@ -312,17 +312,108 @@ int hip_handle_user_msg(struct hip_common *msg,
 	}
 	break;
         case SO_HIP_DHT_ON:
+        	{
                 HIP_DEBUG("Setting DHT ON\n");
                 hip_opendht_inuse = SO_HIP_DHT_ON;
                 HIP_DEBUG("hip_opendht_inuse =  %d (should be %d)\n", 
                           hip_opendht_inuse, SO_HIP_DHT_ON);
-                break;
+        	}
+            break;
+            
         case SO_HIP_DHT_OFF:
+        	{
                 HIP_DEBUG("Setting DHT OFF\n");
                 hip_opendht_inuse = SO_HIP_DHT_OFF;
                 HIP_DEBUG("hip_opendht_inuse =  %d (should be %d)\n", 
                           hip_opendht_inuse, SO_HIP_DHT_OFF);
-                break;
+        	}
+            break;
+                
+        case SO_HIP_SET_HIPPROXY_ON:
+        	{
+        		int n, err;
+        		
+        		//firewall socket address
+        		struct sockaddr_in6 sock_addr;     		
+        		bzero(&sock_addr, sizeof(sock_addr));
+        		sock_addr.sin6_family = AF_INET6;
+        		sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
+        		sock_addr.sin6_addr = in6addr_loopback;
+        		
+        		HIP_DEBUG("Setting HIP PROXY ON\n");
+        		hip_set_hip_proxy_on();
+      			hip_build_user_hdr(msg, SO_HIP_SET_HIPPROXY_ON, 0);
+        		
+        		n = hip_sendto(msg, &sock_addr);
+    			
+        		HIP_IFEL(n < 0, 0, "sendto() failed on agent socket.\n");
+
+        		if (err == 0)
+        		{
+        			HIP_DEBUG("SEND HIPPROXY STATUS OK.\n");
+        		}
+        	}
+        	break;
+        		
+        case SO_HIP_SET_HIPPROXY_OFF:
+        	{
+        		int n, err;
+        		
+        		//firewall socket address
+        		struct sockaddr_in6 sock_addr;     		
+        		bzero(&sock_addr, sizeof(sock_addr));
+        		sock_addr.sin6_family = AF_INET6;
+        		sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
+        		sock_addr.sin6_addr = in6addr_loopback;
+        		
+        		HIP_DEBUG("Setting HIP PROXY OFF\n");
+        		hip_set_hip_proxy_off();
+      			hip_build_user_hdr(msg, SO_HIP_SET_HIPPROXY_OFF, 0);
+        		
+        		n = hip_sendto(msg, &sock_addr);
+    			
+        		HIP_IFEL(n < 0, 0, "sendto() failed on agent socket.\n");
+
+        		if (err == 0)
+        		{
+        			HIP_DEBUG("SEND HIPPROXY STATUS OK.\n");
+        		}
+        	}
+        	break; 
+        		
+        case SO_HIP_HIPPROXY_STATUS_REQUEST:
+        	{
+        		int n, err;
+        		
+        		//firewall socket address
+        		struct sockaddr_in6 sock_addr;     		
+        		bzero(&sock_addr, sizeof(sock_addr));
+        		sock_addr.sin6_family = AF_INET6;
+        		sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
+        		sock_addr.sin6_addr = in6addr_loopback;
+        		
+        		HIP_DEBUG("Received HIPPROXY Status Request from firewall\n");
+     		
+        		memset(msg, 0, sizeof(struct hip_common));
+        		
+        		if(hip_get_hip_proxy_status() == 0)
+        			hip_build_user_hdr(msg, SO_HIP_SET_HIPPROXY_OFF, 0);
+        		
+        		if(hip_get_hip_proxy_status() == 1)
+        			hip_build_user_hdr(msg, SO_HIP_SET_HIPPROXY_ON, 0);
+        		
+        		n = hip_sendto(msg, &sock_addr);
+ //   			HIP_DEBUG("SENDTO ERRNO: 0x%x\n", errno);
+    			
+        		HIP_IFEL(n < 0, 0, "sendto() failed on agent socket.\n");
+
+        		if (err == 0)
+        		{
+        			HIP_DEBUG("SEND HIPPROXY STATUS OK.\n");
+        		}
+        		//SEND RESPONSE();
+        	}
+        	break; 
 
 #ifdef CONFIG_HIP_ESCROW
 	case SO_HIP_ADD_ESCROW:
@@ -708,14 +799,15 @@ int hip_handle_user_msg(struct hip_common *msg,
 		hip_set_opportunistic_tcp_status(0);
 		break;
 
+	case SO_HIP_OPPTCP_UNBLOCK_APP_and_OPPIPDB_ADD_ENTRY:
+		hip_opptcp_unblock_AND_opptcp_add_entry(msg, src);
+		break;
 	case SO_HIP_OPPTCP_UNBLOCK_APP:
-		
 		hip_opptcp_unblock(msg, src);
 		break;
 
 	case SO_HIP_OPPTCP_OPPIPDB_ADD_ENTRY:
 		hip_opptcp_add_entry(msg, src);
-		
 		break;
 
 	case SO_HIP_OPPTCP_SEND_TCP_PACKET:
@@ -724,6 +816,25 @@ int hip_handle_user_msg(struct hip_common *msg,
 		break;
 
 #endif
+	case SO_HIP_GET_PROXY_LOCAL_ADDRESS:
+	{
+		//firewall socket address
+		struct sockaddr_in6 sock_addr;     		
+		bzero(&sock_addr, sizeof(sock_addr));
+		sock_addr.sin6_family = AF_INET6;
+		sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
+		sock_addr.sin6_addr = in6addr_loopback;		
+		HIP_DEBUG("GET HIP PROXY LOCAL ADDRESS\n");
+		hip_get_local_addr(msg);
+//		hip_build_user_hdr(msg, HIP_HIPPROXY_LOCAL_ADDRESS, 0);
+		n = hip_sendto(msg, &sock_addr);		
+		HIP_IFEL(n < 0, 0, "sendto() failed on agent socket.\n");
+		if (err == 0)
+		{
+			HIP_DEBUG("SEND HIPPROXY LOCAL ADDRESS OK.\n");
+		}
+		break;
+	}
 	case SO_HIP_TRIGGER_BEX:
 		dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
 		HIP_IFEL(hip_add_peer_map(msg), -1, "trigger bex\n");

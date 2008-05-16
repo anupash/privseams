@@ -6,17 +6,17 @@ AUTOMAKE_OPTIONS = foreign
 # won't build because there is also the linux/net/ipv6/hip/debug.h include.
 
 CFLAGS = $(hipl_common_cflags) -I/usr/include/libipq/  -L$(HIPL_LIBINET6_LIB) -L$(HIPL_LIBHIPTOOL_LIB)
-CFLAGS += `pkg-config --cflags --libs glib-2.0` 
+#CFLAGS += `pkg-config --cflags --libs glib-2.0` 
 CFLAGS += `pkg-config --cflags --libs gthread-2.0`
 
-include_HEADERS = firewall.h conntrack.h rule_management.h helpers.h firewall_control.h esp_decrypt.h firewall_defines.h
+include_HEADERS = firewall.h conntrack.h rule_management.h helpers.h firewall_control.h esp_decrypt.h firewall_defines.h proxydb.h conndb.h
 INCLUDES = $(hipl_common_include_paths)
 
 if HIP_FIREWALL
 
 sbin_PROGRAMS = hipfw
 
-hipfw_SOURCES = firewall.c conntrack.c rule_management.c helpers.c firewall_control.c esp_decrypt.c
+hipfw_SOURCES = firewall.c conntrack.c rule_management.c helpers.c firewall_control.c esp_decrypt.c proxydb.c conndb.c
 
 hipfw_LDADD = /usr/lib/libipq.a ../libinet6/.libs/libinet6.a
 if HIP_CORPORATE
