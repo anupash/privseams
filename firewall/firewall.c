@@ -34,18 +34,19 @@ int foreground = 1;
 void print_usage()
 {
 	printf("HIP Firewall\n");
-	printf("Usage: hipfw [-f file_name] [-t timeout] [-d|-v] [-F] [-H] [-A] [-b] [-k]\n");
-	printf("      - H drop non-HIP traffic by default (default: accept non-hip traffic)\n");
-	printf("      - A accept HIP traffic by default (default: drop all hip traffic)\n");
-	printf("      - f file_name is a path to a file containing firewall filtering rules (default %s)\n", HIP_FW_DEFAULT_RULE_FILE);
-	printf("      - timeout is connection timeout value in seconds\n");
-	printf("      - d = debugging output\n");
-	printf("      - v = verbose output\n");
-	printf("      - t = timeout for packet capture (default %d secs)\n", 
+	printf("Usage: hipfw [-f file_name] [-t timeout] [-d|-v] [-F] [-H] [-A] [-b] [-k] [-h]\n");
+	printf("      -H drop non-HIP traffic by default (default: accept non-hip traffic)\n");
+	printf("      -A accept HIP traffic by default (default: drop all hip traffic)\n");
+	printf("      -f file_name is a path to a file containing firewall filtering rules (default %s)\n", HIP_FW_DEFAULT_RULE_FILE);
+	printf("      -t timeout is connection timeout value in seconds\n");
+	printf("      -d = debugging output\n");
+	printf("      -v = verbose output\n");
+	printf("      -t = timeout for packet capture (default %d secs)\n", 
 	HIP_FW_DEFAULT_TIMEOUT);
-	printf("      - F = do not flush iptables rules\n");
-	printf("      - b = fork the firewall to background\n");
-	printf("      - k = kill running firewall pid\n\n");
+	printf("      -F = do not flush iptables rules\n");
+	printf("      -b = fork the firewall to background\n");
+	printf("      -k = kill running firewall pid\n");
+	printf("      -h = print this help\n\n");
 }
 
 //currently done at all times, rule_management 
@@ -144,17 +145,17 @@ int firewall_init()
 			{
 				if (!accept_hip_esp_traffic)
 				{
-					system("iptables -I FORWARD -p 253 -j QUEUE");
+					system("iptables -I FORWARD -p 139 -j QUEUE");
 					system("iptables -I FORWARD -p 50 -j QUEUE");
 					system("iptables -I FORWARD -p 17 --dport 50500 -j QUEUE");
 					system("iptables -I FORWARD -p 17 --sport 50500 -j QUEUE");
 	
-					system("iptables -I INPUT -p 253 -j QUEUE");
+					system("iptables -I INPUT -p 139 -j QUEUE");
 					system("iptables -I INPUT -p 50 -j QUEUE");
 					system("iptables -I INPUT -p 17 --dport 50500 -j QUEUE");
 					system("iptables -I INPUT -p 17 --sport 50500 -j QUEUE");
 	
-					system("iptables -I OUTPUT -p 253  -j QUEUE");
+					system("iptables -I OUTPUT -p 139  -j QUEUE");
 					system("iptables -I OUTPUT -p 50 -j QUEUE");
 					system("iptables -I OUTPUT -p 17 --dport 50500 -j QUEUE");
 					system("iptables -I OUTPUT -p 17 --sport 50500 -j QUEUE");
@@ -180,17 +181,17 @@ int firewall_init()
 			{
 				if (!accept_hip_esp_traffic)
 				{
-					system("ip6tables -I FORWARD -p 253 -j QUEUE");
+					system("ip6tables -I FORWARD -p 139 -j QUEUE");
 					system("ip6tables -I FORWARD -p 50 -j QUEUE");
 					system("ip6tables -I FORWARD -p 17 --dport 50500 -j QUEUE");
 					system("ip6tables -I FORWARD -p 17 --sport 50500 -j QUEUE");
 	
-					system("ip6tables -I INPUT -p 253 -j QUEUE");
+					system("ip6tables -I INPUT -p 139 -j QUEUE");
 					system("ip6tables -I INPUT -p 50 -j QUEUE");
 					system("ip6tables -I INPUT -p 17 --dport 50500 -j QUEUE");
 					system("ip6tables -I INPUT -p 17 --sport 50500 -j QUEUE");
 	
-					system("ip6tables -I OUTPUT -p 253  -j QUEUE");
+					system("ip6tables -I OUTPUT -p 139  -j QUEUE");
 					system("ip6tables -I OUTPUT -p 50 -j QUEUE");
 					system("ip6tables -I OUTPUT -p 17 --dport 50500 -j QUEUE");
 					system("ip6tables -I OUTPUT -p 17 --sport 50500 -j QUEUE");
@@ -357,13 +358,7 @@ int is_hip_packet(void * hdr, int trafficType){
 		udphdr = ((struct udphdr *) (((char *) ip6_hdr) + hdr_size));
 	}
 
-#if 0 /* Miika: Weiwei, why the heck were you dropping hip/esp packets over udp?  */
-	if ((udphdr->source == ntohs(HIP_NAT_UDP_PORT)) || (udphdr->dest
-			== ntohs(HIP_NAT_UDP_PORT)))
-		return 1;
-#endif
-	HIP_DEBUG("%d %d %d\n", plen, sizeof (struct ip), sizeof(struct udphdr));
-
+	_HIP_DEBUG("%d %d %d\n", plen, sizeof (struct ip), sizeof(struct udphdr));
 	if (trafficType == 4 &&
 	    (plen >= sizeof (struct ip) + sizeof(struct udphdr) + HIP_UDP_ZERO_BYTES_LEN)) {
 		uint32_t *zero_bytes = NULL;
@@ -1462,7 +1457,7 @@ int main(int argc, char **argv)
 	int errflg = 0, killold = 0;
 
 	if (geteuid() != 0) {
-		HIP_ERROR("firewall must be started with sudo\n");
+		HIP_ERROR("firewall must be run as root\n");
 		exit(-1);
 	}
 
@@ -1470,7 +1465,7 @@ int main(int argc, char **argv)
 
 	hip_set_logdebug(LOGDEBUG_NONE);
 
-	while ((ch = getopt(argc, argv, "f:t:vdFHAbk")) != -1)
+	while ((ch = getopt(argc, argv, "f:t:vdFHAbkh")) != -1)
 	{
 		switch (ch)
 		{
@@ -1486,7 +1481,6 @@ int main(int argc, char **argv)
 		case 'A':
 			accept_hip_esp_traffic = 1;
 			break;
-
 		case 'f':
 			rule_file = optarg;
 			break;
@@ -1505,6 +1499,10 @@ int main(int argc, char **argv)
 			break;
 		case 'k':
 			killold = 1;
+			break;
+		case 'h':
+			print_usage();
+			exit(2);
 			break;
 		case '?':
 			printf("Unrecognized option: -%c\n", optopt);
