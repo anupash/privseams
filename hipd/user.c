@@ -343,7 +343,7 @@ int hip_handle_user_msg(struct hip_common *msg,
         		struct sockaddr_in6 sock_addr;     		
         		bzero(&sock_addr, sizeof(sock_addr));
         		sock_addr.sin6_family = AF_INET6;
-        		sock_addr.sin6_port = HIP_FIREWALL_PORT;
+        		sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
         		sock_addr.sin6_addr = in6addr_loopback;
         		
         		HIP_DEBUG("Setting HIP PROXY ON\n");
@@ -369,7 +369,7 @@ int hip_handle_user_msg(struct hip_common *msg,
         		struct sockaddr_in6 sock_addr;     		
         		bzero(&sock_addr, sizeof(sock_addr));
         		sock_addr.sin6_family = AF_INET6;
-        		sock_addr.sin6_port = HIP_FIREWALL_PORT;
+        		sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
         		sock_addr.sin6_addr = in6addr_loopback;
         		
         		HIP_DEBUG("Setting HIP PROXY OFF\n");
@@ -395,7 +395,7 @@ int hip_handle_user_msg(struct hip_common *msg,
         		struct sockaddr_in6 sock_addr;     		
         		bzero(&sock_addr, sizeof(sock_addr));
         		sock_addr.sin6_family = AF_INET6;
-        		sock_addr.sin6_port = HIP_FIREWALL_PORT;
+        		sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
         		sock_addr.sin6_addr = in6addr_loopback;
         		
         		HIP_DEBUG("Received HIPPROXY Status Request from firewall\n");
@@ -806,14 +806,15 @@ int hip_handle_user_msg(struct hip_common *msg,
 		hip_set_opportunistic_tcp_status(0);
 		break;
 
+	case SO_HIP_OPPTCP_UNBLOCK_APP_and_OPPIPDB_ADD_ENTRY:
+		hip_opptcp_unblock_AND_opptcp_add_entry(msg, src);
+		break;
 	case SO_HIP_OPPTCP_UNBLOCK_APP:
-		
 		hip_opptcp_unblock(msg, src);
 		break;
 
 	case SO_HIP_OPPTCP_OPPIPDB_ADD_ENTRY:
 		hip_opptcp_add_entry(msg, src);
-		
 		break;
 
 	case SO_HIP_OPPTCP_SEND_TCP_PACKET:
@@ -828,7 +829,7 @@ int hip_handle_user_msg(struct hip_common *msg,
 		struct sockaddr_in6 sock_addr;     		
 		bzero(&sock_addr, sizeof(sock_addr));
 		sock_addr.sin6_family = AF_INET6;
-		sock_addr.sin6_port = HIP_FIREWALL_PORT;
+		sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
 		sock_addr.sin6_addr = in6addr_loopback;		
 		HIP_DEBUG("GET HIP PROXY LOCAL ADDRESS\n");
 		hip_get_local_addr(msg);

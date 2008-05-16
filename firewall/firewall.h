@@ -16,6 +16,8 @@
 #include <netinet/tcp.h>
 #include <linux/netfilter_ipv4.h>
 
+#include <libinet6/message.h>
+
 #include "crypto.h"
 #include "ife.h"
 #include "state.h"
@@ -27,6 +29,8 @@
 #include "helpers.h"
 #include "conntrack.h"
 #include "utils.h"
+#include <sys/types.h>
+#include <pthread.h>
 
 
 #define HIP_FW_DEFAULT_RULE_FILE "/etc/hip/firewall.conf"
@@ -86,6 +90,11 @@ void firewall_close(int signal);
 void firewall_exit();
 void firewall_probe_kernel_modules();
 void firewall_increase_netlink_buffers();
+void examine_incoming_tcp_packet(struct ipq_handle *, unsigned long, void *, int, int);
+void hip_request_send_i1_to_hip_peer_from_hipd(struct in6_addr *peer_hit,
+					       struct in6_addr *peer_ip);
+void hip_request_unblock_app_from_hipd(const struct in6_addr *peer_ip);
+void hip_request_oppipdb_add_entry(struct in6_addr *peer_ip);
 
 #endif
 

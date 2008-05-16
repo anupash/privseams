@@ -243,7 +243,6 @@ int hip_connect_func(struct addrinfo *peer_ai, int *sock)
 	
 	/* Loop through every address in the address info. */
 	for(ai = peer_ai; ai != NULL; ai = ai->ai_next) {
-		
 		ipv4 = &((struct sockaddr_in *)ai->ai_addr)->sin_addr;
 		ipv6 = &((struct sockaddr_in6 *)ai->ai_addr)->sin6_addr;
 
