@@ -155,6 +155,9 @@ int hipd_init(int flush_ipsec, int killold)
 
        /* Initialize a hashtable for services, if any service is enabled. */
 	hip_init_services();
+	/* The new service initialization. */
+	hip_init_xxx_services();
+
 #ifdef CONFIG_HIP_RVS
 	
 	HIP_INFO("Initializing HIP relay / RVS.\n");
@@ -255,22 +258,11 @@ int hipd_init(int flush_ipsec, int killold)
 	HIP_IFEL((hip_user_sock < 0), 1, "Could not create socket for user communication.\n");
 	bzero(&daemon_addr, sizeof(daemon_addr));
 	daemon_addr.sin6_family = AF_INET6;
-	daemon_addr.sin6_port = HIP_DAEMON_LOCAL_PORT;
+	daemon_addr.sin6_port = htons(HIP_DAEMON_LOCAL_PORT);
 	daemon_addr.sin6_addr = in6addr_loopback;
 	HIP_IFEL(bind(hip_user_sock, (struct sockaddr *)& daemon_addr,
 		      sizeof(daemon_addr)), -1, "Bind on daemon addr failed\n");
 
-	hip_agent_sock = socket(AF_LOCAL, SOCK_DGRAM, 0);
-	HIP_IFEL(hip_agent_sock < 0, 1,
-	         "Could not create socket for agent communication.\n");
-	unlink(HIP_AGENTADDR_PATH);
-	bzero(&hip_agent_addr, sizeof(hip_agent_addr));
-	hip_agent_addr.sun_family = AF_LOCAL;
-	strcpy(hip_agent_addr.sun_path, HIP_AGENTADDR_PATH);
-	HIP_IFEL(bind(hip_agent_sock, (struct sockaddr *)&hip_agent_addr,
-	              sizeof(hip_agent_addr)), -1, "Bind on agent addr failed.");
-	chmod(HIP_AGENTADDR_PATH, 0777);
-	
 	hip_load_configuration();
 
         dhterr = 0;
@@ -372,6 +364,9 @@ int hip_init_dht()
         return (err);
 }
 
+/*
+ * Note: this function does not go well with valgrind
+ */
 int hip_set_lowcapability() {
 	struct passwd *nobody_pswd;
 	int err = 0;
@@ -574,7 +569,7 @@ int hip_init_nat_sock_udp(int *hip_nat_sock_udp)
 	err = bind(*hip_nat_sock_udp, (struct sockaddr *)&myaddr, sizeof(myaddr));
 	if (err < 0)
 	{
-		HIP_ERROR("Unable to bind udp socket to port\n");
+		HIP_PERROR("Unable to bind udp socket to port\n");
 		err = -1;
 		goto out_err;
 	}
@@ -616,7 +611,6 @@ void hip_close(int signal)
  */
 void hip_exit(int signal)
 {
-	int alen;
 	struct hip_common *msg = NULL;
 	HIP_ERROR("Signal: %d\n", signal);
 
@@ -637,6 +631,7 @@ void hip_exit(int signal)
 
 	/* Next line is needed only if RVS or escrow, hiprelay is in use. */
 	hip_uninit_services();
+	hip_uninit_xxx_services();
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	hip_oppdb_uninit();
@@ -674,20 +669,10 @@ void hip_exit(int signal)
 	msg = hip_msg_alloc();
 	if (msg)
 	{
-	  hip_build_user_hdr(msg, HIP_DAEMON_QUIT, 0);
-	}
-	else HIP_ERROR("Failed to allocate memory for message\n");
-
-	if (msg && hip_agent_sock)
-	{
-		alen = sizeof(hip_agent_addr);
-		sendto(hip_agent_sock, msg, hip_get_msg_total_len(msg), 0,
-		       (struct sockaddr *)&hip_agent_addr, alen);
-	}
-	close(hip_agent_sock);
-
-	if (msg)
+		hip_build_user_hdr(msg, SO_HIP_DAEMON_QUIT, 0);
+		hip_send_agent(msg);
 		free(msg);
+	}
 	
 	hip_remove_lock_file(HIP_DAEMON_LOCK_FILE);
         

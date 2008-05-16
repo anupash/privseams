@@ -1,21 +1,9 @@
 #!/bin/sh
 
-#ldconfig
-#invoke-rc.d --force --quiet hipd stop  
-#invoke-rc.d -f hipd stop
-#update-rc.d -f hipd remove  
 update-rc.d hipd defaults 
-#/usr/sbin/hipd hipd -bk
-#invoke-rc.d hipd start 
-#/usr/sbin/hipd hipd -bk 
-#/etc/init.d/hipd start 
-#pidof hipd 
-#/etc/init.d/hipd restart
- 
-invoke-rc.d hipd start 
- 
-
-
- 
-
-
+# For some weird reason, hipd is killed silently in ubuntu hardy and gutsy
+# without the at kludge when installing the package with apt-get/aptitude
+# from a remote repository. Until the problem is properly solve, this
+# workaround stays here. --miika
+echo "hipd will start in one minute"
+echo "invoke-rc.d --quiet hipd start" | at now + 1 min 2>/dev/null
