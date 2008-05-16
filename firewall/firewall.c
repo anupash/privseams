@@ -1813,7 +1813,7 @@ void firewall_increase_netlink_buffers(){
 	popen("echo 1048576 > /proc/sys/net/core/rmem_default; echo 1048576 > /proc/sys/net/core/rmem_max;echo 1048576 > /proc/sys/net/core/wmem_default;echo 1048576 > /proc/sys/net/core/wmem_max", "r");
 }
 
-void handle_proxy_inbound_traffic(ipq_packet_msg_t *m, struct ipq_handle *hndl,	struct in6_addr src_addr)
+void handle_proxy_inbound_traffic(ipq_packet_msg_t *m, struct ipq_handle *hndl,	struct in6_addr *src_addr)
 {
 		//struct in6_addr client_addr;
 		//HIP PROXY INBOUND PROCESS
