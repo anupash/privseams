@@ -2069,3 +2069,42 @@ int hip_find_local_lsi(hip_lsi_t * dst_lsi){
       HIP_FREE(msg);
     return exist;
 }
+
+
+int getproto_info(int port_dest, char *proto)
+{	 								
+        FILE *fd = NULL;
+        char line[500];
+	int lineno = 0, index_addr_port = 1;
+        int exists = 0;  
+        List list;
+	char path[11+sizeof(proto)];// = "/proc/net/";
+        char *fqdn_str = NULL, *separator = NULL, *sub_string_port_hex = NULL;
+	char port_dest_hex[5];
+        
+	strcpy(path,"/proc/net/"); 
+	strcat(path, proto);
+        fd = fopen(path, "r");		
+        
+        while (fd && getwithoutnewline(line, 500, fd) != NULL && !exists) {		
+                lineno++;
+		if (lineno > 1){
+		  if(strlen(line)<=1) continue;
+		  initlist(&list);                                                    
+		  extractsubstrings(line, &list); 
+		  fqdn_str = getitem(&list, index_addr_port);
+		  separator = strrchr(fqdn_str, ':');
+		  if (separator){
+		    sub_string_port_hex = strtok(fqdn_str, separator);
+		    sprintf(port_dest_hex, "%x", port_dest);
+		    HIP_DEBUG("sub_string_port_hex %s\n",sub_string_port_hex);
+		    HIP_DEBUG("port_dest_hex %s\n",port_dest_hex);
+		    if (!strcmp(sub_string_port_hex,port_dest_hex))
+		      exists = 1;		    
+		  }
+		}
+        } // end of while	              							
+        if (fd)                                                               
+                fclose(fd);		
+        return exists;	        				
+}

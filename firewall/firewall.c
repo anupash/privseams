@@ -941,20 +941,42 @@ int is_packet_reinjection(struct in_addr *ip_src)
 
 int firewall_trigger_incoming_hit(ipq_packet_msg_t *m, struct in6_addr *ip_src, struct in6_addr *ip_dst)
 {
-	int err = 0;
+        int err = 0, proto6 = 0;
+	int ip_hdr_size, portDest;
+	char *proto;
 	hip_lsi_t *lsi_our = NULL, *lsi_peer = NULL;
 	struct in6_addr src_addr, dst_addr;
 	
-	lsi_our = (hip_lsi_t *)hip_get_lsi_our_by_hits(ip_src, ip_dst);
-	lsi_peer = (hip_lsi_t *)hip_get_lsi_peer_by_hits(ip_src, ip_dst);
+	struct ip6_hdr* ip6_hdr = (struct ip6_hdr*) m->payload;
+	ip_hdr_size = sizeof(struct ip6_hdr);
 
-        if(lsi_our && lsi_peer){
-	         IPV4_TO_IPV6_MAP(lsi_our, &src_addr);
-	         IPV4_TO_IPV6_MAP(lsi_peer, &dst_addr);
-		 _HIP_DEBUG_LSI("******lsi_src : ", lsi_our);
-		 _HIP_DEBUG_LSI("******lsi_dst : ", lsi_peer);
-	         reinject_packet(dst_addr, src_addr, m, 6, 1);
-        }
+	switch(ip6_hdr->ip6_nxt){
+	       case IPPROTO_UDP:
+		 portDest = ((struct udphdr*)((m->payload) + ip_hdr_size))->dest;
+		 proto = "udp6";
+		 break;
+	       case IPPROTO_TCP:
+		 portDest = ((struct tcphdr*)((m->payload) + ip_hdr_size))->dest;
+		 proto = "tcp6";
+		 break;
+	       default:
+		 break;
+	}     
+	if (portDest)
+	       proto6 = getproto_info(portDest, proto);
+
+	if (!proto6){
+	        lsi_our = (hip_lsi_t *)hip_get_lsi_our_by_hits(ip_src, ip_dst);
+		lsi_peer = (hip_lsi_t *)hip_get_lsi_peer_by_hits(ip_src, ip_dst);
+
+		if(lsi_our && lsi_peer){
+		        IPV4_TO_IPV6_MAP(lsi_our, &src_addr);
+			IPV4_TO_IPV6_MAP(lsi_peer, &dst_addr);
+			_HIP_DEBUG_LSI("******lsi_src : ", lsi_our);
+			_HIP_DEBUG_LSI("******lsi_dst : ", lsi_peer);
+			reinject_packet(dst_addr, src_addr, m, 6, 1);
+		}
+	}
 	return err;
 }
 
