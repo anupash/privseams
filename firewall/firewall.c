@@ -358,13 +358,7 @@ int is_hip_packet(void * hdr, int trafficType){
 		udphdr = ((struct udphdr *) (((char *) ip6_hdr) + hdr_size));
 	}
 
-#if 0 /* Miika: Weiwei, why the heck were you dropping hip/esp packets over udp?  */
-	if ((udphdr->source == ntohs(HIP_NAT_UDP_PORT)) || (udphdr->dest
-			== ntohs(HIP_NAT_UDP_PORT)))
-		return 1;
-#endif
-	HIP_DEBUG("%d %d %d\n", plen, sizeof (struct ip), sizeof(struct udphdr));
-
+	_HIP_DEBUG("%d %d %d\n", plen, sizeof (struct ip), sizeof(struct udphdr));
 	if (trafficType == 4 &&
 	    (plen >= sizeof (struct ip) + sizeof(struct udphdr) + HIP_UDP_ZERO_BYTES_LEN)) {
 		uint32_t *zero_bytes = NULL;
