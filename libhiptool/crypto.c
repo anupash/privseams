@@ -624,7 +624,7 @@ int impl_rsa_sign(u8 *digest, u8 *private_key, u8 *signature, int priv_klen)
 	
 	
 	_HIP_DEBUG("***********RSA SIGNING ERROR*************\n");
-	_HIP_DEBUG("Siglen %d,signature length %d,  err :%d\n",sig_len,strlen(signature),err);
+	_HIP_DEBUG("Siglen %d,  err :%d\n",sig_len, ,err);
 	_HIP_DEBUG("***********RSA SIGNING ERROR*************\n");
 	
 
@@ -670,7 +670,7 @@ int impl_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen)
 
 	sig_len = ntohs(sig->length) - 1; /* exclude algorithm */
 
-	//HIP_DEBUG("INSIDE impl_rsa_verfiy :: key_len=%d, sig_len= %d, sig->length = %d\n",key_len,sig_len,sig->length);
+	//HIP_DEBUG("INSIDE impl_rsa_verify :: key_len=%d, sig_len= %d, sig->length = %d\n",key_len,sig_len,sig->length);
 	/* verify the RSA signature */
 	err = RSA_verify(NID_sha1, digest, SHA_DIGEST_LENGTH,
 			 signature,RSA_size(rsa) , rsa);

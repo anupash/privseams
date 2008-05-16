@@ -60,8 +60,14 @@ int main(int argc, char *argv[])
                                   &not_before,
                                   &not_after);
 
-        HIP_DEBUG("Certificate contents after all is done:\n"
+        HIP_DEBUG("Public-key sequence contents after all is done:\n"
+                  "%s\n", cert->public_key);
+        
+        HIP_DEBUG("Cert sequence contents after all is done:\n"
                   "%s\n", cert->cert);
+           
+        HIP_DEBUG("Signature sequence contents after all is done:\n"
+                  "%s\n", cert->signature);
 
         HIP_DEBUG("If there was no errors above, \"everything\" is OK\n");
         free(cert);

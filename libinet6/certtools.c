@@ -137,15 +137,16 @@ int hip_cert_spki_create_cert(struct hip_cert_spki_info * content,
                   "daemon and waiting for answer\n");
         hip_send_recv_daemon_info(msg);
         
-        /* get the struct from the messag hip_db_struct_t;e */
+        /* get the struct from the message */
+        /* XX TODO */
 
 out_err:
         /* free everything malloced */
-        free(tmp_before);
-        free(tmp_after);
-        free(tmp_issuer);
-        free(tmp_subject);
-        free(msg);
+        if (tmp_before) free(tmp_before);
+        if (tmp_after) free(tmp_after);
+        if (tmp_issuer) free(tmp_issuer);
+        if (tmp_subject) free(tmp_subject);
+        if (msg) free(msg);
 	return (err);
 } 
  
