@@ -1691,6 +1691,7 @@ gpointer check_for_timeouts(gpointer data)
   return NULL;
 }
 
+#if 0
 /**
  * initialize checking for connection timeouts. timeout value in seconds is 
  * passed in the argument timeout. with negative or 0 value no connection 
@@ -1724,3 +1725,4 @@ void init_timeout_checking(long int timeout_val)
 					   NULL);   
     }
 } 
+#endif

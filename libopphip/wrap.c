@@ -110,6 +110,7 @@ void hip_initialize_db_when_not_exist()
 	srand(getpid());
 	
 	hip_set_logtype(LOGTYPE_SYSLOG);
+	//hip_set_logtype(LOGTYPE_STDERR);
 	hip_set_logfmt(LOGFMT_LONG);
 	HIP_IFEL(hip_set_auto_logdebug(cfile), -1,
 	  "Error: Cannot set the debugging parameter.\n");
@@ -205,15 +206,26 @@ inline int hip_wrapping_is_applicable(const struct sockaddr *sa, hip_opp_socket_
 {
 	HIP_ASSERT(entry);
 
-	if (!(entry->protocol == 0 || entry->protocol == IPPROTO_TCP ||
-	      entry->protocol == IPPROTO_UDP))
-		return 0;
-	
+	if (!(entry->protocol == 0 ||
+	      entry->protocol == IPPROTO_TCP ||
+	      entry->protocol == IPPROTO_UDP ||
+	      entry->protocol == IPPROTO_ICMP ||
+	      entry->protocol == IPPROTO_ICMPV6))
+		return 0;	
+
 	if (!(entry->domain == PF_INET6 || entry->domain == PF_INET))
 		return 0;
-	
-	if (!(entry->type == SOCK_STREAM || entry->type == SOCK_DGRAM))
+
+	if (!(entry->type == SOCK_STREAM ||
+	      entry->type == SOCK_DGRAM ||
+	      entry->type == SOCK_RAW))
 		return 0;
+
+	if(entry->type == SOCK_RAW){
+		if(!(entry->protocol == IPPROTO_ICMP ||
+		     entry->protocol == IPPROTO_ICMPV6))
+			return 0;
+	}
 
 	if (entry->force_orig)
 		return 0;
