@@ -66,18 +66,26 @@ int hip_cert_spki_sign(struct hip_common * msg, HIP_HASHTABLE * db) {
  * @return 0 if signature matches, -1 if error or signature did NOT match
  */
 int hip_cert_spki_construct_keys(HIP_HASHTABLE * db, hip_hit_t * hit, RSA * rsa) {
-        int err = 0, s = 0;
+        int err = 0, s = 1;
+        struct hip_host_id_entry * hostid_entry = NULL;
         struct hip_host_id * hostid = NULL;
+        struct hip_lhi * lhi = NULL;
         u8 *p;
         /* 
            Get the corresponding host id for the HIT.
            It will contain both the public and the private key
         */
-        hostid = hip_get_hostid_entry_by_lhi_and_algo(db, 
-                                                   hit,
-                                                   HIP_HI_RSA, -1);  
+        hostid_entry = hip_get_hostid_entry_by_lhi_and_algo(db, 
+                                                            hit,
+                                                            HIP_HI_RSA, -1);  
         /* Point to the rdata correctly ? */
+        lhi = &hostid_entry->lhi;
+        hostid = hostid_entry->host_id;
         p = (u8 *)(hostid + 1);
+
+        _HIP_DEBUG_HIT("HIT from hostid entry", &lhi->hit);
+        HIP_DEBUG("type = %d len = %d\n", htons(hostid->type), hostid->hi_length);
+
         /*
           Order of the key material in the host id rdata is the following
            HIP_RSA_PUBLIC_EXPONENT_E_LEN 
@@ -88,24 +96,28 @@ int hip_cert_spki_construct_keys(HIP_HASHTABLE * db, hip_hit_t * hit, RSA * rsa)
         */
         
         /* Public part of the key */
-        rsa->e = BN_bin2bn(&p[s], HIP_RSA_PUBLIC_EXPONENT_E_LEN, 0);
+        /* s starts from the first byt after the rdata struct thats why 1*/
+        _HIP_DEBUG("s = %d\n",s);
+        rsa->e = BN_bin2bn(&p[s], HIP_RSA_PUBLIC_EXPONENT_E_LEN, 0);       
         s += HIP_RSA_PUBLIC_EXPONENT_E_LEN;
+        _HIP_DEBUG("s = %d\n",s);
         rsa->n = BN_bin2bn(&p[s], HIP_RSA_PUBLIC_MODULUS_N_LEN, 0);
         s += HIP_RSA_PUBLIC_MODULUS_N_LEN;
+        _HIP_DEBUG("s = %d\n",s);
         /* Private part of the key */
         rsa->d = BN_bin2bn(&p[s], HIP_RSA_PRIVATE_EXPONENT_D_LEN, 0);
         s += HIP_RSA_PRIVATE_EXPONENT_D_LEN;
+        _HIP_DEBUG("s = %d\n",s);
         rsa->p = BN_bin2bn(&p[s], HIP_RSA_SECRET_PRIME_FACTOR_P_LEN, 0);
         s += HIP_RSA_SECRET_PRIME_FACTOR_P_LEN;
+        _HIP_DEBUG("s = %d\n",s);
         rsa->q = BN_bin2bn(&p[s], HIP_RSA_SECRET_PRIME_FACTOR_Q_LEN, 0);
         
-        HIP_DEBUG("Hostid converted to RSA n=%s\n", BN_bn2hex(rsa->n));
         HIP_DEBUG("Hostid converted to RSA e=%s\n", BN_bn2hex(rsa->e));
+        HIP_DEBUG("Hostid converted to RSA n=%s\n", BN_bn2hex(rsa->n));
         HIP_DEBUG("Hostid converted to RSA d=%s\n", BN_bn2hex(rsa->d));
         HIP_DEBUG("Hostid converted to RSA p=%s\n", BN_bn2hex(rsa->p));
         HIP_DEBUG("Hostid converted to RSA q=%s\n", BN_bn2hex(rsa->q));
-
-
 
  out_err: 
         return(err);
