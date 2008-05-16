@@ -48,6 +48,13 @@
 "#\n"\
 "\n"
 
+#define UNSUPPORTED_PACKET  0
+#define HIP_PACKET          1
+#define STUN_PACKET         2
+#define ESP_PACKET          3
+#define TCP_PACKET          4
+#define UDP_PACKET          5
+
 typedef struct hip_proxy_t {
 	hip_hit_t hit_our;
 	hip_hit_t hit_peer;
