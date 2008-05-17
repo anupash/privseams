@@ -54,11 +54,11 @@ int hip_cert_spki_sign(struct hip_common * msg, HIP_HASHTABLE * db) {
         signature_b64 = malloc(256); 
         HIP_IFEL((!signature_b64), -1, "Malloc for signature_b64 failed\n");
         memset(signature_b64, 0, sizeof(signature_b64));
-
-        e_hex = malloc(256); 
+/*
+        e_hex = malloc(10); 
         HIP_IFEL((!e_hex), -1, "Malloc for e_hex failed\n");
         memset(e_hex, 0, sizeof(e_hex));
-
+*/
         /*XX FIXME just a guestimate calculate correctly */
         n_b64 = malloc(sizeof(n)+20);  
         HIP_IFEL((!n_b64), -1, "Malloc for n_b64 failed\n");
@@ -125,7 +125,8 @@ int hip_cert_spki_sign(struct hip_common * msg, HIP_HASHTABLE * db) {
         HIP_HEXDUMP("Exponent in hex ", e_bin, 
                     HIP_RSA_PUBLIC_EXPONENT_E_LEN);
         /* XX FIXME HEX conversion tells the result all wrong */
-        hex_len = snprintf(e_hex, HIP_RSA_PUBLIC_EXPONENT_E_LEN *2 + 1, "%02x", &e_bin);
+	e_hex = BN_bn2hex(rsa->e);
+        //hex_len = snprintf(e_hex, HIP_RSA_PUBLIC_EXPONENT_E_LEN *2 + 1, "%02x", (char *)&e_bin);
         HIP_DEBUG("This hex conversion returned", hex_len);
         sprintf(cert->public_key, "(public_key (rsa-pkcs1-sha1 (e #%s#)(n |%s|)))", 
                 e_hex, n_b64);
