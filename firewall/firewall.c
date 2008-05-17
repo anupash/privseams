@@ -32,6 +32,12 @@ int hip_opptcp = 0;
 #endif
 int hip_userspace_ipsec = 1;
 
+/*
+ * The firewall handlers do not accept rules directly. They should return
+ * zero when they transformed packet and the original should be dropped.
+ * Non-zero means that there was an error or the packet handler did not
+ * know what to do with the packet.
+ */
 int (*fw_handler[NF_IP_NUMHOOKS][FW_PROTOS])(hip_fw_context_t *) = { NULL };
 
 void print_usage()
@@ -1623,12 +1629,19 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx) {
 
 	HIP_DEBUG("\n");
 
-	err = hip_firewall_userspace_ipsec_output(xx_fixme);
+	if (userspace_ipsec)
+		HIP_IFE(hip_firewall_userspace_ipsec_output(xx_fixme), -1);
 						   
 	/* XX FIXME: LSI HOOKS */
+
+	/* No need to check default rules as it is handled by the iptables rules */
+ out_err:
+
+	return err;
 }
 
 int hip_fw_handle_hip_output(hip_fw_context_t *ctx) {
+	int err = 0;
 	int packet_length = 0;
 	struct hip_sig * sig = NULL;
 	
@@ -1652,7 +1665,7 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx) {
 		_HIP_DEBUG("signature exists\n");
 	
 	// check HIP packet against firewall rules
-	err = !filter_hip(&src_addr, 
+	err = filter_hip(&src_addr, 
 			  &dst_addr, 
 			  m->payload + hdr_size, 
 			  m->hook,
@@ -1668,11 +1681,11 @@ int hip_fw_handle_esp_output(hip_fw_context_t *ctx) {
 
 	HIP_DEBUG("\n");
 
-	err = !(filter_esp(&ip6_hdr->ip6_dst, 
+	err = filter_esp(&ip6_hdr->ip6_dst, 
 			   spi_val,
 			   m->hook,
 			   m->indev_name,
-			   m->outdev_name));
+			   m->outdev_name);
 
 	return err;
 }
@@ -1692,19 +1705,23 @@ int hip_fw_handle_other_input(hip_fw_context_t *ctx) {
 	HIP_DEBUG("\n");
 
 	if(ipv6_addr_is_hit(&src_addr) && ipv6_addr_is_hit(&dst_addr))
-	{
-		//struct in6_addr client_addr;
-		//HIP PROXY INBOUND PROCESS
-		err = handle_proxy_inbound_traffic(m, hndl, src_addr);
-	}
+		HIP_IFE(handle_proxy_inbound_traffic(m, hndl, src_addr), -1);
+
+	/* No need to check default rules as it is handled by the iptables rules */
+ out_err:
 
 	return err;
 }
 
 int hip_fw_handle_hip_input(hip_fw_context_t *ctx) {
+	int err = 0;
+
 	HIP_DEBUG("\n");
 
-	return hip_fw_handle_hip_output(ctx);
+	HIP_IFE(hip_fw_handle_hip_output(ctx), -1);
+
+ out_err:
+	return err;
 }
 
 int hip_fw_handle_esp_input(hip_fw_context_t *ctx) {
@@ -1712,16 +1729,11 @@ int hip_fw_handle_esp_input(hip_fw_context_t *ctx) {
 
 	HIP_DEBUG("\n");
 
-	HIP_IFEL(hip_fw_handle_esp_output(ctx), -1,
-		 "ESP packet dropped\n");
-
 	if (hip_userspace_ipsec) {
 		HIP_DEBUG("debug message: HIP firewall userspace ipsec input: \n ");
 		/* added by Tao Wan */
-		HIP_IFEL(hip_firewall_userspace_ipsec_input(hndl, m->packet_id,
-							    packet_hdr, type, m), -1,
-			 "Userspace ipsec failed to process incoming ESP packet\n");
-		
+		HIP_IFE(hip_firewall_userspace_ipsec_input(hndl, m->packet_id,
+							   packet_hdr, type, m), -1);
 	}
 
 	/* XX FIXME: ADD LSI INPUT HERE */
@@ -1735,14 +1747,15 @@ int hip_fw_handle_tcp_input(hip_fw_context_t *ctx) {
 
 	HIP_DEBUG("\n");
 
-	HIP_IFEL(examine_incoming_tcp_packet(hndl,
+	/* if tcp handling consumes the packet, other input is skipped */
+
+	HIP_IFE(!examine_incoming_tcp_packet(hndl,
 					     m->packet_id,
-					     packet_hdr, type), -1,
-		 "Processing TCP packet with Opp. option failed\n");
-	HIP_IFEL(hip_fw_handle_other_input(ctx), -1,
-		 "Handling other input failed\n");
+					    packet_hdr, type), 0);
+	HIP_IFE(hip_fw_handle_other_input(ctx), 0);
 
  out_err:
+
 	return err;
 }
 
@@ -1752,7 +1765,12 @@ int hip_fw_handle_other_forward(hip_fw_context_t *ctx) {
 	HIP_DEBUG("\n");
 
 	if (hip_proxy_status)
-		err = handle_proxy_outbound_traffic(m, hndl,	src_addr, dst_addr, hdr_size, traffic_type);
+		HIP_IFE(handle_proxy_outbound_traffic(m, hndl, src_addr,
+						      dst_addr, hdr_size, traffic_type), -1);
+
+	/* No need to check default rules as it is handled by the iptables rules */
+
+ out_err:
 
 	return err;
 }
@@ -1856,7 +1874,7 @@ static void *handle_ip_traffic(char *buf, struct ipq_handle *hndl, int traffic_t
 	XX_FILL_CTX_HERE;
 	
 	if (hip_fw_handler[packetHook][packet_type]) {
-		err = (hip_fw_handler[packetHook][packet_type])(ctx);
+		err = !(hip_fw_handler[packetHook][packet_type])(ctx);
 	} else {
 		HIP_DEBUG("Ignoring, no handler for hook (%d) with type (%d)\n");
 	}
