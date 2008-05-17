@@ -405,72 +405,141 @@ static void die(struct ipq_handle *h)
  * @param ipVersion	  the IP version for this packet
  * @return            One if @c hdr is a HIP packet, zero otherwise.
  */ 
-int get_packet_type(void * hdr, int ipVersion){
-	struct udphdr *udphdr = NULL;
-	int hdr_size;
-	int udp_spi_is_zero = 0;
-	uint16_t plen;
+int get_packet_type(hip_fw_context_t *ctx){
+#if 0		
 	int return_val; // return value
+#endif
+	int hdr_size;
+	uint16_t plen;
+	struct udphdr *udphdr = NULL;
+	int udp_encap_zero_bytes = 0;
 	
-
-
 	HIP_DEBUG("\n");
 
-	if(ipVersion == 4){
-		struct ip *iphdr = (struct ip *)hdr;
+	if (ctx->ip_version == 4)
+	{
+		_HIP_DEBUG("IPv4 packet\n");
 		
-		_HIP_DEBUG("the IPv4 next header protocol number is %d\n", iphdr->ip_p);
-
+		struct ip *iphdr = (struct ip *) ctx->packet->payload;
+		// add pointer to IPv4 header to context
+		ctx->network_hdr = iphdr;
+		// add IPv4 addresses
+		IPV4_TO_IPV6_MAP(&ctx->network_hdr->ip_src, &ctx->src);
+		IPV4_TO_IPV6_MAP(&iphdr->ip_dst, &ctx->dst);
+		
+		_HIP_DEBUG("IPv4 next header protocol number is %d\n", iphdr->ip_p);
+		
+		
+		// find out which transport layer protocol is used
 		if(iphdr->ip_p == IPPROTO_HIP)
 		{
 			// we have found a plain HIP control packet
 			HIP_DEBUG("plain HIP packet\n");
-			return HIP_PACKET;
+			
+			ctx->packet_type = HIP_PACKET;
+			ctx->transport_hdr = (struct hip_common *) (((char *)iphdr) + sizeof(struct ip));
+			
+			return 0;
 		} else if (iphdr->ip_p == IPPROTO_ESP)
 		{
 			// this is an ESP packet
 			HIP_DEBUG("plain ESP packet\n");
-			return ESP_PACKET;
+			
+			ctx->packet_type = ESP_PACKET;
+			ctx->transport_hdr = (struct hip_esp *) (((char *)iphdr) + sizeof(struct ip));
+			
+			return 0;
+			
 #ifdef CONFIG_HIP_OPPTCP
 		} else if(iphdr->ip_p == IPPROTO_TCP)
 		{
-			return TCP_PACKET;
+			// this might be a TCP packet for opportunistic mode
+			HIP_DEBUG("plain TCP packet\n");
+			
+			ctx->packet_type = TCP_PACKET;
+			ctx->transport_hdr = (struct tcphdr *) (((char *)iphdr) + sizeof(struct ip));
+			
+			return 0;
 #endif
+		
 		} else if (iphdr->ip_p != IPPROTO_UDP)
 		{
 			// if it's not UDP either, it's unsupported
-			return OTHER_PACKET;
+			HIP_DEBUG("some other packet\n");
+			
+			ctx->packet_type = OTHER_PACKET;
+			
+			return 0;
 		}
 
 		// need UDP header to look for encapsulated ESP or STUN
 		hdr_size = (iphdr->ip_hl * 4);
-		
 		HIP_DEBUG("hdr_size is %d\n", hdr_size);
 		plen = iphdr->ip_len;
 		udphdr = ((struct udphdr *) (((char *) iphdr) + hdr_size));
-	} else if (ipVersion == 6)
+		
+		// add udp header to context
+		ctx->udp_encap_hdr = udphdr;
+		
+	} else if (ctx->ip_version == 6)
 	{
-		struct ip6_hdr * ip6_hdr = (struct ip6_hdr *)hdr;
+		struct ip6_hdr *ip6_hdr = (struct ip6_hdr *)ctx->packet->payload;
+		
+		// add pointer to IPv4 header to context
+		ctx->network_hdr = ip6_hdr;
+		// add IPv6 addresses
+		ipv6_addr_copy(&ctx->src, &ip6_hdr->ip6_src);
+		ipv6_addr_copy(&ctx->dst, &ip6_hdr->ip6_dst);
 
-		HIP_DEBUG("the IPv6 next header protocol number is %d\n",
-			  ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt);
+		HIP_DEBUG("IPv6 next header protocol number is %d\n",
+					ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt);
 
+		
+		// find out which transport layer protocol is used
 		if(ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt == IPPROTO_HIP)
 		{
-			return HIP_PACKET;
+			// we have found a plain HIP control packet
+			HIP_DEBUG("plain HIP packet\n");
+						
+			ctx->packet_type = HIP_PACKET;
+			ctx->transport_hdr = (struct hip_common *) (((char *)ip6_hdr) + sizeof(struct ip6_hdr));
+						
+			return 0;
 		} else if (ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt == IPPROTO_ESP)
 		{
-			return ESP_PACKET;
+			// we have found a plain ESP packet
+			HIP_DEBUG("plain ESP packet\n");
+			
+			ctx->packet_type = ESP_PACKET;
+			ctx->transport_hdr = (struct hip_esp *) (((char *)ip6_hdr) + sizeof(struct ip6_hdr));
+			
+			return 0;
+
 #ifdef CONFIG_HIP_OPPTCP
 		} else if(ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt == IPPROTO_TCP)
 		{
-			return TCP_PACKET;
+			// this might be a TCP packet for opportunistic mode
+			HIP_DEBUG("plain TCP packet\n");
+			
+			ctx->packet_type = TCP_PACKET;
+			ctx->transport_hdr = (struct tcphdr *) (((char *)ip6_hdr) + sizeof(struct ip6_hdr));
+			
+			return 0;
 #endif
+		
 		} else if (ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt != IPPROTO_UDP)
 		{
-			return UNSUPPORTED_PACKET;
+			// if it's not UDP either, it's unsupported
+			HIP_DEBUG("some other packet\n");
+			
+			ctx->packet_type = OTHER_PACKET;
+			
+			return 0;
 		}
 	
+		// TODO René: Miika, we don't need to check for UDP encap here!?
+		// if we care, add UDP to context
+		// else clean up
 		hdr_size = (ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen * 4);
 		plen = ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen;
 		udphdr = ((struct udphdr *) (((char *) ip6_hdr) + hdr_size));
@@ -478,25 +547,20 @@ int get_packet_type(void * hdr, int ipVersion){
 
 	HIP_DEBUG("UDP header size  is %d\n", sizeof(struct udphdr));
 
-	// TODO what does that "if" check?
-	if (ipVersion == 4 &&
+	// TODO what does that "if" check exactly?
+	if (ctx->ip_version == 4 &&
 	    (plen >= sizeof(struct ip) + sizeof(struct udphdr) + HIP_UDP_ZERO_BYTES_LEN))
 	{
-		uint32_t *zero_bytes = NULL;
-		// uint32_t *ip_esp_hdr = NULL;
-		
-		/* something wrong here?*/
-		// zero_bytes = (uint32_t *) ((char *)udphdr + 1);
+		__u32 *zero_bytes = NULL;
 
-		// FIXME this does _NOT_ work
-		zero_bytes = (uint32_t *) ((char *)udphdr + sizeof(struct udphdr));
+		// we can distinguish UDP encapsulated control and data traffic with 32 zero bits
+		zero_bytes = (__u32 *) (((char *)udphdr) + sizeof(struct udphdr));
 	  
-		HIP_DEBUG("zero_bytes address is Ox%x, value is %d\n", zero_bytes, 
-			  *zero_bytes);
+		HIP_HEXDUMP("zero_bytes: ", zero_bytes, 4);
 		
 		/*Check whether SPI number is zero or not */
 		if (*zero_bytes == 0) {
-			udp_spi_is_zero = 1;
+			udp_encap_zero_bytes = 1;
 			HIP_DEBUG("Zero SPI found\n");
 		}
 	}
@@ -504,7 +568,7 @@ int get_packet_type(void * hdr, int ipVersion){
 	if(udphdr
 			&& ((udphdr->source == ntohs(HIP_NAT_UDP_PORT)) || 
 		        (udphdr->dest == ntohs(HIP_NAT_UDP_PORT)))
-		    && udp_spi_is_zero)
+		    && udp_encap_zero_bytes)
 		
 	{	
 		/* check for HIP control message */
@@ -514,25 +578,42 @@ int get_packet_type(void * hdr, int ipVersion){
 								     + 
 								     HIP_UDP_ZERO_BYTES_LEN)))
 		{
-			HIP_DEBUG("HIP packet\n");
-			return HIP_PACKET;
+			// we found an UDP encapsulated HIP control packet
+			HIP_DEBUG("UDP encapsulated HIP control packet\n");
+			
+			// add to context
+			ctx->packet_type = HIP_PACKET;
+			ctx->transport_hdr = (struct hip_common *) (((char *)udphdr) 
+				     									+ sizeof(struct udphdr) 
+				     									+ HIP_UDP_ZERO_BYTES_LEN);
+			
+			return 0;
 		}
-		HIP_DEBUG("FIXME zero bytes recognition obbiously not working\n");
+		HIP_DEBUG("FIXME zero bytes recognition obviously not working\n");
 	} else if (udphdr
 				&& ((udphdr->source == ntohs(HIP_NAT_UDP_PORT)) || 
 		            (udphdr->dest == ntohs(HIP_NAT_UDP_PORT)))
-		        && !udp_spi_is_zero)
+		        && !udp_encap_zero_bytes)
     {
     	/* from the ports and the non zero SPI we can tell that this
     	 * is an ESP packet */
 		HIP_DEBUG("UDP encapsulated ESP packet or STUN PACKET\n");
 		HIP_DEBUG("Assuming ESP. Todo: verify SPI from database\n");
-   		return ESP_PACKET;
+		
+		// add to context
+		ctx->packet_type = ESP_PACKET;
+		ctx->transport_hdr = (struct hip_esp *) (((char *)udphdr) 
+			     									+ sizeof(struct udphdr));
+		
+		return 0;
 	}
 	
 	// plain UDP packet -> nothing to play around with
-	HIP_DEBUG("unsupported UDP packet\n");
-	return UNSUPPORTED_PACKET;
+	HIP_DEBUG("some other packet\n");
+	
+	ctx->packet_type = OTHER_PACKET;
+	
+	return 0;
 }
 
 /**
@@ -1805,20 +1886,20 @@ static void *handle_ip_traffic(char *buf, struct ipq_handle *hndl, int traffic_t
 	struct in6_addr proxy_hit;
 	struct hip_proxy_t* entry = NULL;	
 	struct hip_conn_t* conn_entry = NULL;
+	hip_fw_context_t ctx;
+
 	int ret_val_filter_hip, packet_type;
 	int status;
 	void * packet_hdr= NULL;
 	int hdr_size = 0;
-	ipq_packet_msg_t *m = ipq_get_packet(buf);
 #endif
-	hip_fw_context_t ctx;
-	unsigned int packetHook;
-	int hip_related = 0;
 	
-	packetHook = m->hook;
-
 	HIP_DEBUG("thread for traffic_type=IPv%d traffic started\n", traffic_type);
+	
 	memset(buf, 0, BUFSIZE);
+	
+	hip_fw_context_t *ctx = (hip_fw_context_t*)malloc(sizeof(hip_fw_context_t));
+	memset(ctx, 0, sizeof(hip_fw_context_t));
 	
 	/* waits for queue messages to arrive from ip_queue and
 	 * copies them into a supplied buffer */
@@ -1828,52 +1909,33 @@ static void *handle_ip_traffic(char *buf, struct ipq_handle *hndl, int traffic_t
 	/* queued messages may be a packet messages or an error messages */
 	switch (ipq_message_type(buf))
 	{
-	case NLMSG_ERROR:
-		HIP_ERROR("Received error message (%d): %s\n", ipq_get_msgerr(buf), ipq_errstr());
-		goto out_err;
-		break;
-	case IPQM_PACKET:
-		HIP_DEBUG("Received ipqm packet\n");
-		break;
-	default:
-		HIP_DEBUG("default case\n");
-		goto out_err;
-		break;
+		case NLMSG_ERROR:
+			HIP_ERROR("Received error message (%d): %s\n", ipq_get_msgerr(buf), ipq_errstr());
+			goto out_err;
+			break;
+		case IPQM_PACKET:
+			HIP_DEBUG("Received ipqm packet\n");
+			// no goto -> go on with processing the message below
+			break;
+		default:
+			HIP_DEBUG("default case\n");
+			goto out_err;
+			break;
 	}
 	
-	if (traffic_type == 4) {
-		_HIP_DEBUG("ipv4\n");
-		iphdr = (struct ip *) m->payload; 
-		//fields needed for analysis of tcp packets
-		packet_hdr = (void *)iphdr;
-		hdr_size = (iphdr->ip_hl * 4);
-		
-		// IPv4 traffic might be UDP encasulated HIP or ESP
-		// TODO check where used due to zero bytes
-		if (iphdr->ip_p == IPPROTO_UDP){
-			hdr_size += sizeof(struct udphdr) + HIP_UDP_ZERO_BYTES_LEN;
-		}
-		
-		_HIP_DEBUG("header size: %d\n", hdr_size);
-		IPV4_TO_IPV6_MAP(&iphdr->ip_src, &src_addr);
-		IPV4_TO_IPV6_MAP(&iphdr->ip_dst, &dst_addr);
-	} else if(traffic_type == 6) {
-		_HIP_DEBUG("ipv6\n");
-		ip6_hdr = (struct ip6_hdr *) m->payload;
-		//fields needed for analysis of tcp packets
-		packet_hdr = (void *)ip6_hdr;
-		hdr_size = sizeof(struct ip6_hdr);
-		
-		_HIP_DEBUG("header size: %d\n", hdr_size);
-		ipv6_addr_copy(&src_addr, &ip6_hdr->ip6_src);
-		ipv6_addr_copy(&dst_addr, &ip6_hdr->ip6_dst);
-	}
+	// add packet to the context
+	ctx->packet = ipq_get_packet(buf);
+	ctx->ip_version = traffic_type;
 	
-	packet_type = get_packet_type(packet_hdr, traffic_type);
+	// further process the packet
+	// TODO find a fancy function name
+	err = get_packet_type(ctx);
+	if (err)
+		goto out_err;
 	
-	XX_FILL_CTX_HERE;
+	// TODO check if correct below here
 	
-	if (hip_fw_handler[packetHook][packet_type]) {
+	if (hip_fw_handler[packetHook][ctx->packet_type]) {
 		err = !(hip_fw_handler[packetHook][packet_type])(ctx);
 	} else {
 		HIP_DEBUG("Ignoring, no handler for hook (%d) with type (%d)\n");

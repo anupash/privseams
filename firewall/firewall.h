@@ -61,18 +61,25 @@
 #define FW_PROTO_NUM        4 /* Other, HIP, ESP, TCP */
 
 typedef struct hip_fw_context {
-	struct in6_addr src, dst;
-	int ip_version; /* 4, 6 */
-	int packet_type; /* HIP_PACKET, ESP_PACKET, etc  */
+	// queued packet
 	ipq_packet_msg_t *packet;
+	
+	// IP layer information
+	int ip_version; /* 4, 6 */
+	struct in6_addr src, dst;
 	union {
-		struct ip6_hdr *ipv6;
-		struct ip *ipv4;
-	} network_hdr;
+			struct ip6_hdr *ipv6;
+			struct ip *ipv4;
+		} network_hdr;
+		
+	// transport layer information
+	int packet_type; /* HIP_PACKET, ESP_PACKET, etc  */
 	union {
-		struct udphdr *udp;
-		struct tcphdr *tcp;
+		struct hip_esp *esp_hdr;
+		struct hip_common *hip_hdr;
+		struct tcphdr *tcp_hdr;
 	} transport_hdr;
+	struct udphdr *udp_encap_hdr;
 } hip_fw_context_t;
 
 typedef struct hip_proxy_t {
