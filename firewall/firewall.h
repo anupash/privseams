@@ -51,16 +51,28 @@
 "#\n"\
 "\n"
 
-#define UNSUPPORTED_PACKET  0
-#define HIP_PACKET          1
-#define STUN_PACKET         2
-#define ESP_PACKET          3
-#define TCP_PACKET          4
-#define UDP_PACKET          5
+#define OTHER_PACKET          0
+#define HIP_PACKET            1
+#define ESP_PACKET            2
+#define STUN_PACKET           3
+#define TCP_PACKET            4
+#define UDP_PACKET            5
 
 #define FW_PROTO_NUM        4 /* Other, HIP, ESP, TCP */
 
 typedef struct hip_fw_context {
+	struct in6_addr src, dst;
+	int ip_version; /* 4, 6 */
+	int packet_type; /* HIP_PACKET, ESP_PACKET, etc  */
+	ipq_packet_msg_t *packet;
+	union {
+		struct ip6_hdr *ipv6;
+		struct ip *ipv4;
+	} network_hdr;
+	union {
+		struct udphdr *udp;
+		struct tcphdr *tcp;
+	} transport_hdr;
 } hip_fw_context_t;
 
 typedef struct hip_proxy_t {

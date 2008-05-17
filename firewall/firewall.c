@@ -77,13 +77,88 @@ int is_escrow_active()
 
 /*----------------INIT/EXIT FUNCTIONS----------------------*/
 
+/*
+ * Rules:
+ *
+ * Output:
+ *
+ * - HIP:
+ *   1. default rule checks for hip
+ *   2. filter_hip
+ *
+ * - ESP:
+ *   1. default rule checks for hip
+ *   2. filter_esp
+ *
+ * - TCP:
+ *   1. default rule checks for non-hip
+ *   2.
+ *   - destination is hit (userspace ipsec output)
+ *   - destination is lsi (lsi output)
+ *   - destination not hit or lsi
+ *     1. opp tcp filtering (TBD)
+ *
+ * - Other
+ *   - Same as with TCP except no opp tcp filtering
+ *
+ * Input:
+ * 
+ * - HIP:
+ *   1. default rule checks for hip
+ *   2. filter_hip
+ *
+ * - ESP:
+ *   1. default rule checks for hip
+ *   2. filter_esp
+ *   3. userspace_ipsec input
+ *   4. lsi input
+ *   5. proxy input
+ *
+ * - TCP:
+ *   1. default rule checks for non-hip
+ *   2. opp tcp input
+ *   3. proxy input
+ *
+ * - Other:
+ *   - Same as with TCP except no opp tcp input
+ *
+ * Forward:
+ *
+ * - HIP:
+ *   1. None
+ * 
+ * - ESP:
+ *   1. None
+ *
+ * - TCP: 
+ *   1. Proxy input
+ * 
+ * - Other:
+ *   2. Proxy input
+ *   
+ */
 int firewall_init_rules()
 {
 	HIP_DEBUG("Initializing firewall\n");
 
+	hip_fw_handler[NF_IP_LOCAL_IN][OTHER_PACKET] = hip_fw_handle_other_input(ctx);
+	hip_fw_handler[NF_IP_LOCAL_IN][HIP_PACKET] = hip_fw_handle_hip_input(ctx);
+	hip_fw_handler[NF_IP_LOCAL_IN][ESP_PACKET] = hip_fw_handle_esp_input(ctx);
+	hip_fw_handler[NF_IP_LOCAL_IN][TCP_PACKET] = hip_fw_handle_tcp_input(ctx);
+
+	hip_fw_handler[NF_IP_LOCAL_OUT][OTHER_PACKET] = hip_fw_handle_other_output(ctx);
+	hip_fw_handler[NF_IP_LOCAL_OUT][HIP_PACKET] = hip_fw_handle_hip_output(ctx);
+	hip_fw_handler[NF_IP_LOCAL_OUT][ESP_PACKET] = hip_fw_handle_esp_output(ctx);
+	hip_fw_handler[NF_IP_LOCAL_OUT][TCP_PACKET] = hip_fw_handle_tcp_output(ctx);
+
+	hip_fw_handler[NF_IP_FORWARD][OTHER_PACKET] = hip_fw_handle_other_forward(ctx);
+	hip_fw_handler[NF_IP_FORWARD][HIP_PACKET] = NULL;
+	hip_fw_handler[NF_IP_FORWARD][ESP_PACKET] = NULL;
+	hip_fw_handler[NF_IP_FORWARD][TCP_PACKET] = hip_fw_handle_tcp_forward(ctx);
+
 	HIP_DEBUG("Enabling forwarding for IPv4 and IPv6\n");
 	system("echo 1 >/proc/sys/net/ipv4/conf/all/forwarding");
-	system("echo 1 >/proc/sys/net/ipv6/conf/all/forwarding");
+	system("echo 1 >/proc/sys/net/ipv6/conf/all/forwarding")
 
 	if (flush_iptables)
 	{
@@ -189,18 +264,18 @@ int firewall_init_rules()
 			system("ip6tables -I OUTPUT -p 17 --dport 50500 -j QUEUE");
 			system("ip6tables -I OUTPUT -p 17 --sport 50500 -j QUEUE");
 				
-// TODO Rene: Miika, I don't think this should be dependent on "accept_hip_esp_traffic"
-#ifdef CONFIG_HIP_OPPTCP//tcp over ipv4
-			system("iptables -I FORWARD -p 6 -j QUEUE");
-			system("iptables -I INPUT -p 6 -j QUEUE");
-			system("iptables -I OUTPUT -p 6 -j QUEUE");
-			
-			system("ip6tables -I FORWARD -p 6 -j QUEUE");
-			system("ip6tables -I INPUT -p 6 -j QUEUE");
-			system("ip6tables -I OUTPUT -p 6 -j QUEUE");
-#endif
 		}
 	}
+
+#ifdef CONFIG_HIP_OPPTCP//tcp over ipv4
+	//system("iptables -I FORWARD -p 6 -j QUEUE"); // is this needed? -miika
+	system("iptables -I INPUT -p 6 -j QUEUE");
+	system("iptables -I OUTPUT -p 6 -j QUEUE");
+	
+	//system("ip6tables -I FORWARD -p 6 -j QUEUE");  // is this needed? -miika
+	system("ip6tables -I INPUT -p 6 -j QUEUE");
+	system("ip6tables -I OUTPUT -p 6 -j QUEUE");
+#endif
 
 	if (hip_userspace_ipsec) {
 		system("ip6tables -I INPUT -p 50 -j QUEUE"); /* ESP over IPv6 */
@@ -359,7 +434,7 @@ int get_packet_type(void * hdr, int ipVersion){
 		} else if (iphdr->ip_p != IPPROTO_UDP)
 		{
 			// if it's not UDP either, it's unsupported
-			return UNSUPPORTED_PACKET;
+			return OTHER_PACKET;
 		}
 
 		// need UDP header to look for encapsulated ESP or STUN
@@ -1543,8 +1618,20 @@ void hip_firewall_userspace_ipsec_input(struct ipq_handle *handle,
 	drop_packet(handle, packetId);
 }
 
+
+int hip_fw_handle_other_output(hip_fw_context_t *ctx) {
+	int err = 0;
+
+	err = hip_firewall_userspace_ipsec_output();
+						   
+	/* XX FIXME: OPP TCP FILTERING */	
+
+
+	/* XX FIXME: LSI CODE */
+
+}
+
 int hip_fw_handle_hip_output(hip_fw_context_t *ctx) {
-	
 	int packet_length = 0;
 	struct hip_sig * sig = NULL;
 	
@@ -1636,22 +1723,16 @@ int hip_fw_handle_esp_output(hip_fw_context_t *ctx) {
 }
 
 int hip_fw_handle_tcp_output(hip_fw_context_t *ctx) {
-	/* OPPORTUNISTIC MODE HACKS */
-	if((ipv4Traffic && iphdr->ip_p != IPPROTO_TCP) ||
-	   (ipv6Traffic && ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt != IPPROTO_TCP)) {
-		if(accept_normal_traffic)
-			allow_packet(hndl, m->packet_id);
-		else
-			drop_packet(hndl, m->packet_id);
-	} else if(is_incoming_packet(packetHook))
+
+	return hip_fw_handle_other_output();
+}
+
+int hip_fw_handle_other_input(hip_fw_context_t *ctx) {
+	if(ipv6_addr_is_hit(&src_addr) && ipv6_addr_is_hit(&dst_addr))
 	{
-		examine_incoming_tcp_packet(hndl, m->packet_id, packet_hdr, type);
-	} else if(is_outgoing_packet(packetHook))
-	{
-		//examine_outgoing_tcp_packet(hndl, m->packet_id, packet_hdr, type);
-		allow_packet(hndl, m->packet_id);
-	} else {
-		HIP_DEBUG("TCP packet with no rule\n");
+		//struct in6_addr client_addr;
+		//HIP PROXY INBOUND PROCESS
+		handle_proxy_inbound_traffic(m, hndl, src_addr);
 	}
 }
 
@@ -1659,9 +1740,23 @@ int hip_fw_handle_hip_input(hip_fw_context_t *ctx) {
 }
 
 int hip_fw_handle_esp_input(hip_fw_context_t *ctx) {
+
 }
+
 int hip_fw_handle_tcp_input(hip_fw_context_t *ctx) {
+	examine_incoming_tcp_packet(hndl, m->packet_id, packet_hdr, type);
+
+	hip_fw_handle_other_input(ctx);
 }
+
+int hip_fw_handle_other_forward(hip_fw_context_t *ctx) {
+	//HIP PROXY OUTBOUND PROCESS
+	//the destination ip address should be checked first to ensure it supports hip
+	//if the destination ip does not support hip, drop the packet
+	if(hip_proxy_status)
+		return handle_proxy_outbound_traffic(m, hndl,	src_addr, dst_addr, hdr_size, traffic_type);
+}
+
 
 /**
  * Analyzes outgoing TCP packets. We decided to send the TCP SYN_i1
@@ -1672,10 +1767,9 @@ int hip_fw_handle_tcp_input(hip_fw_context_t *ctx) {
  * @return	nothing, this function loops forever,
  * 		until the firewall is stopped.
  */
-static void *handle_ip_traffic(struct ipq_handle *hndl, int traffic_type)
+static void *handle_ip_traffic(char *buf, struct ipq_handle *hndl, int traffic_type)
 {
-	int status;
-	unsigned char buf[BUFSIZE];
+#if 0
 	struct hip_esp * esp_data= NULL;
 	struct hip_esp_packet * esp= NULL;
 	struct hip_common * hip_common= NULL;
@@ -1687,198 +1781,107 @@ static void *handle_ip_traffic(struct ipq_handle *hndl, int traffic_type)
 	struct in6_addr proxy_hit;
 	struct hip_proxy_t* entry = NULL;	
 	struct hip_conn_t* conn_entry = NULL;
+	hip_fw_context_t ctx;
 	unsigned int packetHook;
 	int ret_val_filter_hip, packet_type;
-	
-	/*
-	 * Rules:
-	 *
-	 * Outbound:
-	 *
-	 * - HIP:
-	 *   1. default rule checks for hip
-	 *   2. filter_hip
-	 *
-	 * - ESP:
-	 *   1. default rule checks for hip
-	 *   2. filter_esp
-	 *
-	 * - TCP:
-	 *   1.default rule checks for non-hip
-	 *   2. then
-	 *   - destination is hit (userspace ipsec output)
-	 *   - destination is lsi (lsi output)
-         *   - destination not hit or lsi
-	 *     1. opp tcp filtering (TBD)
-	 *     2. hip proxy output
-	 *
-	 * - Other
-	 *   - Same as with TCP except no opp tcp filtering
-	 *
-	 * Inbound:
-	 * 
-	 * - HIP:
-	 *   1. default rule checks for hip
-	 *   2. filter_hip
-	 *
-	 * - ESP:
-	 *   1. default rule checks for hip
-	 *   2. filter_esp
-	 *   3. userspace_ipsec input
-	 *   4. lsi input
-	 *   5. proxy input
-	 *
-	 * - TCP:
-	 *   1. default rule checks for non-hip
-	 *   2. opp tcp input
-	 *   3. proxy input
-	 *
-	 * - Other:
-	 *   - Same as with TCP except no opp tcp input
-	 *   
-	 */
+	int status;
+	void * packet_hdr= NULL;
+	int hdr_size = 0;
+	ipq_packet_msg_t *m = ipq_get_packet(buf);
+	packetHook = m->hook;
+#endif
+	int hip_related = 0;
 
+	 HIP_DEBUG("thread for traffic_type=IPv%d traffic started\n", traffic_type);
+	 memset(buf, 0, BUFSIZE);
+	 
+	 /* waits for queue messages to arrive from ip_queue and
+	  * copies them into a supplied buffer */
+	 status = ipq_read(hndl, buf, BUFSIZE, 0);
+	 if (status < 0)
+		 die(hndl);
+	 /* queued messages may be a packet messages or an error messages */
+	 switch (ipq_message_type(buf))
+	 {
+	 case NLMSG_ERROR:
+		 HIP_ERROR("Received error message (%d): %s\n", ipq_get_msgerr(buf), ipq_errstr());
+		 goto out_err;
+		 break;
+	 case IPQM_PACKET:
+		 HIP_DEBUG("Received ipqm packet\n");
+		 break;
+	 default:
+		 HIP_DEBUG("default case\n");
+		 goto out_err;
+		 break;
+	 }
 
-	HIP_DEBUG("thread for traffic_type=IPv%d traffic started\n", traffic_type);
-	
-	if(default_HIT) {
-		HIP_DEBUG_IN6ADDR("Default HIT is ", default_HIT);
-	}
-	
-	do
-	{
-		/* waits for queue messages to arrive from ip_queue and
-		 * copies them into a supplied buffer */
-		status = ipq_read(hndl, buf, BUFSIZE, 0);
-		if (status < 0)
-			die(hndl);
-		/* queued messages may be a packet messages or an error messages */
-		switch (ipq_message_type(buf))
-		{
-		case NLMSG_ERROR:
-			fprintf(stderr, "Received error message (%d): %s\n", ipq_get_msgerr(buf), ipq_errstr());
-			break;
-		case IPQM_PACKET:
-		{
-			struct ip6_hdr * ip6_hdr= NULL;
-			struct ip * iphdr= NULL;
-			struct udphdr * udptemp = NULL;
-			void * packet_hdr= NULL;
-			int hdr_size = 0;
-			ipq_packet_msg_t *m = ipq_get_packet(buf);
-			packetHook = m->hook;
-
-			if (traffic_type == 4){
-				_HIP_DEBUG("ipv4\n");
-				iphdr = (struct ip *) m->payload; 
-				//fields needed for analysis of tcp packets
-				packet_hdr = (void *)iphdr;
-				hdr_size = (iphdr->ip_hl * 4);
-				
-				// IPv4 traffic might be UDP encasulated HIP or ESP
-				// TODO check where used due to zero bytes
-				if (iphdr->ip_p == IPPROTO_UDP){
-					hdr_size += sizeof(struct udphdr) + HIP_UDP_ZERO_BYTES_LEN;
-				}
-               	
-				_HIP_DEBUG("header size: %d\n", hdr_size);
-				IPV4_TO_IPV6_MAP(&iphdr->ip_src, &src_addr);
-				IPV4_TO_IPV6_MAP(&iphdr->ip_dst, &dst_addr);
-			} else if(traffic_type == 6)
-			{
-				_HIP_DEBUG("ipv6\n");
-				ip6_hdr = (struct ip6_hdr *) m->payload;
-				//fields needed for analysis of tcp packets
-				packet_hdr = (void *)ip6_hdr;
-				hdr_size = sizeof(struct ip6_hdr);
-				
-				_HIP_DEBUG("header size: %d\n", hdr_size);
-				ipv6_addr_copy(&src_addr, &ip6_hdr->ip6_src);
-				ipv6_addr_copy(&dst_addr, &ip6_hdr->ip6_dst);
-			}
-
-			packet_type = get_packet_type(packet_hdr, traffic_type);
-
+	 if (traffic_type == 4) {
+		 _HIP_DEBUG("ipv4\n");
+		 iphdr = (struct ip *) m->payload; 
+		 //fields needed for analysis of tcp packets
+		 packet_hdr = (void *)iphdr;
+		 hdr_size = (iphdr->ip_hl * 4);
+		 
+		 // IPv4 traffic might be UDP encasulated HIP or ESP
+		 // TODO check where used due to zero bytes
+		 if (iphdr->ip_p == IPPROTO_UDP){
+			 hdr_size += sizeof(struct udphdr) + HIP_UDP_ZERO_BYTES_LEN;
+		 }
+		 
+		 _HIP_DEBUG("header size: %d\n", hdr_size);
+		 IPV4_TO_IPV6_MAP(&iphdr->ip_src, &src_addr);
+		 IPV4_TO_IPV6_MAP(&iphdr->ip_dst, &dst_addr);
+	 } else if(traffic_type == 6) {
+		 _HIP_DEBUG("ipv6\n");
+		 ip6_hdr = (struct ip6_hdr *) m->payload;
+		 //fields needed for analysis of tcp packets
+		 packet_hdr = (void *)ip6_hdr;
+		 hdr_size = sizeof(struct ip6_hdr);
+		 
+		 _HIP_DEBUG("header size: %d\n", hdr_size);
+		 ipv6_addr_copy(&src_addr, &ip6_hdr->ip6_src);
+		 ipv6_addr_copy(&dst_addr, &ip6_hdr->ip6_dst);
+	 }
+		 
+	 packet_type = get_packet_type(packet_hdr, traffic_type);
+		 
+	 XX_FILL_CTX_HERE;
+	 
+	 if (hip_fw_handler[packetHook][packet_type]) {
+		 err = (hip_fw_handler[packetHook][packet_type])(ctx);
+	 } else {
+		 HIP_DEBUG("Ignoring, no handler for hook (%d) with type (%d)\n");
+	 }
+	 
 #if 0
-//#ifdef CONFIG_HIP_HIPPROXY
-			//inbound process
-			//static int ipv6_addr_is_hit(const struct in6_addr *hit);
-			//if src and dst are HIT, then go for inbound process
-			if(hip_proxy_status)
-			{				
-				HIP_DEBUG("HIP PROXY! \n");
-				
-				if(IN6_IS_ADDR_V4MAPPED(&src_addr))
-					HIP_DEBUG("Source address is IPV4!\n");
-				if(IN6_IS_ADDR_V4MAPPED(&dst_addr))
-					HIP_DEBUG("Destination address is IPV4!\n");
-				
-				
-				HIP_DEBUG_IN6ADDR("src_addr", &src_addr);
-				HIP_DEBUG_IN6ADDR("dst_addr", &dst_addr);
-				
-				if(ipv6_addr_is_hit(&src_addr))
-					HIP_DEBUG("Source address is HIT!\n");
-				if(ipv6_addr_is_hit(&dst_addr))
-					HIP_DEBUG("Destination address is HIT!\n");
-				
-				HIP_DEBUG_HIT("src_addr", &src_hit);
-				HIP_DEBUG_HIT("dst_addr", &dst_hit);
-				
-				HIP_DEBUG("HIP PROXY OK! \n");
-				
-				
-				if(ipv6_addr_is_hit(&src_addr) && ipv6_addr_is_hit(&dst_addr))
-				{
-					//struct in6_addr client_addr;
-					//HIP PROXY INBOUND PROCESS
-					handle_proxy_inbound_traffic(m, hndl, src_addr);
-				}
-				else
-				{		
-					//HIP PROXY OUTBOUND PROCESS
-					//the destination ip address should be checked first to ensure it supports hip
-					//if the destination ip does not support hip, drop the packet						
-					if(handle_proxy_outbound_traffic(m, hndl,	src_addr, dst_addr, hdr_size, traffic_type))
-						HIP_DEBUG("handle proxy outbound traffic error!\n");
-				}
-
-#endif				
-				fw_handler[packetHook][packet_type];
-				// XX FIXME: drop or accept the packet according to return value
-			}
-//#endif //ifdef CONFIG_HIP_HIPPROXY
-
-#if 0			HIP_DEBUG("Default case\n");
-				// default behaviour depends on command line options being set
-				if (accept_normal_traffic)
-					allow_packet(hndl, m->packet_id);
-				else
-					drop_packet(hndl, m->packet_id);
-			}
+	 if (status < 0)
+		 die(hndl);
 #endif
 
-			if (status < 0)
-				die(hndl);
-		} while (1);
-
- out_err:
-
-out_err:  
-	if (hip_common)
-		free(hip_common);
-	if (esp)
-	{
-		if (esp_data)
-		{
-			esp->esp_data = NULL;
-			free(esp_data);
-		}
-		free(esp);
-	}
-	ipq_destroy_handle(hndl);
-
-	return;
+out_err:
+	 if (err) {
+		 drop_packet(hndl, m->packet_id);
+	 } else {
+		 allow_packet(hndl, m->packet_id);
+	 }
+	 
+#if 0
+	 if (hip_common)
+		 free(hip_common);
+	 if (esp)
+	 {
+		 if (esp_data)
+		 {
+			 free(esp_data);
+			 esp->esp_data = NULL;
+		 }
+		 free(esp);
+	 }
+	 ipq_destroy_handle(hndl);
+#endif
+	 
+	 return;
 }
 
 void check_and_write_default_config()
@@ -1930,6 +1933,7 @@ int main(int argc, char **argv)
 	socklen_t alen;
 	fd_set read_fdset;
 	struct timeval timeout;
+	unsigned char buf[BUFSIZE];
 
 	if (geteuid() != 0) {
 		HIP_ERROR("firewall must be run as root\n");
@@ -1945,15 +1949,6 @@ int main(int argc, char **argv)
 		HIP_DEBUG("Running HIPD at first\n");
 		goto out_err;
 	}
-	
-	fw_handler[NF_IP_LOCAL_IN][UNSUPPORTED_PACKET] = hip_fw_handle_other_input();
-	fw_handler[NF_IP_LOCAL_IN][HIP_PACKET] = hip_fw_handle_hip_input();
-	fw_handler[NF_IP_LOCAL_IN][ESP_PACKET] = hip_fw_handle_esp_input();
-	fw_handler[NF_IP_LOCAL_IN][TCP_PACKET] = hip_fw_handle_tcp_input();
-	fw_handler[NF_IP_LOCAL_OUT][UNSUPPORTED_PACKET] = hip_fw_handle_other_output();
-	fw_handler[NF_IP_LOCAL_OUT][HIP_PACKET] = hip_fw_handle_hip_output();
-	fw_handler[NF_IP_LOCAL_OUT][ESP_PACKET] = hip_fw_handle_esp_output();
-	fw_handler[NF_IP_LOCAL_OUT][TCP_PACKET] = hip_fw_handle_tcp_output();
 	
 	check_and_write_default_config();
 	
@@ -2101,11 +2096,11 @@ int main(int argc, char **argv)
 		}
 
 		if (FD_ISSET(h4->fd, &read_fdset)) {
-			handle_ip_traffic(h4, 4);
+			handle_ip_traffic(buf, h4, 4);
 		}
 
 		if (FD_ISSET(h6->fd, &read_fdset)) {
-			handle_ip_traffic(h6, 6);
+			handle_ip_traffic(buf, h6, 6);
 		}
 
 		if (FD_ISSET(hip_firewall_sock, &read_fdset)) {
