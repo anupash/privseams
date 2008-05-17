@@ -58,6 +58,11 @@
 #define TCP_PACKET          4
 #define UDP_PACKET          5
 
+#define FW_PROTO_NUM        4 /* Other, HIP, ESP, TCP */
+
+typedef struct hip_fw_context {
+} hip_fw_context_t;
+
 typedef struct hip_proxy_t {
 	hip_hit_t hit_our;
 	hip_hit_t hit_peer;
