@@ -263,6 +263,9 @@ void insert_new_connection(struct hip_data * data){
   connection->original.state = HIP_STATE_UNASSOCIATED;
   connection->original.direction = ORIGINAL_DIR;
   connection->original.esp_tuples = NULL;
+#ifdef CONFIG_HIP_HIPPROXY
+  connection->original.hipproxy = hip_proxy_status;
+#endif /* CONFIG_HIP_HIPPROXY */
   //connection->original.esp_tuple->tuple = &connection->original;
   connection->original.connection = connection;
   connection->original.hip_tuple = (struct hip_tuple *) malloc(sizeof(struct hip_tuple));
@@ -272,12 +275,14 @@ void insert_new_connection(struct hip_data * data){
   connection->original.hip_tuple->data->dst_hit = data->dst_hit;
   connection->original.hip_tuple->data->src_hi = NULL;
   connection->original.hip_tuple->data->verify = NULL;
-  
 
   //reply direction tuple
   connection->reply.state = HIP_STATE_UNASSOCIATED;
   connection->reply.direction = REPLY_DIR;
   connection->reply.esp_tuples = NULL;
+#ifdef CONFIG_HIP_HIPPROXY
+  connection->reply.hipproxy = hip_proxy_status;
+#endif /* CONFIG_HIP_HIPPROXY */
   connection->reply.connection = connection;
   connection->reply.hip_tuple = (struct hip_tuple *) malloc(sizeof(struct hip_tuple));
   connection->reply.hip_tuple->tuple = &connection->reply;
@@ -531,6 +536,9 @@ int insert_connection_from_update(struct hip_data * data,
   connection->original.state = HIP_STATE_UNASSOCIATED;
   connection->original.direction = ORIGINAL_DIR;
   connection->original.esp_tuples = NULL;
+#ifdef CONFIG_HIP_HIPPROXY
+  connection->original.hipproxy = hip_proxy_status;
+#endif /* CONFIG_HIP_HIPPROXY */
   //connection->original.esp_tuple->tuple = &connection->original;
   connection->original.connection = connection;
   connection->original.hip_tuple = (struct hip_tuple *) malloc(sizeof(struct hip_tuple));
@@ -547,6 +555,9 @@ int insert_connection_from_update(struct hip_data * data,
   connection->reply.direction = REPLY_DIR;
 
   connection->reply.esp_tuples = NULL;
+#ifdef CONFIG_HIP_HIPPROXY
+  connection->reply.hipproxy = hip_proxy_status;
+#endif /* CONFIG_HIP_HIPPROXY */
   connection->reply.esp_tuples = (struct GSList *)g_slist_append((struct _GSList *) 
 						connection->reply.esp_tuples,
 						(gpointer) esp_tuple);
@@ -560,6 +571,8 @@ int insert_connection_from_update(struct hip_data * data,
   connection->reply.hip_tuple->data->dst_hit = data->src_hit;
   connection->reply.hip_tuple->data->src_hi = NULL;
   connection->reply.hip_tuple->data->verify = NULL;
+  
+
 
   //add tuples to list
   hipList = (struct GList *) g_list_append((struct _GList *)hipList, 
@@ -934,8 +947,14 @@ int handle_update(const struct in6_addr * ip6_src,
     {
       if(esp_info && locator && seq)
 	{
-	  if(!insert_connection_from_update(get_hip_data(common), esp_info, locator, seq))
-	    return 0;
+	  struct hip_data *data;
+	  data = get_hip_data(common);
+	  if(!insert_connection_from_update(data, esp_info, locator, seq))
+	    {
+	      free(data);
+	      return 0;
+	    }
+	  free(data);
 	}      
       else 
 	return 0;
@@ -1224,6 +1243,7 @@ int check_packet(const struct in6_addr * ip6_src,
 	{
 	  struct hip_data * data = get_hip_data(common);	  
 	  insert_new_connection(data);
+	  free(data);
           HIP_DEBUG_HIT("src hit: ", &data->src_hit);
         HIP_DEBUG_HIT("dst hit: ", &data->dst_hit);
 	}
@@ -1408,6 +1428,7 @@ int filter_state(const struct in6_addr * ip6_src,
   tuple = get_tuple_by_hip(data);
   _HIP_DEBUG("filter_state: hip_data: ");
   //print_data(data);
+  free(data);
   
   //cases where packet does not match
   if(!tuple)
@@ -1500,7 +1521,7 @@ void conntrack(const struct in6_addr * ip6_src,
   check_packet(ip6_src, ip6_dst, buf, tuple, 0, 1);
   g_mutex_unlock(connectionTableMutex);
   _HIP_DEBUG("conntrack:unlocked mutex\n");
-  
+  free(data);
 }
 
 
@@ -1670,6 +1691,7 @@ gpointer check_for_timeouts(gpointer data)
   return NULL;
 }
 
+#if 0
 /**
  * initialize checking for connection timeouts. timeout value in seconds is 
  * passed in the argument timeout. with negative or 0 value no connection 
@@ -1703,3 +1725,4 @@ void init_timeout_checking(long int timeout_val)
 					   NULL);   
     }
 } 
+#endif

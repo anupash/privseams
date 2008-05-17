@@ -513,13 +513,14 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_in6 *src,
 
 /**
  * Processes a message that has been sent to hipd from the firewall,
- * telling it to unblock the applications that connect to a particular peer.
+ * telling it to unblock the applications that connect to a particular peer
+ * and to add the ip of a peer to the blacklist database.
  * 
  * @param *msg	the message.
  * @param *src	the source of the message.
  * @return	an error, if any, during the processing.
  */
-int hip_opptcp_unblock(struct hip_common *msg, const struct sockaddr_in6 *src){
+int hip_opptcp_unblock_AND_opptcp_add_entry(struct hip_common *msg, const struct sockaddr_in6 *src){
 	int n = 0, err = 0, alen = 0;
 	struct in6_addr phit, dst_ip, hit_our, id, our_addr;
 	struct in6_addr *ptr = NULL;
@@ -528,7 +529,7 @@ int hip_opptcp_unblock(struct hip_common *msg, const struct sockaddr_in6 *src){
 
 	if(!opportunistic_mode) {
 		hip_msg_init(msg);
-		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OPPTCP_UNBLOCK_APP, 0),
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OPPTCP_UNBLOCK_APP_and_OPPIPDB_ADD_ENTRY, 0),
 			 -1, "Building of user header failed\n");
 	}
 
@@ -542,43 +543,6 @@ int hip_opptcp_unblock(struct hip_common *msg, const struct sockaddr_in6 *src){
 
 	err = hip_for_each_opp(hip_handle_opptcp_fallback, &dst_ip);
 	HIP_IFEL(err, 0, "for_each_ha err.\n");
-
-	HIP_DEBUG("Unblock returned %d\n", err);
-
- out_err:
-	return err;
-}
-
-
-/**
- * Processes a message that has been sent to hipd from the firewall,
- * telling it to add the ip of a peer to the blacklist database.
- * 
- * @param *msg	the message.
- * @param *src	the source of the message.
- * @return	an error, if any, during the processing.
- */
-int hip_opptcp_add_entry(struct hip_common *msg, const struct sockaddr_in6 *src){
-	int n = 0, err = 0, alen = 0;
-	struct in6_addr phit, dst_ip, hit_our, id, our_addr;
-	struct in6_addr *ptr = NULL;
-	hip_opp_block_t *entry = NULL;
-	hip_ha_t *ha = NULL;
-
-	if(!opportunistic_mode) {
-		hip_msg_init(msg);
-		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OPPTCP_UNBLOCK_APP, 0),
-			 -1, "Building of user header failed\n");
-	}
-
-	//get the dst tcp port from the message for the TCP SYN i1 packet
-	memset(&dst_ip, 0, sizeof(struct in6_addr *));
-	ptr = (struct in6_addr *) hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR);
-	HIP_IFEL(!ptr, -1, "No ip in msg\n");
-	memcpy(&dst_ip, ptr, sizeof(dst_ip));
-	HIP_DEBUG_HIT("dst ip = ", &dst_ip);
-
-	hip_msg_init(msg);//?????
 
 	err = hip_oppipdb_add_entry(&dst_ip);
 	HIP_IFEL(err, 0, "for_each_ha err.\n");
@@ -611,7 +575,7 @@ int hip_opptcp_send_tcp_packet(struct hip_common *msg, const struct sockaddr_in6
 
 	if(!opportunistic_mode) {
 		hip_msg_init(msg);
-		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OPPTCP_UNBLOCK_APP, 0),
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OPPTCP_SEND_TCP_PACKET, 0),
 			 -1, "Building of user header failed\n");
 	}
 
@@ -674,7 +638,6 @@ int hip_handle_opptcp_fallback(hip_opp_block_t *entry, void *data)
 out_err:
 	return err;
 }
-
 
 #endif
 

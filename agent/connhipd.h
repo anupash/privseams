@@ -32,7 +32,6 @@
 #include "hitdb.h"
 #include "gui_interface.h"
 
-
 /******************************************************************************/
 /* DEFINES */
 #define CONNHIPD_IN		0

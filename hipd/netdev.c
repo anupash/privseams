@@ -49,15 +49,15 @@ static int count_if_addresses(int ifindex)
  */
 int filter_address(struct sockaddr *addr, int ifindex)
 {
-	HIP_DEBUG("ifindex=%d, address family=%d\n",
-		  ifindex, addr->sa_family);
-	HIP_HEXDUMP("testing address=", hip_cast_sa_addr(addr),
-		    hip_sa_addr_len(addr));
-
 	/* used as a buffer for inet_ntop */
 #define sLEN 40
 	char s[sLEN];
 	
+	_HIP_DEBUG("ifindex=%d, address family=%d\n",
+		  ifindex, addr->sa_family);
+	_HIP_HEXDUMP("testing address=", hip_cast_sa_addr(addr),
+		    hip_sa_addr_len(addr));
+
 	switch (addr->sa_family) {
 	case AF_INET6:
 		inet_ntop(AF_INET6, &((struct sockaddr_in6*)addr)->sin6_addr, s,
@@ -425,8 +425,8 @@ int static add_address(const struct nlmsghdr *h, int len, void *arg)
  */
 int hip_netdev_init_addresses(struct rtnl_handle *nl)
 {
-	struct ifaddrs *g_ifaces = NULL, *g_iface;
-	int err = 0, if_index;
+	struct ifaddrs *g_ifaces = NULL, *g_iface = NULL;
+	int err = 0, if_index = 0;
 
 	/* Initialize address list */
 	HIP_DEBUG("Initializing addresses...\n");
@@ -1211,8 +1211,8 @@ int hip_select_source_address(struct in6_addr *src, struct in6_addr *dst)
 //	rtnl_rtdsfield_init = 1;
 	
 //	rtnl_tab_initialize("/etc/iproute2/rt_dsfield", rtnl_rtdsfield_tab, 256);
-	HIP_DEBUG_IN6ADDR("dst", dst);
-	HIP_DEBUG_IN6ADDR("src", src);
+	HIP_DEBUG_IN6ADDR("Source", src);
+	HIP_DEBUG_IN6ADDR("Destination", dst);
 
 	HIP_IFEL(hip_iproute_get(&hip_nl_route, src, dst, NULL, NULL, family, idxmap), -1, "Finding ip route failed\n");
 

@@ -1,7 +1,3 @@
-
-
-
-
 /** @file
  * This file defines functions for configuring the the Host Identity
  * Protocol daemon (hipd).
@@ -29,9 +25,9 @@ const char *hipconf_usage =
 "add|del escrow <hit>\n"
 #endif
 "add|del map <hit> <ipv6>\n"
-"add|del service escrow|rvs|hiprelay\n"
-"reinit service rvs|hiprelay\n"
-"add rvs|hiprelay <hit> <ipv6>\n"
+"Server side:\n\tadd|del service escrow|rvs|hiprelay\n"
+"\treinit service rvs|hiprelay\n"
+"Client side:\n\tadd rvs|hiprelay <hit> <ipv6> <lifetime in seconds>\n"
 "del hi <hit>\n"
 "get hi default\n"
 #ifdef CONFIG_HIP_ICOOKIE
@@ -64,6 +60,9 @@ const char *hipconf_usage =
 "opptcp on|off\n"
 #endif
 "set tcptimeout on|off\n" /*added by Tao Wan*/
+#ifdef CONFIG_HIP_HIPPROXY
+"hipproxy on|off\n"
+#endif
 ;
 
 /** Function pointer array containing pointers to handler functions.
@@ -101,6 +100,7 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc) 
 	hip_conf_handle_opptcp,
         hip_conf_handle_trans_order,
 	hip_conf_handle_tcptimeout, /* added by Tao Wan*/
+        hip_conf_handle_hipproxy,
 	NULL /* run */
 };
 
@@ -141,14 +141,16 @@ int hip_conf_get_action(char *text)
 		ret = ACTION_LOAD;
 	else if (!strcmp("dht", text))
 		ret = ACTION_DHT;
-        else if (!strcmp("opendht", text))
-                ret = ACTION_OPENDHT;
-        else if (!strcmp("locator", text))
-                ret = ACTION_LOCATOR; 
+	else if (!strcmp("opendht", text))
+		ret = ACTION_OPENDHT;
+	else if (!strcmp("locator", text))
+		ret = ACTION_LOCATOR; 
 	else if (!strcmp("debug", text))
 		ret = ACTION_DEBUG;
 	else if (!strcmp("handoff", text))
 		ret = ACTION_HANDOFF;
+	else if (!strcmp("transform", text))
+		ret = ACTION_TRANSORDER;
 	else if (!strcmp("restart", text))
 		ret = ACTION_RESTART;
 	else if (!strcmp("tcptimeout", text)) /*added by Tao Wan, 08.Jan.2008 */
@@ -159,6 +161,11 @@ int hip_conf_get_action(char *text)
 	else if (!strcmp("opptcp", text))
                 ret = ACTION_OPPTCP;
 #endif
+#ifdef CONFIG_HIP_HIPPROXY
+	else if (!strcmp("hipproxy", text))
+		ret = ACTION_HIPPROXY;
+#endif
+	
         return ret;
 }
 
@@ -185,8 +192,12 @@ int hip_conf_check_action_argc(int action) {
 		count = 2;
 		break;
 #ifdef CONFIG_HIP_OPPTCP	
-	case ACTION_OPPTCP:
-                break;
+    case ACTION_OPPTCP:
+        break;
+#endif
+#ifdef CONFIG_HIP_HIPPROXY
+    case ACTION_HIPPROXY:
+		break;
 #endif
 	default:
 	        break;
@@ -255,10 +266,11 @@ int hip_conf_get_type(char *text,char *argv[]) {
 	else if (!strcmp("escrow", text))
 		ret = TYPE_ESCROW;
 #endif		
-
+	else if (!strcmp("order", text))
+		ret = TYPE_ORDER;
 #ifdef CONFIG_HIP_OPENDHT
 	else if (strcmp("opendht", argv[1])==0)
-                ret = TYPE_DHT;
+		ret = TYPE_DHT;
 	else if (!strcmp("ttl", text))
 		ret = TYPE_TTL;
 	else if (!strcmp("gw", text))
@@ -273,6 +285,10 @@ int hip_conf_get_type(char *text,char *argv[]) {
 #ifdef CONFIG_HIP_OPPTCP
 	else if (strcmp("opptcp", argv[1])==0)
 		ret = TYPE_OPPTCP;
+#endif
+#ifdef CONFIG_HIP_HIPPROXY
+	else if (strcmp("hipproxy", argv[1])==0)
+		ret = TYPE_HIPPROXY;
 #endif
      return ret;
 }
@@ -294,8 +310,8 @@ int hip_conf_get_type_arg(int action)
 	case ACTION_RUN:
 	case ACTION_LOAD:
 	case ACTION_DHT:
-        case ACTION_OPENDHT:
-        case ACTION_LOCATOR:
+    case ACTION_OPENDHT:
+    case ACTION_LOCATOR:
 	case ACTION_RST:
 	case ACTION_BOS:
 	case ACTION_HANDOFF:
@@ -303,7 +319,10 @@ int hip_conf_get_type_arg(int action)
         case ACTION_TRANSORDER:
 	case ACTION_REINIT:
 #ifdef CONFIG_HIP_OPPTCP
-        case ACTION_OPPTCP:
+    case ACTION_OPPTCP:
+#endif
+#ifdef CONFIG_HIP_HIPPROXY
+	case ACTION_HIPPROXY:
 #endif
 	case ACTION_RESTART:
 		type_arg = 2;
@@ -347,30 +366,59 @@ int hip_conf_handle_rvs(hip_common_t *msg, int action, const char *opt[],
 {
 	hip_hit_t hit;
 	in6_addr_t ipv6;
-	int err = 0;
+	int err = 0, seconds = 0;
+	uint8_t lifetime = 0;
+	time_t seconds_from_lifetime = 0;
+	uint8_t type_list[1];
+	
+	type_list[0] = HIP_SERVICE_RENDEZVOUS;
 
 	HIP_DEBUG("hip_conf_handle_rvs() invoked.\n");
 		
 	HIP_IFEL((action != ACTION_ADD), -1,
 		 "Only action \"add\" is supported for \"rvs\".\n");
 	
-	HIP_IFEL((optc < 2), -1, "Missing arguments.\n");
-	HIP_IFEL((optc > 2), -1, "Too many arguments.\n");
+	HIP_IFEL((optc < 3), -1, "Missing arguments.\n");
+	HIP_IFEL((optc > 3), -1, "Too many arguments.\n");
 	
 	HIP_IFE(convert_string_to_address(opt[0], &hit), -1);
 	HIP_IFE(convert_string_to_address(opt[1], &ipv6), -1);
 	
-	HIP_IFEL(hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
-					  sizeof(in6_addr_t)), -1,
+	seconds = atoi(opt[2]);
+	
+	if(seconds <= 0 || seconds > 15384774) {
+		HIP_ERROR("Invalid lifetime value \"%s\" given.\n"\
+			  "Please give a lifetime value between 1 and "\
+			  "15384774 seconds.\n", opt[2]);
+		goto out_err;
+	}
+
+	HIP_IFEL(hip_get_lifetime_value(seconds, &lifetime), -1,
+		 "Unable to convert seconds to a lifetime value.\n");
+
+	hip_get_lifetime_seconds(lifetime, &seconds_from_lifetime);
+
+	HIP_IFEL(hip_build_param_contents(
+			 msg, (void *) &hit, HIP_PARAM_HIT,
+			 sizeof(in6_addr_t)), -1,
 		 "Failed to build parameter HIT.\n");
 	
-	HIP_IFEL(hip_build_param_contents(msg, (void *) &ipv6,
-					  HIP_PARAM_IPV6_ADDR,
-					  sizeof(in6_addr_t)), -1,
+	HIP_IFEL(hip_build_param_contents(
+			 msg, (void *) &ipv6, HIP_PARAM_IPV6_ADDR,
+			 sizeof(in6_addr_t)), -1,
 		 "Failed to build parameter IPv6.\n");
 	
+	HIP_IFEL(hip_build_param_reg_request(msg, lifetime, &type_list , 1), -1,
+		 "Failed to build REQ_REQUEST parameter to hipconf user "\
+		 "message.\n");
+
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_RVS, 0), -1,
 		 "Failed to build user message header.\n");
+
+	HIP_INFO("\tRequesting RVS service for %d seconds (lifetime 0x%x) from\n"\
+		 "\tHIT %s located at\n\tIP address %s.\n",
+		 seconds_from_lifetime, lifetime, opt[0], opt[1]);
+	
  out_err:
 	return err;
 }
@@ -450,7 +498,7 @@ int hip_conf_handle_hi(hip_common_t *msg, int action, const char *opt[],
      HIP_IFEL((euid != 0 && action == ACTION_SET), -1,
 	      "New default HI must be created as root.\n");
 
-     _HIP_INFO("action=%d optc=%d\n", action, optc);
+     _HIP_DEBUG("action=%d optc=%d\n", action, optc);
 
      if (action == ACTION_DEL)
 	  return hip_conf_handle_hi_del(msg, action, opt, optc);
@@ -1323,7 +1371,7 @@ int hip_conf_handle_service(hip_common_t *msg, int action, const char *opt[],
      
 	HIP_IFEL((optc < 1), -1, "Missing arguments.\n");
 	HIP_IFEL((optc > 1), -1, "Too many arguments.\n");
-     
+	
 	if(action == ACTION_ADD){
 		if (strcmp(opt[0], "escrow") == 0) {
 			HIP_INFO("Adding escrow service.\n");
@@ -1803,8 +1851,6 @@ int hip_conf_handle_opptcp(hip_common_t *msg, int action, const char *opt[],
 /*	hip_set_opportunistic_tcp_status(1);*/
 /*	hip_set_opportunistic_tcp_status(0);*/
 }
-
-
 /**
  * Handles the hipconf commands where the type is @ tcptimeout.
  *
@@ -1841,6 +1887,27 @@ int hip_conf_handle_tcptimeout(struct hip_common *msg, int action,
     return err;
 }
 
-
-
-
+/**
+ * Function that is used to set HIP PROXY on or off
+ *
+ * @return       zero on success, or negative error value on error.
+ */
+int hip_conf_handle_hipproxy(struct hip_common *msg, int action, const char *opt[], int optc)
+{
+        int err = 0, status = 0;
+ 
+#ifdef CONFIG_HIP_HIPPROXY
+        if (!strcmp("on",opt[0])) {
+                status = SO_HIP_SET_HIPPROXY_ON; 
+        } else if (!strcmp("off",opt[0])) {
+                status = SO_HIP_SET_HIPPROXY_OFF;
+        } else {
+                HIP_IFEL(1, -1, "bad args\n");
+        }
+        HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, 
+                 "build hdr failed: %s\n", strerror(err));          
+#endif
+        
+ out_err:
+        return(err);
+}

@@ -439,83 +439,120 @@ connect_alarm(int signo)
  * @param  name  a pointer to a hostname for which are get the HIT.
  * @param  pat   a triple pointer to a ...
  * @param  flags ...
- * @retrun       ...
+ * @return       Number of found HITs on success or a negative error value
+ *               on error.
  */
 int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 {	 								
-        
-	int error, ret_hit, ret_addr, tmp_ttl, tmp_port;
-	int found_hits = 0, lineno = 0, i = 0, err = 0;
-	
-	char dht_response_hit[1024], dht_response_addr[1024], line[500];
-	char ownaddr[] = "127.0.0.1", tmp_ip_str[21];
-        char *pret = NULL, *fqdn_str = NULL;
+	int error = 0, ret_hit = 0, ret_addr = 0, tmp_ttl = 0, tmp_port = 0;
+	int found_hits = -1, lineno = 0, i = 0, err = 0;
 	hip_hit_t hit, tmp_hit, tmp_addr;
-	
+	struct in_addr tmp_v4;
+	char dht_response_hit[1024], dht_response_addr[1024], line[500];
+	char ownaddr[] = "127.0.0.1", tmp_ip_str[INET_ADDRSTRLEN];
+        char *fqdn_str = NULL;
 	hip_common_t *msg = NULL;
 	struct gaih_addrtuple *aux = NULL;
 	struct addrinfo *serving_gateway = NULL;
 	struct hip_opendht_gw_info *gw_info = NULL;
-        struct in_addr tmp_v4;
-	FILE *fp = NULL;						
+	FILE *fp = NULL;				
 	List list;
-        
-        if (flags & AI_NODHT)
+       
+	errno = 0;
+
+	/* Can't use the IFE macros here, since labe skip_dht is under label
+	   out_err. */
+
+	/* This should be the other way around. I.e. look first from 
+	   /etc/hip/hosts and only then from DHT server. */
+        if (flags & AI_NODHT) {
+		HIP_INFO("Distributed Hash Table (DHT) is not in use.\n");
                 goto skip_dht;
-        
+        }
+	
         memset(dht_response_hit, '\0', sizeof(dht_response_hit));
         memset(dht_response_addr, '\0', sizeof(dht_response_addr));
-        
+        memset(&tmp_ip_str, '\0', INET_ADDRSTRLEN);
+
         ret_hit = -1;  
         ret_addr = -1;
-        
-	_HIP_DEBUG("Asking serving gateway info from daemon...\n"); 
+        	
+	msg = (hip_common_t *) malloc(HIP_MAX_PACKET);
+	if(msg == NULL) {
+		HIP_ERROR("Error when allocating memory to a HIP message.\n");
+		err = -ENOMEM;
+		return err;
+	}
+        if(hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW, 0) != 0) {
+		HIP_ERROR("Error when building HIP daemon message header.\n");
+		return -EHIP;
+	}
 	
-        HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "Malloc for msg failed\n");
-        HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW,0),-1, 
-                 "Building daemon header failed\n"); 
-        HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "Send recv daemon info failed\n");
+	HIP_INFO("Asking serving Distributed Hash Table (DHT) gateway "\
+		 "information\nfrom the HIP daemon...\n"); 
 
-        HIP_IFE(!(gw_info = hip_get_param(msg, HIP_PARAM_OPENDHT_GW_INFO)),-1);
-	//"No gw struct found\n");
-        
+	/* Send a user message to the HIP daemon to receive Open DHT server
+	   gateway whereabouts. */
+        if((err = hip_send_recv_daemon_info(msg)) < 0) {
+		HIP_ERROR("Unable to receive DHT gateway information from the "\
+			  "HIP daemon.\nDo you have a local HIP daemon up and "\
+			  "running?\n");
+		goto skip_dht; 
+	}
+	
+	gw_info = hip_get_param(msg, HIP_PARAM_OPENDHT_GW_INFO);
+	if(gw_info == NULL) {
+		HIP_ERROR("Error. No Open DHT gateway information "\
+			  "available.\n");
+		errno = EPROTO;
+		return -EHIP;
+	}
+	
         /* Check if DHT was on */
         if ((gw_info->ttl == 0) && (gw_info->port == 0)) {
-                HIP_DEBUG("DHT is not in use\n");
+                HIP_INFO("Distributed hash table (DHT) is not in use.\n");
                 goto skip_dht;
-        }        
-        memset(&tmp_ip_str,'\0',20);
+        }
+        
         tmp_ttl = gw_info->ttl;
         tmp_port = htons(gw_info->port);
         IPV6_TO_IPV4_MAP(&gw_info->addr, &tmp_v4);
-        /* Compiler warning:
-	   assignment discards qualifiers from pointer target type. */
-        pret = inet_ntop(AF_INET, &tmp_v4, tmp_ip_str, 20);
-        HIP_DEBUG("Got address %s, port %d, TTL %d from daemon\n",
-                  tmp_ip_str, tmp_port, tmp_ttl);
+	
+        if(inet_ntop(AF_INET, &tmp_v4, tmp_ip_str,
+		     sizeof(tmp_ip_str)) == NULL) {
+		err = -1;
+		goto out_err;
+	}
+	
+	/* Check for IN_ADDR_ANY gateway. This happens for example on virtual
+	   machines. */	
+	if((tmp_v4.s_addr | INADDR_ANY) == 0) {
+		HIP_ERROR("DHT gateway is 0.0.0.0. Skipping.\n");
+		goto skip_dht;
+	}
+	
+        HIP_INFO("DHT server is located at %s:%d with TTL %d.\n",
+		 tmp_ip_str, tmp_port, tmp_ttl);
 
         error = 0;
         error = resolve_dht_gateway_info(tmp_ip_str, &serving_gateway);
         if (error < 0) {
-                        HIP_DEBUG("Error in resolving the DHT gateway address, skipping DHT\n");
-                        //close(s);
-                        goto skip_dht;
+		HIP_DEBUG("Error in resolving the DHT gateway address, skipping DHT.\n");
+		goto skip_dht;
         }
-	/* Compiler warning:
-	   passing argument 2 of 'opendht_get_key' discards qualifiers from
-	   pointer target type. */
+
         ret_hit = opendht_get_key(serving_gateway, name, dht_response_hit);
-        if (ret_hit == 0)
-                HIP_DEBUG("HIT received from DHT: %s\n", dht_response_hit);
-        /* Where is this opened? */
-	//close(s);
+	
+        if (ret_hit == 0) {
+                HIP_INFO("HIT received from DHT: %s.\n", dht_response_hit);
+	}
+        
         if (ret_hit == 0 && (strlen((char *)dht_response_hit) > 1)) {
                 ret_addr = opendht_get_key(serving_gateway, 
                                            dht_response_hit, dht_response_addr);
                 if (ret_addr == 0)
-                        HIP_DEBUG("Address received from DHT: %s\n",dht_response_addr);
-                //close(s);
-        }
+                        HIP_INFO("Address received from DHT: %s.\n",dht_response_addr);
+	}
         if ((ret_hit == 0) && (ret_addr == 0) && 
             (dht_response_hit[0] != '\0') && (dht_response_addr[0] != '\0')) { 
                 if (inet_pton(AF_INET6, dht_response_hit, &tmp_hit) >0 &&
@@ -544,7 +581,9 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
                         /* dump_pai(*pat); */
                         return 1;
                 }
-        } 
+        }
+/* HORRIBLE! Why is skip_dht under out_err? This effectively renders our IFE macros
+   useless. :( -Lauri 08.05.2008 */
  out_err: 
  skip_dht:
 									
@@ -552,8 +591,12 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 	fp = fopen(_PATH_HIP_HOSTS, "r");
 	if(fp == NULL)
 	{
-		HIP_ERROR("Error opening file '%s' for reading.\n", _PATH_HIP_HOSTS);		
+		HIP_ERROR("Error opening file '%s' for reading.\n",
+			  _PATH_HIP_HOSTS);
         }
+
+	HIP_INFO("Searching for a HIT value for host '%s' from file '%s'.\n",
+		 name,_PATH_HIP_HOSTS);
 
 	/* Loop through all lines in the file. */
 	/** @todo check return values */
@@ -595,48 +638,57 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 			   again when we already have the hit stored from the
 			   previous loop?
 			   18.01.2008 16:49 -Lauri. */				
-                        for(i = 0; i <length(&list); i++) {                                    
+                        for(i = 0; i <length(&list); i++) {
                                 uint32_t lsi = htonl(HIT2LSI((uint8_t *) &hit));	
                                 struct gaih_addrtuple *prev_pat = NULL;	
 				ret = inet_pton(AF_INET6, getitem(&list,i), &hit);
                                 
-                                if (ret < 1) continue;         
+                                if (ret < 1) {
+					continue;
+				}
                                 
-                                if ((aux = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){
+				aux = (struct gaih_addrtuple *)
+					malloc(sizeof(struct gaih_addrtuple));
+				
+                                if (aux == NULL){
                                         HIP_ERROR("Memory allocation error\n");
                                         exit(-EAI_MEMORY);
                                 }
                                 
-                                //Placing the node at the beginning of the list
+                                /* Placing the node at the beginning of the
+				   list. */
                                 aux->next = (**pat);
                                 (**pat) = aux;
                                 aux->scopeid = 0;				
                                 aux->family = AF_INET6;
                                 memcpy(aux->addr, &hit, sizeof(struct in6_addr));
-                                
-#if 0 /* Disabled as this is not support by the daemon yet -miika*/
-                                /* AG: add LSI as well */					
+/* AG: add LSI as well */
+/* Disabled as this is not support by the daemon yet. -Miika */
+                                /*
                                 if (**pat == NULL) {
-                                        if ((**pat = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){
-                                                HIP_ERROR("Memory allocation error\n");
-                                                exit(-EAI_MEMORY);
-                                        }
-                                        
-                                        (**pat)->scopeid = 0;				
-                                }								
-                                (**pat)->next = NULL;						
-                                (**pat)->family = AF_INET;					
-                                memcpy((**pat)->addr, &lsi, sizeof(hip_lsi_t));			
-                                *pat = &((**pat)->next);					      
-#endif
-                        }									
-                } // end of if 
+				**pat = (struct gaih_addrtuple *)
+				malloc(sizeof(struct gaih_addrtuple));
+				if (**pat == NULL){
+				HIP_ERROR("Memory allocation error\n");
+				exit(-EAI_MEMORY);
+				}
+				
+				(**pat)->scopeid = 0;				
+                                }
+				(**pat)->next = NULL;
+                                (**pat)->family = AF_INET;
+                                memcpy((**pat)->addr, &lsi, sizeof(hip_lsi_t));
+                                *pat = &((**pat)->next);
+				*/
+                        }
+                } // end of if
                 
                 destroy(&list);                                                     
         } // end of while
-
+	
 	if (fp)                                                               
-                fclose(fp);		
+                fclose(fp);
+		
         return found_hits;	        				
 }
 
@@ -682,9 +734,30 @@ send_hipd_addr(struct gaih_addrtuple * orig_at)
       else 
 	addr6 = *(struct in6_addr *) at_ip->addr;
 
-      hip_msg_init(msg);	
-      HIP_DEBUG_IN6ADDR("HIT", (struct in6_addr *)at_hit->addr);
-      HIP_DEBUG_IN6ADDR("IP", &addr6);
+      hip_msg_init(msg);
+      
+      /* Clarified the printed output as this is used in conntest-client-gai.
+	 -Lauri 07.05.2008. */
+      char hit_string[INET6_ADDRSTRLEN];
+      char ipv6_string[INET6_ADDRSTRLEN];
+      memset(hit_string, 0, INET6_ADDRSTRLEN);
+      memset(ipv6_string, 0, INET6_ADDRSTRLEN);
+      
+      inet_ntop(AF_INET6, (struct in6_addr *)at_hit->addr, hit_string,
+		INET6_ADDRSTRLEN);
+
+      if (IN6_IS_ADDR_V4MAPPED(&addr6)) {
+	      struct in_addr in_addr;
+	      IPV6_TO_IPV4_MAP(&addr6, &in_addr);
+	      inet_ntop(AF_INET, &in_addr, ipv6_string, INET6_ADDRSTRLEN);
+	      HIP_INFO("Mapped a HIT to an IPv4 address:\n"\
+		       "%s -> %s.\n", hit_string, ipv6_string);
+      } else {
+	      inet_ntop(AF_INET6, &addr6, ipv6_string, INET6_ADDRSTRLEN);
+	      HIP_INFO("Mapped a HIT to an IPv6 address:\n"\
+		       "%s -> %s.\n", hit_string, ipv6_string);
+      }
+      
       hip_build_param_contents(msg, (void *) at_hit->addr, HIP_PARAM_HIT, sizeof(struct in6_addr));
       hip_build_param_contents(msg, (void *) &addr6, HIP_PARAM_IPV6_ADDR, sizeof(struct in6_addr));
       hip_build_user_hdr(msg, SO_HIP_ADD_PEER_MAP_HIT_IP, 0);
@@ -969,12 +1042,14 @@ int gaih_inet_get_name(const char *name, const struct addrinfo *req,
 		       struct gaih_servtuple *st, struct gaih_addrtuple **at,
 		       int hip_transparent_mode) 
 {
-	int rc;
+	int err = 0, rc = 0;
 	int v4mapped = (req->ai_family == PF_UNSPEC ||
 			req->ai_family == PF_INET6) &&
 		(req->ai_flags & AI_V4MAPPED);
 	char *namebuf = strdupa(name);
 	
+	_HIP_DEBUG("gaih_inet_get_name() invoked.\n");
+
 	*at = malloc (sizeof (struct gaih_addrtuple));
 	
 	(*at)->family = AF_UNSPEC;
@@ -1110,12 +1185,25 @@ int gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	  (v4mapped && (no_inet6_data != 0 || (req->ai_flags & AI_ALL)))
   	  || hip_transparent_mode || req->ai_flags & AI_HIP & AI_NODHT)
 	no_data = gethosts (name, AF_INET, &pat);
-
+      
       if (hip_transparent_mode) {
 	_HIP_DEBUG("HIP_TRANSPARENT_API: fetch HIT addresses\n");
-       
+	
 	_HIP_DEBUG("found_hits before gethosts_hit: %d\n", found_hits);
-	found_hits |= gethosts_hit(name, &pat, req->ai_flags);
+	
+	/* What is the point to bitwise OR from a function return value that
+	   can implicate also an error value? Anyhows, had to fix this a little
+	   to allow the error value to be passed to the caller of this function.
+	   -Lauri 07.05.2008. */
+	err = gethosts_hit(name, &pat, req->ai_flags);
+
+	if((err) < 0) {
+		return err;
+	}
+	
+	found_hits |= err;
+	err = 0;
+	
 	_HIP_DEBUG("found_hits after gethosts_hit: %d\n", found_hits);
 	
 	if (req->ai_flags & AI_HIP) {
@@ -1230,8 +1318,8 @@ int gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	  _HIP_DEBUG("pointer a: %p\tpointer p: %p\n", a, p);	
 	}
 	if (p == NULL){  /* no HITs or LSIs were found */
-	  HIP_DEBUG("No HITs or LSIs were found\n");
-	  return (GAIH_OKIFUNSPEC | -EAI_NONAME);
+		HIP_INFO("No HITs or LSIs were found.\n");
+		return (GAIH_OKIFUNSPEC | -EAI_NONAME);
 	}
 	
 	*at = p;
@@ -1468,11 +1556,14 @@ int getaddrinfo(const char *name, const char *service,
 	struct gaih *g = gaih, *pg = NULL;
 	struct gaih_service gaih_service, *pservice = NULL;
 
-	/*if (name != NULL && name[0] == '*' && name[1] == 0)
+	/* These will segfault if lenght of name is one, but since this
+	   is well defined standard function, there must be a good reason
+	   for this behavior? */
+	if (name != NULL && name[0] == '*' && name[1] == 0)
 		name = NULL;
 	if (service != NULL && service[0] == '*' && service[1] == 0)
-	service = NULL;*/
-
+		service = NULL;
+	
 	/* Return "NAME or SERVICE is unknown." error value. */
 	if (name == NULL && service == NULL)
 		return EAI_NONAME;
@@ -1554,40 +1645,46 @@ int getaddrinfo(const char *name, const char *service,
 	else
 		end = NULL;
 	
-	while (g->gaih)
-	{
-		if (hints->ai_family == g->family || hints->ai_family == AF_UNSPEC)
-		{
-			if ((hints->ai_flags & AI_ADDRCONFIG) && !addrconfig(g->family))
+	/* What does this freaky loop do? */
+	while (g->gaih) {
+		
+		if (hints->ai_family == g->family ||
+		    hints->ai_family == AF_UNSPEC) {
+			
+			if ((hints->ai_flags & AI_ADDRCONFIG)
+			    && !addrconfig(g->family)) {
 				continue;
+			}
+			
 			j++;
-			if (pg == NULL || pg->gaih != g->gaih)
-			{
+			if (pg == NULL || pg->gaih != g->gaih) {
 				pg = g;
-				i = g->gaih(name, pservice, hints, end, hip_transparent_mode);
-				if (i != 0)
-				{
+				i = g->gaih(name, pservice, hints, end,
+					    hip_transparent_mode);
+				if (i != 0) {
 					last_i = i;
-
-					if (hints->ai_family == AF_UNSPEC && (i & GAIH_OKIFUNSPEC))
+					if (hints->ai_family == AF_UNSPEC &&
+					    (i & GAIH_OKIFUNSPEC)) {
 						continue;
-
-					if (p)
+					}
+					if (p != NULL) {
 						freeaddrinfo(p);
-
+					}
 					return -(i & GAIH_EAI);
 				}
-				if (end)
+				if (end != NULL) {
 					while(*end) end = &((*end)->ai_next);
+				}
 			}
 		}
 		++g;
 	}
-
-	if (j == 0)
+	
+	if (j == 0) {
 		return EAI_FAMILY;
-
-	if (p) // here should be true
+	}
+	
+	if (p != NULL) // here should be true
 	{
 		*pai = p;
 		return 0;
@@ -1596,9 +1693,11 @@ int getaddrinfo(const char *name, const char *service,
 	if (pai == NULL && last_i == 0)
 		return 0;
 
-	if (p)
+	if (p != NULL) {
 		freeaddrinfo (p);
-
+	}
+	
+	/* Okay... What exactly are we returning here? An error value? */
 	return last_i ? -(last_i & GAIH_EAI) : EAI_NONAME;
 }
 

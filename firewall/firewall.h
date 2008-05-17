@@ -17,6 +17,8 @@
 #include <stdlib.h>
 #include <linux/netfilter_ipv4.h>
 
+#include <libinet6/message.h>
+
 #include "crypto.h"
 #include "ife.h"
 #include "state.h"
@@ -31,6 +33,8 @@
 #include "hip_usermode.h"
 #include "misc.h"
 #include "netdev.h"
+#include <sys/types.h>
+#include <pthread.h>
 
 #define HIP_FW_DEFAULT_RULE_FILE "/etc/hip/firewall.conf"
 #define HIP_FW_DEFAULT_TIMEOUT   1
@@ -47,7 +51,42 @@
 "#\n"\
 "\n"
 
+#define UNSUPPORTED_PACKET  0
+#define HIP_PACKET          1
+#define STUN_PACKET         2
+#define ESP_PACKET          3
+#define TCP_PACKET          4
+#define UDP_PACKET          5
+
+typedef struct hip_proxy_t {
+	hip_hit_t hit_our;
+	hip_hit_t hit_peer;
+	hip_hit_t hit_proxy;
+	struct in6_addr addr_our;
+	struct in6_addr addr_peer;
+	struct in6_addr addr_proxy;
+	int state;
+	int hip_capable;
+} hip_proxy_t;
+
+struct hip_conn_key {
+	uint8_t protocol;
+	uint16_t port_client;
+	uint16_t port_peer;
+	struct in6_addr hit_peer;
+	struct in6_addr hit_proxy;
+}  __attribute__ ((packed));
+
+typedef struct hip_conn_t  {
+	struct hip_conn_key key;
+	int state;
+	struct in6_addr addr_client; // addr_proxy_client	
+	struct in6_addr addr_peer; // addr_proxy_peer	
+} hip_conn_t;
+
 #define HIP_FIREWALL_LOCK_FILE	"/var/lock/hip_firewall.lock"
+struct in6_addr proxy_hit;
+extern int hipproxy;
 
 //made public for filter_esp_state function
 int match_hit(struct in6_addr match_hit, 
@@ -61,6 +100,11 @@ void firewall_close(int signal);
 void firewall_exit();
 void firewall_probe_kernel_modules();
 void firewall_increase_netlink_buffers();
+void examine_incoming_tcp_packet(struct ipq_handle *, unsigned long, void *, int, int);
+void hip_request_send_i1_to_hip_peer_from_hipd(struct in6_addr *peer_hit,
+					       struct in6_addr *peer_ip);
+void hip_request_unblock_app_from_hipd(const struct in6_addr *peer_ip);
+void hip_request_oppipdb_add_entry(struct in6_addr *peer_ip);
 
 
 void hip_firewall_userspace_ipsec_output(struct ipq_handle *handle,

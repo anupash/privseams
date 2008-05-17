@@ -11,6 +11,7 @@
 #define HIP_WORKQUEUE
 
 #include <stdio.h>
+#include <stdint.h> // For uint8_t
 //#include <asm/byteorder.h>   // use instead #include <endian.h>
 #include "list.h"
 //#include "debug.h"
@@ -20,6 +21,7 @@
 #include "accessor.h"
 /* added by Tao Wan, 10.Jan.2008*/
 #include "tcptimeout.h"
+#include "registration.h"
 
 extern struct addrinfo * opendht_serving_gateway;
 extern int opendht_serving_gateway_port;
