@@ -312,21 +312,21 @@ int return_packet_type(void * hdr, int ipVersion){
 		{
 			// we have found a plain HIP control packet
 			HIP_DEBUG("plain HIP packet\n");
-			return 1;
+			return HIP_PACKET;
 		} else if (iphdr->ip_p == IPPROTO_ESP)
 		{
 			// this is an ESP packet
 			HIP_DEBUG("plain ESP packet\n");
-			return 2;
+			return ESP_PACKET;
 #ifdef CONFIG_HIP_OPPTCP
 		} else if(iphdr->ip_p == IPPROTO_TCP)
 		{
-			return 3;
+			return TCP_PACKET;
 #endif
 		} else if (iphdr->ip_p != IPPROTO_UDP)
 		{
 			// if it's not UDP either, it's unsupported
-			return 0;
+			return UNSUPPORTED_PACKET;
 		}
 
 		// need UDP header to look for encapsulated ESP or STUN
@@ -344,18 +344,18 @@ int return_packet_type(void * hdr, int ipVersion){
 
 		if(ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt == IPPROTO_HIP)
 		{
-			return 1;
+			return HIP_PACKET;
 		} else if (ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt == IPPROTO_ESP)
 		{
-			return 2;
+			return ESP_PACKET;
 #ifdef CONFIG_HIP_OPPTCP
 		} else if(ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt == IPPROTO_TCP)
 		{
-			return 3;
+			return TCP_PACKET;
 #endif
 		} else if (ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt != IPPROTO_UDP)
 		{
-			return 0;
+			return UNSUPPORTED_PACKET;
 		}
 	
 		hdr_size = (ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen * 4);
@@ -383,7 +383,6 @@ int return_packet_type(void * hdr, int ipVersion){
 		
 		/*Check whether SPI number is zero or not */
 		if (*zero_bytes == 0) {
-			// we have most probably found a STUN message
 			udp_spi_is_zero = 1;
 			HIP_DEBUG("Zero SPI found\n");
 		}
@@ -402,8 +401,8 @@ int return_packet_type(void * hdr, int ipVersion){
 								     + 
 								     HIP_UDP_ZERO_BYTES_LEN)))
 		{
-			HIP_DEBUG("STUN packet\n");
-			return 1;
+			HIP_DEBUG("HIP packet\n");
+			return HIP_PACKET;
 		}
 		HIP_DEBUG("FIXME zero bytes recognition obbiously not working\n");
 	} else if (udphdr
@@ -413,13 +412,14 @@ int return_packet_type(void * hdr, int ipVersion){
     {
     	/* from the ports and the non zero SPI we can tell that this
     	 * is an ESP packet */
-		HIP_DEBUG("UDP encapsulated ESP packet\n");
-   		return 2;
+		HIP_DEBUG("UDP encapsulated ESP packet or STUN PACKET\n");
+		HIP_DEBUG("Assuming ESP. Todo: verify SPI from database\n");
+   		return ESP_PACKET;
 	}
 	
 	// plain UDP packet -> nothing to play around with
 	HIP_DEBUG("unsupported UDP packet\n");
-	return 0;
+	return UNSUPPORTED_PACKET;
 }
 
 /**
@@ -1282,7 +1282,7 @@ static void *handle_ip_traffic(struct ipq_handle *hndl, int traffic_type)
 			// handle all different kind of packets
 			switch (return_packet_type(packet_hdr, traffic_type))
 			{
-				case 1:
+				case HIP_PACKET:
 				{
       				// handle HIP packets
       				HIP_DEBUG("****** Received HIP packet ******\n");
@@ -1335,7 +1335,7 @@ static void *handle_ip_traffic(struct ipq_handle *hndl, int traffic_type)
 					
 					break;
       			}
-				case 2:
+				case ESP_PACKET:
 				{
 					// handle ESP packet for HITs
       				HIP_DEBUG("****** Received ESP packet ******\n");
@@ -1384,7 +1384,7 @@ static void *handle_ip_traffic(struct ipq_handle *hndl, int traffic_type)
 				} else
 				{
 				*/
-				case 3:
+				case TCP_PACKET:
 				{
 					// TODO what happens to normal TCP?
 					if(is_incoming_packet(packetHook))
