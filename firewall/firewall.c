@@ -1791,97 +1791,97 @@ static void *handle_ip_traffic(char *buf, struct ipq_handle *hndl, int traffic_t
 	packetHook = m->hook;
 #endif
 	int hip_related = 0;
-
-	 HIP_DEBUG("thread for traffic_type=IPv%d traffic started\n", traffic_type);
-	 memset(buf, 0, BUFSIZE);
-	 
-	 /* waits for queue messages to arrive from ip_queue and
-	  * copies them into a supplied buffer */
-	 status = ipq_read(hndl, buf, BUFSIZE, 0);
-	 if (status < 0)
-		 die(hndl);
-	 /* queued messages may be a packet messages or an error messages */
-	 switch (ipq_message_type(buf))
-	 {
-	 case NLMSG_ERROR:
-		 HIP_ERROR("Received error message (%d): %s\n", ipq_get_msgerr(buf), ipq_errstr());
-		 goto out_err;
-		 break;
-	 case IPQM_PACKET:
-		 HIP_DEBUG("Received ipqm packet\n");
-		 break;
-	 default:
-		 HIP_DEBUG("default case\n");
-		 goto out_err;
-		 break;
-	 }
-
-	 if (traffic_type == 4) {
-		 _HIP_DEBUG("ipv4\n");
-		 iphdr = (struct ip *) m->payload; 
-		 //fields needed for analysis of tcp packets
-		 packet_hdr = (void *)iphdr;
-		 hdr_size = (iphdr->ip_hl * 4);
-		 
-		 // IPv4 traffic might be UDP encasulated HIP or ESP
-		 // TODO check where used due to zero bytes
-		 if (iphdr->ip_p == IPPROTO_UDP){
-			 hdr_size += sizeof(struct udphdr) + HIP_UDP_ZERO_BYTES_LEN;
-		 }
-		 
-		 _HIP_DEBUG("header size: %d\n", hdr_size);
-		 IPV4_TO_IPV6_MAP(&iphdr->ip_src, &src_addr);
-		 IPV4_TO_IPV6_MAP(&iphdr->ip_dst, &dst_addr);
-	 } else if(traffic_type == 6) {
-		 _HIP_DEBUG("ipv6\n");
-		 ip6_hdr = (struct ip6_hdr *) m->payload;
-		 //fields needed for analysis of tcp packets
-		 packet_hdr = (void *)ip6_hdr;
-		 hdr_size = sizeof(struct ip6_hdr);
-		 
-		 _HIP_DEBUG("header size: %d\n", hdr_size);
-		 ipv6_addr_copy(&src_addr, &ip6_hdr->ip6_src);
-		 ipv6_addr_copy(&dst_addr, &ip6_hdr->ip6_dst);
-	 }
-		 
-	 packet_type = get_packet_type(packet_hdr, traffic_type);
-		 
-	 XX_FILL_CTX_HERE;
-	 
-	 if (hip_fw_handler[packetHook][packet_type]) {
-		 err = (hip_fw_handler[packetHook][packet_type])(ctx);
-	 } else {
-		 HIP_DEBUG("Ignoring, no handler for hook (%d) with type (%d)\n");
-	 }
-	 
+	
+	HIP_DEBUG("thread for traffic_type=IPv%d traffic started\n", traffic_type);
+	memset(buf, 0, BUFSIZE);
+	
+	/* waits for queue messages to arrive from ip_queue and
+	 * copies them into a supplied buffer */
+	status = ipq_read(hndl, buf, BUFSIZE, 0);
+	if (status < 0)
+		die(hndl);
+	/* queued messages may be a packet messages or an error messages */
+	switch (ipq_message_type(buf))
+	{
+	case NLMSG_ERROR:
+		HIP_ERROR("Received error message (%d): %s\n", ipq_get_msgerr(buf), ipq_errstr());
+		goto out_err;
+		break;
+	case IPQM_PACKET:
+		HIP_DEBUG("Received ipqm packet\n");
+		break;
+	default:
+		HIP_DEBUG("default case\n");
+		goto out_err;
+		break;
+	}
+	
+	if (traffic_type == 4) {
+		_HIP_DEBUG("ipv4\n");
+		iphdr = (struct ip *) m->payload; 
+		//fields needed for analysis of tcp packets
+		packet_hdr = (void *)iphdr;
+		hdr_size = (iphdr->ip_hl * 4);
+		
+		// IPv4 traffic might be UDP encasulated HIP or ESP
+		// TODO check where used due to zero bytes
+		if (iphdr->ip_p == IPPROTO_UDP){
+			hdr_size += sizeof(struct udphdr) + HIP_UDP_ZERO_BYTES_LEN;
+		}
+		
+		_HIP_DEBUG("header size: %d\n", hdr_size);
+		IPV4_TO_IPV6_MAP(&iphdr->ip_src, &src_addr);
+		IPV4_TO_IPV6_MAP(&iphdr->ip_dst, &dst_addr);
+	} else if(traffic_type == 6) {
+		_HIP_DEBUG("ipv6\n");
+		ip6_hdr = (struct ip6_hdr *) m->payload;
+		//fields needed for analysis of tcp packets
+		packet_hdr = (void *)ip6_hdr;
+		hdr_size = sizeof(struct ip6_hdr);
+		
+		_HIP_DEBUG("header size: %d\n", hdr_size);
+		ipv6_addr_copy(&src_addr, &ip6_hdr->ip6_src);
+		ipv6_addr_copy(&dst_addr, &ip6_hdr->ip6_dst);
+	}
+	
+	packet_type = get_packet_type(packet_hdr, traffic_type);
+	
+	XX_FILL_CTX_HERE;
+	
+	if (hip_fw_handler[packetHook][packet_type]) {
+		err = (hip_fw_handler[packetHook][packet_type])(ctx);
+	} else {
+		HIP_DEBUG("Ignoring, no handler for hook (%d) with type (%d)\n");
+	}
+	
 #if 0
-	 if (status < 0)
-		 die(hndl);
+	if (status < 0)
+		die(hndl);
 #endif
-
-out_err:
-	 if (err) {
-		 drop_packet(hndl, m->packet_id);
-	 } else {
-		 allow_packet(hndl, m->packet_id);
-	 }
-	 
+	
+ out_err:
+	if (err) {
+		drop_packet(hndl, m->packet_id);
+	} else {
+		allow_packet(hndl, m->packet_id);
+	}
+	
 #if 0
-	 if (hip_common)
-		 free(hip_common);
-	 if (esp)
-	 {
-		 if (esp_data)
-		 {
+	if (hip_common)
+		free(hip_common);
+	if (esp)
+	{
+		if (esp_data)
+		{
 			 free(esp_data);
 			 esp->esp_data = NULL;
-		 }
-		 free(esp);
-	 }
-	 ipq_destroy_handle(hndl);
+		}
+		free(esp);
+	}
+	ipq_destroy_handle(hndl);
 #endif
-	 
-	 return;
+	
+	return;
 }
 
 void check_and_write_default_config()
