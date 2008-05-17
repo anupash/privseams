@@ -110,7 +110,6 @@
 #define ACTION_HIPPROXY 24
 #define ACTION_REINIT 25
 #define ACTION_MAX 26 /* exclusive */
->>>>>>> MERGE-SOURCE
 
 /* Important! These values are used as array indexes, so keep in this order.
    Add values after the last value and increment TYPE_MAX. */
