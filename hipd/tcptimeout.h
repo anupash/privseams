@@ -84,7 +84,7 @@ int set_new_tcptimeout_parameters_value(void);
 
 int reset_default_tcptimeout_parameters_value(void);
 
-sysctl_set_command(char const *sysctl_with_options, char const *paras, char const *value, char *command_string);
+void sysctl_set_command(char const *sysctl_with_options, char const *paras, char const *value, char *command_string);
 
 
 #endif /* HIP_TCPTIMEOUT */
