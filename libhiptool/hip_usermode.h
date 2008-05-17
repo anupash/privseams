@@ -47,8 +47,8 @@ extern int socketpair(int, int, int, int sv[2]);
 #else
 // void *hip_esp_output(void *arg);
 // void *hip_esp_output(struct sockaddr_storage *ss_lsi);
-void *hip_esp_output(struct sockaddr_storage *ss_lsi, u8 *raw_buff, int len);
-void *hip_esp_input(struct sockaddr_storage *ss_lsi, u8 *buff, int len);
+int hip_esp_output(struct sockaddr *ss_lsi, u8 *raw_buff, int len);
+int hip_esp_input(struct sockaddr *ss_lsi, u8 *buff, int len);
 //void *hip_esp_input(void *arg);
 void *hip_pfkey(void *arg);
 void *tunreader(void *arg);

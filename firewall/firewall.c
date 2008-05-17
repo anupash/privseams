@@ -1402,11 +1402,10 @@ out_err:
  *   hip_sadb_lookup_addr(struct sockaddr *addr)
  **/
 
-void hip_firewall_userspace_ipsec_output(struct ipq_handle *handle,
-					 unsigned long	    packetId,
-					 void		   *hdr,
-					 int		    trafficType,
-					 ipq_packet_msg_t *ip_packet_in_the_queue)
+int hip_firewall_userspace_ipsec_output(unsigned long packetId,
+					void *hdr,
+					int trafficType,
+					ipq_packet_msg_t *ip_packet_in_the_queue)
 {
 	int ipv6_hdr_size = 0;
 	int tcp_hdr_size = 0;
@@ -1508,8 +1507,7 @@ void hip_firewall_userspace_ipsec_output(struct ipq_handle *handle,
 
 	if (hip_sadb_lookup_addr((struct sockaddr *) &ipv6_addr_to_sockaddr_hit) == NULL) {
 		HIP_DEBUG("pfkey send acquire\n");
-		pfkey_send_acquire((struct sockaddr *) &ipv6_addr_to_sockaddr_hit);
-		
+		err = pfkey_send_acquire((struct sockaddr *) &ipv6_addr_to_sockaddr_hit);
 	} else {
 		// TAO XX FIXME: READ LOCAL HIT AND PASS IT AS SOCKADDR STRUCTURE
 		// TO hip_esp_output
@@ -1537,45 +1535,28 @@ void hip_firewall_userspace_ipsec_output(struct ipq_handle *handle,
 		hip_addr_to_sockaddr(&default_hit, (struct sockaddr *) &sockaddr_local_default_hit);
 		//hip_addr_to_sockaddr(&ip6_hdr->ip6_src, &sockaddr_local_default_hit);
 		
-		hip_esp_output(&sockaddr_local_default_hit, 
-			       (u8 *) ip6_hdr, length_of_packet); /* XX FIXME: LSI */
+		err = hip_esp_output((struct sockaddr *) &sockaddr_local_default_hit, 
+				     (u8 *) ip6_hdr, length_of_packet); /* XX FIXME: LSI */
 	}
 	
 	HIP_DEBUG("Can hip_sadb_lookup_addr() find hip_sadb_entry? : %s\n",
-		  hip_sadb_lookup_addr(&ipv6_addr_to_sockaddr_hit) ? "YES" : "NO");
+		  hip_sadb_lookup_addr((struct sockaddr *) &ipv6_addr_to_sockaddr_hit) ? "YES" : "NO");
 	
 	
  out_err:
 	
-	drop_packet(handle, packetId);
-	return;
-	
-
-  
+	return err;
 }
-
-
-
-
-
-
 
 
 /* added by Tao Wan, This is the function for hip userspace ipsec input 
  *
  **/
-
-
-void hip_firewall_userspace_ipsec_input(struct ipq_handle *handle,
-					 unsigned long	    packetId,
-					 void		   *hdr,
-					 int		    trafficType,
-					 ipq_packet_msg_t *ip_packet_in_the_queue)
+int hip_firewall_userspace_ipsec_input(unsigned long packetId,
+				       void *hdr,
+				       int trafficType,
+				       ipq_packet_msg_t *ip_packet_in_the_queue)
 {
-	
-	
-// parse the peer HIT from arguments
-
 	int ipv6_hdr_size = 0;
 	int tcp_hdr_size = 0;
 	int length_of_packet = 0;
@@ -1600,14 +1581,7 @@ void hip_firewall_userspace_ipsec_input(struct ipq_handle *handle,
 	struct sockaddr_storage ipv6_src_addr;
 	struct sockaddr_storage ipv4_src_addr;
 	struct in6_addr ipv4_to_ipv6_conversion;
-	
-
-
-	
-	
 	int err = 0;
-
-	
 
 	if(trafficType == 4){
 		iphdr = (struct ip *)hdr;
@@ -1624,13 +1598,14 @@ void hip_firewall_userspace_ipsec_input(struct ipq_handle *handle,
 		
 		IPV4_TO_IPV6_MAP(&iphdr->ip_dst, &ipv4_to_ipv6_conversion);
 
-		hip_addr_to_sockaddr(&ipv4_to_ipv6_conversion, &ipv4_src_addr);
+		hip_addr_to_sockaddr((struct in6_addr *) &ipv4_to_ipv6_conversion,
+				     (struct sockaddr *) &ipv4_src_addr);
 		
 		HIP_DEBUG("hello: the number of sa_family is %s\n", 
 			  ipv4_src_addr.ss_family == AF_INET? "ipv4" : "ipv6");
 
-		hip_esp_input(&ipv4_src_addr, 
-			       iphdr, length_of_packet); 
+		err = hip_esp_input((struct sockaddr *) &ipv4_src_addr, 
+				    (u8 *) iphdr, length_of_packet); 
 
 }
 	else if(trafficType == 6){
@@ -1655,26 +1630,23 @@ void hip_firewall_userspace_ipsec_input(struct ipq_handle *handle,
 		tcphdr = ((struct tcphdr *) (((char *) ip6_hdr) + hdr_size));
 		hdrBytes = ((char *) ip6_hdr) + hdr_size;
 		
-	
-		
                 //peer and local ip needed for sending the i1 through hipd
 		//peer_ip = &ip6_hdr->ip6_src;//TO  BE FIXED obtain the pseudo hit instead
-		
-		
 
 		// ipv6_addr_copy(&peer_hit, &ip6_hdr->ip6_dst);
 		HIP_DEBUG_IN6ADDR("IPv6 from peer address ", &ip6_hdr->ip6_src); /* From peer */
 		HIP_DEBUG_IN6ADDR("IPv6 local address ", &ip6_hdr->ip6_dst); /* it is local */
 
 		
-		hip_addr_to_sockaddr(&ip6_hdr->ip6_dst, &ipv6_src_addr);
+		hip_addr_to_sockaddr((struct in6_addr *)&ip6_hdr->ip6_dst,
+				     (struct sockaddr *) &ipv6_src_addr);
 		
-		hip_esp_input(&ipv6_src_addr, 
-			       ip6_hdr, length_of_packet); 
+		err = hip_esp_input((struct sockaddr *) &ipv6_src_addr, 
+				    (char *) ip6_hdr, length_of_packet); 
 	}
 			
 
-	drop_packet(handle, packetId);
+	return err;
 }
 
 
@@ -1683,8 +1655,8 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx) {
 
 	HIP_DEBUG("\n");
 
-	if (userspace_ipsec)
-		HIP_IFE(hip_firewall_userspace_ipsec_output(xx_fixme), -1);
+	if (hip_userspace_ipsec)
+		HIP_IFE(hip_firewall_userspace_ipsec_output(xx), -1);
 						   
 	/* XX FIXME: LSI HOOKS */
 

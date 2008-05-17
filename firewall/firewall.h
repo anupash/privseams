@@ -131,14 +131,11 @@ void hip_request_unblock_app_from_hipd(const struct in6_addr *peer_ip);
 void hip_request_oppipdb_add_entry(struct in6_addr *peer_ip);
 
 
-void hip_firewall_userspace_ipsec_output(struct ipq_handle *handle,
-					 unsigned long	    packetId,
-					 void		   *hdr,
-					 int		    trafficType,
-					 ipq_packet_msg_t *ip_packet_in_the_queue);
+int hip_firewall_userspace_ipsec_output(unsigned long	    packetId,
+					void		    *hdr,
+					int		    trafficType,
+					ipq_packet_msg_t    *ip_packet_in_the_queue);
 
-
-void hip_firewall_userspace_ipsec_input();
 
 int hip_esp_traffic_userspace_handler(pthread_t *hip_esp_userspace_id_param, 
 				      void (*hip_esp_userspace_traffic)(void *), 

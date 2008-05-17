@@ -411,11 +411,11 @@ void init_readsp()
 #ifdef __WIN32__
 void hip_esp_output(void *arg)
 #else
-void *hip_esp_output(struct sockaddr_storage *ss_lsi, 
+int hip_esp_output(struct sockaddr *ss_lsi, 
 		     u8 *raw_buff, int len)
 #endif
 {
-	int i, err, flags, raw_len, is_broadcast, s, offset=0;
+	int i, err = 0, flags, raw_len, is_broadcast, s, offset=0;
 	int on = 1;
 	int out_enc_len; /* returned length of encrypted data*/
 	int ipv4_s_raw = 0; /* ipv4 raw socket */
@@ -1208,10 +1208,10 @@ void hip_esp_input(void *arg)
 /* beuff: raw encrypted data buffer 
  * len: /*length of buffer */
 /* ss_lsi is the source ip address structure for hipl*/
-void *hip_esp_input(struct sockaddr_storage *ss_lsi, u8 *buff, int len)
+int hip_esp_input(struct sockaddr *ss_lsi, u8 *buff, int len)
 #endif
 {
-	int err, max_fd, offset;
+	int err = 0, max_fd, offset;
 	int dec_len; /*lenth of HIT pairs + tcp header + payload */
 	fd_set fd;
 	struct timeval timeout, now;
@@ -1268,7 +1268,7 @@ void *hip_esp_input(struct sockaddr_storage *ss_lsi, u8 *buff, int len)
 
 	
 	if (lsi->sa_family == AF_INET) {
-
+		
 		HIP_DEBUG("It is the IPv4 traffic\n");
 		iph = (struct ip*) buff;
 
@@ -1298,24 +1298,24 @@ void *hip_esp_input(struct sockaddr_storage *ss_lsi, u8 *buff, int len)
 			HIP_DEBUG ("Keepalive packet received.\n");
 			goto out_err;
 		}
-	
+		
 		HIP_HEXDUMP("hello: the whole esp packet\n", esph, len - sizeof(struct ip) - sizeof(struct udphdr));
-
+		
 		spi = ntohl(esph->spi);
-	
+		
 		HIP_DEBUG("Input esp packet SPI value is 0x%x with UDP encapuslation\n", spi);
 		seq_no 	= ntohl(esph->seq_no);
 		if (!(entry = hip_sadb_lookup_spi(spi))) {
 			HIP_DEBUG("Warning: SA not found for SPI 0x%x  with UDP encapuslation\n", spi);
-		esph = (struct ip_esp_hdr *) (buff + sizeof(struct ip));
-		spi = ntohl(esph->spi);
-		seq_no 	= ntohl(esph->seq_no);
-		HIP_DEBUG("Input esp packet SPI value is 0x%x\n", spi);
-		if (!(entry = hip_sadb_lookup_spi(spi))) {
-			HIP_DEBUG("Warning: SA not found for SPI 0x%x\n", spi);
-			goto out_err;
-		}
-		
+			esph = (struct ip_esp_hdr *) (buff + sizeof(struct ip));
+			spi = ntohl(esph->spi);
+			seq_no 	= ntohl(esph->seq_no);
+			HIP_DEBUG("Input esp packet SPI value is 0x%x\n", spi);
+			if (!(entry = hip_sadb_lookup_spi(spi))) {
+				HIP_DEBUG("Warning: SA not found for SPI 0x%x\n", spi);
+				goto out_err;
+			}
+			
 		}
 
 	}
@@ -1354,11 +1354,6 @@ void *hip_esp_input(struct sockaddr_storage *ss_lsi, u8 *buff, int len)
 		}
 
 	}
-		
-	
-			
-	
-	
 
 	HIP_DEBUG("input entry->SPI value is 0x%x\n", entry->spi);
 	
@@ -1465,11 +1460,7 @@ void *hip_esp_input(struct sockaddr_storage *ss_lsi, u8 *buff, int len)
 			
 		}
 
-	
-
 	HIP_DEBUG("DO I come here?\n");
-		
-
 
 #if 0 /*disable openhip implementation */
 
@@ -1669,7 +1660,7 @@ void *hip_esp_input(struct sockaddr_storage *ss_lsi, u8 *buff, int len)
 	fflush(stdout);
 #ifndef __WIN32__
 	pthread_exit((void *) 0);
-	return(NULL);
+	return 0;
 #endif
 
 #endif /* the endif of disable openhip implementation */
@@ -1678,7 +1669,7 @@ void *hip_esp_input(struct sockaddr_storage *ss_lsi, u8 *buff, int len)
 	
 	HIP_DEBUG("hip_esp_input() thread shutdown.\n");
 	fflush(stdout);
-
+	return err;
 }
 
 
