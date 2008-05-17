@@ -562,18 +562,18 @@ void hip_add_lsi(struct sockaddr *addr, struct sockaddr *lsi4,
  */
 int buffer_packet(struct sockaddr *lsi, __u8 *data, int len)
 {
-	int is_new_entry = FALSE;
+	int is_new_entry = 0;
 	hip_lsi_entry *entry;
 
 	/* find entry, or create a new one */
 	if (!(entry = hip_lookup_lsi(lsi))) {
 		entry = create_lsi_entry(lsi);
-		is_new_entry = TRUE;
+		is_new_entry = 1;
 	}
 
 	/* add packet to queue if there is room */
 	if ((len + entry->next_packet) > LSI_PKT_BUFFER_SIZE)
-		return FALSE;
+		return 0;
 	/* TODO: log packet buffer overflow, drop newer/older packets? */
 	memcpy(&entry->packet_buffer[entry->next_packet], data, len);
 	entry->num_packets++;

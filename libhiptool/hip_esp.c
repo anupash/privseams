@@ -49,6 +49,7 @@
 #include <arpa/inet.h>		
 #ifndef __MACOSX__
 #include <linux/types.h>	/* for pfkeyv2.h types */
+#include <netinet/udp.h>	/* struct udphdr */
 #endif /* __MACOSX__ */
 #endif /* __WIN32__ */
 #include <string.h>		/* memset, etc */
@@ -275,7 +276,7 @@ __u16 checksum_udp_packet(__u8 *data, struct sockaddr *src, struct sockaddr *dst
 	pseudo_header6 pseudoh6;
 	__u32 src_network, dst_network;
 	struct in6_addr *src6, *dst6;
-	udphdr* udph = (udphdr*) data;
+	struct udphdr* udph = (struct udphdr*) data;
 
 	if (src->sa_family == AF_INET) {
 		/* IPv4 checksum based on UDP-- Section 6.1.2 */
@@ -429,35 +430,15 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 	size_t sa_size_v4 = sizeof(struct sockaddr_in);
 	size_t sa_size_v6 = sizeof(struct sockaddr_in6);
 	size_t sent = 0; 
-	
 	int dst_is_ipv4 = 0;
-
 	struct ip *iphdr; 
 	struct ip6_hdr *ip6_hdr;
 	struct tcphdr *tcphdr;
-	
-
-
 	int hdr_size;
-
-
-	
 	fd_set fd;
-	
 	struct timeval timeout, now;
-	//__u8 raw_buff[BUFF_LEN];
-	
-	/* encrypted data buffer + udp header -> udp header  + ESP  
-	* HIP_ESP_OVER_UDP
-	*/
 	__u8 data[BUFF_LEN];
-
-	
-
 	struct ip *iph;
-
-	memset(data, 0, sizeof(data));
-
 #ifdef __WIN32__
 	DWORD lenin;
 	OVERLAPPED overlapped = {0};
@@ -466,7 +447,9 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 	static hip_sadb_entry *entry;
 	//struct sockaddr_storage ss_lsi;
 	struct sockaddr *lsi = (struct sockaddr *) ss_lsi;
+	struct ip_esp_hdr *esph;
 
+	memset(data, 0, sizeof(data));
 
 	_HIP_DEBUG("the AF_INET value is %d\n", AF_INET);
 	_HIP_DEBUG("the AF_INET6 value is %d\n", AF_INET6);
@@ -548,7 +531,7 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 		 * already, i.e. a new lsi_entry was created */
 		HIP_DEBUG("HIP ipsec userspace sadb is not ready!!\n");
 
-		if (buffer_packet(lsi, raw_buff, len)==TRUE)
+		if (buffer_packet(lsi, raw_buff, len))
 			pfkey_send_acquire(lsi);
 		// continue;
 		return;
@@ -594,17 +577,9 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 	/* catch empty entries */
 	if (!entry->src_addrs || !entry->dst_addrs)
 			continue;		
-	
 
-
-	HIP_DEBUG_SOCKADDR("src addr: ", &entry->src_addrs->addr);
-	HIP_DEBUG_SOCKADDR("dst addr: ", &entry->dst_addrs->addr);
-
-
-		
-
-
-	
+	HIP_DEBUG_SOCKADDR("src addr: ", (struct sockaddr *) &entry->src_addrs->addr);
+	HIP_DEBUG_SOCKADDR("dst addr: ", (struct sockaddr *) &entry->dst_addrs->addr);
 	
 	/* FIXME if src family is IPv4, dst family is IPv6
 	*  or src family is IPv6, dst family is IPv4
@@ -703,8 +678,7 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 		
 		HIP_HEXDUMP("The output encrypted packet (UDP + ESP)  is ", data, out_enc_len);
 
-		struct ip_esp_hdr *esph = (struct ip_esp_hdr *) (((char *)data) 
-								 + sizeof(udphdr));
+		esph = (struct ip_esp_hdr *) (((char *)data) + sizeof(struct udphdr));
 
  
 		HIP_DEBUG("output packet spi value is 0x%x\n", ntohl(esph->spi));
@@ -931,7 +905,7 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 			    lsi_ip = ntohl(iph->ip_dst.s_addr);
 			    lsi->sa_family = AF_INET;
 			    LSI4(lsi) = lsi_ip;
-			    is_broadcast = FALSE;
+			    is_broadcast = 0;
 			
 			/* We do not have broadcast packets,  added by Tao
 			Wan on 27th, Feb */
@@ -952,7 +926,7 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 			if (!(entry = hip_sadb_lookup_addr(lsi))) {
 		/* No SADB entry. Send ACQUIRE if we haven't
 		* already, i.e. a new lsi_entry was created */
-				if (buffer_packet(lsi, raw_buff, len)==TRUE)
+				if (buffer_packet(lsi, raw_buff, len))
 					pfkey_send_acquire(lsi);
 				// continue;
 				return;
@@ -1081,7 +1055,7 @@ void *hip_esp_output(struct sockaddr_storage *ss_lsi,
 			if (!(entry = hip_sadb_lookup_addr(lsi))) {
 				/* No SADB entry. Send ACQUIRE if we haven't
 				 * already, i.e. a new lsi_entry was created */
-				if (buffer_packet(lsi, raw_buff, len)==TRUE)
+				if (buffer_packet(lsi, raw_buff, len))
 					pfkey_send_acquire(lsi);
 				//continue;
 				return;
@@ -1249,24 +1223,16 @@ void *hip_esp_input(struct sockaddr_storage *ss_lsi, u8 *buff, int len)
 	struct ip6_hdr *ip6_header;
 	struct ip_esp_hdr *esph;
 	hip_sadb_entry *inverse_entry;
-	udphdr *udph;
-
+	struct udphdr *udph;
 	__u32 spi, seq_no;
 	hip_sadb_entry *entry;
-
-
 	int ipv4_s_raw = 0; /* ipv4 raw socket */
 	int ipv6_s_raw = 0; /* ipv6 raw socket */
 	int on;
 	struct sockaddr_in6 *to_local_hit;
-	
 	socklen_t sa_size_v6 = sizeof(struct sockaddr_in6);
-
-	
-
-
-	
-
+	struct ip6_hdr *test_ip6_hdr;
+	struct tcphdr *test_tcphdr;
 
 	HIP_DEBUG("open a raw socket! \n");
 
@@ -1311,7 +1277,7 @@ void *hip_esp_input(struct sockaddr_storage *ss_lsi, u8 *buff, int len)
 
 		HIP_HEXDUMP("hello: the IPv4 header\n", iph, sizeof(struct ip)); 
 		
-		udph = (udphdr*) (buff + sizeof(struct ip));
+		udph = (struct udphdr*) (buff + sizeof(struct ip));
 
 		HIP_HEXDUMP("hellp: the UDP header\n", udph, sizeof(struct udphdr));
 
@@ -1322,12 +1288,12 @@ void *hip_esp_input(struct sockaddr_storage *ss_lsi, u8 *buff, int len)
 		 */
 
 		// esph = (struct ip_esp_hdr *) (((char *)udph) + sizeof(udphdr) + 8);
-		esph = (struct ip_esp_hdr *) (((char *)udph) + sizeof(udphdr));
+		esph = (struct ip_esp_hdr *) (((char *)udph) + sizeof(struct udphdr));
 		
 		
 
 
-		if (((int)(len - sizeof(struct ip) - sizeof(udphdr)) ==
+		if (((int)(len - sizeof(struct ip) - sizeof(struct udphdr)) ==
 		     1) && (((__u8*)esph)[0] == 0xFF)) {
 			HIP_DEBUG ("Keepalive packet received.\n");
 			goto out_err;
@@ -1350,7 +1316,7 @@ void *hip_esp_input(struct sockaddr_storage *ss_lsi, u8 *buff, int len)
 			goto out_err;
 		}
 		
-	}
+		}
 
 	}
 	
@@ -1361,7 +1327,7 @@ void *hip_esp_input(struct sockaddr_storage *ss_lsi, u8 *buff, int len)
 
 	if(lsi->sa_family == AF_INET6) {
 		HIP_DEBUG("It is the IPv6 traffic\n");
-		iph = (struct ip6_hdr *) &buff[0];
+		ip6_header = (struct ip6_hdr *) &buff[0];
 		/*
 		  udph = (udphdr*) &buff[sizeof(struct ip6_hdr)];
 		esph = (struct ip_esp_hdr *) &buff[sizeof(struct ip6_hdr) + sizeof(udphdr)]
@@ -1381,7 +1347,7 @@ void *hip_esp_input(struct sockaddr_storage *ss_lsi, u8 *buff, int len)
 			goto out_err;
 		}
 		
-		if (((int)(len - sizeof(struct ip6_hdr) - sizeof(udphdr)) ==
+		if (((int)(len - sizeof(struct ip6_hdr) - sizeof(struct udphdr)) ==
 		     1) && (((__u8*)esph)[0] == 0xFF)) {
 			HIP_DEBUG ("Keepalive packet received.\n");
 			goto out_err;
@@ -1416,8 +1382,10 @@ void *hip_esp_input(struct sockaddr_storage *ss_lsi, u8 *buff, int len)
 	}
 	*/	
 
-	HIP_DEBUG_SOCKADDR("local inner addr ", &entry->inner_src_addrs->addr);
-	HIP_DEBUG_SOCKADDR("remote inner addr ", &entry->inner_dst_addrs->addr);
+	HIP_DEBUG_SOCKADDR("local inner addr ",
+			   (struct sockaddr *) &entry->inner_src_addrs->addr);
+	HIP_DEBUG_SOCKADDR("remote inner addr ",
+			   (struct sockaddr *) &entry->inner_dst_addrs->addr);
 	
 	
 	if (!(inverse_entry = hip_sadb_lookup_addr(
@@ -1431,48 +1399,42 @@ void *hip_esp_input(struct sockaddr_storage *ss_lsi, u8 *buff, int len)
 	
 	HIP_DEBUG("destination port is %d\n", inverse_entry->dst_port);
 
-	HIP_DEBUG("get src port from udp header is %d\n", ntohs(udph->src_port));
+	HIP_DEBUG("get src port from udp header is %d\n", ntohs(udph->source));
 		  
 
 	/*HIP_DEBUG ( "DST_PORT = %u\n", 
 	 * inverse_entry->dst_port);*/
 	if (inverse_entry->dst_port == 0) {
 		HIP_DEBUG ("ESP channel - Setting dst_port "
-			   "to %u\n",ntohs(udph->src_port));
-		inverse_entry->dst_port = ntohs(udph->src_port);
+			   "to %u\n",ntohs(udph->source));
+		inverse_entry->dst_port = ntohs(udph->source);
 	}
 	
 	pthread_mutex_lock(&entry->rw_lock);
 	err = hip_esp_decrypt(buff, len, data, &offset, &dec_len,
 			      entry, iph, &now);
 	pthread_mutex_unlock(&entry->rw_lock);
-	if (err) 
-	{   HIP_DEBUG("HIP ESP decryption is not successful\n");
-	goto out_err;
+	if (err) {
+		HIP_DEBUG("HIP ESP decryption is not successful\n");
+		goto out_err;
 	}
-
-
-
 
 	to_local_hit = (struct sockaddr_in6 *)  &entry->inner_src_addrs->addr;
 	
-	HIP_DEBUG_SOCKADDR("hip_esp_input: to_local HIT is", to_local_hit);
-
-
-	
+	HIP_DEBUG_SOCKADDR("hip_esp_input: to_local HIT is", (struct sockaddr *) to_local_hit);
 
 	HIP_HEXDUMP("hip_esp_input: content of HITs + TCP + payload:", data, 
 		    dec_len); 
 	
 	/* Test contetnt of HITs + TCP + payload*/
 
-	struct ip6_hdr *test_ip6_hdr = (struct ip6_hdr *) data;
+	test_ip6_hdr = (struct ip6_hdr *) data;
 	
 	HIP_DEBUG_IN6ADDR("HIT pairs src hit: ", &test_ip6_hdr->ip6_src);
 	HIP_DEBUG_IN6ADDR("HIT pairs dst hit: ", &test_ip6_hdr->ip6_dst);
 	
 	
-	struct tcphdr *test_tcphdr  = (struct tcphdr *) &data[sizeof(struct ip6_hdr)];
+	test_tcphdr  = (struct tcphdr *) &data[sizeof(struct ip6_hdr)];
 	HIP_DEBUG("size of struct ipv6_hdr is: %d\n ", sizeof(struct ip6_hdr));
 
 
@@ -1594,11 +1556,11 @@ void *hip_esp_input(struct sockaddr_storage *ss_lsi, u8 *buff, int len)
 
 			/* XXX clean this up XXX */
 			iph = (struct ip*) &buff[0];
-			udph = (udphdr*) &buff[sizeof(struct ip)];
+			udph = (struct udphdr*) &buff[sizeof(struct ip)];
 			esph = (struct ip_esp_hdr *) \
-				&buff[sizeof(struct ip)+sizeof(udphdr)];
+				&buff[sizeof(struct ip)+sizeof(struct udphdr)];
 
-			if (((int)(len - sizeof(struct ip) - sizeof(udphdr)) ==
+			if (((int)(len - sizeof(struct ip) - sizeof(struct udphdr)) ==
 				1) && (((__u8*)esph)[0] == 0xFF)) {
 				HIP_DEBUG ("Keepalive packet received.\n");
 				continue;
@@ -1624,8 +1586,8 @@ void *hip_esp_input(struct sockaddr_storage *ss_lsi, u8 *buff, int len)
 			 * inverse_entry->dst_port);*/
 			if (inverse_entry->dst_port == 0) {
 				HIP_DEBUG ("ESP channel - Setting dst_port "
-					"to %u\n",ntohs(udph->src_port));
-				inverse_entry->dst_port = ntohs(udph->src_port);
+					"to %u\n",ntohs(udph->source));
+				inverse_entry->dst_port = ntohs(udph->source);
 			}
 
 			pthread_mutex_lock(&entry->rw_lock);
@@ -1639,22 +1601,22 @@ void *hip_esp_input(struct sockaddr_storage *ss_lsi, u8 *buff, int len)
 				HIP_DEBUG ("Reception of udp-tunnel activation "
 					"packet for spi:0x%x.\n",
 					inverse_entry->spi);
-				if (ntohs(udph->src_port) != 0) {
+				if (ntohs(udph->source) != 0) {
 					HIP_DEBUG ("ESP channel : Updating "
 						"dst_port: %u=>%u.\n",
 						inverse_entry->dst_port,
-						ntohs(udph->src_port));
+						ntohs(udph->source));
 					inverse_entry->dst_port = 
-						ntohs( udph->src_port );
+						ntohs( udph->source );
 				}
 				continue;
 			}
-			if (inverse_entry->dst_port != ntohs(udph->src_port)) {
+			if (inverse_entry->dst_port != ntohs(udph->source)) {
 				HIP_DEBUG ("ESP channel : unexpected change of "
 					"dst_port : %u=>%u\n",
 					inverse_entry->dst_port,
-					ntohs( udph->src_port ));
-				inverse_entry->dst_port = ntohs(udph->src_port);
+					ntohs( udph->source ));
+				inverse_entry->dst_port = ntohs(udph->source);
 			}
 			 
 #ifdef __WIN32__
@@ -1729,18 +1691,18 @@ void *udp_esp_keepalive (void *arg) {
 	hip_sadb_dst_entry *entry;
 	struct timeval now;
 	__u8 buff[9];
-	udphdr *udph;
+	struct udphdr *udph;
 	__u8 *data;
 	
 
 	HIP_DEBUG("udp_esp_keepalive() thread started...\n");
 
 	memset(buff,0,sizeof(buff));
-	udph = (udphdr*) buff;
-	data = &buff[sizeof(udphdr)];
-	udph->src_port = htons(HIP_ESP_UDP_PORT);
+	udph = (struct udphdr*) buff;
+	data = &buff[sizeof(struct udphdr)];
+	udph->source = htons(HIP_ESP_UDP_PORT);
 	udph->len = htons((__u16) 9);
-	udph->checksum = 0;
+	udph->check = 0;
 	data[0]=0xFF;
 
 	while (g_state == 0) {
@@ -1770,7 +1732,7 @@ void *udp_esp_keepalive (void *arg) {
 				/* XXX TODO: clean this up */
 				if (entry->sadb_entry->usetime_ka.tv_sec + 
 						HIP_KEEPALIVE_TIMEOUT < now.tv_sec) {
-					udph->dst_port = htons (entry->sadb_entry->dst_port);
+					udph->dest = htons (entry->sadb_entry->dst_port);
 					err = sendto(s_esp_udp, buff, sizeof(buff), 0,
 						(struct sockaddr*)&entry->sadb_entry->dst_addrs->addr,
 						SALEN(&entry->sadb_entry->dst_addrs->addr));
@@ -1783,7 +1745,7 @@ void *udp_esp_keepalive (void *arg) {
 						entry->sadb_entry->usetime_ka.tv_sec = now.tv_sec;
 						entry->sadb_entry->usetime_ka.tv_usec = now.tv_usec;
 					}
-					udph->dst_port = 0;
+					udph->dest = 0;
 				}
 			}
 		}
@@ -1898,7 +1860,7 @@ void tunreader(void *arg)
 	HIP_DEBUG("tunreader() thread started...\n");
 
 	init_readsp();
-	overlapped.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+	overlapped.hEvent = CreateEvent(NULL, 1, 0, NULL);
 
 	while (g_state == 0) {
 		overlapped.Offset = 0;
@@ -1911,7 +1873,7 @@ void tunreader(void *arg)
 				//WaitForSingleObject(overlapped.hEvent,2000);
 				WaitForSingleObject(overlapped.hEvent,INFINITE);
 				if (!GetOverlappedResult(tapfd, &overlapped,
-				    &len, FALSE)) {
+				    &len, 0)) {
 					/* there is nothing to send */
 					continue;
 				}
@@ -2250,13 +2212,13 @@ int hip_esp_encrypt(__u8 *in, int len, __u8 *out, int *outlen,
 	struct ip *iph=NULL;
 	struct ip6_hdr *ip6h=NULL;
 	struct ip_esp_hdr *esp;
-	udphdr *udph = NULL;
+	struct udphdr *udph = NULL;
 
 	struct ip_esp_padinfo *padinfo=0;
 	__u8 cbc_iv[16];
 	__u8 hmac_md[EVP_MAX_MD_SIZE];
 	__u16 checksum_fix = 0;
-	int family, use_udp = FALSE;
+	int family, use_udp = 0;
 
 
 	/* Because we do not have LSI support right now, so 
@@ -2329,11 +2291,11 @@ int hip_esp_encrypt(__u8 *in, int len, __u8 *out, int *outlen,
 
 
 	if (entry->mode == 3) { /*(HIP_ESP_OVER_UDP)*/
-		udph = (udphdr*) out;
+		udph = (struct udphdr*) out;
 		/*esp pointer points to out address*/
-		esp = (struct ip_esp_hdr*) &out[sizeof(udphdr)]; 
+		esp = (struct ip_esp_hdr*) &out[sizeof(struct udphdr)]; 
 		// esp += HIP_UDP_ZERO_BYTES_LEN;
-		use_udp = TRUE;
+		use_udp = 1;
 	} else {
 		esp = (struct ip_esp_hdr*) out;
 	}
@@ -2344,7 +2306,7 @@ int hip_esp_encrypt(__u8 *in, int len, __u8 *out, int *outlen,
 	
 	if (use_udp) /* (HIP_ESP_OVER_UDP) */
 		// *outlen += (sizeof(udphdr)  + sizeof(HIP_UDP_ZERO_BYTES_LEN));
-		*outlen += sizeof(udphdr);
+		*outlen += sizeof(struct udphdr);
 		
 	
 	/* 
@@ -2460,7 +2422,7 @@ int hip_esp_encrypt(__u8 *in, int len, __u8 *out, int *outlen,
 		elen += sizeof(struct ip_esp_hdr);
 		HMAC(	EVP_md5(), entry->a_key, entry->a_keylen,
 			(__u8*)esp, elen, hmac_md, &hmac_md_len);
-		memcpy(&out[elen + (use_udp ? sizeof(udphdr) : 0)], 
+		memcpy(&out[elen + (use_udp ? sizeof(struct udphdr) : 0)], 
 			hmac_md, alen);
 		*outlen += alen;
 		break;
@@ -2482,7 +2444,7 @@ int hip_esp_encrypt(__u8 *in, int len, __u8 *out, int *outlen,
 #endif /* DEBUG_EVERY_PACKET */
 		HMAC(	EVP_sha1(), entry->a_key, entry->a_keylen,
 			(__u8*)esp, elen, hmac_md, &hmac_md_len);
-		memcpy(&out[elen + (use_udp ? sizeof(udphdr) : 0)],
+		memcpy(&out[elen + (use_udp ? sizeof(struct udphdr) : 0)],
 			hmac_md, alen);
 		*outlen += alen;
 #ifdef DEBUG_EVERY_PACKET
@@ -2542,16 +2504,16 @@ int hip_esp_encrypt(__u8 *in, int len, __u8 *out, int *outlen,
 
 	if (use_udp) { /* (HIP_ESP_OVER_UDP) */
 		/* Set up UDP header at the beginning of out */
-		memset (udph, 0, sizeof(udphdr));
-		udph->src_port = htons(HIP_ESP_UDP_PORT);
-		if ( (udph->dst_port = htons(entry->dst_port))==0) {
+		memset (udph, 0, sizeof(struct udphdr));
+		udph->source = htons(HIP_ESP_UDP_PORT);
+		if ( (udph->dest = htons(entry->dst_port))==0) {
 			HIP_DEBUG ("ESP encrypt : bad UDP dst port number (%u).\n",
 				entry->dst_port);
 		}
 		udph->len = htons ((__u16)*outlen);
-		udph->checksum = checksum_udp_packet (out, 
-				    (struct sockaddr*)&entry->src_addrs->addr,
-				    (struct sockaddr*)&entry->dst_addrs->addr);
+		udph->check = checksum_udp_packet (out, 
+						   (struct sockaddr*)&entry->src_addrs->addr,
+						   (struct sockaddr*)&entry->dst_addrs->addr);
 	}
 		
 	return(0);
@@ -2604,7 +2566,7 @@ int hip_esp_decrypt(__u8 *in, int len, __u8 *out, int *offset, int *outlen,
 	int alen=0, elen=0, iv_len=0;
 	unsigned int hmac_md_len;
 	struct ip_esp_hdr *esp;
-	udphdr *udph;
+	struct udphdr *udph;
 
 	struct ip_esp_padinfo *padinfo=0;
 	struct tcphdr *tcp=NULL;
@@ -2620,7 +2582,7 @@ int hip_esp_decrypt(__u8 *in, int len, __u8 *out, int *offset, int *outlen,
 	struct sockaddr_in6 *src_hit;
 	struct sockaddr_in6 *dst_hit;
 
-	int use_udp = FALSE;
+	int use_udp = 0;
 	
 	if (!in || !out || !entry)
 		return(-1);
@@ -2631,8 +2593,8 @@ int hip_esp_decrypt(__u8 *in, int len, __u8 *out, int *offset, int *outlen,
 	HIP_HEXDUMP("hello: the IP header:", in, sizeof (struct ip));
 
 	if (entry->mode == 3) {	/*(HIP_ESP_OVER_UDP) */
-		use_udp = TRUE;
-		udph = (udphdr*) (in + sizeof(struct ip));
+		use_udp = 1;
+		udph = (struct udphdr*) (in + sizeof(struct ip));
 		
 		
 		HIP_HEXDUMP("hello: the udp header:", udph, 
@@ -2652,7 +2614,7 @@ int hip_esp_decrypt(__u8 *in, int len, __u8 *out, int *offset, int *outlen,
 		*/
 		
 		esp = (struct ip_esp_hdr*) (((char *) udph) + 
-		                         sizeof(udphdr));
+		                         sizeof(struct udphdr));
 		
 	} else { 		
 		/* Todo: Test if it is not UDP-encapsulated */
@@ -2711,7 +2673,7 @@ int hip_esp_decrypt(__u8 *in, int len, __u8 *out, int *offset, int *outlen,
 		if (iph)
 			elen -= sizeof(struct ip);
 		if (use_udp) /* HIP_ESP_OVER_UDP */
-			elen -= sizeof(udphdr);
+			elen -= sizeof(struct udphdr);
 		if (!entry->a_key || entry->a_keylen==0) {
 			HIP_DEBUG("auth err: missing keys\n");
 			return(-1);
@@ -2730,7 +2692,7 @@ int hip_esp_decrypt(__u8 *in, int len, __u8 *out, int *offset, int *outlen,
 		if (iph)
 			elen -= sizeof(struct ip);
 		if (use_udp) /* HIP_ESP_OVER_UDP */
-			elen -= sizeof(udphdr);
+			elen -= sizeof(struct udphdr);
 		if (!entry->a_key || entry->a_keylen==0) {
 			HIP_DEBUG("auth err: missing keys\n");
 			return(-1);
@@ -2880,11 +2842,13 @@ int hip_esp_decrypt(__u8 *in, int len, __u8 *out, int *offset, int *outlen,
 
 	/* LSI is not used here, FIXME if used later !!! */ 
 	
-	HIP_DEBUG_SOCKADDR("local HIT ", &entry->inner_src_addrs->addr);
-	HIP_DEBUG_SOCKADDR("remote HIT ", &entry->inner_dst_addrs->addr);
+	HIP_DEBUG_SOCKADDR("local HIT ",
+			   (struct sockaddr *) &entry->inner_src_addrs->addr);
+	HIP_DEBUG_SOCKADDR("remote HIT ",
+			   (struct sockaddr *) &entry->inner_dst_addrs->addr);
 	
-	src_hit =  &entry->inner_src_addrs->addr;
-	dst_hit =  &entry->inner_dst_addrs->addr;
+	src_hit = (struct sockaddr_in6 *) &entry->inner_src_addrs->addr;
+	dst_hit = (struct sockaddr_in6 *) &entry->inner_dst_addrs->addr;
 
 	HIP_DEBUG(" Is it TCP and UDP packet:?  %s ", 
 		 padinfo->next_hdr == IPPROTO_TCP? "TCP" : "UDP");
@@ -2963,7 +2927,7 @@ int hip_esp_decrypt(__u8 *in, int len, __u8 *out, int *offset, int *outlen,
 	}
 	
 
-#endif 0  /* end of LSI */
+#endif /* end of LSI */
 
 
 

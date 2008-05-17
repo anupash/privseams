@@ -44,8 +44,6 @@
 #include "hip_usermode.h"
 #include "debug.h"
 
-
-
 /**** some definitions from hip_types.h ****/
 
 /*
@@ -63,21 +61,8 @@ typedef struct _sockaddr_list
         struct timeval creation_time;
 } sockaddr_list;
 
-/* 
- * UDP header, used for UDP encapsulation
- */
-typedef struct _udphdr {
-      __u16 src_port;
-      __u16 dst_port;
-      __u16 len;
-      __u16 checksum;
-} udphdr __attribute__ ((packed));
-
 #define HIP_ESP_UDP_PORT 50500
 #define HIP_KEEPALIVE_TIMEOUT 20
-
-#define FALSE 0
-#define TRUE  1
 
 /**** end of definitions from hip_types.h ****/
 

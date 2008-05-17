@@ -13,6 +13,11 @@
  */
 #include "user.h"
 
+int hip_sendto(const struct hip_common *msg, const struct sockaddr *dst){
+        return sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
+                   0, (struct sockaddr *)dst, hip_sockaddr_len(dst));
+}
+
 /**
  * Handles a user message.
  *

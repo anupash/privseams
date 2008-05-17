@@ -77,6 +77,9 @@ int pfkey_send_acquire(struct sockaddr *target);
 extern __u64 g_tap_mac;
 extern int g_state;
 
+
+/* XX FIXME: THESE ARE ALREADY DEFINED IN HIPL !!!! */
+
 /*
  * Macros from hip.h and elsewhere
  */
@@ -90,7 +93,6 @@ extern int g_state;
 	sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)
 /* get IP address length in bytes */
 #define SAIPLEN(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? 4 : 16
-//#define IS_LSI32(a) ((a & 0xFF) == 0x01)
 
 /* Tao add 27th, Feb */
 #define SA(x) ((struct sockaddr*)x)
@@ -102,8 +104,6 @@ extern int g_state;
 
 
 
-/* LSI functions */
-#define IS_LSI32(a) ((a & 0xFF) == 0x01)
 #ifdef __WIN32__
 #define IN6_ARE_ADDR_EQUAL IN6_ADDR_EQUAL
 #define IS_HIT(x) (( (ntohs(((struct in6_addr*)x)->s6_words[0]) & 0xFFFF) \
@@ -159,6 +159,5 @@ extern int g_state;
 	ntohs((addr).s6_addr16[6]), \
 	ntohs((addr).s6_addr16[7])
 
-#define TRUE 1
-#define FALSE 0
+
 

@@ -16,7 +16,8 @@
 #include <netinet/tcp.h>
 #include <stdlib.h>
 #include <linux/netfilter_ipv4.h>
-
+#include <sys/types.h>
+#include <pthread.h>
 #include <libinet6/message.h>
 
 #include "crypto.h"
@@ -33,8 +34,7 @@
 #include "hip_usermode.h"
 #include "misc.h"
 #include "netdev.h"
-#include <sys/types.h>
-#include <pthread.h>
+#include "hip_sadb.h"
 
 #define HIP_FW_DEFAULT_RULE_FILE "/etc/hip/firewall.conf"
 #define HIP_FW_DEFAULT_TIMEOUT   1
@@ -68,16 +68,16 @@ typedef struct hip_fw_context {
 	int ip_version; /* 4, 6 */
 	struct in6_addr src, dst;
 	union {
-			struct ip6_hdr *ipv6;
-			struct ip *ipv4;
-		} network_hdr;
+		struct ip6_hdr *ipv6;
+		struct ip *ipv4;
+	} network_hdr;
 		
 	// transport layer information
 	int packet_type; /* HIP_PACKET, ESP_PACKET, etc  */
 	union {
-		struct hip_esp *esp_hdr;
-		struct hip_common *hip_hdr;
-		struct tcphdr *tcp_hdr;
+		struct hip_esp *esp;
+		struct hip_common *hip;
+		struct tcphdr *tcp;
 	} transport_hdr;
 	struct udphdr *udp_encap_hdr;
 } hip_fw_context_t;
@@ -143,6 +143,21 @@ void hip_firewall_userspace_ipsec_input();
 int hip_esp_traffic_userspace_handler(pthread_t *hip_esp_userspace_id_param, 
 				      void (*hip_esp_userspace_traffic)(void *), 
 				      void *thread_param);
+int hip_fw_handle_other_output(hip_fw_context_t *ctx);
+int hip_fw_handle_hip_output(hip_fw_context_t *ctx);
+int hip_fw_handle_esp_output(hip_fw_context_t *ctx);
+int hip_fw_handle_tcp_output(hip_fw_context_t *ctx);
+
+int hip_fw_handle_other_input(hip_fw_context_t *ctx);
+int hip_fw_handle_hip_input(hip_fw_context_t *ctx);
+int hip_fw_handle_esp_input(hip_fw_context_t *ctx);
+int hip_fw_handle_tcp_input(hip_fw_context_t *ctx);
+
+int hip_fw_handle_other_forward(hip_fw_context_t *ctx);
+int hip_fw_handle_hip_forward(hip_fw_context_t *ctx);
+int hip_fw_handle_esp_forward(hip_fw_context_t *ctx);
+int hip_fw_handle_tcp_forward(hip_fw_context_t *ctx);
+
 
 #endif
 

@@ -237,7 +237,7 @@ uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr,
 
 	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc memory for triggering base exchange\n");
 	hip_msg_init(msg);
-	HIP_IFEL(hip_build_user_hdr(msg, HIP_FIREWALL_BEX_DONE, 0), -1, 
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_FIREWALL_BEX_DONE, 0), -1, 
 		 "Build hdr failed\n");
 	
 	

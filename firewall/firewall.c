@@ -20,7 +20,7 @@ int accept_normal_traffic = 1;
 int accept_hip_esp_traffic = 0;
 int flush_iptables = 1;
 /*Default HIT*/
-struct in6_addr *default_HIT = NULL;
+struct in6_addr default_hit;
 
 int counter = 0;
 int hip_proxy_status = 0;
@@ -38,7 +38,7 @@ int hip_userspace_ipsec = 1;
  * Non-zero means that there was an error or the packet handler did not
  * know what to do with the packet.
  */
-int (*fw_handler[NF_IP_NUMHOOKS][FW_PROTOS])(hip_fw_context_t *) = { NULL };
+int (*hip_fw_handler[NF_IP_NUMHOOKS][FW_PROTO_NUM])(hip_fw_context_t *) = { NULL };
 
 void print_usage()
 {
@@ -146,24 +146,24 @@ int firewall_init_rules()
 {
 	HIP_DEBUG("Initializing firewall\n");
 
-	hip_fw_handler[NF_IP_LOCAL_IN][OTHER_PACKET] = hip_fw_handle_other_input(ctx);
-	hip_fw_handler[NF_IP_LOCAL_IN][HIP_PACKET] = hip_fw_handle_hip_input(ctx);
-	hip_fw_handler[NF_IP_LOCAL_IN][ESP_PACKET] = hip_fw_handle_esp_input(ctx);
-	hip_fw_handler[NF_IP_LOCAL_IN][TCP_PACKET] = hip_fw_handle_tcp_input(ctx);
+	hip_fw_handler[NF_IP_LOCAL_IN][OTHER_PACKET] = hip_fw_handle_other_input;
+	hip_fw_handler[NF_IP_LOCAL_IN][HIP_PACKET] = hip_fw_handle_hip_input;
+	hip_fw_handler[NF_IP_LOCAL_IN][ESP_PACKET] = hip_fw_handle_esp_input;
+	hip_fw_handler[NF_IP_LOCAL_IN][TCP_PACKET] = hip_fw_handle_tcp_input;
 
-	hip_fw_handler[NF_IP_LOCAL_OUT][OTHER_PACKET] = hip_fw_handle_other_output(ctx);
-	hip_fw_handler[NF_IP_LOCAL_OUT][HIP_PACKET] = hip_fw_handle_hip_output(ctx);
-	hip_fw_handler[NF_IP_LOCAL_OUT][ESP_PACKET] = hip_fw_handle_esp_output(ctx);
-	hip_fw_handler[NF_IP_LOCAL_OUT][TCP_PACKET] = hip_fw_handle_tcp_output(ctx);
+	hip_fw_handler[NF_IP_LOCAL_OUT][OTHER_PACKET] = hip_fw_handle_other_output;
+	hip_fw_handler[NF_IP_LOCAL_OUT][HIP_PACKET] = hip_fw_handle_hip_output;
+	hip_fw_handler[NF_IP_LOCAL_OUT][ESP_PACKET] = hip_fw_handle_esp_output;
+	hip_fw_handler[NF_IP_LOCAL_OUT][TCP_PACKET] = hip_fw_handle_tcp_output;
 
-	hip_fw_handler[NF_IP_FORWARD][OTHER_PACKET] = hip_fw_handle_other_forward(ctx);
+	hip_fw_handler[NF_IP_FORWARD][OTHER_PACKET] = hip_fw_handle_other_forward;
 	hip_fw_handler[NF_IP_FORWARD][HIP_PACKET] = NULL;
 	hip_fw_handler[NF_IP_FORWARD][ESP_PACKET] = NULL;
-	hip_fw_handler[NF_IP_FORWARD][TCP_PACKET] = hip_fw_handle_tcp_forward(ctx);
+	hip_fw_handler[NF_IP_FORWARD][TCP_PACKET] = hip_fw_handle_tcp_forward;
 
 	HIP_DEBUG("Enabling forwarding for IPv4 and IPv6\n");
 	system("echo 1 >/proc/sys/net/ipv4/conf/all/forwarding");
-	system("echo 1 >/proc/sys/net/ipv6/conf/all/forwarding")
+	system("echo 1 >/proc/sys/net/ipv6/conf/all/forwarding");
 
 	if (flush_iptables)
 	{
@@ -422,10 +422,10 @@ int get_packet_type(hip_fw_context_t *ctx){
 		
 		struct ip *iphdr = (struct ip *) ctx->packet->payload;
 		// add pointer to IPv4 header to context
-		ctx->network_hdr = iphdr;
+		ctx->network_hdr.ipv4 = iphdr;
 		// add IPv4 addresses
-		IPV4_TO_IPV6_MAP(&ctx->network_hdr->ip_src, &ctx->src);
-		IPV4_TO_IPV6_MAP(&iphdr->ip_dst, &ctx->dst);
+		IPV4_TO_IPV6_MAP(&ctx->network_hdr.ipv4->ip_src, &ctx->src);
+		IPV4_TO_IPV6_MAP(&ctx->network_hdr.ipv4->ip_dst, &ctx->dst);
 		
 		_HIP_DEBUG("IPv4 next header protocol number is %d\n", iphdr->ip_p);
 		
@@ -437,7 +437,7 @@ int get_packet_type(hip_fw_context_t *ctx){
 			HIP_DEBUG("plain HIP packet\n");
 			
 			ctx->packet_type = HIP_PACKET;
-			ctx->transport_hdr = (struct hip_common *) (((char *)iphdr) + sizeof(struct ip));
+			ctx->transport_hdr.hip = (struct hip_common *) (((char *)iphdr) + sizeof(struct ip));
 			
 			return 0;
 		} else if (iphdr->ip_p == IPPROTO_ESP)
@@ -446,7 +446,7 @@ int get_packet_type(hip_fw_context_t *ctx){
 			HIP_DEBUG("plain ESP packet\n");
 			
 			ctx->packet_type = ESP_PACKET;
-			ctx->transport_hdr = (struct hip_esp *) (((char *)iphdr) + sizeof(struct ip));
+			ctx->transport_hdr.esp = (struct hip_esp *) (((char *)iphdr) + sizeof(struct ip));
 			
 			return 0;
 			
@@ -457,11 +457,11 @@ int get_packet_type(hip_fw_context_t *ctx){
 			HIP_DEBUG("plain TCP packet\n");
 			
 			ctx->packet_type = TCP_PACKET;
-			ctx->transport_hdr = (struct tcphdr *) (((char *)iphdr) + sizeof(struct ip));
+			ctx->transport_hdr.tcp = (struct tcphdr *) (((char *)iphdr) + sizeof(struct ip));
 			
 			return 0;
 #endif
-		
+			
 		} else if (iphdr->ip_p != IPPROTO_UDP)
 		{
 			// if it's not UDP either, it's unsupported
@@ -471,7 +471,7 @@ int get_packet_type(hip_fw_context_t *ctx){
 			
 			return 0;
 		}
-
+		
 		// need UDP header to look for encapsulated ESP or STUN
 		hdr_size = (iphdr->ip_hl * 4);
 		HIP_DEBUG("hdr_size is %d\n", hdr_size);
@@ -486,24 +486,24 @@ int get_packet_type(hip_fw_context_t *ctx){
 		struct ip6_hdr *ip6_hdr = (struct ip6_hdr *)ctx->packet->payload;
 		
 		// add pointer to IPv4 header to context
-		ctx->network_hdr = ip6_hdr;
+		ctx->network_hdr.ipv6 = ip6_hdr;
 		// add IPv6 addresses
 		ipv6_addr_copy(&ctx->src, &ip6_hdr->ip6_src);
 		ipv6_addr_copy(&ctx->dst, &ip6_hdr->ip6_dst);
-
+		
 		HIP_DEBUG("IPv6 next header protocol number is %d\n",
-					ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt);
-
+			  ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt);
+		
 		
 		// find out which transport layer protocol is used
 		if(ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt == IPPROTO_HIP)
 		{
 			// we have found a plain HIP control packet
 			HIP_DEBUG("plain HIP packet\n");
-						
+			
 			ctx->packet_type = HIP_PACKET;
-			ctx->transport_hdr = (struct hip_common *) (((char *)ip6_hdr) + sizeof(struct ip6_hdr));
-						
+			ctx->transport_hdr.hip = (struct hip_common *) (((char *)ip6_hdr) + sizeof(struct ip6_hdr));
+			
 			return 0;
 		} else if (ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt == IPPROTO_ESP)
 		{
@@ -511,10 +511,10 @@ int get_packet_type(hip_fw_context_t *ctx){
 			HIP_DEBUG("plain ESP packet\n");
 			
 			ctx->packet_type = ESP_PACKET;
-			ctx->transport_hdr = (struct hip_esp *) (((char *)ip6_hdr) + sizeof(struct ip6_hdr));
+			ctx->transport_hdr.esp = (struct hip_esp *) (((char *)ip6_hdr) + sizeof(struct ip6_hdr));
 			
 			return 0;
-
+			
 #ifdef CONFIG_HIP_OPPTCP
 		} else if(ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt == IPPROTO_TCP)
 		{
@@ -522,11 +522,11 @@ int get_packet_type(hip_fw_context_t *ctx){
 			HIP_DEBUG("plain TCP packet\n");
 			
 			ctx->packet_type = TCP_PACKET;
-			ctx->transport_hdr = (struct tcphdr *) (((char *)ip6_hdr) + sizeof(struct ip6_hdr));
+			ctx->transport_hdr.tcp = (struct tcphdr *) (((char *)ip6_hdr) + sizeof(struct ip6_hdr));
 			
 			return 0;
 #endif
-		
+			
 		} else if (ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt != IPPROTO_UDP)
 		{
 			// if it's not UDP either, it's unsupported
@@ -546,16 +546,16 @@ int get_packet_type(hip_fw_context_t *ctx){
 	}
 
 	HIP_DEBUG("UDP header size  is %d\n", sizeof(struct udphdr));
-
+	
 	// TODO what does that "if" check exactly?
 	if (ctx->ip_version == 4 &&
 	    (plen >= sizeof(struct ip) + sizeof(struct udphdr) + HIP_UDP_ZERO_BYTES_LEN))
 	{
 		__u32 *zero_bytes = NULL;
-
+		
 		// we can distinguish UDP encapsulated control and data traffic with 32 zero bits
 		zero_bytes = (__u32 *) (((char *)udphdr) + sizeof(struct udphdr));
-	  
+		
 		HIP_HEXDUMP("zero_bytes: ", zero_bytes, 4);
 		
 		/*Check whether SPI number is zero or not */
@@ -565,45 +565,44 @@ int get_packet_type(hip_fw_context_t *ctx){
 		}
 	}
 
-	if(udphdr
-			&& ((udphdr->source == ntohs(HIP_NAT_UDP_PORT)) || 
-		        (udphdr->dest == ntohs(HIP_NAT_UDP_PORT)))
-		    && udp_encap_zero_bytes)
+	if(udphdr && ((udphdr->source == ntohs(HIP_NAT_UDP_PORT)) || 
+		      (udphdr->dest == ntohs(HIP_NAT_UDP_PORT))) &&
+	   udp_encap_zero_bytes)
 		
 	{	
 		/* check for HIP control message */
 		if (!hip_check_network_msg((struct hip_common *) (((char *)udphdr) 
 								     + 
-								     sizeof(struct udphdr) 
-								     + 
-								     HIP_UDP_ZERO_BYTES_LEN)))
+								  sizeof(struct udphdr) 
+								  + 
+								  HIP_UDP_ZERO_BYTES_LEN)))
 		{
 			// we found an UDP encapsulated HIP control packet
 			HIP_DEBUG("UDP encapsulated HIP control packet\n");
 			
 			// add to context
 			ctx->packet_type = HIP_PACKET;
-			ctx->transport_hdr = (struct hip_common *) (((char *)udphdr) 
-				     									+ sizeof(struct udphdr) 
-				     									+ HIP_UDP_ZERO_BYTES_LEN);
+			ctx->transport_hdr.hip = (struct hip_common *) (((char *)udphdr) 
+									+ sizeof(struct udphdr) 
+									+ HIP_UDP_ZERO_BYTES_LEN);
 			
 			return 0;
 		}
 		HIP_DEBUG("FIXME zero bytes recognition obviously not working\n");
 	} else if (udphdr
-				&& ((udphdr->source == ntohs(HIP_NAT_UDP_PORT)) || 
-		            (udphdr->dest == ntohs(HIP_NAT_UDP_PORT)))
-		        && !udp_encap_zero_bytes)
-    {
-    	/* from the ports and the non zero SPI we can tell that this
-    	 * is an ESP packet */
+		   && ((udphdr->source == ntohs(HIP_NAT_UDP_PORT)) || 
+		       (udphdr->dest == ntohs(HIP_NAT_UDP_PORT)))
+		   && !udp_encap_zero_bytes)
+	{
+		/* from the ports and the non zero SPI we can tell that this
+		 * is an ESP packet */
 		HIP_DEBUG("UDP encapsulated ESP packet or STUN PACKET\n");
 		HIP_DEBUG("Assuming ESP. Todo: verify SPI from database\n");
 		
 		// add to context
 		ctx->packet_type = ESP_PACKET;
-		ctx->transport_hdr = (struct hip_esp *) (((char *)udphdr) 
-			     									+ sizeof(struct udphdr));
+		ctx->transport_hdr.esp = (struct hip_esp *) (((char *)udphdr) 
+							     + sizeof(struct udphdr));
 		
 		return 0;
 	}
@@ -1369,14 +1368,14 @@ int filter_hip(const struct in6_addr * ip6_src,
 }
 
 /* Get default HIT*/
-static struct in6_addr_t *hip_get_default_local_hit_from_hipd()
+int hip_get_default_local_hit_from_hipd()
 {
 	 
 	int err = 0;
 	struct hip_common *msg = NULL;
 	struct hip_tlv_common *current_param = NULL;
 	in6_addr_t *defhit;	
-	 struct endpoint_hip *endp=NULL;
+	struct endpoint_hip *endp=NULL;
 	
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEFAULT_HIT,0),-1,
@@ -1387,16 +1386,13 @@ static struct in6_addr_t *hip_get_default_local_hit_from_hipd()
 	while((current_param = hip_get_next_param(msg, current_param)) != NULL)
 	{
 		defhit = (in6_addr_t *)hip_get_param_contents_direct(current_param);
-		set_hit_prefix(defhit);
+		//set_hit_prefix(defhit); // miika: what the heck?
 		HIP_INFO_HIT("default hi is ",defhit);
 	}
 
 
-	return defhit;
-	
-
 out_err:
-	return NULL;
+	return err;
 
 }
 
@@ -1412,9 +1408,6 @@ void hip_firewall_userspace_ipsec_output(struct ipq_handle *handle,
 					 int		    trafficType,
 					 ipq_packet_msg_t *ip_packet_in_the_queue)
 {
-	
-// parse the peer HIT from arguments
-
 	int ipv6_hdr_size = 0;
 	int tcp_hdr_size = 0;
 	int length_of_packet = 0;
@@ -1423,26 +1416,12 @@ void hip_firewall_userspace_ipsec_output(struct ipq_handle *handle,
 	struct tcphdr  *tcphdr;
 	struct ip      *iphdr;
 	struct ip6_hdr *ip6_hdr;
-	
-        //fields for temporary values
-	// u_int16_t       portTemp;
-	// struct in_addr  addrTemp;
-	// struct in6_addr addr6Temp;
-	/* the following vars are needed for
-	 * sending the i1 - initiating the exchange
-	 * in case we see that the peer supports hip*/
 	struct in6_addr peer_ip;
 	struct in6_addr peer_hit;
-	// in_port_t        src_tcp_port;
-	// in_port_t        dst_tcp_port;
-
-	struct sockaddr_storage ipv6_addr_to_sockaddr_hit;
-	struct sockaddr_storage sockaddr_local_default_hit;
+	struct sockaddr_in6 ipv6_addr_to_sockaddr_hit;
+	struct sockaddr_in6 sockaddr_local_default_hit;
 	struct hip_tlv_common *current_param = NULL;
 	struct in6_addr *defhit;
-	
-	
-	
 	int err = 0;
 
 	HIP_DEBUG("Try to get peer_hit\n");
@@ -1504,9 +1483,6 @@ void hip_firewall_userspace_ipsec_output(struct ipq_handle *handle,
 		
                 //peer and local ip needed for sending the i1 through hipd
 		//peer_ip = &ip6_hdr->ip6_src;//TO  BE FIXED obtain the pseudo hit instead
-		
-		
-
 		ipv6_addr_copy(&peer_hit, &ip6_hdr->ip6_dst);
 	}
 	
@@ -1519,23 +1495,20 @@ void hip_firewall_userspace_ipsec_output(struct ipq_handle *handle,
 	
 	HIP_DEBUG_HIT("peer hit from ipsec_output: ", &peer_hit);
 	HIP_DEBUG_HIT("source hit from ipsec_output: ", &ip6_hdr->ip6_src);
-	
-	
 
-	hip_addr_to_sockaddr(&peer_hit, &ipv6_addr_to_sockaddr_hit);     
+	hip_addr_to_sockaddr(&peer_hit, (struct sockaddr *) &ipv6_addr_to_sockaddr_hit);     
 
-
-	HIP_DEBUG_SOCKADDR("ipv6_addr_to_sockaddr_hit value is :", &ipv6_addr_to_sockaddr_hit);
+	HIP_DEBUG_SOCKADDR("ipv6_addr_to_sockaddr_hit value is :",
+			   (struct sockaddr *) &ipv6_addr_to_sockaddr_hit);
 
 	
 	HIP_DEBUG("Can hip_sadb_lookup_addr() find hip_sadb_entry? : %s\n",
-		hip_sadb_lookup_addr(&ipv6_addr_to_sockaddr_hit) ? "YES" : "NO");
+		hip_sadb_lookup_addr((struct sockaddr *) &ipv6_addr_to_sockaddr_hit) ? "YES" : "NO");
 	
 
-	if (hip_sadb_lookup_addr(&ipv6_addr_to_sockaddr_hit) == NULL) {
-		
-		HIP_DEBUG("pfkey send acquire........\n");
-		pfkey_send_acquire(&ipv6_addr_to_sockaddr_hit);
+	if (hip_sadb_lookup_addr((struct sockaddr *) &ipv6_addr_to_sockaddr_hit) == NULL) {
+		HIP_DEBUG("pfkey send acquire\n");
+		pfkey_send_acquire((struct sockaddr *) &ipv6_addr_to_sockaddr_hit);
 		
 	} else {
 		// TAO XX FIXME: READ LOCAL HIT AND PASS IT AS SOCKADDR STRUCTURE
@@ -1559,13 +1532,13 @@ void hip_firewall_userspace_ipsec_output(struct ipq_handle *handle,
 		*/
 
 		// defhit = hip_get_default_local_hit_from_hipd();
-		HIP_INFO_HIT("hip_esp_out: default hit is ",default_HIT);
+		HIP_INFO_HIT("hip_esp_out: default hit is ", &default_hit);
 		
-		hip_addr_to_sockaddr(default_HIT, &sockaddr_local_default_hit);
+		hip_addr_to_sockaddr(&default_hit, (struct sockaddr *) &sockaddr_local_default_hit);
 		//hip_addr_to_sockaddr(&ip6_hdr->ip6_src, &sockaddr_local_default_hit);
 		
 		hip_esp_output(&sockaddr_local_default_hit, 
-			       ip6_hdr, length_of_packet); /* XX FIXME: LSI */
+			       (u8 *) ip6_hdr, length_of_packet); /* XX FIXME: LSI */
 	}
 	
 	HIP_DEBUG("Can hip_sadb_lookup_addr() find hip_sadb_entry? : %s\n",
@@ -2027,16 +2000,11 @@ int main(int argc, char **argv)
 		exit(-1);
 	}
 
-	default_HIT = hip_get_default_local_hit_from_hipd() ;
-	HIP_INFO_HIT("Default hi is ",default_HIT);
+	if (userspace_ipsec)
+		HIP_IFEL(hip_get_default_local_hit_from_hipd(), -1,
+			 "Error getting default HIT\n");
+	HIP_INFO_HIT("Default hi is ", &default_hit);
 
-	if(!default_HIT)
-	{
-
-		HIP_DEBUG("Running HIPD at first\n");
-		goto out_err;
-	}
-	
 	check_and_write_default_config();
 	
 	hip_set_logdebug(LOGDEBUG_NONE);

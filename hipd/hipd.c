@@ -134,6 +134,21 @@ void usage() {
 	fprintf(stderr, "\n");
 }
 
+int hip_send_agent(struct hip_common *msg) {
+        struct sockaddr_in6 hip_agent_addr;
+        int alen;
+
+        memset(&hip_agent_addr, 0, sizeof(hip_agent_addr));
+        hip_agent_addr.sin6_family = AF_INET6;
+        hip_agent_addr.sin6_addr = in6addr_loopback;
+        hip_agent_addr.sin6_port = htons(HIP_AGENT_PORT);
+
+        alen = sizeof(hip_agent_addr);
+
+        return sendto(hip_user_sock, msg, hip_get_msg_total_len(msg), 0,
+                       (struct sockaddr *)&hip_agent_addr, alen);
+}
+
 /**
  * Receive message from agent socket.
  */
