@@ -84,10 +84,10 @@ int is_escrow_active()
  *
  * - HIP:
  *   1. default rule checks for hip
- *   2. filter_hip
+ *   1. filter_hip
  *
  * - ESP:
- *   1. default rule checks for hip
+ *   1. default rule checks for esp
  *   2. filter_esp
  *
  * - TCP:
@@ -112,16 +112,15 @@ int is_escrow_active()
  *   2. filter_esp
  *   3. userspace_ipsec input
  *   4. lsi input
- *   5. proxy input
+ *
+ * - Other:
+ *   - Same as with TCP except no opp tcp input
  *
  * - TCP:
  *   1. default rule checks for non-hip
  *   2. opp tcp input
  *   3. proxy input
- *
- * - Other:
- *   - Same as with TCP except no opp tcp input
- *
+  *
  * Forward:
  *
  * - HIP:
@@ -1622,13 +1621,11 @@ void hip_firewall_userspace_ipsec_input(struct ipq_handle *handle,
 int hip_fw_handle_other_output(hip_fw_context_t *ctx) {
 	int err = 0;
 
-	err = hip_firewall_userspace_ipsec_output();
+	HIP_DEBUG("\n");
+
+	err = hip_firewall_userspace_ipsec_output(xx_fixme);
 						   
-	/* XX FIXME: OPP TCP FILTERING */	
-
-
-	/* XX FIXME: LSI CODE */
-
+	/* XX FIXME: LSI HOOKS */
 }
 
 int hip_fw_handle_hip_output(hip_fw_context_t *ctx) {
@@ -1636,23 +1633,16 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx) {
 	struct hip_sig * sig = NULL;
 	
 	HIP_DEBUG("****** Received HIP packet ******\n");
-	if (m->data_len <= (BUFSIZE - hdr_size))
-	{
+	if (m->data_len <= (BUFSIZE - hdr_size)) {
 		packet_length = m->data_len - hdr_size; 	
 		_HIP_DEBUG("HIP packet size smaller than buffer size\n");
-	} else
-	{
+	} else {
 		/* packet is too long -> drop as max_size is well defined in RFC */
 		//packet_length = BUFSIZE - hdr_size;
 		_HIP_DEBUG("HIP packet size greater than buffer size\n");
-		drop_packet(hndl, m->packet_id);
-		
-		break;
+		err = -1;
+		goto out_err;
 	}
-	
-	hip_common = (struct hip_common *)HIP_MALLOC(packet_length, 0);
-	
-	memcpy(hip_common, m->payload + hdr_size, packet_length);		
 	
 	// TODO check if signature is verified somewhere
 	sig = (struct hip_sig *) hip_get_param(hip_common, HIP_PARAM_HIP_SIGNATURE);
@@ -1662,99 +1652,115 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx) {
 		_HIP_DEBUG("signature exists\n");
 	
 	// check HIP packet against firewall rules
-	if(filter_hip(&src_addr, 
-		      &dst_addr, 
-		      hip_common, 
-		      m->hook,
-		      m->indev_name,
-		      m->outdev_name))
-	{
-		allow_packet(hndl, m->packet_id);
-	} else
-	{
-		HIP_DEBUG("ret_val_filter_hip value is %d (filter_hip)\n", 
-			  ret_val_filter_hip);
-		if (hip_userspace_ipsec)
-			allow_packet(hndl, m->packet_id);
-		else
-			drop_packet(hndl, m->packet_id);
-	}
-	
-	if (hip_common)
-		HIP_FREE(hip_common);
-	hip_common = NULL;
+	err = !filter_hip(&src_addr, 
+			  &dst_addr, 
+			  m->payload + hdr_size, 
+			  m->hook,
+			  m->indev_name,
+			  m->outdev_name);
+
+ out_err:
+	return err;
 }
 
 int hip_fw_handle_esp_output(hip_fw_context_t *ctx) {
-	//TODO prettier way to get spi
-	uint32_t spi_val;
-	
-	// handle ESP packet for HITs
-	HIP_DEBUG("****** Received ESP packet ******\n");
-	
-	memcpy(&spi_val, 
-	       (m->payload + sizeof(struct ip6_hdr)), 
-	       sizeof(__u32));
-	/*
-	  if(filter_esp(&ip6_hdr->ip6_dst, 
-	  spi_val,
-	  m->hook,
-	  m->indev_name,
-	  m->outdev_name))
-	  {
-	*/
-	
-	allow_packet(hndl, m->packet_id);
-	
-	/*
-	  } else
-	  {
-	  drop_packet(hndl, m->packet_id);
-	  }
-	*/
-	break;
-	
-	if (hip_userspace_ipsec && is_incoming_packet(packetHook))
-	{
-		HIP_DEBUG("debug message: HIP firewall userspace ipsec input: \n ");
-		hip_firewall_userspace_ipsec_input(hndl, m->packet_id, packet_hdr, type, m); /* added by Tao Wan */
-		
-	}
+	int err = 0;
+
+	HIP_DEBUG("\n");
+
+	err = !(filter_esp(&ip6_hdr->ip6_dst, 
+			   spi_val,
+			   m->hook,
+			   m->indev_name,
+			   m->outdev_name));
+
+	return err;
 }
 
 int hip_fw_handle_tcp_output(hip_fw_context_t *ctx) {
+
+	HIP_DEBUG("\n");
+
+	/* XX FIXME: opp tcp filtering */
 
 	return hip_fw_handle_other_output();
 }
 
 int hip_fw_handle_other_input(hip_fw_context_t *ctx) {
+	int err = 0;
+
+	HIP_DEBUG("\n");
+
 	if(ipv6_addr_is_hit(&src_addr) && ipv6_addr_is_hit(&dst_addr))
 	{
 		//struct in6_addr client_addr;
 		//HIP PROXY INBOUND PROCESS
-		handle_proxy_inbound_traffic(m, hndl, src_addr);
+		err = handle_proxy_inbound_traffic(m, hndl, src_addr);
 	}
+
+	return err;
 }
 
 int hip_fw_handle_hip_input(hip_fw_context_t *ctx) {
+	HIP_DEBUG("\n");
+
+	return hip_fw_handle_hip_output(ctx);
 }
 
 int hip_fw_handle_esp_input(hip_fw_context_t *ctx) {
+	int err = 0;
 
+	HIP_DEBUG("\n");
+
+	HIP_IFEL(hip_fw_handle_esp_output(ctx), -1,
+		 "ESP packet dropped\n");
+
+	if (hip_userspace_ipsec) {
+		HIP_DEBUG("debug message: HIP firewall userspace ipsec input: \n ");
+		/* added by Tao Wan */
+		HIP_IFEL(hip_firewall_userspace_ipsec_input(hndl, m->packet_id,
+							    packet_hdr, type, m), -1,
+			 "Userspace ipsec failed to process incoming ESP packet\n");
+		
+	}
+
+	/* XX FIXME: ADD LSI INPUT HERE */
+
+ out_err:
+	return err;
 }
 
 int hip_fw_handle_tcp_input(hip_fw_context_t *ctx) {
-	examine_incoming_tcp_packet(hndl, m->packet_id, packet_hdr, type);
+	int err = 0;
 
-	hip_fw_handle_other_input(ctx);
+	HIP_DEBUG("\n");
+
+	HIP_IFEL(examine_incoming_tcp_packet(hndl,
+					     m->packet_id,
+					     packet_hdr, type), -1,
+		 "Processing TCP packet with Opp. option failed\n");
+	HIP_IFEL(hip_fw_handle_other_input(ctx), -1,
+		 "Handling other input failed\n");
+
+ out_err:
+	return err;
 }
 
 int hip_fw_handle_other_forward(hip_fw_context_t *ctx) {
-	//HIP PROXY OUTBOUND PROCESS
-	//the destination ip address should be checked first to ensure it supports hip
-	//if the destination ip does not support hip, drop the packet
-	if(hip_proxy_status)
-		return handle_proxy_outbound_traffic(m, hndl,	src_addr, dst_addr, hdr_size, traffic_type);
+	int err = 0;
+
+	HIP_DEBUG("\n");
+
+	if (hip_proxy_status)
+		err = handle_proxy_outbound_traffic(m, hndl,	src_addr, dst_addr, hdr_size, traffic_type);
+
+	return err;
+}
+
+int hip_fw_handle_tcp_forward(hip_fw_context_t *ctx) {
+	HIP_DEBUG("\n");
+
+	return ip_fw_handle_other_forward(ctx);
 }
 
 
@@ -1781,17 +1787,18 @@ static void *handle_ip_traffic(char *buf, struct ipq_handle *hndl, int traffic_t
 	struct in6_addr proxy_hit;
 	struct hip_proxy_t* entry = NULL;	
 	struct hip_conn_t* conn_entry = NULL;
-	hip_fw_context_t ctx;
-	unsigned int packetHook;
 	int ret_val_filter_hip, packet_type;
 	int status;
 	void * packet_hdr= NULL;
 	int hdr_size = 0;
 	ipq_packet_msg_t *m = ipq_get_packet(buf);
-	packetHook = m->hook;
 #endif
+	hip_fw_context_t ctx;
+	unsigned int packetHook;
 	int hip_related = 0;
 	
+	packetHook = m->hook;
+
 	HIP_DEBUG("thread for traffic_type=IPv%d traffic started\n", traffic_type);
 	memset(buf, 0, BUFSIZE);
 	
