@@ -78,29 +78,20 @@ extern __u64 g_tap_mac;
 extern int g_state;
 
 
-/* XX FIXME: THESE ARE ALREADY DEFINED IN HIPL !!!! */
-
 /*
  * Macros from hip.h and elsewhere
  */
 /* get pointer to IP from a sockaddr 
  *    useful for inet_ntop calls     */
-#define SA2IP(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? \
-	(void*)&((struct sockaddr_in*)x)->sin_addr : \
-	(void*)&((struct sockaddr_in6*)x)->sin6_addr
-/* get socket address length in bytes */
-#define SALEN(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? \
-	sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)
-/* get IP address length in bytes */
-#define SAIPLEN(x) (((struct sockaddr*)x)->sa_family==AF_INET) ? 4 : 16
+#define SA2IP(x) hip_cast_sa_addr(x)
+#define SALEN(x) hip_sockaddr_len(x)
+#define SAIPLEN(x) hip_sa_addr_len(x)
 
 /* Tao add 27th, Feb */
 #define SA(x) ((struct sockaddr*)x)
 
-
-
 /* The below prefix applies to the uppermost 28 bits only (RFC 4843) */
-#define HIT_PREFIX_SHA1_32BITS 0x20010010 
+#define HIT_PREFIX_SHA1_32BITS HIP_HIT_TYPE_MASK_100
 
 
 
@@ -114,8 +105,7 @@ extern int g_state;
 #define IS_HIT(x) ( (ntohl(((struct in6_addr*)x)->__u6_addr.__u6_addr32[0]) \
                   & 0xFFFFFFF0L) == HIT_PREFIX_SHA1_32BITS )
 #else /* Linux */
-#define IS_HIT(x) ( (ntohl(((struct in6_addr*)x)->s6_addr32[0]) & 0xFFFFFFF0L) \
-                        == HIT_PREFIX_SHA1_32BITS )
+#define IS_HIT(x) ipv6_addr_is_hit(x)
 #endif
 
 #define SA2IP6(x) ( &((struct sockaddr_in6*)x)->sin6_addr )
@@ -133,15 +123,6 @@ extern int g_state;
 #define VALID_FAM(a) ( (((struct sockaddr*)a)->sa_family == AF_INET) || \
                        (((struct sockaddr*)a)->sa_family == AF_INET6) )
 
-
-
-
-
-
-
-
-
-
 /* from linux/include/linux/kernel.h */
 #define NIPQUAD(addr) \
 	((unsigned char *)&addr)[0], \
@@ -158,6 +139,4 @@ extern int g_state;
 	ntohs((addr).s6_addr16[5]), \
 	ntohs((addr).s6_addr16[6]), \
 	ntohs((addr).s6_addr16[7])
-
-
 

@@ -61,8 +61,8 @@ typedef struct _sockaddr_list
         struct timeval creation_time;
 } sockaddr_list;
 
-#define HIP_ESP_UDP_PORT 50500
-#define HIP_KEEPALIVE_TIMEOUT 20
+#define HIP_ESP_UDP_PORT       HIP_NAT_UDP_PORT
+#define HIP_KEEPALIVE_TIMEOUT  HIP_NAT_KEEP_ALIVE_INTERVAL
 
 /**** end of definitions from hip_types.h ****/
 
