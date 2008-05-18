@@ -1173,7 +1173,7 @@ int main(int argc, char **argv)
 		hip_query_default_local_hit_from_hipd();
 	}
 
-	HIP_INFO_HIT("Default hit is ", hip_fw_get_default_hit());
+	_HIP_DEBUG_HIT("Default hit is ", hip_fw_get_default_hit());
 
 	check_and_write_default_config();
 	
@@ -1233,6 +1233,7 @@ int main(int argc, char **argv)
 
 	if (!foreground)
 	{
+		HIP_DEBUG("Forking into background\n");
 		hip_set_logtype(LOGTYPE_SYSLOG);
 		if (fork() > 0)
 			return 0;
