@@ -269,10 +269,12 @@ int hipd_init(int flush_ipsec, int killold)
         dhterr = hip_init_dht();
         if (dhterr < 0) HIP_DEBUG("Initializing DHT returned error\n");
 	
+#if 0
 	/* init new tcptimeout parameters, added by Tao Wan on 14.Jan.2008*/
 
 	HIP_IFEL(set_new_tcptimeout_parameters_value(), -1,
 			"set new tcptimeout parameters error\n");
+#endif
 
 
 	HIP_IFEL(hip_set_lowcapability(), -1, "Failed to set capabilities\n");
