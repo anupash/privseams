@@ -1367,7 +1367,7 @@ int main(int argc, char **argv)
 			{
 				HIP_ERROR("Error receiving message header from daemon.\n");
 				err = -1;
-				goto out_err;
+				continue;
 			}
 
 
