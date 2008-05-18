@@ -308,6 +308,7 @@ typedef struct hip_hadb_handle_func_set hip_handle_func_set_t;
 typedef struct hip_hadb_update_func_set hip_update_func_set_t;
 typedef struct hip_hadb_misc_func_set hip_misc_func_set_t;
 typedef struct hip_hadb_xmit_func_set hip_xmit_func_set_t;
+typedef struct hip_ipsec_func_set hip_ipsec_func_set_t;
 typedef struct hip_hadb_input_filter_func_set hip_input_filter_func_set_t;
 typedef struct hip_hadb_output_filter_func_set hip_output_filter_func_set_t;
 typedef struct hip_common hip_common_t;

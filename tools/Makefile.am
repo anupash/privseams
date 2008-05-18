@@ -4,21 +4,17 @@ AUTOMAKE_OPTIONS = foreign
 # won't build because there is also the linux/net/ipv6/hip/debug.h include.
 #
 
-CFLAGS = $(hipl_common_cflags) $(HIPL_XMLI) # -L$(HIPL_LIBINET6_LIB)
+CFLAGS = $(hipl_common_cflags) # -L$(HIPL_LIBINET6_LIB)
 
 INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
 
 include_HEADERS = hipconftool.h
 
-dist_bin_SCRIPTS =  myasn.py parse-key-3.py wget-dht-servers.sh
-dist_bin_SCRIPTS += dnsproxy.py pyip6.py util.py hosts.py
-dist_bin_SCRIPTS += DNS/Base.py DNS/Class.py DNS/Lib.py 
-dist_bin_SCRIPTS += DNS/Opcode.py DNS/Status.py DNS/Type.py
-dist_bin_SCRIPTS += DNS/__init__.py DNS/lazy.py DNS/pyip6.py DNS/win32dns.py
-
 LDFLAGS = -lcrypto $(HIP_XMLL)
 
-INCLUDES += -I../opendht
+if HIP_OPENDHT
+  INCLUDES += -I../opendht
+endif
 
 if HIP_HI3
  INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
@@ -36,7 +32,9 @@ else
   LDADD += ../libhiptool/.libs/libhiptool.a
 endif
 
-LDADD += ../opendht/.libs/libhipopendht.a
+if HIP_OPENDHT
+  LDADD += ../opendht/.libs/libhipopendht.a
+endif
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
 

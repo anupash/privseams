@@ -1300,8 +1300,8 @@ int check_packet(const struct in6_addr * ip6_src,
  * and the HIT options are also filtered here with information from the 
  * connection. 
  */
-int filter_esp_state(const struct in6_addr * dst_addr, 
-		     struct hip_esp_packet * esp,
+int filter_esp_state(const struct in6_addr *dst_addr, 
+		     struct hip_esp *esp,
 		     const struct rule *rule)
 {
   const struct state_option * option = rule->state;
@@ -1310,7 +1310,7 @@ int filter_esp_state(const struct in6_addr * dst_addr,
   int return_value = 0;
   struct hip_tuple * hip_tuple = NULL; 
   struct esp_tuple *esp_tuple = NULL; //REMOVE
-  uint32_t spi = ntohl(esp->esp_data->esp_spi);
+  uint32_t spi = ntohl(esp->esp_spi);
   //option refers to a new connection
   //ESP packet cannot start a connection
   _HIP_DEBUG("filter_esp_state\n");

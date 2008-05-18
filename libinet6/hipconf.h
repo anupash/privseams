@@ -9,6 +9,7 @@
  * @author  Bing Zhou <bingzhou_cc.hut.fi>
  * @author  Anu Markkola
  * @author  Lauri Silvennoinen
+ * @author  Tao Wan <twan@cc.hut.fi>
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>
  */
 #ifndef HIPCONF_H
@@ -105,9 +106,10 @@
 #define ACTION_OPENDHT 20
 #define ACTION_OPPTCP  21
 #define ACTION_TRANSORDER 22
-#define ACTION_HIPPROXY 23
-#define ACTION_REINIT 24
-#define ACTION_MAX 25 /* exclusive */
+#define ACTION_TCPTIMEOUT 23 /* add By Tao Wan, on 04.01.2008 */
+#define ACTION_HIPPROXY 24
+#define ACTION_REINIT 25
+#define ACTION_MAX 26 /* exclusive */
 
 /* Important! These values are used as array indexes, so keep in this order.
    Add values after the last value and increment TYPE_MAX. */
@@ -138,8 +140,9 @@
 #define TYPE_DHT           24
 #define TYPE_OPPTCP	   25
 #define TYPE_ORDER         26
-#define TYPE_HIPPROXY	   27
-#define TYPE_MAX           28 /* exclusive */
+#define TYPE_TCPTIMEOUT	   27 /* add By Tao Wan, on 04.01.2008*/
+#define TYPE_HIPPROXY	   28
+#define TYPE_MAX           29 /* exclusive */
 
 /* for handle_hi() only */
 #define OPT_HI_TYPE 0
@@ -200,5 +203,7 @@ int hip_conf_handle_handoff(hip_common_t *msg, int action,const char *opt[], int
 int hip_conf_handle_opptcp(hip_common_t *, int type, const char *opt[], int optc);
 int hip_do_hipconf(int argc, char *argv[], int send_only);
 int hip_conf_handle_opptcp(struct hip_common *, int type, const char *opt[], int optc);
+int hip_conf_handle_tcptimeout(struct hip_common *, int type, const char *opt[], int optc); /*added by Tao Wan, 04.Jan.2008*/
 int hip_conf_handle_hipproxy(struct hip_common *msg, int action, const char *opt[], int optc);
+
 #endif /* HIPCONF */
