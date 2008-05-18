@@ -32,7 +32,7 @@
 /** Struct used to deliver the minimal needed information to build SPKI cert*/
 struct hip_cert_spki_info {
         char public_key[256];
-	char cert[512];
+	char cert[256];
         char signature[256];
         struct in6_addr issuer_hit;
 };

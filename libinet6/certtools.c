@@ -49,7 +49,6 @@ int hip_cert_spki_create_cert(struct hip_cert_spki_info * content,
         struct hip_common *msg;
 
         /* Malloc needed */
-
         tmp_issuer = malloc(128);
         if (!tmp_issuer) goto out_err;
         tmp_subject = malloc(128);
@@ -62,26 +61,24 @@ int hip_cert_spki_create_cert(struct hip_cert_spki_info * content,
                  "Malloc for msg failed\n");   
 
         /* Memset everything */
-
         HIP_IFEL(!memset(buf_before, '\0', sizeof(buf_before)), -1,
-                 "failed to memset memory for tmp buffers variables\n");
+                 "Failed to memset memory for tmp buffers variables\n");
         HIP_IFEL(!memset(buf_after, '\0', sizeof(buf_after)), -1,
-                 "failed to memset memory for tmp buffers variables\n");
+                 "Failed to memset memory for tmp buffers variables\n");
         HIP_IFEL(!memset(tmp_issuer, '\0', sizeof(tmp_issuer)), -1,
-                 "failed to memset memory for tmp variables\n");
+                 "Failed to memset memory for tmp variables\n");
         HIP_IFEL(!memset(tmp_subject, '\0', sizeof(tmp_subject)), -1,
-                 "failed to memset memory for tmp variables\n");
+                 "Failed to memset memory for tmp variables\n");
         HIP_IFEL(!memset(tmp_before, '\0', sizeof(tmp_before)), -1,
-                 "failed to memset memory for tmp variables\n");
+                 "Failed to memset memory for tmp variables\n");
         HIP_IFEL(!memset(tmp_after, '\0', sizeof(tmp_after)), -1,
-                 "failed to memset memory for tmp variables\n");
+                 "Failed to memset memory for tmp variables\n");
         HIP_IFEL(!memset(present_issuer, '\0', sizeof(present_issuer)), -1,
-                 "failed to memset memory for tmp variables\n");
+                 "Failed to memset memory for tmp variables\n");
         HIP_IFEL(!memset(present_subject, '\0', sizeof(present_subject)), -1,
-                 "failed to memset memory for tmp variables\n");
+                 "Failed to memset memory for tmp variables\n");
 
-        /* Make needed transforms to the date
-
+        /* Make needed transforms to the date */
         _HIP_DEBUG("not_before %d not_after %d\n",*not_before,*not_after);
         /*  Format and print the time, "yyyy-mm-dd hh:mm:ss"
            (not-after "1998-04-15_00:00:00") */
@@ -103,7 +100,6 @@ int hip_cert_spki_create_cert(struct hip_cert_spki_info * content,
         sprintf(tmp_subject, "(hash %s %s)", subject_type, present_subject);
 
         /* Create the cert sequence */        
-
         HIP_IFEL(hip_cert_spki_build_cert(content), -1, 
                  "hip_cert_spki_build_cert failed\n");
 
@@ -121,7 +117,7 @@ int hip_cert_spki_create_cert(struct hip_cert_spki_info * content,
                  "hip_cert_spki_inject failed to inject\n");
 
         /* Create the signature and the public-key sequences */
-        
+        printf("KELELELELE (%s)\n",content->public_key);
         /* Send the daemon the struct hip_cert_spki_header 
            containing the cert sequence in content->cert. 
            As a result you should get the struct back with 
@@ -134,12 +130,16 @@ int hip_cert_spki_create_cert(struct hip_cert_spki_info * content,
                  "Failed to build user header\n");
         /* send and wait */
         HIP_DEBUG("Sending request to sign SPKI cert sequence to "
-                  "daemon and waiting for answer\n");
+                  "daemon and waiting for answer\n");	
         hip_send_recv_daemon_info(msg);
         
-        /* get the struct from the message */
-        /* XX TODO */
+        /* get the struct from the message sent back by the daemon */
+	_HIP_DUMP_MSG(msg);
+        HIP_IFEL(!(content = hip_get_param(msg,HIP_PARAM_CERT_SPKI_INFO)), 
+                 -1, "No cert_info struct found from daemons msg\n");
 
+	HIP_DEBUG("PUBLIC KEY %s\nSIGNATURE %s\n", content->public_key,
+		  content->signature);
 out_err:
         /* free everything malloced */
         if (tmp_before) free(tmp_before);

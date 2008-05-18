@@ -19,7 +19,7 @@
  * @param msg points to the msg gotten from "client"
  * @param db is the db to query for the hostid entry
  *
- * @return 0 if signature matches, -1 if error or signature did NOT match
+ * @return 0 if signature was created without errors negative otherwise
  */
 int hip_cert_spki_sign(struct hip_common * msg, HIP_HASHTABLE * db) {
         int err = 0, sig_len = 0, hex_len = 0;
@@ -27,7 +27,7 @@ int hip_cert_spki_sign(struct hip_common * msg, HIP_HASHTABLE * db) {
         char sha_digest[21];
         char * sig_sequence;
         unsigned char *sha_retval;
-        unsigned char e_bin[HIP_RSA_PUBLIC_EXPONENT_E_LEN + 1];
+        char e_bin[HIP_RSA_PUBLIC_EXPONENT_E_LEN + 1];
         char * signature_b64;
         char * digest_b64;
         char * e_hex;
@@ -54,11 +54,7 @@ int hip_cert_spki_sign(struct hip_common * msg, HIP_HASHTABLE * db) {
         signature_b64 = malloc(256); 
         HIP_IFEL((!signature_b64), -1, "Malloc for signature_b64 failed\n");
         memset(signature_b64, 0, sizeof(signature_b64));
-/*
-        e_hex = malloc(10); 
-        HIP_IFEL((!e_hex), -1, "Malloc for e_hex failed\n");
-        memset(e_hex, 0, sizeof(e_hex));
-*/
+
         /*XX FIXME just a guestimate calculate correctly */
         n_b64 = malloc(sizeof(n)+20);  
         HIP_IFEL((!n_b64), -1, "Malloc for n_b64 failed\n");
@@ -73,9 +69,11 @@ int hip_cert_spki_sign(struct hip_common * msg, HIP_HASHTABLE * db) {
         
         HIP_IFEL(!(cert = hip_get_param(msg,HIP_PARAM_CERT_SPKI_INFO)), 
                  -1, "No cert_info struct found\n");
+	_HIP_DEBUG("\n\n** CONTENTS of public key sequence **\n %s\n\n",cert->public_key);
         _HIP_DEBUG("\n\n** CONTENTS of cert sequence to be signed **\n"
                    "%s\n\n", cert->cert);
-        
+	_HIP_DEBUG("\n\n** CONTENTS of public key sequence **\n %s\n\n",cert->signature);
+
         _HIP_DEBUG_HIT("Getting keys for HIT",&cert->issuer_hit);
         
         HIP_IFEL((err = hip_cert_spki_construct_keys(hip_local_hostid_db,
@@ -103,6 +101,11 @@ int hip_cert_spki_sign(struct hip_common * msg, HIP_HASHTABLE * db) {
 
         /* clearing signature field just to be sure */
         memset(cert->signature, '\0', sizeof(cert->signature));
+        /* 
+           compiler warning for the next 2 lines
+	   cert.c:103: warning: cast to pointer from integer of different size
+	   cert.c:105: warning: cast to pointer from integer of different size
+	*/
         digest_b64 = (char *)base64_encode((unsigned char *)sha_digest, 
                                          (unsigned int)sizeof(sha_digest));
         signature_b64 = (char *)base64_encode((unsigned char *)signature, 
@@ -114,26 +117,42 @@ int hip_cert_spki_sign(struct hip_common * msg, HIP_HASHTABLE * db) {
         
         _HIP_DEBUG("Sig sequence \n%s\n",cert->signature); 
                
-        sprintf(cert->signature, "%s", sig_sequence);
-
         /* Create the public key sequence */
+	/*
+	  compiler warning for the next line
+	  cert.c:117: warning: cast to pointer from integer of different size
+	*/
         n_b64 = (char *)base64_encode((unsigned char *)rsa->n, 
-                                         (unsigned int)sizeof(n));
+				      (unsigned int)sizeof(n));
         
         HIP_IFEL(!(BN_bn2bin(rsa->e, e_bin)), -1,
                  "Error in converting public exponent from BN to bin\n");
-        HIP_HEXDUMP("Exponent in hex ", e_bin, 
-                    HIP_RSA_PUBLIC_EXPONENT_E_LEN);
-        /* XX FIXME HEX conversion tells the result all wrong */
 	e_hex = BN_bn2hex(rsa->e);
-        //hex_len = snprintf(e_hex, HIP_RSA_PUBLIC_EXPONENT_E_LEN *2 + 1, "%02x", (char *)&e_bin);
-        HIP_DEBUG("This hex conversion returned", hex_len);
         sprintf(cert->public_key, "(public_key (rsa-pkcs1-sha1 (e #%s#)(n |%s|)))", 
                 e_hex, n_b64);
 
-        HIP_DEBUG("Public-key sequence\n%s\n",cert->public_key);
-        
+        _HIP_DEBUG("Public-key sequence\n%s\n",cert->public_key);
+	
+        /* Put the results into the msg back */
+/*
+	HIP_DEBUG("LENLENLEN %d + %d + %d\n",
+		  strlen(cert->public_key), strlen(cert->cert), strlen(cert->signature));
+	HIP_IFEL(!memset(msg, 0, HIP_MAX_PACKET), -1,
+		 "Failed to memset memory for msg\n");
+	HIP_DUMP_MSG(msg);
+
+        HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_CERT_SPKI, 0), -1, 
+                 "Failed to build user header\n");
+*/
+
+        HIP_IFEL(hip_build_param_cert_spki_info(msg, cert), -1,
+                 "Failed to build cert_info\n");                 
  out_err:
+
+	/* free malloced memory */
+	if (digest_b64) free(digest_b64);
+	if (signature_b64) free(signature_b64);
+	if (n_b64) free(n_b64);
         if (sig_sequence) free(sig_sequence);
         if (rsa) RSA_free(rsa);
         return err;
@@ -204,4 +223,18 @@ int hip_cert_spki_construct_keys(HIP_HASHTABLE * db, hip_hit_t * hit, RSA * rsa)
 
  out_err: 
         return(err);
+}
+
+/**
+ * Function that verifies the signature in the given SPKI cert sent by the "client"
+ *
+ * @param msg points to the msg gotten from "client"
+ *
+ * @return 0 if signature matches, -1 if error or signature did NOT match
+ */
+int hip_cert_spki_verify(struct hip_common * msg) {
+	int err = 0;
+
+out_err:
+	return (err);
 }

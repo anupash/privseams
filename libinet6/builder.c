@@ -3126,11 +3126,10 @@ int hip_build_param_opendht_gw_info(struct hip_common *msg,
 	return err;
 }
 
-int hip_build_param_cert_spki_info(struct hip_common *msg,
-				    struct hip_cert_spki_info *cert_info)
+int hip_build_param_cert_spki_info(struct hip_common * msg,
+				    struct hip_cert_spki_info * cert_info)
 {
 	int err = 0;
-	
 	hip_set_param_type(cert_info, HIP_PARAM_CERT_SPKI_INFO);
 	hip_calc_param_len(cert_info,
 			   sizeof(struct hip_cert_spki_info) -

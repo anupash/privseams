@@ -286,7 +286,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
                 err = 0;
                 struct hip_opendht_set *name_info; 
                 HIP_IFEL(!(name_info = hip_get_param(msg, HIP_PARAM_OPENDHT_SET)), -1,
-                         "no name struct found (should contain transform order\n");
+                         "no name struct found (should contain transform order)\n");
                 _HIP_DEBUG("Transform order received from hipconf:  %s\n" , name_info->name);
                 hip_transform_order = atoi(name_info->name);
                 hip_recreate_all_precreated_r1_packets();
