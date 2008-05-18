@@ -10,7 +10,7 @@ hip_hit_t *hip_fw_get_default_hit(void) {
 }
 
 /* Get default HIT*/
-int hip_query_default_local_hit_from_hipd()
+int hip_query_default_local_hit_from_hipd(void)
 {
 	 
 	int err = 0;
