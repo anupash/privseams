@@ -29,6 +29,9 @@ int hip_opptcp = 0;
 #endif
 int hip_userspace_ipsec = 1;
 
+/* Default HIT - do not access this directly, call hip_fw_get_default_hit */
+struct in6_addr default_hit;
+
 /*
  * The firewall handlers do not accept rules directly. They should return
  * zero when they transformed packet and the original should be dropped.
@@ -1054,7 +1057,7 @@ int hip_fw_handle_ip_traffic(char *buf, struct ipq_handle *hndl, int ip_version,
 	struct in6_addr proxy_addr;
 	struct in6_addr src_hit;
 	struct in6_addr dst_hit;
-	struct in6_addr proxy_hit;
+	//struct in6_addr proxy_hit;
 	struct hip_proxy_t* entry = NULL;	
 	struct hip_conn_t* conn_entry = NULL;
 	int ret_val_filter_hip, packet_type, err = 0;
@@ -1305,7 +1308,7 @@ int main(int argc, char **argv)
 
 	firewall_init_rules();
 	//get default HIT
-	hip_get_local_hit_wrapper(&proxy_hit);
+	//hip_get_local_hit_wrapper(&proxy_hit);
 
 	/* Allocate message. */
 	msg = hip_msg_alloc();

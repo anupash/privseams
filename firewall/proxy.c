@@ -7,8 +7,8 @@
 int handle_proxy_inbound_traffic(ipq_packet_msg_t *m,
 				  struct in6_addr *src_addr)
 {
-		//struct in6_addr client_addr;
-		//HIP PROXY INBOUND PROCESS
+	//struct in6_addr client_addr;
+	//HIP PROXY INBOUND PROCESS
 	int port_client, port_peer, protocol, err = 0;
 	struct ip6_hdr* ipheader;
 	//struct in6_addr proxy_hit;

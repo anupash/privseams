@@ -1,8 +1,5 @@
 #include "useripsec.h"
 
-/* Default HIT - do not access this directly, call hip_fw_get_default_hit */
-struct in6_addr default_hit;
-
 hip_hit_t *hip_fw_get_default_hit(void) {
 	if (ipv6_addr_is_null) {
 		HIP_DEBUG("Querying hipd for default hit\n");
