@@ -31,13 +31,14 @@
 int hip_peek_recv_total_len(int socket, int encap_hdr_size);
 
 /**
- * .
+ * Connects a socket to the HIP daemon. Connects a socket identified by file
+ * descriptor @c hip_user_sock to the HIP daemon. This function resets @c errno
+ * before connecting to the daemon.
  *
  * @param  hip_user_sock a socket file descriptor.
- * @param  msg           a pointer to a HIP message. 
- * @return 
+ * @return               zero on success, -1 on error.
  */
-int hip_daemon_connect(int hip_user_sock, struct hip_common *msg);
+int hip_daemon_connect(int hip_user_sock);
 
 /**
  * .
@@ -151,5 +152,6 @@ int hip_read_control_msg_v4(int socket, struct hip_common *hip_msg,
 			    struct in6_addr *daddr,
 			    hip_portpair_t *msg_info,
 			    int encap_hdr_size);
+int hip_sendto(int sock, const struct hip_common *msg, const struct sockaddr_in6 *dst);
 
 #endif /* HIP_MESSAGE_H */

@@ -9,7 +9,8 @@ NAME=hipl
 PKGROOT=$PWD
 HIPL=$PWD/..
 PKGDIR=$PKGROOT/${NAME}$SUFFIX
-
+#OS_REV_NUM=`cat /etc/fedora-release | /usr/bin/awk '{print $3}'`
+#OS_REV_NAME=`cat /etc/fedora-release | /usr/bin/awk '{print $4}' | sed s/.*\(// | sed s/\)// `
 error_cleanup()
 {
  if [ -n "$PKGDIR" -a -d "$PKGDIR" ];then

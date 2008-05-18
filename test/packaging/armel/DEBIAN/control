@@ -8,5 +8,4 @@ Standards-Version: 3.6.2
 Package: hipl
 Replaces: hipl
 Architecture: armel
-Description: This package contains the necessary tools, libraries and documents
- for the HIP protocol.
+Description: Host Identity Protocol for Linux
