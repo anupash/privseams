@@ -1,7 +1,19 @@
 #include "useripsec.h"
 
+/* Default HIT - do not access this directly, call hip_fw_get_default_hit */
+struct in6_addr default_hit;
+
+hip_hit_t *hip_fw_get_default_hit(void) {
+	if (ipv6_addr_is_null) {
+		HIP_DEBUG("Querying hipd for default hit\n");
+		if (hip_query_default_local_hit_from_hipd())
+			return NULL;
+	}
+	return &default_hit;
+}
+
 /* Get default HIT*/
-int hip_get_default_local_hit_from_hipd()
+int hip_query_default_local_hit_from_hipd()
 {
 	 
 	int err = 0;
@@ -52,7 +64,7 @@ int hip_fw_userspace_ipsec_output(int ip_version,
 	struct sockaddr_in6 ipv6_addr_to_sockaddr_hit;
 	struct sockaddr_in6 sockaddr_local_default_hit;
 	struct hip_tlv_common *current_param = NULL;
-	struct in6_addr *defhit;
+	hip_hit_t *def_hit;
 	int err = 0;
 
 	HIP_DEBUG("Try to get peer_hit\n");
@@ -161,10 +173,11 @@ int hip_fw_userspace_ipsec_output(int ip_version,
 		defhit = hip_get_param_contents(msg, HIP_PARAM_HIT);
 		*/
 
-		// defhit = hip_get_default_local_hit_from_hipd();
-		HIP_INFO_HIT("hip_esp_out: default hit is ", &default_hit);
+		HIP_IFEL(!(def_hit = hip_fw_get_default_hit()), -1,
+			 "Failed to get default hit - is hipd running?\n");
+		HIP_INFO_HIT("hip_esp_out: default hit is ", def_hit);
 		
-		hip_addr_to_sockaddr(&default_hit, (struct sockaddr *) &sockaddr_local_default_hit);
+		hip_addr_to_sockaddr(def_hit, (struct sockaddr *) &sockaddr_local_default_hit);
 		//hip_addr_to_sockaddr(&ip6_hdr->ip6_src, &sockaddr_local_default_hit);
 		
 		err = hip_esp_output((struct sockaddr *) &sockaddr_local_default_hit, 

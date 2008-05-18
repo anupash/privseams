@@ -18,8 +18,6 @@ int escrow_active = 0;
 int accept_normal_traffic = 1;
 int accept_hip_esp_traffic = 0;
 int flush_iptables = 1;
-/*Default HIT*/
-struct in6_addr default_hit;
 
 int counter = 0;
 int hip_proxy_status = 0;
@@ -1199,10 +1197,13 @@ int main(int argc, char **argv)
 		exit(-1);
 	}
 
-	if (hip_userspace_ipsec)
-		HIP_IFEL(hip_get_default_local_hit_from_hipd(), -1,
-			 "Error getting default HIT\n");
-	HIP_INFO_HIT("Default hi is ", &default_hit);
+	memset(&default_hit, 0, sizeof(default_hit));
+
+	if (hip_userspace_ipsec) {
+		hip_query_default_local_hit_from_hipd();
+	}
+
+	HIP_INFO_HIT("Default hit is ", hip_fw_get_default_hit());
 
 	check_and_write_default_config();
 	
