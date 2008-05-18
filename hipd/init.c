@@ -235,14 +235,14 @@ int hipd_init(int flush_ipsec, int killold)
 
 	if (flush_ipsec)
 	{
-		hip_flush_all_sa();
-		hip_flush_all_policy();
+		default_ipsec_func_set.hip_flush_all_sa();
+		default_ipsec_func_set.hip_flush_all_policy();
 	}
 
 	HIP_DEBUG("Setting SP\n");
-	hip_delete_default_prefix_sp_pair();
-	HIP_IFE(hip_setup_default_sp_prefix_pair(), 1);
-
+	default_ipsec_func_set.hip_delete_default_prefix_sp_pair();
+	HIP_IFE(default_ipsec_func_set.hip_setup_default_sp_prefix_pair(), -1);
+	
 	HIP_DEBUG("Setting iface %s\n", HIP_HIT_DEV);
 	set_up_device(HIP_HIT_DEV, 0);
 	HIP_IFE(set_up_device(HIP_HIT_DEV, 1), 1);
@@ -269,6 +269,14 @@ int hipd_init(int flush_ipsec, int killold)
         dhterr = hip_init_dht();
         if (dhterr < 0) HIP_DEBUG("Initializing DHT returned error\n");
 	
+#if 0
+	/* init new tcptimeout parameters, added by Tao Wan on 14.Jan.2008*/
+
+	HIP_IFEL(set_new_tcptimeout_parameters_value(), -1,
+			"set new tcptimeout parameters error\n");
+#endif
+
+
 	HIP_IFEL(hip_set_lowcapability(), -1, "Failed to set capabilities\n");
 
 #ifdef CONFIG_HIP_HI3
@@ -278,6 +286,8 @@ int hipd_init(int flush_ipsec, int killold)
 		hip_i3_init(/*&peer_hit*/);
 	}
 #endif
+
+	hip_firewall_sock_fd = hip_user_sock;
 
 out_err:
 	return err;
@@ -569,7 +579,7 @@ int hip_init_nat_sock_udp(int *hip_nat_sock_udp)
 	err = bind(*hip_nat_sock_udp, (struct sockaddr *)&myaddr, sizeof(myaddr));
 	if (err < 0)
 	{
-		HIP_ERROR("Unable to bind udp socket to port\n");
+		HIP_PERROR("Unable to bind udp socket to port\n");
 		err = -1;
 		goto out_err;
 	}
@@ -614,9 +624,14 @@ void hip_exit(int signal)
 	struct hip_common *msg = NULL;
 	HIP_ERROR("Signal: %d\n", signal);
 
-	hip_delete_default_prefix_sp_pair();
+	default_ipsec_func_set.hip_delete_default_prefix_sp_pair();
 	/* Close SAs with all peers */
         // hip_send_close(NULL);
+
+
+	/*reset TCP timeout to be original vaule , added By Tao Wan on 14.Jan.2008. */
+	reset_default_tcptimeout_parameters_value();
+
 
 	if (hipd_msg)
 		HIP_FREE(hipd_msg);
@@ -669,7 +684,7 @@ void hip_exit(int signal)
 	msg = hip_msg_alloc();
 	if (msg)
 	{
-		hip_build_user_hdr(msg, HIP_DAEMON_QUIT, 0);
+		hip_build_user_hdr(msg, SO_HIP_DAEMON_QUIT, 0);
 		hip_send_agent(msg);
 		free(msg);
 	}

@@ -217,9 +217,7 @@ int main_server(int type, int port)
  * tried using addresses in the @c peer_ai in the order specified by the linked
  * list of the structure. If a connection is successful, the rest of the
  * addresses are omitted. The socket is bound to the peer HIT, not to the peer
- * IP addresses. This function does not support Local Scope Indentifiers
- * (LSIs). Therefore, all addresses that are not of INET6 address family are
- * skipped.
+ * IP addresses.
  *
  * @param peer_ai a pointer to peer address info.
  * @param sock    a target buffer where the socket file descriptor is to be
@@ -228,62 +226,91 @@ int main_server(int type, int port)
  *                are the @c errno values of socket(), connect() and close()
  *                with a minus sign.
  */
-int hip_connect_func(struct addrinfo *peer_ai, int *sock){
-	int err = 0, e = 0;
-	struct addrinfo *ai = NULL;
-	struct timeval stats_before, stats_after;
-	struct sockaddr_storage local_addr;
+int hip_connect_func(struct addrinfo *peer_ai, int *sock)
+{
+	int err = 0, connect_err = 0;
 	unsigned long microseconds = 0;
-	char addr_str[INET6_ADDRSTRLEN];
-	struct sockaddr_in *sin4 = NULL;
-	struct sockaddr_in6 *sin6 = NULL;
-	
-	/* Reset the global error value since at out_err we set err as
-	   -errno. */
-	errno = 0;
+	struct timeval stats_before, stats_after;
+	char ip_str[INET6_ADDRSTRLEN];
+	struct addrinfo *ai = NULL;
+	struct in_addr *ipv4 = NULL;
+	struct in6_addr *ipv6 = NULL;
 
 	/* Set the memory allocated from the stack to zeros. */
 	memset(&stats_before, 0, sizeof(stats_before));
 	memset(&stats_after, 0, sizeof(stats_after));
-	memset(addr_str, 0, sizeof(addr_str));
-	memset(&local_addr, 0, sizeof(addr_str));
-
+	memset(ip_str, 0, sizeof(ip_str));
+	
 	/* Loop through every address in the address info. */
 	for(ai = peer_ai; ai != NULL; ai = ai->ai_next) {
-		
-		if (!(ai->ai_family == AF_INET || ai->ai_family == AF_INET6)) {
-			HIP_INFO("Trying to connect to a non-inet address "\
-				 "family address. Skipping.\n");
+		ipv4 = &((struct sockaddr_in *)ai->ai_addr)->sin_addr;
+		ipv6 = &((struct sockaddr_in6 *)ai->ai_addr)->sin6_addr;
+
+		/* Check the type of address we are connecting to and print
+		   information about the address to the user. If address is
+		   not supported the move to next address in peer_ai. */
+		if (ai->ai_family == AF_INET) {
+			inet_ntop(AF_INET, ipv4, ip_str, sizeof(ip_str));
+			
+			if(IS_LSI32(ipv4->s_addr)) {
+				HIP_INFO("Connecting to LSI %s.\n", ip_str);
+			} else {
+				HIP_INFO("Connecting to IPv4 address %s.\n",
+					 ip_str);
+			}
+		} else if(ai->ai_family == AF_INET6 ||
+			  ai->ai_family == AF_HIP) {
+			inet_ntop(AF_INET6, ipv6, ip_str, sizeof(ip_str));
+			
+			if(ipv6_addr_is_hit(ipv6)){
+				HIP_INFO("Connecting to HIT %s.\n", ip_str);
+			} else if (IN6_IS_ADDR_V4MAPPED(ipv6)) {
+				HIP_INFO("Connecting to IPv6-mapped IPv4 "\
+					 "address %s.\n", ip_str);
+			} else {
+				HIP_INFO("Connecting to IPv6 address %s.\n",
+					 ip_str);
+			}
+		} else {
+			_HIP_DEBUG("Trying to connect to a non-inet address "\
+				  "family address. Skipping.\n");
+			/* If there are no more address in peer_ai, these err
+			   and errno values are returned. */
+			errno = EAFNOSUPPORT;
+			err = -1;
 			continue;
 		}
+
+		err = 0;
+		errno = 0;
 		
-		sin4 = (struct sockaddr_in *) ai->ai_addr;
-		sin6 = (struct sockaddr_in6 *) ai->ai_addr;
-		
-		if (!inet_ntop(AF_INET6, (char *) &sin6->sin6_addr, addr_str,
-			       sizeof(addr_str)))
-		    inet_ntop(AF_INET, (char *) &sin4->sin_addr, addr_str,
-			      sizeof(addr_str));
-		    
-		HIP_IFEL(((*sock) = socket(ai->ai_family, ai->ai_socktype,
-					   ai->ai_protocol)) < 0,
-			 err = -errno, "Unable to get a socket for sending.\n");
-		
-		if (ai->ai_family == AF_INET) {
-			HIP_INFO_LSI("Connecting to", &sin4->sin_addr);
-		} else if(ipv6_addr_is_hit(&sin6->sin6_addr)){
-			HIP_INFO_HIT("Connecting to HIT", &sin6->sin6_addr);
-		} else if (IN6_IS_ADDR_V4MAPPED(&sin6->sin6_addr)) {
-			HIP_INFO_HIT("Connecting to IPv4 address", &sin6->sin6_addr);
-		} else {
-			HIP_INFO_HIT("Connecting to IPv6 address", &sin6->sin6_addr);
+		/* Get a socket for sending. */
+		*sock = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
+
+		if(*sock < 3) {
+			HIP_ERROR("Unable to get a socket for sending.\n");
+			err = -1;
+			goto out_err;
 		}
 		
 		gettimeofday(&stats_before, NULL);
+		connect_err = connect(*sock, ai->ai_addr, ai->ai_addrlen);
 		
-		HIP_IFE((e = connect(*sock, ai->ai_addr, ai->ai_addrlen)),
-			err = -errno);
-		
+		/* If we're unable to connect to the remote address we try next
+		   address in peer_ai. We back off if the closing of the socket
+		   fails. */
+		if(connect_err != 0){
+			_HIP_ERROR("Unable to connect to the remote address.\n");
+			if(close(*sock) != 0) {
+				HIP_ERROR("Unable to close a socket.\n");
+				err = -1;
+				break;
+			}
+			*sock = 0;
+			err = -1;
+			continue;
+		}
+	
 		gettimeofday(&stats_after, NULL);
 		
 		microseconds  =
@@ -293,10 +320,14 @@ int hip_connect_func(struct addrinfo *peer_ai, int *sock){
 		HIP_INFO("Connecting socket to remote socket address took "\
 			 "%.5f seconds.\n", microseconds / 1000000.0 );
 		
-		if (e < 0) {
-			HIP_IFEL(close(*sock) != 0, err = -errno,
-				 "Failing to close socket.\n");
-			/* Try next address in peer_ai. */
+		if (connect_err != 0) {
+			if(close(*sock) != 0) {
+				HIP_ERROR("Unable to close a socket.\n");
+				err = -1;
+				break;
+			}
+			*sock = 0;
+			/* Try the next address in peer_ai. */
 			continue;
 		} else {
 			/* Connect succeeded and data can be sent/received. */
@@ -345,13 +376,9 @@ int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
 	search_key.ai_family = AF_UNSPEC;
 	search_key.ai_socktype = socktype;
 	
-	/* Get the peer's address info. If we get an error, getaddrinfo
-	   returns a negative error value, but does not neccesarily set the
-	   global errno accordingly. Also, since getaddrinfo error values
-	   overlap negative errno values, we just set the errno as a generic
-	   -1000 in an error case.*/
-	HIP_IFEL(getaddrinfo(peer_name, port_name, &search_key, &peer_ai),
-		 -1000, "Name '%s' or service '%s' is unknown.\n",
+	/* Get the peer's address info. Set a generic -EHADDRINFO for */
+	HIP_IFEL(errno = getaddrinfo(peer_name, port_name, &search_key, &peer_ai),
+		 -EHADDRINFO, "Name '%s' or service '%s' is unknown.\n",
 		 peer_name, port_name);
 	
 	HIP_INFO("Please input some text to be sent to '%s'.\n"\
@@ -381,7 +408,7 @@ int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
 	}
 	
 	/* Get a socket for sending and receiving data. */
-	HIP_IFE(err = (hip_connect_func(peer_ai, &sock)), err);
+	HIP_IFE(err = hip_connect_func(peer_ai, &sock), err);
 
 	gettimeofday(&stats_before, NULL);
 	
@@ -394,12 +421,12 @@ int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
 				HIP_IFEL(((sendnum =
 					   send(sock, sendbuffer + bytes_sent,
 						datalen - bytes_sent, 0)) < 0),
-					 err = -errno,
+					 err = -ECOMM,
 					 "Communication error on send.\n");
 				bytes_sent += sendnum;
 			}
 		
-			/* receive() returns the number of bytes sent, negative
+			/* recv() returns the number of bytes sent, negative
 			   on error or zero when the peer has performed an
 			   orderly shutdown. */
 			if (bytes_received < datalen) {
@@ -412,7 +439,7 @@ int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
 						 "orderly shutdown.\n");
 					goto out_err;
 				} else if(recvnum < 0) {
-					err = -errno;
+					err = -ENODATA;
 					HIP_ERROR("Communication error on "\
 						  "receive.\n");
 				}
@@ -435,14 +462,14 @@ int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
 		 bytes_sent, bytes_received, peer_name);
 	
 	if (memcmp(sendbuffer, receivebuffer, IP_MAXPACKET) != 0) {
-		err = -1001;
+		err = -EBADMSG;
 	}
 
  out_err:
 	if (peer_ai != NULL) {
 		freeaddrinfo(peer_ai);
 	}
-	if (sock != 0) {
+	if (sock > 0) {
 		close(sock);
 	}
 
