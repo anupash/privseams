@@ -2,7 +2,7 @@
 
 hip_hit_t *hip_fw_get_default_hit(void) {
 	if (ipv6_addr_is_null) {
-		HIP_DEBUG("Querying hipd for default hit\n");
+		_HIP_DEBUG("Querying hipd for default hit\n");
 		if (hip_query_default_local_hit_from_hipd())
 			return NULL;
 	}
@@ -29,7 +29,7 @@ int hip_query_default_local_hit_from_hipd(void)
 	{
 		defhit = (in6_addr_t *)hip_get_param_contents_direct(current_param);
 		//set_hit_prefix(defhit); // miika: what the heck?
-		HIP_INFO_HIT("default hi is ",defhit);
+		_HIP_DEBUG_HIT("default hi is ",defhit);
 	}
 
 

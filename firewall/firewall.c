@@ -15,8 +15,8 @@
 
 int statefulFiltering = 1;
 int escrow_active = 0;
-int accept_normal_traffic = 1;
-int accept_hip_esp_traffic = 0;
+int accept_normal_traffic_by_default = 1;
+int accept_hip_esp_traffic_by_default = 0;
 int flush_iptables = 1;
 
 int counter = 0;
@@ -27,7 +27,7 @@ int hip_opptcp = 1;
 #else
 int hip_opptcp = 0;
 #endif
-int hip_userspace_ipsec = 0;
+int hip_userspace_ipsec = 1;
 
 /* Default HIT - do not access this directly, call hip_fw_get_default_hit */
 struct in6_addr default_hit;
@@ -218,49 +218,36 @@ int firewall_init_rules()
 	}
 	else
 	{
-		if (hip_userspace_ipsec) {
-			//system("iptables -I FORWARD -p 6 -j QUEUE"); // do we need this???
-			system("iptables -I INPUT -p 50 -j QUEUE"); /* ESP over IPv4 */
-			system("iptables -I INPUT -p 17 --dport 50500 -j QUEUE");
-			system("iptables -I INPUT -p 17 --sport 50500 -j QUEUE");
-			//system("iptables -I OUTPUT -p 6 ! -d 127.0.0.1 -j QUEUE"); // XX FIXME: LSI support 
-			//system("iptables -I OUTPUT -p 17 ! -d 127.0.0.1 -j QUEUE"); // XX FIXME: LSI support 
-		}
+		system("iptables -I FORWARD -p 139 -j QUEUE");
+		system("iptables -I FORWARD -p 50 -j QUEUE");
+		system("iptables -I FORWARD -p 17 --dport 50500 -j QUEUE");
+		system("iptables -I FORWARD -p 17 --sport 50500 -j QUEUE");
 
-		if (!accept_hip_esp_traffic)
-		{
-			system("iptables -I FORWARD -p 139 -j QUEUE");
-			system("iptables -I FORWARD -p 50 -j QUEUE");
-			system("iptables -I FORWARD -p 17 --dport 50500 -j QUEUE");
-			system("iptables -I FORWARD -p 17 --sport 50500 -j QUEUE");
+		system("iptables -I INPUT -p 139 -j QUEUE");
+		system("iptables -I INPUT -p 50 -j QUEUE");
+		system("iptables -I INPUT -p 17 --dport 50500 -j QUEUE");
+		system("iptables -I INPUT -p 17 --sport 50500 -j QUEUE");
 
-			system("iptables -I INPUT -p 139 -j QUEUE");
-			system("iptables -I INPUT -p 50 -j QUEUE");
-			system("iptables -I INPUT -p 17 --dport 50500 -j QUEUE");
-			system("iptables -I INPUT -p 17 --sport 50500 -j QUEUE");
+		system("iptables -I OUTPUT -p 139  -j QUEUE");
+		system("iptables -I OUTPUT -p 50 -j QUEUE");
+		system("iptables -I OUTPUT -p 17 --dport 50500 -j QUEUE");
+		system("iptables -I OUTPUT -p 17 --sport 50500 -j QUEUE");
+		system("ip6tables -I FORWARD -p 139 -j QUEUE");
+		system("ip6tables -I FORWARD -p 50 -j QUEUE");
+		system("ip6tables -I FORWARD -p 17 --dport 50500 -j QUEUE");
+		system("ip6tables -I FORWARD -p 17 --sport 50500 -j QUEUE");
 
-			system("iptables -I OUTPUT -p 139  -j QUEUE");
-			system("iptables -I OUTPUT -p 50 -j QUEUE");
-			system("iptables -I OUTPUT -p 17 --dport 50500 -j QUEUE");
-			system("iptables -I OUTPUT -p 17 --sport 50500 -j QUEUE");
-			system("ip6tables -I FORWARD -p 139 -j QUEUE");
-			system("ip6tables -I FORWARD -p 50 -j QUEUE");
-			system("ip6tables -I FORWARD -p 17 --dport 50500 -j QUEUE");
-			system("ip6tables -I FORWARD -p 17 --sport 50500 -j QUEUE");
+		system("ip6tables -I INPUT -p 139 -j QUEUE");
+		system("ip6tables -I INPUT -p 50 -j QUEUE");
+		system("ip6tables -I INPUT -p 17 --dport 50500 -j QUEUE");
+		system("ip6tables -I INPUT -p 17 --sport 50500 -j QUEUE");
 
-			system("ip6tables -I INPUT -p 139 -j QUEUE");
-			system("ip6tables -I INPUT -p 50 -j QUEUE");
-			system("ip6tables -I INPUT -p 17 --dport 50500 -j QUEUE");
-			system("ip6tables -I INPUT -p 17 --sport 50500 -j QUEUE");
+		system("ip6tables -I OUTPUT -p 139  -j QUEUE");
+		system("ip6tables -I OUTPUT -p 50 -j QUEUE");
+		system("ip6tables -I OUTPUT -p 17 --dport 50500 -j QUEUE");
+		system("ip6tables -I OUTPUT -p 17 --sport 50500 -j QUEUE");
 
-			system("ip6tables -I OUTPUT -p 139  -j QUEUE");
-			system("ip6tables -I OUTPUT -p 50 -j QUEUE");
-			system("ip6tables -I OUTPUT -p 17 --dport 50500 -j QUEUE");
-			system("ip6tables -I OUTPUT -p 17 --sport 50500 -j QUEUE");
-				
-		}
-
-		if (!accept_normal_traffic)
+		if (!accept_normal_traffic_by_default)
 		{
 			system("iptables -I FORWARD -j DROP");
 			system("iptables -I INPUT -j DROP");
@@ -284,13 +271,17 @@ int firewall_init_rules()
 #endif
 
 	if (hip_userspace_ipsec) {
+		system("iptables -I INPUT -p 50 -j QUEUE"); /* ESP over IPv4 */
+		system("iptables -I INPUT -p 17 --dport 50500 -j QUEUE");
+		system("iptables -I INPUT -p 17 --sport 50500 -j QUEUE");
+
 		system("ip6tables -I INPUT -p 50 -j QUEUE"); /* ESP over IPv6 */
 		
-		//system("ip6tables -I FORWARD -p 6 ! -d ::1 -j QUEUE"); /* TCP: do we need this?? */
-		system("ip6tables -I OUTPUT -p 6 ! -d ::1 -j QUEUE"); /* TCP over IPv6: possibly HIT based connection */
+		//system("ip6tables -I OUTPUT -p 6 ! -d ::1 -j QUEUE"); /* TCP over IPv6: possibly HIT based connection */
+		system("ip6tables -I OUTPUT -p 6 -d 2001:0010::/28 -j QUEUE"); /* TCP over IPv6: possibly HIT based connection */
 		
-		//system("ip6tables -I FORWARD -p 17 -j QUEUE"); /* UDP: do we need this ??? */ 
-		system("ip6tables -I OUTPUT -p 17 ! -d ::1 -j QUEUE"); /* UDP over IPv6: possibly HIT based connection */
+		//system("ip6tables -I OUTPUT -p 17 ! -d ::1 -j QUEUE"); /* UDP over IPv6: possibly HIT based connection */
+		system("ip6tables -I OUTPUT -p 17 -d 2001:0010::/28 -j QUEUE"); /* UDP over IPv6: possibly HIT based connection */
 	}
 
 
@@ -407,9 +398,6 @@ static void die(struct ipq_handle *h)
  * @return            One if @c hdr is a HIP packet, zero otherwise.
  */ 
 int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
-#if 0		
-	int return_val; // return value
-#endif
 	int hdr_size, err = 0;
 	uint16_t plen;
 	struct udphdr *udphdr = NULL;
@@ -717,7 +705,7 @@ int filter_esp(const struct in6_addr * dst_addr, struct hip_esp * esp,
 		ret_val = rule->accept;
 	}
 	else
-		ret_val = 0;
+		ret_val = accept_hip_esp_traffic_by_default;
 	//release rule list
 	read_rules_exit(0);
 	//return the target of the the matched rule or true if no rule matched
@@ -851,7 +839,8 @@ int filter_hip(const struct in6_addr * ip6_src,
     		ret_val = rule->accept; 
     	}
  	else
-    		ret_val = 0; 
+    		ret_val = accept_hip_esp_traffic_by_default;
+
   	//release rule list
   	read_rules_exit(0);
   	// if packet will be accepted and connection tracking is used
@@ -908,15 +897,15 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx) {
 	else
 		_HIP_DEBUG("signature exists\n");
 	
-	// check HIP packet against firewall rules
 	err = filter_hip(&ctx->src, 
 			 &ctx->dst, 
 			 (hip_common_t *) (ctx->ipq_packet->payload + ctx->ip_hdr_len), 
 			 ctx->ipq_packet->hook,
 			 ctx->ipq_packet->indev_name,
 			 ctx->ipq_packet->outdev_name);
-	
+
  out_err:
+	/* zero return value means that the packet should be dropped */
 	return err;
 }
 
@@ -1046,22 +1035,6 @@ int hip_fw_handle_tcp_forward(hip_fw_context_t *ctx) {
  */
 int hip_fw_handle_packet(char *buf, struct ipq_handle *hndl, int ip_version, hip_fw_context_t *ctx)
 {
-#if 0
-	struct hip_esp * esp_data= NULL;
-	struct hip_esp_packet * esp= NULL;
-	struct hip_common * hip_common= NULL;
-	struct in6_addr src_addr;
-	struct in6_addr dst_addr;
-	struct in6_addr proxy_addr;
-	struct in6_addr src_hit;
-	struct in6_addr dst_hit;
-	//struct in6_addr proxy_hit;
-	struct hip_proxy_t* entry = NULL;	
-	struct hip_conn_t* conn_entry = NULL;
-	int ret_val_filter_hip, packet_type, err = 0;
-	void * packet_hdr= NULL;
-	int hdr_size = 0;
-#endif
 	int err = 0;
 	
 	HIP_DEBUG("thread for IPv%d traffic started\n", ip_version);
@@ -1200,7 +1173,7 @@ int main(int argc, char **argv)
 		hip_query_default_local_hit_from_hipd();
 	}
 
-	HIP_INFO_HIT("Default hit is ", hip_fw_get_default_hit());
+	_HIP_DEBUG_HIT("Default hit is ", hip_fw_get_default_hit());
 
 	check_and_write_default_config();
 	
@@ -1217,10 +1190,10 @@ int main(int argc, char **argv)
 			hip_set_logdebug(LOGDEBUG_ALL);
 			break;
 		case 'H':
-			accept_normal_traffic = 0;
+			accept_normal_traffic_by_default = 0;
 			break;
 		case 'A':
-			accept_hip_esp_traffic = 1;
+			accept_hip_esp_traffic_by_default = 1;
 			break;
 		case 'f':
 			rule_file = optarg;
@@ -1260,6 +1233,7 @@ int main(int argc, char **argv)
 
 	if (!foreground)
 	{
+		HIP_DEBUG("Forking into background\n");
 		hip_set_logtype(LOGTYPE_SYSLOG);
 		if (fork() > 0)
 			return 0;
