@@ -6,7 +6,7 @@
 #include "firewall_control.h"
 
 
-int hip_firewall_sock = 0;
+int hip_fw_sock = 0;
 int control_thread_started = 0;
 GThread * control_thread = NULL; 
 
@@ -33,8 +33,8 @@ gpointer run_control_thread(gpointer data)
 	while (control_thread_started)
 	{
 		FD_ZERO(&read_fdset);
-		FD_SET(hip_firewall_sock, &read_fdset);
-		max_fd = hip_firewall_sock;
+		FD_SET(hip_fw_sock, &read_fdset);
+		max_fd = hip_fw_sock;
 		tv.tv_sec = HIP_SELECT_TIMEOUT;
 		tv.tv_usec = 0;
 
@@ -47,7 +47,7 @@ gpointer run_control_thread(gpointer data)
 			/* idle cycle - select() timeout */
 			_HIP_DEBUG("Idle\n");
 		}
-		else if (FD_ISSET(hip_firewall_sock, &read_fdset))
+		else if (FD_ISSET(hip_fw_sock, &read_fdset))
 		{
 		}
 		else {
@@ -60,8 +60,8 @@ out_err:
 	n = sendto_hipd(msg, sizeof(struct hip_common));
 	if (n < 0) HIP_ERROR("Could not send quit message to daemon.\n");
 	
-	if (hip_firewall_sock)
-		close(hip_firewall_sock);
+	if (hip_fw_sock)
+		close(hip_fw_sock);
 	if (msg != NULL)
 		HIP_FREE(msg);
 
@@ -81,18 +81,143 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 	socklen_t alen;
 	int err = 0;
 	
-
 	HIP_DEBUG("Handling message from hipd\n");
+	
 	type = hip_get_msg_type(msg);
 	
-	if (type == SO_HIP_ADD_ESCROW_DATA)
-	{
-		struct hip_keys * keys = NULL;
-		struct in6_addr * hit_s = NULL;
-		struct in6_addr * hit_r = NULL;
+	//for(param = hip_get_next_) {
+	//	switch (type = hip_get_param_type(param))) 
+	//      PARAM_XX:
+	//      break;
+	//}
+	
+	switch(type) {
+	case SO_HIP_FIREWALL_BEX_DONE: {
 		
+		struct in6_addr *saddr = NULL, *daddr = NULL;
+		struct in6_addr *src_hit = NULL, *dst_hit = NULL;
+		uint32_t *spi_ipsec = NULL;
+		int ealg;
+		struct hip_crypto_key *enckey = NULL, *authkey = NULL;
+		int already_acquired, direction, update, sport, dport;
+		hip_tlv_type_t *param;
+		
+		HIP_DEBUG("Received base exchange done from hipd\n\n");
+		
+		/* now param: src addr */
+		
+		
+		param = (hip_tlv_type_t *) hip_get_param(msg, HIP_PARAM_IPV6_ADDR);
+		saddr = (struct in6_addr *) hip_get_param_contents_direct(param); 
+		HIP_DEBUG_IN6ADDR("Received in6_addr: ", saddr);
+		
+                /* now param: dst addr */
+		
+		param = hip_get_next_param(msg, param);
+		daddr = (struct in6_addr *) hip_get_param_contents_direct(param);
+		HIP_DEBUG_IN6ADDR("Received in6_addr: ", daddr);
+		param =  (hip_tlv_type_t *) hip_get_param(msg, HIP_PARAM_HIT);
+		
+		/* now param: src_hit */
+		src_hit = (struct in6_addr *)hip_get_param_contents_direct(param);
+		
+		HIP_DEBUG_HIT("Received src_hit: ", src_hit);
+		
+		/* now param: dst_hit */
+		
+		param =  hip_get_next_param(msg, param);
+		dst_hit = (struct in6_addr *)hip_get_param_contents_direct(param);
+		
+		HIP_DEBUG_HIT("Received dst_hit: ", dst_hit);
+		
+		
+		param =  (hip_tlv_type_t *) hip_get_param(msg, HIP_PARAM_UINT);
+		
+		/* now param: spi */
+		spi_ipsec = (uint32_t *) hip_get_param_contents_direct(param);
+		
+		HIP_DEBUG("the spi value is %x \n", *spi_ipsec);
+		
+		
+		
+		param =  hip_get_next_param(msg, param);
+		sport = *((unsigned int *) hip_get_param_contents_direct(param));
+		HIP_DEBUG("the source port vaule is %d \n", sport);
+		
+		param =  hip_get_next_param(msg, param);
+		dport = *((unsigned int *) hip_get_param_contents_direct(param));
+		HIP_DEBUG("the destination port value is %d \n", dport);
+		
+		
+		
+		
+		param =  (hip_tlv_type_t *) hip_get_param(msg, HIP_PARAM_KEYS);
+		
+		
+		/* now param: enckey */
+		enckey = (struct hip_crypto_key *) hip_get_param_contents_direct(param);
+		
+		
+		
+		
+		// HIP_DEBUG("crypto key is: \n");
+		HIP_HEXDUMP("crypto key :", enckey, sizeof(struct hip_crypto_key));
+		
+		
+		/* now param: anthkey */
+		
+		param =  hip_get_next_param(msg, param);
+		authkey = (struct hip_crypto_key *)hip_get_param_contents_direct(param);
+		// HIP_DEBUG("auth key key is: \n"); 
+		
+		
+		HIP_HEXDUMP("authen key :", authkey, sizeof(struct hip_crypto_key));
+		
+		
+		/* now param: ealg */
+		param =  (hip_tlv_type_t *) hip_get_param(msg, HIP_PARAM_INT);
+		
+		ealg = *((int *) hip_get_param_contents_direct(param));
+		
+		HIP_DEBUG("ealg  value is %d \n", ealg);
+		
+		/* now param: already_acquired */
+		param =  hip_get_next_param(msg, param);		
+		already_acquired = *((int *) hip_get_param_contents_direct( param));
+		HIP_DEBUG("already_acquired value is %d \n", already_acquired);
+		
+		/* now param: direction */
+		param =  hip_get_next_param(msg, param);		
+		direction = *((int *) hip_get_param_contents_direct(param));
+		HIP_DEBUG("the direction value is %d \n", direction);
+		
+                /* now param: update */
+		
+		param =  hip_get_next_param(msg, param);
+		update = *((int *) hip_get_param_contents_direct(param));
+		HIP_DEBUG("the update value is %d \n", update);
+		
+		
+		
+		
+		err =  hipl_userspace_ipsec_api_wrapper_sadb_add(saddr, daddr, 
+								 src_hit, dst_hit, 
+								 spi_ipsec, ealg, enckey, 
+								 authkey, already_acquired, 
+								 direction, update, 
+								 sport, dport);
+		
+		
+		HIP_IFEL(err, -1, "hip userspace sadb add went wrong\n");
+		break;
+	}
+		
+	case SO_HIP_ADD_ESCROW_DATA:
 		while((param = hip_get_next_param(msg, param)))
 		{
+			struct hip_keys * keys = NULL;
+			struct in6_addr * hit_s = NULL;
+			struct in6_addr * hit_r = NULL;
 			
 			if (hip_get_param_type(param) == HIP_PARAM_HIT)
 			{
@@ -129,22 +254,22 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 					auth_len = 32;	
 				else	
 					HIP_DEBUG("Authentication algorithm unsupported\n");
-
+				
 				err = add_esp_decryption_data(hit_s, hit_r, (struct in6_addr *)&keys->address, 
-		     		spi, alg, auth_len, key_len, &keys->enc);
-		     	if (err < 0) {
-		     		HIP_ERROR("Adding esp decryption data failed");
-		     		goto out_err;
-		     	}
+							      spi, alg, auth_len, key_len, &keys->enc);
+				if (err < 0) {
+					HIP_ERROR("Adding esp decryption data failed");
+					goto out_err;
+				}
 				_HIP_DEBUG("Successfully added esp decryption data\n");	
 			}
 		}
-	}
-	else if (type == SO_HIP_DELETE_ESCROW_DATA) {
-                HIP_DEBUG("Received delete message from hipd\n\n");
+	case SO_HIP_DELETE_ESCROW_DATA:
+	{
                 struct in6_addr * addr = NULL;
                 uint32_t * spi = NULL;
                 
+                HIP_DEBUG("Received delete message from hipd\n\n");
                 while((param = hip_get_next_param(msg, param)))
                 {
                         
@@ -161,45 +286,46 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
                 }
                 if ((addr != NULL) && (spi != NULL)) {
                         HIP_IFEL(remove_esp_decryption_data(addr, *spi), -1, 
-                                "Error while removing decryption data\n");
+				 "Error while removing decryption data\n");
                 }
-                
+		break;
 	}
-
-    else if (type == SO_HIP_SET_ESCROW_ACTIVE) {
-            HIP_DEBUG("Received activate escrow message from hipd\n\n");
-            set_escrow_active(1);
-            
-    }
-    else if (type == SO_HIP_SET_ESCROW_INACTIVE) {
-            HIP_DEBUG("Received deactivate escrow message from hipd\n\n");
-            set_escrow_active(0);
-    }
-    else if (type == SO_HIP_SET_HIPPROXY_ON){
+	case SO_HIP_SET_ESCROW_ACTIVE:
+		HIP_DEBUG("Received activate escrow message from hipd\n\n");
+		set_escrow_active(1);
+		break;
+	case SO_HIP_SET_ESCROW_INACTIVE:
+		HIP_DEBUG("Received deactivate escrow message from hipd\n\n");
+		set_escrow_active(0);
+		break;
+	case SO_HIP_SET_HIPPROXY_ON:
 	        HIP_DEBUG("Received HIP PROXY STATUS: ON message from hipd\n\n");
 	        HIP_DEBUG("Firewall is working on Proxy Mode!\n\n");
 	        hip_proxy_status = 1;
 	        firewall_init_rules();
-    }
-    else if (type == SO_HIP_SET_HIPPROXY_OFF){
-	        HIP_DEBUG("Received HIP PROXY STATUS: OFF message from hipd\n\n");
-  	        HIP_DEBUG("Firewall is working on Firewall Mode!\n\n");
+		break;
+	case SO_HIP_SET_HIPPROXY_OFF:
+		HIP_DEBUG("Received HIP PROXY STATUS: OFF message from hipd\n\n");
+		HIP_DEBUG("Firewall is working on Firewall Mode!\n\n");
 	        hip_proxy_status = 0;
 	        firewall_init_rules();
-    }
- /*   else if(type == HIP_HIPPROXY_LOCAL_ADDRESS){
-	    	HIP_DEBUG("Received HIP PROXY LOCAL ADDRESS message from hipd\n\n");
-		if (hip_get_param_type(param) == HIP_PARAM_IPV6_ADDR)
+		break;
+	/*   else if(type == HIP_HIPPROXY_LOCAL_ADDRESS){
+	     HIP_DEBUG("Received HIP PROXY LOCAL ADDRESS message from hipd\n\n");
+	     if (hip_get_param_type(param) == HIP_PARAM_IPV6_ADDR)
 		{
-			_HIP_DEBUG("Handling HIP_PARAM_IPV6_ADDR\n");
-			hit_s = hip_get_param_contents_direct(param);
+		_HIP_DEBUG("Handling HIP_PARAM_IPV6_ADDR\n");
+		hit_s = hip_get_param_contents_direct(param);
 		}
-    }
-*/	
-
-out_err:	
+		}
+	*/	
+	default:
+		HIP_ERROR("Unhandled message type %d\n", type);
+		err = -1;
+		break;
+	}
+out_err:
 	return err;
-
 }
 
 
@@ -215,7 +341,7 @@ int sendto_hipd(void *msg, size_t len)
 	sock_addr.sin6_addr = in6addr_loopback;
     
 	alen = sizeof(sock_addr);
-	n = sendto(hip_firewall_sock, msg, len, 0,
+	n = sendto(hip_fw_sock, msg, len, 0,
 		   (struct sockaddr *)&sock_addr, alen);
 
 	return (n);
@@ -238,9 +364,8 @@ int request_hipproxy_status(void)
                 
         //n = hip_sendto(msg, &hip_firewall_addr);
         
-        //n = sendto(hip_firewall_sock, msg, hip_get_msg_total_len(msg),
+        //n = sendto(hip_fw_sock, msg, hip_get_msg_total_len(msg),
         //		0,(struct sockaddr *)dst, sizeof(struct sockaddr_in6));
-
         
         n = sendto_hipd(msg, hip_get_msg_total_len(msg));
         if (n < 0) {

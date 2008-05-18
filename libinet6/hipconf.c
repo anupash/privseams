@@ -10,6 +10,7 @@
  * @author  Bing Zhou <bingzhou_cc.hut.fi>
  * @author  Anu Markkola
  * @author  Lauri Silvennoinen
+ * @author  Tao Wan  <twan@cc.hut.fi>
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>
  * @todo    add/del map
  * @todo    fix the rst kludges
@@ -48,13 +49,6 @@ const char *hipconf_usage =
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 "set opp on|off\n"
 #endif
-"transform order <int>\n"
-"    0 = AES_SHA1, 3DES_SHA1, NULL_SHA1\n"
-"    1 = 3DES_SHA1, AES_SHA1, NULL_SHA1\n"
-"    2 = AES_SHA1, NULL_SHA1, 3DES_SHA1\n"
-"    3 = 3DES_SHA1, NULL_SHA1, AES_SHA1\n"
-"    4 = NULL_SHA1, AES_SHA1, 3DES_SHA1\n"
-"    5 = NULL_SHA1, 3DES_SHA1, AES_SHA1\n"
 "opendht on|off\n"
 "dht gw <IPv4|hostname> <port (OpenDHT default = 5851)> <TTL>\n"
 "dht get <fqdn/hit>\n"
@@ -65,6 +59,7 @@ const char *hipconf_usage =
 #ifdef CONFIG_HIP_OPPTCP
 "opptcp on|off\n"
 #endif
+"set tcptimeout on|off\n" /*added by Tao Wan*/
 #ifdef CONFIG_HIP_HIPPROXY
 "hipproxy on|off\n"
 #endif
@@ -104,8 +99,9 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc) 
         hip_conf_handle_dht_toggle,
 	hip_conf_handle_opptcp,
         hip_conf_handle_trans_order,
+	hip_conf_handle_tcptimeout, /* added by Tao Wan*/
         hip_conf_handle_hipproxy,
-	NULL, /* run */
+	NULL /* run */
 };
 
 /**
@@ -145,18 +141,20 @@ int hip_conf_get_action(char *text)
 		ret = ACTION_LOAD;
 	else if (!strcmp("dht", text))
 		ret = ACTION_DHT;
-    else if (!strcmp("opendht", text))
-        ret = ACTION_OPENDHT;
-    else if (!strcmp("locator", text))
-        ret = ACTION_LOCATOR; 
+	else if (!strcmp("opendht", text))
+		ret = ACTION_OPENDHT;
+	else if (!strcmp("locator", text))
+		ret = ACTION_LOCATOR; 
 	else if (!strcmp("debug", text))
 		ret = ACTION_DEBUG;
 	else if (!strcmp("handoff", text))
 		ret = ACTION_HANDOFF;
-    else if (!strcmp("transform", text))
-        ret = ACTION_TRANSORDER;
+	else if (!strcmp("transform", text))
+		ret = ACTION_TRANSORDER;
 	else if (!strcmp("restart", text))
 		ret = ACTION_RESTART;
+	else if (!strcmp("tcptimeout", text)) /*added by Tao Wan, 08.Jan.2008 */
+		ret = ACTION_TCPTIMEOUT;
 	else if (!strcmp("reinit", text))
 		ret = ACTION_REINIT;
 #ifdef CONFIG_HIP_OPPTCP
@@ -185,6 +183,7 @@ int hip_conf_check_action_argc(int action) {
 	case ACTION_BOS: case ACTION_LOCATOR: case ACTION_OPENDHT:
                 break;
 	case ACTION_DEBUG: case ACTION_RESTART: case ACTION_REINIT:
+	case ACTION_TCPTIMEOUT:
 		count = 1;
 		break;
 	case ACTION_ADD: case ACTION_DEL: case ACTION_SET: case ACTION_INC:
@@ -241,7 +240,10 @@ int hip_conf_get_type(char *text,char *argv[]) {
 	else if	(strcmp("nat",argv[1])==0) 
 		ret = TYPE_NAT;
         else if (strcmp("locator", argv[1])==0)
-		ret = TYPE_LOCATOR;
+                ret = TYPE_LOCATOR;
+	/* Tao Wan added tcptimeout on 08.Jan.2008 */
+	else if (!strcmp("tcptimeout", text))
+		ret = TYPE_TCPTIMEOUT;
 	else if ((!strcmp("all", text)) && (strcmp("bos",argv[1])==0))
 		ret = TYPE_BOS;
 	else if (!strcmp("debug", text))
@@ -264,10 +266,11 @@ int hip_conf_get_type(char *text,char *argv[]) {
 	else if (!strcmp("escrow", text))
 		ret = TYPE_ESCROW;
 #endif		
-    else if (!strcmp("order", text))
-        ret = TYPE_ORDER;
+	else if (!strcmp("order", text))
+		ret = TYPE_ORDER;
+#ifdef CONFIG_HIP_OPENDHT
 	else if (strcmp("opendht", argv[1])==0)
-        ret = TYPE_DHT;
+		ret = TYPE_DHT;
 	else if (!strcmp("ttl", text))
 		ret = TYPE_TTL;
 	else if (!strcmp("gw", text))
@@ -275,7 +278,8 @@ int hip_conf_get_type(char *text,char *argv[]) {
 	else if (!strcmp("get", text))
 		ret = TYPE_GET;
 	else if (!strcmp("set", text))
-        ret = TYPE_SET;
+                ret = TYPE_SET;
+#endif
 	else if (!strcmp("config", text))
 		ret = TYPE_CONFIG;
 #ifdef CONFIG_HIP_OPPTCP
@@ -311,6 +315,7 @@ int hip_conf_get_type_arg(int action)
 	case ACTION_RST:
 	case ACTION_BOS:
 	case ACTION_HANDOFF:
+	case ACTION_TCPTIMEOUT:
         case ACTION_TRANSORDER:
 	case ACTION_REINIT:
 #ifdef CONFIG_HIP_OPPTCP
@@ -1845,6 +1850,41 @@ int hip_conf_handle_opptcp(hip_common_t *msg, int action, const char *opt[],
 
 /*	hip_set_opportunistic_tcp_status(1);*/
 /*	hip_set_opportunistic_tcp_status(0);*/
+}
+/**
+ * Handles the hipconf commands where the type is @ tcptimeout.
+ *
+ * @param msg    a pointer to the buffer where the message for hipd will
+ *                be written.
+ * @param action the numeric action identifier for the action to be performed.
+ * @param opt    an array of pointers to the command line arguments after
+ *                the action and type.
+ *  @param optc   the number of elements in the array (@b 0).
+ *  @return       zero on success, or negative error value on error.
+ * */
+
+int hip_conf_handle_tcptimeout(struct hip_common *msg, int action,
+                   const char *opt[], int optc)
+{
+    
+   int err = 0, status = 0;
+
+    if (!strcmp("on",opt[0])) {
+
+	HIP_INFO("tcptimeout set on\n");
+	status = SO_HIP_SET_TCPTIMEOUT_ON;
+    } else if (!strcmp("off",opt[0])) {
+       
+	HIP_INFO("tcptimeout set off\n");
+	status = SO_HIP_SET_TCPTIMEOUT_OFF;
+    } else {
+        HIP_IFEL(1, -1, "bad args\n");
+       // err = -1;
+	}
+    HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, "build hdr failed: %s\n", strerror(err));
+
+ out_err:
+    return err;
 }
 
 /**

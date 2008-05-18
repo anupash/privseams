@@ -75,7 +75,7 @@ struct hip_esp_packet {
 
 struct hip_esp {
 	uint32_t esp_spi;
-    uint32_t esp_seq;
+	uint32_t esp_seq;
 } __attribute((packed))__;
 
 struct hip_esp_tail {

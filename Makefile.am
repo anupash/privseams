@@ -1,3 +1,4 @@
+
 AUTOMAKE_OPTIONS = foreign
 
 # For "make dist"

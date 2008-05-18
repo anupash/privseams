@@ -8,9 +8,15 @@
  * @author  Miika Komu <miika_iki.fi>
  * @author  Kristian Slavov <kslavov_hiit.fi>
  * @author  Bing Zhou <bingzhou_cc.hut.fi>
+ * @author  Tao Wan  <twan_cc.hut.fi>
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  */
 #include "user.h"
+
+int hip_sendto(const struct hip_common *msg, const struct sockaddr *dst){
+        return sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
+                   0, (struct sockaddr *)dst, hip_sockaddr_len(dst));
+}
 
 /**
  * Handles a user message.
@@ -211,6 +217,29 @@ int hip_handle_user_msg(struct hip_common *msg,
 		HIP_IFEL(hip_set_blind_off(), -1, "hip_set_blind_off failed\n");
 		break;
 #endif
+       case SO_HIP_SET_TCPTIMEOUT_ON:
+               HIP_DEBUG("Setting TCP TIMEOUT ON\n");
+               hip_tcptimeout_status = SO_HIP_SET_TCPTIMEOUT_ON;
+               HIP_DEBUG("hip tcp timeout status =  %d (should be %d)\n",
+                      hip_tcptimeout_status, SO_HIP_SET_TCPTIMEOUT_ON);
+               
+               /* paramters setting to do here */
+               HIP_IFEL(set_new_tcptimeout_parameters_value(), -1,
+                         "set new tcptimeout parameters error\n");
+               break;
+       
+        case SO_HIP_SET_TCPTIMEOUT_OFF:
+                HIP_DEBUG("Setting TCP TIMEOUT OFF\n");
+                hip_tcptimeout_status = SO_HIP_SET_TCPTIMEOUT_OFF;
+                HIP_DEBUG("hip tcp timeout status =  %d (should be %d)\n",
+                        hip_tcptimeout_status, SO_HIP_SET_TCPTIMEOUT_OFF);
+                
+                /* paramters resetting */
+                HIP_IFEL(reset_default_tcptimeout_parameters_value(), -1,
+                         "reset tcptimeout parameters to be default error\n");
+
+                break;
+
         case SO_HIP_DHT_GW:
 	{
 		char tmp_ip_str[20];
@@ -673,7 +702,6 @@ int hip_handle_user_msg(struct hip_common *msg,
 		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
 			 -1, "sending i1 failed\n");
 		break;
-	     
 	case SO_HIP_OFFER_HIPRELAY:
 		/* draft-ietf-hip-registration-02 HIPRELAY registration. Relay
 		   server handles this message. Message indicates that the
@@ -843,14 +871,8 @@ int hip_handle_user_msg(struct hip_common *msg,
 		break;
 	}
 	case SO_HIP_TRIGGER_BEX:
-		dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
-		HIP_IFEL(hip_add_peer_map(msg), -1, "trigger bex\n");
-		/* Fetch the hadb entry just created. */
-		HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(dst_hit)),
-			 -1, "internal error: no hadb entry found\n");
-		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
-			 -1, "sending i1 failed\n");
-
+		HIP_DUMP_MSG( msg);
+		err = hip_netdev_trigger_bex_msg(msg);
 		goto out_err;
 	  break;
 	default:
@@ -866,7 +888,6 @@ int hip_handle_user_msg(struct hip_common *msg,
 		/* send a response (assuming that it is written to the msg */
 		len = hip_get_msg_total_len(msg);
 		n = hip_sendto(msg, src);
-		
 		if(n != len) {
 			HIP_ERROR("hip_sendto() failed.\n");
 			err = -1;
