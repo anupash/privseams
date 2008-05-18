@@ -62,15 +62,16 @@
 
 typedef struct hip_fw_context {
 	// queued packet
-	ipq_packet_msg_t *packet;
+	ipq_packet_msg_t *ipq_packet;
 	
 	// IP layer information
 	int ip_version; /* 4, 6 */
+	int ip_hdr_len;
 	struct in6_addr src, dst;
 	union {
 		struct ip6_hdr *ipv6;
 		struct ip *ipv4;
-	} network_hdr;
+	} ip_hdr;
 		
 	// transport layer information
 	int packet_type; /* HIP_PACKET, ESP_PACKET, etc  */
@@ -80,18 +81,8 @@ typedef struct hip_fw_context {
 		struct tcphdr *tcp;
 	} transport_hdr;
 	struct udphdr *udp_encap_hdr;
+	//uint32_t spi;
 } hip_fw_context_t;
-
-typedef struct hip_proxy_t {
-	hip_hit_t hit_our;
-	hip_hit_t hit_peer;
-	hip_hit_t hit_proxy;
-	struct in6_addr addr_our;
-	struct in6_addr addr_peer;
-	struct in6_addr addr_proxy;
-	int state;
-	int hip_capable;
-} hip_proxy_t;
 
 struct hip_conn_key {
 	uint8_t protocol;
@@ -111,6 +102,7 @@ typedef struct hip_conn_t  {
 #define HIP_FIREWALL_LOCK_FILE	"/var/lock/hip_firewall.lock"
 struct in6_addr proxy_hit;
 extern int hipproxy;
+extern struct in6_addr default_hit;
 
 //made public for filter_esp_state function
 int match_hit(struct in6_addr match_hit, 
@@ -124,22 +116,7 @@ void firewall_close(int signal);
 void firewall_exit();
 void firewall_probe_kernel_modules();
 void firewall_increase_netlink_buffers();
-void examine_incoming_tcp_packet(struct ipq_handle *, unsigned long, void *, int, int);
-void hip_request_send_i1_to_hip_peer_from_hipd(struct in6_addr *peer_hit,
-					       struct in6_addr *peer_ip);
-void hip_request_unblock_app_from_hipd(const struct in6_addr *peer_ip);
-void hip_request_oppipdb_add_entry(struct in6_addr *peer_ip);
-
-
-int hip_firewall_userspace_ipsec_output(unsigned long	    packetId,
-					void		    *hdr,
-					int		    trafficType,
-					ipq_packet_msg_t    *ip_packet_in_the_queue);
-
-
-int hip_esp_traffic_userspace_handler(pthread_t *hip_esp_userspace_id_param, 
-				      void (*hip_esp_userspace_traffic)(void *), 
-				      void *thread_param);
+int hip_fw_handle_other_forward(hip_fw_context_t *ctx);
 int hip_fw_handle_other_output(hip_fw_context_t *ctx);
 int hip_fw_handle_hip_output(hip_fw_context_t *ctx);
 int hip_fw_handle_esp_output(hip_fw_context_t *ctx);
