@@ -637,61 +637,67 @@ out_err:
 	
 }
 
-int hip_netdev_handle_acquire(const struct nlmsghdr *msg){
+int hip_netdev_trigger_bex(hip_hit_t *src_hit, hip_hit_t *dst_hit,
+			   struct in6_addr *src_addr_p, struct in6_addr *dst_addr_p) {
 	int err = 0, if_index = 0, is_ipv4_locator,
 		reuse_hadb_local_address = 0, ha_nat_mode = hip_nat_status,
                 old_global_nat_mode = hip_nat_status;
         in_port_t ha_peer_port;
 	hip_ha_t *entry;
-	hip_hit_t *src_hit, *dst_hit;
-	
-	int is_loopback = 0;
+       	int is_loopback = 0;
 	struct in6_addr src_addr;
-	struct xfrm_user_acquire *acq;
 	struct in6_addr dst_addr, ha_match;
 	struct sockaddr_storage ss_addr;
 	struct sockaddr *addr;
+	hip_hit_t default_hit;
 	addr = (struct sockaddr*) &ss_addr;
 
-	HIP_DEBUG("Acquire: sending I1 (pid: %d) \n", msg->nlmsg_pid);
+	if (!src_hit) {
+		HIP_DEBUG("........Using default source hit.........\n");
+		HIP_IFEL(hip_get_default_hit(&default_hit), -1,
+			 "default hit\n");
+		src_hit = &default_hit;
+	}
 
-	acq = (struct xfrm_user_acquire *)NLMSG_DATA(msg);
-	src_hit = (struct in6_addr *) &acq->sel.saddr;
-	dst_hit = (struct in6_addr *) &acq->sel.daddr;
+	HIP_DEBUG_HIT("src hit is from hip_get_default_hit: ", src_hit);
 
-	HIP_DEBUG_HIT("src HIT", src_hit);
-	HIP_DEBUG_HIT("dst HIT", dst_hit);
 
 	/* Sometimes we get deformed HITs from kernel, skip them */
 	HIP_IFEL(!(ipv6_addr_is_hit(src_hit) && ipv6_addr_is_hit(dst_hit) &&
 		   hip_hidb_hit_is_our(src_hit) &&
 		   hit_is_real_hit(dst_hit)), -1,
 		 "Received rubbish from netlink, skip\n");
-
+	
 	entry = hip_hadb_find_byhits(src_hit, dst_hit);
 	if (entry) {
 		reuse_hadb_local_address = 1;
 		goto skip_entry_creation;
 	}
 
-
 	/* No entry found; find first IP matching to the HIT and then
 	   create the entry */
 
-#ifdef CONFIG_HIP_HI3
-	if(hip_use_i3) {
-		struct in6_addr lpback = { IN6ADDR_LOOPBACK_INIT };
+	err = 1;
+
+	if (hip_use_i3) {
+		struct in6_addr lpback = IN6ADDR_LOOPBACK_INIT;
 		memcpy(&dst_addr, &lpback, sizeof(struct in6_addr));
 		/*struct in_addr lpback = { INADDR_LOOPBACK };
 		  IPV4_TO_IPV6_MAP(&lpback, &dst_addr);*/
 		err = 0;
 	}
-	else {
+
+	if (err) {
+		if (dst_addr_p) {
+			/* Destination address given; no need to look up */
+			ipv6_addr_copy(dst_addr_p, &dst_addr);
+			err = 0;
+		}
+	}
+	
+	if (err) {
 		err = hip_map_hit_to_addr(dst_hit, &dst_addr);
 	}
-#else
-	err = hip_map_hit_to_addr(dst_hit, &dst_addr);
-#endif // CONFIG_HIP_HI3
 
 	if (err) {
 		/* Search HADB for existing entries */
@@ -766,14 +772,9 @@ skip_entry_creation:
 	memset(addr, 0, sizeof(struct sockaddr_storage));
 	addr->sa_family = (is_ipv4_locator ? AF_INET : AF_INET6);
 
-	if (!reuse_hadb_local_address)
-		if (is_ipv4_locator) {
-			IPV4_TO_IPV6_MAP(((struct in_addr *)&acq->id.daddr),
-					 &entry->local_address);
-		} else {
-			ipv6_addr_copy(&entry->local_address,
-				       ((struct in6_addr*)&acq->id.daddr));
-		}
+	if (!reuse_hadb_local_address && src_addr_p) {
+		ipv6_addr_copy(&entry->local_address, src_addr_p);
+	}
 
 	memcpy(hip_cast_sa_addr(addr), &entry->local_address,
 	       hip_sa_addr_len(addr));
@@ -782,8 +783,6 @@ skip_entry_creation:
         HIP_DEBUG_HIT("peer hit", &entry->hit_peer);
 	HIP_DEBUG_IN6ADDR("peer locator", &entry->preferred_address);
 	HIP_DEBUG_IN6ADDR("our locator", &entry->local_address);
-
-	HIP_DEBUG("acq->sel.ifindex=%d\n", acq->sel.ifindex);
 
 	if_index = hip_devaddr2ifindex(&entry->local_address);
 	HIP_IFEL((if_index < 0), -1, "if_index NOT determined\n");
@@ -801,6 +800,78 @@ out_err:
 	return err;
 }
 
+int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
+	hip_hit_t *src_hit = NULL, *dst_hit = NULL;
+	struct in6_addr saddr, *src_addr = NULL, *dst_addr = NULL;
+	struct xfrm_user_acquire *acq;
+	hip_ha_t *entry;
+
+	HIP_DEBUG("Acquire: sending I1 (pid: %d) \n", msg->nlmsg_pid);
+
+	acq = (struct xfrm_user_acquire *)NLMSG_DATA(msg);
+	src_hit = (hip_hit_t *) &acq->sel.saddr;
+	dst_hit = (hip_hit_t *) &acq->sel.daddr;
+
+	HIP_DEBUG_HIT("src HIT", src_hit);
+	HIP_DEBUG_HIT("dst HIT", dst_hit);
+	HIP_DEBUG("acq->sel.ifindex=%d\n", acq->sel.ifindex);
+
+#if 0
+	/* Is this still necessary? -Miika */
+	entry = hip_hadb_find_byhits(src_hit, dst_hit);
+	if (!entry) {
+		if (is_ipv4_locator) {
+			IPV4_TO_IPV6_MAP(((struct in_addr *)&acq->id.daddr),
+					 &saddr);
+		} else {
+			ipv6_addr_copy(&saddr,
+				       ((struct in6_addr*)&acq->id.daddr));
+		}
+		src_addr = &saddr;
+	}
+#endif
+
+	return hip_netdev_trigger_bex(src_hit, dst_hit, src_addr, dst_addr);
+}
+
+int hip_netdev_trigger_bex_msg(struct hip_common *msg) {
+	hip_hit_t *our_hit = NULL, *peer_hit = NULL;
+	struct in6_addr *our_addr = NULL, *peer_addr = NULL;
+	struct hip_tlv_common *param;
+	int err = 0;
+	
+	HIP_DUMP_MSG( msg);
+	
+	/* Destination HIT */
+	param = hip_get_param(msg, HIP_PARAM_HIT);
+	if (param)
+		peer_hit = hip_get_param_contents_direct(param);
+	
+	HIP_DEBUG_HIT("trigger_msg_peer_hit:", peer_hit);
+	
+	/* Source HIT */
+	param = hip_get_next_param(msg, param);
+	if (param && hip_get_param_type(param) == HIP_PARAM_HIT)
+		our_hit = hip_get_param_contents_direct(param);
+	
+	HIP_DEBUG_HIT("trigger_msg_our_hit:", our_hit);
+	
+	/* Destination IP */
+	param = hip_get_param(msg, HIP_PARAM_IPV6_ADDR);
+	if (param)
+		peer_addr = hip_get_param_contents_direct(param);
+	
+	HIP_DEBUG_IN6ADDR("trigger_msg_peer_addr:", peer_addr);
+
+	/* Source IP */
+	param = hip_get_next_param(msg, param);
+	if (param && hip_get_param_type(param) == HIP_PARAM_IPV6_ADDR)
+		our_addr = hip_get_param_contents_direct(param);
+
+	HIP_DEBUG_IN6ADDR("trigger_msg_our_addr:", our_addr);
+	
+	return hip_netdev_trigger_bex(our_hit, peer_hit, our_addr, peer_addr);
+}
 
 int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 {

@@ -44,7 +44,7 @@ static int hip_verify_hmac(struct hip_common *buffer, u8 *hmac,
 
 	_HIP_HEXDUMP("HMAC", hmac_res, HIP_AH_SHA_LEN);
 	HIP_IFE(memcmp(hmac_res, hmac, HIP_AH_SHA_LEN), -EINVAL);
-	memcmp(hmac_res, hmac, HIP_AH_SHA_LEN);
+	memcmp(hmac_res, hmac, HIP_AH_SHA_LEN); /* why is the same as the line before it?. Tao Wan*/
  out_err:
 	if (hmac_res)
 		HIP_FREE(hmac_res);
@@ -979,7 +979,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	if (hip_blind_get_status()) {
 	  /* let the setup routine give us a SPI. */
 	  HIP_DEBUG("Blind is ON\n");
-	  HIP_IFEL(hip_add_sa(r1_saddr, r1_daddr,
+	  HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(r1_saddr, r1_daddr,
 			      &entry->hit_peer, &entry->hit_our,
 			      &spi_in, transform_esp_suite, 
 			      &ctx->esp_in, &ctx->auth_in, 0,
@@ -994,7 +994,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	  HIP_DEBUG_HIT("hit our", &entry->hit_our);
 	  HIP_DEBUG_HIT("hit peer", &entry->hit_peer);
 	  /* let the setup routine give us a SPI. */
-	  HIP_IFEL(hip_add_sa(r1_saddr, r1_daddr,
+	  HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(r1_saddr, r1_daddr,
 			      &ctx->input->hits, &ctx->input->hitr,
 			      &spi_in, transform_esp_suite, 
 			      &ctx->esp_in, &ctx->auth_in, 0,
@@ -1007,7 +1007,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status()) {
-	  HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_peer,
+	  HIP_IFEL(entry->hadb_ipsec_func->hip_setup_hit_sp_pair(&entry->hit_peer,
 					 &entry->hit_our,
 					 r1_saddr, r1_daddr, IPPROTO_ESP, 1, 1), -1,
 		   "Setting up SP pair failed\n");
@@ -1015,7 +1015,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 #endif
 #ifndef HIP_USE_ICE
 	if (!hip_blind_get_status()) {
-	  HIP_IFEL(hip_setup_hit_sp_pair(&ctx->input->hits,
+	  HIP_IFEL(entry->hadb_ipsec_func->hip_setup_hit_sp_pair(&ctx->input->hits,
 					 &ctx->input->hitr,
 					 r1_saddr, r1_daddr, IPPROTO_ESP, 1, 1), -1,
 		   "Setting up SP pair failed\n");
@@ -2083,7 +2083,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 #ifdef CONFIG_HIP_BLIND
 	if (use_blind) {
 	  /* Set up IPsec associations */
-	  err = hip_add_sa(i2_saddr, i2_daddr,
+	  err = entry->hadb_ipsec_func->hip_add_sa(i2_saddr, i2_daddr,
 			   &entry->hit_peer, &entry->hit_our,
 			   &spi_in,
 			   esp_tfm,  &ctx->esp_in, &ctx->auth_in,
@@ -2095,7 +2095,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	//disable direct connection when ice is used
 	if (!use_blind) {
 	/* Set up IPsec associations */
-	err = hip_add_sa(i2_saddr, i2_daddr,
+	err = entry->hadb_ipsec_func->hip_add_sa(i2_saddr, i2_daddr,
 			 &ctx->input->hits, &ctx->input->hitr,
 			 &spi_in,
 			 esp_tfm,  &ctx->esp_in, &ctx->auth_in,
@@ -2133,19 +2133,19 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	
 #ifdef CONFIG_HIP_BLIND
 	if (use_blind) {
-		err = hip_add_sa(i2_daddr, i2_saddr,
-			    &entry->hit_our, &entry->hit_peer,
+	   err = entry->hadb_ipsec_func->hip_add_sa(i2_daddr, i2_saddr,
+			   &entry->hit_our, &entry->hit_peer,
 			   &spi_out, esp_tfm, 
 			   &ctx->esp_out, &ctx->auth_out,
 			   1, HIP_SPI_DIRECTION_OUT, 0, i2_info->dst_port, i2_info->src_port,0);
 	}
 #endif
 	if (!use_blind) {
-		err = hip_add_sa(i2_daddr, i2_saddr, &ctx->input->hitr,
-				 &ctx->input->hits, &spi_out, esp_tfm,
-				 &ctx->esp_out, &ctx->auth_out, 1,
-				 HIP_SPI_DIRECTION_OUT, 0, i2_info->dst_port,
-				 i2_info->src_port);
+	  err = entry->hadb_ipsec_func->hip_add_sa(i2_daddr, i2_saddr,
+			   &ctx->input->hitr, &ctx->input->hits,
+			   &spi_out, esp_tfm, 
+			   &ctx->esp_out, &ctx->auth_out,
+			   1, HIP_SPI_DIRECTION_OUT, 0, i2_info->dst_port, i2_info->src_port);
 	}
 	if (err) {
 		HIP_ERROR("Failed to setup outbound SA with SPI = %d.\n",
@@ -2161,21 +2161,20 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	HIP_DEBUG("Set up outbound IPsec SA, SPI=0x%x\n", spi_out);
 
 #ifdef CONFIG_HIP_BLIND
-	if (use_blind) {
-		HIP_IFEL(hip_setup_hit_sp_pair(
-				 &entry->hit_peer, &entry->hit_our, i2_saddr,
-				 i2_daddr, IPPROTO_ESP, 1, 1), -1,
-			 "Setting up SP pair failed.\n");
-	}
+    if (use_blind) {
+      HIP_IFEL(entry->hadb_ipsec_func->hip_setup_hit_sp_pair(&entry->hit_peer,
+				     &entry->hit_our,
+				     i2_saddr, i2_daddr, IPPROTO_ESP, 1, 1),
+	       -1, "Setting up SP pair failed\n");
+    }
 #endif
-#ifndef HIP_USE_ICE
-	if (!use_blind) {
-		HIP_IFEL(hip_setup_hit_sp_pair(
-				 &ctx->input->hits, &ctx->input->hitr,
-				 i2_saddr, i2_daddr, IPPROTO_ESP, 1, 1), -1,
-			 "Setting up SP pair failed.\n");
-	}
-#endif
+    if (!use_blind) {
+	    HIP_IFEL(entry->hadb_ipsec_func->hip_setup_hit_sp_pair(&ctx->input->hits,
+					   &ctx->input->hitr,
+					   i2_saddr, i2_daddr, IPPROTO_ESP, 1, 1),
+		     -1, "Setting up SP pair failed\n");
+    }
+
 	/* Source IPv6 address is implicitly the preferred address after the
 	   base exchange. */
     //TODO we make the priority the highest here, check it later
@@ -2542,18 +2541,19 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	
 #ifdef CONFIG_HIP_BLIND
 	if (use_blind) {
-		err = hip_add_sa(r2_daddr, r2_saddr, &entry->hit_our,
-				 &entry->hit_peer, &spi_recvd, tfm,
-				 &ctx->esp_out, &ctx->auth_out, 1,
-				 HIP_SPI_DIRECTION_OUT, 0, r2_info->src_port,
-				 r2_info->dst_port);
+	  err = entry->hadb_ipsec_func->hip_add_sa(r2_daddr, r2_saddr,
+			   &entry->hit_our, &entry->hit_peer,
+			   &spi_recvd, tfm,
+			   &ctx->esp_out, &ctx->auth_out, 1,
+			   HIP_SPI_DIRECTION_OUT, 0, r2_info->src_port, r2_info->dst_port);
 	}
 #endif
 	HIP_DEBUG("entry->hip_transform: \n", entry->hip_transform);
 	if (!hip_blind_get_status()) {
 #ifndef HIP_USE_ICE
-		err = hip_add_sa(r2_daddr, r2_saddr, &ctx->input->hitr,
-				 &ctx->input->hits, &spi_recvd, tfm,
+	  err = entry->hadb_ipsec_func->hip_add_sa(r2_daddr, r2_saddr,
+				 &ctx->input->hitr, &ctx->input->hits,
+				 &spi_recvd, tfm,
 				 &ctx->esp_out, &ctx->auth_out, 1,
 				 HIP_SPI_DIRECTION_OUT, 0, r2_info->src_port,
 				 r2_info->dst_port);

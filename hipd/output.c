@@ -1,4 +1,4 @@
-/** @file
+/* @file
  * This file defines handling functions for outgoing packets for the Host
  * Identity Protocol (HIP).
  * 
@@ -115,6 +115,8 @@ int send_tcp_packet(void *hdr,
 		//socket settings
 		sin_addr.sin_family = AF_INET;
 		sin_addr.sin_port   = htons(tcphdr->dest);
+		
+		/* Is that right to copy address? */
 		sin_addr.sin_addr   = iphdr->ip_dst;
 	}
 	else if(trafficType == 6){
@@ -1454,7 +1456,7 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	if (err)
 		HIP_ERROR("strerror: %s\n", strerror(errno));
 
-	return err;
+	return err; 
 }
 
 /**
