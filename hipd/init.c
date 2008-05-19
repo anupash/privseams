@@ -628,10 +628,10 @@ void hip_exit(int signal)
 	/* Close SAs with all peers */
         // hip_send_close(NULL);
 
-
+#if 0
 	/*reset TCP timeout to be original vaule , added By Tao Wan on 14.Jan.2008. */
 	reset_default_tcptimeout_parameters_value();
-
+#endif
 
 	if (hipd_msg)
 		HIP_FREE(hipd_msg);
