@@ -145,12 +145,12 @@ rm -rf %{buildroot}
 
 %files tools
 %{prefix}/sbin/hipconf
-%{prefix}/bin/myasn.py
-%{prefix}/bin/parse-key-3.py
-%{prefix}/bin/dnsproxy.py
-%{prefix}/bin/hosts.py
-%{prefix}/bin/pyip6.py
-%{prefix}/bin/util.py
+%{prefix}/sbin/myasn.py
+%{prefix}/sbin/parse-key-3.py
+%{prefix}/sbin/dnsproxy.py
+%{prefix}/sbin/hosts.py
+%{prefix}/sbin/pyip6.py
+%{prefix}/sbin/util.py
 %{python_sitelib}/DNS
 %defattr(755,root,root)
 

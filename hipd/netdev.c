@@ -1252,6 +1252,7 @@ int hip_get_default_hit_msg(struct hip_common *msg)
 	hip_hit_t hit;
 	
 	hip_get_default_hit(&hit);
+	HIP_DEBUG_HIT("Default hit is ", &hit);
 	hip_build_param_contents(msg, &hit, HIP_PARAM_HIT, sizeof(hit));
 	
  out_err:
