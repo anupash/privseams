@@ -379,9 +379,13 @@ int hip_handle_param_rrq(hip_ha_t *entry, hip_common_t *source_msg,
 	
 	/* Arrays for storing the type reg_types of the accepted and refused
 	   request types. */
-	uint8_t accepted_requests[type_count], refused_requests[type_count];
-	memset(accepted_requests, '\0', sizeof(accepted_requests));
-	memset(refused_requests, '\0', sizeof(refused_requests));
+	uint8_t accepted_requests[type_count], accepted_lifetimes[type_count];
+	uint8_t refused_requests[type_count], failure_types[type_count];
+	
+	memset(accepted_requests, '0', sizeof(accepted_requests));
+	memset(accepted_lifetimes, '0', sizeof(accepted_lifetimes));
+	memset(refused_requests, '0', sizeof(refused_requests));
+	memset(failure_types, '0', sizeof(failure_types));
 	
 	HIP_DEBUG("REG_REQUEST lifetime: 0x%x, number of types: %d.\n",
 		  reg_request->lifetime, type_count);
@@ -393,9 +397,10 @@ int hip_handle_param_rrq(hip_ha_t *entry, hip_common_t *source_msg,
 			       refused_requests, &refused_count);
 	} else {
 		HIP_DEBUG("Client is registrating for new services.\n");
-		hip_add_reg(entry, reg_types, type_count,
-			    accepted_requests, &accepted_count,
-			    refused_requests, &refused_count);
+		hip_add_reg(entry, reg_request->lifetime, reg_types, type_count,
+			    accepted_requests, accepted_lifetimes,
+			    &accepted_count, refused_requests, failure_types,
+			    &refused_count);
 	}
 	
  out_err:
@@ -427,34 +432,50 @@ int hip_has_duplicate_services(uint8_t *reg_types, int type_count)
  * succesful registrations are listed in @c accepted_requests and unsuccesful
  * registrations in @c refused_requests.
  * 
- * Make sure that you have allocated memory to both @c accepted_requests and
- * @c refused_requests for at least @c type_count elements.
+ * Make sure that you have allocated memory to @c accepted_requests,
+ * @c refused_requests and @c failure_types for at least @c type_count elements.
  *
- * @param  entry             a pointer to a host association.
- * @param  reg_types         a pointer to Reg Types found in REG_REQUEST.
- * @param  type_count        number of Reg Types in @c reg_types.
- * @param  accepted_requests a target buffer that will store the Reg Types of
- *                           the registrations that succeeded.
- * @param  accepted_count    a target buffer that will store the number of Reg
- *                           Types in @c accepted_requests.
- * @param  refused_requests  a target buffer that will store the Reg Types of
- *                           the registrations that did not succeed.
- * @param  refused_count     a target buffer that will store the number of Reg
- *                           Types in @c refused_requests.
- * @return                   zero on success, -1 otherwise.
+ * @param  entry              a pointer to a host association.
+ * @param  lifetime           requested lifetime.
+ * @param  reg_types          a pointer to Reg Types found in REG_REQUEST.
+ * @param  type_count         number of Reg Types in @c reg_types.
+ * @param  accepted_requests  a target buffer that will store the Reg Types of
+ *                            the registrations that succeeded.
+ * @param  accepted_lifetimes a target buffer that will store the life times of
+ *                            the registrations that succeeded. There will be
+ *                            @c accepted_count elements in the buffer, and the
+ *                            life times will be in matching indexes with
+ *                            @c accepted_requests.
+ * @param  accepted_count     a target buffer that will store the number of Reg
+ *                            Types in @c accepted_requests.
+ * @param  refused_requests   a target buffer that will store the Reg Types of
+ *                            the registrations that did not succeed.
+ * @param  failure_types      a target buffer that will store the Failure Types
+ *                            of the refused requests. There will be
+ *                            @c refused_count elements in the buffer, and the
+ *                            Failure Types will be in matching indexes with
+ *                            @c refused_requests.
+ * @param  refused_count      a target buffer that will store the number of Reg
+ *                            Types in @c refused_requests.
+ * @return                    zero on success, -1 otherwise.
  */ 
-int hip_add_reg(hip_ha_t *entry, uint8_t *reg_types, int type_count,
-		uint8_t accepted_requests[], int *accepted_count,
-		uint8_t refused_requests[], int *refused_count)
+int hip_add_reg(hip_ha_t *entry, uint8_t lifetime, uint8_t *reg_types,
+		int type_count, uint8_t accepted_requests[],
+		uint8_t accepted_lifetimes[], int *accepted_count,
+		uint8_t refused_requests[], uint8_t failure_types[],
+		int *refused_count)
 {
 	
 	int err = 0, i = 0;
 	hip_relrec_t dummy, *fetch_record = NULL;
 	uint8_t granted_lifetime = 0;
 
-	/* Check if we already have an relay record for the given HIT. */
 	memcpy(&(dummy.hit_r), &(entry->hit_peer), sizeof(entry->hit_peer));
-	fetch_record = hip_relht_get(&dummy);
+
+	/* Validate lifetime. This should be service specific but since we don't
+	   have a way to customize life times other than RVS lifetime currently,
+	   we use RVS validation for all services. */
+	hip_rvs_validate_lifetime(lifetime, &granted_lifetime);
 
 	/* Loop through all registrations types in reg_types. */
 	for(; i < type_count; i++) {
@@ -462,8 +483,20 @@ int hip_add_reg(hip_ha_t *entry, uint8_t *reg_types, int type_count,
 		case HIP_SERVICE_RENDEZVOUS:
 			HIP_INFO("Client is registering to rendezvous "\
 				 "service.\n");
+			/* Check if we already have an relay record for the
+			   given HIT. Note that the fetched record type does not
+			   matter, since the relay and RVS types cannot co-exist
+			   for a single entry. */
+			fetch_record = hip_relht_get(&dummy);
+			if(fetch_record != NULL) {
+				refused_requests[*refused_count] = reg_types[i];
+				failure_types[*refused_count] =
+					HIP_REG_CANCEL_REQUIRED;
+				*refused_count++;
+			}
 		case HIP_SERVICE_RELAY:
 			HIP_INFO("Client is registering to relay service.\n");
+			fetch_record = hip_relht_get(&dummy);
 		case HIP_SERVICE_ESCROW:
 			HIP_INFO("Client is registering to escrow service.\n");
 		default:

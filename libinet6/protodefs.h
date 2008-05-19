@@ -287,6 +287,11 @@
    Numbers 201 - 255 are reserved by IANA for private use. */
 #define HIP_REG_INSUFFICIENT_CREDENTIALS 0
 #define HIP_REG_TYPE_UNAVAILABLE         1
+/** HIPL specific failure type to indicate that the requested service cannot
+    co-exist with a service that has been already granted to the client. The
+    client is required to cancel the overlapping service before registering.
+*/
+#define HIP_REG_CANCEL_REQUIRED          201
 
 /* Returns length of TLV option (contents) with padding. */
 #define HIP_LEN_PAD(len) \
