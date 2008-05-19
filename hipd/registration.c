@@ -479,19 +479,29 @@ int hip_add_reg(hip_ha_t *entry, uint8_t lifetime, uint8_t *reg_types,
 
 	/* Loop through all registrations types in reg_types. */
 	for(; i < type_count; i++) {
+
 		switch(reg_types[i]) {
 		case HIP_SERVICE_RENDEZVOUS:
 			HIP_INFO("Client is registering to rendezvous "\
 				 "service.\n");
+
+			fetch_record = hip_relht_get(&dummy);
 			/* Check if we already have an relay record for the
 			   given HIT. Note that the fetched record type does not
 			   matter, since the relay and RVS types cannot co-exist
 			   for a single entry. */
-			fetch_record = hip_relht_get(&dummy);
 			if(fetch_record != NULL) {
+				HIP_DEBUG("Cancellation required.\n");
 				refused_requests[*refused_count] = reg_types[i];
 				failure_types[*refused_count] =
 					HIP_REG_CANCEL_REQUIRED;
+				*refused_count++;
+			} else if(hip_relwl_get_status() &&
+				  hip_relwl_get(&dummy.hit_r) == NULL) {
+				HIP_DEBUG("Client is not whitelisted.\n");
+				refused_requests[*refused_count] = reg_types[i];
+				failure_types[*refused_count] =
+					HIP_REG_INSUFFICIENT_CREDENTIALS;
 				*refused_count++;
 			}
 		case HIP_SERVICE_RELAY:
