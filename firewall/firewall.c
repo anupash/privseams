@@ -146,6 +146,7 @@ int firewall_init_rules()
 {
 	HIP_DEBUG("Initializing firewall\n");
 
+	// funtion pointers for the respective packet handlers
 	hip_fw_handler[NF_IP_LOCAL_IN][OTHER_PACKET] = hip_fw_handle_other_input;
 	hip_fw_handler[NF_IP_LOCAL_IN][HIP_PACKET] = hip_fw_handle_hip_input;
 	hip_fw_handler[NF_IP_LOCAL_IN][ESP_PACKET] = hip_fw_handle_esp_input;
@@ -211,22 +212,17 @@ int firewall_init_rules()
 	}
 	else
 	{	
+		// this has to be set up first in order to be the default behavior
 		if (!accept_normal_traffic_by_default)
 		{
-			// change default behavior of chains from ALLOW to DROP
-			/*
-			system("iptables -P FORWARD DROP");
-			system("iptables -P INPUT DROP");
-			system("iptables -P OUTPUT DROP");
-			
-			system("ip6tables -P FORWARD ! -d 2001:0010::/28 DROP");
-			system("ip6tables -P INPUT ! -d 2001:0010::/28 DROP");
-			system("ip6tables -P OUTPUT ! -d 2001:0010::/28 DROP");
-			*/
+			// make DROP the default behavior of all chains
 			system("iptables -I FORWARD -j DROP");
 			system("iptables -I INPUT -j DROP");
 			system("iptables -I OUTPUT -j DROP");
 			
+			// but still allow packets with HITs as destination
+			// FIXME what about checking the src hit?
+			// TODO test behavior for normal network traffic -> might break LSI
 			system("ip6tables -I FORWARD ! -d 2001:0010::/28 -j DROP");
 			system("ip6tables -I INPUT ! -d 2001:0010::/28 -j DROP");
 			system("ip6tables -I OUTPUT ! -d 2001:0010::/28 -j DROP");
@@ -306,21 +302,13 @@ void firewall_close(int signal)
 void hip_fw_flush_iptables(void) {
 	HIP_DEBUG("Flushing all rules\n");
 	
+	// -F flushes the chains
 	system("iptables -F INPUT");
 	system("iptables -F OUTPUT");
 	system("iptables -F FORWARD");
 	system("ip6tables -F INPUT");
 	system("ip6tables -F OUTPUT");
 	system("ip6tables -F FORWARD");
-	
-	/*
-	system("iptables -P INPUT ACCEPT");
-	system("iptables -P OUTPUT ACCEPT");
-	system("iptables -P FORWARD ACCEPT");
-	system("ip6tables -P INPUT ACCEPT");
-	system("ip6tables -P OUTPUT ACCEPT");
-	system("ip6tables -P FORWARD ACCEPT");
-	*/
 }
 
 void firewall_exit()
