@@ -994,6 +994,7 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx) {
 	
 	HIP_DEBUG("****** Received HIP packet ******\n");
 	
+	/*
 	// TODO check if signature is verified somewhere
 	sig = (struct hip_sig *) hip_get_param(ctx->transport_hdr.hip,
 					       HIP_PARAM_HIP_SIGNATURE);
