@@ -44,6 +44,8 @@ endif
 CFLAGS  = $(hipl_common_cflags) -DCONFIG_HIP_LIBHIPTOOL
 
 include_HEADERS =  crypto.h nlink.h pk.h xfrm.h xfrmapi.h ipsec_userspace_api.h
+include_HEADERS  += hip_sadb.h hip_usermode.h win32-checksum.h win32-pfkeyv2.h
+
 
 INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
 

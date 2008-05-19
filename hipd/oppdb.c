@@ -243,7 +243,7 @@ int hip_opp_unblock_app(const struct sockaddr_in6 *app_id, hip_hit_t *hit,
 		HIP_DEBUG("message len: %d\n", hip_get_msg_total_len(message));
 	}
 
-	n = hip_sendto(hip_user_sock, message, app_id);
+	n = hip_sendto(message, app_id);
 	if(n < 0){
 		HIP_ERROR("hip_sendto() failed.\n");
 		err = -1;
