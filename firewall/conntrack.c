@@ -1421,6 +1421,7 @@ int filter_state(const struct in6_addr * ip6_src,
   struct hip_data * data = NULL;
   struct tuple * tuple = NULL;
   struct connection * connection = NULL;
+  // FIXME results in unsafe use in filter_hip()
   int return_value = -1; //invalid value 
 
   _HIP_DEBUG("filter_state\n");
