@@ -675,7 +675,7 @@ int filter_esp(const struct in6_addr * dst_addr, struct hip_esp * esp,
 	struct _GList * list = (struct _GList *) read_rules(hook);
 	struct rule * rule= NULL;
 	int match = 1; // is the packet still a potential match to current rule
-	int ret_val = 0;
+	int verdict = 0;
 	uint32_t spi = esp->esp_spi;
 
 	_HIP_DEBUG("filter_esp:\n");
@@ -746,14 +746,14 @@ int filter_esp(const struct in6_addr * dst_addr, struct hip_esp * esp,
 	if (rule && match)
 	{
 		_HIP_DEBUG("filter_esp: packet matched rule, target %d\n", rule->accept);
-		ret_val = rule->accept;
+		verdict = rule->accept;
 	}
 	else
-		ret_val = accept_hip_esp_traffic_by_default;
+		verdict = accept_hip_esp_traffic_by_default;
 	//release rule list
 	read_rules_exit(0);
 	//return the target of the the matched rule or true if no rule matched
-	return ret_val;
+	return verdict;
 }
 
 /* filter hip packet according to rules.
@@ -773,7 +773,7 @@ int filter_hip(const struct in6_addr * ip6_src,
   	int match = 1;
   	// assume packet has not yet passed connection tracking
   	int conntracked = 0;
-  	int ret_val = 0;
+  	int verdict = 0;
 
 	HIP_DEBUG("\n");
 
@@ -915,10 +915,10 @@ int filter_hip(const struct in6_addr * ip6_src,
   	if(rule && match)
 	{
 		HIP_DEBUG("filter_hip: packet matched rule, target %d\n", rule->accept);
-		ret_val = rule->accept; 
+		verdict = rule->accept; 
 	}
  	else
-    	ret_val = accept_hip_esp_traffic_by_default;
+    	verdict = accept_hip_esp_traffic_by_default;
 
   	//release rule list
   	read_rules_exit(0);
@@ -926,12 +926,14 @@ int filter_hip(const struct in6_addr * ip6_src,
   	// if packet will be accepted and connection tracking is used
   	// but the packet has not been analysed by the conntrack module
   	// show the packet to conntracking
-  	if(statefulFiltering && ret_val && !conntracked){
+  	if(statefulFiltering && verdict && !conntracked){
     	conntrack(ip6_src, ip6_dst, buf);
   	}
   	
+  	HIP_DEBUG("verdict: %d", verdict);
+  	
   	//return the target of the the matched rule
-  	return ret_val; 
+  	return verdict; 
 }
 
 int hip_fw_handle_other_output(hip_fw_context_t *ctx) {
@@ -953,22 +955,25 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx) {
 }
 
 int hip_fw_handle_hip_output(hip_fw_context_t *ctx) {
-	int err = 0;
+	int verdict = 0;
 	int packet_length = 0;
 	struct hip_sig * sig = NULL;
 	
 	HIP_DEBUG("****** Received HIP packet ******\n");
 	
+	/*
 	// FIXME put that in the right place
 	if (ctx->ipq_packet->data_len <= (BUFSIZE - ctx->ip_hdr_len)) {
 		packet_length = ctx->ipq_packet->data_len -
 			ctx->ip_hdr_len; 	
 		_HIP_DEBUG("HIP packet size smaller than buffer size\n");
 	} else {
-		/* packet is too long -> drop as max_size is well defined in RFC */
+		// packet is too long -> drop as max_size is well defined in RFC
 		//packet_length = BUFSIZE - hdr_size;
 		_HIP_DEBUG("HIP packet size greater than buffer size\n");
-		err = -1;
+		
+		// this means the packet will be dropped
+		err = 0;
 		goto out_err;
 	}
 	
@@ -979,8 +984,9 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx) {
 		_HIP_DEBUG("no signature\n");
 	else
 		_HIP_DEBUG("signature exists\n");
+	*/
 	
-	err = filter_hip(&ctx->src, 
+	verdict = filter_hip(&ctx->src, 
 			 &ctx->dst, 
 			 ctx->transport_hdr.hip, 
 			 ctx->ipq_packet->hook,
@@ -989,24 +995,26 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx) {
 
  out_err:
 	/* zero return value means that the packet should be dropped */
-	return err;
+	return verdict;
 }
 
 int hip_fw_handle_esp_output(hip_fw_context_t *ctx) {
-	int err = 0;
+	int verdict = 0;
 
 	HIP_DEBUG("\n");
 
 	HIP_ERROR("XX FIXME: Skipping ESP checks. SPI detection for IPv4, IPv6 and UDPv4 not working\n");
-	return -1;
+	verdict = 1;
 
+	/*
 	err = filter_esp(&ctx->dst, 
 			 ctx->transport_hdr.esp,
 			 ctx->ipq_packet->hook,
 			 ctx->ipq_packet->indev_name,
 			 ctx->ipq_packet->outdev_name);
+			 */
 
-	return err;
+	return verdict;
 }
 
 int hip_fw_handle_tcp_output(hip_fw_context_t *ctx) {
@@ -1033,36 +1041,40 @@ int hip_fw_handle_other_input(hip_fw_context_t *ctx) {
 }
 
 int hip_fw_handle_hip_input(hip_fw_context_t *ctx) {
-	int err = 0;
+	int verdict = 0;
 
 	HIP_DEBUG("\n");
 
-	HIP_IFE(hip_fw_handle_hip_output(ctx), -1);
+	// for now input and output are handled symmetrically
+	// err = 0 means drop
+	verdict = hip_fw_handle_hip_output(ctx);
 
  out_err:
-	return err;
+	return verdict;
 }
 
 int hip_fw_handle_esp_input(hip_fw_context_t *ctx) {
-	int err = 0;
+	int verdict = 0;
 
 	HIP_DEBUG("\n");
 
+	/*
 	if (hip_userspace_ipsec) {
 		HIP_DEBUG("debug message: HIP firewall userspace ipsec input: \n ");
-		/* added by Tao Wan */
+		// added by Tao Wan
 		HIP_IFE(hip_fw_userspace_ipsec_input(ctx->ip_version,
 						     ctx->ip_hdr.ipv4,
 						     ctx->ipq_packet), -1);
 	}
+*/
 
 	/* XX FIXME: ADD LSI INPUT HERE */
 
 	HIP_ERROR("XX FIXME: Skipping ESP checks. SPI detection for IPv4, IPv6 and UDPv4 not working\n");
-	return -1;
+	verdict = 1;
 
  out_err:
-	return err;
+	return verdict;
 }
 
 int hip_fw_handle_tcp_input(hip_fw_context_t *ctx) {
@@ -1118,7 +1130,7 @@ int hip_fw_handle_tcp_forward(hip_fw_context_t *ctx) {
  */
 int hip_fw_handle_packet(char *buf, struct ipq_handle *hndl, int ip_version, hip_fw_context_t *ctx)
 {
-	int err = 0;
+	int verdict = 0;
 	
 	memset(buf, 0, BUFSIZE);
 	
@@ -1126,7 +1138,7 @@ int hip_fw_handle_packet(char *buf, struct ipq_handle *hndl, int ip_version, hip
 	 * copies them into a supplied buffer */
 	if (ipq_read(hndl, buf, BUFSIZE, 0) < 0) {
 		HIP_PERROR("ipq_read failed: ");
-		err = -1;
+		verdict = 0;
 		goto out_err;
 	}
 		
@@ -1147,10 +1159,11 @@ int hip_fw_handle_packet(char *buf, struct ipq_handle *hndl, int ip_version, hip
 			break;
 	}
 	
+	// TODO check return value
 	// set up firewall context
-	err = hip_fw_init_context(ctx, buf, ip_version);
-	if (err)
-		goto out_err;
+	hip_fw_init_context(ctx, buf, ip_version);
+	//if (verdict)
+	//	goto out_err;
 
 	HIP_DEBUG_HIT("packet src", &ctx->src);
 	HIP_DEBUG_HIT("packet dst", &ctx->dst);
@@ -1158,18 +1171,18 @@ int hip_fw_handle_packet(char *buf, struct ipq_handle *hndl, int ip_version, hip
 	// TODO check if correct below here
 	
 	if (hip_fw_handler[ctx->ipq_packet->hook][ctx->packet_type]) {
-		err = !(hip_fw_handler[ctx->ipq_packet->hook][ctx->packet_type])(ctx);
+		verdict = (hip_fw_handler[ctx->ipq_packet->hook][ctx->packet_type])(ctx);
 	} else {
 		HIP_DEBUG("Ignoring, no handler for hook (%d) with type (%d)\n");
 	}
 	
  out_err:
-	if (err) {
-		HIP_DEBUG("=== Verdict: drop packet ===\n");
-		drop_packet(hndl, ctx->ipq_packet->packet_id);
-	} else {
+	if (verdict) {
 		HIP_DEBUG("=== Verdict: allow packet ===\n");
 		allow_packet(hndl, ctx->ipq_packet->packet_id);
+	} else {
+		HIP_DEBUG("=== Verdict: drop packet ===\n");
+		drop_packet(hndl, ctx->ipq_packet->packet_id);
 	}
 	
 #if 0
