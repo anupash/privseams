@@ -210,7 +210,28 @@ int firewall_init_rules()
 		hip_init_conn_db();
 	}
 	else
-	{
+	{	
+		if (!accept_normal_traffic_by_default)
+		{
+			// change default behavior of chains from ALLOW to DROP
+			/*
+			system("iptables -P FORWARD DROP");
+			system("iptables -P INPUT DROP");
+			system("iptables -P OUTPUT DROP");
+			
+			system("ip6tables -P FORWARD ! -d 2001:0010::/28 DROP");
+			system("ip6tables -P INPUT ! -d 2001:0010::/28 DROP");
+			system("ip6tables -P OUTPUT ! -d 2001:0010::/28 DROP");
+			*/
+			system("iptables -I FORWARD -j DROP");
+			system("iptables -I INPUT -j DROP");
+			system("iptables -I OUTPUT -j DROP");
+			
+			system("ip6tables -I FORWARD ! -d 2001:0010::/28 -j DROP");
+			system("ip6tables -I INPUT ! -d 2001:0010::/28 -j DROP");
+			system("ip6tables -I OUTPUT ! -d 2001:0010::/28 -j DROP");
+		}
+		
 		system("iptables -I FORWARD -p 139 -j QUEUE");
 		system("iptables -I FORWARD -p 50 -j QUEUE");
 		system("iptables -I FORWARD -p 17 --dport 50500 -j QUEUE");
@@ -221,10 +242,12 @@ int firewall_init_rules()
 		system("iptables -I INPUT -p 17 --dport 50500 -j QUEUE");
 		system("iptables -I INPUT -p 17 --sport 50500 -j QUEUE");
 
-		system("iptables -I OUTPUT -p 139  -j QUEUE");
+		system("iptables -I OUTPUT -p 139 -j QUEUE");
 		system("iptables -I OUTPUT -p 50 -j QUEUE");
 		system("iptables -I OUTPUT -p 17 --dport 50500 -j QUEUE");
 		system("iptables -I OUTPUT -p 17 --sport 50500 -j QUEUE");
+		
+		
 		system("ip6tables -I FORWARD -p 139 -j QUEUE");
 		system("ip6tables -I FORWARD -p 50 -j QUEUE");
 		system("ip6tables -I FORWARD -p 17 --dport 50500 -j QUEUE");
@@ -235,21 +258,10 @@ int firewall_init_rules()
 		system("ip6tables -I INPUT -p 17 --dport 50500 -j QUEUE");
 		system("ip6tables -I INPUT -p 17 --sport 50500 -j QUEUE");
 
-		system("ip6tables -I OUTPUT -p 139  -j QUEUE");
+		system("ip6tables -I OUTPUT -p 139 -j QUEUE");
 		system("ip6tables -I OUTPUT -p 50 -j QUEUE");
 		system("ip6tables -I OUTPUT -p 17 --dport 50500 -j QUEUE");
 		system("ip6tables -I OUTPUT -p 17 --sport 50500 -j QUEUE");
-
-		if (!accept_normal_traffic_by_default)
-		{
-			system("iptables -P FORWARD DROP");
-			system("iptables -P INPUT DROP");
-			system("iptables -P OUTPUT DROP");
-			
-			system("ip6tables -P FORWARD DROP");
-			system("ip6tables -P INPUT DROP");
-			system("ip6tables -P OUTPUT DROP");
-		}
 
 	}
 
@@ -301,12 +313,14 @@ void hip_fw_flush_iptables(void) {
 	system("ip6tables -F OUTPUT");
 	system("ip6tables -F FORWARD");
 	
+	/*
 	system("iptables -P INPUT ACCEPT");
 	system("iptables -P OUTPUT ACCEPT");
 	system("iptables -P FORWARD ACCEPT");
 	system("ip6tables -P INPUT ACCEPT");
 	system("ip6tables -P OUTPUT ACCEPT");
 	system("ip6tables -P FORWARD ACCEPT");
+	*/
 }
 
 void firewall_exit()
@@ -675,6 +689,7 @@ int filter_esp(const struct in6_addr * dst_addr, struct hip_esp * esp,
 	struct _GList * list = (struct _GList *) read_rules(hook);
 	struct rule * rule= NULL;
 	int match = 1; // is the packet still a potential match to current rule
+	// block traffic by default
 	int verdict = 0;
 	uint32_t spi = esp->esp_spi;
 
@@ -773,6 +788,7 @@ int filter_hip(const struct in6_addr * ip6_src,
   	int match = 1;
   	// assume packet has not yet passed connection tracking
   	int conntracked = 0;
+  	// block traffic by default
   	int verdict = 0;
 
 	HIP_DEBUG("\n");
@@ -805,7 +821,7 @@ int filter_hip(const struct in6_addr * ip6_src,
         // check src_hit if defined in rule
       	if(match && rule->src_hit)
 	  	{
-    		HIP_DEBUG("filter_hip: src_hit ");
+    		HIP_DEBUG("filter_hip: src_hit\n");
     		
     		if(!match_hit(rule->src_hit->value, 
 		  		buf->hits, 
@@ -818,7 +834,7 @@ int filter_hip(const struct in6_addr * ip6_src,
     	//if HIT has matched and HI defined, verify signature 
     	if(match && rule->src_hi)
       	{
-			_HIP_DEBUG("filter_hip: src_hi \n");
+			_HIP_DEBUG("filter_hip: src_hi\n");
 			
 			if(!match_hi(rule->src_hi, buf))
 			{
@@ -829,7 +845,7 @@ int filter_hip(const struct in6_addr * ip6_src,
     	// check src_hit if defined in rule
     	if(match && rule->dst_hit)
 		{
-    		HIP_DEBUG("filter_hip: dst_hit \n");
+    		HIP_DEBUG("filter_hip: dst_hit\n");
     		
     		if(!match_hit(rule->dst_hit->value, 
 		  		buf->hitr, 
@@ -843,7 +859,7 @@ int filter_hip(const struct in6_addr * ip6_src,
     	
       	if(match && rule->type)
 	  	{
-    		HIP_DEBUG("filter_hip: type ");
+    		HIP_DEBUG("filter_hip: type\n");
     		if(!match_int(rule->type->value, 
 		  		buf->type_hdr, 
 		  		rule->type->boolean))
@@ -878,6 +894,7 @@ int filter_hip(const struct in6_addr * ip6_src,
     		{
       			match = 0;
     		}
+    		
     		HIP_DEBUG("filter_hip: out_if rule: %s, packet: %s, boolean: %d, match: %d \n",
 	      			rule->out_if->value, out_if, rule->out_if->boolean, match);
 	  	}
@@ -929,8 +946,6 @@ int filter_hip(const struct in6_addr * ip6_src,
   	if(statefulFiltering && verdict && !conntracked){
     	conntrack(ip6_src, ip6_dst, buf);
   	}
-  	
-  	HIP_DEBUG("verdict: %d", verdict);
   	
   	//return the target of the the matched rule
   	return verdict; 
@@ -1003,7 +1018,7 @@ int hip_fw_handle_esp_output(hip_fw_context_t *ctx) {
 
 	HIP_DEBUG("\n");
 
-	HIP_ERROR("XX FIXME: Skipping ESP checks. SPI detection for IPv4, IPv6 and UDPv4 not working\n");
+	HIP_DEBUG("XX FIXME: Skipping ESP checks. SPI detection for IPv4, IPv6 and UDPv4 not working\n");
 	verdict = 1;
 
 	/*
@@ -1070,7 +1085,7 @@ int hip_fw_handle_esp_input(hip_fw_context_t *ctx) {
 
 	/* XX FIXME: ADD LSI INPUT HERE */
 
-	HIP_ERROR("XX FIXME: Skipping ESP checks. SPI detection for IPv4, IPv6 and UDPv4 not working\n");
+	HIP_DEBUG("XX FIXME: Skipping ESP checks. SPI detection for IPv4, IPv6 and UDPv4 not working\n");
 	verdict = 1;
 
  out_err:
