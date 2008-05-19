@@ -59,5 +59,11 @@ int hip_handle_param_reg_info(hip_common_t *msg, hip_ha_t *entry);
 int hip_handle_param_rrq(hip_ha_t *entry, hip_common_t *source_msg,
 			 hip_common_t *target_msg);
 int hip_has_duplicate_services(uint8_t *values, int type_count);
+int hip_add_reg(hip_ha_t *entry, uint8_t *reg_types, int type_count,
+		uint8_t accepted_requests[], int *accepted_count,
+		uint8_t refused_requests[], int *refused_count);
+int hip_cancel_reg(hip_ha_t *entry, uint8_t *reg_types, int type_count,
+		   uint8_t accepted_requests[], int *accepted_count,
+		   uint8_t refused_requests[], int *refused_count);
 
 #endif /* HIP_REGISTRATION_H */

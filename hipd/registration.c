@@ -343,9 +343,9 @@ int hip_handle_param_reg_info(hip_common_t *msg, hip_ha_t *entry)
 int hip_handle_param_rrq(hip_ha_t *entry, hip_common_t *source_msg,
 			 hip_common_t *target_msg)
 {
-	int err = 0, type_count = 0;
+	int err = 0, type_count = 0, accepted_count = 0, refused_count = 0;
 	struct hip_reg_request *reg_request = NULL;
-	uint8_t *values = NULL;
+	uint8_t *reg_types = NULL;
 
 	reg_request = hip_get_param(source_msg, HIP_PARAM_REG_REQUEST);
 	
@@ -365,11 +365,11 @@ int hip_handle_param_rrq(hip_ha_t *entry, hip_common_t *source_msg,
 	type_count = hip_get_param_contents_len(reg_request) -
 		sizeof(reg_request->lifetime);
 	/* Get a pointer to the actual registration types. */
-	values = hip_get_param_contents_direct(reg_request) +
+	reg_types = hip_get_param_contents_direct(reg_request) +
 		sizeof(reg_request->lifetime);
 
 	/* Check that the request has at most one value of each type. */
-	if(hip_has_duplicate_services(values, type_count)) {
+	if(hip_has_duplicate_services(reg_types, type_count)) {
 		err = -1;
 		HIP_ERROR("The REG_REQUEST parameter has duplicate services. "\
 			  "The whole parameter is omitted.\n");
@@ -377,7 +377,7 @@ int hip_handle_param_rrq(hip_ha_t *entry, hip_common_t *source_msg,
 		return err;
 	}
 	
-	/* Arrays for storing the type values of the accepted and refused
+	/* Arrays for storing the type reg_types of the accepted and refused
 	   request types. */
 	uint8_t accepted_requests[type_count], refused_requests[type_count];
 	memset(accepted_requests, '\0', sizeof(accepted_requests));
@@ -388,17 +388,23 @@ int hip_handle_param_rrq(hip_ha_t *entry, hip_common_t *source_msg,
 
 	if(reg_request->lifetime == 0) {
 		HIP_DEBUG("Client is cancelling registration.\n");
+		hip_cancel_reg(entry, reg_types, type_count,
+			       accepted_requests, &accepted_count,
+			       refused_requests, &refused_count);
 	} else {
 		HIP_DEBUG("Client is registrating for new services.\n");
+		hip_add_reg(entry, reg_types, type_count,
+			    accepted_requests, &accepted_count,
+			    refused_requests, &refused_count);
 	}
 	
  out_err:
 	return err;
 }
 
-int hip_has_duplicate_services(uint8_t *values, int type_count)
+int hip_has_duplicate_services(uint8_t *reg_types, int type_count)
 {
-	if(values == NULL || type_count <= 0) {
+	if(reg_types == NULL || type_count <= 0) {
 		return -1;
 	}
 	
@@ -406,11 +412,97 @@ int hip_has_duplicate_services(uint8_t *values, int type_count)
 
 	for(; i < type_count; i++) {
 		for(j = i + 1; j < type_count; j++) {
-			if(values[i] = values[j]) {
+			if(reg_types[i] = reg_types[j]) {
 				return -1;
 			}
 		}
 	}
 
+	return 0;
+}
+
+/**
+ * Adds new registrations to services. This function tries to add all new
+ * services listed and indentified by @c types. After the function finishes,
+ * succesful registrations are listed in @c accepted_requests and unsuccesful
+ * registrations in @c refused_requests.
+ * 
+ * Make sure that you have allocated memory to both @c accepted_requests and
+ * @c refused_requests for at least @c type_count elements.
+ *
+ * @param  entry             a pointer to a host association.
+ * @param  reg_types         a pointer to Reg Types found in REG_REQUEST.
+ * @param  type_count        number of Reg Types in @c reg_types.
+ * @param  accepted_requests a target buffer that will store the Reg Types of
+ *                           the registrations that succeeded.
+ * @param  accepted_count    a target buffer that will store the number of Reg
+ *                           Types in @c accepted_requests.
+ * @param  refused_requests  a target buffer that will store the Reg Types of
+ *                           the registrations that did not succeed.
+ * @param  refused_count     a target buffer that will store the number of Reg
+ *                           Types in @c refused_requests.
+ * @return                   zero on success, -1 otherwise.
+ */ 
+int hip_add_reg(hip_ha_t *entry, uint8_t *reg_types, int type_count,
+		uint8_t accepted_requests[], int *accepted_count,
+		uint8_t refused_requests[], int *refused_count)
+{
+	
+	int err = 0, i = 0;
+	hip_relrec_t dummy, *fetch_record = NULL;
+	uint8_t granted_lifetime = 0;
+
+	/* Check if we already have an relay record for the given HIT. */
+	memcpy(&(dummy.hit_r), &(entry->hit_peer), sizeof(entry->hit_peer));
+	fetch_record = hip_relht_get(&dummy);
+
+	/* Loop through all registrations types in reg_types. */
+	for(; i < type_count; i++) {
+		switch(reg_types[i]) {
+		case HIP_SERVICE_RENDEZVOUS:
+			HIP_INFO("Client is registering to rendezvous "\
+				 "service.\n");
+		case HIP_SERVICE_RELAY:
+			HIP_INFO("Client is registering to relay service.\n");
+		case HIP_SERVICE_ESCROW:
+			HIP_INFO("Client is registering to escrow service.\n");
+		default:
+			HIP_INFO("Client is trying to register to an "
+				 "unsupported service.\n");
+		}
+	}
+
+ out_err:
+
+	return err;
+}
+
+/**
+ * Cancels registrations to services. This function tries to cancel all services
+ * listed and indentified by @c types. After the function finishes, succesful
+ * cancellations are listed in @c accepted_requests and unsuccesful requests
+ * in @c refused_requests.
+ * 
+ * Make sure that you have allocated memory to both @c accepted_requests and
+ * @c refused_requests for at least @c type_count elements.
+ *
+ * @param  entry             a pointer to a host association.
+ * @param  reg_types         a pointer to Reg Types found in REG_REQUEST.
+ * @param  type_count        number of Reg Types in @c reg_types.
+ * @param  accepted_requests a target buffer that will store the Reg Types of
+ *                           the registrations cancellations that succeeded.
+ * @param  accepted_count    a target buffer that will store the number of Reg
+ *                           Types in @c accepted_requests.
+ * @param  refused_requests  a target buffer that will store the Reg Types of
+ *                           the registrations cancellations that did not
+ *                           succeed.
+ * @param  refused_count     a target buffer that will store the number of Reg
+ *                           Types in @c refused_requests.
+ * @return                   zero on success, -1 otherwise.
+ */ 
+int hip_cancel_reg(hip_ha_t *entry, uint8_t *reg_types, int type_count,
+		   uint8_t accepted_requests[], int *accepted_count,
+		   uint8_t refused_requests[], int *refused_count)
+{
 	return 0;
 }
