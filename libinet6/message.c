@@ -120,7 +120,9 @@ int hip_daemon_bind_socket(int socket, struct sockaddr *sa) {
 		err = bind(socket,(struct sockaddr *)addr,
 			   hip_sockaddr_len(addr));
 		if (err == -1) {
-			if (errno == 13) {
+			if (errno == EACCES) {
+				/* Ephemeral ports:
+				   /proc/sys/net/ipv4/ip_local_port_range */
 				HIP_DEBUG("Use ephemeral port number in connect\n");
 				err = 0;
 				break;

@@ -352,21 +352,40 @@ int hip_handle_param_rrq(hip_ha_t *entry, hip_common_t *source_msg,
 	if(reg_request == NULL) {
 		err = -1;
 		_HIP_DEBUG("No REG_REQUEST parameter found.\n");
-		goto out_err;
+		/* Have to use return instead of 'goto out_err' because of
+		   the arrays initialised later. Otherwise this won't compile:
+		   error: jump into scope of identifier with variably modified
+		   type. */
+		return err;
 	}
 	
 	HIP_DEBUG("REG_REQUEST parameter found.\n");
 	
-	/* Get the registration lifetime and count of registration types. */
+	/* Get the number of registration types. */
 	type_count = hip_get_param_contents_len(reg_request) -
 		sizeof(reg_request->lifetime);
+	/* Get a pointer to the actual registration types. */
 	values = hip_get_param_contents_direct(reg_request) +
 		sizeof(reg_request->lifetime);
 
-	HIP_IFEL(hip_has_duplicate_services(values, type_count), -1,
-		 "The REG_REQUEST parameter has duplicate services. The whole "\
-		 "parameter is omitted.\n");
+	/* Check that the request has at most one value of each type. */
+	if(hip_has_duplicate_services(values, type_count)) {
+		err = -1;
+		HIP_ERROR("The REG_REQUEST parameter has duplicate services. "\
+			  "The whole parameter is omitted.\n");
+		/* As above. */
+		return err;
+	}
 	
+	/* Arrays for storing the type values of the accepted and refused
+	   request types. */
+	uint8_t accepted_requests[type_count], refused_requests[type_count];
+	memset(accepted_requests, '\0', sizeof(accepted_requests));
+	memset(refused_requests, '\0', sizeof(refused_requests));
+	
+	HIP_DEBUG("REG_REQUEST lifetime: 0x%x, number of types: %d.\n",
+		  reg_request->lifetime, type_count);
+
 	if(reg_request->lifetime == 0) {
 		HIP_DEBUG("Client is cancelling registration.\n");
 	} else {

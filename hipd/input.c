@@ -1552,8 +1552,8 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		use_blind = 1;
 	}
 	
-	/* Allocate memory for the context created from the processing of the I2
-	   packet. */
+	/* Allocate memory for the context to be created from the processing of
+	   the I2 packet. */
 	ctx = (struct hip_context *) malloc(sizeof(struct hip_context));
 	if (ctx == NULL) {
 		err = -ENOMEM;
@@ -1591,47 +1591,46 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 #ifdef CONFIG_HIP_HI3
         locator = hip_get_param(i2, HIP_PARAM_LOCATOR);
 	
-        if (locator)
-	{
+        if (locator) {
 		n_addrs = hip_get_locator_addr_item_count(locator);
 		
-		if( i2_info->hi3_in_use && n_addrs > 0 )
-                {
-                        first = (char*)locator+sizeof(struct hip_locator);
-                        memcpy(i2_saddr, &first->address, sizeof(struct in6_addr));
-
-                        list_for_each_safe(item, tmp, addresses, ii)
-                                {
+		if( i2_info->hi3_in_use && n_addrs > 0 ) {
+			
+                        first = (char*)locator + sizeof(struct hip_locator);
+                        memcpy(i2_saddr, &first->address,
+			       sizeof(struct in6_addr));
+			
+                        list_for_each_safe(item, tmp, addresses, ii) {
                                         n = list_entry(item);
-                                        if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
+					
+                                        if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr))) {
                                                 continue;
-                                        if (!IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr)))
-                                        {
-                                                memcpy(i2_daddr, hip_cast_sa_addr(&n->addr),
+					}
+                                        if (!IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
+						memcpy(i2_daddr, hip_cast_sa_addr(&n->addr),
                                                        hip_sa_addr_len(&n->addr));
                                                 ii = -1;
                                                 use_ip4 = 0;
                                                 break;
                                         }
-                                }
-                        if( use_ip4 )
-                        {
-                                list_for_each_safe(item, tmp, addresses, ii)
-                                        {
-                                                n = list_entry(item);
-                                                if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
-                                                        continue;
-                                                if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr)))
-                                                {
-                                                        memcpy(i2_daddr, hip_cast_sa_addr(&n->addr),
-                                                               hip_sa_addr_len(&n->addr));
-                                                        ii = -1;
-                                                        break;
-                                                }
-                                        }
+			}
+                        if( use_ip4 ) {
+                                list_for_each_safe(item, tmp, addresses, ii) {
+					n = list_entry(item);
+
+					if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr))) {
+						continue;
+					}
+					if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
+						memcpy(i2_daddr, hip_cast_sa_addr(&n->addr),
+						       hip_sa_addr_len(&n->addr));
+						ii = -1;
+						break;
+					}
+				}
                         }
-
-
+			
+			
                 }
 	}
 #endif
