@@ -27,7 +27,7 @@ int hip_opptcp = 1;
 #else
 int hip_opptcp = 0;
 #endif
-int hip_userspace_ipsec = 1;
+int hip_userspace_ipsec = 0;
 
 /* Default HIT - do not access this directly, call hip_fw_get_default_hit() */
 struct in6_addr default_hit;
@@ -419,9 +419,9 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 
 	if (ctx->ip_version == 4)
 	{
-		struct ip *iphdr = (struct ip *) ctx->ipq_packet->payload;
-
 		_HIP_DEBUG("IPv4 packet\n");
+		
+		struct ip *iphdr = (struct ip *) ctx->ipq_packet->payload;
 
 		// add pointer to IPv4 header to context
 		ctx->ip_hdr.ipv4 = iphdr;
@@ -429,7 +429,7 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 		IPV4_TO_IPV6_MAP(&ctx->ip_hdr.ipv4->ip_src, &ctx->src);
 		IPV4_TO_IPV6_MAP(&ctx->ip_hdr.ipv4->ip_dst, &ctx->dst);
 		
-		_HIP_DEBUG("IPv4 next header protocol number is %d\n", iphdr->ip_p);
+		HIP_DEBUG("IPv4 next header protocol number is %d\n", iphdr->ip_p);
 		
 		// find out which transport layer protocol is used
 		if(iphdr->ip_p == IPPROTO_HIP)
@@ -439,6 +439,9 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 			
 			ctx->packet_type = HIP_PACKET;
 			ctx->transport_hdr.hip = (struct hip_common *) (((char *)iphdr) + sizeof(struct ip));
+			
+			HIP_DEBUG_HIT("src_hit: ", &ctx->transport_hdr.hip->hits);
+			HIP_DEBUG_HIT("dst_hit: ", &ctx->transport_hdr.hip->hitr);
 			
 			goto end_init;
 			
@@ -777,7 +780,6 @@ int filter_hip(const struct in6_addr * ip6_src,
   	//if dynamically changing rules possible 
   	//int hip_packet = is_hip_packet(), ..if(hip_packet && rule->src_hit)
   	//+ filter_state käsittelemään myös esp paketit
-  	_HIP_DEBUG("filter_hip: \n");
   	while (list != NULL)
 	{
   		match = 1;
@@ -956,6 +958,8 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx) {
 	struct hip_sig * sig = NULL;
 	
 	HIP_DEBUG("****** Received HIP packet ******\n");
+	
+	// FIXME put that in the right place
 	if (ctx->ipq_packet->data_len <= (BUFSIZE - ctx->ip_hdr_len)) {
 		packet_length = ctx->ipq_packet->data_len -
 			ctx->ip_hdr_len; 	
@@ -978,7 +982,7 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx) {
 	
 	err = filter_hip(&ctx->src, 
 			 &ctx->dst, 
-			 (hip_common_t *) (ctx->ipq_packet->payload + ctx->ip_hdr_len), 
+			 ctx->transport_hdr.hip, 
 			 ctx->ipq_packet->hook,
 			 ctx->ipq_packet->indev_name,
 			 ctx->ipq_packet->outdev_name);
