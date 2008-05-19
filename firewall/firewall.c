@@ -412,16 +412,34 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 	struct udphdr *udphdr = NULL;
 	int udp_encap_zero_bytes = 0;
 	
-	// like this we don't have to set NULL pointers for each member
+	// default assumption
+	ctx->packet_type = OTHER_PACKET;
+	
+	// same context memory as for packets before -> re-init
 	memset(ctx, 0, sizeof(hip_fw_context_t));
 	
 	// add whole packet to context and ip version
 	ctx->ipq_packet = ipq_get_packet(buf);
+	// TODO might there be an error here?
+	
 	ctx->ip_version = ip_version;
 	
-	ctx->packet_type = OTHER_PACKET; /* default assumption */
-	
-	HIP_DEBUG("\n");
+	/*
+	// FIXME put that in the right place
+	if (ctx->ipq_packet->data_len <= (BUFSIZE - ctx->ip_hdr_len)) {
+		packet_length = ctx->ipq_packet->data_len -
+			ctx->ip_hdr_len; 	
+		_HIP_DEBUG("HIP packet size smaller than buffer size\n");
+	} else {
+		// packet is too long -> drop as max_size is well defined in RFC
+		//packet_length = BUFSIZE - hdr_size;
+		_HIP_DEBUG("HIP packet size greater than buffer size\n");
+		
+		// this means the packet will be dropped
+		err = 0;
+		goto out_err;
+	}
+	*/
 
 	if (ctx->ip_version == 4)
 	{
@@ -435,6 +453,9 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 		IPV4_TO_IPV6_MAP(&ctx->ip_hdr.ipv4->ip_src, &ctx->src);
 		IPV4_TO_IPV6_MAP(&ctx->ip_hdr.ipv4->ip_dst, &ctx->dst);
 		
+		HIP_DEBUG_HIT("packet src", &ctx->src);
+		HIP_DEBUG_HIT("packet dst", &ctx->dst);
+		
 		HIP_DEBUG("IPv4 next header protocol number is %d\n", iphdr->ip_p);
 		
 		// find out which transport layer protocol is used
@@ -445,9 +466,6 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 			
 			ctx->packet_type = HIP_PACKET;
 			ctx->transport_hdr.hip = (struct hip_common *) (((char *)iphdr) + sizeof(struct ip));
-			
-			HIP_DEBUG_HIT("src_hit: ", &ctx->transport_hdr.hip->hits);
-			HIP_DEBUG_HIT("dst_hit: ", &ctx->transport_hdr.hip->hitr);
 			
 			goto end_init;
 			
@@ -478,7 +496,7 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 		{
 			// if it's not UDP either, it's unsupported
 			HIP_DEBUG("some other packet\n");
-			
+
 			goto end_init;
 		}
 		
@@ -489,7 +507,7 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 		plen = iphdr->ip_len;
 		udphdr = ((struct udphdr *) (((char *) iphdr) + hdr_size));
 		
-		// add udp header to context
+		// add UDP header to context
 		ctx->udp_encap_hdr = udphdr;
 		
 	} else if (ctx->ip_version == 6)
@@ -501,6 +519,9 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 		// add IPv6 addresses
 		ipv6_addr_copy(&ctx->src, &ip6_hdr->ip6_src);
 		ipv6_addr_copy(&ctx->dst, &ip6_hdr->ip6_dst);
+		
+		HIP_DEBUG_HIT("packet src", &ctx->src);
+		HIP_DEBUG_HIT("packet dst", &ctx->dst);
 		
 		HIP_DEBUG("IPv6 next header protocol number is %d\n",
 			  ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt);
@@ -578,10 +599,14 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 			HIP_HEXDUMP("zero_bytes: ", zero_bytes, 4);
 			
 			/* check whether next 32 bits are zero or not */
-			if (*zero_bytes == 0) {
+			if (*zero_bytes == 0)
+			{
 				udp_encap_zero_bytes = 1;
+				
 				HIP_DEBUG("Zero SPI found\n");
 			}
+			
+			zero_bytes = NULL;
 		} else {
 			// only UDP header + payload < 32 bit -> neither HIP nor ESP
 			HIP_DEBUG("UDP packet with <32 bit payload\n");
@@ -639,6 +664,7 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 	// normal UDP packet or UDP encapsulated IPv6
 	else {
 		HIP_DEBUG("normal UDP packet\n");
+		
 	}
 
 end_init:	
@@ -968,22 +994,6 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx) {
 	
 	HIP_DEBUG("****** Received HIP packet ******\n");
 	
-	/*
-	// FIXME put that in the right place
-	if (ctx->ipq_packet->data_len <= (BUFSIZE - ctx->ip_hdr_len)) {
-		packet_length = ctx->ipq_packet->data_len -
-			ctx->ip_hdr_len; 	
-		_HIP_DEBUG("HIP packet size smaller than buffer size\n");
-	} else {
-		// packet is too long -> drop as max_size is well defined in RFC
-		//packet_length = BUFSIZE - hdr_size;
-		_HIP_DEBUG("HIP packet size greater than buffer size\n");
-		
-		// this means the packet will be dropped
-		err = 0;
-		goto out_err;
-	}
-	
 	// TODO check if signature is verified somewhere
 	sig = (struct hip_sig *) hip_get_param(ctx->transport_hdr.hip,
 					       HIP_PARAM_HIP_SIGNATURE);
@@ -1137,15 +1147,17 @@ int hip_fw_handle_tcp_forward(hip_fw_context_t *ctx) {
  */
 int hip_fw_handle_packet(char *buf, struct ipq_handle *hndl, int ip_version, hip_fw_context_t *ctx)
 {
+	// assume DROP
 	int verdict = 0;
 	
+	// same buffer memory as for packets before -> re-init
 	memset(buf, 0, BUFSIZE);
 	
 	/* waits for queue messages to arrive from ip_queue and
 	 * copies them into a supplied buffer */
 	if (ipq_read(hndl, buf, BUFSIZE, 0) < 0) {
 		HIP_PERROR("ipq_read failed: ");
-		verdict = 0;
+		// TODO this error needs to be handled seperately
 		goto out_err;
 	}
 		
@@ -1166,17 +1178,11 @@ int hip_fw_handle_packet(char *buf, struct ipq_handle *hndl, int ip_version, hip
 			break;
 	}
 	
-	// TODO check return value
 	// set up firewall context
-	hip_fw_init_context(ctx, buf, ip_version);
-	//if (verdict)
-	//	goto out_err;
-
-	HIP_DEBUG_HIT("packet src", &ctx->src);
-	HIP_DEBUG_HIT("packet dst", &ctx->dst);
-
-	// TODO check if correct below here
+	if (hip_fw_init_context(ctx, buf, ip_version))
+		goto out_err;
 	
+	// match context with rules
 	if (hip_fw_handler[ctx->ipq_packet->hook][ctx->packet_type]) {
 		verdict = (hip_fw_handler[ctx->ipq_packet->hook][ctx->packet_type])(ctx);
 	} else {
@@ -1192,22 +1198,7 @@ int hip_fw_handle_packet(char *buf, struct ipq_handle *hndl, int ip_version, hip
 		drop_packet(hndl, ctx->ipq_packet->packet_id);
 	}
 	
-#if 0
-	if (hip_common)
-		free(hip_common);
-	if (esp)
-	{
-		if (esp_data)
-		{
-			 free(esp_data);
-			 esp->esp_data = NULL;
-		}
-		free(esp);
-	}
-	ipq_destroy_handle(hndl);
-#endif
-	
-	return;
+	return 0;
 }
 
 void check_and_write_default_config()
