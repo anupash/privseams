@@ -167,14 +167,7 @@ int firewall_init_rules()
 
 	if (flush_iptables)
 	{
-		HIP_DEBUG("Flushing all rules\n");
-		
-		system("iptables -F INPUT");
-		system("iptables -F OUTPUT");
-		system("iptables -F FORWARD");
-		system("ip6tables -F INPUT");
-		system("ip6tables -F OUTPUT");
-		system("ip6tables -F FORWARD");
+		hip_fw_flush_iptables();
 	}
 
 	/* Register signal handlers */
@@ -249,13 +242,13 @@ int firewall_init_rules()
 
 		if (!accept_normal_traffic_by_default)
 		{
-			system("iptables -I FORWARD -j DROP");
-			system("iptables -I INPUT -j DROP");
-			system("iptables -I OUTPUT -j DROP");
+			system("iptables -P FORWARD DROP");
+			system("iptables -P INPUT DROP");
+			system("iptables -P OUTPUT DROP");
 			
-			system("ip6tables -I FORWARD -j DROP");
-			system("ip6tables -I INPUT -j DROP");
-			system("ip6tables -I OUTPUT -j DROP");
+			system("ip6tables -P FORWARD DROP");
+			system("ip6tables -P INPUT DROP");
+			system("ip6tables -P OUTPUT DROP");
 		}
 
 	}
@@ -298,21 +291,31 @@ void firewall_close(int signal)
 	exit(signal);
 }
 
+void hip_fw_flush_iptables(void) {
+	HIP_DEBUG("Flushing all rules\n");
+	
+	system("iptables -F INPUT");
+	system("iptables -F OUTPUT");
+	system("iptables -F FORWARD");
+	system("ip6tables -F INPUT");
+	system("ip6tables -F OUTPUT");
+	system("ip6tables -F FORWARD");
+	
+	system("iptables -P INPUT ACCEPT");
+	system("iptables -P OUTPUT ACCEPT");
+	system("iptables -P FORWARD ACCEPT");
+	system("ip6tables -P INPUT ACCEPT");
+	system("ip6tables -P OUTPUT ACCEPT");
+	system("ip6tables -P FORWARD ACCEPT");
+}
+
 void firewall_exit()
 {
 	HIP_DEBUG("Firewall exit\n");
 
 	if (flush_iptables)
 	{
-		HIP_DEBUG("Flushing all rules\n");
-		system("iptables -F INPUT");
-		system("iptables -F OUTPUT");
-		system("iptables -F FORWARD");
-		system("ip6tables -F INPUT");
-		system("ip6tables -F OUTPUT");
-		system("ip6tables -F FORWARD");
-//		system("iptables -t nat -F");
-//		system("ip6tables -t nat -F");
+		hip_fw_flush_iptables();
 	}
 	else
 	{
