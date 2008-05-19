@@ -732,6 +732,7 @@ void hip_print_locator(const char *str, struct hip_locator *locator) {
     struct hip_locator_info_addr_item2 * locator_address_item2 = NULL;
    /* locator = hip_get_param((struct hip_common *)in_msg,
                             HIP_PARAM_LOCATOR);*/
+    /*
     if (locator) {
     	
     	HIP_DEBUG("%s: \n", str);
@@ -774,7 +775,7 @@ void hip_print_locator(const char *str, struct hip_locator *locator) {
                          
                      }
         }
-    }
+    }*/
 }
 
 void hip_print_peer_addresses(hip_ha_t *entry) {

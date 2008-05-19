@@ -1051,8 +1051,9 @@ char* hip_message_type_name(const uint8_t msg_type){
 	case SO_HIP_I1_REJECT: return "HIP_I1_REJECT";
 	case HIP_I1: return "HIP_I1";
 	case HIP_I2: return "HIP_I2";
-	case SO_HIP_NAT_OFF: return "HIP_NAT_OFF";
-	case SO_HIP_NAT_ON: return "HIP_NAT_ON";
+	case SO_HIP_SET_NAT_NONE: return "HIP_NAT_NONE";
+	case SO_HIP_SET_NAT_ICE_UDP: return "HIP_NAT_ICE_UDP";
+	case SO_HIP_SET_NAT_PLAIN_UDP: return "HIP_NAT_PLAIN_UDP";
 	case HIP_NOTIFY: return "HIP_NOTIFY";
 	case HIP_PAYLOAD: return "HIP_PAYLOAD";
 	case HIP_PSIG: return "HIP_PSIG";

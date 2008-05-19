@@ -87,7 +87,8 @@ int hip_recv_daemon_info(struct hip_common *msg, uint16_t info_type);
  * @return           .
  */
 int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,
-			      struct sockaddr_in6 *saddr);
+			      struct sockaddr_in6 *saddr,
+			      int ice_func(void *, int, in6_addr_t *,in_port_t));
 
 
 /**
@@ -120,7 +121,8 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
                              struct in6_addr *saddr,
                              struct in6_addr *daddr,
                              hip_portpair_t *msg_info,
-                             int encap_hdr_size, int is_ipv4);
+                             int encap_hdr_size, int is_ipv4,
+                             int ice_func(void *, int, in6_addr_t *,in_port_t));
 
 /**
  * Reads an IPv6 control message.

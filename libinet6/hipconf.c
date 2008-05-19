@@ -371,9 +371,9 @@ int hip_conf_handle_rvs(hip_common_t *msg, int action, const char *opt[],
 	int err = 0, seconds = 0;
 	uint8_t lifetime = 0;
 	time_t seconds_from_lifetime = 0;
-	uint8_t type_list[1];
+	uint8_t type_list;
 	
-	type_list[0] = HIP_SERVICE_RENDEZVOUS;
+	type_list = HIP_SERVICE_RENDEZVOUS;
 
 	HIP_DEBUG("hip_conf_handle_rvs() invoked.\n");
 		
