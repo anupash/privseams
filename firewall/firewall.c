@@ -545,7 +545,7 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 	if (ctx->ip_version == 4)
 	{
 		// we might have only received a UDP packet with headers only 
-		if (plen >= sizeof(struct ip) + sizeof(struct udphdr) + HIP_UDP_ZERO_BYTES_LEN))
+		if (plen >= sizeof(struct ip) + sizeof(struct udphdr) + HIP_UDP_ZERO_BYTES_LEN)
 		{
 			__u32 *zero_bytes = NULL;
 			
@@ -563,8 +563,6 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 		} else {
 			// only UDP header + payload < 32 bit -> neither HIP nor ESP
 			HIP_DEBUG("UDP packet with <32 bit payload\n");
-			
-			packet_type = OTHER_PACKET;
 			
 			return 0;
 		}
