@@ -39,9 +39,7 @@ else
   LDADD += ../libhiptool/.libs/libhiptool.a
 endif
 
-if HIP_OPENDHT
-  LDADD += ../opendht/.libs/libhipopendht.a
-endif
+LDADD += ../opendht/.libs/libhipopendht.a
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
 
