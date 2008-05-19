@@ -216,20 +216,24 @@ int firewall_init_rules()
 		if (!accept_normal_traffic_by_default)
 		{
 			// make DROP the default behavior of all chains
+			// TODO don't drop LSIs -> else IPv4 apps won't work
 			system("iptables -I FORWARD -j DROP");
 			system("iptables -I INPUT -j DROP");
 			system("iptables -I OUTPUT -j DROP");
 			
 			// but still allow packets with HITs as destination
-			// FIXME what about checking the src hit?
-			// TODO test behavior for normal network traffic -> might break LSI
+			// FIXME what about checking the src for HITs?
 			system("ip6tables -I FORWARD ! -d 2001:0010::/28 -j DROP");
 			system("ip6tables -I INPUT ! -d 2001:0010::/28 -j DROP");
 			system("ip6tables -I OUTPUT ! -d 2001:0010::/28 -j DROP");
 		}
 		
+		// this will allow the firewall to handle HIP traffic
+		// HIP port
 		system("iptables -I FORWARD -p 139 -j QUEUE");
+		// ESP port
 		system("iptables -I FORWARD -p 50 -j QUEUE");
+		// UDP encapsulation for HIP
 		system("iptables -I FORWARD -p 17 --dport 50500 -j QUEUE");
 		system("iptables -I FORWARD -p 17 --sport 50500 -j QUEUE");
 
