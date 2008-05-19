@@ -406,8 +406,6 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 	struct udphdr *udphdr = NULL;
 	int udp_encap_zero_bytes = 0;
 	
-	HIP_DEBUG("\n");
-	
 	// like this we don't have to set NULL pointers for each member
 	memset(ctx, 0, sizeof(hip_fw_context_t));
 	
@@ -590,6 +588,7 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 									+ sizeof(struct udphdr) 
 									+ HIP_UDP_ZERO_BYTES_LEN);
 			
+			return 0;
 		}
 		HIP_DEBUG("FIXME zero bytes recognition obviously not working\n");
 	}
@@ -610,11 +609,14 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 		ctx->transport_hdr.esp = (struct hip_esp *) (((char *)udphdr) 
 							     + sizeof(struct udphdr));
 		
+		return 0;
 	}
 	
 	// normal UDP packet or UDP encapsulated IPv6
 	else {
 		HIP_DEBUG("normal UDP packet\n");
+		
+		return 0;
 	}
 
 out_err:	
@@ -1077,11 +1079,11 @@ int hip_fw_handle_packet(char *buf, struct ipq_handle *hndl, int ip_version, hip
 	switch (ipq_message_type(buf))
 	{
 		case NLMSG_ERROR:
-			HIP_ERROR("Received error message (%d): %s\n", ipq_get_msgerr(buf), ipq_errstr());
+			HIP_ERROR("\nReceived error message (%d): %s\n", ipq_get_msgerr(buf), ipq_errstr());
 			goto out_err;
 			break;
 		case IPQM_PACKET:
-			HIP_DEBUG("Received ipqm packet\n");
+			HIP_DEBUG("\nReceived ipqm packet\n");
 			// no goto -> go on with processing the message below
 			break;
 		default:
