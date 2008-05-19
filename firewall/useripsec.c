@@ -16,7 +16,7 @@ int hip_query_default_local_hit_from_hipd(void)
 	int err = 0;
 	struct hip_common *msg = NULL;
 	struct hip_tlv_common *current_param = NULL;
-	in6_addr_t *defhit;	
+	hip_hit_t *defhit  = NULL;	
 	struct endpoint_hip *endp=NULL;
 	
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
@@ -29,9 +29,10 @@ int hip_query_default_local_hit_from_hipd(void)
 	{
 		defhit = (in6_addr_t *)hip_get_param_contents_direct(current_param);
 		//set_hit_prefix(defhit); // miika: what the heck?
-		_HIP_DEBUG_HIT("default hi is ",defhit);
+		HIP_DEBUG_HIT("default hi is ",defhit);
 	}
 
+	ipv6_addr_copy(&default_hit, defhit);
 
 out_err:
 	return err;

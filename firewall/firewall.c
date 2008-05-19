@@ -29,7 +29,7 @@ int hip_opptcp = 0;
 #endif
 int hip_userspace_ipsec = 1;
 
-/* Default HIT - do not access this directly, call hip_fw_get_default_hit */
+/* Default HIT - do not access this directly, call hip_fw_get_default_hit() */
 struct in6_addr default_hit;
 
 /*
@@ -1172,9 +1172,7 @@ int main(int argc, char **argv)
 
 	memset(&default_hit, 0, sizeof(default_hit));
 
-	if (hip_userspace_ipsec) {
-		hip_query_default_local_hit_from_hipd();
-	}
+	hip_query_default_local_hit_from_hipd();
 
 	_HIP_DEBUG_HIT("Default hit is ", hip_fw_get_default_hit());
 
