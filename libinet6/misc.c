@@ -2075,13 +2075,19 @@ int getproto_info(int port_dest, char *proto)
 {	 								
         FILE *fd = NULL;
         char line[500];
-	int lineno = 0, index_addr_port = 1;
-        int exists = 0;  
+	int lineno = 0, index_addr_port;
+        int exists = 0, result;
         List list;
-	char path[11+sizeof(proto)];// = "/proc/net/";
+	char path[11+sizeof(proto)];
         char *fqdn_str = NULL, *separator = NULL, *sub_string_port_hex = NULL;
-	char port_dest_hex[5];
         
+	if(!strcmp(proto,"tcp6")){
+           index_addr_port = 15;
+	}
+	else if(!strcmp(proto,"udp6")){
+	   index_addr_port = 10;
+	}
+
 	strcpy(path,"/proc/net/"); 
 	strcat(path, proto);
         fd = fopen(path, "r");		
@@ -2095,11 +2101,13 @@ int getproto_info(int port_dest, char *proto)
 		  fqdn_str = getitem(&list, index_addr_port);
 		  separator = strrchr(fqdn_str, ':');
 		  if (separator){
-		    sub_string_port_hex = strtok(fqdn_str, separator);
-		    sprintf(port_dest_hex, "%x", port_dest);
-		    HIP_DEBUG("sub_string_port_hex %s\n",sub_string_port_hex);
-		    HIP_DEBUG("port_dest_hex %s\n",port_dest_hex);
-		    if (!strcmp(sub_string_port_hex,port_dest_hex))
+		    sub_string_port_hex = strtok(separator,":");
+		    //sprintf(port_dest_hex, "%x", port_dest);
+		    //HIP_DEBUG("sub_string_port_hex %s\n",sub_string_port_hex);
+		    sscanf(sub_string_port_hex,"%X",&result);
+		    HIP_DEBUG("Result %i\n",result);
+		    HIP_DEBUG("port dest %i\n",port_dest);
+		    if (result == port_dest)
 		      exists = 1;		    
 		  }
 		}

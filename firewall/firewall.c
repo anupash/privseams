@@ -748,7 +748,7 @@ int filter_hip(const struct in6_addr * ip6_src,
 * through either ipv4 or ipv6 packets
 */
 static void *handle_ip_traffic(void *ptr) {
-	int status, err;
+        int status, err, res = 0;
 	unsigned char buf[BUFSIZE];
 	struct hip_esp *esp_data = NULL;
 	struct hip_esp_packet *esp = NULL;
@@ -875,8 +875,11 @@ static void *handle_ip_traffic(void *ptr) {
 					HIP_DEBUG("IPV6 TRAFFIC \n");
 					if (ipv6_addr_is_hit(src_addr) && is_incoming_packet(packetHook)){
 						HIP_DEBUG("ipv6 traffic and incoming packet\n");
-						firewall_trigger_incoming_hit(m, src_addr, dst_addr);
-						drop_packet(hndl, m->packet_id);	
+						res = firewall_trigger_incoming_hit(m, src_addr, dst_addr);
+						if (!res){
+						  drop_packet(hndl, m->packet_id);	
+						  break;
+						}
 					}
 					//else if(ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt != IPPROTO_TCP)
 					firewall_traffic_treatment(hndl, m->packet_id);
@@ -941,8 +944,7 @@ int is_packet_reinjection(struct in_addr *ip_src)
 
 int firewall_trigger_incoming_hit(ipq_packet_msg_t *m, struct in6_addr *ip_src, struct in6_addr *ip_dst)
 {
-        int err = 0, proto6 = 0;
-	int ip_hdr_size, portDest;
+        int proto6 = 0, ip_hdr_size = 0, portDest = 0;
 	char *proto;
 	hip_lsi_t *lsi_our = NULL, *lsi_peer = NULL;
 	struct in6_addr src_addr, dst_addr;
@@ -961,9 +963,10 @@ int firewall_trigger_incoming_hit(ipq_packet_msg_t *m, struct in6_addr *ip_src, 
 		 break;
 	       default:
 		 break;
-	}     
+	}
+    
 	if (portDest)
-	       proto6 = getproto_info(portDest, proto);
+	        proto6 = getproto_info(ntohs(portDest), proto);
 
 	if (!proto6){
 	        lsi_our = (hip_lsi_t *)hip_get_lsi_our_by_hits(ip_src, ip_dst);
@@ -977,7 +980,7 @@ int firewall_trigger_incoming_hit(ipq_packet_msg_t *m, struct in6_addr *ip_src, 
 			reinject_packet(dst_addr, src_addr, m, 6, 1);
 		}
 	}
-	return err;
+	return proto6;
 }
 
 int firewall_trigger_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *ip_src, struct in_addr *ip_dst)
