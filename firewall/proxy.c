@@ -19,6 +19,8 @@ int handle_proxy_inbound_traffic(ipq_packet_msg_t *m,
 	HIP_DEBUG("HIP PROXY INBOUND PROCESS:\n");
 	HIP_DEBUG("receiving ESP packets from firewall!\n");
 	
+	HIP_IFEL(!hip_fw_get_default_hit(), 0, "Get Default HIT error!\n");
+	
 	if(protocol == IPPROTO_TCP)
 	{
 		port_peer = ((struct tcphdr *) (m->payload + 40))->source;
@@ -85,6 +87,8 @@ int handle_proxy_outbound_traffic(ipq_packet_msg_t *m,
 	struct hip_proxy_t* entry = NULL;	
 	struct hip_conn_t* conn_entry = NULL;
 	
+	HIP_IFEL(!hip_fw_get_default_hit(), 0, "Get Default HIT error!\n");
+
 	if(ip_version == 4)
 		protocol = ((struct ip *) (m->payload))->ip_p;
 	
@@ -111,6 +115,7 @@ int handle_proxy_outbound_traffic(ipq_packet_msg_t *m,
 		int fallback, reject;
 		
 		hip_proxy_add_entry(&src_addr, &dst_addr);
+
 		
 		//hip_request_peer_hit_from_hipd();
 		
@@ -151,7 +156,7 @@ int handle_proxy_outbound_traffic(ipq_packet_msg_t *m,
 				HIP_DEBUG("Proxy update Failed!\n");
 			
 			if(hip_conn_add_entry(&src_addr, &dst_addr, &proxy_hit, &dst_hit, protocol, port_client, port_peer, HIP_PROXY_TRANSLATE))
-				HIP_DEBUG("ConnDB add entry Failed!\n");;
+				HIP_DEBUG("ConnDB add entry Failed!\n");
 			
 			/* Let packet pass */
 			err = 0;

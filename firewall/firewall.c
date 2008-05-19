@@ -1171,11 +1171,15 @@ int main(int argc, char **argv)
 	}
 
 	memset(&default_hit, 0, sizeof(default_hit));
+	memset(&proxy_hit, 0, sizeof(default_hit));
 
-	hip_query_default_local_hit_from_hipd();
+	
+	if (!hip_query_default_local_hit_from_hipd())
+			ipv6_addr_copy(&proxy_hit, hip_fw_get_default_hit());
+	HIP_DEBUG_HIT("Default hit is ",  &proxy_hit);
 
-	_HIP_DEBUG_HIT("Default hit is ", hip_fw_get_default_hit());
-
+//	HIP_DEBUG_HIT("proxy_hit: ", &proxy_hit);
+	
 	check_and_write_default_config();
 	
 	hip_set_logdebug(LOGDEBUG_NONE);
