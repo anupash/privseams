@@ -682,6 +682,7 @@ end_init:
 void allow_packet(struct ipq_handle *handle, unsigned long packetId)
 {
 	ipq_set_verdict(handle, packetId, NF_ACCEPT, 0, NULL);
+	// TODO error to be handled?
 	HIP_DEBUG("Packet accepted \n\n");
 }
 
@@ -695,21 +696,25 @@ void allow_packet(struct ipq_handle *handle, unsigned long packetId)
 void drop_packet(struct ipq_handle *handle, unsigned long packetId)
 {
 	ipq_set_verdict(handle, packetId, NF_DROP, 0, NULL);
+	// TODO error to be handled?
 	HIP_DEBUG("Packet dropped \n\n");
 }
 
 
-/* filter hip packet according to rules.
+/* filter esp packet according to rules.
  * return verdict
  */
 int filter_esp(const struct in6_addr * dst_addr, struct hip_esp * esp,
 	       unsigned int hook, const char * in_if, const char * out_if)
 {
+	// list with all rules for hook (= IN / OUT / FORWARD)
 	struct _GList * list = (struct _GList *) read_rules(hook);
 	struct rule * rule= NULL;
-	int match = 1; // is the packet still a potential match to current rule
+	// assume matching rule
+	int match = 1;
 	// block traffic by default
 	int verdict = 0;
+	
 	uint32_t spi = esp->esp_spi;
 
 	_HIP_DEBUG("filter_esp:\n");
@@ -717,42 +722,49 @@ int filter_esp(const struct in6_addr * dst_addr, struct hip_esp * esp,
 	{
 		match = 1;
 		rule = (struct rule *) list->data;
-		_HIP_DEBUG("   filter_esp: checking for:\n");
+		
 		//print_rule(rule);
 		HIP_DEBUG_HIT("dst addr: ", dst_addr);
 		HIP_DEBUG("SPI: %d\n", ntohl(spi));
 
-		//type not valid with ESP packets
+		//type not valid with ESP packets -> should not be set in rules
 		if (rule->type)
 		{
-			//not valid with ESP packet
 			_HIP_DEBUG("filter_esp: type option not valid for esp\n");
 			match = 0;
 		}
+		
 		//src and dst hits are matched with state option
+		// TODO HITs are invisible, aren't they!?
 		if ((rule->src_hit || rule->dst_hit) && !rule->state)
 		{
 			//not valid with ESP packet
 			_HIP_DEBUG("filter_esp: hit options without state option not valid for esp\n");
 			match = 0;
 		}
+		
 		if (match && rule->in_if)
 		{
 			if (!match_string(rule->in_if->value, in_if,
 					rule->in_if->boolean))
+			{
 				match = 0;
+			}
+			
 			_HIP_DEBUG("filter_esp: in_if rule: %s, packet: %s, boolean: %d, match: %d \n",
-					rule->in_if->value,
-					in_if, rule->in_if->boolean, match);
+					rule->in_if->value, in_if, rule->in_if->boolean, match);
 		}
+		
 		if (match && rule->out_if)
 		{
 			if (!match_string(rule->out_if->value, out_if,
 					rule->out_if->boolean))
+			{
 				match = 0;
 			_HIP_DEBUG("filter_esp: out_if rule: %s, packet: %s, boolean: %d, match: %d \n",
 					rule->out_if->value, out_if, rule->out_if->boolean, match);
 		}
+		
 		//must be last, so match and verdict known here
 		if (match && rule->state)
 		{
@@ -768,14 +780,18 @@ int filter_esp(const struct in6_addr * dst_addr, struct hip_esp * esp,
 				break;
 			}
 		}
+		
 		// if a match, no need to check further rules
 		if (match)
 		{
 			_HIP_DEBUG("filter_esp: match found\n");
 			break;
 		}
+		
+		// else try to match next rule
 		list = list->next;
 	}
+	
 	//was there a rule matching the packet
 	if (rule && match)
 	{
@@ -784,9 +800,10 @@ int filter_esp(const struct in6_addr * dst_addr, struct hip_esp * esp,
 	}
 	else
 		verdict = accept_hip_esp_traffic_by_default;
+	
 	//release rule list
 	read_rules_exit(0);
-	//return the target of the the matched rule or true if no rule matched
+	
 	return verdict;
 }
 
@@ -800,7 +817,7 @@ int filter_hip(const struct in6_addr * ip6_src,
                const char * in_if, 
                const char * out_if)
 {
-	// complete rule list for hook (== IN / OUT)
+	// complete rule list for hook (== IN / OUT / FORWARD)
   	struct _GList * list = (struct _GList *) read_rules(hook);
   	struct rule * rule = NULL;
   	// assume match for current rule
