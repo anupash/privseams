@@ -1332,6 +1332,7 @@ int hip_build_param(struct hip_common *msg, const void *tlv_common)
 	err = hip_build_param_contents(msg, contents,
 		       hip_get_param_type(tlv_common),
 				       hip_get_param_contents_len(tlv_common));
+        _HIP_DEBUG("tlv_common len %d\n", ((struct hip_tlv_common *)tlv_common)->length);
 	if (err) {
 		HIP_ERROR("could not build contents (%d)\n", err);
 	}

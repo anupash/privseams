@@ -31,29 +31,22 @@
 
 /** Struct used to deliver the minimal needed information to build SPKI cert*/
 struct hip_cert_spki_info {
+	hip_tlv_type_t    type;
+	hip_tlv_len_t     length;
         char public_key[256];
 	char cert[256];
         char signature[256];
         struct in6_addr issuer_hit;
 };
 
-/************************************************************************************
- * BUILDING FUNCTIONS FOR SPKI                                                      *
- ***********************************************************************************/
 int hip_cert_spki_create_cert(struct hip_cert_spki_info *,
                               char *, struct in6_addr *,
                               char *, struct in6_addr *,
                               time_t *, time_t *);
-
 int hip_cert_spki_build_cert(struct hip_cert_spki_info *);
-int hip_cert_spki_build_signature(char *, char *);
 int hip_cert_spki_inject(struct hip_cert_spki_info *, char *, char *);
 int hip_cert_spki_construct_keys(HIP_HASHTABLE *, hip_hit_t *, RSA *);
-
-/************************************************************************************
- * VERIFICATION FUNCTIONS FOR SPKI                                                  *
- ***********************************************************************************/
-
-int hip_cert_spki_verify_signature(char *);
+int hip_cert_spki_char2certinfo(char *,struct hip_cert_spki_info *); 
+int hip_cert_regex(char *, char *, int *, int *);
 
 #endif /* HIP_CERTTOOLS_H */

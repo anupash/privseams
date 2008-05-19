@@ -23,7 +23,8 @@
  */
 int hip_cert_spki_sign(struct hip_common * msg, HIP_HASHTABLE * db) {
         int err = 0, sig_len = 0, hex_len = 0;
-        struct hip_cert_spki_info *cert;
+        struct hip_cert_spki_info * p_cert;
+        struct hip_cert_spki_info * cert;
         char sha_digest[21];
         char * sig_sequence;
         unsigned char *sha_retval;
@@ -55,6 +56,10 @@ int hip_cert_spki_sign(struct hip_common * msg, HIP_HASHTABLE * db) {
         HIP_IFEL((!signature_b64), -1, "Malloc for signature_b64 failed\n");
         memset(signature_b64, 0, sizeof(signature_b64));
 
+        cert = malloc(sizeof(struct hip_cert_spki_info));
+        HIP_IFEL((!cert), -1, "Malloc for cert failed\n");
+        memset(cert, 0, sizeof(struct hip_cert_spki_info));
+
         /*XX FIXME just a guestimate calculate correctly */
         n_b64 = malloc(sizeof(n)+20);  
         HIP_IFEL((!n_b64), -1, "Malloc for n_b64 failed\n");
@@ -67,8 +72,9 @@ int hip_cert_spki_sign(struct hip_common * msg, HIP_HASHTABLE * db) {
         memset(sha_digest, '\0', sizeof(sha_digest));
         memset(e_bin, 0, sizeof(e_bin));
         
-        HIP_IFEL(!(cert = hip_get_param(msg,HIP_PARAM_CERT_SPKI_INFO)), 
+        HIP_IFEL(!(p_cert = hip_get_param(msg,HIP_PARAM_CERT_SPKI_INFO)), 
                  -1, "No cert_info struct found\n");
+        memcpy(cert, p_cert, sizeof(struct hip_cert_spki_info));
 	_HIP_DEBUG("\n\n** CONTENTS of public key sequence **\n %s\n\n",cert->public_key);
         _HIP_DEBUG("\n\n** CONTENTS of cert sequence to be signed **\n"
                    "%s\n\n", cert->cert);
@@ -95,10 +101,6 @@ int hip_cert_spki_sign(struct hip_common * msg, HIP_HASHTABLE * db) {
         _HIP_HEXDUMP("Signature created for the certificate ", signature, sig_len);
         _HIP_DEBUG("Siglen %d, err :%d\n", sig_len, err);
         
-        /* we got the signature lets build the sequence for it */
-        HIP_IFEL((err = hip_cert_spki_build_signature(signature, sig_sequence)), -1,
-                 "Building signature sequence failed\n");
-
         /* clearing signature field just to be sure */
         memset(cert->signature, '\0', sizeof(cert->signature));
         /* 
@@ -131,22 +133,27 @@ int hip_cert_spki_sign(struct hip_common * msg, HIP_HASHTABLE * db) {
         sprintf(cert->public_key, "(public_key (rsa-pkcs1-sha1 (e #%s#)(n |%s|)))", 
                 e_hex, n_b64);
 
-        _HIP_DEBUG("Public-key sequence\n%s\n",cert->public_key);
-	
+        _HIP_DEBUG("\n\nPublic-key sequence:\n%s\n\n",cert->public_key);
+        _HIP_DEBUG("\n\nCert sequence:\n%s\n\n",cert->cert);
+        _HIP_DEBUG("\n\nSignature sequence:\n%s\n\n",cert->signature);
+ 	
         /* Put the results into the msg back */
-/*
-	HIP_DEBUG("LENLENLEN %d + %d + %d\n",
-		  strlen(cert->public_key), strlen(cert->cert), strlen(cert->signature));
-	HIP_IFEL(!memset(msg, 0, HIP_MAX_PACKET), -1,
-		 "Failed to memset memory for msg\n");
-	HIP_DUMP_MSG(msg);
+
+	_HIP_DEBUG("Len public-key (%d) + cert (%d) + signature (%d) = %d\n"
+                  "Sizeof hip_cert_spki_info %d\n",
+		  strlen(cert->public_key), strlen(cert->cert), strlen(cert->signature),
+                  (strlen(cert->public_key)+strlen(cert->cert)+strlen(cert->signature)),
+                  sizeof(struct hip_cert_spki_info));
+
+        hip_msg_init(msg);
 
         HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_CERT_SPKI, 0), -1, 
                  "Failed to build user header\n");
-*/
-
         HIP_IFEL(hip_build_param_cert_spki_info(msg, cert), -1,
                  "Failed to build cert_info\n");                 
+
+        _HIP_DUMP_MSG(msg);
+        
  out_err:
 
 	/* free malloced memory */

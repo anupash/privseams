@@ -22,17 +22,22 @@ int main(int argc, char *argv[])
 {
         int err = 0;
         struct hip_cert_spki_info * cert;
+        struct hip_cert_spki_info * to_verification;
         time_t not_before = 0, not_after = 0;
         struct hip_common *msg;
         struct in6_addr *defhit;
         struct hip_tlv_common *current_param = NULL;
         struct endpoint_hip *endp = NULL;
-
+        char temporary[256];
+       
         HIP_DEBUG("Starting to test SPKI certficate tools\n");
         HIP_DEBUG("Hipd has to run otherwise this will hang\n");
         
         cert = malloc(sizeof(struct hip_cert_spki_info));
         if (!cert) goto out_err;
+        
+        to_verification = malloc(sizeof(struct hip_cert_spki_info));
+        if (!to_verification) goto out_err;
 
         HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, 
                  "Malloc for msg failed\n");        
@@ -60,21 +65,48 @@ int main(int argc, char *argv[])
                                   &not_before,
                                   &not_after);
 
-        HIP_DEBUG("Public-key sequence contents after all is done:\n"
-                  "%s\n", cert->public_key);
+        _HIP_DEBUG("\n\nPublic-key sequence contents after all is done:\n\n"
+                  "%s\n\n", cert->public_key);
         
-        HIP_DEBUG("Cert sequence contents after all is done:\n"
-                  "%s\n", cert->cert);
+        _HIP_DEBUG("Cert sequence contents after all is done:\n\n"
+                  "%s\n\n", cert->cert);
            
-        HIP_DEBUG("Signature sequence contents after all is done:\n"
-                  "%s\n", cert->signature);
+        _HIP_DEBUG("Signature sequence contents after all is done:\n\n"
+                  "%s\n\n", cert->signature);
+        /* 
+           Concatenate everything together as if we would have gotten 
+           it from someone else and we would be starting to verify. 
+
+           So the process would be take the cert blob and take out
+           public-key sequence, cert sequence and signature sequence
+           and create a hip_cert_spki_info and send it to the daemon 
+           for verification.
+        */
+        memset(&temporary, '\0', sizeof(temporary));
+        sprintf(&temporary,"(sequence %s%s%s)", 
+                cert->public_key, cert->cert, cert->signature);
+        HIP_DEBUG("\n\nCertificate gotten back from daemon:\n\n"
+                  "%s\n\nCertificate len %d\n\n",
+                  temporary, strlen(temporary));
+
+        HIP_IFEL(hip_cert_spki_char2certinfo(temporary, to_verification), -1,
+                 "Failed to construct the hip_cert_spki_info from certificate\n");
+
+        /* Send the cert to the daemon for verification */
+        HIP_DEBUG("Sendign the certificate to daemon for verification\n");
+        /* 
+           XX TODO:
+           -Sending to daemon 
+           -verification
+           -error value passing between daemon/client
+           -new socket option or integer in cert_info to tell is this sign/verif
+        */
 
         HIP_DEBUG("If there was no errors above, \"everything\" is OK\n");
-        free(cert);
-        exit(EXIT_SUCCESS);
 
  out_err:
-        HIP_DEBUG("Something failed, see above\n");
-        free(cert);
-        exit(-1);
+        if (cert) free(cert);
+        if (to_verification) free(to_verification);
+        exit(err);
 }
+

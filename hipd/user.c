@@ -241,7 +241,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
                     errr = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped, 
                                                            opendht_serving_gateway_ttl,
                                                            opendht_serving_gateway_port);
-            } else { /* not in use mark port and ttl to 0 */
+            } else { /* not in use mark port and ttl to 0 so 'client' knows */
                     errr = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped, 0,0);
             }
             

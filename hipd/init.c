@@ -123,7 +123,7 @@ void hip_set_os_dep_variables()
 int hipd_init(int flush_ipsec, int killold)
 {
 	hip_hit_t peer_hit;
-	int err = 0, fd, dhterr;
+	int err = 0, fd, dhterr = 0;
 	char str[64];
 	struct sockaddr_in6 daemon_addr;
 
@@ -301,7 +301,6 @@ int hipd_init(int flush_ipsec, int killold)
 	              sizeof(hip_agent_addr)), -1, "Bind on agent addr failed.");
 	chmod(HIP_AGENTADDR_PATH, 0777);
 	
-        dhterr = 0;
         dhterr = hip_init_dht();
         if (dhterr < 0) HIP_DEBUG("Initializing DHT returned error\n");
 	hip_load_configuration();
