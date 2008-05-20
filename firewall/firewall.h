@@ -111,6 +111,8 @@ int match_hit(struct in6_addr match_hit,
 void set_stateful_filtering(int v);
 int get_stateful_filtering();
 
+void hip_fw_flush_iptables(void);
+
 int firewall_init();
 void firewall_close(int signal);
 void firewall_exit();
