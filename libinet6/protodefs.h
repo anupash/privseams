@@ -292,6 +292,9 @@
     client is required to cancel the overlapping service before registering.
 */
 #define HIP_REG_CANCEL_REQUIRED          201
+/** HIPL specific failure type to indicate that the requested service is not
+    available due to transient conditions. */
+#define HIP_REG_TRANSIENT_CONDITIONS     202
 
 /* Returns length of TLV option (contents) with padding. */
 #define HIP_LEN_PAD(len) \

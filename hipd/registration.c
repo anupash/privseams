@@ -403,6 +403,10 @@ int hip_handle_param_rrq(hip_ha_t *entry, hip_common_t *source_msg,
 			    &refused_count);
 	}
 	
+	/* The registration is now done. Next, we build the REG_RESPONSE and
+	   REG_FAILED parameters. */
+	
+	
  out_err:
 	return err;
 }
@@ -467,23 +471,22 @@ int hip_add_reg(hip_ha_t *entry, uint8_t lifetime, uint8_t *reg_types,
 {
 	
 	int err = 0, i = 0;
-	hip_relrec_t dummy, *fetch_record = NULL;
+	hip_relrec_t dummy, *fetch_record = NULL, *new_record = NULL;
 	uint8_t granted_lifetime = 0;
 
 	memcpy(&(dummy.hit_r), &(entry->hit_peer), sizeof(entry->hit_peer));
-
-	/* Validate lifetime. This should be service specific but since we don't
-	   have a way to customize life times other than RVS lifetime currently,
-	   we use RVS validation for all services. */
-	hip_rvs_validate_lifetime(lifetime, &granted_lifetime);
-
-	/* Loop through all registrations types in reg_types. */
+	
+	/* Loop through all registrations types in reg_types. This loop calls
+	   the actual registration functions. */
 	for(; i < type_count; i++) {
 
 		switch(reg_types[i]) {
 		case HIP_SERVICE_RENDEZVOUS:
-			HIP_INFO("Client is registering to rendezvous "\
-				 "service.\n");
+		case HIP_SERVICE_RELAY:
+			HIP_DEBUG("Client is registering to rendezvous "\
+				 "service or relay service.\n");
+			/* Validate lifetime. */
+			hip_rvs_validate_lifetime(lifetime, &granted_lifetime);
 
 			fetch_record = hip_relht_get(&dummy);
 			/* Check if we already have an relay record for the
@@ -503,15 +506,83 @@ int hip_add_reg(hip_ha_t *entry, uint8_t lifetime, uint8_t *reg_types,
 				failure_types[*refused_count] =
 					HIP_REG_INSUFFICIENT_CREDENTIALS;
 				*refused_count++;
+			} else {
+				/* Set the type of the relay record. */
+				hip_relrec_type_t type =
+					(reg_types[i] == HIP_RVSRELAY) ?
+					HIP_RVSRELAY : HIP_FULLRELAY;
+				
+				/* Allocate a new relay record. */
+				new_record = hip_relrec_alloc(
+					type,granted_lifetime, &(entry->hit_peer),
+					&(entry->preferred_address),
+					entry->peer_udp_port,
+					&(entry->hip_hmac_in),
+					entry->hadb_xmit_func->hip_send_pkt);
+				
+				hip_relht_put(new_record);
+
+				/* Check that the put was succesful. */
+				if(hip_relht_get(new_record) != NULL) {
+					accepted_requests[*accepted_count] =
+						reg_types[i];
+					accepted_lifetimes[*accepted_count] =
+						granted_lifetime;
+					*accepted_count++;
+					
+					HIP_DEBUG("Registration accepted.\n");
+				} /* The put was unsuccessful. */
+				else {
+					if(new_record != NULL) {
+						free(new_record);
+					}
+					refused_requests[*refused_count] =
+						reg_types[i];
+					failure_types[*refused_count] =
+						HIP_REG_TRANSIENT_CONDITIONS;
+					*refused_count++;
+					HIP_ERROR("Unable to store new relay "\
+						  "record. Registration "\
+						  "refused.\n");
+				}
 			}
-		case HIP_SERVICE_RELAY:
-			HIP_INFO("Client is registering to relay service.\n");
-			fetch_record = hip_relht_get(&dummy);
+
+			break;
 		case HIP_SERVICE_ESCROW:
-			HIP_INFO("Client is registering to escrow service.\n");
+			HIP_DEBUG("Client is registering to escrow service.\n");
+			
+			/* Validate lifetime. */
+			hip_escrow_validate_lifetime(lifetime,
+						     &granted_lifetime);
+			
+			if(hip_handle_escrow_registration(&entry->hit_peer)
+			   == 0) {
+				accepted_requests[*accepted_count] =
+					reg_types[i];
+				accepted_lifetimes[*accepted_count] =
+					granted_lifetime;
+				*accepted_count++;
+				
+				HIP_DEBUG("Registration accepted.\n");
+			} else {
+				refused_requests[*refused_count] = reg_types[i];
+				failure_types[*refused_count] =
+					HIP_REG_INSUFFICIENT_CREDENTIALS;
+				*refused_count++;
+				HIP_DEBUG("Registration refused.\n");
+			}
+
+			break;
 		default:
-			HIP_INFO("Client is trying to register to an "
-				 "unsupported service.\n");
+			HIP_DEBUG("Client is trying to register to an "
+				  "unsupported service.\nRegistration "\
+				  "refused.\n");
+			refused_requests[*refused_count] = reg_types[i];
+			failure_types[*refused_count] =
+				HIP_REG_TYPE_UNAVAILABLE;
+			*refused_count++;
+			
+			break;
 		}
 	}
 

@@ -1453,7 +1453,7 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 	   (hip_relay_get_status() == HIP_RELAY_ON || we_are_escrow_server()).
 	   But since I don't have a way to detect if we are an escrow server
 	   this part is executed on I and R also. -Lauri 27.09.2007*/
-	hip_handle_regrequest(entry, i2, r2);
+	//hip_handle_regrequest(entry, i2, r2);
 	
 	/* Handle REG_REQUEST parameter. */
 	HIP_DEBUG("Entering new REG_REQUEST handler.\n");
