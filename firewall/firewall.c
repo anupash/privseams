@@ -442,13 +442,17 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 		_HIP_DEBUG("IPv4 packet\n");
 		
 		struct ip *iphdr = (struct ip *) ctx->ipq_packet->payload;
-		int hdr_size;
 		// add pointer to IPv4 header to context
 		ctx->ip_hdr.ipv4 = iphdr;
-		hdr_size = (iphdr->ip_hl * 4);
-		ctx->ip_hdr_len = hdr_size;
-		HIP_DEBUG("hdr_size is %d\n", hdr_size);
-
+		
+		/* ip_hl is given in multiple of 4 bytes
+		 * 
+		 * NOTE: not sizeof(struct ip) as we might have options */
+		ip_hdr_len = (iphdr->ip_hl * 4);
+		// needed for opportunistic TCP
+		ctx->ip_hdr_len = ip_hdr_len;
+		_HIP_DEBUG("ip_hdr_len is %d\n", hdr_size);
+		
 		// add IPv4 addresses
 		IPV4_TO_IPV6_MAP(&ctx->ip_hdr.ipv4->ip_src, &ctx->src);
 		IPV4_TO_IPV6_MAP(&ctx->ip_hdr.ipv4->ip_dst, &ctx->dst);
@@ -523,7 +527,7 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 		
 		HIP_DEBUG_HIT("packet src", &ctx->src);
 		HIP_DEBUG_HIT("packet dst", &ctx->dst);
-
+		
 		HIP_DEBUG("IPv6 next header protocol number is %d\n",
 			  ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt);
 		
