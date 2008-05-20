@@ -1243,8 +1243,10 @@ int check_packet(const struct in6_addr * ip6_src,
 	{
 	  struct hip_data * data = get_hip_data(common);	  
 	  insert_new_connection(data);
+	  // FIXME this does not free all memory -> DEBUG still outputs
+	  // sth similar to HITs
 	  free(data);
-          HIP_DEBUG_HIT("src hit: ", &data->src_hit);
+        HIP_DEBUG_HIT("src hit: ", &data->src_hit);
         HIP_DEBUG_HIT("dst hit: ", &data->dst_hit);
 	}
       else
@@ -1419,6 +1421,7 @@ int filter_state(const struct in6_addr * ip6_src,
   struct hip_data * data = NULL;
   struct tuple * tuple = NULL;
   struct connection * connection = NULL;
+  // FIXME results in unsafe use in filter_hip()
   int return_value = -1; //invalid value 
 
   _HIP_DEBUG("filter_state\n");

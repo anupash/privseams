@@ -23,15 +23,12 @@ int hip_fw_examine_incoming_tcp_packet(void *hdr,
 	/* the following vars are needed for
 	 * sending the i1 - initiating the exchange
 	 * in case we see that the peer supports hip*/
-	struct in6_addr *peer_ip  = NULL;
-	struct in6_addr *peer_hit = NULL;
+	struct in6_addr peer_ip;
+	struct in6_addr peer_hit;
 	in_port_t        src_tcp_port;
 	in_port_t        dst_tcp_port;
 
 	HIP_DEBUG("\n");
-
-	peer_ip  = HIP_MALLOC(sizeof(struct in6_addr), 0);
-	peer_hit = HIP_MALLOC(16, 0);
 
 	if(ip_version == 4){
 		iphdr = (struct ip *)hdr;
@@ -40,7 +37,7 @@ int hip_fw_examine_incoming_tcp_packet(void *hdr,
 		hdrBytes = ((char *) iphdr) + header_size;
 		HIP_DEBUG_INADDR("the destination", &iphdr->ip_src);
 		//peer and local ip needed for sending the i1 through hipd
-		IPV4_TO_IPV6_MAP(&iphdr->ip_src, peer_ip);//TO  BE FIXED obtain the pseudo hit instead
+		IPV4_TO_IPV6_MAP(&iphdr->ip_src, &peer_ip);//TO  BE FIXED obtain the pseudo hit instead
 	}
 	else if(ip_version == 6){
 		ip6_hdr = (struct ip6_hdr *)hdr;
@@ -48,7 +45,7 @@ int hip_fw_examine_incoming_tcp_packet(void *hdr,
 		tcphdr = ((struct tcphdr *) (((char *) ip6_hdr) + header_size));
 		hdrBytes = ((char *) ip6_hdr) + header_size;
 		//peer and local ip needed for sending the i1 through hipd
-		peer_ip = &ip6_hdr->ip6_src;//TO  BE FIXED obtain the pseudo hit instead
+		ipv6_addr_copy(&peer_ip, &ip6_hdr->ip6_src); //TO  BE FIXED obtain the pseudo hit instead
 	}
 
 	/* this condition was originally only for SYN 0
@@ -124,7 +121,7 @@ int hip_fw_examine_incoming_tcp_packet(void *hdr,
 		else{*/
 			//signal for the normal TCP packets not to be blocked for this peer
 			//save in db that peer does not support hip
-			hipd_unblock_app_AND_oppipdb_add_entry(peer_ip);
+			hipd_unblock_app_AND_oppipdb_add_entry(&peer_ip);
 
 			//normal traffic connections should be allowed to be created
 			return -1;
