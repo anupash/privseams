@@ -1037,7 +1037,7 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx) {
 	HIP_DEBUG("\n");
 
 	if (hip_userspace_ipsec)
-		verdict = hip_fw_userspace_ipsec_output(ctx->ip_version,
+		verdict = !hip_fw_userspace_ipsec_output(ctx->ip_version,
 							ctx->ip_hdr.ipv4,
 							ctx->ipq_packet);
 						   
@@ -1051,18 +1051,14 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx) {
 }
 
 int hip_fw_handle_hip_output(hip_fw_context_t *ctx) {
-	int verdict = 0;
-	int packet_length = 0;
-	struct hip_sig * sig = NULL;
-	
-	HIP_DEBUG("****** Received HIP packet ******\n");
+	int verdict = accept_hip_esp_traffic_by_default;
 	
 	verdict = filter_hip(&ctx->src, 
-			 &ctx->dst, 
-			 ctx->transport_hdr.hip, 
-			 ctx->ipq_packet->hook,
-			 ctx->ipq_packet->indev_name,
-			 ctx->ipq_packet->outdev_name);
+					&ctx->dst, 
+					ctx->transport_hdr.hip, 
+					ctx->ipq_packet->hook,
+					ctx->ipq_packet->indev_name,
+					ctx->ipq_packet->outdev_name);
 
  out_err:
 	/* zero return value means that the packet should be dropped */
@@ -1070,15 +1066,15 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx) {
 }
 
 int hip_fw_handle_esp_output(hip_fw_context_t *ctx) {
-	int verdict = 0;
+	int verdict = accept_hip_esp_traffic_by_default;
 
 	HIP_DEBUG("\n");
 
 	verdict = filter_esp(&ctx->dst, 
-			 ctx->transport_hdr.esp,
-			 ctx->ipq_packet->hook,
-			 ctx->ipq_packet->indev_name,
-			 ctx->ipq_packet->outdev_name);
+			 		ctx->transport_hdr.esp,
+			 		ctx->ipq_packet->hook,
+			 		ctx->ipq_packet->indev_name,
+			 		ctx->ipq_packet->outdev_name);
 
 	return verdict;
 }
@@ -1089,6 +1085,7 @@ int hip_fw_handle_tcp_output(hip_fw_context_t *ctx) {
 
 	/* XX FIXME: opp tcp filtering */
 
+	// this will also check for userspace IPsec
 	return hip_fw_handle_other_output(ctx);
 }
 
@@ -1108,20 +1105,15 @@ int hip_fw_handle_other_input(hip_fw_context_t *ctx) {
 }
 
 int hip_fw_handle_hip_input(hip_fw_context_t *ctx) {
-	int verdict = 0;
 
 	HIP_DEBUG("\n");
 
 	// for now input and output are handled symmetrically
-	// err = 0 means drop
-	verdict = hip_fw_handle_hip_output(ctx);
-
- out_err:
-	return verdict;
+	return hip_fw_handle_hip_output(ctx);
 }
 
 int hip_fw_handle_esp_input(hip_fw_context_t *ctx) {
-	int verdict = 0;
+	int verdict = accept_hip_esp_traffic_by_default;
 
 	HIP_DEBUG("\n");
 
@@ -1146,17 +1138,18 @@ int hip_fw_handle_esp_input(hip_fw_context_t *ctx) {
 }
 
 int hip_fw_handle_tcp_input(hip_fw_context_t *ctx) {
-	int verdict = 0;
+	int verdict = accept_normal_traffic_by_default;
 
 	HIP_DEBUG("\n");
 
-	/* if tcp handling consumes the packet, other input is skipped */
-
+	// any incoming plain TCP packet might be an opportunistic I1
 	if(!ipv6_addr_is_hit(&ctx->dst))
 		verdict = hip_fw_examine_incoming_tcp_packet(ctx->ip_hdr.ipv4,
 							     ctx->ip_version,
 							     ctx->ip_hdr_len);
 	else
+		// as we should never receive TCP with HITs, this will only apply
+		// to IPv4 TCP
 		verdict = hip_fw_handle_other_input(ctx);
 
  out_err:
