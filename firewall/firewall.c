@@ -14,6 +14,7 @@
 /* NOTE: if buffer size is changed, make sure to check
  * 		 the HIP packet size in hip_fw_init_context() */
 #define BUFSIZE HIP_MAX_PACKET
+//#define BUFSIZE 2048
 
 int statefulFiltering = 1;
 int escrow_active = 0;
@@ -219,6 +220,7 @@ int firewall_init_rules()
 		{
 			// make DROP the default behavior of all chains
 			// TODO don't drop LSIs -> else IPv4 apps won't work
+			// -> also messaging between HIPd and firewall is blocked here
 			system("iptables -I FORWARD -j DROP");
 			system("iptables -I INPUT -j DROP");
 			system("iptables -I OUTPUT -j DROP");
@@ -941,7 +943,9 @@ int filter_hip(const struct in6_addr * ip6_src,
 	      			rule->out_if->value, out_if, rule->out_if->boolean, match);
 	  	}
       	
-      	// if HI defined, verify signature now (late as expensive operation) 
+      	// if HI defined in rule, verify signature now 
+      	// - late as it's an expensive operation
+      	// - checks that the message src is the src defined in the _rule_
     	if(match && rule->src_hi)
       	{
 			_HIP_DEBUG("filter_hip: src_hi\n");
@@ -957,8 +961,10 @@ int filter_hip(const struct in6_addr * ip6_src,
 		 * must be last, so not called if packet is going to be dropped */
       	if(match && rule->state)
 	  	{
-      		// FIXME this will once again check the signature
-      		// we at least had some packet before -> check this packet
+      		/* we at least had some packet before -> check this packet
+      		 * 
+      		 * this will also check the signature of the packet, if we already
+      		 * have a src_HI stored for the _connection_ */
     		if(!filter_state(ip6_src, ip6_dst, buf, rule->state, rule->accept))
     		{
     			match = 0;
@@ -1033,8 +1039,6 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx) {
 	struct hip_sig * sig = NULL;
 	
 	HIP_DEBUG("****** Received HIP packet ******\n");
-	
-	// TODO check if signature is verified somewhere
 	
 	verdict = filter_hip(&ctx->src, 
 			 &ctx->dst, 
