@@ -11,7 +11,9 @@
 #include "firewall.h"
 
 //#define HIP_HEADER_START 128 //bytes
-#define BUFSIZE 2048
+/* NOTE: if buffer size is changed, make sure to check
+ * 		 the HIP packet size in hip_fw_init_context() */
+#define BUFSIZE HIP_MAX_PACKET
 
 int statefulFiltering = 1;
 int escrow_active = 0;
@@ -408,8 +410,9 @@ static void die(struct ipq_handle *h)
  * @return            One if @c hdr is a HIP packet, zero otherwise.
  */ 
 int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
-	int hdr_size, err = 0;
-	uint16_t plen;
+	int ip_hdr_len, err = 0;
+	// length of packet starting at udp header
+	uint16_t udp_len = 0;
 	struct udphdr *udphdr = NULL;
 	int udp_encap_zero_bytes = 0;
 	
@@ -421,35 +424,35 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 	
 	// add whole packet to context and ip version
 	ctx->ipq_packet = ipq_get_packet(buf);
-	// TODO might there be an error here?
+	// TODO might there be an error we have to catch?
+	
+	// check if packet is to big for the buffer
+	if (ctx->ipq_packet->data_len > BUFSIZE)
+	{
+		_HIP_DEBUG("packet size greater than buffer size\n");
+		
+		err = 1;
+		goto end_init;
+	}
 	
 	ctx->ip_version = ip_version;
-	
-	/*
-	// FIXME put that in the right place
-	if (ctx->ipq_packet->data_len <= (BUFSIZE - ctx->ip_hdr_len)) {
-		packet_length = ctx->ipq_packet->data_len -
-			ctx->ip_hdr_len; 	
-		_HIP_DEBUG("HIP packet size smaller than buffer size\n");
-	} else {
-		// packet is too long -> drop as max_size is well defined in RFC
-		//packet_length = BUFSIZE - hdr_size;
-		_HIP_DEBUG("HIP packet size greater than buffer size\n");
-		
-		// this means the packet will be dropped
-		err = 0;
-		goto out_err;
-	}
-	*/
 
 	if (ctx->ip_version == 4)
 	{
 		_HIP_DEBUG("IPv4 packet\n");
 		
 		struct ip *iphdr = (struct ip *) ctx->ipq_packet->payload;
-
 		// add pointer to IPv4 header to context
 		ctx->ip_hdr.ipv4 = iphdr;
+		
+		/* ip_hl is given in multiple of 4 bytes
+		 * 
+		 * NOTE: not sizeof(struct ip) as we might have options */
+		ip_hdr_len = (iphdr->ip_hl * 4);
+		// needed for opportunistic TCP
+		ctx->ip_hdr_len = ip_hdr_len;
+		_HIP_DEBUG("ip_hdr_len is %d\n", hdr_size);
+		
 		// add IPv4 addresses
 		IPV4_TO_IPV6_MAP(&ctx->ip_hdr.ipv4->ip_src, &ctx->src);
 		IPV4_TO_IPV6_MAP(&ctx->ip_hdr.ipv4->ip_dst, &ctx->dst);
@@ -502,21 +505,26 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 		}
 		
 		// need UDP header to look for encapsulated ESP or STUN
-		hdr_size = (iphdr->ip_hl * 4);
-		ctx->ip_hdr_len = hdr_size;
-		HIP_DEBUG("hdr_size is %d\n", hdr_size);
-		plen = iphdr->ip_len;
-		udphdr = ((struct udphdr *) (((char *) iphdr) + hdr_size));
+		udp_len = iphdr->ip_len;
+		udphdr = ((struct udphdr *) (((char *) iphdr) + ip_hdr_len));
 		
 		// add UDP header to context
 		ctx->udp_encap_hdr = udphdr;
 		
 	} else if (ctx->ip_version == 6)
 	{
-		struct ip6_hdr *ip6_hdr = (struct ip6_hdr *)ctx->ipq_packet->payload;
+		_HIP_DEBUG("IPv6 packet\n");
 		
+		struct ip6_hdr *ip6_hdr = (struct ip6_hdr *)ctx->ipq_packet->payload;
 		// add pointer to IPv4 header to context
 		ctx->ip_hdr.ipv6 = ip6_hdr;
+		
+		// Ipv6 has fixed header length of 40 bytes
+		ip_hdr_len = 40;
+		// needed for opportunistic TCP
+		ctx->ip_hdr_len = ip_hdr_len;
+		_HIP_DEBUG("ip_hdr_len is %d\n", ip_hdr_len);
+		
 		// add IPv6 addresses
 		ipv6_addr_copy(&ctx->src, &ip6_hdr->ip6_src);
 		ipv6_addr_copy(&ctx->dst, &ip6_hdr->ip6_dst);
@@ -572,11 +580,12 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 		 * is only used for IPv4 at the moment
 		 * 
 		 * we keep them anyway in order to ease UDP encapsulation handling
-		 * with IPv6 */
-		hdr_size = (ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen * 4);
-		plen = ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen;
-		ctx->ip_hdr_len = plen;
-		udphdr = ((struct udphdr *) (((char *) ip6_hdr) + hdr_size));
+		 * with IPv6
+		 * 
+		 * NOTE: the length will include optional extension headers 
+		 * -> handle this */
+		udp_len = ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen;
+		udphdr = ((struct udphdr *) (((char *) ip6_hdr) + ip_hdr_len));
 		
 		// add udp header to context
 		ctx->udp_encap_hdr = udphdr;
@@ -589,7 +598,7 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 	if (ctx->ip_version == 4)
 	{
 		// we might have only received a UDP packet with headers only 
-		if (plen >= sizeof(struct ip) + sizeof(struct udphdr) + HIP_UDP_ZERO_BYTES_LEN)
+		if (udp_len >= sizeof(struct ip) + sizeof(struct udphdr) + HIP_UDP_ZERO_BYTES_LEN)
 		{
 			__u32 *zero_bytes = NULL;
 			
@@ -608,7 +617,8 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 			}
 			
 			zero_bytes = NULL;
-		} else {
+		} else
+		{
 			// only UDP header + payload < 32 bit -> neither HIP nor ESP
 			HIP_DEBUG("UDP packet with <32 bit payload\n");
 			
@@ -617,9 +627,10 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 	}
 	    
 	// HIP packets have zero bytes (IPv4 only right now)
-	if(ctx->ip_version == 4 && udphdr && ((udphdr->source == ntohs(HIP_NAT_UDP_PORT)) || 
-		      (udphdr->dest == ntohs(HIP_NAT_UDP_PORT))) &&
-	   udp_encap_zero_bytes)
+	if(ctx->ip_version == 4 && udphdr
+			&& ((udphdr->source == ntohs(HIP_NAT_UDP_PORT)) || 
+		        (udphdr->dest == ntohs(HIP_NAT_UDP_PORT)))
+		    && udp_encap_zero_bytes)
 		
 	{	
 		/* check for HIP control message */
@@ -664,8 +675,7 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 	
 	// normal UDP packet or UDP encapsulated IPv6
 	else {
-		HIP_DEBUG("normal UDP packet\n");
-		
+		HIP_DEBUG("normal UDP packet\n");	
 	}
 
 end_init:	
@@ -775,7 +785,7 @@ int filter_esp(const struct in6_addr * dst_addr, struct hip_esp * esp,
 			if (!filter_esp_state(dst_addr, esp, rule))
 			{//rule->state, rule->accept))
 				match = 0;
-				_HIP_DEBUG("filter_esp: state, rule %d, boolean %d match %d\n",
+				_HIP_DEBUG("filter_esp: state: rule %d, boolean %d, match %d\n",
 					   rule->state->int_opt.value,
 					   rule->state->int_opt.boolean,
 					   match);
@@ -1179,9 +1189,10 @@ int hip_fw_handle_packet(char *buf, struct ipq_handle *hndl, int ip_version, hip
 	
 	/* waits for queue messages to arrive from ip_queue and
 	 * copies them into a supplied buffer */
-	if (ipq_read(hndl, buf, BUFSIZE, 0) < 0) {
+	if (ipq_read(hndl, buf, BUFSIZE, 0) < 0)
+	{
 		HIP_PERROR("ipq_read failed: ");
-		// TODO this error needs to be handled seperately
+		// TODO this error needs to be handled seperately -> die(hndl)?
 		goto out_err;
 	}
 		
@@ -1374,6 +1385,7 @@ int main(int argc, char **argv)
 	firewall_probe_kernel_modules();
 
 	// create firewall queue handles for IPv4 traffic
+	// FIXME died handle will still be used below
 	h4 = ipq_create_handle(0, PF_INET);
 	if (!h4)
 		die(h4);
@@ -1382,6 +1394,7 @@ int main(int argc, char **argv)
 		die(h4);
 
 	// create firewall queue handles for IPv6 traffic
+	// FIXME died handle will still be used below
 	h6 = ipq_create_handle(0, PF_INET6);
 	if (!h6)
 		die(h6);
