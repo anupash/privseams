@@ -1095,24 +1095,22 @@ int hip_fw_handle_hip_input(hip_fw_context_t *ctx) {
 }
 
 int hip_fw_handle_esp_input(hip_fw_context_t *ctx) {
-	int verdict = 0;
+	int verdict = 1;
 
 	HIP_DEBUG("\n");
 
-	/*
+	/* XX FIXME: ADD LSI INPUT AFTER USERSPACE IPSEC */
+
 	if (hip_userspace_ipsec) {
 		HIP_DEBUG("debug message: HIP firewall userspace ipsec input: \n ");
 		// added by Tao Wan
-		HIP_IFE(hip_fw_userspace_ipsec_input(ctx->ip_version,
-						     ctx->ip_hdr.ipv4,
-						     ctx->ipq_packet), -1);
+		verdict = hip_fw_userspace_ipsec_input(ctx->ip_version,
+						       ctx->ip_hdr.ipv4,
+						       ctx->ipq_packet);
+	} else {
+		verdict = 1;
+		HIP_DEBUG("XX FIXME: Skipping ESP checks. SPI detection for IPv4, IPv6 and UDPv4 not working\n");
 	}
-*/
-
-	/* XX FIXME: ADD LSI INPUT HERE */
-
-	HIP_DEBUG("XX FIXME: Skipping ESP checks. SPI detection for IPv4, IPv6 and UDPv4 not working\n");
-	verdict = 1;
 
  out_err:
 	return verdict;
