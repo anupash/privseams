@@ -518,23 +518,21 @@ int hip_add_peer_map(const struct hip_common *input)
 
 	hit = (struct in6_addr *)
 		hip_get_param_contents(input, HIP_PARAM_HIT);
+	
 	lsi = (hip_lsi_t *)
 		hip_get_param_contents(input, HIP_PARAM_LSI);
 
-	if (!hit && !lsi) {
-		HIP_ERROR("handle async map: no hit and no lsi\n");
+	ip = (struct in6_addr *)
+		hip_get_param_contents(input, HIP_PARAM_IPV6_ADDR);
+
+	if (!ip && (!lsi || !hit)){
+		HIP_ERROR("handle async map: no ip and maybe no lsi or hit\n");
 		err = -ENODATA;
 		goto out_err;
 	}
 
-	HIP_DEBUG_LSI("lsi value is\n",lsi);
-	ip = (struct in6_addr *)
-		hip_get_param_contents(input, HIP_PARAM_IPV6_ADDR);
-	if (!ip) {
-		HIP_ERROR("handle async map: no ipv6 address\n");
-		err = -ENODATA;
-		goto out_err;
-	}
+	if (lsi)
+	  	HIP_DEBUG_LSI("lsi value is\n",lsi);
 
 	err = hip_hadb_add_peer_info(hit, ip, lsi);
 

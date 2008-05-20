@@ -387,6 +387,12 @@ gethosts(const char *name, int _family,
     tmpbuf = __alloca (tmpbuflen);				
     rc = __gethostbyname2_r (name, _family, &th, tmpbuf,	
          tmpbuflen, &h, &herrno);				
+    HIP_DEBUG("---th hostname %s\n",th.h_name);
+    HIP_DEBUG("---th host@ type %i\n",th.h_addrtype);
+    if (h){
+      HIP_DEBUG("---h hostname %s\n",h->h_name);
+      HIP_DEBUG("---h host@ type %i\n",h->h_addrtype);
+    }
   } while (rc == ERANGE && herrno == NETDB_INTERNAL);		
   if (rc != 0)							
     {								
@@ -454,7 +460,7 @@ int gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
         char tmp_ip_str[21];
         int tmp_ttl, tmp_port;
         int *pret;
-        int err;
+        int err, is_lsi;
         
         if (flags & AI_NODHT)
                 goto skip_dht;
@@ -537,6 +543,8 @@ int gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
  skip_dht:
 									
         /*! \todo check return values */
+	
+
         _HIP_DEBUG("Opening %s\n", _PATH_HIP_HOSTS);
         fp = fopen(_PATH_HIP_HOSTS, "r");		
         
@@ -544,23 +552,46 @@ int gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
                 int c;								
                 int ret;
                 
+		is_lsi = 0;
                 lineno++;								
                 if(strlen(line)<=1) continue;                                       
                 initlist(&list);                                                    
                 extractsubstrings(line,&list);                                      
                 for(i=0;i<length(&list);i++) {
 			err = inet_pton(AF_INET6, getitem(&list,i), &hit);                                       
-                        if (err == 0)		
-                        	err = inet_pton(AF_INET, getitem(&list,i), &lsi);               		        
-			if(err < 0)
+                        if (err == 0){
+                        	err = inet_pton(AF_INET, getitem(&list,i), &lsi);
+				if (err)
+				  is_lsi = 1;
+			}
+			if(err != 1)
 				fqdn_str = getitem(&list,i);                                                                 
                 }
 									
                 if ((strlen(name) == strlen(fqdn_str)) &&		         	
                     strcmp(name, fqdn_str) == 0) {				        
                         HIP_DEBUG("** match on line %d **\n", lineno);			
-                        found_hits = 1; 
+                        //found_hits = 1; 
                         
+			/*Application hip-aware and lsi read. Continue reading*/
+			if (is_lsi && (flags & AI_HIP)){
+			  HIP_DEBUG("value %i & %i\n", flags, AI_HIP);
+			  HIP_DEBUG("value of flags %i\n",flags & AI_HIP);
+			  continue;
+			}
+			else{
+			  found_hits = 1; 
+			}
+
+			/*  if (is_lsi && (**pat)->family == AF_INET6)
+			  continue;
+			else if (!is_lsi && (**pat)->family == AF_INET){
+			  if (flags & AI_HIP)
+			    (**pat)->family = AF_INET6;
+			  else
+			    continue;
+			    }*/
+
                         /* add every HIT or LSI to linked list */				
                         for(i=0;i<length(&list);i++) {
                                 struct gaih_addrtuple *prev_pat = NULL;	
@@ -583,6 +614,7 @@ int gethosts_hit(const char * name, struct gaih_addrtuple ***pat, int flags)
 	                                memcpy(aux->addr, &hit, sizeof(struct in6_addr));
 				}
 				else if	(ret == 0 && inet_pton(AF_INET, getitem(&list,i), &lsi)){
+				        /*IPv4 to IPV6 in order to be supported by the daemon*/
 					aux->family = AF_INET;
 					memcpy(aux->addr, &lsi, sizeof(hip_lsi_t));
                                 }                                
@@ -943,6 +975,7 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	// not ipv4
   	if ((*at)->family == AF_UNSPEC)
     	{
+	        HIP_DEBUG("--   ---                      --------af_inet %d \n",(*at)->family);
 		char *namebuf = strdupa (name);
 		char *scope_delim;
 	    
@@ -997,6 +1030,7 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	   inet_pton (AF_INET, name, (*at)->addr) <= 0 &&
 	   inet_pton (AF_INET6, namebuf, (*at)->addr) <= 0)
 	   {
+	     
 		struct gaih_addrtuple **pat = at;
 		struct gaih_addrtuple *at_dns = *at;
 		int no_data = 0;
@@ -1004,8 +1038,8 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
 		int old_res_options = _res.options;
 		int found_hits = 0;
       
-		HIP_DEBUG("The name is not an IPv4 or IPv6 address, resolve name (!AI_NUMERICHOST)\n");
-		_HIP_DEBUG("&pat=%p pat=%p *pat=%p **pat=%p\n", &pat, pat, *pat, **pat);
+		HIP_DEBUG("The name is not an IPv4 or IPv6 address, resolve name (!AI_NUMERICHOST) family %i\n",(*at)->family);
+		HIP_DEBUG("&pat=%p pat=%p *pat=%p **pat=%p\n", &pat, pat, *pat, **pat);
       
 #ifdef UNDEF_CONFIG_HIP_AGENT
 		if ((hip_transparent_mode || req->ai_flags & AI_HIP) &&
@@ -1037,13 +1071,14 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	  	(v4mapped && (no_inet6_data != 0 || (req->ai_flags & AI_ALL)))
   	  	|| hip_transparent_mode || req->ai_flags & AI_HIP & AI_NODHT)
 			no_data = gethosts (name, AF_INET, &pat);
-
+		
 		if (hip_transparent_mode) {
 			_HIP_DEBUG("HIP_TRANSPARENT_API: fetch HIT addresses\n");
        
-			_HIP_DEBUG("found_hits before gethosts_hit: %d\n", found_hits);
+			HIP_DEBUG("found_hits before gethosts_hit: %d\n", found_hits);
+			HIP_DEBUG("pat->family %d\n",(*pat)->family);
 			found_hits |= gethosts_hit(name, &pat, req->ai_flags);
-			_HIP_DEBUG("found_hits after gethosts_hit: %d\n", found_hits);
+			HIP_DEBUG("found_hits after gethosts_hit: %d\n", found_hits);
 	
 			if (req->ai_flags & AI_HIP) 
 				HIP_DEBUG("HIP_TRANSPARENT_API: AI_HIP set: strictly HITs are returned\n");
@@ -1060,8 +1095,8 @@ gaih_inet_get_name(const char *name, const struct addrinfo *req,
 			}
 		}
 		HIP_DEBUG("no hip transparent mode\n");
-		_HIP_DEBUG("Dumping the structure\n");
-      		//dump_pai(*at);
+		HIP_DEBUG("Dumping the structure\n");
+      		dump_pai(*at);
       
       		/* perform HIT-IPv6 mapping if both are found 
 		AG: now the loop also takes in IPv4 addresses */
@@ -1387,12 +1422,12 @@ int getaddrinfo (const char *name, const char *service,
   struct gaih_service gaih_service, *pservice;
   int hip_transparent_mode;
 
-  _HIP_DEBUG("flags=%d\n", hints->ai_flags);
+  HIP_DEBUG("flags=%d\n", hints->ai_flags);
   HIP_DEBUG("name='%s' service='%s'\n", name, service);
   if (hints)
-    _HIP_DEBUG("ai_flags=0x%x ai_family=%d ai_socktype=%d ai_protocol=%d\n", hints->ai_flags, hints->ai_family, hints->ai_socktype, hints->ai_protocol);
+    HIP_DEBUG("ai_flags=0x%x ai_family=%d ai_socktype=%d ai_protocol=%d\n", hints->ai_flags, hints->ai_family, hints->ai_socktype, hints->ai_protocol);
   else
-    _HIP_DEBUG("hints=NULL\n");
+    HIP_DEBUG("hints=NULL\n");
 
   //  if (*pai)
   // HIP_DEBUG("pai:ai_flags=%d ai_family=%d ai_socktype=%d ai_protocol=%d\n", (*pai)->ai_flags, (*pai)->ai_family, (*pai)->ai_socktype, (*pai)->ai_protocol);

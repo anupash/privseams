@@ -344,6 +344,7 @@ int main_client_gai(int socktype, char *peer_name, char *peer_port_name, int fla
 	/* lookup host */
 	memset(&hints, 0, sizeof(struct addrinfo));
 	hints.ai_flags = flags;
+	HIP_DEBUG("flags %d\n",flags);
 	/* If peer_name is not specified the destination is looked in the hadb */
 	if (!peer_name)
 		hints.ai_flags |= AI_KERNEL_LIST;
@@ -351,6 +352,7 @@ int main_client_gai(int socktype, char *peer_name, char *peer_port_name, int fla
 	hints.ai_socktype = socktype;
 	
 	gai_err = getaddrinfo(peer_name, peer_port_name, &hints, &res);
+	HIP_DEBUG("despres de getaddrinfo gai_err \n",gai_err);
 	
 	if (gai_err < 0) {
 		printf("GAI ERROR %d: %s\n", gai_err, gai_strerror(gai_err));
