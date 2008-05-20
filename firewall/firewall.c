@@ -761,36 +761,37 @@ int filter_esp(const struct in6_addr * dst_addr, struct hip_esp * esp,
 					  rule->out_if->boolean))
 			{
 				match = 0;
-				_HIP_DEBUG("filter_esp: out_if rule: %s, packet: %s, boolean: %d, match: %d \n",
-					   rule->out_if->value, out_if, rule->out_if->boolean, match);
 			}
 			
-			//must be last, so match and verdict known here
-			if (match && rule->state)
-			{
-				//the entire rule os passed as argument as hits can only be 
-				//filtered whit the state information
-				if (!filter_esp_state(dst_addr, esp, rule))
-				{//rule->state, rule->accept))
-					match = 0;
-					_HIP_DEBUG("filter_esp: state, rule %d, boolean %d match %d\n",
-						   rule->state->int_opt.value,
-						   rule->state->int_opt.boolean,
-						   match);
-					break;
-				}
-			}
+			_HIP_DEBUG("filter_esp: out_if rule: %s, packet: %s, boolean: %d, match: %d \n",
+					rule->out_if->value, out_if, rule->out_if->boolean, match);
+		}
 			
-			// if a match, no need to check further rules
-			if (match)
-			{
-				_HIP_DEBUG("filter_esp: match found\n");
+		//must be last, so match and verdict known here
+		if (match && rule->state)
+		{
+			//the entire rule os passed as argument as hits can only be 
+			//filtered whit the state information
+			if (!filter_esp_state(dst_addr, esp, rule))
+			{//rule->state, rule->accept))
+				match = 0;
+				_HIP_DEBUG("filter_esp: state, rule %d, boolean %d match %d\n",
+					   rule->state->int_opt.value,
+					   rule->state->int_opt.boolean,
+					   match);
 				break;
 			}
-			
-			// else try to match next rule
-			list = list->next;
 		}
+		
+		// if a match, no need to check further rules
+		if (match)
+		{
+			_HIP_DEBUG("filter_esp: match found\n");
+			break;
+		}
+		
+		// else try to match next rule
+		list = list->next;
 	}
 		
 	//was there a rule matching the packet
