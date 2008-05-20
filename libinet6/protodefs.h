@@ -289,12 +289,14 @@
 #define HIP_REG_TYPE_UNAVAILABLE         1
 /** HIPL specific failure type to indicate that the requested service cannot
     co-exist with a service that has been already granted to the client. The
-    client is required to cancel the overlapping service before registering.
-*/
+    client is required to cancel the overlapping service before registering. */
 #define HIP_REG_CANCEL_REQUIRED          201
 /** HIPL specific failure type to indicate that the requested service is not
     available due to transient conditions. */
 #define HIP_REG_TRANSIENT_CONDITIONS     202
+/** Number of existing failure types. */
+#define HIP_TOTAL_EXISTING_FAILURE_TYPES 4
+
 
 /* Returns length of TLV option (contents) with padding. */
 #define HIP_LEN_PAD(len) \

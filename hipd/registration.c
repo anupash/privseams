@@ -4,10 +4,9 @@
  * 
  * @author  Lauri Silvennoinen
  * @version 1.0
- * @date    05.04.2008
- * @note    Related drafts:
- *          <a href="http://www.ietf.org/internet-drafts/draft-ietf-hip-registration-02.txt">
- *          draft-ietf-hip-registration-02</a>
+ * @date    20.05.2008
+ * @note    Related RFC: <a href="http://www.rfc-editor.org/rfc/rfc5203.txt">
+ *          Host Identity Protocol (HIP) Registration Extension</a>
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  * @see     registration.h
  * @see     hiprelay.h
@@ -403,9 +402,58 @@ int hip_handle_param_rrq(hip_ha_t *entry, hip_common_t *source_msg,
 			    &refused_count);
 	}
 	
+	HIP_DEBUG("Accepted: %d, refused: %d.\n", accepted_count,
+		  refused_count);
+
 	/* The registration is now done. Next, we build the REG_RESPONSE and
 	   REG_FAILED parameters. */
-	
+	if(accepted_count > 0) {
+		/* There is an issue related to the building of REG_RESPONSE
+		   parameters in RFC 5203. In Section 4.4 it is said: "The
+		   registrar MUST NOT include more than one REG_RESPONSE
+		   parameter in its R2 or UPDATE packets..." Now, how can we
+		   inform the requester that it has been granted two or more
+		   services with different lifetimes? We cannot. Therefore we
+		   just take the first accepted lifetime and use that with all
+		   services. -Lauri 20.05.2008 */
+		hip_build_param_reg_response(target_msg, accepted_lifetimes[0],
+					     accepted_requests, accepted_count);
+	}
+
+	if(refused_count > 0) {
+		/* We must add as many REG_FAILED parameters as there are
+		   different failure types. */
+		int i, j, to_be_build_count;
+		uint8_t reg_types_to_build[refused_count];
+		uint8_t type_to_check[HIP_TOTAL_EXISTING_FAILURE_TYPES];
+		
+		type_to_check[0] = HIP_REG_INSUFFICIENT_CREDENTIALS;
+		type_to_check[1] = HIP_REG_TYPE_UNAVAILABLE;
+		type_to_check[2] = HIP_REG_CANCEL_REQUIRED;
+		type_to_check[3] = HIP_REG_TRANSIENT_CONDITIONS;
+
+		/* We have to get an continuous memory region holding all the
+		   registration types having the same failure type. This memory
+		   region is the 'reg_types_to_build' array and it will hold
+		   'to_be_build_count' elements in it. This is done for each
+		   existing failure type. After each failure type check, we
+		   build a REG_FAILED parameter. */
+		for(i = 0; i < HIP_TOTAL_EXISTING_FAILURE_TYPES; i++) {
+			to_be_build_count = 0;
+			for(j = 0; j < refused_count; j++) {
+				if(failure_types[j] == type_to_check[i]) {
+					reg_types_to_build[to_be_build_count] =
+						refused_requests[j];
+					to_be_build_count++;
+				}
+			}
+			if(to_be_build_count > 0) {
+				hip_build_param_reg_failed(
+					target_msg, type_to_check[i],
+					reg_types_to_build, to_be_build_count);
+			}
+		}
+	}
 	
  out_err:
 	return err;
@@ -493,19 +541,25 @@ int hip_add_reg(hip_ha_t *entry, uint8_t lifetime, uint8_t *reg_types,
 			   given HIT. Note that the fetched record type does not
 			   matter, since the relay and RVS types cannot co-exist
 			   for a single entry. */
-			if(fetch_record != NULL) {
+			if(hip_relay_get_status() == HIP_RELAY_OFF) {
+				HIP_DEBUG("RVS/Relay is not ON.\n");
+				refused_requests[*refused_count] = reg_types[i];
+				failure_types[*refused_count] =
+					HIP_REG_TYPE_UNAVAILABLE;
+				(*refused_count)++;
+			} else if(fetch_record != NULL) {
 				HIP_DEBUG("Cancellation required.\n");
 				refused_requests[*refused_count] = reg_types[i];
 				failure_types[*refused_count] =
 					HIP_REG_CANCEL_REQUIRED;
-				*refused_count++;
+				(*refused_count)++;
 			} else if(hip_relwl_get_status() &&
 				  hip_relwl_get(&dummy.hit_r) == NULL) {
 				HIP_DEBUG("Client is not whitelisted.\n");
 				refused_requests[*refused_count] = reg_types[i];
 				failure_types[*refused_count] =
 					HIP_REG_INSUFFICIENT_CREDENTIALS;
-				*refused_count++;
+				(*refused_count)++;
 			} else {
 				/* Set the type of the relay record. */
 				hip_relrec_type_t type =
@@ -528,7 +582,7 @@ int hip_add_reg(hip_ha_t *entry, uint8_t lifetime, uint8_t *reg_types,
 						reg_types[i];
 					accepted_lifetimes[*accepted_count] =
 						granted_lifetime;
-					*accepted_count++;
+					(*accepted_count)++;
 					
 					HIP_DEBUG("Registration accepted.\n");
 				} /* The put was unsuccessful. */
@@ -540,7 +594,7 @@ int hip_add_reg(hip_ha_t *entry, uint8_t lifetime, uint8_t *reg_types,
 						reg_types[i];
 					failure_types[*refused_count] =
 						HIP_REG_TRANSIENT_CONDITIONS;
-					*refused_count++;
+					(*refused_count)++;
 					HIP_ERROR("Unable to store new relay "\
 						  "record. Registration "\
 						  "refused.\n");
@@ -561,14 +615,14 @@ int hip_add_reg(hip_ha_t *entry, uint8_t lifetime, uint8_t *reg_types,
 					reg_types[i];
 				accepted_lifetimes[*accepted_count] =
 					granted_lifetime;
-				*accepted_count++;
+				(*accepted_count)++;
 				
 				HIP_DEBUG("Registration accepted.\n");
 			} else {
 				refused_requests[*refused_count] = reg_types[i];
 				failure_types[*refused_count] =
 					HIP_REG_INSUFFICIENT_CREDENTIALS;
-				*refused_count++;
+				(*refused_count)++;
 				HIP_DEBUG("Registration refused.\n");
 			}
 
@@ -580,7 +634,7 @@ int hip_add_reg(hip_ha_t *entry, uint8_t lifetime, uint8_t *reg_types,
 			refused_requests[*refused_count] = reg_types[i];
 			failure_types[*refused_count] =
 				HIP_REG_TYPE_UNAVAILABLE;
-			*refused_count++;
+			(*refused_count)++;
 			
 			break;
 		}

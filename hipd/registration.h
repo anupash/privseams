@@ -3,10 +3,9 @@
  * 
  * @author  Lauri Silvennoinen
  * @version 1.0
- * @date    05.04.2008
- * @note    Related drafts:
- *          <a href="http://www.ietf.org/internet-drafts/draft-ietf-hip-registration-02.txt">
- *          draft-ietf-hip-registration-02</a>
+ * @date    20.05.2008
+ * @note    Related RFC: <a href="http://www.rfc-editor.org/rfc/rfc5203.txt">
+ *          Host Identity Protocol (HIP) Registration Extension</a>
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  * @see     registration.c
  * @see     hiprelay.h
