@@ -41,7 +41,7 @@ struct in6_addr default_hit;
  * Non-zero means that there was an error or the packet handler did not
  * know what to do with the packet.
  */
-int (*hip_fw_handler[NF_IP_NUMHOOKS][FW_PROTO_NUM])(hip_fw_context_t *) = { NULL };
+hip_fw_handler_t hip_fw_handler[NF_IP_NUMHOOKS][FW_PROTO_NUM];
 
 void print_usage()
 {
@@ -149,6 +149,8 @@ int firewall_init_rules()
 {
 	HIP_DEBUG("Initializing firewall\n");
 
+	HIP_DEBUG("in=%d out=%d for=%d\n", NF_IP_LOCAL_IN, NF_IP_LOCAL_OUT, NF_IP_FORWARD);
+
 	// funtion pointers for the respective packet handlers
 	hip_fw_handler[NF_IP_LOCAL_IN][OTHER_PACKET] = hip_fw_handle_other_input;
 	hip_fw_handler[NF_IP_LOCAL_IN][HIP_PACKET] = hip_fw_handle_hip_input;
@@ -198,8 +200,8 @@ int firewall_init_rules()
 		system("ip6tables -I FORWARD -p 139 -j ACCEPT");
 		system("ip6tables -I FORWARD -p 139 -j ACCEPT");
 		
-		system("ip6tables -I FORWARD -p tcp -j QUEUE");
-		system("ip6tables -I FORWARD -p udp -j QUEUE");
+		system("ip6tables -I FORWARD -p tcp ! -d 2001:0010::/28 -j QUEUE");
+		system("ip6tables -I FORWARD -p udp ! -d  2001:0010::/28 -j QUEUE");
 		//system("ip6tables -I FORWARD -p icmp -j QUEUE");
 		//system("ip6tables -I FORWARD -p icmpv6 -j QUEUE");
 		
@@ -485,7 +487,6 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 			
 			goto end_init;
 			
-#ifdef CONFIG_HIP_OPPTCP
 		} else if(iphdr->ip_p == IPPROTO_TCP)
 		{
 			// this might be a TCP packet for opportunistic mode
@@ -495,9 +496,6 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 			ctx->transport_hdr.tcp = (struct tcphdr *) (((char *)iphdr) + sizeof(struct ip));
 			
 			goto end_init;
-			
-#endif
-			
 		} else if (iphdr->ip_p != IPPROTO_UDP)
 		{
 			// if it's not UDP either, it's unsupported
@@ -558,7 +556,6 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 			
 			goto end_init;
 			
-#ifdef CONFIG_HIP_OPPTCP
 		} else if(ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt == IPPROTO_TCP)
 		{
 			// this might be a TCP packet for opportunistic mode
@@ -568,7 +565,6 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 			ctx->transport_hdr.tcp = (struct tcphdr *) (((char *)ip6_hdr) + sizeof(struct ip6_hdr));
 			
 			goto end_init;
-#endif
 			
 		} else if (ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt != IPPROTO_UDP)
 		{
@@ -1163,7 +1159,7 @@ int hip_fw_handle_other_forward(hip_fw_context_t *ctx) {
 	HIP_DEBUG("\n");
 
 	if (hip_proxy_status && !ipv6_addr_is_hit(&ctx->dst))
-		verdict = handle_proxy_outbound_traffic(&ctx->ipq_packet,
+		verdict = handle_proxy_outbound_traffic(ctx->ipq_packet,
 							&ctx->src,
 							&ctx->dst,
 							ctx->ip_hdr_len,
@@ -1228,6 +1224,8 @@ int hip_fw_handle_packet(char *buf, struct ipq_handle *hndl, int ip_version, hip
 	// set up firewall context
 	if (hip_fw_init_context(ctx, buf, ip_version))
 		goto out_err;
+
+	HIP_DEBUG("packet hook=%d, packet type=%d\n", ctx->ipq_packet->hook, ctx->packet_type);
 	
 	// match context with rules
 	if (hip_fw_handler[ctx->ipq_packet->hook][ctx->packet_type]) {
@@ -1308,11 +1306,15 @@ int main(int argc, char **argv)
 	}
 
 	memset(&default_hit, 0, sizeof(default_hit));
+	memset(&proxy_hit, 0, sizeof(default_hit));
 
-	hip_query_default_local_hit_from_hipd();
+	
+	if (!hip_query_default_local_hit_from_hipd())
+			ipv6_addr_copy(&proxy_hit, hip_fw_get_default_hit());
+	HIP_DEBUG_HIT("Default hit is ",  &proxy_hit);
 
-	_HIP_DEBUG_HIT("Default hit is ", hip_fw_get_default_hit());
-
+//	HIP_DEBUG_HIT("proxy_hit: ", &proxy_hit);
+	
 	check_and_write_default_config();
 	
 	hip_set_logdebug(LOGDEBUG_NONE);
