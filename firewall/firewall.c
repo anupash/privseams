@@ -197,8 +197,8 @@ int firewall_init_rules()
 		system("ip6tables -I FORWARD -p 139 -j ACCEPT");
 		system("ip6tables -I FORWARD -p 139 -j ACCEPT");
 		
-		system("ip6tables -I FORWARD -p tcp -j QUEUE");
-		system("ip6tables -I FORWARD -p udp -j QUEUE");
+		system("ip6tables -I FORWARD -p tcp ! -d 2001:0010::/28 -j QUEUE");
+		system("ip6tables -I FORWARD -p udp ! -d  2001:0010::/28 -j QUEUE");
 		//system("ip6tables -I FORWARD -p icmp -j QUEUE");
 		//system("ip6tables -I FORWARD -p icmpv6 -j QUEUE");
 		
