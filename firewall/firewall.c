@@ -716,7 +716,7 @@ int filter_esp(const struct in6_addr * dst_addr, struct hip_esp * esp,
 	int verdict = 0;
 	
 	uint32_t spi = esp->esp_spi;
-
+	
 	_HIP_DEBUG("filter_esp:\n");
 	while (list != NULL)
 	{
@@ -726,7 +726,7 @@ int filter_esp(const struct in6_addr * dst_addr, struct hip_esp * esp,
 		//print_rule(rule);
 		HIP_DEBUG_HIT("dst addr: ", dst_addr);
 		HIP_DEBUG("SPI: %d\n", ntohl(spi));
-
+		
 		//type not valid with ESP packets -> should not be set in rules
 		if (rule->type)
 		{
@@ -746,52 +746,53 @@ int filter_esp(const struct in6_addr * dst_addr, struct hip_esp * esp,
 		if (match && rule->in_if)
 		{
 			if (!match_string(rule->in_if->value, in_if,
-					rule->in_if->boolean))
+					  rule->in_if->boolean))
 			{
 				match = 0;
 			}
 			
 			_HIP_DEBUG("filter_esp: in_if rule: %s, packet: %s, boolean: %d, match: %d \n",
-					rule->in_if->value, in_if, rule->in_if->boolean, match);
+				   rule->in_if->value, in_if, rule->in_if->boolean, match);
 		}
 		
 		if (match && rule->out_if)
 		{
 			if (!match_string(rule->out_if->value, out_if,
-					rule->out_if->boolean))
+					  rule->out_if->boolean))
 			{
 				match = 0;
-			_HIP_DEBUG("filter_esp: out_if rule: %s, packet: %s, boolean: %d, match: %d \n",
-					rule->out_if->value, out_if, rule->out_if->boolean, match);
-		}
-		
-		//must be last, so match and verdict known here
-		if (match && rule->state)
-		{
-			//the entire rule os passed as argument as hits can only be 
-			//filtered whit the state information
-			if (!filter_esp_state(dst_addr, esp, rule))
-			{//rule->state, rule->accept))
-				match = 0;
-				_HIP_DEBUG("filter_esp: state, rule %d, boolean %d match %d\n",
-						rule->state->int_opt.value,
-						rule->state->int_opt.boolean,
-						match);
+				_HIP_DEBUG("filter_esp: out_if rule: %s, packet: %s, boolean: %d, match: %d \n",
+					   rule->out_if->value, out_if, rule->out_if->boolean, match);
+			}
+			
+			//must be last, so match and verdict known here
+			if (match && rule->state)
+			{
+				//the entire rule os passed as argument as hits can only be 
+				//filtered whit the state information
+				if (!filter_esp_state(dst_addr, esp, rule))
+				{//rule->state, rule->accept))
+					match = 0;
+					_HIP_DEBUG("filter_esp: state, rule %d, boolean %d match %d\n",
+						   rule->state->int_opt.value,
+						   rule->state->int_opt.boolean,
+						   match);
+					break;
+				}
+			}
+			
+			// if a match, no need to check further rules
+			if (match)
+			{
+				_HIP_DEBUG("filter_esp: match found\n");
 				break;
 			}
+			
+			// else try to match next rule
+			list = list->next;
 		}
-		
-		// if a match, no need to check further rules
-		if (match)
-		{
-			_HIP_DEBUG("filter_esp: match found\n");
-			break;
-		}
-		
-		// else try to match next rule
-		list = list->next;
 	}
-	
+		
 	//was there a rule matching the packet
 	if (rule && match)
 	{
@@ -1003,12 +1004,13 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx) {
 
 	if (hip_userspace_ipsec)
 		HIP_IFE(hip_fw_userspace_ipsec_output(ctx->ip_version,
-							    ctx->ip_hdr.ipv4,
-							    ctx->ipq_packet), -1);
+						      ctx->ip_hdr.ipv4,
+						      ctx->ipq_packet), -1);
 						   
 	/* XX FIXME: LSI HOOKS */
 
-	/* No need to check default rules as it is handled by the iptables rules */
+	/* No need to check default rules as it is handled by the
+	   iptables rules */
  out_err:
 
 	return err;
@@ -1021,15 +1023,7 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx) {
 	
 	HIP_DEBUG("****** Received HIP packet ******\n");
 	
-	/*
 	// TODO check if signature is verified somewhere
-	sig = (struct hip_sig *) hip_get_param(ctx->transport_hdr.hip,
-					       HIP_PARAM_HIP_SIGNATURE);
-	if(sig == NULL)
-		_HIP_DEBUG("no signature\n");
-	else
-		_HIP_DEBUG("signature exists\n");
-	*/
 	
 	verdict = filter_hip(&ctx->src, 
 			 &ctx->dst, 
@@ -1072,17 +1066,18 @@ int hip_fw_handle_tcp_output(hip_fw_context_t *ctx) {
 }
 
 int hip_fw_handle_other_input(hip_fw_context_t *ctx) {
-	int err = 0;
+	int verdict = 1;
 
 	HIP_DEBUG("\n");
 
-	if(ipv6_addr_is_hit(&ctx->src) && ipv6_addr_is_hit(&ctx->dst))
-		HIP_IFE(handle_proxy_inbound_traffic(ctx->ipq_packet, &ctx->src), -1);
+	if (ipv6_addr_is_hit(&ctx->src) && ipv6_addr_is_hit(&ctx->dst))
+		verdict = handle_proxy_inbound_traffic(ctx->ipq_packet,
+						       &ctx->src);
 
 	/* No need to check default rules as it is handled by the iptables rules */
  out_err:
 
-	return err;
+	return verdict;
 }
 
 int hip_fw_handle_hip_input(hip_fw_context_t *ctx) {
@@ -1123,39 +1118,41 @@ int hip_fw_handle_esp_input(hip_fw_context_t *ctx) {
 }
 
 int hip_fw_handle_tcp_input(hip_fw_context_t *ctx) {
-	int err = 0;
+	int verdict = 0;
 
 	HIP_DEBUG("\n");
 
 	/* if tcp handling consumes the packet, other input is skipped */
 
-	HIP_IFE(!hip_fw_examine_incoming_tcp_packet(ctx->ip_hdr.ipv4,
-						    ctx->ip_version,
-						    ctx->ip_hdr_len), 0);
-	HIP_IFE(hip_fw_handle_other_input(ctx), 0);
+	if(!ipv6_addr_is_hit(&ctx->dst))
+		verdict = hip_fw_examine_incoming_tcp_packet(ctx->ip_hdr.ipv4,
+							     ctx->ip_version,
+							     ctx->ip_hdr_len);
+	else
+		verdict = hip_fw_handle_other_input(ctx);
 
  out_err:
 
-	return err;
+	return verdict;
 }
 
 int hip_fw_handle_other_forward(hip_fw_context_t *ctx) {
-	int err = 0;
+	int verdict = 1;
 
 	HIP_DEBUG("\n");
 
-	if (hip_proxy_status)
-		HIP_IFE(handle_proxy_outbound_traffic(&ctx->ipq_packet,
-						      &ctx->src,
-						      &ctx->dst,
-						      ctx->ip_hdr_len,
-						      ctx->ip_version), -1);
+	if (hip_proxy_status && !ipv6_addr_is_hit(&ctx->dst))
+		verdict = handle_proxy_outbound_traffic(&ctx->ipq_packet,
+							&ctx->src,
+							&ctx->dst,
+							ctx->ip_hdr_len,
+							ctx->ip_version);
 
 	/* No need to check default rules as it is handled by the iptables rules */
 
  out_err:
 
-	return err;
+	return verdict;
 }
 
 int hip_fw_handle_tcp_forward(hip_fw_context_t *ctx) {
