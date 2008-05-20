@@ -5,11 +5,12 @@
 #include "proxy.h"
 
 int handle_proxy_inbound_traffic(ipq_packet_msg_t *m,
-				  struct in6_addr *src_addr)
+				 struct in6_addr *src_addr)
 {
 	//struct in6_addr client_addr;
 	//HIP PROXY INBOUND PROCESS
-	int port_client, port_peer, protocol, err = 0;
+	in_port_t port_client, port_server, port_peer;
+	int protocol, err = 0;
 	struct ip6_hdr* ipheader;
 	//struct in6_addr proxy_hit;
 	struct hip_conn_t* conn_entry = NULL;
@@ -33,6 +34,8 @@ int handle_proxy_inbound_traffic(ipq_packet_msg_t *m,
 		port_client = ((struct udphdr *) (m->payload + 40))->dest;
 	}
 	
+	HIP_DEBUG("client port %d peer port %d\n", port_client, port_server);
+
 	//hip_get_local_hit_wrapper(&proxy_hit);
 	conn_entry = hip_conn_find_by_portinfo(&proxy_hit, src_addr, protocol, port_client, port_peer); 
 	
@@ -79,14 +82,15 @@ int handle_proxy_outbound_traffic(ipq_packet_msg_t *m,
 	//if the destination ip does not support hip, drop the packet
 	int err = 0;
 	int protocol;
-	int port_client;
-	int port_peer;
+	in_port_t port_client = 0, port_peer = 0, port_server = 0;
 	//struct in6_addr proxy_hit;
 	struct in6_addr dst_hit;
 	struct in6_addr proxy_addr;
 	struct hip_proxy_t* entry = NULL;	
 	struct hip_conn_t* conn_entry = NULL;
 	
+	HIP_DEBUG("HIP PROXY OUTBOUND PROCESS:\n");
+
 	HIP_IFEL(!hip_fw_get_default_hit(), 0, "Get Default HIT error!\n");
 
 	if(ip_version == 4)
@@ -107,7 +111,8 @@ int handle_proxy_outbound_traffic(ipq_packet_msg_t *m,
 		port_peer = ((struct udphdr *) (m->payload + hdr_size))->dest;
 	}
 	
-	HIP_DEBUG("HIP PROXY OUTBOUND PROCESS:\n");
+	HIP_DEBUG("client port %d peer port %d\n", port_client, port_server);
+
 	entry = hip_proxy_find_by_addr(src_addr, dst_addr);
 	//hip_get_local_hit_wrapper(&proxy_hit);
 	if (entry == NULL)

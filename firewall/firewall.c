@@ -450,6 +450,9 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 
 		// add pointer to IPv4 header to context
 		ctx->ip_hdr.ipv4 = iphdr;
+		hdr_size = (iphdr->ip_hl * 4);
+		ctx->ip_hdr_len = hdr_size;
+		HIP_DEBUG("hdr_size is %d\n", hdr_size);
 		// add IPv4 addresses
 		IPV4_TO_IPV6_MAP(&ctx->ip_hdr.ipv4->ip_src, &ctx->src);
 		IPV4_TO_IPV6_MAP(&ctx->ip_hdr.ipv4->ip_dst, &ctx->dst);
@@ -480,7 +483,6 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 			
 			goto end_init;
 			
-#ifdef CONFIG_HIP_OPPTCP
 		} else if(iphdr->ip_p == IPPROTO_TCP)
 		{
 			// this might be a TCP packet for opportunistic mode
@@ -490,9 +492,6 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 			ctx->transport_hdr.tcp = (struct tcphdr *) (((char *)iphdr) + sizeof(struct ip));
 			
 			goto end_init;
-			
-#endif
-			
 		} else if (iphdr->ip_p != IPPROTO_UDP)
 		{
 			// if it's not UDP either, it's unsupported
@@ -502,9 +501,6 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 		}
 		
 		// need UDP header to look for encapsulated ESP or STUN
-		hdr_size = (iphdr->ip_hl * 4);
-		ctx->ip_hdr_len = hdr_size;
-		HIP_DEBUG("hdr_size is %d\n", hdr_size);
 		plen = iphdr->ip_len;
 		udphdr = ((struct udphdr *) (((char *) iphdr) + hdr_size));
 		
@@ -517,6 +513,8 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 		
 		// add pointer to IPv4 header to context
 		ctx->ip_hdr.ipv6 = ip6_hdr;
+		hdr_size = (ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen * 4);
+		ctx->ip_hdr_len = plen;
 		// add IPv6 addresses
 		ipv6_addr_copy(&ctx->src, &ip6_hdr->ip6_src);
 		ipv6_addr_copy(&ctx->dst, &ip6_hdr->ip6_dst);
@@ -548,7 +546,6 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 			
 			goto end_init;
 			
-#ifdef CONFIG_HIP_OPPTCP
 		} else if(ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt == IPPROTO_TCP)
 		{
 			// this might be a TCP packet for opportunistic mode
@@ -558,7 +555,6 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 			ctx->transport_hdr.tcp = (struct tcphdr *) (((char *)ip6_hdr) + sizeof(struct ip6_hdr));
 			
 			goto end_init;
-#endif
 			
 		} else if (ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt != IPPROTO_UDP)
 		{
@@ -573,9 +569,7 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 		 * 
 		 * we keep them anyway in order to ease UDP encapsulation handling
 		 * with IPv6 */
-		hdr_size = (ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen * 4);
 		plen = ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen;
-		ctx->ip_hdr_len = plen;
 		udphdr = ((struct udphdr *) (((char *) ip6_hdr) + hdr_size));
 		
 		// add udp header to context
