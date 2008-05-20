@@ -14,6 +14,7 @@
 /* NOTE: if buffer size is changed, make sure to check
  * 		 the HIP packet size in hip_fw_init_context() */
 #define BUFSIZE HIP_MAX_PACKET
+//#define BUFSIZE 2048
 
 int statefulFiltering = 1;
 int escrow_active = 0;
@@ -221,6 +222,7 @@ int firewall_init_rules()
 		{
 			// make DROP the default behavior of all chains
 			// TODO don't drop LSIs -> else IPv4 apps won't work
+			// -> also messaging between HIPd and firewall is blocked here
 			system("iptables -I FORWARD -j DROP");
 			system("iptables -I INPUT -j DROP");
 			system("iptables -I OUTPUT -j DROP");
@@ -721,9 +723,9 @@ int filter_esp(const struct in6_addr * dst_addr, struct hip_esp * esp,
 	// block traffic by default
 	int verdict = 0;
 	
-	uint32_t spi = esp->esp_spi;
-	
 	_HIP_DEBUG("filter_esp:\n");
+	
+	// match all rules
 	while (list != NULL)
 	{
 		match = 1;
@@ -731,24 +733,27 @@ int filter_esp(const struct in6_addr * dst_addr, struct hip_esp * esp,
 		
 		//print_rule(rule);
 		HIP_DEBUG_HIT("dst addr: ", dst_addr);
-		HIP_DEBUG("SPI: %d\n", ntohl(spi));
+		HIP_DEBUG("SPI: %d\n", ntohl(esp->esp_spi));
 		
-		//type not valid with ESP packets -> should not be set in rules
+		// type not valid with ESP packets -> next rule
 		if (rule->type)
 		{
-			_HIP_DEBUG("filter_esp: type option not valid for esp\n");
+			HIP_DEBUG("type option not valid for esp\n");
+			
 			match = 0;
 		}
 		
-		//src and dst hits are matched with state option
-		// TODO HITs are invisible, aren't they!?
+		// we need state from BEX or UPDATE, if src or dst HITs are provided in rule
+		// otherwise we got nothing to match this rule with -> next rule
 		if ((rule->src_hit || rule->dst_hit) && !rule->state)
 		{
 			//not valid with ESP packet
-			_HIP_DEBUG("filter_esp: hit options without state option not valid for esp\n");
+			HIP_DEBUG("hit options without state option not valid for esp\n");
+			
 			match = 0;
 		}
 		
+		// TODO comment
 		if (match && rule->in_if)
 		{
 			if (!match_string(rule->in_if->value, in_if,
@@ -757,10 +762,11 @@ int filter_esp(const struct in6_addr * dst_addr, struct hip_esp * esp,
 				match = 0;
 			}
 			
-			_HIP_DEBUG("filter_esp: in_if rule: %s, packet: %s, boolean: %d, match: %d \n",
+			HIP_DEBUG("in_if rule: %s, packet: %s, boolean: %d, match: %d \n",
 				   rule->in_if->value, in_if, rule->in_if->boolean, match);
 		}
 		
+		// TODO comment
 		if (match && rule->out_if)
 		{
 			if (!match_string(rule->out_if->value, out_if,
@@ -769,22 +775,25 @@ int filter_esp(const struct in6_addr * dst_addr, struct hip_esp * esp,
 				match = 0;
 			}
 			
-			_HIP_DEBUG("filter_esp: out_if rule: %s, packet: %s, boolean: %d, match: %d \n",
+			HIP_DEBUG("out_if rule: %s, packet: %s, boolean: %d, match: %d \n",
 					rule->out_if->value, out_if, rule->out_if->boolean, match);
 		}
 			
-		//must be last, so match and verdict known here
+		// must be last, so match and verdict known here
 		if (match && rule->state)
 		{
-			//the entire rule os passed as argument as hits can only be 
-			//filtered whit the state information
+			//the entire rule is passed as argument as hits can only be 
+			//filtered with the state information
 			if (!filter_esp_state(dst_addr, esp, rule))
-			{//rule->state, rule->accept))
+			{
 				match = 0;
-				_HIP_DEBUG("filter_esp: state: rule %d, boolean %d, match %d\n",
+				
+				HIP_DEBUG("state: rule %d, boolean %d, match %d\n",
 					   rule->state->int_opt.value,
 					   rule->state->int_opt.boolean,
 					   match);
+				
+				// FIXME why break???
 				break;
 			}
 		}
@@ -792,7 +801,7 @@ int filter_esp(const struct in6_addr * dst_addr, struct hip_esp * esp,
 		// if a match, no need to check further rules
 		if (match)
 		{
-			_HIP_DEBUG("filter_esp: match found\n");
+			_HIP_DEBUG("match found\n");
 			break;
 		}
 		
@@ -803,11 +812,16 @@ int filter_esp(const struct in6_addr * dst_addr, struct hip_esp * esp,
 	//was there a rule matching the packet
 	if (rule && match)
 	{
-		_HIP_DEBUG("filter_esp: packet matched rule, target %d\n", rule->accept);
+		HIP_DEBUG("packet matched rule, target %d\n", rule->accept);
+		
 		verdict = rule->accept;
-	}
-	else
+	} else
+	{
+		HIP_DEBUG("falling back to default HIP/ESP behavior, target %d\n",
+				accept_hip_esp_traffic_by_default);
+		
 		verdict = accept_hip_esp_traffic_by_default;
+	}
 	
 	//release rule list
 	read_rules_exit(0);
@@ -869,7 +883,7 @@ int filter_hip(const struct in6_addr * ip6_src,
         // check src_hit if defined in rule
       	if(match && rule->src_hit)
 	  	{
-    		HIP_DEBUG("filter_hip: src_hit\n");
+    		HIP_DEBUG("src_hit\n");
     		
     		if(!match_hit(rule->src_hit->value, 
 		  		buf->hits, 
@@ -882,7 +896,7 @@ int filter_hip(const struct in6_addr * ip6_src,
     	// check dst_hit if defined in rule
     	if(match && rule->dst_hit)
 		{
-    		HIP_DEBUG("filter_hip: dst_hit\n");
+    		HIP_DEBUG("dst_hit\n");
     		
     		if(!match_hit(rule->dst_hit->value, 
 		  		buf->hitr, 
@@ -895,7 +909,7 @@ int filter_hip(const struct in6_addr * ip6_src,
     	// check the HIP packet type (I1, UPDATE, etc.)
       	if(match && rule->type)
 	  	{
-    		HIP_DEBUG("filter_hip: type\n");
+    		HIP_DEBUG("type\n");
     		if(!match_int(rule->type->value, 
 		  		buf->type_hdr, 
 		  		rule->type->boolean))
@@ -903,7 +917,7 @@ int filter_hip(const struct in6_addr * ip6_src,
      			match = 0;
     		}
     		
-	    	HIP_DEBUG("filter_hip: type rule: %d, packet: %d, boolean: %d, match: %d\n",
+	    	HIP_DEBUG("type rule: %d, packet: %d, boolean: %d, match: %d\n",
 		    		rule->type->value, 
 		    		buf->type_hdr,
 		    		rule->type->boolean,
@@ -918,7 +932,7 @@ int filter_hip(const struct in6_addr * ip6_src,
       			match = 0;
     		}
     		
-    		HIP_DEBUG("filter_hip: in_if rule: %s, packet: %s, boolean: %d, match: %d \n",
+    		HIP_DEBUG("in_if rule: %s, packet: %s, boolean: %d, match: %d \n",
 	      			rule->in_if->value, 
 	      			in_if, rule->in_if->boolean, match);
 	  	}
@@ -933,14 +947,16 @@ int filter_hip(const struct in6_addr * ip6_src,
       			match = 0;
     		}
     		
-    		HIP_DEBUG("filter_hip: out_if rule: %s, packet: %s, boolean: %d, match: %d \n",
+    		HIP_DEBUG("out_if rule: %s, packet: %s, boolean: %d, match: %d \n",
 	      			rule->out_if->value, out_if, rule->out_if->boolean, match);
 	  	}
       	
-      	// if HI defined, verify signature now (late as expensive operation) 
+      	// if HI defined in rule, verify signature now 
+      	// - late as it's an expensive operation
+      	// - checks that the message src is the src defined in the _rule_
     	if(match && rule->src_hi)
       	{
-			_HIP_DEBUG("filter_hip: src_hi\n");
+			_HIP_DEBUG("src_hi\n");
 			
 			if(!match_hi(rule->src_hi, buf))
 			{
@@ -953,8 +969,10 @@ int filter_hip(const struct in6_addr * ip6_src,
 		 * must be last, so not called if packet is going to be dropped */
       	if(match && rule->state)
 	  	{
-      		// FIXME this will once again check the signature
-      		// we at least had some packet before -> check this packet
+      		/* we at least had some packet before -> check this packet
+      		 * 
+      		 * this will also check the signature of the packet, if we already
+      		 * have a src_HI stored for the _connection_ */
     		if(!filter_state(ip6_src, ip6_dst, buf, rule->state, rule->accept))
     		{
     			match = 0;
@@ -964,7 +982,7 @@ int filter_hip(const struct in6_addr * ip6_src,
     			conntracked = 1;
     		}
     		
-    		HIP_DEBUG("filter_hip: state, rule %d, boolean %d, match %d\n", 
+    		HIP_DEBUG("state, rule %d, boolean %d, match %d\n", 
 	      			rule->state->int_opt.value,
 	      			rule->state->int_opt.boolean, 
 	      			match);
@@ -973,7 +991,7 @@ int filter_hip(const struct in6_addr * ip6_src,
 		// if a match, no need to check further rules
 		if(match)
 		{
-			HIP_DEBUG("filter_hip: match found\n");
+			HIP_DEBUG("match found\n");
 			break;
  		}
     	
@@ -984,11 +1002,16 @@ int filter_hip(const struct in6_addr * ip6_src,
   	// if we found a matching rule, use its verdict
   	if(rule && match)
 	{
-		HIP_DEBUG("filter_hip: packet matched rule, target %d\n", rule->accept);
+		HIP_DEBUG("packet matched rule, target %d\n", rule->accept);
 		verdict = rule->accept; 
 	}
  	else
-    	verdict = accept_hip_esp_traffic_by_default;
+ 	{
+ 		HIP_DEBUG("falling back to default HIP/ESP behavior, target %d\n",
+ 						accept_hip_esp_traffic_by_default);
+ 		
+ 		verdict = accept_hip_esp_traffic_by_default;
+ 	}
 
   	//release rule list
   	read_rules_exit(0);
@@ -1005,14 +1028,14 @@ int filter_hip(const struct in6_addr * ip6_src,
 }
 
 int hip_fw_handle_other_output(hip_fw_context_t *ctx) {
-	int err = 0;
+	int verdict = accept_normal_traffic_by_default;
 
 	HIP_DEBUG("\n");
 
 	if (hip_userspace_ipsec)
-		HIP_IFE(hip_fw_userspace_ipsec_output(ctx->ip_version,
-						      ctx->ip_hdr.ipv4,
-						      ctx->ipq_packet), -1);
+		verdict = !hip_fw_userspace_ipsec_output(ctx->ip_version,
+							ctx->ip_hdr.ipv4,
+							ctx->ipq_packet);
 						   
 	/* XX FIXME: LSI HOOKS */
 
@@ -1020,24 +1043,18 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx) {
 	   iptables rules */
  out_err:
 
-	return err;
+	return verdict;
 }
 
 int hip_fw_handle_hip_output(hip_fw_context_t *ctx) {
-	int verdict = 0;
-	int packet_length = 0;
-	struct hip_sig * sig = NULL;
-	
-	HIP_DEBUG("****** Received HIP packet ******\n");
-	
-	// TODO check if signature is verified somewhere
+	int verdict = accept_hip_esp_traffic_by_default;
 	
 	verdict = filter_hip(&ctx->src, 
-			 &ctx->dst, 
-			 ctx->transport_hdr.hip, 
-			 ctx->ipq_packet->hook,
-			 ctx->ipq_packet->indev_name,
-			 ctx->ipq_packet->outdev_name);
+					&ctx->dst, 
+					ctx->transport_hdr.hip, 
+					ctx->ipq_packet->hook,
+					ctx->ipq_packet->indev_name,
+					ctx->ipq_packet->outdev_name);
 
  out_err:
 	/* zero return value means that the packet should be dropped */
@@ -1045,20 +1062,15 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx) {
 }
 
 int hip_fw_handle_esp_output(hip_fw_context_t *ctx) {
-	int verdict = 0;
+	int verdict = accept_hip_esp_traffic_by_default;
 
 	HIP_DEBUG("\n");
 
-	HIP_DEBUG("XX FIXME: Skipping ESP checks. SPI detection for IPv4, IPv6 and UDPv4 not working\n");
-	verdict = 1;
-
-	/*
-	err = filter_esp(&ctx->dst, 
-			 ctx->transport_hdr.esp,
-			 ctx->ipq_packet->hook,
-			 ctx->ipq_packet->indev_name,
-			 ctx->ipq_packet->outdev_name);
-			 */
+	verdict = filter_esp(&ctx->dst, 
+			 		ctx->transport_hdr.esp,
+			 		ctx->ipq_packet->hook,
+			 		ctx->ipq_packet->indev_name,
+			 		ctx->ipq_packet->outdev_name);
 
 	return verdict;
 }
@@ -1069,11 +1081,12 @@ int hip_fw_handle_tcp_output(hip_fw_context_t *ctx) {
 
 	/* XX FIXME: opp tcp filtering */
 
+	// this will also check for userspace IPsec
 	return hip_fw_handle_other_output(ctx);
 }
 
 int hip_fw_handle_other_input(hip_fw_context_t *ctx) {
-	int verdict = 1;
+	int verdict = accept_normal_traffic_by_default;
 
 	HIP_DEBUG("\n");
 
@@ -1088,20 +1101,15 @@ int hip_fw_handle_other_input(hip_fw_context_t *ctx) {
 }
 
 int hip_fw_handle_hip_input(hip_fw_context_t *ctx) {
-	int verdict = 0;
 
 	HIP_DEBUG("\n");
 
 	// for now input and output are handled symmetrically
-	// err = 0 means drop
-	verdict = hip_fw_handle_hip_output(ctx);
-
- out_err:
-	return verdict;
+	return hip_fw_handle_hip_output(ctx);
 }
 
 int hip_fw_handle_esp_input(hip_fw_context_t *ctx) {
-	int verdict = 1;
+	int verdict = accept_hip_esp_traffic_by_default;
 
 	HIP_DEBUG("\n");
 
@@ -1110,12 +1118,15 @@ int hip_fw_handle_esp_input(hip_fw_context_t *ctx) {
 	if (hip_userspace_ipsec) {
 		HIP_DEBUG("debug message: HIP firewall userspace ipsec input: \n ");
 		// added by Tao Wan
-		verdict = hip_fw_userspace_ipsec_input(ctx->ip_version,
+		verdict = !hip_fw_userspace_ipsec_input(ctx->ip_version,
 						       ctx->ip_hdr.ipv4,
 						       ctx->ipq_packet);
 	} else {
-		verdict = 1;
-		HIP_DEBUG("XX FIXME: Skipping ESP checks. SPI detection for IPv4, IPv6 and UDPv4 not working\n");
+		verdict = filter_esp(&ctx->dst, 
+					 ctx->transport_hdr.esp,
+					 ctx->ipq_packet->hook,
+					 ctx->ipq_packet->indev_name,
+					 ctx->ipq_packet->outdev_name);
 	}
 
  out_err:
@@ -1123,17 +1134,18 @@ int hip_fw_handle_esp_input(hip_fw_context_t *ctx) {
 }
 
 int hip_fw_handle_tcp_input(hip_fw_context_t *ctx) {
-	int verdict = 0;
+	int verdict = accept_normal_traffic_by_default;
 
 	HIP_DEBUG("\n");
 
-	/* if tcp handling consumes the packet, other input is skipped */
-
+	// any incoming plain TCP packet might be an opportunistic I1
 	if(!ipv6_addr_is_hit(&ctx->dst))
 		verdict = hip_fw_examine_incoming_tcp_packet(ctx->ip_hdr.ipv4,
 							     ctx->ip_version,
 							     ctx->ip_hdr_len);
 	else
+		// as we should never receive TCP with HITs, this will only apply
+		// to IPv4 TCP
 		verdict = hip_fw_handle_other_input(ctx);
 
  out_err:
@@ -1142,7 +1154,7 @@ int hip_fw_handle_tcp_input(hip_fw_context_t *ctx) {
 }
 
 int hip_fw_handle_other_forward(hip_fw_context_t *ctx) {
-	int verdict = 1;
+	int verdict = accept_normal_traffic_by_default;
 
 	HIP_DEBUG("\n");
 
@@ -1230,6 +1242,8 @@ int hip_fw_handle_packet(char *buf, struct ipq_handle *hndl, int ip_version, hip
 		HIP_DEBUG("=== Verdict: drop packet ===\n");
 		drop_packet(hndl, ctx->ipq_packet->packet_id);
 	}
+	
+	// nothing to clean up here as we re-use buf, hndl and ctx
 	
 	return 0;
 }
