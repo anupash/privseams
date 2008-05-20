@@ -514,6 +514,7 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 		// add pointer to IPv4 header to context
 		ctx->ip_hdr.ipv6 = ip6_hdr;
 		hdr_size = (ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen * 4);
+		plen = ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen;
 		ctx->ip_hdr_len = plen;
 		// add IPv6 addresses
 		ipv6_addr_copy(&ctx->src, &ip6_hdr->ip6_src);
@@ -569,7 +570,6 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 		 * 
 		 * we keep them anyway in order to ease UDP encapsulation handling
 		 * with IPv6 */
-		plen = ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen;
 		udphdr = ((struct udphdr *) (((char *) ip6_hdr) + hdr_size));
 		
 		// add udp header to context
