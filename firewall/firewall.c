@@ -1141,7 +1141,7 @@ int hip_fw_handle_other_forward(hip_fw_context_t *ctx) {
 	HIP_DEBUG("\n");
 
 	if (hip_proxy_status && !ipv6_addr_is_hit(&ctx->dst))
-		verdict = handle_proxy_outbound_traffic(&ctx->ipq_packet,
+		verdict = handle_proxy_outbound_traffic(ctx->ipq_packet,
 							&ctx->src,
 							&ctx->dst,
 							ctx->ip_hdr_len,
