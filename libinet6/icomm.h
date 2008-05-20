@@ -97,7 +97,8 @@
 #define SO_HIP_SET_OPPTCP_ON                    159
 #define SO_HIP_SET_OPPTCP_OFF                   160
 #define SO_HIP_TRANSFORM_ORDER                  161
-#define SO_HIP_CERT_SPKI                        162
+#define SO_HIP_CERT_SPKI_SIGN                   162
+#define SO_HIP_CERT_SPKI_VERIFY                 163
 /** @} */
 
 #endif /* _HIP_ICOMM */

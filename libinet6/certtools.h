@@ -36,7 +36,11 @@ struct hip_cert_spki_info {
         char public_key[256];
 	char cert[256];
         char signature[256];
+        /* Contains signers key if this matches to 0 address
+           this cert is meant to be verified */
         struct in6_addr issuer_hit;
+        /* 0 if succesfully verified otherwise negative */
+        int success;
 };
 
 int hip_cert_spki_create_cert(struct hip_cert_spki_info *,
@@ -48,5 +52,6 @@ int hip_cert_spki_inject(struct hip_cert_spki_info *, char *, char *);
 int hip_cert_spki_construct_keys(HIP_HASHTABLE *, hip_hit_t *, RSA *);
 int hip_cert_spki_char2certinfo(char *,struct hip_cert_spki_info *); 
 int hip_cert_regex(char *, char *, int *, int *);
+int hip_cert_send_to_verification(struct hip_cert_spki_info *);
 
 #endif /* HIP_CERTTOOLS_H */

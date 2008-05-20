@@ -25,7 +25,7 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
 	hip_hit_t *hit, *src_hit, *dst_hit;
 	struct in6_addr *src_ip, *dst_ip;
 	hip_ha_t *entry = NULL;
-	int err = 0, msg_type, n = 0, len = 0, state=0;
+	int err = 0, msg_type, n = 0, len = 0, state=0, reti = 0;
 	hip_ha_t * server_entry = NULL;
 	HIP_KEA * kea = NULL;
 	int send_response = (src ? 1 : 0);
@@ -271,14 +271,21 @@ int hip_handle_user_msg(struct hip_common *msg, const struct sockaddr_in6 *src)
                 HIP_DEBUG("Name received from hipconf %s\n", &opendht_name_mapping);
             }
             break;
-        case SO_HIP_CERT_SPKI:
+        case SO_HIP_CERT_SPKI_VERIFY:
                 {
-                        int reti = 0;
+                        HIP_DEBUG("Got an request to verify SPKI cert\n");
+                        reti = hip_cert_spki_verify(msg);   
+                        HIP_IFEL(reti, -1, "Verifying SPKI cert returned an error\n");
+                        HIP_DEBUG("SPKI cert verified sending it back to requester\n");
+                } 
+                break;
+        case SO_HIP_CERT_SPKI_SIGN:
+                {
                         HIP_DEBUG("Got an request to sign SPKI cert sequence\n");
                         reti = hip_cert_spki_sign(msg, hip_local_hostid_db);   
                         HIP_IFEL(reti, -1, "Signing SPKI cert returned an error\n");
-                        HIP_DEBUG("SPKI cert signed sending it back to requester\n");
-                }
+                        HIP_DEBUG("SPKI cert signed sending it back to requester\n");   
+                } 
                 break;
         case SO_HIP_TRANSFORM_ORDER:
                 {

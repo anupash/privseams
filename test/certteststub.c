@@ -93,14 +93,14 @@ int main(int argc, char *argv[])
                  "Failed to construct the hip_cert_spki_info from certificate\n");
 
         /* Send the cert to the daemon for verification */
-        HIP_DEBUG("Sendign the certificate to daemon for verification\n");
-        /* 
-           XX TODO:
-           -Sending to daemon 
-           -verification
-           -error value passing between daemon/client
-           -new socket option or integer in cert_info to tell is this sign/verif
-        */
+        HIP_DEBUG("Sending the certificate to daemon for verification\n");
+
+        HIP_IFEL(hip_cert_send_to_verification(to_verification), -1,
+                 "Failed in sending to verification\n");
+        HIP_IFEL(to_verification->success, -1, 
+                 "Verification was not successfull\n");
+        HIP_DEBUG("Verification was successfull (return value %d)\n", 
+                  to_verification->success);
 
         HIP_DEBUG("If there was no errors above, \"everything\" is OK\n");
 

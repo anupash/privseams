@@ -127,7 +127,7 @@ int hip_cert_spki_create_cert(struct hip_cert_spki_info * content,
         /* build the msg to be sent to the daemon */
         HIP_IFEL(hip_build_param_cert_spki_info(msg, content), -1,
                  "Failed to build cert_info\n");         
-        HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_CERT_SPKI, 0), -1, 
+        HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_CERT_SPKI_SIGN, 0), -1, 
                  "Failed to build user header\n");
         /* send and wait */
         HIP_DEBUG("Sending request to sign SPKI cert sequence to "
@@ -233,29 +233,44 @@ out_err:
  */
 int hip_cert_spki_char2certinfo(char * from, struct hip_cert_spki_info * to) {
         int err = 0, start = 0, stop = 0;
+        /* 
+           p_rule looks for string "(public_key " after which there can be
+           pretty much anything until string "|)))" is encountered.
+           This is the public-key sequence.
+        */
         char p_rule[] = "[(]public_key [ A-Za-z0-9+|/()#=-]*[|][)][)][)]";
+        /* 
+           c_rule looks for string "(cert " after which there can be
+           pretty much anything until string '"))' is encountered.
+           This is the cert sequence.
+        */ 
         char c_rule[] = "[(]cert [ A-Za-z0-9+|/():=_\"-]*[\"][)][)]"; //\" is one char  
+        /* 
+           s_rule looks for string "(signature " after which there can be
+           pretty much anything until string "|))" is encountered.
+           This is the signature sequence.
+        */
         char s_rule[] = "[(]signature [ A-Za-z0-9+/|()=]*[|][)][)]";
         
         _HIP_DEBUG("FROM %s\n", from);
 
         /* Look for the public key */ 
         HIP_IFEL(hip_cert_regex(p_rule, from , &start, &stop), -1,
-                 "Failed to run hip_cert_regex");
+                 "Failed to run hip_cert_regex (public-key)\n");
         _HIP_DEBUG("REGEX results from %d to %d\n", start, stop);
         snprintf(to->public_key, (stop-start) + 1,"%s", &from[start]);
 
         /* Look for the cert sequence */
         start = stop = 0;
         HIP_IFEL(hip_cert_regex(c_rule, from, &start, &stop), -1,
-                 "Failed to run hip_cert_regex");
+                 "Failed to run hip_cert_regex (cert)\n");
         _HIP_DEBUG("REGEX results from %d to %d\n", start, stop);
         snprintf(to->cert, (stop-start) + 1,"%s", &from[start]);        
 
         /* look for the signature sequence */
         start = stop = 0;
         HIP_IFEL(hip_cert_regex(s_rule, from, &start, &stop), -1,
-                 "Failed to run hip_cert_regex");
+                 "Failed to run hip_cert_regex (signature)\n");
         _HIP_DEBUG("REGEX results from %d to %d\n", start, stop);
         snprintf(to->signature, (stop-start) + 1,"%s", &from[start]);
         
@@ -300,5 +315,44 @@ int hip_cert_regex(char * what, char * from, int * start, int * stop) {
         printf("\n");
         */
  out_err:
+        return (err);
+}
+
+/**
+ * Function that sends the given hip_cert_spki_info to the daemon to verification
+ *
+ * @param to_verification is the cert to be verified
+ *
+ * @return 0 if ok and negative if error or unsuccesfull. 
+ *
+ * @note use hip_cert_spki_char2certinfo to build the hip_cert_spki_info
+ */
+int hip_cert_send_to_verification(struct hip_cert_spki_info * to_verification) {
+        int err = 0;
+        struct hip_common * msg;
+        struct hip_cert_spki_info * returned;
+
+        HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, 
+                 "Malloc for msg failed\n");   
+        hip_msg_init(msg);
+        /* build the msg to be sent to the daemon */
+        HIP_IFEL(hip_build_param_cert_spki_info(msg, to_verification), -1,
+                 "Failed to build cert_info\n");         
+        HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_CERT_SPKI_VERIFY, 0), -1, 
+                 "Failed to build user header\n");
+
+        /* send and wait */
+        HIP_DEBUG("Sending request to verify SPKI cert to "
+                  "daemon and waiting for answer\n");	
+        hip_send_recv_daemon_info(msg);        
+        
+        HIP_IFEL(!(returned = hip_get_param(msg, HIP_PARAM_CERT_SPKI_INFO)), 
+                 -1, "No hip_cert_spki_info struct found from daemons msg\n");
+         
+	_HIP_DEBUG("Success = %d (should be 0 if OK\n", returned->success);
+        memcpy(to_verification, returned, sizeof(struct hip_cert_spki_info));
+
+ out_err:
+        if (msg) free(msg);
         return (err);
 }
