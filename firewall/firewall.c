@@ -40,7 +40,7 @@ struct in6_addr default_hit;
  * Non-zero means that there was an error or the packet handler did not
  * know what to do with the packet.
  */
-int (*hip_fw_handler[NF_IP_NUMHOOKS][FW_PROTO_NUM])(hip_fw_context_t *) = { NULL };
+hip_fw_handler_t hip_fw_handler[NF_IP_NUMHOOKS][FW_PROTO_NUM];
 
 void print_usage()
 {
@@ -147,6 +147,8 @@ int is_escrow_active()
 int firewall_init_rules()
 {
 	HIP_DEBUG("Initializing firewall\n");
+
+	HIP_DEBUG("in=%d out=%d for=%d\n", NF_IP_LOCAL_IN, NF_IP_LOCAL_OUT, NF_IP_FORWARD);
 
 	// funtion pointers for the respective packet handlers
 	hip_fw_handler[NF_IP_LOCAL_IN][OTHER_PACKET] = hip_fw_handle_other_input;
