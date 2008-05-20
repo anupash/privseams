@@ -442,6 +442,7 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 		_HIP_DEBUG("IPv4 packet\n");
 		
 		struct ip *iphdr = (struct ip *) ctx->ipq_packet->payload;
+		int hdr_size;
 		// add pointer to IPv4 header to context
 		ctx->ip_hdr.ipv4 = iphdr;
 		hdr_size = (iphdr->ip_hl * 4);
