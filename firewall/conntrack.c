@@ -1312,7 +1312,7 @@ int filter_esp_state(const struct in6_addr *dst_addr,
 	int return_value = 0;
 	
 	struct hip_tuple * hip_tuple = NULL; 
-	//struct esp_tuple *esp_tuple = NULL; //REMOVE
+	struct esp_tuple *esp_tuple = NULL;
 	
 	const struct state_option * option = rule->state;
 	int accept = rule->accept;
