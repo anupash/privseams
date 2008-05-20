@@ -1210,6 +1210,8 @@ int hip_fw_handle_packet(char *buf, struct ipq_handle *hndl, int ip_version, hip
 	// set up firewall context
 	if (hip_fw_init_context(ctx, buf, ip_version))
 		goto out_err;
+
+	HIP_DEBUG("packet hook=%d, packet type=%d\n", ctx->ipq_packet->hook, ctx->packet_type);
 	
 	// match context with rules
 	if (hip_fw_handler[ctx->ipq_packet->hook][ctx->packet_type]) {
