@@ -34,7 +34,7 @@ int handle_proxy_inbound_traffic(ipq_packet_msg_t *m,
 	}
 	
 	//hip_get_local_hit_wrapper(&proxy_hit);
-	conn_entry = hip_conn_find_by_portinfo(&proxy_hit, &src_addr, protocol, port_client, port_peer); 
+	conn_entry = hip_conn_find_by_portinfo(&proxy_hit, src_addr, protocol, port_client, port_peer); 
 	
 	if(conn_entry)
 	{
@@ -108,13 +108,13 @@ int handle_proxy_outbound_traffic(ipq_packet_msg_t *m,
 	}
 	
 	HIP_DEBUG("HIP PROXY OUTBOUND PROCESS:\n");
-	entry = hip_proxy_find_by_addr(&src_addr, &dst_addr);
+	entry = hip_proxy_find_by_addr(src_addr, dst_addr);
 	//hip_get_local_hit_wrapper(&proxy_hit);
 	if (entry == NULL)
 	{
 		int fallback, reject;
 		
-		hip_proxy_add_entry(&src_addr, &dst_addr);
+		hip_proxy_add_entry(src_addr, dst_addr);
 
 		
 		//hip_request_peer_hit_from_hipd();
@@ -125,8 +125,8 @@ int handle_proxy_outbound_traffic(ipq_packet_msg_t *m,
 		   opportunistic HIP fails, it can return an IP address
 		   instead of a HIT */
 		HIP_DEBUG("requesting hit from hipd\n");
-		HIP_DEBUG_IN6ADDR("ip addr", &dst_addr);
-		HIP_IFEL(hip_proxy_request_peer_hit_from_hipd(&dst_addr,
+		HIP_DEBUG_IN6ADDR("ip addr", dst_addr);
+		HIP_IFEL(hip_proxy_request_peer_hit_from_hipd(dst_addr,
 							      &dst_hit,
 							      &proxy_hit,
 							      &fallback,
@@ -143,7 +143,7 @@ int handle_proxy_outbound_traffic(ipq_packet_msg_t *m,
 		{
 			HIP_DEBUG("Peer does not support HIP, fallback\n");
 			//update the state of the ip pair
-			if(hip_proxy_update_state(&src_addr, &dst_addr, NULL, NULL, NULL, NULL, HIP_PROXY_PASSTHROUGH))
+			if(hip_proxy_update_state(&src_addr, dst_addr, NULL, NULL, NULL, NULL, HIP_PROXY_PASSTHROUGH))
 				HIP_DEBUG("Proxy update Failed!\n");
 			
 			//let the packet pass
@@ -152,10 +152,10 @@ int handle_proxy_outbound_traffic(ipq_packet_msg_t *m,
 		else
 		{
 			hip_proxy_request_local_address_from_hipd(&proxy_hit, &dst_hit, &proxy_addr, &fallback, &reject);
-			if(hip_proxy_update_state(&src_addr, &dst_addr, &proxy_addr, NULL, &dst_hit, &proxy_hit, HIP_PROXY_TRANSLATE))
+			if(hip_proxy_update_state(src_addr, dst_addr, &proxy_addr, NULL, &dst_hit, &proxy_hit, HIP_PROXY_TRANSLATE))
 				HIP_DEBUG("Proxy update Failed!\n");
 			
-			if(hip_conn_add_entry(&src_addr, &dst_addr, &proxy_hit, &dst_hit, protocol, port_client, port_peer, HIP_PROXY_TRANSLATE))
+			if(hip_conn_add_entry(src_addr, dst_addr, &proxy_hit, &dst_hit, protocol, port_client, port_peer, HIP_PROXY_TRANSLATE))
 				HIP_DEBUG("ConnDB add entry Failed!\n");
 			
 			/* Let packet pass */
