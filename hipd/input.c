@@ -2345,6 +2345,9 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	/* Registration of additional services. Check if we should expect
 	   REG_RESPONSE or REG_FAILED parameter */
 	
+	/* Lauri: Continue from here: Add REG_RESPONSE handler and check pending
+	   requests. */
+
 	uint8_t services[HIP_TOTAL_EXISTING_SERVICES];
 	
         type_count = hip_get_incomplete_registrations(&reg_types, entry, 1, services); 

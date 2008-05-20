@@ -391,9 +391,9 @@ int hip_handle_param_rrq(hip_ha_t *entry, hip_common_t *source_msg,
 
 	if(reg_request->lifetime == 0) {
 		HIP_DEBUG("Client is cancelling registration.\n");
-		hip_cancel_reg(entry, reg_types, type_count,
-			       accepted_requests, &accepted_count,
-			       refused_requests, &refused_count);
+		hip_cancel_reg(entry, reg_types, type_count, accepted_requests,
+			       accepted_lifetimes, &accepted_count,
+			       refused_requests, failure_types, &refused_count);
 	} else {
 		HIP_DEBUG("Client is registrating for new services.\n");
 		hip_add_reg(entry, reg_request->lifetime, reg_types, type_count,
@@ -419,7 +419,6 @@ int hip_handle_param_rrq(hip_ha_t *entry, hip_common_t *source_msg,
 		hip_build_param_reg_response(target_msg, accepted_lifetimes[0],
 					     accepted_requests, accepted_count);
 	}
-
 	if(refused_count > 0) {
 		/* We must add as many REG_FAILED parameters as there are
 		   different failure types. */
@@ -669,8 +668,9 @@ int hip_add_reg(hip_ha_t *entry, uint8_t lifetime, uint8_t *reg_types,
  * @return                   zero on success, -1 otherwise.
  */ 
 int hip_cancel_reg(hip_ha_t *entry, uint8_t *reg_types, int type_count,
-		   uint8_t accepted_requests[], int *accepted_count,
-		   uint8_t refused_requests[], int *refused_count)
+		   uint8_t accepted_requests[], uint8_t accepted_lifetimes[],
+		   int *accepted_count, uint8_t refused_requests[],
+		   uint8_t failure_types[], int *refused_count)
 {
 	return 0;
 }

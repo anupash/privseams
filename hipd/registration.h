@@ -34,7 +34,7 @@ typedef struct hip_srv{
 	uint8_t max_lifetime;
 }hip_srv_t;
 
-/** A pending service request bound up with a host association. */
+/** A pending service request coupled with a host association. */
 typedef struct{
 	hip_ha_t *entry;
 	uint8_t reg_type;
@@ -64,7 +64,8 @@ int hip_add_reg(hip_ha_t *entry, uint8_t lifetime, uint8_t *reg_types,
 		uint8_t refused_requests[], uint8_t failure_types[],
 		int *refused_count);
 int hip_cancel_reg(hip_ha_t *entry, uint8_t *reg_types, int type_count,
-		   uint8_t accepted_requests[], int *accepted_count,
-		   uint8_t refused_requests[], int *refused_count);
+		   uint8_t accepted_requests[], uint8_t accepted_lifetimes[],
+		   int *accepted_count, uint8_t refused_requests[],
+		   uint8_t failure_types[], int *refused_count);
 
 #endif /* HIP_REGISTRATION_H */
