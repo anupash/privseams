@@ -27,7 +27,7 @@ int hip_opptcp = 1;
 #else
 int hip_opptcp = 0;
 #endif
-int hip_userspace_ipsec = 0;
+int hip_userspace_ipsec = 1;
 
 /* Default HIT - do not access this directly, call hip_fw_get_default_hit() */
 struct in6_addr default_hit;
