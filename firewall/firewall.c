@@ -1017,14 +1017,14 @@ int filter_hip(const struct in6_addr * ip6_src,
 }
 
 int hip_fw_handle_other_output(hip_fw_context_t *ctx) {
-	int err = 0;
+	int verdict = accept_normal_traffic_by_default;
 
 	HIP_DEBUG("\n");
 
 	if (hip_userspace_ipsec)
-		HIP_IFE(hip_fw_userspace_ipsec_output(ctx->ip_version,
-						      ctx->ip_hdr.ipv4,
-						      ctx->ipq_packet), -1);
+		verdict = hip_fw_userspace_ipsec_output(ctx->ip_version,
+							ctx->ip_hdr.ipv4,
+							ctx->ipq_packet);
 						   
 	/* XX FIXME: LSI HOOKS */
 
@@ -1032,7 +1032,7 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx) {
 	   iptables rules */
  out_err:
 
-	return err;
+	return verdict;
 }
 
 int hip_fw_handle_hip_output(hip_fw_context_t *ctx) {
@@ -1078,7 +1078,7 @@ int hip_fw_handle_tcp_output(hip_fw_context_t *ctx) {
 }
 
 int hip_fw_handle_other_input(hip_fw_context_t *ctx) {
-	int verdict = 1;
+	int verdict = accept_normal_traffic_by_default;
 
 	HIP_DEBUG("\n");
 
@@ -1150,7 +1150,7 @@ int hip_fw_handle_tcp_input(hip_fw_context_t *ctx) {
 }
 
 int hip_fw_handle_other_forward(hip_fw_context_t *ctx) {
-	int verdict = 1;
+	int verdict = accept_normal_traffic_by_default;
 
 	HIP_DEBUG("\n");
 
