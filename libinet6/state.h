@@ -312,6 +312,12 @@ struct hip_hadb_state
 	struct in6_addr              preferred_address;
 	/** Our IP address. */
 	struct in6_addr              local_address;
+	
+	/**reflexive address when register to relay**/
+	struct in6_addr              local_reflexive_address;
+	/**reflexive address port when register to relay**/
+	in_port_t local_reflexive_udp_port;
+	
 	/** Peer's Local Scope Identifier (LSI). A Local Scope Identifier is a
 	    32-bit localized representation for a Host Identity.*/
        	hip_lsi_t                    lsi_peer;
