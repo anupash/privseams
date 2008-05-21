@@ -801,7 +801,7 @@ int hip_update_finish_rekeying(hip_common_t *msg, hip_ha_t *entry,
 			 (we_are_HITg ? &espkey_lg : &espkey_gl),
 			 (we_are_HITg ? &authkey_lg : &authkey_gl),
 			 1, HIP_SPI_DIRECTION_IN, 0, entry->peer_udp_port,
-			 (entry->nat_mode ? HIP_NAT_UDP_PORT : 0));
+			 (entry->nat_mode ? HIP_NAT_UDP_PORT : 0), 1);
 
 	//"Setting up new outbound IPsec SA failed\n");
 	HIP_DEBUG("New outbound SA created with SPI=0x%x\n", new_spi_out);
@@ -813,7 +813,7 @@ int hip_update_finish_rekeying(hip_common_t *msg, hip_ha_t *entry,
 			 (we_are_HITg ? &authkey_gl : &authkey_lg),
 			 1, HIP_SPI_DIRECTION_OUT, 0,
 			 (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
-			 entry->peer_udp_port);
+			 entry->peer_udp_port, 1 );
 
 	HIP_DEBUG("err=%d\n", err);
 	if (err)
@@ -3010,8 +3010,9 @@ int hip_peer_learning(struct hip_esp_info * esp_info,
 
 	HIP_DEBUG_HIT("Peer learning: Did not find the address,"
 		      " adding it", src_ip);
+	//TODO set the priority always 0 for now set bex 0 ??
 	HIP_IFE(hip_hadb_add_addr_to_spi(entry, spi_out->spi, src_ip,
-					 0, 0, 0), -1);
+					 0,0, 0, 0,0), -1);
 	//lifetime is 0 in above figure out what it should be
 	return (0);	
 out_err:
