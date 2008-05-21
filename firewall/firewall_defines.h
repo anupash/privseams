@@ -1,12 +1,15 @@
 #ifndef FIREWALL_DEFINES_H_
 #define FIREWALL_DEFINES_H_
 
-#include <glib.h>
-#include <glib/glist.h>
-#include <glib/gtypes.h>
-#include <glib/gthread.h>
-
+//#include <glib.h>
+//#include <glib/glist.h>
+//#include <glib/gtypes.h>
+//#include <glib/gthread.h>
+#include <sys/time.h>
 //int hip_proxy_status;
+
+
+#include "types.h"
 
 /********** State table structures **************/
 
@@ -22,7 +25,7 @@ struct esp_tuple{
   uint32_t spi;
   uint32_t new_spi;
   uint32_t spi_update_id;
-  struct GSList * dst_addr_list;
+  struct SList * dst_addr_list;
   struct tuple * tuple;
   struct decryption_data * dec_data;
 };
@@ -48,7 +51,7 @@ struct hip_tuple {
 
 struct tuple {
   struct hip_tuple * hip_tuple;
-  struct GSList * esp_tuples;
+  struct SList * esp_tuples;
   int direction;
   struct connection * connection;
   int state; 
@@ -62,7 +65,8 @@ struct connection {
   struct tuple reply;  
   int verify_responder;
   int state;
-  GTimeVal time_stamp;
+//  TimeVal time_stamp;
+  struct timeval time_stamp;
 };
 
 struct hip_esp_packet {

@@ -69,13 +69,13 @@
 #include <sys/wait.h>		/* waitpid()	*/
 #include <pthread.h>		/* pthreads support*/
 
-
+#if 0
 #if defined(__BIG_ENDIAN__) || defined( __MACOSX__)
 #include <mac/checksum_mac.h>
 #else
 #include "win32-checksum.h"
 #endif
-
+#endif
 
 
 
@@ -2038,7 +2038,7 @@ int handle_nsol(__u8 *in, int len, __u8 *out, int *outlen,struct sockaddr *addr)
 	p = (__u8*)nadv - 40;
 	payload_len = &out[location] - (__u8*)nadv;
 	add_ipv6_pseudo_header(p, src, dst, (__u32)payload_len, IPPROTO_ICMPV6);
-	nadv->icmp6_cksum = ip_fast_csum(p, &out[location] - p);
+	//nadv->icmp6_cksum = ip_fast_csum(p, &out[location] - p);
 	/* real IPv6 header */
 	add_ipv6_header(&out[sizeof(struct eth_hdr)], src, dst, ip6h, NULL,
 			payload_len, IPPROTO_ICMPV6);
@@ -2851,17 +2851,17 @@ int hip_esp_decrypt(__u8 *in, int len, __u8 *out, int *offset, int *outlen,
 	case IPPROTO_TCP:
 		tcp = (struct tcphdr*)&out[*offset];
 		sum = htons(tcp->check);
-		sum = csum_hip_revert6 (&src_hit->sin6_addr,
+/*		sum = csum_hip_revert6 (&src_hit->sin6_addr,
 					&dst_hit->sin6_addr,
-					sum, htons(entry->hit_magic));
+					sum, htons(entry->hit_magic)); */
 		tcp->check = htons(sum);
 		break;
 	case IPPROTO_UDP:
 		udp = (struct udphdr*)&out[*offset];
 		sum = htons(udp->check);
-		sum = csum_hip_revert6 (&src_hit->sin6_addr,
+/*		sum = csum_hip_revert6 (&src_hit->sin6_addr,
 					&dst_hit->sin6_addr,
-					sum, htons(entry->hit_magic));
+					sum, htons(entry->hit_magic)); */
 		udp->check = htons(sum);
 		break;
 	default:
@@ -2886,30 +2886,34 @@ int hip_esp_decrypt(__u8 *in, int len, __u8 *out, int *offset, int *outlen,
 	case IPPROTO_TCP:
 		tcp = (struct tcphdr*)&out[*offset];
 		sum = htons(tcp->th_sum);
-		sum = csum_hip_revert(	LSI4(&entry->lsi), htonl(g_tap_lsi),
-					sum, htons(entry->hit_magic));
+/*		sum = csum_hip_revert(	LSI4(&entry->lsi), htonl(g_tap_lsi),
+					sum, htons(entry->hit_magic)); 
+*/
 		tcp->th_sum = htons(sum);
 		break;
 	case IPPROTO_UDP:
 		udp = (struct udphdr*)&out[*offset];
 		sum = htons(udp->uh_sum);
-		sum = csum_hip_revert(	LSI4(&entry->lsi), htonl(g_tap_lsi),
+/*		sum = csum_hip_revert(	LSI4(&entry->lsi), htonl(g_tap_lsi),
 					sum, htons(entry->hit_magic));
+					*/
 		udp->uh_sum = htons(sum);
 		break;
 #else
 	case IPPROTO_TCP:
 		tcp = (struct tcphdr*)&out[*offset];
 		sum = htons(tcp->check);
-		sum = csum_hip_revert(	LSI4(&entry->lsi), htonl(g_tap_lsi),
+/*		sum = csum_hip_revert(	LSI4(&entry->lsi), htonl(g_tap_lsi),
 					sum, htons(entry->hit_magic));
+*/
 		tcp->check = htons(sum);
 		break;
 	case IPPROTO_UDP:
 		udp = (struct udphdr*)&out[*offset];
 		sum = htons(udp->check);
-		sum = csum_hip_revert(	LSI4(&entry->lsi), htonl(g_tap_lsi),
+/*		sum = csum_hip_revert(	LSI4(&entry->lsi), htonl(g_tap_lsi),
 					sum, htons(entry->hit_magic));
+					*/
 		udp->check = htons(sum);
 #endif
 	default:
@@ -3018,28 +3022,32 @@ __u16 rewrite_checksum(__u8 *data, __u16 magic)
 		tcp = (struct tcphdr*)(iph + 1);
 #ifdef __MACOSX__
 		ret = tcp->th_sum;
-		tcp->th_sum = csum_tcpudp_hip_nofold(
+/*		tcp->th_sum = csum_tcpudp_hip_nofold(
 				iph->ip_src.s_addr, iph->ip_dst.s_addr,
 				tcp->th_sum, magic);
+*/
 #else
 		ret = tcp->check;
-		tcp->check = csum_tcpudp_hip_nofold(
+/*		tcp->check = csum_tcpudp_hip_nofold(
 				iph->ip_src.s_addr, iph->ip_dst.s_addr,
 				tcp->check, magic);
+*/
 #endif
 		break;
 	case IPPROTO_UDP:
 		udp = (struct udphdr*)(iph + 1);
 #ifdef __MACOSX__
 		ret = udp->uh_sum;
-		udp->uh_sum = csum_tcpudp_hip_nofold(
+/*		udp->uh_sum = csum_tcpudp_hip_nofold(
 				iph->ip_src.s_addr, iph->ip_dst.s_addr,
 				udp->uh_sum, magic);
+				*/
 #else
 		ret = udp->check;
-		udp->check = csum_tcpudp_hip_nofold(
+/*		udp->check = csum_tcpudp_hip_nofold(
 				iph->ip_src.s_addr, iph->ip_dst.s_addr,
 				udp->check, magic);
+*/
 #endif
 		break;
 	default:
@@ -3089,9 +3097,9 @@ void add_ipv4_header(__u8 *data, __u32 src, __u32 dst, struct ip *old,
 
 	/* add the header checksum */
 #if defined(__MACOSX__) && defined(__BIG_ENDIAN__)
-	iph->ip_sum = ip_fast_csum((__u8*)iph, 20);
+//	iph->ip_sum = ip_fast_csum((__u8*)iph, 20);
 #else
-	iph->ip_sum = ip_fast_csum((__u8*)iph, iph->ip_hl);
+//	iph->ip_sum = ip_fast_csum((__u8*)iph, iph->ip_hl);
 #endif	
 }
 
@@ -3183,7 +3191,7 @@ void add_outgoing_esp_header(__u8 *data, __u32 src, __u32 dst, __u16 len)
 	iph->ip_dst.s_addr = dst;
 
 	/* add the header checksum */
-	iph->ip_sum = ip_fast_csum((__u8*)iph, iph->ip_hl);
+//	iph->ip_sum = ip_fast_csum((__u8*)iph, iph->ip_hl);
 }
 
 

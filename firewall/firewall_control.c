@@ -8,10 +8,10 @@
 
 int hip_fw_sock = 0;
 int control_thread_started = 0;
-GThread * control_thread = NULL; 
+//GThread * control_thread = NULL; 
 
 
-gpointer run_control_thread(gpointer data)
+void* run_control_thread(void* data)
 {
 	/* Variables. */
 	int err = 0;

@@ -7,10 +7,12 @@
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <stdio.h>
+/*
 #include <glib.h>
 #include <glib/glist.h>
 #include <glib/gtypes.h>
 #include <glib/gthread.h>
+*/
 
 #include "debug.h"
 #include "firewall_defines.h"
