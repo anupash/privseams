@@ -458,7 +458,7 @@ int hipd_main(int argc, char *argv[])
 			   pkt_info. */
         		if (hip_read_control_msg_stun(hip_nat_sock_udp, hipd_msg,
 						    &saddr, &daddr,
-						    &pkt_info, HIP_UDP_ZERO_BYTES_LEN), &hip_external_ice_receive_pkt)) {
+						    &pkt_info, HIP_UDP_ZERO_BYTES_LEN), &hip_external_ice_receive_pkt) {
         		/* if ( hip_read_control_msg_v4(hip_nat_sock_udp, hipd_msg,&saddr, &daddr,&pkt_info, HIP_UDP_ZERO_BYTES_LEN) ) */
 			if (err) 			
 			{
@@ -488,7 +488,7 @@ int hipd_main(int argc, char *argv[])
 				HIP_ERROR("Reading user msg failed\n");
 			}
 			else { 
-				err = hip_handle_user_msg(hipd_msg, &app_src);
+				err = hip_handle_user_msg(hipd_msg, &saddr);
 			}
 		}
                 /* DHT SOCKETS HANDLING */
