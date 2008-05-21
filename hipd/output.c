@@ -1,4 +1,4 @@
-/** @file
+/* @file
  * This file defines handling functions for outgoing packets for the Host
  * Identity Protocol (HIP).
  * 
@@ -11,7 +11,6 @@
 #include "output.h"
 
 enum number_dh_keys_t number_dh_keys = TWO;
-
 
 
 #ifdef CONFIG_HIP_OPPTCP
@@ -116,13 +115,15 @@ int send_tcp_packet(void *hdr,
 		//socket settings
 		sin_addr.sin_family = AF_INET;
 		sin_addr.sin_port   = htons(tcphdr->dest);
+		
+		/* Is that right to copy address? */
 		sin_addr.sin_addr   = iphdr->ip_dst;
 	}
 	else if(trafficType == 6){
 		//get the ip header
 		ip6_hdr = (struct ip6_hdr *)hdr;
-		//get the tcp header		
-		hdr_size = (ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen * 4);
+		//get the tcp header
+		hdr_size = sizeof(struct ip6_hdr);
 		tcphdr = ((struct tcphdr *) (((char *) ip6_hdr) + hdr_size));
 		//socket settings
 		sin6_addr.sin6_family = AF_INET6;
@@ -284,7 +285,7 @@ void hip_send_opp_tcp_i1(hip_ha_t *entry){
 
 	if(ipType == 0)
 		hdr_size = sizeof(struct ip);
-	else if(ipType == 0)
+	else if(ipType == 1)
 		hdr_size = sizeof(struct ip6_hdr);
 
 	//set all bytes of both headers to 0
@@ -339,7 +340,10 @@ void hip_send_opp_tcp_i1(hip_ha_t *entry){
 	tcphdr->window = 34;//random
 	tcphdr->check = 0;//will be set right when sent, no need to calculate it here
 	//tcphdr->urg_ptr = ???????? TO BE FIXED
-	send_tcp_packet(&bytes[0], hdr_size + 4*tcphdr->doff, (ipType == 0) ? 4 : 6, hip_raw_sock_v4, 1, 0);
+	if(ipType == 0)
+		send_tcp_packet(&bytes[0], hdr_size + 4*tcphdr->doff, 4, hip_raw_sock_v4, 1, 0);
+	else if(ipType == 1)
+		send_tcp_packet(&bytes[0], hdr_size + 4*tcphdr->doff, 6, hip_raw_sock_v6, 1, 0);
 }
 
 #endif
@@ -1242,7 +1246,7 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	if (err)
 		HIP_ERROR("strerror: %s\n", strerror(errno));
 
-	return err;
+	return err; 
 }
 
 /**
@@ -1444,6 +1448,16 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		
 	return err;
 }
+
+int hip_send_r2_response(struct hip_common *r2,
+		struct in6_addr *r2_saddr,
+		struct in6_addr *r2_daddr,
+		hip_ha_t *entry,
+		hip_portpair_t *r2_info)
+{
+	
+}
+
 
 #ifdef CONFIG_HIP_HI3
 /** 

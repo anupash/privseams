@@ -137,6 +137,30 @@
 /** Socket option to ask for cancellation of the escrow service, i.e.\ send
     REG_REQUEST parameter with zero lifetime to the server. (client side) */
 #define SO_HIP_DEL_ESCROW			114
+#define SO_HIP_ADD_DB_HI                        115
+#define SO_HIP_ADD_ESCROW_DATA                  116
+#define SO_HIP_DELETE_ESCROW_DATA               117
+#define SO_HIP_SET_ESCROW_ACTIVE                118
+#define SO_HIP_SET_ESCROW_INACTIVE              119
+#define SO_HIP_FIREWALL_PING                    120
+#define SO_HIP_FIREWALL_PING_REPLY              121
+#define SO_HIP_FIREWALL_QUIT                    122
+#define SO_HIP_AGENT_PING                       123
+#define SO_HIP_AGENT_PING_REPLY                 124
+#define SO_HIP_AGENT_QUIT                       125
+#define SO_HIP_DAEMON_QUIT                      126
+#define SO_HIP_I1_REJECT                        127
+#define SO_HIP_UPDATE_HIU                       128
+#define SO_HIP_NAT_ON                           129
+#define SO_HIP_NAT_OFF                          130
+#define SO_HIP_SET_HIPPROXY_ON		      	131
+#define SO_HIP_SET_HIPPROXY_OFF			132
+#define SO_HIP_GET_PROXY_LOCAL_ADDRESS		133
+#define SO_HIP_HIPPROXY_STATUS_REQUEST		134
+#define SO_HIP_OPPTCP_UNBLOCK_APP_and_OPPIPDB_ADD_ENTRY	135
+#define SO_HIP_FIREWALL_BEX_DONE                        136 /* addes by Tao Wan, for informing the firewall the BEX is done*/
+#define SO_HIP_SET_TCPTIMEOUT_ON                137
+#define SO_HIP_SET_TCPTIMEOUT_OFF               138
 /** @} */
 /* inclusive */
 #define HIP_SO_ROOT_MAX 			255

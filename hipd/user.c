@@ -8,9 +8,15 @@
  * @author  Miika Komu <miika_iki.fi>
  * @author  Kristian Slavov <kslavov_hiit.fi>
  * @author  Bing Zhou <bingzhou_cc.hut.fi>
+ * @author  Tao Wan  <twan_cc.hut.fi>
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  */
 #include "user.h"
+
+int hip_sendto(const struct hip_common *msg, const struct sockaddr *dst){
+        return sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
+                   0, (struct sockaddr *)dst, hip_sockaddr_len(dst));
+}
 
 /**
  * Handles a user message.
@@ -102,13 +108,13 @@ int hip_handle_user_msg(struct hip_common *msg,
 		   machine is behind a NAT. */
 		HIP_DEBUG("Handling NAT ON user message.\n");
 		HIP_IFEL(hip_nat_on(), -1, "Error when setting daemon NAT status to \"on\"\n");
-		hip_agent_update_status(HIP_NAT_ON, NULL, 0);
+		hip_agent_update_status(SO_HIP_NAT_ON, NULL, 0);
 		break;
 	case SO_HIP_SET_NAT_OFF:
 		/* Removes the NAT flag from each host association. */
 		HIP_DEBUG("Handling NAT OFF user message.\n");
 		HIP_IFEL(hip_nat_off(), -1, "Error when setting daemon NAT status to \"off\"\n");
-		hip_agent_update_status(HIP_NAT_OFF, NULL, 0);
+		hip_agent_update_status(SO_HIP_NAT_OFF, NULL, 0);
 		break;
         case SO_HIP_SET_LOCATOR_ON:
                 HIP_DEBUG("Setting LOCATOR ON\n");
@@ -211,6 +217,29 @@ int hip_handle_user_msg(struct hip_common *msg,
 		HIP_IFEL(hip_set_blind_off(), -1, "hip_set_blind_off failed\n");
 		break;
 #endif
+       case SO_HIP_SET_TCPTIMEOUT_ON:
+               HIP_DEBUG("Setting TCP TIMEOUT ON\n");
+               hip_tcptimeout_status = SO_HIP_SET_TCPTIMEOUT_ON;
+               HIP_DEBUG("hip tcp timeout status =  %d (should be %d)\n",
+                      hip_tcptimeout_status, SO_HIP_SET_TCPTIMEOUT_ON);
+               
+               /* paramters setting to do here */
+               HIP_IFEL(set_new_tcptimeout_parameters_value(), -1,
+                         "set new tcptimeout parameters error\n");
+               break;
+       
+        case SO_HIP_SET_TCPTIMEOUT_OFF:
+                HIP_DEBUG("Setting TCP TIMEOUT OFF\n");
+                hip_tcptimeout_status = SO_HIP_SET_TCPTIMEOUT_OFF;
+                HIP_DEBUG("hip tcp timeout status =  %d (should be %d)\n",
+                        hip_tcptimeout_status, SO_HIP_SET_TCPTIMEOUT_OFF);
+                
+                /* paramters resetting */
+                HIP_IFEL(reset_default_tcptimeout_parameters_value(), -1,
+                         "reset tcptimeout parameters to be default error\n");
+
+                break;
+
         case SO_HIP_DHT_GW:
 	{
 		char tmp_ip_str[20];
@@ -318,17 +347,108 @@ int hip_handle_user_msg(struct hip_common *msg,
 	}
 	break;
         case SO_HIP_DHT_ON:
+        	{
                 HIP_DEBUG("Setting DHT ON\n");
                 hip_opendht_inuse = SO_HIP_DHT_ON;
                 HIP_DEBUG("hip_opendht_inuse =  %d (should be %d)\n", 
                           hip_opendht_inuse, SO_HIP_DHT_ON);
-                break;
+        	}
+            break;
+            
         case SO_HIP_DHT_OFF:
+        	{
                 HIP_DEBUG("Setting DHT OFF\n");
                 hip_opendht_inuse = SO_HIP_DHT_OFF;
                 HIP_DEBUG("hip_opendht_inuse =  %d (should be %d)\n", 
                           hip_opendht_inuse, SO_HIP_DHT_OFF);
-                break;
+        	}
+            break;
+                
+        case SO_HIP_SET_HIPPROXY_ON:
+        	{
+        		int n, err;
+        		
+        		//firewall socket address
+        		struct sockaddr_in6 sock_addr;     		
+        		bzero(&sock_addr, sizeof(sock_addr));
+        		sock_addr.sin6_family = AF_INET6;
+        		sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
+        		sock_addr.sin6_addr = in6addr_loopback;
+        		
+        		HIP_DEBUG("Setting HIP PROXY ON\n");
+        		hip_set_hip_proxy_on();
+      			hip_build_user_hdr(msg, SO_HIP_SET_HIPPROXY_ON, 0);
+        		
+        		n = hip_sendto(msg, &sock_addr);
+    			
+        		HIP_IFEL(n < 0, 0, "sendto() failed on agent socket.\n");
+
+        		if (err == 0)
+        		{
+        			HIP_DEBUG("SEND HIPPROXY STATUS OK.\n");
+        		}
+        	}
+        	break;
+        		
+        case SO_HIP_SET_HIPPROXY_OFF:
+        	{
+        		int n, err;
+        		
+        		//firewall socket address
+        		struct sockaddr_in6 sock_addr;     		
+        		bzero(&sock_addr, sizeof(sock_addr));
+        		sock_addr.sin6_family = AF_INET6;
+        		sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
+        		sock_addr.sin6_addr = in6addr_loopback;
+        		
+        		HIP_DEBUG("Setting HIP PROXY OFF\n");
+        		hip_set_hip_proxy_off();
+      			hip_build_user_hdr(msg, SO_HIP_SET_HIPPROXY_OFF, 0);
+        		
+        		n = hip_sendto(msg, &sock_addr);
+    			
+        		HIP_IFEL(n < 0, 0, "sendto() failed on agent socket.\n");
+
+        		if (err == 0)
+        		{
+        			HIP_DEBUG("SEND HIPPROXY STATUS OK.\n");
+        		}
+        	}
+        	break; 
+        		
+        case SO_HIP_HIPPROXY_STATUS_REQUEST:
+        	{
+        		int n, err;
+        		
+        		//firewall socket address
+        		struct sockaddr_in6 sock_addr;     		
+        		bzero(&sock_addr, sizeof(sock_addr));
+        		sock_addr.sin6_family = AF_INET6;
+        		sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
+        		sock_addr.sin6_addr = in6addr_loopback;
+        		
+        		HIP_DEBUG("Received HIPPROXY Status Request from firewall\n");
+     		
+        		memset(msg, 0, sizeof(struct hip_common));
+        		
+        		if(hip_get_hip_proxy_status() == 0)
+        			hip_build_user_hdr(msg, SO_HIP_SET_HIPPROXY_OFF, 0);
+        		
+        		if(hip_get_hip_proxy_status() == 1)
+        			hip_build_user_hdr(msg, SO_HIP_SET_HIPPROXY_ON, 0);
+        		
+        		n = hip_sendto(msg, &sock_addr);
+ //   			HIP_DEBUG("SENDTO ERRNO: 0x%x\n", errno);
+    			
+        		HIP_IFEL(n < 0, 0, "sendto() failed on agent socket.\n");
+
+        		if (err == 0)
+        		{
+        			HIP_DEBUG("SEND HIPPROXY STATUS OK.\n");
+        		}
+        		//SEND RESPONSE();
+        	}
+        	break; 
 
 #ifdef CONFIG_HIP_ESCROW
 	case SO_HIP_ADD_ESCROW:
@@ -576,13 +696,12 @@ int hip_handle_user_msg(struct hip_common *msg,
 		   associations). */
 		HIP_IFEL(hip_nat_on(), -1, "Error when setting daemon NAT status"\
 			 "to \"on\"\n");
-		hip_agent_update_status(HIP_NAT_ON, NULL, 0);
+		hip_agent_update_status(SO_HIP_NAT_ON, NULL, 0);
 
 		/* Send a I1 packet to relay. */
 		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
 			 -1, "sending i1 failed\n");
 		break;
-	     
 	case SO_HIP_OFFER_HIPRELAY:
 		/* draft-ietf-hip-registration-02 HIPRELAY registration. Relay
 		   server handles this message. Message indicates that the
@@ -715,14 +834,15 @@ int hip_handle_user_msg(struct hip_common *msg,
 		hip_set_opportunistic_tcp_status(0);
 		break;
 
+	case SO_HIP_OPPTCP_UNBLOCK_APP_and_OPPIPDB_ADD_ENTRY:
+		hip_opptcp_unblock_AND_opptcp_add_entry(msg, src);
+		break;
 	case SO_HIP_OPPTCP_UNBLOCK_APP:
-		
 		hip_opptcp_unblock(msg, src);
 		break;
 
 	case SO_HIP_OPPTCP_OPPIPDB_ADD_ENTRY:
 		hip_opptcp_add_entry(msg, src);
-		
 		break;
 
 	case SO_HIP_OPPTCP_SEND_TCP_PACKET:
@@ -731,15 +851,28 @@ int hip_handle_user_msg(struct hip_common *msg,
 		break;
 
 #endif
+	case SO_HIP_GET_PROXY_LOCAL_ADDRESS:
+	{
+		//firewall socket address
+		struct sockaddr_in6 sock_addr;     		
+		bzero(&sock_addr, sizeof(sock_addr));
+		sock_addr.sin6_family = AF_INET6;
+		sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
+		sock_addr.sin6_addr = in6addr_loopback;		
+		HIP_DEBUG("GET HIP PROXY LOCAL ADDRESS\n");
+		hip_get_local_addr(msg);
+//		hip_build_user_hdr(msg, HIP_HIPPROXY_LOCAL_ADDRESS, 0);
+		n = hip_sendto(msg, &sock_addr);		
+		HIP_IFEL(n < 0, 0, "sendto() failed on agent socket.\n");
+		if (err == 0)
+		{
+			HIP_DEBUG("SEND HIPPROXY LOCAL ADDRESS OK.\n");
+		}
+		break;
+	}
 	case SO_HIP_TRIGGER_BEX:
-		dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
-		HIP_IFEL(hip_add_peer_map(msg), -1, "trigger bex\n");
-		/* Fetch the hadb entry just created. */
-		HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(dst_hit)),
-			 -1, "internal error: no hadb entry found\n");
-		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
-			 -1, "sending i1 failed\n");
-
+		HIP_DUMP_MSG( msg);
+		err = hip_netdev_trigger_bex_msg(msg);
 		goto out_err;
 	  break;
 	default:
@@ -755,7 +888,6 @@ int hip_handle_user_msg(struct hip_common *msg,
 		/* send a response (assuming that it is written to the msg */
 		len = hip_get_msg_total_len(msg);
 		n = hip_sendto(msg, src);
-		
 		if(n != len) {
 			HIP_ERROR("hip_sendto() failed.\n");
 			err = -1;

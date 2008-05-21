@@ -152,5 +152,6 @@ int hip_read_control_msg_v4(int socket, struct hip_common *hip_msg,
 			    struct in6_addr *daddr,
 			    hip_portpair_t *msg_info,
 			    int encap_hdr_size);
+int hip_sendto(int sock, const struct hip_common *msg, const struct sockaddr_in6 *dst);
 
 #endif /* HIP_MESSAGE_H */

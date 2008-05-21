@@ -72,7 +72,8 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 			/* set the last transmission time to the current time value */
 			time(&entry->hip_msg_retrans.last_transmit);
 		} else {
-		  	HIP_FREE(entry->hip_msg_retrans.buf);
+			if (entry->hip_msg_retrans.buf)
+				HIP_FREE(entry->hip_msg_retrans.buf);
 			entry->hip_msg_retrans.buf = NULL;
 			entry->hip_msg_retrans.count = 0;
 
@@ -163,7 +164,7 @@ int hip_agent_add_lhits(void)
 	HIP_IFEL(hip_for_each_hi(hip_agent_add_lhit, msg), 0,
 	         "for_each_hi err.\n");
 
-	err = hip_build_user_hdr(msg, HIP_ADD_DB_HI, 0);
+	err = hip_build_user_hdr(msg, SO_HIP_ADD_DB_HI, 0);
 	if (err)
 	{
 		HIP_ERROR("build hdr failed: %s\n", strerror(err));
@@ -234,7 +235,7 @@ int hip_agent_send_remote_hits(void)
 	HIP_IFEL(hip_for_each_ha(hip_agent_send_rhit, msg), 0,
 	         "for_each_ha err.\n");
 
-	err = hip_build_user_hdr(msg, HIP_UPDATE_HIU, 0);
+	err = hip_build_user_hdr(msg, SO_HIP_UPDATE_HIU, 0);
 	if (err)
 	{
 		HIP_ERROR("build hdr failed: %s\n", strerror(err));
@@ -357,9 +358,9 @@ int hip_agent_update(void)
 	hip_agent_add_lhits();
 	
 	if (hip_nat_is())
-		hip_agent_update_status(HIP_NAT_ON, NULL, 0);
+		hip_agent_update_status(SO_HIP_NAT_ON, NULL, 0);
 	else
-		hip_agent_update_status(HIP_NAT_OFF, NULL, 0);
+		hip_agent_update_status(SO_HIP_NAT_OFF, NULL, 0);
 }
 
 
@@ -659,7 +660,7 @@ int hip_firewall_add_escrow_data(hip_ha_t *entry, struct in6_addr * hit_s,
 				
 		HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
 		hip_msg_init(msg);
-		HIP_IFEL(hip_build_user_hdr(msg, HIP_ADD_ESCROW_DATA, 0), -1, 
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_ESCROW_DATA, 0), -1, 
                         "Build hdr failed\n");
 		
 		/*if (hip_match_hit(&keys->hit, &entry->hit_our)) {
@@ -691,7 +692,7 @@ int hip_firewall_add_escrow_data(hip_ha_t *entry, struct in6_addr * hit_s,
 out_err:
 	return err;
 
-}
+}     
 
 int hip_firewall_remove_escrow_data(struct in6_addr *addr, uint32_t spi)
 {
@@ -704,13 +705,13 @@ int hip_firewall_remove_escrow_data(struct in6_addr *addr, uint32_t spi)
                                 
         HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
         hip_msg_init(msg);
-        HIP_IFEL(hip_build_user_hdr(msg, HIP_DELETE_ESCROW_DATA, 0), -1, 
+        HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DELETE_ESCROW_DATA, 0), -1, 
                 "Build hdr failed\n");
                 
         HIP_IFEL(hip_build_param_contents(msg, (void *)addr, HIP_PARAM_HIT,
                 sizeof(struct in6_addr)), -1, "build param contents failed\n");
         HIP_IFEL(hip_build_param_contents(msg, (void *)&spi, HIP_PARAM_UINT,
-                sizeof(unsigned int)), -1, "build param contents failed\n");
+                sizeof(unsigned int)), -1, "build param contents failed\n"); 
                 
         n = hip_sendto(msg, &hip_firewall_addr);                   
         if (n < 0)
@@ -736,7 +737,7 @@ int hip_firewall_set_escrow_active(int activate)
         HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
         hip_msg_init(msg);
         HIP_IFEL(hip_build_user_hdr(msg, 
-                (activate ? HIP_SET_ESCROW_ACTIVE : HIP_SET_ESCROW_INACTIVE), 0), 
+                (activate ? SO_HIP_SET_ESCROW_ACTIVE : SO_HIP_SET_ESCROW_INACTIVE), 0), 
                 -1, "Build hdr failed\n");
                 
         n = hip_sendto(msg, &hip_firewall_addr);                   
@@ -788,4 +789,9 @@ int opendht_put_locator(int sockfd,
     err = 0;
  out_err:
     return(err);
+}
+
+int hip_get_firewall_status()
+{
+	return hip_firewall_status;
 }

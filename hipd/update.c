@@ -549,7 +549,7 @@ int hip_handle_update_established(hip_ha_t *entry, hip_common_t *msg,
 	HIP_IFE(!(prev_spi_in =
 		  hip_get_spi_to_update_in_established(entry, dst_ip)), -1);
 	
-	HIP_IFEL(!(new_spi_in = hip_acquire_spi(hits, hitr)), -1, 
+	HIP_IFEL(!(new_spi_in = entry->hadb_ipsec_func->hip_acquire_spi(hits, hitr)), -1, 
 		 "Error while acquiring a SPI\n");
 	
 
@@ -724,7 +724,7 @@ int hip_update_finish_rekeying(hip_common_t *msg, hip_ha_t *entry,
 				auth_transf_length * 2, Kn);
 	
 	/* XFRM API doesn't support multiple SA for one SP */
-	hip_delete_hit_sp_pair(hits, hitr, IPPROTO_ESP, 1);
+	entry->hadb_ipsec_func->hip_delete_hit_sp_pair(hits, hitr, IPPROTO_ESP, 1);
 	
 	hip_delete_sa(prev_spi_out, &entry->preferred_address,
 		      &entry->local_address, AF_INET6,
@@ -735,7 +735,7 @@ int hip_update_finish_rekeying(hip_common_t *msg, hip_ha_t *entry,
 		      (entry->nat_mode ? HIP_NAT_UDP_PORT : 0));
 
 	/* SP and SA are always added, not updated, due to the xfrm api limitation */
-	HIP_IFEL(hip_setup_hit_sp_pair(hits, hitr,
+	HIP_IFEL(entry->hadb_ipsec_func->hip_setup_hit_sp_pair(hits, hitr,
 				       &entry->preferred_address, &entry->local_address,
 				       IPPROTO_ESP, 1, 0), -1,
 		 "Setting up SP pair failed\n");
@@ -1785,7 +1785,7 @@ int hip_update_peer_preferred_address(hip_ha_t *entry,
 
 	/** @todo Enabling 1s makes hard handovers work, but softhandovers fail. */
 #if 1
-	hip_delete_hit_sp_pair(&entry->hit_our, &entry->hit_peer, IPPROTO_ESP, 1);
+	entry->hadb_ipsec_func->hip_delete_hit_sp_pair(&entry->hit_our, &entry->hit_peer, IPPROTO_ESP, 1);
 
 	hip_delete_sa(entry->default_spi_out, &addr->address, &local_addr, 
 		      AF_INET6, (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
@@ -1793,14 +1793,14 @@ int hip_update_peer_preferred_address(hip_ha_t *entry,
 #endif
 
 #if 1
-	hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
+	entry->hadb_ipsec_func->hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
 #endif 
 
 	hip_delete_sa(spi_in, &addr->address, &local_addr, AF_INET6,
 		      (int)entry->peer_udp_port,
 		      (entry->nat_mode ? HIP_NAT_UDP_PORT : 0));
 
-	HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_our, &entry->hit_peer,
+	HIP_IFEL(entry->hadb_ipsec_func->hip_setup_hit_sp_pair(&entry->hit_our, &entry->hit_peer,
 				       &local_addr, &addr->address,
 				       IPPROTO_ESP, 1, 0), -1,
 		 "Setting up SP pair failed\n");
@@ -1815,7 +1815,7 @@ int hip_update_peer_preferred_address(hip_ha_t *entry,
 		 "peer preferred address\n");
      
 #if 1
-	HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_peer, &entry->hit_our,
+	HIP_IFEL(entry->hadb_ipsec_func->hip_setup_hit_sp_pair(&entry->hit_peer, &entry->hit_our,
 				       &addr->address, &local_addr,
 				       IPPROTO_ESP, 1, 0), -1,
 		 "Setting up SP pair failed\n");
@@ -2166,13 +2166,13 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
      HIP_DEBUG_IN6ADDR("saddr", new_pref_addr);
      HIP_DEBUG_IN6ADDR("daddr", daddr);
 
-     hip_delete_hit_sp_pair(&entry->hit_our, &entry->hit_peer, IPPROTO_ESP, 1);
-
+     entry->hadb_ipsec_func->hip_delete_hit_sp_pair(&entry->hit_our, &entry->hit_peer, IPPROTO_ESP, 1);
+     
      hip_delete_sa(entry->default_spi_out, daddr, &entry->local_address,
 		   AF_INET6, (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
 		   (int)entry->peer_udp_port);
 #if 1
-	hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
+     entry->hadb_ipsec_func->hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
 #endif
      /** @todo Check that this works with the pfkey API. */
      hip_delete_sa(spi_in, &entry->local_address, &entry->hit_our, AF_INET6,
@@ -2213,7 +2213,7 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
      HIP_IFEL((IN6_IS_ADDR_V4MAPPED(&srcaddr) != IN6_IS_ADDR_V4MAPPED(&destaddr)), -1,
 	     "Different address families, not adding SAs\n");
      
-     HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_our, &entry->hit_peer,
+     HIP_IFEL(entry->hadb_ipsec_func->hip_setup_hit_sp_pair(&entry->hit_our, &entry->hit_peer,
 				    &srcaddr, &destaddr, IPPROTO_ESP, 1, 0),
 	      -1, "Setting up SP pair failed\n");
 
@@ -2234,7 +2234,7 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
 	HIP_IFEL(_spi_in == NULL, -1, "No inbound SPI found for daddr\n");
 
 #if 1
-     HIP_IFEL(hip_setup_hit_sp_pair(&entry->hit_peer,&entry->hit_our,
+     HIP_IFEL(entry->hadb_ipsec_func->hip_setup_hit_sp_pair(&entry->hit_peer,&entry->hit_our,
 				    &destaddr, &srcaddr, IPPROTO_ESP, 1, 0),
 	      -1, "Setting up SP pair failed\n");
 #endif
@@ -2505,7 +2505,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 	HIP_DEBUG("make_new_sa=%d\n", make_new_sa);
 
 	if (make_new_sa) {
-		HIP_IFEL(!(new_spi_in = hip_acquire_spi(&entry->hit_peer,
+		HIP_IFEL(!(new_spi_in = entry->hadb_ipsec_func->hip_acquire_spi(&entry->hit_peer,
 							&entry->hit_our)), 
 			 -1, "Error while acquiring a SPI\n");
 		HIP_DEBUG("Got SPI value for the SA 0x%x\n", new_spi_in);
