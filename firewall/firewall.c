@@ -1312,21 +1312,26 @@ int main(int argc, char **argv)
 	firewall_probe_kernel_modules();
 
 	// create firewall queue handles for IPv4 traffic
-	h4 = ipq_create_handle(0, PF_INET);
-	if (!h4)
-		die(h4);
-	status = ipq_set_mode(h4, IPQ_COPY_PACKET, BUFSIZE);
+//	h4 = ipq_create_handle(0, PF_INET);
+	HIP_DEBUG("IPQ handle for IPV4 created \n");
+//	if (!h4)
+//		die(h4);
+//	status = ipq_set_mode(h4, IPQ_COPY_PACKET, BUFSIZE);
+	
 	if (status < 0)
 		die(h4);
-
+	HIP_DEBUG("Setting mode to copy packet data to user space \n");
 	// create firewall queue handles for IPv6 traffic
 	h6 = ipq_create_handle(0, PF_INET6);
+	HIP_DEBUG("IPQ handle for IPV6 created \n");
 	if (!h6)
 		die(h6);
+		
 	status = ipq_set_mode(h6, IPQ_COPY_PACKET, BUFSIZE);
+	
 	if (status < 0)
 		die(h6);
-
+	HIP_DEBUG("Setting mode (IPV6) to copy packet data to user space \n");
 	// set up ip(6)tables rules
 	firewall_init_rules();
 	//get default HIT
@@ -1356,20 +1361,21 @@ int main(int argc, char **argv)
 	request_hipproxy_status(); //send hipproxy status request before the control thread running.
 #endif /* CONFIG_HIP_HIPPROXY */
 
-	highest_descriptor = maxof(3, hip_fw_sock, h4->fd, h6->fd);
+	highest_descriptor = maxof(2, hip_fw_sock, h6->fd);//maxof(3, hip_fw_sock, h4->fd, h6->fd);
 
 	// do all the work here
-	while (1) {
+	while (1) {	
 		// set up file descriptors for select
+		HIP_DEBUG("HIP fw select\n");
 		FD_ZERO(&read_fdset);
 		FD_SET(hip_fw_sock, &read_fdset);
-		FD_SET(h4->fd, &read_fdset);
+//		FD_SET(h4->fd, &read_fdset);
 		FD_SET(h6->fd, &read_fdset);
 
 		timeout.tv_sec = HIP_SELECT_TIMEOUT;
 		timeout.tv_usec = 0;
 
-		_HIP_DEBUG("HIP fw select\n");
+		HIP_DEBUG("HIP fw select\n");
 
 		// get handle with queued packet and process
 		if ((err = HIPD_SELECT((highest_descriptor + 1), &read_fdset, 
@@ -1378,10 +1384,10 @@ int main(int argc, char **argv)
 			continue;
 		}
 
-		if (FD_ISSET(h4->fd, &read_fdset)) {
+/*		if (FD_ISSET(h4->fd, &read_fdset)) {
 			err = hip_fw_handle_packet(buf, h4, 4, &ctx);
 		}
-
+*/
 		if (FD_ISSET(h6->fd, &read_fdset)) {
 			err = hip_fw_handle_packet(buf, h6, 6, &ctx);
 		}

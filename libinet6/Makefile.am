@@ -69,7 +69,7 @@ include_HEADERS += utils.h hashtable.h list.h
 EXTRA_DIST = include_glibc21 include_glibc22 include_glibc23 include_glibc
 
 INCLUDES += -I../opendht
-LDADD += ../opendht/.libs/libhipopendht.a
+LDADD += ../opendht/.libs/libhipopendht.a 
 
 if HIP_HI3
  INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
