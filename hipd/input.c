@@ -920,10 +920,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		       but only after R2 has arrived. We do not need pending
 		       requests when R2 arrives, but in case the I2 is to be
 		       retransmitted, we must be able to produce the REG_REQUEST
-		       parameter. 
-
-		    /* Delete all pending requests for this entry. */
-		    //while(hip_del_pending_request(entry) == 0);
+		       parameter. */
 	    }
     }
 
@@ -2348,6 +2345,8 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	/* Lauri: Continue from here: Add REG_RESPONSE handler and check pending
 	   requests. */
 
+	hip_handle_param_reg_response(entry, r2);
+
 	uint8_t services[HIP_TOTAL_EXISTING_SERVICES];
 	
         type_count = hip_get_incomplete_registrations(&reg_types, entry, 1, services); 
@@ -2398,16 +2397,15 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
      ipv6_addr_copy(&dest, &in6addr_any);
      
 #ifdef CONFIG_HIP_RVS
-     if(!hip_relay_get_status() == HIP_RELAY_ON)
-     {
-	  /* This is where the Responder handles the incoming relayed I1 packet.
-	     We need two things from the relayed packet:
-	     1) The destination IP address and port from the FROM/RELAY_FROM
-	     parameters.
-	     2) The source address and source port of the I1 packet to build the
-	     VIA_RVS/RELAY_TO parameter. */
-	  HIP_IFEL(hip_relay_handle_from(i1, i1_saddr, &dest, &dest_port),
-		   -1, "Handling of relayed I1 packet failed.\n");
+     if(hip_relay_get_status() == HIP_RELAY_OFF) {
+	     /* This is where the Responder handles the incoming relayed I1
+		packet. We need two things from the relayed packet:
+		1) The destination IP address and port from the FROM/RELAY_FROM
+		parameters.
+		2) The source address and source port of the I1 packet to build
+		the VIA_RVS/RELAY_TO parameter. */
+	     HIP_IFEL(hip_relay_handle_from(i1, i1_saddr, &dest, &dest_port),
+		      -1, "Handling of relayed I1 packet failed.\n");
      }
 #endif /* CONFIG_HIP_RVS */
 

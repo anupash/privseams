@@ -424,13 +424,9 @@ int hip_handle_param_rrq(hip_ha_t *entry, hip_common_t *source_msg,
 		   different failure types. */
 		int i, j, to_be_build_count;
 		uint8_t reg_types_to_build[refused_count];
-		uint8_t type_to_check[HIP_TOTAL_EXISTING_FAILURE_TYPES];
+		uint8_t type_to_check[HIP_TOTAL_EXISTING_FAILURE_TYPES] =
+			HIP_ARRAY_INIT_REG_FAILURES;
 		
-		type_to_check[0] = HIP_REG_INSUFFICIENT_CREDENTIALS;
-		type_to_check[1] = HIP_REG_TYPE_UNAVAILABLE;
-		type_to_check[2] = HIP_REG_CANCEL_REQUIRED;
-		type_to_check[3] = HIP_REG_TRANSIENT_CONDITIONS;
-
 		/* We have to get an continuous memory region holding all the
 		   registration types having the same failure type. This memory
 		   region is the 'reg_types_to_build' array and it will hold
@@ -673,4 +669,23 @@ int hip_cancel_reg(hip_ha_t *entry, uint8_t *reg_types, int type_count,
 		   uint8_t failure_types[], int *refused_count)
 {
 	return 0;
+}
+
+int hip_handle_param_reg_response(hip_ha_t *entry, hip_common_t *source_msg)
+{
+	int err = 0;
+	struct hip_reg_request *reg_request = NULL;
+
+	HIP_DEBUG("New REG_RESPONSE handler.\n");
+	
+	/* Delete all pending requests for this entry. It does not matter*/
+	while(hip_del_pending_request(entry) == 0) { ;}
+	
+	
+		
+	
+	reg_request = hip_get_param(source_msg, HIP_PARAM_REG_REQUEST);
+	
+ out_err:
+	return err;
 }

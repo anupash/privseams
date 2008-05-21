@@ -259,6 +259,9 @@
                                          HIP_HA_CTRL_LOCAL_REQ_RVS\
                                          )
 
+#define HIP_HA_CTRL_PEER_GRANTED_ESCROW  0x0400 
+#define HIP_HA_CTRL_PEER_GRANTED_RELAY   0x0800 
+#define HIP_HA_CTRL_PEER_GRANTED_RVS     0x1000
 #define HIP_HA_CTRL_PEER_ESCROW_CAPABLE  0x2000 
 #define HIP_HA_CTRL_PEER_RELAY_CAPABLE   0x4000 
 #define HIP_HA_CTRL_PEER_RVS_CAPABLE     0x8000
@@ -296,6 +299,11 @@
 #define HIP_REG_TRANSIENT_CONDITIONS     202
 /** Number of existing failure types. */
 #define HIP_TOTAL_EXISTING_FAILURE_TYPES 4
+/* A shorthand to init an array having all possible registration failure
+   types. */
+#define HIP_ARRAY_INIT_REG_FAILURES \
+   {HIP_REG_INSUFFICIENT_CREDENTIALS, HIP_REG_TYPE_UNAVAILABLE,\
+    HIP_REG_CANCEL_REQUIRED, HIP_REG_TRANSIENT_CONDITIONS}
 
 
 /* Returns length of TLV option (contents) with padding. */

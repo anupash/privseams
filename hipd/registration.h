@@ -67,5 +67,6 @@ int hip_cancel_reg(hip_ha_t *entry, uint8_t *reg_types, int type_count,
 		   uint8_t accepted_requests[], uint8_t accepted_lifetimes[],
 		   int *accepted_count, uint8_t refused_requests[],
 		   uint8_t failure_types[], int *refused_count);
+int hip_handle_param_reg_response(hip_ha_t *entry, hip_common_t *source_msg);
 
 #endif /* HIP_REGISTRATION_H */
