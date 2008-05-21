@@ -3,7 +3,7 @@ AUTOMAKE_OPTIONS = foreign
 # Note: HIPL is included because "libinet6/debug.h" is included; otherwise this
 # won't build because there is also the linux/net/ipv6/hip/debug.h include.
 #
-CFLAGS = $(hipl_common_cflags) -DHIP_UNITTEST_MODE -L$(HIPL_LIBINET6_LIB)
+CFLAGS = $(hipl_common_cflags) -DHIP_UNITTEST_MODE -L$(HIPL_LIBINET6_LIB) -lsqlite3
 
 include_HEADERS = checksum.h first_test.h hipsetup.h start-stop-daemon.h
 include_HEADERS += unittest.h conntest.h hipconftool.h misc_install.h unit.h
@@ -68,6 +68,7 @@ bin_PROGRAMS += hashtest
 bin_PROGRAMS += listtest
 bin_PROGRAMS += opendhtteststub
 bin_PROGRAMS += certteststub
+bin_PROGRAMS += sqliteteststub
 
 #sbin_SCRIPTS = hipsetup
 
@@ -92,6 +93,7 @@ hashtest_SOURCES = hashtest.c
 listtest_SOURCES = listtest.c
 opendhtteststub_SOURCES = opendhtteststub.c
 certteststub_SOURCES = certteststub.c
+sqliteteststub_SOURCES = sqliteteststub.c
 
 #EXTRA_DIST = $(sbin_SCRIPTS)
 
