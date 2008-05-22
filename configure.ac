@@ -191,6 +191,18 @@ if test x"$ac_cv_use_rvs" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_RVS, AC_PREREQ(2.53))
 fi
 
+AC_ARG_ENABLE(openwrt,
+             AC_HELP_STRING([--enable-opewrt],
+                            [OpenWRT (default is NO)]),
+             [ac_cv_use_openwrt=$enableval], [ac_cv_use_openwrt=yes])
+AC_CACHE_CHECK([whether to use OpenWRT],
+               [ac_cv_use_openwrt], [ac_cv_use_opewrt=no])
+if test x"$ac_cv_use_rvs" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_OPENWRT, AC_PREREQ(2.53))
+	AC_SUBST(OPENWRT_CFLAGS, "-lc")
+fi
+
+
 AC_ARG_ENABLE(hipproxy,
              AC_HELP_STRING([--enable-hipproxy],
                             [HIP Proxy (default is YES)]),
@@ -324,7 +336,7 @@ AC_SUBST(HIPL_XMLI, `xml2-config --cflags`)
 AC_SUBST(HIPL_I3UTILS_LIB_DYNAMIC, "$HIPL_I3_UTILS/libutils.a")
 
 AC_SUBST(hipl_common_include_paths, "-I $HIPL -I $HIPL_HIPD -I $HIPL_LIBINET6 -I $HIPL_LIBHIPTOOL -I $HIPL_LIBOPPHIP -I $HIPL_TOOLS -I $HIPL_OPENDHT -I $HIPL_LIBIPSEC -I $HIPL_I3 -I $HIPL_I3_CLIENT -I $HIPL_AESHASH -I $HIPL_I3_CHORD -I $HIPL_I3_UTILS")
-AC_SUBST(hipl_common_cflags, "$GDB_CFLAG $XMLI")
+AC_SUBST(hipl_common_cflags, "$OPENWRT_CFLAGS $GDB_CFLAG $XMLI")
 
 AC_CONFIG_FILES([ Makefile
                   libhiptool/Makefile
