@@ -29,7 +29,7 @@ stop_hipfw() {
 case "$1" in
   start)
         echo -n "Starting firewall"
-	start-stop-hipfw --start --quiet --exec /usr/sbin/hipfw -- $HIPFW_OPTS
+	/usr/sbin/hipfw $HIPFW_OPTS
         #$FIREWALL $OPTIONS
         echo "."
 	;;
