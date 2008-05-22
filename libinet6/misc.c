@@ -2099,7 +2099,14 @@ int getproto_info(int port_dest, char *proto)
 		  initlist(&list);                                                    
 		  extractsubstrings(line, &list); 
 		  fqdn_str = getitem(&list, index_addr_port);
-		  separator = strrchr(fqdn_str, ':');
+		  if (line)
+		    HIP_DEBUG("Print the line %s\n",line);
+		  if (fqdn_str)
+		    HIP_DEBUG("Print the line %s\n",fqdn_str);
+		  //if (fqdn_str)
+		    separator = strrchr(fqdn_str, ':');
+		    //else 
+		    //HIP_DEBUG("Print the line %s\n",line);
 		  if (separator){
 		    sub_string_port_hex = strtok(separator,":");
 		    //sprintf(port_dest_hex, "%x", port_dest);

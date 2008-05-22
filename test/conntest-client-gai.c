@@ -45,6 +45,7 @@ int main(int argc,char *argv[]) {
 	int socktype, err = 0;
 	char *type_name, *peer_port_name, *peer_name;
 	const char *cfile = "default";
+	char *type_id;
 
 	hip_set_logtype(LOGTYPE_STDERR);
 	hip_set_logfmt(LOGFMT_SHORT);
@@ -52,14 +53,15 @@ int main(int argc,char *argv[]) {
 	  "Error: Cannot set the debugging parameter.\n");
 
 
-	if (argc != 4) {
-		fprintf(stderr, "Usage: %s host tcp|udp port\n", argv[0]);
+	if (argc != 4 && argc != 5) {
+		fprintf(stderr, "Usage: %s host tcp|udp port [lsi]\n", argv[0]);
 		exit(1);
 	}
 
 	peer_name = argv[1];
 	type_name = argv[2];
 	peer_port_name = argv[3];
+	type_id = argv[4];
 
 	if (strcmp(type_name, "tcp") == 0) {
 		socktype = SOCK_STREAM;
@@ -69,9 +71,14 @@ int main(int argc,char *argv[]) {
 		fprintf(stderr, "error: proto != tcp|udp\n");
 		exit(1);
 	}
-
-	HIP_IFEL(main_client_gai(socktype, peer_name, peer_port_name, 
-		 AI_HIP), -2,"Error: Cannot set the client.\n");
+	if (strcmp(type_id,"lsi") != 0){
+ 	        HIP_IFEL(main_client_gai(socktype, peer_name, peer_port_name, 
+					 AI_HIP), -2,"Error: Cannot set the client.\n"); 
+	}
+	else{  
+	        HIP_IFEL(main_client_gai(socktype, peer_name, peer_port_name, 
+					 0), -2,"Error: Cannot set the client with lsi's.\n");
+	}
 
  out_err:
 	return err;
