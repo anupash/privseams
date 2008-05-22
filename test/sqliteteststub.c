@@ -20,7 +20,6 @@ static int hip_sqlite_callback(void *NotUsed, int argc, char **argv, char **azCo
         for(i=0; i<argc; i++){
                 HIP_DEBUG("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
         }
-        HIP_DEBUG("\n");
         return 0;
 }
 

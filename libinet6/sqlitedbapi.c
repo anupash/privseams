@@ -22,7 +22,6 @@ static int hip_sqlite_callback(void *NotUsed, int argc, char **argv, char **azCo
         for(i=0; i<argc; i++){
                 HIP_DEBUG("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
         }
-        HIP_DEBUG("\n");
         return 0;
 }
 
@@ -104,7 +103,7 @@ int hip_sqlite_select(sqlite3 * db, const char *sql,
         int err = 0, rc = 0;
         char *zErrMsg = 0;
         
-        HIP_DEBUG("Executing %s\n", sql); 
+        _HIP_DEBUG("Executing %s\n", sql); 
         rc = sqlite3_exec(db, sql, callback, 0, &zErrMsg);                
         if (rc != SQLITE_OK) {
                 HIP_DEBUG("Failed to run SQL query against the database\n");
@@ -131,7 +130,7 @@ int hip_sqlite_execute_into_db(sqlite3 * db, const char *sql) {
         int err = 0, rc = 0;
         char *zErrMsg = 0;
         
-        HIP_DEBUG("Executing \"%s\"\n", sql); 
+        _HIP_DEBUG("Executing \"%s\"\n", sql); 
         rc = sqlite3_exec(db, sql, NULL, 0, &zErrMsg);                
         if (rc != SQLITE_OK) {
                 err = -1;
