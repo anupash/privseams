@@ -181,7 +181,32 @@ int hip_del_pending_request(hip_ha_t *entry)
 	while((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
 		if(((hip_pending_request_t *)(iter->ptr))->entry == entry) {
 			
-			HIP_DEBUG("Deleting a pending request at index %u.\n", index);
+			HIP_DEBUG("Deleting and freeing a pending request at "\
+				  "index %u.\n", index);
+			hip_ll_del(&pending_requests, index, free);
+			return 0;
+		}
+		index++;
+	}
+
+	return -1;
+}
+
+int hip_del_pending_request_by_type(hip_ha_t *entry, uint8_t reg_type)
+{
+	int index = 0;
+	hip_ll_node_t *iter = NULL;
+	hip_pending_request_t * request = NULL;
+
+	/* Iterate through the linked list. We're deleting a node from the list
+	   even though we use an iterator here, but it's okay, since we do not
+	   use the iterator after the deletion. */
+	while((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
+		request = (hip_pending_request_t *)(iter->ptr);
+		if(request->entry == entry && request->reg_type == reg_type) {
+			
+			HIP_DEBUG("Deleting and freeing a pending request by "\
+				  "type at index %u.\n", index);
 			hip_ll_del(&pending_requests, index, free);
 			return 0;
 		}
@@ -673,19 +698,81 @@ int hip_cancel_reg(hip_ha_t *entry, uint8_t *reg_types, int type_count,
 
 int hip_handle_param_reg_response(hip_ha_t *entry, hip_common_t *source_msg)
 {
-	int err = 0;
-	struct hip_reg_request *reg_request = NULL;
+	int err = 0, type_count = 0, i = 0;
+	struct hip_reg_response *reg_response = NULL;
+	uint8_t *reg_types = NULL;
+	time_t seconds = 0;
 
 	HIP_DEBUG("New REG_RESPONSE handler.\n");
 	
-	/* Delete all pending requests for this entry. It does not matter*/
-	while(hip_del_pending_request(entry) == 0) { ;}
+	reg_response = hip_get_param(source_msg, HIP_PARAM_REG_RESPONSE);
+
+	if(reg_response == NULL) {
+		err = -1;
+		HIP_DEBUG("No REG_RESPONSE parameter found.\n");
+		goto out_err;
+	}
+	
+	type_count = hip_get_param_contents_len(reg_response) -
+		sizeof(reg_response->lifetime);
+	reg_types = hip_get_param_contents_direct(reg_response) +
+		sizeof(reg_response->lifetime);
+	hip_get_lifetime_seconds(reg_response->lifetime, &seconds);
 	
 	
+	/* Check what services we have been granted. Cancel the local requests
+	   bit, set the peer granted bit and delete the pending request. */
+	/** @todo This has a slight chance of a memory leak. We create a pending
+	    request when the user issues a hipconf command but delete the
+	    request only when a REG_RESPONSE parameter is received. Should the
+	    parameter never be received, the pending request is never freed. The
+	    requests should be timestamped and deleted in periodic maintenance. */
+	/** @todo We are not storing the granted lifetime anywhere but we 
+	    obviously should. */
+	for(; i < type_count; i++) {
 		
-	
-	reg_request = hip_get_param(source_msg, HIP_PARAM_REG_REQUEST);
-	
+		switch(reg_types[i]) {
+		case HIP_SERVICE_RENDEZVOUS:
+			HIP_DEBUG("The server has granted us rendezvous "\
+				  "service for %u seconds (lifetime 0x%x.)\n",
+				  seconds, reg_response->lifetime);
+			hip_hadb_cancel_local_controls(
+				entry, HIP_HA_CTRL_LOCAL_REQ_RVS); 
+			hip_hadb_set_peer_controls(
+				entry, HIP_HA_CTRL_PEER_GRANTED_RVS); 
+			hip_del_pending_request_by_type(
+				entry, HIP_SERVICE_RENDEZVOUS);
+			break;
+		case HIP_SERVICE_RELAY:
+			HIP_DEBUG("The server has granted us relay "\
+				  "service for %u seconds (lifetime 0x%x.)\n",
+				  seconds, reg_response->lifetime);
+			hip_hadb_cancel_local_controls(
+				entry, HIP_HA_CTRL_LOCAL_REQ_RELAY); 
+			hip_hadb_set_peer_controls(
+				entry, HIP_HA_CTRL_PEER_GRANTED_RELAY); 
+			hip_del_pending_request_by_type(
+				entry, HIP_SERVICE_RELAY);
+			break;
+		case HIP_SERVICE_ESCROW:
+			HIP_DEBUG("The server has granted us escrow "\
+				  "service for %u seconds (lifetime 0x%x.)\n",
+				  seconds, reg_response->lifetime);
+			hip_hadb_cancel_local_controls(
+				entry, HIP_HA_CTRL_LOCAL_REQ_ESCROW); 
+			hip_hadb_set_peer_controls(
+				entry, HIP_HA_CTRL_PEER_GRANTED_ESCROW); 
+			hip_del_pending_request_by_type(
+				entry, HIP_SERVICE_ESCROW);
+			break;
+		default:
+			HIP_DEBUG("The server has granted us an unknown "\
+				  "service for %u seconds (lifetime 0x%x.)\n",
+				  seconds, reg_response->lifetime);
+			break;
+		}
+	}
+
  out_err:
 	return err;
 }

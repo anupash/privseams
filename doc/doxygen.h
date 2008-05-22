@@ -673,14 +673,26 @@
  *      UPDATE packet.
  * @def HIP_HA_CTRL_LOCAL_REQ_ALL
  *      An OR mask of every existing local request mask.
- * @def HIP_HA_CTRL_PEER_ESCROW_CAPABLE
+ * @def HIP_HA_CTRL_PEER_GRANTED_ESCROW
+ *      The peer has granted us escrow service in a REG_RESPONSE parameter
+ *      received in an R2 packet or an UPDATE packet.
+ * @def HIP_HA_CTRL_PEER_GRANTED_RELAY
+ *      The peer has granted us relay service in a REG_RESPONSE parameter
+ *      received in an R2 packet or an UPDATE packet.
+ * @def HIP_HA_CTRL_PEER_GRANTED_RVS
+ *      The peer has granted us rendezvous service in a REG_RESPONSE parameter
+ *      received in an R2 packet or an UPDATE packet.
+ * @def HIP_HA_CTRL_PEER_GRANTED
  *      The peer has announced in a R1 or UPDATE packet that it offers escrow
  *      service.
- * @def HIP_HA_CTRL_PEER_RELAY_CAPABLE
- *      The peer has announced in a R1 or UPDATE packet that it offers HIP relay
+ * @def HIP_HA_CTRL_PEER_ESCROW_CAPABLE
+ *      The peer has announced in an R1 or UPDATE packet that it offers escrow
  *      service.
+ * @def HIP_HA_CTRL_PEER_RELAY_CAPABLE
+ *      The peer has announced in an R1 or UPDATE packet that it offers HIP
+ *      relay service.
  * @def HIP_HA_CTRL_PEER_RVS_CAPABLE
- *      The peer has announced in a R1 or UPDATE packet that it offers
+ *      The peer has announced in an R1 or UPDATE packet that it offers
  *      rendezvous service.
  */
 
