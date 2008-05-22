@@ -1,16 +1,16 @@
 #include "useripsec.h"
 
 hip_hit_t *hip_fw_get_default_hit(void) {
-	if (ipv6_addr_is_null) {
+	if (ipv6_addr_is_null(&default_hit)) {
 		_HIP_DEBUG("Querying hipd for default hit\n");
-		if (hip_query_default_local_hit_from_hipd())
+		if (hip_query_default_local_hit_from_hipd(&default_hit))
 			return NULL;
 	}
 	return &default_hit;
 }
 
 /* Get default HIT*/
-int hip_query_default_local_hit_from_hipd(void)
+int hip_query_default_local_hit_from_hipd(hip_hit_t *hit)
 {
 	 
 	int err = 0;
@@ -32,7 +32,7 @@ int hip_query_default_local_hit_from_hipd(void)
 		HIP_DEBUG_HIT("default hi is ",defhit);
 	}
 
-	ipv6_addr_copy(&default_hit, defhit);
+	ipv6_addr_copy(hit, defhit);
 
 out_err:
 	return err;

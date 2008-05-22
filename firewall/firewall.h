@@ -59,11 +59,11 @@
 #define OTHER_PACKET          0
 #define HIP_PACKET            1
 #define ESP_PACKET            2
-#define STUN_PACKET           3
-#define TCP_PACKET            4
+#define TCP_PACKET            3
+#define STUN_PACKET           4
 #define UDP_PACKET            5
 
-#define FW_PROTO_NUM        4 /* Other, HIP, ESP, TCP */
+#define FW_PROTO_NUM          6 /* Other, HIP, ESP, TCP */
 
 typedef struct hip_fw_context {
 	// queued packet
@@ -103,6 +103,8 @@ typedef struct hip_conn_t  {
 	struct in6_addr addr_client; // addr_proxy_client	
 	struct in6_addr addr_peer; // addr_proxy_peer	
 } hip_conn_t;
+
+typedef int (*hip_fw_handler_t)(hip_fw_context_t *);
 
 #define HIP_FIREWALL_LOCK_FILE	"/var/lock/hip_firewall.lock"
 struct in6_addr proxy_hit;

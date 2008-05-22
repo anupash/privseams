@@ -2691,7 +2691,7 @@ int hip_get_local_addr(struct hip_common *msg)
 	entry = hip_hadb_find_byhits(src_hit, dst_hit);
 	
 	hip_msg_init(msg);
-	HIP_DEBUG_IN6ADDR(" local address: ", &entry->local_address);
+	//HIP_DEBUG_IN6ADDR(" local address: ", &entry->local_address);
 	
 	if(!entry)
 		HIP_DEBUG("Can't find local address because of no entry in hadb!\n");
