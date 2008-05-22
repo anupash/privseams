@@ -877,8 +877,8 @@ static void *handle_ip_traffic(void *ptr) {
 						HIP_DEBUG("ipv6 traffic and incoming packet\n");
 						res = firewall_trigger_incoming_hit(m, src_addr, dst_addr);
 						if (!res){
-						  drop_packet(hndl, m->packet_id);	
-						  break;
+						  	drop_packet(hndl, m->packet_id);	
+						  	break;
 						}
 					}
 					//else if(ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt != IPPROTO_TCP)
@@ -1068,30 +1068,25 @@ int reinject_packet(struct in6_addr src_hit, struct in6_addr dst_hit, ipq_packet
 
 
 	if (protocol == IPPROTO_ICMP && incoming){
-	  HIP_DEBUG("protocol == IPPROTO_ICMP && incoming\n");
-	  struct icmphdr *icmp = NULL;
-	  icmp = (struct icmphdr *)msg;
-	  if (icmp->type == ICMP_ECHO){
-	    icmp->type = ICMP_ECHOREPLY;
-	    err = firewall_send_outgoing_pkt(&dst_hit, &src_hit, msg, packet_length, protocol);
-	  }
-	  else{
-	    err = firewall_send_incoming_pkt(&src_hit, &dst_hit, msg, packet_length, protocol, ttl);
-	  }
+		  HIP_DEBUG("protocol == IPPROTO_ICMP && incoming\n");
+		  struct icmphdr *icmp = NULL;
+		  icmp = (struct icmphdr *)msg;
+		  if (icmp->type == ICMP_ECHO){
+		    	icmp->type = ICMP_ECHOREPLY;
+		    	err = firewall_send_outgoing_pkt(&dst_hit, &src_hit, msg, packet_length, protocol);
+		  }
+		  else{
+		    	err = firewall_send_incoming_pkt(&src_hit, &dst_hit, msg, packet_length, protocol, ttl);
+		  }
 	}else{
-	  if (incoming){
-	    HIP_DEBUG("Firewall send to the kernel an incoming packet\n");
-	    err = firewall_send_incoming_pkt(&src_hit, &dst_hit, msg, packet_length, protocol, ttl);
-	  }else{
-	    HIP_DEBUG("Firewall send to the kernel an outgoing packet\n");
-	    err = firewall_send_outgoing_pkt(&src_hit, &dst_hit, msg, packet_length, protocol);
-	  }
+		  if (incoming){
+			    HIP_DEBUG("Firewall send to the kernel an incoming packet\n");
+			    err = firewall_send_incoming_pkt(&src_hit, &dst_hit, msg, packet_length, protocol, ttl);
+		  }else{
+			    HIP_DEBUG("Firewall send to the kernel an outgoing packet\n");
+			    err = firewall_send_outgoing_pkt(&src_hit, &dst_hit, msg, packet_length, protocol);
+		  }
 	}
-
-	/*if (incoming)
-		err = firewall_send_incoming_pkt(&src_hit, &dst_hit, msg, packet_length, protocol);
-	else
-	err = firewall_send_outgoing_pkt(&src_hit, &dst_hit, msg, packet_length, protocol);*/
 
 	return err;	
 }
