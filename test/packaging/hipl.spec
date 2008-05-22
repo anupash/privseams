@@ -97,6 +97,7 @@ install -d %{buildroot}/etc/rc.d/init.d
 install -d %{buildroot}/doc
 make DESTDIR=%{buildroot} install
 install -m 700 test/packaging/rh-init.d-hipd %{buildroot}/etc/rc.d/init.d/hipd
+install -m 700 test/packaging/rh-init.d-hipfw %{buildroot}/etc/rc.d/init.d/hipfw
 install -m 644 doc/HOWTO.txt %{buildroot}/doc
 install -d %{buildroot}/%{python_sitelib}/DNS
 install -t %{buildroot}/%{python_sitelib}/DNS tools/DNS/*py
@@ -109,9 +110,18 @@ install -t %{buildroot}/%{python_sitelib}/DNS tools/DNS/*py
 /sbin/chkconfig --level 2 hipd on
 /sbin/service hipd start
 
+%post firewall
+/sbin/chkconfig --add hipfw
+/sbin/chkconfig --level 2 hipfw on
+/sbin/service hipfw start
+
 %preun daemon
 /sbin/service hipd stop
 /sbin/chkconfig --del hipd
+
+%preun firewall
+/sbin/service hipfw stop
+/sbin/chkconfig --del hipfw
 
 %clean
 rm -rf %{buildroot}
