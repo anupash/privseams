@@ -109,13 +109,55 @@ int hip_set_srv_max_lifetime(uint8_t reg_type, uint8_t lifetime);
  */ 
 int hip_get_active_services(hip_srv_t *active_services,
 			    unsigned int *active_service_count);
+
+/**
+ * Gets service informartion. Gets a string representing the service @c srv.
+ *
+ * Make sure that the target buffer @c informartion is at least 256 bytes long.
+ *
+ * @param  srv    the service whose information is to be get.
+ * @param  status a target buffer where to store the information string.
+ */ 
+void hip_get_srv_info(const hip_srv_t *srv, char *information);
+
+/**
+ * Adds a pending request. Adds a new pending request to the linked list
+ * @c pending_requests storing the pending requests. The pending request will be
+ * added as the last element of the list.
+ *
+ * @param  request the pending request to add.
+ * @return         zero if the pending request was added succesfully, -1
+ *                 otherwise.
+ */ 
 int hip_add_pending_request(hip_pending_request_t *request);
+
+/**
+ * Deletes a pending request. Deletes a pending request identified by the host
+ * association @c entry from the linked list @c pending_requests.
+ *
+ * @param  entry a host association to which the pending request to be deleted
+ *               is bound.
+ * @return       zero if the pending request was succesfully deleted, -1
+ *               otherwise.
+ */ 
 int hip_del_pending_request(hip_ha_t *entry);
+
+/**
+ * Deletes a pending request of given type. Deletes a pending request identified
+ * by the host association @c entry and matching the given type @c reg_type from
+ * the linked list @c pending_requests.
+ *
+ * @param  entry    a host association to which the pending request to be
+ *                  deleted is bound.
+ * @param  reg_type the type of the pending request to delete.
+ * @return          zero if the pending request was succesfully deleted, -1
+ *                  otherwise.
+ */
 int hip_del_pending_request_by_type(hip_ha_t *entry, uint8_t reg_type);
 int hip_get_pending_requests(hip_ha_t *entry,
 			     hip_pending_request_t *requests[]);
 int hip_get_pending_request_count(hip_ha_t *entry);
-void hip_srv_info(const hip_srv_t *srv, char *status);
+
 
 
 int hip_handle_param_reg_info(hip_common_t *msg, hip_ha_t *entry);

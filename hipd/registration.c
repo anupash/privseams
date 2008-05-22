@@ -121,12 +121,12 @@ int hip_get_active_services(hip_srv_t *active_services,
 	return 0;
 } 
 
-void hip_srv_info(const hip_srv_t *srv, char *status)
+void hip_get_srv_info(const hip_srv_t *srv, char *information)
 {
-	if(srv == NULL || status == NULL)
+	if(srv == NULL || information == NULL)
 		return;
 	
-	char *cursor = status;
+	char *cursor = information;
 	cursor += sprintf(cursor, "Service info:\n");
 	
 	cursor += sprintf(cursor, " reg_type: ");
@@ -157,6 +157,8 @@ int hip_add_pending_request(hip_pending_request_t *request)
 {
 	int err = 0;
 	
+	/* We don't have to check for NULL request as the linked list does that
+	   for us. */
 	HIP_IFEL(hip_ll_add_last(&pending_requests, request), -1,
 		 "Failed to add a pending registration request.\n");
 
@@ -171,7 +173,8 @@ int hip_del_pending_request(hip_ha_t *entry)
 	
 	/* Iterate through the linked list. We're deleting a node from the list
 	   even though we use an iterator here, but it's okay, since we do not
-	   use the iterator after the deletion. */
+	   use the iterator after the deletion. Again, we don't have to check
+	   for NULL request as the linked list does that for us. */
 	while((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
 		if(((hip_pending_request_t *)(iter->ptr))->entry == entry) {
 			
