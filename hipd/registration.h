@@ -55,19 +55,126 @@ int hip_get_pending_requests(hip_ha_t *entry,
 			     hip_pending_request_t *requests[]);
 int hip_get_pending_request_count(hip_ha_t *entry);
 void hip_srv_info(const hip_srv_t *srv, char *status);
+
+
 int hip_handle_param_reg_info(hip_common_t *msg, hip_ha_t *entry);
 int hip_handle_param_rrq(hip_ha_t *entry, hip_common_t *source_msg,
 			 hip_common_t *target_msg);
-int hip_has_duplicate_services(uint8_t *values, int type_count);
-int hip_add_reg(hip_ha_t *entry, uint8_t lifetime, uint8_t *reg_types,
-		int type_count, uint8_t accepted_requests[],
-		uint8_t accepted_lifetimes[], int *accepted_count,
-		uint8_t refused_requests[], uint8_t failure_types[],
-		int *refused_count);
-int hip_cancel_reg(hip_ha_t *entry, uint8_t *reg_types, int type_count,
-		   uint8_t accepted_requests[], uint8_t accepted_lifetimes[],
-		   int *accepted_count, uint8_t refused_requests[],
-		   uint8_t failure_types[], int *refused_count);
 int hip_handle_param_reg_response(hip_ha_t *entry, hip_common_t *source_msg);
 
+/**
+ * Adds new registrations to services at the server. This function tries to add
+ * all new services listed and indentified by @c types. This is server side
+ * addition, meaning that the server calls this function to add entries
+ * to its served client list. After the function finishes, succesful registrations
+ * are listed in @c accepted_requests and unsuccesful registrations in
+ * @c refused_requests.
+ * 
+ * Make sure that you have allocated memory to @c accepted_requests,
+ * @c refused_requests and @c failure_types for at least @c type_count elements.
+ *
+ * @param  entry              a pointer to a host association.
+ * @param  lifetime           requested lifetime.
+ * @param  reg_types          a pointer to Reg Types found in REG_REQUEST.
+ * @param  type_count         number of Reg Types in @c reg_types.
+ * @param  accepted_requests  a target buffer that will store the Reg Types of
+ *                            the registrations that succeeded.
+ * @param  accepted_lifetimes a target buffer that will store the life times of
+ *                            the registrations that succeeded. There will be
+ *                            @c accepted_count elements in the buffer, and the
+ *                            life times will be in matching indexes with
+ *                            @c accepted_requests.
+ * @param  accepted_count     a target buffer that will store the number of Reg
+ *                            Types in @c accepted_requests.
+ * @param  refused_requests   a target buffer that will store the Reg Types of
+ *                            the registrations that did not succeed.
+ * @param  failure_types      a target buffer that will store the Failure Types
+ *                            of the refused requests. There will be
+ *                            @c refused_count elements in the buffer, and the
+ *                            Failure Types will be in matching indexes with
+ *                            @c refused_requests.
+ * @param  refused_count      a target buffer that will store the number of Reg
+ *                            Types in @c refused_requests.
+ * @return                    zero on success, -1 otherwise.
+ * @see                       hip_add_registration_client().
+ */ 
+int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
+				uint8_t *reg_types, int type_count,
+				uint8_t accepted_requests[],
+				uint8_t accepted_lifetimes[],
+				int *accepted_count, uint8_t refused_requests[],
+				uint8_t failure_types[], int *refused_count);
+/**
+ * Cancels registrations to services at the server. This function tries to
+ * cancel all services listed and indentified by @c types. This is server side
+ * cancellation, meaning that the server calls this function to remove entries
+ * from its served client list. After the function finishes, succesful
+ * cancellations are listed in @c accepted_requests and unsuccesful requests
+ * in @c refused_requests.
+ * 
+ * Make sure that you have allocated memory to both @c accepted_requests and
+ * @c refused_requests for at least @c type_count elements.
+ *
+ * @param  entry             a pointer to a host association.
+ * @param  reg_types         a pointer to Reg Types found in REG_REQUEST.
+ * @param  type_count        number of Reg Types in @c reg_types.
+ * @param  accepted_requests a target buffer that will store the Reg Types of
+ *                           the registrations cancellations that succeeded.
+ * @param  accepted_count    a target buffer that will store the number of Reg
+ *                           Types in @c accepted_requests.
+ * @param  refused_requests  a target buffer that will store the Reg Types of
+ *                           the registrations cancellations that did not
+ *                           succeed.
+ * @param  refused_count     a target buffer that will store the number of Reg
+ *                           Types in @c refused_requests.
+ * @return                   zero on success, -1 otherwise.
+ * @see                      hip_del_registration_client().
+ */ 
+int hip_del_registration_server(hip_ha_t *entry, uint8_t *reg_types,
+				int type_count, uint8_t accepted_requests[],
+				uint8_t accepted_lifetimes[],
+				int *accepted_count, uint8_t refused_requests[],
+				uint8_t failure_types[], int *refused_count);
+
+/**
+ * Adds new registrations to services at the client. This function tries to add
+ * all new services listed and indentified by @c types. This is client side
+ * addition, meaning that the client calls this function to add entries to the
+ * list of services it has been granted.
+ *
+ * @param  entry              a pointer to a host association.
+ * @param  lifetime           granted lifetime.
+ * @param  reg_types          a pointer to Reg Types found in REG_REQUEST.
+ * @param  type_count         number of Reg Types in @c reg_types.
+ * @return                    zero on success, -1 otherwise.
+ * @see                       hip_add_registration_server().
+ */
+int hip_add_registration_client(hip_ha_t *entry, uint8_t lifetime,
+				uint8_t *reg_types, int type_count);
+
+/**
+ * Cancels registrations to services at the client. This function tries to
+ * cancel all services listed and indentified by @c types. This is client side
+ * cancellation, meaning that the client calls this function to remove entries
+ * from the list of services it has been granted.
+ *
+ * @param  entry             a pointer to a host association.
+ * @param  reg_types         a pointer to Reg Types found in REG_REQUEST.
+ * @param  type_count        number of Reg Types in @c reg_types.
+ * @return                   zero on success, -1 otherwise.
+ * @see                      hip_del_registration_client().
+ */
+int hip_del_registration_client(hip_ha_t *entry, uint8_t *reg_types,
+				int type_count);
+
+
+/**
+ * Checks if the value list has duplicate values. Checks whether the value list
+ * @c values has duplicate service values. 
+ *
+ * @param  values     the value list to check.
+ * @param  type_count number of values in the value list.
+ * @return            zero if there are no duplicate values, -1 otherwise.
+ */ 
+int hip_has_duplicate_services(uint8_t *values, int type_count);
 #endif /* HIP_REGISTRATION_H */

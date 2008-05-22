@@ -416,12 +416,14 @@ int hip_handle_param_rrq(hip_ha_t *entry, hip_common_t *source_msg,
 
 	if(reg_request->lifetime == 0) {
 		HIP_DEBUG("Client is cancelling registration.\n");
-		hip_cancel_reg(entry, reg_types, type_count, accepted_requests,
-			       accepted_lifetimes, &accepted_count,
-			       refused_requests, failure_types, &refused_count);
+		hip_del_registration_server(entry, reg_types, type_count,
+					    accepted_requests,
+					    accepted_lifetimes, &accepted_count,
+					    refused_requests, failure_types,
+					    &refused_count);
 	} else {
 		HIP_DEBUG("Client is registrating for new services.\n");
-		hip_add_reg(entry, reg_request->lifetime, reg_types, type_count,
+		hip_add_registration_server(entry, reg_request->lifetime, reg_types, type_count,
 			    accepted_requests, accepted_lifetimes,
 			    &accepted_count, refused_requests, failure_types,
 			    &refused_count);
@@ -479,63 +481,44 @@ int hip_handle_param_rrq(hip_ha_t *entry, hip_common_t *source_msg,
 	return err;
 }
 
-int hip_has_duplicate_services(uint8_t *reg_types, int type_count)
+int hip_handle_param_reg_response(hip_ha_t *entry, hip_common_t *source_msg)
 {
-	if(reg_types == NULL || type_count <= 0) {
-		return -1;
+	int err = 0, type_count = 0;
+	struct hip_reg_response *reg_response = NULL;
+	uint8_t *reg_types = NULL;
+
+	HIP_DEBUG("New REG_RESPONSE handler.\n");
+	
+	reg_response = hip_get_param(source_msg, HIP_PARAM_REG_RESPONSE);
+
+	if(reg_response == NULL) {
+		err = -1;
+		HIP_DEBUG("No REG_RESPONSE parameter found.\n");
+		goto out_err;
 	}
 	
-	int i = 0, j = 0;
+	type_count = hip_get_param_contents_len(reg_response) -
+		sizeof(reg_response->lifetime);
+	reg_types = hip_get_param_contents_direct(reg_response) +
+		sizeof(reg_response->lifetime);
+	
+	if(reg_response->lifetime == 0) {
+		/* delete service. */
+	} else {
+		hip_add_registration_client(entry, reg_response->lifetime,
+					    reg_types, type_count);
+	}	
 
-	for(; i < type_count; i++) {
-		for(j = i + 1; j < type_count; j++) {
-			if(reg_types[i] = reg_types[j]) {
-				return -1;
-			}
-		}
-	}
-
-	return 0;
+ out_err:
+	return err;
 }
 
-/**
- * Adds new registrations to services. This function tries to add all new
- * services listed and indentified by @c types. After the function finishes,
- * succesful registrations are listed in @c accepted_requests and unsuccesful
- * registrations in @c refused_requests.
- * 
- * Make sure that you have allocated memory to @c accepted_requests,
- * @c refused_requests and @c failure_types for at least @c type_count elements.
- *
- * @param  entry              a pointer to a host association.
- * @param  lifetime           requested lifetime.
- * @param  reg_types          a pointer to Reg Types found in REG_REQUEST.
- * @param  type_count         number of Reg Types in @c reg_types.
- * @param  accepted_requests  a target buffer that will store the Reg Types of
- *                            the registrations that succeeded.
- * @param  accepted_lifetimes a target buffer that will store the life times of
- *                            the registrations that succeeded. There will be
- *                            @c accepted_count elements in the buffer, and the
- *                            life times will be in matching indexes with
- *                            @c accepted_requests.
- * @param  accepted_count     a target buffer that will store the number of Reg
- *                            Types in @c accepted_requests.
- * @param  refused_requests   a target buffer that will store the Reg Types of
- *                            the registrations that did not succeed.
- * @param  failure_types      a target buffer that will store the Failure Types
- *                            of the refused requests. There will be
- *                            @c refused_count elements in the buffer, and the
- *                            Failure Types will be in matching indexes with
- *                            @c refused_requests.
- * @param  refused_count      a target buffer that will store the number of Reg
- *                            Types in @c refused_requests.
- * @return                    zero on success, -1 otherwise.
- */ 
-int hip_add_reg(hip_ha_t *entry, uint8_t lifetime, uint8_t *reg_types,
-		int type_count, uint8_t accepted_requests[],
-		uint8_t accepted_lifetimes[], int *accepted_count,
-		uint8_t refused_requests[], uint8_t failure_types[],
-		int *refused_count)
+int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
+				uint8_t *reg_types, int type_count,
+				uint8_t accepted_requests[],
+				uint8_t accepted_lifetimes[],
+				int *accepted_count, uint8_t refused_requests[],
+				uint8_t failure_types[], int *refused_count)
 {
 	
 	int err = 0, i = 0;
@@ -665,62 +648,25 @@ int hip_add_reg(hip_ha_t *entry, uint8_t lifetime, uint8_t *reg_types,
 	return err;
 }
 
-/**
- * Cancels registrations to services. This function tries to cancel all services
- * listed and indentified by @c types. After the function finishes, succesful
- * cancellations are listed in @c accepted_requests and unsuccesful requests
- * in @c refused_requests.
- * 
- * Make sure that you have allocated memory to both @c accepted_requests and
- * @c refused_requests for at least @c type_count elements.
- *
- * @param  entry             a pointer to a host association.
- * @param  reg_types         a pointer to Reg Types found in REG_REQUEST.
- * @param  type_count        number of Reg Types in @c reg_types.
- * @param  accepted_requests a target buffer that will store the Reg Types of
- *                           the registrations cancellations that succeeded.
- * @param  accepted_count    a target buffer that will store the number of Reg
- *                           Types in @c accepted_requests.
- * @param  refused_requests  a target buffer that will store the Reg Types of
- *                           the registrations cancellations that did not
- *                           succeed.
- * @param  refused_count     a target buffer that will store the number of Reg
- *                           Types in @c refused_requests.
- * @return                   zero on success, -1 otherwise.
- */ 
-int hip_cancel_reg(hip_ha_t *entry, uint8_t *reg_types, int type_count,
-		   uint8_t accepted_requests[], uint8_t accepted_lifetimes[],
-		   int *accepted_count, uint8_t refused_requests[],
-		   uint8_t failure_types[], int *refused_count)
+int hip_del_registration_server(hip_ha_t *entry, uint8_t *reg_types,
+				int type_count, uint8_t accepted_requests[],
+				uint8_t accepted_lifetimes[],
+				int *accepted_count, uint8_t refused_requests[],
+				uint8_t failure_types[], int *refused_count)
 {
+	/** @todo Implement. */
 	return 0;
 }
 
-int hip_handle_param_reg_response(hip_ha_t *entry, hip_common_t *source_msg)
+int hip_add_registration_client(hip_ha_t *entry, uint8_t lifetime,
+				uint8_t *reg_types, int type_count)
 {
-	int err = 0, type_count = 0, i = 0;
-	struct hip_reg_response *reg_response = NULL;
-	uint8_t *reg_types = NULL;
+	int err = 0, i = 0;
 	time_t seconds = 0;
+	
+	hip_get_lifetime_seconds(lifetime, &seconds);
 
-	HIP_DEBUG("New REG_RESPONSE handler.\n");
-	
-	reg_response = hip_get_param(source_msg, HIP_PARAM_REG_RESPONSE);
-
-	if(reg_response == NULL) {
-		err = -1;
-		HIP_DEBUG("No REG_RESPONSE parameter found.\n");
-		goto out_err;
-	}
-	
-	type_count = hip_get_param_contents_len(reg_response) -
-		sizeof(reg_response->lifetime);
-	reg_types = hip_get_param_contents_direct(reg_response) +
-		sizeof(reg_response->lifetime);
-	hip_get_lifetime_seconds(reg_response->lifetime, &seconds);
-	
-	
-	/* Check what services we have been granted. Cancel the local requests
+        /* Check what services we have been granted. Cancel the local requests
 	   bit, set the peer granted bit and delete the pending request. */
 	/** @todo This has a slight chance of a memory leak. We create a pending
 	    request when the user issues a hipconf command but delete the
@@ -733,9 +679,10 @@ int hip_handle_param_reg_response(hip_ha_t *entry, hip_common_t *source_msg)
 		
 		switch(reg_types[i]) {
 		case HIP_SERVICE_RENDEZVOUS:
+		{
 			HIP_DEBUG("The server has granted us rendezvous "\
 				  "service for %u seconds (lifetime 0x%x.)\n",
-				  seconds, reg_response->lifetime);
+				  seconds, lifetime);
 			hip_hadb_cancel_local_controls(
 				entry, HIP_HA_CTRL_LOCAL_REQ_RVS); 
 			hip_hadb_set_peer_controls(
@@ -743,36 +690,80 @@ int hip_handle_param_reg_response(hip_ha_t *entry, hip_common_t *source_msg)
 			hip_del_pending_request_by_type(
 				entry, HIP_SERVICE_RENDEZVOUS);
 			break;
+		}
 		case HIP_SERVICE_RELAY:
+		{
 			HIP_DEBUG("The server has granted us relay "\
 				  "service for %u seconds (lifetime 0x%x.)\n",
-				  seconds, reg_response->lifetime);
+				  seconds, lifetime);
 			hip_hadb_cancel_local_controls(
 				entry, HIP_HA_CTRL_LOCAL_REQ_RELAY); 
 			hip_hadb_set_peer_controls(
 				entry, HIP_HA_CTRL_PEER_GRANTED_RELAY); 
 			hip_del_pending_request_by_type(
 				entry, HIP_SERVICE_RELAY);
+
 			break;
+		}
 		case HIP_SERVICE_ESCROW:
+		{
+			HIP_KEA *kea = NULL;
+			
 			HIP_DEBUG("The server has granted us escrow "\
 				  "service for %u seconds (lifetime 0x%x.)\n",
-				  seconds, reg_response->lifetime);
+				  seconds, lifetime);
 			hip_hadb_cancel_local_controls(
 				entry, HIP_HA_CTRL_LOCAL_REQ_ESCROW); 
 			hip_hadb_set_peer_controls(
 				entry, HIP_HA_CTRL_PEER_GRANTED_ESCROW); 
 			hip_del_pending_request_by_type(
 				entry, HIP_SERVICE_ESCROW);
+			/* Not tested to work. Just moved here from the old
+			   registration implementation. */
+			if((kea = hip_kea_find(&entry->hit_our) ) != NULL) {
+				kea->keastate = HIP_KEASTATE_VALID;
+				hip_keadb_put_entry(kea);
+			}
+
 			break;
+		}
 		default:
+		{
 			HIP_DEBUG("The server has granted us an unknown "\
 				  "service for %u seconds (lifetime 0x%x.)\n",
-				  seconds, reg_response->lifetime);
+				  seconds, lifetime);
 			break;
+		}
+		}
+	}
+	
+ out_err:
+	
+	return 0;
+}
+
+int hip_del_registration_client(hip_ha_t *entry, uint8_t *reg_types,
+				int type_count)
+{
+	/** @todo Implement. */
+	return 0;
+}
+
+int hip_has_duplicate_services(uint8_t *reg_types, int type_count)
+{
+	if(reg_types == NULL || type_count <= 0) {
+		return -1;
+	}
+	
+	int i = 0, j = 0;
+
+	for(; i < type_count; i++) {
+		for(j = i + 1; j < type_count; j++) {
+			if(reg_types[i] = reg_types[j]) {
+				return -1;
+			}
 		}
 	}
 
- out_err:
-	return err;
+	return 0;
 }
