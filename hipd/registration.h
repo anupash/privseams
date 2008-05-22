@@ -115,7 +115,7 @@ int hip_get_active_services(hip_srv_t *active_services,
  *
  * Make sure that the target buffer @c informartion is at least 256 bytes long.
  *
- * @param  srv    the service whose information is to be get.
+ * @param  srv    a pointer to the service whose information is to be get.
  * @param  status a target buffer where to store the information string.
  */ 
 void hip_get_srv_info(const hip_srv_t *srv, char *information);
@@ -125,7 +125,7 @@ void hip_get_srv_info(const hip_srv_t *srv, char *information);
  * @c pending_requests storing the pending requests. The pending request will be
  * added as the last element of the list.
  *
- * @param  request the pending request to add.
+ * @param  request a pointer to the pending request to add.
  * @return         zero if the pending request was added succesfully, -1
  *                 otherwise.
  */ 
@@ -135,8 +135,8 @@ int hip_add_pending_request(hip_pending_request_t *request);
  * Deletes a pending request. Deletes a pending request identified by the host
  * association @c entry from the linked list @c pending_requests.
  *
- * @param  entry a host association to which the pending request to be deleted
- *               is bound.
+ * @param  entry a pointer to the host association to which the pending request
+ *               to be deleted is bound.
  * @return       zero if the pending request was succesfully deleted, -1
  *               otherwise.
  */ 
@@ -147,19 +147,54 @@ int hip_del_pending_request(hip_ha_t *entry);
  * by the host association @c entry and matching the given type @c reg_type from
  * the linked list @c pending_requests.
  *
- * @param  entry    a host association to which the pending request to be
- *                  deleted is bound.
+ * @param  entry    a pointer to a host association to which the pending request
+ *                  to be deleted is bound.
  * @param  reg_type the type of the pending request to delete.
  * @return          zero if the pending request was succesfully deleted, -1
  *                  otherwise.
  */
 int hip_del_pending_request_by_type(hip_ha_t *entry, uint8_t reg_type);
+
+/**
+ * Gets all pending requests for given host association. Gets all pending
+ * requests for host association @c entry.
+ * 
+ * Make sure that the target buffer @c requests has room for at least as many
+ * pending requests that the host association @c entry has currently. You can
+ * have this number by calling hip_get_pending_request_count().
+ *
+ * @param  entry    a pointer to a host association whose pending requests are
+ *                  to be get.
+ * @param  requests a target buffer for the pending requests.
+ * @return          -1 if @c requests is NULL or if no pending requests were
+ *                  found, zero otherwise.
+ * @see             hip_get_pending_request_count(). 
+ */ 
 int hip_get_pending_requests(hip_ha_t *entry,
 			     hip_pending_request_t *requests[]);
+
+/**
+ * Gets the number of pending requests for a given host association.
+ *
+ * @param  entry a pointer to a host association whose count of pending requests
+ *               is to be get.
+ * @return       the number of pending requests for the host association.
+ */ 
 int hip_get_pending_request_count(hip_ha_t *entry);
 
-
-
+/**
+ * Handles param REG_INFO. Digs out the REG_INFO parameter from the parameter
+ * HIP message @c msg and sets the peer control bits accordingly. I.e. the
+ * peer controls are set to indicate which services the peer offers.
+ *
+ * @param  msg      a pointer to HIP message from where to dig out the REG_INFO
+ *                  parameter.
+ * @parameter entry a pointer to a host association for which to set the peer
+ *                  control bits.
+ * @return          -1 if the message @c msg did not contain a REG_INFO
+ *                  parameter zero otherwise.
+ * @see             peer_controls
+ */ 
 int hip_handle_param_reg_info(hip_common_t *msg, hip_ha_t *entry);
 int hip_handle_param_rrq(hip_ha_t *entry, hip_common_t *source_msg,
 			 hip_common_t *target_msg);

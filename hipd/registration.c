@@ -280,7 +280,7 @@ int hip_handle_param_reg_info(hip_common_t *msg, hip_ha_t *entry)
 			hip_keadb_put_entry(kea);	
 		/** @todo remove base keas */
 #endif /* CONFIG_HIP_ESCROW */		
-		return 0;
+		return -1;
 	}
 	
 	HIP_DEBUG("REG_INFO parameter found.\n");
