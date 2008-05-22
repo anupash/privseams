@@ -214,11 +214,15 @@ copy_and_package_files ()
     mkdir -p "$PKGDIR/usr"
     cd "$PKGDIR"
 
-    mkdir -p usr/sbin
+    # mkdir -p usr/sbin
+    mkdir -p usr/sbin usr/bin etc/init.d etc/hipfw
     cd "$HIPL"
 
     echo "** Copying firewall to $PKGDIR"
     cp firewall/hipfw $PKGDIR/usr/sbin/
+
+    echo "** Copying init.d script to $PKGDIR"
+    cp test/packaging/debian-init.d-hipfw $PKGDIR/etc/init.d/hipfw
 
     PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
     create_sub_package;

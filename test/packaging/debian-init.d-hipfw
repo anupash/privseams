@@ -1,0 +1,61 @@
+#! /bin/sh
+# /etc/init.d/hipfw: start and stop the firewall
+
+#DAEMON="/usr/sbin/hipfw"
+
+HIPFW_OPTS="-bk"
+#PIDFILE=/var/run/hipfw.pid
+PID=`pidof -o $$ hipfw`
+
+set -e
+
+test -x /usr/sbin/hipfw || exit 0
+
+if test -f /etc/default/hipfw; then
+    . /etc/default/hipfw
+fi
+
+#export PATH="${PATH:+$PATH:}/usr/sbin:/sbin"
+
+stop_hipfw() {
+    # Ensure that we don't try to kill init.d script itself
+    #start-stop-firewall --stop --quiet --oknodo --retry 30
+    if [ $PID ]
+    then
+	kill $1 $PID
+    fi
+}
+
+case "$1" in
+  start)
+        echo -n "Starting firewall"
+	start-stop-hipfw --start --quiet --exec /usr/sbin/hipfw -- $HIPFW_OPTS
+        #$FIREWALL $OPTIONS
+        echo "."
+	;;
+  stop)
+        echo -n "Stopping firewall"
+	stop_hipfw
+        echo "."
+	;;
+
+  reload|force-reload)
+        echo -n "Reloading firewall"
+	start-stop-firewall --stop --signal 1 --quiet --oknodo --exec /usr/sbin/hipfw -name hipfw
+	echo "."
+	;;
+
+  restart)
+        echo -n "Restarting firewall"
+        # firewall waits N seconds for closing of connections - just kill it
+	stop_hipfw -KILL
+	start-stop-hipfw --start --quiet --exec /usr/sbin/hipfw -- $HIPFW_OPTS
+	echo "."
+	;;
+
+  *)
+	echo "Usage: /etc/init.d/hipfw {start|stop|reload|force-reload|restart}"
+	exit 1
+esac
+
+exit 0
