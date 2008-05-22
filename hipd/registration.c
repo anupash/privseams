@@ -17,13 +17,9 @@
 /** An array for storing all existing services. */
 hip_srv_t hip_services[HIP_TOTAL_EXISTING_SERVICES];
 /** A linked list for storing pending requests on the client side.
- *  @note This assumes a single threded model. We are not using mutexes here.
+ *  @note This assumes a single threaded model. We are not using mutexes here.
  */
 hip_ll_t pending_requests;
-/** A linked list for storing pending responses on the server side.
- *  @note This assumes a single threded model. We are not using mutexes here.
- */
-hip_ll_t pending_responses;
 
 void hip_init_xxx_services()
 {
@@ -41,15 +37,13 @@ void hip_init_xxx_services()
 	hip_services[2].max_lifetime = HIP_RELREC_MAX_LIFETIME;
 
 	hip_ll_init(&pending_requests);
-	hip_ll_init(&pending_responses);
-	
+		
 	HIP_DEBUG("NEW SERVICE INITIALIZATION DONE.\n");
 }
 
 void hip_uninit_xxx_services()
 {
 	hip_ll_uninit(&pending_requests, free);
-	hip_ll_uninit(&pending_responses, free);
 	HIP_DEBUG("NEW SERVICE UNINITIALIZATION DONE.\n");
 }
 

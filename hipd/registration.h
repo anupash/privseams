@@ -41,11 +41,72 @@ typedef struct{
 	uint8_t lifetime;
 }hip_pending_request_t;
 
+/**
+ * Initializes the services. Initializes the @c hip_services array.
+ */ 
 void hip_init_xxx_services();
+
+/**
+ * Uninitializes the services. Removes all pending requests.
+ */
 void hip_uninit_xxx_services();
+
+/**
+ * Sets service status for a given service. Sets service status to value
+ * identified by @c status for a service identified by @c reg_type in the
+ * @c hip_services array. 
+ *
+ * @param  reg_type the registration type of the service for which the status
+ *                  is to be set.
+ * @param  status   the status to set i.e. ON or OFF.
+ * @return          zero if the status was set succesfully, -1 otherwise.
+ */ 
 int hip_set_srv_status(uint8_t reg_type, hip_srv_status_t status);
+
+/**
+ * Sets the minimum service lifetime for a given service. Sets minimum service
+ * lifetype to value identified by @c lifetime for a service identified by
+ * @c reg_type in the @c hip_services array. This is the minimum lifetime value
+ * that the server is able to grant. According to Chapter 5 of RFC 5203, this
+ * value should be at least 10 seconds (note, that the parameter @c lifetime
+ * is not in seconds).
+ *
+ * @param  reg_type the registration type of the service for which the status
+ *                  is to be set.
+ * @param  lifetime the minimum lifetime to set.
+ * @return          zero if the status was set succesfully, -1 otherwise.
+ */
 int hip_set_srv_min_lifetime(uint8_t reg_type, uint8_t lifetime);
+
+/**
+ * Sets the maximum service lifetime for a given service. Sets maximum service
+ * lifetype to value identified by @c lifetime for a service identified by
+ * @c reg_type in the @c hip_services array. This is the maximum lifetime value
+ * that the server is able to grant. According to Chapter 5 of RFC 5203, this
+ * value should be at least 120 seconds (note, that the parameter @c lifetime
+ * is not in seconds).
+ *
+ * @param  reg_type the registration type of the service for which the status
+ *                  is to be set.
+ * @param  lifetime the maximum lifetime to set.
+ * @return          zero if the status was set succesfully, -1 otherwise.
+ */
 int hip_set_srv_max_lifetime(uint8_t reg_type, uint8_t lifetime);
+
+/**
+ * Gets the active services. Gets all services from the @c hip_services array
+ * whose status is ON.
+ *
+ * Make sure that the size of the target buffer @c active_services is at least
+ * HIP_TOTAL_EXISTING_SERVICES * sizeof(hip_srv_t).
+ *
+ * @param active_services      a target buffer where to put the active
+ *                             services.
+ * @param active_service_count a target buffer indefying how many services there
+ *                             are in the target buffer @c active_services after
+ *                             the function finishes.
+ * @return -1 if active_services is NULL, zero otherwise.
+ */ 
 int hip_get_active_services(hip_srv_t *active_services,
 			    unsigned int *active_service_count);
 int hip_add_pending_request(hip_pending_request_t *request);
