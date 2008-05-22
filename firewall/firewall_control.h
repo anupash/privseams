@@ -16,6 +16,7 @@
 #include "builder.h"
 #include "protodefs.h"
 #include "firewalldb.h"
+#include "ipsec_userspace_api.h"
 
 typedef struct pseudo_v6 {
        struct  in6_addr src;
@@ -31,5 +32,8 @@ int control_thread_init(void);
 int sendto_hipd(void *msg, size_t len);
 int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr);
 int firewall_init_raw_sock_v6();
+int request_hipproxy_status(void);
+extern int hip_proxy_status;
+extern int hip_fw_sock;
 
 #endif /*FIREWALL_CONTROL_H_*/

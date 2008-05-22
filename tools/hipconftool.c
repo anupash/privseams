@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
 
 	
 	HIP_IFEL(hip_do_hipconf(argc, argv, 0), -2,
-	  "Error: Cannot configure hip.\n");
+	  "Error: Cannot configure hip daemon.\n");
 
  out_err:
 	return err;

@@ -7,29 +7,34 @@ TYPE=binary
 MAJOR=1
 MINOR=0
 VERSION="$MAJOR.$MINOR"
-RELEASE=3
-SUFFIX="-$VERSION-$RELEASE"
-NAME=hipl
-NAMEGPL=libhiptool
+RELEASE=4
 
 DEBARCH="i386"
 if uname -m|grep x86_64; then DEBARCH=amd64; fi
 # if uname -m|grep arm*; then DEBARCH=armel; fi 
 if dpkg --print-architecture|grep armel;then DEBARCH=armel;fi
 
-DEBIAN=${DEBARCH}/DEBIAN
+REVISION=`/usr/bin/lsb_release -c | /usr/bin/awk '{print $2}'`
+if [ $DEBARCH = "armel" ]; then REVISION=chinook; fi
 
+SUFFIX="-$VERSION-$RELEASE-$REVISION"
+PKG_SUFFIX="-$VERSION-$RELEASE"
+NAME=hipl
+NAMEGPL=libhiptool
+DEBIAN=${DEBARCH}/DEBIAN
 DEBIANGPL=$DEBARCH/DEBIAN-hiptool
 CORPORATE=
 PKGROOT=$PWD/test/packaging
-PKGDIR=$PKGROOT/${NAME}${SUFFIX}-deb
-PKGDIR_SRC=$PKGROOT/${NAME}${SUFFIX}-deb-src
+PKGDIR=$PKGROOT/${NAME}${PKG_SUFFIX}-deb
+PKGDIR_SRC=$PKGROOT/${NAME}${PKG_SUFFIX}-deb-src
+
 SRCDIR=${PKGDIR_SRC}/${NAME}${SUFFIX}
 HIPL=$PWD
-
 POSTFIX="deb"
-TMPNAME="${VERSION}-${RELEASE}-${DEBARCH}"
-if dpkg --print-architecture|grep armel;then TMPNAME="${VERSION}-${RELEASE}-armel"; fi
+
+TMPNAME="${VERSION}-${RELEASE}-${REVISION}-${DEBARCH}"
+if dpkg --print-architecture|grep armel;then TMPNAME="${VERSION}-${RELEASE}-${REVISION}-armel"; fi
+
 PKGNAME="${NAME}-${TMPNAME}.${POSTFIX}"
 TMP=""
 DEBLIB="$NAME-$TMP"
@@ -49,12 +54,12 @@ copy_tarball ()
 	
 	echo "** Copying the tarball"
 	#cd ${PKGDIR}
-	cp ${HIPL}/hipl-main.tar.gz ${PKGDIR_SRC}/${NAME}_${VERSION}.orig.tar.gz
-	
+        cp ${HIPL}/hipl-main.tar.gz ${PKGDIR_SRC}/${NAME}_${VERSION}.orig.tar.gz
+
 	echo "** Copying Debian control files to '${SRCDIR}/debian'"
 	mkdir -p "${SRCDIR}/debian"
 	cp ${PKGROOT}/$DEBIAN/control-src ${SRCDIR}/debian/control
-	for f in changelog copyright;do
+	for f in changelog copyright rules;do
 	cp ${PKGROOT}/$DEBIAN/$f "${SRCDIR}/debian"
 	done
 	
@@ -94,15 +99,28 @@ init_files ()
     set -e
     mkdir -p "$PKGDIR/DEBIAN"
     
-    if [ $TMP = "core" ]; then
-    	for f in control changelog copyright postinst prerm;do
-		cp $DEBIAN/$f "$PKGDIR/DEBIAN" 
-    	done
-    else
-	for f in control changelog copyright;do
+    if [ $TMP = "daemon" ]; then
+    	for f in preinst postinst prerm postrm;do
 		cp $DEBIAN/$f "$PKGDIR/DEBIAN" 
     	done
     fi
+
+    if [ $TMP = "lib" ]; then
+	echo '#!/bin/sh' > $PKGDIR/DEBIAN/postinst
+	chmod a+rx  $PKGDIR/DEBIAN/postinst
+	echo "ldconfig" >> $PKGDIR/DEBIAN/postinst
+
+    	#for f in postinst;do
+	#	cp $DEBIAN/$f "$PKGDIR/DEBIAN" 
+    	#done
+	#sed -i '2,10d' $PKGDIR\/DEBIAN\/postinst
+        #sed -i '$a\ldconfig\' $PKGDIR\/DEBIAN\/postinst
+    fi
+
+    for f in control changelog copyright;do
+	cp $DEBIAN/$f "$PKGDIR/DEBIAN" 
+    done
+   
 
     echo "** Modifying Debian control file for $DEBLIB $TMP and $DEBARCH"
     
@@ -115,7 +133,7 @@ init_files ()
     sed -i '/'"$LINE2"'/ s/.*/&\-'"$TMP"'/' $PKGDIR\/DEBIAN\/control
     sed -i 's/"$LINE3"/&'" $DEBARCH"'/' $PKGDIR\/DEBIAN\/control
 
-    # cp $PKGDIR/DEBIAN/control $PKGROOT/control-$TMP
+    # cp $PKGDIR/DEBIAN/postinst $PKGROOT/postinst-$TMP
    
 }
 
@@ -163,8 +181,8 @@ copy_and_package_files ()
     PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
     create_sub_package;
 
-    TMP="core"
-    #hipl-core hipd: depends on hipl-lib
+    TMP="daemon"
+    #hipl-daemon hipd: depends on hipl-lib
     DEBLIB="$NAME-lib"
     init_files;
     
@@ -200,30 +218,42 @@ copy_and_package_files ()
     cd "$HIPL"
 
     echo "** Copying firewall to $PKGDIR"
-    cp firewall/firewall $PKGDIR/usr/sbin/
+    cp firewall/hipfw $PKGDIR/usr/sbin/
 
     PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
     create_sub_package;
 
     TMP="tools"
-    #hipl-tools (depends on hipl-lib and hipl-core)
-    DEBLIB="$NAME-lib, $NAME-core"
+    #hipl-tools (depends on hipl-lib and hipl-daemon)
+    DEBLIB="$NAME-lib, $NAME-daemon"
     init_files;
 
     echo "** Making directory to '$PKGDIR'"
     mkdir -p "$PKGDIR/usr"
     cd "$PKGDIR"
 
-    mkdir -p usr/sbin
+    mkdir -p usr/sbin usr/bin
+    mkdir -p usr/share/pyshared/DNS
+
     cd "$HIPL"
 
     cp tools/hipconf $PKGDIR/usr/sbin/
-    
+    cp tools/myasn.py $PKGDIR/usr/bin/
+    cp tools/parse-key-3.py $PKGDIR/usr/bin/
+
+    cp tools/dnsproxy.py $PKGDIR/usr/bin/
+    cp tools/hosts.py $PKGDIR/usr/bin/
+    cp tools/pyip6.py $PKGDIR/usr/bin/
+    cp tools/util.py $PKGDIR/usr/bin/
+    cp tools/DNS/*py $PKGDIR/usr/share/pyshared/DNS
+
+    chmod ugo+rx $PKGDIR/usr/bin/*.py
+
     PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
     create_sub_package;
    
     TMP="test"
-    DEBLIB="$NAME-lib, $NAME-core"
+    DEBLIB="$NAME-lib, $NAME-daemon"
     init_files;
     
     echo "** Making directory to '$PKGDIR'"
@@ -233,7 +263,7 @@ copy_and_package_files ()
     mkdir -p usr/bin usr/sbin
     cd "$HIPL"
 
-    for suffix in "" -gai -native -native-user-key;do
+    for suffix in -opp -hip -native -native-user-key;do
 	cp test/conntest-client$suffix $PKGDIR/usr/bin/
     done
 
@@ -247,7 +277,7 @@ copy_and_package_files ()
     create_sub_package;
 
     TMP="agent"
-    DEBLIB="$NAME-lib, $NAME-core"
+    DEBLIB="$NAME-lib, $NAME-daemon"
     init_files;
 
     echo "** Making directory to '$PKGDIR'"
@@ -470,7 +500,7 @@ if [ $TYPE = "binary" ];then
 
     cd "$PKGROOT"
     if ! copy_and_package_files;then
-	echo "** Error: unable to copy files, exiting"
+	echo "** Error: unable to copy files and create packages, exiting"
 	exit 1
     fi
 
@@ -520,13 +550,15 @@ if [ $TYPE = "source" ];then
     echo "** Creating the Debian Source package of $PKGDIR"
     cd "${PKGDIR_SRC}"
     
-
     if dpkg-source -b "${NAME}${SUFFIX}";then
 
 	rm -rf "${NAME}${SUFFIX}"
 
+	dpkg-scansources . /dev/null | gzip -9c > Sources.gz
+
 	echo "** Successfully finished building the source Debian package"
-	echo "** The debian packages are located in $PKGDIR_SRC"
+	echo "** The debian packages are located in" 
+        echo "$PKGDIR_SRC"
 	echo "** and they are named:"
 	echo "${NAME}-${VERSION}.diff.gz"
 	echo "${NAME}-${VERSION}.dsc"
@@ -538,11 +570,5 @@ if [ $TYPE = "source" ];then
     fi
 fi
 
-# jk: what is this??
-#cd $HIPL
-#echo "Resetting compilation environment, please wait..."
-#./configure >/dev/null
-#make clean >/dev/null
-#echo "Done."
 exit 0
 

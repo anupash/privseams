@@ -1,5 +1,5 @@
 Name: hipl
-Version: 1.0.3
+Version: 1.0.4
 Release: 1
 Summary: HIP IPsec key management and mobility daemon.
 URL: http://infrahip.hiit.fi/hipl/
@@ -41,6 +41,8 @@ make -C doc all
 #
 #%define _unpackaged_files_terminate_build 0
 #%define _missing_doc_files_terminate_build 0
+%define python_sitelib %(%{__python} -c 'from distutils import sysconfig; print sysconfig.get_python_lib()')
+
 
 # Note: we are not distributing everything from test directory, just essentials
 
@@ -52,17 +54,23 @@ Summary: hip library files
 Group: System Environment/Kernel
 %description lib
 
-%package core
+%package daemon
 Requires: hipl-lib
-Summary: hip core files
+Summary: hip daemon files
 Group: System Environment/Kernel
-%description core
+%description daemon
 
 %package agent
-Requires: hipl-lib, hipl-core
+Requires: hipl-lib, hipl-daemon
 Summary: hip agent files
 Group: System Environment/Kernel
 %description agent
+
+%package tools
+Requires: hipl-lib, hipl-daemon
+Summary: hip tools files
+Group: System Environment/Kernel
+%description tools
 
 %package firewall
 Summary: hip firewall files
@@ -70,7 +78,7 @@ Group: System Environment/Kernel
 %description firewall
 
 %package test
-Requires: hipl-lib, hipl-core
+Requires: hipl-lib, hipl-daemon
 Summary: hip test files
 Group: System Environment/Kernel
 %description test
@@ -90,13 +98,18 @@ install -d %{buildroot}/doc
 make DESTDIR=%{buildroot} install
 install -m 700 test/packaging/rh-init.d-hipd %{buildroot}/etc/rc.d/init.d/hipd
 install -m 644 doc/HOWTO.txt %{buildroot}/doc
+install -d %{buildroot}/%{python_sitelib}/DNS
+install -t %{buildroot}/%{python_sitelib}/DNS tools/DNS/*py
 
-%post core
-sudo /sbin/chkconfig --add hipd
-sudo /sbin/chkconfig --level 2 hipd on
-sudo /sbin/service hipd start
+%post lib
+/sbin/ldconfig 
 
-%preun core
+%post daemon
+/sbin/chkconfig --add hipd
+/sbin/chkconfig --level 2 hipd on
+/sbin/service hipd start
+
+%preun daemon
 /sbin/service hipd stop
 /sbin/chkconfig --del hipd
 
@@ -106,8 +119,7 @@ rm -rf %{buildroot}
 %files lib
 %{_libdir}
 
-%files core
-%{prefix}/sbin/hipconf
+%files daemon
 %{prefix}/sbin/hipd
 %{prefix}/bin/hipsetup
 %config /etc/rc.d/init.d/hipd
@@ -115,16 +127,43 @@ rm -rf %{buildroot}
 %files agent
 %{prefix}/bin/hipagent
 
+#%{prefix}/bin/DNS/Base.py
+#%{prefix}/bin/DNS/Base.pyc
+#%{prefix}/bin/DNS/Class.py
+#%{prefix}/bin/DNS/Class.pyc
+#%{prefix}/bin/DNS/Lib.py
+#%{prefix}/bin/DNS/Status.py
+#%{prefix}/bin/DNS/Status.pyc
+#%{prefix}/bin/DNS/Type.py
+#%{prefix}/bin/DNS/Type.pyc
+#%{prefix}/bin/DNS/__init__.py
+#%{prefix}/bin/DNS/__init__.pyc
+#%{prefix}/bin/DNS/lazy.py
+#%{prefix}/bin/DNS/lazy.pyc
+#%{prefix}/bin/DNS/pyip6.py
+#%{prefix}/bin/DNS/win32dns.py
+
+%files tools
+%{prefix}/sbin/hipconf
+%{prefix}/sbin/myasn.py
+%{prefix}/sbin/parse-key-3.py
+%{prefix}/sbin/dnsproxy.py
+%{prefix}/sbin/hosts.py
+%{prefix}/sbin/pyip6.py
+%{prefix}/sbin/util.py
+%{python_sitelib}/DNS
+%defattr(755,root,root)
+
 %files test
-%{prefix}/bin/conntest-client
-%{prefix}/bin/conntest-client-gai
+%{prefix}/bin/conntest-client-opp
+%{prefix}/bin/conntest-client-hip
 %{prefix}/bin/conntest-client-native
 %{prefix}/bin/conntest-client-native-user-key
 %{prefix}/bin/conntest-server
 %{prefix}/bin/conntest-server-native
 
 %files firewall
-%{prefix}/sbin/firewall
+%{prefix}/sbin/hipfw
 
 %files doc
 %doc doc/HOWTO.txt doc/howto-html

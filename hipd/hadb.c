@@ -17,6 +17,10 @@ static IMPLEMENT_LHASH_COMP_FN(hip_compare_ha, const hip_ha_t *)
 hip_xmit_func_set_t default_xmit_func_set;
 /** A transmission function set for NAT traversal. */
 hip_xmit_func_set_t nat_xmit_func_set;
+
+/* added by Tao Wan, 24 Jan, 2008, For IPsec (user_space/kernel) */
+hip_ipsec_func_set_t default_ipsec_func_set;
+
 static hip_misc_func_set_t ahip_misc_func_set;
 static hip_misc_func_set_t default_misc_func_set;
 static hip_input_filter_func_set_t default_input_filter_func_set;
@@ -242,30 +246,27 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 {
 	hip_hastate_t st;
 	hip_ha_t *tmp;
-
+	
 	HIP_DEBUG("hip_hadb_insert_state() invoked.\n");
-
+	
 	/* assume already locked ha */
-
+	
 	HIP_ASSERT(!(ipv6_addr_any(&ha->hit_peer)));
-
+	
 	st = ha->hastate;
 
-	if (!ipv6_addr_any(&ha->hit_peer) && !(st & HIP_HASTATE_HITOK))
-	{
+	if (!ipv6_addr_any(&ha->hit_peer) && !(st & HIP_HASTATE_HITOK)) {
 		HIP_HEXDUMP("ha->hit_our is: ", &ha->hit_our, 16);
 		HIP_HEXDUMP("ha->hit_peer is: ", &ha->hit_peer, 16);
 		tmp = hip_ht_find(hadb_hit, ha);
-		if (!tmp)
-		{
+
+		if (tmp == NULL) {
 		        if (hip_null_lsi(ha->lsi_peer)) 
 		              hip_hadb_set_lsi_pair(ha);
 			hip_ht_add(hadb_hit, ha);
 			st |= HIP_HASTATE_HITOK;
 			HIP_DEBUG("New state added\n");
-		}
-		else
-		{
+		} else {
 			hip_db_put_ha(tmp, hip_hadb_delete_state);
 			HIP_DEBUG("HIT already taken\n");
 		}
@@ -426,6 +427,10 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 #ifdef CONFIG_HIP_OPPTCP
      	entry->hip_is_opptcp_on = hip_get_opportunistic_tcp_status();
 #endif
+     	
+#ifdef CONFIG_HIP_HIPPROXY
+     	entry->hipproxy = hip_get_hip_proxy_status();
+#endif
 
 	int value = hip_hadb_insert_state(entry);
 
@@ -436,9 +441,9 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	HIP_IFEL(hip_hadb_add_peer_addr(entry, peer_addr, 0, 0, PEER_ADDR_STATE_ACTIVE),
 		 -2, "error while adding a new peer address\n");
 
-	HIP_IFEL(hip_setup_hit_sp_pair(peer_hit, local_hit,
-				       local_addr, peer_addr, 0, 1, 0),
-					-1, "Error in setting the SPs\n");
+	HIP_IFEL(default_ipsec_func_set.hip_setup_hit_sp_pair(peer_hit, local_hit,
+							       local_addr, peer_addr, 0, 1, 0),
+		 -1, "Error in setting the SPs\n");
 
 	if (entry)
 		hip_db_put_ha(entry, hip_hadb_delete_state);
@@ -490,7 +495,7 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr, hip_
 		
 	memcpy(&peer_map.peer_addr, peer_addr, sizeof(struct in6_addr));
 	memcpy(&peer_map.peer_hit, peer_hit, sizeof(hip_hit_t));
-
+	
 	if (!peer_lsi){
 		inet_aton("0.0.0.0", &lsi_aux);
 		memcpy(&peer_map.peer_lsi, &lsi_aux, sizeof(hip_lsi_t));
@@ -498,9 +503,9 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr, hip_
 		memcpy(&peer_map.peer_lsi, peer_lsi, sizeof(hip_lsi_t));
 	}
 		 	
-	HIP_IFEL(hip_select_source_address(&peer_map.our_addr,
-					   &peer_map.peer_addr), -1,
-		 "Cannot find source address\n");
+	HIP_IFEL(hip_select_source_address(
+			 &peer_map.our_addr, &peer_map.peer_addr),
+		 -1, "Cannot find source address\n");
 
 	HIP_IFEL(hip_for_each_hi(hip_hadb_add_peer_info_wrapper, &peer_map), 0,
 	         "for_each_hi err.\n");	
@@ -574,6 +579,9 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
 	entry->spis_in = hip_ht_init(hip_hash_spi, hip_match_spi);
 	entry->spis_out = hip_ht_init(hip_hash_spi, hip_match_spi);
 	
+#ifdef CONFIG_HIP_HIPPROXY
+	entry->hipproxy = 0;
+#endif
 	HIP_LOCK_INIT(entry);
 	//atomic_set(&entry->refcnt,0);
 
@@ -607,6 +615,9 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
 	HIP_IFEL(hip_hadb_set_output_filter_function_set(
 			 entry,& default_output_filter_func_set),
 		 -1, "Can't set new function pointer set\n");
+
+	/* added by Tao Wan, on 24, Jan, 2008 */ 
+	entry->hadb_ipsec_func = &default_ipsec_func_set;
 
  out_err:
 	
@@ -2166,6 +2177,27 @@ void hip_init_hadb(void)
 	-Lauri 25.09.2007 15:11. */
      default_input_filter_func_set.hip_input_filter	= hip_agent_filter;
      default_output_filter_func_set.hip_output_filter   = hip_agent_filter;
+
+     /* Tao Wan and Miika komu added, 24 Jan, 2008 for IPsec (userspace / kernel part)*/
+     if (hip_use_userspace_ipsec) {
+	     default_ipsec_func_set.hip_add_sa = hip_userspace_ipsec_add_sa;
+	     default_ipsec_func_set.hip_setup_hit_sp_pair = hip_userspace_ipsec_setup_hit_sp_pair;
+	     default_ipsec_func_set.hip_delete_hit_sp_pair = hip_userspace_ipsec_delete_hit_sp_pair;
+	     default_ipsec_func_set.hip_flush_all_policy = hip_userspace_ipsec_flush_all_policy;
+	     default_ipsec_func_set.hip_flush_all_sa = hip_userspace_ipsec_flush_all_sa;
+	     default_ipsec_func_set.hip_acquire_spi = hip_acquire_spi;
+	     default_ipsec_func_set.hip_delete_default_prefix_sp_pair = hip_userspace_ipsec_delete_default_prefix_sp_pair;
+	     default_ipsec_func_set.hip_setup_default_sp_prefix_pair = hip_userspace_ipsec_setup_default_sp_prefix_pair;
+     } else {
+	     default_ipsec_func_set.hip_add_sa = hip_add_sa;
+	     default_ipsec_func_set.hip_setup_hit_sp_pair = hip_setup_hit_sp_pair;
+	     default_ipsec_func_set.hip_delete_hit_sp_pair = hip_delete_hit_sp_pair;
+	     default_ipsec_func_set.hip_flush_all_policy = hip_flush_all_policy;
+	     default_ipsec_func_set.hip_flush_all_sa = hip_flush_all_sa;
+	     default_ipsec_func_set.hip_acquire_spi = hip_acquire_spi;
+	     default_ipsec_func_set.hip_delete_default_prefix_sp_pair = hip_delete_default_prefix_sp_pair;
+	     default_ipsec_func_set.hip_setup_default_sp_prefix_pair = hip_setup_default_sp_prefix_pair;
+     }
 }
 
 hip_xmit_func_set_t *hip_get_xmit_default_func_set() {
@@ -2300,20 +2332,20 @@ int hip_hadb_set_update_function_set(hip_ha_t * entry,
    for all controls. */
 void hip_hadb_set_local_controls(hip_ha_t *entry, hip_controls_t mask)
 {
-     if(entry != NULL)
-     {
-	  switch(mask)
-	  {
-	  case HIP_HA_CTRL_NONE:
-	       entry->local_controls &= mask;
-	  case HIP_HA_CTRL_LOCAL_REQ_HIPUDP:
-	  case HIP_HA_CTRL_LOCAL_REQ_RVS:
-	       entry->local_controls |= mask;
-	       break;
-	  default:
-	       HIP_ERROR("Unknown local controls given.\n");
-	  }
-     }
+	if(entry != NULL) {
+		switch(mask) {
+
+		case HIP_HA_CTRL_NONE:
+			entry->local_controls &= mask;
+		case HIP_HA_CTRL_LOCAL_REQ_ESCROW:
+		case HIP_HA_CTRL_LOCAL_REQ_RELAY:
+		case HIP_HA_CTRL_LOCAL_REQ_RVS:
+			entry->local_controls |= mask;
+			break;
+		default:
+			HIP_ERROR("Unknown local controls given.\n");
+		}
+	}
 }
 
 /* NOTE! When modifying this function, remember that some control values may
@@ -2321,35 +2353,33 @@ void hip_hadb_set_local_controls(hip_ha_t *entry, hip_controls_t mask)
    for all controls. */
 void hip_hadb_set_peer_controls(hip_ha_t *entry, hip_controls_t mask)
 {
-     if(entry != NULL)
-     {
-	  switch(mask)
-	  {
-	  case HIP_HA_CTRL_NONE:
-	       entry->peer_controls &= mask;
-	  case HIP_HA_CTRL_PEER_RVS_CAPABLE:
-	  case HIP_HA_CTRL_PEER_HIPUDP_CAPABLE:
-	       entry->peer_controls |= mask;
-	       break;
-	  default:
-	       HIP_ERROR("Unknown peer controls given.\n");
-	  }
-     }
+	if(entry != NULL) {
+		switch(mask) {
+
+		case HIP_HA_CTRL_NONE:
+			entry->peer_controls &= mask;
+		case HIP_HA_CTRL_PEER_ESCROW_CAPABLE:
+		case HIP_HA_CTRL_PEER_RVS_CAPABLE:
+		case HIP_HA_CTRL_PEER_RELAY_CAPABLE:
+			entry->peer_controls |= mask;
+			break;
+		default:
+			HIP_ERROR("Unknown peer controls given.\n");
+		}
+	}
 }
 
 void hip_hadb_cancel_local_controls(hip_ha_t *entry, hip_controls_t mask)
 {
-     if(entry != NULL)
-     {
-	  entry->local_controls &= (~mask);
-     }
+	if(entry != NULL) {
+		entry->local_controls &= (~mask);
+	}
 }
 
 void hip_hadb_cancel_peer_controls(hip_ha_t *entry, hip_controls_t mask)
 {
-     if(entry != NULL)
-     {
-	  entry->peer_controls &= (~mask);
+     if(entry != NULL) {
+	     entry->peer_controls &= (~mask);
      }
 }
 
@@ -2611,15 +2641,12 @@ int hip_count_one_entry(hip_ha_t *entry, void *cntr)
 {
 	int *counter = cntr;
 	if (entry->state == HIP_STATE_CLOSING ||
-	    entry->state == HIP_STATE_ESTABLISHED ||
-	    entry->state == HIP_STATE_FILTERING_I2 ||
-	    entry->state == HIP_STATE_FILTERING_R2)
+	    entry->state == HIP_STATE_ESTABLISHED)
 	{
 		(*counter)++;
 	}
 	return 0;
 }
-
 
 /**
  * Return number of open connections by calculating hadb entrys.
@@ -2861,5 +2888,43 @@ hip_hit_t *hip_hadb_get_peer_hit_by_peer_lsi(hip_lsi_t *lsi){
     	else
       		return NULL;
 
+}
+
+int hip_get_local_addr(struct hip_common *msg)
+{
+	hip_ha_t* entry;
+	int err;
+    	struct in6_addr local_address;
+    	hip_hit_t* src_hit;
+    	hip_hit_t* dst_hit;
+	
+    	src_hit = (hip_hit_t *) hip_get_param_contents(msg, HIP_PARAM_HIT);
+	dst_hit = (hip_hit_t *) hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR);
+	HIP_DEBUG_HIT("src_hit from local address request: ", src_hit);
+	HIP_DEBUG_HIT("dst_hit from local address request: ", dst_hit);
+/*	if (ptr) {
+		memcpy(peer_hit, ptr, sizeof(hip_hit_t));
+		HIP_DEBUG_HIT("peer_hit", peer_hit);
+		*fallback = 0;
+	}	
+*/			
+	memset(&local_address, 0, sizeof(struct in6_addr));
+	entry = hip_hadb_find_byhits(src_hit, dst_hit);
+	
+	hip_msg_init(msg);
+	//HIP_DEBUG_IN6ADDR(" local address: ", &entry->local_address);
+	
+	if(!entry)
+		HIP_DEBUG("Can't find local address because of no entry in hadb!\n");
+
+    	ipv6_addr_copy(&local_address, &entry->local_address);
+    	
+    	//hip_build_user_hdr(msg, HIP_HIPPROXY_LOCAL_ADDRESS, 0);
+	err = hip_build_param_contents(msg, &local_address, HIP_PARAM_IPV6_ADDR,
+				       sizeof(struct in6_addr));
+	if (err)
+		HIP_ERROR("Building local address info failed\n");
+	
+	return 0;	
 }
 

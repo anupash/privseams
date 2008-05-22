@@ -9,6 +9,7 @@
  * @author  Bing Zhou <bingzhou_cc.hut.fi>
  * @author  Anu Markkola
  * @author  Lauri Silvennoinen
+ * @author  Tao Wan <twan@cc.hut.fi>
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>
  */
 #ifndef HIPCONF_H
@@ -39,9 +40,9 @@
 #include "crypto.h"
 #include "builder.h"
 #include "hipd.h"
-
 #include "util.h"
 #include "libhipopendht.h"
+#include "registration.h"
 
 /*
  * DO NOT TOUCH THESE, unless you know what you are doing.
@@ -82,9 +83,6 @@
    argument. For example in "tools/hipconf get hi default" -command "get"
    is the action. */
 
-
-/* Important! These values are used as array indexes, so keep in this order.
-   Add values after the last value and increment TYPE_MAX. */
 /* 0 is reserved */
 #define ACTION_ADD 1
 #define ACTION_DEL 2
@@ -108,36 +106,43 @@
 #define ACTION_OPENDHT 20
 #define ACTION_OPPTCP  21
 #define ACTION_TRANSORDER 22
-#define ACTION_MAX 23 /* exclusive */
+#define ACTION_TCPTIMEOUT 23 /* add By Tao Wan, on 04.01.2008 */
+#define ACTION_HIPPROXY 24
+#define ACTION_REINIT 25
+#define ACTION_MAX 26 /* exclusive */
 
+/* Important! These values are used as array indexes, so keep in this order.
+   Add values after the last value and increment TYPE_MAX. */
 /* 0 is reserved */
-#define TYPE_HI      	1
-#define TYPE_MAP     	2
-#define TYPE_RST     	3
-#define TYPE_RVS     	4
-#define TYPE_BOS     	5
-#define TYPE_PUZZLE  	6
-#define TYPE_NAT     	7
-#define TYPE_OPP     	EXEC_LOADLIB_OPP /* Should be 8 */
-#define TYPE_ESCROW  	9
-#define TYPE_SERVICE 	10
-#define TYPE_CONFIG     11
-#define TYPE_RUN     	EXEC_LOADLIB_HIP /* Should be 12 */
-#define TYPE_TTL        13
-#define TYPE_GW         14
-#define TYPE_GET        15
-#define TYPE_BLIND      16
-#define TYPE_HA         17
-#define TYPE_MODE       18
-#define TYPE_DEBUG      19
-#define TYPE_DAEMON     20
-#define TYPE_LOCATOR    21
-#define TYPE_RELAY_UDP_HIP 22
-#define TYPE_SET        23 /* DHT set <name> */
-#define TYPE_DHT        24
-#define TYPE_OPPTCP		25
-#define TYPE_ORDER      26
-#define TYPE_MAX    	27 /* exclusive */
+#define TYPE_HI      	   1
+#define TYPE_MAP     	   2
+#define TYPE_RST           3
+#define TYPE_RVS     	   4
+#define TYPE_BOS     	   5
+#define TYPE_PUZZLE  	   6
+#define TYPE_NAT           7
+#define TYPE_OPP     	   EXEC_LOADLIB_OPP /* Should be 8 */
+#define TYPE_ESCROW  	   9
+#define TYPE_SERVICE 	   10
+#define TYPE_CONFIG        11
+#define TYPE_RUN     	   EXEC_LOADLIB_HIP /* Should be 12 */
+#define TYPE_TTL           13
+#define TYPE_GW            14
+#define TYPE_GET           15
+#define TYPE_BLIND         16
+#define TYPE_HA            17
+#define TYPE_MODE          18
+#define TYPE_DEBUG         19
+#define TYPE_DAEMON        20
+#define TYPE_LOCATOR       21
+#define TYPE_RELAY         22
+#define TYPE_SET           23 /* DHT set <name> */
+#define TYPE_DHT           24
+#define TYPE_OPPTCP	   25
+#define TYPE_ORDER         26
+#define TYPE_TCPTIMEOUT	   27 /* add By Tao Wan, on 04.01.2008*/
+#define TYPE_HIPPROXY	   28
+#define TYPE_MAX           29 /* exclusive */
 
 /* for handle_hi() only */
 #define OPT_HI_TYPE 0
@@ -149,10 +154,10 @@
 "# Format of this file is as with hipconf, but without hipconf prefix.\n\
 # add map HIT IP    # preload some HIT-to-IP mappings to hipd \n\
 # add service rvs   # the host acts as HIP rendezvous\n\
-# nat on            # the host is behind a NAT\n\
 # dht gw host port port TTL # set dht gw hostname|ip port default=5851\n\
 # locator on # host sends all of its locators in base exchange \n\
 opendht off # Jan 2007: OpenDHT infrastructure is flaky -Samu/Miika\n\
+nat on              # the host is behind a NAT\n\
 debug medium        # debug verbosity: all, medium or none\n"
 
 #define HIPD_HOSTS_FILE     "/etc/hip/hosts"
@@ -164,37 +169,41 @@ debug medium        # debug verbosity: all, medium or none\n"
 #2001:17:53ab:9ff1:3cba:15f:86d6:ea2e kenny       # This is a HIT without alias\n"
 
 int hip_handle_exec_application(int fork, int type, int argc, char **argv);
-int hip_conf_handle_restart(struct hip_common *, int type, const char *opt[], int optc);
+int hip_conf_handle_restart(hip_common_t *, int type, const char *opt[], int optc);
 int hip_append_pathtolib(char **libs, char *lib_all, int lib_all_length);
-int hip_conf_handle_hi(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_map(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_rst(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_debug(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_bos(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_rvs(struct hip_common *msg, int action, const char *opt[], int optc);
-int hip_conf_handle_hipudprelay(struct hip_common *msg, int action, const char *opt[], int optc);
-int hip_conf_handle_del(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_nat(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_locator(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_puzzle(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_opp(struct hip_common *msg, int action, const char *opt[], int optc);
-int hip_conf_handle_blind(struct hip_common *, int type, const char **opt, int optc);
-int hip_conf_handle_escrow(struct hip_common *msg, int action, const char *opt[], int optc);
-int hip_conf_handle_service(struct hip_common *msg, int action, const char *opt[], int optc);
-int hip_conf_handle_load(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_ttl(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_gw(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_trans_order(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_get(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_set(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_dht_toggle(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_run_normal(struct hip_common *msg, int action,
+int hip_conf_handle_hi(hip_common_t *, int type, const char *opt[], int optc);
+int hip_conf_handle_map(hip_common_t *, int type, const char *opt[], int optc);
+int hip_conf_handle_rst(hip_common_t *, int type, const char *opt[], int optc);
+int hip_conf_handle_debug(hip_common_t *, int type, const char *opt[], int optc);
+int hip_conf_handle_bos(hip_common_t *, int type, const char *opt[], int optc);
+int hip_conf_handle_rvs(hip_common_t *msg, int action, const char *opt[], int optc);
+int hip_conf_handle_hiprelay(hip_common_t *msg, int action, const char *opt[], int optc);
+int hip_conf_handle_del(hip_common_t *, int type, const char *opt[], int optc);
+int hip_conf_handle_nat(hip_common_t *, int type, const char *opt[], int optc);
+int hip_conf_handle_locator(hip_common_t *, int type, const char *opt[], int optc);
+int hip_conf_handle_puzzle(hip_common_t *, int type, const char *opt[], int optc);
+int hip_conf_handle_opp(hip_common_t *msg, int action, const char *opt[], int optc);
+int hip_conf_handle_blind(hip_common_t *, int type, const char **opt, int optc);
+int hip_conf_handle_escrow(hip_common_t *msg, int action, const char *opt[], int optc);
+int hip_conf_handle_service(hip_common_t *msg, int action, const char *opt[], int optc);
+int hip_conf_handle_load(hip_common_t *, int type, const char *opt[], int optc);
+int hip_conf_handle_ttl(hip_common_t *, int type, const char *opt[], int optc);
+int hip_conf_handle_gw(hip_common_t *, int type, const char *opt[], int optc);
+int hip_conf_handle_trans_order(hip_common_t *, int type, const char *opt[], int optc);
+int hip_conf_handle_get(hip_common_t *, int type, const char *opt[], int optc);
+int hip_conf_handle_set(hip_common_t *, int type, const char *opt[], int optc);
+int hip_conf_handle_dht_toggle(hip_common_t *, int type, const char *opt[], int optc);
+int hip_conf_handle_run_normal(hip_common_t *msg, int action,
 			       const char *opt[], int optc);
-int hip_get_all_hits(struct hip_common *msg,char *argv[]);
+int hip_get_all_hits(hip_common_t *msg,char *argv[]);
 int hip_get_action(char *action);
 int hip_get_type(char *type);
-int hip_conf_handle_ha(struct hip_common *msg, int action,const char *opt[], int optc);
-int hip_conf_handle_handoff(struct hip_common *msg, int action,const char *opt[], int optc);
+int hip_conf_handle_ha(hip_common_t *msg, int action,const char *opt[], int optc);
+int hip_conf_handle_handoff(hip_common_t *msg, int action,const char *opt[], int optc);
+int hip_conf_handle_opptcp(hip_common_t *, int type, const char *opt[], int optc);
 int hip_do_hipconf(int argc, char *argv[], int send_only);
 int hip_conf_handle_opptcp(struct hip_common *, int type, const char *opt[], int optc);
+int hip_conf_handle_tcptimeout(struct hip_common *, int type, const char *opt[], int optc); /*added by Tao Wan, 04.Jan.2008*/
+int hip_conf_handle_hipproxy(struct hip_common *msg, int action, const char *opt[], int optc);
+
 #endif /* HIPCONF */

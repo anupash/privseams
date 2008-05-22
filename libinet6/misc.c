@@ -509,23 +509,21 @@ int convert_string_to_address(const char *str, struct in6_addr *ip6) {
 	struct in_addr ip4;
 
 	ret = inet_pton(AF_INET6, str, ip6);
-	HIP_IFEL((ret < 0 && errno == EAFNOSUPPORT),
-		 err = -1,
-		 "inet_pton: not a valid address family\n");
+	HIP_IFEL((ret < 0 && errno == EAFNOSUPPORT), -1,
+		 "\"%s\" is not of valid address family.\n", str);
 	if (ret > 0) {
                 /* IPv6 address conversion was ok */
-		HIP_DEBUG_IN6ADDR("id", ip6);
+		HIP_DEBUG_IN6ADDR("Converted IPv6", ip6);
 		goto out_err;
 	}
 
 	/* Might be an ipv4 address (ret == 0). Lets catch it here. */
-	
 	err = convert_string_to_address_v4(str, &ip4);
 	if (err)
 		goto out_err;
 
 	IPV4_TO_IPV6_MAP(&ip4, ip6);
-	HIP_DEBUG("Mapped v4 to v6\n");
+	HIP_DEBUG("Mapped v4 to v6.\n");
 	HIP_DEBUG_IN6ADDR("mapped v6", ip6); 	
 
  out_err:
@@ -1648,6 +1646,9 @@ int hip_sockaddr_len(void *sockaddr) {
   case AF_INET6:
     len = sizeof(struct sockaddr_in6);
     break;
+  case_AF_UNIX:
+    len = sizeof(struct sockaddr_un);
+    break;
   default:
     len = 0;
   }
@@ -1669,6 +1670,98 @@ int hip_sa_addr_len(void *sockaddr) {
     len = 0;
   }
   return len;
+}
+
+
+/* conversion function from in6_addr to sockaddr */
+void hip_addr_to_sockaddr(struct in6_addr *addr, struct sockaddr *sa)
+{
+	if (IN6_IS_ADDR_V4MAPPED(addr)) {
+		struct sockaddr_in *in = (struct sockaddr_in *) sa;
+		memset(in, 0, sizeof(struct sockaddr_in));
+		in->sin_family = AF_INET;
+		IPV6_TO_IPV4_MAP(addr, &in->sin_addr);
+	} else {
+		struct sockaddr_in6 *in6 = (struct sockaddr_in6 *) sa;
+		memset(in6, 0, sizeof(struct sockaddr_in6));
+		in6->sin6_family = AF_INET6;
+		ipv6_addr_copy(&in6->sin6_addr, addr);
+	}
+}
+
+
+
+
+
+int hip_remove_lock_file(char *filename) {
+	return unlink(filename);
+}
+
+int hip_create_lock_file(char *filename, int killold) {
+	int err = 0, fd = 0, old_pid = 0;
+	char old_pid_str[64], new_pid_str[64];
+	int new_pid_str_len;
+	
+	memset(old_pid_str, 0, sizeof(old_pid_str));
+	memset(new_pid_str, 0, sizeof(new_pid_str));
+
+	/* New pid */
+	snprintf(new_pid_str, sizeof(new_pid_str)-1, "%d\n", getpid());
+	new_pid_str_len = strnlen(new_pid_str, sizeof(new_pid_str)-1);
+	HIP_IFEL((new_pid_str_len <= 0), -1, "pid length\n");
+		
+	/* Read old pid */
+	fd = open(filename, O_RDWR | O_CREAT, 0644);
+	HIP_IFEL((fd <= 0), -1, "opening lock file failed\n");
+
+	read(fd, old_pid_str, sizeof(old_pid_str) - 1);
+	old_pid = atoi(old_pid_str);
+       
+	if (lockf(fd, F_TLOCK, 0) < 0)
+	{ 
+		HIP_IFEL(!killold, -12,
+			 "\nHIP daemon already running with pid %d\n"
+			 "Give: -k option to kill old daemon.\n",old_pid);
+		
+		HIP_INFO("\nDaemon is already running with pid %d\n"
+			 "-k option given, terminating old one...\n", old_pid);
+		/* Erase the old lock file to avoid having multiple pids
+		   in the file */
+		lockf(fd, F_ULOCK, 0);
+		close(fd);
+		HIP_IFEL(hip_remove_lock_file(filename), -1,"remove lock file\n");
+                /* fd = open(filename, O_RDWR | O_CREAT, 0644); */
+		fd = open(filename, O_RDWR | O_CREAT | O_TRUNC, 0644);
+                /* don't close file descriptor because new started process is running */
+		HIP_IFEL((fd <= 0), -1, "Opening lock file failed\n");
+		HIP_IFEL(lockf(fd, F_TLOCK, 0), -1,"lock attempt failed\n");  
+                 /* HIP_IFEL(kill(old_pid, SIGKILL), -1, "kill failed\n"); */
+		err = kill(old_pid, SIGKILL);
+		if (err != 0)
+		{
+                 HIP_INFO("\nError %d while trying to kill pid %d\n", err,old_pid);
+		} 
+	}
+	/* else if (killold)
+	{	
+		lseek(fd,0,SEEK_SET);
+		write(fd, new_pid_str, new_pid_str_len);
+                system("NEW_PID=$(sudo awk NR==1 /var/lock/hipd.lock)");
+		system("OLD_PID=$(/bin/pidof -o $NEW_PID hipd)");
+		system("kill -9 $OLD_PID"); 
+	} */
+
+	lseek(fd,0,SEEK_SET);
+	HIP_IFEL((write(fd, new_pid_str, new_pid_str_len) != new_pid_str_len),
+		 "Writing new pid failed\n", -1);
+
+out_err:
+	if (err == -12)
+	{
+	  exit(0);
+	}
+
+	return err;
 }
 
 #endif /* ! __KERNEL__ */
@@ -1784,6 +1877,12 @@ hip_lsi_t *hip_get_lsi_peer_by_hits(struct in6_addr *hit_s, struct in6_addr *hit
         struct hip_common *msg = NULL;
 	hip_lsi_t *lsi = NULL;
 
+	HIP_DEBUG_HIT("src hit is: ", src_hit);
+	HIP_DEBUG_HIT("dst hit hit is: ", dst_hit);
+	HIP_DEBUG_IN6ADDR("src ip is: ", src_ip);
+	HIP_DEBUG_IN6ADDR("dst ip  is: ", dst_ip);
+	
+	
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 
 	if (hit_s)
@@ -1963,10 +2062,13 @@ int hip_trigger_bex(struct in6_addr **src_hit, struct in6_addr **dst_hit, struct
 	/* build the message header */
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_TRIGGER_BEX, 0), -1,
 		 "build hdr failed\n");
+
+	HIP_DUMP_MSG(msg);
 	
 	/* send and receive msg to/from hipd */
 	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send_recv msg failed\n");
-	HIP_DEBUG("send_recv msg succeed\n");
+	_HIP_DEBUG("send_recv msg succeed\n");
+
 	/* check error value */
 	HIP_IFEL(hip_get_msg_err(msg), -1, "Got erroneous message!\n");
 
@@ -2116,4 +2218,5 @@ int getproto_info(int port_dest, char *proto)
         if (fd)                                                               
                 fclose(fd);		
         return exists;	        				
+
 }

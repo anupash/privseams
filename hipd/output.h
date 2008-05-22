@@ -22,7 +22,9 @@
 #include "user.h"
 #include "string.h"
 #include "nat.h"
+#include "registration.h"
 #include <netinet/ip.h>
+#include <netinet/tcp.h>
 /* #include <libiptc/libiptc.h> */
 
 #ifdef CONFIG_HIP_HI3
@@ -76,6 +78,13 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
                 in6_addr_t *dst_ip, const in_port_t dst_port,
                 hip_portpair_t *i1_info, uint16_t *nonce);
+
+int hip_send_r2_response(struct hip_common *r2,
+		struct in6_addr *r2_saddr,
+		struct in6_addr *r2_daddr,
+		hip_ha_t *entry,
+		hip_portpair_t *r2_info);
+
 int hip_build_locators(struct hip_common *);
 
 int hip_send_i1(hip_hit_t *, hip_hit_t *, hip_ha_t *);

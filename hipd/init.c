@@ -124,39 +124,14 @@ int hipd_init(int flush_ipsec, int killold)
 {
 	hip_hit_t default_hit;
 	hip_lsi_t default_lsi;
-	int err = 0, fd, dhterr;
+	hip_hit_t peer_hit;
+	int err = 0, dhterr;
 	char str[64];
 	struct sockaddr_in6 daemon_addr;
 
 	/* Open daemon lock file and read pid from it. */
-//	unlink(HIP_DAEMON_LOCK_FILE);
-	fd = open(HIP_DAEMON_LOCK_FILE, O_RDWR | O_CREAT, 0644);
-
-	/* Write pid to file. */
-	if (fd > 0)
-	{
-		if (lockf(fd, F_TLOCK, 0) < 0)
-		{
-			int pid = 0;
-			memset(str, 0, sizeof(str));
-			read(fd, str, sizeof(str) - 1);
-			pid = atoi(str);
-			
-			if (!killold)
-			{
-				HIP_ERROR("HIP daemon already running with pid %d!\n", pid);
-				HIP_ERROR("Use -k option to kill old daemon.\n");
-				exit(1);
-			}
-		
-			HIP_INFO("Daemon is already running with pid %d?"
-			         "-k option given, terminating old one...\n", pid);
-			kill(pid, SIGKILL);
-		}
-		
-		sprintf(str, "%d\n", getpid());
-		write(fd, str, strlen(str)); /* record pid to lockfile */
-	}
+	HIP_IFEL(hip_create_lock_file(HIP_DAEMON_LOCK_FILE, killold), -1,
+		 "locking failed\n");
 
 	hip_init_hostid_db(NULL);
 
@@ -170,7 +145,8 @@ int hipd_init(int flush_ipsec, int killold)
 	signal(SIGCHLD, hip_sig_chld);
  
 	HIP_IFEL(hip_init_oppip_db(), -1,
-	         "Cannot initialize opportunistic mode IP database for non HIP capable hosts!\n");
+	         "Cannot initialize opportunistic mode IP database for "\
+		 "non HIP capable hosts!\n");
 
 	HIP_IFEL((hip_init_cipher() < 0), 1, "Unable to init ciphers.\n");
 
@@ -180,14 +156,15 @@ int hipd_init(int flush_ipsec, int killold)
 
 	hip_init_puzzle_defaults();
 
-/* Initialize a hashtable for services, if any service is enabled. */
+       /* Initialize a hashtable for services, if any service is enabled. */
 	hip_init_services();
+	/* The new service initialization. */
+	hip_init_xxx_services();
+
 #ifdef CONFIG_HIP_RVS
-	HIP_INFO("Initializing HIP UDP relay database.\n");
-	if(hip_relht_init() == NULL)
-	{
-	     HIP_ERROR("Unable to initialize HIP UDP relay database.\n");
-	}
+	
+	HIP_INFO("Initializing HIP relay / RVS.\n");
+	hip_relay_init();
 #endif
 #ifdef CONFIG_HIP_ESCROW
 	hip_init_keadb();
@@ -262,14 +239,14 @@ int hipd_init(int flush_ipsec, int killold)
 
 	if (flush_ipsec)
 	{
-		hip_flush_all_sa();
-		hip_flush_all_policy();
+		default_ipsec_func_set.hip_flush_all_sa();
+		default_ipsec_func_set.hip_flush_all_policy();
 	}
 
 	HIP_DEBUG("Setting SP\n");
-	hip_delete_default_prefix_sp_pair();
-	HIP_IFE(hip_setup_default_sp_prefix_pair(), 1);
-
+	default_ipsec_func_set.hip_delete_default_prefix_sp_pair();
+	HIP_IFE(default_ipsec_func_set.hip_setup_default_sp_prefix_pair(), -1);
+	
 	HIP_DEBUG("Setting iface %s\n", HIP_HIT_DEV);
 	set_up_device(HIP_HIT_DEV, 0);
 	HIP_IFE(set_up_device(HIP_HIT_DEV, 1), 1);
@@ -286,29 +263,25 @@ int hipd_init(int flush_ipsec, int killold)
 	HIP_IFEL((hip_user_sock < 0), 1, "Could not create socket for user communication.\n");
 	bzero(&daemon_addr, sizeof(daemon_addr));
 	daemon_addr.sin6_family = AF_INET6;
-	daemon_addr.sin6_port = HIP_DAEMON_LOCAL_PORT;
+	daemon_addr.sin6_port = htons(HIP_DAEMON_LOCAL_PORT);
 	daemon_addr.sin6_addr = in6addr_loopback;
 	HIP_IFEL(bind(hip_user_sock, (struct sockaddr *)& daemon_addr,
 		      sizeof(daemon_addr)), -1, "Bind on daemon addr failed\n");
 
-	hip_agent_sock = socket(AF_LOCAL, SOCK_DGRAM, 0);
-	HIP_IFEL(hip_agent_sock < 0, 1,
-	         "Could not create socket for agent communication.\n");
-	unlink(HIP_AGENTADDR_PATH);
-	bzero(&hip_agent_addr, sizeof(hip_agent_addr));
-	hip_agent_addr.sun_family = AF_LOCAL;
-	strcpy(hip_agent_addr.sun_path, HIP_AGENTADDR_PATH);
-	HIP_IFEL(bind(hip_agent_sock, (struct sockaddr *)&hip_agent_addr,
-	              sizeof(hip_agent_addr)), -1, "Bind on agent addr failed.");
-	chmod(HIP_AGENTADDR_PATH, 0777);
+	hip_load_configuration();
 
-	hip_firewall_sock = socket(AF_INET6, SOCK_DGRAM, 0);
-	
         dhterr = 0;
         dhterr = hip_init_dht();
         if (dhterr < 0) HIP_DEBUG("Initializing DHT returned error\n");
-	hip_load_configuration();
 	
+#if 0
+	/* init new tcptimeout parameters, added by Tao Wan on 14.Jan.2008*/
+
+	HIP_IFEL(set_new_tcptimeout_parameters_value(), -1,
+			"set new tcptimeout parameters error\n");
+#endif
+
+
 	HIP_IFEL(hip_set_lowcapability(), -1, "Failed to set capabilities\n");
 	
 	hip_get_default_hit(&default_hit);
@@ -317,9 +290,12 @@ int hipd_init(int flush_ipsec, int killold)
 
 #ifdef CONFIG_HIP_HI3
 	if( hip_use_i3 ) 
-		hip_i3_init(&default_hit);
+	{
+//		hip_get_default_hit(&peer_hit);
+		hip_i3_init(/*&peer_hit*/);
+	}
 #endif
-      
+
 out_err:
 	return err;
 }
@@ -405,6 +381,9 @@ int hip_init_dht()
         return (err);
 }
 
+/*
+ * Note: this function does not go well with valgrind
+ */
 int hip_set_lowcapability() {
 	struct passwd *nobody_pswd;
 	int err = 0;
@@ -608,7 +587,7 @@ int hip_init_nat_sock_udp(int *hip_nat_sock_udp)
 	err = bind(*hip_nat_sock_udp, (struct sockaddr *)&myaddr, sizeof(myaddr));
 	if (err < 0)
 	{
-		HIP_ERROR("Unable to bind udp socket to port\n");
+		HIP_PERROR("Unable to bind udp socket to port\n");
 		err = -1;
 		goto out_err;
 	}
@@ -644,23 +623,23 @@ void hip_close(int signal)
 	}
 }
 
-
 /**
  * Cleanup and signal handler to free userspace and kernel space
  * resource allocations.
  */
 void hip_exit(int signal)
 {
-
-	int alen;
 	struct hip_common *msg = NULL;
 	HIP_ERROR("Signal: %d\n", signal);
 
-	hip_delete_default_prefix_sp_pair();
+	default_ipsec_func_set.hip_delete_default_prefix_sp_pair();
 	/* Close SAs with all peers */
         // hip_send_close(NULL);
 
-
+#if 0
+	/*reset TCP timeout to be original vaule , added By Tao Wan on 14.Jan.2008. */
+	reset_default_tcptimeout_parameters_value();
+#endif
 	if (hipd_msg)
 		HIP_FREE(hipd_msg);
         if (hipd_msg_v4)
@@ -672,20 +651,21 @@ void hip_exit(int signal)
 
 	set_up_device(HIP_HIT_DEV, 0);
 
-	/* This is needed only if RVS or escrow, hiprelay is in use. */
+	/* Next line is needed only if RVS or escrow, hiprelay is in use. */
 	hip_uninit_services();
+	hip_uninit_xxx_services();
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	hip_oppdb_uninit();
 #endif
 
 #ifdef CONFIG_HIP_HI3
-	cl_exit();
+	hip_hi3_clean();
 #endif
 
 #ifdef CONFIG_HIP_RVS
-	HIP_INFO("Uninitializing HIP UDP relay database.\n");
-	hip_relht_uninit();
+	HIP_INFO("Uninitializing RVS / HIP relay database and whitelist.\n");
+	hip_relay_uninit();
 #endif
 #ifdef CONFIG_HIP_ESCROW
 	hip_uninit_keadb();
@@ -723,22 +703,12 @@ void hip_exit(int signal)
 	msg = hip_msg_alloc();
 	if (msg)
 	{
-	  hip_build_user_hdr(msg, HIP_DAEMON_QUIT, 0);
-	}
-	else HIP_ERROR("Failed to allocate memory for message\n");
-
-	if (msg && hip_agent_sock)
-	{
-		alen = sizeof(hip_agent_addr);
-		sendto(hip_agent_sock, msg, hip_get_msg_total_len(msg), 0,
-		       (struct sockaddr *)&hip_agent_addr, alen);
-	}
-	close(hip_agent_sock);
-
-	if (msg)
+		hip_build_user_hdr(msg, SO_HIP_DAEMON_QUIT, 0);
+		hip_send_agent(msg);
 		free(msg);
+	}
 	
-	unlink(HIP_DAEMON_LOCK_FILE);
+	hip_remove_lock_file(HIP_DAEMON_LOCK_FILE);
         
 	if (opendht_serving_gateway)
 		freeaddrinfo(opendht_serving_gateway);

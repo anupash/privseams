@@ -1,59 +1,90 @@
-/*
+/** @file
  * HIP userspace communication mechanism between userspace and kernelspace.
  * The mechanism is used by hipd, hipconf and unittest.
  * 
- * Authors:
- * - Miika Komu <miika@iki.fi>
- * - Bing Zhou <bingzhou@cc.hut.fi>
- *
- * TODO
- * - asynchronous term should be replaced with a better one
- * - async messages should also have a counterpart that receives
- *   a response from kernel
+ * @author  Miika Komu <miika_iki.fi>
+ * @author  Bing Zhou <bingzhou_cc.hut.fi>
+ * @version 1.0
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @see     message.h
+ * @todo    Asynchronous term should be replaced with a better one.
+ * @todo    Asynchronous messages should also have a counterpart that receives
+ *          a response from kernel.
  */
-
 #include "message.h"
 
+/**
+ * Does something?
+ *
+ * @param  socket         a file descriptor.
+ * @param  encap_hdr_size ?
+ * @return Number of bytes received on success or a negative error value on
+ *         error.
+ */ 
 int hip_peek_recv_total_len(int socket, int encap_hdr_size)
 {
 	int bytes = 0, err = 0;
 	int hdr_size = encap_hdr_size + sizeof(struct hip_common);
 	char *msg = NULL;
-	struct hip_common *hip_hdr = NULL;
+	hip_common_t *hip_hdr = NULL;
 	
-	HIP_IFEL(!(msg = malloc(hdr_size)), -1, "malloc (%d)failed\n",
-		 hdr_size);
+        /* We're using system call here add thus reseting errno. */
+	errno = 0;
+	
+	msg = (char *)malloc(hdr_size);
+	
+	if(msg == NULL) {
+		HIP_ERROR("Error allocating memory.\n");
+		err = -ENOMEM;
+		goto out_err;
+	}
+	
 
-	HIP_IFEL(((bytes = recvfrom(socket, msg, hdr_size, MSG_PEEK,
-				    NULL, NULL)) != hdr_size), -1,
-		 "recv peek\n");
+	bytes = recvfrom(socket, msg, hdr_size, MSG_PEEK, NULL, NULL);
+	
+	if(bytes != hdr_size) {
+		err = bytes;
+		goto out_err;
+	}
 
 	hip_hdr = (struct hip_common *) (msg + encap_hdr_size);
 	bytes = hip_get_msg_total_len(hip_hdr);
-	HIP_IFEL((bytes > HIP_MAX_PACKET), -1, "packet too long\n");
-	HIP_IFEL((bytes == 0), -1, "packet length is zero\n");
+	
+	if(bytes == 0) {
+		err = -EBADMSG;
+		errno = EBADMSG;
+		HIP_ERROR("HIP message is of zero length.\n");
+		goto out_err;
+	} else if(bytes > HIP_MAX_PACKET) {
+		err = -EMSGSIZE;
+		errno = EMSGSIZE;
+		HIP_ERROR("HIP message max length exceeded.\n");
+		goto out_err;
+	}
+
 	bytes += encap_hdr_size;
 
  out_err:
-	HIP_DEBUG("bytes= %d  hdr_size = %d\n", bytes, hdr_size);
-	
-	if (err)
-		bytes = -1;
-	if (msg)
+	if (msg != NULL) {
 		free(msg);
+	}
+	if (err != 0) {
+		return err;
+	}
+
 	return bytes;
 }
 
-int hip_daemon_connect(int hip_user_sock, struct hip_common *msg) {
-	int err = 0, n, len; // app_fd = 0;
+int hip_daemon_connect(int hip_user_sock) {
+	int err = 0, n, len;
 	int hip_agent_sock = 0;
-	//socklen_t alen = 0;
-	//struct sockaddr_un app_addr, daemon_addr;
 	struct sockaddr_in6 daemon_addr;
+	/* We're using system call here add thus reseting errno. */
+	errno = 0;
 
-        bzero(&daemon_addr, sizeof(daemon_addr));
+	memset(&daemon_addr, 0, sizeof(daemon_addr));
         daemon_addr.sin6_family = AF_INET6;
-        daemon_addr.sin6_port = HIP_DAEMON_LOCAL_PORT;
+        daemon_addr.sin6_port = htons(HIP_DAEMON_LOCAL_PORT);
         daemon_addr.sin6_addr = in6addr_loopback;
 
 	HIP_IFEL(connect(hip_user_sock, (struct sockaddr *) &daemon_addr,
@@ -65,56 +96,142 @@ int hip_daemon_connect(int hip_user_sock, struct hip_common *msg) {
 	return err;
 }
 
+int hip_daemon_bind_socket(int socket, struct sockaddr *sa) {
+	int err = 0, port = 0, on = 1;
+	struct sockaddr_in6 *addr = (struct sockaddr_in6 *) sa;
+
+	HIP_ASSERT(addr->sin6_family == AF_INET6);
+
+	errno = 0;
+
+	setsockopt(socket, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+
+	if (addr->sin6_port) {
+		HIP_DEBUG("Bind to fixed port %d\n", addr->sin6_port);
+		err = bind(socket,(struct sockaddr *)addr,
+			   sizeof(struct sockaddr_in6));
+		err = -errno;
+		goto out_err;
+	}
+
+	for(port = 1023; port > 25; port--) {
+                _HIP_DEBUG("trying bind() to port %d\n", port);
+		addr->sin6_port = htons(port);
+		err = bind(socket,(struct sockaddr *)addr,
+			   hip_sockaddr_len(addr));
+		if (err == -1) {
+			if (errno == 13) {
+				HIP_DEBUG("Use ephemeral port number in connect\n");
+				err = 0;
+				break;
+			} else {
+				HIP_ERROR("Error %d bind() wasn't succesful\n",
+					  errno);
+				err = -1;
+				goto out_err;
+			}
+		}
+		else {
+			_HIP_DEBUG("Bind() to port %d successful\n", port);
+			goto out_err;
+		}
+	}
+
+	if (port == 26) {
+		HIP_ERROR("All privileged ports were occupied\n");
+		err = -1;
+	}
+
+ out_err:
+	errno = 0;
+	return err;
+}
+
 int hip_send_recv_daemon_info(struct hip_common *msg) {
-	int hip_user_sock = 0, err = 0, n, len;
+	int hip_user_sock = 0, err = 0, n = 0, len = 0;
+	struct sockaddr_in6 addr;
 
-	HIP_IFE(((hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0)) < 0), -1);
+	/* We're using system call here add thus reseting errno. */
+	errno = 0;
 
-	HIP_IFEL(err = hip_daemon_connect(hip_user_sock, msg), -1,
-		 "Sending of msg failed (no rcv)\n");
+	/* Displays all debugging messages. */
+	HIP_DEBUG("Handling DEBUG ALL user message.\n");
+	HIP_IFEL(hip_set_logdebug(LOGDEBUG_ALL), -1,
+			 "Error when setting daemon DEBUG status to ALL\n");
 
-	len = hip_get_msg_total_len(msg);
+	HIP_IFE(((hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0)) < 0), EHIP);
+
+	memset(&addr, 0, sizeof(addr));
+        addr.sin6_family = AF_INET6;
+        addr.sin6_addr = in6addr_loopback;
+	HIP_IFEL(hip_daemon_bind_socket(hip_user_sock,
+					(struct sockaddr *) &addr), -1,
+		 "bind failed\n");
+
+	HIP_IFEL(hip_daemon_connect(hip_user_sock), -1,
+		 "connect failed\n");
+
+	if ((len = hip_get_msg_total_len(msg)) < 0) {
+		err = -EBADMSG;
+		goto out_err;
+	}
+	
 	n = send(hip_user_sock, msg, len, 0);
 	if (n < len) {
 		HIP_ERROR("Could not send message to daemon.\n");
-		err = -1;
+		err = -ECOMM;
+		goto out_err;
+	}
+	
+	_HIP_DEBUG("Waiting to receive daemon info.\n");
+	
+	if((len = hip_peek_recv_total_len(hip_user_sock, 0)) < 0) {
+		err = len;
 		goto out_err;
 	}
 
-	//HIP_DEBUG("waiting to receive daemon info\n");
-
-	int hol = hip_peek_recv_total_len(hip_user_sock, 0);
-
-	n = recv(hip_user_sock, msg,
-		 hip_peek_recv_total_len(hip_user_sock, 0), 0);
-
-	if (n < sizeof(struct hip_common)) {
+	n = recv(hip_user_sock, msg, len, 0);
+	if (n == 0) {
+		HIP_INFO("The HIP daemon has performed an "\
+			 "orderly shutdown.\n");
+		/* Note. This is not an error condition, thus we return zero. */
+		goto out_err;
+	} else if(n < sizeof(struct hip_common)) {
 		HIP_ERROR("Could not receive message from daemon.\n");
-		err = -1;
 		goto out_err;
-	} else {
-		HIP_DEBUG("%d bytes received\n", n); 		
 	}
-
-	if (hip_get_msg_err(msg))
-		HIP_ERROR("msg contained error\n");
+	
+	if (hip_get_msg_err(msg)) {
+		HIP_ERROR("HIP message contained an error.\n");
+		err = -EHIP;
+	}
 
  out_err:
 	if (hip_user_sock)
 		close(hip_user_sock);
+	
 	return err;
 }
 
 int hip_send_daemon_info_wrapper(struct hip_common *msg, int send_only) {
 	int hip_user_sock = 0, err = 0, n, len;
-
+	struct sockaddr_in6 addr;
+	
 	if (!send_only)
 		return hip_send_recv_daemon_info(msg);
-	
+
 	HIP_IFE(((hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0)) < 0), -1);
 
-	HIP_IFEL(err = hip_daemon_connect(hip_user_sock, msg), -1,
-		 "Sending of msg failed (no rcv)\n");
+	memset(&addr, 0, sizeof(addr));
+        addr.sin6_family = AF_INET6;
+        addr.sin6_addr = in6addr_loopback;
+
+	HIP_IFEL(hip_daemon_bind_socket(hip_user_sock,
+					(struct sockaddr *) &addr), -1,
+		 "bind failed\n");
+
+	HIP_IFEL(hip_daemon_connect(hip_user_sock), -1,
+		 "connect failed\n");
 
 	len = hip_get_msg_total_len(msg);
 	n = send(hip_user_sock, msg, len, 0);
@@ -136,7 +253,6 @@ int hip_recv_daemon_info(struct hip_common *msg, uint16_t info_type) {
 	/** @todo required by the native HIP API */
 	/* Call first send_daemon_info with info_type and then recvfrom */
 	return -1;
-  	//hip_send_daemon_info(msg);
 }
 
 int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,
@@ -154,14 +270,14 @@ int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,
 	
 	_HIP_DEBUG("msg total length = %d\n", total);
 	
-	/* TODO: Compiler warning;
-	   warning: pointer targets in passing argument 6 of 'recvfrom'
-	   differ in signedness. */
+	/** @todo Compiler warning;
+	    warning: pointer targets in passing argument 6 of 'recvfrom'
+	    differ in signedness. */
 	HIP_IFEL(((bytes = recvfrom(socket, hip_msg, total, 0,
 				    (struct sockaddr *) saddr,
 				    &len)) != total), -1, "recv\n");
 
-	HIP_DEBUG("received user message from local port %d\n", saddr->sin6_port);
+	HIP_DEBUG("received user message from local port %d\n", ntohs(saddr->sin6_port));
 	_HIP_DEBUG("read_user_control_msg recv len=%d\n", len);
 	_HIP_HEXDUMP("recv saddr ", saddr, sizeof(struct sockaddr_un));
 	_HIP_DEBUG("read %d bytes succesfully\n", bytes);
@@ -172,32 +288,7 @@ int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,
 	return err;
 }
 
-/**
- * Prepares a @c hip_common struct based on information received from a socket.
- * 
- * Prepares a @c hip_common struct, allocates memory for buffers and nested
- * structs. Receives a message from socket and fills the @c hip_common struct
- * with the values from this message.
- *
- * @param socket         a socket to read from.
- * @param hip_msg        a pointer to a buffer where to put the received HIP
- *                       common header. This is returned as filled struct.
- * @param read_addr      a flag whether the adresses should be read from the
- *                       received packet. <b>1</b>:read addresses,
- *                       <b>0</b>:don't read addresses.
- * @param saddr          a pointer to a buffer where to put the source IP
- *                       address of the received message (if @c read_addr is set
- *                       to 1).
- * @param daddr          a pointer to a buffer where to put the destination IP
- *                       address of the received message (if @c read_addr is set
- *                       to 1).
- * @param msg_info       a pointer to a buffer where to put the source and 
- *                       destination ports of the received message.
- * @param encap_hdr_size size of encapsulated header in bytes.
- * @param is_ipv4        a boolean value to indicate whether message is received
- *                       on IPv4.
- * @return               -1 in case of an error, 0 otherwise.
- */
+/* Moved function doxy descriptor to the header file. Lauri 11.03.2008 */
 int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
                              struct in6_addr *saddr,
                              struct in6_addr *daddr,
@@ -273,7 +364,7 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
 		 "Could not determine dst addr, dropping\n");
 
 	/* UDP port numbers */
-	if (is_ipv4 && encap_hdr_size == 0) {
+	if (is_ipv4 && encap_hdr_size == HIP_UDP_ZERO_BYTES_LEN) {
 		/* Destination port is known from the bound socket. */
 		HIP_DEBUG("hip_read_control_msg_all() source port = %d\n",
 			  ntohs(addr_from4->sin_port));
@@ -309,6 +400,10 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
 		   Let's remove it here. */
 		memmove(hip_msg, ((char *)hip_msg) + IPV4_HDR_SIZE,
 			HIP_MAX_PACKET - IPV4_HDR_SIZE);
+	} else if (is_ipv4 && encap_hdr_size == HIP_UDP_ZERO_BYTES_LEN) {
+		/* remove 32-bits of zeroes between UDP and HIP headers */
+		memmove(hip_msg, ((char *)hip_msg) + HIP_UDP_ZERO_BYTES_LEN,
+			HIP_MAX_PACKET - HIP_UDP_ZERO_BYTES_LEN);
 	}
 
 	HIP_IFEL(hip_verify_network_header(hip_msg,
@@ -334,7 +429,6 @@ int hip_read_control_msg_v6(int socket, struct hip_common *hip_msg,
 {
 	return hip_read_control_msg_all(socket, hip_msg, saddr,
 					daddr, msg_info, encap_hdr_size, 0);
-
 }
 
 int hip_read_control_msg_v4(int socket, struct hip_common *hip_msg,
@@ -345,5 +439,4 @@ int hip_read_control_msg_v4(int socket, struct hip_common *hip_msg,
 {
 	return hip_read_control_msg_all(socket, hip_msg, saddr,
 					daddr, msg_info, encap_hdr_size, 1);
-
 }

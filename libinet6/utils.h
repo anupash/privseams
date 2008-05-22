@@ -32,7 +32,7 @@ static int hip_tmpname(char *fname) {
 	memcpy(fname, HIP_TMP_FNAME_TEMPLATE, HIP_TMP_FNAME_LEN);
 	return (mkstemp(fname));
 	/*
-	if (mktemp(fname) == NULL)
+      if (mktemp(fname) == NULL)
 		return -1;
 	else
 		return 0;
@@ -87,8 +87,10 @@ struct hip_opp_blocking_request_entry
 	//atomic_t             	refcnt;
 	
 	time_t                creation_time;
-	struct in6_addr       peer_ip;
-	struct in6_addr       our_ip;
+    struct in6_addr       peer_ip;
+    struct in6_addr       our_ip;  
+    uint8_t               proxy_flag; //0: normal connection, 1: connection through proxy
+  
 };
 
 struct hip_opp_hit_pair {
@@ -162,28 +164,29 @@ static inline void set_lsi_prefix(hip_hit_t *lsi)
                      (((a)[HIT_SIZE-3]<<16)+((a)[HIT_SIZE-2]<<8)+((a)[HIT_SIZE-1])))
 */
 
-/*
- * TRUE if a is from 1.0.0.0/8
- */
-#define IS_LSI32(a) ((a & 0x000000FF) == 0x00000001)
-
-/*
- * TRUE if a is from 192.0.0.0/8
+/** 
+ * A macro to test if a uint32_t represents a Local Scope Identifier (LSI).
+ *
+ * @param a the uint32_t to test
+ * @return  true if @c a is from 1.0.0.0/8
+ * @note    This macro tests directly uint32_t, not struct in_addr or a pointer
+ *          to a struct in_addr. To use this macro in context with struct
+ *          in_addr call it with ipv4->s_addr where ipv4 is a pointer to a
+ *          struct in_addr.
  */
 #define IS_LSI(a) ((a & 0x00FFFFFF) == 0x000000C0)
 
-/*
- * TRUE if a is from 127.0.0.0/8
+/** 
+ * A macro to test if a uint32_t represents an IPv4 loopback address.
+ *
+ * @param a the uint32_t to test
+ * @return  non-zero if @c a is from 127.0.0.0/8
+ * @note    This macro tests directly uint32_t, not struct in_addr or a pointer
+ *          to a struct in_addr. To use this macro in context with struct
+ *          in_addr call it with ipv4->s_addr where ipv4 is a pointer to a
+ *          struct in_addr.
  */
 #define IS_IPV4_LOOPBACK(a) ((a & 0x000000FF) == 0x0000007F)
-
-/* LSI not based in HIT structure, so not necessary at the moment 
-#define HIT_IS_LSI(a) \
-        ((((__const uint32_t *) (a))[0] == 0)                                 \
-         && (((__const uint32_t *) (a))[1] == 0)                              \
-         && (((__const uint32_t *) (a))[2] == 0)                              \
-         && IS_LSI32(((__const uint32_t *) (a))[3]))        
-*/
 
 #ifndef MIN
 #  define MIN(a,b)	((a)<(b)?(a):(b))

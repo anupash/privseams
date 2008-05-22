@@ -42,7 +42,7 @@ int init_dht_gateway_socket(int sockfd)
 {
     if ((sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
         HIP_PERROR("OpenDHT socket:");
-    else HIP_DEBUG("\n OpenDHT communication socket created successfully \n");
+    else HIP_DEBUG("\nOpenDHT communication socket created successfully.\n");
     
     return(sockfd);      
 }
@@ -50,7 +50,7 @@ int init_dht_gateway_socket(int sockfd)
 /** 
  * resolve_dht_gateway_info - Resolves the gateway address
  * @param gateway_name FQDN of the gateway
- * @param gateway Addrinfo struct here the result will be stored
+ * @param gateway Addrinfo struct where the result will be stored
  *
  * @return Returns 0 on success otherwise -1
  */
@@ -73,7 +73,7 @@ int resolve_dht_gateway_info(char * gateway_name,
     else
 	{
             sa = (struct sockaddr_in *) (*gateway)->ai_addr;
-            HIP_DEBUG("OpenDHT gateway IPv4/ %s\n", inet_ntoa(sa->sin_addr));
+            HIP_DEBUG("OpenDHT gateway IPv4: %s\n", inet_ntoa(sa->sin_addr));
 	}
     
     return error;
@@ -361,7 +361,8 @@ int opendht_get(int sockfd,
  *
  * @return integer -1 on error, on success 0
  */
-int opendht_get_key(struct addrinfo * gateway, unsigned char * key, unsigned char *value)
+int opendht_get_key(struct addrinfo * gateway, const unsigned char * key,
+		    unsigned char *value)
 {
         int err = 0, sfd = -1, n_addrs = 0;
         int locator_item_count = 0;
