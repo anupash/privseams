@@ -30,8 +30,8 @@ stop_hipfw() {
 case "$1" in
   start)
         echo -n "Starting hipfw"
-	start-stop-hipfw --start --quiet --exec /usr/sbin/hipfw -- $hipfw_OPTS
-        #$hipfw $OPTIONS
+	#start-stop-hipfw --start --quiet --exec /usr/sbin/hipfw -- $hipfw_OPTS
+	`sudo /usr/sbin/hipfw $hipfw_OPTS`
         echo "."
 	;;
   stop)
@@ -40,22 +40,8 @@ case "$1" in
         echo "."
 	;;
 
-  reload|force-reload)
-        echo -n "Reloading hipfw"
-	start-stop-hipfw --stop --signal 1 --quiet --oknodo --exec /usr/sbin/hipfw -name hipfw
-	echo "."
-	;;
-
-  restart)
-        echo -n "Restarting hipfw"
-        # hipfw waits N seconds for closing of connections - just kill it
-	stop_hipfw -KILL
-	start-stop-hipfw --start --quiet --exec /usr/sbin/hipfw -- $hipfw_OPTS
-	echo "."
-	;;
-
   *)
-	echo "Usage: /etc/init.d/hipfw {start|stop|reload|force-reload|restart}"
+	echo "Usage: /etc/init.d/hipfw {start|stop}"
 	exit 1
 esac
 
