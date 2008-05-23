@@ -1877,11 +1877,6 @@ hip_lsi_t *hip_get_lsi_peer_by_hits(struct in6_addr *hit_s, struct in6_addr *hit
         struct hip_common *msg = NULL;
 	hip_lsi_t *lsi = NULL;
 
-	HIP_DEBUG_HIT("src hit is: ", src_hit);
-	HIP_DEBUG_HIT("dst hit hit is: ", dst_hit);
-	HIP_DEBUG_IN6ADDR("src ip is: ", src_ip);
-	HIP_DEBUG_IN6ADDR("dst ip  is: ", dst_ip);
-	
 	
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 
@@ -1906,7 +1901,7 @@ hip_lsi_t *hip_get_lsi_peer_by_hits(struct in6_addr *hit_s, struct in6_addr *hit
 	/* check error value */
 	HIP_IFEL(hip_get_msg_err(msg), -1, "Got erroneous message!\n");
 
-	lsi = (hip_lsi_t *)hip_get_param_contents(msg, HIP_PARAM_LSI);
+	lsi = (hip_lsi_t *)hip_get_param_contents(msg, SO_HIP_PARAM_LSI);
 
 out_err:
 	//if(msg)
@@ -1943,7 +1938,7 @@ hip_lsi_t *hip_get_lsi_our_by_hits(struct in6_addr *hit_s, struct in6_addr *hit_
 	/* check error value */
 	HIP_IFEL(hip_get_msg_err(msg), -1, "Got erroneous message!\n");
 
-	lsi = (hip_lsi_t *)hip_get_param_contents(msg, HIP_PARAM_LSI);
+	lsi = (hip_lsi_t *)hip_get_param_contents(msg, SO_HIP_PARAM_LSI);
 
 out_err:
 	//if(msg)
@@ -2027,7 +2022,7 @@ int hip_trigger_bex(struct in6_addr **src_hit, struct in6_addr **dst_hit, struct
 			HIP_DEBUG_LSI("          lsi is", &src_ip4);
 
 			HIP_IFEL(hip_build_param_contents(msg, (void *) &src_ip4,
-						  HIP_PARAM_LSI,
+						  SO_HIP_PARAM_LSI,
 						  sizeof(struct in_addr)), -1,
 				 "build param HIP_PARAM_LSI failed\n");
 		}
@@ -2045,7 +2040,7 @@ int hip_trigger_bex(struct in6_addr **src_hit, struct in6_addr **dst_hit, struct
 			HIP_DEBUG_LSI("          lsi is", &dst_ip4);
 
 			HIP_IFEL(hip_build_param_contents(msg, (void *) &dst_ip4,
-						  HIP_PARAM_LSI,
+						  SO_HIP_PARAM_LSI,
 						  sizeof(struct in_addr)), -1,
 				 "build param HIP_PARAM_LSI failed\n");
 			is_lsi = 1;
@@ -2137,7 +2132,7 @@ int hip_find_local_lsi(hip_lsi_t * dst_lsi){
 
   if (dst_lsi)
     HIP_IFEL(hip_build_param_contents(msg, (void *) dst_lsi,
-						  HIP_PARAM_LSI,
+						  SO_HIP_PARAM_LSI,
 						  sizeof(struct in_addr)), -1,
 				 "build param HIP_PARAM_LSI failed\n");
 
@@ -2154,7 +2149,7 @@ int hip_find_local_lsi(hip_lsi_t * dst_lsi){
     {
       param_type = hip_get_param_type(current_param);
 
-      if (param_type == HIP_PARAM_LSI){
+      if (param_type == SO_HIP_PARAM_LSI){
 	aux_lsi = (struct in_addr *)hip_get_param_contents_direct(current_param);
 	if (aux_lsi){
 	  exist = 1;

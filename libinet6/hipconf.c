@@ -594,7 +594,7 @@ int hip_conf_handle_map(hip_common_t *msg, int action, const char *opt[],
 		      "string to address conversion failed\n");
 
 	     HIP_IFEL(hip_build_param_contents(msg, (void *) &lsi,
-				       HIP_PARAM_LSI,
+				       SO_HIP_PARAM_LSI,
 				       sizeof(struct in_addr)), -1,
 	      "build param lsi failed\n");		
      }
@@ -1677,7 +1677,7 @@ int hip_get_all_hits(hip_common_t *msg,char *argv[])
 			   set_hit_prefix(defhit);
 			   HIP_INFO_HIT("default hi is ", defhit);
 		    }
-		    else if (param_type == HIP_PARAM_LSI){
+		    else if (param_type == SO_HIP_PARAM_LSI){
 		           deflsi = (struct in_addr *)hip_get_param_contents_direct(current_param);
 			   HIP_DEBUG_LSI("default lsi is ", deflsi);
 		    }
