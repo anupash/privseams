@@ -28,7 +28,10 @@ int hip_nat_sock_udp = 0;
     machine is behind a NAT. */
 int hip_nat_status = 0;
 
-/** Communication interface to userspace apps (hipconf etc) */
+/** Specifies the HIP PROXY status of the daemon. This value indicates if the HIP PROXY is running. */
+int hipproxy = 0;
+
+/* Communication interface to userspace apps (hipconf etc) */
 int hip_user_sock = 0;
 struct sockaddr_un hip_user_addr;
 
@@ -41,9 +44,9 @@ struct rtnl_handle hip_nl_route = { 0 };
 
 int hip_agent_status = 0;
 
-#if 0
+//#if 0
 int hip_firewall_sock = -1;
-#endif
+//#endif
 struct sockaddr_in6 hip_firewall_addr;
 
 /* 
@@ -78,6 +81,10 @@ int hip_opendht_error_count = 0; /* Error count, counting errors from libhipopen
 /* Tells to the daemon should it build LOCATOR parameters to R1 and I2 */
 int hip_locator_status = SO_HIP_SET_LOCATOR_OFF;
 
+
+/* It tells the daemon to set tcp timeout parameters. Added By Tao Wan, on 09.Jan.2008 */
+int hip_tcptimeout_status = SO_HIP_SET_TCPTIMEOUT_ON;
+
 /* We are caching the IP addresses of the host here. The reason is that during
    in hip_handle_acquire it is not possible to call getifaddrs (it creates
    a new netlink socket and seems like only one can be open per process).
@@ -89,10 +96,15 @@ int address_count;
 HIP_HASHTABLE *addresses;
 time_t load_time;
 
-#ifdef CONFIG_HIP_HI3
 char *hip_i3_config_file = NULL;
 int hip_use_i3 = 0; // false
-#endif
+
+/*Define hip_use_userspace_ipsec variable to indicate whether use 
+ * userspace ipsec or not. If it is 1, hip uses the user space ipsec.
+ * It will not use if hip_use_userspace_ipsec = 0. Added By Tao Wan
+ */
+int hip_use_userspace_ipsec = 0;
+
 
 #ifdef CONFIG_HIP_OPPTCP
 int hip_use_opptcp = 0; // false
@@ -122,24 +134,19 @@ void usage() {
 	fprintf(stderr, "\n");
 }
 
-int hip_sendto(const struct hip_common *msg, const struct sockaddr *dst){
-        return sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
-                   0, (struct sockaddr *)dst, hip_sockaddr_len(dst));
-}
-
 int hip_send_agent(struct hip_common *msg) {
-	struct sockaddr_in6 hip_agent_addr;
-	int alen;
+        struct sockaddr_in6 hip_agent_addr;
+        int alen;
 
-	memset(&hip_agent_addr, 0, sizeof(hip_agent_addr));
-	hip_agent_addr.sin6_family = AF_INET6;
-	hip_agent_addr.sin6_addr = in6addr_loopback;
-	hip_agent_addr.sin6_port = htons(HIP_AGENT_PORT);
+        memset(&hip_agent_addr, 0, sizeof(hip_agent_addr));
+        hip_agent_addr.sin6_family = AF_INET6;
+        hip_agent_addr.sin6_addr = in6addr_loopback;
+        hip_agent_addr.sin6_port = htons(HIP_AGENT_PORT);
 
-	alen = sizeof(hip_agent_addr);
+        alen = sizeof(hip_agent_addr);
 
-	return sendto(hip_user_sock, msg, hip_get_msg_total_len(msg), 0,
-		       (struct sockaddr *)&hip_agent_addr, alen);
+        return sendto(hip_user_sock, msg, hip_get_msg_total_len(msg), 0,
+                       (struct sockaddr *)&hip_agent_addr, alen);
 }
 
 /**
@@ -156,10 +163,10 @@ int hip_recv_agent(struct hip_common *msg)
 
 	msg_type = hip_get_msg_type(msg);
 	
-	if (msg_type == HIP_AGENT_PING)
+	if (msg_type == SO_HIP_AGENT_PING)
 	{
 		memset(msg, 0, HIP_MAX_PACKET);
-		hip_build_user_hdr(msg, HIP_AGENT_PING_REPLY, 0);
+		hip_build_user_hdr(msg, SO_HIP_AGENT_PING_REPLY, 0);
 		n = hip_send_agent(msg);
 		HIP_IFEL(n < 0, 0, "sendto() failed on agent socket\n");
 
@@ -174,7 +181,7 @@ int hip_recv_agent(struct hip_common *msg)
 			hip_agent_status = 1;
 		}
 	}
-	else if (msg_type == HIP_AGENT_QUIT)
+	else if (msg_type == SO_HIP_AGENT_QUIT)
 	{
 		HIP_DEBUG("Agent quit.\n");
 		hip_agent_status = 0;
@@ -375,7 +382,7 @@ int hipd_main(int argc, char *argv[])
                     if (err_v4 > -1) {
                         type = hip_get_msg_type(hipd_msg_v4);
                         if (type == HIP_R2) {
-                            err = hip_receive_control_packet(hipd_msg_v4, &saddr_v4, 
+				err = hip_receive_control_packet(hipd_msg_v4, &saddr_v4, 
                                                              &daddr_v4, &pkt_info, 1);
                             if (err) HIP_ERROR("hip_receive_control_packet()!\n");
                             err = hip_receive_control_packet(hipd_msg, &saddr, &daddr, 

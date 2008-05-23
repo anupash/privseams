@@ -522,4 +522,14 @@ hip_rcv_func_set_t *hip_get_rcv_default_func_set();
 hip_handle_func_set_t *hip_get_handle_default_func_set();
 
 
+/**
+ * hip_handle_firewall_i1_request - handle I1 request from FIREWALL.
+ * @param       a pointer to the I1 HIP packet common header with source and
+ *                 destination
+ * @param		Source IP Address for I1
+ * @param		Destination IP Address for I1
+ * @return 0 on success, < 0 on error.
+ */
+int hip_handle_firewall_i1_request(struct hip_common *, struct in6_addr *, struct in6_addr *);
+
 #endif /* HIP_INPUT_H */

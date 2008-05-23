@@ -1497,16 +1497,14 @@
     <title>HIP Firewall</title>
         <para>This section describes how to use the HIP firewall. The firewall needs to be compiled with the --enable-firewall option to configure. There is also a Python interface included in the source distribution (hip-fw-mi-*tar.gz).</para>
 
-        <para>Firewall can be started with "hipfw &lt;file_name&gt;"
-              "timeout value" at firewall directory, where file_name
-              is path of the file containing the firewall rules and
-              timeout value is the connection timeout value in
-              seconds.  If connection timeout is defined as zero or
-              negative, the connection timeout checking is not
-              used. Rules in the file must be separated with
-              newline. The firewall (currently) prints out debug
-              information from rule parsing test functions and from
-              filtering packets.</para>
+	<para>
+        Firewall can be started with "hipfw &lt;file_name&gt;". By default,
+	it drops all HIP traffic and allows all other traffic. You can change
+        the defaults with hipfw command line flags. To get a list of command
+	line flags, give the -h option to hipfw. When you start the firewall
+	the first time, it creates /etc/hip/firewall.conf file which contains
+	an example usage template.
+	</para>
 
         <para>Rules follow (loosely) the syntax of Linux Iptables with
         following syntax.</para>
