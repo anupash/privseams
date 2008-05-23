@@ -2278,6 +2278,9 @@ void hip_hadb_set_peer_controls(hip_ha_t *entry, hip_controls_t mask)
 		case HIP_HA_CTRL_PEER_ESCROW_CAPABLE:
 		case HIP_HA_CTRL_PEER_RVS_CAPABLE:
 		case HIP_HA_CTRL_PEER_RELAY_CAPABLE:
+		case HIP_HA_CTRL_PEER_GRANTED_ESCROW:
+		case HIP_HA_CTRL_PEER_GRANTED_RVS:
+		case HIP_HA_CTRL_PEER_GRANTED_RELAY:
 			entry->peer_controls |= mask;
 			break;
 		default:
@@ -2715,7 +2718,7 @@ int hip_get_local_addr(struct hip_common *msg)
 	entry = hip_hadb_find_byhits(src_hit, dst_hit);
 	
 	hip_msg_init(msg);
-	HIP_DEBUG_IN6ADDR(" local address: ", &entry->local_address);
+	//HIP_DEBUG_IN6ADDR(" local address: ", &entry->local_address);
 	
 	if(!entry)
 		HIP_DEBUG("Can't find local address because of no entry in hadb!\n");

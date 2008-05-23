@@ -1058,10 +1058,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		       but only after R2 has arrived. We do not need pending
 		       requests when R2 arrives, but in case the I2 is to be
 		       retransmitted, we must be able to produce the REG_REQUEST
-		       parameter. 
-
-		    /* Delete all pending requests for this entry. */
-		    //while(hip_del_pending_request(entry) == 0);
+		       parameter. */
 	    }
     }
 
@@ -1618,7 +1615,7 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 	   (hip_relay_get_status() == HIP_RELAY_ON || we_are_escrow_server()).
 	   But since I don't have a way to detect if we are an escrow server
 	   this part is executed on I and R also. -Lauri 27.09.2007*/
-	hip_handle_regrequest(entry, i2, r2);
+	//hip_handle_regrequest(entry, i2, r2);
 	
 	/* Handle REG_REQUEST parameter. */
 	HIP_DEBUG("Entering new REG_REQUEST handler.\n");
@@ -1736,8 +1733,8 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		use_blind = 1;
 	}
 	
-	/* Allocate memory for the context created from the processing of the I2
-	   packet. */
+	/* Allocate memory for the context to be created from the processing of
+	   the I2 packet. */
 	ctx = (struct hip_context *) malloc(sizeof(struct hip_context));
 	if (ctx == NULL) {
 		err = -ENOMEM;
@@ -1775,47 +1772,46 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 #ifdef CONFIG_HIP_HI3
         locator = hip_get_param(i2, HIP_PARAM_LOCATOR);
 	
-        if (locator)
-	{
+        if (locator) {
 		n_addrs = hip_get_locator_addr_item_count(locator);
 		
-		if( i2_info->hi3_in_use && n_addrs > 0 )
-                {
-                        first = (char*)locator+sizeof(struct hip_locator);
-                        memcpy(i2_saddr, &first->address, sizeof(struct in6_addr));
-
-                        list_for_each_safe(item, tmp, addresses, ii)
-                                {
+		if( i2_info->hi3_in_use && n_addrs > 0 ) {
+			
+                        first = (char*)locator + sizeof(struct hip_locator);
+                        memcpy(i2_saddr, &first->address,
+			       sizeof(struct in6_addr));
+			
+                        list_for_each_safe(item, tmp, addresses, ii) {
                                         n = list_entry(item);
-                                        if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
+					
+                                        if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr))) {
                                                 continue;
-                                        if (!IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr)))
-                                        {
-                                                memcpy(i2_daddr, hip_cast_sa_addr(&n->addr),
+					}
+                                        if (!IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
+						memcpy(i2_daddr, hip_cast_sa_addr(&n->addr),
                                                        hip_sa_addr_len(&n->addr));
                                                 ii = -1;
                                                 use_ip4 = 0;
                                                 break;
                                         }
-                                }
-                        if( use_ip4 )
-                        {
-                                list_for_each_safe(item, tmp, addresses, ii)
-                                        {
-                                                n = list_entry(item);
-                                                if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
-                                                        continue;
-                                                if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr)))
-                                                {
-                                                        memcpy(i2_daddr, hip_cast_sa_addr(&n->addr),
-                                                               hip_sa_addr_len(&n->addr));
-                                                        ii = -1;
-                                                        break;
-                                                }
-                                        }
+			}
+                        if( use_ip4 ) {
+                                list_for_each_safe(item, tmp, addresses, ii) {
+					n = list_entry(item);
+
+					if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr))) {
+						continue;
+					}
+					if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
+						memcpy(i2_daddr, hip_cast_sa_addr(&n->addr),
+						       hip_sa_addr_len(&n->addr));
+						ii = -1;
+						break;
+					}
+				}
                         }
-
-
+			
+			
                 }
 	}
 #endif
@@ -2120,10 +2116,10 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
 	
 #ifdef CONFIG_HIP_ESCROW
-	if (hip_deliver_escrow_data(i2_saddr, i2_daddr, &ctx->input->hits, 
-				    &ctx->input->hitr, &spi_in, esp_tfm, &ctx->esp_in, 
-				    HIP_ESCROW_OPERATION_ADD) != 0)
-	{  
+	if (hip_deliver_escrow_data(
+		    i2_saddr, i2_daddr, &ctx->input->hits, &ctx->input->hitr,
+		    &spi_in, esp_tfm, &ctx->esp_in, HIP_ESCROW_OPERATION_ADD)
+	    != 0) {  
 		HIP_DEBUG("Could not deliver escrow data to server\n");
 	}
 #endif //CONFIG_HIP_ESCROW
@@ -2603,8 +2599,6 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 
     /***** LOCATOR PARAMETER ******/
 	
-	
-	
     if (locator)
         {
     		HIP_DEBUG("handling locators in R2\n");
@@ -2691,23 +2685,20 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	  ipv6_addr_copy(&entry->bex_address, &in6addr_any);
 	*/
         
-	/* Registration of additional services. Check if we should expect
-	   REG_RESPONSE or REG_FAILED parameter */
+	/* Handle REG_RESPONSE and REG_FAILED parameters. */
+	hip_handle_param_reg_response(entry, r2);
+	hip_handle_param_reg_failed(entry, r2);
 	
+	/*
 	uint8_t services[HIP_TOTAL_EXISTING_SERVICES];
 	
         type_count = hip_get_incomplete_registrations(&reg_types, entry, 1, services); 
         
         if (type_count > 0) {
-        	
-        		HIP_DEBUG("santtu: handling req response and reg from in r2");
-        		
-                HIP_IFEL(hip_handle_registration_response(entry, r2), -1, 
-			 "Error handling reg_response\n"); 
-        }
-        else
-        	HIP_DEBUG("santtu: not handling req response and reg from in r2 @type counter: %d", type_count);
-
+	HIP_IFEL(hip_handle_registration_response(entry, r2), -1, 
+	"Error handling reg_response\n"); 
+	}*/
+	
 	/* These will change SAs' state from ACQUIRE to VALID, and wake up any
 	   transport sockets waiting for a SA. */
 	// hip_finalize_sa(&entry->hit_peer, spi_recvd);
@@ -2756,18 +2747,15 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
      ipv6_addr_copy(&dest, &in6addr_any);
      
 #ifdef CONFIG_HIP_RVS
-     if(!hip_relay_get_status() == HIP_RELAY_ON)
-     {
-	  /* This is where the Responder handles the incoming relayed I1 packet.
-	     We need two things from the relayed packet:
-	     1) The destination IP address and port from the FROM/RELAY_FROM
-	     parameters.
-	     2) The source address and source port of the I1 packet to build the
-	     VIA_RVS/RELAY_TO parameter. */
-	     
-	  
-	  HIP_IFEL(hip_relay_handle_from(i1, i1_saddr, &dest, &dest_port, &param_type),
-		   -1, "Handling of relayed I1 packet failed.\n");
+     if(hip_relay_get_status() == HIP_RELAY_OFF) {
+	     /* This is where the Responder handles the incoming relayed I1
+		packet. We need two things from the relayed packet:
+		1) The destination IP address and port from the FROM/RELAY_FROM
+		parameters.
+		2) The source address and source port of the I1 packet to build
+		the VIA_RVS/RELAY_TO parameter. */
+	     HIP_IFEL(hip_relay_handle_from(i1, i1_saddr, &dest, &dest_port),
+		      -1, "Handling of relayed I1 packet failed.\n");
      }
 #endif /* CONFIG_HIP_RVS */
 

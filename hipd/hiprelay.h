@@ -60,11 +60,11 @@
  * @author  Lauri Silvennoinen
  * @version 1.1
  * @date    31.03.2008
- * @note    Related drafts:
- *          <a href="http://www.ietf.org/internet-drafts/draft-ietf-hip-rvs-05.txt">
- *          draft-ietf-hip-rvs-05</a>
- *          <a href="http://www.ietf.org/internet-drafts/draft-ietf-hip-nat-traversal-02.txt">
- *          draft-ietf-hip-nat-traversal-02</a>
+ * @note    Related RFC: <a href="http://www.rfc-editor.org/rfc/rfc5204.txt">
+ *          Host Identity Protocol (HIP) Rendezvous Extension</a>
+ * @note    Related draft:
+ *          <a href="http://www.ietf.org/internet-drafts/draft-ietf-hip-nat-traversal-03.txt">
+ *          draft-ietf-hip-nat-traversal-03</a>
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  */
 #ifndef HIP_HIPRELAY_H
