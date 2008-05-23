@@ -1,9 +1,10 @@
 #! /bin/sh
-# /etc/init.d/hipfw: start and stop the firewall
+# /etc/init.d/hipfw: start and stop the HIP hipfw
 
-#DAEMON="/usr/sbin/hipfw"
+#hipfw="/usr/sbin/hipfw"
+#OPTIONS="-bk"
 
-HIPFW_OPTS="-bk"
+hipfw_OPTS="-bk"
 #PIDFILE=/var/run/hipfw.pid
 PID=`pidof -o $$ hipfw`
 
@@ -19,7 +20,7 @@ fi
 
 stop_hipfw() {
     # Ensure that we don't try to kill init.d script itself
-    #start-stop-firewall --stop --quiet --oknodo --retry 30
+    #start-stop-hipfw --stop --quiet --oknodo --retry 30
     if [ $PID ]
     then
 	kill $1 $PID
@@ -28,28 +29,28 @@ stop_hipfw() {
 
 case "$1" in
   start)
-        echo -n "Starting firewall"
-	/usr/sbin/hipfw $HIPFW_OPTS
-        #$FIREWALL $OPTIONS
+        echo -n "Starting hipfw"
+	start-stop-hipfw --start --quiet --exec /usr/sbin/hipfw -- $hipfw_OPTS
+        #$hipfw $OPTIONS
         echo "."
 	;;
   stop)
-        echo -n "Stopping firewall"
+        echo -n "Stopping hipfw"
 	stop_hipfw
         echo "."
 	;;
 
   reload|force-reload)
-        echo -n "Reloading firewall"
-	start-stop-firewall --stop --signal 1 --quiet --oknodo --exec /usr/sbin/hipfw -name hipfw
+        echo -n "Reloading hipfw"
+	start-stop-hipfw --stop --signal 1 --quiet --oknodo --exec /usr/sbin/hipfw -name hipfw
 	echo "."
 	;;
 
   restart)
-        echo -n "Restarting firewall"
-        # firewall waits N seconds for closing of connections - just kill it
+        echo -n "Restarting hipfw"
+        # hipfw waits N seconds for closing of connections - just kill it
 	stop_hipfw -KILL
-	start-stop-hipfw --start --quiet --exec /usr/sbin/hipfw -- $HIPFW_OPTS
+	start-stop-hipfw --start --quiet --exec /usr/sbin/hipfw -- $hipfw_OPTS
 	echo "."
 	;;
 

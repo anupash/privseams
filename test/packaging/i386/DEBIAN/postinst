@@ -1,11 +1,9 @@
 #!/bin/sh
 
-update-rc.d hipfw defaults 
 update-rc.d hipd defaults 
 # For some weird reason, hipd is killed silently in ubuntu hardy and gutsy
 # without the at kludge when installing the package with apt-get/aptitude
 # from a remote repository. Until the problem is properly solve, this
 # workaround stays here. --miika
-echo "invoke-rc.d --quiet hipfw start" | at now + 1 min 2>/dev/null 
 echo "hipd will start in one minute"
 echo "invoke-rc.d --quiet hipd start" | at now + 1 min 2>/dev/null

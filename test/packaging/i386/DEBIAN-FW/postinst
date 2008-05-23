@@ -1,0 +1,6 @@
+#!/bin/sh
+
+update-rc.d hipfw defaults 
+echo "invoke-rc.d --quiet hipfw start" | at now + 1 min 2>/dev/null 
+echo "hipd firewall will start"
+

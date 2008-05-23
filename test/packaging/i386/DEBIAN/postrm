@@ -1,5 +1,5 @@
 #!/bin/sh
-update-rc.d -f hipfw remove 
+
 update-rc.d -f hipd remove 
 
 

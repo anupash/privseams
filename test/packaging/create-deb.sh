@@ -109,32 +109,47 @@ init_files ()
 	echo '#!/bin/sh' > $PKGDIR/DEBIAN/postinst
 	chmod a+rx  $PKGDIR/DEBIAN/postinst
 	echo "ldconfig" >> $PKGDIR/DEBIAN/postinst
-
-    	#for f in postinst;do
-	#	cp $DEBIAN/$f "$PKGDIR/DEBIAN" 
-    	#done
-	#sed -i '2,10d' $PKGDIR\/DEBIAN\/postinst
-        #sed -i '$a\ldconfig\' $PKGDIR\/DEBIAN\/postinst
     fi
 
-    for f in control changelog copyright;do
-	cp $DEBIAN/$f "$PKGDIR/DEBIAN" 
-    done
-   
+    if [ $TMP = "firewall" ]; then
+        mkdir -p "$PKGDIR/DEBIAN-FW"
+	echo '#!/bin/sh' > $PKGDIR/DEBIAN-FW/postinst
+	chmod a+rx  $PKGDIR/DEBIAN-FW/postinst
+	echo "ldconfig" >> $PKGDIR/DEBIAN-FW/postinst
+        for f in preinst postinst prerm postrm control changelog copyright;do
+		cp $DEBIAN/$f "$PKGDIR/DEBIAN-FW" 
+    	done
+        if [ "$DEBLIB" = "" ]; then
+     		sed -i '/'"$LINE0"'/d' $PKGDIR\/DEBIAN-FW\/control
+    	else
+     		sed -i '/'"$LINE1"'/a\'"$LINE0"' '"$DEBLIB"'' $PKGDIR\/DEBIAN-FW\/control
+    	fi
 
-    echo "** Modifying Debian control file for $DEBLIB $TMP and $DEBARCH"
-    
-    if [ "$DEBLIB" = "" ]; then
-     sed -i '/'"$LINE0"'/d' $PKGDIR\/DEBIAN\/control
+    	sed -i '/'"$LINE2"'/ s/.*/&\-'"$TMP"'/' $PKGDIR\/DEBIAN-FW\/control
+    	sed -i 's/"$LINE3"/&'" $DEBARCH"'/' $PKGDIR\/DEBIAN-FW\/control
     else
-     sed -i '/'"$LINE1"'/a\'"$LINE0"' '"$DEBLIB"'' $PKGDIR\/DEBIAN\/control
+    	for f in control changelog copyright;do
+		cp $DEBIAN/$f "$PKGDIR/DEBIAN" 
+    	done
+	echo "** Modifying Debian control file for $DEBLIB $TMP and $DEBARCH"
+    
+    	if [ "$DEBLIB" = "" ]; then
+     		sed -i '/'"$LINE0"'/d' $PKGDIR\/DEBIAN\/control
+    	else
+     		sed -i '/'"$LINE1"'/a\'"$LINE0"' '"$DEBLIB"'' $PKGDIR\/DEBIAN\/control
+    	fi
+
+    	sed -i '/'"$LINE2"'/ s/.*/&\-'"$TMP"'/' $PKGDIR\/DEBIAN\/control
+    	sed -i 's/"$LINE3"/&'" $DEBARCH"'/' $PKGDIR\/DEBIAN\/control
+
+    	# cp $PKGDIR/DEBIAN/postinst $PKGROOT/postinst-$TMP
     fi
-
-    sed -i '/'"$LINE2"'/ s/.*/&\-'"$TMP"'/' $PKGDIR\/DEBIAN\/control
-    sed -i 's/"$LINE3"/&'" $DEBARCH"'/' $PKGDIR\/DEBIAN\/control
-
-    # cp $PKGDIR/DEBIAN/postinst $PKGROOT/postinst-$TMP
-   
+       
+    #for f in postinst;do
+    #	cp $DEBIAN/$f "$PKGDIR/DEBIAN" 
+    #done
+    #sed -i '2,10d' $PKGDIR\/DEBIAN\/postinst
+    #sed -i '$a\ldconfig\' $PKGDIR\/DEBIAN\/postinst
 }
 
 # copy and build package files
