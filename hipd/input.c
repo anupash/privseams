@@ -1930,10 +1930,10 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
 	
 #ifdef CONFIG_HIP_ESCROW
-	if (hip_deliver_escrow_data(i2_saddr, i2_daddr, &ctx->input->hits, 
-				    &ctx->input->hitr, &spi_in, esp_tfm, &ctx->esp_in, 
-				    HIP_ESCROW_OPERATION_ADD) != 0)
-	{  
+	if (hip_deliver_escrow_data(
+		    i2_saddr, i2_daddr, &ctx->input->hits, &ctx->input->hitr,
+		    &spi_in, esp_tfm, &ctx->esp_in, HIP_ESCROW_OPERATION_ADD)
+	    != 0) {  
 		HIP_DEBUG("Could not deliver escrow data to server\n");
 	}
 #endif //CONFIG_HIP_ESCROW
@@ -2339,22 +2339,20 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	}
 	//#endif /* CONFIG_HIP_HI3 */
 	
-	/* Registration of additional services. Check if we should expect
-	   REG_RESPONSE or REG_FAILED parameter */
 	
-	/* Lauri: Continue from here: Add REG_RESPONSE handler and check pending
-	   requests. */
-
+	/* Handle REG_RESPONSE and REG_FAILED parameters. */
 	hip_handle_param_reg_response(entry, r2);
-
+	hip_handle_param_reg_failed(entry, r2);
+	
+	/*
 	uint8_t services[HIP_TOTAL_EXISTING_SERVICES];
 	
         type_count = hip_get_incomplete_registrations(&reg_types, entry, 1, services); 
         if (type_count > 0) {
-                HIP_IFEL(hip_handle_registration_response(entry, r2), -1, 
-			 "Error handling reg_response\n"); 
-        }
-
+	HIP_IFEL(hip_handle_registration_response(entry, r2), -1, 
+	"Error handling reg_response\n"); 
+	}*/
+	
 	/* These will change SAs' state from ACQUIRE to VALID, and wake up any
 	   transport sockets waiting for a SA. */
 	// hip_finalize_sa(&entry->hit_peer, spi_recvd);
