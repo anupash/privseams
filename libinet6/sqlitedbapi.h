@@ -19,6 +19,34 @@
 
 #define HIP_CERT_DB_PATH_AND_NAME "/etc/hip/certdb.db"
 
+#define HIP_AGENT_DB_CREATE_TBLS "CREATE TABLE local (" \
+                                 "lname VARCHAR(65), " \
+                                 "lhit VARCHAR(41)" \
+                                 "); " \
+                                 "CREATE TABLE remote (" \
+                                 "rname VARCHAR(65), " \
+                                 "rhit VARCHAR(41), " \
+                                 "url VARCHAR(1025), " \
+                                 "port VARCHAR(1025), " \
+                                 "gname VARCHAR(65)" \
+                                 "); " \
+                                 "CREATE TABLE groups (" \
+                                 "gname VARCHAR(65), " \
+                                 "lhitname VARCHAR(65), " \
+                                 "accept INTEGER, " \
+                                 "lightweight INTEGER" \
+                                 ");" \
+
+#define HIP_AGENT_DB_DELETE_ALL "DELETE FROM local;" \
+                                "DELETE FROM remote;" \
+                                "DELETE FROM groups;"
+
+#define HIP_AGENT_DB_SELECT_REMOTE "SELECT * FROM remote;"
+
+#define HIP_AGENT_DB_SELECT_LOCAL "SELECT * FROM local;"
+
+#define HIP_AGENT_DB_SELECT_GROUPS "SELECT * FROM groups;"
+
 sqlite3 * hip_sqlite_open_db(const char *, const char *);
 int hip_sqlite_close_db(sqlite3 *);
 int hip_sqlite_select(sqlite3 *, const char *, 

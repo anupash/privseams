@@ -22,7 +22,7 @@
 #include "debug.h"
 #include "ife.h"
 #include "language.h"
-
+#include "sqlitedbapi.h"
 
 /******************************************************************************/
 /* DEFINES */
@@ -42,6 +42,7 @@
 	example: sscanf(buf, "\"%64[^\"]\" %s", name, hit);
 	                         ^^
 */
+/* NOTE these two values affect the db create tbl queries in sqlitedbapi.h */
 #define MAX_NAME_LEN	64
 /** Maximum length for URLs. */
 #define MAX_URL_LEN		1024
@@ -145,12 +146,12 @@ HIT_Remote *hit_db_add_hit(HIT_Remote *, int);
 HIT_Remote *hit_db_add(char *, struct in6_addr *, char *, char *, HIT_Group *, int);
 int hit_db_del(char *);
 HIT_Remote *hit_db_find(char *, struct in6_addr *);
-int hit_db_enum(int (*)(HIT_Remote *, void *), void *);
+int hit_db_enum(int (*)(HIT_Remote *, void *, void *), void *, void *);
 
 int hit_db_save_to_file(char *);
-int hit_db_save_rgroup_to_file(HIT_Group *, void *);
-int hit_db_save_local_to_file(HIT_Local *, void *);
-int hit_db_save_remote_to_file(HIT_Remote *, void *);
+int hit_db_save_rgroup_to_file(HIT_Group *, void *, void *);
+int hit_db_save_local_to_file(HIT_Local *, void *, void *);
+int hit_db_save_remote_to_file(HIT_Remote *, void *, void *);
 
 int hit_db_load_from_file(char *);
 int hit_db_parse_hit(char *);
@@ -160,12 +161,12 @@ int hit_db_parse_local(char *);
 HIT_Group *hit_db_add_rgroup(char *, HIT_Local *, int, int);
 int hit_db_del_rgroup(char *);
 HIT_Group *hit_db_find_rgroup(char *);
-int hit_db_enum_rgroups(int (*)(HIT_Group *, void *), void *);
+int hit_db_enum_rgroups(int (*)(HIT_Group *, void *, void *), void *, void *);
 
 HIT_Local *hit_db_add_local(char *, struct in6_addr *);
 int hit_db_del_local(char *);
 HIT_Local *hit_db_find_local(char *, struct in6_addr *);
-int hit_db_enum_locals(int (*)(HIT_Local *, void *), void *);
+int hit_db_enum_locals(int (*)(HIT_Local *, void *, void *), void *, void *);
 
 int hit_db_count_locals(void);
 HIT_Local *hit_db_default_local(void);

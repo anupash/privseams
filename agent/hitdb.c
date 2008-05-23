@@ -42,9 +42,134 @@ int hit_db_lock = 1;
 
 
 /******************************************************************************/
+/* Callback functions for the database functions to use to handle all the data
+   from queries */
+/******************************************************************************/
+
+/**
+ * Callback function to get the data from the db table local
+ *
+ * @return 0 if created and/or opened OK otherwise negative
+ *
+ * @note Notice that the parameters are allways the same
+ */
+static int hip_agent_db_local_callback(void *NotUsed, int argc, 
+                                       char **argv, char **azColName) {
+        int i;
+        char buf[118]; // sum of the ones below and some more
+        char lname[66];
+        char lhit[42];
+
+        for(i=0; i<argc; i++) {
+                _HIP_DEBUG("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
+                if (strcmp(azColName[i], "lname")) 
+                        sprintf(lname,"%s", argv[i] ? argv[i] : "NULL"); 
+                if (strcmp(azColName[i], "lhit")) 
+                        sprintf(lhit,"%s", argv[i] ? argv[i] : "NULL");
+        }
+        if ((i % 2) == 0) {
+                sprintf(buf, "\"%s\" \"%s\"", 
+                        lname, lhit);
+                HIP_DEBUG("HIT BUF %s\n", buf);
+                hit_db_parse_local(&buf);
+                memset(lname, '\0', sizeof(lname));
+                memset(lhit, '\0', sizeof(lhit));   
+        }
+        return 0;
+
+/* JEMMA
+if (buf[0] == 'r') hit_db_parse_hit(&buf[2]);
+*/
+//fprintf(f, "l \"%s\" %s\n", local->name, hit);
+}
+
+/**
+ * Callback function to get the data from the db table remote
+ *
+ * @return 0 if created and/or opened OK otherwise negative
+ *
+ * @note Notice that the parameters are allways the same
+ */
+static int hip_agent_db_remote_callback(void *NotUsed, int argc, 
+                                        char **argv, char **azColName) {
+        int i;
+        char buf[2236]; // should be the sum of the below + 10 or more :) 
+        char rname[66];
+        char rhit[42];
+        char url[1026];
+        char port[1026];
+        char gname[66];
+       
+        for(i=0; i<argc; i++) {
+                _HIP_DEBUG("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
+                if (strcmp(azColName[i], "rname")) 
+                        sprintf(rname,"%s", argv[i] ? argv[i] : "NULL"); 
+                if (strcmp(azColName[i], "rhit")) 
+                        sprintf(rhit,"%s", argv[i] ? argv[i] : "NULL");  
+                if (strcmp(azColName[i], "url ")) 
+                        sprintf(url ,"%s", argv[i] ? argv[i] : "NULL");  
+                if (strcmp(azColName[i], "port"))  
+                        sprintf(port,"%s", argv[i] ? argv[i] : "NULL");  
+                if (strcmp(azColName[i], "gname"))  
+                        sprintf(gname,"%s", argv[i] ? argv[i] : "NULL");
+        }
+        if ((i % 5) == 0) {
+                sprintf(buf, "\"%s\" \"%s\" \"%s\" \"%s\" \"%s\"", 
+                        rname, rhit, url, port, gname);
+                hit_db_parse_hit(&buf);
+                memset(rname, '\0', sizeof(rname));
+                memset(rhit, '\0', sizeof(rhit));
+                memset(port, '\0', sizeof(port));
+                memset(url, '\0', sizeof(url));
+                memset(gname, '\0', sizeof(gname));
+        }
+        return 0;
+}
+
+/**
+ * Callback function to get the data from the db table groups
+ *
+ * @return 0 if created and/or opened OK otherwise negative
+ *
+ * @note Notice that the parameters are allways the same
+ */
+static int hip_agent_db_groups_callback(void *NotUsed, int argc, 
+                                        char **argv, char **azColName) {
+        int i, accept = 0, lw = 0;
+        char buf[118]; // sum of the ones below + some more
+        char name[66];
+        char lhit[42];
+
+        memset(name, '\0', sizeof(name));
+        memset(lhit, '\0', sizeof(lhit));
+        accept = lw = 0;
+
+        for(i=0; i<argc; i++) {
+                _HIP_DEBUG("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
+                if (strcmp(azColName[i], "gname")) 
+                        sprintf(name,"%s", argv[i] ? argv[i] : "NULL"); 
+                if (strcmp(azColName[i], "lhitname")) 
+                        sprintf(lhit,"%s", argv[i] ? argv[i] : "NULL");  
+                if (strcmp(azColName[i], "accept")) 
+                        accept = argv[i] ? argv[i] : "NULL"; 
+                if (strcmp(azColName[i], "lightweight"))  
+                        lw = argv[i] ? argv[i] : "NULL";
+        }
+        if ((i % 4) == 0) {
+                sprintf(buf, "\"%s\" \"%s\" %d %d", name, lhit, accept, lw);
+                hit_db_parse_rgroup(&buf);
+                memset(name, '\0', sizeof(name));
+                memset(lhit, '\0', sizeof(lhit));
+                accept = lw = 0;
+        }
+        return 0;
+}
+
+/******************************************************************************/
 /* FUNCTIONS */
 
 /******************************************************************************/
+
 /**
 	Initialize HIP agent HIT database. This function must be called before
 	using database at all.
@@ -336,16 +461,16 @@ HIT_Remote *hit_db_find(char *name, struct in6_addr *hit)
 	@param p Pointer to user data.
 	@return Number of HITs enumerated.
 */
-int hit_db_enum(int (*f)(HIT_Remote *, void *), void *p)
+int hit_db_enum(int (*f)(HIT_Remote *, void *, void *), void *p, void * pdb)
 {
 	/* Variables. */
 	HIT_Remote *r;
 	int err = 0, n = 0;
-	
+
 	r = remote_db;
 	while (r != NULL && err == 0)
 	{
-		err = f(r, p);
+		err = f(r, p, pdb);
 		n++;
 		r = (HIT_Remote *)r->next;
 	}
@@ -371,22 +496,35 @@ int hit_db_save_to_file(char *file)
 	FILE *f = NULL;
 	int err = 0, i;
 	char hit[128];
+        sqlite3 *db;
 	
 	HIT_DB_LOCK();
 	
 	_HIP_DEBUG("Saving HIT database to %s.\n", file);
 
-	f = fopen(file, "w");
-	HIP_IFEL(f == NULL, -1, "Failed to save database.\n");
+        //	f = fopen(file, "w");
+	//HIP_IFEL(f == NULL, -1, "Failed to save database.\n");
 
+        /* 
+           XX Save everything to the sqlite db 
+           Clear it first then insert stuff into it
+           Should it be cleared always or just checked the changes against
+           the lists in memory? -- SAMU
+        */
+       
+        db = hip_sqlite_open_db(file, HIP_AGENT_DB_CREATE_TBLS);
+        HIP_IFEL(hip_sqlite_delete_from_table(db, HIP_AGENT_DB_DELETE_ALL),
+                 -1, "Failed to execute delete query\n");
+        
 	/* Write all local HITs to file. */
-	hit_db_enum_locals(hit_db_save_local_to_file, f);
+	hit_db_enum_locals(hit_db_save_local_to_file, f, db);
 	/* Write all remote groups to file. */
-	hit_db_enum_rgroups(hit_db_save_rgroup_to_file, f);
+	hit_db_enum_rgroups(hit_db_save_rgroup_to_file, f, db);
 	/* Write all remote HITs to file. */
-	hit_db_enum(hit_db_save_remote_to_file, f);
-
-out_err:
+	hit_db_enum(hit_db_save_remote_to_file, f, db);
+              
+out_err:        
+        HIP_IFEL(hip_sqlite_close_db(db), -1, "Failed to close the db\n");        
 	if (f) fclose(f);
 	HIT_DB_UNLOCK();
 	return (err);
@@ -399,14 +537,25 @@ out_err:
 	Write remote group to agent database -file.
 	This is a enumeration callback function used by hit_db_enum_rgroups().
 */
-int hit_db_save_rgroup_to_file(HIT_Group *g, void *p)
+int hit_db_save_rgroup_to_file(HIT_Group *g, void *p, void * pdb)
 {
 	/* Variables. */
-	FILE *f = (FILE *)p;
+	//FILE *f = (FILE *)p;
 	char hit[128];
+        char insert_into[256];
+        int ret = 0;
+        sqlite3 * db;
 	
-	if (g->name[0] == ' ' || !g->l) return (0);
-	fprintf(f, "g \"%s\" \"%s\" %d %d\n", g->name, g->l->name, g->accept, g->lightweight);
+        db = (sqlite3 *)pdb;
+	
+	if (g->name[0] == ' ' || !g->l) return (0); 
+ 	//fprintf(f, "g \"%s\" \"%s\" %d %d\n", g->name, g->l->name, 
+        //       g->accept, g->lightweight);
+
+        sprintf(insert_into, "INSERT INTO groups VALUES("
+                 "'%s', '%s', %d, %d);", 
+                 g->name, g->l->name, g->accept, g->lightweight);
+        ret = hip_sqlite_insert_into_table(db, insert_into);
 	
 	return (0);
 }
@@ -418,15 +567,25 @@ int hit_db_save_rgroup_to_file(HIT_Group *g, void *p)
 	Write local HIT to agent database -file.
 	This is a enumeration callback function used by hit_db_enum_locals().
 */
-int hit_db_save_local_to_file(HIT_Local *local, void *p)
+int hit_db_save_local_to_file(HIT_Local *local, void *p, void * pdb)
 {
 	/* Variables. */
-	FILE *f = (FILE *)p;
+	//FILE *f = (FILE *)p;
 	char hit[128];
+        char insert_into[256];
+        int ret = 0;
+        sqlite3 * db;
+	
+        db = (sqlite3 *)pdb;
 	
 	print_hit_to_buffer(hit, &local->lhit);
-	fprintf(f, "l \"%s\" %s\n", local->name, hit);
+	//fprintf(f, "l \"%s\" %s\n", local->name, hit);
 	
+        sprintf(insert_into, "INSERT INTO local VALUES("
+                 "'%s', '%s');", 
+                 local->name, hit);
+        ret = hip_sqlite_insert_into_table(db, insert_into);
+
 	return (0);
 }
 /* END OF FUNCTION */
@@ -437,16 +596,26 @@ int hit_db_save_local_to_file(HIT_Local *local, void *p)
 	Write remote HIT to agent database -file.
 	This is a enumeration callback function used by hit_db_enum_locals().
 */
-int hit_db_save_remote_to_file(HIT_Remote *r, void *p)
+int hit_db_save_remote_to_file(HIT_Remote *r, void *p, void * pdb)
 {
 	/* Variables. */
-	FILE *f = (FILE *)p;
+	//FILE *f = (FILE *)p;
 	char hit[128];
+        char insert_into[256];
+        int ret = 0;
+        sqlite3 * db;
+	
+        db = (sqlite3 *)pdb;
 	
 	if (r->g->name[0] == ' ') return (0);
 	print_hit_to_buffer(hit, &r->hit);
-	fprintf(f, "r %s \"%s\" \"%s\" \"%s\" \"%s\"\n", hit, r->name,
-	        "x", r->port, r->g->name);
+	//fprintf(f, "r %s \"%s\" \"%s\" \"%s\" \"%s\"\n", hit, r->name,
+	//        "x", r->port, r->g->name);
+
+        sprintf(insert_into, "INSERT INTO remote VALUES("
+                 "'%s', '%s', '%s', '%s', '%s');", 
+                hit, r->name, "x", r->port, r->g->name);
+        ret = hip_sqlite_insert_into_table(db, insert_into);
 
 	return (0);
 }
@@ -467,15 +636,31 @@ int hit_db_load_from_file(char *file)
 	char buf[2048], ch;
 	int err = 0, i, n;
 	struct in6_addr hit;
+        sqlite3 * db;
 
 	hit_db_clear();
 	HIT_DB_LOCK();
 
 	_HIP_DEBUG("Loading HIT database from %s.\n", file);
 
-	f = fopen(file, "r");
-	HIP_IFEL(!f, 0, "Failed to open HIT database file \"%s\" for reading.\n", file);
+	//f = fopen(file, "r");
+	//HIP_IFEL(!f, 0, "Failed to open HIT database file \"%s\" for reading.\n", file);
 
+        /* XX replace this loop with three SELECTS (one for remote hits,
+           one for local hits and one for groups.*/
+      
+        db = hip_sqlite_open_db(file, HIP_AGENT_DB_CREATE_TBLS);
+        HIP_IFEL(hip_sqlite_select(db, HIP_AGENT_DB_SELECT_REMOTE, 
+                                   hip_agent_db_remote_callback), -1,
+                 "Failed to execute select query on the db\n");
+        HIP_IFEL(hip_sqlite_select(db, HIP_AGENT_DB_SELECT_LOCAL, 
+                                   hip_agent_db_local_callback), -1,
+                 "Failed to execute select query on the db\n");
+        HIP_IFEL(hip_sqlite_select(db, HIP_AGENT_DB_SELECT_GROUPS, 
+                                   hip_agent_db_groups_callback), -1,
+                 "Failed to execute select query on the db\n");
+
+#if 0        
 	/* Start parsing. */
 	memset(buf, '\0', sizeof(buf)); i = 0; n = -1;
 	for (ch = fgetc(f); ch != EOF; ch = fgetc(f))
@@ -511,6 +696,7 @@ int hit_db_load_from_file(char *file)
 		/* Clear buffer. */
 		memset(buf, '\0', sizeof(buf)); i = 0;
 	}
+#endif        
 	
 out_err:
 	if (f) fclose(f);
@@ -750,7 +936,7 @@ HIT_Group *hit_db_find_rgroup(char *name)
 	@param p Pointer to user data.
 	@return Number of groups enumerated.
 */
-int hit_db_enum_rgroups(int (*f)(HIT_Group *, void *), void *p)
+int hit_db_enum_rgroups(int (*f)(HIT_Group *, void *, void *), void *p, void *pdb)
 {
 	/* Variables. */
 	HIT_Group *g;
@@ -759,7 +945,7 @@ int hit_db_enum_rgroups(int (*f)(HIT_Group *, void *), void *p)
 	g = group_db;
 	while (g != NULL && err == 0)
 	{
-		err = f(g, p);
+		err = f(g, p, pdb);
 		n++;
 		g = (HIT_Group *)g->next;
 	}
@@ -889,7 +1075,7 @@ HIT_Local *hit_db_find_local(char *name, struct in6_addr *hit)
 	@param p Pointer to user data.
 	@return Number of HITs enumerated.
 */
-int hit_db_enum_locals(int (*f)(HIT_Local *, void *), void *p)
+int hit_db_enum_locals(int (*f)(HIT_Local *, void *, void *), void *p, void *pdb)
 {
 	/* Variables. */
 	HIT_Local *h;
@@ -898,7 +1084,7 @@ int hit_db_enum_locals(int (*f)(HIT_Local *, void *), void *p)
 	h = local_db;
 	while (h != NULL && err == 0)
 	{
-		err = f(h, p);
+		err = f(h, p, pdb);
 		n++;
 		h = (HIT_Local *)h->next;
 	}

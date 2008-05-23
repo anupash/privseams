@@ -108,7 +108,7 @@ int main(int argc, char *argv[])
 	/* Create config filename. */
 	str_var_set("config-file", "%s/.hipagent/config", getenv("HOME"));
 	/* Create database filename. */
-	str_var_set("db-file", "%s/.hipagent/database", getenv("HOME"));
+	str_var_set("db-file", "%s/.hipagent/database.db", getenv("HOME"));
 
 	/* Read config. */
 	err = config_read(str_var_get("config-file"));
