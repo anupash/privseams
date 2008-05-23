@@ -984,7 +984,7 @@ int hip_build_locators(struct hip_common *msg)
  */
 int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
                 in6_addr_t *dst_ip, const in_port_t dst_port,
-                hip_portpair_t *i1_info, uint16_t *nonce, hip_tlv_type_t *param_type) 
+                hip_portpair_t *i1_info, uint16_t *nonce) 
 {
 	struct hip_common *r1pkt = NULL;
 	struct in6_addr *r1_dst_addr, *local_plain_hit = NULL;
@@ -992,22 +992,12 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 	int err = 0;
 	
 	_HIP_DEBUG("hip_xmit_r1() invoked.\n");
-	HIP_DEBUG_IN6ADDR("hip_xmit_r1:  R1 destination address dst_ip", dst_ip);
-	HIP_DEBUG_IN6ADDR("hip_xmit_r1:  R1 destination address i1_saddr", i1_saddr);
+	
 	/* Get the final destination address and port for the outgoing R1.
 	   dst_ip and dst_port have values only if the incoming I1 had
 	   FROM/FROM_NAT parameter. */
-	HIP_DEBUG("parameter type: %d \n", *param_type);
-	HIP_DEBUG("destination port : %d \n", dst_port);
-	
-	if(*param_type == HIP_PARAM_RELAY_FROM){
-		r1_dst_addr = i1_saddr;
-		r1_dst_port = i1_info->src_port;
-	}
-	else{
-		r1_dst_addr = (ipv6_addr_any(dst_ip) ? i1_saddr : dst_ip);
-		r1_dst_port = (dst_port == 0 ? i1_info->src_port : dst_port);
-	}
+	r1_dst_addr = (ipv6_addr_any(dst_ip) ? i1_saddr : dst_ip);
+	r1_dst_port = (dst_port == 0 ? i1_info->src_port : dst_port);
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	/* It should not be null hit, null hit has been replaced by real local
@@ -1052,12 +1042,10 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 	   parameter. */
 	if(!ipv6_addr_any(dst_ip))
 	{    // dst_port has the value of RELAY_FROM port.
-	    // if(dst_port == HIP_NAT_UDP_PORT)
-	      if(*param_type == HIP_PARAM_RELAY_FROM)
+	     if(dst_port == HIP_NAT_UDP_PORT)
 	     {
-	      HIP_INFO("hip_xmit_r1: add relay to parameter\n");
 		  hip_build_param_relay_to(
-		       r1pkt, dst_ip, dst_port);
+		       r1pkt, i1_saddr, i1_info->src_port);
 	     }
 	     else
 	     {
@@ -1069,7 +1057,7 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 	/* R1 is send on UDP if R1 destination port is 50500. This is if:
 	   a) the I1 was received on UDP.
 	   b) the received I1 packet had a RELAY_FROM parameter. */
-	if(r1_dst_port != 0)
+	if(r1_dst_port)
 	{
 		HIP_IFEL(hip_send_udp(i1_daddr, r1_dst_addr, HIP_NAT_UDP_PORT,
 				      r1_dst_port, r1pkt, NULL, 0),
