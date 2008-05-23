@@ -183,9 +183,9 @@ int hip_get_pending_requests(hip_ha_t *entry,
 int hip_get_pending_request_count(hip_ha_t *entry);
 
 /**
- * Handles param REG_INFO. Digs out the REG_INFO parameter from the parameter
- * HIP message @c msg and sets the peer control bits accordingly. I.e. the
- * peer controls are set to indicate which services the peer offers.
+ * Handles param REG_INFO. Digs out the REG_INFO parameter from the HIP message
+ * @c msg and sets the peer control bits accordingly. I.e. the peer controls are
+ * set to indicate which services the peer offers.
  *
  * @param  msg      a pointer to HIP message from where to dig out the REG_INFO
  *                  parameter.
@@ -196,9 +196,89 @@ int hip_get_pending_request_count(hip_ha_t *entry);
  * @see             peer_controls
  */ 
 int hip_handle_param_reg_info(hip_common_t *msg, hip_ha_t *entry);
+
+/**
+ * Handles param REG_REQUEST. Digs out the REG_REQUEST parameter from the HIP
+ * message @c source_msg, takes action based on the contents of the REG_REQUEST
+ * parameter and builds parameters in response to the HIP message @c target_msg.
+ * 
+ * First hip_has_duplicate_services() is called to check whether the
+ * parameter is malformed in a way that it has the same services listed more
+ * than once. If the parameter proves to be malformed, the whole parameter is
+ * omitted, none of the Reg Types in the REG_REQUEST are handled, and no
+ * parameters are build as response. The initiator might be rogue and trying to
+ * stress the server with malformed service requests. This is considered as a
+ * protocol error and errno is set to EPROTO.
+ *
+ * If the parameter passes the hip_has_duplicate_services() test, the parameter
+ * lifetime is investigated next. If it is zero i.e. the client is canceling a
+ * service, hip_del_registration_server() is called. Otherwise the client is
+ * registering to new services and hip_add_registration_server() is called.
+ * 
+ * Once the aforementioned functions return, a REG_RESPONSE and/or a required
+ * number of REG_FAILED parameters are built to 
+ * 
+ * @parameter entry   a pointer to a host association which is registering.
+ * @param  source_msg a pointer to HIP message from where to dig out the
+ *                    REG_INFO parameter.
+ * @param  target_msg a pointer to HIP message where to build the REG_RESPONSE
+ *                    and/or REG_FAILED parameters.
+ * @return            -1 if the message @c source_msg did not contain a
+ *                    REG_REQUEST parameter or the parameter had duplicate
+ *                    services, zero otherwise.
+ * @see               hip_has_duplicate_services().
+ * @see               hip_add_registration_server().
+ * @see               hip_del_registration_server().
+ */
 int hip_handle_param_rrq(hip_ha_t *entry, hip_common_t *source_msg,
 			 hip_common_t *target_msg);
-int hip_handle_param_reg_response(hip_ha_t *entry, hip_common_t *source_msg);
+
+/**
+ * Handles param REG_RESPONSE. Digs out the REG_RESPONSE parameter from the HIP
+ * message @c msg and takes action based on the contents of the
+ * REG_RESPONSE parameter.
+ * 
+ * Unlike the REG_REQUEST parameter, the REG_RESPONSE parameter is allowed to
+ * have duplicate services listed. This is because the initiator has the option
+ * not to contact the server in the first place. If the server sends
+ * REG_RESPONSE parameters that contain duplicate services, we just handle each
+ * duplicate Reg Type one after the other.
+ *
+ * The parameter lifetime is investigated first. If it is zero i.e. the server
+ * has canceled a service and hip_del_registration_client() is called. Otherwise
+ * the server has granted us the services we requested and
+ * hip_add_registration_client() is called.
+ * 
+ * @parameter entry a pointer to a host association which is registering.
+ * @param     msg   a pointer to HIP message from where to dig out the
+ *                  REG_RESPONSE parameter.
+ * @return          -1 if the message @c msg did not contain a
+ *                  REG_RESPONSE parameter, zero otherwise.
+ * @see             hip_add_registration_client().
+ * @see             hip_del_registration_client().
+ */
+int hip_handle_param_reg_response(hip_ha_t *entry, hip_common_t *msg);
+
+/**
+ * Handles param REG_FAILED. Digs out the REG_FAILED parameter from the HIP
+ * message @c msg and takes action based on the contents of the
+ * REG_FAILED parameter.
+ * 
+ * Unlike the REG_REQUEST parameter, the REG_FAILED parameter is allowed to
+ * have duplicate services listed. This is because the initiator has the option
+ * not to contact the server in the first place. If the server sends
+ * REG_FAILED parameters that contain duplicate services, we just handle each
+ * duplicate Reg Type one after the other.
+ *
+ * @parameter entry a pointer to a host association which is registering.
+ * @param  msg      a pointer to HIP message from where to dig out the
+ *                  REG_FAILED parameter.
+ * @return          -1 if the message @c msg did not contain a REG_FAILED
+ *                  parameter, zero otherwise.
+ * @see             hip_add_registration_client().
+ * @see             hip_del_registration_client().
+ */
+int hip_handle_param_reg_failed(hip_ha_t *entry, hip_common_t *msg);
 
 /**
  * Adds new registrations to services at the server. This function tries to add

@@ -513,8 +513,6 @@ int hip_handle_user_msg(struct hip_common *msg,
 
 		HIP_DEBUG("KING KONG.\n");
 		
-		/* Set a RVS request flag. */
-		//hip_hadb_set_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_RVS);
 		/* Send a I1 packet to RVS. */
 		/** @todo Not filtering I1, when handling RVS message! */
 		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),

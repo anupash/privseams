@@ -297,18 +297,18 @@ int hip_handle_param_reg_info(hip_common_t *msg, hip_ha_t *entry)
 		return 0;
 	}
 
-	/* Loop through all the registration types found in REG_INFO parameter. */ 
+	/* Loop through all the registration types found in REG_INFO parameter
+	   and store the information of responder's capability to offer a
+	   service. */
 	for(i = 0; i < type_count; i++){
 		
 		switch(reg_types[i]) {
 		case HIP_SERVICE_RENDEZVOUS:
 			HIP_INFO("Responder offers rendezvous service.\n");
-			/* If we have requested for RVS service in I1, we store
-			   the information of responder's capability here. */
-			if(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_RVS) {
-				hip_hadb_set_peer_controls(
-					entry, HIP_HA_CTRL_PEER_RVS_CAPABLE);
-			}
+						
+			hip_hadb_set_peer_controls(
+				entry ,HIP_HA_CTRL_PEER_RVS_CAPABLE);
+			
 			break;
 
 #ifdef CONFIG_HIP_ESCROW		
@@ -319,13 +319,8 @@ int hip_handle_param_reg_info(hip_common_t *msg, hip_ha_t *entry)
 			HIP_INFO("Responder offers escrow service.\n");
 			HIP_KEA *kea;
 			
-			/* If we have requested for escrow service in I1, we
-			   store the information of responder's capability
-			   here. */
-			if(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_ESCROW) {
-				hip_hadb_set_peer_controls(
-					entry, HIP_HA_CTRL_PEER_ESCROW_CAPABLE);
-			}
+			hip_hadb_set_peer_controls(
+				entry, HIP_HA_CTRL_PEER_ESCROW_CAPABLE);
 			
 			kea = hip_kea_find(&entry->hit_our);
 			if (kea && kea->keastate == HIP_KEASTATE_REGISTERING) {
@@ -344,13 +339,9 @@ int hip_handle_param_reg_info(hip_common_t *msg, hip_ha_t *entry)
 #endif /* CONFIG_HIP_ESCROW */				
 		case HIP_SERVICE_RELAY:
 			HIP_INFO("Responder offers relay service.\n");
-			/* If we have requested for relay service in I1, we
-			   store the information of responder's capability
-			   here. */
-			if(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_RELAY) {
-				hip_hadb_set_peer_controls(
-					entry, HIP_HA_CTRL_PEER_RELAY_CAPABLE);
-			}
+			hip_hadb_set_peer_controls(
+				entry, HIP_HA_CTRL_PEER_RELAY_CAPABLE);
+			
 			break;
 			
 		default:
@@ -391,7 +382,12 @@ int hip_handle_param_rrq(hip_ha_t *entry, hip_common_t *source_msg,
 
 	/* Check that the request has at most one value of each type. */
 	if(hip_has_duplicate_services(reg_types, type_count)) {
+		/* We consider this as a protocol error, and do not build
+		   REG_FAILED parameters. The initiator might be rogue and
+		   trying to stress the server with malformed service
+		   requests. */
 		err = -1;
+		errno = EPROTO;
 		HIP_ERROR("The REG_REQUEST parameter has duplicate services. "\
 			  "The whole parameter is omitted.\n");
 		/* As above. */
@@ -413,17 +409,16 @@ int hip_handle_param_rrq(hip_ha_t *entry, hip_common_t *source_msg,
 
 	if(reg_request->lifetime == 0) {
 		HIP_DEBUG("Client is cancelling registration.\n");
-		hip_del_registration_server(entry, reg_types, type_count,
-					    accepted_requests,
-					    accepted_lifetimes, &accepted_count,
-					    refused_requests, failure_types,
-					    &refused_count);
+		hip_del_registration_server(
+			entry, reg_types, type_count, accepted_requests,
+			accepted_lifetimes, &accepted_count, refused_requests,
+			failure_types, &refused_count);
 	} else {
 		HIP_DEBUG("Client is registrating for new services.\n");
-		hip_add_registration_server(entry, reg_request->lifetime, reg_types, type_count,
-			    accepted_requests, accepted_lifetimes,
-			    &accepted_count, refused_requests, failure_types,
-			    &refused_count);
+		hip_add_registration_server(
+			entry, reg_request->lifetime, reg_types, type_count,
+			accepted_requests, accepted_lifetimes, &accepted_count,
+			refused_requests, failure_types, &refused_count);
 	}
 	
 	HIP_DEBUG("Accepted: %d, refused: %d.\n", accepted_count,
@@ -478,7 +473,7 @@ int hip_handle_param_rrq(hip_ha_t *entry, hip_common_t *source_msg,
 	return err;
 }
 
-int hip_handle_param_reg_response(hip_ha_t *entry, hip_common_t *source_msg)
+int hip_handle_param_reg_response(hip_ha_t *entry, hip_common_t *msg)
 {
 	int err = 0, type_count = 0;
 	struct hip_reg_response *reg_response = NULL;
@@ -486,7 +481,7 @@ int hip_handle_param_reg_response(hip_ha_t *entry, hip_common_t *source_msg)
 
 	HIP_DEBUG("New REG_RESPONSE handler.\n");
 	
-	reg_response = hip_get_param(source_msg, HIP_PARAM_REG_RESPONSE);
+	reg_response = hip_get_param(msg, HIP_PARAM_REG_RESPONSE);
 
 	if(reg_response == NULL) {
 		err = -1;
@@ -500,7 +495,7 @@ int hip_handle_param_reg_response(hip_ha_t *entry, hip_common_t *source_msg)
 		sizeof(reg_response->lifetime);
 	
 	if(reg_response->lifetime == 0) {
-		/* delete service. */
+		hip_del_registration_client(entry, reg_types, type_count);
 	} else {
 		hip_add_registration_client(entry, reg_response->lifetime,
 					    reg_types, type_count);
@@ -508,6 +503,12 @@ int hip_handle_param_reg_response(hip_ha_t *entry, hip_common_t *source_msg)
 
  out_err:
 	return err;
+}
+
+int hip_handle_param_reg_failed(hip_ha_t *entry, hip_common_t *msg)
+{
+	/** @todo implement. */
+	return 0;
 }
 
 int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
@@ -715,7 +716,7 @@ int hip_add_registration_client(hip_ha_t *entry, uint8_t lifetime,
 				entry, HIP_HA_CTRL_PEER_GRANTED_ESCROW); 
 			hip_del_pending_request_by_type(
 				entry, HIP_SERVICE_ESCROW);
-			/* Not tested to work. Just moved here from the old
+			/* Not tested to work. Just moved here from an old
 			   registration implementation. */
 			if((kea = hip_kea_find(&entry->hit_our) ) != NULL) {
 				kea->keastate = HIP_KEASTATE_VALID;
