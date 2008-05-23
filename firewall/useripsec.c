@@ -1,4 +1,69 @@
 #include "useripsec.h"
+#include <sys/time.h>		/* gettimeofday() */
+
+#define ESP_PACKET_SIZE 2500
+
+// this is the ESP packet we are about to build
+unsigned char *esp_packet;
+// FIXME this should also only be done once
+// open socket in order to re-insert the esp packet into the stack
+// open ipv4 raw socket
+int ipv4_raw_socket, ipv6_raw_socket;
+int is_init = 0;
+
+/* this will initialize the esp_packet buffer and the sockets,
+ * they are not set yet */
+int user_ipsec_init()
+{	
+	int flags = 0;
+	int err = 0;
+	
+	if (!is_init)
+	{
+		esp_packet = (unsigned char *)malloc(ESP_PACKET_SIZE);
+		if (!esp_packet)
+		{
+			HIP_ERROR("failed to allocate buffer memory");
+			
+			err = 1;
+			goto out_err;
+		}
+		
+		ipv4_raw_socket = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
+		if (ipv4_raw_socket < 0)
+		{
+			HIP_DEBUG("*** ipv4_raw_socket socket() error for raw socket\n");
+			
+			err = 1;
+			goto out_err;
+		}
+		
+		flags = 1;
+		if (setsockopt(ipv4_raw_socket, IPPROTO_IP, IP_HDRINCL, (char *)&flags, 
+					sizeof(flags)) < 0)
+		{
+			HIP_DEBUG("*** setsockopt() error for raw socket in "
+				"hip_esp_output\n");
+
+			err = 1;
+			goto out_err;
+		}
+		
+		/*
+		//open ipv6 raw socket
+		ipv6_raw_socket = socket(AF_INET6, SOCK_RAW, IPPROTO_RAW);
+		if (ipv6_raw_socket < 0) {
+			HIP_DEBUG("*** ipv6_raw_socket socket() error for raw socket in hip_esp_output\n");
+		}
+		// TODO set options
+		 */
+		
+		is_init = 1;
+	}
+	
+  out_err:
+  	return err;
+}
 
 hip_hit_t *hip_fw_get_default_hit(void) {
 	if (ipv6_addr_is_null(&default_hit)) {
@@ -39,71 +104,34 @@ out_err:
 
 }
 
-#if 0
-int user_ipsec_init()
-{
-	// this is the ESP packet we are about to build
-	// FIXME only allocate once and fix size
-	__u8 esp_packet[2500];
-	
-	// FIXME this should also only be done once
-	// open socket in order to re-insert the esp packet into the stack
-	// open ipv4 raw socket
-	int ipv4_raw_socket, ipv6_raw_socket;
-	
-	ipv4_raw_socket = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
-	if (ipv4_raw_socket < 0) {
-		HIP_DEBUG("*** ipv4_raw_socket socket() error for raw socket in hip_esp_output\n");
-	}
-	flags = 1;
-	if (setsockopt(ipv4_raw_socket, IPPROTO_IP, IP_HDRINCL, (char *)&flags, 
-				sizeof(flags)) < 0) {
-		printf("*** setsockopt() error for raw socket in "
-			"hip_esp_output\n");
-	}
-	
-	/*
-	//open ipv6 raw socket
-	ipv6_raw_socket = socket(AF_INET6, SOCK_RAW, IPPROTO_RAW);
-	if (ipv6_raw_socket < 0) {
-		HIP_DEBUG("*** ipv6_raw_socket socket() error for raw socket in hip_esp_output\n");
-	}
-	// TODO set options
-	 */
-}
-#endif
-
-#if 0
 /* prepares the environment for esp encryption */
 int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 {
-
-	// can hold IPv4 or IPv6 addresses
-	struct sockaddr sockaddr_peer;
+	// can hold LSIs or HITs
+	struct sockaddr sockaddr_peer_hit;
+	// entry matching the peer HIT
 	hip_sadb_entry *entry = NULL;
-	int err = 0;
-	udp_encap = 0;
 	struct timeval now;
+	int udp_encap = 0;
+	int err = 0;
+	
+	user_ipsec_init();
+	
+	// re-use allocated esp_packet memory space
+	memset(esp_packet, 0, ESP_PACKET_SIZE);
+	
+	gettimeofday(&now, NULL);
 	
 	// we should only get HITs or LSIs as addresses
 	HIP_DEBUG_HIT("src_hit", &ctx->src);
 	HIP_DEBUG_HIT("dst_hit", &ctx->dst);
 	
-	
-	user_ipsec_init();
-	memset(esp_packet, 0, 2500);
-	
-	gettimeofday(&now, NULL);
-	
-	// resolve HIT to routable addresses
-	
-	hip_addr_to_sockaddr(&ctx->dst, &sockaddr_peer);
-	
 	// SAs directing outwards are indexed with the peer's socket address
 	// FIXME this will only allow one connection to this peer HIT
+	hip_addr_to_sockaddr(&ctx->dst, &sockaddr_peer_hit);
 	entry = hip_sadb_lookup_addr(&sockaddr_peer_hit);
 	
-	// init new SA entry, if none exists yet
+	// create new SA entry, if none exists yet
 	if (entry == NULL)
 	{
 			HIP_DEBUG("pfkey send acquire\n");
@@ -111,19 +139,22 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 			// no SADB entry -> buffer triggering packet and send ACQUIRE
 			// FIXME checks for SA entry again
 			// TODO correct params
-			if (buffer_packet(lsi, raw_buff, len))
+			if (buffer_packet(&sockaddr_peer_hit, ctx->ipq_packet, ctx->ipq_packet->data_len))
 				err = pfkey_send_acquire(&sockaddr_peer_hit);
 			
-			// don't process this message any further
+			// don't process this message any further for now
 			goto end_err;
 	}
+	
+	// TODO unbuffer and process buffered packets
 		
-	HIP_DEBUG("we have found a SA entry")
+	HIP_DEBUG("we have found a SA entry");
 		
+	/*
 	err = hip_esp_output(ctx, entry, esp_packet, udp_encap, &now);
 	
-	// FIXME send the new packet
-	err = sendto(socket, esp_packet, esp_packet_len, flags,
+	// TODO send the new packet
+	err = sendto(ipv4_raw_socket, esp_packet, esp_packet_len, flags,
 			SA(&entry->dst_addrs->addr),
 			SALEN(&entry->dst_addrs->addr));
 	if (err < 0) {
@@ -132,7 +163,7 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	{
 		// update SA statistics for replay protection etc
 		pthread_mutex_lock(&entry->rw_lock);
-		// TODO check why sizeof(ip)
+		// TODO check why sizeof(ip) and err
 		entry->bytes += sizeof(struct ip) + err;
 		entry->usetime.tv_sec = now.tv_sec;
 		entry->usetime.tv_usec = now.tv_usec;
@@ -140,15 +171,15 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 		entry->usetime_ka.tv_usec = now.tv_usec;
 		pthread_mutex_unlock(&entry->rw_lock);
 	}
+	*/
 	
   end_err:
   	return err;
 
 }
-#endif
 
 
-
+#if 0
 /* added by Tao Wan, This is the function for hip userspace ipsec output
  * Todo: How to do hip_sadb_lookup_addr() or  hip_sadb_lookup_spi(spi)
  *   hip_sadb_lookup_addr(struct sockaddr *addr)
@@ -299,6 +330,7 @@ int hip_fw_userspace_ipsec_output(int ip_version,
 	
 	return err;
 }
+#endif
 
 
 /* added by Tao Wan, This is the function for hip userspace ipsec input 
