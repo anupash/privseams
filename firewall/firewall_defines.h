@@ -1,10 +1,6 @@
 #ifndef FIREWALL_DEFINES_H_
 #define FIREWALL_DEFINES_H_
 
-//#include <glib.h>
-//#include <glib/glist.h>
-//#include <glib/gtypes.h>
-//#include <glib/gthread.h>
 #include <sys/time.h>
 //int hip_proxy_status;
 
@@ -65,7 +61,6 @@ struct connection {
   struct tuple reply;  
   int verify_responder;
   int state;
-//  TimeVal time_stamp;
   struct timeval time_stamp;
 };
 

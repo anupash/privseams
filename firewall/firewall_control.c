@@ -165,7 +165,6 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 		
 		
 		/* now param: anthkey */
-		
 		param =  hip_get_next_param(msg, param);
 		authkey = (struct hip_crypto_key *)hip_get_param_contents_direct(param);
 		// HIP_DEBUG("auth key key is: \n"); 

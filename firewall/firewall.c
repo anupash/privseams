@@ -716,7 +716,7 @@ int filter_esp(const struct in6_addr * dst_addr, struct hip_esp * esp,
 	       unsigned int hook, const char * in_if, const char * out_if)
 {
 	// list with all rules for hook (= IN / OUT / FORWARD)
-	struct _GList * list = (struct _GList *) read_rules(hook);
+	struct _DList * list = (struct _DList *) read_rules(hook);
 	struct rule * rule= NULL;
 	// assume matching rule
 	int match = 1;
@@ -840,7 +840,7 @@ int filter_hip(const struct in6_addr * ip6_src,
                const char * out_if)
 {
 	// complete rule list for hook (== IN / OUT / FORWARD)
-  	struct _GList * list = (struct _GList *) read_rules(hook);
+  	struct _DList * list = (struct _DList *) read_rules(hook);
   	struct rule * rule = NULL;
   	// assume match for current rule
   	int match = 1;
@@ -1279,7 +1279,7 @@ int main(int argc, char **argv)
 	//unsigned char buf[BUFSIZE];
 	struct ipq_handle *h4 = NULL, *h6 = NULL;
 	struct rule * rule= NULL;
-	struct _GList * temp_list= NULL;
+	struct _DList * temp_list= NULL;
 	//struct hip_common * hip_common = NULL;
 	//struct hip_esp * esp_data = NULL;
 	//struct hip_esp_packet * esp = NULL;
@@ -1403,18 +1403,24 @@ int main(int argc, char **argv)
 	// create firewall queue handles for IPv4 traffic
 	// FIXME died handle will still be used below
 	h4 = ipq_create_handle(0, PF_INET);
+	HIP_DEBUG("IPQ error: %s \n", ipq_errstr());
 	if (!h4)
 		die(h4);
+		
 	status = ipq_set_mode(h4, IPQ_COPY_PACKET, BUFSIZE);
+	HIP_DEBUG("IPQ error: %s \n", ipq_errstr());
 	if (status < 0)
 		die(h4);
 
 	// create firewall queue handles for IPv6 traffic
 	// FIXME died handle will still be used below
 	h6 = ipq_create_handle(0, PF_INET6);
+	HIP_DEBUG("IPQ error: %s \n", ipq_errstr());
+	
 	if (!h6)
 		die(h6);
 	status = ipq_set_mode(h6, IPQ_COPY_PACKET, BUFSIZE);
+	HIP_DEBUG("IPQ error: %s \n", ipq_errstr());
 	if (status < 0)
 		die(h6);
 
@@ -1448,6 +1454,7 @@ int main(int argc, char **argv)
 #endif /* CONFIG_HIP_HIPPROXY */
 
 	highest_descriptor = maxof(3, hip_fw_sock, h4->fd, h6->fd);
+	
 
 	// do all the work here
 	while (1) {

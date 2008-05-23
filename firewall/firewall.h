@@ -10,10 +10,6 @@
 #include <netinet/ip6.h>
 #include <stdint.h>
 #include <stdio.h>
-/*
-#include <glib.h>
-#include <glib/glist.h>
-*/
 
 #include <string.h>
 #include <netinet/tcp.h>
