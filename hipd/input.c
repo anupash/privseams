@@ -1076,7 +1076,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 		  hip_ha_t *entry, hip_portpair_t *r1_info)
 {
-	int n_addrs = 0, loc_size = 0, i = 0;
+	int  i = 0;
 	int err = 0, retransmission = 0;
 	uint64_t solved_puzzle = 0, I = 0;
 	struct hip_context *ctx = NULL;
@@ -1084,13 +1084,13 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 	struct hip_r1_counter *r1cntr = NULL;
 	struct hip_reg_info *reg_info = NULL;
 	struct hip_dh_public_value *dhpv = NULL;
-	struct hip_locator *locator = NULL;
-	char  *locator_address = NULL;
-	struct hip_locator_info_addr_item *address1 = NULL; 
-	struct hip_locator_info_addr_item2 *address2 = NULL;
-	struct hip_nat_transform *nat_transform  = NULL;
+//	struct hip_locator *locator = NULL;
+//	char  *locator_address = NULL;
+//	struct hip_locator_info_addr_item *address1 = NULL; 
+//	struct hip_locator_info_addr_item2 *address2 = NULL;
+//	struct hip_nat_transform *nat_transform  = NULL;
 #ifdef CONFIG_HIP_HI3
-	struct hip_locator_info_addr_item* first = NULL;
+//	struct hip_locator_info_addr_item* first = NULL;
 	struct netdev_address *n = NULL;
 	hip_list_t *item = NULL, *tmp = NULL;
 	int ii = 0, use_ip4 = 1;
@@ -1136,7 +1136,10 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 		hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
 		HIP_UNLOCK_HA(entry);
 	}
-
+	
+	
+	
+	hip_nat_save_locator_parameter(r1, entry);
         /***** LOCATOR PARAMETER ******
         locator = hip_get_param(r1, HIP_PARAM_LOCATOR);
         if (locator)
@@ -1202,11 +1205,15 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
         else
             HIP_DEBUG("R1 did not have locator\n");
         */
-      nat_transform = hip_get_param(r1, HIP_PARAM_NAT_TRANSFORM);
-	  if(nat_transform){
-	  	entry->nat_control = nat_transform->nat_control;
-	  }    
-        
+	
+	
+	hip_nat_handle_net_transform_parameter(r1,entry);
+	/*
+    nat_transform = hip_get_param(r1, HIP_PARAM_NAT_TRANSFORM);
+	if(nat_transform){
+		entry->nat_control = nat_transform->nat_control;
+	}    
+    */    
 
 	/* Handle REG_INFO parameter. */
 	hip_handle_param_reg_info(r1, entry);
@@ -2372,7 +2379,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	int err = 0, tfm = 0, retransmission = 0, type_count = 0;
 	int *reg_types = NULL;
 	uint32_t spi_recvd = 0, spi_in = 0;
-	void * ice_session = 0;
+//	void * ice_session = 0;
 	int i;
 
 #ifdef CONFIG_HIP_HI3
@@ -2503,8 +2510,9 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	
 	err = 0;
 
-    /***** LOCATOR PARAMETER ******/
-	
+    /***** LOCATOR PARAMETER *****/
+	hip_nat_handle_locator_parameter(r2, entry, esp_info);
+	/*
     if (locator)
         {
     		HIP_DEBUG("handling locators in R2\n");
@@ -2512,26 +2520,31 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
                      locator, esp_info),
                      -1, "hip_update_handle_locator_parameter failed\n");
         
-            
-#if 0 // XX FIXME: DOES NOT COMPILE: SEPARATE TO AN OWN FUNCTION            
+      */      
+ // XX FIXME: DOES NOT COMPILE: SEPARATE TO AN OWN FUNCTION            
 #ifdef HIP_USE_ICE
             
         //check the nat transform mode
-        if(!(entry->nat_control && HIP_NAT_TRANSFORM_ICE)){
-        	//make the connectin directly
-        	if (!hip_blind_get_status()) {		
-        	  err = hip_add_sa(r2_daddr, r2_saddr,
-        				 &ctx->input->hitr, &ctx->input->hits,
-        				 &spi_recvd, tfm,
-        				 &ctx->esp_out, &ctx->auth_out, 1,
-        				 HIP_SPI_DIRECTION_OUT, 0, r2_info->src_port, r2_info->dst_port,0);
-        	}
-        }
-        else    
-	    // no ice when RVS or UDP relay request
-	    if(!((entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_RVS) || 
-	    		(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_HIPUDP))){
-                //init the session right after the locator receivd
+    if(!(entry->nat_control & HIP_NAT_TRANSFORM_ICE)){
+    	//make the connectin directly
+    	if (!hip_blind_get_status()) {		
+    	  err = hip_add_sa(r2_daddr, r2_saddr,
+    				 &ctx->input->hitr, &ctx->input->hits,
+    				 &spi_recvd, tfm,
+    				 &ctx->esp_out, &ctx->auth_out, 1,
+    				 HIP_SPI_DIRECTION_OUT, 0, r2_info->src_port, r2_info->dst_port,0);
+    	}
+    }
+    else    
+    // no ice when RVS or UDP relay request
+    if(!((entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_RVS) || 
+    		(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_RELAY))){
+            //init the session right after the locator receivd
+    	hip_nat_start_ice_engine(entry, esp_info, 0);
+    }
+	    	
+#endif // ICE
+	/*
 	    	HIP_DEBUG("ICE init \n");
 	    	ice_session = hip_external_ice_init(PJ_ICE_SESS_ROLE_CONTROLLED);
 	        if(ice_session){
@@ -2576,15 +2589,14 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
         	
         }
 #endif // ICE
-#endif // 0
+
         }
     else
         HIP_DEBUG("locator did not have locators from R2\n");
     HIP_DEBUG("santtu: end of handling locator in r2");
-    
-    
-    
-    
+     
+    */
+	
 	/*
 	  HIP_DEBUG("clearing the address used during the bex\n");
 	  ipv6_addr_copy(&entry->bex_address, &in6addr_any);
@@ -3265,3 +3277,5 @@ skip_entry_creation:
 out_err:
 	return err;
 }
+
+

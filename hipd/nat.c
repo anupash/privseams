@@ -867,6 +867,128 @@ uint8_t hip_get_nat_control(){
 
 }
 
+int hip_nat_start_ice_engine(hip_ha_t *entry,struct hip_esp_info *esp_info, int controlling){
+	int err = 0,i=0;
+	hip_list_t *item, *tmp;
+	struct netdev_address *n;
+	void * ice_session = 0;
+	struct hip_spi_out_item* spi_out;
+
+	_HIP_DEBUG("ICE init \n");
+	if(controlling){
+		HIP_IFEL(!(ice_session = hip_external_ice_init(PJ_ICE_SESS_ROLE_CONTROLLING)), 
+		    		                       -1, "fail to init ice\n");
+	}
+	else{
+		HIP_IFEL(!(ice_session = hip_external_ice_init(PJ_ICE_SESS_ROLE_CONTROLLED)), 
+    		                       -1, "fail to init ice\n"); 
+	}
+    if(ice_session){
+    	entry->ice_session = ice_session;
+    	_HIP_DEBUG("ICE add local \n");
+    	//add the type 1 address first
+    	list_for_each_safe(item, tmp, addresses, i) {
+    		n = list_entry(item);		
+    		if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
+    		    continue;
+    		HIP_DEBUG_HIT("add Ice local", hip_cast_sa_addr(&n->addr));
+    		if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
+    				hip_external_ice_add_local_candidates(ice_session,hip_cast_sa_addr(&n->addr),HIP_NAT_UDP_PORT,PJ_ICE_CAND_TYPE_HOST);
+    			
+    		}
+    	}
+    	//TODO add reflexive address 
+    	
+    	//TODO add relay address
+    	
+    	_HIP_DEBUG("ICE add remote IN R2, spi is %d\n", ntohl(esp_info->new_spi));
+    	
+    	
+
+    	HIP_IFEL(!(spi_out = hip_hadb_get_spi_list(entry, ntohl(esp_info->new_spi))), -1,
+    		      "Bug: outbound SPI 0x%x does not exist\n", ntohl(esp_info->new_spi)); 
+    	
+    	_HIP_DEBUG("ICE add remote IN R2, peer list mem address is %d\n", spi_out->peer_addr_list);
+    	hip_external_ice_add_remote_candidates(ice_session, spi_out->peer_addr_list,1);
+
+    	HIP_DEBUG("ICE start checking \n");
+
+    	hip_ice_start_check(ice_session);
+    }
+out_err:
+   	return err;
+}
 
 
+
+
+
+/**
+ * pick locator parameter from msg, and save them into entry
+ * 
+ * 
+ * */
+int hip_nat_save_locator_parameter(hip_common_t* msg,hip_ha_t *entry){
+	int err = 0;
+	struct hip_locator *locator = NULL;
+	int n_addrs = 0, loc_size = 0;
+    locator = hip_get_param(msg, HIP_PARAM_LOCATOR);
+    if (locator){   
+    	n_addrs = hip_get_locator_addr_item_count(locator);
+    	loc_size= hip_get_param_contents_len(locator);
+    	HIP_IFEL(!(entry->locator = malloc(loc_size)), 
+    		                       -1, "Malloc for entry->locators failed\n"); 
+        memcpy(entry->locator, locator, loc_size);
+        return 1;
+        }
+    else return 0;    
+out_err:
+   	return err;
+}
+
+/**
+ * handles locator parameter in msg and in entry.
+ * 
+ * 
+ * */
+int hip_nat_handle_locator_parameter(hip_common_t *msg,hip_ha_t *entry,struct hip_esp_info *esp_info){
+	int err = 0;
+	struct hip_locator *locator = NULL;
+	
+    locator = hip_get_param(msg, HIP_PARAM_LOCATOR);
+    if (locator){   
+    	HIP_IFEL(hip_update_handle_locator_parameter(entry, 
+    	                locator, esp_info),
+    	                -1, "hip_update_handle_locator_parameter from msg failed\n");
+        }
+    if (entry->locator){   
+    	HIP_IFEL(hip_update_handle_locator_parameter(entry, 
+        			 	entry->locator, esp_info),
+        	            -1, "hip_update_handle_locator_parameter from entry failed\n");
+            }
+    
+   
+out_err:
+   	return err;
+}
+
+
+
+
+/**
+ * handles net transform parameter in msg, and save them into entry
+ * 
+ * 
+ * */
+int hip_nat_handle_net_transform_parameter(hip_common_t* msg,hip_ha_t *entry){
+	int err = 0;
+	struct hip_nat_transform *nat_transform  = NULL;
+    nat_transform = hip_get_param(msg, HIP_PARAM_NAT_TRANSFORM);
+    if(nat_transform){
+    	entry->nat_control = nat_transform->nat_control;
+    	return 1;
+    }      
+out_err:
+   	return err;
+}
 
