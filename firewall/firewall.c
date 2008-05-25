@@ -708,71 +708,131 @@ void drop_packet(struct ipq_handle *handle, unsigned long packetId)
 	HIP_DEBUG("Packet dropped \n\n");
 }
 
-
-/* filter esp packet according to rules.
- * return verdict
- */
+/* We only match the esp packet with the state in the connection
+ * tracking. There is no need to match the rule-set again as we
+ * already filtered the HIP control packets. If we wanted to
+ * disallow a connection, we should do it there! */
 int filter_esp(const struct in6_addr * dst_addr, struct hip_esp * esp,
-	       unsigned int hook, const char * in_if, const char * out_if)
+		unsigned int hook)
 {
+	// drop packet by default
+	int verdict = 0;
+	// 
+	int use_escrow = 0;
+	struct _GList * list = NULL;
+	struct rule * rule = NULL;
+	
+	// if key escrow is active we have to handle it here too
+	if (is_escrow_active())
+	{
+		// there might be some rules in the rule-set which specify
+		// HITs for which decryption should be done
+		
+		// list with all rules for hook (= IN / OUT / FORWARD)
+		list = (struct _GList *) read_rules(hook);
+		rule = NULL;
+		
+		// match all rules
+		while (list != NULL)
+		{
+			rule = (struct rule *) list->data;
+			
+			// FIXME this does only work if 1. rule with rule->state->decrypt_contents
+			// has matching src or dst addresses
+			if (rule->state)
+			{
+				// search the rule-set for a rule with escow set
+				if (rule->state->decrypt_contents)
+				{
+					// check if rule has valid state specified for data transfer
+					if((rule->state->int_opt.value == CONN_NEW && rule->state->int_opt.boolean) ||
+							(rule->state->int_opt.value == CONN_ESTABLISHED && !rule->state->int_opt.boolean))
+					{
+						HIP_ERROR("INVALID rule: specified state incompatible with --decrypt_contents\n");
+						
+						continue;
+					}
+					else
+					{
+						use_escrow = 1;
+						
+						break;
+					}
+				}
+			}
+		}
+	}
+	
+	//the entire rule is passed as argument as hits can only be 
+	//filtered with the state information
+	if (filter_esp_state(dst_addr, esp, rule, use_escrow))
+	{
+		verdict = 1;
+		
+		HIP_DEBUG("ESP packet successfully passed filtering\n");
+	}
+	
+  out_err:
+  	return verdict;
+	
+#if 0
 	// list with all rules for hook (= IN / OUT / FORWARD)
 	struct _DList * list = (struct _DList *) read_rules(hook);
 	struct rule * rule= NULL;
 	// assume matching rule
-	int match = 1;
+	int match = 0;
 	// block traffic by default
 	int verdict = 0;
 	
 	_HIP_DEBUG("filter_esp:\n");
-	
+
+
 	// match all rules
 	while (list != NULL)
 	{
-		match = 1;
 		rule = (struct rule *) list->data;
 		
 		//print_rule(rule);
 		HIP_DEBUG_HIT("dst addr: ", dst_addr);
 		HIP_DEBUG("SPI: %d\n", ntohl(esp->esp_spi));
 		
-		// type not valid with ESP packets -> next rule
+		// type refers to HIP packets only -> next rule
 		if (rule->type)
 		{
 			HIP_DEBUG("type option not valid for esp\n");
 			
-			match = 0;
+			continue;
 		}
 		
-		// we need state from BEX or UPDATE, if src or dst HITs are provided in rule
-		// otherwise we got nothing to match this rule with -> next rule
+		// TODO why?
 		if ((rule->src_hit || rule->dst_hit) && !rule->state)
 		{
 			//not valid with ESP packet
 			HIP_DEBUG("hit options without state option not valid for esp\n");
 			
-			match = 0;
+			continue;
 		}
 		
-		// TODO comment
+		// check the network interface of the input is the one specified in the rule
 		if (match && rule->in_if)
 		{
 			if (!match_string(rule->in_if->value, in_if,
 					  rule->in_if->boolean))
 			{
-				match = 0;
+				continue;
 			}
 			
 			HIP_DEBUG("in_if rule: %s, packet: %s, boolean: %d, match: %d \n",
 				   rule->in_if->value, in_if, rule->in_if->boolean, match);
 		}
 		
-		// TODO comment
+		// check the network interface for the output is the one specified in the rule
 		if (match && rule->out_if)
 		{
 			if (!match_string(rule->out_if->value, out_if,
 					  rule->out_if->boolean))
 			{
-				match = 0;
+				continue;
 			}
 			
 			HIP_DEBUG("out_if rule: %s, packet: %s, boolean: %d, match: %d \n",
@@ -801,7 +861,6 @@ int filter_esp(const struct in6_addr * dst_addr, struct hip_esp * esp,
 		// if a match, no need to check further rules
 		if (match)
 		{
-			_HIP_DEBUG("match found\n");
 			break;
 		}
 		
@@ -827,6 +886,7 @@ int filter_esp(const struct in6_addr * dst_addr, struct hip_esp * esp,
 	read_rules_exit(0);
 	
 	return verdict;
+#endif
 }
 
 /* filter hip packet according to rules.
@@ -842,8 +902,8 @@ int filter_hip(const struct in6_addr * ip6_src,
 	// complete rule list for hook (== IN / OUT / FORWARD)
   	struct _DList * list = (struct _DList *) read_rules(hook);
   	struct rule * rule = NULL;
-  	// assume match for current rule
-  	int match = 1;
+  	// assume no matching rule
+  	int match = 0;
   	// assume packet has not yet passed connection tracking
   	int conntracked = 0;
   	// block traffic by default
@@ -856,7 +916,7 @@ int filter_hip(const struct in6_addr * ip6_src,
   	//+ filter_state käsittelemään myös esp paketit
   	while (list != NULL)
 	{
-  		match = 1;
+  		match = 0;
   		rule = (struct rule *) list->data;    
   		
   		HIP_DEBUG("HIP type number is %d\n", buf->type_hdr);
@@ -881,7 +941,7 @@ int filter_hip(const struct in6_addr * ip6_src,
         HIP_DEBUG_HIT("dst hit: ", &(buf->hitr));
 
         // check src_hit if defined in rule
-      	if(match && rule->src_hit)
+      	if(rule->src_hit)
 	  	{
     		HIP_DEBUG("src_hit\n");
     		
@@ -889,12 +949,17 @@ int filter_hip(const struct in6_addr * ip6_src,
 		  		buf->hits, 
 		  		rule->src_hit->boolean))
     		{
-      			match = 0;
+    			// proceed with next rule
+    			list = list->next;
+    			
+      			continue;
     		}
+    		
+    		match = 1;
 		}
       	
     	// check dst_hit if defined in rule
-    	if(match && rule->dst_hit)
+    	if(rule->dst_hit)
 		{
     		HIP_DEBUG("dst_hit\n");
     		
@@ -902,20 +967,30 @@ int filter_hip(const struct in6_addr * ip6_src,
 		  		buf->hitr, 
 		  		rule->dst_hit->boolean))
     		{
-    			match = 0;
+    			// proceed with next rule
+    			list = list->next;
+    			
+    			continue;
     		}
+    		
+    		match = 1;
 	  	}
     	
     	// check the HIP packet type (I1, UPDATE, etc.)
-      	if(match && rule->type)
+      	if(rule->type)
 	  	{
     		HIP_DEBUG("type\n");
     		if(!match_int(rule->type->value, 
 		  		buf->type_hdr, 
 		  		rule->type->boolean))
     		{
-     			match = 0;
+    			// proceed with next rule
+    			list = list->next;
+    			
+     			continue;
     		}
+    		
+    		match = 1;
     		
 	    	HIP_DEBUG("type rule: %d, packet: %d, boolean: %d, match: %d\n",
 		    		rule->type->value, 
@@ -924,28 +999,38 @@ int filter_hip(const struct in6_addr * ip6_src,
 		    		match);
 	  	}
       	
-      	// TODO comment
-      	if(match && rule->in_if)
+      	// check the network interface of the input is the one specified in the rule
+      	if(rule->in_if)
 	  	{
     		if(!match_string(rule->in_if->value, in_if, rule->in_if->boolean))
     		{
-      			match = 0;
+    			// proceed with next rule
+    			list = list->next;
+    			
+      			continue;
     		}
+    		
+    		match = 1;
     		
     		HIP_DEBUG("in_if rule: %s, packet: %s, boolean: %d, match: %d \n",
 	      			rule->in_if->value, 
 	      			in_if, rule->in_if->boolean, match);
 	  	}
       	
-      	// TODO comment
-      	if(match && rule->out_if)
+      	// check the network interface for the output is the one specified in the rule
+      	if(rule->out_if)
 	  	{
     		if(!match_string(rule->out_if->value, 
 		     		out_if, 
 		     		rule->out_if->boolean))
     		{
-      			match = 0;
+    			// proceed with next rule
+    			list = list->next;
+    			
+      			continue;
     		}
+    		
+    		match = 1;
     		
     		HIP_DEBUG("out_if rule: %s, packet: %s, boolean: %d, match: %d \n",
 	      			rule->out_if->value, out_if, rule->out_if->boolean, match);
@@ -954,31 +1039,41 @@ int filter_hip(const struct in6_addr * ip6_src,
       	// if HI defined in rule, verify signature now 
       	// - late as it's an expensive operation
       	// - checks that the message src is the src defined in the _rule_
-    	if(match && rule->src_hi)
+    	if(rule->src_hi)
       	{
 			_HIP_DEBUG("src_hi\n");
 			
 			if(!match_hi(rule->src_hi, buf))
 			{
-		  		match = 0;
+    			// proceed with next rule
+    			list = list->next;
+				
+		  		continue;
 			}
+			
+			match = 1;
 	    }
 	
-      	/* check if packet matches state from connection tracking
+      	/* check if packet matches state specified in the _rule-set_
       	 * 
 		 * must be last, so not called if packet is going to be dropped */
-      	if(match && rule->state)
+      	if(rule->state)
 	  	{
-      		/* we at least had some packet before -> check this packet
-      		 * 
-      		 * this will also check the signature of the packet, if we already
+      		/* this will also check the signature of the packet, if we already
       		 * have a src_HI stored for the _connection_ */
     		if(!filter_state(ip6_src, ip6_dst, buf, rule->state, rule->accept))
     		{
-    			match = 0;
+    			// packet state does not match state of connection tracking
+    			
+    			// proceed with next rule
+    			list = list->next;
+    			
+    			continue;
     		} else
     		{
-    			// if it is a valid packet, this also tracked the packet
+    			match = 1;
+    			
+    			// filter_state() already tracked the packet
     			conntracked = 1;
     		}
     		
@@ -988,15 +1083,9 @@ int filter_hip(const struct in6_addr * ip6_src,
 	      			match);
 		}
       	
-		// if a match, no need to check further rules
-		if(match)
-		{
-			HIP_DEBUG("match found\n");
-			break;
- 		}
-    	
-		// else proceed with next rule
-		list = list->next;
+		// either all existing rule-options were validated
+      	// or none specified for a rule
+		break;
     }
   	
   	// if we found a matching rule, use its verdict
@@ -1017,8 +1106,9 @@ int filter_hip(const struct in6_addr * ip6_src,
   	read_rules_exit(0);
   	
   	// if packet will be accepted and connection tracking is used
-  	// but there is no state for the packet in the conntrack module
-  	// yet -> show the packet to conntracking
+  	// but there is no rule specifying some state and matching didn't
+  	// get to that point for previous rules
+  	// -> show the packet to conntracking
   	if(statefulFiltering && verdict && !conntracked)
   	{
     	conntrack(ip6_src, ip6_dst, buf);
@@ -1066,11 +1156,7 @@ int hip_fw_handle_esp_output(hip_fw_context_t *ctx) {
 
 	HIP_DEBUG("\n");
 
-	verdict = filter_esp(&ctx->dst, 
-			 		ctx->transport_hdr.esp,
-			 		ctx->ipq_packet->hook,
-			 		ctx->ipq_packet->indev_name,
-			 		ctx->ipq_packet->outdev_name);
+	verdict = filter_esp(&ctx->dst, ctx->transport_hdr.esp, ctx->ipq_packet->hook);
 
 	return verdict;
 }
@@ -1122,11 +1208,7 @@ int hip_fw_handle_esp_input(hip_fw_context_t *ctx) {
 						       ctx->ip_hdr.ipv4,
 						       ctx->ipq_packet);
 	} else {
-		verdict = filter_esp(&ctx->dst, 
-					 ctx->transport_hdr.esp,
-					 ctx->ipq_packet->hook,
-					 ctx->ipq_packet->indev_name,
-					 ctx->ipq_packet->outdev_name);
+		verdict = filter_esp(&ctx->dst, ctx->transport_hdr.esp, ctx->ipq_packet->hook);
 	}
 
  out_err:

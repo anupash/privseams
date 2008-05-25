@@ -191,15 +191,15 @@ typedef struct _pseudo_header
 void tunreader_shutdown();
 int handle_nsol(__u8 *in, int len, __u8 *out,int *outlen,struct sockaddr *addr);
 int handle_arp(__u8 *in, int len, __u8 *out, int *outlen,struct sockaddr *addr);
-int hip_esp_encrypt(__u8 *in, int len, __u8 *out, int *outlen, 
-	hip_sadb_entry *entry, struct timeval *now);
+int hip_esp_encrypt(__u8 *in, int len, __u8 *out, 
+		hip_sadb_entry *entry, struct timeval *now, int *outlen);
 int hip_esp_decrypt(__u8 *in, int len, __u8 *out, int *offset, int *outlen,
     hip_sadb_entry *entry, struct ip *iph, struct timeval *now);
 
 __u16 rewrite_checksum(__u8 *data, __u16 magic);
 void add_eth_header(__u8 *data, __u64 src, __u64 dst, __u32 type);
-void add_ipv4_header(__u8 *data, __u32 src, __u32 dst, struct ip *old, 
-	__u16 len, __u8 proto);
+void add_ipv4_header(__u8 *new_packet, struct ip *old_ip_hdr, __u32 src_addr, __u32 dst_addr, 
+		__u16 packet_len, __u8 next_hdr);
 void add_ipv6_pseudo_header(__u8 *data, struct sockaddr *src, 
 	struct sockaddr *dst, __u32 len, __u8 proto);
 void add_ipv6_header(__u8 *data, struct sockaddr *src, struct sockaddr *dst,
@@ -395,7 +395,7 @@ void init_readsp()
 
 
 
-
+#if 0
 /*
  * hip_esp_output()
  *
@@ -404,7 +404,203 @@ void init_readsp()
  * encryption. Also handles ARP requests with artificial replies.
  */
 
+/* - encrypt payload
+ * - set up other headers */
+int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry, __u8 *esp_packet,
+		int udp_encap, struct timeval *now)
+{
+	int esp_packet_len = 0;
+	
+	int err = 0;
+	
+	// resolve HITs to routable addresses and select the prefered ones
+	hip_addr_to_sockaddr(&ctx->src, &sockaddr_local);
+	hip_addr_to_sockaddr(&ctx->dst, &sockaddr_peer);
+	
+	// TODO get preferred addresses from the entry
+	
+	// check preferred addresses for the address type of the output
+	if (sockaddr_local_hit->sa_family == AF_INET && sockaddr_peer_hit->sa_family == AF_INET)
+	{
+		HIP_DEBUG("out_ip_version is IPv4");
+		out_ip_version = 4;
+	} else if (sockaddr_local_hit->sa_family == AF_INET6 && sockaddr_peer_hit->sa_family == AF_INET6)
+	{
+		HIP_DEBUG("out_ip_version is IPv6");
+		out_ip_version = 6;
+	} else
+	{
+		HIP_ERROR("bad address combination");
+		
+		err = 1;
+		goto end_err;
+	}
+	
+	// distinguish IPv4 and IPv6 output
+	if (out_ip_version == 4)
+	{
+		// calculate offset at which esp data should be located
+		// NOTE: this does _not_ include IPv4 options for the original packet
+		next_hdr_offset = sizeof(struct ip);
+		
+		// check whether to use UDP encapsulation or not
+		if (udp_encap)
+			next_hdr_offset += sizeof(struct udphdr);
+		
+		
+		__u16 checksum_fix = 0;
+			
+			
+			int family, use_udp = FALSE;
 
+
+			if ((in[12] == 0x86) && (in[13] == 0xdd))
+				family = AF_INET6;
+			else
+				family = AF_INET;
+
+			switch (family) {
+			case AF_INET:
+				iph = (struct ip*) &in[sizeof(struct eth_hdr)];
+				eth_ip_hdr_len = sizeof(struct eth_hdr) + sizeof(struct ip);
+				/* rewrite transport-layer checksum, so it is based on HITs */
+				checksum_fix = rewrite_checksum((__u8*)iph, entry->hit_magic);
+				break;
+			case AF_INET6:
+				ip6h = (struct ip6_hdr*) &in[sizeof(struct eth_hdr)];
+				eth_ip_hdr_len = sizeof(struct eth_hdr)+sizeof(struct ip6_hdr);
+				/* assume HITs are used as v6 src/dst, no checksum rewrite */
+				break;
+			}
+			
+			/* setup ESP header, common to all algorithms */
+			// TODO this is not the way you learn about UDP encap
+			if (entry->mode == 3) { /*(HIP_ESP_OVER_UDP)*/
+				// add udp and esp header
+				udph = (udphdr*) out;
+				esp = (struct ip_esp_hdr*) &out[sizeof(udphdr)];
+				use_udp = TRUE;
+			} else {
+				// only add esp header
+				esp = (struct ip_esp_hdr*) out;
+			}
+
+			// set up esp header
+			esp->spi = htonl(entry->spi);
+			esp->seq_no = htonl(entry->sequence++);
+
+			/* encrypted data length is everything starting at transport layer header */
+			elen = len - eth_ip_hdr_len;
+			
+			// calculate first part of the output length
+			*outlen = sizeof(struct ip_esp_hdr);
+			if (use_udp) /* (HIP_ESP_OVER_UDP) */
+				*outlen += sizeof(udphdr);
+		
+		
+		// encrypt data now
+		pthread_mutex_lock(&entry->rw_lock);
+			
+		HIP_DEBUG("encrypting data...\n");
+		
+		// TODO check if parameters are correct
+		// encrypts the payload and puts esp header and encrypted data right
+		// behind the IP/UDP headers
+		err = hip_esp_encrypt(ctx->ipq_packet, ctx->ipq_packet->data_len,
+				      esp_packet + next_hdr_offset, entry, &now, &esp_packet_len);
+		
+		pthread_mutex_unlock(&entry->rw_lock);
+		
+		
+		/* Record the address family of this packet, so incoming
+		 * replies of the same protocol/ports can be matched to
+		 * the same family.
+		 */
+		// TODO find out what that does
+		if (hip_add_proto_sel_entry(LSI4(&entry->lsi), 
+					(__u8)(iph ? iph->ip_p : ip6h->ip6_nxt), 
+					iph ? (__u8*)(iph+1) : (__u8*)(ip6h+1),
+					family, 0, now	) < 0)
+			printf("hip_esp_encrypt(): error adding sel entry.\n");
+
+
+		/* Restore the checksum in the input data, in case this is
+		 * a broadcast packet that needs to be re-sent to some other
+		 * destination.
+		 */
+		if (checksum_fix > 0) {
+			if (iph->ip_p == IPPROTO_UDP)
+	#ifdef __MACOSX__
+				((struct udphdr*)(iph + 1))->uh_sum = checksum_fix;
+	#else
+				((struct udphdr*)(iph + 1))->check = checksum_fix;
+	#endif
+			else if (iph->ip_p == IPPROTO_TCP)
+	#ifdef __MACOSX__
+				((struct tcphdr*)(iph + 1))->th_sum = checksum_fix;
+	#else
+				((struct tcphdr*)(iph + 1))->check = checksum_fix;
+	#endif
+		}
+
+		if (use_udp) { /* (HIP_ESP_OVER_UDP) */
+			/* Set up UDP header at the beginning of out */
+			memset (udph, 0, sizeof(udphdr));
+			udph->src_port = htons(HIP_ESP_UDP_PORT);
+			if ( (udph->dst_port = htons(entry->dst_port))==0) {
+				printf ("ESP encrypt : bad UDP dst port number (%u).\n",
+					entry->dst_port);
+			}
+			udph->len = htons ((__u16)*outlen);
+			udph->checksum = checksum_udp_packet (out, 
+					    (struct sockaddr*)&entry->src_addrs->addr,
+					    (struct sockaddr*)&entry->dst_addrs->addr);
+		}
+		
+		
+		
+		if (udp_encap)
+		{
+			// add the IPv4 header at the beginning of the new packet
+			// NOTE: we got the overall packet length from hip_esp_encrypt
+			add_ipv4_header(esp_packet, ctx, preferred src, preferred dst, 
+					esp_packet_len + sizeof(udp), IPPROTO_UDP);
+			
+			next_hdr_offset -= sizeof(udp)
+			add_udp_header
+		} else
+		{
+			add_ipv4_header(esp_packet, ctx, preferred src, preferred dst, 
+					esp_packet_len, IPPROTO_ESP);
+		}			
+	} else if (out_ip_version == 6)
+	{
+		/* we don't support UDP encapsulation for IPv6 right now
+		 * 
+		 * this would be the place to add it */
+		next_hdr_offset = ctx->ip_hdr_len;
+			
+		pthread_mutex_lock(&entry->rw_lock);
+			
+		HIP_DEBUG("encrypting data...\n");
+		
+		// TODO check if parameters are correct
+		// encrypts the payload and puts esp header and encrypted data right
+		// behind the previous headers
+		err = hip_esp_encrypt(ctx->ipq_packet, ctx->ipq_packet->data_len,
+				      esp_packet, next_hdr_offset, entry, &now, &esp_packet_len);
+		
+		pthread_mutex_unlock(&entry->rw_lock);
+		
+		add_ipv6_header
+	}
+	
+  end_err:
+  	return err;
+}
+#endif
+	
+#if 0	
 /* We do not use TAP-Win32 interface here, FIXME: SOCK_RAW IP out 
 * should be rewritten:(
 */
@@ -1178,14 +1374,8 @@ int hip_esp_output(struct sockaddr *ss_lsi,
 	pthread_exit((void *) 0);
 	return(NULL);
 #endif
-
-
-
-
-
-
-
 }
+#endif
 
 
 /*
@@ -1763,6 +1953,7 @@ void reset_sadbentry_udp_port (__u32 spi_out)
 
 int send_udp_esp_tunnel_activation (__u32 spi_out)
 {
+#if 0
 	hip_sadb_entry *entry;
 	struct timeval now;
 	int err, len;
@@ -1834,6 +2025,7 @@ int send_udp_esp_tunnel_activation (__u32 spi_out)
 			return (0);
 		}
 	}
+#endif
 	return (-1);
 }
 
@@ -2177,25 +2369,219 @@ void handle_broadcasts(__u8 *data, int len)
 #endif
 
 
+
 /*
  * hip_esp_encrypt()
  * 
- * in:		in	pointer of data to encrypt
+ * in:	in	pointer of data to encrypt
  * 		len	length of data
  * 		out	pointer of where to store encrypted data
  * 		outlen	returned length of encrypted data
  * 		entry 	the SADB entry
  *
- * out:		Encrypted data in out, outlen. entry statistics are modified.
+ * out:	Encrypted data in out, outlen. entry statistics are modified.
  * 		Returns 0 on success, -1 otherwise.
  * 
  * Perform actual ESP encryption and authentication of packets.
  */
+int hip_esp_encrypt(__u8 *in, int len, __u8 *out, 
+	hip_sadb_entry *entry, struct timeval *now, int *outlen)
+{
+#if 0
+	/* length of data to auth */
+	int alen=0;
+	/* elen is length of data to encrypt */
+	elen=0;
+	unsigned int hmac_md_len;
+	int i, iv_len=0, padlen, location, eth_ip_hdr_len;
+	struct ip *iph=NULL;
+	struct ip6_hdr *ip6h=NULL;
+	struct ip_esp_hdr *esp;
+	udphdr *udph = NULL;
+
+	struct ip_esp_padinfo *padinfo=0;
+	__u8 cbc_iv[16];
+	__u8 hmac_md[EVP_MAX_MD_SIZE];
+	
+	padlen = 0;
+
+	/* 
+	 * Encryption 
+	 */
+
+	/* Check keys and set IV length */
+	switch (entry->e_type)
+	{
+		case SADB_EALG_3DESCBC:
+			iv_len = 8;
+			if (!entry->e_key || entry->e_keylen==0) {
+				HIP_DEBUG("hip_esp_encrypt: 3-DES key missing.\n");
+				return(-1);
+			}
+			break;
+		case SADB_X_EALG_BLOWFISHCBC:
+			iv_len = 8;
+			if (!entry->bf_key) {
+				HIP_DEBUG("hip_esp_encrypt: BLOWFISH key missing.\n");
+				return(-1);
+			}
+			break;
+		case SADB_EALG_NULL:
+			iv_len = 0;
+			break;
+		case SADB_X_EALG_AESCBC:
+			iv_len = 16;
+			if (!entry->aes_key && entry->e_key) {
+				entry->aes_key = malloc(sizeof(AES_KEY));
+				if (AES_set_encrypt_key(entry->e_key, 8*entry->e_keylen,
+							entry->aes_key)) {
+					HIP_DEBUG("hip_esp_encrypt: AES key problem!\n");
+				}
+			} else if (!entry->aes_key) {
+				HIP_DEBUG("hip_esp_encrypt: AES key missing.\n");
+				return(-1);
+			}
+			break;
+		case SADB_EALG_NONE:
+		case SADB_EALG_DESCBC:
+		case SADB_X_EALG_CASTCBC:
+		case SADB_X_EALG_SERPENTCBC:
+		case SADB_X_EALG_TWOFISHCBC:
+		default:
+			HIP_DEBUG("Unsupported encryption transform (%d).\n",
+				entry->e_type);
+			return(-1);
+			break;
+	}
+
+	// TODO set elen (hip_esp_output)
+	
+	/* Add initialization vector (random value) */
+	if (iv_len > 0) {
+		RAND_bytes(cbc_iv, iv_len);
+		memcpy(esp->enc_data, cbc_iv, iv_len);
+		padlen = iv_len - ((elen + 2) % iv_len);
+	} else {
+		/* Padding with NULL not based on IV length */
+		padlen = 4 - ((elen + 2) % 4);
+	}
+	
+	/* add padding to input data, set padinfo */
+	location = eth_ip_hdr_len + elen;
+	for (i=0; i<padlen; i++)
+		in[location + i] = i+1;
+	padinfo = (struct ip_esp_padinfo*) &in[location + padlen];
+	padinfo->pad_length = padlen;
+	padinfo->next_hdr = (family == AF_INET) ? iph->ip_p : ip6h->ip6_nxt;
+	/* padinfo is encrypted too */
+	elen += padlen + 2;
+	
+	/* Apply the encryption cipher directly into out buffer
+	 * to avoid extra copying */
+	switch (entry->e_type)
+	{
+		case SADB_EALG_3DESCBC:
+			des_ede3_cbc_encrypt(&in[eth_ip_hdr_len],
+					     &esp->enc_data[iv_len], elen,
+					     entry->ks[0], entry->ks[1], entry->ks[2],
+					     (des_cblock*)cbc_iv, DES_ENCRYPT);
+			break;
+		case SADB_X_EALG_BLOWFISHCBC:
+			BF_cbc_encrypt(&in[eth_ip_hdr_len],
+					&esp->enc_data[iv_len], elen,
+					entry->bf_key, cbc_iv, BF_ENCRYPT);
+			break;
+		case SADB_EALG_NULL:
+			memcpy(esp->enc_data, &in[eth_ip_hdr_len], elen);
+			break;
+		case SADB_X_EALG_AESCBC:
+			AES_cbc_encrypt(&in[eth_ip_hdr_len], 
+					&esp->enc_data[iv_len], elen, 
+					entry->aes_key, cbc_iv, AES_ENCRYPT);
+			break;
+		default:
+			break;
+	}
+	elen += iv_len; /* auth will include IV */
+	*outlen += elen;
+	
+	/* 
+	 * Authentication 
+	 */
+	switch (entry->a_type)
+	{
+		case SADB_AALG_NONE:
+			break;
+		case SADB_AALG_MD5HMAC:
+			alen = HMAC_SHA_96_BITS / 8; /* 12 bytes */
+			if (!entry->a_key || entry->a_keylen==0) {
+				HIP_DEBUG("auth err: missing keys\n");
+				return(-1);
+			}
+			elen += sizeof(struct ip_esp_hdr);
+			HMAC(	EVP_md5(), entry->a_key, entry->a_keylen,
+				(__u8*)esp, elen, hmac_md, &hmac_md_len);
+			memcpy(&out[elen + (use_udp ? sizeof(udphdr) : 0)], 
+				hmac_md, alen);
+			*outlen += alen;
+			break;
+		case SADB_AALG_SHA1HMAC:
+			alen = HMAC_SHA_96_BITS / 8; /* 12 bytes */
+			if (!entry->a_key || entry->a_keylen==0) {
+				HIP_DEBUG("auth err: missing keys\n");
+				return(-1);
+			}
+			elen += sizeof(struct ip_esp_hdr);
+	#ifdef DEBUG_EVERY_PACKET
+			fprintf(debugfp, "SPI=0x%x out a_key(%d): 0x",
+				entry->spi, entry->a_keylen);
+			for (i=0; i < entry->a_keylen; i++) {
+				if (i%4==0) fprintf(debugfp, " ");
+				fprintf(debugfp,"%.2x",entry->a_key[i] & 0xFF);
+			}
+			fprintf(debugfp, "\n");
+	#endif /* DEBUG_EVERY_PACKET */
+			HMAC(	EVP_sha1(), entry->a_key, entry->a_keylen,
+				(__u8*)esp, elen, hmac_md, &hmac_md_len);
+			memcpy(&out[elen + (use_udp ? sizeof(udphdr) : 0)],
+				hmac_md, alen);
+			*outlen += alen;
+	#ifdef DEBUG_EVERY_PACKET
+			fprintf(debugfp, "SHA1: (pkt %d) 0x", *outlen);
+			for (i=0; i < alen; i++) {
+				if (i%4==0) fprintf(debugfp, " ");
+				fprintf(debugfp, "%.2x", hmac_md[i] & 0xFF);
+			}
+			fprintf(debugfp, "\n");
+			fprintf(debugfp, "bytes(%d): ", elen);
+			for (i=0; i < elen; i++) {
+				if (i && i%8==0) fprintf(debugfp, " ");
+				fprintf(debugfp, "%.2x",((__u8*)esp)[i] & 0xFF);
+			}
+			fprintf(debugfp, "\n\n");
+	#endif /* DEBUG_EVERY_PACKET */
+			break;
+		case SADB_X_AALG_SHA2_256HMAC:
+		case SADB_X_AALG_SHA2_384HMAC:
+		case SADB_X_AALG_SHA2_512HMAC:
+		case SADB_X_AALG_RIPEMD160HMAC:
+		case SADB_X_AALG_NULL:
+			break;
+		default:
+			break;
+	}
+		
+#endif
+	return(0);
+}
 
 
+
+
+#if 0
 /* rewrite this function to fit the hipl ipsec implementation*/
-int hip_esp_encrypt(__u8 *in, int len, __u8 *out, int *outlen, 
-	hip_sadb_entry *entry, struct timeval *now)
+int hip_esp_encrypt(__u8 *in, int len, __u8 *out,  
+	hip_sadb_entry *entry, struct timeval *now, int *outlen)
 {
 	int alen=0, elen=0;
 	unsigned int hmac_md_len;
@@ -2509,6 +2895,7 @@ int hip_esp_encrypt(__u8 *in, int len, __u8 *out, int *outlen,
 		
 	return(0);
 }
+#endif
 
 /* debug */
 extern hip_sadb_entry hip_sadb[SADB_SIZE];
@@ -3077,32 +3464,32 @@ void add_eth_header(__u8 *data, __u64 src, __u64 dst, __u32 type)
  * Build an IPv4 header, copying some parameters from an old ip header (old),
  * src and dst in host byte order. old may be NULL.
  */
-void add_ipv4_header(__u8 *data, __u32 src, __u32 dst, struct ip *old, 
-	__u16 len, __u8 proto)
+void add_ipv4_header(__u8 *new_packet, struct ip *old_ip_hdr, __u32 src_addr, __u32 dst_addr, 
+	__u16 packet_len, __u8 next_hdr)
 {
-	struct ip *iph = (struct ip*)data;
+#if 0
+	// copy old header to new packet
+	// this will also copy further ip options
+	memcpy(new_packet, old_ip_hdr, old_ip_hdr->ip_hl * 4);
+	struct ip *new_ip_hdr = (struct ip*)new_packet;
+	
+	// set changed values
+	//new_ip_hdr->ip_v = 4;
+	//new_ip_hdr->ip_hl = 5;
+	//new_ip_hdr->ip_tos = old ? old->ip_tos : 0; /* preserve TOS field */
+	new_ip_hdr->ip_len = htons(packet_len);
+	//new_ip_hdr->ip_id  = old ? old->ip_id : 0;  /* copy identification */
+	//new_ip_hdr->ip_off = old ? old->ip_off : 0; /* copy fragmentation offset */
+	//new_ip_hdr->ip_ttl = old ? old->ip_ttl : 255; /* preserve TTL */
+	new_ip_hdr->ip_p = next_hdr;
+	new_ip_hdr->ip_sum = 0;
+	new_ip_hdr->ip_src.s_addr = htonl(src); /* assume host byte order */
+	new_ip_hdr->ip_dst.s_addr = htonl(dst);
 
-	memset(iph, 0, sizeof(struct ip));
-	iph->ip_v = 4;
-	iph->ip_hl = 5;
-	iph->ip_tos = old ? old->ip_tos : 0; /* preserve TOS field */
-	iph->ip_len = htons(len);
-	iph->ip_id  = old ? old->ip_id : 0;  /* copy identification */
-	iph->ip_off = old ? old->ip_off : 0; /* copy fragmentation offset */
-	iph->ip_ttl = old ? old->ip_ttl : 255; /* preserve TTL */
-	iph->ip_p = proto;
-	iph->ip_sum = 0;
-	iph->ip_src.s_addr = htonl(src); /* assume host byte order */
-	iph->ip_dst.s_addr = htonl(dst);
-
-	/* add the header checksum */
-#if defined(__MACOSX__) && defined(__BIG_ENDIAN__)
-//	iph->ip_sum = ip_fast_csum((__u8*)iph, 20);
-#else
-//	iph->ip_sum = ip_fast_csum((__u8*)iph, iph->ip_hl);
-#endif	
+	/* recalculate the header checksum */
+	new_ip_hdr->ip_sum = ip_fast_csum((__u8*)iph, iph->ip_hl);
+#endif
 }
-
 
 /*
  * add_ipv6_pseudo_header()
@@ -3139,35 +3526,29 @@ void add_ipv6_pseudo_header(__u8 *data, struct sockaddr *src,
  * src and dst in network byte order.
  */
 void add_ipv6_header(__u8 *data, struct sockaddr *src, struct sockaddr *dst,
-	struct ip6_hdr *old, struct ip *old4, __u16 len, __u8 proto)
+		struct ip6_hdr *old, struct ip *old4, __u16 len, __u8 proto)
 {
 	struct ip6_hdr *ip6h = (struct ip6_hdr*)data;
-	__u32 tc;
+		__u32 tc;
 
-	memset(ip6h, 0, sizeof(struct ip6_hdr));
-	ip6h->ip6_flow = 0; /* zero the version (4), TC (8), flow-ID (20) */
-	ip6h->ip6_vfc = 0x60;
-	ip6h->ip6_plen = htons(len);
-	ip6h->ip6_nxt = proto;
-	ip6h->ip6_hlim = 255;
-	//memcpy(&ip6h->ip6_src, SA2IP(src), sizeof(struct in6_addr));
-	//memcpy(&ip6h->ip6_dst, SA2IP(dst), sizeof(struct in6_addr));
-	memcpy(&ip6h->ip6_src, SA2IP(dst), sizeof(struct in6_addr));
-	memcpy(&ip6h->ip6_dst, SA2IP(src), sizeof(struct in6_addr));
-	
-	HIP_DEBUG_IN6ADDR("add ip6h->ip6_src addr: ", &ip6h->ip6_src);
-	HIP_DEBUG_IN6ADDR("add ip6h->ip6_dst addr: ", &ip6h->ip6_dst);
+		memset(ip6h, 0, sizeof(struct ip6_hdr));
+		ip6h->ip6_flow = 0; /* zero the version (4), TC (8), flow-ID (20) */
+		ip6h->ip6_vfc = 0x60;
+		ip6h->ip6_plen = htons(len);
+		ip6h->ip6_nxt = proto;
+		ip6h->ip6_hlim = 255;
+		memcpy(&ip6h->ip6_src, SA2IP(src), sizeof(struct in6_addr));
+		memcpy(&ip6h->ip6_dst, SA2IP(dst), sizeof(struct in6_addr));
 
-
-	/* Try to preserve flow label and hop limit where possible. */
-	if (old) {
-		ip6h->ip6_flow = old->ip6_flow;
-		ip6h->ip6_hlim = old->ip6_hlim;
-	} else if (old4) {
-		tc = old4->ip_tos << 24;
-		ip6h->ip6_flow |= tc; 	/* 8 bits traffic class */
-		ip6h->ip6_hlim = old4->ip_ttl;		/* __u8 */
-	}
+		/* Try to preserve flow label and hop limit where possible. */
+		if (old) {
+			ip6h->ip6_flow = old->ip6_flow;
+			ip6h->ip6_hlim = old->ip6_hlim;
+		} else if (old4) {
+			tc = old4->ip_tos << 24;
+			ip6h->ip6_flow |= tc; 	/* 8 bits traffic class */
+			ip6h->ip6_hlim = old4->ip_ttl;		/* __u8 */
+		}
 }
 
 
