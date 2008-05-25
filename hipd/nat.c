@@ -855,8 +855,8 @@ int hip_external_ice_receive_pkt(struct hip_common * msg, int pkt_size, in6_addr
 
 uint8_t hip_get_nat_control(){
 #ifdef HIP_USE_ICE
-	HIP_DIE("Kaabom! Fixme\n");
-	if(0/*hip_we_are_relay()*/)
+
+	if(hip_get_service_count()>0)
 		return 0;
 	 else if(hip_get_nat_mode()== SO_HIP_SET_NAT_ICE_UDP)
 		 	return 1;
