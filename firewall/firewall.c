@@ -179,6 +179,7 @@ int firewall_init_rules()
 	
 	if(hip_proxy_status)
 	{
+		setenv("PATH", "/sbin:/usr/sbin:/usr/local/sbin", 1);
 		//allow forward hip packets
 		system("iptables -I FORWARD -p 139 -j ACCEPT");
 		system("iptables -I FORWARD -p 139 -j ACCEPT");

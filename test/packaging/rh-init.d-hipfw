@@ -22,6 +22,7 @@ OPTIONS="-bk"
 
 start()
 {
+	setenv("PATH", "/sbin:/usr/sbin:/usr/local/sbin", 1);
 	echo -n $"Starting $BASENAME:"
 	$DAEMON $OPTIONS && success || failure
 	RETVAL=$?

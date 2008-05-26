@@ -174,6 +174,7 @@ rm -rf %{buildroot}
 
 %files firewall
 %{prefix}/sbin/hipfw
+%config /etc/rc.d/init.d/hipfw
 
 %files doc
 %doc doc/HOWTO.txt doc/howto-html
