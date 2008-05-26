@@ -18,6 +18,7 @@
 #include "nlink.h"
 #include "list.h"
 #include "debug.h"
+#include "hip_usermode.h"
 
 #define HIP_RTDS_TAB_LEN 256
 

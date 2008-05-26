@@ -525,7 +525,7 @@ int hip_add_peer_map(const struct hip_common *input)
 		hip_get_param_contents(input, HIP_PARAM_HIT);
 	
 	lsi = (hip_lsi_t *)
-		hip_get_param_contents(input, HIP_PARAM_LSI);
+		hip_get_param_contents(input, SO_HIP_PARAM_LSI);
 
 	ip = (struct in6_addr *)
 		hip_get_param_contents(input, HIP_PARAM_IPV6_ADDR);

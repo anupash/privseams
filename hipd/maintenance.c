@@ -704,7 +704,7 @@ int hip_firewall_add_bex_data(hip_ha_t *entry, struct in6_addr *hit_s, struct in
 	int err = 0;
 	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
 	hip_msg_init(msg);
-	HIP_IFEL(hip_build_user_hdr(msg, HIP_BEX_DONE, 0), -1, 
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_FIREWALL_BEX_DONE, 0), -1, 
                  "Build hdr failed\n");
 		            
         HIP_IFEL(hip_build_param_contents(msg, (void *)hit_s, HIP_PARAM_HIT,
@@ -817,7 +817,3 @@ int opendht_put_locator(int sockfd,
     return(err);
 }
 
-int hip_get_firewall_status()
-{
-	return hip_firewall_status;
-}

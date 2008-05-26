@@ -39,7 +39,7 @@ void hip_esp_input(void *arg);
 void hip_pfkey(void *arg);
 void tunreader(void *arg);
 void hip_dns(void *arg);
-void hipd_main(void *arg);
+//void hipd_main(void *arg);
 void hip_netlink(void *arg);
 void hip_status(void *arg);
 extern int socketpair(int, int, int, int sv[2]);
@@ -53,7 +53,7 @@ int hip_esp_input(struct sockaddr *ss_lsi, u8 *buff, int len);
 void *hip_pfkey(void *arg);
 void *tunreader(void *arg);
 void *hip_dns(void *arg);
-void *hipd_main(void *arg);
+//void *hipd_main(void *arg);
 void *hip_netlink(void *arg);
 void *hip_status(void *arg);
 #define RETNULL NULL;
@@ -109,6 +109,20 @@ extern int g_state;
 #endif
 
 #define SA2IP6(x) ( &((struct sockaddr_in6*)x)->sin6_addr )
+
+
+/** 
+ * Checks if a uint32_t represents a Local Scope Identifier (LSI).
+ *
+ * @param   	the uint32_t to test
+ * @return  	true if @c a is from 1.0.0.0/8
+ * @note    	This macro tests directly uint32_t, not struct in_addr or a pointer
+ *          	to a struct in_addr. To use this macro in context with struct
+ *          	in_addr call it with ipv4->s_addr where ipv4 is a pointer to a
+ *          	struct in_addr.
+ */
+#define IS_LSI32(a) ((a & 0x00FFFFFF) == 0x000000C0)
+
 
 #if defined(__MACOSX__) && defined(__BIG_ENDIAN__)
 #define IS_LSI(a) ( ( ((struct sockaddr*)a)->sa_family == AF_INET) ? \

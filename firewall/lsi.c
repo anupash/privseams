@@ -1,4 +1,6 @@
+#include "lsi.h"
 
+#define BUFSIZE HIP_MAX_PACKET
 
 /**
  * Checks if the packet is a reinjection

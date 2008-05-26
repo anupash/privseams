@@ -130,7 +130,7 @@ int filter_address(struct sockaddr *addr, int ifindex)
 		} else if (IS_IPV4_LOOPBACK(a_in)) {
 			HIP_DEBUG("Ignore: IPV4_LOOPBACK\n");
 			return FA_IGNORE;
-		} else if (IS_LSI(a_in)) {
+		} else if (IS_LSI((struct sockaddr_in *)addr)) {
 			return FA_IGNORE;
 		} else 
 			return FA_ADD;
@@ -653,14 +653,9 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit, hip_hit_t *dst_hit,
                 old_global_nat_mode = hip_nat_status;
         in_port_t ha_peer_port;
 	hip_ha_t *entry;
-<<<<<<< TREE
-	hip_hit_t *src_hit, *dst_hit;
-	hip_lsi_t peer_lsi;
+	hip_lsi_t peer_lsi;//not in use yet [Tere]
 	
 	int is_loopback = 0;
-=======
-       	int is_loopback = 0;
->>>>>>> MERGE-SOURCE
 	struct in6_addr src_addr;
 	struct in6_addr dst_addr, ha_match;
 	struct sockaddr_storage ss_addr;
@@ -853,41 +848,64 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 
 int hip_netdev_trigger_bex_msg(struct hip_common *msg) {
 	hip_hit_t *our_hit = NULL, *peer_hit = NULL;
+	hip_lsi_t *src_lsi = NULL, *dst_lsi = NULL;
 	struct in6_addr *our_addr = NULL, *peer_addr = NULL;
 	struct hip_tlv_common *param;
+	hip_ha_t *entry = NULL;
 	int err = 0;
 	
 	HIP_DUMP_MSG( msg);
 	
-	/* Destination HIT */
-	param = hip_get_param(msg, HIP_PARAM_HIT);
-	if (param)
-		peer_hit = hip_get_param_contents_direct(param);
-	
-	HIP_DEBUG_HIT("trigger_msg_peer_hit:", peer_hit);
-	
-	/* Source HIT */
-	param = hip_get_next_param(msg, param);
-	if (param && hip_get_param_type(param) == HIP_PARAM_HIT)
-		our_hit = hip_get_param_contents_direct(param);
-	
-	HIP_DEBUG_HIT("trigger_msg_our_hit:", our_hit);
-	
-	/* Destination IP */
-	param = hip_get_param(msg, HIP_PARAM_IPV6_ADDR);
-	if (param)
-		peer_addr = hip_get_param_contents_direct(param);
-	
-	HIP_DEBUG_IN6ADDR("trigger_msg_peer_addr:", peer_addr);
+	while((param = hip_get_next_param(msg, param))){
+		if(hip_get_param_type(param) == HIP_PARAM_HIT){
+			if (!peer_hit){
+				/* Destination HIT */
+				peer_hit = hip_get_param_contents_direct(param);
+				HIP_DEBUG_HIT("trigger_msg_peer_hit:", peer_hit);
+			}else{
+				/* Source HIT */
+				our_hit = hip_get_param_contents_direct(param);
+				HIP_DEBUG_HIT("trigger_msg_our_hit:", our_hit);
+			}
+	  	}
+	  
+	  	if (hip_get_param_type(param) == SO_HIP_PARAM_LSI){
+	    		if (!src_lsi){
+				src_lsi = (hip_lsi_t *)hip_get_param_contents_direct(param);
+				HIP_DEBUG_LSI("trigger_msg_our_lsi:", src_lsi);
+	    		}else{
+	      			dst_lsi = (hip_lsi_t *)hip_get_param_contents_direct(param);
+				HIP_DEBUG_LSI("trigger_msg_peer_lsi:", dst_lsi);
+	    		}
+	  	}
 
-	/* Source IP */
-	param = hip_get_next_param(msg, param);
-	if (param && hip_get_param_type(param) == HIP_PARAM_IPV6_ADDR)
-		our_addr = hip_get_param_contents_direct(param);
+		if (hip_get_param_type(param) == HIP_PARAM_IPV6_ADDR){
+			if(!peer_addr){
+				/* Destination IP */
+				peer_addr = hip_get_param_contents_direct(param);
+				HIP_DEBUG_IN6ADDR("trigger_msg_peer_addr:", peer_addr);
+			}
+			else{
+				our_addr = hip_get_param_contents_direct(param);
+				HIP_DEBUG_IN6ADDR("trigger_msg_our_addr:", our_addr);
+			}
+		}
+	}
 
-	HIP_DEBUG_IN6ADDR("trigger_msg_our_addr:", our_addr);
-	
-	return hip_netdev_trigger_bex(our_hit, peer_hit, our_addr, peer_addr);
+	if (!src_lsi){
+		HIP_DEBUG(">Param is not an lsi!!\n");
+		HIP_IFEL(hip_add_peer_map(msg), -1, "trigger bex\n");
+		/* Fetch the hadb entry just created. */
+		HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(peer_hit)),
+			 -1, "internal error: no hadb entry found\n");
+		HIP_IFEL(hip_send_i1(&entry->hit_our, peer_hit, entry),
+			 -1, "sending i1 failed\n");
+	}else{
+		err = hip_netdev_trigger_bex(our_hit, peer_hit, our_addr, peer_addr);
+	}
+
+out_err:
+	return err;
 }
 
 int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
@@ -1263,13 +1281,11 @@ int hip_get_default_hit_msg(struct hip_common *msg)
 	hip_lsi_t lsi;
 	
 	hip_get_default_hit(&hit);
-<<<<<<< TREE
 	hip_get_default_lsi(&lsi);
-=======
 	HIP_DEBUG_HIT("Default hit is ", &hit);
->>>>>>> MERGE-SOURCE
+	HIP_DEBUG_LSI("Default lsi is ", &lsi);
 	hip_build_param_contents(msg, &hit, HIP_PARAM_HIT, sizeof(hit));
-	hip_build_param_contents(msg, &lsi, HIP_PARAM_LSI, sizeof(lsi));
+	hip_build_param_contents(msg, &lsi, SO_HIP_PARAM_LSI, sizeof(lsi));
 
  out_err:
 	return err;

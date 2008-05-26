@@ -105,7 +105,7 @@ int hip_for_each_hi(int (*func)(struct hip_host_id_entry *entry, void *opaq), vo
 int hip_blind_find_local_hi(uint16_t *nonce, struct in6_addr *test_hit,
 			    struct in6_addr *local_hit);
 /*lsi support*/
-int hip_add_lsi(hip_db_struct_t *db, const struct hip_host_id_entry *id_entry);
+int hip_hidb_add_lsi(hip_db_struct_t *db, const struct hip_host_id_entry *id_entry);
 int hip_hidb_exists_lsi(hip_lsi_t *lsi);
 struct hip_host_id_entry *hip_hidb_get_entry_by_lsi(hip_db_struct_t *db, const struct in_addr *lsi);
 int hip_associate_default_hit_lsi(hip_hit_t *default_hit, hip_lsi_t *default_lsi);

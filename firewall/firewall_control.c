@@ -512,20 +512,20 @@ int initialise_firewall_socket()
 	socklen_t alen;
 	
 	/*New UDP socket for communication with HIPD*/
-	hip_firewall_sock = socket(AF_INET6, SOCK_DGRAM, 0);
-	HIP_IFEL((hip_firewall_sock < 0), 1, "Could not create socket for firewall.\n");
+	hip_fw_sock = socket(AF_INET6, SOCK_DGRAM, 0);
+	HIP_IFEL((hip_fw_sock < 0), 1, "Could not create socket for firewall.\n");
 	bzero(&sock_addr, sizeof(sock_addr));
 	sock_addr.sin6_family = AF_INET6;
 	sock_addr.sin6_port = HIP_FIREWALL_PORT;
 	sock_addr.sin6_addr = in6addr_loopback;
 	
-	HIP_IFEL(bind(hip_firewall_sock, (struct sockaddr *)& sock_addr,
+	HIP_IFEL(bind(hip_fw_sock, (struct sockaddr *)& sock_addr,
 		      sizeof(sock_addr)), -1, "Bind on firewall socket addr failed\n");
  out_err:
 	return err;
 }
 
-static inline u16 inchksum(const void *data, u32 length) {
+inline u16 inchksum(const void *data, u32 length){
 	long sum = 0;
     	const u16 *wrd =  (u16 *) data;
     	long slen = (long) length;

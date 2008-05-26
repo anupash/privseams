@@ -220,7 +220,7 @@ int hip_add_host_id(hip_db_struct_t *db,
 	}
 
 	/* assign a free lsi address */
-	HIP_IFEL((hip_add_lsi(db, id_entry))<0, -EEXIST, "No LSI free\n");
+	HIP_IFEL((hip_hidb_add_lsi(db, id_entry))<0, -EEXIST, "No LSI free\n");
 	
 	memcpy(lsi, &id_entry->lsi, sizeof(hip_lsi_t));
 	id_entry->insert = insert;
@@ -727,7 +727,7 @@ struct hip_host_id *hip_get_any_localhost_public_key(int algo)
  * @return		zero on success, or negative error value on failure.
  */
 
-int hip_add_lsi(hip_db_struct_t *db, const struct hip_host_id_entry *id_entry)
+int hip_hidb_add_lsi(hip_db_struct_t *db, const struct hip_host_id_entry *id_entry)
 {
 	struct hip_host_id_entry *id_entry_aux;
 	hip_list_t *item;

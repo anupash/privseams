@@ -2864,7 +2864,7 @@ int hip_handle_firewall_i1_request(struct hip_common *msg, struct in6_addr *i1_s
         in_port_t ha_peer_port;
 	hip_ha_t *entry;
 	hip_hit_t *src_hit, *dst_hit;
-	
+	hip_hit_t *lsi =NULL;
 	int is_loopback = 0;
 	struct in6_addr src_addr;
 //	struct xfrm_user_acquire *acq;
@@ -2948,7 +2948,9 @@ int hip_handle_firewall_i1_request(struct hip_common *msg, struct in6_addr *i1_s
 	/* @fixme: changing global state won't work with threads */
 	hip_nat_status = ha_nat_mode;
 
-	HIP_IFEL(hip_hadb_add_peer_info(dst_hit, &dst_addr), -1,
+	if (entry)
+	  lsi = &(entry->lsi_peer);
+	HIP_IFEL(hip_hadb_add_peer_info(dst_hit, &dst_addr, lsi), -1,
 		 "map failed\n");
 
 	hip_nat_status = old_global_nat_mode; /* restore nat status */

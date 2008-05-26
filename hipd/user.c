@@ -877,11 +877,16 @@ int hip_handle_user_msg(struct hip_common *msg,
 	case SO_HIP_TRIGGER_BEX:
 		HIP_DEBUG("SO_HIP_TRIGGER_BEX\n");
 		hip_firewall_status = 1;
-		lsi = (hip_lsi_t *)hip_get_param_contents(msg, HIP_PARAM_LSI);
+		err = hip_netdev_trigger_bex_msg(msg);
+		goto out_err;
+	  	break;
+
+		/*
+		lsi = (hip_lsi_t *)hip_get_param_contents(msg, SO_HIP_PARAM_LSI);
 
 
 		while((param = hip_get_next_param(msg, param))){
-	    		if (hip_get_param_type(param) == HIP_PARAM_LSI){
+	    		if (hip_get_param_type(param) == SO_HIP_PARAM_LSI){
 	      			if (!src_lsi)
 					src_lsi = (hip_lsi_t *)hip_get_param_contents_direct(param);
 	      			else {
@@ -896,16 +901,16 @@ int hip_handle_user_msg(struct hip_common *msg,
 			dst_hit = (struct in6_addr *)hip_get_param_contents(msg, HIP_PARAM_HIT);
 			HIP_IFEL(hip_add_peer_map(msg), -1, "trigger bex\n");
 			/* Fetch the hadb entry just created. */
-			HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(dst_hit)),
+		/*		HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(dst_hit)),
 				 -1, "internal error: no hadb entry found\n");
 		}else{
 			//hit_peer already mapped because hipconf command and non-opportunistic mode
-			HIP_DEBUG_LSI(">Param is an lsi!!", src_lsi);
-			HIP_DEBUG_LSI(">Param is an lsi!!", dst_lsi);
+			HIP_DEBUG_LSI(" lsi src:", src_lsi);
+			HIP_DEBUG_LSI(" lsi dst:", dst_lsi);
 			HIP_IFEL(!(entry = hip_hadb_try_to_find_by_pair_lsi(src_lsi, dst_lsi)),
 				 -1, "internal error: no hadb entry found\n");
-			HIP_DEBUG_LSI("---------********------------lsi\n",lsi);
-			HIP_DEBUG_HIT("---------********------------src_hit\n",src_hit);
+
+			HIP_DEBUG_HIT(" hit src:",src_hit);
 			HIP_IFEL(!(dst_hit = (hip_hit_t *) HIP_MALLOC(sizeof(hip_hit_t),0)),
 				 -ENOMEM, "No memory available for dst_hit\n");
 			HIP_IFEL(!(src_hit = (hip_hit_t *) HIP_MALLOC(sizeof(hip_hit_t),0)),
@@ -919,9 +924,7 @@ int hip_handle_user_msg(struct hip_common *msg,
 		HIP_DEBUG("Sending i1\n");
 		//HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
 		HIP_DUMP_MSG( msg);
-		err = hip_netdev_trigger_bex_msg(msg);
-		goto out_err;
-	  	break;
+		err = hip_netdev_trigger_bex_msg(msg);*/
 	case SO_HIP_GET_LSI_PEER:
 	case SO_HIP_GET_LSI_OUR:
 		while((param = hip_get_next_param(msg, param))){
@@ -946,13 +949,13 @@ int hip_handle_user_msg(struct hip_common *msg,
 		}
 	        break;
 	case SO_HIP_IS_OUR_LSI:
-	  lsi = (hip_lsi_t *)hip_get_param_contents(msg, HIP_PARAM_LSI);
+	  lsi = (hip_lsi_t *)hip_get_param_contents(msg, SO_HIP_PARAM_LSI);
 	  if (!hip_hidb_exists_lsi(lsi))
 	    lsi = NULL;
 	  break;
 	case SO_HIP_GET_STATE_HA:
 	  while((param = hip_get_next_param(msg, param))){
-	    if (hip_get_param_type(param) == HIP_PARAM_LSI){
+	    if (hip_get_param_type(param) == SO_HIP_PARAM_LSI){
 	      if (!src_lsi)
 		src_lsi = (struct in_addr *)hip_get_param_contents_direct(param);
 	      else 
@@ -992,18 +995,18 @@ int hip_handle_user_msg(struct hip_common *msg,
 		        }
 			if ((msg_type == SO_HIP_GET_LSI_PEER || msg_type == SO_HIP_GET_LSI_OUR) && lsi)
 		                HIP_IFEL(hip_build_param_contents(msg, (void *)lsi,
-					 HIP_PARAM_LSI, sizeof(hip_lsi_t)), -1,
+					 SO_HIP_PARAM_LSI, sizeof(hip_lsi_t)), -1,
 				 	 "build param HIP_PARAM_LSI  failed\n");
 			if (msg_type == SO_HIP_IS_OUR_LSI)
 			        HIP_IFEL(hip_build_param_contents(msg, (void *)lsi,
-					 HIP_PARAM_LSI, sizeof(hip_lsi_t)), -1,
+					 SO_HIP_PARAM_LSI, sizeof(hip_lsi_t)), -1,
 				 	 "build param HIP_PARAM_LSI  failed\n");
 		}
 
 		len = hip_get_msg_total_len(msg);
 		n = hip_sendto(msg, src);
 		if(n != len) {
-			HIP_ERROR("hip_sendto() failed.\n");
+			HIP_ERROR("hip_sendto() failed.n\n");
 			err = -1;
 		} else {
 			HIP_DEBUG("Response sent ok\n");	

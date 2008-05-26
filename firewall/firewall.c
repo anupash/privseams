@@ -1058,7 +1058,7 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx) {
 	        IPV6_TO_IPV4_MAP(&(ctx->src),&src_lsi);
 		IPV6_TO_IPV4_MAP(&(ctx->dst),&dst_lsi);
 
-		if (IS_LSI(src_lsi)){
+		if (IS_LSI(&src_lsi)){
 		      if (is_packet_reinjection(&dst_lsi))
 			    verdict = accept_normal_traffic_by_default ? 1 : 0;
 		      else{
@@ -1300,16 +1300,6 @@ int hip_fw_handle_packet(char *buf, struct ipq_handle *hndl, int ip_version, hip
 	
 	return 0;
 }
-
-void firewall_traffic_treatment(struct ipq_handle *hndl, unsigned long packetId)
-{
-	_HIP_DEBUG("***     firewall_traffic_treatment      ***\n");
-  	if(accept_normal_traffic)
-  		allow_packet(hndl, packetId);
-  	else
-  		drop_packet(hndl, packetId);
-}
-
 
 void check_and_write_default_config()
 {

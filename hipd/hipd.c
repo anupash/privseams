@@ -217,6 +217,30 @@ out_err:
 	return err;
 }
 
+int hip_sendto_firewall(const struct hip_common *msg){
+#ifdef CONFIG_HIP_FIREWALL
+        int n = 0;
+	HIP_DEBUG("CONFIG_HIP_FIREWALL DEFINED AND STATUS IS %d\n", hip_get_firewall_status());
+	socklen_t alen = sizeof(hip_firewall_addr);
+	struct sockaddr_in6 sock_addr;
+	
+	bzero(&sock_addr, alen);
+	sock_addr.sin6_family = AF_INET6;
+	sock_addr.sin6_port = HIP_FIREWALL_PORT;
+	sock_addr.sin6_addr = in6addr_loopback;
+
+	if (hip_get_firewall_status()) {
+	        n = sendto(hip_firewall_sock, msg, hip_get_msg_total_len(msg),
+			   0, (struct sockaddr *)&sock_addr, alen);
+		return n;
+	}
+#else
+	HIP_DEBUG("Firewall is disabled.\n");
+	return 0;
+#endif // CONFIG_HIP_FIREWALL
+}
+
+
 /**
  * Daemon main function.
  */

@@ -174,7 +174,7 @@ static inline void set_lsi_prefix(hip_hit_t *lsi)
  *          in_addr call it with ipv4->s_addr where ipv4 is a pointer to a
  *          struct in_addr.
  */
-#define IS_LSI(a) ((a & 0x00FFFFFF) == 0x000000C0)
+//#define IS_LSI(a) ((a & 0x00FFFFFF) == 0x000000C0)
 
 /** 
  * A macro to test if a uint32_t represents an IPv4 loopback address.

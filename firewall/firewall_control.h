@@ -27,6 +27,15 @@ typedef struct pseudo_v6 {
         u8 next;
 } pseudo_v6;
 
+struct prseuheader
+{
+	unsigned long s_addr;
+	unsigned long d_addr;
+	unsigned char zero;
+	unsigned char prototp;
+	unsigned short len;
+};
+
 gpointer run_control_thread(gpointer data);
 int control_thread_init(void);
 int sendto_hipd(void *msg, size_t len);
