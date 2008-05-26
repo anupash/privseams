@@ -1999,7 +1999,7 @@ int hip_build_param_echo(struct hip_common *msg, void *opaque, int len,
 int hip_build_param_echo_m(struct hip_common *msg, void *opaque, int len, 
                            int request)
 {
-	struct hip_echo_request ping;
+	struct hip_echo_request_m ping;
 	int err;
 
 	if (request)
