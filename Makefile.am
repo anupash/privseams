@@ -7,7 +7,7 @@ EXTRA_DIST += doc/README doc/design_choices.bib test/configs patches
 EXTRA_DIST += doc/base-exchange-relay.png doc/base-exchange-rvs.png
 EXTRA_DIST += hipsock jip
 EXTRA_DIST += test/packaging/create-deb.sh test/packaging/create-rpm.sh test/packaging/hipl.spec
-EXTRA_DIST += test/packaging/rh-init.d-hipd test/packaging/debian-init.d-hipd
+EXTRA_DIST += test/packaging/rh-init.d-hipd test/packaging/rh-init.d-hipfw test/packaging/debian-init.d-hipd
 # The design choices doc is currently depracated
 EXTRA_DIST += doc/design_choices.tex doc/hipl.tex doc/acronyms.tex
 EXTRA_DIST += doc/design_choices_macros.tex doc/catalogue.tex doc/fig

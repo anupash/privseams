@@ -96,8 +96,8 @@ install -d %{buildroot}/%{prefix}/lib
 install -d %{buildroot}/etc/rc.d/init.d
 install -d %{buildroot}/doc
 make DESTDIR=%{buildroot} install
-install -m 700 test/packaging/rh-init.d-hipd %{buildroot}/etc/rc.d/init.d/hipd
 install -m 700 test/packaging/rh-init.d-hipfw %{buildroot}/etc/rc.d/init.d/hipfw
+install -m 700 test/packaging/rh-init.d-hipd %{buildroot}/etc/rc.d/init.d/hipd
 install -m 644 doc/HOWTO.txt %{buildroot}/doc
 install -d %{buildroot}/%{python_sitelib}/DNS
 install -t %{buildroot}/%{python_sitelib}/DNS tools/DNS/*py
