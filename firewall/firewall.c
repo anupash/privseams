@@ -174,8 +174,8 @@ int firewall_init_rules()
 	hip_fw_handler[NF_IP_LOCAL_OUT][TCP_PACKET] = hip_fw_handle_tcp_output;
 
 	hip_fw_handler[NF_IP_FORWARD][OTHER_PACKET] = hip_fw_handle_other_forward;
-	hip_fw_handler[NF_IP_FORWARD][HIP_PACKET] = NULL;
-	hip_fw_handler[NF_IP_FORWARD][ESP_PACKET] = NULL;
+	hip_fw_handler[NF_IP_FORWARD][HIP_PACKET] = hip_fw_handle_hip_forward;
+	hip_fw_handler[NF_IP_FORWARD][ESP_PACKET] = hip_fw_handle_esp_forward;
 	hip_fw_handler[NF_IP_FORWARD][TCP_PACKET] = hip_fw_handle_tcp_forward;
 
 	HIP_DEBUG("Enabling forwarding for IPv4 and IPv6\n");
@@ -1193,6 +1193,32 @@ int hip_fw_handle_other_forward(hip_fw_context_t *ctx) {
 	return verdict;
 }
 
+int hip_fw_handle_hip_forward(hip_fw_context_t *ctx) {
+	int verdict = accept_normal_traffic_by_default;
+
+	HIP_DEBUG("\n");
+
+#ifdef CONFIG_HIP_MIDAUTH
+	if (use_midauth)
+		verdict = midauth_filter_hip(ctx);
+#endif
+
+	return verdict;
+}
+
+int hip_fw_handle_esp_forward(hip_fw_context_t *ctx) {
+	int verdict = accept_normal_traffic_by_default;
+
+	HIP_DEBUG("\n");
+
+#ifdef CONFIG_HIP_MIDAUTH
+	if (use_midauth)
+		verdict = midauth_filter_esp(ctx);
+#endif
+
+	return verdict;
+}
+
 int hip_fw_handle_tcp_forward(hip_fw_context_t *ctx) {
 	HIP_DEBUG("\n");
 
@@ -1257,8 +1283,13 @@ int hip_fw_handle_packet(char *buf, struct ipq_handle *hndl, int ip_version, hip
 	
  out_err:
 	if (verdict) {
-		HIP_DEBUG("=== Verdict: allow packet ===\n");
-		allow_packet(hndl, ctx->ipq_packet->packet_id);
+		if (ctx->modified == 0) {
+			HIP_DEBUG("=== Verdict: allow packet ===\n");
+			allow_packet(hndl, ctx->ipq_packet->packet_id);
+		} else {
+			HIP_DEBUG("=== Verdict: allow modified packet ===\n");
+			allow_modified_packet(hndl, ctx->ipq_packet->packet_id, ctx->ipq_packet->data_len, ctx->ipq_packet->payload);
+		}
 	} else {
 		HIP_DEBUG("=== Verdict: drop packet ===\n");
 		drop_packet(hndl, ctx->ipq_packet->packet_id);
@@ -1425,6 +1456,10 @@ int main(int argc, char **argv)
 
 	firewall_increase_netlink_buffers();
 	firewall_probe_kernel_modules();
+
+#ifdef CONFIG_HIP_MIDAUTH
+	midauth_init();
+#endif
 
 	// create firewall queue handles for IPv4 traffic
 	// FIXME died handle will still be used below

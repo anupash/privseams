@@ -35,7 +35,6 @@
 #include "misc.h"
 #include "netdev.h"
 #include "hip_sadb.h"
-#include "midauth.h"
 
 #define HIP_FW_DEFAULT_RULE_FILE "/etc/hip/firewall.conf"
 #define HIP_FW_DEFAULT_TIMEOUT   1
@@ -83,6 +82,8 @@ typedef struct hip_fw_context {
 	} transport_hdr;
 	struct udphdr *udp_encap_hdr;
 	//uint32_t spi;
+	
+	int modified;
 } hip_fw_context_t;
 
 struct hip_conn_key {

@@ -157,43 +157,41 @@ static void update_hip_checksum_ipv6(struct ip6_hdr *ip)
  * Take care of adapting all headers in front of the HIP payload to the new
  * content.
  *
- * @param p the modified midauth packet
+ * @param ctx context of the modified midauth packet
  */
-static void midauth_update_all_headers(struct midauth_packet *p)
+static void midauth_update_all_headers(hip_fw_context_t *ctx)
 {
 	struct iphdr *ipv4 = NULL;
 	struct ip6_hdr *ipv6 = NULL;
+	size_t len = 0;
 
-	/* Do not update the headers twice. It would break packet sizes */
+	len = hip_get_msg_total_len(ctx->transport_hdr.hip);
 
-	if (p->hdr_length_adapted)
-		return;
-
-	switch (p->ip_version) {
+	switch (ctx->ip_version) {
 	case 4:
-		ipv4 = (struct iphdr *) p->buffer;
-		p->size += ipv4->ihl * 4;
+		ipv4 = (struct iphdr *) ctx->ipq_packet->payload;
+		len += ipv4->ihl * 4;
 		if (ipv4->protocol == IPPROTO_UDP) {
-			p->size += sizeof(struct udphdr) + HIP_UDP_ZERO_BYTES_LEN;
-			update_udp_header(ipv4, p->size);
+			len += sizeof(struct udphdr) + HIP_UDP_ZERO_BYTES_LEN;
+			update_udp_header(ipv4, len);
 		} else {
 			update_hip_checksum_ipv4(ipv4);
 		}
-		update_ipv4_header(ipv4, p->size);    
+		update_ipv4_header(ipv4, len);    
 		break;
 	case 6:
-		ipv6 = (struct ip6_hdr *) p->buffer;
-		p->size += sizeof(struct ip6_hdr);
+		ipv6 = (struct ip6_hdr *) ctx->ipq_packet->payload;
+		len += sizeof(struct ip6_hdr);
 		update_hip_checksum_ipv6(ipv6);
-		update_ipv6_header(ipv6, p->size);
+		update_ipv6_header(ipv6, len);
 		break;
 	default:
 		HIP_ERROR("Unknown IP version. %i, expected 4 or 6.\n", 
-		          p->ip_version);
+		          ctx->ip_version);
 		break;
 	}
 
-	p->hdr_length_adapted = 1;
+	ctx->ipq_packet->data_len = len;
 }
 
 int midauth_verify_solution_m(struct hip_common *hip,
@@ -260,54 +258,45 @@ out_err:
 	return err;
 }
 
-static void midauth_copy_packet_data(struct midauth_packet *p)
+int midauth_add_echo_request_m(hip_fw_context_t *ctx, void *nonce, int len)
 {
-	if (p->hip_copied)
-		return;
-
-	memcpy(p->buffer, p->original_message->payload,
-	       p->original_message->data_len);
-	p->hip_copied = 1;
-	p->hip = (struct hip_common *)(((char*)p->buffer) + p->hdr_size);
-}
-
-int midauth_add_echo_request_m(struct midauth_packet *p, void *nonce, int len)
-{
+	struct hip_common *hip = ctx->transport_hdr.hip;
 	int err = 0;
 
-	midauth_copy_packet_data(p);
+	ctx->modified = 1;
 
-	HIP_IFEL(hip_build_param_echo_m(p->hip, nonce, len, 1),
+	HIP_IFEL(hip_build_param_echo_m(hip, nonce, len, 1),
 	         -1, "Failed to build echo_request_m parameter\n");
-	HIP_IFEL(midauth_relocate_last_hip_parameter(p->hip), -1,
+	HIP_IFEL(midauth_relocate_last_hip_parameter(hip), -1,
 	         "Failed to relocate new echo_request_m parameter\n");
 
 out_err:
 	return err;
 } 
 
-int midauth_add_puzzle_m(struct midauth_packet *p, uint8_t val_K, uint8_t lifetime,
+int midauth_add_puzzle_m(hip_fw_context_t *ctx, uint8_t val_K, uint8_t lifetime,
                          uint8_t *opaque, uint64_t random_i)
 {
+	struct hip_common *hip = ctx->transport_hdr.hip;
 	int err = 0;
 
-	midauth_copy_packet_data(p);
+	ctx->modified = 1;
 
-	HIP_IFEL(hip_build_param_puzzle_m(p->hip, val_K, lifetime, opaque, random_i),
+	HIP_IFEL(hip_build_param_puzzle_m(hip, val_K, lifetime, opaque, random_i),
 	         -1, "Failed to build puzzle_m parameter\n");
-	HIP_IFEL(midauth_relocate_last_hip_parameter(p->hip), -1,
+	HIP_IFEL(midauth_relocate_last_hip_parameter(hip), -1,
 	         "Failed to relocate new puzzle_m parameter\n");
 
 out_err:
 	return err;
 }
 
-int midauth_handler_accept(struct midauth_packet *p)
+int midauth_handler_accept(hip_fw_context_t *ctx)
 {
 	return NF_ACCEPT;
 }
 
-int midauth_handler_drop(struct midauth_packet *p)
+int midauth_handler_drop(hip_fw_context_t *ctx)
 {
 	return NF_DROP;
 }
@@ -315,23 +304,23 @@ int midauth_handler_drop(struct midauth_packet *p)
 /**
  * Distinguish the different UPDATE packets.
  *
- * @param p the modified packet
+ * @param ctx context of the modified packet
  * @return the verdict, either NF_ACCEPT or NF_DROP
  */
-static midauth_handler filter_midauth_update(struct midauth_packet *p)
+static midauth_handler filter_midauth_update(hip_fw_context_t *ctx)
 {
-	if (hip_get_param(p->hip, HIP_PARAM_LOCATOR))
+	if (hip_get_param(ctx->transport_hdr.hip, HIP_PARAM_LOCATOR))
 		return handlers.u1;
-	if (hip_get_param(p->hip, HIP_PARAM_ECHO_REQUEST))
+	if (hip_get_param(ctx->transport_hdr.hip, HIP_PARAM_ECHO_REQUEST))
 		return handlers.u2;
-	if (hip_get_param(p->hip, HIP_PARAM_ECHO_RESPONSE))
+	if (hip_get_param(ctx->transport_hdr.hip, HIP_PARAM_ECHO_RESPONSE))
 		return handlers.u3;
 
 	HIP_ERROR("Unknown UPDATE format, rejecting the request!\n");
 	return midauth_handler_drop;
 }
 
-int filter_midauth(struct midauth_packet *p)
+int filter_midauth(hip_fw_context_t *ctx)
 {
 	int verdict = NF_ACCEPT;
 	midauth_handler h = NULL;
@@ -339,7 +328,7 @@ int filter_midauth(struct midauth_packet *p)
 	/* @todo change this default value to midauth_handler_drop to 
 	 * disallow unknown message types */
 
-	switch (p->hip->type_hdr) {
+	switch (ctx->transport_hdr.hip->type_hdr) {
 	case HIP_I1:
 		h = handlers.i1;
 		break;
@@ -353,7 +342,7 @@ int filter_midauth(struct midauth_packet *p)
 		h = handlers.r2;
 		break;
 	case HIP_UPDATE:
-		h = filter_midauth_update(p);
+		h = filter_midauth_update(ctx);
 		break;
 	default:
 		HIP_DEBUG("filtering default message type\n");
@@ -363,21 +352,29 @@ int filter_midauth(struct midauth_packet *p)
 	if (!h) {
 		h = h_default;
 	}
-	verdict = h(p);
+	verdict = h(ctx);
 
 	/* do not change packet when it is dropped */
-	if (verdict != NF_ACCEPT) {
-		p->size = 0;
-		p->hip_copied = 0;
-	}
+	if (verdict != NF_ACCEPT)
+		ctx->modified = 0;
 
 	/* if packet was modified correct every necessary part */
-	if (p->hip_copied) {
-		p->size = hip_get_msg_total_len(p->hip);
-		midauth_update_all_headers(p);
-	}
+	if (ctx->modified != 0)
+		midauth_update_all_headers(ctx);
 
 	return verdict;
+}
+
+int midauth_filter_hip(hip_fw_context_t *ctx)
+{
+	/* let everything pass for now */
+	return filter_midauth(ctx);
+}
+
+int midauth_filter_esp(hip_fw_context_t *ctx)
+{
+	/* let everything pass for now */
+	return 1;
 }
 
 void midauth_init(void)

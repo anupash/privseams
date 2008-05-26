@@ -8,21 +8,9 @@
 #include <linux/netfilter.h>
 #include "protodefs.h"
 #include "debug.h"
+#include "firewall.h"
 
-#define MIDAUTH_PACKET_SIZE 10240
-
-struct midauth_packet {
-	int size;
-	int ip_version;
-	int hdr_size;
-	int hdr_length_adapted;
-	unsigned char buffer[MIDAUTH_PACKET_SIZE]; /* space for a modified packet */
-	struct hip_common *hip; /* refers to old and new packet */
-	int hip_copied; /* 0 if unmodified, 1 if modified */
-	ipq_packet_msg_t *original_message;
-};
-
-typedef int (*midauth_handler)(struct midauth_packet *p);
+typedef int (*midauth_handler)(hip_fw_context_t *ctx);
 
 struct midauth_handlers {
 	midauth_handler i1;
@@ -39,26 +27,26 @@ struct midauth_handlers {
 /**
  * Filters accepted packets for middlebox authentication.
  *
- * @param p the packet ready for modification
+ * @param ctx context of the packet ready for modification
  * @return verdict, either NF_ACCEPT or NF_DROP
  */
-int filter_midauth(struct midauth_packet *p);
+int filter_midauth(hip_fw_context_t *ctx);
 
 /**
  * Accepts a packet. Used in midauth_handlers as a default handler.
  *
- * @param p the packet
+ * @param ctx context of the packet
  * @return NF_ACCEPT
  */
-int midauth_handler_accept(struct midauth_packet *p);
+int midauth_handler_accept(hip_fw_context_t *ctx);
 
 /**
  * Drops a packet. Used in midauth_handlers as a default handler.
  *
- * @param p the packet
+ * @param ctx context of the packet
  * @return NF_DROP
  */
-int midauth_handler_drop(struct midauth_packet *p);
+int midauth_handler_drop(hip_fw_context_t *ctx);
 
 /**
  * Check the correctness of a hip_solution_m
@@ -73,24 +61,24 @@ int midauth_verify_solution_m(struct hip_common *hip,
 /**
  * Insert an ECHO_REQUEST_M parameter into a HIP packet.
  *
- * @param p the packet to be modified
+ * @param ctx context of the packet to be modified
  * @param nonce data to add
  * @param len length of data to add
  * @return 
  */
-int midauth_add_echo_request_m(struct midauth_packet *p, void *nonce, int len);
+int midauth_add_echo_request_m(hip_fw_context_t *ctx, void *nonce, int len);
 
 /**
  * Insert a PUZZLE_M parameter into a HIP packet.
  *
- * @param p the packet to be modified
+ * @param ctx context of the packet to be modified
  * @param val_K puzzle parameter val_K
  * @param lifetime puzzle parameter lifetime
  * @param opaque puzzle parameter opaque
  * @param random_i puzzle parameter random_i
  * @return 
  */
-int midauth_add_puzzle_m(struct midauth_packet *p, uint8_t val_K, uint8_t lifetime,
+int midauth_add_puzzle_m(hip_fw_context_t *ctx, uint8_t val_K, uint8_t lifetime,
                          uint8_t *opaque, uint64_t random_i);
 
 /**
