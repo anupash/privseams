@@ -121,7 +121,7 @@ int hip_fw_examine_incoming_tcp_packet(void *hdr,
 		else{*/
 			//signal for the normal TCP packets not to be blocked for this peer
 			//save in db that peer does not support hip
-			hipd_unblock_app_AND_oppipdb_add_entry(&peer_ip);
+			hip_fw_unblock_and_blacklist(&peer_ip);
 
 			//normal traffic connections should be allowed to be created
 			return -1;
@@ -255,7 +255,7 @@ int hip_request_send_i1_to_hip_peer_from_hipd(struct in6_addr *peer_hit,
  * @param peer_ip	peer ip.
  * @return		nothing
  */
-int hipd_unblock_app_AND_oppipdb_add_entry(const struct in6_addr *peer_ip){
+int hip_fw_unblock_and_blacklist(const struct in6_addr *peer_ip){
 	struct hip_common *msg = NULL;
 	int err = 0;
 
@@ -269,7 +269,7 @@ int hipd_unblock_app_AND_oppipdb_add_entry(const struct in6_addr *peer_ip){
 			-1, "build param HIP_PARAM_IPV6_ADDR failed\n");
 
 	/* build the message header */
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OPPTCP_UNBLOCK_APP_and_OPPIPDB_ADD_ENTRY, 0),
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OPPTCP_UNBLOCK_AND_BLACKLIST, 0),
 		 -1, "build hdr failed\n");
 	HIP_DUMP_MSG(msg);
 
@@ -283,6 +283,7 @@ out_err:
 	return err;
 }
 
+#if 0
 /**
  * Send the ip of a peer to hipd, so that it can add it to the blacklist database.
  * 
@@ -316,6 +317,7 @@ int hip_request_oppipdb_add_entry(struct in6_addr *peer_ip)
 out_err:
 	return err;
 }
+#endif
 
 /**
  * Send the necessary data to hipd, so that a tcp packet is sent from there. This was done because it was not possible to send a packet directly from here.

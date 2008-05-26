@@ -319,6 +319,16 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 		}
 		}
 	*/	
+	case SO_HIP_SET_OPPTCP_ON:
+		HIP_DEBUG("Opptcp on\n");
+		hip_fw_init_opptcp();
+		hip_opptcp = 1;
+		break;
+	case SO_HIP_SET_OPPTCP_OFF:
+		HIP_DEBUG("Opptcp on\n");
+		hip_opptcp = 0;
+		hip_fw_uninit_opptcp();
+		break;
 	default:
 		HIP_ERROR("Unhandled message type %d\n", type);
 		err = -1;

@@ -2161,12 +2161,15 @@ static inline int hip_reg_param_core(hip_common_t *msg, void *param,
 				       type_list);	
 }
 
-int hip_build_param_reg_info(hip_common_t *msg, const hip_srv_t *service_list,
+int hip_build_param_reg_info(hip_common_t *msg, const void *srv_list,
 			     const unsigned int service_count)
 {
 	int err = 0, i = 0;
 	struct hip_reg_info reg_info;
 	uint8_t reg_type[service_count];
+	/* @todo: using a void pointer as a workaround to avoid
+	   weird compilation warning */
+	const hip_srv_t *service_list = (const hip_srv_t *) srv_list;
 
 	if(service_count == 0) {
 		return 0;

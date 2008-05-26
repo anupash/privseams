@@ -3,8 +3,6 @@
  *
  * Firewall requires: 
  * modprobe ip6_queue
- * ip6tables -A FORWARD -m hip -j QUEUE
- * (ip6tables -A INPUT -p 99 -j QUEUE)
  * 
  */
 
@@ -25,11 +23,7 @@ int flush_iptables = 1;
 int counter = 0;
 int hip_proxy_status = 0;
 int foreground = 1;
-#ifdef CONFIG_HIP_OPPTCP
-int hip_opptcp = 1;
-#else
 int hip_opptcp = 0;
-#endif
 int hip_userspace_ipsec = 0;
 
 /* Default HIT - do not access this directly, call hip_fw_get_default_hit() */
@@ -82,6 +76,24 @@ void set_escrow_active(int active)
 int is_escrow_active()
 {
 	return escrow_active;
+}
+
+int hip_fw_init_opptcp() {
+	HIP_DEBUG("\n");
+
+	system("iptables -I INPUT -p 6 -j QUEUE");
+	system("iptables -I OUTPUT -p 6 -j QUEUE");
+	system("ip6tables -I INPUT -p 6 -j QUEUE");
+	system("ip6tables -I OUTPUT -p 6 -j QUEUE");
+}
+
+int hip_fw_uninit_opptcp() {
+	HIP_DEBUG("\n");
+
+	system("iptables -F -I INPUT -p 6 -j QUEUE");
+	system("iptables -F -I OUTPUT -p 6 -j QUEUE");
+	system("ip6tables -F -I INPUT -p 6 -j QUEUE");
+	system("ip6tables -F -I OUTPUT -p 6 -j QUEUE");
 }
 
 /*----------------INIT/EXIT FUNCTIONS----------------------*/
@@ -271,15 +283,8 @@ int firewall_init_rules()
 
 	}
 
-#ifdef CONFIG_HIP_OPPTCP//tcp over ipv4
-	//system("iptables -I FORWARD -p 6 -j QUEUE"); // is this needed? -miika
-	system("iptables -I INPUT -p 6 -j QUEUE");
-	system("iptables -I OUTPUT -p 6 -j QUEUE");
-	
-	//system("ip6tables -I FORWARD -p 6 -j QUEUE");  // is this needed? -miika
-	system("ip6tables -I INPUT -p 6 -j QUEUE");
-	system("ip6tables -I OUTPUT -p 6 -j QUEUE");
-#endif
+	if (hip_opptcp)
+		hip_fw_init_opptcp();
 
 	if (hip_userspace_ipsec) {
 		system("iptables -I INPUT -p 50 -j QUEUE"); /* ESP over IPv4 */

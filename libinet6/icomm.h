@@ -157,8 +157,8 @@
 #define SO_HIP_SET_HIPPROXY_OFF			132
 #define SO_HIP_GET_PROXY_LOCAL_ADDRESS		133
 #define SO_HIP_HIPPROXY_STATUS_REQUEST		134
-#define SO_HIP_OPPTCP_UNBLOCK_APP_and_OPPIPDB_ADD_ENTRY	135
-#define SO_HIP_FIREWALL_BEX_DONE                        136 /* addes by Tao Wan, for informing the firewall the BEX is done*/
+#define SO_HIP_OPPTCP_UNBLOCK_AND_BLACKLIST     135
+#define SO_HIP_FIREWALL_BEX_DONE                136 /* addes by Tao Wan, for informing the firewall the BEX is done*/
 #define SO_HIP_SET_TCPTIMEOUT_ON                137
 #define SO_HIP_SET_TCPTIMEOUT_OFF               138
 /** @} */
