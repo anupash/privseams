@@ -1239,10 +1239,11 @@
 	</para></listitem>
 	<listitem id="listitem_rvs"><para>
 	  At the responder, we have to register to the rendezvous server:
-	  <programlisting>tools/hipconf add rvs &lt;RVS-HIT&gt; &lt;RVS-IP&gt;</programlisting>
+	  <programlisting>tools/hipconf add rvs &lt;RVS-HIT&gt; &lt;RVS-IP&gt; &lt;LIFETIME&gt;</programlisting>
 	  This will establish a HIP SA between the rendezvous server and the responder.
-	  Please use the
-	  default HIT of the rendezvous server ("tools/hipconf get hi default" at the RVS).
+	  Please use the default HIT of the rendezvous server ("tools/hipconf get hi default" at the RVS).
+	  The lifetime value is in seconds. Note, that requesting a desired lifetime is
+	  currently only supported for the rendezvous service.
 	</para></listitem>
 	<listitem><para>
 	  At the responder, start a server listening for incoming connections:
@@ -2123,8 +2124,7 @@ combo-newgroup=&lt;create new...&gt;
     is small. This "advanced" version of the opportunistic mode
     enables fast and backwards compatible fallback to non-HIP
     communications for TCP connections when the peer does not support
-    HIP.  To use the opportunistic mode, compile HIPL with
-    --enable-opptcp, start both the hipd and hipfw (with option -A).
+    HIP.  To use the opportunistic mode, start both the hipd and hipfw (e.g. with option -A).
     Then run hipconf opptcp on and use the opportunistic mode as instructed
     earlier in this section.
 </para>
