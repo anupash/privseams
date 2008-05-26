@@ -719,7 +719,7 @@ int filter_esp(const struct in6_addr * dst_addr, struct hip_esp * esp,
 	int verdict = 0;
 	// 
 	int use_escrow = 0;
-	struct _GList * list = NULL;
+	struct _DList * list = NULL;
 	struct rule * rule = NULL;
 	
 	// if key escrow is active we have to handle it here too
@@ -729,7 +729,7 @@ int filter_esp(const struct in6_addr * dst_addr, struct hip_esp * esp,
 		// HITs for which decryption should be done
 		
 		// list with all rules for hook (= IN / OUT / FORWARD)
-		list = (struct _GList *) read_rules(hook);
+		list = (struct _DList *) read_rules(hook);
 		rule = NULL;
 		
 		// match all rules
@@ -914,6 +914,10 @@ int filter_hip(const struct in6_addr * ip6_src,
   	//if dynamically changing rules possible 
   	//int hip_packet = is_hip_packet(), ..if(hip_packet && rule->src_hit)
   	//+ filter_state käsittelemään myös esp paketit
+  	if (!list) {
+  		HIP_DEBUG("The list of rules is empty!!!???\n");
+  	}
+  	
   	while (list != NULL)
 	{
   		match = 0;

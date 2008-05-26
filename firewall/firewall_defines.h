@@ -5,7 +5,7 @@
 //int hip_proxy_status;
 
 
-#include "types.h"
+#include "common_types.h"
 
 /********** State table structures **************/
 

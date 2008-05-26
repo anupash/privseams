@@ -19,7 +19,7 @@
 #include <pthread.h>
 #include <libinet6/message.h>
 
-#include "list.h"
+#include "common_types.h"
 #include "crypto.h"
 #include "ife.h"
 #include "state.h"

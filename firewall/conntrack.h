@@ -15,6 +15,7 @@
 #include "misc.h"
 #include "hadb.h"
 #include "pk.h"
+#include "common_types.h"
 
 
 /*-------------- CONNECTION TRACKING ------------*/
