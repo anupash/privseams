@@ -282,17 +282,24 @@ int firewall_init_rules()
 #endif
 
 	if (hip_userspace_ipsec) {
-		system("iptables -I INPUT -p 50 -j QUEUE"); /* ESP over IPv4 */
+		// queue incoming ESP over IPv4 and IPv4 UDP encapsulated traffic
+		system("iptables -I INPUT -p 50 -j QUEUE"); /*  */
 		system("iptables -I INPUT -p 17 --dport 50500 -j QUEUE");
 		system("iptables -I INPUT -p 17 --sport 50500 -j QUEUE");
+		
+		// TODO queue outgoing ICMP, TCP and UDP sent to LSIs
+		//system("iptables -I OUTPUT -p 1 -d 2001:0010::/28 -j QUEUE");
+		//system("iptables -I OUTPUT -p 6 -d 2001:0010::/28 -j QUEUE");
+		//system("iptables -I OUTPUT -p 17 -d 2001:0010::/28 -j QUEUE");
 
-		system("ip6tables -I INPUT -p 50 -j QUEUE"); /* ESP over IPv6 */
-		
-		//system("ip6tables -I OUTPUT -p 6 ! -d ::1 -j QUEUE"); /* TCP over IPv6: possibly HIT based connection */
-		system("ip6tables -I OUTPUT -p 6 -d 2001:0010::/28 -j QUEUE"); /* TCP over IPv6: possibly HIT based connection */
-		
-		//system("ip6tables -I OUTPUT -p 17 ! -d ::1 -j QUEUE"); /* UDP over IPv6: possibly HIT based connection */
-		system("ip6tables -I OUTPUT -p 17 -d 2001:0010::/28 -j QUEUE"); /* UDP over IPv6: possibly HIT based connection */
+		// queue incoming ESP over IPv6
+		// NOTE: add IPv6 UDP encapsulation here
+		system("ip6tables -I INPUT -p 50 -j QUEUE");
+
+		// queue outgoing ICMP, TCP and UDP sent to HITs
+		system("ip6tables -I OUTPUT -p 58 -d 2001:0010::/28 -j QUEUE");
+		system("ip6tables -I OUTPUT -p 6 -d 2001:0010::/28 -j QUEUE");
+		system("ip6tables -I OUTPUT -p 17 -d 2001:0010::/28 -j QUEUE");
 	}
 
 
@@ -1123,9 +1130,7 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx) {
 	HIP_DEBUG("\n");
 
 	if (hip_userspace_ipsec)
-		verdict = !hip_fw_userspace_ipsec_output(ctx->ip_version,
-							ctx->ip_hdr.ipv4,
-							ctx->ipq_packet);
+		verdict = !hip_fw_userspace_ipsec_output(ctx);
 						   
 	/* XX FIXME: LSI HOOKS */
 
@@ -1552,10 +1557,12 @@ int main(int argc, char **argv)
 		}
 
 		if (FD_ISSET(h4->fd, &read_fdset)) {
+			HIP_DEBUG("received IPv4 packet from iptables queue\n");
 			err = hip_fw_handle_packet(buf, h4, 4, &ctx);
 		}
 
 		if (FD_ISSET(h6->fd, &read_fdset)) {
+			HIP_DEBUG("received IPv6 packet from iptables queue\n");
 			err = hip_fw_handle_packet(buf, h6, 6, &ctx);
 		}
 

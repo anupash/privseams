@@ -641,10 +641,10 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit, hip_hit_t *dst_hit,
 			   struct in6_addr *src_addr_p, struct in6_addr *dst_addr_p) {
 	int err = 0, if_index = 0, is_ipv4_locator,
 		reuse_hadb_local_address = 0, ha_nat_mode = hip_nat_status,
-                old_global_nat_mode = hip_nat_status;
+        old_global_nat_mode = hip_nat_status;
         in_port_t ha_peer_port;
 	hip_ha_t *entry;
-       	int is_loopback = 0;
+    int is_loopback = 0;
 	struct in6_addr src_addr;
 	struct in6_addr dst_addr, ha_match;
 	struct sockaddr_storage ss_addr;
@@ -844,7 +844,7 @@ int hip_netdev_trigger_bex_msg(struct hip_common *msg) {
 	
 	/* Destination HIT */
 	param = hip_get_param(msg, HIP_PARAM_HIT);
-	if (param)
+	if (param && hip_get_param_type(param) == HIP_PARAM_HIT)
 		peer_hit = hip_get_param_contents_direct(param);
 	
 	HIP_DEBUG_HIT("trigger_msg_peer_hit:", peer_hit);
@@ -870,7 +870,12 @@ int hip_netdev_trigger_bex_msg(struct hip_common *msg) {
 
 	HIP_DEBUG_IN6ADDR("trigger_msg_our_addr:", our_addr);
 	
+	HIP_IFEL(!peer_hit && !peer_addr, -1, "neither destination hit nor ip provided\n");
+	
 	return hip_netdev_trigger_bex(our_hit, peer_hit, our_addr, peer_addr);
+
+  out_err:
+  	return err;
 }
 
 int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)

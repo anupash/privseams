@@ -1849,42 +1849,53 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 	return err;
 }
 
-int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit, struct in6_addr *src_ip, struct in6_addr *dst_ip)
+/* This builds a msg wich will be sent to the HIPd in order to trigger
+ * a BEX there.
+ * 
+ * NOTE: Either destination HIT or IP (for opportunistic BEX) has to be provided */
+int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
+		struct in6_addr *src_ip, struct in6_addr *dst_ip)
 {
 	struct hip_common *msg = NULL;
 	int err = 0;
 
 	HIP_DEBUG_HIT("src hit is: ", src_hit);
-	HIP_DEBUG_HIT("dst hit hit is: ", dst_hit);
 	HIP_DEBUG_IN6ADDR("src ip is: ", src_ip);
+	HIP_DEBUG_HIT("dst hit is: ", dst_hit);
 	HIP_DEBUG_IN6ADDR("dst ip  is: ", dst_ip);
 	
-	
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
-
-	if (src_hit)
-		HIP_IFEL(hip_build_param_contents(msg, (void *)(src_hit),
-						  HIP_PARAM_HIT,
-						  sizeof(struct in6_addr)), -1,
-			 "build param HIP_PARAM_HIT  failed\n");
 	
+	HIP_IFEL(!dst_hit && !dst_ip, -1, "neither destination hit nor ip provided\n");
+	
+	// NOTE: we need this order in order to process the icoming message correctly
+	// destination HIT is obligatory or opportunistic BEX
 	if (dst_hit)
 		HIP_IFEL(hip_build_param_contents(msg, (void *)(dst_hit),
 						  HIP_PARAM_HIT,
 						  sizeof(struct in6_addr)), -1,
-		 "build param HIP_PARAM_HIT  failed\n");
+		 "build param HIP_PARAM_HIT failed\n");
 	
-	if (src_ip)
-		HIP_IFEL(hip_build_param_contents(msg, (void *)(src_ip),
-						  HIP_PARAM_IPV6_ADDR,
-						  sizeof(struct in6_addr)), -1,
-			 "build param HIP_PARAM_IPV6_ADDR failed\n");
+	// source HIT is optional
+	if (src_hit)
+			HIP_IFEL(hip_build_param_contents(msg, (void *)(src_hit),
+							  HIP_PARAM_HIT,
+							  sizeof(struct in6_addr)), -1,
+				 "build param HIP_PARAM_HIT failed\n");
 	
+	// if no destination HIT is provided this has to be there
 	if (dst_ip)
 		HIP_IFEL(hip_build_param_contents(msg, (void *)(dst_ip),
 						  HIP_PARAM_IPV6_ADDR,
 						  sizeof(struct in6_addr)), -1,
 			 "build param HIP_PARAM_IPV6_ADDR failed\n");
+	
+	// this again is optional
+	if (src_ip)
+			HIP_IFEL(hip_build_param_contents(msg, (void *)(src_ip),
+							  HIP_PARAM_IPV6_ADDR,
+							  sizeof(struct in6_addr)), -1,
+				 "build param HIP_PARAM_IPV6_ADDR failed\n");
 	
 	/* build the message header */
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_TRIGGER_BEX, 0), -1,

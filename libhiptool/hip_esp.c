@@ -27,31 +27,18 @@
 
 
 #include <stdio.h>		/* HIP_DEBUG() */
-#ifdef __WIN32__
-#include <win32/types.h>
-#include <io.h>
-#include <winsock2.h>
-#include <win32/ip.h>
-#else /* __WIN32__ */
 #include <unistd.h>		/* write() */
 #include <pthread.h>		/* pthread_exit() */
 #include <sys/time.h>		/* gettimeofday() */
 #include <sys/errno.h>		/* errno, etc */
-#ifdef __MACOSX__
-#include <netinet/in_systm.h>
-#include <netinet/in.h>	
-#endif /* __MACOSX__ */
 #include <netinet/ip.h>		/* struct ip */
 #include <netinet/ip6.h>	/* struct ip6_hdr */
 #include <netinet/icmp6.h>	/* struct icmp6_hdr */
 #include <netinet/tcp.h>	/* struct tcphdr */
 #include <netinet/udp.h>	/* struct udphdr */
 #include <arpa/inet.h>		
-#ifndef __MACOSX__
 #include <linux/types.h>	/* for pfkeyv2.h types */
 #include <netinet/udp.h>	/* struct udphdr */
-#endif /* __MACOSX__ */
-#endif /* __WIN32__ */
 #include <string.h>		/* memset, etc */
 #include <openssl/hmac.h>	/* HMAC algorithms */
 #include <openssl/sha.h>	/* SHA1 algorithms */
@@ -181,16 +168,11 @@ typedef struct _pseudo_header
 	__u16 packet_length;
 } pseudo_header;
 
-
-#define ARPOP_REQUEST 1
-#define ARPOP_REPLY 2
-
 /* 
  * Local function declarations
  */
-void tunreader_shutdown();
+
 int handle_nsol(__u8 *in, int len, __u8 *out,int *outlen,struct sockaddr *addr);
-int handle_arp(__u8 *in, int len, __u8 *out, int *outlen,struct sockaddr *addr);
 int hip_esp_encrypt(__u8 *in, int len, __u8 *out, 
 		hip_sadb_entry *entry, struct timeval *now, int *outlen);
 int hip_esp_decrypt(__u8 *in, int len, __u8 *out, int *offset, int *outlen,
@@ -213,49 +195,6 @@ int send_udp_esp_tunnel_activation (__u32 spi_out);
 // extern __u32 get_preferred_lsi();
 // extern int do_bcast();
 extern int maxof(int num_args, ...);
-
-#ifdef __MACOSX__
-void add_outgoing_esp_header(__u8 *data, __u32 src, __u32 dst, __u16 len);
-#endif
-
-
-/* hit is the in6_addr struct  */
-
-/* Ipsec userspace trigger the base exchange */
-int pfkey_send_acquire(struct sockaddr *target)
-{
-        struct sockaddr *sa = (struct sockaddr *) target;
-	hip_hit_t conversion_hit;
-	hip_hit_t *hit = NULL;
-	int err = 0;		
-
-	struct in_addr *ipv4_addr = NULL;
-	struct in6_addr *ipv6_addr = NULL;
-	
-	switch(sa->sa_family) {
-	case AF_INET:
-		//ipv4_addr = (struct in_addr *) &(((struct sockaddr_in *)target)->sin_addr);
-	  ipv4_addr = hip_cast_sa_addr(target);
-	    //HIP_DEBUG("Size of: %u\n", ret);
-	  IPV4_TO_IPV6_MAP(ipv4_addr, &conversion_hit);
-	  hit = &conversion_hit;
-	  break;
-	case AF_INET6:
-		hit = hip_cast_sa_addr(target);
-		//ipv6_addr = (struct in6_addr *) (&(((struct sockaddr_in6 *) target)->sin6_addr));
-		//hit = (hip_hit_t *) ipv6_addr;
-	  break;
-	
-	}
-	
-	HIP_DEBUG_HIT("pfkey_send_acquire hit is: ", hit);
-
-	/* Trigger base exchange */
-	HIP_IFEL(hip_trigger_bex(NULL, hit, NULL, NULL), -1,
-		 "trigger bex\n");
- out_err:
-	return err;
-}
 
 
 /*
@@ -353,47 +292,7 @@ int get_preferred_lsi(struct sockaddr *lsi) {
   
 	return (-1); 
 
-} 
-
-
-/*
- * Platform-independent sleep function. added by Tao Wan from Boeing code
- */
-void hip_sleep(int seconds)
-{
-#ifdef __WIN32__
-	/* Microsoft requires at least one of the select() file sets
-	 * to contain a valid socket, so we use Sleep() instead. */
-	Sleep(seconds * 1000);
-#else
-	/* usleep() and sleep() are not thread safe */
-	struct timeval timeout;
-	timeout.tv_sec = seconds;
-	timeout.tv_usec = 0;
-	select(0, NULL, NULL, NULL, &timeout);
-#endif
 }
-
-
-
-void init_readsp()
-{
-	if (readsp[0])
-		return;
-	
-#ifdef __MACOSX__
-	if (socketpair(AF_UNIX, SOCK_DGRAM, PF_UNSPEC, readsp)) {
-#else
-	if (socketpair(AF_UNIX, SOCK_DGRAM, PF_UNIX, readsp)) {
-#endif
-		HIP_DEBUG("sockpair() failed\n");
-	}
-	/* also initialize the Ethernet address table */
-	RAND_bytes(eth_addrs, sizeof(eth_addrs));
-}
-
-
-
 
 #if 0
 /*
@@ -1862,12 +1761,8 @@ int hip_esp_input(struct sockaddr *ss_lsi, u8 *buff, int len)
 	return err;
 }
 
-
-#ifdef __WIN32__
-void udp_esp_keepalive (void *arg) {
-#else
+#if 0
 void *udp_esp_keepalive (void *arg) {
-#endif
 	int i, err;
 	hip_sadb_dst_entry *entry;
 	struct timeval now;
@@ -1933,11 +1828,11 @@ void *udp_esp_keepalive (void *arg) {
 		hip_sleep(1);
 	}
 	HIP_DEBUG("udp_esp_keepalive() thread shutdown.\n");
-#ifndef __WIN32__
+
 	pthread_exit((void *) 0);
 	return (NULL);
-#endif /* __WIN32__ */
 }
+#endif
 
 /*
 void reset_sadbentry_udp_port (__u32 spi_out)
@@ -2028,123 +1923,6 @@ int send_udp_esp_tunnel_activation (__u32 spi_out)
 #endif
 	return (-1);
 }
-
-
-
-#ifdef __WIN32__
-/* For Windows, use overlapped event notification */
-void tunreader(void *arg)
-{
-	DWORD len;
-	char buf[BUFF_LEN];
-	OVERLAPPED overlapped;
-	int status;
-
-	HIP_DEBUG("tunreader() thread started...\n");
-
-	init_readsp();
-	overlapped.hEvent = CreateEvent(NULL, 1, 0, NULL);
-
-	while (g_state == 0) {
-		overlapped.Offset = 0;
-		overlapped.OffsetHigh = 0;
-		ResetEvent(overlapped.hEvent);
-
-		status = ReadFile(tapfd, buf, BUFF_LEN, &len, &overlapped);
-		if (!status) {
-			if (GetLastError() == ERROR_IO_PENDING) {
-				//WaitForSingleObject(overlapped.hEvent,2000);
-				WaitForSingleObject(overlapped.hEvent,INFINITE);
-				if (!GetOverlappedResult(tapfd, &overlapped,
-				    &len, 0)) {
-					/* there is nothing to send */
-					continue;
-				}
-			} else {
-				/* other error, don't exit */
-				HIP_DEBUG("tunreader(): error (%d) reading from ",
-				    (int)GetLastError());
-				HIP_DEBUG("tun device.\n");
-				continue;
-			}
-		}
-		send(readsp[0], buf, len, 0);
-	}
-	CloseHandle(tapfd);
-	HIP_DEBUG("tunreader() thread shutdown.\n");
-	fflush(stdout);
-}
-
-#else /* __WIN32__ */
-
-/* For Linux, use select. */
-void *tunreader(void *arg)
-{
-	int len, err;
-	char buf[BUFF_LEN];
-	struct timeval timeout;
-	fd_set read_fdset;
-	
-	HIP_DEBUG("tunreader() thread started (%d)...\n", tapfd);
-
-	init_readsp();
-	while (g_state == 0) {
-		FD_ZERO(&read_fdset);
-		FD_SET((unsigned)tapfd, &read_fdset);
-		timeout.tv_sec = 3;
-		timeout.tv_usec = 0;
-		if ((err = select((tapfd+1), &read_fdset, 
-				  NULL, NULL, &timeout) < 0)) {
-			if (err == EINTR) 
-				continue;
-			HIP_DEBUG("tunreader: error while reading from tun ");
-			HIP_DEBUG("device: %s\n", strerror(errno));
-			fflush(stdout);
-			return 0;
-		} else if (FD_ISSET(tapfd, &read_fdset)) {
-			if ((len = read(tapfd, buf, BUFF_LEN)) > 0) {
-				write(readsp[0], buf, len);
-			} else {
-				HIP_DEBUG("tunreader: read() error len=%d %s\n",
-					len, strerror(errno));
-				continue;
-			}
-		} else if (err == 0) {
-			/* idle cycle */
-			continue;
-		}
-	}
-	close(tapfd);
-	HIP_DEBUG("tunreader thread shutdown.\n");
-	fflush(stdout);
-	pthread_exit((void *) 0);
-	return(NULL);
-}
-#endif /* __WIN32__ */
-
-/*
- * tunreader_shutdown()
- *
- * Send dummy data to the tun device so that the tunreader() thread doesn't
- * hang waiting for a read event.
- */
-void tunreader_shutdown()
-{
-	char data[8] = { 0,0,0,0,0,0,0,0 };
-	struct sockaddr_in to;
-	int s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-	to.sin_family = AF_INET;
-	to.sin_addr.s_addr = htonl(g_tap_lsi);
-	to.sin_port = htons(8000);
-	
-	sendto(s, data, sizeof(data), 0, (struct sockaddr*)&to, sizeof(to));
-#ifdef __WIN32__
-	closesocket(s);
-#else
-	close(s);
-#endif
-}
-
 
 /*
  * handle_nsol()
@@ -2239,72 +2017,6 @@ int handle_nsol(__u8 *in, int len, __u8 *out, int *outlen,struct sockaddr *addr)
 	return(0);
 }
 
-
-/*
- * handle_arp()
- * 
- * Handle ARP requests for 1.x.x.x addresses. Right now this is called
- * from the esp_output thread when an application wants to send data to
- * an LSI.
- */
-int handle_arp(__u8 *in, int len, __u8 *out, int *outlen, struct sockaddr *addr)
-{
-	struct eth_hdr *eth = (struct eth_hdr*)in;
-	struct arp_hdr *arp_request, *arp_reply;
-	char *p_sender, *p_target, *p;
-	__u64 src=0, dst=0;
-	__u32 ip_req;
-
-	/* only handle ARP requests (opcode 1) here */
-	arp_request = (struct arp_hdr*) &in[14];
-	switch(ntohs(arp_request->ar_op)) {
-		case ARPOP_REQUEST:
-			break;
-		default:
-			return(1);
-	}
-
-	if ((ntohs(arp_request->ar_hrd) == 0x01) &&	/* Ethernet */
-	    (ntohs(arp_request->ar_pro) == 0x0800) &&	/* IPv4 */
-	    (arp_request->ar_hln == 6) && (arp_request->ar_pln == 4)) {
-		/* skip sender MAC, sender IP, target MAC */
-		arp_request++;
-		p_sender = (char *)arp_request;
-		p_target = p_sender + 6 + 4;
-		ip_req = *((__u32*)(p_target + 6));
-	} else {
-		return(-1);
-	}
-
-	if (ip_req == g_tap_lsi) /* don't answer requests for self */
-		return(1);
-
-	/* repl with random MAC addr based on requested IP addr */
-	src = get_eth_addr(AF_INET, (__u8*)&ip_req);
-	memcpy(&dst, eth->src, 6);
-	add_eth_header(out, src, dst, 0x0806);
-
-	/* build ARP reply */
-	arp_reply = (struct arp_hdr*) &out[14];
-	arp_reply->ar_hrd = htons(0x01);
-	arp_reply->ar_pro = htons(0x0800);
-	arp_reply->ar_hln = 6;
-	arp_reply->ar_pln = 4;
-	arp_reply->ar_op = htons(ARPOP_REPLY);
-	p = (char*)(arp_reply +1);
-	memcpy(p, &src, 6);		/* sender MAC */
-	memcpy(p+6, &ip_req, 4);	/* sender address */
-	memcpy(p+10, p_sender, 10);	/* target MAC + address */
-
-	/* return the address */
-	if (addr) {
-		addr->sa_family = AF_INET;
-		((struct sockaddr_in*)addr)->sin_addr.s_addr = ntohl(ip_req);
-	}
-	
-	*outlen = sizeof(struct eth_hdr) + sizeof(struct arp_hdr) + 20;
-	return(0);
-}
 
 #ifdef CURRENTLY_UNUSED
 extern __u32 get_preferred_addr();
@@ -2899,6 +2611,7 @@ int hip_esp_encrypt(__u8 *in, int len, __u8 *out,
 
 /* debug */
 extern hip_sadb_entry hip_sadb[SADB_SIZE];
+
 void print_sadb()
 {
 	int i;

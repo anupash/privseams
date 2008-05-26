@@ -890,7 +890,7 @@ int hip_handle_user_msg(struct hip_common *msg,
 		break;
 	}
 	case SO_HIP_TRIGGER_BEX:
-		HIP_DUMP_MSG( msg);
+		HIP_DUMP_MSG(msg);
 		err = hip_netdev_trigger_bex_msg(msg);
 		goto out_err;
 	  break;
