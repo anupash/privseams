@@ -16,6 +16,10 @@ static IMPLEMENT_LHASH_COMP_FN(hip_compare_ha, const hip_ha_t *)
 hip_xmit_func_set_t default_xmit_func_set;
 /** A transmission function set for NAT traversal. */
 hip_xmit_func_set_t nat_xmit_func_set;
+
+/* added by Tao Wan, 24 Jan, 2008, For IPsec (user_space/kernel) */
+hip_ipsec_func_set_t default_ipsec_func_set;
+
 static hip_misc_func_set_t ahip_misc_func_set;
 static hip_misc_func_set_t default_misc_func_set;
 static hip_input_filter_func_set_t default_input_filter_func_set;
@@ -357,8 +361,8 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	HIP_DEBUG_IN6ADDR("Our IPv6 ", &entry->local_address);
 	HIP_DEBUG_IN6ADDR("Peer IPv6 ", peer_addr);
 
-	HIP_IFEL(hip_setup_hit_sp_pair(peer_hit, local_hit,
-				       local_addr, peer_addr, 0, 1, 0),
+	HIP_IFEL(default_ipsec_func_set.hip_setup_hit_sp_pair(peer_hit, local_hit,
+							       local_addr, peer_addr, 0, 1, 0),
 		 -1, "Error in setting the SPs\n");
 
 out_err:
@@ -512,6 +516,9 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
 	HIP_IFEL(hip_hadb_set_output_filter_function_set(
 			 entry,& default_output_filter_func_set),
 		 -1, "Can't set new function pointer set\n");
+
+	/* added by Tao Wan, on 24, Jan, 2008 */ 
+	entry->hadb_ipsec_func = &default_ipsec_func_set;
 
  out_err:
 	
@@ -2063,6 +2070,27 @@ void hip_init_hadb(void)
 	-Lauri 25.09.2007 15:11. */
      default_input_filter_func_set.hip_input_filter	   = hip_agent_filter;
      default_output_filter_func_set.hip_output_filter   = hip_agent_filter;
+
+     /* Tao Wan and Miika komu added, 24 Jan, 2008 for IPsec (userspace / kernel part)*/
+     if (hip_use_userspace_ipsec) {
+	     default_ipsec_func_set.hip_add_sa = hip_userspace_ipsec_add_sa;
+	     default_ipsec_func_set.hip_setup_hit_sp_pair = hip_userspace_ipsec_setup_hit_sp_pair;
+	     default_ipsec_func_set.hip_delete_hit_sp_pair = hip_userspace_ipsec_delete_hit_sp_pair;
+	     default_ipsec_func_set.hip_flush_all_policy = hip_userspace_ipsec_flush_all_policy;
+	     default_ipsec_func_set.hip_flush_all_sa = hip_userspace_ipsec_flush_all_sa;
+	     default_ipsec_func_set.hip_acquire_spi = hip_acquire_spi;
+	     default_ipsec_func_set.hip_delete_default_prefix_sp_pair = hip_userspace_ipsec_delete_default_prefix_sp_pair;
+	     default_ipsec_func_set.hip_setup_default_sp_prefix_pair = hip_userspace_ipsec_setup_default_sp_prefix_pair;
+     } else {
+	     default_ipsec_func_set.hip_add_sa = hip_add_sa;
+	     default_ipsec_func_set.hip_setup_hit_sp_pair = hip_setup_hit_sp_pair;
+	     default_ipsec_func_set.hip_delete_hit_sp_pair = hip_delete_hit_sp_pair;
+	     default_ipsec_func_set.hip_flush_all_policy = hip_flush_all_policy;
+	     default_ipsec_func_set.hip_flush_all_sa = hip_flush_all_sa;
+	     default_ipsec_func_set.hip_acquire_spi = hip_acquire_spi;
+	     default_ipsec_func_set.hip_delete_default_prefix_sp_pair = hip_delete_default_prefix_sp_pair;
+	     default_ipsec_func_set.hip_setup_default_sp_prefix_pair = hip_setup_default_sp_prefix_pair;
+     }
 }
 
 hip_xmit_func_set_t *hip_get_xmit_default_func_set() {
@@ -2226,6 +2254,9 @@ void hip_hadb_set_peer_controls(hip_ha_t *entry, hip_controls_t mask)
 		case HIP_HA_CTRL_PEER_ESCROW_CAPABLE:
 		case HIP_HA_CTRL_PEER_RVS_CAPABLE:
 		case HIP_HA_CTRL_PEER_RELAY_CAPABLE:
+		case HIP_HA_CTRL_PEER_GRANTED_ESCROW:
+		case HIP_HA_CTRL_PEER_GRANTED_RVS:
+		case HIP_HA_CTRL_PEER_GRANTED_RELAY:
 			entry->peer_controls |= mask;
 			break;
 		default:
@@ -2663,7 +2694,7 @@ int hip_get_local_addr(struct hip_common *msg)
 	entry = hip_hadb_find_byhits(src_hit, dst_hit);
 	
 	hip_msg_init(msg);
-	HIP_DEBUG_IN6ADDR(" local address: ", &entry->local_address);
+	//HIP_DEBUG_IN6ADDR(" local address: ", &entry->local_address);
 	
 	if(!entry)
 		HIP_DEBUG("Can't find local address because of no entry in hadb!\n");

@@ -140,7 +140,11 @@ int hip_conn_add_entry(struct in6_addr *addr_client,
 }
 
 
-hip_conn_t *hip_conn_find_by_portinfo(struct in6_addr *hit_proxy, struct in6_addr *hit_peer, int protocol, int port_client, int port_peer)
+hip_conn_t *hip_conn_find_by_portinfo(struct in6_addr *hit_proxy,
+				      struct in6_addr *hit_peer,
+				      int protocol,
+				      int port_client,
+				      int port_peer)
 {
 	hip_conn_t p, *ret;
 	memcpy(&p.key.hit_proxy, hit_proxy, sizeof(struct in6_addr));

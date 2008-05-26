@@ -105,6 +105,9 @@ int hip_sock_recv_agent(void);
 int hip_sock_recv_firewall(void);
 int hip_sendto_firewall(const struct hip_common *msg, size_t len);
 
+//int hip_sendto(const struct hip_common *msg, const struct sockaddr_in6 *dst);
+
+
 
 #define IPV4_HDR_SIZE 20
 

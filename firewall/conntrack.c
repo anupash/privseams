@@ -1243,8 +1243,10 @@ int check_packet(const struct in6_addr * ip6_src,
 	{
 	  struct hip_data * data = get_hip_data(common);	  
 	  insert_new_connection(data);
+	  // FIXME this does not free all memory -> DEBUG still outputs
+	  // sth similar to HITs
 	  free(data);
-          HIP_DEBUG_HIT("src hit: ", &data->src_hit);
+        HIP_DEBUG_HIT("src hit: ", &data->src_hit);
         HIP_DEBUG_HIT("dst hit: ", &data->dst_hit);
 	}
       else
@@ -1300,113 +1302,122 @@ int check_packet(const struct in6_addr * ip6_src,
  * and the HIT options are also filtered here with information from the 
  * connection. 
  */
-int filter_esp_state(const struct in6_addr * dst_addr, 
-		     struct hip_esp_packet * esp,
-		     const struct rule *rule)
+int filter_esp_state(const struct in6_addr *dst_addr, 
+		     struct hip_esp *esp, struct rule * rule, int use_escrow)
 {
-  const struct state_option * option = rule->state;
-  int accept = rule->accept;
-  int match = 1;
-  int return_value = 0;
-  struct hip_tuple * hip_tuple = NULL; 
-  struct esp_tuple *esp_tuple = NULL; //REMOVE
-  uint32_t spi = ntohl(esp->esp_data->esp_spi);
-  //option refers to a new connection
-  //ESP packet cannot start a connection
-  _HIP_DEBUG("filter_esp_state\n");
-  if((option->int_opt.value == CONN_NEW &&   
-      option->int_opt.boolean) ||
-     (option->int_opt.value == CONN_ESTABLISHED &&   
-      !option->int_opt.boolean))
-    {
-      _HIP_DEBUG("filter_esp_state: rule for new connection not valid with esp\n");
-      return_value = 0;
-      goto out;
-    }
-  g_mutex_lock(connectionTableMutex);
-  _HIP_DEBUG("filter_esp_state:locked mutex\n");
-  struct tuple * tuple = get_tuple_by_esp(dst_addr, spi);
-  
-  //ESP packet cannot start a connection
-  if(!tuple) 
-    {
-      HIP_DEBUG("filter_esp_packet: dst addr %s spi %d no connection found\n",
-		addr_to_numeric(dst_addr), spi);
-      return_value = 0;
-      goto out;
-    }
-  _HIP_DEBUG("filter_esp_packet: dst addr %s spi %d connection found\n",
-	    addr_to_numeric(dst_addr), spi);
+	struct tuple * tuple = NULL;
+	// don't accept packet with this rule by default
+	int verdict = 0;
+	
+	struct hip_tuple * hip_tuple = NULL; 
+	struct esp_tuple *esp_tuple = NULL;
+	int escrow_deny = 0;
+	
+	// needed to de-multiplex ESP traffic
+	uint32_t spi = ntohl(esp->esp_spi);
+	
+	// match packet against known connections
+	HIP_DEBUG("filtering ESP packet against known connections...\n");
+		
+	g_mutex_lock(connectionTableMutex);
+	_HIP_DEBUG("filter_esp_state: locked mutex\n");
+	
+	tuple = get_tuple_by_esp(dst_addr, spi);
+	//ESP packet cannot start a connection
+	if(!tuple) 
+	{
+		_HIP_DEBUG("dst addr %s spi %d no connection found\n",
+				addr_to_numeric(dst_addr), spi);
+		
+		verdict = 0;
+		goto out;
+	} else
+	{
+		_HIP_DEBUG("dst addr %s spi %d connection found\n",
+				addr_to_numeric(dst_addr), spi);
+		
+		verdict = 1;
+	}
+	
+	// do some extra work for key escrow
+	if (use_escrow)
+	{
+		// connection exists and rule is for established connection
+		// if rule has options for hits, match them first
+		// hits are matched with information of the tuple
+		hip_tuple = tuple->hip_tuple;
+		
+		if(rule->src_hit)
+		{
+			_HIP_DEBUG("filter_esp_state: src_hit ");
+			
+			if(!match_hit(rule->src_hit->value,
+					hip_tuple->data->src_hit, 
+					rule->src_hit->boolean))
+			{
+				// fix this in firewall.c:filter_esp()
+				HIP_ERROR("FIXME: wrong rule");
+				
+				// drop packet to make sure it's noticed that this didn't work
+				verdict = 0;
+				goto out;
+			}
+		}
+		
+		if(rule->dst_hit)
+		{
+			_HIP_DEBUG("filter_esp_state: dst_hit \n");
+			
+			if(!match_hit(rule->dst_hit->value, 
+					hip_tuple->data->dst_hit, 
+					rule->dst_hit->boolean))
+			{
+				// fix this in firewall.c:filter_esp()
+				HIP_ERROR("FIXME: wrong rule");
+				
+				// drop packet to make sure it's noticed that this didn't work
+				verdict = 0;
+				goto out;
+			}
+		}
 
-  // connection exists and rule is for established connection
-  //if rule has options for hits, match them first
-  //hits are matched with information on the tuple
-  hip_tuple = tuple->hip_tuple;
-  if(match && rule->src_hit)
-    {
-      _HIP_DEBUG("filter_esp_state: src_hit ");
-      if(!match_hit(rule->src_hit->value, 
-		    hip_tuple->data->src_hit, 
-		    rule->src_hit->boolean))
-	match = 0;	
-    }
-  if(match && rule->dst_hit)
-    {
-      _HIP_DEBUG("filter_esp_state: dst_hit \n");
-      if(!match_hit(rule->dst_hit->value, 
-		    hip_tuple->data->dst_hit, 
-		    rule->dst_hit->boolean))
-	match = 0;	
-    }
-  if(!match)
-    {
-      HIP_DEBUG("filter_esp_packet: hits of the connection did not match\n");
-      return_value = 0;
-      goto out;
-    }
-    
-    // Check if decryption is needed 
-    if (rule->state->decrypt_contents && is_escrow_active()) 
-    {
 		// If decryption data for this spi exists, decrypt the contents
 		esp_tuple = find_esp_tuple(tuple->esp_tuples, spi);
-                if (!esp_tuple) {
+		
+		if (!esp_tuple)
+		{
 			HIP_DEBUG("Could not find corresponding esp_tuple\n");
-                }
+		}
+		
 		/* Decrypt contents */
 		if (esp_tuple && esp_tuple->dec_data) {
-		      HIP_DEBUG_HIT("src hit: ", &esp_tuple->tuple->hip_tuple->data->src_hit);
-                        HIP_DEBUG_HIT("dst hit: ", &esp_tuple->tuple->hip_tuple->data->dst_hit);
-                
-                	decrypt_packet(dst_addr, esp_tuple, esp);
-                }
-                else {
-                        // If contents cannot be decrypted, drop packet
-                        // TODO: Is this what we want?
-                        HIP_DEBUG("Contents cannot be decrypted -> DROP\n");
-                        return_value = 0;
-                        goto out;    
-                }        
-    }
-    
-  // if packet accepted, update time stamp of the connection
-  if(accept)
-    {
-      g_get_current_time(&tuple->connection->time_stamp);
-      return_value = 1;
-    }
-  //if packet dropped, remove connection
-  else
-    {
-      _HIP_DEBUG("filter_esp_packet: dst addr %s spi %d connection found, but packet dropped, removing connection\n",
-		addr_to_numeric(dst_addr), spi);
-      remove_connection(tuple->connection);
-      return_value = 0;
-    }
- out:
-  g_mutex_unlock(connectionTableMutex);
-  _HIP_DEBUG("filter state: returning %d \n", return_value);
-  return return_value;
+			HIP_DEBUG_HIT("src hit: ", &esp_tuple->tuple->hip_tuple->data->src_hit);
+			HIP_DEBUG_HIT("dst hit: ", &esp_tuple->tuple->hip_tuple->data->dst_hit);
+		    
+			// if there's no error allow the packet
+			verdict = !decrypt_packet(dst_addr, esp_tuple, esp);
+		} else
+		{
+			// If contents cannot be decrypted, drop packet
+			// TODO: Is this what we want?
+			HIP_DEBUG("Contents cannot be decrypted -> DROP\n");
+			
+			verdict = 0;  
+		}
+	}
+	
+  out:
+	// if we are going to accept the packet, update time stamp of the connection
+	if(verdict)
+	{
+		g_get_current_time(&tuple->connection->time_stamp);
+	}
+	
+	g_mutex_unlock(connectionTableMutex);
+		
+	_HIP_DEBUG("filter state: verdict %d \n", verdict);
+		
+	return verdict;
 }
 
 //check the verdict in rule, so connections can only be created when necessary
@@ -1419,6 +1430,7 @@ int filter_state(const struct in6_addr * ip6_src,
   struct hip_data * data = NULL;
   struct tuple * tuple = NULL;
   struct connection * connection = NULL;
+  // FIXME results in unsafe use in filter_hip()
   int return_value = -1; //invalid value 
 
   _HIP_DEBUG("filter_state\n");

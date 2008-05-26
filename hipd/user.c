@@ -8,9 +8,15 @@
  * @author  Miika Komu <miika_iki.fi>
  * @author  Kristian Slavov <kslavov_hiit.fi>
  * @author  Bing Zhou <bingzhou_cc.hut.fi>
+ * @author  Tao Wan  <twan_cc.hut.fi>
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  */
 #include "user.h"
+
+int hip_sendto(const struct hip_common *msg, const struct sockaddr *dst){
+        return sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
+                   0, (struct sockaddr *)dst, hip_sockaddr_len(dst));
+}
 
 /**
  * Handles a user message.
@@ -127,7 +133,7 @@ int hip_handle_user_msg(struct hip_common *msg,
                 break;
 	case SO_HIP_SET_DEBUG_ALL:
 		/* Displays all debugging messages. */
-		HIP_DEBUG("Handling DEBUG ALL user message.\n");
+		_HIP_DEBUG("Handling DEBUG ALL user message.\n");
 		HIP_IFEL(hip_set_logdebug(LOGDEBUG_ALL), -1,
 			 "Error when setting daemon DEBUG status to ALL\n");
 		break;
@@ -211,6 +217,29 @@ int hip_handle_user_msg(struct hip_common *msg,
 		HIP_IFEL(hip_set_blind_off(), -1, "hip_set_blind_off failed\n");
 		break;
 #endif
+       case SO_HIP_SET_TCPTIMEOUT_ON:
+               HIP_DEBUG("Setting TCP TIMEOUT ON\n");
+               hip_tcptimeout_status = SO_HIP_SET_TCPTIMEOUT_ON;
+               HIP_DEBUG("hip tcp timeout status =  %d (should be %d)\n",
+                      hip_tcptimeout_status, SO_HIP_SET_TCPTIMEOUT_ON);
+               
+               /* paramters setting to do here */
+               HIP_IFEL(set_new_tcptimeout_parameters_value(), -1,
+                         "set new tcptimeout parameters error\n");
+               break;
+       
+        case SO_HIP_SET_TCPTIMEOUT_OFF:
+                HIP_DEBUG("Setting TCP TIMEOUT OFF\n");
+                hip_tcptimeout_status = SO_HIP_SET_TCPTIMEOUT_OFF;
+                HIP_DEBUG("hip tcp timeout status =  %d (should be %d)\n",
+                        hip_tcptimeout_status, SO_HIP_SET_TCPTIMEOUT_OFF);
+                
+                /* paramters resetting */
+                HIP_IFEL(reset_default_tcptimeout_parameters_value(), -1,
+                         "reset tcptimeout parameters to be default error\n");
+
+                break;
+
         case SO_HIP_DHT_GW:
 	{
 		char tmp_ip_str[20];
@@ -437,7 +466,7 @@ int hip_handle_user_msg(struct hip_common *msg,
 		
 		/* Set a escrow request flag. Should this be done for every entry? */
 		hip_hadb_set_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_ESCROW);
-
+		
 		HIP_IFEL(hip_for_each_hi(hip_launch_escrow_registration, dst_hit), 0,
 			 "for_each_hi err.\n");	
 		break;
@@ -446,8 +475,8 @@ int hip_handle_user_msg(struct hip_common *msg,
 		HIP_DEBUG("handling escrow user message (delete).\n");
 		HIP_IFEL(!(dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT)),
 			 -1, "no hit found\n");
-		HIP_IFEL(!(dst_ip = hip_get_param_contents(msg, 
-							   HIP_PARAM_IPV6_ADDR)), -1, "no ip found\n");
+		HIP_IFEL(!(dst_ip = hip_get_param_contents(
+				   msg, HIP_PARAM_IPV6_ADDR)), -1, "no ip found\n");
 		HIP_IFEL(!(server_entry = hip_hadb_try_to_find_by_peer_hit(dst_hit)), 
 			 -1, "Could not find server entry");
 		HIP_IFEL(!(kea = hip_kea_find(&server_entry->hit_our)), -1, 
@@ -475,34 +504,35 @@ int hip_handle_user_msg(struct hip_common *msg,
 		HIP_IFEL(hip_services_add(HIP_SERVICE_ESCROW), -1, 
 			 "Error while adding service\n");
 	
-		hip_services_set_active(HIP_SERVICE_ESCROW);
+		//hip_services_set_active(HIP_SERVICE_ESCROW);
 
 		hip_set_srv_status(HIP_SERVICE_ESCROW, HIP_SERVICE_ON);
 
-		if (hip_services_is_active(HIP_SERVICE_ESCROW))
-			HIP_DEBUG("Escrow service is now active.\n");
+		/*if (hip_services_is_active(HIP_SERVICE_ESCROW))
+		  HIP_DEBUG("Escrow service is now active.\n");*/
 		HIP_IFEL(hip_recreate_all_precreated_r1_packets(), -1, 
 			 "Failed to recreate R1-packets\n"); 
 		
-		if (hip_firewall_is_alive())
-		{
+		if (hip_firewall_is_alive()) {
 			HIP_IFEL(hip_firewall_set_escrow_active(1), -1, 
-				 "Failed to deliver activation message to firewall\n");
+				 "Failed to deliver activation message to "\
+				 "firewall\n");
 		}
+		
 		break;
 	
 	case SO_HIP_CANCEL_ESCROW:
 		HIP_DEBUG("Handling del escrow service -user message.\n");
-		if (hip_firewall_is_alive())
-		{
+		if (hip_firewall_is_alive()) {
 			HIP_IFEL(hip_firewall_set_escrow_active(0), -1, 
-				 "Failed to deliver activation message to firewall\n");
+				 "Failed to deliver cancellation message to "\
+				 "firewall\n");
 		}
 		
 		hip_set_srv_status(HIP_SERVICE_ESCROW, HIP_SERVICE_OFF);
 		
-		HIP_IFEL(hip_services_remove(HIP_ESCROW_SERVICE), -1, 
-			 "Error while removing service\n");
+		//HIP_IFEL(hip_services_remove(HIP_ESCROW_SERVICE), -1, 
+		// "Error while removing service\n");
 		HIP_IFEL(hip_recreate_all_precreated_r1_packets(), -1, 
 			 "Failed to recreate R1-packets\n"); 
 		
@@ -602,10 +632,6 @@ int hip_handle_user_msg(struct hip_common *msg,
 			}
 		}
 
-		HIP_DEBUG("KING KONG.\n");
-		
-		/* Set a RVS request flag. */
-		//hip_hadb_set_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_RVS);
 		/* Send a I1 packet to RVS. */
 		/** @todo Not filtering I1, when handling RVS message! */
 		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
@@ -619,20 +645,23 @@ int hip_handle_user_msg(struct hip_common *msg,
 		   message is received from hipconf. */
 		HIP_DEBUG("Handling OFFER RENDEZVOUS user message.\n");
 		
-		HIP_IFE(hip_services_add(HIP_SERVICE_RENDEZVOUS), -1);
-		hip_services_set_active(HIP_SERVICE_RENDEZVOUS);
+		//HIP_IFE(hip_services_add(HIP_SERVICE_RENDEZVOUS), -1);
+		//hip_services_set_active(HIP_SERVICE_RENDEZVOUS);
 		
 		hip_set_srv_status(HIP_SERVICE_RENDEZVOUS, HIP_SERVICE_ON);
+		hip_relay_set_status(HIP_RELAY_ON);
 
-		if (hip_services_is_active(HIP_SERVICE_RENDEZVOUS)){
+		/*if (hip_services_is_active(HIP_SERVICE_RENDEZVOUS)){
 			HIP_DEBUG("Rendezvous service is now active.\n");
-			hip_relay_set_status(HIP_RELAY_ON);
-		}
+			}*/
 	     
 		err = hip_recreate_all_precreated_r1_packets();
 		break;
 
 	case SO_HIP_ADD_RELAY:
+	{
+		hip_pending_request_t *pending_req = NULL;
+
 		/* draft-ietf-hip-registration-02 HIPRELAY registration.
 		   Responder (of I,Relay,R hierarchy) handles this message. Message
 		   indicates that the current machine wants to register to a HIP
@@ -658,6 +687,23 @@ int hip_handle_user_msg(struct hip_common *msg,
 	     
 		/* Set a hiprelay request flag. */
 		hip_hadb_set_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_RELAY);
+		
+		pending_req = (hip_pending_request_t *)
+			malloc(sizeof(hip_pending_request_t));
+		if(pending_req == NULL) {
+			HIP_ERROR("Error on allocating memory for a "\
+				  "pending registration request.\n");
+			err = -1;
+			goto out_err;	
+		}
+
+		pending_req->entry    = entry;
+		pending_req->reg_type = HIP_SERVICE_RELAY;
+		/* Use a hard coded value for now. */
+		pending_req->lifetime = 200;
+		
+		HIP_DEBUG("Adding pending request.\n");
+		hip_add_pending_request(pending_req);
 
 		/* Since we are requesting UDP relay, we assume that we are behind
 		   a NAT. Therefore we set the NAT status on. This is needed only
@@ -673,7 +719,7 @@ int hip_handle_user_msg(struct hip_common *msg,
 		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
 			 -1, "sending i1 failed\n");
 		break;
-	     
+	}    
 	case SO_HIP_OFFER_HIPRELAY:
 		/* draft-ietf-hip-registration-02 HIPRELAY registration. Relay
 		   server handles this message. Message indicates that the
@@ -681,16 +727,17 @@ int hip_handle_user_msg(struct hip_common *msg,
 		   message is received from hipconf. */
 		HIP_DEBUG("Handling OFFER HIPRELAY user message.\n");
 		
-		HIP_IFE(hip_services_add(HIP_SERVICE_RELAY), -1);
-		hip_services_set_active(HIP_SERVICE_RELAY);
+		//HIP_IFE(hip_services_add(HIP_SERVICE_RELAY), -1);
+		//hip_services_set_active(HIP_SERVICE_RELAY);
 		
 		hip_set_srv_status(HIP_SERVICE_RELAY, HIP_SERVICE_ON);
+		hip_relay_set_status(HIP_RELAY_ON);
 
-		if (hip_services_is_active(HIP_SERVICE_RELAY)){
-			HIP_DEBUG("UDP relay service for HIP packets"\
-				  "is now active.\n");
-			hip_relay_set_status(HIP_RELAY_ON);
-		}
+		/*if (hip_services_is_active(HIP_SERVICE_RELAY)){
+		  HIP_DEBUG("UDP relay service for HIP packets"\
+		  "is now active.\n");
+				  
+		  }*/
 		
 		err = hip_recreate_all_precreated_r1_packets();
 		break;
@@ -705,8 +752,8 @@ int hip_handle_user_msg(struct hip_common *msg,
 		
 	case SO_HIP_CANCEL_RVS:
 		HIP_DEBUG("Handling CANCEL RVS user message.\n");
-		HIP_IFEL(hip_services_remove(HIP_SERVICE_RENDEZVOUS), -1,
-			 "Failed to remove HIP_SERVICE_RENDEZVOUS");
+		//HIP_IFEL(hip_services_remove(HIP_SERVICE_RENDEZVOUS), -1,
+		// "Failed to remove HIP_SERVICE_RENDEZVOUS");
 		hip_set_srv_status(HIP_SERVICE_RENDEZVOUS, HIP_SERVICE_OFF);
 		
 		hip_relht_free_all_of_type(HIP_RVSRELAY);
@@ -724,10 +771,10 @@ int hip_handle_user_msg(struct hip_common *msg,
 		
 	case SO_HIP_CANCEL_HIPRELAY:
 		HIP_DEBUG("Handling CANCEL RELAY user message.\n");
-		HIP_IFEL(hip_services_remove(HIP_SERVICE_RELAY), -1,
-			 "Failed to remove HIP_SERVICE_RELAY");
+		//HIP_IFEL(hip_services_remove(HIP_SERVICE_RELAY), -1,
+		// "Failed to remove HIP_SERVICE_RELAY");
 		hip_set_srv_status(HIP_SERVICE_RELAY, HIP_SERVICE_OFF);
-
+		
 		hip_relht_free_all_of_type(HIP_FULLRELAY);
 		/* If all off the relay records were freed we can set the relay
 		   status "off". */
@@ -843,14 +890,8 @@ int hip_handle_user_msg(struct hip_common *msg,
 		break;
 	}
 	case SO_HIP_TRIGGER_BEX:
-		dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
-		HIP_IFEL(hip_add_peer_map(msg), -1, "trigger bex\n");
-		/* Fetch the hadb entry just created. */
-		HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(dst_hit)),
-			 -1, "internal error: no hadb entry found\n");
-		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
-			 -1, "sending i1 failed\n");
-
+		HIP_DUMP_MSG( msg);
+		err = hip_netdev_trigger_bex_msg(msg);
 		goto out_err;
 	  break;
 	default:
@@ -866,7 +907,6 @@ int hip_handle_user_msg(struct hip_common *msg,
 		/* send a response (assuming that it is written to the msg */
 		len = hip_get_msg_total_len(msg);
 		n = hip_sendto(msg, src);
-		
 		if(n != len) {
 			HIP_ERROR("hip_sendto() failed.\n");
 			err = -1;
