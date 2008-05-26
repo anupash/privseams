@@ -1,6 +1,5 @@
 #include "list.h"
 
-
 DList * alloc_list (void)  {	
 	DList * list = (struct DList *) malloc (sizeof(DList));
 	list->data = NULL;
@@ -68,30 +67,43 @@ DList * list_last (DList * list) {
 }
 
 unsigned int list_length (DList * list) {
+	HIP_DEBUG("list_length()");
 	unsigned int length = 0;
 	list = list_first (list);
 	if (list) {
 		while (list->next) {
 			length++;
+			list = list->next;
 		}	
 	}
+	HIP_DEBUG("list_length()");
 	return length;	
 }
 
 DList * append_to_list (DList * list,
 					 void *  data) {
-	if (list) {	
-		list = list_last (list);
-		DList * tmp = alloc_list ();
-		tmp->data = data;
-		tmp->prev = list;
-		list->next = tmp;
-		list = tmp;
-	} else {
-		list = alloc_list ();
-		list->data = data;
-	}
-	return list;	 	
+  DList *new_list;
+  DList *last;
+  
+  new_list = alloc_list ();
+  new_list->data = data;
+  new_list->next = NULL;
+  
+  if (list)
+    {
+      last = list_last (list);
+      last->next = new_list;
+      new_list->prev = last;
+      
+	  HIP_DEBUG("List is not empty. Length %d", list_length(list)); 
+      return list;
+    }
+  else
+    {
+      new_list->prev = NULL;
+      HIP_DEBUG("List is empty inserting first node");
+      return new_list;
+    }	 	
 }
 
 DList * prepend_to_list (DList * list,

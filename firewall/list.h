@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include "common_types.h"
+#include "debug.h"
 
 DList * alloc_list (void);
 

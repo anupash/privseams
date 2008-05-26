@@ -14,7 +14,6 @@
 #include "builder.h"
 #include "crypto.h"
 #include "debug.h"
-#include "debug.h"
 #include "list.h"
 
 //string tokens for rule parsing
