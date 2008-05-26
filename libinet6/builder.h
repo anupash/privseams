@@ -96,13 +96,8 @@ int hip_build_param_keys(struct hip_common *, uint16_t, uint16_t,
                          struct in6_addr *, struct in6_addr *, 
                          struct in6_addr *, uint32_t, uint32_t, uint16_t, 
                          struct hip_crypto_key *);
-int hip_build_param_nat_transform(struct hip_common *,
-			     			const uint8_t);
 int hip_build_param_locator(struct hip_common *,
                             struct hip_locator_info_addr_item *, int);
-int hip_build_param_locator2(struct hip_common *,
-                            struct hip_locator_info_addr_item *,
-                            struct hip_locator_info_addr_item2 *, int,int);                    
 int hip_build_param_notification(struct hip_common *, uint16_t, void *, size_t);
 int hip_build_param_puzzle(struct hip_common *, uint8_t, uint8_t, uint32_t,
                            uint64_t);
@@ -111,8 +106,6 @@ int hip_build_param_reg_failed(struct hip_common *, uint8_t, uint8_t *, int);
 //int hip_build_param_reg_info(struct hip_common *, uint8_t, uint8_t, int *, int);
 
 int hip_build_param_rvs_hmac_contents(struct hip_common *,
-                                      struct hip_crypto_key *);
-int hip_build_param_full_relay_hmac_contents(struct hip_common *,
                                       struct hip_crypto_key *);
 int hip_build_param_seq(struct hip_common *, uint32_t);
 int hip_build_param_signature2_contents(struct hip_common *, const void *,
@@ -157,16 +150,6 @@ hip_tlv_len_t hip_get_diffie_hellman_param_public_value_len(
 struct hip_dh_public_value *hip_dh_select_key(
 	const struct hip_diffie_hellman *);
 uint8_t hip_get_host_id_algo(const struct hip_host_id *);
-/**count the number of type 1 addresses in the locator*/
-int hip_get_locator_addr_item1_count(struct hip_locator *);
-/**count the number of type 2 addresses in the locator*/
-int hip_get_locator_addr_item2_count(struct hip_locator *);
-
-void hip_set_locator_addr_length(void *, hip_tlv_len_t length);
-/**
- * 
- * return the amount the address when hip_locator record the same kind of address.
- * */
 int hip_get_locator_addr_item_count(struct hip_locator *);
 
 /**
@@ -197,13 +180,13 @@ int hip_get_lifetime_seconds(uint8_t lifetime, time_t *seconds);
 
 struct hip_locator_info_addr_item *hip_get_locator_first_addr_item(
         struct hip_locator *);
-struct hip_locator_info_addr_item * hip_get_locator_item(void* first_item, int index);
-
 uint16_t hip_get_msg_contents_len(const struct hip_common *);
 hip_hdr_err_t hip_get_msg_err(const struct hip_common *);
 hip_controls_t hip_get_msg_controls(struct hip_common *msg);
 uint16_t hip_get_msg_total_len(const struct hip_common *);
-
+hip_hdr_type_t hip_get_msg_type(const struct hip_common *);
+struct hip_tlv_common *hip_get_next_param(const struct hip_common *,
+                                          const struct hip_tlv_common *);
 void *hip_get_nth_param(const struct hip_common *, hip_tlv_type_t, int);
 void *hip_get_param(const struct hip_common *, hip_tlv_type_t);
 void *hip_get_param_contents(const struct hip_common *, hip_tlv_type_t);

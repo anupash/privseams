@@ -103,12 +103,18 @@ int hip_handle_user_msg(struct hip_common *msg,
 	case SO_HIP_BOS:
 		err = hip_send_bos(msg);
 		break;
-	case SO_HIP_SET_NAT_PLAIN_UDP:
-	case SO_HIP_SET_NAT_ICE_UDP:
-	case SO_HIP_SET_NAT_NONE:
+	case SO_HIP_SET_NAT_ON:
+		/* Sets a flag for each host association that the current
+		   machine is behind a NAT. */
 		HIP_DEBUG("Handling NAT ON user message.\n");
-		HIP_IFEL(hip_user_nat_mode(msg_type), -1, "Error when setting daemon NAT status to \"on\"\n");
-		hip_agent_update_status(msg_type, NULL, 0);
+		HIP_IFEL(hip_nat_on(), -1, "Error when setting daemon NAT status to \"on\"\n");
+		hip_agent_update_status(SO_HIP_NAT_ON, NULL, 0);
+		break;
+	case SO_HIP_SET_NAT_OFF:
+		/* Removes the NAT flag from each host association. */
+		HIP_DEBUG("Handling NAT OFF user message.\n");
+		HIP_IFEL(hip_nat_off(), -1, "Error when setting daemon NAT status to \"off\"\n");
+		hip_agent_update_status(SO_HIP_NAT_OFF, NULL, 0);
 		break;
         case SO_HIP_SET_LOCATOR_ON:
                 HIP_DEBUG("Setting LOCATOR ON\n");
@@ -705,8 +711,9 @@ int hip_handle_user_msg(struct hip_common *msg,
 		   currently only if the global NAT status is on, we must call
 		   hip_nat_on() (which in turn sets the NAT status on for all host
 		   associations). */
-		hip_set_nat_mode(HIP_NAT_MODE_ICE_UDP);
-		hip_agent_update_status(HIP_NAT_MODE_ICE_UDP, NULL, 0);
+		HIP_IFEL(hip_nat_on(), -1, "Error when setting daemon NAT status"\
+			 "to \"on\"\n");
+		hip_agent_update_status(SO_HIP_NAT_ON, NULL, 0);
 
 		/* Send a I1 packet to relay. */
 		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),

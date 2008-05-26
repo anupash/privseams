@@ -123,12 +123,15 @@ int connhipd_handle_msg(struct hip_common *msg,
 		gui_set_info(lang_get("gui-info-000"));
 		hip_agent_connected = 1;
 	}
-	else if (type == SO_HIP_SET_NAT_PLAIN_UDP ||
-		 type == SO_HIP_SET_NAT_NONE ||
-		 type == SO_HIP_SET_NAT_ICE_UDP)
+	else if (type == SO_HIP_NAT_ON)
 	{
-		gui_update_nat(type);
-		HIP_DEBUG("NAT extensions %d.\n", type);
+		gui_update_nat(1);
+		HIP_DEBUG("NAT extensions on.\n");
+	}
+	else if (type == SO_HIP_NAT_OFF)
+	{
+		gui_update_nat(0);
+		HIP_DEBUG("NAT extensions off.\n");
 	}
 	else if (type == SO_HIP_DAEMON_QUIT)
 	{

@@ -357,7 +357,10 @@ int hip_agent_update(void)
 {
 	hip_agent_add_lhits();
 	
-	hip_agent_update_status(hip_get_nat_mode(), NULL, 0);
+	if (hip_nat_is())
+		hip_agent_update_status(SO_HIP_NAT_ON, NULL, 0);
+	else
+		hip_agent_update_status(SO_HIP_NAT_OFF, NULL, 0);
 }
 
 

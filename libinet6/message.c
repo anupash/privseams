@@ -259,8 +259,7 @@ int hip_recv_daemon_info(struct hip_common *msg, uint16_t info_type) {
 }
 
 int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,
-			      struct sockaddr_in6 *saddr,
-                  int ice_func(void *, int, in6_addr_t *,in_port_t))
+			      struct sockaddr_in6 *saddr)
 {
 	int err = 0, bytes, hdr_size = sizeof(struct hip_common), total;
 	socklen_t len;
@@ -285,15 +284,6 @@ int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,
 	_HIP_DEBUG("read_user_control_msg recv len=%d\n", len);
 	_HIP_HEXDUMP("recv saddr ", saddr, sizeof(struct sockaddr_un));
 	_HIP_DEBUG("read %d bytes succesfully\n", bytes);
-/*	
-#ifdef HIP_USE_ICE
-		
-		if (ice_func ){
-			HIP_DEBUG("STUN found \n");
-			HIP_IFEL(ice_func(hip_msg ,bytes, &saddr->sin6_addr   ,saddr->sin6_port), -1,
-					"ICE handling returned error\n");}
-#endif
-*/
  out_err:
 	if (bytes < 0 || err)
 		HIP_PERROR("perror: ");
@@ -306,9 +296,7 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
                              struct in6_addr *saddr,
                              struct in6_addr *daddr,
                              hip_portpair_t *msg_info,
-                             int encap_hdr_size,
-                             int is_ipv4,
-                             int ice_func(void *, int, in6_addr_t *,in_port_t))
+                             int encap_hdr_size, int is_ipv4)
 {
 	struct sockaddr_storage addr_from, addr_to;
 	struct sockaddr_in *addr_from4 = ((struct sockaddr_in *) &addr_from);
@@ -351,10 +339,9 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
         iov.iov_base = hip_msg;
 
 	pktinfo.pktinfo_in4 = NULL;
-	HIP_DEBUG("pkg len 1: %d\n", len);
+
 	len = recvmsg(socket, &msg, 0);
-	HIP_DEBUG("pkg len 2: %d\n", len);
-	
+
 	HIP_IFEL((len < 0), -1, "ICMP%s error: errno=%d, %s\n",
 		 (is_ipv4 ? "v4" : "v6"), errno, strerror(errno));
 
@@ -389,19 +376,6 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
 		   received from NAT socket must have had 50500 as
 		   destination port. */
 		msg_info->dst_port = HIP_NAT_UDP_PORT; 
-		HIP_DEBUG("hip_read_control_msg_all() ice_func = %d\n",
-				ice_func);
-
-		
-	/*	if (ice_func && !hip_verify_network_header(hip_msg,
-							   (struct sockaddr *) &addr_from,
-							   (struct sockaddr *) &addr_to,
-							   len - encap_hdr_size)){
-		if (ice_func ){
-			HIP_DEBUG("STUN found \n");
-			HIP_IFEL(ice_func(hip_msg,len,saddr,msg_info->src_port), -1,
-					"ICE handling returned error\n");}
-*/
 	}
 
 	/* IPv4 addresses */
@@ -434,26 +408,12 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
 		memmove(hip_msg, ((char *)hip_msg) + HIP_UDP_ZERO_BYTES_LEN,
 			HIP_MAX_PACKET - HIP_UDP_ZERO_BYTES_LEN);
 	}
-/*
+
 	HIP_IFEL(hip_verify_network_header(hip_msg,
 					   (struct sockaddr *) &addr_from,
 					   (struct sockaddr *) &addr_to,
 					   len - encap_hdr_size), -1,
 		 "verifying network header failed\n");
-		 */
-	
-	if(hip_verify_network_header(hip_msg,
-			   (struct sockaddr *) &addr_from,
-			   (struct sockaddr *) &addr_to,
-			   len - encap_hdr_size)){
-		if (ice_func&& msg_info->src_port){
-				HIP_DEBUG("STUN found: len is %d\n", len);
-				HIP_IFEL(ice_func(hip_msg,len,saddr,msg_info->src_port), -1,
-						"ICE handling returned error\n");
-				//err = -1;
-				goto out_err;
-				}
-	}
 
 	if (saddr)
 		HIP_DEBUG_IN6ADDR("src", saddr);
@@ -471,8 +431,7 @@ int hip_read_control_msg_v6(int socket, struct hip_common *hip_msg,
                             int encap_hdr_size)
 {
 	return hip_read_control_msg_all(socket, hip_msg, saddr,
-					daddr, msg_info, encap_hdr_size, 0, NULL);
-
+					daddr, msg_info, encap_hdr_size, 0);
 }
 
 int hip_read_control_msg_v4(int socket, struct hip_common *hip_msg,
@@ -482,17 +441,5 @@ int hip_read_control_msg_v4(int socket, struct hip_common *hip_msg,
 			    int encap_hdr_size)
 {
 	return hip_read_control_msg_all(socket, hip_msg, saddr,
-					daddr, msg_info, encap_hdr_size, 1, NULL);
-
-}
-int hip_read_control_msg_stun(int socket, struct hip_common *hip_msg,
-			    struct in6_addr *saddr,
-			    struct in6_addr *daddr,
-			    hip_portpair_t *msg_info,
-			    int encap_hdr_size,
-			    int ice_func(void *, int, in6_addr_t *,in_port_t port))
-{
-	return hip_read_control_msg_all(socket, hip_msg, saddr,
-					daddr, msg_info, encap_hdr_size, 1, ice_func);
-
+					daddr, msg_info, encap_hdr_size, 1);
 }

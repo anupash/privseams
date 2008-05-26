@@ -30,7 +30,6 @@
 #include "user.h"
 #include "debug.h"
 #include "state.h"
-#include "output.h"
 
 #define HIP_NAT_SLEEP_TIME 2
 /** Maximum length of a UDP packet. */
@@ -45,16 +44,12 @@
 #define HIP_NAT_NUM_RETRANSMISSION 2
 /** Port number for NAT traversal of hip control packets. */
 #define HIP_NAT_UDP_PORT 50500
-/** Virtual Port number for hip raw control packets. */
-#define HIP_RAW_PORT 0
 /** For setting socket to listen for beet-udp packets. */
 #define HIP_UDP_ENCAP 100
 /** UDP encapsulation type. */
 #define HIP_UDP_ENCAP_ESPINUDP 2
 /** UDP encapsulation type. */ 
 #define HIP_UDP_ENCAP_ESPINUDP_NONIKE 1 
-/** NAT TRANSFER OFFSET FOR ICE */
-#define HIP_NAT_TRANSFORM_ICE 0x00000001
 /** Boolean which indicates if random port simulation is on.
     <ul>
     <li>0: port randomizing is off.</li>
@@ -93,20 +88,13 @@ extern int hip_nat_sock_udp;
     machine is behind a NAT. Defined in hipd.c */
 extern int hip_nat_status;
 
-
-#define ICE_ROLE_CONTROLLING  PJ_ICE_SESS_ROLE_CONTROLLING
-
-int hip_ha_set_nat_mode(hip_ha_t *entry, void *mode);
-int hip_get_nat_mode();
-void hip_set_nat_mode(int mode);
+int hip_nat_on();
+int hip_nat_off();
+int hip_nat_is();
+int hip_nat_off_for_ha(hip_ha_t *, void *);
+int hip_nat_on_for_ha(hip_ha_t *, void *);
 void hip_nat_randomize_nat_ports();
 int hip_nat_refresh_port();
 int hip_nat_send_keep_alive(hip_ha_t *, void *);
-int hip_external_ice_receive_pkt(struct hip_common *, int pkt_size, in6_addr_t * src_addr,in_port_t port );
-
-
-int hip_nat_save_locator_parameter(hip_common_t* msg,hip_ha_t *entry);
-int hip_nat_handle_locator_parameter(hip_common_t* msg,hip_ha_t *entry,struct hip_esp_info *esp_info);
-int hip_nat_handle_net_transform_parameter(hip_common_t* msg,hip_ha_t *entry);
 #endif /* __NAT_H__ */
 

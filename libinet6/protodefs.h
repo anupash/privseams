@@ -47,7 +47,6 @@
 #define HIP_PARAM_ESP_INFO             65
 #define HIP_PARAM_R1_COUNTER           128
 #define HIP_PARAM_LOCATOR              193
-#define HIP_PARAM_NAT_TRANSFORM        194
 #define HIP_PARAM_HASH_CHAIN_VALUE     221
 #define HIP_PARAM_HASH_CHAIN_ANCHORS   222
 #define HIP_PARAM_HASH_CHAIN_PSIG      223
@@ -406,39 +405,6 @@ struct hip_locator_info_addr_item {
 
 }  __attribute__ ((packed));
 
-
-
-/**
- * it is the type 2 locater for UDP or other transport protocol later.
- */
-struct hip_locator_info_addr_item2 {
-        uint8_t traffic_type;
-        uint8_t locator_type;
-        uint8_t locator_length;
-        uint8_t reserved;  /* last bit is P (prefered) */
-       	uint32_t lifetime;
-       	uint16_t port;
-       	uint8_t  transport_protocol;
-       	uint8_t  kind;
-       	uint32_t priority;
-       	uint32_t spi;
-       	struct in6_addr address;
-
-	int state; /**<State of our addresses, possible states are:
-		      WAITING_ECHO_REQUEST, ACTIVE */
-
-}  __attribute__ ((packed));
-
-
-
-/**
- * it is a union of both type1 and type2 locator.
- *
-union hip_locator_info_addr {
-	struct hip_locator_info_addr_item type1;
-	struct hip_locator_info_addr_item2 type2;
-}__attribute__ ((packed));
-*/
 /** Structure describing an endpoint. This structure is used by the resolver in
  * the userspace, so it is not length-padded like HIP parameters. All of the
  * members are in network byte order.
@@ -630,12 +596,6 @@ struct hip_locator {
 	/* fixed part ends */
 } __attribute__ ((packed));
 
-struct hip_nat_transform {
-	hip_tlv_type_t type;
-	hip_tlv_len_t length;
-	uint8_t nat_control;
-} __attribute__ ((packed));
-
 struct hip_hmac {
 	hip_tlv_type_t type;
 	hip_tlv_len_t  length;
@@ -696,22 +656,6 @@ struct hip_relay_from {
 
 /** draft-ietf-hip-nat-traversal-02 */
 struct hip_relay_to {
-     hip_tlv_type_t type; /**< Type code for the parameter. */
-     hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
-     uint8_t address[16]; /**< IPv6 address */
-     in_port_t port; /**< Port number. */
-} __attribute__ ((packed));
-
-/** draft-ietf-hip-nat-traversal-02 */
-struct hip_reg_from {
-     hip_tlv_type_t type; /**< Type code for the parameter. */
-     hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
-     uint8_t address[16]; /**< IPv6 address */
-     in_port_t port; /**< Port number. */
-} __attribute__ ((packed));
-
-/** draft-ietf-hip-nat-traversal-02 */
-struct hip_send_to {
      hip_tlv_type_t type; /**< Type code for the parameter. */
      hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
      uint8_t address[16]; /**< IPv6 address */

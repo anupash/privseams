@@ -22,7 +22,6 @@
 #include "user.h"
 #include "string.h"
 #include "nat.h"
-#include "hiprelay.h"
 #include "registration.h"
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
@@ -43,11 +42,7 @@ int hip_send_raw(struct in6_addr *, struct in6_addr *, in_port_t, in_port_t,
 		 struct hip_common*, hip_ha_t *, int);
 int hip_send_udp(struct in6_addr *, struct in6_addr *, in_port_t, in_port_t,
 		 struct hip_common*, hip_ha_t *, int);
-int hip_send(struct in6_addr *, struct in6_addr *, in_port_t, in_port_t,
-		 struct hip_common*, hip_ha_t *, int);
-int hip_send_stun(struct in6_addr *local_addr, struct in6_addr *peer_addr,
-		 in_port_t src_port, in_port_t dst_port,
-		 const void *msg, int msg_len, int retransmit);
+
 
 struct hip_common *hip_create_r1(const struct in6_addr *src_hit, 
 				 int (*sign)(struct hip_host_id *p, struct hip_common *m),
@@ -91,7 +86,6 @@ int hip_send_r2_response(struct hip_common *r2,
 		hip_portpair_t *r2_info);
 
 int hip_build_locators(struct hip_common *);
-int hip_build_locators2(struct hip_common *);
 
 int hip_send_i1(hip_hit_t *, hip_hit_t *, hip_ha_t *);
 void hip_send_notify_all(void);

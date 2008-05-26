@@ -1610,9 +1610,7 @@ struct hip_spi_in_item *hip_hadb_get_spi_in_list(hip_ha_t *entry, uint32_t spi)
 int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 			     struct in6_addr *addr,
 			     int is_bex_address, uint32_t lifetime,
-			     int is_preferred_addr,
-			     uint16_t port,
-			     uint32_t priority)
+			     int is_preferred_addr)
 {
 	int err = 0, new = 1, i;
 	struct hip_spi_out_item *spi_list;
@@ -1635,8 +1633,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 	list_for_each_safe(item, tmp, spi_list->peer_addr_list, i)
 	{
 		a = list_entry(item);
-		//check if the address and port number is the same
-		if (!ipv6_addr_cmp(&a->address, addr) && a->port == port)
+		if (!ipv6_addr_cmp(&a->address, addr))
 		{
 			// Do we send a verification if state is unverified?
 			// The address should be awaiting verifivation already
@@ -1645,7 +1642,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 			break;
 		}
 	}
-	
+
 	if (new)
 	{
 		HIP_DEBUG("create new addr item to SPI list\n");
@@ -1661,11 +1658,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 	else HIP_DEBUG("update old addr item\n");
 	
 	new_addr->lifetime = lifetime;
-	if (new) {
-		ipv6_addr_copy(&new_addr->address, addr);
-		new_addr->port = port;
-		new_addr->priority = priority;
-	}
+	if (new) ipv6_addr_copy(&new_addr->address, addr);
 
 	/* If the address is already bound, its lifetime is updated.
 	   If the status of the address is DEPRECATED, the status is
@@ -1710,12 +1703,9 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 		} else {
 			HIP_DEBUG("address's state is set in state UNVERIFIED\n");
 			new_addr->address_state = PEER_ADDR_STATE_UNVERIFIED;
-			/*
-#ifndef HIP_USE_ICE 
-			//if ice is used, then not need to send update
 			err = entry->hadb_update_func->hip_update_send_echo(entry, spi, new_addr);
  
-			/** @todo: check! If not actually a problem (during Handover). Andrey. */
+			/** @todo: check! If not acctually a problem (during Handover). Andrey. */
 			if( err==-ECOMM ) err = 0;
 		}
 		//}
@@ -1727,7 +1717,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
               ipv6_addr_copy(&entry->preferred_address, &new_addr->address);
 	}
 	if (new) {
-		HIP_DEBUG("adding new addr to SPI list %d\n" ,spi_list->peer_addr_list);
+		HIP_DEBUG("adding new addr to SPI list\n");
 		list_add(new_addr, spi_list->peer_addr_list);
 	}
 

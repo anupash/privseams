@@ -51,7 +51,6 @@
 
 #define HIP_LOCATOR_LOCATOR_TYPE_IPV6    0
 #define HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI 1
-#define HIP_LOCATOR_LOCATOR_TYPE_UDP 2
 
 #define SEND_UPDATE_ESP_INFO             (1 << 0)
 #define SEND_UPDATE_LOCATOR              (1 << 1)
@@ -71,10 +70,6 @@
  * HIP, we settle for a constant value of 600 seconds. Lauri 23.01.2008.
  */
 #define HIP_DEFAULT_RVA_LIFETIME         600          
-
-#define HIP_NAT_MODE_NONE               0
-#define HIP_NAT_MODE_PLAIN_UDP          1
-#define HIP_NAT_MODE_ICE_UDP            2 
 
 /**
  * HIP host association state.
@@ -155,15 +150,11 @@ struct hip_context
 				      during the keymat calculation. */
 	uint16_t keymat_index; /**< KEYMAT offset. */
 	uint16_t esp_keymat_index; /**< A pointer to the esp keymat index. */
-//	struct in6_addr dest;
-//	in_port_t  dest_port;
-//	hip_tlv_type_t param_type;
 };
 
 /*
  * Fixed start of this struct must match to struct hip_locator_info_addr_item
  * for the part of address item. It is used in hip_update_locator_match().
- * the protocal and port is add to fit the hip_locator_info_addr_item type 2
  */
 struct hip_peer_addr_list_item
 {
@@ -182,14 +173,6 @@ struct hip_peer_addr_list_item
 	uint32_t         seq_update_id; /* the Update ID in SEQ parameter
 					   this address is related to */
 	uint8_t          echo_data[4];  /* data put into the ECHO_REQUEST parameter */
-	
-	uint8_t  		transport_protocol; /*value 1 for UDP*/
-	
-	uint16_t 		port /*port number for transport protocol*/;
-	
-	uint32_t 		priority;
-    
-    
 };
 
 /* for HIT-SPI hashtable only */
@@ -225,7 +208,6 @@ struct hip_spi_in_item
         /* the corresponding esp_info of peer */
 	struct hip_esp_info stored_received_esp_info;
         /* our addresses this SPI is related to, reuse struct to ease coding */
-        /*there is two struct hip_locator_info_addr_item types but use the first to ease coding here*/
 	struct hip_locator_info_addr_item *addresses;
 	int addresses_n; /* number of addresses */
 };
@@ -312,12 +294,6 @@ struct hip_hadb_state
 	struct in6_addr              preferred_address;
 	/** Our IP address. */
 	struct in6_addr              local_address;
-	
-	/**reflexive address when register to relay**/
-	struct in6_addr              local_reflexive_address;
-	/**reflexive address port when register to relay**/
-	in_port_t local_reflexive_udp_port;
-	
 	/** Peer's Local Scope Identifier (LSI). A Local Scope Identifier is a
 	    32-bit localized representation for a Host Identity.*/
        	hip_lsi_t                    lsi_peer;
@@ -338,8 +314,6 @@ struct hip_hadb_state
 	/** A boolean value indicating whether there is a NAT between this host
 	    and the peer. */
 	uint8_t	                     nat_mode;
-        void* ice_session;
-        uint8_t nat_control;
 	 /** NAT mangled port (source port of I2 packet). */
 	in_port_t	             peer_udp_port;
 	/** Non-zero if the escrow service is in use. */ 
@@ -645,7 +619,7 @@ struct hip_ipsec_func_set {
 			       struct hip_crypto_key *authkey,
 			       int already_acquired,
 			       int direction, int update,
-			       int sport, int dport, int ice_ok);
+			       int sport, int dport);
 	int (*hip_setup_hit_sp_pair)(hip_hit_t *src_hit, hip_hit_t *dst_hit,
 				     struct in6_addr *src_addr,
 				     struct in6_addr *dst_addr, u8 proto,

@@ -36,8 +36,8 @@ const char *hipconf_usage =
 "get|set|inc|dec|new puzzle all\n"
 #endif
 "bos all\n"
-"nat none|plain-udp|ice-udp\n"
-"rst all|peer_hit\n"
+"nat on|off|<peer_hit>\n"
+"rst all|<peer_hit>\n"
 "new|add hi anon|pub rsa|dsa filebasename\n"
 "new|add hi default (HI must be created as root)\n"
 "load config default\n"
@@ -225,8 +225,6 @@ int hip_conf_get_type(char *text,char *argv[]) {
 		ret = TYPE_RELAY;
 	else if (!strcmp("rvs", text))
 		ret = TYPE_RVS;
-	else if (!strcmp("hipudprelay", text))
-		ret = TYPE_RELAY_UDP_HIP;
 	else if (!strcmp("puzzle", text))
 		ret = TYPE_PUZZLE;	
 	else if (!strcmp("service", text))
@@ -371,9 +369,9 @@ int hip_conf_handle_rvs(hip_common_t *msg, int action, const char *opt[],
 	int err = 0, seconds = 0;
 	uint8_t lifetime = 0;
 	time_t seconds_from_lifetime = 0;
-	uint8_t type_list;
+	uint8_t type_list[1];
 	
-	type_list = HIP_SERVICE_RENDEZVOUS;
+	type_list[0] = HIP_SERVICE_RENDEZVOUS;
 
 	HIP_DEBUG("hip_conf_handle_rvs() invoked.\n");
 		
@@ -869,18 +867,14 @@ int hip_conf_handle_nat(hip_common_t *msg, int action,
      int status = 0;
      in6_addr_t hit;
 	
-     if (!strcmp("plain-udp",opt[0]))
+     if (!strcmp("on",opt[0]))
      {
-	  memset(&hit,0,sizeof(struct in6_addr));
-	  status = SO_HIP_SET_NAT_PLAIN_UDP; 
-     } else if (!strcmp("none",opt[0]))
+	  memset(&hit,0,sizeof(in6_addr_t));
+	  status = SO_HIP_SET_NAT_ON; 
+     } else if (!strcmp("off",opt[0]))
      {
-	  memset(&hit,0,sizeof(struct in6_addr));
-	  status = SO_HIP_SET_NAT_NONE;
-     } else if (!strcmp("ice-udp",opt[0]))
-     {
-	  memset(&hit,0,sizeof(struct in6_addr));
-	  status = SO_HIP_SET_NAT_ICE_UDP;
+	  memset(&hit,0,sizeof(in6_addr_t));
+	  status = SO_HIP_SET_NAT_OFF;
      } else
      {
 	  HIP_IFEL(1, -1, "bad args\n");

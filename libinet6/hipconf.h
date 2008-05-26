@@ -142,8 +142,7 @@
 #define TYPE_ORDER         26
 #define TYPE_TCPTIMEOUT	   27 /* add By Tao Wan, on 04.01.2008*/
 #define TYPE_HIPPROXY	   28
-#define TYPE_RELAY_UDP_HIP 29
-#define TYPE_MAX           30 /* exclusive */
+#define TYPE_MAX           29 /* exclusive */
 
 /* for handle_hi() only */
 #define OPT_HI_TYPE 0

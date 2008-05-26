@@ -9,7 +9,7 @@
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  */
 #include "output.h"
-extern HIP_HASHTABLE *hadb_hit;
+
 enum number_dh_keys_t number_dh_keys = TWO;
 
 
@@ -428,7 +428,7 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	  err = entry->hadb_xmit_func->hip_send_pkt(&entry->local_address, 
 						    &daddr, 
 						    (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
-						    entry->peer_udp_port,
+						    HIP_NAT_UDP_PORT,
 						    i1_blind, entry, 1);
 	}
 #endif
@@ -436,7 +436,7 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 		err = entry->hadb_xmit_func->
 			hip_send_pkt(&entry->local_address, &daddr,
 				     (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
-				     entry->peer_udp_port,
+				     HIP_NAT_UDP_PORT,
 				     i1, entry, 1);
 	}
 
@@ -603,19 +603,12 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 
 	/********* LOCATOR PARAMETER ************/
         /** Type 193 **/ 
-        //if (hip_locator_status == SO_HIP_SET_LOCATOR_ON) {
- 		  if(1){
-            HIP_DEBUG("Building LOCATOR parameter in R1\n");
+        if (hip_locator_status == SO_HIP_SET_LOCATOR_ON) {
+            HIP_DEBUG("Building LOCATOR parameter\n");
             if ((err = hip_build_locators(msg)) < 0) 
-            HIP_DEBUG("LOCATOR2 parameter building failed\n");
-       		_HIP_DUMP_MSG(msg);
+                HIP_DEBUG("LOCATOR parameter building failed\n");
+            _HIP_DUMP_MSG(msg);
         }
- 		  
- 	     /**
- 	      * NAT transform parameter is added in r1
- 	      * 
- 	      * */
- 		hip_build_param_nat_transform(msg, hip_get_nat_control());
  	/********** PUZZLE ************/
 	HIP_IFEL(hip_build_param_puzzle(msg, cookie_k,
 					42 /* 2^(42-32) sec lifetime */, 
@@ -729,8 +722,6 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
  * @param msg          a pointer to hip_common to append the LOCATORS
  * @return             len of LOCATOR on success, or negative error value on error
  */
- 
- /*
 int hip_build_locators(struct hip_common *msg) 
 {
     int err = 0, i = 0, ii = 0;
@@ -749,7 +740,7 @@ int hip_build_locators(struct hip_common *msg)
                  -1, "Malloc for LOCATORS failed\n");
         memset(locs,0,(address_count * 
                        sizeof(struct hip_locator_info_addr_item)));
-       	 list_for_each_safe(item, tmp, addresses, i) {
+        list_for_each_safe(item, tmp, addresses, i) {
             n = list_entry(item);
             if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
                 continue;
@@ -785,173 +776,6 @@ int hip_build_locators(struct hip_common *msg)
  out_err:
 
     if (locs) free(locs);
-    return err;
-}
-*/
-/**
- * Builds locator2 list to msg
- *
- * @param msg          a pointer to hip_common to append the LOCATORS
- * @return             len of LOCATOR2 on success, or negative error value on error
- */
-int hip_build_locators(struct hip_common *msg) 
-{
-    int err = 0, i = 0, ii = 0;
-    struct netdev_address *n;
-    hip_ha_t *ha_n;
-    hip_list_t *item = NULL, *tmp = NULL;
-    struct hip_locator_info_addr_item2 *locs2 = NULL;
-    struct hip_locator_info_addr_item *locs1 = NULL;
-    int addr_count1 = 0,addr_count2 = 0 ;
-    int UDP_relay_count = 0;
-    
-    
-    //TODO count the number of UDP relay servers.
-    // check the control state of every hatb_state. 
-
-#ifdef CONFIG_HIP_HI3 // we need addresses for HI3 in any case (if they exist)
-    if (address_count > 0) {
-#else
-    	//check if nat mode is on, or ....
-    if (address_count > 0) {
-#endif
-
-		//TODO check out the count for UDP and hip raw.
-		addr_count1 = address_count;
-		// type 2 locator number is the 
-		/**wrong impemetation
-		 *  hip_relht_size() is the size of relay client in server side*/
-		//addr_count2 = hip_relht_size();
-		//let's put 10 here for now. anyhow 10 additional type 2 addresses should be enough
-		addr_count2 = 10;
-		
-		
-		
-        HIP_IFEL(!(locs1 = malloc(addr_count1 * 
-                                 sizeof(struct hip_locator_info_addr_item))), 
-                 -1, "Malloc for LOCATORS type1 failed\n");
-        HIP_IFEL(!(locs2 = malloc(addr_count2 * 
-                                 sizeof(struct hip_locator_info_addr_item2))), 
-                 -1, "Malloc for LOCATORS type2 failed\n");
-                 
-                 
-        memset(locs1,0,(addr_count1 * 
-                       sizeof(struct hip_locator_info_addr_item)));
-                       
-        memset(locs2,0,(addr_count2 *  
-                       sizeof(struct hip_locator_info_addr_item2)));  
-        
-        HIP_DEBUG("there are %d type 1 locator item" , addr_count1);
-        //starting
-         list_for_each_safe(item, tmp, addresses, i) {
-            n = list_entry(item);
-            if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
-                continue;
-            if (!IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
-                memcpy(&locs1[ii].address, hip_cast_sa_addr(&n->addr), 
-                       sizeof(struct in6_addr));
-                locs1[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
-                locs1[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI;
-                locs1[ii].locator_length = sizeof(struct in6_addr) / 4;
-                locs1[ii].reserved = 0;
-                HIP_DEBUG_HIT("create one locator item, address: ", &locs1[ii].address);
-                ii++;
-               
-            }
-        }
-        list_for_each_safe(item, tmp, addresses, i) {
-            n = list_entry(item);
-            if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
-                continue;
-            if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
-                memcpy(&locs1[ii].address, hip_cast_sa_addr(&n->addr), 
-                       sizeof(struct in6_addr));
-                locs1[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
-                locs1[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI;
-                locs1[ii].locator_length = sizeof(struct in6_addr) / 4;
-                locs1[ii].reserved = 0;
-                HIP_DEBUG_HIT("create one locator item, address: ", &locs1[ii].address);
-                ii++;
-            }
-        }
-        
-        //ending
-        /***for relay locator
-         * retreive the whole entry list
-         * if there is a reflexive  **/
-        HIP_DEBUG("\n santtu: start look for relay address, there are %d entry in hash \n", hadb_hit->num_items);
-        ii = 0;             
-        i = 0;  
-        
-        list_for_each_safe(item, tmp, hadb_hit, i) {
-            ha_n = list_entry(item);
-            // if there are more addresses than we can take, just break it.
-            if (ii>= addr_count2)
-                break;
-            // check if the reflexive udp port. if it not 0. it means addresses found
-            HIP_DEBUG_HIT("santtu: look for reflexive, prefered addres  : ",&ha_n->preferred_address );
-            HIP_DEBUG_HIT("santtu: look for reflexive, local addres  : ",&ha_n->local_address );
-            HIP_DEBUG("santtu: look for reflexive port: %d \n",ha_n->local_reflexive_udp_port);
-            HIP_DEBUG_HIT("santtu: look for reflexive addr: ",&ha_n->local_reflexive_address);
-            HIP_DEBUG("santtu: the entry address is %d \n", ha_n);
-            if(ha_n->local_reflexive_udp_port){
-            	memcpy(&locs2[ii].address, &ha_n->local_reflexive_address, 
-            	                       sizeof(struct in6_addr));
-                locs2[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
-                locs2[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_UDP;
-                locs2[ii].locator_length = sizeof(struct in6_addr) / 4;
-                locs2[ii].reserved = 0;
-                // for IPv4 we add UDP information
-                locs2[ii].port = htons(ha_n->local_reflexive_udp_port);
-                locs2[ii].transport_protocol = 0;
-                locs2[ii].kind = 0;
-                locs2[ii].priority = 126,
-                locs2[ii].spi = 1;
-                //TODO change into constant
-                locs2[ii].priority = htonl(120);
-                ii++;
-                // if there are more addresses than we can take, just break it.
-               if (ii>= addr_count2)
-                   break;
-            }
-            
-            // check it the peer is a full relay server
-            //assume the peer address is IPv4
-            //assume the peer protocol is UDP
-            /* we should search TURN server address not HIP full relay
-            if(ha_n->peer_controls & HIP_HA_CTRL_PEER_HIPUDP_CAPABLE){
-            	HIP_DEBUG_HIT("santtu: UDP full relay, prefered addres  : ",&ha_n->preferred_address );
-            	HIP_DEBUG_HIT("santtu: UDP full relay, local addres  : ",&ha_n->local_address );
-            	HIP_DEBUG("santtu: UDP port: %d \n",ha_n->peer_udp_port);
-          
-                memcpy(&locs2[ii].address, &ha_n->preferred_address, 
-                       sizeof(struct in6_addr));
-                locs2[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
-                locs2[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_UDP;
-                locs2[ii].locator_length = sizeof(struct in6_addr) / 4;
-                locs2[ii].reserved = 0;
-                 // for IPv6 we add UDP information, maybe we do not need this in IPv6
-                locs2[ii].port = htons(ha_n->peer_udp_port);
-                locs2[ii].transport_protocol =0;
-                locs2[ii].kind = 0;
-                locs2[ii].priority = 126,
-                locs2[ii].spi = 1;
-                ii++;
-            }*/
-            
-        }
-        HIP_DEBUG("hip_build_locators: find relay address account:%d \n", ii);
-        //ii is the real amount of type2 locator.addr_count2 is the max value we can accept
-        err = hip_build_param_locator2(msg, locs1,locs2, addr_count1,ii);
-        //err = hip_build_param_locator2(msg, locs1,locs2, addr_count1,addr_count2);
-    }
-    else
-        HIP_DEBUG("Host has only one or no addresses no point "
-                  "in building LOCATOR2 parameters\n");
- out_err:
-
-    if (locs1) free(locs1);
-    if (locs2) free(locs2);
     return err;
 }
 
@@ -1231,28 +1055,6 @@ int hip_queue_packet(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 out_err:
 	return err;
 }
-
-
-#if 0
-/*
- * Xiang, there are several problems with this function that you need to fix:
- * - you just named the function as "hip_send" even though there are at least four sending functions
- * - it should be called from hadb function pointer and not directly
- * - I don't think is needed at all - why don't you just adjust the function pointer in hadb?
- */
-int hip_send(struct in6_addr *local_addr, struct in6_addr *peer_addr,
-		 in_port_t src_port, in_port_t dst_port,
-		 struct hip_common* msg, hip_ha_t *entry, int retransmit)
-{
-	if(dst_port != HIP_RAW_PORT){
-		hip_send_udp(local_addr,peer_addr,src_port,dst_port,msg,entry,retransmit);
-	}
-	else{
-		hip_send_raw(local_addr,peer_addr,src_port,dst_port,msg,entry,retransmit);
-	}
-	
-}
-#endif
 
 /**
  * Sends a HIP message using raw HIP.
@@ -1647,123 +1449,14 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	return err;
 }
 
-int hip_send_stun(struct in6_addr *local_addr, struct in6_addr *peer_addr,
-		 in_port_t src_port, in_port_t dst_port,
-		 const void *msg, int msg_len, int retransmit)
+int hip_send_r2_response(struct hip_common *r2,
+		struct in6_addr *r2_saddr,
+		struct in6_addr *r2_daddr,
+		hip_ha_t *entry,
+		hip_portpair_t *r2_info)
 {
-	int sockfd = 0, err = 0, xmit_count = 0;
-	/* IPv4 Internet socket addresses. */
-	struct sockaddr_in src4, dst4;
-	/* Length of the HIP message. */
-	uint16_t packet_length = 0;
-	/* Number of characters sent. */
-	ssize_t chars_sent = 0;
-	/* If local address is not given, we fetch one in my_addr. my_addr_ptr
-	   points to the final source address (my_addr or local_addr). */
-	struct in6_addr my_addr, *my_addr_ptr = NULL;
 	
-	HIP_DEBUG("hip_send_stun() invoked.\n");
-	/* Verify the existence of obligatory parameters. */
-	HIP_ASSERT(peer_addr != NULL && msg != NULL);
-
-	HIP_DEBUG_IN6ADDR("hip_send_stun(): local_addr", local_addr);
-	HIP_DEBUG_IN6ADDR("hip_send_stun(): peer_addr", peer_addr);
-	HIP_DEBUG("Source port: %d, destination port: %d.\n",
-		  src_port, dst_port);
-	HIP_DUMP_MSG(msg);
-
-	/* Currently only IPv4 is supported, so we set internet address family
-	   accordingly and map IPv6 addresses to IPv4 addresses. */
-	src4.sin_family = dst4.sin_family = AF_INET;
-	
-        /* Source address. */
-        if (local_addr != NULL) {
-		HIP_DEBUG_IN6ADDR("Local address is given", local_addr);
-		HIP_IFEL(!IN6_IS_ADDR_V4MAPPED(local_addr), -EPFNOSUPPORT,
-			 "Local address is pure IPv6 address, IPv6 address "\
-			 "family is currently not supported on UDP/HIP.\n");
-		my_addr_ptr = local_addr;
-		IPV6_TO_IPV4_MAP(local_addr, &src4.sin_addr);
-	} else {
-		HIP_DEBUG("Local address is NOT given, selecting one.\n");
-		HIP_IFEL(hip_select_source_address(
-				 &my_addr, peer_addr), -EADDRNOTAVAIL,
-			 "Cannot find local address.\n");
-		my_addr_ptr = &my_addr;
-		IPV6_TO_IPV4_MAP(&my_addr, &src4.sin_addr);
-	}
-	
-        /* Destination address. */
-	HIP_IFEL(!IN6_IS_ADDR_V4MAPPED(peer_addr), -EPFNOSUPPORT,
-		 "Peer address is pure IPv6 address, IPv6 address family is "\
-		 "currently not supported on UDP/HIP.\n");
-	IPV6_TO_IPV4_MAP(peer_addr, &dst4.sin_addr);
-	
-        /* Source port */
-	if(src_port != 0) {
-		src4.sin_port = htons(src_port);
-	}
-	else {
-		src4.sin_port = 0;
-	}
-	
-	/* Destination port. */
-	if(dst_port != 0) {
-		dst4.sin_port = htons(dst_port);
-	}
-	else {
-		dst4.sin_port = htons(HIP_NAT_UDP_PORT);
-	}
-	
-	/* Get the packet total length for sendto(). */
-	packet_length = msg_len;
-	
-	HIP_DEBUG("Trying to send %u bytes on UDP with source port: %u and "\
-		  "destination port: %u.\n",
-		  packet_length, ntohs(src4.sin_port), ntohs(dst4.sin_port));
-	
-	/* If this is a retransmission, the packet is queued before sending. */
-	/*
-	//TODO check out if the retrnsmit is needed for stun
-	if (retransmit) {
-		HIP_IFEL(hip_queue_packet(my_addr_ptr, peer_addr, msg,
-					  entry), -1, "Queueing failed.\n");
-	}
-	*/
-	/* Try to send the data. */
-	do {
-		chars_sent = sendto( hip_nat_sock_udp, msg, packet_length, 0,
-				     (struct sockaddr *) &dst4, sizeof(dst4));
-		if(chars_sent < 0)
-		{
-			/* Failure. */
-			HIP_DEBUG("Problem in sending STUN UDP packet. Sleeping "\
-				  "for %d seconds and trying again.\n",
-				  HIP_NAT_SLEEP_TIME);
-			sleep(HIP_NAT_SLEEP_TIME);
-		}
-		else
-		{
-			/* Success. */
-			break;
-		}
-		xmit_count++;
-	} while(xmit_count < HIP_NAT_NUM_RETRANSMISSION);
-
-	/* Verify that the message was sent completely. */
-	HIP_IFEL((chars_sent != packet_length), -ECOMM,
-		 "Error while sending data on STUN UDP: %d bytes of %d sent.)\n",
-		 chars_sent, packet_length);
-
-	HIP_DEBUG("Packet sent successfully over STUN UDP, characters sent: %u, "\
-		  "packet length: %u.\n", chars_sent, packet_length);
-
- out_err:
-	if (sockfd)
-		close(sockfd);
-	return err;
 }
-
 
 
 #ifdef CONFIG_HIP_HI3
