@@ -13,8 +13,6 @@
 enum number_dh_keys_t number_dh_keys = TWO;
 
 
-#ifdef CONFIG_HIP_OPPTCP
-
 /**
 * Standard BSD internet checksum routine from nmap
 * for calculating the checksum field of the TCP header
@@ -346,8 +344,6 @@ void hip_send_opp_tcp_i1(hip_ha_t *entry){
 		send_tcp_packet(&bytes[0], hdr_size + 4*tcphdr->doff, 6, hip_raw_sock_v6, 1, 0);
 }
 
-#endif
-
 
 /**
  * Sends an I1 packet to the peer.
@@ -451,17 +447,11 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 		err = 0;
 
 
-#ifdef CONFIG_HIP_OPPTCP
 	/*send the TCP SYN_i1 packet*/
-	HIP_DEBUG_HIT("src_hit", src_hit);
-	////hip_get_default_hit(src_hit);
-
-	if(hip_get_opportunistic_tcp_status()        &&
-	   hit_is_opportunistic_hashed_hit(dst_hit) /* &&
-	   !((entry->tcp_opptcp_src_port == 0) && (entry->tcp_opptcp_dst_port == 0))*/)
+	if (hip_get_opportunistic_tcp_status() &&
+	    hit_is_opportunistic_hashed_hit(dst_hit) &&
+	    entry->tcp_opptcp_dst_port != 0)
 		hip_send_opp_tcp_i1(entry);
-#endif
-
 out_err:
 	if (i1)
 	  HIP_FREE(i1);
