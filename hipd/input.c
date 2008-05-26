@@ -2183,6 +2183,10 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	entry->state = HIP_STATE_ESTABLISHED;
 
         /***** LOCATOR PARAMETER ******/
+	
+	hip_nat_handle_locator_parameter(i2, entry, esp_info);
+	hip_nat_handle_net_transform_parameter(i2, entry);
+	/*
         locator = hip_get_param(i2, HIP_PARAM_LOCATOR);
         nat_transform = hip_get_param(i2, HIP_PARAM_NAT_TRANSFORM);
         if(nat_transform){
@@ -2199,23 +2203,27 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
                 HIP_IFEL(hip_update_handle_locator_parameter(entry, 
                                                              locator, esp_info),
                          -1, "hip_update_handle_locator_parameter failed\n");
-                
-#if 0 // XX FIXME: DOES NOT COMPILE - MESSY CODE
+      */          
+
 #ifdef HIP_USE_ICE
                 //if the client  choose to use ICE 
-        if(!(entry->nat_control & HIP_NAT_TRANSFORM_ICE)){
-        	//TODO check other nat control type. currently only ICE 
-        	 HIP_DEBUG("ice is not selected\n");
-        	 if (!use_blind) {
-        		    HIP_IFEL(hip_setup_hit_sp_pair(&ctx->input->hits,
-        						   &ctx->input->hitr,
-        						   i2_saddr, i2_daddr, IPPROTO_ESP, 1, 1),
-        			     -1, "Setting up SP pair failed\n");
-        	    }
-        }else
+	if(!(entry->nat_control & HIP_NAT_TRANSFORM_ICE)){
+       	//TODO check other nat control type. currently only ICE 
+       	 HIP_DEBUG("ice is not selected\n");
+       	 if (!use_blind) {
+       		 HIP_IFEL(hip_setup_hit_sp_pair(&ctx->input->hits,
+       				 &ctx->input->hitr,
+       				 i2_saddr, i2_daddr, IPPROTO_ESP, 1, 1),
+       				 -1, "Setting up SP pair failed\n");
+       	 }
+	}else
           //no ice when peer is requesting rvs or udp relay
-        if(!((entry->peer_controls & HIP_HA_CTRL_LOCAL_REQ_RVS) || 
-        	    		(entry->peer_controls & HIP_HA_CTRL_LOCAL_REQ_HIPUDP))){
+		if(!((entry->peer_controls & HIP_HA_CTRL_LOCAL_REQ_RVS) || 
+          		(entry->peer_controls & HIP_HA_CTRL_LOCAL_REQ_RELAY))){
+			hip_nat_start_ice_engine(entry, esp_info,1); 	
+        	
+        	
+        	/*
         //init the session right after the locator receivd
                 HIP_DEBUG("init Ice in I2\n");
 		        ice_session = hip_external_ice_init(ICE_ROLE_CONTROLLING);
@@ -2253,16 +2261,16 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		        	}
 		        	HIP_DEBUG("ICE astart checking in I2\n");
 		        	hip_ice_start_check(ice_session);
-		        }
+		        }*/
         }
         
                 
 #endif // ICE
-#endif // 0
-                
+
+        /*        
             }
         else
-            HIP_DEBUG("I2 did not have locator or esp_info\n");
+            HIP_DEBUG("I2 did not have locator or esp_info\n");*/
 
 	HIP_DEBUG("Reached %s state\n", hip_state_str(entry->state));
 	if (entry->hip_msg_retrans.buf) {
@@ -2521,7 +2529,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
                      -1, "hip_update_handle_locator_parameter failed\n");
         
       */      
- // XX FIXME: DOES NOT COMPILE: SEPARATE TO AN OWN FUNCTION            
+           
 #ifdef HIP_USE_ICE
             
         //check the nat transform mode
