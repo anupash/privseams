@@ -434,14 +434,12 @@ struct hip_hadb_state
 	/** If the state for hi3, then this flag is 1, otherwise it is zero. */
 	int                          is_hi3_state ;
 #endif
-#ifdef CONFIG_HIP_OPPTCP
 	/** Non-zero if opportunistic TCP mode is on. */
 	int                          hip_is_opptcp_on;
 	/** The local port from where the TCP SYN I1 packet will be sent */
 	in_port_t                    tcp_opptcp_src_port;
 	/** the port at the peer where the TCP SYN I1 packet will be sent */
 	in_port_t                    tcp_opptcp_dst_port;
-#endif
 #ifdef CONFIG_HIP_HIPPROXY
 	int hipproxy;
 #endif
