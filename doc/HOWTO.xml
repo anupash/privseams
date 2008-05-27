@@ -2125,7 +2125,7 @@ combo-newgroup=&lt;create new...&gt;
     enables fast and backwards compatible fallback to non-HIP
     communications for TCP connections when the peer does not support
     HIP.  To use the opportunistic mode, start both the hipd and hipfw (e.g. with option -A).
-    Then run hipconf opptcp on and use the opportunistic mode as instructed
+    Then instruct "hipconf set opp advanced" and use the opportunistic mode as instructed
     earlier in this section.
 </para>
 
