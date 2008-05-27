@@ -81,8 +81,8 @@ int is_escrow_active()
 void hip_fw_init_opptcp() {
 	HIP_DEBUG("\n");
 
-	system("iptables -I INPUT -p 6 -j QUEUE"); /* @todo: ! LSI PREFIX */
-	system("iptables -I OUTPUT -p 6 -j QUEUE");  /* @todo: ! LSI PREFIX */
+	system("iptables -I INPUT -p 6 ! -d 127.0.0.1 -j QUEUE"); /* @todo: ! LSI PREFIX */
+	system("iptables -I OUTPUT -p 6 ! -d 127.0.0.1 -j QUEUE");  /* @todo: ! LSI PREFIX */
 	system("ip6tables -I INPUT -p 6 ! -d 2001:0010::/28 -j QUEUE");
 	system("ip6tables -I OUTPUT -p 6 ! -d 2001:0010::/28 -j QUEUE");
 }
@@ -90,8 +90,8 @@ void hip_fw_init_opptcp() {
 void hip_fw_uninit_opptcp() {
 	HIP_DEBUG("\n");
 
-	system("iptables -D INPUT -p 6 -j QUEUE");  /* @todo: ! LSI PREFIX */
-	system("iptables -D OUTPUT -p 6 -j QUEUE"); /* @todo: ! LSI PREFIX */
+	system("iptables -D INPUT -p 6 ! -d 127.0.0.1 -j QUEUE");  /* @todo: ! LSI PREFIX */
+	system("iptables -D OUTPUT -p 6 ! -d 127.0.0.1 -j QUEUE"); /* @todo: ! LSI PREFIX */
 	system("ip6tables -D INPUT -p 6 ! -d 2001:0010::/28 -j QUEUE");
 	system("ip6tables -D OUTPUT -p 6 ! -d 2001:0010::/28 -j QUEUE");
 }
