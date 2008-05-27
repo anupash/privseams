@@ -172,7 +172,7 @@ int hip_handle_user_msg(struct hip_common *msg,
 	  	err = hip_set_opportunistic_mode(msg);
 		break;
 	case SO_HIP_GET_PEER_HIT:
-		err = hip_opp_get_peer_hit(msg, src, 0);
+		err = hip_opp_get_peer_hit(msg, src);
 	
 		if(err){
 			_HIP_ERROR("get pseudo hit failed.\n");
@@ -826,7 +826,10 @@ int hip_handle_user_msg(struct hip_common *msg,
 		hipd_set_flag(HIPD_FLAG_RESTART);
 		hip_close(SIGINT);
 		break;
-
+	case SO_HIP_OPPTCP_UNBLOCK_AND_BLACKLIST:
+		hip_opptcp_unblock_and_blacklist(msg, src);
+		break;
+#if 0
 	case SO_HIP_GET_PEER_HIT_FROM_FIREWALL:
 		err = hip_opp_get_peer_hit(msg, src, 1);
 		
@@ -842,14 +845,6 @@ int hip_handle_user_msg(struct hip_common *msg,
 		/* skip sending of return message; will be sent later in R1 */
 		goto out_err;
 	  break;
-	case SO_HIP_SET_OPPTCP_ON:
-	case SO_HIP_SET_OPPTCP_OFF:
-		hip_set_opportunistic_tcp_status(msg);
-		break;
-	case SO_HIP_OPPTCP_UNBLOCK_AND_BLACKLIST:
-		hip_opptcp_unblock_and_blacklist(msg, src);
-		break;
-#if 0
 	case SO_HIP_OPPTCP_UNBLOCK_APP:
 		hip_opptcp_unblock(msg, src);
 		break;

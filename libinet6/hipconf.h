@@ -104,7 +104,7 @@
 #define ACTION_RESTART 18
 #define ACTION_LOCATOR 19
 #define ACTION_OPENDHT 20
-#define ACTION_OPPTCP  21
+//#define ACTION_OPPTCP  21
 #define ACTION_TRANSORDER 22
 #define ACTION_TCPTIMEOUT 23 /* add By Tao Wan, on 04.01.2008 */
 #define ACTION_HIPPROXY 24
@@ -138,7 +138,7 @@
 #define TYPE_RELAY         22
 #define TYPE_SET           23 /* DHT set <name> */
 #define TYPE_DHT           24
-#define TYPE_OPPTCP	   25
+//#define TYPE_OPPTCP	   25
 #define TYPE_ORDER         26
 #define TYPE_TCPTIMEOUT	   27 /* add By Tao Wan, on 04.01.2008*/
 #define TYPE_HIPPROXY	   28
@@ -156,7 +156,7 @@
 # add service rvs   # the host acts as HIP rendezvous\n\
 # dht gw host port port TTL # set dht gw hostname|ip port default=5851\n\
 # locator on        # host sends all of its locators in base exchange \n\
-# opptcp on         # faster fallback to non-hip communications \n\
+# opp normal|advanced|none \n\
 opendht off # Jan 2007: OpenDHT infrastructure is flaky -Samu/Miika\n\
 nat on              # the host is behind a NAT\n\
 debug medium        # debug verbosity: all, medium or none\n"
