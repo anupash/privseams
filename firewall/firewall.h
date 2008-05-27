@@ -10,8 +10,7 @@
 #include <netinet/ip6.h>
 #include <stdint.h>
 #include <stdio.h>
-//#include <glib.h>
-//#include <glib/glist.h>
+
 #include <string.h>
 #include <netinet/tcp.h>
 #include <stdlib.h>
@@ -20,6 +19,7 @@
 #include <pthread.h>
 #include <libinet6/message.h>
 
+#include "common_types.h"
 #include "crypto.h"
 #include "ife.h"
 #include "state.h"
@@ -36,6 +36,7 @@
 #include "misc.h"
 #include "netdev.h"
 //#include "hip_sadb.h"
+
 
 #define HIP_FW_DEFAULT_RULE_FILE "/etc/hip/firewall.conf"
 #define HIP_FW_DEFAULT_TIMEOUT   1

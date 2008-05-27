@@ -22,8 +22,278 @@
  * tunreader portions Copyright (C) 2004 UC Berkeley
  */
 
-#include "hip_esp.h"
 
+
+
+#include <stdio.h>		/* HIP_DEBUG() */
+#include <unistd.h>		/* write() */
+#include <pthread.h>		/* pthread_exit() */
+#include <sys/time.h>		/* gettimeofday() */
+#include <sys/errno.h>		/* errno, etc */
+#include <netinet/ip.h>		/* struct ip */
+#include <netinet/ip6.h>	/* struct ip6_hdr */
+#include <netinet/icmp6.h>	/* struct icmp6_hdr */
+#include <netinet/tcp.h>	/* struct tcphdr */
+#include <netinet/udp.h>	/* struct udphdr */
+#include <arpa/inet.h>		
+#include <linux/types.h>	/* for pfkeyv2.h types */
+#include <netinet/udp.h>	/* struct udphdr */
+#include <string.h>		/* memset, etc */
+#include <openssl/hmac.h>	/* HMAC algorithms */
+#include <openssl/sha.h>	/* SHA1 algorithms */
+#include <openssl/des.h>	/* 3DES algorithms */
+#include <openssl/rand.h>	/* RAND_bytes() */
+
+//#include <hip/hip_types.h>
+//#include <hip/hip_funcs.h>
+#include "hip_usermode.h"
+#include "hip_sadb.h"
+#include "misc.h"
+
+
+#include <sys/time.h>
+#include <sys/wait.h>		/* waitpid()	*/
+#include <pthread.h>		/* pthreads support*/
+
+#if 0
+#if defined(__BIG_ENDIAN__) || defined( __MACOSX__)
+#include <mac/checksum_mac.h>
+#else
+#include "win32-checksum.h"
+#endif
+#endif
+
+
+
+/* 
+ * Globals
+ */
+
+#ifdef __WIN32__
+HANDLE tapfd;
+#else
+int tapfd;
+#endif
+int readsp[2] = {0,0};
+int s_esp, s_esp_udp, s_esp6;
+int s_udp;
+#ifdef DEBUG_EVERY_PACKET
+FILE *debugfp;
+#endif
+
+extern hip_sadb_dst_entry hip_sadb_dst[SADB_SIZE];
+#ifdef __MACOSX__
+extern char *logaddr(struct sockaddr *addr);
+#endif
+
+__u32 g_tap_lsi;
+__u64 g_tap_mac;
+long g_read_usec;
+
+#define BUFF_LEN 2000
+#define HMAC_SHA_96_BITS 96 /* 12 bytes */
+
+/* added By Tao Wan*/
+#define H_PROTO_UDP 17
+
+/* array of Ethernet addresses used by get_eth_addr() */
+#define MAX_ETH_ADDRS 255
+__u8 eth_addrs[6 * MAX_ETH_ADDRS]; /* must be initialized to random values */
+
+
+/* Prototype of checksum function defined in hip_util.c */
+__u16 checksum_udp_packet(__u8 *data, struct sockaddr *src, struct sockaddr *dst);
+
+
+/* added by Tao Wan, define g_state to be 1 */
+/* status kernelspace ipsec */
+int g_state = 0;
+
+
+/* defined RAW socket IP out */
+#define RAW_IP_OUT 1
+
+
+/*HIP ESP output using socket binding */
+// #define USE_BINDING 1
+
+
+/* 
+ * Local data types 
+ */
+struct ip_esp_hdr {
+	__u32 spi;
+	__u32 seq_no;
+	__u8 enc_data[0];
+}__attribute__ ((packed)) ;
+
+struct ip_esp_padinfo {
+	__u8 pad_length;
+	__u8 next_hdr;
+}__attribute__ ((packed)) ;
+
+struct eth_hdr {
+	__u8 dst[6];
+	__u8 src[6];
+	__u16 type;
+}__attribute__ ((packed));
+
+/* ARP header - RFC 826, STD 37 */
+struct arp_hdr {
+	__u16 ar_hrd;
+	__u16 ar_pro;
+	__u8 ar_hln;
+	__u8 ar_pln;
+	__u16 ar_op;
+};
+
+/*added by Tao Wan pseudo_header6, pseudo_header*/
+
+typedef struct _pseudo_header6
+{
+	unsigned char src_addr[16];
+	unsigned char dst_addr[16];
+	__u32 packet_length;
+	char zero[3];
+	__u8 next_hdr;
+} pseudo_header6;
+
+typedef struct _pseudo_header
+{
+	unsigned char src_addr[4];
+	unsigned char dst_addr[4];
+	__u8 zero;
+	__u8 protocol;
+	__u16 packet_length;
+} pseudo_header;
+
+/* 
+ * Local function declarations
+ */
+
+int handle_nsol(__u8 *in, int len, __u8 *out,int *outlen,struct sockaddr *addr);
+int hip_esp_encrypt(__u8 *in, int len, __u8 *out, 
+		hip_sadb_entry *entry, struct timeval *now, int *outlen);
+int hip_esp_decrypt(__u8 *in, int len, __u8 *out, int *offset, int *outlen,
+    hip_sadb_entry *entry, struct ip *iph, struct timeval *now);
+
+__u16 rewrite_checksum(__u8 *data, __u16 magic);
+void add_eth_header(__u8 *data, __u64 src, __u64 dst, __u32 type);
+void add_ipv4_header(__u8 *new_packet, struct ip *old_ip_hdr, __u32 src_addr, __u32 dst_addr, 
+		__u16 packet_len, __u8 next_hdr);
+void add_ipv6_pseudo_header(__u8 *data, struct sockaddr *src, 
+	struct sockaddr *dst, __u32 len, __u8 proto);
+void add_ipv6_header(__u8 *data, struct sockaddr *src, struct sockaddr *dst,
+	struct ip6_hdr *old, struct ip *old4, __u16 len, __u8 proto);
+__u16 in_cksum(struct ip *iph);
+__u64 get_eth_addr(int family, __u8 *addr);
+
+/* void reset_sadbentry_udp_port (__u32 spi_out); */
+int send_udp_esp_tunnel_activation (__u32 spi_out);
+
+// extern __u32 get_preferred_lsi();
+// extern int do_bcast();
+extern int maxof(int num_args, ...);
+
+
+/*
+ * function checksum_udp_packet()
+ *
+ * XXX TODO: combine with other checksum functions
+ *
+ * Calculates the checksum of a UDP packet with pseudo-header
+ * src and dst are IPv4 or IPv6 addresses in network byte order
+ */
+__u16 checksum_udp_packet(__u8 *data, struct sockaddr *src, struct sockaddr *dst)
+{
+	__u16 checksum;
+	unsigned long sum = 0;
+	int count, length;
+	unsigned short *p; /* 16-bit */
+	pseudo_header pseudoh;
+	pseudo_header6 pseudoh6;
+	__u32 src_network, dst_network;
+	struct in6_addr *src6, *dst6;
+	struct udphdr* udph = (struct udphdr*) data;
+
+	if (src->sa_family == AF_INET) {
+		/* IPv4 checksum based on UDP-- Section 6.1.2 */
+		src_network = ((struct sockaddr_in*)src)->sin_addr.s_addr;
+		dst_network = ((struct sockaddr_in*)dst)->sin_addr.s_addr;
+	
+		memset(&pseudoh, 0, sizeof(pseudo_header));
+		memcpy(&pseudoh.src_addr, &src_network, 4);
+		memcpy(&pseudoh.dst_addr, &dst_network, 4);
+		pseudoh.protocol = H_PROTO_UDP;
+		length = ntohs(udph->len);
+		pseudoh.packet_length = htons((__u16)length);
+
+		count = sizeof(pseudo_header); /* count always even number */
+		p = (unsigned short*) &pseudoh;
+	} else {
+		/* IPv6 checksum based on IPv6 pseudo-header */
+		src6 = &((struct sockaddr_in6*)src)->sin6_addr;
+		dst6 = &((struct sockaddr_in6*)dst)->sin6_addr;
+	
+		memset(&pseudoh6, 0, sizeof(pseudo_header6));
+		memcpy(&pseudoh6.src_addr[0], src6, 16);
+		memcpy(&pseudoh6.dst_addr[0], dst6, 16);
+		length = ntohs(udph->len);
+		pseudoh6.next_hdr = H_PROTO_UDP;
+		pseudoh6.packet_length = htonl(length);
+		
+		count = sizeof(pseudo_header6); /* count always even number */
+		p = (unsigned short*) &pseudoh6;
+	}
+	/* 
+	 * this checksum algorithm can be found 
+	 * in RFC 1071 section 4.1
+	 */
+
+	/* sum the psuedo-header */
+	/* count and p are initialized above per protocol */
+	while (count > 1) {
+		sum += *p++;
+		count -= 2;
+	}
+    
+	/* one's complement sum 16-bit words of data */
+	/* log_(NORM, "checksumming %d bytes of data.\n", length); */
+	count = length;
+	p = (unsigned short*) data;
+	while (count > 1)  {
+		sum += *p++;
+		count -= 2;
+	}
+	/* add left-over byte, if any */
+	if (count > 0)
+		sum += (unsigned char)*p;
+ 
+	/*  Fold 32-bit sum to 16 bits */
+	while (sum>>16)
+		sum = (sum & 0xffff) + (sum >> 16);
+	/* take the one's complement of the sum */ 
+	checksum = (__u16)(~sum);
+    
+	return(checksum);
+}
+
+
+/* added by Tao Wan, different from boeing implemenation */
+
+int get_preferred_lsi(struct sockaddr *lsi) {
+
+   if (lsi != NULL) {
+    struct in_addr *lsi_in = hip_cast_sa_addr(lsi);
+    lsi_in->s_addr = 0;
+    return (0);
+} else
+  
+	return (-1); 
+
+}
+
+#if 0
 /*
  * hip_esp_output()
  *
@@ -749,91 +1019,7 @@ void *udp_esp_keepalive (void *arg) {
 }
 #endif
 
-#if 0
 /*
- * function checksum_udp_packet()
- *
- * XXX TODO: combine with other checksum functions
- *
- * Calculates the checksum of a UDP packet with pseudo-header
- * src and dst are IPv4 or IPv6 addresses in network byte order
- */
-__u16 checksum_udp_packet(__u8 *data, struct sockaddr *src, struct sockaddr *dst)
-{
-	__u16 checksum;
-	unsigned long sum = 0;
-	int count, length;
-	unsigned short *p; /* 16-bit */
-	pseudo_header pseudoh;
-	pseudo_header6 pseudoh6;
-	__u32 src_network, dst_network;
-	struct in6_addr *src6, *dst6;
-	struct udphdr* udph = (struct udphdr*) data;
-
-	if (src->sa_family == AF_INET) {
-		/* IPv4 checksum based on UDP-- Section 6.1.2 */
-		src_network = ((struct sockaddr_in*)src)->sin_addr.s_addr;
-		dst_network = ((struct sockaddr_in*)dst)->sin_addr.s_addr;
-	
-		memset(&pseudoh, 0, sizeof(pseudo_header));
-		memcpy(&pseudoh.src_addr, &src_network, 4);
-		memcpy(&pseudoh.dst_addr, &dst_network, 4);
-		pseudoh.protocol = H_PROTO_UDP;
-		length = ntohs(udph->len);
-		pseudoh.packet_length = htons((__u16)length);
-
-		count = sizeof(pseudo_header); /* count always even number */
-		p = (unsigned short*) &pseudoh;
-	} else {
-		/* IPv6 checksum based on IPv6 pseudo-header */
-		src6 = &((struct sockaddr_in6*)src)->sin6_addr;
-		dst6 = &((struct sockaddr_in6*)dst)->sin6_addr;
-	
-		memset(&pseudoh6, 0, sizeof(pseudo_header6));
-		memcpy(&pseudoh6.src_addr[0], src6, 16);
-		memcpy(&pseudoh6.dst_addr[0], dst6, 16);
-		length = ntohs(udph->len);
-		pseudoh6.next_hdr = H_PROTO_UDP;
-		pseudoh6.packet_length = htonl(length);
-		
-		count = sizeof(pseudo_header6); /* count always even number */
-		p = (unsigned short*) &pseudoh6;
-	}
-	/* 
-	 * this checksum algorithm can be found 
-	 * in RFC 1071 section 4.1
-	 */
-
-	/* sum the psuedo-header */
-	/* count and p are initialized above per protocol */
-	while (count > 1) {
-		sum += *p++;
-		count -= 2;
-	}
-    
-	/* one's complement sum 16-bit words of data */
-	/* log_(NORM, "checksumming %d bytes of data.\n", length); */
-	count = length;
-	p = (unsigned short*) data;
-	while (count > 1)  {
-		sum += *p++;
-		count -= 2;
-	}
-	/* add left-over byte, if any */
-	if (count > 0)
-		sum += (unsigned char)*p;
- 
-	/*  Fold 32-bit sum to 16 bits */
-	while (sum>>16)
-		sum = (sum & 0xffff) + (sum >> 16);
-	/* take the one's complement of the sum */ 
-	checksum = (__u16)(~sum);
-    
-	return(checksum);
-}
-#endif
-
-#if 0
 void reset_sadbentry_udp_port (__u32 spi_out)
 {
 	hip_sadb_entry *entry;
@@ -843,7 +1029,243 @@ void reset_sadbentry_udp_port (__u32 spi_out)
 		HIP_DEBUG ("SADB-entry dst_port reset for spi: 0x%x.\n",spi_out);
 	}
 }
+*/
+
+int send_udp_esp_tunnel_activation (__u32 spi_out)
+{
+#if 0
+	hip_sadb_entry *entry;
+	struct timeval now;
+	int err, len;
+	int raw_len = 35 ;
+	__u8 raw_buff[35];
+	__u8 *payload;
+	struct ip *iph;
+	__u8 data[BUFF_LEN];
+
+	memset(raw_buff,0,sizeof(raw_buff));
+	iph = (struct ip*) &raw_buff[14];
+	iph->ip_p = IPPROTO_RAW;
+	payload = &raw_buff[34];
+	payload[0]=0xFF;
+
+/* ugly hack... 
+ * since there is no "ACK" from the responder to signal that its SADB is 
+ * uptodate, the "moving" initiator sends the activation packet directly
+ * after its own SADB is updated... */
+/* so this hack just add a small delay */
+/* wait 0.2sec to give enough time to the peer for finishing the SADB update */
+#ifdef __WIN32__
+	Sleep(200);
+#else
+	struct timespec delay;
+	delay.tv_sec = 0 ;
+	delay.tv_nsec = 200000000;
+	nanosleep (&delay, NULL);
 #endif
+/* end of ugly hack :-) */
+
+	gettimeofday(&now, NULL);
+
+	entry = hip_sadb_lookup_spi (spi_out);
+
+	if (entry) {
+		if (entry->mode != 3) {
+			return(-1);
+		}
+		if (entry->direction != 2) {
+			return(-1);
+		}
+		if (entry->dst_port == 0) {
+			return(-1);
+		}
+
+		pthread_mutex_lock(&entry->rw_lock);
+		err = hip_esp_encrypt(raw_buff, raw_len, data, 
+					&len, entry, &now);
+		pthread_mutex_unlock(&entry->rw_lock);
+		if (err) {
+			HIP_DEBUG ("Error in send_udp_esp_tunnel_activation(). "
+				"hip_esp_encrypt failed.\n");
+			return (-1);
+		}
+		err = sendto(s_esp_udp, data, len, 0,
+			(struct sockaddr*)&entry->dst_addrs->addr,
+			SALEN(&entry->dst_addrs->addr));
+		if (err < 0) {
+			HIP_DEBUG("send_udp_esp_tunnel_activation sendto() "
+				"failed: %s\n",
+				strerror(errno));
+			return (-1);
+		} else {
+			HIP_DEBUG("send_udp_esp_tunnel_activation packet sent.\n");
+			entry->bytes += sizeof(struct ip) + err;
+			entry->usetime_ka.tv_sec = now.tv_sec;
+			entry->usetime_ka.tv_usec = now.tv_usec;
+			return (0);
+		}
+	}
+#endif
+	return (-1);
+}
+
+/*
+ * handle_nsol()
+ * 
+ * Handle ICMPv6 Neighbor Solicitations for HITs.
+ * Right now this is called from the esp_output thread when an 
+ * application wants to send data to a HIT.
+ */
+int handle_nsol(__u8 *in, int len, __u8 *out, int *outlen,struct sockaddr *addr)
+{
+	struct eth_hdr *eth = (struct eth_hdr*)in;
+	struct ip6_hdr *ip6h = (struct ip6_hdr*) &in[sizeof(struct eth_hdr)];
+	__u64 esrc=0, edst=0;
+	struct icmp6_hdr *nsol, *nadv;
+	struct in6_addr *target, *adv_target;
+	struct nd_opt_hdr *adv_target_opts;
+	__u8 *p;
+	__u16 payload_len;
+	int location;
+	struct sockaddr_storage src_ss;
+	struct sockaddr_storage dst_ss;
+	struct sockaddr *src = (struct sockaddr *) &src_ss;
+	struct sockaddr *dst = (struct sockaddr *) &dst_ss;
+
+	nsol = (struct icmp6_hdr *)&in[ sizeof(struct eth_hdr) + 
+					sizeof(struct ip6_hdr) ];
+
+	/* Only allow ICMPv6 Neighbor Soliciations for HITs */
+	if (nsol->icmp6_type != ND_NEIGHBOR_SOLICIT)
+		return(1);
+	target = (struct in6_addr*) (nsol + 1);
+	if (!IS_HIT(target)) /* target must be HIT */
+		return(1);
+	/* don't answer requests for self */
+	src->sa_family = AF_INET6;
+	get_preferred_lsi(src);
+#ifdef __MACOSX__
+/* XXX portability issue with the macro IN6_ARE_ADDR_EQUAL*/
+	if (IN6_ARE_ADDR_EQUAL(target, &((struct sockaddr_in6*)src)->sin6_addr))
+		return(1);
+#else
+	if (IN6_ARE_ADDR_EQUAL(target, SA2IP(src)))
+		return(1);
+#endif
+
+	/* for now, replied MAC addr  */
+	esrc = get_eth_addr(AF_INET6, &target->s6_addr[0]);
+	memcpy(&edst, eth->src, 6);
+	add_eth_header(out, esrc, edst, 0x86dd);
+	location = sizeof(struct eth_hdr);
+
+	/* IPv6 header added after length is calculated */
+	memset(src, 0, sizeof(struct sockaddr_storage));
+	memset(dst, 0, sizeof(struct sockaddr_storage));
+	src->sa_family = AF_INET6;
+	memcpy(SA2IP(src), &target->s6_addr[0], sizeof(struct in6_addr));
+	dst->sa_family = AF_INET6;
+	memcpy(SA2IP(dst), &ip6h->ip6_src.s6_addr[0], sizeof(struct in6_addr));
+	location += sizeof(struct ip6_hdr);
+	
+	/* build neighbor advertisement reply */
+	nadv = (struct icmp6_hdr *)&out[location];
+	nadv->icmp6_type = ND_NEIGHBOR_ADVERT;
+	nadv->icmp6_code = 0;
+	nadv->icmp6_cksum = 0;
+	nadv->icmp6_data32[0] = ND_NA_FLAG_SOLICITED | ND_NA_FLAG_OVERRIDE;
+	location += sizeof(struct icmp6_hdr);
+	adv_target = (struct in6_addr*) &out[location];
+	memcpy(adv_target, target, sizeof(struct in6_addr));
+	location += sizeof(struct in6_addr);
+	adv_target_opts = (struct nd_opt_hdr*) &out[location];
+	adv_target_opts->nd_opt_type = ND_OPT_TARGET_LINKADDR;
+	adv_target_opts->nd_opt_len = 1; /* 1x(8 octets) */
+	location += sizeof(struct nd_opt_hdr);
+	memcpy(&out[location], &esrc, 6);
+	location += 6;
+
+	/* return the HIT */
+	if (addr)
+		memcpy(addr, src, sizeof(struct sockaddr_storage));
+	
+	/* pseudo-header for upper-layer checksum calculation */
+	p = (__u8*)nadv - 40;
+	payload_len = &out[location] - (__u8*)nadv;
+	add_ipv6_pseudo_header(p, src, dst, (__u32)payload_len, IPPROTO_ICMPV6);
+	//nadv->icmp6_cksum = ip_fast_csum(p, &out[location] - p);
+	/* real IPv6 header */
+	add_ipv6_header(&out[sizeof(struct eth_hdr)], src, dst, ip6h, NULL,
+			payload_len, IPPROTO_ICMPV6);
+
+	*outlen = location;
+	return(0);
+}
+
+
+#ifdef CURRENTLY_UNUSED
+extern __u32 get_preferred_addr();
+/*
+ * handle_broadcasts()
+ *
+ * This code leaks broadcast packets outside of the association.
+ * Unfortunately, the receiving end will see a different source address
+ * (not the source LSI) so the packet may be meaningless.
+ */
+void handle_broadcasts(__u8 *data, int len)
+{
+	struct ip iph_old;
+	struct sockaddr_in to;
+	int s, val;
+	__u8 proto, mdata[32];
+	__u16 magic;
+	__u32 src_ip, dst_ip;
+	__u64 sum;
+	
+	/* save IPv4 header before it is zeroed */
+	memcpy(&iph_old, &data[14], sizeof(struct ip));
+	proto = iph_old.ip_p;
+	len -= 14; /* subtract eth header */
+
+	/* 
+	 * form a broadcast address, fixup TCP/UDP checksum
+	 */
+	src_ip = get_preferred_addr();
+	if (!src_ip)	/* preferred address not found! */
+		return;
+	dst_ip = src_ip | 0xFF000000L;
+	
+	/* IP header */
+	memset(mdata, 0, sizeof(mdata));
+	memcpy(&mdata[0], &src_ip, sizeof(src_ip));
+	memcpy(&mdata[16], &dst_ip, sizeof(dst_ip));
+	sum = htonl(src_ip) + htonl(dst_ip);
+	while (sum >> 16)
+		sum = (sum & 0xFFFF) + (sum >> 16);
+	magic = (__u16)sum;
+	magic = htons(magic+1);
+	rewrite_checksum(&data[14], magic);
+
+	/* 
+	 * send it out on a raw socket 
+	 */
+	memset(&to, 0, sizeof(to));
+	to.sin_family = AF_INET;
+	to.sin_addr.s_addr = dst_ip;
+
+	s = socket(PF_INET, SOCK_RAW, proto);
+	val = 1;
+	setsockopt(s, SOL_SOCKET, SO_BROADCAST, &val, sizeof(val));
+	if (sendto(s, &data[34], len, 0, 
+	    (struct sockaddr *)&to, sizeof(to)) < 0) {
+		HIP_DEBUG("broadcast sendto() failed: proto=%d len=%d err:%s\n",
+			proto, len, strerror(errno));
+	}
+	close(s);
+}
+#endif
+
+
 
 /*
  * hip_esp_encrypt()
@@ -1716,17 +2138,17 @@ int hip_esp_decrypt(__u8 *in, int len, __u8 *out, int *offset, int *outlen,
 	case IPPROTO_TCP:
 		tcp = (struct tcphdr*)&out[*offset];
 		sum = htons(tcp->check);
-		sum = csum_hip_revert6 (&src_hit->sin6_addr,
+/*		sum = csum_hip_revert6 (&src_hit->sin6_addr,
 					&dst_hit->sin6_addr,
-					sum, htons(entry->hit_magic));
+					sum, htons(entry->hit_magic)); */
 		tcp->check = htons(sum);
 		break;
 	case IPPROTO_UDP:
 		udp = (struct udphdr*)&out[*offset];
 		sum = htons(udp->check);
-		sum = csum_hip_revert6 (&src_hit->sin6_addr,
+/*		sum = csum_hip_revert6 (&src_hit->sin6_addr,
 					&dst_hit->sin6_addr,
-					sum, htons(entry->hit_magic));
+					sum, htons(entry->hit_magic)); */
 		udp->check = htons(sum);
 		break;
 	default:
@@ -1751,30 +2173,34 @@ int hip_esp_decrypt(__u8 *in, int len, __u8 *out, int *offset, int *outlen,
 	case IPPROTO_TCP:
 		tcp = (struct tcphdr*)&out[*offset];
 		sum = htons(tcp->th_sum);
-		sum = csum_hip_revert(	LSI4(&entry->lsi), htonl(g_tap_lsi),
-					sum, htons(entry->hit_magic));
+/*		sum = csum_hip_revert(	LSI4(&entry->lsi), htonl(g_tap_lsi),
+					sum, htons(entry->hit_magic)); 
+*/
 		tcp->th_sum = htons(sum);
 		break;
 	case IPPROTO_UDP:
 		udp = (struct udphdr*)&out[*offset];
 		sum = htons(udp->uh_sum);
-		sum = csum_hip_revert(	LSI4(&entry->lsi), htonl(g_tap_lsi),
+/*		sum = csum_hip_revert(	LSI4(&entry->lsi), htonl(g_tap_lsi),
 					sum, htons(entry->hit_magic));
+					*/
 		udp->uh_sum = htons(sum);
 		break;
 #else
 	case IPPROTO_TCP:
 		tcp = (struct tcphdr*)&out[*offset];
 		sum = htons(tcp->check);
-		sum = csum_hip_revert(	LSI4(&entry->lsi), htonl(g_tap_lsi),
+/*		sum = csum_hip_revert(	LSI4(&entry->lsi), htonl(g_tap_lsi),
 					sum, htons(entry->hit_magic));
+*/
 		tcp->check = htons(sum);
 		break;
 	case IPPROTO_UDP:
 		udp = (struct udphdr*)&out[*offset];
 		sum = htons(udp->check);
-		sum = csum_hip_revert(	LSI4(&entry->lsi), htonl(g_tap_lsi),
+/*		sum = csum_hip_revert(	LSI4(&entry->lsi), htonl(g_tap_lsi),
 					sum, htons(entry->hit_magic));
+					*/
 		udp->check = htons(sum);
 #endif
 	default:
@@ -1884,28 +2310,32 @@ __u16 rewrite_checksum(__u8 *data, __u16 magic)
 		tcp = (struct tcphdr*)(iph + 1);
 #ifdef __MACOSX__
 		ret = tcp->th_sum;
-		tcp->th_sum = csum_tcpudp_hip_nofold(
+/*		tcp->th_sum = csum_tcpudp_hip_nofold(
 				iph->ip_src.s_addr, iph->ip_dst.s_addr,
 				tcp->th_sum, magic);
+*/
 #else
 		ret = tcp->check;
-		tcp->check = csum_tcpudp_hip_nofold(
+/*		tcp->check = csum_tcpudp_hip_nofold(
 				iph->ip_src.s_addr, iph->ip_dst.s_addr,
 				tcp->check, magic);
+*/
 #endif
 		break;
 	case IPPROTO_UDP:
 		udp = (struct udphdr*)(iph + 1);
 #ifdef __MACOSX__
 		ret = udp->uh_sum;
-		udp->uh_sum = csum_tcpudp_hip_nofold(
+/*		udp->uh_sum = csum_tcpudp_hip_nofold(
 				iph->ip_src.s_addr, iph->ip_dst.s_addr,
 				udp->uh_sum, magic);
+				*/
 #else
 		ret = udp->check;
-		udp->check = csum_tcpudp_hip_nofold(
+/*		udp->check = csum_tcpudp_hip_nofold(
 				iph->ip_src.s_addr, iph->ip_dst.s_addr,
 				udp->check, magic);
+*/
 #endif
 		break;
 	default:
@@ -2049,7 +2479,7 @@ void add_outgoing_esp_header(__u8 *data, __u32 src, __u32 dst, __u16 len)
 	iph->ip_dst.s_addr = dst;
 
 	/* add the header checksum */
-	iph->ip_sum = ip_fast_csum((__u8*)iph, iph->ip_hl);
+//	iph->ip_sum = ip_fast_csum((__u8*)iph, iph->ip_hl);
 }
 
 

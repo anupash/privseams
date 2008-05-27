@@ -8,10 +8,10 @@
 
 int hip_fw_sock = 0;
 int control_thread_started = 0;
-GThread * control_thread = NULL; 
+//GThread * control_thread = NULL; 
 
 
-gpointer run_control_thread(gpointer data)
+void* run_control_thread(void* data)
 {
 	/* Variables. */
 	int err = 0;
@@ -165,7 +165,6 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 		
 		
 		/* now param: anthkey */
-		
 		param =  hip_get_next_param(msg, param);
 		authkey = (struct hip_crypto_key *)hip_get_param_contents_direct(param);
 		// HIP_DEBUG("auth key key is: \n"); 
