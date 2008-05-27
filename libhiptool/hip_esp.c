@@ -1,4 +1,3 @@
-
 /*
  * Host Identity Protocol
  * Copyright (C) 2004-06 the Boeing Company
@@ -23,278 +22,8 @@
  * tunreader portions Copyright (C) 2004 UC Berkeley
  */
 
+#include "hip_esp.h"
 
-
-
-#include <stdio.h>		/* HIP_DEBUG() */
-#include <unistd.h>		/* write() */
-#include <pthread.h>		/* pthread_exit() */
-#include <sys/time.h>		/* gettimeofday() */
-#include <sys/errno.h>		/* errno, etc */
-#include <netinet/ip.h>		/* struct ip */
-#include <netinet/ip6.h>	/* struct ip6_hdr */
-#include <netinet/icmp6.h>	/* struct icmp6_hdr */
-#include <netinet/tcp.h>	/* struct tcphdr */
-#include <netinet/udp.h>	/* struct udphdr */
-#include <arpa/inet.h>		
-#include <linux/types.h>	/* for pfkeyv2.h types */
-#include <netinet/udp.h>	/* struct udphdr */
-#include <string.h>		/* memset, etc */
-#include <openssl/hmac.h>	/* HMAC algorithms */
-#include <openssl/sha.h>	/* SHA1 algorithms */
-#include <openssl/des.h>	/* 3DES algorithms */
-#include <openssl/rand.h>	/* RAND_bytes() */
-
-//#include <hip/hip_types.h>
-//#include <hip/hip_funcs.h>
-#include "hip_usermode.h"
-#include "hip_sadb.h"
-#include "misc.h"
-
-
-#include <sys/time.h>
-#include <sys/wait.h>		/* waitpid()	*/
-#include <pthread.h>		/* pthreads support*/
-
-
-#if defined(__BIG_ENDIAN__) || defined( __MACOSX__)
-#include <mac/checksum_mac.h>
-#else
-#include "win32-checksum.h"
-#endif
-
-
-
-
-/* 
- * Globals
- */
-
-#ifdef __WIN32__
-HANDLE tapfd;
-#else
-int tapfd;
-#endif
-int readsp[2] = {0,0};
-int s_esp, s_esp_udp, s_esp6;
-int s_udp;
-#ifdef DEBUG_EVERY_PACKET
-FILE *debugfp;
-#endif
-
-extern hip_sadb_dst_entry hip_sadb_dst[SADB_SIZE];
-#ifdef __MACOSX__
-extern char *logaddr(struct sockaddr *addr);
-#endif
-
-__u32 g_tap_lsi;
-__u64 g_tap_mac;
-long g_read_usec;
-
-#define BUFF_LEN 2000
-#define HMAC_SHA_96_BITS 96 /* 12 bytes */
-
-/* added By Tao Wan*/
-#define H_PROTO_UDP 17
-
-/* array of Ethernet addresses used by get_eth_addr() */
-#define MAX_ETH_ADDRS 255
-__u8 eth_addrs[6 * MAX_ETH_ADDRS]; /* must be initialized to random values */
-
-
-/* Prototype of checksum function defined in hip_util.c */
-__u16 checksum_udp_packet(__u8 *data, struct sockaddr *src, struct sockaddr *dst);
-
-
-/* added by Tao Wan, define g_state to be 1 */
-/* status kernelspace ipsec */
-int g_state = 0;
-
-
-/* defined RAW socket IP out */
-#define RAW_IP_OUT 1
-
-
-/*HIP ESP output using socket binding */
-// #define USE_BINDING 1
-
-
-/* 
- * Local data types 
- */
-struct ip_esp_hdr {
-	__u32 spi;
-	__u32 seq_no;
-	__u8 enc_data[0];
-}__attribute__ ((packed)) ;
-
-struct ip_esp_padinfo {
-	__u8 pad_length;
-	__u8 next_hdr;
-}__attribute__ ((packed)) ;
-
-struct eth_hdr {
-	__u8 dst[6];
-	__u8 src[6];
-	__u16 type;
-}__attribute__ ((packed));
-
-/* ARP header - RFC 826, STD 37 */
-struct arp_hdr {
-	__u16 ar_hrd;
-	__u16 ar_pro;
-	__u8 ar_hln;
-	__u8 ar_pln;
-	__u16 ar_op;
-};
-
-/*added by Tao Wan pseudo_header6, pseudo_header*/
-
-typedef struct _pseudo_header6
-{
-	unsigned char src_addr[16];
-	unsigned char dst_addr[16];
-	__u32 packet_length;
-	char zero[3];
-	__u8 next_hdr;
-} pseudo_header6;
-
-typedef struct _pseudo_header
-{
-	unsigned char src_addr[4];
-	unsigned char dst_addr[4];
-	__u8 zero;
-	__u8 protocol;
-	__u16 packet_length;
-} pseudo_header;
-
-/* 
- * Local function declarations
- */
-
-int handle_nsol(__u8 *in, int len, __u8 *out,int *outlen,struct sockaddr *addr);
-int hip_esp_encrypt(__u8 *in, int len, __u8 *out, 
-		hip_sadb_entry *entry, struct timeval *now, int *outlen);
-int hip_esp_decrypt(__u8 *in, int len, __u8 *out, int *offset, int *outlen,
-    hip_sadb_entry *entry, struct ip *iph, struct timeval *now);
-
-__u16 rewrite_checksum(__u8 *data, __u16 magic);
-void add_eth_header(__u8 *data, __u64 src, __u64 dst, __u32 type);
-void add_ipv4_header(__u8 *new_packet, struct ip *old_ip_hdr, __u32 src_addr, __u32 dst_addr, 
-		__u16 packet_len, __u8 next_hdr);
-void add_ipv6_pseudo_header(__u8 *data, struct sockaddr *src, 
-	struct sockaddr *dst, __u32 len, __u8 proto);
-void add_ipv6_header(__u8 *data, struct sockaddr *src, struct sockaddr *dst,
-	struct ip6_hdr *old, struct ip *old4, __u16 len, __u8 proto);
-__u16 in_cksum(struct ip *iph);
-__u64 get_eth_addr(int family, __u8 *addr);
-
-/* void reset_sadbentry_udp_port (__u32 spi_out); */
-int send_udp_esp_tunnel_activation (__u32 spi_out);
-
-// extern __u32 get_preferred_lsi();
-// extern int do_bcast();
-extern int maxof(int num_args, ...);
-
-
-/*
- * function checksum_udp_packet()
- *
- * XXX TODO: combine with other checksum functions
- *
- * Calculates the checksum of a UDP packet with pseudo-header
- * src and dst are IPv4 or IPv6 addresses in network byte order
- */
-__u16 checksum_udp_packet(__u8 *data, struct sockaddr *src, struct sockaddr *dst)
-{
-	__u16 checksum;
-	unsigned long sum = 0;
-	int count, length;
-	unsigned short *p; /* 16-bit */
-	pseudo_header pseudoh;
-	pseudo_header6 pseudoh6;
-	__u32 src_network, dst_network;
-	struct in6_addr *src6, *dst6;
-	struct udphdr* udph = (struct udphdr*) data;
-
-	if (src->sa_family == AF_INET) {
-		/* IPv4 checksum based on UDP-- Section 6.1.2 */
-		src_network = ((struct sockaddr_in*)src)->sin_addr.s_addr;
-		dst_network = ((struct sockaddr_in*)dst)->sin_addr.s_addr;
-	
-		memset(&pseudoh, 0, sizeof(pseudo_header));
-		memcpy(&pseudoh.src_addr, &src_network, 4);
-		memcpy(&pseudoh.dst_addr, &dst_network, 4);
-		pseudoh.protocol = H_PROTO_UDP;
-		length = ntohs(udph->len);
-		pseudoh.packet_length = htons((__u16)length);
-
-		count = sizeof(pseudo_header); /* count always even number */
-		p = (unsigned short*) &pseudoh;
-	} else {
-		/* IPv6 checksum based on IPv6 pseudo-header */
-		src6 = &((struct sockaddr_in6*)src)->sin6_addr;
-		dst6 = &((struct sockaddr_in6*)dst)->sin6_addr;
-	
-		memset(&pseudoh6, 0, sizeof(pseudo_header6));
-		memcpy(&pseudoh6.src_addr[0], src6, 16);
-		memcpy(&pseudoh6.dst_addr[0], dst6, 16);
-		length = ntohs(udph->len);
-		pseudoh6.next_hdr = H_PROTO_UDP;
-		pseudoh6.packet_length = htonl(length);
-		
-		count = sizeof(pseudo_header6); /* count always even number */
-		p = (unsigned short*) &pseudoh6;
-	}
-	/* 
-	 * this checksum algorithm can be found 
-	 * in RFC 1071 section 4.1
-	 */
-
-	/* sum the psuedo-header */
-	/* count and p are initialized above per protocol */
-	while (count > 1) {
-		sum += *p++;
-		count -= 2;
-	}
-    
-	/* one's complement sum 16-bit words of data */
-	/* log_(NORM, "checksumming %d bytes of data.\n", length); */
-	count = length;
-	p = (unsigned short*) data;
-	while (count > 1)  {
-		sum += *p++;
-		count -= 2;
-	}
-	/* add left-over byte, if any */
-	if (count > 0)
-		sum += (unsigned char)*p;
- 
-	/*  Fold 32-bit sum to 16 bits */
-	while (sum>>16)
-		sum = (sum & 0xffff) + (sum >> 16);
-	/* take the one's complement of the sum */ 
-	checksum = (__u16)(~sum);
-    
-	return(checksum);
-}
-
-
-/* added by Tao Wan, different from boeing implemenation */
-
-int get_preferred_lsi(struct sockaddr *lsi) {
-
-   if (lsi != NULL) {
-    struct in_addr *lsi_in = hip_cast_sa_addr(lsi);
-    lsi_in->s_addr = 0;
-    return (0);
-} else
-  
-	return (-1); 
-
-}
-
-#if 0
 /*
  * hip_esp_output()
  *
@@ -305,35 +34,12 @@ int get_preferred_lsi(struct sockaddr *lsi) {
 
 /* - encrypt payload
  * - set up other headers */
-int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry, __u8 *esp_packet,
-		int udp_encap, struct timeval *now)
+int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry, int out_ip_version,
+		int udp_encap, struct timeval *now, unsigned char *esp_packet, int *esp_packet_len)
 {
-	int esp_packet_len = 0;
-	
+	int next_hdr_offset = 0;
 	int err = 0;
-	
-	// resolve HITs to routable addresses and select the prefered ones
-	hip_addr_to_sockaddr(&ctx->src, &sockaddr_local);
-	hip_addr_to_sockaddr(&ctx->dst, &sockaddr_peer);
-	
-	// TODO get preferred addresses from the entry
-	
-	// check preferred addresses for the address type of the output
-	if (sockaddr_local_hit->sa_family == AF_INET && sockaddr_peer_hit->sa_family == AF_INET)
-	{
-		HIP_DEBUG("out_ip_version is IPv4");
-		out_ip_version = 4;
-	} else if (sockaddr_local_hit->sa_family == AF_INET6 && sockaddr_peer_hit->sa_family == AF_INET6)
-	{
-		HIP_DEBUG("out_ip_version is IPv6");
-		out_ip_version = 6;
-	} else
-	{
-		HIP_ERROR("bad address combination");
-		
-		err = 1;
-		goto end_err;
-	}
+	__u16 checksum_fix = 0;	
 	
 	// distinguish IPv4 and IPv6 output
 	if (out_ip_version == 4)
@@ -345,58 +51,50 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry, __u8 *esp_packe
 		// check whether to use UDP encapsulation or not
 		if (udp_encap)
 			next_hdr_offset += sizeof(struct udphdr);
+
+#if 0
+		// AF_INET or AF_INET6
+		switch (family) {
+		case AF_INET:
+			iph = (struct ip*) &in[sizeof(struct eth_hdr)];
+			eth_ip_hdr_len = sizeof(struct eth_hdr) + sizeof(struct ip);
+			// rewrite transport-layer checksum, so it is based on HITs
+			checksum_fix = rewrite_checksum((__u8*)iph, entry->hit_magic);
+			break;
+		case AF_INET6:
+			ip6h = (struct ip6_hdr*) &in[sizeof(struct eth_hdr)];
+			eth_ip_hdr_len = sizeof(struct eth_hdr)+sizeof(struct ip6_hdr);
+			// assume HITs are used as v6 src/dst, no checksum rewrite
+			break;
+		}
 		
+		// setup ESP header, common to all algorithms
+		// TODO this is not the way you learn about UDP encap
+		if (udp_encap) { //(HIP_ESP_OVER_UDP)
+			// add udp and esp header
+			udph = (udphdr*) out;
+			esp = (struct ip_esp_hdr*) &out[sizeof(udphdr)];
+			use_udp = TRUE;
+		} else {
+			// only add esp header
+			esp = (struct ip_esp_hdr*) out;
+		}
+#endif
+
+		// set up esp header defined in firewall_defines.h
+		esp_hdr = (struct hip_esp*) ((unsigned char *)esp_packet) + next_hdr_offset;
+		esp_hdr->spi = htonl(entry->spi);
+		esp_hdr->seq_no = htonl(entry->sequence++);
 		
-		__u16 checksum_fix = 0;
-			
-			
-			int family, use_udp = FALSE;
+		// packet to be re-inserted into network stack has at least
+		// length of defined headers
+		*esp_packet_len += next_hdr_offset + sizeof(struct hip_esp);
 
-
-			if ((in[12] == 0x86) && (in[13] == 0xdd))
-				family = AF_INET6;
-			else
-				family = AF_INET;
-
-			switch (family) {
-			case AF_INET:
-				iph = (struct ip*) &in[sizeof(struct eth_hdr)];
-				eth_ip_hdr_len = sizeof(struct eth_hdr) + sizeof(struct ip);
-				/* rewrite transport-layer checksum, so it is based on HITs */
-				checksum_fix = rewrite_checksum((__u8*)iph, entry->hit_magic);
-				break;
-			case AF_INET6:
-				ip6h = (struct ip6_hdr*) &in[sizeof(struct eth_hdr)];
-				eth_ip_hdr_len = sizeof(struct eth_hdr)+sizeof(struct ip6_hdr);
-				/* assume HITs are used as v6 src/dst, no checksum rewrite */
-				break;
-			}
-			
-			/* setup ESP header, common to all algorithms */
-			// TODO this is not the way you learn about UDP encap
-			if (entry->mode == 3) { /*(HIP_ESP_OVER_UDP)*/
-				// add udp and esp header
-				udph = (udphdr*) out;
-				esp = (struct ip_esp_hdr*) &out[sizeof(udphdr)];
-				use_udp = TRUE;
-			} else {
-				// only add esp header
-				esp = (struct ip_esp_hdr*) out;
-			}
-
-			// set up esp header
-			esp->spi = htonl(entry->spi);
-			esp->seq_no = htonl(entry->sequence++);
-
-			/* encrypted data length is everything starting at transport layer header */
-			elen = len - eth_ip_hdr_len;
-			
-			// calculate first part of the output length
-			*outlen = sizeof(struct ip_esp_hdr);
-			if (use_udp) /* (HIP_ESP_OVER_UDP) */
-				*outlen += sizeof(udphdr);
+		// encrypted data length is everything of the original packet
+		// starting at transport layer header
+		elen = ctx->ipq_packet->data_len - sizeof(struct ip);		
 		
-		
+#if 0
 		// encrypt data now
 		pthread_mutex_lock(&entry->rw_lock);
 			
@@ -409,8 +107,9 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry, __u8 *esp_packe
 				      esp_packet + next_hdr_offset, entry, &now, &esp_packet_len);
 		
 		pthread_mutex_unlock(&entry->rw_lock);
+#endif
 		
-		
+#if 0	
 		/* Record the address family of this packet, so incoming
 		 * replies of the same protocol/ports can be matched to
 		 * the same family.
@@ -421,29 +120,24 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry, __u8 *esp_packe
 					iph ? (__u8*)(iph+1) : (__u8*)(ip6h+1),
 					family, 0, now	) < 0)
 			printf("hip_esp_encrypt(): error adding sel entry.\n");
+#endif
 
-
+#if 0
 		/* Restore the checksum in the input data, in case this is
 		 * a broadcast packet that needs to be re-sent to some other
 		 * destination.
 		 */
 		if (checksum_fix > 0) {
 			if (iph->ip_p == IPPROTO_UDP)
-	#ifdef __MACOSX__
-				((struct udphdr*)(iph + 1))->uh_sum = checksum_fix;
-	#else
 				((struct udphdr*)(iph + 1))->check = checksum_fix;
-	#endif
 			else if (iph->ip_p == IPPROTO_TCP)
-	#ifdef __MACOSX__
-				((struct tcphdr*)(iph + 1))->th_sum = checksum_fix;
-	#else
 				((struct tcphdr*)(iph + 1))->check = checksum_fix;
-	#endif
 		}
+#endif
 
-		if (use_udp) { /* (HIP_ESP_OVER_UDP) */
-			/* Set up UDP header at the beginning of out */
+		// finally we have all the information to set up the missing headers
+		if (udp_encap) {
+			// Set up UDP header at the beginning of out
 			memset (udph, 0, sizeof(udphdr));
 			udph->src_port = htons(HIP_ESP_UDP_PORT);
 			if ( (udph->dst_port = htons(entry->dst_port))==0) {
@@ -455,8 +149,6 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry, __u8 *esp_packe
 					    (struct sockaddr*)&entry->src_addrs->addr,
 					    (struct sockaddr*)&entry->dst_addrs->addr);
 		}
-		
-		
 		
 		if (udp_encap)
 		{
@@ -471,7 +163,11 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry, __u8 *esp_packe
 		{
 			add_ipv4_header(esp_packet, ctx, preferred src, preferred dst, 
 					esp_packet_len, IPPROTO_ESP);
-		}			
+		}
+		
+		
+		
+#if 0
 	} else if (out_ip_version == 6)
 	{
 		/* we don't support UDP encapsulation for IPv6 right now
@@ -492,790 +188,12 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry, __u8 *esp_packe
 		pthread_mutex_unlock(&entry->rw_lock);
 		
 		add_ipv6_header
+#endif
 	}
 	
   end_err:
   	return err;
 }
-#endif
-	
-#if 0	
-/* We do not use TAP-Win32 interface here, FIXME: SOCK_RAW IP out 
-* should be rewritten:(
-*/
-#ifdef __WIN32__
-void hip_esp_output(void *arg)
-#else
-int hip_esp_output(struct sockaddr *ss_lsi, 
-		     u8 *raw_buff, int len)
-#endif
-{
-	int i, err = 0, flags, raw_len, is_broadcast, s, offset=0;
-	int on = 1;
-	int out_enc_len; /* returned length of encrypted data*/
-	int ipv4_s_raw = 0; /* ipv4 raw socket */
-	int ipv6_s_raw = 0; /* ipv6 raw socket */
-	struct sockaddr_in *ipv4_binding;
-	struct sockaddr_in6 *ipv6_binding;
-
-	struct sockaddr_in ipv4_src_addr;
-	struct sockaddr_in6 ipv6_src_addr;
-
-	
-	size_t sa_size_v4 = sizeof(struct sockaddr_in);
-	size_t sa_size_v6 = sizeof(struct sockaddr_in6);
-	size_t sent = 0; 
-	int dst_is_ipv4 = 0;
-	struct ip *iphdr; 
-	struct ip6_hdr *ip6_hdr;
-	struct tcphdr *tcphdr;
-	int hdr_size;
-	fd_set fd;
-	struct timeval timeout, now;
-	__u8 data[BUFF_LEN];
-	struct ip *iph;
-#ifdef __WIN32__
-	DWORD lenin;
-	OVERLAPPED overlapped = {0};
-#endif
-	//struct ip6_hdr *ip6h;
-	static hip_sadb_entry *entry;
-	//struct sockaddr_storage ss_lsi;
-	struct sockaddr *lsi = (struct sockaddr *) ss_lsi;
-	struct ip_esp_hdr *esph;
-
-	memset(data, 0, sizeof(data));
-
-	_HIP_DEBUG("the AF_INET value is %d\n", AF_INET);
-	_HIP_DEBUG("the AF_INET6 value is %d\n", AF_INET6);
-	
-	
-	HIP_DEBUG_SOCKADDR("LSI address is: ",  lsi);
-
-	
-	__u32 lsi_ip;
-#ifdef __MACOSX__
-        __u32 saddr, daddr;
-#endif
-#ifdef RAW_IP_OUT
-
-#if 0	
-
-	HIP_DEBUG("Get into RAW_IP_OUT\n");
-	
-	int s_raw = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
-	if (s_raw < 0) {
-		HIP_DEBUG("*** socket() error for raw socket in hip_esp_output\n");
-	}
-	flags = 1;
-	if (setsockopt(s_raw, IPPROTO_IP, IP_HDRINCL, (char *)&flags, 
-		       sizeof(flags)) < 0) {
-		HIP_DEBUG("*** setsockopt() error for raw socket in "
-			  "hip_esp_output\n");
-	}
-	
-
-#endif 	
-	
-	/* open ipv4 raw socket */
-	ipv4_s_raw = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
-	if (ipv4_s_raw < 0) {
-		HIP_DEBUG("*** ipv4_s_raw socket() error for raw socket in hip_esp_output\n");
-	}
-	
-	/* open ipv6 raw socket*/
-	ipv6_s_raw = socket(AF_INET6, SOCK_RAW, IPPROTO_RAW);
-	if (ipv6_s_raw < 0) {
-		HIP_DEBUG("*** ipv6_s_raw socket() error for raw socket in hip_esp_output\n");
-	}
-
-
-#endif /* RAW_IP_OUT */
-
-#ifdef DEBUG_EVERY_PACKET
-	if (!(debugfp = fopen("esp.log", "w"))) {
-		HIP_DEBUG("********* error opening debug log!\n");
-	}
-#endif
-
-	/* we do not need create a pair of connected scokets*/
-	// init_readsp();
-
-	
-	/* For HIPL implementation,  lsi->sa_family is AF_INET6*/
-	HIP_DEBUG("lsi->sa_family value is %d\n",  lsi->sa_family );
-	
-
-	/* HIPL does not use tap driver here */
-
-	// lsi->sa_family = AF_INET;
-	// get_preferred_lsi(lsi);
-	// g_tap_lsi = LSI4(lsi);
-	
-	
-	/* Try to get HIP security association entry (userspace ipsec) */
-	
-
-	/* unicast packets */
-
-	/* we only do the unicast, the entry length is only 1 */
-	
-
-	if (!(entry = hip_sadb_lookup_addr(lsi))) {
-		/* No SADB entry. Send ACQUIRE if we haven't
-		 * already, i.e. a new lsi_entry was created */
-		HIP_DEBUG("HIP ipsec userspace sadb is not ready!!\n");
-
-		if (buffer_packet(lsi, raw_buff, len))
-			pfkey_send_acquire(lsi);
-		// continue;
-		return;
-	}
-
-
-	raw_len = len;
-	
-	HIP_DEBUG("hip_esp_output() thread started...\n");
-       
-	while(entry) {
-
-
-		
-		
-		pthread_mutex_lock(&entry->rw_lock);
-		
-		/* RAW IP out */
-
-		/* This is for IPv4, need LSI support */
-		// offset = sizeof(struct ip);
-		
-		/* This is for IPv6 header */
-		// offset = sizeof(struct ip6_hdr);
-
-		HIP_DEBUG("start encrypt data......\n");
-
-		err = hip_esp_encrypt(raw_buff, raw_len,
-				      data, &out_enc_len, entry, &now);
-		
-		pthread_mutex_unlock(&entry->rw_lock);
-
-                 /*
-		   
-		 
-		 if (err) { 
-		 break;
-		 }
-			
-		 flags = 0;
-		 */
-		
-	/* catch empty entries */
-	if (!entry->src_addrs || !entry->dst_addrs)
-			continue;		
-
-	HIP_DEBUG_SOCKADDR("src addr: ", (struct sockaddr *) &entry->src_addrs->addr);
-	HIP_DEBUG_SOCKADDR("dst addr: ", (struct sockaddr *) &entry->dst_addrs->addr);
-	
-	/* FIXME if src family is IPv4, dst family is IPv6
-	*  or src family is IPv6, dst family is IPv4
-	*
-	*/
-
-	if ((entry->src_addrs->addr).ss_family == AF_INET
-	    && (entry->dst_addrs->addr).ss_family == AF_INET)	
-	{
-		HIP_DEBUG(" Both IP addresses belong to IPv4\n"); 
-	
-
-		dst_is_ipv4 = 1; /* Here we know dst is IPv4 address*/
-		
-		/* raw_buff only includes HITS, FIXME, if support LSI */
-	
-		//get the ip header
-		ip6_hdr = (struct ip6_hdr *) &raw_buff[0];
-		
-		
-		/* get the tcp header pointer */
-		hdr_size = (ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen * 4);
-		tcphdr = ((struct tcphdr *) (((char *) ip6_hdr) + hdr_size));	
-		
-	    		
-		
-#ifdef USE_BINDING /* Using binding */
-		
-		/* my localhost address is entry->dst_addrs->addr 
-		 * FIX ME if using UDP socket, can not use raw_socket here!!!!!!
-		 *
-		 */
-		ipv4_binding = (struct sockaddr_in *) &entry->dst_addrs->addr;
-		
-
-		HIP_DEBUG_SOCKADDR("src addr: ", ipv4_binding);
-		
-		HIP_IFEL(bind(ipv4_s_raw, (struct sockaddr *) ipv4_binding, sa_size_v4), -1,
-			 "Binding to ipv4 raw sock failed\n");
-		flags = 0;
-		
-#else
-		
-		if(setsockopt(ipv4_s_raw, IPPROTO_IP, IP_HDRINCL, 
-			      (char *)&on, sizeof(on)) < 0 )
-		{
-			HIP_DEBUG("ipv4 Error setting an option to raw socket\n"); 
-			goto out_err;
-			
-		}
-		
-		flags = 0;
-
-		/* the peer address is entry->src_addrs->addr*/
-		/* IP header + udp header + ESP packet */
-    
-		__u8 new_raw_ip_output[sizeof(struct ip) + out_enc_len];
-
-		iph = (struct ip *) new_raw_ip_output;
-		
-
-		/* copy memory (data) udp header + ESP packet */
-		memcpy(&new_raw_ip_output[sizeof(struct ip)], data, out_enc_len);
-
-
-		/* Local IP address: &entry->dst_addrs->addr  */
-		/* Remote IP address: &entry->src_addrs->addr */
-
-	      
-		/* FIXME, Replace NULL pointer with LSI if LSI support*/
-		/*  ESP_OVER_UDP */
-		
-		if(entry->mode == 3) 
-		{
-		add_ipv4_header(new_raw_ip_output,
-			       ntohl(LSI4(&entry->dst_addrs->addr)), 
-			       ntohl(LSI4(&entry->src_addrs->addr)), 
-			       (struct ip*) NULL,
-			       sizeof(struct ip) + out_enc_len,
-			       IPPROTO_UDP);
-		
-		} else 
-		{
-			
-			add_ipv4_header(new_raw_ip_output,
-					ntohl(LSI4(&entry->dst_addrs->addr)), 
-					ntohl(LSI4(&entry->src_addrs->addr)), 
-					(struct ip*) NULL,
-					sizeof(struct ip) + out_enc_len,
-					IPPROTO_ESP);
-		}
-
-		
-		
-#endif 
-		
-		HIP_HEXDUMP("The output encrypted packet (UDP + ESP)  is ", data, out_enc_len);
-
-		esph = (struct ip_esp_hdr *) (((char *)data) + sizeof(struct udphdr));
-
- 
-		HIP_DEBUG("output packet spi value is 0x%x\n", ntohl(esph->spi));
-		
-		HIP_HEXDUMP("the output IPv4 header + UDP header + ESP packet is",
-			    new_raw_ip_output, sizeof(struct ip) + out_enc_len);
-
-
-		
-		err = sendto(ipv4_s_raw, new_raw_ip_output, 
-			     sizeof(struct ip) + out_enc_len , 
-			     flags,
-			     SA(&entry->src_addrs->addr),
-			     SALEN(&entry->src_addrs->addr));
- 
-		if (err < 0)
-		{	
-			HIP_DEBUG("hip_esp_output IPv4 sendto() failed:"
-				  " %s\n",strerror(errno));
-			goto out_err;
-			
-		}
-		
-	 	
-		
-
-	}
-	
-	if ((entry->src_addrs->addr).ss_family == AF_INET6
-	    &&(entry->dst_addrs->addr).ss_family == AF_INET6)	 
-		
-	{
-		HIP_DEBUG(" Both IP addresses belong to IPv6\n"); 
-		
-		
-		//get the ip header
-		ip6_hdr = (struct ip6_hdr *) &raw_buff[0];
-		
-		
-		/* get the tcp header pointer
-		 */		
-		hdr_size = (ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen * 4);
-		tcphdr = ((struct tcphdr *) (((char *) ip6_hdr) + hdr_size));	
-		
-
-		
-#ifdef USE_BINDING 
-		
-		ipv6_binding = (struct sockaddr_in6 *) &entry->dst_addrs->addr;
-		HIP_IFEL(bind(ipv6_s_raw, (struct sockaddr *) ipv6_binding, sa_size_v6), -1,
-			 "Binding to ipv4 raw sock failed");
-		flags = 0;
-
-#else
-
-		if(setsockopt(ipv6_s_raw, IPPROTO_IPV6, IP_HDRINCL, 
-			      (char *)&on, sizeof(on)) < 0 )
-		{
-			HIP_DEBUG("ipv6 Error setting an option to raw socket\n"); 
-			goto out_err;
-			
-		}
-		
-		flags = 0;
-
-		/* the peer address is entry->src_addrs->addr*/
-		/* IP header + udp header + ESP packet */
-    
-		__u8 new_raw_ip_output[sizeof(struct ip6_hdr) + out_enc_len];
-
-		
-		/* copy memory (data) udp header + ESP packet */
-		memcpy(&new_raw_ip_output[sizeof(struct ip6_hdr)], data, out_enc_len);
-
-
-		/* Local IP address: &entry->dst_addrs->addr  */
-		/* Remote IP address: &entry->src_addrs->addr */
-	       
-		
-		HIP_DEBUG("The IPPROTO_ESP value is %d\n", IPPROTO_ESP);
-		
-		
-		add_ipv6_header(new_raw_ip_output, 
-				SA(&entry->src_addrs->addr),
-				SA(&entry->dst_addrs->addr),
-				(struct ip6_hdr *) ip6_hdr, (struct ip*) NULL,
-				sizeof(struct ip6_hdr) + out_enc_len,
-				IPPROTO_ESP);
-		
-
-#endif 
-
-
-		HIP_HEXDUMP("The output encrypted packet ( if ESP_OVER_UDP /UDP + ESP)  is ", 
-			    data, out_enc_len);
-	       
-	       struct ip_esp_hdr *esph = (struct ip_esp_hdr *) ((char *) data);
-	       
-	       
-	       HIP_DEBUG("output packet spi value is 0x%x\n", ntohl(esph->spi));
-	       
-	       HIP_HEXDUMP("the output IPv6 header +  ESP packet is",
-			   new_raw_ip_output, sizeof(struct ip6_hdr) + out_enc_len);
-	       
-	       
-	       err = sendto(ipv6_s_raw, new_raw_ip_output, 
-			    sizeof(struct ip6_hdr) + out_enc_len , 
-			    flags,
-			    SA(&entry->src_addrs->addr),
-			    SALEN(&entry->src_addrs->addr));
-	       
-	       
-	       if (err < 0)
-	       {	
-		       HIP_DEBUG("hip_esp_output IPv6 sendto() failed:"
-				 " %s\n",strerror(errno));
-		       goto out_err;
-		       
-	       }
-	       
-	       
-	}
-	
-	
-	entry=hip_sadb_get_next(entry);
-	
-	
-	}
-
-
-
-	
-	
-
-
-
-	// if ((raw_buff[12] == 0x08) && (raw_buff[13] == 0x00)) 
-	       
-
-	// HIP_DEBUG("Print out some raw bufer values....\n");
-	//HIP_DEBUG("raw_buffer[12] is Ox%x\n", raw_buff[12]);
-	// HIP_DEBUG("raw_buffer[13] is Ox%x\n", raw_buff[13]);
-	
-/*
-	for(i = 0; i < len ; i++) {
-	
-	HIP_DEBUG("raw_buffer[%d] is Ox%x\n", i, raw_buff[i]);
-	
-	
-	}
-*/
-
-	
-
-
-#if 0
-
-
-
-	//while (g_state == 0) {
-	{
-
-
-#if 0 /* disable OPENHIP implemenation */
-		/* periodic select loop */
-		gettimeofday(&now, NULL); /* XXX does this cause perf. hit? */
-		FD_ZERO(&fd);
-		FD_SET((unsigned)readsp[1], &fd);
-#ifdef __MACOSX__
-		timeout.tv_sec = 1;
-		timeout.tv_usec = 0;
-#else
-		timeout.tv_sec = 0;
-		timeout.tv_usec = g_read_usec;
-#endif
-		if ((err = select(readsp[1]+1, &fd, NULL, NULL, &timeout))< 0) {
-#ifdef __WIN32__
-			if (WSAGetLastError() == WSAEINTR)
-#else
-			if (errno == EINTR)
-#endif
-				continue;
-			HIP_DEBUG("hip_esp_output(): select() error\n");
-		} else if (err == 0) {
-			/* idle cycle */
-			continue;
-		}
-
-		/* output data on socket */
-		memset(raw_buff, 0, sizeof(raw_buff));
-		memset(data, 0, sizeof(data));
-		memset(lsi, 0, sizeof(struct sockaddr_storage));
-
-#ifdef __WIN32__
-		if ((len = recv(readsp[1], raw_buff, BUFF_LEN, 0)) == SOCKET_ERROR) {
-			if (WSAGetLastError() == WSAEINTR)
-#else
-		if ((len = read(readsp[1], raw_buff, BUFF_LEN)) < 0) {
-			if (errno == EINTR)
-#endif
-				continue;
-			HIP_DEBUG("hip_esp_output(): read() failed: %s\n",
-				  strerror(errno));
-			exit(0);
-		}
-#endif /* 0 */
-			
-			/* 
-			 * IPv4 
-			 */
-			if ((raw_buff[12] == 0x08) && (raw_buff[13] == 0x00)) {
-				iph = (struct ip*) &raw_buff[14];
-				/* accept IPv4 traffic to 1.x.x.x here */
-				if (((iph->ip_v) == IPVERSION) &&
-#if defined(__MACOSX__) && defined(__BIG_ENDIAN__)
-				    (iph->ip_dst.s_addr >> 24 & 0xFF)!=0x01)
-#else
-					(iph->ip_dst.s_addr & 0xFF)!=0x01)
-#endif
-			
-			     /*  continue; */
-			    return;
-										      
-			    lsi_ip = ntohl(iph->ip_dst.s_addr);
-			    lsi->sa_family = AF_INET;
-			    LSI4(lsi) = lsi_ip;
-			    is_broadcast = 0;
-			
-			/* We do not have broadcast packets,  added by Tao
-			Wan on 27th, Feb */
-			/* broadcast packets */
-					
-        
-		// if ((lsi_ip & 0x00FFFFFF)==0x00FFFFFF) {
-		//		if (!do_bcast())
-		//			continue;
-				/* unicast the broadcast to each entry */
-		//		entry = hip_sadb_get_next(NULL);
-		//		is_broadcast = TRUE;
-			
-		//	} 
-
-
-                      /* unicast packets */
-			if (!(entry = hip_sadb_lookup_addr(lsi))) {
-		/* No SADB entry. Send ACQUIRE if we haven't
-		* already, i.e. a new lsi_entry was created */
-				if (buffer_packet(lsi, raw_buff, len))
-					pfkey_send_acquire(lsi);
-				// continue;
-				return;
-			}
-			raw_len = len;
-			while (entry) {
-				pthread_mutex_lock(&entry->rw_lock);
-#ifdef RAW_IP_OUT
-				offset = sizeof(struct ip);
-#else
-				offset = 0;
-#endif
-				err = hip_esp_encrypt(raw_buff, raw_len,
-					&data[offset], &len, entry, &now);
-				pthread_mutex_unlock(&entry->rw_lock);
-				if (err) {
-					if (!is_broadcast)
-						break;
-					entry=hip_sadb_get_next(entry);
-					continue;
-				}
-				flags = 0;
-				/* catch empty entries */
-				if (!entry->src_addrs || !entry->dst_addrs)
-					continue;	
-#ifdef RAW_IP_OUT
-				/* Build IPv4 header and send out raw socket.
-				 * Use this to override OS source address
-				 * selection problems.
-				 */
-				add_ipv4_header(data,
-					ntohl(LSI4(&entry->src_addrs->addr)), 
-					ntohl(LSI4(&entry->dst_addrs->addr)), 
-					(struct ip*)
-					&raw_buff[sizeof(struct eth_hdr)],
-					sizeof(struct ip) + len,
-					IPPROTO_ESP);
-				err = sendto(s_raw, data, 
-					sizeof(struct ip) + len, flags,
-					SA(&entry->dst_addrs->addr),
-					SALEN(&entry->dst_addrs->addr));
-#else
-#ifdef __MACOSX__ 
-/*I need to build an IP header and write it to a different address!*/
-			/* TODO: use offset above, and LSI4 macro instead
-			 *       of calls to inet_addr()
-			 */
-				memmove(&data[20],&data,len);
-				saddr = inet_addr(
-					logaddr((struct sockaddr*)&entry->src_addrs->addr));
-				daddr = inet_addr(
-					logaddr((struct sockaddr*)&entry->dst_addrs->addr));
-				
-				add_outgoing_esp_header(data, saddr,daddr,len);
-				
-				err=sendto(s_esp,data,len+sizeof(struct ip),flags,0,0);
-				if(err < 0)
-					perror("sendto()");
-#else /* __MACOSX__ */
-				if (entry->mode == 3)
-					s = s_esp_udp;
-				else if (entry->dst_addrs->addr.ss_family ==
-					 AF_INET)
-					s = s_esp;
-				else
-					s = s_esp6;
-				err = sendto(s, data, len, flags,
-					     SA(&entry->dst_addrs->addr),
-					     SALEN(&entry->dst_addrs->addr));
-#endif /* __MACOSX__ */
-#endif /* RAW_IP_OUT */
-				if (err < 0) {
-					HIP_DEBUG("hip_esp_output(): sendto() "
-						  "failed: %s\n", strerror(errno));
-				} else {
-					pthread_mutex_lock(&entry->rw_lock);
-					entry->bytes += sizeof(struct ip) + err;
-					entry->usetime.tv_sec = now.tv_sec;
-					entry->usetime.tv_usec = now.tv_usec;
-					entry->usetime_ka.tv_sec = now.tv_sec;
-					entry->usetime_ka.tv_usec = now.tv_usec;
-					pthread_mutex_unlock(&entry->rw_lock);
-				}
-				/* broadcasts are unicast to each association */
-				if (!is_broadcast)
-					break;
-				entry = hip_sadb_get_next(entry);
-			} /* end while */
-			/* 
-			 * IPv6 
-			 */
-		} else if ((raw_buff[12] == 0x86) && (raw_buff[13] == 0xdd)) {
-			ip6h = (struct ip6_hdr*) &raw_buff[14];
-			/* accept IPv6 traffic to 2001:10::/28 here */
-			if ((ip6h->ip6_vfc & 0xF0) != 0x60)
-				// continue;
-				return;
-			/* Look for all-nodes multicast address */
-			if (IN6_IS_ADDR_MC_LINKLOCAL(&ip6h->ip6_dst) &&
-			    (ip6h->ip6_nxt == IPPROTO_ICMPV6)) {
-				err = handle_nsol(raw_buff, len, data,&len,lsi);
-				if (err)
-					//continue;
-					return;
-#ifdef __WIN32__
-				if (!WriteFile(tapfd, data, len, &lenin, 
-							&overlapped)){
-					HIP_DEBUG( "hip_esp_output WriteFile() " \
-						"failed.\n");
-				}
-#else
-				if (write(tapfd, data, len) < 0) {
-					HIP_DEBUG( "hip_esp_output write() " \
-						"failed.\n");
-				}
-#endif
-				//continue;
-				return;
-			} else if (!IS_HIT(&ip6h->ip6_dst)) {
-				// continue;
-				return;
-			}
-			/* HIT prefix */
-			lsi->sa_family = AF_INET6;
-			memcpy(SA2IP(lsi), &ip6h->ip6_dst, SAIPLEN(lsi));
-			if (!(entry = hip_sadb_lookup_addr(lsi))) {
-				/* No SADB entry. Send ACQUIRE if we haven't
-				 * already, i.e. a new lsi_entry was created */
-				if (buffer_packet(lsi, raw_buff, len))
-					pfkey_send_acquire(lsi);
-				//continue;
-				return;
-			} 
-			raw_len = len;
-			pthread_mutex_lock(&entry->rw_lock);
-			err = hip_esp_encrypt(raw_buff, raw_len,
-					      data, &len, entry, &now);
-			pthread_mutex_unlock(&entry->rw_lock);
-			flags = 0;
-			if (entry->mode == 3)
-				s = s_esp_udp;
-			else if (entry->dst_addrs->addr.ss_family == AF_INET)
-				s = s_esp;
-			else
-				s = s_esp6;
-			err = sendto(	s, data, len, flags, 
-					SA(&entry->dst_addrs->addr), 
-					SALEN(&entry->dst_addrs->addr));
-			if (err < 0) {
-				HIP_DEBUG("hip_esp_output IPv6 sendto() failed:"
-					" %s\n",strerror(errno));
-			} else {
-				pthread_mutex_lock(&entry->rw_lock);
-				entry->bytes += sizeof(struct ip6_hdr) + err;
-				entry->usetime.tv_sec = now.tv_sec;
-				entry->usetime.tv_usec = now.tv_usec;
-				pthread_mutex_unlock(&entry->rw_lock);
-			}
-		/* 
-		 * ARP 
-		 */
-		} else if ((raw_buff[12] == 0x08) && (raw_buff[13] == 0x06)) {
-			err = handle_arp(raw_buff, len, data, &len, lsi);
-			if (err)
-				//continue;
-				return;
-#ifdef __WIN32__
-			if (!WriteFile(tapfd, data, len, &lenin, &overlapped)){
-				HIP_DEBUG("hip_esp_output WriteFile() failed.\n");
-			}
-#else
-			if (write(tapfd, data, len) < 0) {
-				HIP_DEBUG("hip_esp_output write() failed.\n");
-			}
-#endif
-			/* Why send acquire during ARP? */
-			/*if (!hip_sadb_lookup_addr(lsi))
-				pfkey_send_acquire(lsi);*/
-			// continue;
-			return;
-		} else {
-			/* debug other eth headers here */
-			/*int i;
-			HIP_DEBUG("<unknown traffic> (len=%d)\n", len);
-			for (i = 0; i < len; i++)
-				HIP_DEBUG("%x", raw_buff[i] & 0xFF);
-			HIP_DEBUG("\n");*/
-			
-		}
-	
-	}
-	/* write some data to flush waiting TAP threads, speed up exit */
-	data[0] = 0;
-	len = 1;
-#ifdef __WIN32__
-	WriteFile(tapfd, data, len, &lenin, &overlapped);
-	CloseHandle(tapfd);
-#else
-	write(tapfd, data, len);
-	close(tapfd);
-#endif
-	
-
-#endif /* end disable OPENHIP implementation */
-
-
-
-	
-	
- out_err:
-
-	/* added by Tao Wan*/
-
-	/* Reset the interface to wildcard or otherwise receiving
-	   broadcast messages fails from the raw sockets. A better
-	   solution would be to have separate sockets for sending
-	   and receiving because we cannot receive a broadcast while
-	   sending */ 
-	
-
-	
-	HIP_DEBUG("Print out any erro message :%s\n",strerror(errno));
-
-#ifdef USE_BINDING
-	if (dst_is_ipv4) {
-		ipv4_src_addr.sin_addr.s_addr = INADDR_ANY;
-		ipv4_src_addr.sin_family = AF_INET;
-		bind(ipv4_s_raw, (struct sockaddr *) &ipv4_binding, sa_size_v4);
-
-		
-	} else {
-		struct in6_addr any = IN6ADDR_ANY_INIT;
-		ipv6_src_addr.sin6_family = AF_INET6;
-		ipv6_addr_copy(&ipv6_src_addr.sin6_addr, &any);
-		bind(ipv6_s_raw, (struct sockaddr *) &ipv6_binding, sa_size_v6);
-		
-	}
-
-#endif
-	
-	HIP_DEBUG("hip_esp_output() thread shutdown...\n");
-	fflush(stdout);
-	return (NULL);
-	
-
-// tunreader_shutdown();
-
-#ifndef __WIN32__
-	pthread_exit((void *) 0);
-	return(NULL);
-#endif
-}
-#endif
-
 
 /*
  * hip_esp_input()
@@ -1285,22 +203,16 @@ int hip_esp_output(struct sockaddr *ss_lsi,
  * Also, expires temporary LSI entries and retransmits buffered packets.
  */
 
-
-
 /* This does not support HIPL ipsec userspace, it needs to write */
 
-
-#ifdef __WIN32__
-void hip_esp_input(void *arg)
-#else
 // void *hip_esp_input(void *arg)
 /* beuff: raw encrypted data buffer 
  * len: /*length of buffer */
 /* ss_lsi is the source ip address structure for hipl*/
 int hip_esp_input(struct sockaddr *ss_lsi, u8 *buff, int len)
-#endif
 {
 	int err = 0, max_fd, offset;
+#if 0
 	int dec_len; /*lenth of HIT pairs + tcp header + payload */
 	fd_set fd;
 	struct timeval timeout, now;
@@ -1759,6 +671,9 @@ int hip_esp_input(struct sockaddr *ss_lsi, u8 *buff, int len)
 	HIP_DEBUG("hip_esp_input() thread shutdown.\n");
 	fflush(stdout);
 	return err;
+#endif
+	
+	return 1;
 }
 
 #if 0
@@ -1834,7 +749,91 @@ void *udp_esp_keepalive (void *arg) {
 }
 #endif
 
+#if 0
 /*
+ * function checksum_udp_packet()
+ *
+ * XXX TODO: combine with other checksum functions
+ *
+ * Calculates the checksum of a UDP packet with pseudo-header
+ * src and dst are IPv4 or IPv6 addresses in network byte order
+ */
+__u16 checksum_udp_packet(__u8 *data, struct sockaddr *src, struct sockaddr *dst)
+{
+	__u16 checksum;
+	unsigned long sum = 0;
+	int count, length;
+	unsigned short *p; /* 16-bit */
+	pseudo_header pseudoh;
+	pseudo_header6 pseudoh6;
+	__u32 src_network, dst_network;
+	struct in6_addr *src6, *dst6;
+	struct udphdr* udph = (struct udphdr*) data;
+
+	if (src->sa_family == AF_INET) {
+		/* IPv4 checksum based on UDP-- Section 6.1.2 */
+		src_network = ((struct sockaddr_in*)src)->sin_addr.s_addr;
+		dst_network = ((struct sockaddr_in*)dst)->sin_addr.s_addr;
+	
+		memset(&pseudoh, 0, sizeof(pseudo_header));
+		memcpy(&pseudoh.src_addr, &src_network, 4);
+		memcpy(&pseudoh.dst_addr, &dst_network, 4);
+		pseudoh.protocol = H_PROTO_UDP;
+		length = ntohs(udph->len);
+		pseudoh.packet_length = htons((__u16)length);
+
+		count = sizeof(pseudo_header); /* count always even number */
+		p = (unsigned short*) &pseudoh;
+	} else {
+		/* IPv6 checksum based on IPv6 pseudo-header */
+		src6 = &((struct sockaddr_in6*)src)->sin6_addr;
+		dst6 = &((struct sockaddr_in6*)dst)->sin6_addr;
+	
+		memset(&pseudoh6, 0, sizeof(pseudo_header6));
+		memcpy(&pseudoh6.src_addr[0], src6, 16);
+		memcpy(&pseudoh6.dst_addr[0], dst6, 16);
+		length = ntohs(udph->len);
+		pseudoh6.next_hdr = H_PROTO_UDP;
+		pseudoh6.packet_length = htonl(length);
+		
+		count = sizeof(pseudo_header6); /* count always even number */
+		p = (unsigned short*) &pseudoh6;
+	}
+	/* 
+	 * this checksum algorithm can be found 
+	 * in RFC 1071 section 4.1
+	 */
+
+	/* sum the psuedo-header */
+	/* count and p are initialized above per protocol */
+	while (count > 1) {
+		sum += *p++;
+		count -= 2;
+	}
+    
+	/* one's complement sum 16-bit words of data */
+	/* log_(NORM, "checksumming %d bytes of data.\n", length); */
+	count = length;
+	p = (unsigned short*) data;
+	while (count > 1)  {
+		sum += *p++;
+		count -= 2;
+	}
+	/* add left-over byte, if any */
+	if (count > 0)
+		sum += (unsigned char)*p;
+ 
+	/*  Fold 32-bit sum to 16 bits */
+	while (sum>>16)
+		sum = (sum & 0xffff) + (sum >> 16);
+	/* take the one's complement of the sum */ 
+	checksum = (__u16)(~sum);
+    
+	return(checksum);
+}
+#endif
+
+#if 0
 void reset_sadbentry_udp_port (__u32 spi_out)
 {
 	hip_sadb_entry *entry;
@@ -1844,243 +843,7 @@ void reset_sadbentry_udp_port (__u32 spi_out)
 		HIP_DEBUG ("SADB-entry dst_port reset for spi: 0x%x.\n",spi_out);
 	}
 }
-*/
-
-int send_udp_esp_tunnel_activation (__u32 spi_out)
-{
-#if 0
-	hip_sadb_entry *entry;
-	struct timeval now;
-	int err, len;
-	int raw_len = 35 ;
-	__u8 raw_buff[35];
-	__u8 *payload;
-	struct ip *iph;
-	__u8 data[BUFF_LEN];
-
-	memset(raw_buff,0,sizeof(raw_buff));
-	iph = (struct ip*) &raw_buff[14];
-	iph->ip_p = IPPROTO_RAW;
-	payload = &raw_buff[34];
-	payload[0]=0xFF;
-
-/* ugly hack... 
- * since there is no "ACK" from the responder to signal that its SADB is 
- * uptodate, the "moving" initiator sends the activation packet directly
- * after its own SADB is updated... */
-/* so this hack just add a small delay */
-/* wait 0.2sec to give enough time to the peer for finishing the SADB update */
-#ifdef __WIN32__
-	Sleep(200);
-#else
-	struct timespec delay;
-	delay.tv_sec = 0 ;
-	delay.tv_nsec = 200000000;
-	nanosleep (&delay, NULL);
 #endif
-/* end of ugly hack :-) */
-
-	gettimeofday(&now, NULL);
-
-	entry = hip_sadb_lookup_spi (spi_out);
-
-	if (entry) {
-		if (entry->mode != 3) {
-			return(-1);
-		}
-		if (entry->direction != 2) {
-			return(-1);
-		}
-		if (entry->dst_port == 0) {
-			return(-1);
-		}
-
-		pthread_mutex_lock(&entry->rw_lock);
-		err = hip_esp_encrypt(raw_buff, raw_len, data, 
-					&len, entry, &now);
-		pthread_mutex_unlock(&entry->rw_lock);
-		if (err) {
-			HIP_DEBUG ("Error in send_udp_esp_tunnel_activation(). "
-				"hip_esp_encrypt failed.\n");
-			return (-1);
-		}
-		err = sendto(s_esp_udp, data, len, 0,
-			(struct sockaddr*)&entry->dst_addrs->addr,
-			SALEN(&entry->dst_addrs->addr));
-		if (err < 0) {
-			HIP_DEBUG("send_udp_esp_tunnel_activation sendto() "
-				"failed: %s\n",
-				strerror(errno));
-			return (-1);
-		} else {
-			HIP_DEBUG("send_udp_esp_tunnel_activation packet sent.\n");
-			entry->bytes += sizeof(struct ip) + err;
-			entry->usetime_ka.tv_sec = now.tv_sec;
-			entry->usetime_ka.tv_usec = now.tv_usec;
-			return (0);
-		}
-	}
-#endif
-	return (-1);
-}
-
-/*
- * handle_nsol()
- * 
- * Handle ICMPv6 Neighbor Solicitations for HITs.
- * Right now this is called from the esp_output thread when an 
- * application wants to send data to a HIT.
- */
-int handle_nsol(__u8 *in, int len, __u8 *out, int *outlen,struct sockaddr *addr)
-{
-	struct eth_hdr *eth = (struct eth_hdr*)in;
-	struct ip6_hdr *ip6h = (struct ip6_hdr*) &in[sizeof(struct eth_hdr)];
-	__u64 esrc=0, edst=0;
-	struct icmp6_hdr *nsol, *nadv;
-	struct in6_addr *target, *adv_target;
-	struct nd_opt_hdr *adv_target_opts;
-	__u8 *p;
-	__u16 payload_len;
-	int location;
-	struct sockaddr_storage src_ss;
-	struct sockaddr_storage dst_ss;
-	struct sockaddr *src = (struct sockaddr *) &src_ss;
-	struct sockaddr *dst = (struct sockaddr *) &dst_ss;
-
-	nsol = (struct icmp6_hdr *)&in[ sizeof(struct eth_hdr) + 
-					sizeof(struct ip6_hdr) ];
-
-	/* Only allow ICMPv6 Neighbor Soliciations for HITs */
-	if (nsol->icmp6_type != ND_NEIGHBOR_SOLICIT)
-		return(1);
-	target = (struct in6_addr*) (nsol + 1);
-	if (!IS_HIT(target)) /* target must be HIT */
-		return(1);
-	/* don't answer requests for self */
-	src->sa_family = AF_INET6;
-	get_preferred_lsi(src);
-#ifdef __MACOSX__
-/* XXX portability issue with the macro IN6_ARE_ADDR_EQUAL*/
-	if (IN6_ARE_ADDR_EQUAL(target, &((struct sockaddr_in6*)src)->sin6_addr))
-		return(1);
-#else
-	if (IN6_ARE_ADDR_EQUAL(target, SA2IP(src)))
-		return(1);
-#endif
-
-	/* for now, replied MAC addr  */
-	esrc = get_eth_addr(AF_INET6, &target->s6_addr[0]);
-	memcpy(&edst, eth->src, 6);
-	add_eth_header(out, esrc, edst, 0x86dd);
-	location = sizeof(struct eth_hdr);
-
-	/* IPv6 header added after length is calculated */
-	memset(src, 0, sizeof(struct sockaddr_storage));
-	memset(dst, 0, sizeof(struct sockaddr_storage));
-	src->sa_family = AF_INET6;
-	memcpy(SA2IP(src), &target->s6_addr[0], sizeof(struct in6_addr));
-	dst->sa_family = AF_INET6;
-	memcpy(SA2IP(dst), &ip6h->ip6_src.s6_addr[0], sizeof(struct in6_addr));
-	location += sizeof(struct ip6_hdr);
-	
-	/* build neighbor advertisement reply */
-	nadv = (struct icmp6_hdr *)&out[location];
-	nadv->icmp6_type = ND_NEIGHBOR_ADVERT;
-	nadv->icmp6_code = 0;
-	nadv->icmp6_cksum = 0;
-	nadv->icmp6_data32[0] = ND_NA_FLAG_SOLICITED | ND_NA_FLAG_OVERRIDE;
-	location += sizeof(struct icmp6_hdr);
-	adv_target = (struct in6_addr*) &out[location];
-	memcpy(adv_target, target, sizeof(struct in6_addr));
-	location += sizeof(struct in6_addr);
-	adv_target_opts = (struct nd_opt_hdr*) &out[location];
-	adv_target_opts->nd_opt_type = ND_OPT_TARGET_LINKADDR;
-	adv_target_opts->nd_opt_len = 1; /* 1x(8 octets) */
-	location += sizeof(struct nd_opt_hdr);
-	memcpy(&out[location], &esrc, 6);
-	location += 6;
-
-	/* return the HIT */
-	if (addr)
-		memcpy(addr, src, sizeof(struct sockaddr_storage));
-	
-	/* pseudo-header for upper-layer checksum calculation */
-	p = (__u8*)nadv - 40;
-	payload_len = &out[location] - (__u8*)nadv;
-	add_ipv6_pseudo_header(p, src, dst, (__u32)payload_len, IPPROTO_ICMPV6);
-	nadv->icmp6_cksum = ip_fast_csum(p, &out[location] - p);
-	/* real IPv6 header */
-	add_ipv6_header(&out[sizeof(struct eth_hdr)], src, dst, ip6h, NULL,
-			payload_len, IPPROTO_ICMPV6);
-
-	*outlen = location;
-	return(0);
-}
-
-
-#ifdef CURRENTLY_UNUSED
-extern __u32 get_preferred_addr();
-/*
- * handle_broadcasts()
- *
- * This code leaks broadcast packets outside of the association.
- * Unfortunately, the receiving end will see a different source address
- * (not the source LSI) so the packet may be meaningless.
- */
-void handle_broadcasts(__u8 *data, int len)
-{
-	struct ip iph_old;
-	struct sockaddr_in to;
-	int s, val;
-	__u8 proto, mdata[32];
-	__u16 magic;
-	__u32 src_ip, dst_ip;
-	__u64 sum;
-	
-	/* save IPv4 header before it is zeroed */
-	memcpy(&iph_old, &data[14], sizeof(struct ip));
-	proto = iph_old.ip_p;
-	len -= 14; /* subtract eth header */
-
-	/* 
-	 * form a broadcast address, fixup TCP/UDP checksum
-	 */
-	src_ip = get_preferred_addr();
-	if (!src_ip)	/* preferred address not found! */
-		return;
-	dst_ip = src_ip | 0xFF000000L;
-	
-	/* IP header */
-	memset(mdata, 0, sizeof(mdata));
-	memcpy(&mdata[0], &src_ip, sizeof(src_ip));
-	memcpy(&mdata[16], &dst_ip, sizeof(dst_ip));
-	sum = htonl(src_ip) + htonl(dst_ip);
-	while (sum >> 16)
-		sum = (sum & 0xFFFF) + (sum >> 16);
-	magic = (__u16)sum;
-	magic = htons(magic+1);
-	rewrite_checksum(&data[14], magic);
-
-	/* 
-	 * send it out on a raw socket 
-	 */
-	memset(&to, 0, sizeof(to));
-	to.sin_family = AF_INET;
-	to.sin_addr.s_addr = dst_ip;
-
-	s = socket(PF_INET, SOCK_RAW, proto);
-	val = 1;
-	setsockopt(s, SOL_SOCKET, SO_BROADCAST, &val, sizeof(val));
-	if (sendto(s, &data[34], len, 0, 
-	    (struct sockaddr *)&to, sizeof(to)) < 0) {
-		HIP_DEBUG("broadcast sendto() failed: proto=%d len=%d err:%s\n",
-			proto, len, strerror(errno));
-	}
-	close(s);
-}
-#endif
-
-
 
 /*
  * hip_esp_encrypt()
@@ -2289,12 +1052,12 @@ int hip_esp_encrypt(__u8 *in, int len, __u8 *out,
 
 
 
-
-#if 0
 /* rewrite this function to fit the hipl ipsec implementation*/
 int hip_esp_encrypt(__u8 *in, int len, __u8 *out,  
 	hip_sadb_entry *entry, struct timeval *now, int *outlen)
 {
+#if 0
+
 	int alen=0, elen=0;
 	unsigned int hmac_md_len;
 	int i, iv_len=0, padlen, location, eth_ip_hdr_len;
@@ -2604,11 +1367,12 @@ int hip_esp_encrypt(__u8 *in, int len, __u8 *out,
 						   (struct sockaddr*)&entry->src_addrs->addr,
 						   (struct sockaddr*)&entry->dst_addrs->addr);
 	}
+#endif
 		
 	return(0);
 }
-#endif
 
+#if 0
 /* debug */
 extern hip_sadb_entry hip_sadb[SADB_SIZE];
 
@@ -2633,6 +1397,7 @@ void print_sadb()
 		}
 	}
 }
+#endif
 
 /*
  * hip_esp_decrypt()
@@ -3097,6 +1862,7 @@ int hip_esp_decrypt(__u8 *in, int len, __u8 *out, int *offset, int *outlen,
 	return(0);
 }
 
+#if 0
 /*
  * rewrite_checksum()
  * 
@@ -3147,8 +1913,9 @@ __u16 rewrite_checksum(__u8 *data, __u16 magic)
 	}
 	return(ret);
 }
+#endif
 
-
+#if 0
 /*
  * add_eth_header()
  *
@@ -3162,6 +1929,7 @@ void add_eth_header(__u8 *data, __u64 src, __u64 dst, __u32 type)
 	memcpy(eth->src, &src, 6);
 	eth->type = htons((__u16)type);
 }
+#endif
 
 /*
  * add_ipv4_header()
@@ -3196,6 +1964,7 @@ void add_ipv4_header(__u8 *new_packet, struct ip *old_ip_hdr, __u32 src_addr, __
 #endif
 }
 
+#if 0
 /*
  * add_ipv6_pseudo_header()
  *
@@ -3223,7 +1992,9 @@ void add_ipv6_pseudo_header(__u8 *data, struct sockaddr *src,
 	memset(ph->ph_zero, 0, 3);
 	ph->ph_next_header = proto;
 }
+#endif
 
+#if 0
 /*
  * add_ipv6_header()
  *
@@ -3255,6 +2026,7 @@ void add_ipv6_header(__u8 *data, struct sockaddr *src, struct sockaddr *dst,
 			ip6h->ip6_hlim = old4->ip_ttl;		/* __u8 */
 		}
 }
+#endif
 
 
 #ifdef __MACOSX__
@@ -3284,6 +2056,7 @@ void add_outgoing_esp_header(__u8 *data, __u32 src, __u32 dst, __u16 len)
 
 #endif
 
+#if 0
 /*
  * get_mac_addr()
  * Give a random 6-bit Ethernet address given an IPv4/IPv6 address.
@@ -3311,3 +2084,4 @@ __u64 get_eth_addr(int family, __u8 *addr)
 	
 	return(r);
 }
+#endif

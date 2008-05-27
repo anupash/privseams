@@ -10,8 +10,8 @@
 #include <netinet/ip6.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <glib.h>
-#include <glib/glist.h>
+//#include <glib.h>
+//#include <glib/glist.h>
 #include <string.h>
 #include <netinet/tcp.h>
 #include <stdlib.h>
@@ -31,10 +31,11 @@
 #include "helpers.h"
 #include "conntrack.h"
 #include "utils.h"
-#include "hip_usermode.h"
+//#include "hip_usermode.h"
+#include "useripsec.h"
 #include "misc.h"
 #include "netdev.h"
-#include "hip_sadb.h"
+//#include "hip_sadb.h"
 
 #define HIP_FW_DEFAULT_RULE_FILE "/etc/hip/firewall.conf"
 #define HIP_FW_DEFAULT_TIMEOUT   1

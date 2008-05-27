@@ -1,9 +1,8 @@
 #include "useripsec.h"
-#include <sys/time.h>		/* gettimeofday() */
-#include "misc.h"
 #include <sys/socket.h>		/* socket() */
-//#include <stdlib.h>			/* malloc() */
-
+#include "misc.h"			/* hip conversion functions */
+#include "hip_esp.h"
+#include <sys/time.h>		/* timeval */
 
 #define ESP_PACKET_SIZE 2500
 
@@ -115,6 +114,7 @@ out_err:
 int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 {
 	// peer HIT
+	// sockaddr does not provide enough space for _in6
 	struct sockaddr_in6 sockaddr_peer_hit;
 	// entry matching the peer HIT
 	hip_sadb_entry *entry = NULL;
@@ -122,11 +122,14 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	// TODO hipd should add this info to the SA entries
 	int udp_encap = 0;
 	int esp_packet_len = 0;
+	int out_ip_version = 0;
+	struct sockaddr_storage *preferred_local_addr;
+	struct sockaddr_storage *preferred_peer_addr;
 	int err = 0;
-	
-	//sockaddr_peer_hit = (struct sockaddr *)malloc(sizeof(sockaddr));
 
-	userspace_ipsec_init();
+	err = userspace_ipsec_init();
+	if (err)
+		goto end_err;
 	
 	HIP_DEBUG("\n");
 
@@ -135,11 +138,14 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 
 	gettimeofday(&now, NULL);
 	
-	// we should only get HITs or LSIs as addresses
+	/* we should only get HITs addresses
+	 * LSI have been handled by LSI module before and converted to HITs */
+	HIP_ASSERT(ipv6_addr_is_hit(&ctx->src) && ipv6_addr_is_hit(&ctx->dst));
+			
 	HIP_DEBUG_HIT("src_hit: ", &ctx->src);
 	HIP_DEBUG_HIT("dst_hit: ", &ctx->dst);
 	
-	// SAs directing outwards are indexed with the peer's socket address
+	// SAs directing outwards are indexed with the peer's HIT
 	// FIXME this will only allow one connection to this peer HIT
 	hip_addr_to_sockaddr(&ctx->dst, (struct sockaddr *) &sockaddr_peer_hit);
 	entry = hip_sadb_lookup_addr((struct sockaddr *) &sockaddr_peer_hit);
@@ -153,7 +159,7 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 			// FIXME checks for SA entry again
 			// TODO this will result in a SEGFAULT
 			//if (buffer_packet(&sockaddr_peer_hit, ctx->ipq_packet->payload, ctx->ipq_packet->data_len))
-				err = pfkey_send_acquire((struct sockaddr *)&sockaddr_peer_hit);
+				err = pfkey_send_acquire((struct sockaddr *) &sockaddr_peer_hit);
 			
 			// don't process this message any further for now
 			goto end_err;
@@ -163,14 +169,43 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	
 	// unbuffer and process buffered packets
 	//unbuffer_packets(entry);
+	
+	// get preferred routable addresses
+	preferred_local_addr = get_preferred_addr(entry->src_addrs);
+	preferred_peer_addr = get_preferred_addr(entry->dst_addrs;	
+	
+	// check preferred addresses for the address type of the output
+	if (preferred_local_addr->sa_family == AF_INET
+			&& preferred_peer_addr->sa_family == AF_INET)
+	{
+		HIP_DEBUG("out_ip_version is IPv4");
+		out_ip_version = 4;
+	} else if (preferred_local_addr->sa_family == AF_INET6
+			&& preferred_peer_addr->sa_family == AF_INET6)
+	{
+		HIP_DEBUG("out_ip_version is IPv6");
+		out_ip_version = 6;
+	} else
+	{
+		HIP_ERROR("bad address combination");
 		
-	//err = hip_esp_output(ctx, entry, esp_packet, udp_encap, &now);
+		err = 1;
+		goto end_err;
+	}
+		
+	err = hip_esp_output(ctx, entry, out_ip_version, udp_encap, &now,
+			esp_packet, &esp_packet_len);
 	
 	// send the raw packet -> returns size of the sent packet
-	// TODO flags
-	err = sendto(raw_sock_v4, esp_packet, esp_packet_len, 1,
-			SA(&entry->dst_addrs->addr),
-			SALEN(&entry->dst_addrs->addr));
+	// TODO check flags
+	if (out_ip_version == 4)
+		err = sendto(raw_sock_v4, esp_packet, esp_packet_len, 0,
+				(struct sockaddr *)preferred_peer_addr,
+				hip_sockaddr_len(preferred_peer_addr));
+	else
+		err = sendto(raw_sock_v6, esp_packet, esp_packet_len, 0,
+						(struct sockaddr *)preferred_peer_addr),
+						hip_sockaddr_len(preferred_peer_addr));
 	
 	if (err < 0) {
 		HIP_DEBUG("hip_esp_output(): sendto() failed \n");
@@ -324,4 +359,23 @@ int pfkey_send_acquire(struct sockaddr *target)
 	
   out_err:
 	return err;
+}
+
+struct sockaddr_storage *get_preferred_addr(sockaddr_list *addr_list)
+{
+	// resolve HITs to routable addresses and select the preferred ones
+	// TODO get preferred addresses
+	
+	while (tmp_addr != NULL)
+	{
+		if (tmp_addr->preferred)
+		{
+			HIP_DEBUG("found preferred src_addr");
+			preferred_local_addr = tmp_addr->addr;
+			
+			break;
+		}
+		else
+			tmp_addr = tmp_addr->next;
+	}
 }

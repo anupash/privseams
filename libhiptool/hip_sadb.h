@@ -20,35 +20,23 @@
  *
  */
 
-#ifdef __MACOSX__
-#include <sys/types.h>
-#include <mac/mac_types.h>
-#else
-#ifdef __WIN32__
-#include <win32/types.h>
-#else
+#ifndef HIP_SADB_H_
+#define HIP_SADB_H_
+
 #include <asm/types.h>		/* __u16, __u32, etc */
-#endif /* __WIN32__ */
-#endif
 #include <sys/types.h>		/* for socket.h */
-#ifdef __WIN32__
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#else
 #include <sys/socket.h>		/* struct sockaddr */
 #include <netinet/in.h>		/* struct sockaddr_in */
-#endif /* __WIN32__ */
 #include <openssl/des.h>	/* des_key_schedule */
 #include <openssl/aes.h>	/* aes_key */
 #include <openssl/blowfish.h>	/* bf_key */
-#include "hip_usermode.h"
+//#include "hip_usermode.h"
+//#include "utils.h"
+#include <sys/time.h>		/* timeval */
 #include "debug.h"
 
-/**** some definitions from hip_types.h ****/
+/**** HIPL <-> OpenHIP compatibility defs ****/
 
-/*
- * list of struct sockaddrs
- */
 typedef struct _sockaddr_list
 {
         struct _sockaddr_list *next;
@@ -108,11 +96,7 @@ typedef struct _hip_sadb_entry
 	des_key_schedule ks[3];		/* 3-DES keys */
 	AES_KEY *aes_key;		/* AES key */
 	BF_KEY *bf_key;			/* BLOWFISH key */
-#ifdef __WIN32__
-	HANDLE rw_lock;
-#else
 	pthread_mutex_t rw_lock;
-#endif
 } hip_sadb_entry;
 
 /* HIP SADB desintation cache entry */
@@ -178,4 +162,6 @@ int hip_select_family_by_proto(__u32 lsi, __u8 proto, __u8 *header,
 int hip_add_proto_sel_entry(__u32 lsi, __u8 proto, __u8 *header, int family,
         int dir, struct timeval *now);
 void hip_remove_expired_sel_entries();
+
+#endif /* HIP_SADB_H_ */
 
