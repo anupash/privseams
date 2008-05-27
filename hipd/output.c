@@ -449,8 +449,7 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 
 	/*send the TCP SYN_i1 packet*/
 	if (hip_get_opportunistic_tcp_status() &&
-	    hit_is_opportunistic_hashed_hit(dst_hit) &&
-	    entry->tcp_opptcp_dst_port != 0)
+	    hit_is_opportunistic_hashed_hit(dst_hit))
 		hip_send_opp_tcp_i1(entry);
 out_err:
 	if (i1)

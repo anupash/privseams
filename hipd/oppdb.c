@@ -372,7 +372,8 @@ int hip_receive_opp_r1(struct hip_common *msg,
 /**
  * No description.
  */
-int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_in6 *src, int fromFirewall){
+int hip_opp_get_peer_hit(struct hip_common *msg,
+			 const struct sockaddr_in6 *src){
 	int n = 0, err = 0, alen = 0;
 	struct in6_addr phit, dst_ip, hit_our, id, our_addr;
 	void *ptr = NULL;
@@ -393,13 +394,10 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_in6 *src,
 
 	/* Create an opportunistic HIT from the peer's IP  */
 
-	if (hip_get_opportunistic_tcp_status() && fromFirewall) {
-		memset(&hit_our, 0, sizeof(struct in6_addr));
-		hip_get_default_hit(&hit_our);
-
+	if (hip_get_opportunistic_tcp_status() &&
+	    (ptr = hip_get_param_contents(msg, HIP_PARAM_SRC_TCP_PORT))) {
 		/*get the src tcp port from the message for the TCP SYN
 		  i1 packet*/
-		ptr = hip_get_param_contents(msg, HIP_PARAM_SRC_TCP_PORT);
 		HIP_IFEL(!ptr, -1, "No peer port in msg\n");
 		src_tcp_port = *((in_port_t *) ptr);
 		
@@ -410,6 +408,8 @@ int hip_opp_get_peer_hit(struct hip_common *msg, const struct sockaddr_in6 *src,
 		dst_tcp_port = *((in_port_t *) ptr);
 		HIP_DEBUG("port src=%d dst=%d", src_tcp_port, dst_tcp_port);
 
+		memset(&hit_our, 0, sizeof(struct in6_addr));
+		hip_get_default_hit(&hit_our);
 	} else {
 		memset(&hit_our, 0, sizeof(struct in6_addr));
 		ptr = hip_get_param_contents(msg, HIP_PARAM_HIT);

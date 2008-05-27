@@ -95,7 +95,7 @@
 #define SO_HIP_DHT_OFF                          93
 #define SO_HIP_SET_OPPTCP_ON			94
 #define SO_HIP_SET_OPPTCP_OFF			95
-#define SO_HIP_GET_PEER_HIT_FROM_FIREWALL	96
+/* slot 96 is free */
 #define SO_HIP_OPPTCP_UNBLOCK_APP		97
 #define SO_HIP_OPPTCP_OPPIPDB_ADD_ENTRY		98
 #define SO_HIP_OPPTCP_SEND_TCP_PACKET		99
