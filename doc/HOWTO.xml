@@ -1722,6 +1722,39 @@
 		</para>
 </section>
 
+
+<section><title>Agent database</title>
+	<para>
+        Agent uses Sqlite3 database. You can view and alter data
+	with sqlite3 command line tool. On most distros 'aptitude
+	install sqlite3' will install it. Usage of the slqite3
+	comandline is simple. '$ sqlite3
+	&lt;path-to-home-folder&gt;/.hipagent/database.db' will start
+	the command line tool with the correct database.  You can
+	check the contents with simple select querys and so on. You can
+	get more information on the program from its man page (man
+	sqlitebrowser).
+	</para>
+	<para>
+	Alternatively you can use the graphical user interface called
+	sqlitebrowser. On most Linux distros 'aptitude install sqlitebrowser' will
+	install it. To start it write to the terminal '$ sqlitebrowser
+	&lt;path-to-home-folder&gt;/.hipagent/database.db' and you
+	should see the tables and their content from the UI. You can
+	get more information on the program from its man page (man sqlitebrowser).
+	</para>	
+	<para>
+	The database contains three tables: local, remote and
+	groups. Local table contains local HITs and their
+	names. Remote contains remote HITs and their names. It also
+	contains some extra information like the group name. Group
+	table contains groups name and information on the group like
+	are these HITs to be accepted or not.
+	</para>
+	
+</section>
+
+
 <section id="sec_hip_conf_gui_language"><title>Language files</title>
 	<para>
 		As described in previous section,

@@ -10,6 +10,9 @@
 #include "agent.h"
 
 
+/* global db for agent to see */
+sqlite3 * agent_db = NULL;
+int init_in_progress = 0;
 /******************************************************************************/
 /** Catch SIGINT. */
 void sig_catch_int(int signum)
@@ -23,6 +26,7 @@ void sig_catch_int(int signum)
 	else
 	{
 		HIP_ERROR("SIGINT (CTRL-C) caught, terminating!\n");
+                hip_sqlite_close_db(agent_db);    
 		exit(1);
 	}
 

@@ -62,25 +62,20 @@ static int hip_agent_db_local_callback(void *NotUsed, int argc,
 
         for(i=0; i<argc; i++) {
                 _HIP_DEBUG("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
-                if (strcmp(azColName[i], "lname")) 
+                if (!strcmp(azColName[i], "lname")) 
                         sprintf(lname,"%s", argv[i] ? argv[i] : "NULL"); 
-                if (strcmp(azColName[i], "lhit")) 
+                if (!strcmp(azColName[i], "lhit")) 
                         sprintf(lhit,"%s", argv[i] ? argv[i] : "NULL");
         }
-        if ((i % 2) == 0) {
-                sprintf(buf, "\"%s\" \"%s\"", 
+        if ((i % 2) == 0 && (i > 0)) {
+                sprintf(buf, "\"%s\" %s", 
                         lname, lhit);
-                HIP_DEBUG("HIT BUF %s\n", buf);
+                _HIP_DEBUG("HIT BUF %s\n", buf);
                 hit_db_parse_local(&buf);
                 memset(lname, '\0', sizeof(lname));
                 memset(lhit, '\0', sizeof(lhit));   
-        }
+        } 
         return 0;
-
-/* JEMMA
-if (buf[0] == 'r') hit_db_parse_hit(&buf[2]);
-*/
-//fprintf(f, "l \"%s\" %s\n", local->name, hit);
 }
 
 /**
@@ -92,7 +87,7 @@ if (buf[0] == 'r') hit_db_parse_hit(&buf[2]);
  */
 static int hip_agent_db_remote_callback(void *NotUsed, int argc, 
                                         char **argv, char **azColName) {
-        int i;
+        int i, err = 0;
         char buf[2236]; // should be the sum of the below + 10 or more :) 
         char rname[66];
         char rhit[42];
@@ -102,18 +97,18 @@ static int hip_agent_db_remote_callback(void *NotUsed, int argc,
        
         for(i=0; i<argc; i++) {
                 _HIP_DEBUG("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
-                if (strcmp(azColName[i], "rname")) 
-                        sprintf(rname,"%s", argv[i] ? argv[i] : "NULL"); 
-                if (strcmp(azColName[i], "rhit")) 
-                        sprintf(rhit,"%s", argv[i] ? argv[i] : "NULL");  
-                if (strcmp(azColName[i], "url ")) 
-                        sprintf(url ,"%s", argv[i] ? argv[i] : "NULL");  
-                if (strcmp(azColName[i], "port"))  
-                        sprintf(port,"%s", argv[i] ? argv[i] : "NULL");  
-                if (strcmp(azColName[i], "gname"))  
-                        sprintf(gname,"%s", argv[i] ? argv[i] : "NULL");
+                if (!strcmp(azColName[i], "rname"))  
+                        err = sprintf(rname,"%s", argv[i] ? argv[i] : "NULL"); 
+                if (!strcmp(azColName[i], "rhit")) 
+                        err = sprintf(rhit,"%s", argv[i] ? argv[i] : "NULL");  
+                if (!strcmp(azColName[i], "url")) 
+                        err = sprintf(url,"%s", argv[i] ? argv[i] : "NULL");  
+                if (!strcmp(azColName[i], "port")) 
+                        err = sprintf(port,"%s", argv[i] ? argv[i] : "NULL");
+                if (!strcmp(azColName[i], "gname")) 
+                        err = sprintf(gname,"%s", argv[i] ? argv[i] : "NULL");
         }
-        if ((i % 5) == 0) {
+        if ((i % 5) == 0 && (i > 0)) {
                 sprintf(buf, "\"%s\" \"%s\" \"%s\" \"%s\" \"%s\"", 
                         rname, rhit, url, port, gname);
                 hit_db_parse_hit(&buf);
@@ -146,16 +141,16 @@ static int hip_agent_db_groups_callback(void *NotUsed, int argc,
 
         for(i=0; i<argc; i++) {
                 _HIP_DEBUG("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
-                if (strcmp(azColName[i], "gname")) 
+                if (!strcmp(azColName[i], "gname")) 
                         sprintf(name,"%s", argv[i] ? argv[i] : "NULL"); 
-                if (strcmp(azColName[i], "lhitname")) 
+                if (!strcmp(azColName[i], "lhitname")) 
                         sprintf(lhit,"%s", argv[i] ? argv[i] : "NULL");  
-                if (strcmp(azColName[i], "accept")) 
+                if (!strcmp(azColName[i], "accept")) 
                         accept = argv[i] ? argv[i] : "NULL"; 
-                if (strcmp(azColName[i], "lightweight"))  
+                if (!strcmp(azColName[i], "lightweight"))  
                         lw = argv[i] ? argv[i] : "NULL";
         }
-        if ((i % 4) == 0) {
+        if ((i % 4) == 0 && (i > 0)) {
                 sprintf(buf, "\"%s\" \"%s\" %d %d", name, lhit, accept, lw);
                 hit_db_parse_rgroup(&buf);
                 memset(name, '\0', sizeof(name));
@@ -181,12 +176,14 @@ int hit_db_init(char *file)
 {
 	/* Variables. */
 	int err = 0;
+        extern int init_in_progress;
 	
 	hit_db_lock = 0;
 	hit_db_clear();
+        init_in_progress = 0;
 
 	if (file) HIP_IFE(hit_db_load_from_file(file), -1);
-
+        init_in_progress = 1;
 out_err:
 	return (err);
 }
@@ -292,6 +289,11 @@ HIT_Remote *hit_db_add(char *name, struct in6_addr *hit, char *url,
 	HIT_Remote *r, *err = NULL;
 	char hitb[128];
 	struct in6_addr lhit;
+        char rhit[128];
+        char insert_into[256];
+        int ret = 0;
+        extern sqlite3 *agent_db;
+        extern int init_in_progress;
 
 	if (!nolock) HIT_DB_LOCK();
 
@@ -331,6 +333,14 @@ HIT_Remote *hit_db_add(char *name, struct in6_addr *hit, char *url,
 	remote_db_last = r;
 	remote_db_n++;
 
+        /* Add it to the db on disk too */
+        if (init_in_progress == 1) {
+                print_hit_to_buffer(hit, &r->hit);
+                sprintf(insert_into, "INSERT INTO remote VALUES("
+                        "'%s', '%s', '%s', '%s', '%s');", 
+                        r->name, hit, "x", r->port, r->g->name);
+                ret = hip_sqlite_insert_into_table(agent_db, insert_into);        
+        }
 	/* Then call GUI to show new HIT. */
 	if (group->name[0] != ' ')
 	{
@@ -496,35 +506,34 @@ int hit_db_save_to_file(char *file)
 	FILE *f = NULL;
 	int err = 0, i;
 	char hit[128];
-        sqlite3 *db;
+        extern sqlite3 *agent_db;
 	
 	HIT_DB_LOCK();
 	
 	_HIP_DEBUG("Saving HIT database to %s.\n", file);
-
-        //	f = fopen(file, "w");
-	//HIP_IFEL(f == NULL, -1, "Failed to save database.\n");
 
         /* 
            XX Save everything to the sqlite db 
            Clear it first then insert stuff into it
            Should it be cleared always or just checked the changes against
            the lists in memory? -- SAMU
+           
+           Disabled this because trying to save info to the db as we go --SAMU
         */
-       
+        /*
         db = hip_sqlite_open_db(file, HIP_AGENT_DB_CREATE_TBLS);
         HIP_IFEL(hip_sqlite_delete_from_table(db, HIP_AGENT_DB_DELETE_ALL),
                  -1, "Failed to execute delete query\n");
-        
+        */
 	/* Write all local HITs to file. */
-	hit_db_enum_locals(hit_db_save_local_to_file, f, db);
+	//hit_db_enum_locals(hit_db_save_local_to_file, f, db);
 	/* Write all remote groups to file. */
-	hit_db_enum_rgroups(hit_db_save_rgroup_to_file, f, db);
+	//hit_db_enum_rgroups(hit_db_save_rgroup_to_file, f, db);
 	/* Write all remote HITs to file. */
-	hit_db_enum(hit_db_save_remote_to_file, f, db);
+	//hit_db_enum(hit_db_save_remote_to_file, f, db);
               
 out_err:        
-        HIP_IFEL(hip_sqlite_close_db(db), -1, "Failed to close the db\n");        
+        HIP_IFEL(hip_sqlite_close_db(agent_db), -1, "Failed to close the db\n");        
 	if (f) fclose(f);
 	HIT_DB_UNLOCK();
 	return (err);
@@ -540,8 +549,6 @@ out_err:
 int hit_db_save_rgroup_to_file(HIT_Group *g, void *p, void * pdb)
 {
 	/* Variables. */
-	//FILE *f = (FILE *)p;
-	char hit[128];
         char insert_into[256];
         int ret = 0;
         sqlite3 * db;
@@ -549,8 +556,6 @@ int hit_db_save_rgroup_to_file(HIT_Group *g, void *p, void * pdb)
         db = (sqlite3 *)pdb;
 	
 	if (g->name[0] == ' ' || !g->l) return (0); 
- 	//fprintf(f, "g \"%s\" \"%s\" %d %d\n", g->name, g->l->name, 
-        //       g->accept, g->lightweight);
 
         sprintf(insert_into, "INSERT INTO groups VALUES("
                  "'%s', '%s', %d, %d);", 
@@ -570,20 +575,19 @@ int hit_db_save_rgroup_to_file(HIT_Group *g, void *p, void * pdb)
 int hit_db_save_local_to_file(HIT_Local *local, void *p, void * pdb)
 {
 	/* Variables. */
-	//FILE *f = (FILE *)p;
 	char hit[128];
         char insert_into[256];
         int ret = 0;
         sqlite3 * db;
 	
         db = (sqlite3 *)pdb;
-	
+
+	HIP_DEBUG("l \"%s\" %s\n", local->name, hit); 
 	print_hit_to_buffer(hit, &local->lhit);
-	//fprintf(f, "l \"%s\" %s\n", local->name, hit);
 	
         sprintf(insert_into, "INSERT INTO local VALUES("
                  "'%s', '%s');", 
-                 local->name, hit);
+                 local->name, hit); 
         ret = hip_sqlite_insert_into_table(db, insert_into);
 
 	return (0);
@@ -608,13 +612,11 @@ int hit_db_save_remote_to_file(HIT_Remote *r, void *p, void * pdb)
         db = (sqlite3 *)pdb;
 	
 	if (r->g->name[0] == ' ') return (0);
-	print_hit_to_buffer(hit, &r->hit);
-	//fprintf(f, "r %s \"%s\" \"%s\" \"%s\" \"%s\"\n", hit, r->name,
-	//        "x", r->port, r->g->name);
 
+	print_hit_to_buffer(hit, &r->hit);
         sprintf(insert_into, "INSERT INTO remote VALUES("
                  "'%s', '%s', '%s', '%s', '%s');", 
-                hit, r->name, "x", r->port, r->g->name);
+                r->name, hit, "x", r->port, r->g->name);
         ret = hip_sqlite_insert_into_table(db, insert_into);
 
 	return (0);
@@ -632,74 +634,38 @@ int hit_db_save_remote_to_file(HIT_Remote *r, void *p, void * pdb)
 int hit_db_load_from_file(char *file)
 {
 	/* Variables. */
-	FILE *f = NULL;
+        FILE * db_file = NULL;
 	char buf[2048], ch;
 	int err = 0, i, n;
 	struct in6_addr hit;
-        sqlite3 * db;
+        extern sqlite3 * agent_db;
+        extern int init_in_progress;
 
 	hit_db_clear();
 	HIT_DB_LOCK();
 
 	_HIP_DEBUG("Loading HIT database from %s.\n", file);
-
-	//f = fopen(file, "r");
-	//HIP_IFEL(!f, 0, "Failed to open HIT database file \"%s\" for reading.\n", file);
-
-        /* XX replace this loop with three SELECTS (one for remote hits,
-           one for local hits and one for groups.*/
       
-        db = hip_sqlite_open_db(file, HIP_AGENT_DB_CREATE_TBLS);
-        HIP_IFEL(hip_sqlite_select(db, HIP_AGENT_DB_SELECT_REMOTE, 
-                                   hip_agent_db_remote_callback), -1,
-                 "Failed to execute select query on the db\n");
-        HIP_IFEL(hip_sqlite_select(db, HIP_AGENT_DB_SELECT_LOCAL, 
+        db_file = fopen(file, "r");
+        if (!db_file) {
+                /* first time creation has to add local info */
+                HIP_DEBUG("Adding local info on this run\n");
+                init_in_progress = 1;
+        }
+        agent_db = hip_sqlite_open_db(file, HIP_AGENT_DB_CREATE_TBLS);
+
+        HIP_IFEL(hip_sqlite_select(agent_db, HIP_AGENT_DB_SELECT_LOCAL, 
                                    hip_agent_db_local_callback), -1,
-                 "Failed to execute select query on the db\n");
-        HIP_IFEL(hip_sqlite_select(db, HIP_AGENT_DB_SELECT_GROUPS, 
+                 "Failed to execute select query (local) on the db\n");  
+        HIP_IFEL(hip_sqlite_select(agent_db, HIP_AGENT_DB_SELECT_GROUPS, 
                                    hip_agent_db_groups_callback), -1,
-                 "Failed to execute select query on the db\n");
-
-#if 0        
-	/* Start parsing. */
-	memset(buf, '\0', sizeof(buf)); i = 0; n = -1;
-	for (ch = fgetc(f); ch != EOF; ch = fgetc(f))
-	{
-		/* Remove whitespaces from line start. */
-		if (i == 0 && (ch == ' ' || ch == '\t')) continue;
-
-		/* Find end of line. */
-		if (ch != '\n')
-		{
-			buf[i] = ch;
-			i++;
-			continue;
-		}
-
-		/*
-			Check whether there is carriage return
-			in the stream and remove it.
-		*/
-		ch = fgetc(f);
-		
-		if (ch != '\r') ungetc(ch, f);
-	
-		/* Check for empty lines and for commented lines. */
-		if (strlen(buf) < 3) goto loop_end;
-		if (buf[0] == '#') goto loop_end;
-	
-		if (buf[0] == 'r') hit_db_parse_hit(&buf[2]);
-		else if (buf[0] == 'l') hit_db_parse_local(&buf[2]);
-		else if (buf[0] == 'g') hit_db_parse_rgroup(&buf[2]);
-
-	loop_end:
-		/* Clear buffer. */
-		memset(buf, '\0', sizeof(buf)); i = 0;
-	}
-#endif        
+                 "Failed to execute select query (groups) on the db\n");
+        HIP_IFEL(hip_sqlite_select(agent_db, HIP_AGENT_DB_SELECT_REMOTE, 
+                                   hip_agent_db_remote_callback), -1,
+                 "Failed to execute select query (remote) on the db\n");  
 	
 out_err:
-	if (f) fclose(f);
+	if (db_file) fclose(db_file);
 	HIT_DB_UNLOCK();
 	return (err);
 }
@@ -722,11 +688,10 @@ int hit_db_parse_hit(char *buf)
 	char lhit[128], group[320];
 
 	/* Parse values from current line. */
-	n = sscanf(buf, "%s \"%64[^\"]\" \"%1024[^\"]\" \"%1024[^\"]\" \"%64[^\"]\"",
-	           lhit, item.name, item.url, item.port, group);
+	n = sscanf(buf, "%s \"%1024[^\"]\" \"%64[^\"]\"  \"%1024[^\"]\" \"%64[^\"]\"",
+	           item.name, lhit,  item.url, item.port, group);
 
 	HIP_IFEL(n != 5, -1, "Broken line in database file: %s\n", buf);
-
 	read_hit_from_buffer(&item.hit, lhit);
 	item.g = hit_db_find_rgroup(group);
 	HIP_IFEL(item.g == NULL, -1, "Invalid group for HIT in database file!\n");
@@ -756,6 +721,7 @@ int hit_db_parse_rgroup(char *buf)
 	int accept, lightweight;
 	
 	/* Parse values from current line. */
+        
 	n = sscanf(buf, "\"%64[^\"]\" \"%64[^\"]\" %d %d",
 	           name, hit, &accept, &lightweight);
 	HIP_IFEL(n != 4, -1, "Broken line in database file: %s\n", buf);
@@ -789,7 +755,7 @@ int hit_db_parse_local(char *buf)
 	int err = 0, n;
 	char name[MAX_NAME_LEN + 1], hit[128];
 	struct in6_addr lhit;
-	
+
 	/* Parse values from current line. */
 	n = sscanf(buf, "\"%64[^\"]\" %s", name, hit);
 	HIP_IFEL(n != 2, -1, "Broken line in database file: %s\n", buf);
@@ -815,6 +781,10 @@ HIT_Group *hit_db_add_rgroup(char *name, HIT_Local *lhit,
 {
 	/* Variables. */
 	HIT_Group *g, *err = NULL;
+        char insert_into[256];
+        int ret = 0;
+        extern sqlite3 *agent_db;
+        extern int init_in_progress;
 
 	/* Check group name length. */
 	HIP_IFEL(strlen(name) < 1, NULL, "Remote group name too short.\n");
@@ -842,6 +812,14 @@ HIT_Group *hit_db_add_rgroup(char *name, HIT_Local *lhit,
 	group_db_last = g;
 	group_db_n++;
 
+        /* add the group also to the db on disk 
+         " deny" group is not necessary on disk?*/
+        if (init_in_progress == 1 && strcmp(" deny", g->name)) {
+                sprintf(insert_into, "INSERT INTO groups VALUES("
+                        "'%s', '%s', %d, %d);", 
+                        g->name, g->l->name, g->accept, g->lightweight);
+                ret = hip_sqlite_insert_into_table(agent_db, insert_into);
+        }
 	/* Tell GUI to show new group item. */
 	if (g->name[0] != ' ')
 	{
@@ -969,6 +947,11 @@ HIT_Local *hit_db_add_local(char *name, struct in6_addr *hit)
 {
 	/* Variables. */
 	HIT_Local *h, *err = NULL;
+        char lhit[128];
+        char insert_into[256];
+        int ret = 0;
+        extern sqlite3 * agent_db;
+        extern int init_in_progress;
 
 	/* Check HIT name length. */
 	HIP_IFEL(strlen(name) < 1, NULL, "Local HIT name too short.\n");
@@ -995,16 +978,25 @@ HIT_Local *hit_db_add_local(char *name, struct in6_addr *hit)
 	local_db_last = h;
 	local_db_n++;
 
+        /* Add it also to the db on disk */
+        if (init_in_progress == 1) {
+                HIP_DEBUG("Saving local value to disk\n");
+                print_hit_to_buffer(lhit, hit);	
+                sprintf(insert_into, "INSERT INTO local VALUES("
+                        "'%s', '%s');", name, lhit); 
+                ret = hip_sqlite_insert_into_table(agent_db, insert_into);
+        }
 //	if (group_db_n < 2)
 	{
-		_HIP_DEBUG("Group database emty, adding default group.\n");
+		_HIP_DEBUG("Group database empty, adding default group.\n");
 		hit_db_add_rgroup(lang_get("default-group-name"), h, HIT_ACCEPT, 0);
-	}
+	}        
 
 	_HIP_DEBUG("New local HIT added with name \"%s\", calling GUI to show it.\n", name);
 
 	/* Tell GUI to show local HIT. */
-	gui_hit_local_add(h);
+        /* XX Useless to call empty function --Samu*/
+        //gui_hit_local_add(h);
 	err = h;
 
 out_err:
