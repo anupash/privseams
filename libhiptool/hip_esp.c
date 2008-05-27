@@ -1830,8 +1830,8 @@ void add_ipv4_header(struct in6_addr *src_addr, struct in6_addr *dst_addr,
 	ip_hdr->ip_sum = 0;
 	/* assume host byte order
 	 * NOTE: IPv4 is in the last 32 bits */
-	ip_hdr->ip_src.s_addr = htonl((__u32)src_addr->in6_u.u6_addr32[3]);
-	ip_hdr->ip_dst.s_addr = htonl((__u32)dst_addr->in6_u.u6_addr32[3]);
+	ip_hdr->ip_src.s_addr = htonl(src_addr->in6_u.u6_addr32[3]);
+	ip_hdr->ip_dst.s_addr = htonl(dst_addr->in6_u.u6_addr32[3]);
 
 	/* recalculate the header checksum */
 	//ip_hdr->ip_sum = ip_fast_csum((__u8*)ip_hdr, ip_hdr->ip_hl);

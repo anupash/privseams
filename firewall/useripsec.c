@@ -124,9 +124,14 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	int udp_encap = 0;
 	int esp_packet_len = 0;
 	int out_ip_version = 0;
-	struct in6_addr *preferred_local_addr;
-	struct in6_addr *preferred_peer_addr;
+	struct in6_addr *preferred_local_addr = NULL;
+	struct in6_addr *preferred_peer_addr = NULL;
 	int err = 0;
+	
+	/* we should only get HIT addresses
+	 * LSI have been handled by LSI module before and converted to HITs */
+	// TODO check for IPv6 first?
+	HIP_ASSERT(ipv6_addr_is_hit(&ctx->src) && ipv6_addr_is_hit(&ctx->dst));
 
 	err = userspace_ipsec_init();
 	if (err)
@@ -136,12 +141,11 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 
 	// re-use allocated esp_packet memory space
 	memset(esp_packet, 0, ESP_PACKET_SIZE);
-
 	gettimeofday(&now, NULL);
-	
-	/* we should only get HITs addresses
-	 * LSI have been handled by LSI module before and converted to HITs */
-	HIP_ASSERT(ipv6_addr_is_hit(&ctx->src) && ipv6_addr_is_hit(&ctx->dst));
+	preferred_local_addr = (struct in6_addr*)malloc(sizeof(struct in6_addr));
+	preferred_peer_addr = (struct in6_addr*)malloc(sizeof(struct in6_addr));
+	memset(preferred_local_addr, 0, sizeof(struct in6_addr));
+	memset(	preferred_peer_addr, 0, sizeof(struct in6_addr));
 			
 	HIP_DEBUG_HIT("src_hit: ", &ctx->src);
 	HIP_DEBUG_HIT("dst_hit: ", &ctx->dst);
@@ -172,17 +176,21 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	//unbuffer_packets(entry);
 	
 	// get preferred routable addresses
-	get_preferred_addr(entry->src_addrs, preferred_local_addr);
-	get_preferred_addr(entry->dst_addrs, preferred_peer_addr);	
+	err = get_preferred_addr(entry->src_addrs, preferred_local_addr);
+	if (err)
+		goto end_err;
+	err = get_preferred_addr(entry->dst_addrs, preferred_peer_addr);	
+	if (err)
+		goto end_err;
 	
 	// check preferred addresses for the address type of the output
-	if (preferred_local_addr->sa_family == AF_INET
-			&& preferred_peer_addr->sa_family == AF_INET)
+	if (IN6_IS_ADDR_V4MAPPED(preferred_local_addr)
+			&& IN6_IS_ADDR_V4MAPPED(preferred_peer_addr))
 	{
 		HIP_DEBUG("out_ip_version is IPv4");
 		out_ip_version = 4;
-	} else if (preferred_local_addr->sa_family == AF_INET6
-			&& preferred_peer_addr->sa_family == AF_INET6)
+	} else if (!IN6_IS_ADDR_V4MAPPED(preferred_local_addr)
+			&& !IN6_IS_ADDR_V4MAPPED(preferred_peer_addr))
 	{
 		HIP_DEBUG("out_ip_version is IPv6");
 		out_ip_version = 6;
@@ -195,9 +203,10 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	}
 		
 	err = hip_esp_output(ctx, entry, out_ip_version, udp_encap, &now,
-			preferred_local_addr, preferred_peer_addr
+			preferred_local_addr, preferred_peer_addr,
 			esp_packet, &esp_packet_len);
 	
+#if 0
 	// send the raw packet -> returns size of the sent packet
 	// TODO check flags
 	if (out_ip_version == 4)
@@ -208,6 +217,7 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 		err = sendto(raw_sock_v6, esp_packet, esp_packet_len, 0,
 						(struct sockaddr *)preferred_peer_addr),
 						hip_sockaddr_len(preferred_peer_addr));
+#endif
 	
 	if (err < 0) {
 		HIP_DEBUG("hip_esp_output(): sendto() failed \n");
@@ -336,15 +346,7 @@ int pfkey_send_acquire(struct sockaddr *target)
 	hip_hit_t *hit = NULL;
 	int err = 0;
 	
-	switch(target->sa_family)
-	{
-		case AF_INET:
-			IPV4_TO_IPV6_MAP(hip_cast_sa_addr(target), &hit);
-			break;
-		case AF_INET6:
-			hit = hip_cast_sa_addr(target);
-			break;
-	}
+	hit = hip_cast_sa_addr(target);
 	
 	HIP_DEBUG_HIT("pfkey_send_acquire hit is: ", hit);
 
@@ -360,6 +362,9 @@ int pfkey_send_acquire(struct sockaddr *target)
 int get_preferred_addr(sockaddr_list *addr_list, struct in6_addr *preferred_addr)
 {
 	int err = 0;
+	struct sockaddr_in sockaddr_in;
+	struct sockaddr_in6 sockaddr_in6;
+	preferred_addr = NULL;
 	
 	while (addr_list != NULL)
 	{
@@ -367,20 +372,26 @@ int get_preferred_addr(sockaddr_list *addr_list, struct in6_addr *preferred_addr
 		{
 			HIP_DEBUG("found preferred src_addr");
 			
-			if (addr_list->addr->sa_family == AF_INET)
-				IPV4_TO_IPV6_MAP()
-			else if (addr_list->addr->sa_family == AF_INET6)
-				ipv6_addr_copy
-			else
+			if (addr_list->addr.ss_family == AF_INET)
+			{
+				sockaddr_in = (struct sockaddr_in)addr_list->addr;
+				IPV4_TO_IPV6_MAP(sockaddr_in.sin_addr, preferred_addr);
+				
+			} else if (addr_list->addr.ss_family == AF_INET6)
+			{
+				sockaddr_in6 = (struct sockaddr_in6)addr_list->addr;
+				ipv6_addr_copy(preferred_addr, sockaddr_in6.sin6_addr);
+				
+			} else
 			{
 				err = 1;
 				goto out_err;
 			}
 			
-			return addr_list->addr;
+			break;
 		}
-		else
-			addr_list = addr_list->next;
+
+		addr_list = addr_list->next;
 	}
 	
   out_err:
