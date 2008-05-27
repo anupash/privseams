@@ -1,14 +1,10 @@
 #ifndef RULE_MANAGEMENT_H
 #define RULE_MANAGEMENT_H 
 
-#include <glib.h>
-#include <glib/glist.h>
 #include <netinet/in.h>
 #include <linux/netfilter.h>
 #include <libipq.h>
-#include <glib.h>
-#include <glib/glist.h>
-#include <glib/gthread.h>
+
 #include <stdio.h>
 #include <openssl/dsa.h>
 #include <openssl/rsa.h>
@@ -18,7 +14,7 @@
 #include "builder.h"
 #include "crypto.h"
 #include "debug.h"
-#include "debug.h"
+#include "list.h"
 
 //string tokens for rule parsing
 #define SRC_HIT_STR "-src_hit"
@@ -44,9 +40,6 @@
 //rule
 #define DROP 0;
 #define ACCEPT 1;
-
-
-struct GList;
 
 enum {
   NO_OPTION,
@@ -118,13 +111,13 @@ void print_rule_table();
 
 struct rule * parse_rule(char * string);
 void read_file(char * file_name);
-struct GList * read_rules(int hook);
+struct DList * read_rules(int hook);
 void read_rules_exit(int hook);
 
 //rule management functions
 void insert_rule(const struct rule * rule, int hook);
 int delete_rule(const struct rule * rule, int hook);
-struct _GList * list_rules(int hook);
+struct _DList * list_rules(int hook);
 int flush(int hook);
 
 void test_rule_management();
