@@ -369,7 +369,7 @@ void hip_error(const char *file, int line, const char *function,
  */
 void hip_perror_wrapper(const char *file, int line, const char *function,
 			const char *s) {
-	hip_error(file, line, function, "%s %s\n", s, strerror(errno));
+	hip_error(file, line, function, "%s%s\n", s, strerror(errno));
 }
 
 /**
@@ -642,28 +642,57 @@ void hip_print_hit(int debug_level, const char *file, int line, const char *func
 	}
 }
 
+#if 0
 void hip_print_key(int debug_level, const char *file, int line, const char *function,
 		   const char *str, const struct hip_crypto_key *key,
 		   int key_len)
 {
-	char dst[key_len];
+	char dst[key_len]; // THIS ALLOCATION IS NOT OK.
 	strncpy(dst, key->key, key_len);
 	hip_print_str(debug_level, file, line, function, "%s: %s\n", str, dst);
 }
+#endif
 
-void uint16_to_binstring(uint16_t val, char *buffer)
+void uint8_to_binstring(uint8_t val, char *buffer) 
 {
-     int i = 0;
-     for(; i < 16; i++)
-     {
-	  if(val & 0x8000)
-	       buffer[i] = '1';
-	  else
-	       buffer[i] = '0';
-	  val <<= 1;
-     }
+	int i = 0;
+	for(; i < 8; i++) {
+		if(val & 0x80)
+			buffer[i] = '1';
+		else
+			buffer[i] = '0';
+		val <<= 1;
+	}
+	
+	buffer[i] = '\0';
+}
+
+void uint16_to_binstring(uint16_t val, char *buffer) 
+{
+	int i = 0;
+	for(; i < 16; i++) {
+		if(val & 0x8000)
+			buffer[i] = '1';
+		else
+			buffer[i] = '0';
+		val <<= 1;
+	}
+	
+	buffer[i] = '\0';
+}
      
-     buffer[i] = '\0';
+void uint32_to_binstring(uint32_t val, char *buffer) 
+{
+	int i = 0;
+	for(; i < 32; i++) {
+		if(val & 0x80000000)
+			buffer[i] = '1';
+		else
+			buffer[i] = '0';
+		val <<= 1;
+	}
+	
+	buffer[i] = '\0';
 }
 
 void hip_print_locator_addresses(struct hip_common * in_msg) {
@@ -693,3 +722,22 @@ void hip_print_locator_addresses(struct hip_common * in_msg) {
     }
 }
 
+void hip_print_peer_addresses(hip_ha_t *entry) {
+	hip_list_t *item = NULL, *tmp = NULL, *item_outer = NULL, *tmp_outer = NULL; 
+	struct hip_peer_addr_list_item *addr_li;
+	struct hip_spi_out_item *spi_out;
+	int i = 0, ii = 0;
+
+	list_for_each_safe(item_outer, tmp_outer, entry->spis_out, i) {
+		spi_out = list_entry(item_outer);
+		HIP_DEBUG("SPI out is %d\n", spi_out->spi);
+		ii = 0;
+		tmp = NULL;
+		item = NULL;
+		list_for_each_safe(item, tmp, spi_out->peer_addr_list, ii) {
+			addr_li = list_entry(item);
+			HIP_DEBUG_HIT("SPI out address", &addr_li->address);
+		
+		}
+	}
+}

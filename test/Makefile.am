@@ -10,13 +10,13 @@ include_HEADERS += unittest.h conntest.h hipconftool.h misc_install.h unit.h
 
 INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
 
-conntest_client_LDADD = 
+conntest_client_opp_LDADD = 
 if HIP_OPPORTUNISTIC
-  # currently opp. library does not work with conntest-client-gai
-  conntest_client_LDADD += ../libopphip/.libs/libopphip.a
+  # currently opp. library does not work with conntest-client-hip
+  conntest_client_opp_LDADD += ../libopphip/.libs/libopphip.a
 endif
 
-conntest_client_LDADD += ../libinet6/.libs/libinet6.a
+conntest_client_opp_LDADD += ../libinet6/.libs/libinet6.a
 hashtest_LDADD = ../libinet6/.libs/libinet6.a
 listtest_LDADD =
 
@@ -26,16 +26,16 @@ listtest_LDADD =
 LDADD  = ../libinet6/.libs/libinet6.a
 
 if HIP_CORPORATE
-  conntest_client_LDADD += -lhiptool
+  conntest_client_opp_LDADD += -lhiptool
   hashtest_LDADD += -lhiptool
   LDADD += -lhiptool
 else
-  conntest_client_LDADD += ../libhiptool/.libs/libhiptool.a
+  conntest_client_opp_LDADD += ../libhiptool/.libs/libhiptool.a
   hashtest_LDADD += ../libhiptool/.libs/libhiptool.a
   LDADD += ../libhiptool/.libs/libhiptool.a
 endif
 
-conntest_client_LDADD += ../opendht/.libs/libhipopendht.a
+conntest_client_opp_LDADD += ../opendht/.libs/libhipopendht.a
 LDADD += ../opendht/.libs/libhipopendht.a
 CFLAGS += $(HIPL_XMLL)
 
@@ -47,9 +47,9 @@ else
   opendhtteststub_LDADD += ../libhiptool/.libs/libhiptool.a
 endif
 
-bin_PROGRAMS = conntest-client
+bin_PROGRAMS = conntest-client-opp
 bin_PROGRAMS += conntest-server
-bin_PROGRAMS += conntest-client-gai
+bin_PROGRAMS += conntest-client-hip
 bin_PROGRAMS += conntest-client-native
 bin_PROGRAMS += conntest-client-native-user-key
 bin_PROGRAMS += conntest-server-native
@@ -73,8 +73,8 @@ bin_PROGRAMS += sqliteteststub
 #sbin_SCRIPTS = hipsetup
 
 #ttcp_SOURCES = ttcp.c
-conntest_client_SOURCES = conntest-client.c  conntest.c
-conntest_client_gai_SOURCES = conntest-client-gai.c conntest.c
+conntest_client_opp_SOURCES = conntest-client-opp.c  conntest.c
+conntest_client_hip_SOURCES = conntest-client-hip.c conntest.c
 conntest_client_native_SOURCES = conntest-client-native.c conntest.c
 conntest_client_native_user_key_SOURCES = \
                         conntest-client-native-user-key.c

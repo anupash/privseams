@@ -82,6 +82,8 @@ int main(int argc, char *argv[])
 	int err = 0, fd, c;
 	char lock_file[MAX_PATH];
 
+	HIP_IFEL((geteuid() != 0), -1, "agent must be started with sudo\n");
+
 	/* Initialize string variables. */
 	HIP_IFEL(str_var_init(), -1, "str_var_init() failed!\n");
 	/* Create config path. */

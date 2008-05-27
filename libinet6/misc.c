@@ -483,12 +483,11 @@ int convert_string_to_address(const char *str, struct in6_addr *ip6) {
 	struct in_addr ip4;
 
 	ret = inet_pton(AF_INET6, str, ip6);
-	HIP_IFEL((ret < 0 && errno == EAFNOSUPPORT),
-		 err = -1,
-		 "inet_pton: not a valid address family\n");
+	HIP_IFEL((ret < 0 && errno == EAFNOSUPPORT), -1,
+		 "\"%s\" is not of valid address family.\n", str);
 	if (ret > 0) {
                 /* IPv6 address conversion was ok */
-		HIP_DEBUG_IN6ADDR("id", ip6);
+		HIP_DEBUG_IN6ADDR("Converted IPv6", ip6);
 		goto out_err;
 	}
 
@@ -496,12 +495,12 @@ int convert_string_to_address(const char *str, struct in6_addr *ip6) {
 		
 	ret = inet_pton(AF_INET, str, &ip4);
 	HIP_IFEL((ret < 0 && errno == EAFNOSUPPORT), -1,
-		 "inet_pton: not a valid address family\n");
+		 "\"%s\" is not of valid address family.\n", str);
 	HIP_IFEL((ret == 0), -1,
-		 "inet_pton: %s: not a valid network address\n", str);
+		 "\"%s\" is not a valid network address.\n", str);
 		
 	IPV4_TO_IPV6_MAP(&ip4, ip6);
-	HIP_DEBUG("Mapped v4 to v6\n");
+	HIP_DEBUG("Mapped v4 to v6.\n");
 	HIP_DEBUG_IN6ADDR("mapped v6", ip6); 	
 
  out_err:
@@ -1634,6 +1633,9 @@ int hip_sockaddr_len(void *sockaddr) {
   case AF_INET6:
     len = sizeof(struct sockaddr_in6);
     break;
+  case_AF_UNIX:
+    len = sizeof(struct sockaddr_un);
+    break;
   default:
     len = 0;
   }
@@ -1657,4 +1659,261 @@ int hip_sa_addr_len(void *sockaddr) {
   return len;
 }
 
+
+/* conversion function from in6_addr to sockaddr */
+void hip_addr_to_sockaddr(struct in6_addr *addr, struct sockaddr *sa)
+{
+	if (IN6_IS_ADDR_V4MAPPED(addr)) {
+		struct sockaddr_in *in = (struct sockaddr_in *) sa;
+		memset(in, 0, sizeof(struct sockaddr_in));
+		in->sin_family = AF_INET;
+		IPV6_TO_IPV4_MAP(addr, &in->sin_addr);
+	} else {
+		struct sockaddr_in6 *in6 = (struct sockaddr_in6 *) sa;
+		memset(in6, 0, sizeof(struct sockaddr_in6));
+		in6->sin6_family = AF_INET6;
+		ipv6_addr_copy(&in6->sin6_addr, addr);
+	}
+}
+
+
+
+
+
+int hip_remove_lock_file(char *filename) {
+	return unlink(filename);
+}
+
+int hip_create_lock_file(char *filename, int killold) {
+	int err = 0, fd = 0, old_pid = 0;
+	char old_pid_str[64], new_pid_str[64];
+	int new_pid_str_len;
+	
+	memset(old_pid_str, 0, sizeof(old_pid_str));
+	memset(new_pid_str, 0, sizeof(new_pid_str));
+
+	/* New pid */
+	snprintf(new_pid_str, sizeof(new_pid_str)-1, "%d\n", getpid());
+	new_pid_str_len = strnlen(new_pid_str, sizeof(new_pid_str)-1);
+	HIP_IFEL((new_pid_str_len <= 0), -1, "pid length\n");
+		
+	/* Read old pid */
+	fd = open(filename, O_RDWR | O_CREAT, 0644);
+	HIP_IFEL((fd <= 0), -1, "opening lock file failed\n");
+
+	read(fd, old_pid_str, sizeof(old_pid_str) - 1);
+	old_pid = atoi(old_pid_str);
+       
+	if (lockf(fd, F_TLOCK, 0) < 0)
+	{ 
+		HIP_IFEL(!killold, -12,
+			 "\nHIP daemon already running with pid %d\n"
+			 "Give: -k option to kill old daemon.\n",old_pid);
+		
+		HIP_INFO("\nDaemon is already running with pid %d\n"
+			 "-k option given, terminating old one...\n", old_pid);
+		/* Erase the old lock file to avoid having multiple pids
+		   in the file */
+		lockf(fd, F_ULOCK, 0);
+		close(fd);
+		HIP_IFEL(hip_remove_lock_file(filename), -1,"remove lock file\n");
+                /* fd = open(filename, O_RDWR | O_CREAT, 0644); */
+		fd = open(filename, O_RDWR | O_CREAT | O_TRUNC, 0644);
+                /* don't close file descriptor because new started process is running */
+		HIP_IFEL((fd <= 0), -1, "Opening lock file failed\n");
+		HIP_IFEL(lockf(fd, F_TLOCK, 0), -1,"lock attempt failed\n");  
+                 /* HIP_IFEL(kill(old_pid, SIGKILL), -1, "kill failed\n"); */
+		err = kill(old_pid, SIGKILL);
+		if (err != 0)
+		{
+                 HIP_INFO("\nError %d while trying to kill pid %d\n", err,old_pid);
+		} 
+	}
+	/* else if (killold)
+	{	
+		lseek(fd,0,SEEK_SET);
+		write(fd, new_pid_str, new_pid_str_len);
+                system("NEW_PID=$(sudo awk NR==1 /var/lock/hipd.lock)");
+		system("OLD_PID=$(/bin/pidof -o $NEW_PID hipd)");
+		system("kill -9 $OLD_PID"); 
+	} */
+
+	lseek(fd,0,SEEK_SET);
+	HIP_IFEL((write(fd, new_pid_str, new_pid_str_len) != new_pid_str_len),
+		 "Writing new pid failed\n", -1);
+
+out_err:
+	if (err == -12)
+	{
+	  exit(0);
+	}
+
+	return err;
+}
+
 #endif /* ! __KERNEL__ */
+
+/**
+ * hip_solve_puzzle - Solve puzzle.
+ * @param puzzle_or_solution Either a pointer to hip_puzzle or hip_solution structure
+ * @param hdr The incoming R1/I2 packet header.
+ * @param mode Either HIP_VERIFY_PUZZLE of HIP_SOLVE_PUZZLE
+ *
+ * The K and I is read from the @c puzzle_or_solution. 
+ *
+ * The J that solves the puzzle is returned, or 0 to indicate an error.
+ * NOTE! I don't see why 0 couldn't solve the puzzle too, but since the
+ * odds are 1/2^64 to try 0, I don't see the point in improving this now.
+ */
+uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
+			  int mode)
+{
+	uint64_t mask = 0;
+	uint64_t randval = 0;
+	uint64_t maxtries = 0;
+	uint64_t digest = 0;
+	u8 cookie[48];
+	int err = 0;
+	union {
+		struct hip_puzzle pz;
+		struct hip_solution sl;
+	} *u;
+
+	HIP_HEXDUMP("puzzle", puzzle_or_solution,
+		    (mode == HIP_VERIFY_PUZZLE ? sizeof(struct hip_solution) : sizeof(struct hip_puzzle)));
+
+	_HIP_DEBUG("\n");
+	/* pre-create cookie */
+	u = puzzle_or_solution;
+
+	_HIP_DEBUG("current hip_cookie_max_k_r1=%d\n", max_k);
+	HIP_IFEL(u->pz.K > HIP_PUZZLE_MAX_K, 0, 
+		 "Cookie K %u is higher than we are willing to calculate"
+		 " (current max K=%d)\n", u->pz.K, HIP_PUZZLE_MAX_K);
+
+	mask = hton64((1ULL << u->pz.K) - 1);
+	memcpy(cookie, (u8 *)&(u->pz.I), sizeof(uint64_t));
+
+	HIP_DEBUG("(u->pz.I: 0x%llx\n", u->pz.I);
+
+	if (mode == HIP_VERIFY_PUZZLE) {
+		ipv6_addr_copy((hip_hit_t *)(cookie+8), &hdr->hits);
+		ipv6_addr_copy((hip_hit_t *)(cookie+24), &hdr->hitr);
+		//randval = ntoh64(u->sl.J);
+		randval = u->sl.J;
+		_HIP_DEBUG("u->sl.J: 0x%llx\n", randval);
+		maxtries = 1;
+	} else if (mode == HIP_SOLVE_PUZZLE) {
+		ipv6_addr_copy((hip_hit_t *)(cookie+8), &hdr->hitr);
+		ipv6_addr_copy((hip_hit_t *)(cookie+24), &hdr->hits);
+		maxtries = 1ULL << (u->pz.K + 3);
+		get_random_bytes(&randval, sizeof(u_int64_t));
+	} else {
+		HIP_IFEL(1, 0, "Unknown mode: %d\n", mode);
+	}
+
+	HIP_DEBUG("K=%u, maxtries (with k+2)=%llu\n", u->pz.K, maxtries);
+	/* while loops should work even if the maxtries is unsigned
+	 * if maxtries = 1 ---> while(1 > 0) [maxtries == 0 now]... 
+	 * the next round while (0 > 0) [maxtries > 0 now]
+	 */
+	while(maxtries-- > 0) {
+	 	u8 sha_digest[HIP_AH_SHA_LEN];
+		
+		/* must be 8 */
+		memcpy(cookie + 40, (u8*) &randval, sizeof(uint64_t));
+
+		hip_build_digest(HIP_DIGEST_SHA1, cookie, 48, sha_digest);
+
+                /* copy the last 8 bytes for checking */
+		memcpy(&digest, sha_digest + 12, sizeof(uint64_t));
+
+		/* now, in order to be able to do correctly the bitwise
+		 * AND-operation we have to remember that little endian
+		 * processors will interpret the digest and mask reversely.
+		 * digest is the last 64 bits of the sha1-digest.. how that is
+		 * ordered in processors registers etc.. does not matter to us.
+		 * If the last 64 bits of the sha1-digest is
+		 * 0x12345678DEADBEEF, whether we have 0xEFBEADDE78563412
+		 * doesn't matter because the mask matters... if the mask is
+		 * 0x000000000000FFFF (or in other endianness
+		 * 0xFFFF000000000000). Either ways... the result is
+		 * 0x000000000000BEEF or 0xEFBE000000000000, which the cpu
+		 * interprets as 0xBEEF. The mask is converted to network byte
+		 * order (above).
+		 */
+		if ((digest & mask) == 0) {
+			_HIP_DEBUG("*** Puzzle solved ***: 0x%llx\n",randval);
+			_HIP_HEXDUMP("digest", sha_digest, HIP_AH_SHA_LEN);
+			_HIP_HEXDUMP("cookie", cookie, sizeof(cookie));
+			return randval;
+		}
+
+		/* It seems like the puzzle was not correctly solved */
+		HIP_IFEL(mode == HIP_VERIFY_PUZZLE, 0, "Puzzle incorrect\n");
+		randval++;
+	}
+
+	HIP_ERROR("Could not solve the puzzle, no solution found\n");
+ out_err:
+	return err;
+}
+
+int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit, struct in6_addr *src_ip, struct in6_addr *dst_ip)
+{
+	struct hip_common *msg = NULL;
+	int err = 0;
+
+	HIP_DEBUG_HIT("src hit is: ", src_hit);
+	HIP_DEBUG_HIT("dst hit hit is: ", dst_hit);
+	HIP_DEBUG_IN6ADDR("src ip is: ", src_ip);
+	HIP_DEBUG_IN6ADDR("dst ip  is: ", dst_ip);
+	
+	
+	HIP_IFE(!(msg = hip_msg_alloc()), -1);
+
+	if (src_hit)
+		HIP_IFEL(hip_build_param_contents(msg, (void *)(src_hit),
+						  HIP_PARAM_HIT,
+						  sizeof(struct in6_addr)), -1,
+			 "build param HIP_PARAM_HIT  failed\n");
+	
+	if (dst_hit)
+		HIP_IFEL(hip_build_param_contents(msg, (void *)(dst_hit),
+						  HIP_PARAM_HIT,
+						  sizeof(struct in6_addr)), -1,
+		 "build param HIP_PARAM_HIT  failed\n");
+	
+	if (src_ip)
+		HIP_IFEL(hip_build_param_contents(msg, (void *)(src_ip),
+						  HIP_PARAM_IPV6_ADDR,
+						  sizeof(struct in6_addr)), -1,
+			 "build param HIP_PARAM_IPV6_ADDR failed\n");
+	
+	if (dst_ip)
+		HIP_IFEL(hip_build_param_contents(msg, (void *)(dst_ip),
+						  HIP_PARAM_IPV6_ADDR,
+						  sizeof(struct in6_addr)), -1,
+			 "build param HIP_PARAM_IPV6_ADDR failed\n");
+	
+	/* build the message header */
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_TRIGGER_BEX, 0), -1,
+		 "build hdr failed\n");
+
+	HIP_DUMP_MSG(msg);
+	
+	/* send and receive msg to/from hipd */
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send_recv msg failed\n");
+	_HIP_DEBUG("send_recv msg succeed\n");
+
+
+	/* check error value */
+	HIP_IFEL(hip_get_msg_err(msg), -1, "Got erroneous message!\n");
+	
+	HIP_DEBUG("Send_recv msg succeed \n");
+	
+ out_err:
+	if (msg)
+		free(msg);
+	return err;
+}

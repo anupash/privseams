@@ -1,16 +1,9 @@
- 
-/*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- */
-
+/** @file
+ * The HIPL main file containing the daemon main loop. 
+ * 
+ * @date 28.01.2008
+ * @note Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ */ 
 #include "hipd.h" 
 
 /* Defined as a global just to allow freeing in exit(). Do not use outside
@@ -18,36 +11,42 @@
 struct hip_common *hipd_msg = NULL;
 struct hip_common *hipd_msg_v4 = NULL;
 
-int is_active_handover = 1; /* which handover to use active or lazy? */
-int hip_blind_status = 0; /* Blind status */
+int is_active_handover = 1;  /**< Which handover to use active or lazy? */
+int hip_blind_status = 0; /**< Blind status */
+
+/** Suppress advertising of none, AF_INET or AF_INET6 address in UPDATEs.
+    0 = none = default, AF_INET, AF_INET6 */
+int suppress_af_family = 0;
 
 /* For receiving of HIP control messages */
 int hip_raw_sock_v6 = 0;
 int hip_raw_sock_v4 = 0;
-/** File descriptor of the socket used for hip control packet NAT traversal on
+/** File descriptor of the socket used for HIP control packet NAT traversal on
     UDP/IPv4. */
 int hip_nat_sock_udp = 0;
 /** Specifies the NAT status of the daemon. This value indicates if the current
     machine is behind a NAT. */
 int hip_nat_status = 0;
 
+/** Specifies the HIP PROXY status of the daemon. This value indicates if the HIP PROXY is running. */
+int hipproxy = 0;
+
 /* Communication interface to userspace apps (hipconf etc) */
 int hip_user_sock = 0;
 struct sockaddr_un hip_user_addr;
 
-/* For receiving netlink IPsec events (acquire, expire, etc) */
+/** For receiving netlink IPsec events (acquire, expire, etc) */
 struct rtnl_handle hip_nl_ipsec  = { 0 };
 
-/* For getting/setting routes and adding HITs (it was not possible to use
-   nf_ipsec for this purpose). */
+/** For getting/setting routes and adding HITs (it was not possible to use
+    nf_ipsec for this purpose). */
 struct rtnl_handle hip_nl_route = { 0 };
 
-int hip_agent_sock = 0, hip_agent_status = 0;
-struct sockaddr_un hip_agent_addr;
+int hip_agent_status = 0;
 
-#if 0
+//#if 0
 int hip_firewall_sock = -1;
-#endif
+//#endif
 struct sockaddr_in6 hip_firewall_addr;
 
 /* 
@@ -82,6 +81,10 @@ int hip_opendht_error_count = 0; /* Error count, counting errors from libhipopen
 /* Tells to the daemon should it build LOCATOR parameters to R1 and I2 */
 int hip_locator_status = SO_HIP_SET_LOCATOR_OFF;
 
+
+/* It tells the daemon to set tcp timeout parameters. Added By Tao Wan, on 09.Jan.2008 */
+int hip_tcptimeout_status = SO_HIP_SET_TCPTIMEOUT_ON;
+
 /* We are caching the IP addresses of the host here. The reason is that during
    in hip_handle_acquire it is not possible to call getifaddrs (it creates
    a new netlink socket and seems like only one can be open per process).
@@ -93,28 +96,57 @@ int address_count;
 HIP_HASHTABLE *addresses;
 time_t load_time;
 
-#ifdef CONFIG_HIP_HI3
 char *hip_i3_config_file = NULL;
 int hip_use_i3 = 0; // false
-#endif
 
-#ifdef CONFIG_HIP_OPPTCP
+/*Define hip_use_userspace_ipsec variable to indicate whether use 
+ * userspace ipsec or not. If it is 1, hip uses the user space ipsec.
+ * It will not use if hip_use_userspace_ipsec = 0. Added By Tao Wan
+ */
+int hip_use_userspace_ipsec = 0;
+
 int hip_use_opptcp = 0; // false
 
-void hip_set_opportunistic_tcp_status(int newVal)
+void hip_set_opportunistic_tcp_status(struct hip_common *msg)
 
 {
-        if((newVal == 0) || (newVal == 1))
-                hip_use_opptcp = newVal;
-	else	
-        	hip_use_opptcp = 0; /*default to 0 in case of error*/
+	struct sockaddr_in6 sock_addr;     		
+	int retry, type, n;
+
+	type = hip_get_msg_type(msg);
+
+	_HIP_DEBUG("type=%d\n", type);
+
+	bzero(&sock_addr, sizeof(sock_addr));
+	sock_addr.sin6_family = AF_INET6;
+	sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
+	sock_addr.sin6_addr = in6addr_loopback;		
+
+	for (retry = 0; retry < 3; retry++) {
+		n = hip_sendto(msg, &sock_addr);		
+		if (n <= 0) {
+			HIP_ERROR("hipconf opptcp failed (round %d)\n", retry);
+			HIP_DEBUG("Sleeping few seconds to wait for fw\n");
+			sleep(2);
+		} else {
+			HIP_DEBUG("hipconf opptcp ok (sent %d bytes)\n", n);
+			break;
+		}
+	}
+
+	if (type == SO_HIP_SET_OPPTCP_ON)
+		hip_use_opptcp = 1;
+	else
+		hip_use_opptcp = 0;
+
+	HIP_DEBUG("Opportunistic tcp set %s\n",
+		  (hip_use_opptcp ? "on" : "off"));
 }
 
 int hip_get_opportunistic_tcp_status()
 {
         return hip_use_opptcp;
 }
-#endif
 
 void usage() {
 	fprintf(stderr, "HIPL Daemon %.2f\n", HIPL_VERSION);
@@ -126,49 +158,41 @@ void usage() {
 	fprintf(stderr, "\n");
 }
 
-int hip_sendto(const struct hip_common *msg, const struct sockaddr_in6 *dst){
-        int n = 0;
-        n = sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
-                   0,(struct sockaddr *)dst, sizeof(struct sockaddr_in6));
-        return n;
+int hip_send_agent(struct hip_common *msg) {
+        struct sockaddr_in6 hip_agent_addr;
+        int alen;
+
+        memset(&hip_agent_addr, 0, sizeof(hip_agent_addr));
+        hip_agent_addr.sin6_family = AF_INET6;
+        hip_agent_addr.sin6_addr = in6addr_loopback;
+        hip_agent_addr.sin6_port = htons(HIP_AGENT_PORT);
+
+        alen = sizeof(hip_agent_addr);
+
+        return sendto(hip_user_sock, msg, hip_get_msg_total_len(msg), 0,
+                       (struct sockaddr *)&hip_agent_addr, alen);
 }
 
 /**
  * Receive message from agent socket.
  */
-int hip_sock_recv_agent(void)
+int hip_recv_agent(struct hip_common *msg)
 {
-	int n, err;
+	int n, err = 0;
 	socklen_t alen;
 	hip_hdr_type_t msg_type;
-	err = 0;
 	hip_opp_block_t *entry;
 	
-	HIP_DEBUG("Receiving a message from agent socket "\
-				"(file descriptor: %d).\n", hip_agent_sock);
+	HIP_DEBUG("Received a message from agent\n");
 
-	bzero(&hip_agent_addr, sizeof(hip_agent_addr));
-	alen = sizeof(hip_agent_addr);
-	n = recvfrom(hip_agent_sock, hipd_msg, sizeof(struct hip_common), MSG_PEEK,
-	             (struct sockaddr *)&hip_agent_addr, &alen);
-	HIP_IFEL(n < 0, 0, "recvfrom() failed on agent socket.\n");
-	bzero(&hip_agent_addr, sizeof(hip_agent_addr));
-	alen = sizeof(hip_agent_addr);
-	n = recvfrom(hip_agent_sock, hipd_msg, hip_get_msg_total_len(hipd_msg), 0,
-	             (struct sockaddr *) &hip_agent_addr, &alen);
-	HIP_IFEL(n < 0, 0, "recvfrom() failed on agent socket.\n");
-	HIP_DEBUG("Received %d bytes from agent.\n", n);
-
-	msg_type = hip_get_msg_type(hipd_msg);
+	msg_type = hip_get_msg_type(msg);
 	
-	if (msg_type == HIP_AGENT_PING)
+	if (msg_type == SO_HIP_AGENT_PING)
 	{
-		memset(hipd_msg, 0, sizeof(struct hip_common));
-		hip_build_user_hdr(hipd_msg, HIP_AGENT_PING_REPLY, 0);
-		alen = sizeof(hip_agent_addr);
-		n = sendto(hip_agent_sock, hipd_msg, sizeof(struct hip_common),
-		           0, (struct sockaddr *) &hip_agent_addr, alen);
-		HIP_IFEL(n < 0, 0, "sendto() failed on agent socket.\n");
+		memset(msg, 0, HIP_MAX_PACKET);
+		hip_build_user_hdr(msg, SO_HIP_AGENT_PING_REPLY, 0);
+		n = hip_send_agent(msg);
+		HIP_IFEL(n < 0, 0, "sendto() failed on agent socket\n");
 
 		if (err == 0)
 		{
@@ -181,7 +205,7 @@ int hip_sock_recv_agent(void)
 			hip_agent_status = 1;
 		}
 	}
-	else if (msg_type == HIP_AGENT_QUIT)
+	else if (msg_type == SO_HIP_AGENT_QUIT)
 	{
 		HIP_DEBUG("Agent quit.\n");
 		hip_agent_status = 0;
@@ -193,11 +217,11 @@ int hip_sock_recv_agent(void)
 		hip_portpair_t *msg_info;
 		void *reject;
 
-		emsg = hip_get_param_contents(hipd_msg, HIP_PARAM_ENCAPS_MSG);
-		src_addr = hip_get_param_contents(hipd_msg, HIP_PARAM_SRC_ADDR);
-		dst_addr = hip_get_param_contents(hipd_msg, HIP_PARAM_DST_ADDR);
-		msg_info = hip_get_param_contents(hipd_msg, HIP_PARAM_PORTPAIR);
-		reject = hip_get_param(hipd_msg, HIP_PARAM_AGENT_REJECT);
+		emsg = hip_get_param_contents(msg, HIP_PARAM_ENCAPS_MSG);
+		src_addr = hip_get_param_contents(msg, HIP_PARAM_SRC_ADDR);
+		dst_addr = hip_get_param_contents(msg, HIP_PARAM_DST_ADDR);
+		msg_info = hip_get_param_contents(msg, HIP_PARAM_PORTPAIR);
+		reject = hip_get_param(msg, HIP_PARAM_AGENT_REJECT);
 
 		if (emsg && src_addr && dst_addr && msg_info && !reject)
 		{
@@ -220,88 +244,13 @@ out_err:
 }
 
 
-#if 0
-/**
- * Receive message from firewall socket.
- */
-int hip_sock_recv_firewall(void)
-{
-	int n, err;
-	socklen_t alen;
-	err = 0;
-	hip_hdr_type_t msg_type;
-
-	HIP_DEBUG("Receiving a message from firewall socket "
-	          "(file descriptor: %d).\n",
-	          hip_firewall_sock);
-	
-	bzero(&hip_firewall_addr, sizeof(hip_firewall_addr));
-	alen = sizeof(hip_firewall_addr);
-	n = recvfrom(hip_firewall_sock, hipd_msg, sizeof(struct hip_common), 0,
-	             (struct sockaddr *) &hip_firewall_addr, &alen);
-	HIP_IFEL(n < 0, 0, "recvfrom() failed on agent socket.\n");
-	
-	msg_type = hip_get_msg_type(hipd_msg);
-	
-	if (msg_type == HIP_FIREWALL_PING)
-	{
-		HIP_DEBUG("Received ping from firewall\n");
-		memset(hipd_msg, 0, sizeof(struct hip_common));
-		hip_build_user_hdr(hipd_msg, HIP_FIREWALL_PING_REPLY, 0);
-		alen = sizeof(hip_firewall_addr);                    
-		n = hip_sendto(hipd_msg, &hip_firewall_addr);
-		HIP_IFEL(n < 0, 0, "sendto() failed on agent socket.\n");
-
-		if (err == 0)
-		{
-			HIP_DEBUG("HIP firewall ok.\n");
-			if (hip_firewall_status == 0)
-			{
-				// TODO: initializing of firewall needed?
-				HIP_DEBUG("First ping\n");
-			}
-			hip_firewall_status = 1;
-		}
-		
-		if (hip_services_is_active(HIP_SERVICE_ESCROW))
-			HIP_DEBUG("Escrow service is now active.\n");
-
-		if (hip_firewall_is_alive())
-			hip_firewall_set_escrow_active(1);
-	}
-	else if (msg_type == HIP_FIREWALL_QUIT)
-	{
-		HIP_DEBUG("Firewall quit.\n");
-		hip_firewall_status = 0;
-	}
-
-out_err:
-	return err;
-}
-#endif
-
-/*int hip_sendto_firewall(const struct hip_common *msg){
-#ifdef CONFIG_HIP_FIREWALL
-	if (hip_get_firewall_status()) {
-		int n = 0;
-		n = sendto(hip_firewall_sock, msg, hip_get_msg_total_len(msg),
-		   0, (struct sockaddr *)&hip_firewall_addr, sizeof(struct sockaddr_un));
-		return n;
-	}
-#else
-	HIP_DEBUG("Firewall is disabled.\n");
-	return 0;
-#endif // CONFIG_HIP_FIREWALL
-}*/
-
-
 /**
  * Daemon main function.
  */
 int hipd_main(int argc, char *argv[])
 {
 	int ch, killold = 0;
-	char buff[HIP_MAX_NETLINK_PACKET];
+	//	char buff[HIP_MAX_NETLINK_PACKET];
 	fd_set read_fdset;
         fd_set write_fdset;
 	int foreground = 1, highest_descriptor = 0, s_net, err = 0;
@@ -372,11 +321,10 @@ int hipd_main(int argc, char *argv[])
 	/* Default initialization function. */
 	HIP_IFEL(hipd_init(flush_ipsec, killold), 1, "hipd_init() failed!\n");
 
-	highest_descriptor = maxof(9, hip_nl_route.fd, hip_raw_sock_v6,
-		hip_user_sock, hip_nl_ipsec.fd,
-		hip_agent_sock, hip_raw_sock_v4,
-	        hip_nat_sock_udp, /* hip_firewall_sock, */
-		hip_opendht_sock_fqdn, hip_opendht_sock_hit);
+	highest_descriptor = maxof(8, hip_nl_route.fd, hip_raw_sock_v6,
+				   hip_user_sock, hip_nl_ipsec.fd,
+				   hip_raw_sock_v4, hip_nat_sock_udp,
+				   hip_opendht_sock_fqdn, hip_opendht_sock_hit);
 
 	/* Allocate user message. */
 	HIP_IFE(!(hipd_msg = hip_msg_alloc()), 1);
@@ -405,7 +353,6 @@ int hipd_main(int argc, char *argv[])
 		FD_SET(hip_nat_sock_udp, &read_fdset);
 		FD_SET(hip_user_sock, &read_fdset);
 		FD_SET(hip_nl_ipsec.fd, &read_fdset);
-		FD_SET(hip_agent_sock, &read_fdset);
 		/* FD_SET(hip_firewall_sock, &read_fdset); */
 		if (hip_opendht_fqdn_sent == STATE_OPENDHT_WAITING_ANSWER)
 			FD_SET(hip_opendht_sock_fqdn, &read_fdset);
@@ -459,7 +406,7 @@ int hipd_main(int argc, char *argv[])
                     if (err_v4 > -1) {
                         type = hip_get_msg_type(hipd_msg_v4);
                         if (type == HIP_R2) {
-                            err = hip_receive_control_packet(hipd_msg_v4, &saddr_v4, 
+				err = hip_receive_control_packet(hipd_msg_v4, &saddr_v4, 
                                                              &daddr_v4, &pkt_info, 1);
                             if (err) HIP_ERROR("hip_receive_control_packet()!\n");
                             err = hip_receive_control_packet(hipd_msg, &saddr, &daddr, 
@@ -533,23 +480,25 @@ int hipd_main(int argc, char *argv[])
 			
 			/* Read in the values to hip_msg, saddr, daddr and
 			   pkt_info. */
-        		if (hip_read_control_msg_v4(hip_nat_sock_udp, hipd_msg,
-						    &saddr, &daddr,
-						    &pkt_info, 0)) {
+        		/* if ( hip_read_control_msg_v4(hip_nat_sock_udp, hipd_msg,&saddr, &daddr,&pkt_info, 0) ) */
+			err = hip_read_control_msg_v4(hip_nat_sock_udp, hipd_msg,&saddr, &daddr,&pkt_info, HIP_UDP_ZERO_BYTES_LEN);			
+			if (err) 			
+			{
                                 HIP_ERROR("Reading network msg failed\n");
 				/* If the values were read in succesfully, we
 				   do the UDP specific stuff next. */
-                        } else {
-				err =  hip_receive_udp_control_packet(
-					hipd_msg, &saddr, &daddr, &pkt_info);
-                        }
+                        } 
+			else 
+			{
+			   err =  hip_receive_udp_control_packet(hipd_msg, &saddr, &daddr, &pkt_info);
+                        } 
 
 		}
 
 		if (FD_ISSET(hip_user_sock, &read_fdset))
 		{
 			/* Receiving of a message from user socket. */
-			struct sockaddr_un app_src;
+			struct sockaddr_storage app_src;
 			HIP_DEBUG("Receiving user message.\n");
 			hip_msg_init(hipd_msg);
 
@@ -558,8 +507,12 @@ int hipd_main(int argc, char *argv[])
 				  hip_user_sock);
 
 			if (hip_read_user_control_msg(hip_user_sock, hipd_msg, &app_src))
+			{
 				HIP_ERROR("Reading user msg failed\n");
-			else err = hip_handle_user_msg(hipd_msg, &app_src);
+			}
+			else { 
+				err = hip_handle_user_msg(hipd_msg, &app_src);
+			}
 		}
                 /* DHT SOCKETS HANDLING */
                 if (hip_opendht_inuse == SO_HIP_DHT_ON && hip_opendht_sock_fqdn != -1) {
@@ -626,19 +579,6 @@ int hipd_main(int argc, char *argv[])
                         }
                 }
                 /* END DHT SOCKETS HANDLING */
-		if (FD_ISSET(hip_agent_sock, &read_fdset))
-		{
-			err = hip_sock_recv_agent();
-			if (err) HIP_ERROR("Receiving packet from agent socket failed!\n");
-		}
- 
-#if 0
-		if (FD_ISSET(hip_firewall_sock, &read_fdset))
-		{
-			err = hip_sock_recv_firewall();
-			if (err) HIP_ERROR("Receiving packet from firewall socket failed!\n");
-		}
-#endif
  
 		if (FD_ISSET(hip_nl_ipsec.fd, &read_fdset))
 		{

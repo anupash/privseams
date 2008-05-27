@@ -1,3 +1,4 @@
+
 r#                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 #
@@ -8,7 +9,7 @@ AC_CONFIG_SRCDIR([tools/hipconftool.c])
 AM_INIT_AUTOMAKE(hipl, main)
 
 # Checks for programs.
-AC_PROG_CXX
+#AC_PROG_CXX
 AC_PROG_AWK
 AC_PROG_YACC
 AC_PROG_CC
@@ -126,17 +127,6 @@ if test x"$ac_cv_use_hi3" = x"yes"; then
 fi
 AM_CONDITIONAL(HIP_HI3, test x"$ac_cv_use_hi3" = x"yes")
 
-AC_ARG_ENABLE(opptcp,
-             AC_HELP_STRING([--enable-opptcp],
-                            [Opportunistic TCP extensions support (default is NO)]),
-             [ac_cv_use_opptcp=$enableval], [ac_cv_use_opptcp=no])
-AC_CACHE_CHECK([whether to use opptcp],
-               [ac_cv_use_opptcp], [ac_cv_use_opptcp=no])
-if test x"$ac_cv_use_opptcp" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_OPPTCP, AC_PREREQ(2.53))
-fi
-AM_CONDITIONAL(HIP_OPPTCP, test x"$ac_cv_use_opptcp" = x"yes")
-
 AC_ARG_ENABLE(cookie,
              AC_HELP_STRING([--enable-cookie],
                             [HIP cookie extensions (default is NO)]),
@@ -188,6 +178,16 @@ AC_CACHE_CHECK([whether to use RVS],
                [ac_cv_use_rvs], [ac_cv_use_rvs=yes])
 if test x"$ac_cv_use_rvs" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_RVS, AC_PREREQ(2.53))
+fi
+
+AC_ARG_ENABLE(hipproxy,
+             AC_HELP_STRING([--enable-hipproxy],
+                            [HIP Proxy (default is YES)]),
+             [ac_cv_use_hipproxy=$enableval], [ac_cv_use_hipproxy=yes])
+AC_CACHE_CHECK([whether to use HIP proxy],
+               [ac_cv_use_hipproxy], [ac_cv_use_hipproxy=yes])
+if test x"$ac_cv_use_hipproxy" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_HIPPROXY, AC_PREREQ(2.53))
 fi
 
 AC_ARG_ENABLE(buggyipsec,

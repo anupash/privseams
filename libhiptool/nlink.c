@@ -47,7 +47,7 @@ int hip_netlink_receive(struct rtnl_handle *nl,
 	char buf[NLMSG_SPACE(HIP_MAX_NETLINK_PACKET)];
 
         msg_len = recvfrom(nl->fd, buf, sizeof(struct nlmsghdr),
-			   MSG_PEEK, NULL, NULL);
+			   MSG_PEEK|MSG_DONTWAIT, NULL, NULL);
 	if (msg_len != sizeof(struct nlmsghdr)) {
 		HIP_ERROR("Bad netlink msg\n");
 		return -1;
@@ -85,7 +85,7 @@ int hip_netlink_receive(struct rtnl_handle *nl,
                         int len = h->nlmsg_len;
                         int l = len - sizeof(*h);
 
-                        if (l<0 || len>status) {
+                        if (l < 0 || len > status) {
                                 if (msg.msg_flags & MSG_TRUNC) {
                                         HIP_ERROR("Truncated netlink message\n");
                                         return -1;
@@ -1176,6 +1176,10 @@ int rtnl_talk(struct rtnl_handle *rtnl, struct nlmsghdr *n, pid_t peer,
                                         if (err < 0)
                                                 return err;
                                 }
+                               /* Don't forget to skip that message. */
+                                status -= NLMSG_ALIGN(len);
+				h = (struct nlmsghdr*)((char*)h + NLMSG_ALIGN(len));
+
                                 continue;
                         }
 
@@ -1297,273 +1301,3 @@ skip_it:
                 }
         }
 }
-
-
-#ifdef CONFIG_HIP_OPPTCP
-
-/**
-* Standard BSD internet checksum routine from nmap
-*/
-unsigned short in_cksum(u16 *ptr,int nbytes){
-	register u32 sum;
-	u16 oddbyte;
-	register u16 answer;
-
-	/*
-	 * Our algorithm is simple, using a 32-bit accumulator (sum),
-	 * we add sequential 16-bit words to it, and at the end, fold back
-	 * all the carry bits from the top 16 bits into the lower 16 bits.
-	 */
-
-	sum = 0;
-	while (nbytes > 1){
-		sum += *ptr++;
-		nbytes -= 2;
-	}
-
-	/* mop up an odd byte, if necessary */
-	if (nbytes == 1) {
-		oddbyte = 0;            /* make sure top half is zero */
-		*((u_char *) &oddbyte) = *(u_char *)ptr;   /* one byte only */
-		sum += oddbyte;
-	}
-
-	/*
-	 * Add back carry outs from top 16 bits to low 16 bits.
-	 */
-
-	sum  = (sum >> 16) + (sum & 0xffff);    /* add high-16 to low-16 */
-	sum += (sum >> 16);                     /* add carry */
-	answer = ~sum;          /* ones-complement, then truncate to 16 bits */
-	return(answer);
-}
-
-
-
-/**
- * adds the i1 option to a packet if required
- * adds the default HIT after the i1 option (if i1 option should be added)
- * and sends it off with the correct checksum
- */
-void send_tcp_packet(void * hdr, int newSize, int trafficType, int addOption, int addHIT){
-	int   sockfd, socketFamily;
-	int   on = 1, i, j;
-	int   hdr_size, newHdr_size, twoHdrsSize;
-	char  *packet;
-	char  *bytes =(char*)hdr;
-	struct sockaddr_in  sock_raw;
-	struct sockaddr_in6 sock6_raw;
-	struct in_addr  dstAddr;
-	struct in6_addr dst6Addr;
-	struct tcphdr *tcphdr;
-	struct tcphdr *newTcphdr;
-	struct ip * iphdr;
-	struct ip * newIphdr;
-	struct ip6_hdr * ip6_hdr;
-	struct ip6_hdr * newIp6_hdr;
-	struct pseudo_hdr  *pseudo;
-	struct pseudo6_hdr *pseudo6;
-	void *pointer;
-	char *HITbytes;
-	struct in6_addr *defaultHit;
-	char newHdr [newSize + 4*addOption + (sizeof(struct in6_addr))*addHIT];
-
-	if(addOption)
-		newSize = newSize + 4;
-	if(addHIT)
-		newSize = newSize + sizeof(struct in6_addr);
-
-	//initializing the raw socket
-	if(trafficType == 4)
-		socketFamily = AF_INET;
-	else if(trafficType == 6)
-		socketFamily = AF_INET6;
-
-	if((sockfd = socket(socketFamily, SOCK_RAW, IPPROTO_RAW)) < 0 ){
-			HIP_DEBUG("Error creating raw socket\n");
-			return;
-	}
-	if(setsockopt(sockfd, IPPROTO_IP, IP_HDRINCL, (char *)&on, sizeof(on)) < 0 ){
-		HIP_DEBUG("Error setting an option to raw socket\n"); 
-		return;
-	}
-
-	//initializing the headers and setting socket settings
-	if(trafficType == 4){
-		//get the ip header
-		iphdr = (struct ip *)hdr;
-		//get the tcp header
-		hdr_size = (iphdr->ip_hl * 4);
-		tcphdr = ((struct tcphdr *) (((char *) iphdr) + hdr_size));
-		//socket settings
-		sock_raw.sin_family = AF_INET;
-		sock_raw.sin_port = htons(tcphdr->dest);
-		sock_raw.sin_addr = iphdr->ip_dst;
-	}
-	else if(trafficType == 6){
-		//get the ip header
-		ip6_hdr = (struct ip6_hdr *)hdr;
-		//get the tcp header		
-		hdr_size = (ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen * 4);
-		tcphdr = ((struct tcphdr *) (((char *) ip6_hdr) + hdr_size));
-		//socket settings
-		sock6_raw.sin6_family = AF_INET6;
-		sock6_raw.sin6_port = htons(tcphdr->dest);
-		sock6_raw.sin6_addr = ip6_hdr->ip6_dst;
-	}
-
-	//measuring the size of ip and tcp headers (no options)
-	twoHdrsSize = hdr_size + 4*5;
-
-	//copy the ip header and the tcp header without the options
-	i = 0;
-	while(i < twoHdrsSize){
-		newHdr[i] = bytes[i];
-		i++;
-	}
-
-	//add the i1 option and copy the old options
-	//add the HIT if required, 
-	if(tcphdr->doff == 5){//there are no previous options
-		if(addOption){
-			newHdr[twoHdrsSize]     = (char)HIP_OPTION_KIND;
-			newHdr[twoHdrsSize + 1] = '0';
-			newHdr[twoHdrsSize + 2] = '0';
-			newHdr[twoHdrsSize + 3] = '0';
-			if(addHIT){
-				//get the default hit
-				hip_get_default_hit(defaultHit);
-				//copy the hit
-				HITbytes = (char*)defaultHit;
-				for(j = 0; j < 16; j++)
-					newHdr[twoHdrsSize + 4 + j] = HITbytes[j];
-			}
-		}
-		else{
-			if(addHIT){
-				//get the default hit
-				hip_get_default_hit(defaultHit);
-				//copy the hit
-				HITbytes = (char*)defaultHit;
-				for(j = 0; j < 16; j++)
-					newHdr[twoHdrsSize + j] = HITbytes[j];
-			}
-		}
-	}
-	else{//there are previous options
-		if(addOption){
-			newHdr[twoHdrsSize]     = (char)HIP_OPTION_KIND;
-			newHdr[twoHdrsSize + 1] = (char)2;
-			newHdr[twoHdrsSize + 2] = (char)1;
-			newHdr[twoHdrsSize + 3] = (char)1;
-
-			//if the HIT is to be sent, the
-			//other options are not important
-			if(addHIT){
-				//get the default hit
-				hip_get_default_hit(defaultHit);
-				//copy the hit
-				HITbytes = (char*)defaultHit;
-				for(j = 0; j < 16; j++)
-					newHdr[twoHdrsSize + 4 + j] = HITbytes[j];
-			}
-			else{
-				i = 0;
-				while(i < 4*(tcphdr->doff-5)){
-					newHdr[i + twoHdrsSize + 4] = bytes[i + twoHdrsSize];
-					i++;
-				}
-			}
-		}
-		else
-		{
-			//if the HIT is to be sent, the
-			//other options are not important
-			if(addHIT){
-				//get the default hit
-				hip_get_default_hit(defaultHit);
-				//copy the hit
-				HITbytes = (char*)defaultHit;
-				for(j = 0; j < 16; j++)
-					newHdr[twoHdrsSize + j] = HITbytes[j];
-			}
-			else{
-				i = 0;
-				while(i < 4*(tcphdr->doff-5)){
-					newHdr[i + twoHdrsSize] = bytes[i + twoHdrsSize];
-					i++;
-				}
-			}
-		}
-	}
-
-	pointer = &newHdr[0];
-	//get pointers to the new packet
-	if(trafficType == 4){
-		//get the ip header
-		newIphdr = (struct ip *)pointer;
-		//get the tcp header
-		newHdr_size = (iphdr->ip_hl * 4);
-		newTcphdr = ((struct tcphdr *) (((char *) newIphdr) + newHdr_size));
-	}
-	else if(trafficType == 6){
-		//get the ip header
-		newIp6_hdr = (struct ip6_hdr *)pointer;
-		//get the tcp header		
-		newHdr_size = (newIp6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen * 4);
-		newTcphdr = ((struct tcphdr *) (((char *) newIp6_hdr) + newHdr_size));
-	}
-
-	//change the values of the checksum and the tcp header length(+1) 
-	newTcphdr->check = 0;
-	if(addOption)
-		newTcphdr->doff = newTcphdr->doff + 1;
-	if(addHIT)
-		newTcphdr->doff = newTcphdr->doff + 4;//16 bytes HIT - 4 more words
-
-	//the checksum
-	if(trafficType == 4){
-		pseudo = (struct pseudo_hdr *) ((u8*)newTcphdr - sizeof(struct pseudo_hdr));
-
-		pseudo->s_addr = newIphdr->ip_src.s_addr;
-		pseudo->d_addr = newIphdr->ip_dst.s_addr;
-		pseudo->zer0    = 0;
-		pseudo->protocol = IPPROTO_TCP;
-		pseudo->length  = htons(sizeof(struct tcphdr) + 4*(newTcphdr->doff-5) + 0);
-
-		newTcphdr->check = in_cksum((unsigned short *)pseudo, sizeof(struct tcphdr) + 
-							4*(newTcphdr->doff-5) + sizeof(struct pseudo_hdr) + 0);
-	}
-	else if(trafficType == 6){
-		pseudo6 = (struct pseudo6_hdr *) ((u8*)newTcphdr - sizeof(struct pseudo6_hdr));
-
-		pseudo6->s_addr = newIp6_hdr->ip6_src;
-		pseudo6->d_addr = newIp6_hdr->ip6_dst;
-		pseudo6->zer0    = 0;
-		pseudo6->protocol = IPPROTO_TCP;
-		pseudo6->length  = htons(sizeof(struct tcphdr) + 4*(newTcphdr->doff-5) + 0);
-
-		newTcphdr->check = in_cksum((unsigned short *)pseudo6, sizeof(struct tcphdr) +
-							4*(newTcphdr->doff-5) + sizeof(struct pseudo6_hdr) + 0);
-	}
-
-	//replace the pseudo header bytes with the correct ones
-	i = 0;
-	while(i < hdr_size){
-		newHdr[i] = bytes[i];
-		i++;
-	}
-
-	//change the src and dst ip if it was an incoming packet******
-
-
-	//finally send through the socket
-	sendto(sockfd, &newHdr[0], newSize, 0, 
-			(struct sockaddr *)&sock_raw, sizeof(sock_raw));
-}
-
-
-
-
-
-#endif

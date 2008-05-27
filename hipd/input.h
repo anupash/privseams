@@ -33,10 +33,11 @@
 #include "util.h"
 #include "state.h"
 #include "oppdb.h"
+#include "registration.h"
+
 #if defined CONFIG_HIP_HI3
 #include "i3_client_api.h"
 #include "oppipdb.h"
-
 
 struct hi3_ipv4_addr {
 	u8 sin_family;
@@ -48,8 +49,7 @@ struct hi3_ipv6_addr {
 	struct in6_addr sin6_addr;
 };
 
-#endif
-
+#endif // CONFIG_HIP_HI3
 
 struct pseudo_header6
 {
@@ -71,7 +71,7 @@ struct pseudo_header
 
 #ifdef CONFIG_HIP_HI3
 void hip_inbound(cl_trigger *t, void *data, void *ctx);
-#endif
+#endif // CONFIG_HIP_HI3
 
 /**
  * Gets name for a message type
@@ -417,8 +417,9 @@ int hip_handle_i1(struct hip_common *, struct in6_addr *, struct in6_addr *,
  *                 initiator should store these addresses to cope with the
  *                 double jump problem.
  */
-int hip_handle_r1(struct hip_common *, struct in6_addr *, struct in6_addr *,
-		  hip_ha_t *, hip_portpair_t *);  
+int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
+		  hip_ha_t *entry, hip_portpair_t *r1_info);
+
 /**
  * Handles an incoming I2 packet.
  *
@@ -454,8 +455,8 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
  * On success (payloads are created and IPsec is set up) 0 is
  * returned, otherwise < 0.
  */
-int hip_handle_r2(struct hip_common *, struct in6_addr *, struct in6_addr *,
-		  hip_ha_t *, hip_portpair_t *);
+int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
+		  hip_ha_t *entry, hip_portpair_t *r2_info);
 
 /**
  * Handles an incoming NOTIFY packet.
@@ -520,5 +521,15 @@ hip_rcv_func_set_t *hip_get_rcv_default_func_set();
 // prototype
 hip_handle_func_set_t *hip_get_handle_default_func_set();
 
+
+/**
+ * hip_handle_firewall_i1_request - handle I1 request from FIREWALL.
+ * @param       a pointer to the I1 HIP packet common header with source and
+ *                 destination
+ * @param		Source IP Address for I1
+ * @param		Destination IP Address for I1
+ * @return 0 on success, < 0 on error.
+ */
+int hip_handle_firewall_i1_request(struct hip_common *, struct in6_addr *, struct in6_addr *);
 
 #endif /* HIP_INPUT_H */

@@ -7,8 +7,10 @@
 #  include "kerncompat.h"
 #endif
 
+#include "registration.h"
 #include "utils.h"
 #include "hidb.h"
+#include "icomm.h"
 
 #ifdef CONFIG_HIP_LIBHIPTOOL
 #  include "hipconf.h"
@@ -91,5 +93,13 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **buf);
 void *hip_cast_sa_addr(void *sockaddr);
 int hip_sockaddr_len(void *sockaddr);
 int hip_sa_addr_len(void *sockaddr);
+int hip_create_lock_file(char *filename, int killold);
+int hip_remove_lock_file(char *filename);
+
+void hip_addr_to_sockaddr(struct in6_addr *addr, struct sockaddr *sa);
+
+uint64_t hip_solve_puzzle(void *puzzle, struct hip_common *hdr, int mode);
+
+int hip_create_lock_file(char *filename, int killold);
 
 #endif /* HIP_MISC_H */

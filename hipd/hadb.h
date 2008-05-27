@@ -11,6 +11,8 @@
 #include "builder.h"
 #include "input.h" 	// required for declaration of receive functions
 #include "update.h"	// required for declaration of update function
+#include "ipsec_userspace_api.h"
+#include "xfrmapi.h"
 
 #ifdef CONFIG_HIP_BLIND
 #include "blind.h"
@@ -93,6 +95,9 @@ extern int hip_nat_status;
 #ifdef CONFIG_HIP_BLIND
 extern int hip_blind_status;
 #endif
+
+/* For switch userspace / kernel IPsec */
+extern int hip_use_userspace_ipsec;
 
 void hip_hadb_hold_entry(void *entry);
 void hip_hadb_put_entry(void *entry);
@@ -268,7 +273,8 @@ typedef struct hip_peer_opaque {
 
 struct hip_peer_map_info {
 	hip_hit_t peer_hit;
-	struct in6_addr our_addr, peer_addr;
+	struct in6_addr our_addr;
+	struct in6_addr peer_addr;
 };
 
 void hip_hadb_remove_hs(uint32_t spi);

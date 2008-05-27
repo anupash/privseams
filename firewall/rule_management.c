@@ -475,7 +475,7 @@ struct hit_option * parse_hit(char * token)
       return NULL;
     }
   option->value = *hit;
-  HIP_DEBUG("hit %d  %s ok\n", option, addr_to_numeric(hit));
+  HIP_DEBUG_HIT("hit ok: ", hit);
   return option;
 }
 
@@ -1277,10 +1277,10 @@ void read_file(char * file_name)
 	  else 
 	    HIP_DEBUG("unable to parse rule: %s\n", original_line);
 	  free(original_line);
-	  free(line);
-	  line = NULL;
 	  original_line = NULL;
       }
+      free(line);
+      line = NULL;
       fclose(file);
     }
   else
