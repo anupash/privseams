@@ -23,14 +23,6 @@
 #include <stdio.h>	/* printf() */
 #include <stdlib.h>	/* malloc() */
 #include <string.h>	/* memset() */
-#ifdef __WIN32__
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include <io.h>
-#include <time.h>
-#include <win32/types.h>
-#include <win32/ip.h>
-#else
 #include <unistd.h>	/* write() */
 #include <sys/errno.h>  /* errno */
 #include <sys/time.h>	/* gettimeofday() */
@@ -38,11 +30,6 @@
 #include <netinet/ip6.h> /* struct ip6_hdr */
 #include <netinet/tcp.h> /* struct tcphdr */
 #include <netinet/udp.h> /* struct udphdr */
-#ifdef __MACOSX__
-#include <netinet/in_systm.h> /* struct ip */
-#include <netinet/in.h> /* struct ip */
-#endif
-#endif
 //#include <hip/hip_service.h>
 //#include <hip/hip_types.h>
 #include "hip_sadb.h"
@@ -629,6 +616,7 @@ void unbuffer_packets(hip_lsi_entry *entry)
 			break;
 		}
 		next_hdr += len;
+#if 0
 #ifdef __WIN32__
 		if (send(readsp[0], data, len, 0) < 0) {
 #else
@@ -636,8 +624,11 @@ void unbuffer_packets(hip_lsi_entry *entry)
 #endif
 			printf("unbuffer_packets: write error: %s",
 				strerror(errno));
+
 			break;
 		}
+#endif
+		printf("FIXME: not fully implemented");
 	}
 
 	entry->num_packets = 0;

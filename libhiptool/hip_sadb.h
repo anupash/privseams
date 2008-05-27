@@ -49,6 +49,16 @@ typedef struct _sockaddr_list
         struct timeval creation_time;
 } sockaddr_list;
 
+/*
+ * Macros from hip.h and elsewhere
+ */
+/* get pointer to IP from a sockaddr 
+ *    useful for inet_ntop calls     */
+#define SA2IP(x) hip_cast_sa_addr(x)
+#define SALEN(x) hip_sockaddr_len(x)
+#define SAIPLEN(x) hip_sa_addr_len(x)
+#define SA(x) ((struct sockaddr*)x)
+
 #define HIP_ESP_UDP_PORT       HIP_NAT_UDP_PORT
 #define HIP_KEEPALIVE_TIMEOUT  HIP_NAT_KEEP_ALIVE_INTERVAL
 

@@ -55,17 +55,7 @@ extern __u64 g_tap_mac;
 extern int g_state;
 
 
-/*
- * Macros from hip.h and elsewhere
- */
-/* get pointer to IP from a sockaddr 
- *    useful for inet_ntop calls     */
-#define SA2IP(x) hip_cast_sa_addr(x)
-#define SALEN(x) hip_sockaddr_len(x)
-#define SAIPLEN(x) hip_sa_addr_len(x)
 
-/* Tao add 27th, Feb */
-#define SA(x) ((struct sockaddr*)x)
 
 /* The below prefix applies to the uppermost 28 bits only (RFC 4843) */
 #define HIT_PREFIX_SHA1_32BITS HIP_HIT_TYPE_MASK_100

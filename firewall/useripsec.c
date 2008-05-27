@@ -2,6 +2,7 @@
 #include <sys/socket.h>		/* socket() */
 #include "misc.h"			/* hip conversion functions */
 #include "hip_esp.h"
+#include "utils.h"
 #include <sys/time.h>		/* timeval */
 
 #define ESP_PACKET_SIZE 2500
@@ -123,8 +124,8 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	int udp_encap = 0;
 	int esp_packet_len = 0;
 	int out_ip_version = 0;
-	struct sockaddr_storage *preferred_local_addr;
-	struct sockaddr_storage *preferred_peer_addr;
+	struct in6_addr *preferred_local_addr;
+	struct in6_addr *preferred_peer_addr;
 	int err = 0;
 
 	err = userspace_ipsec_init();
@@ -171,8 +172,8 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	//unbuffer_packets(entry);
 	
 	// get preferred routable addresses
-	preferred_local_addr = get_preferred_addr(entry->src_addrs);
-	preferred_peer_addr = get_preferred_addr(entry->dst_addrs;	
+	get_preferred_addr(entry->src_addrs, preferred_local_addr);
+	get_preferred_addr(entry->dst_addrs, preferred_peer_addr);	
 	
 	// check preferred addresses for the address type of the output
 	if (preferred_local_addr->sa_family == AF_INET
@@ -194,6 +195,7 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	}
 		
 	err = hip_esp_output(ctx, entry, out_ip_version, udp_encap, &now,
+			preferred_local_addr, preferred_peer_addr
 			esp_packet, &esp_packet_len);
 	
 	// send the raw packet -> returns size of the sent packet
@@ -232,6 +234,7 @@ int hip_fw_userspace_ipsec_input(int ip_version,
 				 void *hdr,
 				 ipq_packet_msg_t *ip_packet_in_the_queue)
 {
+#if 0
 	int ipv6_hdr_size = 0;
 	int tcp_hdr_size = 0;
 	int length_of_packet = 0;
@@ -322,33 +325,25 @@ int hip_fw_userspace_ipsec_input(int ip_version,
 			
 
 	return err;
+#endif
+	
+	return 1;
 }
 
 /* userspace IPsec trigger for the base exchange */
 int pfkey_send_acquire(struct sockaddr *target)
 {
-	hip_hit_t conversion_hit;
 	hip_hit_t *hit = NULL;
-	int err = 0;		
-
-	struct in_addr *ipv4_addr = NULL;
-	struct in6_addr *ipv6_addr = NULL;
+	int err = 0;
 	
 	switch(target->sa_family)
 	{
 		case AF_INET:
-			//ipv4_addr = (struct in_addr *) &(((struct sockaddr_in *)target)->sin_addr);
-		  ipv4_addr = hip_cast_sa_addr(target);
-		    //HIP_DEBUG("Size of: %u\n", ret);
-		  IPV4_TO_IPV6_MAP(ipv4_addr, &conversion_hit);
-		  hit = &conversion_hit;
-		  break;
+			IPV4_TO_IPV6_MAP(hip_cast_sa_addr(target), &hit);
+			break;
 		case AF_INET6:
 			hit = hip_cast_sa_addr(target);
-			//ipv6_addr = (struct in6_addr *) (&(((struct sockaddr_in6 *) target)->sin6_addr));
-			//hit = (hip_hit_t *) ipv6_addr;
 			break;
-	
 	}
 	
 	HIP_DEBUG_HIT("pfkey_send_acquire hit is: ", hit);
@@ -361,21 +356,33 @@ int pfkey_send_acquire(struct sockaddr *target)
 	return err;
 }
 
-struct sockaddr_storage *get_preferred_addr(sockaddr_list *addr_list)
+// resolve HIT to routable addresses and select the preferred ones
+int get_preferred_addr(sockaddr_list *addr_list, struct in6_addr *preferred_addr)
 {
-	// resolve HITs to routable addresses and select the preferred ones
-	// TODO get preferred addresses
+	int err = 0;
 	
-	while (tmp_addr != NULL)
+	while (addr_list != NULL)
 	{
-		if (tmp_addr->preferred)
+		if (addr_list->preferred)
 		{
 			HIP_DEBUG("found preferred src_addr");
-			preferred_local_addr = tmp_addr->addr;
 			
-			break;
+			if (addr_list->addr->sa_family == AF_INET)
+				IPV4_TO_IPV6_MAP()
+			else if (addr_list->addr->sa_family == AF_INET6)
+				ipv6_addr_copy
+			else
+			{
+				err = 1;
+				goto out_err;
+			}
+			
+			return addr_list->addr;
 		}
 		else
-			tmp_addr = tmp_addr->next;
+			addr_list = addr_list->next;
 	}
+	
+  out_err:
+  	return err;
 }
