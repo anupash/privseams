@@ -377,7 +377,7 @@ int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
 	search_key.ai_socktype = socktype;
 	
 	/* Get the peer's address info. Set a generic -EHADDRINFO for */
-	HIP_IFEL(errno = getaddrinfo(peer_name, port_name, &search_key, &peer_ai),
+	HIP_IFEL(getaddrinfo(peer_name, port_name, &search_key, &peer_ai),
 		 -EHADDRINFO, "Name '%s' or service '%s' is unknown.\n",
 		 peer_name, port_name);
 	
