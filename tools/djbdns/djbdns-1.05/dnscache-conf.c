@@ -16,6 +16,7 @@
 #include "exit.h"
 #include "auto_home.h"
 #include "generic-conf.h"
+#include "stralloc.h"
 
 #define FATAL "dnscache-conf: fatal: "
 
@@ -36,6 +37,8 @@ const char *myip;
 
 uint32 seed[32];
 int seedpos = 0;
+
+stralloc dnsrootname;
 
 void seed_adduint32(uint32 u)
 {
@@ -89,13 +92,19 @@ int main(int argc,char **argv)
   if (chdir(auto_home) == -1)
     strerr_die4sys(111,FATAL,"unable to switch to ",auto_home,": ");
 
-  fdrootservers = open_read("/etc/dnsroots.local");
+  stralloc_copys(&dnsrootname,auto_home);
+  stralloc_cats(&dnsrootname,"/etc/dnsroots.local");
+  stralloc_catb(&dnsrootname,"",1);
+  fdrootservers = open_read(dnsrootname.s);
   if (fdrootservers == -1) {
     if (errno != error_noent)
-      strerr_die2sys(111,FATAL,"unable to open /etc/dnsroots.local: ");
-    fdrootservers = open_read("/etc/dnsroots.global");
+      strerr_die2sys(111,FATAL,"unable to open .../etc/dnsroots.local: ");
+    stralloc_copys(&dnsrootname,auto_home);
+    stralloc_cats(&dnsrootname,"/etc/dnsroots.global");
+    stralloc_catb(&dnsrootname,"",1);
+    fdrootservers = open_read(dnsrootname.s);
     if (fdrootservers == -1)
-      strerr_die2sys(111,FATAL,"unable to open /etc/dnsroots.global: ");
+      strerr_die2sys(111,FATAL,"unable to open .../etc/dnsroots.global: ");
   }
 
   init(dir,FATAL);

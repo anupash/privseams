@@ -328,9 +328,9 @@ libtai.a unix.a byte.a socket.lib
 
 dnscache-conf: \
 load dnscache-conf.o generic-conf.o auto_home.o libtai.a buffer.a \
-unix.a byte.a
+unix.a byte.a alloc.a
 	./load dnscache-conf generic-conf.o auto_home.o libtai.a \
-	buffer.a unix.a byte.a 
+	buffer.a unix.a byte.a alloc.a
 
 dnscache-conf.o: \
 compile dnscache-conf.c hasdevtcp.h strerr.h buffer.h uint32.h taia.h \

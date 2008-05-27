@@ -11,6 +11,7 @@
 #include "qlog.h"
 #include "response.h"
 #include "dns.h"
+#include "scan.h"
 
 extern char *fatal;
 extern char *starting;
@@ -83,6 +84,7 @@ int main()
 {
   char *x;
   int udp53;
+  uint16 listenport;
 
   x = env_get("IP");
   if (!x)
@@ -90,10 +92,22 @@ int main()
   if (!ip4_scan(x,ip))
     strerr_die3x(111,fatal,"unable to parse IP address ",x);
 
+  x = env_get("PORT");
+  if (x) {
+    unsigned long u;
+    int	pos;
+    pos = scan_ulong(x,&u);
+    if (pos == 0)
+      strerr_die2x(111,fatal,"Invalid $PORT");
+    listenport = u;
+  } else {
+    listenport = 53;
+  }
+
   udp53 = socket_udp();
   if (udp53 == -1)
     strerr_die2sys(111,fatal,"unable to create UDP socket: ");
-  if (socket_bind4_reuse(udp53,ip,53) == -1)
+  if (socket_bind4_reuse(udp53,ip,listenport) == -1)
     strerr_die2sys(111,fatal,"unable to bind UDP socket: ");
 
   droproot(fatal);
