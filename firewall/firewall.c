@@ -3,8 +3,6 @@
  *
  * Firewall requires: 
  * modprobe ip6_queue
- * ip6tables -A FORWARD -m hip -j QUEUE
- * (ip6tables -A INPUT -p 99 -j QUEUE)
  * 
  */
 
@@ -25,11 +23,7 @@ int flush_iptables = 1;
 int counter = 0;
 int hip_proxy_status = 0;
 int foreground = 1;
-#ifdef CONFIG_HIP_OPPTCP
-int hip_opptcp = 1;
-#else
 int hip_opptcp = 0;
-#endif
 int hip_userspace_ipsec = 1;
 
 /* Default HIT - do not access this directly, call hip_fw_get_default_hit() */
@@ -82,6 +76,83 @@ void set_escrow_active(int active)
 int is_escrow_active()
 {
 	return escrow_active;
+}
+
+void hip_fw_init_opptcp() {
+	HIP_DEBUG("\n");
+
+	system("iptables -I INPUT -p 6 ! -d 127.0.0.1 -j QUEUE"); /* @todo: ! LSI PREFIX */
+	system("iptables -I OUTPUT -p 6 ! -d 127.0.0.1 -j QUEUE");  /* @todo: ! LSI PREFIX */
+	system("ip6tables -I INPUT -p 6 ! -d 2001:0010::/28 -j QUEUE");
+	system("ip6tables -I OUTPUT -p 6 ! -d 2001:0010::/28 -j QUEUE");
+}
+
+void hip_fw_uninit_opptcp() {
+	HIP_DEBUG("\n");
+
+	system("iptables -D INPUT -p 6 ! -d 127.0.0.1 -j QUEUE");  /* @todo: ! LSI PREFIX */
+	system("iptables -D OUTPUT -p 6 ! -d 127.0.0.1 -j QUEUE"); /* @todo: ! LSI PREFIX */
+	system("ip6tables -D INPUT -p 6 ! -d 2001:0010::/28 -j QUEUE");
+	system("ip6tables -D OUTPUT -p 6 ! -d 2001:0010::/28 -j QUEUE");
+}
+
+void hip_fw_init_proxy() {
+	//allow forward hip packets
+	system("iptables -I FORWARD -p 139 -j ACCEPT");
+	system("iptables -I FORWARD -p 139 -j ACCEPT");
+	
+	system("iptables -I FORWARD -p tcp -j QUEUE");
+	system("iptables -I FORWARD -p udp -j QUEUE");
+	//system("iptables -I FORWARD -p icmp -j QUEUE");
+	//system("iptables -I FORWARD -p icmpv6 -j QUEUE");
+	
+	//system("iptables -t nat -A POSTROUTING -o vmnet2 -j SNAT --to-source 10.0.0.1");
+	
+	//allow forward hip packets
+	system("ip6tables -I FORWARD -p 139 -j ACCEPT");
+	system("ip6tables -I FORWARD -p 139 -j ACCEPT");
+	
+	system("ip6tables -I FORWARD -p tcp ! -d 2001:0010::/28 -j QUEUE");
+	system("ip6tables -I FORWARD -p udp ! -d  2001:0010::/28 -j QUEUE");
+	//system("ip6tables -I FORWARD -p icmp -j QUEUE");
+	//system("ip6tables -I FORWARD -p icmpv6 -j QUEUE");
+	
+	system("ip6tables -I INPUT -p tcp -d 2001:0010::/28 -j QUEUE");
+	system("ip6tables -I INPUT -p udp -d 2001:0010::/28 -j QUEUE");
+	//system("ip6tables -I INPUT -p tcp  -j QUEUE");
+	//system("ip6tables -I INPUT -p udp -j QUEUE");
+	//system("ip6tables -I INPUT -p icmp -j QUEUE");
+	//system("ip6tables -I INPUT -p icmpv6 -j QUEUE");
+	
+	hip_init_proxy_db();
+	hip_init_conn_db();
+}
+
+void hip_fw_uninit_proxy() {
+	//delete forward hip packets
+	system("iptables -D FORWARD -p 139 -j ACCEPT");
+	system("iptables -D FORWARD -p 139 -j ACCEPT");
+	
+	system("iptables -D FORWARD -p tcp -j QUEUE");
+	system("iptables -D FORWARD -p udp -j QUEUE");
+	//system("iptables -D FORWARD -p icmp -j QUEUE");
+	//system("iptables -D FORWARD -p icmpv6 -j QUEUE");
+	
+	//delete forward hip packets
+	system("ip6tables -D FORWARD -p 139 -j ACCEPT");
+	system("ip6tables -D FORWARD -p 139 -j ACCEPT");
+	
+	system("ip6tables -D FORWARD -p tcp ! -d 2001:0010::/28 -j QUEUE");
+	system("ip6tables -D FORWARD -p udp ! -d  2001:0010::/28 -j QUEUE");
+	//system("ip6tables -D FORWARD -p icmp -j QUEUE");
+	//system("ip6tables -D FORWARD -p icmpv6 -j QUEUE");
+	
+	system("ip6tables -D INPUT -p tcp -d 2001:0010::/28 -j QUEUE");
+	system("ip6tables -D INPUT -p udp -d 2001:0010::/28 -j QUEUE");
+	//system("ip6tables -D INPUT -p tcp  -j QUEUE");
+	//system("ip6tables -D INPUT -p udp -j QUEUE");
+	//system("ip6tables -D INPUT -p icmp -j QUEUE");
+	//system("ip6tables -D INPUT -p icmpv6 -j QUEUE");
 }
 
 /*----------------INIT/EXIT FUNCTIONS----------------------*/
@@ -185,35 +256,7 @@ int firewall_init_rules()
 	
 	if(hip_proxy_status)
 	{
-		//allow forward hip packets
-		system("iptables -I FORWARD -p 139 -j ACCEPT");
-		system("iptables -I FORWARD -p 139 -j ACCEPT");
-		
-		system("iptables -I FORWARD -p tcp -j QUEUE");
-		system("iptables -I FORWARD -p udp -j QUEUE");
-		//system("iptables -I FORWARD -p icmp -j QUEUE");
-		//system("iptables -I FORWARD -p icmpv6 -j QUEUE");
-		
-		//system("iptables -t nat -A POSTROUTING -o vmnet2 -j SNAT --to-source 10.0.0.1");
-
-		//allow forward hip packets
-		system("ip6tables -I FORWARD -p 139 -j ACCEPT");
-		system("ip6tables -I FORWARD -p 139 -j ACCEPT");
-		
-		system("ip6tables -I FORWARD -p tcp ! -d 2001:0010::/28 -j QUEUE");
-		system("ip6tables -I FORWARD -p udp ! -d  2001:0010::/28 -j QUEUE");
-		//system("ip6tables -I FORWARD -p icmp -j QUEUE");
-		//system("ip6tables -I FORWARD -p icmpv6 -j QUEUE");
-		
-		system("ip6tables -I INPUT -p tcp -d 2001:0010::/28 -j QUEUE");
-		system("ip6tables -I INPUT -p udp -d 2001:0010::/28 -j QUEUE");
-		//system("ip6tables -I INPUT -p tcp  -j QUEUE");
-		//system("ip6tables -I INPUT -p udp -j QUEUE");
-		//system("ip6tables -I INPUT -p icmp -j QUEUE");
-		//system("ip6tables -I INPUT -p icmpv6 -j QUEUE");
-
-		hip_init_proxy_db();
-		hip_init_conn_db();
+		hip_fw_init_proxy();
 	}
 	else
 	{	
@@ -223,9 +266,9 @@ int firewall_init_rules()
 			// make DROP the default behavior of all chains
 			// TODO don't drop LSIs -> else IPv4 apps won't work
 			// -> also messaging between HIPd and firewall is blocked here
-			system("iptables -I FORWARD -j DROP");
-			system("iptables -I INPUT -j DROP");
-			system("iptables -I OUTPUT -j DROP");
+			system("iptables -I FORWARD -j DROP");  /* @todo: ! LSI PREFIX */
+			system("iptables -I INPUT -j DROP");  /* @todo: ! LSI PREFIX */
+			system("iptables -I OUTPUT -j DROP");  /* @todo: ! LSI PREFIX */
 			
 			// but still allow packets with HITs as destination
 			// FIXME what about checking the src for HITs?
@@ -268,18 +311,10 @@ int firewall_init_rules()
 		system("ip6tables -I OUTPUT -p 50 -j QUEUE");
 		system("ip6tables -I OUTPUT -p 17 --dport 50500 -j QUEUE");
 		system("ip6tables -I OUTPUT -p 17 --sport 50500 -j QUEUE");
-
 	}
 
-#ifdef CONFIG_HIP_OPPTCP//tcp over ipv4
-	//system("iptables -I FORWARD -p 6 -j QUEUE"); // is this needed? -miika
-	system("iptables -I INPUT -p 6 -j QUEUE");
-	system("iptables -I OUTPUT -p 6 -j QUEUE");
-	
-	//system("ip6tables -I FORWARD -p 6 -j QUEUE");  // is this needed? -miika
-	system("ip6tables -I INPUT -p 6 -j QUEUE");
-	system("ip6tables -I OUTPUT -p 6 -j QUEUE");
-#endif
+	if (hip_opptcp)
+		hip_fw_init_opptcp();
 
 	if (hip_userspace_ipsec) {
 		// queue incoming ESP over IPv4 and IPv4 UDP encapsulated traffic
@@ -1397,7 +1432,7 @@ int main(int argc, char **argv)
 
 	
 	if (!hip_query_default_local_hit_from_hipd())
-			ipv6_addr_copy(&proxy_hit, hip_fw_get_default_hit());
+		ipv6_addr_copy(&proxy_hit, (struct in6_addr *) hip_fw_get_default_hit());
 	HIP_DEBUG_HIT("Default hit is ",  &proxy_hit);
 
 //	HIP_DEBUG_HIT("proxy_hit: ", &proxy_hit);

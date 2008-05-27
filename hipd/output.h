@@ -25,6 +25,7 @@
 #include "registration.h"
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
+#include <unistd.h>
 /* #include <libiptc/libiptc.h> */
 
 #ifdef CONFIG_HIP_HI3
