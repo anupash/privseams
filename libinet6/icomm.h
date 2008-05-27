@@ -52,6 +52,7 @@
 #define SO_HIP_GET_HITS                         21
 #define SO_HIP_GET_HA_INFO			22
 #define SO_HIP_TRIGGER_BEX                      23
+#define SO_HIP_DHT_SERVING_GW                   24
 /* inclusive */
 #define HIP_SO_ANY_MAX 				63
 
@@ -82,7 +83,7 @@
 #define SO_HIP_SET_DEBUG_MEDIUM			83
 #define SO_HIP_SET_DEBUG_NONE			84
 /** Socket option for hipconf to ask about the used gateway with OpenDHT */
-#define SO_HIP_DHT_SERVING_GW                   85
+/* 85 is free slot */
 #define SO_HIP_HANDOFF_ACTIVE			86
 #define SO_HIP_HANDOFF_LAZY			87
 /** Socket option for hipconf to restart daemon. */
