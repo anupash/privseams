@@ -461,7 +461,7 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 		    struct hip_crypto_key *authkey,
 		    int already_acquired,
 		    int direction, int update,
-		    int sport, int dport) {
+		    int sport, int dport, int ice_ok) {
 			// hip_portpair_t *sa_info) {
 	/* XX FIX: how to deal with the direction? */
 
@@ -488,6 +488,9 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 	if (!already_acquired)
 		get_random_bytes(spi, sizeof(uint32_t));
 
+	if(!ice_ok)
+		goto out_err;
+	
 	HIP_IFE(hip_xfrm_state_modify(hip_xfrmapi_nl_ipsec, cmd,
 				      saddr, daddr, 
 				      src_hit, dst_hit, *spi,
@@ -509,7 +512,7 @@ int hip_setup_hit_sp_pair(hip_hit_t *src_hit, hip_hit_t *dst_hit,
 	int cmd = update ? XFRM_MSG_UPDPOLICY : XFRM_MSG_NEWPOLICY;
 
 	/* XX FIXME: remove the proto argument */
-
+	HIP_DEBUG("hip_setup_hit_sp_pair\n");
 	HIP_IFE(hip_xfrm_policy_modify(hip_xfrmapi_nl_ipsec, cmd,
 				       dst_hit, src_hit,
 				       src_addr, dst_addr,

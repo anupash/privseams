@@ -47,6 +47,9 @@
 #define HIP_PARAM_ESP_INFO             65
 #define HIP_PARAM_R1_COUNTER           128
 #define HIP_PARAM_LOCATOR              193
+//NAT branch
+#define HIP_PARAM_NAT_TRANSFORM        194
+//end NAT branch
 #define HIP_PARAM_HASH_CHAIN_VALUE     221
 #define HIP_PARAM_HASH_CHAIN_ANCHORS   222
 #define HIP_PARAM_HASH_CHAIN_PSIG      223

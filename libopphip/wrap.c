@@ -362,6 +362,7 @@ int hip_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
 					  sizeof(struct in6_addr)), -1,
 		 "build param HIP_PARAM_IPV6_ADDR failed\n");
 
+#ifdef CONFIG_HIP_OPPTCP
 	HIP_IFEL(hip_build_param_contents(msg, (void *)(src_tcp_port),
 					  HIP_PARAM_SRC_TCP_PORT,
 					  sizeof(in_port_t)), -1,
@@ -371,6 +372,7 @@ int hip_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
 					  HIP_PARAM_DST_TCP_PORT,
 					  sizeof(in_port_t)), -1,
 		 "build param HIP_PARAM_DST_TCP_PORT failed\n");
+#endif
 	
 	/* build the message header */
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT, 0), -1,
@@ -497,7 +499,7 @@ int hip_translate_new(hip_opp_socket_t *entry,
 		      int is_translated, int wrap_applicable)
 {
 	int err = 0, pid = getpid();
-	in_port_t src_opptcp_port = 0, dst_opptcp_port = 0;/*the ports needed to send the TCP SYN i1*/
+	in_port_t src_opptcp_port, dst_opptcp_port;/*the ports needed to send the TCP SYN i1*/
 	struct sockaddr_in6 src_hit, dst_hit,
 		*hit = (is_peer ? &dst_hit : &src_hit);
 	socklen_t translated_id_len;

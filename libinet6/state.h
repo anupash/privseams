@@ -51,6 +51,14 @@
 
 #define HIP_LOCATOR_LOCATOR_TYPE_IPV6    0
 #define HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI 1
+//NAT branch
+#define HIP_LOCATOR_LOCATOR_TYPE_UDP 2
+
+/** for the triple nat mode*/
+#define HIP_NAT_MODE_NONE               0
+#define HIP_NAT_MODE_PLAIN_UDP          1
+#define HIP_NAT_MODE_ICE_UDP            2 
+//end NAT branch
 
 #define SEND_UPDATE_ESP_INFO             (1 << 0)
 #define SEND_UPDATE_LOCATOR              (1 << 1)
@@ -173,6 +181,13 @@ struct hip_peer_addr_list_item
 	uint32_t         seq_update_id; /* the Update ID in SEQ parameter
 					   this address is related to */
 	uint8_t          echo_data[4];  /* data put into the ECHO_REQUEST parameter */
+//NAT branch	
+	uint8_t  		transport_protocol; /*value 1 for UDP*/
+	
+	uint16_t 		port /*port number for transport protocol*/;
+	
+	uint32_t 		priority;
+//end NAT branch
 };
 
 /* for HIT-SPI hashtable only */
@@ -419,15 +434,30 @@ struct hip_hadb_state
 	/** If the state for hi3, then this flag is 1, otherwise it is zero. */
 	int                          is_hi3_state ;
 #endif
+#ifdef CONFIG_HIP_OPPTCP
 	/** Non-zero if opportunistic TCP mode is on. */
 	int                          hip_is_opptcp_on;
 	/** The local port from where the TCP SYN I1 packet will be sent */
 	in_port_t                    tcp_opptcp_src_port;
 	/** the port at the peer where the TCP SYN I1 packet will be sent */
 	in_port_t                    tcp_opptcp_dst_port;
+#endif
 #ifdef CONFIG_HIP_HIPPROXY
 	int hipproxy;
 #endif
+	
+//NAT Branch
+	//pointer for ice engine
+    void* ice_session;
+    /** a 16 bits flag for nat connectiviy checking engine control*/
+    uint16_t nat_control;
+    
+	/**reflexive address(NAT box out bound) when register to relay or RVS**/
+	struct in6_addr              local_reflexive_address;
+	/**reflexive address port (NAT box out bound) when register to relay or RVS**/
+	in_port_t local_reflexive_udp_port;
+//end NAT Branch
+	
 };
 
 /** A data structure defining host association information that is sent

@@ -108,7 +108,7 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 		    uint32_t *spi, int ealg, struct hip_crypto_key *enckey,
 		    struct hip_crypto_key *authkey,
 		    int already_acquired, int direction, int update,
-			int sport, int dport);
+			int sport, int dport,int ice_ok);
 
 void hip_delete_sa(u32 spi, struct in6_addr *peer_addr, struct in6_addr *dst_addr, 
 		   int family, int sport, int dport);

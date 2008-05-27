@@ -104,20 +104,13 @@ int hip_set_opportunistic_mode(const struct hip_common *msg)
 		goto out_err;
 	}
   
-	HIP_DEBUG("mode=%d\n", *mode);
-
-	if(*mode == 0 || *mode == 1 || *mode == 2){
+	if(*mode == 0 || *mode == 1){
 		opportunistic_mode = *mode;
 	} else {
 		HIP_ERROR("Invalid value for opportunistic mode\n");
 		err = -EINVAL;
 		goto out_err;
 	}
-
-	memset(msg, 0, HIP_MAX_PACKET);
-	HIP_IFE(hip_build_user_hdr(msg, (opportunistic_mode == 2 ? SO_HIP_SET_OPPTCP_ON : SO_HIP_SET_OPPTCP_OFF),
-				   0), -1);
-	hip_set_opportunistic_tcp_status(msg);
 	
  out_err:
 	return err;
