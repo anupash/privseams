@@ -1,2 +1,2 @@
 
-SV:123456:respawn:/command/svscanboot
+SV:123456:respawn:/usr/sbin/svscanboot

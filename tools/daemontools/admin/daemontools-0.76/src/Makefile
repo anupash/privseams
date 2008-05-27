@@ -390,7 +390,7 @@ pathexec.h str.h strerr.h svscan.c wait.h
 svscanboot: home svscanboot.sh warn-auto.sh
 	rm -f svscanboot
 	cat warn-auto.sh svscanboot.sh \
-	| sed s}HOME}"`head -1 home`"}g \
+	| sed -e s}HOME}"`head -1 home`"}g -e s}SERVICE}"`head -1 conf-service`"}g \
 	> svscanboot
 	chmod 555 svscanboot
 
