@@ -47,7 +47,7 @@ const char *hipconf_usage =
 "set blind on|off\n"
 #endif
 #ifdef CONFIG_HIP_OPPORTUNISTIC
-"set opp on|off\n"
+"set opp normal|advanced|none\n"
 #endif
 "opendht on|off\n"
 "dht gw <IPv4|hostname> <port (OpenDHT default = 5851)> <TTL>\n"
@@ -56,7 +56,6 @@ const char *hipconf_usage =
 "locator on|off\n"
 "debug all|medium|none\n"
 "restart daemon\n"
-"opptcp on|off\n"
 "set tcptimeout on|off\n" /*added by Tao Wan*/
 #ifdef CONFIG_HIP_HIPPROXY
 "hipproxy on|off\n"
@@ -95,7 +94,6 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc) 
         hip_conf_handle_hiprelay,
         hip_conf_handle_set,
         hip_conf_handle_dht_toggle,
-	hip_conf_handle_opptcp,
         hip_conf_handle_trans_order,
 	hip_conf_handle_tcptimeout, /* added by Tao Wan*/
         hip_conf_handle_hipproxy,
@@ -155,8 +153,6 @@ int hip_conf_get_action(char *text)
 		ret = ACTION_TCPTIMEOUT;
 	else if (!strcmp("reinit", text))
 		ret = ACTION_REINIT;
-	else if (!strcmp("opptcp", text))
-                ret = ACTION_OPPTCP;
 #ifdef CONFIG_HIP_HIPPROXY
 	else if (!strcmp("hipproxy", text))
 		ret = ACTION_HIPPROXY;
@@ -187,8 +183,6 @@ int hip_conf_check_action_argc(int action) {
 	case ACTION_HA: case ACTION_HANDOFF: case ACTION_TRANSORDER:
 		count = 2;
 		break;
-    case ACTION_OPPTCP:
-        break;
 #ifdef CONFIG_HIP_HIPPROXY
     case ACTION_HIPPROXY:
 		break;
@@ -276,8 +270,6 @@ int hip_conf_get_type(char *text,char *argv[]) {
 #endif
 	else if (!strcmp("config", text))
 		ret = TYPE_CONFIG;
-	else if (strcmp("opptcp", argv[1])==0)
-		ret = TYPE_OPPTCP;
 #ifdef CONFIG_HIP_HIPPROXY
 	else if (strcmp("hipproxy", argv[1])==0)
 		ret = TYPE_HIPPROXY;
@@ -310,7 +302,6 @@ int hip_conf_get_type_arg(int action)
 	case ACTION_TCPTIMEOUT:
         case ACTION_TRANSORDER:
 	case ACTION_REINIT:
-    case ACTION_OPPTCP:
 #ifdef CONFIG_HIP_HIPPROXY
 	case ACTION_HIPPROXY:
 #endif
@@ -1051,9 +1042,11 @@ int hip_conf_handle_opp(hip_common_t *msg, int action,
 		goto out;
 	}
 
-	if (!strcmp("on",opt[0])) {
+	if (!strcmp("normal",opt[0])) {
 		oppmode = 1;
-	} else if (!strcmp("off", opt[0])){
+	} else if (!strcmp("advanced",opt[0])) {
+		oppmode = 2;
+	} else if (!strcmp("none", opt[0])){
 		oppmode = 0;
 	} else {
 		HIP_ERROR("Invalid argument\n");
@@ -1818,6 +1811,7 @@ int hip_conf_handle_restart(hip_common_t *msg, int type, const char *opt[],
 	return err;
 }
 
+#if 0
 int hip_conf_handle_opptcp(hip_common_t *msg, int action, const char *opt[],
 			   int optc)
 {
@@ -1839,6 +1833,8 @@ int hip_conf_handle_opptcp(hip_common_t *msg, int action, const char *opt[],
 /*	hip_set_opportunistic_tcp_status(1);*/
 /*	hip_set_opportunistic_tcp_status(0);*/
 }
+#endif
+
 /**
  * Handles the hipconf commands where the type is @ tcptimeout.
  *

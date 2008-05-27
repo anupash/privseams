@@ -842,10 +842,6 @@ int hip_handle_user_msg(struct hip_common *msg,
 		/* skip sending of return message; will be sent later in R1 */
 		goto out_err;
 	  break;
-	case SO_HIP_SET_OPPTCP_ON:
-	case SO_HIP_SET_OPPTCP_OFF:
-		hip_set_opportunistic_tcp_status(msg);
-		break;
 	case SO_HIP_OPPTCP_UNBLOCK_AND_BLACKLIST:
 		hip_opptcp_unblock_and_blacklist(msg, src);
 		break;
