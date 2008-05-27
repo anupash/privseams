@@ -166,6 +166,8 @@
 #define SO_HIP_SET_TCPTIMEOUT_OFF               138
 #define SO_HIP_SET_NAT_ICE_UDP                  139
 #define HIP_PARAM_INT                           140
+#define SO_HIP_CERT_SPKI_SIGN                   141
+#define SO_HIP_CERT_SPKI_VERIFY                 142
 /** @} */
 /* inclusive */
 #define HIP_SO_ROOT_MAX 			255

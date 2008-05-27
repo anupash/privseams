@@ -33,7 +33,6 @@ int hip_handle_user_msg(struct hip_common *msg,
 	struct in6_addr *src_ip, *dst_ip;
 	hip_ha_t *entry = NULL, *server_entry = NULL;
 	int err = 0, msg_type = 0, n = 0, len = 0, state = 0, reti = 0;
-	hip_ha_t * server_entry = NULL;
 	int access_ok = 0, send_response = 1, is_root;
 	HIP_KEA * kea = NULL;
 
