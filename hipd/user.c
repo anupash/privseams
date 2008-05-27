@@ -108,13 +108,13 @@ int hip_handle_user_msg(struct hip_common *msg,
 		   machine is behind a NAT. */
 		HIP_DEBUG("Handling NAT ON user message.\n");
 		HIP_IFEL(hip_nat_on(), -1, "Error when setting daemon NAT status to \"on\"\n");
-		hip_agent_update_status(SO_HIP_NAT_ON, NULL, 0);
+		hip_agent_update_status(SO_HIP_SET_NAT_ON, NULL, 0);
 		break;
 	case SO_HIP_SET_NAT_OFF:
 		/* Removes the NAT flag from each host association. */
 		HIP_DEBUG("Handling NAT OFF user message.\n");
 		HIP_IFEL(hip_nat_off(), -1, "Error when setting daemon NAT status to \"off\"\n");
-		hip_agent_update_status(SO_HIP_NAT_OFF, NULL, 0);
+		hip_agent_update_status(SO_HIP_SET_NAT_OFF, NULL, 0);
 		break;
         case SO_HIP_SET_LOCATOR_ON:
                 HIP_DEBUG("Setting LOCATOR ON\n");
@@ -172,7 +172,7 @@ int hip_handle_user_msg(struct hip_common *msg,
 	  	err = hip_set_opportunistic_mode(msg);
 		break;
 	case SO_HIP_GET_PEER_HIT:
-		err = hip_opp_get_peer_hit(msg, src, 0);
+		err = hip_opp_get_peer_hit(msg, src);
 	
 		if(err){
 			_HIP_ERROR("get pseudo hit failed.\n");
@@ -713,7 +713,7 @@ int hip_handle_user_msg(struct hip_common *msg,
 		   associations). */
 		HIP_IFEL(hip_nat_on(), -1, "Error when setting daemon NAT status"\
 			 "to \"on\"\n");
-		hip_agent_update_status(SO_HIP_NAT_ON, NULL, 0);
+		hip_agent_update_status(SO_HIP_SET_NAT_ON, NULL, 0);
 
 		/* Send a I1 packet to relay. */
 		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
@@ -826,8 +826,10 @@ int hip_handle_user_msg(struct hip_common *msg,
 		hipd_set_flag(HIPD_FLAG_RESTART);
 		hip_close(SIGINT);
 		break;
-
-#ifdef CONFIG_HIP_OPPTCP
+	case SO_HIP_OPPTCP_UNBLOCK_AND_BLACKLIST:
+		hip_opptcp_unblock_and_blacklist(msg, src);
+		break;
+#if 0
 	case SO_HIP_GET_PEER_HIT_FROM_FIREWALL:
 		err = hip_opp_get_peer_hit(msg, src, 1);
 		
@@ -843,33 +845,17 @@ int hip_handle_user_msg(struct hip_common *msg,
 		/* skip sending of return message; will be sent later in R1 */
 		goto out_err;
 	  break;
-	case SO_HIP_SET_OPPTCP_ON:
-		HIP_DEBUG("Setting opptcp on!!\n");
-		hip_set_opportunistic_tcp_status(1);
-		break;
-
-	case SO_HIP_SET_OPPTCP_OFF:
-		HIP_DEBUG("Setting opptcp off!!\n");
-		hip_set_opportunistic_tcp_status(0);
-		break;
-
-	case SO_HIP_OPPTCP_UNBLOCK_APP_and_OPPIPDB_ADD_ENTRY:
-		hip_opptcp_unblock_AND_opptcp_add_entry(msg, src);
-		break;
 	case SO_HIP_OPPTCP_UNBLOCK_APP:
 		hip_opptcp_unblock(msg, src);
 		break;
-
 	case SO_HIP_OPPTCP_OPPIPDB_ADD_ENTRY:
 		hip_opptcp_add_entry(msg, src);
 		break;
-
+#endif
 	case SO_HIP_OPPTCP_SEND_TCP_PACKET:
 		hip_opptcp_send_tcp_packet(msg, src); 
 		
 		break;
-
-#endif
 	case SO_HIP_GET_PROXY_LOCAL_ADDRESS:
 	{
 		//firewall socket address
@@ -882,7 +868,7 @@ int hip_handle_user_msg(struct hip_common *msg,
 		hip_get_local_addr(msg);
 //		hip_build_user_hdr(msg, HIP_HIPPROXY_LOCAL_ADDRESS, 0);
 		n = hip_sendto(msg, &sock_addr);		
-		HIP_IFEL(n < 0, 0, "sendto() failed on agent socket.\n");
+		HIP_IFEL(n < 0, 0, "sendto() failed on fw socket.\n");
 		if (err == 0)
 		{
 			HIP_DEBUG("SEND HIPPROXY LOCAL ADDRESS OK.\n");

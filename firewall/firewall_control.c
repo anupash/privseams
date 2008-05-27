@@ -290,27 +290,29 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 		break;
 	}
 	case SO_HIP_SET_ESCROW_ACTIVE:
-		HIP_DEBUG("Received activate escrow message from hipd\n\n");
+		HIP_DEBUG("Received activate escrow message from hipd\n");
 		set_escrow_active(1);
 		break;
 	case SO_HIP_SET_ESCROW_INACTIVE:
-		HIP_DEBUG("Received deactivate escrow message from hipd\n\n");
+		HIP_DEBUG("Received deactivate escrow message from hipd\n");
 		set_escrow_active(0);
 		break;
 	case SO_HIP_SET_HIPPROXY_ON:
-	        HIP_DEBUG("Received HIP PROXY STATUS: ON message from hipd\n\n");
-	        HIP_DEBUG("Firewall is working on Proxy Mode!\n\n");
-	        hip_proxy_status = 1;
-	        firewall_init_rules();
+	        HIP_DEBUG("Received HIP PROXY STATUS: ON message from hipd\n");
+	        HIP_DEBUG("Proxy is on\n");
+		if (!hip_proxy_status)
+			hip_fw_init_proxy();
+		hip_proxy_status = 1;
 		break;
 	case SO_HIP_SET_HIPPROXY_OFF:
-		HIP_DEBUG("Received HIP PROXY STATUS: OFF message from hipd\n\n");
-		HIP_DEBUG("Firewall is working on Firewall Mode!\n\n");
-	        hip_proxy_status = 0;
-	        firewall_init_rules();
+		HIP_DEBUG("Received HIP PROXY STATUS: OFF message from hipd\n");
+		HIP_DEBUG("Proxy is off\n");
+		if (hip_proxy_status)
+			hip_fw_uninit_proxy();
+		hip_proxy_status = 0;
 		break;
 	/*   else if(type == HIP_HIPPROXY_LOCAL_ADDRESS){
-	     HIP_DEBUG("Received HIP PROXY LOCAL ADDRESS message from hipd\n\n");
+	     HIP_DEBUG("Received HIP PROXY LOCAL ADDRESS message from hipd\n");
 	     if (hip_get_param_type(param) == HIP_PARAM_IPV6_ADDR)
 		{
 		_HIP_DEBUG("Handling HIP_PARAM_IPV6_ADDR\n");
@@ -318,6 +320,18 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 		}
 		}
 	*/	
+	case SO_HIP_SET_OPPTCP_ON:
+		HIP_DEBUG("Opptcp on\n");
+		if (!hip_opptcp)
+			hip_fw_init_opptcp();
+		hip_opptcp = 1;
+		break;
+	case SO_HIP_SET_OPPTCP_OFF:
+		HIP_DEBUG("Opptcp on\n");
+		if (hip_opptcp)
+			hip_fw_uninit_opptcp();
+		hip_opptcp = 0;
+		break;
 	default:
 		HIP_ERROR("Unhandled message type %d\n", type);
 		err = -1;
