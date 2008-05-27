@@ -268,6 +268,8 @@ int firewall_init_rules()
 		system("ip6tables -I OUTPUT -p 17 --sport 50500 -j QUEUE");
 
 	}
+	// Initializing db for mapping LSI-HIT in the firewall
+	firewall_init_hldb();
 
 #ifdef CONFIG_HIP_OPPTCP//tcp over ipv4
 	//system("iptables -I FORWARD -p 6 -j QUEUE"); // is this needed? -miika
@@ -1045,7 +1047,6 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx) {
 
 	int verdict = accept_normal_traffic_by_default;
 	int packet_id = ctx->ipq_packet->packet_id;
-	HIP_DEBUG("\n");
 
 	if (hip_userspace_ipsec)
 		verdict = !hip_fw_userspace_ipsec_output(ctx->ip_version,
@@ -1057,12 +1058,14 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx) {
 	  
 	        IPV6_TO_IPV4_MAP(&(ctx->src),&src_lsi);
 		IPV6_TO_IPV4_MAP(&(ctx->dst),&dst_lsi);
-
-		if (IS_LSI(&src_lsi)){
+		HIP_DEBUG("lsi is .... %d\n",IS_LSI(&src_lsi));
+		HIP_DEBUG("32 lsi is .... %d\n",IS_LSI32(src_lsi.s_addr));
+		if (IS_LSI32(src_lsi.s_addr)){
 		      if (is_packet_reinjection(&dst_lsi))
 			    verdict = accept_normal_traffic_by_default ? 1 : 0;
 		      else{
 			    hip_fw_handle_outgoing_lsi(ctx->ipq_packet, &src_lsi, &dst_lsi);
+			    /*Reject the packet*/
 			    verdict = 0;
 		      }
 		}

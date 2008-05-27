@@ -646,14 +646,14 @@ out_err:
 	
 }
 
-int hip_netdev_trigger_bex(hip_hit_t *src_hit, hip_hit_t *dst_hit,
-			   struct in6_addr *src_addr_p, struct in6_addr *dst_addr_p) {
+int hip_netdev_trigger_bex(hip_hit_t **src_hit, hip_hit_t **dst_hit,
+			   hip_lsi_t *src_lsi, hip_lsi_t *dst_lsi,
+			   struct in6_addr **src_addr_p, struct in6_addr **dst_addr_p) {
 	int err = 0, if_index = 0, is_ipv4_locator,
 		reuse_hadb_local_address = 0, ha_nat_mode = hip_nat_status,
                 old_global_nat_mode = hip_nat_status;
         in_port_t ha_peer_port;
 	hip_ha_t *entry;
-	hip_lsi_t peer_lsi;//not in use yet [Tere]
 	
 	int is_loopback = 0;
 	struct in6_addr src_addr;
@@ -663,23 +663,40 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit, hip_hit_t *dst_hit,
 	hip_hit_t default_hit;
 	addr = (struct sockaddr*) &ss_addr;
 
-	if (!src_hit) {
-		HIP_DEBUG("........Using default source hit.........\n");
-		HIP_IFEL(hip_get_default_hit(&default_hit), -1,
-			 "default hit\n");
-		src_hit = &default_hit;
+	
+	if (src_lsi && dst_lsi){
+	        //hit_peer already mapped because hipconf command and non-opportunistic mode
+	        HIP_DEBUG_LSI("Param is an lsi!!", src_lsi);
+		HIP_DEBUG_LSI("Param is an lsi!!", dst_lsi);
+		HIP_IFEL(!(entry = hip_hadb_try_to_find_by_pair_lsi(src_lsi, dst_lsi)),
+			 -1, "internal error: no hadb entry found\n");
+
+		/*HIP_IFEL(!(dst_hit = (hip_hit_t *) HIP_MALLOC(sizeof(hip_hit_t),0)),
+			 -ENOMEM, "No memory available for dst_hit\n");
+		HIP_IFEL(!(src_hit = (hip_hit_t *) HIP_MALLOC(sizeof(hip_hit_t),0)),
+			 -ENOMEM, "No memory available for src_hit\n");
+		memset(dst_hit, 0, sizeof(*dst_hit));
+		memset(src_hit, 0, sizeof(*src_hit));*/
+		*dst_hit = &(entry->hit_peer);
+		*src_hit = &(entry->hit_our);
+		//ipv6_addr_copy(*dst_hit, &entry->hit_peer);
+		//ipv6_addr_copy(*src_hit, &entry->hit_our);
 	}
 
-	HIP_DEBUG_HIT("src hit is from hip_get_default_hit: ", src_hit);
-
+	if (!(*src_hit)){
+		HIP_IFEL(hip_get_default_hit(&default_hit), -1,
+			 "default hit\n");
+		*src_hit = &default_hit;
+		HIP_DEBUG_HIT("src hit is from hip_get_default_hit: ", *src_hit);
+	}
 
 	/* Sometimes we get deformed HITs from kernel, skip them */
-	HIP_IFEL(!(ipv6_addr_is_hit(src_hit) && ipv6_addr_is_hit(dst_hit) &&
-		   hip_hidb_hit_is_our(src_hit) &&
-		   hit_is_real_hit(dst_hit)), -1,
+	HIP_IFEL(!(ipv6_addr_is_hit(*src_hit) && ipv6_addr_is_hit(*dst_hit) &&
+		   hip_hidb_hit_is_our(*src_hit) &&
+		   hit_is_real_hit(*dst_hit)), -1,
 		 "Received rubbish from netlink, skip\n");
 	
-	entry = hip_hadb_find_byhits(src_hit, dst_hit);
+	entry = hip_hadb_find_byhits(*src_hit, *dst_hit);
 	if (entry) {
 		reuse_hadb_local_address = 1;
 		goto skip_entry_creation;
@@ -699,20 +716,20 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit, hip_hit_t *dst_hit,
 	}
 
 	if (err) {
-		if (dst_addr_p) {
+		if (*dst_addr_p) {
 			/* Destination address given; no need to look up */
-			ipv6_addr_copy(dst_addr_p, &dst_addr);
+			ipv6_addr_copy(*dst_addr_p, &dst_addr);
 			err = 0;
 		}
 	}
 	
 	if (err) {
-		err = hip_map_hit_to_addr(dst_hit, &dst_addr);
+		err = hip_map_hit_to_addr(*dst_hit, &dst_addr);
 	}
 
 	if (err) {
 		/* Search HADB for existing entries */
-		entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
+		entry = hip_hadb_try_to_find_by_peer_hit(*dst_hit);
 		if (entry) {
 			HIP_DEBUG_IN6ADDR("reusing HA",
 					  &entry->preferred_address);
@@ -724,7 +741,7 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit, hip_hit_t *dst_hit,
 	}
 
 	/* map to loopback if hit is ours  */
-	if (err && hip_hidb_hit_is_our(dst_hit)) {
+	if (err && hip_hidb_hit_is_our(*dst_hit)) {
 		struct in6_addr lpback = IN6ADDR_LOOPBACK_INIT;
 		ipv6_addr_copy(&dst_addr, &lpback);
 		ipv6_addr_copy(&src_addr, &lpback);
@@ -746,13 +763,13 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit, hip_hit_t *dst_hit,
 	/* @fixme: changing global state won't work with threads */
 	hip_nat_status = ha_nat_mode;
 
-	/*@fixme: peer_lsi need to assign a value*/
-	HIP_IFEL(hip_hadb_add_peer_info(dst_hit, &dst_addr, &peer_lsi), -1,
+	/*@fixme: dst_lsi need to assign a value*/
+	HIP_IFEL(hip_hadb_add_peer_info(*dst_hit, &dst_addr, dst_lsi), -1,
 		 "map failed\n");
 
 	hip_nat_status = old_global_nat_mode; /* restore nat status */
 	
-	HIP_IFEL(!(entry = hip_hadb_find_byhits(src_hit, dst_hit)), -1,
+	HIP_IFEL(!(entry = hip_hadb_find_byhits(*src_hit, *dst_hit)), -1,
 		 "Internal lookup error\n");
 
 	if (is_loopback)
@@ -785,7 +802,7 @@ skip_entry_creation:
 	addr->sa_family = (is_ipv4_locator ? AF_INET : AF_INET6);
 
 	if (!reuse_hadb_local_address && src_addr_p) {
-		ipv6_addr_copy(&entry->local_address, src_addr_p);
+		ipv6_addr_copy(&entry->local_address, *src_addr_p);
 	}
 
 	memcpy(hip_cast_sa_addr(addr), &entry->local_address,
@@ -814,6 +831,7 @@ out_err:
 
 int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	hip_hit_t *src_hit = NULL, *dst_hit = NULL;
+	hip_lsi_t *src_lsi = NULL, *dst_lsi = NULL;
 	struct in6_addr saddr, *src_addr = NULL, *dst_addr = NULL;
 	struct xfrm_user_acquire *acq;
 	hip_ha_t *entry;
@@ -843,18 +861,18 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	}
 #endif
 
-	return hip_netdev_trigger_bex(src_hit, dst_hit, src_addr, dst_addr);
+	return hip_netdev_trigger_bex(src_hit, dst_hit, src_lsi, dst_lsi, src_addr, dst_addr);
 }
 
 int hip_netdev_trigger_bex_msg(struct hip_common *msg) {
 	hip_hit_t *our_hit = NULL, *peer_hit = NULL;
-	hip_lsi_t *src_lsi = NULL, *dst_lsi = NULL;
+	hip_lsi_t *our_lsi = NULL, *peer_lsi = NULL;
 	struct in6_addr *our_addr = NULL, *peer_addr = NULL;
 	struct hip_tlv_common *param;
 	hip_ha_t *entry = NULL;
 	int err = 0;
 	
-	HIP_DUMP_MSG( msg);
+	HIP_DUMP_MSG(msg);
 	
 	while((param = hip_get_next_param(msg, param))){
 		if(hip_get_param_type(param) == HIP_PARAM_HIT){
@@ -870,12 +888,12 @@ int hip_netdev_trigger_bex_msg(struct hip_common *msg) {
 	  	}
 	  
 	  	if (hip_get_param_type(param) == SO_HIP_PARAM_LSI){
-	    		if (!src_lsi){
-				src_lsi = (hip_lsi_t *)hip_get_param_contents_direct(param);
-				HIP_DEBUG_LSI("trigger_msg_our_lsi:", src_lsi);
+	    		if (!our_lsi){
+				our_lsi = (hip_lsi_t *)hip_get_param_contents_direct(param);
+				HIP_DEBUG_LSI("trigger_msg_our_lsi:", our_lsi);
 	    		}else{
-	      			dst_lsi = (hip_lsi_t *)hip_get_param_contents_direct(param);
-				HIP_DEBUG_LSI("trigger_msg_peer_lsi:", dst_lsi);
+	      			peer_lsi = (hip_lsi_t *)hip_get_param_contents_direct(param);
+				HIP_DEBUG_LSI("trigger_msg_peer_lsi:", peer_lsi);
 	    		}
 	  	}
 
@@ -892,7 +910,7 @@ int hip_netdev_trigger_bex_msg(struct hip_common *msg) {
 		}
 	}
 
-	if (!src_lsi){
+	if (!our_lsi){
 		HIP_DEBUG(">Param is not an lsi!!\n");
 		HIP_IFEL(hip_add_peer_map(msg), -1, "trigger bex\n");
 		/* Fetch the hadb entry just created. */
@@ -901,7 +919,19 @@ int hip_netdev_trigger_bex_msg(struct hip_common *msg) {
 		HIP_IFEL(hip_send_i1(&entry->hit_our, peer_hit, entry),
 			 -1, "sending i1 failed\n");
 	}else{
-		err = hip_netdev_trigger_bex(our_hit, peer_hit, our_addr, peer_addr);
+                err = hip_netdev_trigger_bex(&our_hit, &peer_hit, our_lsi, peer_lsi, &our_addr, &peer_addr);
+		if (our_hit){
+                        HIP_DEBUG_HIT("our_hit ", our_hit);
+		        HIP_IFEL(hip_build_param_contents(msg, (void *)our_hit,
+							  HIP_PARAM_HIT, sizeof(struct in6_addr)), -1,
+				 "build param HIP_PARAM_HIT  failed\n");                 
+		}
+		if (peer_hit){
+		        HIP_DEBUG_HIT("peer_hit ", peer_hit);
+		        HIP_IFEL(hip_build_param_contents(msg, (void *)peer_hit,
+							  HIP_PARAM_HIT, sizeof(struct in6_addr)), -1,
+				 "build param HIP_PARAM_HIT  failed\n");
+		}
 	}
 
 out_err:

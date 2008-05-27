@@ -2019,7 +2019,7 @@ int hip_trigger_bex(struct in6_addr **src_hit, struct in6_addr **dst_hit, struct
 	        /* LSI check */
 	        if (IN6_IS_ADDR_V4MAPPED(src_ip)){
 			IPV6_TO_IPV4_MAP(src_ip, &src_ip4);
-			HIP_DEBUG_LSI("          lsi is", &src_ip4);
+			HIP_DEBUG_LSI(" src lsi", &src_ip4);
 
 			HIP_IFEL(hip_build_param_contents(msg, (void *) &src_ip4,
 						  SO_HIP_PARAM_LSI,
@@ -2037,7 +2037,7 @@ int hip_trigger_bex(struct in6_addr **src_hit, struct in6_addr **dst_hit, struct
 		/* LSI check */
 		if (IN6_IS_ADDR_V4MAPPED(dst_ip)){
 			IPV6_TO_IPV4_MAP(dst_ip, &dst_ip4);
-			HIP_DEBUG_LSI("          lsi is", &dst_ip4);
+			HIP_DEBUG_LSI(" dst lsi", &dst_ip4);
 
 			HIP_IFEL(hip_build_param_contents(msg, (void *) &dst_ip4,
 						  SO_HIP_PARAM_LSI,
@@ -2086,85 +2086,52 @@ int hip_trigger_bex(struct in6_addr **src_hit, struct in6_addr **dst_hit, struct
 	return err;
 }
 
-/*int hip_find_local_lsi(hip_lsi_t * dst_lsi){
-  int err = 0, exist = 0;
-  hip_lsi_t *aux_lsi = NULL;
-
-  struct hip_common *msg = NULL;
-
-  HIP_IFE(!(msg = hip_msg_alloc()), -1);
-
-  if (dst_lsi)
-    HIP_IFEL(hip_build_param_contents(msg, (void *) dst_lsi,
-						  HIP_PARAM_LSI,
-						  sizeof(struct in_addr)), -1,
-				 "build param HIP_PARAM_LSI failed\n");
-
-    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_IS_OUR_LSI, 0), -1,
-	     "build hdr failed\n");
-	
-  //   send and receive msg to/from hipd 
-    HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send_recv msg failed\n");
-    HIP_DEBUG("send_recv msg succeed\n");
-//  check error value 
-    HIP_IFEL(hip_get_msg_err(msg), -1, "Got erroneous message!\n");
-
-    aux_lsi = hip_get_param_contents_direct(HIP_PARAM_LSI);
-    if (aux_lsi)
-      exist = 1;
-    //exist = hip_hidb_exists_lsi(dst_lsi);
-    // exist = hip_hidb_hit_is_our(NULL);
- out_err:
-    if(msg)
-      HIP_FREE(msg);
-    return exist;
-}*/
 
 int hip_find_local_lsi(hip_lsi_t * dst_lsi){
-  int err = 0, exist = 0;
-  hip_lsi_t *aux_lsi = NULL;
+	int err = 0, exist = 0;
+  	hip_lsi_t *aux_lsi = NULL;
 
-  struct hip_common *msg = NULL;
-  struct hip_tlv_common *current_param = NULL;
-  hip_tlv_type_t param_type;
+  	struct hip_common *msg = NULL;
+  	struct hip_tlv_common *current_param = NULL;
+  	hip_tlv_type_t param_type;
 
-  HIP_IFE(!(msg = hip_msg_alloc()), -1);
+  	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 
-  if (dst_lsi)
-    HIP_IFEL(hip_build_param_contents(msg, (void *) dst_lsi,
+  	if (dst_lsi){
+    		HIP_IFEL(hip_build_param_contents(msg, (void *) dst_lsi,
 						  SO_HIP_PARAM_LSI,
 						  sizeof(struct in_addr)), -1,
-				 "build param HIP_PARAM_LSI failed\n");
+			 "build param HIP_PARAM_LSI failed\n");
 
-    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_IS_OUR_LSI, 0), -1,
-	     "build hdr failed\n");
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_IS_OUR_LSI, 0), -1,
+	     	"build hdr failed\n");
 	
-    /* send and receive msg to/from hipd */
-    HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send_recv msg failed\n");
-    HIP_DEBUG("send_recv msg succeed\n");
-    /* check error value */
-    HIP_IFEL(hip_get_msg_err(msg), -1, "Got erroneous message!\n");
+    		/* send and receive msg to/from hipd */
+    		HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send_recv msg failed\n");
+	        HIP_DEBUG("send_recv msg succeed\n");
+	        /* check error value */
+	        HIP_IFEL(hip_get_msg_err(msg), -1, "Got erroneous message!\n");
 
-    while((current_param = hip_get_next_param(msg, current_param)) != NULL)
-    {
-      param_type = hip_get_param_type(current_param);
+		while((current_param = hip_get_next_param(msg, current_param)) != NULL)
+		{
+			param_type = hip_get_param_type(current_param);
 
-      if (param_type == SO_HIP_PARAM_LSI){
-	aux_lsi = (struct in_addr *)hip_get_param_contents_direct(current_param);
-	if (aux_lsi){
-	  exist = 1;
-	  HIP_DEBUG_LSI("Lsi found is: ", aux_lsi);
+			if (param_type == SO_HIP_PARAM_LSI){
+				aux_lsi = (struct in_addr *)hip_get_param_contents_direct(current_param);
+				if (aux_lsi){
+					exist = 1;
+					HIP_DEBUG_LSI("Lsi found is: ", aux_lsi);
+				}
+				break;
+      			}
+    		}
 	}
-	break;
-      }
-    }
-
-    HIP_DEBUG("exist = %d \n", exist);
-
+    	
  out_err:
-    if(msg)
-      HIP_FREE(msg);
-    return exist;
+	HIP_DEBUG("exist = %d \n", exist);
+	if(msg)
+      		HIP_FREE(msg);
+    	return exist;
 }
 
 
