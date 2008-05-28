@@ -11,6 +11,7 @@
 /** A hashtable for storing the supported services. */
 HIP_HASHTABLE *services;
 
+
 void hip_init_services(void)
 {
 	services = hip_ht_init(NULL, NULL);
@@ -46,7 +47,7 @@ int hip_services_add(int service_type)
         
 	HIP_DEBUG("Adding service.\n");
 	
-	/* Check if the service is already supported. */
+	// Check if the service is already supported.
 	tmp = hip_get_service((uint8_t)service_type);
 	if(tmp) {
 		HIP_ERROR("Trying to add duplicate service: %s. " \
@@ -86,15 +87,6 @@ int hip_services_add(int service_type)
 		service->handle_registration = hip_handle_registration;
 		service->cancel_registration = hip_cancel_registration;
 		service->cancel_service = hip_cancel_service;
-	  
-		/*if(hip_relht_init() == NULL)
-		  {
-		  err = -1;
-		  }
-		  else
-		  {
-		  HIP_DEBUG("HIP UDP RELAY service initiated.\n");
-		  }*/
 	} else {
 		HIP_ERROR("Unknown service type.\n");
 		err = -1;
@@ -103,9 +95,7 @@ int hip_services_add(int service_type)
 	}
 	
 	list_add(service, services);
-	
-	//TODO: Send information about new service
-        
+
  out_err:
 	return err;	
 }
@@ -203,7 +193,7 @@ int hip_get_services_list(int **service_types)
 		return 0;
 	}
 
-	/* Where is this freed? */
+	// Where is this freed?
 	*service_types = HIP_MALLOC((counter1 * sizeof(int)), GFP_KERNEL);	
 	
 	list_for_each_safe(item2, tmp2, services, c) {
@@ -218,7 +208,6 @@ int hip_get_services_list(int **service_types)
 	
 	return counter2;
 }
-
 
 int hip_get_service_count()
 {
@@ -299,7 +288,7 @@ int hip_handle_regrequest(hip_ha_t *entry, hip_common_t *source_msg,
 			  hip_common_t *target_msg)
 {
 	struct hip_reg_request *reg_request = NULL;
-	hip_service_t *service = NULL;
+	//hip_service_t *service = NULL;
 	int err = 0, accepted_count = 0, rejected_count = 0, type_count = 0;
 	int request_got_rejected = 0;
 	uint8_t req_lifetime = 0, val_lifetime = 0;
@@ -348,7 +337,7 @@ int hip_handle_regrequest(hip_ha_t *entry, hip_common_t *source_msg,
 		
 		for(; i < type_count; i++) {
 			/* Check if we have the requested service in our services. */
-			service = hip_get_service(values[i]);
+			/*service = hip_get_service(values[i]);
 			if(service == NULL) {
 				HIP_INFO("Client is trying to cancel an "\
 					 "service (%u) that we do not have in "\
@@ -357,7 +346,7 @@ int hip_handle_regrequest(hip_ha_t *entry, hip_common_t *source_msg,
 				rejected_requests[rejected_count] = values[i];
 				rejected_count++;
 				continue;
-			}
+				}*/
 			
 			/* We could do the cancellation via each services
 			   cancel_registration functionpointer inside the above
@@ -390,13 +379,13 @@ int hip_handle_regrequest(hip_ha_t *entry, hip_common_t *source_msg,
 			case HIP_SERVICE_ESCROW:
 				HIP_INFO("Client is cancelling registration "\
 					 "to escrow service.\n");
-				if(service->cancel_registration(
+				/*if(service->cancel_registration(
 					   &entry->hit_peer) == 0) {
 					HIP_DEBUG("Cancelled escrow "\
 						  "service.\n");
 				} else {
 					request_got_rejected = 1;
-				}
+					}*/
 				break;
 			case HIP_SERVICE_RELAY:
 				HIP_INFO("Client is cancelling registration "\
@@ -460,7 +449,7 @@ int hip_handle_regrequest(hip_ha_t *entry, hip_common_t *source_msg,
 		for(; i < type_count; i++) {
 			/* Check if we have the requested service in our
 			   services. */
-			service = hip_get_service(values[i]);
+			/*service = hip_get_service(values[i]);
 			if(service == NULL) {
 				HIP_INFO("Client is trying to register to a "\
 					 "service (%u) that we do not have in "\
@@ -469,7 +458,7 @@ int hip_handle_regrequest(hip_ha_t *entry, hip_common_t *source_msg,
 				rejected_requests[rejected_count] = values[i];
 				rejected_count++;
 				continue;
-			}
+				}*/
 			
 			/** @todo Handle registration using each services
 			    handle_registration functionpointer (as now done in
@@ -557,7 +546,7 @@ int hip_handle_regrequest(hip_ha_t *entry, hip_common_t *source_msg,
 				HIP_INFO("Client is registering to escrow service.\n");
 				hip_escrow_validate_lifetime(req_lifetime,
 							     &val_lifetime);
-				
+				/*
 				if (service->state == HIP_SERVICE_ACTIVE)
 				{
 					if(service->handle_registration(&entry->hit_peer) == 0)
@@ -571,7 +560,7 @@ int hip_handle_regrequest(hip_ha_t *entry, hip_common_t *source_msg,
 				{
 					request_got_rejected = 1;
 					HIP_DEBUG("Service inactive.\n");
-				}
+					}*/
 				break;
 			case HIP_SERVICE_RELAY:
 				HIP_INFO("Client is registering to UDP relay "\

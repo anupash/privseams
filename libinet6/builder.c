@@ -996,8 +996,9 @@ char* hip_message_type_name(const uint8_t msg_type){
 	case SO_HIP_I1_REJECT: return "HIP_I1_REJECT";
 	case HIP_I1: return "HIP_I1";
 	case HIP_I2: return "HIP_I2";
-	case SO_HIP_NAT_OFF: return "HIP_NAT_OFF";
-	case SO_HIP_NAT_ON: return "HIP_NAT_ON";
+	case SO_HIP_SET_NAT_NONE: return "SO_HIP_SET_NAT_NONE:";
+	case SO_HIP_SET_NAT_PLAIN_UDP: return "SO_HIP_SET_NAT_PLAIN_UDP:";
+	case SO_HIP_SET_NAT_ICE_UDP: return "SO_HIP_SET_NAT_ICE_UDP:";
 	case HIP_NOTIFY: return "HIP_NOTIFY";
 	case HIP_PAYLOAD: return "HIP_PAYLOAD";
 	case HIP_PSIG: return "HIP_PSIG";
@@ -2199,12 +2200,15 @@ static inline int hip_reg_param_core(hip_common_t *msg, void *param,
 				       type_list);	
 }
 
-int hip_build_param_reg_info(hip_common_t *msg, const hip_srv_t *service_list,
+int hip_build_param_reg_info(hip_common_t *msg, const void *srv_list,
 			     const unsigned int service_count)
 {
 	int err = 0, i = 0;
 	struct hip_reg_info reg_info;
 	uint8_t reg_type[service_count];
+	/* @todo: using a void pointer as a workaround to avoid
+	   weird compilation warning */
+	const hip_srv_t *service_list = (const hip_srv_t *) srv_list;
 
 	if(service_count == 0) {
 		return 0;

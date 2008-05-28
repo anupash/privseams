@@ -334,9 +334,7 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 		entry->is_loopback = 1;
 	}
 
-#ifdef CONFIG_HIP_OPPTCP
      	entry->hip_is_opptcp_on = hip_get_opportunistic_tcp_status();
-#endif
      	
 #ifdef CONFIG_HIP_HIPPROXY
      	entry->hipproxy = hip_get_hip_proxy_status();
@@ -2256,6 +2254,9 @@ void hip_hadb_set_peer_controls(hip_ha_t *entry, hip_controls_t mask)
 		case HIP_HA_CTRL_PEER_ESCROW_CAPABLE:
 		case HIP_HA_CTRL_PEER_RVS_CAPABLE:
 		case HIP_HA_CTRL_PEER_RELAY_CAPABLE:
+		case HIP_HA_CTRL_PEER_GRANTED_ESCROW:
+		case HIP_HA_CTRL_PEER_GRANTED_RVS:
+		case HIP_HA_CTRL_PEER_GRANTED_RELAY:
 			entry->peer_controls |= mask;
 			break;
 		default:
