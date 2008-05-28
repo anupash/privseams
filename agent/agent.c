@@ -10,6 +10,9 @@
 #include "agent.h"
 
 
+/* global db for agent to see */
+sqlite3 * agent_db = NULL;
+int init_in_progress = 0;
 /******************************************************************************/
 /** Catch SIGINT. */
 void sig_catch_int(int signum)
@@ -23,6 +26,7 @@ void sig_catch_int(int signum)
 	else
 	{
 		HIP_ERROR("SIGINT (CTRL-C) caught, terminating!\n");
+                hip_sqlite_close_db(agent_db);    
 		exit(1);
 	}
 
@@ -110,7 +114,7 @@ int main(int argc, char *argv[])
 	/* Create config filename. */
 	str_var_set("config-file", "%s/.hipagent/config", getenv("HOME"));
 	/* Create database filename. */
-	str_var_set("db-file", "%s/.hipagent/database", getenv("HOME"));
+	str_var_set("db-file", "%s/.hipagent/database.db", getenv("HOME"));
 
 	/* Read config. */
 	err = config_read(str_var_get("config-file"));

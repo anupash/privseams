@@ -46,6 +46,7 @@
 #define HIP_MAX_DH_GROUP_ID 7 
 
 #define HIP_MAX_DSA_KEY_LEN 4096
+/* Parts of the code assume that the key is 1024 and nothing else --SAMU */
 #define HIP_MAX_RSA_KEY_LEN 4096
 #define HIP_MAX_DH_GROUP_ID 7 
 
