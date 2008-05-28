@@ -3,6 +3,7 @@
 import sys
 import getopt
 import os
+import stat
 import time
 import util
 import socket
@@ -24,6 +25,8 @@ if path != None:
 else:
     path = []
 
+myid = '%d-%d' % (time.time(),os.getpid())
+
 def has_resolvconf0():
     path2 = list(path)
     if not '/sbin' in path2:
@@ -34,6 +37,72 @@ def has_resolvconf0():
     return False
 
 has_resolvconf = has_resolvconf0()
+
+class ResolvConfError(Exception):
+    pass
+
+class ResolvConf:
+    def guess_resolvconf(self):
+        if (os.path.isdir('/etc/resolvconf/.') and
+            os.path.exists('/sbin/resolvconf') and
+            os.path.exists('/etc/resolvconf/run/resolv.conf')):
+            # We have probably resoconf package installed
+            return '/etc/resolvconf/run/resolv.conf'
+        return None
+    def __init__(self,filetowatch = None):
+        self.oktowrite = 0
+        self.resolvconf_towrite = None
+        if filetowatch == None:
+            filetowatch = self.guess_resolvconf()
+        self.resolvconf_orig = filetowatch
+        self.resolvconf_towrite = '/etc/resolv.conf'
+        return
+    def save_resolvconf(self):
+        st1 = os.lstat(self.resolvconf_towrite)
+        self.resolvconf_bkname = '%s-%s' % (self.resolvconf_towrite,myid)
+        os.link(self.resolvconf_towrite,self.resolvconf_bkname)
+        return
+    def restore_resolvconf(self):
+        os.remove(self.resolvconf_towrite)
+        os.rename(self.resolvconf_bkname,self.resolvconf_towrite)
+        return
+
+    def write(self,params):
+        if not self.oktowrite:
+            throw(ResolvConfError('Cannot write resolv.conf'))
+
+        keys = params.keys()
+        keys.sort()
+        tmp = '%s.tmp-%s' % (self.resolvconf_towrite,myid)
+        tf = file(tmp,'w')
+        tf.write('# This is written by dnsproxy.py\n')
+        for k in keys:
+            v = params.get(k)
+            if type(v) == type(''):
+                v = (v,)
+            for v2 in v:
+                tf.write('%-10s %s\n' % (k,v2))
+        tf.close()
+        os.rename(tmp,self.resolvconf_towrite)
+
+    def start(self):
+        self.save_resolvconf()
+        if self.resolvconf_towrite:
+            tmp = '%s.tmp-%s' % (self.resolvconf_towrite,myid)
+            f1 = file(self.resolvconf_towrite,'r')
+            f2 = file(tmp,'w')
+            while 1:
+                d = f1.read(16384)
+                if not d:
+                    break
+                f2.write(d)
+            f1.close()
+            f2.close()
+            os.rename(tmp,self.resolvconf_towrite)
+            self.oktowrite = 1
+    def stop(self):
+        self.oktowrite = 0
+        self.restore_resolvconf()
 
 class Global:
     re_nameserver = re.compile(r'nameserver\s([0-9\.]+)$')
@@ -104,6 +173,7 @@ class Global:
         for hn in gp.hostsnames:
             gp.hosts.append(hosts.Hosts(hn))
         util.init_wantdown()
+        util.init_wantdown_int()        # Keyboard interrupts
         fout = sys.stdout
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.bind((gp.bind_ip,gp.bind_port))
@@ -116,6 +186,11 @@ class Global:
 
         s2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s2.connect((gp.server_ip,gp.server_port))
+
+        rc1 = ResolvConf()
+        rc1.start()
+
+        rc1.write({'nameserver': gp.bind_ip})
 
         while not util.wantdown():
             try:
@@ -190,6 +265,9 @@ class Global:
                 fout.write('Exception %s\n' % (e,))
                 
         fout.write('Wants down\n')
+        fout.flush()
+        rc1.stop()
+        fout.write('resolv.conf restored\n')
         fout.flush()
         return
 
