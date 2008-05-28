@@ -2,6 +2,7 @@
 #define HIP_FIREWALL_H
 
 #include <netinet/in.h>
+#include <linux/types.h>
 #include <linux/netfilter.h>
 #include <libipq.h>
 #include <linux/netfilter.h>
@@ -10,8 +11,7 @@
 #include <netinet/ip6.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <glib.h>
-#include <glib/glist.h>
+
 #include <string.h>
 #include <netinet/tcp.h>
 #include <stdlib.h>
@@ -20,6 +20,7 @@
 #include <pthread.h>
 #include <libinet6/message.h>
 
+#include "common_types.h"
 #include "crypto.h"
 #include "ife.h"
 #include "state.h"
@@ -35,6 +36,7 @@
 #include "misc.h"
 #include "netdev.h"
 #include "hip_sadb.h"
+
 
 #define HIP_FW_DEFAULT_RULE_FILE "/etc/hip/firewall.conf"
 #define HIP_FW_DEFAULT_TIMEOUT   1
@@ -54,11 +56,11 @@
 #define OTHER_PACKET          0
 #define HIP_PACKET            1
 #define ESP_PACKET            2
-#define STUN_PACKET           3
-#define TCP_PACKET            4
+#define TCP_PACKET            3
+#define STUN_PACKET           4
 #define UDP_PACKET            5
 
-#define FW_PROTO_NUM        4 /* Other, HIP, ESP, TCP */
+#define FW_PROTO_NUM          6 /* Other, HIP, ESP, TCP */
 
 typedef struct hip_fw_context {
 	// queued packet
@@ -99,6 +101,8 @@ typedef struct hip_conn_t  {
 	struct in6_addr addr_peer; // addr_proxy_peer	
 } hip_conn_t;
 
+typedef int (*hip_fw_handler_t)(hip_fw_context_t *);
+
 #define HIP_FIREWALL_LOCK_FILE	"/var/lock/hip_firewall.lock"
 struct in6_addr proxy_hit;
 extern int hipproxy;
@@ -110,6 +114,8 @@ int match_hit(struct in6_addr match_hit,
 	      int boolean);
 void set_stateful_filtering(int v);
 int get_stateful_filtering();
+
+void hip_fw_flush_iptables(void);
 
 int firewall_init();
 void firewall_close(int signal);

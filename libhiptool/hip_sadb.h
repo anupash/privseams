@@ -87,6 +87,7 @@ typedef struct _hip_sadb_entry
 	sockaddr_list *inner_src_addrs;
 	sockaddr_list *inner_dst_addrs;
 	__u32 mode; 	/* ESP mode :  0-default 1-transport 2-tunnel 3-beet */
+	// TODO add encap_mode (= UDP / TCP)
 	__u16 dst_port;			/* UDP dest. port for encaps. ESP */
 	struct timeval usetime_ka;  /* last used timestamp, incl keep-alives */
 	struct sockaddr_storage lsi;	/* LSI 				*/

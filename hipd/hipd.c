@@ -105,24 +105,48 @@ int hip_use_i3 = 0; // false
  */
 int hip_use_userspace_ipsec = 0;
 
-
-#ifdef CONFIG_HIP_OPPTCP
 int hip_use_opptcp = 0; // false
 
-void hip_set_opportunistic_tcp_status(int newVal)
+void hip_set_opportunistic_tcp_status(struct hip_common *msg)
 
 {
-        if((newVal == 0) || (newVal == 1))
-                hip_use_opptcp = newVal;
-	else	
-        	hip_use_opptcp = 0; /*default to 0 in case of error*/
+	struct sockaddr_in6 sock_addr;     		
+	int retry, type, n;
+
+	type = hip_get_msg_type(msg);
+
+	_HIP_DEBUG("type=%d\n", type);
+
+	bzero(&sock_addr, sizeof(sock_addr));
+	sock_addr.sin6_family = AF_INET6;
+	sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
+	sock_addr.sin6_addr = in6addr_loopback;		
+
+	for (retry = 0; retry < 3; retry++) {
+		n = hip_sendto(msg, &sock_addr);		
+		if (n <= 0) {
+			HIP_ERROR("hipconf opptcp failed (round %d)\n", retry);
+			HIP_DEBUG("Sleeping few seconds to wait for fw\n");
+			sleep(2);
+		} else {
+			HIP_DEBUG("hipconf opptcp ok (sent %d bytes)\n", n);
+			break;
+		}
+	}
+
+	if (type == SO_HIP_SET_OPPTCP_ON)
+		hip_use_opptcp = 1;
+	else
+		hip_use_opptcp = 0;
+
+	HIP_DEBUG("Opportunistic tcp set %s\n",
+		  (hip_use_opptcp ? "on" : "off"));
 }
 
 int hip_get_opportunistic_tcp_status()
 {
         return hip_use_opptcp;
 }
-#endif
 
 void usage() {
 	fprintf(stderr, "HIPL Daemon %.2f\n", HIPL_VERSION);

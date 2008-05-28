@@ -1,22 +1,22 @@
 #include "useripsec.h"
 
 hip_hit_t *hip_fw_get_default_hit(void) {
-	if (ipv6_addr_is_null) {
+	if (ipv6_addr_is_null(&default_hit)) {
 		_HIP_DEBUG("Querying hipd for default hit\n");
-		if (hip_query_default_local_hit_from_hipd())
+		if (hip_query_default_local_hit_from_hipd(&default_hit))
 			return NULL;
 	}
 	return &default_hit;
 }
 
 /* Get default HIT*/
-int hip_query_default_local_hit_from_hipd(void)
+int hip_query_default_local_hit_from_hipd(hip_hit_t *hit)
 {
 	 
 	int err = 0;
 	struct hip_common *msg = NULL;
 	struct hip_tlv_common *current_param = NULL;
-	in6_addr_t *defhit;	
+	hip_hit_t *defhit  = NULL;	
 	struct endpoint_hip *endp=NULL;
 	
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
@@ -29,14 +29,124 @@ int hip_query_default_local_hit_from_hipd(void)
 	{
 		defhit = (in6_addr_t *)hip_get_param_contents_direct(current_param);
 		//set_hit_prefix(defhit); // miika: what the heck?
-		_HIP_DEBUG_HIT("default hi is ",defhit);
+		HIP_DEBUG_HIT("default hi is ",defhit);
 	}
 
+	ipv6_addr_copy(hit, defhit);
 
 out_err:
 	return err;
 
 }
+
+#if 0
+int user_ipsec_init()
+{
+	// this is the ESP packet we are about to build
+	// FIXME only allocate once and fix size
+	__u8 esp_packet[2500];
+	
+	// FIXME this should also only be done once
+	// open socket in order to re-insert the esp packet into the stack
+	// open ipv4 raw socket
+	int ipv4_raw_socket, ipv6_raw_socket;
+	
+	ipv4_raw_socket = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
+	if (ipv4_raw_socket < 0) {
+		HIP_DEBUG("*** ipv4_raw_socket socket() error for raw socket in hip_esp_output\n");
+	}
+	flags = 1;
+	if (setsockopt(ipv4_raw_socket, IPPROTO_IP, IP_HDRINCL, (char *)&flags, 
+				sizeof(flags)) < 0) {
+		printf("*** setsockopt() error for raw socket in "
+			"hip_esp_output\n");
+	}
+	
+	/*
+	//open ipv6 raw socket
+	ipv6_raw_socket = socket(AF_INET6, SOCK_RAW, IPPROTO_RAW);
+	if (ipv6_raw_socket < 0) {
+		HIP_DEBUG("*** ipv6_raw_socket socket() error for raw socket in hip_esp_output\n");
+	}
+	// TODO set options
+	 */
+}
+#endif
+
+#if 0
+/* prepares the environment for esp encryption */
+int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
+{
+
+	// can hold IPv4 or IPv6 addresses
+	struct sockaddr sockaddr_peer;
+	hip_sadb_entry *entry = NULL;
+	int err = 0;
+	udp_encap = 0;
+	struct timeval now;
+	
+	// we should only get HITs or LSIs as addresses
+	HIP_DEBUG_HIT("src_hit", &ctx->src);
+	HIP_DEBUG_HIT("dst_hit", &ctx->dst);
+	
+	
+	user_ipsec_init();
+	memset(esp_packet, 0, 2500);
+	
+	gettimeofday(&now, NULL);
+	
+	// resolve HIT to routable addresses
+	
+	hip_addr_to_sockaddr(&ctx->dst, &sockaddr_peer);
+	
+	// SAs directing outwards are indexed with the peer's socket address
+	// FIXME this will only allow one connection to this peer HIT
+	entry = hip_sadb_lookup_addr(&sockaddr_peer_hit);
+	
+	// init new SA entry, if none exists yet
+	if (entry == NULL)
+	{
+			HIP_DEBUG("pfkey send acquire\n");
+			
+			// no SADB entry -> buffer triggering packet and send ACQUIRE
+			// FIXME checks for SA entry again
+			// TODO correct params
+			if (buffer_packet(lsi, raw_buff, len))
+				err = pfkey_send_acquire(&sockaddr_peer_hit);
+			
+			// don't process this message any further
+			goto end_err;
+	}
+		
+	HIP_DEBUG("we have found a SA entry")
+		
+	err = hip_esp_output(ctx, entry, esp_packet, udp_encap, &now);
+	
+	// FIXME send the new packet
+	err = sendto(socket, esp_packet, esp_packet_len, flags,
+			SA(&entry->dst_addrs->addr),
+			SALEN(&entry->dst_addrs->addr));
+	if (err < 0) {
+		HIP_DEBUG("hip_esp_output(): sendto() failed \n");
+	} else
+	{
+		// update SA statistics for replay protection etc
+		pthread_mutex_lock(&entry->rw_lock);
+		// TODO check why sizeof(ip)
+		entry->bytes += sizeof(struct ip) + err;
+		entry->usetime.tv_sec = now.tv_sec;
+		entry->usetime.tv_usec = now.tv_usec;
+		entry->usetime_ka.tv_sec = now.tv_sec;
+		entry->usetime_ka.tv_usec = now.tv_usec;
+		pthread_mutex_unlock(&entry->rw_lock);
+	}
+	
+  end_err:
+  	return err;
+
+}
+#endif
+
 
 
 /* added by Tao Wan, This is the function for hip userspace ipsec output
@@ -77,8 +187,7 @@ int hip_fw_userspace_ipsec_output(int ip_version,
 		tcphdr = ((struct tcphdr *) (((char *) iphdr) + hdr_size));
 		hdrBytes = ((char *) iphdr) + hdr_size;
 		
-		HIP_DEBUG_INADDR("the src", &iphdr->ip_src);
-		HIP_DEBUG_INADDR("the dst", &iphdr->ip_dst);
+		
 		
 		//peer and local ip needed for sending the i1 through hipd
 		//IPV4_TO_IPV6_MAP(&iphdr->ip_src, &peer_ip); //TO  BE FIXED obtain the pseudo hit instead
@@ -176,9 +285,10 @@ int hip_fw_userspace_ipsec_output(int ip_version,
 		
 		hip_addr_to_sockaddr(def_hit, (struct sockaddr *) &sockaddr_local_default_hit);
 		//hip_addr_to_sockaddr(&ip6_hdr->ip6_src, &sockaddr_local_default_hit);
-		
+#if 0
 		err = hip_esp_output((struct sockaddr *) &sockaddr_local_default_hit, 
 				     (u8 *) ip6_hdr, length_of_packet); /* XX FIXME: LSI */
+#endif
 	}
 	
 	HIP_DEBUG("Can hip_sadb_lookup_addr() find hip_sadb_entry? : %s\n",
