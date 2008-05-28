@@ -52,6 +52,7 @@
 #define SO_HIP_GET_HITS                         21
 #define SO_HIP_GET_HA_INFO			22
 #define SO_HIP_TRIGGER_BEX                      23
+#define SO_HIP_DHT_SERVING_GW                   24
 /* inclusive */
 #define HIP_SO_ANY_MAX 				63
 
@@ -82,7 +83,7 @@
 #define SO_HIP_SET_DEBUG_MEDIUM			83
 #define SO_HIP_SET_DEBUG_NONE			84
 /** Socket option for hipconf to ask about the used gateway with OpenDHT */
-#define SO_HIP_DHT_SERVING_GW                   85
+/* 85 is free slot */
 #define SO_HIP_HANDOFF_ACTIVE			86
 #define SO_HIP_HANDOFF_LAZY			87
 /** Socket option for hipconf to restart daemon. */
@@ -94,7 +95,7 @@
 #define SO_HIP_DHT_OFF                          93
 #define SO_HIP_SET_OPPTCP_ON			94
 #define SO_HIP_SET_OPPTCP_OFF			95
-#define SO_HIP_GET_PEER_HIT_FROM_FIREWALL	96
+/* slot 96 is free */
 #define SO_HIP_OPPTCP_UNBLOCK_APP		97
 #define SO_HIP_OPPTCP_OPPIPDB_ADD_ENTRY		98
 #define SO_HIP_OPPTCP_SEND_TCP_PACKET		99
@@ -159,8 +160,8 @@
 #define SO_HIP_SET_HIPPROXY_OFF			132
 #define SO_HIP_GET_PROXY_LOCAL_ADDRESS		133
 #define SO_HIP_HIPPROXY_STATUS_REQUEST		134
-#define SO_HIP_OPPTCP_UNBLOCK_APP_and_OPPIPDB_ADD_ENTRY	135
-#define SO_HIP_FIREWALL_BEX_DONE                        136 /* addes by Tao Wan, for informing the firewall the BEX is done*/
+#define SO_HIP_OPPTCP_UNBLOCK_AND_BLACKLIST     135
+#define SO_HIP_FIREWALL_BEX_DONE                136 /* addes by Tao Wan, for informing the firewall the BEX is done*/
 #define SO_HIP_SET_TCPTIMEOUT_ON                137
 #define SO_HIP_SET_TCPTIMEOUT_OFF               138
 #define SO_HIP_SET_NAT_ICE_UDP                  139

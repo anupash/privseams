@@ -445,7 +445,7 @@ connect_alarm(int signo)
 int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 {	 								
 	int error = 0, ret_hit = 0, ret_addr = 0, tmp_ttl = 0, tmp_port = 0;
-	int found_hits = -1, lineno = 0, i = 0, err = 0;
+	int found_hits = 0, lineno = 0, i = 0, err = 0;
 	hip_hit_t hit, tmp_hit, tmp_addr;
 	struct in_addr tmp_v4;
 	char dht_response_hit[1024], dht_response_addr[1024], line[500];
@@ -1196,8 +1196,7 @@ int gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	   to allow the error value to be passed to the caller of this function.
 	   -Lauri 07.05.2008. */
 	err = gethosts_hit(name, &pat, req->ai_flags);
-
-	if((err) < 0) {
+	if((err) <= 0) {
 		return err;
 	}
 	
