@@ -1009,6 +1009,13 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		struct hip_echo_request_m *ping;
 
 		ping = hip_get_param(ctx->input, HIP_PARAM_ECHO_REQUEST_M);
+
+		/* if we get echo requests, we must add HOST_ID once more */
+
+		if (ping != NULL)
+			HIP_IFEL(hip_build_param(i2, entry->our_pub), -1,
+			         "Building of host id failed\n");
+
 		while (ping) {
 			int ln = hip_get_param_contents_len(ping);
 			if (hip_get_param_type(ping) != HIP_PARAM_ECHO_REQUEST_M)
@@ -1514,6 +1521,13 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 		struct hip_echo_request_m *ping;
 
 		ping = hip_get_param(ctx->input, HIP_PARAM_ECHO_REQUEST_M);
+
+		/* if we get echo requests, we must add HOST_ID once more */
+
+		if (ping != NULL)
+			HIP_IFEL(hip_build_param(r2, entry->our_pub), -1,
+			         "Building of host id failed\n");
+
 		while (ping) {
 			int ln = hip_get_param_contents_len(ping);
 			if (hip_get_param_type(ping) != HIP_PARAM_ECHO_REQUEST_M)

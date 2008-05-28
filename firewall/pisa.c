@@ -249,16 +249,19 @@ static int pisa_check_solution(hip_fw_context_t *ctx)
 static int pisa_check_signature(hip_fw_context_t *ctx)
 {
 	struct hip_common *hip = ctx->transport_hdr.hip;
-	int err = 0;
+	int err = -1;
 	struct hip_host_id *host_id;
 	int (*verify_signature)(struct hip_host_id *, struct hip_common *);
 
 	host_id = hip_get_param(hip, HIP_PARAM_HOST_ID);
-	HIP_IFEL(host_id == 0, -1, "No HOST_ID found to check signature.\n");
-
-	verify_signature = (hip_get_host_id_algo(host_id) == HIP_HI_RSA ? hip_rsa_verify : hip_dsa_verify);
+	if (host_id == 0) {
+		HIP_DEBUG("Cannot check signature: No HOST_ID found.\n");
+	} else {
+	verify_signature = (hip_get_host_id_algo(host_id) == HIP_HI_RSA ?
+	                    hip_rsa_verify : hip_dsa_verify);
 
 	err = verify_signature(host_id, hip);
+	}
 
 out_err:
 	return err;
@@ -316,8 +319,7 @@ static int pisa_handler_r2(hip_fw_context_t *ctx)
 
 	nonce = pisa_check_nonce(ctx);
 	solution = pisa_check_solution(ctx);
-	sig = /*pisa_check_signature(ctx)*/ 1;
-	/* FIXME re-enable signature checking, when hipd provides HOST_ID */
+	sig = pisa_check_signature(ctx);
 
 	if (nonce != 0 || solution != 0 || sig != 0) {
 		/* disallow further communication if either nonce or solution

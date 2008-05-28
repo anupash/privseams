@@ -1017,6 +1017,13 @@ int hip_build_verification_pkt(hip_ha_t *entry, hip_common_t *update_packet,
 		struct hip_echo_request_m *ping;
 
 		ping = hip_get_param(msg, HIP_PARAM_ECHO_REQUEST_M);
+
+		/* if we get echo requests, we must add HOST_ID once more */
+
+		if (ping != NULL)
+			HIP_IFEL(hip_build_param(update_packet, entry->our_pub), -1,
+			         "Building of host id failed\n");
+
 		while (ping) {
 			int ln = hip_get_param_contents_len(ping);
 			if (hip_get_param_type(ping) != HIP_PARAM_ECHO_REQUEST_M)
@@ -1306,6 +1313,13 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, hip_common_t *msg,
 		struct hip_echo_request_m *ping;
 
 		ping = hip_get_param(msg, HIP_PARAM_ECHO_REQUEST_M);
+
+		/* if we get echo requests, we must add HOST_ID once more */
+
+		if (ping != NULL)
+			HIP_IFEL(hip_build_param(update_packet, entry->our_pub), -1,
+			         "Building of host id failed\n");
+
 		while (ping) {
 			int ln = hip_get_param_contents_len(ping);
 			if (hip_get_param_type(ping) != HIP_PARAM_ECHO_REQUEST_M)
