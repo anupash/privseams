@@ -3,6 +3,7 @@
 
 #include <netinet/in.h>
 #include <netinet/in.h>
+#include <linux/types.h>
 #include <linux/netfilter_ipv6.h>
 
 #include "debug.h"
