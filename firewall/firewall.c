@@ -1529,24 +1529,24 @@ int main(int argc, char **argv)
 	// create firewall queue handles for IPv4 traffic
 	// FIXME died handle will still be used below
 	h4 = ipq_create_handle(0, PF_INET);
-	HIP_DEBUG("IPQ error: %s \n", ipq_errstr());
+	_HIP_DEBUG("IPQ error: %s \n", ipq_errstr());
 	if (!h4)
 		die(h4);
 		
 	status = ipq_set_mode(h4, IPQ_COPY_PACKET, BUFSIZE);
-	HIP_DEBUG("IPQ error: %s \n", ipq_errstr());
+	_HIP_DEBUG("IPQ error: %s \n", ipq_errstr());
 	if (status < 0)
 		die(h4);
 
 	// create firewall queue handles for IPv6 traffic
 	// FIXME died handle will still be used below
 	h6 = ipq_create_handle(0, PF_INET6);
-	HIP_DEBUG("IPQ error: %s \n", ipq_errstr());
+	_HIP_DEBUG("IPQ error: %s \n", ipq_errstr());
 	
 	if (!h6)
 		die(h6);
 	status = ipq_set_mode(h6, IPQ_COPY_PACKET, BUFSIZE);
-	HIP_DEBUG("IPQ error: %s \n", ipq_errstr());
+	_HIP_DEBUG("IPQ error: %s \n", ipq_errstr());
 	if (status < 0)
 		die(h6);
 

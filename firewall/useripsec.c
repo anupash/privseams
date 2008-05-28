@@ -145,7 +145,7 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	preferred_local_addr = (struct in6_addr*)malloc(sizeof(struct in6_addr));
 	preferred_peer_addr = (struct in6_addr*)malloc(sizeof(struct in6_addr));
 	memset(preferred_local_addr, 0, sizeof(struct in6_addr));
-	memset(	preferred_peer_addr, 0, sizeof(struct in6_addr));
+	memset(preferred_peer_addr, 0, sizeof(struct in6_addr));
 			
 	HIP_DEBUG_HIT("src_hit: ", &ctx->src);
 	HIP_DEBUG_HIT("dst_hit: ", &ctx->dst);
@@ -165,8 +165,12 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 			// TODO this will result in a SEGFAULT
 			//if (buffer_packet(&sockaddr_peer_hit, ctx->ipq_packet->payload, ctx->ipq_packet->data_len))
 				err = pfkey_send_acquire((struct sockaddr *) &sockaddr_peer_hit);
+				
+			// as we don't buffer the packet right now, we have to drop it
+			// due to not routable addresses
+			err = 1;
 			
-			// don't process this message any further for now
+			// don't process this message any further
 			goto end_err;
 	}
 		
@@ -183,20 +187,23 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	if (err)
 		goto end_err;
 	
+	HIP_DEBUG_HIT("preferred_local_addr: ", preferred_local_addr);
+	HIP_DEBUG_HIT("preferred_peer_addr: ", preferred_peer_addr);
+	
 	// check preferred addresses for the address type of the output
 	if (IN6_IS_ADDR_V4MAPPED(preferred_local_addr)
 			&& IN6_IS_ADDR_V4MAPPED(preferred_peer_addr))
 	{
-		HIP_DEBUG("out_ip_version is IPv4");
+		HIP_DEBUG("out_ip_version is IPv4\n");
 		out_ip_version = 4;
 	} else if (!IN6_IS_ADDR_V4MAPPED(preferred_local_addr)
 			&& !IN6_IS_ADDR_V4MAPPED(preferred_peer_addr))
 	{
-		HIP_DEBUG("out_ip_version is IPv6");
+		HIP_DEBUG("out_ip_version is IPv6\n");
 		out_ip_version = 6;
 	} else
 	{
-		HIP_ERROR("bad address combination");
+		HIP_ERROR("bad address combination\n");
 		
 		err = 1;
 		goto end_err;
@@ -219,8 +226,8 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 						hip_sockaddr_len(preferred_peer_addr));
 #endif
 	
-	if (err < 0) {
-		HIP_DEBUG("hip_esp_output(): sendto() failed \n");
+	if (err) {
+		HIP_DEBUG("hip_esp_output(): sendto() failed\n");
 	} else
 	{
 		// update SA statistics for replay protection etc
@@ -362,25 +369,26 @@ int pfkey_send_acquire(struct sockaddr *target)
 int get_preferred_addr(sockaddr_list *addr_list, struct in6_addr *preferred_addr)
 {
 	int err = 0;
-	struct sockaddr_in sockaddr_in;
-	struct sockaddr_in6 sockaddr_in6;
+	struct sockaddr_in *sockaddr_in = NULL;
+	struct sockaddr_in6 *sockaddr_in6 = NULL;
 	preferred_addr = NULL;
 	
 	while (addr_list != NULL)
 	{
 		if (addr_list->preferred)
 		{
-			HIP_DEBUG("found preferred src_addr");
+			HIP_DEBUG("found preferred src_addr\n");
 			
 			if (addr_list->addr.ss_family == AF_INET)
 			{
-				sockaddr_in = (struct sockaddr_in)addr_list->addr;
-				IPV4_TO_IPV6_MAP(sockaddr_in.sin_addr, preferred_addr);
+				sockaddr_in = (struct sockaddr_in *)&addr_list->addr;
+				IPV4_TO_IPV6_MAP(&sockaddr_in->sin_addr, preferred_addr);
 				
 			} else if (addr_list->addr.ss_family == AF_INET6)
 			{
-				sockaddr_in6 = (struct sockaddr_in6)addr_list->addr;
-				ipv6_addr_copy(preferred_addr, sockaddr_in6.sin6_addr);
+				
+				sockaddr_in6 = (struct sockaddr_in6 *)&addr_list->addr;
+				ipv6_addr_copy(preferred_addr, &sockaddr_in6->sin6_addr);
 				
 			} else
 			{

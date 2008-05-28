@@ -48,7 +48,7 @@ typedef __u8 hip_hit [sizeof(hip_hit_t)];  /* 16-byte (128 bit) Host Identity Ta
 
 /* default 3 is used to for HIPL HIP_ESP_OVER_UDP */
 
-#define IPSEC_MODE 0
+#define IPSEC_MODE 3
 
 
 
