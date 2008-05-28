@@ -13,7 +13,11 @@ fi
 echo 'Creating SERVICE...'
 mkdir -p SERVICE
 
-if test -r /etc/inittab
+if test -d /etc/event.d
+then
+  cp package/boot.upstart /etc/event.d/daemontools
+  initctl start daemontools
+elif test -r /etc/inittab
 then
   /usr/sbin/setlock /etc/inittab package/run.inittab
 else
