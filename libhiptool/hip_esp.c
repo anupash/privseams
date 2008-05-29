@@ -48,7 +48,7 @@
 //#include <hip/hip_funcs.h>
 #include "hip_usermode.h"
 #include "hip_sadb.h"
-#include "misc.h"
+
 
 
 #include <sys/time.h>
@@ -65,6 +65,7 @@
 #endif
 
 #include "hip_esp.h"
+#include "utils.h"
 
 /*
  * hip_esp_output()
@@ -1816,9 +1817,15 @@ void add_eth_header(__u8 *data, __u64 src, __u64 dst, __u32 type)
 void add_ipv4_header(struct in6_addr *src_addr, struct in6_addr *dst_addr,
 		int packet_len, int next_hdr, struct ip *ip_hdr)
 {
-	// TODO convert to correct __uXX values
+	struct in_addr src_in_addr;
+	struct in_addr dst_in_addr;
+	IPV6_TO_IPV4_MAP(src_addr, &src_in_addr);
+	IPV6_TO_IPV4_MAP(dst_addr, &dst_in_addr);
+	
+	// TODO convert rest to correct values
 	// set changed values
 	ip_hdr->ip_v = 4;
+	/* assume no options */
 	ip_hdr->ip_hl = 5;
 	ip_hdr->ip_tos = 0;
 	ip_hdr->ip_len = htons(packet_len);
@@ -1828,10 +1835,9 @@ void add_ipv4_header(struct in6_addr *src_addr, struct in6_addr *dst_addr,
 	ip_hdr->ip_ttl = 255;
 	ip_hdr->ip_p = next_hdr;
 	ip_hdr->ip_sum = 0;
-	/* assume host byte order
-	 * NOTE: IPv4 is in the last 32 bits */
-	ip_hdr->ip_src.s_addr = htonl(src_addr->in6_u.u6_addr32[3]);
-	ip_hdr->ip_dst.s_addr = htonl(dst_addr->in6_u.u6_addr32[3]);
+	/* assume host byte order */
+	ip_hdr->ip_src.s_addr = htonl(src_in_addr.s_addr);
+	ip_hdr->ip_dst.s_addr = htonl(dst_in_addr.s_addr);
 
 	/* recalculate the header checksum */
 	//ip_hdr->ip_sum = ip_fast_csum((__u8*)ip_hdr, ip_hdr->ip_hl);

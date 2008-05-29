@@ -1,8 +1,7 @@
-
-
 #ifndef IPSEC_USERSPACE_API_H
 #define IPSEC_USERSPACE_API_H
 
+// TODO clean up
 #include <time.h>
 #include <netdb.h>
 //#include <net/if.h> /* Excluded for RH/Fedora compilation */
@@ -49,24 +48,6 @@ typedef __u8 hip_hit [sizeof(hip_hit_t)];  /* 16-byte (128 bit) Host Identity Ta
 /* default 3 is used to for HIPL HIP_ESP_OVER_UDP */
 
 #define IPSEC_MODE 3
-
-
-
-
-__u16 checksum_magic(const hip_hit *i, const hip_hit *r);
-
-
-int hipl_userspace_ipsec_api_wrapper_sadb_add(struct in6_addr *saddr,
-				     struct in6_addr *daddr,
-				     struct in6_addr *src_hit, 
-				     struct in6_addr *dst_hit,
-				     uint32_t *spi, int ealg,
-				     struct hip_crypto_key *enckey,
-				     struct hip_crypto_key *authkey,
-				     int already_acquired,
-				     int direction, int update,
-				     int sport, int dport);
-
 
 uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 			      struct in6_addr *src_hit, struct in6_addr *dst_hit,

@@ -1650,11 +1650,14 @@ int hip_sa_addr_len(void *sockaddr) {
 }
 
 
-/* conversion function from in6_addr to sockaddr */
-void hip_addr_to_sockaddr(struct in6_addr *addr, struct sockaddr *sa)
+/* conversion function from in6_addr to sockaddr_storage
+ * 
+ * NOTE: sockaddr too small to store sockaddr_in6 */
+void hip_addr_to_sockaddr(struct in6_addr *addr, struct sockaddr_storage *sa)
 {
 	if (IN6_IS_ADDR_V4MAPPED(addr)) {
 		struct sockaddr_in *in = (struct sockaddr_in *) sa;
+		HIP_DEBUG("\n");
 		memset(in, 0, sizeof(struct sockaddr_in));
 		in->sin_family = AF_INET;
 		IPV6_TO_IPV4_MAP(addr, &in->sin_addr);
@@ -1859,16 +1862,17 @@ int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
 	struct hip_common *msg = NULL;
 	int err = 0;
 
-	HIP_DEBUG_HIT("src hit is: ", src_hit);
-	HIP_DEBUG_IN6ADDR("src ip is: ", src_ip);
-	HIP_DEBUG_HIT("dst hit is: ", dst_hit);
-	HIP_DEBUG_IN6ADDR("dst ip  is: ", dst_ip);
+	HIP_DEBUG_HIT("src_hit is: ", src_hit);
+	HIP_DEBUG_IN6ADDR("src_ip is: ", src_ip);
+	HIP_DEBUG_HIT("dst_hit is: ", dst_hit);
+	HIP_DEBUG_IN6ADDR("dst_ip  is: ", dst_ip);
 	
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 	
 	HIP_IFEL(!dst_hit && !dst_ip, -1, "neither destination hit nor ip provided\n");
 	
-	// NOTE: we need this order in order to process the icoming message correctly
+	// NOTE: we need this sequence in order to process the icoming message correctly
+	
 	// destination HIT is obligatory or opportunistic BEX
 	if (dst_hit)
 		HIP_IFEL(hip_build_param_contents(msg, (void *)(dst_hit),
@@ -1903,13 +1907,13 @@ int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
 
 	HIP_DUMP_MSG(msg);
 	
-	/* send and receive msg to/from hipd */
+	/* send msg to hipd and receive corresponding reply */
 	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send_recv msg failed\n");
 	_HIP_DEBUG("send_recv msg succeed\n");
 
 
 	/* check error value */
-	HIP_IFEL(hip_get_msg_err(msg), -1, "Got erroneous message!\n");
+	HIP_IFEL(hip_get_msg_err(msg), -1, "hipd returned error message!\n");
 	
 	HIP_DEBUG("Send_recv msg succeed \n");
 	
