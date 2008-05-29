@@ -27,11 +27,15 @@
  *
  * Please fix it if you know it is safe to do so.
  * -Lauri 26.09.2007 14:43
+ *
+ * This is not called from anywhere, so if 0 --Samu
  */
+#if 0
 static int hip_tmpname(char *fname) {
 	memcpy(fname, HIP_TMP_FNAME_TEMPLATE, HIP_TMP_FNAME_LEN);     
 	return(mkstemp(fname));      
 } 
+#endif
 
 /**
  * hip_tmpname_gui: 
@@ -43,13 +47,17 @@ static int hip_tmpname(char *fname) {
  * @return 0 if the unique filename is correctly assigned; -1 on error.
  *
  * -Alberto
+ *
+ * This is not called from anywhere, so if 0 -- Samu
  */
+#if 0
 static int hip_tmpname_gui(char *fname) {
         int ret = 0;
 	memcpy(fname, HIP_TMP_FNAME_TEMPLATE, HIP_TMP_FNAME_LEN);        
 	if (mktemp(fname) == NULL) ret = -1;
        	return(ret); 
 } 
+#endif
 
 /*
  * HIP header and parameter related constants and structures.

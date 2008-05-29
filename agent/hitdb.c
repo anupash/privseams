@@ -372,7 +372,9 @@ int hit_db_del(char *n)
 	HIT_Remote *r1, *r2;
 	char name[MAX_NAME_LEN + 1], group_name[MAX_NAME_LEN + 1];
 	int err = 0;
-	
+        char delete_from[256];        
+	extern sqlite3 * agent_db;
+
 	/* Check that database is not empty. */
 	HIP_IFEL(remote_db_n < 1, -1, "Remote database is empty, should not happen!\n");
 	
@@ -419,6 +421,11 @@ int hit_db_del(char *n)
 		}
 		else err = -1;
 	}
+        /* Mirror the delete to the db on disk */
+        sprintf(delete_from,"DELETE FROM remote WHERE rname = %s;",name);
+        _HIP_DEBUG("DEL :: %s\n",delete_from);
+        HIP_IFEL(hip_sqlite_delete_from_table(agent_db, delete_from),
+                 -1, "Failed to execute delete query on remote table\n"); 
 
 out_err:
 	if (err) _HIP_DEBUG("Deleting remote HIT failed: %s\n", name);
@@ -845,6 +852,8 @@ int hit_db_del_rgroup(char *name)
 	/* Variables. */
 	HIT_Group *g, *g2;
 	int err = 0;
+        char delete_from[256];
+	extern sqlite3 * agent_db;
 
 	/* Find group from database first. */
 	g = hit_db_find_rgroup(name);
@@ -861,17 +870,24 @@ int hit_db_del_rgroup(char *name)
 		/* Find previous group from database. */
 		g2 = group_db;
 		while (g2->next != (void *)g && g2) g2 = (HIT_Group *)g2->next;
-		HIP_IFEL(!g2, -1, "Could not find previous group for group \"%s\"!\n", name);
+		HIP_IFEL(!g2, -1, "Could not find previous group for group \"%s\"!\n", 
+                         name);
 		g2->next = g->next;
 		if (g == group_db_last) group_db_last = g2;
 	}
-	
+	/* Mirror the delete to the db on disk */
+        sprintf(delete_from,"DELETE FROM groups WHERE gname = '%s';",name);
+        _HIP_DEBUG("DEL :: %s\n",delete_from);
+        HIP_IFEL(hip_sqlite_delete_from_table(agent_db, delete_from),
+                 -1, "Failed to execute delete query group table\n"); 
+
 	gui_group_remote_del(name);
 	free(g);
 	group_db_n--;
 
 	/* If this was last group, (re-)create default group. */
-	if (group_db_n < 1) hit_db_add_rgroup(lang_get("default-group-name"), local_db, HIT_ACCEPT, 0);
+	if (group_db_n < 1) 
+                hit_db_add_rgroup(lang_get("default-group-name"), local_db, HIT_ACCEPT, 0);
 	
 out_err:
 	return (err);
