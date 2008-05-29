@@ -4,14 +4,9 @@
 #include <stdio.h>
 #include <glib/gthread.h>
 #include <sys/un.h>
-
 #include <errno.h>
 #include <stddef.h>
 #include <sys/socket.h>
-#include <netinet/tcp.h>
-#include <netinet/udp.h>
-#include <netinet/ip_icmp.h>
-#include <linux/icmpv6.h>
 
 #include "builder.h"
 #include "protodefs.h"

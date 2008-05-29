@@ -93,7 +93,6 @@ extern struct sockaddr_in6 hip_firewall_addr;
 
 extern int is_active_handover;
 
-
 int hip_agent_is_alive();
 
 int hip_firewall_is_alive();
@@ -111,6 +110,7 @@ int hip_sock_recv_firewall(void);
 
 /* Functions for handling outgoing packets. */
 int hip_sendto_firewall(const struct hip_common *msg);
+
 
 #define IPV4_HDR_SIZE 20
 

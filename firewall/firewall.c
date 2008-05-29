@@ -825,7 +825,7 @@ int filter_esp(const struct in6_addr * dst_addr, struct hip_esp * esp,
 		HIP_DEBUG("falling back to default HIP/ESP behavior, target %d\n",
 				accept_hip_esp_traffic_by_default);
 		
-		verdict = accept_hip_esp_traffic_by_default;
+		verdict = 1;//tere accept_hip_esp_traffic_by_default;
 	}
 	
 	//release rule list
@@ -1564,8 +1564,13 @@ int main(int argc, char **argv)
 			}
 
 			HIP_ASSERT(n == len);
-
+			
 			if (ntohs(sock_addr.sin6_port) != HIP_DAEMON_LOCAL_PORT) {
+			  	int type = hip_get_msg_type(msg);
+			        if (type == SO_HIP_FIREWALL_BEX_DONE){
+				  HIP_DEBUG(".....................SO_HIP_FIREWALL_BEX_DONE\n");
+				  HIP_DEBUG("%d == %d\n", ntohs(sock_addr.sin6_port), HIP_DAEMON_LOCAL_PORT);
+				}
 				HIP_DEBUG("Drop, message not from hipd\n");
 				err = -1;
 				continue;

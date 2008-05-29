@@ -231,7 +231,7 @@ int hipd_init(int flush_ipsec, int killold)
 	
 	HIP_IFEL(hip_init_raw_sock_v6(&hip_raw_sock_v6), -1, "raw sock v6\n");
 	HIP_IFEL(hip_init_raw_sock_v4(&hip_raw_sock_v4), -1, "raw sock v4\n");
-	HIP_IFEL(hip_init_nat_sock_udp(&hip_nat_sock_udp), -1, "raw sock udp\n");
+	HIP_IFEL(hip_init_nat_sock_udp(&hip_nat_sock_udp), -1, "raw sock udp\n");		
 
 	HIP_DEBUG("hip_raw_sock = %d\n", hip_raw_sock_v6);
 	HIP_DEBUG("hip_raw_sock_v4 = %d\n", hip_raw_sock_v4);
@@ -269,7 +269,7 @@ int hipd_init(int flush_ipsec, int killold)
 		      sizeof(daemon_addr)), -1, "Bind on daemon addr failed\n");
 
 	hip_load_configuration();
-
+       
         dhterr = 0;
         dhterr = hip_init_dht();
         if (dhterr < 0) HIP_DEBUG("Initializing DHT returned error\n");
@@ -295,6 +295,8 @@ int hipd_init(int flush_ipsec, int killold)
 		hip_i3_init(/*&peer_hit*/);
 	}
 #endif
+
+	hip_firewall_sock_fd = hip_firewall_sock_lsi_fd = hip_user_sock;
 
 out_err:
 	return err;

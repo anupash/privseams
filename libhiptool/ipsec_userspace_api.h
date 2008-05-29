@@ -36,8 +36,6 @@
 
 // #include "hip_usermode.h"
 
-
-
 typedef __u8 hip_hit [sizeof(hip_hit_t)];  /* 16-byte (128 bit) Host Identity Tag */
 
 

@@ -2,7 +2,6 @@
 #define HIP_LSI_H
 
 #include <libipq.h>
-#include "firewall_control.h"
 #include "firewalldb.h"
 
 int is_packet_reinjection(struct in_addr *ip_src);

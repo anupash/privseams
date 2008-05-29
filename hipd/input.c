@@ -2385,6 +2385,11 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	
 	
  out_err:
+	if (entry->state == HIP_STATE_ESTABLISHED)
+		hip_firewall_add_bex_data(entry, &entry->hit_our, &entry->hit_peer);
+	else
+		hip_firewall_add_bex_data(entry, NULL, NULL);
+
 	if (ctx) {
 		HIP_FREE(ctx);
 	}

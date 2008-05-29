@@ -640,16 +640,16 @@ struct hip_tlv_common *hip_get_next_param(const struct hip_common *msg,
 		HIP_ERROR("msg null\n");
 		goto out;
 	}
-
+       
 	if (current_param == NULL) {
-		pos = (void *) msg;
+		pos = (void *) msg;		
 	}
 
 	if (pos == msg)
 		pos += sizeof(struct hip_common);
 	else
-		pos += hip_get_param_total_len(current_param);
-
+		pos += hip_get_param_total_len(current_param);	       
+	
 	next_param = (struct hip_tlv_common *) pos;
 
 	/* check that the next parameter does not point

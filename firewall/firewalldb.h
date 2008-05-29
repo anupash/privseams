@@ -6,12 +6,17 @@
 #include <glib.h>
 #include <glib/glist.h>
 #include <string.h>
+#include <sys/socket.h>
+#include <netinet/tcp.h>
+#include <netinet/udp.h>
+#include <netinet/ip_icmp.h>
+#include <linux/icmpv6.h>
 #include "ife.h"
 #include "state.h"
 #include "debug.h"
 #include "helpers.h"
 #include "conntrack.h"
-#include "utils.h"
+//#include "utils.h"
 #include "misc.h"
 
 HIP_HASHTABLE *firewall_lsi_hit_db;
@@ -37,4 +42,17 @@ firewall_hl_t *firewall_hit_lsi_db_match(hip_lsi_t *lsi_peer);
 int firewall_add_hit_lsi(struct in6_addr *hit_our, struct in6_addr *hit_peer, hip_lsi_t *lsi, int state);
 int firewall_set_bex_state(struct in6_addr *hit_s, struct in6_addr *hit_r, int state);
 void hip_firewall_delete_hldb(void);
+
+/*Raw sockets operations*/
+void firewall_init_raw_sockets(void);
+/*icmp*/
+int firewall_init_raw_sock_icmp_outbound(int *firewall_raw_sock_v6);
+int firewall_init_raw_sock_icmp_v4(int *firewall_raw_sock_v4);
+int firewall_init_raw_sock_icmp_v6(int *firewall_raw_sock_v6);
+/*udp*/
+int firewall_init_raw_sock_udp_v4(int *firewall_raw_sock_v4);
+int firewall_init_raw_sock_udp_v6(int *firewall_raw_sock_v6);
+/*tcp*/
+int firewall_init_raw_sock_tcp_v6(int *firewall_raw_sock_v6);
+int firewall_init_raw_sock_tcp_v4(int *firewall_raw_sock_v4);
 #endif
