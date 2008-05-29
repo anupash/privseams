@@ -714,125 +714,75 @@ void drop_packet(struct ipq_handle *handle, unsigned long packetId)
 }
 
 
-/* filter esp packet according to rules.
- * return verdict
- */
+
+/* We only match the esp packet with the state in the connection
+  * tracking. There is no need to match the rule-set again as we
+  * already filtered the HIP control packets. If we wanted to
+  * disallow a connection, we should do it there! */
 int filter_esp(const struct in6_addr * dst_addr, struct hip_esp * esp,
-	       unsigned int hook, const char * in_if, const char * out_if)
+	       unsigned int hook)
 {
-	// list with all rules for hook (= IN / OUT / FORWARD)
-	struct _GList * list = (struct _GList *) read_rules(hook);
-	struct rule * rule= NULL;
-	// assume matching rule
-	int match = 1;
-	// block traffic by default
-	int verdict = 0;
-	
-	_HIP_DEBUG("filter_esp:\n");
-	
-	// match all rules
-	while (list != NULL)
-	{
-		match = 1;
-		rule = (struct rule *) list->data;
-		
-		print_rule(rule);
-		HIP_DEBUG_HIT("dst addr: ", dst_addr);
-		HIP_DEBUG("SPI: %d\n", ntohl(esp->esp_spi));
-		
-		// type not valid with ESP packets -> next rule
-		if (rule->type)
-		{
-			HIP_DEBUG("type option not valid for esp\n");
-			
-			match = 0;
-		}
-		
-		// we need state from BEX or UPDATE, if src or dst HITs are provided in rule
-		// otherwise we got nothing to match this rule with -> next rule
-		if ((rule->src_hit || rule->dst_hit) && !rule->state)
-		{
-			//not valid with ESP packet
-			HIP_DEBUG("hit options without state option not valid for esp\n");
-			
-			match = 0;
-		}
-		
-		// TODO comment
-		if (match && rule->in_if)
-		{
-			if (!match_string(rule->in_if->value, in_if,
-					  rule->in_if->boolean))
-			{
-				match = 0;
-			}
-			
-			HIP_DEBUG("in_if rule: %s, packet: %s, boolean: %d, match: %d \n",
-				   rule->in_if->value, in_if, rule->in_if->boolean, match);
-		}
-		
-		// TODO comment
-		if (match && rule->out_if)
-		{
-			if (!match_string(rule->out_if->value, out_if,
-					  rule->out_if->boolean))
-			{
-				match = 0;
-			}
-			
-			HIP_DEBUG("out_if rule: %s, packet: %s, boolean: %d, match: %d \n",
-					rule->out_if->value, out_if, rule->out_if->boolean, match);
-		}
-			
-		// must be last, so match and verdict known here
-		if (match && rule->state)
-		{
-			//the entire rule is passed as argument as hits can only be 
-			//filtered with the state information
-			if (!filter_esp_state(dst_addr, esp, rule))
-			{
-				match = 0;
-				
-				HIP_DEBUG("state: rule %d, boolean %d, match %d\n",
-					   rule->state->int_opt.value,
-					   rule->state->int_opt.boolean,
-					   match);
-				
-				// FIXME why break???
-				break;
-			}
-		}
-		
-		// if a match, no need to check further rules
-		if (match)
-		{
-			_HIP_DEBUG("match found\n");
-			break;
-		}
-		
-		// else try to match next rule
-		list = list->next;
-	}
-		
-	//was there a rule matching the packet
-	if (rule && match)
-	{
-		HIP_DEBUG("packet matched rule, target %d\n", rule->accept);
-		
-		verdict = rule->accept;
-	} else
-	{
-		HIP_DEBUG("falling back to default HIP/ESP behavior, target %d\n",
-				accept_hip_esp_traffic_by_default);
-		
-		verdict = 1;//tere accept_hip_esp_traffic_by_default;
-	}
-	
-	//release rule list
-	read_rules_exit(0);
-	
-	return verdict;
-}
+ 	// drop packet by default
+ 	int verdict = 0; 
+ 	int use_escrow = 0;
+ 	struct _GList * list = NULL;
+ 	struct rule * rule = NULL;
+ 	
+ 	// if key escrow is active we have to handle it here too
+ 	if (is_escrow_active())
+ 	{
+ 		// there might be some rules in the rule-set which specify
+ 		// HITs for which decryption should be done
+ 		
+ 		// list with all rules for hook (= IN / OUT / FORWARD)
+ 		list = (struct _GList *) read_rules(hook);
+ 		rule = NULL;
+ 		
+ 		// match all rules
+ 		while (list != NULL)
+ 		{
+ 			rule = (struct rule *) list->data;
+ 			
+ 			// FIXME this does only work if 1. rule with rule->state->decrypt_contents
+ 			// has matching src or dst addresses
+ 			if (rule->state)
+ 			{
+ 				// search the rule-set for a rule with escow set
+ 				if (rule->state->decrypt_contents)
+ 				{
+ 					// check if rule has valid state specified for data transfer
+ 					if((rule->state->int_opt.value == CONN_NEW && rule->state->int_opt.boolean) ||
+ 							(rule->state->int_opt.value == CONN_ESTABLISHED && !rule->state->int_opt.boolean))
+ 					{
+ 						HIP_ERROR("INVALID rule: specified state incompatible with --decrypt_contents\n");
+ 						
+ 						continue;
+ 					}
+ 					else
+ 					{
+ 						use_escrow = 1;
+ 						
+ 						break;
+ 					}
+ 				}
+ 			}
+ 		}
+ 	}
+ 	
+ 	//the entire rule is passed as argument as hits can only be 
+ 	//filtered with the state information
+ 	if (filter_esp_state(dst_addr, esp, rule, use_escrow))
+ 	{
+ 		verdict = 1;
+ 		
+ 		HIP_DEBUG("ESP packet successfully passed filtering\n");
+ 	}
+ 	
+  out_err:
+   	return verdict;
+
+} 	
+
 
 int bex_traffic(hip_hdr_type_t type_hdr){
 	if (type_hdr == HIP_I1 || type_hdr == HIP_R1 || 
@@ -1099,12 +1049,8 @@ int hip_fw_handle_esp_output(hip_fw_context_t *ctx) {
 	HIP_DEBUG("\n");
 	HIP_DEBUG("........................Hei verdict - %d\n",verdict);
 	HIP_DEBUG("......................... hip_userspace_ipsec %d\n", hip_userspace_ipsec);
-	verdict = filter_esp(&ctx->dst, 
-			 		ctx->transport_hdr.esp,
-			 		ctx->ipq_packet->hook,
-			 		ctx->ipq_packet->indev_name,
-			 		ctx->ipq_packet->outdev_name);
-
+	verdict = filter_esp(&ctx->dst, ctx->transport_hdr.esp, ctx->ipq_packet->hook);
+			 		
 	return verdict;
 }
 
@@ -1159,11 +1105,8 @@ int hip_fw_handle_esp_input(hip_fw_context_t *ctx) {
 						       ctx->ip_hdr.ipv4,
 						       ctx->ipq_packet);
 	} else {
-		verdict = filter_esp(&ctx->dst, 
-					 ctx->transport_hdr.esp,
-					 ctx->ipq_packet->hook,
-					 ctx->ipq_packet->indev_name,
-					 ctx->ipq_packet->outdev_name);
+		verdict = filter_esp(&ctx->dst, ctx->transport_hdr.esp,
+				     ctx->ipq_packet->hook);
 	}
 
  out_err:
