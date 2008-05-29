@@ -1655,15 +1655,14 @@ int hip_sa_addr_len(void *sockaddr) {
  * NOTE: sockaddr too small to store sockaddr_in6 */
 void hip_addr_to_sockaddr(struct in6_addr *addr, struct sockaddr_storage *sa)
 {
+	memset(sa, 0, sizeof(struct sockaddr_storage));
+	
 	if (IN6_IS_ADDR_V4MAPPED(addr)) {
 		struct sockaddr_in *in = (struct sockaddr_in *) sa;
-		HIP_DEBUG("\n");
-		memset(in, 0, sizeof(struct sockaddr_in));
 		in->sin_family = AF_INET;
 		IPV6_TO_IPV4_MAP(addr, &in->sin_addr);
 	} else {
 		struct sockaddr_in6 *in6 = (struct sockaddr_in6 *) sa;
-		memset(in6, 0, sizeof(struct sockaddr_in6));
 		in6->sin6_family = AF_INET6;
 		ipv6_addr_copy(&in6->sin6_addr, addr);
 	}

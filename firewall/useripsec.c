@@ -133,7 +133,7 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	HIP_DEBUG_HIT("dst_hit: ", &ctx->dst);
 
 	HIP_IFEL(userspace_ipsec_init(), -1, "failed to initialize userspace ipsec");
-
+	
 	// re-use allocated esp_packet memory space
 	memset(esp_packet, 0, ESP_PACKET_SIZE);
 	memset(preferred_local_addr, 0, sizeof(struct in6_addr));
@@ -172,9 +172,6 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	// get preferred routable addresses
 	HIP_IFE(get_preferred_addr(entry->src_addrs, preferred_local_addr), -1);
 	HIP_IFE(get_preferred_addr(entry->dst_addrs, preferred_peer_addr), -1);	
-	
-	HIP_DEBUG_HIT("preferred_local_addr: ", preferred_local_addr);
-	HIP_DEBUG_HIT("preferred_peer_addr: ", preferred_peer_addr);
 	
 	// check preferred addresses for the address type of the output
 	if (IN6_IS_ADDR_V4MAPPED(preferred_local_addr)
@@ -403,8 +400,9 @@ int hipl_userspace_ipsec_sadb_add_wrapper(struct in6_addr *saddr,
 	hip_addr_to_sockaddr(src_hit, &inner_src); /* source HIT conversion */
 	hip_addr_to_sockaddr(dst_hit, &inner_dst); /* destination HIT conversion */
 	
-	HIP_DEBUG_INADDR("source sockaddr (IPv4): ", hip_cast_sa_addr(&src));
-	HIP_DEBUG_INADDR("dest sockaddr (IPv4): ", hip_cast_sa_addr(&dst));
+	struct in_addr * in_src = hip_cast_sa_addr(&src);
+	
+	HIP_DEBUG_INADDR("source sockaddr (IPv4): ", in_src);
 	
 	/* hit_magic is the 16-bit sum of the bytes of both HITs. 
 	 * the checksum is calculated as other Internet checksum, according to 
@@ -522,11 +520,7 @@ __u16 checksum_magic(const hip_hit *i, const hip_hit *r)
 int get_preferred_addr(sockaddr_list *addr_list, struct in6_addr *preferred_addr)
 {
 	int err = 0;
-	struct sockaddr_in *sockaddr_in = NULL;
-	struct sockaddr_in6 *sockaddr_in6 = NULL;
-	preferred_addr = NULL;
 	
-	int i = 0;
 	while (addr_list != NULL)
 	{
 		// TODO find preferred address and don't select first one in list
@@ -536,16 +530,15 @@ int get_preferred_addr(sockaddr_list *addr_list, struct in6_addr *preferred_addr
 		
 			if (addr_list->addr.ss_family == AF_INET)
 			{
-				sockaddr_in = (struct sockaddr_in *)&addr_list->addr;
-				HIP_DEBUG_IN6ADDR("preferred_addr (IPv4): ", sockaddr_in->sin_addr);
-				IPV4_TO_IPV6_MAP(&sockaddr_in->sin_addr, preferred_addr);
+				IPV4_TO_IPV6_MAP((struct in_addr *)hip_cast_sa_addr(&addr_list->addr),
+						preferred_addr);
+				
 				HIP_DEBUG_HIT("preferred_addr (IPv4): ", preferred_addr);
 				
 			} else if (addr_list->addr.ss_family == AF_INET6)
 			{
-				sockaddr_in6 = (struct sockaddr_in6 *)&addr_list->addr;
-				HIP_DEBUG_HIT("preferred_addr (IPv6): ", sockaddr_in6->sin6_addr);
-				ipv6_addr_copy(preferred_addr, &sockaddr_in6->sin6_addr);
+				preferred_addr = (struct in6_addr *)hip_cast_sa_addr(&addr_list->addr);
+
 				HIP_DEBUG_HIT("preferred_addr (IPv6): ", preferred_addr);
 				
 			} else
