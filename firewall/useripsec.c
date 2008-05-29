@@ -403,8 +403,8 @@ int hipl_userspace_ipsec_sadb_add_wrapper(struct in6_addr *saddr,
 	hip_addr_to_sockaddr(src_hit, &inner_src); /* source HIT conversion */
 	hip_addr_to_sockaddr(dst_hit, &inner_dst); /* destination HIT conversion */
 	
-	HIP_DEBUG_INADDR("source sockaddr (IPv4): ", ((struct sockaddr_in *)&src)->sin_addr);
-	HIP_DEBUG_INADDR("dest sockaddr (IPv4): ", ((struct sockaddr_in *)&dst)->sin_addr);
+	HIP_DEBUG_INADDR("source sockaddr (IPv4): ", hip_cast_sa_addr(&src));
+	HIP_DEBUG_INADDR("dest sockaddr (IPv4): ", hip_cast_sa_addr(&dst));
 	
 	/* hit_magic is the 16-bit sum of the bytes of both HITs. 
 	 * the checksum is calculated as other Internet checksum, according to 
