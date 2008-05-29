@@ -736,7 +736,7 @@ int filter_esp(const struct in6_addr * dst_addr, struct hip_esp * esp,
 		match = 1;
 		rule = (struct rule *) list->data;
 		
-		//print_rule(rule);
+		print_rule(rule);
 		HIP_DEBUG_HIT("dst addr: ", dst_addr);
 		HIP_DEBUG("SPI: %d\n", ntohl(esp->esp_spi));
 		
@@ -1080,7 +1080,7 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx) {
 
 int hip_fw_handle_hip_output(hip_fw_context_t *ctx) {
 	int verdict = accept_hip_esp_traffic_by_default;
-	
+
 	verdict = filter_hip(&ctx->src, 
 					&ctx->dst, 
 					ctx->transport_hdr.hip, 
@@ -1097,7 +1097,8 @@ int hip_fw_handle_esp_output(hip_fw_context_t *ctx) {
 	int verdict = accept_hip_esp_traffic_by_default;
 
 	HIP_DEBUG("\n");
-
+	HIP_DEBUG("........................Hei verdict - %d\n",verdict);
+	HIP_DEBUG("......................... hip_userspace_ipsec %d\n", hip_userspace_ipsec);
 	verdict = filter_esp(&ctx->dst, 
 			 		ctx->transport_hdr.esp,
 			 		ctx->ipq_packet->hook,
