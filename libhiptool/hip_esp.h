@@ -4,9 +4,20 @@
 #include "hip_sadb.h"
 #include "firewall/firewall.h"
 
+// needed for transport layer checksum calculation
+typedef struct _pseudo_header
+{
+	unsigned char src_addr[4];
+	unsigned char dst_addr[4];
+	__u8 zero;
+	__u8 protocol;
+	__u16 packet_length;
+} pseudo_header;
+
+
 long g_read_usec;
 
-int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry, int out_ip_version,
+int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 		int udp_encap, struct timeval *now, struct in6_addr *preferred_local_addr,
 		struct in6_addr *preferred_peer_addr, unsigned char *esp_packet, int *esp_packet_len);
 int hip_esp_input(struct sockaddr *ss_lsi, u8 *buff, int len);
@@ -73,14 +84,6 @@ typedef struct _pseudo_header6
 	__u8 next_hdr;
 } pseudo_header6;
 
-typedef struct _pseudo_header
-{
-	unsigned char src_addr[4];
-	unsigned char dst_addr[4];
-	__u8 zero;
-	__u8 protocol;
-	__u16 packet_length;
-} pseudo_header;
 
 
 

@@ -77,12 +77,12 @@
 
 /* - encrypt payload
  * - set up other headers */
-int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry, int out_ip_version,
+int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 		int udp_encap, struct timeval *now, struct in6_addr *preferred_local_addr,
 		struct in6_addr *preferred_peer_addr, unsigned char *esp_packet, int *esp_packet_len)
 {
 	struct ip *out_ip_hdr = NULL;
-	//struct ip6_hdr *ip6_hdr = NULL; 
+	struct ip6_hdr *ip6_hdr = NULL; 
 	struct udphdr *out_udp_hdr = NULL;
 	struct hip_esp *out_esp_hdr = NULL;
 	int next_hdr_offset = 0;
@@ -91,7 +91,7 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry, int out_ip_vers
 	int elen = 0;
 	
 	// distinguish IPv4 and IPv6 output
-	if (out_ip_version == 4)
+	if (IN6_IS_ADDR_V4MAPPED(preferred_peer_addr))
 	{
 		// calculate offset at which esp data should be located
 		// NOTE: this does _not_ include IPv4 options for the original packet
@@ -135,7 +135,7 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry, int out_ip_vers
 #endif
 
 		// set up esp header defined in firewall_defines.h
-		out_esp_hdr = (struct hip_esp*) ((unsigned char *)esp_packet) + next_hdr_offset;
+		out_esp_hdr = (struct hip_esp *) ((unsigned char *)esp_packet) + next_hdr_offset;
 		out_esp_hdr->esp_spi = htonl(entry->spi);
 		out_esp_hdr->esp_seq = htonl(entry->sequence++);
 		
@@ -143,11 +143,11 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry, int out_ip_vers
 		// length of defined headers
 		*esp_packet_len += next_hdr_offset + sizeof(struct hip_esp);
 
+#if 0
 		// length of data to be encrypted is everything of the original packet
 		// starting at transport layer header
 		elen = ctx->ipq_packet->data_len - sizeof(struct ip);		
 		
-#if 0
 		// encrypt data now
 		pthread_mutex_lock(&entry->rw_lock);
 			
@@ -190,18 +190,21 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry, int out_ip_vers
 
 		// finally we have all the information to set up the missing headers
 		if (udp_encap) {
-			add_ipv4_header(preferred_local_addr, preferred_peer_addr,
-					*esp_packet_len, IPPROTO_UDP, out_ip_hdr);
+			// the length field covers everything starting with UDP header
+			add_udp_header(out_udp_hdr, *esp_packet_len - sizeof(struct ip), entry,
+					preferred_local_addr, preferred_peer_addr);
 			
-			add_udp_header(out_udp_hdr, entry, *esp_packet_len - sizeof(struct ip));
+			// now we can also calculate the csum of the new packet
+			add_ipv4_header(out_ip_hdr, preferred_local_addr, preferred_peer_addr,
+								*esp_packet_len, IPPROTO_UDP);
 		} else
 		{
-			add_ipv4_header(preferred_local_addr, preferred_peer_addr,
-								*esp_packet_len, IPPROTO_ESP, out_ip_hdr);
+			add_ipv4_header(out_ip_hdr, preferred_local_addr, preferred_peer_addr,
+								*esp_packet_len, IPPROTO_ESP);
 		}
 		
 #if 0
-	} else if (out_ip_version == 6)
+	} else
 	{
 		/* we don't support UDP encapsulation for IPv6 right now
 		 * 
@@ -1814,8 +1817,8 @@ void add_eth_header(__u8 *data, __u64 src, __u64 dst, __u32 type)
  * Build an IPv4 header, copying some parameters from an old ip header,
  * src and dst in host byte order. old may be NULL.
  */
-void add_ipv4_header(struct in6_addr *src_addr, struct in6_addr *dst_addr,
-		int packet_len, int next_hdr, struct ip *ip_hdr)
+void add_ipv4_header(struct ip *ip_hdr, struct in6_addr *src_addr, struct in6_addr *dst_addr,
+		int packet_len, int next_hdr)
 {
 	struct in_addr src_in_addr;
 	struct in_addr dst_in_addr;
@@ -1907,70 +1910,50 @@ void add_ipv6_header(__u8 *data, struct sockaddr *src, struct sockaddr *dst,
 }
 #endif
 
-void add_udp_header(struct udphdr *udp_hdr, hip_sadb_entry *entry, int packet_len)
+void add_udp_header(struct udphdr *udp_hdr, int packet_len, hip_sadb_entry *entry,
+		struct in6_addr *src_addr, struct in6_addr *dst_addr)
 {
 	udp_hdr->source = htons(HIP_ESP_UDP_PORT);
-	if ( (udp_hdr->dest = htons(entry->dst_port))==0) {
-		HIP_ERROR("bad UDP dst port number (%u)\n", entry->dst_port);
+	
+	if ((udp_hdr->dest = htons(entry->dst_port)) == 0) {
+		HIP_ERROR("bad UDP dst port number: %u\n", entry->dst_port);
 	}
-	udp_hdr->len = htons((__u16)packet_len);
-#if 0
-	udph->checksum = checksum_udp_packet (out, 
-			    (struct sockaddr*)&entry->src_addrs->addr,
-			    (struct sockaddr*)&entry->dst_addrs->addr);
-#endif
+	
+	udp_hdr->len = htons((u_int16_t)packet_len);
+	
+	// this will create a pseudo header using some information from the ip layer
+	udp_hdr->check = checksum_udp_packet(udp_hdr, src_addr, dst_addr);
 }
 
-#if 0
 /*
  * function checksum_udp_packet()
  *
- * XXX TODO: combine with other checksum functions
+ * XX TODO: combine with other checksum functions
  *
  * Calculates the checksum of a UDP packet with pseudo-header
  * src and dst are IPv4 addresses in network byte order
  */
-__u16 checksum_udp_packet(__u8 *data, struct sockaddr *src, struct sockaddr *dst)
+u_int16_t checksum_udp_packet(struct udphdr *udp_hdr, struct in6_addr *src_addr,
+		struct in6_addr *dst_addr)
 {
-	__u16 checksum = 0;
+	u_int16_t checksum = 0;
 	unsigned long sum = 0;
 	int count, length;
 	unsigned short *p; /* 16-bit */
-	pseudo_header pseudoh;
-	pseudo_header6 pseudoh6;
-	__u32 src_network, dst_network;
-	struct in6_addr *src6, *dst6;
-	struct udphdr* udph = (struct udphdr*) data;
+	pseudo_header pseudo_hdr;
 
-	if (src->sa_family == AF_INET) {
-		/* IPv4 checksum based on UDP-- Section 6.1.2 */
-		src_network = ((struct sockaddr_in*)src)->sin_addr.s_addr;
-		dst_network = ((struct sockaddr_in*)dst)->sin_addr.s_addr;
+	/* IPv4 checksum based on UDP-- Section 6.1.2 */
 	
-		memset(&pseudoh, 0, sizeof(pseudo_header));
-		memcpy(&pseudoh.src_addr, &src_network, 4);
-		memcpy(&pseudoh.dst_addr, &dst_network, 4);
-		pseudoh.protocol = H_PROTO_UDP;
-		length = ntohs(udph->len);
-		pseudoh.packet_length = htons((__u16)length);
+	// setting up pseudo header
+	memset(&pseudo_hdr, 0, sizeof(pseudo_header));
+	IPV6_TO_IPV4_MAP(src_addr, &pseudo_hdr.src_addr);
+	IPV6_TO_IPV4_MAP(dst_addr, &pseudo_hdr.dst_addr);
+	pseudo_hdr.protocol = IPPROTO_UDP;
+	pseudo_hdr.packet_length = udp_hdr->len;
 
-		count = sizeof(pseudo_header); /* count always even number */
-		p = (unsigned short*) &pseudoh;
-	} else {
-		/* IPv6 checksum based on IPv6 pseudo-header */
-		src6 = &((struct sockaddr_in6*)src)->sin6_addr;
-		dst6 = &((struct sockaddr_in6*)dst)->sin6_addr;
+	count = sizeof(pseudo_header); /* count always even number */
+	p = (unsigned short*) &pseudo_hdr;
 	
-		memset(&pseudoh6, 0, sizeof(pseudo_header6));
-		memcpy(&pseudoh6.src_addr[0], src6, 16);
-		memcpy(&pseudoh6.dst_addr[0], dst6, 16);
-		length = ntohs(udph->len);
-		pseudoh6.next_hdr = H_PROTO_UDP;
-		pseudoh6.packet_length = htonl(length);
-		
-		count = sizeof(pseudo_header6); /* count always even number */
-		p = (unsigned short*) &pseudoh6;
-	}
 	/* 
 	 * this checksum algorithm can be found 
 	 * in RFC 1071 section 4.1
@@ -1986,7 +1969,7 @@ __u16 checksum_udp_packet(__u8 *data, struct sockaddr *src, struct sockaddr *dst
 	/* one's complement sum 16-bit words of data */
 	/* log_(NORM, "checksumming %d bytes of data.\n", length); */
 	count = length;
-	p = (unsigned short*) data;
+	p = (unsigned short*) udp_hdr;
 	while (count > 1)  {
 		sum += *p++;
 		count -= 2;
@@ -1999,8 +1982,7 @@ __u16 checksum_udp_packet(__u8 *data, struct sockaddr *src, struct sockaddr *dst
 	while (sum>>16)
 		sum = (sum & 0xffff) + (sum >> 16);
 	/* take the one's complement of the sum */ 
-	checksum = (__u16)(~sum);
+	checksum = (u_int16_t)(~sum);
     
-	return(checksum);
+	return checksum;
 }
-#endif

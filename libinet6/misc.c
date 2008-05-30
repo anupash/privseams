@@ -1854,6 +1854,8 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 /* This builds a msg wich will be sent to the HIPd in order to trigger
  * a BEX there.
  * 
+ * TODO move that to useripsec.c?
+ * 
  * NOTE: Either destination HIT or IP (for opportunistic BEX) has to be provided */
 int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
 		struct in6_addr *src_ip, struct in6_addr *dst_ip)

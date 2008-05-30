@@ -4,19 +4,17 @@
 #include "hip_esp.h"
 #include "utils.h"
 #include <sys/time.h>		/* timeval */
+#include <asm/types.h>		/* __u16, __u32, etc */
 
 #define ESP_PACKET_SIZE 2500
 
 // this is the ESP packet we are about to build
 unsigned char *esp_packet = NULL;
-// the routable addresses
-struct in6_addr *preferred_local_addr = NULL;
-struct in6_addr *preferred_peer_addr = NULL;
 // open sockets in order to re-insert the esp packet into the stack
 int raw_sock_v4 = 0, raw_sock_v6 = 0;
 int is_init = 0;
 
-__u16 checksum_magic(const hip_hit *i, const hip_hit *r);
+__u16 checksum_magic(const struct in6_addr *initiator, const struct in6_addr *receiver);
 
 /* this will initialize the esp_packet buffer and the sockets,
  * they are not set yet */
@@ -30,8 +28,6 @@ int userspace_ipsec_init()
 	if (!is_init)
 	{
 		HIP_IFE(!(esp_packet = (unsigned char *)malloc(ESP_PACKET_SIZE)), -1);
-		HIP_IFE(!(preferred_local_addr = (struct in6_addr *)malloc(sizeof(struct in6_addr))), -1);
-		HIP_IFE(!(preferred_peer_addr = (struct in6_addr *)malloc(sizeof(struct in6_addr))), -1);
 		
 		// open IPv4 raw socket
 		raw_sock_v4 = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
@@ -114,10 +110,16 @@ out_err:
 /* prepares the environment for esp encryption */
 int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 {
-	// peer HIT, sockaddr does not provide enough space for _in6
+	// peer HIT, sockaddr does not provide enough space for sockaddr_in6
 	struct sockaddr_storage sockaddr_peer_hit;
 	// entry matching the peer HIT
 	hip_sadb_entry *entry = NULL;
+	// the routable addresses as used in OpenHIP
+	struct sockaddr_storage preferred_local_sockaddr;
+	struct sockaddr_storage preferred_peer_sockaddr;
+	// the routable addresses as used in HIPL
+	struct in6_addr preferred_local_addr;
+	struct in6_addr preferred_peer_addr;
 	struct timeval now;
 	// TODO hipd should add this info to the SA entries
 	int udp_encap = 0;
@@ -136,8 +138,6 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	
 	// re-use allocated esp_packet memory space
 	memset(esp_packet, 0, ESP_PACKET_SIZE);
-	memset(preferred_local_addr, 0, sizeof(struct in6_addr));
-	memset(preferred_peer_addr, 0, sizeof(struct in6_addr));
 	gettimeofday(&now, NULL);
 	
 	// SAs directing outwards are indexed with the peer's HIT
@@ -154,7 +154,10 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 			// FIXME checks for SA entry again
 			// TODO this will result in a SEGFAULT
 			//if (buffer_packet(&sockaddr_peer_hit, ctx->ipq_packet->payload, ctx->ipq_packet->data_len))
-				err = pfkey_send_acquire((struct sockaddr *) &sockaddr_peer_hit);
+				
+				/* Trigger base exchange providing destination hit only */
+				HIP_IFEL(hip_trigger_bex(NULL, &ctx->dst, NULL, NULL), -1,
+					 "trigger bex\n");
 				
 			// as we don't buffer the packet right now, we have to drop it
 			// due to not routable addresses
@@ -166,21 +169,23 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 		
 	HIP_DEBUG("we have found a SA entry\n");
 	
-	// unbuffer and process buffered packets
+	// unbuffer buffered packets -> re-injects original packets
 	//unbuffer_packets(entry);
 	
 	// get preferred routable addresses
-	HIP_IFE(get_preferred_addr(entry->src_addrs, preferred_local_addr), -1);
-	HIP_IFE(get_preferred_addr(entry->dst_addrs, preferred_peer_addr), -1);	
+	HIP_IFE(get_preferred_sockaddr(entry->src_addrs, &preferred_local_sockaddr), -1);
+	HIP_IFE(get_preferred_sockaddr(entry->dst_addrs, &preferred_peer_sockaddr), -1);
+	HIP_IFE(cast_sockaddr_to_in6_addr(&preferred_local_sockaddr, &preferred_local_addr), -1);
+	HIP_IFE(cast_sockaddr_to_in6_addr(&preferred_peer_sockaddr, &preferred_peer_addr), -1);
 	
 	// check preferred addresses for the address type of the output
-	if (IN6_IS_ADDR_V4MAPPED(preferred_local_addr)
-			&& IN6_IS_ADDR_V4MAPPED(preferred_peer_addr))
+	if (IN6_IS_ADDR_V4MAPPED(&preferred_local_addr)
+			&& IN6_IS_ADDR_V4MAPPED(&preferred_peer_addr))
 	{
 		HIP_DEBUG("out_ip_version is IPv4\n");
 		out_ip_version = 4;
-	} else if (!IN6_IS_ADDR_V4MAPPED(preferred_local_addr)
-			&& !IN6_IS_ADDR_V4MAPPED(preferred_peer_addr))
+	} else if (!IN6_IS_ADDR_V4MAPPED(&preferred_local_addr)
+			&& !IN6_IS_ADDR_V4MAPPED(&preferred_peer_addr))
 	{
 		HIP_DEBUG("out_ip_version is IPv6\n");
 		out_ip_version = 6;
@@ -193,21 +198,19 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	}
 		
 	err = hip_esp_output(ctx, entry, out_ip_version, udp_encap, &now,
-			preferred_local_addr, preferred_peer_addr,
+			&preferred_local_addr, &preferred_peer_addr,
 			esp_packet, &esp_packet_len);
-	
-#if 0
+
 	// send the raw packet -> returns size of the sent packet
 	// TODO check flags
 	if (out_ip_version == 4)
 		err = sendto(raw_sock_v4, esp_packet, esp_packet_len, 0,
-				(struct sockaddr *)preferred_peer_addr,
-				hip_sockaddr_len(preferred_peer_addr));
+				(struct sockaddr *)&preferred_peer_sockaddr,
+				hip_sockaddr_len(&preferred_peer_sockaddr));
 	else
 		err = sendto(raw_sock_v6, esp_packet, esp_packet_len, 0,
-						(struct sockaddr *)preferred_peer_addr),
-						hip_sockaddr_len(preferred_peer_addr));
-#endif
+						(struct sockaddr *)&preferred_peer_sockaddr,
+						hip_sockaddr_len(&preferred_peer_sockaddr));
 	
 	if (err) {
 		HIP_DEBUG("hip_esp_output(): sendto() failed\n");
@@ -330,25 +333,6 @@ int hip_fw_userspace_ipsec_input(int ip_version,
 	return 1;
 }
 
-/* userspace IPsec trigger for the base exchange */
-int pfkey_send_acquire(struct sockaddr *target)
-{
-	hip_hit_t *hit = NULL;
-	int err = 0;
-	
-	// NOTE: this will always return an in6_addr as we are only dealing with HITs here
-	hit = hip_cast_sa_addr(target);
-	
-	HIP_DEBUG_HIT("pfkey_send_acquire hit is: ", hit);
-
-	/* Trigger base exchange */
-	HIP_IFEL(hip_trigger_bex(NULL, hit, NULL, NULL), -1,
-		 "trigger bex\n");
-	
-  out_err:
-	return err;
-}
-
 int hipl_userspace_ipsec_sadb_add_wrapper(struct in6_addr *saddr,
 					      struct in6_addr *daddr,
 					      struct in6_addr *src_hit, 
@@ -374,6 +358,7 @@ int hipl_userspace_ipsec_sadb_add_wrapper(struct in6_addr *saddr,
 	int err = 0;
 
 	/* MAP HIP ESP encryption INDEX to SADB encryption INDEX */
+	// TODO check if this is right
 	switch(ealg) {
 		case HIP_ESP_AES_SHA1:
 			ipsec_e_type = SADB_X_EALG_AESCBC;
@@ -400,18 +385,13 @@ int hipl_userspace_ipsec_sadb_add_wrapper(struct in6_addr *saddr,
 	hip_addr_to_sockaddr(src_hit, &inner_src); /* source HIT conversion */
 	hip_addr_to_sockaddr(dst_hit, &inner_dst); /* destination HIT conversion */
 	
-	struct in_addr * in_src = hip_cast_sa_addr(&src);
-	
-	HIP_DEBUG_INADDR("source sockaddr (IPv4): ", in_src);
-	
 	/* hit_magic is the 16-bit sum of the bytes of both HITs. 
 	 * the checksum is calculated as other Internet checksum, according to 
 	 * the HIP spec this is the sum of 16-bit words from the input data a 
 	 * 32-bit accumulator is used but the end result is folded into a 16-bit
 	 * sum
 	 */
-	// TODO find correct implementation
-	//hit_magic = checksum_magic((hip_hit *) src_hit->s6_addr, (hip_hit *) dst_hit->s6_addr);
+	hit_magic = checksum_magic(src_hit, dst_hit);
 	
 	
 	/* a_type is for crypto parameters, but type is currently ignored  */
@@ -423,7 +403,7 @@ int hipl_userspace_ipsec_sadb_add_wrapper(struct in6_addr *saddr,
 	
 	/* struct hip_crypto_key *enckey ---> __u8 *e_key */
 	/* struct hip_crypto_key *authkey  ---> __u8 *a_key */
-	
+	// TODO check if this is right
 	ipsec_e_key = (__u8 *) enckey->key;
 	ipsec_a_key = (__u8 *) authkey->key;
 	/* 
@@ -467,7 +447,6 @@ int hipl_userspace_ipsec_sadb_add_wrapper(struct in6_addr *saddr,
 	return err;
 }
 
-#if 0
 /*
  * * function checksum_magic()
  * *
@@ -476,29 +455,33 @@ int hipl_userspace_ipsec_sadb_add_wrapper(struct in6_addr *saddr,
  * * which HIT is given first, and the one's complement is not
  * * taken.
  */
-__u16 checksum_magic(const hip_hit *i, const hip_hit *r)
+__u16 checksum_magic(const struct in6_addr *initiator, const struct in6_addr *receiver)
 {
 	int count;
 	unsigned long sum = 0;
 	unsigned short *p; /* 16-bit */
 	
 	/* 
-	 * 	 * this checksum algorithm can be found 
-	 * 	 * in RFC 1071 section 4.1, pseudo-header
-	 * 	* from RFC 2460
+	 * * this checksum algorithm can be found 
+	 * * in RFC 1071 section 4.1, pseudo-header
+	 * * from RFC 2460
 	 * */
 	
 	/* one's complement sum 16-bit words of data */
 	/* sum initiator's HIT */
 	count = HIT_SIZE;
-	p = (unsigned short*) i;
+	// TODO check if this is right
+	p = (unsigned short *) initiator;
+	
 	while (count > 1)  {
 		sum += *p++;
 		count -= 2;
 	}
+	
 	/* sum responder's HIT */
 	count = HIT_SIZE;
-	p = (unsigned short*) r;
+	p = (unsigned short*) receiver;
+	
 	while (count > 1)  {
 		sum += *p++;
 		count -= 2;
@@ -514,10 +497,9 @@ __u16 checksum_magic(const hip_hit *i, const hip_hit *r)
 	/* don't take the one's complement of the sum */
 	return((__u16)sum);
 }
-#endif
 
-// resolve HIT to routable addresses and select the preferred ones
-int get_preferred_addr(sockaddr_list *addr_list, struct in6_addr *preferred_addr)
+// resolve HIT to routable addresses selecting the preferred ones
+int get_preferred_sockaddr(sockaddr_list *addr_list, struct sockaddr_storage *preferred_addr)
 {
 	int err = 0;
 	
@@ -528,29 +510,42 @@ int get_preferred_addr(sockaddr_list *addr_list, struct in6_addr *preferred_addr
 		//{
 		//	HIP_DEBUG("found preferred src_addr\n");
 		
-			if (addr_list->addr.ss_family == AF_INET)
-			{
-				IPV4_TO_IPV6_MAP((struct in_addr *)hip_cast_sa_addr(&addr_list->addr),
-						preferred_addr);
-				
-				HIP_DEBUG_HIT("preferred_addr (IPv4): ", preferred_addr);
-				
-			} else if (addr_list->addr.ss_family == AF_INET6)
-			{
-				preferred_addr = (struct in6_addr *)hip_cast_sa_addr(&addr_list->addr);
-
-				HIP_DEBUG_HIT("preferred_addr (IPv6): ", preferred_addr);
-				
-			} else
-			{
-				err = 1;
-				goto out_err;
-			}
+			preferred_addr = &addr_list->addr;
 			
 			break;
 		//}
 
 		addr_list = addr_list->next;
+	}
+	
+	if (addr_list == NULL)
+		err = 1;
+	
+  out_err:
+  	return err;
+}
+
+int cast_sockaddr_to_in6_addr(struct sockaddr_storage *sockaddr, struct in6_addr *in6_addr)
+{
+	int err = 0;
+	
+	if (sockaddr->ss_family == AF_INET)
+	{
+		IPV4_TO_IPV6_MAP((struct in_addr *)hip_cast_sa_addr(sockaddr),
+				in6_addr);
+		
+		HIP_DEBUG_HIT("preferred_addr (IPv4): ", in6_addr);
+		
+	} else if (sockaddr->ss_family == AF_INET6)
+	{
+		in6_addr = (struct in6_addr *)hip_cast_sa_addr(sockaddr);
+
+		HIP_DEBUG_HIT("preferred_addr (IPv6): ", in6_addr);
+		
+	} else
+	{
+		err = 1;
+		goto out_err;
 	}
 	
   out_err:
