@@ -626,8 +626,7 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
                         if (err == 0){
 				err = inet_pton(AF_INET, getitem(&list,i), &lsi);
 				HIP_DEBUG_LSI("Is LSI????????  ",&(lsi.s_addr));
-				HIP_DEBUG("err+ %d && is_lsi = %d \n", err, IS_LSI(&lsi));
-				HIP_DEBUG("err+ %d && is_lsi = %d \n", err, IS_LSI32(lsi.s_addr));
+				HIP_DEBUG("err %d && is_lsi = %d \n", err, IS_LSI32(lsi.s_addr));
 				if (err && IS_LSI32(lsi.s_addr))
 				        is_lsi = 1;
 			}
@@ -707,7 +706,11 @@ send_hipd_addr(struct gaih_addrtuple * orig_at)
 	struct hip_common *msg;
 	msg = malloc(HIP_MAX_PACKET);
   	if(orig_at == NULL ) HIP_DEBUG("NULL orig_at sent\n"); 
-  	
+
+	HIP_DEBUG("-------Dump_pai--------\n");
+  	dump_pai(orig_at);
+	HIP_DEBUG("-------End Dump_pai--------\n");
+
 	for(at_hit = orig_at; at_hit != NULL; at_hit = at_hit->next) {
     		int i;
  		struct sockaddr_in6 *s;
@@ -738,7 +741,7 @@ send_hipd_addr(struct gaih_addrtuple * orig_at)
 	    		}
 
 			if (at_ip->family == AF_INET) {
-				HIP_DEBUG_LSI("AF_INET\n",(struct in_addr *) at_ip->addr);
+				HIP_DEBUG_LSI("AF_INET ",(struct in_addr *) at_ip->addr);
 			        IPV4_TO_IPV6_MAP(((struct in_addr *) at_ip->addr), &addr6);
 	    		}
 
@@ -1059,13 +1062,22 @@ int gaih_inet_get_name(const char *name, const struct addrinfo *req,
 		       struct gaih_servtuple *st, struct gaih_addrtuple **at,
 		       int hip_transparent_mode) 
 {
-	int err = 0, rc = 0;
+        int err = 0, rc = 0, is_lsi = 0;
 	int v4mapped = (req->ai_family == PF_UNSPEC ||
 			req->ai_family == PF_INET6) &&
 		(req->ai_flags & AI_V4MAPPED);
 	char *namebuf = strdupa(name);
 	
-	_HIP_DEBUG("gaih_inet_get_name() invoked.\n");
+	HIP_DEBUG("gaih_inet_get_name() invoked.\n");
+
+
+      HIP_DEBUG("-------------Dumping the structure at al principo \n");
+      dump_pai(*at);
+      HIP_DEBUG("-----------End of Dumping the structure\n");
+
+
+
+
 
 	*at = malloc (sizeof (struct gaih_addrtuple));
 	
@@ -1073,7 +1085,7 @@ int gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	(*at)->scopeid = 0;
 	(*at)->next = NULL;
 	
-	/* Check if the addredd is an IPv4 address. */
+	/* Is ipv4 address? */
 	if (inet_pton (AF_INET, name, (*at)->addr) > 0)
 	{
 		HIP_DEBUG("The name to resolve is an IPv4\n");
@@ -1081,6 +1093,9 @@ int gaih_inet_get_name(const char *name, const struct addrinfo *req,
 		    req->ai_family == AF_INET || v4mapped)
 		{
 			(*at)->family = AF_INET;
+			is_lsi = IS_LSI32(((struct in_addr *)(*at)->addr)->s_addr);
+			//IS_LSI32(ntohl(((struct in_addr *)a->addr)->s_addr))
+			HIP_DEBUG("----------IS_LSI %d\n",is_lsi);
 		}
 		else
 		{
@@ -1168,9 +1183,9 @@ int gaih_inet_get_name(const char *name, const struct addrinfo *req,
       int old_res_options = _res.options;
       int found_hits = 0;
       
-      _HIP_DEBUG("The name is not an IPv4 or IPv6 address, resolve name "\
+      HIP_DEBUG("The name is not an IPv4 or IPv6 address, resolve name "\
 		"(!AI_NUMERICHOST)\n");
-      _HIP_DEBUG("&pat=%p pat=%p *pat=%p **pat=%p\n", &pat, pat, *pat, **pat);
+      HIP_DEBUG("&pat=%p pat=%p *pat=%p **pat=%p\n", &pat, pat, *pat, **pat);
       
 #ifdef UNDEF_CONFIG_HIP_AGENT
       if ((hip_transparent_mode || req->ai_flags & AI_HIP) &&
@@ -1242,9 +1257,13 @@ int gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	}
       }
 
-      _HIP_DEBUG("Dumping the structure\n");
-      //dump_pai(*at);
-      
+      HIP_DEBUG("-------------Dumping the structure pat \n");
+      dump_pai(*pat);
+      HIP_DEBUG("-----------End of Dumping the structure\n");
+
+      HIP_DEBUG("-------------Dumping the structure at \n");
+      dump_pai(*at);
+       HIP_DEBUG("-----------End of Dumping the structure\n");
       /* perform HIT-IPv6 mapping if both are found 
 	 AG: now the loop also takes in IPv4 addresses */
       if (found_hits) 
@@ -1313,8 +1332,7 @@ int gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	  
 	  /* do not remove LSI if request is IPv4 */
 	  if (req->ai_family == AF_INET && 
-	      a->family == AF_INET && 
-	      IS_LSI32(ntohl(((struct in_addr *)a->addr)->s_addr)))
+	      a->family == AF_INET && is_lsi)
 	    goto leave;
 
 	  if (p != NULL){
@@ -1361,15 +1379,12 @@ int gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	    continue;
 	  }
 	  
-#if 0 /* Not supported yet */
 	  /* do not move the LSI if request is IPv4 */
 	  if (req->ai_family == AF_INET && 
-	      a->family == AF_INET && 
-	      IS_LSI32(ntohl(((struct in_addr *)a->addr)->s_addr))){
+	      a->family == AF_INET && is_lsi){
 	    a = aux = nxt;
 	    continue;
 	  }
-#endif
 
 	  /* putting the IPs to the linked list *p */
 	  if (p == NULL){
@@ -1407,8 +1422,8 @@ int gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	}
       }
 
-      _HIP_DEBUG("Dumping the structure after removing IP addreses\n");
-      //dump_pai(*at);
+      HIP_DEBUG("Dumping the structure after removing IP addreses\n");
+      dump_pai(*at);
     } /* (at->family == AF_UNSPEC && (req->ai_flags & AI_NUMERICHOST) == 0) */ 
   return 0;
 }
@@ -1572,7 +1587,8 @@ int getaddrinfo(const char *name, const char *service,
 	struct addrinfo *p = NULL, **end = NULL;
 	struct gaih *g = gaih, *pg = NULL;
 	struct gaih_service gaih_service, *pservice = NULL;
-
+	
+	HIP_DEBUG("------------------GETADDRINFO--------------------\n");
 	/* These will segfault if lenght of name is one, but since this
 	   is well defined standard function, there must be a good reason
 	   for this behavior? */
