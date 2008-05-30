@@ -117,20 +117,20 @@ install -t %{buildroot}/%{python_sitelib}/DNS tools/DNS/*py
 #`/usr/sbin/hipfw -bk`
 
 %post firewall
-#/sbin/chkconfig --add hipfw
-#/sbin/chkconfig --level 2 hipfw on
+/sbin/chkconfig --add hipfw
+/sbin/chkconfig --level 2 hipfw on
+/sbin/service hipfw start
+#/etc/rc.d/init.d/hipfw start
 #/usr/sbin/hipfw -bk`
-#/sbin/service hipfw start
-/etc/rc.d/init.d/hipfw start
 
 %preun daemon
 /sbin/service hipd stop
 /sbin/chkconfig --del hipd
 
 %preun firewall
-#/sbin/service hipfw stop
-#/sbin/chkconfig --del hipfw
-/etc/rc.d/init.d/hipfw stop
+/sbin/service hipfw stop
+/sbin/chkconfig --del hipfw
+#/etc/rc.d/init.d/hipfw stop
 
 %clean
 rm -rf %{buildroot}

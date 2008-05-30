@@ -1,10 +1,10 @@
-#!/bin/bash
+#!/bin/sh
 #
+# chkconfig: 2345 10 90
 # Init file for hip firewall
 #
 # processname: hipfw
 # pidfile: /var/run/hipfw.pid
-# chkconfig: 2345 15 85
 
 # source function library
 . /etc/rc.d/init.d/functions
