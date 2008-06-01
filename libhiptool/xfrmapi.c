@@ -487,10 +487,11 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 	/* XX CHECK: is there some kind of range for the SPIs ? */
 	if (!already_acquired)
 		get_random_bytes(spi, sizeof(uint32_t));
-
+/*
 	if(!ice_ok)
 		goto out_err;
-	
+	HIP_DEBUG("...........inside add sa..............\n");
+*/	
 	HIP_IFE(hip_xfrm_state_modify(hip_xfrmapi_nl_ipsec, cmd,
 				      saddr, daddr, 
 				      src_hit, dst_hit, *spi,
