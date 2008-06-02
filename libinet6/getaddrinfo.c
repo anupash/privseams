@@ -625,7 +625,7 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 		        err = inet_pton(AF_INET6, getitem(&list,i), &hit);  
                         if (err == 0){
 				err = inet_pton(AF_INET, getitem(&list,i), &lsi);
-				HIP_DEBUG_LSI("Is LSI????????  ",&(lsi.s_addr));
+				HIP_DEBUG_LSI("Is LSI????????  ",&lsi);
 				HIP_DEBUG("err %d && is_lsi = %d \n", err, IS_LSI32(lsi.s_addr));
 				if (err && IS_LSI32(lsi.s_addr))
 				        is_lsi = 1;
@@ -654,7 +654,7 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
                                 struct gaih_addrtuple *prev_pat = NULL;	
 				ret = inet_pton(AF_INET6, getitem(&list,i), &hit);
                                 
-                                if (ret < 1) {
+                                if (ret < 0) {
 					continue;
 				}
                                 
@@ -668,18 +668,23 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
                                 
                                 /* Placing the node at the beginning of the
 				   list. */
-                                aux->next = (**pat);
-                                (**pat) = aux;
-                                aux->scopeid = 0;
+                                
 
 				if (ret == 1){
+				        /*It's a HIT*/
+				        aux->next = (**pat);
+                                        (**pat) = aux;
+                                        aux->scopeid = 0;
 				        aux->family = AF_INET6;
 					memcpy(aux->addr, &hit, sizeof(struct in6_addr));
 				}
 				else if (ret == 0 && inet_pton(AF_INET, getitem(&list,i), &lsi)){
 				        /*IPv4 to IPV6 in order to be supported by the daemon*/
+				        aux->next = (**pat);
+					(**pat) = aux;
+					aux->scopeid = 0;
 					aux->family = AF_INET6;
-					_HIP_DEBUG_LSI(" lsi to add", &lsi);
+					HIP_DEBUG_LSI(" lsi to add", &lsi);
 					IPV4_TO_IPV6_MAP(&lsi, &lsi_ip6);
 					memcpy(aux->addr, &lsi_ip6, sizeof(struct in6_addr));
 				}

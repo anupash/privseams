@@ -498,6 +498,7 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr, hip_
 	
 	if (!peer_lsi){
 		inet_aton("0.0.0.0", &lsi_aux);
+		// Call to the automatic generation
 		memcpy(&peer_map.peer_lsi, &lsi_aux, sizeof(hip_lsi_t));
 	}else{
 		memcpy(&peer_map.peer_lsi, peer_lsi, sizeof(hip_lsi_t));
@@ -812,6 +813,7 @@ int hip_hadb_add_peer_addr(hip_ha_t *entry, struct in6_addr *new_addr,
 				  addrstr);
 		}
 		ipv6_addr_copy(&entry->preferred_address, new_addr);
+		HIP_DEBUG_IN6ADDR("entry->preferred_address \n", &entry->preferred_address);
 		goto out_err;
 	}
 

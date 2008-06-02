@@ -621,7 +621,6 @@ int hip_map_hit_to_addr(hip_hit_t *dst_hit, struct in6_addr *dst_addr) {
 	   We can fallback to e.g. DHT search if the mapping is not
 	   found from local files.*/
 	
-	_HIP_DEBUG("I am here just before getendpointinfo() \n");
 	
 	hip_in6_ntop(dst_hit, peer_hit);
 	
@@ -663,24 +662,25 @@ int hip_netdev_trigger_bex(hip_hit_t **src_hit, hip_hit_t **dst_hit,
 	hip_hit_t default_hit;
 	addr = (struct sockaddr*) &ss_addr;
 
-	
-	if (src_lsi && dst_lsi){
+	HIP_DEBUG_IN6ADDR("...................... dst_addr \n", &dst_addr);
+
+	if (src_lsi && dst_lsi && !(*dst_hit || *src_hit)){
 	        //hit_peer already mapped because hipconf command and non-opportunistic mode
 	        HIP_DEBUG_LSI("Param is an lsi!!", src_lsi);
 		HIP_DEBUG_LSI("Param is an lsi!!", dst_lsi);
 		HIP_IFEL(!(entry = hip_hadb_try_to_find_by_pair_lsi(src_lsi, dst_lsi)),
 			 -1, "internal error: no hadb entry found\n");
 
-		/*HIP_IFEL(!(dst_hit = (hip_hit_t *) HIP_MALLOC(sizeof(hip_hit_t),0)),
+		HIP_IFEL(!(dst_hit = (hip_hit_t *) HIP_MALLOC(sizeof(hip_hit_t),0)),
 			 -ENOMEM, "No memory available for dst_hit\n");
 		HIP_IFEL(!(src_hit = (hip_hit_t *) HIP_MALLOC(sizeof(hip_hit_t),0)),
 			 -ENOMEM, "No memory available for src_hit\n");
 		memset(dst_hit, 0, sizeof(*dst_hit));
-		memset(src_hit, 0, sizeof(*src_hit));*/
-		*dst_hit = &(entry->hit_peer);
-		*src_hit = &(entry->hit_our);
-		//ipv6_addr_copy(*dst_hit, &entry->hit_peer);
-		//ipv6_addr_copy(*src_hit, &entry->hit_our);
+		memset(src_hit, 0, sizeof(*src_hit));
+		ipv6_addr_copy(*dst_hit, &entry->hit_peer);
+		ipv6_addr_copy(*src_hit, &entry->hit_our);
+		goto skip_hadb_find;
+		
 	}
 
 	if (!(*src_hit)){
@@ -697,14 +697,16 @@ int hip_netdev_trigger_bex(hip_hit_t **src_hit, hip_hit_t **dst_hit,
 		 "Received rubbish from netlink, skip\n");
 	
 	entry = hip_hadb_find_byhits(*src_hit, *dst_hit);
+
 	if (entry) {
+ skip_hadb_find:
 		reuse_hadb_local_address = 1;
 		goto skip_entry_creation;
 	}
 
 	/* No entry found; find first IP matching to the HIT and then
 	   create the entry */
-
+	HIP_DEBUG("No entry found; find first IP matching");
 	err = 1;
 
 	if (hip_use_i3) {
@@ -763,7 +765,6 @@ int hip_netdev_trigger_bex(hip_hit_t **src_hit, hip_hit_t **dst_hit,
 	/* @fixme: changing global state won't work with threads */
 	hip_nat_status = ha_nat_mode;
 
-	/*@fixme: dst_lsi need to assign a value*/
 	HIP_IFEL(hip_hadb_add_peer_info(*dst_hit, &dst_addr, dst_lsi), -1,
 		 "map failed\n");
 
@@ -782,6 +783,8 @@ int hip_netdev_trigger_bex(hip_hit_t **src_hit, hip_hit_t **dst_hit,
 	reuse_hadb_local_address = 1;
 
 skip_entry_creation:
+
+	HIP_DEBUG_IN6ADDR(".wewqeqe..................... dst_addr \n", &dst_addr);
 
 	if (entry->state == HIP_STATE_ESTABLISHED) {
 		HIP_DEBUG("Acquire in established state (hard handover?), skip\n");
@@ -845,10 +848,17 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	HIP_DEBUG_HIT("src HIT", src_hit);
 	HIP_DEBUG_HIT("dst HIT", dst_hit);
 	HIP_DEBUG("acq->sel.ifindex=%d\n", acq->sel.ifindex);
-
-#if 0
-	/* Is this still necessary? -Miika */
+	
 	entry = hip_hadb_find_byhits(src_hit, dst_hit);
+
+	if (entry){
+	        HIP_DEBUG("---------------------- Hola!! entry defined\n");
+	        src_lsi = &(entry->lsi_our);
+	        dst_lsi = &(entry->lsi_peer);
+	}
+
+	/* Is this still necessary? -Miika */
+#if 0
 	if (!entry) {
 		if (is_ipv4_locator) {
 			IPV4_TO_IPV6_MAP(((struct in_addr *)&acq->id.daddr),
@@ -861,7 +871,7 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	}
 #endif
 
-	return hip_netdev_trigger_bex(src_hit, dst_hit, src_lsi, dst_lsi, src_addr, dst_addr);
+	return hip_netdev_trigger_bex(&src_hit, &dst_hit, src_lsi, dst_lsi, &src_addr, &dst_addr);
 }
 
 int hip_netdev_trigger_bex_msg(struct hip_common *msg) {
