@@ -22,8 +22,7 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 		struct in6_addr *preferred_peer_addr, unsigned char *esp_packet, int *esp_packet_len);
 int hip_esp_input(struct sockaddr *ss_lsi, u8 *buff, int len);
 
-int hip_esp_encrypt(unsigned char *in, int len, unsigned char *out, 
-		hip_sadb_entry *entry, struct timeval *now, int *outlen);
+
 int hip_esp_decrypt(unsigned char *in, int len, unsigned char *out, int *offset, int *outlen,
     hip_sadb_entry *entry, struct ip *iph, struct timeval *now);
 

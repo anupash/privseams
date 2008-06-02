@@ -67,6 +67,9 @@
 #include "hip_esp.h"
 #include "utils.h"
 
+int hip_esp_encrypt(unsigned char *in, uint8_t in_type, int in_len,
+		unsigned char *out, int *out_len, hip_sadb_entry *entry);
+
 void add_ipv4_header(struct ip *ip_hdr, struct in6_addr *src_addr, struct in6_addr *dst_addr,
 		int packet_len, int next_hdr);
 void add_udp_header(struct udphdr *udp_hdr, int packet_len, hip_sadb_entry *entry,
@@ -93,10 +96,12 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 	struct ip6_hdr *ip6_hdr = NULL; 
 	struct udphdr *out_udp_hdr = NULL;
 	struct hip_esp *out_esp_hdr = NULL;
+	unsigned char *in_transport_hdr = NULL;
+	uint8_t in_transport_type = 0;
 	int next_hdr_offset = 0;
-	int err = 0;
-	__u16 checksum_fix = 0;
 	int elen = 0;
+	int encryption_len = 0;
+	int err = 0;
 	
 	// distinguish IPv4 and IPv6 output
 	if (IN6_IS_ADDR_V4MAPPED(preferred_peer_addr))
@@ -113,62 +118,47 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 			next_hdr_offset += sizeof(struct udphdr);
 		}
 
-#if 0
-		// AF_INET or AF_INET6
-		switch (family) {
-		case AF_INET:
-			iph = (struct ip*) &in[sizeof(struct eth_hdr)];
-			eth_ip_hdr_len = sizeof(struct eth_hdr) + sizeof(struct ip);
-			// rewrite transport-layer checksum, so it is based on HITs
-			checksum_fix = rewrite_checksum((__u8*)iph, entry->hit_magic);
-			break;
-		case AF_INET6:
-			ip6h = (struct ip6_hdr*) &in[sizeof(struct eth_hdr)];
-			eth_ip_hdr_len = sizeof(struct eth_hdr)+sizeof(struct ip6_hdr);
-			// assume HITs are used as v6 src/dst, no checksum rewrite
-			break;
-		}
-		
-		// setup ESP header, common to all algorithms
-		// TODO this is not the way you learn about UDP encap
-		if (udp_encap) { //(HIP_ESP_OVER_UDP)
-			// add udp and esp header
-			udph = (udphdr*) out;
-			esp = (struct ip_esp_hdr*) &out[sizeof(udphdr)];
-			use_udp = TRUE;
-		} else {
-			// only add esp header
-			esp = (struct ip_esp_hdr*) out;
-		}
-#endif
-
 		// set up esp header defined in firewall_defines.h
 		out_esp_hdr = (struct hip_esp *) ((unsigned char *)esp_packet) + next_hdr_offset;
 		out_esp_hdr->esp_spi = htonl(entry->spi);
 		out_esp_hdr->esp_seq = htonl(entry->sequence++);
 		
+		next_hdr_offset += sizeof(struct hip_esp);
+		
 		// packet to be re-inserted into network stack has at least
 		// length of defined headers
-		*esp_packet_len += next_hdr_offset + sizeof(struct hip_esp);
+		*esp_packet_len += next_hdr_offset;
 
-#if 0
-		// length of data to be encrypted is everything of the original packet
-		// starting at transport layer header
-		elen = ctx->ipq_packet->data_len - sizeof(struct ip);		
 		
-		// encrypt data now
+		/* Set up information needed for ESP encryption */
+		
+		/* get pointer to data, right behind IPv6 header
+		 * 
+		 * NOTE: we are only dealing with HIT-based (-> IPv6) data traffic */
+		in_transport_hdr = ((unsigned char *) ctx->ipq_packet->payload)
+								+ sizeof(struct ip6_hdr);
+		
+		in_transport_type = ((struct ip6_hdr *) ctx->ipq_packet->payload)->ip6_ctlun.ip6_un1.ip6_un1_nxt;
+		
+		/* length of data to be encrypted is length of the original packet
+		 * starting at the transport layer header */
+		elen = ctx->ipq_packet->data_len - sizeof(struct ip6_hdr);		
+		
+		/* encrypt data now */
 		pthread_mutex_lock(&entry->rw_lock);
 			
 		HIP_DEBUG("encrypting data...\n");
 		
 		// TODO check if parameters are correct
-		// encrypts the payload and puts esp header and encrypted data right
-		// behind the IP/UDP headers
-		err = hip_esp_encrypt(ctx->ipq_packet, ctx->ipq_packet->data_len,
-				      esp_packet + next_hdr_offset, entry, &now, &esp_packet_len);
+		/* encrypts the payload and puts the encrypted data right
+		 * behind the ESP header */
+		err = hip_esp_encrypt(in_transport_hdr, in_transport_type, elen,
+				      esp_packet + next_hdr_offset, &encryption_len, entry);
 		
 		pthread_mutex_unlock(&entry->rw_lock);
-#endif
+		
+		// this also includes the ESP trailer
+		*esp_packet_len += encryption_len;
 		
 #if 0	
 		/* Record the address family of this packet, so incoming
@@ -181,19 +171,6 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 					iph ? (__u8*)(iph+1) : (__u8*)(ip6h+1),
 					family, 0, now	) < 0)
 			printf("hip_esp_encrypt(): error adding sel entry.\n");
-#endif
-
-#if 0
-		/* Restore the checksum in the input data, in case this is
-		 * a broadcast packet that needs to be re-sent to some other
-		 * destination.
-		 */
-		if (checksum_fix > 0) {
-			if (iph->ip_p == IPPROTO_UDP)
-				((struct udphdr*)(iph + 1))->check = checksum_fix;
-			else if (iph->ip_p == IPPROTO_TCP)
-				((struct tcphdr*)(iph + 1))->check = checksum_fix;
-		}
 #endif
 
 		// finally we have all the information to set up the missing headers
@@ -723,43 +700,44 @@ int hip_esp_input(struct sockaddr *ss_lsi, u8 *buff, int len)
 /*
  * hip_esp_encrypt()
  * 
- * in:	in	pointer of data to encrypt
- * 		len	length of data
- * 		out	pointer of where to store encrypted data
- * 		outlen	returned length of encrypted data
+ * in:	in		pointer to data to encrypt
+ * 		in_len	length of input-data
+ * 		out		pointer to where to store encrypted data
+ * 		out_len	length of encrypted data
  * 		entry 	the SADB entry
  *
- * out:	Encrypted data in out, outlen. entry statistics are modified.
+ * out:	Encrypted data out, out_len.
  * 		Returns 0 on success, -1 otherwise.
  * 
  * Perform actual ESP encryption and authentication of packets.
  */
-int hip_esp_encrypt(__u8 *in, int len, __u8 *out, 
-	hip_sadb_entry *entry, struct timeval *now, int *outlen)
+int hip_esp_encrypt(unsigned char *in, uint8_t in_type, int in_len,
+		unsigned char *out, int *out_len, hip_sadb_entry *entry)
 {
-#if 0
-	/* length of data to auth */
-	int alen=0;
 	/* elen is length of data to encrypt */
-	elen=0;
-	unsigned int hmac_md_len;
-	int i, iv_len=0, padlen, location, eth_ip_hdr_len;
-	struct ip *iph=NULL;
-	struct ip6_hdr *ip6h=NULL;
-	struct ip_esp_hdr *esp;
-	udphdr *udph = NULL;
-
-	struct ip_esp_padinfo *padinfo=0;
-	__u8 cbc_iv[16];
-	__u8 hmac_md[EVP_MAX_MD_SIZE];
+	int elen = in_len;
+	/* length of data to auth */
+	int alen = 0;
+	/* initialization vector */
+	int iv_len = 0;
+	unsigned char cbc_iv[16];
+	/* ESP tail information */
+	int pad_len = 0;
+	struct hip_esp_tail *esp_tail = NULL;
+	int i = 0;
+	int err = 0;
 	
-	padlen = 0;
+	//, location, eth_ip_hdr_len;
+	//unsigned int hmac_md_len;
+	//__u8 hmac_md[EVP_MAX_MD_SIZE];
+	
+	
 
 	/* 
 	 * Encryption 
 	 */
 
-	/* Check keys and set IV length */
+	/* Check keys and set initialisation vector length */
 	switch (entry->e_type)
 	{
 		case SADB_EALG_3DESCBC:
@@ -803,58 +781,65 @@ int hip_esp_encrypt(__u8 *in, int len, __u8 *out,
 			return(-1);
 			break;
 	}
-
-	// TODO set elen (hip_esp_output)
 	
-	/* Add initialization vector (random value) */
+	/* Add initialization vector (random value) in the beginning of
+	 * out and calculate padding
+	 * 
+	 * NOTE: this will _NOT_ be encrypted */
 	if (iv_len > 0) {
 		RAND_bytes(cbc_iv, iv_len);
-		memcpy(esp->enc_data, cbc_iv, iv_len);
-		padlen = iv_len - ((elen + 2) % iv_len);
+		memcpy(out, cbc_iv, iv_len);
+		pad_len = iv_len - ((elen + 2) % iv_len);
 	} else {
 		/* Padding with NULL not based on IV length */
-		padlen = 4 - ((elen + 2) % 4);
+		pad_len = 4 - ((elen + 2) % 4);
 	}
 	
-	/* add padding to input data, set padinfo */
-	location = eth_ip_hdr_len + elen;
-	for (i=0; i<padlen; i++)
-		in[location + i] = i+1;
-	padinfo = (struct ip_esp_padinfo*) &in[location + padlen];
-	padinfo->pad_length = padlen;
-	padinfo->next_hdr = (family == AF_INET) ? iph->ip_p : ip6h->ip6_nxt;
-	/* padinfo is encrypted too */
-	elen += padlen + 2;
+	// FIXME this can cause buffer overflows
+	/* add padding to the end of input data and set esp_tail */
+	// padding itself
+	for (i = 0; i < pad_len; i++)
+	{
+		in[elen + i] = i + 1;
+	}
+	// add meta-info
+	esp_tail = (struct hip_esp_tail *) &in[elen + pad_len];
+	esp_tail->esp_padlen = pad_len;
+	esp_tail->esp_next = in_type;
+	/* esp_tail is encrypted too */
+	elen += pad_len + sizeof(struct hip_esp_tail);
 	
 	/* Apply the encryption cipher directly into out buffer
 	 * to avoid extra copying */
 	switch (entry->e_type)
 	{
 		case SADB_EALG_3DESCBC:
-			des_ede3_cbc_encrypt(&in[eth_ip_hdr_len],
-					     &esp->enc_data[iv_len], elen,
+			des_ede3_cbc_encrypt(in, &out[iv_len], elen,
 					     entry->ks[0], entry->ks[1], entry->ks[2],
-					     (des_cblock*)cbc_iv, DES_ENCRYPT);
+					     (des_cblock *) cbc_iv, DES_ENCRYPT);
 			break;
 		case SADB_X_EALG_BLOWFISHCBC:
-			BF_cbc_encrypt(&in[eth_ip_hdr_len],
-					&esp->enc_data[iv_len], elen,
+			BF_cbc_encrypt(in, &out[iv_len], elen,
 					entry->bf_key, cbc_iv, BF_ENCRYPT);
 			break;
 		case SADB_EALG_NULL:
-			memcpy(esp->enc_data, &in[eth_ip_hdr_len], elen);
+			// TODO check if we should really overwrite IV
+			memcpy(out, in, elen);
 			break;
 		case SADB_X_EALG_AESCBC:
-			AES_cbc_encrypt(&in[eth_ip_hdr_len], 
-					&esp->enc_data[iv_len], elen, 
+			AES_cbc_encrypt(in, &out[iv_len], elen, 
 					entry->aes_key, cbc_iv, AES_ENCRYPT);
 			break;
 		default:
 			break;
 	}
-	elen += iv_len; /* auth will include IV */
-	*outlen += elen;
 	
+	/* auth will include IV */
+	alen = elen + iv_len;
+	
+	*out_len += alen;
+	
+#if 0
 	/* 
 	 * Authentication 
 	 */
@@ -920,10 +905,10 @@ int hip_esp_encrypt(__u8 *in, int len, __u8 *out,
 		default:
 			break;
 	}
-	
-	return 0;
 #endif
-	return 1;
+
+  end_err:
+	return err;
 }
 
 /*
