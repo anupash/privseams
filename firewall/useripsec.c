@@ -197,7 +197,7 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 		goto out_err;
 	}
 		
-	err = hip_esp_output(ctx, entry, out_ip_version, udp_encap, &now,
+	err = hip_esp_output(ctx, entry, udp_encap, &now,
 			&preferred_local_addr, &preferred_peer_addr,
 			esp_packet, &esp_packet_len);
 

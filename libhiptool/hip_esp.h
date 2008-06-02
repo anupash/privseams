@@ -7,11 +7,11 @@
 // needed for transport layer checksum calculation
 typedef struct _pseudo_header
 {
-	unsigned char src_addr[4];
-	unsigned char dst_addr[4];
-	__u8 zero;
-	__u8 protocol;
-	__u16 packet_length;
+	uint32_t src_addr;
+	uint32_t dst_addr;
+	uint8_t zero;
+	uint8_t protocol;
+	uint16_t packet_length;
 } pseudo_header;
 
 

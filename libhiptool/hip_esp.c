@@ -67,6 +67,13 @@
 #include "hip_esp.h"
 #include "utils.h"
 
+void add_ipv4_header(struct ip *ip_hdr, struct in6_addr *src_addr, struct in6_addr *dst_addr,
+		int packet_len, int next_hdr);
+void add_udp_header(struct udphdr *udp_hdr, int packet_len, hip_sadb_entry *entry,
+		struct in6_addr *src_addr, struct in6_addr *dst_addr);
+u_int16_t checksum_udp_packet(struct udphdr *udp_hdr, struct in6_addr *src_addr,
+		struct in6_addr *dst_addr);
+
 /*
  * hip_esp_output()
  *
@@ -1933,21 +1940,26 @@ void add_udp_header(struct udphdr *udp_hdr, int packet_len, hip_sadb_entry *entr
  * Calculates the checksum of a UDP packet with pseudo-header
  * src and dst are IPv4 addresses in network byte order
  */
-u_int16_t checksum_udp_packet(struct udphdr *udp_hdr, struct in6_addr *src_addr,
+uint16_t checksum_udp_packet(struct udphdr *udp_hdr, struct in6_addr *src_addr,
 		struct in6_addr *dst_addr)
 {
-	u_int16_t checksum = 0;
+	uint16_t checksum = 0;
 	unsigned long sum = 0;
 	int count, length;
 	unsigned short *p; /* 16-bit */
 	pseudo_header pseudo_hdr;
+	struct in_addr src_in_addr;
+	struct in_addr dst_in_addr;
 
 	/* IPv4 checksum based on UDP-- Section 6.1.2 */
 	
 	// setting up pseudo header
 	memset(&pseudo_hdr, 0, sizeof(pseudo_header));
-	IPV6_TO_IPV4_MAP(src_addr, &pseudo_hdr.src_addr);
-	IPV6_TO_IPV4_MAP(dst_addr, &pseudo_hdr.dst_addr);
+	IPV6_TO_IPV4_MAP(src_addr, &src_in_addr);
+	IPV6_TO_IPV4_MAP(dst_addr, &dst_in_addr);
+	// TODO check for correct byte order
+	pseudo_hdr.src_addr = src_in_addr.s_addr;
+	pseudo_hdr.dst_addr = dst_in_addr.s_addr;
 	pseudo_hdr.protocol = IPPROTO_UDP;
 	pseudo_hdr.packet_length = udp_hdr->len;
 
