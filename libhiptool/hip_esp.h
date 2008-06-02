@@ -14,6 +14,8 @@ typedef struct _pseudo_header
 	uint16_t packet_length;
 } pseudo_header;
 
+//#define HMAC_SHA_96_BITS 96 /* 12 bytes */
+
 
 long g_read_usec;
 
@@ -30,7 +32,7 @@ int hip_esp_decrypt(unsigned char *in, int len, unsigned char *out, int *offset,
 
 
 #define BUFF_LEN 2000
-#define HMAC_SHA_96_BITS 96 /* 12 bytes */
+
 
 /* added By Tao Wan*/
 #define H_PROTO_UDP 17
