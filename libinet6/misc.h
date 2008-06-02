@@ -1,3 +1,12 @@
+/**@file
+ * A header file for misc.c
+ *
+ * @author Miika Komu
+ * @author Mika Kousa
+ * @author Bing Zhou
+ * @note   Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @see    misc.h
+ */
 #ifndef HIP_MISC_H
 #define HIP_MISC_H
 
@@ -101,5 +110,20 @@ void hip_addr_to_sockaddr(struct in6_addr *addr, struct sockaddr *sa);
 uint64_t hip_solve_puzzle(void *puzzle, struct hip_common *hdr, int mode);
 
 int hip_create_lock_file(char *filename, int killold);
+
+/**
+ * Converts a string to lowercase. Converts parameter @c from string to a
+ * lowercase string and places the result in @c to. All alphabetic (isalpha())
+ * characters are converted. Non-alphabetic are copied from source buffer
+ * @c from to target buffer @c to without conversion.
+ *
+ * @param  to    a target buffer where to put the converted string
+ * @param  from  a source buffer which to convert.
+ * @param  count number of characters in @c from <b>including null
+ *               termination</b>. Use strlen(from) + 1.
+ * @return       -1 if @c count is zero or if @c to or @c from are NULL, zero
+ *               otherwise.
+ */ 
+int hip_string_to_lowercase(char *to, const char *from, const size_t count);
 
 #endif /* HIP_MISC_H */

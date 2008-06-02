@@ -1,13 +1,12 @@
-/*
- * Miscellaneous functions
+/**@file
+ * This file defines miscellaneous utility functions
  *
- * Licence: GNU/GPL
- * Authors:
- * - Miika Komu <miika@iki.fi>
- * - Mika Kousa <mkousa@iki.fi>
- * - Bing Zhou <bingzhou@cc.hut.fi>
+ * @author Miika Komu
+ * @author Mika Kousa
+ * @author Bing Zhou
+ * @note   Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @see    misc.h
  */
-
 #include "misc.h"
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip, struct in6_addr *hit, int hit_type)
@@ -1906,4 +1905,22 @@ int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit, struct i
 	if (msg)
 		free(msg);
 	return err;
+}
+
+int hip_string_to_lowercase(char *to, const char *from, const size_t count)
+{
+	if(to == NULL || from == NULL || count == 0)
+		return -1;
+
+	int i = 0;
+
+	for(; i < count; i++) {
+		if(isalpha(from[i])) {
+			to[i] = tolower(from[i]);
+		} else {
+			to[i] = from[i];
+		}
+	}
+
+	return 0;
 }

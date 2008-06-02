@@ -27,7 +27,7 @@ const char *hipconf_usage =
 "add|del map <hit> <ipv6>\n"
 "Server side:\n\tadd|del service escrow|rvs|hiprelay\n"
 "\treinit service rvs|hiprelay\n"
-"Client side:\n\tadd rvs|hiprelay <hit> <ipv6> <lifetime in seconds>\n"
+"Client side:\n\tadd server rvs|hiprelay|escrow [servicelist] <hit> <ipv6> <lifetime in seconds>\n"
 "del hi <hit>\n"
 "get hi default\n"
 #ifdef CONFIG_HIP_ICOOKIE
@@ -73,7 +73,7 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc) 
 	hip_conf_handle_hi,
 	hip_conf_handle_map,
 	hip_conf_handle_rst,
-	hip_conf_handle_rvs,
+	hip_conf_handle_server,
 	hip_conf_handle_bos,
 	hip_conf_handle_puzzle,
 	hip_conf_handle_nat,
@@ -211,8 +211,8 @@ int hip_conf_get_type(char *text,char *argv[]) {
 		ret = TYPE_RST;
 	else if (!strcmp("hiprelay", text))
 		ret = TYPE_RELAY;
-	else if (!strcmp("rvs", text))
-		ret = TYPE_RVS;
+	else if (!strcmp("server", text))
+		ret = TYPE_SERVER;
 	else if (!strcmp("puzzle", text))
 		ret = TYPE_PUZZLE;	
 	else if (!strcmp("service", text))
@@ -321,7 +321,7 @@ int hip_conf_get_type_arg(int action)
 }
 
 /**
- * Handles the hipconf commands where the type is @c rvs.
+ * Handles the hipconf commands where the type is @c server.
  *  
  * Create a message to the kernel module from the function parameters @c msg,
  * @c action and @c opt[].
@@ -330,9 +330,8 @@ int hip_conf_get_type_arg(int action)
  *               be written.
  * @param action the numeric action identifier for the action to be performed.
  * @param opt    an array of pointers to the command line arguments after
- *               the action and type (should be the HIT and the corresponding
- *               IPv6 address).
- * @param optc   the number of elements in the array (@b 2).
+ *               the action and type.
+ * @param optc   the number of elements in array @c opt.
  * @return       zero on success, or negative error value on error.
  * @note         Currently only action @c add is supported.
  * @todo         If the current machine has more than one IP address
@@ -342,35 +341,53 @@ int hip_conf_get_type_arg(int action)
  *               interface. There should be a way to choose which of the HITs
  *               to register to the rendezvous server.
  */ 
-int hip_conf_handle_rvs(hip_common_t *msg, int action, const char *opt[], 
-			int optc)
+int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[], 
+			   int optc)
 {
 	hip_hit_t hit;
 	in6_addr_t ipv6;
-	int err = 0, seconds = 0;
-	uint8_t lifetime = 0;
+	int err = 0, seconds = 0, i = 0, number_of_regtypes = 0, reg_type = 0;
+	uint8_t lifetime = 0, reg_types[optc - 3];
 	time_t seconds_from_lifetime = 0;
-	uint8_t type_list[1];
+	char lowercase[30];
 	
-	type_list[0] = HIP_SERVICE_RENDEZVOUS;
+	HIP_DEBUG("hip_conf_handle_server() invoked.\n");
 
-	HIP_DEBUG("hip_conf_handle_rvs() invoked.\n");
-		
-	HIP_IFEL((action != ACTION_ADD), -1,
-		 "Only action \"add\" is supported for \"rvs\".\n");
+	HIP_DEBUG("Option count: %d.\n", optc);
 	
-	HIP_IFEL((optc < 3), -1, "Missing arguments.\n");
-	HIP_IFEL((optc > 3), -1, "Too many arguments.\n");
+	if(action != ACTION_ADD) {
+		HIP_ERROR("Only action \"add\" is supported for \"server\".\n");
+		err = -1;
+		goto out_err;
+	} else if (optc < 4) {
+		HIP_ERROR("Missing arguments.\n");
+		err = -1;
+		goto out_err;
+	} /* Check the HIT value. */
+ 	else if(inet_pton(AF_INET6, opt[optc - 3], &hit) <= 0) {
+		HIP_ERROR("'%s' is not a valid HIT.\n", opt[optc - 3]);
+		err = -1;
+		goto out_err;
+	} /* Check the IPv4 or IPV6 value. */
+	else if(inet_pton(AF_INET6, opt[optc - 2], &ipv6) <= 0) {
+		struct in_addr ipv4;
+		if(inet_pton(AF_INET, opt[optc - 2], &ipv4) <= 0) {
+			HIP_ERROR("'%s' is not a valid IPv4 or IPv6 address.\n",
+				  opt[optc - 2]);
+			err = -1;
+			goto out_err;
+		} else {
+			IPV4_TO_IPV6_MAP(&ipv4, &ipv6);
+		}
+	} 
 	
-	HIP_IFE(convert_string_to_address(opt[0], &hit), -1);
-	HIP_IFE(convert_string_to_address(opt[1], &ipv6), -1);
-	
-	seconds = atoi(opt[2]);
+	/* The last commandline argument has the lifetime. */
+	seconds = atoi(opt[optc - 1]);
 	
 	if(seconds <= 0 || seconds > 15384774) {
 		HIP_ERROR("Invalid lifetime value \"%s\" given.\n"\
 			  "Please give a lifetime value between 1 and "\
-			  "15384774 seconds.\n", opt[2]);
+			  "15384774 seconds.\n", opt[optc - 1]);
 		goto out_err;
 	}
 
@@ -379,26 +396,68 @@ int hip_conf_handle_rvs(hip_common_t *msg, int action, const char *opt[],
 
 	hip_get_lifetime_seconds(lifetime, &seconds_from_lifetime);
 
-	HIP_IFEL(hip_build_param_contents(
-			 msg, (void *) &hit, HIP_PARAM_HIT,
-			 sizeof(in6_addr_t)), -1,
-		 "Failed to build parameter HIT.\n");
+	/* Every commandline argument in opt[] from '0' to 'optc - 4' should
+	   be either one of the strings in service_strings or a number between
+	   0 and 255 (inclusive). */
+	number_of_regtypes = optc - 3; 
+
+	for(; i < number_of_regtypes; i++) {
+		if(strlen(opt[i]) > 30) {
+			HIP_ERROR("'%s' is not a valid service name.\n");
+			err = -1;
+			goto out_err;
+		}
+		
+		hip_string_to_lowercase(lowercase, opt[i], strlen(opt[i]) + 1);
+		
+		if(strcmp("rvs", lowercase) == 0){
+			reg_types[i] = HIP_SERVICE_RENDEZVOUS;
+		} else if(strcmp("hiprelay", lowercase) == 0) {
+			reg_types[i] = HIP_SERVICE_RELAY;
+		} else if(strcmp("escrow", lowercase) == 0) {
+			reg_types[i] = HIP_SERVICE_ESCROW;
+		} /* To cope with the atoi() error value. */
+		else if(strcmp("0", lowercase) == 0) {
+			reg_types[i] = 0;
+		} else {
+			reg_type = atoi(lowercase);
+			
+			if(reg_type <= 0 || reg_type > 255) {
+				HIP_ERROR("'%s' is not a valid service name "\
+					  "or service number.\n", opt[i]);
+				err = -1;
+				goto out_err;
+			} else {
+				reg_types[i] = reg_type;
+			}
+		}
+	}
 	
-	HIP_IFEL(hip_build_param_contents(
-			 msg, (void *) &ipv6, HIP_PARAM_IPV6_ADDR,
-			 sizeof(in6_addr_t)), -1,
-		 "Failed to build parameter IPv6.\n");
+	for(i = 0 ;i < number_of_regtypes; i++) {
+		HIP_DEBUG("Reg type: %d.\n", reg_types[i]);
+	}
 	
-	HIP_IFEL(hip_build_param_reg_request(msg, lifetime, &type_list , 1), -1,
-		 "Failed to build REQ_REQUEST parameter to hipconf user "\
+	HIP_IFEL(hip_build_param_contents(msg, &hit, HIP_PARAM_HIT,
+					  sizeof(in6_addr_t)), -1, 
+		 "Failed to build HIT parameter to hipconf user message.\n");
+	
+	HIP_IFEL(hip_build_param_contents(msg, &ipv6, HIP_PARAM_IPV6_ADDR,
+					  sizeof(in6_addr_t)), -1,
+		 "Failed to build IPv6 parameter to hipconf user message.\n");
+	
+	HIP_IFEL(hip_build_param_reg_request(msg, lifetime, reg_types ,
+					     number_of_regtypes), -1,
+		 "Failed to build REG_REQUEST parameter to hipconf user "\
 		 "message.\n");
 
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_RVS, 0), -1,
-		 "Failed to build user message header.\n");
+		 "Failed to build hipconf user message header.\n");
+	
+	HIP_DUMP_MSG(msg);
 
-	HIP_INFO("\tRequesting RVS service for %d seconds (lifetime 0x%x) from\n"\
-		 "\tHIT %s located at\n\tIP address %s.\n",
-		 seconds_from_lifetime, lifetime, opt[0], opt[1]);
+	HIP_INFO("\tRequesting %s service for %d seconds (lifetime 0x%x) from\n"\
+		 "\tHIT %s located at\n\tIP address %s.\n", opt[0], 
+		 seconds_from_lifetime, lifetime, opt[optc - 3], opt[optc - 2]);
 	
  out_err:
 	return err;

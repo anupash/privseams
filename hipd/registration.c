@@ -752,12 +752,14 @@ int hip_has_duplicate_services(uint8_t *reg_types, int type_count)
 	if(reg_types == NULL || type_count <= 0) {
 		return -1;
 	}
+
+	HIP_DEBUG("Type count %d.\n", type_count);
 	
 	int i = 0, j = 0;
 
 	for(; i < type_count; i++) {
 		for(j = i + 1; j < type_count; j++) {
-			if(reg_types[i] = reg_types[j]) {
+			if(reg_types[i] == reg_types[j]) {
 				return -1;
 			}
 		}

@@ -111,13 +111,13 @@
 #define ACTION_REINIT 25
 #define ACTION_MAX 26 /* exclusive */
 
-/* Important! These values are used as array indexes, so keep in this order.
+/* Important! These values are used as array indexes, so keep these in order.
    Add values after the last value and increment TYPE_MAX. */
 /* 0 is reserved */
 #define TYPE_HI      	   1
 #define TYPE_MAP     	   2
 #define TYPE_RST           3
-#define TYPE_RVS     	   4
+#define TYPE_SERVER        4
 #define TYPE_BOS     	   5
 #define TYPE_PUZZLE  	   6
 #define TYPE_NAT           7
@@ -177,7 +177,7 @@ int hip_conf_handle_map(hip_common_t *, int type, const char *opt[], int optc);
 int hip_conf_handle_rst(hip_common_t *, int type, const char *opt[], int optc);
 int hip_conf_handle_debug(hip_common_t *, int type, const char *opt[], int optc);
 int hip_conf_handle_bos(hip_common_t *, int type, const char *opt[], int optc);
-int hip_conf_handle_rvs(hip_common_t *msg, int action, const char *opt[], int optc);
+int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[], int optc);
 int hip_conf_handle_hiprelay(hip_common_t *msg, int action, const char *opt[], int optc);
 int hip_conf_handle_del(hip_common_t *, int type, const char *opt[], int optc);
 int hip_conf_handle_nat(hip_common_t *, int type, const char *opt[], int optc);
