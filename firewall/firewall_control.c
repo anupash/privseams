@@ -403,7 +403,7 @@ u16 ipv6_checksum(u8 protocol, struct in6_addr *src, struct in6_addr *dst, void 
 
     	chksum = (u16)(~chksum);
     	if (chksum == 0)
-    	    chksum = 0xffff;
+    		chksum = 0xffff;
 
     	return chksum;
 }

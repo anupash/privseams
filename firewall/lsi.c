@@ -39,20 +39,20 @@ int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m, struct in6_addr *ip_src, str
 	ip_hdr_size = sizeof(struct ip6_hdr);
 
 	switch(ip6_hdr->ip6_nxt){
-	       case IPPROTO_UDP:
-		 portDest = ((struct udphdr*)((m->payload) + ip_hdr_size))->dest;
-		 proto = "udp6";
-		 break;
+		case IPPROTO_UDP:
+			portDest = ((struct udphdr*)((m->payload) + ip_hdr_size))->dest;
+			proto = "udp6";
+			break;
 	       case IPPROTO_TCP:
-		 portDest = ((struct tcphdr*)((m->payload) + ip_hdr_size))->dest;
-		 proto = "tcp6";
-		 break;
+			portDest = ((struct tcphdr*)((m->payload) + ip_hdr_size))->dest;
+			proto = "tcp6";
+			break;
 	       default:
-		 break;
+		 	break;
 	}
     
 	if (portDest)
-	        proto6 = getproto_info(ntohs(portDest), proto);
+		proto6 = getproto_info(ntohs(portDest), proto);
 
 	if (!proto6){
 	        lsi_our = (hip_lsi_t *)hip_get_lsi_our_by_hits(ip_src, ip_dst);
@@ -96,7 +96,6 @@ int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *ip_src, stru
 	HIP_DEBUG("1. FIREWALL_TRIGGERING OUTGOING LSI %s\n",inet_ntoa(*ip_dst));
 
 	if (entry_peer){
-	        HIP_DEBUG("Firewall_db HIT ???? %d \n", entry_peer->bex_state);
 		HIP_IFEL(entry_peer->bex_state == -1, -1, "Base Exchange Failed");
 	  	if(entry_peer->bex_state)
 			reinject_packet(entry_peer->hit_our, entry_peer->hit_peer, m, 4, 0);
@@ -110,7 +109,7 @@ int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *ip_src, stru
 		}
 		else{
 			// Run bex to initialize SP and SA
-			HIP_DEBUG("Firewall_db empty and no ha. Triggering Base Exchange\n");
+			HIP_INFO("Firewall_db empty and no ha. Triggering Base Exchange\n");
 			HIP_IFEL(hip_trigger_bex(&src_hit, &dst_hit, &src_addr, &dst_addr), -1, 
 			 	 "Base Exchange Trigger failed");
 		  	firewall_add_hit_lsi(src_hit, dst_hit, ip_dst, 0);
@@ -145,10 +144,9 @@ int reinject_packet(struct in6_addr src_hit, struct in6_addr dst_hit, ipq_packet
 	        HIP_DEBUG_LSI("Ipv4 address dst ", &(iphdr->ip_dst));
 	}else{
 	        struct ip6_hdr* ip6_hdr = (struct ip6_hdr*) m->payload;
-		ip_hdr_size = sizeof(struct ip6_hdr);
+		ip_hdr_size = sizeof(struct ip6_hdr); //Fixed size
 		protocol = ip6_hdr->ip6_nxt;
 		ttl = ip6_hdr->ip6_hlim;
-		HIP_DEBUG("ip_hdr_size %d\n",ip_hdr_size);
 		HIP_DEBUG_IN6ADDR("Orig packet src address: ", &(ip6_hdr->ip6_src));
 		HIP_DEBUG_IN6ADDR("Orig packet dst address: ", &(ip6_hdr->ip6_dst));
 		HIP_DEBUG_IN6ADDR("New packet src address:", &src_hit);
@@ -164,22 +162,19 @@ int reinject_packet(struct in6_addr src_hit, struct in6_addr dst_hit, ipq_packet
 		HIP_DEBUG("HIP packet size greater than buffer size\n");
 	}
 
-	HIP_DEBUG("-Reinject packet packet length is %d\n", packet_length);
-	HIP_DEBUG("      Protocol used is %d\n", protocol);
-	HIP_DEBUG("      ipOrigTraffic %d \n", ipOrigTraffic);
+	_HIP_DEBUG("Reinject packet packet length (%d)\n", packet_length);
+	_HIP_DEBUG("      Protocol %d\n", protocol);
+	_HIP_DEBUG("      ipOrigTraffic %d \n", ipOrigTraffic);
 
 	msg = (u8 *)HIP_MALLOC(packet_length, 0);
 	memcpy(msg, (m->payload)+ip_hdr_size, packet_length);
-
-	//HIP_DUMP_MSG(msg);
-
 
 	if (protocol == IPPROTO_ICMP && incoming){
 		  HIP_DEBUG("protocol == IPPROTO_ICMP && incoming\n");
 		  struct icmphdr *icmp = NULL;
 		  icmp = (struct icmphdr *)msg;
 		  if (icmp->type == ICMP_ECHO){
-		    	icmp->type = ICMP_ECHOREPLY;
+		  	icmp->type = ICMP_ECHOREPLY;
 		    	err = firewall_send_outgoing_pkt(&dst_hit, &src_hit, msg, packet_length, protocol);
 		  }
 		  else{

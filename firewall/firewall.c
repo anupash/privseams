@@ -1004,20 +1004,17 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx) {
 							ctx->ipq_packet);
 						   
 	/* LSI HOOKS */
-	if (ctx->ip_version == 4){
-	  
-	        IPV6_TO_IPV4_MAP(&(ctx->src),&src_lsi);
+	if (ctx->ip_version == 4){	  
+		IPV6_TO_IPV4_MAP(&(ctx->src),&src_lsi);
 		IPV6_TO_IPV4_MAP(&(ctx->dst),&dst_lsi);
-		HIP_DEBUG("lsi is .... %d\n",IS_LSI(&src_lsi));
-		HIP_DEBUG("32 lsi is .... %d\n",IS_LSI32(src_lsi.s_addr));
 		if (IS_LSI32(src_lsi.s_addr)){
-		      if (is_packet_reinjection(&dst_lsi))
-			    verdict = accept_normal_traffic_by_default ? 1 : 0;
-		      else{
-			    hip_fw_handle_outgoing_lsi(ctx->ipq_packet, &src_lsi, &dst_lsi);
-			    /*Reject the packet*/
-			    verdict = 0;
-		      }
+			if (is_packet_reinjection(&dst_lsi))
+				verdict = accept_normal_traffic_by_default ? 1 : 0;
+		      	else{
+			    	hip_fw_handle_outgoing_lsi(ctx->ipq_packet, &src_lsi, &dst_lsi);
+			    	/*Reject the packet*/
+			    	verdict = 0;
+		      	}
 		}
 	}
 
@@ -1047,8 +1044,6 @@ int hip_fw_handle_esp_output(hip_fw_context_t *ctx) {
 	int verdict = accept_hip_esp_traffic_by_default;
 
 	HIP_DEBUG("\n");
-	HIP_DEBUG("........................Hei verdict - %d\n",verdict);
-	HIP_DEBUG("......................... hip_userspace_ipsec %d\n", hip_userspace_ipsec);
 	verdict = filter_esp(&ctx->dst, ctx->transport_hdr.esp, ctx->ipq_packet->hook);
 			 		
 	return verdict;
@@ -1070,13 +1065,13 @@ int hip_fw_handle_other_input(hip_fw_context_t *ctx) {
 	HIP_DEBUG("\n");
 	
 	if (ip_hits){
-	  if (hip_proxy_status)
-		verdict = handle_proxy_inbound_traffic(ctx->ipq_packet,
-						       &ctx->src);
-	  else{
-	        //LSI check
-	        verdict = hip_fw_handle_incoming_hit(ctx->ipq_packet,&ctx->src,&ctx->dst);
-	  }
+		if (hip_proxy_status)
+			verdict = handle_proxy_inbound_traffic(ctx->ipq_packet,
+							       &ctx->src);
+	  	else{
+	        	//LSI check
+	        	verdict = hip_fw_handle_incoming_hit(ctx->ipq_packet,&ctx->src,&ctx->dst);
+	  	}
 	}
 
 	/* No need to check default rules as it is handled by the iptables rules */
@@ -1157,27 +1152,6 @@ int hip_fw_handle_tcp_forward(hip_fw_context_t *ctx) {
 
 	return hip_fw_handle_other_forward(ctx);
 }
-
-
-/**
-* Returns true if the packet direction is input
-*/
-int is_incoming_packet(unsigned int theHook){
-    if(theHook == NF_IP_LOCAL_IN)
-        return 1;
-    return 0;
-}
-
-
-/**
-* Returns true if the packet direction is output
-*/
-int is_outgoing_packet(unsigned int theHook){
-    if(theHook == NF_IP_LOCAL_OUT)
-        return 1;
-    return 0;
-}
-
 
 /**
  * Analyzes packets.
@@ -1512,7 +1486,7 @@ int main(int argc, char **argv)
 			if (ntohs(sock_addr.sin6_port) != HIP_DAEMON_LOCAL_PORT) {
 			  	int type = hip_get_msg_type(msg);
 			        if (type == SO_HIP_FIREWALL_BEX_DONE){
-				  HIP_DEBUG(".....................SO_HIP_FIREWALL_BEX_DONE\n");
+				  HIP_DEBUG("SO_HIP_FIREWALL_BEX_DONE\n");
 				  HIP_DEBUG("%d == %d\n", ntohs(sock_addr.sin6_port), HIP_DAEMON_LOCAL_PORT);
 				}
 				HIP_DEBUG("Drop, message not from hipd\n");
