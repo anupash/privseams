@@ -71,7 +71,8 @@ void add_ipv4_header(struct ip *ip_hdr, struct in6_addr *src_addr, struct in6_ad
 		int packet_len, int next_hdr);
 void add_udp_header(struct udphdr *udp_hdr, int packet_len, hip_sadb_entry *entry,
 		struct in6_addr *src_addr, struct in6_addr *dst_addr);
-u_int16_t checksum_udp_packet(struct udphdr *udp_hdr, struct in6_addr *src_addr,
+uint16_t checksum_ip(struct ip *ip_hdr, unsigned int ip_hl);
+u_int16_t checksum_udp(struct udphdr *udp_hdr, struct in6_addr *src_addr,
 		struct in6_addr *dst_addr);
 
 /*
@@ -1832,7 +1833,6 @@ void add_ipv4_header(struct ip *ip_hdr, struct in6_addr *src_addr, struct in6_ad
 	IPV6_TO_IPV4_MAP(src_addr, &src_in_addr);
 	IPV6_TO_IPV4_MAP(dst_addr, &dst_in_addr);
 	
-	// TODO convert rest to correct values
 	// set changed values
 	ip_hdr->ip_v = 4;
 	/* assume no options */
@@ -1849,8 +1849,8 @@ void add_ipv4_header(struct ip *ip_hdr, struct in6_addr *src_addr, struct in6_ad
 	ip_hdr->ip_src.s_addr = htonl(src_in_addr.s_addr);
 	ip_hdr->ip_dst.s_addr = htonl(dst_in_addr.s_addr);
 
-	/* recalculate the header checksum */
-	//ip_hdr->ip_sum = ip_fast_csum((__u8*)ip_hdr, ip_hdr->ip_hl);
+	/* recalculate the header checksum, does not include payload */
+	ip_hdr->ip_sum = checksum_ip(ip_hdr, ip_hdr->ip_hl);
 }
 
 #if 0
@@ -1929,7 +1929,40 @@ void add_udp_header(struct udphdr *udp_hdr, int packet_len, hip_sadb_entry *entr
 	udp_hdr->len = htons((u_int16_t)packet_len);
 	
 	// this will create a pseudo header using some information from the ip layer
-	udp_hdr->check = checksum_udp_packet(udp_hdr, src_addr, dst_addr);
+	udp_hdr->check = checksum_udp(udp_hdr, src_addr, dst_addr);
+}
+
+
+/* This isn't the 'fast' checksum, since the GCC inline ASM version is not 
+ * available in Windows; this is the same code from hip_util.c */
+uint16_t checksum_ip(struct ip *ip_hdr, unsigned int ip_hl)
+{
+	uint16_t checksum;
+	unsigned long sum = 0;
+	int count = ip_hl*4;
+	unsigned short *p = (unsigned short *) ip_hdr;
+
+	/* 
+	 * this checksum algorithm can be found 
+	 * in RFC 1071 section 4.1
+	 */
+
+	/* one's complement sum 16-bit words of data */
+	while (count > 1)  {
+		sum += *p++;
+		count -= 2;
+	}
+	/* add left-over byte, if any */
+	if (count > 0)
+		sum += (unsigned char)*p;
+ 
+	/*  Fold 32-bit sum to 16 bits */
+	while (sum>>16)
+		sum = (sum & 0xffff) + (sum >> 16);
+	/* take the one's complement of the sum */ 
+	checksum = (uint16_t)(~sum);
+    
+	return checksum;
 }
 
 /*
@@ -1940,7 +1973,7 @@ void add_udp_header(struct udphdr *udp_hdr, int packet_len, hip_sadb_entry *entr
  * Calculates the checksum of a UDP packet with pseudo-header
  * src and dst are IPv4 addresses in network byte order
  */
-uint16_t checksum_udp_packet(struct udphdr *udp_hdr, struct in6_addr *src_addr,
+uint16_t checksum_udp(struct udphdr *udp_hdr, struct in6_addr *src_addr,
 		struct in6_addr *dst_addr)
 {
 	uint16_t checksum = 0;

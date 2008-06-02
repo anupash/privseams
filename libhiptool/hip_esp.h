@@ -36,14 +36,6 @@ int hip_esp_decrypt(unsigned char *in, int len, unsigned char *out, int *offset,
 /* added By Tao Wan*/
 #define H_PROTO_UDP 17
 
-/* array of Ethernet addresses used by get_eth_addr() */
-#define MAX_ETH_ADDRS 255
-__u8 eth_addrs[6 * MAX_ETH_ADDRS]; /* must be initialized to random values */
-
-
-/* Prototype of checksum function defined in hip_util.c */
-__u16 checksum_udp_packet(__u8 *data, struct sockaddr *src, struct sockaddr *dst);
-
 /* 
  * Local data types 
  */
@@ -58,20 +50,6 @@ struct ip_esp_padinfo {
 	__u8 next_hdr;
 }__attribute__ ((packed)) ;
 
-struct eth_hdr {
-	__u8 dst[6];
-	__u8 src[6];
-	__u16 type;
-}__attribute__ ((packed));
-
-/* ARP header - RFC 826, STD 37 */
-struct arp_hdr {
-	__u16 ar_hrd;
-	__u16 ar_pro;
-	__u8 ar_hln;
-	__u8 ar_pln;
-	__u16 ar_op;
-};
 
 /*added by Tao Wan pseudo_header6, pseudo_header*/
 
@@ -79,12 +57,10 @@ typedef struct _pseudo_header6
 {
 	unsigned char src_addr[16];
 	unsigned char dst_addr[16];
-	__u32 packet_length;
+	uint32_t packet_length;
 	char zero[3];
-	__u8 next_hdr;
+	uint8_t next_hdr;
 } pseudo_header6;
-
-
 
 
 

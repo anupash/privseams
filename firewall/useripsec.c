@@ -212,7 +212,7 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 						(struct sockaddr *)&preferred_peer_sockaddr,
 						hip_sockaddr_len(&preferred_peer_sockaddr));
 	
-	if (err) {
+	if (err < 0) {
 		HIP_DEBUG("hip_esp_output(): sendto() failed\n");
 	} else
 	{
