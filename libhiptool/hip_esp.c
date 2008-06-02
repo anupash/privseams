@@ -1932,6 +1932,8 @@ void add_udp_header(struct udphdr *udp_hdr, int packet_len, hip_sadb_entry *entr
 	udp_hdr->check = checksum_udp(udp_hdr, src_addr, dst_addr);
 }
 
+/* TODO put checksums in one function and copy add function from openhip
+ * needed for UDP */
 
 /* This isn't the 'fast' checksum, since the GCC inline ASM version is not 
  * available in Windows; this is the same code from hip_util.c */
@@ -1968,8 +1970,6 @@ uint16_t checksum_ip(struct ip *ip_hdr, unsigned int ip_hl)
 /*
  * function checksum_udp_packet()
  *
- * XX TODO: combine with other checksum functions
- *
  * Calculates the checksum of a UDP packet with pseudo-header
  * src and dst are IPv4 addresses in network byte order
  */
@@ -1990,9 +1990,9 @@ uint16_t checksum_udp(struct udphdr *udp_hdr, struct in6_addr *src_addr,
 	memset(&pseudo_hdr, 0, sizeof(pseudo_header));
 	IPV6_TO_IPV4_MAP(src_addr, &src_in_addr);
 	IPV6_TO_IPV4_MAP(dst_addr, &dst_in_addr);
-	// TODO check for correct byte order
-	pseudo_hdr.src_addr = src_in_addr.s_addr;
-	pseudo_hdr.dst_addr = dst_in_addr.s_addr;
+	/* assume host byte order */
+	pseudo_hdr.src_addr = htonl(src_in_addr.s_addr);
+	pseudo_hdr.dst_addr = htonl(dst_in_addr.s_addr);
 	pseudo_hdr.protocol = IPPROTO_UDP;
 	pseudo_hdr.packet_length = udp_hdr->len;
 
