@@ -662,7 +662,6 @@ int hip_netdev_trigger_bex(hip_hit_t **src_hit, hip_hit_t **dst_hit,
 	hip_hit_t default_hit;
 	addr = (struct sockaddr*) &ss_addr;
 
-	HIP_DEBUG_IN6ADDR("...................... dst_addr \n", &dst_addr);
 
 	if (src_lsi && dst_lsi && !(*dst_hit || *src_hit)){
 	        //hit_peer already mapped because hipconf command and non-opportunistic mode
@@ -670,17 +669,9 @@ int hip_netdev_trigger_bex(hip_hit_t **src_hit, hip_hit_t **dst_hit,
 		HIP_DEBUG_LSI("Param is an lsi!!", dst_lsi);
 		HIP_IFEL(!(entry = hip_hadb_try_to_find_by_pair_lsi(src_lsi, dst_lsi)),
 			 -1, "internal error: no hadb entry found\n");
-
-		HIP_IFEL(!(dst_hit = (hip_hit_t *) HIP_MALLOC(sizeof(hip_hit_t),0)),
-			 -ENOMEM, "No memory available for dst_hit\n");
-		HIP_IFEL(!(src_hit = (hip_hit_t *) HIP_MALLOC(sizeof(hip_hit_t),0)),
-			 -ENOMEM, "No memory available for src_hit\n");
-		memset(dst_hit, 0, sizeof(*dst_hit));
-		memset(src_hit, 0, sizeof(*src_hit));
-		ipv6_addr_copy(*dst_hit, &entry->hit_peer);
-		ipv6_addr_copy(*src_hit, &entry->hit_our);
-		goto skip_hadb_find;
-		
+		*dst_hit = &(entry->hit_peer);
+		*src_hit = &(entry->hit_our);
+		goto skip_hadb_find;		
 	}
 
 	if (!(*src_hit)){

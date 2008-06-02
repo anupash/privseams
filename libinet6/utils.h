@@ -130,7 +130,7 @@ static inline void set_hit_prefix(struct in6_addr *hit)
 	memcpy(hit, &hit_begin, sizeof(hip_closest_prefix_type_t));
 }
 
-static inline void set_lsi_prefix(hip_hit_t *lsi)
+static inline void set_lsi_prefix(hip_lsi_t *lsi)
 {
 	hip_closest_prefix_type_t lsi_begin;
 	memcpy(&lsi_begin, lsi, sizeof(hip_closest_prefix_type_t));
