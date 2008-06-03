@@ -254,7 +254,8 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	hip_sadb_entry *inverse_entry = NULL;
 	struct in6_addr src_hit;
 	struct in6_addr dst_hit;
-	decrypted_packet_len = 0;
+	struct timeval now;
+	int decrypted_packet_len = 0;
 	uint32_t spi = 0;
 	uint32_t seq_no = 0;
 	int err = 0;
@@ -266,6 +267,7 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	
 	// re-use allocated decrypted_packet memory space
 	memset(decrypted_packet, 0, ESP_PACKET_SIZE);
+	gettimeofday(&now, NULL);
 	
 	// get ESP header of input packet, UDP encapsulation is handled in firewall already
 	esp_hdr = ctx->transport_hdr.esp;
@@ -318,23 +320,25 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	HIP_IFE(cast_sockaddr_to_in6_addr(&entry->inner_dst_addrs->addr, &dst_hit), -1);
 	
 	// decrypt the packet and create a new HIT-based one
-	err = hip_esp_input(esp_hdr, entry, src_hit, dst_hit,
+	err = hip_esp_input(ctx, entry, &src_hit, &dst_hit,
 			(struct ip6_hdr *) decrypted_packet, &decrypted_packet_len);
 	
 	// send the raw HIT-based (-> IPv6) packet -> returns size of the sent packet
 	// TODO check flags
-	err = sendto(raw_sock_v6, decrypted_packet, packet_len, 0,
+	err = sendto(raw_sock_v6, decrypted_packet, decrypted_packet_len, 0,
 					(struct sockaddr *)&entry->inner_dst_addrs->addr,
 					hip_sockaddr_len(&entry->inner_dst_addrs->addr));
 	if (err < 0) {
 		HIP_DEBUG("hip_esp_input(): sendto() failed\n");
 	} else
 	{
-		entry->bytes += *outlen - sizeof(struct eth_hdr);
-		entry->usetime.tv_sec = now->tv_sec;
-		entry->usetime.tv_usec = now->tv_usec;
-		entry->usetime_ka.tv_sec = now->tv_sec;
-		entry->usetime_ka.tv_usec = now->tv_usec;
+		pthread_mutex_lock(&entry->rw_lock);
+		entry->bytes += err;
+		entry->usetime.tv_sec = now.tv_sec;
+		entry->usetime.tv_usec = now.tv_usec;
+		entry->usetime_ka.tv_sec = now.tv_sec;
+		entry->usetime_ka.tv_usec = now.tv_usec;
+		pthread_mutex_unlock(&entry->rw_lock);
 	}
 	
   out_err:

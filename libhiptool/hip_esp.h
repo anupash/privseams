@@ -23,11 +23,9 @@ long g_read_usec;
 int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 		int udp_encap, struct timeval *now, struct in6_addr *preferred_local_addr,
 		struct in6_addr *preferred_peer_addr, unsigned char *esp_packet, int *esp_packet_len);
-int hip_esp_input(struct sockaddr *ss_lsi, u8 *buff, int len);
-
-
-int hip_esp_decrypt(unsigned char *in, int len, unsigned char *out, int *offset, int *outlen,
-    hip_sadb_entry *entry, struct ip *iph, struct timeval *now);
+int hip_esp_input(hip_fw_context_t *ctx, hip_sadb_entry *entry,
+		struct in6_addr *src_hit, struct in6_addr *dst_hit,
+		struct ip6_hdr *decrypted_packet, int *decrypted_packet_len);
 
 #if 0
 

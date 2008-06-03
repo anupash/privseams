@@ -69,11 +69,12 @@
 
 int hip_esp_encrypt(unsigned char *in, uint8_t in_type, int in_len,
 		unsigned char *out, int *out_len, hip_sadb_entry *entry);
-
+int hip_esp_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8_t *out_type,
+		int *out_len, hip_sadb_entry *entry);
 void add_ipv4_header(struct ip *ip_hdr, struct in6_addr *src_addr, struct in6_addr *dst_addr,
-		int packet_len, int next_hdr);
+		int packet_len, uint8_t next_hdr);
 void add_ipv6_header(struct ip6_hdr *ip6_hdr, struct in6_addr *src_addr, struct in6_addr *dst_addr,
-		int packet_len, int next_hdr);
+		int packet_len, uint8_t next_hdr);
 void add_udp_header(struct udphdr *udp_hdr, int packet_len, hip_sadb_entry *entry,
 		struct in6_addr *src_addr, struct in6_addr *dst_addr);
 uint16_t checksum_ip(struct ip *ip_hdr, unsigned int ip_hl);
@@ -271,15 +272,23 @@ int hip_esp_input(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 	
 	decrypted_packet_len += next_hdr_offset;
 
-	// TODO calculate esp_len
-	esp_len = 
+	// calculate esp data length
+	if (ctx->ip_version == 4)
+	{
+		esp_len = ctx->ipq_packet->data_len - sizeof(struct ip);
+		// check if ESP packet is UDP encapsulated
+		if (ctx->udp_encap_hdr)
+			esp_len -= sizeof(struct udphdr);
+	}
+	else
+		esp_len = ctx->ipq_packet->data_len - sizeof(struct ip6_hdr);
 	
 	// decrypt now
 	pthread_mutex_lock(&entry->rw_lock);
 	
 	err = hip_esp_decrypt((unsigned char *)ctx->transport_hdr.esp, esp_len,
-			((unsigned char *)decrypted_packet) + next_hdr_offset, &next_hdr, &decrypted_data_len,
-			entry);
+			((unsigned char *)decrypted_packet) + next_hdr_offset, &next_hdr,
+			&decrypted_data_len, entry);
 	
 	pthread_mutex_unlock(&entry->rw_lock);
 	if (err) {
@@ -291,7 +300,7 @@ int hip_esp_input(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 	
 	// now we know the next_hdr and can set up the IPv6 header
 	add_ipv6_header(decrypted_packet, src_hit, dst_hit,
-			decrypted_packet_len, next_hdr)
+			*decrypted_packet_len, next_hdr);
 	
   out_err:
   	return err;
@@ -329,7 +338,7 @@ int hip_esp_encrypt(unsigned char *in, uint8_t in_type, int in_len,
 	int err = 0;
 	
 	//unsigned int hmac_md_len;
-	//__u8 hmac_md[EVP_MAX_MD_SIZE];
+	//unsigned char hmac_md[EVP_MAX_MD_SIZE];
 	
 	esp_data_offset = sizeof(struct hip_esp);
 
@@ -343,7 +352,7 @@ int hip_esp_encrypt(unsigned char *in, uint8_t in_type, int in_len,
 		case SADB_EALG_3DESCBC:
 			iv_len = 8;
 			if (!entry->e_key || entry->e_keylen==0) {
-				HIP_DEBUG("hip_esp_encrypt: 3-DES key missing.\n");
+				HIP_ERROR("3-DES key missing.\n");
 				
 				err = -1;
 				goto out_err;
@@ -352,7 +361,7 @@ int hip_esp_encrypt(unsigned char *in, uint8_t in_type, int in_len,
 		case SADB_X_EALG_BLOWFISHCBC:
 			iv_len = 8;
 			if (!entry->bf_key) {
-				HIP_DEBUG("hip_esp_encrypt: BLOWFISH key missing.\n");
+				HIP_ERROR("BLOWFISH key missing.\n");
 				
 				err = -1;
 				goto out_err;
@@ -367,13 +376,13 @@ int hip_esp_encrypt(unsigned char *in, uint8_t in_type, int in_len,
 				entry->aes_key = malloc(sizeof(AES_KEY));
 				if (AES_set_encrypt_key(entry->e_key, 8*entry->e_keylen,
 							entry->aes_key)) {
-					HIP_DEBUG("hip_esp_encrypt: AES key problem!\n");
+					HIP_ERROR("AES key problem!\n");
 					
 					err = -1;
 					goto out_err;
 				}
 			} else if (!entry->aes_key) {
-				HIP_DEBUG("hip_esp_encrypt: AES key missing.\n");
+				HIP_ERROR("AES key missing.\n");
 				 
 				err = -1;
 				goto out_err;
@@ -445,7 +454,11 @@ int hip_esp_encrypt(unsigned char *in, uint8_t in_type, int in_len,
 			
 			break;
 		default:
-			break;
+			HIP_DEBUG("Unsupported encryption transform (%d).\n",
+					entry->e_type);
+						
+			err = -1;
+			goto out_err;
 	}
 	
 	/* auth will include IV */
@@ -468,7 +481,7 @@ int hip_esp_encrypt(unsigned char *in, uint8_t in_type, int in_len,
 			break;
 		case SADB_AALG_MD5HMAC:
 			if (!entry->a_key || entry->a_keylen == 0) {
-				HIP_DEBUG("auth err: missing keys\n");
+				HIP_ERROR("authentication keys missing\n");
 				
 				err = -1;
 				goto out_err;
@@ -481,7 +494,7 @@ int hip_esp_encrypt(unsigned char *in, uint8_t in_type, int in_len,
 		case SADB_AALG_SHA1HMAC:
 			//alen = HMAC_SHA_96_BITS / 8; /* 12 bytes */
 			if (!entry->a_key || entry->a_keylen == 0) {
-				HIP_DEBUG("auth err: missing keys\n");
+				HIP_ERROR("authentication keys missing\n");
 				
 				err = -1;
 				goto out_err;
@@ -527,12 +540,12 @@ int hip_esp_encrypt(unsigned char *in, uint8_t in_type, int in_len,
  * 
  * Perform authentication and decryption of ESP packets.
  */
-int hip_esp_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8_t *out_type, int *out_len,
-		hip_sadb_entry *entry)
+int hip_esp_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8_t *out_type,
+		int *out_len, hip_sadb_entry *entry)
 {
 #if 0
 	int alen=0, elen=0, iv_len=0;
-	unsigned int hmac_md_len;
+	
 	struct ip_esp_hdr *esp;
 	udphdr *udph;
 
@@ -540,18 +553,30 @@ int hip_esp_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8_t *
 	struct tcphdr *tcp=NULL;
 	struct udphdr *udp=NULL;
 	__u8 cbc_iv[16];
-	__u8 hmac_md[EVP_MAX_MD_SIZE];
+	
 	__u64 dst_mac;
 	__u16 sum;
 	int family_out;
 	struct sockaddr_storage taplsi6;
 	int use_udp = FALSE;
 #endif
-
+	/* elen is length of data to encrypt */
+	int elen = 0;
 	// length of authentication protection field
 	int alen = 0;
+	// authentication data
+	unsigned int hmac_md_len;
+	unsigned char hmac_md[EVP_MAX_MD_SIZE];
+	/* initialization vector */
+	int iv_len = 0;
+	unsigned char cbc_iv[16];
+	/* ESP tail information */
+	int pad_len = 0;
+	struct hip_esp_tail *esp_tail = NULL;
+	int esp_data_offset = 0;
 	int err = 0;
 
+	esp_data_offset = sizeof(struct hip_esp);
 	
 	/* 
 	 *   Authentication 
@@ -563,7 +588,7 @@ int hip_esp_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8_t *
 			break;
 		case SADB_AALG_MD5HMAC:
 			alen = HMAC_SHA_96_BITS / 8; /* 12 bytes */
-			// length of encrypted payload
+			// length of the authenticated payload, includes ESP header
 			elen = in_len - alen;
 			
 			if (!entry->a_key || entry->a_keylen == 0) {
@@ -574,11 +599,10 @@ int hip_esp_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8_t *
 			}
 			
 			HMAC(EVP_md5(), entry->a_key, entry->a_keylen, 
-				(__u8*)esp, elen + sizeof(struct ip_esp_hdr),
-				hmac_md, &hmac_md_len);
+				in, elen, hmac_md, &hmac_md_len);
 			
 			// actual auth verification
-			if (memcmp(&in[len - alen], hmac_md, alen) != 0)
+			if (memcmp(&in[elen], hmac_md, hmac_md_len) != 0)
 			{
 				HIP_DEBUG("ESP packet could not be authenticated\n");
 				
@@ -588,7 +612,7 @@ int hip_esp_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8_t *
 			break;
 		case SADB_AALG_SHA1HMAC:
 			alen = HMAC_SHA_96_BITS / 8; /* 12 bytes */
-			// length of encrypted payload
+			// length of the encrypted payload
 			elen = in_len - alen;
 			
 			if (!entry->a_key || entry->a_keylen == 0) {
@@ -599,11 +623,11 @@ int hip_esp_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8_t *
 			}
 			
 			HMAC(EVP_sha1(), entry->a_key, entry->a_keylen, 
-				(__u8*)esp, elen + sizeof(struct ip_esp_hdr),
-				hmac_md, &hmac_md_len);
+				in, elen, hmac_md, &hmac_md_len);
 			
 			// actual auth verification
-			if (memcmp(&in[len - alen], hmac_md, alen) !=0) {
+			if (memcmp(&in[elen], hmac_md, hmac_md_len) != 0)
+			{
 				HIP_DEBUG("ESP packet could not be authenticated\n");
 				
 				err = 1;
@@ -616,29 +640,39 @@ int hip_esp_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8_t *
 		case SADB_X_AALG_RIPEMD160HMAC:
 		case SADB_X_AALG_NULL:
 		default:
-			HIP_DEBUG("Unsupported authentication algorithm (%d).\n",
+			HIP_ERROR("Unsupported authentication algorithm (%d).\n",
 										entry->a_type);
 						
 			err = -1;
 			goto out_err;
 	}
 	
+	
+
 	/*
 	 *   Decryption
 	 */
+	
+	elen -= esp_data_offset;
+
+	/* Check keys and set initialisation vector length */
 	switch (entry->e_type) {
 		case SADB_EALG_3DESCBC:
 			iv_len = 8;
-			if (!entry->e_key || entry->e_keylen==0) {
-				printf("hip_esp_decrypt: 3-DES key missing.\n");
-				return(-1);
+			if (!entry->e_key || entry->e_keylen == 0) {
+				HIP_ERROR("3-DES key missing.\n");
+
+				err = -1;
+				goto out_err;
 			}
 			break;
 		case SADB_X_EALG_BLOWFISHCBC:
 			iv_len = 8;
 			if (!entry->bf_key) {
-				printf("hip_esp_decrypt: BLOWFISH key missing.\n");
-				return(-1);
+				HIP_ERROR("BLOWFISH key missing.\n");
+
+				err = -1;
+				goto out_err;
 			}
 			break;
 		case SADB_EALG_NULL:
@@ -648,13 +682,20 @@ int hip_esp_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8_t *
 			iv_len = 16;
 			if (!entry->aes_key && entry->e_key) {
 				entry->aes_key = malloc(sizeof(AES_KEY));
+				
 				if (AES_set_decrypt_key(entry->e_key, 8*entry->e_keylen,
 							entry->aes_key)) {
-					printf("hip_esp_decrypt: AES key problem!\n");
+					HIP_ERROR("AES key problem!\n");
+					
+					err = -1;
+					goto out_err;
 				}
+				
 			} else if (!entry->aes_key) {
-				printf("hip_esp_decrypt: AES key missing.\n");
-				return(-1);
+				HIP_ERROR("AES key missing.\n");
+
+				err = -1;
+				goto out_err;
 			}
 			break;
 		case SADB_EALG_NONE:
@@ -663,46 +704,57 @@ int hip_esp_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8_t *
 		case SADB_X_EALG_SERPENTCBC:
 		case SADB_X_EALG_TWOFISHCBC:
 		default:
-			printf("Unsupported decryption algorithm (%d)\n", 
+			HIP_ERROR("Unsupported decryption algorithm (%d)\n", 
 				entry->e_type);
-			break;
+
+			err = -1;
+			goto out_err;
 	}
 	
-	memcpy(cbc_iv, esp->enc_data, iv_len);
-	elen -= iv_len; /* don't include iv as part of ciphertext */
+	/* get the initialisation vector located right behind the ESP header */
+	memcpy(cbc_iv, in + esp_data_offset, iv_len);
+	
+	/* also don't include IV as part of ciphertext */
+	elen -= iv_len; 
 	
 	switch (entry->e_type) {
 		case SADB_EALG_3DESCBC:
-			des_ede3_cbc_encrypt(&esp->enc_data[iv_len], &out[*offset],elen,
+			des_ede3_cbc_encrypt(&in[esp_data_offset + iv_len], out, elen,
 					     entry->ks[0], entry->ks[1], entry->ks[2],
-					     (des_cblock*)cbc_iv, DES_DECRYPT);
+					     (des_cblock *) cbc_iv, DES_DECRYPT);
 			break;
 		case SADB_X_EALG_BLOWFISHCBC:
-			BF_cbc_encrypt(&esp->enc_data[iv_len], &out[*offset], elen,
+			BF_cbc_encrypt(&in[esp_data_offset + iv_len], out, elen,
 					entry->bf_key, cbc_iv, BF_DECRYPT);
 			break;
 		case SADB_EALG_NULL:
-			memcpy(&out[*offset], esp->enc_data, elen);
-			//padinfo = (struct ip_esp_padinfo*) &in[len - alen - 2];
+			memcpy(out, &in[esp_data_offset], elen);
 			break;
 		case SADB_X_EALG_AESCBC:
-			AES_cbc_encrypt(&esp->enc_data[iv_len], &out[*offset], elen,
+			AES_cbc_encrypt(&in[esp_data_offset + iv_len], out, elen,
 					entry->aes_key, cbc_iv, AES_DECRYPT);
 			break;
 		default:
-			return(-1);
+			HIP_ERROR("Unsupported decryption algorithm (%d)\n", 
+					entry->e_type);
+
+			err = -1;
+			goto out_err;
 	}
 
 	/* remove padding */
-	padinfo = (struct ip_esp_padinfo*) &out[*offset + elen - 2];
-	elen -= 2 + padinfo->pad_length;
+	esp_tail = (struct hip_esp_tail *) &out[elen - sizeof(struct hip_esp_tail)];
+	*out_type = esp_tail->esp_next;
+	*out_len = elen - (esp_tail->esp_padlen + sizeof(struct hip_esp_tail));
 
+#if 0
+	// TODO do we need this?
 	/* determine address family for new packet based on 
 	 * decrypted upper layer protocol header
 	 */
 	family_out = hip_select_family_by_proto(LSI4(&entry->lsi), 
 					padinfo->next_hdr, &out[*offset], now);
-	
+#endif
 
   out_err:
 	return err;
