@@ -173,6 +173,8 @@ int reinject_packet(struct in6_addr src_hit, struct in6_addr dst_hit, ipq_packet
 		  HIP_DEBUG("protocol == IPPROTO_ICMP && incoming\n");
 		  struct icmphdr *icmp = NULL;
 		  icmp = (struct icmphdr *)msg;
+		  /*Manually built due to kernel messed up with the ECHO_REPLY message.
+		   Kernel was building an answer message with equals @src and @dst*/
 		  if (icmp->type == ICMP_ECHO){
 		  	icmp->type = ICMP_ECHOREPLY;
 		    	err = firewall_send_outgoing_pkt(&dst_hit, &src_hit, msg, packet_length, protocol);
