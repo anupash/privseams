@@ -539,13 +539,13 @@ int hip_handle_user_msg(struct hip_common *msg,
 		break;
 #endif /* CONFIG_HIP_ESCROW */
 #ifdef CONFIG_HIP_RVS
-	case SO_HIP_ADD_RVS:
+	case SO_HIP_ADD_SERVER:
 	{
-		/* draft-ietf-hip-registration-02 RVS registration. Responder
-		   (of I,RVS,R hierarchy) handles this message. Message
-		   indicates that the current machine wants to register to a rvs
-		   server. This message is received from hipconf. */
-		HIP_DEBUG("Handling ADD RENDEZVOUS user message.\n");
+		/* RFC 5203 service registration. The requester, i.e. the client
+		   of the server handles this message. Message indicates that
+		   the current machine wants to register to a server for
+		   additional services. */
+		HIP_DEBUG("Handling ADD SERVER user message.\n");
 
 		struct hip_reg_request *reg_req = NULL;
 		hip_pending_request_t *pending_req = NULL;
@@ -576,7 +576,7 @@ int hip_handle_user_msg(struct hip_common *msg,
 			goto out_err;
 		}
 		
-		/* Add HIT to IP address mapping of RVS to haDB. */ 
+		/* Add HIT to IP address mapping of the server to haDB. */ 
 		HIP_IFEL(hip_add_peer_map(msg), -1, "Error on adding server "\
 			 "HIT to IP address mapping to the haDB.\n");
 		
@@ -645,15 +645,8 @@ int hip_handle_user_msg(struct hip_common *msg,
 		   message is received from hipconf. */
 		HIP_DEBUG("Handling OFFER RENDEZVOUS user message.\n");
 		
-		//HIP_IFE(hip_services_add(HIP_SERVICE_RENDEZVOUS), -1);
-		//hip_services_set_active(HIP_SERVICE_RENDEZVOUS);
-		
 		hip_set_srv_status(HIP_SERVICE_RENDEZVOUS, HIP_SERVICE_ON);
 		hip_relay_set_status(HIP_RELAY_ON);
-
-		/*if (hip_services_is_active(HIP_SERVICE_RENDEZVOUS)){
-			HIP_DEBUG("Rendezvous service is now active.\n");
-			}*/
 	     
 		err = hip_recreate_all_precreated_r1_packets();
 		break;

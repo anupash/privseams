@@ -27,6 +27,9 @@
 
 /** @addtogroup hip_so
  * HIP socket options.
+ * @note Values 1 - 64 overlap the message values and thus cannot be used in
+ *       hip_message_type_name().
+ * @todo Should socket option values 1 - 64 be renumbered starting from 65?
  * @{
  */
 #define HIP_SO_ANY_MIN 				1
@@ -109,7 +112,7 @@
 #define SO_HIP_REINIT_RVS                       103
 /** Socket option to ask for the RVS service, i.e.\ send REG_REQUEST parameter
     to the server. (client side) */
-#define SO_HIP_ADD_RVS			        104
+#define SO_HIP_ADD_SERVER			        104
 /** Socket option to ask for cancellation of the RVS service, i.e.\ send
     REG_REQUEST parameter with zero lifetime to the server. (client side) */
 #define SO_HIP_DEL_RVS                          105
@@ -153,7 +156,6 @@
 #define SO_HIP_UPDATE_HIU                       128
 #define SO_HIP_SET_NAT_PLAIN_UDP                129
 #define SO_HIP_SET_NAT_ON                       129 // XX FIXME: REMOVE
-#define SO_HIP_SET_NAT_PLAIN_UDP                129
 #define SO_HIP_SET_NAT_NONE                     130
 #define SO_HIP_SET_NAT_OFF                      130 // XX FIXME: REMOVE
 #define SO_HIP_SET_HIPPROXY_ON		      	131

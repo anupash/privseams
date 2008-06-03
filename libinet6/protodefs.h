@@ -238,7 +238,7 @@
 #define HIP_HA_CTRL_LOCAL_REQ_RELAY      0x4000
 #define HIP_HA_CTRL_LOCAL_REQ_RVS        0x8000
 /* Keep inside parentheses. */
-#define HIP_HA_CTRL_LOCAL_REQ_ALL        (\
+#define HIP_HA_CTRL_LOCAL_REQ_ANY        (\
                                          HIP_HA_CTRL_LOCAL_REQ_ESCROW |\
                                          HIP_HA_CTRL_LOCAL_REQ_RELAY |\
                                          HIP_HA_CTRL_LOCAL_REQ_RVS\
@@ -267,15 +267,15 @@
 #define HIP_SERVICE_RELAY            	 202
 #define HIP_SERVICE_RELAY_UDP_HIP	 203
 #define HIP_SERVICE_RELAY_UDP_ESP	 204
+/* IMPORTANT! This must be the sum of above services. */
+#define HIP_TOTAL_EXISTING_SERVICES      3
+/* @} */
 
 /** @addtogroup hip_proxy
  * @{ 
  */
 #define HIP_PROXY_PASSTHROUGH		0
 #define HIP_PROXY_TRANSLATE 			1
-
-/* IMPORTANT! This must be the sum of above services. */
-#define HIP_TOTAL_EXISTING_SERVICES      3
 /* @} */
 
 /* Registration failure types as specified in draft-ietf-hip-registration-02.
@@ -763,4 +763,3 @@ struct hip_opendht_set {
 /* @} */
 
 #endif /* _HIP_PROTODEFS */
-

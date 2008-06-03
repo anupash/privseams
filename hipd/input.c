@@ -897,9 +897,10 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
     }             
 #endif //CONFIG_HIP_ESCROW
 
+    /************ REG_REQUEST ***********/
     /* Check if we have requested any services. The request bits are set in
        user.c. */
-    if(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_ALL) {
+    if(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_ANY) {
 	    int request_count = hip_get_pending_request_count(entry);
 	    if(request_count > 0) {
 		    int i = 0;
@@ -923,16 +924,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		       parameter. */
 	    }
     }
-
-    /* Old crap soon to be removed...
-    uint8_t services[HIP_TOTAL_EXISTING_SERVICES];
-    type_count = hip_get_incomplete_registrations(&reg_type, entry, 1, services); 
-    if (type_count > 0) {
-    HIP_DEBUG("Adding REG_REQUEST parameter with %d reg types.\n", type_count);
-    HIP_IFEL(hip_build_param_reg_request(i2, 255, services, type_count),
-    -1, "Could not build REG_REQUEST parameter\n");
-    }
-    */
 
     /******** NONCE *************************/
 #ifdef CONFIG_HIP_BLIND
@@ -992,7 +983,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	/* Store the keys until we receive R2 */
 	HIP_IFEB(hip_store_base_exchange_keys(entry, ctx, 1), -1, HIP_UNLOCK_HA(entry));
 
-	/* todo: Also store the keys that will be given to ESP later */
+	/** @todo Also store the keys that will be given to ESP later */
 	HIP_IFE(hip_hadb_get_peer_addr(entry, &daddr), -1); 
 
 	/* R1 packet source port becomes the I2 packet destination port. */
@@ -1134,96 +1125,7 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 
 	/* Handle REG_INFO parameter. */
 	hip_handle_param_reg_info(r1, entry);
-	/*
-	  reg_info = hip_get_param(r1, HIP_PARAM_REG_INFO);
 	
-	  if (reg_info) {
-	  int i;
-	  uint8_t current_reg_type = 0;
-	  uint8_t size_of_lifetimes = sizeof(reg_info->min_lifetime)
-	  + sizeof(reg_info->max_lifetime);
-	  int typecount;
-	
-	  uint8_t *reg_types = (uint8_t *)
-	  (hip_get_param_contents_direct(reg_info)) + size_of_lifetimes;
-
-	  typecount = hip_get_param_contents_len(reg_info) - size_of_lifetimes;
-		
-	  if(typecount == 0){
-	  HIP_DEBUG("REG_INFO had no services listed.\n");
-	  HIP_INFO("Responder is currently unable to provide "\
-	  "services due to transient conditions.\n");
-	  }
-
-	  HIP_DEBUG("Responder offers %d %s.\n", typecount,
-	  (typecount == 1) ? "service" : "services");
-	  HIP_HEXDUMP("Reg types are (one byte each): ", reg_types, typecount);
-
-	  for(i = 0; i < typecount; i++){
-	  current_reg_type = reg_types[i];
-		     
-	  switch(current_reg_type){
-	  #ifdef CONFIG_HIP_ESCROW
-	  case HIP_SERVICE_ESCROW:
-	  HIP_INFO("Responder offers escrow service.\n");
-						
-	  HIP_KEA *kea;
-	  kea = hip_kea_find(&entry->hit_our);
-	  if (kea && kea->keastate == HIP_KEASTATE_REGISTERING) {
-	  HIP_DEBUG("Registering to escrow service.\n");
-	  hip_keadb_put_entry(kea);
-	  } 
-	  else if(kea){
-	  kea->keastate = HIP_KEASTATE_INVALID;
-	  HIP_DEBUG("Not doing escrow registration, "\
-	  "invalid kea state.\n");
-	  hip_keadb_put_entry(kea);	  
-	  }
-	  else{
-	  HIP_DEBUG("Not doing escrow registration.\n");
-	  }
-
-	  break;
-	  #endif
-	  #ifdef CONFIG_HIP_RVS
-	  case HIP_SERVICE_RENDEZVOUS:
-	  HIP_INFO("Responder offers rendezvous service.\n");
-		
-	  if(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_RVS)
-	  {
-	  hip_hadb_set_peer_controls(
-	  entry, HIP_HA_CTRL_PEER_RVS_CAPABLE);
-	  }
-	  break;
-	  case HIP_SERVICE_RELAY:
-	  HIP_INFO("Responder offers UDP relay service for "\
-	  "HIP packets.\n");
-			  
-	  if(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_RELAY)
-	  {
-	  hip_hadb_set_peer_controls(
-	  entry, HIP_HA_CTRL_PEER_RELAY_CAPABLE);
-
-	  }
-	  break;
-	  #endif
-	  default:
-	  HIP_INFO("Responder offers unsupported service.\n");
-	  }
-	  }
-	  }
-	  #ifdef CONFIG_HIP_ESCROW
-	  else {
-	  HIP_DEBUG("No REG_INFO found in R1: no services available \n");
-	  HIP_KEA *kea;
-	  kea = hip_kea_find(&entry->hit_our);
-	  if (kea && (kea->keastate == HIP_KEASTATE_REGISTERING))
-	  kea->keastate = HIP_KEASTATE_INVALID;
-	  if (kea)
-	  hip_keadb_put_entry(kea);	
-	  }
-	  #endif */
-
 	/* R1 generation check */
 
 	/* We have problems with creating precreated R1s in reasonable
@@ -1450,7 +1352,6 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 	   (hip_relay_get_status() == HIP_RELAY_ON || we_are_escrow_server()).
 	   But since I don't have a way to detect if we are an escrow server
 	   this part is executed on I and R also. -Lauri 27.09.2007*/
-	//hip_handle_regrequest(entry, i2, r2);
 	
 	/* Handle REG_REQUEST parameter. */
 	HIP_DEBUG("Entering new REG_REQUEST handler.\n");
@@ -2020,11 +1921,10 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	
 	/* Note that we haven't handled the REG_REQUEST yet. This is because we
 	   must create an REG_RESPONSE parameter into the R2 packet based on the
-	   REG_REQUEST parameter. We could allocate a new R2 here and store it
-	   to the context, but since the allocation is done in hip_create_r2(),
-	   we choose handle the REG_REQUEST parameter there - although that is
-	   somewhat illogical. -Lauri 06.05.2008 */
-
+	   REG_REQUEST parameter. We handle the REG_REQUEST parameter in
+	   hip_create_r2() - although that is somewhat illogical.
+	   -Lauri 06.05.2008 */
+	
 	/* Create an R2 packet in response. */
 	HIP_IFEL(entry->hadb_misc_func->hip_create_r2(
 			 ctx, i2_saddr, i2_daddr, entry, i2_info), -1, 

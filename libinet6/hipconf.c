@@ -416,7 +416,8 @@ int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[],
 			reg_types[i] = HIP_SERVICE_RELAY;
 		} else if(strcmp("escrow", lowercase) == 0) {
 			reg_types[i] = HIP_SERVICE_ESCROW;
-		} /* To cope with the atoi() error value. */
+		} /* To cope with the atoi() error value we handle the 'zero'
+		     case here. */
 		else if(strcmp("0", lowercase) == 0) {
 			reg_types[i] = 0;
 		} else {
@@ -450,7 +451,7 @@ int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[],
 		 "Failed to build REG_REQUEST parameter to hipconf user "\
 		 "message.\n");
 
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_RVS, 0), -1,
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_SERVER, 0), -1,
 		 "Failed to build hipconf user message header.\n");
 	
 	HIP_DUMP_MSG(msg);
