@@ -14,7 +14,8 @@ typedef struct _pseudo_header
 	uint16_t packet_length;
 } pseudo_header;
 
-//#define HMAC_SHA_96_BITS 96 /* 12 bytes */
+// needed for authentication of incoming packets
+#define HMAC_SHA_96_BITS 96 /* 12 bytes */
 
 
 long g_read_usec;

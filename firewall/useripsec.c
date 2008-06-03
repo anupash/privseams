@@ -1,3 +1,7 @@
+/** 
+ * @author René Hummen
+ */
+
 #include "useripsec.h"
 #include <sys/socket.h>		/* socket() */
 #include "misc.h"			/* hip conversion functions */
@@ -10,7 +14,9 @@
 
 // this is the ESP packet we are about to build
 unsigned char *esp_packet = NULL;
-// open sockets in order to re-insert the esp packet into the stack
+// the original packet before ESP encryption
+unsigned char *decrypted_packet = NULL;
+// sockets in order to re-insert the esp packet into the stack
 int raw_sock_v4 = 0, raw_sock_v6 = 0;
 int is_init = 0;
 
@@ -28,6 +34,7 @@ int userspace_ipsec_init()
 	if (!is_init)
 	{
 		HIP_IFE(!(esp_packet = (unsigned char *)malloc(ESP_PACKET_SIZE)), -1);
+		HIP_IFE(!(decrypted_packet = (unsigned char *)malloc(ESP_PACKET_SIZE)), -1);
 		
 		// open IPv4 raw socket
 		raw_sock_v4 = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
@@ -106,6 +113,13 @@ out_err:
 	return err;
 
 }
+
+#if 0
+	// should be called from time to time
+	hip_remove_expired_lsi_entries();
+	hip_remove_expired_sel_entries();
+	/* TODO: implement SA timeout here */
+#endif
 
 /* prepares the environment for esp encryption */
 int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
@@ -197,6 +211,7 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 		goto out_err;
 	}
 		
+	// encrypt transport layer and create new packet
 	err = hip_esp_output(ctx, entry, udp_encap, &now,
 			&preferred_local_addr, &preferred_peer_addr,
 			esp_packet, &esp_packet_len);
@@ -230,6 +245,103 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
   	return err;
 }
 
+int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
+{
+	struct hip_esp *esp_hdr = NULL;
+	// entry matching the SPI
+	hip_sadb_entry *entry = NULL;
+	// return entry
+	hip_sadb_entry *inverse_entry = NULL;
+	struct in6_addr src_hit;
+	struct in6_addr dst_hit;
+	decrypted_packet_len = 0;
+	uint32_t spi = 0;
+	uint32_t seq_no = 0;
+	int err = 0;
+	
+	// we should only get ESP packets here
+	HIP_ASSERT(ctx->packet_type == IPPROTO_ESP);
+	
+	HIP_IFEL(userspace_ipsec_init(), -1, "failed to initialize userspace ipsec");
+	
+	// re-use allocated decrypted_packet memory space
+	memset(decrypted_packet, 0, ESP_PACKET_SIZE);
+	
+	// get ESP header of input packet, UDP encapsulation is handled in firewall already
+	esp_hdr = ctx->transport_hdr.esp;
+	spi = ntohl(esp_hdr->esp_spi);
+	seq_no = ntohl(esp_hdr->esp_seq);
+	HIP_DEBUG("SPI no. of incoming packet: %u", spi);
+	HIP_DEBUG("SEQ no. of incoming packet: %u", seq_no);
+	
+	// lookup corresponding SA entry by SPI
+	HIP_IFEL(!(entry = hip_sadb_lookup_spi(ntohl(esp_hdr->esp_spi))), -1,
+			"no SA entry found for SPI %u", ntohl(esp_hdr->esp_spi));
+	
+	// TODO check for correct SEQ no.
+	HIP_IFEL(entry->sequence != seq_no, -1, "ESP sequence numbers do not match");
+	
+	// check consistency of the entry and if we have a SA entry to reply to
+	if (!entry->inner_src_addrs || !!entry->inner_dst_addrs)
+	{
+		err = -1;
+		goto out_err;
+	}
+	
+	HIP_DEBUG_SOCKADDR("inner_src_addr ",
+			   (struct sockaddr *) &entry->inner_src_addrs->addr);
+	HIP_DEBUG_SOCKADDR("inner_dst_addr ",
+			   (struct sockaddr *) &entry->inner_dst_addrs->addr);
+
+	if (!(inverse_entry = hip_sadb_lookup_addr(
+		(struct sockaddr *)&entry->inner_src_addrs->addr)))
+	{
+		HIP_DEBUG("Corresponding sadb entry for outgoing packets not found.\n");
+		
+		err = -1;
+		goto out_err;
+	}
+
+// TODO check where we set the UDP dst port
+#if 0
+	/*HIP_DEBUG ( "DST_PORT = %u\n", 
+	 * inverse_entry->dst_port);*/
+	if (inverse_entry->dst_port == 0) {
+		HIP_DEBUG ("ESP channel - Setting dst_port "
+			"to %u\n",ntohs(udph->source));
+		inverse_entry->dst_port = ntohs(udph->source);
+	}
+	// TODO handle else case
+#endif
+	
+	HIP_IFE(cast_sockaddr_to_in6_addr(&entry->inner_src_addrs->addr, &src_hit), -1);
+	HIP_IFE(cast_sockaddr_to_in6_addr(&entry->inner_dst_addrs->addr, &dst_hit), -1);
+	
+	// decrypt the packet and create a new HIT-based one
+	err = hip_esp_input(esp_hdr, entry, src_hit, dst_hit,
+			(struct ip6_hdr *) decrypted_packet, &decrypted_packet_len);
+	
+	// send the raw HIT-based (-> IPv6) packet -> returns size of the sent packet
+	// TODO check flags
+	err = sendto(raw_sock_v6, decrypted_packet, packet_len, 0,
+					(struct sockaddr *)&entry->inner_dst_addrs->addr,
+					hip_sockaddr_len(&entry->inner_dst_addrs->addr));
+	if (err < 0) {
+		HIP_DEBUG("hip_esp_input(): sendto() failed\n");
+	} else
+	{
+		entry->bytes += *outlen - sizeof(struct eth_hdr);
+		entry->usetime.tv_sec = now->tv_sec;
+		entry->usetime.tv_usec = now->tv_usec;
+		entry->usetime_ka.tv_sec = now->tv_sec;
+		entry->usetime_ka.tv_usec = now->tv_usec;
+	}
+	
+  out_err:
+  	return err;
+}
+
+#if 0
 /* added by Tao Wan, This is the function for hip userspace ipsec input 
  *
  **/
@@ -237,7 +349,6 @@ int hip_fw_userspace_ipsec_input(int ip_version,
 				 void *hdr,
 				 ipq_packet_msg_t *ip_packet_in_the_queue)
 {
-#if 0
 	int ipv6_hdr_size = 0;
 	int tcp_hdr_size = 0;
 	int length_of_packet = 0;
@@ -328,10 +439,8 @@ int hip_fw_userspace_ipsec_input(int ip_version,
 			
 
 	return err;
-#endif
-	
-	return 1;
 }
+#endif
 
 int hipl_userspace_ipsec_sadb_add_wrapper(struct in6_addr *saddr,
 					      struct in6_addr *daddr,
