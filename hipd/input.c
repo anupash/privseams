@@ -91,6 +91,47 @@ int hip_verify_packet_hmac(struct hip_common *msg,
  out_err:
 	return err;
 }
+//add by santtu
+int hip_verify_packet_hmac_general(struct hip_common *msg,
+			   struct hip_crypto_key *crypto_key, hip_tlv_type_t parameter_type)
+{
+	HIP_DEBUG("hip_verify_packet_hmac() invoked.\n");
+	int err = 0, len = 0, orig_len = 0;
+	u8 orig_checksum = 0;
+	struct hip_crypto_key tmpkey;
+	struct hip_hmac *hmac = NULL;
+
+	HIP_IFEL(!(hmac = hip_get_param(msg, parameter_type)),
+		 -ENOMSG, "No HMAC parameter\n");
+
+	/* hmac verification modifies the msg length temporarile, so we have
+	   to restore the length */
+	orig_len = hip_get_msg_total_len(msg);
+
+	/* hmac verification assumes that checksum is zero */
+	orig_checksum = hip_get_msg_checksum(msg);
+	hip_zero_msg_checksum(msg);
+
+	len = (u8 *) hmac - (u8*) msg;
+	hip_set_msg_total_len(msg, len);
+
+	_HIP_HEXDUMP("HMAC key", crypto_key->key,
+		    hip_hmac_key_length(HIP_ESP_AES_SHA1));
+	_HIP_HEXDUMP("HMACced data:", msg, len);
+
+	memcpy(&tmpkey, crypto_key, sizeof(tmpkey));
+	HIP_IFEL(hip_verify_hmac(msg, hmac->hmac_data, tmpkey.key,
+				 HIP_DIGEST_SHA1_HMAC), 
+		 -1, "HMAC validation failed\n");
+
+	/* revert the changes to the packet */
+	hip_set_msg_total_len(msg, orig_len);
+	hip_set_msg_checksum(msg, orig_checksum);
+
+ out_err:
+	return err;
+}
+//end add
 
 int hip_verify_packet_rvs_hmac(struct hip_common *msg,
 			   struct hip_crypto_key *crypto_key)
@@ -506,7 +547,19 @@ int hip_receive_control_packet(struct hip_common *msg,
 	    entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
 	}
 #endif
-
+//add by santtu
+#ifdef CONFIG_HIP_RVS
+	//check if it a relaying msg
+	//add by santtu
+	//if(hip_relay_handle_relay_to(msg, type, src_addr, dst_addr, msg_info)){
+	if(hip_relay_handle_relay_to(msg, type, src_addr, dst_addr, msg_info)){
+	//end 
+		err = -ECANCELED;
+		goto out_err;
+	}
+#endif
+//end add	
+	
 	switch(type) {
 	case HIP_I1:
 		/* No state. */
@@ -2142,6 +2195,33 @@ int hip_receive_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		 ntohs(i2->control));
 
 	if (entry == NULL) {
+//add by santtu	
+#ifdef CONFIG_HIP_RVS
+	     if(hip_relay_get_status() == HIP_RELAY_ON)
+	     {
+		  hip_relrec_t *rec = NULL, dummy;
+
+		  /* Check if we have a relay record in our database matching the
+		     Responder's HIT. We should find one, if the Responder is
+		     registered to relay.*/
+		  HIP_DEBUG_HIT("Searching relay record on HIT ", &i2->hitr);
+		  memcpy(&(dummy.hit_r), &i2->hitr, sizeof(i2->hitr));
+		  rec = hip_relht_get(&dummy);
+		  if(rec == NULL)
+ 		       HIP_INFO("No matching relay record found.\n");
+		  //add by santtu
+ 		  else if(rec->type == HIP_FULLRELAY)
+ 		  {
+ 		       HIP_INFO("Matching relay record found:Full-Relay.\n");
+ 		       hip_relay_forward_I(i2, i2_saddr, i2_daddr, rec, i2_info,HIP_I2);
+ 		       state = HIP_STATE_NONE;
+ 		       err = -ECANCELED;
+ 		       goto out_err;
+
+ 		  }
+	     }
+#endif		
+//end
 		state = HIP_STATE_UNASSOCIATED;
 	} else  {
 		HIP_LOCK_HA(entry);
@@ -2495,19 +2575,27 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		  memcpy(&(dummy.hit_r), &i1->hitr, sizeof(i1->hitr));
 		  rec = hip_relht_get(&dummy);
 		  if(rec == NULL)
-		       HIP_INFO("No matching relay record found.\n");
-		  else if(rec->type != HIP_RVSRELAY)
-		       HIP_INFO("Matching relay record found, but it is of the"\
-				"wrong type.\n");
-		  else
-		  {
-		       hip_relay_rvs(i1, i1_saddr, i1_daddr, rec, i1_info);
-		       /* We created a new I1 from scratch in the relay function.
-			  The original I1 packet is now redundant. */
-		       state = HIP_STATE_NONE;
-		       err = -ECANCELED;
-		       goto out_err;
-		  }
+ 		       HIP_INFO("No matching relay record found.\n");
+		  //add by santtu
+ 		  else if(rec->type == HIP_FULLRELAY)
+ 		  {
+ 		       HIP_INFO("Matching relay record found:Full-Relay.\n");
+ 		       hip_relay_forward_I(i1, i1_saddr, i1_daddr, rec, i1_info,HIP_I1);
+ 		       state = HIP_STATE_NONE;
+ 		       err = -ECANCELED;
+ 		       goto out_err;
+
+ 		  }
+		  //end
+ 		  else if(rec->type == HIP_RVSRELAY)
+ 		  {
+ 		       hip_relay_rvs(i1, i1_saddr, i1_daddr, rec, i1_info);
+ 		       /* We created a new I1 from scratch in the relay function.
+ 			  The original I1 packet is now redundant. */
+ 		       state = HIP_STATE_NONE;
+ 		       err = -ECANCELED;
+ 		       goto out_err;
+ 		  }
 	     }
 #endif
 		state = HIP_STATE_NONE;

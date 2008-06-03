@@ -855,7 +855,8 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 	   parameter. */
 	if(!ipv6_addr_any(dst_ip))
 	{    // dst_port has the value of RELAY_FROM port.
-	     if(dst_port == HIP_NAT_UDP_PORT)
+		//there is port no value for FROM parameter
+	     if(dst_port != 0)
 	     {
 		  hip_build_param_relay_to(
 		       r1pkt, i1_saddr, i1_info->src_port);

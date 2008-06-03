@@ -161,6 +161,18 @@ int hip_verify_packet_hmac2(struct hip_common *msg,
 int hip_verify_packet_hmac(struct hip_common *, struct hip_crypto_key *);
 
 /**
+ * Verifies gerenal HMAC in HIP msg
+ *
+ * @param msg HIP packet
+ * @param entry HA
+ * @param parameter_type
+ * @return 0 if HMAC was validated successfully, < 0 if HMAC could
+ * not be validated.
+ */
+
+int hip_verify_packet_hmac_general(struct hip_common *msg,
+			   struct hip_crypto_key *crypto_key, hip_tlv_type_t parameter_type);
+/**
  * Verifies packet RVS_HMAC
  * @param msg HIP packet
  * @param entry HA
