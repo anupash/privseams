@@ -171,10 +171,10 @@ int hip_del_pending_request(hip_ha_t *entry)
 	int index = 0;
 	hip_ll_node_t *iter = NULL;
 	
-	/* Iterate through the linked list. We're deleting a node from the list
-	   even though we use an iterator here, but it's okay, since we do not
-	   use the iterator after the deletion. Again, we don't have to check
-	   for NULL request as the linked list does that for us. */
+	/* Iterate through the linked list. The iterator itself can't be used
+	   for deleting nodes from the list. Therefore, we just get the index of
+	   the element to be deleted using the iterator and then call
+	   hip_ll_del() to do the actual deletion. */
 	while((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
 		if(((hip_pending_request_t *)(iter->ptr))->entry == entry) {
 			
@@ -195,9 +195,10 @@ int hip_del_pending_request_by_type(hip_ha_t *entry, uint8_t reg_type)
 	hip_ll_node_t *iter = NULL;
 	hip_pending_request_t * request = NULL;
 
-	/* Iterate through the linked list. We're deleting a node from the list
-	   even though we use an iterator here, but it's okay, since we do not
-	   use the iterator after the deletion. */
+	/* Iterate through the linked list. The iterator itself can't be used
+	   for deleting nodes from the list. Therefore, we just get the index of
+	   the element to be deleted using the iterator and then call
+	   hip_ll_del() to do the actual deletion. */
 	while((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
 		request = (hip_pending_request_t *)(iter->ptr);
 		if(request->entry == entry && request->reg_type == reg_type) {
@@ -211,6 +212,11 @@ int hip_del_pending_request_by_type(hip_ha_t *entry, uint8_t reg_type)
 	}
 
 	return -1;
+}
+
+int hip_del_first_expired_pending_request()
+{
+	return 0;
 }
 
 int hip_get_pending_requests(hip_ha_t *entry, hip_pending_request_t *requests[])
@@ -290,7 +296,7 @@ int hip_handle_param_reg_info(hip_common_t *msg, hip_ha_t *entry)
 	type_count = hip_get_param_contents_len(reg_info) -
 		(sizeof(reg_info->min_lifetime) + sizeof(reg_info->max_lifetime));
 	
-	/* Check draft-ietf-hip-registration-02 chapter 3.1. */
+	/* Check RFC 5203 Chapter 3.1. */
 	if(type_count == 0){
 		HIP_INFO("The server is currently unable to provide services "\
 			 "due to transient conditions.\n");

@@ -900,6 +900,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
     /************ REG_REQUEST ***********/
     /* Check if we have requested any services. The request bits are set in
        user.c. */
+    /** @todo Only build those Reg Types that we have requested _and_ the
+	server offers. */
     if(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_ANY) {
 	    int request_count = hip_get_pending_request_count(entry);
 	    if(request_count > 0) {

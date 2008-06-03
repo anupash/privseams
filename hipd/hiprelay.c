@@ -288,7 +288,6 @@ hip_relrec_t *hip_relrec_alloc(const hip_relrec_type_t type,
 	rec->send_fn = func;
 	hip_relrec_set_lifetime(rec, lifetime);
 	rec->created = time(NULL);
-	rec->last_contact = time(NULL);
      
 	return rec;
 }
@@ -329,8 +328,6 @@ void hip_relrec_info(const hip_relrec_t *rec)
 			  rec->lifetime);
 	cursor += sprintf(cursor, " Record created: %lu seconds ago\n",
 			  time(NULL) - rec->created);
-	cursor += sprintf(cursor, " Last contact: %lu seconds ago\n",
-			  time(NULL) - rec->last_contact);
 	cursor += sprintf(cursor, " HIT of R: %04x:%04x:%04x:%04x:"\
 			  "%04x:%04x:%04x:%04x\n",
 			  ntohs(rec->hit_r.s6_addr16[0]),
@@ -574,10 +571,6 @@ int hip_relay_rvs(const hip_common_t *i1, const in6_addr_t *i1_saddr,
 	HIP_IFEL(rec->send_fn(NULL, &(rec->ip_r), HIP_NAT_UDP_PORT,
 			      rec->udp_port_r, i1_to_be_relayed, NULL, 0),
 		 -ECOMM, "Relaying I1 failed.\n");
-
-	/* Once we have relayed the I1 packet successfully, we update the time of
-	   last contact. */
-	rec->last_contact = time(NULL);
 
 	HIP_DEBUG_HIT("hip_relay_rvs(): Relayed I1 to", &(rec->ip_r));
 

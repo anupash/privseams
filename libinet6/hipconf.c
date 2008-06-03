@@ -397,7 +397,7 @@ int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[],
 	hip_get_lifetime_seconds(lifetime, &seconds_from_lifetime);
 
 	/* Every commandline argument in opt[] from '0' to 'optc - 4' should
-	   be either one of the strings in service_strings or a number between
+	   be either one of the predefined strings or a number between
 	   0 and 255 (inclusive). */
 	number_of_regtypes = optc - 3; 
 

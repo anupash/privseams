@@ -83,7 +83,7 @@
 /**
  * The minimum lifetime the relay / RVS client is granted the service. This
  * value is used as a 8-bit integer value. The lifetime value in seconds is
- * calculated using the formula given in the registration draft.
+ * calculated using the formula given in RFC 5203.
  * @note this is a fallback value if we are not able to read the configuration
  *       file.
  */
@@ -91,11 +91,11 @@
 /**
  * The maximum lifetime the relay / RVS client is granted the service. This
  * value is used as a 8-bit integer value. The lifetime value in seconds is
- * calculated using the formula given in the registration draft.
+ * calculated using the formula given in RFC 5203.
  * @note this is a fallback value if we are not able to read the configuration
  *       file.
  */
-#define HIP_RELREC_MAX_LIFETIME 159 // Equals 3756.049 seconds.
+#define HIP_RELREC_MAX_LIFETIME 159 // Equals 3756 seconds.
 /** HIP relay config file name and path. */
 #define HIP_RELAY_CONFIG_FILE  "/etc/hip/relay_config"
 /** HIP relay config file default content. If the file @c HIP_RELAY_CONFIG_FILE
@@ -148,8 +148,6 @@ typedef struct{
         time_t lifetime;
 	/** Time when this record was created, seconds since epoch. */
 	time_t created;
-	/** Time when this record was last used, seconds since epoch. */
-	time_t last_contact;
 	/** HIT of Responder (Relay Client) */
 	hip_hit_t hit_r;
 	/** IP address of Responder (Relay Client) */

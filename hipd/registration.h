@@ -21,6 +21,16 @@
 #include "protodefs.h" // For service type values and hip_ha_t
 #include "linkedlist.h" // For pending service requests.
 
+/**
+ * Pending request lifetime. Pending requests are created when the requester
+ * requests a service i.e. sends an I1 packet to the server. Pending requests
+ * are normally deleted when the requester receives an REG_RESPONSE or
+ * REG_FAILED parameter. Should these parameters never be received, the pending
+ * requests can be deleted after the lifetime has expired. This value is in
+ * seconds.
+ */
+#define HIP_PENDING_REQUEST_LIFETIME 120
+
 /** Possible service states. */
 typedef enum{HIP_SERVICE_OFF = 0, HIP_SERVICE_ON = 1}hip_srv_status_t;
 
@@ -39,6 +49,8 @@ typedef struct{
 	hip_ha_t *entry;
 	uint8_t reg_type;
 	uint8_t lifetime;
+	/** Time when this record was created, seconds since epoch. */
+	time_t created;
 }hip_pending_request_t;
 
 /**
@@ -154,6 +166,8 @@ int hip_del_pending_request(hip_ha_t *entry);
  *                  otherwise.
  */
 int hip_del_pending_request_by_type(hip_ha_t *entry, uint8_t reg_type);
+
+int hip_del_first_expired_pending_request();
 
 /**
  * Gets all pending requests for given host association. Gets all pending

@@ -607,7 +607,8 @@ int hip_handle_user_msg(struct hip_common *msg,
 			pending_req->entry    = entry;
 			pending_req->reg_type = reg_types[i];
 			pending_req->lifetime = reg_req->lifetime;
-			
+			pending_req->created  = time(NULL);
+
 			HIP_DEBUG("Adding pending request.\n");
 			hip_add_pending_request(pending_req);
 
