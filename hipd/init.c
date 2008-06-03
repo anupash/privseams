@@ -123,7 +123,8 @@ void hip_set_os_dep_variables()
 int hipd_init(int flush_ipsec, int killold)
 {
 	hip_hit_t peer_hit;
-	int err = 0, dhterr;
+	int err = 0, fd, dhterr = 0;
+	char str[64];
 	struct sockaddr_in6 daemon_addr;
 
 	/* Open daemon lock file and read pid from it. */
@@ -141,17 +142,20 @@ int hipd_init(int flush_ipsec, int killold)
 	signal(SIGTERM, hip_close);
 	signal(SIGCHLD, hip_sig_chld);
  
+#ifdef CONFIG_HIP_OPPORTUNISTIC
 	HIP_IFEL(hip_init_oppip_db(), -1,
 	         "Cannot initialize opportunistic mode IP database for "\
-		 "non HIP capable hosts!\n");
-
+                 "non HIP capable hosts!\n");
+#endif
 	HIP_IFEL((hip_init_cipher() < 0), 1, "Unable to init ciphers.\n");
 
 	HIP_IFE(init_random_seed(), -1);
 
 	hip_init_hadb();
-
+        /* hip_init_puzzle_defaults just returns, removed -samu  */
+#if 0
 	hip_init_puzzle_defaults();
+#endif
 
        /* Initialize a hashtable for services, if any service is enabled. */
 	hip_init_services();

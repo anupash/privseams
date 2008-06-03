@@ -1405,6 +1405,7 @@ int hip_build_param(struct hip_common *msg, const void *tlv_common)
 	err = hip_build_param_contents(msg, contents,
 		       hip_get_param_type(tlv_common),
 				       hip_get_param_contents_len(tlv_common));
+        _HIP_DEBUG("tlv_common len %d\n", ((struct hip_tlv_common *)tlv_common)->length);
 	if (err) {
 		HIP_ERROR("could not build contents (%d)\n", err);
 	}
@@ -3228,6 +3229,18 @@ int hip_build_param_opendht_gw_info(struct hip_common *msg,
 	gw_info.port = htons(port);
 	ipv6_addr_copy(&gw_info.addr, addr);
 	err = hip_build_param(msg, &gw_info);
+	return err;
+}
+
+int hip_build_param_cert_spki_info(struct hip_common * msg,
+				    struct hip_cert_spki_info * cert_info)
+{
+	int err = 0;
+	hip_set_param_type(cert_info, HIP_PARAM_CERT_SPKI_INFO);
+	hip_calc_param_len(cert_info,
+			   sizeof(struct hip_cert_spki_info) -
+			   sizeof(struct hip_tlv_common));
+	err = hip_build_param(msg, cert_info);
 	return err;
 }
 

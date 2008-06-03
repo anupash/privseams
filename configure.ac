@@ -95,6 +95,8 @@ if test x"$ac_cv_use_firewall" = x"yes"; then
 fi
 AM_CONDITIONAL(HIP_FIREWALL, test x"$ac_cv_use_firewall" = x"yes")
 
+#Check if the libsqlite3-dev is present
+AC_CHECK_LIB(sqlite3, sqlite3_open,, AC_MSG_ERROR(libsqlite3 not found))	
 
 # Try to automatically detect GTK if not disabled or enabled by user
 PKG_CHECK_MODULES(GTK, gtk+-2.0 >= 2.10.0, ac_cv_use_agent=yes, ac_cv_use_agent=no)

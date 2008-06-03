@@ -19,6 +19,8 @@
 #include "bos.h"
 #include "close.h"
 #include "accessor.h"
+#include "hidb.h"
+#include "cert.h"
 /* added by Tao Wan, 10.Jan.2008*/
 #include "tcptimeout.h"
 #include "registration.h"
