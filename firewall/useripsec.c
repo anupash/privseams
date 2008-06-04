@@ -188,9 +188,15 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	
 	// get preferred routable addresses
 	HIP_IFE(get_preferred_sockaddr(entry->src_addrs, &preferred_local_sockaddr), -1);
+	HIP_DEBUG_SOCKADDR("preferred_local_sockaddr", (struct sockaddr *)&preferred_local_sockaddr);
 	HIP_IFE(get_preferred_sockaddr(entry->dst_addrs, &preferred_peer_sockaddr), -1);
+	HIP_DEBUG_SOCKADDR("preferred_peer_sockaddr", (struct sockaddr *)&preferred_peer_sockaddr);
+	
 	HIP_IFE(cast_sockaddr_to_in6_addr(&preferred_local_sockaddr, &preferred_local_addr), -1);
 	HIP_IFE(cast_sockaddr_to_in6_addr(&preferred_peer_sockaddr, &preferred_peer_addr), -1);
+
+	HIP_DEBUG_HIT("preferred_local_addr", &preferred_local_addr);
+	HIP_DEBUG_HIT("preferred_peer_addr", &preferred_peer_addr);
 	
 	// check preferred addresses for the address type of the output
 	if (IN6_IS_ADDR_V4MAPPED(&preferred_local_addr)
@@ -621,12 +627,14 @@ int get_preferred_sockaddr(sockaddr_list *addr_list, struct sockaddr_storage *pr
 {
 	int err = 0;
 	
+	HIP_DEBUG_SOCKADDR("preferred_addr ", (struct sockaddr *)&addr_list->addr);
+	
 	while (addr_list != NULL)
 	{
 		// TODO find preferred address and don't select first one in list
 		//if (addr_list->preferred)
 		//{
-		//	HIP_DEBUG("found preferred src_addr\n");
+			HIP_DEBUG("found preferred addr\n");
 		
 			preferred_addr = &addr_list->addr;
 			
@@ -637,7 +645,13 @@ int get_preferred_sockaddr(sockaddr_list *addr_list, struct sockaddr_storage *pr
 	}
 	
 	if (addr_list == NULL)
+	{
+		HIP_DEBUG("unable to resolve HIT to preferred address\n");
+		
 		err = 1;
+	}
+	
+	HIP_DEBUG_SOCKADDR("new ptr to preferred_addr ", (struct sockaddr *)preferred_addr);
 	
   out_err:
   	return err;
@@ -646,6 +660,8 @@ int get_preferred_sockaddr(sockaddr_list *addr_list, struct sockaddr_storage *pr
 int cast_sockaddr_to_in6_addr(struct sockaddr_storage *sockaddr, struct in6_addr *in6_addr)
 {
 	int err = 0;
+	
+	HIP_DEBUG("sockaddr->ss_family: %u\n", sockaddr->ss_family);
 	
 	if (sockaddr->ss_family == AF_INET)
 	{
@@ -662,6 +678,8 @@ int cast_sockaddr_to_in6_addr(struct sockaddr_storage *sockaddr, struct in6_addr
 		
 	} else
 	{
+		HIP_DEBUG("unable to find ip address type\n");
+		
 		err = 1;
 		goto out_err;
 	}
