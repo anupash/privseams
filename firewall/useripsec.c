@@ -188,10 +188,7 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	
 	// get preferred routable addresses
 	HIP_IFE(get_preferred_sockaddr(entry->src_addrs, &preferred_local_sockaddr), -1);
-	HIP_DEBUG_SOCKADDR("preferred_local_sockaddr", (struct sockaddr *)&preferred_local_sockaddr);
 	HIP_IFE(get_preferred_sockaddr(entry->dst_addrs, &preferred_peer_sockaddr), -1);
-	HIP_DEBUG_SOCKADDR("preferred_peer_sockaddr", (struct sockaddr *)&preferred_peer_sockaddr);
-	
 	HIP_IFE(cast_sockaddr_to_in6_addr(&preferred_local_sockaddr, &preferred_local_addr), -1);
 	HIP_IFE(cast_sockaddr_to_in6_addr(&preferred_peer_sockaddr, &preferred_peer_addr), -1);
 
@@ -237,7 +234,8 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 		HIP_DEBUG("hip_esp_output(): sendto() failed\n");
 	} else
 	{
-		HIP_DEBUG("new packet successfully re-injected into network stack");
+		HIP_DEBUG("new packet SUCCESSFULLY re-injected into network stack");
+		HIP_DEBUG("dropping original packet...\n");
 		
 		// update SA statistics for replay protection etc
 		pthread_mutex_lock(&entry->rw_lock);
@@ -341,7 +339,8 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 		HIP_DEBUG("hip_esp_input(): sendto() failed\n");
 	} else
 	{
-		HIP_DEBUG("new packet successfully re-injected into network stack");
+		HIP_DEBUG("new packet SUCCESSFULLY re-injected into network stack\n");
+		HIP_DEBUG("dropping ESP packet...\n");
 		
 		pthread_mutex_lock(&entry->rw_lock);
 		entry->bytes += err;
@@ -627,16 +626,14 @@ int get_preferred_sockaddr(sockaddr_list *addr_list, struct sockaddr_storage *pr
 {
 	int err = 0;
 	
-	HIP_DEBUG_SOCKADDR("preferred_addr ", (struct sockaddr *)&addr_list->addr);
-	
 	while (addr_list != NULL)
 	{
 		// TODO find preferred address and don't select first one in list
 		//if (addr_list->preferred)
 		//{
 			HIP_DEBUG("found preferred addr\n");
-		
-			preferred_addr = &addr_list->addr;
+			
+			*preferred_addr = addr_list->addr;
 			
 			break;
 		//}
@@ -650,8 +647,6 @@ int get_preferred_sockaddr(sockaddr_list *addr_list, struct sockaddr_storage *pr
 		
 		err = 1;
 	}
-	
-	HIP_DEBUG_SOCKADDR("new ptr to preferred_addr ", (struct sockaddr *)preferred_addr);
 	
   out_err:
   	return err;
