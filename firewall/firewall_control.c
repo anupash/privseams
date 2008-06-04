@@ -308,7 +308,7 @@ int handle_sa_add_request(struct hip_common * msg, struct hip_tlv_common *param)
 	
 	param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_UINT);
 	spi_ipsec = (uint32_t *) hip_get_param_contents_direct(param);
-	HIP_DEBUG("the spi value is : %x \n", *spi_ipsec);
+	HIP_DEBUG("the spi value is : %u \n", *spi_ipsec);
 
 	param =  hip_get_next_param(msg, param);
 	sport = *((unsigned int *) hip_get_param_contents_direct(param));

@@ -231,6 +231,8 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 		HIP_DEBUG("hip_esp_output(): sendto() failed\n");
 	} else
 	{
+		HIP_DEBUG("new packet successfully re-injected into network stack");
+		
 		// update SA statistics for replay protection etc
 		pthread_mutex_lock(&entry->rw_lock);
 		entry->bytes += err;
@@ -332,6 +334,8 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 		HIP_DEBUG("hip_esp_input(): sendto() failed\n");
 	} else
 	{
+		HIP_DEBUG("new packet successfully re-injected into network stack");
+		
 		pthread_mutex_lock(&entry->rw_lock);
 		entry->bytes += err;
 		entry->usetime.tv_sec = now.tv_sec;
