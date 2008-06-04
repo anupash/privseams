@@ -373,8 +373,12 @@ int midauth_filter_hip(hip_fw_context_t *ctx)
 
 int midauth_filter_esp(hip_fw_context_t *ctx)
 {
-	/* let everything pass for now */
-	return 1;
+	midauth_handler h = handlers.esp;
+
+	if (!h)
+		h = midauth_handler_drop;
+
+	return h(ctx);
 }
 
 void midauth_init(void)

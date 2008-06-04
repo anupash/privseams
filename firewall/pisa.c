@@ -335,6 +335,18 @@ static int pisa_handler_r2(hip_fw_context_t *ctx)
 	return verdict;
 }
 
+/**
+ * Handle ESP data that should be forwarded.
+ *
+ * @param ctx context of the packet to check
+ * @return verdict, either NF_ACCEPT or NF_DROP
+ */
+static int pisa_handler_esp(hip_fw_context_t *ctx)
+{
+	HIP_DEBUG("handling ESP data.\n");
+	return NF_ACCEPT;
+}
+
 void pisa_init(struct midauth_handlers *h)
 {
 	h->i1 = midauth_handler_accept;
@@ -344,6 +356,7 @@ void pisa_init(struct midauth_handlers *h)
 	h->u1 = midauth_handler_accept;
 	h->u2 = pisa_handler_i2;
 	h->u3 = pisa_handler_r2;
+	h->esp = pisa_handler_esp;
 
 	pisa_generate_random();
 	pisa_generate_random();

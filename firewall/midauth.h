@@ -20,6 +20,7 @@ struct midauth_handlers {
 	midauth_handler u1;
 	midauth_handler u2;
 	midauth_handler u3;
+	midauth_handler esp;
 };
 
 /* public functions for midauth */
