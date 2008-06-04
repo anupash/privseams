@@ -603,6 +603,7 @@ int hip_conf_handle_map(hip_common_t *msg, int action, const char *opt[],
      case ACTION_ADD:
 	  HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_PEER_MAP_HIT_IP,
 	      		              0), -1, "add peer map failed\n");
+	  
 	  break;
      case ACTION_DEL:
 	  HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEL_PEER_MAP_HIT_IP,

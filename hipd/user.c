@@ -88,7 +88,6 @@ int hip_handle_user_msg(struct hip_common *msg,
 		break;
 	case SO_HIP_ADD_PEER_MAP_HIT_IP:	
 		HIP_DEBUG("Handling SO_HIP_ADD_PEER_MAP_HIT_IP.\n");
-
 		err = hip_add_peer_map(msg);
 		if(err)
 		{

@@ -333,16 +333,13 @@ void hip_hadb_set_lsi_pair(hip_ha_t *entry)
 {
         hip_lsi_t aux;
 	//Assign value to lsi_our searching in hidb by the correspondent hit
-	HIP_DEBUG("hip_hadb_set_lsi_pair\n");
+	_HIP_DEBUG("hip_hadb_set_lsi_pair\n");
 	if (entry){
-	  hip_hidb_get_lsi_by_hit(&entry->hit_our, &entry->lsi_our);
-	  //Assign lsi_peer 
-	  HIP_DEBUG("after hip_hidb_get_lsi_by_hit  ....\n");
-	  aux = hip_generate_peer_lsi();
-	  HIP_DEBUG("Before memcpy....");
-	  memcpy(&entry->lsi_peer, &aux, sizeof(hip_lsi_t));
-	  HIP_DEBUG("Before accessing to entry->lsi_peer ....\n");
-	  HIP_DEBUG_LSI(">>>>entry->lsi_peer is...:", &entry->lsi_peer);
+		hip_hidb_get_lsi_by_hit(&entry->hit_our, &entry->lsi_our);
+		//Assign lsi_peer 
+		aux = hip_generate_peer_lsi();
+		memcpy(&entry->lsi_peer, &aux, sizeof(hip_lsi_t));
+		HIP_DEBUG_LSI("entry->lsi_peer is ", &entry->lsi_peer);
 	}
 }
 
@@ -2782,27 +2779,14 @@ hip_ha_t *hip_hadb_find_by_blind_hits(hip_hit_t *local_blind_hit,
 
 struct in_addr hip_generate_peer_lsi()
 {
-	struct in_addr aux;
-	int oct1 = 0, oct2 = 0, oct3 = 0, oct4 = 0;
-	char inputIpString[16];
-
-	inet_aton("192.0.0.0", &aux);
-	inet_aton("0.0.0.1", &peer_lsi_index);
-	aux.s_addr |= peer_lsi_index.s_addr;
-  
-	HIP_DEBUG_LSI(">>>Lsi value is \n", &aux);
-  
-	while (lsi_assigned(aux)){
-        	sscanf(inet_ntoa(aux),"%d.%d.%d.%d",&oct1,&oct2,&oct3,&oct4);
-	    	oct4= oct4 + 1;
-	    	HIP_DEBUG("-----------------oct4 is...%d\n", oct4);
-	    	inet_aton("192.0.0.0", &aux);// Reset to 192.0.0.0
-	    	sprintf(inputIpString,"%d.%d.%d.%d",oct1,oct2,oct3,oct4);
-	    	inet_aton(inputIpString, &aux);
-	    	aux.s_addr |= peer_lsi_index.s_addr;// Or with the peer_lsi_index
-  	}
-  	HIP_DEBUG_LSI(">>>lsi free final value is ", &aux);
- 	return aux;
+	struct in_addr lsi_prefix;
+	int index = 1;
+	do{	
+		lsi_prefix.s_addr = htonl(HIP_LSI_PREFIX|index++);
+	}while(lsi_assigned(lsi_prefix));
+	
+	HIP_DEBUG_LSI("lsi free final value is ", &lsi_prefix);
+	return lsi_prefix;
 }
 
 /**
@@ -2852,8 +2836,8 @@ hip_ha_t *hip_hadb_try_to_find_by_peer_lsi(hip_lsi_t *lsi){
 	list_for_each_safe(item, aux, hadb_hit, i)
 	{
 		tmp = list_entry(item);
-		HIP_DEBUG_LSI("Are they equal? ", &tmp->lsi_peer);
-		HIP_DEBUG_LSI(" == ", lsi);
+		_HIP_DEBUG_LSI("Are they equal? ", &tmp->lsi_peer);
+		_HIP_DEBUG_LSI(" == ", lsi);
 		if(!hip_lsi_are_equal(&tmp->lsi_peer, lsi))
 			continue;
 		else
@@ -2871,8 +2855,6 @@ hip_ha_t *hip_hadb_try_to_find_by_pair_lsi(hip_lsi_t *lsi_src, hip_lsi_t *lsi_ds
 	list_for_each_safe(item, aux, hadb_hit, i)
 	{
 		tmp = list_entry(item);
-		HIP_DEBUG_LSI("Are they equal? ", &tmp->lsi_peer);
-		HIP_DEBUG_LSI(" == ", lsi_dst);
 		if(!hip_lsi_are_equal(&tmp->lsi_peer, lsi_dst))
 			continue;
 		else if (hip_lsi_are_equal(&tmp->lsi_our, lsi_src))
