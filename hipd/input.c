@@ -901,7 +901,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
     /* Check if we have requested any services. The request bits are set in
        user.c. */
     /** @todo Only build those Reg Types that we have requested _and_ the
-	server offers. */
+	server offers. Check the lifetime boundaries from ctx. */
     if(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_ANY) {
 	    int request_count = hip_get_pending_request_count(entry);
 	    if(request_count > 0) {
@@ -2246,15 +2246,6 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	/* Handle REG_RESPONSE and REG_FAILED parameters. */
 	hip_handle_param_reg_response(entry, r2);
 	hip_handle_param_reg_failed(entry, r2);
-	
-	/*
-	uint8_t services[HIP_TOTAL_EXISTING_SERVICES];
-	
-        type_count = hip_get_incomplete_registrations(&reg_types, entry, 1, services); 
-        if (type_count > 0) {
-	HIP_IFEL(hip_handle_registration_response(entry, r2), -1, 
-	"Error handling reg_response\n"); 
-	}*/
 	
 	/* These will change SAs' state from ACQUIRE to VALID, and wake up any
 	   transport sockets waiting for a SA. */

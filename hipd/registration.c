@@ -326,6 +326,7 @@ int hip_handle_param_reg_info(hip_common_t *msg, hip_ha_t *entry)
 	/* Loop through all the registration types found in REG_INFO parameter
 	   and store the information of responder's capability to offer a
 	   service. */
+	/** @todo store the offered lifetime boundaries to the pending request. */
 	for(i = 0; i < type_count; i++){
 		
 		switch(reg_types[i]) {
@@ -337,7 +338,7 @@ int hip_handle_param_reg_info(hip_common_t *msg, hip_ha_t *entry)
 			
 			break;
 
-#ifdef CONFIG_HIP_ESCROW		
+#ifdef CONFIG_HIP_ESCROW	
 		case HIP_SERVICE_ESCROW:
 			/* The escrow part is just a copy paste from the
 			   previous HIPL registration implementation. It is not
@@ -362,7 +363,7 @@ int hip_handle_param_reg_info(hip_common_t *msg, hip_ha_t *entry)
 			}
 
 			break;
-#endif /* CONFIG_HIP_ESCROW */				
+#endif /* CONFIG_HIP_ESCROW */
 		case HIP_SERVICE_RELAY:
 			HIP_INFO("Responder offers relay service.\n");
 			hip_hadb_set_peer_controls(
@@ -534,6 +535,7 @@ int hip_handle_param_reg_response(hip_ha_t *entry, hip_common_t *msg)
 int hip_handle_param_reg_failed(hip_ha_t *entry, hip_common_t *msg)
 {
 	/** @todo implement. */
+	/* Note there can be more than one paramters. */
 	return 0;
 }
 
@@ -688,16 +690,12 @@ int hip_add_registration_client(hip_ha_t *entry, uint8_t lifetime,
 	int err = 0, i = 0;
 	time_t seconds = 0;
 	
+	/* 'seconds' are just just for debug prints. */
 	hip_get_lifetime_seconds(lifetime, &seconds);
 
         /* Check what services we have been granted. Cancel the local requests
 	   bit, set the peer granted bit and delete the pending request. */
-	/** @todo This has a slight chance of a memory leak. We create a pending
-	    request when the user issues a hipconf command but delete the
-	    request only when a REG_RESPONSE parameter is received. Should the
-	    parameter never be received, the pending request is never freed. The
-	    requests should be timestamped and deleted in periodic maintenance. */
-	/** @todo We are not storing the granted lifetime anywhere but we 
+	/** @todo We are not storing the granted lifetime anywhere as we 
 	    obviously should. */
 	for(; i < type_count; i++) {
 		
