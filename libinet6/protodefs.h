@@ -275,7 +275,7 @@
  * @{ 
  */
 #define HIP_PROXY_PASSTHROUGH		0
-#define HIP_PROXY_TRANSLATE 			1
+#define HIP_PROXY_TRANSLATE 		1
 /* @} */
 
 /* Registration failure types as specified in draft-ietf-hip-registration-02.

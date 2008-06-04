@@ -47,6 +47,11 @@ void hip_uninit_xxx_services()
 	HIP_DEBUG("NEW SERVICE UNINITIALIZATION DONE.\n");
 }
 
+void hip_registration_maintenance()
+{
+	while (hip_del_pending_request_by_expiration() == 0);
+}
+
 int hip_set_srv_status(uint8_t reg_type, hip_srv_status_t status)
 {
 	int i = 0;
@@ -195,10 +200,7 @@ int hip_del_pending_request_by_type(hip_ha_t *entry, uint8_t reg_type)
 	hip_ll_node_t *iter = NULL;
 	hip_pending_request_t * request = NULL;
 
-	/* Iterate through the linked list. The iterator itself can't be used
-	   for deleting nodes from the list. Therefore, we just get the index of
-	   the element to be deleted using the iterator and then call
-	   hip_ll_del() to do the actual deletion. */
+	/* See hip_del_pending_request() for a comment. */
 	while((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
 		request = (hip_pending_request_t *)(iter->ptr);
 		if(request->entry == entry && request->reg_type == reg_type) {
@@ -214,9 +216,27 @@ int hip_del_pending_request_by_type(hip_ha_t *entry, uint8_t reg_type)
 	return -1;
 }
 
-int hip_del_first_expired_pending_request()
+int hip_del_pending_request_by_expiration()
 {
-	return 0;
+	int index = 0;
+	hip_ll_node_t *iter = NULL;
+	hip_pending_request_t * request = NULL;
+	time_t now = time(NULL); 
+
+	/* See hip_del_pending_request() for a comment. */
+	while((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
+		request = (hip_pending_request_t *)(iter->ptr);
+		if(now - request->created > HIP_PENDING_REQUEST_LIFETIME ) {
+			HIP_DEBUG("Deleting and freeing a pending request by "\
+				  "expiration (%u seconds) at index %u.\n",
+				  now - request->created, index);
+			hip_ll_del(&pending_requests, index, free);
+			return 0;
+		}
+		index++;
+	}
+
+	return -1;
 }
 
 int hip_get_pending_requests(hip_ha_t *entry, hip_pending_request_t *requests[])

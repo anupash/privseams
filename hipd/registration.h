@@ -64,6 +64,18 @@ void hip_init_xxx_services();
 void hip_uninit_xxx_services();
 
 /**
+ * Periodic maintenance function of the registration extension. This function
+ * should be called every now and then. A suitable time between calls could be
+ * 10 minutes for example. This function deletes the expired pending requests by
+ * calling @c hip_del_pending_request_by_expiration() until there are no expired
+ * pending requests left.
+ * 
+ * An expired pending requests is one that has not been deleted within
+ * @c HIP_PENDING_REQUEST_LIFETIME seconds.
+ */
+void hip_registration_maintenance();
+
+/**
  * Sets service status for a given service. Sets service status to value
  * identified by @c status for a service identified by @c reg_type in the
  * @c hip_services array. 
@@ -167,7 +179,11 @@ int hip_del_pending_request(hip_ha_t *entry);
  */
 int hip_del_pending_request_by_type(hip_ha_t *entry, uint8_t reg_type);
 
-int hip_del_first_expired_pending_request();
+/**
+ * Deletes one expired pending request. Deletes the first exipired pending
+ * request from the pending request linked list @c pending_requests.
+ */
+int hip_del_pending_request_by_expiration();
 
 /**
  * Gets all pending requests for given host association. Gets all pending

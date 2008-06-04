@@ -613,10 +613,14 @@ int periodic_maintenance()
         }
 
 //#ifdef CONFIG_HIP_UDPRELAY
-	/* Clear expired records from the relay hashtable. */
+	/* Clear the expired records from the relay hashtable. */
 	hip_relht_maintenance();
 //#endif
-
+	/* Clear the expired pending service requests. This is by no means time
+	   critical operation and is not needed to be done on every maintenance
+	   cycle. Once every 10 minutes or so should be enough. Just for the
+	   record, if periodic_maintenance() is ever to be optimized. */
+	hip_registration_maintenance();
 
 	/* Sending of NAT Keep-Alives. */
 	if(hip_nat_status && nat_keep_alive_counter < 0){
