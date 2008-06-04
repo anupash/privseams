@@ -212,9 +212,9 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	}
 		
 	// encrypt transport layer and create new packet
-	err = hip_esp_output(ctx, entry, udp_encap, &now,
+	HIP_IFEL(hip_esp_output(ctx, entry, udp_encap, &now,
 			&preferred_local_addr, &preferred_peer_addr,
-			esp_packet, &esp_packet_len);
+			esp_packet, &esp_packet_len), 1, "failed to create ESP packet");
 
 	// send the raw packet -> returns size of the sent packet
 	// TODO check flags
@@ -322,8 +322,9 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	HIP_IFE(cast_sockaddr_to_in6_addr(&entry->inner_dst_addrs->addr, &dst_hit), -1);
 	
 	// decrypt the packet and create a new HIT-based one
-	err = hip_esp_input(ctx, entry, &src_hit, &dst_hit,
-			(struct ip6_hdr *) decrypted_packet, &decrypted_packet_len);
+	HIP_IFEL(hip_esp_input(ctx, entry, &src_hit, &dst_hit,
+			(struct ip6_hdr *) decrypted_packet, &decrypted_packet_len), 1,
+			"failed to recreate original packet");
 	
 	// send the raw HIT-based (-> IPv6) packet -> returns size of the sent packet
 	// TODO check flags
