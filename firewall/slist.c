@@ -1,7 +1,7 @@
 #include "slist.h"
 
 SList * alloc_slist (void) {
-	SList * list = (struct SList *) malloc (sizeof (SList));
+	SList * list = (SList *) malloc (sizeof (SList));
 	list->next = NULL;	
 	list->data = NULL;
 	return list;
