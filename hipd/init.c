@@ -380,6 +380,7 @@ int hip_set_lowcapability() {
 	int err = 0;
 #ifdef CONFIG_HIP_PRIVSEP
 	cap_value_t cap_list[] = {CAP_NET_RAW, CAP_NET_ADMIN };
+	int ncap_list = 2; 
 	uid_t ruid,euid;
 	cap_t cap_p;
 	char *cap_s;
@@ -409,8 +410,8 @@ int hip_set_lowcapability() {
 	HIP_DEBUG ("Going to clear all capabilities except the ones needed\n");
 	HIP_IFEL(cap_clear(cap_p)<0, -1, "Error clearing capabilities\n");
 
-	HIP_IFEL(cap_set_flag(cap_p, CAP_EFFECTIVE, 2, cap_list, CAP_SET)<0, -1, "Error setting capability flags\n");
-	HIP_IFEL(cap_set_flag(cap_p, CAP_PERMITTED, 2, cap_list, CAP_SET)<0, -1, "Error setting capability flags\n");
+	HIP_IFEL(cap_set_flag(cap_p, CAP_EFFECTIVE, ncap_list, cap_list, CAP_SET)<0, -1, "Error setting capability flags\n");
+	HIP_IFEL(cap_set_flag(cap_p, CAP_PERMITTED, ncap_list, cap_list, CAP_SET)<0, -1, "Error setting capability flags\n");
 	HIP_IFEL(cap_set_proc(cap_p)<0, -1, "Error modifying capabilities\n");
 	HIP_DEBUG("UID=%d EFF_UID=%d\n", getuid(), geteuid());	
 	HIP_DEBUG("cap_p %s\n", cap_s = cap_to_text(cap_p, NULL));
