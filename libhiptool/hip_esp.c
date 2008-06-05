@@ -106,6 +106,8 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 	int encryption_len = 0;
 	int err = 0;
 	
+	HIP_DEBUG("original packet length: %i \n", ctx->ipq_packet->data_len);
+	
 	// distinguish IPv4 and IPv6 output
 	if (IN6_IS_ADDR_V4MAPPED(preferred_peer_addr))
 	{
@@ -295,7 +297,7 @@ int hip_esp_input(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 	// the decrypted data will be placed behind the HIT-based IPv6 header
 	next_hdr_offset = sizeof(struct ip6_hdr);
 	
-	decrypted_packet_len += next_hdr_offset;
+	*decrypted_packet_len += next_hdr_offset;
 
 	// calculate esp data length
 	if (ctx->ip_version == 4)
@@ -319,11 +321,13 @@ int hip_esp_input(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 	
 	pthread_mutex_unlock(&entry->rw_lock);
 	
-	decrypted_packet_len += decrypted_data_len;
+	*decrypted_packet_len += decrypted_data_len;
 	
 	// now we know the next_hdr and can set up the IPv6 header
 	add_ipv6_header((struct ip6_hdr *)decrypted_packet, src_hit, dst_hit,
 			*decrypted_packet_len, next_hdr);
+	
+	HIP_DEBUG("original packet length: %i \n", *decrypted_packet_len);
 	
   out_err:
   	return err;
@@ -606,7 +610,6 @@ int hip_esp_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8_t *
 			break;
 		case SADB_AALG_MD5HMAC:
 			alen = MD5_DIGEST_LENGTH;
-			HIP_DEBUG("alen: %i \n", alen);
 			
 			// length of the authenticated payload, includes ESP header
 			elen = in_len - alen;
@@ -621,8 +624,6 @@ int hip_esp_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8_t *
 			HMAC(EVP_md5(), entry->a_key, entry->a_keylen, 
 				in, elen, hmac_md, &hmac_md_len);
 			
-			HIP_DEBUG("hmac_md_len: %i \n", hmac_md_len);
-			
 			// actual auth verification
 			if (memcmp(&in[elen], hmac_md, hmac_md_len) != 0)
 			{
@@ -634,7 +635,6 @@ int hip_esp_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8_t *
 			break;
 		case SADB_AALG_SHA1HMAC:
 			alen = SHA_DIGEST_LENGTH;
-			HIP_DEBUG("alen: %i \n", alen);
 			
 			// length of the encrypted payload
 			elen = in_len - alen;
@@ -649,8 +649,6 @@ int hip_esp_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8_t *
 			HMAC(EVP_sha1(), entry->a_key, entry->a_keylen, 
 				in, elen, hmac_md, &hmac_md_len);
 			
-			HIP_DEBUG("hmac_md_len: %i \n", hmac_md_len);
-			
 			// actual auth verification
 			if (memcmp(&in[elen], hmac_md, hmac_md_len) != 0)
 			{
@@ -659,6 +657,7 @@ int hip_esp_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8_t *
 				err = 1;
 				goto out_err;
 			}
+			
 			break;
 		case SADB_X_AALG_SHA2_256HMAC:
 		case SADB_X_AALG_SHA2_384HMAC:
@@ -673,9 +672,7 @@ int hip_esp_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8_t *
 			goto out_err;
 	}
 	
-	HIP_HEXDUMP("esp packet (authed part): ", in, elen);
-	HIP_HEXDUMP("esp packet (auth part): ", &in[elen], alen);
-	HIP_HEXDUMP("tmp comp (auth part): ", hmac_md, hmac_md_len);
+	HIP_DEBUG("esp packet successfully authenticated");
 		
 
 	/*
@@ -770,6 +767,8 @@ int hip_esp_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8_t *
 			err = -1;
 			goto out_err;
 	}
+	
+	HIP_DEBUG("esp payload successfully decrypted");
 
 	/* remove padding */
 	esp_tail = (struct hip_esp_tail *) &out[elen - sizeof(struct hip_esp_tail)];
