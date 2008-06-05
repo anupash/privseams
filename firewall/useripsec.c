@@ -271,7 +271,7 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	// we should only get ESP packets here
 	HIP_ASSERT(ctx->packet_type == ESP_PACKET);
 	
-	HIP_IFEL(userspace_ipsec_init(), -1, "failed to initialize userspace ipsec");
+	HIP_IFEL(userspace_ipsec_init(), -1, "failed to initialize userspace ipsec\n");
 	
 	// re-use allocated decrypted_packet memory space
 	memset(decrypted_packet, 0, ESP_PACKET_SIZE);
@@ -281,15 +281,17 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	esp_hdr = ctx->transport_hdr.esp;
 	spi = ntohl(esp_hdr->esp_spi);
 	seq_no = ntohl(esp_hdr->esp_seq);
-	HIP_DEBUG("SPI no. of incoming packet: %u", spi);
-	HIP_DEBUG("SEQ no. of incoming packet: %u", seq_no);
+	HIP_DEBUG("SPI no. of incoming packet: %u \n", spi);
+	HIP_DEBUG("SEQ no. of incoming packet: %u \n", seq_no);
 	
 	// lookup corresponding SA entry by SPI
 	HIP_IFEL(!(entry = hip_sadb_lookup_spi(ntohl(esp_hdr->esp_spi))), -1,
-			"no SA entry found for SPI %u", ntohl(esp_hdr->esp_spi));
+			"no SA entry found for SPI %u \n", ntohl(esp_hdr->esp_spi));
+	
+	HIP_DEBUG("SEQ no. of entry: %u \n", entry->sequence);
 	
 	// TODO check for correct SEQ no.
-	HIP_IFEL(entry->sequence != seq_no, -1, "ESP sequence numbers do not match");
+	HIP_IFEL(entry->sequence != seq_no, -1, "ESP sequence numbers do not match\n");
 	
 	// check consistency of the entry and if we have a SA entry to reply to
 	if (!entry->inner_src_addrs || !!entry->inner_dst_addrs)
@@ -330,7 +332,7 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	// decrypt the packet and create a new HIT-based one
 	HIP_IFEL(hip_esp_input(ctx, entry, &src_hit, &dst_hit,
 			(struct ip6_hdr *) decrypted_packet, &decrypted_packet_len), 1,
-			"failed to recreate original packet");
+			"failed to recreate original packet\n");
 	
 	// send the raw HIT-based (-> IPv6) packet -> returns size of the sent packet
 	// TODO check flags
@@ -356,107 +358,6 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
   out_err:
   	return err;
 }
-
-#if 0
-/* added by Tao Wan, This is the function for hip userspace ipsec input 
- *
- **/
-int hip_fw_userspace_ipsec_input(int ip_version,
-				 void *hdr,
-				 ipq_packet_msg_t *ip_packet_in_the_queue)
-{
-	int ipv6_hdr_size = 0;
-	int tcp_hdr_size = 0;
-	int length_of_packet = 0;
-        int i, optLen, hdr_size, optionsLen;
-	char 	       *hdrBytes = NULL;
-	struct tcphdr  *tcphdr;
-	struct ip      *iphdr;
-	struct ip6_hdr *ip6_hdr;
-	
-        //fields for temporary values
-	// u_int16_t       portTemp;
-	// struct in_addr  addrTemp;
-	// struct in6_addr addr6Temp;
-	/* the following vars are needed for
-	 * sending the i1 - initiating the exchange
-	 * in case we see that the peer supports hip*/
-	// struct in6_addr peer_ip;
-	// struct in6_addr peer_hit;
-	// in_port_t        src_tcp_port;
-	// in_port_t        dst_tcp_port;
-
-	struct sockaddr_storage ipv6_src_addr;
-	struct sockaddr_storage ipv4_src_addr;
-	struct in6_addr ipv4_to_ipv6_conversion;
-	int err = 0;
-
-	if(ip_version == 4){
-		iphdr = (struct ip *)hdr;
-		//get the tcp header
-		hdr_size = (iphdr->ip_hl * 4);
-		tcphdr = ((struct tcphdr *) (((char *) iphdr) + hdr_size));
-		hdrBytes = ((char *) iphdr) + hdr_size;
-		
-		HIP_DEBUG_INADDR("IPv4 from peer address ", &iphdr->ip_src); /* From peer */
-		HIP_DEBUG_INADDR("IPv4 local address ", &iphdr->ip_dst); /* it is local */
-		
-		length_of_packet = ip_packet_in_the_queue->data_len;		
-		
-		
-		IPV4_TO_IPV6_MAP(&iphdr->ip_dst, &ipv4_to_ipv6_conversion);
-
-		hip_addr_to_sockaddr((struct in6_addr *) &ipv4_to_ipv6_conversion,
-				     (struct sockaddr *) &ipv4_src_addr);
-		
-		HIP_DEBUG("hello: the number of sa_family is %s\n", 
-			  ipv4_src_addr.ss_family == AF_INET? "ipv4" : "ipv6");
-
-		err = hip_esp_input((struct sockaddr *) &ipv4_src_addr, 
-				    (u8 *) iphdr, length_of_packet); 
-
-}
-	else if(ip_version == 6){
-		ip6_hdr = (struct ip6_hdr *)hdr;
-		
-		ipv6_hdr_size = sizeof(struct ip6_hdr);
-		tcp_hdr_size = sizeof(struct tcphdr);
-		
-		
-		if(ip_packet_in_the_queue->data_len >= 
-		   (ipv6_hdr_size + tcp_hdr_size)) 
-		{
-			
-			length_of_packet = ip_packet_in_the_queue->data_len;  
-			HIP_DEBUG("length of packet is %d \n", length_of_packet);
-			_HIP_DEBUG("ipv6 header size  is %d \n", ipv6_hdr_size);
-			_HIP_DEBUG("tcp header size is %d \n", tcp_hdr_size);
-		}
-		 		
-                 //get the tcp header		
-		hdr_size = (ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen * 4);
-		tcphdr = ((struct tcphdr *) (((char *) ip6_hdr) + hdr_size));
-		hdrBytes = ((char *) ip6_hdr) + hdr_size;
-		
-                //peer and local ip needed for sending the i1 through hipd
-		//peer_ip = &ip6_hdr->ip6_src;//TO  BE FIXED obtain the pseudo hit instead
-
-		// ipv6_addr_copy(&peer_hit, &ip6_hdr->ip6_dst);
-		HIP_DEBUG_IN6ADDR("IPv6 from peer address ", &ip6_hdr->ip6_src); /* From peer */
-		HIP_DEBUG_IN6ADDR("IPv6 local address ", &ip6_hdr->ip6_dst); /* it is local */
-
-		
-		hip_addr_to_sockaddr((struct in6_addr *)&ip6_hdr->ip6_dst,
-				     (struct sockaddr *) &ipv6_src_addr);
-		
-		err = hip_esp_input((struct sockaddr *) &ipv6_src_addr, 
-				    (char *) ip6_hdr, length_of_packet); 
-	}
-			
-
-	return err;
-}
-#endif
 
 int hipl_userspace_ipsec_sadb_add_wrapper(struct in6_addr *saddr,
 					      struct in6_addr *daddr,
