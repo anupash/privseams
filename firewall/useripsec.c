@@ -295,25 +295,16 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	//HIP_IFEL(entry->sequence != seq_no, -1, "ESP sequence numbers do not match\n");
 	
 	// check consistency of the entry and if we have a SA entry to reply to
-	if (!entry->inner_src_addrs || !!entry->inner_dst_addrs)
-	{
-		err = -1;
-		goto out_err;
-	}
+	HIP_IFEL(!entry->inner_src_addrs || !entry->inner_dst_addrs, -1, "HITs missing")
 	
 	HIP_DEBUG_SOCKADDR("inner_src_addr ",
 			   (struct sockaddr *) &entry->inner_src_addrs->addr);
 	HIP_DEBUG_SOCKADDR("inner_dst_addr ",
 			   (struct sockaddr *) &entry->inner_dst_addrs->addr);
 
-	if (!(inverse_entry = hip_sadb_lookup_addr(
-		(struct sockaddr *)&entry->inner_src_addrs->addr)))
-	{
-		HIP_DEBUG("Corresponding sadb entry for outgoing packets not found.\n");
-		
-		err = -1;
-		goto out_err;
-	}
+	HIP_IFEL(!(inverse_entry = hip_sadb_lookup_addr(
+		(struct sockaddr *)&entry->inner_src_addrs->addr)), -1,
+		"corresponding sadb entry for outgoing packets not found\n");
 
 // TODO check where we set the UDP dst port
 #if 0
@@ -327,6 +318,7 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	// TODO handle else case
 #endif
 	
+	// convert HITs to type used in hipl
 	HIP_IFE(cast_sockaddr_to_in6_addr(&entry->inner_src_addrs->addr, &src_hit), -1);
 	HIP_IFE(cast_sockaddr_to_in6_addr(&entry->inner_dst_addrs->addr, &dst_hit), -1);
 	
