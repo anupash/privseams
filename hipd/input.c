@@ -1356,7 +1356,6 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 	   this part is executed on I and R also. -Lauri 27.09.2007*/
 	
 	/* Handle REG_REQUEST parameter. */
-	HIP_DEBUG("Entering new REG_REQUEST handler.\n");
 	hip_handle_param_rrq(entry, i2, r2);
 #endif	
  	/* HMAC2 */
@@ -1940,33 +1939,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		HIP_DEBUG("Could not deliver escrow data to server\n");
 	}
 #endif //CONFIG_HIP_ESCROW
-        /*      
-	#ifdef CONFIG_HIP_RVS
-	if (entry != NULL) {
-	if(hip_relay_get_status() == HIP_RELAY_ON) {
-	entry->state = HIP_STATE_ESTABLISHED;
-	} else {
-	if (entry->state == HIP_STATE_UNASSOCIATED) {
-	entry->state = HIP_STATE_ESTABLISHED;
-	} else if (entry->state == HIP_STATE_ESTABLISHED) {
-	HIP_DEBUG("Initiator rebooted, but base "\
-	"exchange completed. Staying in "\
-	"ESTABLISHED.\n");
-	}
-	}
-	}
-	#else
-	if (entry != NULL) {
-	if (entry->state == HIP_STATE_UNASSOCIATED) {
-			
-	entry->state = HIP_STATE_ESTABLISHED;
-	} else if (entry->state == HIP_STATE_ESTABLISHED) {
-	HIP_DEBUG("Initiator rebooted, but base "\
-	"exchange completed. Staying in "\
-	"ESTABLISHED.\n");
-	}
-	}
-	#endif */ /* CONFIG_HIP_RVS */
 	
 	/** @todo Should wait for ESP here or wait for implementation specific
 	    time. */

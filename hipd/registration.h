@@ -425,4 +425,7 @@ int hip_del_registration_client(hip_ha_t *entry, uint8_t *reg_types,
  * @return            zero if there are no duplicate values, -1 otherwise.
  */ 
 int hip_has_duplicate_services(uint8_t *values, int type_count);
+
+int hip_get_registration_failure_string(uint8_t failure_type,
+					char *type_string);
 #endif /* HIP_REGISTRATION_H */

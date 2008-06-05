@@ -626,7 +626,7 @@ int hip_check_param_contents_len(const struct hip_common *msg,
  * @param msg           a pointer to the beginning of the message header
  * @param current_param a pointer to the current parameter, or NULL if the msg
  *                      is to be searched from the beginning.
- * @return              the next parameter after the current_param in msg, or
+ * @return              the next parameter after the current_param in @c msg, or
  *                      NULL if no parameters were found.
  */
 struct hip_tlv_common *hip_get_next_param(const struct hip_common *msg,
@@ -676,7 +676,7 @@ struct hip_tlv_common *hip_get_next_param(const struct hip_common *msg,
 
 /**
  * Gets  the first parameter of the given type.
-  *
+ *
  * If there are multiple parameters of the same type, one should use
  * hip_get_next_param() after calling this function to iterate through
  * them all.

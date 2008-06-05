@@ -265,8 +265,6 @@
 #define HIP_SERVICE_RENDEZVOUS	         1
 #define HIP_SERVICE_ESCROW	         201
 #define HIP_SERVICE_RELAY            	 202
-#define HIP_SERVICE_RELAY_UDP_HIP	 203
-#define HIP_SERVICE_RELAY_UDP_ESP	 204
 /* IMPORTANT! This must be the sum of above services. */
 #define HIP_TOTAL_EXISTING_SERVICES      3
 /* @} */
@@ -723,7 +721,7 @@ struct hip_reg_response {
 struct hip_reg_failed {
 	hip_tlv_type_t type;
 	hip_tlv_len_t  length;
-	uint8_t       failure_type;
+	uint8_t        failure_type;
 } __attribute__ ((packed));
 
 struct hip_keys {

@@ -410,7 +410,7 @@ int hip_handle_param_rrq(hip_ha_t *entry, hip_common_t *source_msg,
 	/* Check that the request has at most one value of each type. */
 	if(hip_has_duplicate_services(reg_types, type_count)) {
 		/* We consider this as a protocol error, and do not build
-		   REG_FAILED parameters. The initiator might be rogue and
+		   REG_FAILED parameters. The initiator may be rogue and
 		   trying to stress the server with malformed service
 		   requests. */
 		err = -1;
@@ -534,9 +534,91 @@ int hip_handle_param_reg_response(hip_ha_t *entry, hip_common_t *msg)
 
 int hip_handle_param_reg_failed(hip_ha_t *entry, hip_common_t *msg)
 {
-	/** @todo implement. */
-	/* Note there can be more than one paramters. */
-	return 0;
+	int err = 0, type_count = 0, i = 0;
+	struct hip_reg_failed *reg_failed = NULL;
+	uint8_t *reg_types = NULL;
+	char reason[256];
+
+	HIP_DEBUG("New REG_FAILED handler.\n");
+	
+	reg_failed = hip_get_param(msg, HIP_PARAM_REG_FAILED);
+	
+	if(reg_failed == NULL) {
+		err = -1;
+		HIP_DEBUG("No REG_FAILED parameter found.\n");
+		goto out_err;
+	}
+	
+	while(hip_get_param_type(reg_failed) == HIP_PARAM_REG_FAILED) {
+
+		type_count = hip_get_param_contents_len(reg_failed) -
+			sizeof(reg_failed->failure_type);
+		reg_types = hip_get_param_contents_direct(reg_failed) +
+			sizeof(reg_failed->failure_type);
+		hip_get_registration_failure_string(reg_failed->failure_type,
+						    reason);
+	
+		HIP_DEBUG("TYPE COUNT %u.\n", type_count);
+
+		for(; i < type_count; i++) {
+		
+			switch(reg_types[i]) {
+			case HIP_SERVICE_RENDEZVOUS:
+			{
+				HIP_DEBUG("The server has refused to grant us "\
+					  "rendezvous service.\n%s\n", reason);
+				hip_hadb_cancel_local_controls(
+					entry, HIP_HA_CTRL_LOCAL_REQ_RVS); 
+				hip_del_pending_request_by_type(
+					entry, HIP_SERVICE_RENDEZVOUS);
+				break;
+			}
+			case HIP_SERVICE_RELAY:
+			{
+				HIP_DEBUG("The server has refused to grant us "\
+					  "relay service.\n%s\n", reason);
+				hip_hadb_cancel_local_controls(
+					entry, HIP_HA_CTRL_LOCAL_REQ_RELAY); 
+				hip_del_pending_request_by_type(
+					entry, HIP_SERVICE_RELAY);
+
+				break;
+			}
+			case HIP_SERVICE_ESCROW:
+			{
+				HIP_DEBUG("The server has refused to grant us "\
+					  "escrow service.\n%s\n", reason);
+				hip_hadb_set_peer_controls(
+					entry, HIP_HA_CTRL_PEER_GRANTED_ESCROW); 
+				hip_del_pending_request_by_type(
+					entry, HIP_SERVICE_ESCROW);
+				/* Not tested to work. Just moved here from an old
+				   registration implementation. */
+			
+				break;
+			}
+			default:
+				HIP_DEBUG("The server has refused to grant us "\
+					  "an unknown service (%u).\n%s\n", reg_types[i],
+					  reason);
+				hip_del_pending_request_by_type(
+					entry, reg_types[i]);
+				break;
+			}
+		}
+		
+		/* Iterate to the next parameter and break the loop if there is
+		   no more parameters left. */
+		i = 0;
+		reg_failed = hip_get_next_param(msg, reg_failed);
+		
+		if(reg_failed == NULL)
+			break;
+	}
+
+ out_err:
+	
+	return err;
 }
 
 int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
@@ -789,5 +871,43 @@ int hip_has_duplicate_services(uint8_t *reg_types, int type_count)
 		}
 	}
 
+	return 0;
+}
+
+int hip_get_registration_failure_string(uint8_t failure_type,
+					char *type_string) {
+	if(type_string == NULL)
+		return -1;
+	
+	switch (failure_type) {
+	case HIP_REG_INSUFFICIENT_CREDENTIALS:
+		memcpy(type_string,
+		       "Registration requires additional credentials.",
+		       sizeof("Registration requires additional credentials."));
+		break;
+	case HIP_REG_TYPE_UNAVAILABLE:
+		memcpy(type_string, "Registration type unavailable.",
+		       sizeof("Registration type unavailable."));
+		break;
+	case HIP_REG_CANCEL_REQUIRED:
+		memcpy(type_string,
+		       "Cancellation of a previously granted service is "\
+		       "required.",
+		       sizeof("Cancellation of a previously granted service "\
+			      "is required."));
+		break;
+	case HIP_REG_TRANSIENT_CONDITIONS:
+		memcpy(type_string,
+		       "The server is currently unable to provide services "\
+		       "due to transient conditions.",
+		       sizeof("The server is currently unable to provide services "\
+			      "due to transient conditions."));
+		break;
+	default:
+		memcpy(type_string, "Unknown failure type.",
+		       sizeof("Unknown failure type."));
+		break;
+	}
+	
 	return 0;
 }
