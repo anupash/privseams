@@ -326,7 +326,7 @@ int hip_handle_param_reg_info(hip_common_t *msg, hip_ha_t *entry)
 	/* Loop through all the registration types found in REG_INFO parameter
 	   and store the information of responder's capability to offer a
 	   service. */
-	/** @todo store the offered lifetime boundaries to the pending request. */
+	/** @todo store the offered lifetime boundaries somewhere. */
 	for(i = 0; i < type_count; i++){
 		
 		switch(reg_types[i]) {
@@ -337,7 +337,12 @@ int hip_handle_param_reg_info(hip_common_t *msg, hip_ha_t *entry)
 				entry ,HIP_HA_CTRL_PEER_RVS_CAPABLE);
 			
 			break;
-
+		case HIP_SERVICE_RELAY:
+			HIP_INFO("Responder offers relay service.\n");
+			hip_hadb_set_peer_controls(
+				entry, HIP_HA_CTRL_PEER_RELAY_CAPABLE);
+			
+			break;
 #ifdef CONFIG_HIP_ESCROW	
 		case HIP_SERVICE_ESCROW:
 			/* The escrow part is just a copy paste from the
@@ -364,12 +369,6 @@ int hip_handle_param_reg_info(hip_common_t *msg, hip_ha_t *entry)
 
 			break;
 #endif /* CONFIG_HIP_ESCROW */
-		case HIP_SERVICE_RELAY:
-			HIP_INFO("Responder offers relay service.\n");
-			hip_hadb_set_peer_controls(
-				entry, HIP_HA_CTRL_PEER_RELAY_CAPABLE);
-			
-			break;
 			
 		default:
 			HIP_INFO("Responder offers unsupported service.\n");
@@ -549,6 +548,8 @@ int hip_handle_param_reg_failed(hip_ha_t *entry, hip_common_t *msg)
 		goto out_err;
 	}
 	
+	/* There can be more than one REG_FAILED parameters in the message. We
+	   have to loop through every one. */
 	while(hip_get_param_type(reg_failed) == HIP_PARAM_REG_FAILED) {
 
 		type_count = hip_get_param_contents_len(reg_failed) -
@@ -558,10 +559,8 @@ int hip_handle_param_reg_failed(hip_ha_t *entry, hip_common_t *msg)
 		hip_get_registration_failure_string(reg_failed->failure_type,
 						    reason);
 	
-		HIP_DEBUG("TYPE COUNT %u.\n", type_count);
-
 		for(; i < type_count; i++) {
-		
+			
 			switch(reg_types[i]) {
 			case HIP_SERVICE_RENDEZVOUS:
 			{
@@ -581,15 +580,15 @@ int hip_handle_param_reg_failed(hip_ha_t *entry, hip_common_t *msg)
 					entry, HIP_HA_CTRL_LOCAL_REQ_RELAY); 
 				hip_del_pending_request_by_type(
 					entry, HIP_SERVICE_RELAY);
-
+				
 				break;
 			}
 			case HIP_SERVICE_ESCROW:
 			{
 				HIP_DEBUG("The server has refused to grant us "\
 					  "escrow service.\n%s\n", reason);
-				hip_hadb_set_peer_controls(
-					entry, HIP_HA_CTRL_PEER_GRANTED_ESCROW); 
+				hip_hadb_cancel_local_controls(
+					entry, HIP_HA_CTRL_LOCAL_REQ_ESCROW); 
 				hip_del_pending_request_by_type(
 					entry, HIP_SERVICE_ESCROW);
 				/* Not tested to work. Just moved here from an old
@@ -599,15 +598,15 @@ int hip_handle_param_reg_failed(hip_ha_t *entry, hip_common_t *msg)
 			}
 			default:
 				HIP_DEBUG("The server has refused to grant us "\
-					  "an unknown service (%u).\n%s\n", reg_types[i],
-					  reason);
+					  "an unknown service (%u).\n%s\n",
+					  reg_types[i], reason);
 				hip_del_pending_request_by_type(
 					entry, reg_types[i]);
 				break;
 			}
 		}
 		
-		/* Iterate to the next parameter and break the loop if there is
+		/* Iterate to the next parameter and break the loop if there are
 		   no more parameters left. */
 		i = 0;
 		reg_failed = hip_get_next_param(msg, reg_failed);

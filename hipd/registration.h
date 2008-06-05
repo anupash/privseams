@@ -267,7 +267,7 @@ int hip_handle_param_rrq(hip_ha_t *entry, hip_common_t *source_msg,
  * Handles param REG_RESPONSE. Digs out the REG_RESPONSE parameter from the HIP
  * message @c msg and takes action based on the contents of the
  * REG_RESPONSE parameter.
- * 
+ *
  * Unlike the REG_REQUEST parameter, the REG_RESPONSE parameter is allowed to
  * have duplicate services listed. This is because the initiator has the option
  * not to contact the server in the first place. If the server sends
@@ -290,23 +290,16 @@ int hip_handle_param_rrq(hip_ha_t *entry, hip_common_t *source_msg,
 int hip_handle_param_reg_response(hip_ha_t *entry, hip_common_t *msg);
 
 /**
- * Handles param REG_FAILED. Digs out the REG_FAILED parameter from the HIP
- * message @c msg and takes action based on the contents of the
- * REG_FAILED parameter.
+ * Handles all REG_FAILED parameters. Digs out the REG_FAILED parameters one
+ * after other from the HIP message @c msg and takes action based on the
+ * contents of the current REG_FAILED parameter. The function first cancels the
+ * 'request' bit and then removes the corresponding pending request.
  * 
- * Unlike the REG_REQUEST parameter, the REG_FAILED parameter is allowed to
- * have duplicate services listed. This is because the initiator has the option
- * not to contact the server in the first place. If the server sends
- * REG_FAILED parameters that contain duplicate services, we just handle each
- * duplicate Reg Type one after the other.
- *
  * @parameter entry a pointer to a host association which is registering.
  * @param  msg      a pointer to HIP message from where to dig out the
- *                  REG_FAILED parameter.
+ *                  REG_FAILED parameters.
  * @return          -1 if the message @c msg did not contain a REG_FAILED
  *                  parameter, zero otherwise.
- * @see             hip_add_registration_client().
- * @see             hip_del_registration_client().
  */
 int hip_handle_param_reg_failed(hip_ha_t *entry, hip_common_t *msg);
 
@@ -388,7 +381,9 @@ int hip_del_registration_server(hip_ha_t *entry, uint8_t *reg_types,
  * Adds new registrations to services at the client. This function tries to add
  * all new services listed and indentified by @c types. This is client side
  * addition, meaning that the client calls this function to add entries to the
- * list of services it has been granted.
+ * list of services it has been granted. It first cancels the 'request' bit,
+ * then sets the 'granted' bit and finally removes the corresponding pending
+ * request.
  *
  * @param  entry              a pointer to a host association.
  * @param  lifetime           granted lifetime.
@@ -426,6 +421,14 @@ int hip_del_registration_client(hip_ha_t *entry, uint8_t *reg_types,
  */ 
 int hip_has_duplicate_services(uint8_t *values, int type_count);
 
+/**
+ * Gets a string representation related to a registration failure type.
+ *
+ * @param  failure_type the Failure Type of a REG_FAILED parameter.
+ * @param  type_string  a target buffer where to store the string
+ *                      representation. This should be at least 256 bytes long.
+ * @return              -1 if @c type_string is NULL, zero otherwise.
+ */ 
 int hip_get_registration_failure_string(uint8_t failure_type,
 					char *type_string);
 #endif /* HIP_REGISTRATION_H */
