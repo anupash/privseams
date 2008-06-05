@@ -290,8 +290,9 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	
 	HIP_DEBUG("SEQ no. of entry: %u \n", entry->sequence);
 	
-	// TODO check for correct SEQ no.
-	HIP_IFEL(entry->sequence != seq_no, -1, "ESP sequence numbers do not match\n");
+	// TODO implement seq window
+	// check for correct SEQ no.
+	//HIP_IFEL(entry->sequence != seq_no, -1, "ESP sequence numbers do not match\n");
 	
 	// check consistency of the entry and if we have a SA entry to reply to
 	if (!entry->inner_src_addrs || !!entry->inner_dst_addrs)
