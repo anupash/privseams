@@ -117,14 +117,20 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 		// check whether to use UDP encapsulation or not
 		if (udp_encap)
 		{
-			out_udp_hdr = (struct udphdr *)((unsigned char *)esp_packet) + next_hdr_offset;
+			out_udp_hdr = (struct udphdr *) (esp_packet + next_hdr_offset);
 			next_hdr_offset += sizeof(struct udphdr);
 		}
-
-		// set up esp header defined in firewall_defines.h
-		out_esp_hdr = (struct hip_esp *) ((unsigned char *)esp_packet) + next_hdr_offset;
+		
+		_HIP_DEBUG("spi no.: %u\n", entry->spi);
+		_HIP_DEBUG("seq no.: %u\n", entry->sequence);
+		
+		// set up esp header
+		out_esp_hdr = (struct hip_esp *) (esp_packet + next_hdr_offset);
 		out_esp_hdr->esp_spi = htonl(entry->spi);
 		out_esp_hdr->esp_seq = htonl(entry->sequence++);
+		
+		_HIP_HEXDUMP("new packet (with esp header): ", esp_packet,
+					next_hdr_offset + sizeof(struct hip_esp));
 		
 		// packet to be re-inserted into network stack has at least
 		// length of defined headers
@@ -154,12 +160,16 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 		 * behind the ESP header
 		 * 
 		 * NOTE: we are implicitely passing the previously set up ESP header */
-		err = hip_esp_encrypt(in_transport_hdr, in_transport_type, elen,
-				      esp_packet + next_hdr_offset, &encryption_len, entry);
+		HIP_IFEL(hip_esp_encrypt(in_transport_hdr, in_transport_type, elen,
+				      esp_packet + next_hdr_offset, &encryption_len, entry), -1,
+				      "failed to encrypt data");
 		
 		pthread_mutex_unlock(&entry->rw_lock);
 		
-		// this also includes the ESP trailer
+		_HIP_HEXDUMP("new packet (with esp): ", esp_packet,
+					next_hdr_offset + sizeof(struct hip_esp) + encryption_len);
+		
+		// this also includes the ESP tail
 		*esp_packet_len += encryption_len;
 		
 #if 0	
@@ -180,14 +190,17 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 			// the length field covers everything starting with UDP header
 			add_udp_header(out_udp_hdr, *esp_packet_len - sizeof(struct ip), entry,
 					preferred_local_addr, preferred_peer_addr);
+			_HIP_HEXDUMP("new packet (with udp header): ", esp_packet, *esp_packet_len);
 			
 			// now we can also calculate the csum of the new packet
 			add_ipv4_header(out_ip_hdr, preferred_local_addr, preferred_peer_addr,
 								*esp_packet_len, IPPROTO_UDP);
+			_HIP_HEXDUMP("new packet (with ipv4 header): ", esp_packet, *esp_packet_len);
 		} else
 		{
 			add_ipv4_header(out_ip_hdr, preferred_local_addr, preferred_peer_addr,
 								*esp_packet_len, IPPROTO_ESP);
+			_HIP_HEXDUMP("new packet (with ipv4 header): ", esp_packet, *esp_packet_len);
 		}
 	} else
 	{
@@ -204,10 +217,13 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 		 * 		 this would be the place to add it
 		 */
 
-		// set up esp header defined in firewall_defines.h
-		out_esp_hdr = (struct hip_esp *) ((unsigned char *)esp_packet) + next_hdr_offset;
+		// set up esp header
+		out_esp_hdr = (struct hip_esp *) (esp_packet + next_hdr_offset);
 		out_esp_hdr->esp_spi = htonl(entry->spi);
 		out_esp_hdr->esp_seq = htonl(entry->sequence++);
+		
+		_HIP_HEXDUMP("new packet (with esp header): ", esp_packet,
+				next_hdr_offset + sizeof(struct hip_esp));
 		
 		// packet to be re-inserted into network stack has at least
 		// length of defined headers
@@ -236,17 +252,25 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 		 * behind the ESP header
 		 * 
 		 * NOTE: we are implicitely passing the previously set up ESP header */
-		err = hip_esp_encrypt(in_transport_hdr, in_transport_type, elen,
-				      esp_packet + next_hdr_offset, &encryption_len, entry);
+		HIP_IFEL(hip_esp_encrypt(in_transport_hdr, in_transport_type, elen,
+				      esp_packet + next_hdr_offset, &encryption_len, entry), -1,
+				      "failed to encrypt data");
 		
 		pthread_mutex_unlock(&entry->rw_lock);
+		
+		_HIP_HEXDUMP("new packet (with esp): ", esp_packet,
+				next_hdr_offset + sizeof(struct hip_esp) + encryption_len);
+		
+		// this also includes the ESP tail
+		*esp_packet_len += encryption_len;
 		
 		// now we know the packet length
 		add_ipv6_header(out_ip6_hdr, preferred_local_addr, preferred_peer_addr,
 							*esp_packet_len, IPPROTO_UDP);
+		HIP_HEXDUMP("new packet (with ipv6 header): ", esp_packet, *esp_packet_len);
 	}
 	
-  end_err:
+  out_err:
   	return err;
 }
 
@@ -822,16 +846,15 @@ void add_ipv4_header(struct ip *ip_hdr, struct in6_addr *src_addr, struct in6_ad
 	/* assume no options */
 	ip_hdr->ip_hl = 5;
 	ip_hdr->ip_tos = 0;
-	ip_hdr->ip_len = htons(packet_len);
+	ip_hdr->ip_len = packet_len;
 	/* assume that we have no fragmentation */
 	ip_hdr->ip_id  = 0;
 	ip_hdr->ip_off = 0;
 	ip_hdr->ip_ttl = 255;
 	ip_hdr->ip_p = next_hdr;
 	ip_hdr->ip_sum = 0;
-	/* assume host byte order */
-	ip_hdr->ip_src.s_addr = htonl(src_in_addr.s_addr);
-	ip_hdr->ip_dst.s_addr = htonl(dst_in_addr.s_addr);
+	ip_hdr->ip_src.s_addr = src_in_addr.s_addr;
+	ip_hdr->ip_dst.s_addr = dst_in_addr.s_addr;
 
 	/* recalculate the header checksum, does not include payload */
 	ip_hdr->ip_sum = checksum_ip(ip_hdr, ip_hdr->ip_hl);
@@ -880,7 +903,7 @@ void add_ipv6_header(struct ip6_hdr *ip6_hdr, struct in6_addr *src_addr, struct 
 	ip6_hdr->ip6_flow = 0; /* zero the version (4), TC (8) and flow-ID (20) */
 	/* only set 4 bits version and top 4 bits tclass */
 	ip6_hdr->ip6_vfc = 0x60;
-	ip6_hdr->ip6_plen = htons(packet_len);
+	ip6_hdr->ip6_plen = packet_len;
 	ip6_hdr->ip6_nxt = next_hdr;
 	ip6_hdr->ip6_hlim = 255;
 	memcpy(&ip6_hdr->ip6_src, src_addr, sizeof(struct in6_addr));

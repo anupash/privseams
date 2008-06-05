@@ -218,6 +218,8 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	HIP_IFEL(hip_esp_output(ctx, entry, udp_encap, &now,
 			&preferred_local_addr, &preferred_peer_addr,
 			esp_packet, &esp_packet_len), 1, "failed to create ESP packet");
+	
+	HIP_HEXDUMP("new packet: ", esp_packet, esp_packet_len + 8);
 
 	// send the raw packet -> returns size of the sent packet
 	// TODO check flags
@@ -234,7 +236,7 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 		HIP_DEBUG("hip_esp_output(): sendto() failed\n");
 	} else
 	{
-		HIP_DEBUG("new packet SUCCESSFULLY re-injected into network stack");
+		HIP_DEBUG("new packet SUCCESSFULLY re-injected into network stack\n");
 		HIP_DEBUG("dropping original packet...\n");
 		
 		// update SA statistics for replay protection etc
@@ -656,20 +658,14 @@ int cast_sockaddr_to_in6_addr(struct sockaddr_storage *sockaddr, struct in6_addr
 {
 	int err = 0;
 	
-	HIP_DEBUG("sockaddr->ss_family: %u\n", sockaddr->ss_family);
-	
 	if (sockaddr->ss_family == AF_INET)
 	{
 		IPV4_TO_IPV6_MAP((struct in_addr *)hip_cast_sa_addr(sockaddr),
 				in6_addr);
 		
-		HIP_DEBUG_HIT("preferred_addr (IPv4): ", in6_addr);
-		
 	} else if (sockaddr->ss_family == AF_INET6)
 	{
 		in6_addr = (struct in6_addr *)hip_cast_sa_addr(sockaddr);
-
-		HIP_DEBUG_HIT("preferred_addr (IPv6): ", in6_addr);
 		
 	} else
 	{
