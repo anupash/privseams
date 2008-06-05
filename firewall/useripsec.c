@@ -559,7 +559,7 @@ int cast_sockaddr_to_in6_addr(struct sockaddr_storage *sockaddr, struct in6_addr
 		
 	} else if (sockaddr->ss_family == AF_INET6)
 	{
-		in6_addr = (struct in6_addr *)hip_cast_sa_addr(sockaddr);
+		*in6_addr = *((struct in6_addr *)hip_cast_sa_addr(sockaddr));
 		
 	} else
 	{
