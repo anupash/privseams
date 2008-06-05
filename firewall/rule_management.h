@@ -10,6 +10,7 @@
 #include <openssl/dsa.h>
 #include <openssl/rsa.h>
 #include <openssl/pem.h>
+#include <limits.h>
 #include <linux/netfilter_ipv6.h>
 
 #include "builder.h"
