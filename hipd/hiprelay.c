@@ -495,14 +495,17 @@ int hip_relay_rvs(const hip_common_t *i1, const in6_addr_t *i1_saddr,
 		  i1_info->src_port, i1_info->dst_port);
 		
 	/* If the incoming I1 packet was destined to port 50500, we know that
-	   there is a NAT between (I->NAT->RVS->R). */
+	   there is a NAT between (I->NAT->RVS->R). 
 	if(i1_info->dst_port == HIP_NAT_UDP_PORT) {
 		builder_function = hip_build_param_relay_from;
 		param_type = HIP_PARAM_RELAY_FROM;
 	} else {
 		builder_function = hip_build_param_from;
 		param_type = HIP_PARAM_FROM;
-	}
+	}*/
+	
+	builder_function = hip_build_param_from;
+	param_type = HIP_PARAM_FROM;
 
 	HIP_IFEL(!(i1_to_be_relayed = hip_msg_alloc()), -ENOMEM,
 		 "No memory to copy original I1\n");	
@@ -935,8 +938,8 @@ int hip_relay_handle_relay_to(struct hip_common * msg,
 	hip_relrec_t *rec = NULL, dummy;
 	struct hip_relay_to *relay_to;
 	//check if full relay service is active
-	if((!hip_services_is_active(HIP_FULLRELAY))) goto out_err;
-	
+	if(hip_relay_get_status() != HIP_RELAY_ON) goto out_err;
+	HIP_DEBUG("handle_relay_to: full relay is on\n");
 	
 	// check if the relay has been registered
 
@@ -1047,7 +1050,7 @@ int hip_relay_handle_from(hip_common_t *source_msg,
 			  in6_addr_t *rvs_ip,
 			  in6_addr_t *dest_ip, in_port_t *dest_port)
 {
-	 hip_tlv_type_t *param_type;
+	 hip_tlv_type_t param_type;
      struct hip_relay_from *relay_from = NULL;
      struct hip_from *from = NULL;
      hip_ha_t *rvs_ha_entry = NULL;
@@ -1066,13 +1069,13 @@ int hip_relay_handle_from(hip_common_t *source_msg,
      } else if(from != NULL)
      {
 		  
-		  *param_type = HIP_PARAM_FROM;
+		  param_type = HIP_PARAM_FROM;
 		  memcpy(dest_ip, &from->address, sizeof(from->address));
      } else 
      {
 	  HIP_DEBUG("Found RELAY_FROM parameter in I.\n");
 	  // set the relay ip and port to the destination address and port.
-		  *param_type = HIP_PARAM_RELAY_FROM;
+		  param_type = HIP_PARAM_RELAY_FROM;
 		  
 		  memcpy(dest_ip, &relay_from->address, sizeof(relay_from->address));
 		  	*dest_port = ntohs(relay_from->port);

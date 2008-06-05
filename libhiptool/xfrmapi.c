@@ -478,6 +478,12 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 	HIP_DEBUG_IN6ADDR("saddr", saddr);
 	HIP_DEBUG_IN6ADDR("daddr", daddr);
 
+	HIP_DEBUG("sport %d\n", sport);
+	HIP_DEBUG("dport %d\n", dport);
+	HIP_DEBUG("direction %d\n", direction);
+	HIP_DEBUG("SPI=0x%x\n",spi);
+	
+	
 	authkey_len = hip_auth_key_length_esp(aalg);
 	enckey_len = hip_enc_key_length(ealg);
 

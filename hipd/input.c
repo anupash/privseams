@@ -552,6 +552,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 	//check if it a relaying msg
 	//add by santtu
 	//if(hip_relay_handle_relay_to(msg, type, src_addr, dst_addr, msg_info)){
+	HIP_DEBUG("help......\n");
 	if(hip_relay_handle_relay_to(msg, type, src_addr, dst_addr, msg_info)){
 	//end 
 		err = -ECANCELED;
@@ -2346,6 +2347,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	memcpy(&ctx->auth_out, &entry->auth_out, sizeof(ctx->auth_out));
 	HIP_DEBUG("entry should have only one spi_in now, test\n");
 	spi_in = hip_hadb_get_latest_inbound_spi(entry);
+
 	tfm = entry->esp_transform;
 	
 	HIP_DEBUG("R2 packet source port: %d, destination port %d.\n",

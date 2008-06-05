@@ -809,9 +809,29 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 	/* Get the final destination address and port for the outgoing R1.
 	   dst_ip and dst_port have values only if the incoming I1 had
 	   FROM/FROM_NAT parameter. */
+	if(!ipv6_addr_any(dst_ip)){
+		//from RVS or relay
+		if(dst_port){
+			//from relay
+			r1_dst_addr = i1_saddr;
+			r1_dst_port = i1_info->src_port;
+		}
+		else{
+			//from RVS
+			r1_dst_addr =  dst_ip;
+			// what port....?
+			r1_dst_port =  50500;
+		}
+	}
+	else{
+		//direct
+		r1_dst_addr = i1_saddr;
+		r1_dst_port = i1_info->src_port;
+	}
+/* removed by santtu becuase relay supported 
 	r1_dst_addr = (ipv6_addr_any(dst_ip) ? i1_saddr : dst_ip);
 	r1_dst_port = (dst_port == 0 ? i1_info->src_port : dst_port);
-
+*/
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	/* It should not be null hit, null hit has been replaced by real local
 	   hit. */
@@ -859,7 +879,7 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 	     if(dst_port != 0)
 	     {
 		  hip_build_param_relay_to(
-		       r1pkt, i1_saddr, i1_info->src_port);
+		       r1pkt, dst_ip, dst_port);
 	     }
 	     else
 	     {
