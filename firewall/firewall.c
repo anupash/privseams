@@ -271,7 +271,6 @@ int firewall_init_rules()
 			system("iptables -I OUTPUT -j DROP");  /* @todo: ! LSI PREFIX */
 			
 			// but still allow packets with HITs as destination
-			// FIXME what about checking the src for HITs?
 			system("ip6tables -I FORWARD ! -d 2001:0010::/28 -j DROP");
 			system("ip6tables -I INPUT ! -d 2001:0010::/28 -j DROP");
 			system("ip6tables -I OUTPUT ! -d 2001:0010::/28 -j DROP");
@@ -322,13 +321,12 @@ int firewall_init_rules()
 		system("iptables -I INPUT -p 17 --dport 50500 -j QUEUE");
 		system("iptables -I INPUT -p 17 --sport 50500 -j QUEUE");
 		
-		// TODO queue outgoing ICMP, TCP and UDP sent to LSIs
-		//system("iptables -I OUTPUT -p 1 -d 2001:0010::/28 -j QUEUE");
-		//system("iptables -I OUTPUT -p 6 -d 2001:0010::/28 -j QUEUE");
-		//system("iptables -I OUTPUT -p 17 -d 2001:0010::/28 -j QUEUE");
+		/* no need to queue outgoing ICMP, TCP and UDP sent to LSIs as
+		 * this is handled elsewhere */
 
-		// queue incoming ESP over IPv6
-		// NOTE: add IPv6 UDP encapsulation here
+
+		/* queue incoming ESP over IPv6
+		 * NOTE: add IPv6 UDP encapsulation here */
 		system("ip6tables -I INPUT -p 50 -j QUEUE");
 
 		// queue outgoing ICMP, TCP and UDP sent to HITs
@@ -779,7 +777,7 @@ int filter_esp(const struct in6_addr * dst_addr, struct hip_esp * esp,
 		{
 			rule = (struct rule *) list->data;
 			
-			// FIXME this does only work if 1. rule with rule->state->decrypt_contents
+			// FIXME this does only work if first rule with rule->state->decrypt_contents
 			// has matching src or dst addresses
 			if (rule->state)
 			{
@@ -816,119 +814,6 @@ int filter_esp(const struct in6_addr * dst_addr, struct hip_esp * esp,
 	
   out_err:
   	return verdict;
-	
-#if 0
-	// list with all rules for hook (= IN / OUT / FORWARD)
-	struct _DList * list = (struct _DList *) read_rules(hook);
-	struct rule * rule= NULL;
-	// assume matching rule
-	int match = 0;
-	// block traffic by default
-	int verdict = 0;
-	
-	_HIP_DEBUG("filter_esp:\n");
-
-
-	// match all rules
-	while (list != NULL)
-	{
-		rule = (struct rule *) list->data;
-		
-		//print_rule(rule);
-		HIP_DEBUG_HIT("dst addr: ", dst_addr);
-		HIP_DEBUG("SPI: %d\n", ntohl(esp->esp_spi));
-		
-		// type refers to HIP packets only -> next rule
-		if (rule->type)
-		{
-			HIP_DEBUG("type option not valid for esp\n");
-			
-			continue;
-		}
-		
-		// TODO why?
-		if ((rule->src_hit || rule->dst_hit) && !rule->state)
-		{
-			//not valid with ESP packet
-			HIP_DEBUG("hit options without state option not valid for esp\n");
-			
-			continue;
-		}
-		
-		// check the network interface of the input is the one specified in the rule
-		if (match && rule->in_if)
-		{
-			if (!match_string(rule->in_if->value, in_if,
-					  rule->in_if->boolean))
-			{
-				continue;
-			}
-			
-			HIP_DEBUG("in_if rule: %s, packet: %s, boolean: %d, match: %d \n",
-				   rule->in_if->value, in_if, rule->in_if->boolean, match);
-		}
-		
-		// check the network interface for the output is the one specified in the rule
-		if (match && rule->out_if)
-		{
-			if (!match_string(rule->out_if->value, out_if,
-					  rule->out_if->boolean))
-			{
-				continue;
-			}
-			
-			HIP_DEBUG("out_if rule: %s, packet: %s, boolean: %d, match: %d \n",
-					rule->out_if->value, out_if, rule->out_if->boolean, match);
-		}
-			
-		// must be last, so match and verdict known here
-		if (match && rule->state)
-		{
-			//the entire rule is passed as argument as hits can only be 
-			//filtered with the state information
-			if (!filter_esp_state(dst_addr, esp, rule))
-			{
-				match = 0;
-				
-				HIP_DEBUG("state: rule %d, boolean %d, match %d\n",
-					   rule->state->int_opt.value,
-					   rule->state->int_opt.boolean,
-					   match);
-				
-				// FIXME why break???
-				break;
-			}
-		}
-		
-		// if a match, no need to check further rules
-		if (match)
-		{
-			break;
-		}
-		
-		// else try to match next rule
-		list = list->next;
-	}
-		
-	//was there a rule matching the packet
-	if (rule && match)
-	{
-		HIP_DEBUG("packet matched rule, target %d\n", rule->accept);
-		
-		verdict = rule->accept;
-	} else
-	{
-		HIP_DEBUG("falling back to default HIP/ESP behavior, target %d\n",
-				accept_hip_esp_traffic_by_default);
-		
-		verdict = accept_hip_esp_traffic_by_default;
-	}
-	
-	//release rule list
-	read_rules_exit(0);
-	
-	return verdict;
-#endif
 }
 
 /* filter hip packet according to rules.
@@ -1246,11 +1131,9 @@ int hip_fw_handle_esp_input(hip_fw_context_t *ctx) {
 	/* XX FIXME: ADD LSI INPUT AFTER USERSPACE IPSEC */
 
 	if (hip_userspace_ipsec) {
-		HIP_DEBUG("debug message: HIP firewall userspace ipsec input: \n ");
+		HIP_DEBUG("userspace ipsec input\n");
 		// added by Tao Wan
-		verdict = !hip_fw_userspace_ipsec_input(ctx->ip_version,
-						       ctx->ip_hdr.ipv4,
-						       ctx->ipq_packet);
+		verdict = !hip_fw_userspace_ipsec_input(ctx);
 	} else {
 		verdict = filter_esp(&ctx->dst, ctx->transport_hdr.esp, ctx->ipq_packet->hook);
 	}
