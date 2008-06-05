@@ -426,29 +426,34 @@ int hip_esp_encrypt(unsigned char *in, uint8_t in_type, int in_len,
 	/* Add initialization vector (random value) in the beginning of
 	 * out and calculate padding
 	 * 
-	 * NOTE: this will _NOT_ be encrypted */
+	 * NOTE: IV will _NOT_ be encrypted */
 	if (iv_len > 0) {
 		RAND_bytes(cbc_iv, iv_len);
 		memcpy(&out[esp_data_offset], cbc_iv, iv_len);
-		pad_len = iv_len - ((elen + 2) % iv_len);
+		pad_len = iv_len - ((elen + sizeof(struct hip_esp_tail)) % iv_len);
 	} else {
-		/* Padding with NULL not based on IV length */
-		pad_len = 4 - ((elen + 2) % 4);
+		/* Padding with NULL encryption is not based on IV length */
+		pad_len = 4 - ((elen + sizeof(struct hip_esp_tail)) % 4);
 	}
 	
 	// FIXME this can cause buffer overflows
 	/* add padding to the end of input data and set esp_tail */
-	// padding itself
 	for (i = 0; i < pad_len; i++)
 	{
-		in[elen + i] = i + 1;
+		in[in_len + i] = i + 1;
 	}
-	// add meta-info
+	// add meta-info to input
 	esp_tail = (struct hip_esp_tail *) &in[elen + pad_len];
 	esp_tail->esp_padlen = pad_len;
 	esp_tail->esp_next = in_type;
-	/* esp_tail is encrypted too */
+	
+	HIP_DEBUG("esp_tail->esp_padlen: %u \n", esp_tail->esp_padlen);
+	HIP_DEBUG("esp_tail->esp_next: %u \n", esp_tail->esp_next);
+	
+	/* padding and esp_tail are encrypted too */
 	elen += pad_len + sizeof(struct hip_esp_tail);
+	
+	_HIP_HEXDUMP("data to be encrypted: ", in, elen);
 	
 	/* Apply the encryption cipher directly into out buffer
 	 * to avoid extra copying */
@@ -466,7 +471,7 @@ int hip_esp_encrypt(unsigned char *in, uint8_t in_type, int in_len,
 			
 			break;
 		case SADB_EALG_NULL:
-			// TODO check if we should really overwrite IV
+			// NOTE: in this case there is no IV
 			memcpy(out, in, elen);
 			
 			break;
@@ -484,10 +489,8 @@ int hip_esp_encrypt(unsigned char *in, uint8_t in_type, int in_len,
 	}
 	
 	/* auth will include IV */
-	// TODO at least here it will break with NULL encryption
 	elen += iv_len;
 	*out_len += elen;
-	
 	
 	
 	/* 
@@ -496,6 +499,7 @@ int hip_esp_encrypt(unsigned char *in, uint8_t in_type, int in_len,
 	
 	/* the authentication covers the whole esp part starting with the header */
 	elen += esp_data_offset;
+	
 	/* Check keys and calculate hashes */
 	switch (entry->a_type)
 	{
@@ -539,7 +543,13 @@ int hip_esp_encrypt(unsigned char *in, uint8_t in_type, int in_len,
 			goto out_err;
 	}
 	
+	HIP_DEBUG("alen: %i \n", alen);
+	HIP_HEXDUMP("esp packet (authed part): ", out, elen);
+	HIP_HEXDUMP("esp packet (auth part): ", &out[elen], alen);
+	
 	*out_len += alen;
+	
+	HIP_HEXDUMP("esp packet (whole esp): ", out, *out_len);
 
   out_err:
 	return err;
@@ -652,7 +662,12 @@ int hip_esp_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8_t *
 			goto out_err;
 	}
 	
-	
+	HIP_DEBUG("alen: %i \n", alen);
+	HIP_DEBUG("hmac_md_len: %i \n", hmac_md_len);
+	HIP_HEXDUMP("esp packet (authed part): ", in, elen);
+	HIP_HEXDUMP("esp packet (auth part): ", &in[elen], hmac_md_len);
+	HIP_HEXDUMP("tmp comp (auth part): ", hmac_md, hmac_md_len);
+		
 
 	/*
 	 *   Decryption

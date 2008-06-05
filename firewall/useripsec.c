@@ -219,9 +219,6 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	HIP_IFEL(hip_esp_output(ctx, entry, udp_encap, &now,
 			&preferred_local_addr, &preferred_peer_addr,
 			esp_packet, &esp_packet_len), 1, "failed to create ESP packet");
-	
-	HIP_DEBUG("esp packet length: %i \n", esp_packet_len);
-	HIP_HEXDUMP("esp packet (+ 8 bit length control): ", esp_packet, esp_packet_len + 8);
 
 	// reinsert the esp packet into the network stack
 	// TODO check flags
@@ -272,9 +269,6 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	
 	// we should only get ESP packets here
 	HIP_ASSERT(ctx->packet_type == ESP_PACKET);
-	
-	HIP_DEBUG("esp packet length: %i \n", ctx->ipq_packet->data_len);
-	HIP_HEXDUMP("esp packet: ", ctx->ipq_packet->payload, ctx->ipq_packet->data_len);
 	
 	HIP_IFEL(userspace_ipsec_init(), -1, "failed to initialize userspace ipsec\n");
 	
