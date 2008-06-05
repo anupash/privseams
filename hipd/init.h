@@ -49,19 +49,6 @@
 
 #define USER_NOBODY "nobody"
 
-/* In kernel version >= 2.6.25, _LINUX_CAPABILITY_VERSION is defined as
- * _LINUX_CAPABILITY_VERSION_2, which is 0x20071026, while in kernel < 2.6.25
- * it is defined as the old constant 0x19980330. In order to avoid crashes
- * at capget() resulted from this capability version mismatch, we need to
- * check if cap version 1 is available on the current system.
- * - Dongsu Park, 20080604
- */
-#if defined(_LINUX_CAPABILITY_VERSION_1)
-# define _LINUX_CAPABILITY_VERSION_HIPL	_LINUX_CAPABILITY_VERSION_1
-#else
-# define _LINUX_CAPABILITY_VERSION_HIPL	_LINUX_CAPABILITY_VERSION
-#endif
-
 extern char *i3_config_file;
 extern char *hip_i3_config_file;
 extern int hip_use_i3;
