@@ -283,7 +283,7 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
  */
 int hip_esp_input(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 		struct in6_addr *src_hit, struct in6_addr *dst_hit,
-		struct ip6_hdr *decrypted_packet, int *decrypted_packet_len)
+		unsigned char *decrypted_packet, int *decrypted_packet_len)
 {
 	int next_hdr_offset = 0;
 	int esp_len = 0;
@@ -291,7 +291,7 @@ int hip_esp_input(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 	uint8_t next_hdr = 0;
 	int err = 0;
 	
-	// the decrypted data will be placed behind the IPv6 header
+	// the decrypted data will be placed behind the HIT-based IPv6 header
 	next_hdr_offset = sizeof(struct ip6_hdr);
 	
 	decrypted_packet_len += next_hdr_offset;
@@ -310,20 +310,18 @@ int hip_esp_input(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 	// decrypt now
 	pthread_mutex_lock(&entry->rw_lock);
 	
-	err = hip_esp_decrypt((unsigned char *)ctx->transport_hdr.esp, esp_len,
-			((unsigned char *)decrypted_packet) + next_hdr_offset, &next_hdr,
-			&decrypted_data_len, entry);
+	HIP_DEBUG("decrypting ESP packet...");
+	
+	HIP_IFEL(hip_esp_decrypt((unsigned char *)ctx->transport_hdr.esp, esp_len,
+			decrypted_packet + next_hdr_offset, &next_hdr,
+			&decrypted_data_len, entry), -1, "ESP decryption is not successful\n");
 	
 	pthread_mutex_unlock(&entry->rw_lock);
-	if (err) {
-		HIP_DEBUG("HIP ESP decryption is not successful\n");
-		goto out_err;
-	}
 	
 	decrypted_packet_len += decrypted_data_len;
 	
 	// now we know the next_hdr and can set up the IPv6 header
-	add_ipv6_header(decrypted_packet, src_hit, dst_hit,
+	add_ipv6_header((struct ip6_hdr *)decrypted_packet, src_hit, dst_hit,
 			*decrypted_packet_len, next_hdr);
 	
   out_err:
@@ -567,23 +565,6 @@ int hip_esp_encrypt(unsigned char *in, uint8_t in_type, int in_len,
 int hip_esp_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8_t *out_type,
 		int *out_len, hip_sadb_entry *entry)
 {
-#if 0
-	int alen=0, elen=0, iv_len=0;
-	
-	struct ip_esp_hdr *esp;
-	udphdr *udph;
-
-	struct ip_esp_padinfo *padinfo=0;
-	struct tcphdr *tcp=NULL;
-	struct udphdr *udp=NULL;
-	__u8 cbc_iv[16];
-	
-	__u64 dst_mac;
-	__u16 sum;
-	int family_out;
-	struct sockaddr_storage taplsi6;
-	int use_udp = FALSE;
-#endif
 	/* elen is length of data to encrypt */
 	int elen = 0;
 	// length of authentication protection field

@@ -157,6 +157,7 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	// SAs directing outwards are indexed with the peer's HIT
 	// FIXME this will only allow one connection to this peer HIT
 	hip_addr_to_sockaddr(&ctx->dst, &sockaddr_peer_hit);
+	
 	entry = hip_sadb_lookup_addr((struct sockaddr *) &sockaddr_peer_hit);
 	
 	// create new SA entry, if none exists yet
@@ -210,7 +211,7 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	{
 		HIP_ERROR("bad address combination\n");
 		
-		err = 1;
+		err = -1;
 		goto out_err;
 	}
 		
@@ -280,28 +281,28 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	// get ESP header of input packet, UDP encapsulation is handled in firewall already
 	esp_hdr = ctx->transport_hdr.esp;
 	spi = ntohl(esp_hdr->esp_spi);
-	seq_no = ntohl(esp_hdr->esp_seq);
 	HIP_DEBUG("SPI no. of incoming packet: %u \n", spi);
-	HIP_DEBUG("SEQ no. of incoming packet: %u \n", seq_no);
 	
 	// lookup corresponding SA entry by SPI
 	HIP_IFEL(!(entry = hip_sadb_lookup_spi(ntohl(esp_hdr->esp_spi))), -1,
 			"no SA entry found for SPI %u \n", ntohl(esp_hdr->esp_spi));
 	
-	HIP_DEBUG("SEQ no. of entry: %u \n", entry->sequence);
-	
-	// TODO implement seq window
-	// check for correct SEQ no.
-	//HIP_IFEL(entry->sequence != seq_no, -1, "ESP sequence numbers do not match\n");
-	
-	// check consistency of the entry and if we have a SA entry to reply to
-	HIP_IFEL(!entry->inner_src_addrs || !entry->inner_dst_addrs, -1, "HITs missing")
+	// do a partial consistency check of the entry
+	HIP_ASSERT(entry->inner_src_addrs && entry->inner_dst_addrs);
 	
 	HIP_DEBUG_SOCKADDR("inner_src_addr ",
 			   (struct sockaddr *) &entry->inner_src_addrs->addr);
 	HIP_DEBUG_SOCKADDR("inner_dst_addr ",
 			   (struct sockaddr *) &entry->inner_dst_addrs->addr);
+	
+	// TODO implement seq window
+	// check for correct SEQ no.
+	HIP_DEBUG("SEQ no. of entry: %u \n", entry->sequence);
+	seq_no = ntohl(esp_hdr->esp_seq);
+	HIP_DEBUG("SEQ no. of incoming packet: %u \n", seq_no);
+	//HIP_IFEL(entry->sequence != seq_no, -1, "ESP sequence numbers do not match\n");
 
+	// check if we have a SA entry to reply to
 	HIP_IFEL(!(inverse_entry = hip_sadb_lookup_addr(
 		(struct sockaddr *)&entry->inner_src_addrs->addr)), -1,
 		"corresponding sadb entry for outgoing packets not found\n");
@@ -324,7 +325,7 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	
 	// decrypt the packet and create a new HIT-based one
 	HIP_IFEL(hip_esp_input(ctx, entry, &src_hit, &dst_hit,
-			(struct ip6_hdr *) decrypted_packet, &decrypted_packet_len), 1,
+			decrypted_packet, &decrypted_packet_len), 1,
 			"failed to recreate original packet\n");
 	
 	// send the raw HIT-based (-> IPv6) packet -> returns size of the sent packet
