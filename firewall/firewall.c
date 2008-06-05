@@ -12,7 +12,9 @@
 /* NOTE: if buffer size is changed, make sure to check
  * 		 the HIP packet size in hip_fw_init_context() */
 #define BUFSIZE HIP_MAX_PACKET
-//#define BUFSIZE 2048
+#define MAX_ESP_PADDING 255
+#define MANGLED_PACKET_SIZE (BUFSIZE + sizeof(struct udphdr) + sizeof(struct hip_esp) +
+				MAX_ESP_PADDING + sizeof(struct hip_esp_tail) + EVP_MAX_MD_SIZE)
 
 int statefulFiltering = 1;
 int escrow_active = 0;
@@ -24,7 +26,12 @@ int counter = 0;
 int hip_proxy_status = 0;
 int foreground = 1;
 int hip_opptcp = 0;
+
 int hip_userspace_ipsec = 1;
+// buffer for mangled packets
+unsigned char *mangled_packet = NULL;
+int mangled_packet_len = 0;
+int is_init = 0;
 
 /* Default HIT - do not access this directly, call hip_fw_get_default_hit() */
 struct in6_addr default_hit;
@@ -53,6 +60,25 @@ void print_usage()
 	printf("      -b = fork the firewall to background\n");
 	printf("      -k = kill running firewall pid\n");
 	printf("      -h = print this help\n\n");
+}
+
+int firewall_init()
+{	
+	int err = 0;
+	
+	HIP_DEBUG("\n");
+	
+	if (!is_init)
+	{
+		/* mangled packet can be bigger than the original one when we add
+		 * ESP information for userspace IPsec */
+		HIP_IFE(!(mangled_packet = (unsigned char *) malloc(MANGLED_PACKET_SIZE), -1);
+		
+		is_init = 1;
+	}
+	
+  out_err:
+  	return err;
 }
 
 //currently done at all times, rule_management 
@@ -323,7 +349,6 @@ int firewall_init_rules()
 		
 		/* no need to queue outgoing ICMP, TCP and UDP sent to LSIs as
 		 * this is handled elsewhere */
-
 
 		/* queue incoming ESP over IPv6
 		 * NOTE: add IPv6 UDP encapsulation here */
@@ -1054,7 +1079,8 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx) {
 	HIP_DEBUG("\n");
 
 	if (hip_userspace_ipsec)
-		verdict = !hip_fw_userspace_ipsec_output(ctx);
+		// TODO handle verdict correctly 0,1,2
+			verdict = !hip_fw_userspace_ipsec_output(ctx, mangled_packet, mangled_packet_len);
 						   
 	/* XX FIXME: LSI HOOKS */
 
@@ -1130,10 +1156,11 @@ int hip_fw_handle_esp_input(hip_fw_context_t *ctx) {
 
 	/* XX FIXME: ADD LSI INPUT AFTER USERSPACE IPSEC */
 
+	// TODO first filter then decrypt
 	if (hip_userspace_ipsec) {
 		HIP_DEBUG("userspace ipsec input\n");
-		// added by Tao Wan
-		verdict = !hip_fw_userspace_ipsec_input(ctx);
+		// TODO handle verdict correctly 0,1,2
+		verdict = !hip_fw_userspace_ipsec_input(ctx, mangled_packet, mangled_packet_len);
 	} else {
 		verdict = filter_esp(&ctx->dst, ctx->transport_hdr.esp, ctx->ipq_packet->hook);
 	}
@@ -1610,4 +1637,3 @@ void firewall_increase_netlink_buffers(){
 
 	popen("echo 1048576 > /proc/sys/net/core/rmem_default; echo 1048576 > /proc/sys/net/core/rmem_max;echo 1048576 > /proc/sys/net/core/wmem_default;echo 1048576 > /proc/sys/net/core/wmem_max", "r");
 }
-

@@ -8,25 +8,24 @@
 #include "hip_esp.h"
 #include "utils.h"
 #include <sys/time.h>		/* timeval */
-#include <asm/types.h>		/* __u16, __u32, etc */
 
-#define ESP_PACKET_SIZE 2500
+//#define ESP_PACKET_SIZE 2500
 
-// this is the ESP packet we are about to build
-unsigned char *esp_packet = NULL;
+
 // the original packet before ESP encryption
-unsigned char *decrypted_packet = NULL;
+//unsigned char *decrypted_packet = NULL;
 // sockets in order to re-insert the esp packet into the stack
-int raw_sock_v4 = 0, raw_sock_v6 = 0;
-int is_init = 0;
+//int raw_sock_v4 = 0, raw_sock_v6 = 0;
+//int is_init = 0;
 
-__u16 checksum_magic(const struct in6_addr *initiator, const struct in6_addr *receiver);
+uint16_t checksum_magic(const struct in6_addr *initiator, const struct in6_addr *receiver);
 
+#if 0
 /* this will initialize the esp_packet buffer and the sockets,
  * they are not set yet */
 int userspace_ipsec_init()
 {	
-	int flags = 0;
+	//int flags = 0;
 	int err = 0;
 	
 	HIP_DEBUG("\n");
@@ -36,6 +35,7 @@ int userspace_ipsec_init()
 		HIP_IFE(!(esp_packet = (unsigned char *)malloc(ESP_PACKET_SIZE)), -1);
 		HIP_IFE(!(decrypted_packet = (unsigned char *)malloc(ESP_PACKET_SIZE)), -1);
 		
+
 		// open IPv4 raw socket
 		raw_sock_v4 = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
 		if (raw_sock_v4 < 0)
@@ -65,16 +65,20 @@ int userspace_ipsec_init()
 			err = 1;
 			goto out_err;
 		}
+
 		
 		is_init = 1;
 		
 		HIP_DEBUG("userspace IPsec successfully initialised\n");
 	}
+
 	
   out_err:
   	return err;
 }
+#endif
 
+#if 0
 hip_hit_t *hip_fw_get_default_hit(void) {
 	if (ipv6_addr_is_null(&default_hit)) {
 		_HIP_DEBUG("Querying hipd for default hit\n");
@@ -113,6 +117,7 @@ out_err:
 	return err;
 
 }
+#endif
 
 #if 0
 	// should be called from time to time
@@ -122,7 +127,8 @@ out_err:
 #endif
 
 /* prepares the environment for esp encryption */
-int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
+int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx,
+		unsigned char *esp_packet, int *esp_packet_len)
 {
 	// peer HIT, sockaddr does not provide enough space for sockaddr_in6
 	struct sockaddr_storage sockaddr_peer_hit;
@@ -137,7 +143,7 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	struct timeval now;
 	// TODO hipd should add this info to the SA entries
 	int udp_encap = 0;
-	int esp_packet_len = 0;
+	
 	int out_ip_version = 0;
 	int err = 0;
 	
@@ -148,10 +154,11 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	HIP_DEBUG_HIT("src_hit: ", &ctx->src);
 	HIP_DEBUG_HIT("dst_hit: ", &ctx->dst);
 
-	HIP_IFEL(userspace_ipsec_init(), -1, "failed to initialize userspace ipsec");
+	//HIP_IFEL(userspace_ipsec_init(), -1, "failed to initialize userspace ipsec");
 	
 	// re-use allocated esp_packet memory space
 	memset(esp_packet, 0, ESP_PACKET_SIZE);
+	*esp_packet_len = 0;
 	gettimeofday(&now, NULL);
 	
 	// SAs directing outwards are indexed with the peer's HIT
@@ -218,8 +225,9 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	// encrypt transport layer and create new packet
 	HIP_IFEL(hip_esp_output(ctx, entry, udp_encap, &now,
 			&preferred_local_addr, &preferred_peer_addr,
-			esp_packet, &esp_packet_len), 1, "failed to create ESP packet");
+			esp_packet, esp_packet_len), 1, "failed to create ESP packet");
 
+#if 0
 	// reinsert the esp packet into the network stack
 	// TODO check flags
 	if (out_ip_version == 4)
@@ -237,22 +245,24 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	{
 		HIP_DEBUG("new packet SUCCESSFULLY re-inserted into network stack\n");
 		HIP_DEBUG("dropping original packet...\n");
+#endif
 		
-		// update SA statistics for replay protection etc
-		pthread_mutex_lock(&entry->rw_lock);
-		entry->bytes += err;
-		entry->usetime.tv_sec = now.tv_sec;
-		entry->usetime.tv_usec = now.tv_usec;
-		entry->usetime_ka.tv_sec = now.tv_sec;
-		entry->usetime_ka.tv_usec = now.tv_usec;
-		pthread_mutex_unlock(&entry->rw_lock);
-	}
+	// update SA statistics for replay protection etc
+	pthread_mutex_lock(&entry->rw_lock);
+	entry->bytes += *esp_packet_len;
+	entry->usetime.tv_sec = now.tv_sec;
+	entry->usetime.tv_usec = now.tv_usec;
+	entry->usetime_ka.tv_sec = now.tv_sec;
+	entry->usetime_ka.tv_usec = now.tv_usec;
+	pthread_mutex_unlock(&entry->rw_lock);
+	//}
 	
   out_err:
   	return err;
 }
 
-int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
+int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx,
+		unsigned char *decrypted_packet, int *decrypted_packet_len)
 {
 	struct hip_esp *esp_hdr = NULL;
 	// entry matching the SPI
@@ -262,7 +272,6 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	struct in6_addr src_hit;
 	struct in6_addr dst_hit;
 	struct timeval now;
-	int decrypted_packet_len = 0;
 	uint32_t spi = 0;
 	uint32_t seq_no = 0;
 	int err = 0;
@@ -270,10 +279,11 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	// we should only get ESP packets here
 	HIP_ASSERT(ctx->packet_type == ESP_PACKET);
 	
-	HIP_IFEL(userspace_ipsec_init(), -1, "failed to initialize userspace ipsec\n");
+	//HIP_IFEL(userspace_ipsec_init(), -1, "failed to initialize userspace ipsec\n");
 	
 	// re-use allocated decrypted_packet memory space
 	memset(decrypted_packet, 0, ESP_PACKET_SIZE);
+	*decrypted_packet_len = 0;
 	gettimeofday(&now, NULL);
 	
 	// get ESP header of input packet, UDP encapsulation is handled in firewall already
@@ -324,9 +334,10 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	
 	// decrypt the packet and create a new HIT-based one
 	HIP_IFEL(hip_esp_input(ctx, entry, &src_hit, &dst_hit,
-			decrypted_packet, &decrypted_packet_len), 1,
+			decrypted_packet, decrypted_packet_len), 1,
 			"failed to recreate original packet\n");
-	
+
+#if 0
 	// re-insert the original HIT-based (-> IPv6) packet into the network stack
 	// TODO check flags
 	err = sendto(raw_sock_v6, decrypted_packet, decrypted_packet_len, 0,
@@ -338,15 +349,16 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	{
 		HIP_DEBUG("new packet SUCCESSFULLY re-inserted into network stack\n");
 		HIP_DEBUG("dropping ESP packet...\n");
+#endif
 		
-		pthread_mutex_lock(&entry->rw_lock);
-		entry->bytes += err;
-		entry->usetime.tv_sec = now.tv_sec;
-		entry->usetime.tv_usec = now.tv_usec;
-		entry->usetime_ka.tv_sec = now.tv_sec;
-		entry->usetime_ka.tv_usec = now.tv_usec;
-		pthread_mutex_unlock(&entry->rw_lock);
-	}
+	pthread_mutex_lock(&entry->rw_lock);
+	entry->bytes += err;
+	entry->usetime.tv_sec = now.tv_sec;
+	entry->usetime.tv_usec = now.tv_usec;
+	entry->usetime_ka.tv_sec = now.tv_sec;
+	entry->usetime_ka.tv_usec = now.tv_usec;
+	pthread_mutex_unlock(&entry->rw_lock);
+	//}
 	
   out_err:
   	return err;
@@ -474,7 +486,7 @@ int hipl_userspace_ipsec_sadb_add_wrapper(struct in6_addr *saddr,
  * * which HIT is given first, and the one's complement is not
  * * taken.
  */
-__u16 checksum_magic(const struct in6_addr *initiator, const struct in6_addr *receiver)
+uint16_t checksum_magic(const struct in6_addr *initiator, const struct in6_addr *receiver)
 {
 	int count;
 	unsigned long sum = 0;
@@ -511,10 +523,10 @@ __u16 checksum_magic(const struct in6_addr *initiator, const struct in6_addr *re
 		sum = (sum & 0xffff) + (sum >> 16);
 	
 	HIP_DEBUG("hitMagic checksum over %d bytes: 0x%x\n",
-		  2*HIT_SIZE, (__u16)sum);
+		  2*HIT_SIZE, (uint16_t)sum);
 	
 	/* don't take the one's complement of the sum */
-	return((__u16)sum);
+	return((uint16_t)sum);
 }
 
 // resolve HIT to routable addresses selecting the preferred ones
