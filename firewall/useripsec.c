@@ -182,7 +182,7 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 			goto out_err;
 	}
 		
-	HIP_DEBUG("we have found a SA entry\n");
+	HIP_DEBUG("matching SA entry found\n");
 	
 	// unbuffer buffered packets -> re-injects original packets
 	//unbuffer_packets(entry);
@@ -220,9 +220,10 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 			&preferred_local_addr, &preferred_peer_addr,
 			esp_packet, &esp_packet_len), 1, "failed to create ESP packet");
 	
-	HIP_HEXDUMP("new packet: ", esp_packet, esp_packet_len + 8);
+	HIP_DEBUG("esp packet length: \n", esp_packet_len);
+	HIP_HEXDUMP("esp packet (+ 8 bit length control): ", esp_packet, esp_packet_len + 8);
 
-	// send the raw packet -> returns size of the sent packet
+	// reinsert the esp packet into the network stack
 	// TODO check flags
 	if (out_ip_version == 4)
 		err = sendto(raw_sock_v4, esp_packet, esp_packet_len, 0,
@@ -237,7 +238,7 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 		HIP_DEBUG("hip_esp_output(): sendto() failed\n");
 	} else
 	{
-		HIP_DEBUG("new packet SUCCESSFULLY re-injected into network stack\n");
+		HIP_DEBUG("new packet SUCCESSFULLY re-inserted into network stack\n");
 		HIP_DEBUG("dropping original packet...\n");
 		
 		// update SA statistics for replay protection etc
@@ -272,6 +273,9 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	// we should only get ESP packets here
 	HIP_ASSERT(ctx->packet_type == ESP_PACKET);
 	
+	HIP_DEBUG("esp packet length: \n", ctx->ipq_packet->data_len);
+	HIP_HEXDUMP("esp packet: ", ctx->ipq_packet->payload, ctx->ipq_packet->data_len);
+	
 	HIP_IFEL(userspace_ipsec_init(), -1, "failed to initialize userspace ipsec\n");
 	
 	// re-use allocated decrypted_packet memory space
@@ -280,22 +284,19 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	
 	// get ESP header of input packet, UDP encapsulation is handled in firewall already
 	esp_hdr = ctx->transport_hdr.esp;
+	HIP_HEXDUMP("esp header: ", esp_hdr, sizeof(struct hip_esp));	
 	spi = ntohl(esp_hdr->esp_spi);
 	HIP_DEBUG("SPI no. of incoming packet: %u \n", spi);
 	
 	// lookup corresponding SA entry by SPI
 	HIP_IFEL(!(entry = hip_sadb_lookup_spi(ntohl(esp_hdr->esp_spi))), -1,
 			"no SA entry found for SPI %u \n", ntohl(esp_hdr->esp_spi));
+	HIP_DEBUG("matching SA entry found\n");
 	
 	// do a partial consistency check of the entry
 	HIP_ASSERT(entry->inner_src_addrs && entry->inner_dst_addrs);
-	
-	HIP_DEBUG_SOCKADDR("inner_src_addr ",
-			   (struct sockaddr *) &entry->inner_src_addrs->addr);
-	HIP_DEBUG_SOCKADDR("inner_dst_addr ",
-			   (struct sockaddr *) &entry->inner_dst_addrs->addr);
-	
-	// TODO implement seq window
+
+	// TODO implement check with seq window
 	// check for correct SEQ no.
 	HIP_DEBUG("SEQ no. of entry: %u \n", entry->sequence);
 	seq_no = ntohl(esp_hdr->esp_seq);
@@ -304,7 +305,7 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 
 	// check if we have a SA entry to reply to
 	HIP_IFEL(!(inverse_entry = hip_sadb_lookup_addr(
-		(struct sockaddr *)&entry->inner_src_addrs->addr)), -1,
+		(struct sockaddr *)&entry->inner_src_addrs->addr)), 1,
 		"corresponding sadb entry for outgoing packets not found\n");
 
 // TODO check where we set the UDP dst port
@@ -323,12 +324,15 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	HIP_IFE(cast_sockaddr_to_in6_addr(&entry->inner_src_addrs->addr, &src_hit), -1);
 	HIP_IFE(cast_sockaddr_to_in6_addr(&entry->inner_dst_addrs->addr, &dst_hit), -1);
 	
+	HIP_DEBUG_HIT("src hit: ", &src_hit);
+	HIP_DEBUG_HIT("dst hit: ", &dst_hit);
+	
 	// decrypt the packet and create a new HIT-based one
 	HIP_IFEL(hip_esp_input(ctx, entry, &src_hit, &dst_hit,
 			decrypted_packet, &decrypted_packet_len), 1,
 			"failed to recreate original packet\n");
 	
-	// send the raw HIT-based (-> IPv6) packet -> returns size of the sent packet
+	// re-insert the original HIT-based (-> IPv6) packet into the network stack
 	// TODO check flags
 	err = sendto(raw_sock_v6, decrypted_packet, decrypted_packet_len, 0,
 					(struct sockaddr *)&entry->inner_dst_addrs->addr,
@@ -337,7 +341,7 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 		HIP_DEBUG("hip_esp_input(): sendto() failed\n");
 	} else
 	{
-		HIP_DEBUG("new packet SUCCESSFULLY re-injected into network stack\n");
+		HIP_DEBUG("new packet SUCCESSFULLY re-inserted into network stack\n");
 		HIP_DEBUG("dropping ESP packet...\n");
 		
 		pthread_mutex_lock(&entry->rw_lock);
