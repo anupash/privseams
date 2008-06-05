@@ -277,10 +277,8 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	gettimeofday(&now, NULL);
 	
 	// get ESP header of input packet, UDP encapsulation is handled in firewall already
-	esp_hdr = ctx->transport_hdr.esp;
-	HIP_HEXDUMP("esp header: ", esp_hdr, sizeof(struct hip_esp));	
+	esp_hdr = ctx->transport_hdr.esp;	
 	spi = ntohl(esp_hdr->esp_spi);
-	HIP_DEBUG("SPI no. of incoming packet: %u \n", spi);
 	
 	// lookup corresponding SA entry by SPI
 	HIP_IFEL(!(entry = hip_sadb_lookup_spi(ntohl(esp_hdr->esp_spi))), -1,
@@ -315,6 +313,9 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 #endif
 	
 	// convert HITs to type used in hipl
+	HIP_DEBUG_SOCKADDR("src hit: ", &entry->inner_src_addrs->addr);
+	HIP_DEBUG_SOCKADDR("dst hit: ", &entry->inner_dst_addrs->addr);
+	
 	HIP_IFE(cast_sockaddr_to_in6_addr(&entry->inner_src_addrs->addr, &src_hit), -1);
 	HIP_IFE(cast_sockaddr_to_in6_addr(&entry->inner_dst_addrs->addr, &dst_hit), -1);
 	

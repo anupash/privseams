@@ -313,7 +313,7 @@ int hip_esp_input(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 	// decrypt now
 	pthread_mutex_lock(&entry->rw_lock);
 	
-	HIP_DEBUG("decrypting ESP packet...");
+	HIP_DEBUG("decrypting ESP packet...\n");
 	
 	HIP_IFEL(hip_esp_decrypt((unsigned char *)ctx->transport_hdr.esp, esp_len,
 			decrypted_packet + next_hdr_offset, &next_hdr,
@@ -672,7 +672,7 @@ int hip_esp_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8_t *
 			goto out_err;
 	}
 	
-	HIP_DEBUG("esp packet successfully authenticated");
+	HIP_DEBUG("esp packet successfully authenticated\n");
 		
 
 	/*
@@ -768,7 +768,7 @@ int hip_esp_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8_t *
 			goto out_err;
 	}
 	
-	HIP_DEBUG("esp payload successfully decrypted");
+	HIP_DEBUG("esp payload successfully decrypted\n");
 
 	/* remove padding */
 	esp_tail = (struct hip_esp_tail *) &out[elen - sizeof(struct hip_esp_tail)];
