@@ -269,7 +269,7 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	int err = 0;
 	
 	// we should only get ESP packets here
-	HIP_ASSERT(ctx->packet_type == IPPROTO_ESP);
+	HIP_ASSERT(ctx->packet_type == ESP_PACKET);
 	
 	HIP_IFEL(userspace_ipsec_init(), -1, "failed to initialize userspace ipsec");
 	
