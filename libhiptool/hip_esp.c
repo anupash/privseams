@@ -665,7 +665,7 @@ int hip_esp_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8_t *
 	HIP_DEBUG("alen: %i \n", alen);
 	HIP_DEBUG("hmac_md_len: %i \n", hmac_md_len);
 	HIP_HEXDUMP("esp packet (authed part): ", in, elen);
-	HIP_HEXDUMP("esp packet (auth part): ", &in[elen], hmac_md_len);
+	HIP_HEXDUMP("esp packet (auth part): ", &in[elen], alen);
 	HIP_HEXDUMP("tmp comp (auth part): ", hmac_md, hmac_md_len);
 		
 
