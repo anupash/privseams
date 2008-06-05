@@ -386,7 +386,7 @@ int hip_set_lowcapability() {
 	capdata_t data;	
 
 	header.pid=0;
-	header.version = _LINUX_CAPABILITY_VERSION;
+	header.version = _LINUX_CAPABILITY_VERSION_HIPL;
 	data.effective = data.permitted = data.inheritable = 0;
 
 	HIP_IFEL(prctl(PR_SET_KEEPCAPS, 1), -1, "prctl err\n");
