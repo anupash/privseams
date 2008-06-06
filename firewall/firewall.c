@@ -638,11 +638,11 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 		// we might have only received a UDP packet with headers only 
 		if (udp_len >= sizeof(struct ip) + sizeof(struct udphdr) + HIP_UDP_ZERO_BYTES_LEN)
 		{
-			__u32 *zero_bytes = NULL;
+			uint32_t *zero_bytes = NULL;
 			
 			// we can distinguish UDP encapsulated control and data traffic with 32 zero bits
 			// behind UDP header
-			zero_bytes = (__u32 *) (((char *)udphdr) + sizeof(struct udphdr));
+			zero_bytes = (uint32_t *) (((char *)udphdr) + sizeof(struct udphdr));
 			
 			HIP_HEXDUMP("zero_bytes: ", zero_bytes, 4);
 			

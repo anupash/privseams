@@ -81,17 +81,12 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 			out_udp_hdr = (struct udphdr *) (esp_packet + next_hdr_offset);
 			next_hdr_offset += sizeof(struct udphdr);
 		}
-		
-		_HIP_DEBUG("spi no.: %u\n", entry->spi);
-		_HIP_DEBUG("seq no.: %u\n", entry->sequence);
+	
 		
 		// set up esp header
 		out_esp_hdr = (struct hip_esp *) (esp_packet + next_hdr_offset);
 		out_esp_hdr->esp_spi = htonl(entry->spi);
 		out_esp_hdr->esp_seq = htonl(entry->sequence++);
-		
-		_HIP_HEXDUMP("new packet (with esp header): ", esp_packet,
-					next_hdr_offset + sizeof(struct hip_esp));
 		
 		// packet to be re-inserted into network stack has at least
 		// length of defined headers
@@ -131,8 +126,6 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 		// this also includes the ESP tail
 		*esp_packet_len += encryption_len;
 		
-		_HIP_HEXDUMP("new packet (with esp): ", esp_packet, *esp_packet_len);
-		
 		
 #if 0	
 		/* Record the address family of this packet, so incoming
@@ -152,17 +145,14 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 			// the length field covers everything starting with UDP header
 			add_udp_header(out_udp_hdr, *esp_packet_len - sizeof(struct ip), entry,
 					preferred_local_addr, preferred_peer_addr);
-			_HIP_HEXDUMP("new packet (with udp header): ", esp_packet, *esp_packet_len);
 			
 			// now we can also calculate the csum of the new packet
 			add_ipv4_header(out_ip_hdr, preferred_local_addr, preferred_peer_addr,
 								*esp_packet_len, IPPROTO_UDP);
-			_HIP_HEXDUMP("new packet (with ipv4 header): ", esp_packet, *esp_packet_len);
 		} else
 		{
 			add_ipv4_header(out_ip_hdr, preferred_local_addr, preferred_peer_addr,
 								*esp_packet_len, IPPROTO_ESP);
-			_HIP_HEXDUMP("new packet (with ipv4 header): ", esp_packet, *esp_packet_len);
 		}
 	} else
 	{
@@ -183,9 +173,6 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 		out_esp_hdr = (struct hip_esp *) (esp_packet + next_hdr_offset);
 		out_esp_hdr->esp_spi = htonl(entry->spi);
 		out_esp_hdr->esp_seq = htonl(entry->sequence++);
-		
-		_HIP_HEXDUMP("new packet (with esp header): ", esp_packet,
-				next_hdr_offset + sizeof(struct hip_esp));
 		
 		// packet to be re-inserted into network stack has at least
 		// length of defined headers
@@ -220,16 +207,12 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 		
 		pthread_mutex_unlock(&entry->rw_lock);
 		
-		_HIP_HEXDUMP("new packet (with esp): ", esp_packet,
-				next_hdr_offset + sizeof(struct hip_esp) + encryption_len);
-		
 		// this also includes the ESP tail
 		*esp_packet_len += encryption_len;
 		
 		// now we know the packet length
 		add_ipv6_header(out_ip6_hdr, preferred_local_addr, preferred_peer_addr,
 							*esp_packet_len, IPPROTO_UDP);
-		_HIP_HEXDUMP("new packet (with ipv6 header): ", esp_packet, *esp_packet_len);
 	}
 	
   out_err:
@@ -861,7 +844,7 @@ void add_ipv6_header(struct ip6_hdr *ip6_hdr, struct in6_addr *src_addr, struct 
 	ip6_hdr->ip6_flow = 0; /* zero the version (4), TC (8) and flow-ID (20) */
 	/* set version to 6 and leave first 4 bits of TC at 0 */
 	ip6_hdr->ip6_vfc = 0x60;
-	ip6_hdr->ip6_plen = packet_len;
+	ip6_hdr->ip6_plen = packet_len - sizeof(struct ip6_hdr);
 	ip6_hdr->ip6_nxt = next_hdr;
 	ip6_hdr->ip6_hlim = 255;
 	memcpy(&ip6_hdr->ip6_src, src_addr, sizeof(struct in6_addr));
