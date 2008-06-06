@@ -33,7 +33,11 @@ endif
 hipd_LDFLAGS = -lcrypto $(HIPL_XMLL) -lm -DHIPL_HIPD
 
 if HIP_PRIVSEP
+if HIP_OPENWRT
+  hipd_LDFLAGS +=
+else
   hipd_LDFLAGS += -lcap
+endif
 endif
 
 if HIP_HI3

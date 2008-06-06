@@ -190,7 +190,7 @@ if test x"$ac_cv_use_openwrt" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_OPENWRT, AC_PREREQ(2.53))
 	AC_SUBST(OPENWRT_CFLAGS, "-lc")
 fi
-
+AM_CONDITIONAL(HIP_OPENWRT, test x"$ac_cv_use_openwrt" = x"yes")
 
 AC_ARG_ENABLE(hipproxy,
              AC_HELP_STRING([--enable-hipproxy],
