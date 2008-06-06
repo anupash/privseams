@@ -32,6 +32,14 @@ endif
 
 hipd_LDFLAGS = -lcrypto $(HIPL_XMLL) -lm -DHIPL_HIPD
 
+if HIP_PRIVSEP
+if HIP_OPENWRT
+  hipd_LDFLAGS +=
+else
+  hipd_LDFLAGS += -lcap
+endif
+endif
+
 if HIP_HI3
  hipd_SOURCES += hi3.c
  INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
