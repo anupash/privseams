@@ -1055,8 +1055,10 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx) {
 
 	if (hip_userspace_ipsec)
 	{
+		HIP_DEBUG_HIT("destination hit: ", &ctx->dst);
+		HIP_DEBUG_HIT("default hit: ", hip_fw_get_default_hit());
 		// check if this is a reinjected packet
-		if (IN6_ARE_ADDR_EQUAL(&ctx->dst, hip_fw_get_default_hit))
+		if (IN6_ARE_ADDR_EQUAL(&ctx->dst, hip_fw_get_default_hit()))
 			verdict = hip_fw_handle_other_input(ctx);
 		else
 			verdict = !hip_fw_userspace_ipsec_output(ctx);
