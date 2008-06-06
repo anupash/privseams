@@ -372,6 +372,79 @@ int hip_init_dht()
         return (err);
 }
 
+#ifdef CONFIG_HIP_OPENWRT
+/*
+ * Note: this function does not go well with valgrind
+ */
+int hip_set_lowcapability() {
+  struct passwd *nobody_pswd;
+  int err = 0;
+#ifdef CONFIG_HIP_PRIVSEP
+  uid_t ruid,euid;
+  capheader_t header;
+  capdata_t data; 
+
+  header.pid=0;
+  header.version = _LINUX_CAPABILITY_VERSION_HIPL;
+  data.effective = data.permitted = data.inheritable = 0;
+
+  /* openwrt code */
+
+  HIP_IFEL(prctl(PR_SET_KEEPCAPS, 1), -1, "prctl err\n");
+        
+  HIP_DEBUG("Now PR_SET_KEEPCAPS=%d\n", prctl(PR_GET_KEEPCAPS));
+
+  HIP_IFEL(!(nobody_pswd = getpwnam(USER_NOBODY)), -1,
+	   "Error while retrieving USER 'nobody' uid\n"); 
+
+  HIP_IFEL(capget(&header, &data), -1,
+	   "error while retrieving capabilities through capget()\n");
+
+  HIP_DEBUG("effective=%u, permitted = %u, inheritable=%u\n",
+	    data.effective, data.permitted, data.inheritable);
+
+  ruid=nobody_pswd->pw_uid; 
+  euid=nobody_pswd->pw_uid; 
+  HIP_DEBUG("Before setreuid(,) UID=%d and EFF_UID=%d\n",
+	    getuid(), geteuid());
+        
+  /* openwrt code */
+
+  HIP_IFEL(setreuid(ruid,euid), -1, "setruid failed\n");
+        
+  HIP_DEBUG("After setreuid(,) UID=%d and EFF_UID=%d\n",
+	    getuid(), geteuid());
+  HIP_IFEL(capget(&header, &data), -1,
+	   "error while retrieving capabilities through 'capget()'\n");
+
+  HIP_DEBUG("effective=%u, permitted = %u, inheritable=%u\n",
+	    data.effective,data.permitted, data.inheritable);
+  HIP_DEBUG ("Going to clear all capabilities except the ones needed\n");
+  data.effective = data.permitted = data.inheritable = 0;
+  // for CAP_NET_RAW capability 
+  data.effective |= (1 <<CAP_NET_RAW );
+  data.permitted |= (1 <<CAP_NET_RAW );
+  // for CAP_NET_ADMIN capability 
+  data.effective |= (1 <<CAP_NET_ADMIN );
+  data.permitted |= (1 <<CAP_NET_ADMIN );
+
+  /* openwrt code */
+
+  HIP_IFEL(capset(&header, &data), -1, 
+	   "error in capset (do you have capabilities kernel module?)");
+
+  HIP_DEBUG("UID=%d EFF_UID=%d\n", getuid(), geteuid());  
+  HIP_DEBUG("effective=%u, permitted = %u, inheritable=%u\n",
+	    data.effective, data.permitted, data.inheritable);
+#endif /* CONFIG_HIP_PRIVSEP */
+
+ out_err:
+  return err;
+        
+}
+
+#else /* ! OPENWRT */
+
 /*
  * Note: this function does not go well with valgrind
  */
@@ -424,6 +497,7 @@ out_err:
 	return err;
 	
 }
+#endif
 
 /**
  * Init host IDs.
