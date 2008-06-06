@@ -65,7 +65,7 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 	int encryption_len = 0;
 	int err = 0;
 	
-	HIP_DEBUG("original packet length: %i \n", ctx->ipq_packet->data_len);
+	_HIP_DEBUG("original packet length: %i \n", ctx->ipq_packet->data_len);
 	
 	// distinguish IPv4 and IPv6 output
 	if (IN6_IS_ADDR_V4MAPPED(preferred_peer_addr))
@@ -131,7 +131,7 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 		// this also includes the ESP tail
 		*esp_packet_len += encryption_len;
 		
-		HIP_HEXDUMP("new packet (with esp): ", esp_packet, *esp_packet_len);
+		_HIP_HEXDUMP("new packet (with esp): ", esp_packet, *esp_packet_len);
 		
 		
 #if 0	
@@ -229,7 +229,7 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 		// now we know the packet length
 		add_ipv6_header(out_ip6_hdr, preferred_local_addr, preferred_peer_addr,
 							*esp_packet_len, IPPROTO_UDP);
-		HIP_HEXDUMP("new packet (with ipv6 header): ", esp_packet, *esp_packet_len);
+		_HIP_HEXDUMP("new packet (with ipv6 header): ", esp_packet, *esp_packet_len);
 	}
 	
   out_err:
@@ -510,12 +510,7 @@ int hip_esp_encrypt(unsigned char *in, uint8_t in_type, int in_len,
 			goto out_err;
 	}
 	
-	HIP_HEXDUMP("esp packet (authed part): ", out, elen);
-	HIP_HEXDUMP("esp packet (auth part): ", &out[elen], alen);
-	
 	*out_len += alen;
-	
-	HIP_HEXDUMP("esp packet (whole esp): ", out, *out_len);
 
   out_err:
 	return err;
