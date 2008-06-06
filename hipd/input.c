@@ -2471,7 +2471,8 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		  struct in6_addr *i1_daddr, hip_ha_t *entry,
 		  hip_portpair_t *i1_info)
 {
-     int err = 0;
+     int err = 0, state;
+     hip_tlv_type_t  relay_para_type = 0;
      uint16_t nonce = 0;
      in6_addr_t dest; // For the IP address in FROM/RELAY_FROM
      in_port_t  dest_port = 0; // For the port in RELAY_FROM
@@ -2487,9 +2488,25 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		1) The destination IP address and port from the FROM/RELAY_FROM
 		parameters.
 		2) The source address and source port of the I1 packet to build
-		the VIA_RVS/RELAY_TO parameter. */
-	     HIP_IFEL(hip_relay_handle_from(i1, i1_saddr, &dest, &dest_port),
-		      -1, "Handling of relayed I1 packet failed.\n");
+		the VIA_RVS/RELAY_TO parameter. 
+		3) only one relay parameter should appear
+		*/
+    	 state = hip_relay_handle_from(i1, i1_saddr, &dest, &dest_port);
+	     if( state == -1){
+	    	 HIP_DEBUG( "Handling FROM of  I1 packet failed.\n");
+	    	 goto out_err;
+	     }else if(state == 1){
+	    	 relay_para_type = HIP_PARAM_FROM;
+	     }
+	     
+    	 state = hip_relay_handle_relay_from(i1, i1_saddr, &dest, &dest_port);
+	     if( state == -1 ){
+	    	 HIP_DEBUG( "Handling RELAY_FROM of  I1 packet failed.\n");
+	    	 goto out_err;
+	     }else if(state == 1){
+	    	 relay_para_type = HIP_PARAM_RELAY_FROM;
+	     }
+	    		
      }
 #endif /* CONFIG_HIP_RVS */
 
@@ -2503,7 +2520,7 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
      }
 #endif
      err = hip_xmit_r1(i1, i1_saddr, i1_daddr, &dest, dest_port, i1_info,
-		       &nonce);
+		       relay_para_type );
  out_err:
      return err;
 }
