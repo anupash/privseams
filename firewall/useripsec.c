@@ -151,6 +151,8 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	 * LSI have been handled by LSI module before and converted to HITs */
 	HIP_ASSERT(ipv6_addr_is_hit(&ctx->src) && ipv6_addr_is_hit(&ctx->dst));
 	
+	HIP_HEXDUMP("original packet :", ctx->ipq_packet->payload, ctx->ipq_packet->data_len);
+	
 	HIP_DEBUG_HIT("src_hit: ", &ctx->src);
 	HIP_DEBUG_HIT("dst_hit: ", &ctx->dst);
 
@@ -329,6 +331,8 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	HIP_IFEL(hip_esp_input(ctx, entry, &src_hit, &dst_hit,
 			decrypted_packet, &decrypted_packet_len), 1,
 			"failed to recreate original packet\n");
+	
+	HIP_HEXDUMP("restored original packet: ", decrypted_packet, decrypted_packet_len);
 	
 	// re-insert the original HIT-based (-> IPv6) packet into the network stack
 	// TODO check flags

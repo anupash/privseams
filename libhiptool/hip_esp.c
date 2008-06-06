@@ -23,47 +23,6 @@
  */
 
 
-
-#if 0
-#include <stdio.h>		/* HIP_DEBUG() */
-#include <unistd.h>		/* write() */
-#include <pthread.h>		/* pthread_exit() */
-#include <sys/time.h>		/* gettimeofday() */
-#include <sys/errno.h>		/* errno, etc */
-#include <netinet/ip.h>		/* struct ip */
-#include <netinet/ip6.h>	/* struct ip6_hdr */
-#include <netinet/icmp6.h>	/* struct icmp6_hdr */
-#include <netinet/tcp.h>	/* struct tcphdr */
-#include <netinet/udp.h>	/* struct udphdr */
-#include <arpa/inet.h>		
-#include <linux/types.h>	/* for pfkeyv2.h types */
-#include <netinet/udp.h>	/* struct udphdr */
-#include <string.h>		/* memset, etc */
-#include <openssl/hmac.h>	/* HMAC algorithms */
-#include <openssl/sha.h>	/* SHA1 algorithms */
-#include <openssl/des.h>	/* 3DES algorithms */
-#include <openssl/rand.h>	/* RAND_bytes() */
-
-//#include <hip/hip_types.h>
-//#include <hip/hip_funcs.h>
-#include "hip_usermode.h"
-#include "hip_sadb.h"
-
-
-
-#include <sys/time.h>
-#include <sys/wait.h>		/* waitpid()	*/
-#include <pthread.h>		/* pthreads support*/
-#endif
-
-#if 0
-#if defined(__BIG_ENDIAN__) || defined( __MACOSX__)
-#include <mac/checksum_mac.h>
-#else
-#include "win32-checksum.h"
-#endif
-#endif
-
 #include "hip_esp.h"
 #include "utils.h"
 
@@ -78,7 +37,7 @@ void add_ipv6_header(struct ip6_hdr *ip6_hdr, struct in6_addr *src_addr, struct 
 void add_udp_header(struct udphdr *udp_hdr, int packet_len, hip_sadb_entry *entry,
 		struct in6_addr *src_addr, struct in6_addr *dst_addr);
 uint16_t checksum_ip(struct ip *ip_hdr, unsigned int ip_hl);
-u_int16_t checksum_udp(struct udphdr *udp_hdr, struct in6_addr *src_addr,
+uint16_t checksum_udp(struct udphdr *udp_hdr, struct in6_addr *src_addr,
 		struct in6_addr *dst_addr);
 
 /*
@@ -905,7 +864,7 @@ void add_ipv6_header(struct ip6_hdr *ip6_hdr, struct in6_addr *src_addr, struct 
 		int packet_len, uint8_t next_hdr)
 {
 	ip6_hdr->ip6_flow = 0; /* zero the version (4), TC (8) and flow-ID (20) */
-	/* only set 4 bits version and top 4 bits tclass */
+	/* set version to 6 and leave first 4 bits of TC at 0 */
 	ip6_hdr->ip6_vfc = 0x60;
 	ip6_hdr->ip6_plen = packet_len;
 	ip6_hdr->ip6_nxt = next_hdr;
