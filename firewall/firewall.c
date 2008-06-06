@@ -1059,7 +1059,8 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx) {
 		HIP_DEBUG_HIT("default hit: ", hip_fw_get_default_hit());
 		// check if this is a reinjected packet
 		if (IN6_ARE_ADDR_EQUAL(&ctx->dst, hip_fw_get_default_hit()))
-			verdict = hip_fw_handle_other_input(ctx);
+			// let the packet pass through directly
+			verdict = 1;
 		else
 			verdict = !hip_fw_userspace_ipsec_output(ctx);
 	}
@@ -1113,12 +1114,9 @@ int hip_fw_handle_other_input(hip_fw_context_t *ctx) {
 
 	HIP_DEBUG("\n");
 
-#if 0
-	// FIXME this segfaults
 	if (ipv6_addr_is_hit(&ctx->src) && ipv6_addr_is_hit(&ctx->dst))
 		verdict = handle_proxy_inbound_traffic(ctx->ipq_packet,
 						       &ctx->src);
-#endif
 
 	/* No need to check default rules as it is handled by the iptables rules */
  out_err:
