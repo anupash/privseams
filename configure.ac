@@ -183,7 +183,7 @@ fi
 AC_ARG_ENABLE(openwrt,
              AC_HELP_STRING([--enable-opewrt],
                             [OpenWRT (default is NO)]),
-             [ac_cv_use_openwrt=$enableval], [ac_cv_use_openwrt=yes])
+             [ac_cv_use_openwrt=$enableval], [ac_cv_use_openwrt=no])
 AC_CACHE_CHECK([whether to use OpenWRT],
                [ac_cv_use_openwrt], [ac_cv_use_opewrt=no])
 if test x"$ac_cv_use_rvs" = x"yes"; then
