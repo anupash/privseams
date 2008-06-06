@@ -16,7 +16,7 @@
 #include "builder.h"
 #include "crypto.h"
 #include "debug.h"
-#include "list.h"
+#include "dlist.h"
 
 //string tokens for rule parsing
 #define SRC_HIT_STR "-src_hit"
