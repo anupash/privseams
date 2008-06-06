@@ -1,4 +1,4 @@
-#include "slist.h"
+#include "hslist.h"
 
 SList * alloc_slist (void) {
 	SList * list = (SList *) malloc (sizeof (SList));
