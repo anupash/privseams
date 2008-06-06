@@ -279,6 +279,155 @@ int hip_get_pending_request_count(hip_ha_t *entry)
 	return request_count;
 }
 
+int hip_handle_param_rinfo(hip_ha_t *entry, hip_common_t *source_msg,
+			   hip_common_t *target_msg)
+{
+	struct hip_reg_info *reg_info = NULL;
+	uint8_t *reg_types = NULL, reg_type = 0;
+	unsigned int type_count = 0;
+	int err = 0, i = 0;
+	
+	HIP_DEBUG("NEW REG_INFO HANDLER!\n");
+
+	reg_info = hip_get_param(source_msg, HIP_PARAM_REG_INFO);
+	
+	if(reg_info == NULL) {
+		HIP_DEBUG("No REG_INFO parameter found. The server offers "\
+			  "no services.\n");
+		
+#ifdef CONFIG_HIP_ESCROW
+		HIP_KEA *kea = hip_kea_find(&entry->hit_our);
+		if (kea != NULL) {
+			hip_keadb_put_entry(kea);
+		}
+#endif /* CONFIG_HIP_ESCROW */
+
+		err = -1;
+		goto out_err;
+	}
+	
+	HIP_DEBUG("REG_INFO parameter found.\n");
+	
+	/* Get a pointer registration types and the type count. */
+	reg_types  = reg_info->reg_type;
+	type_count = hip_get_param_contents_len(reg_info) -
+		(sizeof(reg_info->min_lifetime) +
+		 sizeof(reg_info->max_lifetime));
+	
+	/* Check RFC 5203 Chapter 3.1. */
+	if(type_count == 0){
+		HIP_INFO("The server is currently unable to provide services "\
+			 "due to transient conditions.\n");
+		err = 0;
+		goto out_err;
+	}
+	
+	/* Loop through all the registration types found in REG_INFO parameter
+	   and store the information of responder's capability to offer a
+	   service. */
+	for(i = 0; i < type_count; i++){
+		
+		switch(reg_types[i]) {
+		case HIP_SERVICE_RENDEZVOUS:
+			HIP_INFO("Responder offers rendezvous service.\n");
+			
+			hip_hadb_set_peer_controls(
+				entry ,HIP_HA_CTRL_PEER_RVS_CAPABLE);
+			
+			break;
+		case HIP_SERVICE_RELAY:
+			HIP_INFO("Responder offers relay service.\n");
+			hip_hadb_set_peer_controls(
+				entry, HIP_HA_CTRL_PEER_RELAY_CAPABLE);
+			
+			break;
+#ifdef CONFIG_HIP_ESCROW	
+		case HIP_SERVICE_ESCROW:
+			/* The escrow part is just a copy paste from the
+			   previous HIPL registration implementation. It is not
+			   tested to work. -Lauri */
+			HIP_INFO("Responder offers escrow service.\n");
+			hip_hadb_set_peer_controls(
+				entry, HIP_HA_CTRL_PEER_ESCROW_CAPABLE);
+			HIP_KEA *kea = hip_kea_find(&entry->hit_our);
+			
+			if (kea != NULL) {
+				if(kea->keastate != HIP_KEASTATE_REGISTERING) {
+					kea->keastate = HIP_KEASTATE_INVALID;
+				}
+				
+				hip_keadb_put_entry(kea);
+			} else {
+				HIP_DEBUG("No KEA found. Not doing escrow "\
+					  "registration.\n");
+			}
+			
+			break;
+#endif /* CONFIG_HIP_ESCROW */
+			
+		default:
+			HIP_INFO("Responder offers unsupported service.\n");
+		}
+	}
+
+	/* This far we have stored the information of what services the server
+	   offers. Next we check if we have requested any of those services from
+	   command line using hipconf. If we have requested, we have pending
+	   requests stored. We build a REG_REQUEST parameter containing each
+	   service that we have requested and the server offers. */
+	
+	if(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_ANY) {
+		int request_count = hip_get_pending_request_count(entry);
+		if(request_count > 0) {
+			int j = 0, types_to_request = 0;
+			uint8_t type_array[request_count], valid_lifetime = 0;
+			hip_pending_request_t *requests[request_count];
+						
+			i = 0;
+			hip_get_pending_requests(entry, requests);
+			
+			/* Check that the requested lifetime falls between the
+			   offered lifetime boundaries. */
+			valid_lifetime = MIN(requests[0]->lifetime,
+					     reg_info->max_lifetime);
+			valid_lifetime = MAX(valid_lifetime,
+					     reg_info->min_lifetime);
+			
+			/* Copy the Reg Types to an array. Outer loop for the
+			   services we have requested, inner loop for the
+			   services the server offers. */
+			for(i = 0; i < request_count; i++) {
+				for(j = 0; j < type_count; j++) {
+					if(requests[i]->reg_type ==
+					   reg_types[j]) { 
+						type_array[types_to_request] =
+							requests[i]->reg_type;
+						types_to_request++;
+						break;
+					}
+				}
+			}
+			
+			if (types_to_request > 0) {
+				HIP_IFEL(hip_build_param_reg_request(
+						 target_msg, valid_lifetime,
+						 type_array, types_to_request),
+					 -1,
+					 "Failed to build a REG_REQUEST "\
+					 "parameter.\n");
+				
+			}
+		}
+		/* We do not delete the pending requests for this entry yet, but
+		   only after R2 has arrived. We do not need pending requests
+		   when R2 arrives, but in case the I2 is to be retransmitted,
+		   we must be able to produce the REG_REQUEST parameter. */
+	}
+
+ out_err:
+	return err;
+}
+
 int hip_handle_param_reg_info(hip_common_t *msg, hip_ha_t *entry)
 {
 	struct hip_reg_info *reg_info = NULL;
@@ -289,23 +438,23 @@ int hip_handle_param_reg_info(hip_common_t *msg, hip_ha_t *entry)
 	reg_info = hip_get_param(msg, HIP_PARAM_REG_INFO);
 	
 	if(reg_info == NULL) {
+		HIP_DEBUG("No REG_INFO parameter found. The Responder offers "\
+			  "no services.\n");
 #ifdef CONFIG_HIP_ESCROW
 		/* The escrow part is just a copy paste from the previous HIPL
 		   registration implementation. It is not tested to work.
 		   Besides, it makes no sense to do anything except return
 		   zero here. Why should we take action if the responder does
 		   NOT offer the service? -Lauri. */ 
-		HIP_DEBUG("No REG_INFO parameter found. The Responder offers "\
-			  "no services.\n");
-		HIP_KEA *kea;
+		HIP_KEA *kea = NULL;
 		kea = hip_kea_find(&entry->hit_our);
 		
 		if (kea && (kea->keastate == HIP_KEASTATE_REGISTERING))
 			kea->keastate = HIP_KEASTATE_INVALID;
 		if (kea)
-			hip_keadb_put_entry(kea);	
+			hip_keadb_put_entry(kea);
 		/** @todo remove base keas */
-#endif /* CONFIG_HIP_ESCROW */		
+#endif /* CONFIG_HIP_ESCROW */
 		return -1;
 	}
 	
@@ -326,7 +475,6 @@ int hip_handle_param_reg_info(hip_common_t *msg, hip_ha_t *entry)
 	/* Loop through all the registration types found in REG_INFO parameter
 	   and store the information of responder's capability to offer a
 	   service. */
-	/** @todo store the offered lifetime boundaries somewhere. */
 	for(i = 0; i < type_count; i++){
 		
 		switch(reg_types[i]) {
@@ -609,7 +757,8 @@ int hip_handle_param_reg_failed(hip_ha_t *entry, hip_common_t *msg)
 		/* Iterate to the next parameter and break the loop if there are
 		   no more parameters left. */
 		i = 0;
-		reg_failed = hip_get_next_param(msg, reg_failed);
+		reg_failed = (struct hip_reg_failed *)
+			hip_get_next_param(msg, (hip_tlv_common_t *)reg_failed);
 		
 		if(reg_failed == NULL)
 			break;

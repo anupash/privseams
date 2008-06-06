@@ -212,6 +212,9 @@ int hip_get_pending_requests(hip_ha_t *entry,
  */ 
 int hip_get_pending_request_count(hip_ha_t *entry);
 
+int hip_handle_param_rinfo(hip_ha_t *entry, hip_common_t *source_msg,
+			   hip_common_t *target_msg);
+
 /**
  * Handles param REG_INFO. Digs out the REG_INFO parameter from the HIP message
  * @c msg and sets the peer control bits accordingly. I.e. the peer controls are

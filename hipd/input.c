@@ -902,30 +902,32 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
        user.c. */
     /** @todo Only build those Reg Types that we have requested _and_ the
 	server offers. Check the lifetime boundaries from ctx. */
-    if(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_ANY) {
+    /*if(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_ANY) {
 	    int request_count = hip_get_pending_request_count(entry);
 	    if(request_count > 0) {
 		    int i = 0;
 		    uint8_t reg_types[request_count];
 		    hip_pending_request_t *requests[request_count];
-		    hip_get_pending_requests(entry, requests);
+		    hip_get_pending_requests(entry, requests);*/
 		    
 		    /* Copy the reg_types to an array. */
-		    for(;i < request_count; i++) {
+    /*for(;i < request_count; i++) {
 			    reg_types[i] = requests[i]->reg_type;
 		    }
 		    
 		    HIP_IFEL(hip_build_param_reg_request(
 				     i2, requests[0]->lifetime, reg_types,
 				     request_count), -1,
-			     "Failed to build a REG_REQUEST parameter.\n");
+				     "Failed to build a REG_REQUEST parameter.\n"); */
 		    /* We do not delete the pending requests for this entry yet,
 		       but only after R2 has arrived. We do not need pending
 		       requests when R2 arrives, but in case the I2 is to be
 		       retransmitted, we must be able to produce the REG_REQUEST
 		       parameter. */
-	    }
-    }
+/*}
+  } */
+
+    hip_handle_param_rinfo(entry, ctx->input, i2);
 
     /******** NONCE *************************/
 #ifdef CONFIG_HIP_BLIND
