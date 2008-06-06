@@ -10,12 +10,13 @@
 #include <openssl/dsa.h>
 #include <openssl/rsa.h>
 #include <openssl/pem.h>
+#include <limits.h>
 #include <linux/netfilter_ipv6.h>
 
 #include "builder.h"
 #include "crypto.h"
 #include "debug.h"
-#include "list.h"
+#include "dlist.h"
 
 //string tokens for rule parsing
 #define SRC_HIT_STR "-src_hit"

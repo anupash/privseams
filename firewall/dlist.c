@@ -1,4 +1,4 @@
-#include "list.h"
+#include "dlist.h"
 
 DList * alloc_list (void)  {	
 	DList * list = (struct DList *) malloc (sizeof(DList));
