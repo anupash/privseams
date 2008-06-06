@@ -81,8 +81,8 @@ int is_escrow_active()
 void hip_fw_init_opptcp() {
 	HIP_DEBUG("\n");
 
-	system("iptables -I INPUT -p 6 -j QUEUE"); /* @todo: ! LSI PREFIX */
-	system("iptables -I OUTPUT -p 6 -j QUEUE");  /* @todo: ! LSI PREFIX */
+	system("iptables -I INPUT -p 6 ! -d 127.0.0.1 -j QUEUE"); /* @todo: ! LSI PREFIX */
+	system("iptables -I OUTPUT -p 6 ! -d 127.0.0.1 -j QUEUE");  /* @todo: ! LSI PREFIX */
 	system("ip6tables -I INPUT -p 6 ! -d 2001:0010::/28 -j QUEUE");
 	system("ip6tables -I OUTPUT -p 6 ! -d 2001:0010::/28 -j QUEUE");
 }
@@ -90,8 +90,8 @@ void hip_fw_init_opptcp() {
 void hip_fw_uninit_opptcp() {
 	HIP_DEBUG("\n");
 
-	system("iptables -D INPUT -p 6 -j QUEUE");  /* @todo: ! LSI PREFIX */
-	system("iptables -D OUTPUT -p 6 -j QUEUE"); /* @todo: ! LSI PREFIX */
+	system("iptables -D INPUT -p 6 ! -d 127.0.0.1 -j QUEUE");  /* @todo: ! LSI PREFIX */
+	system("iptables -D OUTPUT -p 6 ! -d 127.0.0.1 -j QUEUE"); /* @todo: ! LSI PREFIX */
 	system("ip6tables -D INPUT -p 6 ! -d 2001:0010::/28 -j QUEUE");
 	system("ip6tables -D OUTPUT -p 6 ! -d 2001:0010::/28 -j QUEUE");
 }
@@ -1524,14 +1524,16 @@ int main(int argc, char **argv)
 	// create firewall queue handles for IPv4 traffic
 	// FIXME died handle will still be used below
 	h4 = ipq_create_handle(0, PF_INET);
-	HIP_DEBUG("IPQ error: %s \n", ipq_errstr());
-	if (!h4)
+	if (!h4) {
+		HIP_ERROR("IPQ error: %s \n", ipq_errstr());
 		die(h4);
+	}
 		
 	status = ipq_set_mode(h4, IPQ_COPY_PACKET, BUFSIZE);
-	HIP_DEBUG("IPQ error: %s \n", ipq_errstr());
-	if (status < 0)
+	if (status < 0) {
+		HIP_ERROR("IPQ error: %s \n", ipq_errstr());
 		die(h4);
+	}
 
 	// create firewall queue handles for IPv6 traffic
 	// FIXME died handle will still be used below

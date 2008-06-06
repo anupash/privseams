@@ -30,7 +30,7 @@ else
   hipd_LDADD += ../libhiptool/.libs/libhiptool.a
 endif
 
-hipd_LDFLAGS = -lcrypto $(HIPL_XMLL) -lm -DHIPL_HIPD
+hipd_LDFLAGS = -lcrypto $(HIPL_XMLL) -lm -DHIPL_HIPD -lcap
 
 if HIP_HI3
  hipd_SOURCES += hi3.c

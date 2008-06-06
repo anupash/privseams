@@ -46,7 +46,7 @@ libinet6_la_SOURCES += getendpointinfo.c util.c debug.c builder.c misc.c
 libinet6_la_SOURCES += hipconf.c message.c
 
 # Original flags.
-CFLAGS  = -D_LIBC_REENTRANT -D_IO_MTSAFE_IO -D_USAGI -D_GNU_SOURCE
+CFLAGS  = -D_LIBC_REENTRANT -D_USAGI -D_GNU_SOURCE
 CFLAGS += -DCOMPAT_RFC2292 -Iinclude -D__ss_family=ss_family -D__ss_len=ss_len
 CFLAGS += -D_USAGI_LIBINET6=$(usagi_libc) -Iinclude_glibc$(usagi_libc)
 CFLAGS += -DHIPL_DEFAULT_PREFIX=\"$(prefix)\"

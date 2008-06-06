@@ -5,7 +5,7 @@
 
 #include <stdlib.h>
 
-SList * alloc_list (void);
+SList * alloc_slist (void);
 
 void free_slist (SList * list);
 
