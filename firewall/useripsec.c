@@ -318,10 +318,7 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	// TODO handle else case
 #endif
 	
-	// convert HITs to type used in hipl
-	HIP_DEBUG_SOCKADDR("src hit: ", &entry->inner_src_addrs->addr);
-	HIP_DEBUG_SOCKADDR("dst hit: ", &entry->inner_dst_addrs->addr);
-	
+	// convert HITs to type used in hipl	
 	HIP_IFE(cast_sockaddr_to_in6_addr(&entry->inner_src_addrs->addr, &src_hit), -1);
 	HIP_IFE(cast_sockaddr_to_in6_addr(&entry->inner_dst_addrs->addr, &dst_hit), -1);
 	

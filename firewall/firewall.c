@@ -1113,9 +1113,12 @@ int hip_fw_handle_other_input(hip_fw_context_t *ctx) {
 
 	HIP_DEBUG("\n");
 
+#if 0
+	// FIXME this segfaults
 	if (ipv6_addr_is_hit(&ctx->src) && ipv6_addr_is_hit(&ctx->dst))
 		verdict = handle_proxy_inbound_traffic(ctx->ipq_packet,
 						       &ctx->src);
+#endif
 
 	/* No need to check default rules as it is handled by the iptables rules */
  out_err:
