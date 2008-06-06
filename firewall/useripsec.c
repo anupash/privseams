@@ -338,6 +338,7 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 			"failed to recreate original packet\n");
 	
 	HIP_HEXDUMP("restored original packet: ", decrypted_packet, decrypted_packet_len);
+	struct ip6_hdr *ip6_hdr = (struct ip6_hdr *)decrypted_packet;
 	HIP_DEBUG("ip6_hdr->ip6_vfc: 0x%x \n", ip6_hdr->ip6_vfc);
 	HIP_DEBUG("ip6_hdr->ip6_plen: %u \n", ip6_hdr->ip6_plen);
 	HIP_DEBUG("ip6_hdr->ip6_nxt: %u \n", ip6_hdr->ip6_nxt);
