@@ -1054,7 +1054,13 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx) {
 	HIP_DEBUG("\n");
 
 	if (hip_userspace_ipsec)
-		verdict = !hip_fw_userspace_ipsec_output(ctx);
+	{
+		// check if this is a reinjected packet
+		if (IN6_ARE_ADDR_EQUAL(&ctx->dst, hip_fw_get_default_hit))
+			verdict = hip_fw_handle_other_input(ctx);
+		else
+			verdict = !hip_fw_userspace_ipsec_output(ctx);
+	}
 						   
 	/* XX FIXME: LSI HOOKS */
 

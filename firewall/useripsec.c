@@ -11,6 +11,12 @@
 #include <asm/types.h>		/* __u16, __u32, etc */
 
 #define ESP_PACKET_SIZE 2500
+// this is the maximum buffer-size needed for an userspace ipsec esp packet
+#if 0
+#define MAX_ESP_PADDING 255
+#define ESP_PACKET_SIZE (BUFSIZE + sizeof(struct udphdr) + sizeof(struct hip_esp) +
+				MAX_ESP_PADDING + sizeof(struct hip_esp_tail) + EVP_MAX_MD_SIZE)
+#endif
 
 // this is the ESP packet we are about to build
 unsigned char *esp_packet = NULL;
@@ -20,7 +26,7 @@ unsigned char *decrypted_packet = NULL;
 int raw_sock_v4 = 0, raw_sock_v6 = 0;
 int is_init = 0;
 
-__u16 checksum_magic(const struct in6_addr *initiator, const struct in6_addr *receiver);
+uint16_t checksum_magic(const struct in6_addr *initiator, const struct in6_addr *receiver);
 
 /* this will initialize the esp_packet buffer and the sockets,
  * they are not set yet */
@@ -474,7 +480,7 @@ int hipl_userspace_ipsec_sadb_add_wrapper(struct in6_addr *saddr,
  * * which HIT is given first, and the one's complement is not
  * * taken.
  */
-__u16 checksum_magic(const struct in6_addr *initiator, const struct in6_addr *receiver)
+uint16_t checksum_magic(const struct in6_addr *initiator, const struct in6_addr *receiver)
 {
 	int count;
 	unsigned long sum = 0;
@@ -511,10 +517,10 @@ __u16 checksum_magic(const struct in6_addr *initiator, const struct in6_addr *re
 		sum = (sum & 0xffff) + (sum >> 16);
 	
 	HIP_DEBUG("hitMagic checksum over %d bytes: 0x%x\n",
-		  2*HIT_SIZE, (__u16)sum);
+		  2*HIT_SIZE, (uint16_t)sum);
 	
 	/* don't take the one's complement of the sum */
-	return((__u16)sum);
+	return((uint16_t)sum);
 }
 
 // resolve HIT to routable addresses selecting the preferred ones
