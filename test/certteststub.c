@@ -21,9 +21,9 @@
  
 int main(int argc, char *argv[])
 {
-        int err = 0;
-        struct hip_cert_spki_info * cert;
-        struct hip_cert_spki_info * to_verification;
+        int err = 0, i = 0;
+        struct hip_cert_spki_info * cert = NULL;
+        struct hip_cert_spki_info * to_verification = NULL;
         time_t not_before = 0, not_after = 0;
         struct hip_common *msg;
         struct in6_addr *defhit;
@@ -35,11 +35,22 @@ int main(int argc, char *argv[])
         int return_value = 0;
         uLongf compressed_length = 0;
         uLongf uncompressed_length = 0;
-       
-        HIP_DEBUG("Starting to test SPKI certficate tools\n");
+	CONF * conf;
+	CONF_VALUE *item;
+	STACK_OF(CONF_VALUE) * sec;
+
+	if (argc != 2) {
+		printf("Usage: %s spki|x509\n", argv[0]);
+		exit(EXIT_SUCCESS);
+	}
+
         HIP_DEBUG("- This test tool has to be run as root otherwise this will fail!\n") ;
         HIP_DEBUG("- Hipd has to run otherwise this will hang!\n");
-        
+
+	if (strcmp(argv[1], "spki")) goto skip_spki; 
+
+        HIP_DEBUG("Starting to test SPKI certficate tools\n");
+       
         cert = malloc(sizeof(struct hip_cert_spki_info));
         if (!cert) goto out_err;
         
@@ -49,25 +60,33 @@ int main(int argc, char *argv[])
         HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, 
                  "Malloc for msg failed\n");        
 
+	defhit = malloc(sizeof(struct in6_addr));
+	if (!defhit) goto out_err;
+
         time(&not_before);
         time(&not_after);
+	HIP_DEBUG("Reading configuration file (%s)\n", HIP_CERT_CONF_PATH);
+	conf = hip_cert_open_conf();
+	sec = hip_cert_read_conf_section("hip_spki", conf);
 
-        /* 
-           get the first RSA HIT 
-        */
-        HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HITS,0),-1, "Fail to get hits");
-        hip_send_recv_daemon_info(msg);
-	
-        while((current_param = hip_get_next_param(msg, current_param)) != NULL) {
-                endp = (struct endpoint_hip *)
-                        hip_get_param_contents_direct(current_param);
-                if (endp->algo == HIP_HI_RSA) {
-                        defhit = &endp->id.hit;
-                        break;
-                }
-        }
-        HIP_DEBUG("Add 3 000 000 seconds to time now (for not_after)\n");
-        not_after += 3000000;
+	for (i = 0; i < sk_CONF_VALUE_num(sec); i++) {
+		item = sk_CONF_VALUE_value(sec, i);
+		_HIP_DEBUG("Sec: %s, Key; %s, Val %s\n", 
+			  item->section, item->name, item->value);
+		if (!strcmp(item->name, "hit")) {
+			err = inet_pton(AF_INET6, item->value, defhit);
+			if (err < 1) {
+				err = -1;
+				goto out_err;
+			}
+		}
+		if (!strcmp(item->name, "days")) {
+			_HIP_DEBUG("Days in sec = %d\n", 60 * 60 * 24 * atoi(item->value));
+			not_after += 60 * 60 * 24 * atoi(item->value);
+		} 
+	}
+	hip_cert_free_conf(conf);
+
         hip_cert_spki_create_cert(cert, 
                                   "hit", defhit,
                                   "hit", defhit,
@@ -146,13 +165,22 @@ int main(int argc, char *argv[])
         */
         HIP_DEBUG("Sending the certificate to daemon for verification\n");
 
-        HIP_IFEL(hip_cert_send_to_verification(to_verification), -1,
+        HIP_IFEL(hip_cert_spki_send_to_verification(to_verification), -1,
                  "Failed in sending to verification\n");
         HIP_IFEL(to_verification->success, -1, 
                  "Verification was not successfull\n");
         HIP_DEBUG("Verification was successfull (return value %d)\n", 
                   to_verification->success);
-
+	goto to_end;
+	
+skip_spki:
+	HIP_DEBUG("Starting to test x509v3 support\n");
+	HIP_DEBUG("Reading configuration file (%s)\n", HIP_CERT_CONF_PATH);
+	conf = hip_cert_open_conf();
+	sec = hip_cert_read_conf_section("hip_x509v3", conf);
+	
+	hip_cert_free_conf(conf);
+to_end:
         HIP_DEBUG("If there was no errors above, \"everything\" is OK\n");
 
  out_err:

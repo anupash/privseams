@@ -3104,7 +3104,6 @@ int hip_build_param_eid_endpoint(struct hip_common *msg,
 	return err;
 }
 
-
 int hip_host_id_entry_to_endpoint(struct hip_host_id_entry *entry, struct hip_common *msg)
 {
 	struct endpoint_hip endpoint;
@@ -3112,6 +3111,7 @@ int hip_host_id_entry_to_endpoint(struct hip_host_id_entry *entry, struct hip_co
 
 	endpoint.family = PF_HIP;	
 	endpoint.length = sizeof(struct endpoint_hip); 	
+	/* Next line is useless see couple of lines further --SAMU */
 	endpoint.algo= entry->lhi.algo;
 	endpoint.flags=entry->lhi.anonymous;
 	endpoint.algo=hip_get_host_id_algo(entry->host_id);

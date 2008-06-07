@@ -168,6 +168,8 @@
 #define HIP_PARAM_INT                           140
 #define SO_HIP_CERT_SPKI_SIGN                   141
 #define SO_HIP_CERT_SPKI_VERIFY                 142
+#define SO_HIP_CERT_X509V3_SIGN                 143
+#define SO_HIP_CERT_X509V3_VERIFY               144
 /** @} */
 /* inclusive */
 #define HIP_SO_ROOT_MAX 			255
