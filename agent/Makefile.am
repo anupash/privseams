@@ -38,6 +38,8 @@ hipagent_LDADD += ../opendht/.libs/libhipopendht.a
 
 hipagent_LDFLAGS = -lcrypto -lpthread $(GTKLDADD) $(GTHREADLDADD) $(GOBJECTLDADD)
 
+CFLAGS += -lsqlite3
+
 endif
 
 # This is needed when getting a fresh checkout and "./autogen.sh && ./configure && make install"

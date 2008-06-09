@@ -15,8 +15,9 @@
 #include <string.h>
 #include <netinet/tcp.h>
 #include <stdlib.h>
-#include <linux/netfilter_ipv4.h>
 #include <sys/types.h>
+#include <limits.h>
+#include <linux/netfilter_ipv4.h>
 #include <pthread.h>
 #include <libinet6/message.h>
 

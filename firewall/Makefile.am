@@ -10,8 +10,8 @@ CFLAGS = $(hipl_common_cflags) -I/usr/include/libipq/  -L$(HIPL_LIBINET6_LIB) -L
 #CFLAGS += `pkg-config --cflags --libs gthread-2.0`
 CFLAGS += `pkg-config --cflags`
 
-include_HEADERS =  firewall.h conntrack.h rule_management.h helpers.h firewall_control.h list.h slist.h common_types.h
-include_HEADERS += esp_decrypt.h firewall_defines.h proxydb.h conndb.h esp_decrypt.h
+include_HEADERS =  firewall.h conntrack.h rule_management.h helpers.h firewall_control.h hslist.h common_types.h
+include_HEADERS += esp_decrypt.h firewall_defines.h proxydb.h conndb.h esp_decrypt.h dlist.h
 include_HEADERS += proxy.h opptcp.h useripsec.h
 include_HEADERS += midauth.h pisa.h
 
@@ -21,7 +21,7 @@ if HIP_FIREWALL
 
 sbin_PROGRAMS = hipfw
 
-hipfw_SOURCES = firewall.c conntrack.c rule_management.c helpers.c firewall_control.c esp_decrypt.c proxydb.c conndb.c list.c slist.c
+hipfw_SOURCES = firewall.c conntrack.c rule_management.c helpers.c firewall_control.c esp_decrypt.c proxydb.c conndb.c dlist.c hslist.c
 hipfw_SOURCES += proxy.c opptcp.c useripsec.c
 hipfw_SOURCES += midauth.c pisa.c
 
