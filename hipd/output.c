@@ -823,10 +823,9 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 		}
 		else if(relay_para_type == HIP_PARAM_FROM){
 			//from RVS, answer to I 
-			r1_dst_addr =  dst_ip;
-			
+			r1_dst_addr =  dst_ip;			
 			if(i1_info->src_port)
-				// R and RVS is in the UDP mode
+				// R and RVS is in the UDP mode or I send UDP to RVS with incoming port 50500
 				r1_dst_port =  HIP_NAT_UDP_PORT;
 			else 
 				// connection between R & RVS is in hip raw mode 
@@ -838,6 +837,7 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 		r1_dst_addr = i1_saddr;
 		r1_dst_port = i1_info->src_port;
 	}
+
 /* removed by santtu becuase relay supported 
 	r1_dst_addr = (ipv6_addr_any(dst_ip) ? i1_saddr : dst_ip);
 	r1_dst_port = (dst_port == 0 ? i1_info->src_port : dst_port);

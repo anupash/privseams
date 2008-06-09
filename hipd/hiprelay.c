@@ -574,10 +574,29 @@ int hip_relay_rvs(const hip_common_t *i1, const in6_addr_t *i1_saddr,
 	   that we use NULL as source IP address instead of
 	   i1_daddr. A source address is selected in the corresponding
 	   send-function. */
+/*
+ * we could not use the defauld send function point for the I1 RVS relay, because if the either
+ * of I->RVS, or R-> RVS registration use UDP, we must use UDP to send.
+ * 
+ * 
 	HIP_IFEL(rec->send_fn(NULL, &(rec->ip_r), HIP_NAT_UDP_PORT,
 			      rec->udp_port_r, i1_to_be_relayed, NULL, 0),
 		 -ECOMM, "Relaying I1 failed.\n");
-
+*/
+//add by Santtu
+	if(i1_info->src_port){
+		// if the incoming message is via UDP, the RVS relay must use UDP also.
+		HIP_IFEL(hip_send_udp(NULL, &(rec->ip_r), HIP_NAT_UDP_PORT,
+					      rec->udp_port_r, i1_to_be_relayed, NULL, 0),
+				 -ECOMM, "Relaying I1 failed.\n");
+	}
+	else{
+		HIP_IFEL(rec->send_fn(NULL, &(rec->ip_r), HIP_NAT_UDP_PORT,
+					      rec->udp_port_r, i1_to_be_relayed, NULL, 0),
+				 -ECOMM, "Relaying I1 failed.\n");
+	}
+//end add
+	
 	/* Once we have relayed the I1 packet successfully, we update the time of
 	   last contact. */
 	rec->last_contact = time(NULL);

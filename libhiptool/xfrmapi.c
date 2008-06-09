@@ -471,17 +471,9 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 
 	HIP_ASSERT(spi);
 
-	HIP_DEBUG("%s SA\n", (update ? "updating" : "adding new"));
+	
 
-	HIP_DEBUG_HIT("src_hit", src_hit);
-	HIP_DEBUG_HIT("dst_hit", dst_hit);
-	HIP_DEBUG_IN6ADDR("saddr", saddr);
-	HIP_DEBUG_IN6ADDR("daddr", daddr);
 
-	HIP_DEBUG("sport %d\n", sport);
-	HIP_DEBUG("dport %d\n", dport);
-	HIP_DEBUG("direction %d\n", direction);
-	HIP_DEBUG("SPI=0x%x\n",spi);
 	
 	
 	authkey_len = hip_auth_key_length_esp(aalg);
@@ -498,6 +490,20 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 		goto out_err;
 	HIP_DEBUG("...........inside add sa..............\n");
 */	
+	
+	HIP_DEBUG("************************************\n");
+	HIP_DEBUG("%s SA\n", (update ? "updating" : "adding new"));
+	HIP_DEBUG_HIT("src_hit", src_hit);
+	HIP_DEBUG_HIT("dst_hit", dst_hit);
+	HIP_DEBUG_IN6ADDR("saddr", saddr);
+	HIP_DEBUG_IN6ADDR("daddr", daddr);
+
+	HIP_DEBUG("sport %d\n", sport);
+	HIP_DEBUG("dport %d\n", dport);
+	HIP_DEBUG("direction %d\n", direction);
+	HIP_DEBUG("SPI=0x%x\n",*spi);
+	HIP_DEBUG("************************************\n");
+	
 	HIP_IFE(hip_xfrm_state_modify(hip_xfrmapi_nl_ipsec, cmd,
 				      saddr, daddr, 
 				      src_hit, dst_hit, *spi,

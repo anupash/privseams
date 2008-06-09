@@ -550,9 +550,10 @@ int hip_receive_control_packet(struct hip_common *msg,
 //add by santtu
 #ifdef CONFIG_HIP_RVS
 	//check if it a relaying msg
+	
 	//add by santtu
 	//if(hip_relay_handle_relay_to(msg, type, src_addr, dst_addr, msg_info)){
-	HIP_DEBUG("help......\n");
+
 	if(hip_relay_handle_relay_to(msg, type, src_addr, dst_addr, msg_info)){
 	//end 
 		err = -ECANCELED;
