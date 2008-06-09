@@ -763,6 +763,13 @@ struct hip_opendht_set {
         char name[256];
 } __attribute__ ((packed));
 
+//add by santtu from here
+
+struct hip_nat_transform {
+	hip_tlv_type_t        type;
+	hip_tlv_len_t         length;
+	hip_transform_suite_t suite_id[1];
+} __attribute__ ((packed));
 /* @} */
 
 #endif /* _HIP_PROTODEFS */

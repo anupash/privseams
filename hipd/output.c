@@ -598,6 +598,9 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
                 HIP_DEBUG("LOCATOR parameter building failed\n");
             _HIP_DUMP_MSG(msg);
         }
+#ifdef HIP_USE_ICE
+        hip_build_param_nat_tranform(msg, hip_nat_get_control());
+#endif
  	/********** PUZZLE ************/
 	HIP_IFEL(hip_build_param_puzzle(msg, cookie_k,
 					42 /* 2^(42-32) sec lifetime */, 

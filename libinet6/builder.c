@@ -3473,3 +3473,29 @@ int hip_build_param_full_relay_hmac_contents(struct hip_common *msg,
  out_err:
 	return err;
 }
+
+
+
+/**
+ * Builds a @c NAT_Transfer  parameter.
+ *
+ * Builds a @c NAT_TRANSFER parameter to the HIP packet @c msg.
+ *
+ * @param msg      a pointer to a HIP packet common header
+ * @param nat_control     16bit integer indicate the nat_transfer type
+ * @return         zero on success, or negative error value on error.
+ * @see            <a href="http://tools.ietf.org/wg/hip/draft-ietf-hip-rvs/draft-ietf-hip-rvs-05.txt">
+ *                 draft-ietf-hip-rvs-05</a> section 4.2.2.
+ */
+int hip_build_param_nat_tranform(struct hip_common *msg, hip_transform_suite_t nat_control)
+{
+	struct hip_nat_transform nat_transform;
+	int err = 0;
+	
+	hip_set_param_type(&nat_transform, HIP_PARAM_NAT_TRANSFORM);
+	nat_transform.suite_id[0] = htons(nat_control);
+
+	hip_calc_generic_param_len(&nat_transform, sizeof(struct hip_nat_transform), 0);
+	err = hip_build_param(msg, &nat_transform);
+	return err;
+}

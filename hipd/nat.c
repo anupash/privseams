@@ -294,3 +294,100 @@ void hip_nat_randomize_nat_ports()
 		  hip_nat_rand_port1, hip_nat_rand_port2);
 }
 #endif
+
+
+//add by santtu from here
+
+int hip_nat_handle_transform_in_client(struct hip_common *msg , hip_ha_t *entry){
+	int err = 0;
+	struct hip_nat_transform *nat_transform  = NULL;
+	
+	
+    nat_transform = hip_get_param(msg, HIP_PARAM_NAT_TRANSFORM);
+    if(nat_transform){
+    	// in the furtue, we should check all the transform type and pick only one
+    	// but now, we have only one choice, which is ICE, so the code is the same as
+    	//in the server side.
+    	entry->nat_control = (ntohs(nat_transform->suite_id[0])) & hip_nat_get_control();
+    }
+out_err:
+	return err;
+	  
+}
+
+int hip_nat_handle_transform_in_server(struct hip_common *msg , hip_ha_t *entry){
+	int err = 0;
+	struct hip_nat_transform *nat_transform  = NULL;
+	
+	
+    nat_transform = hip_get_param(msg, HIP_PARAM_NAT_TRANSFORM);
+    if(nat_transform){
+    	// check if the requested tranform is also supported in the server.
+    	entry->nat_control = (ntohs(nat_transform->suite_id[0])) & hip_nat_get_control();
+    }
+out_err:
+	return err;
+	  
+}
+
+uint16_t hip_nat_get_control(){
+#ifdef HIP_USE_ICE
+	 if(hip_relay_get_status() == HIP_RELAY_ON)
+		 return 0;
+	 // comment out before the ice mode is added
+	 else //if(hip_nat_get_mode()== SO_HIP_SET_NAT_ICE_UDP)
+		 	return 1;
+		 // else return 0;
+#else
+	return 0;
+#endif
+
+}
+
+
+
+/**
+ * Sets NAT status
+ * 
+ * Sets NAT mode for each host association in the host association
+ * database.
+ *
+ * @return zero on success, or negative error value on error.
+ * @todo   Extend this to handle peer_hit case for
+ *         <code>"hipconf hip nat peer_hit"</code> This would be helpful in
+ *         multihoming case.
+ *
+int hip_user_nat_mode(int nat_mode)
+{
+	int err = 0, nat;
+	HIP_DEBUG("hip_user_nat_mode() invoked. mode: %d\n", nat_mode);
+#if HIP_UDP_PORT_RANDOMIZING 
+	hip_nat_randomize_nat_ports();
+#endif
+	
+	nat = nat_mode;
+	switch (nat) {
+	case SO_HIP_SET_NAT_PLAIN_UDP:
+		nat = HIP_NAT_MODE_PLAIN_UDP;
+		break;
+	case SO_HIP_SET_NAT_NONE:
+		nat = HIP_NAT_MODE_NONE;
+		break;
+	case SO_HIP_SET_NAT_ICE_UDP:
+		nat = HIP_NAT_MODE_ICE_UDP;
+		break;
+	default:
+		err = -1;
+		HIP_IFEL(1, -1, "Unknown nat mode %d\n", nat_mode);
+	} 
+	HIP_IFEL(hip_for_each_ha(hip_ha_set_nat_mode, &nat), 0,
+	         "Error from for_each_ha().\n");
+	//set the nat mode for the host
+	hip_set_nat_mode(nat);
+	
+	HIP_DEBUG("hip_user_nat_mode() end. mode: %d\n", hip_nat_status);
+
+out_err:
+	return err;
+}
+*/

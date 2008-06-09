@@ -765,6 +765,9 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
             if ((err = hip_build_locators(i2)) < 0) 
                 HIP_DEBUG("LOCATOR parameter building failed\n");
         }
+#ifdef HIP_USE_ICE
+        hip_build_param_nat_tranform(i2, entry->nat_control);
+#endif
 	/********** SOLUTION **********/
 	{
 		struct hip_puzzle *pz;
@@ -1122,6 +1125,12 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 		HIP_UNLOCK_HA(entry);
 	}
 
+	
+#ifdef HIP_USE_ICE	
+ 	HIP_DEBUG("handle nat trasform in R1\n");
+ 	hip_nat_handle_transform_in_client(r1, entry);
+#endif		
+	
         /***** LOCATOR PARAMETER ******/
         locator = hip_get_param(r1, HIP_PARAM_LOCATOR);
         if (locator)
@@ -1639,7 +1648,10 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		 -ENOMSG, "Cookie solution rejected.\n");
 	
  	HIP_DEBUG("Cookie accepted\n");
-	
+#ifdef HIP_USE_ICE	
+ 	HIP_DEBUG("handle nat trasform in I2\n");
+ 	hip_nat_handle_transform_in_server(i2, entry);
+#endif	
 #ifdef CONFIG_HIP_HI3
         locator = hip_get_param(i2, HIP_PARAM_LOCATOR);
 	
