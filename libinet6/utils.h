@@ -20,10 +20,22 @@
 #define HIP_TMP_FNAME_TEMPLATE "/tmp/hip_XXXXXX"
 #define HIP_TMP_FNAME_LEN strlen(HIP_TMP_FNAME_TEMPLATE)
 
+/* mktemp results to a compiler warning - or actually in a host of warnings
+ * since this function is called from tens of places.
+ * 
+ * warning: the use of `mktemp' is dangerous, better use `mkstemp' or `mkdtemp'
+ *
+ * Please fix it if you know it is safe to do so.
+ * -Lauri 26.09.2007 14:43
+ *
+ * This is not called from anywhere, so if 0 --Samu
+ */
+#if 0
 static int hip_tmpname(char *fname) {
-	memcpy(fname, HIP_TMP_FNAME_TEMPLATE, HIP_TMP_FNAME_LEN);
-	return (mkstemp(fname));
+	memcpy(fname, HIP_TMP_FNAME_TEMPLATE, HIP_TMP_FNAME_LEN);     
+	return(mkstemp(fname));      
 } 
+#endif
 
 /**
  * hip_tmpname_gui: 
@@ -35,11 +47,11 @@ static int hip_tmpname(char *fname) {
  * @return 0 if the unique filename is correctly assigned; -1 on error.
  *
  * -Alberto
+ *
+ * This is not called from anywhere, so if 0 -- Samu
  */
+#if 0
 static int hip_tmpname_gui(char *fname) {
-	memcpy(fname, HIP_TMP_FNAME_TEMPLATE, HIP_TMP_FNAME_LEN);
-	//return (mkstemp(fname));
-        
 	/* mktemp results to a compiler warning - or actually in a host of
 	 * warnings since this function is called many times.
 	 * 
@@ -49,12 +61,12 @@ static int hip_tmpname_gui(char *fname) {
 	 * Please fix it if you know it is safe to do so.
 	 * -Lauri 02.06.2008 15:55
 	 */
-	if (mktemp(fname) == NULL)
-		return -1;
-	else
-		return 0;
-        
+        int ret = 0;
+	memcpy(fname, HIP_TMP_FNAME_TEMPLATE, HIP_TMP_FNAME_LEN);        
+	if (mktemp(fname) == NULL) ret = -1;
+       	return(ret); 
 } 
+#endif
 
 /*
  * HIP header and parameter related constants and structures.

@@ -23,6 +23,7 @@
 #  include "icomm.h"
 #  include "state.h"
 #endif
+#include "certtools.h"
 
 //typedef struct hip_srv hip_srv_t;
 
