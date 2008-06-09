@@ -83,7 +83,7 @@ int read_hit_from_buffer(struct in6_addr *hit, char *buffer)
 	
 	memset(v, 0, sizeof(int) * 8);
 	memset(hit, 0, sizeof(struct in6_addr));
-	
+        
 	err = sscanf(buffer, "%x:%x:%x:%x:%x:%x:%x:%x",
 	             &v[7], &v[6], &v[5], &v[4],
 	             &v[3], &v[2], &v[1], &v[0]);

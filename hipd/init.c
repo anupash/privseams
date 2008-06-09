@@ -121,7 +121,8 @@ void hip_set_os_dep_variables()
 int hipd_init(int flush_ipsec, int killold)
 {
 	hip_hit_t peer_hit;
-	int err = 0, dhterr;
+	int err = 0, fd, dhterr = 0;
+	char str[64];
 	struct sockaddr_in6 daemon_addr;
 
 	/* Open daemon lock file and read pid from it. */
@@ -139,17 +140,20 @@ int hipd_init(int flush_ipsec, int killold)
 	signal(SIGTERM, hip_close);
 	signal(SIGCHLD, hip_sig_chld);
  
+#ifdef CONFIG_HIP_OPPORTUNISTIC
 	HIP_IFEL(hip_init_oppip_db(), -1,
 	         "Cannot initialize opportunistic mode IP database for "\
-		 "non HIP capable hosts!\n");
-
+                 "non HIP capable hosts!\n");
+#endif
 	HIP_IFEL((hip_init_cipher() < 0), 1, "Unable to init ciphers.\n");
 
 	HIP_IFE(init_random_seed(), -1);
 
 	hip_init_hadb();
-
+        /* hip_init_puzzle_defaults just returns, removed -samu  */
+#if 0
 	hip_init_puzzle_defaults();
+#endif
 
        /* Initialize a hashtable for services, if any service is enabled. */
 	hip_init_services();
@@ -266,6 +270,11 @@ int hipd_init(int flush_ipsec, int killold)
         dhterr = 0;
         dhterr = hip_init_dht();
         if (dhterr < 0) HIP_DEBUG("Initializing DHT returned error\n");
+
+	/* reusing dhterr */
+	dhterr = 0;
+	dhterr = hip_init_certs();
+	if (dhterr < 0) HIP_DEBUG("Initializing cert configuration file returned error\n");
 	
 #if 0
 	/* init new tcptimeout parameters, added by Tao Wan on 14.Jan.2008*/
@@ -824,3 +833,80 @@ void hip_probe_kernel_modules()
 	HIP_DEBUG("Probing completed\n");
 }
 
+int hip_init_certs(void) {
+	int err = 0;
+	char hit[41];
+	FILE * conf_file;
+	struct hip_host_id_entry * entry;
+	char hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
+
+	memset(hostname, 0, HIP_HOST_ID_HOSTNAME_LEN_MAX);
+	HIP_IFEL(gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1), -1,
+		 "gethostname failed\n");    
+
+	conf_file = fopen(HIP_CERT_CONF_PATH, "r");
+	if (!conf_file) {
+		HIP_DEBUG("Configuration file did NOT exist creating it and "
+			  "filling it with default information\n");
+		HIP_IFEL(!memset(hit, '\0', sizeof(hit)), -1,
+			  "Failed to memset memory for hit presentation format\n");
+		/* Fetch the first RSA HIT */
+		entry = hip_return_first_rsa();
+		if (entry == NULL) {
+			HIP_DEBUG("Failed to get the first RSA HI");
+			goto out_err;
+		}
+		hip_in6_ntop(&entry->lhi.hit, hit);
+		conf_file = fopen(HIP_CERT_CONF_PATH, "w+");
+		fprintf(conf_file,
+			"# Section containing SPKI related information\n"
+			"#\n"
+			"# hit = what hit is to be used when signing\n"                          
+			"# days = how long is this key valid\n"
+			"\n"
+			"[ hip_spki ]\n"
+			"hit = %s\n"
+			"days = %d\n"
+			"\n"
+			"# Section containing HIP related information\n"
+			"#\n"
+			"# hit = what hit is to be used when signing\n"
+			"# alias = userfriendly name\n"         
+			"# days = how long is this key valid\n"
+			"\n"
+			"[ hip_x509v3 ]\n"
+			"hit = %s\n"
+			"alias = %s\n"
+			"days = %d\n", 
+			hit, HIP_CERT_INIT_DAYS,
+			hit, hostname, HIP_CERT_INIT_DAYS);		
+		fclose(conf_file);
+	} else {
+		HIP_DEBUG("Configuration file existed exiting hip_init_certs");
+	}
+out_err:
+	return err;
+}
+
+struct hip_host_id_entry * hip_return_first_rsa(void) {
+	hip_list_t *curr, *iter;
+	struct hip_host_id_entry *tmp;
+	int err = 0, c;
+	uint16_t algo;
+
+	HIP_READ_LOCK_DB(hip_local_hostid_db);
+
+	list_for_each_safe(curr, iter, hip_local_hostid_db, c) {
+		tmp = list_entry(curr);
+		HIP_DEBUG_HIT("Found HIT", &tmp->lhi.hit);
+		algo = hip_get_host_id_algo(tmp->host_id);
+		HIP_DEBUG("hits algo %d HIP_HI_RSA = %d\n", 
+			  algo, HIP_HI_RSA);
+		if (algo == HIP_HI_RSA) goto out_err;
+	}
+
+out_err:
+	HIP_READ_UNLOCK_DB(hip_local_hostid_db);
+	if (algo == HIP_HI_RSA) return (tmp);
+	return NULL;
+}
