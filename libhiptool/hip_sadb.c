@@ -35,6 +35,7 @@
 #include "hip_sadb.h"
 //#include <hip/hip_funcs.h> /* gettimeofday() for win32 */
 #include "win32-pfkeyv2.h"
+#include "hashchain.h"
 
 
 /*
@@ -129,7 +130,7 @@ void hip_sadb_init() {
 	memset(hip_sadb, 0, sizeof(hip_sadb));
 	memset(hip_sadb_dst, 0, sizeof(hip_sadb_dst));
 	lsi_temp = NULL;
-        memset(hip_proto_sel, 0, sizeof(hip_proto_sel));
+    memset(hip_proto_sel, 0, sizeof(hip_proto_sel));
 }
 
 /*
@@ -177,6 +178,11 @@ int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
 	entry->dst_addrs = (sockaddr_list*)malloc(sizeof(sockaddr_list));
 	entry->inner_src_addrs = (sockaddr_list*)malloc(sizeof(sockaddr_list));
 	entry->inner_dst_addrs = (sockaddr_list*)malloc(sizeof(sockaddr_list));
+	/* allocate memory for hash chains and anchors */
+	entry->active_hchain = (hash_chain_t*)malloc(sizeof(hash_chain_t));
+	entry->next_hchain = (hash_chain_t*)malloc(sizeof(hash_chain_t));
+	entry->active_anchor = (unsigned char*)malloc(HCHAIN_ELEMENT_LENGTH);
+	entry->next_anchor = (unsigned char*)malloc(HCHAIN_ELEMENT_LENGTH);
 	entry->dst_port = port ;
 	entry->usetime_ka.tv_sec = 0;
 	entry->usetime_ka.tv_usec = 0;
@@ -199,7 +205,8 @@ int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
 	pthread_mutex_unlock(&entry->rw_lock);
 
 	/* malloc error */
-	if (!entry->src_addrs || !entry->dst_addrs || !entry->a_key)
+	if (!entry->src_addrs || !entry->dst_addrs || !entry->a_key || !entry->active_hchain
+			|| !entry->next_hchain || entry->active_anchor || entry->next_anchor)
 		goto hip_sadb_add_error;
 	if ((e_keylen > 0) && !entry->e_key)
 		goto hip_sadb_add_error;
@@ -233,9 +240,34 @@ int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
 		memcpy(&entry->inner_dst_addrs->addr, inner_dst,
 		       SALEN(inner_dst));
 	}
-
 	
-
+	/* set up both hash chains and anchors for now */
+	// TODO hchains should be taken from the store
+	memcpy(entry->active_hchain, hchain_create(100), sizeof(hash_chain_t));
+	
+	// verify active hash chain
+	HIP_DEBUG("verifying _active_ hash chain...\n");
+	if (hchain_verify(entry->active_hchain->source_element->hash,
+			entry->active_hchain->anchor_element->hash, 100))
+		HIP_DEBUG("active hash chain successfully verified!\n");
+	else
+		HIP_DEBUG("ERROR verifying active hash chain!\n");
+	
+	memcpy(entry->next_hchain, hchain_create(100), sizeof(hash_chain_t));
+	
+	// verify hash chains
+	HIP_DEBUG("verifying _next_ hash chain...\n");
+	if (hchain_verify(entry->next_hchain->source_element->hash,
+			entry->next_hchain->anchor_element->hash, 100))
+		HIP_DEBUG("next hash chain successfully verified!\n");
+	else
+		HIP_DEBUG("ERROR verifying next hash chain!\n");
+	
+	entry->tolerance = 10;
+	memcpy(entry->active_anchor, entry->active_hchain->anchor_element->hash, 
+			HCHAIN_ELEMENT_LENGTH); 
+	memcpy(entry->next_anchor, entry->next_hchain->anchor_element->hash,
+			HCHAIN_ELEMENT_LENGTH);
 	
 	/* copy keys */
 

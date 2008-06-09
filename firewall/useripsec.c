@@ -9,6 +9,7 @@
 #include "utils.h"
 #include <sys/time.h>		/* timeval */
 #include <asm/types.h>		/* __u16, __u32, etc */
+#include "hashchain.h"
 
 #define ESP_PACKET_SIZE 2500
 // this is the maximum buffer-size needed for an userspace ipsec esp packet
@@ -279,6 +280,8 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	int decrypted_packet_len = 0;
 	uint32_t spi = 0;
 	uint32_t seq_no = 0;
+	uint32_t hash = 0;
+	unsigned char *sent_hc_element = NULL;
 	int err = 0;
 	
 	// we should only get ESP packets here
@@ -308,6 +311,46 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	seq_no = ntohl(esp_hdr->esp_seq);
 	HIP_DEBUG("SEQ no. of incoming packet: %u \n", seq_no);
 	//HIP_IFEL(entry->sequence != seq_no, -1, "ESP sequence numbers do not match\n");
+	
+#if 0
+	// TODO verify hchain-elements
+	HIP_DEBUG("verifying hash chain element for incoming packet...\n");
+	
+	hash = ntohl(esp_hdr->hc_element);
+	// sent_hc_element = (unsigned char*) &hash;
+	sent_hc_element = (unsigned char*) malloc(HCHAIN_ELEMENT_LENGTH);
+	memcpy(sent_hc_element, &hash, HCHAIN_ELEMENT_LENGTH);
+	
+	if (hchain_verify(sent_hc_element, entry->active_anchor, entry->tolerance))
+	{
+		// memcpy(entry->active_anchor, sent_hc_element, HCHAIN_ELEMENT_LENGTH);
+		free(entry->active_anchor);
+		// this will allow only increasing elements to be accepted
+		entry->active_anchor = sent_hc_element;
+		HIP_DEBUG("hash-chain element correct!\n");
+	} else
+	{
+		if (hchain_verify(sent_element, entry->next_anchor, entry->tolerance))
+		{
+			// TODO change handling of new hchains
+			// there was an implicit change to the next hchain
+			free(entry->active_anchor);
+			entry->active_anchor = entry->next_anchor;
+			entry->next_anchor = (unsigned char*)malloc(HCHAIN_ELEMENT_LENGTH);
+			memcpy(entry->next_anchor, entry->active_anchor, HCHAIN_ELEMENT_LENGTH);	
+		} else
+		{
+			// handle incorrect elements -> drop packet
+			HIP_DEBUG("ERROR invalid hash-chain element!\n");
+			HIP_DEBUG("dropping packet...!\n");
+			
+			free(sent_element);
+			
+			err = 1;
+			goto out_err;
+		}
+	}
+#endif
 
 	// check if we have a SA entry to reply to
 	HIP_IFEL(!(inverse_entry = hip_sadb_lookup_addr(

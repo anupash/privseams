@@ -63,6 +63,8 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 	int next_hdr_offset = 0;
 	int elen = 0;
 	int encryption_len = 0;
+	uint32_t hash = 0;
+	unsigned char* hash_ptr = NULL;
 	int err = 0;
 	
 	_HIP_DEBUG("original packet length: %i \n", ctx->ipq_packet->data_len);
@@ -82,11 +84,37 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 			next_hdr_offset += sizeof(struct udphdr);
 		}
 	
-		
 		// set up esp header
 		out_esp_hdr = (struct hip_esp *) (esp_packet + next_hdr_offset);
 		out_esp_hdr->esp_spi = htonl(entry->spi);
 		out_esp_hdr->esp_seq = htonl(entry->sequence++);
+
+#if 0
+		// TODO add hchain-element to esp header
+		HIP_DEBUG("adding hash chain element to outgoing packet...\n");
+		hash_ptr = hchain_pop(entry->active_hchain)->hash;
+		
+		/* don't send anchor as it could be known to third party
+		 * -> other end-host will not accept it
+		 * -> get next element */
+		if (!memcmp(hash_ptr, entry->active_hchain->anchor_element->hash, HCHAIN_ELEMENT_LENGTH))
+		{	
+			hash_ptr = hchain_pop(entry->active_hchain)->hash;
+		}
+		
+		memcpy(&hash, hash_ptr, HCHAIN_ELEMENT_LENGTH);
+		out_esp_hdr->hc_element = htonl(hash);
+		
+		// set up new chain when active one is depleted
+		if (!memcmp(hash_ptr, entry->active_hchain->source_element->hash, HCHAIN_ELEMENT_LENGTH))
+		{
+			// this will free all linked elements in the hchain
+			hchain_destruct(entry->active_hchain);
+			entry->active_hchain = entry->next_hchain;
+			// TODO this should be taken from the store
+			entry->next_hchain = hchain_create(100);
+		}
+#endif
 		
 		// packet to be re-inserted into network stack has at least
 		// length of defined headers
