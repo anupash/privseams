@@ -6,7 +6,7 @@
  */
  
 #include "init.h"
-#include <linux/capability.h>
+#include <sys/capability.h>
 #include <sys/prctl.h>
 #include <sys/types.h>
 #include "debug.h"
@@ -15,8 +15,6 @@
 
 extern struct hip_common *hipd_msg;
 extern struct hip_common *hipd_msg_v4;
-typedef struct __user_cap_header_struct capheader_t;
-typedef struct __user_cap_data_struct capdata_t;
 
 /******************************************************************************/
 /** Catch SIGCHLD. */
@@ -272,6 +270,11 @@ int hipd_init(int flush_ipsec, int killold)
         dhterr = 0;
         dhterr = hip_init_dht();
         if (dhterr < 0) HIP_DEBUG("Initializing DHT returned error\n");
+
+	/* reusing dhterr */
+	dhterr = 0;
+	dhterr = hip_init_certs();
+	if (dhterr < 0) HIP_DEBUG("Initializing cert configuration file returned error\n");
 	
 #if 0
 	/* init new tcptimeout parameters, added by Tao Wan on 14.Jan.2008*/
@@ -378,6 +381,79 @@ int hip_init_dht()
         return (err);
 }
 
+#ifdef CONFIG_HIP_OPENWRT
+/*
+ * Note: this function does not go well with valgrind
+ */
+int hip_set_lowcapability() {
+  struct passwd *nobody_pswd;
+  int err = 0;
+#ifdef CONFIG_HIP_PRIVSEP
+  uid_t ruid,euid;
+  capheader_t header;
+  capdata_t data; 
+
+  header.pid=0;
+  header.version = _LINUX_CAPABILITY_VERSION_HIPL;
+  data.effective = data.permitted = data.inheritable = 0;
+
+  /* openwrt code */
+
+  HIP_IFEL(prctl(PR_SET_KEEPCAPS, 1), -1, "prctl err\n");
+        
+  HIP_DEBUG("Now PR_SET_KEEPCAPS=%d\n", prctl(PR_GET_KEEPCAPS));
+
+  HIP_IFEL(!(nobody_pswd = getpwnam(USER_NOBODY)), -1,
+	   "Error while retrieving USER 'nobody' uid\n"); 
+
+  HIP_IFEL(capget(&header, &data), -1,
+	   "error while retrieving capabilities through capget()\n");
+
+  HIP_DEBUG("effective=%u, permitted = %u, inheritable=%u\n",
+	    data.effective, data.permitted, data.inheritable);
+
+  ruid=nobody_pswd->pw_uid; 
+  euid=nobody_pswd->pw_uid; 
+  HIP_DEBUG("Before setreuid(,) UID=%d and EFF_UID=%d\n",
+	    getuid(), geteuid());
+        
+  /* openwrt code */
+
+  HIP_IFEL(setreuid(ruid,euid), -1, "setruid failed\n");
+        
+  HIP_DEBUG("After setreuid(,) UID=%d and EFF_UID=%d\n",
+	    getuid(), geteuid());
+  HIP_IFEL(capget(&header, &data), -1,
+	   "error while retrieving capabilities through 'capget()'\n");
+
+  HIP_DEBUG("effective=%u, permitted = %u, inheritable=%u\n",
+	    data.effective,data.permitted, data.inheritable);
+  HIP_DEBUG ("Going to clear all capabilities except the ones needed\n");
+  data.effective = data.permitted = data.inheritable = 0;
+  // for CAP_NET_RAW capability 
+  data.effective |= (1 <<CAP_NET_RAW );
+  data.permitted |= (1 <<CAP_NET_RAW );
+  // for CAP_NET_ADMIN capability 
+  data.effective |= (1 <<CAP_NET_ADMIN );
+  data.permitted |= (1 <<CAP_NET_ADMIN );
+
+  /* openwrt code */
+
+  HIP_IFEL(capset(&header, &data), -1, 
+	   "error in capset (do you have capabilities kernel module?)");
+
+  HIP_DEBUG("UID=%d EFF_UID=%d\n", getuid(), geteuid());  
+  HIP_DEBUG("effective=%u, permitted = %u, inheritable=%u\n",
+	    data.effective, data.permitted, data.inheritable);
+#endif /* CONFIG_HIP_PRIVSEP */
+
+ out_err:
+  return err;
+        
+}
+
+#else /* ! OPENWRT */
+
 /*
  * Note: this function does not go well with valgrind
  */
@@ -385,62 +461,52 @@ int hip_set_lowcapability() {
 	struct passwd *nobody_pswd;
 	int err = 0;
 #ifdef CONFIG_HIP_PRIVSEP
+	cap_value_t cap_list[] = {CAP_NET_RAW, CAP_NET_ADMIN };
+	int ncap_list = 2; 
 	uid_t ruid,euid;
-	capheader_t header;
-	capdata_t data;	
-
-	header.pid=0;
-	header.version = _LINUX_CAPABILITY_VERSION;
-	data.effective = data.permitted = data.inheritable = 0;
+	cap_t cap_p;
+	char *cap_s;
 
 	HIP_IFEL(prctl(PR_SET_KEEPCAPS, 1), -1, "prctl err\n");
 	
 	HIP_DEBUG("Now PR_SET_KEEPCAPS=%d\n", prctl(PR_GET_KEEPCAPS));
 
-	HIP_IFEL(!(nobody_pswd = getpwnam(USER_NOBODY)), -1,
-		 "Error while retrieving USER 'nobody' uid\n"); 
+        HIP_IFEL(!(nobody_pswd = getpwnam(USER_NOBODY)), -1,
+                 "Error while retrieving USER 'nobody' uid\n");
 
-	HIP_IFEL(capget(&header, &data), -1,
-		 "error while retrieving capabilities through capget()\n");
-
-	HIP_DEBUG("effective=%u, permitted = %u, inheritable=%u\n",
-		  data.effective, data.permitted, data.inheritable);
+	HIP_IFEL(!(cap_p = cap_get_proc()), -1, "Error getting capabilities\n");
+	HIP_DEBUG("cap_p %s\n", cap_s = cap_to_text(cap_p, NULL));
+	cap_free(cap_s);
 
 	ruid=nobody_pswd->pw_uid; 
 	euid=nobody_pswd->pw_uid; 
-	HIP_DEBUG("Before setreuid(,) UID=%d and EFF_UID=%d\n",
+
+	HIP_DEBUG("Before setreuid UID=%d and EFF_UID=%d\n",
 		  getuid(), geteuid());
   	
 	HIP_IFEL(setreuid(ruid,euid), -1, "setruid failed\n");
 	
-	HIP_DEBUG("After setreuid(,) UID=%d and EFF_UID=%d\n",
+	HIP_DEBUG("After setreuid UID=%d and EFF_UID=%d\n",
 		  getuid(), geteuid());
-	HIP_IFEL(capget(&header, &data), -1,
-		 "error while retrieving capabilities through 'capget()'\n");
 
-	HIP_DEBUG("effective=%u, permitted = %u, inheritable=%u\n",
-		  data.effective,data.permitted, data.inheritable);
 	HIP_DEBUG ("Going to clear all capabilities except the ones needed\n");
-	data.effective = data.permitted = data.inheritable = 0;
-  	// for CAP_NET_RAW capability 
-	data.effective |= (1 <<CAP_NET_RAW );
-  	data.permitted |= (1 <<CAP_NET_RAW );
-  	// for CAP_NET_ADMIN capability 
-	data.effective |= (1 <<CAP_NET_ADMIN );
-  	data.permitted |= (1 <<CAP_NET_ADMIN );
+	HIP_IFEL(cap_clear(cap_p)<0, -1, "Error clearing capabilities\n");
 
-	HIP_IFEL(capset(&header, &data), -1, 
-		 "error in capset (do you have capabilities kernel module?)");
-
+	HIP_IFEL(cap_set_flag(cap_p, CAP_EFFECTIVE, ncap_list, cap_list, CAP_SET)<0, -1, "Error setting capability flags\n");
+	HIP_IFEL(cap_set_flag(cap_p, CAP_PERMITTED, ncap_list, cap_list, CAP_SET)<0, -1, "Error setting capability flags\n");
+	HIP_IFEL(cap_set_proc(cap_p)<0, -1, "Error modifying capabilities\n");
 	HIP_DEBUG("UID=%d EFF_UID=%d\n", getuid(), geteuid());	
-	HIP_DEBUG("effective=%u, permitted = %u, inheritable=%u\n",
-		  data.effective, data.permitted, data.inheritable);
+	HIP_DEBUG("cap_p %s\n", cap_s = cap_to_text(cap_p, NULL));
+	cap_free(cap_s);
+	cap_free(cap_p);
+
 #endif /* CONFIG_HIP_PRIVSEP */
 
 out_err:
 	return err;
 	
 }
+#endif
 
 /**
  * Init host IDs.
@@ -767,3 +833,80 @@ void hip_probe_kernel_modules()
 	HIP_DEBUG("Probing completed\n");
 }
 
+int hip_init_certs(void) {
+	int err = 0;
+	char hit[41];
+	FILE * conf_file;
+	struct hip_host_id_entry * entry;
+	char hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
+
+	memset(hostname, 0, HIP_HOST_ID_HOSTNAME_LEN_MAX);
+	HIP_IFEL(gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1), -1,
+		 "gethostname failed\n");    
+
+	conf_file = fopen(HIP_CERT_CONF_PATH, "r");
+	if (!conf_file) {
+		HIP_DEBUG("Configuration file did NOT exist creating it and "
+			  "filling it with default information\n");
+		HIP_IFEL(!memset(hit, '\0', sizeof(hit)), -1,
+			  "Failed to memset memory for hit presentation format\n");
+		/* Fetch the first RSA HIT */
+		entry = hip_return_first_rsa();
+		if (entry == NULL) {
+			HIP_DEBUG("Failed to get the first RSA HI");
+			goto out_err;
+		}
+		hip_in6_ntop(&entry->lhi.hit, hit);
+		conf_file = fopen(HIP_CERT_CONF_PATH, "w+");
+		fprintf(conf_file,
+			"# Section containing SPKI related information\n"
+			"#\n"
+			"# hit = what hit is to be used when signing\n"                          
+			"# days = how long is this key valid\n"
+			"\n"
+			"[ hip_spki ]\n"
+			"hit = %s\n"
+			"days = %d\n"
+			"\n"
+			"# Section containing HIP related information\n"
+			"#\n"
+			"# hit = what hit is to be used when signing\n"
+			"# alias = userfriendly name\n"         
+			"# days = how long is this key valid\n"
+			"\n"
+			"[ hip_x509v3 ]\n"
+			"hit = %s\n"
+			"alias = %s\n"
+			"days = %d\n", 
+			hit, HIP_CERT_INIT_DAYS,
+			hit, hostname, HIP_CERT_INIT_DAYS);		
+		fclose(conf_file);
+	} else {
+		HIP_DEBUG("Configuration file existed exiting hip_init_certs");
+	}
+out_err:
+	return err;
+}
+
+struct hip_host_id_entry * hip_return_first_rsa(void) {
+	hip_list_t *curr, *iter;
+	struct hip_host_id_entry *tmp;
+	int err = 0, c;
+	uint16_t algo;
+
+	HIP_READ_LOCK_DB(hip_local_hostid_db);
+
+	list_for_each_safe(curr, iter, hip_local_hostid_db, c) {
+		tmp = list_entry(curr);
+		HIP_DEBUG_HIT("Found HIT", &tmp->lhi.hit);
+		algo = hip_get_host_id_algo(tmp->host_id);
+		HIP_DEBUG("hits algo %d HIP_HI_RSA = %d\n", 
+			  algo, HIP_HI_RSA);
+		if (algo == HIP_HI_RSA) goto out_err;
+	}
+
+out_err:
+	HIP_READ_UNLOCK_DB(hip_local_hostid_db);
+	if (algo == HIP_HI_RSA) return (tmp);
+	return NULL;
+}

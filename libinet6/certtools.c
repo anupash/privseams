@@ -12,9 +12,9 @@
  *
  */
 #include "certtools.h"
-
+ 
 /*******************************************************************************
- * BUILDING FUNCTIONS FOR SPKI                                                 *
+ * FUNCTIONS FOR SPKI                                                          *
  *******************************************************************************/
 
 /**  
@@ -282,6 +282,136 @@ int hip_cert_spki_char2certinfo(char * from, struct hip_cert_spki_info * to) {
 }
 
 /**
+ * Function that sends the given hip_cert_spki_info to the daemon to verification
+ *
+ * @param to_verification is the cert to be verified
+ *
+ * @return 0 if ok and negative if error or unsuccesfull. 
+ *
+ * @note use hip_cert_spki_char2certinfo to build the hip_cert_spki_info
+ */
+int hip_cert_spki_send_to_verification(struct hip_cert_spki_info * to_verification) {
+        int err = 0;
+        struct hip_common * msg;
+        struct hip_cert_spki_info * returned;
+
+        HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, 
+                 "Malloc for msg failed\n");   
+        hip_msg_init(msg);
+        /* build the msg to be sent to the daemon */
+        HIP_IFEL(hip_build_param_cert_spki_info(msg, to_verification), -1,
+                 "Failed to build cert_info\n");         
+        HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_CERT_SPKI_VERIFY, 0), -1, 
+                 "Failed to build user header\n");
+
+        /* send and wait */
+        HIP_DEBUG("Sending request to verify SPKI cert to "
+                  "daemon and waiting for answer\n");	
+        hip_send_recv_daemon_info(msg);        
+        
+        HIP_IFEL(!(returned = hip_get_param(msg, HIP_PARAM_CERT_SPKI_INFO)), 
+                 -1, "No hip_cert_spki_info struct found from daemons msg\n");
+         
+	_HIP_DEBUG("Success = %d (should be 0 if OK\n", returned->success);
+        memcpy(to_verification, returned, sizeof(struct hip_cert_spki_info));
+
+ out_err:
+        if (msg) free(msg);
+        return (err);
+}
+
+/*******************************************************************************
+ * FUNCTIONS FOR x509v3                                                        *
+ *******************************************************************************/
+
+/**
+ * Function that creates the certificate request for a certificate and sends it to the daemon
+ * to get the certificate.
+ *
+ * @param section STACK_OF(CONF_VALUE) pointer that holds the configuration file section
+ * that contains the naming information
+ *
+ * @return STACK_OF(CONF_VALUE) pointer if ok and NULL if error or unsuccesfull. 
+ */
+int hip_cert_x509v3_request(STACK_OF(CONF_VALUE) * section) {
+	int err = 0;
+
+out_err:
+	return err;
+}
+
+/*******************************************************************************
+ * UTILITARY FUNCTIONS                                                         *
+ *******************************************************************************/
+
+/**
+ * Function that reads configuration section from HIP_CERTCONF_PATH,
+ *
+ * @param char pointer pointing to the name of desired section name
+ *
+ * @return STACK_OF(CONF_VALUE) pointer if ok and NULL if error or unsuccesfull. 
+ */
+STACK_OF(CONF_VALUE) * hip_cert_read_conf_section(char * section_name, CONF * conf) {
+	long err = 0;
+	int i;
+	STACK_OF(CONF_VALUE) * sec;
+	CONF_VALUE *item;
+	
+	_HIP_DEBUG("Started to read cert configuration file\n");
+
+	conf = NCONF_new(NCONF_default());
+	HIP_IFEL(!NCONF_load(conf, HIP_CERT_CONF_PATH, &err),
+		 -1, "Error opening the configuration file");
+
+	HIP_IFEL(!(sec = NCONF_get_section(conf, section_name)), -1,
+		 "Error getting the section from configuration file\n");
+
+	for (i = 0; i < sk_CONF_VALUE_num(sec); i++) {
+		item = sk_CONF_VALUE_value(sec, i);
+		_HIP_DEBUG("Sec: %s, Key; %s, Val %s\n", 
+			  item->section, item->name, item->value);
+	}
+out_err:
+	if (err == -1) return NULL;
+	return sec;
+}
+
+/**
+ * Function that opens an configuration file from HIP_CERTCONF_PATH,
+ *
+ * @param void
+ *
+ * @return CONF pointer if ok and NULL if error or unsuccesfull. 
+ */
+CONF * hip_cert_open_conf(void) {
+	long err = 0;
+	int i;
+	CONF *conf = NULL;
+	STACK_OF(CONF_VALUE) * sec;
+	CONF_VALUE *item;
+	
+	_HIP_DEBUG("Started to read cert configuration file\n");
+
+	conf = NCONF_new(NCONF_default());
+	HIP_IFEL(!NCONF_load(conf, HIP_CERT_CONF_PATH, &err),
+		 -1, "Error opening the configuration file");
+out_err:
+	if (err == -1) return NULL;
+	return conf;
+}
+
+/**
+ * Function that opens an configuration file from HIP_CERTCONF_PATH,
+ *
+ * @param CONF pointer to the to be freed configuration 
+ *
+ * @return void 
+ */
+void hip_cert_free_conf(CONF * conf) {
+	if (conf) NCONF_free(conf);
+}
+
+/**
  * Function that wraps regular expression stuff and gives the answer :)
  *
  * @param what is a char pointer to the rule used in the search (POSIX)
@@ -315,44 +445,5 @@ int hip_cert_regex(char * what, char * from, int * start, int * stop) {
         printf("\n");
         */
  out_err:
-        return (err);
-}
-
-/**
- * Function that sends the given hip_cert_spki_info to the daemon to verification
- *
- * @param to_verification is the cert to be verified
- *
- * @return 0 if ok and negative if error or unsuccesfull. 
- *
- * @note use hip_cert_spki_char2certinfo to build the hip_cert_spki_info
- */
-int hip_cert_send_to_verification(struct hip_cert_spki_info * to_verification) {
-        int err = 0;
-        struct hip_common * msg;
-        struct hip_cert_spki_info * returned;
-
-        HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, 
-                 "Malloc for msg failed\n");   
-        hip_msg_init(msg);
-        /* build the msg to be sent to the daemon */
-        HIP_IFEL(hip_build_param_cert_spki_info(msg, to_verification), -1,
-                 "Failed to build cert_info\n");         
-        HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_CERT_SPKI_VERIFY, 0), -1, 
-                 "Failed to build user header\n");
-
-        /* send and wait */
-        HIP_DEBUG("Sending request to verify SPKI cert to "
-                  "daemon and waiting for answer\n");	
-        hip_send_recv_daemon_info(msg);        
-        
-        HIP_IFEL(!(returned = hip_get_param(msg, HIP_PARAM_CERT_SPKI_INFO)), 
-                 -1, "No hip_cert_spki_info struct found from daemons msg\n");
-         
-	_HIP_DEBUG("Success = %d (should be 0 if OK\n", returned->success);
-        memcpy(to_verification, returned, sizeof(struct hip_cert_spki_info));
-
- out_err:
-        if (msg) free(msg);
         return (err);
 }
