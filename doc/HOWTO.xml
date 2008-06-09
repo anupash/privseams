@@ -2206,8 +2206,7 @@ combo-newgroup=&lt;create new...&gt;
     <title>DNS proxy</title>
     <para>
       In tools directory, there is dnsproxy.py script, which provides DNS
-      proxy functionality. Currently the easiest way to run the dnsproxy is
-      to invoke the run-dnsproxy.sh script in the same directory.
+      proxy functionality. The script has to be started with root priviledges.
     </para>
     <para>
       The DNS proxy can read HIT information from HIP hosts
