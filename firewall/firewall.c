@@ -324,7 +324,6 @@ int firewall_init_rules()
 		/* no need to queue outgoing ICMP, TCP and UDP sent to LSIs as
 		 * this is handled elsewhere */
 
-
 		/* queue incoming ESP over IPv6
 		 * NOTE: add IPv6 UDP encapsulation here */
 		system("ip6tables -I INPUT -p 50 -j QUEUE");
@@ -468,12 +467,11 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 	
 	// add whole packet to context and ip version
 	ctx->ipq_packet = ipq_get_packet(buf);
-	// TODO might there be an error we have to catch?
 	
 	// check if packet is to big for the buffer
 	if (ctx->ipq_packet->data_len > BUFSIZE)
 	{
-		_HIP_DEBUG("packet size greater than buffer size\n");
+		HIP_ERROR("packet size greater than buffer\n");
 		
 		err = 1;
 		goto end_init;
@@ -495,14 +493,14 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 		ip_hdr_len = (iphdr->ip_hl * 4);
 		// needed for opportunistic TCP
 		ctx->ip_hdr_len = ip_hdr_len;
-		_HIP_DEBUG("ip_hdr_len is %d\n", hdr_size);
+		HIP_DEBUG("ip_hdr_len is: %d\n", ip_hdr_len);
 		
 		// add IPv4 addresses
 		IPV4_TO_IPV6_MAP(&ctx->ip_hdr.ipv4->ip_src, &ctx->src);
 		IPV4_TO_IPV6_MAP(&ctx->ip_hdr.ipv4->ip_dst, &ctx->dst);
 		
-		HIP_DEBUG_HIT("packet src", &ctx->src);
-		HIP_DEBUG_HIT("packet dst", &ctx->dst);
+		HIP_DEBUG_HIT("packet src: ", &ctx->src);
+		HIP_DEBUG_HIT("packet dst: ", &ctx->dst);
 		
 		HIP_DEBUG("IPv4 next header protocol number is %d\n", iphdr->ip_p);
 		
