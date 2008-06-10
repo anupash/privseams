@@ -413,14 +413,11 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	HIP_IFEL(hip_hadb_get_peer_addr(entry, &daddr), -1, 
 		 "No preferred IP address for the peer.\n");
 
-	HIP_DEBUG("........................... IN6_IS_ADDR_V4MAPPED(&daddr) == %d \n", IN6_IS_ADDR_V4MAPPED(&daddr));
-
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	// if hitr is hashed null hit, send it as null on the wire
 	if(hit_is_opportunistic_hashed_hit(&i1->hitr))
 		ipv6_addr_copy(&i1->hitr, &in6addr_any);
 	
-	HIP_HEXDUMP("dest hit on wire", &i1->hitr, sizeof(struct in6_addr));
 	HIP_HEXDUMP("daddr", &daddr, sizeof(struct in6_addr));
 #endif // CONFIG_HIP_OPPORTUNISTIC
 

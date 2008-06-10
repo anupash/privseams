@@ -775,8 +775,6 @@ int hip_netdev_trigger_bex(hip_hit_t **src_hit, hip_hit_t **dst_hit,
 
 skip_entry_creation:
 
-	HIP_DEBUG_IN6ADDR(".wewqeqe..................... dst_addr \n", &dst_addr);
-
 	if (entry->state == HIP_STATE_ESTABLISHED) {
 		HIP_DEBUG("Acquire in established state (hard handover?), skip\n");
 		goto out_err;
@@ -843,7 +841,6 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	entry = hip_hadb_find_byhits(src_hit, dst_hit);
 
 	if (entry){
-	        HIP_DEBUG("---------------------- Hola!! entry defined\n");
 	        src_lsi = &(entry->lsi_our);
 	        dst_lsi = &(entry->lsi_peer);
 	}
@@ -912,7 +909,6 @@ int hip_netdev_trigger_bex_msg(struct hip_common *msg) {
 	}
 
 	if (!our_lsi){
-		HIP_DEBUG(">Param is not an lsi!!\n");
 		HIP_IFEL(hip_add_peer_map(msg), -1, "trigger bex\n");
 		/* Fetch the hadb entry just created. */
 		HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(peer_hit)),
@@ -1292,15 +1288,12 @@ int hip_get_default_lsi(struct in_addr *lsi){
         rtnl_tab_initialize("/etc/iproute2/rt_dsfield",rtnl_rtdsfield_tab, 256);
 	memset(&lsi_tmpl, 0, sizeof(lsi_tmpl));
 	set_lsi_prefix(&lsi_tmpl);
-	//inet_aton("192.0.0.10", &lsi_tmpl);
 	IPV4_TO_IPV6_MAP(&lsi_tmpl, &lsi_addr);
 	HIP_IFEL(hip_iproute_get(&hip_nl_route, &lsi_aux6, &lsi_addr, NULL, NULL, family, idxmap),
 		 -1,"Finding ip route failed\n");
 
 	if(IN6_IS_ADDR_V4MAPPED(&lsi_aux6))
 	        IPV6_TO_IPV4_MAP(&lsi_aux6, lsi);
-	HIP_DEBUG_LSI("lsi_prefix to search in route table\n",&lsi_tmpl);
-	HIP_DEBUG_LSI("lsi default\n",lsi);
  out_err:
 	return err;
 }

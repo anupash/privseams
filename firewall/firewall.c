@@ -1009,7 +1009,7 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx) {
 		IPV6_TO_IPV4_MAP(&(ctx->dst),&dst_lsi);
 		if (IS_LSI32(src_lsi.s_addr)){
 			if (is_packet_reinjection(&dst_lsi))
-				verdict = accept_normal_traffic_by_default ? 1 : 0;
+				verdict = 1;
 		      	else{
 			    	hip_fw_handle_outgoing_lsi(ctx->ipq_packet, &src_lsi, &dst_lsi);
 			    	/*Reject the packet*/
