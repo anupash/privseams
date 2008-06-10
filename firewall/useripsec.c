@@ -35,7 +35,7 @@ uint16_t checksum_magic(const struct in6_addr *initiator, const struct in6_addr 
  * they are not set yet */
 int userspace_ipsec_init()
 {	
-	int flags = 0;
+	int on = 1;
 	int err = 0;
 	
 	HIP_DEBUG("\n");
@@ -54,11 +54,9 @@ int userspace_ipsec_init()
 			err = -1;
 			goto out_err;
 		}
-		
 		// this option allows us to add the IP header ourselves
-		flags = 1;
-		if (setsockopt(raw_sock_v4, IPPROTO_IP, IP_HDRINCL, (char *)&flags, 
-					sizeof(flags)) < 0)
+		if (setsockopt(raw_sock_v4, IPPROTO_IP, IP_HDRINCL, (char *)&on, 
+					sizeof(on)) < 0)
 		{
 			HIP_DEBUG("*** setsockopt() error for IPv4 raw socket\n");
 
@@ -71,6 +69,15 @@ int userspace_ipsec_init()
 		if (raw_sock_v6 < 0) {
 			HIP_DEBUG("*** ipv6_raw_socket socket() error for raw socket\n");
 			
+			err = 1;
+			goto out_err;
+		}
+		// this option allows us to add the IP header ourselves
+		if (setsockopt(raw_sock_v6, IPPROTO_IPV6, IP_HDRINCL, (char *)&on, 
+					sizeof(on)) < 0)
+		{
+			HIP_DEBUG("*** setsockopt() error for IPv6 raw socket\n");
+
 			err = 1;
 			goto out_err;
 		}

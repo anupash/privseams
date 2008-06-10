@@ -494,6 +494,9 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 		// needed for opportunistic TCP
 		ctx->ip_hdr_len = ip_hdr_len;
 		HIP_DEBUG("ip_hdr_len is: %d\n", ip_hdr_len);
+		HIP_DEBUG("total length: %u\n", iphdr->ip_len);
+		HIP_DEBUG("ttl: %u\n", iphdr->ip_ttl);
+		HIP_DEBUG("packet length (ipq): %u\n", ctx->ipq_packet->data_len);
 		
 		// add IPv4 addresses
 		IPV4_TO_IPV6_MAP(&ctx->ip_hdr.ipv4->ip_src, &ctx->src);
@@ -511,8 +514,7 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 			HIP_DEBUG("plain HIP packet\n");
 			
 			ctx->packet_type = HIP_PACKET;
-			// TODO fix to ip_hdr_len
-			ctx->transport_hdr.hip = (struct hip_common *) (((char *)iphdr) + sizeof(struct ip));
+			ctx->transport_hdr.hip = (struct hip_common *) (((char *)iphdr) + ip_hdr_len);
 			
 			goto end_init;
 			
@@ -522,7 +524,7 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 			HIP_DEBUG("plain ESP packet\n");
 			
 			ctx->packet_type = ESP_PACKET;
-			ctx->transport_hdr.esp = (struct hip_esp *) (((char *)iphdr) + sizeof(struct ip));
+			ctx->transport_hdr.esp = (struct hip_esp *) (((char *)iphdr) + ip_hdr_len);
 			
 			goto end_init;
 			
@@ -532,7 +534,7 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 			HIP_DEBUG("plain TCP packet\n");
 			
 			ctx->packet_type = TCP_PACKET;
-			ctx->transport_hdr.tcp = (struct tcphdr *) (((char *)iphdr) + sizeof(struct ip));
+			ctx->transport_hdr.tcp = (struct tcphdr *) (((char *)iphdr) + ip_hdr_len);
 			
 			goto end_init;
 		} else if (iphdr->ip_p != IPPROTO_UDP)
@@ -563,6 +565,9 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 		// needed for opportunistic TCP
 		ctx->ip_hdr_len = ip_hdr_len;
 		HIP_DEBUG("ip_hdr_len is: %d\n", ip_hdr_len);
+		HIP_DEBUG("payload length: %u\n", ip6_hdr->ip6_plen);
+		HIP_DEBUG("ttl: %u\n", ip6_hdr->ip6_hlim);
+		HIP_DEBUG("packet length (ipq): %u\n", ctx->ipq_packet->data_len);
 		
 		// add IPv6 addresses
 		ipv6_addr_copy(&ctx->src, &ip6_hdr->ip6_src);
@@ -572,10 +577,10 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 		HIP_DEBUG_HIT("packet dst: ", &ctx->dst);
 		
 		HIP_DEBUG("IPv6 next header protocol number is %d\n",
-			  ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt);
+			  ip6_hdr->ip6_nxt);
 		
 		// find out which transport layer protocol is used
-		if(ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt == IPPROTO_HIP)
+		if(ip6_hdr->ip6_nxt == IPPROTO_HIP)
 		{
 			// we have found a plain HIP control packet
 			HIP_DEBUG("plain HIP packet\n");
@@ -585,7 +590,7 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 			
 			goto end_init;
 			
-		} else if (ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt == IPPROTO_ESP)
+		} else if (ip6_hdr->ip6_nxt == IPPROTO_ESP)
 		{
 			// we have found a plain ESP packet
 			HIP_DEBUG("plain ESP packet\n");
@@ -595,7 +600,7 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 			
 			goto end_init;
 			
-		} else if(ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt == IPPROTO_TCP)
+		} else if(ip6_hdr->ip6_nxt == IPPROTO_TCP)
 		{
 			// this might be a TCP packet for opportunistic mode
 			HIP_DEBUG("plain TCP packet\n");
@@ -605,7 +610,7 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 			
 			goto end_init;
 			
-		} else if (ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt != IPPROTO_UDP)
+		} else if (ip6_hdr->ip6_nxt != IPPROTO_UDP)
 		{
 			// if it's not UDP either, it's unsupported
 			HIP_DEBUG("some other packet\n");
@@ -621,7 +626,7 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 		 * 
 		 * NOTE: the length will include optional extension headers 
 		 * -> handle this */
-		udp_len = ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen;
+		udp_len = ip6_hdr->ip6_plen;
 		udphdr = ((struct udphdr *) (((char *) ip6_hdr) + ip_hdr_len));
 		
 		// add udp header to context
