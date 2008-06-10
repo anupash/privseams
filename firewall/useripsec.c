@@ -427,20 +427,19 @@ int hipl_userspace_ipsec_sadb_add_wrapper(struct in6_addr *saddr,
 					      int sport, int dport) 
 {
 	__u16 hit_magic = 0;
-	__u8 *ipsec_e_key; 
-	__u8 *ipsec_a_key;
-	__u32 ipsec_e_keylen = HIP_MAX_KEY_LEN; 
-	__u32 ipsec_a_keylen = HIP_MAX_KEY_LEN;
+	__u8 *ipsec_e_key = NULL; 
+	__u8 *ipsec_a_key = NULL;
+	__u32 ipsec_e_keylen = 0; 
+	__u32 ipsec_a_keylen = 0;
 	/*HIT address,  inner addresses*/
 	struct sockaddr_storage inner_src, inner_dst; 
 	struct sockaddr_storage src, dst; /* IP address*/
 	__u32 ipsec_spi = (__u32) *spi; /*IPsec SPI*/
-	__u32 ipsec_e_type ; /* encryption type */
-	__u32 ipsec_a_type ; /* authentication type is equal to encryption type */
+	__u32 ipsec_e_type = 0; /* encryption type */
+	__u32 ipsec_a_type = 0; /* authentication type is equal to encryption type */
 	int err = 0;
 
 	/* MAP HIP ESP encryption INDEX to SADB encryption INDEX */
-	// TODO check if this is right
 	switch(ealg) {
 		case HIP_ESP_AES_SHA1:
 			ipsec_e_type = SADB_X_EALG_AESCBC;
@@ -455,6 +454,16 @@ int hipl_userspace_ipsec_sadb_add_wrapper(struct in6_addr *saddr,
 			ipsec_a_type = SADB_AALG_SHA1HMAC;
 			break;
 	}
+	
+	ipsec_a_keylen = hip_auth_key_length_esp(ealg);
+	ipsec_e_keylen = hip_enc_key_length(ealg);
+	
+	ipsec_e_key = (__u8 *) enckey->key;
+	ipsec_a_key = (__u8 *) authkey->key;
+	
+	HIP_HEXDUMP("auth key: ", ipsec_a_key, ipsec_a_keylen);
+	HIP_HEXDUMP("enc key: ", ipsec_e_key, ipsec_e_keylen);
+	
 	
 	HIP_DEBUG_HIT("source hit: ", src_hit);
 	HIP_DEBUG_IN6ADDR("source ip: ", saddr);
@@ -475,28 +484,6 @@ int hipl_userspace_ipsec_sadb_add_wrapper(struct in6_addr *saddr,
 	 */
 	hit_magic = checksum_magic(src_hit, dst_hit);
 	
-	
-	/* a_type is for crypto parameters, but type is currently ignored  */
-	/* struct hip_crypto_key {
-	 *  char key[HIP_MAX_KEY_LEN]
-	 *  }
-	 *  HIP_MAX_KEY_LEN 32 // max. draw: 256 bits!
-	 */
-	
-	/* struct hip_crypto_key *enckey ---> __u8 *e_key */
-	/* struct hip_crypto_key *authkey  ---> __u8 *a_key */
-	// TODO check if this is right
-	ipsec_e_key = (__u8 *) enckey->key;
-	ipsec_a_key = (__u8 *) authkey->key;
-	/* 
-	   int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
-	   struct sockaddr *inner_dst, struct sockaddr *src, struct sockaddr *dst,
-	   __u16 port,
-	   __u32 spi, __u8 *e_key, __u32 e_type, __u32 e_keylen, __u8 *a_key,
-	   __u32 a_type, __u32 a_keylen, __u32 lifetime, __u16 hitmagic)
-	   
-	*/
-	
 	/* looking at the usermode code, it may be that the lifetime is stored in
 	 * the hip_sadb_entry but never used. It is supposed to be the value in
 	 * seconds after which the SA expires but I don't think this is
@@ -506,7 +493,6 @@ int hipl_userspace_ipsec_sadb_add_wrapper(struct in6_addr *saddr,
 	 * Here just give a value 100 to lifetime
 	 * */
 	
-	// Tao: check return argument
 	err = hip_sadb_add(TYPE_USERSPACE_IPSEC, IPSEC_MODE, (struct sockaddr *) &inner_src,
 			(struct sockaddr *) &inner_dst, (struct sockaddr *) &src, (struct sockaddr *) &dst,
 			   (__u16) dport, ipsec_spi, ipsec_e_key, ipsec_e_type, ipsec_e_keylen,

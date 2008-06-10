@@ -348,7 +348,7 @@ int hip_esp_encrypt(unsigned char *in, uint8_t in_type, int in_len,
 	{
 		case SADB_EALG_3DESCBC:
 			iv_len = 8;
-			if (!entry->e_key || entry->e_keylen==0) {
+			if (!entry->e_key || entry->e_keylen == 0) {
 				HIP_ERROR("3-DES key missing.\n");
 				
 				err = -1;
@@ -371,7 +371,7 @@ int hip_esp_encrypt(unsigned char *in, uint8_t in_type, int in_len,
 			iv_len = 16;
 			if (!entry->aes_key && entry->e_key) {
 				entry->aes_key = malloc(sizeof(AES_KEY));
-				if (AES_set_encrypt_key(entry->e_key, 8*entry->e_keylen,
+				if (AES_set_encrypt_key(entry->e_key, 8 * entry->e_keylen,
 							entry->aes_key)) {
 					HIP_ERROR("AES key problem!\n");
 					
