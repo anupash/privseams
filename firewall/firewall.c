@@ -511,6 +511,7 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 			HIP_DEBUG("plain HIP packet\n");
 			
 			ctx->packet_type = HIP_PACKET;
+			// TODO fix to ip_hdr_len
 			ctx->transport_hdr.hip = (struct hip_common *) (((char *)iphdr) + sizeof(struct ip));
 			
 			goto end_init;
@@ -557,18 +558,18 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 		// add pointer to IPv4 header to context
 		ctx->ip_hdr.ipv6 = ip6_hdr;
 		
-		// Ipv6 has fixed header length of 40 bytes
-		ip_hdr_len = 40;
+		// Ipv6 has fixed header length
+		ip_hdr_len = sizeof(struct ip6_hdr);
 		// needed for opportunistic TCP
 		ctx->ip_hdr_len = ip_hdr_len;
-		_HIP_DEBUG("ip_hdr_len is %d\n", ip_hdr_len);
+		HIP_DEBUG("ip_hdr_len is: %d\n", ip_hdr_len);
 		
 		// add IPv6 addresses
 		ipv6_addr_copy(&ctx->src, &ip6_hdr->ip6_src);
 		ipv6_addr_copy(&ctx->dst, &ip6_hdr->ip6_dst);
 		
-		HIP_DEBUG_HIT("packet src", &ctx->src);
-		HIP_DEBUG_HIT("packet dst", &ctx->dst);
+		HIP_DEBUG_HIT("packet src: ", &ctx->src);
+		HIP_DEBUG_HIT("packet dst: ", &ctx->dst);
 		
 		HIP_DEBUG("IPv6 next header protocol number is %d\n",
 			  ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt);
