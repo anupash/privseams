@@ -1934,3 +1934,19 @@ int hip_string_to_lowercase(char *to, const char *from, const size_t count)
 
 	return 0;
 }
+
+int hip_string_is_digit(const char *string)
+{
+	if(string == NULL)
+		return -1;
+	
+	int i = 0;
+	
+	while(string[i] != '\0') {
+		if(!isdigit(string[i])) {
+			return -1;
+		}
+		i++;
+	}
+	return 0;
+}

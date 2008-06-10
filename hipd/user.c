@@ -644,7 +644,7 @@ int hip_handle_user_msg(struct hip_common *msg,
 		}
 
 		/* Send a I1 packet to RVS. */
-		/** @todo Not filtering I1, when handling RVS message! */
+		/** @todo Not filtering I1, when handling server message! */
 		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
 			 -1, "Error on sending I1 packet to the server.\n");
 		break;

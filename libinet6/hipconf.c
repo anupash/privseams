@@ -296,8 +296,8 @@ int hip_conf_get_type_arg(int action)
 	case ACTION_RUN:
 	case ACTION_LOAD:
 	case ACTION_DHT:
-    case ACTION_OPENDHT:
-    case ACTION_LOCATOR:
+	case ACTION_OPENDHT:
+	case ACTION_LOCATOR:
 	case ACTION_RST:
 	case ACTION_BOS:
 	case ACTION_HANDOFF:
@@ -323,13 +323,21 @@ int hip_conf_get_type_arg(int action)
 }
 
 /**
- * Handles the hipconf commands where the type is @c server.
- *  
- * Create a message to the kernel module from the function parameters @c msg,
- * @c action and @c opt[].
+ * Handles the hipconf commands where the type is @c server. Creates a user
+ * message from the function parameters @c msg, @c action and @c opt[]. The
+ * command line that this function parses is of type:
+ * <code>tools/hipconf <b>add</b> server &lt;SERVICES&gt; &lt;SERVER HIT&gt;
+ * &lt;SERVER IP ADDRESS&gt; &lt;LIFETIME&gt;</code> or
+ * <code>tools/hipconf <b>del</b> server &lt;SERVICES&gt; &lt;SERVER HIT&gt;
+ * &lt;SERVER IP ADDRESS&gt;</code>, where <code>&lt;SERVICES&gt;</code> is a list of
+ * the services to which we want to register or cancel or registration. The
+ * list can consist of any number of the strings @c rvs, @c relay or @c escrow,
+ * or any number of service type numbers between 0 and 255. The list can be a
+ * combination of these with repetitions allowed. At least one string or
+ * service type number must be provided.
  * 
- * @param msg    a pointer to the buffer where the message for kernel will
- *               be written.
+ * @param msg    a pointer to a target buffer where the message for HIP daemon
+ *               is to put
  * @param action the numeric action identifier for the action to be performed.
  * @param opt    an array of pointers to the command line arguments after
  *               the action and type.
@@ -338,10 +346,10 @@ int hip_conf_get_type_arg(int action)
  * @note         Currently only action @c add is supported.
  * @todo         If the current machine has more than one IP address
  *               there should be a way to choose which of the addresses
- *               to register to the rendezvous server.
+ *               to register to the server.
  * @todo         There are currently four different HITs at the @c dummy0
  *               interface. There should be a way to choose which of the HITs
- *               to register to the rendezvous server.
+ *               to register to the server.
  */ 
 int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[], 
 			   int optc)
@@ -349,72 +357,102 @@ int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[],
 	hip_hit_t hit;
 	in6_addr_t ipv6;
 	int err = 0, seconds = 0, i = 0, number_of_regtypes = 0, reg_type = 0;
-	uint8_t lifetime = 0, reg_types[optc - 3];
+	int index_of_hit = 0, index_of_ip = 0;
+	uint8_t lifetime = 0, *reg_types = NULL;
 	time_t seconds_from_lifetime = 0;
 	char lowercase[30];
-	
+		
 	HIP_DEBUG("hip_conf_handle_server() invoked.\n");
 
 	HIP_DEBUG("Option count: %d.\n", optc);
 	
-	if(action != ACTION_ADD) {
-		HIP_ERROR("Only action \"add\" is supported for \"server\".\n");
+	if(action != ACTION_ADD && action != ACTION_DEL) {
+		HIP_ERROR("Only actions \"add\" and \"del\" are supported for "\
+			  "\"server\".\n");
 		err = -1;
 		goto out_err;
-	} else if (optc < 4) {
-		HIP_ERROR("Missing arguments.\n");
-		err = -1;
-		goto out_err;
-	} /* Check the HIT value. */
- 	else if(inet_pton(AF_INET6, opt[optc - 3], &hit) <= 0) {
-		HIP_ERROR("'%s' is not a valid HIT.\n", opt[optc - 3]);
+	} else if (action == ACTION_ADD) {
+		if(optc < 4) {
+			HIP_ERROR("Missing arguments.\n");
+			err = -1;
+			goto out_err;
+		}
+		number_of_regtypes = optc - 3;
+		index_of_hit = optc - 3;
+		index_of_ip  = optc - 2;
+		
+		/* The last commandline argument has the lifetime. */
+		HIP_IFEL(hip_string_is_digit(opt[optc - 1]), -1,
+			 "Invalid lifetime value \"%s\" given.\n"\
+			 "Please give a lifetime value between 1 and "\
+			 "15384774 seconds.\n", opt[optc - 1]);
+
+		seconds = atoi(opt[optc - 1]);
+		
+		if(seconds <= 0 || seconds > 15384774) {
+			HIP_ERROR("Invalid lifetime value \"%s\" given.\n"\
+				  "Please give a lifetime value between 1 and "\
+				  "15384774 seconds.\n", opt[optc - 1]);
+			goto out_err;
+		}
+		
+		HIP_IFEL(hip_get_lifetime_value(seconds, &lifetime), -1,
+			 "Unable to convert seconds to a lifetime value.\n");
+		
+		hip_get_lifetime_seconds(lifetime, &seconds_from_lifetime);
+		
+	} else if (action == ACTION_DEL) {
+		if (optc < 3) {
+			HIP_ERROR("Missing arguments.\n");
+			err = -1;
+			goto out_err;
+		}
+		HIP_DEBUG("PING.\n");
+		number_of_regtypes = optc - 2;
+		index_of_hit = optc - 2;
+		index_of_ip  = optc - 1;
+	}
+	/* Check the HIT value. */
+ 	if(inet_pton(AF_INET6, opt[index_of_hit], &hit) <= 0) {
+		HIP_ERROR("'%s' is not a valid HIT.\n", opt[index_of_hit]);
 		err = -1;
 		goto out_err;
 	} /* Check the IPv4 or IPV6 value. */
-	else if(inet_pton(AF_INET6, opt[optc - 2], &ipv6) <= 0) {
+	else if(inet_pton(AF_INET6, opt[index_of_ip], &ipv6) <= 0) {
 		struct in_addr ipv4;
-		if(inet_pton(AF_INET, opt[optc - 2], &ipv4) <= 0) {
+		if(inet_pton(AF_INET, opt[index_of_ip], &ipv4) <= 0) {
 			HIP_ERROR("'%s' is not a valid IPv4 or IPv6 address.\n",
-				  opt[optc - 2]);
+				  opt[index_of_ip]);
 			err = -1;
 			goto out_err;
 		} else {
 			IPV4_TO_IPV6_MAP(&ipv4, &ipv6);
 		}
 	} 
-	
-	/* The last commandline argument has the lifetime. */
-	seconds = atoi(opt[optc - 1]);
-	
-	if(seconds <= 0 || seconds > 15384774) {
-		HIP_ERROR("Invalid lifetime value \"%s\" given.\n"\
-			  "Please give a lifetime value between 1 and "\
-			  "15384774 seconds.\n", opt[optc - 1]);
+	HIP_DEBUG("PONG, num of reg_types: %i.\n", number_of_regtypes);
+
+	reg_types = malloc(number_of_regtypes * sizeof(uint8_t));
+	if(reg_types == NULL) {
+		err = -1;
+		HIP_ERROR("Unable to allocate memory for registration "\
+			  "types.\n");
 		goto out_err;
 	}
-
-	HIP_IFEL(hip_get_lifetime_value(seconds, &lifetime), -1,
-		 "Unable to convert seconds to a lifetime value.\n");
-
-	hip_get_lifetime_seconds(lifetime, &seconds_from_lifetime);
-
+	
 	/* Every commandline argument in opt[] from '0' to 'optc - 4' should
 	   be either one of the predefined strings or a number between
 	   0 and 255 (inclusive). */
-	number_of_regtypes = optc - 3; 
-
 	for(; i < number_of_regtypes; i++) {
 		if(strlen(opt[i]) > 30) {
-			HIP_ERROR("'%s' is not a valid service name.\n");
+			HIP_ERROR("'%s' is not a valid service name.\n", opt[i]);
 			err = -1;
 			goto out_err;
 		}
 		
 		hip_string_to_lowercase(lowercase, opt[i], strlen(opt[i]) + 1);
-		
 		if(strcmp("rvs", lowercase) == 0){
 			reg_types[i] = HIP_SERVICE_RENDEZVOUS;
-		} else if(strcmp("hiprelay", lowercase) == 0) {
+		} else if(strcmp("relay", lowercase) == 0) {
 			reg_types[i] = HIP_SERVICE_RELAY;
 		} else if(strcmp("escrow", lowercase) == 0) {
 			reg_types[i] = HIP_SERVICE_ESCROW;
@@ -424,7 +462,6 @@ int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[],
 			reg_types[i] = 0;
 		} else {
 			reg_type = atoi(lowercase);
-			
 			if(reg_type <= 0 || reg_type > 255) {
 				HIP_ERROR("'%s' is not a valid service name "\
 					  "or service number.\n", opt[i]);
@@ -458,11 +495,25 @@ int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[],
 	
 	HIP_DUMP_MSG(msg);
 
-	HIP_INFO("\tRequesting %s service for %d seconds (lifetime 0x%x) from\n"\
-		 "\tHIT %s located at\n\tIP address %s.\n", opt[0], 
-		 seconds_from_lifetime, lifetime, opt[optc - 3], opt[optc - 2]);
-	
+	if(action == ACTION_ADD) {
+		HIP_INFO("\tRequesting %u service%s for %d seconds "
+			 "(lifetime 0x%x) from\n\tHIT %s located at\n\tIP "\
+			 "address %s.\n", number_of_regtypes,
+			 (number_of_regtypes > 1) ? "s" : "",
+			 seconds_from_lifetime, lifetime, opt[index_of_hit],
+			 opt[index_of_ip]);
+	} else {
+		HIP_INFO("\tRequesting the cancellation of %u service%s from\n"\
+			 "\tHIT %s located at\n\tIP address %s.\n",
+			 number_of_regtypes,
+			 (number_of_regtypes > 1) ? "s" : "", opt[index_of_hit],
+			 opt[index_of_ip]);
+		
+	}
  out_err:
+	if(reg_types != NULL)
+		free(reg_types);
+
 	return err;
 }
 

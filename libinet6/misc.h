@@ -126,4 +126,13 @@ int hip_create_lock_file(char *filename, int killold);
  */ 
 int hip_string_to_lowercase(char *to, const char *from, const size_t count);
 
+/**
+ * Checks whether a string consists only of digits (isdigit()).
+ *
+ * @param  string the string to check
+ * @return        -1 if @c string is NULL or if the string has characters other
+ *                than digits, zero otherwise.
+ */ 
+int hip_string_is_digit(const char *string);
+
 #endif /* HIP_MISC_H */
