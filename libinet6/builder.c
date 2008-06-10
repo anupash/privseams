@@ -1022,7 +1022,7 @@ char* hip_message_type_name(const uint8_t msg_type){
 	case SO_HIP_OFFER_RVS: return "SO_HIP_OFFER_RVS";
 	case SO_HIP_CANCEL_RVS: return "SO_HIP_CANCEL_RVS";
 	case SO_HIP_REINIT_RVS: return "SO_HIP_REINIT_RVS";
-	case SO_HIP_ADD_SERVER: return "SO_HIP_ADD_SERVER";
+	case SO_HIP_ADD_DEL_SERVER: return "SO_HIP_ADD_DEL_SERVER";
 	case SO_HIP_DEL_RVS: return "SO_HIP_DEL_RVS";
 	case SO_HIP_OFFER_HIPRELAY: return "SO_HIP_OFFER_HIPRELAY";
 	case SO_HIP_CANCEL_HIPRELAY: return "SO_HIP_CANCEL_HIPRELAY";

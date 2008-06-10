@@ -376,7 +376,6 @@ int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
  */ 
 int hip_del_registration_server(hip_ha_t *entry, uint8_t *reg_types,
 				int type_count, uint8_t accepted_requests[],
-				uint8_t accepted_lifetimes[],
 				int *accepted_count, uint8_t refused_requests[],
 				uint8_t failure_types[], int *refused_count);
 

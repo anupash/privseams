@@ -549,13 +549,14 @@ int hip_handle_user_msg(struct hip_common *msg,
 		break;
 #endif /* CONFIG_HIP_ESCROW */
 #ifdef CONFIG_HIP_RVS
-	case SO_HIP_ADD_SERVER:
+	case SO_HIP_ADD_DEL_SERVER:
 	{
 		/* RFC 5203 service registration. The requester, i.e. the client
 		   of the server handles this message. Message indicates that
-		   the current machine wants to register to a server for
-		   additional services. */
-		HIP_DEBUG("Handling ADD SERVER user message.\n");
+		   the hip daemon wants either to register to a server for
+		   additional services or it wants to cancel a registration.
+		   Cancellation is indentified by a zero lifetime*/
+		HIP_DEBUG("Handling ADD DEL SERVER user message.\n");
 
 		struct hip_reg_request *reg_req = NULL;
 		hip_pending_request_t *pending_req = NULL;

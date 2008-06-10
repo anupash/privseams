@@ -110,9 +110,11 @@
 #define SO_HIP_CANCEL_RVS                       102
 /** Socket option for the server to reinit the RVS service. (server side) */
 #define SO_HIP_REINIT_RVS                       103
-/** Socket option to ask for the RVS service, i.e.\ send REG_REQUEST parameter
-    to the server. (client side) */
-#define SO_HIP_ADD_SERVER			        104
+/**
+ * Socket option to ask for additional services or service cancellation from a
+ * server, i.e.\ to send a REG_REQUEST parameter to the server. (client side)
+ */
+#define SO_HIP_ADD_DEL_SERVER                   104
 /** Socket option to ask for cancellation of the RVS service, i.e.\ send
     REG_REQUEST parameter with zero lifetime to the server. (client side) */
 #define SO_HIP_DEL_RVS                          105

@@ -386,13 +386,19 @@ int hip_handle_param_rinfo(hip_ha_t *entry, hip_common_t *source_msg,
 			i = 0;
 			hip_get_pending_requests(entry, requests);
 			
-			/* Check that the requested lifetime falls between the
-			   offered lifetime boundaries. */
-			valid_lifetime = MIN(requests[0]->lifetime,
-					     reg_info->max_lifetime);
-			valid_lifetime = MAX(valid_lifetime,
-					     reg_info->min_lifetime);
-			
+			/* If we have requested for a cancellation of a service
+			   we use lifetime of zero. Otherwise we must check
+			   that the requested lifetime falls between the offered
+			   lifetime boundaries. */
+			if(requests[0]->lifetime == 0)
+				valid_lifetime = 0;
+			else {
+				valid_lifetime = MIN(requests[0]->lifetime,
+						     reg_info->max_lifetime);
+				valid_lifetime = MAX(valid_lifetime,
+						     reg_info->min_lifetime);
+			}
+
 			/* Copy the Reg Types to an array. Outer loop for the
 			   services we have requested, inner loop for the
 			   services the server offers. */
@@ -537,7 +543,6 @@ int hip_handle_param_rrq(hip_ha_t *entry, hip_common_t *source_msg,
 	
 	if(reg_request == NULL) {
 		err = -1;
-		_HIP_DEBUG("No REG_REQUEST parameter found.\n");
 		/* Have to use return instead of 'goto out_err' because of
 		   the arrays initialised later. Otherwise this won't compile:
 		   error: jump into scope of identifier with variably modified
@@ -573,11 +578,11 @@ int hip_handle_param_rrq(hip_ha_t *entry, hip_common_t *source_msg,
 	uint8_t accepted_requests[type_count], accepted_lifetimes[type_count];
 	uint8_t refused_requests[type_count], failure_types[type_count];
 	
-	memset(accepted_requests, '0', sizeof(accepted_requests));
-	memset(accepted_lifetimes, '0', sizeof(accepted_lifetimes));
-	memset(refused_requests, '0', sizeof(refused_requests));
-	memset(failure_types, '0', sizeof(failure_types));
-	
+	memset(accepted_requests, 0, sizeof(accepted_requests));
+	memset(accepted_lifetimes, 0, sizeof(accepted_lifetimes));
+	memset(refused_requests, 0, sizeof(refused_requests));
+	memset(failure_types, 0, sizeof(failure_types));
+
 	HIP_DEBUG("REG_REQUEST lifetime: 0x%x, number of types: %d.\n",
 		  reg_request->lifetime, type_count);
 
@@ -585,8 +590,8 @@ int hip_handle_param_rrq(hip_ha_t *entry, hip_common_t *source_msg,
 		HIP_DEBUG("Client is cancelling registration.\n");
 		hip_del_registration_server(
 			entry, reg_types, type_count, accepted_requests,
-			accepted_lifetimes, &accepted_count, refused_requests,
-			failure_types, &refused_count);
+			&accepted_count, refused_requests, failure_types,
+			&refused_count);
 	} else {
 		HIP_DEBUG("Client is registrating for new services.\n");
 		hip_add_registration_server(
@@ -776,7 +781,6 @@ int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
 				int *accepted_count, uint8_t refused_requests[],
 				uint8_t failure_types[], int *refused_count)
 {
-	
 	int err = 0, i = 0;
 	hip_relrec_t dummy, *fetch_record = NULL, *new_record = NULL;
 	uint8_t granted_lifetime = 0;
@@ -796,10 +800,13 @@ int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
 			hip_rvs_validate_lifetime(lifetime, &granted_lifetime);
 
 			fetch_record = hip_relht_get(&dummy);
-			/* Check if we already have an relay record for the
-			   given HIT. Note that the fetched record type does not
+			/* Check that
+			   a) the rvs/relay is ON;
+			   b) there already is no relay record for the given
+			   HIT. Note that the fetched record type does not
 			   matter, since the relay and RVS types cannot co-exist
-			   for a single entry. */
+			   for a single entry;
+			   c) the client is whitelisted if the whitelist is on. */
 			if(hip_relay_get_status() == HIP_RELAY_OFF) {
 				HIP_DEBUG("RVS/Relay is not ON.\n");
 				refused_requests[*refused_count] = reg_types[i];
@@ -906,12 +913,111 @@ int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
 
 int hip_del_registration_server(hip_ha_t *entry, uint8_t *reg_types,
 				int type_count, uint8_t accepted_requests[],
-				uint8_t accepted_lifetimes[],
 				int *accepted_count, uint8_t refused_requests[],
 				uint8_t failure_types[], int *refused_count)
 {
-	/** @todo Implement. */
-	return 0;
+	int err = 0, i = 0;
+	hip_relrec_t dummy, *fetch_record = NULL, *new_record = NULL;
+	
+	memcpy(&(dummy.hit_r), &(entry->hit_peer), sizeof(entry->hit_peer));
+	
+	/* Loop through all registrations types in reg_types. This loop calls
+	   the actual registration functions. */
+	for(; i < type_count; i++) {
+
+		switch(reg_types[i]) {
+		case HIP_SERVICE_RENDEZVOUS:
+			HIP_DEBUG("Client is cancelling registration to "
+				  "rendezvous service.\n");
+			refused_requests[*refused_count] = reg_types[i];
+			failure_types[*refused_count] =
+				HIP_REG_TRANSIENT_CONDITIONS;
+			(*refused_count)++;
+
+			break;
+		case HIP_SERVICE_RELAY:
+			HIP_DEBUG("Client is cancelling registration to "
+				  "relay service.\n");
+
+			fetch_record = hip_relht_get(&dummy);
+			/* Check that
+			   a) the rvs/relay is ON;
+			   b) there is an relay record to delete for the given
+			   HIT.
+			   c) the fetched record type is correct.
+			   d) the client is whitelisted if the whitelist is on. */
+
+			if(hip_relay_get_status() == HIP_RELAY_OFF) {
+				HIP_DEBUG("RVS/Relay is not ON.\n");
+				refused_requests[*refused_count] = reg_types[i];
+				failure_types[*refused_count] =
+					HIP_REG_TYPE_UNAVAILABLE;
+				(*refused_count)++;
+			} else if(fetch_record == NULL) {
+				HIP_DEBUG("There is no relay record to "\
+					  "cancel.\n");
+				refused_requests[*refused_count] = reg_types[i];
+				failure_types[*refused_count] =
+					HIP_REG_TYPE_UNAVAILABLE;
+				(*refused_count)++;
+			} else if(fetch_record->type != HIP_FULLRELAY) {
+				HIP_DEBUG("The relay record to be cancelled "\
+					  "is of wrong type.\n");
+				refused_requests[*refused_count] = reg_types[i];
+				failure_types[*refused_count] =
+					HIP_REG_TYPE_UNAVAILABLE;
+				(*refused_count)++; 
+			} else if(hip_relwl_get_status() &&
+				  hip_relwl_get(&dummy.hit_r) == NULL) {
+				HIP_DEBUG("Client is not whitelisted.\n");
+				refused_requests[*refused_count] = reg_types[i];
+				failure_types[*refused_count] =
+					HIP_REG_INSUFFICIENT_CREDENTIALS;
+				(*refused_count)++;
+			} else {
+				/* Delete the relay record. */
+				hip_relht_rec_free(&dummy);
+				/* Check that the relay record really got deleted. */
+				if(hip_relht_get(&dummy) == NULL) {
+					accepted_requests[*accepted_count] =
+						reg_types[i];
+					(*accepted_count)++;
+					HIP_DEBUG("Cancellation accepted.\n");
+				} else {
+					refused_requests[*refused_count] =
+						reg_types[i];
+					failure_types[*refused_count] =
+						HIP_REG_TRANSIENT_CONDITIONS;
+					(*refused_count)++;
+					HIP_ERROR("Cancellation refused.\n");
+				}
+			}
+			
+			break;
+		case HIP_SERVICE_ESCROW:
+			HIP_DEBUG("Client is cancelling registration to "
+				  "escrow service.\n");
+			refused_requests[*refused_count] = reg_types[i];
+			failure_types[*refused_count] =
+				HIP_REG_TYPE_UNAVAILABLE;
+			(*refused_count)++;
+
+			break;
+		default:
+			HIP_DEBUG("Client is trying to cancel an unsupported "\
+				  "service.\nCancellation refused.\n");
+			refused_requests[*refused_count] = reg_types[i];
+			failure_types[*refused_count] =
+				HIP_REG_TYPE_UNAVAILABLE;
+			(*refused_count)++;
+			
+			break;
+		}
+	}
+
+ out_err:
+
+	return err;
 }
 
 int hip_add_registration_client(hip_ha_t *entry, uint8_t lifetime,

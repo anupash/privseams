@@ -896,7 +896,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
         HIP_DEBUG("Could not deliver escrow data to server.\n");
     }             
 #endif //CONFIG_HIP_ESCROW
-
+    
     /************ REG_REQUEST ***********/
     /* Check if we have requested any services. The request bits are set in
        user.c. */
@@ -1128,7 +1128,7 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
             HIP_DEBUG("R1 did not have locator\n");
 
 	/* Handle REG_INFO parameter. */
-	hip_handle_param_reg_info(r1, entry);
+	//hip_handle_param_reg_info(r1, entry);
 	
 	/* R1 generation check */
 
