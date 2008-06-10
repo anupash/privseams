@@ -35,8 +35,9 @@
 #include "hip_sadb.h"
 //#include <hip/hip_funcs.h> /* gettimeofday() for win32 */
 #include "win32-pfkeyv2.h"
+#if 0
 #include "hashchain.h"
-
+#endif
 
 /*
  * Globals
@@ -178,11 +179,13 @@ int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
 	entry->dst_addrs = (sockaddr_list*)malloc(sizeof(sockaddr_list));
 	entry->inner_src_addrs = (sockaddr_list*)malloc(sizeof(sockaddr_list));
 	entry->inner_dst_addrs = (sockaddr_list*)malloc(sizeof(sockaddr_list));
+#if 0
 	/* allocate memory for hash chains and anchors */
 	entry->active_hchain = (hash_chain_t*)malloc(sizeof(hash_chain_t));
 	entry->next_hchain = (hash_chain_t*)malloc(sizeof(hash_chain_t));
 	entry->active_anchor = (unsigned char*)malloc(HCHAIN_ELEMENT_LENGTH);
 	entry->next_anchor = (unsigned char*)malloc(HCHAIN_ELEMENT_LENGTH);
+#endif
 	entry->dst_port = port ;
 	entry->usetime_ka.tv_sec = 0;
 	entry->usetime_ka.tv_usec = 0;
@@ -204,9 +207,12 @@ int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
 	entry->replay_map = 0;
 	pthread_mutex_unlock(&entry->rw_lock);
 
+#if 0
 	/* malloc error */
 	if (!entry->src_addrs || !entry->dst_addrs || !entry->a_key || !entry->active_hchain
 			|| !entry->next_hchain || entry->active_anchor || entry->next_anchor)
+#endif
+	if (!entry->src_addrs || !entry->dst_addrs || !entry->a_key)
 		goto hip_sadb_add_error;
 	if ((e_keylen > 0) && !entry->e_key)
 		goto hip_sadb_add_error;
@@ -241,6 +247,7 @@ int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
 		       SALEN(inner_dst));
 	}
 	
+#if 0
 	/* set up both hash chains and anchors for now */
 	// TODO hchains should be taken from the store
 	memcpy(entry->active_hchain, hchain_create(100), sizeof(hash_chain_t));
@@ -268,6 +275,7 @@ int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
 			HCHAIN_ELEMENT_LENGTH); 
 	memcpy(entry->next_anchor, entry->next_hchain->anchor_element->hash,
 			HCHAIN_ELEMENT_LENGTH);
+#endif
 	
 	/* copy keys */
 

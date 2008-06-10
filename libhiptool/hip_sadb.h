@@ -34,7 +34,9 @@
 //#include "utils.h"
 #include <sys/time.h>		/* timeval */
 #include "debug.h"
+#if 0
 #include "hashchain.h"
+#endif
 
 /**** HIPL <-> OpenHIP compatibility defs ****/
 
@@ -85,6 +87,7 @@ typedef struct _hip_sadb_entry
 	 * are used as outer addresses) */
 	sockaddr_list *inner_src_addrs;
 	sockaddr_list *inner_dst_addrs;
+#if 0
 	/* hash chain parameters for this SA used in secure ESP extension */
 	/* for outgoing SA */
 	hash_chain_t *active_hchain;
@@ -93,6 +96,7 @@ typedef struct _hip_sadb_entry
 	int tolerance;
 	unsigned char *active_anchor;
 	unsigned char *next_anchor;
+#endif
 	__u32 mode; 	/* ESP mode :  0-default 1-transport 2-tunnel 3-beet */
 	// TODO add encap_mode (= UDP / TCP)
 	__u16 dst_port;			/* UDP dest. port for encaps. ESP */

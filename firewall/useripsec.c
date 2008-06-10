@@ -9,7 +9,9 @@
 #include "utils.h"
 #include <sys/time.h>		/* timeval */
 #include <asm/types.h>		/* __u16, __u32, etc */
+#if 0
 #include "hashchain.h"
+#endif
 
 #define ESP_PACKET_SIZE 2500
 // this is the maximum buffer-size needed for an userspace ipsec esp packet
