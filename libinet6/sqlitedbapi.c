@@ -7,6 +7,8 @@
  *
  */
 
+#ifdef CONFIG_HIP_AGENT
+
 #include "sqlitedbapi.h"
 
 /**
@@ -199,4 +201,4 @@ int hip_sqlite_delete_from_table(sqlite3 * db, const char *sql) {
         return(err);
 }
 
-
+#endif /* CONFIG_HIP_AGENT */
