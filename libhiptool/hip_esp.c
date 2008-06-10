@@ -26,6 +26,8 @@
 #include "hip_esp.h"
 #include "utils.h"
 
+#define ICV_LENGTH 12
+
 int hip_esp_encrypt(unsigned char *in, uint8_t in_type, int in_len,
 		unsigned char *out, int *out_len, hip_sadb_entry *entry);
 int hip_esp_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8_t *out_type,
@@ -368,9 +370,11 @@ int hip_esp_encrypt(unsigned char *in, uint8_t in_type, int in_len,
 			iv_len = 0;
 			break;
 		case SADB_X_EALG_AESCBC:
-			iv_len = 16;
+			// initalisation vector has the same size as the aes block size
+			iv_len = AES_BLOCK_SIZE;
 			if (!entry->aes_key && entry->e_key) {
 				entry->aes_key = malloc(sizeof(AES_KEY));
+				// needs length of key in bits
 				if (AES_set_encrypt_key(entry->e_key, 8 * entry->e_keylen,
 							entry->aes_key)) {
 					HIP_ERROR("AES key problem!\n");
@@ -521,7 +525,8 @@ int hip_esp_encrypt(unsigned char *in, uint8_t in_type, int in_len,
 			goto out_err;
 	}
 	
-	*out_len += alen;
+	// cut off eventual longer digests
+	*out_len += ICV_LENGTH;
 
   out_err:
 	return err;
@@ -574,7 +579,9 @@ int hip_esp_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8_t *
 		case SADB_AALG_NONE:
 			break;
 		case SADB_AALG_MD5HMAC:
-			alen = MD5_DIGEST_LENGTH;
+			// even if hash digest might be longer, we are only using this much here
+			alen = ICV_LENGTH;
+			//alen = MD5_DIGEST_LENGTH;
 			
 			// length of the authenticated payload, includes ESP header
 			elen = in_len - alen;
@@ -599,7 +606,9 @@ int hip_esp_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8_t *
 			}
 			break;
 		case SADB_AALG_SHA1HMAC:
-			alen = SHA_DIGEST_LENGTH;
+			// even if hash digest might be longer, we are only using this much here
+			alen = ICV_LENGTH;
+			//alen = SHA_DIGEST_LENGTH;
 			
 			// length of the encrypted payload
 			elen = in_len - alen;
@@ -615,7 +624,8 @@ int hip_esp_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8_t *
 				in, elen, hmac_md, &hmac_md_len);
 			
 			// actual auth verification
-			if (memcmp(&in[elen], hmac_md, hmac_md_len) != 0)
+			//if (memcmp(&in[elen], hmac_md, hmac_md_len) != 0)
+			if (memcmp(&in[elen], hmac_md, alen) != 0)
 			{
 				HIP_DEBUG("ESP packet could not be authenticated\n");
 				

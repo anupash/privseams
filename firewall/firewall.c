@@ -494,7 +494,7 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 		// needed for opportunistic TCP
 		ctx->ip_hdr_len = ip_hdr_len;
 		HIP_DEBUG("ip_hdr_len is: %d\n", ip_hdr_len);
-		HIP_DEBUG("total length: %u\n", iphdr->ip_len);
+		HIP_DEBUG("total length: %u\n", ntohs(iphdr->ip_len));
 		HIP_DEBUG("ttl: %u\n", iphdr->ip_ttl);
 		HIP_DEBUG("packet length (ipq): %u\n", ctx->ipq_packet->data_len);
 		
@@ -546,7 +546,7 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 		}
 		
 		// need UDP header to look for encapsulated ESP or STUN
-		udp_len = iphdr->ip_len;
+		udp_len = ntohs(iphdr->ip_len);
 		udphdr = ((struct udphdr *) (((char *) iphdr) + ip_hdr_len));
 		
 		// add UDP header to context
@@ -565,7 +565,7 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 		// needed for opportunistic TCP
 		ctx->ip_hdr_len = ip_hdr_len;
 		HIP_DEBUG("ip_hdr_len is: %d\n", ip_hdr_len);
-		HIP_DEBUG("payload length: %u\n", ip6_hdr->ip6_plen);
+		HIP_DEBUG("payload length: %u\n", ntohs(ip6_hdr->ip6_plen));
 		HIP_DEBUG("ttl: %u\n", ip6_hdr->ip6_hlim);
 		HIP_DEBUG("packet length (ipq): %u\n", ctx->ipq_packet->data_len);
 		
@@ -626,7 +626,7 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 		 * 
 		 * NOTE: the length will include optional extension headers 
 		 * -> handle this */
-		udp_len = ip6_hdr->ip6_plen;
+		udp_len = ntohs(ip6_hdr->ip6_plen);
 		udphdr = ((struct udphdr *) (((char *) ip6_hdr) + ip_hdr_len));
 		
 		// add udp header to context
