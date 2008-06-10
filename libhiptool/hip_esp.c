@@ -898,7 +898,7 @@ void add_udp_header(struct udphdr *udp_hdr, int packet_len, hip_sadb_entry *entr
 		HIP_ERROR("bad UDP dst port number: %u\n", entry->dst_port);
 	}
 	
-	udp_hdr->len = htons((u_int16_t)packet_len);
+	udp_hdr->len = htons((uint16_t)packet_len);
 	
 	// this will create a pseudo header using some information from the ip layer
 	udp_hdr->check = checksum_udp(udp_hdr, src_addr, dst_addr);
@@ -950,21 +950,23 @@ uint16_t checksum_udp(struct udphdr *udp_hdr, struct in6_addr *src_addr,
 {
 	uint16_t checksum = 0;
 	unsigned long sum = 0;
-	int count, length;
+	int count = 0;
 	unsigned short *p; /* 16-bit */
 	pseudo_header pseudo_hdr;
 	struct in_addr src_in_addr;
 	struct in_addr dst_in_addr;
 
-	/* IPv4 checksum based on UDP-- Section 6.1.2 */
+	/* IPv4 checksum based on UDP -- Section 6.1.2 */
 	
 	// setting up pseudo header
 	memset(&pseudo_hdr, 0, sizeof(pseudo_header));
 	IPV6_TO_IPV4_MAP(src_addr, &src_in_addr);
 	IPV6_TO_IPV4_MAP(dst_addr, &dst_in_addr);
 	/* assume host byte order */
-	pseudo_hdr.src_addr = htonl(src_in_addr.s_addr);
-	pseudo_hdr.dst_addr = htonl(dst_in_addr.s_addr);
+	pseudo_hdr.src_addr = src_in_addr.s_addr;
+	pseudo_hdr.dst_addr = dst_in_addr.s_addr;
+	//pseudo_hdr.src_addr = htonl(src_in_addr.s_addr);
+	//pseudo_hdr.dst_addr = htonl(dst_in_addr.s_addr);
 	pseudo_hdr.protocol = IPPROTO_UDP;
 	pseudo_hdr.packet_length = udp_hdr->len;
 
@@ -985,7 +987,7 @@ uint16_t checksum_udp(struct udphdr *udp_hdr, struct in6_addr *src_addr,
     
 	/* one's complement sum 16-bit words of data */
 	/* log_(NORM, "checksumming %d bytes of data.\n", length); */
-	count = length;
+	count = ntohs(udp_hdr->len);
 	p = (unsigned short*) udp_hdr;
 	while (count > 1)  {
 		sum += *p++;

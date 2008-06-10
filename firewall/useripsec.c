@@ -152,7 +152,7 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	struct in6_addr preferred_peer_addr;
 	struct timeval now;
 	// TODO hipd should add this info to the SA entries
-	int udp_encap = 0;
+	int udp_encap = 1;
 	int esp_packet_len = 0;
 	int out_ip_version = 0;
 	int err = 0;
