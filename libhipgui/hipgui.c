@@ -178,7 +178,7 @@ void gui_main(void)
 	gtk_combo_box_append_text(GTK_COMBO_BOX(widget(ID_TWR_RGROUP)), lang_get("combo-newgroup"));
 	gtk_combo_box_append_text(GTK_COMBO_BOX(widget(ID_NH_RGROUP)), lang_get("combo-newgroup"));
 
-	hit_db_enum_locals(local_add, NULL);
+	hit_db_enum_locals(local_add, NULL, NULL);
 	gtk_combo_box_set_active(GTK_COMBO_BOX(widget(ID_TWR_LOCAL)), 0);
 	gtk_combo_box_set_active(GTK_COMBO_BOX(widget(ID_TWG_LOCAL)), 0);
 	gtk_combo_box_set_active(GTK_COMBO_BOX(widget(ID_NG_LOCAL)), 0);

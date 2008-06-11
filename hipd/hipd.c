@@ -115,6 +115,8 @@ void hip_set_opportunistic_tcp_status(struct hip_common *msg)
 
 	type = hip_get_msg_type(msg);
 
+	_HIP_DEBUG("type=%d\n", type);
+
 	bzero(&sock_addr, sizeof(sock_addr));
 	sock_addr.sin6_family = AF_INET6;
 	sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);

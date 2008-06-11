@@ -93,8 +93,9 @@ struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(
 	list_for_each(item, db, c) {
 		id_entry = list_entry(item);
                 
-		HIP_DEBUG("ALGO VALUE :%d, algo value of id entry :%d\n",
+		_HIP_DEBUG("ALGO VALUE :%d, algo value of id entry :%d\n",
 			  algo, hip_get_host_id_algo(id_entry->host_id));
+                _HIP_DEBUG_HIT("Comparing HIT", &id_entry->lhi.hit);
                 
 		if ((hit == NULL || !ipv6_addr_cmp(&id_entry->lhi.hit, hit)) &&
 		    (algo == HIP_ANY_ALGO ||
@@ -603,7 +604,10 @@ static struct hip_host_id *hip_get_rsa_public_key(struct hip_host_id *tmp)
 	/* the secret component of the RSA key is always d+p+q bytes */
 	/* note: it's assumed that RSA key length is 1024 bits */
 
-	tmp->hi_length = htons(ntohs(tmp->hi_length) - (128+64+64));
+	tmp->hi_length = htons(ntohs(tmp->hi_length) - 
+                               (HIP_RSA_PRIVATE_EXPONENT_D_LEN + 
+                                HIP_RSA_SECRET_PRIME_FACTOR_P_LEN +
+                                HIP_RSA_SECRET_PRIME_FACTOR_Q_LEN));	
 
 	_HIP_DEBUG("hi->hi_length=%d\n", htons(tmp->hi_length));
 
@@ -614,10 +618,15 @@ static struct hip_host_id *hip_get_rsa_public_key(struct hip_host_id *tmp)
 	HIP_DEBUG("dilen: %d\n", dilen);
 
 	to = ((char *)(tmp + 1)) - sizeof(struct hip_host_id_key_rdata) + ntohs(tmp->hi_length);
-	from = to + (128+64+64); /* d, p, q*/
+	from = to + (HIP_RSA_PRIVATE_EXPONENT_D_LEN + 
+                     HIP_RSA_SECRET_PRIME_FACTOR_P_LEN +
+                     HIP_RSA_SECRET_PRIME_FACTOR_Q_LEN);
+
 	memmove(to, from, dilen);
 
-	hip_set_param_contents_len(tmp, (len - (128+64+64)));
+	hip_set_param_contents_len(tmp, (len - (HIP_RSA_PRIVATE_EXPONENT_D_LEN + 
+                                                HIP_RSA_SECRET_PRIME_FACTOR_P_LEN +
+                                                HIP_RSA_SECRET_PRIME_FACTOR_Q_LEN)));
 
 	HIP_DEBUG("Host ID len after cut-off: %d\n",
 		  hip_get_param_total_len(tmp));

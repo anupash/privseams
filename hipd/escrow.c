@@ -443,7 +443,7 @@ int hip_kea_add_endpoint(HIP_KEA *kea, HIP_KEA_EP *kea_ep)
 		 "Cannot insert KEA_EP entry with NULL hit\n");
 		 
 	// Create key
-	memcpy(&kea_ep->ep_id.value, &kea_ep->hit.in6_u.u6_addr32, 
+	memcpy(&kea_ep->ep_id.value, &kea_ep->hit.s6_addr32, 
 		   sizeof(struct in6_addr));
 	memcpy(&kea_ep->ep_id.value[4], &kea_ep->spi, sizeof(int));
 	
@@ -514,7 +514,7 @@ HIP_KEA_EP *hip_kea_ep_find(struct in6_addr *hit, uint32_t spi)
 	
 	key = HIP_MALLOC(sizeof(struct hip_kea_ep_id), GFP_KERNEL);
 	
-	memcpy(&key->value, &hit->in6_u.u6_addr32, sizeof(struct in6_addr));
+	memcpy(&key->value, &hit->s6_addr32, sizeof(struct in6_addr));
 	memcpy(&key->value[4], &spi, sizeof(int));
 
 	HIP_HEXDUMP("Searching KEA endpoint with key:", key, 18);
