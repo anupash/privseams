@@ -488,6 +488,10 @@ int hip_update_handle_echo_response(hip_ha_t *entry,
                                     in6_addr_t *src_ip);
 
 /**
+ * @addtogroup receive_functions
+ * @{ 
+ */
+/**
  * Receives an UPDATE packet.
  *
  * This is the initial function which is called when an UPDATE packet is
@@ -507,6 +511,7 @@ int hip_update_handle_echo_response(hip_ha_t *entry,
 int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 		       in6_addr_t *update_daddr, hip_ha_t *entry,
 		       hip_portpair_t *sinfo);
+/* @} */
 
 /**
  * Copies addresses to the inbound SPI.

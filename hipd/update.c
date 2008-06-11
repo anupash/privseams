@@ -1841,8 +1841,7 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 		       in6_addr_t *update_daddr, hip_ha_t *entry,
 		       hip_portpair_t *sinfo)
 {
-	int err = 0, state = 0, has_esp_info = 0, pl = 0;
-	int updating_addresses = 0;
+	int err = 0, has_esp_info = 0, pl = 0, updating_addresses = 0;
 	in6_addr_t *hits = NULL;
 	in6_addr_t *src_ip = NULL , *dst_ip = NULL;
 	struct hip_esp_info *esp_info = NULL;
@@ -1859,13 +1858,30 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
      	
 	HIP_DEBUG("hip_receive_update() invoked.\n");
 	
+        /* RFC 5201: If there is no corresponding HIP association, the
+	 * implementation MAY reply with an ICMP Parameter Problem.
+	 *
+	 * An UPDATE packet is only accepted if the state is ESTABLISHED.
+	 * The HIP state machine defines a move from state R2-SENT to
+	 * ESTABLISHED for 'data or EC timeout'. Since we (probably) have no
+	 * fancy timeout stuff implemented, we just move from R2-SENT to
+	 * ESTABLISHED incase of an received UPDATE.
+	 */
 	if(entry == NULL) {
 		HIP_ERROR("No host association database entry found.\n");
 		err = -1;
 		goto out_err;
+	} else if(entry->state == HIP_STATE_R2_SENT) {
+		entry->state = HIP_STATE_ESTABLISHED;
+		HIP_DEBUG("Received UPDATE in state %s, moving to "\
+			  "ESTABLISHED.\n", hip_state_str(entry->state));
+	} else if(entry->state != HIP_STATE_ESTABLISHED) {
+		HIP_ERROR("Received UPDATE in illegal state %s.\n",
+			  hip_state_str(entry->state));
+		err = -EPROTO;
+		goto out_err;
 	}
-	
-	
+
 	esp_info = hip_get_param(msg, HIP_PARAM_ESP_INFO);
 	seq = hip_get_param(msg, HIP_PARAM_SEQ);
 	ack = hip_get_param(msg, HIP_PARAM_ACK);
@@ -1881,39 +1897,15 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 	src_ip = update_saddr;
 	dst_ip = update_daddr;
 	hits = &msg->hits;
-	state = entry->state;
 
-	
-
-	/* An UPDATE packet is only accepted if the state is R2-SENT or
-	 * ESTABLISHED. 
-	 */
-	
-	if(state == HIP_STATE_R2_SENT) {
-		state = entry->state = HIP_STATE_ESTABLISHED;
-		HIP_DEBUG("Received UPDATE in state %s, moving to "\
-			  "ESTABLISHED.\n", hip_state_str(state));
-	} else if(state != HIP_STATE_ESTABLISHED) {
-		HIP_ERROR("Received UPDATE in illegal state %s.\n",
-			  hip_state_str(state));
-		err = -EPROTO;
-		goto out_err;
-	}
-	
 	if (esp_info != NULL){
 		HIP_DEBUG("ESP INFO parameter found with new SPI %u.\n",
 			  ntohl(esp_info->new_spi));
 		has_esp_info = 1;
 	}
-	if (locator != NULL) {
-		HIP_DEBUG("LOCATOR parameter found.\n");
-	}
-	if (echo != NULL) {
-		HIP_DEBUG("ECHO_REQUEST parameter found.\n");
-	}
-	if (echo_response != NULL) {
-		HIP_DEBUG("ECHO_RESPONSE parameter found.\n");
-	}
+	
+	/* RFC 5201: If both ACK and SEQ parameters are present, first ACK is
+	   processed, then _the rest of the packet_ is processed as with SEQ. */
 	if (ack != NULL) {
 		HIP_DEBUG("ACK parameter found with peer Update ID %u.\n",
 			  ntohl(ack->peer_update_id));
@@ -1927,17 +1919,16 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 			 "Error when handling parameter SEQ.\n");
 	}
 	
-	/* base-05 Sec 6.12.1.2 6.12.2.2 The system MUST verify the 
-	 * HMAC in the UPDATE packet.If the verification fails, 
-	 * the packet MUST be dropped. */
+	/* RFC 5201: The system MUST verify the HMAC in the UPDATE packet. If
+	   the verification fails, the packet MUST be dropped. */
 	HIP_IFEL(hip_verify_packet_hmac(msg, &entry->hip_hmac_in), -1, 
-		 "HMAC validation on UPDATE failed\n");
+		 "HMAC validation on UPDATE failed.\n");
 
-	/* base-05 Sec 6.12.1.3 6.12.2.3. The system MAY verify 
-	 * the SIGNATURE in the UPDATE packet. If the verification fails, 
-	 * the packet SHOULD be dropped and an error message logged. */
+	/* RFC 5201: The system MAY verify the SIGNATURE in the UPDATE packet.
+	   If the verification fails, the packet SHOULD be dropped and an error
+	   message logged. */
 	HIP_IFEL(entry->verify(entry->peer_pub, msg), -1, 
-		 "Verification of UPDATE signature failed\n");
+		 "Verification of UPDATE signature failed.\n");
  	
 	/* Node moves within public Internet or from behind a NAT to public
 	   Internet. */
@@ -1958,6 +1949,16 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 		hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
 		ipv6_addr_copy(&entry->local_address, dst_ip);
 		ipv6_addr_copy(&entry->preferred_address, src_ip);
+	}
+	
+	if (locator != NULL) {
+		HIP_DEBUG("LOCATOR parameter found.\n");
+	}
+	if (echo != NULL) {
+		HIP_DEBUG("ECHO_REQUEST parameter found.\n");
+	}
+	if (echo_response != NULL) {
+		HIP_DEBUG("ECHO_RESPONSE parameter found.\n");
 	}
 	
 	if(esp_info)
