@@ -101,6 +101,7 @@ typedef struct _hip_sadb_entry
 	// TODO add encap_mode (= UDP / TCP)
 	__u16 src_port;
 	__u16 dst_port;			/* UDP dest. port for encaps. ESP */
+	int encap_mode;			/* 0 - none, 1 - udp
 	struct timeval usetime_ka;  /* last used timestamp, incl keep-alives */
 	struct sockaddr_storage lsi;	/* LSI 				*/
 	struct sockaddr_storage lsi6;	/* IPv6 LSI (peer HIT)		*/
@@ -169,7 +170,7 @@ int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
     struct sockaddr *inner_dst, struct sockaddr *src, struct sockaddr *dst, __u16 sport,
     __u16 dport, int direction,
     __u32 spi, __u8 *e_key, __u32 e_type, __u32 e_keylen, __u8 *a_key,
-    __u32 a_type, __u32 a_keylen, __u32 lifetime, __u16 hitmagic);
+    __u32 a_type, __u32 a_keylen, __u32 lifetime, __u16 hitmagic, int encap_mode);
 int hip_sadb_delete(__u32 type, struct sockaddr *src, struct sockaddr *dst,
     __u32 spi);
 void hip_remove_expired_lsi_entries();

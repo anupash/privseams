@@ -53,7 +53,7 @@ uint16_t checksum_udp(struct udphdr *udp_hdr, struct in6_addr *src_addr,
 /* - encrypt payload
  * - set up other headers */
 int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
-		int udp_encap, struct timeval *now, struct in6_addr *preferred_local_addr,
+		int udp_encap, struct in6_addr *preferred_local_addr,
 		struct in6_addr *preferred_peer_addr, unsigned char *esp_packet, int *esp_packet_len)
 {
 	struct ip *out_ip_hdr = NULL;
@@ -80,7 +80,7 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 		next_hdr_offset = sizeof(struct ip);
 		
 		// check whether to use UDP encapsulation or not
-		if (udp_encap)
+		if (entry->encap_mode == 1)
 		{
 			out_udp_hdr = (struct udphdr *) (esp_packet + next_hdr_offset);
 			next_hdr_offset += sizeof(struct udphdr);
@@ -171,7 +171,7 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 #endif
 
 		// finally we have all the information to set up the missing headers
-		if (udp_encap) {
+		if (entry->encap_mode == 1) {
 			// the length field covers everything starting with UDP header
 			add_udp_header(out_udp_hdr, *esp_packet_len - sizeof(struct ip), entry,
 					preferred_local_addr, preferred_peer_addr);
@@ -242,7 +242,7 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 		
 		// now we know the packet length
 		add_ipv6_header(out_ip6_hdr, preferred_local_addr, preferred_peer_addr,
-							*esp_packet_len, IPPROTO_UDP);
+							*esp_packet_len, IPPROTO_ESP);
 	}
 	
   out_err:

@@ -151,8 +151,6 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	struct in6_addr preferred_local_addr;
 	struct in6_addr preferred_peer_addr;
 	struct timeval now;
-	// TODO hipd should add this info to the SA entries
-	int udp_encap = 1;
 	int esp_packet_len = 0;
 	int out_ip_version = 0;
 	int err = 0;
@@ -240,8 +238,7 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	}
 		
 	// encrypt transport layer and create new packet
-	HIP_IFEL(hip_esp_output(ctx, entry, udp_encap, &now,
-			&preferred_local_addr, &preferred_peer_addr,
+	HIP_IFEL(hip_esp_output(ctx, entry, &preferred_local_addr, &preferred_peer_addr,
 			esp_packet, &esp_packet_len), 1, "failed to create ESP packet");
 
 	// reinsert the esp packet into the network stack
@@ -444,6 +441,7 @@ int hipl_userspace_ipsec_sadb_add_wrapper(struct in6_addr *saddr,
 	__u32 ipsec_spi = (__u32) *spi; /*IPsec SPI*/
 	__u32 ipsec_e_type = 0; /* encryption type */
 	__u32 ipsec_a_type = 0; /* authentication type is equal to encryption type */
+	int encap_mode = 0; /* 0 - none, 1 - udp
 	int err = 0;
 
 	/* MAP HIP ESP encryption INDEX to SADB encryption INDEX */
@@ -483,6 +481,11 @@ int hipl_userspace_ipsec_sadb_add_wrapper(struct in6_addr *saddr,
 	hip_addr_to_sockaddr(src_hit, &inner_src); /* source HIT conversion */
 	hip_addr_to_sockaddr(dst_hit, &inner_dst); /* destination HIT conversion */
 	
+	/* if one of the ports is not 0, we can assume that the bex was done
+	 * with udp encap */
+	if (sport != 0 || dport != 0)
+		encap_mode = 1;
+	
 	/* hit_magic is the 16-bit sum of the bytes of both HITs. 
 	 * the checksum is calculated as other Internet checksum, according to 
 	 * the HIP spec this is the sum of 16-bit words from the input data a 
@@ -502,7 +505,7 @@ int hipl_userspace_ipsec_sadb_add_wrapper(struct in6_addr *saddr,
 	err = hip_sadb_add(TYPE_USERSPACE_IPSEC, IPSEC_MODE, (struct sockaddr *) &inner_src,
 			(struct sockaddr *) &inner_dst, (struct sockaddr *) &src, (struct sockaddr *) &dst,
 			(__u16) sport, (__u16) dport, direction, ipsec_spi, ipsec_e_key, ipsec_e_type,
-			ipsec_e_keylen, ipsec_a_key, ipsec_a_type, ipsec_a_keylen, 100 , hit_magic);
+			ipsec_e_keylen, ipsec_a_key, ipsec_a_type, ipsec_a_keylen, 100 , hit_magic, encap_mode);
 	
 	// Tell firewall that HIT SRC + DST HAS A SECURITY ASSOCIATION
 	HIP_DEBUG("HIP IPsec userspace SA add return value %d\n", err);

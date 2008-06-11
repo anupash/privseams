@@ -143,7 +143,7 @@ int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
     struct sockaddr *inner_dst, struct sockaddr *src, struct sockaddr *dst, 
     __u16 sport, __u16 dport, int direction,
     __u32 spi, __u8 *e_key, __u32 e_type, __u32 e_keylen, __u8 *a_key,
-    __u32 a_type, __u32 a_keylen, __u32 lifetime, __u16 hitmagic)
+    __u32 a_type, __u32 a_keylen, __u32 lifetime, __u16 hitmagic, int encap_mode)
 {
 	
 	hip_sadb_entry *entry;
@@ -189,6 +189,7 @@ int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
 #endif
 	entry->src_port = sport ;
 	entry->dst_port = dport ;
+	entry->encap_mode = encap_mode;
 	entry->usetime_ka.tv_sec = 0;
 	entry->usetime_ka.tv_usec = 0;
 	memset(&entry->lsi, 0, sizeof(struct sockaddr_storage));
