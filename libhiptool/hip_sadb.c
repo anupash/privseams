@@ -686,9 +686,11 @@ void unbuffer_packets(hip_lsi_entry *entry)
 hip_lsi_entry *hip_lookup_lsi_by_addr(struct sockaddr *addr)
 {
 	hip_lsi_entry *entry;
+	// we will only get hits here
+	hip_hit_t *hit = (hip_hit_t *) hip_cast_sa_addr(addr);
+	
 	for (entry = lsi_temp; entry; entry = entry->next) {
-		if (memcmp(SA2IP(&entry->addr),
-			   SA2IP(addr), SAIPLEN(addr))==0) {
+		if (IN6_ARE_ADDR_EQUAL((hip_hit_t *)(hip_cast_sa_addr(&entry->addr)), hit)) {
 			return(entry);
 		}
 	}
@@ -704,11 +706,12 @@ hip_lsi_entry *hip_lookup_lsi(struct sockaddr *lsi)
 {
 	hip_lsi_entry *entry;
 	struct sockaddr_storage *entry_lsi;
+	hip_hit_t *hit = (hip_hit_t *) hip_cast_sa_addr(lsi);
 
 	for (entry = lsi_temp; entry; entry = entry->next) {
 		entry_lsi = (lsi->sa_family == AF_INET) ? &entry->lsi4 : 
 							  &entry->lsi6;
-		if (memcmp(SA2IP(entry_lsi), SA2IP(lsi), SAIPLEN(lsi))==0)
+		if (IN6_ARE_ADDR_EQUAL((hip_hit_t *)(hip_cast_sa_addr(entry_lsi)), hit))
 			return(entry);
 	}
 	return(NULL);
@@ -738,6 +741,7 @@ hip_sadb_entry *hip_sadb_lookup_spi(__u32 spi) {
 int hip_sadb_add_dst_entry(struct sockaddr *addr, hip_sadb_entry *entry)
 {
 	hip_sadb_dst_entry *dst_entry, *last;
+	hip_hit_t *hit = (hip_hit_t *) hip_cast_sa_addr(addr);
 	
 	if (!addr || !entry)
 		return(-1);
@@ -748,7 +752,8 @@ int hip_sadb_add_dst_entry(struct sockaddr *addr, hip_sadb_entry *entry)
 		dst_entry; dst_entry = dst_entry->next) {
 		last = dst_entry;
 		if (dst_entry->sadb_entry &&
-		   !memcmp(SA2IP(&dst_entry->addr), SA2IP(addr), SALEN(addr))) {
+			IN6_ARE_ADDR_EQUAL((hip_hit_t *)(hip_cast_sa_addr(&dst_entry->addr)), hit))
+		{
 			dst_entry->sadb_entry = entry;
 			return(0);
 		}
@@ -777,11 +782,13 @@ int hip_sadb_add_dst_entry(struct sockaddr *addr, hip_sadb_entry *entry)
  */ 
 int hip_sadb_delete_dst_entry(struct sockaddr *addr) {
 	hip_sadb_dst_entry *entry, *prev, *next;
+	hip_hit_t *hit = (hip_hit_t *) hip_cast_sa_addr(addr);
 	
 	prev = NULL;
 	for (entry = &hip_sadb_dst[sadb_dst_hashfn(addr)]; 
 	     entry; entry = entry->next) {
-		if (memcmp(SA2IP(addr), SA2IP(&entry->addr), SAIPLEN(addr))) {
+		if (!IN6_ARE_ADDR_EQUAL((hip_hit_t *)(hip_cast_sa_addr(&entry->addr)), hit))
+		{
 			prev = entry;
 			continue;
 		}
@@ -812,11 +819,13 @@ int hip_sadb_delete_dst_entry(struct sockaddr *addr) {
  */ 
 hip_sadb_entry *hip_sadb_lookup_addr(struct sockaddr *addr) {
 	hip_sadb_dst_entry *entry;
+	hip_hit_t *hit = (hip_hit_t *) hip_cast_sa_addr(addr);
+	
 	for (entry = &hip_sadb_dst[sadb_dst_hashfn(addr)]; 
 	     entry; entry = entry->next) {
 		if ((addr->sa_family == entry->addr.ss_family) &&
-		    (memcmp(SA2IP(addr), SA2IP(&entry->addr), 
-			    SAIPLEN(addr))==0)) {
+				IN6_ARE_ADDR_EQUAL((hip_hit_t *)(hip_cast_sa_addr(&entry->addr)), hit))
+		{
 			return(entry->sadb_entry);
 		}
 	}
