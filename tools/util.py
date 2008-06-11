@@ -40,11 +40,16 @@ def sighandler(signum, frame):
     global __wantalarm
     if signum == signal.SIGTERM:
         __wantdown = 1
+    if signum == signal.SIGINT:
+        __wantdown = 1
     if signum == signal.SIGALRM:
         __wantalarm = 1
 
 def init_wantdown():
     signal.signal(signal.SIGTERM, sighandler)
+
+def init_wantdown_int():
+    signal.signal(signal.SIGINT, sighandler)
 
 def init_wantalarm():
     signal.signal(signal.SIGALRM, sighandler)

@@ -1,40 +1,10 @@
 #include "rule_management.h"
 
-struct GList * input_rules;
-struct GList * output_rules;
-struct GList * forward_rules;
+struct DList * input_rules;
+struct DList * output_rules;
+struct DList * forward_rules;
 
-/**mutual exclusion mechanisms for concurrent 
- * reading and writing of rule list 
- * (from courtois: readers and writers)
- */
-
-GStaticMutex input_mutex1 = G_STATIC_MUTEX_INIT;
-GStaticMutex input_mutex2 = G_STATIC_MUTEX_INIT;
-GStaticMutex input_mutex3 = G_STATIC_MUTEX_INIT;
-GStaticMutex input_w = G_STATIC_MUTEX_INIT;
-GStaticMutex input_r = G_STATIC_MUTEX_INIT;
-static int input_read_count = 0;
-static int input_write_count = 0;
-
-GStaticMutex output_mutex1 = G_STATIC_MUTEX_INIT;
-GStaticMutex output_mutex2 = G_STATIC_MUTEX_INIT;
-GStaticMutex output_mutex3 = G_STATIC_MUTEX_INIT;
-GStaticMutex output_w = G_STATIC_MUTEX_INIT;
-GStaticMutex output_r = G_STATIC_MUTEX_INIT;
-static int output_read_count = 0;
-static int output_write_count = 0;
-
-GStaticMutex forward_mutex1 = G_STATIC_MUTEX_INIT;
-GStaticMutex forward_mutex2 = G_STATIC_MUTEX_INIT;
-GStaticMutex forward_mutex3 = G_STATIC_MUTEX_INIT;
-GStaticMutex forward_w = G_STATIC_MUTEX_INIT;
-GStaticMutex forward_r = G_STATIC_MUTEX_INIT;
-static int forward_read_count = 0;
-static int forward_write_count = 0;
-
-
-struct GList * get_rule_list(int hook)
+struct _DList * get_rule_list(int hook)
 {
   if(hook == NF_IP6_LOCAL_IN)
     return input_rules;
@@ -44,7 +14,7 @@ struct GList * get_rule_list(int hook)
     return forward_rules;
 }
 
-void set_rule_list(struct GList * list, int hook)
+void set_rule_list(struct DList * list, int hook)
 {
   if(hook == NF_IP6_LOCAL_IN)
     input_rules = list;
@@ -134,7 +104,7 @@ void print_rule(const struct rule * rule){
  * caller should take care of synchronization
  */
 void print_rule_tables(){
-  struct _GList * list = (struct _GList *) input_rules;
+  struct _DList * list = (struct _DList *) input_rules;
   struct rule * rule = NULL;
   while(list != NULL)
     {
@@ -142,14 +112,14 @@ void print_rule_tables(){
       print_rule(rule);
       list = list->next;
     }
-  list = (struct _GList *) output_rules;
+  list = (struct _DList *) output_rules;
   while(list != NULL)
     {
       rule = (struct rule *)list->data;
       print_rule(rule);
       list = list->next;
     }
-  list = (struct _GList *)forward_rules;
+  list = (struct _DList *) forward_rules;
   while(list != NULL)
     {
       rule = (struct rule *)list->data;
@@ -1035,165 +1005,14 @@ struct rule * parse_rule(char * string)
 
 
 /*-----------PARSING ----------*/
-/*----------- MUTUAL EXCLUSION ----------*/
-
-/**
- * called before reading rule table
- * (classic readers and writers problem solution)
- */
-void read_enter(int hook){
-  _HIP_DEBUG("read_enter\n");
-  if(hook == NF_IP6_LOCAL_IN)
-    {
-      g_static_mutex_lock(&input_mutex3);
-      g_static_mutex_lock(&input_r);
-      g_static_mutex_lock(&input_mutex1);
-      input_read_count++;
-      if(input_read_count == 1)
-	g_static_mutex_lock(&input_w);
-      g_static_mutex_unlock(&input_mutex1);
-      g_static_mutex_unlock(&input_r);
-      g_static_mutex_unlock(&input_mutex3);
-    }
-  else if (hook == NF_IP6_LOCAL_OUT)
-    {
-      g_static_mutex_lock(&output_mutex3);
-      g_static_mutex_lock(&output_r);
-      g_static_mutex_lock(&output_mutex1);
-      output_read_count++;
-      if(output_read_count == 1)
-	g_static_mutex_lock(&output_w);
-      g_static_mutex_unlock(&output_mutex1);
-      g_static_mutex_unlock(&output_r);
-      g_static_mutex_unlock(&output_mutex3);
-    }
-  else if (hook == NF_IP6_FORWARD)
-    {
-      g_static_mutex_lock(&forward_mutex3);
-      g_static_mutex_lock(&forward_r);
-      g_static_mutex_lock(&forward_mutex1);
-      forward_read_count++;
-      if(forward_read_count == 1)
-	g_static_mutex_lock(&forward_w);
-      g_static_mutex_unlock(&forward_mutex1);
-      g_static_mutex_unlock(&forward_r);
-      g_static_mutex_unlock(&forward_mutex3);
-    }
-}
-
-/**
- * called before reading rule table
- * (classic readers and writers problem solution)
- */
-void read_exit(int hook)
-{
-  _HIP_DEBUG("read_exit, hook %d \n", hook);
-  if (hook == NF_IP6_LOCAL_IN)
-    {
-      g_static_mutex_lock(&input_mutex1);
-      input_read_count--;
-      if(input_read_count == 0)
-	g_static_mutex_unlock(&input_w);
-      g_static_mutex_unlock(&input_mutex1);
-    }
-  else if (hook == NF_IP6_LOCAL_OUT)
-    {
-      g_static_mutex_lock(&output_mutex1);
-      output_read_count--;
-      if(output_read_count == 0)
-	g_static_mutex_unlock(&output_w);
-      g_static_mutex_unlock(&output_mutex1);
-    }
-  else if (hook == NF_IP6_FORWARD)
-    {
-      g_static_mutex_lock(&forward_mutex1);
-      forward_read_count--;
-      if(forward_read_count == 0)
-	g_static_mutex_unlock(&forward_w);
-      g_static_mutex_unlock(&forward_mutex1);
-    }
-}
-
-/**
- * called before writing rule table
- * (classic readers and writers problem solution)
- */
-void write_enter(int hook)
-{
-  _HIP_DEBUG("write_enter, hook %d \n", hook);
-  if (hook == NF_IP6_LOCAL_IN)
-    {  
-      g_static_mutex_lock(&input_mutex2);
-      input_write_count++;
-      if(input_write_count == 1)
-	g_static_mutex_lock(&input_r);
-      g_static_mutex_unlock(&input_mutex2);
-      g_static_mutex_lock(&input_w);
-    }
-  else if (hook == NF_IP6_LOCAL_OUT)
-    {  
-      g_static_mutex_lock(&output_mutex2);
-      output_write_count++;
-      if(output_write_count == 1)
-	g_static_mutex_lock(&output_r);
-      g_static_mutex_unlock(&output_mutex2);
-      g_static_mutex_lock(&output_w);
-    }
-  else if (hook == NF_IP6_FORWARD)
-    {  
-      g_static_mutex_lock(&forward_mutex2);
-      forward_write_count++;
-      if(forward_write_count == 1)
-	g_static_mutex_lock(&forward_r);
-      g_static_mutex_unlock(&forward_mutex2);
-      g_static_mutex_lock(&forward_w);
-    }
-}
-
-/**
- * called before writing rule table
- * (classic readers and writers problem solution)
- */
-void write_exit(int hook)
-{
-  _HIP_DEBUG("write_exit, hook %d \n", hook);
-  if (hook == NF_IP6_LOCAL_IN)
-    {
-      g_static_mutex_unlock(&input_w);
-      g_static_mutex_lock(&input_mutex2);
-      input_write_count++;
-      if(input_write_count == 0)
-	g_static_mutex_unlock(&input_r);
-      g_static_mutex_unlock(&input_mutex2);    
-    }
-  else if (hook == NF_IP6_LOCAL_OUT)
-    {
-      g_static_mutex_unlock(&output_w);
-      g_static_mutex_lock(&output_mutex2);
-      output_write_count++;
-      if(output_write_count == 0)
-	g_static_mutex_unlock(&output_r);
-      g_static_mutex_unlock(&output_mutex2);    
-    }
-  else if (hook == NF_IP6_FORWARD)
-    {
-      g_static_mutex_unlock(&forward_w);
-      g_static_mutex_lock(&forward_mutex2);
-      forward_write_count++;
-      if(forward_write_count == 0)
-	g_static_mutex_unlock(&forward_r);
-      g_static_mutex_unlock(&forward_mutex2);    
-    }
-}
-
 
 /**
  * mainly for the use of the firewall itself
  * !!! read_rules_exit must be called after done with reading
  */
-struct GList * read_rules(int hook){
+struct DList * read_rules(int hook){
   _HIP_DEBUG("read_rules\n");
-  read_enter(hook);
+//  read_enter(hook);
   return get_rule_list(hook);
 }
 
@@ -1203,7 +1022,7 @@ struct GList * read_rules(int hook){
  */
 void read_rules_exit(int hook){
   _HIP_DEBUG("read_rules_exit\n");
-  read_exit(hook);
+//  read_exit(hook);
 }
 
 /*----------- RULE MANAGEMENT -----------*/
@@ -1217,9 +1036,9 @@ void read_rules_exit(int hook){
  */
 void read_file(char * file_name)
 {
-  struct GList * input = NULL;
-  struct GList * output = NULL;
-  struct GList * forward = NULL;
+  struct DList * input = NULL;
+  struct DList * output = NULL;
+  struct DList * forward = NULL;
   FILE *file = fopen(file_name, "r");
   struct rule * rule;
   char * line = NULL;
@@ -1253,24 +1072,24 @@ void read_file(char * file_name)
 	  if(rule)
 	    {
 	      if(rule->state)
-		state = 1;
+			state = 1;
 	      if(rule->hook == NF_IP6_LOCAL_IN)
 		{
-		  input = (struct GList *)g_list_append((struct _GList *) input, 
-							(gpointer) rule);
-		  print_rule((struct rule *)((struct _GList *) input)->data);
+		  input = (struct DList *)append_to_list((struct _DList *) input, 
+							(void *) rule);
+		  print_rule((struct rule *)((struct _DList *) input)->data);
 		}
 	      else if(rule->hook == NF_IP6_LOCAL_OUT)
 		{
-		  output = (struct GList *)g_list_append((struct _GList *) output, 
-							 (gpointer) rule);
-		  print_rule((struct rule *)((struct _GList *) output)->data);
+		  output = (struct DList *)append_to_list((struct _DList *) output, 
+							 (void *) rule);
+		  print_rule((struct rule *)((struct _DList *) output)->data);
 		}
 	      else if(rule->hook == NF_IP6_FORWARD)
 		{
-		  forward = (struct GList *)g_list_append((struct _GList *) forward, 
-							  (gpointer) rule);
-		  print_rule((struct rule *)((struct _GList *) forward)->data);
+		  forward = (struct DList *)append_to_list((struct _DList *) forward, 
+							  (void *) rule);
+		  print_rule((struct rule *)((struct _DList *) forward)->data);
 		}
 	      rule = NULL;
 	    }
@@ -1287,16 +1106,16 @@ void read_file(char * file_name)
     { 
       HIP_DEBUG("Can't open file %s \n", file_name );
     }
-  write_enter(NF_IP6_LOCAL_IN);
+//  write_enter(NF_IP6_LOCAL_IN);
   input_rules = input;
   set_stateful_filtering(state);
-  write_exit(NF_IP6_LOCAL_IN);
-  write_enter(NF_IP6_LOCAL_OUT);
+//  write_exit(NF_IP6_LOCAL_IN);
+//  write_enter(NF_IP6_LOCAL_OUT);
   output_rules = output;
-  write_exit(NF_IP6_LOCAL_OUT);
-  write_enter(NF_IP6_FORWARD);
+//  write_exit(NF_IP6_LOCAL_OUT);
+//  write_enter(NF_IP6_FORWARD);
   forward_rules = forward;
-  write_exit(NF_IP6_FORWARD);
+//  write_exit(NF_IP6_FORWARD);
 }
 
 
@@ -1313,14 +1132,14 @@ void insert_rule(const struct rule * rule, int hook){
   if(!rule)
     return;
   struct rule * copy = copy_rule(rule);  
-  write_enter(hook);
-  set_rule_list((struct GList *)g_list_append((struct _GList *) get_rule_list(hook), 
-  					(gpointer) copy),
-		hook);
+//  write_enter(hook);
+  set_rule_list(append_to_list(get_rule_list(hook), 
+  					(void *) copy),
+					hook);
 
   if(rule->state)
     set_stateful_filtering(1);
-  write_exit(hook);
+//  write_exit(hook);
 }
 
 /**
@@ -1330,30 +1149,30 @@ void insert_rule(const struct rule * rule, int hook){
  */
 int delete_rule(const struct rule * rule, int hook){
   HIP_DEBUG("delete_rule\n");
-  struct _GList * temp;
+  struct _DList * temp;
   struct rule * r;
   int val = -1, state = 0;
-  write_enter(hook);
-  temp = (struct _GList *)get_rule_list(hook);
+//  write_enter(hook);
+  temp = get_rule_list(hook);
   while(temp)
     {
       //delete first match
-      if(rules_equal((struct rule *)temp->data, rule))
-	{
+  	  if(rules_equal((struct rule *)temp->data, rule))
+		{
 	  free_rule((struct rule *) temp->data);
 	  HIP_DEBUG("delete_rule freed\n");
-	  set_rule_list((struct GList *)g_list_remove((struct _GList *)get_rule_list(hook), 
+	  set_rule_list((struct _DList *)remove_from_list((struct _DList *)get_rule_list(hook), 
 						      temp->data),
 			hook);
 	  HIP_DEBUG("delete_rule removed\n");
 	  val = 0;
 	  break;
 	}
-      temp = temp->next;
+    temp = temp->next;
     }
   HIP_DEBUG("delete_rule looped\n");
   set_stateful_filtering(state);
-  write_exit(hook);
+//  write_exit(hook);
   HIP_DEBUG("delete_rule exit\n");
   return val;
 }
@@ -1361,43 +1180,42 @@ int delete_rule(const struct rule * rule, int hook){
  * create local copy of the rule list and return
  * caller is responsible for freeing rules
  */
-struct _GList * list_rules(int hook)
+struct _DList * list_rules(int hook)
 {
   HIP_DEBUG("list_rules\n");
-  struct _GList * temp = NULL, * ret = NULL;
-  read_enter(hook);
-  temp = (struct _GList *) get_rule_list(hook);
+  struct _DList * temp = NULL, * ret = NULL;
+  //read_enter(hook);
+  temp = (struct _DList *) get_rule_list(hook);
   while(temp)
     {
-      
-      ret = g_list_append(ret, 
-			  (gpointer) copy_rule((struct rule *) temp->data)); 
+      ret = append_to_list(ret, 
+			  	(void *) copy_rule((struct rule *) temp->data)); 
       temp = temp->next;
     }
-  read_exit(hook);
+  //read_exit(hook);
   return ret;
 }
 
 int flush(int hook)
 {
   HIP_DEBUG("flush\n");
-  struct _GList * temp = (struct _GList *) get_rule_list(hook);
-  write_enter(hook);
+  struct _DList * temp = (struct _DList *) get_rule_list(hook);
+//  write_enter(hook);
   set_rule_list(NULL, hook);
   set_stateful_filtering(0);
-  write_exit(hook);
+//  write_exit(hook);
   while(temp)
     {
       free_rule((struct rule *) temp->data);
       temp = temp->next;
     }
-  g_list_free(temp);
+  free_list(temp);
 }
 
 void test_rule_management(){
-  struct _GList * list = NULL,  * orig = NULL;
+  struct _DList * list = NULL,  * orig = NULL;
   HIP_DEBUG("\n\ntesting rule management functions\n");
-  list = (struct _GList *) list_rules(NF_IP6_FORWARD);
+  list = (struct _DList *) list_rules(NF_IP6_FORWARD);
   orig = list;
   HIP_DEBUG("ORIGINAL \n");
   print_rule_tables();
