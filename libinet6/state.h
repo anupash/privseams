@@ -54,6 +54,8 @@
 //NAT branch
 #define HIP_LOCATOR_LOCATOR_TYPE_UDP 2
 
+#define HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY 126
+
 /** for the triple nat mode*/
 #define HIP_NAT_MODE_NONE               0
 #define HIP_NAT_MODE_PLAIN_UDP          1

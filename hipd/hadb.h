@@ -361,4 +361,13 @@ int hip_handle_get_ha_info(hip_ha_t *entry, struct hip_common *msg);
 int hip_hadb_find_peer_address(hip_ha_t *entry, void *id);
 int hip_hadb_map_ip_to_hit(hip_ha_t *entry, void *id2);
 
+
+//add by santtu
+int hip_hadb_add_udp_addr_to_spi(hip_ha_t *entry, uint32_t spi,
+			     struct in6_addr *addr,
+			     int is_bex_address, uint32_t lifetime,
+			     int is_preferred_addr,
+			     uint16_t port,
+			     uint32_t priority);
+
 #endif /* HIP_HADB_H */

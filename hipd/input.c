@@ -1652,6 +1652,11 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
  	HIP_DEBUG("handle nat trasform in I2\n");
  	hip_nat_handle_transform_in_server(i2, entry);
 #endif	
+//add by santtu	
+    /***** LOCATOR PARAMETER *****/
+	hip_nat_handle_locator_parameter(i2, entry, esp_info);	
+//end add 	
+ 	
 #ifdef CONFIG_HIP_HI3
         locator = hip_get_param(i2, HIP_PARAM_LOCATOR);
 	
@@ -2366,6 +2371,14 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	HIP_DEBUG("R2 packet source port: %d, destination port %d.\n",
 		  r2_info->src_port, r2_info->dst_port);
 
+//add by santtu	
+    /***** LOCATOR PARAMETER *****/
+	hip_nat_handle_locator_parameter(r2, entry, esp_info);	
+//end add
+	
+	
+	
+	
 #ifdef CONFIG_HIP_BLIND
 	if (use_blind) {
 	  err = entry->hadb_ipsec_func->hip_add_sa(r2_daddr, r2_saddr,

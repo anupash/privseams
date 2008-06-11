@@ -407,7 +407,37 @@ struct hip_locator_info_addr_item {
 		      WAITING_ECHO_REQUEST, ACTIVE */
 
 }  __attribute__ ((packed));
+//add by santtu
+/**
+ * it is the type 2 locater for UDP or other transport protocol later.
+ */
+struct hip_locator_info_addr_item2 {
+        uint8_t traffic_type;
+        uint8_t locator_type;
+        uint8_t locator_length;
+        uint8_t reserved;  /* last bit is P (prefered) */
+       	uint32_t lifetime;
+       	uint16_t port;
+       	uint8_t  transport_protocol;
+       	uint8_t  kind;
+       	uint32_t priority;
+       	uint32_t spi;
+       	struct in6_addr address;
 
+	int state; /**<State of our addresses, possible states are:
+		      WAITING_ECHO_REQUEST, ACTIVE */
+
+}  __attribute__ ((packed));
+
+
+/**
+ * it is a union of both type1 and type2 locator.
+ */
+union hip_locator_info_addr {
+	struct hip_locator_info_addr_item type1;
+	struct hip_locator_info_addr_item2 type2;
+}__attribute__ ((packed));
+//end add
 /** Structure describing an endpoint. This structure is used by the resolver in
  * the userspace, so it is not length-padded like HIP parameters. All of the
  * members are in network byte order.

@@ -406,14 +406,14 @@ uint8_t hip_get_host_id_algo(const struct hip_host_id *host_id) {
 struct hip_locator_info_addr_item *hip_get_locator_first_addr_item(struct hip_locator *locator) {
 	return (struct hip_locator_info_addr_item *) (locator + 1);
 }
-
+/* remove by santtu, since the item have type2
 int hip_get_locator_addr_item_count(struct hip_locator *locator) {
 	return (hip_get_param_contents_len(locator) -
 		(sizeof(struct hip_locator) -
 		 sizeof(struct hip_tlv_common))) /
 		sizeof(struct hip_locator_info_addr_item);
 }
-
+*/
 int hip_get_lifetime_value(time_t seconds, uint8_t *lifetime)
 {
 	/* Check that we get a lifetime value between 1 and 255. The minimum
@@ -3437,7 +3437,16 @@ int hip_private_dsa_to_hit(DSA *dsa_key, unsigned char *dsa, int type,
 			   struct in6_addr *hit) {
   return hip_any_key_to_hit(dsa_key, dsa, type, hit, 0, 1);
 }
+
+
+
+
+
+
 //add by santtu
+
+
+
 
 /**
  * Builds a @c FULLRELAY_HMAC parameter.
@@ -3499,3 +3508,157 @@ int hip_build_param_nat_tranform(struct hip_common *msg, hip_transform_suite_t n
 	err = hip_build_param(msg, &nat_transform);
 	return err;
 }
+
+
+
+void hip_set_locator_addr_length(void * locator, hip_tlv_len_t  length){
+	((struct hip_locator *)locator)->length = htons(length);
+	return;
+}
+
+
+/**
+ * 
+ * return the amount the locator items(type 1 and 2 are both supproted).
+ * */
+ 
+int hip_get_locator_addr_item_count(struct hip_locator *locator) {	
+	
+	char *address_pointer =(char*) (locator + 1);
+	int amount = 0;
+	
+	
+	
+	for(;address_pointer < ((char*)locator) + hip_get_param_contents_len(locator); ){
+		if(((struct hip_locator_info_addr_item*)address_pointer)->locator_type == 
+					HIP_LOCATOR_LOCATOR_TYPE_UDP){
+                		address_pointer += sizeof(struct hip_locator_info_addr_item2);
+                		amount += 1;
+                	}
+        else if(((struct hip_locator_info_addr_item*)address_pointer)->locator_type == 
+        			HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI){
+    		address_pointer += sizeof(struct hip_locator_info_addr_item);
+    		amount += 1;
+    	} 
+        else
+        	address_pointer += sizeof(struct hip_locator_info_addr_item);
+	}
+	
+	
+	return amount;
+}
+
+/**
+ * retreive a locator address item from a list
+ *
+ * retreive a @c LOCATOR ADDRESS ITEM@c from a list.
+ *
+ * @param item_list      a pointer to the first item in the list
+ * @param index     the index of the item in the list
+ */
+union hip_locator_info_addr * hip_get_locator_item(void* item_list, int index){
+	int i= 0;
+	struct hip_locator_info_addr_item *temp;
+	char *result = (char*) item_list;
+	
+	
+	for(;i<index;i++){
+		temp = (struct hip_locator_info_addr_item*) result;
+		if (temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI)
+			result  +=  sizeof(struct hip_locator_info_addr_item);
+		else 
+			result  +=  sizeof(struct hip_locator_info_addr_item2);
+		
+	}
+	return (union hip_locator_info_addr *) result ;
+	
+} 
+
+/**
+ * retreive a IP address  from a locator item structure
+ *
+ *
+ * @param item      a pointer to the item
+ */
+struct in6_addr * hip_get_locator_item_address(void* item){
+
+	struct hip_locator_info_addr_item *temp;
+	
+	
+	temp = (struct hip_locator_info_addr_item*) item;
+	if (temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI){
+		return &temp->address;
+	}
+	else {
+		return &((struct hip_locator_info_addr_item2 *)temp)->address;
+	}
+	
+} 
+
+/**
+ * retreive a port from a locator item structure
+ *
+ *
+ * @param item      a pointer to the item
+ */
+uint16_t hip_get_locator_item_port(void* item){
+
+	struct hip_locator_info_addr_item *temp;
+	
+	
+	temp = (struct hip_locator_info_addr_item*) item;
+	if (temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI){
+		return 0;
+	}
+	else {
+		return ntohs(((struct hip_locator_info_addr_item2 *)temp)->port);
+	}
+	
+} 
+
+
+/**
+ * retreive a port from a locator item structure
+ *
+ *
+ * @param item      a pointer to the item
+ */
+uint32_t hip_get_locator_item_priority(void* item){
+
+	struct hip_locator_info_addr_item *temp;
+	
+	
+	temp = (struct hip_locator_info_addr_item*) item;
+	if (temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI){
+		//todo check the constant value
+		return HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY;
+	}
+	else {
+		return ntohl(((struct hip_locator_info_addr_item2 *)temp)->priority);
+	}
+	
+}
+/**
+ * Count the a locator item list length in bytes.
+ *
+ *
+ * @param item_list      a pointer to the first item
+ * @param amount          the number of items in the list
+ */
+int hip_get_locator_item_list_length(void* item_list, int amount){
+
+	int i= 0;
+	struct hip_locator_info_addr_item *temp;
+	char * result = (char*) item_list;
+	
+	for(;i<amount+1;i++){
+		temp = (struct hip_locator_info_addr_item*) result;
+		if (temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI)
+			result  +=  sizeof(struct hip_locator_info_addr_item);
+		else 
+			result  +=  sizeof(struct hip_locator_info_addr_item2);
+		
+	}
+	return result - (char*) item_list;
+	
+} 
