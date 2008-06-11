@@ -47,6 +47,9 @@ int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m, struct in6_addr *ip_src, str
 			portDest = ((struct tcphdr*)((m->payload) + ip_hdr_size))->dest;
 			proto = "tcp6";
 			break;
+	       case IPPROTO_ICMPV6:
+		        proto6 = 1;
+			break;
 	       default:
 		 	break;
 	}
