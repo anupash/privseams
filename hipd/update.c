@@ -1841,7 +1841,7 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 		       in6_addr_t *update_daddr, hip_ha_t *entry,
 		       hip_portpair_t *sinfo)
 {
-	int err = 0, has_esp_info = 0, pl = 0, updating_addresses = 0;
+	int err = 0, has_esp_info = 0, pl = 0, send_ack = 0;
 	in6_addr_t *hits = NULL;
 	in6_addr_t *src_ip = NULL , *dst_ip = NULL;
 	struct hip_esp_info *esp_info = NULL;
@@ -1851,8 +1851,6 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 	struct hip_echo_request *echo = NULL;
 	struct hip_echo_response *echo_response = NULL;
 	struct hip_tlv_common *reg_request = NULL;
-	struct hip_tlv_common *reg_response = NULL;
-	struct hip_tlv_common *reg_failed = NULL;
 	struct hip_tlv_common *reg_info = NULL;
 	struct hip_tlv_common *encrypted = NULL;
      	
@@ -1865,8 +1863,7 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 	 * The HIP state machine defines a move from state R2-SENT to
 	 * ESTABLISHED for 'data or EC timeout'. Since we (probably) have no
 	 * fancy timeout stuff implemented, we just move from R2-SENT to
-	 * ESTABLISHED incase of an received UPDATE.
-	 */
+	 * ESTABLISHED. */
 	if(entry == NULL) {
 		HIP_ERROR("No host association database entry found.\n");
 		err = -1;
@@ -1890,8 +1887,6 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 	echo_response = hip_get_param(msg, HIP_PARAM_ECHO_RESPONSE);
 	encrypted = hip_get_param(msg, HIP_PARAM_ENCRYPTED);
 	reg_request = hip_get_param(msg, HIP_PARAM_REG_REQUEST);
-	reg_response = hip_get_param(msg, HIP_PARAM_REG_RESPONSE);
-	reg_failed = hip_get_param(msg, HIP_PARAM_REG_FAILED);
 	reg_info = hip_get_param(msg, HIP_PARAM_REG_INFO);
 
 	src_ip = update_saddr;
@@ -2014,13 +2009,20 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 			 "Error handling reg_request\n");
 	  
 	}
-	/* Handle registration response and registration failure. */
-	if (reg_response || reg_failed) {
-		HIP_IFEL(hip_handle_registration_response(entry, msg), -1, 
-			 "Error handling reg_response\n");
-		HIP_IFEL(hip_update_send_ack(entry, msg, src_ip, dst_ip), -1, 
-			 "Error sending ack\n");
+
+	/* Handle REG_RESPONSE and REG_FAILED parameters. */
+	if(hip_handle_param_reg_response(entry, msg) == 0) {
+		send_ack = 1;
 	}
+	if (hip_handle_param_reg_failed(entry, msg) == 0) {
+		send_ack = 1;
+        }
+
+	if(send_ack) {
+		HIP_IFEL(hip_update_send_ack(entry, msg, src_ip, dst_ip), -1, 
+			 "Error sending UPDATE ACK.\n");
+	}
+	
 	/* Handle registration info. */
 	if (reg_info) {
 		uint8_t *types = NULL;
