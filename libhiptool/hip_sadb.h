@@ -101,7 +101,7 @@ typedef struct _hip_sadb_entry
 	// TODO add encap_mode (= UDP / TCP)
 	__u16 src_port;
 	__u16 dst_port;			/* UDP dest. port for encaps. ESP */
-	int encap_mode;			/* 0 - none, 1 - udp
+	int encap_mode;			/* 0 - none, 1 - udp */
 	struct timeval usetime_ka;  /* last used timestamp, incl keep-alives */
 	struct sockaddr_storage lsi;	/* LSI 				*/
 	struct sockaddr_storage lsi6;	/* IPv6 LSI (peer HIT)		*/

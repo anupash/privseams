@@ -441,7 +441,7 @@ int hipl_userspace_ipsec_sadb_add_wrapper(struct in6_addr *saddr,
 	__u32 ipsec_spi = (__u32) *spi; /*IPsec SPI*/
 	__u32 ipsec_e_type = 0; /* encryption type */
 	__u32 ipsec_a_type = 0; /* authentication type is equal to encryption type */
-	int encap_mode = 0; /* 0 - none, 1 - udp
+	int encap_mode = 0; /* 0 - none, 1 - udp */
 	int err = 0;
 
 	/* MAP HIP ESP encryption INDEX to SADB encryption INDEX */

@@ -53,8 +53,8 @@ uint16_t checksum_udp(struct udphdr *udp_hdr, struct in6_addr *src_addr,
 /* - encrypt payload
  * - set up other headers */
 int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
-		int udp_encap, struct in6_addr *preferred_local_addr,
-		struct in6_addr *preferred_peer_addr, unsigned char *esp_packet, int *esp_packet_len)
+		struct in6_addr *preferred_local_addr, struct in6_addr *preferred_peer_addr,
+		unsigned char *esp_packet, int *esp_packet_len)
 {
 	struct ip *out_ip_hdr = NULL;
 	struct ip6_hdr *out_ip6_hdr = NULL; 
