@@ -212,23 +212,27 @@ int hip_get_pending_requests(hip_ha_t *entry,
  */ 
 int hip_get_pending_request_count(hip_ha_t *entry);
 
-int hip_handle_param_rinfo(hip_ha_t *entry, hip_common_t *source_msg,
-			   hip_common_t *target_msg);
-
 /**
  * Handles param REG_INFO. Digs out the REG_INFO parameter from the HIP message
- * @c msg and sets the peer control bits accordingly. I.e. the peer controls are
- * set to indicate which services the peer offers.
+ * @c source_msg, sets the peer control bits accordingly and builds REG_REQUEST
+ * in response to the HIP message @c target_msg. The peer controls are set to
+ * indicate which services the peer offers.
+ * 
+ * REG_REQUEST is build only if the server offers at least one of the services
+ * we have requested. Only those services as requested that the server offers.
  *
- * @param  msg      a pointer to HIP message from where to dig out the REG_INFO
- *                  parameter.
- * @parameter entry a pointer to a host association for which to set the peer
- *                  control bits.
- * @return          -1 if the message @c msg did not contain a REG_INFO
- *                  parameter zero otherwise.
- * @see             peer_controls
+ * @param source_msg a pointer to HIP message from where to dig out the
+ *                   REG_INFO parameter.
+ * @param target_msg a pointer to HIP message where to build the REG_REQUEST
+ *                   parameter.
+ * @param entry      a pointer to a host association for which to set the peer
+ *                   control bits.
+ * @return           -1 if the message @c msg did not contain a REG_INFO
+ *                   parameter zero otherwise.
+ * @see              peer_controls
  */ 
-int hip_handle_param_reg_info(hip_common_t *msg, hip_ha_t *entry);
+int hip_handle_param_reg_info(hip_ha_t *entry, hip_common_t *source_msg,
+			      hip_common_t *target_msg);
 
 /**
  * Handles param REG_REQUEST. Digs out the REG_REQUEST parameter from the HIP
@@ -251,17 +255,17 @@ int hip_handle_param_reg_info(hip_common_t *msg, hip_ha_t *entry);
  * Once the aforementioned functions return, a REG_RESPONSE and/or a required
  * number of REG_FAILED parameters are built to 
  * 
- * @parameter entry   a pointer to a host association which is registering.
- * @param  source_msg a pointer to HIP message from where to dig out the
- *                    REG_INFO parameter.
- * @param  target_msg a pointer to HIP message where to build the REG_RESPONSE
- *                    and/or REG_FAILED parameters.
- * @return            -1 if the message @c source_msg did not contain a
- *                    REG_REQUEST parameter or the parameter had duplicate
- *                    services, zero otherwise.
- * @see               hip_has_duplicate_services().
- * @see               hip_add_registration_server().
- * @see               hip_del_registration_server().
+ * @param entry      a pointer to a host association which is registering.
+ * @param source_msg a pointer to HIP message from where to dig out the
+ *                   REG_INFO parameter.
+ * @param target_msg a pointer to HIP message where to build the REG_RESPONSE
+ *                   and/or REG_FAILED parameters.
+ * @return           -1 if the message @c source_msg did not contain a
+ *                   REG_REQUEST parameter or the parameter had duplicate
+ *                   services, zero otherwise.
+ * @see              hip_has_duplicate_services().
+ * @see              hip_add_registration_server().
+ * @see              hip_del_registration_server().
  */
 int hip_handle_param_rrq(hip_ha_t *entry, hip_common_t *source_msg,
 			 hip_common_t *target_msg);

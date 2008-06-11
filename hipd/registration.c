@@ -279,8 +279,8 @@ int hip_get_pending_request_count(hip_ha_t *entry)
 	return request_count;
 }
 
-int hip_handle_param_rinfo(hip_ha_t *entry, hip_common_t *source_msg,
-			   hip_common_t *target_msg)
+int hip_handle_param_reg_info(hip_ha_t *entry, hip_common_t *source_msg,
+			      hip_common_t *target_msg)
 {
 	struct hip_reg_info *reg_info = NULL;
 	uint8_t *reg_types = NULL, reg_type = 0;
@@ -432,104 +432,6 @@ int hip_handle_param_rinfo(hip_ha_t *entry, hip_common_t *source_msg,
 
  out_err:
 	return err;
-}
-
-int hip_handle_param_reg_info(hip_common_t *msg, hip_ha_t *entry)
-{
-	struct hip_reg_info *reg_info = NULL;
-	uint8_t *reg_types = NULL, reg_type = 0;
-	unsigned int type_count = 0;
-	int i = 0;
-	
-	reg_info = hip_get_param(msg, HIP_PARAM_REG_INFO);
-	
-	if(reg_info == NULL) {
-		HIP_DEBUG("No REG_INFO parameter found. The Responder offers "\
-			  "no services.\n");
-#ifdef CONFIG_HIP_ESCROW
-		/* The escrow part is just a copy paste from the previous HIPL
-		   registration implementation. It is not tested to work.
-		   Besides, it makes no sense to do anything except return
-		   zero here. Why should we take action if the responder does
-		   NOT offer the service? -Lauri. */ 
-		HIP_KEA *kea = NULL;
-		kea = hip_kea_find(&entry->hit_our);
-		
-		if (kea && (kea->keastate == HIP_KEASTATE_REGISTERING))
-			kea->keastate = HIP_KEASTATE_INVALID;
-		if (kea)
-			hip_keadb_put_entry(kea);
-		/** @todo remove base keas */
-#endif /* CONFIG_HIP_ESCROW */
-		return -1;
-	}
-	
-	HIP_DEBUG("REG_INFO parameter found.\n");
-
-	/* Get a pointer registration types and the type count. */
-	reg_types  = reg_info->reg_type;
-	type_count = hip_get_param_contents_len(reg_info) -
-		(sizeof(reg_info->min_lifetime) + sizeof(reg_info->max_lifetime));
-	
-	/* Check RFC 5203 Chapter 3.1. */
-	if(type_count == 0){
-		HIP_INFO("The server is currently unable to provide services "\
-			 "due to transient conditions.\n");
-		return 0;
-	}
-
-	/* Loop through all the registration types found in REG_INFO parameter
-	   and store the information of responder's capability to offer a
-	   service. */
-	for(i = 0; i < type_count; i++){
-		
-		switch(reg_types[i]) {
-		case HIP_SERVICE_RENDEZVOUS:
-			HIP_INFO("Responder offers rendezvous service.\n");
-						
-			hip_hadb_set_peer_controls(
-				entry ,HIP_HA_CTRL_PEER_RVS_CAPABLE);
-			
-			break;
-		case HIP_SERVICE_RELAY:
-			HIP_INFO("Responder offers relay service.\n");
-			hip_hadb_set_peer_controls(
-				entry, HIP_HA_CTRL_PEER_RELAY_CAPABLE);
-			
-			break;
-#ifdef CONFIG_HIP_ESCROW	
-		case HIP_SERVICE_ESCROW:
-			/* The escrow part is just a copy paste from the
-			   previous HIPL registration implementation. It is not
-			   tested to work. -Lauri */
-			HIP_INFO("Responder offers escrow service.\n");
-			HIP_KEA *kea;
-			
-			hip_hadb_set_peer_controls(
-				entry, HIP_HA_CTRL_PEER_ESCROW_CAPABLE);
-			
-			kea = hip_kea_find(&entry->hit_our);
-			if (kea && kea->keastate == HIP_KEASTATE_REGISTERING) {
-				HIP_DEBUG("Registering to escrow service.\n");
-				hip_keadb_put_entry(kea);
-			} else if(kea){
-				kea->keastate = HIP_KEASTATE_INVALID;
-				HIP_DEBUG("Not doing escrow registration, "\
-					  "invalid kea state.\n");
-				hip_keadb_put_entry(kea);	  
-			} else {
-				HIP_DEBUG("Not doing escrow registration.\n");
-			}
-
-			break;
-#endif /* CONFIG_HIP_ESCROW */
-			
-		default:
-			HIP_INFO("Responder offers unsupported service.\n");
-		}
-	}
-	
-	return 0;
 }
 
 int hip_handle_param_rrq(hip_ha_t *entry, hip_common_t *source_msg,

@@ -896,38 +896,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
         HIP_DEBUG("Could not deliver escrow data to server.\n");
     }             
 #endif //CONFIG_HIP_ESCROW
-    
-    /************ REG_REQUEST ***********/
-    /* Check if we have requested any services. The request bits are set in
-       user.c. */
-    /** @todo Only build those Reg Types that we have requested _and_ the
-	server offers. Check the lifetime boundaries from ctx. */
-    /*if(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_ANY) {
-	    int request_count = hip_get_pending_request_count(entry);
-	    if(request_count > 0) {
-		    int i = 0;
-		    uint8_t reg_types[request_count];
-		    hip_pending_request_t *requests[request_count];
-		    hip_get_pending_requests(entry, requests);*/
-		    
-		    /* Copy the reg_types to an array. */
-    /*for(;i < request_count; i++) {
-			    reg_types[i] = requests[i]->reg_type;
-		    }
-		    
-		    HIP_IFEL(hip_build_param_reg_request(
-				     i2, requests[0]->lifetime, reg_types,
-				     request_count), -1,
-				     "Failed to build a REG_REQUEST parameter.\n"); */
-		    /* We do not delete the pending requests for this entry yet,
-		       but only after R2 has arrived. We do not need pending
-		       requests when R2 arrives, but in case the I2 is to be
-		       retransmitted, we must be able to produce the REG_REQUEST
-		       parameter. */
-/*}
-  } */
 
-    hip_handle_param_rinfo(entry, ctx->input, i2);
+    hip_handle_param_reg_info(entry, ctx->input, i2);
 
     /******** NONCE *************************/
 #ifdef CONFIG_HIP_BLIND
@@ -1012,7 +982,6 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 	struct hip_context *ctx = NULL;
 	struct hip_host_id *peer_host_id = NULL;
 	struct hip_r1_counter *r1cntr = NULL;
-	struct hip_reg_info *reg_info = NULL;
 	struct hip_dh_public_value *dhpv = NULL;
         struct hip_locator *locator = NULL;
 #ifdef CONFIG_HIP_HI3
@@ -1127,9 +1096,6 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
         else
             HIP_DEBUG("R1 did not have locator\n");
 
-	/* Handle REG_INFO parameter. */
-	//hip_handle_param_reg_info(r1, entry);
-	
 	/* R1 generation check */
 
 	/* We have problems with creating precreated R1s in reasonable
