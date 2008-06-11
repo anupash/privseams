@@ -1660,17 +1660,19 @@ int hip_sa_addr_len(void *sockaddr) {
 }
 
 
-/* conversion function from in6_addr to sockaddr */
-void hip_addr_to_sockaddr(struct in6_addr *addr, struct sockaddr *sa)
+/* conversion function from in6_addr to sockaddr_storage
+ * 
+ * NOTE: sockaddr too small to store sockaddr_in6 */
+void hip_addr_to_sockaddr(struct in6_addr *addr, struct sockaddr_storage *sa)
 {
+	memset(sa, 0, sizeof(struct sockaddr_storage));
+	
 	if (IN6_IS_ADDR_V4MAPPED(addr)) {
 		struct sockaddr_in *in = (struct sockaddr_in *) sa;
-		memset(in, 0, sizeof(struct sockaddr_in));
 		in->sin_family = AF_INET;
 		IPV6_TO_IPV4_MAP(addr, &in->sin_addr);
 	} else {
 		struct sockaddr_in6 *in6 = (struct sockaddr_in6 *) sa;
-		memset(in6, 0, sizeof(struct sockaddr_in6));
 		in6->sin6_family = AF_INET6;
 		ipv6_addr_copy(&in6->sin6_addr, addr);
 	}
@@ -1859,42 +1861,56 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 	return err;
 }
 
-int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit, struct in6_addr *src_ip, struct in6_addr *dst_ip)
+/* This builds a msg wich will be sent to the HIPd in order to trigger
+ * a BEX there.
+ * 
+ * TODO move that to useripsec.c?
+ * 
+ * NOTE: Either destination HIT or IP (for opportunistic BEX) has to be provided */
+int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
+		struct in6_addr *src_ip, struct in6_addr *dst_ip)
 {
 	struct hip_common *msg = NULL;
 	int err = 0;
 
-	HIP_DEBUG_HIT("src hit is: ", src_hit);
-	HIP_DEBUG_HIT("dst hit hit is: ", dst_hit);
-	HIP_DEBUG_IN6ADDR("src ip is: ", src_ip);
-	HIP_DEBUG_IN6ADDR("dst ip  is: ", dst_ip);
-	
+	HIP_DEBUG_HIT("src_hit is: ", src_hit);
+	HIP_DEBUG_IN6ADDR("src_ip is: ", src_ip);
+	HIP_DEBUG_HIT("dst_hit is: ", dst_hit);
+	HIP_DEBUG_IN6ADDR("dst_ip  is: ", dst_ip);
 	
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
-
-	if (src_hit)
-		HIP_IFEL(hip_build_param_contents(msg, (void *)(src_hit),
-						  HIP_PARAM_HIT,
-						  sizeof(struct in6_addr)), -1,
-			 "build param HIP_PARAM_HIT  failed\n");
 	
+	HIP_IFEL(!dst_hit && !dst_ip, -1, "neither destination hit nor ip provided\n");
+	
+	// NOTE: we need this sequence in order to process the icoming message correctly
+	
+	// destination HIT is obligatory or opportunistic BEX
 	if (dst_hit)
 		HIP_IFEL(hip_build_param_contents(msg, (void *)(dst_hit),
 						  HIP_PARAM_HIT,
 						  sizeof(struct in6_addr)), -1,
-		 "build param HIP_PARAM_HIT  failed\n");
+		 "build param HIP_PARAM_HIT failed\n");
 	
-	if (src_ip)
-		HIP_IFEL(hip_build_param_contents(msg, (void *)(src_ip),
-						  HIP_PARAM_IPV6_ADDR,
-						  sizeof(struct in6_addr)), -1,
-			 "build param HIP_PARAM_IPV6_ADDR failed\n");
+	// source HIT is optional
+	if (src_hit)
+			HIP_IFEL(hip_build_param_contents(msg, (void *)(src_hit),
+							  HIP_PARAM_HIT,
+							  sizeof(struct in6_addr)), -1,
+				 "build param HIP_PARAM_HIT failed\n");
 	
+	// if no destination HIT is provided this has to be there
 	if (dst_ip)
 		HIP_IFEL(hip_build_param_contents(msg, (void *)(dst_ip),
 						  HIP_PARAM_IPV6_ADDR,
 						  sizeof(struct in6_addr)), -1,
 			 "build param HIP_PARAM_IPV6_ADDR failed\n");
+	
+	// this again is optional
+	if (src_ip)
+			HIP_IFEL(hip_build_param_contents(msg, (void *)(src_ip),
+							  HIP_PARAM_IPV6_ADDR,
+							  sizeof(struct in6_addr)), -1,
+				 "build param HIP_PARAM_IPV6_ADDR failed\n");
 	
 	/* build the message header */
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_TRIGGER_BEX, 0), -1,
@@ -1902,13 +1918,13 @@ int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit, struct i
 
 	HIP_DUMP_MSG(msg);
 	
-	/* send and receive msg to/from hipd */
+	/* send msg to hipd and receive corresponding reply */
 	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send_recv msg failed\n");
 	_HIP_DEBUG("send_recv msg succeed\n");
 
 
 	/* check error value */
-	HIP_IFEL(hip_get_msg_err(msg), -1, "Got erroneous message!\n");
+	HIP_IFEL(hip_get_msg_err(msg), -1, "hipd returned error message!\n");
 	
 	HIP_DEBUG("Send_recv msg succeed \n");
 	

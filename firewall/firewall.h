@@ -33,10 +33,10 @@
 #include "helpers.h"
 #include "conntrack.h"
 #include "utils.h"
-#include "hip_usermode.h"
+//#include "hip_usermode.h"
 #include "misc.h"
 #include "netdev.h"
-#include "hip_sadb.h"
+//#include "hip_sadb.h"
 
 
 #define HIP_FW_DEFAULT_RULE_FILE "/etc/hip/firewall.conf"
@@ -139,6 +139,7 @@ int hip_fw_handle_hip_forward(hip_fw_context_t *ctx);
 int hip_fw_handle_esp_forward(hip_fw_context_t *ctx);
 int hip_fw_handle_tcp_forward(hip_fw_context_t *ctx);
 
+// dependent on typedefs in here
+#include "useripsec.h"
 
 #endif
-
