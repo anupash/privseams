@@ -758,6 +758,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 			 "Could not build R1 GENERATION parameter\n");
 	}
 
+	
+#ifndef HIP_USE_ICE
 	/********* LOCATOR PARAMETER ************/
         /** Type 193 **/ 
         if (hip_locator_status == SO_HIP_SET_LOCATOR_ON) {
@@ -765,7 +767,17 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
             if ((err = hip_build_locators(i2)) < 0) 
                 HIP_DEBUG("LOCATOR parameter building failed\n");
         }
+#endif
 #ifdef HIP_USE_ICE
+    	/********* LOCATOR PARAMETER ************/
+		/** Type 193 **/ 
+		if (hip_locator_status == SO_HIP_SET_LOCATOR_ON) {
+		    HIP_DEBUG("Building nat LOCATOR parameter\n");
+		    if ((err = hip_nat_build_locators(i2)) < 0) 
+		        HIP_DEBUG("nat LOCATOR parameter building failed\n");
+		}        
+
+        
         hip_build_param_nat_tranform(i2, entry->nat_control);
 #endif
 	/********** SOLUTION **********/
@@ -1507,6 +1519,16 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 	}
 #endif
 
+#ifdef HIP_USE_ICE
+    	/********* LOCATOR PARAMETER ************/
+		/** Type 193 **/ 
+		if (hip_locator_status == SO_HIP_SET_LOCATOR_ON) {
+		    HIP_DEBUG("Building nat LOCATOR parameter\n");
+		    if ((err = hip_nat_build_locators(r2)) < 0) 
+		        HIP_DEBUG("nat LOCATOR parameter building failed\n");
+		}  	
+#endif	
+	
 #if defined(CONFIG_HIP_RVS) || defined(CONFIG_HIP_ESCROW)
 	/********** REG_REQUEST **********/
 	/* This part should only be executed in HIP relay or in the host

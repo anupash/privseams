@@ -3662,3 +3662,60 @@ int hip_get_locator_item_list_length(void* item_list, int amount){
 	return result - (char*) item_list;
 	
 } 
+
+
+/**
+ * hip_build_param_locator2 - build HIP locator parameter
+ *
+ * @param msg the message where the REA will be appended
+ * @param addresses1 list of addresses type1
+ * @param addresses2 list of addresses type2
+ * @param address_count1 number of addresses1
+ * @param address_count2 number of addresses2
+ * @return 0 on success, otherwise < 0.
+ */
+int hip_build_param_locator2(struct hip_common *msg,
+			struct hip_locator_info_addr_item  *addresses1,
+			struct hip_locator_info_addr_item2 *addresses2,
+			int address_count1,
+			int address_count2)
+{
+	int err = 0;
+	struct hip_locator *locator_info = NULL;
+	int addrs_len1 = address_count1 *
+		(sizeof(struct hip_locator_info_addr_item));
+	int addrs_len2 = address_count2 *
+		(sizeof(struct hip_locator_info_addr_item2));
+	
+	_HIP_DEBUG("Santtu: create total locator items : %d \n", address_count1 + address_count2 );
+	_HIP_DEBUG("Santtu: create total locator length : %d \n", addrs_len1 + addrs_len2 );
+		
+	HIP_IFE(!(locator_info =
+		  malloc(sizeof(struct hip_locator) + addrs_len1 + addrs_len2 )), -1);
+
+	hip_set_param_type(locator_info, HIP_PARAM_LOCATOR);
+	hip_calc_generic_param_len(locator_info,
+				   sizeof(struct hip_locator),
+				   addrs_len1+addrs_len2);
+	_HIP_DEBUG("params size=%d\n", sizeof(struct hip_locator) -
+		   sizeof(struct hip_tlv_common) +
+		   addrs_len1+addrs_len2);
+
+	memcpy(locator_info + 1, addresses1, addrs_len1);
+	if(address_count2 >0)
+	memcpy(((char*)(locator_info + 1))+addrs_len1, addresses2, addrs_len2);
+	
+	HIP_IFE(hip_build_param(msg, locator_info), -1);
+
+	_HIP_DEBUG("msgtotlen=%d addrs_len=%d\n", hip_get_msg_total_len(msg),
+		   addrs_len);
+	//if (addrs_len > 0)
+	//	memcpy((void *)msg+hip_get_msg_total_len(msg)-addrs_len,
+	//	       addresses, addrs_len);
+
+ out_err:
+	if (locator_info)
+		free(locator_info);
+
+	return err;
+}
