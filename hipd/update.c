@@ -1979,21 +1979,32 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 			   that interested in the success of PL */
 			hip_print_peer_addresses(entry);
 		}
-	}
-	else if (echo_response) {
+	} else if (echo_response) {
 		//handle echo response
 		hip_update_handle_echo_response(entry, echo_response, src_ip);
 	}
 	
-	if (encrypted) {
+	if (encrypted != NULL) {
 		// handle encrypted parameter
 		HIP_DEBUG("ENCRYPTED found\n");
 		HIP_IFEL(hip_handle_encrypted(entry, encrypted), -1,
 			 "Error in processing encrypted parameter\n");
-		HIP_IFEL(hip_update_send_ack(entry, msg, src_ip, dst_ip), -1,
-			 "Error sending ack\n");
+		send_ack = 1;
 	}
-     
+	
+	/* Handle registration info. */
+	if (reg_info) {
+		uint8_t *types = NULL;
+		int type_count;
+		types = (uint8_t *)(hip_get_param_contents(msg, HIP_PARAM_REG_INFO));
+		/* leave out lifetime fields. */
+		type_count = hip_get_param_contents_len(reg_info) - 2;
+                
+		HIP_IFEL(hip_handle_reg_info(entry, reg_info, (types + 2), 
+					     type_count), -1,
+			 "Error handling reg_info\n");
+	}
+
 	/* Handle registration request. */
 	if (reg_request) {
 	  
@@ -2023,19 +2034,6 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 			 "Error sending UPDATE ACK.\n");
 	}
 	
-	/* Handle registration info. */
-	if (reg_info) {
-		uint8_t *types = NULL;
-		int type_count;
-		types = (uint8_t *)(hip_get_param_contents(msg, HIP_PARAM_REG_INFO));
-		/* leave out lifetime fields. */
-		type_count = hip_get_param_contents_len(reg_info) - 2;
-                
-		HIP_IFEL(hip_handle_reg_info(entry, reg_info, (types + 2), 
-					     type_count), -1,
-			 "Error handling reg_info\n");
-	}
-        
  out_err:
 	if (err != 0)
 		HIP_ERROR("UPDATE handler failed, err=%d\n", err);

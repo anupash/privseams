@@ -69,7 +69,6 @@ int hip_services_add(int service_type)
 		strncpy(service->name, "ESCROW_SERVICE", 20);
 		service->handle_registration = hip_handle_escrow_registration;
 		service->cancel_registration = hip_cancel_escrow_registration;
-		service->cancel_service = hip_cancel_escrow_service;
 		
 	} else if (service_type == HIP_SERVICE_RENDEZVOUS)
 	{
@@ -78,7 +77,6 @@ int hip_services_add(int service_type)
 		strncpy(service->name, "RENDEZVOUS", 20); 
 		service->handle_registration = hip_handle_registration;
 		service->cancel_registration = hip_cancel_registration;
-		service->cancel_service = hip_cancel_service;
 	} else if (service_type == HIP_SERVICE_RELAY)
 	{
 		service->service_type = HIP_SERVICE_RELAY;
@@ -86,7 +84,6 @@ int hip_services_add(int service_type)
 		strncpy(service->name, "RELAYUDPHIP_SERVICE", 20); 
 		service->handle_registration = hip_handle_registration;
 		service->cancel_registration = hip_cancel_registration;
-		service->cancel_service = hip_cancel_service;
 	} else {
 		HIP_ERROR("Unknown service type.\n");
 		err = -1;
@@ -144,8 +141,6 @@ int hip_services_remove(int service)
 		s = list_entry(item);
 		if (s->service_type == service) {
 			HIP_DEBUG("Removing service %d.\n", service);
-			HIP_IFEL(s->cancel_service(), -1, 
-				 "Error cancelling service\n");
 			list_del(s, services);
 			HIP_FREE(s);
 		}
@@ -798,9 +793,3 @@ int hip_cancel_registration(struct in6_addr *hit)
 	return 0;
 }
 
-// Default func
-int hip_cancel_service(void)
-{
-	// TODO: notify registered clients (REG_RESPONSE with zero lifetime) 
-	return 0;
-}
