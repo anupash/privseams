@@ -99,6 +99,7 @@ typedef struct _hip_sadb_entry
 #endif
 	__u32 mode; 	/* ESP mode :  0-default 1-transport 2-tunnel 3-beet */
 	// TODO add encap_mode (= UDP / TCP)
+	__u16 src_port;
 	__u16 dst_port;			/* UDP dest. port for encaps. ESP */
 	struct timeval usetime_ka;  /* last used timestamp, incl keep-alives */
 	struct sockaddr_storage lsi;	/* LSI 				*/
@@ -165,7 +166,8 @@ typedef struct _hip_proto_sel_entry
  */
 void hip_sadb_init();
 int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
-    struct sockaddr *inner_dst, struct sockaddr *src, struct sockaddr *dst, __u16 port,
+    struct sockaddr *inner_dst, struct sockaddr *src, struct sockaddr *dst, __u16 sport,
+    __u16 dport, int direction,
     __u32 spi, __u8 *e_key, __u32 e_type, __u32 e_keylen, __u8 *a_key,
     __u32 a_type, __u32 a_keylen, __u32 lifetime, __u16 hitmagic);
 int hip_sadb_delete(__u32 type, struct sockaddr *src, struct sockaddr *dst,

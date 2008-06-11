@@ -892,7 +892,8 @@ void add_ipv6_header(struct ip6_hdr *ip6_hdr, struct in6_addr *src_addr, struct 
 void add_udp_header(struct udphdr *udp_hdr, int packet_len, hip_sadb_entry *entry,
 		struct in6_addr *src_addr, struct in6_addr *dst_addr)
 {
-	udp_hdr->source = htons(HIP_ESP_UDP_PORT);
+	//udp_hdr->source = htons(HIP_ESP_UDP_PORT);
+	udp_hdr->source = htons(entry->src_port);
 	
 	if ((udp_hdr->dest = htons(entry->dst_port)) == 0) {
 		HIP_ERROR("bad UDP dst port number: %u\n", entry->dst_port);

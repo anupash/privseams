@@ -499,11 +499,10 @@ int hipl_userspace_ipsec_sadb_add_wrapper(struct in6_addr *saddr,
 	 * 
 	 * Here just give a value 100 to lifetime
 	 * */
-	
 	err = hip_sadb_add(TYPE_USERSPACE_IPSEC, IPSEC_MODE, (struct sockaddr *) &inner_src,
 			(struct sockaddr *) &inner_dst, (struct sockaddr *) &src, (struct sockaddr *) &dst,
-			   (__u16) dport, ipsec_spi, ipsec_e_key, ipsec_e_type, ipsec_e_keylen,
-			   ipsec_a_key, ipsec_a_type, ipsec_a_keylen, 100 , hit_magic);
+			(__u16) sport, (__u16) dport, direction, ipsec_spi, ipsec_e_key, ipsec_e_type,
+			ipsec_e_keylen, ipsec_a_key, ipsec_a_type, ipsec_a_keylen, 100 , hit_magic);
 	
 	// Tell firewall that HIT SRC + DST HAS A SECURITY ASSOCIATION
 	HIP_DEBUG("HIP IPsec userspace SA add return value %d\n", err);
