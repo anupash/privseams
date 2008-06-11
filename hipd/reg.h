@@ -76,8 +76,8 @@ int hip_services_is_active(int service_type);
  * @note             This function replaces the old registration handlers.
  * @note             Registration cancellation has not been tested.
  */
-int hip_handle_regrequest(hip_ha_t *entry, hip_common_t *source_msg,
-			  hip_common_t *target_msg);
+int hip_handle_rrq_old(hip_ha_t *entry, hip_common_t *source_msg,
+		       hip_common_t *target_msg);
 
 /**
  * Handles registration attempt.

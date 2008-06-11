@@ -30,13 +30,10 @@ extern hip_xmit_func_set_t nat_xmit_func_set;
 /** A transmission function set for sending raw HIP packets. */
 extern hip_xmit_func_set_t default_xmit_func_set;
 
-int hip_for_each_locator_addr_item(int (*func)
-				   (hip_ha_t *entry,
-				    struct hip_locator_info_addr_item *i,
-				    void *opaq),
-                                   hip_ha_t *entry,
-                                   struct hip_locator *locator,
-                                   void *opaque)
+int hip_for_each_locator_addr_item(
+	int (*func)
+	(hip_ha_t *entry, struct hip_locator_info_addr_item *i, void *opaq),
+	hip_ha_t *entry, struct hip_locator *locator, void *opaque)
 {
 	int i = 0, err = 0, n_addrs;
 	struct hip_locator_info_addr_item *locator_address_item = NULL;
@@ -44,7 +41,7 @@ int hip_for_each_locator_addr_item(int (*func)
 	n_addrs = hip_get_locator_addr_item_count(locator);
 	HIP_IFEL((n_addrs < 0), -1, "Negative address count\n");
 	/**
-	   @todo: Here we have wrong checking, because function  
+	   @todo Here we have wrong checking, because function  
 	   hip_get_locator_addr_item_count(locator) has already
 	   divided the length on sizeof(struct hip_locator_info_addr_item)
 	   hence we already have number of elements. Andrey
@@ -68,13 +65,11 @@ int hip_for_each_locator_addr_item(int (*func)
 	return err;
 }
 
-int hip_update_for_each_peer_addr(int (*func)
-				  (hip_ha_t *entry,
-				   struct hip_peer_addr_list_item *list_item,
-				   struct hip_spi_out_item *spi_out,
-				   void *opaq), hip_ha_t *entry,
-                                  struct hip_spi_out_item *spi_out,
-                                  void *opaq)
+int hip_update_for_each_peer_addr(
+	int (*func)
+	(hip_ha_t *entry, struct hip_peer_addr_list_item *list_item,
+	 struct hip_spi_out_item *spi_out, void *opaq),
+	hip_ha_t *entry, struct hip_spi_out_item *spi_out, void *opaq)
 {
 	hip_list_t *item, *tmp;
 	struct hip_peer_addr_list_item *addr;
@@ -1442,6 +1437,7 @@ int hip_handle_esp_info(hip_common_t *msg, hip_ha_t *entry)
 	return err;
 }
 
+
 int hip_create_reg_response(hip_ha_t *entry, struct hip_tlv_common * reg,
 			    uint8_t *requests, int request_count,
 			    in6_addr_t *src_ip, in6_addr_t *dst_ip)
@@ -1452,6 +1448,10 @@ int hip_create_reg_response(hip_ha_t *entry, struct hip_tlv_common * reg,
 	uint32_t update_id_out = 0;
 	struct hip_reg_request *reg_request = NULL;
         
+	/* Why does this function include so many parameter builders. After all,
+	   this should only build the REG_RESPONSE parameter.
+	   -Lauri 11.06.2008 */
+
 	if (reg != NULL) {
 		reg_request = (struct hip_reg_request *)reg;
 		HIP_DEBUG("Received registration message from client\n");
@@ -1484,7 +1484,7 @@ int hip_create_reg_response(hip_ha_t *entry, struct hip_tlv_common * reg,
 	}
 	/********** REG_RESPONSE/REG_FAILED **********/        
 	/* Check service requests and build reg_response and/or reg_failed */
-	/** @todo change to use hip_handle_regrequest(). For that we need
+	/** @todo change to use hip_handle_rrq_old(). For that we need
 	    entry, source message and destination message. We don't have the
 	    source message here... */
 	hip_handle_registration_attempt(entry, update_packet, reg_request, 
@@ -1857,35 +1857,15 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 	struct hip_tlv_common *reg_info = NULL;
 	struct hip_tlv_common *encrypted = NULL;
      	
-	HIP_DEBUG("enter\n");
-
-	src_ip = update_saddr;
-	dst_ip = update_daddr;
-	hits = &msg->hits;
-
-	HIP_IFEL(!entry, -1, "Entry not found\n");
-	HIP_LOCK_HA(entry);
-	state = entry->state;
-
-	HIP_DEBUG("Received UPDATE in state %s\n", hip_state_str(state));
-
-	/* in state R2-SENT: Receive UPDATE, go to ESTABLISHED and
-	 * process from ESTABLISHED state
-	 *
-	 * CHK: Is it too early to do this?
-	 *                           -Bagri */
-	if (state == HIP_STATE_R2_SENT) {
-		state = entry->state = HIP_STATE_ESTABLISHED;
-		HIP_DEBUG("Moved from R2-SENT to ESTABLISHED\n");
-	}
-
-	if (!(state == HIP_STATE_ESTABLISHED) ) {
-		HIP_DEBUG("Received UPDATE in illegal state %s. Dropping\n",
-			  hip_state_str(state));
-		err = -EINVAL;
+	HIP_DEBUG("hip_receive_update() invoked.\n");
+	
+	if(entry == NULL) {
+		HIP_ERROR("No host association database entry found.\n");
+		err = -1;
 		goto out_err;
 	}
-
+	
+	
 	esp_info = hip_get_param(msg, HIP_PARAM_ESP_INFO);
 	seq = hip_get_param(msg, HIP_PARAM_SEQ);
 	ack = hip_get_param(msg, HIP_PARAM_ACK);
@@ -1898,25 +1878,54 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 	reg_failed = hip_get_param(msg, HIP_PARAM_REG_FAILED);
 	reg_info = hip_get_param(msg, HIP_PARAM_REG_INFO);
 
-	if(ack)
-		HIP_DEBUG("ACK found: %u\n", ntohl(ack->peer_update_id));
-	if (esp_info){
-		HIP_DEBUG("LOCATOR: SPI new 0x%x\n", ntohl(esp_info->new_spi));
+	src_ip = update_saddr;
+	dst_ip = update_daddr;
+	hits = &msg->hits;
+	state = entry->state;
+
+	
+
+	/* An UPDATE packet is only accepted if the state is R2-SENT or
+	 * ESTABLISHED. 
+	 */
+	
+	if(state == HIP_STATE_R2_SENT) {
+		state = entry->state = HIP_STATE_ESTABLISHED;
+		HIP_DEBUG("Received UPDATE in state %s, moving to "\
+			  "ESTABLISHED.\n", hip_state_str(state));
+	} else if(state != HIP_STATE_ESTABLISHED) {
+		HIP_ERROR("Received UPDATE in illegal state %s.\n",
+			  hip_state_str(state));
+		err = -EPROTO;
+		goto out_err;
+	}
+	
+	if (esp_info != NULL){
+		HIP_DEBUG("ESP INFO parameter found with new SPI %u.\n",
+			  ntohl(esp_info->new_spi));
 		has_esp_info = 1;
 	}
-	if (locator)
-		HIP_DEBUG("LOCATOR found\n");
-	if (echo)
-		HIP_DEBUG("ECHO_REQUEST found\n");
-	if (echo_response)
-		HIP_DEBUG("ECHO_RESPONSE found\n");
-
-	if (ack)
-		//process ack
-		entry->hadb_update_func->hip_update_handle_ack(entry, ack,
-							       has_esp_info);
-	if (seq)
-		HIP_IFEL(hip_handle_update_seq(entry, msg), -1, "seq\n");
+	if (locator != NULL) {
+		HIP_DEBUG("LOCATOR parameter found.\n");
+	}
+	if (echo != NULL) {
+		HIP_DEBUG("ECHO_REQUEST parameter found.\n");
+	}
+	if (echo_response != NULL) {
+		HIP_DEBUG("ECHO_RESPONSE parameter found.\n");
+	}
+	if (ack != NULL) {
+		HIP_DEBUG("ACK parameter found with peer Update ID %u.\n",
+			  ntohl(ack->peer_update_id));
+		entry->hadb_update_func->hip_update_handle_ack(
+			entry, ack, has_esp_info);
+	}
+	if (seq != NULL) {
+		HIP_DEBUG("SEQ parameter found with  Update ID %u.\n",
+			  ntohl(seq->update_id));
+		HIP_IFEL(hip_handle_update_seq(entry, msg), -1,
+			 "Error when handling parameter SEQ.\n");
+	}
 	
 	/* base-05 Sec 6.12.1.2 6.12.2.2 The system MUST verify the 
 	 * HMAC in the UPDATE packet.If the verification fails, 
@@ -1949,18 +1958,6 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 		hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
 		ipv6_addr_copy(&entry->local_address, dst_ip);
 		ipv6_addr_copy(&entry->preferred_address, src_ip);
-		
-		/* Somehow the addresses in the entry doesn't get updated for
-		   mobility behind nat case. The "else" would be called only
-		   when the client moves from behind NAT to behind NAT.
-		   Updating the entry addresses here.
-		   
-		   Miika: Is it the correct place to be done? -- Abi
-		   
-		   Error was because of multiple locator parameter, code
-		   shifted to after setting of preferred address by the
-		   mm logic
-		   -- Bagri */	
 	}
 	
 	if(esp_info)
@@ -2037,13 +2034,14 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 	}
         
  out_err:
-	if (err)
+	if (err != 0)
 		HIP_ERROR("UPDATE handler failed, err=%d\n", err);
-
-	if (entry) {
+	
+	if (entry != NULL) {
 		HIP_UNLOCK_HA(entry);
 		hip_put_ha(entry);
 	}
+	
 	return err;
 }
 
@@ -2896,14 +2894,9 @@ int hip_update_send_registration_request(hip_ha_t *entry,
 	HIP_IFEL(hip_build_param_seq(update_packet, update_id_out), -1, 
 		 "Building of SEQ param failed\n");
         
-	HIP_IFEL(hip_build_param_reg_request(update_packet, lifetime,
-						 (uint8_t *)types, type_count),
-		 -1, "Building of REG_REQUEST failed\n");
-	/*
 	HIP_IFEL(hip_build_param_reg_request(
-			 update_packet, lifetime, (uint8_t *)types, type_count, 1),
+			 update_packet, lifetime, (uint8_t *)types, type_count),
 		 -1, "Building of REG_REQUEST failed\n");
-	*/
 
 	/* Add HMAC */
 	HIP_IFEL(hip_build_param_hmac_contents(

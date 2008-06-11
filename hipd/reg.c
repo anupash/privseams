@@ -284,7 +284,7 @@ int hip_check_service_requests(struct in6_addr *hit, uint8_t *requests, int requ
 	return err;	
 }
 
-int hip_handle_regrequest(hip_ha_t *entry, hip_common_t *source_msg,
+int hip_handle_rrq_old(hip_ha_t *entry, hip_common_t *source_msg,
 			  hip_common_t *target_msg)
 {
 	struct hip_reg_request *reg_request = NULL;
@@ -294,7 +294,7 @@ int hip_handle_regrequest(hip_ha_t *entry, hip_common_t *source_msg,
 	uint8_t req_lifetime = 0, val_lifetime = 0;
 	uint8_t *values = NULL;
      
-	HIP_DEBUG("hip_handle_regrequest() invoked.\n");
+	HIP_DEBUG("hip_handle_rrq_old() invoked.\n");
 
 	/* Check if the incoming I2 has a REG_REQUEST parameter at all. */
 	reg_request = hip_get_param(source_msg, HIP_PARAM_REG_REQUEST);

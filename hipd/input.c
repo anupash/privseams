@@ -1266,46 +1266,43 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 		  in6_addr_t *i2_daddr, hip_ha_t *entry,
 		  hip_portpair_t *i2_info)
 {
-	struct hip_reg_request *reg_request = NULL;
- 	struct hip_common *r2 = NULL, *i2 = NULL;
- 	int err = 0, clear = 0;
+	struct hip_common *r2 = NULL, *i2 = NULL;
+	struct hip_crypto_key hmac;
+ 	int err = 0;
 	uint16_t mask = 0;
-	uint8_t lifetime;
-	uint32_t spi_in;
+	uint32_t spi_in = 0;
         
 	_HIP_DEBUG("hip_create_r2() invoked.\n");
 	/* Assume already locked entry */
 	i2 = ctx->input;
-
+	
 	/* Build and send R2: IP ( HIP ( SPI, HMAC, HIP_SIGNATURE ) ) */
 	HIP_IFEL(!(r2 = hip_msg_alloc()), -ENOMEM, "No memory for R2\n");
-
-
+	
 #ifdef CONFIG_HIP_BLIND
 	// For blind: we must add encrypted public host id
 	if (hip_blind_get_status()) {
-	  HIP_DEBUG("Set HIP_PACKET_CTRL_BLIND for R2\n");
-	  mask |= HIP_PACKET_CTRL_BLIND;
-	  
-	  // Build network header by using blinded HITs
-	  entry->hadb_misc_func->
-	    hip_build_network_hdr(r2, HIP_R2, mask, &entry->hit_our_blind,
-				  &entry->hit_peer_blind);
+		HIP_DEBUG("Set HIP_PACKET_CTRL_BLIND for R2\n");
+		mask |= HIP_PACKET_CTRL_BLIND;
+		
+		// Build network header by using blinded HITs
+		entry->hadb_misc_func->
+			hip_build_network_hdr(r2, HIP_R2, mask, &entry->hit_our_blind,
+					      &entry->hit_peer_blind);
 	}
 #endif
-	/* Just swap the addresses to use the I2's destination HIT as
-	 * the R2's source HIT */
+	/* Just swap the addresses to use the I2's destination HIT as the R2's
+	   source HIT. */
 	if (!hip_blind_get_status()) {
-	  entry->hadb_misc_func->
-	    hip_build_network_hdr(r2, HIP_R2, mask, &entry->hit_our,
-				  &entry->hit_peer);
+		entry->hadb_misc_func->
+			hip_build_network_hdr(r2, HIP_R2, mask, &entry->hit_our,
+					      &entry->hit_peer);
 	}
 
- 	/********** ESP_INFO **********/
+ 	/* ESP_INFO */
 	spi_in = hip_hadb_get_latest_inbound_spi(entry);
-	HIP_IFEL(hip_build_param_esp_info(r2, ctx->esp_keymat_index,
-					  0, spi_in), -1,
-		 "building of ESP_INFO failed.\n");
+	HIP_IFEL(hip_build_param_esp_info(r2, ctx->esp_keymat_index, 0, spi_in),
+		 -1, "building of ESP_INFO failed.\n");
 
 #ifdef CONFIG_HIP_BLIND
 	// For blind: we must add encrypted public host id
@@ -1317,46 +1314,52 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 
 #if defined(CONFIG_HIP_RVS) || defined(CONFIG_HIP_ESCROW)
 	/********** REG_REQUEST **********/
-	/* This part should only be executed in HIP relay or in the host
-	   offering escrow service.
-	   (hip_relay_get_status() == HIP_RELAY_ON || we_are_escrow_server()).
-	   But since I don't have a way to detect if we are an escrow server
-	   this part is executed on I and R also. -Lauri 27.09.2007*/
+	/* This part should only be executed at server offering rvs, relay or
+	   escrow services. Since we don't have a way to detect if we are an
+	   escrow server this part is executed on I and R also.
+	   -Lauri 11.06.2008
 	
 	/* Handle REG_REQUEST parameter. */
-	hip_handle_param_rrq(entry, i2, r2);
+	hip_handle_param_reg_request(entry, i2, r2);
 #endif	
- 	/* HMAC2 */
-	{
-		struct hip_crypto_key hmac;
-		if (entry->our_pub == NULL) {
-			HIP_DEBUG("entry->our_pub is null\n");
-		} else {
-			_HIP_HEXDUMP("Host id for HMAC2", entry->our_pub,
-				    hip_get_param_total_len(entry->our_pub));
-		}
-		
-		memcpy(&hmac, &entry->hip_hmac_out, sizeof(hmac));
-		HIP_IFEL(hip_build_param_hmac2_contents(r2, &hmac, entry->our_pub), -1,
-			 "Building of hmac failed\n");
+ 	/* Create HMAC2 parameter. */
+	if (entry->our_pub == NULL) {
+		HIP_DEBUG("entry->our_pub is NULL.\n");
+	} else {
+		_HIP_HEXDUMP("Host ID for HMAC2", entry->our_pub,
+			     hip_get_param_total_len(entry->our_pub));
 	}
 	
-	HIP_IFEL(entry->sign(entry->our_priv, r2), -EINVAL, "Could not sign R2. Failing\n");
-
-	err = entry->hadb_xmit_func->hip_send_pkt(i2_daddr, i2_saddr,
-						  (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
-	                                          entry->peer_udp_port, r2, entry, 1);
-	if (err == 1) err = 0;
+	memcpy(&hmac, &entry->hip_hmac_out, sizeof(hmac));
+	HIP_IFEL(hip_build_param_hmac2_contents(r2, &hmac, entry->our_pub), -1,
+		 "Failed to build parameter HMAC2 contents.\n");
+	
+	HIP_IFEL(entry->sign(entry->our_priv, r2), -EINVAL,
+		 "Failed to sign R2 packet.\n");
+	
+	err = entry->hadb_xmit_func->hip_send_pkt(
+		i2_daddr, i2_saddr, (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+		entry->peer_udp_port, r2, entry, 1);
+	
+	/* Why is err reset to zero? -Lauri 11.06.2008 */
+	if (err == 1) {
+		err = 0;
+	}
+	
 	HIP_IFEL(err, -ECOMM, "Sending R2 packet failed.\n");
 
  out_err:
-	if (r2)
+	if (r2 != NULL)
 		free(r2);
-        if (clear && entry) {
-		/** @todo Should this putting happen here? */
+	/* This 'if' had a condition that was never true. Probably a relic from
+	   old code. Anyhows, commented out this. -Lauri 11.06.2008 */
+	/*
+	if (entry != NULL) {
 		HIP_ERROR("About to do hip_put_ha, should this happen here?\n");
 		hip_put_ha(entry);
 	}
+	*/
+	
 	return err;
 }
 

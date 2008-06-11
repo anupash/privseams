@@ -434,8 +434,8 @@ int hip_handle_param_reg_info(hip_ha_t *entry, hip_common_t *source_msg,
 	return err;
 }
 
-int hip_handle_param_rrq(hip_ha_t *entry, hip_common_t *source_msg,
-			 hip_common_t *target_msg)
+int hip_handle_param_reg_request(hip_ha_t *entry, hip_common_t *source_msg,
+				 hip_common_t *target_msg)
 {
 	int err = 0, type_count = 0, accepted_count = 0, refused_count = 0;
 	struct hip_reg_request *reg_request = NULL;

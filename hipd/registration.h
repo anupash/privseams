@@ -267,8 +267,8 @@ int hip_handle_param_reg_info(hip_ha_t *entry, hip_common_t *source_msg,
  * @see              hip_add_registration_server().
  * @see              hip_del_registration_server().
  */
-int hip_handle_param_rrq(hip_ha_t *entry, hip_common_t *source_msg,
-			 hip_common_t *target_msg);
+int hip_handle_param_reg_request(hip_ha_t *entry, hip_common_t *source_msg,
+				 hip_common_t *target_msg);
 
 /**
  * Handles param REG_RESPONSE. Digs out the REG_RESPONSE parameter from the HIP
