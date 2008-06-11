@@ -15,11 +15,10 @@
  *  hip_esp.c
  *
  *  Authors: Jeff Ahrenholz <jeffrey.m.ahrenholz@boeing.com>
- *           Tao Wan        <simonwantao@yahoo.com>  
+ *           René Hummen    <rene.hummen@rwth-aachen.de>  
  * 
  * User-mode HIP ESP implementation.
  *
- * tunreader portions Copyright (C) 2004 UC Berkeley
  */
 
 
@@ -60,13 +59,14 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 	struct ip6_hdr *out_ip6_hdr = NULL; 
 	struct udphdr *out_udp_hdr = NULL;
 	struct hip_esp *out_esp_hdr = NULL;
+	// esp header used for hash-chain protection
+	struct hip_esp_ext *out_esp_exthdr = NULL;
 	unsigned char *in_transport_hdr = NULL;
 	uint8_t in_transport_type = 0;
 	int next_hdr_offset = 0;
 	int elen = 0;
 	int encryption_len = 0;
-	uint32_t hash = 0;
-	unsigned char* hash_ptr = NULL;
+	unsigned char* hash = NULL;
 	int err = 0;
 	
 	_HIP_DEBUG("original packet length: %i \n", ctx->ipq_packet->data_len);
@@ -85,43 +85,52 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 			out_udp_hdr = (struct udphdr *) (esp_packet + next_hdr_offset);
 			next_hdr_offset += sizeof(struct udphdr);
 		}
-	
-		// set up esp header
-		out_esp_hdr = (struct hip_esp *) (esp_packet + next_hdr_offset);
-		out_esp_hdr->esp_spi = htonl(entry->spi);
-		out_esp_hdr->esp_seq = htonl(entry->sequence++);
-
-#if 0
-		// TODO add hchain-element to esp header
-		HIP_DEBUG("adding hash chain element to outgoing packet...\n");
-		hash_ptr = hchain_pop(entry->active_hchain)->hash;
 		
-		/* don't send anchor as it could be known to third party
-		 * -> other end-host will not accept it
-		 * -> get next element */
-		if (!memcmp(hash_ptr, entry->active_hchain->anchor_element->hash, HCHAIN_ELEMENT_LENGTH))
-		{	
-			hash_ptr = hchain_pop(entry->active_hchain)->hash;
-		}
-		
-		memcpy(&hash, hash_ptr, HCHAIN_ELEMENT_LENGTH);
-		out_esp_hdr->hc_element = htonl(hash);
-		
-		// set up new chain when active one is depleted
-		if (!memcmp(hash_ptr, entry->active_hchain->source_element->hash, HCHAIN_ELEMENT_LENGTH))
+		// set up esp header according to the header type used
+		if (USE_EXTHDR)
 		{
-			// this will free all linked elements in the hchain
-			hchain_destruct(entry->active_hchain);
-			entry->active_hchain = entry->next_hchain;
-			// TODO this should be taken from the store
-			entry->next_hchain = hchain_create(100);
+			out_esp_exthdr = (struct hip_esp_ext *) (esp_packet + next_hdr_offset);
+			out_esp_exthdr->esp_spi = htonl(entry->spi);
+			out_esp_exthdr->esp_seq = htonl(entry->sequence++);
+			
+			// TODO add hchain-element to esp header
+			HIP_DEBUG("adding hash chain element to outgoing packet...\n");
+			hash = hchain_pop(entry->active_hchain)->hash;
+			
+			/* don't send anchor as it could be known to third party
+			 * -> other end-host will not accept it
+			 * -> get next element */
+			if (!memcmp(hash, entry->active_hchain->anchor_element->hash, HCHAIN_ELEMENT_LENGTH))
+			{	
+				hash = hchain_pop(entry->active_hchain)->hash;
+			}
+			
+			//memcpy(&hash, hash_ptr, HCHAIN_ELEMENT_LENGTH);
+			out_esp_exthdr->hc_element = htonl(*hash);
+			
+			// set up new chain when active one is depleted
+			if (!memcmp(hash, entry->active_hchain->source_element->hash, HCHAIN_ELEMENT_LENGTH))
+			{
+				// this will free all linked elements in the hchain
+				hchain_destruct(entry->active_hchain);
+				entry->active_hchain = entry->next_hchain;
+				// TODO this should be taken from the store
+				entry->next_hchain = hchain_create(100);
+			}
+			
+			// packet to be re-inserted into network stack has at least
+			// length of defined headers
+			*esp_packet_len += next_hdr_offset + sizeof(struct hip_esp_ext);
+			
+		} else
+		{
+			out_esp_hdr = (struct hip_esp *) (esp_packet + next_hdr_offset);
+			out_esp_hdr->esp_spi = htonl(entry->spi);
+			out_esp_hdr->esp_seq = htonl(entry->sequence++);
+			
+			*esp_packet_len += next_hdr_offset + sizeof(struct hip_esp);
 		}
-#endif
 		
-		// packet to be re-inserted into network stack has at least
-		// length of defined headers
-		*esp_packet_len += next_hdr_offset + sizeof(struct hip_esp);
-
 		
 		/* Set up information needed for ESP encryption */
 		
@@ -131,8 +140,7 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 		in_transport_hdr = ((unsigned char *) ctx->ipq_packet->payload)
 								+ sizeof(struct ip6_hdr);
 		
-		in_transport_type = ((struct ip6_hdr *)
-				ctx->ipq_packet->payload)->ip6_ctlun.ip6_un1.ip6_un1_nxt;
+		in_transport_type = ((struct ip6_hdr *)ctx->ipq_packet->payload)->ip6_nxt;
 		
 		/* length of data to be encrypted is length of the original packet
 		 * starting at the transport layer header */
@@ -217,7 +225,7 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 		in_transport_hdr = ((unsigned char *) ctx->ipq_packet->payload)
 								+ sizeof(struct ip6_hdr);
 		
-		in_transport_type = ((struct ip6_hdr *) ctx->ipq_packet->payload)->ip6_ctlun.ip6_un1.ip6_un1_nxt;
+		in_transport_type = ((struct ip6_hdr *) ctx->ipq_packet->payload)->ip6_nxt;
 		
 		/* length of data to be encrypted is length of the original packet
 		 * starting at the transport layer header */
@@ -336,10 +344,10 @@ int hip_esp_encrypt(unsigned char *in, uint8_t in_type, int in_len,
 	int i = 0;
 	int err = 0;
 	
-	//unsigned int hmac_md_len;
-	//unsigned char hmac_md[EVP_MAX_MD_SIZE];
-	
-	esp_data_offset = sizeof(struct hip_esp);
+	if (USE_EXTHDR)
+		esp_data_offset = sizeof(struct hip_esp_ext);
+	else
+		esp_data_offset = sizeof(struct hip_esp);
 
 	/* 
 	 * Encryption 
@@ -568,7 +576,10 @@ int hip_esp_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8_t *
 	int esp_data_offset = 0;
 	int err = 0;
 
-	esp_data_offset = sizeof(struct hip_esp);
+	if (USE_EXTHDR)
+		esp_data_offset = sizeof(struct hip_esp_ext);
+	else
+		esp_data_offset = sizeof(struct hip_esp);
 	
 	/* 
 	 *   Authentication 

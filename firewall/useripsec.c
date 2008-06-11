@@ -9,9 +9,7 @@
 #include "utils.h"
 #include <sys/time.h>		/* timeval */
 #include <asm/types.h>		/* __u16, __u32, etc */
-#if 0
 #include "hashchain.h"
-#endif
 
 #define ESP_PACKET_SIZE 2500
 // this is the maximum buffer-size needed for an userspace ipsec esp packet
@@ -253,7 +251,7 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 						hip_sockaddr_len(&preferred_peer_sockaddr));
 	
 	if (err < 0) {
-		HIP_DEBUG("hip_esp_output(): sendto() failed\n");
+		HIP_DEBUG("sendto() failed\n");
 	} else
 	{
 		HIP_DEBUG("new packet SUCCESSFULLY re-inserted into network stack\n");
@@ -276,6 +274,7 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 {
 	struct hip_esp *esp_hdr = NULL;
+	struct hip_esp_ext *esp_exthdr = NULL;
 	// entry matching the SPI
 	hip_sadb_entry *entry = NULL;
 	// return entry
@@ -299,13 +298,25 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	memset(decrypted_packet, 0, ESP_PACKET_SIZE);
 	gettimeofday(&now, NULL);
 	
-	// get ESP header of input packet, UDP encapsulation is handled in firewall already
-	esp_hdr = ctx->transport_hdr.esp;	
-	spi = ntohl(esp_hdr->esp_spi);
+	/* get ESP header of input packet
+	 * UDP encapsulation is handled in firewall already
+	 * check if we are using the esp header extension */
+	if (USE_EXTHDR)
+	{
+		esp_exthdr = (struct hip_esp_ext *)ctx->transport_hdr.esp;	
+		spi = ntohl(esp_exthdr->esp_spi);
+		seq_no = ntohl(esp_exthdr->esp_seq);
+		hash = ntohl(esp_exthdr->hc_element);
+	} else
+	{
+		esp_hdr = ctx->transport_hdr.esp;	
+		spi = ntohl(esp_hdr->esp_spi);
+		seq_no = ntohl(esp_hdr->esp_seq);
+	}
 	
 	// lookup corresponding SA entry by SPI
-	HIP_IFEL(!(entry = hip_sadb_lookup_spi(ntohl(esp_hdr->esp_spi))), -1,
-			"no SA entry found for SPI %u \n", ntohl(esp_hdr->esp_spi));
+	HIP_IFEL(!(entry = hip_sadb_lookup_spi(spi)), -1,
+			"no SA entry found for SPI %u \n", spi);
 	HIP_DEBUG("matching SA entry found\n");
 	
 	// do a partial consistency check of the entry
@@ -314,49 +325,38 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	// TODO implement check with seq window
 	// check for correct SEQ no.
 	HIP_DEBUG("SEQ no. of entry: %u \n", entry->sequence);
-	seq_no = ntohl(esp_hdr->esp_seq);
 	HIP_DEBUG("SEQ no. of incoming packet: %u \n", seq_no);
 	//HIP_IFEL(entry->sequence != seq_no, -1, "ESP sequence numbers do not match\n");
 	
-#if 0
-	// TODO verify hchain-elements
-	HIP_DEBUG("verifying hash chain element for incoming packet...\n");
-	
-	hash = ntohl(esp_hdr->hc_element);
-	// sent_hc_element = (unsigned char*) &hash;
-	sent_hc_element = (unsigned char*) malloc(HCHAIN_ELEMENT_LENGTH);
-	memcpy(sent_hc_element, &hash, HCHAIN_ELEMENT_LENGTH);
-	
-	if (hchain_verify(sent_hc_element, entry->active_anchor, entry->tolerance))
+	if (USE_EXTHDR)
 	{
-		// memcpy(entry->active_anchor, sent_hc_element, HCHAIN_ELEMENT_LENGTH);
-		free(entry->active_anchor);
-		// this will allow only increasing elements to be accepted
-		entry->active_anchor = sent_hc_element;
-		HIP_DEBUG("hash-chain element correct!\n");
-	} else
-	{
-		if (hchain_verify(sent_element, entry->next_anchor, entry->tolerance))
+		// verify hchain-elements
+		HIP_DEBUG("verifying hash chain element for incoming packet...\n");
+		
+		sent_hc_element = (unsigned char *) &hash;
+		
+		if (hchain_verify(sent_hc_element, entry->active_anchor, entry->tolerance))
 		{
-			// TODO change handling of new hchains
-			// there was an implicit change to the next hchain
-			free(entry->active_anchor);
-			entry->active_anchor = entry->next_anchor;
-			entry->next_anchor = (unsigned char*)malloc(HCHAIN_ELEMENT_LENGTH);
-			memcpy(entry->next_anchor, entry->active_anchor, HCHAIN_ELEMENT_LENGTH);	
+			// this will allow only increasing elements to be accepted
+			memcpy(entry->active_anchor, sent_hc_element, HCHAIN_ELEMENT_LENGTH);
+			HIP_DEBUG("hash-chain element correct!\n");
 		} else
 		{
-			// handle incorrect elements -> drop packet
-			HIP_DEBUG("ERROR invalid hash-chain element!\n");
-			HIP_DEBUG("dropping packet...!\n");
-			
-			free(sent_element);
-			
-			err = 1;
-			goto out_err;
+			// check if there was an implicit change to the next hchain
+			if (hchain_verify(sent_hc_element, entry->next_anchor, entry->tolerance))
+			{
+				// TODO change handling of new hchains
+				memcpy(entry->active_anchor, entry->next_anchor, HCHAIN_ELEMENT_LENGTH);	
+			} else
+			{
+				// handle incorrect elements -> drop packet
+				HIP_DEBUG("INVALID hash-chain element!\n");
+				
+				err = 1;
+				goto out_err;
+			}
 		}
 	}
-#endif
 
 	// check if we have a SA entry to reply to
 	HIP_IFEL(!(inverse_entry = hip_sadb_lookup_addr(
