@@ -24,7 +24,7 @@ int counter = 0;
 int hip_proxy_status = 0;
 int foreground = 1;
 int hip_opptcp = 0;
-int hip_userspace_ipsec = 1;
+int hip_userspace_ipsec = 0;
 
 /* Default HIT - do not access this directly, call hip_fw_get_default_hit() */
 struct in6_addr default_hit;
