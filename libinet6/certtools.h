@@ -24,6 +24,8 @@
 #include <netinet/in.h>
 #include <openssl/rsa.h>
 #include <openssl/conf.h>
+#include <openssl/x509.h>
+#include <openssl/x509v3.h>
 #include "debug.h"
 #include "ife.h"
 #include "misc.h"
@@ -62,7 +64,7 @@ int hip_cert_spki_char2certinfo(char *,struct hip_cert_spki_info *);
 int hip_cert_spki_send_to_verification(struct hip_cert_spki_info *);
 
 /** x509v3 cert related functions **/
-int hip_cert_x509v3_request(STACK_OF(CONF_VALUE) * section);
+int hip_cert_x509v3_request_certificate(struct in6_addr *, char *);
 
 /** Utilitary functions **/
 STACK_OF(CONF_VALUE) * hip_cert_read_conf_section(char *, CONF *);

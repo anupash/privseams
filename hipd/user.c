@@ -344,6 +344,14 @@ int hip_handle_user_msg(struct hip_common *msg,
                         HIP_DEBUG("SPKI cert signed sending it back to requester\n");   
                 } 
                 break;
+        case SO_HIP_CERT_X509V3_SIGN:
+                {
+                        HIP_DEBUG("Got an request to sign X509v3 cert sequence\n");
+                        reti = hip_cert_x509v3_handle_request(msg, hip_local_hostid_db);   
+                        HIP_IFEL(reti, -1, "Signing x509v3 cert returned an error\n");
+                        HIP_DEBUG("X509v3 cert signed sending it back to requester\n");   
+                } 
+                break;
         case SO_HIP_TRANSFORM_ORDER:
 	{
                 extern int hip_transform_order;

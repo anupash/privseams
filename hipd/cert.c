@@ -216,7 +216,7 @@ int hip_cert_spki_construct_keys(HIP_HASHTABLE * db, hip_hit_t * hit, RSA * rsa)
            HIP_RSA_SECRET_PRIME_FACTOR_P_LEN
            HIP_RSA_SECRET_PRIME_FACTOR_Q_LEN  
         */
-        
+         
         /* Public part of the key */
         /* s starts from the first byte after the rdata struct thats why 1*/
         _HIP_DEBUG("s = %d\n",s);
@@ -422,3 +422,43 @@ out_err:
         if (rsa) RSA_free(rsa);
 	return (err);
 }
+
+/**
+ * Function that creates the certificate and sends it to back to the client.
+ *
+ * @param msg is a pointer to the requesting msg
+ * @param db is the db to query for the hostid entry
+ *
+ * @return 0 on success negative otherwise. 
+ */ 
+int hip_cert_x509v3_handle_request(struct hip_common * msg,  HIP_HASHTABLE * db) {
+	int err = 0;
+	CONF * conf;
+	CONF_VALUE *item;
+	STACK_OF(CONF_VALUE) * sec = NULL;
+	STACK_OF(CONF_VALUE) * sec_general = NULL;
+	STACK_OF(CONF_VALUE) * sec_name = NULL;
+	STACK_OF(CONF_VALUE) * sec_ext = NULL;
+
+        X509_REQ * req = NULL;
+        X509_NAME * subj = NULL;
+
+        OpenSSL_add_all_algorithms();
+        ERR_load_crypto_strings();
+        
+	HIP_DEBUG("Reading configuration file (%s)\n", HIP_CERT_CONF_PATH);
+	conf = hip_cert_open_conf();
+	sec_general = hip_cert_read_conf_section("hip_x509v3", conf);
+        sec_name = hip_cert_read_conf_section("hip_x509v3_name", conf);
+        sec_ext = hip_cert_read_conf_section("hip_x509v3_extensions", conf);
+	hip_cert_free_conf(conf);
+
+        HIP_IFEL(!(req = X509_REQ_new()), -1, "Failed to create X509_REQ object");
+        HIP_IFEL(!(subj = X509_NAME_new()), -1, "Failed to set the subject name");
+
+        HIP_DEBUG("X509 request contents\n\n%s\n\n", req);
+
+out_err:
+        if(req != NULL) X509_REQ_free(req);
+	return err;
+} 

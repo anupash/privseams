@@ -20,14 +20,21 @@
 #include <string.h>
 #include <netinet/in.h>
 #include <openssl/rsa.h>
+#include <openssl/conf.h>
+#include <openssl/x509.h>
+#include <openssl/x509v3.h>
 #include "debug.h"
 #include "ife.h"
 #include "misc.h"
 #include "hidb.h"
 #include "hashtable.h"
 
+/** SPKI **/
 int hip_cert_spki_construct_keys(HIP_HASHTABLE *, hip_hit_t *, RSA *);
 int hip_cert_spki_sign(struct hip_common *, HIP_HASHTABLE *);
-int hip_cert_spki_verify(struct hip_common * msg);
+int hip_cert_spki_verify(struct hip_common *);
+
+/** x509v3 **/
+int hip_cert_x509v3_handle_request(struct hip_common * msg, HIP_HASHTABLE *);
 
 #endif /* HIP_CERT_H */

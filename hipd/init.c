@@ -839,7 +839,7 @@ int hip_init_certs(void) {
 	FILE * conf_file;
 	struct hip_host_id_entry * entry;
 	char hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
-
+        
 	memset(hostname, 0, HIP_HOST_ID_HOSTNAME_LEN_MAX);
 	HIP_IFEL(gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1), -1,
 		 "gethostname failed\n");    
@@ -878,13 +878,19 @@ int hip_init_certs(void) {
 			"issuerhit = %s\n"
 			"days = %d\n"
 			"\n"
-			"Section containing the name section for the x509v3 issuer name"
+			"#Section containing the name section for the x509v3 issuer name"
 			"\n"
-			"[ hip_x509v3_issuer_name ]"
+			"[ hip_x509v3_name ]\n"
 			"issuerhit = %s\n"
-			"commonName = alias",
+			"commonName = alias"
+                        "\n"
+                        "# Uncomment this section to add any valid x509 extension "
+                        "# to the certificate\n"
+                        "# [ hip_x509_extension ]\n"
+                        "# issuerAltName = DNS:mydomain.com\n",
 			hit, HIP_CERT_INIT_DAYS,
-			hit, hostname, HIP_CERT_INIT_DAYS);		
+                        hit, HIP_CERT_INIT_DAYS,
+			hit, hostname);		
 		fclose(conf_file);
 	} else {
 		HIP_DEBUG("Configuration file existed exiting hip_init_certs");

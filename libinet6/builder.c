@@ -3005,7 +3005,7 @@ void hip_build_endpoint_hdr(struct endpoint_hip *endpoint_hdr,
 			    se_hip_flags_t endpoint_flags,
 			    uint8_t host_id_algo,
 			    unsigned int rr_data_len)
-{
+{ 
 	hip_build_param_host_id_hdr(&endpoint_hdr->id.host_id,
 				    hostname, rr_data_len, host_id_algo);
 	endpoint_hdr->family = PF_HIP;
@@ -3241,6 +3241,18 @@ int hip_build_param_cert_spki_info(struct hip_common * msg,
 			   sizeof(struct hip_cert_spki_info) -
 			   sizeof(struct hip_tlv_common));
 	err = hip_build_param(msg, cert_info);
+	return err;
+}
+
+int hip_build_param_cert_x509_req(struct hip_common * msg,
+				    struct hip_cert_x509_req * info)
+{
+	int err = 0;
+	hip_set_param_type(info, HIP_PARAM_CERT_X509_REQ);
+	hip_calc_param_len(info,
+			   sizeof(struct hip_cert_x509_req) -
+			   sizeof(struct hip_tlv_common));
+	err = hip_build_param(msg, info);
 	return err;
 }
 

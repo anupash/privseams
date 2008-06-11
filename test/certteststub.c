@@ -37,7 +37,10 @@ int main(int argc, char *argv[])
         uLongf uncompressed_length = 0;
 	CONF * conf;
 	CONF_VALUE *item;
-	STACK_OF(CONF_VALUE) * sec;
+	STACK_OF(CONF_VALUE) * sec = NULL;
+	STACK_OF(CONF_VALUE) * sec_general = NULL;
+	STACK_OF(CONF_VALUE) * sec_name = NULL;
+	STACK_OF(CONF_VALUE) * sec_ext = NULL;
 
 	if (argc != 2) {
 		printf("Usage: %s spki|x509\n", argv[0]);
@@ -152,7 +155,6 @@ int main(int argc, char *argv[])
         else
                 HIP_DEBUG("Uncompressed certificate did NOT match the original\n\n");
 
-
         /* 
            end of compression testing 
         */
@@ -175,11 +177,27 @@ int main(int argc, char *argv[])
 	
 skip_spki:
 	HIP_DEBUG("Starting to test x509v3 support\n");
-	HIP_DEBUG("Reading configuration file (%s)\n", HIP_CERT_CONF_PATH);
+
 	conf = hip_cert_open_conf();
-	sec = hip_cert_read_conf_section("hip_x509v3", conf);
-	
-	hip_cert_free_conf(conf);
+        sec_name = hip_cert_read_conf_section("hip_x509v3_issuer", conf);
+
+        if (sec_ext == NULL) HIP_DEBUG("No extensions present\n");
+	for (i = 0; i < sk_CONF_VALUE_num(sec_name); i++) {
+		item = sk_CONF_VALUE_value(sec_name, i);
+		_HIP_DEBUG("Sec: %s, Key; %s, Val %s\n", 
+			  item->section, item->name, item->value);
+		if (!strcmp(item->name, "issuerhit")) {
+			err = inet_pton(AF_INET6, item->value, defhit);
+			if (err < 1) {
+				err = -1;
+				goto out_err;
+			}
+		}
+	}
+        hip_cert_free_conf(conf);
+
+        err = hip_cert_x509v3_request_certificate(defhit, certificate); 
+
 to_end:
         HIP_DEBUG("If there was no errors above, \"everything\" is OK\n");
 

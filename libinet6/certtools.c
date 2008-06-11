@@ -325,19 +325,37 @@ int hip_cert_spki_send_to_verification(struct hip_cert_spki_info * to_verificati
  *******************************************************************************/
 
 /**
- * Function that creates the certificate request for a certificate and sends it to the daemon
- * to get the certificate.
+ * Function that requests for a certificate from daemon and gives it back
  *
- * @param section STACK_OF(CONF_VALUE) pointer that holds the configuration file section
- * that contains the naming information
+ * @param subject is the subject
  *
- * @return STACK_OF(CONF_VALUE) pointer if ok and NULL if error or unsuccesfull. 
- */
-int hip_cert_x509v3_request(STACK_OF(CONF_VALUE) * section) {
-	int err = 0;
+ * @param cert is pointer to where this function writes the completed cert 
+ *
+ * @return 0 on success negative otherwise
+ */ 
+int hip_cert_x509v3_request_certificate(struct in6_addr * subject, char * certificate) {
+        int err = 0;
+        struct hip_common * msg;
+                
+        HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, 
+                 "Malloc for msg failed\n");   
+        
+        /* build the msg to be sent to the daemon */
+        HIP_IFEL(hip_build_param_cert_x509_req(msg, subject), -1,
+                 "Failed to build cert_info\n");         
+        HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_CERT_X509V3_SIGN, 0), -1, 
+                 "Failed to build user header\n");
+        /* send and wait */
+        HIP_DEBUG("Sending request to sign SPKI cert sequence to "
+                  "daemon and waiting for answer\n");	
+        hip_send_recv_daemon_info(msg);
+        
+        /* get the struct from the message sent back by the daemon */
+	HIP_DUMP_MSG(msg);
 
-out_err:
-	return err;
+ out_err:
+        if (msg) free(msg);
+        return(err);
 }
 
 /*******************************************************************************
@@ -364,7 +382,8 @@ STACK_OF(CONF_VALUE) * hip_cert_read_conf_section(char * section_name, CONF * co
 		 -1, "Error opening the configuration file");
 
 	HIP_IFEL(!(sec = NCONF_get_section(conf, section_name)), -1,
-		 "Error getting the section from configuration file\n");
+		 "Section %s was not in the configuration (%s)\n", 
+                 section_name,HIP_CERT_CONF_PATH);
 
 	for (i = 0; i < sk_CONF_VALUE_num(sec); i++) {
 		item = sk_CONF_VALUE_value(sec, i);

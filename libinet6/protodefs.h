@@ -101,6 +101,7 @@
 #define HIP_PARAM_ADD_HIT		32800
 #define HIP_PARAM_ADD_OPTION		32801
 #define HIP_PARAM_PEER_HIT		32802
+#define HIP_PARAM_CERT_X509_REQ         32802
 
 /* End of HIPL private parameters. */
 
@@ -752,6 +753,12 @@ struct hip_opendht_gw_info {
 	struct in6_addr addr;
 	uint32_t        ttl;
 	uint16_t        port;
+} __attribute__ ((packed));
+
+struct hip_cert_x509_req {
+	hip_tlv_type_t 	type;
+	hip_tlv_len_t 	length;
+	struct in6_addr addr;
 } __attribute__ ((packed));
 
 struct hip_opendht_set {
