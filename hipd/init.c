@@ -861,23 +861,28 @@ int hip_init_certs(void) {
 		fprintf(conf_file,
 			"# Section containing SPKI related information\n"
 			"#\n"
-			"# hit = what hit is to be used when signing\n"                          
+			"# issuerhit = what hit is to be used when signing\n"   
 			"# days = how long is this key valid\n"
 			"\n"
 			"[ hip_spki ]\n"
-			"hit = %s\n"
+			"issuerhit = %s\n"
 			"days = %d\n"
 			"\n"
 			"# Section containing HIP related information\n"
 			"#\n"
-			"# hit = what hit is to be used when signing\n"
-			"# alias = userfriendly name\n"         
+			"# issuerhit = what hit is to be used when signing\n"
+			"# commonName = userfriendly name\n"
 			"# days = how long is this key valid\n"
 			"\n"
 			"[ hip_x509v3 ]\n"
-			"hit = %s\n"
-			"alias = %s\n"
-			"days = %d\n", 
+			"issuerhit = %s\n"
+			"days = %d\n"
+			"\n"
+			"Section containing the name section for the x509v3 issuer name"
+			"\n"
+			"[ hip_x509v3_issuer_name ]"
+			"issuerhit = %s\n"
+			"commonName = alias",
 			hit, HIP_CERT_INIT_DAYS,
 			hit, hostname, HIP_CERT_INIT_DAYS);		
 		fclose(conf_file);

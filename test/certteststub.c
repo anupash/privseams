@@ -73,7 +73,7 @@ int main(int argc, char *argv[])
 		item = sk_CONF_VALUE_value(sec, i);
 		_HIP_DEBUG("Sec: %s, Key; %s, Val %s\n", 
 			  item->section, item->name, item->value);
-		if (!strcmp(item->name, "hit")) {
+		if (!strcmp(item->name, "issuerhit")) {
 			err = inet_pton(AF_INET6, item->value, defhit);
 			if (err < 1) {
 				err = -1;
@@ -81,8 +81,8 @@ int main(int argc, char *argv[])
 			}
 		}
 		if (!strcmp(item->name, "days")) {
-			_HIP_DEBUG("Days in sec = %d\n", 60 * 60 * 24 * atoi(item->value));
-			not_after += 60 * 60 * 24 * atoi(item->value);
+			_HIP_DEBUG("Days in sec = %d\n", HIP_CERT_DAY * atoi(item->value));
+			not_after += HIP_CERT_DAY * atoi(item->value);
 		} 
 	}
 	hip_cert_free_conf(conf);

@@ -36,6 +36,8 @@
 /* Needed if the configuration file for certs did not exist  */
 #define HIP_CERT_INIT_DAYS 10
 
+#define HIP_CERT_DAY 86400
+
 /** Struct used to deliver the minimal needed information to build SPKI cert **/
 struct hip_cert_spki_info {
 	hip_tlv_type_t    type;
