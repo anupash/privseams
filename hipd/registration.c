@@ -829,8 +829,8 @@ int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
 			} else {
 				/* Set the type of the relay record. */
 				hip_relrec_type_t type =
-					(reg_types[i] == HIP_RVSRELAY) ?
-					HIP_RVSRELAY : HIP_FULLRELAY;
+					(reg_types[i] == HIP_SERVICE_RELAY) ?
+					HIP_FULLRELAY : HIP_RVSRELAY;
 				
 				/* Allocate a new relay record. */
 				new_record = hip_relrec_alloc(
@@ -927,18 +927,22 @@ int hip_del_registration_server(hip_ha_t *entry, uint8_t *reg_types,
 
 		switch(reg_types[i]) {
 		case HIP_SERVICE_RENDEZVOUS:
-			HIP_DEBUG("Client is cancelling registration to "
-				  "rendezvous service.\n");
-			refused_requests[*refused_count] = reg_types[i];
-			failure_types[*refused_count] =
-				HIP_REG_TRANSIENT_CONDITIONS;
-			(*refused_count)++;
+		case HIP_SERVICE_RELAY: {
+			/* Set the type of the relay record. */
+			hip_relrec_type_t type_to_delete = 0;
 
-			break;
-		case HIP_SERVICE_RELAY:
-			HIP_DEBUG("Client is cancelling registration to "
-				  "relay service.\n");
-
+			/* RVS and relay deletions are identical except the
+			   relay record type. */
+			if(reg_types[i] == HIP_SERVICE_RENDEZVOUS) {
+				HIP_DEBUG("Client is cancelling registration "\
+					  "to rendezvous service.\n");
+				type_to_delete = HIP_RVSRELAY;
+			} else {
+				HIP_DEBUG("Client is cancelling registration "\
+					  "to relay service.\n");
+				type_to_delete = HIP_FULLRELAY;
+			}
+						
 			fetch_record = hip_relht_get(&dummy);
 			/* Check that
 			   a) the rvs/relay is ON;
@@ -960,7 +964,7 @@ int hip_del_registration_server(hip_ha_t *entry, uint8_t *reg_types,
 				failure_types[*refused_count] =
 					HIP_REG_TYPE_UNAVAILABLE;
 				(*refused_count)++;
-			} else if(fetch_record->type != HIP_FULLRELAY) {
+			} else if(fetch_record->type != type_to_delete) {
 				HIP_DEBUG("The relay record to be cancelled "\
 					  "is of wrong type.\n");
 				refused_requests[*refused_count] = reg_types[i];
@@ -994,9 +998,12 @@ int hip_del_registration_server(hip_ha_t *entry, uint8_t *reg_types,
 			}
 			
 			break;
+		}
 		case HIP_SERVICE_ESCROW:
+			/** @todo Implement escrow cancellation. */
 			HIP_DEBUG("Client is cancelling registration to "
-				  "escrow service.\n");
+				  "escrow service. Escrow cancellation is not "\
+				  "supported yet.\n");
 			refused_requests[*refused_count] = reg_types[i];
 			failure_types[*refused_count] =
 				HIP_REG_TYPE_UNAVAILABLE;
@@ -1026,7 +1033,7 @@ int hip_add_registration_client(hip_ha_t *entry, uint8_t lifetime,
 	int err = 0, i = 0;
 	time_t seconds = 0;
 	
-	/* 'seconds' are just just for debug prints. */
+	/* 'seconds' is just just for debug prints. */
 	hip_get_lifetime_seconds(lifetime, &seconds);
 
         /* Check what services we have been granted. Cancel the local requests
