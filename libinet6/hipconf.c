@@ -50,6 +50,7 @@ const char *hipconf_usage =
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 "set opp on|off\n"
 #endif
+"get ha all|HIT\n"
 "opendht on|off\n"
 "dht gw <IPv4|hostname> <port (OpenDHT default = 5851)> <TTL>\n"
 "dht get <fqdn/hit>\n"
@@ -1534,78 +1535,37 @@ int hip_conf_handle_ha(hip_common_t *msg, int action,const char *opt[], int optc
 	  struct hip_hadb_user_info_state *ha =
 	       hip_get_param_contents_direct(current_param);
 
-	  if (!strcmp("all", opt[0])) {
-	       HIP_INFO("HA is %s\n", hip_state_str(ha->state));
-	       HIP_INFO_HIT("local hit is", &ha->hit_our);
-	       HIP_INFO_HIT("peer  hit is", &ha->hit_peer);
+	  if (!strcmp("all", opt[0]))
+	          hip_conf_print_info_ha(ha);
 
-	  }
-
-	  if (((opt[0] !='\0') && (opt[1] !=  '\0')) &&
+	 
+	  if (((opt[0] !='\0') && (opt[1] == '\0')) &&
 	      (strcmp("all",opt[0]) !=0))
 	  {
-	       ret = inet_pton(AF_INET6,opt[0], &arg1);
-	       HIP_IFEL((ret < 0 && errno == EAFNOSUPPORT), -1, "not a valid address family\n");
 
-	       ret = inet_pton(AF_INET6,opt[1], &hit1);
-	       HIP_IFEL((ret < 0 && errno == EAFNOSUPPORT), -1, "not a valid address family\n");
+	    HIP_IFEL(convert_string_to_address(opt[0], &hit1), -1, "not a valid address family\n");
 
-	       if ((ipv6_addr_cmp(&arg1, &ha->hit_our) == 0) ||  (ipv6_addr_cmp(&hit1, &ha->hit_our) == 0))
-	       {
-		    HIP_INFO("HA is in %s state\n", hip_state_str(ha->state));
-		    HIP_INFO_HIT("hit is", &ha->hit_our);
-	       }
+	    if ((ipv6_addr_cmp(&hit1, &ha->hit_our) == 0) ||  (ipv6_addr_cmp(&hit1, &ha->hit_peer) == 0))
+	            hip_conf_print_info_ha(ha);
 
 	  }
-	  HIP_INFO("\n");
      }
 
-        HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
-
-        HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0), -1,
-                 "Building of daemon header failed\n");
-
-        HIP_IFEL(hip_send_recv_daemon_info(msg), -1,
-                 "send recv daemon info\n");
-
-        while((current_param = hip_get_next_param(msg, current_param)) != NULL) {
-                struct hip_hadb_user_info_state *ha =
-                        hip_get_param_contents_direct(current_param);
-
-                if (!strcmp("all", opt[0])) {
-                        HIP_INFO("HA is %s\n", hip_state_str(ha->state));
-                        HIP_INFO_HIT("local hit is", &ha->hit_our);
-                        HIP_INFO_HIT("peer  hit is", &ha->hit_peer);
-			HIP_DEBUG_LSI("local lsi is", &ha->lsi_our);
-                        HIP_DEBUG_LSI("peer  lsi is", &ha->lsi_peer);
-                        HIP_INFO_IN6ADDR("local ip is", &ha->ip_our);
-                        HIP_INFO_IN6ADDR("peer  ip is", &ha->ip_peer);
-
-
-                }
-
-                if (((opt[0] !='\0') && (opt[1] !=  '\0')) &&
-                    (strcmp("all",opt[0]) !=0))
-                {
-                        ret = inet_pton(AF_INET6,opt[0], &arg1);
-                        HIP_IFEL((ret < 0 && errno == EAFNOSUPPORT), -1, "not a valid address family\n");
-
-                        ret = inet_pton(AF_INET6,opt[1], &hit1);
-                        HIP_IFEL((ret < 0 && errno == EAFNOSUPPORT), -1, "not a valid address family\n");
-
-                        if ((ipv6_addr_cmp(&arg1, &ha->hit_our) == 0) ||  (ipv6_addr_cmp(&hit1, &ha->hit_our) == 0))
-                        {
-                                HIP_INFO("HA is in %s state\n", hip_state_str(ha->state));
-                                HIP_INFO_HIT("hit is", &ha->hit_our);
-                        }
-
-                }
-
-                HIP_INFO("\n");
-        }
-
-   out_err:
+out_err:
         return err;
+}
+
+int hip_conf_print_info_ha(struct hip_hadb_user_info_state *ha)
+{
+        HIP_INFO("HA is %s\n", hip_state_str(ha->state));
+        HIP_INFO_HIT(" Local HIT", &ha->hit_our);
+	HIP_INFO_HIT(" Peer  HIT", &ha->hit_peer);
+	HIP_DEBUG_LSI(" Local LSI", &ha->lsi_our);
+        HIP_DEBUG_LSI(" Peer  LSI", &ha->lsi_peer);
+        HIP_INFO_IN6ADDR(" Local IP", &ha->ip_our);
+        HIP_INFO_IN6ADDR(" Peer  IP", &ha->ip_peer);
+	HIP_INFO("\n");
+
 }
 
 int hip_conf_handle_handoff(hip_common_t *msg, int action,const char *opt[], int optc)

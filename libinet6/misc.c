@@ -513,7 +513,7 @@ int convert_string_to_address(const char *str, struct in6_addr *ip6) {
 		 "\"%s\" is not of valid address family.\n", str);
 	if (ret > 0) {
                 /* IPv6 address conversion was ok */
-		HIP_DEBUG_IN6ADDR("Converted IPv6", ip6);
+		_HIP_DEBUG_IN6ADDR("Converted IPv6", ip6);
 		goto out_err;
 	}
 

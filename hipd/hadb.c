@@ -137,7 +137,7 @@ hip_ha_t *hip_hadb_find_byhits(hip_hit_t *hit, hip_hit_t *hit2)
 
 	ret = hip_ht_find(hadb_hit, &ha);
 	if (!ret) {
-		memcpy(&ha.hit_peer, hit, sizeof(hip_hit_t));
+	        memcpy(&ha.hit_peer, hit, sizeof(hip_hit_t));
 		memcpy(&ha.hit_our, hit2, sizeof(hip_hit_t));
 		ret = hip_ht_find(hadb_hit, &ha);
 	}
@@ -151,21 +151,20 @@ hip_ha_t *hip_hadb_find_byhits(hip_hit_t *hit, hip_hit_t *hit2)
  */
 hip_ha_t *hip_hadb_find_bylsis(hip_lsi_t *lsi, hip_lsi_t *lsi2)
 {
-    hip_ha_t ha, *ret;
-    memcpy(&ha.lsi_our, lsi, sizeof(hip_lsi_t));
-    memcpy(&ha.lsi_peer, lsi2, sizeof(hip_lsi_t));
-    HIP_DEBUG_LSI("LSI1", lsi);
-    HIP_DEBUG_LSI("LSI2", lsi2);
+        hip_ha_t ha, *ret;
+	memcpy(&ha.lsi_our, lsi, sizeof(hip_lsi_t));
+	memcpy(&ha.lsi_peer, lsi2, sizeof(hip_lsi_t));
+	HIP_DEBUG_LSI("LSI1", lsi);
+	HIP_DEBUG_LSI("LSI2", lsi2);
+	
+	ret = hip_ht_find(hadb_hit, &ha);
+	if (!ret) {
+	        memcpy(&ha.lsi_peer, lsi, sizeof(hip_lsi_t));
+		memcpy(&ha.lsi_our, lsi2, sizeof(hip_lsi_t));
+		ret = hip_ht_find(hadb_hit, &ha);
+	}
 
-    ret = hip_ht_find(hadb_hit, &ha);
-    if (!ret) {
-        memcpy(&ha.lsi_peer, lsi, sizeof(hip_lsi_t));
-        memcpy(&ha.lsi_our, lsi2, sizeof(hip_lsi_t));
-        ret = hip_ht_find(hadb_hit, &ha);
-    }
-    if (ret)
-      HIP_DEBUG(">>>>>>>>>>>>>>>>>>>>>>>>>>>Match, lsi found!!!!!!!!!\n");
-    return ret;
+	return ret;
 }
 
 
@@ -261,8 +260,6 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 		tmp = hip_ht_find(hadb_hit, ha);
 
 		if (tmp == NULL) {
-		        if (hip_null_lsi(ha->lsi_peer)) 
-		              hip_hadb_set_lsi_pair(ha);
 			hip_ht_add(hadb_hit, ha);
 			st |= HIP_HASTATE_HITOK;
 			HIP_DEBUG("New state added\n");
@@ -323,11 +320,6 @@ void hip_print_debug_info(struct in6_addr *local_addr,
 		HIP_DEBUG_LSI("Peer LSI", peer_lsi);
 }
 
-int hip_null_lsi(hip_lsi_t lsi_peer)
-{
-        return (strcmp(inet_ntoa(lsi_peer), "0.0.0.0") == 0);
-}
-
 
 void hip_hadb_set_lsi_pair(hip_ha_t *entry)
 {
@@ -367,7 +359,7 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 {
 	int err = 0, n=0;
 	hip_ha_t *entry;
-	hip_lsi_t local_lsi;
+	hip_lsi_t local_lsi, lsi_aux;
 
 	hip_print_debug_info(local_addr, peer_addr,local_hit, peer_hit, peer_lsi);
 
@@ -382,7 +374,7 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 		}	
 	}
 
-	if (!entry || hip_null_lsi(entry->lsi_peer)){
+	if (!entry){
 		HIP_DEBUG("hip_hadb_create_state\n");
 		entry = hip_hadb_create_state(GFP_KERNEL);
 		HIP_IFEL(!entry, -1, "Unable to create a new entry");
@@ -397,6 +389,11 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 		/*Copy in local_lsi the associated lsi for the local_hit value specified*/
 		HIP_IFEL(hip_hidb_get_lsi_by_hit(local_hit, &entry->lsi_our), -1, "Unable to find local hit");		
 		ipv4_addr_copy(&entry->lsi_peer, peer_lsi);
+	}
+	else{
+		// Call to the automatic generation
+		lsi_aux = hip_generate_peer_lsi();
+		ipv4_addr_copy(&entry->lsi_peer, &lsi_aux);
 	}
 
 	/* If global NAT status is on, that is if the current host is behind
@@ -485,8 +482,6 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr, hip_
 	hip_lsi_t lsi_aux;
 	
 	HIP_DEBUG("hip_hadb_add_peer_info() invoked.\n");
-	//HIP_DEBUG_HIT("Peer HIT ", peer_hit);
-	//HIP_DEBUG_IN6ADDR("Peer addr ", peer_addr);
 
  	hip_print_debug_info(NULL, peer_addr, NULL, peer_hit, peer_lsi);
 		
@@ -494,8 +489,8 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr, hip_
 	memcpy(&peer_map.peer_hit, peer_hit, sizeof(hip_hit_t));
 	
 	if (!peer_lsi){
-		inet_aton("0.0.0.0", &lsi_aux);
 		// Call to the automatic generation
+		lsi_aux = hip_generate_peer_lsi();
 		memcpy(&peer_map.peer_lsi, &lsi_aux, sizeof(hip_lsi_t));
 	}else{
 		memcpy(&peer_map.peer_lsi, peer_lsi, sizeof(hip_lsi_t));
@@ -2804,10 +2799,15 @@ int lsi_assigned(struct in_addr add)
 int hip_hadb_exists_lsi(hip_lsi_t *lsi)
 {
 	int res = 0;
-	hip_lsi_t lsi_aux = *lsi;
+	hip_lsi_t lsi_aux;
+
+	memcpy(&lsi_aux, lsi, sizeof(hip_lsi_t));
 	hip_for_each_ha(hip_hadb_find_lsi, &lsi_aux);
-	if (!(&lsi_aux) && lsi)
+	
+	if (ipv4_addr_cmp(&lsi_aux, lsi) != 0){
 		res = 1;
+		HIP_DEBUG("lsi exists\n");
+	}
 	return res;
 }
 
@@ -2816,7 +2816,7 @@ int hip_hadb_find_lsi(hip_ha_t *entry, void *lsi)
 	int exist_lsi; 
 	exist_lsi = hip_lsi_are_equal(&entry->lsi_peer,(hip_lsi_t *)lsi);
 	if (exist_lsi)
-		lsi = NULL;
+	        memset(lsi, 0, sizeof(lsi));
 }
 
 
