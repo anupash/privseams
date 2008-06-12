@@ -95,7 +95,6 @@ if test x"$ac_cv_use_firewall" = x"yes"; then
 fi
 AM_CONDITIONAL(HIP_FIREWALL, test x"$ac_cv_use_firewall" = x"yes")
 
-
 # Try to automatically detect GTK if not disabled or enabled by user
 PKG_CHECK_MODULES(GTK, gtk+-2.0 >= 2.10.0, ac_cv_use_agent=yes, ac_cv_use_agent=no)
 if test x"$ac_cv_use_agent" = x"no"; then
@@ -113,6 +112,7 @@ AC_CACHE_CHECK([whether to use agent],
                [ac_cv_use_agent], [ac_cv_use_agent=yes])
 if test x"$ac_cv_use_agent" = x"yes"; then
 	AC_DEFINE(CONFIG_HIP_AGENT, AC_PREREQ(2.53))
+        AC_CHECK_LIB(sqlite3, sqlite3_open,, AC_MSG_ERROR(libsqlite3 not found))	
 fi
 AM_CONDITIONAL(HIP_AGENT, test x"$ac_cv_use_agent" = x"yes")
 

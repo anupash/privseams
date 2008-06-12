@@ -9,7 +9,12 @@ int hip_rsa_sign(struct hip_host_id *priv, struct hip_common *msg) {
 	HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, msg, len, sha1_digest) < 0,
 		 -1, "Building of SHA1 digest failed\n");
 	HIP_IFEL(impl_rsa_sign(sha1_digest, (u8 *)(priv + 1), signature,
-			       3+128*2+64+64 /*e+n+d+p+q*/), 0, "Signing error\n");
+                               (HIP_RSA_PUBLIC_EXPONENT_E_LEN +
+                                HIP_RSA_PUBLIC_MODULUS_N_LEN + 
+                                HIP_RSA_PRIVATE_EXPONENT_D_LEN +
+                                HIP_RSA_SECRET_PRIME_FACTOR_P_LEN +
+                                HIP_RSA_SECRET_PRIME_FACTOR_Q_LEN)), 
+                               0, "Signing error\n");
 	if (hip_get_msg_type(msg) == HIP_R1) {
 		HIP_IFEL(hip_build_param_signature2_contents(msg, signature,
 							     HIP_RSA_SIGNATURE_LEN,

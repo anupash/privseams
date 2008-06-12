@@ -161,10 +161,15 @@
 #define SO_HIP_GET_PROXY_LOCAL_ADDRESS		133
 #define SO_HIP_HIPPROXY_STATUS_REQUEST		134
 #define SO_HIP_OPPTCP_UNBLOCK_AND_BLACKLIST     135
-#define SO_HIP_FIREWALL_BEX_DONE                136 /* addes by Tao Wan, for informing the firewall the BEX is done*/
+#define SO_HIP_IPSEC_ADD_SA             	    136 /* addes by Tao Wan, for informing the firewall the BEX is done*/
 #define SO_HIP_SET_TCPTIMEOUT_ON                137
 #define SO_HIP_SET_TCPTIMEOUT_OFF               138
 #define SO_HIP_SET_NAT_ICE_UDP                  139
+#define HIP_PARAM_INT                           140
+#define SO_HIP_CERT_SPKI_SIGN                   141
+#define SO_HIP_CERT_SPKI_VERIFY                 142
+#define SO_HIP_CERT_X509V3_SIGN                 143
+#define SO_HIP_CERT_X509V3_VERIFY               144
 /** @} */
 /* inclusive */
 #define HIP_SO_ROOT_MAX 			255
