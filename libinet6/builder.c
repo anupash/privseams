@@ -3719,3 +3719,37 @@ int hip_build_param_locator2(struct hip_common *msg,
 
 	return err;
 }
+
+
+/**
+ * Builds a @c RELAY_TO parameter.
+ *
+ * Builds a @c RELAY_TO parameter to the HIP packet @c msg.
+ *
+ * @param msg  a pointer to a HIP packet common header
+ * @param addr a pointer to IPv6 address
+ * @param port portnumber      
+ * @return     zero on success, or negative error value on error.
+ * @note       This used to be VIA_RVS_NAT, but because of the HIP-ICE
+ *             draft, this is now RELAY_TO.
+ */
+int hip_build_param_reg_from(struct hip_common *msg,
+			     const in6_addr_t *addr,
+			     const in_port_t port)
+{
+
+     struct hip_reg_from reg_from;
+     int err = 0;
+     
+     hip_set_param_type(&reg_from, HIP_PARAM_REG_FROM);
+     ipv6_addr_copy((struct in6_addr *)&reg_from.address, addr);
+     HIP_DEBUG_IN6ADDR("santtu:reg_from address is ", &reg_from.address);
+     HIP_DEBUG_IN6ADDR("santtu:the given address is ", addr);
+     reg_from.port = htons(port);
+     hip_calc_generic_param_len(&reg_from, sizeof(reg_from), 0);
+     err = hip_build_param(msg, &reg_from);
+     
+     return err;
+
+}
+

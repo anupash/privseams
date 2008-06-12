@@ -802,5 +802,13 @@ struct hip_nat_transform {
 } __attribute__ ((packed));
 /* @} */
 
+/** draft-ietf-hip-nat-traversal-02 */
+struct hip_reg_from {
+     hip_tlv_type_t type; /**< Type code for the parameter. */
+     hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
+     uint8_t address[16]; /**< IPv6 address */
+     in_port_t port; /**< Port number. */
+} __attribute__ ((packed));
+
 #endif /* _HIP_PROTODEFS */
 

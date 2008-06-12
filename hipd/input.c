@@ -1468,7 +1468,9 @@ int hip_receive_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
  */
 int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 		  in6_addr_t *i2_daddr, hip_ha_t *entry,
-		  hip_portpair_t *i2_info)
+		  hip_portpair_t *i2_info,
+		  in6_addr_t *dest,
+		  const in_port_t dest_port)
 {
 	struct hip_reg_request *reg_request = NULL;
  	struct hip_common *r2 = NULL, *i2 = NULL;
@@ -1556,6 +1558,20 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 		HIP_IFEL(hip_build_param_hmac2_contents(r2, &hmac, entry->our_pub), -1,
 			 "Building of hmac failed\n");
 	}
+
+#ifdef CONFIG_HIP_RVS
+	if(!ipv6_addr_any(dest))
+	 {  	   
+	      HIP_INFO("create replay_to parameter in R2\n");
+		  hip_build_param_relay_to(
+		       r2, dest, dest_port);
+	  }
+	  if(hip_relay_get_status() == HIP_RELAY_ON) {
+	 		hip_build_param_reg_from(r2,i2_saddr, i2_info->src_port);
+	  }
+#endif	
+	
+	
 	
 	HIP_IFEL(entry->sign(entry->our_priv, r2), -EINVAL, "Could not sign R2. Failing\n");
 
@@ -1617,7 +1633,10 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	uint64_t I = 0, J = 0;	
 	uint32_t spi_in = 0, spi_out = 0;
 	uint16_t crypto_len = 0, nonce = 0;
-	int err = 0, retransmission = 0, replay = 0, use_blind = 0;
+	int err = 0, retransmission = 0, replay = 0, use_blind = 0, state;
+	
+    in6_addr_t dest; // For the IP address in RELAY_FROM
+    in_port_t  dest_port = 0; // For the port in RELAY_FROM
         
 #ifdef CONFIG_HIP_HI3
 	int n_addrs = 0;
@@ -1677,6 +1696,18 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 //add by santtu	
     /***** LOCATOR PARAMETER *****/
 	hip_nat_handle_locator_parameter(i2, entry, esp_info);	
+#ifdef CONFIG_HIP_RVS
+	ipv6_addr_copy(&dest, &in6addr_any);
+    if(hip_relay_get_status() == HIP_RELAY_OFF) {
+
+	state = hip_relay_handle_relay_from(i2, i2_saddr, &dest, &dest_port);
+	if( state == -1 ){
+		HIP_DEBUG( "Handling RELAY_FROM of  I2 packet failed.\n");
+		 goto out_err;
+	 }
+			
+     }
+#endif 
 //end add 	
  	
 #ifdef CONFIG_HIP_HI3
@@ -2121,7 +2152,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
 	/* Create an R2 packet in response. */
 	HIP_IFEL(entry->hadb_misc_func->hip_create_r2(
-			 ctx, i2_saddr, i2_daddr, entry, i2_info), -1, 
+			 ctx, i2_saddr, i2_daddr, entry, i2_info, &dest, dest_port), -1, 
 		 "Creation of R2 failed\n");
 
 #ifdef CONFIG_HIP_ESCROW

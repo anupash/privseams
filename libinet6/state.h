@@ -620,7 +620,12 @@ struct hip_hadb_misc_func_set{
 			     struct in6_addr *i2_saddr,
 			     struct in6_addr *i2_daddr,
 			     hip_ha_t *entry,
-			     hip_portpair_t *);
+			     hip_portpair_t *,
+//add by santtu for the relay address and port
+			     struct in6_addr *,
+			     const in_port_t
+//end add			     
+				);
 	void (*hip_build_network_hdr)(struct hip_common *msg, uint8_t type_hdr,
 				      uint16_t control,
 				      const struct in6_addr *hit_sender,

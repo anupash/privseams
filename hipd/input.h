@@ -524,7 +524,8 @@ int hip_create_i2(struct hip_context *, uint64_t, struct in6_addr *,
  * @return 0 on success, < 0 on error.
  */
 int hip_create_r2(struct hip_context *, struct in6_addr *,
-		  struct in6_addr *, hip_ha_t *, hip_portpair_t *);
+		  struct in6_addr *, hip_ha_t *, hip_portpair_t *,
+		  struct in6_addr *,const in_port_t);
 
 // 2007-02-26 oleg
 // prototype
