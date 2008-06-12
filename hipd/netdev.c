@@ -874,14 +874,14 @@ int hip_netdev_trigger_bex_msg(struct hip_common *msg) {
 	
 	while((param = hip_get_next_param(msg, param))){
 		if(hip_get_param_type(param) == HIP_PARAM_HIT){
-			if (!peer_hit){
-				/* Destination HIT */
-				peer_hit = hip_get_param_contents_direct(param);
-				HIP_DEBUG_HIT("trigger_msg_peer_hit:", peer_hit);
-			}else{
+			if (!our_hit){
 				/* Source HIT */
 				our_hit = hip_get_param_contents_direct(param);
 				HIP_DEBUG_HIT("trigger_msg_our_hit:", our_hit);
+			}else{
+				/* Destination HIT */
+				peer_hit = hip_get_param_contents_direct(param);
+				HIP_DEBUG_HIT("trigger_msg_peer_hit:", peer_hit);
 			}
 	  	}
 	  

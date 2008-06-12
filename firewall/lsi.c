@@ -137,6 +137,7 @@ int reinject_packet(struct in6_addr src_hit, struct in6_addr dst_hit, ipq_packet
 {
         int err, ip_hdr_size, packet_length = 0, protocol, ttl;
 	u8 *msg;  
+	struct icmphdr *icmp = NULL;
 
 	if (ipOrigTraffic == 4){
 		struct ip *iphdr = (struct ip*) m->payload;
@@ -172,10 +173,9 @@ int reinject_packet(struct in6_addr src_hit, struct in6_addr dst_hit, ipq_packet
 	msg = (u8 *)HIP_MALLOC(packet_length, 0);
 	memcpy(msg, (m->payload)+ip_hdr_size, packet_length);
 
-	if (protocol == IPPROTO_ICMP && incoming){
-		  HIP_DEBUG("protocol == IPPROTO_ICMP && incoming\n");
-		  struct icmphdr *icmp = NULL;
+	if (protocol == IPPROTO_ICMP && incoming){	          		  
 		  icmp = (struct icmphdr *)msg;
+		  HIP_DEBUG("protocol == IPPROTO_ICMP && incoming && type=%d code=%d\n",icmp->type,icmp->code);
 		  /*Manually built due to kernel messed up with the ECHO_REPLY message.
 		   Kernel was building an answer message with equals @src and @dst*/
 		  if (icmp->type == ICMP_ECHO){
