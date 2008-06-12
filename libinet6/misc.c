@@ -1241,11 +1241,14 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
  skip_msg:
 
  out:
-
-  change_key_file_perms(dsa_filenamebase);
-  change_key_file_perms(rsa_filenamebase);
-  change_key_file_perms(dsa_filenamebase_pub);
-  change_key_file_perms(rsa_filenamebase_pub);
+  if (dsa_filenamebase != NULL)
+          change_key_file_perms(dsa_filenamebase);
+  if (rsa_filenamebase != NULL)
+          change_key_file_perms(rsa_filenamebase);
+  if (dsa_filenamebase_pub != NULL)
+          change_key_file_perms(dsa_filenamebase_pub);
+  if (rsa_filenamebase_pub != NULL)
+          change_key_file_perms(rsa_filenamebase_pub);
 
   if (dsa_host_id)
     free(dsa_host_id);
