@@ -260,6 +260,8 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 		tmp = hip_ht_find(hadb_hit, ha);
 
 		if (tmp == NULL) {
+		        if ((ha->lsi_peer).s_addr == 0)
+		                hip_hadb_set_lsi_pair(ha);
 			hip_ht_add(hadb_hit, ha);
 			st |= HIP_HASTATE_HITOK;
 			HIP_DEBUG("New state added\n");
@@ -477,7 +479,7 @@ int hip_hadb_add_peer_info_wrapper(struct hip_host_id_entry *entry,
 int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr, hip_lsi_t *peer_lsi)
 {
 	int err = 0;
-	hip_ha_t *entry;
+	hip_ha_t *entry = NULL;
 	struct hip_peer_map_info peer_map;
 	hip_lsi_t lsi_aux;
 	
@@ -485,17 +487,33 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr, hip_
 
  	hip_print_debug_info(NULL, peer_addr, NULL, peer_hit, peer_lsi);
 		
-	memcpy(&peer_map.peer_addr, peer_addr, sizeof(struct in6_addr));
-	memcpy(&peer_map.peer_hit, peer_hit, sizeof(hip_hit_t));
+
+	entry = hip_hadb_try_to_find_by_peer_hit(peer_hit);
+
+	if (!entry){
+	        memcpy(&peer_map.peer_hit, peer_hit, sizeof(hip_hit_t));
+	        memcpy(&peer_map.peer_addr, peer_addr, sizeof(struct in6_addr));
 	
-	if (!peer_lsi){
-		// Call to the automatic generation
-		lsi_aux = hip_generate_peer_lsi();
-		memcpy(&peer_map.peer_lsi, &lsi_aux, sizeof(hip_lsi_t));
-	}else{
-		memcpy(&peer_map.peer_lsi, peer_lsi, sizeof(hip_lsi_t));
+	        if (!peer_lsi){
+		        // Call to the automatic generation
+		        lsi_aux = hip_generate_peer_lsi();
+			memcpy(&peer_map.peer_lsi, &lsi_aux, sizeof(hip_lsi_t));
+		}else{
+		        memcpy(&peer_map.peer_lsi, peer_lsi, sizeof(hip_lsi_t));
+		}
 	}
-		 	
+	else if(ipv6_addr_cmp(peer_addr, &entry->preferred_address)){
+	        //Peer_addr has changed
+	        memcpy(&peer_map.peer_hit, peer_hit, sizeof(hip_hit_t));
+	        memcpy(&peer_map.peer_addr, peer_addr, sizeof(struct in6_addr));
+		if ((entry->lsi_peer).s_addr == 0){
+		        lsi_aux = hip_generate_peer_lsi();
+			memcpy(&peer_map.peer_lsi, &lsi_aux, sizeof(hip_lsi_t));
+		}
+	}
+	else 
+	        goto out_err;
+ 	
 	HIP_IFEL(hip_select_source_address(
 			 &peer_map.our_addr, &peer_map.peer_addr),
 		 -1, "Cannot find source address\n");
