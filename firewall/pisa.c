@@ -8,6 +8,7 @@
 #include "midauth.h"
 #include "misc.h"
 #include "pisa.h"
+#include "hslist.h"
 #include <string.h>
 
 #define PISA_RANDOM_LEN 16
@@ -18,6 +19,61 @@
 /*#define PISA_INTRODUCE_ERROR_NONCE*/
 /*#define PISA_INTRODUCE_ERROR_PUZZLE_OPAQUE*/
 /*#define PISA_INTRODUCE_ERROR_PUZZLE_RANDOM*/
+
+struct pisa_conn {
+	uint32_t spi[2];
+	struct in6_addr hit[2];
+};
+
+static SList *pisa_connections = NULL;
+
+struct pisa_conn_query {
+	struct in6_addr *hit[2];
+};
+
+static struct pisa_conn *pisa_find_conn(struct pisa_conn 
+					*(*f)(SList *s, void *p),
+					void *data)
+{
+	SList *l = pisa_connections;
+	struct pisa_conn *pcd;
+
+	while (l) {
+		pcd = f(l, data);
+		if (pcd != NULL)
+			return pcd;
+		l = l->next;
+	}
+    
+	return NULL;
+}
+
+static struct pisa_conn *pisa_find_conn_by_hits2(SList *s, void *p)
+{
+	struct pisa_conn_query *query = (struct pisa_conn_query *) p;
+	struct pisa_conn *data;
+
+	if (s && s->data) {
+		data = (struct pisa_conn *) s->data;
+		if ((!ipv6_addr_cmp(&data->hit[0], query->hit[0]) &&
+		     !ipv6_addr_cmp(&data->hit[1], query->hit[1])) ||
+		    (!ipv6_addr_cmp(&data->hit[0], query->hit[1]) &&
+		     !ipv6_addr_cmp(&data->hit[1], query->hit[0])))
+			return data;
+	}
+	return NULL;
+}
+
+static struct pisa_conn *pisa_find_conn_by_hits(struct in6_addr *hit1,
+						struct in6_addr *hit2)
+{
+	struct pisa_conn_query data;
+
+	data.hit[0] = hit1;
+	data.hit[1] = hit2;
+
+	return pisa_find_conn(pisa_find_conn_by_hits2, &data);
+}
 
 struct pisa_puzzle_hash {
 	u8 data[4];
@@ -37,8 +93,13 @@ static char pisa_random_data[2][PISA_RANDOM_LEN];
  */
 static void pisa_generate_random()
 {
-	memcpy(&pisa_random_data[0][0], &pisa_random_data[1][0], PISA_RANDOM_LEN);
-	get_random_bytes(&pisa_random_data[1][0], PISA_RANDOM_LEN);
+	void *p0, *p1;
+
+	p0 = &pisa_random_data[0][0];
+	p1 = &pisa_random_data[1][0];
+
+	memcpy(p0, p1, PISA_RANDOM_LEN);
+	get_random_bytes(p1, PISA_RANDOM_LEN);
 }
 
 /**
@@ -51,7 +112,7 @@ static void pisa_generate_random()
  * @param data pointer to buffer for data and the HMAC
  */
 static void pisa_append_hmac(struct in6_addr *a, struct in6_addr *b, 
-                                   int rnd, u32 spi, void *data, int data_len)
+			     int rnd, u32 spi, void *data, int data_len)
 {
 	u8 key[36 + PISA_RANDOM_LEN];
 	int len = HIP_AH_SHA_LEN;
@@ -73,7 +134,8 @@ static void pisa_append_hmac(struct in6_addr *a, struct in6_addr *b,
 	ipv6_addr_copy((struct in6_addr *)(key+20), b);
 	memcpy(key+36, &pisa_random_data[rnd][0], PISA_RANDOM_LEN);
 
-	HMAC(EVP_sha1(), key, 36 + PISA_RANDOM_LEN, data, data_len, data + data_len, &len);
+	HMAC(EVP_sha1(), key, 36 + PISA_RANDOM_LEN, data, data_len,
+	     data + data_len, &len);
 }
 
 /**
@@ -90,6 +152,7 @@ static int pisa_insert_nonce(hip_fw_context_t *ctx)
 	u32 spi;
 
 	esp_info = hip_get_param(hip, HIP_PARAM_ESP_INFO);
+/* FIXME: check ptr */
 	spi = esp_info->new_spi;
 
 #ifdef PISA_TEST_MULTIPLE_PARAMETERS
@@ -146,7 +209,8 @@ static int pisa_insert_puzzle(hip_fw_context_t *ctx)
 	hash.u.pz.random++;
 #endif
 
-	return midauth_add_puzzle_m(ctx, 3, 4, hash.u.pz.opaque, hash.u.pz.random);
+	return midauth_add_puzzle_m(ctx, 3, 4, hash.u.pz.opaque,
+	                            hash.u.pz.random);
 }
 
 /**
@@ -156,9 +220,9 @@ static int pisa_insert_puzzle(hip_fw_context_t *ctx)
  * previous point in time).
  *
  * @param ctx context of the packet with the nonce to check
- * @return success (0) or failure
+ * @return pointer to the nonce we accepted or NULL at failure
  */
-static int pisa_check_nonce(hip_fw_context_t *ctx)
+static struct hip_tlv_common *pisa_check_nonce(hip_fw_context_t *ctx)
 {
 	struct hip_tlv_common *nonce;
 	struct hip_common *hip = ctx->transport_hdr.hip;
@@ -182,29 +246,31 @@ static int pisa_check_nonce(hip_fw_context_t *ctx)
 			spi = *((u32 *)nonce_data);
 
 			/* ... first check the current random value ... */
-			pisa_append_hmac(&hip->hitr, &hip->hits, 1, spi, valid, 4);
+			pisa_append_hmac(&hip->hitr, &hip->hits, 1, spi,
+			                 valid, 4);
 			if (!memcmp(valid, nonce_data, PISA_NONCE_LEN))
-				return 0;
+				return nonce;
 
 			/* ... and if that failed the old random value */
-			pisa_append_hmac(&hip->hitr, &hip->hits, 0, spi, valid, 4);
+			pisa_append_hmac(&hip->hitr, &hip->hits, 0, spi,
+			                 valid, 4);
 			if (!memcmp(valid, nonce_data, PISA_NONCE_LEN))
-				return 0;
+				return nonce;
 		}
 
 		nonce = hip_get_next_param(hip, nonce);
 	}
 
-	return -1;
+	return NULL;
 }
 
 /**
  * Check the validity of a PISA puzzle. 
  *
  * @param ctx context of the packet with the puzzle to check
- * @return success (0) or failure
+ * @return pointer to the puzzle we accepted or NULL at failure
  */
-static int pisa_check_solution(hip_fw_context_t *ctx)
+static struct hip_solution_m *pisa_check_solution(hip_fw_context_t *ctx)
 {
 	struct hip_solution_m *solution;
 	struct hip_common *hip = ctx->transport_hdr.hip;
@@ -230,14 +296,14 @@ static int pisa_check_solution(hip_fw_context_t *ctx)
 		    (!memcmp(solution->opaque, hash[0].u.pz.opaque, 6)
 		      && solution->I == hash[0].u.pz.random)) {
 			if (midauth_verify_solution_m(hip, solution) == 0)
-				return 0;
+				return solution;
 		}
 
-		solution = (struct hip_solution_m *) hip_get_next_param(hip, 
+		solution = (struct hip_solution_m *) hip_get_next_param(hip,
 		             (struct hip_tlv_common *) solution);
 	}
 
-	return -1;
+	return NULL;
 }
 
 /**
@@ -273,9 +339,39 @@ out_err:
  *
  * @param ctx context of the packet that belongs to that connection
  */
-static void pisa_accept_connection(hip_fw_context_t *ctx)
+static void pisa_accept_connection(hip_fw_context_t *ctx,
+				   struct hip_tlv_common *nonce)
 {
-	/* @todo: FIXME - implement this stub */
+	struct hip_common *hip = ctx->transport_hdr.hip;
+	struct pisa_conn *pcd;
+	struct hip_esp_info *esp_info;
+	uint32_t *spi;
+
+	if (nonce == NULL){
+		HIP_DEBUG("Accepting failed: no nonce found.\n");
+		return;
+	}
+
+	esp_info = hip_get_param(hip,HIP_PARAM_ESP_INFO);
+
+	if (esp_info == NULL) {
+		HIP_DEBUG("Accepting failed: no HIP_PARAM_ESP_INFO found.\n");
+		return;
+	}
+
+	spi = (uint32_t *) hip_get_param_contents_direct(nonce);
+
+	/* add a new connection or update an old one */
+	if ((pcd = pisa_find_conn_by_hits(&hip->hits, &hip->hitr)) == NULL) {
+		pcd = malloc(sizeof(struct pisa_conn));
+		append_to_slist(pisa_connections, pcd);
+	}
+
+	ipv6_addr_copy(&pcd->hit[0], &hip->hits);
+	ipv6_addr_copy(&pcd->hit[1], &hip->hitr);
+	pcd->spi[0] = esp_info->new_spi;
+	pcd->spi[1] = *spi;
+
 	HIP_INFO("PISA accepted the connection.\n");
 }
 
@@ -285,7 +381,8 @@ static void pisa_accept_connection(hip_fw_context_t *ctx)
  *
  * @param ctx context of the packet that belongs to that connection
  */
-static void pisa_reject_connection(hip_fw_context_t *ctx)
+static void pisa_reject_connection(hip_fw_context_t *ctx,
+				   struct hip_tlv_common *nonce)
 {
 	/* @todo: FIXME - implement this stub */
 	HIP_INFO("PISA rejected the connection.\n");
@@ -315,20 +412,22 @@ static int pisa_handler_i2(hip_fw_context_t *ctx)
  */
 static int pisa_handler_r2(hip_fw_context_t *ctx)
 {
-	int verdict = NF_DROP, nonce = 0, solution = 0, sig = 0;
+	int verdict = NF_DROP, sig = 0;
+	struct hip_solution_m *solution = NULL;
+	struct hip_tlv_common *nonce = NULL;
 
 	nonce = pisa_check_nonce(ctx);
 	solution = pisa_check_solution(ctx);
 	sig = pisa_check_signature(ctx);
 
-	if (nonce != 0 || solution != 0 || sig != 0) {
+	if (nonce == NULL || solution == NULL || sig != 0) {
 		/* disallow further communication if either nonce or solution
 		 * were not correct */
-		pisa_reject_connection(ctx);
+		pisa_reject_connection(ctx, nonce);
 		verdict = NF_DROP;
 	} else {
 		/* allow futher communication otherwise */
-		pisa_accept_connection(ctx);
+		pisa_accept_connection(ctx, nonce);
 		verdict = NF_ACCEPT;
 	}
 
@@ -360,6 +459,8 @@ void pisa_init(struct midauth_handlers *h)
 
 	pisa_generate_random();
 	pisa_generate_random();
+
+	pisa_connections = alloc_slist();
 }
 
 #endif
