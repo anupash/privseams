@@ -2,7 +2,7 @@ AUTOMAKE_OPTIONS = foreign
 
 # Note: .. is included because libinet6/debug.h is included; otherwise this
 # won't build because there is also the linux/net/ipv6/hip/debug.h include.
-CFLAGS = $(hipl_common_cflags) -lsqlite3
+CFLAGS = $(hipl_common_cflags)
 
 GTKLDADD   = `pkg-config gtk+-2.0 --libs`
 GTHREADLDADD  = `pkg-config --cflags --libs gthread-2.0`
@@ -37,6 +37,8 @@ endif
 hipagent_LDADD += ../opendht/.libs/libhipopendht.a
 
 hipagent_LDFLAGS = -lcrypto -lpthread $(GTKLDADD) $(GTHREADLDADD) $(GOBJECTLDADD)
+
+CFLAGS += -lsqlite3
 
 endif
 
