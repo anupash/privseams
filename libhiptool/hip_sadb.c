@@ -23,14 +23,6 @@
 #include <stdio.h>	/* printf() */
 #include <stdlib.h>	/* malloc() */
 #include <string.h>	/* memset() */
-#ifdef __WIN32__
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include <io.h>
-#include <time.h>
-#include <win32/types.h>
-#include <win32/ip.h>
-#else
 #include <unistd.h>	/* write() */
 #include <sys/errno.h>  /* errno */
 #include <sys/time.h>	/* gettimeofday() */
@@ -38,17 +30,14 @@
 #include <netinet/ip6.h> /* struct ip6_hdr */
 #include <netinet/tcp.h> /* struct tcphdr */
 #include <netinet/udp.h> /* struct udphdr */
-#ifdef __MACOSX__
-#include <netinet/in_systm.h> /* struct ip */
-#include <netinet/in.h> /* struct ip */
-#endif
-#endif
 //#include <hip/hip_service.h>
 //#include <hip/hip_types.h>
 #include "hip_sadb.h"
 //#include <hip/hip_funcs.h> /* gettimeofday() for win32 */
 #include "win32-pfkeyv2.h"
-
+#if 0
+#include "hashchain.h"
+#endif
 
 /*
  * Globals
@@ -142,7 +131,7 @@ void hip_sadb_init() {
 	memset(hip_sadb, 0, sizeof(hip_sadb));
 	memset(hip_sadb_dst, 0, sizeof(hip_sadb_dst));
 	lsi_temp = NULL;
-        memset(hip_proto_sel, 0, sizeof(hip_proto_sel));
+    memset(hip_proto_sel, 0, sizeof(hip_proto_sel));
 }
 
 /*
@@ -152,9 +141,9 @@ void hip_sadb_init() {
  */ 
 int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
     struct sockaddr *inner_dst, struct sockaddr *src, struct sockaddr *dst, 
-    __u16 port,
+    __u16 sport, __u16 dport, int direction,
     __u32 spi, __u8 *e_key, __u32 e_type, __u32 e_keylen, __u8 *a_key,
-    __u32 a_type, __u32 a_keylen, __u32 lifetime, __u16 hitmagic)
+    __u32 a_type, __u32 a_keylen, __u32 lifetime, __u16 hitmagic, int encap_mode)
 {
 	
 	hip_sadb_entry *entry;
@@ -183,6 +172,7 @@ int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
 	memset(entry, 0, sizeof(hip_sadb_entry));
 	pthread_mutex_lock(&entry->rw_lock);
 	entry->mode = mode;
+	entry->direction = direction;
 	entry->next = NULL;
 	entry->spi = spi;
 	entry->hit_magic = hitmagic;
@@ -190,7 +180,16 @@ int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
 	entry->dst_addrs = (sockaddr_list*)malloc(sizeof(sockaddr_list));
 	entry->inner_src_addrs = (sockaddr_list*)malloc(sizeof(sockaddr_list));
 	entry->inner_dst_addrs = (sockaddr_list*)malloc(sizeof(sockaddr_list));
-	entry->dst_port = port ;
+#if 0
+	/* allocate memory for hash chains and anchors */
+	entry->active_hchain = (hash_chain_t*)malloc(sizeof(hash_chain_t));
+	entry->next_hchain = (hash_chain_t*)malloc(sizeof(hash_chain_t));
+	entry->active_anchor = (unsigned char*)malloc(HCHAIN_ELEMENT_LENGTH);
+	entry->next_anchor = (unsigned char*)malloc(HCHAIN_ELEMENT_LENGTH);
+#endif
+	entry->src_port = sport ;
+	entry->dst_port = dport ;
+	entry->encap_mode = encap_mode;
 	entry->usetime_ka.tv_sec = 0;
 	entry->usetime_ka.tv_usec = 0;
 	memset(&entry->lsi, 0, sizeof(struct sockaddr_storage));
@@ -211,7 +210,11 @@ int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
 	entry->replay_map = 0;
 	pthread_mutex_unlock(&entry->rw_lock);
 
+#if 0
 	/* malloc error */
+	if (!entry->src_addrs || !entry->dst_addrs || !entry->a_key || !entry->active_hchain
+			|| !entry->next_hchain || entry->active_anchor || entry->next_anchor)
+#endif
 	if (!entry->src_addrs || !entry->dst_addrs || !entry->a_key)
 		goto hip_sadb_add_error;
 	if ((e_keylen > 0) && !entry->e_key)
@@ -246,9 +249,36 @@ int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
 		memcpy(&entry->inner_dst_addrs->addr, inner_dst,
 		       SALEN(inner_dst));
 	}
-
 	
-
+#if 0
+	/* set up both hash chains and anchors for now */
+	// TODO hchains should be taken from the store
+	memcpy(entry->active_hchain, hchain_create(100), sizeof(hash_chain_t));
+	
+	// verify active hash chain
+	HIP_DEBUG("verifying _active_ hash chain...\n");
+	if (hchain_verify(entry->active_hchain->source_element->hash,
+			entry->active_hchain->anchor_element->hash, 100))
+		HIP_DEBUG("active hash chain successfully verified!\n");
+	else
+		HIP_DEBUG("ERROR verifying active hash chain!\n");
+	
+	memcpy(entry->next_hchain, hchain_create(100), sizeof(hash_chain_t));
+	
+	// verify hash chains
+	HIP_DEBUG("verifying _next_ hash chain...\n");
+	if (hchain_verify(entry->next_hchain->source_element->hash,
+			entry->next_hchain->anchor_element->hash, 100))
+		HIP_DEBUG("next hash chain successfully verified!\n");
+	else
+		HIP_DEBUG("ERROR verifying next hash chain!\n");
+	
+	entry->tolerance = 10;
+	memcpy(entry->active_anchor, entry->active_hchain->anchor_element->hash, 
+			HCHAIN_ELEMENT_LENGTH); 
+	memcpy(entry->next_anchor, entry->next_hchain->anchor_element->hash,
+			HCHAIN_ELEMENT_LENGTH);
+#endif
 	
 	/* copy keys */
 
@@ -629,6 +659,7 @@ void unbuffer_packets(hip_lsi_entry *entry)
 			break;
 		}
 		next_hdr += len;
+#if 0
 #ifdef __WIN32__
 		if (send(readsp[0], data, len, 0) < 0) {
 #else
@@ -636,8 +667,11 @@ void unbuffer_packets(hip_lsi_entry *entry)
 #endif
 			printf("unbuffer_packets: write error: %s",
 				strerror(errno));
+
 			break;
 		}
+#endif
+		printf("FIXME: not fully implemented");
 	}
 
 	entry->num_packets = 0;
@@ -652,9 +686,11 @@ void unbuffer_packets(hip_lsi_entry *entry)
 hip_lsi_entry *hip_lookup_lsi_by_addr(struct sockaddr *addr)
 {
 	hip_lsi_entry *entry;
+	// we will only get hits here
+	hip_hit_t *hit = (hip_hit_t *) hip_cast_sa_addr(addr);
+	
 	for (entry = lsi_temp; entry; entry = entry->next) {
-		if (memcmp(SA2IP(&entry->addr),
-			   SA2IP(addr), SAIPLEN(addr))==0) {
+		if (IN6_ARE_ADDR_EQUAL((hip_hit_t *)(hip_cast_sa_addr(&entry->addr)), hit)) {
 			return(entry);
 		}
 	}
@@ -670,11 +706,12 @@ hip_lsi_entry *hip_lookup_lsi(struct sockaddr *lsi)
 {
 	hip_lsi_entry *entry;
 	struct sockaddr_storage *entry_lsi;
+	hip_hit_t *hit = (hip_hit_t *) hip_cast_sa_addr(lsi);
 
 	for (entry = lsi_temp; entry; entry = entry->next) {
 		entry_lsi = (lsi->sa_family == AF_INET) ? &entry->lsi4 : 
 							  &entry->lsi6;
-		if (memcmp(SA2IP(entry_lsi), SA2IP(lsi), SAIPLEN(lsi))==0)
+		if (IN6_ARE_ADDR_EQUAL((hip_hit_t *)(hip_cast_sa_addr(entry_lsi)), hit))
 			return(entry);
 	}
 	return(NULL);
@@ -704,6 +741,7 @@ hip_sadb_entry *hip_sadb_lookup_spi(__u32 spi) {
 int hip_sadb_add_dst_entry(struct sockaddr *addr, hip_sadb_entry *entry)
 {
 	hip_sadb_dst_entry *dst_entry, *last;
+	hip_hit_t *hit = (hip_hit_t *) hip_cast_sa_addr(addr);
 	
 	if (!addr || !entry)
 		return(-1);
@@ -714,7 +752,8 @@ int hip_sadb_add_dst_entry(struct sockaddr *addr, hip_sadb_entry *entry)
 		dst_entry; dst_entry = dst_entry->next) {
 		last = dst_entry;
 		if (dst_entry->sadb_entry &&
-		   !memcmp(SA2IP(&dst_entry->addr), SA2IP(addr), SALEN(addr))) {
+			IN6_ARE_ADDR_EQUAL((hip_hit_t *)(hip_cast_sa_addr(&dst_entry->addr)), hit))
+		{
 			dst_entry->sadb_entry = entry;
 			return(0);
 		}
@@ -743,11 +782,13 @@ int hip_sadb_add_dst_entry(struct sockaddr *addr, hip_sadb_entry *entry)
  */ 
 int hip_sadb_delete_dst_entry(struct sockaddr *addr) {
 	hip_sadb_dst_entry *entry, *prev, *next;
+	hip_hit_t *hit = (hip_hit_t *) hip_cast_sa_addr(addr);
 	
 	prev = NULL;
 	for (entry = &hip_sadb_dst[sadb_dst_hashfn(addr)]; 
 	     entry; entry = entry->next) {
-		if (memcmp(SA2IP(addr), SA2IP(&entry->addr), SAIPLEN(addr))) {
+		if (!IN6_ARE_ADDR_EQUAL((hip_hit_t *)(hip_cast_sa_addr(&entry->addr)), hit))
+		{
 			prev = entry;
 			continue;
 		}
@@ -778,11 +819,13 @@ int hip_sadb_delete_dst_entry(struct sockaddr *addr) {
  */ 
 hip_sadb_entry *hip_sadb_lookup_addr(struct sockaddr *addr) {
 	hip_sadb_dst_entry *entry;
+	hip_hit_t *hit = (hip_hit_t *) hip_cast_sa_addr(addr);
+	
 	for (entry = &hip_sadb_dst[sadb_dst_hashfn(addr)]; 
 	     entry; entry = entry->next) {
 		if ((addr->sa_family == entry->addr.ss_family) &&
-		    (memcmp(SA2IP(addr), SA2IP(&entry->addr), 
-			    SAIPLEN(addr))==0)) {
+				IN6_ARE_ADDR_EQUAL((hip_hit_t *)(hip_cast_sa_addr(&entry->addr)), hit))
+		{
 			return(entry->sadb_entry);
 		}
 	}

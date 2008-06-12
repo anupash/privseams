@@ -6,7 +6,9 @@
  */
  
 #include "init.h"
+#ifdef CONFIG_HIP_PRIVSEP
 #include <sys/capability.h>
+#endif /* CONFIG_HIP_PRIVSEP */
 #include <sys/prctl.h>
 #include <sys/types.h>
 #include "debug.h"
