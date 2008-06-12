@@ -99,7 +99,7 @@ void hip_set_os_dep_variables()
 		hip_xfrm_set_beet(2);
 		hip_xfrm_set_algo_names(0);
 	} else {
-		hip_xfrm_set_beet(1);
+		hip_xfrm_set_beet(4);
 		hip_xfrm_set_algo_names(1);
 	}
 #endif
