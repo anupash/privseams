@@ -9,7 +9,7 @@
 #include "utils.h"
 #include <sys/time.h>		/* timeval */
 #include <asm/types.h>		/* __u16, __u32, etc */
-#include "hashchain.h"
+#include "hashchain_store.h"
 
 #define ESP_PACKET_SIZE 2500
 // this is the maximum buffer-size needed for an userspace ipsec esp packet
@@ -18,7 +18,10 @@
 #define ESP_PACKET_SIZE (BUFSIZE + sizeof(struct udphdr) + sizeof(struct hip_esp) +
 				MAX_ESP_PADDING + sizeof(struct hip_esp_tail) + EVP_MAX_MD_SIZE)
 #endif
-
+// different hc_length in order not to spoil calculation time for short connections
+#define HC_LENGTH_STEP1 1000
+#define HC_LENGTH_STEP2 100000
+				
 // this is the ESP packet we are about to build
 unsigned char *esp_packet = NULL;
 // the original packet before ESP encryption
@@ -42,6 +45,12 @@ int userspace_ipsec_init()
 	{
 		HIP_IFE(!(esp_packet = (unsigned char *)malloc(ESP_PACKET_SIZE)), -1);
 		HIP_IFE(!(decrypted_packet = (unsigned char *)malloc(ESP_PACKET_SIZE)), -1);
+		
+		// init the hash-chain store
+		int hc_element_lengths[] = {HC_LENGTH_STEP1, HC_LENGTH_STEP2, HC_LENGTH_STEP3};
+		HIP_IFE(hip_hchain_store_init(hc_element_lengths, 2), -1);
+		// ... and fill it with elements
+		HIP_IFE(hip_hchain_stores_refill(), -1);
 		
 		// open IPv4 raw socket
 		raw_sock_v4 = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);

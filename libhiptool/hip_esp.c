@@ -93,7 +93,7 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 			out_esp_exthdr->esp_spi = htonl(entry->spi);
 			out_esp_exthdr->esp_seq = htonl(entry->sequence++);
 			
-			// TODO add hchain-element to esp header
+			// add hchain-element to esp header
 			HIP_DEBUG("adding hash chain element to outgoing packet...\n");
 			hash = hchain_pop(entry->active_hchain)->hash;
 			
@@ -163,20 +163,6 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 		
 		// this also includes the ESP tail
 		*esp_packet_len += encryption_len;
-		
-		
-#if 0	
-		/* Record the address family of this packet, so incoming
-		 * replies of the same protocol/ports can be matched to
-		 * the same family.
-		 */
-		// TODO find out what that does
-		if (hip_add_proto_sel_entry(LSI4(&entry->lsi), 
-					(__u8)(iph ? iph->ip_p : ip6h->ip6_nxt), 
-					iph ? (__u8*)(iph+1) : (__u8*)(ip6h+1),
-					family, 0, now	) < 0)
-			printf("hip_esp_encrypt(): error adding sel entry.\n");
-#endif
 
 		// finally we have all the information to set up the missing headers
 		if (entry->encap_mode == 1) {
@@ -760,15 +746,6 @@ int hip_esp_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8_t *
 	esp_tail = (struct hip_esp_tail *) &out[elen - sizeof(struct hip_esp_tail)];
 	*out_type = esp_tail->esp_next;
 	*out_len = elen - (esp_tail->esp_padlen + sizeof(struct hip_esp_tail));
-
-#if 0
-	// TODO do we need this?
-	/* determine address family for new packet based on 
-	 * decrypted upper layer protocol header
-	 */
-	family_out = hip_select_family_by_proto(LSI4(&entry->lsi), 
-					padinfo->next_hdr, &out[*offset], now);
-#endif
 
   out_err:
 	return err;
