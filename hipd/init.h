@@ -48,7 +48,7 @@
 #include "hi3.h"
 
 #define USER_NOBODY "nobody"
-
+ 
 extern char *i3_config_file;
 extern char *hip_i3_config_file;
 extern int hip_use_i3;
@@ -66,6 +66,7 @@ void hip_close(int signal);
 void hip_exit(int signal);
 void hip_probe_kernel_modules();
 int hip_init_dht();
-
+int hip_init_certs();
+struct hip_host_id_entry * hip_return_first_rsa(void);
 #endif /* _HIP_INIT */
 

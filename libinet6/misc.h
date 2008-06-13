@@ -114,7 +114,7 @@ int hip_sa_addr_len(void *sockaddr);
 int hip_create_lock_file(char *filename, int killold);
 int hip_remove_lock_file(char *filename);
 
-void hip_addr_to_sockaddr(struct in6_addr *addr, struct sockaddr *sa);
+void hip_addr_to_sockaddr(struct in6_addr *addr, struct sockaddr_storage *sa);
 
 uint64_t hip_solve_puzzle(void *puzzle, struct hip_common *hdr, int mode);
 hip_lsi_t *hip_get_lsi_peer_by_hits(struct in6_addr *hit_s, struct in6_addr *hit_r);

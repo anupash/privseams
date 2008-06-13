@@ -59,5 +59,5 @@ int hip_for_each_opp(int (*func)(hip_opp_block_t *entry, void *opaq),
 		     void *opaque);
 
 int hip_handle_opp_reject(hip_opp_block_t *entry, void *ips);
-int hip_handle_opptcp_fallback(hip_opp_block_t *entry, void *ips);
+int hip_force_opptcp_fallback(hip_opp_block_t *entry, void *ips);
 #endif /* HIP_HADB_H */

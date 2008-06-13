@@ -27,17 +27,15 @@
  *
  * Please fix it if you know it is safe to do so.
  * -Lauri 26.09.2007 14:43
+ *
+ * This is not called from anywhere, so if 0 --Samu
  */
+#if 0
 static int hip_tmpname(char *fname) {
-	memcpy(fname, HIP_TMP_FNAME_TEMPLATE, HIP_TMP_FNAME_LEN);
-	return (mkstemp(fname));
-	/*
-      if (mktemp(fname) == NULL)
-		return -1;
-	else
-		return 0;
-	*/
+	memcpy(fname, HIP_TMP_FNAME_TEMPLATE, HIP_TMP_FNAME_LEN);     
+	return(mkstemp(fname));      
 } 
+#endif
 
 /**
  * hip_tmpname_gui: 
@@ -49,17 +47,17 @@ static int hip_tmpname(char *fname) {
  * @return 0 if the unique filename is correctly assigned; -1 on error.
  *
  * -Alberto
+ *
+ * This is not called from anywhere, so if 0 -- Samu
  */
+#if 0
 static int hip_tmpname_gui(char *fname) {
-	memcpy(fname, HIP_TMP_FNAME_TEMPLATE, HIP_TMP_FNAME_LEN);
-	//return (mkstemp(fname));
-        
-	if (mktemp(fname) == NULL)
-		return -1;
-	else
-		return 0;
-        
+        int ret = 0;
+	memcpy(fname, HIP_TMP_FNAME_TEMPLATE, HIP_TMP_FNAME_LEN);        
+	if (mktemp(fname) == NULL) ret = -1;
+       	return(ret); 
 } 
+#endif
 
 /*
  * HIP header and parameter related constants and structures.
@@ -175,6 +173,22 @@ static inline void set_lsi_prefix(hip_lsi_t *lsi)
  *          struct in_addr.
  */
 //#define IS_LSI(a) ((a & 0x00FFFFFF) == 0x000000C0)
+
+/** 
+ * Checks if a uint32_t represents a Local Scope Identifier (LSI).
+ *
+ * @param       the uint32_t to test
+ * @return      true if @c a is from 1.0.0.0/8
+ * @note        This macro tests directly uint32_t, not struct in_addr or a pointer
+ *              to a struct in_addr. To use this macro in context with struct
+ *              in_addr call it with ipv4->s_addr where ipv4 is a pointer to a
+ *              struct in_addr.
+ */
+#define IS_LSI32(a) ((a & 0x00FFFFFF) == 0x000000C0)
+
+#define IS_LSI(a) ( (((struct sockaddr*)a)->sa_family == AF_INET) ? \
+                   (IS_LSI32(((struct sockaddr_in*)a)->sin_addr.s_addr)) : \
+                   (ipv6_addr_is_hit( &((struct sockaddr_in6*)a)->sin6_addr) )     )
 
 /** 
  * A macro to test if a uint32_t represents an IPv4 loopback address.

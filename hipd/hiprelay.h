@@ -60,11 +60,11 @@
  * @author  Lauri Silvennoinen
  * @version 1.1
  * @date    31.03.2008
- * @note    Related drafts:
- *          <a href="http://www.ietf.org/internet-drafts/draft-ietf-hip-rvs-05.txt">
- *          draft-ietf-hip-rvs-05</a>
- *          <a href="http://www.ietf.org/internet-drafts/draft-ietf-hip-nat-traversal-02.txt">
- *          draft-ietf-hip-nat-traversal-02</a>
+ * @note    Related RFC: <a href="http://www.rfc-editor.org/rfc/rfc5204.txt">
+ *          Host Identity Protocol (HIP) Rendezvous Extension</a>
+ * @note    Related draft:
+ *          <a href="http://www.ietf.org/internet-drafts/draft-ietf-hip-nat-traversal-03.txt">
+ *          draft-ietf-hip-nat-traversal-03</a>
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  */
 #ifndef HIP_HIPRELAY_H
@@ -203,18 +203,18 @@ static inline unsigned long hip_hash_func(const hip_hit_t *hit)
 	   are constant and have no hash value. Therefore, we create a new
 	   replacement sequence for first 32 bit sequence. */
 	   
-	bits_1st = (~hit->in6_u.u6_addr8[3]) << 28;
-	bits_1st |= hit->in6_u.u6_addr8[3] << 24;
-	bits_1st |= hit->in6_u.u6_addr8[7] << 16;
-	bits_1st |= hit->in6_u.u6_addr8[11] << 8;
-	bits_1st |= hit->in6_u.u6_addr8[15];
+	bits_1st = (~hit->s6_addr[3]) << 28;
+	bits_1st |= hit->s6_addr[3] << 24;
+	bits_1st |= hit->s6_addr[7] << 16;
+	bits_1st |= hit->s6_addr[11] << 8;
+	bits_1st |= hit->s6_addr[15];
 		
 	/* We calculate the hash by avalanching the bits. The avalanching
 	   ensures that we make use of all bits when dealing with 64 bits
 	   architectures. */
-	hash =  (bits_1st ^ hit->in6_u.u6_addr32[1]);
+	hash =  (bits_1st ^ hit->s6_addr32[1]);
 	hash ^= hash << 3;
-	hash ^= (hit->in6_u.u6_addr32[2] ^ hit->in6_u.u6_addr32[3]);
+	hash ^= (hit->s6_addr32[2] ^ hit->s6_addr32[3]);
 	hash += hash >> 5;
 	hash ^= hash << 4;
 	hash += hash >> 17;

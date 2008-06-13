@@ -15,7 +15,7 @@
  * <li>doc/HACKING. This file contains developer information on policies in the
  * HIPL project.</li>
  * <li>HIPL User Manual. Type <code>make HOWTO.html</code> in "doc" directory.
- * The user manual is now available at doc/howto-html/index.html</li>.
+ * The user manual is then available at doc/howto-html/index.html</li>.
  * <!--<li><a href=""></a>.</li>-->
  * </ul>
  * 
@@ -643,9 +643,9 @@
  * |||| |||| +--------- 0x0080 - free -
  * |||| |||+----------- 0x0100 - free -
  * |||| ||+------------ 0x0200 - free -
- * |||| |+------------- 0x0400 - free -
- * |||| +-------------- 0x0800 - free -
- * |||+---------------- 0x1000 - free -
+ * |||| |+------------- 0x0400 Peer granted escrow service to us.
+ * |||| +-------------- 0x0800 Peer granted HIP relay service to us.
+ * |||+---------------- 0x1000 Peer granted RVS service to us.
  * ||+----------------- 0x2000 Peer offers escrow service.
  * |+------------------ 0x4000 Peer offers HIP relay service.
  * +------------------- 0x8000 Peer offers RVS service.
@@ -663,24 +663,36 @@
  *      hip_hadb_set_local_controls() with this mask. To clear all peer controls
  *      call hip_hadb_set_peer_controls() with this mask.
  * @def HIP_HA_CTRL_LOCAL_REQ_ESCROW
- *      The host association has requested escrow service in a I1 or an UPDATE
+ *      The host association has requested escrow service in an I1 or an UPDATE
  *      packet.
  * @def HIP_HA_CTRL_LOCAL_REQ_RELAY
- *      The host association has requested HIP relay service in a I1 or an
+ *      The host association has requested HIP relay service in an I1 or an
  *      UPDATE packet.
  * @def HIP_HA_CTRL_LOCAL_REQ_RVS
- *      The host association has requested rendezvous service in a I1 or an
+ *      The host association has requested rendezvous service in an I1 or an
  *      UPDATE packet.
  * @def HIP_HA_CTRL_LOCAL_REQ_ALL
- *      An AND mask of every existing local request mask.
- * @def HIP_HA_CTRL_PEER_ESCROW_CAPABLE
+ *      An OR mask of every existing local request mask.
+ * @def HIP_HA_CTRL_PEER_GRANTED_ESCROW
+ *      The peer has granted us escrow service in a REG_RESPONSE parameter
+ *      received in an R2 packet or an UPDATE packet.
+ * @def HIP_HA_CTRL_PEER_GRANTED_RELAY
+ *      The peer has granted us relay service in a REG_RESPONSE parameter
+ *      received in an R2 packet or an UPDATE packet.
+ * @def HIP_HA_CTRL_PEER_GRANTED_RVS
+ *      The peer has granted us rendezvous service in a REG_RESPONSE parameter
+ *      received in an R2 packet or an UPDATE packet.
+ * @def HIP_HA_CTRL_PEER_GRANTED
  *      The peer has announced in a R1 or UPDATE packet that it offers escrow
  *      service.
- * @def HIP_HA_CTRL_PEER_RELAY_CAPABLE
- *      The peer has announced in a R1 or UPDATE packet that it offers HIP relay
+ * @def HIP_HA_CTRL_PEER_ESCROW_CAPABLE
+ *      The peer has announced in an R1 or UPDATE packet that it offers escrow
  *      service.
+ * @def HIP_HA_CTRL_PEER_RELAY_CAPABLE
+ *      The peer has announced in an R1 or UPDATE packet that it offers HIP
+ *      relay service.
  * @def HIP_HA_CTRL_PEER_RVS_CAPABLE
- *      The peer has announced in a R1 or UPDATE packet that it offers
+ *      The peer has announced in an R1 or UPDATE packet that it offers
  *      rendezvous service.
  */
 

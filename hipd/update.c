@@ -7,6 +7,7 @@
  * @author  Tobias Heer <tobi#tobibox.de>
  * @author  Abhijit Bagri <abagri#gmail.com>
  * @author  Miika Komu <miika#iki.fi>
+ * @author  Samu Varjonen <samu.varjonen#hiit.fi>
  * @version 1.0
  * @date    08.01.2008
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.

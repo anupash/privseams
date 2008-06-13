@@ -650,10 +650,9 @@ int hip_netdev_trigger_bex(hip_hit_t **src_hit, hip_hit_t **dst_hit,
 			   struct in6_addr **src_addr_p, struct in6_addr **dst_addr_p) {
 	int err = 0, if_index = 0, is_ipv4_locator,
 		reuse_hadb_local_address = 0, ha_nat_mode = hip_nat_status,
-                old_global_nat_mode = hip_nat_status;
+        old_global_nat_mode = hip_nat_status;
         in_port_t ha_peer_port;
 	hip_ha_t *entry;
-	
 	int is_loopback = 0;
 	struct in6_addr src_addr;
 	struct in6_addr dst_addr, ha_match;
@@ -872,67 +871,47 @@ int hip_netdev_trigger_bex_msg(struct hip_common *msg) {
 	
 	HIP_DUMP_MSG(msg);
 	
-	while((param = hip_get_next_param(msg, param))){
-		if(hip_get_param_type(param) == HIP_PARAM_HIT){
-			if (!our_hit){
-				/* Source HIT */
-				our_hit = hip_get_param_contents_direct(param);
-				HIP_DEBUG_HIT("trigger_msg_our_hit:", our_hit);
-			}else{
-				/* Destination HIT */
-				peer_hit = hip_get_param_contents_direct(param);
-				HIP_DEBUG_HIT("trigger_msg_peer_hit:", peer_hit);
-			}
-	  	}
-	  
-	  	if (hip_get_param_type(param) == SO_HIP_PARAM_LSI){
-	    		if (!our_lsi){
-				our_lsi = (hip_lsi_t *)hip_get_param_contents_direct(param);
-				HIP_DEBUG_LSI("trigger_msg_our_lsi:", our_lsi);
-	    		}else{
-	      			peer_lsi = (hip_lsi_t *)hip_get_param_contents_direct(param);
-				HIP_DEBUG_LSI("trigger_msg_peer_lsi:", peer_lsi);
-	    		}
-	  	}
+	/* Destination HIT */
+	param = hip_get_param(msg, HIP_PARAM_HIT);
+	if (param && hip_get_param_type(param) == HIP_PARAM_HIT)
+		peer_hit = hip_get_param_contents_direct(param);
+	
+	HIP_DEBUG_HIT("trigger_msg_peer_hit:", peer_hit);
+	
+	/* Source HIT */
+	param = hip_get_next_param(msg, param);
+	if (param && hip_get_param_type(param) == HIP_PARAM_HIT)
+		our_hit = hip_get_param_contents_direct(param);
+	
+	HIP_DEBUG_HIT("trigger_msg_our_hit:", our_hit);
 
-		if (hip_get_param_type(param) == HIP_PARAM_IPV6_ADDR){
-			if(!peer_addr){
-				/* Destination IP */
-				peer_addr = hip_get_param_contents_direct(param);
-				HIP_DEBUG_IN6ADDR("trigger_msg_peer_addr:", peer_addr);
-			}
-			else{
-				our_addr = hip_get_param_contents_direct(param);
-				HIP_DEBUG_IN6ADDR("trigger_msg_our_addr:", our_addr);
-			}
-		}
-	}
+	/* @todo: what about local LSIs? */
+	
+	/* Local LSI */
+	param = hip_get_param(msg, SO_HIP_PARAM_LSI);
+	if (param)
+		our_lsi = hip_get_param_contents_direct(param);
+	
+	/* Destination IP */
+	param = hip_get_param(msg, HIP_PARAM_IPV6_ADDR);
+	if (param)
+		peer_addr = hip_get_param_contents_direct(param);
 
-	if (!our_lsi){
-		HIP_IFEL(hip_add_peer_map(msg), -1, "trigger bex\n");
-		/* Fetch the hadb entry just created. */
-		HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(peer_hit)),
-			 -1, "internal error: no hadb entry found\n");
-		HIP_IFEL(hip_send_i1(&entry->hit_our, peer_hit, entry),
-			 -1, "sending i1 failed\n");
-	}else{
-                err = hip_netdev_trigger_bex(&our_hit, &peer_hit, our_lsi, peer_lsi, &our_addr, &peer_addr);
-		if (our_hit){
-                        HIP_DEBUG_HIT("our_hit ", our_hit);
-		        HIP_IFEL(hip_build_param_contents(msg, (void *)our_hit,
-							  HIP_PARAM_HIT, sizeof(struct in6_addr)), -1,
-				 "build param HIP_PARAM_HIT  failed\n");                 
-		}
-		if (peer_hit){
-		        HIP_DEBUG_HIT("peer_hit ", peer_hit);
-		        HIP_IFEL(hip_build_param_contents(msg, (void *)peer_hit,
-							  HIP_PARAM_HIT, sizeof(struct in6_addr)), -1,
-				 "build param HIP_PARAM_HIT  failed\n");
-		}
-	}
+        /* Source IP */
+        param = hip_get_next_param(msg, param);
+        if (param && hip_get_param_type(param) == HIP_PARAM_IPV6_ADDR)
+		our_addr = hip_get_param_contents_direct(param);
 
-out_err:
-	return err;
+        HIP_IFEL(!peer_hit && !peer_addr, -1, "neither destination hit nor ip provided\n");
+
+	HIP_DEBUG_IN6ADDR("trigger_msg_our_addr:", our_addr);
+	
+	HIP_IFEL(!peer_hit && !peer_addr, -1, "neither destination hit nor ip provided\n");
+	
+	return hip_netdev_trigger_bex(our_hit, peer_hit, our_lsi, peer_lsi, our_addr, peer_addr);
+
+  out_err:
+  	return err;
 }
 
 int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)

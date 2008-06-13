@@ -5,6 +5,10 @@ AUTOMAKE_OPTIONS = foreign
 #
 CFLAGS = $(hipl_common_cflags) -DHIP_UNITTEST_MODE -L$(HIPL_LIBINET6_LIB)
 
+if HIP_AGENT
+CFLAGS += -lsqlite3
+endif
+
 include_HEADERS = checksum.h first_test.h hipsetup.h start-stop-daemon.h
 include_HEADERS += unittest.h conntest.h hipconftool.h misc_install.h unit.h
 
@@ -67,6 +71,8 @@ bin_PROGRAMS += hashtest
 #bin_PROGRAMS += hipconf
 bin_PROGRAMS += listtest
 bin_PROGRAMS += opendhtteststub
+bin_PROGRAMS += certteststub
+bin_PROGRAMS += sqliteteststub
 
 #sbin_SCRIPTS = hipsetup
 
@@ -90,6 +96,8 @@ hashtest_SOURCES = hashtest.c
 #hipconf_SOURCE = hipconftool.c
 listtest_SOURCES = listtest.c
 opendhtteststub_SOURCES = opendhtteststub.c
+certteststub_SOURCES = certteststub.c
+sqliteteststub_SOURCES = sqliteteststub.c
 
 #EXTRA_DIST = $(sbin_SCRIPTS)
 

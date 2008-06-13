@@ -82,21 +82,21 @@ int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m, struct in6_addr *ip_src, str
  * @param ip_dst      ipv6 destination address
  * @return	      err during the BEX
  */
-int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *ip_src, struct in_addr *ip_dst)
+int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src, struct in_addr *lsi_dst)
 {
 	int err, msg_type;
-	struct in6_addr src_addr, dst_addr;
+	struct in6_addr src_lsi, dst_lsi;
 	struct in6_addr *src_hit = NULL, *dst_hit = NULL;
 	firewall_hl_t *entry_peer = NULL;
 
 
-	IPV4_TO_IPV6_MAP(ip_dst, &dst_addr);
-	IPV4_TO_IPV6_MAP(ip_src, &src_addr);
+	IPV4_TO_IPV6_MAP(lsi_dst, &dst_lsi);
+	IPV4_TO_IPV6_MAP(lsi_src, &src_lsi);
 
 	hip_firewall_hldb_dump();
-	entry_peer = (firewall_hl_t *)firewall_hit_lsi_db_match(ip_dst);
+	entry_peer = (firewall_hl_t *)firewall_hit_lsi_db_match(lsi_dst);
 
-	HIP_DEBUG("1. FIREWALL_TRIGGERING OUTGOING LSI %s\n",inet_ntoa(*ip_dst));
+	HIP_DEBUG("1. FIREWALL_TRIGGERING OUTGOING LSI %s\n",inet_ntoa(*lsi_dst));
 
 	if (entry_peer){
 		HIP_IFEL(entry_peer->bex_state == -1, -1, "Base Exchange Failed");
@@ -104,18 +104,18 @@ int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *ip_src, stru
 			reinject_packet(entry_peer->hit_our, entry_peer->hit_peer, m, 4, 0);
 	}else{
 	        //Check if bex is already established: Server case
-	        int state_ha = hip_trigger_is_bex_established(&src_hit, &dst_hit, ip_src, ip_dst);
+	        int state_ha = hip_trigger_is_bex_established(&src_hit, &dst_hit, lsi_src, lsi_dst);
 		if (state_ha){
 			HIP_DEBUG("ha is ESTABLISHED!\n");
-			firewall_add_hit_lsi(src_hit, dst_hit, ip_dst, state_ha);
+			firewall_add_hit_lsi(src_hit, dst_hit, lsi_dst, state_ha);
 			reinject_packet(*src_hit, *dst_hit, m, 4, 0);
 		}
 		else{
 			// Run bex to initialize SP and SA
 			HIP_INFO("Firewall_db empty and no ha. Triggering Base Exchange\n");
-			HIP_IFEL(hip_trigger_bex(&src_hit, &dst_hit, &src_addr, &dst_addr), -1, 
+			HIP_IFEL(hip_trigger_bex(src_hit, dst_hit, &src_lsi, &dst_lsi, NULL, NULL), -1, 
 			 	 "Base Exchange Trigger failed");
-		  	firewall_add_hit_lsi(src_hit, dst_hit, ip_dst, 0);
+		  	firewall_add_hit_lsi(src_hit, dst_hit, lsi_dst, 0);
 		}
 	}
 out_err: 

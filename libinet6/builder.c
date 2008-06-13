@@ -992,8 +992,9 @@ char* hip_message_type_name(const uint8_t msg_type){
 	case SO_HIP_I1_REJECT: return "HIP_I1_REJECT";
 	case HIP_I1: return "HIP_I1";
 	case HIP_I2: return "HIP_I2";
-	case SO_HIP_NAT_OFF: return "HIP_NAT_OFF";
-	case SO_HIP_NAT_ON: return "HIP_NAT_ON";
+	case SO_HIP_SET_NAT_NONE: return "SO_HIP_SET_NAT_NONE:";
+	case SO_HIP_SET_NAT_PLAIN_UDP: return "SO_HIP_SET_NAT_PLAIN_UDP:";
+	case SO_HIP_SET_NAT_ICE_UDP: return "SO_HIP_SET_NAT_ICE_UDP:";
 	case HIP_NOTIFY: return "HIP_NOTIFY";
 	case HIP_PAYLOAD: return "HIP_PAYLOAD";
 	case HIP_PSIG: return "HIP_PSIG";
@@ -1407,6 +1408,7 @@ int hip_build_param(struct hip_common *msg, const void *tlv_common)
 	err = hip_build_param_contents(msg, contents,
 		       hip_get_param_type(tlv_common),
 				       hip_get_param_contents_len(tlv_common));
+        _HIP_DEBUG("tlv_common len %d\n", ((struct hip_tlv_common *)tlv_common)->length);
 	if (err) {
 		HIP_ERROR("could not build contents (%d)\n", err);
 	}
@@ -2164,12 +2166,15 @@ static inline int hip_reg_param_core(hip_common_t *msg, void *param,
 				       type_list);	
 }
 
-int hip_build_param_reg_info(hip_common_t *msg, const hip_srv_t *service_list,
+int hip_build_param_reg_info(hip_common_t *msg, const void *srv_list,
 			     const unsigned int service_count)
 {
 	int err = 0, i = 0;
 	struct hip_reg_info reg_info;
 	uint8_t reg_type[service_count];
+	/* @todo: using a void pointer as a workaround to avoid
+	   weird compilation warning */
+	const hip_srv_t *service_list = (const hip_srv_t *) srv_list;
 
 	if(service_count == 0) {
 		return 0;
@@ -3102,7 +3107,6 @@ int hip_build_param_eid_endpoint(struct hip_common *msg,
 	return err;
 }
 
-
 int hip_host_id_entry_to_endpoint(struct hip_host_id_entry *entry, struct hip_common *msg)
 {
 	struct endpoint_hip endpoint;
@@ -3110,6 +3114,7 @@ int hip_host_id_entry_to_endpoint(struct hip_host_id_entry *entry, struct hip_co
 
 	endpoint.family = PF_HIP;	
 	endpoint.length = sizeof(struct endpoint_hip); 	
+	/* Next line is useless see couple of lines further --SAMU */
 	endpoint.algo= entry->lhi.algo;
 	endpoint.flags=entry->lhi.anonymous;
 	endpoint.algo=hip_get_host_id_algo(entry->host_id);
@@ -3227,6 +3232,18 @@ int hip_build_param_opendht_gw_info(struct hip_common *msg,
 	gw_info.port = htons(port);
 	ipv6_addr_copy(&gw_info.addr, addr);
 	err = hip_build_param(msg, &gw_info);
+	return err;
+}
+
+int hip_build_param_cert_spki_info(struct hip_common * msg,
+				    struct hip_cert_spki_info * cert_info)
+{
+	int err = 0;
+	hip_set_param_type(cert_info, HIP_PARAM_CERT_SPKI_INFO);
+	hip_calc_param_len(cert_info,
+			   sizeof(struct hip_cert_spki_info) -
+			   sizeof(struct hip_tlv_common));
+	err = hip_build_param(msg, cert_info);
 	return err;
 }
 
