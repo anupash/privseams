@@ -1279,6 +1279,8 @@ void check_and_write_default_config()
 
 	_HIP_DEBUG("\n");
 
+	rename("/etc/hip/firewall.conf", HIP_FW_DEFAULT_RULE_FILE);
+
 	if (stat(file, &status) && errno == ENOENT)
 	{
 		errno = 0;
