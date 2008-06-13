@@ -47,13 +47,12 @@ void hip_firewall_hldb_dump(void)
 	list_for_each_safe(item, tmp, firewall_lsi_hit_db, i)
 	{
 		this = list_entry(item);
-		HIP_DEBUG_HIT("Dump >>> hit_our", &this->hit_our);
-		HIP_DEBUG_HIT("Dump >>> hit_peer", &this->hit_peer);
-		HIP_DEBUG_LSI("Dump >>> lsi", &this->lsi);
-		HIP_DEBUG("Dump >>> bex_state %d \n", this->bex_state);
+		HIP_DEBUG_HIT("hit_our", &this->hit_our);
+		HIP_DEBUG_HIT("hit_peer", &this->hit_peer);
+		HIP_DEBUG_LSI("lsi", &this->lsi);
+		HIP_DEBUG("bex_state %d \n", this->bex_state);
 	}
 	HIP_UNLOCK_HT(&firewall_lsi_hit_db);
-	HIP_DEBUG("end hldbdb dump\n");
 }
 
 int firewall_add_hit_lsi(struct in6_addr *hit_our, struct in6_addr *hit_peer, hip_lsi_t *lsi, int state){
@@ -61,21 +60,17 @@ int firewall_add_hit_lsi(struct in6_addr *hit_our, struct in6_addr *hit_peer, hi
 	firewall_hl_t *new_entry = NULL;
 
 	HIP_ASSERT(hit_our != NULL && hit_peer != NULL && lsi != NULL);
-	HIP_DEBUG("Start firewall_add_hit_lsi\n");
+	_HIP_DEBUG("Start firewall_add_hit_lsi\n");
 	
 	new_entry = hip_create_hl_entry();
 	ipv6_addr_copy(&new_entry->hit_our, hit_our);
 	ipv6_addr_copy(&new_entry->hit_peer, hit_peer);
 	ipv4_addr_copy(&new_entry->lsi, lsi);
 	new_entry->bex_state = state;
-	HIP_DEBUG_HIT("1. entry to add to firewall_db hit_our ", &new_entry->hit_our);
-	HIP_DEBUG_HIT("1. entry to add to firewall_db hit_peer ", &new_entry->hit_peer);
-	HIP_DEBUG_LSI("1. entry to add to firewall_db lsi ", &new_entry->lsi);
 	hip_ht_add(firewall_lsi_hit_db, new_entry);
 
 out_err:
-	//	hip_firewall_hldb_dump();
-	HIP_DEBUG("End firewall_add_hit_lsi\n");
+	_HIP_DEBUG("End firewall_add_hit_lsi\n");
 	return err;
 }
 
@@ -122,12 +117,14 @@ int firewall_set_bex_state(struct in6_addr *hit_s, struct in6_addr *hit_r, int s
 	lsi_peer = hip_get_lsi_peer_by_hits(hit_s, hit_r);
 
 	if (lsi_peer){
-	        entry_update = firewall_hit_lsi_db_match(lsi_peer);
+	        HIP_IFEL(!(entry_update = firewall_hit_lsi_db_match(lsi_peer)), -1,
+			 "Entry not found in fwdb");
 		entry_update->bex_state = state;
-		hip_ht_add(firewall_lsi_hit_db, entry_update);
+		hip_ht_add(firewall_lsi_hit_db, entry_update); 
 	}
 	else
 		err = -1;
+ out_err:
 	return err;
 }
 
