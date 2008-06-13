@@ -199,7 +199,7 @@ int hip_set_auto_logdebug(const char *cfile){
  *
  */
 void hip_handle_log_error(int logtype) {
-  fprintf(stderr, "log (type=%d) failed, ignoring", logtype);
+  fprintf(stderr, "log (type=%d) failed, ignoring\n", logtype);
 }
 
 /**

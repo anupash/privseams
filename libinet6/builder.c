@@ -3245,14 +3245,16 @@ int hip_build_param_cert_spki_info(struct hip_common * msg,
 }
 
 int hip_build_param_cert_x509_req(struct hip_common * msg,
-				    struct hip_cert_x509_req * info)
+				    struct in6_addr * addr)
 {
 	int err = 0;
-	hip_set_param_type(info, HIP_PARAM_CERT_X509_REQ);
-	hip_calc_param_len(info,
+        struct hip_cert_x509_req subj;        
+	hip_set_param_type(&subj, HIP_PARAM_CERT_X509_REQ);
+	hip_calc_param_len(&subj,
 			   sizeof(struct hip_cert_x509_req) -
 			   sizeof(struct hip_tlv_common));
-	err = hip_build_param(msg, info);
+        ipv6_addr_copy(&subj.addr, addr);
+	err = hip_build_param(msg, &subj);
 	return err;
 }
 

@@ -336,10 +336,9 @@ int hip_cert_spki_send_to_verification(struct hip_cert_spki_info * to_verificati
 int hip_cert_x509v3_request_certificate(struct in6_addr * subject, char * certificate) {
         int err = 0;
         struct hip_common * msg;
-                
+        
         HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, 
                  "Malloc for msg failed\n");   
-        
         /* build the msg to be sent to the daemon */
         HIP_IFEL(hip_build_param_cert_x509_req(msg, subject), -1,
                  "Failed to build cert_info\n");         
@@ -428,6 +427,31 @@ out_err:
  */
 void hip_cert_free_conf(CONF * conf) {
 	if (conf) NCONF_free(conf);
+}
+
+/**
+ * Function that goes through stack of conf values
+ *
+ * @param CONF pointer to the to be freed configuration 
+ *
+ * @return void 
+ */
+void hip_for_each_conf_value(STACK_OF(CONF_VALUE) * sconfv, 
+                             int (func)(char * name, char * value, void *opaq) , 
+                             void * opaque) {
+        int err = 0, i = 0;
+        CONF_VALUE *item;
+        
+        for (i = 0; i < sk_CONF_VALUE_num(sconfv); i++) {
+                item = sk_CONF_VALUE_value(sconfv, i);
+                _HIP_DEBUG("Sec: %s, Key; %s, Val %s\n", 
+                          item->section, item->name, item->value);
+                HIP_IFEL(func(item->name, item->value, opaque), -1, 
+                         "Error, see above lines\n");
+        }
+
+ out_err:
+        return;
 }
 
 /**

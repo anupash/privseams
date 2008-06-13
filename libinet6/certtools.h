@@ -70,6 +70,8 @@ int hip_cert_x509v3_request_certificate(struct in6_addr *, char *);
 STACK_OF(CONF_VALUE) * hip_cert_read_conf_section(char *, CONF *);
 CONF * hip_cert_open_conf(void); 
 void hip_cert_free_conf(CONF *);
+void hip_for_each_conf_value(STACK_OF(CONF_VALUE) *, 
+                             int (func)(char *, char *, void *) , void *);
 int hip_cert_regex(char *, char *, int *, int *);
 
 #endif /* HIP_CERTTOOLS_H */

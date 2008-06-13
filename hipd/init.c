@@ -884,7 +884,7 @@ int hip_init_certs(void) {
 			"issuerhit = %s\n"
 			"commonName = alias"
                         "\n"
-                        "# Uncomment this section to add any valid x509 extension "
+                        "# Uncomment this section to add x509 extensions\n"
                         "# to the certificate\n"
                         "# [ hip_x509_extension ]\n"
                         "# issuerAltName = DNS:mydomain.com\n",

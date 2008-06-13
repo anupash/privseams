@@ -179,7 +179,7 @@ skip_spki:
 	HIP_DEBUG("Starting to test x509v3 support\n");
 
 	conf = hip_cert_open_conf();
-        sec_name = hip_cert_read_conf_section("hip_x509v3_issuer", conf);
+        sec_name = hip_cert_read_conf_section("hip_x509v3_name", conf);
 
         if (sec_ext == NULL) HIP_DEBUG("No extensions present\n");
 	for (i = 0; i < sk_CONF_VALUE_num(sec_name); i++) {

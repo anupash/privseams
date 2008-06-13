@@ -13,6 +13,12 @@
  */
 #include "cert.h"
 
+/****************************************************************************
+ *
+ * SPKI
+ *
+ ***************************************************************************/
+
 /**
  * Function that signs the cert sequence and creates the public key sequence
  *
@@ -423,6 +429,12 @@ out_err:
 	return (err);
 }
 
+/****************************************************************************
+ *
+ * X.509v3
+ *
+ ***************************************************************************/
+
 /**
  * Function that creates the certificate and sends it to back to the client.
  *
@@ -430,9 +442,12 @@ out_err:
  * @param db is the db to query for the hostid entry
  *
  * @return 0 on success negative otherwise. 
+ *
+ * @note the request part is just for informational purposes, in practise it
+ * is not needed
  */ 
 int hip_cert_x509v3_handle_request(struct hip_common * msg,  HIP_HASHTABLE * db) {
-	int err = 0;
+	int err = 0, i = 0, nid = 0;
 	CONF * conf;
 	CONF_VALUE *item;
 	STACK_OF(CONF_VALUE) * sec = NULL;
@@ -441,7 +456,27 @@ int hip_cert_x509v3_handle_request(struct hip_common * msg,  HIP_HASHTABLE * db)
 	STACK_OF(CONF_VALUE) * sec_ext = NULL;
 
         X509_REQ * req = NULL;
+        X509_NAME * issuer = NULL;
         X509_NAME * subj = NULL;
+        X509_EXTENSION * ext = NULL;
+        STACK_OF(X509_EXTENSION) * extlist = NULL;
+        X509_NAME_ENTRY *ent;
+        EVP_PKEY *pkey, *capkey;
+        /** XX TODO THIS should come from a configuration file 
+            monotonically increasing counter **/
+        long serial = 1; 
+        const EVP_MD * digest;
+        X509 *cert, *CAcert;
+        X509V3_CTX ctx;
+        struct hip_cert_x509_req * subject;
+        char subject_hit[41];
+        
+        HIP_IFEL(!(subject = malloc(sizeof(struct in6_addr))), -1, 
+                 "Malloc for subject failed\n");   
+        HIP_IFEL(!memset(subject, '\0', sizeof(subject)), -1,
+                 "Failed to memset memory for subject\n");               
+        HIP_IFEL(!memset(subject_hit, '\0', sizeof(subject_hit)), -1,
+                 "Failed to memset memory for subject\n");                
 
         OpenSSL_add_all_algorithms();
         ERR_load_crypto_strings();
@@ -453,12 +488,98 @@ int hip_cert_x509v3_handle_request(struct hip_common * msg,  HIP_HASHTABLE * db)
         sec_ext = hip_cert_read_conf_section("hip_x509v3_extensions", conf);
 	hip_cert_free_conf(conf);
 
+        /* Get the general information */
+        HIP_IFEL((sec_general == NULL), -1, 
+                 "Failed to load general certificate information\n");
         HIP_IFEL(!(req = X509_REQ_new()), -1, "Failed to create X509_REQ object");
-        HIP_IFEL(!(subj = X509_NAME_new()), -1, "Failed to set the subject name");
 
-        HIP_DEBUG("X509 request contents\n\n%s\n\n", req);
+        /* Issuer naming */
+        HIP_IFEL((sec_name = NULL), -1,
+                 "Failed to load issuer naming information for the certificate\n");
+        HIP_IFEL(!(issuer = X509_NAME_new()), -1, "Failed to set create subject name");
+        
+        /* Subject naming */
+        /* Get the subject hit from msg */
+        HIP_IFEL(!(subject = hip_get_param(msg, HIP_PARAM_CERT_X509_REQ)), 
+                 -1, "No cert_info struct found\n");
+        _HIP_DEBUG_HIT("Subject", &subject->addr);
+        HIP_IFEL((!inet_ntop(AF_INET6, &subject->addr, subject_hit, sizeof(subject_hit))),
+                 -1, "Failed to convert subject hit to presentation format\n");
+        _HIP_DEBUG("Subject HIT is %s (id for commonName = %d)\n", subject_hit, nid);
+        HIP_IFEL(!(subj = X509_NAME_new()), -1, "Failed to set create subject name");
+        nid = OBJ_txt2nid("commonName");
+        HIP_IFEL((nid == NID_undef), -1, "NID text not defined\n");
+        HIP_IFEL(!(ent = X509_NAME_ENTRY_create_by_NID (NULL, nid, MBSTRING_ASC,
+                                                        subject_hit, -1)), -1,
+                 "Failed to create name entry for subject\n");
+        HIP_IFEL((X509_NAME_add_entry(subj, ent, -1, 0) != 1), -1,
+                 "Failed to add entry to subject name\n");
+        HIP_IFEL((X509_REQ_set_subject_name (req, subj) != 1), -1,
+                 "Failed to add subject name to certificate request\n");
+         
+        if (sec_ext != NULL) {
+                /* Loop through the conf stack and add extensions to ext stack */
+                extlist = sk_X509_EXTENSION_new_null();
+                for (i = 0; i < sk_CONF_VALUE_num(sec_ext); i++) {
+                        item = sk_CONF_VALUE_value(sec_ext, i);
+                        _HIP_DEBUG("Sec: %s, Key; %s, Val %s\n", 
+                                   item->section, item->name, item->value);
+                        HIP_IFEL(!(ext = X509V3_EXT_conf(NULL, NULL, 
+                                                       item->name, item->value )), -1, 
+                                 "Failed to create extension\n");
+                        sk_X509_EXTENSION_push(extlist, ext);
+                }
+                HIP_IFEL((!X509_REQ_add_extensions(req, extlist)), -1,
+                          "Failed to add extensions to the request\n");
+        }
+
+        /* DEBUG PART START for the certificate request */
+        HIP_DEBUG("x.509v3 certificate request in readable format\n\n");
+        HIP_IFEL(!X509_REQ_print_fp(stdout, req), -1,
+                 "Failed to print x.509v3 request in human readable format\n");
+        HIP_DEBUG("x.509v3 certificate request in PEM format\n\n");
+        HIP_IFEL((PEM_write_X509_REQ(stdout, req) != 1), -1 ,
+                 "Failed to write the x509 request in PEM to stdout\n");
+        /* DEBUG PART END for the certificate request*/
+        
+        /** NOW WE ARE READY TO CREATE A CERTIFICATE FROM THE REQUEST **/        
+        HIP_DEBUG("\n\nStarting the certificate creation\n\n");
+
+        /* JUST A REMINDER THAT THESE ARE ALREADY IN USE
+        X509_NAME *issuer or subj; (name)
+        X509_EXTENSION * ext; (subjaltname)
+        STACK_OF (X509_EXTENSION) * extlist; (req_exts)
+        */
+        HIP_IFEL(!(cert = X509_new ()), -1,
+                 "Failed to create X509 object\n");        
+
+        HIP_IFEL((X509_set_version (cert, 2L) != 1), -1,
+                  "Failed to set certificate version\n");
+        /** XX TODO serial should be stored after increasing it **/
+        ASN1_INTEGER_set (X509_get_serialNumber (cert), serial++);
+        
+        HIP_IFEL((X509_set_subject_name (cert, subj) != 1), -1,
+                "Failed to set subject name of certificate\n");
+        HIP_IFEL((X509_set_issuer_name (cert, issuer) != 1), -1,
+                 "Failed to set issuer name of certificate\n");
+        /* XX TODO FILL ISSUER FROM CONF **/
+        HIP_IFEL(!(X509_gmtime_adj (X509_get_notBefore (cert), 0)), -1,
+                 "Error setting beginning time of the certificate");
+        /* XX TODO read from conf to secs */
+        HIP_IFEL(!(X509_gmtime_adj (X509_get_notAfter (cert), 3600)), -1, 
+                 "Error setting ending time of the certificate");
+
+        /* DEBUG PART START for the certificate */
+        HIP_DEBUG("x.509v3 certificate in readable format\n\n");
+        HIP_IFEL(!X509_print_fp(stdout, cert), -1,
+                 "Failed to print x.509v3 in human readable format\n");
+        HIP_DEBUG("x.509v3 certificate in PEM format\n\n");
+        HIP_IFEL((PEM_write_X509(stdout, cert) != 1), -1 ,
+                 "Failed to write the x509 in PEM to stdout\n");
+        /* DEBUG PART END for the certificate */
 
 out_err:
         if(req != NULL) X509_REQ_free(req);
+        if(extlist != NULL) sk_X509_EXTENSION_pop_free (extlist, X509_EXTENSION_free);
 	return err;
 } 
