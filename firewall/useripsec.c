@@ -18,9 +18,6 @@
 #define ESP_PACKET_SIZE (BUFSIZE + sizeof(struct udphdr) + sizeof(struct hip_esp) +
 				MAX_ESP_PADDING + sizeof(struct hip_esp_tail) + EVP_MAX_MD_SIZE)
 #endif
-// different hc_length in order not to spoil calculation time for short connections
-#define HC_LENGTH_STEP1 1000
-#define HC_LENGTH_STEP2 100000
 				
 // this is the ESP packet we are about to build
 unsigned char *esp_packet = NULL;
@@ -47,10 +44,11 @@ int userspace_ipsec_init()
 		HIP_IFE(!(decrypted_packet = (unsigned char *)malloc(ESP_PACKET_SIZE)), -1);
 		
 		// init the hash-chain store
-		int hc_element_lengths[] = {HC_LENGTH_STEP1, HC_LENGTH_STEP2, HC_LENGTH_STEP3};
+		int hc_element_lengths[] = {HC_LENGTH_STEP1, HC_LENGTH_STEP2};
 		HIP_IFE(hip_hchain_store_init(hc_element_lengths, 2), -1);
+		HIP_IFE(hip_hchain_bexstore_set_item_length(HC_LENGTH_BEX_STORE), -1)
 		// ... and fill it with elements
-		HIP_IFE(hip_hchain_stores_refill(), -1);
+		HIP_IFE(hchain_store_maintainance(), -1);
 		
 		// open IPv4 raw socket
 		raw_sock_v4 = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
@@ -168,6 +166,7 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	
 	HIP_DEBUG("original packet length: %u \n", ctx->ipq_packet->data_len);
 	HIP_HEXDUMP("original packet :", ctx->ipq_packet->payload, ctx->ipq_packet->data_len);
+	
 	struct ip6_hdr *ip6_hdr = (struct ip6_hdr *)ctx->ipq_packet->payload;
 	HIP_DEBUG("ip6_hdr->ip6_vfc: 0x%x \n", ip6_hdr->ip6_vfc);
 	HIP_DEBUG("ip6_hdr->ip6_plen: %u \n", ntohs(ip6_hdr->ip6_plen));
@@ -274,6 +273,8 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 		entry->usetime_ka.tv_sec = now.tv_sec;
 		entry->usetime_ka.tv_usec = now.tv_usec;
 		pthread_mutex_unlock(&entry->rw_lock);
+		
+		hchain_store_maintainance();
 	}
 	
   out_err:
@@ -354,8 +355,8 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 			// check if there was an implicit change to the next hchain
 			if (hchain_verify(sent_hc_element, entry->next_anchor, entry->tolerance))
 			{
-				// TODO change handling of new hchains
-				memcpy(entry->active_anchor, entry->next_anchor, HCHAIN_ELEMENT_LENGTH);	
+				memcpy(entry->active_anchor, entry->next_anchor, HCHAIN_ELEMENT_LENGTH);
+				entry->next_anchor = NULL;
 			} else
 			{
 				// handle incorrect elements -> drop packet
@@ -422,6 +423,8 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 		entry->usetime_ka.tv_sec = now.tv_sec;
 		entry->usetime_ka.tv_usec = now.tv_usec;
 		pthread_mutex_unlock(&entry->rw_lock);
+		
+		hchain_store_maintainance();
 	}
 	
   out_err:
@@ -639,4 +642,36 @@ int cast_sockaddr_to_in6_addr(struct sockaddr_storage *sockaddr, struct in6_addr
 	
   out_err:
   	return err;
+}
+
+int hchain_store_maintainance(void)
+{
+	int err = 0;
+	
+	err = hip_hchain_stores_refill();
+	if (err < 0)
+	{
+		HIP_ERROR("error refilling the stores\n");
+		goto out_err;
+	} else if (err > 0)
+	{
+		// this means the bex store was updated
+		HIP_DEBUG("sending anchor update...\n");
+		send_anchor_update_to_hipd();
+		
+		err = 0;
+	}
+
+  out_err:
+  	return err;
+}
+
+int send_anchor_update_to_hipd(void)
+{
+	struct hip_common *msg = NULL;
+	
+	create_bexstore_anchors_message(msg);
+	
+	// TODO send
+	HIP_DEBUG("anchor update sent\n");
 }

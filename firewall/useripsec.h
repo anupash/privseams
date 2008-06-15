@@ -3,6 +3,11 @@
 
 #include "firewall.h"
 
+// different hc_length in order not to spoil calculation time for short connections
+#define HC_LENGTH_BEX_STORE 1000 
+#define HC_LENGTH_STEP1 10000
+#define HC_LENGTH_STEP2 100000
+
 int hip_firewall_userspace_ipsec_input(hip_fw_context_t *ctx);
 int hip_firewall_userspace_ipsec_output(hip_fw_context_t *ctx);
 hip_hit_t *hip_fw_get_default_hit(void);

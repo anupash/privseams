@@ -67,6 +67,7 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 	int elen = 0;
 	int encryption_len = 0;
 	unsigned char* hash = NULL;
+	hash_chain_t *stored_hchain = NULL;
 	int err = 0;
 	
 	_HIP_DEBUG("original packet length: %i \n", ctx->ipq_packet->data_len);
@@ -114,8 +115,10 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 				// this will free all linked elements in the hchain
 				hchain_destruct(entry->active_hchain);
 				entry->active_hchain = entry->next_hchain;
-				// TODO this should be taken from the store
-				entry->next_hchain = hchain_create(100);
+				// TODO add stepping
+				hip_hchain_store_get_hchain(HC_LENGTH_STEP1, entry->next_hchain);
+				// TODO issue UPDATE message sent by hipd
+				// SO_HIP_IPSEC_NEXT_ANCHOR
 			}
 			
 			// packet to be re-inserted into network stack has at least
