@@ -304,6 +304,8 @@ struct hip_hadb_state
 	int                          esp_transform;
 	/** HIP transform type */
 	int                          hip_transform;
+	/** ESP protection mode */
+	int							 esp_prot_mode;
 	/** Something to do with the birthday paradox.
 	    @todo Please clarify what this field is. */
 	uint64_t                     birthday;

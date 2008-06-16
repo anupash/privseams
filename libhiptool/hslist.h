@@ -1,9 +1,13 @@
 #ifndef SLIST_H_
 #define SLIST_H_
 
-#include "common_types.h"
-
 #include <stdlib.h>
+
+typedef struct _SList SList;
+struct _SList {
+	void 		 * data;
+	SList 		 * next;	
+};
 
 SList * alloc_slist (void);
 

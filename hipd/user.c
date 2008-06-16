@@ -12,6 +12,7 @@
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  */
 #include "user.h"
+#include "anchordb.h"
 
 int hip_sendto(const struct hip_common *msg, const struct sockaddr *dst){
         return sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
@@ -891,8 +892,8 @@ int hip_handle_user_msg(struct hip_common *msg,
 		goto out_err;
 	  break;
 	case SO_HIP_IPSEC_UPDATE_ANCHOR_LIST:
-		// TODO implement
-		/* reset list in hadb entry to new one */
+		HIP_DUMP_MSG(msg);
+		err = update_anchor_db(msg);
 		break;
 	case SO_HIP_IPSEC_NEXT_ANCHOR:
 		// TODO implement

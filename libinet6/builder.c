@@ -1075,7 +1075,8 @@ char* hip_param_type_name(const hip_tlv_type_t param_type){
 	case HIP_PARAM_UINT: return "HIP_PARAM_UINT";
 	case HIP_PARAM_UNIT_TEST: return "HIP_PARAM_UNIT_TEST";
 	case HIP_PARAM_VIA_RVS: return "HIP_PARAM_VIA_RVS";
-	case HIP_PARAM_PSEUDO_HIT: return "HIP_PARAM_PSEUDO_HIT";	
+	case HIP_PARAM_PSEUDO_HIT: return "HIP_PARAM_PSEUDO_HIT";
+	case HIP_PARAM_ESP_PROT_MODE: return "HIP_PARAM_ESP_PROT_MODE";
 	}
 	return "UNDEFINED";
 }
@@ -2730,6 +2731,48 @@ int hip_build_param_ack(struct hip_common *msg, uint32_t peer_update_id)
         ack.peer_update_id = htonl(peer_update_id);
         err = hip_build_param(msg, &ack);
         return err;
+}
+
+/**
+ * hip_build_param_esp_prot_mode - build and append ESP PROT mode parameter
+ * @param msg the message where the parameter will be appended
+ * @param mode the mode to be used for the esp extension header
+ * 
+ * @return 0 on success, otherwise < 0.
+ */
+int hip_build_param_esp_prot_mode(struct hip_common *msg, uint8_t mode)
+{
+	int err = 0;
+	
+	struct esp_prot_mode prot_mode;
+
+	hip_set_param_type(&prot_mode, HIP_PARAM_ESP_PROT_MODE);
+	hip_calc_generic_param_len(&prot_mode, sizeof(struct esp_prot_mode), 0);
+	prot_mode.prot_mode = htonl(mode);
+	err = hip_build_param(msg, &prot_mode);
+	
+	return err;
+}
+
+/**
+ * hip_build_param_esp_prot_mode - build and append ESP PROT mode parameter
+ * @param msg the message where the parameter will be appended
+ * @param mode the mode to be used for the esp extension header
+ * 
+ * @return 0 on success, otherwise < 0.
+ */
+int hip_build_param_esp_prot_anchor(struct hip_common *msg, uint32_t *anchor)
+{
+	int err = 0;
+	
+	struct esp_prot_anchor esp_anchor;
+
+	hip_set_param_type(&esp_anchor, HIP_PARAM_ESP_PROT_ANCHOR);
+	hip_calc_generic_param_len(&esp_anchor, sizeof(struct esp_prot_anchor), 0);
+	esp_anchor.anchor = htonl(*anchor);
+	err = hip_build_param(msg, &esp_anchor);
+	
+	return err;
 }
 
 /**

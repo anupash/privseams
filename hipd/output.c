@@ -646,6 +646,18 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 					   sizeof(transform_esp_suite) /
 					   sizeof(hip_transform_suite_t)), -1, 
 		 "Building of ESP transform failed\n");
+ 	
+ 	/********** ESP-PROT mode (OPTIONAL) **********/
+ 	
+ 	/* only supported in usermode and optional there.
+ 	 * we can assume that anchordb is filled, if the extension is
+ 	 * switched on. */
+ 	// TODO add define for mode
+ 	if (hip_use_userspace_ipsec && has_more_anchors())
+ 		HIP_IFEL(hip_build_param_esp_prot_mode(msg, HIP_PARAM_ESP_PROT_MODE,  
+ 						1), -1, 
+ 			 "Building of ESP protection mode failed\n");
+ 	// TODO should we explicitly say that we do not support it?
 
 	/********** REG_INFO *********/
 	hip_get_active_services(service_list, &service_count);

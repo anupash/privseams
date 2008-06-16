@@ -651,6 +651,9 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	int err = 0, host_id_in_enc_len = 0, written = 0;
 	uint16_t mask = 0;
 	uint32_t spi_in = 0;
+	struct esp_prot_mode *prot_mode = NULL;
+	int esp_prot_mode = 0;
+	unsigned char *anchor = NULL;
 	
 	_HIP_DEBUG("hip_create_i2() invoked.\n");
 
@@ -791,7 +794,29 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	HIP_IFEL(hip_build_param_transform(i2, HIP_PARAM_ESP_TRANSFORM,
 					   &transform_esp_suite, 1), -1,
 		 "Building of ESP transform failed\n");
-
+	
+	/********** ESP-PROT mode (OPTIONAL) **********/
+	if (param = hip_get_param(ctx->input, HIP_PARAM_ESP_PROT_MODE))
+	{
+		prot_mode = (struct esp_prot_mode *) param;
+		esp_prot_mode = ntohl(prot_mode->prot_mode);
+		HIP_IFEL(hip_build_param_esp_prot_mode(i2, esp_prot_mode), -1,
+			 "Building of ESP protection mode failed\n");
+	}
+	
+	/********** ESP-PROT anchor (OPTIONAL) **********/
+	if (esp_prot_mode)
+	{
+		if (has_more_anchors())
+		{
+			get_next_anchor(anchor);
+			HIP_IFEL(hip_build_param_esp_prot_anchor(i2, anchor), -1,
+				 "Building of ESP protection anchor failed\n");
+		}
+	}
+	
+	/************************************************/
+	
 	HIP_HEXDUMP("enc(host_id)", host_id_in_enc,
 		    hip_get_param_total_len(host_id_in_enc));
 
@@ -857,6 +882,17 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	  HIP_DEBUG_HIT("hit our", &entry->hit_our);
 	  HIP_DEBUG_HIT("hit peer", &entry->hit_peer);
 	  /* let the setup routine give us a SPI. */
+	  
+	  
+	  
+	  
+	  
+	  // TODO change so that the anchor will be sent to firewall here
+	  
+	  
+	  
+	  
+	  
 	  HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(r1_saddr, r1_daddr,
 			      &ctx->input->hits, &ctx->input->hitr,
 			      &spi_in, transform_esp_suite, 
@@ -1443,6 +1479,19 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 	}
 #endif
 
+	
+	
+	
+	
+	
+	
+	
+	// TODO add anchor element to message
+	
+	
+	
+	
+	
 #if defined(CONFIG_HIP_RVS) || defined(CONFIG_HIP_ESCROW)
 	/********** REG_REQUEST **********/
 	/* This part should only be executed in HIP relay or in the host
@@ -1892,6 +1941,25 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	HIP_DEBUG("retransmission: %s\n", (retransmission ? "yes" : "no"));
 	HIP_DEBUG("replay: %s\n", (replay ? "yes" : "no"));
 	HIP_DEBUG("src %d, dst %d\n", i2_info->src_port, i2_info->dst_port);
+	
+	/********** ESP-PROT mode (OPTIONAL) **********/
+	if (param = hip_get_param(ctx->input, HIP_PARAM_ESP_PROT_MODE))
+	{
+		prot_mode = (struct esp_prot_mode *) param;
+		esp_prot_mode = ntohl(prot_mode->prot_mode);
+	}
+	
+	/********** ESP-PROT anchor (OPTIONAL) **********/
+	if (esp_prot_mode)
+	{
+		HIP_IFEL(!(param = hip_get_param(ctx->input, HIP_PARAM_ESP_PROT_ANCHOR)),
+				-ENOENT, "agreed on using esp extension, but no anchor\n");
+		prot_anchor = (struct esp_prot_anchor *) param;
+		anchor = &prot_anchor.anchor;
+	}
+	
+	/************************************************/
+	
 #ifdef CONFIG_HIP_BLIND
 	if (use_blind) {
 	  /* Set up IPsec associations */
@@ -1906,6 +1974,15 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
 	if (!use_blind) {
 	/* Set up IPsec associations */
+		
+		
+		
+		
+	// TODO change so that anchor is also sent to firewall
+		
+		
+		
+		
 	err = entry->hadb_ipsec_func->hip_add_sa(i2_saddr, i2_daddr,
 			 &ctx->input->hits, &ctx->input->hitr,
 			 &spi_in,
@@ -1941,6 +2018,13 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	spi_out = ntohl(esp_info->new_spi);
 	HIP_DEBUG("Setting up outbound IPsec SA, SPI=0x%x\n", spi_out);
 	
+	
+	
+	// TODO draw anchor from list and add somewhere
+	
+	
+	
+	
 #ifdef CONFIG_HIP_BLIND
 	if (use_blind) {
 	   err = entry->hadb_ipsec_func->hip_add_sa(i2_daddr, i2_saddr,
@@ -1952,6 +2036,15 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 #endif
 
 	if (!use_blind) {
+		
+		
+		
+		
+		// TODO change so that anchor is also sent to firewall
+		
+		
+		
+		
 	  err = entry->hadb_ipsec_func->hip_add_sa(i2_daddr, i2_saddr,
 			   &ctx->input->hitr, &ctx->input->hits,
 			   &spi_out, esp_tfm, 
@@ -2270,6 +2363,13 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	
 	HIP_DEBUG("R2 packet source port: %d, destination port %d.\n",
 		  r2_info->src_port, r2_info->dst_port);
+	
+	
+	
+	
+	// TODO get anchor element
+	
+	
 
 #ifdef CONFIG_HIP_BLIND
 	if (use_blind) {
@@ -2281,6 +2381,15 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	}
 #endif
 	if (!hip_blind_get_status()) {
+		
+		
+		
+		
+		// TODO change in order to transfer anchor
+		
+		
+		
+		
 	  err = entry->hadb_ipsec_func->hip_add_sa(r2_daddr, r2_saddr,
 				 &ctx->input->hitr, &ctx->input->hits,
 				 &spi_recvd, tfm,

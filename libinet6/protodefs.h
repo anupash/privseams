@@ -61,12 +61,14 @@
 #define HIP_PARAM_CERT                 768
 #define HIP_PARAM_NOTIFICATION         832
 #define HIP_PARAM_ECHO_REQUEST_SIGN    897
-#define HIP_PARAM_REG_INFO	       930
+#define HIP_PARAM_REG_INFO	       	   930
 #define HIP_PARAM_REG_REQUEST	       932
 #define HIP_PARAM_REG_RESPONSE	       934
 #define HIP_PARAM_REG_FAILED	       936
 #define HIP_PARAM_ECHO_RESPONSE_SIGN   961
 #define HIP_PARAM_ESP_TRANSFORM        4095
+#define HIP_PARAM_ESP_PROT_MODE		   4120
+#define HIP_PARAM_ESP_PROT_ANCHOR	   4121
 
 /* Range 32768 - 49141 can be used for HIPL private parameters i.e. to
    parameters passed from hipconf to hipdaemon. */
@@ -375,6 +377,18 @@ struct hip_keymat_keymat
 	size_t keymatlen; /**< Length of the key material */
 	void *keymatdst;  /**< Pointer to beginning of key material */
 };
+
+struct esp_prot_mode {
+	hip_tlv_type_t     type;
+	hip_tlv_len_t      length;
+	uint8_t     	   prot_mode;
+} __attribute__ ((packed));
+
+struct esp_prot_anchor {
+	hip_tlv_type_t     type;
+	hip_tlv_len_t      length;
+	uint32_t     	   anchor;
+} __attribute__ ((packed));
 
 /**
  * Used in executing a unit test case in a test suite in the kernel module.
