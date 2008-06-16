@@ -109,16 +109,22 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 			//memcpy(&hash, hash_ptr, HCHAIN_ELEMENT_LENGTH);
 			out_esp_exthdr->hc_element = htonl(*hash);
 			
-			// set up new chain when active one is depleted
-			if (!memcmp(hash, entry->active_hchain->source_element->hash, HCHAIN_ELEMENT_LENGTH))
+			if (!entry->next_hchain && entry->active_hchain->remaining <= entry->active_hchain->length * REMAIN_THRESHOLD)
+			{
+				// TODO add stepping
+				hip_hchain_store_get_hchain(HC_LENGTH_STEP1, entry->next_hchain);
+				// issue UPDATE message to be sent by hipd
+				send_next_anchor_to_hipd(entry->next_hchain->anchor_element);
+			}
+			
+			// activate next hchain if current one is depleted
+			if (entry->next_hchain && entry->active_hchain->remaining == 0)
 			{
 				// this will free all linked elements in the hchain
 				hchain_destruct(entry->active_hchain);
+				HIP_DEBUG("changing to next_hchain\n");
 				entry->active_hchain = entry->next_hchain;
-				// TODO add stepping
-				hip_hchain_store_get_hchain(HC_LENGTH_STEP1, entry->next_hchain);
-				// TODO issue UPDATE message sent by hipd
-				// SO_HIP_IPSEC_NEXT_ANCHOR
+				entry->next_hchain = NULL;
 			}
 			
 			// packet to be re-inserted into network stack has at least

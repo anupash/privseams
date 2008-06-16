@@ -426,7 +426,7 @@ int create_bexstore_anchors_message(struct hip_common *msg)
 	
 	hip_msg_init(msg);
 	
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_IPSEC_UPDATE_ANCHORS, 0), -1, 
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_IPSEC_UPDATE_ANCHOR_LIST, 0), -1, 
 		 "build hdr failed\n");
 	
 	bex_store_count = hip_hchain_storage.store_count[0];

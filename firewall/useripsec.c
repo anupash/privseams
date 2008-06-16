@@ -644,6 +644,7 @@ int cast_sockaddr_to_in6_addr(struct sockaddr_storage *sockaddr, struct in6_addr
   	return err;
 }
 
+/* refill the stores and send list update to hipd if necessary */
 int hchain_store_maintainance(void)
 {
 	int err = 0;
@@ -657,7 +658,7 @@ int hchain_store_maintainance(void)
 	{
 		// this means the bex store was updated
 		HIP_DEBUG("sending anchor update...\n");
-		send_anchor_update_to_hipd();
+		send_anchor_list_update_to_hipd();
 		
 		err = 0;
 	}
@@ -666,12 +667,63 @@ int hchain_store_maintainance(void)
   	return err;
 }
 
-int send_anchor_update_to_hipd(void)
+/* sends a list of all available anchor elements in the bex store
+ * to the hipd, which then draws the element used in the bex from
+ * this list */
+int send_anchor_list_update_to_hipd(void)
 {
+	int err = 0;
 	struct hip_common *msg = NULL;
 	
 	create_bexstore_anchors_message(msg);
 	
-	// TODO send
-	HIP_DEBUG("anchor update sent\n");
+	HIP_DUMP_MSG(msg);
+		
+	/* send msg to hipd and receive corresponding reply */
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send_recv msg failed\n");
+
+	/* check error value */
+	HIP_IFEL(hip_get_msg_err(msg), -1, "hipd returned error message!\n");
+	
+	HIP_DEBUG("send_recv msg succeeded\n");
+	
+ out_err:
+	if (msg)
+		free(msg);
+	return err;
+}
+
+/* invoke an UPDATE message containing the next anchor element to be used */
+int send_next_anchor_to_hipd(unsigned char *anchor)
+{
+	int err = 0;
+	struct hip_common *msg = NULL;
+	
+	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1,
+		 "alloc memory for adding sa entry\n");
+	
+	hip_msg_init(msg);
+	
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_IPSEC_NEXT_ANCHOR, 0), -1, 
+		 "build hdr failed\n");
+	
+	HIP_DEBUG("anchor: %x \n", *anchor);
+	HIP_IFEL(hip_build_param_contents(msg, (void *)anchor, HIP_PARAM_UINT,
+					  sizeof(unsigned int)), -1,
+					  "build param contents failed\n");
+	
+	HIP_DUMP_MSG(msg);
+	
+	/* send msg to hipd and receive corresponding reply */
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send_recv msg failed\n");
+
+	/* check error value */
+	HIP_IFEL(hip_get_msg_err(msg), -1, "hipd returned error message!\n");
+	
+	HIP_DEBUG("send_recv msg succeeded\n");
+	
+ out_err:
+	if (msg)
+		free(msg);
+	return err;
 }

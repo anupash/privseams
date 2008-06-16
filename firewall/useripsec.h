@@ -7,6 +7,7 @@
 #define HC_LENGTH_BEX_STORE 1000 
 #define HC_LENGTH_STEP1 10000
 #define HC_LENGTH_STEP2 100000
+#define REMAIN_THRESHOLD 0.2
 
 int hip_firewall_userspace_ipsec_input(hip_fw_context_t *ctx);
 int hip_firewall_userspace_ipsec_output(hip_fw_context_t *ctx);
@@ -23,5 +24,7 @@ int hipl_userspace_ipsec_sadb_add_wrapper(struct in6_addr *saddr,
 					      int already_acquired,
 					      int direction, int update,
 					      int sport, int dport);
+
+int send_next_anchor_to_hipd(unsigned char *anchor);
 
 #endif /* HIP_USERIPSEC_H_ */
