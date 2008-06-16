@@ -890,6 +890,17 @@ int hip_handle_user_msg(struct hip_common *msg,
 		err = hip_netdev_trigger_bex_msg(msg);
 		goto out_err;
 	  break;
+	case SO_HIP_IPSEC_UPDATE_ANCHOR_LIST:
+		// TODO implement
+		/* reset list in hadb entry to new one */
+		break;
+	case SO_HIP_IPSEC_NEXT_ANCHOR:
+		// TODO implement
+		/* hip_send_update(struct hip_hadb_state *entry,
+		    struct hip_locator_info_addr_item *addr_list,
+		    int addr_count, int ifindex, int flags, 
+		    int is_add, struct sockaddr* addr) */
+		break;
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;

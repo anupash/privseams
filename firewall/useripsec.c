@@ -135,13 +135,6 @@ out_err:
 
 }
 
-#if 0
-	// should be called from time to time
-	hip_remove_expired_lsi_entries();
-	hip_remove_expired_sel_entries();
-	/* TODO: implement SA timeout here */
-#endif
-
 /* prepares the environment for esp encryption */
 int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 {
@@ -662,6 +655,13 @@ int hchain_store_maintainance(void)
 		
 		err = 0;
 	}
+	
+#if 0
+	// should be called from time to time
+	hip_remove_expired_lsi_entries();
+	hip_remove_expired_sel_entries();
+	/* TODO: implement SA timeout here */
+#endif
 
   out_err:
   	return err;
