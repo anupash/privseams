@@ -127,17 +127,10 @@
       Gibbon for compiling the kernel and userspace software:
     </para>
     <para>
-      aptitude install bazaar libncurses5-dev kernel-package autoreconf automake autoconf libtool g++ libgtk2.0-dev libssl-dev libxml2-dev xmlto doxygen iproute netcat6 iptables-dev
+      aptitude install bazaar libncurses5-dev kernel-package autoreconf automake autoconf libtool g++ libgtk2.0-dev libssl-dev libxml2-dev xmlto doxygen iproute netcat6 iptables-dev libcap-dev libsqlite3-dev
     </para>
     <para>
-      On Fedora 8: yum install bazaar openssl-devel libxml2-devel autoconf automake libtool iproute gtk2-devel xmlto doxygen iptables-devel
-    </para>
-    <para>
-      Note: Some people reported this error:
-      /usr/include/bits/stdio-lock.h:24:26: error: lowlevellock.h: No such
-      file or directory.  This seems to be a bug in the latest libc6-dev
-      package itself. It is just missing a header file. As a workaround,
-      åplease comment #include &lt;lowlevellock.h&gt; from /usr/include/bits/stdio-lock.h.
+      On Fedora 8: yum install bazaar openssl-devel libxml2-devel autoconf automake libtool iproute gtk2-devel xmlto doxygen iptables-devel libcap-devel sqlite-devel
     </para>
     <para>On 64-bit Fedora 8, ln -s /usr/lib64/libipq.a /usr/lib/libipq.a was necessary. This has not been fixed in the HIPL build properly yet.
     </para>
@@ -322,13 +315,6 @@
     </para>
     <para>
       ./configure &amp;&amp; make install
-    </para>
-    <para>
-    Note1: Some people reported this error:
-  /usr/include/bits/stdio-lock.h:24:26: error: lowlevellock.h: No such
-  file or directory.  This seems to be a bug in the latest libc6-dev
-  package itself. It is just missing a header file. As a workaround,
-  åplease comment #include &lt;lowlevellock.h&gt; from /usr/include/bits/stdio-lock.h.
     </para>
     <para>
       Note2: you can optionally compile a binary package with "make deb" or "make rpm".
@@ -887,66 +873,6 @@
 	examples of configuration changes and instructions.
       </para>
     </section>
-    <section>
-    <title> Using HIP Enabled Proxy Server</title>
-    <para>
-      In the deployment phase, it is interesting to set-up a proxy server that 
-      translates the TCP/IP traffic into HIP. For instance, this is convenient 
-      in http proxy servers. Thus all http traffic between our host and the proxy 
-      server will benefit from the usage of HIP. 
-    </para>
-    <para>
-      First of all, you should have installed and configured properly your proxy
-      server to employ HIP. This includes alowing HITs to connect the server 
-      (settings in the httpd.conf file) and restarting httpd using HIP.
-    </para>
-    <para>
-      You have several options to enable the HIP proxy within Firefox. In the menu 
-      Edit/Preferences/Advanced/Connection Settings, you can choose:
-    </para>
-    <para>
-      Direct connection to the internet: To disable the usage of any proxy.
-    </para>
-    <para>
-      Auto-detect proxy settings for this network: To enable the auto-detection
-      feature, you should configure the wpad.dat file that it is served by
-      your proxy in the URL http://wpad.mynetwork.com/wpad.dat (or a similar one).
-      The wpad.dat file should return the information of your HIP enabled 
-      proxy server at the end of the function FindProxyForURL(url, host). 
-    </para>
-    <para> 
-      Manual proxy configuration: To manually introduce the information about 
-      your HIP enabled proxy server. You should also identify the port number.  
-    </para>
-    <para> 
-      Automatic proxy configuration URL: To use a wpad.dat file that is not 
-      located in the default URL http://wpad.mynetwork.com/wpad.dat. With this 
-      feature, you can store a wpad.dat file in some other location of your 
-      server and Firefox will fetch it from this URL.    
-    </para>
-    <para>
-      Once you have the proxy server and Firefox ready, you can restart Firefox 
-      under HIP with (please make sure that no other instances of Firefox are being 
-      run at that time):
-    </para>
-    <para>
-      hipconf run normal|opp firefox 
-    </para>
-    <para>
-      Now your Firefox should be connected by HIP to your proxy server, 
-      enabling mobility and enhancing security from your proxy to your host. 
-    </para>
-  </section>
-  <section>
-  <title>Sendmail and Spamassassin</title>
-  <para>
-  Sendmail works fine with HIP after you enable IPv6 in sendmail. We
-  did some experimentation with spamassassin to integrate it with HIP
-  puzzle mechanisms. See spamass-sendmail-debian-v1.patch,
-  README.SPAMASS.HIPL and spamass-milter-0.3.0-hipl-v1.patch for some
-  examples of configuration changes and instructions.
-  </para>
-  </section>
   <section>
   <title>OpenLDAP</title>
   <para>
@@ -980,6 +906,64 @@
   kernels. <ulink url="http://www.cs.helsinki.fi/u/sklvarjo/manuals.htm" />.
   </para>
   </section>
+    <section id="hip_over_vpn">
+      <title>HIP over openVPN</title>
+    <!-- id="hip_over_vpn_how_to" -->
+      <para>
+	OpenVPN is an open-source VPN solution. More information on it can
+	be found at http://openvpn.net/. In Linux, OpenVPN is installed with
+	the command:
+      </para>
+
+      <para>
+	apt-get install openvpn
+      </para>
+
+      <para>
+	An example of OpenVPN configuration on Linux can be found at
+	https://help.ubuntu.com/community/VPNServer. This link illustrates very
+	well the configuration files. In those configuration files, only the IP
+	addresses need to be changed according to the machines that will be used
+	in the VPN. We used similar routing as shown in the link above, but not
+	exactly the same. The basic for successful VPN routing is to have the VPN
+	traffic routed through the tun0 interface, and all other traffic directed
+	through the default interface. No changes to iptables were needed.
+      </para>
+    <!-- id="hip_over_vpn_performance" -->
+      <para>
+	Following are some data to give a general idea about performance
+	degradation caused by OpenVPN, HIP, and when we use HIP over OpenVPN.
+	These data illustrate the TCP throughput between two machines in four cases.
+	The measurements for each case were repeated roughly 20 times and the
+	average was calculated. The following throughput measurements were done at
+	the machine that serves as the HIP client, when we use HIP, and as the VPN
+	client, when we use VPN.
+      </para>
+
+      <para>
+	1. No HIP or VPN. We do not use HIP or VPN for the data traffic.
+	Throughput: 95.41 Mbits/sec.
+      </para>
+      <para>
+	2. VPN, no HIP. We use VPN for the data traffic.
+	Throughput: 76.4 Mbits/sec
+      </para>
+      <para>
+	3. HIP, no VPN. We use HIP for the data traffic.
+	Throughput: 71.45 Mbits/sec
+      </para>
+      <para>
+	4. VPN and HIP. We use HIP over VPN for the data traffic.
+	Throughput: 36.23 Mbits/sec
+      </para>
+    <!-- id="hip_over_vpn_pitfalls" -->
+      <para>
+	Routing is where one might have problems when configuring OpenVPN or
+	HIP over OpenVPN. One should have one route to VPN network through
+	the tun0 interface and one route for the rest of the traffic through
+	the default interface.
+      </para>
+    </section>
   </chapter>
 
   <chapter id="ch_rvs_relay">
@@ -1782,6 +1766,39 @@
 		</para>
 </section>
 
+
+<section><title>Agent database</title>
+	<para>
+        Agent uses Sqlite3 database. You can view and alter data
+	with sqlite3 command line tool. On most distros 'aptitude
+	install sqlite3' will install it. Usage of the slqite3
+	comandline is simple. '$ sqlite3
+	&lt;path-to-home-folder&gt;/.hipagent/database.db' will start
+	the command line tool with the correct database.  You can
+	check the contents with simple select querys and so on. You can
+	get more information on the program from its man page (man
+	sqlitebrowser).
+	</para>
+	<para>
+	Alternatively you can use the graphical user interface called
+	sqlitebrowser. On most Linux distros 'aptitude install sqlitebrowser' will
+	install it. To start it write to the terminal '$ sqlitebrowser
+	&lt;path-to-home-folder&gt;/.hipagent/database.db' and you
+	should see the tables and their content from the UI. You can
+	get more information on the program from its man page (man sqlitebrowser).
+	</para>	
+	<para>
+	The database contains three tables: local, remote and
+	groups. Local table contains local HITs and their
+	names. Remote contains remote HITs and their names. It also
+	contains some extra information like the group name. Group
+	table contains groups name and information on the group like
+	are these HITs to be accepted or not.
+	</para>
+	
+</section>
+
+
 <section id="sec_hip_conf_gui_language"><title>Language files</title>
 	<para>
 		As described in previous section,
@@ -2247,8 +2264,7 @@ combo-newgroup=&lt;create new...&gt;
     <title>DNS proxy</title>
     <para>
       In tools directory, there is dnsproxy.py script, which provides DNS
-      proxy functionality. Currently the easiest way to run the dnsproxy is
-      to invoke the run-dnsproxy.sh script in the same directory.
+      proxy functionality. The script has to be started with root priviledges.
     </para>
     <para>
       The DNS proxy can read HIT information from HIP hosts

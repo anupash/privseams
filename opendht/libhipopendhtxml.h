@@ -1,3 +1,18 @@
+#ifndef HIP_LIBHIPOPENDHTXML_H
+#define HIP_LIBHIPOPENDHTXML_H
+
+/** @file
+ * A header file for libhipopendhtxml.c
+ *
+ * All xml-rpc message building functions for opendht.
+ * Also contains base 64 encoding and decoding wrappers that should
+ * be moved somewhere else because they are used also in cert stuff.
+ *
+ * @author Samu Varjonen
+ * @version 0.2
+ *
+ */
+
 /* All XML RPC packet creation and reading functions */
 
 int build_packet_put_rm(unsigned char *, int, unsigned char *, 
@@ -23,3 +38,6 @@ struct opendht_answers {
   int count;
   char addrs[440];
 };
+
+#endif /* HIP_LIBHIPOPENDHTXML_H */
+
