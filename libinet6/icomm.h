@@ -177,6 +177,7 @@
 #define SO_HIP_IS_OUR_LSI                       148
 #define SO_HIP_ADD_PEER_MAP_HIT_IP_LSI          149
 #define SO_HIP_FIREWALL_BEX_DONE                150
+#define SO_HIP_GET_PEER_HIT_BY_LSIS             151
 /** @} */
 /* inclusive */
 #define HIP_SO_ROOT_MAX 			255

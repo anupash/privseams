@@ -894,7 +894,6 @@ int hip_handle_user_msg(struct hip_common *msg,
 		err = hip_netdev_trigger_bex_msg(msg);
 		goto out_err;
 	  	break;
-
 	case SO_HIP_GET_LSI_PEER:
 	case SO_HIP_GET_LSI_OUR:
 		while((param = hip_get_next_param(msg, param))){
@@ -906,42 +905,40 @@ int hip_handle_user_msg(struct hip_common *msg,
 		  	}
 	  	}
 		if (src_hit && dst_hit){
-		        hip_ha_t *aux = hip_hadb_find_byhits(src_hit, dst_hit);
-		        if (aux){
-			        if(msg_type == SO_HIP_GET_LSI_PEER){
+		        entry = hip_hadb_find_byhits(src_hit, dst_hit);
+		        if (entry){
+			        lsi = (msg_type == SO_HIP_GET_LSI_PEER) ? &entry->lsi_peer : &entry->lsi_our;
+			        /*if(msg_type == SO_HIP_GET_LSI_PEER)
 		                        lsi = &aux->lsi_peer;
-		                        _HIP_DEBUG_LSI("lsi peer is after searching in hip_hadb_find_byhits", lsi);
-			        }else if(msg_type == SO_HIP_GET_LSI_OUR){
-				        lsi = &aux->lsi_our;
-		                        _HIP_DEBUG_LSI("lsi our is after searching in hip_hadb_find_byhits", lsi);
-				}
+			        else if(msg_type == SO_HIP_GET_LSI_OUR)
+				lsi = &aux->lsi_our;*/
 		        }
 		}
 	        break;
 	case SO_HIP_IS_OUR_LSI:
-	  lsi = (hip_lsi_t *)hip_get_param_contents(msg, SO_HIP_PARAM_LSI);
-	  if (!hip_hidb_exists_lsi(lsi))
-	    lsi = NULL;
-	  break;
+		lsi = (hip_lsi_t *)hip_get_param_contents(msg, SO_HIP_PARAM_LSI);
+	  	if (!hip_hidb_exists_lsi(lsi))
+	    		lsi = NULL;
+	  	break;
 	case SO_HIP_GET_STATE_HA:
-	  while((param = hip_get_next_param(msg, param))){
-	    if (hip_get_param_type(param) == SO_HIP_PARAM_LSI){
-	      if (!src_lsi)
-		src_lsi = (struct in_addr *)hip_get_param_contents_direct(param);
-	      else 
-		dst_lsi = (struct in_addr *)hip_get_param_contents_direct(param);
-	    }
-	  }
-	  HIP_DEBUG(">>>hip_hadb_find_bylsis\n");
-	  HIP_DEBUG_LSI("LSI1", src_lsi);
-	  HIP_DEBUG_LSI("LSI2", dst_lsi);
-	  hip_ha_t *aux = hip_hadb_find_bylsis(src_lsi, dst_lsi);
-          if (aux && aux->state == HIP_STATE_ESTABLISHED){
-	    HIP_DEBUG("Entry found in the ha database \n\n");
-	      src_hit = &aux->hit_our;
-	      dst_hit = &aux->hit_peer;
-	  }
-	  break;
+	case SO_HIP_GET_PEER_HIT_BY_LSIS:
+		while((param = hip_get_next_param(msg, param))){
+	    		if (hip_get_param_type(param) == SO_HIP_PARAM_LSI){
+	      			if (!src_lsi)
+					src_lsi = (struct in_addr *)hip_get_param_contents_direct(param);
+	      			else 
+					dst_lsi = (struct in_addr *)hip_get_param_contents_direct(param);
+	    		}
+	  	}
+
+	  	entry = hip_hadb_try_to_find_by_pair_lsi(src_lsi, dst_lsi);
+          	if (entry && (entry->state == HIP_STATE_ESTABLISHED || 
+		    msg_type == SO_HIP_GET_PEER_HIT_BY_LSIS)){
+	    		HIP_DEBUG("Entry found in the ha database \n\n");
+	      		src_hit = &entry->hit_our;
+	      		dst_hit = &entry->hit_peer;
+	  	}
+	  	break;
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;
@@ -950,12 +947,13 @@ int hip_handle_user_msg(struct hip_common *msg,
  out_err:
 
 	if (send_response) {
-	  HIP_DEBUG("Send response\n");
+	        HIP_DEBUG("Send response\n");
 		if (err)
-			hip_set_msg_err(msg, 1);
+		        hip_set_msg_err(msg, 1);
 		else{
-		  if ((msg_type == SO_HIP_TRIGGER_BEX && lsi) ||
-		      (msg_type == SO_HIP_GET_STATE_HA &&src_hit && dst_hit)){
+		        if ((msg_type == SO_HIP_TRIGGER_BEX && lsi) ||
+		            ((msg_type == SO_HIP_GET_STATE_HA || msg_type == SO_HIP_GET_PEER_HIT_BY_LSIS) 
+			    && src_hit && dst_hit)){
 		                HIP_IFEL(hip_build_param_contents(msg, (void *)src_hit,
 					 HIP_PARAM_HIT, sizeof(struct in6_addr)), -1,
 				 	 "build param HIP_PARAM_HIT  failed\n");
@@ -963,26 +961,21 @@ int hip_handle_user_msg(struct hip_common *msg,
 					 HIP_PARAM_HIT, sizeof(struct in6_addr)), -1,
 				 	 "build param HIP_PARAM_HIT  failed\n");
 		        }
-			if ((msg_type == SO_HIP_GET_LSI_PEER || msg_type == SO_HIP_GET_LSI_OUR) && lsi)
+			if (((msg_type == SO_HIP_GET_LSI_PEER || msg_type == SO_HIP_GET_LSI_OUR) 
+			    && lsi) || msg_type == SO_HIP_IS_OUR_LSI)
 		                HIP_IFEL(hip_build_param_contents(msg, (void *)lsi,
-					 SO_HIP_PARAM_LSI, sizeof(hip_lsi_t)), -1,
-				 	 "build param HIP_PARAM_LSI  failed\n");
-			if (msg_type == SO_HIP_IS_OUR_LSI)
-			        HIP_IFEL(hip_build_param_contents(msg, (void *)lsi,
 					 SO_HIP_PARAM_LSI, sizeof(hip_lsi_t)), -1,
 				 	 "build param HIP_PARAM_LSI  failed\n");
 		}
 
 		len = hip_get_msg_total_len(msg);
 		n = hip_sendto(msg, src);
-		if(n != len) {
-			HIP_ERROR("hip_sendto() failed.n\n");
+		if(n != len)	
 			err = -1;
-		} else {
+		else
 			HIP_DEBUG("Response sent ok\n");	
-		}
-	} else {
+	} else
 		HIP_DEBUG("No response sent\n");
-	}
+
 	return err;
 }

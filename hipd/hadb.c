@@ -146,30 +146,6 @@ hip_ha_t *hip_hadb_find_byhits(hip_hit_t *hit, hip_hit_t *hit2)
 }
 
 /**
- * This function searches for a hip_ha_t entry from the hip_hadb_hit
- * by a LSI pair (local,peer).
- */
-hip_ha_t *hip_hadb_find_bylsis(hip_lsi_t *lsi, hip_lsi_t *lsi2)
-{
-        hip_ha_t ha, *ret;
-	memcpy(&ha.lsi_our, lsi, sizeof(hip_lsi_t));
-	memcpy(&ha.lsi_peer, lsi2, sizeof(hip_lsi_t));
-	HIP_DEBUG_LSI("LSI1", lsi);
-	HIP_DEBUG_LSI("LSI2", lsi2);
-	
-	ret = hip_ht_find(hadb_hit, &ha);
-	if (!ret) {
-	        memcpy(&ha.lsi_peer, lsi, sizeof(hip_lsi_t));
-		memcpy(&ha.lsi_our, lsi2, sizeof(hip_lsi_t));
-		ret = hip_ht_find(hadb_hit, &ha);
-	}
-
-	return ret;
-}
-
-
-
-/**
  * This function simply goes through all local HIs and tries
  * to find a HADB entry that matches the current HI and
  * the given peer hit. First matching HADB entry is then returned.
@@ -2841,36 +2817,18 @@ int hip_hadb_find_lsi(hip_ha_t *entry, void *lsi)
 
 /**
  * This function simply goes through all HADB to find an entry that
- * matches the given lsi. First matching HADB entry is then returned.
+ * matches the given lsi pair. First matching HADB entry is then returned.
  *
  * @note This way of finding HA entries doesn't work properly if we have 
- * multiple entries with the same peer_lsi. Currently, that's not the case.
- * Our implementation doesn't allow repeated lsi's.
+ * multiple entries with the same tuple <lsi_src,lsi_dst>. Currently, that's not the case.
+ * Our implementation doesn't allow repeated lsi tuples.
  */
-hip_ha_t *hip_hadb_try_to_find_by_peer_lsi(hip_lsi_t *lsi){
-        hip_list_t *item, *aux;
-	hip_ha_t *tmp;
-	int i;
-
-	list_for_each_safe(item, aux, hadb_hit, i)
-	{
-		tmp = list_entry(item);
-		_HIP_DEBUG_LSI("Are they equal? ", &tmp->lsi_peer);
-		_HIP_DEBUG_LSI(" == ", lsi);
-		if(!hip_lsi_are_equal(&tmp->lsi_peer, lsi))
-			continue;
-		else
-			return tmp;
-	}
-	return NULL;
-}
-
 
 hip_ha_t *hip_hadb_try_to_find_by_pair_lsi(hip_lsi_t *lsi_src, hip_lsi_t *lsi_dst){
         hip_list_t *item, *aux;
 	hip_ha_t *tmp;
 	int i;
-
+	
 	list_for_each_safe(item, aux, hadb_hit, i)
 	{
 		tmp = list_entry(item);
@@ -2882,15 +2840,6 @@ hip_ha_t *hip_hadb_try_to_find_by_pair_lsi(hip_lsi_t *lsi_src, hip_lsi_t *lsi_ds
 		        continue;
 	}
 	return NULL;
-}
-
-hip_hit_t *hip_hadb_get_peer_hit_by_peer_lsi(hip_lsi_t *lsi){
-	hip_ha_t *entry = hip_hadb_try_to_find_by_peer_lsi(lsi);
-	if (entry)
-      		return &(entry->hit_peer);
-    	else
-      		return NULL;
-
 }
 
 int hip_get_local_addr(struct hip_common *msg)

@@ -78,45 +78,47 @@ int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m, struct in6_addr *ip_src, str
  * in the local database the necessary information for doing the packet reinjection with HITs.
  *
  * @param m           pointer to the packet
- * @param ip_src      ipv6 source address 
- * @param ip_dst      ipv6 destination address
+ * @param lsi_src     source LSI 
+ * @param lsi_dst     destination LSI
  * @return	      err during the BEX
  */
 int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src, struct in_addr *lsi_dst)
 {
 	int err, msg_type;
 	struct in6_addr src_lsi, dst_lsi;
-	struct in6_addr *src_hit = NULL, *dst_hit = NULL;
+	struct in6_addr src_hit, *dst_hit = NULL;
 	firewall_hl_t *entry_peer = NULL;
 
+	HIP_DEBUG("FIREWALL_TRIGGERING OUTGOING LSI %s\n",inet_ntoa(*lsi_dst));
 
 	IPV4_TO_IPV6_MAP(lsi_dst, &dst_lsi);
 	IPV4_TO_IPV6_MAP(lsi_src, &src_lsi);
 
 	hip_firewall_hldb_dump();
-	entry_peer = (firewall_hl_t *)firewall_hit_lsi_db_match(lsi_dst);
-
-	HIP_DEBUG("1. FIREWALL_TRIGGERING OUTGOING LSI %s\n",inet_ntoa(*lsi_dst));
+	entry_peer = (firewall_hl_t *)firewall_hit_lsi_db_match(lsi_dst);	
 
 	if (entry_peer){
 		HIP_IFEL(entry_peer->bex_state == -1, -1, "Base Exchange Failed");
 	  	if(entry_peer->bex_state)
 			reinject_packet(entry_peer->hit_our, entry_peer->hit_peer, m, 4, 0);
 	}else{
-	        //Check if bex is already established: Server case
-	        int state_ha = hip_trigger_is_bex_established(&src_hit, &dst_hit, lsi_src, lsi_dst);
-		if (state_ha){
-			HIP_DEBUG("ha is ESTABLISHED!\n");
+	  /*Check if bex is already established: Server case
+	   int state_ha = hip_trigger_is_bex_established(&src_hit, &dst_hit, lsi_src, lsi_dst);
+	  if (state_ha){
+	  	HIP_DEBUG("ha is ESTABLISHED!\n");
 			firewall_add_hit_lsi(src_hit, dst_hit, lsi_dst, state_ha);
-			reinject_packet(*src_hit, *dst_hit, m, 4, 0);
-		}
-		else{
+				reinject_packet(*src_hit, *dst_hit, m, 4, 0);
+	  }
+	  else{*/
 			// Run bex to initialize SP and SA
-			HIP_INFO("Firewall_db empty and no ha. Triggering Base Exchange\n");
-			HIP_IFEL(hip_trigger_bex(src_hit, dst_hit, &src_lsi, &dst_lsi, NULL, NULL), -1, 
-			 	 "Base Exchange Trigger failed");
-		  	firewall_add_hit_lsi(src_hit, dst_hit, lsi_dst, 0);
-		}
+			HIP_INFO("Firewall_db empty and no ha ESTABLISHED. Triggering Base Exchange\n");
+			HIP_IFEL(!(dst_hit = hip_get_hit_peer_by_lsi_pair(lsi_src, lsi_dst, &src_hit)), -1 ,"No entry in hadb \n");
+			HIP_DEBUG_HIT("src_hit ",&src_hit);
+			HIP_DEBUG_HIT("dst_hit ",dst_hit);
+			HIP_IFEL(hip_trigger_bex(&src_hit, dst_hit, &src_lsi, &dst_lsi, NULL, NULL), -1, 
+			 	 "Base Exchange Trigger failed\n");
+		  	firewall_add_hit_lsi(&src_hit, dst_hit, lsi_dst, 0);
+			//}
 	}
 out_err: 
 	return err;

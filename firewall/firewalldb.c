@@ -59,6 +59,9 @@ int firewall_add_hit_lsi(struct in6_addr *hit_our, struct in6_addr *hit_peer, hi
 	int err = 0;
 	firewall_hl_t *new_entry = NULL;
 
+	HIP_DEBUG_HIT("hit_our ",hit_our);
+	HIP_DEBUG_HIT("hit_peer ",hit_peer);
+	HIP_DEBUG_LSI("lsi ",lsi);
 	HIP_ASSERT(hit_our != NULL && hit_peer != NULL && lsi != NULL);
 	_HIP_DEBUG("Start firewall_add_hit_lsi\n");
 	
