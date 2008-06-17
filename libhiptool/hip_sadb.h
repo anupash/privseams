@@ -20,35 +20,26 @@
  *
  */
 
-#ifdef __MACOSX__
-#include <sys/types.h>
-#include <mac/mac_types.h>
-#else
-#ifdef __WIN32__
-#include <win32/types.h>
-#else
+#ifndef HIP_SADB_H_
+#define HIP_SADB_H_
+
 #include <asm/types.h>		/* __u16, __u32, etc */
-#endif /* __WIN32__ */
-#endif
 #include <sys/types.h>		/* for socket.h */
-#ifdef __WIN32__
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#else
 #include <sys/socket.h>		/* struct sockaddr */
 #include <netinet/in.h>		/* struct sockaddr_in */
-#endif /* __WIN32__ */
 #include <openssl/des.h>	/* des_key_schedule */
 #include <openssl/aes.h>	/* aes_key */
 #include <openssl/blowfish.h>	/* bf_key */
-#include "hip_usermode.h"
+//#include "hip_usermode.h"
+//#include "utils.h"
+#include <sys/time.h>		/* timeval */
 #include "debug.h"
+#if 0
+#include "hashchain.h"
+#endif
 
-/**** some definitions from hip_types.h ****/
+/**** HIPL <-> OpenHIP compatibility defs ****/
 
-/*
- * list of struct sockaddrs
- */
 typedef struct _sockaddr_list
 {
         struct _sockaddr_list *next;
@@ -60,6 +51,16 @@ typedef struct _sockaddr_list
         __u32 nonce;    /* random value for address verification */
         struct timeval creation_time;
 } sockaddr_list;
+
+/*
+ * Macros from hip.h and elsewhere
+ */
+/* get pointer to IP from a sockaddr 
+ *    useful for inet_ntop calls     */
+#define SA2IP(x) hip_cast_sa_addr(x)
+#define SALEN(x) hip_sockaddr_len(x)
+#define SAIPLEN(x) hip_sa_addr_len(x)
+#define SA(x) ((struct sockaddr*)x)
 
 #define HIP_ESP_UDP_PORT       HIP_NAT_UDP_PORT
 #define HIP_KEEPALIVE_TIMEOUT  HIP_NAT_KEEP_ALIVE_INTERVAL
@@ -86,9 +87,21 @@ typedef struct _hip_sadb_entry
 	 * are used as outer addresses) */
 	sockaddr_list *inner_src_addrs;
 	sockaddr_list *inner_dst_addrs;
+#if 0
+	/* hash chain parameters for this SA used in secure ESP extension */
+	/* for outgoing SA */
+	hash_chain_t *active_hchain;
+	hash_chain_t *next_hchain;
+	/* for incoming SA */
+	int tolerance;
+	unsigned char *active_anchor;
+	unsigned char *next_anchor;
+#endif
 	__u32 mode; 	/* ESP mode :  0-default 1-transport 2-tunnel 3-beet */
 	// TODO add encap_mode (= UDP / TCP)
+	__u16 src_port;
 	__u16 dst_port;			/* UDP dest. port for encaps. ESP */
+	int encap_mode;			/* 0 - none, 1 - udp */
 	struct timeval usetime_ka;  /* last used timestamp, incl keep-alives */
 	struct sockaddr_storage lsi;	/* LSI 				*/
 	struct sockaddr_storage lsi6;	/* IPv6 LSI (peer HIT)		*/
@@ -108,11 +121,7 @@ typedef struct _hip_sadb_entry
 	des_key_schedule ks[3];		/* 3-DES keys */
 	AES_KEY *aes_key;		/* AES key */
 	BF_KEY *bf_key;			/* BLOWFISH key */
-#ifdef __WIN32__
-	HANDLE rw_lock;
-#else
 	pthread_mutex_t rw_lock;
-#endif
 } hip_sadb_entry;
 
 /* HIP SADB desintation cache entry */
@@ -158,9 +167,10 @@ typedef struct _hip_proto_sel_entry
  */
 void hip_sadb_init();
 int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
-    struct sockaddr *inner_dst, struct sockaddr *src, struct sockaddr *dst, __u16 port,
+    struct sockaddr *inner_dst, struct sockaddr *src, struct sockaddr *dst, __u16 sport,
+    __u16 dport, int direction,
     __u32 spi, __u8 *e_key, __u32 e_type, __u32 e_keylen, __u8 *a_key,
-    __u32 a_type, __u32 a_keylen, __u32 lifetime, __u16 hitmagic);
+    __u32 a_type, __u32 a_keylen, __u32 lifetime, __u16 hitmagic, int encap_mode);
 int hip_sadb_delete(__u32 type, struct sockaddr *src, struct sockaddr *dst,
     __u32 spi);
 void hip_remove_expired_lsi_entries();
@@ -178,4 +188,6 @@ int hip_select_family_by_proto(__u32 lsi, __u8 proto, __u8 *header,
 int hip_add_proto_sel_entry(__u32 lsi, __u8 proto, __u8 *header, int family,
         int dir, struct timeval *now);
 void hip_remove_expired_sel_entries();
+
+#endif /* HIP_SADB_H_ */
 
