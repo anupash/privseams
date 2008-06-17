@@ -62,6 +62,10 @@
 #define HIP_ESCROW_OPERATION_MODIFY      2
 #define HIP_ESCROW_OPERATION_DELETE      3
 
+// used by esp protection extension
+#define ESP_PROT_TRANSFORM_UNUSED		 0
+#define ESP_PROT_TRANSFORM_DEFAULT		 1
+
 #define HIP_DEFAULT_AUTH                 HIP_AUTH_SHA /**< AUTH transform in R1 */
 /**
  * Default rendezvous association lifetime in seconds. The lifetime should be
@@ -304,8 +308,12 @@ struct hip_hadb_state
 	int                          esp_transform;
 	/** HIP transform type */
 	int                          hip_transform;
-	/** ESP protection mode */
-	int							 esp_prot_mode;
+	/** ESP extension protection transform */
+	uint8_t						 esp_prot_transform;
+	/** ESP extension protection local_anchor */
+	uint32_t					 esp_local_anchor;
+	/** ESP extension protection peer_anchor */
+	uint32_t					 esp_peer_anchor;
 	/** Something to do with the birthday paradox.
 	    @todo Please clarify what this field is. */
 	uint64_t                     birthday;

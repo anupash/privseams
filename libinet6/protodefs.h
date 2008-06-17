@@ -67,7 +67,7 @@
 #define HIP_PARAM_REG_FAILED	       936
 #define HIP_PARAM_ECHO_RESPONSE_SIGN   961
 #define HIP_PARAM_ESP_TRANSFORM        4095
-#define HIP_PARAM_ESP_PROT_MODE		   4120
+#define HIP_PARAM_ESP_PROT_TRANSFORM   4120
 #define HIP_PARAM_ESP_PROT_ANCHOR	   4121
 
 /* Range 32768 - 49141 can be used for HIPL private parameters i.e. to
@@ -378,10 +378,10 @@ struct hip_keymat_keymat
 	void *keymatdst;  /**< Pointer to beginning of key material */
 };
 
-struct esp_prot_mode {
+struct esp_prot_transform {
 	hip_tlv_type_t     type;
 	hip_tlv_len_t      length;
-	uint8_t     	   prot_mode;
+	uint8_t     	   transform;
 } __attribute__ ((packed));
 
 struct esp_prot_anchor {

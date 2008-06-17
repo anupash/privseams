@@ -651,9 +651,9 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	int err = 0, host_id_in_enc_len = 0, written = 0;
 	uint16_t mask = 0;
 	uint32_t spi_in = 0;
-	struct esp_prot_mode *prot_mode = NULL;
-	int esp_prot_mode = 0;
-	unsigned char *anchor = NULL;
+	struct esp_prot_transform *prot_transform = NULL;
+	uint_8 prot_transform = 0;
+	uint32_t anchor = 0;
 	
 	_HIP_DEBUG("hip_create_i2() invoked.\n");
 
@@ -735,7 +735,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		 HIP_MAX_DH_GROUP_ID, NULL, 0), -1,
 		 "Building of DH failed.\n");
 
-        /********** HIP transform. **********/
+    /********** HIP transform. **********/
 	HIP_IFE(!(param = hip_get_param(ctx->input, HIP_PARAM_HIP_TRANSFORM)), -ENOENT);
 	HIP_IFEL((transform_hip_suite =
 		  hip_select_hip_transform((struct hip_hip_transform *) param)) == 0, 
@@ -795,23 +795,52 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 					   &transform_esp_suite, 1), -1,
 		 "Building of ESP transform failed\n");
 	
-	/********** ESP-PROT mode (OPTIONAL) **********/
-	if (param = hip_get_param(ctx->input, HIP_PARAM_ESP_PROT_MODE))
+	/********** ESP-PROT transform (OPTIONAL) **********/
+	
+	param = hip_get_param(ctx->input, HIP_PARAM_ESP_PROT_TRANSFORM);
+	/* this is only handled if we are using userspace ipsec,
+	 * otherwise we just ignore it */
+	if (hip_use_userspace_ipsec && param)
 	{
-		prot_mode = (struct esp_prot_mode *) param;
-		esp_prot_mode = ntohl(prot_mode->prot_mode);
-		HIP_IFEL(hip_build_param_esp_prot_mode(i2, esp_prot_mode), -1,
-			 "Building of ESP protection mode failed\n");
+		prot_transform = (struct esp_prot_transform *) param;
+		transform = ntohl(prot_transform->transform);
+		// check if we are supporting this transform
+		if (entry->esp_prot_transform == ESP_PROT_TRANSFORM_DEFAULT
+				&& entry->esp_prot_transform == transform)
+		{
+			HIP_IFEL(hip_build_param_esp_prot_mode(i2, ESP_PROT_TRANSFORM_DEFAULT),
+					-1, "Building of ESP protection mode failed\n");
+		} else
+		{
+			// set to unused and reply with according parameter
+			entry->esp_prot_transform = ESP_PROT_TRANSFORM_UNUSED;
+			HIP_IFEL(hip_build_param_esp_prot_mode(i2, ESP_PROT_TRANSFORM_UNUSED),
+					-1, "Building of ESP protection mode failed\n");
+		}
+	} else
+	{
+		// make sure we don't add the anchor now
+		entry->esp_prot_transform = ESP_PROT_TRANSFORM_UNUSED;
 	}
 	
 	/********** ESP-PROT anchor (OPTIONAL) **********/
-	if (esp_prot_mode)
+	
+	if (entry->esp_prot_transform)
 	{
 		if (has_more_anchors())
 		{
-			get_next_anchor(anchor);
+			HIP_IFEL(get_next_anchor(&anchor), -1, "no anchor elements available, threading?");
 			HIP_IFEL(hip_build_param_esp_prot_anchor(i2, anchor), -1,
 				 "Building of ESP protection anchor failed\n");
+			HIP_DEBUG("sending anchor element: %u", anchor);
+			
+			// store local_anchor
+			entry->esp_local_anchor = anchor;
+		} else
+		{
+			HIP_ERROR("we agreed on using esp hchain protection, but no elements");
+			// fall back
+			entry->esp_prot_transform = ESP_PROT_TRANSFORM_UNUSED;
 		}
 	}
 	
@@ -1478,19 +1507,29 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 	  	   -1, "hip_blind_build_r2 failed\n");
 	}
 #endif
-
 	
+	/********** ESP-PROT anchor (OPTIONAL) **********/
 	
+	if (entry->esp_prot_transform)
+	{
+		if (has_more_anchors())
+		{
+			HIP_IFEL(get_next_anchor(&anchor)), -1, "no anchor elements available, threading?");
+			HIP_IFEL(hip_build_param_esp_prot_anchor(r2, anchor), -1,
+				 "Building of ESP protection anchor failed\n");
+			HIP_DEBUG("sending anchor element: %u", anchor);
+			
+			// store local_anchor
+			entry->esp_local_anchor = anchor;
+		} else
+		{
+			HIP_ERROR("we agreed on using esp hchain protection, but no elements");
+			// fall back
+			entry->esp_prot_transform = ESP_PROT_TRANSFORM_UNUSED;
+		}
+	}
 	
-	
-	
-	
-	
-	// TODO add anchor element to message
-	
-	
-	
-	
+	/************************************************/
 	
 #if defined(CONFIG_HIP_RVS) || defined(CONFIG_HIP_ESCROW)
 	/********** REG_REQUEST **********/
@@ -1581,6 +1620,10 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	uint32_t spi_in = 0, spi_out = 0;
 	uint16_t crypto_len = 0, nonce = 0;
 	int err = 0, retransmission = 0, replay = 0, use_blind = 0;
+	struct esp_prot_anchor *prot_anchor = NULL;
+	uint32_t anchor = 0;
+	struct esp_prot_transform *prot_transform = NULL;
+	uint_8 prot_transform = 0;
         
 #ifdef CONFIG_HIP_HI3
 	int n_addrs = 0;
@@ -1942,20 +1985,42 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	HIP_DEBUG("replay: %s\n", (replay ? "yes" : "no"));
 	HIP_DEBUG("src %d, dst %d\n", i2_info->src_port, i2_info->dst_port);
 	
-	/********** ESP-PROT mode (OPTIONAL) **********/
-	if (param = hip_get_param(ctx->input, HIP_PARAM_ESP_PROT_MODE))
+	/********** ESP-PROT transform (OPTIONAL) **********/
+	
+	param = hip_get_param(ctx->input, HIP_PARAM_ESP_PROT_TRANSFORM);
+	// process this if we are actually going to use it
+	if (entry->esp_prot_transform && param)
 	{
-		prot_mode = (struct esp_prot_mode *) param;
-		esp_prot_mode = ntohl(prot_mode->prot_mode);
+		prot_transform = (struct esp_prot_transform *) transform;
+		transform = ntohl(prot_transform->transform);
+		
+		// right now we only support 2 transform, so we can just copy
+		entry->esp_prot_transform = transform;
+	} else
+	{
+		// make sure we are not going to use the extension
+		entry->esp_prot_transform = ESP_PROT_TRANSFORM_UNUSED;
 	}
 	
 	/********** ESP-PROT anchor (OPTIONAL) **********/
-	if (esp_prot_mode)
+	
+	/* only process the anchor parameter, if we are going to use it */
+	if (entry->esp_prot_transform)
 	{
-		HIP_IFEL(!(param = hip_get_param(ctx->input, HIP_PARAM_ESP_PROT_ANCHOR)),
-				-ENOENT, "agreed on using esp extension, but no anchor\n");
-		prot_anchor = (struct esp_prot_anchor *) param;
-		anchor = &prot_anchor.anchor;
+		if (param = hip_get_param(ctx->input, HIP_PARAM_ESP_PROT_ANCHOR))
+		{
+			prot_anchor = (struct esp_prot_anchor *) param;
+			anchor = ntohl(prot_anchor->anchor);
+			HIP_DEBUG("received anchor element: %u", anchor);
+			
+			// store peer_anchor
+			entry->esp_peer_anchor = anchor;
+		} else
+		{
+			HIP_DEBUG("agreed on using esp hchain extension, but no anchor sent\n");
+			// fall back option
+			entry->esp_prot_transform = ESP_PROT_TRANSFORM_UNUSED;
+		}
 	}
 	
 	/************************************************/
@@ -2364,12 +2429,26 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	HIP_DEBUG("R2 packet source port: %d, destination port %d.\n",
 		  r2_info->src_port, r2_info->dst_port);
 	
+	/********** ESP-PROT anchor (OPTIONAL) **********/
+
+	param = hip_get_param(ctx->input, HIP_PARAM_ESP_PROT_ANCHOR);
+	// only process anchor, if we agreed on using it before
+	if (entry->esp_prot_transform && param)
+	{
+		prot_anchor = (struct esp_prot_anchor *) param;
+		anchor = ntohl(prot_anchor->anchor);
+		HIP_DEBUG("received anchor element: %u", anchor);
+		
+		// store peer_anchor
+		entry->esp_peer_anchor = anchor;
+	} else
+	{
+		HIP_DEBUG("agreed on using esp hchain extension, but no anchor sent\n");
+		// fall back option
+		entry->esp_prot_transform = ESP_PROT_TRANSFORM_UNUSED;
+	}
 	
-	
-	
-	// TODO get anchor element
-	
-	
+	/************************************************/
 
 #ifdef CONFIG_HIP_BLIND
 	if (use_blind) {
@@ -3112,6 +3191,18 @@ skip_entry_creation:
 	   but it seems to fail too */
 
 	HIP_DEBUG("Using ifindex %d\n", if_index);
+	
+	/* the hchain extension to esp is only supported in usermode
+	 * and optional there */
+	if (hip_use_userspace_ipsec)
+	{
+		/* if the extension is switched on, we can assume that anchordb is filled */
+ 		if (has_more_anchors())
+ 			entry->esp_prot_transform = ESP_PROT_TRANSFORM_DEFAULT;
+ 		else
+ 			entry->esp_prot_transform = ESP_PROT_TRANSFORM_UNUSED;
+	}
+		
 
 	//add_address_to_list(addr, if_index /*acq->sel.ifindex*/);
 

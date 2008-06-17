@@ -2734,34 +2734,34 @@ int hip_build_param_ack(struct hip_common *msg, uint32_t peer_update_id)
 }
 
 /**
- * hip_build_param_esp_prot_mode - build and append ESP PROT mode parameter
+ * hip_build_param_esp_prot_mode - build and append ESP PROT transform parameter
  * @param msg the message where the parameter will be appended
- * @param mode the mode to be used for the esp extension header
+ * @param transform the transform to be used for the esp extension header
  * 
  * @return 0 on success, otherwise < 0.
  */
-int hip_build_param_esp_prot_mode(struct hip_common *msg, uint8_t mode)
+int hip_build_param_esp_prot_transform(struct hip_common *msg, uint8_t transform)
 {
 	int err = 0;
 	
-	struct esp_prot_mode prot_mode;
+	struct esp_prot_transform prot_transform;
 
-	hip_set_param_type(&prot_mode, HIP_PARAM_ESP_PROT_MODE);
-	hip_calc_generic_param_len(&prot_mode, sizeof(struct esp_prot_mode), 0);
-	prot_mode.prot_mode = htonl(mode);
-	err = hip_build_param(msg, &prot_mode);
+	hip_set_param_type(&prot_transform, HIP_PARAM_ESP_PROT_TRANSFORM);
+	hip_calc_generic_param_len(&prot_transform, sizeof(struct esp_prot_transform), 0);
+	prot_transform.transform = htonl(transform);
+	err = hip_build_param(msg, &prot_transform);
 	
 	return err;
 }
 
 /**
- * hip_build_param_esp_prot_mode - build and append ESP PROT mode parameter
+ * hip_build_param_esp_prot_mode - build and append ESP PROT anchor parameter
  * @param msg the message where the parameter will be appended
- * @param mode the mode to be used for the esp extension header
+ * @param anchor the anchor for the hchain to be used for extended esp protection
  * 
  * @return 0 on success, otherwise < 0.
  */
-int hip_build_param_esp_prot_anchor(struct hip_common *msg, uint32_t *anchor)
+int hip_build_param_esp_prot_anchor(struct hip_common *msg, uint32_t anchor)
 {
 	int err = 0;
 	
