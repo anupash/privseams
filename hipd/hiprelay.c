@@ -969,7 +969,7 @@ int hip_relay_handle_relay_to(struct hip_common * msg,
 	memcpy(&(dummy.hit_r), &msg->hits, sizeof(msg->hits));
 	rec = hip_relht_get(&dummy);
 	if(rec == NULL){
-		HIP_INFO("r1 relay: No matching relay record found.\n");
+		HIP_INFO("handle_relay_to: No matching relay record found.\n");
 		goto out_err;
 	}
 	else if(rec->type != HIP_FULLRELAY) goto out_err; 

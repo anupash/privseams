@@ -563,6 +563,9 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
 			HIP_PARAM_RVS_HMAC,
                         HIP_PARAM_HOST_ID,
                         HIP_PARAM_LOCATOR,
+			//add by santtu
+			HIP_PARAM_NAT_TRANSFORM,
+			//end add
                         HIP_PARAM_NOTIFICATION,
                         HIP_PARAM_PUZZLE,
                         HIP_PARAM_R1_COUNTER,
@@ -573,7 +576,10 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
                         HIP_PARAM_SEQ,
                         HIP_PARAM_SOLUTION,
                         HIP_PARAM_VIA_RVS,
-			HIP_PARAM_RELAY_TO
+			HIP_PARAM_RELAY_TO,
+			//add by santtu
+			HIP_PARAM_REG_FROM
+			//end add
 		};
 	hip_tlv_type_t type = hip_get_param_type(param);
 
@@ -1079,6 +1085,9 @@ char* hip_param_type_name(const hip_tlv_type_t param_type){
 	case HIP_PARAM_UNIT_TEST: return "HIP_PARAM_UNIT_TEST";
 	case HIP_PARAM_VIA_RVS: return "HIP_PARAM_VIA_RVS";
 	case HIP_PARAM_PSEUDO_HIT: return "HIP_PARAM_PSEUDO_HIT";	
+	//add by santtu
+	case HIP_PARAM_NAT_TRANSFORM: return "HIP_PARAM_NAT_TRANSFORM";	
+	//end add
 	}
 	return "UNDEFINED";
 }

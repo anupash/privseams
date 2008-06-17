@@ -3021,6 +3021,10 @@ int hip_update_locator_parameter(hip_ha_t *entry,
 	struct hip_peer_addr_list_item *a, *tmp, addr;
 	struct netdev_address *n;
  
+    if (hip_locator_status == SO_HIP_SET_LOCATOR_OFF) {
+    	HIP_DEBUG("stop updating locator if the locator mode is off\n");
+    	goto out_err;
+    }
  
 	HIP_INFO_LOCATOR("santtu: let's update locator:", locator);
  

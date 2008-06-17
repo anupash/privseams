@@ -477,6 +477,8 @@ int hip_receive_control_packet(struct hip_common *msg,
 
 	entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
 	
+	
+	
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	if (!entry && opportunistic_mode &&
 	    (type == HIP_I1 || type == HIP_R1)) {
@@ -558,6 +560,9 @@ int hip_receive_control_packet(struct hip_common *msg,
 	//end 
 		err = -ECANCELED;
 		goto out_err;
+	}
+	else{
+		HIP_DEBUG("handle relay to failed, continue the bex handler\n");
 	}
 #endif
 //end add	
@@ -1559,6 +1564,9 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 			 "Building of hmac failed\n");
 	}
 
+	HIP_IFEL(entry->sign(entry->our_priv, r2), -EINVAL, "Could not sign R2. Failing\n");
+	
+//add by santtu	
 #ifdef CONFIG_HIP_RVS
 	if(!ipv6_addr_any(dest))
 	 {  	   
@@ -1570,10 +1578,10 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 	 		hip_build_param_reg_from(r2,i2_saddr, i2_info->src_port);
 	  }
 #endif	
+//end add
 	
 	
-	
-	HIP_IFEL(entry->sign(entry->our_priv, r2), -EINVAL, "Could not sign R2. Failing\n");
+
 
 	err = entry->hadb_xmit_func->hip_send_pkt(i2_daddr, i2_saddr,
 						  (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
@@ -1693,22 +1701,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
  	HIP_DEBUG("handle nat trasform in I2\n");
  	hip_nat_handle_transform_in_server(i2, entry);
 #endif	
-//add by santtu	
-    /***** LOCATOR PARAMETER *****/
-	hip_nat_handle_locator_parameter(i2, entry, esp_info);	
-#ifdef CONFIG_HIP_RVS
-	ipv6_addr_copy(&dest, &in6addr_any);
-    if(hip_relay_get_status() == HIP_RELAY_OFF) {
-
-	state = hip_relay_handle_relay_from(i2, i2_saddr, &dest, &dest_port);
-	if( state == -1 ){
-		HIP_DEBUG( "Handling RELAY_FROM of  I2 packet failed.\n");
-		 goto out_err;
-	 }
-			
-     }
-#endif 
-//end add 	
+	
  	
 #ifdef CONFIG_HIP_HI3
         locator = hip_get_param(i2, HIP_PARAM_LOCATOR);
@@ -2143,6 +2136,30 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		  "\tCreating an R2 packet in response next.\n",
 		  hip_state_str(entry->state), entry->default_spi_out);
 	
+	
+	//add by santtu	
+	    /***** LOCATOR PARAMETER *****/
+		hip_nat_handle_locator_parameter(i2, entry, esp_info);	
+		
+	#ifdef CONFIG_HIP_RVS
+		ipv6_addr_copy(&dest, &in6addr_any);
+	    if(hip_relay_get_status() == HIP_RELAY_OFF) {
+
+		state = hip_relay_handle_relay_from(i2, i2_saddr, &dest, &dest_port);
+		if( state == -1 ){
+			HIP_DEBUG( "Handling RELAY_FROM of  I2 packet failed.\n");
+			 goto out_err;
+		 }
+				
+	     }
+	#endif 
+	//end add 	
+	
+	
+	
+	
+	
+	
 	/* Note that we haven't handled the REG_REQUEST yet. This is because we
 	   must create an REG_RESPONSE parameter into the R2 packet based on the
 	   REG_REQUEST parameter. We could allocate a new R2 here and store it
@@ -2491,7 +2508,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	err = 0;
 
         /***** LOCATOR PARAMETER ******/
-	//#ifndef CONFIG_HIP_HI3
+
         if (entry->locator) {
                 HIP_IFEL(hip_update_handle_locator_parameter(
 				 entry, entry->locator, esp_info), -1,
@@ -2505,7 +2522,9 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	/* Handle REG_RESPONSE and REG_FAILED parameters. */
 	hip_handle_param_reg_response(entry, r2);
 	hip_handle_param_reg_failed(entry, r2);
-	
+//add by santtu
+	hip_handle_reg_from(entry, r2);
+//end add
 	/*
 	uint8_t services[HIP_TOTAL_EXISTING_SERVICES];
 	

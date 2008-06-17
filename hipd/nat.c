@@ -327,9 +327,12 @@ int hip_nat_handle_transform_in_server(struct hip_common *msg , hip_ha_t *entry)
 	
 	
     nat_transform = hip_get_param(msg, HIP_PARAM_NAT_TRANSFORM);
-    if(nat_transform){
+    if(nat_transform&&entry){
     	// check if the requested tranform is also supported in the server.
     	entry->nat_control = (ntohs(nat_transform->suite_id[0])) & hip_nat_get_control();
+    }
+    else{
+    	HIP_DEBUG("handle nat transform failed: entry %d,nat transform %d\n", entry, nat_transform);
     }
 out_err:
 	return err;
