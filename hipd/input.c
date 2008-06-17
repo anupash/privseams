@@ -1920,6 +1920,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	if(i2_info->dst_port == HIP_NAT_UDP_PORT)
 	{
 		entry->nat_mode = 1;
+		entry->local_port = i2_info->dst_port;
 		entry->peer_udp_port = i2_info->src_port;
 		HIP_DEBUG("entry->hadb_xmit_func: %p.\n", entry->hadb_xmit_func);
 		HIP_DEBUG("SETTING SEND FUNC TO UDP for entry %p from I2 info.\n",
@@ -2039,21 +2040,11 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
 	if (!use_blind) {
 	/* Set up IPsec associations */
-		
-		
-		
-		
-	// TODO change so that anchor is also sent to firewall
-		
-		
-		
-		
 	err = entry->hadb_ipsec_func->hip_add_sa(i2_saddr, i2_daddr,
 			 &ctx->input->hits, &ctx->input->hitr,
 			 &spi_in,
 			 esp_tfm,  &ctx->esp_in, &ctx->auth_in,
-			 retransmission, HIP_SPI_DIRECTION_IN, 0, i2_info->src_port, 
-				i2_info->dst_port);
+			 retransmission, HIP_SPI_DIRECTION_IN, 0, entry);
 	}
 	if (err) {
 		HIP_ERROR("Failed to setup inbound SA with SPI=%d\n", spi_in);

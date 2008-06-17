@@ -284,9 +284,10 @@ int handle_sa_add_request(struct hip_common * msg, struct hip_tlv_common *param)
 	struct in6_addr *saddr = NULL, *daddr = NULL;
 	struct in6_addr *src_hit = NULL, *dst_hit = NULL;
 	uint32_t *spi_ipsec = NULL;
-	int ealg;
+	int ealg = 0;
 	struct hip_crypto_key *enckey = NULL, *authkey = NULL;
-	int already_acquired, direction, update, sport, dport;
+	int retransmission = 0, direction = 0, update = 0, local_port = 0, peer_port = 0;
+	uint8_t nat_mode = 0;
 	
 	// get all attributes from the message
 	
@@ -310,13 +311,21 @@ int handle_sa_add_request(struct hip_common * msg, struct hip_tlv_common *param)
 	spi_ipsec = (uint32_t *) hip_get_param_contents_direct(param);
 	HIP_DEBUG("the spi value is : %u \n", *spi_ipsec);
 
-	param =  hip_get_next_param(msg, param);
-	sport = *((unsigned int *) hip_get_param_contents_direct(param));
-	HIP_DEBUG("the sport vaule is %d \n", sport);
+	param = hip_get_next_param(msg, param);
+	nat_mode = *((uint8_t *) hip_get_param_contents_direct(param));
+	HIP_DEBUG("the nat_mode value is %u \n", nat_mode);
 	
 	param =  hip_get_next_param(msg, param);
-	dport = *((unsigned int *) hip_get_param_contents_direct(param));
-	HIP_DEBUG("the dport value is %d \n", dport);
+	local_port = *((uint16_t *) hip_get_param_contents_direct(param));
+	HIP_DEBUG("the local_port value is %u \n", local_port);
+	
+	param =  hip_get_next_param(msg, param);
+	peer_port = *((uint16_t *) hip_get_param_contents_direct(param));
+	HIP_DEBUG("the peer_port value is %u \n", peer_port);
+	
+	param =  hip_get_next_param(msg, param);
+	hchain_anchor = *((uint32_t *) hip_get_param_contents_direct(param));
+	HIP_DEBUG("the hchain_anchor value is %u \n", hchain_anchor);
 
 	param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_KEYS);
 	enckey = (struct hip_crypto_key *) hip_get_param_contents_direct(param);
@@ -331,8 +340,8 @@ int handle_sa_add_request(struct hip_common * msg, struct hip_tlv_common *param)
 	HIP_DEBUG("ealg value is %d \n", ealg);
 
 	param =  hip_get_next_param(msg, param);		
-	already_acquired = *((int *) hip_get_param_contents_direct(param));
-	HIP_DEBUG("already_acquired value is %d \n", already_acquired);
+	retransmission = *((int *) hip_get_param_contents_direct(param));
+	HIP_DEBUG("already_acquired value is %d \n", retransmission);
 	
 	param =  hip_get_next_param(msg, param);		
 	direction = *((int *) hip_get_param_contents_direct(param));
@@ -344,8 +353,9 @@ int handle_sa_add_request(struct hip_common * msg, struct hip_tlv_common *param)
 	
 	return hipl_userspace_ipsec_sadb_add_wrapper(saddr, daddr, 
 							 src_hit, dst_hit, 
-							 spi_ipsec, ealg, enckey, 
-							 authkey, already_acquired, 
-							 direction, update, 
-							 sport, dport);
+							 spi_ipsec, nat_mode,
+							 local_port, peer_port,
+							 hchain_anchor, ealg, enckey, 
+							 authkey, retransmission, 
+							 direction, update);
 }

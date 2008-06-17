@@ -324,8 +324,11 @@ struct hip_hadb_state
 	/** A boolean value indicating whether there is a NAT between this host
 	    and the peer. */
 	uint8_t	                     nat_mode;
+	/* this might seem redundant as dst_port == HIP_NAT_UDP_PORT, but it makes
+	 * port handling easier in other functions */
+	in_port_t					 local_udp_port;
 	 /** NAT mangled port (source port of I2 packet). */
-	in_port_t	             peer_udp_port;
+	in_port_t	             	 peer_udp_port;
 	/** Non-zero if the escrow service is in use. */ 
 	int                          escrow_used;
 	/** Escrow server HIT. */ 
@@ -627,7 +630,7 @@ struct hip_ipsec_func_set {
 			       struct hip_crypto_key *authkey,
 			       int already_acquired,
 			       int direction, int update,
-			       int sport, int dport);
+			       hip_ha_t *entry);
 	int (*hip_setup_hit_sp_pair)(hip_hit_t *src_hit, hip_hit_t *dst_hit,
 				     struct in6_addr *src_addr,
 				     struct in6_addr *dst_addr, u8 proto,
