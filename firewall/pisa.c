@@ -44,7 +44,7 @@ static struct pisa_conn *pisa_find_conn(struct pisa_conn
 			return pcd;
 		l = l->next;
 	}
-    
+
 	return NULL;
 }
 
@@ -73,6 +73,25 @@ static struct pisa_conn *pisa_find_conn_by_hits(struct in6_addr *hit1,
 	data.hit[1] = hit2;
 
 	return pisa_find_conn(pisa_find_conn_by_hits2, &data);
+}
+
+static struct pisa_conn *pisa_find_conn_by_spi2(SList *s, void *p)
+{
+	uint32_t *spi = (uint32_t *) p;
+	struct pisa_conn *data;
+
+	if (s && s->data) {
+		data = (struct pisa_conn *) s->data;
+		if (data->spi[0] == *spi || data->spi[1] == *spi)
+			return data;
+	}
+
+	return NULL;
+}
+
+static struct pisa_conn *pisa_find_conn_by_spi(uint32_t spi)
+{
+	return pisa_find_conn(pisa_find_conn_by_spi2, &spi);
 }
 
 struct pisa_puzzle_hash {
@@ -442,8 +461,20 @@ static int pisa_handler_r2(hip_fw_context_t *ctx)
  */
 static int pisa_handler_esp(hip_fw_context_t *ctx)
 {
-	HIP_DEBUG("handling ESP data.\n");
-	return NF_ACCEPT;
+	int err = NF_DROP;
+	struct hip_esp *esp;
+	struct pisa_conn *pcd;
+
+	esp = ctx->transport_hdr.esp;
+	HIP_IFEL(esp == NULL, NF_DROP, "No ESP Header found.\n");
+	
+	pcd = pisa_find_conn_by_spi(esp->esp_spi);
+	HIP_IFEL(pcd == NULL, NF_DROP, "Connection not found.\n");
+
+	err = NF_ACCEPT;
+	HIP_DEBUG("Connection found, forwarding ESP packet.\n");
+out_err:
+	return err;	
 }
 
 void pisa_init(struct midauth_handlers *h)
