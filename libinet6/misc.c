@@ -1991,7 +1991,7 @@ int hip_trigger_is_bex_established(struct in6_addr *src_hit, struct in6_addr *ds
 			*dst_hit = ha->hit_peer;
 			res = 1;
 			HIP_DEBUG_HIT("hip_trigger_ha src_hit",src_hit);
-			HIP_DEBUG_HIT("hip_trigger_ha dst_hit",*dst_hit);
+			HIP_DEBUG_HIT("hip_trigger_ha dst_hit",dst_hit);
 			break;
 		}
         
