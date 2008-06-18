@@ -122,8 +122,10 @@ void hip_set_os_dep_variables()
  */
 int hipd_init(int flush_ipsec, int killold)
 {
+	hip_hit_t default_hit;
+	hip_lsi_t default_lsi;
 	hip_hit_t peer_hit;
-	int err = 0, fd, dhterr = 0;
+	int err = 0, dhterr = 0;
 	char str[64];
 	struct sockaddr_in6 daemon_addr;
 
@@ -180,8 +182,9 @@ int hipd_init(int flush_ipsec, int killold)
 	   will maintain the list This needs to be done before opening
 	   NETLINK_ROUTE! See the comment about address_count global var. */
 	HIP_DEBUG("Initializing the netdev_init_addresses\n");
-	hip_netdev_init_addresses(&hip_nl_ipsec);
 
+	hip_netdev_init_addresses(&hip_nl_ipsec);
+	
 	if (rtnl_open_byproto(&hip_nl_route,
 	                      RTMGRP_LINK | RTMGRP_IPV6_IFADDR | IPPROTO_IPV6
 	                      | RTMGRP_IPV4_IFADDR | IPPROTO_IP,
@@ -228,10 +231,10 @@ int hipd_init(int flush_ipsec, int killold)
                     HIP_DEBUG("Setting send buffer size of hip_nl_ipsec.fd failed\n");
 	}
 #endif
-
+	
 	HIP_IFEL(hip_init_raw_sock_v6(&hip_raw_sock_v6), -1, "raw sock v6\n");
 	HIP_IFEL(hip_init_raw_sock_v4(&hip_raw_sock_v4), -1, "raw sock v4\n");
-	HIP_IFEL(hip_init_nat_sock_udp(&hip_nat_sock_udp), -1, "raw sock udp\n");
+	HIP_IFEL(hip_init_nat_sock_udp(&hip_nat_sock_udp), -1, "raw sock udp\n");		
 
 	HIP_DEBUG("hip_raw_sock = %d\n", hip_raw_sock_v6);
 	HIP_DEBUG("hip_raw_sock_v4 = %d\n", hip_raw_sock_v4);
@@ -256,6 +259,7 @@ int hipd_init(int flush_ipsec, int killold)
 		hip_locator_status = SO_HIP_SET_LOCATOR_ON;
 	}
 #endif
+
 	HIP_IFE(hip_init_host_ids(), 1);
 
 	hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0);
@@ -268,7 +272,7 @@ int hipd_init(int flush_ipsec, int killold)
 		      sizeof(daemon_addr)), -1, "Bind on daemon addr failed\n");
 
 	hip_load_configuration();
-
+       
         dhterr = 0;
         dhterr = hip_init_dht();
         if (dhterr < 0) HIP_DEBUG("Initializing DHT returned error\n");
@@ -287,6 +291,10 @@ int hipd_init(int flush_ipsec, int killold)
 
 
 	HIP_IFEL(hip_set_lowcapability(), -1, "Failed to set capabilities\n");
+	
+	hip_get_default_hit(&default_hit);
+	hip_get_default_lsi(&default_lsi);
+	hip_associate_default_hit_lsi(&default_hit, &default_lsi);
 
 #ifdef CONFIG_HIP_HI3
 	if( hip_use_i3 ) 
@@ -296,7 +304,7 @@ int hipd_init(int flush_ipsec, int killold)
 	}
 #endif
 
-	hip_firewall_sock_fd = hip_user_sock;
+	hip_firewall_sock_fd = hip_firewall_sock_lsi_fd = hip_user_sock;
 
 out_err:
 	return err;
@@ -553,6 +561,7 @@ int hip_init_host_ids()
 	}
 	
 	err = hip_handle_add_local_hi(user_msg);
+
 	if (err)
 	{
 		HIP_ERROR("Adding of keys failed\n");
@@ -704,13 +713,12 @@ void hip_exit(int signal)
 	/*reset TCP timeout to be original vaule , added By Tao Wan on 14.Jan.2008. */
 	reset_default_tcptimeout_parameters_value();
 #endif
-
 	if (hipd_msg)
 		HIP_FREE(hipd_msg);
         if (hipd_msg_v4)
-            HIP_FREE(hipd_msg_v4);
+        	HIP_FREE(hipd_msg_v4);
 	
-	hip_delete_all_sp();
+	hip_delete_all_sp();//empty
 
 	delete_all_addresses();
 
@@ -737,18 +745,30 @@ void hip_exit(int signal)
 	hip_uninit_kea_endpoints();
 #endif
 
-	if (hip_raw_sock_v6)
+	if (hip_raw_sock_v6){
+		HIP_INFO("hip_raw_sock_v6\n");
 		close(hip_raw_sock_v6);
-	if (hip_raw_sock_v4)
+	}
+	if (hip_raw_sock_v4){
+		HIP_INFO("hip_raw_sock_v4\n");
 		close(hip_raw_sock_v4);
-	if(hip_nat_sock_udp)
+	}
+	if(hip_nat_sock_udp){
+		HIP_INFO("hip_nat_sock_udp\n");
 		close(hip_nat_sock_udp);
-	if (hip_user_sock)
+	}
+	if (hip_user_sock){
+		HIP_INFO("hip_user_sock\n");
 		close(hip_user_sock);
-	if (hip_nl_ipsec.fd)
+	}
+	if (hip_nl_ipsec.fd){
+		HIP_INFO("hip_nl_ipsec.fd\n");
 		rtnl_close(&hip_nl_ipsec);
-	if (hip_nl_route.fd)
+	}	
+	if (hip_nl_route.fd){
+		HIP_INFO("hip_nl_route.fd\n");
 		rtnl_close(&hip_nl_route);
+	}
 
 	hip_uninit_hadb();
 	hip_uninit_host_id_dbs();
