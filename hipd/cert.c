@@ -181,77 +181,6 @@ int hip_cert_spki_sign(struct hip_common * msg, HIP_HASHTABLE * db) {
 }
 
 /**
- * Function that extracts the key from hidb entry and constructs a RSA struct from it
- *
- * @param db is the db to query for the hostid entry
- * @param hit is a pointer to a host identity tag to be searched
- * @param rsa is the resulting struct that contains the key material
- *
- * @return 0 if signature matches, -1 if error or signature did NOT match
- */
-int hip_cert_spki_construct_keys(HIP_HASHTABLE * db, hip_hit_t * hit, RSA * rsa) {
-        int err = 0, s = 1;
-        struct hip_host_id_entry * hostid_entry = NULL;
-        struct hip_host_id * hostid = NULL;
-        struct hip_lhi * lhi = NULL;
-        u8 *p;
-        /* 
-           Get the corresponding host id for the HIT.
-           It will contain both the public and the private key
-        */
-	_HIP_DEBUG_HIT("HIT we are looking for ", hit);
-        hostid_entry = hip_get_hostid_entry_by_lhi_and_algo(db, 
-                                                            hit,
-                                                            HIP_HI_RSA, -1);  
-	if (hostid_entry == NULL) {
-		err = -1;
-		goto out_err;
-	}
-        lhi = &hostid_entry->lhi;
-        hostid = hostid_entry->host_id;
-        p = (u8 *)(hostid + 1);
-
-        _HIP_DEBUG_HIT("HIT from hostid entry", &lhi->hit);
-        _HIP_DEBUG("type = %d len = %d\n", htons(hostid->type), hostid->hi_length);
-
-        /*
-          Order of the key material in the host id rdata is the following
-           HIP_RSA_PUBLIC_EXPONENT_E_LEN 
-           HIP_RSA_PUBLIC_MODULUS_N_LEN 
-           HIP_RSA_PRIVATE_EXPONENT_D_LEN 
-           HIP_RSA_SECRET_PRIME_FACTOR_P_LEN
-           HIP_RSA_SECRET_PRIME_FACTOR_Q_LEN  
-        */
-         
-        /* Public part of the key */
-        /* s starts from the first byte after the rdata struct thats why 1*/
-        _HIP_DEBUG("s = %d\n",s);
-        rsa->e = BN_bin2bn(&p[s], HIP_RSA_PUBLIC_EXPONENT_E_LEN, 0);       
-        s += HIP_RSA_PUBLIC_EXPONENT_E_LEN;
-        _HIP_DEBUG("s = %d\n",s);
-        rsa->n = BN_bin2bn(&p[s], HIP_RSA_PUBLIC_MODULUS_N_LEN, 0);
-        s += HIP_RSA_PUBLIC_MODULUS_N_LEN;
-        _HIP_DEBUG("s = %d\n",s);
-        /* Private part of the key */
-        rsa->d = BN_bin2bn(&p[s], HIP_RSA_PRIVATE_EXPONENT_D_LEN, 0);
-        s += HIP_RSA_PRIVATE_EXPONENT_D_LEN;
-        _HIP_DEBUG("s = %d\n",s);
-        rsa->p = BN_bin2bn(&p[s], HIP_RSA_SECRET_PRIME_FACTOR_P_LEN, 0);
-        s += HIP_RSA_SECRET_PRIME_FACTOR_P_LEN;
-        _HIP_DEBUG("s = %d\n",s);
-        rsa->q = BN_bin2bn(&p[s], HIP_RSA_SECRET_PRIME_FACTOR_Q_LEN, 0);
-        
-        _HIP_DEBUG("Hostid converted to RSA e=%s\n", BN_bn2hex(rsa->e));
-        _HIP_DEBUG("Hostid converted to RSA n=%s\n", BN_bn2hex(rsa->n));
-        _HIP_DEBUG("Hostid converted to RSA d=%s\n", BN_bn2hex(rsa->d));
-        _HIP_DEBUG("Hostid converted to RSA p=%s\n", BN_bn2hex(rsa->p));
-        _HIP_DEBUG("Hostid converted to RSA q=%s\n", BN_bn2hex(rsa->q));
-
- out_err: 
-        return(err);
-}
-
-/**
  * Function that verifies the signature in the given SPKI cert sent by the "client"
  *
  * @param msg points to the msg gotten from "client"
@@ -447,7 +376,7 @@ out_err:
  * is not needed
  */ 
 int hip_cert_x509v3_handle_request(struct hip_common * msg,  HIP_HASHTABLE * db) {
-	int err = 0, i = 0, nid = 0;
+	int err = 0, i = 0, nid = 0, ret = 0, secs = 0;
 	CONF * conf;
 	CONF_VALUE *item;
 	STACK_OF(CONF_VALUE) * sec = NULL;
@@ -470,14 +399,27 @@ int hip_cert_x509v3_handle_request(struct hip_common * msg,  HIP_HASHTABLE * db)
         X509V3_CTX ctx;
         struct hip_cert_x509_req * subject;
         char subject_hit[41];
-        
+        char issuer_hit[41];
+        struct in6_addr * issuer_hit_n;
+        RSA * rsa = NULL;
+
         HIP_IFEL(!(subject = malloc(sizeof(struct in6_addr))), -1, 
                  "Malloc for subject failed\n");   
-        HIP_IFEL(!memset(subject, '\0', sizeof(subject)), -1,
-                 "Failed to memset memory for subject\n");               
+        HIP_IFEL(!(issuer_hit_n = malloc(sizeof(struct in6_addr))), -1, 
+                 "Malloc for subject failed\n");   
+        HIP_IFEL(!memset(subject, 0, sizeof(subject)), -1,
+                 "Failed to memset memory for subject\n");
+        HIP_IFEL(!memset(issuer_hit_n, 0, sizeof(issuer_hit_n)), -1,
+                 "Failed to memset memory for issuer\n");               
         HIP_IFEL(!memset(subject_hit, '\0', sizeof(subject_hit)), -1,
                  "Failed to memset memory for subject\n");                
+        HIP_IFEL(!memset(issuer_hit_n, 0, sizeof(struct in6_addr)), -1,
+                 "Failed to memser memory for issuer HIT\n");
 
+        /* malloc space for new rsa */
+        rsa = RSA_new();
+        HIP_IFEL(!rsa, -1, "Failed to malloc RSA\n");
+       
         OpenSSL_add_all_algorithms();
         ERR_load_crypto_strings();
         
@@ -486,17 +428,43 @@ int hip_cert_x509v3_handle_request(struct hip_common * msg,  HIP_HASHTABLE * db)
 	sec_general = hip_cert_read_conf_section("hip_x509v3", conf);
         sec_name = hip_cert_read_conf_section("hip_x509v3_name", conf);
         sec_ext = hip_cert_read_conf_section("hip_x509v3_extensions", conf);
-	hip_cert_free_conf(conf);
+  	hip_cert_free_conf(conf);
 
         /* Get the general information */
         HIP_IFEL((sec_general == NULL), -1, 
                  "Failed to load general certificate information\n");
         HIP_IFEL(!(req = X509_REQ_new()), -1, "Failed to create X509_REQ object");
 
-        /* Issuer naming */
         HIP_IFEL((sec_name = NULL), -1,
                  "Failed to load issuer naming information for the certificate\n");
+
+        /* Issuer naming */
+        if (sec_general != NULL) {
+                /* Loop through the conf stack and add extensions to ext stack */
+                extlist = sk_X509_EXTENSION_new_null();
+                for (i = 0; i < sk_CONF_VALUE_num(sec_general); i++) {
+                        item = sk_CONF_VALUE_value(sec_general, i);
+                        _HIP_DEBUG("Sec: %s, Key; %s, Val %s\n", 
+                                   item->section, item->name, item->value);
+                        if(!strcmp(item->name, "issuerhit")) {
+                                strcpy(issuer_hit, item->value);
+                                ret = inet_pton(AF_INET6, item->value, issuer_hit_n);
+                                HIP_IFEL((ret < 0 && errno == EAFNOSUPPORT), -1, 
+                                         "Failed to convert issuer HIT to hip_hit_t\n");
+                                HIP_DEBUG_HIT("Issuer HIT", issuer_hit_n);
+                        }
+                        if(!strcmp(item->name, "days")) 
+                           secs = HIP_CERT_DAY * atoi(item->value);
+                }
+        }
         HIP_IFEL(!(issuer = X509_NAME_new()), -1, "Failed to set create subject name");
+        nid = OBJ_txt2nid("commonName");
+        HIP_IFEL((nid == NID_undef), -1, "NID text not defined\n");
+        HIP_IFEL(!(ent = X509_NAME_ENTRY_create_by_NID (NULL, nid, MBSTRING_ASC,
+                                                        issuer_hit, -1)), -1,
+                 "Failed to create name entry for issuer\n");
+        HIP_IFEL((X509_NAME_add_entry(issuer, ent, -1, 0) != 1), -1,
+                 "Failed to add entry to issuer name\n");
         
         /* Subject naming */
         /* Get the subject hit from msg */
@@ -516,7 +484,7 @@ int hip_cert_x509v3_handle_request(struct hip_common * msg,  HIP_HASHTABLE * db)
                  "Failed to add entry to subject name\n");
         HIP_IFEL((X509_REQ_set_subject_name (req, subj) != 1), -1,
                  "Failed to add subject name to certificate request\n");
-         
+          
         if (sec_ext != NULL) {
                 /* Loop through the conf stack and add extensions to ext stack */
                 extlist = sk_X509_EXTENSION_new_null();
@@ -562,12 +530,15 @@ int hip_cert_x509v3_handle_request(struct hip_common * msg,  HIP_HASHTABLE * db)
                 "Failed to set subject name of certificate\n");
         HIP_IFEL((X509_set_issuer_name (cert, issuer) != 1), -1,
                  "Failed to set issuer name of certificate\n");
-        /* XX TODO FILL ISSUER FROM CONF **/
         HIP_IFEL(!(X509_gmtime_adj (X509_get_notBefore (cert), 0)), -1,
                  "Error setting beginning time of the certificate");
-        /* XX TODO read from conf to secs */
-        HIP_IFEL(!(X509_gmtime_adj (X509_get_notAfter (cert), 3600)), -1, 
+        HIP_IFEL(!(X509_gmtime_adj (X509_get_notAfter (cert), secs)), -1, 
                  "Error setting ending time of the certificate");
+
+        HIP_DEBUG("Getting the key\n");
+        HIP_IFEL((err = hip_cert_spki_construct_keys(hip_local_hostid_db,
+                                            issuer_hit_n, rsa)), -1, 
+                "Error constructing the keys from hidb entry\n");
 
         /* DEBUG PART START for the certificate */
         HIP_DEBUG("x.509v3 certificate in readable format\n\n");
@@ -583,3 +554,80 @@ out_err:
         if(extlist != NULL) sk_X509_EXTENSION_pop_free (extlist, X509_EXTENSION_free);
 	return err;
 } 
+
+/****************************************************************************
+ *
+ * Utilitary functions
+ *
+ ***************************************************************************/
+
+/**
+ * Function that extracts the key from hidb entry and constructs a RSA struct from it
+ *
+ * @param db is the db to query for the hostid entry
+ * @param hit is a pointer to a host identity tag to be searched
+ * @param rsa is the resulting struct that contains the key material
+ *
+ * @return 0 if signature matches, -1 if error or signature did NOT match
+ */
+int hip_cert_spki_construct_keys(HIP_HASHTABLE * db, hip_hit_t * hit, RSA * rsa) {
+        int err = 0, s = 1;
+        struct hip_host_id_entry * hostid_entry = NULL;
+        struct hip_host_id * hostid = NULL;
+        struct hip_lhi * lhi = NULL;
+        u8 *p;
+        /* 
+           Get the corresponding host id for the HIT.
+           It will contain both the public and the private key
+        */
+	_HIP_DEBUG_HIT("HIT we are looking for ", hit);
+        hostid_entry = hip_get_hostid_entry_by_lhi_and_algo(db, 
+                                                            hit,
+                                                            HIP_HI_RSA, -1);  
+	if (hostid_entry == NULL) {
+		err = -1;
+		goto out_err;
+	}
+        lhi = &hostid_entry->lhi;
+        hostid = hostid_entry->host_id;
+        p = (u8 *)(hostid + 1);
+
+        _HIP_DEBUG_HIT("HIT from hostid entry", &lhi->hit);
+        _HIP_DEBUG("type = %d len = %d\n", htons(hostid->type), hostid->hi_length);
+
+        /*
+          Order of the key material in the host id rdata is the following
+           HIP_RSA_PUBLIC_EXPONENT_E_LEN 
+           HIP_RSA_PUBLIC_MODULUS_N_LEN 
+           HIP_RSA_PRIVATE_EXPONENT_D_LEN 
+           HIP_RSA_SECRET_PRIME_FACTOR_P_LEN
+           HIP_RSA_SECRET_PRIME_FACTOR_Q_LEN  
+        */
+         
+        /* Public part of the key */
+        /* s starts from the first byte after the rdata struct thats why 1*/
+        _HIP_DEBUG("s = %d\n",s);
+        rsa->e = BN_bin2bn(&p[s], HIP_RSA_PUBLIC_EXPONENT_E_LEN, 0);       
+        s += HIP_RSA_PUBLIC_EXPONENT_E_LEN;
+        _HIP_DEBUG("s = %d\n",s);
+        rsa->n = BN_bin2bn(&p[s], HIP_RSA_PUBLIC_MODULUS_N_LEN, 0);
+        s += HIP_RSA_PUBLIC_MODULUS_N_LEN;
+        _HIP_DEBUG("s = %d\n",s);
+        /* Private part of the key */
+        rsa->d = BN_bin2bn(&p[s], HIP_RSA_PRIVATE_EXPONENT_D_LEN, 0);
+        s += HIP_RSA_PRIVATE_EXPONENT_D_LEN;
+        _HIP_DEBUG("s = %d\n",s);
+        rsa->p = BN_bin2bn(&p[s], HIP_RSA_SECRET_PRIME_FACTOR_P_LEN, 0);
+        s += HIP_RSA_SECRET_PRIME_FACTOR_P_LEN;
+        _HIP_DEBUG("s = %d\n",s);
+        rsa->q = BN_bin2bn(&p[s], HIP_RSA_SECRET_PRIME_FACTOR_Q_LEN, 0);
+        
+        _HIP_DEBUG("Hostid converted to RSA e=%s\n", BN_bn2hex(rsa->e));
+        _HIP_DEBUG("Hostid converted to RSA n=%s\n", BN_bn2hex(rsa->n));
+        _HIP_DEBUG("Hostid converted to RSA d=%s\n", BN_bn2hex(rsa->d));
+        _HIP_DEBUG("Hostid converted to RSA p=%s\n", BN_bn2hex(rsa->p));
+        _HIP_DEBUG("Hostid converted to RSA q=%s\n", BN_bn2hex(rsa->q));
+
+ out_err: 
+        return(err);
+}
