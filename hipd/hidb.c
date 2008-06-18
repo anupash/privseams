@@ -328,8 +328,6 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 
 	        
 		IPV4_TO_IPV6_MAP(&lsi, &in6_lsi);
-		HIP_DEBUG_IN6ADDR("..........Mapping lsi to hit ", &in6_lsi);
-		HIP_DEBUG_LSI("Lsi is........", &lsi);
 		/* Adding routes just in case they don't exist */
 		hip_add_iface_local_route(&lhi.hit);
 		hip_add_iface_local_route(&in6_lsi);
