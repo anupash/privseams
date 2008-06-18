@@ -137,17 +137,18 @@ void hip_sadb_init() {
  * Add an SADB entry to the SADB hash table.
  */ 
 int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
-    struct sockaddr *inner_dst, struct sockaddr *src, struct sockaddr *dst, 
-    __u16 sport, __u16 dport, int direction,
-    __u32 spi, __u8 *e_key, __u32 e_type, __u32 e_keylen, __u8 *a_key,
-    __u32 a_type, __u32 a_keylen, __u32 lifetime, __u16 hitmagic, int encap_mode)
+    struct sockaddr *inner_dst, struct sockaddr *src, struct sockaddr *dst, __u16 sport,
+    __u16 dport, int direction, __u32 spi, __u8 *e_key, __u32 e_type, __u32 e_keylen,
+    __u8 *a_key, __u32 a_type, __u32 a_keylen, __u32 lifetime, __u16 hitmagic,
+    uint8_t nat_mode, uint32_t hchain_anchor)
 {
 	
-	hip_sadb_entry *entry;
-	hip_lsi_entry *lsi_entry;
-	int err, key_len;
+	hip_sadb_entry *entry = NULL;
+	hip_lsi_entry *lsi_entry = NULL;
+	int key_len = 0;
 	__u8 key1[8], key2[8], key3[8]; /* for 3-DES */
 	struct sockaddr *use_dst, *use_src;
+	int err = 0;
 
 	/* type is currently ignored */	
 	if (!src || !dst || !a_key)
@@ -177,14 +178,14 @@ int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
 	entry->dst_addrs = (sockaddr_list*)malloc(sizeof(sockaddr_list));
 	entry->inner_src_addrs = (sockaddr_list*)malloc(sizeof(sockaddr_list));
 	entry->inner_dst_addrs = (sockaddr_list*)malloc(sizeof(sockaddr_list));
-	/* allocate memory for hash chains and anchors */
-	entry->active_hchain = (hash_chain_t*)malloc(sizeof(hash_chain_t));
-	entry->next_hchain = (hash_chain_t*)malloc(sizeof(hash_chain_t));
-	entry->active_anchor = (unsigned char*)malloc(HCHAIN_ELEMENT_LENGTH);
-	entry->next_anchor = (unsigned char*)malloc(HCHAIN_ELEMENT_LENGTH);
+	/* hash chains and anchors for esp extension */
+	entry->active_hchain = NULL;
+	entry->next_hchain = NULL;
+	entry->active_anchor = 0;
+	entry->next_anchor = 0;
 	entry->src_port = sport ;
 	entry->dst_port = dport ;
-	entry->encap_mode = encap_mode;
+	entry->nat_mode = nat_mode;
 	entry->usetime_ka.tv_sec = 0;
 	entry->usetime_ka.tv_usec = 0;
 	memset(&entry->lsi, 0, sizeof(struct sockaddr_storage));
@@ -221,54 +222,31 @@ int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
 	memset(entry->inner_src_addrs, 0, sizeof(sockaddr_list));
 	memset(entry->inner_dst_addrs, 0, sizeof(sockaddr_list));
 
-/* HIP_ESP_OVER_UDP */ // comments from openhip
-
-/* in our HIPL case, mode 3, HIP_ESP_OVER_UDP */
-	
-		
-	if (entry->mode == 3) { 
+	if (entry->mode == 0 || entry->mode == 3) { 
 		memcpy(&entry->inner_src_addrs->addr, inner_src,
 			SALEN(inner_src));
 		memcpy(&entry->inner_dst_addrs->addr, inner_dst,
 		       SALEN(inner_dst));
 	}
 	
-
-	/* mode 0 ->  default, IP + ESP + payload*/
-	if (entry->mode == 0) { 
-		memcpy(&entry->inner_src_addrs->addr, inner_src,
-		       SALEN(inner_src));
-		memcpy(&entry->inner_dst_addrs->addr, inner_dst,
-		       SALEN(inner_dst));
+	/* set up hash chains or anchors depending on the direction */
+	if (direction == HIP_SPI_DIRECTION_IN)
+	{
+		// set anchor for inbound SA
+		entry->active_anchor = hchain_anchor;
+		entry->tolerance = HCHAIN_VERIFY_WINDOW;
+	} else
+	{
+		// set hchain for outbound SA
+		err = hip_hchain_bexstore_get_hchain((unsigned char *)&hchain_anchor,
+				entry->active_hchain);
+		
+		if (err)
+		{
+			HIP_ERROR("corresponding hchain not found");
+			goto hip_sadb_add_error;
+		}
 	}
-	
-	/* set up both hash chains and anchors for now */
-	// TODO hchains should be taken from the store
-	memcpy(entry->active_hchain, hchain_create(100), sizeof(hash_chain_t));
-	
-	// verify active hash chain
-	HIP_DEBUG("verifying _active_ hash chain...\n");
-	if (hchain_verify(entry->active_hchain->source_element->hash,
-			entry->active_hchain->anchor_element->hash, 100))
-		HIP_DEBUG("active hash chain successfully verified!\n");
-	else
-		HIP_DEBUG("ERROR verifying active hash chain!\n");
-	
-	memcpy(entry->next_hchain, hchain_create(100), sizeof(hash_chain_t));
-	
-	// verify hash chains
-	HIP_DEBUG("verifying _next_ hash chain...\n");
-	if (hchain_verify(entry->next_hchain->source_element->hash,
-			entry->next_hchain->anchor_element->hash, 100))
-		HIP_DEBUG("next hash chain successfully verified!\n");
-	else
-		HIP_DEBUG("ERROR verifying next hash chain!\n");
-	
-	entry->tolerance = 10;
-	memcpy(entry->active_anchor, entry->active_hchain->anchor_element->hash, 
-			HCHAIN_ELEMENT_LENGTH); 
-	memcpy(entry->next_anchor, entry->next_hchain->anchor_element->hash,
-			HCHAIN_ELEMENT_LENGTH);
 	
 	/* copy keys */
 

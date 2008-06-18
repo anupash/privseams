@@ -336,12 +336,10 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 		// verify hchain-elements
 		HIP_DEBUG("verifying hash chain element for incoming packet...\n");
 		
-		sent_hc_element = (unsigned char *) &hash;
-		
-		if (hchain_verify(sent_hc_element, entry->active_anchor, entry->tolerance))
+		if (hchain_verify((unsigned char *) &hash, entry->active_anchor, entry->tolerance))
 		{
 			// this will allow only increasing elements to be accepted
-			memcpy(entry->active_anchor, sent_hc_element, HCHAIN_ELEMENT_LENGTH);
+			memcpy(entry->active_anchor, hash, HCHAIN_ELEMENT_LENGTH);
 			HIP_DEBUG("hash-chain element correct!\n");
 		} else
 		{
@@ -437,17 +435,16 @@ int hipl_userspace_ipsec_sadb_add_wrapper(struct in6_addr *saddr,
 					      int already_acquired,
 					      int direction, int update) 
 {
-	__u16 hit_magic = 0;
-	__u8 *ipsec_e_key = NULL; 
-	__u8 *ipsec_a_key = NULL;
-	__u32 ipsec_e_keylen = 0; 
-	__u32 ipsec_a_keylen = 0;
+	uint16_t hit_magic = 0;
+	uint8_t *ipsec_e_key = NULL; 
+	uint8_t *ipsec_a_key = NULL;
+	uint32_t ipsec_e_keylen = 0; 
+	uint32_t ipsec_a_keylen = 0;
 	/*HIT address,  inner addresses*/
 	struct sockaddr_storage inner_src, inner_dst; 
 	struct sockaddr_storage src, dst; /* IP address*/
-	__u32 ipsec_spi = (__u32) *spi; /*IPsec SPI*/
-	__u32 ipsec_e_type = 0; /* encryption type */
-	__u32 ipsec_a_type = 0; /* authentication type is equal to encryption type */
+	uint32_t ipsec_e_type = 0; /* encryption type */
+	uint32_t ipsec_a_type = 0; /* authentication type is equal to encryption type */
 	int encap_mode = 0; /* 0 - none, 1 - udp */
 	int err = 0;
 
@@ -505,8 +502,9 @@ int hipl_userspace_ipsec_sadb_add_wrapper(struct in6_addr *saddr,
 	 * */
 	err = hip_sadb_add(TYPE_USERSPACE_IPSEC, IPSEC_MODE, (struct sockaddr *) &inner_src,
 			(struct sockaddr *) &inner_dst, (struct sockaddr *) &src, (struct sockaddr *) &dst,
-			local_port, peer_port, direction, ipsec_spi, ipsec_e_key, ipsec_e_type,
-			ipsec_e_keylen, ipsec_a_key, ipsec_a_type, ipsec_a_keylen, 100 , hit_magic, nat_mode);
+			local_port, peer_port, direction, spi, ipsec_e_key, ipsec_e_type,
+			ipsec_e_keylen, ipsec_a_key, ipsec_a_type, ipsec_a_keylen, 100 , hit_magic, nat_mode,
+			hchain_anchor);
 	
 	// Tell firewall that HIT SRC + DST HAS A SECURITY ASSOCIATION
 	HIP_DEBUG("HIP IPsec userspace SA add return value %d\n", err);

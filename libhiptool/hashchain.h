@@ -19,6 +19,8 @@
 /* value used by Tobias */
 //#define HCHAIN_ELEMENT_LENGTH 20 // (in bytes)
 
+#define HCHAIN_VERIFY_WINDOW 10
+
 typedef struct hash_chain hash_chain_t;
 typedef struct hash_chain_element hash_chain_element_t;
 
