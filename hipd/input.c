@@ -809,13 +809,13 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		if (entry->esp_prot_transform == ESP_PROT_TRANSFORM_DEFAULT
 				&& entry->esp_prot_transform == transform)
 		{
-			HIP_IFEL(hip_build_param_esp_prot_mode(i2, ESP_PROT_TRANSFORM_DEFAULT),
+			HIP_IFEL(hip_build_param_esp_prot_transform(i2, ESP_PROT_TRANSFORM_DEFAULT),
 					-1, "Building of ESP protection mode failed\n");
 		} else
 		{
 			// set to unused and reply with according parameter
 			entry->esp_prot_transform = ESP_PROT_TRANSFORM_UNUSED;
-			HIP_IFEL(hip_build_param_esp_prot_mode(i2, ESP_PROT_TRANSFORM_UNUSED),
+			HIP_IFEL(hip_build_param_esp_prot_transform(i2, ESP_PROT_TRANSFORM_UNUSED),
 					-1, "Building of ESP protection mode failed\n");
 		}
 	} else

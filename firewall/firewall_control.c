@@ -288,6 +288,7 @@ int handle_sa_add_request(struct hip_common * msg, struct hip_tlv_common *param)
 	struct hip_crypto_key *enckey = NULL, *authkey = NULL;
 	int retransmission = 0, direction = 0, update = 0, local_port = 0, peer_port = 0;
 	uint8_t nat_mode = 0;
+	uint32_t hchain_anchor = 0;
 	
 	// get all attributes from the message
 	

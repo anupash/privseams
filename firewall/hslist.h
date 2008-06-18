@@ -2,6 +2,7 @@
 #define SLIST_H_
 
 #include <stdlib.h>
+#include "common_types.h"
 
 SList * alloc_slist (void);
 

@@ -18,12 +18,14 @@ int hipl_userspace_ipsec_sadb_add_wrapper(struct in6_addr *saddr,
 					      struct in6_addr *daddr,
 					      struct in6_addr *src_hit, 
 					      struct in6_addr *dst_hit,
-					      uint32_t *spi, int ealg,
+					      uint32_t *spi, uint8_t nat_mode,
+					      uint16_t local_port,
+					      uint16_t peer_port,
+					      uint32_t hchain_anchor, int ealg,
 					      struct hip_crypto_key *enckey,
 					      struct hip_crypto_key *authkey,
 					      int already_acquired,
-					      int direction, int update,
-					      int sport, int dport);
+					      int direction, int update);
 
 int send_next_anchor_to_hipd(unsigned char *anchor);
 
