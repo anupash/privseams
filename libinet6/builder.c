@@ -1090,7 +1090,6 @@ char* hip_param_type_name(const hip_tlv_type_t param_type){
 	//add by santtu
 	case HIP_PARAM_NAT_TRANSFORM: return "HIP_PARAM_NAT_TRANSFORM";	
 	//end add
-	case HIP_PARAM_PSEUDO_HIT: return "HIP_PARAM_PSEUDO_HIT";
 	case SO_HIP_PARAM_LSI: return "SO_HIP_PARAM_LSI";	
 	}
 	return "UNDEFINED";
