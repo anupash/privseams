@@ -446,7 +446,7 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 {	 								
 	int error = 0, ret_hit = 0, ret_addr = 0, tmp_ttl = 0, tmp_port = 0;
 	int c, ret, is_lsi;	
-	int found_hits = 0, lineno = 0, i = 0, err = 0;
+	int found_hits = -1, lineno = 0, i = 0, err = 0;//tere found_hits = 0
 	hip_hit_t hit, tmp_hit, tmp_addr;
 	hip_lsi_t lsi;
 	struct in_addr tmp_v4;

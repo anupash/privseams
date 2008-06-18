@@ -550,7 +550,7 @@ int hip_conf_handle_map(hip_common_t *msg, int action, const char *opt[],
 {
      int err = 0;
      int ret;
-     struct in_addr lsi;
+     struct in_addr lsi, aux;
      in6_addr_t hit, ip6;
 
      HIP_DEBUG("action=%d optc=%d\n", action, optc);
@@ -563,6 +563,10 @@ int hip_conf_handle_map(hip_common_t *msg, int action, const char *opt[],
      HIP_IFEL(convert_string_to_address(opt[1], &ip6), -1,
 	      "string to address conversion failed\n");
      
+     if(!convert_string_to_address_v4(opt[1], &aux)){
+	     HIP_IFEL(IS_LSI32(aux.s_addr), -1, "Missing ip address before lsi\n");
+     }
+
      HIP_IFEL(hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
 				       sizeof(in6_addr_t)), -1,
 	      "build param hit failed\n");
