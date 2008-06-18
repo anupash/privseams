@@ -1961,7 +1961,7 @@ hip_lsi_t *hip_get_lsi_our_by_hits(struct in6_addr *hit_s, struct in6_addr *hit_
 	
 }
 
-int hip_trigger_is_bex_established(struct in6_addr **src_hit, struct in6_addr **dst_hit, struct in_addr *src_ip, struct in_addr *dst_ip){
+int hip_trigger_is_bex_established(struct in6_addr *src_hit, struct in6_addr *dst_hit, struct in_addr *src_ip, struct in_addr *dst_ip){
 
 	int err = 0, res = 0;
 	hip_lsi_t src_ip4, dst_ip4;
@@ -1987,18 +1987,16 @@ int hip_trigger_is_bex_established(struct in6_addr **src_hit, struct in6_addr **
 		if ( (((ipv4_addr_cmp(src_ip, &ha->lsi_our) == 0) && (ipv4_addr_cmp(dst_ip, &ha->lsi_peer) == 0))
 		      || ((ipv4_addr_cmp(dst_ip, &ha->lsi_our) == 0) &&  (ipv4_addr_cmp(src_ip, &ha->lsi_peer) == 0)))
 		     && ha->state == HIP_STATE_ESTABLISHED){
-			*src_hit = &(ha->hit_our);
-			*dst_hit = &(ha->hit_peer);
+			*src_hit = ha->hit_our;
+			*dst_hit = ha->hit_peer;
+			res = 1;
+			HIP_DEBUG_HIT("hip_trigger_ha src_hit",src_hit);
+			HIP_DEBUG_HIT("hip_trigger_ha dst_hit",*dst_hit);
 			break;
 		}
         
 	}
         
-	if (*src_hit && *dst_hit){
-		res = 1;
-		_HIP_DEBUG_HIT("hip_trigger_ha src_hit",*src_hit);
-		_HIP_DEBUG_HIT("hip_trigger_ha dst_hit",*dst_hit);
-	}
  out_err:
         if(msg)
                 HIP_FREE(msg);  
@@ -2023,8 +2021,6 @@ int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
 
         HIP_DEBUG_HIT("src_hit is: ", src_hit);
 	HIP_DEBUG_HIT("dst_hit is: ", dst_hit);
-
-
         HIP_DEBUG_IN6ADDR("src_ip is: ", src_ip);        
         HIP_DEBUG_IN6ADDR("dst_ip  is: ", dst_ip);
         
@@ -2095,17 +2091,14 @@ int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
         return err;
 }
 
-struct in6_addr *hip_get_hit_peer_by_lsi_pair(hip_lsi_t *src_lsi, hip_lsi_t *dst_lsi,struct in6_addr *src_hit){
+int hip_get_hit_peer_by_lsi_pair(hip_lsi_t *src_lsi, hip_lsi_t *dst_lsi, 
+				 struct in6_addr *src_hit, struct in6_addr *dst_hit){
         struct hip_common *msg = NULL;
-	struct hip_tlv_common *param;// = NULL;
-	struct in6_addr *dst_hit = NULL;
+	struct hip_tlv_common *param;
 	int hit_size = sizeof(struct in6_addr);
         int err = 0;
 
         HIP_IFE(!(msg = hip_msg_alloc()), -1);
-	HIP_IFE(!(dst_hit = HIP_MALLOC(hit_size, 0)), -1);
-	
-	memset(dst_hit, 0, hit_size);
 
 	if (src_lsi)
 		HIP_IFEL(hip_build_param_contents(msg, (void *)(src_lsi),
@@ -2136,12 +2129,10 @@ struct in6_addr *hip_get_hit_peer_by_lsi_pair(hip_lsi_t *src_lsi, hip_lsi_t *dst
 
 	param = hip_get_next_param(msg, param);
 	if (param && hip_get_param_type(param) == HIP_PARAM_HIT)
-	        memcpy(dst_hit, (struct in6_addr *)hip_get_param_contents_direct(param), hit_size);
+	        *dst_hit = *((struct in6_addr *)hip_get_param_contents_direct(param));
 
  out_err:
-        if (msg)
-                free(msg);
-        return dst_hit;	
+        return err;	
 }
 
 int hip_find_local_lsi(hip_lsi_t * dst_lsi){

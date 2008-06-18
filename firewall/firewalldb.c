@@ -39,9 +39,7 @@ void hip_firewall_hldb_dump(void)
 	int i;
 	firewall_hl_t *this;
 	hip_list_t *item, *tmp;
-	HIP_DEBUG("/////////////////////////////\n");
-	HIP_DEBUG("//////  Firewall db  ///////\n");
-	HIP_DEBUG("/////////////////////////////\n")
+	HIP_DEBUG("---------   Firewall db   ---------\n");
 	HIP_LOCK_HT(&firewall_lsi_hit_db);
 
 	list_for_each_safe(item, tmp, firewall_lsi_hit_db, i)

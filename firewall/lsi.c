@@ -86,7 +86,7 @@ int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src, str
 {
 	int err, msg_type;
 	struct in6_addr src_lsi, dst_lsi;
-	struct in6_addr src_hit, *dst_hit = NULL;
+	struct in6_addr src_hit, dst_hit;
 	firewall_hl_t *entry_peer = NULL;
 
 	HIP_DEBUG("FIREWALL_TRIGGERING OUTGOING LSI %s\n",inet_ntoa(*lsi_dst));
@@ -102,23 +102,21 @@ int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src, str
 	  	if(entry_peer->bex_state)
 			reinject_packet(entry_peer->hit_our, entry_peer->hit_peer, m, 4, 0);
 	}else{
-	  /*Check if bex is already established: Server case
-	   int state_ha = hip_trigger_is_bex_established(&src_hit, &dst_hit, lsi_src, lsi_dst);
-	  if (state_ha){
-	  	HIP_DEBUG("ha is ESTABLISHED!\n");
-			firewall_add_hit_lsi(src_hit, dst_hit, lsi_dst, state_ha);
-				reinject_packet(*src_hit, *dst_hit, m, 4, 0);
-	  }
-	  else{*/
+	        /*Check if bex is already established: Server case*/
+	        int state_ha = hip_trigger_is_bex_established(&src_hit, &dst_hit, lsi_src, lsi_dst);
+		if (state_ha){
+		        HIP_DEBUG("ha is ESTABLISHED!\n");
+			firewall_add_hit_lsi(&src_hit, &dst_hit, lsi_dst, state_ha);
+			reinject_packet(src_hit, dst_hit, m, 4, 0);
+		}
+		else{
 			// Run bex to initialize SP and SA
 			HIP_INFO("Firewall_db empty and no ha ESTABLISHED. Triggering Base Exchange\n");
-			HIP_IFEL(!(dst_hit = hip_get_hit_peer_by_lsi_pair(lsi_src, lsi_dst, &src_hit)), -1 ,"No entry in hadb \n");
-			HIP_DEBUG_HIT("src_hit ",&src_hit);
-			HIP_DEBUG_HIT("dst_hit ",dst_hit);
-			HIP_IFEL(hip_trigger_bex(&src_hit, dst_hit, &src_lsi, &dst_lsi, NULL, NULL), -1, 
+			err = hip_get_hit_peer_by_lsi_pair(lsi_src, lsi_dst, &src_hit, &dst_hit);
+			HIP_IFEL(hip_trigger_bex(&src_hit, &dst_hit, &src_lsi, &dst_lsi, NULL, NULL), -1, 
 			 	 "Base Exchange Trigger failed\n");
-		  	firewall_add_hit_lsi(&src_hit, dst_hit, lsi_dst, 0);
-			//}
+		  	firewall_add_hit_lsi(&src_hit, &dst_hit, lsi_dst, 0);
+		}
 	}
 out_err: 
 	return err;

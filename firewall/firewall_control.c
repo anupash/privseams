@@ -88,6 +88,9 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 	
 	
 	switch(type) {
+	case SO_HIP_FIREWALL_BEX_DONE:
+	        HIP_IFEL(handle_bex_state_update(msg), -1, "hip bex state NOT updated\n");
+	        break;
 	case SO_HIP_IPSEC_ADD_SA: {
 		HIP_DEBUG("Received add sa request from hipd\n");
 		HIP_IFEL(handle_sa_add_request(msg, param), -1, "hip userspace sadb add did NOT succeed\n");
@@ -350,6 +353,29 @@ out_err:
         return err;
 }
 #endif /* CONFIG_HIP_HIPPROXY */
+
+int handle_bex_state_update(struct hip_common * msg, struct hip_tlv_common *param)
+{
+	struct in6_addr *src_hit = NULL, *dst_hit = NULL;
+	int err = 0;
+
+	/* src_hit */
+        param = (struct hip_tlv_common *)hip_get_param(msg, HIP_PARAM_HIT);
+	src_hit = (struct in6_addr *) hip_get_param_contents_direct(param);
+	HIP_DEBUG_HIT("Source HIT: ", src_hit);
+	
+	/* dst_hit */
+	param = hip_get_next_param(msg, param);
+	dst_hit = (struct in6_addr *) hip_get_param_contents_direct(param);
+	HIP_DEBUG_HIT("Destination HIT: ", dst_hit);
+
+	/* update bex_state in firewalldb */
+	if (dst_hit)
+		err = firewall_set_bex_state(src_hit, dst_hit, 1);
+	else
+		err = firewall_set_bex_state(src_hit, dst_hit, -1);
+
+}
 
 int handle_sa_add_request(struct hip_common * msg, struct hip_tlv_common *param)
 {
