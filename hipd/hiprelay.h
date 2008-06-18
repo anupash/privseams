@@ -634,9 +634,11 @@ int hip_relay_rvs(const hip_common_t *i1,
  *                    parameter.
  * @return            zero 
  */ 
+
 int hip_relay_handle_from(hip_common_t *source_msg,
 			  in6_addr_t *rvs_ip,
 			  in6_addr_t *dest_ip, in_port_t *dest_port);
+
 
 /**
  * Reads RVS / HIP Relay configuration from a file. Reads configuration
@@ -658,5 +660,26 @@ int hip_relay_read_config();
  * @note   Truncates existing file to zero length.
  */ 
 int hip_relay_write_config();
+
+//add by santtu
+
+/****
+ * function for full relay service. from I to R
+ *
+ */
+
+int hip_relay_forward_I(const hip_common_t *i1,
+		  const in6_addr_t *i1_saddr,
+		  const in6_addr_t *i1_daddr, hip_relrec_t *rec,
+		  const hip_portpair_t *i1_info,
+		  const uint8_t);
+//from R to I
+int hip_relay_forward_response(const hip_common_t *r,
+			const uint8_t type_hdr, 
+			const in6_addr_t *r_saddr,
+			const in6_addr_t *r_daddr , 
+			const hip_portpair_t *r_info , 
+			const in6_addr_t *relay_to_addr,
+			const in_port_t relay_to_port);
 
 #endif /* HIP_HIPRELAY_H */

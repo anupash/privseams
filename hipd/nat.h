@@ -31,6 +31,8 @@
 #include "debug.h"
 #include "state.h"
 
+#define HIP_USE_ICE
+
 #define HIP_NAT_SLEEP_TIME 2
 /** Maximum length of a UDP packet. */
 #define HIP_MAX_LENGTH_UDP_PACKET 2000
@@ -96,5 +98,9 @@ int hip_nat_on_for_ha(hip_ha_t *, void *);
 void hip_nat_randomize_nat_ports();
 int hip_nat_refresh_port();
 int hip_nat_send_keep_alive(hip_ha_t *, void *);
+
+int hip_nat_handle_transform_in_client(struct hip_common *msg , hip_ha_t *entry);
+int hip_nat_handle_transform_in_server(struct hip_common *msg , hip_ha_t *entry);
+uint16_t hip_nat_get_control();
 #endif /* __NAT_H__ */
 
