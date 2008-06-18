@@ -5,13 +5,6 @@
 
 #include "debug.h"
 
-typedef struct _DList DList;
-struct _DList {
-	void 		 * data;
-	DList * next;
-	DList * prev;	
-};
-
 DList * alloc_list (void);
 
 void free_list (DList * list);

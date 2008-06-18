@@ -11,7 +11,7 @@ CFLAGS = $(hipl_common_cflags) -I/usr/include/libipq/  -L$(HIPL_LIBINET6_LIB) -L
 CFLAGS += `pkg-config --cflags`
 
 include_HEADERS =  firewall.h conntrack.h rule_management.h helpers.h firewall_control.h common_types.h
-include_HEADERS += esp_decrypt.h firewall_defines.h proxydb.h conndb.h esp_decrypt.h
+include_HEADERS += esp_decrypt.h firewall_defines.h proxydb.h conndb.h esp_decrypt.h hslist.h dlist.h
 include_HEADERS += proxy.h opptcp.h useripsec.h
 
 INCLUDES = $(hipl_common_include_paths)
@@ -20,7 +20,7 @@ if HIP_FIREWALL
 
 sbin_PROGRAMS = hipfw
 
-hipfw_SOURCES = firewall.c conntrack.c rule_management.c helpers.c firewall_control.c esp_decrypt.c proxydb.c conndb.c
+hipfw_SOURCES = firewall.c conntrack.c rule_management.c helpers.c firewall_control.c esp_decrypt.c proxydb.c conndb.c hslist.c dlist.c
 hipfw_SOURCES += proxy.c opptcp.c useripsec.c
 
 hipfw_LDADD = /usr/lib/libipq.a ../libinet6/.libs/libinet6.a

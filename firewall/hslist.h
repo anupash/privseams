@@ -3,12 +3,6 @@
 
 #include <stdlib.h>
 
-typedef struct _SList SList;
-struct _SList {
-	void 		 * data;
-	SList 		 * next;	
-};
-
 SList * alloc_slist (void);
 
 void free_slist (SList * list);
