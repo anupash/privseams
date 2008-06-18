@@ -209,7 +209,7 @@ int midauth_verify_solution_m(struct hip_common *hip,
 	         -1, "Solution is wrong\n");
 
 out_err:
-	return 0;
+	return err;
 }
 
 /**
