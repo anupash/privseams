@@ -25,4 +25,4 @@ tags:
 	etags $(libhipgui_a_SOURCES) $(include_HEADERS)
 
 install:
-	cp hipmanager.png /usr/share/pixmaps/hipmanager.png
+	$(install_sh_DATA) hipmanager.png $(DESTDIR)$(datadir)/pixmaps/hipmanager.png

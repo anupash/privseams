@@ -39,7 +39,7 @@
 //#include "hip_sadb.h"
 
 
-#define HIP_FW_DEFAULT_RULE_FILE "/etc/hip/firewall.conf"
+#define HIP_FW_DEFAULT_RULE_FILE "/etc/hip/firewall_conf"
 #define HIP_FW_DEFAULT_TIMEOUT   1
 #define HIP_FW_CONFIG_FILE_EX \
 "# format: HOOK [match] TARGET\n"\
