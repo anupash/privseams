@@ -81,7 +81,7 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 		next_hdr_offset = sizeof(struct ip);
 		
 		// check whether to use UDP encapsulation or not
-		if (entry->encap_mode == 1)
+		if (entry->nat_mode == 1)
 		{
 			out_udp_hdr = (struct udphdr *) (esp_packet + next_hdr_offset);
 			next_hdr_offset += sizeof(struct udphdr);
@@ -114,7 +114,7 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 				// TODO add stepping
 				hip_hchain_store_get_hchain(HC_LENGTH_STEP1, entry->next_hchain);
 				// issue UPDATE message to be sent by hipd
-				send_next_anchor_to_hipd(entry->next_hchain->anchor_element);
+				send_next_anchor_to_hipd(entry->next_hchain->anchor_element->hash);
 			}
 			
 			// activate next hchain if current one is depleted
@@ -174,7 +174,7 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 		*esp_packet_len += encryption_len;
 
 		// finally we have all the information to set up the missing headers
-		if (entry->encap_mode == 1) {
+		if (entry->nat_mode == 1) {
 			// the length field covers everything starting with UDP header
 			add_udp_header(out_udp_hdr, *esp_packet_len - sizeof(struct ip), entry,
 					preferred_local_addr, preferred_peer_addr);

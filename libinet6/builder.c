@@ -1076,7 +1076,8 @@ char* hip_param_type_name(const hip_tlv_type_t param_type){
 	case HIP_PARAM_UNIT_TEST: return "HIP_PARAM_UNIT_TEST";
 	case HIP_PARAM_VIA_RVS: return "HIP_PARAM_VIA_RVS";
 	case HIP_PARAM_PSEUDO_HIT: return "HIP_PARAM_PSEUDO_HIT";
-	case HIP_PARAM_ESP_PROT_MODE: return "HIP_PARAM_ESP_PROT_MODE";
+	case HIP_PARAM_ESP_PROT_TRANSFORM: return "HIP_PARAM_ESP_PROT_TRANSFORM";
+	case HIP_PARAM_ESP_PROT_ANCHOR: return "HIP_PARAM_ESP_PROT_ANCHOR";
 	}
 	return "UNDEFINED";
 }
@@ -2769,7 +2770,7 @@ int hip_build_param_esp_prot_anchor(struct hip_common *msg, uint32_t anchor)
 
 	hip_set_param_type(&esp_anchor, HIP_PARAM_ESP_PROT_ANCHOR);
 	hip_calc_generic_param_len(&esp_anchor, sizeof(struct esp_prot_anchor), 0);
-	esp_anchor.anchor = htonl(*anchor);
+	esp_anchor.anchor = htonl(anchor);
 	err = hip_build_param(msg, &esp_anchor);
 	
 	return err;

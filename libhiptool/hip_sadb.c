@@ -35,6 +35,7 @@
 #include "hip_sadb.h"
 //#include <hip/hip_funcs.h> /* gettimeofday() for win32 */
 #include "win32-pfkeyv2.h"
+#include "state.h"
 
 /*
  * Globals

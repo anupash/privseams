@@ -653,7 +653,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	uint16_t mask = 0;
 	uint32_t spi_in = 0;
 	struct esp_prot_transform *prot_transform = NULL;
-	uint_8 prot_transform = 0;
+	uint8_t transform = 0;
 	uint32_t anchor = 0;
 	
 	_HIP_DEBUG("hip_create_i2() invoked.\n");
@@ -1456,6 +1456,7 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 	uint16_t mask = 0;
 	uint8_t lifetime;
 	uint32_t spi_in;
+	uint32_t anchor = 0;
         
 	_HIP_DEBUG("hip_create_r2() invoked.\n");
 	/* Assume already locked entry */
@@ -1505,7 +1506,7 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 	{
 		if (has_more_anchors())
 		{
-			HIP_IFEL(get_next_anchor(&anchor)), -1, "no anchor elements available, threading?");
+			HIP_IFEL(get_next_anchor(&anchor), -1, "no anchor elements available, threading?");
 			HIP_IFEL(hip_build_param_esp_prot_anchor(r2, anchor), -1,
 				 "Building of ESP protection anchor failed\n");
 			HIP_DEBUG("sending anchor element: %u", anchor);
@@ -1614,7 +1615,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	struct esp_prot_anchor *prot_anchor = NULL;
 	uint32_t anchor = 0;
 	struct esp_prot_transform *prot_transform = NULL;
-	uint_8 prot_transform = 0;
+	uint8_t transform = 0;
         
 #ifdef CONFIG_HIP_HI3
 	int n_addrs = 0;
@@ -2332,6 +2333,9 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	int err = 0, tfm = 0, retransmission = 0, type_count = 0;
 	int *reg_types = NULL;
 	uint32_t spi_recvd = 0, spi_in = 0;
+	struct hip_param *param = NULL;
+	struct esp_prot_anchor *prot_anchor = NULL;
+	uint32_t anchor = 0;
 	
 #ifdef CONFIG_HIP_HI3
 	if( r2_info->hi3_in_use ) {
