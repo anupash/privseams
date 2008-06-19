@@ -1,0 +1,175 @@
+diff -Naur a/kamikaze_7.09/package/hipl/Makefile b/kamikaze_7.09/package/hipl/Makefile
+--- a/kamikaze_7.09/package/hipl/Makefile	2008-06-12 17:05:20.000000000 +0300
++++ b/kamikaze_7.09/package/hipl/Makefile	1970-01-01 02:00:00.000000000 +0200
+@@ -1,66 +0,0 @@
+-include $(TOPDIR)/rules.mk
+-
+-PKG_NAME:=hipl--openwrt
+-PKG_VERSION:=2.6--patch-7
+-
+-PKG_SOURCE:=$(PKG_NAME)--$(PKG_VERSION).tar.gz
+-PKG_SOURCE_URL:=http://localhost/hipl/
+-PKG_CAT:=zcat
+-
+-PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)--$(PKG_VERSION)
+-PKG_INSTALL_DIR:=$(PKG_BUILD_DIR)/ipkg-install
+-
+-include $(INCLUDE_DIR)/package.mk
+-
+-define Package/hipl
+-  SECTION:=net
+-  CATEGORY:=Network
+-  DEPENDS:=+openssl +libxml2 +lipq +lc
+-  TITLE:=Host identity protocol
+-  URL:=hipl.hiit.fi 
+-
+-endef
+-
+-CONFIGURE_VARS += \
+-	LIBS="-lxml2 -lcrypto -lm -lz" \
+-	CPPFLAGS="$$$$CPPFLAGS -I$(STAGING_DIR)/usr/include/libxml2 -I$(STAGING_DIR)/usr/include -I$(STAGING_DIR)/include" \
+-	LDFLAGS="$$$$LDFLAGS -L$(STAGING_DIR)/usr/lib -L$(STAGING_DIR)/lib" \
+-	OPENWRT="-L$(STAGING_DIR)/usr/lib -L$(STAGING_DIR)/lib" \
+-	OPENWRT_LIB_STATIC="$(STAGING_DIR)/lib/libc.a" \
+-	
+-define Build/Configure
+-	(cd $(PKG_BUILD_DIR); rm -rf config.{cache,status}; \
+-		./autogen.sh				    \
+-	);
+-
+-	(cd  $(PKG_BUILD_DIR)/libinet6;  ln -v -s include_glibc23 include; \
+-	);
+-
+-	(cp $(PKG_BUILD_DIR)/libinet6/include/ifaddrs.h $(STAGING_DIR)/include/ \
+-	);
+-
+-	(cd ..; \
+-	);
+-
+-	$(CONFIGURE_VARS);
+-
+-	$(call Build/Configure/Default, \
+-		--enable-shared \
+-		--disable-nls \
+-		--disable-agent  \
+-		--enable-opendht \
+-		--enable-opewrt  \
+-		--disable-privsep \
+-	);
+-endef
+-
+-define Build/Compile
+-	($(CONFIGURE_VARS) \
+-	$(MAKE) -C $(PKG_BUILD_DIR));
+-endef
+-
+-define Package/hipl/install
+-	$(INSTALL_DIR) $(1)/bin/
+-endef
+-
+-$(eval $(call BuildPackage,hipl))
+diff -Naur a/kamikaze_7.09/package/libxml2/Makefile b/kamikaze_7.09/package/libxml2/Makefile
+--- a/kamikaze_7.09/package/libxml2/Makefile	2008-06-12 16:00:09.000000000 +0300
++++ b/kamikaze_7.09/package/libxml2/Makefile	1970-01-01 02:00:00.000000000 +0200
+@@ -1,101 +0,0 @@
+-# 
+-# Copyright (C) 2006 OpenWrt.org
+-#
+-# This is free software, licensed under the GNU General Public License v2.
+-# See /LICENSE for more information.
+-#
+-# $Id: Makefile 7271 2007-05-18 09:43:14Z florian $
+-
+-include $(TOPDIR)/rules.mk
+-
+-PKG_NAME:=libxml2
+-PKG_VERSION:=2.6.32
+-PKG_RELEASE:=1
+-
+-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
+-PKG_SOURCE_URL:=http://xmlsoft.org/sources/ \
+-	ftp://fr.rpmfind.net/pub/libxml/
+-PKG_CAT:=zcat
+-
+-PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
+-PKG_INSTALL_DIR:=$(PKG_BUILD_DIR)/ipkg-install
+-
+-include $(INCLUDE_DIR)/package.mk
+-
+-define Package/libxml2
+-  SECTION:=libs
+-  CATEGORY:=Libraries
+-  DEPENDS:=+libpthread +zlib
+-  TITLE:=Gnome XML library
+-  DESCRIPTION:=\
+-  	A library for manipulating XML and HTML resources.
+-  URL:=http://xmlsoft.org/
+-endef
+-
+-define Build/Configure
+-	$(call Build/Configure/Default, \
+-		--enable-shared \
+-		--enable-static \
+-		--with-c14n \
+-		--with-html \
+-		--without-ftp \
+-		--without-http \
+-		--without-iconv \
+-		--without-iso8859x \
+-		--with-legacy \
+-		--with-output \
+-		--with-reader \
+-		--with-sax1 \
+-		--with-schemas \
+-		--with-threads \
+-		--with-tree \
+-		--with-valid \
+-		--with-writer \
+-		--with-xinclude \
+-		--with-xpath \
+-		--with-xptr \
+-		--with-zlib \
+-		--with-regexp \
+-	)
+-endef
+-
+-define Build/Compile
+-	$(MAKE) -C $(PKG_BUILD_DIR) \
+-		DESTDIR="$(PKG_INSTALL_DIR)" \
+-		all install
+-endef
+-
+-define Build/InstallDev
+-	mkdir -p $(STAGING_DIR)/usr/bin
+-	$(CP) $(PKG_INSTALL_DIR)/usr/bin/xml2-config $(STAGING_DIR)/usr/bin/
+-	mkdir -p $(STAGING_DIR)/usr/include
+-	$(CP) $(PKG_INSTALL_DIR)/usr/include/libxml2 $(STAGING_DIR)/usr/include/
+-	mkdir -p $(STAGING_DIR)/usr/lib
+-	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libxml2.{a,so*} $(STAGING_DIR)/usr/lib/
+-	mkdir -p $(STAGING_DIR)/usr/lib/pkgconfig
+-	$(CP) $(PKG_INSTALL_DIR)/usr/lib/pkgconfig/libxml-2.0.pc $(STAGING_DIR)/usr/lib/pkgconfig/
+-	$(SED) 's,-I$$$${includedir}/libxml2,,g' $(STAGING_DIR)/usr/bin/xml2-config
+-	$(SED) 's,-I$$$${includedir},,g' $(STAGING_DIR)/usr/bin/xml2-config
+-	$(SED) 's,-I$(STAGING_DIR)/usr/include,,g' $(STAGING_DIR)/usr/bin/xml2-config
+-	$(SED) 's,-L$$$${libdir},,g' $(STAGING_DIR)/usr/bin/xml2-config
+-	$(SED) 's,-L$(STAGING_DIR)/usr/lib,,g' $(STAGING_DIR)/usr/bin/xml2-config
+-	$(SED) 's,-I$$$${includedir}/libxml2,,g' $(STAGING_DIR)/usr/lib/pkgconfig/libxml-2.0.pc
+-	$(SED) 's,-L$$$${libdir},,g' $(STAGING_DIR)/usr/lib/pkgconfig/libxml-2.0.pc
+-	$(SED)  "s,"prefix\=/usr",prefix=$(STAGING_DIR)/usr," $(STAGING_DIR)/usr/lib/pkgconfig/libxml-2.0.pc
+-	$(SED)  "s,"exec_prefix\=/usr",exec_prefix=$(STAGING_DIR)/usr," $(STAGING_DIR)/usr/lib/pkgconfig/libxml-2.0.pc
+-endef
+-
+-define Build/UninstallDev
+-	rm -rf \
+-		$(STAGING_DIR)/usr/bin/xml2-config \
+-		$(STAGING_DIR)/usr/include/libxml2 \
+-		$(STAGING_DIR)/usr/lib/libxml2.{a,so*} \
+-		$(STAGING_DIR)/usr/lib/pkgconfig/libxml-2.0.pc
+-endef
+-
+-define Package/libxml2/install
+-	$(INSTALL_DIR) $(1)/usr/lib
+-	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libxml2.so.* $(1)/usr/lib/
+-endef
+-
+-$(eval $(call BuildPackage,libxml2))
