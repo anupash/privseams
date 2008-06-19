@@ -242,6 +242,7 @@ int sendto_hipd(void *msg, size_t len)
 	alen = sizeof(sock_addr);
 	n = sendto(hip_fw_sock, msg, len, 0,
 		   (struct sockaddr *)&sock_addr, alen);
+	
 
 	return (n);
 }

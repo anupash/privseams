@@ -6,9 +6,9 @@
  */
  
 #include "init.h"
-#ifdef CONFIG_HIP_PRIVSEP
-#include <sys/capability.h>
-#endif /* CONFIG_HIP_PRIVSEP */
+#ifndef OPENWRT
+//#include <sys/capability.h>
+#endif
 #include <sys/prctl.h>
 #include <sys/types.h>
 #include "debug.h"
@@ -263,7 +263,8 @@ int hipd_init(int flush_ipsec, int killold)
 	bzero(&daemon_addr, sizeof(daemon_addr));
 	daemon_addr.sin6_family = AF_INET6;
 	daemon_addr.sin6_port = htons(HIP_DAEMON_LOCAL_PORT);
-	daemon_addr.sin6_addr = in6addr_loopback;
+	//daemon_addr.sin6_addr = in6addr_loopback;
+	daemon_addr.sin6_addr = in6addr_any;
 	HIP_IFEL(bind(hip_user_sock, (struct sockaddr *)& daemon_addr,
 		      sizeof(daemon_addr)), -1, "Bind on daemon addr failed\n");
 

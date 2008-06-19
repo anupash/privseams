@@ -234,8 +234,12 @@ int firewall_init_rules()
 	hip_fw_handler[NF_IP_LOCAL_OUT][TCP_PACKET] = hip_fw_handle_tcp_output;
 
 	hip_fw_handler[NF_IP_FORWARD][OTHER_PACKET] = hip_fw_handle_other_forward;
-	hip_fw_handler[NF_IP_FORWARD][HIP_PACKET] = NULL;
-	hip_fw_handler[NF_IP_FORWARD][ESP_PACKET] = NULL;
+	
+	//apply rules for forwarded hip and esp traffic
+	hip_fw_handler[NF_IP_FORWARD][HIP_PACKET] = hip_fw_handle_hip_forward;
+	hip_fw_handler[NF_IP_FORWARD][ESP_PACKET] = hip_fw_handle_esp_forward;
+	//do not drop those files by default
+	
 	hip_fw_handler[NF_IP_FORWARD][TCP_PACKET] = hip_fw_handle_tcp_forward;
 
 	HIP_DEBUG("Enabling forwarding for IPv4 and IPv6\n");
@@ -1194,6 +1198,21 @@ int hip_fw_handle_other_forward(hip_fw_context_t *ctx) {
 	return verdict;
 }
 
+int hip_fw_handle_hip_forward (hip_fw_context_t *ctx) {
+	return filter_hip(&ctx->src, 
+					&ctx->dst, 
+					ctx->transport_hdr.hip, 
+					ctx->ipq_packet->hook,
+					ctx->ipq_packet->indev_name,
+					ctx->ipq_packet->outdev_name);	
+}
+
+int hip_fw_handle_esp_forward (hip_fw_context_t *ctx) {
+	return filter_esp(&ctx->dst, 
+					  ctx->transport_hdr.esp, 
+					  ctx->ipq_packet->hook);
+}
+
 int hip_fw_handle_tcp_forward(hip_fw_context_t *ctx) {
 	HIP_DEBUG("\n");
 
@@ -1427,16 +1446,14 @@ int main(int argc, char **argv)
 	// create firewall queue handles for IPv4 traffic
 	// FIXME died handle will still be used below
 	h4 = ipq_create_handle(0, PF_INET);
-	if (!h4) {
-		HIP_ERROR("IPQ error: %s \n", ipq_errstr());
+	_HIP_DEBUG("IPQ error: %s \n", ipq_errstr());
+	if (!h4)
 		die(h4);
-	}
 		
 	status = ipq_set_mode(h4, IPQ_COPY_PACKET, BUFSIZE);
-	if (status < 0) {
-		HIP_ERROR("IPQ error: %s \n", ipq_errstr());
+	_HIP_DEBUG("IPQ error: %s \n", ipq_errstr());
+	if (status < 0)
 		die(h4);
-	}
 
 	// create firewall queue handles for IPv6 traffic
 	// FIXME died handle will still be used below
@@ -1448,7 +1465,7 @@ int main(int argc, char **argv)
 	status = ipq_set_mode(h6, IPQ_COPY_PACKET, BUFSIZE);
 	_HIP_DEBUG("IPQ error: %s \n", ipq_errstr());
 	if (status < 0)
-		die(h6);
+		die(h6); 	
 
 	// set up ip(6)tables rules
 	firewall_init_rules();

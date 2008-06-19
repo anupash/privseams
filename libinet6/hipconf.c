@@ -1423,6 +1423,7 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
      hip_common_t *msg = NULL;
      char *text = NULL;
      
+     
      /* Check that we have at least one command line argument. */
      HIP_IFEL((argc < 2), -1, "Invalid arguments.\n\n%s usage:\n%s\n",
 	      argv[0], hipconf_usage);
@@ -1477,6 +1478,7 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
 
      /* send msg to hipd */
      HIP_IFEL(hip_send_daemon_info_wrapper(msg, send_only), -1, "sending msg failed\n");
+     //HIP_IFEL(hip_test_deamon_info_wrapper(), -1, "sending msg failed\n");
      HIP_INFO("hipconf command successful\n");
 
  out_err:

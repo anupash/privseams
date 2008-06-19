@@ -22,8 +22,9 @@ hipd_SOURCES += input.c output.c hidb.c cookie.c netdev.c bos.c nat.c icookie.c
 hipd_SOURCES += escrow.c init.c maintenance.c accessor.c oppipdb.c dh.c
 hipd_SOURCES += tcptimeout.c cert.c
 
+
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
-hipd_LDADD = ../libinet6/.libs/libinet6.a
+hipd_LDADD = $(OPENWRT_LIB_STATIC) ../libinet6/.libs/libinet6.a
 if HIP_CORPORATE
   hipd_LDADD += -lhiptool
 else
@@ -34,7 +35,7 @@ hipd_LDFLAGS = -lcrypto $(HIPL_XMLL) -lm -DHIPL_HIPD
 
 if HIP_PRIVSEP
 if HIP_OPENWRT
-  hipd_LDFLAGS +=
+  hipd_LDFLAGS += 
 else
   hipd_LDFLAGS += -lcap
 endif

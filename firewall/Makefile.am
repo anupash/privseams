@@ -23,7 +23,7 @@ sbin_PROGRAMS = hipfw
 hipfw_SOURCES = firewall.c conntrack.c rule_management.c helpers.c firewall_control.c esp_decrypt.c proxydb.c conndb.c dlist.c hslist.c
 hipfw_SOURCES += proxy.c opptcp.c useripsec.c
 
-hipfw_LDADD = /usr/lib/libipq.a ../libinet6/.libs/libinet6.a
+hipfw_LDADD =  ../libinet6/.libs/libinet6.a
 if HIP_CORPORATE
   hipfw_LDADD += -lhiptool
 else

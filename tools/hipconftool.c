@@ -36,13 +36,13 @@ int main(int argc, char *argv[]) {
 	const char *cfile = "default";
 
 	/* we don't want log messages via syslog */
-	hip_set_logtype(LOGTYPE_STDERR);
+	(LOGTYPE_STDERR);
 	hip_set_logfmt(LOGFMT_SHORT);
 	HIP_IFEL(hip_set_auto_logdebug(cfile), -1,
 	  "Error: Cannot set the debugging parameter.\n");
 
 	
-	HIP_IFEL(hip_do_hipconf(argc, argv, 0), -2,
+	HIP_IFEL(hip_do_hipconf(argc, argv, 1), -2,
 	  "Error: Cannot configure hip daemon.\n");
 
  out_err:

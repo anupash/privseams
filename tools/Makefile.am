@@ -11,13 +11,17 @@ dist_sbin_SCRIPTS  += util.py
 # won't build because there is also the linux/net/ipv6/hip/debug.h include.
 #
 
-CFLAGS = $(hipl_common_cflags) # -L$(HIPL_LIBINET6_LIB)
+if HIP_OPENWRT
+	CFLAGS =
+else
+	CFLAGS = $(hipl_common_cflags) # -L$(HIPL_LIBINET6_LIB)
+endif
 
 INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
 
 include_HEADERS = hipconftool.h
 
-LDFLAGS = -lcrypto $(HIP_XMLL)
+LDFLAGS = -lc -lcrypto $(HIP_XMLL) $(OPENWRT)
 
 if HIP_OPENDHT
   INCLUDES += -I../opendht
@@ -31,6 +35,8 @@ LDADD=
 if HIP_OPPORTUNISTIC
   LDADD += ../libopphip/.libs/libopphip.a
 endif
+
+LDADD+= $(OPENWRT_LIB_STATIC)
 
 LDADD += ../libinet6/.libs/libinet6.a
 if HIP_CORPORATE
