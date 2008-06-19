@@ -739,7 +739,7 @@ int hip_private_host_id_to_hit(const struct hip_host_id *host_id,
  */
 int check_and_create_dir(char *dirname, mode_t mode) {
 	int err = 0;
-	struct stat dir_stat;
+	static struct stat dir_stat;
 
 	HIP_INFO("dirname=%s mode=%o\n", dirname, mode);
 	err = stat(dirname, &dir_stat);
