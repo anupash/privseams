@@ -41,7 +41,6 @@ int init_esp_input(int family, int proto);
 
 int pfkey_send_acquire(struct sockaddr *target);
 
-#if 0
 /*
  * Global definitions
  */
@@ -53,9 +52,6 @@ int pfkey_send_acquire(struct sockaddr *target);
 #define HIP_DNS_SUFFIX ".hip"
 extern __u64 g_tap_mac;
 extern int g_state;
-
-
-
 
 /* The below prefix applies to the uppermost 28 bits only (RFC 4843) */
 #define HIT_PREFIX_SHA1_32BITS HIP_HIT_TYPE_MASK_100
@@ -95,6 +91,6 @@ extern int g_state;
 	ntohs((addr).s6_addr16[7])
 #endif
 
-#endif
-#endif
+#endif  /* 0 */
+
 

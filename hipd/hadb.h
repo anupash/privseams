@@ -202,7 +202,7 @@ void hip_hadb_delete_peer_addrlist_one(hip_ha_t *entry, struct in6_addr *addr);
 
 int hip_add_peer_map(const struct hip_common *input);
 
-int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr);
+int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr, hip_lsi_t *peer_lsi);
 
 int hip_del_peer_info(hip_hit_t *, hip_hit_t *);
 
@@ -275,6 +275,7 @@ struct hip_peer_map_info {
 	hip_hit_t peer_hit;
 	struct in6_addr our_addr;
 	struct in6_addr peer_addr;
+	hip_lsi_t peer_lsi;
 };
 
 void hip_hadb_remove_hs(uint32_t spi);
@@ -360,5 +361,22 @@ hip_ha_t *hip_hadb_find_by_blind_hits(hip_hit_t *local_blind_hit,
 int hip_handle_get_ha_info(hip_ha_t *entry, struct hip_common *msg);
 int hip_hadb_find_peer_address(hip_ha_t *entry, void *id);
 int hip_hadb_map_ip_to_hit(hip_ha_t *entry, void *id2);
+
+//add by santtu
+int hip_hadb_add_udp_addr_to_spi(hip_ha_t *entry, uint32_t spi,
+			     struct in6_addr *addr,
+			     int is_bex_address, uint32_t lifetime,
+			     int is_preferred_addr,
+			     uint16_t port,
+			     uint32_t priority);
+
+/*lsi support functions*/
+struct in_addr hip_generate_peer_lsi();
+void hip_hadb_set_lsi_pair(hip_ha_t *entry);
+int hip_hadb_exists_lsi(hip_lsi_t *lsi);
+int hip_hadb_find_lsi(hip_ha_t *entry, void *lsi);
+hip_ha_t *hip_hadb_try_to_find_by_peer_lsi(hip_lsi_t *lsi);
+hip_ha_t *hip_hadb_try_to_find_by_pair_lsi(hip_lsi_t *lsi_src, hip_lsi_t *lsi_dst);
+hip_hit_t *hip_hadb_get_peer_hit_by_peer_lsi(hip_lsi_t *lsi);
 
 #endif /* HIP_HADB_H */

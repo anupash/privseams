@@ -92,4 +92,3 @@ hiprelay.c: hiprelay.h
 configfilereader.c: configfilereader.h
 registration.c: registration.h
 linkedlist.c: linkedlist.h
-

@@ -29,12 +29,14 @@ int hip_sendto(const struct hip_common *msg, const struct sockaddr *dst){
 int hip_handle_user_msg(struct hip_common *msg,
 			struct sockaddr_in6 *src)
 {
-	hip_hit_t *hit, *src_hit, *dst_hit;
-	struct in6_addr *src_ip, *dst_ip;
+	hip_hit_t *hit = NULL, *src_hit = NULL, *dst_hit = NULL;
+	hip_lsi_t *lsi, *src_lsi = NULL, *dst_lsi = NULL;
+	in6_addr_t *src_ip = NULL, *dst_ip = NULL;
 	hip_ha_t *entry = NULL, *server_entry = NULL;
 	int err = 0, msg_type = 0, n = 0, len = 0, state = 0, reti = 0;
 	int access_ok = 0, send_response = 1, is_root;
 	HIP_KEA * kea = NULL;
+	struct hip_tlv_common *param = NULL;
 
 	HIP_ASSERT(src->sin6_family == AF_INET6);
 
@@ -84,7 +86,8 @@ int hip_handle_user_msg(struct hip_common *msg,
 	case SO_HIP_DEL_LOCAL_HI:
 		err = hip_handle_del_local_hi(msg);
 		break;
-	case SO_HIP_ADD_PEER_MAP_HIT_IP:
+	case SO_HIP_ADD_PEER_MAP_HIT_IP:	
+		HIP_DEBUG("Handling SO_HIP_ADD_PEER_MAP_HIT_IP.\n");
 		err = hip_add_peer_map(msg);
 		if(err)
 		{
@@ -279,43 +282,45 @@ int hip_handle_user_msg(struct hip_common *msg,
 	}
 	break; 
         case SO_HIP_DHT_SERVING_GW:
-          {
-		  struct in_addr ip_gw;
-		  struct in6_addr ip_gw_mapped;
-		  int rett = 0, errr = 0;
-		  struct sockaddr_in *sa;
-		  if (opendht_serving_gateway == NULL) {
-			  opendht_serving_gateway = malloc(sizeof(struct addrinfo));
-			  memset(opendht_serving_gateway, 0, sizeof(struct addrinfo));
-		  }
-		  if (opendht_serving_gateway->ai_addr == NULL) {
-			  opendht_serving_gateway->ai_addr = malloc(sizeof(struct sockaddr_in));
-			  memset(opendht_serving_gateway->ai_addr, 0, sizeof(struct sockaddr_in));
-		  }
-		  sa = (struct sockaddr_in*)opendht_serving_gateway->ai_addr;
-		  rett = inet_pton(AF_INET, inet_ntoa(sa->sin_addr), &ip_gw);
-		  IPV4_TO_IPV6_MAP(&ip_gw, &ip_gw_mapped);
-		  if (hip_opendht_inuse == SO_HIP_DHT_ON) {
-			  errr = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped, 
-								 opendht_serving_gateway_ttl,
-								 opendht_serving_gateway_port);
-		  } else { /* not in use mark port and ttl to 0 so 'client' knows */
-			  errr = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped, 0,0);
-		  }
-		  
-		  if (errr)
-		  {
-			  HIP_ERROR("Build param hit failed: %s\n", strerror(errr));
-			  goto out_err;
-		  }
-		  errr = hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW, 0);
-		  if (errr)
-		  {
-			  HIP_ERROR("Build hdr failed: %s\n", strerror(errr));
-		  }
-		  HIP_DEBUG("Building gw_info complete\n");
-          }
-          break;
+        {
+	        struct in_addr ip_gw;
+		struct in6_addr ip_gw_mapped;
+		int rett = 0, errr = 0;
+		struct sockaddr_in *sa;
+		if (opendht_serving_gateway == NULL) {
+		        opendht_serving_gateway = malloc(sizeof(struct addrinfo));
+			memset(opendht_serving_gateway, 0, sizeof(struct addrinfo));
+		}
+		if (opendht_serving_gateway->ai_addr == NULL) {
+		        opendht_serving_gateway->ai_addr = malloc(sizeof(struct sockaddr_in));
+			memset(opendht_serving_gateway->ai_addr, 0, sizeof(struct sockaddr_in));
+		}
+		sa = (struct sockaddr_in*)opendht_serving_gateway->ai_addr;
+		rett = inet_pton(AF_INET, inet_ntoa(sa->sin_addr), &ip_gw);
+		IPV4_TO_IPV6_MAP(&ip_gw, &ip_gw_mapped);
+		HIP_DEBUG_HIT("dht gateway address (mapped) to be sent", &ip_gw_mapped);
+	    
+		memset(msg, 0, HIP_MAX_PACKET);
+	    	   
+		if (hip_opendht_inuse == SO_HIP_DHT_ON) {
+  		        errr = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped,
+							       opendht_serving_gateway_ttl,
+							       opendht_serving_gateway_port);
+		} else { /* not in use mark port and ttl to 0 so 'client' knows*/
+  		        errr = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped, 0,0);
+		}
+	    
+		if (errr) {
+		        HIP_ERROR("Build param hit failed: %s\n", strerror(errr));
+			goto out_err;
+		}
+		errr = hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW, 0);
+		if (errr){
+		        HIP_ERROR("Build hdr failed: %s\n", strerror(errr));
+		}
+		HIP_DEBUG("Building gw_info complete\n");
+        }
+        break;
         case SO_HIP_DHT_SET:
 	{
                 extern char opendht_name_mapping;
@@ -886,10 +891,56 @@ int hip_handle_user_msg(struct hip_common *msg,
 		break;
 	}
 	case SO_HIP_TRIGGER_BEX:
-		HIP_DUMP_MSG(msg);
+		HIP_DEBUG("SO_HIP_TRIGGER_BEX\n");
+		hip_firewall_status = 1;
 		err = hip_netdev_trigger_bex_msg(msg);
 		goto out_err;
-	  break;
+	  	break;
+	case SO_HIP_GET_LSI_PEER:
+	case SO_HIP_GET_LSI_OUR:
+		while((param = hip_get_next_param(msg, param))){
+			if (hip_get_param_type(param) == HIP_PARAM_HIT){
+		    		if (!src_hit)
+		      			src_hit = (struct in6_addr *)hip_get_param_contents_direct(param);
+		    		else 
+		      			dst_hit = (struct in6_addr *)hip_get_param_contents_direct(param);
+		  	}
+	  	}
+		if (src_hit && dst_hit){
+		        entry = hip_hadb_find_byhits(src_hit, dst_hit);
+		        if (entry){
+			        lsi = (msg_type == SO_HIP_GET_LSI_PEER) ? &entry->lsi_peer : &entry->lsi_our;
+			        /*if(msg_type == SO_HIP_GET_LSI_PEER)
+		                        lsi = &aux->lsi_peer;
+			        else if(msg_type == SO_HIP_GET_LSI_OUR)
+				lsi = &aux->lsi_our;*/
+		        }
+		}
+	        break;
+	case SO_HIP_IS_OUR_LSI:
+		lsi = (hip_lsi_t *)hip_get_param_contents(msg, SO_HIP_PARAM_LSI);
+	  	if (!hip_hidb_exists_lsi(lsi))
+	    		lsi = NULL;
+	  	break;
+	case SO_HIP_GET_STATE_HA:
+	case SO_HIP_GET_PEER_HIT_BY_LSIS:
+		while((param = hip_get_next_param(msg, param))){
+	    		if (hip_get_param_type(param) == SO_HIP_PARAM_LSI){
+	      			if (!src_lsi)
+					src_lsi = (struct in_addr *)hip_get_param_contents_direct(param);
+	      			else 
+					dst_lsi = (struct in_addr *)hip_get_param_contents_direct(param);
+	    		}
+	  	}
+
+	  	entry = hip_hadb_try_to_find_by_pair_lsi(src_lsi, dst_lsi);
+          	if (entry && (entry->state == HIP_STATE_ESTABLISHED || 
+		    msg_type == SO_HIP_GET_PEER_HIT_BY_LSIS)){
+	    		HIP_DEBUG("Entry found in the ha database \n\n");
+	      		src_hit = &entry->hit_our;
+	      		dst_hit = &entry->hit_peer;
+	  	}
+	  	break;
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;
@@ -898,21 +949,35 @@ int hip_handle_user_msg(struct hip_common *msg,
  out_err:
 
 	if (send_response) {
+	        HIP_DEBUG("Send response\n");
 		if (err)
-			hip_set_msg_err(msg, 1);
-		/* send a response (assuming that it is written to the msg */
+		        hip_set_msg_err(msg, 1);
+		else{
+		        if ((msg_type == SO_HIP_TRIGGER_BEX && lsi) ||
+		            ((msg_type == SO_HIP_GET_STATE_HA || msg_type == SO_HIP_GET_PEER_HIT_BY_LSIS) 
+			    && src_hit && dst_hit)){
+		                HIP_IFEL(hip_build_param_contents(msg, (void *)src_hit,
+					 HIP_PARAM_HIT, sizeof(struct in6_addr)), -1,
+				 	 "build param HIP_PARAM_HIT  failed\n");
+		    		HIP_IFEL(hip_build_param_contents(msg, (void *)dst_hit,
+					 HIP_PARAM_HIT, sizeof(struct in6_addr)), -1,
+				 	 "build param HIP_PARAM_HIT  failed\n");
+		        }
+			if (((msg_type == SO_HIP_GET_LSI_PEER || msg_type == SO_HIP_GET_LSI_OUR) 
+			    && lsi) || msg_type == SO_HIP_IS_OUR_LSI)
+		                HIP_IFEL(hip_build_param_contents(msg, (void *)lsi,
+					 SO_HIP_PARAM_LSI, sizeof(hip_lsi_t)), -1,
+				 	 "build param HIP_PARAM_LSI  failed\n");
+		}
+
 		len = hip_get_msg_total_len(msg);
 		n = hip_sendto(msg, src);
-		if(n != len) {
-			HIP_ERROR("hip_sendto() failed.\n");
+		if(n != len)	
 			err = -1;
-		} else {
-			HIP_DEBUG("Response sent ok\n");
-		
-		}
-	} else {
+		else
+			HIP_DEBUG("Response sent ok\n");	
+	} else
 		HIP_DEBUG("No response sent\n");
-	}
 
 	return err;
 }
