@@ -6,8 +6,10 @@
 #include <linux/netfilter.h>
 #include <libipq.h>
 #include <linux/netfilter.h>
+#include <linux/netfilter_ipv4.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
+#include <netinet/ip_icmp.h>
 #include <netinet/ip6.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -20,7 +22,6 @@
 #include <linux/netfilter_ipv4.h>
 #include <pthread.h>
 #include <libinet6/message.h>
-
 #include "common_types.h"
 #include "crypto.h"
 #include "ife.h"
@@ -36,8 +37,7 @@
 //#include "hip_usermode.h"
 #include "misc.h"
 #include "netdev.h"
-//#include "hip_sadb.h"
-
+#include "lsi.h"
 
 #define HIP_FW_DEFAULT_RULE_FILE "/etc/hip/firewall_conf"
 #define HIP_FW_DEFAULT_TIMEOUT   1
@@ -53,6 +53,15 @@
 "#            -state [!] <state> --verify_responder --accept_mobile --decrypt_contents\n"\
 "#\n"\
 "\n"
+
+struct firewall_hl {
+	hip_lsi_t lsi;
+	hip_hit_t hit_our;
+        hip_hit_t hit_peer;
+        int bex_state;
+};
+
+typedef struct firewall_hl firewall_hl_t;
 
 #define OTHER_PACKET          0
 #define HIP_PACKET            1
@@ -141,5 +150,7 @@ int hip_fw_handle_tcp_forward(hip_fw_context_t *ctx);
 
 // dependent on typedefs in here
 #include "useripsec.h"
+
+void firewall_traffic_treatment(struct ipq_handle *hndl, unsigned long packetId);
 
 #endif

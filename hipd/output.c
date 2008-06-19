@@ -414,8 +414,7 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	if(hit_is_opportunistic_hashed_hit(&i1->hitr))
 		ipv6_addr_copy(&i1->hitr, &in6addr_any);
 	
-	_HIP_HEXDUMP("dest hit on wire", &i1->hitr, sizeof(struct in6_addr));
-	_HIP_HEXDUMP("daddr", &daddr, sizeof(struct in6_addr));
+	HIP_HEXDUMP("daddr", &daddr, sizeof(struct in6_addr));
 #endif // CONFIG_HIP_OPPORTUNISTIC
 
 #ifdef CONFIG_HIP_BLIND
@@ -1114,6 +1113,7 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	memset(&dst, 0, sizeof(dst));
 	
 	if (dst_is_ipv4) {
+	        HIP_DEBUG("Using IPv4 raw socket\n");
 		hip_raw_sock = hip_raw_sock_v4;
 		sa_size = sizeof(struct sockaddr_in);
 	} else {
@@ -1207,6 +1207,7 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 			if (sent != len) {
 				HIP_ERROR("Could not send the all requested"\
 					  " data (%d/%d)\n", sent, len);
+				HIP_DEBUG("strerror %s\n",strerror(errno));
 				sleep(2);
 			} else {
 				HIP_DEBUG("sent=%d/%d ipv4=%d\n",

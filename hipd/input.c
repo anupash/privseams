@@ -1,3 +1,4 @@
+
 /** @file
  * This file defines handling functions for incoming packets for the Host
  * Identity Protocol (HIP).
@@ -510,6 +511,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 	switch(type) {
 	case HIP_I1:
 		/* No state. */
+	  HIP_DEBUG("Received HIP_I1 message\n");
 	  err = (hip_get_rcv_default_func_set())->hip_receive_i1(msg, src_addr,
 								 dst_addr,
 								 entry,
@@ -650,8 +652,10 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	unsigned char *iv = NULL;
 	int err = 0, host_id_in_enc_len = 0, written = 0;
 	uint16_t mask = 0;
+	int type_count = 0, request_rvs = 0, request_escrow = 0;
+        int *reg_type = NULL;
 	uint32_t spi_in = 0;
-	
+
 	_HIP_DEBUG("hip_create_i2() invoked.\n");
 
 	HIP_ASSERT(entry);
@@ -844,18 +848,18 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	  HIP_DEBUG("Blind is ON\n");
 	  HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(r1_saddr, r1_daddr,
 			      &entry->hit_peer, &entry->hit_our,
-			      &spi_in, transform_esp_suite, 
+			      entry, &spi_in, transform_esp_suite, 
 			      &ctx->esp_in, &ctx->auth_in, 0,
 			      HIP_SPI_DIRECTION_IN, 0,
 			      r1_info->src_port, r1_info->dst_port), -1, 
-		   "Failed to setup IPsec SPD/SA entries, peer:src\n");
+		         "Failed to setup IPsec SPD/SA entries, peer:src\n");
 	}
 #endif
 
 	if (!hip_blind_get_status()) {
 	  HIP_DEBUG("Blind is OFF\n");
-	  HIP_DEBUG_HIT("hit our", &entry->hit_our);
-	  HIP_DEBUG_HIT("hit peer", &entry->hit_peer);
+	  /*Find lsi identifiers for the pair of hits given by the context */
+	  hip_ha_t *entry_aux = hip_hadb_find_byhits(&ctx->input->hits, &ctx->input->hitr);
 	  /* let the setup routine give us a SPI. */
 	  HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(r1_saddr, r1_daddr,
 			      &ctx->input->hits, &ctx->input->hitr,
@@ -864,6 +868,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 			      HIP_SPI_DIRECTION_IN, 0,
 			      r1_info->src_port, r1_info->dst_port), -1, 
 		   "Failed to setup IPsec SPD/SA entries, peer:src\n");
+
 	}
 	/* XXX: -EAGAIN */
 	HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
@@ -1026,8 +1031,9 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 	hip_list_t *item = NULL, *tmp = NULL;
 	int ii = 0, use_ip4 = 1;
 #endif
+
 	_HIP_DEBUG("hip_handle_r1() invoked.\n");
-	
+
 	if (entry->state == HIP_STATE_I2_SENT) {
 		HIP_DEBUG("Retransmission\n");
 		retransmission = 1;
@@ -1778,20 +1784,23 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	     HIP_DEBUG("No entry, creating new.\n");
 	     HIP_IFEL(!(entry = hip_hadb_create_state(GFP_KERNEL)), -ENOMSG,
 		      "Failed to create or find entry\n");
-	     
+	     HIP_DEBUG("After creating a new state\n");
 	     /* The rest of the code assume already locked entry, so lock the
 		newly created entry as well. */
 	     HIP_LOCK_HA(entry);
 	     if (use_blind) {
 		  ipv6_addr_copy(&entry->hit_peer, plain_peer_hit);
 		  hip_init_us(entry, plain_local_hit);
+			HIP_DEBUG("Using blinding\n");
 	     }
 	     else {
 		  ipv6_addr_copy(&entry->hit_peer, &i2->hits);
 		  hip_init_us(entry, &i2->hitr);
+			HIP_DEBUG("Not Using blinding\n");
 	     }
-		
+		HIP_DEBUG("Before inserting state entry in hadb\n");
 	     hip_hadb_insert_state(entry);
+		HIP_DEBUG("After inserting state entry in hadb\n");
 	     hip_hold_ha(entry);
 	     
 	     ipv6_addr_copy(&entry->local_address, i2_daddr);
@@ -1839,10 +1848,10 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	
 #ifdef CONFIG_HIP_BLIND
 	if (use_blind) {
-	  memcpy(&entry->hit_our_blind, &i2->hitr, sizeof(struct in6_addr));
-	  memcpy(&entry->hit_peer_blind, &i2->hits, sizeof(struct in6_addr));
-	  entry->blind_nonce_i = nonce;
-	  entry->blind = 1;
+		memcpy(&entry->hit_our_blind, &i2->hitr, sizeof(struct in6_addr));
+		memcpy(&entry->hit_peer_blind, &i2->hits, sizeof(struct in6_addr));
+	  	entry->blind_nonce_i = nonce;
+	  	entry->blind = 1;
 	}
 #endif
 
@@ -1897,7 +1906,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	  /* Set up IPsec associations */
 	  err = entry->hadb_ipsec_func->hip_add_sa(i2_saddr, i2_daddr,
 			   &entry->hit_peer, &entry->hit_our,
-			   &spi_in,
+			   entry, &spi_in,
 			   esp_tfm,  &ctx->esp_in, &ctx->auth_in,
 			   retransmission, HIP_SPI_DIRECTION_IN, 0, i2_info->src_port, 
 			   i2_info->dst_port);
@@ -1908,10 +1917,9 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	/* Set up IPsec associations */
 	err = entry->hadb_ipsec_func->hip_add_sa(i2_saddr, i2_daddr,
 			 &ctx->input->hits, &ctx->input->hitr,
-			 &spi_in,
-			 esp_tfm,  &ctx->esp_in, &ctx->auth_in,
-			 retransmission, HIP_SPI_DIRECTION_IN, 0, i2_info->src_port, 
-				i2_info->dst_port);
+			 &spi_in, esp_tfm, &ctx->esp_in, &ctx->auth_in,
+			 retransmission, HIP_SPI_DIRECTION_IN, 0,
+			 i2_info->src_port, i2_info->dst_port);
 	}
 	if (err) {
 		HIP_ERROR("Failed to setup inbound SA with SPI=%d\n", spi_in);
@@ -2288,7 +2296,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 				 HIP_SPI_DIRECTION_OUT, 0, r2_info->src_port,
 				 r2_info->dst_port);
 	}
-	
+
 	if (err) {
 		/** @todo Remove inbound IPsec SA. */
 		HIP_ERROR("hip_add_sa() failed, peer:dst (err = %d).\n", err);
@@ -2376,6 +2384,11 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	
 	
  out_err:
+	if (entry->state == HIP_STATE_ESTABLISHED)
+		hip_firewall_add_bex_data(entry, &entry->hit_our, &entry->hit_peer);
+	else
+		hip_firewall_add_bex_data(entry, NULL, NULL);
+
 	if (ctx) {
 		HIP_FREE(ctx);
 	}
@@ -2854,7 +2867,7 @@ int hip_handle_firewall_i1_request(struct hip_common *msg, struct in6_addr *i1_s
         in_port_t ha_peer_port;
 	hip_ha_t *entry;
 	hip_hit_t *src_hit, *dst_hit;
-	
+	hip_hit_t *lsi =NULL;
 	int is_loopback = 0;
 	struct in6_addr src_addr;
 //	struct xfrm_user_acquire *acq;
@@ -2938,7 +2951,9 @@ int hip_handle_firewall_i1_request(struct hip_common *msg, struct in6_addr *i1_s
 	/* @fixme: changing global state won't work with threads */
 	hip_nat_status = ha_nat_mode;
 
-	HIP_IFEL(hip_hadb_add_peer_info(dst_hit, &dst_addr), -1,
+	if (entry)
+	  lsi = &(entry->lsi_peer);
+	HIP_IFEL(hip_hadb_add_peer_info(dst_hit, &dst_addr, lsi), -1,
 		 "map failed\n");
 
 	hip_nat_status = old_global_nat_mode; /* restore nat status */

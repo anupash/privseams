@@ -30,12 +30,18 @@
 #define HIP_HIT_TYPE_HAA_HASH   2
 #define HIP_HIT_TYPE_MASK_HAA   0x00000080 /**< depracated -miika */
 #define HIP_HIT_TYPE_MASK_100   0x20010010
+#define HIP_LSI_TYPE_MASK_192	0xC0000000
 #define HIP_HIT_TYPE_MASK_CLEAR 0x0000000f
+#define HIP_LSI_TYPE_MASK_CLEAR 0x000000ff
 #define HIP_HIT_TYPE_MASK_INV   0xfffffff0
 #define HIP_HIT_PREFIX          HIP_HIT_TYPE_MASK_100
-#define HIP_HIT_PREFIX_LEN      28     /* bits */
+#define HIP_LSI_PREFIX          HIP_LSI_TYPE_MASK_192
+#define HIP_HIT_PREFIX_LEN      28	/* bits */
+#define HIP_LSI_PREFIX_LEN	24	/* bits */
 #define HIP_HIT_FULL_PREFIX_STR "/128"
 #define HIP_HIT_PREFIX_STR      "/28"
+#define HIP_LSI_FULL_PREFIX_STR "/24"
+#define HIP_LSI_PREFIX_STR	"/24"
 #define HIP_KHI_CONTEXT_ID_INIT { 0xF0,0xEF,0xF0,0x2F,0xBF,0xF4,0x3D,0x0F, \
                                   0xE7,0x93,0x0C,0x3C,0x6E,0x61,0x74,0xEA }
 
@@ -445,8 +451,8 @@ struct hip_common {
 	uint8_t      ver_res;
 	uint16_t     checksum;
 	uint16_t     control;
-	struct in6_addr hits;  /**< Sender HIT   */
-	struct in6_addr hitr;  /**< Receiver HIT */
+	struct in6_addr hits;	/**< Sender HIT   */
+	struct in6_addr hitr;	/**< Receiver HIT */
 } __attribute__ ((packed));
 
 /**

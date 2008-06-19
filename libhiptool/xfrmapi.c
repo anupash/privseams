@@ -53,19 +53,23 @@ void hip_xfrm_set_algo_names(int new_algo_names) {
 /**
  * hip_xfrm_policy_modify - modify the Security Policy
  * @param cmd command. %XFRM_MSG_NEWPOLICY | %XFRM_MSG_UPDPOLICY
- * @param hit_our Source HIT
- * @param hit_peer Peer HIT
+ * @param id_our Source ID or LSI
+ * @param id_peer Peer ID or LSI
  * @param tmpl_saddr source IP address
  * @param tmpl_daddr dst IP address
  * @param dir SPD direction, %XFRM_POLICY_IN or %XFRM_POLICY_OUT
  *
  * @return 0 if successful, else < 0
  */
+
+//hip_xfrm_policy_modify(hip_xfrmapi_nl_ipsec, cmd, dst_hit, src_hit, src_addr, dst_addr,XFRM_POLICY_IN, proto, prefix,AF_INET6)
+
+
 int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
-			   hip_hit_t *hit_our, hip_hit_t *hit_peer,
+			   struct in6_addr *id_our, struct in6_addr *id_peer,
 			   struct in6_addr *tmpl_saddr,
 			   struct in6_addr *tmpl_daddr,
-			   int dir, u8 proto, u8 hit_prefix,
+			   int dir, u8 proto, u8 id_prefix,
 			   int preferred_family)
 {
 	struct {
@@ -90,9 +94,9 @@ int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
 	/* Direction */
 	req.xpinfo.dir = dir;
 
-	/* SELECTOR <--> HITs */
-	HIP_IFE(xfrm_fill_selector(&req.xpinfo.sel, hit_peer, hit_our, 0,
-				   hit_prefix, 0, 0, preferred_family), -1);
+	/* SELECTOR <--> HITs  SELECTOR <--> LSIs*/
+	HIP_IFE(xfrm_fill_selector(&req.xpinfo.sel, id_peer, id_our, 0,
+				   id_prefix, 0, 0, preferred_family), -1);
 
 	/* TEMPLATE */
 	tmpl = (struct xfrm_user_tmpl *)((char *)tmpls_buf);
@@ -138,12 +142,15 @@ int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
 		memcpy(x, &req.n, sizeof(req.n));
 		HIP_IFEL((netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0), -1,
 			 "netlink_talk failed\n");
+		///if (x)
+			//free(x);
 	}
 
 out_err:
-
+	
 	return err;
 }
+
 
 int hip_xfrm_sa_flush(struct rtnl_handle *rth) {
 
@@ -248,8 +255,8 @@ int hip_xfrm_policy_delete(struct rtnl_handle *rth,
  * Modifies a Security Association.
  * 
  * @param cmd command. %XFRM_MSG_NEWSA | %XFRM_MSG_UPDSA
- * @param hit_our Source HIT
- * @param hit_peer Peer HIT
+ * @param id_our Source HIT or LSI
+ * @param id_peer Peer HIT or LSI
  * @param tmpl_saddr source IP address
  * @param tmpl_daddr dst IP address
  *
@@ -258,8 +265,8 @@ int hip_xfrm_policy_delete(struct rtnl_handle *rth,
 int hip_xfrm_state_modify(struct rtnl_handle *rth,
 			  int cmd, struct in6_addr *saddr,
 			  struct in6_addr *daddr, 
-			  struct in6_addr *src_hit, 
-			  struct in6_addr *dst_hit,
+			  struct in6_addr *src_id, 
+			  struct in6_addr *dst_id,
 			  __u32 spi, int ealg,
 			  struct hip_crypto_key *enckey,
 			  int enckey_len,
@@ -310,7 +317,7 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 	req.xsinfo.id.spi = htonl(spi);
 
 	/* Selector */
-	HIP_IFE(xfrm_fill_selector(&req.xsinfo.sel, src_hit, dst_hit, 
+	HIP_IFE(xfrm_fill_selector(&req.xsinfo.sel, src_id, dst_id, 
 			   0, hip_xfrmapi_sa_default_prefix, 0,0, AF_INET6), -1);
 	if(req.xsinfo.family == AF_INET && (sport || dport))
 	{
@@ -499,27 +506,51 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 	return err;
 }
 
-int hip_setup_hit_sp_pair(hip_hit_t *src_hit, hip_hit_t *dst_hit,
+/*
+Calculates the prefix length to use depending on identifier's type: LSI or HIT 
+*/
+int hip_calc_sp_prefix(struct in6_addr *src_id, int use_full_prefix){
+	
+	u8 prefix;
+
+	if (IN6_IS_ADDR_V4MAPPED(src_id)){
+		HIP_DEBUG("ipv4 address mapped as ipv6\n");
+		prefix = (use_full_prefix) ? 32 : HIP_LSI_PREFIX_LEN;	
+	}
+	else
+		prefix = (use_full_prefix) ? 128 : HIP_HIT_PREFIX_LEN;	
+
+	return prefix;
+}
+
+
+int hip_setup_hit_sp_pair(struct in6_addr *src_id, struct in6_addr *dst_id,
 			  struct in6_addr *src_addr,
 			  struct in6_addr *dst_addr, u8 proto,
 			  int use_full_prefix, int update)
 {
+	HIP_DEBUG("Start\n");
+
 	int err = 0;
-	u8 prefix = (use_full_prefix) ? 128 : HIP_HIT_PREFIX_LEN;
+	u8 prefix = hip_calc_sp_prefix(src_id, use_full_prefix);
+
+
 	int cmd = update ? XFRM_MSG_UPDPOLICY : XFRM_MSG_NEWPOLICY;
 
 	/* XX FIXME: remove the proto argument */
 
 	HIP_IFE(hip_xfrm_policy_modify(hip_xfrmapi_nl_ipsec, cmd,
-				       dst_hit, src_hit,
+				       dst_id, src_id,
 				       src_addr, dst_addr,
 				       XFRM_POLICY_IN, proto, prefix,
 				       AF_INET6), -1);
+
 	HIP_IFE(hip_xfrm_policy_modify(hip_xfrmapi_nl_ipsec, cmd,
-				       src_hit, dst_hit,
+				       src_id, dst_id,
 				       dst_addr, src_addr,
 				       XFRM_POLICY_OUT, proto, prefix,
 				       AF_INET6), -1);
+	HIP_DEBUG("End\n");
  out_err:
 	return err;
 }

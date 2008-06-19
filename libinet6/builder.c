@@ -1,3 +1,4 @@
+
 /** @file
  * This file defines building and parsing functions for Host Identity Protocol
  * (HIP) kernel module and user messages.
@@ -639,16 +640,16 @@ struct hip_tlv_common *hip_get_next_param(const struct hip_common *msg,
 		HIP_ERROR("msg null\n");
 		goto out;
 	}
-
+       
 	if (current_param == NULL) {
-		pos = (void *) msg;
+		pos = (void *) msg;		
 	}
 
 	if (pos == msg)
 		pos += sizeof(struct hip_common);
 	else
-		pos += hip_get_param_total_len(current_param);
-
+		pos += hip_get_param_total_len(current_param);	       
+	
 	next_param = (struct hip_tlv_common *) pos;
 
 	/* check that the next parameter does not point
@@ -727,6 +728,7 @@ void *hip_get_param(const struct hip_common *msg,
 void *hip_get_param_contents(const struct hip_common *msg,
 			     hip_tlv_type_t param_type)
 {
+	
 	void *contents = hip_get_param(msg,param_type);
 	if (contents)
 		contents += sizeof(struct hip_tlv_common);
@@ -1075,7 +1077,8 @@ char* hip_param_type_name(const hip_tlv_type_t param_type){
 	case HIP_PARAM_UINT: return "HIP_PARAM_UINT";
 	case HIP_PARAM_UNIT_TEST: return "HIP_PARAM_UNIT_TEST";
 	case HIP_PARAM_VIA_RVS: return "HIP_PARAM_VIA_RVS";
-	case HIP_PARAM_PSEUDO_HIT: return "HIP_PARAM_PSEUDO_HIT";	
+	case HIP_PARAM_PSEUDO_HIT: return "HIP_PARAM_PSEUDO_HIT";
+	case SO_HIP_PARAM_LSI: return "SO_HIP_PARAM_LSI";	
 	}
 	return "UNDEFINED";
 }
@@ -1252,6 +1255,8 @@ int hip_check_network_msg(const struct hip_common *msg)
  * @see                  hip_build_param().
  * @see                  hip_build_param_contents().
  */
+
+
 int hip_build_generic_param(struct hip_common *msg,
 			    const void *parameter_hdr,
 			    hip_tlv_len_t param_hdr_size,
@@ -1359,7 +1364,6 @@ int hip_build_param_contents(struct hip_common *msg,
 			     hip_tlv_len_t contents_size)
 {
 	struct hip_tlv_common param;
-
 	hip_set_param_type(&param, param_type);
 	hip_set_param_contents_len(&param, contents_size);
 
