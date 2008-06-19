@@ -32,9 +32,9 @@ if HIP_HI3
 endif
 
 LDADD=
-if HIP_OPPORTUNISTIC
-  LDADD += ../libopphip/.libs/libopphip.a
-endif
+#if HIP_OPPORTUNISTIC
+#  LDADD += ../libopphip/.libs/libopphip.a
+#endif
 
 LDADD+= $(OPENWRT_LIB_STATIC)
 
