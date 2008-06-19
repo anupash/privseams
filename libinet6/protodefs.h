@@ -30,12 +30,18 @@
 #define HIP_HIT_TYPE_HAA_HASH   2
 #define HIP_HIT_TYPE_MASK_HAA   0x00000080 /**< depracated -miika */
 #define HIP_HIT_TYPE_MASK_100   0x20010010
+#define HIP_LSI_TYPE_MASK_192	0xC0000000
 #define HIP_HIT_TYPE_MASK_CLEAR 0x0000000f
+#define HIP_LSI_TYPE_MASK_CLEAR 0x000000ff
 #define HIP_HIT_TYPE_MASK_INV   0xfffffff0
 #define HIP_HIT_PREFIX          HIP_HIT_TYPE_MASK_100
-#define HIP_HIT_PREFIX_LEN      28     /* bits */
+#define HIP_LSI_PREFIX          HIP_LSI_TYPE_MASK_192
+#define HIP_HIT_PREFIX_LEN      28	/* bits */
+#define HIP_LSI_PREFIX_LEN	24	/* bits */
 #define HIP_HIT_FULL_PREFIX_STR "/128"
 #define HIP_HIT_PREFIX_STR      "/28"
+#define HIP_LSI_FULL_PREFIX_STR "/24"
+#define HIP_LSI_PREFIX_STR	"/24"
 #define HIP_KHI_CONTEXT_ID_INIT { 0xF0,0xEF,0xF0,0x2F,0xBF,0xF4,0x3D,0x0F, \
                                   0xE7,0x93,0x0C,0x3C,0x6E,0x61,0x74,0xEA }
 
@@ -47,6 +53,9 @@
 #define HIP_PARAM_ESP_INFO             65
 #define HIP_PARAM_R1_COUNTER           128
 #define HIP_PARAM_LOCATOR              193
+//NAT branch
+#define HIP_PARAM_NAT_TRANSFORM        194
+//end NAT branch
 #define HIP_PARAM_HASH_CHAIN_VALUE     221
 #define HIP_PARAM_HASH_CHAIN_ANCHORS   222
 #define HIP_PARAM_HASH_CHAIN_PSIG      223
@@ -404,7 +413,37 @@ struct hip_locator_info_addr_item {
 		      WAITING_ECHO_REQUEST, ACTIVE */
 
 }  __attribute__ ((packed));
+//add by santtu
+/**
+ * it is the type 2 locater for UDP or other transport protocol later.
+ */
+struct hip_locator_info_addr_item2 {
+        uint8_t traffic_type;
+        uint8_t locator_type;
+        uint8_t locator_length;
+        uint8_t reserved;  /* last bit is P (prefered) */
+       	uint32_t lifetime;
+       	uint16_t port;
+       	uint8_t  transport_protocol;
+       	uint8_t  kind;
+       	uint32_t priority;
+       	uint32_t spi;
+       	struct in6_addr address;
 
+	int state; /**<State of our addresses, possible states are:
+		      WAITING_ECHO_REQUEST, ACTIVE */
+
+}  __attribute__ ((packed));
+
+
+/**
+ * it is a union of both type1 and type2 locator.
+ */
+union hip_locator_info_addr {
+	struct hip_locator_info_addr_item type1;
+	struct hip_locator_info_addr_item2 type2;
+}__attribute__ ((packed));
+//end add
 /** Structure describing an endpoint. This structure is used by the resolver in
  * the userspace, so it is not length-padded like HIP parameters. All of the
  * members are in network byte order.
@@ -445,8 +484,8 @@ struct hip_common {
 	uint8_t      ver_res;
 	uint16_t     checksum;
 	uint16_t     control;
-	struct in6_addr hits;  /**< Sender HIT   */
-	struct in6_addr hitr;  /**< Receiver HIT */
+	struct in6_addr hits;	/**< Sender HIT   */
+	struct in6_addr hitr;	/**< Receiver HIT */
 } __attribute__ ((packed));
 
 /**
@@ -760,7 +799,22 @@ struct hip_opendht_set {
         char name[256];
 } __attribute__ ((packed));
 
+//add by santtu from here
+
+struct hip_nat_transform {
+	hip_tlv_type_t        type;
+	hip_tlv_len_t         length;
+	hip_transform_suite_t suite_id[1];
+} __attribute__ ((packed));
 /* @} */
+
+/** draft-ietf-hip-nat-traversal-02 */
+struct hip_reg_from {
+     hip_tlv_type_t type; /**< Type code for the parameter. */
+     hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
+     uint8_t address[16]; /**< IPv6 address */
+     in_port_t port; /**< Port number. */
+} __attribute__ ((packed));
 
 #endif /* _HIP_PROTODEFS */
 
