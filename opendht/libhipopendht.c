@@ -467,6 +467,88 @@ int opendht_handle_value(char * value, char * out_value)
     return(err);
 }
 
+/*
+*	To convert 53 to the character 'S':
+*	char returnVal = hexToString('5', '3');
+*   using this to make it 20 byte from 40 byte
+*/
+char hexToAscii(char first, char second)
+{
+	char hex[5], *stop;
+	hex[0] = '0';
+	hex[1] = 'x';
+	hex[2] = first;
+	hex[3] = second;
+	hex[4] = 0;
+	//HIP_DEBUG("First hex digit: %c \n Second hex digit: %c \n", first, second);
+	//HIP_DEBUG("Ascii value:  %c.\n", strtol(hex, &stop, 16));
+
+	// Decoding logic works fine, converts ascii to hex again
+	char acB[3];
+	sprintf(acB, "%x", strtol(hex, &stop, 16));
+	//HIP_DEBUG("Again : Hex  value:  %s \n", acB);
+	return strtol(hex, &stop, 16);
+}
+
+/*
+ * This function does the manual string manipulation on the HIT which if stored in a 
+ * character array occupies 32 byte (one byte for each hex digit)
+ * This function joins two hex digits pointed by the param *key as one ASCII character
+ * in memory hence reducing it to 16 bytes
+ */
+void zero_pad_key (char *key, char *newkey)
+{
+	 int i = 0 ;
+	 int x = 0 ;
+	 char tempChar1 = ' ';
+	 char tempChar2 = ' ';
+	 
+	while(*key != '\0')
+	{
+		tempChar1 = *key;
+		tempChar2 = *(key+1);
+		//HIP_DEBUG("tempchar1 : %c , tempchar2 ; %c \n", tempChar1, tempChar2);
+		
+		if ( x == 0)
+			x=1;
+		else 
+			x = 0;
+		if (i < 4 )//|| tempChar1 == ':')
+		{
+			*key++;
+			*key++;
+		}
+		else
+		{
+			if (tempChar2 == ':')
+			{
+				tempChar2 = *(key+2);
+				*key++;
+			}
+			else if (tempChar2 == '\0')
+				tempChar2 = '0';
+			*newkey++ = hexToAscii (tempChar1, tempChar2);
+			
+			*key++;
+			*key++;
+			
+				
+	
+		}
+		i++;
+	}
+	while (i < 24)
+	{
+		*newkey++ = hexToAscii('0','0');	
+		i++;
+	}
+	*newkey = '\0';
+	
+
+	
+}
+
+
 /**
  * opendht_handle_key Modifies the key to suitable format for OpenDHT
  *
@@ -481,12 +563,19 @@ int opendht_handle_key(char * key, char * out_key)
     char tmp_key[21];
     struct in6_addr addrkey;
     unsigned char *sha_retval;
-
+	
+	// These two variable are added by Pardeep - 
+	int key_len_specified_in_bytes = 20;
+	unsigned char *paddedkey = malloc(key_len_specified_in_bytes +4);
+	 
+	 memset(paddedkey, '\0', key_len_specified_in_bytes +4);
+    
     /* check for too long keys and convert HITs to numeric form */
     memset(tmp_key, '\0', sizeof(tmp_key));
 
+    //if (inet_pton(AF_INET6, (char *)key, &addrkey.s6_addr) == 0)
     if (inet_pton(AF_INET6, (char *)key, &addrkey.s6_addr) == 0)
-        {
+    {
             /* inet_pton failed because of invalid IPv6 address */
             memset(tmp_key,'\0',sizeof(tmp_key));
             /* strlen works now but maybe not later */
@@ -506,10 +595,79 @@ int opendht_handle_key(char * key, char * out_key)
         } 
     else 
         {
+       	// Added by Pardeep
+        	
+			
+		 	// This is another function which does the same. zero_pad_key().
+		 	// BBut it seems to be less efficient, as it invloves quite a lot
+		 	// of string manipulation. So commenting it 
+		 	
+		 	//zero_pad_key(key, paddedkey);
+			
+			
+			/* Another approach as guided by SAMU:
+			 We require only last 100 bits of the HIT. That is to say
+			 to ignore first 28 bits we need to shift 28 bits left the HIT.
+			 Follwoing logic does it and zero padding is already done in memset
+			 above for tmp_key to make it 160 bit long key 
+			 
+			*/
+			 
+			 memcpy(paddedkey, addrkey.s6_addr, sizeof(addrkey.s6_addr));		
+			
+			 paddedkey = addrkey.s6_addr + 3;
+			 
+			 int k = 0;
+		     unsigned char tempChar1 =' ';
+			 unsigned char tempChar2 =' ';
+			 
+			
+			 while (k <13)
+			 {
+			 	tempChar1 = *(paddedkey+k);
+			 	tempChar2 = *(paddedkey+k+1);
+			 	
+			 	//HIP_DEBUG("MSB HEX before shift:  %x.\n", tempChar1);
+			 	//HIP_DEBUG("LSB HEX before shift:  %x.\n", tempChar2);
+			   
+			 	tempChar1 = tempChar1 << 4 ;
+			 	tempChar2 = tempChar2 >> 4 ;
+			 	
+			 	//HIP_DEBUG("MSB HEX after shift:  %x.\n", tempChar1);
+			 	//HIP_DEBUG("LSB HEX after shift:  %x.\n", tempChar2);
+			 	
+			 	*(paddedkey+k) = tempChar1 | tempChar2 ;
+				    
+			    //HIP_DEBUG("New key value at position %d :  %x.\n",k , *(paddedkey+k));
+					 
+			    k++;
+			 }
+			
+		 //The latest working approach
+			
+			 HIP_DEBUG("New key value:  %d.\n", strlen(paddedkey));
+			 
+			 
+			 memcpy(tmp_key, paddedkey, strlen(paddedkey)+1);
+			key_len = key_len_specified_in_bytes ;
+			
+			
+			//HIP_DEBUG("New key value:  %s \n", tmp_key);
+			//HIP_DEBUG("New key value:  %d \n", strlen(tmp_key));
+			  err = key_len;
+			 
+			 
+		// ended
+			
+		// EXISTING CODE COMMENTED BY PARDEEP
+			
             /* key was in IPv6 format so propably is a HIT */
-            memcpy(tmp_key, addrkey.s6_addr, sizeof(addrkey.s6_addr));
+        /*    memcpy(tmp_key, addrkey.s6_addr, sizeof(addrkey.s6_addr));
             key_len = sizeof(addrkey.s6_addr);
             err = key_len;
+         */
+         
+        // COMMENTING ENDS
         }
     memcpy(out_key, tmp_key, sizeof(tmp_key));
  out_err:
@@ -556,4 +714,5 @@ int opendht_read_response(int sockfd, char * answer)
         }
     return(ret);
 }
+
 
