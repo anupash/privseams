@@ -771,8 +771,9 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 #ifndef HIP_USE_ICE
 	/********* LOCATOR PARAMETER ************/
         /** Type 193 **/ 
+		HIP_DEBUG("Building LOCATOR parameter 	1\n");
         if (hip_locator_status == SO_HIP_SET_LOCATOR_ON) {
-            HIP_DEBUG("Building LOCATOR parameter\n");
+            HIP_DEBUG("Building LOCATOR parameter 2\n");
             if ((err = hip_build_locators(i2)) < 0) 
                 HIP_DEBUG("LOCATOR parameter building failed\n");
         }
@@ -780,8 +781,9 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 #ifdef HIP_USE_ICE
     	/********* LOCATOR PARAMETER ************/
 		/** Type 193 **/ 
+        HIP_DEBUG("Building nat LOCATOR parameter 1: %d\n",hip_locator_status==SO_HIP_SET_LOCATOR_ON);
 		if (hip_locator_status == SO_HIP_SET_LOCATOR_ON) {
-		    HIP_DEBUG("Building nat LOCATOR parameter\n");
+		    HIP_DEBUG("Building nat LOCATOR parameter 2\n");
 		    if ((err = hip_nat_build_locators(i2)) < 0) 
 		        HIP_DEBUG("nat LOCATOR parameter building failed\n");
 		}        
@@ -923,21 +925,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	  HIP_DEBUG("Blind is ON\n");
 	  HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(r1_saddr, r1_daddr,
 			      &entry->hit_peer, &entry->hit_our,
-			      entry, &spi_in, transform_esp_suite, 
-			      &ctx->esp_in, &ctx->auth_in, 0,
-			      HIP_SPI_DIRECTION_IN, 0,
-			      r1_info->src_port, r1_info->dst_port), -1, 
-		         "Failed to setup IPsec SPD/SA entries, peer:src\n");
-	}
-#endif
-
-	if (!hip_blind_get_status()) {
-	  HIP_DEBUG("Blind is OFF\n");
-	  /*Find lsi identifiers for the pair of hits given by the context */
-	  hip_ha_t *entry_aux = hip_hadb_find_byhits(&ctx->input->hits, &ctx->input->hitr);
-	  /* let the setup routine give us a SPI. */
-	  HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(r1_saddr, r1_daddr,
-			      &ctx->input->hits, &ctx->input->hitr,
 			      &spi_in, transform_esp_suite, 
 			      &ctx->esp_in, &ctx->auth_in, 0,
 			      HIP_SPI_DIRECTION_IN, 0,
@@ -945,6 +932,30 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		   "Failed to setup IPsec SPD/SA entries, peer:src\n");
 
 	}
+#endif
+//modified by santtu
+	/**when nat control is 0, we create sa as normal mode, 
+	 * but is it is not, we use other connectivity engine to create sa***/
+	if(entry->nat_control==0){
+		if (!hip_blind_get_status()) {
+		  HIP_DEBUG("Blind is OFF\n");
+		  HIP_DEBUG_HIT("hit our", &entry->hit_our);
+		  HIP_DEBUG_HIT("hit peer", &entry->hit_peer);
+		  /* let the setup routine give us a SPI. */
+		  HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(r1_saddr, r1_daddr,
+				      &ctx->input->hits, &ctx->input->hitr,
+				      &spi_in, transform_esp_suite, 
+				      &ctx->esp_in, &ctx->auth_in, 0,
+				      HIP_SPI_DIRECTION_IN, 0,
+				      r1_info->src_port, r1_info->dst_port), -1, 
+			   "Failed to setup IPsec SPD/SA entries, peer:src\n");
+		}
+	}
+	else{
+		//spi should be created
+		get_random_bytes(&spi_in, sizeof(uint32_t));
+	}
+//end modify
 	/* XXX: -EAGAIN */
 	HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
 	
@@ -2030,26 +2041,35 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 			   i2_info->dst_port);
 	}
 #endif
-
-	if (!use_blind) {
-	/* Set up IPsec associations */
-	err = entry->hadb_ipsec_func->hip_add_sa(i2_saddr, i2_daddr,
-			 &ctx->input->hits, &ctx->input->hitr,
-			 &spi_in, esp_tfm, &ctx->esp_in, &ctx->auth_in,
-			 retransmission, HIP_SPI_DIRECTION_IN, 0,
-			 i2_info->src_port, i2_info->dst_port);
+//modified by santtu
+	/**nat_control is 0 means we use normal mode to create sa*/
+	if(entry->nat_control == 0){
+	
+		if (!use_blind) {
+			/* Set up IPsec associations */
+			err = entry->hadb_ipsec_func->hip_add_sa(i2_saddr, i2_daddr,
+					 &ctx->input->hits, &ctx->input->hitr,
+					 &spi_in,
+					 esp_tfm,  &ctx->esp_in, &ctx->auth_in,
+					 retransmission, HIP_SPI_DIRECTION_IN, 0, i2_info->src_port, 
+						i2_info->dst_port);
+		}
+		if (err) {
+			HIP_ERROR("Failed to setup inbound SA with SPI=%d\n", spi_in);
+			/* if (err == -EEXIST)
+			   HIP_ERROR("SA for SPI 0x%x already exists, this is perhaps a bug\n",
+			   spi_in); */
+			err = -1;
+			hip_hadb_delete_inbound_spi(entry, 0);
+			hip_hadb_delete_outbound_spi(entry, 0);
+			goto out_err;
+		}
 	}
-	if (err) {
-		HIP_ERROR("Failed to setup inbound SA with SPI=%d\n", spi_in);
-		/* if (err == -EEXIST)
-		   HIP_ERROR("SA for SPI 0x%x already exists, this is perhaps a bug\n",
-		   spi_in); */
-		err = -1;
-		hip_hadb_delete_inbound_spi(entry, 0);
-		hip_hadb_delete_outbound_spi(entry, 0);
-		goto out_err;
+	else{
+		//sa not created, but spi must be created
+		get_random_bytes(&spi_in, sizeof(uint32_t));
 	}
-
+//end modify
 	/** @todo Check -EAGAIN */
 	
 	/* ok, found an unused SPI to use */
@@ -2076,24 +2096,29 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 			   1, HIP_SPI_DIRECTION_OUT, 0, i2_info->dst_port, i2_info->src_port);
 	}
 #endif
-
-	if (!use_blind) {
-	  err = entry->hadb_ipsec_func->hip_add_sa(i2_daddr, i2_saddr,
-			   &ctx->input->hitr, &ctx->input->hits,
-			   &spi_out, esp_tfm, 
-			   &ctx->esp_out, &ctx->auth_out,
-			   1, HIP_SPI_DIRECTION_OUT, 0, i2_info->dst_port, i2_info->src_port);
+//modified by santtu
+	/**nat_control is 0 means we use normal mode to create sa*/
+	if(entry->nat_control == 0){
+		if (!use_blind) {
+		  err = entry->hadb_ipsec_func->hip_add_sa(i2_daddr, i2_saddr,
+				   &ctx->input->hitr, &ctx->input->hits,
+				   &spi_out, esp_tfm, 
+				   &ctx->esp_out, &ctx->auth_out,
+				   1, HIP_SPI_DIRECTION_OUT, 0, i2_info->dst_port, i2_info->src_port);
+		}
+		if (err) {
+			HIP_ERROR("Failed to setup outbound SA with SPI = %d.\n",
+				  spi_out);
+			
+			/* delete all IPsec related SPD/SA for this entry*/
+			hip_hadb_delete_inbound_spi(entry, 0);
+			hip_hadb_delete_outbound_spi(entry, 0);
+			goto out_err;
+		}
+	}else{
+		HIP_DEBUG("ICE engine will be used, no sa created here\n");
 	}
-	if (err) {
-		HIP_ERROR("Failed to setup outbound SA with SPI = %d.\n",
-			  spi_out);
-		
-		/* delete all IPsec related SPD/SA for this entry*/
-		hip_hadb_delete_inbound_spi(entry, 0);
-		hip_hadb_delete_outbound_spi(entry, 0);
-		goto out_err;
-	}
-	
+//end modify
 	/* @todo Check if err = -EAGAIN... */
 	HIP_DEBUG("Set up outbound IPsec SA, SPI=0x%x\n", spi_out);
 
@@ -2466,21 +2491,29 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 			   HIP_SPI_DIRECTION_OUT, 0, r2_info->src_port, r2_info->dst_port);
 	}
 #endif
-	if (!hip_blind_get_status()) {
-	  err = entry->hadb_ipsec_func->hip_add_sa(r2_daddr, r2_saddr,
-				 &ctx->input->hitr, &ctx->input->hits,
-				 &spi_recvd, tfm,
-				 &ctx->esp_out, &ctx->auth_out, 1,
-				 HIP_SPI_DIRECTION_OUT, 0, r2_info->src_port,
-				 r2_info->dst_port);
+//modified by santtu
+	/**nat_control is 0 means we use normal mode to create sa*/
+	if(entry->nat_control == 0){
+		if (!hip_blind_get_status()) {
+		  err = entry->hadb_ipsec_func->hip_add_sa(r2_daddr, r2_saddr,
+					 &ctx->input->hitr, &ctx->input->hits,
+					 &spi_recvd, tfm,
+					 &ctx->esp_out, &ctx->auth_out, 1,
+					 HIP_SPI_DIRECTION_OUT, 0, r2_info->src_port,
+					 r2_info->dst_port);
+		}
+		
+		if (err) {
+			/** @todo Remove inbound IPsec SA. */
+			HIP_ERROR("hip_add_sa() failed, peer:dst (err = %d).\n", err);
+			err = -1;
+			goto out_err;
+		}
 	}
-
-	if (err) {
-		/** @todo Remove inbound IPsec SA. */
-		HIP_ERROR("hip_add_sa() failed, peer:dst (err = %d).\n", err);
-		err = -1;
-		goto out_err;
+	else{
+		HIP_DEBUG("ICE engine will be used, no sa created here\n");
 	}
+//end modify
 	/** @todo Check for -EAGAIN */
 	HIP_DEBUG("Set up outbound IPsec SA, SPI = 0x%x (host).\n", spi_recvd);
 	

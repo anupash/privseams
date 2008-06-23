@@ -468,7 +468,7 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 		    struct hip_crypto_key *authkey,
 		    int already_acquired,
 		    int direction, int update,
-		    int sport, int dport, int ice_ok) {
+		    int sport, int dport) {
 			// hip_portpair_t *sa_info) {
 	/* XX FIX: how to deal with the direction? */
 
