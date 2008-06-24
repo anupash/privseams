@@ -630,7 +630,7 @@ int hip_init_nat_sock_udp(int *hip_nat_sock_udp)
 {
 	int on = 1, err = 0;
 	int off = 0;
-	int encap_on = HIP_UDP_ENCAP_ESPINUDP_NONIKE;
+	int encap_on = HIP_UDP_ENCAP_ESPINUDP;
 	struct sockaddr_in myaddr;
 
 	HIP_DEBUG("hip_init_nat_sock_udp() invoked.\n");
