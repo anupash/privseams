@@ -30,6 +30,28 @@ else
   hipd_LDADD += ../libhiptool/.libs/libhiptool.a
 endif
 
+# Required for pjsip
+hipd_LDADD += -lpthread
+hipd_LDADD += ../pjproject/pjnath/lib/libpjnath-${host}.a
+hipd_LDADD += ../pjproject/pjsip/lib/libpjsip-${host}.a
+hipd_LDADD += ../pjproject/pjsip/lib/libpjsip-ua-${host}.a
+hipd_LDADD += ../pjproject/pjsip/lib/libpjsip-simple-${host}.a
+hipd_LDADD += ../pjproject/pjsip/lib/libpjsua-${host}.a
+hipd_LDADD += ../pjproject/pjmedia/lib/libpjmedia-${host}.a
+hipd_LDADD += ../pjproject/pjmedia/lib/libpjmedia-codec-${host}.a
+hipd_LDADD += ../pjproject/pjlib/lib/libpj-${host}.a
+hipd_LDADD += ../pjproject/pjlib-util/lib/libpjlib-util-${host}.a
+
+../pjproject/pjlib/lib/libpj-${host}.a:
+../pjproject/pjlib-util/lib/libpjlib-util-${host}.a:
+../pjproject/pjnath/lib/libpjnath-${host}.a:
+../pjproject/pjsip/lib/libpjsip-${host}.a:
+../pjproject/pjsip/lib/libpjsip-ua-${host}.a:
+../pjproject/pjsip/lib/libpjsip-simple-${host}.a:
+../pjproject/pjsip/lib/libpjsua-${host}.a:
+../pjproject/pjmedia/lib/libpjmedia-${host}.a:
+../pjproject/pjmedia/lib/libpjmedia-codec-${host}.a:
+
 hipd_LDFLAGS = -lcrypto $(HIPL_XMLL) -lm -DHIPL_HIPD
 
 if HIP_PRIVSEP
