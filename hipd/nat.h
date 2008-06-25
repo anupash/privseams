@@ -31,6 +31,9 @@
 #include "debug.h"
 #include "state.h"
 
+#define HIP_USE_ICE
+
+#define HIP_NAT_SLEEP_TIME 2
 /** Maximum length of a UDP packet. */
 #define HIP_MAX_LENGTH_UDP_PACKET 2000
 /** Time interval between consecutive NAT Keep-Alive packets in seconds.
@@ -41,8 +44,6 @@
 #define HIP_NAT_KEEP_ALIVE_INTERVAL 20
 /** Number of retransmissions to try if hip_send_udp() fails. */
 #define HIP_NAT_NUM_RETRANSMISSION 2
-/** Amount of time to sleep between transmission and retransmissions. */
-#define HIP_NAT_SLEEP_TIME 2
 /** Port number for NAT traversal of hip control packets. */
 #define HIP_NAT_UDP_PORT 50500
 /** For setting socket to listen for beet-udp packets. */
@@ -97,5 +98,9 @@ int hip_nat_on_for_ha(hip_ha_t *, void *);
 void hip_nat_randomize_nat_ports();
 int hip_nat_refresh_port();
 int hip_nat_send_keep_alive(hip_ha_t *, void *);
+
+int hip_nat_handle_transform_in_client(struct hip_common *msg , hip_ha_t *entry);
+int hip_nat_handle_transform_in_server(struct hip_common *msg , hip_ha_t *entry);
+uint16_t hip_nat_get_control();
 #endif /* __NAT_H__ */
 

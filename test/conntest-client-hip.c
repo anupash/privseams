@@ -1,17 +1,15 @@
-/*
- * Echo STDIN to a selected machine via tcp or udp using ipv6. Use this
- * with conntest-server.
+/** @file
+ * A test client for testing connection between hosts. Use this in context
+ * with conntest-server. "gai" stands for "give all information" :D
  *
- * $Id: conntest-client-hip.c,v 1.6 2003/09/02 12:45:13 mkomu Exp $
- *
- * Notes:
- * - assumes that udp packets arrive in order (high probability within same
- *   network)
- * Bugs:
- * - none
- * Todo:
- * - rewrite/refactor for better modularity
+ * @author  Lauri Silvennoinen
+ * @version 1.1
+ * @date    30.01.2008
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  */
+#if HAVE_CONFIG_H
+#include <config.h>
+#endif
 
 #include <stdio.h> 
 #include <stdlib.h> 
@@ -25,136 +23,143 @@
 #include <netdb.h>
 #include <sys/time.h>
 #include <time.h>
+#include "debug.h"
+#include "ife.h"
+#include "conntest.h"
 
-int create_socket(int type, int port) {
-  int fd;
+#define MINPORTNUM 1
+#define MAXPORTNUM 65535
 
-  fd = socket(AF_INET6, type, 0);
-  if (fd < 0) {
-    perror("socket");
-    exit(1);
-  }
+/**
+ * Main function.
+ * 
+ * @param argc command line argument count.
+ * @param argv command line arguments.
+ * @return     EXIT_FAILURE on failure, EXIT_SUCCESS on success.
+ */
+int main(int argc, char *argv[]) {
+	
+	int socktype = -1, err = 0;
+	const char *cfile = "default";
+	char usage[100];
+	char ping_help[512];
+	in_port_t port = 0;
 
-  return(fd);
-}
+	sprintf(usage, "Usage: %s <host> tcp|udp <port>", argv[0]);
 
-
-// usage: ./conntest-client host tcp|udp port
-// reads stdin
-
-int main(int argc,char *argv[]) {
-  struct timeval stats_before, stats_after;
-  long stats_diff_sec, stats_diff_usec;
-  int sock;
-  struct sockaddr_hip6 peeraddr;
-  char mylovemostdata[IP_MAXPACKET];
-  char receiveddata[IP_MAXPACKET];
-  int recvnum, sendnum;
-  int datalen = 0;
-  int port = 0;
-  int type;
-  int datasent = 0;
-  int datareceived = 0;
-  int ch;
-
-  if (argc != 5) {
-    fprintf(stderr, "Usage: %s addr tcp|udp port hit\n", argv[0]);
-    exit(1);
-  }
-
-  if (strcmp(argv[2], "tcp") == 0) {
-    type = SOCK_STREAM;
-  } else if (strcmp(argv[2], "udp") == 0) {
-    type = SOCK_DGRAM;
-  } else {
-    fprintf(stderr, "error: proto != tcp|udp\n");
-    exit(1);
-  }
-
-  port = atoi(argv[3]);
-  if (port <= 0 || port >= 65535) {
-    fprintf(stderr, "error: port < 0 || port > 65535\n");
-    exit(1);
-  }
-
-  sock = create_socket(type, port);
-
-  /* set server info */
-  bzero(&peeraddr, sizeof(peeraddr));
-  peeraddr.ship6_family = AF_INET6;
-  peeraddr.ship6_port = htons(port);
-  peeraddr.ship6_flowinfo = 0;
-  if(inet_pton(AF_INET6, argv[1], (struct in6_addr *) &peeraddr.ship6_addr) < 0) {
-    perror("inet_pton");
-    exit(1);
-  }
-  if(inet_pton(AF_INET6, argv[4], (struct in6_addr *) &peeraddr.ship6_hit) < 0) {
-    perror("inet_pton");
-    exit(1);
-  }
-
-  // data from stdin to buffer
-  bzero(receiveddata, IP_MAXPACKET);
-  bzero(mylovemostdata, IP_MAXPACKET);
-
-  while ((ch = fgetc(stdin)) != EOF && (datalen < IP_MAXPACKET)) { // horrible code
-    mylovemostdata[datalen] = (unsigned char) ch;
-    datalen++;
-  }
-  //fprintf(stderr, "datalen=%d\n", datalen);
-
-
-  /* send and receive data */
-  if (type == SOCK_STREAM || proto == SOCK_DGRAM) {
-    
-    gettimeofday(&stats_before, NULL);
-    if (connect(sock, (struct sockaddr *) &peeraddr, sizeof(peeraddr)) < 0) {
-      perror("connect");
-      exit(1);
-    }
-    gettimeofday(&stats_after, NULL);
-    stats_diff_sec  = (stats_after.tv_sec - stats_before.tv_sec) * 1000;
-    stats_diff_usec = (stats_after.tv_usec - stats_before.tv_usec) / 1000;
-    /* note: the 1 ms error in diff_usec is cancelled by diff_sec */
-    printf("connect took %ld ms\n", stats_diff_sec + stats_diff_usec);
-
-    while((datasent < datalen) || (datareceived < datalen)) { // send all
-
-      if (datasent < datalen) {
-	sendnum = send(sock, mylovemostdata+datasent, datalen-datasent, 0);
-	if (sendnum < 0) {
-	  perror("send");
-	  printf("FAIL\n");
-	  exit(2);
+	hip_set_logtype(LOGTYPE_STDERR);
+	hip_set_logfmt(LOGFMT_SHORT);
+	HIP_IFEL(hip_set_auto_logdebug(cfile), -1,
+		 "Error: Cannot set the debugging parameter.\n");
+	
+	if(argc < 4) {
+		HIP_INFO("Not enough arguments.\n%s\n", usage);
+		return EXIT_FAILURE;
+	}else if(argc > 4) {
+		HIP_INFO("Too many arguments.\n%s\n", usage);
+		return EXIT_FAILURE;
 	}
-	datasent += sendnum;
-	//fprintf(stderr, "sendnum=%d ", sendnum);
-      }
-
-      if (datareceived < datalen) {
-	recvnum = recv(sock, receiveddata+datareceived, datalen-datareceived, 0);
-	if (recvnum < 0) {
-	  perror("recv");
-	  exit(2);
+	
+	if (strcmp(argv[2], "tcp") == 0) {
+		socktype = SOCK_STREAM;
+	} else if (strcmp(argv[2], "udp") == 0) {
+		socktype = SOCK_DGRAM;
+	} else {
+		HIP_INFO("Invalid protocol: '%s'\n%s\n", argv[2], usage);
+		return EXIT_FAILURE;
 	}
-	datareceived += recvnum;
-	// fprintf(stderr, "recvnum=%d\n", recvnum);
-	//	receiveddata[datareceived] = '\0'; // turha ?
-      }
-      //fprintf(stderr, "datalen=%d datasent=%d datareceived=%d\n", datalen, datasent, datareceived);
-    }
-  } else {
-    perror("weird proto");
-    exit(1);
-  }
+	
+	port = atoi(argv[3]);
 
-  if (!memcmp(mylovemostdata, receiveddata, IP_MAXPACKET)) {
-    printf("OK\n");
-  } else {
-    printf("FAIL\n");
-    return(1);
-  }
+	/* Disabled since this comparison is always true with the current
+	   port number boundaries.
+	if(port < MINPORTNUM || port > MAXPORTNUM){
+		HIP_INFO("Invalid port number, allowed port numbers are "\
+			 "from %d to %d.\n%s\n", MINPORTNUM, MAXPORTNUM,
+			 usage);
+		return EXIT_FAILURE;
+	}
+	*/
 
-  close(sock);
-  return(0);
+	HIP_INFO("=== Testing %s connection to '%s' on port %s ===\n",
+		 (socktype == SOCK_STREAM ? "TCP" : "UDP"), argv[1],
+		 argv[3]);
+
+	/* Call the main function to do the actual logic. */
+	err = main_client_gai(socktype, argv[1], argv[3], 0);
+
+ out_err:
+	if(err == 0) {
+		HIP_INFO("=== Connection test result: "\
+			 "\e[92mSUCCESS\e[00m ===\n");
+		return EXIT_SUCCESS;
+	} else {
+		_HIP_DEBUG("err: %d, errno: %d .\n", err, errno);
+
+		/* Get a help string for pinging etc. */
+		sprintf(ping_help, "You can try the 'ping', 'ping6', "\
+			"'traceroute' or 'traceroute6' programs to\n"\
+			"track down the problem.\n");
+		
+		/* Check our specially tailored 'err' values first.
+		/* getaddrinfo() returns an error value as defined in
+		   /usr/include/netdb.h. We have stored that error value in
+		   errno. */
+		if(err == -EHADDRINFO) {
+			HIP_ERROR("Error when retrieving address information "\
+				  "for the peer.\n");
+			if(errno == EAI_NONAME) {
+				HIP_ERROR("Connection refused.\nDo you have a "\
+					  "local HIP daemon up and running?\n");
+			} else if(errno == EAI_AGAIN) {
+				HIP_ERROR("Temporary failure in name "\
+					  "resolution.\n");
+			}
+		} else if(err == -EBADMSG) {
+			HIP_INFO("Error when communicating with the peer.\n"\
+				 "The peer is supposed to echo back the sent "\
+				 "data,\nbut the sent and received data do "\
+				 "not match.\n");
+		}
+		/* Then move to errno handling. Note that the errno is set
+		   in somewhat randomly in libinet6 functions and therefore
+		   these error messages do not neccessarily hold. Well, better
+		   than nothing... */
+		else if(errno == ECONNREFUSED) {
+			HIP_ERROR("The peer was reached but it refused the "\
+				  "connection.\nThere is no one listening on "\
+				  "the remote address.\nIf you are trying to "\
+				  "establish a HIP connection,\nyou need both "\
+				  "a HIP daemon and a server running at the "\
+				  "other end.\nFor an IP connection you only "\
+				  "need a server running at the other end.\n");
+		} else if(errno == ENOTSOCK) {
+			HIP_ERROR("Socket operation on non-socket.\n"\
+				  "Is the host you are trying to connect local");
+			
+		} else if(errno == ENETUNREACH) {
+			HIP_ERROR("Network is unreachable.\n%s", ping_help);
+		} else if(errno == EBADF) {
+			HIP_ERROR("Bad file descriptor.\nThe file descriptor "\
+				  "used when trying to connect to the remote "\
+				  "host is not a\nvalid index in the "\
+				  "descriptor table.\n");
+		} else if(errno == EAFNOSUPPORT) {
+			HIP_ERROR("Address family not supported by protocol.\n"\
+				  "Only IPv4, IPv6 and HIP address families "\
+				  "are supported.\nAre you trying to "\
+				  "communicate between processes on the same "\
+				  "machine?\n");
+		}
+		/* Just to make sure we don't print 'success' when the
+		   connection test has actually failed we check errno != 0. */
+		else if (errno != 0) {
+			HIP_PERROR("");
+		}
+
+		HIP_INFO("=== Connection test result: "\
+			 "\e[91mFAILURE\e[00m ===\n");
+		
+		return EXIT_FAILURE;
+	}
 }

@@ -23,34 +23,25 @@
 #define HIP_PSIG                20 /* lightweight HIP pre signature */
 #define HIP_TRIG                21 /* lightweight HIP signature trigger*/
 #define HIP_PAYLOAD             64
-#define HIP_AGENT_PING          70
-#define HIP_AGENT_PING_REPLY    71
-#define HIP_AGENT_QUIT          72
-#define HIP_ADD_DB_HI           73
-#define HIP_I1_REJECT           74
-#define HIP_UPDATE_HIU          75
-#define HIP_FIREWALL_PING       80
-#define HIP_FIREWALL_PING_REPLY 81
-#define HIP_FIREWALL_QUIT       82
-#define HIP_ADD_ESCROW_DATA     83
-#define HIP_DELETE_ESCROW_DATA  84
-#define HIP_SET_ESCROW_ACTIVE   85
-#define HIP_SET_ESCROW_INACTIVE 86
-#define HIP_NAT_ON              87
-#define HIP_NAT_OFF             88
-#define HIP_DAEMON_QUIT         127
+/* only hip network message types here */
 /* @} */
 
 #define HIP_HIT_TYPE_HASH100    1
 #define HIP_HIT_TYPE_HAA_HASH   2
-#define HIP_HIT_TYPE_MASK_HAA   0x00000080 // depracated -miika
+#define HIP_HIT_TYPE_MASK_HAA   0x00000080 /**< depracated -miika */
 #define HIP_HIT_TYPE_MASK_100   0x20010010
+#define HIP_LSI_TYPE_MASK_192	0xC0000000
 #define HIP_HIT_TYPE_MASK_CLEAR 0x0000000f
+#define HIP_LSI_TYPE_MASK_CLEAR 0x000000ff
 #define HIP_HIT_TYPE_MASK_INV   0xfffffff0
 #define HIP_HIT_PREFIX          HIP_HIT_TYPE_MASK_100
-#define HIP_HIT_PREFIX_LEN      28     /* bits */
+#define HIP_LSI_PREFIX          HIP_LSI_TYPE_MASK_192
+#define HIP_HIT_PREFIX_LEN      28	/* bits */
+#define HIP_LSI_PREFIX_LEN	24	/* bits */
 #define HIP_HIT_FULL_PREFIX_STR "/128"
 #define HIP_HIT_PREFIX_STR      "/28"
+#define HIP_LSI_FULL_PREFIX_STR "/24"
+#define HIP_LSI_PREFIX_STR	"/24"
 #define HIP_KHI_CONTEXT_ID_INIT { 0xF0,0xEF,0xF0,0x2F,0xBF,0xF4,0x3D,0x0F, \
                                   0xE7,0x93,0x0C,0x3C,0x6E,0x61,0x74,0xEA }
 
@@ -62,6 +53,9 @@
 #define HIP_PARAM_ESP_INFO             65
 #define HIP_PARAM_R1_COUNTER           128
 #define HIP_PARAM_LOCATOR              193
+//NAT branch
+#define HIP_PARAM_NAT_TRANSFORM        194
+//end NAT branch
 #define HIP_PARAM_HASH_CHAIN_VALUE     221
 #define HIP_PARAM_HASH_CHAIN_ANCHORS   222
 #define HIP_PARAM_HASH_CHAIN_PSIG      223
@@ -76,40 +70,47 @@
 #define HIP_PARAM_CERT                 768
 #define HIP_PARAM_NOTIFICATION         832
 #define HIP_PARAM_ECHO_REQUEST_SIGN    897
+#define HIP_PARAM_REG_INFO	       930
+#define HIP_PARAM_REG_REQUEST	       932
+#define HIP_PARAM_REG_RESPONSE	       934
+#define HIP_PARAM_REG_FAILED	       936
 #define HIP_PARAM_ECHO_RESPONSE_SIGN   961
 #define HIP_PARAM_ESP_TRANSFORM        4095
 
-/* Range 32768 - 49141 can be used for HIPL private parameters. */
+/* Range 32768 - 49141 can be used for HIPL private parameters i.e. to
+   parameters passed from hipconf to hipdaemon. */
 #define HIP_PARAM_HIT                   32768
 #define HIP_PARAM_IPV6_ADDR             32769
-/** @todo change to digest */
-#define HIP_PARAM_DSA_SIGN_DATA         32770
+#define HIP_PARAM_DSA_SIGN_DATA         32770 /**< @todo change to digest */
 #define HIP_PARAM_HI                    32771
 #define HIP_PARAM_DH_SHARED_KEY         32772
 #define HIP_PARAM_UNIT_TEST             32773
 #define HIP_PARAM_EID_SOCKADDR          32774
-#define HIP_PARAM_EID_ENDPOINT          32775 /* Pass endpoint_hip structures into kernel */
+#define HIP_PARAM_EID_ENDPOINT          32775 /**< Pass endpoint_hip structures into kernel */
 #define HIP_PARAM_EID_IFACE             32776
 #define HIP_PARAM_EID_ADDR              32777
-#define HIP_PARAM_UINT                  32778 /* Unsigned integer */
+#define HIP_PARAM_UINT                  32778 /**< Unsigned integer */
 #define HIP_PARAM_KEYS                  32779
-#define HIP_PSEUDO_HIT                  32780 
-#define HIP_PARAM_REG_INFO		32781
-#define HIP_PARAM_REG_REQUEST		32782
-#define HIP_PARAM_REG_RESPONSE		32783
-#define HIP_PARAM_REG_FAILED		32784
-#define HIP_PARAM_BLIND_NONCE           32785 /* Pass blind nonce */
+#define HIP_PARAM_PSEUDO_HIT            32780 
+#define HIP_PARAM_BLIND_NONCE           32785 /**< Pass blind nonce */
 #define HIP_PARAM_OPENDHT_GW_INFO       32786
-
 #define HIP_PARAM_ENCAPS_MSG		32787
 #define HIP_PARAM_PORTPAIR		32788
 #define HIP_PARAM_SRC_ADDR		32789
 #define HIP_PARAM_DST_ADDR		32790
-
 #define HIP_PARAM_AGENT_REJECT	        32791
 #define HIP_PARAM_HA_INFO               32792
 #define HIP_PARAM_OPENDHT_SET           32793
-#define HIP_PARAM_INT                   32794
+#define HIP_PARAM_CERT_SPKI_INFO        32794
+#define HIP_PARAM_SRC_TCP_PORT		32795
+#define HIP_PARAM_DST_TCP_PORT		32796
+#define HIP_PARAM_IP_HEADER		32797
+#define HIP_PARAM_PACKET_SIZE		32798
+#define HIP_PARAM_TRAFFIC_TYPE		32799
+#define HIP_PARAM_ADD_HIT		32800
+#define HIP_PARAM_ADD_OPTION		32801
+#define HIP_PARAM_PEER_HIT		32802
+
 /* End of HIPL private parameters. */
 
 #define HIP_PARAM_HMAC                 61505
@@ -163,7 +164,6 @@
 #define HIP_LOWER_TRANSFORM_TYPE 2048
 #define HIP_UPPER_TRANSFORM_TYPE 4095
 
-
 #define HIP_ESP_RESERVED                0
 #define HIP_ESP_AES_SHA1                1
 #define HIP_ESP_3DES_SHA1               2
@@ -184,7 +184,8 @@
 #define HIP_SIG_RSA                   5
 #define HIP_HI_DEFAULT_ALGO           HIP_HI_DSA
 
-/* Kludge: currently set to DSA until bug id 175 is resolved! Should be RSA */
+/** @todo Kludge: currently set to DSA until bug id 175 is resolved!
+    Should be RSA. */
 #define HIP_SIG_DEFAULT_ALGO          HIP_SIG_RSA
 #define HIP_ANY_ALGO                  -1
 
@@ -235,17 +236,28 @@
 #define HIP_VER_MASK                0xF0
 #define HIP_RES_MASK                0x0F 
 
-#define HIP_HA_CTRL_NONE                 0x0000
-
 /**
  * @addtogroup hip_ha_controls
  * @{
  */
 /* REMEMBER TO UPDATE BITMAP IN DOC/DOXYGEN.H WHEN YOU ADD/CHANGE THESE! */
-#define HIP_HA_CTRL_LOCAL_REQ_HIPUDP     0x4000
-#define HIP_HA_CTRL_LOCAL_REQ_RVS        0x8000
+#define HIP_HA_CTRL_NONE                 0x0000
 
-#define HIP_HA_CTRL_PEER_HIPUDP_CAPABLE  0x4000 
+#define HIP_HA_CTRL_LOCAL_REQ_ESCROW     0x2000
+#define HIP_HA_CTRL_LOCAL_REQ_RELAY      0x4000
+#define HIP_HA_CTRL_LOCAL_REQ_RVS        0x8000
+/* Keep inside parentheses. */
+#define HIP_HA_CTRL_LOCAL_REQ_ALL        (\
+                                         HIP_HA_CTRL_LOCAL_REQ_ESCROW |\
+                                         HIP_HA_CTRL_LOCAL_REQ_RELAY |\
+                                         HIP_HA_CTRL_LOCAL_REQ_RVS\
+                                         )
+
+#define HIP_HA_CTRL_PEER_GRANTED_ESCROW  0x0400 
+#define HIP_HA_CTRL_PEER_GRANTED_RELAY   0x0800 
+#define HIP_HA_CTRL_PEER_GRANTED_RVS     0x1000
+#define HIP_HA_CTRL_PEER_ESCROW_CAPABLE  0x2000 
+#define HIP_HA_CTRL_PEER_RELAY_CAPABLE   0x4000 
 #define HIP_HA_CTRL_PEER_RVS_CAPABLE     0x8000
 /* @} */
 
@@ -261,11 +273,18 @@
  */
 #define HIP_SERVICE_RENDEZVOUS	         1
 #define HIP_SERVICE_ESCROW	         201
-#define HIP_SERVICE_RELAY_UDP_HIP	 202
-#define HIP_SERVICE_RELAY_UDP_ESP	 203
+#define HIP_SERVICE_RELAY            	 202
+#define HIP_SERVICE_RELAY_UDP_HIP	 203
+#define HIP_SERVICE_RELAY_UDP_ESP	 204
+
+/** @addtogroup hip_proxy
+ * @{ 
+ */
+#define HIP_PROXY_PASSTHROUGH		0
+#define HIP_PROXY_TRANSLATE 			1
 
 /* IMPORTANT! This must be the sum of above services. */
-#define HIP_NUMBER_OF_EXISTING_SERVICES  4
+#define HIP_TOTAL_EXISTING_SERVICES      3
 /* @} */
 
 /* Registration failure types as specified in draft-ietf-hip-registration-02.
@@ -273,10 +292,27 @@
    Numbers 201 - 255 are reserved by IANA for private use. */
 #define HIP_REG_INSUFFICIENT_CREDENTIALS 0
 #define HIP_REG_TYPE_UNAVAILABLE         1
+/** HIPL specific failure type to indicate that the requested service cannot
+    co-exist with a service that has been already granted to the client. The
+    client is required to cancel the overlapping service before registering. */
+#define HIP_REG_CANCEL_REQUIRED          201
+/** HIPL specific failure type to indicate that the requested service is not
+    available due to transient conditions. */
+#define HIP_REG_TRANSIENT_CONDITIONS     202
+/** Number of existing failure types. */
+#define HIP_TOTAL_EXISTING_FAILURE_TYPES 4
+/* A shorthand to init an array having all possible registration failure
+   types. */
+#define HIP_ARRAY_INIT_REG_FAILURES \
+   {HIP_REG_INSUFFICIENT_CREDENTIALS, HIP_REG_TYPE_UNAVAILABLE,\
+    HIP_REG_CANCEL_REQUIRED, HIP_REG_TRANSIENT_CONDITIONS}
+
 
 /* Returns length of TLV option (contents) with padding. */
 #define HIP_LEN_PAD(len) \
     ((((len) & 0x07) == 0) ? (len) : ((((len) >> 3) << 3) + 8))
+
+#define HIP_UDP_ZERO_BYTES_LEN 4 /* in bytes */
 
 typedef uint8_t hip_hdr_type_t;
 typedef uint8_t hip_hdr_len_t;
@@ -299,9 +335,11 @@ typedef struct hip_hadb_handle_func_set hip_handle_func_set_t;
 typedef struct hip_hadb_update_func_set hip_update_func_set_t;
 typedef struct hip_hadb_misc_func_set hip_misc_func_set_t;
 typedef struct hip_hadb_xmit_func_set hip_xmit_func_set_t;
+typedef struct hip_ipsec_func_set hip_ipsec_func_set_t;
 typedef struct hip_hadb_input_filter_func_set hip_input_filter_func_set_t;
 typedef struct hip_hadb_output_filter_func_set hip_output_filter_func_set_t;
 typedef struct hip_common hip_common_t;
+typedef struct hip_tlv_common hip_tlv_common_t;
 
 struct hip_crypto_key {
 	char key[HIP_MAX_KEY_LEN];
@@ -366,7 +404,7 @@ struct hip_locator_info_addr_item {
         uint8_t traffic_type;
         uint8_t locator_type;
         uint8_t locator_length;
-        uint8_t reserved;  /* last bit is P (prefered) */
+        uint8_t reserved;  /**< last bit is P (prefered) */
 	uint32_t lifetime;
 	struct in6_addr address;
 	/* end of fixed part - locator of arbitrary length follows but 
@@ -375,7 +413,37 @@ struct hip_locator_info_addr_item {
 		      WAITING_ECHO_REQUEST, ACTIVE */
 
 }  __attribute__ ((packed));
+//add by santtu
+/**
+ * it is the type 2 locater for UDP or other transport protocol later.
+ */
+struct hip_locator_info_addr_item2 {
+        uint8_t traffic_type;
+        uint8_t locator_type;
+        uint8_t locator_length;
+        uint8_t reserved;  /* last bit is P (prefered) */
+       	uint32_t lifetime;
+       	uint16_t port;
+       	uint8_t  transport_protocol;
+       	uint8_t  kind;
+       	uint32_t priority;
+       	uint32_t spi;
+       	struct in6_addr address;
 
+	int state; /**<State of our addresses, possible states are:
+		      WAITING_ECHO_REQUEST, ACTIVE */
+
+}  __attribute__ ((packed));
+
+
+/**
+ * it is a union of both type1 and type2 locator.
+ */
+union hip_locator_info_addr {
+	struct hip_locator_info_addr_item type1;
+	struct hip_locator_info_addr_item2 type2;
+}__attribute__ ((packed));
+//end add
 /** Structure describing an endpoint. This structure is used by the resolver in
  * the userspace, so it is not length-padded like HIP parameters. All of the
  * members are in network byte order.
@@ -416,8 +484,8 @@ struct hip_common {
 	uint8_t      ver_res;
 	uint16_t     checksum;
 	uint16_t     control;
-	struct in6_addr hits;  /**< Sender HIT   */
-	struct in6_addr hitr;  /**< Receiver HIT */
+	struct in6_addr hits;	/**< Sender HIT   */
+	struct in6_addr hitr;	/**< Receiver HIT */
 } __attribute__ ((packed));
 
 /**
@@ -646,9 +714,9 @@ struct hip_relay_via {
  * @note obsolete.
  */
 struct hip_relay_to_old {
-     hip_tlv_type_t type; /**< Type code for the parameter. */
-     hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
-     uint8_t address_and_port[0]; /**< Rendezvous server addresses and ports. */
+	hip_tlv_type_t type; /**< Type code for the parameter. */
+	hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
+	uint8_t address_and_port[0]; /**< Rendezvous server addresses and ports. */
 } __attribute__ ((packed));
 
 struct hip_eid_endpoint {
@@ -669,19 +737,26 @@ struct hip_eid_sockaddr {
 	struct sockaddr sockaddr;
 } __attribute__ ((packed));
 
-/* ESCROW */
-
 struct hip_reg_info {
-	hip_tlv_type_t type;
-	hip_tlv_len_t  length;
-	uint8_t       min_lifetime;
-	uint8_t       max_lifetime;
+	hip_tlv_type_t type; /**< Type code for the parameter. */
+	hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
+	uint8_t        min_lifetime;
+	uint8_t        max_lifetime;
+	uint8_t        reg_type[0];
 } __attribute__ ((packed));
 
 struct hip_reg_request {
 	hip_tlv_type_t type;
 	hip_tlv_len_t  length;
-	uint8_t       lifetime;
+	uint8_t        lifetime;
+	uint8_t        reg_type[0];
+} __attribute__ ((packed));
+
+struct hip_reg_response {
+	hip_tlv_type_t type;
+	hip_tlv_len_t  length;
+	uint8_t        lifetime;
+	uint8_t        reg_type[0];
 } __attribute__ ((packed));
 
 struct hip_reg_failed {
@@ -724,7 +799,22 @@ struct hip_opendht_set {
         char name[256];
 } __attribute__ ((packed));
 
+//add by santtu from here
+
+struct hip_nat_transform {
+	hip_tlv_type_t        type;
+	hip_tlv_len_t         length;
+	hip_transform_suite_t suite_id[1];
+} __attribute__ ((packed));
 /* @} */
+
+/** draft-ietf-hip-nat-traversal-02 */
+struct hip_reg_from {
+     hip_tlv_type_t type; /**< Type code for the parameter. */
+     hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
+     uint8_t address[16]; /**< IPv6 address */
+     in_port_t port; /**< Port number. */
+} __attribute__ ((packed));
 
 #endif /* _HIP_PROTODEFS */
 

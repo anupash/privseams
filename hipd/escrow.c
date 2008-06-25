@@ -12,8 +12,10 @@
 HIP_HASHTABLE *kea_table;
 HIP_HASHTABLE *kea_endpoints;
 
-// static hip_list_t keadb[HIP_KEA_SIZE];
-// static hip_list_t kea_endpointdb[HIP_KEA_EP_SIZE];
+/** Minimum relay record life time as a 8-bit integer. */
+uint8_t escrow_min_lifetime = HIP_ESCROW_MIN_LIFETIME;
+/** Maximum relay record life time as a 8-bit integer. */
+uint8_t escrow_max_lifetime = HIP_ESCROW_MAX_LIFETIME;
 
 static void *hip_keadb_get_key(void *entry)
 {
@@ -138,6 +140,7 @@ int hip_launch_cancel_escrow_registration(struct hip_host_id_entry * id_entry,
         hip_ha_t * entry = NULL;        
         struct in6_addr * server_hit = server_hit_void;
         HIP_KEA * kea = NULL;
+		in_port_t *peer_port;
         
         HIP_IFEL(!(entry = hip_hadb_find_byhits(&id_entry->lhi.hit, server_hit_void)),
                          -1, "internal error: no hadb entry found\n");
@@ -440,7 +443,7 @@ int hip_kea_add_endpoint(HIP_KEA *kea, HIP_KEA_EP *kea_ep)
 		 "Cannot insert KEA_EP entry with NULL hit\n");
 		 
 	// Create key
-	memcpy(&kea_ep->ep_id.value, &kea_ep->hit.in6_u.u6_addr32, 
+	memcpy(&kea_ep->ep_id.value, &kea_ep->hit.s6_addr32, 
 		   sizeof(struct in6_addr));
 	memcpy(&kea_ep->ep_id.value[4], &kea_ep->spi, sizeof(int));
 	
@@ -484,6 +487,20 @@ void hip_kea_remove_endpoint(HIP_KEA_EP *kea_ep)
 	HIP_UNLOCK_HA(kea_ep); 	
 }
 
+int hip_escrow_validate_lifetime(uint8_t requested_lifetime,
+				uint8_t *granted_lifetime)
+{
+	if(requested_lifetime < escrow_min_lifetime){
+		*granted_lifetime = escrow_min_lifetime;
+		return -1;
+	}else if(requested_lifetime > escrow_max_lifetime){
+		*granted_lifetime = escrow_max_lifetime;
+		return -1;
+	}else{
+		*granted_lifetime = requested_lifetime;
+		return 0;
+	}
+}
 
 void hip_kea_delete_endpoint(HIP_KEA_EP *kea_ep)
 {
@@ -497,7 +514,7 @@ HIP_KEA_EP *hip_kea_ep_find(struct in6_addr *hit, uint32_t spi)
 	
 	key = HIP_MALLOC(sizeof(struct hip_kea_ep_id), GFP_KERNEL);
 	
-	memcpy(&key->value, &hit->in6_u.u6_addr32, sizeof(struct in6_addr));
+	memcpy(&key->value, &hit->s6_addr32, sizeof(struct in6_addr));
 	memcpy(&key->value[4], &spi, sizeof(int));
 
 	HIP_HEXDUMP("Searching KEA endpoint with key:", key, 18);

@@ -4,14 +4,13 @@
 #include <stdio.h>
 #include <stdint.h>
 
+
 #include "builder.h"
 #include "debug.h"
 #include "xfrm.h"
 
 /* Keep this one as the last to avoid some weird compilation problems */
 #include <linux/netlink.h>
-
-#ifdef CONFIG_HIP_OPPTCP
 
 struct pseudo_hdr{
 	u32 s_addr;
@@ -28,8 +27,6 @@ struct pseudo6_hdr{
 	u8  protocol;
 	u16 length;
 };
-
-#endif
 
 /* New one to prevent netlink overrun */
 #if 0
@@ -54,9 +51,7 @@ struct pseudo6_hdr{
 #define NLMSG_TAIL(nmsg) \
 	((struct rtattr *) (((void *) (nmsg)) + NLMSG_ALIGN((nmsg)->nlmsg_len)))
 
-#ifdef CONFIG_HIP_OPPTCP
 #define HIP_OPTION_KIND 30
-#endif
 
 struct hip_work_order_hdr {
 	int type;
@@ -110,6 +105,9 @@ struct rtnl_handle
         __u32                   dump;
 };
 
+
+int lsi_total;
+
 typedef int (*hip_filter_t)(const struct nlmsghdr *n, int len, void *arg);
 typedef int (*rtnl_filter_t)(const struct sockaddr_nl *,
 			     const struct nlmsghdr *n, void **);
@@ -130,5 +128,6 @@ int netlink_talk(struct rtnl_handle *nl, struct nlmsghdr *n, pid_t peer,
 int hip_netlink_talk(struct rtnl_handle *nl, struct hip_work_order *req, struct hip_work_order *resp);
 int hip_netlink_send(struct hip_work_order *hwo);
 void hip_netlink_close(struct rtnl_handle *rth);
+//int hip_get_default_hit(struct rtnl_handle *hip_nl_route, struct in6_addr *hit);
 
 #endif /* _HIP_NLINK_H */

@@ -103,6 +103,13 @@ int hip_firewall_remove_escrow_data(struct in6_addr *addr, uint32_t spi);
 /* Functions for handling incoming packets. */
 int hip_sock_recv_agent(void);
 int hip_sock_recv_firewall(void);
+//Merge-may int hip_sendto_firewall(const struct hip_common *msg, size_t len);
+
+//int hip_sendto(const struct hip_common *msg, const struct sockaddr_in6 *dst);
+
+
+/* Functions for handling outgoing packets. */
+int hip_sendto_firewall(const struct hip_common *msg);
 
 
 #define IPV4_HDR_SIZE 20

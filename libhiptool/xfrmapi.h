@@ -74,12 +74,16 @@ int hip_xfrm_dst_init(struct in6_addr * dst_hit, struct in6_addr * dst_addr);
 int hip_xfrm_update(hip_hit_t *hit, hip_hit_t *hit2, struct in6_addr *addr, 
 		    uint32_t spi, int state, int dir, hip_portpair_t *sa_info);
 int hip_xfrm_delete(hip_hit_t * hit, uint32_t spi, int dir);
+
+
 int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
-			   struct in6_addr *hit_our,
-			   struct in6_addr *hit_peer, 
+			   struct in6_addr *id_our,
+			   struct in6_addr *id_peer, 
 			   struct in6_addr *tmpl_saddr,
 			   struct in6_addr *tmpl_daddr, int dir, u8 proto,
-			   u8 hit_prefix, int preferred_family);
+			   u8 id_prefix, int preferred_family);
+
+
 int hip_xfrm_policy_delete(struct rtnl_handle *rth,
 			   struct in6_addr *hit_our,
 			   struct in6_addr *hit_peer,
@@ -108,10 +112,28 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 		    uint32_t *spi, int ealg, struct hip_crypto_key *enckey,
 		    struct hip_crypto_key *authkey,
 		    int already_acquired, int direction, int update,
-			int sport, int dport);
+			int sport, int dport,int ice_ok);
 
 void hip_delete_sa(u32 spi, struct in6_addr *peer_addr, struct in6_addr *dst_addr, 
 		   int family, int sport, int dport);
+
+
+int hip_setup_hit_sp_pair(hip_hit_t *src_hit, hip_hit_t *dst_hit,
+                          struct in6_addr *src_addr,
+                          struct in6_addr *dst_addr, u8 proto,
+                          int use_full_prefix, int update);
+
+void hip_delete_hit_sp_pair(hip_hit_t *src_hit, hip_hit_t *dst_hit, u8 proto,
+                            int use_full_prefix);
+
+
+
+int hip_flush_all_policy();
+int hip_flush_all_sa();
+
+void hip_delete_default_prefix_sp_pair();
+int hip_setup_default_sp_prefix_pair();
+
 
 #endif /* HIP_BEET_H */
 

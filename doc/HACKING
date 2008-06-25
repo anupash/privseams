@@ -198,26 +198,6 @@ libraries.
 cd hipl--main--2.6
 baz changes --link
 
-YUM
----
-
-- to configure yum for Fedora modify configuration
-
-/etc/yum.conf
-
-[package]
-name=package
-baseurl=http://URL/yum/base/package
- 
-- create directory for package and copy rpm package 
-- to directory before update repository for yum
-
-$ sudo createrepo package
-
-- install the HIPL package using command
-
-$ yum install package
-
 ARCH POLICY
 ===========
 
@@ -320,16 +300,16 @@ int count;
 In example 1 we have a variable named count to which we wish to add a Doxygen
 comment "The number of items in the list." As a general rule, a Doxygen comment
 is bound to the next item. So if in Example 1 we would have had "int count2"
-just after count, the Doxygen comment would have been bound only "int count".
+just after count, the Doxygen comment would have been bound only to "int count".
 
-If you wish to add a Doxygen comment on the same line that the variable is, you
-have to to put an additional < marker in the comment block. Example 2:
+If you wish to add a Doxygen comment on the same line that the variable is,
+you'll have to to put an additional "<" marker in the comment block. Example 2:
 
 int count; /**< The number of items in the list. */
 
-This has the same effect as Example 1. Remember that the comment with the <
+This has the same effect as Example 1. Remember that the comment with the "<"
 marker has to start from the same line as the variable. Using the special marker
-< one can comment also structure members. Example 3:
+"<" one can comment also structure members. Example 3:
 
 /** A HIP FROM parameter. */
 struct hip_from {
@@ -341,7 +321,7 @@ struct hip_from {
 Here the whole structure gets Doxygen comment "A HIP FROM parameter", and the
 members get commented as illustrated. The structure members can also be
 commented using the plain /** ... */ comment block by placing the comment block
-on the line before the member, but the < marker saves some space. This does it
+on the line before the member, but the "<" marker saves some space. This does it
 for variable commenting, lets move onto function commenting. Example 4.
 
 /**
@@ -374,8 +354,8 @@ rendered using Courier instead of the default font. However, be careful not to
 add your own special commands by accidentally typing something like @entry.
 
 Function comment blocks can be placed to the c-file or the header file. You 
-should prefer the header file because it saves space from the actual code file.
-Doxygen comment blocks have the tendency to bloat the code. Generally, if
+should prefer the header file because it saves space in the actual code file.
+Doxygen comment blocks have a tendency to bloat the code. Generally, if
 possible, place the doxygen comment in the header file instead of the c-file.
 This applies to all Doxygen comments, not just function comments.
 
@@ -388,7 +368,7 @@ block.
 
 Example 5 is an example of an todo item placed inside a function, in the middle
 of the code. Hence, this becomes a todo item for the whole function. Doxygen
-maintains a list that contains all of the todo items of the project. Example 5.
+maintains a list that contains all the todo items of the project. Example 5.
 
 HIP_DEBUG("outgoing UPDATE ID=%u\n", update_id_out);
 /** @todo Handle this case. */
@@ -398,8 +378,7 @@ Entire files can be commented with the "@file" special tag as illustrated in
 Example 6. From example 6 we notice that Doxygen comments can also include
 simple HTML.
 
-/**
- * @file
+/**@file
  * This file defines various functions for handling HIP messages.
  * 
  * @author  John Doe
@@ -420,7 +399,7 @@ doxygen comments, i.e. it has no code whatsoever. The file is doc/doxygen.h.
 We can target comments from this file to another files using the "@file" special
 command. For example, to insert a Doxygen comment for the definition of 
 HIP_NTF_INVALID_SYNTAX located in libinet6/protodefs.h you can add the
-following, example 7.
+following comment block in doc/doxygen.h, example 7.
 
 /**
  * @file libinet6/protodefs.h
@@ -428,7 +407,7 @@ following, example 7.
  *       Indicates that the HIP message received was invalid because...
  */
 
-Finally, doc/doxygen.h is a good place for declaring groups. Groups are declared
+doc/doxygen.h is also a good place for declaring groups. Groups are declared
 with the "@defgroup" special tag. Example 8.
 
 /** @defgroup notification NOTIFICATION parameter values */
@@ -449,7 +428,7 @@ The general JavaDoc style guide applies to HIPL project. This style guide is
 available at:
 http://java.sun.com/j2se/javadoc/writingdoccomments/index.html
 
-Remember that the normal non-Doxygen comments are always valid. Thus if you need
+Remember that normal non-Doxygen comments are always valid. Thus if you need
 to comment something more specific to the code, use the regular
 
 /* comment here. */
@@ -485,8 +464,8 @@ PREBUILT BINARY PACKAGES
 Redhat
 ------
 
-Note well: Currently the status of the packaging scripts is in very initial
-phase. They are not tested throughly.
+Note well: Currently the status of the packaging scripts is in release
+phase. 
 
 Two separate packages are planned to be provided by HIPL: one for user
 space software and the other for kernel and kernel modules. Currently only
@@ -641,6 +620,139 @@ This is what I did:
 
    * copied the patches to /usr/src/redhat/SOURCES
    * rpmbuild --target i686 -ba /usr/src/redhat/SPECS/kernel-2.6.16.9.spec
+
+RETRIEVING HIPL PACKAGES FROM A REPOSITORY
+==========================================
+
+- tools to retrieve hipl packages are yum and apt-get
+
+yum for Fedora
+--------------
+
+- to configure yum for Fedora modify configuration
+
+[hipl]
+name=HIPL
+baseurl=http://packages.infrahip.net/fedora/base/$releasever/$basearch
+gpgcheck=0
+enabled=1
+
+- if exists sub-directory for packages in repository tree
+
+baseurl=http://packages.infrahip.net/fedora/base/$releasever/$basearch/RPMS
+
+- install hipl package by command yum
+
+$ sudo yum install hipl-lib hipl-daemon hipl-tools
+
+
+Updating yum repository
+-----------------------
+
+- install repository tool to the web server 
+
+$ yum -y install createrepo
+
+- create a directory tree for yum repository
+
+$ mkdir -p /var/www/html/fedora/base/8/i386
+
+$ mkdir -p /var/www/html/fedora/base/8/x86_64
+
+- copy all hipl packages to the repository depending on the architecture
+
+- for example copy all packages to directory /var/www/html/fedora/base/hipl/i386/
+
+hipl-agent-1.0.3-1.i386.rpm
+hipl-daemon-1.0.3-1.i386.rpm
+hipl-doc-1.0.3-1.i386.rpm
+hipl-firewall-1.0.3-1.i386.rpm
+hipl-lib-1.0.3-1.i386.rpm
+hipl-test-1.0.3-1.i386.rpm
+hipl-tools-1.0.3-1.i386.rpm
+
+- create yum repository for all packages 
+
+$ createrepo repository
+
+- for example to create yum repository for all packages 
+
+$ createrepo fedora/base/8/i386
+
+
+apt-get for Debian
+------------------
+
+- to configure apt-get for Debian modify sources.list 
+
+$ nano /etc/apt/sources.list
+
+deb http://packages.infrahip.net/ubuntu/ gutsy main
+deb-src http://packages.infrahip.net/ubuntu/ gutsy main
+
+- update and install hipl packages 
+
+$ apt-get update 
+
+$ apt-get install hipl-lib hipl-core hipl-tools hipl-doc
+
+- to fetch source package by apt-get
+
+$ apt-get source hipl 
+
+
+Updating dpkg repository 
+--------------------------
+
+- create a directory tree on the web server for executable files 
+
+$ mkdir -p /var/www/html/ubuntu/dists/gutsy/main/binary-armel
+$ mkdir -p /var/www/html/ubuntu/dists/gutsy/main/binary-i386
+$ mkdir -p /var/www/html/ubuntu/dists/gutsy/main/binary-amd64
+
+- to create overview file of Packages.gz for all hipl packages
+
+$ dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz
+
+- option -m for all -multiversions of hipl packages
+  
+$ dpkg-scanpackages -m . /dev/null | sudo gzip -9c > Packages.gz
+
+- copy all Debian hipl packages and Packages.gz file to directories 
+
+$ rsync *.deb root@packages.infrahip.net:/var/www/html/ubuntu/
+
+- for example to copy Packages.gz for architecture of i386
+
+$ rsync Packages.gz root@packages.infrahip.net:/var/www/html/ubuntu/dists/gutsy/main/binary-i386
+
+- to change owner of all files for web server
+
+$ sudo chown apache.apache *
+
+- create a directory tree for source package on the web server
+
+$ mkdir -p /var/www/html/ubuntu/dists/gutsy/main/source 
+
+- copy source package to the web server 
+
+$ rsync hipl-main.tar.gz root@packages.infrahip.net:/var/www/html/ubuntu/
+
+- change to the sub-directory where overview files are located 
+
+$ cd test/packaging/*-deb-src
+
+- and copy all overview files to the web server
+
+$ rsync Sources.gz root@packages.infrahip.net:/var/www/html/ubuntu/dists/gutsy/main/source
+
+$ rsync *.dsc *.orig.tar.gz *.diff.gz root@packages.infrahip.net:/var/www/html/ubuntu/
+
+- if Sources.gz is not found then create overview file for hipl-main.tar.gz source package
+
+$ sudo dpkg-scansources . /dev/null | sudo gzip -9c > Sources.gz
+
+
 
 TEST MATRIX
 ===========

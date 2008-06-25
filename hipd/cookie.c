@@ -12,9 +12,11 @@ int hip_cookie_difficulty = HIP_DEFAULT_COOKIE_K;
 
 #ifndef CONFIG_HIP_ICOOKIE /* see also spam.c for overriding functions */
 
+#if 0
 void hip_init_puzzle_defaults() {
 	return;
 }
+#endif
 
 int hip_get_cookie_difficulty(hip_hit_t *not_used) {
 	/* Note: we could return a higher value if we detect DoS */
@@ -219,51 +221,51 @@ void hip_uninit_r1(struct hip_r1entry *hip_r1table)
 }
 
 /**
- * hip_verify_cookie - Verify solution to the puzzle
- * @param ip_i Initiator's IPv6
- * @param ip_r Responder's IPv6
- * @param hdr Received HIP packet
- * @param solution Solution structure
- *
- * First we check that K and I are the same as in the puzzle we sent.
- * If not, then we check the previous ones (since the puzzle might just
- * have been expired). 
- *
- * Returns 1 if puzzle ok, 0 if !ok.
+ * Verifies the solution of a puzzle. First we check that K and I are the same
+ * as in the puzzle we sent. If not, then we check the previous ones (since the
+ * puzzle might just have been expired). 
+ * 
+ * @param ip_i     a pointer to Initiator's IP address.
+ * @param ip_r     a pointer to Responder's IP address.
+ * @param hdr      a pointer to HIP packet common header
+ * @param solution a pointer to a solution structure
+ * @return         1 if puzzle ok, 0 if not-ok.
+ * @todo           the return value of this function is in conflict with HIPL
+ *                 coding convention.
  */ 
-int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r, 
-		      struct hip_common *hdr, struct hip_solution *solution)
+int hip_verify_cookie(in6_addr_t *ip_i, in6_addr_t *ip_r, 
+		      hip_common_t *hdr, struct hip_solution *solution)
 {
-	struct hip_puzzle *puzzle;
-	struct hip_r1entry *result;
-	struct hip_host_id_entry *hid;
+	struct hip_puzzle *puzzle = NULL;
+	struct hip_r1entry *result = NULL;
+	struct hip_host_id_entry *hid = NULL;
 	struct in6_addr *plain_local_hit = NULL;
 	int err = 1;
-	uint16_t nonce;
+	uint16_t nonce = 0;
 
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status()) {
-	  HIP_IFEL((plain_local_hit = HIP_MALLOC(sizeof(struct in6_addr), 0)) == NULL,
-		   -1, "Couldn't allocate memory\n");
-	  HIP_IFEL(hip_blind_get_nonce(hdr, &nonce), -1, "hip_blind_get_nonce failed\n");
-	  HIP_IFEL(hip_plain_fingerprint(&nonce, &hdr->hitr, plain_local_hit), 
-		   -1, "hip_plain_fingerprint failed\n");
-	  HIP_DEBUG_HIT("plain_local_hit", plain_local_hit);
-	  
-	  /* Find the proper R1 table, use plain hit */
-	  HIP_READ_LOCK_DB(HIP_DB_LOCAL_HID);
-	  HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID, plain_local_hit, HIP_ANY_ALGO, -1)), 
-		   0, "Requested source HIT not (any more) available.\n");
-	  result = &hid->blindr1[hip_calc_cookie_idx(ip_i, ip_r, &hdr->hits)];
+		HIP_IFEL((plain_local_hit = HIP_MALLOC(sizeof(struct in6_addr), 0)) == NULL,
+			 -1, "Couldn't allocate memory.\n");
+		HIP_IFEL(hip_blind_get_nonce(hdr, &nonce), -1, "hip_blind_get_nonce failed\n");
+		HIP_IFEL(hip_plain_fingerprint(&nonce, &hdr->hitr, plain_local_hit), 
+			 -1, "hip_plain_fingerprint failed\n");
+		HIP_DEBUG_HIT("plain_local_hit", plain_local_hit);
+		
+		/* Find the proper R1 table, use plain hit */
+		HIP_READ_LOCK_DB(HIP_DB_LOCAL_HID);
+		HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID, plain_local_hit, HIP_ANY_ALGO, -1)), 
+			 0, "Requested source HIT not (any more) available.\n");
+		result = &hid->blindr1[hip_calc_cookie_idx(ip_i, ip_r, &hdr->hits)];
 	}
 #endif
-
+	
 	/* Find the proper R1 table, no blind used */
 	if (!hip_blind_get_status()) {
-	  HIP_READ_LOCK_DB(HIP_DB_LOCAL_HID);
-	  HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID, &hdr->hitr, HIP_ANY_ALGO, -1)), 
-		   0, "Requested source HIT not (any more) available.\n");
-	  result = &hid->r1[hip_calc_cookie_idx(ip_i, ip_r, &hdr->hits)];
+		HIP_READ_LOCK_DB(HIP_DB_LOCAL_HID);
+		HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID, &hdr->hitr, HIP_ANY_ALGO, -1)), 
+			 0, "Requested source HIT not (any more) available.\n");
+		result = &hid->r1[hip_calc_cookie_idx(ip_i, ip_r, &hdr->hits)];
 	}
 
 	puzzle = hip_get_param(result->r1, HIP_PARAM_PUZZLE);
@@ -271,7 +273,7 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 
 	_HIP_HEXDUMP("opaque in solution", solution->opaque,
 		     HIP_PUZZLE_OPAQUE_LEN);
-	_HIP_HEXDUMP("opaque in result", result->Copaque,
+	_HIP_HEXDUMP("Copaque in result", result->Copaque,
 		     HIP_PUZZLE_OPAQUE_LEN);
 	_HIP_HEXDUMP("opaque in puzzle", puzzle->opaque,
 		     HIP_PUZZLE_OPAQUE_LEN);
@@ -295,7 +297,7 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 			 solution->K, puzzle->K);
 		
 		HIP_IFEL(solution->K != result->Ck, 0,
-			"Solution's K did not match any sent Ks.\n");
+			 "Solution's K did not match any sent Ks.\n");
 		HIP_IFEL(solution->I != result->Ci, 0, 
 			 "Solution's I did not match the sent I\n");
 		HIP_IFEL(memcmp(solution->opaque, result->Copaque, HIP_PUZZLE_OPAQUE_LEN), 0,
@@ -313,7 +315,7 @@ int hip_verify_cookie(struct in6_addr *ip_i, struct in6_addr *ip_r,
 	}
 
 	HIP_IFEL(!hip_solve_puzzle(solution, hdr, HIP_VERIFY_PUZZLE), 0, 
-	 "Puzzle incorrectly solved\n");
+		 "Puzzle incorrectly solved\n");
 	
  out_err:
 	HIP_READ_UNLOCK_DB(HIP_DB_LOCAL_HID);
@@ -326,6 +328,7 @@ int hip_recreate_r1s_for_entry_move(struct hip_host_id_entry *entry, void *new_h
 {
 	struct hip_host_id *private = NULL;
 	struct hip_lhi lhi;
+	hip_lsi_t lsi;
 	int err = 0, len;
 	HIP_HASHTABLE *ht = (HIP_HASHTABLE *) new_hash;
 
@@ -342,15 +345,16 @@ int hip_recreate_r1s_for_entry_move(struct hip_host_id_entry *entry, void *new_h
 	HIP_IFEL(hip_del_host_id(HIP_DB_LOCAL_HID, &lhi), -1,
 		 "Failed to delete host id\n");
 
-	HIP_IFEL(hip_add_host_id(ht, &lhi, private, 
+	HIP_IFEL(hip_add_host_id(ht, &lhi, &lsi, private, 
 				 NULL, NULL, NULL), -1,
-		 "add host id failed\n");
+		 "add host id failed\n");//this calll 
 
  out_err:
 	if (private)
 		free(private);
 	return err;
 }
+
 
 int hip_recreate_all_precreated_r1_packets()
 {

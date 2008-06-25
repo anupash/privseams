@@ -44,6 +44,23 @@
 
 typedef  HIP_HASHTABLE hip_db_struct_t;
 
+/* 
+   Defines to help with the handling of the keys
+   For example with 1024 bit keys these values are
+   N = 128 bytes (1024 bits and so on)
+   E = 3 bytes
+   D = 128 bytes
+   P = 64 bytes
+   Q = 64 bytes
+*/
+/* Public part of the key */
+#define HIP_RSA_PUBLIC_EXPONENT_E_LEN 3
+#define HIP_RSA_PUBLIC_MODULUS_N_LEN 128
+/* Private part of the key */
+#define HIP_RSA_PRIVATE_EXPONENT_D_LEN 128
+#define HIP_RSA_SECRET_PRIME_FACTOR_P_LEN 64
+#define HIP_RSA_SECRET_PRIME_FACTOR_Q_LEN 64
+
 #define HIP_MAX_COOKIE_INFO 10
 /* for debugging with in6_ntop */
 #define INET6_ADDRSTRLEN 46
@@ -61,6 +78,7 @@ struct hip_hadb_multi {
 	int              m_type;
 };
 
+static char *lsi_addresses[] = {"192.0.0.1","192.0.0.2","192.0.0.3","192.0.0.4"};
 /*
  * Note: lhit->hit and hid are stored in network byte order.
  */
@@ -86,6 +104,7 @@ struct hip_host_id *hip_get_host_id(hip_db_struct_t *db,
 				    struct in6_addr *hit, int algo);
 int hip_add_host_id(hip_db_struct_t *db,
 		    const struct hip_lhi *lhi,
+		    hip_lsi_t *lsi,
 		    const struct hip_host_id *host_id,
 		    int (*insert)(struct hip_host_id_entry *, void **arg),		
 		    int (*remove)(struct hip_host_id_entry *, void **arg),
@@ -102,8 +121,16 @@ int hip_for_each_hi(int (*func)(struct hip_host_id_entry *entry, void *opaq), vo
 
 int hip_blind_find_local_hi(uint16_t *nonce, struct in6_addr *test_hit,
 			    struct in6_addr *local_hit);
+/*lsi support*/
+int hip_hidb_add_lsi(hip_db_struct_t *db, const struct hip_host_id_entry *id_entry);
+int hip_hidb_exists_lsi(hip_lsi_t *lsi);
+struct hip_host_id_entry *hip_hidb_get_entry_by_lsi(hip_db_struct_t *db, const struct in_addr *lsi);
+int hip_associate_default_hit_lsi(hip_hit_t *default_hit, hip_lsi_t *default_lsi);
+int hip_hidb_get_lsi_by_hit(const hip_hit_t *our, hip_lsi_t *our_lsi);
+
 /* existence */
 int hip_hidb_hit_is_our(const hip_hit_t *src);
+
 unsigned long hip_hidb_hash(const void *ptr);
 int hip_hidb_match(const void *ptr1, const void *ptr2);
 

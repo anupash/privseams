@@ -231,6 +231,7 @@ int hip_handle_bos(struct hip_common *bos,
 {
 	int err = 0, len;
 	struct hip_host_id *peer_host_id;
+	hip_lsi_t lsi;
 	//struct hip_lhi peer_lhi;
 	struct in6_addr peer_hit;
 	char *str;
@@ -287,7 +288,7 @@ int hip_handle_bos(struct hip_common *bos,
 
 		/* we have no previous infomation on the peer, create
 		 * a new HIP HA */
-		HIP_IFEL((hip_hadb_add_peer_info(&bos->hits, dstip)<0), -1,
+		HIP_IFEL((hip_hadb_add_peer_info(&bos->hits, dstip, &lsi)<0), -1,
 			 "Failed to insert new peer info");
 		HIP_DEBUG("HA entry created.\n");
 

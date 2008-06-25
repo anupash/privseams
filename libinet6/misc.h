@@ -7,8 +7,10 @@
 #  include "kerncompat.h"
 #endif
 
+#include "registration.h"
 #include "utils.h"
 #include "hidb.h"
+#include "icomm.h"
 
 #ifdef CONFIG_HIP_LIBHIPTOOL
 #  include "hipconf.h"
@@ -18,6 +20,18 @@
 
 #define HIP_OPP_IP_DB_SIZE		16
 
+static inline int ipv4_addr_cmp(const struct in_addr *a1,
+				const struct in_addr *a2)
+{
+	return memcmp((const void *) a1, (const void *) a2,
+		      sizeof(struct in_addr));
+}
+
+static inline void ipv4_addr_copy(struct in_addr *a1,
+				  const struct in_addr *a2)
+{
+	memcpy((void *) a1, (const void *) a2, sizeof(struct in_addr));
+}
 
 static inline int ipv6_addr_cmp(const struct in6_addr *a1,
 				const struct in6_addr *a2)
@@ -56,7 +70,12 @@ int hip_in6_ntop2(const struct in6_addr *in6, char *buf);
 char* hip_hit_ntop(const hip_hit_t *hit, char *buf);
 int hip_host_id_contains_private_key(struct hip_host_id *host_id);
 u8 *hip_host_id_extract_public_key(u8 *buffer, struct hip_host_id *data);
+
+int hip_lsi_are_equal(const hip_lsi_t *lsi1,
+		      const hip_lsi_t *lsi2);
 int hip_hit_is_bigger(const struct in6_addr *hit1,
+		      const struct in6_addr *hit2);
+int hip_hit_are_equal(const struct in6_addr *hit1,
 		      const struct in6_addr *hit2);
 void hip_xor_hits(struct in6_addr *res, 
 		  const struct in6_addr *hit1, 
@@ -67,6 +86,7 @@ unsigned long hip_hash_spi(const void *spi);
 int hip_match_spi(const void *, const void *);
 int hip_match_hit(const void *, const void *);
 const char *hip_algorithm_to_string(int algo);
+int convert_string_to_address_v4(const char *str, struct in_addr *ip);
 
 hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht);
 hip_transform_suite_t hip_select_hip_transform(struct hip_hip_transform *ht);
@@ -91,7 +111,14 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **buf);
 void *hip_cast_sa_addr(void *sockaddr);
 int hip_sockaddr_len(void *sockaddr);
 int hip_sa_addr_len(void *sockaddr);
+int hip_create_lock_file(char *filename, int killold);
+int hip_remove_lock_file(char *filename);
+
+void hip_addr_to_sockaddr(struct in6_addr *addr, struct sockaddr_storage *sa);
 
 uint64_t hip_solve_puzzle(void *puzzle, struct hip_common *hdr, int mode);
+hip_lsi_t *hip_get_lsi_peer_by_hits(struct in6_addr *hit_s, struct in6_addr *hit_r);
+
+int hip_create_lock_file(char *filename, int killold);
 
 #endif /* HIP_MISC_H */

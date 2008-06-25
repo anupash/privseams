@@ -13,6 +13,7 @@
 
 #include "maintenance.h"
 
+int hip_firewall_sock_lsi_fd = -1;
 
 float retrans_counter = HIP_RETRANSMIT_INIT;
 float opp_fallback_counter = HIP_OPP_FALLBACK_INIT;
@@ -45,9 +46,11 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 	if(*now - HIP_RETRANSMIT_WAIT > entry->hip_msg_retrans.last_transmit){
 		_HIP_DEBUG("%d %d %d\n",entry->hip_msg_retrans.count,
 			  entry->state, entry->retrans_state);
-		if ((entry->hip_msg_retrans.count > 0) &&
-		    (entry->state != HIP_STATE_ESTABLISHED && entry->retrans_state != entry->state) ||
-		    (entry->update_state != 0 && entry->retrans_state != entry->update_state)) {
+		if ((entry->hip_msg_retrans.count > 0) && entry->hip_msg_retrans.buf &&
+		    ((entry->state != HIP_STATE_ESTABLISHED && entry->retrans_state != entry->state) ||
+		     (entry->update_state != 0 && entry->retrans_state != entry->update_state))) {
+			HIP_DEBUG("state=%d, retrans_state=%d, update_state=%d\n",
+				  entry->state, entry->retrans_state, entry->update_state, entry->retrans_state);
 
 			/* @todo: verify that this works over slow ADSL line */
 			err = entry->hadb_xmit_func->
@@ -69,9 +72,9 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 			entry->hip_msg_retrans.count--;
 			/* set the last transmission time to the current time value */
 			time(&entry->hip_msg_retrans.last_transmit);
-		}
-		else {
-		  	HIP_FREE(entry->hip_msg_retrans.buf);
+		} else {
+			if (entry->hip_msg_retrans.buf)
+				HIP_FREE(entry->hip_msg_retrans.buf);
 			entry->hip_msg_retrans.buf = NULL;
 			entry->hip_msg_retrans.count = 0;
 
@@ -122,7 +125,8 @@ int hip_agent_add_lhit(struct hip_host_id_entry *entry, void *msg)
 {
 	int err = 0;
 
-	err = hip_build_param_contents(msg, (void *)&entry->lhi.hit, HIP_PARAM_HIT,
+	err = hip_build_param_contents(msg, (void *)&entry->lhi.hit,
+				       HIP_PARAM_HIT,
 	                               sizeof(struct in6_addr));
 	if (err)
 	{
@@ -140,7 +144,7 @@ out_err:
  */
 int hip_agent_add_lhits(void)
 {
-	struct hip_common *msg;
+	struct hip_common *msg = NULL;
 	int err = 0, n;
 	socklen_t alen;
 
@@ -161,31 +165,29 @@ int hip_agent_add_lhits(void)
 	HIP_IFEL(hip_for_each_hi(hip_agent_add_lhit, msg), 0,
 	         "for_each_hi err.\n");
 
-	err = hip_build_user_hdr(msg, HIP_ADD_DB_HI, 0);
+	err = hip_build_user_hdr(msg, SO_HIP_ADD_DB_HI, 0);
 	if (err)
 	{
 		HIP_ERROR("build hdr failed: %s\n", strerror(err));
 		goto out_err;
 	}
 
-	HIP_DEBUG("Sending local HITs to agent,"
-	          " message body size is %d bytes...\n",
-	          hip_get_msg_total_len(msg) - sizeof(struct hip_common));
-
-	alen = sizeof(hip_agent_addr);                      
-	n = sendto(hip_agent_sock, msg, hip_get_msg_total_len(msg),
-	           0, (struct sockaddr *)&hip_agent_addr, alen);
+	n = hip_send_agent(msg);
 	if (n < 0)
 	{
 		HIP_ERROR("Sendto() failed.\n");
 		err = -1;
 		goto out_err;
 	}
-	else HIP_DEBUG("Sendto() OK.\n");
+	else {
+		HIP_DEBUG("Sendto() OK.\n");
+	}
 
 #endif
 
 out_err:
+	if (msg)
+		free(msg);
 	return (err);
 }
 
@@ -219,9 +221,8 @@ out_err:
  */
 int hip_agent_send_remote_hits(void)
 {
-	struct hip_common *msg;
+	struct hip_common *msg = NULL;
 	int err = 0, n;
-	socklen_t alen;
 
 #ifdef CONFIG_HIP_AGENT
 	msg = malloc(HIP_MAX_PACKET);
@@ -235,16 +236,14 @@ int hip_agent_send_remote_hits(void)
 	HIP_IFEL(hip_for_each_ha(hip_agent_send_rhit, msg), 0,
 	         "for_each_ha err.\n");
 
-	err = hip_build_user_hdr(msg, HIP_UPDATE_HIU, 0);
+	err = hip_build_user_hdr(msg, SO_HIP_UPDATE_HIU, 0);
 	if (err)
 	{
 		HIP_ERROR("build hdr failed: %s\n", strerror(err));
 		goto out_err;
 	}
 
-	alen = sizeof(hip_agent_addr);                      
-	n = sendto(hip_agent_sock, msg, hip_get_msg_total_len(msg),
-	           0, (struct sockaddr *)&hip_agent_addr, alen);
+	n = hip_send_agent(msg);
 	if (n < 0)
 	{
 		HIP_ERROR("Sendto() failed.\n");
@@ -256,6 +255,8 @@ int hip_agent_send_remote_hits(void)
 #endif
 
 out_err:
+	if (msg)
+		free(msg);
 	return (err);
 }
 
@@ -271,7 +272,6 @@ int hip_agent_filter(struct hip_common *msg,
 	struct hip_common *user_msg = NULL;
 	int err = 0;
 	int n, sendn;
-	socklen_t alen;
 	hip_ha_t *ha_entry;
 	struct in6_addr hits;
 	
@@ -296,9 +296,7 @@ int hip_agent_filter(struct hip_common *msg,
 	HIP_IFE(hip_build_param_contents(user_msg, msg_info, HIP_PARAM_PORTPAIR,
 	                                 sizeof(*msg_info)), -1);
 
-	alen = sizeof(hip_agent_addr);
-	n = sendto(hip_agent_sock, user_msg, hip_get_msg_total_len(user_msg),
-	           0, (struct sockaddr *)&hip_agent_addr, alen);
+	n = hip_send_agent(user_msg);
 	if (n < 0)
 	{
 		HIP_ERROR("Sendto() failed.\n");
@@ -309,6 +307,8 @@ int hip_agent_filter(struct hip_common *msg,
 	HIP_DEBUG("Sent %d bytes to agent for handling.\n", n);
 	
 out_err:
+	if (user_msg)
+		free(user_msg);
 	return (err);
 }
 
@@ -336,8 +336,7 @@ int hip_agent_update_status(int msg_type, void *data, size_t size)
 		                                 size), -1);
 	}
 
-	n = sendto(hip_agent_sock, user_msg, hip_get_msg_total_len(user_msg),
-	           0, (struct sockaddr *)&hip_agent_addr, sizeof(hip_agent_addr));
+	n = hip_send_agent(user_msg);
 	if (n < 0)
 	{
 		HIP_ERROR("Sendto() failed.\n");
@@ -346,6 +345,8 @@ int hip_agent_update_status(int msg_type, void *data, size_t size)
 	}
 
 out_err:
+	if (user_msg)
+		free(user_msg);
 	return err;
 }
 
@@ -358,9 +359,9 @@ int hip_agent_update(void)
 	hip_agent_add_lhits();
 	
 	if (hip_nat_is())
-		hip_agent_update_status(HIP_NAT_ON, NULL, 0);
+		hip_agent_update_status(SO_HIP_SET_NAT_ON, NULL, 0);
 	else
-		hip_agent_update_status(HIP_NAT_OFF, NULL, 0);
+		hip_agent_update_status(SO_HIP_SET_NAT_OFF, NULL, 0);
 }
 
 
@@ -402,8 +403,10 @@ void register_to_dht ()
                 }
         }
  out_err:
-        if (tmp_hit_str) free(tmp_hit_str);
-        if (tmp_addr_str) free(tmp_addr_str);
+        if (tmp_hit_str)
+		free(tmp_hit_str);
+        if (tmp_addr_str)
+		free(tmp_addr_str);
         return;
 }
 
@@ -629,6 +632,10 @@ int periodic_maintenance()
 	return err;
 }
 
+int hip_get_firewall_status(){
+	return hip_firewall_status;
+}
+
 int hip_firewall_is_alive()
 {
 #ifdef CONFIG_HIP_FIREWALL
@@ -658,7 +665,7 @@ int hip_firewall_add_escrow_data(hip_ha_t *entry, struct in6_addr * hit_s,
 				
 		HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
 		hip_msg_init(msg);
-		HIP_IFEL(hip_build_user_hdr(msg, HIP_ADD_ESCROW_DATA, 0), -1, 
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_ESCROW_DATA, 0), -1, 
                         "Build hdr failed\n");
 		
 		/*if (hip_match_hit(&keys->hit, &entry->hit_our)) {
@@ -678,7 +685,7 @@ int hip_firewall_add_escrow_data(hip_ha_t *entry, struct in6_addr * hit_s,
 		HIP_IFEL(hip_build_param(msg, (struct hip_tlv_common *)keys), -1, 
                         "hip build param failed\n");
 
-		n = hip_sendto(msg, &hip_firewall_addr);                   
+		n = hip_sendto_firewall(msg);             
 		if (n < 0)
 		{
 			HIP_ERROR("Sendto firewall failed.\n");
@@ -690,6 +697,44 @@ int hip_firewall_add_escrow_data(hip_ha_t *entry, struct in6_addr * hit_s,
 out_err:
 	return err;
 
+}     
+
+
+int hip_firewall_add_bex_data(hip_ha_t *entry, struct in6_addr *hit_s, struct in6_addr *hit_r){
+	struct hip_common *msg;
+	int err = 0, n = 0;
+	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
+	hip_msg_init(msg);
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_FIREWALL_BEX_DONE, 0), -1, 
+                 "Build hdr failed\n");
+		            
+        HIP_IFEL(hip_build_param_contents(msg, (void *)hit_s, HIP_PARAM_HIT,
+                 sizeof(struct in6_addr)), -1, "build param contents failed\n");
+	HIP_IFEL(hip_build_param_contents(msg, (void *)hit_r, HIP_PARAM_HIT,
+                 sizeof(struct in6_addr)), -1, "build param contents failed\n");
+
+	struct sockaddr_in6 hip_firewall_addr;
+	socklen_t alen = sizeof(hip_firewall_addr);
+	
+	bzero(&hip_firewall_addr, alen);
+	hip_firewall_addr.sin6_family = AF_INET6;
+	hip_firewall_addr.sin6_port = htons(HIP_FIREWALL_PORT);
+	hip_firewall_addr.sin6_addr = in6addr_loopback;
+
+	if (hip_get_firewall_status()) {
+	        n = sendto(hip_firewall_sock_lsi_fd, msg, hip_get_msg_total_len(msg),
+			   0, &hip_firewall_addr, alen);
+	}
+                      
+	//n = hip_sendto_firewall(msg);
+	if (n < 0)
+	  HIP_DEBUG("Send to firewall failed str errno %s\n",strerror(errno));
+	HIP_IFEL( n < 0, -1, "Sendto firewall failed.\n");   
+	          
+	HIP_DEBUG("Sendto firewall OK.\n");
+
+out_err:
+	return err;
 }
 
 int hip_firewall_remove_escrow_data(struct in6_addr *addr, uint32_t spi)
@@ -703,13 +748,13 @@ int hip_firewall_remove_escrow_data(struct in6_addr *addr, uint32_t spi)
                                 
         HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
         hip_msg_init(msg);
-        HIP_IFEL(hip_build_user_hdr(msg, HIP_DELETE_ESCROW_DATA, 0), -1, 
+        HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DELETE_ESCROW_DATA, 0), -1, 
                 "Build hdr failed\n");
                 
         HIP_IFEL(hip_build_param_contents(msg, (void *)addr, HIP_PARAM_HIT,
                 sizeof(struct in6_addr)), -1, "build param contents failed\n");
         HIP_IFEL(hip_build_param_contents(msg, (void *)&spi, HIP_PARAM_UINT,
-                sizeof(unsigned int)), -1, "build param contents failed\n");
+                sizeof(unsigned int)), -1, "build param contents failed\n"); 
                 
         n = hip_sendto(msg, &hip_firewall_addr);                   
         if (n < 0)
@@ -735,7 +780,7 @@ int hip_firewall_set_escrow_active(int activate)
         HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
         hip_msg_init(msg);
         HIP_IFEL(hip_build_user_hdr(msg, 
-                (activate ? HIP_SET_ESCROW_ACTIVE : HIP_SET_ESCROW_INACTIVE), 0), 
+                (activate ? SO_HIP_SET_ESCROW_ACTIVE : SO_HIP_SET_ESCROW_INACTIVE), 0), 
                 -1, "Build hdr failed\n");
                 
         n = hip_sendto(msg, &hip_firewall_addr);                   
@@ -750,6 +795,7 @@ int hip_firewall_set_escrow_active(int activate)
 out_err:
         return err;
 }
+
 
 int opendht_put_locator(int sockfd, 
                    unsigned char * key, 
@@ -788,3 +834,4 @@ int opendht_put_locator(int sockfd,
  out_err:
     return(err);
 }
+

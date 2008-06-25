@@ -104,13 +104,20 @@ int hip_set_opportunistic_mode(const struct hip_common *msg)
 		goto out_err;
 	}
   
-	if(*mode == 0 || *mode == 1){
+	HIP_DEBUG("mode=%d\n", *mode);
+
+	if(*mode == 0 || *mode == 1 || *mode == 2){
 		opportunistic_mode = *mode;
 	} else {
 		HIP_ERROR("Invalid value for opportunistic mode\n");
 		err = -EINVAL;
 		goto out_err;
 	}
+
+	memset(msg, 0, HIP_MAX_PACKET);
+	HIP_IFE(hip_build_user_hdr(msg, (opportunistic_mode == 2 ? SO_HIP_SET_OPPTCP_ON : SO_HIP_SET_OPPTCP_OFF),
+				   0), -1);
+	hip_set_opportunistic_tcp_status(msg);
 	
  out_err:
 	return err;
@@ -151,7 +158,7 @@ int hip_query_ip_hit_mapping(struct hip_common *msg)
 	hip_ha_t *entry = NULL;
 	
 	
-	hit = (struct in6_addr *) hip_get_param_contents(msg, HIP_PSEUDO_HIT);
+	hit = (struct in6_addr *) hip_get_param_contents(msg, HIP_PARAM_PSEUDO_HIT);
 	HIP_ASSERT(hit_is_opportunistic_hashed_hit(hit));
 	
 	entry = hip_hadb_try_to_find_by_peer_hit(hit);
@@ -175,3 +182,25 @@ int hip_query_ip_hit_mapping(struct hip_common *msg)
 }
 #endif // CONFIG_HIP_OPPORTUNISTIC
 
+int hip_get_hip_proxy_status(void)
+{
+	return hipproxy;
+}
+
+int hip_set_hip_proxy_on(void)
+{
+	int err = 0;
+	hipproxy = 1;
+	HIP_DEBUG("hip_set_hip_proxy_on() invoked.\n");
+ out_err:
+	return err;
+}
+
+int hip_set_hip_proxy_off(void)
+{
+	int err = 0;
+	hipproxy = 0;
+	HIP_DEBUG("hip_set_hip_proxy_off() invoked.\n");
+ out_err:
+	return err;
+}

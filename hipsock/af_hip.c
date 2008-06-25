@@ -622,12 +622,12 @@ int hip_socket_setsockopt(struct socket *sock,
 	case SO_HIP_RST:
 		err = hip_socket_handle_rst(msg);
 		break;
-	case SO_HIP_ADD_RENDEZVOUS:
+	case SO_HIP_ADD_RVS:
 		err = hip_socket_handle_rvs(msg);
 		break;
-// XX TODO: not supported for now, this message should be moved as
-// such to the userspace anyway i.e. create WORKORDER:
-// HIP_WO_SUBTYPE_SEND_BOS:
+        /** @todo Not supported for now, this message should be moved as
+	    such to the userspace anyway i.e. create WORKORDER: */
+        // HIP_WO_SUBTYPE_SEND_BOS:
 	case SO_HIP_BOS:
 		err = hip_socket_bos_wo(msg);
 		//err = hip_socket_send_bos(msg);

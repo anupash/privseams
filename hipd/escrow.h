@@ -12,8 +12,22 @@
 typedef enum { HIP_KEASTATE_INVALID=0, HIP_KEASTATE_REGISTERING=1, 
 		HIP_KEASTATE_UNREGISTERING=2, HIP_KEASTATE_VALID=3 } hip_keastate_t;
 
-
-
+/**
+ * The minimum lifetime the escrow client is granted the service. This
+ * value is used as a 8-bit integer value. The lifetime value in seconds is
+ * calculated using the formula given in the registration draft.
+ * @note this is a fallback value if we are not able to read the configuration
+ *       file.
+ */
+#define HIP_ESCROW_MIN_LIFETIME 91 // Equals ~10 seconds.
+/**
+ * The maximum lifetime the escrow client is granted the service. This
+ * value is used as a 8-bit integer value. The lifetime value in seconds is
+ * calculated using the formula given in the registration draft.
+ * @note this is a fallback value if we are not able to read the configuration
+ *       file.
+ */
+#define HIP_ESCROW_MAX_LIFETIME 200 // Equals 131072 seconds.
 
 struct hip_key_escrow_association 
 {
@@ -22,9 +36,8 @@ struct hip_key_escrow_association
 	atomic_t               refcnt;
 	spinlock_t             lock;
 	struct in6_addr        hit; /* if we are the server, this is client hit,
-				 if we are the client, this is our own hit */
-	/*! \todo Find better key. Client HIT used for now. */
-	//struct in6_addr       	client_hit; 
+				       if we are the client, this is our own hit */
+	/** @todo Find better key. Client HIT used for now. */
 	struct in6_addr        peer_hit; 
 	struct in6_addr        server_hit;
 	
@@ -61,7 +74,6 @@ struct hip_kea_endpoint
 	uint16_t               key_len; 	//?
 	struct hip_crypto_key  esp_key;	
 };
-
 
 typedef struct hip_key_escrow_association HIP_KEA;
 typedef struct hip_kea_endpoint HIP_KEA_EP;
@@ -135,6 +147,25 @@ HIP_KEA_EP *hip_kea_ep_create(struct in6_addr *hit, struct in6_addr *peer_hit, s
 							  struct hip_crypto_key * key);
 
 int hip_kea_add_endpoint(HIP_KEA *kea, HIP_KEA_EP *kea_ep);
+
+/**
+ * Validates a escrow service lifetime. If @c requested_lifetime is smaller than
+ * @c escrow_min_lifetime then @c granted_lifetime is set to
+ * @c escrow_min_lifetime. If @c requested_lifetime is greater than
+ * @c escrow_max_lifetime then @c granted_lifetime is set to
+ * @c escrow_max_lifetime. Else @c granted_lifetime is set to
+ * @c requested_lifetime.
+ *
+ * @param  requested_lifetime the lifetime that is to be validated.
+ * @param  granted_lifetime   a target buffer for the validated lifetime.
+ * @return                    -1 if @c requested_lifetime is outside boundaries,
+ *                            i.e. is smaller than @c escrow_min_lifetime or
+ *                            is greater than @c escrow_max_lifetime. Zero
+ *                            otherwise.
+ */ 
+int hip_escrow_validate_lifetime(uint8_t requested_lifetime,
+				uint8_t *granted_lifetime);
+
 void hip_kea_remove_endpoint(HIP_KEA_EP *kea_ep);
 void hip_kea_delete_endpoint(HIP_KEA_EP *kea_ep);
 

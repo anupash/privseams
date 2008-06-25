@@ -6,7 +6,9 @@
  */
  
 #include "init.h"
-#include <linux/capability.h>
+#ifdef CONFIG_HIP_PRIVSEP
+#include <sys/capability.h>
+#endif /* CONFIG_HIP_PRIVSEP */
 #include <sys/prctl.h>
 #include <sys/types.h>
 #include "debug.h"
@@ -15,8 +17,6 @@
 
 extern struct hip_common *hipd_msg;
 extern struct hip_common *hipd_msg_v4;
-typedef struct __user_cap_header_struct capheader_t;
-typedef struct __user_cap_data_struct capdata_t;
 
 /******************************************************************************/
 /** Catch SIGCHLD. */
@@ -122,40 +122,16 @@ void hip_set_os_dep_variables()
  */
 int hipd_init(int flush_ipsec, int killold)
 {
+	hip_hit_t default_hit;
+	hip_lsi_t default_lsi;
 	hip_hit_t peer_hit;
-	int err = 0, fd, dhterr;
+	int err = 0, dhterr = 0;
 	char str[64];
 	struct sockaddr_in6 daemon_addr;
 
 	/* Open daemon lock file and read pid from it. */
-//	unlink(HIP_DAEMON_LOCK_FILE);
-	fd = open(HIP_DAEMON_LOCK_FILE, O_RDWR | O_CREAT, 0644);
-
-	/* Write pid to file. */
-	if (fd > 0)
-	{
-		if (lockf(fd, F_TLOCK, 0) < 0)
-		{
-			int pid = 0;
-			memset(str, 0, sizeof(str));
-			read(fd, str, sizeof(str) - 1);
-			pid = atoi(str);
-			
-			if (!killold)
-			{
-				HIP_ERROR("HIP daemon already running with pid %d!\n", pid);
-				HIP_ERROR("Use -k option to kill old daemon.\n");
-				exit(1);
-			}
-		
-			HIP_INFO("Daemon is already running with pid %d?"
-			         "-k option given, terminating old one...\n", pid);
-			kill(pid, SIGKILL);
-		}
-		
-		sprintf(str, "%d\n", getpid());
-		write(fd, str, strlen(str)); /* record pid to lockfile */
-	}
+	HIP_IFEL(hip_create_lock_file(HIP_DAEMON_LOCK_FILE, killold), -1,
+		 "locking failed\n");
 
 	hip_init_hostid_db(NULL);
 
@@ -168,25 +144,30 @@ int hipd_init(int flush_ipsec, int killold)
 	signal(SIGTERM, hip_close);
 	signal(SIGCHLD, hip_sig_chld);
  
+#ifdef CONFIG_HIP_OPPORTUNISTIC
 	HIP_IFEL(hip_init_oppip_db(), -1,
-	         "Cannot initialize opportunistic mode IP database for non HIP capable hosts!\n");
-
+	         "Cannot initialize opportunistic mode IP database for "\
+                 "non HIP capable hosts!\n");
+#endif
 	HIP_IFEL((hip_init_cipher() < 0), 1, "Unable to init ciphers.\n");
 
 	HIP_IFE(init_random_seed(), -1);
 
 	hip_init_hadb();
-
+        /* hip_init_puzzle_defaults just returns, removed -samu  */
+#if 0
 	hip_init_puzzle_defaults();
+#endif
 
-/* Initialize a hashtable for services, if any service is enabled. */
+       /* Initialize a hashtable for services, if any service is enabled. */
 	hip_init_services();
+	/* The new service initialization. */
+	hip_init_xxx_services();
+
 #ifdef CONFIG_HIP_RVS
-	HIP_INFO("Initializing HIP UDP relay database.\n");
-	if(hip_relht_init() == NULL)
-	{
-	     HIP_ERROR("Unable to initialize HIP UDP relay database.\n");
-	}
+	
+	HIP_INFO("Initializing HIP relay / RVS.\n");
+	hip_relay_init();
 #endif
 #ifdef CONFIG_HIP_ESCROW
 	hip_init_keadb();
@@ -201,8 +182,9 @@ int hipd_init(int flush_ipsec, int killold)
 	   will maintain the list This needs to be done before opening
 	   NETLINK_ROUTE! See the comment about address_count global var. */
 	HIP_DEBUG("Initializing the netdev_init_addresses\n");
-	hip_netdev_init_addresses(&hip_nl_ipsec);
 
+	hip_netdev_init_addresses(&hip_nl_ipsec);
+	
 	if (rtnl_open_byproto(&hip_nl_route,
 	                      RTMGRP_LINK | RTMGRP_IPV6_IFADDR | IPPROTO_IPV6
 	                      | RTMGRP_IPV4_IFADDR | IPPROTO_IP,
@@ -249,10 +231,10 @@ int hipd_init(int flush_ipsec, int killold)
                     HIP_DEBUG("Setting send buffer size of hip_nl_ipsec.fd failed\n");
 	}
 #endif
-
+	
 	HIP_IFEL(hip_init_raw_sock_v6(&hip_raw_sock_v6), -1, "raw sock v6\n");
 	HIP_IFEL(hip_init_raw_sock_v4(&hip_raw_sock_v4), -1, "raw sock v4\n");
-	HIP_IFEL(hip_init_nat_sock_udp(&hip_nat_sock_udp), -1, "raw sock udp\n");
+	HIP_IFEL(hip_init_nat_sock_udp(&hip_nat_sock_udp), -1, "raw sock udp\n");		
 
 	HIP_DEBUG("hip_raw_sock = %d\n", hip_raw_sock_v6);
 	HIP_DEBUG("hip_raw_sock_v4 = %d\n", hip_raw_sock_v4);
@@ -260,14 +242,14 @@ int hipd_init(int flush_ipsec, int killold)
 
 	if (flush_ipsec)
 	{
-		hip_flush_all_sa();
-		hip_flush_all_policy();
+		default_ipsec_func_set.hip_flush_all_sa();
+		default_ipsec_func_set.hip_flush_all_policy();
 	}
 
 	HIP_DEBUG("Setting SP\n");
-	hip_delete_default_prefix_sp_pair();
-	HIP_IFE(hip_setup_default_sp_prefix_pair(), 1);
-
+	default_ipsec_func_set.hip_delete_default_prefix_sp_pair();
+	HIP_IFE(default_ipsec_func_set.hip_setup_default_sp_prefix_pair(), -1);
+	
 	HIP_DEBUG("Setting iface %s\n", HIP_HIT_DEV);
 	set_up_device(HIP_HIT_DEV, 0);
 	HIP_IFE(set_up_device(HIP_HIT_DEV, 1), 1);
@@ -277,42 +259,52 @@ int hipd_init(int flush_ipsec, int killold)
 		hip_locator_status = SO_HIP_SET_LOCATOR_ON;
 	}
 #endif
+
 	HIP_IFE(hip_init_host_ids(), 1);
 
 	hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0);
 	HIP_IFEL((hip_user_sock < 0), 1, "Could not create socket for user communication.\n");
 	bzero(&daemon_addr, sizeof(daemon_addr));
 	daemon_addr.sin6_family = AF_INET6;
-	daemon_addr.sin6_port = HIP_DAEMON_LOCAL_PORT;
+	daemon_addr.sin6_port = htons(HIP_DAEMON_LOCAL_PORT);
 	daemon_addr.sin6_addr = in6addr_loopback;
 	HIP_IFEL(bind(hip_user_sock, (struct sockaddr *)& daemon_addr,
 		      sizeof(daemon_addr)), -1, "Bind on daemon addr failed\n");
 
-	hip_agent_sock = socket(AF_LOCAL, SOCK_DGRAM, 0);
-	HIP_IFEL(hip_agent_sock < 0, 1,
-	         "Could not create socket for agent communication.\n");
-	unlink(HIP_AGENTADDR_PATH);
-	bzero(&hip_agent_addr, sizeof(hip_agent_addr));
-	hip_agent_addr.sun_family = AF_LOCAL;
-	strcpy(hip_agent_addr.sun_path, HIP_AGENTADDR_PATH);
-	HIP_IFEL(bind(hip_agent_sock, (struct sockaddr *)&hip_agent_addr,
-	              sizeof(hip_agent_addr)), -1, "Bind on agent addr failed.");
-	chmod(HIP_AGENTADDR_PATH, 0777);
-	
+	hip_load_configuration();
+       
         dhterr = 0;
         dhterr = hip_init_dht();
         if (dhterr < 0) HIP_DEBUG("Initializing DHT returned error\n");
-	hip_load_configuration();
+
+	/* reusing dhterr */
+	dhterr = 0;
+	dhterr = hip_init_certs();
+	if (dhterr < 0) HIP_DEBUG("Initializing cert configuration file returned error\n");
 	
+#if 0
+	/* init new tcptimeout parameters, added by Tao Wan on 14.Jan.2008*/
+
+	HIP_IFEL(set_new_tcptimeout_parameters_value(), -1,
+			"set new tcptimeout parameters error\n");
+#endif
+
+
 	HIP_IFEL(hip_set_lowcapability(), -1, "Failed to set capabilities\n");
+	
+	hip_get_default_hit(&default_hit);
+	hip_get_default_lsi(&default_lsi);
+	hip_associate_default_hit_lsi(&default_hit, &default_lsi);
 
 #ifdef CONFIG_HIP_HI3
 	if( hip_use_i3 ) 
 	{
-		hip_get_default_hit(&peer_hit);
-		hip_i3_init(&peer_hit);
+//		hip_get_default_hit(&peer_hit);
+		hip_i3_init(/*&peer_hit*/);
 	}
 #endif
+
+	hip_firewall_sock_fd = hip_firewall_sock_lsi_fd = hip_user_sock;
 
 out_err:
 	return err;
@@ -399,66 +391,132 @@ int hip_init_dht()
         return (err);
 }
 
+#ifdef CONFIG_HIP_OPENWRT
+/*
+ * Note: this function does not go well with valgrind
+ */
+int hip_set_lowcapability() {
+  struct passwd *nobody_pswd;
+  int err = 0;
+#ifdef CONFIG_HIP_PRIVSEP
+  uid_t ruid,euid;
+  capheader_t header;
+  capdata_t data; 
+
+  header.pid=0;
+  header.version = _LINUX_CAPABILITY_VERSION_HIPL;
+  data.effective = data.permitted = data.inheritable = 0;
+
+  /* openwrt code */
+
+  HIP_IFEL(prctl(PR_SET_KEEPCAPS, 1), -1, "prctl err\n");
+        
+  HIP_DEBUG("Now PR_SET_KEEPCAPS=%d\n", prctl(PR_GET_KEEPCAPS));
+
+  HIP_IFEL(!(nobody_pswd = getpwnam(USER_NOBODY)), -1,
+	   "Error while retrieving USER 'nobody' uid\n"); 
+
+  HIP_IFEL(capget(&header, &data), -1,
+	   "error while retrieving capabilities through capget()\n");
+
+  HIP_DEBUG("effective=%u, permitted = %u, inheritable=%u\n",
+	    data.effective, data.permitted, data.inheritable);
+
+  ruid=nobody_pswd->pw_uid; 
+  euid=nobody_pswd->pw_uid; 
+  HIP_DEBUG("Before setreuid(,) UID=%d and EFF_UID=%d\n",
+	    getuid(), geteuid());
+        
+  /* openwrt code */
+
+  HIP_IFEL(setreuid(ruid,euid), -1, "setruid failed\n");
+        
+  HIP_DEBUG("After setreuid(,) UID=%d and EFF_UID=%d\n",
+	    getuid(), geteuid());
+  HIP_IFEL(capget(&header, &data), -1,
+	   "error while retrieving capabilities through 'capget()'\n");
+
+  HIP_DEBUG("effective=%u, permitted = %u, inheritable=%u\n",
+	    data.effective,data.permitted, data.inheritable);
+  HIP_DEBUG ("Going to clear all capabilities except the ones needed\n");
+  data.effective = data.permitted = data.inheritable = 0;
+  // for CAP_NET_RAW capability 
+  data.effective |= (1 <<CAP_NET_RAW );
+  data.permitted |= (1 <<CAP_NET_RAW );
+  // for CAP_NET_ADMIN capability 
+  data.effective |= (1 <<CAP_NET_ADMIN );
+  data.permitted |= (1 <<CAP_NET_ADMIN );
+
+  /* openwrt code */
+
+  HIP_IFEL(capset(&header, &data), -1, 
+	   "error in capset (do you have capabilities kernel module?)");
+
+  HIP_DEBUG("UID=%d EFF_UID=%d\n", getuid(), geteuid());  
+  HIP_DEBUG("effective=%u, permitted = %u, inheritable=%u\n",
+	    data.effective, data.permitted, data.inheritable);
+#endif /* CONFIG_HIP_PRIVSEP */
+
+ out_err:
+  return err;
+        
+}
+
+#else /* ! OPENWRT */
+
+/*
+ * Note: this function does not go well with valgrind
+ */
 int hip_set_lowcapability() {
 	struct passwd *nobody_pswd;
 	int err = 0;
 #ifdef CONFIG_HIP_PRIVSEP
+	cap_value_t cap_list[] = {CAP_NET_RAW, CAP_NET_ADMIN };
+	int ncap_list = 2; 
 	uid_t ruid,euid;
-	capheader_t header;
-	capdata_t data;	
-
-	header.pid=0;
-	header.version = _LINUX_CAPABILITY_VERSION;
-	data.effective = data.permitted = data.inheritable = 0;
+	cap_t cap_p;
+	char *cap_s;
 
 	HIP_IFEL(prctl(PR_SET_KEEPCAPS, 1), -1, "prctl err\n");
 	
 	HIP_DEBUG("Now PR_SET_KEEPCAPS=%d\n", prctl(PR_GET_KEEPCAPS));
 
-	HIP_IFEL(!(nobody_pswd = getpwnam(USER_NOBODY)), -1,
-		 "Error while retrieving USER 'nobody' uid\n"); 
+        HIP_IFEL(!(nobody_pswd = getpwnam(USER_NOBODY)), -1,
+                 "Error while retrieving USER 'nobody' uid\n");
 
-	HIP_IFEL(capget(&header, &data), -1,
-		 "error while retrieving capabilities through capget()\n");
-
-	HIP_DEBUG("effective=%u, permitted = %u, inheritable=%u\n",
-		  data.effective, data.permitted, data.inheritable);
+	HIP_IFEL(!(cap_p = cap_get_proc()), -1, "Error getting capabilities\n");
+	HIP_DEBUG("cap_p %s\n", cap_s = cap_to_text(cap_p, NULL));
+	cap_free(cap_s);
 
 	ruid=nobody_pswd->pw_uid; 
 	euid=nobody_pswd->pw_uid; 
-	HIP_DEBUG("Before setreuid(,) UID=%d and EFF_UID=%d\n",
+
+	HIP_DEBUG("Before setreuid UID=%d and EFF_UID=%d\n",
 		  getuid(), geteuid());
   	
 	HIP_IFEL(setreuid(ruid,euid), -1, "setruid failed\n");
 	
-	HIP_DEBUG("After setreuid(,) UID=%d and EFF_UID=%d\n",
+	HIP_DEBUG("After setreuid UID=%d and EFF_UID=%d\n",
 		  getuid(), geteuid());
-	HIP_IFEL(capget(&header, &data), -1,
-		 "error while retrieving capabilities through 'capget()'\n");
 
-	HIP_DEBUG("effective=%u, permitted = %u, inheritable=%u\n",
-		  data.effective,data.permitted, data.inheritable);
 	HIP_DEBUG ("Going to clear all capabilities except the ones needed\n");
-	data.effective = data.permitted = data.inheritable = 0;
-  	// for CAP_NET_RAW capability 
-	data.effective |= (1 <<CAP_NET_RAW );
-  	data.permitted |= (1 <<CAP_NET_RAW );
-  	// for CAP_NET_ADMIN capability 
-	data.effective |= (1 <<CAP_NET_ADMIN );
-  	data.permitted |= (1 <<CAP_NET_ADMIN );
+	HIP_IFEL(cap_clear(cap_p)<0, -1, "Error clearing capabilities\n");
 
-	HIP_IFEL(capset(&header, &data), -1, 
-		 "error in capset (do you have capabilities kernel module?)");
-
+	HIP_IFEL(cap_set_flag(cap_p, CAP_EFFECTIVE, ncap_list, cap_list, CAP_SET)<0, -1, "Error setting capability flags\n");
+	HIP_IFEL(cap_set_flag(cap_p, CAP_PERMITTED, ncap_list, cap_list, CAP_SET)<0, -1, "Error setting capability flags\n");
+	HIP_IFEL(cap_set_proc(cap_p)<0, -1, "Error modifying capabilities\n");
 	HIP_DEBUG("UID=%d EFF_UID=%d\n", getuid(), geteuid());	
-	HIP_DEBUG("effective=%u, permitted = %u, inheritable=%u\n",
-		  data.effective, data.permitted, data.inheritable);
+	HIP_DEBUG("cap_p %s\n", cap_s = cap_to_text(cap_p, NULL));
+	cap_free(cap_s);
+	cap_free(cap_p);
+
 #endif /* CONFIG_HIP_PRIVSEP */
 
 out_err:
 	return err;
 	
 }
+#endif
 
 /**
  * Init host IDs.
@@ -503,6 +561,7 @@ int hip_init_host_ids()
 	}
 	
 	err = hip_handle_add_local_hi(user_msg);
+
 	if (err)
 	{
 		HIP_ERROR("Adding of keys failed\n");
@@ -601,7 +660,7 @@ int hip_init_nat_sock_udp(int *hip_nat_sock_udp)
 	err = bind(*hip_nat_sock_udp, (struct sockaddr *)&myaddr, sizeof(myaddr));
 	if (err < 0)
 	{
-		HIP_ERROR("Unable to bind udp socket to port\n");
+		HIP_PERROR("Unable to bind udp socket to port\n");
 		err = -1;
 		goto out_err;
 	}
@@ -637,64 +696,79 @@ void hip_close(int signal)
 	}
 }
 
-
 /**
  * Cleanup and signal handler to free userspace and kernel space
  * resource allocations.
  */
 void hip_exit(int signal)
 {
-	int alen;
 	struct hip_common *msg = NULL;
 	HIP_ERROR("Signal: %d\n", signal);
 
-	hip_delete_default_prefix_sp_pair();
+	default_ipsec_func_set.hip_delete_default_prefix_sp_pair();
 	/* Close SAs with all peers */
         // hip_send_close(NULL);
 
+#if 0
+	/*reset TCP timeout to be original vaule , added By Tao Wan on 14.Jan.2008. */
+	reset_default_tcptimeout_parameters_value();
+#endif
 	if (hipd_msg)
 		HIP_FREE(hipd_msg);
         if (hipd_msg_v4)
-            HIP_FREE(hipd_msg_v4);
+        	HIP_FREE(hipd_msg_v4);
 	
-	hip_delete_all_sp();
+	hip_delete_all_sp();//empty
 
 	delete_all_addresses();
 
 	set_up_device(HIP_HIT_DEV, 0);
 
-	/* This is needed only if RVS or escrow, hiprelay is in use. */
+	/* Next line is needed only if RVS or escrow, hiprelay is in use. */
 	hip_uninit_services();
+	hip_uninit_xxx_services();
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	hip_oppdb_uninit();
 #endif
 
 #ifdef CONFIG_HIP_HI3
-	cl_exit();
+	hip_hi3_clean();
 #endif
 
 #ifdef CONFIG_HIP_RVS
-	HIP_INFO("Uninitializing HIP UDP relay database.\n");
-	hip_relht_uninit();
+	HIP_INFO("Uninitializing RVS / HIP relay database and whitelist.\n");
+	hip_relay_uninit();
 #endif
 #ifdef CONFIG_HIP_ESCROW
 	hip_uninit_keadb();
 	hip_uninit_kea_endpoints();
 #endif
 
-	if (hip_raw_sock_v6)
+	if (hip_raw_sock_v6){
+		HIP_INFO("hip_raw_sock_v6\n");
 		close(hip_raw_sock_v6);
-	if (hip_raw_sock_v4)
+	}
+	if (hip_raw_sock_v4){
+		HIP_INFO("hip_raw_sock_v4\n");
 		close(hip_raw_sock_v4);
-	if(hip_nat_sock_udp)
+	}
+	if(hip_nat_sock_udp){
+		HIP_INFO("hip_nat_sock_udp\n");
 		close(hip_nat_sock_udp);
-	if (hip_user_sock)
+	}
+	if (hip_user_sock){
+		HIP_INFO("hip_user_sock\n");
 		close(hip_user_sock);
-	if (hip_nl_ipsec.fd)
+	}
+	if (hip_nl_ipsec.fd){
+		HIP_INFO("hip_nl_ipsec.fd\n");
 		rtnl_close(&hip_nl_ipsec);
-	if (hip_nl_route.fd)
+	}	
+	if (hip_nl_route.fd){
+		HIP_INFO("hip_nl_route.fd\n");
 		rtnl_close(&hip_nl_route);
+	}
 
 	hip_uninit_hadb();
 	hip_uninit_host_id_dbs();
@@ -702,22 +776,12 @@ void hip_exit(int signal)
 	msg = hip_msg_alloc();
 	if (msg)
 	{
-	  hip_build_user_hdr(msg, HIP_DAEMON_QUIT, 0);
-	}
-	else HIP_ERROR("Failed to allocate memory for message\n");
-
-	if (msg && hip_agent_sock)
-	{
-		alen = sizeof(hip_agent_addr);
-		sendto(hip_agent_sock, msg, hip_get_msg_total_len(msg), 0,
-		       (struct sockaddr *)&hip_agent_addr, alen);
-	}
-	close(hip_agent_sock);
-
-	if (msg)
+		hip_build_user_hdr(msg, SO_HIP_DAEMON_QUIT, 0);
+		hip_send_agent(msg);
 		free(msg);
+	}
 	
-	unlink(HIP_DAEMON_LOCK_FILE);
+	hip_remove_lock_file(HIP_DAEMON_LOCK_FILE);
         
 	if (opendht_serving_gateway)
 		freeaddrinfo(opendht_serving_gateway);
@@ -791,3 +855,80 @@ void hip_probe_kernel_modules()
 	HIP_DEBUG("Probing completed\n");
 }
 
+int hip_init_certs(void) {
+	int err = 0;
+	char hit[41];
+	FILE * conf_file;
+	struct hip_host_id_entry * entry;
+	char hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
+
+	memset(hostname, 0, HIP_HOST_ID_HOSTNAME_LEN_MAX);
+	HIP_IFEL(gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1), -1,
+		 "gethostname failed\n");    
+
+	conf_file = fopen(HIP_CERT_CONF_PATH, "r");
+	if (!conf_file) {
+		HIP_DEBUG("Configuration file did NOT exist creating it and "
+			  "filling it with default information\n");
+		HIP_IFEL(!memset(hit, '\0', sizeof(hit)), -1,
+			  "Failed to memset memory for hit presentation format\n");
+		/* Fetch the first RSA HIT */
+		entry = hip_return_first_rsa();
+		if (entry == NULL) {
+			HIP_DEBUG("Failed to get the first RSA HI");
+			goto out_err;
+		}
+		hip_in6_ntop(&entry->lhi.hit, hit);
+		conf_file = fopen(HIP_CERT_CONF_PATH, "w+");
+		fprintf(conf_file,
+			"# Section containing SPKI related information\n"
+			"#\n"
+			"# hit = what hit is to be used when signing\n"                          
+			"# days = how long is this key valid\n"
+			"\n"
+			"[ hip_spki ]\n"
+			"hit = %s\n"
+			"days = %d\n"
+			"\n"
+			"# Section containing HIP related information\n"
+			"#\n"
+			"# hit = what hit is to be used when signing\n"
+			"# alias = userfriendly name\n"         
+			"# days = how long is this key valid\n"
+			"\n"
+			"[ hip_x509v3 ]\n"
+			"hit = %s\n"
+			"alias = %s\n"
+			"days = %d\n", 
+			hit, HIP_CERT_INIT_DAYS,
+			hit, hostname, HIP_CERT_INIT_DAYS);		
+		fclose(conf_file);
+	} else {
+		HIP_DEBUG("Configuration file existed exiting hip_init_certs");
+	}
+out_err:
+	return err;
+}
+
+struct hip_host_id_entry * hip_return_first_rsa(void) {
+	hip_list_t *curr, *iter;
+	struct hip_host_id_entry *tmp;
+	int err = 0, c;
+	uint16_t algo;
+
+	HIP_READ_LOCK_DB(hip_local_hostid_db);
+
+	list_for_each_safe(curr, iter, hip_local_hostid_db, c) {
+		tmp = list_entry(curr);
+		HIP_DEBUG_HIT("Found HIT", &tmp->lhi.hit);
+		algo = hip_get_host_id_algo(tmp->host_id);
+		HIP_DEBUG("hits algo %d HIP_HI_RSA = %d\n", 
+			  algo, HIP_HI_RSA);
+		if (algo == HIP_HI_RSA) goto out_err;
+	}
+
+out_err:
+	HIP_READ_UNLOCK_DB(hip_local_hostid_db);
+	if (algo == HIP_HI_RSA) return (tmp);
+	return NULL;
+}
