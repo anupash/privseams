@@ -168,11 +168,11 @@ static int pisa_insert_nonce(hip_fw_context_t *ctx)
 	u8 nonce[PISA_NONCE_LEN];
 	struct hip_esp_info *esp_info;
 	struct hip_common *hip = ctx->transport_hdr.hip;
-	u32 spi;
+	u32 spi = 0;
 
 	esp_info = hip_get_param(hip, HIP_PARAM_ESP_INFO);
-/* FIXME: check ptr */
-	spi = esp_info->new_spi;
+	if (esp_info != NULL)
+		spi = esp_info->new_spi;
 
 #ifdef PISA_TEST_MULTIPLE_PARAMETERS
 	{
@@ -211,8 +211,8 @@ static int pisa_insert_puzzle(hip_fw_context_t *ctx)
 
 	memcpy(&hash, &seed, 4);
 
-	/* here we switch order of initiator and receiver to obtain an other
-	 * SHA1 hash */
+	/* here we switch order of initiator and receiver to obtain a
+	 * different SHA1 hash */
 	pisa_append_hmac(&hip->hitr, &hip->hits, 1, 0, &hash, 4);
 
 #ifdef PISA_TEST_MULTIPLE_PARAMETERS
@@ -342,10 +342,12 @@ static int pisa_check_signature(hip_fw_context_t *ctx)
 	if (host_id == 0) {
 		HIP_DEBUG("Cannot check signature: No HOST_ID found.\n");
 	} else {
-	verify_signature = (hip_get_host_id_algo(host_id) == HIP_HI_RSA ?
-	                    hip_rsa_verify : hip_dsa_verify);
+		if (hip_get_host_id_algo(host_id) == HIP_HI_RSA)
+			verify_signature = hip_rsa_verify;
+		else
+			verify_signature = hip_dsa_verify;
 
-	err = verify_signature(host_id, hip);
+		err = verify_signature(host_id, hip);
 	}
 
 out_err:
@@ -440,8 +442,8 @@ static int pisa_handler_r2(hip_fw_context_t *ctx)
 	sig = pisa_check_signature(ctx);
 
 	if (nonce == NULL || solution == NULL || sig != 0) {
-		/* disallow further communication if either nonce or solution
-		 * were not correct */
+		/* disallow further communication if either nonce, solution or
+		 * signature were not correct */
 		pisa_reject_connection(ctx, nonce);
 		verdict = NF_DROP;
 	} else {
