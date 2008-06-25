@@ -37,6 +37,8 @@ extern HIP_HASHTABLE *hadb_hit;
 //add by santtu
 #include "pjnath.h"
 #include "pjlib.h"
+#include "pjlib-util.h"
+
 //end add
 
 /** A transmission function set for NAT traversal. */
@@ -580,6 +582,8 @@ pj_caching_pool cp;
 pj_status_t status;
 pj_pool_t *pool = 0;
 
+
+
 #define PJ_COM_ID 1   
 
 
@@ -602,6 +606,8 @@ hip_ha_t * hip_get_entry_from_ice(void * ice){
 	
 	return entry;
 }  
+
+
 /***
  * this the call back interface when check complete.
  * */
@@ -1146,7 +1152,7 @@ int hip_nat_create_pj_addr(pj_ice_sess_cand *pj_cand,in6_addr_t * hip_addr, in_p
 	
 	
 	//TODO check IPV6
-	
+	if(pj_cand == NULL) return -1;
 	//constant in all the pj_addr
 	pj_cand->comp_id = 1;
 	pj_cand->addr.ipv4.sin_family = PJ_AF_INET;
@@ -1160,7 +1166,5 @@ int hip_nat_create_pj_addr(pj_ice_sess_cand *pj_cand,in6_addr_t * hip_addr, in_p
 	return 0;
 	
 }
-
-
 
 
