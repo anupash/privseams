@@ -516,6 +516,7 @@ out_err:
 int hip_init_host_ids()
 {
 	int err = 0;
+	int anon;
 	struct stat status;
 	struct hip_common *user_msg = NULL;
 
@@ -525,15 +526,15 @@ int hip_init_host_ids()
 	   with hipconf. */
 
 	HIP_IFE((!(user_msg = hip_msg_alloc())), -1);
-		
+
 	/* Create default keys if necessary. */
 
 	if (stat(DEFAULT_CONFIG_DIR "/" DEFAULT_HOST_RSA_KEY_FILE_BASE DEFAULT_PUB_HI_FILE_NAME_SUFFIX, &status) && errno == ENOENT)
 	{
-		hip_msg_init(user_msg);
+		//hip_msg_init(user_msg); already called by hip_msg_alloc()
 		err = hip_serialize_host_id_action(user_msg,
 						   ACTION_NEW, 0, 1,
-						   NULL, NULL);
+						   NULL, NULL, 0);
 		if (err)
 		{
 			err = 1;
@@ -544,21 +545,56 @@ int hip_init_host_ids()
 	}
 
         /* Retrieve the keys to hipd */
+	/* Three steps because multiple large keys will not fit in the same message */
+
+	/* dsa anon and pub */
 	hip_msg_init(user_msg);
-	err = hip_serialize_host_id_action(user_msg, ACTION_ADD, 0, 1, NULL, NULL);
+	err = hip_serialize_host_id_action(user_msg, ACTION_ADD, 0, 1, "dsa", NULL, 0);
 	if (err)
 	{
-		HIP_ERROR("Could not load default keys\n");
-		goto out_err;
-	}
-	
-	err = hip_handle_add_local_hi(user_msg);
-	if (err)
-	{
-		HIP_ERROR("Adding of keys failed\n");
+		HIP_ERROR("Could not load default keys (DSA)\n");
 		goto out_err;
 	}
 
+	err = hip_handle_add_local_hi(user_msg);
+	if (err)
+	{
+		HIP_ERROR("Adding of keys failed (DSA)\n");
+		goto out_err;
+	}
+
+	/* rsa anon */
+	hip_msg_init(user_msg);
+	err = hip_serialize_host_id_action(user_msg, ACTION_ADD, 1, 1, "rsa", NULL, 0);
+	if (err)
+	{
+		HIP_ERROR("Could not load default keys (RSA anon)\n");
+		goto out_err;
+	}
+
+	err = hip_handle_add_local_hi(user_msg);
+	if (err)
+	{
+		HIP_ERROR("Adding of keys failed (RSA anon)\n");
+		goto out_err;
+	}
+
+	/* rsa pub */
+	hip_msg_init(user_msg);
+	err = hip_serialize_host_id_action(user_msg, ACTION_ADD, 0, 1, "rsa", NULL, 0);
+	if (err)
+	{
+		HIP_ERROR("Could not load default keys (RSA pub)\n");
+		goto out_err;
+	}
+
+	err = hip_handle_add_local_hi(user_msg);
+	if (err)
+	{
+		HIP_ERROR("Adding of keys failed (RSA pub)\n");
+		goto out_err;
+	}
+HIP_DEBUG("Keys added\n");
  out_err:
 
 	if (user_msg)

@@ -80,7 +80,7 @@ int hip_birthday_success(uint64_t old_bd, uint64_t new_bd);
 uint64_t hip_get_current_birthday(void);
 int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
 				 int use_default, const char *hi_fmt,
-				 const char *hi_file);
+				 const char *hi_file, int bits);
 char *hip_convert_hit_to_str(const hip_hit_t *local_hit, const char *prefix);
 int maxof(int num_args, ...);
 
@@ -101,5 +101,13 @@ void hip_addr_to_sockaddr(struct in6_addr *addr, struct sockaddr_storage *sa);
 uint64_t hip_solve_puzzle(void *puzzle, struct hip_common *hdr, int mode);
 
 int hip_create_lock_file(char *filename, int killold);
+
+struct hip_rsa_keylen {
+	int e_len;
+	int e;
+	int n;
+};
+
+void hip_get_rsa_keylen(const struct hip_host_id *host_id, struct hip_rsa_keylen *ret, int is_priv);
 
 #endif /* HIP_MISC_H */

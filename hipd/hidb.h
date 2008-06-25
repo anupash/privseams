@@ -52,14 +52,14 @@ typedef  HIP_HASHTABLE hip_db_struct_t;
    D = 128 bytes
    P = 64 bytes
    Q = 64 bytes
-*/
-/* Public part of the key */
+* Public part of the key
 #define HIP_RSA_PUBLIC_EXPONENT_E_LEN 3
 #define HIP_RSA_PUBLIC_MODULUS_N_LEN 128
-/* Private part of the key */
+* Private part of the key
 #define HIP_RSA_PRIVATE_EXPONENT_D_LEN 128
 #define HIP_RSA_SECRET_PRIME_FACTOR_P_LEN 64
 #define HIP_RSA_SECRET_PRIME_FACTOR_Q_LEN 64
+*/
 
 #define HIP_MAX_COOKIE_INFO 10
 /* for debugging with in6_ntop */

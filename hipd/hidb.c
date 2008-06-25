@@ -534,7 +534,7 @@ static struct hip_host_id *hip_get_dsa_public_key(struct hip_host_id *hi)
 
 	/* the secret component of the DSA key is always 20 bytes */
 
-	hi->hi_length = htons(ntohs(hi->hi_length) - 20);
+	hi->hi_length = htons(ntohs(hi->hi_length) - DSA_PRIV);
 
 	_HIP_DEBUG("hi->hi_length=%d\n", htons(tmp->hi_length));
 
@@ -543,10 +543,10 @@ static struct hip_host_id *hip_get_dsa_public_key(struct hip_host_id *hi)
 	dilen = ntohs(hi->di_type_length) & 0x0FFF;
 
 	to = ((char *)(hi + 1)) - sizeof(struct hip_host_id_key_rdata) + ntohs(hi->hi_length);
-	from = to + 20;
+	from = to + DSA_PRIV;
 	memmove(to, from, dilen);
 
-	hip_set_param_contents_len(hi, (len - 20));
+	hip_set_param_contents_len(hi, (len - DSA_PRIV));
 
 	_HIP_DEBUG("Host ID len after cut-off: %d\n",
 		  hip_get_param_total_len(hi));
@@ -591,6 +591,8 @@ static struct hip_host_id *hip_get_rsa_public_key(struct hip_host_id *tmp)
 	hip_tlv_len_t len;
 	uint16_t dilen;
 	char *from, *to;
+	int rsa_priv_len;
+	struct hip_rsa_keylen keylen;
 
 	/** @todo check some value in the RSA key? */
       
@@ -598,19 +600,19 @@ static struct hip_host_id *hip_get_rsa_public_key(struct hip_host_id *tmp)
 	
 	len = hip_get_param_contents_len(tmp);
 
-	_HIP_DEBUG("Host ID len before cut-off: %d\n",
+	HIP_DEBUG("Host ID len before cut-off: %d\n",
 		  hip_get_param_total_len(tmp));
 
-	/* the secret component of the RSA key is always d+p+q bytes */
-	/* note: it's assumed that RSA key length is 1024 bits */
+	/* the secret component of the RSA key is always d+p+q == 2*n bytes */
 
-	tmp->hi_length = htons(ntohs(tmp->hi_length) - 
-                               (HIP_RSA_PRIVATE_EXPONENT_D_LEN + 
-                                HIP_RSA_SECRET_PRIME_FACTOR_P_LEN +
-                                HIP_RSA_SECRET_PRIME_FACTOR_Q_LEN));	
+	hip_get_rsa_keylen(tmp, &keylen, 1);
+	rsa_priv_len = 2 * keylen.n;
 
-	_HIP_DEBUG("hi->hi_length=%d\n", htons(tmp->hi_length));
+	HIP_DEBUG("rsa_priv_len = %d (Key is %d bits.)\n", rsa_priv_len, rsa_priv_len * 4);
 
+	tmp->hi_length = htons(ntohs(tmp->hi_length) - rsa_priv_len);
+
+	_HIP_DEBUG("hi->hi_length=%d\n", ntohs(tmp->hi_length));
 	/* Move the hostname d+p+q bytes earlier */
 
 	dilen = ntohs(tmp->di_type_length) & 0x0FFF;
@@ -618,19 +620,14 @@ static struct hip_host_id *hip_get_rsa_public_key(struct hip_host_id *tmp)
 	HIP_DEBUG("dilen: %d\n", dilen);
 
 	to = ((char *)(tmp + 1)) - sizeof(struct hip_host_id_key_rdata) + ntohs(tmp->hi_length);
-	from = to + (HIP_RSA_PRIVATE_EXPONENT_D_LEN + 
-                     HIP_RSA_SECRET_PRIME_FACTOR_P_LEN +
-                     HIP_RSA_SECRET_PRIME_FACTOR_Q_LEN);
+	from = to +  rsa_priv_len;
 
 	memmove(to, from, dilen);
 
-	hip_set_param_contents_len(tmp, (len - (HIP_RSA_PRIVATE_EXPONENT_D_LEN + 
-                                                HIP_RSA_SECRET_PRIME_FACTOR_P_LEN +
-                                                HIP_RSA_SECRET_PRIME_FACTOR_Q_LEN)));
-
+	hip_set_param_contents_len(tmp, (len -  rsa_priv_len));
 	HIP_DEBUG("Host ID len after cut-off: %d\n",
 		  hip_get_param_total_len(tmp));
-
+	HIP_DEBUG("hi_length after cut %d\n", tmp->hi_length);
 	/* make sure that the padding is zero (and not to reveal any bytes of
 	   the private key */
 	to = (char *)tmp + hip_get_param_contents_len(tmp) +

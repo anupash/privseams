@@ -40,6 +40,7 @@ const char *hipconf_usage =
 "nat on|off|<peer_hit>\n"
 "rst all|<peer_hit>\n"
 "new|add hi anon|pub rsa|dsa filebasename\n"
+"new hi anon|pub rsa|dsa filebasename keylen\n"
 "new|add hi default (HI must be created as root)\n"
 "load config default\n"
 "handoff mode lazy|active\n"
@@ -473,7 +474,7 @@ int hip_conf_handle_hiprelay(hip_common_t *msg, int action,
 int hip_conf_handle_hi(hip_common_t *msg, int action, const char *opt[],
 		       int optc)
 {
-	int err = 0, anon = 0, use_default = 0, euid = -1;
+	int err = 0, anon = 0, use_default = 0, key_bits = 0, euid = -1;
      
      /* Get the effective user ID. This has to be zero (root), because root owns
 	the key files under /etc/hip/. */
@@ -489,8 +490,8 @@ int hip_conf_handle_hi(hip_common_t *msg, int action, const char *opt[],
 	  return hip_conf_handle_hi_get(msg, action, opt, optc);
 
      /* Check min/max amount of args */
-     if (optc < 1 || optc > 3) {
-	  HIP_ERROR("Too few arguments\n");
+     if (optc < 1 || optc > 4) {
+	  HIP_ERROR("Illegal number of arguments.\n");
 	  err = -EINVAL;
 	  goto out_err;
      }
@@ -505,8 +506,11 @@ int hip_conf_handle_hi(hip_common_t *msg, int action, const char *opt[],
 	  HIP_ERROR("Bad hi type (not public, anon or default)\n");
 	  err = -EINVAL;
 	  goto out_err;
-     }  
-    
+     }
+
+     if (optc == 4)
+	key_bits = atoi(opt[3]);
+
      if (use_default) {
 	  if (optc != 1) {
 	       HIP_ERROR("Wrong number of args for default\n");
@@ -514,7 +518,7 @@ int hip_conf_handle_hi(hip_common_t *msg, int action, const char *opt[],
 	       goto out_err;
 	  }
      } else {
-	  if (optc != 3) {
+	  if (optc == 2) {
 	       HIP_ERROR("Wrong number of args\n");
 	       err = -EINVAL;
 	       goto out_err;
@@ -522,7 +526,7 @@ int hip_conf_handle_hi(hip_common_t *msg, int action, const char *opt[],
      }
 
      err = hip_serialize_host_id_action(msg, action, anon, use_default,
-					opt[OPT_HI_FMT], opt[OPT_HI_FILE]);
+					opt[OPT_HI_FMT], opt[OPT_HI_FILE], key_bits);
 
      HIP_INFO("\nNew default HI is now created.\nYou must restart hipd to make "\
 	      "the changes effective.\n\n");

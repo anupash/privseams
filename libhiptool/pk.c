@@ -2,30 +2,34 @@
 
 int hip_rsa_sign(struct hip_host_id *priv, struct hip_common *msg) {
 	u8 sha1_digest[HIP_AH_SHA_LEN];
-	u8 signature[HIP_RSA_SIGNATURE_LEN];
+	u8 *signature;
 	int err = 0, len;
+	struct hip_rsa_keylen keylen;
 
 	len = hip_get_msg_total_len(msg);
 	HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, msg, len, sha1_digest) < 0,
 		 -1, "Building of SHA1 digest failed\n");
+
+	hip_get_rsa_keylen(priv, &keylen, 1);
+	signature = malloc(keylen.n);
+	HIP_IFEL(!signature, -1, "Malloc for signature failed.");
+
 	HIP_IFEL(impl_rsa_sign(sha1_digest, (u8 *)(priv + 1), signature,
-                               (HIP_RSA_PUBLIC_EXPONENT_E_LEN +
-                                HIP_RSA_PUBLIC_MODULUS_N_LEN + 
-                                HIP_RSA_PRIVATE_EXPONENT_D_LEN +
-                                HIP_RSA_SECRET_PRIME_FACTOR_P_LEN +
-                                HIP_RSA_SECRET_PRIME_FACTOR_Q_LEN)), 
+                               &keylen), 
                                0, "Signing error\n");
 	if (hip_get_msg_type(msg) == HIP_R1) {
 		HIP_IFEL(hip_build_param_signature2_contents(msg, signature,
-							     HIP_RSA_SIGNATURE_LEN,
+							     keylen.n,
 							     HIP_SIG_RSA), -1,
 			 "Building of signature failed\n");
 	} else
 		HIP_IFEL(hip_build_param_signature_contents(msg, signature,
-							    HIP_RSA_SIGNATURE_LEN,
+							    keylen.n,
 							    HIP_SIG_RSA), -1,
 			 "Building of signature failed\n");	  
  out_err:
+	if(signature)
+	    free(signature);
 	return err;
 }
 
@@ -100,10 +104,10 @@ static int verify(struct hip_host_id *peer_pub, struct hip_common *msg, int rsa)
 	HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, msg, len, sha1_digest), 
 		 -1, "Could not calculate SHA1 digest\n");
 	if (rsa) {
-		int public_key_len = ntohs(peer_pub->hi_length) - 
-			sizeof(struct hip_host_id_key_rdata);
+		struct hip_rsa_keylen keylen;
+		hip_get_rsa_keylen(peer_pub, &keylen, 0);
 		err = impl_rsa_verify(sha1_digest, (u8 *) (peer_pub + 1), sig->signature, 
-				      public_key_len);
+				      &keylen);
 		_HIP_DEBUG("RSA verify err value: %d \n",err);		
 	} else {
 		err = impl_dsa_verify(sha1_digest, (u8 *) (peer_pub + 1), sig->signature);
