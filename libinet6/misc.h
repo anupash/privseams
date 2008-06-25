@@ -121,4 +121,12 @@ hip_lsi_t *hip_get_lsi_peer_by_hits(struct in6_addr *hit_s, struct in6_addr *hit
 
 int hip_create_lock_file(char *filename, int killold);
 
+typedef struct _hip_hosts_entry
+{
+        char *hostname;
+        hip_hit_t hit;
+        hip_lsi_t lsi;
+	struct _hip_hosts_entry *next;
+} hip_hosts_entry;
+
 #endif /* HIP_MISC_H */

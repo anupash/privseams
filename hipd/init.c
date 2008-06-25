@@ -254,6 +254,7 @@ int hipd_init(int flush_ipsec, int killold)
 	set_up_device(HIP_HIT_DEV, 0);
 	HIP_IFE(set_up_device(HIP_HIT_DEV, 1), 1);
 
+
 #ifdef CONFIG_HIP_HI3
 	if( hip_use_i3 ) {
 		hip_locator_status = SO_HIP_SET_LOCATOR_ON;
@@ -303,7 +304,6 @@ int hipd_init(int flush_ipsec, int killold)
 		hip_i3_init(/*&peer_hit*/);
 	}
 #endif
-
 	hip_firewall_sock_fd = hip_firewall_sock_lsi_fd = hip_user_sock;
 
 out_err:
@@ -567,6 +567,10 @@ int hip_init_host_ids()
 		HIP_ERROR("Adding of keys failed\n");
 		goto out_err;
 	}
+
+	///////////
+	hip_init_hadb_hip_host();
+	//////////
 
  out_err:
 

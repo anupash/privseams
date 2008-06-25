@@ -2186,6 +2186,34 @@ void hip_init_hadb(void)
      }
 }
 
+/*Initialize hadb with values contained in /etc/hip/hosts*/
+int hip_init_hadb_hip_host(){
+        int err = 0, lines = 0, n = 0;
+        hip_hosts_entry hip_hosts[200];
+
+	/* Initialize hash table */
+	memset(hip_hosts, 0, sizeof(hip_hosts));
+	/* Fill hip_hosts with the information in /etc/hip/host */
+        gaih_inet_get_hip_hosts_file_info(&hip_hosts, &lines);
+	/* Add the information to the HADB */
+	hip_hadb_add_peer_info_etc_hosts_file(hip_hosts, lines);
+
+	return err;
+} 
+
+int hip_hadb_add_peer_info_etc_hosts_file(hip_hosts_entry *hip_hosts, int lineno){
+        int i;
+	struct in6_addr address;
+
+        for (i = 0; i < lineno; i++) {
+	        if (hip_hosts[i].hostname){
+		        hip_find_address(hip_hosts[i].hostname, &address);
+		        hip_hadb_add_peer_info(&(hip_hosts[i].hit), &address, &(hip_hosts[i].lsi));
+		}
+	}
+ }
+
+
 hip_xmit_func_set_t *hip_get_xmit_default_func_set() {
 	return &default_xmit_func_set;
 }
