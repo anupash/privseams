@@ -1857,18 +1857,19 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 	HIP_DEBUG("hip_receive_update() invoked.\n");
 	
         /* RFC 5201: If there is no corresponding HIP association, the
-	 * implementation MAY reply with an ICMP Parameter Problem.
-	 *
-	 * An UPDATE packet is only accepted if the state is ESTABLISHED.
-	 * The HIP state machine defines a move from state R2-SENT to
-	 * ESTABLISHED for 'data or EC timeout'. Since we (probably) have no
-	 * fancy timeout stuff implemented, we just move from R2-SENT to
-	 * ESTABLISHED. */
+	 * implementation MAY reply with an ICMP Parameter Problem. */
 	if(entry == NULL) {
 		HIP_ERROR("No host association database entry found.\n");
 		err = -1;
 		goto out_err;
-	} else if(entry->state == HIP_STATE_R2_SENT) {
+	
+	}
+	/* RFC 5201: An UPDATE packet is only accepted if the state is only
+	   processed in state ESTABLISHED. However, if the state machine is in
+	   state R2-SENT and an UPDATE is received, the state machine should
+	   move to state ESTABLISHED (see table 5 under section 4.4.2. HIP
+	   State Processes). */
+	else if(entry->state == HIP_STATE_R2_SENT) {
 		entry->state = HIP_STATE_ESTABLISHED;
 		HIP_DEBUG("Received UPDATE in state %s, moving to "\
 			  "ESTABLISHED.\n", hip_state_str(entry->state));

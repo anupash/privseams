@@ -205,15 +205,15 @@ int hip_update_handle_locator_parameter(hip_ha_t *entry,
 					struct hip_esp_info *esp_info);
 
 /**
- * Handles an incoming UPDATE packet received in ESTABLISHED state.
+ * @brief Handles an incoming UPDATE packet received in ESTABLISHED state.
  *
  * This function handles case 7 in section 8.11 Processing UPDATE packets in
  * state ESTABLISHED of the base draft.
  *
- * @param entry  hadb entry corresponding to the peer.
- * @param msg    the HIP packet.
+ * @param entry  a pointer to a hadb entry corresponding to the peer.
+ * @param msg    a pointer to a HIP packet.
  * @param src_ip source IPv6 address from where the UPDATE was sent.
- * @param dst_ip destination IPv6 address where the UPDATE was received.
+ * @param dst_ip destination IPv6 address to which the UPDATE was sent.
  * @return       0 if successful, otherwise < 0.
  * @note         @c entry must be is locked when this function is called.
  */
@@ -492,18 +492,31 @@ int hip_update_handle_echo_response(hip_ha_t *entry,
  * @{ 
  */
 /**
- * Receives an UPDATE packet.
+ * @brief Receives an UPDATE packet.
  *
  * This is the initial function which is called when an UPDATE packet is
- * received. The validity of the packet is checked and then this function acts
+ * received. The UPDATE packet is only processed when the HIP state machine is
+ * in state ESTABLISHED (see section 6.12. Receiving UPDATE Packets of RFC
+ * 5201). However, if the state machine is in state R2-SENT and an UPDATE is
+ * received, the state machine should move to state ESTABLISHED (see table 5
+ * under section 4.4.2. HIP State Processes). Therefore this function processes
+ * the received UPDATE packet in both of the states, R2-sent and ESTABLISHED.
+ * When received in state R2-SENT, we move to state ESTABLISHED as instructed in
+ * RFC 5201.
+ * 
+ * If there is no corresponding HIP association (@c entry is NULL) or if the
+ * state machine is in any other state than R2-SENT or ESTABLISHED the packet is
+ * not processed and -1 is returned.
+ * 
+ * The validity of the packet is checked and then this function acts
  * according to whether this packet is a reply or not.
  *
- * @param msg          a pointer to a buffer where the HIP packet is in.
+ * @param msg          a pointer to a HIP packet.
  * @param update_saddr a pointer to the UPDATE packet source IP address.
  * @param update_daddr a pointer to the UPDATE packet destination IP address.
  * @param entry        a pointer to a hadb entry.
- * @param sinfo        a pointer to a struct containing the UPDATE packet source
- *                     and destination ports.
+ * @param sinfo        a pointer to a structure containing the UPDATE packet
+ *                     source and destination ports.
  * @return             0 if successful (HMAC and signature (if needed) are
  *                     validated, and the rest of the packet is handled if
  *                     current state allows it), otherwise < 0.
