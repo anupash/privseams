@@ -139,7 +139,7 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 	u_int32_t seq = 0;
 	u_int flags = 0; // always zero
 	u_int64_t lifebyte = 0, lifetime = 0;
-	u_int8_t l_natt_type = HIP_UDP_ENCAP_ESPINUDP;
+	u_int8_t l_natt_type = HIP_UDP_ENCAP_ESPINUDP_NON_IKE;
 	// FIXME: this parameter maybe should be related to some esp parameters (according to racoon source code)
 	u_int16_t l_natt_frag = 0;
 	/* Mappings from HIP to PFKEY algo names */
