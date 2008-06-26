@@ -325,7 +325,7 @@ int hip_hchain_bexstore_get_hchain(unsigned char *anchor, hash_chain_t *stored_h
 	for (i = 0; i < remaining_items; i++)
 	{
 		if (!memcmp(stored_item->hchain->anchor_element, anchor,
-				HCHAIN_ELEMENT_LENGTH))
+				DEFAULT_HASH_LENGTH))
 		{
 			HIP_DEBUG("Taking hash chain from the BEX store\n");
 			stored_hchain = stored_item->hchain;
@@ -416,7 +416,7 @@ out_err:
 
 int create_bexstore_anchors_message(struct hip_common *msg)
 {
-	int err = 0, i;
+	int err = 0, item_length = 0, i;
 	int bex_store_count = 0;
 	hip_hchain_store_item_t *stored_item = NULL;
 	unsigned char *anchor = NULL;
@@ -430,18 +430,33 @@ int create_bexstore_anchors_message(struct hip_common *msg)
 		 "build hdr failed\n");
 	
 	bex_store_count = hip_hchain_storage.store_count[0];
-	stored_item = hip_hchain_storage.hchain_store[0];
-	for (i = 0; i < bex_store_count; i++)
+	
+	if (bex_store_count > 0)
 	{
-		anchor = stored_item->hchain->anchor_element;
-		HIP_DEBUG("anchor %i: %x \n", i + 1, *anchor);
-		HIP_IFEL(hip_build_param_contents(msg, (void *)anchor, HIP_PARAM_UINT,
-						  sizeof(unsigned int)), -1,
-						  "build param contents failed\n");
+		stored_item = hip_hchain_storage.hchain_store[0];
 		
-		stored_item = stored_item->next; 
+		HIP_DEBUG("hash_length: %u \n", stored_item->hchain->hash_length);
+		HIP_IFEL(hip_build_param_contents(msg, (void *)&stored_item->hchain->hash_length,
+				HIP_PARAM_UINT, sizeof(uint8_t)), -1, "build param contents failed\n");
+		
+		HIP_DEBUG("salt_length: %u \n", stored_item->hchain->salt_length);
+		HIP_IFEL(hip_build_param_contents(msg, (void *)&stored_item->hchain->salt_length,
+				HIP_PARAM_UINT, sizeof(uint8_t)), -1, "build param contents failed\n");
+		
+		item_length = stored_item->hchain->hash_length + stored_item->hchain->salt_length;
+		
+		while(stored_item = stored_item->next)
+		{
+			anchor = stored_item->hchain->anchor_element->hash;
+			HIP_HEXDUMP("anchor: ", anchor, item_length);
+			HIP_IFEL(hip_build_param_contents(msg, (void *)anchor, HIP_PARAM_HCHAIN_ANCHOR,
+					item_length), -1, "build param contents failed\n");
+		}
+	} else
+	{
+		err = 1;
 	}
 	
- out_err:
-	return err;
+  out_err:
+  	return err;
 }

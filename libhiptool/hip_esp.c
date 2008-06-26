@@ -66,7 +66,7 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 	int next_hdr_offset = 0;
 	int elen = 0;
 	int encryption_len = 0;
-	unsigned char* hash = NULL;
+	hash_item_t * hash_item = NULL;
 	hash_chain_t *stored_hchain = NULL;
 	int err = 0;
 	
@@ -96,20 +96,23 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 			
 			// add hchain-element to esp header
 			HIP_DEBUG("adding hash chain element to outgoing packet...\n");
-			hash = hchain_pop(entry->active_hchain)->hash;
+			hash_item = hchain_pop(entry->active_hchain);
 			
 			/* don't send anchor as it could be known to third party
 			 * -> other end-host will not accept it
 			 * -> get next element */
-			if (!memcmp(hash, entry->active_hchain->anchor_element->hash, HCHAIN_ELEMENT_LENGTH))
+			if (!memcmp(hash_item->hash, entry->active_hchain->anchor_element->hash,
+					hash_item->hash_length + hash_item->salt_length))
 			{	
-				hash = hchain_pop(entry->active_hchain)->hash;
+				hash_item = hchain_pop(entry->active_hchain);
 			}
 			
 			//memcpy(&hash, hash_ptr, HCHAIN_ELEMENT_LENGTH);
-			out_esp_exthdr->hc_element = htonl(*hash);
+			// TODO make hdr extension more flexible for different hash lengths
+			out_esp_exthdr->hc_element = htonl(*hash_item->hash);
 			
-			if (!entry->next_hchain && entry->active_hchain->remaining <= entry->active_hchain->length * REMAIN_THRESHOLD)
+			if (!entry->next_hchain && entry->active_hchain->remaining
+					<= entry->active_hchain->hchain_length * REMAIN_THRESHOLD)
 			{
 				// TODO add stepping
 				hip_hchain_store_get_hchain(HC_LENGTH_STEP1, entry->next_hchain);

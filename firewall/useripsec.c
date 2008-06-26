@@ -336,17 +336,17 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 		// verify hchain-elements
 		HIP_DEBUG("verifying hash chain element for incoming packet...\n");
 		
-		if (hchain_verify((unsigned char *) &hash, entry->active_anchor, entry->tolerance))
+		if (hchain_verify((unsigned char *)&hash, (unsigned char *)entry->active_anchor, entry->tolerance))
 		{
 			// this will allow only increasing elements to be accepted
-			memcpy(entry->active_anchor, hash, HCHAIN_ELEMENT_LENGTH);
+			memcpy(entry->active_anchor, hash, DEFAULT_HASH_LENGTH);
 			HIP_DEBUG("hash-chain element correct!\n");
 		} else
 		{
 			// check if there was an implicit change to the next hchain
 			if (hchain_verify(sent_hc_element, entry->next_anchor, entry->tolerance))
 			{
-				memcpy(entry->active_anchor, entry->next_anchor, HCHAIN_ELEMENT_LENGTH);
+				memcpy(entry->active_anchor, entry->next_anchor, DEFAULT_HASH_LENGTH);
 				entry->next_anchor = NULL;
 			} else
 			{

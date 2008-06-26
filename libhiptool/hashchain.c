@@ -17,6 +17,8 @@
 #include <openssl/rand.h>		
 #include <openssl/sha.h>
 #include <string.h>			// memcpy
+#include "debug.h"
+#include "ife.h"
 
 
 #define TRUE  1
@@ -29,14 +31,15 @@
 
 
 void hchain_print(hash_chain_t * hash_chain){
-	if(hash_chain){
-		
+	if(hash_chain)
+	{	
 		hash_chain_element_t *current_element;
 		printf("Hash chain: %d\n", (int) hash_chain);
 		printf("Current element: ");
 		
 		if(hash_chain->current_element != NULL){
-			hexdump(hash_chain->current_element->hash, HCHAIN_ELEMENT_LENGTH);
+			hexdump(hash_chain->current_element->hash,
+					hash_chain->hash_length + hash_chain->salt_length);
 		}else{
 			printf(" -- hash chain not in use -- ");
 		}
@@ -47,13 +50,14 @@ void hchain_print(hash_chain_t * hash_chain){
 		for(current_element = hash_chain->anchor_element, i=0;
 		current_element != NULL;
 		current_element = current_element->next, i++){
-			if(hash_chain->length - hash_chain->remaining < i+1){
+			if(hash_chain->hchain_length - hash_chain->remaining < i+1){
 				printf("(+)");
 			}else{
 				printf("(-)");
 			}
 			printf("%2d: ", i);
-			hexdump(current_element->hash, HCHAIN_ELEMENT_LENGTH);
+			hexdump(current_element->hash,
+					hash_chain->hash_length + hash_chain->salt_length);
 			printf("\n");
 		}
 	}else{
@@ -81,53 +85,62 @@ void hexdump(const unsigned char * const buffer, int length){
 
 /**
  * hash_chain_verify - verify if the given hash is part of a hash chain
- * @hash: the given hash value
- * @last_hash: the last known hash value
+ * @hash_item: the given hash value
+ * @last_item: the last known hash value
  * @tolerance: The tolerance limit determines how many steps may be missing in the hash chain
  *             0 means that only sequential hash values are considered as valid.
  * @return: returns 1 if the hash authentication was successfull, 0 otherwise
  */
-int hchain_verify(const unsigned char * hash, const unsigned char * last_hash, int tolerance){
-	
+int hchain_verify(const hash_item_t * hash_item, const hash_item_t * last_item,
+		int tolerance)
+{
 	assert(tolerance >= 0);
-	assert(hash != NULL && last_hash != NULL);
+	assert(hash_item != NULL && last_item != NULL);
 	
-	int i;
 	unsigned char *buffer = NULL;
 	unsigned char *hash_value = NULL;
+	int err = FALSE, item_length = 0, i;
 	
-	buffer = (unsigned char*) malloc(HCHAIN_ELEMENT_LENGTH);
-	hash_value = (unsigned char*) malloc(SHA_DIGEST_LENGTH);
+	item_length = hash_item->hash_length + hash_item->salt_length;
+	HIP_IFE(!(buffer = (unsigned char*)malloc(item_length)), -1);
+	/* the hash function output might be longer than needed
+	 * allocate enough memory for the hash function output */
+	HIP_IFE(!(hash_value = (unsigned char*)malloc(SHA_DIGEST_LENGTH)), -1);
 	
 	// init buffer with the hash we want to verify
-	memcpy(buffer, hash, HCHAIN_ELEMENT_LENGTH);
+	memcpy(buffer, hash_item->hash, item_length);
 	
 	printf("Compare old: ");
-	hexdump(last_hash, HCHAIN_ELEMENT_LENGTH);
+	hexdump(last_item->hash, item_length);
 	printf("\nto new: ");
-	hexdump(buffer, HCHAIN_ELEMENT_LENGTH);
+	hexdump(buffer, item_length);
 	printf("\n");
 	
-	// TODO free hashes
-	
 	for(i = 0; i < tolerance - 1; i++){
-		//printf("Calculating round %2d: ", i + 1);
-		SHA1(buffer, HCHAIN_ELEMENT_LENGTH, hash_value);
-		memcpy(buffer, hash_value, HCHAIN_ELEMENT_LENGTH);
+		//HIP_DEBUG("Calculating round %2d: ", i + 1);
+		// (input, input_length, output) -> output_length == 20
+		SHA1(buffer, item_length, hash_value);
+		memcpy(buffer, hash_value, item_length);
 		//hexdump(buffer, HCHAIN_ELEMENT_LENGTH);
-		//printf(" <-> ");
+		//HIP_DEBUG(" <-> ");
 		//hexdump(last_hash, HCHAIN_ELEMENT_LENGTH);
-		//printf("\n");
+		//HIP_DEBUG("\n");
 		
 		// compare the elements
-		if(memcmp(buffer, last_hash, HCHAIN_ELEMENT_LENGTH) == 0){
-			return TRUE;
+		if(memcmp(buffer, last_item->hash, item_length) == 0){
+			err = TRUE;
+			break;
 		}
 	}
-	return FALSE;
+	
+  out_err:
+  	if (buffer)
+  		free(buffer);
+  	if (hash_value)
+  		free(hash_value);
+  
+  	return err;
 }
-
-
 
 /**
  * hchain_create - create a new hash chain of a certain length 
@@ -138,34 +151,37 @@ hash_chain_t * hchain_create(int length)
 {
 	
 	hash_chain_element_t *last_element = NULL, *current_element = NULL;
-	int i;
-	
-	// the hash function output might be longer than needed
-	// allocate enough memory for the hash function output
+	hash_chain_t *hash_chain = NULL;
 	unsigned char *hash_value = NULL;
-	hash_value = (unsigned char*)malloc(SHA_DIGEST_LENGTH);
+	int i, item_length = 0, err = 0;
+	
+	/* the hash function output might be longer than needed
+	 * allocate enough memory for the hash function output */
+	HIP_IFE(!(hash_value = (unsigned char *)malloc(SHA_DIGEST_LENGTH)), -1);
+	
+	item_length = DEFAULT_HASH_LENGTH + DEFAULT_SALT_LENGTH;
 	
 	// allocate memory for a new hash chain
-	hash_chain_t* hash_chain;
-	hash_chain = (hash_chain_t*)malloc(sizeof(hash_chain_t));
+	hash_chain = (hash_chain_t *)malloc(sizeof(hash_chain_t));
 	
 	for(i = 0; i < length; i++){
-		
 		// allocate memory for a new element 
-		current_element = (hash_chain_element_t*)malloc(sizeof(hash_chain_element_t));
-		current_element->hash = (unsigned char*)malloc(HCHAIN_ELEMENT_LENGTH);
+		HIP_IFE(!(current_element = (hash_chain_element_t *)
+				malloc(sizeof(hash_chain_element_t))), -1);
+		HIP_IFE(!(current_element->hash = (unsigned char *)
+				malloc(item_length)), -1);
 		
 		if(last_element != NULL){
-			// (input, input-length, output -> length == 20)
-			SHA1(last_element->hash, HCHAIN_ELEMENT_LENGTH, hash_value);
-			// only consider HCHAIN_ELEMENT_LENGTH highest bytes
-			memcpy(current_element->hash, hash_value, HCHAIN_ELEMENT_LENGTH);
+			// (input, input_length, output) -> output_length == 20
+			SHA1(last_element->hash, item_length, hash_value);
+			// only consider DEFAULT_HASH_LENGTH highest bytes
+			memcpy(current_element->hash, hash_value, item_length);
 		}else{
 			/* TODO delete this after taking the measurements */
 			// we need some deterministic seed as we don't exchange the anchors
-			memset(current_element->hash, 0, HCHAIN_ELEMENT_LENGTH);
+			memset(current_element->hash, 0, item_length);
 			// random bytes as seed
-			//RAND_bytes(current_element->hash, HCHAIN_ELEMENT_LENGTH);
+			//RAND_bytes(current_element->hash, item_length);
 			hash_chain->source_element = current_element;
 		}
 		
@@ -174,19 +190,23 @@ hash_chain_t * hchain_create(int length)
 		last_element = current_element;
 	}
 	
-	hash_chain->length    = length;
+	hash_chain->hchain_length = length;
 	hash_chain->remaining = length;
+	hash_chain->hash_length = DEFAULT_HASH_LENGTH;
+	hash_chain->salt_length = DEFAULT_SALT_LENGTH;
 	// hash_chain->source_element set above
 	hash_chain->anchor_element  = current_element;
 	hash_chain->current_element = NULL;
 	
-	free(hash_value);
-	hash_value = NULL;
-	last_element = NULL;
-	current_element = NULL;
-	
-	printf("hchain_create: Hash-chain with %i elements created!\n", length);
-	
+	HIP_DEBUG("Hash-chain with %i elements created!\n", length);
+
+  out_err:
+    if (hash_value)	
+    	free(hash_value);
+  	hash_value = NULL;
+  	last_element = NULL;
+  	current_element = NULL;
+  	
 	return hash_chain;
 }
 
@@ -196,37 +216,52 @@ hash_chain_t * hchain_create(int length)
  * @hash_chain: the hash chain which has to be popped
  * @return: pointer to the current hash_chain element
  */
-hash_chain_element_t  * hchain_pop(hash_chain_t * hash_chain){
+hash_item_t * hchain_pop(hash_chain_t * hash_chain)
+{
+	hash_chain_element_t * return_element = NULL;
+	hash_item_t * hash_item = NULL;
+	int err = 0;
 	
-	if(hash_chain == NULL){
-		printf("hchain_pop: Given pointer is NULL.\n");
-		exit(1);
-	}
-	hash_chain_element_t * return_element;
+	HIP_ASSERT(hash_chain != NULL);
+	
 	HCHAIN_LOCK(&hash_chain);  
-	if( hash_chain->current_element != NULL){
+	if(hash_chain->current_element != NULL){
 		// hash chain already in use
-		if( hash_chain->current_element->next == NULL ){
-			return_element = NULL;
-			printf("hchain_next: Hash chain depleted!\n");
+		if(hash_chain->current_element->next == NULL){
+			HIP_ERROR("hchain_next: Hash chain depleted!\n");
 			exit(1);
-		}else{
+		} else
+		{
 			return_element = hash_chain->current_element->next;
 		}
-	}else{
+	} else
+	{
 		// hash_chain unused yet
 		return_element = hash_chain->anchor_element;
 	}
 	
+	HIP_DEBUG("Popping Hash chain element: ");
+	hexdump(return_element->hash, hash_chain->hash_length + hash_chain->salt_length);
+	HIP_DEBUG("\n");
+	
+	/* put hash into other data structure providing enough information to be
+	 * processed anywhere */
+	HIP_IFE(!(hash_item = (hash_item_t *)malloc(sizeof(hash_item_t))), -1);
+	hash_item->hash = return_element->hash;
+	hash_item->hash_length = hash_chain->hash_length;
+	hash_item->salt_length = hash_chain->salt_length;
+	
+	// hchain update
 	hash_chain->current_element = return_element;
 	hash_chain->remaining--;
-	HCHAIN_UNLOCK(&hash_chain);
-	printf("Popping Hash chain element: ");
-	hexdump(return_element->hash, HCHAIN_ELEMENT_LENGTH);
-	printf("\n");
-	return return_element;
 	
+  out_err:
+  	HCHAIN_UNLOCK(&hash_chain);
+  
+	if (err && hash_item)
+		free(hash_item);
 	
+	return hash_item;
 }
 
 /**
@@ -238,17 +273,14 @@ hash_chain_element_t  * hchain_pop(hash_chain_t * hash_chain){
  */
 hash_chain_element_t  * hchain_next(hash_chain_t * hash_chain){
 	
-	if(hash_chain == NULL){
-		printf("hchain_next: Given pointer is NULL.\n");
-		exit(1);
-	}
+	HIP_ASSERT(hash_chain != NULL);
 	
 	hash_chain_element_t * return_element;
 	if( hash_chain->current_element != NULL){
 		// hash chain already in use
 		if( hash_chain->current_element->next == NULL ){
 			// hash chain depleted. return NULL
-			printf("hchain_next: Hash chain depleted!\n");
+			HIP_ERROR("hchain_next: Hash chain depleted!\n");
 			exit(1);
 			return_element = NULL;
 		}else{
@@ -268,17 +300,26 @@ hash_chain_element_t  * hchain_next(hash_chain_t * hash_chain){
  * @hash_chain: the hash chain 
  * @return: current element of the hash chain or NULL if the hash chain is depleted.
  */
-hash_chain_element_t  * hchain_current(hash_chain_t * hash_chain){
+hash_item_t * hchain_current(hash_chain_t * hash_chain)
+{
+	hash_item_t * hash_item = NULL;
+	int err = 0;
 	
-	if(hash_chain == NULL){
-		printf("hchain_next: Given pointer is NULL.\n");
-		exit(1);
-	}
-	if(hash_chain->current_element == NULL){
-		printf("hchain_next: Current element is NULL.\n");
-		exit(1);
-	}
-	return hash_chain->current_element;
+	HIP_ASSERT(hash_chain != NULL);
+	HIP_ASSERT(hash_chain->current_element != NULL);
+	
+	/* put hash into other data structure providing enough information to be
+	 * processed anywhere */
+	HIP_IFE(!(hash_item = (hash_item_t *)malloc(sizeof(hash_item_t))), -1);
+	hash_item->hash = hash_chain->current_element->hash;
+	hash_item->hash_length = hash_chain->hash_length;
+	hash_item->salt_length = hash_chain->salt_length;
+	
+  out_err:
+	if (err && hash_item)
+		free(hash_item);
+	
+	return hash_item;
 }
 
 
@@ -313,7 +354,9 @@ int hchain_get_num_remaining(hash_chain_t * hash_chain){
 	return hash_chain->remaining;
 }
 
+
 /*************** Helper functions ********************/
+
 /** 
  * concat_n_hash_SHA - concatenate various strings and hash them
  * @hash: return value. Needs to be an empty buffer with HIP_HASH_SHA_LEN bytes memory

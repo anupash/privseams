@@ -103,6 +103,7 @@
 #define HIP_PARAM_ADD_HIT		32800
 #define HIP_PARAM_ADD_OPTION		32801
 #define HIP_PARAM_PEER_HIT		32802
+#define HIP_PARAM_HCHAIN_ANCHOR			32803
 
 /* End of HIPL private parameters. */
 

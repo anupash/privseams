@@ -91,8 +91,8 @@ typedef struct _hip_sadb_entry
 	hash_chain_t *next_hchain;
 	/* for incoming SA */
 	int tolerance;
-	uint32_t active_anchor;
-	uint32_t next_anchor;
+	hash_item_t *active_anchor;
+	hash_item_t *next_anchor;
 	__u32 mode; 	/* ESP mode :  0-default 1-transport 2-tunnel 3-beet */
 	// TODO add encap_mode (= UDP / TCP)
 	__u16 src_port;
