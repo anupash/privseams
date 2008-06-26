@@ -1893,13 +1893,18 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 	src_ip = update_saddr;
 	dst_ip = update_daddr;
 	hits = &msg->hits;
-
-	if (esp_info != NULL){
-		HIP_DEBUG("ESP INFO parameter found with new SPI %u.\n",
-			  ntohl(esp_info->new_spi));
-		has_esp_info = 1;
-	}
 	
+	/* RFC 5201: The UPDATE packet contains mandatory HMAC and HIP_SIGNATURE
+	   parameters, and other optional parameters. The UPDATE packet contains
+	   zero or one SEQ parameter. An UPDATE packet contains zero or one ACK
+	   parameters. (see section 5.3.5). A single UPDATE packet may contain
+	   both a sequence number and one or more acknowledgment numbers. (see
+	   section 4.2).
+
+	   Thus, we first have to verify the HMAC and HIP_SIGNATURE parameters
+	   and only after successful verification, we can move to ...
+	*/
+
 	/* RFC 5201: If both ACK and SEQ parameters are present, first ACK is
 	   processed, then _the rest of the packet_ is processed as with SEQ. */
 	if (ack != NULL) {
@@ -1915,6 +1920,12 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 			 "Error when handling parameter SEQ.\n");
 	}
 	
+	if (esp_info != NULL){
+		HIP_DEBUG("ESP INFO parameter found with new SPI %u.\n",
+			  ntohl(esp_info->new_spi));
+		has_esp_info = 1;
+	}
+
 	/* RFC 5201: The system MUST verify the HMAC in the UPDATE packet. If
 	   the verification fails, the packet MUST be dropped. */
 	HIP_IFEL(hip_verify_packet_hmac(msg, &entry->hip_hmac_in), -1, 
