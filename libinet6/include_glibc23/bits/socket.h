@@ -310,7 +310,6 @@ struct ucred
 /* Get socket manipulation related informations from kernel headers.  */
 #include <asm/socket.h>
 
-
 /* Structure used to manipulate the SO_LINGER option.  */
 struct linger
   {

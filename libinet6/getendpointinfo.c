@@ -2240,7 +2240,7 @@ int hip_conf_handle_load(struct hip_common *msg, int action,
 			/* the list is backwards ordered */
 			args[len - i - 1] = getitem(&list, i);
 		}
-		err = hip_do_hipconf(len, args, 1);
+		err = hip_do_hipconf(len, args, 1, NULL, NULL);
 		destroy(&list);
 	}
 

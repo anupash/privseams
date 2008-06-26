@@ -10,7 +10,6 @@
  * @author  Bing Zhou <bingzhou_cc.hut.fi>
  * @author  Anu Markkola
  * @author  Lauri Silvennoinen
- * @author  Samu Varjonen
  * @author  Tao Wan  <twan@cc.hut.fi>
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>
  * @todo    add/del map
@@ -92,14 +91,13 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc) 
 	hip_conf_handle_handoff,
 	hip_conf_handle_debug,
 	hip_conf_handle_restart,
-        hip_conf_handle_locator,
-        hip_conf_handle_hiprelay,
-        hip_conf_handle_set,
-        hip_conf_handle_dht_toggle,
-	hip_conf_handle_opptcp,
-        hip_conf_handle_trans_order,
+    hip_conf_handle_locator,
+    hip_conf_handle_hiprelay,
+    hip_conf_handle_set,
+    hip_conf_handle_dht_toggle,
+    hip_conf_handle_trans_order,
 	hip_conf_handle_tcptimeout, /* added by Tao Wan*/
-        hip_conf_handle_hipproxy,
+    hip_conf_handle_hipproxy,
 	NULL /* run */
 };
 
@@ -1417,13 +1415,14 @@ int hip_conf_handle_run_normal(hip_common_t *msg, int action,
 					   (char **) &opt[0]);
 }
 
-int hip_do_hipconf(int argc, char *argv[], int send_only)
+int hip_do_hipconf(int argc, char *argv[], int send_only,  
+				   sendto_delegate_hipd delegate_sendto,
+				   recvfrom_delegate_hipd delegate_recvfrom)
 {
      int err = 0, type_arg = 0, i = 0;
      long int action = 0, type = 0, hiparg = 0;
      hip_common_t *msg = NULL;
      char *text = NULL;
-     
      
      /* Check that we have at least one command line argument. */
      HIP_IFEL((argc < 2), -1, "Invalid arguments.\n\n%s usage:\n%s\n",
@@ -1433,7 +1432,7 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
      action = hip_conf_get_action(argv[1]);
      HIP_IFEL((action == -1), -1,
 	      "Invalid action argument '%s'\n", argv[1]);
-     
+     _HIP_DEBUG ("hip_conf_get_action()\n");
      /* Check that we have at least the minumum number of arguments
 	for the given action. */
      HIP_IFEL((argc < hip_conf_check_action_argc(action) + 2), -1,
@@ -1443,33 +1442,38 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
      /* Is this redundant? What does it do? -Lauri 19.03.2008 19:46. */
      HIP_IFEL(((type_arg = hip_conf_get_type_arg(action)) < 0), -1,
 	      "Could not parse type\n");
-
+	 
      type = hip_conf_get_type(argv[type_arg],argv);
+     
      HIP_IFEL((type <= 0 || type >= TYPE_MAX), -1,
 	      "Invalid type argument '%s'\n", argv[type_arg]);
      
      /* Get the type argument for the given action. */
      HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed.\n");
+     
      memset(msg, 0, HIP_MAX_PACKET);
+     
      hip_get_all_hits(msg,argv);
      
      /* Call handler function from the handler function pointer
 	array at index "type" with given commandline arguments. 
 	The functions build a hip_common message. */
+	
      if (argc ==3)
-	  err = (*action_handler[type])(msg, action, (const char **)&argv[2], argc - 3);
+	   err = (*action_handler[type])(msg, action, (const char **)&argv[2], argc - 3);
      else
-	  err = (*action_handler[type])(msg, action, (const char **)&argv[3], argc - 3);
+	   err = (*action_handler[type])(msg, action, (const char **)&argv[3], argc - 3);
 
+	
      if(err != 0) {
 	     HIP_ERROR("Failed to build a message to hip daemon.\n");
 	     goto out_err;
      }
-
+     
      /* hipconf new hi does not involve any messages to hipd */
-     if (hip_get_msg_type(msg) == 0)
+     /*if (hip_get_msg_type(msg) == 0)
 	  goto out_err;
-	
+	*/
      /* Tell hip daemon, that this message is from agent. */
      /* if (from_agent)
 	{
@@ -1478,9 +1482,18 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
 	}*/
 
      /* send msg to hipd */
-     HIP_IFEL(hip_send_daemon_info_wrapper(msg, send_only), -1, "sending msg failed\n");
-     //HIP_IFEL(hip_test_deamon_info_wrapper(), -1, "sending msg failed\n");
-     HIP_INFO("hipconf command successful\n");
+     if (delegate_sendto != NULL && 
+     	 delegate_recvfrom != NULL) {
+       HIP_IFEL(hip_send_recv_daemon_info_by_ext(msg, 
+       											 delegate_sendto, 
+       											 delegate_recvfrom), -1, "sending msg failed\n");  
+     } else {
+       HIP_IFEL(hip_send_daemon_info_wrapper(msg, send_only), -1, "sending msg failed\n"); 	
+     }
+    
+    
+    
+    HIP_INFO("hipconf command successful\n");
 
  out_err:
      if (msg)
@@ -1882,7 +1895,8 @@ int hip_conf_handle_tcptimeout(struct hip_common *msg, int action,
 int hip_conf_handle_hipproxy(struct hip_common *msg, int action, const char *opt[], int optc)
 {
         int err = 0, status = 0;
- 
+ 		HIP_DEBUG("hip_conf_handle_hipproxy()\n");
+ 		
 #ifdef CONFIG_HIP_HIPPROXY
         if (!strcmp("on",opt[0])) {
                 status = SO_HIP_SET_HIPPROXY_ON; 

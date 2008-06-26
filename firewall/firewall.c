@@ -1199,18 +1199,22 @@ int hip_fw_handle_other_forward(hip_fw_context_t *ctx) {
 }
 
 int hip_fw_handle_hip_forward (hip_fw_context_t *ctx) {
-	return filter_hip(&ctx->src, 
+	/*return filter_hip(&ctx->src, 
 					&ctx->dst, 
 					ctx->transport_hdr.hip, 
 					ctx->ipq_packet->hook,
 					ctx->ipq_packet->indev_name,
-					ctx->ipq_packet->outdev_name);	
+					ctx->ipq_packet->outdev_name);
+	*/	
+	return accept_normal_traffic_by_default;
 }
 
 int hip_fw_handle_esp_forward (hip_fw_context_t *ctx) {
-	return filter_esp(&ctx->dst, 
+	/*return filter_esp(&ctx->dst, 
 					  ctx->transport_hdr.esp, 
 					  ctx->ipq_packet->hook);
+	*/
+	return accept_normal_traffic_by_default;
 }
 
 int hip_fw_handle_tcp_forward(hip_fw_context_t *ctx) {

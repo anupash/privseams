@@ -18,6 +18,7 @@
 #include "nlink.h"
 #include "debug.h"
 #include "icomm.h"
+#include "hipconf.h"
 
 #define HIP_DAEMON_PORT 3030
 
@@ -154,5 +155,9 @@ int hip_read_control_msg_v4(int socket, struct hip_common *hip_msg,
 			    int encap_hdr_size);
 			    
 int hip_sendto_hipd(int socket, void *msg, size_t len);
+
+int hip_send_recv_daemon_info_by_ext(struct hip_common *msg, 
+									 sendto_delegate_hipd delegate_sendto,
+									 recvfrom_delegate_hipd delegate_recvfrom);
 
 #endif /* HIP_MESSAGE_H */
