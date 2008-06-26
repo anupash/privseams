@@ -390,7 +390,7 @@ int hip_cert_x509v3_handle_request(struct hip_common * msg,  HIP_HASHTABLE * db)
         X509_EXTENSION * ext = NULL;
         STACK_OF(X509_EXTENSION) * extlist = NULL;
         X509_NAME_ENTRY *ent;
-        EVP_PKEY *pkey, *capkey;
+        EVP_PKEY *pkey;
         /** XX TODO THIS should come from a configuration file 
             monotonically increasing counter **/
         long serial = 1; 
@@ -406,7 +406,9 @@ int hip_cert_x509v3_handle_request(struct hip_common * msg,  HIP_HASHTABLE * db)
         HIP_IFEL(!(subject = malloc(sizeof(struct in6_addr))), -1, 
                  "Malloc for subject failed\n");   
         HIP_IFEL(!(issuer_hit_n = malloc(sizeof(struct in6_addr))), -1, 
-                 "Malloc for subject failed\n");   
+                 "Malloc for subject failed\n"); 
+        HIP_IFEL(!(pkey = malloc(sizeof(EVP_PKEY))), -1, 
+                 "Malloc for pkey failed\n");  
         HIP_IFEL(!memset(subject, 0, sizeof(subject)), -1,
                  "Failed to memset memory for subject\n");
         HIP_IFEL(!memset(issuer_hit_n, 0, sizeof(issuer_hit_n)), -1,
@@ -513,11 +515,6 @@ int hip_cert_x509v3_handle_request(struct hip_common * msg,  HIP_HASHTABLE * db)
         /** NOW WE ARE READY TO CREATE A CERTIFICATE FROM THE REQUEST **/        
         HIP_DEBUG("\n\nStarting the certificate creation\n\n");
 
-        /* JUST A REMINDER THAT THESE ARE ALREADY IN USE
-        X509_NAME *issuer or subj; (name)
-        X509_EXTENSION * ext; (subjaltname)
-        STACK_OF (X509_EXTENSION) * extlist; (req_exts)
-        */
         HIP_IFEL(!(cert = X509_new ()), -1,
                  "Failed to create X509 object\n");        
 
@@ -540,6 +537,15 @@ int hip_cert_x509v3_handle_request(struct hip_common * msg,  HIP_HASHTABLE * db)
                                             issuer_hit_n, rsa)), -1, 
                 "Error constructing the keys from hidb entry\n");
 
+        HIP_IFEL(!EVP_PKEY_set1_RSA(pkey, rsa), -1, 
+                 "Failed to convert RSA to EVP_PKEY\n");
+        HIP_IFEL((X509_set_pubkey (cert, pkey) != 1), -1, 
+                 "Failed to set public key of the certificate\n");
+
+        digest = EVP_sha1 ();
+        HIP_IFEL(!(X509_sign (cert, pkey, digest)), -1,
+                 "Failed to sign x509v3 certificate\n"); 
+
         /* DEBUG PART START for the certificate */
         HIP_DEBUG("x.509v3 certificate in readable format\n\n");
         HIP_IFEL(!X509_print_fp(stdout, cert), -1,
@@ -548,6 +554,8 @@ int hip_cert_x509v3_handle_request(struct hip_common * msg,  HIP_HASHTABLE * db)
         HIP_IFEL((PEM_write_X509(stdout, cert) != 1), -1 ,
                  "Failed to write the x509 in PEM to stdout\n");
         /* DEBUG PART END for the certificate */
+
+        /** XX TODO Send the cert back to the client **/
 
 out_err:
         if(req != NULL) X509_REQ_free(req);
