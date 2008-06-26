@@ -3034,6 +3034,7 @@ int hip_update_locator_parameter(hip_ha_t *entry,
  
 	HIP_INFO_LOCATOR("santtu: let's update locator:", locator);
  
+	entry->locator = locator;
  
 	old_spi = ntohl(esp_info->new_spi);
 	new_spi = ntohl(esp_info->new_spi);

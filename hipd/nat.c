@@ -34,12 +34,7 @@ extern HIP_HASHTABLE *hadb_hit;
 #define HIP_REFEXIVE_LOCATOR_ITEM_AMOUNT_MAX 1
 //end add
 
-//add by santtu
-#include "pjnath.h"
-#include "pjlib.h"
-#include "pjlib-util.h"
 
-//end add
 
 /** A transmission function set for NAT traversal. */
 extern hip_xmit_func_set_t nat_xmit_func_set;
@@ -1025,7 +1020,10 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 			HIP_DEBUG("add remote address in integer is : %d \n", temp_cand->addr.ipv4.sin_addr.s_addr);
 			
 			temp_cand->base_addr.ipv4.sin_family = 4;
-			temp_cand->base_addr.ipv4.sin_port = peer_addr_list_item->port;
+			if( peer_addr_list_item->port)
+				temp_cand->base_addr.ipv4.sin_port = peer_addr_list_item->port;
+			else 
+				temp_cand->base_addr.ipv4.sin_port = HIP_NAT_UDP_PORT;
 			temp_cand->base_addr.ipv4.sin_addr.s_addr = *((pj_uint32_t*) &peer_addr_list_item->address.s6_addr32[3]);
 						
 			

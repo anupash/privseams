@@ -32,8 +32,18 @@
 #include "state.h"
 
 
-#define HIP_USE_ICE
+//add by santtu
+#include "pjnath.h"
+#include "pjlib.h"
+#include "pjlib-util.h"
 
+//end add
+
+//add by santtu
+#define HIP_USE_ICE
+#define ICE_ROLE_CONTROLLING  PJ_ICE_SESS_ROLE_CONTROLLING
+#define ICE_ROLE_CONTROLLED  PJ_ICE_SESS_ROLE_CONTROLLED
+//end add
 #define HIP_NAT_SLEEP_TIME 2
 /** Maximum length of a UDP packet. */
 #define HIP_MAX_LENGTH_UDP_PACKET 2000
