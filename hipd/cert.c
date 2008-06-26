@@ -92,7 +92,7 @@ int hip_cert_spki_sign(struct hip_common * msg, HIP_HASHTABLE * db) {
 
         _HIP_DEBUG_HIT("Getting keys for HIT",&cert->issuer_hit);
         
-        HIP_IFEL((err = hip_cert_spki_construct_keys(hip_local_hostid_db,
+        HIP_IFEL((err = hip_cert_rsa_construct_keys(hip_local_hostid_db,
                                             &cert->issuer_hit, rsa)), -1, 
                 "Error constructing the keys from hidb entry\n");
         
@@ -402,6 +402,9 @@ int hip_cert_x509v3_handle_request(struct hip_common * msg,  HIP_HASHTABLE * db)
         char issuer_hit[41];
         struct in6_addr * issuer_hit_n;
         RSA * rsa = NULL;
+        char cert_str_pem[1024];
+        BIO *out_pem;
+        int read_bytes = 0;
 
         HIP_IFEL(!(subject = malloc(sizeof(struct in6_addr))), -1, 
                  "Malloc for subject failed\n");   
@@ -417,6 +420,8 @@ int hip_cert_x509v3_handle_request(struct hip_common * msg,  HIP_HASHTABLE * db)
                  "Failed to memset memory for subject\n");                
         HIP_IFEL(!memset(issuer_hit_n, 0, sizeof(struct in6_addr)), -1,
                  "Failed to memser memory for issuer HIT\n");
+        HIP_IFEL(!memset(cert_str_pem, 0, sizeof(cert_str_pem)), -1,
+                 "Failed to memser memory for cert_str\n");
 
         /* malloc space for new rsa */
         rsa = RSA_new();
@@ -439,7 +444,7 @@ int hip_cert_x509v3_handle_request(struct hip_common * msg,  HIP_HASHTABLE * db)
 
         HIP_IFEL((sec_name = NULL), -1,
                  "Failed to load issuer naming information for the certificate\n");
-
+ 
         /* Issuer naming */
         if (sec_general != NULL) {
                 /* Loop through the conf stack and add extensions to ext stack */
@@ -533,7 +538,7 @@ int hip_cert_x509v3_handle_request(struct hip_common * msg,  HIP_HASHTABLE * db)
                  "Error setting ending time of the certificate");
 
         HIP_DEBUG("Getting the key\n");
-        HIP_IFEL((err = hip_cert_spki_construct_keys(hip_local_hostid_db,
+        HIP_IFEL((err = hip_cert_rsa_construct_keys(hip_local_hostid_db,
                                             issuer_hit_n, rsa)), -1, 
                 "Error constructing the keys from hidb entry\n");
 
@@ -551,15 +556,32 @@ int hip_cert_x509v3_handle_request(struct hip_common * msg,  HIP_HASHTABLE * db)
         HIP_IFEL(!X509_print_fp(stdout, cert), -1,
                  "Failed to print x.509v3 in human readable format\n");
         HIP_DEBUG("x.509v3 certificate in PEM format\n\n");
-        HIP_IFEL((PEM_write_X509(stdout, cert) != 1), -1 ,
+        HIP_IFEL((PEM_write_X509(stdout, cert) != 1), -1,
                  "Failed to write the x509 in PEM to stdout\n");
         /* DEBUG PART END for the certificate */
 
         /** XX TODO Send the cert back to the client **/
+        hip_msg_init(msg);
+        /* Write PEM to char array cert_str_pem */                
+        out_pem = BIO_new(BIO_s_mem());
+        HIP_IFEL((PEM_write_bio_X509(out_pem, cert) != 1), -1,
+                 "Failed to write the x509 in PEM to stdout\n");
+        read_bytes = BIO_read(out_pem, cert_str_pem, sizeof(cert_str_pem));
+        _HIP_DEBUG("Cert_str_pem:\n%s\nRead bytes %d\n", cert_str_pem, read_bytes);
+
+        HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_CERT_X509V3_SIGN, 0), -1, 
+                 "Failed to build user header\n");
+        HIP_DEBUG("MOI1\n");
+        HIP_IFEL(hip_build_param_cert_x509_resp(msg, &cert_str_pem), -1, 
+                 "Failed to create x509 response parameter\n");        
+        HIP_DEBUG("moi3\n");
+        HIP_DUMP_MSG(msg);
 
 out_err:
         if(req != NULL) X509_REQ_free(req);
         if(extlist != NULL) sk_X509_EXTENSION_pop_free (extlist, X509_EXTENSION_free);
+        BIO_flush(out_pem);
+        BIO_free_all(out_pem);
 	return err;
 } 
 
@@ -578,7 +600,7 @@ out_err:
  *
  * @return 0 if signature matches, -1 if error or signature did NOT match
  */
-int hip_cert_spki_construct_keys(HIP_HASHTABLE * db, hip_hit_t * hit, RSA * rsa) {
+int hip_cert_rsa_construct_keys(HIP_HASHTABLE * db, hip_hit_t * hit, RSA * rsa) {
         int err = 0, s = 1;
         struct hip_host_id_entry * hostid_entry = NULL;
         struct hip_host_id * hostid = NULL;

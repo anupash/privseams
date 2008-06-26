@@ -336,6 +336,7 @@ int hip_cert_spki_send_to_verification(struct hip_cert_spki_info * to_verificati
 int hip_cert_x509v3_request_certificate(struct in6_addr * subject, char * certificate) {
         int err = 0;
         struct hip_common * msg;
+        char cert_back[1024];
         
         HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, 
                  "Malloc for msg failed\n");   

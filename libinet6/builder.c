@@ -3246,7 +3246,7 @@ int hip_build_param_cert_spki_info(struct hip_common * msg,
 
 int hip_build_param_cert_x509_req(struct hip_common * msg,
 				    struct in6_addr * addr)
-{
+{ 
 	int err = 0;
         struct hip_cert_x509_req subj;        
 	hip_set_param_type(&subj, HIP_PARAM_CERT_X509_REQ);
@@ -3255,6 +3255,23 @@ int hip_build_param_cert_x509_req(struct hip_common * msg,
 			   sizeof(struct hip_tlv_common));
         ipv6_addr_copy(&subj.addr, addr);
 	err = hip_build_param(msg, &subj);
+ out_err:
+	return err;
+}
+
+int hip_build_param_cert_x509_resp(struct hip_common * msg,
+				    char * pem)
+{
+	int err = 0;
+        struct hip_cert_x509_resp local;        
+	hip_set_param_type(&local, HIP_PARAM_CERT_X509_RESP);
+	hip_calc_param_len(&local,
+			   sizeof(struct hip_cert_x509_resp) -
+			   sizeof(struct hip_tlv_common));
+        strcpy(&local.pem, pem);
+	err = hip_build_param(msg, &local);
+ out_err:
+        HIP_DEBUG("moi2\n");
 	return err;
 }
 
