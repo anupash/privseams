@@ -50,6 +50,11 @@ int main(int argc, char *argv[])
         HIP_DEBUG("- This test tool has to be run as root otherwise this will fail!\n") ;
         HIP_DEBUG("- Hipd has to run otherwise this will hang!\n");
 
+        HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, 
+                 "Malloc for msg failed\n");        
+	defhit = malloc(sizeof(struct in6_addr));
+	if (!defhit) goto out_err;
+
 	if (strcmp(argv[1], "spki")) goto skip_spki; 
 
         HIP_DEBUG("Starting to test SPKI certficate tools\n");
@@ -59,12 +64,6 @@ int main(int argc, char *argv[])
         
         to_verification = malloc(sizeof(struct hip_cert_spki_info));
         if (!to_verification) goto out_err;
-
-        HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, 
-                 "Malloc for msg failed\n");        
-
-	defhit = malloc(sizeof(struct in6_addr));
-	if (!defhit) goto out_err;
 
         time(&not_before);
         time(&not_after);
@@ -181,7 +180,6 @@ skip_spki:
 	conf = hip_cert_open_conf();
         sec_name = hip_cert_read_conf_section("hip_x509v3_name", conf);
 
-        if (sec_ext == NULL) HIP_DEBUG("No extensions present\n");
 	for (i = 0; i < sk_CONF_VALUE_num(sec_name); i++) {
 		item = sk_CONF_VALUE_value(sec_name, i);
 		_HIP_DEBUG("Sec: %s, Key; %s, Val %s\n", 

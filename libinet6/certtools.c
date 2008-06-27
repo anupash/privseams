@@ -342,6 +342,7 @@ int hip_cert_x509v3_request_certificate(struct in6_addr * subject, char * certif
         HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, 
                  "Malloc for msg failed\n");   
         /* build the msg to be sent to the daemon */
+	hip_msg_init(msg);
         HIP_IFEL(hip_build_param_cert_x509_req(msg, subject), -1,
                  "Failed to build cert_info\n");         
         HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_CERT_X509V3_SIGN, 0), -1, 
