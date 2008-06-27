@@ -125,6 +125,7 @@ int hip_cert_spki_create_cert(struct hip_cert_spki_info * content,
            public-key and signature fields filled */
 
         /* build the msg to be sent to the daemon */
+	hip_msg_init(msg);
         HIP_IFEL(hip_build_param_cert_spki_info(msg, content), -1,
                  "Failed to build cert_info\n");         
         HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_CERT_SPKI_SIGN, 0), -1, 

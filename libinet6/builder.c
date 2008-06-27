@@ -3236,11 +3236,15 @@ int hip_build_param_cert_spki_info(struct hip_common * msg,
 				    struct hip_cert_spki_info * cert_info)
 {
 	int err = 0;
-	hip_set_param_type(cert_info, HIP_PARAM_CERT_SPKI_INFO);
-	hip_calc_param_len(cert_info,
+	struct hip_cert_spki_info local;
+	memset(&local, '\0', sizeof(struct hip_cert_spki_info));
+	memcpy(&local, cert_info, sizeof(struct hip_cert_spki_info));
+	hip_set_param_type(&local, HIP_PARAM_CERT_SPKI_INFO);
+	hip_calc_param_len(&local,
 			   sizeof(struct hip_cert_spki_info) -
 			   sizeof(struct hip_tlv_common));
-	err = hip_build_param(msg, cert_info);
+	_HIP_DEBUG("Param len spki_info %d\n", htons(local.length));
+	err = hip_build_param(msg, &local);
 	return err;
 }
 

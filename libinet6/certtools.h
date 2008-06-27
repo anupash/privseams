@@ -49,7 +49,7 @@ struct hip_cert_spki_info {
         char signature[256];
         struct in6_addr issuer_hit;
         /* 0 if succesfully verified otherwise negative */
-        int success;
+        uint32_t success;
 };
 
 /** SPKI cert related functions **/
