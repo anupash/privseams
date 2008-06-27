@@ -3271,7 +3271,6 @@ int hip_build_param_cert_x509_resp(struct hip_common * msg,
         strcpy(&local.pem, pem);
 	err = hip_build_param(msg, &local);
  out_err:
-        HIP_DEBUG("moi2\n");
 	return err;
 }
 

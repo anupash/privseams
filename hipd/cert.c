@@ -571,11 +571,9 @@ int hip_cert_x509v3_handle_request(struct hip_common * msg,  HIP_HASHTABLE * db)
 
         HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_CERT_X509V3_SIGN, 0), -1, 
                  "Failed to build user header\n");
-        HIP_DEBUG("MOI1\n");
         HIP_IFEL(hip_build_param_cert_x509_resp(msg, &cert_str_pem), -1, 
                  "Failed to create x509 response parameter\n");        
-        HIP_DEBUG("moi3\n");
-        HIP_DUMP_MSG(msg);
+        _HIP_DUMP_MSG(msg);
 
 out_err:
         if(req != NULL) X509_REQ_free(req);

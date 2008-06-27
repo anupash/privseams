@@ -351,7 +351,7 @@ int hip_cert_x509v3_request_certificate(struct in6_addr * subject, char * certif
         hip_send_recv_daemon_info(msg);
         
         /* get the struct from the message sent back by the daemon */
-	HIP_DUMP_MSG(msg);
+	_HIP_DUMP_MSG(msg);
 
  out_err:
         if (msg) free(msg);
