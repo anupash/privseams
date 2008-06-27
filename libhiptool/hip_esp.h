@@ -4,8 +4,6 @@
 #include "hip_sadb.h"
 #include "firewall/firewall.h"
 
-#define USE_EXTHDR 1
-
 // needed for transport layer checksum calculation
 typedef struct _pseudo_header
 {

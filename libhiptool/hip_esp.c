@@ -41,6 +41,8 @@ uint16_t checksum_ip(struct ip *ip_hdr, unsigned int ip_hl);
 uint16_t checksum_udp(struct udphdr *udp_hdr, struct in6_addr *src_addr,
 		struct in6_addr *dst_addr);
 
+extern int hip_esp_protection_extension;
+
 /*
  * hip_esp_output()
  *
@@ -88,47 +90,13 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 		}
 		
 		// set up esp header according to the header type used
-		if (USE_EXTHDR)
+		if (hip_esp_protection_extension)
 		{
 			out_esp_exthdr = (struct hip_esp_ext *) (esp_packet + next_hdr_offset);
 			out_esp_exthdr->esp_spi = htonl(entry->spi);
 			out_esp_exthdr->esp_seq = htonl(entry->sequence++);
 			
-			// add hchain-element to esp header
-			HIP_DEBUG("adding hash chain element to outgoing packet...\n");
-			hash_item = hchain_pop(entry->active_hchain);
-			
-			/* don't send anchor as it could be known to third party
-			 * -> other end-host will not accept it
-			 * -> get next element */
-			if (!memcmp(hash_item->hash, entry->active_hchain->anchor_element->hash,
-					hash_item->hash_length + hash_item->salt_length))
-			{	
-				hash_item = hchain_pop(entry->active_hchain);
-			}
-			
-			//memcpy(&hash, hash_ptr, HCHAIN_ELEMENT_LENGTH);
-			// TODO make hdr extension more flexible for different hash lengths
-			out_esp_exthdr->hc_element = htonl(*hash_item->hash);
-			
-			if (!entry->next_hchain && entry->active_hchain->remaining
-					<= entry->active_hchain->hchain_length * REMAIN_THRESHOLD)
-			{
-				// TODO add stepping
-				hip_hchain_store_get_hchain(HC_LENGTH_STEP1, entry->next_hchain);
-				// issue UPDATE message to be sent by hipd
-				send_next_anchor_to_hipd(entry->next_hchain->anchor_element->hash);
-			}
-			
-			// activate next hchain if current one is depleted
-			if (entry->next_hchain && entry->active_hchain->remaining == 0)
-			{
-				// this will free all linked elements in the hchain
-				hchain_destruct(entry->active_hchain);
-				HIP_DEBUG("changing to next_hchain\n");
-				entry->active_hchain = entry->next_hchain;
-				entry->next_hchain = NULL;
-			}
+			HIP_IFE(add_esp_prot_hash(entry, unsigned char *out_hash, int *out_length), -1);
 			
 			// packet to be re-inserted into network stack has at least
 			// length of defined headers
@@ -342,7 +310,7 @@ int hip_esp_encrypt(unsigned char *in, uint8_t in_type, int in_len,
 	int i = 0;
 	int err = 0;
 	
-	if (USE_EXTHDR)
+	if (hip_esp_protection_extension)
 		esp_data_offset = sizeof(struct hip_esp_ext);
 	else
 		esp_data_offset = sizeof(struct hip_esp);
@@ -574,7 +542,7 @@ int hip_esp_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8_t *
 	int esp_data_offset = 0;
 	int err = 0;
 
-	if (USE_EXTHDR)
+	if (hip_esp_protection_extension)
 		esp_data_offset = sizeof(struct hip_esp_ext);
 	else
 		esp_data_offset = sizeof(struct hip_esp);

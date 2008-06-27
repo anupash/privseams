@@ -188,6 +188,29 @@ void hip_fw_uninit_proxy() {
 	//system("ip6tables -D INPUT -p icmpv6 -j QUEUE");
 }
 
+
+void hip_fw_init_userspace_ipsec()
+{
+	HIP_IFEL(userspace_ipsec_init(), -1, "failed to initialize userspace ipsec");
+	
+	// queue incoming ESP over IPv4 and IPv4 UDP encapsulated traffic
+	system("iptables -I INPUT -p 50 -j QUEUE"); /*  */
+	system("iptables -I INPUT -p 17 --dport 50500 -j QUEUE");
+	system("iptables -I INPUT -p 17 --sport 50500 -j QUEUE");
+	
+	/* no need to queue outgoing ICMP, TCP and UDP sent to LSIs as
+	 * this is handled elsewhere */
+
+	/* queue incoming ESP over IPv6
+	 * NOTE: add IPv6 UDP encapsulation here */
+	system("ip6tables -I INPUT -p 50 -j QUEUE");
+
+	// queue outgoing ICMP, TCP and UDP sent to HITs
+	system("ip6tables -I OUTPUT -p 58 -d 2001:0010::/28 -j QUEUE");
+	system("ip6tables -I OUTPUT -p 6 -d 2001:0010::/28 -j QUEUE");
+	system("ip6tables -I OUTPUT -p 17 -d 2001:0010::/28 -j QUEUE");
+}
+
 /*----------------INIT/EXIT FUNCTIONS----------------------*/
 
 /*
@@ -348,24 +371,8 @@ int firewall_init_rules()
 	if (hip_opptcp)
 		hip_fw_init_opptcp();
 
-	if (hip_userspace_ipsec) {
-		// queue incoming ESP over IPv4 and IPv4 UDP encapsulated traffic
-		system("iptables -I INPUT -p 50 -j QUEUE"); /*  */
-		system("iptables -I INPUT -p 17 --dport 50500 -j QUEUE");
-		system("iptables -I INPUT -p 17 --sport 50500 -j QUEUE");
-		
-		/* no need to queue outgoing ICMP, TCP and UDP sent to LSIs as
-		 * this is handled elsewhere */
-
-		/* queue incoming ESP over IPv6
-		 * NOTE: add IPv6 UDP encapsulation here */
-		system("ip6tables -I INPUT -p 50 -j QUEUE");
-
-		// queue outgoing ICMP, TCP and UDP sent to HITs
-		system("ip6tables -I OUTPUT -p 58 -d 2001:0010::/28 -j QUEUE");
-		system("ip6tables -I OUTPUT -p 6 -d 2001:0010::/28 -j QUEUE");
-		system("ip6tables -I OUTPUT -p 17 -d 2001:0010::/28 -j QUEUE");
-	}
+	if (hip_userspace_ipsec)
+		hip_fw_init_userspace_ipsec();
 
 
  out_err:

@@ -8,7 +8,6 @@
 #include "hip_esp.h"
 #include "utils.h"
 #include <sys/time.h>		/* timeval */
-//#include <asm/types.h>		/* __u16, __u32, etc */
 #include "hashchain_store.h"
 
 #define ESP_PACKET_SIZE 2500
@@ -27,6 +26,8 @@ unsigned char *decrypted_packet = NULL;
 int raw_sock_v4 = 0, raw_sock_v6 = 0;
 int is_init = 0;
 
+extern int hip_esp_protection_extension;
+
 uint16_t checksum_magic(const struct in6_addr *initiator, const struct in6_addr *receiver);
 
 /* this will initialize the esp_packet buffer and the sockets,
@@ -43,12 +44,10 @@ int userspace_ipsec_init()
 		HIP_IFE(!(esp_packet = (unsigned char *)malloc(ESP_PACKET_SIZE)), -1);
 		HIP_IFE(!(decrypted_packet = (unsigned char *)malloc(ESP_PACKET_SIZE)), -1);
 		
-		// init the hash-chain store
-		int hc_element_lengths[] = {HC_LENGTH_STEP1, HC_LENGTH_STEP2};
-		HIP_IFE(hip_hchain_store_init(hc_element_lengths, 2), -1);
-		HIP_IFE(hip_hchain_bexstore_set_item_length(HC_LENGTH_BEX_STORE), -1)
-		// ... and fill it with elements
-		HIP_IFE(hchain_store_maintainance(), -1);
+		if (hip_esp_protection_extension)
+		{
+			HIP_IFEL(esp_prot_ext_init(), -1, "failed to init esp protection extension\n");
+		}
 		
 		// open IPv4 raw socket
 		raw_sock_v4 = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
@@ -168,8 +167,6 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	
 	HIP_DEBUG_HIT("src_hit: ", &ctx->src);
 	HIP_DEBUG_HIT("dst_hit: ", &ctx->dst);
-
-	HIP_IFEL(userspace_ipsec_init(), -1, "failed to initialize userspace ipsec");
 	
 	// re-use allocated esp_packet memory space
 	memset(esp_packet, 0, ESP_PACKET_SIZE);
@@ -266,8 +263,6 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 		entry->usetime_ka.tv_sec = now.tv_sec;
 		entry->usetime_ka.tv_usec = now.tv_usec;
 		pthread_mutex_unlock(&entry->rw_lock);
-		
-		hchain_store_maintainance();
 	}
 	
   out_err:
@@ -300,11 +295,11 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	// re-use allocated decrypted_packet memory space
 	memset(decrypted_packet, 0, ESP_PACKET_SIZE);
 	gettimeofday(&now, NULL);
-	
+
 	/* get ESP header of input packet
 	 * UDP encapsulation is handled in firewall already
 	 * check if we are using the esp header extension */
-	if (USE_EXTHDR)
+	if (hip_esp_protection_extension)
 	{
 		esp_exthdr = (struct hip_esp_ext *)ctx->transport_hdr.esp;	
 		spi = ntohl(esp_exthdr->esp_spi);
@@ -331,32 +326,9 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	HIP_DEBUG("SEQ no. of incoming packet: %u \n", seq_no);
 	//HIP_IFEL(entry->sequence != seq_no, -1, "ESP sequence numbers do not match\n");
 	
-	if (USE_EXTHDR)
+	if (hip_esp_protection_extension)
 	{
-		// verify hchain-elements
-		HIP_DEBUG("verifying hash chain element for incoming packet...\n");
-		
-		if (hchain_verify((unsigned char *)&hash, (unsigned char *)entry->active_anchor, entry->tolerance))
-		{
-			// this will allow only increasing elements to be accepted
-			memcpy(entry->active_anchor, hash, DEFAULT_HASH_LENGTH);
-			HIP_DEBUG("hash-chain element correct!\n");
-		} else
-		{
-			// check if there was an implicit change to the next hchain
-			if (hchain_verify(sent_hc_element, entry->next_anchor, entry->tolerance))
-			{
-				memcpy(entry->active_anchor, entry->next_anchor, DEFAULT_HASH_LENGTH);
-				entry->next_anchor = NULL;
-			} else
-			{
-				// handle incorrect elements -> drop packet
-				HIP_DEBUG("INVALID hash-chain element!\n");
-				
-				err = 1;
-				goto out_err;
-			}
-		}
+		HIP_IFEL(verify_esp_prot_hash(entry, &hash), -1, "hash could not be verified");
 	}
 
 	// check if we have a SA entry to reply to
@@ -414,8 +386,6 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 		entry->usetime_ka.tv_sec = now.tv_sec;
 		entry->usetime_ka.tv_usec = now.tv_usec;
 		pthread_mutex_unlock(&entry->rw_lock);
-		
-		hchain_store_maintainance();
 	}
 	
   out_err:
@@ -631,62 +601,6 @@ int cast_sockaddr_to_in6_addr(struct sockaddr_storage *sockaddr, struct in6_addr
   	return err;
 }
 
-/* refill the stores and send list update to hipd if necessary */
-int hchain_store_maintainance(void)
-{
-	int err = 0;
-	
-	err = hip_hchain_stores_refill();
-	if (err < 0)
-	{
-		HIP_ERROR("error refilling the stores\n");
-		goto out_err;
-	} else if (err > 0)
-	{
-		// this means the bex store was updated
-		HIP_DEBUG("sending anchor update...\n");
-		send_anchor_list_update_to_hipd();
-		
-		err = 0;
-	}
-	
-#if 0
-	// should be called from time to time
-	hip_remove_expired_lsi_entries();
-	hip_remove_expired_sel_entries();
-	/* TODO: implement SA timeout here */
-#endif
-
-  out_err:
-  	return err;
-}
-
-/* sends a list of all available anchor elements in the bex store
- * to the hipd, which then draws the element used in the bex from
- * this list */
-int send_anchor_list_update_to_hipd(void)
-{
-	int err = 0;
-	struct hip_common *msg = NULL;
-	
-	create_bexstore_anchors_message(msg);
-	
-	HIP_DUMP_MSG(msg);
-		
-	/* send msg to hipd and receive corresponding reply */
-	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send_recv msg failed\n");
-
-	/* check error value */
-	HIP_IFEL(hip_get_msg_err(msg), -1, "hipd returned error message!\n");
-	
-	HIP_DEBUG("send_recv msg succeeded\n");
-	
- out_err:
-	if (msg)
-		free(msg);
-	return err;
-}
-
 int send_userspace_ipsec_to_hipd(int activate)
 {
 	int err = 0;
@@ -715,81 +629,6 @@ int send_userspace_ipsec_to_hipd(int activate)
 	
 	HIP_DEBUG("send_recv msg succeeded\n");
 	HIP_DEBUG("userspace ipsec activated\n");
-	
- out_err:
-	if (msg)
-		free(msg);
-	return err;
-}
-
-/* this sends the prefered transform to hipd implicitely turning on
- * the esp protection extension there */
-int send_esp_protection_extension_to_hipd()
-{
-	int err = 0;
-	struct hip_common *msg = NULL;
-	uint8_t transform = 0;
-	
-	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1,
-		 "alloc memory for adding sa entry\n");
-	
-	hip_msg_init(msg);
-	
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ESP_PROT_EXT_TRANSFORM, 0), -1, 
-		 "build hdr failed\n");
-	
-	transform = ESP_PROT_TRANSFORM_DEFAULT;
-	
-	HIP_IFEL(hip_build_param_contents(msg, (void *)&transform, HIP_PARAM_UINT,
-					  sizeof(uint8_t)), -1,
-					  "build param contents failed\n");
-	
-	HIP_DEBUG("sending esp protection extension transform to hipd...\n");
-	HIP_DUMP_MSG(msg);
-	
-	/* send msg to hipd and receive corresponding reply */
-	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send_recv msg failed\n");
-
-	/* check error value */
-	HIP_IFEL(hip_get_msg_err(msg), -1, "hipd returned error message!\n");
-	
-	HIP_DEBUG("send_recv msg succeeded\n");
-	HIP_DEBUG("esp extension transform successfully set up\n");
-	
- out_err:
-	if (msg)
-		free(msg);
-	return err;
-}
-
-/* invoke an UPDATE message containing the next anchor element to be used */
-int send_next_anchor_to_hipd(unsigned char *anchor)
-{
-	int err = 0;
-	struct hip_common *msg = NULL;
-	
-	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1,
-		 "alloc memory for adding sa entry\n");
-	
-	hip_msg_init(msg);
-	
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_IPSEC_NEXT_ANCHOR, 0), -1, 
-		 "build hdr failed\n");
-	
-	HIP_DEBUG("anchor: %x \n", *anchor);
-	HIP_IFEL(hip_build_param_contents(msg, (void *)anchor, HIP_PARAM_UINT,
-					  sizeof(unsigned int)), -1,
-					  "build param contents failed\n");
-	
-	HIP_DUMP_MSG(msg);
-	
-	/* send msg to hipd and receive corresponding reply */
-	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send_recv msg failed\n");
-
-	/* check error value */
-	HIP_IFEL(hip_get_msg_err(msg), -1, "hipd returned error message!\n");
-	
-	HIP_DEBUG("send_recv msg succeeded\n");
 	
  out_err:
 	if (msg)

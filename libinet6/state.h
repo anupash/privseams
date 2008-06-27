@@ -62,10 +62,6 @@
 #define HIP_ESCROW_OPERATION_MODIFY      2
 #define HIP_ESCROW_OPERATION_DELETE      3
 
-// used by esp protection extension
-#define ESP_PROT_TRANSFORM_UNUSED		 0
-#define ESP_PROT_TRANSFORM_DEFAULT		 1
-
 #define HIP_DEFAULT_AUTH                 HIP_AUTH_SHA /**< AUTH transform in R1 */
 /**
  * Default rendezvous association lifetime in seconds. The lifetime should be

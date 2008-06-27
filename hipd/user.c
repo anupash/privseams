@@ -12,6 +12,7 @@
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  */
 #include "user.h"
+#include "esp_prot_ext.h"
 #include "anchordb.h"
 
 int hip_sendto(const struct hip_common *msg, const struct sockaddr *dst){
@@ -40,6 +41,12 @@ int hip_userspace_ipsec_activate(struct hip_common *msg)
 	return err;
 }
 
+/** 
+ * activates the esp protection extension in the hipd
+ * 
+ * NOTE: this is called by the hipd when receiving the respective message
+ * from the firewall
+ **/
 int hip_esp_protection_extension_transform(struct hip_common *msg)
 {
 	struct hip_tlv_common *param = NULL;

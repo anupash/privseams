@@ -21,7 +21,7 @@ uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr,
 	struct in6_addr loopback = in6addr_loopback;
 	int err = 0;
 	socklen_t alen;
-	uint32_t hchain_anchor = 0;
+	hash_item_t *anchor_item = NULL;
 	
 	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1,
 		 "alloc memory for adding sa entry\n");
@@ -83,11 +83,11 @@ uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr,
 	
 	// choose the anchor depending on the direction
 	if (direction == HIP_SPI_DIRECTION_IN)
-		hchain_anchor = entry->esp_peer_anchor;
+		anchor_item = entry->esp_peer_anchor;
 	else
-		hchain_anchor = entry->esp_local_anchor;
+		anchor_item = entry->esp_local_anchor;
 	
-	HIP_DEBUG("the hchain_anchor value is %u \n", hchain_anchor);
+	HIP_DEBUG("the hchain_anchor value is %x \n", *(anchor_item->hash));
 	HIP_IFEL(hip_build_param_contents(msg, (void *)&hchain_anchor, HIP_PARAM_UINT,
 					  sizeof(unsigned int)), -1,
 					  "build param contents failed\n");
