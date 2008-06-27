@@ -337,7 +337,7 @@ int hip_cert_spki_send_to_verification(struct hip_cert_spki_info * to_verificati
 int hip_cert_x509v3_request_certificate(struct in6_addr * subject, char * certificate) {
         int err = 0;
         struct hip_common * msg;
-        char cert_back[1024];
+        struct hip_cert_x509_resp * received;
         
         HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, 
                  "Malloc for msg failed\n");   
@@ -351,8 +351,11 @@ int hip_cert_x509v3_request_certificate(struct in6_addr * subject, char * certif
         HIP_DEBUG("Sending request to sign SPKI cert sequence to "
                   "daemon and waiting for answer\n");	
         hip_send_recv_daemon_info(msg);
-        
         /* get the struct from the message sent back by the daemon */
+        HIP_IFEL(!(received = hip_get_param(msg, HIP_PARAM_CERT_X509_RESP)), -1,
+                 "No name x509 struct found\n");
+        _HIP_DEBUG("CERT PEM\n%s\n", received->pem);
+        memcpy(certificate, &received->pem, sizeof(received->pem));
 	_HIP_DUMP_MSG(msg);
 
  out_err:

@@ -372,7 +372,7 @@ out_err:
  *
  * @return 0 on success negative otherwise. 
  *
- * @note the request part is just for informational purposes, in practise it
+ * @note the request part is just for informational purposes, in practice it
  * is not needed
  */ 
 int hip_cert_x509v3_handle_request(struct hip_common * msg,  HIP_HASHTABLE * db) {
@@ -447,7 +447,7 @@ int hip_cert_x509v3_handle_request(struct hip_common * msg,  HIP_HASHTABLE * db)
  
         /* Issuer naming */
         if (sec_general != NULL) {
-                /* Loop through the conf stack and add extensions to ext stack */
+                /* Loop through the conf stack for general information */
                 extlist = sk_X509_EXTENSION_new_null();
                 for (i = 0; i < sk_CONF_VALUE_num(sec_general); i++) {
                         item = sk_CONF_VALUE_value(sec_general, i);
@@ -507,7 +507,7 @@ int hip_cert_x509v3_handle_request(struct hip_common * msg,  HIP_HASHTABLE * db)
                 HIP_IFEL((!X509_REQ_add_extensions(req, extlist)), -1,
                           "Failed to add extensions to the request\n");
         }
-
+#if 0
         /* DEBUG PART START for the certificate request */
         HIP_DEBUG("x.509v3 certificate request in readable format\n\n");
         HIP_IFEL(!X509_REQ_print_fp(stdout, req), -1,
@@ -516,7 +516,8 @@ int hip_cert_x509v3_handle_request(struct hip_common * msg,  HIP_HASHTABLE * db)
         HIP_IFEL((PEM_write_X509_REQ(stdout, req) != 1), -1 ,
                  "Failed to write the x509 request in PEM to stdout\n");
         /* DEBUG PART END for the certificate request*/
-        
+#endif     
+   
         /** NOW WE ARE READY TO CREATE A CERTIFICATE FROM THE REQUEST **/        
         HIP_DEBUG("\n\nStarting the certificate creation\n\n");
 
@@ -536,6 +537,19 @@ int hip_cert_x509v3_handle_request(struct hip_common * msg,  HIP_HASHTABLE * db)
                  "Error setting beginning time of the certificate");
         HIP_IFEL(!(X509_gmtime_adj (X509_get_notAfter (cert), secs)), -1, 
                  "Error setting ending time of the certificate");
+
+        if (sec_ext != NULL) {
+                for (i = 0; i < sk_CONF_VALUE_num(sec_ext); i++) {
+                        item = sk_CONF_VALUE_value(sec_ext, i);
+                        HIP_DEBUG("Sec: %s, Key; %s, Val %s\n", 
+                                   item->section, item->name, item->value);
+                        HIP_IFEL(!(ext = X509V3_EXT_conf(NULL, NULL, 
+                                                       item->name, item->value )), -1, 
+                                 "Failed to create extension\n");
+                        HIP_IFEL((!X509_add_ext(cert, ext, -1)), -1,
+                                 "Failed to add extensions to the cert\n");
+                }
+        }
 
         HIP_DEBUG("Getting the key\n");
         HIP_IFEL((err = hip_cert_rsa_construct_keys(hip_local_hostid_db,

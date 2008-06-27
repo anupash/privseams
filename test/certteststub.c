@@ -193,9 +193,13 @@ skip_spki:
 		}
 	}
         hip_cert_free_conf(conf);
-
+        memset(certificate, '\0', sizeof(certificate));
         err = hip_cert_x509v3_request_certificate(defhit, certificate); 
+        HIP_DEBUG("Certificate in PEM from daemon\n%s\n", certificate);
 
+        /** Now send it back for the verification **/
+        
+        
 to_end:
         HIP_DEBUG("If there was no errors above, \"everything\" is OK\n");
 
