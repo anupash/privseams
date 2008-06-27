@@ -8,7 +8,7 @@
 #include "hip_esp.h"
 #include "utils.h"
 #include <sys/time.h>		/* timeval */
-#include <asm/types.h>		/* __u16, __u32, etc */
+//#include <asm/types.h>		/* __u16, __u32, etc */
 #include "hashchain_store.h"
 
 #define ESP_PACKET_SIZE 2500
@@ -680,6 +680,81 @@ int send_anchor_list_update_to_hipd(void)
 	HIP_IFEL(hip_get_msg_err(msg), -1, "hipd returned error message!\n");
 	
 	HIP_DEBUG("send_recv msg succeeded\n");
+	
+ out_err:
+	if (msg)
+		free(msg);
+	return err;
+}
+
+int send_userspace_ipsec_to_hipd(int activate)
+{
+	int err = 0;
+	struct hip_common *msg = NULL;
+	
+	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1,
+		 "alloc memory for adding sa entry\n");
+	
+	hip_msg_init(msg);
+	
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_USERSPACE_IPSEC, 0), -1, 
+		 "build hdr failed\n");
+	
+	HIP_IFEL(hip_build_param_contents(msg, (void *)&activate, HIP_PARAM_INT,
+					  sizeof(unsigned int)), -1,
+					  "build param contents failed\n");
+	
+	HIP_DEBUG("sending userspace ipsec activation to hipd...\n");
+	HIP_DUMP_MSG(msg);
+	
+	/* send msg to hipd and receive corresponding reply */
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send_recv msg failed\n");
+
+	/* check error value */
+	HIP_IFEL(hip_get_msg_err(msg), -1, "hipd returned error message!\n");
+	
+	HIP_DEBUG("send_recv msg succeeded\n");
+	HIP_DEBUG("userspace ipsec activated\n");
+	
+ out_err:
+	if (msg)
+		free(msg);
+	return err;
+}
+
+/* this sends the prefered transform to hipd implicitely turning on
+ * the esp protection extension there */
+int send_esp_protection_extension_to_hipd()
+{
+	int err = 0;
+	struct hip_common *msg = NULL;
+	uint8_t transform = 0;
+	
+	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1,
+		 "alloc memory for adding sa entry\n");
+	
+	hip_msg_init(msg);
+	
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ESP_PROT_EXT_TRANSFORM, 0), -1, 
+		 "build hdr failed\n");
+	
+	transform = ESP_PROT_TRANSFORM_DEFAULT;
+	
+	HIP_IFEL(hip_build_param_contents(msg, (void *)&transform, HIP_PARAM_UINT,
+					  sizeof(uint8_t)), -1,
+					  "build param contents failed\n");
+	
+	HIP_DEBUG("sending esp protection extension transform to hipd...\n");
+	HIP_DUMP_MSG(msg);
+	
+	/* send msg to hipd and receive corresponding reply */
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send_recv msg failed\n");
+
+	/* check error value */
+	HIP_IFEL(hip_get_msg_err(msg), -1, "hipd returned error message!\n");
+	
+	HIP_DEBUG("send_recv msg succeeded\n");
+	HIP_DEBUG("esp extension transform successfully set up\n");
 	
  out_err:
 	if (msg)

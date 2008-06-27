@@ -170,8 +170,10 @@
 #define SO_HIP_CERT_SPKI_VERIFY                 142
 #define SO_HIP_CERT_X509V3_SIGN                 143
 #define SO_HIP_CERT_X509V3_VERIFY               144
-#define SO_HIP_IPSEC_UPDATE_ANCHOR_LIST			145
-#define SO_HIP_IPSEC_NEXT_ANCHOR				146
+#define SO_HIP_USERSPACE_IPSEC					145
+#define SO_HIP_ESP_PROT_EXT_TRANSFORM			146
+#define SO_HIP_IPSEC_UPDATE_ANCHOR_LIST			147
+#define SO_HIP_IPSEC_NEXT_ANCHOR				148
 /** @} */
 /* inclusive */
 #define HIP_SO_ROOT_MAX 			255

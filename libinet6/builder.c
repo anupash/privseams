@@ -2750,6 +2750,7 @@ int hip_build_param_esp_prot_transform(struct hip_common *msg, uint8_t transform
 	hip_set_param_type(&prot_transform, HIP_PARAM_ESP_PROT_TRANSFORM);
 	hip_calc_generic_param_len(&prot_transform, sizeof(struct esp_prot_transform), 0);
 	prot_transform.transform = htonl(transform);
+	
 	err = hip_build_param(msg, &prot_transform);
 	
 	return err;
@@ -2762,7 +2763,7 @@ int hip_build_param_esp_prot_transform(struct hip_common *msg, uint8_t transform
  * 
  * @return 0 on success, otherwise < 0.
  */
-int hip_build_param_esp_prot_anchor(struct hip_common *msg, uint32_t anchor)
+int hip_build_param_esp_prot_anchor(struct hip_common *msg, hash_item_t *anchor)
 {
 	int err = 0;
 	
@@ -2770,7 +2771,9 @@ int hip_build_param_esp_prot_anchor(struct hip_common *msg, uint32_t anchor)
 
 	hip_set_param_type(&esp_anchor, HIP_PARAM_ESP_PROT_ANCHOR);
 	hip_calc_generic_param_len(&esp_anchor, sizeof(struct esp_prot_anchor), 0);
-	esp_anchor.anchor = htonl(anchor);
+	
+	memcpy(&(esp_anchor.anchor), anchor->hash, anchor->hash_length + anchor->salt_length);
+	
 	err = hip_build_param(msg, &esp_anchor);
 	
 	return err;

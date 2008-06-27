@@ -24,7 +24,8 @@ int counter = 0;
 int hip_proxy_status = 0;
 int foreground = 1;
 int hip_opptcp = 0;
-int hip_userspace_ipsec = 1;
+int hip_userspace_ipsec = 0;
+int hip_esp_protection_extension = 0;
 
 /* Default HIT - do not access this directly, call hip_fw_get_default_hit() */
 struct in6_addr default_hit;
@@ -52,6 +53,8 @@ void print_usage()
 	printf("      -F = do not flush iptables rules\n");
 	printf("      -b = fork the firewall to background\n");
 	printf("      -k = kill running firewall pid\n");
+	printf("      -i = switch on userspace ipsec\n");
+	printf("      -e = use esp protection extension (also sets -i)\n");
 	printf("      -h = print this help\n\n");
 }
 
@@ -76,6 +79,36 @@ void set_escrow_active(int active)
 int is_escrow_active()
 {
 	return escrow_active;
+}
+
+int set_userspace_ipsec_active(int activate)
+{
+	int err = 0;
+	
+	// activate userspace ipsec in hipd
+	HIP_IFE(send_userspace_ipsec_to_hipd(activate), -1);
+	
+	// if active in hipd also activate here
+	hip_userspace_ipsec = activate;
+	
+  out_err:
+	return err;
+}
+
+int set_esp_protection_extension_active(int activate)
+{
+	int err = 0;
+	
+	// first switch to userspace ipsec
+	HIP_IFE(set_userspace_ipsec_active(activate), -1);
+	
+	// then acticate the extension in hipd and the firewall
+	HIP_IFE(send_esp_protection_extension_to_hipd(), -1);
+		
+	hip_esp_protection_extension = activate;
+	
+  out_err:
+	return err;
 }
 
 void hip_fw_init_opptcp() {
@@ -1363,7 +1396,7 @@ int main(int argc, char **argv)
 	
 	hip_set_logdebug(LOGDEBUG_NONE);
 
-	while ((ch = getopt(argc, argv, "f:t:vdFHAbkh")) != -1)
+	while ((ch = getopt(argc, argv, "f:t:vdFHAbkieh")) != -1)
 	{
 		switch (ch)
 		{
@@ -1397,6 +1430,12 @@ int main(int argc, char **argv)
 			break;
 		case 'k':
 			killold = 1;
+			break;
+		case 'i':
+			set_userspace_ipsec_active(1);
+			break;
+		case 'e':
+			set_esp_protection_extension_active(1);
 			break;
 		case 'h':
 			print_usage();

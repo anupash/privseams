@@ -14,12 +14,16 @@
 #define HASH_CHAIN_H
 
 #include <inttypes.h>
+#include <openssl/sha.h>
 
 // default length of the hash function output used in the chain
 #define DEFAULT_HASH_LENGTH 4 // (in bytes)
 #define DEFAULT_SALT_LENGTH 0 // (in bytes)
 /* value used by Tobias Heer */
 //#define HCHAIN_ELEMENT_LENGTH 20 // (in bytes)
+
+// change this, if you are changing the hash function
+#define MAX_HASH_LENGTH SHA_DIGEST_LENGTH
 
 #define HCHAIN_VERIFY_WINDOW 10
 

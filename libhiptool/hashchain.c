@@ -15,7 +15,6 @@
 #include <stdlib.h>			// malloc & co
 #include <stdio.h> 			// printf & comalloc & co.
 #include <openssl/rand.h>		
-#include <openssl/sha.h>
 #include <string.h>			// memcpy
 #include "debug.h"
 #include "ife.h"

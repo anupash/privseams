@@ -27,6 +27,8 @@ int hipl_userspace_ipsec_sadb_add_wrapper(struct in6_addr *saddr,
 					      int already_acquired,
 					      int direction, int update);
 
+int send_userspace_ipsec_to_hipd(int activate);
+int send_esp_protection_extension_to_hipd(void);
 int send_next_anchor_to_hipd(unsigned char *anchor);
 
 #endif /* HIP_USERIPSEC_H_ */

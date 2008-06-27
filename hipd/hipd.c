@@ -103,12 +103,12 @@ int hip_use_i3 = 0; // false
  * userspace ipsec or not. If it is 1, hip uses the user space ipsec.
  * It will not use if hip_use_userspace_ipsec = 0. Added By Tao Wan
  */
-int hip_use_userspace_ipsec = 1;
+int hip_use_userspace_ipsec = 0;
+uint8_t hip_esp_prot_ext_transform = ESP_PROT_TRANSFORM_UNUSED;
 
 int hip_use_opptcp = 0; // false
 
 void hip_set_opportunistic_tcp_status(struct hip_common *msg)
-
 {
 	struct sockaddr_in6 sock_addr;     		
 	int retry, type, n;

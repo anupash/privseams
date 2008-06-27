@@ -654,7 +654,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	uint32_t spi_in = 0;
 	struct esp_prot_transform *prot_transform = NULL;
 	uint8_t transform = 0;
-	uint32_t anchor = 0;
+	hash_item_t *anchor = NULL;
 	
 	_HIP_DEBUG("hip_create_i2() invoked.\n");
 
@@ -830,10 +830,10 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	{
 		if (has_more_anchors())
 		{
-			HIP_IFEL(get_next_anchor(&anchor), -1, "no anchor elements available, threading?");
+			HIP_IFEL(get_next_anchor(anchor), -1, "no anchor elements available, threading?");
 			HIP_IFEL(hip_build_param_esp_prot_anchor(i2, anchor), -1,
 				 "Building of ESP protection anchor failed\n");
-			HIP_DEBUG("sending anchor element: %u", anchor);
+			HIP_DEBUG("sending anchor element: %u", anchor->hash);
 			
 			// store local_anchor
 			entry->esp_local_anchor = anchor;
@@ -1456,7 +1456,7 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 	uint16_t mask = 0;
 	uint8_t lifetime;
 	uint32_t spi_in;
-	uint32_t anchor = 0;
+	hash_item_t *anchor = NULL;
         
 	_HIP_DEBUG("hip_create_r2() invoked.\n");
 	/* Assume already locked entry */
@@ -1506,10 +1506,10 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 	{
 		if (has_more_anchors())
 		{
-			HIP_IFEL(get_next_anchor(&anchor), -1, "no anchor elements available, threading?");
+			HIP_IFEL(get_next_anchor(anchor), -1, "no anchor elements available, threading?");
 			HIP_IFEL(hip_build_param_esp_prot_anchor(r2, anchor), -1,
 				 "Building of ESP protection anchor failed\n");
-			HIP_DEBUG("sending anchor element: %u", anchor);
+			HIP_DEBUG("sending anchor element: %x", anchor->hash);
 			
 			// store local_anchor
 			entry->esp_local_anchor = anchor;
@@ -1613,7 +1613,8 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	uint16_t crypto_len = 0, nonce = 0;
 	int err = 0, retransmission = 0, replay = 0, use_blind = 0;
 	struct esp_prot_anchor *prot_anchor = NULL;
-	uint32_t anchor = 0;
+	hash_item_t *anchor = NULL;
+	int item_length = 0;
 	struct esp_prot_transform *prot_transform = NULL;
 	uint8_t transform = 0;
         
@@ -2003,8 +2004,24 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		if (param = hip_get_param(ctx->input, HIP_PARAM_ESP_PROT_ANCHOR))
 		{
 			prot_anchor = (struct esp_prot_anchor *) param;
-			anchor = ntohl(prot_anchor->anchor);
-			HIP_DEBUG("received anchor element: %u", anchor);
+			
+			anchor = (hash_item_t *)malloc(sizeof(hash_item_t));
+			
+			// distinguish different hash lengths/transforms
+			if (entry->esp_prot_transform == ESP_PROT_TRANSFORM_DEFAULT)
+			{
+				anchor->hash_length = DEFAULT_HASH_LENGTH;
+				anchor->salt_length = DEFAULT_SALT_LENGTH;
+				item_length = anchor->hash_length + anchor->salt_length;
+				anchor->hash = (unsigned char *)malloc(item_length);
+				memcpy(anchor->hash, prot_anchor->anchor, item_length);
+			} else
+			{
+				HIP_ERROR("received anchor with unknown transform\n");
+				exit(1);
+			}
+			
+			HIP_DEBUG("received anchor element: %x\n", anchor->hash);
 			
 			// store peer_anchor
 			entry->esp_peer_anchor = anchor;
@@ -2335,7 +2352,8 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	uint32_t spi_recvd = 0, spi_in = 0;
 	struct hip_param *param = NULL;
 	struct esp_prot_anchor *prot_anchor = NULL;
-	uint32_t anchor = 0;
+	hash_item_t *anchor = NULL;
+	int item_length = 0;
 	
 #ifdef CONFIG_HIP_HI3
 	if( r2_info->hi3_in_use ) {
@@ -2405,8 +2423,24 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	if (entry->esp_prot_transform && param)
 	{
 		prot_anchor = (struct esp_prot_anchor *) param;
-		anchor = ntohl(prot_anchor->anchor);
-		HIP_DEBUG("received anchor element: %u", anchor);
+		
+		anchor = (hash_item_t *)malloc(sizeof(hash_item_t));
+					
+		// distinguish different hash lengths/transforms
+		if (entry->esp_prot_transform == ESP_PROT_TRANSFORM_DEFAULT)
+		{
+			anchor->hash_length = DEFAULT_HASH_LENGTH;
+			anchor->salt_length = DEFAULT_SALT_LENGTH;
+			item_length = anchor->hash_length + anchor->salt_length;
+			anchor->hash = (unsigned char *)malloc(item_length);
+			memcpy(anchor->hash, prot_anchor->anchor, item_length);
+		} else
+		{
+			HIP_ERROR("received anchor with unknown transform\n");
+			exit(1);
+		}
+		
+		HIP_DEBUG("received anchor element: %x", anchor->hash);
 		
 		// store peer_anchor
 		entry->esp_peer_anchor = anchor;

@@ -12,7 +12,7 @@ void init_anchor_db()
 }
 
 /* simply deletes all elements in the list and adds new ones */
-// TODO reimplement as ineffcient
+// TODO reimplement as ineffcient -> only add non-existing elements
 int update_anchor_db(struct hip_common *msg)
 {
 	struct hip_tlv_common *param = NULL;

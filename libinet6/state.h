@@ -311,9 +311,9 @@ struct hip_hadb_state
 	/** ESP extension protection transform */
 	uint8_t						 esp_prot_transform;
 	/** ESP extension protection local_anchor */
-	uint32_t					 esp_local_anchor;
+	hash_item_t *				 esp_local_anchor;
 	/** ESP extension protection peer_anchor */
-	uint32_t					 esp_peer_anchor;
+	hash_item_t *				 esp_peer_anchor;
 	/** Something to do with the birthday paradox.
 	    @todo Please clarify what this field is. */
 	uint64_t                     birthday;
