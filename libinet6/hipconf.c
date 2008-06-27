@@ -42,6 +42,7 @@ const char *hipconf_usage =
 "new|add hi anon|pub rsa|dsa filebasename\n"
 "new hi anon|pub rsa|dsa filebasename keylen\n"
 "new|add hi default (HI must be created as root)\n"
+"new hi default rsa_keybits dsa_keybits\n"
 "load config default\n"
 "handoff mode lazy|active\n"
 "run normal|opp <binary>\n"
@@ -474,8 +475,12 @@ int hip_conf_handle_hiprelay(hip_common_t *msg, int action,
 int hip_conf_handle_hi(hip_common_t *msg, int action, const char *opt[],
 		       int optc)
 {
-	int err = 0, anon = 0, use_default = 0, key_bits = 0, euid = -1;
-     
+	int err = 0, anon = 0, use_default = 0, rsa_key_bits = 0, 
+	dsa_key_bits = 0, euid = -1;
+	char *fmt = NULL;
+	char *file = NULL;
+	hip_common_t *msg_tmp = NULL;
+
      /* Get the effective user ID. This has to be zero (root), because root owns
 	the key files under /etc/hip/. */
      euid = geteuid();
@@ -495,7 +500,7 @@ int hip_conf_handle_hi(hip_common_t *msg, int action, const char *opt[],
 	  err = -EINVAL;
 	  goto out_err;
      }
-  
+
      if(!strcmp(opt[OPT_HI_TYPE], "pub")) {
 	  anon = 0;
      } else if(!strcmp(opt[OPT_HI_TYPE], "anon")) {
@@ -508,30 +513,66 @@ int hip_conf_handle_hi(hip_common_t *msg, int action, const char *opt[],
 	  goto out_err;
      }
 
-     if (optc == 4)
-	key_bits = atoi(opt[3]);
-
      if (use_default) {
-	  if (optc != 1) {
+	  if (optc != 1 && optc != 3) {
 	       HIP_ERROR("Wrong number of args for default\n");
 	       err = -EINVAL;
 	       goto out_err;
 	  }
-     } else {
-	  if (optc == 2) {
+     } else {HIP_DEBUG("not default\n");
+	  if (optc < 3) {
 	       HIP_ERROR("Wrong number of args\n");
 	       err = -EINVAL;
 	       goto out_err;
 	  }
      }
 
-     err = hip_serialize_host_id_action(msg, action, anon, use_default,
-					opt[OPT_HI_FMT], opt[OPT_HI_FILE], key_bits);
+    if (use_default && optc == 3) {
+	rsa_key_bits = atoi(opt[1]);
+	dsa_key_bits = atoi(opt[2]);
+    }
+
+    if (!use_default) {
+	fmt = opt[OPT_HI_FMT];
+	file = opt[OPT_HI_FILE];
+    }
+
+    if (optc == 4)
+	rsa_key_bits = dsa_key_bits = atoi(opt[OPT_HI_KEYLEN]);
+
+    if (rsa_key_bits < 384 || rsa_key_bits > HIP_MAX_RSA_KEY_LEN || rsa_key_bits % 64 != 0)
+	rsa_key_bits = RSA_KEY_DEFAULT_BITS;
+    if (dsa_key_bits < 512 || dsa_key_bits > HIP_MAX_DSA_KEY_LEN || dsa_key_bits % 64 != 0)
+	dsa_key_bits = DSA_KEY_DEFAULT_BITS;
+
+    if (use_default && action == ACTION_ADD) {
+	/* Add default keys in three steps: dsa, rsa anon, rsa pub.
+	   Necessary for large keys. */
+
+	HIP_IFEL(!(msg_tmp = malloc(HIP_MAX_PACKET)), -1, "Malloc for msg_tmp failed.\n");
+	memcpy(msg_tmp, msg, HIP_MAX_PACKET);
+	if (err = hip_serialize_host_id_action(msg_tmp, action, 0, 1, "dsa", NULL, 0, 0))
+	    goto out_err;
+	HIP_IFEL(hip_send_daemon_info_wrapper(msg_tmp, 0), -1, "Sending msg failed.\n");
+
+	memcpy(msg_tmp, msg, HIP_MAX_PACKET);
+	if (err = hip_serialize_host_id_action(msg_tmp, action, 1, 1, "rsa", NULL, 0, 0))
+	    goto out_err;
+	HIP_IFEL(hip_send_daemon_info_wrapper(msg_tmp, 0), -1, "Sending msg failed.\n");
+
+	err = hip_serialize_host_id_action(msg, action, 0, 1, "rsa", NULL, 0, 0);
+	goto out_err;
+    }
+
+    err = hip_serialize_host_id_action(msg, action, anon, use_default,
+					fmt, file, rsa_key_bits, dsa_key_bits);
 
      HIP_INFO("\nNew default HI is now created.\nYou must restart hipd to make "\
 	      "the changes effective.\n\n");
 
  out_err:
+     if (msg_tmp)
+	free(msg_tmp);
      return err;
 }
 
@@ -1435,13 +1476,13 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
      action = hip_conf_get_action(argv[1]);
      HIP_IFEL((action == -1), -1,
 	      "Invalid action argument '%s'\n", argv[1]);
-     
+
      /* Check that we have at least the minumum number of arguments
 	for the given action. */
      HIP_IFEL((argc < hip_conf_check_action_argc(action) + 2), -1,
 	      "Not enough arguments given for the action '%s'\n",
 	      argv[1]);
-     
+
      /* Is this redundant? What does it do? -Lauri 19.03.2008 19:46. */
      HIP_IFEL(((type_arg = hip_conf_get_type_arg(action)) < 0), -1,
 	      "Could not parse type\n");
@@ -1449,12 +1490,12 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
      type = hip_conf_get_type(argv[type_arg],argv);
      HIP_IFEL((type <= 0 || type >= TYPE_MAX), -1,
 	      "Invalid type argument '%s'\n", argv[type_arg]);
-     
+
      /* Get the type argument for the given action. */
      HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed.\n");
      memset(msg, 0, HIP_MAX_PACKET);
      hip_get_all_hits(msg,argv);
-     
+
      /* Call handler function from the handler function pointer
 	array at index "type" with given commandline arguments. 
 	The functions build a hip_common message. */

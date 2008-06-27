@@ -569,7 +569,6 @@ int impl_rsa_sign(u8 *digest, u8 *private_key, u8 *signature, struct hip_rsa_key
 	BN_CTX *ctx;
 	u8 *data = private_key;
 	int offset = keylen->e_len;
-	int len;
 	int err, res = 1;
 	unsigned int sig_len;
 
@@ -579,24 +578,15 @@ int impl_rsa_sign(u8 *digest, u8 *private_key, u8 *signature, struct hip_rsa_key
 		goto err;
 	}
 
-	len = keylen->e;
-	rsa->e = BN_bin2bn(&data[offset], len, 0);
-	offset += len;
-
-        len = keylen->n;
-	rsa->n = BN_bin2bn(&data[offset], len, 0);
-	offset += len;
-
-        //len = keylen->n;
-	rsa->d = BN_bin2bn(&data[offset], len, 0);
-	offset += len;
-
-        len = keylen->n / 2;
-	rsa->p = BN_bin2bn(&data[offset], len, 0);
-	offset += len;
-
-        //len = keylen->n / 2;
-	rsa->q = BN_bin2bn(&data[offset], len, 0);
+	rsa->e = BN_bin2bn(&data[offset], keylen->e, 0);
+	offset += keylen->e;
+	rsa->n = BN_bin2bn(&data[offset], keylen->n, 0);
+	offset += keylen->n;
+	rsa->d = BN_bin2bn(&data[offset], keylen->n, 0);
+	offset += keylen->n;
+	rsa->p = BN_bin2bn(&data[offset], keylen->n / 2, 0);
+	offset += keylen->n / 2;
+	rsa->q = BN_bin2bn(&data[offset], keylen->n / 2, 0);
 
 	ctx = BN_CTX_new();
 	if (!ctx) {
@@ -646,7 +636,7 @@ int impl_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, struct hip_rsa_ke
 	int offset = keylen->e_len;
 
 	if (keylen->e > 512) { /* RFC 3110 limits this field to 4096 bits */
-		HIP_ERROR("RSA HI has invalid exponent length of %u\n",
+		HIP_ERROR("RSA HI has invalid exponent length of %d\n",
 			  keylen->e);
 		return(-1);
 	}
@@ -705,7 +695,7 @@ int hip_gen_dh_shared_key(DH *dh, u8 *peer_key, size_t peer_len, u8 *dh_shared_k
 	err = DH_compute_key(dh_shared_key, peer_pub_key, dh);
 
  out_err:
-	if (peer_pub_key) 
+	if (peer_pub_key)
 		BN_free(peer_pub_key);
 
 	return err;

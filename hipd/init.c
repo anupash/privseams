@@ -516,7 +516,6 @@ out_err:
 int hip_init_host_ids()
 {
 	int err = 0;
-	int anon;
 	struct stat status;
 	struct hip_common *user_msg = NULL;
 
@@ -533,8 +532,8 @@ int hip_init_host_ids()
 	{
 		//hip_msg_init(user_msg); already called by hip_msg_alloc()
 		err = hip_serialize_host_id_action(user_msg,
-						   ACTION_NEW, 0, 1,
-						   NULL, NULL, 0);
+						ACTION_NEW, 0, 1, NULL, NULL,
+						RSA_KEY_DEFAULT_BITS, DSA_KEY_DEFAULT_BITS);
 		if (err)
 		{
 			err = 1;
@@ -549,7 +548,7 @@ int hip_init_host_ids()
 
 	/* dsa anon and pub */
 	hip_msg_init(user_msg);
-	err = hip_serialize_host_id_action(user_msg, ACTION_ADD, 0, 1, "dsa", NULL, 0);
+	err = hip_serialize_host_id_action(user_msg, ACTION_ADD, 0, 1, "dsa", NULL, 0, 0);
 	if (err)
 	{
 		HIP_ERROR("Could not load default keys (DSA)\n");
@@ -565,7 +564,7 @@ int hip_init_host_ids()
 
 	/* rsa anon */
 	hip_msg_init(user_msg);
-	err = hip_serialize_host_id_action(user_msg, ACTION_ADD, 1, 1, "rsa", NULL, 0);
+	err = hip_serialize_host_id_action(user_msg, ACTION_ADD, 1, 1, "rsa", NULL, 0, 0);
 	if (err)
 	{
 		HIP_ERROR("Could not load default keys (RSA anon)\n");
@@ -581,7 +580,7 @@ int hip_init_host_ids()
 
 	/* rsa pub */
 	hip_msg_init(user_msg);
-	err = hip_serialize_host_id_action(user_msg, ACTION_ADD, 0, 1, "rsa", NULL, 0);
+	err = hip_serialize_host_id_action(user_msg, ACTION_ADD, 0, 1, "rsa", NULL, 0, 0);
 	if (err)
 	{
 		HIP_ERROR("Could not load default keys (RSA pub)\n");

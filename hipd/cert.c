@@ -83,7 +83,7 @@ int hip_cert_spki_sign(struct hip_common * msg, HIP_HASHTABLE * db) {
         HIP_IFEL((!signature_b64), -1, "Malloc for signature_b64 failed\n");
         memset(signature_b64, 0, RSA_size(rsa));
 
-        /*XX FIXME just a guestimate calculate correctly */
+        /*XX FIXME just a guesstimate calculate correctly */
         n_b64 = malloc(RSA_size(rsa) + 20);
         HIP_IFEL((!n_b64), -1, "Malloc for n_b64 failed\n");
         memset(n_b64, 0, (RSA_size(rsa) + 20));
@@ -278,7 +278,7 @@ int hip_cert_spki_verify(struct hip_common * msg) {
 	int err = 0, start = 0, stop = 0, evpret = 0, keylen;
         char buf[200];
         char sha_digest[21];
-        char e_hex[7];
+        char * e_hex = NULL;
         char * signature_hash = NULL;
         char * signature_hash_b64 = NULL;
         char * signature_b64 = NULL;
@@ -292,7 +292,7 @@ int hip_cert_spki_verify(struct hip_common * msg) {
         char * signature = NULL;
 
         /* rules for regular expressions */
-        
+
         /* 
            rule to get the public exponent. 
            Look for the part that says # and after that some hex blob and #
@@ -348,6 +348,8 @@ int hip_cert_spki_verify(struct hip_common * msg) {
         HIP_IFEL(hip_cert_regex(e_rule, cert->public_key, &start, &stop), -1,
                  "Failed to run hip_cert_regex (exponent)\n");
         _HIP_DEBUG("REGEX results from %d to %d\n", start, stop);
+	e_hex = malloc(stop-start);
+	HIP_IFEL((!e_hex), -1, "Malloc for e_hex failed\n");
         snprintf(e_hex, (stop-start-1), "%s", &cert->public_key[start + 1]);
         _HIP_DEBUG("E_HEX %s\n",e_hex);
 
@@ -377,8 +379,8 @@ int hip_cert_spki_verify(struct hip_common * msg) {
 	HIP_DEBUG("keylen = %d (%d bits)\n", keylen, keylen * 8);
 	signature = malloc(keylen);
 	HIP_IFEL((!signature), -1, "Malloc for signature failed.\n");
-
         rsa->n = BN_bin2bn(modulus, keylen, 0);
+
         _HIP_DEBUG("In verification RSA e=%s\n", BN_bn2hex(rsa->e));
         _HIP_DEBUG("In verification RSA n=%s\n", BN_bn2hex(rsa->n));
 
@@ -452,5 +454,6 @@ out_err:
         if (cert) free(cert);
         if (rsa) RSA_free(rsa);
 	if (signature) free(signature);
+	if (e_hex) free(e_hex);
 	return (err);
 }
