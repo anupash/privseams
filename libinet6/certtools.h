@@ -67,6 +67,7 @@ int hip_cert_spki_send_to_verification(struct hip_cert_spki_info *);
 int hip_cert_x509v3_request_certificate(struct in6_addr *, char *);
 
 /** Utilitary functions **/
+void hip_cert_display_x509_pem_contents(char *); 
 STACK_OF(CONF_VALUE) * hip_cert_read_conf_section(char *, CONF *);
 CONF * hip_cert_open_conf(void); 
 void hip_cert_free_conf(CONF *);

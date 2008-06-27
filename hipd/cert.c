@@ -519,7 +519,7 @@ int hip_cert_x509v3_handle_request(struct hip_common * msg,  HIP_HASHTABLE * db)
 #endif     
    
         /** NOW WE ARE READY TO CREATE A CERTIFICATE FROM THE REQUEST **/        
-        HIP_DEBUG("\n\nStarting the certificate creation\n\n");
+        HIP_DEBUG("Starting the certificate creation\n");
 
         HIP_IFEL(!(cert = X509_new ()), -1,
                  "Failed to create X509 object\n");        
@@ -541,7 +541,7 @@ int hip_cert_x509v3_handle_request(struct hip_common * msg,  HIP_HASHTABLE * db)
         if (sec_ext != NULL) {
                 for (i = 0; i < sk_CONF_VALUE_num(sec_ext); i++) {
                         item = sk_CONF_VALUE_value(sec_ext, i);
-                        HIP_DEBUG("Sec: %s, Key; %s, Val %s\n", 
+                        _HIP_DEBUG("Sec: %s, Key; %s, Val %s\n", 
                                    item->section, item->name, item->value);
                         HIP_IFEL(!(ext = X509V3_EXT_conf(NULL, NULL, 
                                                        item->name, item->value )), -1, 
@@ -564,15 +564,16 @@ int hip_cert_x509v3_handle_request(struct hip_common * msg,  HIP_HASHTABLE * db)
         digest = EVP_sha1 ();
         HIP_IFEL(!(X509_sign (cert, pkey, digest)), -1,
                  "Failed to sign x509v3 certificate\n"); 
-
+#if 0
         /* DEBUG PART START for the certificate */
         HIP_DEBUG("x.509v3 certificate in readable format\n\n");
         HIP_IFEL(!X509_print_fp(stdout, cert), -1,
                  "Failed to print x.509v3 in human readable format\n");
         HIP_DEBUG("x.509v3 certificate in PEM format\n\n");
-        HIP_IFEL((PEM_write_X509(stdout, cert) != 1), -1,
+        HIP_IFEL((PEM_write_X509(stdout, cert) != 1), -1, 
                  "Failed to write the x509 in PEM to stdout\n");
         /* DEBUG PART END for the certificate */
+#endif
 
         /** XX TODO Send the cert back to the client **/
         hip_msg_init(msg);

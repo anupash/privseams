@@ -368,6 +368,31 @@ int hip_cert_x509v3_request_certificate(struct in6_addr * subject, char * certif
  *******************************************************************************/
 
 /**
+ * Function that displays the contents of the PEM encoded x509 certificate
+ *
+ * @param CONF pointer to the to be freed configuration 
+ *
+ * @return void 
+ */
+void hip_cert_display_x509_pem_contents(char * pem) {
+        int err = 0;
+        BIO *out;
+        X509 * cert = NULL;
+        int read_bytes = 0;
+
+        HIP_DEBUG("PEM:\n%s\n", pem);        
+        out = BIO_new_mem_buf(pem, -1);      
+        HIP_IFEL((NULL == (cert = PEM_read_bio_X509(out, NULL, 0, NULL))), -1,
+                 "Cert variable is NULL\n");
+        HIP_DEBUG("x.509v3 certificate in readable format\n\n");
+        HIP_IFEL(!X509_print_fp(stdout, cert), -1,
+                 "Failed to print x.509v3 in human readable format\n");
+      
+ out_err:
+        return;
+}
+ 
+/**
  * Function that reads configuration section from HIP_CERTCONF_PATH,
  *
  * @param char pointer pointing to the name of desired section name
@@ -425,7 +450,7 @@ out_err:
 }
 
 /**
- * Function that opens an configuration file from HIP_CERTCONF_PATH,
+ * Function that frees the memory of a allocated configuration
  *
  * @param CONF pointer to the to be freed configuration 
  *
