@@ -41,9 +41,11 @@ int userspace_ipsec_init()
 	
 	if (!is_init)
 	{
+		// allocate memory for the packet buffers
 		HIP_IFE(!(esp_packet = (unsigned char *)malloc(ESP_PACKET_SIZE)), -1);
 		HIP_IFE(!(decrypted_packet = (unsigned char *)malloc(ESP_PACKET_SIZE)), -1);
 		
+		// also initialize the esp protection extension, if switched on
 		if (hip_esp_protection_extension)
 		{
 			HIP_IFEL(esp_prot_ext_init(), -1, "failed to init esp protection extension\n");
@@ -181,29 +183,21 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	// create new SA entry, if none exists yet
 	if (entry == NULL)
 	{
-			HIP_DEBUG("pfkey send acquire\n");
-			
-			// no SADB entry -> buffer triggering packet and send ACQUIRE
-			// FIXME checks for SA entry again
-			// TODO this will result in a SEGFAULT
-			//if (buffer_packet(&sockaddr_peer_hit, ctx->ipq_packet->payload, ctx->ipq_packet->data_len))
+		HIP_DEBUG("pfkey send acquire\n");
+	
+		/* no SADB entry -> trigger base exchange providing destination hit only */
+		HIP_IFEL(hip_trigger_bex(NULL, &ctx->dst, NULL, NULL), -1,
+			 "trigger bex\n");
 				
-				/* Trigger base exchange providing destination hit only */
-				HIP_IFEL(hip_trigger_bex(NULL, &ctx->dst, NULL, NULL), -1,
-					 "trigger bex\n");
-				
-			// as we don't buffer the packet right now, we have to drop it
-			// due to not routable addresses
-			err = 1;
+		// as we don't buffer the packet right now, we have to drop it
+		// due to not routable addresses
+		err = 1;
 			
-			// don't process this message any further
-			goto out_err;
+		// don't process this message any further
+		goto out_err;
 	}
 		
 	HIP_DEBUG("matching SA entry found\n");
-	
-	// unbuffer buffered packets -> re-injects original packets
-	//unbuffer_packets(entry);
 	
 	// get preferred routable addresses
 	HIP_IFE(get_preferred_sockaddr(entry->src_addrs, &preferred_local_sockaddr), -1);
@@ -289,28 +283,16 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	
 	// we should only get ESP packets here
 	HIP_ASSERT(ctx->packet_type == ESP_PACKET);
-	
-	HIP_IFEL(userspace_ipsec_init(), -1, "failed to initialize userspace ipsec\n");
-	
+
 	// re-use allocated decrypted_packet memory space
 	memset(decrypted_packet, 0, ESP_PACKET_SIZE);
 	gettimeofday(&now, NULL);
 
 	/* get ESP header of input packet
-	 * UDP encapsulation is handled in firewall already
-	 * check if we are using the esp header extension */
-	if (hip_esp_protection_extension)
-	{
-		esp_exthdr = (struct hip_esp_ext *)ctx->transport_hdr.esp;	
-		spi = ntohl(esp_exthdr->esp_spi);
-		seq_no = ntohl(esp_exthdr->esp_seq);
-		hash = ntohl(esp_exthdr->hc_element);
-	} else
-	{
-		esp_hdr = ctx->transport_hdr.esp;	
-		spi = ntohl(esp_hdr->esp_spi);
-		seq_no = ntohl(esp_hdr->esp_seq);
-	}
+	 * UDP encapsulation is handled in firewall already */
+	esp_hdr = ctx->transport_hdr.esp;	
+	spi = ntohl(esp_hdr->esp_spi);
+	seq_no = ntohl(esp_hdr->esp_seq);
 	
 	// lookup corresponding SA entry by SPI
 	HIP_IFEL(!(entry = hip_sadb_lookup_spi(spi)), -1,
@@ -326,27 +308,14 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	HIP_DEBUG("SEQ no. of incoming packet: %u \n", seq_no);
 	//HIP_IFEL(entry->sequence != seq_no, -1, "ESP sequence numbers do not match\n");
 	
-	if (hip_esp_protection_extension)
-	{
-		HIP_IFEL(verify_esp_prot_hash(entry, &hash), -1, "hash could not be verified");
-	}
-
+	// verify the esp extension hash, if in use
+	HIP_IFEL(verify_esp_prot_hash(entry, ((unsigned char *)esp_hdr) + sizeof(struct hip_esp)),
+			-1, "hash could not be verified");
+	
 	// check if we have a SA entry to reply to
 	HIP_IFEL(!(inverse_entry = hip_sadb_lookup_addr(
 		(struct sockaddr *)&entry->inner_src_addrs->addr)), 1,
 		"corresponding sadb entry for outgoing packets not found\n");
-
-// TODO check where we set the UDP dst port
-#if 0
-	/*HIP_DEBUG ( "DST_PORT = %u\n", 
-	 * inverse_entry->dst_port);*/
-	if (inverse_entry->dst_port == 0) {
-		HIP_DEBUG ("ESP channel - Setting dst_port "
-			"to %u\n",ntohs(udph->source));
-		inverse_entry->dst_port = ntohs(udph->source);
-	}
-	// TODO handle else case
-#endif
 	
 	// convert HITs to type used in hipl	
 	HIP_IFE(cast_sockaddr_to_in6_addr(&entry->inner_src_addrs->addr, &src_hit), -1);

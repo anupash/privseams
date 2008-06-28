@@ -9,44 +9,56 @@ int esp_prot_ext_init()
 	/***** init the hash-chain store *****/
 	int hc_element_lengths[] = {HC_LENGTH_STEP1};
 	
-	HIP_IFE(hip_hchain_store_init(hc_element_lengths, 1), -1);
+	HIP_IFEL(hip_hchain_store_init(hc_element_lengths, 1), -1,
+			"failed to initialize the hchain stores\n");
 	
-	HIP_IFE(hip_hchain_bexstore_set_item_length(HC_LENGTH_BEX_STORE), -1)
+	HIP_IFEL(hip_hchain_bexstore_set_item_length(HC_LENGTH_BEX_STORE), -1,
+			"failed to set item length for bex store\n");
 	
 	// ... and fill it with elements
-	HIP_IFE(hchain_store_maintainance(), -1);
+	HIP_IFEL(hchain_store_maintainance(), -1, "failed to fill the hash stores\n");
 	
   out_err:
   	return err;
 }
 
-int add_esp_prot_hash(hip_sadb_entry *entry, unsigned char *out_hash, int *out_length)
+int add_esp_prot_hash(unsigned char *out_hash, int *out_length, hip_sadb_entry *entry)
 {
 	int err = 0;
+	*hash_element = NULL;
 	
 	// first determine hash length
-	if (entry->active_hchain->transform > ESP_PROT_TRANSFORM_UNUSED)
+	*out_length = esp_prot_transforms[entry->active_transform];
+	
+	if (*out_length > 0)
 	{
-		*out_length = esp_prot_transforms[]
+		HIP_DEBUG("adding hash chain element to outgoing packet...\n");
+		
+		/* right now we only support the default length, so no need to
+		 * check for correct hash length */
+		HIP_IFEL(!(hash_element = hchain_pop(entry->active_hchain)), -1,
+				"unable to retrieve hash element from hash-chain\n");
+		
+		/* don't send anchor as it could be known to third party
+		 * -> other end-host will not accept it */
+		if (!memcmp(hash_element->hash, entry->active_hchain->anchor_element->hash,
+				*out_length))
+		{	
+			// get next element
+			HIP_IFEL(!(hash_element = hchain_pop(entry->active_hchain)), -1,
+				"unable to retrieve hash element from hash-chain\n");
+		}
+		
+		// copy the hash value into the buffer
+		memcpy(out_hash, hash_element->hash, *out_length);
+		
+		// now do some maintainance operations
+		HIP_IFEL(esp_prot_ext_maintainance(), -1,
+				"esp protection extension maintainance operations failed\n"=;
 	}
 	
-	HIP_DEBUG("adding hash chain element to outgoing packet...\n");
-	hash_element = hchain_pop(entry->active_hchain);
-	
-	/* don't send anchor as it could be known to third party
-	 * -> other end-host will not accept it
-	 * -> get next element */
-	if (!memcmp(hash_element->hash, entry->active_hchain->anchor_element->hash,
-			hash_length))
-	{	
-		hash_element = hchain_pop(entry->active_hchain);
-	}
-	
-	// copy the hash value into the buffer
-	memcpy(out_hash, hash_element->hash, out_length);
-	
-	// now do some maintainance operations
-	esp_prot_ext_maintainance();
+  out_err:
+    return err;
 }
 
 /* verifies received hchain-elements */
@@ -57,43 +69,48 @@ int verify_esp_prot_hash(hip_sadb_entry *entry, unsigned char *hash_value)
 	int err = 0;
 	
 	HIP_DEBUG("verifying hash chain element for incoming packet...\n");
-	
-	if (entry->active_anchor && entry->active_anchor->transform > ESP_PROT_TRANSFORM_UNUSED)
-	{
-		hash_length = esp_prot_transforms[entry->active_anchor->transform];
+
+	hash_length = esp_prot_transforms[entry->active_transform];
 		
-	} else
+	// only verify the hash, if extension is switched on
+	if (hash_length <= 0)
 	{
 		// no need to verify
 		goto out_err;
 	}
 		
-	if (hchain_verify(hash_item->hash, entry->active_anchor->hash,
+	if (hchain_verify(hash_value, entry->active_anchor,
 		entry->tolerance, hash_length))
 	{
 		// this will allow only increasing elements to be accepted
-		memcpy(entry->active_anchor, hash, hash_length);
+		memcpy(entry->active_anchor, hash_value, hash_length);
 		HIP_DEBUG("hash-chain element correct!\n");
 		
 	} else
 	{
-		if (entry->next_anchor && entry->next_anchor->transform > ESP_PROT_TRANSFORM_UNUSED)
-		{
-			hash_length = esp_prot_transforms[entry->next_anchor->transform];
+		// there might still be a chance that we have to switch to the next hchain
+		hash_length = esp_prot_transforms[entry->next_transform];
 			
-		} else
+		if (hash_length <= 0)
 		{
 			// no need to verify
 			goto out_err;
 		}
 		
 		// check if there was an implicit change to the next hchain
-		if (hchain_verify(sent_hc_element, entry->next_anchor->hash,
+		if (hchain_verify(hash_value, entry->next_anchor,
 				entry->tolerance, hash_length))
 		{
-			memcpy(entry->active_anchor, entry->next_anchor, hash_length);
-			entry->active_anchor->transform = entry->next_anchor->transform;
-			memset(entry->next_anchor, 0, sizeof(esp_hash_item));
+			// beware: the hash lengths might differ between 2 different hchains
+			free(entry->active_anchor);
+			entry->active_anchor = (unsigned char *)malloc(hash_length);
+			
+			memcpy(entry->active_anchor, hash_value, hash_length);
+			entry->active_transform = entry->next_transform;
+			
+			free(entry->next_anchor);
+			entry->next_anchor = NULL;
+			entry->next_transform = ESP_PROT_TRANSFORM_UNUSED;
 			
 		} else
 		{
@@ -109,9 +126,18 @@ int verify_esp_prot_hash(hip_sadb_entry *entry, unsigned char *hash_value)
     return err;
 }
 
+int get_esp_data_offset(hip_sadb_entry *entry)
+{
+	return sizeof(struct hip_esp) + transforms[entry->active_transform];
+}
+
+
+
 int esp_prot_ext_maintainance()
 {
-	/* make sure the next hash-chain is set up before the active one
+	int err = 0;
+	
+	/* make sure that the next hash-chain is set up before the active one
 	 * depletes */
 	if (!entry->next_hchain && entry->active_hchain->remaining
 				<= entry->active_hchain->hchain_length * REMAIN_THRESHOLD)
@@ -129,6 +155,8 @@ int esp_prot_ext_maintainance()
 	{
 		// this will free all linked elements in the hchain
 		hchain_destruct(entry->active_hchain->hchain);
+		free(entry->active_hchain);
+		
 		HIP_DEBUG("changing to next_hchain\n");
 		entry->active_hchain = entry->next_hchain;
 		entry->next_hchain = NULL;
@@ -151,6 +179,9 @@ int esp_prot_ext_maintainance()
 			err = 0;
 		}
 	}
+	
+  out_err:
+    return err;
 }
 
 /* this sends the prefered transform to hipd implicitely turning on
@@ -233,10 +264,9 @@ int send_next_anchor_to_hipd(unsigned char *anchor)
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_IPSEC_NEXT_ANCHOR, 0), -1, 
 		 "build hdr failed\n");
 	
-	HIP_DEBUG("anchor: %x \n", *anchor);
-	HIP_IFEL(hip_build_param_contents(msg, (void *)anchor, HIP_PARAM_UINT,
-					  sizeof(unsigned int)), -1,
-					  "build param contents failed\n");
+	HIP_HEXDUMP("anchor: ", anchor, item_length);
+	HIP_IFEL(hip_build_param_contents(msg, (void *)anchor, HIP_PARAM_HCHAIN_ANCHOR,
+		item_length), -1, "build param contents failed\n");
 	
 	HIP_DUMP_MSG(msg);
 	

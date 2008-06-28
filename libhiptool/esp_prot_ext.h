@@ -37,6 +37,7 @@ int esp_prot_transforms[2] = {0, 8};
 int esp_prot_ext_init(void);
 int add_esp_prot_hash(hip_sadb_entry *entry, unsigned char *out_hash, int *out_length);
 int verify_esp_prot_hash(hip_sadb_entry *entry, unsigned char *hash_value);
+int get_esp_data_offset(hip_sadb_entry *entry);
 int esp_prot_ext_maintainance(void);
 int send_esp_protection_extension_to_hipd(void);
 int send_anchor_list_update_to_hipd(void);
