@@ -133,50 +133,55 @@ int get_esp_data_offset(hip_sadb_entry *entry)
 
 
 
-int esp_prot_ext_maintainance()
+int esp_prot_ext_maintainance(hip_sadb_entry *entry)
 {
 	int err = 0;
 	
-	/* make sure that the next hash-chain is set up before the active one
-	 * depletes */
-	if (!entry->next_hchain && entry->active_hchain->remaining
-				<= entry->active_hchain->hchain_length * REMAIN_THRESHOLD)
+	// first check the is extension is used
+	if (entry->actice_transform > ESP_PROT_TRANSFORM_UNUSED)
 	{
-		// set next hchain
-		hip_hchain_store_get_hchain(HC_LENGTH_STEP1, entry->next_hchain);
-		// issue UPDATE message to be sent by hipd
-		send_next_anchor_to_hipd(entry->next_hchain);
 		
-		decreased_store_count = 1;
-	}
-	
-	// activate next hchain if current one is depleted
-	if (entry->next_hchain && entry->active_hchain->remaining == 0)
-	{
-		// this will free all linked elements in the hchain
-		hchain_destruct(entry->active_hchain->hchain);
-		free(entry->active_hchain);
-		
-		HIP_DEBUG("changing to next_hchain\n");
-		entry->active_hchain = entry->next_hchain;
-		entry->next_hchain = NULL;
-	}
-	
-	// check if we should refill the stores
-	if (decreased_store_count)
-	{
-		err = hip_hchain_stores_refill();
-		if (err < 0)
+		/* make sure that the next hash-chain is set up before the active one
+		 * depletes */
+		if (!entry->next_hchain && entry->active_hchain->remaining
+					<= entry->active_hchain->hchain_length * REMAIN_THRESHOLD)
 		{
-			HIP_ERROR("error refilling the stores\n");
-			goto out_err;
-		} else if (err > 0)
-		{
-			// this means the bex store was updated
-			HIP_DEBUG("sending anchor update...\n");
-			send_anchor_list_update_to_hipd();
+			// set next hchain
+			hip_hchain_store_get_hchain(HC_LENGTH_STEP1, entry->next_hchain);
+			// issue UPDATE message to be sent by hipd
+			send_next_anchor_to_hipd(entry->next_hchain);
 			
-			err = 0;
+			decreased_store_count = 1;
+		}
+		
+		// activate next hchain if current one is depleted
+		if (entry->next_hchain && entry->active_hchain->remaining == 0)
+		{
+			// this will free all linked elements in the hchain
+			hchain_destruct(entry->active_hchain->hchain);
+			free(entry->active_hchain);
+			
+			HIP_DEBUG("changing to next_hchain\n");
+			entry->active_hchain = entry->next_hchain;
+			entry->next_hchain = NULL;
+		}
+		
+		// check if we should refill the stores
+		if (decreased_store_count)
+		{
+			err = hip_hchain_stores_refill();
+			if (err < 0)
+			{
+				HIP_ERROR("error refilling the stores\n");
+				goto out_err;
+			} else if (err > 0)
+			{
+				// this means the bex store was updated
+				HIP_DEBUG("sending anchor update...\n");
+				send_anchor_list_update_to_hipd();
+				
+				err = 0;
+			}
 		}
 	}
 	
@@ -200,6 +205,7 @@ int send_esp_protection_extension_to_hipd()
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ESP_PROT_EXT_TRANSFORM, 0), -1, 
 		 "build hdr failed\n");
 	
+	// for now this is the only transform we support
 	transform = ESP_PROT_TRANSFORM_DEFAULT;
 	
 	HIP_IFEL(hip_build_param_contents(msg, (void *)&transform, HIP_PARAM_UINT,
