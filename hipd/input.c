@@ -469,6 +469,18 @@ int hip_receive_control_packet(struct hip_common *msg,
 		  msg_info->src_port, msg_info->dst_port);
 	HIP_DUMP_MSG(msg);
 
+//add by santtu	
+#ifdef HIP_USE_ICE
+	type = hip_get_msg_type(msg);
+	entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
+	if(type == HIP_UPDATE && entry){
+		hip_external_ice_receive_pkt(msg,1000,src_addr,msg_info->src_port);
+	}
+#endif
+//end add	
+	
+	
+	
 	HIP_IFEL(hip_check_network_msg(msg), -1,
 		 "checking control message failed\n", -1);
 
@@ -607,7 +619,12 @@ int hip_receive_control_packet(struct hip_common *msg,
 		//HIP_STOP_TIMER(KMM_GLOBAL,"Base Exchange");
 		break;
 		
-	case HIP_UPDATE:
+	case HIP_UPDATE:		
+		if(entry)
+			if(entry->nat_control){
+				hip_external_ice_receive_pkt(msg,1000,src_addr,msg_info->src_port);
+				break;
+			}
 		HIP_IFCS(entry, err = entry->hadb_rcv_func->
 			 hip_receive_update(msg, src_addr, dst_addr, entry,
 					    msg_info));
@@ -1720,10 +1737,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		 -ENOMSG, "Cookie solution rejected.\n");
 	
  	HIP_DEBUG("Cookie accepted\n");
-#ifdef HIP_USE_ICE	
- 	HIP_DEBUG("handle nat trasform in I2\n");
- 	hip_nat_handle_transform_in_server(i2, entry);
-#endif	
+
 	
  	
 #ifdef CONFIG_HIP_HI3
@@ -2047,7 +2061,13 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 			   i2_info->dst_port);
 	}
 #endif
+	
 //modified by santtu
+#ifdef HIP_USE_ICE	
+ 	HIP_DEBUG("handle nat trasform in I2\n");
+ 	hip_nat_handle_transform_in_server(i2, entry);
+#endif	
+
 	/**nat_control is 0 means we use normal mode to create sa*/
 	if(entry->nat_control == 0){
 	

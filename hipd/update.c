@@ -1078,9 +1078,12 @@ int hip_update_send_addr_verify_packet(hip_ha_t *entry,
 	 * 	 else 
 	 * 	 	verify only unverified addresses
 	 */
-	return hip_update_send_addr_verify_packet_all(entry, addr, spi_out,
+//modify by sanntu when ice is choosen, not update message is needed
+	if(entry->nat_control == 0)
+		return hip_update_send_addr_verify_packet_all(entry, addr, spi_out,
 						      src_ip, 0);
-
+	else return 0;
+//end modify
 }
 
 int hip_update_send_addr_verify_packet_all(hip_ha_t *entry,

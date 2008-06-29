@@ -38,7 +38,10 @@ const char *hipconf_usage =
 "get|set|inc|dec|new puzzle all\n"
 #endif
 "bos all\n"
-"nat on|off|<peer_hit>\n"
+//modify by santtu
+//"nat on|off|<peer_hit>\n"
+"nat none|plain-udp|ice-udp\n"
+//end modify
 "rst all|<peer_hit>\n"
 "new|add hi anon|pub rsa|dsa filebasename\n"
 "new|add hi default (HI must be created as root)\n"
@@ -867,18 +870,24 @@ int hip_conf_handle_nat(hip_common_t *msg, int action,
      int status = 0;
      in6_addr_t hit;
 	
-     if (!strcmp("on",opt[0]))
+ //    if (!strcmp("on",opt[0]))
+     if (!strcmp("plain-udp",opt[0]))
      {
-	  memset(&hit,0,sizeof(in6_addr_t));
-	  status = SO_HIP_SET_NAT_ON; 
-     } else if (!strcmp("off",opt[0]))
-     {
-	  memset(&hit,0,sizeof(in6_addr_t));
-	  status = SO_HIP_SET_NAT_OFF;
-     } else
-     {
-	  HIP_IFEL(1, -1, "bad args\n");
-     }
+    	 memset(&hit,0,sizeof(in6_addr_t));
+	//  status = SO_HIP_SET_NAT_ON; 
+    	 status = SO_HIP_SET_NAT_PLAIN_UDP; 
+	  } else if (!strcmp("none",opt[0]))
+	  {
+		  memset(&hit,0,sizeof(struct in6_addr));
+	  status = SO_HIP_SET_NAT_NONE;
+	  } else if (!strcmp("ice-udp",opt[0]))
+	  {
+	   	  memset(&hit,0,sizeof(struct in6_addr));
+	  	  status = SO_HIP_SET_NAT_ICE_UDP;
+	  } else
+	  {
+		  HIP_IFEL(1, -1, "bad args\n");
+	  }
 #if 0 /* Not used currently */
      else {
 	  ret = inet_pton(AF_INET6, opt[0], &hit);

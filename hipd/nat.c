@@ -50,7 +50,7 @@ in_port_t hip_nat_rand_port1 = HIP_NAT_UDP_PORT;
     @note This is needed only for simulation purposes and can be removed from
     released versions of HIPL. */
 in_port_t hip_nat_rand_port2 = HIP_NAT_UDP_PORT;
-
+#if 0
 /**
  * Sets NAT status "on".
  * 
@@ -164,7 +164,7 @@ int hip_nat_off_for_ha(hip_ha_t *entry, void *not_used)
  out_err:
 	return err;
 }
-
+#endif
 /**
  * Refreshes the port state of all NATs related to this host.
  *
@@ -755,15 +755,19 @@ pj_status_t hip_on_tx_pkt(pj_ice_sess *ice, unsigned comp_id, const void *pkt, p
 	
 	HIP_IFEL(!(msg = hip_msg_alloc()), -ENOMEM, "Out of memory\n");
 	
+	HIP_DEBUG("send ice: len %d \n", size);
+	
 	entry = hip_get_entry_from_ice(ice);
 	if(entry==NULL) {
 		err = -1;
 		goto out_err;
 	}
-	
-	hip_build_network_hdr(msg, 0, 0, &entry->hit_our, &entry->hit_peer);
+
+	hip_build_network_hdr(msg, HIP_UPDATE, 0, &entry->hit_our, &entry->hit_peer);
 //	hip_set_msg_total_len(msg,sizeof(struct hip_common) + size);
-	msg->payload_len = sizeof(struct hip_common) + size;
+	
+	//hip len convert
+	msg->payload_len = (sizeof(struct hip_common) + size)>>3;
 	memcpy(msg +1, pkt, size );  
 		
 	HIP_DEBUG("hip_on_tx_pkt : \n");
@@ -775,22 +779,25 @@ pj_status_t hip_on_tx_pkt(pj_ice_sess *ice, unsigned comp_id, const void *pkt, p
 	pj_sockaddr_in *addr;
 	
 	addr =(pj_sockaddr_in *) dst_addr;
+	HIP_DEBUG("hip_on_tx_pkt : 1\n");
 	//only IP_V4 is supported
 	//peer_addr  = (struct in6_addr * )&addr->sin_addr;
 	peer_addr.in6_u.u6_addr32[0] = (uint32_t)0;
 	peer_addr.in6_u.u6_addr32[1] = (uint32_t)0;
 	peer_addr.in6_u.u6_addr32[2] = (uint32_t)htonl (0xffff);
 	peer_addr.in6_u.u6_addr32[3] = (uint32_t)addr->sin_addr.s_addr;
+	HIP_DEBUG("hip_on_tx_pkt 2: \n");
 	//memcpy(peer_addr.in6_u.u6_addr32+3, &addr->sin_addr.s_addr, 4);
-	hip_print_lsi("address is in stun send 2:" , &addr->sin_addr.s_addr );
-	hip_print_hit("address is in stun send 3:" , &peer_addr );
-	HIP_DEBUG("length of the stun package is %d\n", size );
-	dst_port = addr->sin_port;
 	
+
+	HIP_DEBUG("length of the stun package is %d\n", size );
+	
+	dst_port = addr->sin_port;
+	HIP_DEBUG("hip_on_tx_pkt 3: \n");
 	int msg_len ;
 	int retransmit = 0;
 	
-	if(err = hip_send_stun(local_addr, &peer_addr, src_port,dst_port, msg, msg->payload_len,0) )
+	if(err = hip_send_udp(local_addr, &peer_addr, src_port,dst_port, msg, msg->payload_len,0) )
 		goto out_err;
 	//TODO check out what should be returned
 	else return PJ_SUCCESS;
@@ -1130,7 +1137,7 @@ int hip_external_ice_receive_pkt(struct hip_common * msg, int pkt_size, in6_addr
 	entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
     if(entry == NULL) return -1;
     if(entry->ice_session){
-    	pj_ice_sess_on_rx_pkt(entry->ice_session,1,msg+1, pkt_size-sizeof(struct hip_common), &pj_addr,addr_len);
+    	pj_ice_sess_on_rx_pkt(entry->ice_session,1,msg+1, (msg->payload_len-sizeof(struct hip_common))>>3, &pj_addr,addr_len);
     }
     else{
     	HIP_DEBUG("ice is not init in entry.\n");
@@ -1165,4 +1172,94 @@ int hip_nat_create_pj_addr(pj_ice_sess_cand *pj_cand,in6_addr_t * hip_addr, in_p
 	
 }
 
+
+
+/**
+ * Sets NAT status
+ * 
+ * Sets NAT mode for each host association in the host association
+ * database.
+ *
+ * @return zero on success, or negative error value on error.
+ * @todo   Extend this to handle peer_hit case for
+ *         <code>"hipconf hip nat peer_hit"</code> This would be helpful in
+ *         multihoming case.
+ */ 
+int hip_user_nat_mode(int nat_mode)
+{
+	int err = 0, nat;
+	HIP_DEBUG("hip_user_nat_mode() invoked. mode: %d\n", nat_mode);
+#if HIP_UDP_PORT_RANDOMIZING 
+	hip_nat_randomize_nat_ports();
+#endif
+	
+	nat = nat_mode;
+	switch (nat) {
+	case SO_HIP_SET_NAT_PLAIN_UDP:
+		nat = HIP_NAT_MODE_PLAIN_UDP;
+		break;
+	case SO_HIP_SET_NAT_NONE:
+		nat = HIP_NAT_MODE_NONE;
+		break;
+	case SO_HIP_SET_NAT_ICE_UDP:
+		nat = HIP_NAT_MODE_ICE_UDP;
+		break;
+	default:
+		err = -1;
+		HIP_IFEL(1, -1, "Unknown nat mode %d\n", nat_mode);
+	} 
+	HIP_IFEL(hip_for_each_ha(hip_ha_set_nat_mode, &nat), 0,
+	         "Error from for_each_ha().\n");
+	//set the nat mode for the host
+	hip_set_nat_mode(nat);
+	
+	HIP_DEBUG("hip_user_nat_mode() end. mode: %d\n", hip_nat_status);
+
+out_err:
+	return err;
+}
+
+/**
+ * Get HIP NAT status.
+ */
+int hip_get_nat_mode()
+{
+	return hip_nat_status;
+}
+
+/**
+ * Get HIP NAT status.
+ */
+void hip_set_nat_mode(int mode)
+{
+	hip_nat_status = mode;
+}
+
+
+/**
+ * Sets NAT status "on" for a single host association.
+ *
+ * @param entry    a pointer to a host association for which to set NAT status.
+ * @param mode     nat mode
+ * @return         zero.
+ * @note           the status is changed just for the parameter host 
+ *                 association. This function does @b not insert the host
+ *                 association into the host association database.
+ */
+int hip_ha_set_nat_mode(hip_ha_t *entry, void *mode)
+{
+	int err = 0;
+	int nat_mode = *((int *) mode);
+	HIP_DEBUG("\n");
+
+	if(entry)
+	{
+		hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
+		entry->nat_mode = nat_mode;
+		HIP_DEBUG("NAT status of host association %p: %d\n",
+			  entry, entry->nat_mode);
+	}
+ out_err:
+	return err;
+}
 

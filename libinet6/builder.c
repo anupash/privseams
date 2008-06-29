@@ -958,6 +958,9 @@ void hip_dump_msg(const struct hip_common *msg)
      HIP_DEBUG("Msg length:     %d\n", hip_get_msg_total_len(msg));
      HIP_DEBUG("Msg err:        %d\n", hip_get_msg_err(msg));
      HIP_DEBUG("Msg controls:   0x%04x\n", msg->control);
+     
+     HIP_DEBUG_HIT("Msg hits:       ", &msg->hits );
+     HIP_DEBUG_HIT("Msg hitr:       ", &msg->hitr );
 	
      while((current_param = hip_get_next_param(msg, current_param)) != NULL)
      {

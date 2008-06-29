@@ -2990,12 +2990,17 @@ int hip_hadb_add_udp_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 			ipv6_addr_copy(&entry->preferred_address, addr);
 			new_addr->seq_update_id = 0;
 		} else {
-			HIP_DEBUG("address's state is set in state UNVERIFIED\n");
-			new_addr->address_state = PEER_ADDR_STATE_UNVERIFIED;
-			err = entry->hadb_update_func->hip_update_send_echo(entry, spi, new_addr);
- 
-			/** @todo: check! If not acctually a problem (during Handover). Andrey. */
-			if( err==-ECOMM ) err = 0;
+			
+//modify by santtu		
+			if(entry->nat_control == 0){
+				HIP_DEBUG("address's state is set in state UNVERIFIED\n");
+				new_addr->address_state = PEER_ADDR_STATE_UNVERIFIED;
+				err = entry->hadb_update_func->hip_update_send_echo(entry, spi, new_addr);
+	 
+				/** @todo: check! If not acctually a problem (during Handover). Andrey. */
+				if( err==-ECOMM ) err = 0;
+			}
+//end modify
 		}
 		//}
 

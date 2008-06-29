@@ -100,12 +100,19 @@ extern int hip_nat_sock_udp;
 /** Specifies the NAT status of the daemon. This value indicates if the current
     machine is behind a NAT. Defined in hipd.c */
 extern int hip_nat_status;
-
+/*
 int hip_nat_on();
 int hip_nat_off();
 int hip_nat_is();
 int hip_nat_off_for_ha(hip_ha_t *, void *);
 int hip_nat_on_for_ha(hip_ha_t *, void *);
+*/
+
+int hip_ha_set_nat_mode(hip_ha_t *entry, void *mode);
+int hip_get_nat_mode();
+void hip_set_nat_mode(int mode);
+
+
 void hip_nat_randomize_nat_ports();
 int hip_nat_refresh_port();
 int hip_nat_send_keep_alive(hip_ha_t *, void *);
