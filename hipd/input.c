@@ -620,11 +620,6 @@ int hip_receive_control_packet(struct hip_common *msg,
 		break;
 		
 	case HIP_UPDATE:		
-		if(entry)
-			if(entry->nat_control){
-				hip_external_ice_receive_pkt(msg,1000,src_addr,msg_info->src_port);
-				break;
-			}
 		HIP_IFCS(entry, err = entry->hadb_rcv_func->
 			 hip_receive_update(msg, src_addr, dst_addr, entry,
 					    msg_info));

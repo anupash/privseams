@@ -767,7 +767,7 @@ pj_status_t hip_on_tx_pkt(pj_ice_sess *ice, unsigned comp_id, const void *pkt, p
 //	hip_set_msg_total_len(msg,sizeof(struct hip_common) + size);
 	
 	//hip len convert
-	msg->payload_len = (sizeof(struct hip_common) + size)>>3;
+	msg->payload_len = size;
 	memcpy(msg +1, pkt, size );  
 		
 	HIP_DEBUG("hip_on_tx_pkt : \n");
@@ -817,7 +817,7 @@ out_err:
  * we ignire here.
  * */
 void hip_on_rx_data(pj_ice_sess *ice, unsigned comp_id, void *pkt, pj_size_t size, const pj_sockaddr_t *src_addr, unsigned src_addr_len){
-	
+	HIP_DEBUG("failed stun\n");
 }
 
 
@@ -1137,7 +1137,9 @@ int hip_external_ice_receive_pkt(struct hip_common * msg, int pkt_size, in6_addr
 	entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
     if(entry == NULL) return -1;
     if(entry->ice_session){
-    	pj_ice_sess_on_rx_pkt(entry->ice_session,1,msg+1, (msg->payload_len-sizeof(struct hip_common))>>3, &pj_addr,addr_len);
+    	
+    	
+    	pj_ice_sess_on_rx_pkt(entry->ice_session,1,msg+1, msg->payload_len, &pj_addr,addr_len);
     }
     else{
     	HIP_DEBUG("ice is not init in entry.\n");
