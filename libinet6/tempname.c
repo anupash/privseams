@@ -197,7 +197,7 @@ __gen_tempname (char *tmpl, int kind)
 	  continue;
 
 	default:
-	  assert (! "invalid KIND in __gen_tempname");
+	  HIP_ASSERT (! "invalid KIND in __gen_tempname");
 	}
 
       if (fd >= 0)

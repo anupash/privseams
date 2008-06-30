@@ -569,7 +569,7 @@ int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
 
        _HIP_HEXDUMP("digest", digest, sizeof(digest));
 
-       bzero(hit, sizeof(hip_hit_t));
+       memset(hit, 0, sizeof(hip_hit_t));
        HIP_IFEL(khi_encode(digest, sizeof(digest) * 8,
 			   ((u8 *) hit) + 3,
 			   sizeof(hip_hit_t) * 8 - HIP_HIT_PREFIX_LEN),
@@ -739,7 +739,7 @@ int hip_private_host_id_to_hit(const struct hip_host_id *host_id,
  */
 int check_and_create_dir(char *dirname, mode_t mode) {
 	int err = 0;
-	static struct stat dir_stat;
+	struct stat dir_stat;
 
 	HIP_INFO("dirname=%s mode=%o\n", dirname, mode);
 	err = stat(dirname, &dir_stat);

@@ -415,9 +415,9 @@ void hip_hexdump(const char *file, int line, const char *function,
 	HIP_DIE("hexdump msg too long(%d)", hexdump_written);
 	} else {
 	hexdump_count -= hexdump_written;
-	//assert(hexdump_count >=0);
+	HIP_ASSERT(hexdump_count >=0);
 	hexdump_index += hexdump_written;
-	//assert(hexdump_index + hexdump_count == hexdump_max_size);
+	HIP_ASSERT(hexdump_index + hexdump_count == hexdump_max_size);
 	}
 	char_index++;
 	} while(char_index < len);
@@ -498,9 +498,9 @@ int hip_hexdump_parsed(const char *file, int line, const char *function,
 				HIP_DIE("hexdump msg too long(%d)", hexdump_written);
 			}
 			hexdump_count -= hexdump_written;
-			//assert(hexdump_count >=0);
+			HIP_ASSERT(hexdump_count >=0);
 			hexdump_index += hexdump_written;
-			//assert(hexdump_index + hexdump_count == hexdump_total_size);
+			HIP_ASSERT(hexdump_index + hexdump_count == hexdump_total_size);
 			
 			// Wite the character in ascii to asciidump line	
 			if (written > 32 && written < 127)

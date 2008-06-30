@@ -160,7 +160,7 @@ hip_sendto_hipd(int socket, void *msg, size_t len)
 	struct sockaddr_in6 sock_addr;
 	int n, alen;
 	
-	bzero(&sock_addr, sizeof(sock_addr));
+	memset(&sock_addr, 0, sizeof(sock_addr));
 	sock_addr.sin6_family = AF_INET6;
 	sock_addr.sin6_port = htons(HIP_DAEMON_LOCAL_PORT);
 	sock_addr.sin6_addr = in6addr_loopback;
