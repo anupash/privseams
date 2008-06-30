@@ -791,7 +791,7 @@ void hip_print_locator(int debug_level, const char *file, int line, const char *
 		locator_address_item2 = (struct hip_locator_info_addr_item2 *) locator_address_item;
 			HIP_INFO_HIT("LOCATOR from UDP",
 	               (struct in6_addr *)&locator_address_item2->address);
-			HIP_DEBUG("LOCATOR port for UDP: %d",  ntohs(locator_address_item2->port));
+			HIP_DEBUG("LOCATOR port for UDP: %d\n",  ntohs(locator_address_item2->port));
 			_HIP_HEXDUMP("Should be in6_addr", 
 	                                  &locator_address_item[i].address,
 	                                  sizeof(struct in6_addr));

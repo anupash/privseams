@@ -364,13 +364,18 @@ int hip_nat_handle_locator_parameter(hip_common_t *msg,hip_ha_t *entry,struct hi
 	int err = 0;
 	struct hip_locator *locator = NULL;
 	
+	if (hip_locator_status == SO_HIP_SET_LOCATOR_OFF) 
+		goto out_err;
+	
+	HIP_DEBUG("%d    %d",hip_locator_status,SO_HIP_SET_LOCATOR_OFF);
+	
     locator = hip_get_param(msg, HIP_PARAM_LOCATOR);
     if (locator){   
     	HIP_IFEL(hip_update_locator_parameter(entry, 
     	                locator, esp_info),
     	                -1, "hip_update_handle_locator_parameter from msg failed\n");
         }
-    if (entry->locator){   
+    else if (entry->locator){   
     	HIP_IFEL(hip_update_locator_parameter(entry, 
         			 	entry->locator, esp_info),
         	            -1, "hip_update_handle_locator_parameter from entry failed\n");
@@ -617,32 +622,53 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
     hip_list_t *item = NULL, *tmp = NULL;
     hip_list_t *item1 = NULL, *tmp1 = NULL;
 	struct hip_peer_addr_list_item * peer_addr_list_item;
-	struct hip_spi_out_item* spi_out;
-    
-    
+//	struct hip_spi_out_item* spi_out;
+	uint32_t spi = 0;
+	struct in6_addr peer_addr;
+	
     entry = hip_get_entry_from_ice(ice);
-    
-    if(entry == NULL)
-    	HIP_DEBUG("hip_on_ice_complete, entry found");
-    
+    if(!entry) {
+    	
+    	HIP_DEBUG("entry not found in ice complete\n");
+    	return;
+    }
+    spi = hip_hadb_get_outbound_spi(entry);
+    if(!spi) {
+       	
+       	HIP_DEBUG("spi not found in ice complete\n");
+       	return;
+       }
+
 	// the verified list 
 	//if(status == PJ_TRUE){
 		valid_list = &ice->valid_list;
 	//}
 	
 	HIP_DEBUG("there are %d pairs in valid list\n", valid_list->count);
-	HIP_DEBUG("there are %d pairs in valid list\n", ice->valid_list.count);
 	//read all the element from the list
 	if(valid_list->count > 0){
-		for(i = 0; i< valid_list->count; i++){
-			if (valid_list->checks[i].nominated == PJ_TRUE){
+		
+	
+	//	for(i = 0; i< valid_list->count; i++){
+		//	if (valid_list->checks[i].nominated == PJ_TRUE){
 				//set the prefered peer
 				HIP_DEBUG("find a nominated candiate\n");
-				rcand = valid_list->checks[i].rcand;
+				rcand = valid_list->checks[0].rcand;
 				addr = rcand->addr;
 				
 			//	hip_print_lsi("set prefered the peer_addr : ", &addr.ipv4.sin_addr.s_addr );
 				HIP_DEBUG("set prefered the peer_addr port: %d\n", addr.ipv4.sin_port );
+				peer_addr.in6_u.u6_addr32[0] = (uint32_t)0;
+				peer_addr.in6_u.u6_addr32[1] = (uint32_t)0;
+				peer_addr.in6_u.u6_addr32[2] = (uint32_t)htonl (0xffff);
+				peer_addr.in6_u.u6_addr32[3] = (uint32_t)addr.ipv4.sin_addr.s_addr;
+				
+				
+				hip_hadb_add_udp_addr_to_spi(entry, spi, &peer_addr, 1, 0, 1,addr.ipv4.sin_port, HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY);
+				memcpy(&entry->preferred_address, &peer_addr, sizeof(struct in6_addr));
+				entry->peer_udp_port = addr.ipv4.sin_port;
+				
+				/*			
 				k= 0;
 				list_for_each_safe(item1, tmp1, entry->spis_out, k) {
 					spi_out = list_entry(item1);
@@ -659,15 +685,19 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 							HIP_DEBUG_HIT("found & set prefered the peer_addr : ", &peer_addr_list_item->address );
 							peer_addr_list_item->address_state = PEER_ADDR_STATE_ACTIVE;
 							peer_addr_list_item->is_preferred = 1;
+							
 							memcpy(&entry->preferred_address, &peer_addr_list_item->address, sizeof(struct in6_addr));
 							entry->peer_udp_port = peer_addr_list_item->port;
 						}
 						
 					}
 				}
+				*/
+
 				//
-			}
-			else{/*
+			//}
+			//else{
+				/*
 				if(valid_list->checks[i].state == PJ_ICE_SESS_CHECK_STATE_SUCCEEDED){
 						rcand = valid_list->checks[i].rcand;
 						j= 0;
@@ -687,12 +717,13 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 						}	
 					
 				}*/
-			}
+			//}
 				
 			
-		}
+		//}
 
-		int err;
+
+
 		uint32_t spi_in, spi_out;
 		if (entry->state == HIP_STATE_ESTABLISHED)
 					spi_in = hip_hadb_get_latest_inbound_spi(entry);
@@ -1009,7 +1040,9 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 	
 	list_for_each_safe(item, tmp, list, i) {
 		peer_addr_list_item = list_entry(item);
-		if(peer_addr_list_item->port == 0) peer_addr_list_item->port = 50500;
+		
+		HIP_DEBUG("peer list item address: %d ",peer_addr_list_item);
+		
 		HIP_DEBUG_HIT("add Ice remote address:", &peer_addr_list_item->address);
 		hip_print_lsi("add Ice remote address 1: ", ((int *) (&peer_addr_list_item->address)+3));
 		HIP_DEBUG("add Ice remote port: %d \n", peer_addr_list_item->port);
@@ -1022,11 +1055,15 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 
 		
 			temp_cand->addr.ipv4.sin_family = PJ_AF_INET;
-			temp_cand->addr.ipv4.sin_port = peer_addr_list_item->port;
+			if( peer_addr_list_item->port)
+				temp_cand->addr.ipv4.sin_port = peer_addr_list_item->port;
+			else 
+				temp_cand->addr.ipv4.sin_port = HIP_NAT_UDP_PORT;
 			temp_cand->addr.ipv4.sin_addr.s_addr = *((pj_uint32_t *) &peer_addr_list_item->address.s6_addr32[3]) ;
+			
 			HIP_DEBUG("add remote address in integer is : %d \n", temp_cand->addr.ipv4.sin_addr.s_addr);
 			
-			temp_cand->base_addr.ipv4.sin_family = 4;
+			temp_cand->base_addr.ipv4.sin_family = PJ_AF_INET;
 			if( peer_addr_list_item->port)
 				temp_cand->base_addr.ipv4.sin_port = peer_addr_list_item->port;
 			else 
@@ -1038,8 +1075,8 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 			temp_cand->comp_id = 1;
 			temp_cand->type = type;
 			temp_cand->foundation = pj_str("ice");
-			//TODO we use the max for all the candidate for now, but it is saved into peer_list already, 
-			temp_cand->prio = 65535;
+	
+			temp_cand->prio = peer_addr_list_item->priority;
 	
 			temp_cand++;
 			rem_cand_cnt++;

@@ -1659,7 +1659,8 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	struct hip_esp_info *esp_info = NULL;
 	struct hip_dh_public_value *dhpv = NULL;
 	struct hip_spi_in_item spi_in_data;
-	struct hip_locator *locator = NULL;
+//removed by santtu
+	//struct hip_locator *locator = NULL;
 	struct hip_solution *sol = NULL;
 	hip_tlv_common_t *param = NULL;
 	in6_addr_t *plain_peer_hit = NULL, *plain_local_hit = NULL;
@@ -2160,9 +2161,15 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
 	/* Source IPv6 address is implicitly the preferred address after the
 	   base exchange. */
+//modify by santtu
+    //port must be added
+#ifndef HIP_USE_ICE    
 	HIP_IFEL(hip_hadb_add_addr_to_spi(entry, spi_out, i2_saddr, 1, 0, 1),
 		 -1,  "Failed to add an address to SPI list\n");
-	
+#else
+	HIP_IFEL(hip_hadb_add_udp_addr_to_spi(entry, spi_out, i2_saddr, 1, 0, 1,i2_info->src_port, HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY),
+			 -1,  "Failed to add an address to SPI list\n");
+#endif
 	memset(&spi_in_data, 0, sizeof(struct hip_spi_in_item));
 	spi_in_data.spi = spi_in;
 	spi_in_data.ifindex = hip_devaddr2ifindex(i2_daddr);
@@ -2191,23 +2198,22 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		  hip_state_str(entry->state), entry->default_spi_out);
 	
 	
-	//add by santtu	
-	    /***** LOCATOR PARAMETER *****/
-		hip_nat_handle_locator_parameter(i2, entry, esp_info);	
-		
-	#ifdef CONFIG_HIP_RVS
-		ipv6_addr_copy(&dest, &in6addr_any);
-	    if(hip_relay_get_status() == HIP_RELAY_OFF) {
+//add by santtu	
 
-		state = hip_relay_handle_relay_from(i2, i2_saddr, &dest, &dest_port);
-		if( state == -1 ){
-			HIP_DEBUG( "Handling RELAY_FROM of  I2 packet failed.\n");
-			 goto out_err;
-		 }
-				
-	     }
-	#endif 
-	//end add 	
+	
+#ifdef CONFIG_HIP_RVS
+	ipv6_addr_copy(&dest, &in6addr_any);
+    if(hip_relay_get_status() == HIP_RELAY_OFF) {
+
+	state = hip_relay_handle_relay_from(i2, i2_saddr, &dest, &dest_port);
+	if( state == -1 ){
+		HIP_DEBUG( "Handling RELAY_FROM of  I2 packet failed.\n");
+		 goto out_err;
+	 }
+			
+     }
+#endif 
+//end add 	
 	
 	
 	
@@ -2280,13 +2286,12 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
         /***** LOCATOR PARAMETER ******/
 	/* Why do we process the LOCATOR parameter only after R2 has been sent?
 	   -Lauri 29.04.2008. */
-	locator = hip_get_param(i2, HIP_PARAM_LOCATOR);
-        
-	if (locator != NULL && esp_info != NULL) {
-                HIP_IFEL(hip_update_handle_locator_parameter(
-				 entry, locator, esp_info), -1,
-			 "hip_update_handle_locator_parameter() failed.\n");
-//add by santtu                
+
+                
+//add by santtu	
+    /***** LOCATOR PARAMETER *****/
+	hip_nat_handle_locator_parameter(i2, entry, esp_info);	
+               
 #ifdef HIP_USE_ICE
                 //if the client  choose to use ICE 
         if(!(entry->nat_control)){
@@ -2324,12 +2329,12 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		        	
 		        	HIP_DEBUG("ICE add remote in I2\n");
 		        	struct hip_spi_out_item* spi_out;
-		        	HIP_DEBUG("number of spi_out : %d", entry->spis_out->num_nodes);
+		        	
 		        	list_for_each_safe(item, tmp, entry->spis_out, i) {
 		        		spi_out = list_entry(item);
 		        		hip_external_ice_add_remote_candidates(ice_session, spi_out->peer_addr_list,1);
 		        	}
-		        	HIP_DEBUG("ICE astart checking in I2\n");
+		        	HIP_DEBUG("ICE start checking in I2\n");
 		        	hip_ice_start_check(ice_session);
 		        }
         }
@@ -2340,10 +2345,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 //end add                
                 
                 
-	} else {
-		HIP_DEBUG("Both LOCATOR and ESP_INFO parameters were missing "\
-			  "from the incoming I2 packet.\n");
-	}
+
 	
 	HIP_DEBUG("Reached %s state\n", hip_state_str(entry->state));
 	if (entry->hip_msg_retrans.buf) {
@@ -2611,7 +2613,18 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	
         /* Source IPv6 address is implicitly the preferred address after the
 	   base exchange. */
+	
+//modify by santtu
+    //port must be added
+#ifndef HIP_USE_ICE    
 	err = hip_hadb_add_addr_to_spi(entry, spi_recvd, r2_saddr, 1, 0, 1);
+#else
+	err = 0;
+	if(entry->nat_control==0)
+	HIP_IFEL(hip_hadb_add_udp_addr_to_spi(entry, spi_recvd, r2_saddr, 1, 0, 1,r2_info->src_port, HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY),
+			 -1,  "Failed to add an address to SPI list\n");
+#endif	
+	
 	if (err) {
 		HIP_ERROR("hip_hadb_add_addr_to_spi() err = %d not handled.\n",
 			  err);
