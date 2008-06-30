@@ -2763,16 +2763,17 @@ int hip_build_param_esp_prot_transform(struct hip_common *msg, uint8_t transform
  * 
  * @return 0 on success, otherwise < 0.
  */
-int hip_build_param_esp_prot_anchor(struct hip_common *msg, hash_item_t *anchor)
+int hip_build_param_esp_prot_anchor(struct hip_common *msg, unsigned char *anchor,
+		uint8_t transform)
 {
 	int err = 0;
 	
 	struct esp_prot_anchor esp_anchor;
 
 	hip_set_param_type(&esp_anchor, HIP_PARAM_ESP_PROT_ANCHOR);
-	hip_calc_generic_param_len(&esp_anchor, sizeof(struct esp_prot_anchor), 0);
-	
-	memcpy(&(esp_anchor.anchor), anchor->hash, anchor->hash_length + anchor->salt_length);
+	hip_calc_generic_param_len(&esp_anchor,
+			sizeof(hip_tlv_common_t) + esp_prot_transforms[transform], 0);
+	memcpy(&(esp_anchor.anchor), anchor, esp_prot_transforms[transform]);
 	
 	err = hip_build_param(msg, &esp_anchor);
 	

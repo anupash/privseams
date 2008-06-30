@@ -19,18 +19,6 @@
 #define HC_LENGTH_STEP1 10000
 #define REMAIN_THRESHOLD 0.2
 
-typedef struct esp_hash_item
-{
-	uint8_t transform; /* the transform determines the hash and salt lengths */
-	unsigned char *hash; /* the hash value including the salt */
-} esp_hash_item_t;
-
-typedef struct esp_hchain
-{
-	uint8_t transform; /* the transform determines the hash and salt lengths */
-	hash_chain_t *hchain; /* the hash-chain itself */
-} esp_hchain_t;
-
 // (hash, salt)-length for the respective transform in bytes
 int esp_prot_transforms[2] = {0, DEFAULT_HASH_LENGTH};
 

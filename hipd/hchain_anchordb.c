@@ -1,4 +1,4 @@
-#include "anchordb.h"
+#include "hchain_anchordb.h"
 #include "linkedlist.h"
 
 hip_ll_t anchor_list;
@@ -20,9 +20,9 @@ int update_anchor_db(struct hip_common *msg)
 	
 	hip_ll_uninit(&anchor_list, free);
 	
-	if (hip_esp_prot_ext_transform == ESP_PROT_TRANSFORM_DEFAULT)
+	if (hip_esp_prot_ext_transform > ESP_PROT_TRANSFORM_UNUSED)
 	{
-		hash_length = esp_prot_transforms[ESP_PROT_TRANSFORM_DEFAULT];
+		hash_length = esp_prot_transforms[hip_esp_prot_ext_transform];
 		HIP_DEBUG("hash length: %i \n", hash_length);
 	} else
 	{

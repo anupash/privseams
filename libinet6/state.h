@@ -296,7 +296,7 @@ struct hip_hadb_state
 	struct in6_addr              local_address;
 	/** Peer's Local Scope Identifier (LSI). A Local Scope Identifier is a
 	    32-bit localized representation for a Host Identity.*/
-       	hip_lsi_t                    lsi_peer;
+    hip_lsi_t                    lsi_peer;
 	/** Our Local Scope Identifier (LSI). A Local Scope Identifier is a
 	    32-bit localized representation for a Host Identity.*/
 	hip_lsi_t                    lsi_our;
@@ -307,9 +307,9 @@ struct hip_hadb_state
 	/** ESP extension protection transform */
 	uint8_t						 esp_prot_transform;
 	/** ESP extension protection local_anchor */
-	hash_item_t *				 esp_local_anchor;
+	unsigned char *				 esp_local_anchor;
 	/** ESP extension protection peer_anchor */
-	hash_item_t *				 esp_peer_anchor;
+	unsigned char *				 esp_peer_anchor;
 	/** Something to do with the birthday paradox.
 	    @todo Please clarify what this field is. */
 	uint64_t                     birthday;
