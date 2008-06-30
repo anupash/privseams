@@ -18,6 +18,9 @@
 /* value used by Tobias Heer */
 //#define HCHAIN_ELEMENT_LENGTH 20 // (in bytes)
 
+// modify this when changing the hash function
+#define MAX_HASH_LENGTH SHA_DIGEST_LENGTH
+
 typedef struct hash_chain hash_chain_t;
 typedef struct hash_chain_element hash_chain_element_t;
 

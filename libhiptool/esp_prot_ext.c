@@ -1,5 +1,10 @@
 #include "esp_prot_ext.h"
 
+// different hc_length in order not to spoil calculation time for short connections
+#define HC_LENGTH_BEX_STORE 1000 
+#define HC_LENGTH_STEP1 10000
+#define REMAIN_THRESHOLD 0.2
+
 int esp_prot_ext_init()
 {
 	int err = 0;
@@ -16,7 +21,19 @@ int esp_prot_ext_init()
 			"failed to set item length for bex store\n");
 	
 	// ... and fill it with elements
-	HIP_IFEL(hchain_store_maintainance(), -1, "failed to fill the hash stores\n");
+	err = hip_hchain_stores_refill();
+	if (err < 0)
+	{
+		HIP_ERROR("error refilling the stores\n");
+		goto out_err;
+	} else if (err > 0)
+	{
+		// this means the bex store was updated
+		HIP_DEBUG("sending anchor update...\n");
+		send_anchor_list_update_to_hipd();
+		
+		err = 0;
+	}
 	
   out_err:
   	return err;
@@ -25,7 +42,7 @@ int esp_prot_ext_init()
 int add_esp_prot_hash(unsigned char *out_hash, int *out_length, hip_sadb_entry *entry)
 {
 	int err = 0;
-	*hash_element = NULL;
+	hash_chain_element_t *hash_element = NULL;
 	
 	// first determine hash length
 	*out_length = esp_prot_transforms[entry->active_transform];
@@ -54,7 +71,7 @@ int add_esp_prot_hash(unsigned char *out_hash, int *out_length, hip_sadb_entry *
 		
 		// now do some maintainance operations
 		HIP_IFEL(esp_prot_ext_maintainance(), -1,
-				"esp protection extension maintainance operations failed\n"=;
+				"esp protection extension maintainance operations failed\n");
 	}
 	
   out_err:

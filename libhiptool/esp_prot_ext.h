@@ -13,18 +13,10 @@
 #define DEFAULT_HASH_LENGTH 8 // (in bytes)
 //#define DEFAULT_SALT_LENGTH 0 // (in bytes)
 
-// change this, if you are changing the hash function
-#define MAX_HASH_LENGTH SHA_DIGEST_LENGTH
-
 #define DEFAULT_VERIFY_WINDOW 10
 
-// different hc_length in order not to spoil calculation time for short connections
-#define HC_LENGTH_BEX_STORE 1000 
-#define HC_LENGTH_STEP1 10000
-#define REMAIN_THRESHOLD 0.2
-
 // (hash, salt)-length for the respective transform in bytes
-const static int esp_prot_transforms[2] = {0, DEFAULT_HASH_LENGTH};
+const int esp_prot_transforms[2] = {0, DEFAULT_HASH_LENGTH};
 
 int esp_prot_ext_init(void);
 int add_esp_prot_hash(hip_sadb_entry *entry, unsigned char *out_hash, int *out_length);

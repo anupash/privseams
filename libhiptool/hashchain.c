@@ -147,7 +147,7 @@ int hchain_verify(const hash_item_t * hash_item, const hash_item_t * last_item,
  * @length: number of hash entries
  * @return: returns a pointer to the newly created hash_chain
  */
-hash_chain_t * hchain_create(int length)
+hash_chain_t * hchain_create(int length, int hash_length)
 {
 	
 	hash_chain_element_t *last_element = NULL, *current_element = NULL;
@@ -155,33 +155,33 @@ hash_chain_t * hchain_create(int length)
 	unsigned char *hash_value = NULL;
 	int i, item_length = 0, err = 0;
 	
+	// make sure that the hash we want to use is smaller than the max output
+	HIP_ASSERT(hash_length <= MAX_HASH_LENGTH);
+	
 	/* the hash function output might be longer than needed
 	 * allocate enough memory for the hash function output */
-	HIP_IFE(!(hash_value = (unsigned char *)malloc(SHA_DIGEST_LENGTH)), -1);
-	
-	item_length = DEFAULT_HASH_LENGTH + DEFAULT_SALT_LENGTH;
+	HIP_IFEL(!(hash_value = (unsigned char *)malloc(MAX_HASH_LENGTH)), -1,
+			"failed to allocate memory\n");
 	
 	// allocate memory for a new hash chain
-	hash_chain = (hash_chain_t *)malloc(sizeof(hash_chain_t));
+	HIP_IFEL(!(hash_chain = (hash_chain_t *)malloc(sizeof(hash_chain_t))), -1,
+			"failed to allocate memory\n");
 	
 	for(i = 0; i < length; i++){
 		// allocate memory for a new element 
-		HIP_IFE(!(current_element = (hash_chain_element_t *)
-				malloc(sizeof(hash_chain_element_t))), -1);
-		HIP_IFE(!(current_element->hash = (unsigned char *)
-				malloc(item_length)), -1);
+		HIP_IFEL(!(current_element = (hash_chain_element_t *)
+				malloc(sizeof(hash_chain_element_t))), -1, "failed to allocate memory\n");
+		HIP_IFEL(!(current_element->hash = (unsigned char *)malloc(hash_length)), -1,
+				"failed to allocate memory\n");
 		
 		if(last_element != NULL){
 			// (input, input_length, output) -> output_length == 20
-			SHA1(last_element->hash, item_length, hash_value);
+			SHA1(last_element->hash, hash_length, hash_value);
 			// only consider DEFAULT_HASH_LENGTH highest bytes
-			memcpy(current_element->hash, hash_value, item_length);
+			memcpy(current_element->hash, hash_value, hash_length);
 		}else{
-			/* TODO delete this after taking the measurements */
-			// we need some deterministic seed as we don't exchange the anchors
-			memset(current_element->hash, 0, item_length);
 			// random bytes as seed
-			//RAND_bytes(current_element->hash, item_length);
+			RAND_bytes(current_element->hash, hash_length);
 			hash_chain->source_element = current_element;
 		}
 		
@@ -192,8 +192,6 @@ hash_chain_t * hchain_create(int length)
 	
 	hash_chain->hchain_length = length;
 	hash_chain->remaining = length;
-	hash_chain->hash_length = DEFAULT_HASH_LENGTH;
-	hash_chain->salt_length = DEFAULT_SALT_LENGTH;
 	// hash_chain->source_element set above
 	hash_chain->anchor_element  = current_element;
 	hash_chain->current_element = NULL;
@@ -216,7 +214,7 @@ hash_chain_t * hchain_create(int length)
  * @hash_chain: the hash chain which has to be popped
  * @return: pointer to the current hash_chain element
  */
-hash_item_t * hchain_pop(hash_chain_t * hash_chain)
+hash_chain_element_t * hchain_pop(hash_chain_t * hash_chain)
 {
 	hash_chain_element_t * return_element = NULL;
 	hash_item_t * hash_item = NULL;
@@ -300,7 +298,7 @@ hash_chain_element_t  * hchain_next(hash_chain_t * hash_chain){
  * @hash_chain: the hash chain 
  * @return: current element of the hash chain or NULL if the hash chain is depleted.
  */
-hash_item_t * hchain_current(hash_chain_t * hash_chain)
+hash_chain_element_t * hchain_current(hash_chain_t * hash_chain)
 {
 	hash_item_t * hash_item = NULL;
 	int err = 0;

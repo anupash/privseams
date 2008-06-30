@@ -35,7 +35,6 @@
    they shouldn't be accessed directly */
 typedef struct hip_hchain_storage    hip_hchain_storage_t;
 typedef struct hip_hchain_store_item hip_hchain_store_item_t;
-typedef struct hip_hchain_anchor_list hip_hchain_anchor_list_t;
 
 /* a struct which holds a number of hash chains of different lengths.
    the hash chains are stored in different stores. Every store stores
@@ -138,7 +137,7 @@ int hip_hchain_bexstore_set_item_length(int item_length)
  * the appropriate store.
  * @num_new_items: number of hash chains to be created
  * @item_length: length of the new hash chains
- * @return: zero on success, negative values on failure and 1 if bex_store was updated
+ * @return: zero on success, negative values on failure
 **/
 int hip_hchain_store_fill(int num_new_items, int item_length){
 	
@@ -428,13 +427,13 @@ int create_bexstore_anchors_message(struct hip_common *msg, uint8_t transform)
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_IPSEC_UPDATE_ANCHOR_LIST, 0), -1, 
 		 "build hdr failed\n");
 	
-	// make sure there are some items to send
-	if (stored_item = hip_hchain_storage.hchain_store[0])
+	// this implies the hash length
+	if (transform > ESP_PROT_TRANSFORM_UNUSED)
 	{
-		// this implies the hash length
-		if (transform > ESP_PROT_TRANSFORM_UNUSED)
+		// make sure there are some items to send
+		if (stored_item = hip_hchain_storage.hchain_store[0])
 		{
-			HIP_DEBUG("adding anchor to message...\n");
+			HIP_DEBUG("adding anchors to message...\n");
 			do
 			{
 				anchor = stored_item->hchain->anchor_element->hash;
@@ -447,14 +446,14 @@ int create_bexstore_anchors_message(struct hip_common *msg, uint8_t transform)
 			} while(stored_item = stored_item->next);
 		} else
 		{
-			HIP_ERROR("unknown esp protection extension transform\n");
+			HIP_ERROR("bex store anchor message issued, but no anchors\n");
 			
 			err = 1;
 			goto out_err;
 		}	
 	} else
 	{
-		HIP_ERROR("bex store anchor message issued, but no anchors\n");
+		HIP_ERROR("esp protection extension transform says UNUSED\n");
 		
 		err = 1;
 		goto out_err;
