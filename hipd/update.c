@@ -1880,12 +1880,12 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 		goto out_err;
 	}
 
-	esp_info = hip_get_param(msg, HIP_PARAM_ESP_INFO);
-	seq = hip_get_param(msg, HIP_PARAM_SEQ);
-	ack = hip_get_param(msg, HIP_PARAM_ACK);
-	locator = hip_get_param(msg, HIP_PARAM_LOCATOR);
-	echo = hip_get_param(msg, HIP_PARAM_ECHO_REQUEST);
-	echo_response = hip_get_param(msg, HIP_PARAM_ECHO_RESPONSE);
+	
+	
+	
+
+
+	
 	encrypted = hip_get_param(msg, HIP_PARAM_ENCRYPTED);
 	reg_request = hip_get_param(msg, HIP_PARAM_REG_REQUEST);
 	reg_info = hip_get_param(msg, HIP_PARAM_REG_INFO);
@@ -1905,14 +1905,28 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 	   and only after successful verification, we can move to handling the
 	   optional parameters. */
 
+	/* RFC 5201: The system MUST verify the HMAC in the UPDATE packet. If
+	   the verification fails, the packet MUST be dropped. */
+	HIP_IFEL(hip_verify_packet_hmac(msg, &entry->hip_hmac_in), -1, 
+		 "HMAC validation on UPDATE failed.\n");
+	
+	/* RFC 5201: The system MAY verify the SIGNATURE in the UPDATE packet.
+	   If the verification fails, the packet SHOULD be dropped and an error
+	   message logged. */
+	HIP_IFEL(entry->verify(entry->peer_pub, msg), -1, 
+		 "Verification of UPDATE signature failed.\n");
+	
 	/* RFC 5201: If both ACK and SEQ parameters are present, first ACK is
-	   processed, then _the rest of the packet_ is processed as with SEQ. */
+	   processed, then the rest of the packet is processed as with SEQ. */
+	ack = hip_get_param(msg, HIP_PARAM_ACK);
 	if (ack != NULL) {
 		HIP_DEBUG("ACK parameter found with peer Update ID %u.\n",
 			  ntohl(ack->peer_update_id));
 		entry->hadb_update_func->hip_update_handle_ack(
 			entry, ack, has_esp_info);
 	}
+	
+	seq = hip_get_param(msg, HIP_PARAM_SEQ);
 	if (seq != NULL) {
 		HIP_DEBUG("SEQ parameter found with  Update ID %u.\n",
 			  ntohl(seq->update_id));
@@ -1920,23 +1934,56 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 			 "Error when handling parameter SEQ.\n");
 	}
 	
+	esp_info = hip_get_param(msg, HIP_PARAM_ESP_INFO);
 	if (esp_info != NULL){
 		HIP_DEBUG("ESP INFO parameter found with new SPI %u.\n",
 			  ntohl(esp_info->new_spi));
 		has_esp_info = 1;
 	}
 
-	/* RFC 5201: The system MUST verify the HMAC in the UPDATE packet. If
-	   the verification fails, the packet MUST be dropped. */
-	HIP_IFEL(hip_verify_packet_hmac(msg, &entry->hip_hmac_in), -1, 
-		 "HMAC validation on UPDATE failed.\n");
+	if(esp_info != NULL) {
+		HIP_IFEL(hip_handle_esp_info(msg, entry), -1,
+			 "Error in processing esp_info\n");
+	}
 
-	/* RFC 5201: The system MAY verify the SIGNATURE in the UPDATE packet.
-	   If the verification fails, the packet SHOULD be dropped and an error
-	   message logged. */
-	HIP_IFEL(entry->verify(entry->peer_pub, msg), -1, 
-		 "Verification of UPDATE signature failed.\n");
- 	
+	/* RFC 5206: End-Host Mobility and Multihoming. */
+	locator = hip_get_param(msg, HIP_PARAM_LOCATOR);
+	echo = hip_get_param(msg, HIP_PARAM_ECHO_REQUEST);
+	echo_response = hip_get_param(msg, HIP_PARAM_ECHO_RESPONSE);
+	if (locator != NULL) {
+		HIP_DEBUG("LOCATOR parameter found.\n");
+		err = entry->hadb_update_func->hip_handle_update_plain_locator(
+			entry, msg, src_ip, dst_ip, esp_info, seq);
+	}
+	else if (echo != NULL) {
+		HIP_DEBUG("ECHO_REQUEST parameter found.\n");
+		//handle echo_request
+		err = entry->hadb_update_func->hip_handle_update_addr_verify(
+			entry, msg, src_ip, dst_ip);
+		/* Check the peer learning case. Can you find the src_ip 
+		   from spi_out->peer_addr_list if the addr is not found add it
+		   -- SAMU */
+		if (!err) {
+			hip_print_peer_addresses(entry);
+			pl = hip_peer_learning(esp_info, entry, src_ip);
+			/* pl left unchecked because currently we are not 
+			   that interested in the success of PL */
+			hip_print_peer_addresses(entry);
+		}
+	}else if (echo_response != NULL) {
+		HIP_DEBUG("ECHO_RESPONSE parameter found.\n");
+		hip_update_handle_echo_response(entry, echo_response, src_ip);
+	}
+	
+	if (encrypted != NULL) {
+		// handle encrypted parameter
+		HIP_DEBUG("ENCRYPTED found\n");
+		HIP_IFEL(hip_handle_encrypted(entry, encrypted), -1,
+			 "Error in processing encrypted parameter\n");
+		send_ack = 1;
+	}
+	
+	
 	/* Node moves within public Internet or from behind a NAT to public
 	   Internet. */
 	if(sinfo->dst_port == 0){
@@ -1957,53 +2004,7 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 		ipv6_addr_copy(&entry->local_address, dst_ip);
 		ipv6_addr_copy(&entry->preferred_address, src_ip);
 	}
-	
-	if (locator != NULL) {
-		HIP_DEBUG("LOCATOR parameter found.\n");
-	}
-	if (echo != NULL) {
-		HIP_DEBUG("ECHO_REQUEST parameter found.\n");
-	}
-	if (echo_response != NULL) {
-		HIP_DEBUG("ECHO_RESPONSE parameter found.\n");
-	}
-	if(esp_info != NULL) {
-		HIP_IFEL(hip_handle_esp_info(msg, entry), -1,
-			 "Error in processing esp_info\n");
-	}
 
-	//mm stuff after this
-	if (locator)
-		//handle locator parameter
-		err = entry->hadb_update_func->hip_handle_update_plain_locator(
-			entry, msg, src_ip, dst_ip, esp_info, seq);
-	else if (echo) {
-		//handle echo_request
-		err = entry->hadb_update_func->hip_handle_update_addr_verify(
-			entry, msg, src_ip, dst_ip);
-		/* Check the peer learning case. Can you find the src_ip 
-		   from spi_out->peer_addr_list if the addr is not found add it
-		   -- SAMU */
-		if (!err) {
-			hip_print_peer_addresses(entry);
-			pl = hip_peer_learning(esp_info, entry, src_ip);
-			/* pl left unchecked because currently we are not 
-			   that interested in the success of PL */
-			hip_print_peer_addresses(entry);
-		}
-	} else if (echo_response) {
-		//handle echo response
-		hip_update_handle_echo_response(entry, echo_response, src_ip);
-	}
-	
-	if (encrypted != NULL) {
-		// handle encrypted parameter
-		HIP_DEBUG("ENCRYPTED found\n");
-		HIP_IFEL(hip_handle_encrypted(entry, encrypted), -1,
-			 "Error in processing encrypted parameter\n");
-		send_ack = 1;
-	}
-	
 	/* Handle registration info. */
 	if (reg_info) {
 		uint8_t *types = NULL;
