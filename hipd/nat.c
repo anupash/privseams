@@ -1117,13 +1117,12 @@ int hip_external_ice_end(){
     pj_caching_pool_destroy(&cp);
 }
 
-int hip_external_ice_receive_pkt(struct hip_common * msg, int pkt_size, in6_addr_t * src_addr,in_port_t port ){
-    hip_ha_t  *entry;
+int hip_external_ice_receive_pkt(struct hip_common * msg, hip_ha_t *entry, in6_addr_t * src_addr,in_port_t port ){
+
     int i, addr_len;
     pj_sockaddr_in pj_addr;
    
     
-    HIP_DEBUG("receive a stun  len:  %d\n" ,pkt_size);
     HIP_DEBUG_HIT("receive a stun  from:  " ,src_addr );
     HIP_DEBUG("receive a stun  port:  %d\n" ,port);
     //TODO filter out ipv6
@@ -1133,10 +1132,8 @@ int hip_external_ice_receive_pkt(struct hip_common * msg, int pkt_size, in6_addr
 	 
 	 addr_len = sizeof(pj_sockaddr_in);
     
-	// found the right entry. 
-	entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
-    if(entry == NULL) return -1;
-    if(entry->ice_session){
+
+     if(entry->ice_session){
     	
     	
     	pj_ice_sess_on_rx_pkt(entry->ice_session,1,msg+1, msg->payload_len, &pj_addr,addr_len);
