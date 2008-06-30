@@ -1902,8 +1902,8 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 	   section 4.2).
 
 	   Thus, we first have to verify the HMAC and HIP_SIGNATURE parameters
-	   and only after successful verification, we can move to ...
-	*/
+	   and only after successful verification, we can move to handling the
+	   optional parameters. */
 
 	/* RFC 5201: If both ACK and SEQ parameters are present, first ACK is
 	   processed, then _the rest of the packet_ is processed as with SEQ. */
@@ -1967,11 +1967,11 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 	if (echo_response != NULL) {
 		HIP_DEBUG("ECHO_RESPONSE parameter found.\n");
 	}
-	
-	if(esp_info)
+	if(esp_info != NULL) {
 		HIP_IFEL(hip_handle_esp_info(msg, entry), -1,
 			 "Error in processing esp_info\n");
-	
+	}
+
 	//mm stuff after this
 	if (locator)
 		//handle locator parameter
