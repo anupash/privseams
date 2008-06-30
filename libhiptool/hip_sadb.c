@@ -36,7 +36,7 @@
 //#include <hip/hip_funcs.h> /* gettimeofday() for win32 */
 #include "win32-pfkeyv2.h"
 #include "state.h"
-
+#include "esp_prot_ext.h"
 /*
  * Globals
  */

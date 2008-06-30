@@ -12,8 +12,8 @@
 #ifndef HASHCHAIN_STORE_H
 #define HASHCHAIN_STORE_H
 
-#include "builder.h"
 #include "hashchain.h"
+#include "builder.h"
 
 int hip_hchain_store_init(int* lengths, int lengths_count);
 int hip_hchain_bexstore_set_item_length(int item_length);

@@ -20,7 +20,7 @@ int hipl_userspace_ipsec_sadb_add_wrapper(struct in6_addr *saddr,
 					      int ealg, struct hip_crypto_key *enckey,
 					      struct hip_crypto_key *authkey,
 					      int already_acquired,
-					      int direction, int update)
+					      int direction, int update);
 
 int send_userspace_ipsec_to_hipd(int activate);
 

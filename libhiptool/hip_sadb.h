@@ -169,7 +169,7 @@ int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
     struct sockaddr *inner_dst, struct sockaddr *src, struct sockaddr *dst, __u16 sport,
     __u16 dport, int direction, __u32 spi, __u8 *e_key, __u32 e_type, __u32 e_keylen,
     __u8 *a_key, __u32 a_type, __u32 a_keylen, __u32 lifetime, __u16 hitmagic,
-    uint8_t nat_mode, uint32_t hchain_anchor);
+    uint8_t nat_mode, uint8_t esp_prot_transform, unsigned char *esp_prot_anchor);
 int hip_sadb_delete(__u32 type, struct sockaddr *src, struct sockaddr *dst,
     __u32 spi);
 void hip_remove_expired_lsi_entries();

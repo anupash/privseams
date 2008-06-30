@@ -21,9 +21,9 @@
  *
  */
 
-
 #include "hip_esp.h"
 #include "utils.h"
+#include "esp_prot_ext.h"
 
 #define ICV_LENGTH 12
 
