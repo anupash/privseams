@@ -480,7 +480,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 				 const struct hip_host_id *host_id_pub,
 				 int cookie_k)
 {
-        extern int hip_transform_order;
+    extern int hip_transform_order;
 	struct hip_locator_info_addr_item *addr_list = NULL;
 	struct hip_locator *locator = NULL;
  	struct hip_locator_info_addr_item *locators = NULL;
@@ -647,22 +647,40 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 					   sizeof(hip_transform_suite_t)), -1, 
 		 "Building of ESP transform failed\n");
  	
- 	/********** ESP-PROT mode (OPTIONAL) **********/
+ 	/********** ESP-PROT transform (OPTIONAL) **********/
  	
- 	/* only supported in usermode and optional there */
+ 	/* only supported in usermode and optional there
+ 	 * 
+ 	 * add the transform only when usermode is active */
  	if (hip_use_userspace_ipsec)
  	{
- 		/* if the extension is switched on, we can assume that anchordb is filled */
- 		if (has_more_anchors())
+ 		if (hip_esp_prot_ext_transform > ESP_PROT_TRANSFORM_UNUSED)
  		{
- 			HIP_IFEL(hip_build_param_esp_prot_transform(msg,
- 					HIP_PARAM_ESP_PROT_TRANSFORM, ESP_PROT_TRANSFORM_DEFAULT), -1, 
- 					"Building of ESP protection mode failed\n");
+	 		/* if the extension is switched on, only advertise usage when anchordb
+	 		 * is filled */
+	 		if (has_more_anchors())
+	 		{
+	 			HIP_IFEL(hip_build_param_esp_prot_transform(msg,
+	 					HIP_PARAM_ESP_PROT_TRANSFORM, hip_esp_prot_ext_transform), -1, 
+	 					"Building of ESP protection mode failed\n");
+	 			
+	 			HIP_DEBUG("adding esp protection transform: %u, \n",
+	 					hip_esp_prot_ext_transform);
+	 		} else
+	 		{
+	 			HIP_IFEL(hip_build_param_esp_prot_transform(msg,
+	 					HIP_PARAM_ESP_PROT_TRANSFORM, ESP_PROT_TRANSFORM_UNUSED), -1, 
+	 					"Building of ESP protection mode failed\n");
+	 			
+	 			HIP_ERROR("setting esp protection transform to UNUSED as no anchor available\n");
+	 		}
  		} else
  		{
  			HIP_IFEL(hip_build_param_esp_prot_transform(msg,
  					HIP_PARAM_ESP_PROT_TRANSFORM, ESP_PROT_TRANSFORM_UNUSED), -1, 
  					"Building of ESP protection mode failed\n");
+ 			
+ 			HIP_ERROR("setting esp protection transform to UNUSED as extension not activated\n");
  		}
  	}
 

@@ -414,12 +414,11 @@ out_err:
 	return err;
 }
 
-int create_bexstore_anchors_message(struct hip_common *msg)
+int create_bexstore_anchors_message(struct hip_common *msg, uint8_t transform)
 {
-	int err = 0, item_length = 0, i;
-	int bex_store_count = 0;
 	hip_hchain_store_item_t *stored_item = NULL;
 	unsigned char *anchor = NULL;
+	int err = 0;
 	
 	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1,
 		 "alloc memory for adding sa entry\n");
@@ -429,32 +428,36 @@ int create_bexstore_anchors_message(struct hip_common *msg)
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_IPSEC_UPDATE_ANCHOR_LIST, 0), -1, 
 		 "build hdr failed\n");
 	
-	bex_store_count = hip_hchain_storage.store_count[0];
-	
-	if (bex_store_count > 0)
+	// make sure there are some items to send
+	if (stored_item = hip_hchain_storage.hchain_store[0])
 	{
-		stored_item = hip_hchain_storage.hchain_store[0];
-		
-		HIP_DEBUG("hash_length: %u \n", stored_item->hchain->hash_length);
-		HIP_IFEL(hip_build_param_contents(msg, (void *)&stored_item->hchain->hash_length,
-				HIP_PARAM_UINT, sizeof(uint8_t)), -1, "build param contents failed\n");
-		
-		HIP_DEBUG("salt_length: %u \n", stored_item->hchain->salt_length);
-		HIP_IFEL(hip_build_param_contents(msg, (void *)&stored_item->hchain->salt_length,
-				HIP_PARAM_UINT, sizeof(uint8_t)), -1, "build param contents failed\n");
-		
-		item_length = stored_item->hchain->hash_length + stored_item->hchain->salt_length;
-		
-		while(stored_item = stored_item->next)
+		// this implies the hash length
+		if (transform == ESP_PROT_TRANSFORM_DEFAULT)
 		{
-			anchor = stored_item->hchain->anchor_element->hash;
-			HIP_HEXDUMP("anchor: ", anchor, item_length);
-			HIP_IFEL(hip_build_param_contents(msg, (void *)anchor, HIP_PARAM_HCHAIN_ANCHOR,
-					item_length), -1, "build param contents failed\n");
-		}
+			HIP_DEBUG("adding anchor to message...\n");
+			do
+			{
+				anchor = stored_item->hchain->anchor_element->hash;
+				
+				HIP_HEXDUMP("anchor: ", anchor, DEFAULT_HASH_LENGTH);
+				HIP_IFEL(hip_build_param_contents(msg, (void *)anchor,
+						HIP_PARAM_HCHAIN_ANCHOR, DEFAULT_HASH_LENGTH),
+						-1, "build param contents failed\n");
+				
+			} while(stored_item = stored_item->next);
+		} else
+		{
+			HIP_ERROR("unknown esp protection extension transform\n");
+			
+			err = 1;
+			goto out_err;
+		}	
 	} else
 	{
+		HIP_ERROR("bex store anchor message issued, but no anchors\n");
+		
 		err = 1;
+		goto out_err;
 	}
 	
   out_err:

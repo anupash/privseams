@@ -8,7 +8,7 @@
 #define ESP_PROT_TRANSFORM_DEFAULT		 1
 
 // default length of the hash function output used in the chain
-#define DEFAULT_HASH_LENGTH 4 // (in bytes)
+#define DEFAULT_HASH_LENGTH 8 // (in bytes)
 //#define DEFAULT_SALT_LENGTH 0 // (in bytes)
 
 // change this, if you are changing the hash function
@@ -32,7 +32,7 @@ typedef struct esp_hchain
 } esp_hchain_t;
 
 // (hash, salt)-length for the respective transform in bytes
-int esp_prot_transforms[2] = {0, 8};
+int esp_prot_transforms[2] = {0, DEFAULT_HASH_LENGTH};
 
 int esp_prot_ext_init(void);
 int add_esp_prot_hash(hip_sadb_entry *entry, unsigned char *out_hash, int *out_length);

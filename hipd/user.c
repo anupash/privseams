@@ -15,64 +15,12 @@
 #include "esp_prot_ext.h"
 #include "anchordb.h"
 
+int hip_userspace_ipsec_activate(struct hip_common *msg);
+int hip_esp_protection_extension_transform(struct hip_common *msg);
+
 int hip_sendto(const struct hip_common *msg, const struct sockaddr *dst){
         return sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
                    0, (struct sockaddr *)dst, hip_sockaddr_len(dst));
-}
-
-int hip_userspace_ipsec_activate(struct hip_common *msg)
-{
-	struct hip_tlv_common *param = NULL;
-	int err = 0, activate = 0;
-	
-	// process message and store anchor elements in the db
-	param = (struct hip_tlv_common *)hip_get_param(msg, HIP_PARAM_INT);
-	activate = *((int *)hip_get_param_contents_direct(param));
-	HIP_DEBUG("userspace ipsec activate: %i \n", activate);
-	
-	hip_use_userspace_ipsec = activate;
-	
-	/* we have to modify the ipsec function pointers to call the ones
-	 * located in userspace from now on */
-	hip_uninit_hadb();
-	hip_init_hadb();
-	
-  out_err:
-	return err;
-}
-
-/** 
- * activates the esp protection extension in the hipd
- * 
- * NOTE: this is called by the hipd when receiving the respective message
- * from the firewall
- **/
-int hip_esp_protection_extension_transform(struct hip_common *msg)
-{
-	struct hip_tlv_common *param = NULL;
-	int err = 0;
-	uint8_t transform = 0;
-	extern uint8_t hip_esp_prot_ext_transform;
-	
-	// process message and store anchor elements in the db
-	param = (struct hip_tlv_common *)hip_get_param(msg, HIP_PARAM_UINT);
-	transform = *((uint8_t *)hip_get_param_contents_direct(param));
-	HIP_DEBUG("esp protection extension transform: %u \n", transform);
-	
-	if (transform == ESP_PROT_TRANSFORM_DEFAULT)
-	{
-		hip_esp_prot_ext_transform = ESP_PROT_TRANSFORM_DEFAULT;
-		
-		HIP_DEBUG("hipd switched to esp protection extension\n");
-	}
-	else
-	{
-		hip_esp_prot_ext_transform = ESP_PROT_TRANSFORM_UNUSED;
-		
-		HIP_DEBUG("hipd switched to normal esp mode\n");
-	}
-	
-	// TODO there should be no precreated R1s without the transform
 }
 
 /**
@@ -990,4 +938,63 @@ int hip_handle_user_msg(struct hip_common *msg,
 	}
 
 	return err;
+}
+
+int hip_userspace_ipsec_activate(struct hip_common *msg)
+{
+	struct hip_tlv_common *param = NULL;
+	int err = 0, activate = 0;
+	
+	// process message and store anchor elements in the db
+	param = (struct hip_tlv_common *)hip_get_param(msg, HIP_PARAM_INT);
+	activate = *((int *)hip_get_param_contents_direct(param));
+	HIP_DEBUG("userspace ipsec activate: %i \n", activate);
+	
+	hip_use_userspace_ipsec = activate;
+	
+	/* we have to modify the ipsec function pointers to call the ones
+	 * located in userspace from now on */
+	hip_uninit_hadb();
+	hip_init_hadb();
+	
+  out_err:
+	return err;
+}
+
+/** 
+ * activates the esp protection extension in the hipd
+ * 
+ * NOTE: this is called by the hipd when receiving the respective message
+ * from the firewall
+ **/
+int hip_esp_protection_extension_transform(struct hip_common *msg)
+{
+	struct hip_tlv_common *param = NULL;
+	int err = 0;
+	uint8_t transform = 0;
+	extern uint8_t hip_esp_prot_ext_transform;
+	
+	// process message and store anchor elements in the db
+	param = (struct hip_tlv_common *)hip_get_param(msg, HIP_PARAM_UINT);
+	transform = *((uint8_t *)hip_get_param_contents_direct(param));
+	HIP_DEBUG("esp protection extension transform: %u \n", transform);
+	
+	// right now we only support the default transform
+	if (transform == ESP_PROT_TRANSFORM_DEFAULT)
+	{
+		hip_esp_prot_ext_transform = transform;
+		
+		HIP_DEBUG("hipd switched to esp protection extension\n");
+	}
+	else
+	{
+		hip_esp_prot_ext_transform = ESP_PROT_TRANSFORM_UNUSED;
+		
+		HIP_DEBUG("hipd switched to normal esp mode\n");
+	}
+	
+	/* we have to make sure that the precalculated R1s include the esp
+	 * protection extension transform */
+	hip_uninit_hadb();
+	hip_init_hadb();
 }
