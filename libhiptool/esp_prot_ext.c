@@ -126,12 +126,22 @@ int verify_esp_prot_hash(hip_sadb_entry *entry, unsigned char *hash_value)
     return err;
 }
 
+int esp_prot_get_corresponding_hchain(unsigned char *hchain_anchor, uint8_t transform,
+		hash_chain_t *out_hchain)
+{
+	int err = 0;
+	out_hchain = NULL;
+	
+	hip_hchain_bexstore_get_hchain(hchain_anchor, out_hchain);
+	
+  goto out_err:
+  	return err;
+}
+
 int get_esp_data_offset(hip_sadb_entry *entry)
 {
 	return sizeof(struct hip_esp) + transforms[entry->active_transform];
 }
-
-
 
 int esp_prot_ext_maintainance(hip_sadb_entry *entry)
 {

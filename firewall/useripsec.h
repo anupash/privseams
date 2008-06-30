@@ -15,11 +15,12 @@ int hipl_userspace_ipsec_sadb_add_wrapper(struct in6_addr *saddr,
 					      uint32_t *spi, uint8_t nat_mode,
 					      uint16_t local_port,
 					      uint16_t peer_port,
-					      uint32_t hchain_anchor, int ealg,
-					      struct hip_crypto_key *enckey,
+					      uint8_t esp_prot_transform,
+					      unsigned char *esp_prot_anchor,
+					      int ealg, struct hip_crypto_key *enckey,
 					      struct hip_crypto_key *authkey,
 					      int already_acquired,
-					      int direction, int update);
+					      int direction, int update)
 
 int send_userspace_ipsec_to_hipd(int activate);
 

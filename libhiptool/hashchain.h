@@ -18,8 +18,6 @@
 /* value used by Tobias Heer */
 //#define HCHAIN_ELEMENT_LENGTH 20 // (in bytes)
 
-#define HCHAIN_VERIFY_WINDOW 10
-
 typedef struct hash_chain hash_chain_t;
 typedef struct hash_chain_element hash_chain_element_t;
 
@@ -42,17 +40,17 @@ struct hash_chain
 hash_chain_t * hchain_create(int length);
 
 /* remove and return the next element from the hash chain */
-unsigned char * hchain_pop(hash_chain_t * hash_chain);
+hash_chain_element_t * hchain_pop(hash_chain_t * hash_chain);
 
 /* return the next element from the hash chain */
 hash_chain_element_t  * hchain_next(hash_chain_t * hash_chain);
 
 /* return the current element from the hash chain */
-hash_item_t * hchain_current(hash_chain_t * hash_chain);
+hash_chain_element_t * hchain_current(hash_chain_t * hash_chain);
 
 
 /* check if a hash is part of a hash chain */
-int hchain_verify(const hash_item_t * hash_item, const hash_item_t * last_item,
+int hchain_verify(const unsigned char *current_hash, const unsigned char *last_hash,
 		int tolerance);
 
 /* delete hash chain and free memory */

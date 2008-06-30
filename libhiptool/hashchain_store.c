@@ -432,16 +432,16 @@ int create_bexstore_anchors_message(struct hip_common *msg, uint8_t transform)
 	if (stored_item = hip_hchain_storage.hchain_store[0])
 	{
 		// this implies the hash length
-		if (transform == ESP_PROT_TRANSFORM_DEFAULT)
+		if (transform > ESP_PROT_TRANSFORM_UNUSED)
 		{
 			HIP_DEBUG("adding anchor to message...\n");
 			do
 			{
 				anchor = stored_item->hchain->anchor_element->hash;
 				
-				HIP_HEXDUMP("anchor: ", anchor, DEFAULT_HASH_LENGTH);
+				HIP_HEXDUMP("anchor: ", anchor, esp_prot_transforms[transform]);
 				HIP_IFEL(hip_build_param_contents(msg, (void *)anchor,
-						HIP_PARAM_HCHAIN_ANCHOR, DEFAULT_HASH_LENGTH),
+						HIP_PARAM_HCHAIN_ANCHOR, esp_prot_transforms[transform]),
 						-1, "build param contents failed\n");
 				
 			} while(stored_item = stored_item->next);

@@ -92,12 +92,10 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 	//}
 	
 	switch(type) {
-	case SO_HIP_IPSEC_ADD_SA: {
+	case SO_HIP_IPSEC_ADD_SA:
 		HIP_DEBUG("Received add sa request from hipd\n");
 		HIP_IFEL(handle_sa_add_request(msg, param), -1, "hip userspace sadb add did NOT succeed\n");
 		break;
-	}
-		
 	case SO_HIP_ADD_ESCROW_DATA:
 		while((param = hip_get_next_param(msg, param)))
 		{
@@ -288,7 +286,8 @@ int handle_sa_add_request(struct hip_common * msg, struct hip_tlv_common *param)
 	struct hip_crypto_key *enckey = NULL, *authkey = NULL;
 	int retransmission = 0, direction = 0, update = 0, local_port = 0, peer_port = 0;
 	uint8_t nat_mode = 0;
-	uint32_t hchain_anchor = 0;
+	uint8_t esp_prot_transform = 0;
+	unsigned char *esp_prot_anchor = NULL;
 	
 	// get all attributes from the message
 	
@@ -325,8 +324,13 @@ int handle_sa_add_request(struct hip_common * msg, struct hip_tlv_common *param)
 	HIP_DEBUG("the peer_port value is %u \n", peer_port);
 	
 	param =  hip_get_next_param(msg, param);
-	hchain_anchor = *((uint32_t *) hip_get_param_contents_direct(param));
-	HIP_DEBUG("the hchain_anchor value is %u \n", hchain_anchor);
+	esp_prot_transform = *((uint8_t *) hip_get_param_contents_direct(param));
+	HIP_DEBUG("esp protection extension transform is %u \n", esp_prot_transform);
+	
+	param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_HCHAIN_ANCHOR);
+	esp_prot_anchor = (unsigned char *) hip_get_param_contents_direct(param));
+	HIP_HEXDUMP("the esp protection anchor is ", esp_prot_anchor,
+	    		esp_prot_transforms[esp_prot_transform]);
 
 	param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_KEYS);
 	enckey = (struct hip_crypto_key *) hip_get_param_contents_direct(param);
@@ -356,7 +360,8 @@ int handle_sa_add_request(struct hip_common * msg, struct hip_tlv_common *param)
 							 src_hit, dst_hit, 
 							 spi_ipsec, nat_mode,
 							 local_port, peer_port,
-							 hchain_anchor, ealg, enckey, 
+							 esp_prot_transform,
+							 esp_prot_anchor, ealg, enckey, 
 							 authkey, retransmission, 
 							 direction, update);
 }

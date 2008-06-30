@@ -2,6 +2,7 @@
 #define ESP_PROT_EXT_H_
 
 #include <openssl/sha.h>
+#include "hip_sadb.h"
 
 // the transforms used by esp protection extension
 #define ESP_PROT_TRANSFORM_UNUSED		 0
@@ -13,6 +14,8 @@
 
 // change this, if you are changing the hash function
 #define MAX_HASH_LENGTH SHA_DIGEST_LENGTH
+
+#define DEFAULT_VERIFY_WINDOW 10
 
 // different hc_length in order not to spoil calculation time for short connections
 #define HC_LENGTH_BEX_STORE 1000 

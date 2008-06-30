@@ -21,7 +21,7 @@ uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr,
 	struct in6_addr loopback = in6addr_loopback;
 	int err = 0;
 	socklen_t alen;
-	hash_item_t *anchor_item = NULL;
+	unsigned char *hchain_anchor = NULL;
 	
 	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1,
 		 "alloc memory for adding sa entry\n");
@@ -81,15 +81,21 @@ uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr,
 					  sizeof(unsigned int)), -1,
 					  "build param contents failed\n");
 	
+	HIP_DEBUG("esp protection extension transform is %u \n", entry->esp_prot_transform);
+	HIP_IFEL(hip_build_param_contents(msg, (void *)&entry->esp_prot_transform,
+					  HIP_PARAM_UINT, sizeof(uint8_t)), -1,
+					  "build param contents failed\n");
+	
 	// choose the anchor depending on the direction
 	if (direction == HIP_SPI_DIRECTION_IN)
-		anchor_item = entry->esp_peer_anchor;
+		hchain_anchor = entry->esp_peer_anchor;
 	else
-		anchor_item = entry->esp_local_anchor;
+		hchain_anchor = entry->esp_local_anchor;
 	
-	HIP_DEBUG("the hchain_anchor value is %x \n", *(anchor_item->hash));
-	HIP_IFEL(hip_build_param_contents(msg, (void *)&hchain_anchor, HIP_PARAM_UINT,
-					  sizeof(unsigned int)), -1,
+    HIP_HEXDUMP("the esp protection anchor is ", hchain_anchor,
+    		esp_prot_transforms[entry->esp_prot_transform]);
+	HIP_IFEL(hip_build_param_contents(msg, (void *)&hchain_anchor, HIP_PARAM_HCHAIN_ANCHOR,
+					  esp_prot_transforms[entry->esp_prot_transform]), -1,
 					  "build param contents failed\n");
 
 	HIP_HEXDUMP("crypto key :", enckey, sizeof(struct hip_crypto_key));

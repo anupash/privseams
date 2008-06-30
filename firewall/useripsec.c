@@ -368,8 +368,9 @@ int hipl_userspace_ipsec_sadb_add_wrapper(struct in6_addr *saddr,
 					      uint32_t *spi, uint8_t nat_mode,
 					      uint16_t local_port,
 					      uint16_t peer_port,
-					      uint32_t hchain_anchor, int ealg,
-					      struct hip_crypto_key *enckey,
+					      uint8_t esp_prot_transform,
+					      unsigned char *esp_prot_anchor,
+					      int ealg, struct hip_crypto_key *enckey,
 					      struct hip_crypto_key *authkey,
 					      int already_acquired,
 					      int direction, int update) 
@@ -443,7 +444,7 @@ int hipl_userspace_ipsec_sadb_add_wrapper(struct in6_addr *saddr,
 			(struct sockaddr *) &inner_dst, (struct sockaddr *) &src, (struct sockaddr *) &dst,
 			local_port, peer_port, direction, spi, ipsec_e_key, ipsec_e_type,
 			ipsec_e_keylen, ipsec_a_key, ipsec_a_type, ipsec_a_keylen, 100 , hit_magic, nat_mode,
-			hchain_anchor);
+			esp_prot_transform, esp_prot_anchor);
 	
 	// Tell firewall that HIT SRC + DST HAS A SECURITY ASSOCIATION
 	HIP_DEBUG("HIP IPsec userspace SA add return value %d\n", err);

@@ -141,7 +141,7 @@ int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
     struct sockaddr *inner_dst, struct sockaddr *src, struct sockaddr *dst, __u16 sport,
     __u16 dport, int direction, __u32 spi, __u8 *e_key, __u32 e_type, __u32 e_keylen,
     __u8 *a_key, __u32 a_type, __u32 a_keylen, __u32 lifetime, __u16 hitmagic,
-    uint8_t nat_mode, uint32_t hchain_anchor)
+    uint8_t nat_mode, uint8_t esp_prot_transform, unsigned char *esp_prot_anchor)
 {
 	
 	hip_sadb_entry *entry = NULL;
@@ -182,8 +182,9 @@ int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
 	/* hash chains and anchors for esp extension */
 	entry->active_hchain = NULL;
 	entry->next_hchain = NULL;
-	entry->active_anchor = 0;
-	entry->next_anchor = 0;
+	entry->active_anchor = NULL;
+	entry->next_anchor = NULL;
+	entry->tolerance = 0;
 	entry->src_port = sport ;
 	entry->dst_port = dport ;
 	entry->nat_mode = nat_mode;
@@ -208,8 +209,7 @@ int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
 	pthread_mutex_unlock(&entry->rw_lock);
 
 	/* malloc error */
-	if (!entry->src_addrs || !entry->dst_addrs || !entry->a_key || !entry->active_hchain
-			|| !entry->next_hchain || entry->active_anchor || entry->next_anchor)
+	if (!entry->src_addrs || !entry->dst_addrs || !entry->a_key)
 		goto hip_sadb_add_error;
 	if ((e_keylen > 0) && !entry->e_key)
 		goto hip_sadb_add_error;
@@ -230,16 +230,19 @@ int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
 		       SALEN(inner_dst));
 	}
 	
+	// set the esp protection extension transform
+	entry->active_transform = esp_prot_transform;
+	
 	/* set up hash chains or anchors depending on the direction */
 	if (direction == HIP_SPI_DIRECTION_IN)
 	{
 		// set anchor for inbound SA
-		entry->active_anchor = hchain_anchor;
-		entry->tolerance = HCHAIN_VERIFY_WINDOW;
+		entry->active_anchor = esp_prot_anchor;
+		entry->tolerance = DEFAULT_VERIFY_WINDOW;
 	} else
 	{
 		// set hchain for outbound SA
-		err = hip_hchain_bexstore_get_hchain((unsigned char *)&hchain_anchor,
+		err = esp_prot_get_corresponding_hchain(esp_prot_anchor, esp_prot_transform,
 				entry->active_hchain);
 		
 		if (err)
