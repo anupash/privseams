@@ -3,6 +3,7 @@
  * 
  * @date    1.1.2007
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @note    HIPU: BSD platform needs to be autodetected in hip_set_lowcapability
  */
  
 #include "init.h"
