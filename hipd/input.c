@@ -803,6 +803,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	 * otherwise we just ignore it */
 	if (hip_use_userspace_ipsec)
 	{
+		HIP_DEBUG("userspace IPsec hint: ESP extension might be in use\n");
 		param = hip_get_param(ctx->input, HIP_PARAM_ESP_PROT_TRANSFORM);
 		
 		// check if the transform parameter was sent
@@ -811,18 +812,28 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 			prot_transform = (struct esp_prot_transform *) param;
 			transform = ntohl(prot_transform->transform);
 			
+			HIP_DEBUG("R1 contains ESP protection transform: %u\n", transform);
+			
 			// check if we are using the extension
 			if (hip_esp_prot_ext_transform > ESP_PROT_TRANSFORM_UNUSED)
 			{
 				// check if the transforms match
 				if (hip_esp_prot_ext_transform == transform)
 				{
+					HIP_DEBUG("matching ESP extension transforms: %u\n",
+							hip_esp_prot_ext_transform);
+					HIP_DEBUG("sending transform...\n");
+					
 					// set transform for this connection and advertise
 					entry->esp_prot_transform = transform;
 					HIP_IFEL(hip_build_param_esp_prot_transform(i2, transform),
 							-1, "Building of ESP protection mode failed\n");
 				} else
 				{
+					HIP_DEBUG("different ESP extension transforms: %u\n",
+							hip_esp_prot_ext_transform);
+					HIP_DEBUG("sending transform UNUSED...\n");
+					
 					// set to unused and reply with according parameter
 					entry->esp_prot_transform = ESP_PROT_TRANSFORM_UNUSED;
 					HIP_IFEL(hip_build_param_esp_prot_transform(i2, ESP_PROT_TRANSFORM_UNUSED),
@@ -830,17 +841,23 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 				}
 			} else
 			{
+				HIP_DEBUG("ESP extension switched off locally, sending UNUSED transform...\n");
+				
 				// advertise that we are not using the extension
 				HIP_IFEL(hip_build_param_esp_prot_transform(i2, ESP_PROT_TRANSFORM_UNUSED),
 						-1, "Building of ESP protection mode failed\n");
 			}
 		} else if (!param)
 		{
+			HIP_DEBUG("R1 does not contain ESP protection transform\n");
+			
 			// if the other end-host does not want to use the extension, we don't either
 			entry->esp_prot_transform = ESP_PROT_TRANSFORM_UNUSED;
 		}
 	} else
 	{
+		HIP_DEBUG("no userspace IPsec hint for ESP extension, UNUSED\n");
+		
 		// make sure we don't add the anchor now and don't add any transform or anchor
 		entry->esp_prot_transform = ESP_PROT_TRANSFORM_UNUSED;
 	}
