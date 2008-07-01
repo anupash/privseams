@@ -17,7 +17,6 @@
 #include "builder.h"
 #include "hadb.h"
 #include "escrow.h"
-#include "reg.h"
 
 /* FIXME: where to include these from in userspace? */
 #define IPV6_ADDR_ANY           0x0000U
@@ -416,33 +415,6 @@ int hip_set_rekeying_state(hip_ha_t *entry,
  */
 int hip_handle_esp_info(hip_common_t *msg, hip_ha_t *entry);
 
-/**
- * Creates a REG_RESPONSE parameter.
- *
- * @param entry         a pointer to a hadb entry.
- * @param reg           a pointer to REG_RESPONSE parameter struct.
- * @param requests      a pointer to registration type values.
- * @param request_count number of requests in @c requests.
- * @param src_ip        a pointer to source IP address.
- * @param dst_ip        a pointer to destination IP address.
- * @return       
- */
-int hip_create_reg_response(hip_ha_t *entry, struct hip_tlv_common *reg,
-			    uint8_t *requests, int request_count,
-			    in6_addr_t *src_ip, in6_addr_t *dst_ip);
-
-/**
- * Function Doxygen comments missing.
- *
- * @param entry      a pointer to a hadb entry.
- * @param reg        a pointer to a REG_INFO parameter to be handled.
- * @param types      a pointer to the registration types in the parameter.
- * @param type_count the number of registration types in the parameter.
- * @return      ...
- */
-int hip_handle_reg_info(hip_ha_t *entry, struct hip_tlv_common *reg, 
-			uint8_t *types, int type_count);
-
 #ifdef CONFIG_HIP_ESCROW
 /**
  * Function Doxygen comments missing.
@@ -624,20 +596,6 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
  * @param have_nes ...
  */
 void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_nes);
-
-/**
- * Internal function copied originally from rea.c.
- * 
- * @param entry      a pointer to a hadb entry.
- * @param server_hit a pointer to server HIT.
- * @param types      a pointer to...
- * @param type_count number of types in @c types.
- * @param op         zero or one. Zero for cancelling registration.
- * @return           zero on success, non-zero otherwise.
- */
-int hip_update_send_registration_request(hip_ha_t *entry,
-					 in6_addr_t *server_hit, int *types,
-					 int type_count, int op);
 
 /**
  * Sends an UPDATE acknowledgement.

@@ -17,13 +17,7 @@
 #include "update.h"
 
 /* All Doxygen function comments are now moved to the header file. Some comments
-   are inadequate, feel free to complement.
-
-   Code is now reformatted "linux" style and with maximum row width of 80
-   characters (where possible). Please stick to the coding convention and style
-   guide, they make the code more readable and uniform.
-
-   Lauri 10.01.2008 */
+   are inadequate. */
 
 /** A transmission function set for NAT traversal. */
 extern hip_xmit_func_set_t nat_xmit_func_set;
@@ -1437,86 +1431,6 @@ int hip_handle_esp_info(hip_common_t *msg, hip_ha_t *entry)
 	return err;
 }
 
-
-int hip_create_reg_response(hip_ha_t *entry, struct hip_tlv_common * reg,
-			    uint8_t *requests, int request_count,
-			    in6_addr_t *src_ip, in6_addr_t *dst_ip)
-{
-	int err = 0;
-	uint16_t mask = 0;
-	hip_common_t *update_packet = NULL;
-	uint32_t update_id_out = 0;
-	struct hip_reg_request *reg_request = NULL;
-        
-	/* Why does this function include so many parameter builders. After all,
-	   this should only build the REG_RESPONSE parameter.
-	   -Lauri 11.06.2008 */
-
-	if (reg != NULL) {
-		reg_request = (struct hip_reg_request *)reg;
-		HIP_DEBUG("Received registration message from client\n");
-	}
-        
-	/* Reply with UPDATE-packet containing the response */
-        
-	HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM,
-		 "Out of memory.\n");
-	HIP_DEBUG_HIT("sending UPDATE to", &entry->hit_peer);
-	HIP_DEBUG_HIT("... from", &entry->hit_our);
-
-	entry->hadb_misc_func->hip_build_network_hdr(
-		update_packet, HIP_UPDATE, mask, &entry->hit_our, &entry->hit_peer);
-
-	/********** SEQ **********/  
-	entry->update_id_out++;
-	update_id_out = entry->update_id_out;
-	/* todo: handle this case */
-	HIP_IFEL(!update_id_out, -EINVAL,
-		 "Outgoing UPDATE ID overflowed back to 0, bug ?\n");
-	HIP_IFEL(hip_build_param_seq(update_packet, update_id_out), -1, 
-		 "Building of SEQ param failed\n");
-            
-	/********** ACK **********/  
-	/* Piggyback ACK of the received message */
-	if (reg_request) {
-		HIP_IFEL(hip_build_param_ack(update_packet, entry->update_id_in), -1,
-			 "Building of ACK failed\n");
-	}
-	/********** REG_RESPONSE/REG_FAILED **********/        
-	/* Check service requests and build reg_response and/or reg_failed */
-	/** @todo change to use hip_handle_rrq_old(). For that we need
-	    entry, source message and destination message. We don't have the
-	    source message here... */
-	hip_handle_registration_attempt(entry, update_packet, reg_request, 
-					requests, request_count);
-        
-        
-	/********** HMAC **********/
-	HIP_IFEL(hip_build_param_hmac_contents(update_packet,
-					       &entry->hip_hmac_out), -1,
-		 "Building of HMAC failed\n");
-
-	/********** SIGNATURE **********/
-	HIP_IFEL(entry->sign(entry->our_priv, update_packet), -EINVAL,
-		 "Could not sign UPDATE. Failing\n");
-
-	/********** Send UPDATE **********/
-	HIP_DEBUG("Sending UPDATE packet with registration response\n");
-	HIP_IFEL(entry->hadb_xmit_func->hip_send_pkt(
-			 src_ip, dst_ip, 0, 0, update_packet, entry, 1), -1,
-		 "csum_send failed\n");
- out_err: 
-	return err;
-}
-
-int hip_handle_reg_info(hip_ha_t *entry, struct hip_tlv_common *reg, 
-			uint8_t *types, int type_count)
-{       
-	struct hip_reg_info *reg_info = (struct hip_reg_info *)reg;
-	/** @todo server announces that new services are available. */
-}
-
-
 #ifdef CONFIG_HIP_ESCROW
 int hip_handle_escrow_parameter(hip_ha_t * entry, struct hip_keys * keys)
 {
@@ -1848,10 +1762,8 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 	struct hip_seq *seq = NULL;
 	struct hip_ack *ack = NULL;
 	struct hip_locator *locator = NULL;
-	struct hip_echo_request *echo = NULL;
+	struct hip_echo_request *echo_request = NULL;
 	struct hip_echo_response *echo_response = NULL;
-	struct hip_tlv_common *reg_request = NULL;
-	struct hip_tlv_common *reg_info = NULL;
 	struct hip_tlv_common *encrypted = NULL;
      	
 	HIP_DEBUG("hip_receive_update() invoked.\n");
@@ -1879,17 +1791,7 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 		err = -EPROTO;
 		goto out_err;
 	}
-
 	
-	
-	
-
-
-	
-	encrypted = hip_get_param(msg, HIP_PARAM_ENCRYPTED);
-	reg_request = hip_get_param(msg, HIP_PARAM_REG_REQUEST);
-	reg_info = hip_get_param(msg, HIP_PARAM_REG_INFO);
-
 	src_ip = update_saddr;
 	dst_ip = update_daddr;
 	hits = &msg->hits;
@@ -1939,56 +1841,56 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 		HIP_DEBUG("ESP INFO parameter found with new SPI %u.\n",
 			  ntohl(esp_info->new_spi));
 		has_esp_info = 1;
-	}
-
-	if(esp_info != NULL) {
 		HIP_IFEL(hip_handle_esp_info(msg, entry), -1,
 			 "Error in processing esp_info\n");
 	}
-
+	
 	/* RFC 5206: End-Host Mobility and Multihoming. */
 	locator = hip_get_param(msg, HIP_PARAM_LOCATOR);
-	echo = hip_get_param(msg, HIP_PARAM_ECHO_REQUEST);
+	echo_request = hip_get_param(msg, HIP_PARAM_ECHO_REQUEST);
 	echo_response = hip_get_param(msg, HIP_PARAM_ECHO_RESPONSE);
 	if (locator != NULL) {
 		HIP_DEBUG("LOCATOR parameter found.\n");
 		err = entry->hadb_update_func->hip_handle_update_plain_locator(
 			entry, msg, src_ip, dst_ip, esp_info, seq);
-	}
-	else if (echo != NULL) {
-		HIP_DEBUG("ECHO_REQUEST parameter found.\n");
-		//handle echo_request
-		err = entry->hadb_update_func->hip_handle_update_addr_verify(
-			entry, msg, src_ip, dst_ip);
-		/* Check the peer learning case. Can you find the src_ip 
-		   from spi_out->peer_addr_list if the addr is not found add it
-		   -- SAMU */
-		if (!err) {
-			hip_print_peer_addresses(entry);
-			pl = hip_peer_learning(esp_info, entry, src_ip);
-			/* pl left unchecked because currently we are not 
-			   that interested in the success of PL */
-			hip_print_peer_addresses(entry);
+	} else {
+		if (echo_request != NULL) {
+			HIP_DEBUG("ECHO_REQUEST parameter found.\n");
+			err = entry->hadb_update_func->hip_handle_update_addr_verify(
+				entry, msg, src_ip, dst_ip);
+			/* Check the peer learning case. Can you find the src_ip 
+			   from spi_out->peer_addr_list if the addr is not found add it
+			   -- SAMU */
+			if (!err) {
+				hip_print_peer_addresses(entry);
+				pl = hip_peer_learning(esp_info, entry, src_ip);
+				/* pl left unchecked because currently we are not 
+				   that interested in the success of PL */
+				hip_print_peer_addresses(entry);
+			}
 		}
-	}else if (echo_response != NULL) {
-		HIP_DEBUG("ECHO_RESPONSE parameter found.\n");
-		hip_update_handle_echo_response(entry, echo_response, src_ip);
+		if (echo_response != NULL) {
+			HIP_DEBUG("ECHO_RESPONSE parameter found.\n");
+			hip_update_handle_echo_response(entry, echo_response, src_ip);
+		}
 	}
-	
+
+	encrypted = hip_get_param(msg, HIP_PARAM_ENCRYPTED);
 	if (encrypted != NULL) {
-		// handle encrypted parameter
 		HIP_DEBUG("ENCRYPTED found\n");
 		HIP_IFEL(hip_handle_encrypted(entry, encrypted), -1,
 			 "Error in processing encrypted parameter\n");
 		send_ack = 1;
 	}
-	
-	
+		
 	/* Node moves within public Internet or from behind a NAT to public
-	   Internet. */
+	   Internet.
+
+	   Should this be moved inside the LOCATOR parameter handling? Does node
+	   movement mean that we should expect a LOCATOR parameter?
+	   -Lauri 01.07.2008. */
 	if(sinfo->dst_port == 0){
 		HIP_DEBUG("UPDATE packet src port %d\n", sinfo->src_port);
-		/* HIP_DEBUG("UPDATE packet was NOT destined to port 50500.\n"); */
 		entry->nat_mode = 0;
 		entry->peer_udp_port = 0;
 		entry->hadb_xmit_func->hip_send_pkt = hip_send_raw;
@@ -2005,43 +1907,32 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 		ipv6_addr_copy(&entry->preferred_address, src_ip);
 	}
 
-	/* Handle registration info. */
-	if (reg_info) {
-		uint8_t *types = NULL;
-		int type_count;
-		types = (uint8_t *)(hip_get_param_contents(msg, HIP_PARAM_REG_INFO));
-		/* leave out lifetime fields. */
-		type_count = hip_get_param_contents_len(reg_info) - 2;
-                
-		HIP_IFEL(hip_handle_reg_info(entry, reg_info, (types + 2), 
-					     type_count), -1,
-			 "Error handling reg_info\n");
-	}
+	/* RFC 5203: Registration Extension
+	   When there is a REG_INFO parameter present and in the parameter are
+	   listed changes that affect the set of requester's services, we must
+	   response with an UPDATE packet containing a REG_REQUEST parameter.
 
-	/* Handle registration request. */
-	if (reg_request) {
-	  
-		uint8_t *types = NULL;
-		int type_count;
-		types = (uint8_t *)(hip_get_param_contents(
-					    msg,HIP_PARAM_REG_REQUEST));
-		/* Leave out lifetime field. */
-		type_count = hip_get_param_contents_len(reg_request) - 1;
-		HIP_IFEL(hip_create_reg_response(entry, reg_request, 
-						 (uint8_t *)(types + 1), type_count,
-						 dst_ip, src_ip), -1,
-			 "Error handling reg_request\n");
-	  
-	}
+	   When there is a REG_REQUEST parameter present and in the parameter
+	   are listed services that the registrar is able to provide, we must
+	   response with an UPDATE packet containing a REG_RESPONSE parameter.
 
-	/* Handle REG_RESPONSE and REG_FAILED parameters. */
-	if(hip_handle_param_reg_response(entry, msg) == 0) {
+	   When REG_INFO or REG_REQUEST is present, we just set the send_ack
+	   bit and build the response parameter in the hip_update_send_ack().
+	   This may lead to acking SEQs more than once, but since the update
+	   implementation is currently being revised, we settle for this
+	   arrangement for now.
+
+	   REG_RESPONSE or REG_FAILED parametes do not need any response.
+	   -Lauri 01.07.2008. */
+	if(hip_get_param(msg, HIP_PARAM_REG_INFO) != NULL) {
 		send_ack = 1;
-	}
-	if (hip_handle_param_reg_failed(entry, msg) == 0) {
+	} else if(hip_get_param(msg, HIP_PARAM_REG_REQUEST) != NULL) {
 		send_ack = 1;
-        }
-
+	} else {
+		hip_handle_param_reg_response(entry, msg);
+		hip_handle_param_reg_failed(entry, msg);
+	}
+	
 	if(send_ack) {
 		HIP_IFEL(hip_update_send_ack(entry, msg, src_ip, dst_ip), -1, 
 			 "Error sending UPDATE ACK.\n");
@@ -2875,61 +2766,6 @@ int hip_update_send_ack(hip_ha_t *entry, hip_common_t *msg,
 	HIP_DEBUG("end, err=%d\n", err);
 	return err;      
 }                                  
-                                  
-int hip_update_send_registration_request(hip_ha_t *entry,
-					 in6_addr_t *server_hit,
-					 int *types, int type_count, int op) 
-{
-	int err = 0;
-	uint16_t mask = 0;
-	uint8_t lifetime = 0; 
-	uint32_t update_id_out = 0;
-	in6_addr_t saddr = { 0 }, daddr = { 0 };
-	hip_common_t *update_packet = NULL;
-	struct hip_seq *seq = NULL;
-     
-	/** @todo If not cancelling a service, this function requests for a
-	    lifetime of 255 always. Fix this hard coded value. */
-	if (op)
-		lifetime = 255;
-     
-	hip_hadb_get_peer_addr(entry, &daddr);
-	memcpy(&saddr, &entry->local_address, sizeof(saddr));
-                
-	HIP_IFEL(!(update_packet = hip_msg_alloc()), -ENOMEM, "Out of memory\n");
-	entry->hadb_misc_func->hip_build_network_hdr(
-		update_packet, HIP_UPDATE, mask, &entry->hit_our, server_hit);
-	entry->update_id_out++;
-	update_id_out = entry->update_id_out;
-	_HIP_DEBUG("outgoing UPDATE ID=%u\n", update_id_out);
-	/** @todo Handle this case. */
-	HIP_IFEL(!update_id_out, -EINVAL,
-		 "Outgoing UPDATE ID overflowed back to 0, bug ?\n");
-	HIP_IFEL(hip_build_param_seq(update_packet, update_id_out), -1, 
-		 "Building of SEQ param failed\n");
-        
-	HIP_IFEL(hip_build_param_reg_request(
-			 update_packet, lifetime, (uint8_t *)types, type_count),
-		 -1, "Building of REG_REQUEST failed\n");
-
-	/* Add HMAC */
-	HIP_IFEL(hip_build_param_hmac_contents(
-			 update_packet, &entry->hip_hmac_out), -1,
-		 "Building of HMAC failed\n");
-	/* Add SIGNATURE */
-	HIP_IFEL(entry->sign(entry->our_priv, update_packet), -EINVAL,
-		 "Could not sign UPDATE. Failing\n");
-        
-	HIP_DEBUG("Sending initial UPDATE packet (reg_request)\n");
-	HIP_IFEL(entry->hadb_xmit_func->hip_send_pkt(
-			 &saddr, &daddr, 0, 0, update_packet, entry, 0), -1,
-		 "csum_send failed\n");
-
- out_err:
-	if (update_packet)
-		HIP_FREE(update_packet);
-	return err;
-}
 
 int hip_peer_learning(struct hip_esp_info * esp_info, 
 		      hip_ha_t *entry, in6_addr_t * src_ip) {

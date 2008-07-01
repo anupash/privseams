@@ -688,8 +688,7 @@ struct hip_tlv_common *hip_get_next_param(const struct hip_common *msg,
  *                   or NULL if no parameters of the type param_type were not
  *                   found. 
  */
-void *hip_get_param(const struct hip_common *msg,
-		    hip_tlv_type_t param_type)
+void *hip_get_param(const struct hip_common *msg, hip_tlv_type_t param_type)
 {
 	void *matched = NULL;
 	struct hip_tlv_common *current_param = NULL;
