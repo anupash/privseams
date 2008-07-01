@@ -153,9 +153,13 @@ uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr,
 		HIP_ERROR("Sendto firewall failed.\n");
 		err = -1;
 		goto out_err;
+	} else
+	{
+		HIP_DEBUG("hipd ipsec_add_sa --> Sendto firewall OK.\n");
+		// this is needed if we want to use HIP_IFEL
+		err = 0;
 	}
-	else HIP_DEBUG("hipd ipsec_add_sa --> Sendto firewall OK.\n");
-	
+		
  out_err:
 	return err;	 
 }
