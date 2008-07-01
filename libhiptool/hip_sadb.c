@@ -158,6 +158,9 @@ int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
 		return(-1);
 	}
 
+	HIP_DEBUG("spi: %u\n", spi);
+	HIP_DEBUG("#(spi): %i\n", sadb_hashfn(spi));
+	
 	entry = &hip_sadb[sadb_hashfn(spi)];
 	if (entry->spi && entry->spi==spi)
 	{ 
