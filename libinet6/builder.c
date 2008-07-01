@@ -1003,6 +1003,7 @@ char* hip_message_type_name(const uint8_t msg_type){
 	case HIP_TRIG: return "HIP_TRIG";
 	case SO_HIP_UPDATE_HIU: return "HIP_UPDATE_HIU";
 	case HIP_UPDATE: return "HIP_UPDATE";
+	case HIP_HDRR: return "HIP_HDRR";
 	default:            return "UNDEFINED";
 	}
 }
@@ -3241,6 +3242,18 @@ int hip_build_param_cert_spki_info(struct hip_common * msg,
 			   sizeof(struct hip_cert_spki_info) -
 			   sizeof(struct hip_tlv_common));
 	err = hip_build_param(msg, cert_info);
+	return err;
+}
+
+int hip_build_param_hip_hdrr_info(struct hip_common * msg,
+				    struct hip_hdrr_info * hdrr_info)
+{
+	int err = 0;
+	hip_set_param_type(hdrr_info, HIP_PARAM_HDRR_INFO);
+	hip_calc_param_len(hdrr_info,
+			   sizeof(struct hip_hdrr_info) -
+			   sizeof(struct hip_tlv_common));
+	err = hip_build_param(msg, hdrr_info);
 	return err;
 }
 

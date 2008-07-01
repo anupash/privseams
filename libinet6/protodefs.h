@@ -20,8 +20,10 @@
 #define HIP_NOTIFY              17
 #define HIP_CLOSE               18
 #define HIP_CLOSE_ACK           19
-#define HIP_PSIG                20 /* lightweight HIP pre signature */
-#define HIP_TRIG                21 /* lightweight HIP signature trigger*/
+#define HIP_HDRR                20 /* 20 was already occupied by HIP_PSIG so shifting HIP_PSIG and HIP_TRIG plus 1*/
+#define HIP_PSIG                21 /* lightweight HIP pre signature */ 
+#define HIP_TRIG                22 /* lightweight HIP signature trigger*/
+
 #define HIP_PAYLOAD             64
 /* only hip network message types here */
 /* @} */
@@ -101,6 +103,7 @@
 #define HIP_PARAM_ADD_HIT		32800
 #define HIP_PARAM_ADD_OPTION		32801
 #define HIP_PARAM_PEER_HIT		32802
+#define HIP_PARAM_HDRR_INFO		32803 
 
 /* End of HIPL private parameters. */
 
@@ -759,6 +762,15 @@ struct hip_opendht_set {
 	hip_tlv_len_t 	length;
         char name[256];
 } __attribute__ ((packed));
+
+struct hip_hdrr_info {
+	hip_tlv_type_t    type;
+	hip_tlv_len_t     length;
+        struct in6_addr dht_key;
+	    /* 0 if succesfully verified otherwise negative */
+        int sig_verified;
+        int hit_verified;
+}__attribute__ ((packed));
 
 /* @} */
 

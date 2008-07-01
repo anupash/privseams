@@ -394,8 +394,11 @@ void register_to_dht ()
                                 return;
                         }
                         tmp_hit_str =  hip_convert_hit_to_str(&tmp_hit, NULL);
-                        tmp_addr_str = hip_convert_hit_to_str(hip_cast_sa_addr(&opendht_n->addr), 
-                                                              NULL); 
+                        
+                        //TODO checkout a better way to find OPENDHT_GATEWAY address to be sent as HOST 
+                        // param value in HTTP header
+                        //tmp_addr_str = hip_convert_hit_to_str(hip_cast_sa_addr(&opendht_n->addr), NULL);
+                        tmp_addr_str = OPENDHT_GATEWAY; 
                         publish_hit(&opendht_name_mapping, tmp_hit_str, tmp_addr_str);
                         pub_addr_ret = publish_addr(tmp_hit_str, tmp_addr_str);
                         continue;
@@ -404,8 +407,8 @@ void register_to_dht ()
  out_err:
         if (tmp_hit_str)
 		free(tmp_hit_str);
-        if (tmp_addr_str)
-		free(tmp_addr_str);
+        //if (tmp_addr_str)
+		//free(tmp_addr_str);
         return;
 }
 
@@ -437,7 +440,7 @@ void publish_hit(char *hostname, char *tmp_hit_str, char *tmp_addr_str)
                                         hip_opendht_sock_fqdn = init_dht_gateway_socket(hip_opendht_sock_fqdn);
                                 opendht_error = 0;
                                 opendht_error = connect_dht_gateway(hip_opendht_sock_fqdn, 
-                                                                    opendht_serving_gateway, 0);
+                                                                    opendht_serving_gateway, 0); //Changed to 1 by Pardeep for testing
                                 if (opendht_error > -1 && opendht_error != EINPROGRESS) { 
                                         opendht_error = opendht_put(hip_opendht_sock_fqdn,
                                                                     (unsigned char *)hostname,
@@ -765,6 +768,16 @@ int opendht_put_locator(int sockfd,
     char tmp_key[21];   
     fake_msg = hip_msg_alloc();
     value_len = hip_build_locators(fake_msg);
+    
+    /* The function below builds and appends Host Id
+     * and signature to the msg */
+    err = hip_build_host_id_and_signature(fake_msg, key);
+    if( err != 0)
+    {
+    	HIP_DEBUG("Appending Host ID and Signature to HDRR failed.\n");
+    	goto out_err;
+    }
+    
     _HIP_DUMP_MSG(fake_msg);        
     key_len = opendht_handle_key(key, tmp_key);
     value_len = hip_get_msg_total_len(fake_msg);

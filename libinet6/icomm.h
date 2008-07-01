@@ -53,6 +53,8 @@
 #define SO_HIP_GET_HA_INFO			22
 #define SO_HIP_TRIGGER_BEX                      23
 #define SO_HIP_DHT_SERVING_GW                   24
+#define SO_HIP_GET_STATE_HA	                    25
+
 /* inclusive */
 #define HIP_SO_ANY_MAX 				63
 
@@ -170,6 +172,7 @@
 #define SO_HIP_CERT_SPKI_VERIFY                 142
 #define SO_HIP_CERT_X509V3_SIGN                 143
 #define SO_HIP_CERT_X509V3_VERIFY               144
+#define SO_HIP_VERIFY_DHT_HDRR_RESP             145
 /** @} */
 /* inclusive */
 #define HIP_SO_ROOT_MAX 			255

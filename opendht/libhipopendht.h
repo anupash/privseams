@@ -2,9 +2,14 @@
 
 #define lib_opendht
 
+
 /* Resolve the gateway address using opendht.nyuld.net */
-#define OPENDHT_GATEWAY "opendht.nyuld.net"
-#define OPENDHT_PORT 5851
+//#define OPENDHT_GATEWAY "opendht.nyuld.net"
+#define OPENDHT_GATEWAY "openlookup.net"
+// change to 5851 XX TODO
+#define OPENDHT_PORT 80
+// change to 5851 XX TODO
+#define OPENDHT_PORT_STR "80" //Not in use
 #define OPENDHT_TTL 120
 #define STATE_OPENDHT_IDLE 0
 #define STATE_OPENDHT_WAITING_ANSWER 1

@@ -20,6 +20,7 @@
 #include "fcntl.h"
 #include "ife.h"
 
+
 /**
  *  For interrupting the connect in gethosts_hit 
  *  @param signo signal number
@@ -66,8 +67,7 @@ int resolve_dht_gateway_info(char * gateway_name,
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_NODHT;
     error = 0;
-    
-    error = getaddrinfo(gateway_name, "5851", &hints, gateway);
+    error = getaddrinfo(gateway_name, OPENDHT_PORT_STR, &hints, gateway);
     if (error != 0)
         HIP_DEBUG("OpenDHT gateway resolving failed\n");
     else
@@ -375,6 +375,8 @@ int opendht_get_key(struct addrinfo * gateway, const unsigned char * key,
         struct in6_addr addr6;
         struct in_addr addr4;
         
+       
+        
         memset(hostname,'\0',sizeof(hostname));
         HIP_IFEL((gethostname(hostname, sizeof(hostname))),-1,"Error getting hostname\n");
         HIP_IFEL(!(hoste = gethostbyname(hostname)),-1,
@@ -390,6 +392,11 @@ int opendht_get_key(struct addrinfo * gateway, const unsigned char * key,
                 HIP_DEBUG("Unknown host address family\n");
                 goto out_err;
         }
+        
+        /* TODO
+         * Following line Temporarily inserted line for openlokup, MUST BE REMOVED
+         */
+         host_addr = OPENDHT_GATEWAY;
         _HIP_DEBUG("Host addresss %s\n", host_addr);
         sfd = init_dht_gateway_socket(sfd);
         HIP_IFEL((err = connect_dht_gateway(sfd, gateway, 1))
@@ -399,8 +406,11 @@ int opendht_get_key(struct addrinfo * gateway, const unsigned char * key,
                  -1, "Opendht_get error");
         HIP_IFEL(opendht_read_response(sfd, dht_response), -1,"Opendht_read_response error\n"); 
         _HIP_DUMP_MSG((struct hip_common *)dht_response);
+          
+       
         /* check if there is locator, if is, take first and give it for the caller
            should give the whole locator and let the caller decide */
+           
         locator = hip_get_param((struct hip_common *)dht_response, HIP_PARAM_LOCATOR);
         if (locator) {
                 locator_item_count = hip_get_locator_addr_item_count(locator);
@@ -430,6 +440,8 @@ int opendht_get_key(struct addrinfo * gateway, const unsigned char * key,
                 }
         }
  out_err:
+ 		// Following line is added by Pardeep to take DHT response back to the caller
+ 		 memcpy(value, dht_response,1024);
         if (sfd) close(sfd); 
         return(err);
 }

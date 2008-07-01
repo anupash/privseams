@@ -219,6 +219,8 @@ int rsa_to_hip_endpoint(RSA *rsa, struct endpoint_hip **endpoint,
 			se_hip_flags_t endpoint_flags, const char *hostname);
 int dsa_to_hip_endpoint(DSA *dsa, struct endpoint_hip **endpoint,
 			se_hip_flags_t endpoint_flags, const char *hostname);
+int hip_build_param_hip_hdrr_info(struct hip_common * msg,
+				    struct hip_hdrr_info * hdrr_info);
 /**
  * Builds a REG_INFO parameter.
  * 
@@ -254,5 +256,7 @@ int hip_build_param_reg_request(hip_common_t *msg, const uint8_t lifetime,
  */
 int hip_build_param_reg_response(hip_common_t *msg, const uint8_t lifetime,
 				 const uint8_t *type_list, const int type_count);
+
+
 
 #endif /* HIP_BUILDER */

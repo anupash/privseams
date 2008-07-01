@@ -890,6 +890,64 @@ int hip_handle_user_msg(struct hip_common *msg,
 		err = hip_netdev_trigger_bex_msg(msg);
 		goto out_err;
 	  break;
+	case SO_HIP_VERIFY_DHT_HDRR_RESP: // Added by Pardeep to verify signature and host id
+       {
+       	/* This case verifies host id in the value (HDRR) against HIT used as a key for DHT
+       	 * And it also verifies the signature in HDRR
+       	 * This works on the hip common message sent to the daemon
+       	 * Modifies the message and sets the required flag if (or not) verified
+       	 * */
+        struct hip_sig *signature ;
+        struct hip_host_id *hostid; 
+        struct hip_locator *locator;
+		int alg = -1;
+		struct in6_addr *hit ;
+		struct hip_hdrr_info *hdrr_info;
+		
+		locator = hip_get_param(msg, HIP_PARAM_LOCATOR);
+        signature = hip_get_param (msg, HIP_PARAM_HIP_SIGNATURE);
+        hostid = hip_get_param (msg, HIP_PARAM_HOST_ID);
+        hdrr_info = hip_get_param (msg, HIP_PARAM_HDRR_INFO);
+        
+        //Check for algo and call verify signature from pk.c
+        
+        alg = hip_get_host_id_algo(hostid);
+        
+        /* Type of the hip msg in header has been modified to 
+         * user message type SO_HIP_VERIFY_DHT_HDRR_RESP , to
+         * get it here. Revert it back to HDRR to give it
+         * original shape as returned by the DHT and
+         *  then verify signature
+         */
+        
+    	hip_set_msg_type(msg,HIP_HDRR);
+    	HIP_DUMP_MSG (msg);
+    	
+    	HIP_IFEL(!(hit = malloc(sizeof(struct in6_addr))), -1, "Malloc for HIT failed\n");
+		switch (alg) {
+			case HIP_HI_RSA:
+				hdrr_info->sig_verified = hip_rsa_verify(hostid, msg);
+				err = hip_rsa_host_id_to_hit (hostid, hit, HIP_HIT_TYPE_HASH100);
+				hdrr_info->hit_verified = memcmp(hit, &hdrr_info->dht_key, sizeof(struct in6_addr)) ;
+				break;
+			case HIP_HI_DSA:
+				hdrr_info->sig_verified = hip_dsa_verify(hostid, msg);
+				err = hip_dsa_host_id_to_hit (hostid, hit, HIP_HIT_TYPE_HASH100);
+				hdrr_info->hit_verified = memcmp(hit, &hdrr_info->dht_key, sizeof(struct in6_addr)) ; 
+				break;
+			default:
+				HIP_ERROR("Unsupported HI algorithm used cannot verify signature (%d)\n", alg);
+				break;
+		}
+		HIP_DUMP_MSG (msg);
+		if (err != 0)
+		{
+			HIP_DEBUG("Unable to convert host id to hit for host id verification \n");
+		}
+     
+      }
+          break;
+	
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;
