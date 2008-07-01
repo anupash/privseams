@@ -281,7 +281,7 @@ int handle_sa_add_request(struct hip_common * msg, struct hip_tlv_common *param)
 {
 	struct in6_addr *saddr = NULL, *daddr = NULL;
 	struct in6_addr *src_hit = NULL, *dst_hit = NULL;
-	uint32_t *spi_ipsec = NULL;
+	uint32_t spi_ipsec = 0;
 	int ealg = 0;
 	struct hip_crypto_key *enckey = NULL, *authkey = NULL;
 	int retransmission = 0, direction = 0, update = 0, local_port = 0, peer_port = 0;
@@ -308,8 +308,8 @@ int handle_sa_add_request(struct hip_common * msg, struct hip_tlv_common *param)
 	HIP_DEBUG_HIT("Destination HIT: ", dst_hit);
 	
 	param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_UINT);
-	spi_ipsec = (uint32_t *) hip_get_param_contents_direct(param);
-	HIP_DEBUG("the spi value is : %u \n", *spi_ipsec);
+	spi_ipsec = *((uint32_t *) hip_get_param_contents_direct(param));
+	HIP_DEBUG("the spi value is : %u \n", spi_ipsec);
 
 	param = hip_get_next_param(msg, param);
 	nat_mode = *((uint8_t *) hip_get_param_contents_direct(param));
