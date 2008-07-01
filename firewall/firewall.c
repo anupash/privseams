@@ -189,8 +189,10 @@ void hip_fw_uninit_proxy() {
 }
 
 
-void hip_fw_init_userspace_ipsec()
+int hip_fw_init_userspace_ipsec()
 {
+	int err = 0;
+	
 	HIP_IFEL(userspace_ipsec_init(), -1, "failed to initialize userspace ipsec");
 	
 	// queue incoming ESP over IPv4 and IPv4 UDP encapsulated traffic
@@ -209,6 +211,9 @@ void hip_fw_init_userspace_ipsec()
 	system("ip6tables -I OUTPUT -p 58 -d 2001:0010::/28 -j QUEUE");
 	system("ip6tables -I OUTPUT -p 6 -d 2001:0010::/28 -j QUEUE");
 	system("ip6tables -I OUTPUT -p 17 -d 2001:0010::/28 -j QUEUE");
+	
+  out_err:
+  	return err;
 }
 
 /*----------------INIT/EXIT FUNCTIONS----------------------*/

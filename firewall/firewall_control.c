@@ -328,7 +328,7 @@ int handle_sa_add_request(struct hip_common * msg, struct hip_tlv_common *param)
 	HIP_DEBUG("esp protection extension transform is %u \n", esp_prot_transform);
 	
 	param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_HCHAIN_ANCHOR);
-	esp_prot_anchor = (unsigned char *) hip_get_param_contents_direct(param));
+	esp_prot_anchor = (unsigned char *) hip_get_param_contents_direct(param);
 	HIP_HEXDUMP("the esp protection anchor is ", esp_prot_anchor,
 	    		esp_prot_transforms[esp_prot_transform]);
 

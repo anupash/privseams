@@ -2319,9 +2319,9 @@ int hip_build_param_puzzle(struct hip_common *msg, uint8_t val_K,
 	/* puzzle.opaque[2] = (opaque & 0xFF0000) >> 16; */
 	puzzle.I = random_i;
 
-        err = hip_build_generic_param(msg, &puzzle,
-				      sizeof(struct hip_tlv_common),
-				      hip_get_param_contents_direct(&puzzle));
+    err = hip_build_generic_param(msg, &puzzle,
+			      sizeof(struct hip_tlv_common),
+			      hip_get_param_contents_direct(&puzzle));
 	return err;
 
 }
@@ -2772,11 +2772,15 @@ int hip_build_param_esp_prot_anchor(struct hip_common *msg, unsigned char *ancho
 	struct esp_prot_anchor esp_anchor;
 
 	hip_set_param_type(&esp_anchor, HIP_PARAM_ESP_PROT_ANCHOR);
-	hip_calc_generic_param_len(&esp_anchor,
-			sizeof(hip_tlv_common_t) + esp_prot_transforms[transform], 0);
-	memcpy(&(esp_anchor.anchor), anchor, esp_prot_transforms[transform]);
 	
-	err = hip_build_param(msg, &esp_anchor);
+	/* note: the length cannot be calculated with calc_param_len() */
+	hip_set_param_contents_len(&esp_anchor, esp_prot_transforms[transform]);
+	
+	memcpy(esp_anchor.anchor, anchor, esp_prot_transforms[transform]);
+	
+	err = hip_build_generic_param(msg, &esp_anchor,
+					      sizeof(struct hip_tlv_common),
+					      hip_get_param_contents_direct(&esp_anchor));
 	
 	return err;
 }

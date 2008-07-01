@@ -14,6 +14,7 @@
 #define HASH_CHAIN_H
 
 #include <inttypes.h>
+#include <openssl/sha.h>
 
 /* value used by Tobias Heer */
 //#define HCHAIN_ELEMENT_LENGTH 20 // (in bytes)
@@ -53,11 +54,11 @@ int hchain_create(int hchain_length, int hash_length, hash_chain_t *out_hchain);
 int hchain_pop(hash_chain_t * hash_chain, int hash_length, unsigned char *popped_hash);
 
 /* return the next element from the hash chain */
-int hchain_next(const hash_chain_t *hash_chain, int hash_length, unsigned char *next_hash)
+int hchain_next(const hash_chain_t *hash_chain, int hash_length, unsigned char *next_hash);
 
 /* return the current element from the hash chain */
 int hchain_current(const hash_chain_t *hash_chain, int hash_length,
-		unsigned char *current_hash)
+		unsigned char *current_hash);
 
 /* delete hash chain and free memory */
 int hchain_destruct(hash_chain_t *hash_chain);

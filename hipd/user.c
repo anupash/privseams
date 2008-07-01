@@ -13,7 +13,7 @@
  */
 #include "user.h"
 #include "esp_prot_ext.h"
-#include "anchordb.h"
+#include "hchain_anchordb.h"
 
 int hip_userspace_ipsec_activate(struct hip_common *msg);
 int hip_esp_protection_extension_transform(struct hip_common *msg);

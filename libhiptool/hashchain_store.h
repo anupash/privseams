@@ -15,15 +15,16 @@
 #include "hashchain.h"
 #include "builder.h"
 
-int hip_hchain_store_init(int* lengths, int lengths_count);
-int hip_hchain_bexstore_set_item_length(int item_length);
-int hip_hchain_store_fill(int num_new_items, int item_length);
-int hip_hchain_bexstore_fill(int num_new_items);
-int hip_hchain_stores_refill(void);
-int hip_hchain_store_get_hchain(int item_length, hash_chain_t *stored_hchain);
-int hip_hchain_bexstore_get_hchain(unsigned char *anchor, hash_chain_t *stored_hchain);
-int hip_hchain_store_get_store(int item_length);
-int hip_hchain_store_remaining(int item_length);
-int create_bexstore_anchors_message(struct hip_common *msg);
+int hip_hchain_store_init(int* hchain_lengths, int lengths_count);
+int hip_hchain_bexstore_set_item_length(int hchain_length);
+int hip_hchain_store_fill(int num_new_items, int hchain_length, int hash_length);
+int hip_hchain_bexstore_fill(int num_new_items, int hash_length);
+int hip_hchain_stores_refill(int hash_length);
+int hip_hchain_store_get_hchain(int hchain_length, hash_chain_t *stored_hchain);
+int hip_hchain_bexstore_get_hchain(unsigned char *anchor, int hash_length,
+		hash_chain_t *stored_hchain);
+int hip_hchain_store_get_store(int hchain_length);
+int hip_hchain_store_remaining(int hchain_length);
+int create_bexstore_anchors_message(struct hip_common *msg, int hash_length);
 
 #endif /* HASHCHAIN_STORE_H */

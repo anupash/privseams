@@ -5,6 +5,8 @@
 #ifndef _HIP_PROTODEFS
 #define _HIP_PROTODEFS
 
+#include "hashchain.h"
+
 #define HIP_MAX_PACKET 2048
 
 /** @addtogroup hip_msg
@@ -388,7 +390,7 @@ struct esp_prot_transform {
 struct esp_prot_anchor {
 	hip_tlv_type_t     type;
 	hip_tlv_len_t      length;
-	unsigned char	   anchor;
+	unsigned char  	   anchor[MAX_HASH_LENGTH];
 } __attribute__ ((packed));
 
 /**

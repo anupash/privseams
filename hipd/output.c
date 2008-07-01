@@ -494,6 +494,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	int err = 0, dh_size1 = 0, dh_size2 = 0, written1 = 0, written2 = 0;
 	int mask = 0, l = 0, is_add = 0, ii = 0, *list = NULL;
 	unsigned int service_count = 0;
+	extern uint8_t hip_esp_prot_ext_transform;
 
 	/* Supported HIP and ESP transforms. */
 	hip_transform_suite_t transform_hip_suite[] = {

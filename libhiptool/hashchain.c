@@ -15,7 +15,6 @@
 #include <stdlib.h>			// malloc & co
 #include <stdio.h> 			// printf & comalloc & co.
 #include <openssl/rand.h>
-#include <openssl/sha.h>
 #include <string.h>			// memcpy
 #include "debug.h"
 #include "ife.h"
@@ -231,6 +230,7 @@ int hchain_create(int hchain_length, int hash_length, hash_chain_t *out_hchain)
 int hchain_pop(hash_chain_t * hash_chain, int hash_length, unsigned char *popped_hash)
 {
 	int err = 0;
+	hash_chain_element_t *tmp_element = NULL;
 	popped_hash = NULL;
 	
 	HIP_ASSERT(hash_chain != NULL);
@@ -243,20 +243,22 @@ int hchain_pop(hash_chain_t * hash_chain, int hash_length, unsigned char *popped
 			exit(1);
 		} else
 		{
-			popped_hash = hash_chain->current_element->next->hash;
+			tmp_element = hash_chain->current_element->next;
 		}
 	} else
 	{
 		// hash_chain unused yet
-		popped_hash = hash_chain->anchor_element->hash;
+		tmp_element = hash_chain->anchor_element;
 	}
 	
-	HIP_DEBUG("Popping Hash chain element: ");
+	popped_hash = tmp_element->hash;
+	
+	HIP_DEBUG("Popping hash chain element: ");
 	hexdump(popped_hash, hash_length);
 	HIP_DEBUG("\n");
 	
 	// hchain update
-	hash_chain->current_element = return_element;
+	hash_chain->current_element = tmp_element;
 	hash_chain->remaining--;
 	
   out_err:
@@ -342,6 +344,7 @@ int hchain_destruct(hash_chain_t *hash_chain)
 		}
 		
 		free(hash_chain);
+		hash_chain = NULL;
 	}
 	
   out_err:

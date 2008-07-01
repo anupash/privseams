@@ -654,7 +654,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	uint32_t spi_in = 0;
 	struct esp_prot_transform *prot_transform = NULL;
 	uint8_t transform = 0;
-	hash_item_t *anchor = NULL;
+	extern uint8_t hip_esp_prot_ext_transform;
+	unsigned char *anchor = NULL;
 	
 	_HIP_DEBUG("hip_create_i2() invoked.\n");
 
@@ -1479,7 +1480,7 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 	uint16_t mask = 0;
 	uint8_t lifetime;
 	uint32_t spi_in;
-	hash_item_t *anchor = NULL;
+	unsigned char *anchor = NULL;
         
 	_HIP_DEBUG("hip_create_r2() invoked.\n");
 	/* Assume already locked entry */
@@ -1639,7 +1640,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	uint16_t crypto_len = 0, nonce = 0;
 	int err = 0, retransmission = 0, replay = 0, use_blind = 0;
 	struct esp_prot_anchor *prot_anchor = NULL;
-	hash_item_t *anchor = NULL;
+	unsigned char *anchor = NULL;
 	int item_length = 0;
 	struct esp_prot_transform *prot_transform = NULL;
 	uint8_t transform = 0;
@@ -2011,7 +2012,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	// process this if we are actually going to use it
 	if (entry->esp_prot_transform && param)
 	{
-		prot_transform = (struct esp_prot_transform *) transform;
+		prot_transform = (struct esp_prot_transform *) param;
 		transform = ntohl(prot_transform->transform);
 		
 		// right now we only support 2 transform, so we can just copy
@@ -2383,7 +2384,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	uint32_t spi_recvd = 0, spi_in = 0;
 	struct hip_param *param = NULL;
 	struct esp_prot_anchor *prot_anchor = NULL;
-	hash_item_t *anchor = NULL;
+	unsigned char *anchor = NULL;
 	int item_length = 0;
 	
 #ifdef CONFIG_HIP_HI3
