@@ -159,7 +159,10 @@ int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
 	}
 
 	entry = &hip_sadb[sadb_hashfn(spi)];
-	if (entry->spi && entry->spi==spi) { /* entry already exists */
+	if (entry->spi && entry->spi==spi)
+	{ 
+		/* entry already exists */
+		HIP_ERROR("the entry already exists\n");
 		return(-1);
 	} else if (entry->spi) { /* another entry matches hash value */
 		/* advance to end of linked list */
@@ -167,10 +170,15 @@ int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
 		/* create a new entry at end of list */
 		entry->next = malloc(sizeof(hip_sadb_entry));
 		if (!entry->next)
+		{
+			HIP_ERROR("failed to allocate memory\n");
 			return(-1);
+		}
 		entry = entry->next;
 	}
+	
 	/* add the new entry */
+	HIP_DEBUG("adding new sadb entry...\n");
 	memset(entry, 0, sizeof(hip_sadb_entry));
 	pthread_mutex_lock(&entry->rw_lock);
 	entry->mode = mode;
@@ -235,14 +243,13 @@ int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
 	memset(entry->inner_dst_addrs, 0, sizeof(sockaddr_list));
 
 	if (entry->mode == 0 || entry->mode == 3) { 
-		memcpy(&entry->inner_src_addrs->addr, inner_src,
-			SALEN(inner_src));
-		memcpy(&entry->inner_dst_addrs->addr, inner_dst,
-		       SALEN(inner_dst));
+		memcpy(&entry->inner_src_addrs->addr, inner_src, SALEN(inner_src));
+		memcpy(&entry->inner_dst_addrs->addr, inner_dst, SALEN(inner_dst));
 	}
 	
 	// set the esp protection extension transform
 	entry->active_transform = esp_prot_transform;
+	HIP_DEBUG("entry->active_transform: %u\n", entry->active_transform);
 	
 	// only set up the anchor or hchain, if esp extension is used
 	if (esp_prot_transform > ESP_PROT_TRANSFORM_UNUSED)
