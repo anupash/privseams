@@ -153,7 +153,10 @@ int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
 
 	/* type is currently ignored */	
 	if (!src || !dst || !a_key)
+	{
+		HIP_DEBUG("some parameters missing\n");
 		return(-1);
+	}
 
 	entry = &hip_sadb[sadb_hashfn(spi)];
 	if (entry->spi && entry->spi==spi) { /* entry already exists */
@@ -184,6 +187,8 @@ int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
 	entry->next_hchain = NULL;
 	entry->active_anchor = NULL;
 	entry->next_anchor = NULL;
+	entry->active_transform = 0;
+	entry->next_transform = 0;
 	entry->tolerance = 0;
 	entry->src_port = sport ;
 	entry->dst_port = dport ;
@@ -210,9 +215,15 @@ int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
 
 	/* malloc error */
 	if (!entry->src_addrs || !entry->dst_addrs || !entry->a_key)
+	{
+		HIP_ERROR("failed to allocate memory\n");
 		goto hip_sadb_add_error;
+	}
 	if ((e_keylen > 0) && !entry->e_key)
+	{
+		HIP_ERROR("failed to allocate memory\n");
 		goto hip_sadb_add_error;
+	}
 
 	/* copy addresses */
 	pthread_mutex_lock(&entry->rw_lock);
@@ -236,6 +247,8 @@ int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
 	// only set up the anchor or hchain, if esp extension is used
 	if (esp_prot_transform > ESP_PROT_TRANSFORM_UNUSED)
 	{
+		HIP_DEBUG("setting up ESP extension parameters...\n");
+		
 		/* set up hash chains or anchors depending on the direction */
 		if (direction == HIP_SPI_DIRECTION_IN)
 		{
@@ -295,13 +308,6 @@ int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
 	 * for HIP over UDP, HITs are used and not outer dst addr 
 	 * 	which can be the same for multiple hosts 
 	 */
-
-
-	/* For our HIPL userspace ipsec, mode 3 we do not think 
-	 * we do implement HIP_over_TCP
-	 *
-	 */
-	
 	
 	HIP_DEBUG("IPsec mode is %d \n", entry->mode);
 
