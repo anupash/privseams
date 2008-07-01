@@ -233,22 +233,26 @@ int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
 	// set the esp protection extension transform
 	entry->active_transform = esp_prot_transform;
 	
-	/* set up hash chains or anchors depending on the direction */
-	if (direction == HIP_SPI_DIRECTION_IN)
+	// only set up the anchor or hchain, if esp extension is used
+	if (esp_prot_transform > ESP_PROT_TRANSFORM_UNUSED)
 	{
-		// set anchor for inbound SA
-		entry->active_anchor = esp_prot_anchor;
-		entry->tolerance = DEFAULT_VERIFY_WINDOW;
-	} else
-	{
-		// set hchain for outbound SA
-		err = esp_prot_get_corresponding_hchain(esp_prot_anchor, esp_prot_transform,
-				entry->active_hchain);
-		
-		if (err)
+		/* set up hash chains or anchors depending on the direction */
+		if (direction == HIP_SPI_DIRECTION_IN)
 		{
-			HIP_ERROR("corresponding hchain not found");
-			goto hip_sadb_add_error;
+			// set anchor for inbound SA
+			entry->active_anchor = esp_prot_anchor;
+			entry->tolerance = DEFAULT_VERIFY_WINDOW;
+		} else
+		{
+			// set hchain for outbound SA
+			err = esp_prot_get_corresponding_hchain(esp_prot_anchor, esp_prot_transform,
+					entry->active_hchain);
+			
+			if (err)
+			{
+				HIP_ERROR("corresponding hchain not found");
+				goto hip_sadb_add_error;
+			}
 		}
 	}
 	

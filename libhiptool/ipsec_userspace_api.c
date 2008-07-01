@@ -87,17 +87,21 @@ uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr,
 					  HIP_PARAM_UINT, sizeof(uint8_t)), -1,
 					  "build param contents failed\n");
 	
-	// choose the anchor depending on the direction
-	if (direction == HIP_SPI_DIRECTION_IN)
-		hchain_anchor = entry->esp_peer_anchor;
-	else
-		hchain_anchor = entry->esp_local_anchor;
-	
-    HIP_HEXDUMP("the esp protection anchor is ", hchain_anchor,
-    		esp_prot_transforms[entry->esp_prot_transform]);
-	HIP_IFEL(hip_build_param_contents(msg, (void *)&hchain_anchor, HIP_PARAM_HCHAIN_ANCHOR,
-					  esp_prot_transforms[entry->esp_prot_transform]), -1,
-					  "build param contents failed\n");
+	// only transmit the anchor to the firewall, if the esp extension is used
+	if (entry->esp_prot_transform > ESP_PROT_TRANSFORM_UNUSED)
+	{
+		// choose the anchor depending on the direction
+		if (direction == HIP_SPI_DIRECTION_IN)
+			hchain_anchor = entry->esp_peer_anchor;
+		else
+			hchain_anchor = entry->esp_local_anchor;
+		
+	    HIP_HEXDUMP("the esp protection anchor is ", hchain_anchor,
+	    		esp_prot_transforms[entry->esp_prot_transform]);
+		HIP_IFEL(hip_build_param_contents(msg, (void *)&hchain_anchor, HIP_PARAM_HCHAIN_ANCHOR,
+						  esp_prot_transforms[entry->esp_prot_transform]), -1,
+						  "build param contents failed\n");
+	}
 
 	HIP_HEXDUMP("crypto key :", enckey, sizeof(struct hip_crypto_key));
 	HIP_IFEL(hip_build_param_contents(msg,
