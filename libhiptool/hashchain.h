@@ -39,33 +39,32 @@ struct hash_chain
 	hash_chain_element_t *anchor_element; /* anchor - last element */
 };
 
-/* create a new hash chain on the heap */
-hash_chain_t * hchain_create(int length);
-
-/* remove and return the next element from the hash chain */
-hash_chain_element_t * hchain_pop(hash_chain_t * hash_chain);
-
-/* return the next element from the hash chain */
-hash_chain_element_t  * hchain_next(hash_chain_t * hash_chain);
-
-/* return the current element from the hash chain */
-hash_chain_element_t * hchain_current(hash_chain_t * hash_chain);
-
+void hchain_print(const hash_chain_t * hash_chain, int hash_length);
+void hexdump(const unsigned char * const buffer, int length);
 
 /* check if a hash is part of a hash chain */
-int hchain_verify(const unsigned char *current_hash, const unsigned char *last_hash,
-		int tolerance);
+int hchain_verify(const unsigned char * current_hash, const unsigned char * last_hash,
+		int hash_length, int tolerance);
+
+/* create a new hash chain on the heap */
+int hchain_create(int hchain_length, int hash_length, hash_chain_t *out_hchain);
+
+/* remove and return the next element from the hash chain */
+int hchain_pop(hash_chain_t * hash_chain, int hash_length, unsigned char *popped_hash);
+
+/* return the next element from the hash chain */
+int hchain_next(const hash_chain_t *hash_chain, int hash_length, unsigned char *next_hash)
+
+/* return the current element from the hash chain */
+int hchain_current(const hash_chain_t *hash_chain, int hash_length,
+		unsigned char *current_hash)
 
 /* delete hash chain and free memory */
 int hchain_destruct(hash_chain_t *hash_chain);
 
-void hchain_print(hash_chain_t *hash_chain);
-
-// for testing
-void hexdump(const unsigned char * const buffer, int length);
-
-int hchain_get_num_remaining(hash_chain_t * hash_chain);
+int hchain_get_num_remaining(const hash_chain_t * hash_chain);
 
 /*************** Helper functions ********************/
-int concat_n_hash_SHA(unsigned char *hash, unsigned char** parts, int* part_length, int num_parts);
+int concat_n_hash_SHA(unsigned char *hash, unsigned char** parts, int* part_length,
+		int num_parts);
 #endif /*HASH_CHAIN_H*/
