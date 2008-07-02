@@ -358,14 +358,40 @@ out_err:
  * Accept a connection via PISA. Update firewall to allow further packages to
  * pass through.
  *
+ * @param hits HIT of the sender
+ * @param spi_s SPI of the sender
+ * @param hitr HIT of the receiver
+ * @param spi_r SPI of the receiver
+ */
+static void pisa_accept_connection(struct in6_addr *hits, uint32_t spi_s,
+				   struct in6_addr *hitr, uint32_t spi_r)
+{
+	struct pisa_conn *pcd;
+
+	/* add a new connection or update an old one */
+	if ((pcd = pisa_find_conn_by_hits(hits, hitr)) == NULL) {
+		pcd = malloc(sizeof(struct pisa_conn));
+		append_to_slist(pisa_connections, pcd);
+	}
+
+	ipv6_addr_copy(&pcd->hit[0], hits);
+	ipv6_addr_copy(&pcd->hit[1], hitr);
+	pcd->spi[0] = spi_s;
+	pcd->spi[1] = spi_r;
+
+	HIP_INFO("PISA accepted the connection.\n");
+}
+
+/**
+ * Accept a connection via PISA after receiving an I2 packet.
+ *
  * @param ctx context of the packet that belongs to that connection
  */
-static void pisa_accept_connection(hip_fw_context_t *ctx,
-				   struct hip_tlv_common *nonce)
+static void pisa_accept_connection_i2(hip_fw_context_t *ctx,
+				      struct hip_tlv_common *nonce)
 {
 	struct hip_common *hip = ctx->transport_hdr.hip;
-	struct pisa_conn *pcd;
-	struct hip_esp_info *esp_info;
+	struct hip_esp_info *esp;
 	uint32_t *spi;
 
 	if (nonce == NULL){
@@ -373,27 +399,16 @@ static void pisa_accept_connection(hip_fw_context_t *ctx,
 		return;
 	}
 
-	esp_info = hip_get_param(hip,HIP_PARAM_ESP_INFO);
+	esp = hip_get_param(hip, HIP_PARAM_ESP_INFO);
 
-	if (esp_info == NULL) {
+	if (esp == NULL) {
 		HIP_DEBUG("Accepting failed: no HIP_PARAM_ESP_INFO found.\n");
 		return;
 	}
 
 	spi = (uint32_t *) hip_get_param_contents_direct(nonce);
 
-	/* add a new connection or update an old one */
-	if ((pcd = pisa_find_conn_by_hits(&hip->hits, &hip->hitr)) == NULL) {
-		pcd = malloc(sizeof(struct pisa_conn));
-		append_to_slist(pisa_connections, pcd);
-	}
-
-	ipv6_addr_copy(&pcd->hit[0], &hip->hits);
-	ipv6_addr_copy(&pcd->hit[1], &hip->hitr);
-	pcd->spi[0] = esp_info->new_spi;
-	pcd->spi[1] = *spi;
-
-	HIP_INFO("PISA accepted the connection.\n");
+	pisa_accept_connection(&hip->hits, esp->new_spi, &hip->hitr, *spi);
 }
 
 /**
@@ -448,7 +463,7 @@ static int pisa_handler_r2(hip_fw_context_t *ctx)
 		verdict = NF_DROP;
 	} else {
 		/* allow futher communication otherwise */
-		pisa_accept_connection(ctx, nonce);
+		pisa_accept_connection_i2(ctx, nonce);
 		verdict = NF_ACCEPT;
 	}
 
@@ -485,9 +500,10 @@ void pisa_init(struct midauth_handlers *h)
 	h->r1 = midauth_handler_accept;
 	h->i2 = pisa_handler_i2;
 	h->r2 = pisa_handler_r2;
+	/* @todo update handling will be separated from bex handling */
 	h->u1 = midauth_handler_accept;
-	h->u2 = pisa_handler_i2;
-	h->u3 = pisa_handler_r2;
+	h->u2 = midauth_handler_accept;
+	h->u3 = midauth_handler_accept;
 	h->esp = pisa_handler_esp;
 
 	pisa_generate_random();
