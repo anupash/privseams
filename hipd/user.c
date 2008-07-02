@@ -33,7 +33,7 @@ int hip_handle_user_msg(struct hip_common *msg,
 	hip_lsi_t *lsi, *src_lsi = NULL, *dst_lsi = NULL;
 	in6_addr_t *src_ip = NULL, *dst_ip = NULL;
 	hip_ha_t *entry = NULL, *server_entry = NULL;
-	int err = 0, msg_type = 0, n = 0, len = 0, state = 0, reti = 0;
+	int err = 0, msg_type = 0, n = 0, len = 0, state = 0, reti = 0, dhterr = 0;
 	int access_ok = 0, send_response = 1, is_root;
 	HIP_KEA * kea = NULL;
 	struct hip_tlv_common *param = NULL;
@@ -368,6 +368,9 @@ int hip_handle_user_msg(struct hip_common *msg,
                 HIP_DEBUG("hip_opendht_inuse =  %d (should be %d)\n", 
                           hip_opendht_inuse, SO_HIP_DHT_ON);
         	}
+                dhterr = 0;
+                dhterr = hip_init_dht();
+                if (dhterr < 0) HIP_DEBUG("Initializing DHT returned error\n");
             break;
             
         case SO_HIP_DHT_OFF:

@@ -126,7 +126,7 @@ int hipd_init(int flush_ipsec, int killold)
 	hip_hit_t default_hit;
 	hip_lsi_t default_lsi;
 	hip_hit_t peer_hit;
-	int err = 0, dhterr = 0;
+	int err = 0, certerr = 0;
 	char str[64];
 	struct sockaddr_in6 daemon_addr;
 
@@ -273,15 +273,10 @@ int hipd_init(int flush_ipsec, int killold)
 		      sizeof(daemon_addr)), -1, "Bind on daemon addr failed\n");
 
 	hip_load_configuration();
-       
-        dhterr = 0;
-        dhterr = hip_init_dht();
-        if (dhterr < 0) HIP_DEBUG("Initializing DHT returned error\n");
 
-	/* reusing dhterr */
-	dhterr = 0;
-	dhterr = hip_init_certs();
-	if (dhterr < 0) HIP_DEBUG("Initializing cert configuration file returned error\n");
+	certerr = 0;
+	certerr = hip_init_certs();
+	if (certerr < 0) HIP_DEBUG("Initializing cert configuration file returned error\n");
 	
 #if 0
 	/* init new tcptimeout parameters, added by Tao Wan on 14.Jan.2008*/
@@ -905,7 +900,7 @@ int hip_init_certs(void) {
 			hit, hostname, HIP_CERT_INIT_DAYS);		
 		fclose(conf_file);
 	} else {
-		HIP_DEBUG("Configuration file existed exiting hip_init_certs");
+		HIP_DEBUG("Configuration file existed exiting hip_init_certs\n");
 	}
 out_err:
 	return err;
