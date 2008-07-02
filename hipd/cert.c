@@ -217,10 +217,7 @@ int hip_cert_spki_construct_keys(HIP_HASHTABLE * db, hip_hit_t * hit, RSA * rsa)
 	_HIP_DEBUG_HIT("HIT we are looking for ", hit);
         hostid_entry = hip_get_hostid_entry_by_lhi_and_algo(db, hit,
                                                             HIP_HI_RSA, -1);  
-	if (hostid_entry == NULL) {
-		err = -1;
-		goto out_err;
-	}
+	HIP_IFEL(!hostid_entry, -1, "Failed to get host id entry\n");
         lhi = &hostid_entry->lhi;
         hostid = hostid_entry->host_id;
         p = (u8 *)(hostid + 1);

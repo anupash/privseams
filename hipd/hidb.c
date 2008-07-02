@@ -453,13 +453,11 @@ int hip_get_any_localhost_hit(struct in6_addr *target, int algo, int anon)
 
 /**
  * Returns pointer to newly allocated area that contains a localhost HI. NULL
- * is returned is problems are encountered. 
+ * is returned if problems are encountered. 
  *
  * @param db   ...
  * @param lhi  HIT to match, if null, any.
  * @param algo algorithm to match, if HIP_ANY_ALGO, any.
- * @note       The memory that is allocated is 1024 bytes. If the key is longer,
- *             we fail.
  * @note       Remember to free the host id structure after use.
  */
 struct hip_host_id *hip_get_host_id(hip_db_struct_t *db, 
@@ -470,13 +468,13 @@ struct hip_host_id *hip_get_host_id(hip_db_struct_t *db,
 	unsigned long lf;
 	int t;
 
-	result = (struct hip_host_id *)HIP_MALLOC(1024, GFP_ATOMIC);
+	result = (struct hip_host_id *)HIP_MALLOC(HIP_MAX_HOST_ID_LEN, GFP_ATOMIC);
 	if (!result) {
 		HIP_ERROR("Out of memory.\n");
 		return NULL;
 	}
 
-	memset(result, 0, 1024);
+	memset(result, 0, HIP_MAX_HOST_ID_LEN);
 
 	HIP_READ_LOCK_DB(db);
 
@@ -489,7 +487,8 @@ struct hip_host_id *hip_get_host_id(hip_db_struct_t *db,
 	}
 
 	t = hip_get_param_total_len(tmp->host_id);
-	if (t > 1024) {
+	HIP_DEBUG("Host ID length is %d bytes", t);
+	if (t > HIP_MAX_HOST_ID_LEN) {
 		HIP_READ_UNLOCK_DB(db);
 		HIP_FREE(result);
 		return NULL;
@@ -601,14 +600,15 @@ static struct hip_host_id *hip_get_rsa_public_key(struct hip_host_id *tmp)
 	len = hip_get_param_contents_len(tmp);
 
 	HIP_DEBUG("Host ID len before cut-off: %d\n",
-		  hip_get_param_total_len(tmp));
+		  			hip_get_param_total_len(tmp));
 
-	/* the secret component of the RSA key is always d+p+q == 2*n bytes */
+	/* the secret component of the RSA key is d+p+q == 2*n bytes */
 
 	hip_get_rsa_keylen(tmp, &keylen, 1);
 	rsa_priv_len = 2 * keylen.n;
 
-	HIP_DEBUG("rsa_priv_len = %d (Key is %d bits.)\n", rsa_priv_len, rsa_priv_len * 4);
+	HIP_DEBUG("rsa_priv_len = %d (Key is %d bits.)\n", rsa_priv_len,
+							     rsa_priv_len * 4);
 
 	tmp->hi_length = htons(ntohs(tmp->hi_length) - rsa_priv_len);
 
@@ -619,8 +619,9 @@ static struct hip_host_id *hip_get_rsa_public_key(struct hip_host_id *tmp)
 
 	HIP_DEBUG("dilen: %d\n", dilen);
 
-	to = ((char *)(tmp + 1)) - sizeof(struct hip_host_id_key_rdata) + ntohs(tmp->hi_length);
-	from = to +  rsa_priv_len;
+	to = ((char *)(tmp + 1)) - sizeof(struct hip_host_id_key_rdata) +
+							 ntohs(tmp->hi_length);
+	from = to + rsa_priv_len;
 
 	memmove(to, from, dilen);
 
@@ -631,7 +632,7 @@ static struct hip_host_id *hip_get_rsa_public_key(struct hip_host_id *tmp)
 	/* make sure that the padding is zero (and not to reveal any bytes of
 	   the private key */
 	to = (char *)tmp + hip_get_param_contents_len(tmp) +
-	  sizeof(struct hip_tlv_common);
+	  					sizeof(struct hip_tlv_common);
 	memset(to, 0, 8);
 
 	_HIP_HEXDUMP("HOSTID... (public)", tmp, hip_get_param_total_len(tmp));

@@ -452,7 +452,7 @@ int bn2bin_safe(const BIGNUM *a, unsigned char *to, int len)
  */
 int impl_dsa_sign(u8 *digest, u8 *private_key, u8 *signature)
 {
-	DSA_SIG *dsa_sig;
+	DSA_SIG *dsa_sig = NULL;
 	DSA *dsa = NULL;
 	int offset = 0, err = 1;
 	int t = private_key[offset++];
@@ -469,11 +469,11 @@ int impl_dsa_sign(u8 *digest, u8 *private_key, u8 *signature)
 	dsa->p = BN_bin2bn(&private_key[offset], len, 0);
 	offset += len;
 
-	len = 64+8*t;
+	//len = 64+8*t;
 	dsa->g = BN_bin2bn(&private_key[offset], len, 0);
 	offset += len;
 
-	len = 64+8*t;
+	//len = 64+8*t;
 	dsa->pub_key = BN_bin2bn(&private_key[offset], len, 0);
 	offset += len;
 
@@ -488,7 +488,7 @@ int impl_dsa_sign(u8 *digest, u8 *private_key, u8 *signature)
 	//HIP_DEBUG("DSA.privkey: %s\n", BN_bn2hex(dsa->priv_key));
 
 	memset(signature, 0, HIP_DSA_SIG_SIZE);
-	signature[0] = 8;
+	signature[0] = t;
 
 	//HIP_HEXDUMP("DSA signing digest", digest, SHA_DIGEST_LENGTH);
 
@@ -499,8 +499,8 @@ int impl_dsa_sign(u8 *digest, u8 *private_key, u8 *signature)
 	//HIP_DEBUG("DSAsig.s: %s\n", BN_bn2hex(dsa_sig->s));
 
 	/* build signature from DSA_SIG struct */
-	bn2bin_safe(dsa_sig->r, &signature[1], 20);
-	bn2bin_safe(dsa_sig->s, &signature[21], 20);
+	bn2bin_safe(dsa_sig->r, &signature[1], DSA_PRIV);
+	bn2bin_safe(dsa_sig->s, &signature[1 + DSA_PRIV], DSA_PRIV);
 	DSA_SIG_free(dsa_sig);
  	err = 0;
 
@@ -542,8 +542,8 @@ int impl_dsa_verify(u8 *digest, u8 *public_key, u8 *signature)
 	//HIP_DEBUG("DSA.pubkey: %s\n", BN_bn2hex(dsa->pub_key));
 
 	/* build the DSA structure */
-	dsa_sig.r = BN_bin2bn(&signature[1], 20, NULL);
-	dsa_sig.s = BN_bin2bn(&signature[21], 20, NULL);
+	dsa_sig.r = BN_bin2bn(&signature[1], DSA_PRIV, NULL);
+	dsa_sig.s = BN_bin2bn(&signature[1 + DSA_PRIV], DSA_PRIV, NULL);
 
 	//HIP_DEBUG("DSAsig.r: %s\n", BN_bn2hex(dsa_sig.r));
 	//HIP_DEBUG("DSAsig.s: %s\n", BN_bn2hex(dsa_sig.s));
@@ -565,19 +565,18 @@ int impl_dsa_verify(u8 *digest, u8 *public_key, u8 *signature)
  */
 int impl_rsa_sign(u8 *digest, u8 *private_key, u8 *signature, struct hip_rsa_keylen *keylen)
 {
-	RSA *rsa;
-	BN_CTX *ctx;
+	RSA *rsa = NULL;
+	BN_CTX *ctx = NULL;
 	u8 *data = private_key;
-	int offset = keylen->e_len;
-	int err, res = 1;
+	int offset;
+	int err;
 	unsigned int sig_len;
 
 	/* Build the private key */
 	rsa = RSA_new();
-	if (!rsa) {
-		goto err;
-	}
+	HIP_IFE(!rsa, 1);
 
+	offset = keylen->e_len;
 	rsa->e = BN_bin2bn(&data[offset], keylen->e, 0);
 	offset += keylen->e;
 	rsa->n = BN_bin2bn(&data[offset], keylen->n, 0);
@@ -589,15 +588,10 @@ int impl_rsa_sign(u8 *digest, u8 *private_key, u8 *signature, struct hip_rsa_key
 	rsa->q = BN_bin2bn(&data[offset], keylen->n / 2, 0);
 
 	ctx = BN_CTX_new();
-	if (!ctx) {
-		goto err;
-	}
+	HIP_IFE(!ctx, 1);
 
 	rsa->iqmp = BN_mod_inverse(NULL, rsa->p, rsa->q, ctx);
-	if (!rsa->iqmp) {
-		HIP_ERROR("Unable to invert.\n");
-		goto err;
-	}
+	HIP_IFEL(!rsa->iqmp, 1, "Unable to invert.\n");
 
 	/* assuming RSA_sign() uses PKCS1 - RFC 3110/2437
 	 * hash = SHA1 ( data )
@@ -607,61 +601,56 @@ int impl_rsa_sign(u8 *digest, u8 *private_key, u8 *signature, struct hip_rsa_key
 
 	sig_len = keylen->n;
 	memset(signature, 0, sig_len);
+	/* RSA_sign returns 0 on failure */
 	err = RSA_sign(NID_sha1, digest, SHA_DIGEST_LENGTH, signature,
-		       &sig_len, rsa);
-	res = err == 0 ? 1 : 0;
-	
-	
+		       &sig_len, rsa) == 0 ? 1 : 0;
+
 	_HIP_DEBUG("***********RSA SIGNING ERROR*************\n");
 	_HIP_DEBUG("Siglen %d,  err :%d\n",sig_len, ,err);
 	_HIP_DEBUG("***********RSA SIGNING ERROR*************\n");
 
 
 	_HIP_HEXDUMP("signature",signature,sig_len);
- err:
+ out_err:
 	if (rsa)
 		RSA_free(rsa);
 	if (ctx)
 		BN_CTX_free(ctx);
 
-	return res;
+	return err;
 }
 
 int impl_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, struct hip_rsa_keylen *keylen)
 {
-	RSA *rsa;
+	RSA *rsa = NULL;
 	struct hip_sig *sig = (struct hip_sig *)(signature - 1);
 	u8 *data = public_key;
-	int sig_len, err;
-	int offset = keylen->e_len;
+	int err;
+	int offset;
 
 	if (keylen->e > 512) { /* RFC 3110 limits this field to 4096 bits */
-		HIP_ERROR("RSA HI has invalid exponent length of %d\n",
-			  keylen->e);
-		return(-1);
+	    HIP_ERROR("RSA HI has invalid exponent length of %d\n", keylen->e);
+	    return(-1);
 	}
 
 	/* Build the public key */
 	rsa = RSA_new();
 
+	offset = keylen->e_len;
 	rsa->e = BN_bin2bn(&data[offset], keylen->e, 0);
 	offset += keylen->e;
 	rsa->n = BN_bin2bn(&data[offset], keylen->n, 0);
 
-	sig_len = ntohs(sig->length) - 1; /* exclude algorithm */
-
+	//sig_len = ntohs(sig->length) - 1; /* exclude algorithm */
 	//HIP_DEBUG("INSIDE impl_rsa_verify :: key_len=%d, sig_len= %d, sig->length = %d\n",key_len,sig_len,sig->length);
 	/* verify the RSA signature */
-	err = RSA_verify(NID_sha1, digest, SHA_DIGEST_LENGTH,
-			 signature,RSA_size(rsa) , rsa);
-	/*RSA_verify returns 1 if success.*/
-
+	/* RSA_verify returns 0 on failure */
+	err = RSA_verify(NID_sha1, digest, SHA_DIGEST_LENGTH, signature,
+			RSA_size(rsa) , rsa) == 0 ? 1 : 0;
 
 	unsigned long e_code = ERR_get_error();
 	ERR_load_crypto_strings();
-	
 
-		
 	_HIP_DEBUG("***********RSA ERROR*************\n");
 	_HIP_DEBUG("htons %d , RSA_size(rsa) = %d\n",htons(sig->length),RSA_size(rsa));
 	char buf[200];
@@ -674,12 +663,9 @@ int impl_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, struct hip_rsa_ke
 	_HIP_DEBUG("Reason error :%s\n",ERR_reason_error_string(e_code));
 	_HIP_DEBUG("***********RSA ERROR*************\n");
 
-
 	RSA_free(rsa);
 
-	HIP_DEBUG("RSA verify: %d\n", err);
-
-	return err == 1 ? 0 : 1;
+	return err;
 }
 
 int hip_gen_dh_shared_key(DH *dh, u8 *peer_key, size_t peer_len, u8 *dh_shared_key,
@@ -780,12 +766,11 @@ u16 hip_get_dh_size(u8 hip_dh_group_type) {
  */
 DSA *create_dsa_key(int bits) {
   DSA *dsa = NULL;
-  int ok;
 
-  if (bits < 1 || bits > HIP_MAX_DSA_KEY_LEN) {
+/*  if (bits < 1 || bits > HIP_MAX_DSA_KEY_LEN) {
     HIP_ERROR("create_dsa_key failed (illegal bits value %d)\n", bits);
     goto err_out;
-  }
+  } Checked before calling function */
 
   dsa = DSA_generate_parameters(bits, NULL, 0, NULL, NULL, NULL, NULL);
   if (!dsa) {
@@ -795,8 +780,7 @@ DSA *create_dsa_key(int bits) {
   }
 
   /* generate private and public keys */
-  ok = DSA_generate_key(dsa);
-  if (!ok) {
+  if (!DSA_generate_key(dsa)) {
     HIP_ERROR("create_dsa_key failed (DSA_generate_key): %s\n",
 	     ERR_error_string(ERR_get_error(), NULL));
     goto err_out;
@@ -823,18 +807,17 @@ DSA *create_dsa_key(int bits) {
  */
 RSA *create_rsa_key(int bits) {
   RSA *rsa = NULL;
-  int ok;
 
-  if (bits < 1 || bits > HIP_MAX_RSA_KEY_LEN) {
+ /* if (bits < 1 || bits > HIP_MAX_RSA_KEY_LEN) {
     HIP_ERROR("create_rsa_key failed (illegal bits value %d)\n", bits);
     goto err_out;
-  }
+  } Checked before calling function */
 
   /* generate private and public keys */
   rsa = RSA_generate_key(bits, RSA_F4, NULL, NULL);
   if (!rsa) {
     HIP_ERROR("create_rsa_key failed (RSA_generate_key): %s\n",
-	     ERR_error_string(ERR_get_error(), NULL));
+	     			ERR_error_string(ERR_get_error(), NULL));
     goto err_out;
   }
 

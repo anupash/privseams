@@ -590,9 +590,7 @@ int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
 int hip_rsa_host_id_to_hit(const struct hip_host_id *host_id,
 			   struct in6_addr *hit, int hit_type)
 {
-	int err;
-	err = hip_dsa_host_id_to_hit(host_id, hit, hit_type);
-	return err;
+	return hip_dsa_host_id_to_hit(host_id, hit, hit_type);
 }
 
 int hip_host_id_to_hit(const struct hip_host_id *host_id,
@@ -625,19 +623,12 @@ int hip_private_dsa_host_id_to_hit(const struct hip_host_id *host_id,
 
 	/*! \todo add an extra check for the T val */
 
-	if (contents_len <= 20) {
-		err = -EMSGSIZE;
-		HIP_ERROR("Host id too short\n");
-		goto out_err;
-	}
+	HIP_IFEL(contents_len <= 20, -EMSGSIZE, "Host id too short\n");
 
 	/* Allocate enough space for host id; there will be 20 bytes extra
 	   to avoid hassle with padding. */
 	host_id_pub = (struct hip_host_id *)HIP_MALLOC(total_len, GFP_KERNEL);
-	if (!host_id_pub) {
-		err = -EFAULT;
-		goto out_err;
-	}
+	HIP_IFE(!host_id_pub, -EFAULT);
 	memset(host_id_pub, 0, total_len);
 
 	memcpy(host_id_pub, host_id,
@@ -649,8 +640,7 @@ int hip_private_dsa_host_id_to_hit(const struct hip_host_id *host_id,
 	_HIP_HEXDUMP("extracted pubkey", host_id_pub,
 		     hip_get_param_total_len(host_id_pub));
 
-	err = hip_dsa_host_id_to_hit(host_id_pub, hit, hit_type);
-	if (err) {
+	if (err = hip_dsa_host_id_to_hit(host_id_pub, hit, hit_type)) {
 		HIP_ERROR("Failed to convert HI to HIT.\n");
 		goto out_err;
 	}
@@ -678,10 +668,7 @@ int hip_private_rsa_host_id_to_hit(const struct hip_host_id *host_id,
 
 	/* Allocate space for public key */
 	host_id_pub = (struct hip_host_id *)HIP_MALLOC(total_len, GFP_KERNEL);
-	if (!host_id_pub) {
-		err = -EFAULT;
-		goto out_err;
-	}
+	HIP_IFE(!host_id_pub, -EFAULT);
 	memset(host_id_pub, 0, total_len);
 
 	/* Length of the private part of the RSA key d + p + q
@@ -701,18 +688,16 @@ int hip_private_rsa_host_id_to_hit(const struct hip_host_id *host_id,
 	_HIP_HEXDUMP("extracted pubkey", host_id_pub,
 				 hip_get_param_total_len(host_id_pub));
 
-	err = hip_rsa_host_id_to_hit(host_id_pub, hit, hit_type);
-
-	if (err) {
-			HIP_ERROR("Failed to convert HI to HIT.\n");
-			goto out_err;
+	if (err = hip_rsa_host_id_to_hit(host_id_pub, hit, hit_type)) {
+		HIP_ERROR("Failed to convert HI to HIT.\n");
+		goto out_err;
 	}
 
  out_err:
 	
 	if (host_id_pub)
-			HIP_FREE(host_id_pub);
-	
+		HIP_FREE(host_id_pub);
+
 	return err;
 }
 
@@ -800,7 +785,8 @@ void change_key_file_perms(char *filenamebase) {
 
 int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
 				 int use_default, const char *hi_fmt,
-				 const char *hi_file, int rsa_key_bits, int dsa_key_bits) {
+				 const char *hi_file, int rsa_key_bits,
+				 int dsa_key_bits) {
   int err, ret;
   hip_hdr_type_t numeric_action = 0;
   char addrstr[INET6_ADDRSTRLEN];
@@ -821,8 +807,7 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
   struct in6_addr *dsa_hit = NULL;
 
   memset(hostname, 0, HIP_HOST_ID_HOSTNAME_LEN_MAX);
-  err = -gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
-  if (err) {
+  if (err = -gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1)) {
     HIP_ERROR("gethostname failed (%d)\n", err);
     goto out_err;
   }
@@ -832,16 +817,18 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
   fmt = HIP_KEYFILE_FMT_HIP_PEM;
 
   HIP_IFEL((!use_default && strcmp(hi_fmt, "rsa") && strcmp(hi_fmt, "dsa")),
-				-ENOSYS, "Only rsa or dsa keys are supported\n");
+			      -ENOSYS, "Only rsa and dsa keys are supported\n");
 
   /* Set filenamebase (depending on whether the user supplied a
      filenamebase or not) */
-  if (use_default == 0) {
+  if (!use_default) {
     if(!strcmp(hi_fmt, "dsa")) {
       dsa_filenamebase = malloc(strlen(hi_file) + 1);
+      HIP_IFEL(!dsa_filenamebase, -ENOMEM, "Could not allocate DSA filename\n");
       memcpy(dsa_filenamebase, hi_file, strlen(hi_file));
     } else /*rsa*/ {
       rsa_filenamebase = malloc(strlen(hi_file) + 1);
+      HIP_IFEL(!rsa_filenamebase, -ENOMEM, "Could not allocate RSA filename\n");
       memcpy(rsa_filenamebase, hi_file, strlen(hi_file));
     }
   } else { /* create dynamically default filenamebase */
@@ -850,12 +837,13 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
     HIP_INFO("No key file given, use default\n");
 
     /* DEFAULT_CONFIG_DIR/DEFAULT_HOST_DSA_KEY_FILE_BASE.DEFAULT_ANON_HI_FILE_NAME_SUFFIX)\0 */
-    /* Creation of default keys is called with hi_fmt = NULL, anon = 0 */
+    /* Creation of default keys is called with hi_fmt = NULL,
+       adding is called separately for DSA, RSA anon and RSA pub */
     if (hi_fmt == NULL || !strcmp(hi_fmt, "dsa")) {
 	dsa_filenamebase_len = strlen(DEFAULT_CONFIG_DIR) + strlen("/") +
-	strlen(DEFAULT_HOST_DSA_KEY_FILE_BASE) + 1;
+				    strlen(DEFAULT_HOST_DSA_KEY_FILE_BASE) + 1;
 	dsa_filenamebase = malloc(HOST_ID_FILENAME_MAX_LEN);
-	HIP_IFEL(!dsa_filenamebase, -ENOMEM, "Could not allocate DSA file name\n");
+	HIP_IFEL(!dsa_filenamebase, -ENOMEM, "Could not allocate DSA filename\n");
 
 	ret = snprintf(dsa_filenamebase,
 		   	dsa_filenamebase_len +
@@ -868,7 +856,7 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
 
 	dsa_filenamebase_pub = malloc(HOST_ID_FILENAME_MAX_LEN);
 	HIP_IFEL(!dsa_filenamebase_pub, -ENOMEM, 
-			"Could not allocate DSA (pub) file name\n");
+			"Could not allocate DSA (pub) filename\n");
 
 	ret = snprintf(dsa_filenamebase_pub, HOST_ID_FILENAME_MAX_LEN, "%s/%s%s",
 		   	DEFAULT_CONFIG_DIR,
@@ -883,21 +871,25 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
     if (hi_fmt == NULL || !strcmp(hi_fmt, "rsa")) {
 	rsa_filenamebase_len = strlen(DEFAULT_CONFIG_DIR) + strlen("/") +
 				strlen(DEFAULT_HOST_RSA_KEY_FILE_BASE) + 1;
-	rsa_filenamebase = malloc(HOST_ID_FILENAME_MAX_LEN);
-	HIP_IFEL(!rsa_filenamebase, -ENOMEM, "Could not allocate RSA file name\n");
 
-	ret = snprintf(rsa_filenamebase, HOST_ID_FILENAME_MAX_LEN, "%s/%s%s",
+	if (anon || hi_fmt == NULL) {
+	    rsa_filenamebase = malloc(HOST_ID_FILENAME_MAX_LEN);
+	    HIP_IFEL(!rsa_filenamebase, -ENOMEM,
+					"Could not allocate RSA filename\n");
+
+	    ret = snprintf(rsa_filenamebase, HOST_ID_FILENAME_MAX_LEN, "%s/%s%s",
                    		DEFAULT_CONFIG_DIR,
 		   		DEFAULT_HOST_RSA_KEY_FILE_BASE,
 		   		DEFAULT_ANON_HI_FILE_NAME_SUFFIX);
-	HIP_IFE(ret <= 0, -EINVAL);
+	    HIP_IFE(ret <= 0, -EINVAL);
 
-	HIP_DEBUG("Using rsa (anon hi) filenamebase: %s\n", rsa_filenamebase);
+	    HIP_DEBUG("Using rsa (anon hi) filenamebase: %s\n", rsa_filenamebase);
+	}
 
-	if (!anon) {
+	if (!anon || hi_fmt == NULL) {
 	    rsa_filenamebase_pub = malloc(HOST_ID_FILENAME_MAX_LEN);
 	    HIP_IFEL(!rsa_filenamebase_pub, -ENOMEM, 
-				"Could not allocate RSA (pub) file name\n");
+				"Could not allocate RSA (pub) filename\n");
 
 	    ret = snprintf(rsa_filenamebase_pub,
 		   	rsa_filenamebase_len+
@@ -921,39 +913,36 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
 
     /* Default directory is created only in "hipconf new default hi" */
     if (use_default) {
-      err = check_and_create_dir(DEFAULT_CONFIG_DIR,
-				 DEFAULT_CONFIG_DIR_MODE);
-      if (err) {
-	HIP_ERROR("Could not create default directory\n", err);
-	goto out_err;
-      }
+	if (err = check_and_create_dir(DEFAULT_CONFIG_DIR,
+				 	DEFAULT_CONFIG_DIR_MODE)) {
+	    HIP_ERROR("Could not create default directory\n");
+	    goto out_err;
+	}
     }
 
     if (!use_default) {
+
       if (!strcmp(hi_fmt, "dsa")) {
-	dsa_key = create_dsa_key(dsa_key_bits);
-	HIP_IFEL(!dsa_key, -EINVAL, "creation of dsa key failed\n");
-
-	err = save_dsa_private_key(dsa_filenamebase, dsa_key);
-	if (err) {
-	  HIP_ERROR("saving of dsa key failed\n");
-	  goto out_err;
-	}
-
+	  dsa_key = create_dsa_key(dsa_key_bits);
+	  HIP_IFEL(!dsa_key, -EINVAL, "creation of dsa key failed\n");
+	  if (err = save_dsa_private_key(dsa_filenamebase, dsa_key)) {
+	      HIP_ERROR("saving of dsa key failed\n");
+	      goto out_err;
+	  }
       } else { /*RSA*/
-	rsa_key = create_rsa_key(rsa_key_bits);
-	HIP_IFEL(!rsa_key, -EINVAL, "creation of rsa key failed\n");
-
-	 err = save_rsa_private_key(rsa_filenamebase, rsa_key);
-	 if (err) {
-	   HIP_ERROR("saving of rsa key failed\n");
-	   goto out_err;
-	 }
+	  rsa_key = create_rsa_key(rsa_key_bits);
+	  HIP_IFEL(!rsa_key, -EINVAL, "creation of rsa key failed\n");
+	  if (err = save_rsa_private_key(rsa_filenamebase, rsa_key)) {
+	      HIP_ERROR("saving of rsa key failed\n");
+	      goto out_err;
+	  }
       }
       HIP_DEBUG("saved key\n");
       break;
+
     }
 
+    /* using default */
     dsa_key = create_dsa_key(dsa_key_bits);
     HIP_IFEL(!dsa_key, -EINVAL, "creation of dsa key failed\n");
 
@@ -966,28 +955,24 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
     rsa_pub_key = create_rsa_key(rsa_key_bits);
     HIP_IFEL(!dsa_pub_key, -EINVAL, "creation of rsa key (pub) failed\n");
 
-    err = save_dsa_private_key(dsa_filenamebase, dsa_key);
-    if (err) {
-      HIP_ERROR("saving of dsa key failed\n");
-      goto out_err;
+    if (err = save_dsa_private_key(dsa_filenamebase, dsa_key)) {
+        HIP_ERROR("saving of dsa key failed\n");
+        goto out_err;
     }
 
-    err = save_dsa_private_key(dsa_filenamebase_pub, dsa_pub_key);
-    if (err) {
-      HIP_ERROR("saving of dsa key failed\n");
-      goto out_err;
+    if (err = save_dsa_private_key(dsa_filenamebase_pub, dsa_pub_key)) {
+        HIP_ERROR("saving of dsa key failed\n");
+        goto out_err;
     }
 
-    err = save_rsa_private_key(rsa_filenamebase, rsa_key);
-    if (err) {
-      HIP_ERROR("saving of rsa key failed\n");
-      goto out_err;
+    if (err = save_rsa_private_key(rsa_filenamebase, rsa_key)) {
+        HIP_ERROR("saving of rsa key failed\n");
+        goto out_err;
     }
 
-    err = save_rsa_private_key(rsa_filenamebase_pub, rsa_pub_key);
-    if (err) {
-      HIP_ERROR("saving of rsa key failed\n");
-      goto out_err;
+    if (err = save_rsa_private_key(rsa_filenamebase_pub, rsa_pub_key)) {
+        HIP_ERROR("saving of rsa key failed\n");
+        goto out_err;
     }
     break;
 
@@ -996,47 +981,40 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
 
     if (!use_default) {
       if (!strcmp(hi_fmt, "dsa")) {
-	err = load_dsa_private_key(dsa_filenamebase, &dsa_key);
-	if (err) {
-	  HIP_ERROR("Loading of the DSA key failed\n");
-	  goto out_err;
+	if (err = load_dsa_private_key(dsa_filenamebase, &dsa_key)) {
+	    HIP_ERROR("Loading of the DSA key failed\n");
+	    goto out_err;
 	}
 	dsa_key_rr_len = dsa_to_dns_key_rr(dsa_key, &dsa_key_rr);
 	HIP_IFEL(dsa_key_rr_len <= 0, -EFAULT, "dsa_key_rr_len <= 0\n");
 
-	err = dsa_to_hip_endpoint(dsa_key, &endpoint_dsa_hip, 
-				  anon ? HIP_ENDPOINT_FLAG_ANON : 0, 
-				  hostname);
-	if (err) {
-	  HIP_ERROR("Failed to allocate and build DSA endpoint.\n");
-	  goto out_err;
+	if (err = dsa_to_hip_endpoint(dsa_key, &endpoint_dsa_hip,
+				anon ? HIP_ENDPOINT_FLAG_ANON : 0, hostname)) {
+	    HIP_ERROR("Failed to allocate and build DSA endpoint.\n");
+	    goto out_err;
 	}
-	err = hip_build_param_eid_endpoint(msg, endpoint_dsa_hip);
-	if (err) {
-	  HIP_ERROR("Building of host id failed\n");
-	  goto out_err;
+	if (err = hip_build_param_eid_endpoint(msg, endpoint_dsa_hip)) {
+	    HIP_ERROR("Building of host id failed\n");
+	    goto out_err;
 	}
 
       } else { /*RSA*/
-	err = load_rsa_private_key(rsa_filenamebase, &rsa_key);
-	if (err) {
-	  HIP_ERROR("Loading of the RSA key failed\n");
-	  goto out_err;
+	if (err = load_rsa_private_key(rsa_filenamebase, &rsa_key)) {
+	    HIP_ERROR("Loading of the RSA key failed\n");
+	    goto out_err;
 	}
 	rsa_key_rr_len = rsa_to_dns_key_rr(rsa_key, &rsa_key_rr);
 	HIP_IFEL(rsa_key_rr_len <= 0, -EFAULT, "rsa_key_rr_len <= 0\n");
 
-	err = rsa_to_hip_endpoint(rsa_key, &endpoint_rsa_hip, 
+	if (err = rsa_to_hip_endpoint(rsa_key, &endpoint_rsa_hip, 
 				  anon ? HIP_ENDPOINT_FLAG_ANON : 0,
-				  hostname);
-	if (err) {
-	  HIP_ERROR("Failed to allocate and build RSA endpoint.\n");
-	  goto out_err;
+				  hostname)) {
+	    HIP_ERROR("Failed to allocate and build RSA endpoint.\n");
+	    goto out_err;
 	}
-	err = hip_build_param_eid_endpoint(msg, endpoint_rsa_hip);
-	if (err) {
-	  HIP_ERROR("Building of host id failed\n");
-	  goto out_err;
+	if (err = hip_build_param_eid_endpoint(msg, endpoint_rsa_hip)) {
+	    HIP_ERROR("Building of host id failed\n");
+	    goto out_err;
 	}
 
       }
@@ -1048,31 +1026,27 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
     HIP_IFEL(hi_fmt == NULL, -1, "Key type is null.\n");
 
     if (!strcmp(hi_fmt, "dsa")) {
-	err = load_dsa_private_key(dsa_filenamebase, &dsa_key);
-	if (err) {
-	  HIP_ERROR("Loading of the DSA key failed\n");
-	  goto out_err;
+	if (err = load_dsa_private_key(dsa_filenamebase, &dsa_key)) {
+	    HIP_ERROR("Loading of the DSA key failed\n");
+	    goto out_err;
 	}
 
 	dsa_key_rr_len = dsa_to_dns_key_rr(dsa_key, &dsa_key_rr);
 	HIP_IFEL(dsa_key_rr_len <= 0, -EFAULT, "dsa_key_rr_len <= 0\n");
 
-	err = dsa_to_hip_endpoint(dsa_key, &endpoint_dsa_hip, 
-			      HIP_ENDPOINT_FLAG_ANON, hostname);
-	if (err) {
+	if (err = dsa_to_hip_endpoint(dsa_key, &endpoint_dsa_hip, 
+			      HIP_ENDPOINT_FLAG_ANON, hostname)) {
 	    HIP_ERROR("Failed to allocate and build DSA endpoint (anon).\n");
 	    goto out_err;
 	}
 
-	err = hip_private_dsa_to_hit(dsa_key, dsa_key_rr, HIP_HIT_TYPE_HASH100,
-				 &dsa_lhi.hit);
-	if (err) {
+	if (err = hip_private_dsa_to_hit(dsa_key, dsa_key_rr,
+				 HIP_HIT_TYPE_HASH100, &dsa_lhi.hit)) {
 	    HIP_ERROR("Conversion from DSA to HIT failed\n");
 	    goto out_err;
 	}
 
-	err = load_dsa_private_key(dsa_filenamebase_pub, &dsa_pub_key);
-	if (err) {
+	if (err = load_dsa_private_key(dsa_filenamebase_pub, &dsa_pub_key)) {
 	    HIP_ERROR("Loading of the DSA key (pub) failed\n");
 	    goto out_err;
 	}
@@ -1082,26 +1056,22 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
 
 	HIP_DEBUG_HIT("DSA HIT", &dsa_lhi.hit);
 
-	err = hip_private_dsa_to_hit(dsa_pub_key, dsa_pub_key_rr,
-				 HIP_HIT_TYPE_HASH100, 
-				 &dsa_pub_lhi.hit);
-	if (err) {
-	   HIP_ERROR("Conversion from DSA to HIT failed\n");
-	goto out_err;
+	if (err = hip_private_dsa_to_hit(dsa_pub_key, dsa_pub_key_rr,
+				 HIP_HIT_TYPE_HASH100, &dsa_pub_lhi.hit)) {
+	    HIP_ERROR("Conversion from DSA to HIT failed\n");
+	    goto out_err;
 	}
 	HIP_DEBUG_HIT("DSA HIT", &dsa_pub_lhi.hit);
 
-	err = dsa_to_hip_endpoint(dsa_pub_key, &endpoint_dsa_pub_hip, 
-			      0, hostname);
-	if (err) {
+	if (err = dsa_to_hip_endpoint(dsa_pub_key, 
+					&endpoint_dsa_pub_hip, 0, hostname)) {
 	    HIP_ERROR("Failed to allocate and build DSA endpoint (pub).\n");
 	    goto out_err;
 	}
 
     } else if (anon) { /* rsa anon */
 
-	err = load_rsa_private_key(rsa_filenamebase, &rsa_key);
-	if (err) {
+	if (err = load_rsa_private_key(rsa_filenamebase, &rsa_key)) {
 	    HIP_ERROR("Loading of the RSA key failed\n");
 	    goto out_err;
 	}
@@ -1109,25 +1079,22 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
 	rsa_key_rr_len = rsa_to_dns_key_rr(rsa_key, &rsa_key_rr);
 	HIP_IFEL(rsa_key_rr_len <= 0, -EFAULT, "rsa_key_rr_len <= 0\n");
 
-	err = rsa_to_hip_endpoint(rsa_key, &endpoint_rsa_hip, 
-			      HIP_ENDPOINT_FLAG_ANON, hostname);
-	if (err) {
+	if (err = rsa_to_hip_endpoint(rsa_key, &endpoint_rsa_hip, 
+					HIP_ENDPOINT_FLAG_ANON, hostname)) {
 	    HIP_ERROR("Failed to allocate and build RSA endpoint (anon).\n");
 	    goto out_err;
 	}
 
-	err = hip_private_rsa_to_hit(rsa_key, rsa_key_rr, HIP_HIT_TYPE_HASH100,
-				 &rsa_lhi.hit);
-	if (err) {
+	if (err = hip_private_rsa_to_hit(rsa_key, rsa_key_rr,
+					HIP_HIT_TYPE_HASH100,  &rsa_lhi.hit)) {
 	    HIP_ERROR("Conversion from RSA to HIT failed\n");
 	    goto out_err;
 	}
 	HIP_DEBUG_HIT("RSA HIT", &rsa_lhi.hit);
 
-   } else { /* rsa pub */
+    } else { /* rsa pub */
 
-	err = load_rsa_private_key(rsa_filenamebase_pub, &rsa_pub_key);
-	if (err) {
+	if (err = load_rsa_private_key(rsa_filenamebase_pub, &rsa_pub_key)) {
 	    HIP_ERROR("Loading of the RSA key (pub) failed\n");
 	    goto out_err;
 	}
@@ -1135,21 +1102,20 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
 	rsa_pub_key_rr_len = rsa_to_dns_key_rr(rsa_pub_key, &rsa_pub_key_rr);
 	HIP_IFEL(rsa_pub_key_rr_len <= 0, -EFAULT, "rsa_pub_key_rr_len <= 0\n");
 
-	err = rsa_to_hip_endpoint(rsa_pub_key, &endpoint_rsa_pub_hip, 
-			      0, hostname);
-	if (err) {
+	if (err = rsa_to_hip_endpoint(rsa_pub_key, 
+					&endpoint_rsa_pub_hip, 0, hostname)) {
 	    HIP_ERROR("Failed to allocate and build RSA endpoint (pub).\n");
-	goto out_err;
+	    goto out_err;
 	}
 
-	err = hip_private_rsa_to_hit(rsa_pub_key, rsa_pub_key_rr,
-				 HIP_HIT_TYPE_HASH100, &rsa_pub_lhi.hit);
-	if (err) {
+	if (err = hip_private_rsa_to_hit(rsa_pub_key, rsa_pub_key_rr,
+				 HIP_HIT_TYPE_HASH100, &rsa_pub_lhi.hit)) {
 	    HIP_ERROR("Conversion from RSA to HIT failed\n");
 	    goto out_err;
 	}
 	HIP_DEBUG_HIT("RSA HIT", &rsa_pub_lhi.hit);
-   }
+
+    }
 
     break;
   } /* end switch */
@@ -1159,29 +1125,25 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
 
   if (!strcmp(hi_fmt, "dsa")) {
 
-	err = hip_build_param_eid_endpoint(msg, endpoint_dsa_hip);
-	if (err) {
+	if (err = hip_build_param_eid_endpoint(msg, endpoint_dsa_hip)) {
 	    HIP_ERROR("Building of host id failed\n");
 	    goto out_err;
 	}
-	err = hip_build_param_eid_endpoint(msg, endpoint_dsa_pub_hip);
-	if (err) {
+	if (err = hip_build_param_eid_endpoint(msg, endpoint_dsa_pub_hip)) {
 	    HIP_ERROR("Building of host id failed\n");
 	    goto out_err;
 	}
 
   } else if (anon) {
 
-	err = hip_build_param_eid_endpoint(msg, endpoint_rsa_hip);
-	if (err) {
+	if (err = hip_build_param_eid_endpoint(msg, endpoint_rsa_hip)) {
 	    HIP_ERROR("Building of host id failed\n");
 	    goto out_err;
 	}
 
   } else {
 
-	err = hip_build_param_eid_endpoint(msg, endpoint_rsa_pub_hip);
-	if (err) {
+	if (err = hip_build_param_eid_endpoint(msg, endpoint_rsa_pub_hip)) {
 	    HIP_ERROR("Building of host id failed\n");
 	    goto out_err;
 	}
@@ -1189,10 +1151,9 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
   }
 
  skip_host_id:
-  err = hip_build_user_hdr(msg, numeric_action, 0);
-  if (err) {
-    HIP_ERROR("build hdr error %d\n", err);
-    goto out_err;
+  if (err = hip_build_user_hdr(msg, numeric_action, 0)) {
+      HIP_ERROR("build hdr error %d\n", err);
+      goto out_err;
   }
 
  skip_msg:
@@ -1376,11 +1337,7 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
 
   _HIP_DEBUG("dsa key rr len = %d\n", dsa_key_rr_len);
   *dsa_key_rr = malloc(dsa_key_rr_len);
-  if (!*dsa_key_rr) {
-    HIP_ERROR("malloc\n");
-    err = -ENOMEM;
-    goto out_err;
-  }
+  HIP_IFEL(!*dsa_key_rr, -ENOMEM, "Malloc for *dsa_key_rr failed\n");
 
   /* side-effect: does also padding for Q, P, G, and Y */
   memset(*dsa_key_rr, 0, dsa_key_rr_len);
@@ -1411,11 +1368,8 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
   /* Q */
   bn2bin_len = bn2bin_safe(dsa->q, bn_buf, DSA_PRIV);
   _HIP_DEBUG("q len=%d\n", bn2bin_len);
-  if (!bn2bin_len) {
-    HIP_ERROR("bn2bin\n");
-    err = -ENOMEM;
-    goto out_err;
-  }
+  HIP_IFEL(!bn2bin_len, -ENOMEM, "bn2bin for Q failed\n");
+
   HIP_ASSERT(bn2bin_len == DSA_PRIV);
   memcpy(p, bn_buf, bn2bin_len);
   p += bn2bin_len;
@@ -1451,7 +1405,7 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
 
   if(dsa->priv_key){
     bn2bin_len = bn2bin_safe(dsa->priv_key, bn_buf, DSA_PRIV);
-    memcpy(p,bn_buf,bn2bin_len);
+    memcpy(p, bn_buf, bn2bin_len);
     
     p += bn2bin_len;
     _HIP_HEXDUMP("DSA KEY RR after X:", *dsa_key_rr, p-*dsa_key_rr);
@@ -1498,7 +1452,7 @@ int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr) {
 
 /*  HIP_ASSERT(BN_num_bytes(rsa->e) < 255); // is this correct?
 	*/
-  HIP_ASSERT(BN_num_bytes(rsa->e) <= 512) // RFC 3110 limits e to 4096 bits
+  HIP_ASSERT(BN_num_bytes(rsa->e) <= 512) /* RFC 3110 limits e to 4096 bits */
   if (BN_num_bytes(rsa->e) > 255)
 	e_len = 3;
 
@@ -1527,11 +1481,7 @@ int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr) {
   }
 
   *rsa_key_rr = malloc(rsa_key_rr_len);
-  if (!*rsa_key_rr) {
-    HIP_ERROR("malloc\n");
-    err = -ENOMEM;
-    goto out_err;
-  }
+  HIP_IFEL(!*rsa_key_rr, -ENOMEM, "Malloc for *rsa_key_rr failed\n");
 
   memset(*rsa_key_rr, 0, rsa_key_rr_len);
 
@@ -1540,7 +1490,7 @@ int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr) {
   if (e_len == 1) {
 	*c = (unsigned char) BN_num_bytes(rsa->e);
   }
-  c++; // If e_len is more than one byte, first byte is 0.
+  c++; /* If e_len is more than one byte, first byte is 0. */
   if (e_len == 3) {
 	*c = htons((u16)BN_num_bytes(rsa->e));
 	c += 2;
@@ -1897,8 +1847,8 @@ int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
 	return err;
 }
 
-void hip_get_rsa_keylen(const struct hip_host_id *host_id, struct hip_rsa_keylen *ret, 
-									int is_priv)
+void hip_get_rsa_keylen(const struct hip_host_id *host_id, 
+				       struct hip_rsa_keylen *ret, int is_priv)
 {
 int bytes;
 u8 *tmp = (host_id + 1);
@@ -1906,10 +1856,10 @@ int offset = 0;
 int e_len = tmp[offset++];
 
 /* Check for public exponent longer than 255 bytes (see RFC 3110) */
-    if (e_len == 0) {
-	e_len = ntohs((u16)tmp[offset]);
-	offset += 2;
-    }
+  if (e_len == 0) {
+      e_len = ntohs((u16)tmp[offset]);
+      offset += 2;
+  }
 
 /*
  hi_length is the total length of:
@@ -1917,14 +1867,14 @@ int e_len = tmp[offset++];
  e (normally 3 bytes), followed by public n, private d, p, q
  n_len == d_len == 2 * p_len == 2 * q_len
 */
-    if (is_priv)
-	bytes = (ntohs(host_id->hi_length) - sizeof(struct hip_host_id_key_rdata) - 
+  if (is_priv)
+    bytes = (ntohs(host_id->hi_length) - sizeof(struct hip_host_id_key_rdata) -
 			offset - e_len) / 3;
-    else
-	bytes = (ntohs(host_id->hi_length) - sizeof(struct hip_host_id_key_rdata) -
+  else
+    bytes = (ntohs(host_id->hi_length) - sizeof(struct hip_host_id_key_rdata) -
 			offset - e_len);
 
-    ret->e_len = offset;
-    ret->e = e_len;
-    ret->n = bytes;
+  ret->e_len = offset;
+  ret->e = e_len;
+  ret->n = bytes;
 }

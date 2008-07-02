@@ -50,11 +50,11 @@
 #define HIP_MAX_RSA_KEY_LEN 4096
 #define HIP_MAX_DH_GROUP_ID 7
 
-//#define DSA_KEY_DEFAULT_BITS    (128 * 8)
-//#define RSA_KEY_DEFAULT_BITS    1024
+#define DSA_KEY_DEFAULT_BITS    (128 * 8)
+#define RSA_KEY_DEFAULT_BITS    1024
 
-#define DSA_KEY_DEFAULT_BITS    512
-#define RSA_KEY_DEFAULT_BITS    512
+//#define DSA_KEY_DEFAULT_BITS    512
+//#define RSA_KEY_DEFAULT_BITS    512
 
 #define DEFAULT_CONFIG_DIR        "/etc/hip"
 #define DEFAULT_CONFIG_DIR_MODE   0755

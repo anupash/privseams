@@ -197,7 +197,6 @@ int hip_conf_handle_set(hip_common_t *, int type, const char *opt[], int optc);
 int hip_conf_handle_dht_toggle(hip_common_t *, int type, const char *opt[], int optc);
 int hip_conf_handle_run_normal(hip_common_t *msg, int action,
 			       const char *opt[], int optc);
-int hip_get_all_hits(hip_common_t *msg,char *argv[]);
 int hip_get_action(char *action);
 int hip_get_type(char *type);
 int hip_conf_handle_ha(hip_common_t *msg, int action,const char *opt[], int optc);
