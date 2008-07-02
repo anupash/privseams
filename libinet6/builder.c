@@ -593,7 +593,11 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
 	/** @todo check the lengths of the parameters */
 
 	for (i = 0; i < ARRAY_SIZE(valid); i++) {
-		if (type == valid[i]) {
+		if (!(type & 0x0001)) {
+			_HIP_DEBUG("Optional param, skip\n");
+			ok = 1;
+			break;
+		} else if (type == valid[i]) {
 			ok = 1;
 			break;
 		}

@@ -1,9 +1,8 @@
-/*
- * This code is GNU/GPL.
- *
- * Firewall requires: 
- * modprobe ip6_queue
+/** @file
+ * HIP Firewwall
  * 
+ * @note: This code is GNU/GPL.
+ * @note: HIPU: requires libipq, might need pcap libraries
  */
 
 #include "firewall.h"

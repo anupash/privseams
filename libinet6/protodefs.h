@@ -482,7 +482,7 @@ struct sockaddr_eid {
  * Use accessor functions defined in builder.c, do not access members
  * directly to avoid hassle with byte ordering and number conversion.
  */
-struct hip_common {
+struct hip_common { 
 	uint8_t      payload_proto;
 	uint8_t      payload_len;
 	uint8_t      type_hdr;
