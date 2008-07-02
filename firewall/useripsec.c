@@ -43,8 +43,6 @@ int userspace_ipsec_init()
 		HIP_IFE(!(esp_packet = (unsigned char *)malloc(ESP_PACKET_SIZE)), -1);
 		HIP_IFE(!(decrypted_packet = (unsigned char *)malloc(ESP_PACKET_SIZE)), -1);
 		
-		HIP_DEBUG("hip_esp_protection_extension: %i\n", hip_esp_protection_extension);
-		
 		// also initialize the esp protection extension, if switched on
 		if (hip_esp_protection_extension)
 		{

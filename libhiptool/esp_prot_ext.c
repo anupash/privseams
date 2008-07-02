@@ -22,6 +22,7 @@ int esp_prot_ext_init()
 			"failed to set item length for bex store\n");
 	
 	// ... and fill it with elements
+	HIP_DEBUG("filling the hchain stores...\n");
 	err = hip_hchain_stores_refill(esp_prot_transforms[ESP_PROT_TRANSFORM_DEFAULT]);
 	if (err < 0)
 	{
@@ -30,7 +31,7 @@ int esp_prot_ext_init()
 	} else if (err > 0)
 	{
 		// this means the bex store was updated
-		HIP_DEBUG("sending anchor update...\n");
+		HIP_DEBUG("sending anchor list update to hipd...\n");
 		HIP_IFEL(send_anchor_list_update_to_hipd(ESP_PROT_TRANSFORM_DEFAULT), -1,
 				"unable to send anchor list update to hipd\n");
 		

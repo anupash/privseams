@@ -64,7 +64,7 @@ void hchain_print(const hash_chain_t * hash_chain, int hash_length)
 		}
 	} else
 	{
-		printf("Given hash chain was NULL!");	
+		printf("Given hash chain was NULL!\n");	
 	}
 }
 
@@ -168,7 +168,7 @@ int hchain_create(int hchain_length, int hash_length, hash_chain_t *out_hchain)
 	out_hchain = NULL;
 	
 	// make sure that the hash we want to use is smaller than the max output
-	HIP_ASSERT(hash_length <= MAX_HASH_LENGTH);
+	HIP_ASSERT(hash_length > 0 && hash_length <= MAX_HASH_LENGTH);
 	
 	/* the hash function output might be longer than needed
 	 * allocate enough memory for the hash function output */
