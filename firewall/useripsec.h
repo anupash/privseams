@@ -3,6 +3,7 @@
 
 #include "firewall.h"
 
+int userspace_ipsec_init(void);
 int hip_firewall_userspace_ipsec_input(hip_fw_context_t *ctx);
 int hip_firewall_userspace_ipsec_output(hip_fw_context_t *ctx);
 hip_hit_t *hip_fw_get_default_hit(void);

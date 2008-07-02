@@ -989,17 +989,17 @@ int hip_esp_protection_extension_transform(struct hip_common *msg)
 	HIP_DEBUG("esp protection extension transform: %u \n", transform);
 	
 	// right now we only support the default transform
-	if (transform == ESP_PROT_TRANSFORM_DEFAULT)
+	if (transform > ESP_PROT_TRANSFORM_UNUSED)
 	{
 		hip_esp_prot_ext_transform = transform;
 		
-		HIP_DEBUG("hipd switched to esp protection extension\n");
+		HIP_DEBUG("switched to esp protection extension\n");
 	}
 	else
 	{
 		hip_esp_prot_ext_transform = ESP_PROT_TRANSFORM_UNUSED;
 		
-		HIP_DEBUG("hipd switched to normal esp mode\n");
+		HIP_DEBUG("switched to normal esp mode\n");
 	}
 	
 	/* we have to make sure that the precalculated R1s include the esp
@@ -1007,4 +1007,7 @@ int hip_esp_protection_extension_transform(struct hip_common *msg)
 	HIP_DEBUG("re-initializing the hadb...\n");
 	hip_uninit_hadb();
 	hip_init_hadb();
+	
+  out_err:
+  	return err;
 }

@@ -104,8 +104,9 @@ int set_esp_protection_extension_active(int activate)
 	
 	// then acticate the extension in hipd and the firewall
 	HIP_IFE(send_esp_protection_extension_to_hipd(), -1);
-		
+	
 	hip_esp_protection_extension = activate;
+	HIP_DEBUG("esp protection extension set to: %i\n", activate);
 	
   out_err:
 	return err;

@@ -26,16 +26,14 @@ unsigned char *decrypted_packet = NULL;
 int raw_sock_v4 = 0, raw_sock_v6 = 0;
 int is_init = 0;
 
-extern int hip_esp_protection_extension;
-
 uint16_t checksum_magic(const struct in6_addr *initiator, const struct in6_addr *receiver);
 
 /* this will initialize the esp_packet buffer and the sockets,
  * they are not set yet */
 int userspace_ipsec_init()
 {	
-	int on = 1;
-	int err = 0;
+	int on = 1, err = 0;
+	extern int hip_esp_protection_extension;
 	
 	HIP_DEBUG("\n");
 	
@@ -45,9 +43,12 @@ int userspace_ipsec_init()
 		HIP_IFE(!(esp_packet = (unsigned char *)malloc(ESP_PACKET_SIZE)), -1);
 		HIP_IFE(!(decrypted_packet = (unsigned char *)malloc(ESP_PACKET_SIZE)), -1);
 		
+		HIP_DEBUG("hip_esp_protection_extension: %i\n", hip_esp_protection_extension);
+		
 		// also initialize the esp protection extension, if switched on
 		if (hip_esp_protection_extension)
 		{
+			HIP_DEBUG("initializing esp protection extension...\n");
 			HIP_IFEL(esp_prot_ext_init(), -1, "failed to init esp protection extension\n");
 		}
 		
