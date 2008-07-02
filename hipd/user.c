@@ -948,12 +948,21 @@ int hip_userspace_ipsec_activate(struct hip_common *msg)
 	// process message and store anchor elements in the db
 	param = (struct hip_tlv_common *)hip_get_param(msg, HIP_PARAM_INT);
 	activate = *((int *)hip_get_param_contents_direct(param));
+	
+	// set global variable
+	hip_use_userspace_ipsec = activate;
 	HIP_DEBUG("userspace ipsec activate: %i \n", activate);
 	
-	hip_use_userspace_ipsec = activate;
+	/* remove the policies from the kernel-mode IPsec, otherwise app-packets
+	 * will be captured and processed by the kernel */
+	HIP_DEBUG("flushing all ipsec policies...\n");
+	default_ipsec_func_set.hip_flush_all_policy();
+	HIP_DEBUG("flushing all ipsec SAs...\n");
+	default_ipsec_func_set.hip_flush_all_sa();
 	
 	/* we have to modify the ipsec function pointers to call the ones
 	 * located in userspace from now on */
+	HIP_DEBUG("re-initializing the hadb...\n");
 	hip_uninit_hadb();
 	hip_init_hadb();
 	
@@ -995,6 +1004,7 @@ int hip_esp_protection_extension_transform(struct hip_common *msg)
 	
 	/* we have to make sure that the precalculated R1s include the esp
 	 * protection extension transform */
+	HIP_DEBUG("re-initializing the hadb...\n");
 	hip_uninit_hadb();
 	hip_init_hadb();
 }
