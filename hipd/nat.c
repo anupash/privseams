@@ -41,12 +41,12 @@ extern hip_xmit_func_set_t nat_xmit_func_set;
 /** A transmission function set for sending raw HIP packets. */
 extern hip_xmit_func_set_t default_xmit_func_set;
 /** Port used for NAT travelsal random port simulation.
-    If random port simulation is of, 50500 is used.
+    If random port simulation is of, HIP_NAT_UDP_PORT is used.
     @note This is needed only for simulation purposes and can be removed from
     released versions of HIPL. */
 in_port_t hip_nat_rand_port1 = HIP_NAT_UDP_PORT;
 /** Port used for NAT travelsal random port simulation.
-    If random port simulation is of, 50500 is used.
+    If random port simulation is of, HIP_NAT_UDP_PORT is used.
     @note This is needed only for simulation purposes and can be removed from
     released versions of HIPL. */
 in_port_t hip_nat_rand_port2 = HIP_NAT_UDP_PORT;
@@ -245,11 +245,11 @@ int hip_nat_send_keep_alive(hip_ha_t *entry, void *not_used)
 	/* Calculate the HIP header length */
 	hip_calc_hdr_len(msg);
 
-	/* Send the UPDATE packet using 50500 as source and destination ports.
+	/* Send the UPDATE packet using HIP_NAT_UDP_PORT as source and destination ports.
 	   Only outgoing traffic acts refresh the NAT port state. We could
-	   choose to use other than 50500 as source port, but we must use 50500
+	   choose to use other than HIP_NAT_UDP_PORT as source port, but we must use HIP_NAT_UDP_PORT
 	   as destination port. However, because it is recommended to use
-	   50500 as source port also, we choose to do so here. */
+	   HIP_NAT_UDP_PORT as source port also, we choose to do so here. */
 	entry->hadb_xmit_func->
 		hip_send_pkt(&entry->local_address, &entry->preferred_address,
 			     HIP_NAT_UDP_PORT, HIP_NAT_UDP_PORT, msg,
@@ -584,6 +584,9 @@ pj_pool_t *pool = 0;
 
 
 
+
+
+
 #define PJ_COM_ID 1   
 
 
@@ -732,7 +735,7 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 						 &entry->hit_our, &entry->hit_peer,
 						 &entry->default_spi_out, entry->esp_transform,
 						 &entry->esp_out, &entry->auth_out, 1,
-						 HIP_SPI_DIRECTION_OUT, 0, 50500, entry->peer_udp_port);
+						 HIP_SPI_DIRECTION_OUT, 0, HIP_NAT_UDP_PORT, entry->peer_udp_port);
 		if (err) {
 			HIP_ERROR("Failed to setup outbound SA with SPI=%d\n",
 					entry->default_spi_out);
@@ -745,7 +748,7 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 						&spi_in,
 						entry->esp_transform,
 						 &entry->esp_in, &entry->auth_in, 1,
-						 HIP_SPI_DIRECTION_IN, 0, entry->peer_udp_port, 50500);
+						 HIP_SPI_DIRECTION_IN, 0, entry->peer_udp_port, HIP_NAT_UDP_PORT);
 		if (err) {
 				HIP_ERROR("Failed to setup inbound SA with SPI=%d\n", spi_in);
 				/* if (err == -EEXIST)
@@ -805,7 +808,7 @@ pj_status_t hip_on_tx_pkt(pj_ice_sess *ice, unsigned comp_id, const void *pkt, p
 	
 	struct in6_addr *local_addr = 0;
 	struct in6_addr peer_addr;
-	in_port_t src_port = 50500; 
+	in_port_t src_port = HIP_NAT_UDP_PORT; 
 	in_port_t dst_port ;
 	pj_sockaddr_in *addr;
 	
@@ -954,23 +957,23 @@ void* hip_external_ice_init(pj_ice_sess_role role){
  * this function is called to add local candidates for the only component
  *  
  * */
-int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, in_port_t port, int addr_type){
+int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, in6_addr_t * hip_addr_base, in_port_t port,in_port_t port_base, int addr_type){
 	
 	 pj_ice_sess *   	 ice ;
 	 unsigned  	comp_id;
 	 pj_ice_cand_type  	type;
 	 pj_uint16_t  	local_pref;
 	 pj_str_t   	foundation;
-	 const pj_sockaddr_t *  	base_addr = NULL;
-	 const pj_sockaddr_t *  	rel_addr= NULL;
+
 	 int  	addr_len;
 	 unsigned   	p_cand_id;
 	 pj_sockaddr_in pj_addr;
+	 pj_sockaddr_in pj_addr_base;
 	 pj_status_t pj_status;
 	 
 	 /***debug area**/
 	 HIP_DEBUG_HIT("coming address ",hip_addr);
-	 
+
 	 
 	 
 	 ice = session;
@@ -984,6 +987,11 @@ int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, 
 	 pj_addr.sin_port = port;
 	 pj_addr.sin_addr.s_addr =*((pj_uint32_t*) &hip_addr->s6_addr32[3]);
 	 
+	 
+	 pj_addr_base.sin_family=PJ_AF_INET;
+	 pj_addr_base.sin_port = port_base;
+	 pj_addr_base.sin_addr.s_addr =*((pj_uint32_t*) &hip_addr->s6_addr32[3]);
+	 
 	 addr_len = sizeof(pj_sockaddr_in);
 
 	
@@ -993,7 +1001,7 @@ int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, 
 			65535,
 			&foundation,
 			&pj_addr,
-			&pj_addr,
+			&pj_addr_base,
 			NULL,
 			addr_len,
 			&p_cand_id	 
@@ -1011,7 +1019,7 @@ int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, 
 *this function is called after the local candidates are added. 
 * the check list will created inside the seesion object. 
 */
-int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list, pj_ice_cand_type type){
+int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list){
 	
 	pj_ice_sess *   	 ice = session;
 	const pj_str_t *  	rem_ufrag;
@@ -1030,7 +1038,6 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 	HIP_DEBUG("ICE add remote function\n");
 	
 	rem_cand_cnt = 0;
-	HIP_DEBUG("ICE add remote: node number in list %d\n", list->num_nodes);
 	//reserve space for the cand
 	rem_cand = pj_pool_calloc(pool,rem_cand_cnt, sizeof(pj_ice_sess_cand));
 	
@@ -1073,7 +1080,7 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 			
 			
 			temp_cand->comp_id = 1;
-			temp_cand->type = type;
+			temp_cand->type = ICE_CAND_TYPE_HOST;
 			temp_cand->foundation = pj_str("ice");
 	
 			temp_cand->prio = peer_addr_list_item->priority;
@@ -1297,5 +1304,80 @@ int hip_ha_set_nat_mode(hip_ha_t *entry, void *mode)
 	}
  out_err:
 	return err;
+}
+
+int hip_nat_start_ice(hip_ha_t *entry, struct hip_esp_info *esp_info, int ice_control_roll){
+	
+	int err = 0, i= 0;
+	hip_list_t *item, *tmp;
+	struct netdev_address *n;
+    hip_ha_t *ha_n;
+    void* ice_session;
+	
+	if(!(entry->nat_control)){
+		// nat_control is not set to "ice on"
+	}
+    else{
+            //init the session right after the locator receivd
+    	HIP_DEBUG("ICE init \n");
+    	ice_session = hip_external_ice_init(ice_control_roll);
+        if(ice_session){
+        	entry->ice_session = ice_session;
+        	HIP_DEBUG("ICE add local \n");
+        	//add the type 1 address first
+        	list_for_each_safe(item, tmp, addresses, i) {
+        		n = list_entry(item);
+        		// filt out IPv6 address
+        		if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
+        		    continue;
+        		HIP_DEBUG_HIT("add Ice local address", hip_cast_sa_addr(&n->addr));
+        		
+        		if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
+        			hip_external_ice_add_local_candidates(ice_session,
+        					hip_cast_sa_addr(&n->addr),hip_cast_sa_addr(&n->addr),
+        					HIP_NAT_UDP_PORT,HIP_NAT_UDP_PORT,
+        					ICE_CAND_TYPE_HOST);
+        		}		
+        		
+        	}
+        	//add reflexive address          
+            i = 0;           
+            list_for_each_safe(item, tmp, hadb_hit, i) {
+                ha_n = list_entry(item);
+                // check if the reflexive udp port. if it not 0. it means addresses found
+                if(ha_n->local_reflexive_udp_port){
+                	if (IN6_IS_ADDR_V4MAPPED(&ha_n->local_reflexive_address)) {
+	        			hip_external_ice_add_local_candidates(ice_session,
+	        					&ha_n->local_reflexive_address,
+	        					&ha_n->preferred_address,
+	        					ha_n->local_reflexive_udp_port,
+	        					HIP_NAT_UDP_PORT,
+	        					ICE_CAND_TYPE_SRFLX);
+                	        		}
+
+                }
+        	//TODO add relay address
+        	
+        	HIP_DEBUG("ICE add remote IN R2, spi is %d\n", ntohl(esp_info->new_spi));
+        	
+        	struct hip_spi_out_item* spi_out;
+
+        	HIP_IFEL(!(spi_out = hip_hadb_get_spi_list(entry, ntohl(esp_info->new_spi))), -1,
+        		      "Bug: outbound SPI 0x%x does not exist\n", ntohl(esp_info->new_spi)); 
+        	
+        	HIP_DEBUG("ICE add remote IN R2, peer list mem address is %d\n", spi_out->peer_addr_list);
+        	hip_external_ice_add_remote_candidates(ice_session, spi_out->peer_addr_list);
+
+        	HIP_DEBUG("ICE start checking \n");
+
+        hip_ice_start_check(ice_session);
+        }
+    	
+    }
+    }
+out_err:
+	return err;
+	
+	
 }
 

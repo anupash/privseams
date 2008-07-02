@@ -2293,6 +2293,9 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	hip_nat_handle_locator_parameter(i2, entry, esp_info);	
                
 #ifdef HIP_USE_ICE
+	
+	hip_nat_start_ice(entry, esp_info,ICE_ROLE_CONTROLLING);
+		/*
                 //if the client  choose to use ICE 
         if(!(entry->nat_control)){
         	//TODO check other nat control type. currently only ICE 
@@ -2338,7 +2341,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		        	hip_ice_start_check(ice_session);
 		        }
         }
-        
+        */
                 
 #endif
                                 
@@ -2619,6 +2622,8 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 #ifndef HIP_USE_ICE    
 	err = hip_hadb_add_addr_to_spi(entry, spi_recvd, r2_saddr, 1, 0, 1);
 #else
+	// when ice implemenation is included
+	// if ice mode is on, we do not add the current address into peer list (can be added also, but set the is_prefered off)
 	err = 0;
 	if(entry->nat_control==0)
 	HIP_IFEL(hip_hadb_add_udp_addr_to_spi(entry, spi_recvd, r2_saddr, 1, 0, 1,r2_info->src_port, HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY),
@@ -2641,19 +2646,11 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	} else {
 		HIP_ERROR("Couldn't get device ifindex of address\n");
 	}
-	
-	err = 0;
-
-    /***** LOCATOR PARAMETER ******/
-
-    if (entry->locator) {
-    	/*
-                HIP_IFEL(hip_update_handle_locator_parameter(
-				 entry, entry->locator, esp_info), -1,
-			 "hip_update_handle_locator_parameter failed\n");*/
-    	
+   	
 #ifdef HIP_USE_ICE
-            
+    	
+	hip_nat_start_ice(entry,esp_info,ICE_ROLE_CONTROLLED);
+        /*    
         //check the nat transform mode
         if(!(entry->nat_control)){
 
@@ -2703,14 +2700,9 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	        }
         	
         }
-        
+        */
                 
 #endif	   	
-	} else {
-		HIP_DEBUG("entry->locator did not have locators from r1\n");
-	}
-	//#endif /* CONFIG_HIP_HI3 */
-	
 	
 	/* Handle REG_RESPONSE and REG_FAILED parameters. */
 	hip_handle_param_reg_response(entry, r2);

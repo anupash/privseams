@@ -295,8 +295,7 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
                              struct in6_addr *saddr,
                              struct in6_addr *daddr,
                              hip_portpair_t *msg_info,
-                             int encap_hdr_size, int is_ipv4,
-                             int ice_func(void *, int, in6_addr_t *,in_port_t))
+                             int encap_hdr_size, int is_ipv4)
 {
 	struct sockaddr_storage addr_from, addr_to;
 	struct sockaddr_in *addr_from4 = ((struct sockaddr_in *) &addr_from);
@@ -408,27 +407,15 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
 		memmove(hip_msg, ((char *)hip_msg) + HIP_UDP_ZERO_BYTES_LEN,
 			HIP_MAX_PACKET - HIP_UDP_ZERO_BYTES_LEN);
 	}
-//modify by santtu
-/*
+
 	HIP_IFEL(hip_verify_network_header(hip_msg,
 					   (struct sockaddr *) &addr_from,
 					   (struct sockaddr *) &addr_to,
 					   len - encap_hdr_size), -1,
 		 "verifying network header failed\n");
-*/	
-	if(hip_verify_network_header(hip_msg,
-			   (struct sockaddr *) &addr_from,
-			   (struct sockaddr *) &addr_to,
-			   len - encap_hdr_size)){
-		if (ice_func&& msg_info->src_port){
-				HIP_DEBUG("STUN found: len is %d\n", len);
-				HIP_IFEL(ice_func(hip_msg,len,saddr,msg_info->src_port), -1,
-						"ICE handling returned error\n");
-				//err = -1;
-				goto out_err;
-				}
-	}
-//end modify
+
+	
+
 	if (saddr)
 		HIP_DEBUG_IN6ADDR("src", saddr);
 	if (daddr)
@@ -445,7 +432,7 @@ int hip_read_control_msg_v6(int socket, struct hip_common *hip_msg,
                             int encap_hdr_size)
 {
 	return hip_read_control_msg_all(socket, hip_msg, saddr,
-					daddr, msg_info, encap_hdr_size, 0, NULL);
+					daddr, msg_info, encap_hdr_size, 0);
 }
 
 int hip_read_control_msg_v4(int socket, struct hip_common *hip_msg,
@@ -455,18 +442,7 @@ int hip_read_control_msg_v4(int socket, struct hip_common *hip_msg,
 			    int encap_hdr_size)
 {
 	return hip_read_control_msg_all(socket, hip_msg, saddr,
-					daddr, msg_info, encap_hdr_size, 1, NULL);
+					daddr, msg_info, encap_hdr_size, 1);
 }
 
-//add by santtu
-int hip_read_control_msg_stun(int socket, struct hip_common *hip_msg,
-			    struct in6_addr *saddr,
-			    struct in6_addr *daddr,
-			    hip_portpair_t *msg_info,
-			    int encap_hdr_size,
-			    int ice_func(void *, int, in6_addr_t *,in_port_t port))
-{
-	return hip_read_control_msg_all(socket, hip_msg, saddr,
-					daddr, msg_info, encap_hdr_size, 1, ice_func);
 
-}
