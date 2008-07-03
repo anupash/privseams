@@ -68,6 +68,8 @@ int add_esp_prot_hash(unsigned char *out_hash, int *out_length, hip_sadb_entry *
 					"unable to retrieve hash element from hash-chain\n");
 		}
 		
+		HIP_HEXDUMP("added esp protection hash: ", out_hash, *out_length);
+		
 		// now do some maintainance operations
 		HIP_IFEL(esp_prot_ext_maintainance(entry), -1,
 				"esp protection extension maintainance operations failed\n");
@@ -86,11 +88,13 @@ int verify_esp_prot_hash(hip_sadb_entry *entry, unsigned char *hash_value)
 	HIP_DEBUG("verifying hash chain element for incoming packet...\n");
 
 	hash_length = esp_prot_transforms[entry->active_transform];
+	HIP_DEBUG("hash length is %i,\n", hash_length);
 		
 	// only verify the hash, if extension is switched on
 	if (hash_length <= 0)
 	{
 		// extension might not be in use, no need to verify
+		HIP_DEBUG("not expecting any hash element\n");
 		goto out_err;
 	}
 		
@@ -100,7 +104,7 @@ int verify_esp_prot_hash(hip_sadb_entry *entry, unsigned char *hash_value)
 		// this will allow only increasing elements to be accepted
 		memcpy(entry->active_anchor, hash_value, hash_length);
 		
-		HIP_DEBUG("hash-chain element correct!\n");
+		HIP_DEBUG("hash matches element in actice hash-chain\n");
 		
 	} else
 	{
@@ -117,6 +121,8 @@ int verify_esp_prot_hash(hip_sadb_entry *entry, unsigned char *hash_value)
 		if (hchain_verify(hash_value, entry->next_anchor,
 				hash_length, entry->tolerance))
 		{
+			HIP_DEBUG("hash matches element in next hash-chain\n");
+			
 			// beware, the hash lengths might differ between 2 different hchains
 			if (entry->active_transform != entry->next_transform)
 			{
