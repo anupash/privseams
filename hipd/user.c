@@ -1004,9 +1004,8 @@ int hip_esp_protection_extension_transform(struct hip_common *msg)
 	
 	/* we have to make sure that the precalculated R1s include the esp
 	 * protection extension transform */
-	HIP_DEBUG("re-initializing the hadb...\n");
-	hip_uninit_hadb();
-	hip_init_hadb();
+	HIP_DEBUG("recreate all R1s\n");
+	HIP_IFEL(hip_recreate_all_precreated_r1_packets(), -1, "failed to recreate all R1s\n");
 	
   out_err:
   	return err;
