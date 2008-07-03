@@ -260,7 +260,6 @@ int hip_conf_get_type(char *text,char *argv[]) {
 #endif		
 	else if (!strcmp("order", text))
 		ret = TYPE_ORDER;
-#ifdef CONFIG_HIP_OPENDHT
 	else if (strcmp("opendht", argv[1])==0)
 		ret = TYPE_DHT;
 	else if (!strcmp("ttl", text))
@@ -271,7 +270,6 @@ int hip_conf_get_type(char *text,char *argv[]) {
 		ret = TYPE_GET;
 	else if (!strcmp("set", text))
                 ret = TYPE_SET;
-#endif
 	else if (!strcmp("config", text))
 		ret = TYPE_CONFIG;
 #ifdef CONFIG_HIP_HIPPROXY

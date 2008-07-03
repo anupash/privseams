@@ -126,9 +126,11 @@ int hipd_init(int flush_ipsec, int killold)
 	hip_hit_t default_hit;
 	hip_lsi_t default_lsi;
 	hip_hit_t peer_hit;
-	int err = 0, certerr = 0;
+	int err = 0, certerr = 0, dhterr = 0;
 	char str[64];
 	struct sockaddr_in6 daemon_addr;
+	extern int hip_opendht_sock_fqdn;
+	extern int hip_opendht_sock_hit;
 
 	/* Open daemon lock file and read pid from it. */
 	HIP_IFEL(hip_create_lock_file(HIP_DAEMON_LOCK_FILE, killold), -1,
@@ -274,6 +276,9 @@ int hipd_init(int flush_ipsec, int killold)
 
 	hip_load_configuration();
 
+	hip_opendht_sock_fqdn = init_dht_gateway_socket(hip_opendht_sock_fqdn);
+	hip_opendht_sock_hit = init_dht_gateway_socket(hip_opendht_sock_hit);
+
 	certerr = 0;
 	certerr = hip_init_certs();
 	if (certerr < 0) HIP_DEBUG("Initializing cert configuration file returned error\n");
@@ -375,7 +380,7 @@ int hip_init_dht()
                         memset(&opendht_name_mapping, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
                         if (gethostname(&opendht_name_mapping, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1))
                                 HIP_DEBUG("gethostname failed\n");
-                        register_to_dht(); 
+			register_to_dht(); 
                         destroy(&list);
                 }
         } else {

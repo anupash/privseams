@@ -2042,7 +2042,8 @@ combo-newgroup=&lt;create new...&gt;
     /etc/hip/dhtservers. This file follows the same syntax as
     /etc/hosts and can contain multiple gateway address-name pairs. If
     this file exists hipd chooses gateways from the file by
-    random. currently running servers list is at <ulink
+    random (NOTE do NOT leave empty lines to the end of the file).
+    currently running servers list is at <ulink
     url="http://www.opendht.org/servers.txt" />. The wget-dht-servers.sh
     script can create you the list automatically (in tools directory).
     </para>

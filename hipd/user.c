@@ -368,9 +368,11 @@ int hip_handle_user_msg(struct hip_common *msg,
                 HIP_DEBUG("hip_opendht_inuse =  %d (should be %d)\n", 
                           hip_opendht_inuse, SO_HIP_DHT_ON);
         	}
+		
                 dhterr = 0;
                 dhterr = hip_init_dht();
                 if (dhterr < 0) HIP_DEBUG("Initializing DHT returned error\n");
+		
             break;
             
         case SO_HIP_DHT_OFF:
