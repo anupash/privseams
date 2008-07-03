@@ -5,7 +5,7 @@ hip_ll_t anchor_list;
 
 void init_anchor_db()
 {
-	HIP_DEBUG("initializing the anchorDB...\n");
+	HIP_DEBUG("initializing hchain anchorDB...\n");
 	hip_ll_init(&anchor_list);
 }
 
@@ -18,12 +18,15 @@ int update_anchor_db(struct hip_common *msg)
 	int err = 0, hash_length = 0, salt_length = 0, item_length = 0;
 	extern uint8_t hip_esp_prot_ext_transform;
 	
+	HIP_DEBUG("updating hchain anchorDB...\n");
+	
 	hip_ll_uninit(&anchor_list, free);
+	HIP_DEBUG("uninited hchain anchorDB\n");
 	
 	if (hip_esp_prot_ext_transform > ESP_PROT_TRANSFORM_UNUSED)
 	{
 		hash_length = esp_prot_transforms[hip_esp_prot_ext_transform];
-		HIP_DEBUG("hash length: %i \n", hash_length);
+		HIP_DEBUG("hash length is %i \n", hash_length);
 	} else
 	{
 		HIP_ERROR("anchor db update issued, but wrong transform\n");
@@ -40,7 +43,7 @@ int update_anchor_db(struct hip_common *msg)
 						"failed to allocate memory\n");
 		
 		anchor = (unsigned char *)hip_get_param_contents_direct(param);
-		HIP_HEXDUMP("anchor: ", anchor, hash_length);
+		HIP_HEXDUMP("adding anchor: ", anchor, hash_length);
 		
 		hip_ll_add_first(&anchor_list, anchor);
 	} while(param = hip_get_next_param(msg, param));

@@ -653,8 +653,11 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
  	/* only supported in usermode and optional there
  	 * 
  	 * add the transform only when usermode is active */
+ 	HIP_DEBUG("hip_use_userspace_ipsec is %i\n", hip_use_userspace_ipsec);
  	if (hip_use_userspace_ipsec)
  	{
+ 		HIP_DEBUG("userspace IPsec hint: esp protection extension might be in use\n");
+ 		
  		if (hip_esp_prot_ext_transform > ESP_PROT_TRANSFORM_UNUSED)
  		{
 	 		/* if the extension is switched on, only advertise usage when anchordb
@@ -665,7 +668,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	 					HIP_PARAM_ESP_PROT_TRANSFORM, hip_esp_prot_ext_transform), -1, 
 	 					"Building of ESP protection mode failed\n");
 	 			
-	 			HIP_DEBUG("adding esp protection transform: %u, \n",
+	 			HIP_DEBUG("added esp protection transform: %u, \n",
 	 					hip_esp_prot_ext_transform);
 	 		} else
 	 		{
@@ -673,16 +676,19 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	 					HIP_PARAM_ESP_PROT_TRANSFORM, ESP_PROT_TRANSFORM_UNUSED), -1, 
 	 					"Building of ESP protection mode failed\n");
 	 			
-	 			HIP_ERROR("setting esp protection transform to UNUSED as no anchor available\n");
+	 			HIP_ERROR("added esp protection transform UNUSED, as no anchors available\n");
 	 		}
  		} else
- 		{
+ 		{	
  			HIP_IFEL(hip_build_param_esp_prot_transform(msg,
  					HIP_PARAM_ESP_PROT_TRANSFORM, ESP_PROT_TRANSFORM_UNUSED), -1, 
  					"Building of ESP protection mode failed\n");
  			
  			HIP_ERROR("setting esp protection transform to UNUSED as extension not activated\n");
  		}
+ 	} else
+ 	{
+ 		HIP_DEBUG("userspace IPsec hint: esp protection extension UNUSED, sending...\n");
  	}
 
 	/********** REG_INFO *********/
