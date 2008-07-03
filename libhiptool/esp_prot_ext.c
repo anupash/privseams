@@ -2,8 +2,8 @@
 #include "firewall/firewall_defines.h"
 
 // different hc_length in order not to spoil calculation time for short connections
-#define HC_LENGTH_BEX_STORE 1000 
-#define HC_LENGTH_STEP1 10000
+#define HC_LENGTH_BEX_STORE 10
+#define HC_LENGTH_STEP1 10
 #define REMAIN_THRESHOLD 0.2
 
 int esp_prot_ext_init()
@@ -271,7 +271,8 @@ int send_anchor_list_update_to_hipd(uint8_t transform)
 	int err = 0;
 	struct hip_common *msg = NULL;
 	
-	create_bexstore_anchors_message(msg, esp_prot_transforms[transform]);
+	HIP_IFEL(!(msg = create_bexstore_anchors_message(esp_prot_transforms[transform])), -1,
+			"failed to create bex store anchors update message\n");
 	
 	HIP_DUMP_MSG(msg);
 		

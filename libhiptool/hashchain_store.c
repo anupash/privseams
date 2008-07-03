@@ -21,9 +21,6 @@
  * single length for all items at the moment */
 
 #include "hashchain_store.h"
-#include <stdlib.h>			// malloc & co
-#include <string.h>			// memcpy
-#include "debug.h"
 #include "misc.h"
 #include "linkedlist.h"
 
@@ -93,6 +90,7 @@ int hip_hchain_store_init(int* hchain_lengths, int lengths_count)
 	// set BEX_STORE hchain length to 0
 	hip_hchain_storage.store_hchain_length[0] = 0;
 	HIP_DEBUG("BEX Store (0): %i\n", hip_hchain_storage.store_hchain_length[0]);
+	/* initialized the hchain list for this store */
 	hip_ll_init(&hip_hchain_storage.hchain_store[0]);
 	
 	// ...and copy for the rest
@@ -101,7 +99,6 @@ int hip_hchain_store_init(int* hchain_lengths, int lengths_count)
 		hip_hchain_storage.store_hchain_length[i + 1] = hchain_lengths[i];
 		HIP_DEBUG("Store %i: %i\n", i + 1, hip_hchain_storage.store_hchain_length[i + 1]);
 		
-		/* set pointers to first element of each store to NULL */
 		hip_ll_init(&hip_hchain_storage.hchain_store[i + 1]);
 	}
 
@@ -147,12 +144,17 @@ int hip_hchain_store_fill(int num_new_items, int hchain_length, int hash_length)
 	/* create num_new_items new hash chains and add them to the store */
 	for(i = 0; i < num_new_items; i++)
 	{	
-		HIP_IFEL(hchain_create(hchain_length, hash_length, new_hchain), -1,
+		HIP_IFEL(!(new_hchain = hchain_create(hchain_length, hash_length)), -1,
 				"failed to create new hash-chain\n");
+		hchain_print(new_hchain, hash_length);
+		HIP_IFEL(hchain_verify(new_hchain->source_element->hash,
+				new_hchain->anchor_element->hash, hash_length, hchain_length) <= 0, -1,
+				"failed to verify created hchain\n");
+		HIP_DEBUG("hchain successfully verfied\n");
+		
 		HIP_IFEL(hip_ll_add_first(&hip_hchain_storage.hchain_store[store], new_hchain), -1,
 				"failed to store new hchain in store\n");
 		HIP_DEBUG("Stored new hchain of length: %i\n", hchain_length);
-		hchain_print(new_hchain, hash_length);
 	}
 	
 out_err:
@@ -191,12 +193,16 @@ int hip_hchain_bexstore_fill(int num_new_items, int hash_length)
 	/* create num_new_items new hash chains and add them to the store */
 	for(i = 0; i < num_new_items; i++)
 	{	
-		HIP_IFEL(hchain_create(hchain_length, hash_length, new_hchain), -1,
+		HIP_IFEL(!(new_hchain = hchain_create(hchain_length, hash_length)), -1,
 				"failed to create new hash-chain\n");
+		HIP_IFEL(hchain_verify(new_hchain->source_element->hash,
+				new_hchain->anchor_element->hash, hash_length, hchain_length) <= 0, -1,
+				"failed to verify created hchain\n");
+		HIP_DEBUG("hchain successfully verfied\n");
+		
 		HIP_IFEL(hip_ll_add_first(&hip_hchain_storage.hchain_store[0], new_hchain), -1,
 				"failed to store new hchain in store\n");
 		HIP_DEBUG("Stored new hchain of length: %i\n", hchain_length);
-		hchain_print(new_hchain, hash_length);
 	}
 	
 out_err:
@@ -373,12 +379,12 @@ int hip_hchain_store_remaining(int hchain_length)
 	return err;
 }
 
-int create_bexstore_anchors_message(struct hip_common *msg, int hash_length)
+struct hip_common *create_bexstore_anchors_message(int hash_length)
 {
+	struct hip_common *msg = NULL;
 	hash_chain_t *bex_hchain = NULL;
 	unsigned char *anchor = NULL;
 	int err = 0, i, num_hchains = 0;
-	msg = NULL;
 	
 	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1,
 		 "alloc memory for adding sa entry\n");
@@ -400,15 +406,14 @@ int create_bexstore_anchors_message(struct hip_common *msg, int hash_length)
 					hip_ll_get(&hip_hchain_storage.hchain_store[0], i)), -1,
 					"failed to get first hchain from bex store\n");
 		
-			hchain_print(bex_hchain, hash_length);
+			//hchain_print(bex_hchain, hash_length);
 			
 			anchor = bex_hchain->anchor_element->hash;
-			
 			HIP_HEXDUMP("anchor: ", anchor, hash_length);
+			
 			HIP_IFEL(hip_build_param_contents(msg, (void *)anchor,
 					HIP_PARAM_HCHAIN_ANCHOR, hash_length),
 					-1, "build param contents failed\n");
-			
 		}
 	} else
 	{
@@ -419,5 +424,11 @@ int create_bexstore_anchors_message(struct hip_common *msg, int hash_length)
 	}	
 	
   out_err:
-  	return err;
+  	if (err)
+  	{
+  		free(msg);
+  		msg = NULL;
+  	}
+  
+  	return msg;
 }

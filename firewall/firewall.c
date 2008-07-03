@@ -194,7 +194,7 @@ int hip_fw_init_userspace_ipsec()
 {
 	int err = 0;
 	
-	HIP_IFEL(userspace_ipsec_init(), -1, "failed to initialize userspace ipsec");
+	HIP_IFEL(userspace_ipsec_init(), -1, "failed to initialize userspace ipsec\n");
 	
 	// queue incoming ESP over IPv4 and IPv4 UDP encapsulated traffic
 	system("iptables -I INPUT -p 50 -j QUEUE"); /*  */

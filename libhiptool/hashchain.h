@@ -13,7 +13,6 @@
 #ifndef HASH_CHAIN_H
 #define HASH_CHAIN_H
 
-#include <inttypes.h>
 #include <openssl/sha.h>
 
 /* value used by Tobias Heer */
@@ -41,14 +40,13 @@ struct hash_chain
 };
 
 void hchain_print(const hash_chain_t * hash_chain, int hash_length);
-void hexdump(const unsigned char * const buffer, int length);
 
 /* check if a hash is part of a hash chain */
 int hchain_verify(const unsigned char * current_hash, const unsigned char * last_hash,
 		int hash_length, int tolerance);
 
 /* create a new hash chain on the heap */
-int hchain_create(int hchain_length, int hash_length, hash_chain_t *out_hchain);
+hash_chain_t *hchain_create(int hchain_length, int hash_length);
 
 /* remove and return the next element from the hash chain */
 int hchain_pop(hash_chain_t * hash_chain, int hash_length, unsigned char *popped_hash);
