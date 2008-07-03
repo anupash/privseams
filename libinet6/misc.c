@@ -1703,7 +1703,7 @@ int hip_create_lock_file(char *filename, int killold) {
 	HIP_IFEL((new_pid_str_len <= 0), -1, "pid length\n");
 		
 	/* Read old pid */
-	fd = open(filename, O_RDWR | O_CREAT, 0644);
+	fd = HIP_CREATE_FILE(filename);
 	HIP_IFEL((fd <= 0), -1, "opening lock file failed\n");
 
 	read(fd, old_pid_str, sizeof(old_pid_str) - 1);
