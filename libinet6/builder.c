@@ -2754,6 +2754,8 @@ int hip_build_param_esp_prot_transform(struct hip_common *msg, uint8_t transform
 	
 	err = hip_build_param(msg, &prot_transform);
 	
+	HIP_DEBUG("added esp_prot_transform: %u\n", transform);
+	
 	return err;
 }
 
@@ -2781,6 +2783,8 @@ int hip_build_param_esp_prot_anchor(struct hip_common *msg, unsigned char *ancho
 	err = hip_build_generic_param(msg, &esp_anchor,
 					      sizeof(struct hip_tlv_common),
 					      hip_get_param_contents_direct(&esp_anchor));
+	
+	HIP_HEXDUMP("added esp protection anchor: ", anchor, esp_prot_transforms[transform]);
 	
 	return err;
 }

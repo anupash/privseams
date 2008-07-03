@@ -74,6 +74,9 @@ int add_esp_prot_hash(unsigned char *out_hash, int *out_length, hip_sadb_entry *
 		// now do some maintainance operations
 		HIP_IFEL(esp_prot_ext_maintainance(entry), -1,
 				"esp protection extension maintainance operations failed\n");
+	} else
+	{
+		HIP_DEBUG("not adding any hash-chain elements\n");
 	}
 	
   out_err:
