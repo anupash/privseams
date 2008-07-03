@@ -3,8 +3,11 @@
  * 
  * @date 28.01.2008
  * @note Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @note HIPU: libm.a is not availble on OS X. The functions are present in libSystem.dyld, though
+ * @note HIPU: lcap is used by HIPD. It needs to be changed to generic posix functions.
  */ 
 #include "hipd.h" 
+
 
 /* Defined as a global just to allow freeing in exit(). Do not use outside
    of this file! */
@@ -44,10 +47,8 @@ struct rtnl_handle hip_nl_route = { 0 };
 
 int hip_agent_status = 0;
 
-//#if 0
-int hip_firewall_sock = -1;
-//#endif
 struct sockaddr_in6 hip_firewall_addr;
+int hip_firewall_sock = 0;
 
 /* 
    HIP transform suite order 
@@ -243,6 +244,29 @@ out_err:
 	return err;
 }
 
+int hip_sendto_firewall(const struct hip_common *msg){
+#ifdef CONFIG_HIP_FIREWALL
+        int n = 0;
+	HIP_DEBUG("CONFIG_HIP_FIREWALL DEFINED AND STATUS IS %d\n", hip_get_firewall_status());
+	struct sockaddr_in6 hip_firewall_addr;
+	socklen_t alen = sizeof(hip_firewall_addr);
+	
+	bzero(&hip_firewall_addr, alen);
+	hip_firewall_addr.sin6_family = AF_INET6;
+	hip_firewall_addr.sin6_port = htons(HIP_FIREWALL_PORT);
+	hip_firewall_addr.sin6_addr = in6addr_loopback;
+
+	if (hip_get_firewall_status()) {
+	        n = sendto(hip_firewall_sock, msg, hip_get_msg_total_len(msg),
+			   0, &hip_firewall_addr, alen);
+		return n;
+	}
+#else
+	HIP_DEBUG("Firewall is disabled.\n");
+	return 0;
+#endif // CONFIG_HIP_FIREWALL
+}
+
 
 /**
  * Daemon main function.
@@ -320,7 +344,6 @@ int hipd_main(int argc, char *argv[])
 	
 	/* Default initialization function. */
 	HIP_IFEL(hipd_init(flush_ipsec, killold), 1, "hipd_init() failed!\n");
-
 	highest_descriptor = maxof(8, hip_nl_route.fd, hip_raw_sock_v6,
 				   hip_user_sock, hip_nl_ipsec.fd,
 				   hip_raw_sock_v4, hip_nat_sock_udp,
@@ -354,6 +377,7 @@ int hipd_main(int argc, char *argv[])
 		FD_SET(hip_user_sock, &read_fdset);
 		FD_SET(hip_nl_ipsec.fd, &read_fdset);
 		/* FD_SET(hip_firewall_sock, &read_fdset); */
+
 		if (hip_opendht_fqdn_sent == STATE_OPENDHT_WAITING_ANSWER)
 			FD_SET(hip_opendht_sock_fqdn, &read_fdset);
 		if (hip_opendht_hit_sent == STATE_OPENDHT_WAITING_ANSWER)
@@ -362,7 +386,7 @@ int hipd_main(int argc, char *argv[])
 		timeout.tv_sec = HIP_SELECT_TIMEOUT;
 		timeout.tv_usec = 0;
 		
-		_HIP_DEBUG("select loop\n");
+		//HIP_DEBUG("select loop value hip_raw_socket_v4 = %d \n",hip_raw_sock_v4);
 		/* wait for socket activity */
 
                 /* If DHT is on have to use write sets for asynchronic communication */
@@ -440,6 +464,7 @@ int hipd_main(int argc, char *argv[])
                     }
                     
                     if (FD_ISSET(hip_raw_sock_v4, &read_fdset)){
+		        HIP_DEBUG("HIP RAW SOCKET\n");
 			/* Receiving of a raw HIP message from IPv4 socket. */
 			struct in6_addr saddr, daddr;
 			hip_portpair_t pkt_info;
@@ -516,6 +541,7 @@ int hipd_main(int argc, char *argv[])
 		}
                 /* DHT SOCKETS HANDLING */
                 if (hip_opendht_inuse == SO_HIP_DHT_ON && hip_opendht_sock_fqdn != -1) {
+		        HIP_DEBUG("Receiving opendht in use message.\n");
                         if (FD_ISSET(hip_opendht_sock_fqdn, &read_fdset) &&
                             FD_ISSET(hip_opendht_sock_fqdn, &write_fdset) &&
                             (hip_opendht_inuse == SO_HIP_DHT_ON)) {

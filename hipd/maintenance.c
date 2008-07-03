@@ -13,6 +13,7 @@
 
 #include "maintenance.h"
 
+int hip_firewall_sock_lsi_fd = -1;
 
 float retrans_counter = HIP_RETRANSMIT_INIT;
 float opp_fallback_counter = HIP_OPP_FALLBACK_INIT;
@@ -634,6 +635,10 @@ int periodic_maintenance()
 	return err;
 }
 
+int hip_get_firewall_status(){
+	return hip_firewall_status;
+}
+
 int hip_firewall_is_alive()
 {
 #ifdef CONFIG_HIP_FIREWALL
@@ -683,7 +688,7 @@ int hip_firewall_add_escrow_data(hip_ha_t *entry, struct in6_addr * hit_s,
 		HIP_IFEL(hip_build_param(msg, (struct hip_tlv_common *)keys), -1, 
                         "hip build param failed\n");
 
-		n = hip_sendto(msg, &hip_firewall_addr);                   
+		n = hip_sendto_firewall(msg);             
 		if (n < 0)
 		{
 			HIP_ERROR("Sendto firewall failed.\n");
@@ -696,6 +701,44 @@ out_err:
 	return err;
 
 }     
+
+
+int hip_firewall_add_bex_data(hip_ha_t *entry, struct in6_addr *hit_s, struct in6_addr *hit_r){
+	struct hip_common *msg;
+	int err = 0, n = 0;
+	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
+	hip_msg_init(msg);
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_FIREWALL_BEX_DONE, 0), -1, 
+                 "Build hdr failed\n");
+		            
+        HIP_IFEL(hip_build_param_contents(msg, (void *)hit_s, HIP_PARAM_HIT,
+                 sizeof(struct in6_addr)), -1, "build param contents failed\n");
+	HIP_IFEL(hip_build_param_contents(msg, (void *)hit_r, HIP_PARAM_HIT,
+                 sizeof(struct in6_addr)), -1, "build param contents failed\n");
+
+	struct sockaddr_in6 hip_firewall_addr;
+	socklen_t alen = sizeof(hip_firewall_addr);
+	
+	bzero(&hip_firewall_addr, alen);
+	hip_firewall_addr.sin6_family = AF_INET6;
+	hip_firewall_addr.sin6_port = htons(HIP_FIREWALL_PORT);
+	hip_firewall_addr.sin6_addr = in6addr_loopback;
+
+	if (hip_get_firewall_status()) {
+	        n = sendto(hip_firewall_sock_lsi_fd, msg, hip_get_msg_total_len(msg),
+			   0, &hip_firewall_addr, alen);
+	}
+                      
+	//n = hip_sendto_firewall(msg);
+	if (n < 0)
+	  HIP_DEBUG("Send to firewall failed str errno %s\n",strerror(errno));
+	HIP_IFEL( n < 0, -1, "Sendto firewall failed.\n");   
+	          
+	HIP_DEBUG("Sendto firewall OK.\n");
+
+out_err:
+	return err;
+}
 
 int hip_firewall_remove_escrow_data(struct in6_addr *addr, uint32_t spi)
 {
@@ -756,6 +799,7 @@ out_err:
         return err;
 }
 
+
 int opendht_put_locator(int sockfd, 
                    unsigned char * key, 
                    unsigned char * host,
@@ -804,7 +848,3 @@ int opendht_put_locator(int sockfd,
     return(err);
 }
 
-int hip_get_firewall_status()
-{
-	return hip_firewall_status;
-}

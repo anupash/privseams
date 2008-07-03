@@ -906,6 +906,77 @@
   kernels. <ulink url="http://www.cs.helsinki.fi/u/sklvarjo/manuals.htm" />.
   </para>
   </section>
+    <section id="hip_over_vpn">
+      <title>HIP over openVPN</title>
+    <!-- id="hip_over_vpn_how_to" -->
+      <para>
+	OpenVPN is an open-source VPN solution. More information on it can
+	be found at http://openvpn.net/. In Linux, OpenVPN is installed with
+	the command:
+      </para>
+
+      <para>
+	apt-get install openvpn
+      </para>
+
+      <para>
+	An example of OpenVPN configuration on Linux can be found at
+	https://help.ubuntu.com/community/VPNServer. This link illustrates very
+	well the configuration files. In those configuration files, only the IP
+	addresses need to be changed according to the machines that will be used
+	in the VPN. We used similar routing as shown in the link above, but not
+	exactly the same. The basic for successful VPN routing is to have the VPN
+	traffic routed through the tun0 interface, and all other traffic directed
+	through the default interface. No changes to iptables were needed.
+      </para>
+    <!-- id="hip_over_vpn_performance" -->
+      <para>
+	Following are some data to give a general idea about performance
+	degradation caused by OpenVPN, HIP, and when we use HIP over OpenVPN.
+	These data illustrate the TCP throughput between two machines in four cases.
+	The measurements for each case were repeated roughly 20 times and the
+	average was calculated. The following throughput measurements were done at
+	the machine that serves as the HIP client, and as the VPN client.
+	One of the machines acts both as the VPN server and as one of the hosts in
+	HIP-communication.
+      </para>
+
+      <para>
+	1. No HIP or VPN. We do not use HIP or VPN for the data traffic - 95.41 Mbits/sec.
+      </para>
+      <para>
+	2. VPN, no HIP. We use VPN for the data traffic - 76.4 Mbits/sec
+      </para>
+      <para>
+	3. HIP, no VPN. We use HIP for the data traffic - 71.45 Mbits/sec
+      </para>
+      <para>
+	4. VPN and HIP. We use HIP over VPN for the data traffic - 36.23 Mbits/sec
+      </para>
+
+
+    <!-- id="hip_over_vpn_pitfalls" -->
+      <para>
+	In contrast to the previous measurements, the following use a virtual
+	machine for HIP communication (virtualbox.org). Additionally, HIP
+	communication is UDP-encapsulated. The average values of the
+	measurements of throughput are:
+      </para>
+      <para>
+	1. No HIP or VPN. We do not use HIP or VPN for the data traffic - 70.26 Mbits/sec
+      </para>
+      <para>
+	2. VPN, no HIP. We use VPN for the data traffic - 52.6 Mbits/sec
+      </para>
+      <para>
+	3. HIP, no VPN. We use HIP for the data traffic - 25.6 Mbits/sec
+      </para>
+      <para>
+	4. VPN and HIP. We use HIP over VPN for the data traffic - 17.14 Mbits/sec
+      </para>
+
+
+    </section>
   </chapter>
 
   <chapter id="ch_rvs_relay">
