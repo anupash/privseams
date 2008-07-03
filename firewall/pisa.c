@@ -13,7 +13,8 @@
 
 #define PISA_RANDOM_LEN 16
 #define PISA_PUZZLE_SEED 0xDEADC0DE
-#define PISA_NONCE_LEN (4 + HIP_AH_SHA_LEN)
+#define PISA_NONCE_LEN_1SPI (4 + HIP_AH_SHA_LEN)
+#define PISA_NONCE_LEN_2SPI (8 + HIP_AH_SHA_LEN)
 
 /*#define PISA_TEST_MULTIPLE_PARAMETERS*/
 /*#define PISA_INTRODUCE_ERROR_NONCE*/
@@ -127,8 +128,9 @@ static void pisa_generate_random()
  * @param a first HIT
  * @param b second HIT
  * @param rnd which random number to use, either 0 or 1
- * @param spi SPI of that will be signed
+ * @param spi SPI that will be signed
  * @param data pointer to buffer for data and the HMAC
+ * @param data_len length of data
  */
 static void pisa_append_hmac(struct in6_addr *a, struct in6_addr *b, 
 			     int rnd, u32 spi, void *data, int data_len)
@@ -158,14 +160,14 @@ static void pisa_append_hmac(struct in6_addr *a, struct in6_addr *b,
 }
 
 /**
- * Insert a PISA nonce into a packet.
+ * Insert a PISA nonce into a packet that will contain 1 SPI.
  *
  * @param ctx context of the packet where the nonce will be inserted
  * @return success (0) or failure
  */
-static int pisa_insert_nonce(hip_fw_context_t *ctx)
+static int pisa_insert_nonce_1spi(hip_fw_context_t *ctx)
 {
-	u8 nonce[PISA_NONCE_LEN];
+	u8 nonce[PISA_NONCE_LEN_1SPI];
 	struct hip_esp_info *esp_info;
 	struct hip_common *hip = ctx->transport_hdr.hip;
 	u32 spi = 0;
@@ -188,13 +190,60 @@ static int pisa_insert_nonce(hip_fw_context_t *ctx)
 	 */
 
 	memcpy(nonce, &spi, sizeof(u32));
-	pisa_append_hmac(&hip->hits, &hip->hitr, 1, spi, nonce, 4);
+	pisa_append_hmac(&hip->hits, &hip->hitr, 1, spi, nonce, sizeof(u32));
 
 #ifdef PISA_INTRODUCE_ERROR_NONCE
 	nonce[0]++;
 #endif
 
-	return midauth_add_echo_request_m(ctx, nonce, PISA_NONCE_LEN);
+	return midauth_add_echo_request_m(ctx, nonce, PISA_NONCE_LEN_1SPI);
+}
+
+/**
+ * Insert a PISA nonce into a packet that will contain 2 SPIs.
+ *
+ * @param ctx context of the packet where the nonce will be inserted
+ * @param old_nonce parameter in ctx that contains the old SPI
+ * @return success (0) or failure
+ */
+static int pisa_insert_nonce_2spi(hip_fw_context_t *ctx,
+				  struct hip_tlv_common *old_nonce)
+{
+	u8 nonce[PISA_NONCE_LEN_2SPI];
+	struct hip_esp_info *esp_info;
+	struct hip_common *hip = ctx->transport_hdr.hip;
+	u32 spi[2] = {0, 0};
+
+	if (old_nonce != NULL)
+		spi[0] = *((u32 *)hip_get_param_contents_direct(old_nonce));
+
+	esp_info = hip_get_param(hip, HIP_PARAM_ESP_INFO);
+	if (esp_info != NULL)
+		spi[1] = esp_info->new_spi;
+
+#ifdef PISA_TEST_MULTIPLE_PARAMETERS
+	{
+		char *nonce1 = "asdf", *nonce2 = "0123456789012345678901234567";
+		midauth_add_echo_request_m(ctx, nonce1, strlen(nonce1));
+		midauth_add_echo_request_m(ctx, nonce2, strlen(nonce2));
+	}
+#endif
+	/* The nonce looks like this:
+	 *    4 bytes first SPI
+	 *    4 bytes second SPI
+	 *   20 bytes HMAC of everything before
+	 * As we only use the data in the firewall, byteorder is not an issue.
+	 */
+
+	memcpy(nonce, &spi[0], sizeof(u32));
+	memcpy(nonce+sizeof(u32), &spi[1], sizeof(u32));
+	pisa_append_hmac(&hip->hits, &hip->hitr, 1, spi[0], nonce, sizeof(u32)*2);
+
+#ifdef PISA_INTRODUCE_ERROR_NONCE
+	nonce[0]++;
+#endif
+
+	return midauth_add_echo_request_m(ctx, nonce, PISA_NONCE_LEN_2SPI);
 }
 
 /**
@@ -245,7 +294,7 @@ static struct hip_tlv_common *pisa_check_nonce(hip_fw_context_t *ctx)
 {
 	struct hip_tlv_common *nonce;
 	struct hip_common *hip = ctx->transport_hdr.hip;
-	u8 valid[PISA_NONCE_LEN], *nonce_data;
+	u8 valid[PISA_NONCE_LEN_2SPI], *nonce_data;
 	u32 spi;
 	int nonce_len;
 
@@ -260,20 +309,26 @@ static struct hip_tlv_common *pisa_check_nonce(hip_fw_context_t *ctx)
 		nonce_data = (u8 *)hip_get_param_contents_direct(nonce);
 
 		/* if the payload has the size of a nonce ... */
-		if (nonce_len == PISA_NONCE_LEN) {
-			memcpy(valid, nonce_data, 4);
+		if (nonce_len == PISA_NONCE_LEN_1SPI ||
+		    nonce_len == PISA_NONCE_LEN_2SPI) {
+			int data_size = sizeof(u32);
+
+			if (nonce_len == PISA_NONCE_LEN_2SPI)
+				data_size = sizeof(u32) * 2;
+
+			memcpy(valid, nonce_data, data_size);
 			spi = *((u32 *)nonce_data);
 
 			/* ... first check the current random value ... */
 			pisa_append_hmac(&hip->hitr, &hip->hits, 1, spi,
-			                 valid, 4);
-			if (!memcmp(valid, nonce_data, PISA_NONCE_LEN))
+			                 valid, data_size);
+			if (!memcmp(valid, nonce_data, nonce_len))
 				return nonce;
 
 			/* ... and if that failed the old random value */
 			pisa_append_hmac(&hip->hitr, &hip->hits, 0, spi,
-			                 valid, 4);
-			if (!memcmp(valid, nonce_data, PISA_NONCE_LEN))
+			                 valid, data_size);
+			if (!memcmp(valid, nonce_data, nonce_len))
 				return nonce;
 		}
 
@@ -379,6 +434,10 @@ static void pisa_accept_connection(struct in6_addr *hits, uint32_t spi_s,
 	pcd->spi[0] = spi_s;
 	pcd->spi[1] = spi_r;
 
+	HIP_DEBUG_HIT("pcd->hit[0]: ", &pcd->hit[0]);
+	HIP_DEBUG_HIT("pcd->hit[1]: ", &pcd->hit[1]);
+	HIP_DEBUG("spi[0]: %i, spi[1]", pcd->spi[0], pcd->spi[1]);
+
 	HIP_INFO("PISA accepted the connection.\n");
 }
 
@@ -386,6 +445,7 @@ static void pisa_accept_connection(struct in6_addr *hits, uint32_t spi_s,
  * Accept a connection via PISA after receiving an I2 packet.
  *
  * @param ctx context of the packet that belongs to that connection
+ * @param nonce the nonce we accepted
  */
 static void pisa_accept_connection_i2(hip_fw_context_t *ctx,
 				      struct hip_tlv_common *nonce)
@@ -394,7 +454,7 @@ static void pisa_accept_connection_i2(hip_fw_context_t *ctx,
 	struct hip_esp_info *esp;
 	uint32_t *spi;
 
-	if (nonce == NULL){
+	if (nonce == NULL) {
 		HIP_DEBUG("Accepting failed: no nonce found.\n");
 		return;
 	}
@@ -412,6 +472,30 @@ static void pisa_accept_connection_i2(hip_fw_context_t *ctx,
 }
 
 /**
+ * Accept a connection via PISA after receiving an U3 packet.
+ *
+ * @param ctx context of the packet that belongs to that connection
+ * @param nonce the nonce we accepted
+ */
+static void pisa_accept_connection_u3(hip_fw_context_t *ctx,
+				      struct hip_tlv_common *nonce)
+{
+	struct hip_common *hip = ctx->transport_hdr.hip;
+	uint32_t spi[2], *p;
+
+	if (nonce == NULL) {
+		HIP_DEBUG("Accepting failed: no nonce found.\n");
+		return;
+	}
+
+	p = (uint32_t *) hip_get_param_contents_direct(nonce);
+	spi[0] = *(p);
+	spi[1] = *(p + 1);
+
+	pisa_accept_connection(&hip->hits, spi[0], &hip->hitr, spi[1]);
+}
+
+/**
  * Reject a connection via PISA. Update firewall to allow no further packages
  * to pass through.
  *
@@ -425,7 +509,7 @@ static void pisa_reject_connection(hip_fw_context_t *ctx,
 }
 
 /**
- * Insert a PISA nonce and a PISA puzzle into the packet.
+ * Insert a PISA nonce and a PISA puzzle into the I2 packet.
  *
  * @param ctx context of the packet to modify
  * @return verdict, either NF_ACCEPT or NF_DROP
@@ -434,14 +518,14 @@ static int pisa_handler_i2(hip_fw_context_t *ctx)
 {
 	int verdict = NF_ACCEPT;
 
-	pisa_insert_nonce(ctx);
+	pisa_insert_nonce_1spi(ctx);
 	pisa_insert_puzzle(ctx);
 
 	return verdict;
 }
 
 /**
- * Check for a PISA nonce and a PISA puzzle in the packet.
+ * Check for a PISA nonce and a PISA puzzle in the R2 packet.
  *
  * @param ctx context of the packet to check
  * @return verdict, either NF_ACCEPT or NF_DROP
@@ -469,6 +553,79 @@ static int pisa_handler_r2(hip_fw_context_t *ctx)
 
 	return verdict;
 }
+
+/**
+ * Insert a PISA nonce and a PISA puzzle into the U1 packet.
+ *
+ * @param ctx context of the packet to modify
+ * @return verdict, either NF_ACCEPT or NF_DROP
+ */
+static int pisa_handler_u1(hip_fw_context_t *ctx)
+{
+	int verdict = NF_ACCEPT;
+
+	pisa_insert_nonce_1spi(ctx);
+	pisa_insert_puzzle(ctx);
+
+	return verdict;
+}
+
+/**
+ * Check for a PISA nonce and a PISA puzzle in the U2 packet.
+ *
+ * @param ctx context of the packet to check
+ * @return verdict, either NF_ACCEPT or NF_DROP
+ */
+static int pisa_handler_u2(hip_fw_context_t *ctx)
+{
+	int verdict = NF_DROP, sig = 0;
+	struct hip_solution_m *solution = NULL;
+	struct hip_tlv_common *nonce = NULL;
+
+	nonce = pisa_check_nonce(ctx);
+	solution = pisa_check_solution(ctx);
+	sig = pisa_check_signature(ctx);
+
+	if (nonce == NULL || solution == NULL || sig != 0) {
+		HIP_DEBUG("U2 packet did not match criteria: nonce %p, "
+		          "solution %p, signature %i\n", nonce, solution, sig);
+		verdict = NF_DROP;
+	} else {
+		/* packet was ok, forward the first SPI */
+		pisa_insert_nonce_2spi(ctx, nonce);
+		verdict = NF_ACCEPT;
+	}
+
+	return verdict;
+}
+
+/**
+ * Check for a PISA nonce in the U3 packet.
+ *
+ * @param ctx context of the packet to check
+ * @return verdict, either NF_ACCEPT or NF_DROP
+ */
+static int pisa_handler_u3(hip_fw_context_t *ctx)
+{
+	int verdict = NF_DROP, sig = 0;
+	struct hip_tlv_common *nonce = NULL;
+
+	nonce = pisa_check_nonce(ctx);
+	sig = pisa_check_signature(ctx);
+
+	if (nonce == NULL || sig != 0) {
+		HIP_DEBUG("U2 packet did not match criteria: nonce %p, "
+		          "signature %i\n", nonce, sig);
+		verdict = NF_DROP;
+	} else {
+		/* allow futher communication otherwise */
+		pisa_accept_connection_u3(ctx, nonce);
+		verdict = NF_ACCEPT;
+	}
+
+	return verdict;
+}
+
 
 /**
  * Handle ESP data that should be forwarded.
@@ -500,10 +657,9 @@ void pisa_init(struct midauth_handlers *h)
 	h->r1 = midauth_handler_accept;
 	h->i2 = pisa_handler_i2;
 	h->r2 = pisa_handler_r2;
-	/* @todo update handling will be separated from bex handling */
-	h->u1 = midauth_handler_accept;
-	h->u2 = midauth_handler_accept;
-	h->u3 = midauth_handler_accept;
+	h->u1 = pisa_handler_u1;
+	h->u2 = pisa_handler_u2;
+	h->u3 = pisa_handler_u3;
 	h->esp = pisa_handler_esp;
 
 	pisa_generate_random();
