@@ -46,13 +46,14 @@ int add_esp_prot_hash(unsigned char *out_hash, int *out_length, hip_sadb_entry *
 {
 	int err = 0;
 	
+	HIP_DEBUG("adding hash chain element to outgoing packet...\n");
+	
 	// first determine hash length
 	*out_length = esp_prot_transforms[entry->active_transform];
+	HIP_DEBUG("hash length is %i\n", *out_length);
 	
 	if (*out_length > 0)
 	{
-		HIP_DEBUG("adding hash chain element to outgoing packet...\n");
-		
 		/* put the hchain element directly in the provided buffer, no need to copy
 		 * afterwards */
 		HIP_IFEL(hchain_pop(entry->active_hchain, *out_length, out_hash), -1,
@@ -88,13 +89,13 @@ int verify_esp_prot_hash(hip_sadb_entry *entry, unsigned char *hash_value)
 	HIP_DEBUG("verifying hash chain element for incoming packet...\n");
 
 	hash_length = esp_prot_transforms[entry->active_transform];
-	HIP_DEBUG("hash length is %i,\n", hash_length);
+	HIP_DEBUG("hash length is %i\n", hash_length);
 		
 	// only verify the hash, if extension is switched on
 	if (hash_length <= 0)
 	{
 		// extension might not be in use, no need to verify
-		HIP_DEBUG("not expecting any hash element\n");
+		HIP_DEBUG("not expecting any hash-chain element\n");
 		goto out_err;
 	}
 		
