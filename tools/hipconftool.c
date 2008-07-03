@@ -20,7 +20,6 @@
 #include "hipconftool.h"
 #include "ife.h"
 
-
 /**
  * Parses command line arguments and send the appropiate message to hipd
  *
@@ -96,6 +95,61 @@ int hip_peek_total_len(int socket, int encap_hdr_size)
 	return bytes;
 }
 
+int hip_bind_to_daemon_socket(int socket, struct sockaddr *sa) {
+	int err = 0, port = 0, on = 1;
+	struct sockaddr_in6 *addr = (struct sockaddr_in6 *) sa;
+
+	HIP_ASSERT(addr->sin6_family == AF_INET6);
+
+	errno = 0;
+
+	if (setsockopt(socket, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) == -1) {
+		HIP_DEBUG ("Failed to set socket option SO_REUSEADDR %s \n",  strerror(errno));
+	}
+
+	if (addr->sin6_port) {
+		_HIP_DEBUG("Bind to fixed port %d\n", addr->sin6_port);
+		err = bind(socket,(struct sockaddr *)addr,
+			   sizeof(struct sockaddr_in6));
+		err = -errno;
+		goto out_err;
+	}
+
+	for(port = 1023; port > 25; port--) {
+        _HIP_DEBUG("trying bind() to port %d\n", port);
+		addr->sin6_port = htons(port);
+		err = bind(socket,(struct sockaddr *)addr,
+			   hip_sockaddr_len(addr));
+		if (err == -1) {
+			if (errno == EACCES) {
+				/* Ephemeral ports:
+				   /proc/sys/net/ipv4/ip_local_port_range */
+				HIP_DEBUG("Use ephemeral port number in connect\n");
+				err = 0;
+				break;
+			} else {
+				HIP_ERROR("Error %d bind() wasn't succesful\n",
+					  errno);
+				err = -1;
+				goto out_err;
+			}
+		}
+		else {
+			_HIP_DEBUG("Bind() to port %d successful\n", port);
+			goto out_err;
+		}
+	}
+
+	if (port == 26) {
+		HIP_ERROR("All privileged ports were occupied\n");
+		err = -1;
+	}
+
+ out_err:
+	errno = 0;
+	return err;
+}
+
 
 int 
 callback_sendto_hipd(int * sock, void *msg, size_t len)
@@ -105,7 +159,7 @@ callback_sendto_hipd(int * sock, void *msg, size_t len)
 	
 	bzero(&sock_addr, sizeof(sock_addr));
 	sock_addr.sin6_family = AF_INET6;
-	sock_addr.sin6_port = htons(970);
+	sock_addr.sin6_port = htons(HIP_DAEMON_LOCAL_PORT);
 	sock_addr.sin6_addr = in6addr_loopback;
     
 	alen = sizeof(sock_addr);
@@ -119,10 +173,10 @@ callback_sendto_hipd(int * sock, void *msg, size_t len)
 	memset(&addr, 0, sizeof(addr));
 	addr.sin6_family = AF_INET6;
 	addr.sin6_addr = in6addr_loopback;
-	addr.sin6_port = htons(1023);
-	 
-	err = bind(*sock,(struct sockaddr *)&addr,
-			   sizeof(struct sockaddr_in6));
+	//addr.sin6_port = htons(1023);
+	err = hip_bind_to_daemon_socket(*sock, (struct sockaddr *)&addr);
+	//	err = bind(*sock,(struct sockaddr *)&addr,
+	//	   sizeof(struct sockaddr_in6));
 	
 	n = sendto(*sock, msg, len, 0,
 		   (struct sockaddr *)&sock_addr, alen);
