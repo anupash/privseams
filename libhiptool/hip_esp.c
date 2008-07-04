@@ -1,4 +1,4 @@
-/*
+/**
  * Host Identity Protocol
  * Copyright (C) 2004-06 the Boeing Company
  * 
@@ -19,6 +19,8 @@
  * 
  * User-mode HIP ESP implementation.
  *
+ * tunreader portions Copyright (C) 2004 UC Berkeley
+ * @note HIPU: The userspace IPsec must be used.
  */
 
 #include "hip_esp.h"

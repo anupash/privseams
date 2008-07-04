@@ -2,13 +2,10 @@
  * @author René Hummen
  */
 
-#include "useripsec.h"
 #include <sys/socket.h>		/* socket() */
-#include "misc.h"			/* hip conversion functions */
-#include "hip_esp.h"
-#include "utils.h"
 #include <sys/time.h>		/* timeval */
-#include "hashchain_store.h"
+#include "useripsec.h"
+#include "misc.h"			/* hip conversion functions */
 
 #define ESP_PACKET_SIZE 2500
 // this is the maximum buffer-size needed for an userspace ipsec esp packet
@@ -25,8 +22,6 @@ unsigned char *decrypted_packet = NULL;
 // sockets in order to re-insert the esp packet into the stack
 int raw_sock_v4 = 0, raw_sock_v6 = 0;
 int is_init = 0;
-
-uint16_t checksum_magic(const struct in6_addr *initiator, const struct in6_addr *receiver);
 
 /* this will initialize the esp_packet buffer and the sockets,
  * they are not set yet */
@@ -111,9 +106,9 @@ int hip_query_default_local_hit_from_hipd(hip_hit_t *hit)
 	 
 	int err = 0;
 	struct hip_common *msg = NULL;
-	struct hip_tlv_common *current_param = NULL;
+	struct hip_tlv_common *param = NULL;
 	hip_hit_t *defhit  = NULL;	
-	struct endpoint_hip *endp=NULL;
+	struct endpoint_hip *endp = NULL;
 	
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEFAULT_HIT,0),-1,
@@ -121,13 +116,8 @@ int hip_query_default_local_hit_from_hipd(hip_hit_t *hit)
 	HIP_IFEL(hip_send_recv_daemon_info(msg), -1,
 		 "send/recv daemon info\n");
 	
-	while((current_param = hip_get_next_param(msg, current_param)) != NULL)
-	{
-		defhit = (in6_addr_t *)hip_get_param_contents_direct(current_param);
-		//set_hit_prefix(defhit); // miika: what the heck?
-		HIP_DEBUG_HIT("default hi is ",defhit);
-	}
-
+	HIP_IFE(!(param = hip_get_param(msg, HIP_PARAM_HIT)), -1); 
+	defhit = hip_get_param_contents_direct(param);
 	ipv6_addr_copy(hit, defhit);
 
 out_err:

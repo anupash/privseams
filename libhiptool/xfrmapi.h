@@ -74,12 +74,16 @@ int hip_xfrm_dst_init(struct in6_addr * dst_hit, struct in6_addr * dst_addr);
 int hip_xfrm_update(hip_hit_t *hit, hip_hit_t *hit2, struct in6_addr *addr, 
 		    uint32_t spi, int state, int dir, hip_portpair_t *sa_info);
 int hip_xfrm_delete(hip_hit_t * hit, uint32_t spi, int dir);
+
+
 int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
-			   struct in6_addr *hit_our,
-			   struct in6_addr *hit_peer, 
+			   struct in6_addr *id_our,
+			   struct in6_addr *id_peer, 
 			   struct in6_addr *tmpl_saddr,
 			   struct in6_addr *tmpl_daddr, int dir, u8 proto,
-			   u8 hit_prefix, int preferred_family);
+			   u8 id_prefix, int preferred_family);
+
+
 int hip_xfrm_policy_delete(struct rtnl_handle *rth,
 			   struct in6_addr *hit_our,
 			   struct in6_addr *hit_peer,

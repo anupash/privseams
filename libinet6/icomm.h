@@ -53,6 +53,7 @@
 #define SO_HIP_GET_HA_INFO			22
 #define SO_HIP_TRIGGER_BEX                      23
 #define SO_HIP_DHT_SERVING_GW                   24
+#define SO_HIP_GET_STATE_HA		        25
 /* inclusive */
 #define HIP_SO_ANY_MAX 				63
 
@@ -170,10 +171,17 @@
 #define SO_HIP_CERT_SPKI_VERIFY                 142
 #define SO_HIP_CERT_X509V3_SIGN                 143
 #define SO_HIP_CERT_X509V3_VERIFY               144
-#define SO_HIP_USERSPACE_IPSEC					145
-#define SO_HIP_ESP_PROT_EXT_TRANSFORM			146
-#define SO_HIP_IPSEC_UPDATE_ANCHOR_LIST			147
-#define SO_HIP_IPSEC_NEXT_ANCHOR				148
+#define SO_HIP_USERSPACE_IPSEC			145
+#define SO_HIP_ESP_PROT_EXT_TRANSFORM		146
+#define SO_HIP_IPSEC_UPDATE_ANCHOR_LIST		147
+#define SO_HIP_IPSEC_NEXT_ANCHOR		148
+#define SO_HIP_PARAM_LSI			149
+#define SO_HIP_GET_LSI_PEER                     150
+#define SO_HIP_GET_LSI_OUR			151
+#define SO_HIP_IS_OUR_LSI                       152
+#define SO_HIP_ADD_PEER_MAP_HIT_IP_LSI          153
+#define SO_HIP_FIREWALL_BEX_DONE                154
+#define SO_HIP_GET_PEER_HIT_BY_LSIS             155
 /** @} */
 /* inclusive */
 #define HIP_SO_ROOT_MAX 			255
