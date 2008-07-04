@@ -348,6 +348,8 @@ int hip_connect_func(struct addrinfo *peer_ai, int *sock)
  * @param flags     flags that are set to addrinfo flags.
  *
  * @return          zero on success, non-zero otherwise.
+ * @note            This function uses printf instead of the debug macros because
+ *                  conntest-client-opp and opp library debugs get tangled.
  */
 int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
 {
@@ -377,12 +379,15 @@ int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
 	search_key.ai_socktype = socktype;
 	
 	/* Get the peer's address info. Set a generic -EHADDRINFO for */
-	HIP_IFEL(getaddrinfo(peer_name, port_name, &search_key, &peer_ai),
-		 -EHADDRINFO, "Name '%s' or service '%s' is unknown.\n",
-		 peer_name, port_name);
+	if (getaddrinfo(peer_name, port_name, &search_key, &peer_ai)) {
+	    err = -EHADDRINFO;
+	    printf("Name '%s' or service '%s' is unknown.\n",
+		   peer_name, port_name);
+	    goto out_err;
+	}
 	
-	HIP_INFO("Please input some text to be sent to '%s'.\n"\
-		 "Empty row or \"CTRL+d\" sends data.\n", peer_name);
+	printf("Please input some text to be sent to '%s'.\n"\
+	       "Empty row or \"CTRL+d\" sends data.\n", peer_name);
 	
 	/* Read user input from the standard input. */
 	while((c = getc(stdin)) != EOF && (datalen < IP_MAXPACKET))
@@ -403,12 +408,15 @@ int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
 	}
 	
 	if(datalen == 0) {
-		HIP_INFO("No input data given.\nRunning plain connection test "\
-			 "with no payload data exchange.\n");
+		printf("No input data given.\nRunning plain connection test "\
+		       "with no payload data exchange.\n");
 	}
 	
 	/* Get a socket for sending and receiving data. */
-	HIP_IFE(err = hip_connect_func(peer_ai, &sock), err);
+	if (err = hip_connect_func(peer_ai, &sock)) {
+		printf("connect failed\n");
+		goto out_err;
+	}
 
 	gettimeofday(&stats_before, NULL);
 	
@@ -455,11 +463,11 @@ int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
 		((stats_after.tv_sec - stats_before.tv_sec) * 1000000)
 		+ (stats_after.tv_usec - stats_before.tv_usec);
 	
-	HIP_INFO("Data exchange took %.5f seconds.\n",
-		 microseconds / 1000000.0 );
+	printf("Data exchange took %.5f seconds.\n",
+	       microseconds / 1000000.0 );
 
-	HIP_INFO("Sent/received %d/%d bytes payload data to/from '%s'.\n",
-		 bytes_sent, bytes_received, peer_name);
+	printf("Sent/received %d/%d bytes payload data to/from '%s'.\n",
+	       bytes_sent, bytes_received, peer_name);
 	
 	if (memcmp(sendbuffer, receivebuffer, IP_MAXPACKET) != 0) {
 		err = -EBADMSG;
