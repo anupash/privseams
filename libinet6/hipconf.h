@@ -135,14 +135,12 @@
 #define TYPE_DEBUG         19
 #define TYPE_DAEMON        20
 #define TYPE_LOCATOR       21
-#define TYPE_RELAY         22
-#define TYPE_SET           23 /* DHT set <name> */
-#define TYPE_DHT           24
-//#define TYPE_OPPTCP	   25
-#define TYPE_ORDER         26
-#define TYPE_TCPTIMEOUT	   27 /* add By Tao Wan, on 04.01.2008*/
-#define TYPE_HIPPROXY	   28
-#define TYPE_MAX           29 /* exclusive */
+#define TYPE_SET           22 /* DHT set <name> */
+#define TYPE_DHT           23
+#define TYPE_ORDER         24
+#define TYPE_TCPTIMEOUT	   25 /* add By Tao Wan, on 04.01.2008*/
+#define TYPE_HIPPROXY	   26
+#define TYPE_MAX           27 /* exclusive */
 
 /* for handle_hi() only */
 #define OPT_HI_TYPE 0
@@ -178,7 +176,6 @@ int hip_conf_handle_rst(hip_common_t *, int type, const char *opt[], int optc);
 int hip_conf_handle_debug(hip_common_t *, int type, const char *opt[], int optc);
 int hip_conf_handle_bos(hip_common_t *, int type, const char *opt[], int optc);
 int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[], int optc);
-int hip_conf_handle_hiprelay(hip_common_t *msg, int action, const char *opt[], int optc);
 int hip_conf_handle_del(hip_common_t *, int type, const char *opt[], int optc);
 int hip_conf_handle_nat(hip_common_t *, int type, const char *opt[], int optc);
 int hip_conf_handle_locator(hip_common_t *, int type, const char *opt[], int optc);

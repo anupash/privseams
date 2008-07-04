@@ -1621,7 +1621,7 @@ void *hip_cast_sa_addr(void *sockaddr) {
   return ret;
 }
 
-int hip_sockaddr_len(void *sockaddr) {
+int hip_sockaddr_len(const void *sockaddr) {
   struct sockaddr *sa = (struct sockaddr *) sockaddr;
   int len;
   

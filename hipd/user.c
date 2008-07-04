@@ -15,7 +15,7 @@
 
 int hip_sendto(const struct hip_common *msg, const struct sockaddr *dst){
         return sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
-                   0, (struct sockaddr *)dst, hip_sockaddr_len(dst));
+		      0, (struct sockaddr *)dst, hip_sockaddr_len(dst));
 }
 
 /**
@@ -388,7 +388,8 @@ int hip_handle_user_msg(struct hip_common *msg,
         		HIP_DEBUG("Setting HIP PROXY ON\n");
         		hip_set_hip_proxy_on();
       			hip_build_user_hdr(msg, SO_HIP_SET_HIPPROXY_ON, 0);
-        		
+			/* warning: passing argument 2 of 'hip_sendto' from
+			   incompatible pointer type. 04.07.2008. */
         		n = hip_sendto(msg, &sock_addr);
     			
         		HIP_IFEL(n < 0, 0, "sendto() failed on agent socket.\n");
@@ -414,7 +415,8 @@ int hip_handle_user_msg(struct hip_common *msg,
         		HIP_DEBUG("Setting HIP PROXY OFF\n");
         		hip_set_hip_proxy_off();
       			hip_build_user_hdr(msg, SO_HIP_SET_HIPPROXY_OFF, 0);
-        		
+        		/* warning: passing argument 2 of 'hip_sendto' from
+			   incompatible pointer type. 04.07.2008. */
         		n = hip_sendto(msg, &sock_addr);
     			
         		HIP_IFEL(n < 0, 0, "sendto() failed on agent socket.\n");
@@ -446,9 +448,10 @@ int hip_handle_user_msg(struct hip_common *msg,
         		
         		if(hip_get_hip_proxy_status() == 1)
         			hip_build_user_hdr(msg, SO_HIP_SET_HIPPROXY_ON, 0);
-        		
+			
+        		/* warning: passing argument 2 of 'hip_sendto' from
+			   incompatible pointer type. 04.07.2008. */
         		n = hip_sendto(msg, &sock_addr);
- //   			HIP_DEBUG("SENDTO ERRNO: 0x%x\n", errno);
     			
         		HIP_IFEL(n < 0, 0, "sendto() failed on agent socket.\n");
 
@@ -514,12 +517,8 @@ int hip_handle_user_msg(struct hip_common *msg,
 		HIP_IFEL(hip_services_add(HIP_SERVICE_ESCROW), -1, 
 			 "Error while adding service\n");
 	
-		//hip_services_set_active(HIP_SERVICE_ESCROW);
-
 		hip_set_srv_status(HIP_SERVICE_ESCROW, HIP_SERVICE_ON);
 
-		/*if (hip_services_is_active(HIP_SERVICE_ESCROW))
-		  HIP_DEBUG("Escrow service is now active.\n");*/
 		HIP_IFEL(hip_recreate_all_precreated_r1_packets(), -1, 
 			 "Failed to recreate R1-packets\n"); 
 		
@@ -541,8 +540,6 @@ int hip_handle_user_msg(struct hip_common *msg,
 		
 		hip_set_srv_status(HIP_SERVICE_ESCROW, HIP_SERVICE_OFF);
 		
-		//HIP_IFEL(hip_services_remove(HIP_ESCROW_SERVICE), -1, 
-		// "Error while removing service\n");
 		HIP_IFEL(hip_recreate_all_precreated_r1_packets(), -1, 
 			 "Failed to recreate R1-packets\n"); 
 		
@@ -620,7 +617,8 @@ int hip_handle_user_msg(struct hip_common *msg,
 			pending_req->lifetime = reg_req->lifetime;
 			pending_req->created  = time(NULL);
 
-			HIP_DEBUG("Adding pending request.\n");
+			HIP_DEBUG("Adding pending service request for service %u.\n",
+				  reg_types[i]);
 			hip_add_pending_request(pending_req);
 
 			/* Set the request flag. */
@@ -638,13 +636,16 @@ int hip_handle_user_msg(struct hip_common *msg,
 					entry, HIP_HA_CTRL_LOCAL_REQ_ESCROW);
 				break;
 			default:
-				HIP_INFO("Undefined service type requested in "\
-					 "the service request.\n");
+				HIP_INFO("Undefined service type (%u) "\
+					 "requested in the service "\
+					 "request. As a result, the local "\
+					 "service request flag was not set "\
+					 "for this service.\n", reg_types[i]);
 				break;
 			}
 		}
 
-		/* Send a I1 packet to RVS. */
+		/* Send a I1 packet to the server (registrar). */
 		/** @todo Not filtering I1, when handling server message! */
 		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
 			 -1, "Error on sending I1 packet to the server.\n");
@@ -663,68 +664,6 @@ int hip_handle_user_msg(struct hip_common *msg,
 		err = hip_recreate_all_precreated_r1_packets();
 		break;
 
-	case SO_HIP_ADD_RELAY:
-	{
-		hip_pending_request_t *pending_req = NULL;
-
-		/* draft-ietf-hip-registration-02 HIPRELAY registration.
-		   Responder (of I,Relay,R hierarchy) handles this message. Message
-		   indicates that the current machine wants to register to a HIP
-		   relay server. This message is received from hipconf. */
-		HIP_DEBUG("Handling ADD HIPRELAY user message.\n");
-		
-		/* Get HIP relay IP address and HIT that were given as commandline
-		   parameters to hipconf. */
-		HIP_IFEL(!(dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT)),
-			 -1, "Relay server HIT was not found from the message.\n");
-		HIP_IFEL(!(dst_ip = hip_get_param_contents(
-				   msg, HIP_PARAM_IPV6_ADDR)), -1, "Relay server "\
-			 "IP address was not found from the message.\n");
-		/* Create a new host association database entry from the message
-		   received from the hipconf. This creates a HIT to IP mapping
-		   of the relay server. */
-		HIP_IFEL(hip_add_peer_map(msg), -1, "Failed to create a new host "
-			 "association database entry for the relay server.\n");
-		/* Fetch the host association database entry just created. */
-		HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(dst_hit)),
-			 -1, "Unable to find host association database entry "\
-			 "matching relay server's HIT.\n");
-	     
-		/* Set a hiprelay request flag. */
-		hip_hadb_set_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_RELAY);
-		
-		pending_req = (hip_pending_request_t *)
-			malloc(sizeof(hip_pending_request_t));
-		if(pending_req == NULL) {
-			HIP_ERROR("Error on allocating memory for a "\
-				  "pending registration request.\n");
-			err = -1;
-			goto out_err;	
-		}
-
-		pending_req->entry    = entry;
-		pending_req->reg_type = HIP_SERVICE_RELAY;
-		/* Use a hard coded value for now. */
-		pending_req->lifetime = 200;
-		
-		HIP_DEBUG("Adding pending request.\n");
-		hip_add_pending_request(pending_req);
-
-		/* Since we are requesting UDP relay, we assume that we are behind
-		   a NAT. Therefore we set the NAT status on. This is needed only
-		   for the current host association, but since keep-alives are sent
-		   currently only if the global NAT status is on, we must call
-		   hip_nat_on() (which in turn sets the NAT status on for all host
-		   associations). */
-		HIP_IFEL(hip_nat_on(), -1, "Error when setting daemon NAT status"\
-			 "to \"on\"\n");
-		hip_agent_update_status(SO_HIP_SET_NAT_ON, NULL, 0);
-
-		/* Send a I1 packet to relay. */
-		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
-			 -1, "sending i1 failed\n");
-		break;
-	}    
 	case SO_HIP_OFFER_HIPRELAY:
 		/* draft-ietf-hip-registration-02 HIPRELAY registration. Relay
 		   server handles this message. Message indicates that the
@@ -732,18 +671,9 @@ int hip_handle_user_msg(struct hip_common *msg,
 		   message is received from hipconf. */
 		HIP_DEBUG("Handling OFFER HIPRELAY user message.\n");
 		
-		//HIP_IFE(hip_services_add(HIP_SERVICE_RELAY), -1);
-		//hip_services_set_active(HIP_SERVICE_RELAY);
-		
 		hip_set_srv_status(HIP_SERVICE_RELAY, HIP_SERVICE_ON);
 		hip_relay_set_status(HIP_RELAY_ON);
 
-		/*if (hip_services_is_active(HIP_SERVICE_RELAY)){
-		  HIP_DEBUG("UDP relay service for HIP packets"\
-		  "is now active.\n");
-				  
-		  }*/
-		
 		err = hip_recreate_all_precreated_r1_packets();
 		break;
 		
@@ -757,8 +687,7 @@ int hip_handle_user_msg(struct hip_common *msg,
 		
 	case SO_HIP_CANCEL_RVS:
 		HIP_DEBUG("Handling CANCEL RVS user message.\n");
-		//HIP_IFEL(hip_services_remove(HIP_SERVICE_RENDEZVOUS), -1,
-		// "Failed to remove HIP_SERVICE_RENDEZVOUS");
+		
 		hip_set_srv_status(HIP_SERVICE_RENDEZVOUS, HIP_SERVICE_OFF);
 		
 		hip_relht_free_all_of_type(HIP_RVSRELAY);
@@ -776,8 +705,7 @@ int hip_handle_user_msg(struct hip_common *msg,
 		
 	case SO_HIP_CANCEL_HIPRELAY:
 		HIP_DEBUG("Handling CANCEL RELAY user message.\n");
-		//HIP_IFEL(hip_services_remove(HIP_SERVICE_RELAY), -1,
-		// "Failed to remove HIP_SERVICE_RELAY");
+		
 		hip_set_srv_status(HIP_SERVICE_RELAY, HIP_SERVICE_OFF);
 		
 		hip_relht_free_all_of_type(HIP_FULLRELAY);
@@ -805,7 +733,7 @@ int hip_handle_user_msg(struct hip_common *msg,
 		hip_msg_init(msg);
 		hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0);
 		/** 
-		 * @todo passing argument 1 of 'hip_for_each_hi' from incompatible
+		 * @todo passing argument 1 of 'hip_for_each_ha' from incompatible
 		 * pointer type
 		 */
 		err = hip_for_each_ha(hip_handle_get_ha_info, msg);

@@ -28,7 +28,7 @@ const char *hipconf_usage =
 "add|del map <hit> <ipv6>\n"
 "Server side:\n\tadd|del service escrow|rvs|hiprelay\n"
 "\treinit service rvs|hiprelay\n"
-"Client side:\n\tadd server rvs|hiprelay|escrow [servicelist] <hit> <ipv6> <lifetime in seconds>\n"
+"Client side:\n\tadd server rvs|relay|escrow [servicelist] <hit> <ipv6> <lifetime in seconds>\n"
 "del hi <hit>\n"
 "get hi default\n"
 #ifdef CONFIG_HIP_ICOOKIE
@@ -93,7 +93,6 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc) 
 	hip_conf_handle_debug,
 	hip_conf_handle_restart,
         hip_conf_handle_locator,
-        hip_conf_handle_hiprelay,
         hip_conf_handle_set,
         hip_conf_handle_dht_toggle,
         hip_conf_handle_trans_order,
@@ -211,8 +210,6 @@ int hip_conf_get_type(char *text,char *argv[]) {
 		ret = TYPE_MAP;
 	else if (!strcmp("rst", text))
 		ret = TYPE_RST;
-	else if (!strcmp("hiprelay", text))
-		ret = TYPE_RELAY;
 	else if (!strcmp("server", text))
 		ret = TYPE_SERVER;
 	else if (!strcmp("puzzle", text))
@@ -362,10 +359,8 @@ int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[],
 	time_t seconds_from_lifetime = 0;
 	char lowercase[30];
 		
-	HIP_DEBUG("hip_conf_handle_server() invoked.\n");
+	_HIP_DEBUG("hip_conf_handle_server() invoked.\n");
 
-	HIP_DEBUG("Option count: %d.\n", optc);
-	
 	if(action != ACTION_ADD && action != ACTION_DEL) {
 		HIP_ERROR("Only actions \"add\" and \"del\" are supported for "\
 			  "\"server\".\n");
@@ -407,7 +402,6 @@ int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[],
 			err = -1;
 			goto out_err;
 		}
-		HIP_DEBUG("PING.\n");
 		number_of_regtypes = optc - 2;
 		index_of_hit = optc - 2;
 		index_of_ip  = optc - 1;
@@ -429,7 +423,6 @@ int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[],
 			IPV4_TO_IPV6_MAP(&ipv4, &ipv6);
 		}
 	} 
-	HIP_DEBUG("PONG, num of reg_types: %i.\n", number_of_regtypes);
 
 	reg_types = malloc(number_of_regtypes * sizeof(uint8_t));
 	if(reg_types == NULL) {
@@ -472,11 +465,7 @@ int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[],
 			}
 		}
 	}
-	
-	for(i = 0 ;i < number_of_regtypes; i++) {
-		HIP_DEBUG("Reg type: %d.\n", reg_types[i]);
-	}
-	
+		
 	HIP_IFEL(hip_build_param_contents(msg, &hit, HIP_PARAM_HIT,
 					  sizeof(in6_addr_t)), -1, 
 		 "Failed to build HIT parameter to hipconf user message.\n");
@@ -514,59 +503,6 @@ int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[],
 	if(reg_types != NULL)
 		free(reg_types);
 
-	return err;
-}
-
-/**
- * Handles the hipconf commands where the type is @c hiprelay.
- *  
- * Create a message to the kernel module from the function parameters @c msg,
- * @c action and @c opt[].
- * 
- * @param msg    a pointer to the buffer where the message for kernel will
- *               be written.
- * @param action the numeric action identifier for the action to be performed.
- * @param opt    an array of pointers to the command line arguments after
- *               the action and type (should be the HIT and the corresponding
- *               IPv6 address).
- * @param optc   the number of elements in the array (@b 2).
- * @return       zero on success, or negative error value on error.
- * @note         Currently only action @c add is supported.
- * @todo         If the current machine has more than one IP address
- *               there should be a way to choose which of the addresses
- *               to register to the rendezvous server.
- * @todo         There are currently four different HITs at the @c dummy0
- *               interface. There should be a way to choose which of the HITs
- *               to register to the rendezvous server.
- */ 
-int hip_conf_handle_hiprelay(hip_common_t *msg, int action,
-				const char *opt[], int optc)
-{
-	in6_addr_t hit, ip6;
-	int err=0;
-
-	HIP_DEBUG("handle_hiprelay() invoked.\n");
-	     
-	HIP_IFEL((action != ACTION_ADD), -1,
-		 "Only action \"add\" is supported for \"hiprelay\".\n");
-	HIP_IFEL((optc != 2), -1, "Missing arguments\n");
-	
-	HIP_IFEL(convert_string_to_address(opt[0], &hit), -1,
-		 "string to address conversion failed\n");
-	HIP_IFEL(convert_string_to_address(opt[1], &ip6), -1,
-		 "string to address conversion failed\n");
-     
-	HIP_IFEL(hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
-					  sizeof(in6_addr_t)), -1,
-		 "build param hit failed\n");
-	HIP_IFEL(hip_build_param_contents(msg, (void *) &ip6,
-					  HIP_PARAM_IPV6_ADDR,
-					  sizeof(in6_addr_t)), -1,
-		 "build param hit failed\n");
-     
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_RELAY, 0), -1,
-		 "Failed to build user message header.\n");
- out_err:
 	return err;
 }
 
@@ -788,6 +724,8 @@ int hip_conf_handle_trans_order(hip_common_t *msg, int action,
      } 
      
      /* a bit wastefull but works */
+     /* warning: passing argument 2 of 'hip_build_param_opendht_set' discards
+	qualifiers from pointer target type. 04.07.2008. */
      err = hip_build_param_opendht_set(msg, opt[0]);
      if (err) {
              HIP_ERROR("build param hit failed: %s\n", strerror(err));
@@ -1289,6 +1227,8 @@ int hip_conf_handle_set(hip_common_t *msg, int action, const char *opt[], int op
     len_name = strlen(opt[0]);
     HIP_DEBUG("Name received from user: %s (len = %d (max 256))\n", opt[0], len_name);
     HIP_IFEL((len_name > 255), -1, "Name too long, max 256\n");
+    /* warning: passing argument 2 of 'hip_build_param_opendht_set' discards
+       qualifiers from pointer target type. 04.07.2008 */
     err = hip_build_param_opendht_set(msg, opt[0]);
     if (err) {
         HIP_ERROR("build param hit failed: %s\n", strerror(err));
@@ -1326,10 +1266,14 @@ int hip_conf_handle_gw(hip_common_t *msg, int action, const char *opt[], int opt
                 err = -EINVAL;
                 goto out_err;
         }
-
+	
         memset(&new_gateway, '0', sizeof(new_gateway));
         ret = 0;
         /* resolve the new gateway */
+        /* warning: passing argument 1 of 'resolve_dht_gateway_info' discards
+	   qualifiers from pointer target type. 04.07.2008 */
+	/* warning: passing argument 2 of 'resolve_dht_gateway_info' from
+	   incompatible pointer type. 04.07.2008 */
         ret = resolve_dht_gateway_info(opt[0], &new_gateway);
         if (ret < 0) goto out_err;
         struct sockaddr_in *sa = (struct sockaddr_in *)new_gateway.ai_addr;
@@ -1403,6 +1347,7 @@ int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int op
         tmp_ttl = gw_info->ttl;
         tmp_port = htons(gw_info->port);
         IPV6_TO_IPV4_MAP(&gw_info->addr, &tmp_v4);
+	/* warning: assignment from incompatible pointer type. 04.07.2008. */
         pret = inet_ntop(AF_INET, &tmp_v4, tmp_ip_str, 20);
         HIP_INFO("Got address %s, port %d, TTL %d from daemon\n",
                   tmp_ip_str, tmp_port, tmp_ttl);
