@@ -28,9 +28,9 @@ if HIP_HI3
 endif
 
 LDADD=
-if HIP_OPPORTUNISTIC
-  LDADD += ../libopphip/.libs/libopphip.a
-endif
+#if HIP_OPPORTUNISTIC
+#  LDADD += ../libopphip/.libs/libopphip.a
+#endif
 
 LDADD += ../libinet6/.libs/libinet6.a
 if HIP_CORPORATE
