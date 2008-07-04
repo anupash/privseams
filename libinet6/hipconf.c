@@ -483,6 +483,8 @@ int hip_conf_handle_hi(hip_common_t *msg, int action, const char *opt[],
 
      _HIP_DEBUG("action=%d optc=%d\n", action, optc);
 
+     /* @todo: the ACTION_GET is bypassed in hip_do_hipconf() */
+
      if (action == ACTION_DEL)
 	  return hip_conf_handle_hi_del(msg, action, opt, optc);
      else if (action == ACTION_GET)
@@ -1292,7 +1294,6 @@ int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int op
 
         /* ASK THIS INFO FROM DAEMON */
         HIP_INFO("Asking serving gateway info from daemon...\n");
-        HIP_IFEL(!(msgdaemon = malloc(HIP_MAX_PACKET)), -1, "Malloc for msg failed\n");
         HIP_IFEL(hip_build_user_hdr(msgdaemon, SO_HIP_DHT_SERVING_GW,0),-1,
                  "Building daemon header failed\n");
         HIP_IFEL(hip_send_recv_daemon_info(msgdaemon), -1, "Send recv daemon info failed\n");
@@ -1465,12 +1466,13 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
      /* Get the type argument for the given action. */
      HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed.\n");
      memset(msg, 0, HIP_MAX_PACKET);
-     hip_get_all_hits(msg,argv);
-     
+
      /* Call handler function from the handler function pointer
 	array at index "type" with given commandline arguments. 
 	The functions build a hip_common message. */
-     if (argc ==3)
+     if (action == ACTION_GET)
+	     err = hip_get_all_hits(msg,argv);
+     else if (argc == 3)
 	  err = (*action_handler[type])(msg, action, (const char **)&argv[2], argc - 3);
      else
 	  err = (*action_handler[type])(msg, action, (const char **)&argv[3], argc - 3);
@@ -1509,8 +1511,6 @@ int hip_conf_handle_ha(hip_common_t *msg, int action,const char *opt[], int optc
      struct hip_tlv_common *current_param = NULL;
      int err = 0, state, ret;
      in6_addr_t arg1, hit1;
-
-     HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
 
      HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0), -1,
 	      "Building of daemon header failed\n");
@@ -1559,8 +1559,6 @@ int hip_conf_handle_handoff(hip_common_t *msg, int action,const char *opt[], int
 {	
      int err=0;
 		
-     HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
-	
      if (strcmp("active",opt[0]) ==0)
      {
 	  HIP_IFEL(hip_build_user_hdr(msg,SO_HIP_HANDOFF_ACTIVE, 0), -1,
