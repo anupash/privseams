@@ -660,7 +660,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
  		
  		if (hip_esp_prot_ext_transform > ESP_PROT_TRANSFORM_UNUSED)
  		{
-	 		/* the extension is switched on *//
+	 		/* the extension is switched on */
  			HIP_IFEL(hip_build_param_esp_prot_transform(msg,
  					HIP_PARAM_ESP_PROT_TRANSFORM, hip_esp_prot_ext_transform), -1, 
  					"Building of ESP protection mode failed\n");
