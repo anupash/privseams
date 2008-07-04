@@ -577,11 +577,13 @@ out_err:
 	return err;
 }
 */
-    
+ 
+pj_caching_pool *cpp;
 pj_caching_pool cp;
+/* 
 pj_status_t status;
 pj_pool_t *pool = 0;
-
+*/
 
 
 
@@ -870,6 +872,8 @@ void hip_on_rx_data(pj_ice_sess *ice, unsigned comp_id, void *pkt, pj_size_t siz
 void* hip_external_ice_init(pj_ice_sess_role role){
 	pj_ice_sess *  	p_ice;
 	pj_status_t status;
+
+	pj_pool_t *pool ;
 	
 	//init for PJproject
 	status = pj_init();
@@ -880,13 +884,16 @@ void* hip_external_ice_init(pj_ice_sess_role role){
         HIP_DEBUG("Error initializing PJLIB", status);
         return 0;
     }
-    pj_log_set_level(3);
+    pj_log_set_level(5);
 	//init for memery pool factroy
     // using default pool policy.
 
     pj_dump_config();
-    pj_caching_pool_init(&cp, NULL, 6024*1024 );  
     
+    if(cpp == 0){
+    	cpp= &cp;
+    	pj_caching_pool_init(cpp, NULL, 6024*2024 );  
+    }
 
     pjnath_init();
     
@@ -905,28 +912,21 @@ void* hip_external_ice_init(pj_ice_sess_role role){
  	
  	const pj_str_t    	 local_ufrag = pj_str("user");
  	const pj_str_t   	local_passwd = pj_str("pass");
- 	
-	//copy from test
-	  //	pj_pool_t *pool;
-	    pj_ioqueue_t *ioqueue;
-	    pj_timer_heap_t *timer_heap;
+
+    pj_ioqueue_t *ioqueue;
+    pj_timer_heap_t *timer_heap;
 	   //end copy
  	
  	//configure the call back handle
  	cb.on_ice_complete = &hip_on_ice_complete;
  	cb.on_tx_pkt = &hip_on_tx_pkt;
  	cb.on_rx_data= &hip_on_rx_data;
- 
- 	//copy from test
- 
+  	   
+   pool = pj_pool_create(&cpp->factory, NULL, 8000, 4000, NULL);
+   pj_ioqueue_create(pool, 12, &ioqueue);
+   pj_timer_heap_create(pool, 100, &timer_heap);
  	   
- 	  
- 	   
- 	   pool = pj_pool_create(&cp.factory, NULL, 4000, 4000, NULL);
- 	   pj_ioqueue_create(pool, 12, &ioqueue);
- 	   pj_timer_heap_create(pool, 100, &timer_heap);
- 	   
- 	  pj_stun_config_init(&stun_cfg, &cp.factory, 0, ioqueue, timer_heap);
+   pj_stun_config_init(&stun_cfg, &cp.factory, 0, ioqueue, timer_heap);
  	//end copy
  	     
  	//check if there is already a session
@@ -946,10 +946,10 @@ void* hip_external_ice_init(pj_ice_sess_role role){
  	 if(PJ_SUCCESS ==  status){
  		 return p_ice;
  	  }
- 	 else HIP_DEBUG("ice init fail %d \n", status); 
+ 	 else 
+ 		 HIP_DEBUG("ice init fail %d \n", status); 
  	
-
- 	return 0;
+ 	 return 0;
  	
 }
 
@@ -970,6 +970,8 @@ int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, 
 	 pj_sockaddr_in pj_addr;
 	 pj_sockaddr_in pj_addr_base;
 	 pj_status_t pj_status;
+	// pj_pool_t *pool ;
+	 
 	 
 	 /***debug area**/
 	 HIP_DEBUG_HIT("coming address ",hip_addr);
@@ -977,7 +979,9 @@ int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, 
 	 
 	 
 	 ice = session;
-	 pool = pj_pool_create(&cp.factory, NULL, 4000, 4000, NULL);
+	// pool = pj_pool_create(&cp.factory, NULL, 4000, 4000, NULL);
+	
+	 
 	 comp_id = PJ_COM_ID;
 	 type = addr_type;
 	 foundation = pj_str("ice");
@@ -990,7 +994,7 @@ int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, 
 	 
 	 pj_addr_base.sin_family=PJ_AF_INET;
 	 pj_addr_base.sin_port = port_base;
-	 pj_addr_base.sin_addr.s_addr =*((pj_uint32_t*) &hip_addr->s6_addr32[3]);
+	 pj_addr_base.sin_addr.s_addr =*((pj_uint32_t*) &hip_addr_base->s6_addr32[3]);
 	 
 	 addr_len = sizeof(pj_sockaddr_in);
 
@@ -1026,21 +1030,23 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 	const pj_str_t *  	rem_passwd;
 	unsigned  	rem_cand_cnt;
 	pj_ice_sess_cand *      temp_cand;
+//	pj_ice_sess_cand cand[10];
 	pj_ice_sess_cand *  	rem_cand;
 	struct hip_peer_addr_list_item * peer_addr_list_item;
-	int i;
+	int i, err = 0;
 	hip_list_t *item, *tmp;
 	const pj_str_t    	 local_ufrag = pj_str("user");
  	const pj_str_t   	local_passwd = pj_str("pass");
-	
-	
+ 	
+	pj_pool_t *pool ;
+ 	pool = pj_pool_create(&cpp->factory, NULL, 4000, 4000, NULL);
 	
 	HIP_DEBUG("ICE add remote function\n");
 	
 	rem_cand_cnt = 0;
 	//reserve space for the cand
-	rem_cand = pj_pool_calloc(pool,rem_cand_cnt, sizeof(pj_ice_sess_cand));
-	
+	rem_cand = pj_pool_calloc(pool,10, sizeof(pj_ice_sess_cand));
+//	rem_cand = cand;
 	i=0;
 	
 	temp_cand = rem_cand;
@@ -1080,7 +1086,14 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 			
 			
 			temp_cand->comp_id = 1;
-			temp_cand->type = ICE_CAND_TYPE_HOST;
+			if(peer_addr_list_item->port== 0 || peer_addr_list_item->port == HIP_NAT_UDP_PORT){
+				temp_cand->type = ICE_CAND_TYPE_HOST;
+			}
+			else{			
+				// we can not get peer base address for the reflexive address. 
+				// set all the peer address to host type for now.
+				temp_cand->type = ICE_CAND_TYPE_HOST;
+			}
 			temp_cand->foundation = pj_str("ice");
 	
 			temp_cand->prio = peer_addr_list_item->priority;
@@ -1102,8 +1115,10 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 		rem_cand 
 	) ;
 	HIP_DEBUG("add remote result: %d \n", t);
-	
-	return 0;
+out_err:
+	if(pool)
+		pj_pool_release(pool);
+	return err;
 }
 /**
  * 
@@ -1113,7 +1128,7 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 int hip_ice_start_check(void* ice){
 	
 	pj_ice_sess * session = ice;
-	/*
+	
 	HIP_DEBUG("start checking\n");
 	HIP_DEBUG("ice: %s \n", session->obj_name);
 	HIP_DEBUG("ice: local c number %d \n", session->lcand_cnt);
@@ -1129,7 +1144,9 @@ int hip_ice_start_check(void* ice){
 		HIP_DEBUG("Ice: check local candidate : %d \n" , j);
 		HIP_DEBUG("candidate 's foundation %s \n" , session->lcand[j].foundation.ptr );
 		HIP_DEBUG("candidate 's 	prio %d \n" , session->lcand[j].prio );
-		hip_print_lsi("candidate 's 	base addr:" , &(session->lcand[j].addr.ipv4.sin_addr.s_addr ));
+	//	hip_print_lsi("candidate 's 	base addr:" , &(session->lcand[j].addr.ipv4.sin_addr.s_addr ));
+
+																	
 		HIP_DEBUG("ca 's 	base addr port: %d \n" , (session->lcand[j].addr.ipv4.sin_port ));
 	}
 	int i;
@@ -1137,10 +1154,10 @@ int hip_ice_start_check(void* ice){
 		HIP_DEBUG("Ice: check r ca : %d \n" , i);
 		HIP_DEBUG("ca 's foundation %s \n" , session->rcand[i].foundation.ptr );
 		HIP_DEBUG("ca 's 	prio %d \n" , session->rcand[i].prio );
-		hip_print_lsi("ca 's 	base addr:" , &(session->rcand[i].addr.ipv4.sin_addr.s_addr ));
+//		hip_print_lsi("ca 's 	base addr:" , &(session->rcand[i].addr.ipv4.sin_addr.s_addr ));
 		HIP_DEBUG("ca 's 	base addr port: %d \n" , (session->rcand[i].addr.ipv4.sin_port ));
 	}
-	*/				
+					
 	pj_status_t result;
 	HIP_DEBUG("Ice: check dump end\n");
 	pj_log_set_level(4);
@@ -1152,7 +1169,7 @@ int hip_ice_start_check(void* ice){
 	else return -1;
 			
 }
-
+/*
 int hip_external_ice_end(){
 	//destory the pool
 	if(pool)
@@ -1160,7 +1177,7 @@ int hip_external_ice_end(){
     //destory the pool factory
     pj_caching_pool_destroy(&cp);
 }
-
+*/
 int hip_external_ice_receive_pkt(struct hip_common * msg, hip_ha_t *entry, in6_addr_t * src_addr,in_port_t port ){
 
     int i, addr_len;
@@ -1340,7 +1357,8 @@ int hip_nat_start_ice(hip_ha_t *entry, struct hip_esp_info *esp_info, int ice_co
         		}		
         		
         	}
-        	//add reflexive address          
+        	//add reflexive address 
+        	/*
             i = 0;           
             list_for_each_safe(item, tmp, hadb_hit, i) {
                 ha_n = list_entry(item);
@@ -1356,6 +1374,8 @@ int hip_nat_start_ice(hip_ha_t *entry, struct hip_esp_info *esp_info, int ice_co
                 	        		}
 
                 }
+            }
+            */
         	//TODO add relay address
         	
         	HIP_DEBUG("ICE add remote IN R2, spi is %d\n", ntohl(esp_info->new_spi));
@@ -1373,7 +1393,7 @@ int hip_nat_start_ice(hip_ha_t *entry, struct hip_esp_info *esp_info, int ice_co
         hip_ice_start_check(ice_session);
         }
     	
-    }
+    
     }
 out_err:
 	return err;
