@@ -1,4 +1,5 @@
 #include "ipsec_userspace_api.h"
+#include "esp_prot_ext.h"
 
 int hip_firewall_sock_fd = -1;
 
@@ -12,17 +13,16 @@ uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr,
 				    uint32_t *spi, int ealg,
 				    struct hip_crypto_key *enckey,
 				    struct hip_crypto_key *authkey,
-				    int already_acquired,
+				    int retransmission,
 				    int direction, int update,
-				    int sport, int dport  ) {
+				    hip_ha_t *entry) {
 	
-	struct hip_common *msg;
+	struct hip_common *msg = NULL;
 	struct sockaddr_in6 hip_firewall_addr; 
 	struct in6_addr loopback = in6addr_loopback;
 	int err = 0;
-	int n;
 	socklen_t alen;
-	
+	unsigned char *hchain_anchor = NULL;
 	
 	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1,
 		 "alloc memory for adding sa entry\n");
@@ -55,7 +55,7 @@ uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr,
 					  sizeof(struct in6_addr)), -1,
 					  "build param contents failed\n");
 
-	if (!already_acquired || *spi == 0) {
+	if (!retransmission || *spi == 0) {
 		*spi = hip_userspace_ipsec_acquire_spi((hip_hit_t *) src_hit, 
 						       (hip_hit_t *) dst_hit);
 		
@@ -65,17 +65,43 @@ uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr,
 	HIP_DEBUG("the spi value is : %x \n", *spi);
 	HIP_IFEL(hip_build_param_contents(msg, (void *)spi, HIP_PARAM_UINT,
 					  sizeof(unsigned int)), -1,
-					  "build param contents failed\n"); 
+					  "build param contents failed\n");
+	
+	HIP_DEBUG("the nat_mode value is %u \n", entry->nat_mode);
+	HIP_IFEL(hip_build_param_contents(msg, (void *)&entry->nat_mode, HIP_PARAM_UINT,
+					  sizeof(unsigned int)), -1,
+					  "build param contents failed\n");
 
-	HIP_DEBUG("the sport vaule is %d \n", sport);
-	HIP_IFEL(hip_build_param_contents(msg, (void *)&sport, HIP_PARAM_UINT,
+	HIP_DEBUG("the local_port value is %u \n", entry->peer_udp_port);
+	HIP_IFEL(hip_build_param_contents(msg, (void *)&entry->local_udp_port, HIP_PARAM_UINT,
 					  sizeof(unsigned int)), -1,
 					  "build param contents failed\n");
 	
-	HIP_DEBUG("the dport value is %d \n", dport);
-	HIP_IFEL(hip_build_param_contents(msg, (void *)&dport, HIP_PARAM_UINT,
+	HIP_DEBUG("the peer_port value is %u \n", entry->peer_udp_port);
+	HIP_IFEL(hip_build_param_contents(msg, (void *)&entry->peer_udp_port, HIP_PARAM_UINT,
 					  sizeof(unsigned int)), -1,
-					  "build param contents failed\n");  
+					  "build param contents failed\n");
+	
+	HIP_DEBUG("esp protection extension transform is %u \n", entry->esp_prot_transform);
+	HIP_IFEL(hip_build_param_contents(msg, (void *)&entry->esp_prot_transform,
+					  HIP_PARAM_UINT, sizeof(uint8_t)), -1,
+					  "build param contents failed\n");
+	
+	// only transmit the anchor to the firewall, if the esp extension is used
+	if (entry->esp_prot_transform > ESP_PROT_TRANSFORM_UNUSED)
+	{
+		// choose the anchor depending on the direction
+		if (direction == HIP_SPI_DIRECTION_IN)
+			hchain_anchor = entry->esp_peer_anchor;
+		else
+			hchain_anchor = entry->esp_local_anchor;
+		
+	    HIP_HEXDUMP("the esp protection anchor is ", hchain_anchor,
+	    		esp_prot_transforms[entry->esp_prot_transform]);
+		HIP_IFEL(hip_build_param_contents(msg, (void *)&hchain_anchor, HIP_PARAM_HCHAIN_ANCHOR,
+						  esp_prot_transforms[entry->esp_prot_transform]), -1,
+						  "build param contents failed\n");
+	}
 
 	HIP_HEXDUMP("crypto key :", enckey, sizeof(struct hip_crypto_key));
 	HIP_IFEL(hip_build_param_contents(msg,
@@ -91,13 +117,14 @@ uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr,
 					  sizeof(struct hip_crypto_key)), -1,
 					  "build param contents failed\n"); 
 	
-	HIP_DEBUG("ealg  value is %d \n", ealg);
+	HIP_DEBUG("ealg value is %d \n", ealg);
 	HIP_IFEL(hip_build_param_contents(msg, (void *)&ealg, HIP_PARAM_INT,
 					  sizeof(int)), -1,
-					  "build param contents failed\n");  
+					  "build param contents failed\n");
 	
-	HIP_DEBUG("already_acquired value is %d \n", already_acquired);
-	HIP_IFEL(hip_build_param_contents(msg, (void *)&already_acquired,
+	
+	HIP_DEBUG("retransmission value is %d \n", retransmission);
+	HIP_IFEL(hip_build_param_contents(msg, (void *)&retransmission,
 					  HIP_PARAM_INT, sizeof(int)), -1,
 					  "build param contents failed\n");  
 	
@@ -119,16 +146,20 @@ uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr,
 	HIP_DEBUG_IN6ADDR("sending message to loopback: ", 
 			  hip_firewall_addr.sin6_addr.s6_addr);
 	
-	n = sendto(hip_firewall_sock_fd, msg, hip_get_msg_total_len(msg), 0,
+	err = sendto(hip_firewall_sock_fd, msg, hip_get_msg_total_len(msg), 0,
 		   &hip_firewall_addr, sizeof(hip_firewall_addr));
-	if (n < 0)
+	if (err < 0)
 	{
 		HIP_ERROR("Sendto firewall failed.\n");
 		err = -1;
 		goto out_err;
+	} else
+	{
+		HIP_DEBUG("hipd ipsec_add_sa --> Sendto firewall OK.\n");
+		// this is needed if we want to use HIP_IFEL
+		err = 0;
 	}
-	else HIP_DEBUG("hipd ipsec_add_sa --> Sendto firewall OK.\n");
-	
+		
  out_err:
 	return err;	 
 }

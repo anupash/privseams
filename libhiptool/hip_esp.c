@@ -15,7 +15,7 @@
  *  hip_esp.c
  *
  *  Authors: Jeff Ahrenholz <jeffrey.m.ahrenholz@boeing.com>
- *           Tao Wan        <simonwantao@yahoo.com>  
+ *           René Hummen    <rene.hummen@rwth-aachen.de>  
  * 
  * User-mode HIP ESP implementation.
  *
@@ -23,9 +23,9 @@
  * @note HIPU: The userspace IPsec must be used.
  */
 
-
 #include "hip_esp.h"
 #include "utils.h"
+#include "esp_prot_ext.h"
 
 #define ICV_LENGTH 12
 
@@ -43,6 +43,8 @@ uint16_t checksum_ip(struct ip *ip_hdr, unsigned int ip_hl);
 uint16_t checksum_udp(struct udphdr *udp_hdr, struct in6_addr *src_addr,
 		struct in6_addr *dst_addr);
 
+extern int hip_esp_protection_extension;
+
 /*
  * hip_esp_output()
  *
@@ -57,6 +59,7 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 		struct in6_addr *preferred_local_addr, struct in6_addr *preferred_peer_addr,
 		unsigned char *esp_packet, int *esp_packet_len)
 {
+	// some pointers to packet headers
 	struct ip *out_ip_hdr = NULL;
 	struct ip6_hdr *out_ip6_hdr = NULL; 
 	struct udphdr *out_udp_hdr = NULL;
@@ -64,10 +67,12 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 	unsigned char *in_transport_hdr = NULL;
 	uint8_t in_transport_type = 0;
 	int next_hdr_offset = 0;
+	// length of the data to be encrypted
 	int elen = 0;
+	// length of the esp payload
 	int encryption_len = 0;
-	uint32_t hash = 0;
-	unsigned char* hash_ptr = NULL;
+	// length of the hash value used by the esp protection extension
+	int esp_prot_hash_length = 0;
 	int err = 0;
 	
 	_HIP_DEBUG("original packet length: %i \n", ctx->ipq_packet->data_len);
@@ -81,50 +86,32 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 		next_hdr_offset = sizeof(struct ip);
 		
 		// check whether to use UDP encapsulation or not
-		if (entry->encap_mode == 1)
+		if (entry->nat_mode == 1)
 		{
 			out_udp_hdr = (struct udphdr *) (esp_packet + next_hdr_offset);
 			next_hdr_offset += sizeof(struct udphdr);
 		}
-	
+		
 		// set up esp header
 		out_esp_hdr = (struct hip_esp *) (esp_packet + next_hdr_offset);
 		out_esp_hdr->esp_spi = htonl(entry->spi);
 		out_esp_hdr->esp_seq = htonl(entry->sequence++);
-
-#if 0
-		// TODO add hchain-element to esp header
-		HIP_DEBUG("adding hash chain element to outgoing packet...\n");
-		hash_ptr = hchain_pop(entry->active_hchain)->hash;
 		
-		/* don't send anchor as it could be known to third party
-		 * -> other end-host will not accept it
-		 * -> get next element */
-		if (!memcmp(hash_ptr, entry->active_hchain->anchor_element->hash, HCHAIN_ELEMENT_LENGTH))
-		{	
-			hash_ptr = hchain_pop(entry->active_hchain)->hash;
-		}
-		
-		memcpy(&hash, hash_ptr, HCHAIN_ELEMENT_LENGTH);
-		out_esp_hdr->hc_element = htonl(hash);
-		
-		// set up new chain when active one is depleted
-		if (!memcmp(hash_ptr, entry->active_hchain->source_element->hash, HCHAIN_ELEMENT_LENGTH))
-		{
-			// this will free all linked elements in the hchain
-			hchain_destruct(entry->active_hchain);
-			entry->active_hchain = entry->next_hchain;
-			// TODO this should be taken from the store
-			entry->next_hchain = hchain_create(100);
-		}
-#endif
+		/* place the esp protection extension hash right behind the header
+		 * (virtual header extension)
+		 * 
+		 * NOTE: we are not placing the hash into the actual header definition
+		 *       in order to be more flexible about the hash length
+		 **/
+		HIP_IFEL(add_esp_prot_hash(esp_packet + *esp_packet_len, &esp_prot_hash_length,
+					entry), -1, "failed to add the esp protection extension hash\n");
 		
 		// packet to be re-inserted into network stack has at least
-		// length of defined headers
-		*esp_packet_len += next_hdr_offset + sizeof(struct hip_esp);
+		// length of all defined headers
+		*esp_packet_len += next_hdr_offset + sizeof(struct hip_esp) + esp_prot_hash_length;
 
 		
-		/* Set up information needed for ESP encryption */
+		/***** Set up information needed for ESP encryption *****/
 		
 		/* get pointer to data, right behind IPv6 header
 		 * 
@@ -132,8 +119,7 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 		in_transport_hdr = ((unsigned char *) ctx->ipq_packet->payload)
 								+ sizeof(struct ip6_hdr);
 		
-		in_transport_type = ((struct ip6_hdr *)
-				ctx->ipq_packet->payload)->ip6_ctlun.ip6_un1.ip6_un1_nxt;
+		in_transport_type = ((struct ip6_hdr *)ctx->ipq_packet->payload)->ip6_nxt;
 		
 		/* length of data to be encrypted is length of the original packet
 		 * starting at the transport layer header */
@@ -149,30 +135,16 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 		 * 
 		 * NOTE: we are implicitely passing the previously set up ESP header */
 		HIP_IFEL(hip_esp_encrypt(in_transport_hdr, in_transport_type, elen,
-				      esp_packet + next_hdr_offset, &encryption_len, entry), -1,
-				      "failed to encrypt data");
+				      esp_packet + next_hdr_offset, &encryption_len, entry),
+				      -1, "failed to encrypt data");
 		
 		pthread_mutex_unlock(&entry->rw_lock);
 		
 		// this also includes the ESP tail
 		*esp_packet_len += encryption_len;
-		
-		
-#if 0	
-		/* Record the address family of this packet, so incoming
-		 * replies of the same protocol/ports can be matched to
-		 * the same family.
-		 */
-		// TODO find out what that does
-		if (hip_add_proto_sel_entry(LSI4(&entry->lsi), 
-					(__u8)(iph ? iph->ip_p : ip6h->ip6_nxt), 
-					iph ? (__u8*)(iph+1) : (__u8*)(ip6h+1),
-					family, 0, now	) < 0)
-			printf("hip_esp_encrypt(): error adding sel entry.\n");
-#endif
 
 		// finally we have all the information to set up the missing headers
-		if (entry->encap_mode == 1) {
+		if (entry->nat_mode == 1) {
 			// the length field covers everything starting with UDP header
 			add_udp_header(out_udp_hdr, *esp_packet_len - sizeof(struct ip), entry,
 					preferred_local_addr, preferred_peer_addr);
@@ -218,7 +190,7 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 		in_transport_hdr = ((unsigned char *) ctx->ipq_packet->payload)
 								+ sizeof(struct ip6_hdr);
 		
-		in_transport_type = ((struct ip6_hdr *) ctx->ipq_packet->payload)->ip6_ctlun.ip6_un1.ip6_un1_nxt;
+		in_transport_type = ((struct ip6_hdr *) ctx->ipq_packet->payload)->ip6_nxt;
 		
 		/* length of data to be encrypted is length of the original packet
 		 * starting at the transport layer header */
@@ -279,9 +251,10 @@ int hip_esp_input(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 		// check if ESP packet is UDP encapsulated
 		if (ctx->udp_encap_hdr)
 			esp_len -= sizeof(struct udphdr);
-	}
-	else
+	} else
+	{
 		esp_len = ctx->ipq_packet->data_len - sizeof(struct ip6_hdr);
+	} 
 	
 	// decrypt now
 	pthread_mutex_lock(&entry->rw_lock);
@@ -333,15 +306,13 @@ int hip_esp_encrypt(unsigned char *in, uint8_t in_type, int in_len,
 	/* ESP tail information */
 	int pad_len = 0;
 	struct hip_esp_tail *esp_tail = NULL;
+	// offset of the payload counting from the beginning of the esp header
 	int esp_data_offset = 0;
 	int i = 0;
 	int err = 0;
-	
-	//unsigned int hmac_md_len;
-	//unsigned char hmac_md[EVP_MAX_MD_SIZE];
-	
-	esp_data_offset = sizeof(struct hip_esp);
 
+	esp_data_offset = get_esp_data_offset(entry);
+	
 	/* 
 	 * Encryption 
 	 */
@@ -566,10 +537,12 @@ int hip_esp_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8_t *
 	/* ESP tail information */
 	int pad_len = 0;
 	struct hip_esp_tail *esp_tail = NULL;
+	// offset of the payload counting from the beginning of the esp header
 	int esp_data_offset = 0;
 	int err = 0;
 
-	esp_data_offset = sizeof(struct hip_esp);
+	// different offset if esp extension used or not
+	esp_data_offset = get_esp_data_offset(entry);
 	
 	/* 
 	 *   Authentication 
@@ -751,59 +724,9 @@ int hip_esp_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8_t *
 	*out_type = esp_tail->esp_next;
 	*out_len = elen - (esp_tail->esp_padlen + sizeof(struct hip_esp_tail));
 
-#if 0
-	// TODO do we need this?
-	/* determine address family for new packet based on 
-	 * decrypted upper layer protocol header
-	 */
-	family_out = hip_select_family_by_proto(LSI4(&entry->lsi), 
-					padinfo->next_hdr, &out[*offset], now);
-#endif
-
   out_err:
 	return err;
 }
-
-
-#if 0
-void reset_sadbentry_udp_port (__u32 spi_out)
-{
-	hip_sadb_entry *entry;
-	entry = hip_sadb_lookup_spi (spi_out);
-	if (entry) {
-		entry->dst_port = 0;
-		HIP_DEBUG ("SADB-entry dst_port reset for spi: 0x%x.\n",spi_out);
-	}
-}
-#endif
-
-#if 0
-/* debug */
-extern hip_sadb_entry hip_sadb[SADB_SIZE];
-
-void print_sadb()
-{
-	int i;
-	hip_sadb_entry *entry;
-
-	for (i=0; i < SADB_SIZE; i++) {
-		for (	entry = &hip_sadb[i]; entry && entry->spi; 
-				entry=entry->next ) {
-			HIP_DEBUG("entry(%d): ", i);
-			HIP_DEBUG("SPI=0x%x dir=%d magic=0x%x mode=%d lsi=%x ",
-				entry->spi, entry->direction, entry->hit_magic,
-				entry->mode, 
-				((struct sockaddr_in*)&entry->lsi)->sin_addr.s_addr);
-			HIP_DEBUG("lsi6= a_type=%d e_type=%d a_keylen=%d "
-				"e_keylen=%d lifetime=%llu seq=%d\n",
-				entry->a_type, entry->e_type,
-				entry->a_keylen, entry->e_keylen,
-				entry->lifetime, entry->sequence  );
-		}
-	}
-}
-#endif
-
 
 /* TODO copy as much header information as possible */
 

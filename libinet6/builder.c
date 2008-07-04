@@ -56,6 +56,7 @@
  */
 #include "builder.h"
 #include "registration.h"
+#include "esp_prot_ext.h"
 
 static enum select_dh_key_t select_dh_key = STRONGER_KEY;
 
@@ -1090,7 +1091,9 @@ char* hip_param_type_name(const hip_tlv_type_t param_type){
 	case HIP_PARAM_UINT: return "HIP_PARAM_UINT";
 	case HIP_PARAM_UNIT_TEST: return "HIP_PARAM_UNIT_TEST";
 	case HIP_PARAM_VIA_RVS: return "HIP_PARAM_VIA_RVS";
-	case HIP_PARAM_PSEUDO_HIT: return "HIP_PARAM_PSEUDO_HIT";	
+	case HIP_PARAM_PSEUDO_HIT: return "HIP_PARAM_PSEUDO_HIT";
+	case HIP_PARAM_ESP_PROT_TRANSFORM: return "HIP_PARAM_ESP_PROT_TRANSFORM";
+	case HIP_PARAM_ESP_PROT_ANCHOR: return "HIP_PARAM_ESP_PROT_ANCHOR";
 	//add by santtu
 	case HIP_PARAM_NAT_TRANSFORM: return "HIP_PARAM_NAT_TRANSFORM";	
 	//end add
@@ -2336,9 +2339,9 @@ int hip_build_param_puzzle(struct hip_common *msg, uint8_t val_K,
 	/* puzzle.opaque[2] = (opaque & 0xFF0000) >> 16; */
 	puzzle.I = random_i;
 
-        err = hip_build_generic_param(msg, &puzzle,
-				      sizeof(struct hip_tlv_common),
-				      hip_get_param_contents_direct(&puzzle));
+    err = hip_build_generic_param(msg, &puzzle,
+			      sizeof(struct hip_tlv_common),
+			      hip_get_param_contents_direct(&puzzle));
 	return err;
 
 }
@@ -2750,6 +2753,60 @@ int hip_build_param_ack(struct hip_common *msg, uint32_t peer_update_id)
         ack.peer_update_id = htonl(peer_update_id);
         err = hip_build_param(msg, &ack);
         return err;
+}
+
+/**
+ * hip_build_param_esp_prot_mode - build and append ESP PROT transform parameter
+ * @param msg the message where the parameter will be appended
+ * @param transform the transform to be used for the esp extension header
+ * 
+ * @return 0 on success, otherwise < 0.
+ */
+int hip_build_param_esp_prot_transform(struct hip_common *msg, uint8_t transform)
+{
+	int err = 0;
+	
+	struct esp_prot_transform prot_transform;
+
+	hip_set_param_type(&prot_transform, HIP_PARAM_ESP_PROT_TRANSFORM);
+	hip_calc_generic_param_len(&prot_transform, sizeof(struct esp_prot_transform), 0);
+	prot_transform.transform = htonl(transform);
+	
+	err = hip_build_param(msg, &prot_transform);
+	
+	HIP_DEBUG("added esp_prot_transform: %u\n", transform);
+	
+	return err;
+}
+
+/**
+ * hip_build_param_esp_prot_mode - build and append ESP PROT anchor parameter
+ * @param msg the message where the parameter will be appended
+ * @param anchor the anchor for the hchain to be used for extended esp protection
+ * 
+ * @return 0 on success, otherwise < 0.
+ */
+int hip_build_param_esp_prot_anchor(struct hip_common *msg, unsigned char *anchor,
+		uint8_t transform)
+{
+	int err = 0;
+	
+	struct esp_prot_anchor esp_anchor;
+
+	hip_set_param_type(&esp_anchor, HIP_PARAM_ESP_PROT_ANCHOR);
+	
+	/* note: the length cannot be calculated with calc_param_len() */
+	hip_set_param_contents_len(&esp_anchor, esp_prot_transforms[transform]);
+	
+	memcpy(esp_anchor.anchor, anchor, esp_prot_transforms[transform]);
+	
+	err = hip_build_generic_param(msg, &esp_anchor,
+					      sizeof(struct hip_tlv_common),
+					      hip_get_param_contents_direct(&esp_anchor));
+	
+	HIP_HEXDUMP("added esp protection anchor: ", anchor, esp_prot_transforms[transform]);
+	
+	return err;
 }
 
 /**

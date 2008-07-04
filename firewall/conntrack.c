@@ -1,4 +1,5 @@
 #include "conntrack.h"
+#include "dlist.h"
 
 struct DList * hipList = NULL;
 struct DList * espList = NULL;

@@ -24,6 +24,7 @@ int hip_proxy_status = 0;
 int foreground = 1;
 int hip_opptcp = 0;
 int hip_userspace_ipsec = 0;
+int hip_esp_protection_extension = 0;
 
 /* Default HIT - do not access this directly, call hip_fw_get_default_hit() */
 struct in6_addr default_hit;
@@ -47,10 +48,12 @@ void print_usage()
 	printf("      -d = debugging output\n");
 	printf("      -v = verbose output\n");
 	printf("      -t = timeout for packet capture (default %d secs)\n", 
-	HIP_FW_DEFAULT_TIMEOUT);
+			HIP_FW_DEFAULT_TIMEOUT);
 	printf("      -F = do not flush iptables rules\n");
 	printf("      -b = fork the firewall to background\n");
 	printf("      -k = kill running firewall pid\n");
+	printf("      -i = switch on userspace ipsec\n");
+	printf("      -e = use esp protection extension (also sets -i)\n");
 	printf("      -h = print this help\n\n");
 }
 
@@ -75,6 +78,37 @@ void set_escrow_active(int active)
 int is_escrow_active()
 {
 	return escrow_active;
+}
+
+int set_userspace_ipsec_active(int activate)
+{
+	int err = 0;
+	
+	// activate userspace ipsec in hipd
+	HIP_IFE(send_userspace_ipsec_to_hipd(activate), -1);
+	
+	// if active in hipd also activate here
+	hip_userspace_ipsec = activate;
+	
+  out_err:
+	return err;
+}
+
+int set_esp_protection_extension_active(int activate)
+{
+	int err = 0;
+	
+	// first switch to userspace ipsec
+	HIP_IFE(set_userspace_ipsec_active(activate), -1);
+	
+	// then acticate the extension in hipd and the firewall
+	HIP_IFE(send_esp_protection_extension_to_hipd(), -1);
+	
+	hip_esp_protection_extension = activate;
+	HIP_DEBUG("esp protection extension set to: %i\n", activate);
+	
+  out_err:
+	return err;
 }
 
 void hip_fw_init_opptcp() {
@@ -152,6 +186,34 @@ void hip_fw_uninit_proxy() {
 	//system("ip6tables -D INPUT -p udp -j QUEUE");
 	//system("ip6tables -D INPUT -p icmp -j QUEUE");
 	//system("ip6tables -D INPUT -p icmpv6 -j QUEUE");
+}
+
+
+int hip_fw_init_userspace_ipsec()
+{
+	int err = 0;
+	
+	HIP_IFEL(userspace_ipsec_init(), -1, "failed to initialize userspace ipsec\n");
+	
+	// queue incoming ESP over IPv4 and IPv4 UDP encapsulated traffic
+	system("iptables -I INPUT -p 50 -j QUEUE"); /*  */
+	system("iptables -I INPUT -p 17 --dport 50500 -j QUEUE");
+	system("iptables -I INPUT -p 17 --sport 50500 -j QUEUE");
+	
+	/* no need to queue outgoing ICMP, TCP and UDP sent to LSIs as
+	 * this is handled elsewhere */
+
+	/* queue incoming ESP over IPv6
+	 * NOTE: add IPv6 UDP encapsulation here */
+	system("ip6tables -I INPUT -p 50 -j QUEUE");
+
+	// queue outgoing ICMP, TCP and UDP sent to HITs
+	system("ip6tables -I OUTPUT -p 58 -d 2001:0010::/28 -j QUEUE");
+	system("ip6tables -I OUTPUT -p 6 -d 2001:0010::/28 -j QUEUE");
+	system("ip6tables -I OUTPUT -p 17 -d 2001:0010::/28 -j QUEUE");
+	
+  out_err:
+  	return err;
 }
 
 /*----------------INIT/EXIT FUNCTIONS----------------------*/
@@ -233,8 +295,8 @@ int firewall_init_rules()
 	hip_fw_handler[NF_IP_LOCAL_OUT][TCP_PACKET] = hip_fw_handle_tcp_output;
 
 	hip_fw_handler[NF_IP_FORWARD][OTHER_PACKET] = hip_fw_handle_other_forward;
-	hip_fw_handler[NF_IP_FORWARD][HIP_PACKET] = NULL;
-	hip_fw_handler[NF_IP_FORWARD][ESP_PACKET] = NULL;
+	hip_fw_handler[NF_IP_FORWARD][HIP_PACKET] = hip_fw_handle_hip_forward;
+	hip_fw_handler[NF_IP_FORWARD][ESP_PACKET] = hip_fw_handle_esp_forward;
 	hip_fw_handler[NF_IP_FORWARD][TCP_PACKET] = hip_fw_handle_tcp_forward;
 
 	HIP_DEBUG("Enabling forwarding for IPv4 and IPv6\n");
@@ -276,9 +338,9 @@ int firewall_init_rules()
 		}
 		
 		// this will allow the firewall to handle HIP traffic
-		// HIP port
+		// HIP protocol
 		system("iptables -I FORWARD -p 139 -j QUEUE");
-		// ESP port
+		// ESP protocol
 		system("iptables -I FORWARD -p 50 -j QUEUE");
 		// UDP encapsulation for HIP
 		system("iptables -I FORWARD -p 17 --dport 50500 -j QUEUE");
@@ -317,24 +379,8 @@ int firewall_init_rules()
 	if (hip_opptcp)
 		hip_fw_init_opptcp();
 
-	if (hip_userspace_ipsec) {
-		// queue incoming ESP over IPv4 and IPv4 UDP encapsulated traffic
-		system("iptables -I INPUT -p 50 -j QUEUE"); /*  */
-		system("iptables -I INPUT -p 17 --dport 50500 -j QUEUE");
-		system("iptables -I INPUT -p 17 --sport 50500 -j QUEUE");
-		
-		/* no need to queue outgoing ICMP, TCP and UDP sent to LSIs as
-		 * this is handled elsewhere */
-
-		/* queue incoming ESP over IPv6
-		 * NOTE: add IPv6 UDP encapsulation here */
-		system("ip6tables -I INPUT -p 50 -j QUEUE");
-
-		// queue outgoing ICMP, TCP and UDP sent to HITs
-		system("ip6tables -I OUTPUT -p 58 -d 2001:0010::/28 -j QUEUE");
-		system("ip6tables -I OUTPUT -p 6 -d 2001:0010::/28 -j QUEUE");
-		system("ip6tables -I OUTPUT -p 17 -d 2001:0010::/28 -j QUEUE");
-	}
+	if (hip_userspace_ipsec)
+		hip_fw_init_userspace_ipsec();
 
 
  out_err:
@@ -767,7 +813,6 @@ int filter_esp(const struct in6_addr * dst_addr, struct hip_esp * esp,
 {
 	// drop packet by default
 	int verdict = 0;
-	// 
 	int use_escrow = 0;
 	struct _DList * list = NULL;
 	struct rule * rule = NULL;
@@ -1070,6 +1115,8 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx) {
 int hip_fw_handle_hip_output(hip_fw_context_t *ctx) {
 	int verdict = accept_hip_esp_traffic_by_default;
 
+	HIP_DEBUG("\n");
+
 	verdict = filter_hip(&ctx->src, 
 					&ctx->dst, 
 					ctx->transport_hdr.hip, 
@@ -1135,13 +1182,15 @@ int hip_fw_handle_esp_input(hip_fw_context_t *ctx) {
 
 	HIP_DEBUG("\n");
 
-	if (hip_userspace_ipsec) {
+	/* XX FIXME: ADD LSI INPUT AFTER USERSPACE IPSEC */
+
+	// first of all check if this belongs to one of our connections
+	verdict = filter_esp(&ctx->dst, ctx->transport_hdr.esp, ctx->ipq_packet->hook);
+	
+	if (verdict && hip_userspace_ipsec) {
 		HIP_DEBUG("userspace ipsec input\n");
 		// added by Tao Wan
 		verdict = !hip_fw_userspace_ipsec_input(ctx);
-	} else {
-		verdict = filter_esp(&ctx->dst, ctx->transport_hdr.esp,
-				     ctx->ipq_packet->hook);
 	}
 
  out_err:
@@ -1180,10 +1229,28 @@ int hip_fw_handle_other_forward(hip_fw_context_t *ctx) {
 							ctx->ip_hdr_len,
 							ctx->ip_version);
 
-	/* No need to check default rules as it is handled by the iptables rules */
-
  out_err:
 
+	return verdict;
+}
+
+int hip_fw_handle_hip_forward(hip_fw_context_t *ctx) {
+
+	HIP_DEBUG("\n");
+
+	// for now forward and output are handled symmetrically
+	return hip_fw_handle_hip_output(ctx);
+}
+
+int hip_fw_handle_esp_forward(hip_fw_context_t *ctx) {
+	int verdict = accept_hip_esp_traffic_by_default;
+
+	HIP_DEBUG("\n");
+
+	// check if this belongs to one of the connections pass through
+	verdict = filter_esp(&ctx->dst, ctx->transport_hdr.esp, ctx->ipq_packet->hook);
+
+ out_err:
 	return verdict;
 }
 
@@ -1336,7 +1403,7 @@ int main(int argc, char **argv)
 	
 	hip_set_logdebug(LOGDEBUG_NONE);
 
-	while ((ch = getopt(argc, argv, "f:t:vdFHAbkh")) != -1)
+	while ((ch = getopt(argc, argv, "f:t:vdFHAbkieh")) != -1)
 	{
 		switch (ch)
 		{
@@ -1370,6 +1437,12 @@ int main(int argc, char **argv)
 			break;
 		case 'k':
 			killold = 1;
+			break;
+		case 'i':
+			set_userspace_ipsec_active(1);
+			break;
+		case 'e':
+			set_esp_protection_extension_active(1);
 			break;
 		case 'h':
 			print_usage();
