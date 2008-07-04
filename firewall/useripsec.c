@@ -175,7 +175,7 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 		HIP_DEBUG("pfkey send acquire\n");
 	
 		/* no SADB entry -> trigger base exchange providing destination hit only */
-		HIP_IFEL(hip_trigger_bex(NULL, &ctx->dst, NULL, NULL), -1,
+		HIP_IFEL(hip_trigger_bex(NULL, &ctx->dst, NULL, NULL, NULL, NULL), -1,
 			 "trigger bex\n");
 				
 		// as we don't buffer the packet right now, we have to drop it
