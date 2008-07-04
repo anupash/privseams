@@ -1777,6 +1777,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	int item_length = 0;
 	struct esp_prot_transform *prot_transform = NULL;
 	uint8_t transform = 0;
+	extern uint8_t hip_esp_prot_ext_transform;
 	in6_addr_t dest; // For the IP address in RELAY_FROM
 	in_port_t  dest_port = 0; // For the port in RELAY_FROM
         
@@ -2151,24 +2152,40 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	
 	/********** ESP-PROT transform (OPTIONAL) **********/
 	
-	param = hip_get_param(ctx->input, HIP_PARAM_ESP_PROT_TRANSFORM);
-	// process this if we are actually going to use it
-	if (entry->esp_prot_transform && param)
-	{
-		prot_transform = (struct esp_prot_transform *) param;
-		transform = ntohl(prot_transform->transform);
-		
-		// right now we only support 2 transform, so we can just copy
-		entry->esp_prot_transform = transform;
-		
-		HIP_DEBUG("esp protection transform: %u \n", transform);
-	} else
-	{
-		// make sure we are not going to use the extension
-		entry->esp_prot_transform = ESP_PROT_TRANSFORM_UNUSED;
-		
-		HIP_DEBUG("no esp protection extension param or locally set to unused\n");
-	}
+	/* only supported in usermode and optional there
+ 	 * 
+ 	 * process the transform only when usermode is active */
+ 	HIP_DEBUG("hip_use_userspace_ipsec is %i\n", hip_use_userspace_ipsec);
+ 	if (hip_use_userspace_ipsec)
+ 	{
+ 		HIP_DEBUG("userspace IPsec hint: esp protection extension might be in use\n");
+ 		
+ 		if (hip_esp_prot_ext_transform > ESP_PROT_TRANSFORM_UNUSED)
+ 		{
+ 			param = hip_get_param(ctx->input, HIP_PARAM_ESP_PROT_TRANSFORM);
+			/* process this if the other end-host supports the extension
+			 * (parameter incl in R1) */
+			if (param)
+			{
+				prot_transform = (struct esp_prot_transform *) param;
+				transform = ntohl(prot_transform->transform);
+				
+				// TODO agree on transform
+				// right now we only support 2 transform, so we can just copy
+				entry->esp_prot_transform = transform;
+				
+				HIP_DEBUG("esp protection transform: %u \n", transform);
+			}
+ 		} else
+ 		{	
+ 			HIP_DEBUG("esp protection extension not active, setting UNUSED\n");
+ 			entry->esp_prot_transform = ESP_PROT_TRANSFORM_UNUSED;
+ 		}
+ 	} else
+ 	{
+ 		HIP_DEBUG("userspace IPsec hint: esp protection extension UNUSED, skipped\n");
+ 		entry->esp_prot_transform = ESP_PROT_TRANSFORM_UNUSED;
+ 	}
 	
 	/********** ESP-PROT anchor (OPTIONAL) **********/
 	
