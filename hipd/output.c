@@ -676,7 +676,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
  					HIP_PARAM_ESP_PROT_TRANSFORM, ESP_PROT_TRANSFORM_UNUSED), -1, 
  					"Building of ESP protection mode failed\n");
  			
- 			HIP_ERROR("esp protection extension not active, sending UNUSED\n");
+ 			HIP_DEBUG("esp protection extension not active, sending UNUSED\n");
  		}
  	} else
  	{
