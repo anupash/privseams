@@ -12,6 +12,7 @@
  * - none
  * Todo:
  * - rewrite/refactor for better modularity
+ * @note: HIPU: does not work on MAC OS X
  */
 
 #if HAVE_CONFIG_H

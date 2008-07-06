@@ -362,6 +362,14 @@ int hip_handle_get_ha_info(hip_ha_t *entry, struct hip_common *msg);
 int hip_hadb_find_peer_address(hip_ha_t *entry, void *id);
 int hip_hadb_map_ip_to_hit(hip_ha_t *entry, void *id2);
 
+//add by santtu
+int hip_hadb_add_udp_addr_to_spi(hip_ha_t *entry, uint32_t spi,
+			     struct in6_addr *addr,
+			     int is_bex_address, uint32_t lifetime,
+			     int is_preferred_addr,
+			     uint16_t port,
+			     uint32_t priority);
+
 /*lsi support functions*/
 struct in_addr hip_generate_peer_lsi();
 void hip_hadb_set_lsi_pair(hip_ha_t *entry);
@@ -370,6 +378,5 @@ int hip_hadb_find_lsi(hip_ha_t *entry, void *lsi);
 hip_ha_t *hip_hadb_try_to_find_by_peer_lsi(hip_lsi_t *lsi);
 hip_ha_t *hip_hadb_try_to_find_by_pair_lsi(hip_lsi_t *lsi_src, hip_lsi_t *lsi_dst);
 hip_hit_t *hip_hadb_get_peer_hit_by_peer_lsi(hip_lsi_t *lsi);
-
 
 #endif /* HIP_HADB_H */

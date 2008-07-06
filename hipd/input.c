@@ -11,6 +11,7 @@
  * @author  Bing Zhou
  * @author  Tobias Heer
  * @author  Laura Takkinen //blind code
+ * @author  Rene Hummen
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  * @note    Doxygen comments for functions are now in the header file.
  *          Lauri 19.09.2007 16:43
@@ -92,6 +93,47 @@ int hip_verify_packet_hmac(struct hip_common *msg,
  out_err:
 	return err;
 }
+//add by santtu
+int hip_verify_packet_hmac_general(struct hip_common *msg,
+			   struct hip_crypto_key *crypto_key, hip_tlv_type_t parameter_type)
+{
+	HIP_DEBUG("hip_verify_packet_hmac() invoked.\n");
+	int err = 0, len = 0, orig_len = 0;
+	u8 orig_checksum = 0;
+	struct hip_crypto_key tmpkey;
+	struct hip_hmac *hmac = NULL;
+
+	HIP_IFEL(!(hmac = hip_get_param(msg, parameter_type)),
+		 -ENOMSG, "No HMAC parameter\n");
+
+	/* hmac verification modifies the msg length temporarile, so we have
+	   to restore the length */
+	orig_len = hip_get_msg_total_len(msg);
+
+	/* hmac verification assumes that checksum is zero */
+	orig_checksum = hip_get_msg_checksum(msg);
+	hip_zero_msg_checksum(msg);
+
+	len = (u8 *) hmac - (u8*) msg;
+	hip_set_msg_total_len(msg, len);
+
+	_HIP_HEXDUMP("HMAC key", crypto_key->key,
+		    hip_hmac_key_length(HIP_ESP_AES_SHA1));
+	_HIP_HEXDUMP("HMACced data:", msg, len);
+
+	memcpy(&tmpkey, crypto_key, sizeof(tmpkey));
+	HIP_IFEL(hip_verify_hmac(msg, hmac->hmac_data, tmpkey.key,
+				 HIP_DIGEST_SHA1_HMAC), 
+		 -1, "HMAC validation failed\n");
+
+	/* revert the changes to the packet */
+	hip_set_msg_total_len(msg, orig_len);
+	hip_set_msg_checksum(msg, orig_checksum);
+
+ out_err:
+	return err;
+}
+//end add
 
 int hip_verify_packet_rvs_hmac(struct hip_common *msg,
 			   struct hip_crypto_key *crypto_key)
@@ -437,6 +479,8 @@ int hip_receive_control_packet(struct hip_common *msg,
 
 	entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
 	
+	
+	
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	if (!entry && opportunistic_mode &&
 	    (type == HIP_I1 || type == HIP_R1)) {
@@ -507,7 +551,24 @@ int hip_receive_control_packet(struct hip_common *msg,
 	    entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
 	}
 #endif
+//add by santtu
+#ifdef CONFIG_HIP_RVS
+	//check if it a relaying msg
+	
+	//add by santtu
+	//if(hip_relay_handle_relay_to(msg, type, src_addr, dst_addr, msg_info)){
 
+	if(hip_relay_handle_relay_to(msg, type, src_addr, dst_addr, msg_info)){
+	//end 
+		err = -ECANCELED;
+		goto out_err;
+	}
+	else{
+		HIP_DEBUG("handle relay to failed, continue the bex handler\n");
+	}
+#endif
+//end add	
+	
 	switch(type) {
 	case HIP_I1:
 		/* No state. */
@@ -655,6 +716,10 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	int type_count = 0, request_rvs = 0, request_escrow = 0;
         int *reg_type = NULL;
 	uint32_t spi_in = 0;
+	struct esp_prot_transform *prot_transform = NULL;
+	uint8_t transform = 0;
+	extern uint8_t hip_esp_prot_ext_transform;
+	unsigned char *anchor = NULL;
 
 	_HIP_DEBUG("hip_create_i2() invoked.\n");
 
@@ -707,6 +772,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 			 "Could not build R1 GENERATION parameter\n");
 	}
 
+	
+#ifndef HIP_USE_ICE
 	/********* LOCATOR PARAMETER ************/
         /** Type 193 **/ 
         if (hip_locator_status == SO_HIP_SET_LOCATOR_ON) {
@@ -714,6 +781,19 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
             if ((err = hip_build_locators(i2)) < 0) 
                 HIP_DEBUG("LOCATOR parameter building failed\n");
         }
+#endif
+#ifdef HIP_USE_ICE
+    	/********* LOCATOR PARAMETER ************/
+		/** Type 193 **/ 
+		if (hip_locator_status == SO_HIP_SET_LOCATOR_ON) {
+		    HIP_DEBUG("Building nat LOCATOR parameter\n");
+		    if ((err = hip_nat_build_locators(i2)) < 0) 
+		        HIP_DEBUG("nat LOCATOR parameter building failed\n");
+		}        
+
+        
+        hip_build_param_nat_tranform(i2, entry->nat_control);
+#endif
 	/********** SOLUTION **********/
 	{
 		struct hip_puzzle *pz;
@@ -736,7 +816,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		 HIP_MAX_DH_GROUP_ID, NULL, 0), -1,
 		 "Building of DH failed.\n");
 
-        /********** HIP transform. **********/
+    /********** HIP transform. **********/
 	HIP_IFE(!(param = hip_get_param(ctx->input, HIP_PARAM_HIP_TRANSFORM)), -ENOENT);
 	HIP_IFEL((transform_hip_suite =
 		  hip_select_hip_transform((struct hip_hip_transform *) param)) == 0, 
@@ -795,7 +875,99 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	HIP_IFEL(hip_build_param_transform(i2, HIP_PARAM_ESP_TRANSFORM,
 					   &transform_esp_suite, 1), -1,
 		 "Building of ESP transform failed\n");
-
+	
+	/********** ESP-PROT transform (OPTIONAL) **********/
+	
+	/* this is only handled if we are using userspace ipsec,
+	 * otherwise we just ignore it */
+	if (hip_use_userspace_ipsec)
+	{
+		HIP_DEBUG("userspace IPsec hint: ESP extension might be in use\n");
+		param = hip_get_param(ctx->input, HIP_PARAM_ESP_PROT_TRANSFORM);
+		
+		// check if the transform parameter was sent
+		if (param)
+		{
+			prot_transform = (struct esp_prot_transform *) param;
+			transform = ntohl(prot_transform->transform);
+			
+			HIP_DEBUG("R1 contains ESP protection transform: %u\n", transform);
+			
+			// check if we are using the extension
+			if (hip_esp_prot_ext_transform > ESP_PROT_TRANSFORM_UNUSED)
+			{
+				// check if the transforms match
+				if (hip_esp_prot_ext_transform == transform)
+				{
+					HIP_DEBUG("matching ESP extension transform: %u\n",
+							hip_esp_prot_ext_transform);
+					HIP_DEBUG("setting and sending transform...\n");
+					
+					// set transform for this connection and advertise
+					entry->esp_prot_transform = transform;
+					HIP_IFEL(hip_build_param_esp_prot_transform(i2, transform),
+							-1, "Building of ESP protection mode failed\n");
+				} else
+				{
+					HIP_DEBUG("different local ESP extension transform: %u\n",
+							hip_esp_prot_ext_transform);
+					HIP_DEBUG("setting and sending transform UNUSED...\n");
+					
+					// set to unused and reply with according parameter
+					entry->esp_prot_transform = ESP_PROT_TRANSFORM_UNUSED;
+					HIP_IFEL(hip_build_param_esp_prot_transform(i2, ESP_PROT_TRANSFORM_UNUSED),
+							-1, "Building of ESP protection mode failed\n");
+				}
+			} else
+			{
+				HIP_DEBUG("ESP extension switched off locally, setting and sending UNUSED transform...\n");
+				
+				entry->esp_prot_transform = ESP_PROT_TRANSFORM_UNUSED;
+				// advertise that we are not using the extension
+				HIP_IFEL(hip_build_param_esp_prot_transform(i2, ESP_PROT_TRANSFORM_UNUSED),
+						-1, "Building of ESP protection mode failed\n");
+			}
+		} else if (!param)
+		{
+			HIP_DEBUG("R1 does not contain ESP protection transform, setting UNUSED\n");
+			
+			// if the other end-host does not want to use the extension, we don't either
+			entry->esp_prot_transform = ESP_PROT_TRANSFORM_UNUSED;
+		}
+	} else
+	{
+		HIP_DEBUG("no userspace IPsec hint for ESP extension, setting UNUSED\n");
+		
+		// make sure we don't add the anchor now and don't add any transform or anchor
+		entry->esp_prot_transform = ESP_PROT_TRANSFORM_UNUSED;
+	}
+	
+	/********** ESP-PROT anchor (OPTIONAL) **********/
+	
+	// only add, if extension in use and we agreed on a transform
+	if (entry->esp_prot_transform)
+	{
+		if (has_more_anchors())
+		{
+			HIP_IFEL(get_next_anchor(anchor), -1,
+					"no anchor elements available, threading?");
+			HIP_IFEL(hip_build_param_esp_prot_anchor(i2, anchor), -1,
+					"Building of ESP protection anchor failed\n");
+			HIP_HEXDUMP("adding anchor: ", anchor,
+					esp_prot_transforms[entry->esp_prot_transform]);
+			
+			// store local_anchor
+			entry->esp_local_anchor = anchor;
+		} else
+		{
+			// fall back
+			HIP_ERROR("we agreed on using esp hchain protection, but no elements");
+			entry->esp_prot_transform = ESP_PROT_TRANSFORM_UNUSED;
+		}
+	}
+	
+	/************************************************/
+	
 	HIP_HEXDUMP("enc(host_id)", host_id_in_enc,
 		    hip_get_param_total_len(host_id_in_enc));
 
@@ -839,6 +1011,9 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	 * try to set up inbound IPsec SA, similarly as in hip_create_r2 */
 
 	HIP_DEBUG("src %d, dst %d\n", r1_info->src_port, r1_info->dst_port);
+	
+	entry->local_udp_port = r1_info->src_port;
+	entry->peer_udp_port = r1_info->dst_port;
 
 	entry->hip_transform = transform_hip_suite;
 
@@ -850,9 +1025,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 			      &entry->hit_peer, &entry->hit_our,
 			      entry, &spi_in, transform_esp_suite, 
 			      &ctx->esp_in, &ctx->auth_in, 0,
-			      HIP_SPI_DIRECTION_IN, 0,
-			      r1_info->src_port, r1_info->dst_port), -1, 
-		         "Failed to setup IPsec SPD/SA entries, peer:src\n");
+			      HIP_SPI_DIRECTION_IN, 0, entry), -1, 
+		   "Failed to setup IPsec SPD/SA entries, peer:src\n");
 	}
 #endif
 
@@ -865,8 +1039,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 			      &ctx->input->hits, &ctx->input->hitr,
 			      &spi_in, transform_esp_suite, 
 			      &ctx->esp_in, &ctx->auth_in, 0,
-			      HIP_SPI_DIRECTION_IN, 0,
-			      r1_info->src_port, r1_info->dst_port), -1, 
+			      HIP_SPI_DIRECTION_IN, 0, entry), -1, 
 		   "Failed to setup IPsec SPD/SA entries, peer:src\n");
 
 	}
@@ -1073,6 +1246,12 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 		HIP_UNLOCK_HA(entry);
 	}
 
+	
+#ifdef HIP_USE_ICE	
+ 	HIP_DEBUG("handle nat trasform in R1\n");
+ 	hip_nat_handle_transform_in_client(r1, entry);
+#endif		
+	
         /***** LOCATOR PARAMETER ******/
         locator = hip_get_param(r1, HIP_PARAM_LOCATOR);
         if (locator)
@@ -1398,7 +1577,9 @@ int hip_receive_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
  */
 int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 		  in6_addr_t *i2_daddr, hip_ha_t *entry,
-		  hip_portpair_t *i2_info)
+		  hip_portpair_t *i2_info,
+		  in6_addr_t *dest,
+		  const in_port_t dest_port)
 {
 	struct hip_reg_request *reg_request = NULL;
  	struct hip_common *r2 = NULL, *i2 = NULL;
@@ -1406,6 +1587,7 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 	uint16_t mask = 0;
 	uint8_t lifetime;
 	uint32_t spi_in;
+	unsigned char *anchor = NULL;
         
 	_HIP_DEBUG("hip_create_r2() invoked.\n");
 	/* Assume already locked entry */
@@ -1448,7 +1630,43 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 	  	   -1, "hip_blind_build_r2 failed\n");
 	}
 #endif
+	
+	/********** ESP-PROT anchor (OPTIONAL) **********/
+	
+	// only add, if extension in use, we agreed on a transform and no error until now
+	if (entry->esp_prot_transform)
+	{
+		if (has_more_anchors())
+		{
+			HIP_IFEL(get_next_anchor(anchor), -1,
+					"no anchor elements available, threading?");
+			HIP_IFEL(hip_build_param_esp_prot_anchor(i2, anchor), -1,
+					"Building of ESP protection anchor failed\n");
+			HIP_HEXDUMP("adding anchor: ", anchor,
+					esp_prot_transforms[entry->esp_prot_transform]);
+			
+			// store local_anchor
+			entry->esp_local_anchor = anchor;
+		} else
+		{
+			// fall back
+			HIP_ERROR("we agreed on using esp hchain protection, but no elements");
+			entry->esp_prot_transform = ESP_PROT_TRANSFORM_UNUSED;
+		}
+	}
+	
+	/************************************************/
 
+#ifdef HIP_USE_ICE
+    	/********* LOCATOR PARAMETER ************/
+		/** Type 193 **/ 
+		if (hip_locator_status == SO_HIP_SET_LOCATOR_ON) {
+		    HIP_DEBUG("Building nat LOCATOR parameter\n");
+		    if ((err = hip_nat_build_locators(r2)) < 0) 
+		        HIP_DEBUG("nat LOCATOR parameter building failed\n");
+		}  	
+#endif	
+	
 #if defined(CONFIG_HIP_RVS) || defined(CONFIG_HIP_ESCROW)
 	/********** REG_REQUEST **********/
 	/* This part should only be executed in HIP relay or in the host
@@ -1476,8 +1694,25 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 		HIP_IFEL(hip_build_param_hmac2_contents(r2, &hmac, entry->our_pub), -1,
 			 "Building of hmac failed\n");
 	}
-	
+
 	HIP_IFEL(entry->sign(entry->our_priv, r2), -EINVAL, "Could not sign R2. Failing\n");
+	
+//add by santtu	
+#ifdef CONFIG_HIP_RVS
+	if(!ipv6_addr_any(dest))
+	 {  	   
+	      HIP_INFO("create replay_to parameter in R2\n");
+		  hip_build_param_relay_to(
+		       r2, dest, dest_port);
+	  }
+	  if(hip_relay_get_status() == HIP_RELAY_ON) {
+	 		hip_build_param_reg_from(r2,i2_saddr, i2_info->src_port);
+	  }
+#endif	
+//end add
+	
+	
+
 
 	err = entry->hadb_xmit_func->hip_send_pkt(i2_daddr, i2_saddr,
 						  (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
@@ -1537,7 +1772,15 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	uint64_t I = 0, J = 0;	
 	uint32_t spi_in = 0, spi_out = 0;
 	uint16_t crypto_len = 0, nonce = 0;
-	int err = 0, retransmission = 0, replay = 0, use_blind = 0;
+	int err = 0, retransmission = 0, replay = 0, use_blind = 0, state;
+	struct esp_prot_anchor *prot_anchor = NULL;
+	unsigned char *anchor = NULL;
+	int item_length = 0;
+	struct esp_prot_transform *prot_transform = NULL;
+	uint8_t transform = 0;
+	extern uint8_t hip_esp_prot_ext_transform;
+	in6_addr_t dest; // For the IP address in RELAY_FROM
+	in_port_t  dest_port = 0; // For the port in RELAY_FROM
         
 #ifdef CONFIG_HIP_HI3
 	int n_addrs = 0;
@@ -1590,7 +1833,12 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		 -ENOMSG, "Cookie solution rejected.\n");
 	
  	HIP_DEBUG("Cookie accepted\n");
+#ifdef HIP_USE_ICE	
+ 	HIP_DEBUG("handle nat trasform in I2\n");
+ 	hip_nat_handle_transform_in_server(i2, entry);
+#endif	
 	
+ 	
 #ifdef CONFIG_HIP_HI3
         locator = hip_get_param(i2, HIP_PARAM_LOCATOR);
 	
@@ -1837,6 +2085,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	if(i2_info->dst_port == HIP_NAT_UDP_PORT)
 	{
 		entry->nat_mode = 1;
+		entry->local_udp_port = i2_info->dst_port;
 		entry->peer_udp_port = i2_info->src_port;
 		HIP_DEBUG("entry->hadb_xmit_func: %p.\n", entry->hadb_xmit_func);
 		HIP_DEBUG("SETTING SEND FUNC TO UDP for entry %p from I2 info.\n",
@@ -1901,6 +2150,88 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	HIP_DEBUG("retransmission: %s\n", (retransmission ? "yes" : "no"));
 	HIP_DEBUG("replay: %s\n", (replay ? "yes" : "no"));
 	HIP_DEBUG("src %d, dst %d\n", i2_info->src_port, i2_info->dst_port);
+	
+	/********** ESP-PROT transform (OPTIONAL) **********/
+	
+	/* only supported in usermode and optional there
+ 	 * 
+ 	 * process the transform only when usermode is active */
+ 	HIP_DEBUG("hip_use_userspace_ipsec is %i\n", hip_use_userspace_ipsec);
+ 	if (hip_use_userspace_ipsec)
+ 	{
+ 		HIP_DEBUG("userspace IPsec hint: esp protection extension might be in use\n");
+ 		
+ 		if (hip_esp_prot_ext_transform > ESP_PROT_TRANSFORM_UNUSED)
+ 		{
+ 			param = hip_get_param(ctx->input, HIP_PARAM_ESP_PROT_TRANSFORM);
+			/* process this if the other end-host supports the extension
+			 * (parameter incl in R1) */
+			if (param)
+			{
+				prot_transform = (struct esp_prot_transform *) param;
+				transform = ntohl(prot_transform->transform);
+				
+				// TODO agree on transform
+				// right now we only support 2 transform, so we can just copy
+				entry->esp_prot_transform = transform;
+				
+				HIP_DEBUG("esp protection transform in I2: %u \n", transform);
+			} else
+			{
+				HIP_DEBUG("esp protection extension active, but not used by peer host -> setting UNUSED\n");
+				entry->esp_prot_transform = ESP_PROT_TRANSFORM_UNUSED;
+			}
+ 		} else
+ 		{	
+ 			HIP_DEBUG("esp protection extension not active, setting UNUSED\n");
+ 			entry->esp_prot_transform = ESP_PROT_TRANSFORM_UNUSED;
+ 		}
+ 	} else
+ 	{
+ 		HIP_DEBUG("userspace IPsec hint: esp protection extension UNUSED, skipped\n");
+ 		entry->esp_prot_transform = ESP_PROT_TRANSFORM_UNUSED;
+ 	}
+	
+	/********** ESP-PROT anchor (OPTIONAL) **********/
+	
+	/* only process the anchor parameter, if we are going to use it */
+	if (entry->esp_prot_transform)
+	{
+		if (param = hip_get_param(ctx->input, HIP_PARAM_ESP_PROT_ANCHOR))
+		{
+			prot_anchor = (struct esp_prot_anchor *) param;
+			
+			// distinguish different hash lengths/transforms
+			if (entry->esp_prot_transform > ESP_PROT_TRANSFORM_UNUSED)
+			{
+				anchor = (unsigned char *)
+						malloc(esp_prot_transforms[entry->esp_prot_transform]);
+				
+				memcpy(anchor, prot_anchor->anchor,
+						esp_prot_transforms[entry->esp_prot_transform]);
+				
+				HIP_HEXDUMP("received anchor: ", anchor,
+						esp_prot_transforms[entry->esp_prot_transform]);
+			} else
+			{
+				HIP_ERROR("received anchor with unknown transform, falling back\n");
+				
+				entry->esp_prot_transform = ESP_PROT_TRANSFORM_UNUSED;
+			}
+			
+			// store peer_anchor
+			entry->esp_peer_anchor = anchor;
+		} else
+		{
+			// fall back option
+			HIP_DEBUG("agreed on using esp hchain extension, but no anchor sent or error\n");
+			
+			entry->esp_prot_transform = ESP_PROT_TRANSFORM_UNUSED;
+		}
+	}
+	
+	/************************************************/
+	
 #ifdef CONFIG_HIP_BLIND
 	if (use_blind) {
 	  /* Set up IPsec associations */
@@ -1908,8 +2239,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 			   &entry->hit_peer, &entry->hit_our,
 			   entry, &spi_in,
 			   esp_tfm,  &ctx->esp_in, &ctx->auth_in,
-			   retransmission, HIP_SPI_DIRECTION_IN, 0, i2_info->src_port, 
-			   i2_info->dst_port);
+			   retransmission, HIP_SPI_DIRECTION_IN, 0, entry);
 	}
 #endif
 
@@ -1917,9 +2247,9 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	/* Set up IPsec associations */
 	err = entry->hadb_ipsec_func->hip_add_sa(i2_saddr, i2_daddr,
 			 &ctx->input->hits, &ctx->input->hitr,
-			 &spi_in, esp_tfm, &ctx->esp_in, &ctx->auth_in,
-			 retransmission, HIP_SPI_DIRECTION_IN, 0,
-			 i2_info->src_port, i2_info->dst_port);
+			 &spi_in,
+			 esp_tfm,  &ctx->esp_in, &ctx->auth_in,
+			 retransmission, HIP_SPI_DIRECTION_IN, 0, entry);
 	}
 	if (err) {
 		HIP_ERROR("Failed to setup inbound SA with SPI=%d\n", spi_in);
@@ -1955,16 +2285,16 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 			   &entry->hit_our, &entry->hit_peer,
 			   &spi_out, esp_tfm, 
 			   &ctx->esp_out, &ctx->auth_out,
-			   1, HIP_SPI_DIRECTION_OUT, 0, i2_info->dst_port, i2_info->src_port);
+			   1, HIP_SPI_DIRECTION_OUT, 0, entry);
 	}
 #endif
 
-	if (!use_blind) {
+	if (!use_blind) {		
 	  err = entry->hadb_ipsec_func->hip_add_sa(i2_daddr, i2_saddr,
 			   &ctx->input->hitr, &ctx->input->hits,
 			   &spi_out, esp_tfm, 
 			   &ctx->esp_out, &ctx->auth_out,
-			   1, HIP_SPI_DIRECTION_OUT, 0, i2_info->dst_port, i2_info->src_port);
+			   1, HIP_SPI_DIRECTION_OUT, 0, entry);
 	}
 	if (err) {
 		HIP_ERROR("Failed to setup outbound SA with SPI = %d.\n",
@@ -2026,6 +2356,30 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		  "\tCreating an R2 packet in response next.\n",
 		  hip_state_str(entry->state), entry->default_spi_out);
 	
+	
+	//add by santtu	
+	    /***** LOCATOR PARAMETER *****/
+		hip_nat_handle_locator_parameter(i2, entry, esp_info);	
+		
+	#ifdef CONFIG_HIP_RVS
+		ipv6_addr_copy(&dest, &in6addr_any);
+	    if(hip_relay_get_status() == HIP_RELAY_OFF) {
+
+		state = hip_relay_handle_relay_from(i2, i2_saddr, &dest, &dest_port);
+		if( state == -1 ){
+			HIP_DEBUG( "Handling RELAY_FROM of  I2 packet failed.\n");
+			 goto out_err;
+		 }
+				
+	     }
+	#endif 
+	//end add 	
+	
+	
+	
+	
+	
+	
 	/* Note that we haven't handled the REG_REQUEST yet. This is because we
 	   must create an REG_RESPONSE parameter into the R2 packet based on the
 	   REG_REQUEST parameter. We could allocate a new R2 here and store it
@@ -2035,7 +2389,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
 	/* Create an R2 packet in response. */
 	HIP_IFEL(entry->hadb_misc_func->hip_create_r2(
-			 ctx, i2_saddr, i2_daddr, entry, i2_info), -1, 
+			 ctx, i2_saddr, i2_daddr, entry, i2_info, &dest, dest_port), -1, 
 		 "Creation of R2 failed\n");
 
 #ifdef CONFIG_HIP_ESCROW
@@ -2150,6 +2504,33 @@ int hip_receive_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		 ntohs(i2->control));
 
 	if (entry == NULL) {
+//add by santtu	
+#ifdef CONFIG_HIP_RVS
+	     if(hip_relay_get_status() == HIP_RELAY_ON)
+	     {
+		  hip_relrec_t *rec = NULL, dummy;
+
+		  /* Check if we have a relay record in our database matching the
+		     Responder's HIT. We should find one, if the Responder is
+		     registered to relay.*/
+		  HIP_DEBUG_HIT("Searching relay record on HIT ", &i2->hitr);
+		  memcpy(&(dummy.hit_r), &i2->hitr, sizeof(i2->hitr));
+		  rec = hip_relht_get(&dummy);
+		  if(rec == NULL)
+ 		       HIP_INFO("No matching relay record found.\n");
+		  //add by santtu
+ 		  else if(rec->type == HIP_FULLRELAY)
+ 		  {
+ 		       HIP_INFO("Matching relay record found:Full-Relay.\n");
+ 		       hip_relay_forward_I(i2, i2_saddr, i2_daddr, rec, i2_info,HIP_I2);
+ 		       state = HIP_STATE_NONE;
+ 		       err = -ECANCELED;
+ 		       goto out_err;
+
+ 		  }
+	     }
+#endif		
+//end
 		state = HIP_STATE_UNASSOCIATED;
 	} else  {
 		HIP_LOCK_HA(entry);
@@ -2217,6 +2598,10 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	int err = 0, tfm = 0, retransmission = 0, type_count = 0;
 	int *reg_types = NULL;
 	uint32_t spi_recvd = 0, spi_in = 0;
+	struct hip_param *param = NULL;
+	struct esp_prot_anchor *prot_anchor = NULL;
+	unsigned char *anchor = NULL;
+	int item_length = 0;
 	
 #ifdef CONFIG_HIP_HI3
 	if( r2_info->hi3_in_use ) {
@@ -2274,18 +2659,51 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	memcpy(&ctx->auth_out, &entry->auth_out, sizeof(ctx->auth_out));
 	HIP_DEBUG("entry should have only one spi_in now, test\n");
 	spi_in = hip_hadb_get_latest_inbound_spi(entry);
+
 	tfm = entry->esp_transform;
 	
 	HIP_DEBUG("R2 packet source port: %d, destination port %d.\n",
 		  r2_info->src_port, r2_info->dst_port);
+	
+	/********** ESP-PROT anchor (OPTIONAL) **********/
 
+	param = hip_get_param(ctx->input, HIP_PARAM_ESP_PROT_ANCHOR);
+	// only process anchor, if we agreed on using it before
+	if (entry->esp_prot_transform && param)
+	{
+		prot_anchor = (struct esp_prot_anchor *) param;
+		
+		anchor = (unsigned char *)malloc(esp_prot_transforms[entry->esp_prot_transform]);
+		memcpy(anchor, prot_anchor->anchor, esp_prot_transforms[entry->esp_prot_transform]);
+		
+		HIP_HEXDUMP("received anchor: ", anchor, esp_prot_transforms[entry->esp_prot_transform]);
+		
+		// store peer_anchor
+		entry->esp_peer_anchor = anchor;
+	} else
+	{
+		HIP_DEBUG("agreed on using esp hchain extension, but no anchor sent or error\n");
+		// fall back option
+		entry->esp_prot_transform = ESP_PROT_TRANSFORM_UNUSED;
+	}
+	
+	/************************************************/
+
+//add by santtu	
+    /***** LOCATOR PARAMETER *****/
+	hip_nat_handle_locator_parameter(r2, entry, esp_info);	
+//end add
+	
+	
+	
+	
 #ifdef CONFIG_HIP_BLIND
 	if (use_blind) {
 	  err = entry->hadb_ipsec_func->hip_add_sa(r2_daddr, r2_saddr,
 			   &entry->hit_our, &entry->hit_peer,
 			   &spi_recvd, tfm,
 			   &ctx->esp_out, &ctx->auth_out, 1,
-			   HIP_SPI_DIRECTION_OUT, 0, r2_info->src_port, r2_info->dst_port);
+			   HIP_SPI_DIRECTION_OUT, 0, entry);
 	}
 #endif
 	if (!hip_blind_get_status()) {
@@ -2293,8 +2711,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 				 &ctx->input->hitr, &ctx->input->hits,
 				 &spi_recvd, tfm,
 				 &ctx->esp_out, &ctx->auth_out, 1,
-				 HIP_SPI_DIRECTION_OUT, 0, r2_info->src_port,
-				 r2_info->dst_port);
+				 HIP_SPI_DIRECTION_OUT, 0, entry);
 	}
 
 	if (err) {
@@ -2338,7 +2755,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	err = 0;
 
         /***** LOCATOR PARAMETER ******/
-	//#ifndef CONFIG_HIP_HI3
+
         if (entry->locator) {
                 HIP_IFEL(hip_update_handle_locator_parameter(
 				 entry, entry->locator, esp_info), -1,
@@ -2352,7 +2769,9 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	/* Handle REG_RESPONSE and REG_FAILED parameters. */
 	hip_handle_param_reg_response(entry, r2);
 	hip_handle_param_reg_failed(entry, r2);
-	
+//add by santtu
+	hip_handle_reg_from(entry, r2);
+//end add
 	/*
 	uint8_t services[HIP_TOTAL_EXISTING_SERVICES];
 	
@@ -2402,7 +2821,8 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		  struct in6_addr *i1_daddr, hip_ha_t *entry,
 		  hip_portpair_t *i1_info)
 {
-     int err = 0;
+     int err = 0, state;
+     hip_tlv_type_t  relay_para_type = 0;
      uint16_t nonce = 0;
      in6_addr_t dest; // For the IP address in FROM/RELAY_FROM
      in_port_t  dest_port = 0; // For the port in RELAY_FROM
@@ -2418,9 +2838,25 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		1) The destination IP address and port from the FROM/RELAY_FROM
 		parameters.
 		2) The source address and source port of the I1 packet to build
-		the VIA_RVS/RELAY_TO parameter. */
-	     HIP_IFEL(hip_relay_handle_from(i1, i1_saddr, &dest, &dest_port),
-		      -1, "Handling of relayed I1 packet failed.\n");
+		the VIA_RVS/RELAY_TO parameter. 
+		3) only one relay parameter should appear
+		*/
+    	 state = hip_relay_handle_from(i1, i1_saddr, &dest, &dest_port);
+	     if( state == -1){
+	    	 HIP_DEBUG( "Handling FROM of  I1 packet failed.\n");
+	    	 goto out_err;
+	     }else if(state == 1){
+	    	 relay_para_type = HIP_PARAM_FROM;
+	     }
+	     
+    	 state = hip_relay_handle_relay_from(i1, i1_saddr, &dest, &dest_port);
+	     if( state == -1 ){
+	    	 HIP_DEBUG( "Handling RELAY_FROM of  I1 packet failed.\n");
+	    	 goto out_err;
+	     }else if(state == 1){
+	    	 relay_para_type = HIP_PARAM_RELAY_FROM;
+	     }
+	    		
      }
 #endif /* CONFIG_HIP_RVS */
 
@@ -2434,7 +2870,7 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
      }
 #endif
      err = hip_xmit_r1(i1, i1_saddr, i1_daddr, &dest, dest_port, i1_info,
-		       &nonce);
+		       relay_para_type );
  out_err:
      return err;
 }
@@ -2508,19 +2944,27 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		  memcpy(&(dummy.hit_r), &i1->hitr, sizeof(i1->hitr));
 		  rec = hip_relht_get(&dummy);
 		  if(rec == NULL)
-		       HIP_INFO("No matching relay record found.\n");
-		  else if(rec->type != HIP_RVSRELAY)
-		       HIP_INFO("Matching relay record found, but it is of the"\
-				"wrong type.\n");
-		  else
-		  {
-		       hip_relay_rvs(i1, i1_saddr, i1_daddr, rec, i1_info);
-		       /* We created a new I1 from scratch in the relay function.
-			  The original I1 packet is now redundant. */
-		       state = HIP_STATE_NONE;
-		       err = -ECANCELED;
-		       goto out_err;
-		  }
+ 		       HIP_INFO("No matching relay record found.\n");
+		  //add by santtu
+ 		  else if(rec->type == HIP_FULLRELAY)
+ 		  {
+ 		       HIP_INFO("Matching relay record found:Full-Relay.\n");
+ 		       hip_relay_forward_I(i1, i1_saddr, i1_daddr, rec, i1_info,HIP_I1);
+ 		       state = HIP_STATE_NONE;
+ 		       err = -ECANCELED;
+ 		       goto out_err;
+
+ 		  }
+		  //end
+ 		  else if(rec->type == HIP_RVSRELAY)
+ 		  {
+ 		       hip_relay_rvs(i1, i1_saddr, i1_daddr, rec, i1_info);
+ 		       /* We created a new I1 from scratch in the relay function.
+ 			  The original I1 packet is now redundant. */
+ 		       state = HIP_STATE_NONE;
+ 		       err = -ECANCELED;
+ 		       goto out_err;
+ 		  }
 	     }
 #endif
 		state = HIP_STATE_NONE;
@@ -2864,7 +3308,7 @@ int hip_handle_firewall_i1_request(struct hip_common *msg, struct in6_addr *i1_s
 	int err = 0, if_index = 0, is_ipv4_locator,
 		reuse_hadb_local_address = 0, ha_nat_mode = hip_nat_status,
                 old_global_nat_mode = hip_nat_status;
-        in_port_t ha_peer_port;
+    in_port_t ha_local_port, ha_peer_port;
 	hip_ha_t *entry;
 	hip_hit_t *src_hit, *dst_hit;
 	hip_hit_t *lsi =NULL;
@@ -2920,6 +3364,7 @@ int hip_handle_firewall_i1_request(struct hip_common *msg, struct in6_addr *i1_s
 			HIP_DEBUG_IN6ADDR("reusing HA",
 					  &entry->preferred_address);
 			ipv6_addr_copy(&dst_addr, &entry->preferred_address);
+			ha_local_port = entry->local_udp_port;
 			ha_peer_port = entry->peer_udp_port;
 			ha_nat_mode = entry->nat_mode;
 			err = 0;
@@ -2965,6 +3410,7 @@ int hip_handle_firewall_i1_request(struct hip_common *msg, struct in6_addr *i1_s
 		ipv6_addr_copy(&(entry->local_address), &src_addr);
 	
 	/* Preserve NAT status with peer */
+	entry->local_udp_port = ha_local_port;
 	entry->peer_udp_port = ha_peer_port;
 	entry->nat_mode = ha_nat_mode;
 

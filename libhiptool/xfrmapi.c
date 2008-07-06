@@ -468,7 +468,7 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 		    struct hip_crypto_key *authkey,
 		    int already_acquired,
 		    int direction, int update,
-		    int sport, int dport) {
+		    hip_ha_t *entry) {
 			// hip_portpair_t *sa_info) {
 	/* XX FIX: how to deal with the direction? */
 
@@ -477,14 +477,7 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 	int cmd = update ? XFRM_MSG_UPDSA : XFRM_MSG_NEWSA;
 
 	HIP_ASSERT(spi);
-
-	HIP_DEBUG("%s SA\n", (update ? "updating" : "adding new"));
-
-	HIP_DEBUG_HIT("src_hit", src_hit);
-	HIP_DEBUG_HIT("dst_hit", dst_hit);
-	HIP_DEBUG_IN6ADDR("saddr", saddr);
-	HIP_DEBUG_IN6ADDR("daddr", daddr);
-
+	
 	authkey_len = hip_auth_key_length_esp(aalg);
 	enckey_len = hip_enc_key_length(ealg);
 
@@ -494,13 +487,31 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 	/* XX CHECK: is there some kind of range for the SPIs ? */
 	if (!already_acquired)
 		get_random_bytes(spi, sizeof(uint32_t));
+/*
+	if(!ice_ok)
+		goto out_err;
+	HIP_DEBUG("...........inside add sa..............\n");
+*/	
+	
+	HIP_DEBUG("************************************\n");
+	HIP_DEBUG("%s SA\n", (update ? "updating" : "adding new"));
+	HIP_DEBUG_HIT("src_hit", src_hit);
+	HIP_DEBUG_HIT("dst_hit", dst_hit);
+	HIP_DEBUG_IN6ADDR("saddr", saddr);
+	HIP_DEBUG_IN6ADDR("daddr", daddr);
 
+	_HIP_DEBUG("sport %d\n", sport);
+	_HIP_DEBUG("dport %d\n", dport);
+	HIP_DEBUG("direction %d\n", direction);
+	HIP_DEBUG("SPI=0x%x\n",*spi);
+	HIP_DEBUG("************************************\n");
+	
 	HIP_IFE(hip_xfrm_state_modify(hip_xfrmapi_nl_ipsec, cmd,
 				      saddr, daddr, 
 				      src_hit, dst_hit, *spi,
 				      ealg, enckey, enckey_len, aalg,
 				      authkey, authkey_len, AF_INET6,
-				      sport, dport), 1);
+				      entry->local_udp_port, entry->peer_udp_port), 1);
 				      
  out_err:
 	return err;
@@ -538,7 +549,7 @@ int hip_setup_hit_sp_pair(struct in6_addr *src_id, struct in6_addr *dst_id,
 	int cmd = update ? XFRM_MSG_UPDPOLICY : XFRM_MSG_NEWPOLICY;
 
 	/* XX FIXME: remove the proto argument */
-
+	HIP_DEBUG("hip_setup_hit_sp_pair\n");
 	HIP_IFE(hip_xfrm_policy_modify(hip_xfrmapi_nl_ipsec, cmd,
 				       dst_id, src_id,
 				       src_addr, dst_addr,

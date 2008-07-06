@@ -48,6 +48,9 @@
  * This software is Copyright 1996 by Craig Metz, All Rights Reserved.
  * 
  * @author Craig Metz
+ * @note: HIPU: libinet6 requires LD_PRELOAD which is "dylib" on BSD. Miika:
+ * we are going to get rid of the LD_PRELOAD stuff in HIPL anyway.
+ * @note: HIPU: the include headers should be excluded on MAC OS X
  */
 #ifdef _USAGI_LIBINET6
 #include "libc-compat.h"
@@ -472,7 +475,7 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 	   /etc/hip/hosts and only then from DHT server. */
         if (flags & AI_NODHT) {
 		HIP_INFO("Distributed Hash Table (DHT) is not in use.\n");
-                goto skip_dht;
+                goto out_err;
         }
 	
         memset(dht_response_hit, '\0', sizeof(dht_response_hit));
@@ -498,12 +501,10 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 
 	/* Send a user message to the HIP daemon to receive Open DHT server
 	   gateway whereabouts. */
-        if((err = hip_send_recv_daemon_info(msg)) < 0) {
-		HIP_ERROR("Unable to receive DHT gateway information from the "\
+        HIP_IFEL(((err = hip_send_recv_daemon_info(msg)) < 0), -1,
+		"Unable to receive DHT gateway information from the "\
 			  "HIP daemon.\nDo you have a local HIP daemon up and "\
 			  "running?\n");
-		goto skip_dht; 
-	}
 	
 	gw_info = hip_get_param(msg, HIP_PARAM_OPENDHT_GW_INFO);
 	if(gw_info == NULL) {
@@ -516,35 +517,29 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
         /* Check if DHT was on */
         if ((gw_info->ttl == 0) && (gw_info->port == 0)) {
                 HIP_INFO("Distributed hash table (DHT) is not in use.\n");
-                goto skip_dht;
+                goto out_err;
         }
         
         tmp_ttl = gw_info->ttl;
         tmp_port = htons(gw_info->port);
         IPV6_TO_IPV4_MAP(&gw_info->addr, &tmp_v4);
 	
-        if(inet_ntop(AF_INET, &tmp_v4, tmp_ip_str,
-		     sizeof(tmp_ip_str)) == NULL) {
-		err = -1;
-		goto out_err;
-	}
+        HIP_IFEL((inet_ntop(AF_INET, &tmp_v4, tmp_ip_str,
+                            sizeof(tmp_ip_str)) == NULL), 1, 
+                 "Failed to convert gw addr to presentation format\n");		
 	
 	/* Check for IN_ADDR_ANY gateway. This happens for example on virtual
 	   machines. */	
-	if((tmp_v4.s_addr | INADDR_ANY) == 0) {
-		HIP_ERROR("DHT gateway is 0.0.0.0. Skipping.\n");
-		goto skip_dht;
-	}
+	HIP_IFEL(((tmp_v4.s_addr | INADDR_ANY) == 0), -1, 
+                 "DHT gateway is 0.0.0.0. Skipping.\n");
 	
         HIP_INFO("DHT server is located at %s:%d with TTL %d.\n",
 		 tmp_ip_str, tmp_port, tmp_ttl);
 
         error = 0;
         error = resolve_dht_gateway_info(tmp_ip_str, &serving_gateway);
-        if (error < 0) {
-		HIP_DEBUG("Error in resolving the DHT gateway address, skipping DHT.\n");
-		goto skip_dht;
-        }
+        HIP_IFEL((error < 0), -1,
+                 "Error in resolving the DHT gateway address, skipping DHT.\n");
 
         ret_hit = opendht_get_key(serving_gateway, name, dht_response_hit);
 	
@@ -587,10 +582,8 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
                         return 1;
                 }
         }
-/* HORRIBLE! Why is skip_dht under out_err? This effectively renders our IFE macros
-   useless. :( -Lauri 08.05.2008 */
  out_err: 
- skip_dht:
+
 								
 	/* Open the file containing HIP hosts for reading. */
 	fp = fopen(_PATH_HIP_HOSTS, "r");

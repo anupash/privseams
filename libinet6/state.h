@@ -51,6 +51,16 @@
 
 #define HIP_LOCATOR_LOCATOR_TYPE_IPV6    0
 #define HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI 1
+//NAT branch
+#define HIP_LOCATOR_LOCATOR_TYPE_UDP 2
+
+#define HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY 126
+#define HIP_LOCATOR_LOCATOR_TYPE_REFLEXIVE_PRIORITY 120
+/** for the triple nat mode*/
+#define HIP_NAT_MODE_NONE               0
+#define HIP_NAT_MODE_PLAIN_UDP          1
+#define HIP_NAT_MODE_ICE_UDP            2 
+//end NAT branch
 
 #define SEND_UPDATE_ESP_INFO             (1 << 0)
 #define SEND_UPDATE_LOCATOR              (1 << 1)
@@ -173,6 +183,13 @@ struct hip_peer_addr_list_item
 	uint32_t         seq_update_id; /* the Update ID in SEQ parameter
 					   this address is related to */
 	uint8_t          echo_data[4];  /* data put into the ECHO_REQUEST parameter */
+//NAT branch	
+	uint8_t  		transport_protocol; /*value 1 for UDP*/
+	
+	uint16_t 		port /*port number for transport protocol*/;
+	
+	uint32_t 		priority;
+//end NAT branch
 };
 
 /* for HIT-SPI hashtable only */
@@ -296,7 +313,7 @@ struct hip_hadb_state
 	struct in6_addr              local_address;
 	/** Peer's Local Scope Identifier (LSI). A Local Scope Identifier is a
 	    32-bit localized representation for a Host Identity.*/
-       	hip_lsi_t                    lsi_peer;
+    hip_lsi_t                    lsi_peer;
 	/** Our Local Scope Identifier (LSI). A Local Scope Identifier is a
 	    32-bit localized representation for a Host Identity.*/
 	hip_lsi_t                    lsi_our;
@@ -304,6 +321,12 @@ struct hip_hadb_state
 	int                          esp_transform;
 	/** HIP transform type */
 	int                          hip_transform;
+	/** ESP extension protection transform */
+	uint8_t						 esp_prot_transform;
+	/** ESP extension protection local_anchor */
+	unsigned char *				 esp_local_anchor;
+	/** ESP extension protection peer_anchor */
+	unsigned char *				 esp_peer_anchor;
 	/** Something to do with the birthday paradox.
 	    @todo Please clarify what this field is. */
 	uint64_t                     birthday;
@@ -314,8 +337,11 @@ struct hip_hadb_state
 	/** A boolean value indicating whether there is a NAT between this host
 	    and the peer. */
 	uint8_t	                     nat_mode;
+	/* this might seem redundant as dst_port == HIP_NAT_UDP_PORT, but it makes
+	 * port handling easier in other functions */
+	in_port_t					 local_udp_port;
 	 /** NAT mangled port (source port of I2 packet). */
-	in_port_t	             peer_udp_port;
+	in_port_t	             	 peer_udp_port;
 	/** Non-zero if the escrow service is in use. */ 
 	int                          escrow_used;
 	/** Escrow server HIT. */ 
@@ -428,6 +454,19 @@ struct hip_hadb_state
 #ifdef CONFIG_HIP_HIPPROXY
 	int hipproxy;
 #endif
+	
+//NAT Branch
+	//pointer for ice engine
+    void* ice_session;
+    /** a 16 bits flag for nat connectiviy checking engine control*/
+    uint16_t nat_control;
+    
+	/**reflexive address(NAT box out bound) when register to relay or RVS**/
+	struct in6_addr              local_reflexive_address;
+	/**reflexive address port (NAT box out bound) when register to relay or RVS**/
+	in_port_t local_reflexive_udp_port;
+//end NAT Branch
+	
 };
 
 /** A data structure defining host association information that is sent
@@ -592,7 +631,12 @@ struct hip_hadb_misc_func_set{
 			     struct in6_addr *i2_saddr,
 			     struct in6_addr *i2_daddr,
 			     hip_ha_t *entry,
-			     hip_portpair_t *);
+			     hip_portpair_t *,
+//add by santtu for the relay address and port
+			     struct in6_addr *,
+			     const in_port_t
+//end add			     
+				);
 	void (*hip_build_network_hdr)(struct hip_common *msg, uint8_t type_hdr,
 				      uint16_t control,
 				      const struct in6_addr *hit_sender,
@@ -619,7 +663,7 @@ struct hip_ipsec_func_set {
 			       struct hip_crypto_key *authkey,
 			       int already_acquired,
 			       int direction, int update,
-			       int sport, int dport);
+			       hip_ha_t *entry);
 	int (*hip_setup_hit_sp_pair)(hip_hit_t *src_hit, hip_hit_t *dst_hit,
 				     struct in6_addr *src_addr,
 				     struct in6_addr *dst_addr, u8 proto,

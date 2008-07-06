@@ -3,6 +3,7 @@
  * 
  * @date    1.1.2007
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @note    HIPU: BSD platform needs to be autodetected in hip_set_lowcapability
  */
  
 #include "init.h"
@@ -125,9 +126,11 @@ int hipd_init(int flush_ipsec, int killold)
 	hip_hit_t default_hit;
 	hip_lsi_t default_lsi;
 	hip_hit_t peer_hit;
-	int err = 0, dhterr = 0;
+	int err = 0, certerr = 0, dhterr = 0;
 	char str[64];
 	struct sockaddr_in6 daemon_addr;
+	extern int hip_opendht_sock_fqdn;
+	extern int hip_opendht_sock_hit;
 
 	/* Open daemon lock file and read pid from it. */
 	HIP_IFEL(hip_create_lock_file(HIP_DAEMON_LOCK_FILE, killold), -1,
@@ -273,15 +276,13 @@ int hipd_init(int flush_ipsec, int killold)
 		      sizeof(daemon_addr)), -1, "Bind on daemon addr failed\n");
 
 	hip_load_configuration();
-       
-        dhterr = 0;
-        dhterr = hip_init_dht();
-        if (dhterr < 0) HIP_DEBUG("Initializing DHT returned error\n");
 
-	/* reusing dhterr */
-	dhterr = 0;
-	dhterr = hip_init_certs();
-	if (dhterr < 0) HIP_DEBUG("Initializing cert configuration file returned error\n");
+	hip_opendht_sock_fqdn = init_dht_gateway_socket(hip_opendht_sock_fqdn);
+	hip_opendht_sock_hit = init_dht_gateway_socket(hip_opendht_sock_hit);
+
+	certerr = 0;
+	certerr = hip_init_certs();
+	if (certerr < 0) HIP_DEBUG("Initializing cert configuration file returned error\n");
 	
 #if 0
 	/* init new tcptimeout parameters, added by Tao Wan on 14.Jan.2008*/
@@ -379,7 +380,7 @@ int hip_init_dht()
                         memset(&opendht_name_mapping, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
                         if (gethostname(&opendht_name_mapping, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1))
                                 HIP_DEBUG("gethostname failed\n");
-                        register_to_dht(); 
+			register_to_dht(); 
                         destroy(&list);
                 }
         } else {
@@ -634,7 +635,7 @@ int hip_init_nat_sock_udp(int *hip_nat_sock_udp)
 {
 	int on = 1, err = 0;
 	int off = 0;
-	int encap_on = HIP_UDP_ENCAP_ESPINUDP_NONIKE;
+	int encap_on = HIP_UDP_ENCAP_ESPINUDP;
 	struct sockaddr_in myaddr;
 
 	HIP_DEBUG("hip_init_nat_sock_udp() invoked.\n");
@@ -908,7 +909,7 @@ int hip_init_certs(void) {
 			hit, hostname, HIP_CERT_INIT_DAYS);		
 		fclose(conf_file);
 	} else {
-		HIP_DEBUG("Configuration file existed exiting hip_init_certs");
+		HIP_DEBUG("Configuration file existed exiting hip_init_certs\n");
 	}
 out_err:
 	return err;

@@ -97,6 +97,7 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc) 
         hip_conf_handle_hiprelay,
         hip_conf_handle_set,
         hip_conf_handle_dht_toggle,
+	hip_conf_handle_opptcp,
         hip_conf_handle_trans_order,
 	hip_conf_handle_tcptimeout, /* added by Tao Wan*/
         hip_conf_handle_hipproxy,
@@ -259,7 +260,6 @@ int hip_conf_get_type(char *text,char *argv[]) {
 #endif		
 	else if (!strcmp("order", text))
 		ret = TYPE_ORDER;
-#ifdef CONFIG_HIP_OPENDHT
 	else if (strcmp("opendht", argv[1])==0)
 		ret = TYPE_DHT;
 	else if (!strcmp("ttl", text))
@@ -270,7 +270,6 @@ int hip_conf_get_type(char *text,char *argv[]) {
 		ret = TYPE_GET;
 	else if (!strcmp("set", text))
                 ret = TYPE_SET;
-#endif
 	else if (!strcmp("config", text))
 		ret = TYPE_CONFIG;
 #ifdef CONFIG_HIP_HIPPROXY
@@ -483,6 +482,8 @@ int hip_conf_handle_hi(hip_common_t *msg, int action, const char *opt[],
 	      "New default HI must be created as root.\n");
 
      _HIP_DEBUG("action=%d optc=%d\n", action, optc);
+
+     /* @todo: the ACTION_GET is bypassed in hip_do_hipconf() */
 
      if (action == ACTION_DEL)
 	  return hip_conf_handle_hi_del(msg, action, opt, optc);
@@ -1293,7 +1294,6 @@ int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int op
 
         /* ASK THIS INFO FROM DAEMON */
         HIP_INFO("Asking serving gateway info from daemon...\n");
-        HIP_IFEL(!(msgdaemon = malloc(HIP_MAX_PACKET)), -1, "Malloc for msg failed\n");
         HIP_IFEL(hip_build_user_hdr(msgdaemon, SO_HIP_DHT_SERVING_GW,0),-1,
                  "Building daemon header failed\n");
         HIP_IFEL(hip_send_recv_daemon_info(msgdaemon), -1, "Send recv daemon info failed\n");
@@ -1466,12 +1466,13 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
      /* Get the type argument for the given action. */
      HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed.\n");
      memset(msg, 0, HIP_MAX_PACKET);
-     hip_get_all_hits(msg,argv);
-     
+
      /* Call handler function from the handler function pointer
 	array at index "type" with given commandline arguments. 
 	The functions build a hip_common message. */
-     if (argc ==3)
+     if (action == ACTION_GET)
+	     err = hip_get_all_hits(msg,argv);
+     else if (argc == 3)
 	  err = (*action_handler[type])(msg, action, (const char **)&argv[2], argc - 3);
      else
 	  err = (*action_handler[type])(msg, action, (const char **)&argv[3], argc - 3);
@@ -1510,8 +1511,6 @@ int hip_conf_handle_ha(hip_common_t *msg, int action,const char *opt[], int optc
      struct hip_tlv_common *current_param = NULL;
      int err = 0, state, ret;
      in6_addr_t arg1, hit1;
-
-     HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
 
      HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0), -1,
 	      "Building of daemon header failed\n");
@@ -1560,8 +1559,6 @@ int hip_conf_handle_handoff(hip_common_t *msg, int action,const char *opt[], int
 {	
      int err=0;
 		
-     HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
-	
      if (strcmp("active",opt[0]) ==0)
      {
 	  HIP_IFEL(hip_build_user_hdr(msg,SO_HIP_HANDOFF_ACTIVE, 0), -1,
@@ -1803,7 +1800,6 @@ int hip_conf_handle_restart(hip_common_t *msg, int type, const char *opt[],
 	return err;
 }
 
-#if 0
 int hip_conf_handle_opptcp(hip_common_t *msg, int action, const char *opt[],
 			   int optc)
 {
@@ -1825,7 +1821,6 @@ int hip_conf_handle_opptcp(hip_common_t *msg, int action, const char *opt[],
 /*	hip_set_opportunistic_tcp_status(1);*/
 /*	hip_set_opportunistic_tcp_status(0);*/
 }
-#endif
 
 /**
  * Handles the hipconf commands where the type is @ tcptimeout.

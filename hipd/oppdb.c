@@ -465,7 +465,7 @@ int hip_opp_get_peer_hit(struct hip_common *msg,
 					   &dst_ip), -1,
 		 "Cannot find source address\n");
 	
-	err = hip_hadb_add_peer_info_complete(&hit_our, &phit, &our_addr, &dst_ip);
+	err = hip_hadb_add_peer_info_complete(&hit_our, &phit, NULL, &our_addr, &dst_ip);
 	HIP_IFEL(!(ha = hip_hadb_find_byhits(&hit_our, &phit)), -1,
 		 "Did not find entry\n");
 

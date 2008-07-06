@@ -5,6 +5,8 @@
 #ifndef _HIP_PROTODEFS
 #define _HIP_PROTODEFS
 
+#include "hashchain.h"
+
 #define HIP_MAX_PACKET 2048
 
 /** @addtogroup hip_msg
@@ -53,6 +55,9 @@
 #define HIP_PARAM_ESP_INFO             65
 #define HIP_PARAM_R1_COUNTER           128
 #define HIP_PARAM_LOCATOR              193
+//NAT branch
+#define HIP_PARAM_NAT_TRANSFORM        194
+//end NAT branch
 #define HIP_PARAM_HASH_CHAIN_VALUE     221
 #define HIP_PARAM_HASH_CHAIN_ANCHORS   222
 #define HIP_PARAM_HASH_CHAIN_PSIG      223
@@ -67,12 +72,14 @@
 #define HIP_PARAM_CERT                 768
 #define HIP_PARAM_NOTIFICATION         832
 #define HIP_PARAM_ECHO_REQUEST_SIGN    897
-#define HIP_PARAM_REG_INFO	       930
+#define HIP_PARAM_REG_INFO	       	   930
 #define HIP_PARAM_REG_REQUEST	       932
 #define HIP_PARAM_REG_RESPONSE	       934
 #define HIP_PARAM_REG_FAILED	       936
 #define HIP_PARAM_ECHO_RESPONSE_SIGN   961
 #define HIP_PARAM_ESP_TRANSFORM        4095
+#define HIP_PARAM_ESP_PROT_TRANSFORM   4120
+#define HIP_PARAM_ESP_PROT_ANCHOR	   4121
 
 /* Range 32768 - 49141 can be used for HIPL private parameters i.e. to
    parameters passed from hipconf to hipdaemon. */
@@ -107,6 +114,7 @@
 #define HIP_PARAM_ADD_HIT		32800
 #define HIP_PARAM_ADD_OPTION		32801
 #define HIP_PARAM_PEER_HIT		32802
+#define HIP_PARAM_HCHAIN_ANCHOR			32803
 
 /* End of HIPL private parameters. */
 
@@ -382,6 +390,18 @@ struct hip_keymat_keymat
 	void *keymatdst;  /**< Pointer to beginning of key material */
 };
 
+struct esp_prot_transform {
+	hip_tlv_type_t     type;
+	hip_tlv_len_t      length;
+	uint8_t     	   transform;
+} __attribute__ ((packed));
+
+struct esp_prot_anchor {
+	hip_tlv_type_t     type;
+	hip_tlv_len_t      length;
+	unsigned char  	   anchor[MAX_HASH_LENGTH];
+} __attribute__ ((packed));
+
 /**
  * Used in executing a unit test case in a test suite in the kernel module.
  */
@@ -410,7 +430,37 @@ struct hip_locator_info_addr_item {
 		      WAITING_ECHO_REQUEST, ACTIVE */
 
 }  __attribute__ ((packed));
+//add by santtu
+/**
+ * it is the type 2 locater for UDP or other transport protocol later.
+ */
+struct hip_locator_info_addr_item2 {
+        uint8_t traffic_type;
+        uint8_t locator_type;
+        uint8_t locator_length;
+        uint8_t reserved;  /* last bit is P (prefered) */
+       	uint32_t lifetime;
+       	uint16_t port;
+       	uint8_t  transport_protocol;
+       	uint8_t  kind;
+       	uint32_t priority;
+       	uint32_t spi;
+       	struct in6_addr address;
 
+	int state; /**<State of our addresses, possible states are:
+		      WAITING_ECHO_REQUEST, ACTIVE */
+
+}  __attribute__ ((packed));
+
+
+/**
+ * it is a union of both type1 and type2 locator.
+ */
+union hip_locator_info_addr {
+	struct hip_locator_info_addr_item type1;
+	struct hip_locator_info_addr_item2 type2;
+}__attribute__ ((packed));
+//end add
 /** Structure describing an endpoint. This structure is used by the resolver in
  * the userspace, so it is not length-padded like HIP parameters. All of the
  * members are in network byte order.
@@ -444,7 +494,7 @@ struct sockaddr_eid {
  * Use accessor functions defined in builder.c, do not access members
  * directly to avoid hassle with byte ordering and number conversion.
  */
-struct hip_common {
+struct hip_common { 
 	uint8_t      payload_proto;
 	uint8_t      payload_len;
 	uint8_t      type_hdr;
@@ -766,7 +816,22 @@ struct hip_opendht_set {
         char name[256];
 } __attribute__ ((packed));
 
+//add by santtu from here
+
+struct hip_nat_transform {
+	hip_tlv_type_t        type;
+	hip_tlv_len_t         length;
+	hip_transform_suite_t suite_id[1];
+} __attribute__ ((packed));
 /* @} */
+
+/** draft-ietf-hip-nat-traversal-02 */
+struct hip_reg_from {
+     hip_tlv_type_t type; /**< Type code for the parameter. */
+     hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
+     uint8_t address[16]; /**< IPv6 address */
+     in_port_t port; /**< Port number. */
+} __attribute__ ((packed));
 
 #endif /* _HIP_PROTODEFS */
 

@@ -10,6 +10,7 @@
 *   - Miika Komu <miika@iki.fi>
 *   - Laura Takkinen <laura.takkinen@hut.fi>
 * Licence: GNU/GPL
+* @note HIPU: This is a kernel module specifically for Linux. It needs to be rewritten for MAC OS X.
 *
 */
 

@@ -12,6 +12,11 @@
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  */
 #include "user.h"
+#include "esp_prot_ext.h"
+#include "hchain_anchordb.h"
+
+int hip_userspace_ipsec_activate(struct hip_common *msg);
+int hip_esp_protection_extension_transform(struct hip_common *msg);
 
 int hip_sendto(const struct hip_common *msg, const struct sockaddr *dst){
         return sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
@@ -33,7 +38,7 @@ int hip_handle_user_msg(struct hip_common *msg,
 	hip_lsi_t *lsi, *src_lsi = NULL, *dst_lsi = NULL;
 	in6_addr_t *src_ip = NULL, *dst_ip = NULL;
 	hip_ha_t *entry = NULL, *server_entry = NULL;
-	int err = 0, msg_type = 0, n = 0, len = 0, state = 0, reti = 0;
+	int err = 0, msg_type = 0, n = 0, len = 0, state = 0, reti = 0, dhterr = 0;
 	int access_ok = 0, send_response = 1, is_root;
 	HIP_KEA * kea = NULL;
 	struct hip_tlv_common *param = NULL;
@@ -368,6 +373,11 @@ int hip_handle_user_msg(struct hip_common *msg,
                 HIP_DEBUG("hip_opendht_inuse =  %d (should be %d)\n", 
                           hip_opendht_inuse, SO_HIP_DHT_ON);
         	}
+		
+                dhterr = 0;
+                dhterr = hip_init_dht();
+                if (dhterr < 0) HIP_DEBUG("Initializing DHT returned error\n");
+		
             break;
             
         case SO_HIP_DHT_OFF:
@@ -894,8 +904,26 @@ int hip_handle_user_msg(struct hip_common *msg,
 		HIP_DEBUG("SO_HIP_TRIGGER_BEX\n");
 		hip_firewall_status = 1;
 		err = hip_netdev_trigger_bex_msg(msg);
-		goto out_err;
-	  	break;
+		break;
+	case SO_HIP_USERSPACE_IPSEC:
+		HIP_DUMP_MSG(msg);
+		err = hip_userspace_ipsec_activate(msg);
+		break;
+	case SO_HIP_ESP_PROT_EXT_TRANSFORM:
+		HIP_DUMP_MSG(msg);
+		err = hip_esp_protection_extension_transform(msg);
+		break;	
+	case SO_HIP_IPSEC_UPDATE_ANCHOR_LIST:
+		HIP_DUMP_MSG(msg);
+		err = update_anchor_db(msg);
+		break;
+	case SO_HIP_IPSEC_NEXT_ANCHOR:
+		// TODO implement
+		/* hip_send_update(struct hip_hadb_state *entry,
+		    struct hip_locator_info_addr_item *addr_list,
+		    int addr_count, int ifindex, int flags, 
+		    int is_add, struct sockaddr* addr) */
+		break;
 	case SO_HIP_GET_LSI_PEER:
 	case SO_HIP_GET_LSI_OUR:
 		while((param = hip_get_next_param(msg, param))){
@@ -980,4 +1008,75 @@ int hip_handle_user_msg(struct hip_common *msg,
 		HIP_DEBUG("No response sent\n");
 
 	return err;
+}
+
+int hip_userspace_ipsec_activate(struct hip_common *msg)
+{
+	struct hip_tlv_common *param = NULL;
+	int err = 0, activate = 0;
+	
+	// process message and store anchor elements in the db
+	param = (struct hip_tlv_common *)hip_get_param(msg, HIP_PARAM_INT);
+	activate = *((int *)hip_get_param_contents_direct(param));
+	
+	// set global variable
+	hip_use_userspace_ipsec = activate;
+	HIP_DEBUG("userspace ipsec activate: %i \n", activate);
+	
+	/* remove the policies from the kernel-mode IPsec, otherwise app-packets
+	 * will be captured and processed by the kernel */
+	HIP_DEBUG("flushing all ipsec policies...\n");
+	default_ipsec_func_set.hip_flush_all_policy();
+	HIP_DEBUG("flushing all ipsec SAs...\n");
+	default_ipsec_func_set.hip_flush_all_sa();
+	
+	/* we have to modify the ipsec function pointers to call the ones
+	 * located in userspace from now on */
+	HIP_DEBUG("re-initializing the hadb...\n");
+	hip_uninit_hadb();
+	hip_init_hadb();
+	
+  out_err:
+	return err;
+}
+
+/** 
+ * activates the esp protection extension in the hipd
+ * 
+ * NOTE: this is called by the hipd when receiving the respective message
+ * from the firewall
+ **/
+int hip_esp_protection_extension_transform(struct hip_common *msg)
+{
+	struct hip_tlv_common *param = NULL;
+	int err = 0;
+	uint8_t transform = 0;
+	extern uint8_t hip_esp_prot_ext_transform;
+	
+	// process message and store anchor elements in the db
+	param = (struct hip_tlv_common *)hip_get_param(msg, HIP_PARAM_UINT);
+	transform = *((uint8_t *)hip_get_param_contents_direct(param));
+	HIP_DEBUG("esp protection extension transform: %u \n", transform);
+	
+	// right now we only support the default transform
+	if (transform > ESP_PROT_TRANSFORM_UNUSED)
+	{
+		hip_esp_prot_ext_transform = transform;
+		
+		HIP_DEBUG("switched to esp protection extension\n");
+	}
+	else
+	{
+		hip_esp_prot_ext_transform = ESP_PROT_TRANSFORM_UNUSED;
+		
+		HIP_DEBUG("switched to normal esp mode\n");
+	}
+	
+	/* we have to make sure that the precalculated R1s include the esp
+	 * protection extension transform */
+	HIP_DEBUG("recreate all R1s\n");
+	HIP_IFEL(hip_recreate_all_precreated_r1_packets(), -1, "failed to recreate all R1s\n");
+	
+  out_err:
+  	return err;
 }
