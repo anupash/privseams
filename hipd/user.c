@@ -15,7 +15,6 @@
 #include "esp_prot_ext.h"
 #include "hchain_anchordb.h"
 
-int hip_userspace_ipsec_activate(struct hip_common *msg);
 int hip_esp_protection_extension_transform(struct hip_common *msg);
 
 int hip_sendto(const struct hip_common *msg, const struct sockaddr *dst){
@@ -1007,37 +1006,6 @@ int hip_handle_user_msg(struct hip_common *msg,
 	} else
 		HIP_DEBUG("No response sent\n");
 
-	return err;
-}
-
-// TODO extend to allow switching back to kernel-mode
-int hip_userspace_ipsec_activate(struct hip_common *msg)
-{
-	struct hip_tlv_common *param = NULL;
-	int err = 0, activate = 0;
-	
-	// process message and store anchor elements in the db
-	param = (struct hip_tlv_common *)hip_get_param(msg, HIP_PARAM_INT);
-	activate = *((int *)hip_get_param_contents_direct(param));
-	
-	// set global variable
-	hip_use_userspace_ipsec = activate;
-	HIP_DEBUG("userspace ipsec activate: %i \n", activate);
-	
-	/* remove the policies from the kernel-mode IPsec, otherwise app-packets
-	 * will be captured and processed by the kernel */
-	HIP_DEBUG("flushing all ipsec policies...\n");
-	default_ipsec_func_set.hip_flush_all_policy();
-	HIP_DEBUG("flushing all ipsec SAs...\n");
-	default_ipsec_func_set.hip_flush_all_sa();
-	
-	/* we have to modify the ipsec function pointers to call the ones
-	 * located in userspace from now on */
-	HIP_DEBUG("re-initializing the hadb...\n");
-	hip_uninit_hadb();
-	hip_init_hadb();
-	
-  out_err:
 	return err;
 }
 
