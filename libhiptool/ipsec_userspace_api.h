@@ -54,7 +54,7 @@ uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr, struct in6_addr *dad
 			      struct hip_crypto_key *authkey,
 			      int already_acquired,
 			      int direction, int update,
-			      int sport, int dport);
+			      hip_ha_t *entry);
 int hip_userspace_ipsec_setup_hit_sp_pair(hip_hit_t *src_hit, hip_hit_t *dst_hit,
 				    struct in6_addr *src_addr,
 				    struct in6_addr *dst_addr, u8 proto,

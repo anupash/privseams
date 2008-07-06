@@ -737,7 +737,7 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 						 &entry->hit_our, &entry->hit_peer,
 						 &entry->default_spi_out, entry->esp_transform,
 						 &entry->esp_out, &entry->auth_out, 1,
-						 HIP_SPI_DIRECTION_OUT, 0, HIP_NAT_UDP_PORT, entry->peer_udp_port);
+						 HIP_SPI_DIRECTION_OUT, 0, entry);
 		if (err) {
 			HIP_ERROR("Failed to setup outbound SA with SPI=%d\n",
 					entry->default_spi_out);
@@ -750,7 +750,7 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 						&spi_in,
 						entry->esp_transform,
 						 &entry->esp_in, &entry->auth_in, 1,
-						 HIP_SPI_DIRECTION_IN, 0, entry->peer_udp_port, HIP_NAT_UDP_PORT);
+						 HIP_SPI_DIRECTION_IN, 0, entry);
 		if (err) {
 				HIP_ERROR("Failed to setup inbound SA with SPI=%d\n", spi_in);
 				/* if (err == -EEXIST)

@@ -800,5 +800,3 @@ void hip_print_locator(int debug_level, const char *file, int line, const char *
 	    }
 	}
 }
-
-

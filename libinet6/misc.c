@@ -2016,11 +2016,11 @@ int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
 		    struct in6_addr *src_ip, struct in6_addr *dst_ip)
 {
         struct hip_common *msg = NULL;
-	void *param = NULL;
+        void *param = NULL;
         int err = 0;
 
         HIP_DEBUG_HIT("src_hit is: ", src_hit);
-	HIP_DEBUG_HIT("dst_hit is: ", dst_hit);
+        HIP_DEBUG_HIT("dst_hit is: ", dst_hit);
         HIP_DEBUG_IN6ADDR("src_ip is: ", src_ip);        
         HIP_DEBUG_IN6ADDR("dst_ip  is: ", dst_ip);
         
@@ -2067,7 +2067,7 @@ int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
         
         // this again is optional
         if (src_ip)
-		HIP_IFEL(hip_build_param_contents(msg, (void *)(src_ip),
+        	HIP_IFEL(hip_build_param_contents(msg, (void *)(src_ip),
 						  HIP_PARAM_IPV6_ADDR,
 						  sizeof(struct in6_addr)), -1,
 			 "build param HIP_PARAM_IPV6_ADDR failed\n");

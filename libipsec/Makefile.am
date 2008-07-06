@@ -57,4 +57,4 @@ noinst_HEADERS = ipsec_strerror.h policy_parse.h
 
 #EXTRA_DIST = ${man3_MANS} test-policy.c
 
-DISTCLEANFILES = policy_parse.c policy_parse.h policy_token.c policy_token.h
+DISTCLEANFILES = policy_parse.c policy_token.c policy_token.h

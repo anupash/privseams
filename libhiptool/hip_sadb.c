@@ -35,10 +35,8 @@
 #include "hip_sadb.h"
 //#include <hip/hip_funcs.h> /* gettimeofday() for win32 */
 #include "win32-pfkeyv2.h"
-#if 0
-#include "hashchain.h"
-#endif
-
+#include "state.h"
+#include "esp_prot_ext.h"
 /*
  * Globals
  */
@@ -140,24 +138,31 @@ void hip_sadb_init() {
  * Add an SADB entry to the SADB hash table.
  */ 
 int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
-    struct sockaddr *inner_dst, struct sockaddr *src, struct sockaddr *dst, 
-    __u16 sport, __u16 dport, int direction,
-    __u32 spi, __u8 *e_key, __u32 e_type, __u32 e_keylen, __u8 *a_key,
-    __u32 a_type, __u32 a_keylen, __u32 lifetime, __u16 hitmagic, int encap_mode)
+    struct sockaddr *inner_dst, struct sockaddr *src, struct sockaddr *dst, __u16 sport,
+    __u16 dport, int direction, __u32 spi, __u8 *e_key, __u32 e_type, __u32 e_keylen,
+    __u8 *a_key, __u32 a_type, __u32 a_keylen, __u32 lifetime, __u16 hitmagic,
+    uint8_t nat_mode, uint8_t esp_prot_transform, unsigned char *esp_prot_anchor)
 {
 	
-	hip_sadb_entry *entry;
-	hip_lsi_entry *lsi_entry;
-	int err, key_len;
+	hip_sadb_entry *entry = NULL;
+	hip_lsi_entry *lsi_entry = NULL;
+	int key_len = 0;
 	__u8 key1[8], key2[8], key3[8]; /* for 3-DES */
 	struct sockaddr *use_dst, *use_src;
+	int err = 0;
 
 	/* type is currently ignored */	
 	if (!src || !dst || !a_key)
+	{
+		HIP_DEBUG("some parameters missing\n");
 		return(-1);
-
+	}
+	
 	entry = &hip_sadb[sadb_hashfn(spi)];
-	if (entry->spi && entry->spi==spi) { /* entry already exists */
+	if (entry->spi && entry->spi==spi)
+	{ 
+		/* entry already exists */
+		HIP_ERROR("the entry already exists\n");
 		return(-1);
 	} else if (entry->spi) { /* another entry matches hash value */
 		/* advance to end of linked list */
@@ -165,10 +170,15 @@ int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
 		/* create a new entry at end of list */
 		entry->next = malloc(sizeof(hip_sadb_entry));
 		if (!entry->next)
+		{
+			HIP_ERROR("failed to allocate memory\n");
 			return(-1);
+		}
 		entry = entry->next;
 	}
+	
 	/* add the new entry */
+	HIP_DEBUG("adding new sadb entry...\n");
 	memset(entry, 0, sizeof(hip_sadb_entry));
 	pthread_mutex_lock(&entry->rw_lock);
 	entry->mode = mode;
@@ -180,16 +190,17 @@ int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
 	entry->dst_addrs = (sockaddr_list*)malloc(sizeof(sockaddr_list));
 	entry->inner_src_addrs = (sockaddr_list*)malloc(sizeof(sockaddr_list));
 	entry->inner_dst_addrs = (sockaddr_list*)malloc(sizeof(sockaddr_list));
-#if 0
-	/* allocate memory for hash chains and anchors */
-	entry->active_hchain = (hash_chain_t*)malloc(sizeof(hash_chain_t));
-	entry->next_hchain = (hash_chain_t*)malloc(sizeof(hash_chain_t));
-	entry->active_anchor = (unsigned char*)malloc(HCHAIN_ELEMENT_LENGTH);
-	entry->next_anchor = (unsigned char*)malloc(HCHAIN_ELEMENT_LENGTH);
-#endif
+	/* hash chains and anchors for esp extension */
+	entry->active_hchain = NULL;
+	entry->next_hchain = NULL;
+	entry->active_anchor = NULL;
+	entry->next_anchor = NULL;
+	entry->active_transform = 0;
+	entry->next_transform = 0;
+	entry->tolerance = 0;
 	entry->src_port = sport ;
 	entry->dst_port = dport ;
-	entry->encap_mode = encap_mode;
+	entry->nat_mode = nat_mode;
 	entry->usetime_ka.tv_sec = 0;
 	entry->usetime_ka.tv_usec = 0;
 	memset(&entry->lsi, 0, sizeof(struct sockaddr_storage));
@@ -210,15 +221,17 @@ int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
 	entry->replay_map = 0;
 	pthread_mutex_unlock(&entry->rw_lock);
 
-#if 0
 	/* malloc error */
-	if (!entry->src_addrs || !entry->dst_addrs || !entry->a_key || !entry->active_hchain
-			|| !entry->next_hchain || entry->active_anchor || entry->next_anchor)
-#endif
 	if (!entry->src_addrs || !entry->dst_addrs || !entry->a_key)
+	{
+		HIP_ERROR("failed to allocate memory\n");
 		goto hip_sadb_add_error;
+	}
 	if ((e_keylen > 0) && !entry->e_key)
+	{
+		HIP_ERROR("failed to allocate memory\n");
 		goto hip_sadb_add_error;
+	}
 
 	/* copy addresses */
 	pthread_mutex_lock(&entry->rw_lock);
@@ -229,56 +242,39 @@ int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
 	memset(entry->inner_src_addrs, 0, sizeof(sockaddr_list));
 	memset(entry->inner_dst_addrs, 0, sizeof(sockaddr_list));
 
-/* HIP_ESP_OVER_UDP */ // comments from openhip
-
-/* in our HIPL case, mode 3, HIP_ESP_OVER_UDP */
+	if (entry->mode == 0 || entry->mode == 3) { 
+		memcpy(&entry->inner_src_addrs->addr, inner_src, SALEN(inner_src));
+		memcpy(&entry->inner_dst_addrs->addr, inner_dst, SALEN(inner_dst));
+	}
 	
+	// set the esp protection extension transform
+	entry->active_transform = esp_prot_transform;
+	HIP_DEBUG("entry->active_transform: %u\n", entry->active_transform);
+	
+	// only set up the anchor or hchain, if esp extension is used
+	if (esp_prot_transform > ESP_PROT_TRANSFORM_UNUSED)
+	{
+		HIP_DEBUG("setting up ESP extension parameters...\n");
 		
-	if (entry->mode == 3) { 
-		memcpy(&entry->inner_src_addrs->addr, inner_src,
-			SALEN(inner_src));
-		memcpy(&entry->inner_dst_addrs->addr, inner_dst,
-		       SALEN(inner_dst));
+		/* set up hash chains or anchors depending on the direction */
+		if (direction == HIP_SPI_DIRECTION_IN)
+		{
+			// set anchor for inbound SA
+			entry->active_anchor = esp_prot_anchor;
+			entry->tolerance = DEFAULT_VERIFY_WINDOW;
+		} else
+		{
+			// set hchain for outbound SA
+			err = esp_prot_get_corresponding_hchain(esp_prot_anchor, esp_prot_transform,
+					entry->active_hchain);
+			
+			if (err)
+			{
+				HIP_ERROR("corresponding hchain not found");
+				goto hip_sadb_add_error;
+			}
+		}
 	}
-	
-
-	/* mode 0 ->  default, IP + ESP + payload*/
-	if (entry->mode == 0) { 
-		memcpy(&entry->inner_src_addrs->addr, inner_src,
-		       SALEN(inner_src));
-		memcpy(&entry->inner_dst_addrs->addr, inner_dst,
-		       SALEN(inner_dst));
-	}
-	
-#if 0
-	/* set up both hash chains and anchors for now */
-	// TODO hchains should be taken from the store
-	memcpy(entry->active_hchain, hchain_create(100), sizeof(hash_chain_t));
-	
-	// verify active hash chain
-	HIP_DEBUG("verifying _active_ hash chain...\n");
-	if (hchain_verify(entry->active_hchain->source_element->hash,
-			entry->active_hchain->anchor_element->hash, 100))
-		HIP_DEBUG("active hash chain successfully verified!\n");
-	else
-		HIP_DEBUG("ERROR verifying active hash chain!\n");
-	
-	memcpy(entry->next_hchain, hchain_create(100), sizeof(hash_chain_t));
-	
-	// verify hash chains
-	HIP_DEBUG("verifying _next_ hash chain...\n");
-	if (hchain_verify(entry->next_hchain->source_element->hash,
-			entry->next_hchain->anchor_element->hash, 100))
-		HIP_DEBUG("next hash chain successfully verified!\n");
-	else
-		HIP_DEBUG("ERROR verifying next hash chain!\n");
-	
-	entry->tolerance = 10;
-	memcpy(entry->active_anchor, entry->active_hchain->anchor_element->hash, 
-			HCHAIN_ELEMENT_LENGTH); 
-	memcpy(entry->next_anchor, entry->next_hchain->anchor_element->hash,
-			HCHAIN_ELEMENT_LENGTH);
-#endif
 	
 	/* copy keys */
 
@@ -319,13 +315,6 @@ int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
 	 * for HIP over UDP, HITs are used and not outer dst addr 
 	 * 	which can be the same for multiple hosts 
 	 */
-
-
-	/* For our HIPL userspace ipsec, mode 3 we do not think 
-	 * we do implement HIP_over_TCP
-	 *
-	 */
-	
 	
 	HIP_DEBUG("IPsec mode is %d \n", entry->mode);
 
