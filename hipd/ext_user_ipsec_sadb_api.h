@@ -1,5 +1,5 @@
-#ifndef IPSEC_USERSPACE_API_H
-#define IPSEC_USERSPACE_API_H
+#ifndef EXT_USER_IPSEC_SADB_API_H
+#define EXT_USER_IPSEC_SADB_API_H
 
 // TODO clean up
 #include <time.h>
@@ -31,7 +31,7 @@
 #include <openssl/sha.h>	/* SHA1 algorithms */
 #include <openssl/des.h>	/* 3DES algorithms */
 #include <openssl/rand.h>	/* RAND_bytes() */
-#include "win32-pfkeyv2.h"
+#include <linux/pfkeyv2.h>  /* ESP transforms */
 
 // #include "hip_usermode.h"
 

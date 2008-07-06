@@ -34,7 +34,7 @@ AUTOMAKE_OPTIONS = foreign
 
 lib_LTLIBRARIES = libhiptool.la
 
-libhiptool_la_SOURCES = crypto.c pk.c nlink.c hip_esp.c hip_sadb.c ipsec_userspace_api.c
+libhiptool_la_SOURCES = crypto.c pk.c nlink.c
 libhiptool_la_SOURCES += hashchain_store.c hashchain.c esp_prot_ext.c linkedlist.c
 
 if HIP_PFKEY
@@ -44,8 +44,7 @@ endif
 
 CFLAGS  = $(hipl_common_cflags) -DCONFIG_HIP_LIBHIPTOOL
 
-include_HEADERS =  crypto.h nlink.h pk.h xfrm.h xfrmapi.h ipsec_userspace_api.h
-include_HEADERS  += hip_sadb.h hip_esp.h win32-checksum.h win32-pfkeyv2.h
+include_HEADERS =  crypto.h nlink.h pk.h xfrm.h xfrmapi.h
 include_HEADERS  += hashchain_store.h hashchain.h esp_prot_ext.h linkedlist.h
 
 

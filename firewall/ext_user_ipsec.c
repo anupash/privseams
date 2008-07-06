@@ -4,16 +4,13 @@
 
 #include <sys/socket.h>		/* socket() */
 #include <sys/time.h>		/* timeval */
-#include "useripsec.h"
+#include "ext_user_ipsec.h"
 #include "misc.h"			/* hip conversion functions */
 
-#define ESP_PACKET_SIZE 2500
+//#define ESP_PACKET_SIZE 2500
 // this is the maximum buffer-size needed for an userspace ipsec esp packet
-#if 0
 #define MAX_ESP_PADDING 255
-#define ESP_PACKET_SIZE (BUFSIZE + sizeof(struct udphdr) + sizeof(struct hip_esp) +
-				MAX_ESP_PADDING + sizeof(struct hip_esp_tail) + EVP_MAX_MD_SIZE)
-#endif
+#define ESP_PACKET_SIZE (HIP_MAX_PACKET + sizeof(struct udphdr) + sizeof(struct hip_esp) + MAX_ESP_PADDING + sizeof(struct hip_esp_tail) + EVP_MAX_MD_SIZE)
 				
 // this is the ESP packet we are about to build
 unsigned char *esp_packet = NULL;
@@ -34,6 +31,7 @@ int userspace_ipsec_init()
 	
 	if (!is_init)
 	{
+		HIP_DEBUG("ESP_PACKET_SIZE is %i\n", ESP_PACKET_SIZE);
 		// allocate memory for the packet buffers
 		HIP_IFE(!(esp_packet = (unsigned char *)malloc(ESP_PACKET_SIZE)), -1);
 		HIP_IFE(!(decrypted_packet = (unsigned char *)malloc(ESP_PACKET_SIZE)), -1);
@@ -217,11 +215,10 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	}
 		
 	// encrypt transport layer and create new packet
-	HIP_IFEL(hip_esp_output(ctx, entry, &preferred_local_addr, &preferred_peer_addr,
+	HIP_IFEL(hip_beet_mode_output(ctx, entry, &preferred_local_addr, &preferred_peer_addr,
 			esp_packet, &esp_packet_len), 1, "failed to create ESP packet");
 
 	// reinsert the esp packet into the network stack
-	// TODO check flags
 	if (out_ip_version == 4)
 		err = sendto(raw_sock_v4, esp_packet, esp_packet_len, 0,
 				(struct sockaddr *)&preferred_peer_sockaddr,
@@ -314,7 +311,7 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	HIP_DEBUG_HIT("dst hit: ", &dst_hit);
 	
 	// decrypt the packet and create a new HIT-based one
-	HIP_IFEL(hip_esp_input(ctx, entry, &src_hit, &dst_hit,
+	HIP_IFEL(hip_beet_mode_input(ctx, entry, &src_hit, &dst_hit,
 			decrypted_packet, &decrypted_packet_len), 1,
 			"failed to recreate original packet\n");
 	
@@ -326,7 +323,6 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	HIP_DEBUG("ip6_hdr->ip6_hlim: %u \n", ip6_hdr->ip6_hlim);
 	
 	// re-insert the original HIT-based (-> IPv6) packet into the network stack
-	// TODO check flags
 	err = sendto(raw_sock_v6, decrypted_packet, decrypted_packet_len, 0,
 					(struct sockaddr *)&entry->inner_dst_addrs->addr,
 					hip_sockaddr_len(&entry->inner_dst_addrs->addr));
@@ -348,6 +344,111 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	
   out_err:
   	return err;
+}
+
+int handle_sa_add_request(struct hip_common * msg,
+			  struct hip_tlv_common *param)
+{
+	struct in6_addr *saddr = NULL, *daddr = NULL;
+	struct in6_addr *src_hit = NULL, *dst_hit = NULL;
+	uint32_t spi_ipsec = 0;
+	int ealg, err = 0;
+	struct hip_crypto_key *enckey = NULL, *authkey = NULL;
+	int retransmission = 0, direction = 0, update = 0, local_port = 0, peer_port = 0;
+	uint8_t nat_mode = 0;
+	uint8_t esp_prot_transform = 0;
+	unsigned char *esp_prot_anchor = NULL;
+	
+	// get all attributes from the message
+	
+	param = (struct hip_tlv_common *)hip_get_param(msg, HIP_PARAM_IPV6_ADDR);
+	saddr = (struct in6_addr *) hip_get_param_contents_direct(param);
+	HIP_DEBUG_IN6ADDR("Source IP address: ", saddr);
+	
+	param = hip_get_next_param(msg, param);
+	daddr = (struct in6_addr *) hip_get_param_contents_direct(param);
+	HIP_DEBUG_IN6ADDR("Destination IP address : ", daddr);
+	
+	param = (struct hip_tlv_common *)hip_get_param(msg, HIP_PARAM_HIT);
+	src_hit = (struct in6_addr *) hip_get_param_contents_direct(param);
+	HIP_DEBUG_HIT("Source Hit: ", src_hit);
+	
+	param = hip_get_next_param(msg, param);
+	dst_hit = (struct in6_addr *) hip_get_param_contents_direct(param);
+	HIP_DEBUG_HIT("Destination HIT: ", dst_hit);
+	
+	param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_UINT);
+	spi_ipsec = *((uint32_t *) hip_get_param_contents_direct(param));
+	HIP_DEBUG("the spi value is : %u \n", spi_ipsec);
+	
+	param = hip_get_next_param(msg, param);
+	nat_mode = *((uint8_t *) hip_get_param_contents_direct(param));
+	HIP_DEBUG("the nat_mode value is %u \n", nat_mode);
+	
+	param =  hip_get_next_param(msg, param);
+	local_port = *((uint16_t *) hip_get_param_contents_direct(param));
+	HIP_DEBUG("the local_port value is %u \n", local_port);
+	
+	param =  hip_get_next_param(msg, param);
+	peer_port = *((uint16_t *) hip_get_param_contents_direct(param));
+	HIP_DEBUG("the peer_port value is %u \n", peer_port);
+	
+	param =  hip_get_next_param(msg, param);
+	esp_prot_transform = *((uint8_t *) hip_get_param_contents_direct(param));
+	HIP_DEBUG("esp protection extension transform is %u \n", esp_prot_transform);
+	
+	// this parameter is only included, if the esp extension is used
+	if (esp_prot_transform > ESP_PROT_TRANSFORM_UNUSED)
+	{
+		param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_HCHAIN_ANCHOR);
+		esp_prot_anchor = (unsigned char *) hip_get_param_contents_direct(param);
+		HIP_HEXDUMP("the esp protection anchor is ", esp_prot_anchor,
+			    esp_prot_transforms[esp_prot_transform]);
+	} else
+	{
+		esp_prot_anchor = NULL;
+	}
+	
+	param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_KEYS);
+	enckey = (struct hip_crypto_key *) hip_get_param_contents_direct(param);
+	HIP_HEXDUMP("crypto key :", enckey, sizeof(struct hip_crypto_key));
+	
+	param = hip_get_next_param(msg, param);
+	authkey = (struct hip_crypto_key *)hip_get_param_contents_direct(param);
+	HIP_HEXDUMP("authen key :", authkey, sizeof(struct hip_crypto_key));
+	
+	param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_INT);
+	ealg = *((int *) hip_get_param_contents_direct(param));
+	HIP_DEBUG("ealg value is %d \n", ealg);
+	
+	param =  hip_get_next_param(msg, param);		
+	retransmission = *((int *) hip_get_param_contents_direct(param));
+	HIP_DEBUG("already_acquired value is %d \n", retransmission);
+	
+	param =  hip_get_next_param(msg, param);		
+	direction = *((int *) hip_get_param_contents_direct(param));
+	HIP_DEBUG("the direction value is %d \n", direction);
+	
+	param =  hip_get_next_param(msg, param);
+	update = *((int *) hip_get_param_contents_direct(param));
+	HIP_DEBUG("the update value is %d \n", update);
+	
+	if (dst_hit)
+		err = firewall_set_bex_state(src_hit, dst_hit, 1);
+	else
+		err = firewall_set_bex_state(src_hit, dst_hit, -1);
+	
+	
+	err = hipl_userspace_ipsec_sadb_add_wrapper(saddr, daddr, 
+						    src_hit, dst_hit, 
+						    spi_ipsec, nat_mode,
+						    local_port, peer_port,
+						    esp_prot_transform,
+						    esp_prot_anchor, ealg,
+						    enckey, 
+						    authkey, retransmission, 
+						    direction, update);
+	return err;
 }
 
 int hipl_userspace_ipsec_sadb_add_wrapper(struct in6_addr *saddr,
@@ -412,6 +513,7 @@ int hipl_userspace_ipsec_sadb_add_wrapper(struct in6_addr *saddr,
 	hip_addr_to_sockaddr(src_hit, &inner_src); /* source HIT conversion */
 	hip_addr_to_sockaddr(dst_hit, &inner_dst); /* destination HIT conversion */
 	
+#if 0
 	/* hit_magic is the 16-bit sum of the bytes of both HITs. 
 	 * the checksum is calculated as other Internet checksum, according to 
 	 * the HIP spec this is the sum of 16-bit words from the input data a 
@@ -419,6 +521,7 @@ int hipl_userspace_ipsec_sadb_add_wrapper(struct in6_addr *saddr,
 	 * sum
 	 */
 	hit_magic = checksum_magic(src_hit, dst_hit);
+#endif
 	
 	/* looking at the usermode code, it may be that the lifetime is stored in
 	 * the hip_sadb_entry but never used. It is supposed to be the value in
@@ -442,6 +545,7 @@ int hipl_userspace_ipsec_sadb_add_wrapper(struct in6_addr *saddr,
 	return err;
 }
 
+#if 0
 /*
  * * function checksum_magic()
  * *
@@ -492,6 +596,7 @@ uint16_t checksum_magic(const struct in6_addr *initiator, const struct in6_addr 
 	/* don't take the one's complement of the sum */
 	return((uint16_t)sum);
 }
+#endif
 
 // resolve HIT to routable addresses selecting the preferred ones
 int get_preferred_sockaddr(sockaddr_list *addr_list, struct sockaddr_storage *preferred_addr)

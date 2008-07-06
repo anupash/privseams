@@ -20,8 +20,8 @@
  *
  */
 
-#ifndef HIP_SADB_H_
-#define HIP_SADB_H_
+#ifndef EXT_USER_IPSEC_SADB_H_
+#define EXT_USER_IPSEC_SADB_H_
 
 #include <asm/types.h>		/* __u16, __u32, etc */
 #include <sys/types.h>		/* for socket.h */
@@ -30,8 +30,6 @@
 #include <openssl/des.h>	/* des_key_schedule */
 #include <openssl/aes.h>	/* aes_key */
 #include <openssl/blowfish.h>	/* bf_key */
-//#include "hip_usermode.h"
-//#include "utils.h"
 #include <sys/time.h>		/* timeval */
 #include "debug.h"
 #include "hashchain.h"

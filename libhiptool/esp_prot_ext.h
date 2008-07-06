@@ -2,7 +2,7 @@
 #define ESP_PROT_EXT_H_
 
 #include "hashchain_store.h"
-#include "hip_sadb.h"
+#include "firewall/ext_user_ipsec_sadb.h"
 
 // the transforms used by esp protection extension
 #define ESP_PROT_TRANSFORM_UNUSED		 0

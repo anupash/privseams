@@ -1010,6 +1010,7 @@ int hip_handle_user_msg(struct hip_common *msg,
 	return err;
 }
 
+// TODO extend to allow switching back to kernel-mode
 int hip_userspace_ipsec_activate(struct hip_common *msg)
 {
 	struct hip_tlv_common *param = NULL;
@@ -1046,6 +1047,7 @@ int hip_userspace_ipsec_activate(struct hip_common *msg)
  * NOTE: this is called by the hipd when receiving the respective message
  * from the firewall
  **/
+// TODO extend to allow switching back to kernel-mode
 int hip_esp_protection_extension_transform(struct hip_common *msg)
 {
 	struct hip_tlv_common *param = NULL;

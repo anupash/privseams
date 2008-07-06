@@ -34,10 +34,10 @@
 #include "helpers.h"
 #include "conntrack.h"
 #include "utils.h"
-//#include "hip_usermode.h"
 #include "misc.h"
 #include "netdev.h"
 #include "lsi.h"
+// include of "ext_user_ipsec.h" at the bottom due to dependency
 
 #define HIP_FW_DEFAULT_RULE_FILE "/etc/hip/firewall_conf"
 #define HIP_FW_DEFAULT_TIMEOUT   1
@@ -149,7 +149,7 @@ int hip_fw_handle_esp_forward(hip_fw_context_t *ctx);
 int hip_fw_handle_tcp_forward(hip_fw_context_t *ctx);
 
 // dependent on typedefs in here
-#include "useripsec.h"
+#include "ext_user_ipsec.h"
 
 void firewall_traffic_treatment(struct ipq_handle *hndl, unsigned long packetId);
 

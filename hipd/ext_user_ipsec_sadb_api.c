@@ -1,4 +1,4 @@
-#include "ipsec_userspace_api.h"
+#include "ext_user_ipsec_sadb_api.h"
 #include "esp_prot_ext.h"
 
 int hip_firewall_sock_fd = -1;

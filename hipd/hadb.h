@@ -11,7 +11,7 @@
 #include "builder.h"
 #include "input.h" 	// required for declaration of receive functions
 #include "update.h"	// required for declaration of update function
-#include "ipsec_userspace_api.h"
+#include "ext_user_ipsec_sadb_api.h"
 #include "xfrmapi.h"
 
 #ifdef CONFIG_HIP_BLIND
