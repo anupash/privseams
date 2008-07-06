@@ -153,10 +153,9 @@
 #define SO_HIP_I1_REJECT                        127
 #define SO_HIP_UPDATE_HIU                       128
 #define SO_HIP_SET_NAT_PLAIN_UDP                129
-#define SO_HIP_SET_NAT_ON                       129 // XX FIXME: REMOVE
-#define SO_HIP_SET_NAT_PLAIN_UDP                129
+#define SO_HIP_SET_NAT_ON                     SO_HIP_SET_NAT_PLAIN_UDP
 #define SO_HIP_SET_NAT_NONE                     130
-#define SO_HIP_SET_NAT_OFF                      130 // XX FIXME: REMOVE
+#define SO_HIP_SET_NAT_OFF                      SO_HIP_SET_NAT_NONE // XX FIXME: REMOVE
 #define SO_HIP_SET_HIPPROXY_ON		      	131
 #define SO_HIP_SET_HIPPROXY_OFF			132
 #define SO_HIP_GET_PROXY_LOCAL_ADDRESS		133
