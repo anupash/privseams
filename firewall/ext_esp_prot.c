@@ -1,5 +1,5 @@
-#include "esp_prot_ext.h"
-#include "firewall/firewall_defines.h"
+#include "ext_esp_prot.h"
+#include "firewall_defines.h"
 
 // different hc_length in order not to spoil calculation time for short connections
 #define HC_LENGTH_BEX_STORE 10

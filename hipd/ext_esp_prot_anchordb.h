@@ -1,5 +1,5 @@
-#ifndef ANCHORDB_H_
-#define ANCHORDB_H_
+#ifndef EXT_ESP_PROT_ANCHORDB_H_
+#define EXT_ESP_PROT_ANCHORDB_H_
 
 #include "builder.h"
 

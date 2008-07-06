@@ -25,7 +25,7 @@
 
 #include "ext_user_ipsec_esp.h"
 #include "utils.h"
-#include "esp_prot_ext.h"
+#include "ext_esp_prot.h"
 
 // for some reason the ICV for ESP authentication is truncated to 12 bytes
 #define ICV_LENGTH 12

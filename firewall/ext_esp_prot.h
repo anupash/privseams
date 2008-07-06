@@ -2,19 +2,7 @@
 #define ESP_PROT_EXT_H_
 
 #include "hashchain_store.h"
-#include "firewall/ext_user_ipsec_sadb.h"
-
-// the transforms used by esp protection extension
-#define ESP_PROT_TRANSFORM_UNUSED		 0
-#define ESP_PROT_TRANSFORM_DEFAULT		 1
-
-// default length of the hash function output used in the chain
-#define DEFAULT_HASH_LENGTH 8 // (in bytes)
-
-#define DEFAULT_VERIFY_WINDOW 10
-
-// (hash, salt)-length for the respective transform in bytes
-static const int esp_prot_transforms[2] = {0, DEFAULT_HASH_LENGTH};
+#include "ext_user_ipsec_sadb.h"
 
 int esp_prot_ext_init(void);
 int add_esp_prot_hash(unsigned char *out_hash, int *out_length, hip_sadb_entry *entry);

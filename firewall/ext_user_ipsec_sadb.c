@@ -20,7 +20,8 @@
  *
  */
 #include "ext_user_ipsec_sadb.h"
-#include "esp_prot_ext.h"
+#include "ext_esp_prot_common.h"
+#include "misc.h"
 
 /*
  * Globals
