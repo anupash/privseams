@@ -106,6 +106,8 @@ int hip_handle_user_msg(struct hip_common *msg,
 	case SO_HIP_BOS:
 		err = hip_send_bos(msg);
 		break;
+//modify by santtu
+#if 0
 	case SO_HIP_SET_NAT_ON:
 		/* Sets a flag for each host association that the current
 		   machine is behind a NAT. */
@@ -119,6 +121,24 @@ int hip_handle_user_msg(struct hip_common *msg,
 		HIP_IFEL(hip_nat_off(), -1, "Error when setting daemon NAT status to \"off\"\n");
 		hip_agent_update_status(SO_HIP_SET_NAT_OFF, NULL, 0);
 		break;
+#endif		
+	case SO_HIP_SET_NAT_ICE_UDP:
+		HIP_DEBUG("Setting LOCATOR ON, when ice is on\n");
+        hip_locator_status = SO_HIP_SET_LOCATOR_ON;
+        HIP_DEBUG("hip_locator status =  %d (should be %d)\n", 
+                  hip_locator_status, SO_HIP_SET_LOCATOR_ON);
+        
+        
+	case SO_HIP_SET_NAT_NONE:
+	case SO_HIP_SET_NAT_PLAIN_UDP:
+		HIP_IFEL(hip_user_nat_mode(msg_type), -1, "Error when setting daemon NAT status to \"on\"\n");
+		hip_agent_update_status(msg_type, NULL, 0);
+		
+		HIP_DEBUG("Recreate all R1s\n");
+		hip_recreate_all_precreated_r1_packets();
+		break;
+//end modify	
+		
         case SO_HIP_SET_LOCATOR_ON:
                 HIP_DEBUG("Setting LOCATOR ON\n");
                 hip_locator_status = SO_HIP_SET_LOCATOR_ON;
@@ -724,7 +744,13 @@ int hip_handle_user_msg(struct hip_common *msg,
 		
 		HIP_DEBUG("Adding pending request.\n");
 		hip_add_pending_request(pending_req);
-
+#if 0
+		//removed by santtu here
+		/*
+		 * nat mode is more complex now, we must set nat mode
+		 * seperated, not alway assume that if relay is on, nat 
+		 * is plain UDP mode.
+		 * */
 		/* Since we are requesting UDP relay, we assume that we are behind
 		   a NAT. Therefore we set the NAT status on. This is needed only
 		   for the current host association, but since keep-alives are sent
@@ -734,7 +760,8 @@ int hip_handle_user_msg(struct hip_common *msg,
 		HIP_IFEL(hip_nat_on(), -1, "Error when setting daemon NAT status"\
 			 "to \"on\"\n");
 		hip_agent_update_status(SO_HIP_SET_NAT_ON, NULL, 0);
-
+		//end remove
+#endif
 		/* Send a I1 packet to relay. */
 		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
 			 -1, "sending i1 failed\n");

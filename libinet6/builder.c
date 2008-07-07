@@ -958,6 +958,9 @@ void hip_dump_msg(const struct hip_common *msg)
      HIP_DEBUG("Msg length:     %d\n", hip_get_msg_total_len(msg));
      HIP_DEBUG("Msg err:        %d\n", hip_get_msg_err(msg));
      HIP_DEBUG("Msg controls:   0x%04x\n", msg->control);
+     
+     _HIP_DEBUG_HIT("Msg hits:       ", &msg->hits );
+     _HIP_DEBUG_HIT("Msg hitr:       ", &msg->hitr );
 	
      while((current_param = hip_get_next_param(msg, current_param)) != NULL)
      {
@@ -3623,12 +3626,19 @@ int hip_get_locator_addr_item_count(struct hip_locator *locator) {
                 		address_pointer += sizeof(struct hip_locator_info_addr_item2);
                 		amount += 1;
                 	}
-        else if(((struct hip_locator_info_addr_item*)address_pointer)->locator_type == 
+        else 
+        if(((struct hip_locator_info_addr_item*)address_pointer)->locator_type == 
         			HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI){
     		address_pointer += sizeof(struct hip_locator_info_addr_item);
     		amount += 1;
     	} 
         else
+		if(((struct hip_locator_info_addr_item*)address_pointer)->locator_type == 
+			 	HIP_LOCATOR_LOCATOR_TYPE_IPV6){
+    		address_pointer += sizeof(struct hip_locator_info_addr_item);
+    		amount += 1;
+    	} 
+        else	//ignore the others
         	address_pointer += sizeof(struct hip_locator_info_addr_item);
 	}
 	

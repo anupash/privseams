@@ -507,6 +507,8 @@ int hipd_main(int argc, char *argv[])
 			if (err) 			
 			{
                                 HIP_ERROR("Reading network msg failed\n");
+                                
+     
 				/* If the values were read in succesfully, we
 				   do the UDP specific stuff next. */
                         } 

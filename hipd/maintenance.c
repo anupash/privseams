@@ -357,11 +357,15 @@ out_err:
 int hip_agent_update(void)
 {
 	hip_agent_add_lhits();
-	
+	/* remove by santtu
 	if (hip_nat_is())
 		hip_agent_update_status(SO_HIP_SET_NAT_ON, NULL, 0);
 	else
 		hip_agent_update_status(SO_HIP_SET_NAT_OFF, NULL, 0);
+		*/
+	//add by santtu
+	hip_agent_update_status(hip_get_nat_mode(), NULL, 0);
+	//end add
 }
 
 

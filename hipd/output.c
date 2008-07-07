@@ -602,7 +602,10 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
         }
 #endif
 #ifdef HIP_USE_ICE
-        hip_build_param_nat_tranform(msg, hip_nat_get_control());
+	{	
+		hip_transform_suite_t suite = hip_nat_get_control();
+		hip_build_param_nat_tranform(msg, suite);
+	}
 #endif
  	/********** PUZZLE ************/
 	HIP_IFEL(hip_build_param_puzzle(msg, cookie_k,
@@ -1562,3 +1565,5 @@ int hip_send_i3(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	return err;
 }
 #endif
+
+
