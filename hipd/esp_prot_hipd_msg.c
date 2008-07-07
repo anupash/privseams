@@ -166,11 +166,12 @@ int add_esp_prot_anchor_to_I2(hip_common_t *i2, hip_ha_t *entry)
 	{
 		if (has_more_anchors())
 		{
-			HIP_IFEL(get_next_anchor(anchor), -1,
-					"no anchor elements available, threading?");
-			HIP_IFEL(hip_build_param_esp_prot_anchor(i2, anchor), -1,
+			HIP_IFEL(!(anchor = get_next_anchor()), -1,
+					"no anchor elements available, threading?\n");
+			HIP_IFEL(hip_build_param_esp_prot_anchor(i2, anchor,
+					esp_prot_transforms[entry->esp_prot_transform]), -1,
 					"Building of ESP protection anchor failed\n");
-			HIP_HEXDUMP("adding anchor: ", anchor,
+			HIP_HEXDUMP("added anchor: ", anchor,
 					esp_prot_transforms[entry->esp_prot_transform]);
 			
 			// store local_anchor
@@ -295,11 +296,12 @@ int add_esp_prot_anchor_to_R2(hip_common_t *r2, hip_ha_t *entry)
 	{
 		if (has_more_anchors())
 		{
-			HIP_IFEL(get_next_anchor(anchor), -1,
-					"no anchor elements available, threading?");
-			HIP_IFEL(hip_build_param_esp_prot_anchor(r2, anchor), -1,
+			HIP_IFEL(!(anchor = get_next_anchor()), -1,
+					"no anchor elements available, threading?\n");
+			HIP_IFEL(hip_build_param_esp_prot_anchor(r2, anchor,
+					esp_prot_transforms[entry->esp_prot_transform]), -1,
 					"Building of ESP protection anchor failed\n");
-			HIP_HEXDUMP("adding anchor: ", anchor,
+			HIP_HEXDUMP("added anchor: ", anchor,
 					esp_prot_transforms[entry->esp_prot_transform]);
 			
 			// store local_anchor
