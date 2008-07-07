@@ -2769,7 +2769,7 @@ int hip_build_param_esp_prot_transform(struct hip_common *msg, uint8_t transform
 
 	hip_set_param_type(&prot_transform, HIP_PARAM_ESP_PROT_TRANSFORM);
 	hip_calc_generic_param_len(&prot_transform, sizeof(struct esp_prot_transform), 0);
-	prot_transform.transform = htonl(transform);
+	prot_transform.transform = transform;
 	
 	err = hip_build_param(msg, &prot_transform);
 	

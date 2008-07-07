@@ -74,6 +74,8 @@ int add_esp_prot_transform_to_r1(hip_common_t *msg)
  		HIP_DEBUG("userspace IPsec hint: esp protection extension UNUSED, skip\n");
  	}
  	
+ 	_HIP_DUMP_MSG(msg);
+ 	
   out_err:
  	return err;
 }
@@ -97,7 +99,7 @@ int add_esp_prot_transform_to_I2(hip_common_t *i2, hip_ha_t *entry, struct hip_c
 		if (param)
 		{
 			prot_transform = (struct esp_prot_transform *) param;
-			transform = ntohl(prot_transform->transform);
+			transform = prot_transform->transform;
 			
 			HIP_DEBUG("R1 contains ESP protection transform: %u\n", transform);
 			
@@ -209,7 +211,7 @@ int handle_esp_prot_transform_in_I2(hip_ha_t *entry, struct hip_context *ctx)
 			if (param)
 			{
 				prot_transform = (struct esp_prot_transform *) param;
-				transform = ntohl(prot_transform->transform);
+				transform = prot_transform->transform;
 				
 				// TODO agree on transform
 				// right now we only support 2 transform, so we can just copy
