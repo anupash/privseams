@@ -1,6 +1,6 @@
-#include "ext_esp_prot_hipd_msg.h"
-#include "ext_esp_prot_common.h"
-#include "ext_esp_prot_anchordb.h"
+#include "esp_prot_hipd_msg.h"
+#include "esp_prot_anchordb.h"
+#include "esp_prot_common.h"
 
 /** 
  * activates the esp protection extension in the hipd

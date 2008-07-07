@@ -149,7 +149,7 @@ int hip_fw_handle_esp_forward(hip_fw_context_t *ctx);
 int hip_fw_handle_tcp_forward(hip_fw_context_t *ctx);
 
 // dependent on typedefs in here
-#include "ext_user_ipsec.h"
+#include "user_ipsec.h"
 
 void firewall_traffic_treatment(struct ipq_handle *hndl, unsigned long packetId);
 

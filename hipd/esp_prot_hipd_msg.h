@@ -1,5 +1,5 @@
-#ifndef EXT_ESP_PROT_HIPD_MSG_H_
-#define EXT_ESP_PROT_HIPD_MSG_H_
+#ifndef ESP_PROT_HIPD_MSG_H_
+#define ESP_PROT_HIPD_MSG_H_
 
 #include "misc.h"
 
@@ -12,4 +12,4 @@ int handle_esp_prot_anchor_in_I2(hip_ha_t *entry, struct hip_context *ctx);
 int add_esp_prot_anchor_to_R2(hip_common_t *r2, hip_ha_t *entry);
 int handle_esp_prot_anchor_in_R2(hip_ha_t *entry, struct hip_context *ctx);
 
-#endif /*EXT_ESP_PROT_HIPD_MSG_H_*/
+#endif /*ESP_PROT_HIPD_MSG_H_*/

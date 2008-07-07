@@ -725,7 +725,8 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 		    && udp_encap_zero_bytes)
 		
 	{	
-		/* check for HIP control message */
+		/* check if zero byte hint is correct and we are processing a
+		 * HIP control message */
 		if (!hip_check_network_msg((struct hip_common *) (((char *)udphdr) 
 								     + 
 								  sizeof(struct udphdr) 

@@ -1,5 +1,5 @@
-#ifndef EXT_USER_IPSEC_HIPD_MSG_H_
-#define EXT_USER_IPSEC_HIPD_MSG_H_
+#ifndef USER_IPSEC_HIPD_MSG_H_
+#define USER_IPSEC_HIPD_MSG_H_
 
 #include "misc.h"
 
@@ -15,4 +15,4 @@ struct hip_common * create_add_sa_msg(struct in6_addr *saddr,
 							    int direction, int update,
 							    hip_ha_t *entry);
 
-#endif /*EXT_USER_IPSEC_HIPD_MSG_H_*/
+#endif /*USER_IPSEC_HIPD_MSG_H_*/

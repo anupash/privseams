@@ -1,5 +1,5 @@
-#include "ext_user_ipsec_sadb_api.h"
-#include "ext_esp_prot_common.h"
+#include "user_ipsec_sadb_api.h"
+#include "esp_prot_common.h"
 
 int hip_firewall_sock_fd = -1;
 

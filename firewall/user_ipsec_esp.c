@@ -23,9 +23,9 @@
  * @note HIPU: The userspace IPsec must be used.
  */
 
-#include "ext_user_ipsec_esp.h"
+#include "user_ipsec_esp.h"
+#include "esp_prot.h"
 #include "utils.h"
-#include "ext_esp_prot.h"
 
 // for some reason the ICV for ESP authentication is truncated to 12 bytes
 #define ICV_LENGTH 12

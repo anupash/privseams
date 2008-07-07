@@ -43,7 +43,7 @@ endif
 
 CFLAGS  = $(hipl_common_cflags) -DCONFIG_HIP_LIBHIPTOOL
 
-include_HEADERS =  crypto.h nlink.h pk.h xfrm.h xfrmapi.h ext_esp_prot_common.h
+include_HEADERS =  crypto.h nlink.h pk.h xfrm.h xfrmapi.h esp_prot_common.h
 include_HEADERS  += hashchain_store.h hashchain.h linkedlist.h
 
 

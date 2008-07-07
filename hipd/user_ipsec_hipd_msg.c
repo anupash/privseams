@@ -1,4 +1,4 @@
-#include "ext_user_ipsec_hipd_msg.h"
+#include "user_ipsec_hipd_msg.h"
 
 // TODO extend to allow switching back to kernel-mode
 int hip_userspace_ipsec_activate(struct hip_common *msg)
@@ -144,7 +144,6 @@ struct hip_common * create_add_sa_msg(struct in6_addr *saddr,
 	HIP_IFEL(hip_build_param_contents(msg, (void *)&ealg, HIP_PARAM_INT,
 					  sizeof(int)), -1,
 					  "build param contents failed\n");
-	
 	
 	HIP_DEBUG("retransmission value is %d \n", retransmission);
 	HIP_IFEL(hip_build_param_contents(msg, (void *)&retransmission,

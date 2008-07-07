@@ -19,8 +19,8 @@
  * the HIP Security Association database
  *
  */
-#include "ext_user_ipsec_sadb.h"
-#include "ext_esp_prot_common.h"
+#include "user_ipsec_sadb.h"
+#include "esp_prot_common.h"
 #include "misc.h"
 
 /*

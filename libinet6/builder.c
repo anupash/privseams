@@ -55,7 +55,7 @@
  */
 #include "builder.h"
 #include "registration.h"
-#include "ext_esp_prot_common.h"
+#include "esp_prot_common.h"
 
 static enum select_dh_key_t select_dh_key = STRONGER_KEY;
 

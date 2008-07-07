@@ -1,7 +1,7 @@
-#ifndef EXT_USER_IPSEC_ESP_H_
-#define EXT_USER_IPSEC_ESP_H_
+#ifndef USER_IPSEC_ESP_H_
+#define USER_IPSEC_ESP_H_
 
-#include "ext_user_ipsec_sadb.h"
+#include "user_ipsec_sadb.h"
 #include "firewall.h"
 
 // needed for transport layer checksum calculation
@@ -51,4 +51,4 @@ typedef struct _pseudo_header6
 
 #endif
 
-#endif /*HIP_ESP_H_*/
+#endif /* USER_IPSEC_ESP_H_*/

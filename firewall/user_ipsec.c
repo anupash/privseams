@@ -4,14 +4,23 @@
 
 #include <sys/socket.h>		/* socket() */
 #include <sys/time.h>		/* timeval */
-#include "ext_user_ipsec.h"
+#include "user_ipsec.h"
 #include "misc.h"			/* hip conversion functions */
 
 //#define ESP_PACKET_SIZE 2500
 // this is the maximum buffer-size needed for an userspace ipsec esp packet
 #define MAX_ESP_PADDING 255
-#define ESP_PACKET_SIZE (HIP_MAX_PACKET + sizeof(struct udphdr) + sizeof(struct hip_esp) + MAX_ESP_PADDING + sizeof(struct hip_esp_tail) + EVP_MAX_MD_SIZE)
-				
+#define ESP_PACKET_SIZE (HIP_MAX_PACKET + sizeof(struct udphdr) \
+		+ sizeof(struct hip_esp) + MAX_ESP_PADDING + sizeof(struct hip_esp_tail) \
+		+ EVP_MAX_MD_SIZE)
+
+/* For wrapper the API of the usespace IPsec implementation */
+#define TYPE_USERSPACE_IPSEC 0 /* Type is not used currently*/
+/* mode: 1-transport, 2-tunnel, 3-beet 
+ * 
+ * however right now we only support mode 3, no need for variable yet */
+#define IPSEC_MODE 3
+
 // this is the ESP packet we are about to build
 unsigned char *esp_packet = NULL;
 // the original packet before ESP encryption
