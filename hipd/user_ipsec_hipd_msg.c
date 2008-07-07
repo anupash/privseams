@@ -1,6 +1,5 @@
 #include "user_ipsec_hipd_msg.h"
 
-// TODO extend to allow switching back to kernel-mode
 int hip_userspace_ipsec_activate(struct hip_common *msg)
 {
 	struct hip_tlv_common *param = NULL;
@@ -12,20 +11,53 @@ int hip_userspace_ipsec_activate(struct hip_common *msg)
 	
 	// set global variable
 	hip_use_userspace_ipsec = activate;
-	HIP_DEBUG("userspace ipsec activate: %i \n", activate);
+	HIP_DEBUG("userspace ipsec set to %i\n", activate);
 	
-	/* remove the policies from the kernel-mode IPsec, otherwise app-packets
-	 * will be captured and processed by the kernel */
-	HIP_DEBUG("flushing all ipsec policies...\n");
-	default_ipsec_func_set.hip_flush_all_policy();
-	HIP_DEBUG("flushing all ipsec SAs...\n");
-	default_ipsec_func_set.hip_flush_all_sa();
+	/* remove the policies from the kernel-mode IPsec when switching to userspace,
+	 * otherwise app-packets will still be captured and processed by the kernel
+	 * 
+	 * wo don't have to to this when we switch back to kernel-mode, as it will
+	 * only be the case when the firewall is shut down 
+	 * -> firewall might already be closed when user-message arrives */
+	if (hip_use_userspace_ipsec)
+	{
+		HIP_DEBUG("flushing all ipsec policies in the kernel...\n");
+		default_ipsec_func_set.hip_flush_all_policy();
+		HIP_DEBUG("flushing all ipsec SAs in the kernel...\n");
+		default_ipsec_func_set.hip_flush_all_sa();
+	}
+
+	// send close to all peers in order to reset peer state
+	HIP_IFEL(hip_send_close(NULL), -1, "failed to close all connections");
 	
-	/* we have to modify the ipsec function pointers to call the ones
-	 * located in userspace from now on */
+	/* reset the ipsec function set
+	 * 
+	 * copied from hadb.c */
+	if (hip_use_userspace_ipsec) {
+	     default_ipsec_func_set.hip_add_sa = hip_userspace_ipsec_add_sa;
+	     default_ipsec_func_set.hip_setup_hit_sp_pair = hip_userspace_ipsec_setup_hit_sp_pair;
+	     default_ipsec_func_set.hip_delete_hit_sp_pair = hip_userspace_ipsec_delete_hit_sp_pair;
+	     default_ipsec_func_set.hip_flush_all_policy = hip_userspace_ipsec_flush_all_policy;
+	     default_ipsec_func_set.hip_flush_all_sa = hip_userspace_ipsec_flush_all_sa;
+	     default_ipsec_func_set.hip_acquire_spi = hip_acquire_spi;
+	     default_ipsec_func_set.hip_delete_default_prefix_sp_pair = hip_userspace_ipsec_delete_default_prefix_sp_pair;
+	     default_ipsec_func_set.hip_setup_default_sp_prefix_pair = hip_userspace_ipsec_setup_default_sp_prefix_pair;
+     } else
+     {
+	     default_ipsec_func_set.hip_add_sa = hip_add_sa;
+	     default_ipsec_func_set.hip_setup_hit_sp_pair = hip_setup_hit_sp_pair;
+	     default_ipsec_func_set.hip_delete_hit_sp_pair = hip_delete_hit_sp_pair;
+	     default_ipsec_func_set.hip_flush_all_policy = hip_flush_all_policy;
+	     default_ipsec_func_set.hip_flush_all_sa = hip_flush_all_sa;
+	     default_ipsec_func_set.hip_acquire_spi = hip_acquire_spi;
+	     default_ipsec_func_set.hip_delete_default_prefix_sp_pair = hip_delete_default_prefix_sp_pair;
+	     default_ipsec_func_set.hip_setup_default_sp_prefix_pair = hip_setup_default_sp_prefix_pair;
+     }
+	/*
 	HIP_DEBUG("re-initializing the hadb...\n");
 	hip_uninit_hadb();
 	hip_init_hadb();
+	*/
 	
   out_err:
 	return err;

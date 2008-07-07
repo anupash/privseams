@@ -2169,7 +2169,9 @@ void hip_init_hadb(void)
      default_input_filter_func_set.hip_input_filter	= hip_agent_filter;
      default_output_filter_func_set.hip_output_filter   = hip_agent_filter;
 
-     /* Tao Wan and Miika komu added, 24 Jan, 2008 for IPsec (userspace / kernel part)*/
+     /* Tao Wan and Miika komu added, 24 Jan, 2008 for IPsec (userspace / kernel part)
+      * 
+      * copy in user_ipsec_hipd_msg.c */
      if (hip_use_userspace_ipsec) {
 	     default_ipsec_func_set.hip_add_sa = hip_userspace_ipsec_add_sa;
 	     default_ipsec_func_set.hip_setup_hit_sp_pair = hip_userspace_ipsec_setup_hit_sp_pair;
