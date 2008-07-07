@@ -3637,7 +3637,7 @@ int hip_get_locator_addr_item_count(struct hip_locator *locator) {
     		address_pointer += sizeof(struct hip_locator_info_addr_item);
     		amount += 1;
     	} 
-        else	
+        else	//ignore the others
         	address_pointer += sizeof(struct hip_locator_info_addr_item);
 	}
 	
