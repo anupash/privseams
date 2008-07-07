@@ -871,7 +871,7 @@ int hip_netdev_trigger_bex_msg(struct hip_common *msg) {
 	
 	HIP_DUMP_MSG(msg);
 	
-	/* Destination HIT */
+	/* Destination HIT - mandatory*/
 	param = hip_get_param(msg, HIP_PARAM_HIT);
 	if (param && hip_get_param_type(param) == HIP_PARAM_HIT)
 		peer_hit = hip_get_param_contents_direct(param);
