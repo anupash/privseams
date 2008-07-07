@@ -383,7 +383,7 @@ int hip_cert_x509v3_request_verification(char * certificate) {
         HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, 
                  "Malloc for msg failed\n");   
         /* build the msg to be sent to the daemon */
-        HIP_IFEL(hip_build_param_cert_x509_ver(msg, certificate), -1,
+        HIP_IFEL(hip_build_param_cert_x509_ver(msg, certificate), -1, 
                  "Failed to build cert_info\n");         
         HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_CERT_X509V3_VERIFY, 0), -1, 
                  "Failed to build user header\n");
@@ -396,7 +396,7 @@ int hip_cert_x509v3_request_verification(char * certificate) {
         HIP_IFEL(!(received = hip_get_param(msg, HIP_PARAM_CERT_X509_RESP)), -1,
                  "No x509 struct found\n");
         HIP_DEBUG("Verification success %d (0 yes -1 no)\n", received->success);
-        err = (received->success == 1)?0:-11;
+        err = (received->success == 1) ? 0 : -1;
 	_HIP_DUMP_MSG(msg);
 
  out_err:
@@ -411,26 +411,42 @@ int hip_cert_x509v3_request_verification(char * certificate) {
 /**
  * Function that displays the contents of the PEM encoded x509 certificate
  *
- * @param CONF pointer to the to be freed configuration 
+ * @param pem points to PEM encoded certificate
  *
  * @return void 
  */
 void hip_cert_display_x509_pem_contents(char * pem) {
         int err = 0;
-        BIO *out;
+	X509 * cert = NULL;
+
+	cert = hip_cert_pem_to_x509(pem);
+        HIP_DEBUG("x.509v3 certificate in readable format\n\n");
+        HIP_IFEL(!X509_print_fp(stdout, cert), -1,
+                 "Failed to print x.509v3 in human readable format\n");    
+ out_err:
+        return;
+}
+
+/**
+ * Function that converts the PEM encoded X509 to X509 struct
+ *
+ * @param pem points to PEM encoded certificate
+ * @param certificate points to X509 where the certificate PEM decoded cert will be stored
+ *
+ * @return int 0 on success otherwise negative 
+ */
+X509 * hip_cert_pem_to_x509(char * pem) {
+        int err = 0;
+        BIO *out; 
         X509 * cert = NULL;
-        int read_bytes = 0;
 
         HIP_DEBUG("PEM:\n%s\n", pem);        
         out = BIO_new_mem_buf(pem, -1);      
         HIP_IFEL((NULL == (cert = PEM_read_bio_X509(out, NULL, 0, NULL))), -1,
                  "Cert variable is NULL\n");
-        HIP_DEBUG("x.509v3 certificate in readable format\n\n");
-        HIP_IFEL(!X509_print_fp(stdout, cert), -1,
-                 "Failed to print x.509v3 in human readable format\n");
-      
  out_err:
-        return;
+	if (err == -1) return NULL;
+        return cert;
 }
  
 /**

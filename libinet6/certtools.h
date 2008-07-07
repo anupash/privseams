@@ -69,6 +69,7 @@ int hip_cert_x509v3_request_verification(char *);
 
 /** Utilitary functions **/
 void hip_cert_display_x509_pem_contents(char *); 
+X509 * hip_cert_pem_to_x509(char * pem);
 STACK_OF(CONF_VALUE) * hip_cert_read_conf_section(char *, CONF *);
 CONF * hip_cert_open_conf(void); 
 void hip_cert_free_conf(CONF *);

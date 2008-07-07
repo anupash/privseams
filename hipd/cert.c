@@ -393,9 +393,9 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common * msg,  HIP_HASHTAB
         EVP_PKEY *pkey;
         /** XX TODO THIS should come from a configuration file 
             monotonically increasing counter **/
-        long serial = 1; 
+        long serial = 0; 
         const EVP_MD * digest;
-        X509 *cert, *CAcert;
+        X509 *cert;
         X509V3_CTX ctx;
         struct hip_cert_x509_req * subject;
         char subject_hit[41];
@@ -527,7 +527,7 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common * msg,  HIP_HASHTAB
         HIP_IFEL((X509_set_version (cert, 2L) != 1), -1,
                   "Failed to set certificate version\n");
         /** XX TODO serial should be stored after increasing it **/
-        ASN1_INTEGER_set (X509_get_serialNumber (cert), serial++);
+        ASN1_INTEGER_set (X509_get_serialNumber(cert), serial++);
         
         HIP_IFEL((X509_set_subject_name (cert, subj) != 1), -1,
                 "Failed to set subject name of certificate\n");
@@ -538,12 +538,24 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common * msg,  HIP_HASHTAB
         HIP_IFEL(!(X509_gmtime_adj (X509_get_notAfter (cert), secs)), -1, 
                  "Error setting ending time of the certificate");
 
+        HIP_DEBUG("Getting the key\n");
+        HIP_IFEL((err = hip_cert_rsa_construct_keys(hip_local_hostid_db,
+                                            issuer_hit_n, rsa)), -1, 
+                "Error constructing the keys from hidb entry\n");
+
+        HIP_IFEL(!EVP_PKEY_assign_RSA(pkey, rsa), -1, 
+                 "Failed to convert RSA to EVP_PKEY\n");
+        HIP_IFEL((X509_set_pubkey (cert, pkey) != 1), -1, 
+                 "Failed to set public key of the certificate\n");
+
+	X509V3_set_ctx(&ctx, cert, cert, NULL, NULL, 0);
+
         if (sec_ext != NULL) {
                 for (i = 0; i < sk_CONF_VALUE_num(sec_ext); i++) {
                         item = sk_CONF_VALUE_value(sec_ext, i);
                         _HIP_DEBUG("Sec: %s, Key; %s, Val %s\n", 
                                    item->section, item->name, item->value);
-                        HIP_IFEL(!(ext = X509V3_EXT_conf(NULL, NULL, 
+                        HIP_IFEL(!(ext = X509V3_EXT_conf(NULL, &ctx, 
                                                        item->name, item->value )), -1, 
                                  "Failed to create extension\n");
                         HIP_IFEL((!X509_add_ext(cert, ext, -1)), -1,
@@ -551,17 +563,7 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common * msg,  HIP_HASHTAB
                 }
         }
 
-        HIP_DEBUG("Getting the key\n");
-        HIP_IFEL((err = hip_cert_rsa_construct_keys(hip_local_hostid_db,
-                                            issuer_hit_n, rsa)), -1, 
-                "Error constructing the keys from hidb entry\n");
-
-        HIP_IFEL(!EVP_PKEY_set1_RSA(pkey, rsa), -1, 
-                 "Failed to convert RSA to EVP_PKEY\n");
-        HIP_IFEL((X509_set_pubkey (cert, pkey) != 1), -1, 
-                 "Failed to set public key of the certificate\n");
-
-        digest = EVP_sha1 ();
+        digest = EVP_sha1();
         HIP_IFEL(!(X509_sign (cert, pkey, digest)), -1,
                  "Failed to sign x509v3 certificate\n"); 
 #if 0
@@ -598,6 +600,11 @@ out_err:
 	return err;
 } 
 
+int verify_callback (int ok, X509_STORE_CTX * stor) {
+  if (!ok) HIP_DEBUG("Error: %s\n", X509_verify_cert_error_string (stor->error));
+  return ok;
+}
+
 /**
  * Function verifies the given certificate and sends it to back to the client.
  *
@@ -609,7 +616,13 @@ int hip_cert_x509v3_handle_request_to_verify(struct hip_common * msg) {
         int err = 0;
         struct hip_cert_x509_resp verify;
         struct hip_cert_x509_resp * p;
-        
+	X509 *cert;
+	X509_STORE *store;
+	X509_STORE_CTX *verify_ctx;
+
+	OpenSSL_add_all_algorithms ();
+	ERR_load_crypto_strings ();
+
         _HIP_DUMP_MSG(msg);
         memset(&verify, 0, sizeof(struct hip_cert_x509_resp));
         HIP_IFEL(!(p = hip_get_param(msg, HIP_PARAM_CERT_X509_REQ)), -1,
@@ -618,8 +631,50 @@ int hip_cert_x509v3_handle_request_to_verify(struct hip_common * msg) {
         /*
           hip_cert_display_x509_pem_contents(&verify.pem);
         */
-        
+	cert = hip_cert_pem_to_x509(&verify.pem);   
+
+/*
+	HIP_IFEL(!X509_print_fp(stdout, cert), -1,
+                 "Failed to print x.509v3 in human readable format\n"); 
+*/
+
+	HIP_IFEL(!(store = X509_STORE_new ()), -1,
+		"Failed to create X509_STORE_CTX object\n");
+	X509_STORE_set_verify_cb_func(store, verify_callback);
+
+	/* self signed so te cert itself should verify itself */
+
+	HIP_IFEL(!X509_STORE_add_cert(store, cert), -1,
+		 "Failed to add cert to ctx\n");
+	
+	HIP_IFEL((!(verify_ctx = X509_STORE_CTX_new ())), -1,
+		"Failed to create X509_STORE_CTX object\n");
+ 
+	//X509_STORE_CTX_set_flags(&verify_ctx, X509_V_FLAG_CB_ISSUER_CHECK); 
+
+	HIP_IFEL((X509_STORE_CTX_init(verify_ctx, store, cert, NULL) != 1), -1,
+		 "Failed to initialize verification context\n");
+
+	if (X509_verify_cert(verify_ctx) != 1) {
+		HIP_DEBUG("Error verifying the certificate\n");
+		err = -1; 
+	} else {
+		HIP_DEBUG("Certificate verified correctly!\n");
+		err = 0;
+	}
+	memcpy(&p->success, &err, sizeof(int));
+/*	
+	hip_msg_init(msg);
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_CERT_X509V3_SIGN, 0), -1, 
+                 "Failed to build user header\n");
+        HIP_IFEL(hip_build_param_cert_x509_resp(msg, &cert_str_pem), -1, 
+                 "Failed to create x509 response parameter\n");        
+*/
+        _HIP_DUMP_MSG(msg);	
  out_err:
+	X509_STORE_CTX_cleanup(verify_ctx);
+	if (store) X509_STORE_free(store);
+	if (cert) X509_free(cert);
         return err;
 }
 

@@ -886,7 +886,7 @@ int hip_init_certs(void) {
                         "\n"
                         "# Uncomment this section to add x509 extensions\n"
                         "# to the certificate\n"
-                        "# [ hip_x509_extension ]\n"
+                        "# [ hip_x509v3_extensions ]\n"
                         "# issuerAltName = DNS:mydomain.com\n",
 			hit, HIP_CERT_INIT_DAYS,
                         hit, HIP_CERT_INIT_DAYS,

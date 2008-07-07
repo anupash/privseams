@@ -23,6 +23,9 @@
 #include <openssl/conf.h>
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
+#include <openssl/x509_vfy.h>
+#include <openssl/err.h>
+#include <openssl/pem.h>
 #include "debug.h"
 #include "ife.h"
 #include "misc.h"

@@ -18,6 +18,51 @@
 #include "icomm.h"
 #include "debug.h"
 #include "certtools.h"
+
+void compression_test(char * cert) {
+	int err = 0;
+        char certificate[1024];
+        char compressed[1024];
+        char uncompressed[1024];
+        int return_value = 0;
+        uLongf compressed_length = 0;
+        uLongf uncompressed_length = 0;
+	
+        HIP_DEBUG("Testing Zlib compression on the data");
+        memset(&compressed, '\0', sizeof(compressed));
+        memset(&uncompressed, '0', sizeof(uncompressed));
+	strcpy(certificate, cert);
+        compressed_length = sizeof(compressed);
+        _HIP_DEBUG("Destination length %d\n", compressed_length);
+      
+        return_value = compress2((Bytef *)compressed , &compressed_length, 
+                                (Bytef *)&certificate, (uLong)strlen(certificate),
+                                 Z_BEST_COMPRESSION);
+        if (return_value == Z_OK) HIP_DEBUG("Compression was succesfull\n");
+        if (return_value == Z_BUF_ERROR) 
+                HIP_DEBUG("Compression was NOT succesfull (given buffer is too small)\n");
+        if (return_value == Z_MEM_ERROR) 
+                HIP_DEBUG("Compression was NOT succesfull (not enough memory)\n");
+        HIP_DEBUG("Compressed data length: %d\n", compressed_length);        
+        
+        uncompressed_length = sizeof(uncompressed);
+        return_value = uncompress((Bytef *)uncompressed, &uncompressed_length,
+                                  (Bytef *)compressed, (uLong)compressed_length);
+        if (return_value == Z_OK) HIP_DEBUG("Uncompression was succesfull\n");
+        if (return_value == Z_BUF_ERROR) 
+                HIP_DEBUG("Uncompression was NOT succesfull (given buffer is too small)\n");
+        if (return_value == Z_MEM_ERROR) 
+                HIP_DEBUG("Uncompression was NOT succesfull (not enough memory)\n");        
+ 
+        uncompressed[strlen(certificate)] = '\0';
+        _HIP_DEBUG("Uncompressed:\n%s\n\n",uncompressed);
+        if (!strcmp(certificate, uncompressed))
+                HIP_DEBUG("Uncompressed data did match the original\n\n");
+        else
+                HIP_DEBUG("Uncompressed data did NOT match the original\n\n");
+out_err:
+	return;
+}
  
 int main(int argc, char *argv[])
 {
@@ -30,11 +75,6 @@ int main(int argc, char *argv[])
         struct hip_tlv_common *current_param = NULL;
         struct endpoint_hip *endp = NULL;
         char certificate[1024];
-        char compressed[1024];
-        char uncompressed[1024];
-        int return_value = 0;
-        uLongf compressed_length = 0;
-        uLongf uncompressed_length = 0;
 	CONF * conf;
 	CONF_VALUE *item;
 	STACK_OF(CONF_VALUE) * sec = NULL;
@@ -119,44 +159,7 @@ int main(int argc, char *argv[])
                   "%s\n\nCertificate len %d\n\n",
                   certificate, strlen(certificate));
 
-        /* 
-           Test if Zlib can compress the certificate into smaller space
-        */
-        HIP_DEBUG("Testing Zlib compression on the certificate");
-        memset(&compressed, '\0', sizeof(compressed));
-        memset(&uncompressed, '0', sizeof(uncompressed));
-        compressed_length = sizeof(compressed);
-        _HIP_DEBUG("Destination length %d\n", compressed_length);
-      
-        return_value = compress2((Bytef *)compressed , &compressed_length, 
-                                (Bytef *)&certificate, (uLong)strlen(certificate),
-                                 Z_BEST_COMPRESSION);
-        if (return_value == Z_OK) HIP_DEBUG("Compression was succesfull\n");
-        if (return_value == Z_BUF_ERROR) 
-                HIP_DEBUG("Compression was NOT succesfull (given buffer is too small)\n");
-        if (return_value == Z_MEM_ERROR) 
-                HIP_DEBUG("Compression was NOT succesfull (not enough memory)\n");
-        HIP_DEBUG("Compressed certificate length: %d\n", compressed_length);        
-        
-        uncompressed_length = sizeof(uncompressed);
-        return_value = uncompress((Bytef *)uncompressed, &uncompressed_length,
-                                  (Bytef *)compressed, (uLong)compressed_length);
-        if (return_value == Z_OK) HIP_DEBUG("Uncompression was succesfull\n");
-        if (return_value == Z_BUF_ERROR) 
-                HIP_DEBUG("Uncompression was NOT succesfull (given buffer is too small)\n");
-        if (return_value == Z_MEM_ERROR) 
-                HIP_DEBUG("Uncompression was NOT succesfull (not enough memory)\n");        
- 
-        uncompressed[strlen(certificate)] = '\0';
-        _HIP_DEBUG("Uncompressed:\n%s\n\n",uncompressed);
-        if (!strcmp(certificate, uncompressed))
-                HIP_DEBUG("Uncompressed certificate did match the original\n\n");
-        else
-                HIP_DEBUG("Uncompressed certificate did NOT match the original\n\n");
-
-        /* 
-           end of compression testing 
-        */
+	compression_test(certificate);
 
         HIP_IFEL(hip_cert_spki_char2certinfo(certificate, to_verification), -1,
                  "Failed to construct the hip_cert_spki_info from certificate\n");
@@ -172,7 +175,7 @@ int main(int argc, char *argv[])
                  "Verification was not successfull\n");
         HIP_DEBUG("Verification was successfull (return value %d)\n", 
                   to_verification->success);
-	goto to_end;
+	goto out_err;
 	
 skip_spki:
 	HIP_DEBUG("Starting to test x509v3 support\n");
@@ -197,13 +200,15 @@ skip_spki:
         err = hip_cert_x509v3_request_certificate(defhit, certificate); 
         hip_cert_display_x509_pem_contents(certificate);
 
+	compression_test(certificate);
+
         /** Now send it back for the verification **/
-        err = hip_cert_x509v3_request_verification(certificate);
-        
-to_end:
+        HIP_IFEL(((err = hip_cert_x509v3_request_verification(certificate)) < 0), -1,
+		"Failed to verify a certificate\n");
+         
+ out_err:
         HIP_DEBUG("If there was no errors above, \"everything\" is OK\n");
 
- out_err:
         if (cert) free(cert);
         if (to_verification) free(to_verification);
         exit(err);
