@@ -2540,7 +2540,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	struct hip_context *ctx = NULL;
  	struct hip_esp_info *esp_info = NULL;
 	struct hip_spi_out_item spi_out_data;
-	int err = 0, tfm = 0, retransmission = 0, type_count = 0;
+	int err = 0, tfm = 0, retransmission = 0, type_count = 0, idx;
 	int *reg_types = NULL;
 	uint32_t spi_recvd = 0, spi_in = 0;
 	
@@ -2696,11 +2696,11 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	entry->default_spi_out = spi_recvd;
 	HIP_DEBUG("Set default SPI out = 0x%x\n", spi_recvd);
 		
-	err = hip_devaddr2ifindex(r2_daddr);
+	idx = hip_devaddr2ifindex(r2_daddr);
 	
-	if (err != 0) {
-		HIP_DEBUG("ifindex = %d\n", err);
-		hip_hadb_set_spi_ifindex(entry, spi_in, err);
+	if (idx != 0) {
+		HIP_DEBUG("ifindex = %d\n", idx);
+		hip_hadb_set_spi_ifindex(entry, spi_in, idx);
 	} else {
 		HIP_ERROR("Couldn't get device ifindex of address\n");
 	}
