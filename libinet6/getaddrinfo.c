@@ -78,7 +78,6 @@
 #include "message.h"
 #include "util.h"
 #include "libhipopendht.h"
-#include "hip_usermode.h"
 #include "bos.h"
 
 #define GAIH_OKIFUNSPEC 0x0100

@@ -11,7 +11,8 @@ include_HEADERS += bos.h input.h output.h icookie.h blind.h
 include_HEADERS += close.h hi3.h keymat.h timer.h configfilereader.h
 include_HEADERS += cookie.h hidb.h nat.h update.h dh.h registration.h
 include_HEADERS += escrow.h reg.h init.h maintenance.h accessor.h oppipdb.h
-include_HEADERS += tcptimeout.h cert.h hchain_anchordb.h
+include_HEADERS += tcptimeout.h cert.h user_ipsec_sadb_api.h user_ipsec_hipd_msg.h
+include_HEADERS += esp_prot_hipd_msg.h esp_prot_anchordb.h
 
 INCLUDES = $(hipl_common_include_paths)
 
@@ -20,7 +21,8 @@ hipd_SOURCES = reg.c update.c hipd.c keymat.c blind.c hiprelay.c registration.c
 hipd_SOURCES += user.c hadb.c oppdb.c close.c configfilereader.c
 hipd_SOURCES += input.c output.c hidb.c cookie.c netdev.c bos.c nat.c icookie.c
 hipd_SOURCES += escrow.c init.c maintenance.c accessor.c oppipdb.c dh.c
-hipd_SOURCES += tcptimeout.c cert.c hchain_anchordb.c
+hipd_SOURCES += tcptimeout.c cert.c user_ipsec_sadb_api.c user_ipsec_hipd_msg.c
+hipd_SOURCES += esp_prot_hipd_msg.c esp_prot_anchordb.c
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
 hipd_LDADD = ../libinet6/.libs/libinet6.a
@@ -29,6 +31,28 @@ if HIP_CORPORATE
 else
   hipd_LDADD += ../libhiptool/.libs/libhiptool.a
 endif
+
+# Required for pjsip
+hipd_LDADD += -lpthread
+hipd_LDADD += ../pjproject/pjnath/lib/libpjnath-${host}.a
+hipd_LDADD += ../pjproject/pjsip/lib/libpjsip-${host}.a
+hipd_LDADD += ../pjproject/pjsip/lib/libpjsip-ua-${host}.a
+hipd_LDADD += ../pjproject/pjsip/lib/libpjsip-simple-${host}.a
+hipd_LDADD += ../pjproject/pjsip/lib/libpjsua-${host}.a
+hipd_LDADD += ../pjproject/pjmedia/lib/libpjmedia-${host}.a
+hipd_LDADD += ../pjproject/pjmedia/lib/libpjmedia-codec-${host}.a
+hipd_LDADD += ../pjproject/pjlib/lib/libpj-${host}.a
+hipd_LDADD += ../pjproject/pjlib-util/lib/libpjlib-util-${host}.a
+
+../pjproject/pjlib/lib/libpj-${host}.a:
+../pjproject/pjlib-util/lib/libpjlib-util-${host}.a:
+../pjproject/pjnath/lib/libpjnath-${host}.a:
+../pjproject/pjsip/lib/libpjsip-${host}.a:
+../pjproject/pjsip/lib/libpjsip-ua-${host}.a:
+../pjproject/pjsip/lib/libpjsip-simple-${host}.a:
+../pjproject/pjsip/lib/libpjsua-${host}.a:
+../pjproject/pjmedia/lib/libpjmedia-${host}.a:
+../pjproject/pjmedia/lib/libpjmedia-codec-${host}.a:
 
 hipd_LDFLAGS = -lcrypto $(HIPL_XMLL) -lm -DHIPL_HIPD
 
