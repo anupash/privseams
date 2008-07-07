@@ -3253,12 +3253,29 @@ int hip_build_param_cert_x509_req(struct hip_common * msg,
 { 
 	int err = 0;
         struct hip_cert_x509_req subj;        
-	hip_set_param_type(&subj, HIP_PARAM_CERT_X509_REQ);
-	hip_calc_param_len(&subj,
-			   sizeof(struct hip_cert_x509_req) -
-			   sizeof(struct hip_tlv_common));
+       
+        hip_set_param_type(&subj, HIP_PARAM_CERT_X509_REQ);
+        hip_calc_param_len(&subj,
+                           sizeof(struct hip_cert_x509_req) -
+                           sizeof(struct hip_tlv_common));
         ipv6_addr_copy(&subj.addr, addr);
-	err = hip_build_param(msg, &subj);
+        err = hip_build_param(msg, &subj);
+ out_err:
+	return err;
+}
+
+int hip_build_param_cert_x509_ver(struct hip_common * msg,
+                                  char * pem)
+{ 
+	int err = 0;
+        struct hip_cert_x509_resp subj;        
+       
+        hip_set_param_type(&subj, HIP_PARAM_CERT_X509_REQ);
+        hip_calc_param_len(&subj,
+                           sizeof(struct hip_cert_x509_resp) -
+                           sizeof(struct hip_tlv_common));
+        memcpy(&subj.pem, pem, strlen(pem));
+        err = hip_build_param(msg, &subj);
  out_err:
 	return err;
 }

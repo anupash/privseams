@@ -333,6 +333,8 @@ int hip_cert_spki_send_to_verification(struct hip_cert_spki_info * to_verificati
  * @param cert is pointer to where this function writes the completed cert 
  *
  * @return 0 on success negative otherwise
+ * 
+ * @note The certificate is given in PEM encoding
  */ 
 int hip_cert_x509v3_request_certificate(struct in6_addr * subject, char * certificate) {
         int err = 0;
@@ -348,7 +350,7 @@ int hip_cert_x509v3_request_certificate(struct in6_addr * subject, char * certif
         HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_CERT_X509V3_SIGN, 0), -1, 
                  "Failed to build user header\n");
         /* send and wait */
-        HIP_DEBUG("Sending request to sign SPKI cert sequence to "
+        HIP_DEBUG("Sending request to sign x509 cert to "
                   "daemon and waiting for answer\n");	
         hip_send_recv_daemon_info(msg);
         /* get the struct from the message sent back by the daemon */
@@ -356,6 +358,45 @@ int hip_cert_x509v3_request_certificate(struct in6_addr * subject, char * certif
                  "No name x509 struct found\n");
         _HIP_DEBUG("CERT PEM\n%s\n", received->pem);
         memcpy(certificate, &received->pem, sizeof(received->pem));
+	_HIP_DUMP_MSG(msg);
+
+ out_err:
+        if (msg) free(msg);
+        return(err);
+}
+
+/**
+ * Function that requests for a verification of a certificate from daemon and
+ * tells the result
+ *
+ * @param cert is pointer to a certificate to be verified
+ *
+ * @return 0 on success negative otherwise
+ *
+ * @note give the certificate in PEM encoding
+ */ 
+int hip_cert_x509v3_request_verification(char * certificate) {
+        int err = 0;
+        struct hip_common * msg;
+        struct hip_cert_x509_resp * received;
+        
+        HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, 
+                 "Malloc for msg failed\n");   
+        /* build the msg to be sent to the daemon */
+        HIP_IFEL(hip_build_param_cert_x509_ver(msg, certificate), -1,
+                 "Failed to build cert_info\n");         
+        HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_CERT_X509V3_VERIFY, 0), -1, 
+                 "Failed to build user header\n");
+        /* send and wait */
+        HIP_DEBUG("Sending request to verify x509  cert to "
+                  "daemon and waiting for answer\n");
+        _HIP_DUMP_MSG(msg);	
+        hip_send_recv_daemon_info(msg);
+        /* get the struct from the message sent back by the daemon */
+        HIP_IFEL(!(received = hip_get_param(msg, HIP_PARAM_CERT_X509_RESP)), -1,
+                 "No x509 struct found\n");
+        HIP_DEBUG("Verification success %d (0 yes -1 no)\n", received->success);
+        err = (received->success == 1)?0:-11;
 	_HIP_DUMP_MSG(msg);
 
  out_err:

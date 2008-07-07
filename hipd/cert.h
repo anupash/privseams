@@ -34,7 +34,8 @@ int hip_cert_spki_sign(struct hip_common *, HIP_HASHTABLE *);
 int hip_cert_spki_verify(struct hip_common *);
 
 /** x509v3 **/
-int hip_cert_x509v3_handle_request(struct hip_common * msg, HIP_HASHTABLE *);
+int hip_cert_x509v3_handle_request_to_sign(struct hip_common *, HIP_HASHTABLE *);
+int hip_cert_x509v3_handle_request_to_verify(struct hip_common *);
 
 /** utilitary functions **/
 int hip_cert_rsa_construct_keys(HIP_HASHTABLE *, hip_hit_t *, RSA *);

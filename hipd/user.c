@@ -346,10 +346,21 @@ int hip_handle_user_msg(struct hip_common *msg,
                 break;
         case SO_HIP_CERT_X509V3_SIGN:
                 {
-                        HIP_DEBUG("Got an request to sign X509v3 cert sequence\n");
-                        reti = hip_cert_x509v3_handle_request(msg, hip_local_hostid_db);   
-                        HIP_IFEL(reti, -1, "Signing x509v3 cert returned an error\n");
+                        HIP_DEBUG("Got an request to sign X509v3 cert\n");
+                        reti = hip_cert_x509v3_handle_request_to_sign(msg, 
+                                                                      hip_local_hostid_db);   
+                        HIP_IFEL(reti, -1, "Signing of x509v3 cert returned an error\n");
                         HIP_DEBUG("X509v3 cert signed sending it back to requester\n");   
+                } 
+                break;
+        case SO_HIP_CERT_X509V3_VERIFY:
+                {
+                        HIP_DEBUG("Got an request to verify X509v3 cert\n");
+                        reti = hip_cert_x509v3_handle_request_to_verify(msg);   
+                        HIP_IFEL(reti, -1, "Verification of x509v3 cert "
+                                 "returned an error\n");
+                        HIP_DEBUG("X509v3 verification ended "
+                                  "sending it back to requester\n");   
                 } 
                 break;
         case SO_HIP_TRANSFORM_ORDER:

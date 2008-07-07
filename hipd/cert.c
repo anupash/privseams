@@ -375,7 +375,7 @@ out_err:
  * @note the request part is just for informational purposes, in practice it
  * is not needed
  */ 
-int hip_cert_x509v3_handle_request(struct hip_common * msg,  HIP_HASHTABLE * db) {
+int hip_cert_x509v3_handle_request_to_sign(struct hip_common * msg,  HIP_HASHTABLE * db) {
 	int err = 0, i = 0, nid = 0, ret = 0, secs = 0;
 	CONF * conf;
 	CONF_VALUE *item;
@@ -597,6 +597,31 @@ out_err:
         BIO_free_all(out_pem);
 	return err;
 } 
+
+/**
+ * Function verifies the given certificate and sends it to back to the client.
+ *
+ * @param msg is a pointer to the requesting msg
+ *
+ * @return 0 on success negative otherwise. 
+ */ 
+int hip_cert_x509v3_handle_request_to_verify(struct hip_common * msg) {
+        int err = 0;
+        struct hip_cert_x509_resp verify;
+        struct hip_cert_x509_resp * p;
+        
+        _HIP_DUMP_MSG(msg);
+        memset(&verify, 0, sizeof(struct hip_cert_x509_resp));
+        HIP_IFEL(!(p = hip_get_param(msg, HIP_PARAM_CERT_X509_REQ)), -1,
+                   "Failed to get cert info from the msg\n");
+        memcpy(&verify, p, sizeof(struct hip_cert_x509_resp));
+        /*
+          hip_cert_display_x509_pem_contents(&verify.pem);
+        */
+        
+ out_err:
+        return err;
+}
 
 /****************************************************************************
  *

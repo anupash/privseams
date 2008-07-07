@@ -198,7 +198,7 @@ skip_spki:
         hip_cert_display_x509_pem_contents(certificate);
 
         /** Now send it back for the verification **/
-        
+        err = hip_cert_x509v3_request_verification(certificate);
         
 to_end:
         HIP_DEBUG("If there was no errors above, \"everything\" is OK\n");
