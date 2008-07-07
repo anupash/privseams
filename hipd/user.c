@@ -824,10 +824,6 @@ int hip_handle_user_msg(struct hip_common *msg,
 	case SO_HIP_GET_HA_INFO:
 		hip_msg_init(msg);
 		hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0);
-		/** 
-		 * @todo passing argument 1 of 'hip_for_each_hi' from incompatible
-		 * pointer type
-		 */
 		err = hip_for_each_ha(hip_handle_get_ha_info, msg);
 		break;
 	case SO_HIP_DEFAULT_HIT:

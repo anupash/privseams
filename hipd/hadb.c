@@ -2213,7 +2213,10 @@ int hip_hadb_add_peer_info_etc_hosts_file(hip_hosts_entry *hip_hosts, int lineno
         for (i = 0; i < lineno; i++) {
 	        if (hip_hosts[i].hostname){
 		        hip_find_address(hip_hosts[i].hostname, &address);
-		        hip_hadb_add_peer_info(&(hip_hosts[i].hit), &address, &(hip_hosts[i].lsi));
+			if ((hip_hosts[i].lsi).s_addr == 0)
+			        hip_hadb_add_peer_info(&(hip_hosts[i].hit), &address, NULL);
+			else
+			        hip_hadb_add_peer_info(&(hip_hosts[i].hit), &address, &(hip_hosts[i].lsi));
 		}
 	}
  }
