@@ -349,7 +349,7 @@ uint16_t hip_nat_get_control(){
 	 // comment out before the ice mode is added
 	 else if(hip_get_nat_mode()== SO_HIP_SET_NAT_ICE_UDP)
 		 	return 1;
-		 // else return 0;
+	 else return 0;
 #else
 	return 0;
 #endif
