@@ -787,14 +787,13 @@ int hip_update_finish_rekeying(hip_common_t *msg, hip_ha_t *entry,
 	HIP_DEBUG("Setting up new outbound SA, SPI=0x%x\n", new_spi_out);
 	/** @todo Currently NULLing the stateless info. Send port info through
 	    entry parameter --Abi */
+	entry->local_udp_port = entry->nat_mode ? HIP_NAT_UDP_PORT : 0;
 
 	err = hip_add_sa(&entry->preferred_address, &entry->local_address, hits,
-			 hitr, &new_spi_in, esp_transform,
+			 hitr,  &new_spi_in, esp_transform,
 			 (we_are_HITg ? &espkey_lg : &espkey_gl),
 			 (we_are_HITg ? &authkey_lg : &authkey_gl),
-			 1, HIP_SPI_DIRECTION_IN, 0,0, entry->peer_udp_port,
-			 (entry->nat_mode ? HIP_NAT_UDP_PORT : 0));
-
+			 1, HIP_SPI_DIRECTION_IN, 0, entry);
 
 	//"Setting up new outbound IPsec SA failed\n");
 	HIP_DEBUG("New outbound SA created with SPI=0x%x\n", new_spi_out);
@@ -804,10 +803,7 @@ int hip_update_finish_rekeying(hip_common_t *msg, hip_ha_t *entry,
 			 hits, &new_spi_out, esp_transform,
 			 (we_are_HITg ? &espkey_gl : &espkey_lg),
 			 (we_are_HITg ? &authkey_gl : &authkey_lg),
-			 1, HIP_SPI_DIRECTION_OUT, 0,0,
-			 (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
-			 entry->peer_udp_port);
-
+			 1, HIP_SPI_DIRECTION_OUT, 0, entry);
 
 	HIP_DEBUG("err=%d\n", err);
 	if (err)
@@ -1080,9 +1076,12 @@ int hip_update_send_addr_verify_packet(hip_ha_t *entry,
 	 * 	 else 
 	 * 	 	verify only unverified addresses
 	 */
-	return hip_update_send_addr_verify_packet_all(entry, addr, spi_out,
+//modify by sanntu when ice is choosen, not update message is needed
+	if(entry->nat_control == 0)
+		return hip_update_send_addr_verify_packet_all(entry, addr, spi_out,
 						      src_ip, 0);
-
+	else return 0;
+//end modify
 }
 
 int hip_update_send_addr_verify_packet_all(hip_ha_t *entry,
@@ -1792,13 +1791,12 @@ int hip_update_peer_preferred_address(hip_ha_t *entry,
 				       IPPROTO_ESP, 1, 0), -1,
 		 "Setting up SP pair failed\n");
 
-	HIP_IFEL(hip_add_sa(&local_addr, &addr->address, 
-			    &entry->hit_our, &entry->hit_peer,
-			    &entry->default_spi_out,
+	entry->local_udp_port = entry->nat_mode ? HIP_NAT_UDP_PORT : 0;
+	
+	HIP_IFEL(hip_add_sa(&local_addr, &addr->address, &entry->hit_our,
+			    &entry->hit_peer, &entry->default_spi_out,
 			    entry->esp_transform, &entry->esp_out,
-			    &entry->auth_out, 1, HIP_SPI_DIRECTION_OUT, 0,0,
-			    (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
-			    entry->peer_udp_port ), -1,
+			    &entry->auth_out, 1, HIP_SPI_DIRECTION_OUT, 0, entry), -1,
 		 "Error while changing outbound security association for new "\
 		 "peer preferred address\n");
      
@@ -1813,9 +1811,7 @@ int hip_update_peer_preferred_address(hip_ha_t *entry,
 			    &entry->hit_peer, &entry->hit_our, 
 			    &spi_in, entry->esp_transform,
 			    &entry->esp_in, &entry->auth_in, 1, 
-			    HIP_SPI_DIRECTION_IN, 0, 0,
-			    (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
-			    entry->peer_udp_port), -1, 
+			    HIP_SPI_DIRECTION_IN, 0, entry), -1, 
 		 "Error while changing inbound security association for new "\
 		 "preferred address\n");
      
@@ -2206,13 +2202,12 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
 				    &srcaddr, &destaddr, IPPROTO_ESP, 1, 0),
 	      -1, "Setting up SP pair failed\n");
 
-     HIP_IFEL(hip_add_sa(&srcaddr, &destaddr, 
-			 &entry->hit_our, &entry->hit_peer, 
-			 &entry->default_spi_out,
+     entry->local_udp_port = entry->nat_mode ? HIP_NAT_UDP_PORT : 0;
+     
+     HIP_IFEL(hip_add_sa(&srcaddr, &destaddr, &entry->hit_our,
+			 &entry->hit_peer, &entry->default_spi_out,
 			 entry->esp_transform, &entry->esp_out,
-			 &entry->auth_out, 1, HIP_SPI_DIRECTION_OUT, 0,  0,
-			 (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
-			 entry->peer_udp_port ), -1, 
+			 &entry->auth_out, 1, HIP_SPI_DIRECTION_OUT, 0, entry), -1, 
 	      "Error while changing outbound security association for new "\
 	      "preferred address\n");
 	
@@ -2233,8 +2228,7 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
 			 &entry->hit_peer, &entry->hit_our,
 			 &spi_in, entry->esp_transform,
 			 &entry->esp_in, &entry->auth_in, 1,
-			 HIP_SPI_DIRECTION_IN, 0,0, entry->peer_udp_port,
-			 (entry->nat_mode ? HIP_NAT_UDP_PORT : 0)), -1, 
+			 HIP_SPI_DIRECTION_IN, 0, entry), -1, 
 	      "Error while changing inbound security association for new "\
 	      "preferred address\n");
      
@@ -3036,6 +3030,7 @@ int hip_update_locator_parameter(hip_ha_t *entry,
  
 	HIP_INFO_LOCATOR("santtu: let's update locator:", locator);
  
+	entry->locator = locator;
  
 	old_spi = ntohl(esp_info->new_spi);
 	new_spi = ntohl(esp_info->new_spi);

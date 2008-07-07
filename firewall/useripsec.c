@@ -2,16 +2,10 @@
  * @author René Hummen
  */
 
-#include "useripsec.h"
 #include <sys/socket.h>		/* socket() */
-#include "misc.h"			/* hip conversion functions */
-#include "hip_esp.h"
-#include "utils.h"
 #include <sys/time.h>		/* timeval */
-#include <asm/types.h>		/* __u16, __u32, etc */
-#if 0
-#include "hashchain.h"
-#endif
+#include "useripsec.h"
+#include "misc.h"			/* hip conversion functions */
 
 #define ESP_PACKET_SIZE 2500
 // this is the maximum buffer-size needed for an userspace ipsec esp packet
@@ -20,7 +14,7 @@
 #define ESP_PACKET_SIZE (BUFSIZE + sizeof(struct udphdr) + sizeof(struct hip_esp) +
 				MAX_ESP_PADDING + sizeof(struct hip_esp_tail) + EVP_MAX_MD_SIZE)
 #endif
-
+				
 // this is the ESP packet we are about to build
 unsigned char *esp_packet = NULL;
 // the original packet before ESP encryption
@@ -29,21 +23,27 @@ unsigned char *decrypted_packet = NULL;
 int raw_sock_v4 = 0, raw_sock_v6 = 0;
 int is_init = 0;
 
-uint16_t checksum_magic(const struct in6_addr *initiator, const struct in6_addr *receiver);
-
 /* this will initialize the esp_packet buffer and the sockets,
  * they are not set yet */
 int userspace_ipsec_init()
 {	
-	int on = 1;
-	int err = 0;
+	int on = 1, err = 0;
+	extern int hip_esp_protection_extension;
 	
 	HIP_DEBUG("\n");
 	
 	if (!is_init)
 	{
+		// allocate memory for the packet buffers
 		HIP_IFE(!(esp_packet = (unsigned char *)malloc(ESP_PACKET_SIZE)), -1);
 		HIP_IFE(!(decrypted_packet = (unsigned char *)malloc(ESP_PACKET_SIZE)), -1);
+		
+		// also initialize the esp protection extension, if switched on
+		if (hip_esp_protection_extension)
+		{
+			HIP_DEBUG("initializing esp protection extension...\n");
+			HIP_IFEL(esp_prot_ext_init(), -1, "failed to init esp protection extension\n");
+		}
 		
 		// open IPv4 raw socket
 		raw_sock_v4 = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
@@ -125,13 +125,6 @@ out_err:
 
 }
 
-#if 0
-	// should be called from time to time
-	hip_remove_expired_lsi_entries();
-	hip_remove_expired_sel_entries();
-	/* TODO: implement SA timeout here */
-#endif
-
 /* prepares the environment for esp encryption */
 int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 {
@@ -156,6 +149,7 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	
 	HIP_DEBUG("original packet length: %u \n", ctx->ipq_packet->data_len);
 	HIP_HEXDUMP("original packet :", ctx->ipq_packet->payload, ctx->ipq_packet->data_len);
+	
 	struct ip6_hdr *ip6_hdr = (struct ip6_hdr *)ctx->ipq_packet->payload;
 	HIP_DEBUG("ip6_hdr->ip6_vfc: 0x%x \n", ip6_hdr->ip6_vfc);
 	HIP_DEBUG("ip6_hdr->ip6_plen: %u \n", ntohs(ip6_hdr->ip6_plen));
@@ -164,8 +158,6 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	
 	HIP_DEBUG_HIT("src_hit: ", &ctx->src);
 	HIP_DEBUG_HIT("dst_hit: ", &ctx->dst);
-
-	HIP_IFEL(userspace_ipsec_init(), -1, "failed to initialize userspace ipsec");
 	
 	// re-use allocated esp_packet memory space
 	memset(esp_packet, 0, ESP_PACKET_SIZE);
@@ -180,29 +172,21 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	// create new SA entry, if none exists yet
 	if (entry == NULL)
 	{
-			HIP_DEBUG("pfkey send acquire\n");
-			
-			// no SADB entry -> buffer triggering packet and send ACQUIRE
-			// FIXME checks for SA entry again
-			// TODO this will result in a SEGFAULT
-			//if (buffer_packet(&sockaddr_peer_hit, ctx->ipq_packet->payload, ctx->ipq_packet->data_len))
+		HIP_DEBUG("pfkey send acquire\n");
+	
+		/* no SADB entry -> trigger base exchange providing destination hit only */
+		HIP_IFEL(hip_trigger_bex(NULL, &ctx->dst, NULL, NULL, NULL, NULL), -1,
+			 "trigger bex\n");
 				
-				/* Trigger base exchange providing destination hit only */
-				HIP_IFEL(hip_trigger_bex(NULL, &ctx->dst, NULL, NULL, NULL, NULL), -1,
-					 "trigger bex\n");
-				
-			// as we don't buffer the packet right now, we have to drop it
-			// due to not routable addresses
-			err = 1;
+		// as we don't buffer the packet right now, we have to drop it
+		// due to not routable addresses
+		err = 1;
 			
-			// don't process this message any further
-			goto out_err;
+		// don't process this message any further
+		goto out_err;
 	}
 		
 	HIP_DEBUG("matching SA entry found\n");
-	
-	// unbuffer buffered packets -> re-injects original packets
-	//unbuffer_packets(entry);
 	
 	// get preferred routable addresses
 	HIP_IFE(get_preferred_sockaddr(entry->src_addrs, &preferred_local_sockaddr), -1);
@@ -248,7 +232,7 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 						hip_sockaddr_len(&preferred_peer_sockaddr));
 	
 	if (err < 0) {
-		HIP_DEBUG("hip_esp_output(): sendto() failed\n");
+		HIP_DEBUG("sendto() failed\n");
 	} else
 	{
 		HIP_DEBUG("new packet SUCCESSFULLY re-inserted into network stack\n");
@@ -271,6 +255,7 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 {
 	struct hip_esp *esp_hdr = NULL;
+	struct hip_esp_ext *esp_exthdr = NULL;
 	// entry matching the SPI
 	hip_sadb_entry *entry = NULL;
 	// return entry
@@ -287,20 +272,20 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	
 	// we should only get ESP packets here
 	HIP_ASSERT(ctx->packet_type == ESP_PACKET);
-	
-	HIP_IFEL(userspace_ipsec_init(), -1, "failed to initialize userspace ipsec\n");
-	
+
 	// re-use allocated decrypted_packet memory space
 	memset(decrypted_packet, 0, ESP_PACKET_SIZE);
 	gettimeofday(&now, NULL);
-	
-	// get ESP header of input packet, UDP encapsulation is handled in firewall already
+
+	/* get ESP header of input packet
+	 * UDP encapsulation is handled in firewall already */
 	esp_hdr = ctx->transport_hdr.esp;	
 	spi = ntohl(esp_hdr->esp_spi);
+	seq_no = ntohl(esp_hdr->esp_seq);
 	
 	// lookup corresponding SA entry by SPI
-	HIP_IFEL(!(entry = hip_sadb_lookup_spi(ntohl(esp_hdr->esp_spi))), -1,
-			"no SA entry found for SPI %u \n", ntohl(esp_hdr->esp_spi));
+	HIP_IFEL(!(entry = hip_sadb_lookup_spi(spi)), -1,
+			"no SA entry found for SPI %u \n", spi);
 	HIP_DEBUG("matching SA entry found\n");
 	
 	// do a partial consistency check of the entry
@@ -309,66 +294,17 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	// TODO implement check with seq window
 	// check for correct SEQ no.
 	HIP_DEBUG("SEQ no. of entry: %u \n", entry->sequence);
-	seq_no = ntohl(esp_hdr->esp_seq);
 	HIP_DEBUG("SEQ no. of incoming packet: %u \n", seq_no);
 	//HIP_IFEL(entry->sequence != seq_no, -1, "ESP sequence numbers do not match\n");
 	
-#if 0
-	// TODO verify hchain-elements
-	HIP_DEBUG("verifying hash chain element for incoming packet...\n");
+	// verify the esp extension hash, if in use
+	HIP_IFEL(verify_esp_prot_hash(entry, ((unsigned char *)esp_hdr) + sizeof(struct hip_esp)),
+			-1, "hash could not be verified");
 	
-	hash = ntohl(esp_hdr->hc_element);
-	// sent_hc_element = (unsigned char*) &hash;
-	sent_hc_element = (unsigned char*) malloc(HCHAIN_ELEMENT_LENGTH);
-	memcpy(sent_hc_element, &hash, HCHAIN_ELEMENT_LENGTH);
-	
-	if (hchain_verify(sent_hc_element, entry->active_anchor, entry->tolerance))
-	{
-		// memcpy(entry->active_anchor, sent_hc_element, HCHAIN_ELEMENT_LENGTH);
-		free(entry->active_anchor);
-		// this will allow only increasing elements to be accepted
-		entry->active_anchor = sent_hc_element;
-		HIP_DEBUG("hash-chain element correct!\n");
-	} else
-	{
-		if (hchain_verify(sent_element, entry->next_anchor, entry->tolerance))
-		{
-			// TODO change handling of new hchains
-			// there was an implicit change to the next hchain
-			free(entry->active_anchor);
-			entry->active_anchor = entry->next_anchor;
-			entry->next_anchor = (unsigned char*)malloc(HCHAIN_ELEMENT_LENGTH);
-			memcpy(entry->next_anchor, entry->active_anchor, HCHAIN_ELEMENT_LENGTH);	
-		} else
-		{
-			// handle incorrect elements -> drop packet
-			HIP_DEBUG("ERROR invalid hash-chain element!\n");
-			HIP_DEBUG("dropping packet...!\n");
-			
-			free(sent_element);
-			
-			err = 1;
-			goto out_err;
-		}
-	}
-#endif
-
 	// check if we have a SA entry to reply to
 	HIP_IFEL(!(inverse_entry = hip_sadb_lookup_addr(
 		(struct sockaddr *)&entry->inner_src_addrs->addr)), 1,
 		"corresponding sadb entry for outgoing packets not found\n");
-
-// TODO check where we set the UDP dst port
-#if 0
-	/*HIP_DEBUG ( "DST_PORT = %u\n", 
-	 * inverse_entry->dst_port);*/
-	if (inverse_entry->dst_port == 0) {
-		HIP_DEBUG ("ESP channel - Setting dst_port "
-			"to %u\n",ntohs(udph->source));
-		inverse_entry->dst_port = ntohs(udph->source);
-	}
-	// TODO handle else case
-#endif
 	
 	// convert HITs to type used in hipl	
 	HIP_IFE(cast_sockaddr_to_in6_addr(&entry->inner_src_addrs->addr, &src_hit), -1);
@@ -418,25 +354,26 @@ int hipl_userspace_ipsec_sadb_add_wrapper(struct in6_addr *saddr,
 					      struct in6_addr *daddr,
 					      struct in6_addr *src_hit, 
 					      struct in6_addr *dst_hit,
-					      uint32_t *spi, int ealg,
-					      struct hip_crypto_key *enckey,
+					      uint32_t spi, uint8_t nat_mode,
+					      uint16_t local_port,
+					      uint16_t peer_port,
+					      uint8_t esp_prot_transform,
+					      unsigned char *esp_prot_anchor,
+					      int ealg, struct hip_crypto_key *enckey,
 					      struct hip_crypto_key *authkey,
 					      int already_acquired,
-					      int direction, int update,
-					      int sport, int dport) 
+					      int direction, int update) 
 {
-	__u16 hit_magic = 0;
-	__u8 *ipsec_e_key = NULL; 
-	__u8 *ipsec_a_key = NULL;
-	__u32 ipsec_e_keylen = 0; 
-	__u32 ipsec_a_keylen = 0;
+	uint16_t hit_magic = 0;
+	uint8_t *ipsec_e_key = NULL; 
+	uint8_t *ipsec_a_key = NULL;
+	uint32_t ipsec_e_keylen = 0; 
+	uint32_t ipsec_a_keylen = 0;
 	/*HIT address,  inner addresses*/
 	struct sockaddr_storage inner_src, inner_dst; 
 	struct sockaddr_storage src, dst; /* IP address*/
-	__u32 ipsec_spi = (__u32) *spi; /*IPsec SPI*/
-	__u32 ipsec_e_type = 0; /* encryption type */
-	__u32 ipsec_a_type = 0; /* authentication type is equal to encryption type */
-	int encap_mode = 0; /* 0 - none, 1 - udp */
+	uint32_t ipsec_e_type = 0; /* encryption type */
+	uint32_t ipsec_a_type = 0; /* authentication type is equal to encryption type */
 	int err = 0;
 
 	/* MAP HIP ESP encryption INDEX to SADB encryption INDEX */
@@ -458,12 +395,11 @@ int hipl_userspace_ipsec_sadb_add_wrapper(struct in6_addr *saddr,
 	ipsec_a_keylen = hip_auth_key_length_esp(ealg);
 	ipsec_e_keylen = hip_enc_key_length(ealg);
 	
-	ipsec_e_key = (__u8 *) enckey->key;
-	ipsec_a_key = (__u8 *) authkey->key;
+	ipsec_e_key = (uint8_t *) enckey->key;
+	ipsec_a_key = (uint8_t *) authkey->key;
 	
 	HIP_HEXDUMP("auth key: ", ipsec_a_key, ipsec_a_keylen);
 	HIP_HEXDUMP("enc key: ", ipsec_e_key, ipsec_e_keylen);
-	
 	
 	HIP_DEBUG_HIT("source hit: ", src_hit);
 	HIP_DEBUG_IN6ADDR("source ip: ", saddr);
@@ -475,11 +411,6 @@ int hipl_userspace_ipsec_sadb_add_wrapper(struct in6_addr *saddr,
 	hip_addr_to_sockaddr(daddr, &dst); /* destination ip address conversion */
 	hip_addr_to_sockaddr(src_hit, &inner_src); /* source HIT conversion */
 	hip_addr_to_sockaddr(dst_hit, &inner_dst); /* destination HIT conversion */
-	
-	/* if one of the ports is not 0, we can assume that the bex was done
-	 * with udp encap */
-	if (sport != 0 || dport != 0)
-		encap_mode = 1;
 	
 	/* hit_magic is the 16-bit sum of the bytes of both HITs. 
 	 * the checksum is calculated as other Internet checksum, according to 
@@ -497,21 +428,13 @@ int hipl_userspace_ipsec_sadb_add_wrapper(struct in6_addr *saddr,
 	 * 
 	 * Here just give a value 100 to lifetime
 	 * */
-	err = hip_sadb_add(TYPE_USERSPACE_IPSEC, IPSEC_MODE, (struct sockaddr *) &inner_src,
-			(struct sockaddr *) &inner_dst, (struct sockaddr *) &src, (struct sockaddr *) &dst,
-			(__u16) sport, (__u16) dport, direction, ipsec_spi, ipsec_e_key, ipsec_e_type,
-			ipsec_e_keylen, ipsec_a_key, ipsec_a_type, ipsec_a_keylen, 100 , hit_magic, encap_mode);
+	HIP_IFEL(hip_sadb_add(TYPE_USERSPACE_IPSEC, IPSEC_MODE, (struct sockaddr *) &inner_src,
+			(struct sockaddr *) &inner_dst, (struct sockaddr *) &src,
+			(struct sockaddr *) &dst, local_port, peer_port, direction, spi, ipsec_e_key,
+			ipsec_e_type, ipsec_e_keylen, ipsec_a_key, ipsec_a_type, ipsec_a_keylen, 100 ,
+			hit_magic, nat_mode, esp_prot_transform, esp_prot_anchor), -1,
+			"HIP user_space IPsec security association DB add is not successful\n");
 	
-	// Tell firewall that HIT SRC + DST HAS A SECURITY ASSOCIATION
-	HIP_DEBUG("HIP IPsec userspace SA add return value %d\n", err);
-
-	if(err == -1)
-	{
-		
-		HIP_ERROR("HIP user_space IPsec security association DB add is not successful\n");
-		goto out_err;
-		
-	} 	
 	HIP_DEBUG(" HIP user space IPsec security sadb is done \n\n");
 
  out_err:
@@ -625,4 +548,39 @@ int cast_sockaddr_to_in6_addr(struct sockaddr_storage *sockaddr, struct in6_addr
 	
   out_err:
   	return err;
+}
+
+int send_userspace_ipsec_to_hipd(int activate)
+{
+	int err = 0;
+	struct hip_common *msg = NULL;
+	
+	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1,
+		 "alloc memory for adding sa entry\n");
+	
+	hip_msg_init(msg);
+	
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_USERSPACE_IPSEC, 0), -1, 
+		 "build hdr failed\n");
+	
+	HIP_IFEL(hip_build_param_contents(msg, (void *)&activate, HIP_PARAM_INT,
+					  sizeof(unsigned int)), -1,
+					  "build param contents failed\n");
+	
+	HIP_DEBUG("sending userspace ipsec activation to hipd...\n");
+	HIP_DUMP_MSG(msg);
+	
+	/* send msg to hipd and receive corresponding reply */
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send_recv msg failed\n");
+
+	/* check error value */
+	HIP_IFEL(hip_get_msg_err(msg), -1, "hipd returned error message!\n");
+	
+	HIP_DEBUG("send_recv msg succeeded\n");
+	HIP_DEBUG("userspace ipsec activated\n");
+	
+ out_err:
+	if (msg)
+		free(msg);
+	return err;
 }

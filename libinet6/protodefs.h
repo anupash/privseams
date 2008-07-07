@@ -5,6 +5,8 @@
 #ifndef _HIP_PROTODEFS
 #define _HIP_PROTODEFS
 
+#include "hashchain.h"
+
 #define HIP_MAX_PACKET 2048
 
 /** @addtogroup hip_msg
@@ -70,12 +72,14 @@
 #define HIP_PARAM_CERT                 768
 #define HIP_PARAM_NOTIFICATION         832
 #define HIP_PARAM_ECHO_REQUEST_SIGN    897
-#define HIP_PARAM_REG_INFO	       930
+#define HIP_PARAM_REG_INFO	       	   930
 #define HIP_PARAM_REG_REQUEST	       932
 #define HIP_PARAM_REG_RESPONSE	       934
 #define HIP_PARAM_REG_FAILED	       936
 #define HIP_PARAM_ECHO_RESPONSE_SIGN   961
 #define HIP_PARAM_ESP_TRANSFORM        4095
+#define HIP_PARAM_ESP_PROT_TRANSFORM   4120
+#define HIP_PARAM_ESP_PROT_ANCHOR	   4121
 
 /* Range 32768 - 49141 can be used for HIPL private parameters i.e. to
    parameters passed from hipconf to hipdaemon. */
@@ -110,6 +114,7 @@
 #define HIP_PARAM_ADD_HIT		32800
 #define HIP_PARAM_ADD_OPTION		32801
 #define HIP_PARAM_PEER_HIT		32802
+#define HIP_PARAM_HCHAIN_ANCHOR			32803
 
 /* End of HIPL private parameters. */
 
@@ -385,6 +390,18 @@ struct hip_keymat_keymat
 	void *keymatdst;  /**< Pointer to beginning of key material */
 };
 
+struct esp_prot_transform {
+	hip_tlv_type_t     type;
+	hip_tlv_len_t      length;
+	uint8_t     	   transform;
+} __attribute__ ((packed));
+
+struct esp_prot_anchor {
+	hip_tlv_type_t     type;
+	hip_tlv_len_t      length;
+	unsigned char  	   anchor[MAX_HASH_LENGTH];
+} __attribute__ ((packed));
+
 /**
  * Used in executing a unit test case in a test suite in the kernel module.
  */
@@ -477,7 +494,7 @@ struct sockaddr_eid {
  * Use accessor functions defined in builder.c, do not access members
  * directly to avoid hassle with byte ordering and number conversion.
  */
-struct hip_common {
+struct hip_common { 
 	uint8_t      payload_proto;
 	uint8_t      payload_len;
 	uint8_t      type_hdr;

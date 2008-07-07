@@ -1,3 +1,8 @@
+/** @file
+ *
+ * @note: HIPU: libinet6 requires LD_PRELOAD which is "dylib" on BSD.
+ */
+
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>

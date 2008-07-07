@@ -1655,7 +1655,33 @@ uint32_t hip_hadb_get_latest_inbound_spi(hip_ha_t *entry)
 	_HIP_DEBUG("newest spi_in is 0x%x\n", spi);
 	return spi;
 }
+//add by santtu
+/* todo: use jiffies instead of timestamp */
+uint32_t hip_hadb_get_outbound_spi(hip_ha_t *entry)
+{
+	hip_list_t *item, *tmp;
+	struct hip_spi_out_item *spi_item;
+	uint32_t spi = 0;
+	unsigned int now = jiffies;
+	unsigned long t = ULONG_MAX;
+	int i;
 
+	/* assumes already locked entry */
+	
+	list_for_each_safe(item, tmp, entry->spis_out, i)
+	{
+		spi_item = list_entry(item);
+		
+		spi = spi_item->spi;
+		
+		break;
+		
+	}
+	
+	_HIP_DEBUG("newest spi_in out 0x%x\n", spi);
+	return spi;
+}
+//end add
 /* get pointer to the outbound SPI list or NULL if the outbound SPI
    list does not exist */
 struct hip_spi_out_item *hip_hadb_get_spi_list(hip_ha_t *entry, uint32_t spi)
@@ -1703,6 +1729,9 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 			     int is_bex_address, uint32_t lifetime,
 			     int is_preferred_addr)
 {
+	
+	
+	HIP_DEBUG("old hip_hadb_add_udp_addr_to_spi\n");
 	return  hip_hadb_add_udp_addr_to_spi(entry, spi, addr, is_bex_address, 
 			lifetime, is_preferred_addr, 0, HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY);
 	//remove by santtu
@@ -2916,10 +2945,13 @@ int hip_hadb_add_udp_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 	list_for_each_safe(item, tmp, spi_list->peer_addr_list, i)
 	{
 		a = list_entry(item);
-		if (!ipv6_addr_cmp(&a->address, addr) && a->port == port)
+		if ((!ipv6_addr_cmp(&a->address, addr) )&& a->port == port)
 		{
 			// Do we send a verification if state is unverified?
 			// The address should be awaiting verifivation already
+			HIP_DEBUG_HIT("found address: ",&a->address);
+			HIP_DEBUG("found port: %d\n",a->port );
+			
 			new_addr = a;
 			new = 0;
 			break;
@@ -2992,10 +3024,15 @@ int hip_hadb_add_udp_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 		} else {
 			HIP_DEBUG("address's state is set in state UNVERIFIED\n");
 			new_addr->address_state = PEER_ADDR_STATE_UNVERIFIED;
-			err = entry->hadb_update_func->hip_update_send_echo(entry, spi, new_addr);
- 
-			/** @todo: check! If not acctually a problem (during Handover). Andrey. */
-			if( err==-ECOMM ) err = 0;
+//modify by santtu		
+			if(entry->nat_control == 0){
+				
+				err = entry->hadb_update_func->hip_update_send_echo(entry, spi, new_addr);
+	 
+				/** @todo: check! If not acctually a problem (during Handover). Andrey. */
+				if( err==-ECOMM ) err = 0;
+			}
+//end modify
 		}
 		//}
 
@@ -3004,10 +3041,13 @@ int hip_hadb_add_udp_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 	if(is_preferred_addr){
             //HIP_DEBUG("Since the address is preferred, we set the entry preferred_address as such\n");
               ipv6_addr_copy(&entry->preferred_address, &new_addr->address);
+              entry->peer_udp_port = new_addr->port;
 	}
 	if (new) {
 		HIP_DEBUG("adding new addr to SPI list\n");
 		list_add(new_addr, spi_list->peer_addr_list);
+		
+		HIP_DEBUG("new peer list item address: %d ",new_addr);
 	}
 
  out_err:

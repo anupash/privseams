@@ -153,10 +153,9 @@
 #define SO_HIP_I1_REJECT                        127
 #define SO_HIP_UPDATE_HIU                       128
 #define SO_HIP_SET_NAT_PLAIN_UDP                129
-#define SO_HIP_SET_NAT_ON                       129 // XX FIXME: REMOVE
-#define SO_HIP_SET_NAT_PLAIN_UDP                129
+#define SO_HIP_SET_NAT_ON                     SO_HIP_SET_NAT_PLAIN_UDP
 #define SO_HIP_SET_NAT_NONE                     130
-#define SO_HIP_SET_NAT_OFF                      130 // XX FIXME: REMOVE
+#define SO_HIP_SET_NAT_OFF                      SO_HIP_SET_NAT_NONE // XX FIXME: REMOVE
 #define SO_HIP_SET_HIPPROXY_ON		      	131
 #define SO_HIP_SET_HIPPROXY_OFF			132
 #define SO_HIP_GET_PROXY_LOCAL_ADDRESS		133
@@ -171,13 +170,17 @@
 #define SO_HIP_CERT_SPKI_VERIFY                 142
 #define SO_HIP_CERT_X509V3_SIGN                 143
 #define SO_HIP_CERT_X509V3_VERIFY               144
-#define SO_HIP_PARAM_LSI			145
-#define SO_HIP_GET_LSI_PEER                     146
-#define SO_HIP_GET_LSI_OUR			147
-#define SO_HIP_IS_OUR_LSI                       148
-#define SO_HIP_ADD_PEER_MAP_HIT_IP_LSI          149
-#define SO_HIP_FIREWALL_BEX_DONE                150
-#define SO_HIP_GET_PEER_HIT_BY_LSIS             151
+#define SO_HIP_USERSPACE_IPSEC			145
+#define SO_HIP_ESP_PROT_EXT_TRANSFORM		146
+#define SO_HIP_IPSEC_UPDATE_ANCHOR_LIST		147
+#define SO_HIP_IPSEC_NEXT_ANCHOR		148
+#define SO_HIP_PARAM_LSI			149
+#define SO_HIP_GET_LSI_PEER                     150
+#define SO_HIP_GET_LSI_OUR			151
+#define SO_HIP_IS_OUR_LSI                       152
+#define SO_HIP_ADD_PEER_MAP_HIT_IP_LSI          153
+#define SO_HIP_FIREWALL_BEX_DONE                154
+#define SO_HIP_GET_PEER_HIT_BY_LSIS             155
 /** @} */
 /* inclusive */
 #define HIP_SO_ROOT_MAX 			255
