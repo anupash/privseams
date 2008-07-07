@@ -126,10 +126,16 @@ int hip_handle_user_msg(struct hip_common *msg,
 		HIP_IFEL(hip_nat_off(), -1, "Error when setting daemon NAT status to \"off\"\n");
 		hip_agent_update_status(SO_HIP_SET_NAT_OFF, NULL, 0);
 		break;
-#endif
-	case SO_HIP_SET_NAT_PLAIN_UDP:
+#endif		
 	case SO_HIP_SET_NAT_ICE_UDP:
+		HIP_DEBUG("Setting LOCATOR ON, when ice is on\n");
+        hip_locator_status = SO_HIP_SET_LOCATOR_ON;
+        HIP_DEBUG("hip_locator status =  %d (should be %d)\n", 
+                  hip_locator_status, SO_HIP_SET_LOCATOR_ON);
+        HIP_DEBUG("Recreate all R1s\n");
+        hip_recreate_all_precreated_r1_packets();
 	case SO_HIP_SET_NAT_NONE:
+	case SO_HIP_SET_NAT_PLAIN_UDP:
 		HIP_IFEL(hip_user_nat_mode(msg_type), -1, "Error when setting daemon NAT status to \"on\"\n");
 		hip_agent_update_status(msg_type, NULL, 0);
 		break;
