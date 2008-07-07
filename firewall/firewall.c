@@ -780,7 +780,7 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version)
 		} else
 		{
 			// only UDP header + payload < 32 bit -> neither HIP nor ESP
-			HIP_DEBUG("UDP packet with <32 bit payload\n");
+			HIP_DEBUG("UDP packet with < 32 bit payload\n");
 			
 			goto end_init;
 		}
@@ -812,7 +812,8 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version)
 			
 			goto end_init;
 		}
-		HIP_DEBUG("FIXME zero bytes recognition obviously not working\n");
+		HIP_ERROR("communicating with BROKEN peer implementation of UDP encapsulation,"
+				" found zero bytes when receiving HIP control message\n");
 	}
 	
 	// ESP does not have zero bytes (IPv4 only right now)
