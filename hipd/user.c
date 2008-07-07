@@ -473,10 +473,12 @@ int hip_handle_user_msg(struct hip_common *msg,
 							   HIP_PARAM_IPV6_ADDR)),
 			 -1, "no ip found\n");
 		HIP_IFEL(hip_add_peer_map(msg), -1, "add escrow map\n");
-		HIP_IFEL(hip_for_each_hi(hip_kea_create_base_entry, dst_hit), 0,
-			 "for_each_hi err.\n");	
-		HIP_DEBUG("Added kea base entry.\n");
 		
+		/* Create a KEA base entry. */
+		HIP_IFEL(hip_for_each_hi(hip_kea_create_base_entry, dst_hit), 0,
+			 "Error when doing hip_kea_create_base_entry() for "\
+			 "each HI.\n");	
+				
 		/* Set a escrow request flag. Should this be done for every entry? */
 		hip_hadb_set_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_ESCROW);
 		
@@ -552,7 +554,7 @@ int hip_handle_user_msg(struct hip_common *msg,
 		   of the server handles this message. Message indicates that
 		   the hip daemon wants either to register to a server for
 		   additional services or it wants to cancel a registration.
-		   Cancellation is indentified by a zero lifetime*/
+		   Cancellation is identified with a zero lifetime. */
 		HIP_DEBUG("Handling ADD DEL SERVER user message.\n");
 
 		struct hip_reg_request *reg_req = NULL;
@@ -634,6 +636,15 @@ int hip_handle_user_msg(struct hip_common *msg,
 			case HIP_SERVICE_ESCROW:
 				hip_hadb_set_local_controls(
 					entry, HIP_HA_CTRL_LOCAL_REQ_ESCROW);
+				/* Cancel registration to the escrow service. */
+				if(reg_req->lifetime == 0) {
+
+				}
+				/* Register to the escrow service. */
+				else {
+					
+				}
+
 				break;
 			default:
 				HIP_INFO("Undefined service type (%u) "\
@@ -646,9 +657,15 @@ int hip_handle_user_msg(struct hip_common *msg,
 		}
 
 		/* Send a I1 packet to the server (registrar). */
-		/** @todo Not filtering I1, when handling server message! */
-		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
-			 -1, "Error on sending I1 packet to the server.\n");
+		/** @todo When registering or cancelling a service, we should
+		    first check the state of the host association that is
+		    registering. When it is ESTABLISHED or R2-SENT, we have
+		    already successfully carried out a base exchange and we
+		    must use an UPDATE packet to carry a REG_REQUEST parameter.
+		    When the state is anything else, we launch a base exchange
+		    using an I1 packet. */
+		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry), -1,
+			 "Error on sending I1 packet to the server.\n");
 		break;
 	}
 	case SO_HIP_OFFER_RVS:
