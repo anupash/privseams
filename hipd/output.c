@@ -493,7 +493,6 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	int err = 0, dh_size1 = 0, dh_size2 = 0, written1 = 0, written2 = 0;
 	int mask = 0, l = 0, is_add = 0, ii = 0, *list = NULL;
 	unsigned int service_count = 0;
-	extern uint8_t hip_esp_prot_ext_transform;
 
 	/* Supported HIP and ESP transforms. */
 	hip_transform_suite_t transform_hip_suite[] = {
@@ -603,7 +602,10 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
         }
 #endif
 #ifdef HIP_USE_ICE
-        hip_build_param_nat_tranform(msg, hip_nat_get_control());
+	{	
+		hip_transform_suite_t suite = hip_nat_get_control();
+		hip_build_param_nat_tranform(msg, suite);
+	}
 #endif
  	/********** PUZZLE ************/
 	HIP_IFEL(hip_build_param_puzzle(msg, cookie_k,
@@ -653,35 +655,8 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
  	
  	/********** ESP-PROT transform (OPTIONAL) **********/
  	
- 	/* only supported in usermode and optional there
- 	 * 
- 	 * add the transform only when usermode is active */
- 	HIP_DEBUG("hip_use_userspace_ipsec is %i\n", hip_use_userspace_ipsec);
- 	if (hip_use_userspace_ipsec)
- 	{
- 		HIP_DEBUG("userspace IPsec hint: esp protection extension might be in use\n");
- 		
- 		if (hip_esp_prot_ext_transform > ESP_PROT_TRANSFORM_UNUSED)
- 		{
-	 		/* the extension is switched on */
- 			HIP_IFEL(hip_build_param_esp_prot_transform(msg,
- 					HIP_PARAM_ESP_PROT_TRANSFORM, hip_esp_prot_ext_transform), -1, 
- 					"Building of ESP protection mode failed\n");
- 			
- 			HIP_DEBUG("added esp protection transform: %u, \n",
- 					hip_esp_prot_ext_transform);
- 		} else
- 		{	
- 			HIP_IFEL(hip_build_param_esp_prot_transform(msg,
- 					HIP_PARAM_ESP_PROT_TRANSFORM, ESP_PROT_TRANSFORM_UNUSED), -1, 
- 					"Building of ESP protection mode failed\n");
- 			
- 			HIP_DEBUG("esp protection extension not active, sending UNUSED\n");
- 		}
- 	} else
- 	{
- 		HIP_DEBUG("userspace IPsec hint: esp protection extension UNUSED, nothing added\n");
- 	}
+ 	HIP_IFEL(add_esp_prot_transform_to_r1(msg), -1,
+ 			"failed to add optional esp transform parameter\n");
 
 	/********** REG_INFO *********/
 	hip_get_active_services(service_list, &service_count);
@@ -1590,3 +1565,5 @@ int hip_send_i3(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	return err;
 }
 #endif
+
+

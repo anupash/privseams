@@ -1,4 +1,4 @@
-#include "hchain_anchordb.h"
+#include "esp_prot_anchordb.h"
 #include "linkedlist.h"
 
 hip_ll_t anchor_list;
@@ -61,14 +61,21 @@ int has_more_anchors()
 }
 
 /* gets the first element of the list into the supplied buffer */
-int get_next_anchor(unsigned char *anchor)
+unsigned char * get_next_anchor()
 {
+	unsigned char *return_anchor = NULL;
 	int err = 0;
-	anchor = NULL;
 	
-	HIP_IFEL(!(anchor = (unsigned char *)hip_ll_del_first(&anchor_list, NULL)), -1,
+	HIP_IFEL(!(return_anchor = (unsigned char *)hip_ll_del_first(&anchor_list, NULL)), -1,
 			"failed to retrieve anchor\n");
 	
   out_err:
-  	return err;
+  	if (err)
+  	{
+  		if (return_anchor)
+  			free(return_anchor);
+  		return_anchor = NULL;
+  	}
+  	
+  	return return_anchor;
 }

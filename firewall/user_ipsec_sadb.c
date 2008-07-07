@@ -19,24 +19,10 @@
  * the HIP Security Association database
  *
  */
+#include "user_ipsec_sadb.h"
+#include "esp_prot_common.h"
+#include "misc.h"
 
-#include <stdio.h>	/* printf() */
-#include <stdlib.h>	/* malloc() */
-#include <string.h>	/* memset() */
-#include <unistd.h>	/* write() */
-#include <sys/errno.h>  /* errno */
-#include <sys/time.h>	/* gettimeofday() */
-#include <netinet/ip.h> /* struct ip */
-#include <netinet/ip6.h> /* struct ip6_hdr */
-#include <netinet/tcp.h> /* struct tcphdr */
-#include <netinet/udp.h> /* struct udphdr */
-//#include <hip/hip_service.h>
-//#include <hip/hip_types.h>
-#include "hip_sadb.h"
-//#include <hip/hip_funcs.h> /* gettimeofday() for win32 */
-#include "win32-pfkeyv2.h"
-#include "state.h"
-#include "esp_prot_ext.h"
 /*
  * Globals
  */

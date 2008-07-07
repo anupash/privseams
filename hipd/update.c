@@ -788,8 +788,9 @@ int hip_update_finish_rekeying(hip_common_t *msg, hip_ha_t *entry,
 	/** @todo Currently NULLing the stateless info. Send port info through
 	    entry parameter --Abi */
 	entry->local_udp_port = entry->nat_mode ? HIP_NAT_UDP_PORT : 0;
+
 	err = hip_add_sa(&entry->preferred_address, &entry->local_address, hits,
-			 hitr, &new_spi_in, esp_transform,
+			 hitr,  &new_spi_in, esp_transform,
 			 (we_are_HITg ? &espkey_lg : &espkey_gl),
 			 (we_are_HITg ? &authkey_lg : &authkey_gl),
 			 1, HIP_SPI_DIRECTION_IN, 0, entry);
@@ -1075,9 +1076,12 @@ int hip_update_send_addr_verify_packet(hip_ha_t *entry,
 	 * 	 else 
 	 * 	 	verify only unverified addresses
 	 */
-	return hip_update_send_addr_verify_packet_all(entry, addr, spi_out,
+//modify by sanntu when ice is choosen, not update message is needed
+	if(entry->nat_control == 0)
+		return hip_update_send_addr_verify_packet_all(entry, addr, spi_out,
 						      src_ip, 0);
-
+	else return 0;
+//end modify
 }
 
 int hip_update_send_addr_verify_packet_all(hip_ha_t *entry,
@@ -3026,6 +3030,7 @@ int hip_update_locator_parameter(hip_ha_t *entry,
  
 	HIP_INFO_LOCATOR("santtu: let's update locator:", locator);
  
+	entry->locator = locator;
  
 	old_spi = ntohl(esp_info->new_spi);
 	new_spi = ntohl(esp_info->new_spi);

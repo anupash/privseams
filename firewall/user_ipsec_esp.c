@@ -23,27 +23,12 @@
  * @note HIPU: The userspace IPsec must be used.
  */
 
-#include "hip_esp.h"
+#include "user_ipsec_esp.h"
+#include "esp_prot.h"
 #include "utils.h"
-#include "esp_prot_ext.h"
 
+// for some reason the ICV for ESP authentication is truncated to 12 bytes
 #define ICV_LENGTH 12
-
-int hip_esp_encrypt(unsigned char *in, uint8_t in_type, int in_len,
-		unsigned char *out, int *out_len, hip_sadb_entry *entry);
-int hip_esp_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8_t *out_type,
-		int *out_len, hip_sadb_entry *entry);
-void add_ipv4_header(struct ip *ip_hdr, struct in6_addr *src_addr, struct in6_addr *dst_addr,
-		int packet_len, uint8_t next_hdr);
-void add_ipv6_header(struct ip6_hdr *ip6_hdr, struct in6_addr *src_addr, struct in6_addr *dst_addr,
-		int packet_len, uint8_t next_hdr);
-void add_udp_header(struct udphdr *udp_hdr, int packet_len, hip_sadb_entry *entry,
-		struct in6_addr *src_addr, struct in6_addr *dst_addr);
-uint16_t checksum_ip(struct ip *ip_hdr, unsigned int ip_hl);
-uint16_t checksum_udp(struct udphdr *udp_hdr, struct in6_addr *src_addr,
-		struct in6_addr *dst_addr);
-
-extern int hip_esp_protection_extension;
 
 /*
  * hip_esp_output()
@@ -55,7 +40,7 @@ extern int hip_esp_protection_extension;
 
 /* - encrypt payload
  * - set up other headers */
-int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
+int hip_beet_mode_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 		struct in6_addr *preferred_local_addr, struct in6_addr *preferred_peer_addr,
 		unsigned char *esp_packet, int *esp_packet_len)
 {
@@ -134,7 +119,7 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 		 * behind the ESP header
 		 * 
 		 * NOTE: we are implicitely passing the previously set up ESP header */
-		HIP_IFEL(hip_esp_encrypt(in_transport_hdr, in_transport_type, elen,
+		HIP_IFEL(hip_payload_encrypt(in_transport_hdr, in_transport_type, elen,
 				      esp_packet + next_hdr_offset, &encryption_len, entry),
 				      -1, "failed to encrypt data");
 		
@@ -204,7 +189,7 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 		 * behind the ESP header
 		 * 
 		 * NOTE: we are implicitely passing the previously set up ESP header */
-		HIP_IFEL(hip_esp_encrypt(in_transport_hdr, in_transport_type, elen,
+		HIP_IFEL(hip_payload_encrypt(in_transport_hdr, in_transport_type, elen,
 				      esp_packet + next_hdr_offset, &encryption_len, entry), -1,
 				      "failed to encrypt data");
 		
@@ -229,7 +214,7 @@ int hip_esp_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
  * them, adding HIT or LSI headers and sending them out the TAP-Win32 interface.
  * Also, expires temporary LSI entries and retransmits buffered packets.
  */
-int hip_esp_input(hip_fw_context_t *ctx, hip_sadb_entry *entry,
+int hip_beet_mode_input(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 		struct in6_addr *src_hit, struct in6_addr *dst_hit,
 		unsigned char *decrypted_packet, int *decrypted_packet_len)
 {
@@ -261,7 +246,7 @@ int hip_esp_input(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 	
 	HIP_DEBUG("decrypting ESP packet...\n");
 	
-	HIP_IFEL(hip_esp_decrypt((unsigned char *)ctx->transport_hdr.esp, esp_len,
+	HIP_IFEL(hip_payload_decrypt((unsigned char *)ctx->transport_hdr.esp, esp_len,
 			decrypted_packet + next_hdr_offset, &next_hdr,
 			&decrypted_data_len, entry), -1, "ESP decryption is not successful\n");
 	
@@ -293,7 +278,7 @@ int hip_esp_input(hip_fw_context_t *ctx, hip_sadb_entry *entry,
  * 
  * Perform actual ESP encryption and authentication of packets.
  */
-int hip_esp_encrypt(unsigned char *in, uint8_t in_type, int in_len,
+int hip_payload_encrypt(unsigned char *in, uint8_t in_type, int in_len,
 		unsigned char *out, int *out_len, hip_sadb_entry *entry)
 {
 	/* elen is length of data to encrypt */
@@ -521,7 +506,7 @@ int hip_esp_encrypt(unsigned char *in, uint8_t in_type, int in_len,
  * 
  * Perform authentication and decryption of ESP packets.
  */
-int hip_esp_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8_t *out_type,
+int hip_payload_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8_t *out_type,
 		int *out_len, hip_sadb_entry *entry)
 {
 	/* elen is length of data to encrypt */

@@ -20,8 +20,8 @@
  *
  */
 
-#ifndef HIP_SADB_H_
-#define HIP_SADB_H_
+#ifndef USER_IPSEC_SADB_H_
+#define USER_IPSEC_SADB_H_
 
 #include <asm/types.h>		/* __u16, __u32, etc */
 #include <sys/types.h>		/* for socket.h */
@@ -30,8 +30,6 @@
 #include <openssl/des.h>	/* des_key_schedule */
 #include <openssl/aes.h>	/* aes_key */
 #include <openssl/blowfish.h>	/* bf_key */
-//#include "hip_usermode.h"
-//#include "utils.h"
 #include <sys/time.h>		/* timeval */
 #include "debug.h"
 #include "hashchain.h"
@@ -188,5 +186,5 @@ int hip_add_proto_sel_entry(__u32 lsi, __u8 proto, __u8 *header, int family,
         int dir, struct timeval *now);
 void hip_remove_expired_sel_entries();
 
-#endif /* HIP_SADB_H_ */
+#endif /* USER_IPSEC_SADB_H_ */
 

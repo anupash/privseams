@@ -1,31 +1,86 @@
-#include "ipsec_userspace_api.h"
-#include "esp_prot_ext.h"
+#include "user_ipsec_hipd_msg.h"
 
-int hip_firewall_sock_fd = -1;
-
-/* hipd sends a packet to the firewall making it add a new sa entry
- * 
- * this function is called by hip daemon */
-uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr, 
-				    struct in6_addr *daddr,
-				    struct in6_addr *src_hit, 
-				    struct in6_addr *dst_hit,
-				    uint32_t *spi, int ealg,
-				    struct hip_crypto_key *enckey,
-				    struct hip_crypto_key *authkey,
-				    int retransmission,
-				    int direction, int update,
-				    hip_ha_t *entry) {
+int hip_userspace_ipsec_activate(struct hip_common *msg)
+{
+	struct hip_tlv_common *param = NULL;
+	int err = 0, activate = 0;
 	
+	// process message and store anchor elements in the db
+	param = (struct hip_tlv_common *)hip_get_param(msg, HIP_PARAM_INT);
+	activate = *((int *)hip_get_param_contents_direct(param));
+	
+	// set global variable
+	hip_use_userspace_ipsec = activate;
+	HIP_DEBUG("userspace ipsec set to %i\n", activate);
+	
+	/* remove the policies from the kernel-mode IPsec when switching to userspace,
+	 * otherwise app-packets will still be captured and processed by the kernel
+	 * 
+	 * wo don't have to to this when we switch back to kernel-mode, as it will
+	 * only be the case when the firewall is shut down 
+	 * -> firewall might already be closed when user-message arrives */
+	if (hip_use_userspace_ipsec)
+	{
+		HIP_DEBUG("flushing all ipsec policies in the kernel...\n");
+		default_ipsec_func_set.hip_flush_all_policy();
+		HIP_DEBUG("flushing all ipsec SAs in the kernel...\n");
+		default_ipsec_func_set.hip_flush_all_sa();
+	}
+
+	// send close to all peers in order to reset peer state
+	HIP_IFEL(hip_send_close(NULL), -1, "failed to close all connections");
+	
+	/* reset the ipsec function set
+	 * 
+	 * copied from hadb.c */
+	if (hip_use_userspace_ipsec) {
+	     default_ipsec_func_set.hip_add_sa = hip_userspace_ipsec_add_sa;
+	     default_ipsec_func_set.hip_setup_hit_sp_pair = hip_userspace_ipsec_setup_hit_sp_pair;
+	     default_ipsec_func_set.hip_delete_hit_sp_pair = hip_userspace_ipsec_delete_hit_sp_pair;
+	     default_ipsec_func_set.hip_flush_all_policy = hip_userspace_ipsec_flush_all_policy;
+	     default_ipsec_func_set.hip_flush_all_sa = hip_userspace_ipsec_flush_all_sa;
+	     default_ipsec_func_set.hip_acquire_spi = hip_acquire_spi;
+	     default_ipsec_func_set.hip_delete_default_prefix_sp_pair = hip_userspace_ipsec_delete_default_prefix_sp_pair;
+	     default_ipsec_func_set.hip_setup_default_sp_prefix_pair = hip_userspace_ipsec_setup_default_sp_prefix_pair;
+     } else
+     {
+	     default_ipsec_func_set.hip_add_sa = hip_add_sa;
+	     default_ipsec_func_set.hip_setup_hit_sp_pair = hip_setup_hit_sp_pair;
+	     default_ipsec_func_set.hip_delete_hit_sp_pair = hip_delete_hit_sp_pair;
+	     default_ipsec_func_set.hip_flush_all_policy = hip_flush_all_policy;
+	     default_ipsec_func_set.hip_flush_all_sa = hip_flush_all_sa;
+	     default_ipsec_func_set.hip_acquire_spi = hip_acquire_spi;
+	     default_ipsec_func_set.hip_delete_default_prefix_sp_pair = hip_delete_default_prefix_sp_pair;
+	     default_ipsec_func_set.hip_setup_default_sp_prefix_pair = hip_setup_default_sp_prefix_pair;
+     }
+	/*
+	HIP_DEBUG("re-initializing the hadb...\n");
+	hip_uninit_hadb();
+	hip_init_hadb();
+	*/
+	
+  out_err:
+	return err;
+}
+
+struct hip_common * create_add_sa_msg(struct in6_addr *saddr, 
+							    struct in6_addr *daddr,
+							    struct in6_addr *src_hit, 
+							    struct in6_addr *dst_hit,
+							    uint32_t *spi, int ealg,
+							    struct hip_crypto_key *enckey,
+							    struct hip_crypto_key *authkey,
+							    int retransmission,
+							    int direction, int update,
+							    hip_ha_t *entry)
+{
 	struct hip_common *msg = NULL;
-	struct sockaddr_in6 hip_firewall_addr; 
-	struct in6_addr loopback = in6addr_loopback;
 	int err = 0;
 	socklen_t alen;
 	unsigned char *hchain_anchor = NULL;
 	
 	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1,
-		 "alloc memory for adding sa entry\n");
+			 "alloc memory for adding sa entry\n");
 	
 	hip_msg_init(msg);
 	
@@ -122,7 +177,6 @@ uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr,
 					  sizeof(int)), -1,
 					  "build param contents failed\n");
 	
-	
 	HIP_DEBUG("retransmission value is %d \n", retransmission);
 	HIP_IFEL(hip_build_param_contents(msg, (void *)&retransmission,
 					  HIP_PARAM_INT, sizeof(int)), -1,
@@ -139,64 +193,13 @@ uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr,
 					  sizeof(int)), -1,
 					  "build param contents failed\n");
 	
-	hip_firewall_addr.sin6_family = AF_INET6;
-	hip_firewall_addr.sin6_port = htons(HIP_FIREWALL_PORT);
-	ipv6_addr_copy(&(hip_firewall_addr.sin6_addr.s6_addr), &loopback);  
-     
-	HIP_DEBUG_IN6ADDR("sending message to loopback: ", 
-			  hip_firewall_addr.sin6_addr.s6_addr);
-	
-	err = sendto(hip_firewall_sock_fd, msg, hip_get_msg_total_len(msg), 0,
-		   &hip_firewall_addr, sizeof(hip_firewall_addr));
-	if (err < 0)
-	{
-		HIP_ERROR("Sendto firewall failed.\n");
-		err = -1;
-		goto out_err;
-	} else
-	{
-		HIP_DEBUG("hipd ipsec_add_sa --> Sendto firewall OK.\n");
-		// this is needed if we want to use HIP_IFEL
-		err = 0;
-	}
-		
- out_err:
-	return err;	 
-}
-
-int hip_userspace_ipsec_setup_hit_sp_pair(hip_hit_t *src_hit,
-					  hip_hit_t *dst_hit,
-					  struct in6_addr *src_addr,
-					  struct in6_addr *dst_addr, u8 proto,
-					  int use_full_prefix, int update) {
-	/* XX FIXME: TAO */
-	return 0;
-}
-
-void hip_userspace_ipsec_delete_hit_sp_pair(hip_hit_t *src_hit,
-					    hip_hit_t *dst_hit, u8 proto,
-					    int use_full_prefix) {
-	/* XX FIXME: TAO */
-}
-
-int hip_userspace_ipsec_flush_all_policy() {
-	/* XX FIXME: TAO */
-}
-
-int hip_userspace_ipsec_flush_all_sa() {
-	/* XX FIXME: TAO */
-}
-
-uint32_t hip_userspace_ipsec_acquire_spi(hip_hit_t *srchit,
-					 hip_hit_t *dsthit) {
-	return hip_acquire_spi(srchit, dsthit);
-}
-
-void hip_userspace_ipsec_delete_default_prefix_sp_pair() {
-	/* XX FIXME: TAO */
-}
-
-int hip_userspace_ipsec_setup_default_sp_prefix_pair() {
-	/* XX FIXME: TAO */
-	return 0;
+  out_err:
+  	if (err)
+  	{
+  		if (msg)
+  			free(msg);
+  		msg = NULL;
+  	}
+  	
+  	return msg;
 }
