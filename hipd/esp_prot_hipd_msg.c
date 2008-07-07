@@ -52,7 +52,6 @@ int add_esp_prot_transform_to_r1(hip_common_t *msg)
 	/* only supported in usermode and optional there
  	 * 
  	 * add the transform only when usermode is active */
- 	HIP_DEBUG("hip_use_userspace_ipsec is %i\n", hip_use_userspace_ipsec);
  	if (hip_use_userspace_ipsec)
  	{
  		HIP_DEBUG("userspace IPsec hint: esp protection extension might be in use\n");
@@ -60,23 +59,19 @@ int add_esp_prot_transform_to_r1(hip_common_t *msg)
  		if (hip_esp_prot_ext_transform > ESP_PROT_TRANSFORM_UNUSED)
  		{
 	 		/* the extension is switched on */
- 			HIP_IFEL(hip_build_param_esp_prot_transform(msg,
- 					HIP_PARAM_ESP_PROT_TRANSFORM, hip_esp_prot_ext_transform), -1, 
- 					"Building of ESP protection mode failed\n");
+ 			HIP_IFEL(hip_build_param_esp_prot_transform(msg, hip_esp_prot_ext_transform),
+ 					-1, "Building of ESP protection mode failed\n");
  			
- 			HIP_DEBUG("added esp protection transform: %u, \n",
- 					hip_esp_prot_ext_transform);
  		} else
  		{	
+ 			HIP_DEBUG("esp protection extension not active\n");
  			HIP_IFEL(hip_build_param_esp_prot_transform(msg,
  					HIP_PARAM_ESP_PROT_TRANSFORM, ESP_PROT_TRANSFORM_UNUSED), -1, 
  					"Building of ESP protection mode failed\n");
- 			
- 			HIP_DEBUG("esp protection extension not active, sending UNUSED\n");
  		}
  	} else
  	{
- 		HIP_DEBUG("userspace IPsec hint: esp protection extension UNUSED, nothing added\n");
+ 		HIP_DEBUG("userspace IPsec hint: esp protection extension UNUSED, skip\n");
  	}
  	
   out_err:
