@@ -34,7 +34,6 @@ int is_init = 0;
 int userspace_ipsec_init()
 {	
 	int on = 1, err = 0;
-	extern int hip_esp_protection_extension;
 	
 	HIP_DEBUG("\n");
 	
@@ -44,13 +43,6 @@ int userspace_ipsec_init()
 		// allocate memory for the packet buffers
 		HIP_IFE(!(esp_packet = (unsigned char *)malloc(ESP_PACKET_SIZE)), -1);
 		HIP_IFE(!(decrypted_packet = (unsigned char *)malloc(ESP_PACKET_SIZE)), -1);
-		
-		// also initialize the esp protection extension, if switched on
-		if (hip_esp_protection_extension)
-		{
-			HIP_DEBUG("initializing esp protection extension...\n");
-			HIP_IFEL(esp_prot_ext_init(), -1, "failed to init esp protection extension\n");
-		}
 		
 		// open IPv4 raw socket
 		raw_sock_v4 = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
@@ -664,7 +656,7 @@ int cast_sockaddr_to_in6_addr(struct sockaddr_storage *sockaddr, struct in6_addr
   	return err;
 }
 
-int send_userspace_ipsec_to_hipd(int activate)
+int send_userspace_ipsec_to_hipd(int active)
 {
 	int err = 0;
 	struct hip_common *msg = NULL;
@@ -677,7 +669,7 @@ int send_userspace_ipsec_to_hipd(int activate)
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_USERSPACE_IPSEC, 0), -1, 
 		 "build hdr failed\n");
 	
-	HIP_IFEL(hip_build_param_contents(msg, (void *)&activate, HIP_PARAM_INT,
+	HIP_IFEL(hip_build_param_contents(msg, (void *)&active, HIP_PARAM_INT,
 					  sizeof(unsigned int)), -1,
 					  "build param contents failed\n");
 	
@@ -689,8 +681,8 @@ int send_userspace_ipsec_to_hipd(int activate)
 
 	/* check error value */
 	HIP_IFEL(hip_get_msg_err(msg), -1, "hipd returned error message!\n");
-	
 	HIP_DEBUG("send_recv msg succeeded\n");
+	
 	HIP_DEBUG("userspace ipsec activated\n");
 	
  out_err:

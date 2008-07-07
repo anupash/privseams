@@ -6,7 +6,7 @@
 #define HC_LENGTH_STEP1 10
 #define REMAIN_THRESHOLD 0.2
 
-int esp_prot_ext_init()
+int esp_prot_init()
 {
 	int err = 0;
 	
@@ -234,11 +234,17 @@ int esp_prot_ext_maintainance(hip_sadb_entry *entry)
 
 /* this sends the prefered transform to hipd implicitely turning on
  * the esp protection extension there */
-int send_esp_protection_extension_to_hipd()
+int send_esp_protection_to_hipd(int active)
 {
 	int err = 0;
 	struct hip_common *msg = NULL;
 	uint8_t transform = 0;
+	
+	// for now this is the only transform we support
+	if (active > 0)
+		transform = ESP_PROT_TRANSFORM_DEFAULT;
+	else
+		transform = ESP_PROT_TRANSFORM_UNUSED;
 	
 	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1,
 		 "alloc memory for adding sa entry\n");
@@ -248,14 +254,11 @@ int send_esp_protection_extension_to_hipd()
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ESP_PROT_EXT_TRANSFORM, 0), -1, 
 		 "build hdr failed\n");
 	
-	// for now this is the only transform we support
-	transform = ESP_PROT_TRANSFORM_DEFAULT;
-	
 	HIP_IFEL(hip_build_param_contents(msg, (void *)&transform, HIP_PARAM_UINT,
 					  sizeof(uint8_t)), -1,
 					  "build param contents failed\n");
 	
-	HIP_DEBUG("sending esp protection extension transform to hipd...\n");
+	HIP_DEBUG("sending esp protection transform %i to hipd...\n", active);
 	HIP_DUMP_MSG(msg);
 	
 	/* send msg to hipd and receive corresponding reply */
