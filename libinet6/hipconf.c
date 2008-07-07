@@ -10,6 +10,7 @@
  * @author  Bing Zhou <bingzhou_cc.hut.fi>
  * @author  Anu Markkola
  * @author  Lauri Silvennoinen
+ * @author  Teresa Finez <tfinezmo_cc.hut.fi> Modifications
  * @author  Samu Varjonen
  * @author  Tao Wan  <twan@cc.hut.fi>
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>
@@ -25,7 +26,7 @@ const char *hipconf_usage =
 #ifdef CONFIG_HIP_ESCROW
 "add|del escrow <hit>\n"
 #endif
-"add|del map <hit> <ipv6>\n"
+"add|del map <hit> <ipv6> [lsi]\n"
 "Server side:\n\tadd|del service escrow|rvs|hiprelay\n"
 "\treinit service rvs|hiprelay\n"
 "Client side:\n\tadd rvs|hiprelay <hit> <ipv6> <lifetime in seconds>\n"
@@ -37,7 +38,10 @@ const char *hipconf_usage =
 "get|set|inc|dec|new puzzle all\n"
 #endif
 "bos all\n"
-"nat on|off|<peer_hit>\n"
+//modify by santtu
+//"nat on|off|<peer_hit>\n"
+"nat none|plain-udp|ice-udp\n"
+//end modify
 "rst all|<peer_hit>\n"
 "new|add hi anon|pub rsa|dsa filebasename\n"
 "new|add hi default (HI must be created as root)\n"
@@ -96,6 +100,7 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc) 
         hip_conf_handle_hiprelay,
         hip_conf_handle_set,
         hip_conf_handle_dht_toggle,
+	hip_conf_handle_opptcp,
         hip_conf_handle_trans_order,
 	hip_conf_handle_tcptimeout, /* added by Tao Wan*/
         hip_conf_handle_hipproxy,
@@ -258,7 +263,6 @@ int hip_conf_get_type(char *text,char *argv[]) {
 #endif		
 	else if (!strcmp("order", text))
 		ret = TYPE_ORDER;
-#ifdef CONFIG_HIP_OPENDHT
 	else if (strcmp("opendht", argv[1])==0)
 		ret = TYPE_DHT;
 	else if (!strcmp("ttl", text))
@@ -269,7 +273,6 @@ int hip_conf_get_type(char *text,char *argv[]) {
 		ret = TYPE_GET;
 	else if (!strcmp("set", text))
                 ret = TYPE_SET;
-#endif
 	else if (!strcmp("config", text))
 		ret = TYPE_CONFIG;
 #ifdef CONFIG_HIP_HIPPROXY
@@ -483,6 +486,8 @@ int hip_conf_handle_hi(hip_common_t *msg, int action, const char *opt[],
 
      _HIP_DEBUG("action=%d optc=%d\n", action, optc);
 
+     /* @todo: the ACTION_GET is bypassed in hip_do_hipconf() */
+
      if (action == ACTION_DEL)
 	  return hip_conf_handle_hi_del(msg, action, opt, optc);
      else if (action == ACTION_GET)
@@ -549,17 +554,22 @@ int hip_conf_handle_map(hip_common_t *msg, int action, const char *opt[],
 {
      int err = 0;
      int ret;
+     struct in_addr lsi, aux;
      in6_addr_t hit, ip6;
 
      HIP_DEBUG("action=%d optc=%d\n", action, optc);
 
-     HIP_IFEL((optc != 2), -1, "Missing arguments\n");
+     HIP_IFEL((optc != 2 && optc != 3), -1, "Missing arguments\n");
 	
      HIP_IFEL(convert_string_to_address(opt[0], &hit), -1,
 	      "string to address conversion failed\n");
 
      HIP_IFEL(convert_string_to_address(opt[1], &ip6), -1,
 	      "string to address conversion failed\n");
+     
+     if(!convert_string_to_address_v4(opt[1], &aux)){
+	     HIP_IFEL(IS_LSI32(aux.s_addr), -1, "Missing ip address before lsi\n");
+     }
 
      HIP_IFEL(hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
 				       sizeof(in6_addr_t)), -1,
@@ -570,10 +580,21 @@ int hip_conf_handle_map(hip_common_t *msg, int action, const char *opt[],
 				       sizeof(in6_addr_t)), -1,
 	      "build param hit failed\n");
 
+     if(optc == 3){
+	     HIP_IFEL(convert_string_to_address_v4(opt[2], &lsi), -1,
+		      "string to address conversion failed\n");
+
+	     HIP_IFEL(hip_build_param_contents(msg, (void *) &lsi,
+				       SO_HIP_PARAM_LSI,
+				       sizeof(struct in_addr)), -1,
+	      "build param lsi failed\n");		
+     }
+
      switch(action) {
      case ACTION_ADD:
 	  HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_PEER_MAP_HIT_IP,
-				      0), -1, "add peer map failed\n");
+	      		              0), -1, "add peer map failed\n");
+	  
 	  break;
      case ACTION_DEL:
 	  HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEL_PEER_MAP_HIT_IP,
@@ -850,18 +871,24 @@ int hip_conf_handle_nat(hip_common_t *msg, int action,
      int status = 0;
      in6_addr_t hit;
 	
-     if (!strcmp("on",opt[0]))
+ //    if (!strcmp("on",opt[0]))
+     if (!strcmp("plain-udp",opt[0]))
      {
-	  memset(&hit,0,sizeof(in6_addr_t));
-	  status = SO_HIP_SET_NAT_ON; 
-     } else if (!strcmp("off",opt[0]))
-     {
-	  memset(&hit,0,sizeof(in6_addr_t));
-	  status = SO_HIP_SET_NAT_OFF;
-     } else
-     {
-	  HIP_IFEL(1, -1, "bad args\n");
-     }
+    	 memset(&hit,0,sizeof(in6_addr_t));
+	//  status = SO_HIP_SET_NAT_ON; 
+    	 status = SO_HIP_SET_NAT_PLAIN_UDP; 
+	  } else if (!strcmp("none",opt[0]))
+	  {
+		  memset(&hit,0,sizeof(struct in6_addr));
+	  status = SO_HIP_SET_NAT_NONE;
+	  } else if (!strcmp("ice-udp",opt[0]))
+	  {
+	   	  memset(&hit,0,sizeof(struct in6_addr));
+	  	  status = SO_HIP_SET_NAT_ICE_UDP;
+	  } else
+	  {
+		  HIP_IFEL(1, -1, "bad args\n");
+	  }
 #if 0 /* Not used currently */
      else {
 	  ret = inet_pton(AF_INET6, opt[0], &hit);
@@ -1276,7 +1303,6 @@ int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int op
 
         /* ASK THIS INFO FROM DAEMON */
         HIP_INFO("Asking serving gateway info from daemon...\n");
-        HIP_IFEL(!(msgdaemon = malloc(HIP_MAX_PACKET)), -1, "Malloc for msg failed\n");
         HIP_IFEL(hip_build_user_hdr(msgdaemon, SO_HIP_DHT_SERVING_GW,0),-1,
                  "Building daemon header failed\n");
         HIP_IFEL(hip_send_recv_daemon_info(msgdaemon), -1, "Send recv daemon info failed\n");
@@ -1432,7 +1458,7 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
      HIP_IFEL((action == -1), -1,
 	      "Invalid action argument '%s'\n", argv[1]);
      
-     /* Check that we have at least the minumum number of arguments
+     /* Check that we have at least the minimum number of arguments
 	for the given action. */
      HIP_IFEL((argc < hip_conf_check_action_argc(action) + 2), -1,
 	      "Not enough arguments given for the action '%s'\n",
@@ -1449,12 +1475,13 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
      /* Get the type argument for the given action. */
      HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed.\n");
      memset(msg, 0, HIP_MAX_PACKET);
-     hip_get_all_hits(msg,argv);
-     
+
      /* Call handler function from the handler function pointer
 	array at index "type" with given commandline arguments. 
 	The functions build a hip_common message. */
-     if (argc ==3)
+     if (action == ACTION_GET)
+	     err = hip_get_all_hits(msg,argv);
+     else if (argc == 3)
 	  err = (*action_handler[type])(msg, action, (const char **)&argv[2], argc - 3);
      else
 	  err = (*action_handler[type])(msg, action, (const char **)&argv[3], argc - 3);
@@ -1476,6 +1503,7 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
 	}*/
 
      /* send msg to hipd */
+     HIP_INFO("Send msg to hipd");
      HIP_IFEL(hip_send_daemon_info_wrapper(msg, send_only), -1, "sending msg failed\n");
      HIP_INFO("hipconf command successful\n");
 
@@ -1493,8 +1521,6 @@ int hip_conf_handle_ha(hip_common_t *msg, int action,const char *opt[], int optc
      int err = 0, state, ret;
      in6_addr_t arg1, hit1;
 
-     HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
-
      HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0), -1,
 	      "Building of daemon header failed\n");
 
@@ -1505,83 +1531,43 @@ int hip_conf_handle_ha(hip_common_t *msg, int action,const char *opt[], int optc
 	  struct hip_hadb_user_info_state *ha =
 	       hip_get_param_contents_direct(current_param);
 
-	  if (!strcmp("all", opt[0])) {
-	       HIP_INFO("HA is %s\n", hip_state_str(ha->state));
-	       HIP_INFO_HIT("local hit is", &ha->hit_our);
-	       HIP_INFO_HIT("peer  hit is", &ha->hit_peer);
+	  if (!strcmp("all", opt[0]))
+	          hip_conf_print_info_ha(ha);
 
-	  }
-
-	  if (((opt[0] !='\0') && (opt[1] !=  '\0')) &&
+	 
+	  if (((opt[0] !='\0') && (opt[1] == '\0')) &&
 	      (strcmp("all",opt[0]) !=0))
 	  {
-	       ret = inet_pton(AF_INET6,opt[0], &arg1);
-	       HIP_IFEL((ret < 0 && errno == EAFNOSUPPORT), -1, "not a valid address family\n");
 
-	       ret = inet_pton(AF_INET6,opt[1], &hit1);
-	       HIP_IFEL((ret < 0 && errno == EAFNOSUPPORT), -1, "not a valid address family\n");
+	    HIP_IFEL(convert_string_to_address(opt[0], &hit1), -1, "not a valid address family\n");
 
-	       if ((ipv6_addr_cmp(&arg1, &ha->hit_our) == 0) ||  (ipv6_addr_cmp(&hit1, &ha->hit_our) == 0))
-	       {
-		    HIP_INFO("HA is in %s state\n", hip_state_str(ha->state));
-		    HIP_INFO_HIT("hit is", &ha->hit_our);
-	       }
+	    if ((ipv6_addr_cmp(&hit1, &ha->hit_our) == 0) ||  (ipv6_addr_cmp(&hit1, &ha->hit_peer) == 0))
+	            hip_conf_print_info_ha(ha);
 
 	  }
-	  HIP_INFO("\n");
      }
 
-        HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
-
-        HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0), -1,
-                 "Building of daemon header failed\n");
-
-        HIP_IFEL(hip_send_recv_daemon_info(msg), -1,
-                 "send recv daemon info\n");
-
-        while((current_param = hip_get_next_param(msg, current_param)) != NULL) {
-                struct hip_hadb_user_info_state *ha =
-                        hip_get_param_contents_direct(current_param);
-
-                if (!strcmp("all", opt[0])) {
-                        HIP_INFO("HA is %s\n", hip_state_str(ha->state));
-                        HIP_INFO_HIT("local hit is", &ha->hit_our);
-                        HIP_INFO_HIT("peer  hit is", &ha->hit_peer);
-                        HIP_INFO_IN6ADDR("local ip is", &ha->ip_our);
-                        HIP_INFO_IN6ADDR("peer  ip is", &ha->ip_peer);
-
-                }
-
-                if (((opt[0] !='\0') && (opt[1] !=  '\0')) &&
-                    (strcmp("all",opt[0]) !=0))
-                {
-                        ret = inet_pton(AF_INET6,opt[0], &arg1);
-                        HIP_IFEL((ret < 0 && errno == EAFNOSUPPORT), -1, "not a valid address family\n");
-
-                        ret = inet_pton(AF_INET6,opt[1], &hit1);
-                        HIP_IFEL((ret < 0 && errno == EAFNOSUPPORT), -1, "not a valid address family\n");
-
-                        if ((ipv6_addr_cmp(&arg1, &ha->hit_our) == 0) ||  (ipv6_addr_cmp(&hit1, &ha->hit_our) == 0))
-                        {
-                                HIP_INFO("HA is in %s state\n", hip_state_str(ha->state));
-                                HIP_INFO_HIT("hit is", &ha->hit_our);
-                        }
-
-                }
-
-                HIP_INFO("\n");
-        }
-
-   out_err:
+out_err:
         return err;
+}
+
+int hip_conf_print_info_ha(struct hip_hadb_user_info_state *ha)
+{
+        HIP_INFO("HA is %s\n", hip_state_str(ha->state));
+        HIP_INFO_HIT(" Local HIT", &ha->hit_our);
+	HIP_INFO_HIT(" Peer  HIT", &ha->hit_peer);
+	HIP_DEBUG_LSI(" Local LSI", &ha->lsi_our);
+        HIP_DEBUG_LSI(" Peer  LSI", &ha->lsi_peer);
+        HIP_INFO_IN6ADDR(" Local IP", &ha->ip_our);
+        HIP_INFO_IN6ADDR(" Peer  IP", &ha->ip_peer);
+	HIP_INFO("\n");
+
 }
 
 int hip_conf_handle_handoff(hip_common_t *msg, int action,const char *opt[], int optc)
 {	
      int err=0;
 		
-     HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
-	
      if (strcmp("active",opt[0]) ==0)
      {
 	  HIP_IFEL(hip_build_user_hdr(msg,SO_HIP_HANDOFF_ACTIVE, 0), -1,
@@ -1604,11 +1590,13 @@ int hip_conf_handle_handoff(hip_common_t *msg, int action,const char *opt[], int
 int hip_get_all_hits(hip_common_t *msg,char *argv[])
 {	
      struct hip_tlv_common *current_param = NULL;
-     struct endpoint_hip *endp=NULL;
-     int err=0;
+     struct endpoint_hip *endp = NULL;
+     int err = 0;
      struct sockaddr_in6 addr;
-     in6_addr_t *defhit;
+     struct in6_addr *defhit;
+     struct in_addr *deflsi;
      struct hip_hadb_user_info_state *ha;
+     hip_tlv_type_t param_type;
 	
      if (strcmp(argv[1], "get") == 0)
      {
@@ -1637,9 +1625,17 @@ int hip_get_all_hits(hip_common_t *msg,char *argv[])
 	
 	       while((current_param = hip_get_next_param(msg, current_param)) != NULL)
 	       {
-		    defhit = (in6_addr_t *)hip_get_param_contents_direct(current_param);
-		    set_hit_prefix(defhit);
-		    HIP_INFO_HIT("default hi is ",defhit);
+		    param_type = hip_get_param_type(current_param);
+
+		    if (param_type == HIP_PARAM_HIT){
+		           defhit = (struct in6_addr *)hip_get_param_contents_direct(current_param);
+			   set_hit_prefix(defhit);
+			   HIP_INFO_HIT("default hi is ", defhit);
+		    }
+		    else if (param_type == SO_HIP_PARAM_LSI){
+		           deflsi = (struct in_addr *)hip_get_param_contents_direct(current_param);
+			   HIP_DEBUG_LSI("default lsi is ", deflsi);
+		    }
 	       }
 	  }
      }
@@ -1813,7 +1809,6 @@ int hip_conf_handle_restart(hip_common_t *msg, int type, const char *opt[],
 	return err;
 }
 
-#if 0
 int hip_conf_handle_opptcp(hip_common_t *msg, int action, const char *opt[],
 			   int optc)
 {
@@ -1835,7 +1830,6 @@ int hip_conf_handle_opptcp(hip_common_t *msg, int action, const char *opt[],
 /*	hip_set_opportunistic_tcp_status(1);*/
 /*	hip_set_opportunistic_tcp_status(0);*/
 }
-#endif
 
 /**
  * Handles the hipconf commands where the type is @ tcptimeout.
