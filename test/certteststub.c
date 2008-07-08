@@ -26,9 +26,10 @@ void compression_test(char * cert) {
         char uncompressed[1024];
         int return_value = 0;
         uLongf compressed_length = 0;
-        uLongf uncompressed_length = 0;
-	
-        HIP_DEBUG("Testing Zlib compression on the data");
+        uLongf uncompressed_length = 0; // sizeof buffer
+	int uncomp_len = 0; // length of the uncompressed content
+
+        HIP_DEBUG("Testing Zlib compression on the data\n");
         memset(&compressed, '\0', sizeof(compressed));
         memset(&uncompressed, '0', sizeof(uncompressed));
 	strcpy(certificate, cert);
@@ -43,9 +44,14 @@ void compression_test(char * cert) {
                 HIP_DEBUG("Compression was NOT succesfull (given buffer is too small)\n");
         if (return_value == Z_MEM_ERROR) 
                 HIP_DEBUG("Compression was NOT succesfull (not enough memory)\n");
-        HIP_DEBUG("Compressed data length: %d\n", compressed_length);        
         
         uncompressed_length = sizeof(uncompressed);
+        uncomp_len = strlen(cert);
+
+        HIP_DEBUG("Uncompressed data length: %d\n"
+                  "Compressed data length: %d\n", 
+                  uncomp_len, compressed_length);        
+
         return_value = uncompress((Bytef *)uncompressed, &uncompressed_length,
                                   (Bytef *)compressed, (uLong)compressed_length);
         if (return_value == Z_OK) HIP_DEBUG("Uncompression was succesfull\n");

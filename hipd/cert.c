@@ -390,7 +390,7 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common * msg,  HIP_HASHTAB
         X509_EXTENSION * ext = NULL;
         STACK_OF(X509_EXTENSION) * extlist = NULL;
         X509_NAME_ENTRY *ent;
-        EVP_PKEY *pkey;
+        EVP_PKEY *pkey; 
         /** XX TODO THIS should come from a configuration file 
             monotonically increasing counter **/
         long serial = 0; 
@@ -459,11 +459,17 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common * msg,  HIP_HASHTAB
                                 HIP_IFEL((ret < 0 && errno == EAFNOSUPPORT), -1, 
                                          "Failed to convert issuer HIT to hip_hit_t\n");
                                 HIP_DEBUG_HIT("Issuer HIT", issuer_hit_n);
+                                /* on conversion more to get rid of padding 0s*/
+                                memset(issuer_hit, 0, sizeof(issuer_hit));
+                                HIP_IFEL((!inet_ntop(AF_INET6, issuer_hit_n, 
+                                                     issuer_hit, sizeof(issuer_hit))),
+                                         -1, "Failed to convert subject hit to "
+                                         "presentation format\n");
                         }
                         if(!strcmp(item->name, "days")) 
                            secs = HIP_CERT_DAY * atoi(item->value);
                 }
-        }
+        } 
         HIP_IFEL(!(issuer = X509_NAME_new()), -1, "Failed to set create subject name");
         nid = OBJ_txt2nid("commonName");
         HIP_IFEL((nid == NID_undef), -1, "NID text not defined\n");
@@ -499,7 +505,7 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common * msg,  HIP_HASHTAB
                         item = sk_CONF_VALUE_value(sec_ext, i);
                         _HIP_DEBUG("Sec: %s, Key; %s, Val %s\n", 
                                    item->section, item->name, item->value);
-                        HIP_IFEL(!(ext = X509V3_EXT_conf(NULL, NULL, 
+                        HIP_IFEL(!(ext = X509V3_EXT_conf(NULL, &ctx, 
                                                        item->name, item->value )), -1, 
                                  "Failed to create extension\n");
                         sk_X509_EXTENSION_push(extlist, ext);
@@ -547,7 +553,7 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common * msg,  HIP_HASHTAB
                  "Failed to convert RSA to EVP_PKEY\n");
         HIP_IFEL((X509_set_pubkey (cert, pkey) != 1), -1, 
                  "Failed to set public key of the certificate\n");
-
+        
 	X509V3_set_ctx(&ctx, cert, cert, NULL, NULL, 0);
 
         if (sec_ext != NULL) {
@@ -560,6 +566,19 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common * msg,  HIP_HASHTAB
                                  "Failed to create extension\n");
                         HIP_IFEL((!X509_add_ext(cert, ext, -1)), -1,
                                  "Failed to add extensions to the cert\n");
+                        if (!strcmp(item->name, "basicConstraints") &&
+                            !strcmp(item->value, "CA:true")) {
+                                /* We are writing a CA cert and in CA self-signed
+                                   certificate you have to have subject key identifier
+                                   present, when adding subjectKeyIdentifier give string
+                                   hash to the */
+                                HIP_IFEL(!(ext = X509V3_EXT_conf(NULL, &ctx, 
+                                                                 "subjectKeyIdentifier", 
+                                                                 "hash")), -1, 
+                                         "Failed to create extension\n");
+                                HIP_IFEL((!X509_add_ext(cert, ext, -1)), -1,
+                                         "Failed to add extensions to the cert\n");
+                        }
                 }
         }
 
@@ -619,11 +638,14 @@ int hip_cert_x509v3_handle_request_to_verify(struct hip_common * msg) {
 	X509 *cert;
 	X509_STORE *store;
 	X509_STORE_CTX *verify_ctx;
+        char cert_str_pem[1024];
 
 	OpenSSL_add_all_algorithms ();
 	ERR_load_crypto_strings ();
 
         _HIP_DUMP_MSG(msg);
+        memset(&cert_str_pem, '\0', sizeof(cert_str_pem));
+        strcpy(cert_str_pem, &verify.pem);
         memset(&verify, 0, sizeof(struct hip_cert_x509_resp));
         HIP_IFEL(!(p = hip_get_param(msg, HIP_PARAM_CERT_X509_REQ)), -1,
                    "Failed to get cert info from the msg\n");
@@ -631,6 +653,8 @@ int hip_cert_x509v3_handle_request_to_verify(struct hip_common * msg) {
         /*
           hip_cert_display_x509_pem_contents(&verify.pem);
         */
+        /* XX TODO check why the end contains extra fluff */
+        _HIP_DEBUG("PEM\n%s\n",verify.pem);
 	cert = hip_cert_pem_to_x509(&verify.pem);   
 
 /*
@@ -649,8 +673,6 @@ int hip_cert_x509v3_handle_request_to_verify(struct hip_common * msg) {
 	
 	HIP_IFEL((!(verify_ctx = X509_STORE_CTX_new ())), -1,
 		"Failed to create X509_STORE_CTX object\n");
- 
-	//X509_STORE_CTX_set_flags(&verify_ctx, X509_V_FLAG_CB_ISSUER_CHECK); 
 
 	HIP_IFEL((X509_STORE_CTX_init(verify_ctx, store, cert, NULL) != 1), -1,
 		 "Failed to initialize verification context\n");
@@ -662,14 +684,13 @@ int hip_cert_x509v3_handle_request_to_verify(struct hip_common * msg) {
 		HIP_DEBUG("Certificate verified correctly!\n");
 		err = 0;
 	}
-	memcpy(&p->success, &err, sizeof(int));
-/*	
+	
 	hip_msg_init(msg);
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_CERT_X509V3_SIGN, 0), -1, 
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_CERT_X509V3_SIGN, err), -1, 
                  "Failed to build user header\n");
         HIP_IFEL(hip_build_param_cert_x509_resp(msg, &cert_str_pem), -1, 
                  "Failed to create x509 response parameter\n");        
-*/
+
         _HIP_DUMP_MSG(msg);	
  out_err:
 	X509_STORE_CTX_cleanup(verify_ctx);

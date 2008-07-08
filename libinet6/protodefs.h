@@ -766,7 +766,6 @@ struct hip_cert_x509_resp {
 	hip_tlv_type_t 	type;
 	hip_tlv_len_t 	length;
 	char pem[1024];
-        int success; //used by the verification
 } __attribute__ ((packed));
 
 struct hip_opendht_set {

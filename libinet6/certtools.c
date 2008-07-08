@@ -395,8 +395,9 @@ int hip_cert_x509v3_request_verification(char * certificate) {
         /* get the struct from the message sent back by the daemon */
         HIP_IFEL(!(received = hip_get_param(msg, HIP_PARAM_CERT_X509_RESP)), -1,
                  "No x509 struct found\n");
-        HIP_DEBUG("Verification success %d (0 yes -1 no)\n", received->success);
-        err = (received->success == 1) ? 0 : -1;
+        err = hip_get_msg_err(msg);
+        if (err == 0) HIP_DEBUG("Verified successfully\n");
+        else HIP_DEBUG("Verification failed\n");
 	_HIP_DUMP_MSG(msg);
 
  out_err:
@@ -440,7 +441,7 @@ X509 * hip_cert_pem_to_x509(char * pem) {
         BIO *out; 
         X509 * cert = NULL;
 
-        HIP_DEBUG("PEM:\n%s\n", pem);        
+        _HIP_DEBUG("PEM:\n%s\nLength of PEM %d\n", pem, strlen(pem));        
         out = BIO_new_mem_buf(pem, -1);      
         HIP_IFEL((NULL == (cert = PEM_read_bio_X509(out, NULL, 0, NULL))), -1,
                  "Cert variable is NULL\n");
