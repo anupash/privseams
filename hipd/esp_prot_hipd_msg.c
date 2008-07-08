@@ -65,9 +65,8 @@ int add_esp_prot_transform_to_r1(hip_common_t *msg)
  		} else
  		{	
  			HIP_DEBUG("esp protection extension not active\n");
- 			HIP_IFEL(hip_build_param_esp_prot_transform(msg,
- 					HIP_PARAM_ESP_PROT_TRANSFORM, ESP_PROT_TRANSFORM_UNUSED), -1, 
- 					"Building of ESP protection mode failed\n");
+ 			HIP_IFEL(hip_build_param_esp_prot_transform(msg, ESP_PROT_TRANSFORM_UNUSED),
+ 					-1, "Building of ESP protection mode failed\n");
  		}
  	} else
  	{

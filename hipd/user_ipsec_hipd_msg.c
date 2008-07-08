@@ -34,6 +34,8 @@ int hip_userspace_ipsec_activate(struct hip_common *msg)
 	 * 
 	 * copied from hadb.c */
 	if (hip_use_userspace_ipsec) {
+		 HIP_DEBUG("reseting ipsec function set to userspace api\n");
+		
 	     default_ipsec_func_set.hip_add_sa = hip_userspace_ipsec_add_sa;
 	     default_ipsec_func_set.hip_setup_hit_sp_pair = hip_userspace_ipsec_setup_hit_sp_pair;
 	     default_ipsec_func_set.hip_delete_hit_sp_pair = hip_userspace_ipsec_delete_hit_sp_pair;
@@ -44,6 +46,8 @@ int hip_userspace_ipsec_activate(struct hip_common *msg)
 	     default_ipsec_func_set.hip_setup_default_sp_prefix_pair = hip_userspace_ipsec_setup_default_sp_prefix_pair;
      } else
      {
+    	 HIP_DEBUG("reseting ipsec function set to kernel-mode api\n");
+    	 
 	     default_ipsec_func_set.hip_add_sa = hip_add_sa;
 	     default_ipsec_func_set.hip_setup_hit_sp_pair = hip_setup_hit_sp_pair;
 	     default_ipsec_func_set.hip_delete_hit_sp_pair = hip_delete_hit_sp_pair;
