@@ -1000,14 +1000,16 @@ int hip_handle_user_msg(struct hip_common *msg,
 		        hip_set_msg_err(msg, 1);
 		else{
 		        if ((msg_type == SO_HIP_TRIGGER_BEX && lsi) ||
-		            ((msg_type == SO_HIP_GET_STATE_HA || msg_type == SO_HIP_GET_PEER_HIT_BY_LSIS) 
-			    && src_hit && dst_hit)){
-		                HIP_IFEL(hip_build_param_contents(msg, (void *)src_hit,
-					 HIP_PARAM_HIT, sizeof(struct in6_addr)), -1,
-				 	 "build param HIP_PARAM_HIT  failed\n");
-		    		HIP_IFEL(hip_build_param_contents(msg, (void *)dst_hit,
-					 HIP_PARAM_HIT, sizeof(struct in6_addr)), -1,
-				 	 "build param HIP_PARAM_HIT  failed\n");
+		            msg_type == SO_HIP_GET_STATE_HA || 
+			    msg_type == SO_HIP_GET_PEER_HIT_BY_LSIS){
+			        if (src_hit)  
+				         HIP_IFEL(hip_build_param_contents(msg, (void *)src_hit,
+									   HIP_PARAM_HIT, sizeof(struct in6_addr)), -1,
+						  "build param HIP_PARAM_HIT  failed\n");
+				if (dst_hit)
+				         HIP_IFEL(hip_build_param_contents(msg, (void *)dst_hit,
+									   HIP_PARAM_HIT, sizeof(struct in6_addr)), -1,
+						  "build param HIP_PARAM_HIT  failed\n");
 		        }
 			if (((msg_type == SO_HIP_GET_LSI_PEER || msg_type == SO_HIP_GET_LSI_OUR) 
 			    && lsi) || msg_type == SO_HIP_IS_OUR_LSI)

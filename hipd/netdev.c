@@ -713,7 +713,7 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit, hip_hit_t *dst_hit,
 
 	/* No entry found; find first IP matching to the HIT and then
 	   create the entry */
-	HIP_DEBUG("No entry found; find first IP matching");
+	HIP_DEBUG("No entry found; find first IP matching\n");
 	err = 1;
 
 	if (hip_use_i3) {
@@ -906,10 +906,11 @@ int hip_netdev_trigger_bex_msg(struct hip_common *msg) {
 	param = hip_get_param(msg, SO_HIP_PARAM_LSI);
 	if (param){
 		peer_lsi6 = hip_get_param_contents_direct(param);
-		if (IN6_IS_ADDR_V4MAPPED(peer_lsi6))
-		        IPV6_TO_IPV4_MAP(peer_lsi6, &peer_lsi);		
+		if (IN6_IS_ADDR_V4MAPPED(peer_lsi6)){
+		        IPV6_TO_IPV4_MAP(peer_lsi6, &peer_lsi);	
+		        HIP_DEBUG_LSI("trigger_msg_peer_lsi:", &peer_lsi);	
+		}
 	}
-	HIP_DEBUG_LSI("trigger_msg_peer_lsi:", &peer_lsi);
 
 	/* Local LSI */
 	param = hip_get_next_param(msg, param);

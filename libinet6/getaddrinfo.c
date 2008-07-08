@@ -1828,6 +1828,7 @@ int gaih_inet_get_hip_hosts_file_info(hip_hosts_entry *hip_hosts, int *l)
         } // end of while
 
  out_err:	
+	destroy(&list);
 	if (fp)                                                               
                 fclose(fp);
 	return err;		
