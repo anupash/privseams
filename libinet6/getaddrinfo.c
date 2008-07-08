@@ -48,6 +48,9 @@
  * This software is Copyright 1996 by Craig Metz, All Rights Reserved.
  * 
  * @author Craig Metz
+ * @note: HIPU: libinet6 requires LD_PRELOAD which is "dylib" on BSD. Miika:
+ * we are going to get rid of the LD_PRELOAD stuff in HIPL anyway.
+ * @note: HIPU: the include headers should be excluded on MAC OS X
  */
 #ifdef _USAGI_LIBINET6
 #include "libc-compat.h"
@@ -75,7 +78,6 @@
 #include "message.h"
 #include "util.h"
 #include "libhipopendht.h"
-
 #include "bos.h"
 
 #define GAIH_OKIFUNSPEC 0x0100
@@ -445,9 +447,12 @@ connect_alarm(int signo)
 int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 {	 								
 	int error = 0, ret_hit = 0, ret_addr = 0, tmp_ttl = 0, tmp_port = 0;
-	int found_hits = -1, lineno = 0, i = 0, err = 0;
+	int c, ret, is_lsi;	
+	int found_hits = 0, lineno = 0, i = 0, err = 0;
 	hip_hit_t hit, tmp_hit, tmp_addr;
+	hip_lsi_t lsi;
 	struct in_addr tmp_v4;
+	struct in6_addr lsi_ip6;
 	char dht_response_hit[1024], dht_response_addr[1024], line[500];
 	char ownaddr[] = "127.0.0.1", tmp_ip_str[INET_ADDRSTRLEN];
         char *fqdn_str = NULL;
@@ -467,7 +472,7 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 	   /etc/hip/hosts and only then from DHT server. */
         if (flags & AI_NODHT) {
 		HIP_INFO("Distributed Hash Table (DHT) is not in use.\n");
-                goto skip_dht;
+                goto out_err;
         }
 	
         memset(dht_response_hit, '\0', sizeof(dht_response_hit));
@@ -493,12 +498,10 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 
 	/* Send a user message to the HIP daemon to receive Open DHT server
 	   gateway whereabouts. */
-        if((err = hip_send_recv_daemon_info(msg)) < 0) {
-		HIP_ERROR("Unable to receive DHT gateway information from the "\
+        HIP_IFEL(((err = hip_send_recv_daemon_info(msg)) < 0), -1,
+		"Unable to receive DHT gateway information from the "\
 			  "HIP daemon.\nDo you have a local HIP daemon up and "\
 			  "running?\n");
-		goto skip_dht; 
-	}
 	
 	gw_info = hip_get_param(msg, HIP_PARAM_OPENDHT_GW_INFO);
 	if(gw_info == NULL) {
@@ -511,35 +514,29 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
         /* Check if DHT was on */
         if ((gw_info->ttl == 0) && (gw_info->port == 0)) {
                 HIP_INFO("Distributed hash table (DHT) is not in use.\n");
-                goto skip_dht;
+                goto out_err;
         }
         
         tmp_ttl = gw_info->ttl;
         tmp_port = htons(gw_info->port);
         IPV6_TO_IPV4_MAP(&gw_info->addr, &tmp_v4);
 	
-        if(inet_ntop(AF_INET, &tmp_v4, tmp_ip_str,
-		     sizeof(tmp_ip_str)) == NULL) {
-		err = -1;
-		goto out_err;
-	}
+        HIP_IFEL((inet_ntop(AF_INET, &tmp_v4, tmp_ip_str,
+                            sizeof(tmp_ip_str)) == NULL), 1, 
+                 "Failed to convert gw addr to presentation format\n");		
 	
 	/* Check for IN_ADDR_ANY gateway. This happens for example on virtual
 	   machines. */	
-	if((tmp_v4.s_addr | INADDR_ANY) == 0) {
-		HIP_ERROR("DHT gateway is 0.0.0.0. Skipping.\n");
-		goto skip_dht;
-	}
+	HIP_IFEL(((tmp_v4.s_addr | INADDR_ANY) == 0), -1, 
+                 "DHT gateway is 0.0.0.0. Skipping.\n");
 	
         HIP_INFO("DHT server is located at %s:%d with TTL %d.\n",
 		 tmp_ip_str, tmp_port, tmp_ttl);
 
         error = 0;
         error = resolve_dht_gateway_info(tmp_ip_str, &serving_gateway);
-        if (error < 0) {
-		HIP_DEBUG("Error in resolving the DHT gateway address, skipping DHT.\n");
-		goto skip_dht;
-        }
+        HIP_IFEL((error < 0), -1,
+                 "Error in resolving the DHT gateway address, skipping DHT.\n");
 
         ret_hit = opendht_get_key(serving_gateway, name, dht_response_hit);
 	
@@ -582,11 +579,9 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
                         return 1;
                 }
         }
-/* HORRIBLE! Why is skip_dht under out_err? This effectively renders our IFE macros
-   useless. :( -Lauri 08.05.2008 */
  out_err: 
- skip_dht:
-									
+
+								
 	/* Open the file containing HIP hosts for reading. */
 	fp = fopen(_PATH_HIP_HOSTS, "r");
 	if(fp == NULL)
@@ -601,8 +596,8 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 	/* Loop through all lines in the file. */
 	/** @todo check return values */
         while (fp && getwithoutnewline(line, 500, fp) != NULL) {		
-                int c, ret;
-		
+	        c = ret = is_lsi = 0;
+	
 		/* Keep track of line number for debuging purposes. */
 		lineno++;
 		/* Skip empty and single character lines. */
@@ -613,24 +608,31 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
                 initlist(&list);
                 extractsubstrings(line,&list);
 		
-		/* Loop through the substrings just created. We try to convert
-		   the list item into an IPv6 address. If the conversion is NOT
+		/* Loop through the substrings just created. We check if the 
+		   list item is an IPv6 or IPv4 address. If the conversion is NOT
 		   successful, we assume that the substring represents a fully
 		   qualified domain name. Note that this omits the possible
 		   aliases that the hosts has. */
                 for(i = 0; i < length(&list); i++) {
-			
-                        if (inet_pton(AF_INET6, getitem(&list,i), &hit) <= 0) {
-				fqdn_str = getitem(&list,i);
-			}                                                                 
+		        err = inet_pton(AF_INET6, getitem(&list,i), &hit);  
+                        if (err == 0){
+				err = inet_pton(AF_INET, getitem(&list,i), &lsi);				
+				if (err && IS_LSI32(lsi.s_addr))
+				        is_lsi = 1;
+			}
+			if(err != 1)
+			        fqdn_str = getitem(&list,i);                                                                                
                 }
-		/* Here we have the domain name in "fqdn" and the HIT in "hit". */
+		/* Here we have the domain name in "fqdn" and the HIT in "hit" or the LSI in "lsi". */
                 if ((strlen(name) == strlen(fqdn_str)) &&
 		    strcmp(name, fqdn_str) == 0) {
-			HIP_INFO("Found a HIT value for host '%s' on line "\
+			HIP_INFO("Found a HIT/LSI value for host '%s' on line "\
 				 "%d of file '%s'.\n",
 				 name, lineno, _PATH_HIP_HOSTS);
-                        found_hits = 1; 
+			if (is_lsi && (flags & AI_HIP))
+			        continue;           
+			else
+			        found_hits = 1;
                         
                         /* "add every HIT to linked list"
 			   What do you mean by "every"? We only have one HIT per
@@ -639,11 +641,10 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 			   previous loop?
 			   18.01.2008 16:49 -Lauri. */				
                         for(i = 0; i <length(&list); i++) {
-                                uint32_t lsi = htonl(HIT2LSI((uint8_t *) &hit));	
                                 struct gaih_addrtuple *prev_pat = NULL;	
 				ret = inet_pton(AF_INET6, getitem(&list,i), &hit);
                                 
-                                if (ret < 1) {
+                                if (ret < 0) {
 					continue;
 				}
                                 
@@ -656,30 +657,27 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
                                 }
                                 
                                 /* Placing the node at the beginning of the
-				   list. */
-                                aux->next = (**pat);
-                                (**pat) = aux;
-                                aux->scopeid = 0;				
-                                aux->family = AF_INET6;
-                                memcpy(aux->addr, &hit, sizeof(struct in6_addr));
-/* AG: add LSI as well */
-/* Disabled as this is not support by the daemon yet. -Miika */
-                                /*
-                                if (**pat == NULL) {
-				**pat = (struct gaih_addrtuple *)
-				malloc(sizeof(struct gaih_addrtuple));
-				if (**pat == NULL){
-				HIP_ERROR("Memory allocation error\n");
-				exit(-EAI_MEMORY);
+				   list. */                                
+
+				if (ret == 1){
+				        /*It's a HIT*/
+				        aux->next = (**pat);
+                                        (**pat) = aux;
+                                        aux->scopeid = 0;
+				        aux->family = AF_INET6;
+					memcpy(aux->addr, &hit, sizeof(struct in6_addr));
 				}
-				
-				(**pat)->scopeid = 0;				
-                                }
-				(**pat)->next = NULL;
-                                (**pat)->family = AF_INET;
-                                memcpy((**pat)->addr, &lsi, sizeof(hip_lsi_t));
-                                *pat = &((**pat)->next);
-				*/
+				else if (ret == 0 && inet_pton(AF_INET, getitem(&list,i), &lsi)){
+				        /*IPv4 to IPV6 in order to be supported by the daemon*/
+				        aux->next = (**pat);
+					(**pat) = aux;
+					aux->scopeid = 0;
+					aux->family = AF_INET6;
+					HIP_DEBUG_LSI(" lsi to add", &lsi);
+					IPV4_TO_IPV6_MAP(&lsi, &lsi_ip6);
+					memcpy(aux->addr, &lsi_ip6, sizeof(struct in6_addr));
+				}
+
                         }
                 } // end of if
                 
@@ -698,103 +696,117 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 void 
 send_hipd_addr(struct gaih_addrtuple * orig_at)
 {
-  struct gaih_addrtuple *at_ip, *at_hit;
-  struct hip_common *msg;
-  msg = malloc(HIP_MAX_PACKET);
-  if(orig_at == NULL ) HIP_DEBUG("NULL orig_at sent\n"); 
-  for(at_hit = orig_at; at_hit != NULL; at_hit = at_hit->next) {
-    int i;
-    struct sockaddr_in6 *s;
-    struct in6_addr addr6;
-    
-    if (at_hit->family != AF_INET6)
-      continue;
-    
-    s	= (struct sockaddr_in6 *)at_hit->addr;
-    
-    if (!ipv6_addr_is_hit((struct in6_addr *) at_hit->addr)) {
-      continue;
-    }
-    
-    for(at_ip = orig_at; at_ip != NULL; at_ip = at_ip->next) {
+	struct gaih_addrtuple *at_ip, *at_hit;
+	struct hip_common *msg;
+	msg = malloc(HIP_MAX_PACKET);
+  	if(orig_at == NULL ) HIP_DEBUG("NULL orig_at sent\n"); 
 
-#if 0 /* LSIs not supported yet */
-      if (at_ip->family == AF_INET && 
-	  IS_LSI32(ntohl(((struct in_addr *) at_ip->addr)->s_addr)))
-	continue;
-#endif
+	for(at_hit = orig_at; at_hit != NULL; at_hit = at_hit->next) {
+    		int i, is_lsi = 0;
+ 		struct sockaddr_in6 *s;
+	        struct in6_addr addr6;
+		hip_lsi_t lsi;
+   
+	        if (at_hit->family != AF_INET6)
+    	        	continue;
+   
+    		s = (struct sockaddr_in6 *)at_hit->addr;
+   
+		if (!ipv6_addr_is_hit((struct in6_addr *) at_hit->addr))
+		        continue;
+    
+		for(at_ip = orig_at; at_ip != NULL; at_ip = at_ip->next) {
+			if (at_ip->family == AF_INET6){
+				if(ipv6_addr_is_hit((struct in6_addr *) at_ip->addr))
+					continue;
+				else if(IN6_IS_ADDR_V4MAPPED((struct in6_addr *)at_ip->addr)){
+			        	IPV6_TO_IPV4_MAP(((struct in6_addr *)at_ip->addr), &lsi);
+					is_lsi = 1;
+					_HIP_DEBUG_LSI("lsi\n", &lsi);
+					continue;
+				}
+		   		else{
+			        	addr6 = *(struct in6_addr *) at_ip->addr;
+		   		        _HIP_DEBUG_IN6ADDR("addr6\n", (struct in6_addr *)at_hit->addr);
+		   		}
+	    		}
 
-      if (at_ip->family == AF_INET6 &&
-	  ipv6_addr_is_hit((struct in6_addr *) at_ip->addr)) {
-	continue;
-      }
-      if (at_ip->family == AF_INET) {
-	IPV4_TO_IPV6_MAP(((struct in_addr *) at_ip->addr), &addr6);
-      }
-      else 
-	addr6 = *(struct in6_addr *) at_ip->addr;
+			if (at_ip->family == AF_INET) {
+				HIP_DEBUG_LSI("AF_INET ",(struct in_addr *) at_ip->addr);
+			        IPV4_TO_IPV6_MAP(((struct in_addr *) at_ip->addr), &addr6);
+	    		}
 
-      hip_msg_init(msg);
-      
-      /* Clarified the printed output as this is used in conntest-client-gai.
-	 -Lauri 07.05.2008. */
-      char hit_string[INET6_ADDRSTRLEN];
-      char ipv6_string[INET6_ADDRSTRLEN];
-      memset(hit_string, 0, INET6_ADDRSTRLEN);
-      memset(ipv6_string, 0, INET6_ADDRSTRLEN);
-      
-      inet_ntop(AF_INET6, (struct in6_addr *)at_hit->addr, hit_string,
-		INET6_ADDRSTRLEN);
+	    		if (at_ip->family != AF_INET6 && at_ip->family != AF_INET)
+	        		HIP_DEBUG("undef family!!!!!!!!!\n");
 
-      if (IN6_IS_ADDR_V4MAPPED(&addr6)) {
-	      struct in_addr in_addr;
-	      IPV6_TO_IPV4_MAP(&addr6, &in_addr);
-	      inet_ntop(AF_INET, &in_addr, ipv6_string, INET6_ADDRSTRLEN);
-	      HIP_INFO("Mapped a HIT to an IPv4 address:\n"\
-		       "%s -> %s.\n", hit_string, ipv6_string);
-      } else {
-	      inet_ntop(AF_INET6, &addr6, ipv6_string, INET6_ADDRSTRLEN);
-	      HIP_INFO("Mapped a HIT to an IPv6 address:\n"\
-		       "%s -> %s.\n", hit_string, ipv6_string);
-      }
-      
-      hip_build_param_contents(msg, (void *) at_hit->addr, HIP_PARAM_HIT, sizeof(struct in6_addr));
-      hip_build_param_contents(msg, (void *) &addr6, HIP_PARAM_IPV6_ADDR, sizeof(struct in6_addr));
-      hip_build_user_hdr(msg, SO_HIP_ADD_PEER_MAP_HIT_IP, 0);
-      hip_send_recv_daemon_info(msg);
-    }
-  }  
-  free(msg);
+	    		hip_msg_init(msg);   
+	    		/* Clarified the printed output as this is used in conntest-client-gai.
+			   -Lauri 07.05.2008. */
+			char hit_string[INET6_ADDRSTRLEN];
+			char ipv6_string[INET6_ADDRSTRLEN];
+			memset(hit_string, 0, INET6_ADDRSTRLEN);
+			memset(ipv6_string, 0, INET6_ADDRSTRLEN);
+	      
+		    	HIP_DEBUG_IN6ADDR("HIT", (struct in6_addr *)at_hit->addr);
+		    	HIP_DEBUG_IN6ADDR("IP", &addr6);
+		    	hip_build_param_contents(msg, (void *) at_hit->addr, HIP_PARAM_HIT, sizeof(struct in6_addr));
+		    	hip_build_param_contents(msg, (void *) &addr6, HIP_PARAM_IPV6_ADDR, sizeof(struct in6_addr));
+
+		    	inet_ntop(AF_INET6, (struct in6_addr *)at_hit->addr, hit_string,
+				  INET6_ADDRSTRLEN);
+
+		    	if (IN6_IS_ADDR_V4MAPPED(&addr6)) {
+		      		struct in_addr in_addr;
+		   	        IPV6_TO_IPV4_MAP(&addr6, &in_addr);
+		      		inet_ntop(AF_INET, &in_addr, ipv6_string, INET6_ADDRSTRLEN);
+		      		HIP_INFO("Mapped a HIT to an IPv4 address:\n"\
+					"%s -> %s.\n", hit_string, ipv6_string);
+		    	} else {
+		      		inet_ntop(AF_INET6, &addr6, ipv6_string, INET6_ADDRSTRLEN);
+		      		HIP_INFO("Mapped a HIT to an IPv6 address:\n"\
+			       		 "%s -> %s.\n", hit_string, ipv6_string);
+		    	}
+
+			if (is_lsi){
+		      		HIP_DEBUG_LSI("LSI", &lsi);
+				hip_build_param_contents(msg, (void *) &lsi, SO_HIP_PARAM_LSI, sizeof(hip_lsi_t));
+				is_lsi = 0;
+		    	}
+		    	hip_build_user_hdr(msg, SO_HIP_ADD_PEER_MAP_HIT_IP, 0);
+		    	hip_send_recv_daemon_info(msg);
+		}//for at_ip
+	}//for at_hit
+	free(msg);
 }
 
 void
 get_ip_from_gaih_addrtuple(struct gaih_addrtuple *orig_at, struct in6_addr *ip)
 {
-  HIP_ASSERT(orig_at != NULL );
-  struct gaih_addrtuple *at_ip;
-  struct in6_addr addr6;
+	HIP_ASSERT(orig_at != NULL );
+  	struct gaih_addrtuple *at_ip;
+	struct in6_addr addr6;
 
-  for(at_ip = orig_at; at_ip != NULL; at_ip = at_ip->next) {
-    if (at_ip->family == AF_INET && 
-	IS_LSI32(ntohl(((struct in_addr *) at_ip->addr)->s_addr)))
-      continue;
-    if (at_ip->family == AF_INET6 &&
-	ipv6_addr_is_hit((struct in6_addr *) at_ip->addr)) {
-      continue;
-    }
-    if (at_ip->family == AF_INET) {
-      IPV4_TO_IPV6_MAP(((struct in_addr *) at_ip->addr), &addr6);
-      continue;
-      memcpy(ip, &addr6, sizeof(struct in6_addr));
-      _HIP_DEBUG_HIT("IPV4_TO_IPV6_MAP addr=", &addr6);
-      _HIP_HEXDUMP("IPV4_TO_IPV6_MAP HEXDUMP ip=", ip, sizeof(struct in6_addr));
-    }
-    else 
-      addr6 = *(struct in6_addr *) at_ip->addr;
-      _HIP_DEBUG_HIT("get_ip_from_gaih_addrtuple addr=", &addr6);
-      memcpy(ip, &addr6, sizeof(struct in6_addr));
-      _HIP_HEXDUMP("get_ip_from_gaih_addrtuple HEXDUMP ip=", ip, sizeof(struct in6_addr));
-  }  
+  	for(at_ip = orig_at; at_ip != NULL; at_ip = at_ip->next) {
+    		if (at_ip->family == AF_INET && 
+		    IS_LSI32(ntohl(((struct in_addr *) at_ip->addr)->s_addr)))
+      			continue;
+		if (at_ip->family == AF_INET6 &&
+		    ipv6_addr_is_hit((struct in6_addr *) at_ip->addr)) 
+			continue;
+    		
+    		if (at_ip->family == AF_INET) {
+	      		IPV4_TO_IPV6_MAP(((struct in_addr *) at_ip->addr), &addr6);
+	      		continue;
+	      		memcpy(ip, &addr6, sizeof(struct in6_addr));
+	      		_HIP_DEBUG_HIT("IPV4_TO_IPV6_MAP addr=", &addr6);
+			_HIP_HEXDUMP("IPV4_TO_IPV6_MAP HEXDUMP ip=", ip, sizeof(struct in6_addr));
+    		}
+    		else 
+      			addr6 = *(struct in6_addr *) at_ip->addr;
+	      	_HIP_DEBUG_HIT("get_ip_from_gaih_addrtuple addr=", &addr6);
+	      	memcpy(ip, &addr6, sizeof(struct in6_addr));
+	      	_HIP_HEXDUMP("get_ip_from_gaih_addrtuple HEXDUMP ip=", ip, sizeof(struct in6_addr));
+	}  
 }
 
 int 
@@ -1042,13 +1054,13 @@ int gaih_inet_get_name(const char *name, const struct addrinfo *req,
 		       struct gaih_servtuple *st, struct gaih_addrtuple **at,
 		       int hip_transparent_mode) 
 {
-	int err = 0, rc = 0;
+        int err = 0, rc = 0, is_lsi = 0;
 	int v4mapped = (req->ai_family == PF_UNSPEC ||
 			req->ai_family == PF_INET6) &&
 		(req->ai_flags & AI_V4MAPPED);
 	char *namebuf = strdupa(name);
 	
-	_HIP_DEBUG("gaih_inet_get_name() invoked.\n");
+	HIP_DEBUG("gaih_inet_get_name() invoked.\n");
 
 	*at = malloc (sizeof (struct gaih_addrtuple));
 	
@@ -1056,7 +1068,7 @@ int gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	(*at)->scopeid = 0;
 	(*at)->next = NULL;
 	
-	/* Check if the addredd is an IPv4 address. */
+	/* Is ipv4 address? */
 	if (inet_pton (AF_INET, name, (*at)->addr) > 0)
 	{
 		HIP_DEBUG("The name to resolve is an IPv4\n");
@@ -1064,6 +1076,7 @@ int gaih_inet_get_name(const char *name, const struct addrinfo *req,
 		    req->ai_family == AF_INET || v4mapped)
 		{
 			(*at)->family = AF_INET;
+			is_lsi = IS_LSI32(((struct in_addr *)(*at)->addr)->s_addr);
 		}
 		else
 		{
@@ -1141,259 +1154,252 @@ int gaih_inet_get_name(const char *name, const struct addrinfo *req,
        to use the flag AI_NUMERICHOST to identify whether the name is a 
        numeric address. */
 
-    if ((*at)->family == AF_UNSPEC &&
-	inet_pton (AF_INET, name, (*at)->addr) <= 0 &&
-	inet_pton (AF_INET6, namebuf, (*at)->addr) <= 0) {
-      struct gaih_addrtuple **pat = at;
-      struct gaih_addrtuple *at_dns = *at;
-      int no_data = 0;
-      int no_inet6_data = 0;
-      int old_res_options = _res.options;
-      int found_hits = 0;
+	if ((*at)->family == AF_UNSPEC &&
+	    inet_pton (AF_INET, name, (*at)->addr) <= 0 &&
+	    inet_pton (AF_INET6, namebuf, (*at)->addr) <= 0) {
+      		struct gaih_addrtuple **pat = at;
+      		struct gaih_addrtuple *at_dns = *at;
+	        int no_data = 0;
+	        int no_inet6_data = 0;
+	        int old_res_options = _res.options;
+	        int found_hits = 0;
       
-      _HIP_DEBUG("The name is not an IPv4 or IPv6 address, resolve name "\
-		"(!AI_NUMERICHOST)\n");
-      _HIP_DEBUG("&pat=%p pat=%p *pat=%p **pat=%p\n", &pat, pat, *pat, **pat);
+      		HIP_DEBUG("The name is not an IPv4 or IPv6 address, resolve name "\
+			  "(!AI_NUMERICHOST)\n");
+      		HIP_DEBUG("&pat=%p pat=%p *pat=%p **pat=%p\n", &pat, pat, *pat, **pat);
       
 #ifdef UNDEF_CONFIG_HIP_AGENT
-      if ((hip_transparent_mode || req->ai_flags & AI_HIP) &&
-	  hip_agent_is_alive()) {
-	/* Communicate the name and port output to the agent
-	   synchronously with netlink. First send the name + port
-	   and then wait for answer (select). The agent filters
-	   or modifies the list. The agent implements gethosts_hit
-	   with some filtering. */
-      }
+      		if ((hip_transparent_mode || req->ai_flags & AI_HIP) &&
+	    	    hip_agent_is_alive()) {
+			/* Communicate the name and port output to the agent
+			   synchronously with netlink. First send the name + port
+			   and then wait for answer (select). The agent filters
+			   or modifies the list. The agent implements gethosts_hit
+			   with some filtering. */
+      		}
 #endif
  
-      /* If we are looking for both IPv4 and IPv6 address we don't
-	 want the lookup functions to automatically promote IPv4
-	 addresses to IPv6 addresses.  Currently this is decided
-	 by setting the RES_USE_INET6 bit in _res.options.  */
-      if (req->ai_family == AF_UNSPEC)
-	_res.options &= ~RES_USE_INET6;
-      
-      if (req->ai_family == AF_UNSPEC || req->ai_family == AF_INET6 
-	|| hip_transparent_mode || req->ai_flags & AI_HIP || req->ai_flags & AI_NODHT)
-	 no_inet6_data = gethosts (name, AF_INET6, &pat);
+	      /* If we are looking for both IPv4 and IPv6 address we don't
+		 want the lookup functions to automatically promote IPv4
+		 addresses to IPv6 addresses.  Currently this is decided
+		 by setting the RES_USE_INET6 bit in _res.options.  */
+		if (req->ai_family == AF_UNSPEC)
+			_res.options &= ~RES_USE_INET6;
+	      
+		if (req->ai_family == AF_UNSPEC || req->ai_family == AF_INET6 
+		    || hip_transparent_mode || req->ai_flags & AI_HIP || req->ai_flags & AI_NODHT)
+			no_inet6_data = gethosts (name, AF_INET6, &pat);
 
-      if (req->ai_family == AF_UNSPEC)
-	_res.options = old_res_options;
-      
-      if (req->ai_family == AF_INET ||
-	  (!v4mapped && req->ai_family == AF_UNSPEC) ||
-	  (v4mapped && (no_inet6_data != 0 || (req->ai_flags & AI_ALL)))
-  	  || hip_transparent_mode || req->ai_flags & AI_HIP & AI_NODHT)
-	no_data = gethosts (name, AF_INET, &pat);
-      
-      if (hip_transparent_mode) {
-	_HIP_DEBUG("HIP_TRANSPARENT_API: fetch HIT addresses\n");
+	      	if (req->ai_family == AF_UNSPEC)
+			_res.options = old_res_options;
+	      
+	      	if (req->ai_family == AF_INET ||
+		    (!v4mapped && req->ai_family == AF_UNSPEC) ||
+		    (v4mapped && (no_inet6_data != 0 || (req->ai_flags & AI_ALL)))
+	  	    || hip_transparent_mode || req->ai_flags & AI_HIP & AI_NODHT)
+			no_data = gethosts (name, AF_INET, &pat);
+	      
+	      	if (hip_transparent_mode) {
+			_HIP_DEBUG("HIP_TRANSPARENT_API: fetch HIT addresses\n");
 	
-	_HIP_DEBUG("found_hits before gethosts_hit: %d\n", found_hits);
+			_HIP_DEBUG("found_hits before gethosts_hit: %d\n", found_hits);
 	
-	/* What is the point to bitwise OR from a function return value that
-	   can implicate also an error value? Anyhows, had to fix this a little
-	   to allow the error value to be passed to the caller of this function.
-	   -Lauri 07.05.2008. */
-	err = gethosts_hit(name, &pat, req->ai_flags);
-
-	if((err) < 0) {
-		return err;
-	}
+			/* What is the point to bitwise OR from a function return value that
+			   can implicate also an error value? Anyhows, had to fix this a little
+			   to allow the error value to be passed to the caller of this function.
+			   -Lauri 07.05.2008. */
+			err = gethosts_hit(name, &pat, req->ai_flags);
+			if((err) <= 0) {
+			  return err;
+			}
 	
-	found_hits |= err;
-	err = 0;
+			found_hits |= err;
+			err = 0;
 	
-	_HIP_DEBUG("found_hits after gethosts_hit: %d\n", found_hits);
+			_HIP_DEBUG("found_hits after gethosts_hit: %d\n", found_hits);
 	
-	if (req->ai_flags & AI_HIP) {
-	  _HIP_DEBUG("HIP_TRANSPARENT_API: AI_HIP set: strictly HITs are "\
-		    "returned\n");
-	} else {
-	  _HIP_DEBUG("HIP_TRANSPARENT_API: AI_HIP unset: if any HITs are "\
-		    "found only HITs will be returned; if not, IPs will be "\
-		    "returned\n");
-	}
-      } else /* not hip_transparent_mode */ {
-	if (req->ai_flags & AI_HIP) {
-	  _HIP_DEBUG("no HIP_TRANSPARENT_API: AI_HIP set: strictly HITs are "\
-		    "returned\n");
-	  found_hits |= gethosts_hit(name, &pat, req->ai_flags);
-	} else {
-	  _HIP_DEBUG("no HIP_TRANSPARENT_API: AI_HIP unset: strictly IPs are "\
-		    "returned\n");
-	}
-      }
+			if (req->ai_flags & AI_HIP) {
+				_HIP_DEBUG("HIP_TRANSPARENT_API: AI_HIP set: strictly HITs are "\
+					   "returned\n");
+			} else {
+			  	_HIP_DEBUG("HIP_TRANSPARENT_API: AI_HIP unset: if any HITs are "\
+			   	    	   "found only HITs will be returned; if not, IPs will be "\
+				    	   "returned\n");
+			}
+		} else /* not hip_transparent_mode */ {
+			if (req->ai_flags & AI_HIP) {
+				_HIP_DEBUG("no HIP_TRANSPARENT_API: AI_HIP set: strictly HITs are "\
+	 			           "returned\n");
+				found_hits |= gethosts_hit(name, &pat, req->ai_flags);
+			} else {
+				_HIP_DEBUG("no HIP_TRANSPARENT_API: AI_HIP unset: strictly IPs are "\
+				    	   "returned\n");
+			}
+		}
 
-      _HIP_DEBUG("Dumping the structure\n");
-      //dump_pai(*at);
-      
-      /* perform HIT-IPv6 mapping if both are found 
-	 AG: now the loop also takes in IPv4 addresses */
-      if (found_hits) 
-	send_hipd_addr(*at);
+		dump_pai(*at);
 
-      /*
-        Check if DNS returned HITs incase hosts file and DHT checks didn't contain HITs 
-      */
-      if (!found_hits)
-        {
-          for (at_dns = *at; at_dns != NULL; at_dns = at_dns->next)
-            {
-              if (ipv6_addr_is_hit((struct in6_addr *)at_dns->addr)) 
-                {
-		  found_hits = 1;
-		  send_hipd_addr(*at);
-                  break;
-                }
-            }
-        } 
+		/* perform HIT-IPv6 mapping if both are found 
+		AG: now the loop also takes in IPv4 addresses */
+	      	if (found_hits) 
+			send_hipd_addr(*at);
 
-      if (no_data != 0 && no_inet6_data != 0)
-	{
-	  _HIP_DEBUG("nodata\n");
-	  /* If both requests timed out report this.  */
-	  if (no_data == EAI_AGAIN && no_inet6_data == EAI_AGAIN)
-	    return -EAI_AGAIN;
-	  
-	  /* We made requests but they turned out no data.  The name
-	     is known, though.  */
-	  return (GAIH_OKIFUNSPEC | -EAI_AGAIN);
-	}
-      /* If there isn't any node in the list or the first node is unspecified, exit */ 
-      if (*at == NULL || (*at)->family == AF_UNSPEC)
-	return (GAIH_OKIFUNSPEC | -EAI_NONAME);
-    
-      _HIP_DEBUG("req->ai_flags: %d   AI_HIP: %d  AF_UNSPEC: %d\n", req->ai_flags, AI_HIP, AF_UNSPEC);
+		/*
+			Check if DNS returned HITs incase hosts file and DHT checks didn't contain HITs 
+	      	*/
+	      	if (!found_hits)
+		{
+			for (at_dns = *at; at_dns != NULL; at_dns = at_dns->next)
+			{
+		      		if (ipv6_addr_is_hit((struct in6_addr *)at_dns->addr)) 
+		        	{
+			  		found_hits = 1;
+			  		send_hipd_addr(*at);
+		          		break;
+		        	}
+		    	}
+		} 
 
-      _HIP_DEBUG("found_hits: %d\n", found_hits);
-      
-      /* HIP: Finally remove IP addresses from the list to be returned depending
-	 on the AI_HIP flag. */ 
-      if ((req->ai_flags & AI_HIP) || found_hits) {
-	struct gaih_addrtuple *a = *at, *p = NULL, *aux = NULL;
-	_HIP_DEBUG("HIP: AI_HIP set or HITs were found: removing IP addresses\n");
-	_HIP_DEBUG("(*at)->addr: %s  (*at)->family: %d\n", (*at)->addr, (*at)->family);
+	      	if (no_data != 0 && no_inet6_data != 0)
+		{
+			_HIP_DEBUG("nodata\n");
+			/* If both requests timed out report this.  */
+		  	if (no_data == EAI_AGAIN && no_inet6_data == EAI_AGAIN)
+		    		return -EAI_AGAIN;
+		  
+		  	/* We made requests but they turned out no data.  The name
+		     	is known, though.  */
+		  	return (GAIH_OKIFUNSPEC | -EAI_AGAIN);
+		}
+	      	/* If there isn't any node in the list or the first node is unspecified, exit */ 
+	      	if (*at == NULL || (*at)->family == AF_UNSPEC)
+			return (GAIH_OKIFUNSPEC | -EAI_NONAME);
+	    
+	      	_HIP_DEBUG("req->ai_flags: %d   AI_HIP: %d  AF_UNSPEC: %d\n", req->ai_flags, AI_HIP, AF_UNSPEC);
 
-	while (a != NULL) {
+	      	_HIP_DEBUG("found_hits: %d\n", found_hits);
+	      
+	      	/* HIP: Finally remove IP addresses from the list to be returned depending
+		on the AI_HIP flag. */ 
+	      	if ((req->ai_flags & AI_HIP) || found_hits) {
+			struct gaih_addrtuple *a = *at, *p = NULL, *aux = NULL;
+			_HIP_DEBUG("HIP: AI_HIP set or HITs were found: removing IP addresses\n");
+			_HIP_DEBUG("(*at)->addr: %s  (*at)->family: %d\n", (*at)->addr, (*at)->family);
+
+			while (a != NULL) {
 	
-	  struct gaih_addrtuple *nxt = a->next;
-	  
-	  _HIP_DEBUG("req->ai_family: %d   a->family: %d   ipv6_addr_is_hit: %d  ", 
-		    req->ai_family, a->family, 
-                    ipv6_addr_is_hit((struct in6_addr *)a->addr), a->addr);
-	  if (a->family == AF_INET) {
-              _HIP_DEBUG_LSI("\na->addr",a->addr);
-	  }
-          if (a->family == AF_INET6) {
-              _HIP_DEBUG_HIT("\na->addr",a->addr);
-	  }
-	  /* do not remove HIT if request is not IPv4 */
-	  if (req->ai_family != AF_INET && 
-	      a->family == AF_INET6 && 
-	      ipv6_addr_is_hit((struct in6_addr *)a->addr))
-	    goto leave;
-	  
-	  /* do not remove LSI if request is IPv4 */
-	  if (req->ai_family == AF_INET && 
-	      a->family == AF_INET && 
-	      IS_LSI32(ntohl(((struct in_addr *)a->addr)->s_addr)))
-	    goto leave;
+			  	struct gaih_addrtuple *nxt = a->next;
+			  
+			  	_HIP_DEBUG("req->ai_family: %d   a->family: %d   ipv6_addr_is_hit: %d  ", 
+				    	   req->ai_family, a->family, 
+				    	   ipv6_addr_is_hit((struct in6_addr *)a->addr), a->addr);
+			  	if (a->family == AF_INET) {
+			      		_HIP_DEBUG_LSI("\na->addr",a->addr);
+			  	}
+			  	if (a->family == AF_INET6) {
+			      		_HIP_DEBUG_HIT("\na->addr",a->addr);
+			  	}
+			 	/* do not remove HIT if request is not IPv4 */
+			  	if (req->ai_family != AF_INET && 
+			      	    a->family == AF_INET6 && 
+			      	    ipv6_addr_is_hit((struct in6_addr *)a->addr))
+			    		goto leave;
+			  
+			  	/* do not remove LSI if request is IPv4 */
+			  	if (req->ai_family == AF_INET && 
+			      	    a->family == AF_INET && is_lsi)
+			    		goto leave;
 
-	  if (p != NULL){
-	    while (aux->next != a)
-	      aux = aux->next;
-	    aux->next = a->next;
-	  }
-	  _HIP_DEBUG("freeing IP address\n");
-	  free(a);
-	  a = nxt;
-	  _HIP_DEBUG("pointer a: %p\tpointer p: %p\n", a, p);
-	  continue;
+				if (p != NULL){
+					while (aux->next != a)
+				      		aux = aux->next;
+				    	aux->next = a->next;
+				}
+			  	_HIP_DEBUG("freeing IP address\n");
+			  	free(a);
+			  	a = nxt;
+			  	_HIP_DEBUG("pointer a: %p\tpointer p: %p\n", a, p);
+			  	continue;
 	  
-	leave:
-	  if (p == NULL)
-	    p = aux = a;
-	  a = a->next;
-	  _HIP_DEBUG("pointer a: %p\tpointer p: %p\n", a, p);	
-	}
-	if (p == NULL){  /* no HITs or LSIs were found */
-		HIP_INFO("No HITs or LSIs were found.\n");
-		return (GAIH_OKIFUNSPEC | -EAI_NONAME);
-	}
+				leave:
+					if (p == NULL)
+			    			p = aux = a;
+			  		a = a->next;
+			  		_HIP_DEBUG("pointer a: %p\tpointer p: %p\n", a, p);	
+			}
+			if (p == NULL){  /* no HITs or LSIs were found */
+				HIP_INFO("No HITs or LSIs were found.\n");
+				return (GAIH_OKIFUNSPEC | -EAI_NONAME);
+			}
 	
-	*at = p;
-      }
+			*at = p;
+		}
 
 
-      /* HIP: If AF_UNSPEC flag is set, order the link list so HITs are first and then IPs. */
-      if (req->ai_flags == AF_UNSPEC) {
-	struct gaih_addrtuple *a = *at, *p = NULL, *plast = NULL, *aux = *at;
-	_HIP_DEBUG("HIP: AI_HIP set: order IP addresses. (*at)->addr: %s (*at)->family: %d\n", (*at)->addr, (*at)->family);  
-	while (a != NULL) {
-	  struct gaih_addrtuple *nxt = a->next;
-	  
-	  _HIP_DEBUG("req->ai_family: %d    a->family: %d    ipv6_addr_is_hit: %d a->addr: %s\n", 
-		    req->ai_family, a->family, ipv6_addr_is_hit((struct in6_addr *)a->addr), a->addr);
-	  
-	  /* do not move HITs if request is not IPv4 */
-	  if (req->ai_family != AF_INET && 
-	      a->family == AF_INET6 && 
-	      ipv6_addr_is_hit((struct in6_addr *)a->addr)){
-	    a = aux = nxt;
-	    continue;
-	  }
-	  
-#if 0 /* Not supported yet */
-	  /* do not move the LSI if request is IPv4 */
-	  if (req->ai_family == AF_INET && 
-	      a->family == AF_INET && 
-	      IS_LSI32(ntohl(((struct in_addr *)a->addr)->s_addr))){
-	    a = aux = nxt;
-	    continue;
-	  }
-#endif
+	      	/* HIP: If AF_UNSPEC flag is set, order the link list so HITs are first and then IPs. */
+		if (req->ai_flags == AF_UNSPEC) {
+			struct gaih_addrtuple *a = *at, *p = NULL, *plast = NULL, *aux = *at;
+			_HIP_DEBUG("HIP: AI_HIP set: order IP addresses. (*at)->addr: %s (*at)->family: %d\n", (*at)->addr, (*at)->family);  
+			while (a != NULL) {
+		  		struct gaih_addrtuple *nxt = a->next;
+		  
+		  		_HIP_DEBUG("req->ai_family: %d    a->family: %d    ipv6_addr_is_hit: %d a->addr: %s\n", 
+			    		   req->ai_family, a->family, ipv6_addr_is_hit((struct in6_addr *)a->addr), a->addr);
+		  
+			  	/* do not move HITs if request is not IPv4 */
+		  		if (req->ai_family != AF_INET && 
+		      		    a->family == AF_INET6 && 
+		      		    ipv6_addr_is_hit((struct in6_addr *)a->addr)){
+		    			a = aux = nxt;
+		    			continue;
+		  		}
+		  
+		  		/* do not move the LSI if request is IPv4 */
+		  		if (req->ai_family == AF_INET && 
+		      		    a->family == AF_INET && is_lsi){
+		    			a = aux = nxt;
+		    			continue;
+		  		}
 
-	  /* putting the IPs to the linked list *p */
-	  if (p == NULL){
-	    p = plast = a;
-	    a->next = NULL;
-	  }else{
-	    plast->next = a;
-	    plast = plast->next;
-	    a->next = NULL;
-	  }
-	  if (aux == *at)
-	    *at = aux = nxt;
-	  else{ 
-	    aux = *at;
-	    while (aux->next != a)
-	      aux = aux->next;
-	    aux->next = nxt;
-	  }
+		  		/* putting the IPs to the linked list *p */
+		  		if (p == NULL){
+		    			p = plast = a;
+		    			a->next = NULL;
+		  		}else{
+		    			plast->next = a;
+		    			plast = plast->next;
+		    			a->next = NULL;
+		  		}
+				if (aux == *at)
+		    			*at = aux = nxt;
+		  		else{ 
+		    			aux = *at;
+		    			while (aux->next != a)
+		      				aux = aux->next;
+		    				aux->next = nxt;
+		  		}
 
-	  a = aux = nxt;
-	  _HIP_DEBUG("pointer a: %p\tpointer p: %p\n", a, p);
-	 
-	}
+		  		a = aux = nxt;
+		  		_HIP_DEBUG("pointer a: %p\tpointer p: %p\n", a, p);
+			}//while
 
-	/* Appending linked list *p (IPs) after HITs */
-	if (p != NULL){
-	  aux = *at;
-	  if(aux == NULL)
-	    *at = p;
-	  else{
-	    while (aux->next != NULL)
-	      aux = aux->next;
-	    aux->next = p;
-	  }
-	}
-      }
+			/* Appending linked list *p (IPs) after HITs */
+			if (p != NULL){
+		  		aux = *at;
+		  		if(aux == NULL)
+		    			*at = p;
+		  		else{
+		    			while (aux->next != NULL)
+		      				aux = aux->next;
+		    				aux->next = p;
+		  		}
+			}
+	      }
 
-      _HIP_DEBUG("Dumping the structure after removing IP addreses\n");
-      //dump_pai(*at);
-    } /* (at->family == AF_UNSPEC && (req->ai_flags & AI_NUMERICHOST) == 0) */ 
-  return 0;
+	      HIP_DEBUG("Dumping the structure after removing IP addreses\n");
+	      dump_pai(*at);
+	} /* (at->family == AF_UNSPEC && (req->ai_flags & AI_NUMERICHOST) == 0) */ 
+	return 0;
 }
 
 static int
@@ -1555,7 +1561,8 @@ int getaddrinfo(const char *name, const char *service,
 	struct addrinfo *p = NULL, **end = NULL;
 	struct gaih *g = gaih, *pg = NULL;
 	struct gaih_service gaih_service, *pservice = NULL;
-
+	
+	HIP_DEBUG("------------------GETADDRINFO--------------------\n");
 	/* These will segfault if lenght of name is one, but since this
 	   is well defined standard function, there must be a good reason
 	   for this behavior? */

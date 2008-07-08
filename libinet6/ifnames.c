@@ -266,7 +266,7 @@ nl_close (int sd)
 {
   int saved_errno = errno;
   if (sd >= 0)
-    __close (sd);
+    close (sd);
   __set_errno (saved_errno);
 }
 

@@ -23,6 +23,7 @@ AC_CHECK_LIB(crypto, DSA_generate_key,, AC_MSG_ERROR(openssl lib not found))
 # We need the math lib in the registration extension.
 AC_CHECK_LIB(m, pow,, AC_MSG_ERROR(Math lib not found))
 #AC_CHECK_LIB([gcrypt], [gcry_pk_sign])
+#AC_CHECK_LIB([pthread], [sem_open])
 AC_HEADER_SYS_WAIT
 # Checks for header files.
 AC_HEADER_STDC
@@ -84,7 +85,7 @@ AC_CACHE_CHECK([whether to use firewall],
                [ac_cv_use_firewall], [ac_cv_use_firewall=yes])
 if test x"$ac_cv_use_firewall" = x"yes"; then
         AC_CHECK_LIB(ipq, ipq_create_handle,, AC_MSG_ERROR(libipq not found))
-        AC_CHECK_LIB(glib-2.0, g_list_append,, AC_MSG_ERROR(glib not found))
+#        AC_CHECK_LIB(glib-2.0, g_list_append,, AC_MSG_ERROR(glib not found))
 # Do not work -mk
 #        AC_CHECK_HEADERS(glib-2.0/glib/glist.h,,
 #                         AC_MSG_ERROR(glibc development headers missing))
@@ -94,7 +95,6 @@ if test x"$ac_cv_use_firewall" = x"yes"; then
 #        hipl_opt_build="$hipl_opt_build firewall"
 fi
 AM_CONDITIONAL(HIP_FIREWALL, test x"$ac_cv_use_firewall" = x"yes")
-
 
 # Try to automatically detect GTK if not disabled or enabled by user
 PKG_CHECK_MODULES(GTK, gtk+-2.0 >= 2.10.0, ac_cv_use_agent=yes, ac_cv_use_agent=no)
@@ -113,6 +113,7 @@ AC_CACHE_CHECK([whether to use agent],
                [ac_cv_use_agent], [ac_cv_use_agent=yes])
 if test x"$ac_cv_use_agent" = x"yes"; then
 	AC_DEFINE(CONFIG_HIP_AGENT, AC_PREREQ(2.53))
+        AC_CHECK_LIB(sqlite3, sqlite3_open,, AC_MSG_ERROR(libsqlite3 not found))	
 fi
 AM_CONDITIONAL(HIP_AGENT, test x"$ac_cv_use_agent" = x"yes")
 
@@ -126,17 +127,6 @@ if test x"$ac_cv_use_hi3" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_HI3, AC_PREREQ(2.53))
 fi
 AM_CONDITIONAL(HIP_HI3, test x"$ac_cv_use_hi3" = x"yes")
-
-AC_ARG_ENABLE(opptcp,
-             AC_HELP_STRING([--enable-opptcp],
-                            [Opportunistic TCP extensions support (default is NO)]),
-             [ac_cv_use_opptcp=$enableval], [ac_cv_use_opptcp=no])
-AC_CACHE_CHECK([whether to use opptcp],
-               [ac_cv_use_opptcp], [ac_cv_use_opptcp=no])
-if test x"$ac_cv_use_opptcp" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_OPPTCP, AC_PREREQ(2.53))
-fi
-AM_CONDITIONAL(HIP_OPPTCP, test x"$ac_cv_use_opptcp" = x"yes")
 
 AC_ARG_ENABLE(cookie,
              AC_HELP_STRING([--enable-cookie],
@@ -191,6 +181,18 @@ if test x"$ac_cv_use_rvs" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_RVS, AC_PREREQ(2.53))
 fi
 
+AC_ARG_ENABLE(openwrt,
+             AC_HELP_STRING([--enable-opewrt],
+                            [OpenWRT (default is NO)]),
+             [ac_cv_use_openwrt=$enableval], [ac_cv_use_openwrt=no])
+AC_CACHE_CHECK([whether to use OpenWRT],
+               [ac_cv_use_openwrt], [ac_cv_use_opewrt=no])
+if test x"$ac_cv_use_openwrt" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_OPENWRT, AC_PREREQ(2.53))
+	AC_SUBST(OPENWRT_CFLAGS, "-lc")
+fi
+AM_CONDITIONAL(HIP_OPENWRT, test x"$ac_cv_use_openwrt" = x"yes")
+
 AC_ARG_ENABLE(hipproxy,
              AC_HELP_STRING([--enable-hipproxy],
                             [HIP Proxy (default is YES)]),
@@ -229,6 +231,7 @@ AC_ARG_ENABLE(privsep,
 AC_CACHE_CHECK([whether to use privsep],
                [ac_cv_use_privsep], [ac_cv_use_privsep=yes])
 if test x"$ac_cv_use_privsep" = x"yes"; then
+	AC_CHECK_LIB(cap, cap_get_proc,, AC_MSG_ERROR(Cap lib not found))
         AC_DEFINE(CONFIG_HIP_PRIVSEP, AC_PREREQ(2.53))
 fi
 AM_CONDITIONAL(HIP_PRIVSEP, test x"$ac_cv_use_privsep" = x"yes")
@@ -322,9 +325,16 @@ AC_SUBST(HIPL_I3_UTILS, "$HIPL/i3/utils")
 AC_SUBST(HIPL_XMLL, `xml2-config --libs`)
 AC_SUBST(HIPL_XMLI, `xml2-config --cflags`)
 AC_SUBST(HIPL_I3UTILS_LIB_DYNAMIC, "$HIPL_I3_UTILS/libutils.a")
+AC_SUBST(HIPL_PJPROJECT, "$HIPL/pjproject")
+AC_SUBST(HIPL_PJPROJECT_LIB, "$HIPL_PJPROJECT/pjlib")
+AC_SUBST(HIPL_PJPROJECT_LIB_UTIL, "$HIPL_PJPROJECT/pjlib-util")
+AC_SUBST(HIPL_PJPROJECT_NATH, "$HIPL_PJPROJECT/pjnath/")
+AC_SUBST(HIPL_PJPROJECT_MEDIA, "$HIPL_PJPROJECT/pjmedia")
+AC_SUBST(HIPL_PJPROJECT_SIP, "$HIPL_PJPROJECT/pjsip")
 
-AC_SUBST(hipl_common_include_paths, "-I $HIPL -I $HIPL_HIPD -I $HIPL_LIBINET6 -I $HIPL_LIBHIPTOOL -I $HIPL_LIBOPPHIP -I $HIPL_TOOLS -I $HIPL_OPENDHT -I $HIPL_LIBIPSEC -I $HIPL_I3 -I $HIPL_I3_CLIENT -I $HIPL_AESHASH -I $HIPL_I3_CHORD -I $HIPL_I3_UTILS")
-AC_SUBST(hipl_common_cflags, "$GDB_CFLAG $XMLI")
+AC_SUBST(hipl_common_include_paths, "-I $HIPL -I $HIPL_HIPD -I $HIPL_LIBINET6 -I $HIPL_LIBHIPTOOL -I $HIPL_LIBOPPHIP -I $HIPL_TOOLS -I $HIPL_OPENDHT -I $HIPL_LIBIPSEC -I $HIPL_I3 -I $HIPL_I3_CLIENT -I $HIPL_AESHASH -I $HIPL_I3_CHORD -I $HIPL_I3_UTILS -I $HIPL_PJPROJECT_LIB/include -I $HIPL_PJPROJECT_LIB_UTIL/include -I $HIPL_PJPROJECT_NATH/include -I $HIPL_PJPROJECT_MEDIA/include -I $HIPL_PJPROJECT_SIP/include")
+
+AC_SUBST(hipl_common_cflags, "$OPENWRT_CFLAGS $GDB_CFLAG $XMLI")
 
 AC_CONFIG_FILES([ Makefile
                   libhiptool/Makefile

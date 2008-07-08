@@ -123,12 +123,12 @@ int connhipd_handle_msg(struct hip_common *msg,
 		gui_set_info(lang_get("gui-info-000"));
 		hip_agent_connected = 1;
 	}
-	else if (type == SO_HIP_NAT_ON)
+	else if (type == SO_HIP_SET_NAT_ON)
 	{
 		gui_update_nat(1);
 		HIP_DEBUG("NAT extensions on.\n");
 	}
-	else if (type == SO_HIP_NAT_OFF)
+	else if (type == SO_HIP_SET_NAT_OFF)
 	{
 		gui_update_nat(0);
 		HIP_DEBUG("NAT extensions off.\n");

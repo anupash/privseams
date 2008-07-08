@@ -63,7 +63,7 @@ int hip_peek_recv_total_len(int socket, int encap_hdr_size)
 	}
 
 	bytes += encap_hdr_size;
-	
+
  out_err:
 	if (msg != NULL) {
 		free(msg);
@@ -120,7 +120,9 @@ int hip_daemon_bind_socket(int socket, struct sockaddr *sa) {
 		err = bind(socket,(struct sockaddr *)addr,
 			   hip_sockaddr_len(addr));
 		if (err == -1) {
-			if (errno == 13) {
+			if (errno == EACCES) {
+				/* Ephemeral ports:
+				   /proc/sys/net/ipv4/ip_local_port_range */
 				HIP_DEBUG("Use ephemeral port number in connect\n");
 				err = 0;
 				break;
@@ -151,11 +153,11 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 	int hip_user_sock = 0, err = 0, n = 0, len = 0;
 	struct sockaddr_in6 addr;
 
-	/* We're using system call here add thus reseting errno. */
+	/* We're using system call here and thus reseting errno. */
 	errno = 0;
 
 	/* Displays all debugging messages. */
-	HIP_DEBUG("Handling DEBUG ALL user message.\n");
+	_HIP_DEBUG("Handling DEBUG ALL user message.\n");
 	HIP_IFEL(hip_set_logdebug(LOGDEBUG_ALL), -1,
 			 "Error when setting daemon DEBUG status to ALL\n");
 
@@ -207,13 +209,11 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 	}
 
  out_err:
-
 	if (hip_user_sock)
 		close(hip_user_sock);
 	
 	return err;
 }
-
 
 int hip_send_daemon_info_wrapper(struct hip_common *msg, int send_only) {
 	int hip_user_sock = 0, err = 0, n, len;
@@ -237,6 +237,7 @@ int hip_send_daemon_info_wrapper(struct hip_common *msg, int send_only) {
 
 	len = hip_get_msg_total_len(msg);
 	n = send(hip_user_sock, msg, len, 0);
+
 	if (n < len) {
 		HIP_ERROR("Could not send message to daemon.\n");
 		err = -1;
@@ -413,6 +414,8 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
 					   len - encap_hdr_size), -1,
 		 "verifying network header failed\n");
 
+	
+
 	if (saddr)
 		HIP_DEBUG_IN6ADDR("src", saddr);
 	if (daddr)
@@ -441,3 +444,5 @@ int hip_read_control_msg_v4(int socket, struct hip_common *hip_msg,
 	return hip_read_control_msg_all(socket, hip_msg, saddr,
 					daddr, msg_info, encap_hdr_size, 1);
 }
+
+

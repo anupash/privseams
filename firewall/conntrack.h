@@ -7,10 +7,6 @@
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <stdio.h>
-#include <glib.h>
-#include <glib/glist.h>
-#include <glib/gtypes.h>
-#include <glib/gthread.h>
 
 #include "debug.h"
 #include "firewall_defines.h"
@@ -19,6 +15,7 @@
 #include "misc.h"
 #include "hadb.h"
 #include "pk.h"
+#include "common_types.h"
 
 
 /*-------------- CONNECTION TRACKING ------------*/
@@ -39,8 +36,7 @@ extern int hip_proxy_status;
 
 void print_data(struct hip_data * data);
 int filter_esp_state(const struct in6_addr * dst_addr, 
-		     struct hip_esp * esp, 
-		    const struct rule * rule);
+		     struct hip_esp * esp, struct rule * rule, int use_escrow);
 int filter_state(const struct in6_addr * ip6_src,
 		 const struct in6_addr * ip6_dst, 
 		 struct hip_common * buf, 

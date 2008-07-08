@@ -28,9 +28,9 @@ if HIP_HI3
 endif
 
 LDADD=
-if HIP_OPPORTUNISTIC
-  LDADD += ../libopphip/.libs/libopphip.a
-endif
+#if HIP_OPPORTUNISTIC
+#  LDADD += ../libopphip/.libs/libopphip.a
+#endif
 
 LDADD += ../libinet6/.libs/libinet6.a
 if HIP_CORPORATE
@@ -39,9 +39,7 @@ else
   LDADD += ../libhiptool/.libs/libhiptool.a
 endif
 
-if HIP_OPENDHT
-  LDADD += ../opendht/.libs/libhipopendht.a
-endif
+LDADD += ../opendht/.libs/libhipopendht.a
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
 

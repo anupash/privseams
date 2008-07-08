@@ -1,12 +1,11 @@
 #ifndef FIREWALL_DEFINES_H_
 #define FIREWALL_DEFINES_H_
 
-#include <glib.h>
-#include <glib/glist.h>
-#include <glib/gtypes.h>
-#include <glib/gthread.h>
-
+#include <sys/time.h>
 //int hip_proxy_status;
+
+
+#include "common_types.h"
 
 /********** State table structures **************/
 
@@ -22,7 +21,7 @@ struct esp_tuple{
   uint32_t spi;
   uint32_t new_spi;
   uint32_t spi_update_id;
-  struct GSList * dst_addr_list;
+  struct SList * dst_addr_list;
   struct tuple * tuple;
   struct decryption_data * dec_data;
 };
@@ -48,7 +47,7 @@ struct hip_tuple {
 
 struct tuple {
   struct hip_tuple * hip_tuple;
-  struct GSList * esp_tuples;
+  struct SList * esp_tuples;
   int direction;
   struct connection * connection;
   int state; 
@@ -62,7 +61,7 @@ struct connection {
   struct tuple reply;  
   int verify_responder;
   int state;
-  GTimeVal time_stamp;
+  struct timeval time_stamp;
 };
 
 struct hip_esp_packet {
@@ -76,7 +75,17 @@ struct hip_esp_packet {
 struct hip_esp {
 	uint32_t esp_spi;
 	uint32_t esp_seq;
-} __attribute((packed))__;
+} __attribute__ ((packed));;
+
+struct hip_esp_ext {
+	uint32_t esp_spi;
+	uint32_t esp_seq;
+	// additional hash-chain element
+	uint32_t hc_element;
+} __attribute__ ((packed));
+
+/* TODO define a typedef with same name, but depending on which header we want to use
+ * distinguish the headers using sizeof(typedef) */
 
 struct hip_esp_tail {
 	 uint8_t esp_padlen;

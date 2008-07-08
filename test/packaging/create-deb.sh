@@ -185,7 +185,7 @@ copy_and_package_files ()
 
     for suffix in a so so.0 so.0.0.0;do
 	cp -d libinet6/.libs/libinet6.$suffix $PKGDIR/usr/lib/
-	if [ ! $CORPORATE ];then
+	if [ ! "$CORPORATE" ];then
 		cp -d libhiptool/.libs/libhiptool.$suffix $PKGDIR/usr/lib/
 	fi
 	cp -d libopphip/.libs/libopphip.$suffix $PKGDIR/usr/lib/
@@ -193,7 +193,7 @@ copy_and_package_files ()
     done
 
     cp -L libinet6/.libs/libinet6.la $PKGDIR/usr/lib/
-	if [ ! $CORPORATE ];then
+	if [ ! "$CORPORATE" ];then
 	    cp -L libhiptool/.libs/libhiptool.la $PKGDIR/usr/lib/
 	fi
    
@@ -472,7 +472,7 @@ if [ $TYPE = "binary" ];then
     echo "** Compiling user space software"
     echo "**"
 
-	if [ $CORPORATE ];then
+	if [ "$CORPORATE" ];then
 		echo "** Must do make install for libhiptool to be able to make hipl"
 		echo "** (note: only when compiling libhiptool as dynamically linked)"
 	    echo "** Running make in $HIPL/libhiptool"
@@ -534,7 +534,7 @@ if [ $TYPE = "binary" ];then
     fi
 
     cd "$PKGROOT"
-    	if [ $CORPORATE = 1 ];then
+    	if [ "$CORPORATE" = 1 ];then
     		if ! copy_files_gpl;then
     		echo "** Error: unable to copy GPL files, exiting"
     		exit 1

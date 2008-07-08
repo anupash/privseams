@@ -52,6 +52,8 @@
 #define SO_HIP_GET_HITS                         21
 #define SO_HIP_GET_HA_INFO			22
 #define SO_HIP_TRIGGER_BEX                      23
+#define SO_HIP_DHT_SERVING_GW                   24
+#define SO_HIP_GET_STATE_HA		        25
 /* inclusive */
 #define HIP_SO_ANY_MAX 				63
 
@@ -72,8 +74,7 @@
 #define SO_HIP_CONF_PUZZLE_SET                  73
 #define SO_HIP_CONF_PUZZLE_INC                  74
 #define SO_HIP_CONF_PUZZLE_DEC                  75
-#define SO_HIP_SET_NAT_ON			76
-#define SO_HIP_SET_NAT_OFF			77
+/* Three free slots here */
 #define SO_HIP_SET_OPPORTUNISTIC_MODE           78
 #define SO_HIP_SET_BLIND_ON                     79
 #define SO_HIP_SET_BLIND_OFF                    80
@@ -83,7 +84,7 @@
 #define SO_HIP_SET_DEBUG_MEDIUM			83
 #define SO_HIP_SET_DEBUG_NONE			84
 /** Socket option for hipconf to ask about the used gateway with OpenDHT */
-#define SO_HIP_DHT_SERVING_GW                   85
+/* 85 is free slot */
 #define SO_HIP_HANDOFF_ACTIVE			86
 #define SO_HIP_HANDOFF_LAZY			87
 /** Socket option for hipconf to restart daemon. */
@@ -95,7 +96,7 @@
 #define SO_HIP_DHT_OFF                          93
 #define SO_HIP_SET_OPPTCP_ON			94
 #define SO_HIP_SET_OPPTCP_OFF			95
-#define SO_HIP_GET_PEER_HIT_FROM_FIREWALL	96
+/* slot 96 is free */
 #define SO_HIP_OPPTCP_UNBLOCK_APP		97
 #define SO_HIP_OPPTCP_OPPIPDB_ADD_ENTRY		98
 #define SO_HIP_OPPTCP_SEND_TCP_PACKET		99
@@ -151,16 +152,35 @@
 #define SO_HIP_DAEMON_QUIT                      126
 #define SO_HIP_I1_REJECT                        127
 #define SO_HIP_UPDATE_HIU                       128
-#define SO_HIP_NAT_ON                           129
-#define SO_HIP_NAT_OFF                          130
+#define SO_HIP_SET_NAT_PLAIN_UDP                129
+#define SO_HIP_SET_NAT_ON                     SO_HIP_SET_NAT_PLAIN_UDP
+#define SO_HIP_SET_NAT_NONE                     130
+#define SO_HIP_SET_NAT_OFF                      SO_HIP_SET_NAT_NONE // XX FIXME: REMOVE
 #define SO_HIP_SET_HIPPROXY_ON		      	131
 #define SO_HIP_SET_HIPPROXY_OFF			132
 #define SO_HIP_GET_PROXY_LOCAL_ADDRESS		133
 #define SO_HIP_HIPPROXY_STATUS_REQUEST		134
-#define SO_HIP_OPPTCP_UNBLOCK_APP_and_OPPIPDB_ADD_ENTRY	135
-#define SO_HIP_FIREWALL_BEX_DONE                        136 /* addes by Tao Wan, for informing the firewall the BEX is done*/
+#define SO_HIP_OPPTCP_UNBLOCK_AND_BLACKLIST     135
+#define SO_HIP_IPSEC_ADD_SA             	    136 /* addes by Tao Wan, for informing the firewall the BEX is done*/
 #define SO_HIP_SET_TCPTIMEOUT_ON                137
 #define SO_HIP_SET_TCPTIMEOUT_OFF               138
+#define SO_HIP_SET_NAT_ICE_UDP                  139
+#define HIP_PARAM_INT                           140
+#define SO_HIP_CERT_SPKI_SIGN                   141
+#define SO_HIP_CERT_SPKI_VERIFY                 142
+#define SO_HIP_CERT_X509V3_SIGN                 143
+#define SO_HIP_CERT_X509V3_VERIFY               144
+#define SO_HIP_USERSPACE_IPSEC			145
+#define SO_HIP_ESP_PROT_EXT_TRANSFORM		146
+#define SO_HIP_IPSEC_UPDATE_ANCHOR_LIST		147
+#define SO_HIP_IPSEC_NEXT_ANCHOR		148
+#define SO_HIP_PARAM_LSI			149
+#define SO_HIP_GET_LSI_PEER                     150
+#define SO_HIP_GET_LSI_OUR			151
+#define SO_HIP_IS_OUR_LSI                       152
+#define SO_HIP_ADD_PEER_MAP_HIT_IP_LSI          153
+#define SO_HIP_FIREWALL_BEX_DONE                154
+#define SO_HIP_GET_PEER_HIT_BY_LSIS             155
 /** @} */
 /* inclusive */
 #define HIP_SO_ROOT_MAX 			255
