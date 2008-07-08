@@ -1320,45 +1320,33 @@ int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int op
                  "Resolve error!\n");
         // HIP_IFEL(opendht_get_key(serving_gateway, opt[0], dht_response), 0,
                  //"Get error!\n");
-        
-        /* Using pointer function
-         * */
+        /* Using pointer function */
          HIP_IFEL(hip_opendht_get_key(&handle_hdrr_value,serving_gateway, opt[0], dht_response), 0,
                  "Get error!\n");
         HIP_INFO("Value received from the DHT %s\n",dht_response);
         
-        /*
-         * It sends the dht response to hipdaemon
+         /* It sends the dht response to hipdaemon
          * first appending one more user param for holding a structure hdrr_info
          * hdrr_info is used by daemon to mark signature and host id verification
          * Then adding user header for recognizing the message at daemon side
-         * 
          */
         hipcommonmsg = (struct hip_common *)dht_response ;
         _HIP_DUMP_MSG (hipcommonmsg);
         
-        //locator = hip_get_param(hipcommonmsg, HIP_PARAM_LOCATOR);
-      
         if (inet_pton(AF_INET6, (char *)opt[0], &addrkey.s6_addr) == 0)
     	{ 
     		HIP_DEBUG("Key provided for lookup is not a hit");
     		goto out_err ;
     	}
-    	
     	/* Inititalize values for hip_hdrr_info structure before sending it to daemon
     	 * */
        	memcpy(&hdrr_info.dht_key, &addrkey, sizeof(struct in6_addr));
     	hdrr_info.sig_verified = -1;
     	hdrr_info.hit_verified = -1;
-    	
-    	
     	hip_build_param_hip_hdrr_info(hipcommonmsg, &hdrr_info);
-    	HIP_DUMP_MSG (hipcommonmsg);
-		
-        
-         /* ASK Signature and Host Id verification INFO FROM DAEMON */
+    	_HIP_DUMP_MSG (hipcommonmsg);
+		 /* ASK Signature and Host Id verification INFO FROM DAEMON */
         HIP_INFO("Asking signature verification info from daemon...\n");
-     
         HIP_IFEL(hip_build_user_hdr(hipcommonmsg, SO_HIP_VERIFY_DHT_HDRR_RESP,0),-1,
                  "Building daemon header failed\n");
         HIP_IFEL(hip_send_recv_daemon_info(hipcommonmsg), -1, "Send recv daemon info failed\n");
@@ -1367,8 +1355,7 @@ int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int op
       	 * if modified by the daemon for the flags for signature and host id
       	 * verification set in struc hip_hdrr_info
       	 * */
-		    
-      	hdrr_info_response = hip_get_param (hipcommonmsg, HIP_PARAM_HDRR_INFO);
+	  	hdrr_info_response = hip_get_param (hipcommonmsg, HIP_PARAM_HDRR_INFO);
       	_HIP_DUMP_MSG (hipcommonmsg);
         HIP_DEBUG ("Sig verified (0=true): %d\nHit Verified (0=true): %d ",hdrr_info_response->sig_verified, hdrr_info_response->hit_verified);
  out_err:

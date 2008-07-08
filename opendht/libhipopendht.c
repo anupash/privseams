@@ -362,92 +362,88 @@ int opendht_get(int sockfd,
  * VALUE contains HIP_COMMON structure in case of HDRR lookup
  * @return integer -1 on error, on success 0
  */
- /*
-//int opendht_get_key(struct addrinfo * gateway, const unsigned char * key,
-//		    unsigned char *value)
-//{
-//        int err = 0, sfd = -1, n_addrs = 0;
-//        int locator_item_count = 0;
-//        char dht_response[1400];
-//        char hostname[256];
-//        char *host_addr = NULL;
-//        struct hostent *hoste = NULL;
-//        struct hip_locator *locator;
-//        struct hip_locator_info_addr_item *locator_address_item = NULL;
-//        struct in6_addr addr6;
-//        struct in_addr addr4;
-//        
-//       
-//        
-//        memset(hostname,'\0',sizeof(hostname));
-//        HIP_IFEL((gethostname(hostname, sizeof(hostname))),-1,"Error getting hostname\n");
-//        HIP_IFEL(!(hoste = gethostbyname(hostname)),-1,
-//                 "Encountered an error when getting host address\n");
-//        if (hoste->h_addrtype == AF_INET)
-//                host_addr = inet_ntoa(*(struct in_addr *)*hoste->h_addr_list);
-//        else if (hoste->h_addrtype == AF_INET6) {
-//                HIP_IFEL(inet_ntop(AF_INET6, &hoste->h_addr_list, 
-//                                   host_addr, sizeof(INET6_ADDRSTRLEN)),
-//                         -1,"Error converting host IPv6 address\n");
-//        }
-//        else {
-//                HIP_DEBUG("Unknown host address family\n");
-//                goto out_err;
-//        }
-//        
-//        /* TODO
-//         * Following line Temporarily inserted line for openlokup, MUST BE REMOVED
-//         */
-//         host_addr = OPENDHT_GATEWAY;
-//        _HIP_DEBUG("Host addresss %s\n", host_addr);
-//        sfd = init_dht_gateway_socket(sfd);
-//        HIP_IFEL((err = connect_dht_gateway(sfd, gateway, 1))
-//                 ,-1,"OpenDHT connect error\n");  
-//        memset(dht_response, '\0', sizeof(dht_response));
-//        HIP_IFEL((err = opendht_get(sfd, (unsigned char *)key, (unsigned char *)host_addr, 5851)),
-//                 -1, "Opendht_get error");
-//        HIP_IFEL(opendht_read_response(sfd, dht_response), -1,"Opendht_read_response error\n"); 
-//        _HIP_DUMP_MSG((struct hip_common *)dht_response);
-//          
-//       
-//        /* check if there is locator, if is, take first and give it for the caller
-//           should give the whole locator and let the caller decide */
-//           
-//        locator = hip_get_param((struct hip_common *)dht_response, HIP_PARAM_LOCATOR);
-//        if (locator) {
-//        		memcpy(value, dht_response, 1024);
-//        	/*Commented by Pardeep to return whole response back in case od HDRR*/
-//        	
-//        	/*
-//                locator_item_count = hip_get_locator_addr_item_count(locator);
-//                locator_item_count--;
-//                locator_address_item = hip_get_locator_first_addr_item(locator);
-//                  memcpy(&addr6, 
-//                       (struct in6_addr*)&locator_address_item[locator_item_count].address, 
-//                       sizeof(struct in6_addr));
-//                if (IN6_IS_ADDR_V4MAPPED(&addr6)) {
-//                        IPV6_TO_IPV4_MAP(&addr6, &addr4);
-//                        sprintf(value, "%s", inet_ntoa(addr4));
-//                } else {
-//                        hip_in6_ntop(&addr6, value);
-//                        HIP_DEBUG("Value: %s\n", value);
-//                }
-//                */
-//        } else {
-//                if (ipv6_addr_is_hit((struct in6_addr*)dht_response)) {
-//                        /* if IPv6 must be HIT */
-//                        hip_in6_ntop((struct in6_addr *)dht_response, value);
-//                } else {
-//                        memcpy(value, dht_response, strlen(dht_response));
-//                }
-//        }
-// out_err:
-// 		// Following line is added by Pardeep to take DHT response back to the caller
-// 		// memcpy(value, dht_response,1024);
-//        if (sfd) close(sfd); 
-//        return(err);
-//}
 
+/*Commenthing this fucntion AS WE NOW USE hip_opendht_get_key*/
+#if 0
+int opendht_get_key(struct addrinfo * gateway, const unsigned char * key,
+		    unsigned char *value)
+{
+        int err = 0, sfd = -1, n_addrs = 0;
+        int locator_item_count = 0;
+        char dht_response[1400];
+        char hostname[256];
+        char *host_addr = NULL;
+        struct hostent *hoste = NULL;
+        struct hip_locator *locator;
+        struct hip_locator_info_addr_item *locator_address_item = NULL;
+        struct in6_addr addr6;
+        struct in_addr addr4;
+        
+        memset(hostname,'\0',sizeof(hostname));
+        HIP_IFEL((gethostname(hostname, sizeof(hostname))),-1,"Error getting hostname\n");
+        HIP_IFEL(!(hoste = gethostbyname(hostname)),-1,
+                 "Encountered an error when getting host address\n");
+        if (hoste->h_addrtype == AF_INET)
+                host_addr = inet_ntoa(*(struct in_addr *)*hoste->h_addr_list);
+        else if (hoste->h_addrtype == AF_INET6) {
+                HIP_IFEL(inet_ntop(AF_INET6, &hoste->h_addr_list, 
+                                   host_addr, sizeof(INET6_ADDRSTRLEN)),
+                         -1,"Error converting host IPv6 address\n");
+        }
+        else {
+                HIP_DEBUG("Unknown host address family\n");
+                goto out_err;
+        }
+        /* TODO
+         * Following line Temporarily inserted line for openlokup, MUST BE REMOVED
+         */
+         host_addr = OPENDHT_GATEWAY;
+        _HIP_DEBUG("Host addresss %s\n", host_addr);
+        sfd = init_dht_gateway_socket(sfd);
+        HIP_IFEL((err = connect_dht_gateway(sfd, gateway, 1))
+                 ,-1,"OpenDHT connect error\n");  
+        memset(dht_response, '\0', sizeof(dht_response));
+        HIP_IFEL((err = opendht_get(sfd, (unsigned char *)key, (unsigned char *)host_addr, 5851)),
+                 -1, "Opendht_get error");
+        HIP_IFEL(opendht_read_response(sfd, dht_response), -1,"Opendht_read_response error\n"); 
+        _HIP_DUMP_MSG((struct hip_common *)dht_response);
+   
+        /* check if there is locator, if is, take first and give it for the caller
+           should give the whole locator and let the caller decide */
+        locator = hip_get_param((struct hip_common *)dht_response, HIP_PARAM_LOCATOR);
+        if (locator) {
+        		memcpy(value, dht_response, 1024);
+        	/*Commented by Pardeep to return whole response back in case od HDRR*/
+        	
+        	/*
+                locator_item_count = hip_get_locator_addr_item_count(locator);
+                locator_item_count--;
+                locator_address_item = hip_get_locator_first_addr_item(locator);
+                  memcpy(&addr6, 
+                       (struct in6_addr*)&locator_address_item[locator_item_count].address, 
+                       sizeof(struct in6_addr));
+                if (IN6_IS_ADDR_V4MAPPED(&addr6)) {
+                        IPV6_TO_IPV4_MAP(&addr6, &addr4);
+                        sprintf(value, "%s", inet_ntoa(addr4));
+                } else {
+                        hip_in6_ntop(&addr6, value);
+                        HIP_DEBUG("Value: %s\n", value);
+                }
+                */
+        } else {
+                if (ipv6_addr_is_hit((struct in6_addr*)dht_response)) {
+                        /* if IPv6 must be HIT */
+                        hip_in6_ntop((struct in6_addr *)dht_response, value);
+                } else {
+                        memcpy(value, dht_response, strlen(dht_response));
+               	  }
+     	  }	
+ out_err:
+ 		
+        if (sfd) close(sfd); 
+        return(err);
+}
+#endif /*Commetning above function*/
 /**
  * opendht_handle_value Modifies the key to suitable format for OpenDHT
  *
@@ -481,88 +477,6 @@ int opendht_handle_value(char * value, char * out_value)
     return(err);
 }
 
-/*
-*	To convert 53 to the character 'S':
-*	char returnVal = hexToString('5', '3');
-*   using this to make it 20 byte from 40 byte
-*/
-char hexToAscii(char first, char second)
-{
-	char hex[5], *stop;
-	hex[0] = '0';
-	hex[1] = 'x';
-	hex[2] = first;
-	hex[3] = second;
-	hex[4] = 0;
-	//HIP_DEBUG("First hex digit: %c \n Second hex digit: %c \n", first, second);
-	//HIP_DEBUG("Ascii value:  %c.\n", strtol(hex, &stop, 16));
-
-	// Decoding logic works fine, converts ascii to hex again
-	char acB[3];
-	sprintf(acB, "%x", strtol(hex, &stop, 16));
-	//HIP_DEBUG("Again : Hex  value:  %s \n", acB);
-	return strtol(hex, &stop, 16);
-}
-
-/*
- * This function does the manual string manipulation on the HIT which if stored in a 
- * character array occupies 32 byte (one byte for each hex digit)
- * This function joins two hex digits pointed by the param *key as one ASCII character
- * in memory hence reducing it to 16 bytes
- */
-void zero_pad_key (char *key, char *newkey)
-{
-	 int i = 0 ;
-	 int x = 0 ;
-	 char tempChar1 = ' ';
-	 char tempChar2 = ' ';
-	 
-	while(*key != '\0')
-	{
-		tempChar1 = *key;
-		tempChar2 = *(key+1);
-		//HIP_DEBUG("tempchar1 : %c , tempchar2 ; %c \n", tempChar1, tempChar2);
-		
-		if ( x == 0)
-			x=1;
-		else 
-			x = 0;
-		if (i < 4 )//|| tempChar1 == ':')
-		{
-			*key++;
-			*key++;
-		}
-		else
-		{
-			if (tempChar2 == ':')
-			{
-				tempChar2 = *(key+2);
-				*key++;
-			}
-			else if (tempChar2 == '\0')
-				tempChar2 = '0';
-			*newkey++ = hexToAscii (tempChar1, tempChar2);
-			
-			*key++;
-			*key++;
-			
-				
-	
-		}
-		i++;
-	}
-	while (i < 24)
-	{
-		*newkey++ = hexToAscii('0','0');	
-		i++;
-	}
-	*newkey = '\0';
-	
-
-	
-}
-
-
 /**
  * opendht_handle_key Modifies the key to suitable format for OpenDHT
  *
@@ -577,112 +491,60 @@ int opendht_handle_key(char * key, char * out_key)
     char tmp_key[21];
     struct in6_addr addrkey;
     unsigned char *sha_retval;
-	
-	// These two variable are added by Pardeep - 
 	int key_len_specified_in_bytes = 20;
 	unsigned char *paddedkey = malloc(key_len_specified_in_bytes +4);
+	/* Below three variables are used for key padding logic*/
+	int k = 0;
+	unsigned char tempChar1 =' ';
+	unsigned char tempChar2 =' ';
+		
 	 
-	 memset(paddedkey, '\0', key_len_specified_in_bytes +4);
-    
+	memset(paddedkey, '\0', key_len_specified_in_bytes +4);
     /* check for too long keys and convert HITs to numeric form */
     memset(tmp_key, '\0', sizeof(tmp_key));
 
-    //if (inet_pton(AF_INET6, (char *)key, &addrkey.s6_addr) == 0)
     if (inet_pton(AF_INET6, (char *)key, &addrkey.s6_addr) == 0)
-    {
-            /* inet_pton failed because of invalid IPv6 address */
-            memset(tmp_key,'\0',sizeof(tmp_key));
-            /* strlen works now but maybe not later */
-            for (i = 0; i < strlen(key); i++ )
-                    key[i] = tolower(key[i]);
-            if (key[strlen(key)] == '.')
-                key[strlen(key)] == '\0';
-            sha_retval = SHA1(key, strlen(key), tmp_key); 
-            key_len = 20;
-            err = key_len;
-            _HIP_HEXDUMP("KEY FOR OPENDHT", tmp_key, key_len);
-            if (!sha_retval)
-                {
-                    HIP_DEBUG("SHA1 error when creating key for OpenDHT.\n");
-                    return(-1);
-                }                
-        } 
-    else 
+	{
+ 		/* inet_pton failed because of invalid IPv6 address */
+		memset(tmp_key,'\0',sizeof(tmp_key));
+		/* strlen works now but maybe not later */
+        for (i = 0; i < strlen(key); i++ )
+            key[i] = tolower(key[i]);
+        if (key[strlen(key)] == '.')
+            key[strlen(key)] == '\0';
+        sha_retval = SHA1(key, strlen(key), tmp_key); 
+        key_len = 20;
+        err = key_len;
+        _HIP_HEXDUMP("KEY FOR OPENDHT", tmp_key, key_len);
+        if (!sha_retval)
         {
-       	// Added by Pardeep
-        	
-			
-		 	// This is another function which does the same. zero_pad_key().
-		 	// BBut it seems to be less efficient, as it invloves quite a lot
-		 	// of string manipulation. So commenting it 
-		 	
-		 	//zero_pad_key(key, paddedkey);
-			
-			
-			/* Another approach as guided by SAMU:
-			 We require only last 100 bits of the HIT. That is to say
-			 to ignore first 28 bits we need to shift 28 bits left the HIT.
-			 Follwoing logic does it and zero padding is already done in memset
-			 above for tmp_key to make it 160 bit long key 
-			 
-			*/
-			 
-			 memcpy(paddedkey, addrkey.s6_addr, sizeof(addrkey.s6_addr));		
-			
-			 paddedkey = addrkey.s6_addr + 3;
-			 
-			 int k = 0;
-		     unsigned char tempChar1 =' ';
-			 unsigned char tempChar2 =' ';
-			 
-			
-			 while (k <13)
-			 {
-			 	tempChar1 = *(paddedkey+k);
-			 	tempChar2 = *(paddedkey+k+1);
-			 	
-			 	//HIP_DEBUG("MSB HEX before shift:  %x.\n", tempChar1);
-			 	//HIP_DEBUG("LSB HEX before shift:  %x.\n", tempChar2);
-			   
-			 	tempChar1 = tempChar1 << 4 ;
-			 	tempChar2 = tempChar2 >> 4 ;
-			 	
-			 	//HIP_DEBUG("MSB HEX after shift:  %x.\n", tempChar1);
-			 	//HIP_DEBUG("LSB HEX after shift:  %x.\n", tempChar2);
-			 	
-			 	*(paddedkey+k) = tempChar1 | tempChar2 ;
-				    
-			    //HIP_DEBUG("New key value at position %d :  %x.\n",k , *(paddedkey+k));
-					 
-			    k++;
-			 }
-			
-		 //The latest working approach
-			
-			 HIP_DEBUG("New key value:  %d.\n", strlen(paddedkey));
-			 
-			 
-			 memcpy(tmp_key, paddedkey, strlen(paddedkey)+1);
-			key_len = key_len_specified_in_bytes ;
-			
-			
-			//HIP_DEBUG("New key value:  %s \n", tmp_key);
-			//HIP_DEBUG("New key value:  %d \n", strlen(tmp_key));
-			  err = key_len;
-			 
-			 
-		// ended
-			
-		// EXISTING CODE COMMENTED BY PARDEEP
-			
-            /* key was in IPv6 format so propably is a HIT */
-        /*    memcpy(tmp_key, addrkey.s6_addr, sizeof(addrkey.s6_addr));
-            key_len = sizeof(addrkey.s6_addr);
-            err = key_len;
-         */
-         
-        // COMMENTING ENDS
-        }
+        	HIP_DEBUG("SHA1 error when creating key for OpenDHT.\n");
+            return(-1);
+        }                
+    } 
+    else 
+    {
+       	/* We require only last 100 bits of the HIT. That is to say
+		 to ignore first 28 bits we need to shift 28 bits left the HIT.
+		 Follwoing logic does it and zero padding is already done in memset
+		 above for tmp_key to make it 160 bit long key */
+		 memcpy(paddedkey, addrkey.s6_addr, sizeof(addrkey.s6_addr));		
+		 paddedkey = addrkey.s6_addr + 3;
+				
+		 while (k <13)
+		 { 	/*We get the MSB hex byte from tempchar1 and LSB temchar2 */
+		 	tempChar1 = *(paddedkey+k);
+		 	tempChar2 = *(paddedkey+k+1);
+		 	tempChar1 = tempChar1 << 4 ;
+		 	tempChar2 = tempChar2 >> 4 ;
+		 	*(paddedkey+k) = tempChar1 | tempChar2 ;
+		     k++;
+		 }
+		 HIP_DEBUG("New key value:  %d.\n", strlen(paddedkey));
+		 memcpy(tmp_key, paddedkey, strlen(paddedkey)+1);
+		 key_len = key_len_specified_in_bytes ;
+		 err = key_len;
+    }
     memcpy(out_key, tmp_key, sizeof(tmp_key));
  out_err:
     return(err);

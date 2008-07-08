@@ -921,7 +921,6 @@ int hip_handle_user_msg(struct hip_common *msg,
         hdrr_info = hip_get_param (msg, HIP_PARAM_HDRR_INFO);
         
         //Check for algo and call verify signature from pk.c
-        
         alg = hip_get_host_id_algo(hostid);
         
         /* Type of the hip msg in header has been modified to 
@@ -930,10 +929,8 @@ int hip_handle_user_msg(struct hip_common *msg,
          * original shape as returned by the DHT and
          *  then verify signature
          */
-        
     	hip_set_msg_type(msg,HIP_HDRR);
     	_HIP_DUMP_MSG (msg);
-    	
     	HIP_IFEL(!(hit = malloc(sizeof(struct in6_addr))), -1, "Malloc for HIT failed\n");
 		switch (alg) {
 			case HIP_HI_RSA:
