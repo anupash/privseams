@@ -1290,12 +1290,8 @@ int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int op
         int tmp_ttl, tmp_port;
         int *pret;
 		
-		 //Added by Pardeep
-        struct hip_common *hipcommonmsg;	/* hip common message to be sent to daemon*/
-        struct hip_sig *signature;			/* To examine DHT response which contains signature in HDRR*/	 
-        struct hip_host_id *hostid;			/* To examine DHT response which contains host id in HDRR*/	
-        struct hip_locator *locator;		/* To examine DHT response which contains locator in HDRR*/
-		struct in6_addr addrkey;			/* To convert DHT key (HIT) to in6_addr structure for verification*/
+		struct hip_common *hipcommonmsg;	/* hip common message to be sent to daemon*/
+        struct in6_addr addrkey;			/* To convert DHT key (HIT) to in6_addr structure for verification*/
 		struct hip_hdrr_info hdrr_info;		/* To examine DHT response which contains locator in HDRR*/
 		struct hip_hdrr_info *hdrr_info_response; /* To examine daemon response in msg sent for verification*/
         /* ASK THIS INFO FROM DAEMON */
@@ -1322,18 +1318,27 @@ int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int op
 
         HIP_IFEL(resolve_dht_gateway_info(tmp_ip_str, &serving_gateway),0,
                  "Resolve error!\n");
-        HIP_IFEL(opendht_get_key(serving_gateway, opt[0], dht_response), 0,
+        // HIP_IFEL(opendht_get_key(serving_gateway, opt[0], dht_response), 0,
+                 //"Get error!\n");
+        
+        /* Using pointer function
+         * */
+         HIP_IFEL(hip_opendht_get_key(&handle_hdrr_value,serving_gateway, opt[0], dht_response), 0,
                  "Get error!\n");
         HIP_INFO("Value received from the DHT %s\n",dht_response);
         
-        //Pardeep, some dht response test stuff
+        /*
+         * It sends the dht response to hipdaemon
+         * first appending one more user param for holding a structure hdrr_info
+         * hdrr_info is used by daemon to mark signature and host id verification
+         * Then adding user header for recognizing the message at daemon side
+         * 
+         */
         hipcommonmsg = (struct hip_common *)dht_response ;
-        HIP_DUMP_MSG (hipcommonmsg);
+        _HIP_DUMP_MSG (hipcommonmsg);
         
-        locator = hip_get_param(hipcommonmsg, HIP_PARAM_LOCATOR);
-        signature = hip_get_param (hipcommonmsg, HIP_PARAM_HIP_SIGNATURE);
-        hostid = hip_get_param (hipcommonmsg, HIP_PARAM_HOST_ID);
-        
+        //locator = hip_get_param(hipcommonmsg, HIP_PARAM_LOCATOR);
+      
         if (inet_pton(AF_INET6, (char *)opt[0], &addrkey.s6_addr) == 0)
     	{ 
     		HIP_DEBUG("Key provided for lookup is not a hit");
@@ -1364,7 +1369,7 @@ int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int op
       	 * */
 		    
       	hdrr_info_response = hip_get_param (hipcommonmsg, HIP_PARAM_HDRR_INFO);
-      	HIP_DUMP_MSG (hipcommonmsg);
+      	_HIP_DUMP_MSG (hipcommonmsg);
         HIP_DEBUG ("Sig verified (0=true): %d\nHit Verified (0=true): %d ",hdrr_info_response->sig_verified, hdrr_info_response->hit_verified);
  out_err:
         return(err);

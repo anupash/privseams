@@ -3583,6 +3583,11 @@ int hip_get_locator_addr_item_count(struct hip_locator *locator) {
     		address_pointer += sizeof(struct hip_locator_info_addr_item);
     		amount += 1;
     	} 
+    	else if(((struct hip_locator_info_addr_item*)address_pointer)->locator_type == 
+        			HIP_LOCATOR_LOCATOR_TYPE_IPV6){
+    		address_pointer += sizeof(struct hip_locator_info_addr_item);
+    		amount += 1;
+    	} 
         else
         	address_pointer += sizeof(struct hip_locator_info_addr_item);
 	}

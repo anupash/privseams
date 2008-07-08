@@ -246,7 +246,7 @@ int main(int argc, char *argv[])
             memset(dht_response, '\0', sizeof(dht_response));
             ret = 0;
             HIP_DEBUG("\n\nTrying out get wrapper\n");
-            ret = opendht_get_key(serving_gateway, val_hit, dht_response);
+            ret = hip_opendht_get_key(&handle_hit_value, serving_gateway, val_hit, dht_response);
 
             if (!ret)
                 HIP_DEBUG("DHT get succeeded\n");

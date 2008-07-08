@@ -463,7 +463,16 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 	struct hip_opendht_gw_info *gw_info = NULL;
 	FILE *fp = NULL;				
 	List list;
-       
+	
+	/* Used for HDRR response */
+    struct hip_common *hipcommonmsg;	/* hip common message to be sent to daemon*/
+    struct hip_locator *locator;		/* To examine DHT response which contains locator in HDRR*/
+	struct in6_addr addrkey;			/* To convert DHT key (HIT) to in6_addr structure for verification*/
+	struct hip_hdrr_info hdrr_info;		/* To examine DHT response which contains locator in HDRR*/
+	struct hip_hdrr_info *hdrr_info_response; /* To examine daemon response in msg sent for verification*/
+	char dht_response_addresses[1024] = "";
+	struct hip_locator_info_addr_item *locator_address_item ;	
+    int locator_item_count = 0;
 	errno = 0;
 
 	/* Can't use the IFE macros here, since labe skip_dht is under label
@@ -539,43 +548,118 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
         HIP_IFEL((error < 0), -1,
                  "Error in resolving the DHT gateway address, skipping DHT.\n");
 
-        ret_hit = opendht_get_key(serving_gateway, name, dht_response_hit);
+        ret_hit = hip_opendht_get_key(&handle_hit_value,serving_gateway, name, dht_response_hit);
 	
         if (ret_hit == 0) {
                 HIP_INFO("HIT received from DHT: %s.\n", dht_response_hit);
 	}
-        
+        /*Now opendeht_get_key in case of HDRR Lookup returns complete HDRR packet
+         * so that its verification can be done and locators can be manipulated 
+         * */
         if (ret_hit == 0 && (strlen((char *)dht_response_hit) > 1)) {
-                ret_addr = opendht_get_key(serving_gateway, 
+                ret_addr = hip_opendht_get_key(&handle_hdrr_value, serving_gateway, 
                                            dht_response_hit, dht_response_addr);
                 if (ret_addr == 0)
                         HIP_INFO("Address received from DHT: %s.\n",dht_response_addr);
 	}
+	
+	  /*
+        * It sends the dht response to hipdaemon
+        * first appending one more user param for holding a structure hdrr_info
+        * hdrr_info is used by daemon to mark signature and host id verification
+        * Then adding user header for recognizing the message at daemon side
+        * 
+        */
+	   
+        hipcommonmsg = (struct hip_common *)dht_response_addr ;
+        _HIP_DUMP_MSG (hipcommonmsg);
+        
+ 		if (inet_pton(AF_INET6, &dht_response_hit, &addrkey.s6_addr) == 0)
+    	{ 
+    		HIP_DEBUG("HIT not found from DHT");
+    		goto out_err ;
+    	}
+    	
+    	/* Inititalize values for hip_hdrr_info structure before sending it to daemon
+    	 * */
+       	memcpy(&hdrr_info.dht_key, &addrkey, sizeof(struct in6_addr));
+    	hdrr_info.sig_verified = -1;
+    	hdrr_info.hit_verified = -1;
+    	
+    	
+    	hip_build_param_hip_hdrr_info(hipcommonmsg, &hdrr_info);
+    	_HIP_DUMP_MSG (hipcommonmsg);
+		
+        
+         /* ASK Signature and Host Id verification INFO FROM DAEMON */
+        HIP_INFO("Asking signature verification info from daemon...\n");
+     
+        HIP_IFEL(hip_build_user_hdr(hipcommonmsg, SO_HIP_VERIFY_DHT_HDRR_RESP,0),-1,
+                 "Building daemon header failed\n");
+        HIP_IFEL(hip_send_recv_daemon_info(hipcommonmsg), -1, "Send recv daemon info failed\n");
+      
+      	/* Now reading response from the hip common message 
+      	 * if modified by the daemon for the flags for signature and host id
+      	 * verification set in struc hip_hdrr_info
+      	 * */
+		    
+      	hdrr_info_response = hip_get_param (hipcommonmsg, HIP_PARAM_HDRR_INFO);
+      	_HIP_DUMP_MSG (hipcommonmsg);
+        HIP_DEBUG ("Sig verified (0=true): %d\nHit Verified (0=true): %d \n",hdrr_info_response->sig_verified, hdrr_info_response->hit_verified);
+		
+		/* get the locator and its item count to chain addresses in gaih_tuple */
+		locator = hip_get_param(hipcommonmsg, HIP_PARAM_LOCATOR);
+		locator_item_count = hip_get_locator_addr_item_count(locator);
+	 
+	
+		/* commenting some checks, for HDRR locators
+		 *  as now we deal with all locator addresses*/
+		
         if ((ret_hit == 0) && (ret_addr == 0) && 
-            (dht_response_hit[0] != '\0') && (dht_response_addr[0] != '\0')) { 
+            (dht_response_hit[0] != '\0') /*&& (dht_response_addr[0] != '\0')*/) { 
                 if (inet_pton(AF_INET6, dht_response_hit, &tmp_hit) >0 &&
-                    inet_pton(AF_INET6, dht_response_addr, &tmp_addr) >0) {
-                        if (**pat == NULL) {						
-                                if ((**pat = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){
-                                        HIP_ERROR("Memory allocation error\n");
-                                        exit(-EAI_MEMORY);
-                                }	  
-                                (**pat)->scopeid = 0;				
-                        }
-                        (**pat)->family = AF_INET6;					
+                    /*inet_pton(AF_INET6, dht_response_addresses, &tmp_addr)*/
+                    locator_item_count >0) {
+                        /*locators are there and hit also exists, now creating gaih_addrtuple*/ 
+                      //  **pat = NULL ;      			
+                       	if (**pat == NULL) {						
+                           	    if ((**pat = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){
+                               	        HIP_ERROR("Memory allocation error\n");
+                                   	    exit(-EAI_MEMORY);
+                               	}	  
+                               	(**pat)->scopeid = 0;				
+                       	}
+                       	(**pat)->family = AF_INET6;				
                         memcpy((**pat)->addr, &tmp_hit, sizeof(struct in6_addr));		
-                        *pat = &((**pat)->next);				     	
-                        
-                        if ((**pat = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){
-                                HIP_ERROR("Memory allocation error\n");
-                                exit(-EAI_MEMORY);
-                        }	  
-                        
-                        (**pat)->scopeid = 0;				
-                        (**pat)->next = NULL;						
-                        (**pat)->family = AF_INET6;					
-                        memcpy((**pat)->addr, &tmp_addr, sizeof(struct in6_addr));	
                         *pat = &((**pat)->next);
+                       	 
+                    	locator_address_item = hip_get_locator_first_addr_item(locator);
+                  		locator_item_count--;
+                       	
+                       	int x= 0 ;
+                     	for ( x = 0; x <= locator_item_count ; x++)
+                       	{
+                       		memcpy(&tmp_addr, 
+                       			(struct in6_addr*)&locator_address_item[x].address, 
+                       				sizeof(struct in6_addr));
+                        					     	
+                        
+                        	if ((**pat = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){
+                            	    HIP_ERROR("Memory allocation error\n");
+                                	exit(-EAI_MEMORY);
+                        	}	  
+                        
+                        	(**pat)->scopeid = 0;				
+                        	//(**pat)->next = NULL;						
+                        	(**pat)->family = AF_INET6;							
+                        	memcpy((**pat)->addr, &tmp_addr, sizeof(struct in6_addr));
+                        	if (x !=locator_item_count)
+                        		*pat = &((**pat)->next);
+                        
+                        } /*For loop ends */
+                       (**pat)->next = NULL;
+                       *pat = &((**pat)->next);
+                       
                         /* dump_pai(*pat); */
                         return 1;
                 }
@@ -721,14 +805,26 @@ send_hipd_addr(struct gaih_addrtuple * orig_at)
 				if(ipv6_addr_is_hit((struct in6_addr *) at_ip->addr))
 					continue;
 				else if(IN6_IS_ADDR_V4MAPPED((struct in6_addr *)at_ip->addr)){
-			        	IPV6_TO_IPV4_MAP(((struct in6_addr *)at_ip->addr), &lsi);
-					is_lsi = 1;
-					_HIP_DEBUG_LSI("lsi\n", &lsi);
-					continue;
+					IPV6_TO_IPV4_MAP(((struct in6_addr *)at_ip->addr), &lsi);
+			        if (IS_LSI32(lsi.s_addr)) {
+			        	
+						is_lsi = 1;
+						HIP_DEBUG_LSI("lsi\n", &lsi);
+						HIP_DEBUG("IS_LSI32: %d\n", IS_LSI32(lsi.s_addr));
+						continue;
+			        }
+			        else
+			        { 
+					//continue; //COMMENTING IT !! Pardeep
+					/*I couldnt get it, if it gets ipv4 it will not take it into account ?? Ask Samu*/
+					//Adding this line as well, so it gets ip address copied to addr
+					HIP_DEBUG("IS_LSI32: %d\n", IS_LSI32(lsi.s_addr));
+					addr6 = *(struct in6_addr *) at_ip->addr;
+			        }
 				}
 		   		else{
 			        	addr6 = *(struct in6_addr *) at_ip->addr;
-		   		        _HIP_DEBUG_IN6ADDR("addr6\n", (struct in6_addr *)at_hit->addr);
+		   		        HIP_DEBUG_IN6ADDR("addr6\n", (struct in6_addr *)at_hit->addr); //unignoring it
 		   		}
 	    		}
 

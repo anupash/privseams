@@ -932,7 +932,7 @@ int hip_handle_user_msg(struct hip_common *msg,
          */
         
     	hip_set_msg_type(msg,HIP_HDRR);
-    	HIP_DUMP_MSG (msg);
+    	_HIP_DUMP_MSG (msg);
     	
     	HIP_IFEL(!(hit = malloc(sizeof(struct in6_addr))), -1, "Malloc for HIT failed\n");
 		switch (alg) {
@@ -950,7 +950,7 @@ int hip_handle_user_msg(struct hip_common *msg,
 				HIP_ERROR("Unsupported HI algorithm used cannot verify signature (%d)\n", alg);
 				break;
 		}
-		HIP_DUMP_MSG (msg);
+		_HIP_DUMP_MSG (msg);
 		if (err != 0)
 		{
 			HIP_DEBUG("Unable to convert host id to hit for host id verification \n");

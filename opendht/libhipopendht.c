@@ -358,93 +358,95 @@ int opendht_get(int sockfd,
  * @param gateway A addrinfo struct containing the gateway address
  * @param key Pointer to key to be fetched
  * @param value Pointer to memory area where the corresponding value will be saved
- *
+ * VALUE contains HIT (string) in case of HIT Lookup OR
+ * VALUE contains HIP_COMMON structure in case of HDRR lookup
  * @return integer -1 on error, on success 0
  */
-int opendht_get_key(struct addrinfo * gateway, const unsigned char * key,
-		    unsigned char *value)
-{
-        int err = 0, sfd = -1, n_addrs = 0;
-        int locator_item_count = 0;
-        char dht_response[1400];
-        char hostname[256];
-        char *host_addr = NULL;
-        struct hostent *hoste = NULL;
-        struct hip_locator *locator;
-        struct hip_locator_info_addr_item *locator_address_item = NULL;
-        struct in6_addr addr6;
-        struct in_addr addr4;
-        
-       
-        
-        memset(hostname,'\0',sizeof(hostname));
-        HIP_IFEL((gethostname(hostname, sizeof(hostname))),-1,"Error getting hostname\n");
-        HIP_IFEL(!(hoste = gethostbyname(hostname)),-1,
-                 "Encountered an error when getting host address\n");
-        if (hoste->h_addrtype == AF_INET)
-                host_addr = inet_ntoa(*(struct in_addr *)*hoste->h_addr_list);
-        else if (hoste->h_addrtype == AF_INET6) {
-                HIP_IFEL(inet_ntop(AF_INET6, &hoste->h_addr_list, 
-                                   host_addr, sizeof(INET6_ADDRSTRLEN)),
-                         -1,"Error converting host IPv6 address\n");
-        }
-        else {
-                HIP_DEBUG("Unknown host address family\n");
-                goto out_err;
-        }
-        
-        /* TODO
-         * Following line Temporarily inserted line for openlokup, MUST BE REMOVED
-         */
-         host_addr = OPENDHT_GATEWAY;
-        _HIP_DEBUG("Host addresss %s\n", host_addr);
-        sfd = init_dht_gateway_socket(sfd);
-        HIP_IFEL((err = connect_dht_gateway(sfd, gateway, 1))
-                 ,-1,"OpenDHT connect error\n");  
-        memset(dht_response, '\0', sizeof(dht_response));
-        HIP_IFEL((err = opendht_get(sfd, (unsigned char *)key, (unsigned char *)host_addr, 5851)),
-                 -1, "Opendht_get error");
-        HIP_IFEL(opendht_read_response(sfd, dht_response), -1,"Opendht_read_response error\n"); 
-        _HIP_DUMP_MSG((struct hip_common *)dht_response);
-          
-       
-        /* check if there is locator, if is, take first and give it for the caller
-           should give the whole locator and let the caller decide */
-           
-        locator = hip_get_param((struct hip_common *)dht_response, HIP_PARAM_LOCATOR);
-        if (locator) {
-                locator_item_count = hip_get_locator_addr_item_count(locator);
-                locator_item_count--;
-                locator_address_item = hip_get_locator_first_addr_item(locator);
-                /*
-                memcpy(&addr6, 
-                       (struct in6_addr*)&locator_address_item[0].address, 
-                       sizeof(struct in6_addr));
-                */
-                memcpy(&addr6, 
-                       (struct in6_addr*)&locator_address_item[locator_item_count].address, 
-                       sizeof(struct in6_addr));
-                if (IN6_IS_ADDR_V4MAPPED(&addr6)) {
-                        IPV6_TO_IPV4_MAP(&addr6, &addr4);
-                        sprintf(value, "%s", inet_ntoa(addr4));
-                } else {
-                        hip_in6_ntop(&addr6, value);
-                        HIP_DEBUG("Value: %s\n", value);
-                }
-        } else {
-                if (ipv6_addr_is_hit((struct in6_addr*)dht_response)) {
-                        /* if IPv6 must be HIT */
-                        hip_in6_ntop((struct in6_addr *)dht_response, value);
-                } else {
-                        memcpy(value, dht_response, strlen(dht_response));
-                }
-        }
- out_err:
- 		// Following line is added by Pardeep to take DHT response back to the caller
- 		 memcpy(value, dht_response,1024);
-        if (sfd) close(sfd); 
-        return(err);
-}
+ /*
+//int opendht_get_key(struct addrinfo * gateway, const unsigned char * key,
+//		    unsigned char *value)
+//{
+//        int err = 0, sfd = -1, n_addrs = 0;
+//        int locator_item_count = 0;
+//        char dht_response[1400];
+//        char hostname[256];
+//        char *host_addr = NULL;
+//        struct hostent *hoste = NULL;
+//        struct hip_locator *locator;
+//        struct hip_locator_info_addr_item *locator_address_item = NULL;
+//        struct in6_addr addr6;
+//        struct in_addr addr4;
+//        
+//       
+//        
+//        memset(hostname,'\0',sizeof(hostname));
+//        HIP_IFEL((gethostname(hostname, sizeof(hostname))),-1,"Error getting hostname\n");
+//        HIP_IFEL(!(hoste = gethostbyname(hostname)),-1,
+//                 "Encountered an error when getting host address\n");
+//        if (hoste->h_addrtype == AF_INET)
+//                host_addr = inet_ntoa(*(struct in_addr *)*hoste->h_addr_list);
+//        else if (hoste->h_addrtype == AF_INET6) {
+//                HIP_IFEL(inet_ntop(AF_INET6, &hoste->h_addr_list, 
+//                                   host_addr, sizeof(INET6_ADDRSTRLEN)),
+//                         -1,"Error converting host IPv6 address\n");
+//        }
+//        else {
+//                HIP_DEBUG("Unknown host address family\n");
+//                goto out_err;
+//        }
+//        
+//        /* TODO
+//         * Following line Temporarily inserted line for openlokup, MUST BE REMOVED
+//         */
+//         host_addr = OPENDHT_GATEWAY;
+//        _HIP_DEBUG("Host addresss %s\n", host_addr);
+//        sfd = init_dht_gateway_socket(sfd);
+//        HIP_IFEL((err = connect_dht_gateway(sfd, gateway, 1))
+//                 ,-1,"OpenDHT connect error\n");  
+//        memset(dht_response, '\0', sizeof(dht_response));
+//        HIP_IFEL((err = opendht_get(sfd, (unsigned char *)key, (unsigned char *)host_addr, 5851)),
+//                 -1, "Opendht_get error");
+//        HIP_IFEL(opendht_read_response(sfd, dht_response), -1,"Opendht_read_response error\n"); 
+//        _HIP_DUMP_MSG((struct hip_common *)dht_response);
+//          
+//       
+//        /* check if there is locator, if is, take first and give it for the caller
+//           should give the whole locator and let the caller decide */
+//           
+//        locator = hip_get_param((struct hip_common *)dht_response, HIP_PARAM_LOCATOR);
+//        if (locator) {
+//        		memcpy(value, dht_response, 1024);
+//        	/*Commented by Pardeep to return whole response back in case od HDRR*/
+//        	
+//        	/*
+//                locator_item_count = hip_get_locator_addr_item_count(locator);
+//                locator_item_count--;
+//                locator_address_item = hip_get_locator_first_addr_item(locator);
+//                  memcpy(&addr6, 
+//                       (struct in6_addr*)&locator_address_item[locator_item_count].address, 
+//                       sizeof(struct in6_addr));
+//                if (IN6_IS_ADDR_V4MAPPED(&addr6)) {
+//                        IPV6_TO_IPV4_MAP(&addr6, &addr4);
+//                        sprintf(value, "%s", inet_ntoa(addr4));
+//                } else {
+//                        hip_in6_ntop(&addr6, value);
+//                        HIP_DEBUG("Value: %s\n", value);
+//                }
+//                */
+//        } else {
+//                if (ipv6_addr_is_hit((struct in6_addr*)dht_response)) {
+//                        /* if IPv6 must be HIT */
+//                        hip_in6_ntop((struct in6_addr *)dht_response, value);
+//                } else {
+//                        memcpy(value, dht_response, strlen(dht_response));
+//                }
+//        }
+// out_err:
+// 		// Following line is added by Pardeep to take DHT response back to the caller
+// 		// memcpy(value, dht_response,1024);
+//        if (sfd) close(sfd); 
+//        return(err);
+//}
 
 /**
  * opendht_handle_value Modifies the key to suitable format for OpenDHT
@@ -727,4 +729,130 @@ int opendht_read_response(int sockfd, char * answer)
     return(ret);
 }
 
+    
+/**
+ * hip_opendht_get_key - creates socket, connects to OpenDHT and gets the value under given key
+ *
+ * @param *value_handler(), a pointer function which treats different values from openDHT based
+ * on the function assigned to it by the caller
+ * @param gateway A addrinfo struct containing the gateway address
+ * @param key Pointer to key to be fetched
+ * @param opaque_answer Pointer to memory area where the corresponding value will be saved
+ * opaque_answer is set by poiner function sent as param
+ *  @return integer -1 on error, on success 0
+ */
+int hip_opendht_get_key(int (*value_handler)(unsigned char * packet,
+             void * answer),struct addrinfo * gateway, 
+            	  	const unsigned char * key, void * opaque_answer)
+{
+		int err = 0, sfd = -1;
+        char dht_response[1400];
+        char hostname[256];
+        char *host_addr = NULL;
+        struct hostent *hoste = NULL;
+            
+        memset(hostname,'\0',sizeof(hostname));
+        HIP_IFEL((gethostname(hostname, sizeof(hostname))),-1,"Error getting hostname\n");
+        HIP_IFEL(!(hoste = gethostbyname(hostname)),-1,
+                 "Encountered an error when getting host address\n");
+        if (hoste->h_addrtype == AF_INET)
+                host_addr = inet_ntoa(*(struct in_addr *)*hoste->h_addr_list);
+        else if (hoste->h_addrtype == AF_INET6) {
+                HIP_IFEL(inet_ntop(AF_INET6, &hoste->h_addr_list, 
+                                   host_addr, sizeof(INET6_ADDRSTRLEN)),
+                         -1,"Error converting host IPv6 address\n");
+        }
+        else {
+                HIP_DEBUG("Unknown host address family\n");
+                goto out_err;
+        }
+        
+        /* TODO
+         * Following line Temporarily inserted line for openlokup, MUST BE REMOVED
+         */
+         host_addr = OPENDHT_GATEWAY;
+        _HIP_DEBUG("Host addresss %s\n", host_addr);
+        sfd = init_dht_gateway_socket(sfd);
+        HIP_IFEL((err = connect_dht_gateway(sfd, gateway, 1))
+                 ,-1,"OpenDHT connect error\n");  
+        memset(dht_response, '\0', sizeof(dht_response));
+        HIP_IFEL((err = opendht_get(sfd, (unsigned char *)key, (unsigned char *)host_addr, 5851)),
+                 -1, "Opendht_get error");
+        HIP_IFEL(opendht_read_response(sfd, dht_response), -1,"Opendht_read_response error\n"); 
+        _HIP_DUMP_MSG((struct hip_common *)dht_response);
+        
+        //Call the handler function , passed as a fuunction pointer
+        err = value_handler(&dht_response, opaque_answer);
+        
+out_err:
+ 		// Following line is added by Pardeep to take DHT response back to the caller
+ 		// memcpy(value, dht_response,1024);
+        if (sfd) close(sfd); 
+        return(err);
+}
+	
 
+int handle_hdrr_value (unsigned char *packet, void *hdrr)
+{
+	// What to check in response -- why locator ? -- should be nothing
+	 struct hip_locator *locator;
+	 locator = hip_get_param((struct hip_common *)packet, HIP_PARAM_LOCATOR);
+        if (locator)
+        { 
+        	//TODO Define size of HDRR packet
+        		memcpy(hdrr, packet, 1024);
+        		return 0 ;
+        }
+        else
+        	return -1 ;		
+}
+
+int handle_locator_value (unsigned char *packet, void *locator_ipv4)
+{
+	 struct hip_locator *locator;
+     struct hip_locator_info_addr_item *locator_address_item = NULL;
+     int locator_item_count = 0;
+     struct in6_addr addr6;
+     struct in_addr addr4;   
+	 locator = hip_get_param((struct hip_common *)packet, HIP_PARAM_LOCATOR);
+        if (locator) {
+        	/* This gets the last address in locator list, 
+        	 * which has to be ipv4 address
+        	 * 
+        	 * */	
+        	
+        	    locator_item_count = hip_get_locator_addr_item_count(locator);
+                locator_item_count--;
+                locator_address_item = hip_get_locator_first_addr_item(locator);
+                  memcpy(&addr6, 
+                       (struct in6_addr*)&locator_address_item[locator_item_count].address, 
+                       sizeof(struct in6_addr));
+                if (IN6_IS_ADDR_V4MAPPED(&addr6)) {
+                        IPV6_TO_IPV4_MAP(&addr6, &addr4);
+                        sprintf((char*)locator_ipv4, "%s", inet_ntoa(addr4));
+                } else {
+                        hip_in6_ntop(&addr6, (char*)locator_ipv4);
+                        HIP_DEBUG("Value: %s\n", (char*)locator_ipv4);
+                }
+                return 0 ;
+        }
+        else
+        	return -1;	
+}
+
+int handle_hit_value (unsigned char *packet, void *hit)
+{
+	 if (ipv6_addr_is_hit((struct in6_addr*)packet)) 
+	 {
+                        /* if IPv6 must be HIT */
+         hip_in6_ntop((struct in6_addr *)packet, (char*)hit);
+         return 0 ;
+     } 
+     else 
+     {
+     	return -1 ;
+     }
+        	
+       
+        			
+}

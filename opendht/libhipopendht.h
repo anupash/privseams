@@ -35,13 +35,20 @@ int opendht_rm(int, unsigned char *, unsigned char *,
 
 int opendht_get(int, unsigned char *, unsigned char *, int);
 
-int opendht_get_key(struct addrinfo *, const unsigned char *,
+/*int opendht_get_key(struct addrinfo *, const unsigned char *,
 		    unsigned char *);
-
+*/
 int opendht_handle_key(char *, char *);
 
-int opendht_handle_value(char *, char *); 
+int opendht_handle_value(char *, char *);
+
 
 int opendht_read_response(int, char *);
+
+int (*value_handler)(unsigned char * packet, void * answer);  
+
+int handle_hdrr_value (unsigned char *packet, void *hdrr);
+int handle_locator_value (unsigned char *packet, void *locator_ipv4);
+int handle_hit_value (unsigned char *packet, void *hit); 
 
 #endif /* lib_opendht */
