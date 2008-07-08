@@ -596,6 +596,14 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
       	_HIP_DUMP_MSG (hipcommonmsg);
         HIP_DEBUG ("Sig verified (0=true): %d\nHit Verified (0=true): %d \n",hdrr_info_response->sig_verified, hdrr_info_response->hit_verified);
 		
+		/*IF signature or host id is not verified*/
+		if(hdrr_info_response->sig_verified != 0 || hdrr_info_response->hit_verified != 0)
+		{
+			HIP_DEBUG ("HDRR Signature and/or Host Id verification failed\n");
+			err = -1 ;
+			goto out_err ;
+		}
+		
 		/* get the locator and its item count to chain addresses in gaih_tuple */
 		locator = hip_get_param(hipcommonmsg, HIP_PARAM_LOCATOR);
 		locator_item_count = hip_get_locator_addr_item_count(locator);
