@@ -378,12 +378,12 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	   NAT, the NAT status of the host association is set on and the send
 	   function set is set to "nat_xmit_func_set". */
 	if(hip_nat_status && IN6_IS_ADDR_V4MAPPED(peer_addr)) {
-		entry->nat_mode = 1;
+		entry->nat_mode = hip_nat_status;
 		entry->peer_udp_port = HIP_NAT_UDP_PORT;
 		entry->hadb_xmit_func = &nat_xmit_func_set;
 	}
 	else {
-		entry->nat_mode = 0;
+		entry->nat_mode = hip_nat_status;
 		entry->peer_udp_port = 0;
 	}
 

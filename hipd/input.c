@@ -1181,7 +1181,8 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 	   of R2 packet. Don't know if the entry is already locked... */
 	if(r1_info->dst_port == HIP_NAT_UDP_PORT) {
 		HIP_LOCK_HA(entry);
-		entry->nat_mode = 1;
+		if(!entry->nat_mode)
+			entry->nat_mode = HIP_NAT_MODE_PLAIN_UDP;
 		hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
 		HIP_UNLOCK_HA(entry);
 	}
@@ -2006,7 +2007,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	   here, since the source port can be different for I1 and I2. */
 	if(i2_info->dst_port == HIP_NAT_UDP_PORT)
 	{
-		entry->nat_mode = 1;
+		if (!entry->nat_mode) entry->nat_mode = HIP_NAT_MODE_PLAIN_UDP;
 		entry->local_udp_port = i2_info->dst_port;
 		entry->peer_udp_port = i2_info->src_port;
 		HIP_DEBUG("entry->hadb_xmit_func: %p.\n", entry->hadb_xmit_func);

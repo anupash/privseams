@@ -1857,7 +1857,7 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 		   behind the same NAT or moves from behind one NAT to behind
 		   another NAT. */
 		HIP_DEBUG("UPDATE packet src port %d\n", sinfo->src_port);
-		entry->nat_mode = 1;
+		if(!entry->nat_mode) entry->nat_mode = HIP_NAT_MODE_PLAIN_UDP;
 		entry->peer_udp_port = sinfo->src_port;
 		hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
 		ipv6_addr_copy(&entry->local_address, dst_ip);
