@@ -1286,9 +1286,7 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
   int dsa_key_rr_len = -1;
   signed char t; /* in units of 8 bytes */
   unsigned char *p;
-  unsigned char *bn_buf = NULL;
-  int bn_buf_len;
-  int bn2bin_len;
+  int key_len;
 
   HIP_ASSERT(dsa != NULL); /* should not happen */
 
@@ -1307,11 +1305,8 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
 
   /* ***** is use of BN_num_bytes ok ? ***** */
   t = (BN_num_bytes(dsa->p) - 64) / 8;
-  if (t < 0 || t > 8) {
-    HIP_ERROR("t=%d < 0 || t > 8\n", t);
-    err = -EINVAL;
-    goto out_err;
-  }
+  HIP_IFEL((t < 0 || t > 8), -EINVAL,
+			"Invalid RSA key length %d bits\n", (64 + t * 8) * 8);
   _HIP_DEBUG("t=%d\n", t);
 
   /* RFC 2536 section 2 */
@@ -1324,9 +1319,10 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
             G        64 + T*8  octets
             Y        64 + T*8  octets
 	  [ X        20 optional octets (private key hack) ]
-	
+
   */
-  dsa_key_rr_len = 1 + DSA_PRIV + 3 * (64 + t * 8);
+  key_len = 64 + t * 8;
+  dsa_key_rr_len = 1 + DSA_PRIV + 3 * key_len;
 
   if (dsa->priv_key) {
     dsa_key_rr_len += DSA_PRIV; /* private key hack */
@@ -1338,90 +1334,47 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
   _HIP_DEBUG("dsa key rr len = %d\n", dsa_key_rr_len);
   *dsa_key_rr = malloc(dsa_key_rr_len);
   HIP_IFEL(!*dsa_key_rr, -ENOMEM, "Malloc for *dsa_key_rr failed\n");
-
-  /* side-effect: does also padding for Q, P, G, and Y */
   memset(*dsa_key_rr, 0, dsa_key_rr_len);
 
-  /* copy header */
   p = *dsa_key_rr;
 
   /* set T */
   memset(p, t, 1); // XX FIX: WTF MEMSET?
-  p += 1;
+  p++;
   _HIP_HEXDUMP("DSA KEY RR after T:", *dsa_key_rr, p - *dsa_key_rr);
-
-  /* minimum number of bytes needed to store P, G or Y */
-  bn_buf_len = BN_num_bytes(dsa->p);
-  if (bn_buf_len <= 0) {
-    HIP_ERROR("bn_buf_len p <= 0\n");
-    err = -EINVAL;
-    goto out_err_free_rr;
-  }
-
-  bn_buf = malloc(bn_buf_len);
-  if (!bn_buf) {
-    HIP_ERROR("malloc\n");
-    err = -ENOMEM;
-    goto out_err_free_rr;
-  }
   
-  /* Q */
-  bn2bin_len = bn2bin_safe(dsa->q, bn_buf, DSA_PRIV);
-  _HIP_DEBUG("q len=%d\n", bn2bin_len);
-  HIP_IFEL(!bn2bin_len, -ENOMEM, "bn2bin for Q failed\n");
+  /* add given dsa_param to the *dsa_key_rr */
 
-  HIP_ASSERT(bn2bin_len == DSA_PRIV);
-  memcpy(p, bn_buf, bn2bin_len);
-  p += bn2bin_len;
+  bn2bin_safe(dsa->q, p, DSA_PRIV);
+  p += DSA_PRIV;
   _HIP_HEXDUMP("DSA KEY RR after Q:", *dsa_key_rr, p-*dsa_key_rr);
 
-  /* add given dsa_param to the *dsa_key_rr */
-#define DSA_ADD_PGY_PARAM_TO_RR(dsa_param, t)            \
-  bn2bin_len = bn2bin_safe(dsa_param, bn_buf, 64 + t*8); \
-  _HIP_DEBUG("len=%d\n", bn2bin_len);                    \
-  if (!bn2bin_len) {                                     \
-    HIP_ERROR("bn2bin\n");                               \
-    err = -ENOMEM;                                       \
-    goto out_err_free_rr;                                \
-  }                                                      \
-  HIP_ASSERT(bn_buf_len-bn2bin_len >= 0);                \
-  p += bn_buf_len-bn2bin_len; /* skip pad */             \
-  memcpy(p, bn_buf, bn2bin_len);                         \
-  p += bn2bin_len;
-
-  /* padding + P */
-  DSA_ADD_PGY_PARAM_TO_RR(dsa->p, t);
+  bn2bin_safe(dsa->p, p, key_len);
+  p += key_len;
   _HIP_HEXDUMP("DSA KEY RR after P:", *dsa_key_rr, p-*dsa_key_rr);
-  /* padding + G */
-  DSA_ADD_PGY_PARAM_TO_RR(dsa->g, t);
+
+  bn2bin_safe(dsa->g, p, key_len);
+  p += key_len;
   _HIP_HEXDUMP("DSA KEY RR after G:", *dsa_key_rr, p-*dsa_key_rr);
-  /* padding + Y */
-  DSA_ADD_PGY_PARAM_TO_RR(dsa->pub_key, t);
+
+  bn2bin_safe(dsa->pub_key, p, key_len);
+  p += key_len;
   _HIP_HEXDUMP("DSA KEY RR after Y:", *dsa_key_rr, p-*dsa_key_rr);
-  /* padding + X */
-
-#undef DSA_ADD_PGY_PARAM_TO_RR
-
 
   if(dsa->priv_key){
-    bn2bin_len = bn2bin_safe(dsa->priv_key, bn_buf, DSA_PRIV);
-    memcpy(p, bn_buf, bn2bin_len);
-    
-    p += bn2bin_len;
-    _HIP_HEXDUMP("DSA KEY RR after X:", *dsa_key_rr, p-*dsa_key_rr);
-
+      bn2bin_safe(dsa->priv_key, p, DSA_PRIV);
+      _HIP_HEXDUMP("DSA KEY RR after X:", *dsa_key_rr, p-*dsa_key_rr);
   }
 
-  goto out_err;
-
- out_err_free_rr:
-  if (*dsa_key_rr)
-    free(*dsa_key_rr);
-
  out_err:
-  if (bn_buf)
-    free(bn_buf);
-  return dsa_key_rr_len;
+
+  if (err) {
+    if (*dsa_key_rr)
+	free(*dsa_key_rr);
+    return err;
+  }
+  else
+    return dsa_key_rr_len;
 }
 
 
@@ -1440,26 +1393,30 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
  * and sets rsa_key_rr to NULL.
  */
 int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr) {
-  int err = 0, len;
+  int err = 0;
   int rsa_key_rr_len = -1;
   unsigned char *c;
   int public = -1;
-  int e_len = 1;
+  int e_len_bytes = 1;
+  int e_len, key_len;
 
   HIP_ASSERT(rsa != NULL); // should not happen
 
   *rsa_key_rr = NULL;
 
-/*  HIP_ASSERT(BN_num_bytes(rsa->e) < 255); // is this correct?
-	*/
-  HIP_ASSERT(BN_num_bytes(rsa->e) <= 512) /* RFC 3110 limits e to 4096 bits */
-  if (BN_num_bytes(rsa->e) > 255)
-	e_len = 3;
+  e_len = BN_num_bytes(rsa->e);
+  key_len = RSA_size(rsa);
+
+  /* RFC 3110 limits e to 4096 bits */
+  HIP_IFEL(e_len > 512, -EINVAL,  "Invalid rsa->e length %d bytes\n", e_len);
+  if (e_len > 255)
+	e_len_bytes = 3;
 
   /* let's check if the RSA key is public or private
      private exponent is NULL in public keys */
   if(rsa->d == NULL) { 
     public = 1;
+    rsa_key_rr_len = e_len_bytes + e_len + key_len;
 
     /* 
        See RFC 2537 for flags, protocol and algorithm and check RFC 3110 for 
@@ -1469,53 +1426,52 @@ int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr) {
 
        2 bytes for flags, 1 byte for protocol and 1 byte for algorithm = 4 bytes       
     */
-    rsa_key_rr_len = e_len + BN_num_bytes(rsa->e) + RSA_size(rsa);
-
     /* Doesn't the rdata struct hold this? Function doesn't write it. */
     // rsa_key_rr_len += 4;
 
   } else{
     public = 0;
-    rsa_key_rr_len = e_len + BN_num_bytes(rsa->e) + 3 * RSA_size(rsa);
+    rsa_key_rr_len = e_len_bytes + e_len + 3 * key_len;
 
   }
 
   *rsa_key_rr = malloc(rsa_key_rr_len);
   HIP_IFEL(!*rsa_key_rr, -ENOMEM, "Malloc for *rsa_key_rr failed\n");
-
   memset(*rsa_key_rr, 0, rsa_key_rr_len);
 
   c = *rsa_key_rr;
 
-  if (e_len == 1) {
-	*c = (unsigned char) BN_num_bytes(rsa->e);
+  if (e_len_bytes == 1) {
+	*c = (unsigned char) e_len;
   }
   c++; /* If e_len is more than one byte, first byte is 0. */
-  if (e_len == 3) {
-	*c = htons((u16)BN_num_bytes(rsa->e));
+  if (e_len_bytes == 3) {
+	*c = htons((u16) e_len);
 	c += 2;
   }
 
-  len = bn2bin_safe(rsa->e, c, BN_num_bytes(rsa->e));
-  c += len;
-
-  len = bn2bin_safe(rsa->n, c, RSA_size(rsa));
-  c += len;
+  bn2bin_safe(rsa->e, c, e_len);
+  c += e_len;
+  bn2bin_safe(rsa->n, c, key_len);
+  c += key_len;
 
   if(!public){
-          len = bn2bin_safe(rsa->d, c, RSA_size(rsa));
-          c += len;
-
-          len = bn2bin_safe(rsa->p, c, RSA_size(rsa) / 2);
-          c += len;
-
-          len = bn2bin_safe(rsa->q, c, RSA_size(rsa) / 2);
-          c += len;
+          bn2bin_safe(rsa->d, c, key_len);
+          c += key_len;
+          bn2bin_safe(rsa->p, c, key_len / 2);
+          c += key_len / 2;
+          bn2bin_safe(rsa->q, c, key_len / 2);
   }
 
  out_err:
 
-  return rsa_key_rr_len;
+  if (err) {
+    if (*rsa_key_rr)
+	free(*rsa_key_rr);
+    return err;
+  }
+  else
+    return rsa_key_rr_len;
 }
 
 void *hip_cast_sa_addr(void *sockaddr) {

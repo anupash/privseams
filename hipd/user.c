@@ -797,7 +797,7 @@ int hip_handle_user_msg(struct hip_common *msg,
 		   the REG_INFO parameters here. */
 		err = hip_recreate_all_precreated_r1_packets();
 		break;
-#endif
+#endif /* CONFIG_HIP_RVS */
 	case SO_HIP_GET_HITS:		
 		/** 
 		 * @todo passing argument 1 of 'hip_for_each_hi' from incompatible
@@ -890,6 +890,10 @@ int hip_handle_user_msg(struct hip_common *msg,
 		err = hip_netdev_trigger_bex_msg(msg);
 		goto out_err;
 	  break;
+	case SO_HIP_RESTART_DUMMY_INTERFACE:
+		set_up_device(HIP_HIT_DEV, 0);
+		err = set_up_device(HIP_HIT_DEV, 1);
+		break;
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;

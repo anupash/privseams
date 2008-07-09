@@ -477,17 +477,8 @@ int hip_conf_handle_hi(hip_common_t *msg, int action, const char *opt[],
 		       int optc)
 {
 	int err = 0, anon = 0, use_default = 0, rsa_key_bits = 0, 
-	dsa_key_bits = 0; //, euid = -1;
+	dsa_key_bits = 0;
 	char *fmt = NULL, *file = NULL;
-
-     /* Get the effective user ID. This has to be zero (root), because root owns
-	the key files under /etc/hip/. 
-     euid = geteuid();
-     HIP_IFEL((euid != 0 && action == ACTION_SET), -1,
-	      "New default HI must be created as root.\n");
-
-	ACTION_SET doesn't do anything.
-     */
 
      _HIP_DEBUG("action=%d optc=%d\n", action, optc);
 
@@ -512,6 +503,28 @@ int hip_conf_handle_hi(hip_common_t *msg, int action, const char *opt[],
 	  goto out_err;
      }
 
+     if (use_default && action == ACTION_ADD) {
+	/* Add default keys in three steps: dsa, rsa anon, rsa pub.
+	   Necessary for large keys. */
+
+	if (err = hip_serialize_host_id_action(msg, ACTION_ADD, 0, 1,
+							   "dsa", NULL, 0, 0))
+	    goto out_err;
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "Sending msg failed.\n");
+
+	hip_msg_init(msg);
+	if (err = hip_serialize_host_id_action(msg, ACTION_ADD, 1, 1,
+							   "rsa", NULL, 0, 0))
+	    goto out_err;
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "Sending msg failed.\n");
+
+	hip_msg_init(msg);
+	err = hip_serialize_host_id_action(msg, ACTION_ADD, 0, 1,
+							   "rsa", NULL, 0, 0);
+
+	goto out_err;
+     }
+
      if (use_default) {
 
 	  if (optc == 3) {
@@ -532,36 +545,14 @@ int hip_conf_handle_hi(hip_common_t *msg, int action, const char *opt[],
 	  file = opt[OPT_HI_FILE];
      }
 
-    if (use_default && action == ACTION_ADD) {
-	/* Add default keys in three steps: dsa, rsa anon, rsa pub.
-	   Necessary for large keys. */
-
-	if (err = hip_serialize_host_id_action(msg, ACTION_ADD, 0, 1,
-							   "dsa", NULL, 0, 0))
-	    goto out_err;
-	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "Sending msg failed.\n");
-
-	hip_msg_init(msg);
-	if (err = hip_serialize_host_id_action(msg, ACTION_ADD, 1, 1,
-							   "rsa", NULL, 0, 0))
-	    goto out_err;
-	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "Sending msg failed.\n");
-
-	hip_msg_init(msg);
-	err = hip_serialize_host_id_action(msg, ACTION_ADD, 0, 1,
-							   "rsa", NULL, 0, 0);
-
-	goto out_err;
-    }
-
-    if (rsa_key_bits < 384 || rsa_key_bits > HIP_MAX_RSA_KEY_LEN ||
+     if (rsa_key_bits < 384 || rsa_key_bits > HIP_MAX_RSA_KEY_LEN ||
 							rsa_key_bits % 64 != 0)
-	rsa_key_bits = RSA_KEY_DEFAULT_BITS;
-    if (dsa_key_bits < 512 || dsa_key_bits > HIP_MAX_DSA_KEY_LEN ||
+	 rsa_key_bits = RSA_KEY_DEFAULT_BITS;
+     if (dsa_key_bits < 512 || dsa_key_bits > HIP_MAX_DSA_KEY_LEN ||
 							dsa_key_bits % 64 != 0)
-	dsa_key_bits = DSA_KEY_DEFAULT_BITS;
+	 dsa_key_bits = DSA_KEY_DEFAULT_BITS;
 
-    err = hip_serialize_host_id_action(msg, action, anon, use_default,
+     err = hip_serialize_host_id_action(msg, action, anon, use_default,
 					fmt, file, rsa_key_bits, dsa_key_bits);
 
     //HIP_INFO("\nNew default HI is now created.\nYou must restart hipd to make "\
@@ -657,8 +648,7 @@ int hip_conf_handle_hi_del(hip_common_t *msg, int action,
      HIP_IFEL((ret == 0), -EINVAL, 
 		       "inet_pton: %s: not a valid network address\n", opt[0]);
 
-     HIP_HEXDUMP("HIT to delete: ", &hit,
-		 sizeof(in6_addr_t));
+     HIP_HEXDUMP("HIT to delete: ", &hit, sizeof(in6_addr_t));
 
      if (err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
 				    sizeof(in6_addr_t))) {
@@ -697,14 +687,18 @@ int hip_conf_handle_hi_del_all(hip_common_t *msg)
 					    -1, "Failed to build HIT param\n");
 
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEL_LOCAL_HI, 0),
--				   -1, "Failed to build user message header\n");
+-				  -1, "Failed to build user message header\n");
 	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "Sending msg failed.\n");
 
 	hip_msg_init(msg);
 
     }
 
-    HIP_INFO("All HITs deleted.\n");
+    /*FIXME Deleting HITs from the interface isn't working, so we restart it */
+    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_RESTART_DUMMY_INTERFACE, 0),
+				-1, "Failed to build message header\n");
+
+    HIP_INFO("All HIs deleted.\n");
 
   out_err:
     if (msg_tmp)
@@ -1483,8 +1477,8 @@ int hip_conf_handle_run_normal(hip_common_t *msg, int action,
 
 int hip_do_hipconf(int argc, char *argv[], int send_only)
 {
-     int err = 0, type_arg = 0; //, i = 0;
-     long int action = 0, type = 0; //, hiparg = 0;
+     int err = 0, type_arg = 0;
+     long int action = 0, type = 0;
      hip_common_t *msg = NULL;
      //char *text = NULL;
      

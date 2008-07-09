@@ -383,7 +383,7 @@ int hip_del_host_id(hip_db_struct_t *db, struct hip_lhi *lhi)
 /**
  * Handles the deletion of a localhost host identity.
  * 
- * @param msg the message containing the hit to be deleted.
+ * @param input the message containing the hit to be deleted.
  * @return    zero on success, or negative error value on failure.
  */
 int hip_handle_del_local_hi(const struct hip_common *input)
@@ -393,25 +393,20 @@ int hip_handle_del_local_hi(const struct hip_common *input)
 	char buf[46];
 	int err = 0;
 
-	
 	hit = (struct in6_addr *)
 		hip_get_param_contents(input, HIP_PARAM_HIT);
-	if (!hit) {
-		HIP_ERROR("no hit\n");
-		err = -ENODATA;
-		goto out_err;
-	}
+	HIP_IFEL(!hit, -ENODATA, "no hit\n");
 
 	hip_in6_ntop(hit, buf);
 	HIP_INFO("del HIT: %s\n", buf);
 
 	ipv6_addr_copy(&lhi.hit, hit);
 
-        err = hip_del_host_id(HIP_DB_LOCAL_HID, &lhi);
-        if (err) {
+        if (err = hip_del_host_id(HIP_DB_LOCAL_HID, &lhi)) {
 		HIP_ERROR("deleting of local host identity failed\n");
 		goto out_err;
         }
+
 	/** @todo remove associations from hadb & beetdb by the deleted HI. */
 	HIP_DEBUG("Removal of HIP localhost identity was successful\n");
  out_err:
