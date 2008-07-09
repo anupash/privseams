@@ -403,8 +403,10 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common * msg,  HIP_HASHTAB
         struct in6_addr * issuer_hit_n;
         RSA * rsa = NULL;
         char cert_str_pem[1024];
-        BIO *out_pem;
+        BIO *out;
         int read_bytes = 0;
+        unsigned char * der_cert = NULL;
+        int der_cert_len = 0;
 
         HIP_IFEL(!(subject = malloc(sizeof(struct in6_addr))), -1, 
                  "Malloc for subject failed\n");   
@@ -598,24 +600,36 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common * msg,  HIP_HASHTAB
 
         /** XX TODO Send the cert back to the client **/
         hip_msg_init(msg);
+
+#if 0
+        /* removed in favor of DER encoding on the wire 
+         if enabled  again uncomment BIO stuff also from out_err */
         /* Write PEM to char array cert_str_pem */                
-        out_pem = BIO_new(BIO_s_mem());
-        HIP_IFEL((PEM_write_bio_X509(out_pem, cert) != 1), -1,
+        out = BIO_new(BIO_s_mem());
+        HIP_IFEL((PEM_write_bio_X509(out, cert) != 1), -1,
                  "Failed to write the x509 in PEM to stdout\n");
-        read_bytes = BIO_read(out_pem, cert_str_pem, sizeof(cert_str_pem));
+        read_bytes = BIO_read(out, cert_str_pem, sizeof(cert_str_pem));
         _HIP_DEBUG("Cert_str_pem:\n%s\nRead bytes %d\n", cert_str_pem, read_bytes);
+#endif
+
+        /** DER **/
+        HIP_IFEL(((der_cert_len = i2d_X509(cert, &der_cert)) < 0), -1, 
+                 "Failed to convert cert to DER\n");
+        HIP_HEXDUMP("DER:\n", der_cert, der_cert_len);
+        HIP_DEBUG("DER length %d\n", der_cert_len);
+        /** end DER **/
 
         HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_CERT_X509V3_SIGN, 0), -1, 
                  "Failed to build user header\n");
-        HIP_IFEL(hip_build_param_cert_x509_resp(msg, &cert_str_pem), -1, 
+        HIP_IFEL(hip_build_param_cert_x509_resp(msg, der_cert, der_cert_len), -1, 
                  "Failed to create x509 response parameter\n");        
-        _HIP_DUMP_MSG(msg);
+        HIP_DUMP_MSG(msg);
 
 out_err:
         if(req != NULL) X509_REQ_free(req);
         if(extlist != NULL) sk_X509_EXTENSION_pop_free (extlist, X509_EXTENSION_free);
-        BIO_flush(out_pem);
-        BIO_free_all(out_pem);
+        //BIO_flush(out);
+        //BIO_free_all(out);
 	return err;
 } 
 
@@ -638,29 +652,28 @@ int hip_cert_x509v3_handle_request_to_verify(struct hip_common * msg) {
 	X509 *cert;
 	X509_STORE *store;
 	X509_STORE_CTX *verify_ctx;
-        char cert_str_pem[1024];
+        unsigned char *der_cert = NULL;
 
 	OpenSSL_add_all_algorithms ();
 	ERR_load_crypto_strings ();
 
-        _HIP_DUMP_MSG(msg);
-        memset(&cert_str_pem, '\0', sizeof(cert_str_pem));
-        strcpy(cert_str_pem, &verify.pem);
+        HIP_DUMP_MSG(msg);
         memset(&verify, 0, sizeof(struct hip_cert_x509_resp));
         HIP_IFEL(!(p = hip_get_param(msg, HIP_PARAM_CERT_X509_REQ)), -1,
                    "Failed to get cert info from the msg\n");
         memcpy(&verify, p, sizeof(struct hip_cert_x509_resp));
-        /*
-          hip_cert_display_x509_pem_contents(&verify.pem);
-        */
+        der_cert = p;
         /* XX TODO check why the end contains extra fluff */
-        _HIP_DEBUG("PEM\n%s\n",verify.pem);
-	cert = hip_cert_pem_to_x509(&verify.pem);   
 
-/*
+        HIP_HEXDUMP("DER:\n", p->der, p->der_len);
+        HIP_DEBUG("DER length %d\n", p->der_len);
+        HIP_IFEL(((cert = d2i_X509(NULL, &der_cert ,p->der_len)) == NULL), -1,
+                 "Failed to convert cert from DER to internal format\n");
+        
+
 	HIP_IFEL(!X509_print_fp(stdout, cert), -1,
                  "Failed to print x.509v3 in human readable format\n"); 
-*/
+
 
 	HIP_IFEL(!(store = X509_STORE_new ()), -1,
 		"Failed to create X509_STORE_CTX object\n");
@@ -688,7 +701,7 @@ int hip_cert_x509v3_handle_request_to_verify(struct hip_common * msg) {
 	hip_msg_init(msg);
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_CERT_X509V3_SIGN, err), -1, 
                  "Failed to build user header\n");
-        HIP_IFEL(hip_build_param_cert_x509_resp(msg, &cert_str_pem), -1, 
+        HIP_IFEL(hip_build_param_cert_x509_resp(msg, &der_cert, p->der_len), -1, 
                  "Failed to create x509 response parameter\n");        
 
         _HIP_DUMP_MSG(msg);	

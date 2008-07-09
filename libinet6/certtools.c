@@ -332,9 +332,9 @@ int hip_cert_spki_send_to_verification(struct hip_cert_spki_info * to_verificati
  *
  * @param cert is pointer to where this function writes the completed cert 
  *
- * @return 0 on success negative otherwise
+ * @return < 0 on success negative otherwise
  * 
- * @note The certificate is given in PEM encoding
+ * @note The certificate is given in DER encoding
  */ 
 int hip_cert_x509v3_request_certificate(struct in6_addr * subject, char * certificate) {
         int err = 0;
@@ -356,8 +356,10 @@ int hip_cert_x509v3_request_certificate(struct in6_addr * subject, char * certif
         /* get the struct from the message sent back by the daemon */
         HIP_IFEL(!(received = hip_get_param(msg, HIP_PARAM_CERT_X509_RESP)), -1,
                  "No name x509 struct found\n");
-        _HIP_DEBUG("CERT PEM\n%s\n", received->pem);
-        memcpy(certificate, &received->pem, sizeof(received->pem));
+        _HIP_HEXDUMP("DER:\n", der_cert, der_cert_len);
+        _HIP_DEBUG("DER length %d\n", der_cert_len);
+        memcpy(certificate, &received->der, received->der_len);
+        err = received->der_len;
 	_HIP_DUMP_MSG(msg);
 
  out_err:
@@ -375,7 +377,7 @@ int hip_cert_x509v3_request_certificate(struct in6_addr * subject, char * certif
  *
  * @note give the certificate in PEM encoding
  */ 
-int hip_cert_x509v3_request_verification(char * certificate) {
+int hip_cert_x509v3_request_verification(char * certificate, int len) {
         int err = 0;
         struct hip_common * msg;
         struct hip_cert_x509_resp * received;
@@ -383,7 +385,7 @@ int hip_cert_x509v3_request_verification(char * certificate) {
         HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, 
                  "Malloc for msg failed\n");   
         /* build the msg to be sent to the daemon */
-        HIP_IFEL(hip_build_param_cert_x509_ver(msg, certificate), -1, 
+        HIP_IFEL(hip_build_param_cert_x509_ver(msg, certificate, len), -1, 
                  "Failed to build cert_info\n");         
         HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_CERT_X509V3_VERIFY, 0), -1, 
                  "Failed to build user header\n");
@@ -421,6 +423,7 @@ void hip_cert_display_x509_pem_contents(char * pem) {
 	X509 * cert = NULL;
 
 	cert = hip_cert_pem_to_x509(pem);
+        HIP_IFEL((cert == NULL), -1, "Cert is NULL\n");
         HIP_DEBUG("x.509v3 certificate in readable format\n\n");
         HIP_IFEL(!X509_print_fp(stdout, cert), -1,
                  "Failed to print x.509v3 in human readable format\n");    
@@ -438,7 +441,7 @@ void hip_cert_display_x509_pem_contents(char * pem) {
  */
 X509 * hip_cert_pem_to_x509(char * pem) {
         int err = 0;
-        BIO *out; 
+        BIO *out = NULL; 
         X509 * cert = NULL;
 
         _HIP_DEBUG("PEM:\n%s\nLength of PEM %d\n", pem, strlen(pem));        
@@ -446,6 +449,7 @@ X509 * hip_cert_pem_to_x509(char * pem) {
         HIP_IFEL((NULL == (cert = PEM_read_bio_X509(out, NULL, 0, NULL))), -1,
                  "Cert variable is NULL\n");
  out_err:
+        if (out) BIO_flush(out);
 	if (err == -1) return NULL;
         return cert;
 }

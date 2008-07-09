@@ -408,7 +408,7 @@ struct hip_locator_info_addr_item *hip_get_locator_first_addr_item(struct hip_lo
 }
 
 int hip_get_locator_addr_item_count(struct hip_locator *locator) {
-	return (hip_get_param_contents_len(locator) -
+	return (hip_get_param_contents_len(locator) - 
 		(sizeof(struct hip_locator) -
 		 sizeof(struct hip_tlv_common))) /
 		sizeof(struct hip_locator_info_addr_item);
@@ -3265,7 +3265,7 @@ int hip_build_param_cert_x509_req(struct hip_common * msg,
 }
 
 int hip_build_param_cert_x509_ver(struct hip_common * msg,
-                                  char * pem)
+                                  char * der, int len)
 { 
 	int err = 0;
         struct hip_cert_x509_resp subj;        
@@ -3274,14 +3274,14 @@ int hip_build_param_cert_x509_ver(struct hip_common * msg,
         hip_calc_param_len(&subj,
                            sizeof(struct hip_cert_x509_resp) -
                            sizeof(struct hip_tlv_common));
-        memcpy(&subj.pem, pem, strlen(pem));
+        memcpy(&subj.der, der, len);
         err = hip_build_param(msg, &subj);
  out_err:
 	return err;
 }
 
 int hip_build_param_cert_x509_resp(struct hip_common * msg,
-				    char * pem)
+				    char * der, int len)
 {
 	int err = 0;
         struct hip_cert_x509_resp local;        
@@ -3289,7 +3289,7 @@ int hip_build_param_cert_x509_resp(struct hip_common * msg,
 	hip_calc_param_len(&local,
 			   sizeof(struct hip_cert_x509_resp) -
 			   sizeof(struct hip_tlv_common));
-        strcpy(&local.pem, pem);
+        memcpy(&local.der, der, len);
 	err = hip_build_param(msg, &local);
  out_err:
 	return err;

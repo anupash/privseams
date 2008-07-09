@@ -19,7 +19,7 @@
 #include "debug.h"
 #include "certtools.h"
 
-void compression_test(char * cert) {
+void compression_test(char * cert, int len) {
 	int err = 0;
         char certificate[1024];
         char compressed[1024];
@@ -46,7 +46,7 @@ void compression_test(char * cert) {
                 HIP_DEBUG("Compression was NOT succesfull (not enough memory)\n");
         
         uncompressed_length = sizeof(uncompressed);
-        uncomp_len = strlen(cert);
+        uncomp_len = len;
 
         HIP_DEBUG("Uncompressed data length: %d\n"
                   "Compressed data length: %d\n", 
@@ -72,7 +72,7 @@ out_err:
  
 int main(int argc, char *argv[])
 {
-        int err = 0, i = 0;
+        int err = 0, i = 0, len;
         struct hip_cert_spki_info * cert = NULL;
         struct hip_cert_spki_info * to_verification = NULL;
         time_t not_before = 0, not_after = 0;
@@ -81,6 +81,7 @@ int main(int argc, char *argv[])
         struct hip_tlv_common *current_param = NULL;
         struct endpoint_hip *endp = NULL;
         char certificate[1024];
+        unsigned der_cert[1024];
 	CONF * conf;
 	CONF_VALUE *item;
 	STACK_OF(CONF_VALUE) * sec = NULL;
@@ -165,7 +166,7 @@ int main(int argc, char *argv[])
                   "%s\n\nCertificate len %d\n\n",
                   certificate, strlen(certificate));
 
-	compression_test(certificate);
+	compression_test(certificate, strlen(certificate));
 
         HIP_IFEL(hip_cert_spki_char2certinfo(certificate, to_verification), -1,
                  "Failed to construct the hip_cert_spki_info from certificate\n");
@@ -202,14 +203,12 @@ skip_spki:
 		}
 	}
         hip_cert_free_conf(conf);
-        memset(certificate, '\0', sizeof(certificate));
-        err = hip_cert_x509v3_request_certificate(defhit, certificate); 
-        hip_cert_display_x509_pem_contents(certificate);
+        len = hip_cert_x509v3_request_certificate(defhit, der_cert); 
 
-	compression_test(certificate);
+	compression_test(der_cert, len);
 
         /** Now send it back for the verification **/
-        HIP_IFEL(((err = hip_cert_x509v3_request_verification(certificate)) < 0), -1,
+        HIP_IFEL(((err = hip_cert_x509v3_request_verification(der_cert, len)) < 0), -1,
 		"Failed to verify a certificate\n");
          
  out_err:

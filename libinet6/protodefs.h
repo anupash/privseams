@@ -765,7 +765,8 @@ struct hip_cert_x509_req {
 struct hip_cert_x509_resp {
 	hip_tlv_type_t 	type;
 	hip_tlv_len_t 	length;
-	char pem[1024];
+	unsigned char der[1024];
+        int der_len;
 } __attribute__ ((packed));
 
 struct hip_opendht_set {
