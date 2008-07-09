@@ -802,7 +802,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		}        
 
         
-        hip_build_param_nat_tranform(i2, entry->nat_control);
+        hip_build_param_nat_transform(i2, entry->nat_control);
 #endif
 	/********** SOLUTION **********/
 	{
