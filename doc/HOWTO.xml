@@ -2129,34 +2129,34 @@ combo-newgroup=&lt;create new...&gt;
   	Follow these steps to compile and initialize escrow functionality:
   	</para>
   	<para>
-  	&nbsp; 1. Run autogen.sh
+  	1. Run autogen.sh
   	</para>
   	<para>
-  	&nbsp; ./autogen.sh
+  	<programlisting>./autogen.sh</programlisting>
   	</para>
   	<para>
-  	&nbsp; 2. Run configure with flag --enable-escrow and --enable-firewall if firewall is used
+  	2. Run configure with flag --enable-escrow and --enable-firewall if firewall is used
   	</para>
   	<para>
-  	&nbsp; ./configure --enable-escrow --enable-firewall
+  	<programlisting>./configure --enable-escrow --enable-firewall</programlisting>
   	</para>
   	<para>
-  	&nbsp; 3. Run make
+  	3. Run make
   	</para>
   	<para>
-  	&nbsp; make
+  	<programlisting>make</programlisting>
   	</para>
   	<para>
-  	&nbsp; 4. Start hip daemon on all machines
+  	4. Start hip daemon on all machines
   	</para>
   	<para>
-  	&nbsp; ./hipd/hipd -b
+  	<programlisting>./hipd/hipd -b</programlisting>
   	</para>
   	<para>
-  	&nbsp; 5. On the server enable escrow service using hipconf
+  	5. On the server enable escrow service using hipconf
   	</para>
   	<para>
-  	&nbsp; ./tools/hipconf add service escrow
+  	<programlisting>./tools/hipconf add service escrow</programlisting>
   	</para>
   	<para>
   	Start firewall using firewall instructions. Use state flag --decrypt_contents in rule file to enable decryption.
@@ -2165,14 +2165,14 @@ combo-newgroup=&lt;create new...&gt;
   	 On client host register to escrow server using hipconf.
   	</para>
   	<para>
-  	&nbsp; ./tools/hipconf add escrow hit address
-  	</para>
+	  <programlisting>tools/hipconf add server escrow &lt;ESCROW-SERVER-HIT&gt; &lt;ESCROW-SERVER-IP&gt; &lt;LIFETIME-IN-SECONDS&gt;</programlisting>
+	</para>
   	<para>
   	After this connection between client and the other host can be tested using conntest-server and conntest-client-hip. 
   	</para>
   	<para>
-  	&nbsp; ./test/conntest-server tcp 5000 
-  	&nbsp; ./test/conntest-client-hip hostname tcp 5000 
+	  <programlisting>./test/conntest-server tcp 5000</programlisting>
+	  <programlisting>./test/conntest-client-hip hostname tcp 5000</programlisting>
   	</para>
   	<para>
   	During base exchange session data is sent to escrow server in update-messages. 

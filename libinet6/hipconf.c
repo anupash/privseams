@@ -11,7 +11,7 @@
  * @author  Anu Markkola
  * @author  Lauri Silvennoinen
  * @author  Samu Varjonen
- * @author  Tao Wan  <twan@cc.hut.fi>
+ * @author  Tao Wan  <twan_cc.hut.fi>
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>
  * @todo    add/del map
  * @todo    fix the rst kludges
@@ -22,20 +22,14 @@
 
 /** A help string containing the usage of @c hipconf. */
 const char *hipconf_usage =
-#ifdef CONFIG_HIP_ESCROW
-"add|del escrow <hit>\n"
-#endif
 "add|del map <hit> <ipv6>\n"
-"Server side:\n\tadd|del service escrow|rvs|hiprelay\n"
-"\treinit service rvs|hiprelay\n"
-"Client side:\n\tadd server rvs|relay|escrow [servicelist] <hit> <ipv6> <lifetime in seconds>\n"
-"del hi <hit>\n"
-"get hi default\n"
 #ifdef CONFIG_HIP_ICOOKIE
 "get|set|inc|dec|new puzzle all|<hit>\n"
 #else
 "get|set|inc|dec|new puzzle all\n"
 #endif
+"del hi <hit>\n"
+"get hi default\n"
 "bos all\n"
 "nat on|off|<peer_hit>\n"
 "rst all|<peer_hit>\n"
@@ -44,6 +38,11 @@ const char *hipconf_usage =
 "load config default\n"
 "handoff mode lazy|active\n"
 "run normal|opp <binary>\n"
+"Server side:\n"
+"\tadd|del service escrow|rvs|hiprelay\n"
+"\treinit service rvs|hiprelay\n"
+"Client side:\n"
+"\tadd|del server rvs|relay|escrow <hit> <ipv6> <lifetime in seconds>\n"
 #ifdef CONFIG_HIP_BLIND
 "set blind on|off\n"
 #endif
@@ -1479,7 +1478,7 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
      if (hip_get_msg_type(msg) == 0)
 	  goto out_err;
 	
-     /* Tell hip daemon, that this message is from agent. */
+     /* Tell hip daemon that this message is from agent. */
      /* if (from_agent)
 	{
 	err = hip_build_param_contents(msg, NULL, HIP_PARAM_AGENT_SEND_THIS, 0);
