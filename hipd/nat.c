@@ -317,7 +317,7 @@ int hip_nat_handle_transform_in_client(struct hip_common *msg , hip_ha_t *entry)
     	// in the furtue, we should check all the transform type and pick only one
     	// but now, we have only one choice, which is ICE, so the code is the same as
     	//in the server side.
-    	entry->nat_control = (ntohs(nat_transform->suite_id[0])) & hip_nat_get_control();
+    	entry->nat_control = (ntohs(nat_transform->suite_id[0])) & hip_nat_get_control(entry);
     }
 out_err:
 	return err;
@@ -332,7 +332,7 @@ int hip_nat_handle_transform_in_server(struct hip_common *msg , hip_ha_t *entry)
     nat_transform = hip_get_param(msg, HIP_PARAM_NAT_TRANSFORM);
     if(nat_transform&&entry){
     	// check if the requested tranform is also supported in the server.
-    	entry->nat_control = (ntohs(nat_transform->suite_id[0])) & hip_nat_get_control();
+    	entry->nat_control = (ntohs(nat_transform->suite_id[0])) & hip_nat_get_control(entry);
     }
     else{
     	HIP_DEBUG("handle nat transform failed: entry %d,nat transform %d\n", entry, nat_transform);
@@ -342,14 +342,14 @@ out_err:
 	  
 }
 
-uint16_t hip_nat_get_control(){
+uint16_t hip_nat_get_control(hip_ha_t *entry){
 	
 	HIP_DEBUG("check nat mode for ice: %d, %d\n",hip_get_nat_mode(),HIP_NAT_MODE_ICE_UDP);
 #ifdef HIP_USE_ICE
 	 if(hip_relay_get_status() == HIP_RELAY_ON)
 		 return 0;
 	 // comment out before the ice mode is added
-	 else if (hip_get_nat_mode()== HIP_NAT_MODE_ICE_UDP)
+	 else if (hip_get_nat_mode(entry)== HIP_NAT_MODE_ICE_UDP)
 		 return 1;
 	 else return 0;
 #else
@@ -930,7 +930,8 @@ void* hip_external_ice_init(pj_ice_sess_role role){
  * this function is called to add local candidates for the only component
  *  
  * */
-int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, in6_addr_t * hip_addr_base, in_port_t port,in_port_t port_base, int addr_type){
+int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, in6_addr_t * hip_addr_base, 
+		in_port_t port,in_port_t port_base, int addr_type){
 	
 	 pj_ice_sess *   	 ice ;
 	 unsigned  	comp_id;
@@ -943,22 +944,38 @@ int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, 
 	 pj_sockaddr_in pj_addr;
 	 pj_sockaddr_in pj_addr_base;
 	 pj_status_t pj_status;
-	// pj_pool_t *pool ;
+	 
+
 	 
 	 
 	 /***debug area**/
-	 HIP_DEBUG_HIT("coming address ",hip_addr);
+	 _HIP_DEBUG_HIT("coming address ",hip_addr);
 
 	 
 	 
 	 ice = session;
-	// pool = pj_pool_create(&cp.factory, NULL, 4000, 4000, NULL);
 	
 	 
 	 comp_id = PJ_COM_ID;
 	 type = addr_type;
 	 foundation = pj_str("ice");
-
+	 
+	 
+	 switch(type){
+		 case ICE_CAND_TYPE_HOST:
+			 local_pref = ICE_CAND_PRE_HOST;
+			 break;
+		 case ICE_CAND_TYPE_SRFLX:
+			 local_pref = ICE_CAND_PRE_SRFLX;
+			 break;
+		 case ICE_CAND_TYPE_RELAYED:
+			 local_pref = ICE_CAND_PRE_RELAYED;
+			 break;
+		 default: 
+			 HIP_DEBUG("wrong candidate type in add local \n");
+			 break;
+	 }
+	 
 	 
 	 pj_addr.sin_family=PJ_AF_INET;
 	 pj_addr.sin_port = port;
@@ -975,7 +992,7 @@ int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, 
 	pj_status =  pj_ice_sess_add_cand  	(   ice,
 			comp_id,
 			type,
-			65535,
+			local_pref,
 			&foundation,
 			&pj_addr,
 			&pj_addr_base,
@@ -1184,27 +1201,32 @@ int hip_nat_parse_pj_addr(pj_sockaddr_in *pj_addr,in6_addr_t * hip_addr, in_port
 	return 0;
 	
 }
+/*
 
-
-int hip_nat_create_pj_addr(pj_ice_sess_cand *pj_cand,in6_addr_t * hip_addr, in_port_t *port, int *priority, int *type ){
+int hip_nat_create_pj_session_cand(pj_ice_sess_cand *pj_cand,in6_addr_t * hip_addr, in_port_t *port, int *priority, int *type ){
 	
-	
+	int err = 0;
 	//TODO check IPV6
-	if(pj_cand == NULL) return -1;
-	//constant in all the pj_addr
-	pj_cand->comp_id = 1;
-	pj_cand->addr.ipv4.sin_family = PJ_AF_INET;
-	pj_cand->foundation = pj_str("ice");
+	if(pj_cand == NULL) goto out_err;
+	//constant  pj_cand
 	
-	pj_cand->addr.ipv4.sin_port = *port;
-	pj_cand->addr.ipv4.sin_addr.s_addr = *((pj_uint32_t *) &hip_addr->s6_addr32[3]) ;
 	pj_cand->type = *type;
+	pj_cand->status;
+	
+	pj_cand->comp_id = 1;
+	pj_cand->transport_id;
+	pj_cand->local_pref;
+	pj_cand->foundation = pj_str("ice");
 	pj_cand->prio = *priority;
 	
-	return 0;
+	memcpy(&pj_cand->addr, addr, sizeof(pj_sockaddr));
+	memcpy(&pj_cand->base_addr, base_addr, sizeof(pj_sockaddr));
+	
+out_err:	
+	return err;
 	
 }
-
+*/
 
 
 /**
@@ -1255,8 +1277,12 @@ out_err:
 /**
  * Get HIP NAT status.
  */
-int hip_get_nat_mode()
+int hip_get_nat_mode(hip_ha_t *entry)
 {
+	
+	if(entry){
+		return entry->nat_mode;
+	}
 	return hip_nat_status;
 }
 
@@ -1331,7 +1357,7 @@ int hip_nat_start_ice(hip_ha_t *entry, struct hip_esp_info *esp_info, int ice_co
         		
         	}
         	//add reflexive address 
-        	/*
+        	
             i = 0;           
             list_for_each_safe(item, tmp, hadb_hit, i) {
                 ha_n = list_entry(item);
@@ -1340,7 +1366,7 @@ int hip_nat_start_ice(hip_ha_t *entry, struct hip_esp_info *esp_info, int ice_co
                 	if (IN6_IS_ADDR_V4MAPPED(&ha_n->local_reflexive_address)) {
 	        			hip_external_ice_add_local_candidates(ice_session,
 	        					&ha_n->local_reflexive_address,
-	        					&ha_n->preferred_address,
+	        					&ha_n->local_address,
 	        					ha_n->local_reflexive_udp_port,
 	        					HIP_NAT_UDP_PORT,
 	        					ICE_CAND_TYPE_SRFLX);
@@ -1348,7 +1374,7 @@ int hip_nat_start_ice(hip_ha_t *entry, struct hip_esp_info *esp_info, int ice_co
 
                 }
             }
-            */
+            
         	//TODO add relay address
         	
         	HIP_DEBUG("ICE add remote IN R2, spi is %d\n", ntohl(esp_info->new_spi));

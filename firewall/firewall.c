@@ -815,6 +815,13 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version)
 		HIP_ERROR("communicating with BROKEN peer implementation of UDP encapsulation,"
 				" found zero bytes when receiving HIP control message\n");
 	}
+
+	/* Santtu: XX FIXME: needs to be inside the following if
+	else if (hip_is_stun_msg(udphdr) {
+		ctx->is_stun = 1;
+	    goto end_init;
+	}
+	*/	
 	
 	// ESP does not have zero bytes (IPv4 only right now)
 	else if (ctx->ip_version == 4 && udphdr
@@ -1236,8 +1243,16 @@ int hip_fw_handle_other_input(hip_fw_context_t *ctx)
 	        	//LSI check
 	        	verdict = hip_fw_handle_incoming_hit(ctx->ipq_packet,&ctx->src,&ctx->dst);
 	  	}
+	} else /* (if ctx->is_stun == 1) */ {
+		// Santtu FIXME
+		/* verdict = hip_fw_handle_stun_packet(ctx); */
+		// verdict zero drops the original so that you can send a new one
+		// alloc new memory, copy the packet and add some zeroes (and hip header?)
+		// changed ip and udp lengths and checksums accordingly
+		// check handle_proxy_inbound_traffic() for examples
+		// use raw_sock_v4 to send the packets 
 	}
-
+		
 	/* No need to check default rules as it is handled by the iptables rules */
  out_err:
 
