@@ -623,7 +623,7 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common * msg,  HIP_HASHTAB
                  "Failed to build user header\n");
         HIP_IFEL(hip_build_param_cert_x509_resp(msg, der_cert, der_cert_len), -1, 
                  "Failed to create x509 response parameter\n");        
-        HIP_DUMP_MSG(msg);
+        _HIP_DUMP_MSG(msg);
 
 out_err:
         if(req != NULL) X509_REQ_free(req);
