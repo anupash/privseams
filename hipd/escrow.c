@@ -104,7 +104,7 @@ int hip_kea_create_base_entry(struct hip_host_id_entry *entry,
  * op = 0/1 (zero for cancelling registration)
  */
 int hip_launch_escrow_registration(struct hip_host_id_entry * id_entry, 
-	void * server_hit_void)
+				   void * server_hit_void)
 {
 	int err = 0;
 	hip_ha_t * entry = NULL;	
@@ -112,66 +112,43 @@ int hip_launch_escrow_registration(struct hip_host_id_entry * id_entry,
 	HIP_KEA * kea = NULL;
 	
 	HIP_IFEL(!(entry = hip_hadb_find_byhits(&id_entry->lhi.hit, server_hit_void)),
-			 -1, "internal error: no hadb entry found\n");
+		 -1, "Internal error: no haDB entry found.\n");
 	HIP_IFEL(!(kea = hip_kea_find(&entry->hit_our)), -1, "No KEA base entry found\n");
 	HIP_DEBUG_HIT("Registering to server from ", &entry->hit_our);
 	
         kea->keastate = HIP_KEASTATE_REGISTERING;
         hip_keadb_put_entry(kea);
 	
-        if (entry->state == HIP_STATE_UNASSOCIATED) {
-                HIP_IFEL(hip_send_i1(&entry->hit_our, server_hit, entry), 
-                        -1, "sending i1 failed\n");
-        }
-        else if (entry->state == HIP_STATE_ESTABLISHED) {
-                int reg_types[1] = { HIP_SERVICE_ESCROW }; 
-		/* Here we should send an UPDATE with REG_REQUEST to current
-		   peer. The sending of the UPDATE was removed when the update.c
-		   was revised.
-		   -Lauri 01.07.2008 */
-	}
-		
-out_err:
-        if (entry)
+ out_err:
+        if (entry != NULL) {
                 hip_hadb_put_entry(entry);
+	}
+
 	return err;		
 }
 
 int hip_launch_cancel_escrow_registration(struct hip_host_id_entry * id_entry, 
-        void * server_hit_void)
+					  void * server_hit_void)
 {
         int err = 0;
         hip_ha_t * entry = NULL;        
         struct in6_addr * server_hit = server_hit_void;
         HIP_KEA * kea = NULL;
-		in_port_t *peer_port;
+	in_port_t *peer_port;
         
         HIP_IFEL(!(entry = hip_hadb_find_byhits(&id_entry->lhi.hit, server_hit_void)),
-                         -1, "internal error: no hadb entry found\n");
+		 -1, "Internal error: no haDB entry found\n");
         HIP_IFEL(!(kea = hip_kea_find(&entry->hit_our)), -1, "No KEA base entry found\n");
         HIP_DEBUG_HIT("Cancelling registration of ", &entry->hit_our);
         
         kea->keastate = HIP_KEASTATE_UNREGISTERING;
-               
+	
         hip_keadb_put_entry(kea);
-        
-        if (entry->state == HIP_STATE_UNASSOCIATED) {
-                /* TODO: can this situation ever happen? */
-                HIP_DEBUG("Cancelling registration but state is unassociated!\n");
-                HIP_IFEL(hip_send_i1(&entry->hit_our, server_hit, entry), 
-                        -1, "sending i1 failed\n");
-        }
-        else if (entry->state == HIP_STATE_ESTABLISHED) {
-                int reg_types[1] = { HIP_SERVICE_ESCROW };
-		/* Here we should send an UPDATE with REG_REQUEST to current
-		   peer. The sending of the UPDATE was removed when the update.c
-		   was revised.
-		   -Lauri 01.07.2008 */
-	}
-                
-out_err:
-        if (entry)
+	
+ out_err:
+        if (entry != NULL)
                 hip_put_ha(entry);
+	
         return err;             
 }
 

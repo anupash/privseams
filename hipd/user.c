@@ -464,55 +464,6 @@ int hip_handle_user_msg(struct hip_common *msg,
         	break; 
 
 #ifdef CONFIG_HIP_ESCROW
-	case SO_HIP_ADD_ESCROW:
-		HIP_DEBUG("handling escrow user message (add).\n");
-	 	HIP_IFEL(!(dst_hit = hip_get_param_contents(msg,
-							    HIP_PARAM_HIT)),
-			 -1, "no hit found\n");
-		HIP_IFEL(!(dst_ip = hip_get_param_contents(msg,
-							   HIP_PARAM_IPV6_ADDR)),
-			 -1, "no ip found\n");
-		HIP_IFEL(hip_add_peer_map(msg), -1, "add escrow map\n");
-		
-		/* Create a KEA base entry. */
-		HIP_IFEL(hip_for_each_hi(hip_kea_create_base_entry, dst_hit), 0,
-			 "Error when doing hip_kea_create_base_entry() for "\
-			 "each HI.\n");	
-				
-		/* Set a escrow request flag. Should this be done for every entry? */
-		hip_hadb_set_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_ESCROW);
-		
-		HIP_IFEL(hip_for_each_hi(hip_launch_escrow_registration, dst_hit), 0,
-			 "for_each_hi err.\n");	
-		break;
-	
-	case SO_HIP_DEL_ESCROW:
-		HIP_DEBUG("handling escrow user message (delete).\n");
-		HIP_IFEL(!(dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT)),
-			 -1, "no hit found\n");
-		HIP_IFEL(!(dst_ip = hip_get_param_contents(
-				   msg, HIP_PARAM_IPV6_ADDR)), -1, "no ip found\n");
-		HIP_IFEL(!(server_entry = hip_hadb_try_to_find_by_peer_hit(dst_hit)), 
-			 -1, "Could not find server entry");
-		HIP_IFEL(!(kea = hip_kea_find(&server_entry->hit_our)), -1, 
-			 "Could not find kea base entry");
-		if (ipv6_addr_cmp(dst_hit, &kea->server_hit) == 0)
-		{
-			// Cancel registration (REG_REQUEST with zero lifetime)
-			HIP_IFEL(hip_for_each_hi(hip_launch_cancel_escrow_registration, dst_hit), 0,
-				 "for_each_hi err.\n");
-			hip_keadb_put_entry(kea);
-			HIP_IFEL(hip_for_each_ha(hip_remove_escrow_data, dst_hit), 
-				 0, "for_each_hi err.\n");	
-			HIP_IFEL(hip_kea_remove_base_entries(), 0,
-				 "Could not remove base entries\n");	
-			HIP_DEBUG("Removed kea base entries.\n");	
-		}
-		/** @todo Not filtering I1, when handling escrow user message! */
-		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, server_entry),
-			 -1, "sending i1 failed\n");
-		break;
-		
 	case SO_HIP_OFFER_ESCROW:
 		HIP_DEBUG("Handling add escrow service -user message.\n");
 		
@@ -633,19 +584,57 @@ int hip_handle_user_msg(struct hip_common *msg,
 				hip_hadb_set_local_controls(
 					entry, HIP_HA_CTRL_LOCAL_REQ_RELAY);
 				break;
+#ifdef CONFIG_HIP_ESCROW
 			case HIP_SERVICE_ESCROW:
+				/* Set a escrow request flag. Should this be
+				   done for every entry? */
 				hip_hadb_set_local_controls(
 					entry, HIP_HA_CTRL_LOCAL_REQ_ESCROW);
 				/* Cancel registration to the escrow service. */
 				if(reg_req->lifetime == 0) {
-
+					HIP_IFEL((kea =
+						  hip_kea_find(&entry->hit_our))
+						 == NULL, -1,
+						 "Could not find kea base entry.\n");
+					
+					if (ipv6_addr_cmp(dst_hit, &kea->server_hit) == 0) {
+						HIP_IFEL(hip_for_each_hi(
+								 hip_launch_cancel_escrow_registration,
+								 dst_hit), 0,
+							 "Error when doing "\
+							 "hip_launch_cancel_escrow_registration() "\
+							 "for each HI.\n");
+						HIP_IFEL(hip_for_each_ha(
+								 hip_remove_escrow_data,
+								 dst_hit), 0,
+							 "Error when doing "\
+							 "hip_remove_escrow_data() "\
+							 "for each HI.\n");
+						HIP_IFEL(hip_kea_remove_base_entries(),
+							 0, "Could not remove "\
+							 "KEA base entries.\n");	
+					}
 				}
 				/* Register to the escrow service. */
 				else {
+					/* Create a KEA base entry. */
+					HIP_IFEL(hip_for_each_hi(
+							 hip_kea_create_base_entry,
+							 dst_hit), 0,
+						 "Error when doing "\
+						 "hip_kea_create_base_entry() "\
+						 "for each HI.\n");
 					
+					HIP_IFEL(hip_for_each_hi(
+							 hip_launch_escrow_registration,
+							 dst_hit), 0,
+						 "Error when doing "\
+						 "hip_launch_escrow_registration() "\
+						 "for each HI.\n");
 				}
 
 				break;
+#endif /* CONFIG_HIP_ESCROW */
 			default:
 				HIP_INFO("Undefined service type (%u) "\
 					 "requested in the service "\
@@ -657,13 +646,13 @@ int hip_handle_user_msg(struct hip_common *msg,
 		}
 
 		/* Send a I1 packet to the server (registrar). */
-		/** @todo When registering or cancelling a service, we should
-		    first check the state of the host association that is
-		    registering. When it is ESTABLISHED or R2-SENT, we have
+		/** @todo When registering to a service or cancelling a service,
+		    we should first check the state of the host association that
+		    is registering. When it is ESTABLISHED or R2-SENT, we have
 		    already successfully carried out a base exchange and we
 		    must use an UPDATE packet to carry a REG_REQUEST parameter.
-		    When the state is anything else, we launch a base exchange
-		    using an I1 packet. */
+		    When the state is not ESTABLISHED or R2-SENT, we launch a
+		    base exchange using an I1 packet. */
 		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry), -1,
 			 "Error on sending I1 packet to the server.\n");
 		break;

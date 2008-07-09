@@ -80,14 +80,13 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc) 
 	hip_conf_handle_puzzle,
 	hip_conf_handle_nat,
 	hip_conf_handle_opp,
-	hip_conf_handle_escrow,
+	hip_conf_handle_blind,
 	hip_conf_handle_service,
 	hip_conf_handle_load,
 	hip_conf_handle_run_normal, /* run */
 	hip_conf_handle_ttl,
 	hip_conf_handle_gw,
 	hip_conf_handle_get,
-	hip_conf_handle_blind,
 	hip_conf_handle_ha,
 	hip_conf_handle_handoff,
 	hip_conf_handle_debug,
@@ -1160,50 +1159,6 @@ int hip_conf_handle_blind(hip_common_t *msg, int action,
 
  out:
      return err;
-}
-
-/**
- * Handles the hipconf commands where the type is @c escrow.
- *
- * @param msg    a pointer to the buffer where the message for kernel will
- *               be written.
- * @param action the numeric action identifier for the action to be performed.
- * @param opt    an array of pointers to the command line arguments after
- *               the action and type.
- * @param optc   the number of elements in the array.
- * @return       zero on success, or negative error value on error.
- */
-int hip_conf_handle_escrow(hip_common_t *msg, int action, const char *opt[], 
-			   int optc)
-{
-     in6_addr_t hit;
-     in6_addr_t ip;
-     int err = 0;
-
-     HIP_DEBUG("hipconf: using escrow");
-     HIP_INFO("action=%d optc=%d\n", action, optc);
-	
-     HIP_IFEL((optc != 2), -1, "Missing arguments\n");
-	
-     HIP_IFEL(convert_string_to_address(opt[0], &hit), -1,
-	      "string to address conversion failed\n");
-     HIP_IFEL(convert_string_to_address(opt[1], &ip), -1,
-	      "string to address conversion failed\n");
-
-     HIP_IFEL(hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
-				       sizeof(in6_addr_t)), -1,
-	      "build param hit failed\n");
-	
-     HIP_IFEL(hip_build_param_contents(msg, (void *) &ip,
-				       HIP_PARAM_IPV6_ADDR,
-				       sizeof(in6_addr_t)), -1,
-	      "build param hit failed\n");
-
-     HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_ESCROW, 0), -1,
-	      "Failed to build user message header.\n");
- out_err:
-     return err;
-	
 }
 
 int hip_conf_handle_ttl(hip_common_t *msg, int action, const char *opt[], int optc)

@@ -1027,8 +1027,6 @@ char* hip_message_type_name(const uint8_t msg_type){
 	case SO_HIP_REINIT_RELAY: return "SO_HIP_REINIT_RELAY";
 	case SO_HIP_OFFER_ESCROW: return "SO_HIP_OFFER_ESCROW";
 	case SO_HIP_CANCEL_ESCROW: return "SO_HIP_CANCEL_ESCROW";
-	case SO_HIP_ADD_ESCROW: return "SO_HIP_ADD_ESCROW";
-	case SO_HIP_DEL_ESCROW: return "SO_HIP_DEL_ESCROW";
 	case SO_HIP_ADD_DB_HI: return "SO_HIP_ADD_DB_HI";
 	case SO_HIP_ADD_ESCROW_DATA: return "SO_HIP_ADD_ESCROW_DATA";
 	case SO_HIP_DELETE_ESCROW_DATA: return "SO_HIP_DELETE_ESCROW_DATA";

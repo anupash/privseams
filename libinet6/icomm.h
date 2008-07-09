@@ -127,12 +127,6 @@
 #define SO_HIP_OFFER_ESCROW			111
 /** Socket option for the server to cancel the escrow service. (server side) */
 #define SO_HIP_CANCEL_ESCROW                    112
-/** Socket option to ask for the escrow service, i.e.\ send REG_REQUEST parameter
-    to the server. (client side) */
-#define SO_HIP_ADD_ESCROW			113
-/** Socket option to ask for cancellation of the escrow service, i.e.\ send
-    REG_REQUEST parameter with zero lifetime to the server. (client side) */
-#define SO_HIP_DEL_ESCROW			114
 #define SO_HIP_ADD_DB_HI                        115
 #define SO_HIP_ADD_ESCROW_DATA                  116
 #define SO_HIP_DELETE_ESCROW_DATA               117
