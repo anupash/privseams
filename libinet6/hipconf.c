@@ -42,7 +42,8 @@ const char *hipconf_usage =
 "\tadd|del service escrow|rvs|hiprelay\n"
 "\treinit service rvs|hiprelay\n"
 "Client side:\n"
-"\tadd|del server rvs|relay|escrow <hit> <ipv6> <lifetime in seconds>\n"
+"\tadd server rvs|relay|escrow <HIT> <IP address> <lifetime in seconds>\n"
+"\tdel server rvs|relay|escrow <HIT> <IP address>\n"
 #ifdef CONFIG_HIP_BLIND
 "set blind on|off\n"
 #endif
@@ -480,8 +481,6 @@ int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[],
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_DEL_SERVER, 0), -1,
 		 "Failed to build hipconf user message header.\n");
 	
-	HIP_DUMP_MSG(msg);
-
 	if(action == ACTION_ADD) {
 		HIP_INFO("\tRequesting %u service%s for %d seconds "
 			 "(lifetime 0x%x) from\n\tHIT %s located at\n\tIP "\
