@@ -27,6 +27,12 @@ typedef struct _hip_hosts_entry
         char *hostname;
 } hip_hosts_entry;
 
+struct hip_rsa_keylen {
+	int e_len;
+	int e;
+	int n;
+};
+
 static inline int ipv4_addr_cmp(const struct in_addr *a1,
 				const struct in_addr *a2)
 {
@@ -105,7 +111,7 @@ int hip_birthday_success(uint64_t old_bd, uint64_t new_bd);
 uint64_t hip_get_current_birthday(void);
 int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
 				 int use_default, const char *hi_fmt,
-				 const char *hi_file);
+				 const char *hi_file, int rsa_key_bits, int dsa_key_bits);
 char *hip_convert_hit_to_str(const hip_hit_t *local_hit, const char *prefix);
 int maxof(int num_args, ...);
 
@@ -127,6 +133,8 @@ uint64_t hip_solve_puzzle(void *puzzle, struct hip_common *hdr, int mode);
 hip_lsi_t *hip_get_lsi_peer_by_hits(struct in6_addr *hit_s, struct in6_addr *hit_r);
 
 int hip_create_lock_file(char *filename, int killold);
+
+void hip_get_rsa_keylen(const struct hip_host_id *host_id, struct hip_rsa_keylen *ret, int is_priv);
 
 int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
                     struct in6_addr *src_lsi, struct in6_addr *dst_lsi,

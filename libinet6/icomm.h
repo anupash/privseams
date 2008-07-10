@@ -181,6 +181,7 @@
 #define SO_HIP_FW_BEX_DONE                      154
 #define SO_HIP_GET_PEER_HIT_BY_LSIS             155
 #define SO_HIP_FW_UPDATE_DB                     156
+#define SO_HIP_RESTART_DUMMY_INTERFACE		157
 /** @} */
 /* inclusive */
 #define HIP_SO_ROOT_MAX 			255
