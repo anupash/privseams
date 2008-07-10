@@ -454,7 +454,7 @@ int hip_receive_control_packet(struct hip_common *msg,
                                int filter)
 {
 	hip_ha_t tmp, *entry = NULL;
-	int err = 0, type, skip_sync = 0;
+	int err = 0, type, skip_sync = 0;	
 
 	/* Debug printing of received packet information. All received HIP
 	   control packets are first passed to this function. Therefore

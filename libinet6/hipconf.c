@@ -1481,7 +1481,7 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
 	The functions build a hip_common message. */
      if (action == ACTION_GET)
 	     err = hip_get_all_hits(msg,argv);
-     else if (argc == 3)
+     if (argc == 3)
 	  err = (*action_handler[type])(msg, action, (const char **)&argv[2], argc - 3);
      else
 	  err = (*action_handler[type])(msg, action, (const char **)&argv[3], argc - 3);

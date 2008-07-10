@@ -531,54 +531,72 @@ int hip_get_peer_endpointinfo(const char *nodename, struct in6_addr *res){
 
  /* HOSTS_FILE='/etc/hosts' */
  find_address:
-   hosts = fopen(HOSTS_FILE, "r");
-   lineno=0; 
-   memset(&line,0,sizeof(line));
-
-   if (!hosts) {
-     err = -1;
-     HIP_ERROR("Failed to open %s \n", HOSTS_FILE);
-     goto out_err;
-   }
-
-  
-  while(getwithoutnewline(line,500,hosts) != NULL ) {
-    lineno++;
-    if(strlen(line)<=1) continue; 
-    initlist(&mylist);
-    extractsubstrings(line,&mylist);
-     
-    /* find out the fqdn string amongst the Ipv4/Ipv6 addresses - 
-       it's a non-valid ipv6 addr */
-    for(i=0;i<length(&mylist);i++) {
-      if(inet_pton(AF_INET6, getitem(&mylist,i), &ipv6_dst)<1||
-	inet_pton(AF_INET, getitem(&mylist,i), &ipv4_dst)<1){
-	temp_str = getitem(&mylist,i);
-	if((strlen(temp_str)==strlen(fqdn_str))&&(strcmp(temp_str,fqdn_str)==0)) {
-	  int j;
-	  for(j=0;j<length(&mylist);j++){
-	     if(inet_pton(AF_INET6, getitem(&mylist,j), &ipv6_dst)>0) {
-		HIP_DEBUG("Peer Address found from '/etc/hosts' is %s\n",getitem(&mylist,j));
-		memcpy((void *)res,(void *)&ipv6_dst,sizeof(struct in6_addr));
-		err=1;
-		goto out_err;
-	     } else if(inet_pton(AF_INET, getitem(&mylist,j), &ipv4_dst)>0) {
-		HIP_DEBUG("Peer Address found from '/etc/hosts' is %s\n",getitem(&mylist,j));
-		IPV4_TO_IPV6_MAP(&ipv4_dst,res);
-		err=1;
-		goto out_err;
-	     }  
-	  }
-        }
-     } 
-   }
- }
-
+        err = hip_find_address(fqdn_str, res);
+   
  out_err:
 	destroy(&mylist);
    	return err;
-
 }
+
+/*
+ * hip_find_address. Find an IPv4/IPv6 address present in the file /etc/hosts
+ * that has as domain name fqdn_str
+*/
+int hip_find_address(char *fqdn_str, struct in6_addr *res){
+        int lineno = 0, err = 0, i;
+	struct in6_addr ipv6_dst;
+	struct in_addr ipv4_dst;
+	char line[500];
+	char *temp_str;
+	FILE *hosts = NULL;
+	List mylist;
+
+        hosts = fopen(HOSTS_FILE, "r");
+	
+	if (!hosts) {
+	        err = -1;
+		HIP_ERROR("Failed to open %s \n", HOSTS_FILE);
+		goto out_err;
+	}
+
+	while(getwithoutnewline(line, 500, hosts) != NULL ) {
+	        lineno++;
+		if(strlen(line)<=1) continue; 
+		initlist(&mylist);
+		extractsubstrings(line, &mylist);
+     
+		/* find out the fqdn string amongst the Ipv4/Ipv6 addresses - 
+		   it's a non-valid ipv6 addr */
+		for(i = 0; i<length(&mylist); i++) {
+		        if(inet_pton(AF_INET6, getitem(&mylist,i), &ipv6_dst)<1||
+			        inet_pton(AF_INET, getitem(&mylist,i), &ipv4_dst)<1){
+			        temp_str = getitem(&mylist,i);
+				if((strlen(temp_str)==strlen(fqdn_str))&&(strcmp(temp_str,fqdn_str)==0)) {
+				        int j;
+					for(j=0;j<length(&mylist);j++){
+					        if(inet_pton(AF_INET6, getitem(&mylist,j), &ipv6_dst)>0) {
+						        HIP_DEBUG("Peer Address found from '/etc/hosts' is %s\n",
+								  getitem(&mylist,j));
+							memcpy((void *)res,(void *)&ipv6_dst,sizeof(struct in6_addr));
+							err = 1;
+							goto out_err;
+						} else if(inet_pton(AF_INET, getitem(&mylist,j), &ipv4_dst)>0) {
+						        HIP_DEBUG("Peer Address found from '/etc/hosts' is %s\n",
+								  getitem(&mylist,j));
+							IPV4_TO_IPV6_MAP(&ipv4_dst,res);
+							err = 1;
+							goto out_err;
+						}  
+					}//for j
+				}
+			} 
+		}//for i
+	}
+ out_err:
+	destroy(&mylist);
+	return err;
+}
+
 
 int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *res)
 {
@@ -695,7 +713,7 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit, hip_hit_t *dst_hit,
 
 	/* No entry found; find first IP matching to the HIT and then
 	   create the entry */
-	HIP_DEBUG("No entry found; find first IP matching");
+	HIP_DEBUG("No entry found; find first IP matching\n");
 	err = 1;
 
 	if (hip_use_i3) {
@@ -888,10 +906,11 @@ int hip_netdev_trigger_bex_msg(struct hip_common *msg) {
 	param = hip_get_param(msg, SO_HIP_PARAM_LSI);
 	if (param){
 		peer_lsi6 = hip_get_param_contents_direct(param);
-		if (IN6_IS_ADDR_V4MAPPED(peer_lsi6))
-		        IPV6_TO_IPV4_MAP(peer_lsi6, &peer_lsi);		
+		if (IN6_IS_ADDR_V4MAPPED(peer_lsi6)){
+		        IPV6_TO_IPV4_MAP(peer_lsi6, &peer_lsi);	
+		        HIP_DEBUG_LSI("trigger_msg_peer_lsi:", &peer_lsi);	
+		}
 	}
-	HIP_DEBUG_LSI("trigger_msg_peer_lsi:", &peer_lsi);
 
 	/* Local LSI */
 	param = hip_get_next_param(msg, param);

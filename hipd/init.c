@@ -117,14 +117,11 @@ void hip_set_os_dep_variables()
 #endif
 }
 
-
 /**
  * Main initialization function for HIP daemon.
  */
 int hipd_init(int flush_ipsec, int killold)
 {
-	hip_hit_t default_hit;
-	hip_lsi_t default_lsi;
 	hip_hit_t peer_hit;
 	int err = 0, certerr = 0, dhterr = 0;
 	char str[64];
@@ -180,6 +177,7 @@ int hipd_init(int flush_ipsec, int killold)
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	hip_init_opp_db();
 #endif
+
 
 	/* Resolve our current addresses, afterwards the events from kernel
 	   will maintain the list This needs to be done before opening
@@ -257,6 +255,7 @@ int hipd_init(int flush_ipsec, int killold)
 	set_up_device(HIP_HIT_DEV, 0);
 	HIP_IFE(set_up_device(HIP_HIT_DEV, 1), 1);
 
+
 #ifdef CONFIG_HIP_HI3
 	if( hip_use_i3 ) {
 		hip_locator_status = SO_HIP_SET_LOCATOR_ON;
@@ -264,7 +263,7 @@ int hipd_init(int flush_ipsec, int killold)
 #endif
 
 	HIP_IFE(hip_init_host_ids(), 1);
-
+	
 	hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0);
 	HIP_IFEL((hip_user_sock < 0), 1, "Could not create socket for user communication.\n");
 	bzero(&daemon_addr, sizeof(daemon_addr));
@@ -292,11 +291,7 @@ int hipd_init(int flush_ipsec, int killold)
 
 
 	HIP_IFEL(hip_set_lowcapability(), -1, "Failed to set capabilities\n");
-	
-	hip_get_default_hit(&default_hit);
-	hip_get_default_lsi(&default_lsi);
-	hip_associate_default_hit_lsi(&default_hit, &default_lsi);
-
+      
 #ifdef CONFIG_HIP_HI3
 	if( hip_use_i3 ) 
 	{
@@ -304,7 +299,6 @@ int hipd_init(int flush_ipsec, int killold)
 		hip_i3_init(/*&peer_hit*/);
 	}
 #endif
-
 	hip_firewall_sock_fd = hip_firewall_sock_lsi_fd = hip_user_sock;
 
 out_err:
@@ -527,6 +521,8 @@ int hip_init_host_ids()
 	int err = 0;
 	struct stat status;
 	struct hip_common *user_msg = NULL;
+	hip_hit_t default_hit;
+	hip_lsi_t default_lsi;
 
 	/* We are first serializing a message with HIs and then
 	   deserializing it. This building and parsing causes
@@ -568,6 +564,16 @@ int hip_init_host_ids()
 		HIP_ERROR("Adding of keys failed\n");
 		goto out_err;
 	}
+
+	hip_get_default_hit(&default_hit);
+	hip_get_default_lsi(&default_lsi);
+
+	HIP_DEBUG_HIT("default_hit ", &default_hit);
+	HIP_DEBUG_LSI("default_lsi ", &default_lsi);
+	hip_hidb_associate_default_hit_lsi(&default_hit, &default_lsi);
+
+	/*Initializes the hadb with the information contained in /etc/hip/hosts*/
+	hip_init_hadb_hip_host();
 
  out_err:
 

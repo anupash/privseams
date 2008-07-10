@@ -64,8 +64,8 @@ int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m, struct in6_addr *ip_src, str
 		if(lsi_our && lsi_peer){
 		        IPV4_TO_IPV6_MAP(lsi_our, &src_addr);
 			IPV4_TO_IPV6_MAP(lsi_peer, &dst_addr);
-			_HIP_DEBUG_LSI("******lsi_src : ", lsi_our);
-			_HIP_DEBUG_LSI("******lsi_dst : ", lsi_peer);
+			HIP_DEBUG_LSI("******lsi_src : ", lsi_our);
+			HIP_DEBUG_LSI("******lsi_dst : ", lsi_peer);
 			reinject_packet(dst_addr, src_addr, m, 6, 1);
 		}
 	}
