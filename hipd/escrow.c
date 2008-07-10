@@ -157,7 +157,8 @@ int hip_remove_escrow_data(hip_ha_t * entry, void * data)
 {
 	int err = 0;
 	entry->escrow_used = 0;
-out_err:	
+	
+ out_err:	
 	return err;
 }
 

@@ -482,15 +482,15 @@ int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[],
 		 "Failed to build hipconf user message header.\n");
 	
 	if(action == ACTION_ADD) {
-		HIP_INFO("\tRequesting %u service%s for %d seconds "
-			 "(lifetime 0x%x) from\n\tHIT %s located at\n\tIP "\
+		HIP_INFO("Requesting %u service%s for %d seconds "
+			 "(lifetime 0x%x) from\nHIT %s located at\nIP "\
 			 "address %s.\n", number_of_regtypes,
 			 (number_of_regtypes > 1) ? "s" : "",
 			 seconds_from_lifetime, lifetime, opt[index_of_hit],
 			 opt[index_of_ip]);
 	} else {
-		HIP_INFO("\tRequesting the cancellation of %u service%s from\n"\
-			 "\tHIT %s located at\n\tIP address %s.\n",
+		HIP_INFO("Requesting the cancellation of %u service%s from\n"\
+			 "HIT %s located at\nIP address %s.\n",
 			 number_of_regtypes,
 			 (number_of_regtypes > 1) ? "s" : "", opt[index_of_hit],
 			 opt[index_of_ip]);
@@ -1484,9 +1484,11 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
 	HIP_IFEL(err, -1, "Failed to add parameter to message!\n");
 	}*/
 
-     /* send msg to hipd */
-     HIP_IFEL(hip_send_daemon_info_wrapper(msg, send_only), -1, "sending msg failed\n");
-     HIP_INFO("hipconf command successful\n");
+     /* Send message to hipd */
+     HIP_IFEL(hip_send_daemon_info_wrapper(msg, send_only), -1,
+	      "Failed to send user message to the HIP daemon.\n");
+     
+     HIP_INFO("User message was sent successfully to the HIP daemon.\n");
 
  out_err:
      if (msg)

@@ -631,12 +631,9 @@ int hip_receive_udp_control_packet(struct hip_common *msg,
 	return err;
 }
 
-int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle, 
-		  struct in6_addr *r1_saddr,
-		  struct in6_addr *r1_daddr,
-		  hip_ha_t *entry,
-	          hip_portpair_t *r1_info,
-		  struct hip_dh_public_value *dhpv)
+int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
+		  in6_addr_t *r1_saddr, in6_addr_t *r1_daddr, hip_ha_t *entry,
+	          hip_portpair_t *r1_info, struct hip_dh_public_value *dhpv)
 {
 	
 	hip_transform_suite_t transform_hip_suite, transform_esp_suite; 
@@ -653,6 +650,9 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	uint32_t spi_in = 0;
 	
 	_HIP_DEBUG("hip_create_i2() invoked.\n");
+
+	HIP_DEBUG("R1 source port %u, destination port %d\n",
+		  r1_info->src_port, r1_info->dst_port);
 
 	HIP_ASSERT(entry);
 
@@ -780,7 +780,11 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
  		HIP_IFEL(1, -ENOSYS, "HIP transform not supported (%d)\n",
 			 transform_hip_suite);
 	}
-
+	
+	/* REG_INFO parameter. This builds a REG_REQUEST parameter in the I2
+	   packet. */
+	hip_handle_param_reg_info(entry, ctx->input, i2);
+	
 	/********** ESP-ENC transform. **********/
 	HIP_IFE(!(param = hip_get_param(ctx->input, HIP_PARAM_ESP_TRANSFORM)), -ENOENT);
 
@@ -833,8 +837,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
         /* Now that almost everything is set up except the signature, we can
 	 * try to set up inbound IPsec SA, similarly as in hip_create_r2 */
-
-	HIP_DEBUG("src %d, dst %d\n", r1_info->src_port, r1_info->dst_port);
 
 	entry->hip_transform = transform_hip_suite;
 
@@ -889,22 +891,21 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	/* LSI not created, as it is local, and we do not support IPv4 */
 
 #ifdef CONFIG_HIP_ESCROW
-    if (hip_deliver_escrow_data(r1_saddr, r1_daddr, &ctx->input->hits, 
-        &ctx->input->hitr, &spi_in, transform_esp_suite, &ctx->esp_in, 
-        HIP_ESCROW_OPERATION_ADD) != 0)
-    {  
-        HIP_DEBUG("Could not deliver escrow data to server.\n");
-    }             
+	if (hip_deliver_escrow_data(r1_saddr, r1_daddr, &ctx->input->hits,
+				    &ctx->input->hitr, &spi_in,
+				    transform_esp_suite, &ctx->esp_in, 
+				    HIP_ESCROW_OPERATION_ADD) != 0)
+	{  
+		HIP_DEBUG("Could not deliver escrow data to server.\n");
+	}             
 #endif //CONFIG_HIP_ESCROW
 
-    hip_handle_param_reg_info(entry, ctx->input, i2);
-
-    /******** NONCE *************************/
+	/******** NONCE *************************/
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status()) {
-	  HIP_DEBUG("add nonce to the message\n");
-	  HIP_IFEL(hip_build_param_blind_nonce(i2, entry->blind_nonce_i), 
-		   -1, "Unable to attach nonce to the message.\n");
+		HIP_DEBUG("add nonce to the message\n");
+		HIP_IFEL(hip_build_param_blind_nonce(i2, entry->blind_nonce_i), 
+			 -1, "Unable to attach nonce to the message.\n");
 	}
 #endif
 
@@ -1153,6 +1154,9 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 			  len, hip_get_param_host_id_hostname(peer_host_id));
 	}
 	
+	/* We haven't handled REG_INFO parameter. We do that in hip_create_i2()
+	   because we must create an REG_REQUEST parameter based on the data
+	   of the REG_INFO parameter. */
  	err = entry->hadb_misc_func->
 	     hip_create_i2(ctx, solved_puzzle, r1_saddr, r1_daddr, entry,
 			   r1_info, dhpv);
@@ -2184,8 +2188,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 		HIP_DEBUG("entry->locator did not have locators from r1\n");
 	}
 	//#endif /* CONFIG_HIP_HI3 */
-	
-	
+		
 	/* Handle REG_RESPONSE and REG_FAILED parameters. */
 	hip_handle_param_reg_response(entry, r2);
 	hip_handle_param_reg_failed(entry, r2);

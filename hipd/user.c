@@ -31,7 +31,7 @@ int hip_handle_user_msg(struct hip_common *msg,
 {
 	hip_hit_t *hit, *src_hit, *dst_hit;
 	struct in6_addr *src_ip, *dst_ip;
-	hip_ha_t *entry = NULL, *server_entry = NULL;
+	hip_ha_t *entry = NULL;
 	int err = 0, msg_type = 0, n = 0, len = 0, state = 0, reti = 0;
 	int access_ok = 0, send_response = 1, is_root;
 	HIP_KEA * kea = NULL;
@@ -641,6 +641,10 @@ int hip_handle_user_msg(struct hip_common *msg,
 					 "request. As a result, the local "\
 					 "service request flag was not set "\
 					 "for this service.\n", reg_types[i]);
+				HIP_DEBUG("Deleting pending service request "\
+					  "for service %u.\n", reg_types[i]);
+				hip_del_pending_request_by_type(entry,
+								reg_types[i]);
 				break;
 			}
 		}

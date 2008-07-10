@@ -21,7 +21,7 @@ hip_srv_t hip_services[HIP_TOTAL_EXISTING_SERVICES];
  */
 hip_ll_t pending_requests;
 
-void hip_init_xxx_services()
+void hip_init_services()
 {
 	hip_services[0].reg_type     = HIP_SERVICE_RENDEZVOUS;
 	hip_services[0].status       = HIP_SERVICE_OFF;
@@ -41,7 +41,7 @@ void hip_init_xxx_services()
 	HIP_DEBUG("NEW SERVICE INITIALIZATION DONE.\n");
 }
 
-void hip_uninit_xxx_services()
+void hip_uninit_services()
 {
 	hip_ll_uninit(&pending_requests, free);
 	HIP_DEBUG("NEW SERVICE UNINITIALIZATION DONE.\n");
@@ -287,8 +287,6 @@ int hip_handle_param_reg_info(hip_ha_t *entry, hip_common_t *source_msg,
 	unsigned int type_count = 0;
 	int err = 0, i = 0;
 	
-	HIP_DEBUG("NEW REG_INFO HANDLER!\n");
-
 	reg_info = hip_get_param(source_msg, HIP_PARAM_REG_INFO);
 	
 	if(reg_info == NULL) {
@@ -390,9 +388,9 @@ int hip_handle_param_reg_info(hip_ha_t *entry, hip_common_t *source_msg,
 			   we use lifetime of zero. Otherwise we must check
 			   that the requested lifetime falls between the offered
 			   lifetime boundaries. */
-			if(requests[0]->lifetime == 0)
+			if(requests[0]->lifetime == 0) {
 				valid_lifetime = 0;
-			else {
+			} else {
 				valid_lifetime = MIN(requests[0]->lifetime,
 						     reg_info->max_lifetime);
 				valid_lifetime = MAX(valid_lifetime,
@@ -559,17 +557,16 @@ int hip_handle_param_reg_response(hip_ha_t *entry, hip_common_t *msg)
 	int err = 0, type_count = 0;
 	struct hip_reg_response *reg_response = NULL;
 	uint8_t *reg_types = NULL;
-
-	HIP_DEBUG("New REG_RESPONSE handler.\n");
-	
+		
 	reg_response = hip_get_param(msg, HIP_PARAM_REG_RESPONSE);
-
+	
 	if(reg_response == NULL) {
 		err = -1;
-		HIP_DEBUG("No REG_RESPONSE parameter found.\n");
 		goto out_err;
 	}
 	
+	HIP_DEBUG("REG_RESPONSE parameter found.\n");
+
 	type_count = hip_get_param_contents_len(reg_response) -
 		sizeof(reg_response->lifetime);
 	reg_types = hip_get_param_contents_direct(reg_response) +
@@ -593,16 +590,15 @@ int hip_handle_param_reg_failed(hip_ha_t *entry, hip_common_t *msg)
 	uint8_t *reg_types = NULL;
 	char reason[256];
 
-	HIP_DEBUG("New REG_FAILED handler.\n");
-	
 	reg_failed = hip_get_param(msg, HIP_PARAM_REG_FAILED);
 	
 	if(reg_failed == NULL) {
 		err = -1;
-		HIP_DEBUG("No REG_FAILED parameter found.\n");
 		goto out_err;
 	}
 	
+	HIP_DEBUG("REG_FAILED parameter found.\n");
+
 	/* There can be more than one REG_FAILED parameters in the message. We
 	   have to loop through every one. */
 	while(hip_get_param_type(reg_failed) == HIP_PARAM_REG_FAILED) {
@@ -1012,7 +1008,57 @@ int hip_add_registration_client(hip_ha_t *entry, uint8_t lifetime,
 int hip_del_registration_client(hip_ha_t *entry, uint8_t *reg_types,
 				int type_count)
 {
-	/** @todo Implement. */
+	int err = 0, i = 0;
+	
+        /* Check what service registration cancellations we have been granted.
+	   Cancel the local requests and delete the pending request. */
+	/** @todo We are not storing information about cancellation anywhere. */
+	for(; i < type_count; i++) {
+		
+		switch(reg_types[i]) {
+		case HIP_SERVICE_RENDEZVOUS:
+		{
+			HIP_DEBUG("The server has cancelled our rendezvous "\
+				  "service.\n");
+			hip_hadb_cancel_local_controls(
+				entry, HIP_HA_CTRL_LOCAL_REQ_RVS); 
+			hip_del_pending_request_by_type(
+				entry, HIP_SERVICE_RENDEZVOUS);
+			break;
+		}
+		case HIP_SERVICE_RELAY:
+		{
+			HIP_DEBUG("The server has cancelled our relay "\
+				  "service.\n");
+			hip_hadb_cancel_local_controls(
+				entry, HIP_HA_CTRL_LOCAL_REQ_RELAY); 
+			hip_del_pending_request_by_type(
+				entry, HIP_SERVICE_RELAY);
+
+			break;
+		}
+		case HIP_SERVICE_ESCROW:
+		{
+			HIP_DEBUG("The server has cancelled our escrow "\
+				  "service.\n");
+			hip_hadb_cancel_local_controls(
+				entry, HIP_HA_CTRL_LOCAL_REQ_ESCROW); 
+			hip_del_pending_request_by_type(
+				entry, HIP_SERVICE_ESCROW);
+			
+			break;
+		}
+		default:
+		{
+			HIP_DEBUG("The server has cancelled our registration "\
+				  "to an unknown service.\n");
+			break;
+		}
+		}
+	}
+	
+ out_err:
+	
 	return 0;
 }
 

@@ -56,12 +56,12 @@ typedef struct{
 /**
  * Initializes the services. Initializes the @c hip_services array.
  */ 
-void hip_init_xxx_services();
+void hip_init_services();
 
 /**
  * Uninitializes the services. Removes all pending requests.
  */
-void hip_uninit_xxx_services();
+void hip_uninit_services();
 
 /**
  * Periodic maintenance function of the registration extension. This function
