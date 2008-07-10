@@ -336,15 +336,17 @@ int hip_cert_spki_send_to_verification(struct hip_cert_spki_info * to_verificati
  * 
  * @note The certificate is given in DER encoding
  */ 
-int hip_cert_x509v3_request_certificate(struct in6_addr * subject, char * certificate) {
+int hip_cert_x509v3_request_certificate(struct in6_addr * subject, 
+                                        unsigned char * certificate) {
         int err = 0;
         struct hip_common * msg;
-        struct hip_cert_x509_resp * received;
+        struct hip_cert_x509_resp * p;
         
         HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, 
                  "Malloc for msg failed\n");   
-        /* build the msg to be sent to the daemon */
 	hip_msg_init(msg);
+        /* build the msg to be sent to the daemon */
+
         HIP_IFEL(hip_build_param_cert_x509_req(msg, subject), -1,
                  "Failed to build cert_info\n");         
         HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_CERT_X509V3_SIGN, 0), -1, 
@@ -354,12 +356,12 @@ int hip_cert_x509v3_request_certificate(struct in6_addr * subject, char * certif
                   "daemon and waiting for answer\n");	
         hip_send_recv_daemon_info(msg);
         /* get the struct from the message sent back by the daemon */
-        HIP_IFEL(!(received = hip_get_param(msg, HIP_PARAM_CERT_X509_RESP)), -1,
+        HIP_IFEL(!(p = hip_get_param(msg, HIP_PARAM_CERT_X509_RESP)), -1,
                  "No name x509 struct found\n");
-        _HIP_HEXDUMP("DER:\n", der_cert, der_cert_len);
-        _HIP_DEBUG("DER length %d\n", der_cert_len);
-        memcpy(certificate, &received->der, received->der_len);
-        err = received->der_len;
+        _HIP_HEXDUMP("DER:\n", p->der, p->der_len);
+        _HIP_DEBUG("DER length %d\n", p->der_len);
+        memcpy(certificate, p->der, p->der_len);
+        err = p->der_len;
 	_HIP_DUMP_MSG(msg);
 
  out_err:
@@ -377,13 +379,18 @@ int hip_cert_x509v3_request_certificate(struct in6_addr * subject, char * certif
  *
  * @note give the certificate in PEM encoding
  */ 
-int hip_cert_x509v3_request_verification(char * certificate, int len) {
+int hip_cert_x509v3_request_verification(unsigned char * certificate, int len) {
         int err = 0;
         struct hip_common * msg;
         struct hip_cert_x509_resp * received;
         
         HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, 
                  "Malloc for msg failed\n");   
+        hip_msg_init(msg);
+
+        _HIP_HEXDUMP("DER DUMP:\n", certificate, len);
+        _HIP_DEBUG("DER LEN %d\n", len);
+        
         /* build the msg to be sent to the daemon */
         HIP_IFEL(hip_build_param_cert_x509_ver(msg, certificate, len), -1, 
                  "Failed to build cert_info\n");         
@@ -397,7 +404,7 @@ int hip_cert_x509v3_request_verification(char * certificate, int len) {
         /* get the struct from the message sent back by the daemon */
         HIP_IFEL(!(received = hip_get_param(msg, HIP_PARAM_CERT_X509_RESP)), -1,
                  "No x509 struct found\n");
-        err = hip_get_msg_err(msg);
+        err = hip_get_msg_err(msg); 
         if (err == 0) HIP_DEBUG("Verified successfully\n");
         else HIP_DEBUG("Verification failed\n");
 	_HIP_DUMP_MSG(msg);
@@ -410,6 +417,48 @@ int hip_cert_x509v3_request_verification(char * certificate, int len) {
 /*******************************************************************************
  * UTILITARY FUNCTIONS                                                         *
  *******************************************************************************/
+
+/**
+ * Function that displays the contents of the DER encoded x509 certificate
+ *
+ * @param pem points to DER encoded certificate
+ *
+ * @return void 
+ */
+void hip_cert_display_x509_der_contents(char * der, int length) {
+        int err = 0;
+	X509 * cert = NULL;
+
+	cert = hip_cert_der_to_x509(der, length);
+        HIP_IFEL((cert == NULL), -1, "Cert is NULL\n");
+        HIP_DEBUG("x.509v3 certificate in readable format\n\n");
+        HIP_IFEL(!X509_print_fp(stdout, cert), -1,
+                 "Failed to print x.509v3 in human readable format\n");    
+ out_err:
+        return;
+}
+
+/**
+ * Function that converts the DER encoded X509 to X509 struct
+ *
+ * @param der points to DER encoded certificate
+ * @param length of DER
+ *
+ * @return * X509
+ */
+X509 * hip_cert_der_to_x509(unsigned char * der, int length) {
+        int err = 0;
+        X509 * cert = NULL;
+
+        _HIP_HEXDUMP("DER:\n", der, length);
+        _HIP_DEBUG("DER length %d\n", length);
+
+        HIP_IFEL(((cert = d2i_X509(NULL, &der , length)) == NULL), -1,
+                 "Failed to convert cert from DER to internal format\n");
+ out_err:
+	if (err == -1) return NULL;
+        return cert;
+}
 
 /**
  * Function that displays the contents of the PEM encoded x509 certificate
@@ -435,9 +484,8 @@ void hip_cert_display_x509_pem_contents(char * pem) {
  * Function that converts the PEM encoded X509 to X509 struct
  *
  * @param pem points to PEM encoded certificate
- * @param certificate points to X509 where the certificate PEM decoded cert will be stored
  *
- * @return int 0 on success otherwise negative 
+ * @return *X509
  */
 X509 * hip_cert_pem_to_x509(char * pem) {
         int err = 0;

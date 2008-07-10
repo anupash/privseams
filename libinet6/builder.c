@@ -3275,6 +3275,7 @@ int hip_build_param_cert_x509_ver(struct hip_common * msg,
                            sizeof(struct hip_cert_x509_resp) -
                            sizeof(struct hip_tlv_common));
         memcpy(&subj.der, der, len);
+        subj.der_len = len;
         err = hip_build_param(msg, &subj);
  out_err:
 	return err;
@@ -3290,6 +3291,7 @@ int hip_build_param_cert_x509_resp(struct hip_common * msg,
 			   sizeof(struct hip_cert_x509_resp) -
 			   sizeof(struct hip_tlv_common));
         memcpy(&local.der, der, len);
+        local.der_len = len;
 	err = hip_build_param(msg, &local);
  out_err:
 	return err;

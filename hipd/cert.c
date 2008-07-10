@@ -615,8 +615,8 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common * msg,  HIP_HASHTAB
         /** DER **/
         HIP_IFEL(((der_cert_len = i2d_X509(cert, &der_cert)) < 0), -1, 
                  "Failed to convert cert to DER\n");
-        HIP_HEXDUMP("DER:\n", der_cert, der_cert_len);
-        HIP_DEBUG("DER length %d\n", der_cert_len);
+        _HIP_HEXDUMP("DER:\n", der_cert, der_cert_len);
+        _HIP_DEBUG("DER length %d\n", der_cert_len);
         /** end DER **/
 
         HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_CERT_X509V3_SIGN, 0), -1, 
@@ -657,23 +657,25 @@ int hip_cert_x509v3_handle_request_to_verify(struct hip_common * msg) {
 	OpenSSL_add_all_algorithms ();
 	ERR_load_crypto_strings ();
 
-        HIP_DUMP_MSG(msg);
+        _HIP_DUMP_MSG(msg);
         memset(&verify, 0, sizeof(struct hip_cert_x509_resp));
         HIP_IFEL(!(p = hip_get_param(msg, HIP_PARAM_CERT_X509_REQ)), -1,
                    "Failed to get cert info from the msg\n");
         memcpy(&verify, p, sizeof(struct hip_cert_x509_resp));
-        der_cert = p;
+      
+        der_cert = &p->der;
         /* XX TODO check why the end contains extra fluff */
 
-        HIP_HEXDUMP("DER:\n", p->der, p->der_len);
-        HIP_DEBUG("DER length %d\n", p->der_len);
-        HIP_IFEL(((cert = d2i_X509(NULL, &der_cert ,p->der_len)) == NULL), -1,
+        _HIP_HEXDUMP("DER:\n", verify.der, verify.der_len);
+        _HIP_DEBUG("DER length %d\n", verify.der_len);
+        
+        HIP_IFEL(((cert = d2i_X509(NULL, &der_cert ,verify.der_len)) == NULL), -1,
                  "Failed to convert cert from DER to internal format\n");
         
-
+        /*
 	HIP_IFEL(!X509_print_fp(stdout, cert), -1,
                  "Failed to print x.509v3 in human readable format\n"); 
-
+        */
 
 	HIP_IFEL(!(store = X509_STORE_new ()), -1,
 		"Failed to create X509_STORE_CTX object\n");
