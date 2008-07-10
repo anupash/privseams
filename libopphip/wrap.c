@@ -6,6 +6,7 @@
  * @author  Bing Zhou <bingzhou_cc.hut.fi>
  * @version 1.0
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @note    HIPU: MAC OS X requires LD_PRELOAD conversion
  */
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 #include <sys/types.h>
