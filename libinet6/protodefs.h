@@ -114,8 +114,8 @@
 #define HIP_PARAM_ADD_HIT		32800
 #define HIP_PARAM_ADD_OPTION		32801
 #define HIP_PARAM_PEER_HIT		32802
-#define HIP_PARAM_HCHAIN_ANCHOR			32803
-
+#define HIP_PARAM_HCHAIN_ANCHOR		32803
+#define HIP_PARAM_LSI		        32804
 /* End of HIPL private parameters. */
 
 #define HIP_PARAM_HMAC                 61505

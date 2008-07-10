@@ -3,6 +3,7 @@
 #include "hadb.h"
  
 HIP_HASHTABLE *hadb_hit;
+HIP_HASHTABLE *hadb_file_hits;
 struct in_addr peer_lsi_index;
 
 /** A callback wrapper of the prototype required by @c lh_new(). */
@@ -129,16 +130,16 @@ static void hip_hadb_remove_state_hit(hip_ha_t *ha)
  */
 hip_ha_t *hip_hadb_find_byhits(hip_hit_t *hit, hip_hit_t *hit2)
 {
-        int n = 0;
+  //int n = 0;
 	hip_ha_t ha, *ret;
 	memcpy(&ha.hit_our, hit, sizeof(hip_hit_t));
 	memcpy(&ha.hit_peer, hit2, sizeof(hip_hit_t));
 	HIP_DEBUG_HIT("HIT1", hit);
 	HIP_DEBUG_HIT("HIT2", hit2);
 	
-	HIP_DEBUG("----------Checking database-----------------\n");
-	hip_for_each_ha(hip_print_info_hadb, &n);
-	HIP_DEBUG("----------End Checking database-----------------\n");
+	//HIP_DEBUG("----------Checking database-----------------\n");
+	//hip_for_each_ha(hip_print_info_hadb, &n);
+	//HIP_DEBUG("----------End Checking database-----------------\n");
 	ret = hip_ht_find(hadb_hit, &ha);
 	if (!ret) {
 	        memcpy(&ha.hit_peer, hit, sizeof(hip_hit_t));
@@ -502,7 +503,7 @@ int hip_add_peer_map(const struct hip_common *input)
 		hip_get_param_contents(input, HIP_PARAM_HIT);
 	
 	lsi = (hip_lsi_t *)
-		hip_get_param_contents(input, SO_HIP_PARAM_LSI);
+		hip_get_param_contents(input, HIP_PARAM_LSI);
 
 	ip = (struct in6_addr *)
 		hip_get_param_contents(input, HIP_PARAM_IPV6_ADDR);
@@ -2214,36 +2215,55 @@ void hip_init_hadb(void)
      }
 }
 
+unsigned long hip_hadb_hash_file_hits(const void *ptr){
+        HIP_DEBUG("string %s\n",((hip_hosts_entry *)ptr)->hostname);
+	char *fqdn = ((hip_hosts_entry *)ptr)->hostname;
+        uint8_t hash[HIP_AH_SHA_LEN];
+  
+	//hip_build_digest(HIP_DIGEST_SHA1, hit, sizeof(*hit), hash);
+	hip_build_digest(HIP_DIGEST_SHA1, fqdn, strlen(fqdn)+1, hash);
+	return *((unsigned long *)hash);
+}
+
+int hip_hadb_hash_match_file_hits(const void *ptr1, const void *ptr2){
+        return (hip_hadb_hash_file_hits(ptr1) != hip_hadb_hash_file_hits(ptr2));
+}
+
+void hip_hadb_init_db_file_hits(void){
+        hadb_file_hits = hip_ht_init(hip_hadb_hash_file_hits,hip_hadb_hash_match_file_hits);
+}
+
+
 /*Initialize hadb with values contained in /etc/hip/hosts*/
 int hip_init_hadb_hip_host(){
-        int err = 0, lines = 0, n = 0;
-        hip_hosts_entry hip_hosts[200];
+  int err = 0, i = 0, n = 0;
+	hip_hosts_entry *element = NULL;
+	hip_list_t *item, *tmp;
+	struct in6_addr address;
+	
+	hip_hadb_init_db_file_hits();
 
-	/* Initialize hash table */
-	memset(hip_hosts, 0, sizeof(hip_hosts));
-	/* Fill hip_hosts with the information in /etc/hip/host */
-        gaih_inet_get_hip_hosts_file_info(&hip_hosts, &lines);
+	/* Look up /etc/hip/host */
+        gaih_inet_get_hip_hosts_file_info(hadb_file_hits);
+
 	/* Add the information to the HADB */
-	hip_hadb_add_peer_info_etc_hosts_file(hip_hosts, lines);
+	list_for_each_safe(item, tmp, hadb_file_hits, i){
+	        element = list_entry(item);
+		memset(&address, 0, sizeof(struct in6_addr));
+		hip_find_address(element->hostname, &address);
+		n++;
+		HIP_DEBUG(" hostname %s \n", element->hostname);
+		HIP_DEBUG_HIT(" hit \n", &element->hit);  
+		HIP_DEBUG_LSI(" lsi \n", &element->lsi); 
 
+		if ((element->lsi).s_addr == 0)
+		        hip_hadb_add_peer_info(&element->hit, &address, NULL);
+		else
+		        hip_hadb_add_peer_info(&element->hit, &address, &element->lsi);		     		
+	}
+	HIP_DEBUG("n = %d\n",n);
 	return err;
 } 
-
-int hip_hadb_add_peer_info_etc_hosts_file(hip_hosts_entry *hip_hosts, int lineno){
-        int i;
-	struct in6_addr address;
-
-        for (i = 0; i < lineno; i++) {
-	        if (hip_hosts[i].hostname){
-		        hip_find_address(hip_hosts[i].hostname, &address);
-			if ((hip_hosts[i].lsi).s_addr == 0)
-			        hip_hadb_add_peer_info(&(hip_hosts[i].hit), &address, NULL);
-			else
-			        hip_hadb_add_peer_info(&(hip_hosts[i].hit), &address, &(hip_hosts[i].lsi));
-		}
-	}
- }
-
 
 hip_xmit_func_set_t *hip_get_xmit_default_func_set() {
 	return &default_xmit_func_set;

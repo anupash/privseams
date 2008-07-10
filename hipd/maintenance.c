@@ -703,13 +703,14 @@ out_err:
 
 }     
 
-
-int hip_firewall_add_bex_data(hip_ha_t *entry, struct in6_addr *hit_s, struct in6_addr *hit_r){
-	struct hip_common *msg;
+int hip_firewall_set_bex_data(int action, hip_ha_t *entry, struct in6_addr *hit_s, struct in6_addr *hit_r)
+{
+        struct hip_common *msg = NULL;
+	struct sockaddr_in6 hip_firewall_addr;
 	int err = 0, n = 0;
 	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
 	hip_msg_init(msg);
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_FIREWALL_BEX_DONE, 0), -1, 
+	HIP_IFEL(hip_build_user_hdr(msg, action, 0), -1, 
                  "Build hdr failed\n");
 		            
         HIP_IFEL(hip_build_param_contents(msg, (void *)hit_s, HIP_PARAM_HIT,
@@ -717,7 +718,7 @@ int hip_firewall_add_bex_data(hip_ha_t *entry, struct in6_addr *hit_s, struct in
 	HIP_IFEL(hip_build_param_contents(msg, (void *)hit_r, HIP_PARAM_HIT,
                  sizeof(struct in6_addr)), -1, "build param contents failed\n");
 
-	struct sockaddr_in6 hip_firewall_addr;
+	
 	socklen_t alen = sizeof(hip_firewall_addr);
 	
 	bzero(&hip_firewall_addr, alen);
@@ -730,7 +731,6 @@ int hip_firewall_add_bex_data(hip_ha_t *entry, struct in6_addr *hit_s, struct in
 			   0, &hip_firewall_addr, alen);
 	}
                       
-	//n = hip_sendto_firewall(msg);
 	if (n < 0)
 	  HIP_DEBUG("Send to firewall failed str errno %s\n",strerror(errno));
 	HIP_IFEL( n < 0, -1, "Sendto firewall failed.\n");   
