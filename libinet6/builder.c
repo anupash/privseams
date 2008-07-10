@@ -1,4 +1,3 @@
-
 /** @file
  * This file defines building and parsing functions for Host Identity Protocol
  * (HIP) kernel module and user messages.
@@ -56,6 +55,7 @@
  */
 #include "builder.h"
 #include "registration.h"
+#include "esp_prot_common.h"
 
 static enum select_dh_key_t select_dh_key = STRONGER_KEY;
 
@@ -964,6 +964,9 @@ void hip_dump_msg(const struct hip_common *msg)
      HIP_DEBUG("Msg length:     %d\n", hip_get_msg_total_len(msg));
      HIP_DEBUG("Msg err:        %d\n", hip_get_msg_err(msg));
      HIP_DEBUG("Msg controls:   0x%04x\n", msg->control);
+     
+     _HIP_DEBUG_HIT("Msg hits:       ", &msg->hits );
+     _HIP_DEBUG_HIT("Msg hitr:       ", &msg->hitr );
 	
      while((current_param = hip_get_next_param(msg, current_param)) != NULL)
      {
@@ -1100,7 +1103,9 @@ char* hip_param_type_name(const hip_tlv_type_t param_type){
 	case HIP_PARAM_UINT: return "HIP_PARAM_UINT";
 	case HIP_PARAM_UNIT_TEST: return "HIP_PARAM_UNIT_TEST";
 	case HIP_PARAM_VIA_RVS: return "HIP_PARAM_VIA_RVS";
-	case HIP_PARAM_PSEUDO_HIT: return "HIP_PARAM_PSEUDO_HIT";	
+	case HIP_PARAM_PSEUDO_HIT: return "HIP_PARAM_PSEUDO_HIT";
+	case HIP_PARAM_ESP_PROT_TRANSFORM: return "HIP_PARAM_ESP_PROT_TRANSFORM";
+	case HIP_PARAM_ESP_PROT_ANCHOR: return "HIP_PARAM_ESP_PROT_ANCHOR";
 	//add by santtu
 	case HIP_PARAM_NAT_TRANSFORM: return "HIP_PARAM_NAT_TRANSFORM";	
 	//end add
@@ -2374,9 +2379,9 @@ int hip_build_param_puzzle(struct hip_common *msg, uint8_t val_K,
 	/* puzzle.opaque[2] = (opaque & 0xFF0000) >> 16; */
 	puzzle.I = random_i;
 
-        err = hip_build_generic_param(msg, &puzzle,
-				      sizeof(struct hip_tlv_common),
-				      hip_get_param_contents_direct(&puzzle));
+    err = hip_build_generic_param(msg, &puzzle,
+			      sizeof(struct hip_tlv_common),
+			      hip_get_param_contents_direct(&puzzle));
 	return err;
 
 }
@@ -2869,6 +2874,62 @@ int hip_build_param_ack(struct hip_common *msg, uint32_t peer_update_id)
         ack.peer_update_id = htonl(peer_update_id);
         err = hip_build_param(msg, &ack);
         return err;
+}
+
+/**
+ * hip_build_param_esp_prot_mode - build and append ESP PROT transform parameter
+ * @param msg the message where the parameter will be appended
+ * @param transform the transform to be used for the esp extension header
+ * 
+ * @return 0 on success, otherwise < 0.
+ */
+int hip_build_param_esp_prot_transform(struct hip_common *msg, uint8_t transform)
+{
+	int err = 0;
+	
+	struct esp_prot_transform prot_transform;
+
+	hip_set_param_type(&prot_transform, HIP_PARAM_ESP_PROT_TRANSFORM);
+	hip_calc_generic_param_len(&prot_transform, sizeof(struct esp_prot_transform), 0);
+	prot_transform.transform = transform;
+	
+	err = hip_build_param(msg, &prot_transform);
+	
+	HIP_DEBUG("added esp_prot_transform: %u\n", transform);
+	
+	return err;
+}
+
+/**
+ * hip_build_param_esp_prot_mode - build and append ESP PROT anchor parameter
+ * @param msg the message where the parameter will be appended
+ * @param anchor the anchor for the hchain to be used for extended esp protection
+ * 
+ * @return 0 on success, otherwise < 0.
+ */
+int hip_build_param_esp_prot_anchor(struct hip_common *msg, unsigned char *anchor,
+		int hash_length)
+{
+	int err = 0;
+	
+	struct esp_prot_anchor esp_anchor;
+
+	hip_set_param_type(&esp_anchor, HIP_PARAM_ESP_PROT_ANCHOR);
+	
+	HIP_DEBUG("hash length: %i\n", hash_length);
+	
+	/* note: the length cannot be calculated with calc_param_len() */
+	hip_set_param_contents_len(&esp_anchor, hash_length);
+	
+	memcpy(esp_anchor.anchor, anchor, hash_length);
+	
+	err = hip_build_generic_param(msg, &esp_anchor,
+					      sizeof(struct hip_tlv_common),
+					      hip_get_param_contents_direct(&esp_anchor));
+	
+	HIP_HEXDUMP("added esp protection anchor: ", anchor, hash_length);
+	
+	return err;
 }
 
 /**
@@ -3670,30 +3731,29 @@ void hip_set_locator_addr_length(void * locator, hip_tlv_len_t  length){
  * 
  * return the amount the locator items(type 1 and 2 are both supproted).
  * */
- 
 int hip_get_locator_addr_item_count(struct hip_locator *locator) {	
-	
 	char *address_pointer =(char*) (locator + 1);
 	int amount = 0;
-	
-	
-	
-	for(;address_pointer < ((char*)locator) + hip_get_param_contents_len(locator); ){
-		if(((struct hip_locator_info_addr_item*)address_pointer)->locator_type == 
-					HIP_LOCATOR_LOCATOR_TYPE_UDP){
-                		address_pointer += sizeof(struct hip_locator_info_addr_item2);
-                		amount += 1;
-                	}
-        else if(((struct hip_locator_info_addr_item*)address_pointer)->locator_type == 
-        			HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI){
-    		address_pointer += sizeof(struct hip_locator_info_addr_item);
-    		amount += 1;
-    	} 
-        else
-        	address_pointer += sizeof(struct hip_locator_info_addr_item);
-	}
-	
-	
+       
+	for(;address_pointer < ((char*)locator) + hip_get_param_contents_len(locator); ) {
+		if (((struct hip_locator_info_addr_item*)address_pointer)->locator_type 
+                    == HIP_LOCATOR_LOCATOR_TYPE_UDP) {
+                        address_pointer += sizeof(struct hip_locator_info_addr_item2);
+                        amount += 1;
+                }
+                else if(((struct hip_locator_info_addr_item*)address_pointer)->locator_type 
+                        == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI) {
+                        address_pointer += sizeof(struct hip_locator_info_addr_item);
+                        amount += 1;
+                } 
+                else if(((struct hip_locator_info_addr_item*)address_pointer)->locator_type 
+                        == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
+                        address_pointer += sizeof(struct hip_locator_info_addr_item);
+                        amount += 1;
+                } 
+                else
+                        address_pointer += sizeof(struct hip_locator_info_addr_item);
+	}	
 	return amount;
 }
 

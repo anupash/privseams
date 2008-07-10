@@ -20,6 +20,14 @@
 
 #define HIP_OPP_IP_DB_SIZE		16
 
+typedef struct _hip_hosts_entry
+{
+        char *hostname;
+        hip_hit_t hit;
+        hip_lsi_t lsi;
+	struct _hip_hosts_entry *next;
+} hip_hosts_entry;
+
 static inline int ipv4_addr_cmp(const struct in_addr *a1,
 				const struct in_addr *a2)
 {
@@ -120,5 +128,9 @@ uint64_t hip_solve_puzzle(void *puzzle, struct hip_common *hdr, int mode);
 hip_lsi_t *hip_get_lsi_peer_by_hits(struct in6_addr *hit_s, struct in6_addr *hit_r);
 
 int hip_create_lock_file(char *filename, int killold);
+
+int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
+                    struct in6_addr *src_lsi, struct in6_addr *dst_lsi,
+                    struct in6_addr *src_ip, struct in6_addr *dst_ip);
 
 #endif /* HIP_MISC_H */

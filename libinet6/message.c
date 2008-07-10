@@ -414,6 +414,8 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
 					   len - encap_hdr_size), -1,
 		 "verifying network header failed\n");
 
+	
+
 	if (saddr)
 		HIP_DEBUG_IN6ADDR("src", saddr);
 	if (daddr)
@@ -442,3 +444,5 @@ int hip_read_control_msg_v4(int socket, struct hip_common *hip_msg,
 	return hip_read_control_msg_all(socket, hip_msg, saddr,
 					daddr, msg_info, encap_hdr_size, 1);
 }
+
+

@@ -741,7 +741,7 @@ int hip_hidb_add_lsi(hip_db_struct_t *db, const struct hip_host_id_entry *id_ent
 	hip_lsi_t lsi_aux;
 	int err = 0, used_lsi, c, i;
 	int len = sizeof(lsi_addresses)/sizeof(*lsi_addresses);
-	
+
 	for(i=0; i < len; i++) {	
 		inet_aton(lsi_addresses[i],&lsi_aux);
 		used_lsi = 0;
@@ -756,7 +756,7 @@ int hip_hidb_add_lsi(hip_db_struct_t *db, const struct hip_host_id_entry *id_ent
 
 		if (!used_lsi){
 			memcpy(&id_entry->lsi, &lsi_aux, sizeof(hip_lsi_t));
-			HIP_DEBUG("LSI assigned:%s\n",inet_ntoa(id_entry->lsi));
+			_HIP_DEBUG("LSI assigned:%s\n",inet_ntoa(id_entry->lsi));
 			break;
 		}
 	}
@@ -833,7 +833,7 @@ struct hip_host_id_entry *hip_hidb_get_entry_by_lsi(
 	return NULL;
 }
 
-int hip_associate_default_hit_lsi(hip_hit_t *default_hit, hip_lsi_t *default_lsi){
+int hip_hidb_associate_default_hit_lsi(hip_hit_t *default_hit, hip_lsi_t *default_lsi){
 	int err = 0;
 	hip_lsi_t aux_lsi; 
 	struct hip_host_id_entry *tmp1;

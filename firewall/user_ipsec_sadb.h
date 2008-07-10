@@ -20,8 +20,8 @@
  *
  */
 
-#ifndef HIP_SADB_H_
-#define HIP_SADB_H_
+#ifndef USER_IPSEC_SADB_H_
+#define USER_IPSEC_SADB_H_
 
 #include <asm/types.h>		/* __u16, __u32, etc */
 #include <sys/types.h>		/* for socket.h */
@@ -30,13 +30,9 @@
 #include <openssl/des.h>	/* des_key_schedule */
 #include <openssl/aes.h>	/* aes_key */
 #include <openssl/blowfish.h>	/* bf_key */
-//#include "hip_usermode.h"
-//#include "utils.h"
 #include <sys/time.h>		/* timeval */
 #include "debug.h"
-#if 0
 #include "hashchain.h"
-#endif
 
 /**** HIPL <-> OpenHIP compatibility defs ****/
 
@@ -87,7 +83,6 @@ typedef struct _hip_sadb_entry
 	 * are used as outer addresses) */
 	sockaddr_list *inner_src_addrs;
 	sockaddr_list *inner_dst_addrs;
-#if 0
 	/* hash chain parameters for this SA used in secure ESP extension */
 	/* for outgoing SA */
 	hash_chain_t *active_hchain;
@@ -96,12 +91,14 @@ typedef struct _hip_sadb_entry
 	int tolerance;
 	unsigned char *active_anchor;
 	unsigned char *next_anchor;
-#endif
+	/* for both */
+	uint8_t active_transform;
+	uint8_t next_transform;
 	__u32 mode; 	/* ESP mode :  0-default 1-transport 2-tunnel 3-beet */
 	// TODO add encap_mode (= UDP / TCP)
 	__u16 src_port;
 	__u16 dst_port;			/* UDP dest. port for encaps. ESP */
-	int encap_mode;			/* 0 - none, 1 - udp */
+	uint8_t nat_mode;			/* 0 - none, 1 - udp */
 	struct timeval usetime_ka;  /* last used timestamp, incl keep-alives */
 	struct sockaddr_storage lsi;	/* LSI 				*/
 	struct sockaddr_storage lsi6;	/* IPv6 LSI (peer HIT)		*/
@@ -168,9 +165,9 @@ typedef struct _hip_proto_sel_entry
 void hip_sadb_init();
 int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
     struct sockaddr *inner_dst, struct sockaddr *src, struct sockaddr *dst, __u16 sport,
-    __u16 dport, int direction,
-    __u32 spi, __u8 *e_key, __u32 e_type, __u32 e_keylen, __u8 *a_key,
-    __u32 a_type, __u32 a_keylen, __u32 lifetime, __u16 hitmagic, int encap_mode);
+    __u16 dport, int direction, __u32 spi, __u8 *e_key, __u32 e_type, __u32 e_keylen,
+    __u8 *a_key, __u32 a_type, __u32 a_keylen, __u32 lifetime, __u16 hitmagic,
+    uint8_t nat_mode, uint8_t esp_prot_transform, unsigned char *esp_prot_anchor);
 int hip_sadb_delete(__u32 type, struct sockaddr *src, struct sockaddr *dst,
     __u32 spi);
 void hip_remove_expired_lsi_entries();
@@ -189,5 +186,5 @@ int hip_add_proto_sel_entry(__u32 lsi, __u8 proto, __u8 *header, int family,
         int dir, struct timeval *now);
 void hip_remove_expired_sel_entries();
 
-#endif /* HIP_SADB_H_ */
+#endif /* USER_IPSEC_SADB_H_ */
 

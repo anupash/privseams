@@ -468,7 +468,7 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 		    struct hip_crypto_key *authkey,
 		    int already_acquired,
 		    int direction, int update,
-		    int sport, int dport, int ice_ok) {
+		    hip_ha_t *entry) {
 			// hip_portpair_t *sa_info) {
 	/* XX FIX: how to deal with the direction? */
 
@@ -477,11 +477,6 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 	int cmd = update ? XFRM_MSG_UPDSA : XFRM_MSG_NEWSA;
 
 	HIP_ASSERT(spi);
-
-	
-
-
-	
 	
 	authkey_len = hip_auth_key_length_esp(aalg);
 	enckey_len = hip_enc_key_length(ealg);
@@ -505,8 +500,8 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 	HIP_DEBUG_IN6ADDR("saddr", saddr);
 	HIP_DEBUG_IN6ADDR("daddr", daddr);
 
-	HIP_DEBUG("sport %d\n", sport);
-	HIP_DEBUG("dport %d\n", dport);
+	_HIP_DEBUG("sport %d\n", sport);
+	_HIP_DEBUG("dport %d\n", dport);
 	HIP_DEBUG("direction %d\n", direction);
 	HIP_DEBUG("SPI=0x%x\n",*spi);
 	HIP_DEBUG("************************************\n");
@@ -516,7 +511,7 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 				      src_hit, dst_hit, *spi,
 				      ealg, enckey, enckey_len, aalg,
 				      authkey, authkey_len, AF_INET6,
-				      sport, dport), 1);
+				      entry->local_udp_port, entry->peer_udp_port), 1);
 				      
  out_err:
 	return err;

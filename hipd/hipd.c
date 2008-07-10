@@ -72,16 +72,13 @@ struct addrinfo * opendht_serving_gateway = NULL;
 int opendht_serving_gateway_port = OPENDHT_PORT;
 int opendht_serving_gateway_ttl = OPENDHT_TTL;
 char opendht_name_mapping[HIP_HOST_ID_HOSTNAME_LEN_MAX]; /* what name should be used as key */
-#ifdef CONFIG_HIP_OPENDHT
-int hip_opendht_inuse = SO_HIP_DHT_ON;
-#else
+
+/* now DHT is always off, so you have to set it on if you want to use it */
 int hip_opendht_inuse = SO_HIP_DHT_OFF;
-#endif
 int hip_opendht_error_count = 0; /* Error count, counting errors from libhipopendht */
 
 /* Tells to the daemon should it build LOCATOR parameters to R1 and I2 */
 int hip_locator_status = SO_HIP_SET_LOCATOR_OFF;
-
 
 /* It tells the daemon to set tcp timeout parameters. Added By Tao Wan, on 09.Jan.2008 */
 int hip_tcptimeout_status = SO_HIP_SET_TCPTIMEOUT_ON;
@@ -105,11 +102,11 @@ int hip_use_i3 = 0; // false
  * It will not use if hip_use_userspace_ipsec = 0. Added By Tao Wan
  */
 int hip_use_userspace_ipsec = 0;
+uint8_t hip_esp_prot_ext_transform = ESP_PROT_TRANSFORM_UNUSED;
 
 int hip_use_opptcp = 0; // false
 
 void hip_set_opportunistic_tcp_status(struct hip_common *msg)
-
 {
 	struct sockaddr_in6 sock_addr;     		
 	int retry, type, n;
@@ -362,13 +359,13 @@ int hipd_main(int argc, char *argv[])
 	while (hipd_get_state() != HIPD_STATE_CLOSED)
 	{
 		/* prepare file descriptor sets */
-                if (hip_opendht_inuse == SO_HIP_DHT_ON) {
+	        if (hip_opendht_inuse == SO_HIP_DHT_ON) {
                         FD_ZERO(&write_fdset);
                         if (hip_opendht_fqdn_sent == STATE_OPENDHT_WAITING_CONNECT)
                                 FD_SET(hip_opendht_sock_fqdn, &write_fdset);
                         if (hip_opendht_hit_sent == STATE_OPENDHT_WAITING_CONNECT)
                                 FD_SET(hip_opendht_sock_hit, &write_fdset);
-                }
+		}
 		FD_ZERO(&read_fdset);
 		FD_SET(hip_nl_route.fd, &read_fdset);
 		FD_SET(hip_raw_sock_v6, &read_fdset);
@@ -390,7 +387,7 @@ int hipd_main(int argc, char *argv[])
 		/* wait for socket activity */
 
                 /* If DHT is on have to use write sets for asynchronic communication */
-                if (hip_opendht_inuse == SO_HIP_DHT_ON) {
+		              if (hip_opendht_inuse == SO_HIP_DHT_ON) {
                         if ((err = HIPD_SELECT((highest_descriptor + 1), &read_fdset, 
                                                &write_fdset, NULL, &timeout)) < 0) {
 			HIP_ERROR("select() error: %s.\n", strerror(errno));
@@ -406,7 +403,7 @@ int hipd_main(int argc, char *argv[])
                                 HIP_ERROR("select() error: %s.\n", strerror(errno));
                                 goto to_maintenance;
                         } else if (err == 0) {
-                                /* idle cycle - select() timeout */
+                                // idle cycle - select() timeout 
                                 _HIP_DEBUG("Idle.\n");
                                 goto to_maintenance;
                         } 
@@ -510,6 +507,8 @@ int hipd_main(int argc, char *argv[])
 			if (err) 			
 			{
                                 HIP_ERROR("Reading network msg failed\n");
+                                
+     
 				/* If the values were read in succesfully, we
 				   do the UDP specific stuff next. */
                         } 
@@ -541,7 +540,6 @@ int hipd_main(int argc, char *argv[])
 		}
                 /* DHT SOCKETS HANDLING */
                 if (hip_opendht_inuse == SO_HIP_DHT_ON && hip_opendht_sock_fqdn != -1) {
-		        HIP_DEBUG("Receiving opendht in use message.\n");
                         if (FD_ISSET(hip_opendht_sock_fqdn, &read_fdset) &&
                             FD_ISSET(hip_opendht_sock_fqdn, &write_fdset) &&
                             (hip_opendht_inuse == SO_HIP_DHT_ON)) {

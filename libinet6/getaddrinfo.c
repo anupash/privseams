@@ -78,7 +78,6 @@
 #include "message.h"
 #include "util.h"
 #include "libhipopendht.h"
-#include "hip_usermode.h"
 #include "bos.h"
 
 #define GAIH_OKIFUNSPEC 0x0100
@@ -154,6 +153,8 @@ static const struct addrinfo default_hints;
 static const struct addrinfo default_hints =
 	{ 0, PF_UNSPEC, 0, 0, 0, NULL, NULL, NULL };
 #endif
+
+int max_line_etc_hip = 500;
 
 static int addrconfig (sa_family_t af)
 {
@@ -473,7 +474,7 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 	   /etc/hip/hosts and only then from DHT server. */
         if (flags & AI_NODHT) {
 		HIP_INFO("Distributed Hash Table (DHT) is not in use.\n");
-                goto skip_dht;
+                goto out_err;
         }
 	
         memset(dht_response_hit, '\0', sizeof(dht_response_hit));
@@ -499,12 +500,10 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 
 	/* Send a user message to the HIP daemon to receive Open DHT server
 	   gateway whereabouts. */
-        if((err = hip_send_recv_daemon_info(msg)) < 0) {
-		HIP_ERROR("Unable to receive DHT gateway information from the "\
+        HIP_IFEL(((err = hip_send_recv_daemon_info(msg)) < 0), -1,
+		"Unable to receive DHT gateway information from the "\
 			  "HIP daemon.\nDo you have a local HIP daemon up and "\
 			  "running?\n");
-		goto skip_dht; 
-	}
 	
 	gw_info = hip_get_param(msg, HIP_PARAM_OPENDHT_GW_INFO);
 	if(gw_info == NULL) {
@@ -517,35 +516,29 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
         /* Check if DHT was on */
         if ((gw_info->ttl == 0) && (gw_info->port == 0)) {
                 HIP_INFO("Distributed hash table (DHT) is not in use.\n");
-                goto skip_dht;
+                goto out_err;
         }
         
         tmp_ttl = gw_info->ttl;
         tmp_port = htons(gw_info->port);
         IPV6_TO_IPV4_MAP(&gw_info->addr, &tmp_v4);
 	
-        if(inet_ntop(AF_INET, &tmp_v4, tmp_ip_str,
-		     sizeof(tmp_ip_str)) == NULL) {
-		err = -1;
-		goto out_err;
-	}
+        HIP_IFEL((inet_ntop(AF_INET, &tmp_v4, tmp_ip_str,
+                            sizeof(tmp_ip_str)) == NULL), 1, 
+                 "Failed to convert gw addr to presentation format\n");		
 	
 	/* Check for IN_ADDR_ANY gateway. This happens for example on virtual
 	   machines. */	
-	if((tmp_v4.s_addr | INADDR_ANY) == 0) {
-		HIP_ERROR("DHT gateway is 0.0.0.0. Skipping.\n");
-		goto skip_dht;
-	}
+	HIP_IFEL(((tmp_v4.s_addr | INADDR_ANY) == 0), -1, 
+                 "DHT gateway is 0.0.0.0. Skipping.\n");
 	
         HIP_INFO("DHT server is located at %s:%d with TTL %d.\n",
 		 tmp_ip_str, tmp_port, tmp_ttl);
 
         error = 0;
         error = resolve_dht_gateway_info(tmp_ip_str, &serving_gateway);
-        if (error < 0) {
-		HIP_DEBUG("Error in resolving the DHT gateway address, skipping DHT.\n");
-		goto skip_dht;
-        }
+        HIP_IFEL((error < 0), -1,
+                 "Error in resolving the DHT gateway address, skipping DHT.\n");
 
         ret_hit = opendht_get_key(serving_gateway, name, dht_response_hit);
 	
@@ -588,10 +581,8 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
                         return 1;
                 }
         }
-/* HORRIBLE! Why is skip_dht under out_err? This effectively renders our IFE macros
-   useless. :( -Lauri 08.05.2008 */
  out_err: 
- skip_dht:
+
 								
 	/* Open the file containing HIP hosts for reading. */
 	fp = fopen(_PATH_HIP_HOSTS, "r");
@@ -1737,4 +1728,108 @@ void freeaddrinfo (struct addrinfo *ai)
 		ai = ai->ai_next;
 		free (p);
 	}
+}
+
+int hhdb_hashfn(char *name, int size) 
+{
+        return(atoi(name) % size);
+}
+
+
+int gaih_inet_get_hip_hosts_file_info(hip_hosts_entry *hip_hosts, int *l)
+{        
+	int c, ret, is_lsi, is_hit;
+	int lineno = 0, i = 0, err = 0;
+	hip_hit_t hit, tmp_hit, tmp_addr;
+	hip_lsi_t lsi;
+        char *fqdn_str = NULL;
+	char line[500];
+	hip_common_t *msg = NULL;
+	FILE *fp = NULL;				
+	List list;
+	hip_hosts_entry *entry;
+
+        fp = fopen(_PATH_HIP_HOSTS, "r");
+	if(fp == NULL)
+	{
+		HIP_ERROR("Error opening file '%s' for reading.\n",
+			  _PATH_HIP_HOSTS);
+        }
+	
+	/*Initialize hash table*/
+	memset(hip_hosts, 0, sizeof(hip_hosts));
+
+	/* Loop through all lines in the file. */
+        while (fp && getwithoutnewline(line, 500, fp) != NULL) {		
+	        c = ret = is_lsi = is_hit = 0;
+		
+		/* Keep track of line number for debugging purposes. */
+		lineno++;
+		/* Skip empty and single character lines. */
+                if(strlen(line) <= 1) 
+			continue;
+		/* Init a list for the substrings of the line. Note that this is
+		   done for every line. Break the line into substrings next. */
+                initlist(&list);
+                extractsubstrings(line,&list);
+		
+		/* Loop through the substrings just created. We check if the 
+		   list item is an IPv6 or IPv4 address. If the conversion is NOT
+		   successful, we assume that the substring represents a fully
+		   qualified domain name. Note that this omits the possible
+		   aliases that the hosts has. */
+
+		for (i = 0; i < length(&list); i++) {
+		        HIP_DEBUG("Inside the for %i\n", i);
+		        err = inet_pton(AF_INET6, getitem(&list,i), &hit);  
+                        if (err == 0){
+				err = inet_pton(AF_INET, getitem(&list,i), &lsi);				
+				if (err && IS_LSI32(lsi.s_addr)){
+				        is_lsi = 1;
+					break;
+				}
+			}		       
+			if (err != 1)
+			        fqdn_str = getitem(&list,i); 
+			else
+			        is_hit = 1;
+                }
+
+		*l = lineno;
+
+		/* Here we have the domain name in "fqdn" and the HIT in "hit" or the LSI in "lsi". */
+		HIP_DEBUG("HASH TABLE hhdb_hashfn[%d] \n", hhdb_hashfn(fqdn_str, max_line_etc_hip));
+		entry = &hip_hosts[hhdb_hashfn(fqdn_str, max_line_etc_hip)];
+
+		if (entry->hostname && strcmp(entry->hostname, fqdn_str) == 0) { 
+		        /* entry already exists but lsi or hit empty*/
+		        if (is_lsi)
+			        memcpy(&entry->lsi, &lsi, sizeof(entry->lsi));
+			else if (is_hit)
+			        memcpy(&entry->hit, &hit, sizeof(entry->hit));			  
+		} else if (entry->hostname) {                        		  
+		        /* another entry matches hash value */
+		        /* advance to end of linked list */
+		        for ( ; entry->next; entry=entry->next);
+			/* create a new entry at end of list */
+			entry->next = malloc(sizeof(hip_hosts_entry));
+			HIP_IFEL(!entry->next ,-1, "Error allocating new entry");
+			entry = entry->next;
+		} else {
+		       /* add the new entry */
+		       memset(entry, 0, sizeof(hip_hosts_entry));
+		       entry->hostname = fqdn_str;
+		       if (is_lsi)
+		               memcpy(&entry->lsi, &lsi, sizeof(entry->lsi));
+		       else if (is_hit)
+			       memcpy(&entry->hit, &hit, sizeof(entry->hit));			  
+	        }
+
+        } // end of while
+
+ out_err:	
+	destroy(&list);
+	if (fp)                                                               
+                fclose(fp);
+	return err;		
 }

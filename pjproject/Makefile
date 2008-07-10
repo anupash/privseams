@@ -1,7 +1,8 @@
 include build.mak
 include build/host-$(HOST_NAME).mak
 
-DIRS = pjlib pjlib-util pjnath third_party pjmedia pjsip pjsip-apps
+# Miika: some unnecessary builds for HIPL are commented
+DIRS = pjlib pjlib-util pjnath # third_party pjmedia pjsip pjsip-apps
 
 ifdef MINSIZE
 MAKE_FLAGS := MINSIZE=1
@@ -25,7 +26,8 @@ LIBS = 	pjlib/lib/libpj-$(TARGET_NAME).a \
 	pjsip/lib/libpjsip-ua-$(TARGET_NAME).a \
 	pjsip/lib/libpjsip-simple-$(TARGET_NAME).a \
 	pjsip/lib/libpjsua-$(TARGET_NAME).a
-BINS = 	pjsip-apps/bin/pjsua-$(TARGET_NAME)$(HOST_EXE) 
+# Miika: some unnecessary builds for HIPL are commented
+BINS = 	#pjsip-apps/bin/pjsua-$(TARGET_NAME)$(HOST_EXE) 
 
 size:
 	@echo -n 'Date: '

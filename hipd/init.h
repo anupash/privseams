@@ -56,6 +56,8 @@ extern hip_ipsec_func_set_t default_ipsec_func_set;
 extern int hip_firewall_sock_fd;
 extern int hip_firewall_sock_lsi_fd;
 
+int hip_associate_default_hit_lsi();
+
 int hipd_init(int flush_ipsec, int killold);
 int hip_init_host_ids();
 int hip_init_raw_sock_v6(int *hip_raw_sock_v6);
