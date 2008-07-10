@@ -45,6 +45,7 @@ int hip_cert_spki_sign(struct hip_common * msg, HIP_HASHTABLE * db) {
         char e[HIP_RSA_PUBLIC_EXPONENT_E_LEN];
         u8 signature[HIP_RSA_SIGNATURE_LEN];
         RSA *rsa = NULL;
+        DSA *dsa = NULL;
         
         /* 
            XX FIXME
@@ -76,7 +77,7 @@ int hip_cert_spki_sign(struct hip_common * msg, HIP_HASHTABLE * db) {
         /* malloc space for new rsa */
         rsa = RSA_new();
         HIP_IFEL(!rsa, -1, "Failed to malloc RSA\n");
-        
+        dsa = DSA_new();
         memset(sha_digest, '\0', sizeof(sha_digest));
         memset(e_bin, 0, sizeof(e_bin));
         
@@ -91,11 +92,17 @@ int hip_cert_spki_sign(struct hip_common * msg, HIP_HASHTABLE * db) {
                    "%s\n\n",cert->signature);
 
         _HIP_DEBUG_HIT("Getting keys for HIT",&cert->issuer_hit);
+
+        /*        
+        HIP_IFEL((err = hip_cert_hostid2dsa(hip_local_hostid_db,
+                                            &cert->issuer_hit, dsa)), -1, 
+                "Error constructing the keys from hidb entry\n");
+        */
         
-        HIP_IFEL((err = hip_cert_rsa_construct_keys(hip_local_hostid_db,
+        HIP_IFEL((err = hip_cert_hostid2rsa(hip_local_hostid_db,
                                             &cert->issuer_hit, rsa)), -1, 
                 "Error constructing the keys from hidb entry\n");
-        
+
         /* build sha1 digest that will be signed */
         HIP_IFEL(!(sha_retval = SHA1(cert->cert, strlen(cert->cert), sha_digest)),
                  -1, "SHA1 error when creating digest.\n");        
@@ -547,7 +554,7 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common * msg,  HIP_HASHTAB
                  "Error setting ending time of the certificate");
 
         HIP_DEBUG("Getting the key\n");
-        HIP_IFEL((err = hip_cert_rsa_construct_keys(hip_local_hostid_db,
+        HIP_IFEL((err = hip_cert_hostid2rsa(hip_local_hostid_db,
                                             issuer_hit_n, rsa)), -1, 
                 "Error constructing the keys from hidb entry\n");
 
@@ -729,12 +736,13 @@ int hip_cert_x509v3_handle_request_to_verify(struct hip_common * msg) {
  *
  * @return 0 if signature matches, -1 if error or signature did NOT match
  */
-int hip_cert_rsa_construct_keys(HIP_HASHTABLE * db, hip_hit_t * hit, RSA * rsa) {
+int hip_cert_hostid2rsa(HIP_HASHTABLE * db, hip_hit_t * hit, RSA * rsa) {
         int err = 0, s = 1;
         struct hip_host_id_entry * hostid_entry = NULL;
         struct hip_host_id * hostid = NULL;
         struct hip_lhi * lhi = NULL;
         u8 *p;
+ 
         /* 
            Get the corresponding host id for the HIT.
            It will contain both the public and the private key
@@ -742,7 +750,7 @@ int hip_cert_rsa_construct_keys(HIP_HASHTABLE * db, hip_hit_t * hit, RSA * rsa) 
 	_HIP_DEBUG_HIT("HIT we are looking for ", hit);
         hostid_entry = hip_get_hostid_entry_by_lhi_and_algo(db, 
                                                             hit,
-                                                            HIP_HI_RSA, -1);  
+                                                            HIP_ANY_ALGO, -1);  
 	if (hostid_entry == NULL) {
 		err = -1;
 		goto out_err;
@@ -786,6 +794,88 @@ int hip_cert_rsa_construct_keys(HIP_HASHTABLE * db, hip_hit_t * hit, RSA * rsa) 
         _HIP_DEBUG("Hostid converted to RSA d=%s\n", BN_bn2hex(rsa->d));
         _HIP_DEBUG("Hostid converted to RSA p=%s\n", BN_bn2hex(rsa->p));
         _HIP_DEBUG("Hostid converted to RSA q=%s\n", BN_bn2hex(rsa->q));
+
+ out_err: 
+        return(err);
+}
+
+/**
+ * Function that extracts the key from hidb entry and constructs a DSA struct from it
+ *
+ * @param db is the db to query for the hostid entry
+ * @param hit is a pointer to a host identity tag to be searched
+ * @param rsa is the resulting struct that contains the key material
+ *
+ * @return 0 if signature matches, -1 if error or signature did NOT match
+ */
+int hip_cert_hostid2dsa(HIP_HASHTABLE * db, hip_hit_t * hit, DSA * dsa) {
+        int err = 0, s = 0, t = 0, offs;
+        struct hip_host_id_entry * hostid_entry = NULL;
+        struct hip_host_id * hostid = NULL;
+        struct hip_lhi * lhi = NULL;
+        u8 *p;
+ 
+        /* 
+           Get the corresponding host id for the HIT.
+           It will contain both the public and the private key
+        */
+	_HIP_DEBUG_HIT("HIT we are looking for ", hit);
+        hostid_entry = hip_get_hostid_entry_by_lhi_and_algo(db, hit,
+                                                            HIP_ANY_ALGO, -1);  
+	if (hostid_entry == NULL) {
+		err = -1;
+		goto out_err;
+	}
+        lhi = &hostid_entry->lhi;
+        hostid = hostid_entry->host_id;
+        p = (u8 *)(hostid + 1);
+
+        _HIP_DEBUG_HIT("HIT from hostid entry", &lhi->hit);
+        _HIP_DEBUG("type = %d len = %d\n", htons(hostid->type), hostid->hi_length);
+
+        /*
+          Order of the key material in the host id rdata is the following  
+          See also RFC 2536
+          T = stored in the first octet, tells the key size 
+          (0 < T < 8 are valid values)          
+
+          HIP_DSA_PUBLIC_Q_LEN
+          HIP_DSA_PUBLIC_P_LEN
+          HIP_DSA_PUBLIC_G_LEN
+          HIP_DSA_PUBLIC_KEY_LEN // Usually in literature defined as y 
+          HIP_DSA_SECRET_KEY_LEN // Usually in literature defined as x
+        */
+         
+        /* Public part of the key */
+        /* Read the t telling the key len used below*/
+        t = p[s++]; 
+        offs = (HIP_DSA_OCTET * t);
+
+        HIP_DEBUG("s = %d\n",s);
+        dsa->q = BN_bin2bn(&p[s], HIP_DSA_PUBLIC_Q_LEN, 0);       
+        s += HIP_DSA_PUBLIC_Q_LEN;
+
+        HIP_DEBUG("s = %d\n",s);
+        dsa->p = BN_bin2bn(&p[s], HIP_DSA_PUBLIC_P_LEN + offs, 0);
+        s += HIP_DSA_PUBLIC_P_LEN + offs;
+
+        HIP_DEBUG("s = %d\n",s);
+        dsa->g = BN_bin2bn(&p[s], HIP_DSA_PUBLIC_G_LEN + offs, 0);
+        s += HIP_DSA_PUBLIC_G_LEN + offs;
+
+        HIP_DEBUG("s = %d\n",s);
+        dsa->pub_key = BN_bin2bn(&p[s], HIP_DSA_PUBLIC_KEY_LEN + offs, 0);
+        s += HIP_DSA_PUBLIC_KEY_LEN + offs;
+
+        /* Private part of the key */
+        HIP_DEBUG("s = %d\n",s);
+        dsa->priv_key = BN_bin2bn(&p[s], HIP_DSA_SECRET_KEY_LEN, 0);
+        
+        HIP_DEBUG("Hostid converted to DSA q=%s\n", BN_bn2hex(dsa->q));
+        HIP_DEBUG("Hostid converted to DSA p=%s\n", BN_bn2hex(dsa->p));
+        HIP_DEBUG("Hostid converted to DSA g=%s\n", BN_bn2hex(dsa->g));
+        HIP_DEBUG("Hostid converted to DSA pub_key=%s\n", BN_bn2hex(dsa->pub_key));
+        HIP_DEBUG("Hostid converted to DSA priv_key=%s\n", BN_bn2hex(dsa->priv_key));
 
  out_err: 
         return(err);

@@ -45,7 +45,7 @@
 typedef  HIP_HASHTABLE hip_db_struct_t;
 
 /* 
-   Defines to help with the handling of the keys
+   Defines to help with the handling of the RSA keys 
    For example with 1024 bit keys these values are
    N = 128 bytes (1024 bits and so on)
    E = 3 bytes
@@ -60,6 +60,29 @@ typedef  HIP_HASHTABLE hip_db_struct_t;
 #define HIP_RSA_PRIVATE_EXPONENT_D_LEN 128
 #define HIP_RSA_SECRET_PRIME_FACTOR_P_LEN 64
 #define HIP_RSA_SECRET_PRIME_FACTOR_Q_LEN 64
+
+/* 
+   Defines to help with the handling of the RSA keys
+   See also RFC 2536
+   By default in HIPL
+   T = stored in the first octet, tells the key size (0 < T < 8 are valid values)
+   Q = 20 bytes, allways 20 bytes
+   P = 64 bytes
+   G = 64 bytes
+   Pub_key = 64 bytes
+   Priv_key = 20 bytes
+*/
+/* Public part of the key */
+#define HIP_DSA_PUBLIC_Q_LEN 20
+#define HIP_DSA_PUBLIC_P_LEN 64
+#define HIP_DSA_PUBLIC_G_LEN 64
+/* Usually in literature defined as y */
+#define HIP_DSA_PUBLIC_KEY_LEN 64
+/* Private part of the key */
+/* Usually in literature defined as x */
+#define HIP_DSA_SECRET_KEY_LEN 20
+/* Used to define key component lengths */
+#define HIP_DSA_OCTET 8
 
 #define HIP_MAX_COOKIE_INFO 10
 /* for debugging with in6_ntop */

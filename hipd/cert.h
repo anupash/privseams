@@ -41,6 +41,7 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common *, HIP_HASHTABLE *)
 int hip_cert_x509v3_handle_request_to_verify(struct hip_common *);
 
 /** utilitary functions **/
-int hip_cert_rsa_construct_keys(HIP_HASHTABLE *, hip_hit_t *, RSA *);
+int hip_cert_hostid2rsa(HIP_HASHTABLE *, hip_hit_t *, RSA *);
+int hip_cert_hostid2dsa(HIP_HASHTABLE *, hip_hit_t *, DSA *);
 
 #endif /* HIP_CERT_H */

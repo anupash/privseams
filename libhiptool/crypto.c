@@ -1099,11 +1099,12 @@ int load_dsa_private_key(const char *filenamebase, DSA **dsa) {
     err = -EINVAL;
     goto out_err;
   }
+  _HIP_DEBUG("Loaded host DSA q=%s\n", BN_bn2hex((*dsa)->q));
+  _HIP_DEBUG("Loaded host DSA p=%s\n", BN_bn2hex((*dsa)->p));
+  _HIP_DEBUG("Loaded host DSA g=%s\n", BN_bn2hex((*dsa)->g));
   _HIP_DEBUG("Loaded host DSA pubkey=%s\n", BN_bn2hex((*dsa)->pub_key));
   _HIP_DEBUG("Loaded host DSA privkey=%s\n", BN_bn2hex((*dsa)->priv_key));
-  _HIP_DEBUG("Loaded host DSA p=%s\n", BN_bn2hex((*dsa)->p));
-  _HIP_DEBUG("Loaded host DSA q=%s\n", BN_bn2hex((*dsa)->q));
-  _HIP_DEBUG("Loaded host DSA g=%s\n", BN_bn2hex((*dsa)->g));
+
 
  out_err:
 
