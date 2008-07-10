@@ -489,8 +489,8 @@ int hip_conf_handle_hi(hip_common_t *msg, int action, const char *opt[],
 
      if (action == ACTION_DEL)
 	  return hip_conf_handle_hi_del(msg, action, opt, optc);
-     //if (action == ACTION_GET)
-     //	  return hip_get_hits(msg, opt, optc);
+     if (action == ACTION_GET)
+     	  return hip_get_hits(msg, opt, optc);
 	  //return hip_conf_handle_hi_get(msg, action, opt, optc);
 
      /* Check min/max amount of args */
