@@ -26,6 +26,15 @@ hipfw_SOURCES += user_ipsec.c user_ipsec_esp.c user_ipsec_sadb.c esp_prot.c
 hipfw_SOURCES += proxy.c opptcp.c firewalldb.c lsi.c
 
 hipfw_LDADD = /usr/lib/libipq.a ../libinet6/.libs/libinet6.a
+hipfw_LDADD += -lpthread -luuid
+hipfw_LDADD += ../pjproject/pjnath/lib/libpjnath-${host}.a
+hipfw_LDADD += ../pjproject/pjlib/lib/libpj-${host}.a
+hipfw_LDADD += ../pjproject/pjlib-util/lib/libpjlib-util-${host}.a
+
+../pjproject/pjlib/lib/libpj-${host}.a:
+../pjproject/pjlib-util/lib/libpjlib-util-${host}.a:
+../pjproject/pjnath/lib/libpjnath-${host}.a:
+
 if HIP_CORPORATE
   hipfw_LDADD += -lhiptool
 else
