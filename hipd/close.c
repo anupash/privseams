@@ -43,6 +43,8 @@ int hip_xmit_close(hip_ha_t *entry, void *opaque)
 
 	HIP_DEBUG("State is ESTABLISHED in current host association, sending "\
 		  "CLOSE message to peer.\n");
+
+	hip_firewall_set_bex_data(SO_HIP_FW_UPDATE_DB, entry, &entry->hit_our, &entry->hit_peer);
 	
 	HIP_IFE(!(close = hip_msg_alloc()), -ENOMEM);
 
@@ -72,7 +74,7 @@ int hip_xmit_close(hip_ha_t *entry, void *opaque)
 		 -ECOMM, "Sending CLOSE message failed.\n");
 	
 	entry->state = HIP_STATE_CLOSING;
-
+	
  out_err:
 	if (close)
 		HIP_FREE(close);

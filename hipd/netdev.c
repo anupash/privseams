@@ -559,6 +559,8 @@ int hip_find_address(char *fqdn_str, struct in6_addr *res){
 		goto out_err;
 	}
 
+	HIP_DEBUG("Looking up for hostname %s in /etc/hosts",fqdn_str);
+
 	while(getwithoutnewline(line, 500, hosts) != NULL ) {
 	        lineno++;
 		if(strlen(line)<=1) continue; 
@@ -903,7 +905,7 @@ int hip_netdev_trigger_bex_msg(struct hip_common *msg) {
 	HIP_DEBUG_HIT("trigger_msg_our_hit:", our_hit);
 
 	/* Peer LSI */
-	param = hip_get_param(msg, SO_HIP_PARAM_LSI);
+	param = hip_get_param(msg, HIP_PARAM_LSI);
 	if (param){
 		peer_lsi6 = hip_get_param_contents_direct(param);
 		if (IN6_IS_ADDR_V4MAPPED(peer_lsi6)){
@@ -914,7 +916,7 @@ int hip_netdev_trigger_bex_msg(struct hip_common *msg) {
 
 	/* Local LSI */
 	param = hip_get_next_param(msg, param);
-	if (param && hip_get_param_type(param) == SO_HIP_PARAM_LSI){
+	if (param && hip_get_param_type(param) == HIP_PARAM_LSI){
 		our_lsi6 = hip_get_param_contents_direct(param);
 		if (IN6_IS_ADDR_V4MAPPED(our_lsi6))
 		        IPV6_TO_IPV4_MAP(our_lsi6, &our_lsi);
@@ -1317,7 +1319,7 @@ int hip_get_default_hit_msg(struct hip_common *msg)
 	HIP_DEBUG_HIT("Default hit is ", &hit);
 	HIP_DEBUG_LSI("Default lsi is ", &lsi);
 	hip_build_param_contents(msg, &hit, HIP_PARAM_HIT, sizeof(hit));
-	hip_build_param_contents(msg, &lsi, SO_HIP_PARAM_LSI, sizeof(lsi));
+	hip_build_param_contents(msg, &lsi, HIP_PARAM_LSI, sizeof(lsi));
 
  out_err:
 	return err;

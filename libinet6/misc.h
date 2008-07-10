@@ -22,10 +22,9 @@
 
 typedef struct _hip_hosts_entry
 {
-        char *hostname;
         hip_hit_t hit;
         hip_lsi_t lsi;
-	struct _hip_hosts_entry *next;
+        char *hostname;
 } hip_hosts_entry;
 
 static inline int ipv4_addr_cmp(const struct in_addr *a1,

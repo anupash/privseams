@@ -964,14 +964,14 @@ int hip_handle_user_msg(struct hip_common *msg,
 		}
 	        break;
 	case SO_HIP_IS_OUR_LSI:
-		lsi = (hip_lsi_t *)hip_get_param_contents(msg, SO_HIP_PARAM_LSI);
+		lsi = (hip_lsi_t *)hip_get_param_contents(msg, HIP_PARAM_LSI);
 	  	if (!hip_hidb_exists_lsi(lsi))
 	    		lsi = NULL;
 	  	break;
 	case SO_HIP_GET_STATE_HA:
 	case SO_HIP_GET_PEER_HIT_BY_LSIS:
 		while((param = hip_get_next_param(msg, param))){
-	    		if (hip_get_param_type(param) == SO_HIP_PARAM_LSI){
+	    		if (hip_get_param_type(param) == HIP_PARAM_LSI){
 	      			if (!src_lsi)
 					src_lsi = (struct in_addr *)hip_get_param_contents_direct(param);
 	      			else 
@@ -1014,7 +1014,7 @@ int hip_handle_user_msg(struct hip_common *msg,
 			if (((msg_type == SO_HIP_GET_LSI_PEER || msg_type == SO_HIP_GET_LSI_OUR) 
 			    && lsi) || msg_type == SO_HIP_IS_OUR_LSI)
 		                HIP_IFEL(hip_build_param_contents(msg, (void *)lsi,
-					 SO_HIP_PARAM_LSI, sizeof(hip_lsi_t)), -1,
+					 HIP_PARAM_LSI, sizeof(hip_lsi_t)), -1,
 				 	 "build param HIP_PARAM_LSI  failed\n");
 		}
 
