@@ -1710,8 +1710,8 @@ int main(int argc, char **argv)
 			
 			if (ntohs(sock_addr.sin6_port) != HIP_DAEMON_LOCAL_PORT) {
 			  	int type = hip_get_msg_type(msg);
-			        if (type == SO_HIP_FIREWALL_BEX_DONE){
-				  HIP_DEBUG("SO_HIP_FIREWALL_BEX_DONE\n");
+			        if (type == SO_HIP_FW_BEX_DONE){
+				  HIP_DEBUG("SO_HIP_FW_BEX_DONE\n");
 				  HIP_DEBUG("%d == %d\n", ntohs(sock_addr.sin6_port), HIP_DAEMON_LOCAL_PORT);
 				}
 				HIP_DEBUG("Drop, message not from hipd\n");

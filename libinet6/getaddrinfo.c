@@ -771,7 +771,7 @@ send_hipd_addr(struct gaih_addrtuple * orig_at)
 
 			if (is_lsi){
 		      		HIP_DEBUG_LSI("LSI", &lsi);
-				hip_build_param_contents(msg, (void *) &lsi, SO_HIP_PARAM_LSI, sizeof(hip_lsi_t));
+				hip_build_param_contents(msg, (void *) &lsi, HIP_PARAM_LSI, sizeof(hip_lsi_t));
 				is_lsi = 0;
 		    	}
 		    	hip_build_user_hdr(msg, SO_HIP_ADD_PEER_MAP_HIT_IP, 0);
@@ -1730,16 +1730,10 @@ void freeaddrinfo (struct addrinfo *ai)
 	}
 }
 
-int hhdb_hashfn(char *name, int size) 
-{
-        return(atoi(name) % size);
-}
-
-
-int gaih_inet_get_hip_hosts_file_info(hip_hosts_entry *hip_hosts, int *l)
+int gaih_inet_get_hip_hosts_file_info(hip_db_struct_t *db)
 {        
 	int c, ret, is_lsi, is_hit;
-	int lineno = 0, i = 0, err = 0;
+	int lineno = 0, i = 0, err = 0, add_new = 0;
 	hip_hit_t hit, tmp_hit, tmp_addr;
 	hip_lsi_t lsi;
         char *fqdn_str = NULL;
@@ -1747,7 +1741,7 @@ int gaih_inet_get_hip_hosts_file_info(hip_hosts_entry *hip_hosts, int *l)
 	hip_common_t *msg = NULL;
 	FILE *fp = NULL;				
 	List list;
-	hip_hosts_entry *entry;
+	hip_hosts_entry *new_el = NULL, aux;
 
         fp = fopen(_PATH_HIP_HOSTS, "r");
 	if(fp == NULL)
@@ -1756,9 +1750,6 @@ int gaih_inet_get_hip_hosts_file_info(hip_hosts_entry *hip_hosts, int *l)
 			  _PATH_HIP_HOSTS);
         }
 	
-	/*Initialize hash table*/
-	memset(hip_hosts, 0, sizeof(hip_hosts));
-
 	/* Loop through all lines in the file. */
         while (fp && getwithoutnewline(line, 500, fp) != NULL) {		
 	        c = ret = is_lsi = is_hit = 0;
@@ -1780,7 +1771,6 @@ int gaih_inet_get_hip_hosts_file_info(hip_hosts_entry *hip_hosts, int *l)
 		   aliases that the hosts has. */
 
 		for (i = 0; i < length(&list); i++) {
-		        HIP_DEBUG("Inside the for %i\n", i);
 		        err = inet_pton(AF_INET6, getitem(&list,i), &hit);  
                         if (err == 0){
 				err = inet_pton(AF_INET, getitem(&list,i), &lsi);				
@@ -1795,41 +1785,39 @@ int gaih_inet_get_hip_hosts_file_info(hip_hosts_entry *hip_hosts, int *l)
 			        is_hit = 1;
                 }
 
-		*l = lineno;
+		// Comment line
+		if(strstr(fqdn_str,"#"))
+		        continue;
+		
+		//Search entry in the db
+		memset(&aux, 0, sizeof(hip_hosts_entry));
+		aux.hostname = malloc(strlen(fqdn_str)+1);
+		strcpy(aux.hostname, fqdn_str);	
+		new_el = (hip_hosts_entry *) hip_ht_find(db, &aux);
+		
+		if (!new_el){
+		        // Not exist : Create new entry
+		  	HIP_IFEL(!(new_el = (hip_hosts_entry *) HIP_MALLOC(sizeof(hip_hosts_entry),0)),
+				 -ENOMEM,"No memory available\n");
+			memset(new_el, 0, sizeof(hip_hosts_entry));
+			new_el->hostname = malloc(strlen(fqdn_str)+1);
+			strcpy(new_el->hostname, fqdn_str);		  
+		}
+		// Exist: modify content
+		if (is_lsi)
+		        ipv4_addr_copy(&new_el->lsi, &lsi);
+		else if (is_hit)
+		        ipv6_addr_copy(&new_el->hit, &hit);
 
-		/* Here we have the domain name in "fqdn" and the HIT in "hit" or the LSI in "lsi". */
-		HIP_DEBUG("HASH TABLE hhdb_hashfn[%d] \n", hhdb_hashfn(fqdn_str, max_line_etc_hip));
-		entry = &hip_hosts[hhdb_hashfn(fqdn_str, max_line_etc_hip)];
+		hip_ht_add(db, new_el);
 
-		if (entry->hostname && strcmp(entry->hostname, fqdn_str) == 0) { 
-		        /* entry already exists but lsi or hit empty*/
-		        if (is_lsi)
-			        memcpy(&entry->lsi, &lsi, sizeof(entry->lsi));
-			else if (is_hit)
-			        memcpy(&entry->hit, &hit, sizeof(entry->hit));			  
-		} else if (entry->hostname) {                        		  
-		        /* another entry matches hash value */
-		        /* advance to end of linked list */
-		        for ( ; entry->next; entry=entry->next);
-			/* create a new entry at end of list */
-			entry->next = malloc(sizeof(hip_hosts_entry));
-			HIP_IFEL(!entry->next ,-1, "Error allocating new entry");
-			entry = entry->next;
-		} else {
-		       /* add the new entry */
-		       memset(entry, 0, sizeof(hip_hosts_entry));
-		       entry->hostname = fqdn_str;
-		       if (is_lsi)
-		               memcpy(&entry->lsi, &lsi, sizeof(entry->lsi));
-		       else if (is_hit)
-			       memcpy(&entry->hit, &hit, sizeof(entry->hit));			  
-	        }
-
+		destroy(&list);
         } // end of while
 
- out_err:	
-	destroy(&list);
+ out_err:		
 	if (fp)                                                               
                 fclose(fp);
+	if (aux.hostname)
+	  free(aux.hostname);
 	return err;		
 }
