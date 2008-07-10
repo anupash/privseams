@@ -959,20 +959,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	}
 #endif
 
-	if (!hip_blind_get_status()) {
-	  HIP_DEBUG("Blind is OFF\n");
-	  /*Find lsi identifiers for the pair of hits given by the context */
-	  hip_ha_t *entry_aux = hip_hadb_find_byhits(&ctx->input->hits, &ctx->input->hitr);
-	  /* let the setup routine give us a SPI. */
-	  HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(r1_saddr, r1_daddr,
-			      &ctx->input->hits, &ctx->input->hitr,
-			      &spi_in, transform_esp_suite, 
-			      &ctx->esp_in, &ctx->auth_in, 0,
-			      HIP_SPI_DIRECTION_IN, 0, entry), -1, 
-		   "Failed to setup IPsec SPD/SA entries, peer:src\n");
-
-	}
-
 //modified by santtu
 	/**when nat control is 0, we create sa as normal mode, 
 	 * but is it is not, we use other connectivity engine to create sa***/
@@ -2341,7 +2327,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
                 
 //add by santtu	
     /***** LOCATOR PARAMETER *****/
-	hip_nat_handle_locator_parameter(i2, entry, esp_info);	
+	hip_handle_locator_parameter(i2, entry, esp_info);	
                
 #ifdef HIP_USE_ICE
 	
@@ -2622,7 +2608,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 
 //add by santtu	
     /***** LOCATOR PARAMETER *****/
-	hip_nat_handle_locator_parameter(r2, entry, esp_info);	
+	hip_handle_locator_parameter(r2, entry, esp_info);	
 //end add
 	
 	

@@ -3612,37 +3612,29 @@ void hip_set_locator_addr_length(void * locator, hip_tlv_len_t  length){
  * 
  * return the amount the locator items(type 1 and 2 are both supproted).
  * */
- 
 int hip_get_locator_addr_item_count(struct hip_locator *locator) {	
-	
 	char *address_pointer =(char*) (locator + 1);
 	int amount = 0;
-	
-	
-	
-	for(;address_pointer < ((char*)locator) + hip_get_param_contents_len(locator); ){
-		if(((struct hip_locator_info_addr_item*)address_pointer)->locator_type == 
-					HIP_LOCATOR_LOCATOR_TYPE_UDP){
-                		address_pointer += sizeof(struct hip_locator_info_addr_item2);
-                		amount += 1;
-                	}
-        else 
-        if(((struct hip_locator_info_addr_item*)address_pointer)->locator_type == 
-        			HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI){
-    		address_pointer += sizeof(struct hip_locator_info_addr_item);
-    		amount += 1;
-    	} 
-        else
-		if(((struct hip_locator_info_addr_item*)address_pointer)->locator_type == 
-			 	HIP_LOCATOR_LOCATOR_TYPE_IPV6){
-    		address_pointer += sizeof(struct hip_locator_info_addr_item);
-    		amount += 1;
-    	} 
-        else	//ignore the others
-        	address_pointer += sizeof(struct hip_locator_info_addr_item);
-	}
-	
-	
+       
+	for(;address_pointer < ((char*)locator) + hip_get_param_contents_len(locator); ) {
+		if (((struct hip_locator_info_addr_item*)address_pointer)->locator_type 
+                    == HIP_LOCATOR_LOCATOR_TYPE_UDP) {
+                        address_pointer += sizeof(struct hip_locator_info_addr_item2);
+                        amount += 1;
+                }
+                else if(((struct hip_locator_info_addr_item*)address_pointer)->locator_type 
+                        == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI) {
+                        address_pointer += sizeof(struct hip_locator_info_addr_item);
+                        amount += 1;
+                } 
+                else if(((struct hip_locator_info_addr_item*)address_pointer)->locator_type 
+                        == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
+                        address_pointer += sizeof(struct hip_locator_info_addr_item);
+                        amount += 1;
+                } 
+                else
+                        address_pointer += sizeof(struct hip_locator_info_addr_item);
+	}	
 	return amount;
 }
 

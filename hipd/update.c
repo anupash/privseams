@@ -360,144 +360,6 @@ int hip_update_set_preferred(hip_ha_t *entry,
 	list_item->is_preferred =  *preferred;
 	return 0;
 }
-/**
- * this is an old function, and will be divert to hip_update_locator_parameter
- */
-int hip_update_handle_locator_parameter(hip_ha_t *entry,
-					struct hip_locator *locator,
-					struct hip_esp_info *esp_info)
-{	
-	HIP_DEBUG("out-of-date function: hip_update_handle_locator_parameter\n");
-	hip_update_locator_parameter(entry, locator,esp_info);
-//remove by santtu
-#if 0
-	uint32_t old_spi = 0, new_spi = 0, i, err = 0;
-	int zero = 0, n_addrs = 0, ii = 0;
-	int same_af = 0, local_af = 0, comp_af = 0, tmp_af = 0;
-	hip_list_t *item = NULL, *tmplist = NULL;
-	struct hip_locator_info_addr_item *locator_address_item;
-	struct hip_spi_out_item *spi_out;
-	struct hip_peer_addr_list_item *a, *tmp, addr;
-	struct netdev_address *n;
-
-	old_spi = ntohl(esp_info->new_spi);
-	new_spi = ntohl(esp_info->new_spi);
-	HIP_DEBUG("LOCATOR SPI old=0x%x new=0x%x\n", old_spi, new_spi);
-                
-	/* If following does not exit, its a bug: outbound SPI must have been
-	   already created by the corresponding ESP_INFO in the same UPDATE
-	   packet */
-	HIP_IFEL(!(spi_out = hip_hadb_get_spi_list(entry, new_spi)), -1,
-		 "Bug: outbound SPI 0x%x does not exist\n", new_spi);
-        
-	/* Set all peer addresses to unpreferred */
-     
-	/** @todo Compiler warning; warning: passing argument 1 of
-	 * 'hip_update_for_each_peer_addr' from incompatible pointer type.
-	 *  What is the real point with this one anyway?
-	 */
-     
-#if 0
-	HIP_IFE(hip_update_for_each_peer_addr(hip_update_set_preferred,
-					      entry, spi_out, &zero), -1);
-#endif            
-	if(locator)        
-		HIP_IFEL(hip_update_for_each_peer_addr(hip_update_deprecate_unlisted,
-						       entry, spi_out, locator), -1,
-			 "Depracating a peer address failed\n"); 
-     
-	/* checking did the locator have any address with the same family as
-	   entry->local_address, if not change local address to address that
-	   has same family as the address(es) in locator, if possible */
-
-	if (!locator) {
-		goto out_of_loop;
-	}
-
-	locator_address_item = hip_get_locator_first_addr_item(locator);
-	local_af = 
-		IN6_IS_ADDR_V4MAPPED(&entry->local_address) ? AF_INET :AF_INET6;
-	if (local_af == 0) {
-		HIP_DEBUG("Local address is invalid, skipping\n");
-		goto out_err;
-	}
-
-	n_addrs = hip_get_locator_addr_item_count(locator);
-	for (i = 0; i < n_addrs; i++) {
-		/* check if af same as in entry->local_af */
-		comp_af = IN6_IS_ADDR_V4MAPPED(&locator_address_item[i].address)
-			? AF_INET : AF_INET6;
-		if (comp_af == local_af) {
-			HIP_DEBUG("LOCATOR contained same family members as "\
-				  "local_address\n");
-			same_af = 1;
-	       
-			break;
-		}
-        }
-        /*
-          Comparison is as it should and not "==". If changed to "==" it will
-          breaks hipd with "hipconf locator on". This part of the code should 
-          be cleaned up. 
-        */
-#ifdef CONFIG_HIP_HI3 /* @fixme: test and fix this weirdness */
-        if (same_af == 0) {
-                HIP_DEBUG("Did not find any address of same family\n");
-                goto out_of_loop;
-	}
-#else
-        if (same_af != 0) {
-                HIP_DEBUG("Did not find any address of same family\n");
-                goto out_of_loop;
-	}
-#endif
-
-	/* look for local address with family == comp_af */
-	list_for_each_safe(item, tmplist, addresses, ii) {
-		n = list_entry(item);
-		tmp_af = IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr)) ?
-			AF_INET : AF_INET6;
-		if (tmp_af == comp_af) {
-			HIP_DEBUG("LOCATOR did not contain same family members "
-				  "as local_address, changing local_address and "
-				  "preferred_address\n");
-			/* Replace the local address to match the family */
-			memcpy(&entry->local_address, 
-			       hip_cast_sa_addr(&n->addr),
-			       sizeof(in6_addr_t));
-			/* Replace the peer preferred address to match the family */
-			locator_address_item = hip_get_locator_first_addr_item(locator);
-			/* First should be OK, no opposite family in LOCATOR */
-			memcpy(&entry->preferred_address,
-			       &locator_address_item->address, 
-			       sizeof(in6_addr_t));
-			memcpy(&addr.address,
-			       &locator_address_item->address,
-			       sizeof(in6_addr_t));
-			HIP_IFEL(hip_update_peer_preferred_address(
-					 entry, &addr, new_spi), -1,
-				 "Setting peer preferred address failed\n");
-			
-			goto out_of_loop;
-		}
-	}
-
- out_of_loop:
-	if(locator)
-		HIP_IFEL(hip_for_each_locator_addr_item(hip_update_add_peer_addr_item,
-							entry, locator, &new_spi), -1,
-			 "Locator handling failed\n"); 
-
-#if 0 /* Let's see if this is really needed -miika */
-	if (n_addrs == 0) /* our own extension, use some other SPI */
-		(void)hip_hadb_relookup_default_out(entry);
-	/* relookup always ? */
-#endif
-
- out_err:
-	return err;
-#endif
-}
 
 int hip_handle_update_established(hip_ha_t *entry, hip_common_t *msg,
 				  in6_addr_t *src_ip,
@@ -622,7 +484,7 @@ int hip_handle_update_established(hip_ha_t *entry, hip_common_t *msg,
 				  "in ESP_INFO\n", ntohl(esp_info->old_spi),
 				  ntohl(esp_info->new_spi));
 		} else {
-			err = hip_update_handle_locator_parameter(
+			err = hip_handle_locator_parameter(
 				entry, locator, esp_info);
 			_HIP_DEBUG("locator param handling ret %d\n", err);
 			err = 0;
@@ -1255,8 +1117,8 @@ int hip_handle_update_plain_locator(hip_ha_t *entry, hip_common_t *msg,
 			  "yet)\n", spi_out);
 	}
 
-	HIP_IFEL(hip_update_handle_locator_parameter(entry, locator, esp_info),
-		 -1, "hip_update_handle_locator_parameter failed\n");
+	HIP_IFEL(hip_handle_locator_parameter(entry, locator, esp_info),
+		 -1, "hip_handle_locator_parameter failed\n");
 
  out_err:
 	if (update_packet)
@@ -3137,4 +2999,34 @@ out_of_loop:
 
 out_err:
 	return err;
+}
+
+/**
+ * handles locator parameter in msg and in entry.
+ * 
+ * 
+ * */
+int hip_handle_locator_parameter(hip_common_t *msg, hip_ha_t *entry,
+                                 struct hip_esp_info *esp_info) {
+	int err = 0;
+	struct hip_locator *locator = NULL;
+	
+	if (hip_locator_status == SO_HIP_SET_LOCATOR_OFF) 
+		goto out_err;
+	
+	HIP_DEBUG("%d    %d",hip_locator_status,SO_HIP_SET_LOCATOR_OFF);
+	
+        locator = hip_get_param(msg, HIP_PARAM_LOCATOR);
+        if (locator){   
+                HIP_IFEL(hip_update_locator_parameter(entry, 
+                                                      locator, esp_info),
+                         -1, "hip_handle_locator_parameter from msg failed\n");
+        }
+        else if (entry->locator){   
+                HIP_IFEL(hip_update_locator_parameter(entry, 
+                                                      entry->locator, esp_info),
+                         -1, "hip_handle_locator_parameter from entry failed\n");
+        }
+out_err:
+   	return err;
 }

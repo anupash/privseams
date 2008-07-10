@@ -191,20 +191,6 @@ int hip_update_set_preferred(hip_ha_t *entry,
 			     void *pref);
 
 /**
- * Processes locator parameters in the UPDATE message.
- * 
- * @param entry    a pointer to corresponding hadb entry of the peer.
- * @param locator  a pointer to the locator parameter in the packet.
- * @param esp_info a pointer to ...
- * 
- * @note   @c entry must be is locked when this function is called.
- * @return 0 if the locator parameter was processed successfully, otherwise < 0.
- */
-int hip_update_handle_locator_parameter(hip_ha_t *entry,
-					struct hip_locator *locator,
-					struct hip_esp_info *esp_info);
-
-/**
  * Handles an incoming UPDATE packet received in ESTABLISHED state.
  *
  * This function handles case 7 in section 8.11 Processing UPDATE packets in
@@ -644,5 +630,7 @@ int hip_update_send_ack(hip_ha_t *entry, hip_common_t *msg,
  * @return       zero on success, non-zero otherwise.
  */
 int hip_peer_learning(struct hip_esp_info * esp_info, hip_ha_t *entry, in6_addr_t * src_ip);
+
+int hip_handle_locator_parameter(hip_common_t *, hip_ha_t *,struct hip_esp_info *);
 
 #endif /* HIP_UPDATE_H */
