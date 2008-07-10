@@ -3,6 +3,8 @@
 import sys
 import getopt
 import os
+import pyip6
+import binascii
 
 def usage(utyp, *msg):
     sys.stderr.write('Usage: %s\n' % os.path.split(sys.argv[0])[1])
@@ -19,6 +21,7 @@ class Hosts:
             resolv_conf = '/etc/resolv.conf'
         self.resolv_conf = resolv_conf
         self.d = {}
+        self.aaaa = {}
         self.recheck()
         return
 
@@ -43,6 +46,13 @@ class Hosts:
             a.pop()
         return '.'.join(a)
 
+    def sani_aaaa(self,a):
+        a = pyip6.inet_pton(a)
+        a2 = list(binascii.b2a_hex(a))
+        a2.reverse()
+        a2.extend(['ip6','arpa'])
+        return '.'.join(a2)
+
     def rcreread(self):
         self.suffixes = ()
         f = file(self.resolv_conf)
@@ -64,6 +74,7 @@ class Hosts:
     def reread(self):
         f = file(self.hostsfile)
         d = {}
+        aaaa = {}
         while 1:
             l = f.readline()
             if not l:
@@ -73,18 +84,26 @@ class Hosts:
                 continue
             aa = l.split()
             addr = aa.pop(0)
+            aa2 = []
             for n in aa:
                 n = self.sani(n)
+                aa2.append(n)
                 a2 = n.split('.')
                 if len(a2) <= 1:
                     for s in self.suffixes:
                         d['%s.%s' % (n,s)] = addr
                 d[n] = addr
-            self.d = d
+            aaaa[self.sani_aaaa(addr)] = aa2
+        self.d = d
+        self.aaaa = aaaa
         return
 
     def getbyname(self,n):
         r = self.d.get(self.sani(n))
+        return r
+
+    def getbyaaaa(self,a):
+        r = self.aaaa.get(self.sani(a))
         return r
 
 class Global:
