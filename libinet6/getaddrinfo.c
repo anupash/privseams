@@ -48,6 +48,9 @@
  * This software is Copyright 1996 by Craig Metz, All Rights Reserved.
  * 
  * @author Craig Metz
+ * @note: HIPU: libinet6 requires LD_PRELOAD which is "dylib" on BSD. Miika:
+ * we are going to get rid of the LD_PRELOAD stuff in HIPL anyway.
+ * @note: HIPU: the include headers should be excluded on MAC OS X
  */
 #ifdef _USAGI_LIBINET6
 #include "libc-compat.h"
