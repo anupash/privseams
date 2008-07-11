@@ -37,6 +37,7 @@ apps_dir = os.path.join(os.environ['PWD'],'applications')
 for name in os.listdir(apps_dir):
 	path = os.path.join(apps_dir, name)
 	#check whether it is the right application download based on configuration file
+	# FIX ME:  not try to get 
 	for conf_name in applications:
 		if conf_name[0].lower() in name.lower():
 			#print conf_name[0]
@@ -60,6 +61,9 @@ for name in os.listdir(apps_dir):
 	del search_engine
 	search_engine = SearchEngine(all_socket_api)
 
+
+
+dbhandle.insert_sum_data()
 
 
 #walk_tree_print_c_files(apps_dir, functions, structures,search_engine)
