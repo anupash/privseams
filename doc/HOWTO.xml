@@ -814,7 +814,7 @@
   <chapter id="ch_tips_for_hip">
     <title>Tips for Using HIP with Some Applications</title>
     <section id="sec_using_hip_proxy">
-      <title> Using HIP Enabled Proxy Server</title>
+      <title> Using HIP Enabled Web Proxy</title>
       <para>
 	In the deployment phase, it is interesting to set-up a proxy server that 
 	translates the TCP/IP traffic into HIP. For instance, this is convenient 
