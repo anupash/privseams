@@ -741,3 +741,62 @@ void hip_print_peer_addresses(hip_ha_t *entry) {
 		}
 	}
 }
+
+//add  by santtu
+/**
+ * hip_print_hit - print a HIT
+ * @param str string to be printed before the HIT
+ * @param hit the HIT to be printed
+ */
+void hip_print_locator(int debug_level, const char *file, int line, const char *function,
+		   const char *str, const struct in6_addr *locator)
+{
+
+	int n_addrs = 0, i = 0;
+	struct hip_locator_info_addr_item *first_address_item = NULL, *locator_address_item = NULL;
+	struct hip_locator_info_addr_item2 * locator_address_item2 = NULL;
+	   /* locator = hip_get_param((struct hip_common *)in_msg,
+	HIP_PARAM_LOCATOR);*/
+	if (locator) {
+		HIP_DEBUG("%s: \n", str);
+	
+	n_addrs = hip_get_locator_addr_item_count(locator);
+	HIP_DEBUG("there are  %d locator items \n", n_addrs);
+	first_address_item = hip_get_locator_first_addr_item(locator);
+	               
+	for (i = 0; i < n_addrs; i++) {
+		locator_address_item = (struct hip_locator_info_addr_item *) hip_get_locator_item(first_address_item, i);
+	    _HIP_HEXDUMP("LOC HEX", &locator_address_item[i],
+	                           sizeof(struct hip_locator_info_addr_item));
+	HIP_DEBUG("locator items index %d, type is %d \n", i,locator_address_item->locator_type );
+	if (locator_address_item->locator_type == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
+	    
+		HIP_INFO_HIT("LOCATOR from DHT",
+	              (struct in6_addr *)&locator_address_item->address);
+		_HIP_HEXDUMP("Should be in6_addr", 
+	                 &locator_address_item[i].address,
+	                 sizeof(struct in6_addr));
+	    
+	}
+	if (locator_address_item->locator_type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI) {
+		
+			HIP_INFO_HIT("LOCATOR from ESP SPI(type 1)",
+	                 (struct in6_addr *)&locator_address_item->address);
+			_HIP_HEXDUMP("Should be in6_addr", 
+	                            &locator_address_item[i].address,
+	                            sizeof(struct in6_addr));
+	               
+	           }
+	if (locator_address_item->locator_type == HIP_LOCATOR_LOCATOR_TYPE_UDP) {
+		locator_address_item2 = (struct hip_locator_info_addr_item2 *) locator_address_item;
+			HIP_INFO_HIT("LOCATOR from UDP",
+	               (struct in6_addr *)&locator_address_item2->address);
+			HIP_DEBUG("LOCATOR port for UDP: %d\n",  ntohs(locator_address_item2->port));
+			_HIP_HEXDUMP("Should be in6_addr", 
+	                                  &locator_address_item[i].address,
+	                                  sizeof(struct in6_addr));
+	                     
+	                 }
+	    }
+	}
+}
