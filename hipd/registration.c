@@ -554,7 +554,7 @@ int hip_handle_param_reg_response(hip_ha_t *entry, hip_common_t *msg)
 	int err = 0, type_count = 0;
 	struct hip_reg_response *reg_response = NULL;
 	uint8_t *reg_types = NULL;
-		
+	
 	reg_response = hip_get_param(msg, HIP_PARAM_REG_RESPONSE);
 	
 	if(reg_response == NULL) {

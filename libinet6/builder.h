@@ -253,6 +253,16 @@ int hip_build_param_reg_request(hip_common_t *msg, const uint8_t lifetime,
 int hip_build_param_reg_response(hip_common_t *msg, const uint8_t lifetime,
 				 const uint8_t *type_list, const int type_count);
 
+/**
+ * Builds a REG_FAILED parameter.
+ * 
+ * @param msg        a pointer to a HIP message where to build the parameter.
+ * @param lifetime   the failure type to be put into the parameter.
+ * @param type_list  a pointer to an array containing the registration types to
+ *                   be put into the parameter.
+ * @param type_count number of registration types in @c type_list.
+ * @return           zero on success, non-zero otherwise.
+ */
 int hip_build_param_reg_failed(struct hip_common *msg, uint8_t failure_type,
 			       uint8_t *type_list, int type_count);
 
