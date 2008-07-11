@@ -13,7 +13,7 @@
  */
 #include "user.h"
 
-int hip_sendto(const struct hip_common *msg, const struct sockaddr *dst){
+int hip_sendto_user(const struct hip_common *msg, const struct sockaddr *dst){
         return sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
 		      0, (struct sockaddr *)dst, hip_sockaddr_len(dst));
 }
@@ -26,55 +26,48 @@ int hip_sendto(const struct hip_common *msg, const struct sockaddr *dst){
  * @return zero on success, or negative error value on error.
  * @see    hip_so.
  */ 
-int hip_handle_user_msg(struct hip_common *msg,
-			struct sockaddr_in6 *src)
+int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 {
-	hip_hit_t *hit, *src_hit, *dst_hit;
-	struct in6_addr *src_ip, *dst_ip;
+	hip_hit_t *hit = NULL, *src_hit = NULL, *dst_hit = NULL;
+	in6_addr_t *src_ip = NULL, *dst_ip = NULL;
 	hip_ha_t *entry = NULL;
 	int err = 0, msg_type = 0, n = 0, len = 0, state = 0, reti = 0;
-	int access_ok = 0, send_response = 1, is_root;
-	HIP_KEA * kea = NULL;
-
+	int access_ok = 0, send_response = 1, is_root = 0;
+	
 	HIP_ASSERT(src->sin6_family == AF_INET6);
 
 	err = hip_check_userspace_msg(msg);
-	if (err)
-	{
-		HIP_ERROR("HIP socket option was invalid\n");
+	
+	if (err) {
+		HIP_ERROR("HIP socket option was invalid.\n");
 		goto out_err;
 	}
 	
 	msg_type = hip_get_msg_type(msg);
-	HIP_DEBUG("Message type %d\n", msg_type);
-
-	HIP_DEBUG("handling user msg of family=%d from port=%d\n",
-		  src->sin6_family, ntohs(src->sin6_port));
-
+	
 	is_root = (ntohs(src->sin6_port) < 1024);
 
-	if (is_root)
+	if (is_root) {
 		access_ok = 1;
-	else if (!is_root &&
-		 (msg_type >= HIP_SO_ANY_MIN && msg_type <= HIP_SO_ANY_MAX))
+	} else if (!is_root &&
+		   (msg_type >= HIP_SO_ANY_MIN && msg_type <= HIP_SO_ANY_MAX)) {
 		access_ok = 1;
-
-	/* const struct sockaddr_in6 *src */
-
-	if (access_ok)
-	{
-		HIP_DEBUG("The operation is allowed.\n");
-	}		
-	else
-	{
-		HIP_ERROR("The operation isn't allowed.\n", msg_type);
+	}
+	
+	if (!access_ok) {
+		HIP_ERROR("The user does not have privilege for this "
+			  "operation. The operation is cancelled.\n");
 		err = -1;
 		goto out_err;
 			
 	}
 
-	if (ntohs(src->sin6_port) == HIP_AGENT_PORT)
+	if (ntohs(src->sin6_port) == HIP_AGENT_PORT) {
 		return hip_recv_agent(msg);
+	}
+	
+	HIP_DEBUG("HIP user message type is: %s.\n",
+		  hip_message_type_name(msg_type));
 	
 	switch(msg_type)
 	{
@@ -390,7 +383,7 @@ int hip_handle_user_msg(struct hip_common *msg,
       			hip_build_user_hdr(msg, SO_HIP_SET_HIPPROXY_ON, 0);
 			/* warning: passing argument 2 of 'hip_sendto' from
 			   incompatible pointer type. 04.07.2008. */
-        		n = hip_sendto(msg, &sock_addr);
+        		n = hip_sendto_user(msg, &sock_addr);
     			
         		HIP_IFEL(n < 0, 0, "sendto() failed on agent socket.\n");
 
@@ -417,7 +410,7 @@ int hip_handle_user_msg(struct hip_common *msg,
       			hip_build_user_hdr(msg, SO_HIP_SET_HIPPROXY_OFF, 0);
         		/* warning: passing argument 2 of 'hip_sendto' from
 			   incompatible pointer type. 04.07.2008. */
-        		n = hip_sendto(msg, &sock_addr);
+        		n = hip_sendto_user(msg, &sock_addr);
     			
         		HIP_IFEL(n < 0, 0, "sendto() failed on agent socket.\n");
 
@@ -451,7 +444,7 @@ int hip_handle_user_msg(struct hip_common *msg,
 			
         		/* warning: passing argument 2 of 'hip_sendto' from
 			   incompatible pointer type. 04.07.2008. */
-        		n = hip_sendto(msg, &sock_addr);
+        		n = hip_sendto_user(msg, &sock_addr);
     			
         		HIP_IFEL(n < 0, 0, "sendto() failed on agent socket.\n");
 
@@ -586,6 +579,8 @@ int hip_handle_user_msg(struct hip_common *msg,
 				break;
 #ifdef CONFIG_HIP_ESCROW
 			case HIP_SERVICE_ESCROW:
+				HIP_KEA * kea = NULL;
+				
 				/* Set a escrow request flag. Should this be
 				   done for every entry? */
 				hip_hadb_set_local_controls(
@@ -809,11 +804,10 @@ int hip_handle_user_msg(struct hip_common *msg,
 		sock_addr.sin6_addr = in6addr_loopback;		
 		HIP_DEBUG("GET HIP PROXY LOCAL ADDRESS\n");
 		hip_get_local_addr(msg);
-//		hip_build_user_hdr(msg, HIP_HIPPROXY_LOCAL_ADDRESS, 0);
-		n = hip_sendto(msg, &sock_addr);		
+                //hip_build_user_hdr(msg, HIP_HIPPROXY_LOCAL_ADDRESS, 0);
+		n = hip_sendto_user(msg, &sock_addr);		
 		HIP_IFEL(n < 0, 0, "sendto() failed on fw socket.\n");
-		if (err == 0)
-		{
+		if (err == 0) {
 			HIP_DEBUG("SEND HIPPROXY LOCAL ADDRESS OK.\n");
 		}
 		break;
@@ -835,9 +829,9 @@ int hip_handle_user_msg(struct hip_common *msg,
 			hip_set_msg_err(msg, 1);
 		/* send a response (assuming that it is written to the msg */
 		len = hip_get_msg_total_len(msg);
-		n = hip_sendto(msg, src);
+		n = hip_sendto_user(msg, src);
 		if(n != len) {
-			HIP_ERROR("hip_sendto() failed.\n");
+			HIP_ERROR("hip_sendto_user() failed.\n");
 			err = -1;
 		} else {
 			HIP_DEBUG("Response sent ok\n");

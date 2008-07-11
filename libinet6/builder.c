@@ -2214,16 +2214,18 @@ static inline int hip_reg_param_core(hip_common_t *msg, void *param,
 				       type_list);	
 }
 
-int hip_build_param_reg_info(hip_common_t *msg, const void *srv_list,
+/* Hmmm... Because of some weird linker (?) error we cannot use the defined type
+   hip_srv_t here, but have to settle for using struct hip_srv. Not that this
+   would rock the world, but we definately have something fishy in the makefiles
+   or in whatever makes the linker work. -Lauri 11.07.2008. */
+int hip_build_param_reg_info(hip_common_t *msg,
+			     const struct hip_srv *service_list,
 			     const unsigned int service_count)
 {
 	int err = 0, i = 0;
 	struct hip_reg_info reg_info;
 	uint8_t reg_type[service_count];
-	/* @todo: using a void pointer as a workaround to avoid
-	   weird compilation warning */
-	const hip_srv_t *service_list = (const hip_srv_t *) srv_list;
-
+	
 	if(service_count == 0) {
 		return 0;
 	} 
@@ -2257,8 +2259,8 @@ int hip_build_param_reg_info(hip_common_t *msg, const void *srv_list,
 	err = hip_build_generic_param(
 		msg, &reg_info, sizeof(struct hip_reg_info), (void *)reg_type);
 
-	HIP_DEBUG("Added REG_INFO parameter with %u service%s.\n", service_count,
-		  (service_count > 1) ? "s" : "");
+	_HIP_DEBUG("Added REG_INFO parameter with %u service%s.\n", service_count,
+		   (service_count > 1) ? "s" : "");
 	
  out_err:
 	return err;

@@ -279,8 +279,9 @@ int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,
 	HIP_IFEL(((bytes = recvfrom(socket, hip_msg, total, 0,
 				    (struct sockaddr *) saddr,
 				    &len)) != total), -1, "recv\n");
-
-	HIP_DEBUG("received user message from local port %d\n", ntohs(saddr->sin6_port));
+	
+	_HIP_DEBUG("received user message from local port %d\n",
+		   ntohs(saddr->sin6_port));
 	_HIP_DEBUG("read_user_control_msg recv len=%d\n", len);
 	_HIP_HEXDUMP("recv saddr ", saddr, sizeof(struct sockaddr_un));
 	_HIP_DEBUG("read %d bytes succesfully\n", bytes);
