@@ -2219,8 +2219,7 @@ unsigned long hip_hadb_hash_file_hits(const void *ptr){
         HIP_DEBUG("string %s\n",((hip_hosts_entry *)ptr)->hostname);
 	char *fqdn = ((hip_hosts_entry *)ptr)->hostname;
         uint8_t hash[HIP_AH_SHA_LEN];
-  
-	//hip_build_digest(HIP_DIGEST_SHA1, hit, sizeof(*hit), hash);
+        
 	hip_build_digest(HIP_DIGEST_SHA1, fqdn, strlen(fqdn)+1, hash);
 	return *((unsigned long *)hash);
 }
@@ -2236,7 +2235,7 @@ void hip_hadb_init_db_file_hits(void){
 
 /*Initialize hadb with values contained in /etc/hip/hosts*/
 int hip_init_hadb_hip_host(){
-  int err = 0, i = 0, n = 0;
+        int err = 0, i = 0;
 	hip_hosts_entry *element = NULL;
 	hip_list_t *item, *tmp;
 	struct in6_addr address;
@@ -2251,17 +2250,11 @@ int hip_init_hadb_hip_host(){
 	        element = list_entry(item);
 		memset(&address, 0, sizeof(struct in6_addr));
 		hip_find_address(element->hostname, &address);
-		n++;
-		HIP_DEBUG(" hostname %s \n", element->hostname);
-		HIP_DEBUG_HIT(" hit \n", &element->hit);  
-		HIP_DEBUG_LSI(" lsi \n", &element->lsi); 
-
 		if ((element->lsi).s_addr == 0)
 		        hip_hadb_add_peer_info(&element->hit, &address, NULL);
 		else
 		        hip_hadb_add_peer_info(&element->hit, &address, &element->lsi);		     		
 	}
-	HIP_DEBUG("n = %d\n",n);
 	return err;
 } 
 
