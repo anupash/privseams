@@ -32,7 +32,6 @@ int hip_cert_spki_sign(struct hip_common * msg, HIP_HASHTABLE * db) {
         struct hip_cert_spki_info * p_cert;
         struct hip_cert_spki_info * cert;
         char sha_digest[21];
-        /*char * sig_sequence;*/
         unsigned char *sha_retval;
         char * e_bin = NULL;
         char * n_bin = NULL;
@@ -45,34 +44,16 @@ int hip_cert_spki_sign(struct hip_common * msg, HIP_HASHTABLE * db) {
         RSA *rsa = NULL;
         DSA *dsa = NULL;
         
-        /* 
-           XX FIXME
-           sizes for the mallocs are just estimates, 
-           the signature is 128 bytes + the 
-           bytes from base64 and the sequence stuff 
-        */
-        sig_sequence = malloc(256); 
-        HIP_IFEL((!sig_sequence), -1, "Malloc for sig_sequence failed\n");
-        memset(sig_sequence, 0, sizeof(sig_sequence));
-
-        digest_b64 = malloc(30); 
-        HIP_IFEL((!digest_b64), -1, "Malloc for digest_b64 failed\n");
-        memset(digest_b64, 0, sizeof(digest_b64));
-                
-        signature_b64 = malloc(256); 
-        HIP_IFEL((!signature_b64), -1, "Malloc for signature_b64 failed\n");
-        memset(signature_b64, 0, sizeof(signature_b64));
-
         cert = malloc(sizeof(struct hip_cert_spki_info));
         HIP_IFEL((!cert), -1, "Malloc for cert failed\n");
         memset(cert, 0, sizeof(struct hip_cert_spki_info));
 
-        /* malloc space for new rsa */
+        /* XX TODO malloc space for new rsa DO THIS WHEN YOU KNOW which one you need 
+         Figure out how to present DSA in SPKI public-key can it be done?*/
         rsa = RSA_new();
         HIP_IFEL(!rsa, -1, "Failed to malloc RSA\n");
         dsa = DSA_new();
-
-        memset(sha_digest, '\0', sizeof(sha_digest));
+        HIP_IFEL(!dsa, -1, "Failed to malloc DSA\n");
 
         HIP_IFEL(!(p_cert = hip_get_param(msg,HIP_PARAM_CERT_SPKI_INFO)), 
                  -1, "No cert_info struct found\n");
@@ -83,29 +64,18 @@ int hip_cert_spki_sign(struct hip_common * msg, HIP_HASHTABLE * db) {
                    "%s\n\n", cert->cert);
 	_HIP_DEBUG("\n\n** CONTENTS of public key sequence **\n"
                    "%s\n\n",cert->signature);
-
         _HIP_DEBUG_HIT("Getting keys for HIT",&cert->issuer_hit);
-        /*        
+  
+        /*   
         HIP_IFEL((err = hip_cert_hostid2dsa(hip_local_hostid_db,
                                             &cert->issuer_hit, dsa)), -1, 
                 "Error constructing the keys from hidb entry\n");
-        
+        */   
         HIP_IFEL((err = hip_cert_hostid2rsa(hip_local_hostid_db,
-        */
-        HIP_IFEL((err = hip_cert_spki_construct_keys(hip_local_hostid_db,
                                             &cert->issuer_hit, rsa)), -1, 
                 "Error constructing the keys from hidb entry\n");
-
-        /*
-           XX FIXME
-           sizes for the mallocs are just estimates, 
-           the signature is 128 bytes + the 
-           bytes from base64 and the sequence stuff 
-        */
-
-        /*sig_sequence = malloc(256); 
-        HIP_IFEL((!sig_sequence), -1, "Malloc for sig_sequence failed\n");
-        memset(sig_sequence, 0, 256);*/
+        
+        memset(sha_digest, '\0', sizeof(sha_digest));
 
         digest_b64 = malloc(30); 
         HIP_IFEL((!digest_b64), -1, "Malloc for digest_b64 failed\n");
@@ -115,7 +85,6 @@ int hip_cert_spki_sign(struct hip_common * msg, HIP_HASHTABLE * db) {
         HIP_IFEL((!signature_b64), -1, "Malloc for signature_b64 failed\n");
         memset(signature_b64, 0, RSA_size(rsa));
 
-        /*XX FIXME just a guesstimate calculate correctly */
         n_b64 = malloc(RSA_size(rsa) + 20);
         HIP_IFEL((!n_b64), -1, "Malloc for n_b64 failed\n");
         memset(n_b64, 0, (RSA_size(rsa) + 20));
@@ -194,7 +163,7 @@ int hip_cert_spki_sign(struct hip_common * msg, HIP_HASHTABLE * db) {
 
         /* Put the results into the msg back */
 
-	HIP_DEBUG("Len public-key (%d) + cert (%d) + signature (%d) = %d\n"
+	_HIP_DEBUG("Len public-key (%d) + cert (%d) + signature (%d) = %d\n"
                   "Sizeof hip_cert_spki_info %d\n",
 		  strlen(cert->public_key), strlen(cert->cert), strlen(cert->signature),
                   (strlen(cert->public_key)+strlen(cert->cert)+strlen(cert->signature)),
@@ -215,7 +184,6 @@ int hip_cert_spki_sign(struct hip_common * msg, HIP_HASHTABLE * db) {
 	if (digest_b64) free(digest_b64);
 	if (signature_b64) free(signature_b64);
 	if (n_b64) free(n_b64);
-        /*if (sig_sequence) free(sig_sequence);*/
         if (rsa) RSA_free(rsa);
 	if (e_bin) free(e_bin);
 	if (n_bin) free(n_bin);
@@ -227,76 +195,6 @@ int hip_cert_spki_sign(struct hip_common * msg, HIP_HASHTABLE * db) {
 }
 
 /**
- * Function that extracts the key from hidb entry and constructs a RSA struct from it
- *
- * @param db is the db to query for the hostid entry
- * @param hit is a pointer to a host identity tag to be searched
- * @param rsa is the resulting struct that contains the key material
- *
- * @return 0 if signature matches, -1 if error or signature did NOT match
- */
-int hip_cert_spki_construct_keys(HIP_HASHTABLE * db, hip_hit_t * hit, RSA * rsa) {
-        int err = 0, s;
-        struct hip_host_id_entry * hostid_entry = NULL;
-        struct hip_host_id * hostid = NULL;
-        struct hip_lhi * lhi = NULL;
-	struct hip_rsa_keylen keylen;
-        u8 *p;
-        /* 
-           Get the corresponding host id for the HIT.
-           It will contain both the public and the private key
-        */
-	_HIP_DEBUG_HIT("HIT we are looking for ", hit);
-        hostid_entry = hip_get_hostid_entry_by_lhi_and_algo(db, hit,
-                                                            HIP_HI_RSA, -1);  
-	HIP_IFEL(!hostid_entry, -1, "Failed to get host id entry\n");
-        lhi = &hostid_entry->lhi;
-        hostid = hostid_entry->host_id;
-        p = (u8 *)(hostid + 1);
-
-        _HIP_DEBUG_HIT("HIT from hostid entry", &lhi->hit);
-        _HIP_DEBUG("type = %d len = %d\n", htons(hostid->type), hostid->hi_length);
-
-        /*
-          Order of the key material in the host id rdata is the following
-           HIP_RSA_PUBLIC_EXPONENT_E_LEN 
-           HIP_RSA_PUBLIC_MODULUS_N_LEN 
-           HIP_RSA_PRIVATE_EXPONENT_D_LEN 
-           HIP_RSA_SECRET_PRIME_FACTOR_P_LEN
-           HIP_RSA_SECRET_PRIME_FACTOR_Q_LEN  
-        */
-	hip_get_rsa_keylen(hostid, &keylen, 1);
-	s = keylen.e_len;
-
-        /* Public part of the key */
-        /* s is the number of bytes at the start indicating the length of e */
-        _HIP_DEBUG("s = %d\n",s);
-        rsa->e = BN_bin2bn(&p[s], keylen.e, 0);
-        s += keylen.e;
-        _HIP_DEBUG("s = %d\n",s);
-        rsa->n = BN_bin2bn(&p[s], keylen.n, 0);
-        s += keylen.n;
-        _HIP_DEBUG("s = %d\n",s);
-        /* Private part of the key */
-        rsa->d = BN_bin2bn(&p[s], keylen.n, 0);
-        s += keylen.n;
-        _HIP_DEBUG("s = %d\n",s);
-        rsa->p = BN_bin2bn(&p[s], keylen.n / 2, 0);
-        s += keylen.n / 2;
-        _HIP_DEBUG("s = %d\n",s);
-        rsa->q = BN_bin2bn(&p[s], keylen.n / 2, 0);
-
-        _HIP_DEBUG("Hostid converted to RSA e=%s\n", BN_bn2hex(rsa->e));
-        _HIP_DEBUG("Hostid converted to RSA n=%s\n", BN_bn2hex(rsa->n));
-        _HIP_DEBUG("Hostid converted to RSA d=%s\n", BN_bn2hex(rsa->d));
-        _HIP_DEBUG("Hostid converted to RSA p=%s\n", BN_bn2hex(rsa->p));
-        _HIP_DEBUG("Hostid converted to RSA q=%s\n", BN_bn2hex(rsa->q));
-
- out_err:
-        return(err);
-}
-
-/**
  * Function that verifies the signature in the given SPKI cert sent by the "client"
  *
  * @param msg points to the msg gotten from "client"
@@ -304,7 +202,7 @@ int hip_cert_spki_construct_keys(HIP_HASHTABLE * db, hip_hit_t * hit, RSA * rsa)
  * @return 0 if signature matches, -1 if error or signature did NOT match
  */
 int hip_cert_spki_verify(struct hip_common * msg) {
-	int err = 0, start = 0, stop = 0, evpret = 0, keylen;
+	int err = 0, start = 0, stop = 0, evpret = 0, keylen = 0;
         char buf[200];
         char sha_digest[21];
         char * e_hex = NULL;
@@ -382,7 +280,7 @@ int hip_cert_spki_verify(struct hip_common * msg) {
         snprintf(e_hex, (stop-start-1), "%s", &cert->public_key[start + 1]);
         _HIP_DEBUG("E_HEX %s\n",e_hex);
 
-        /* public modulus second */
+        /* public modulus */
         start = stop = 0;
         HIP_IFEL(hip_cert_regex(n_rule, cert->public_key, &start, &stop), -1,
                  "Failed to run hip_cert_regex (modulus)\n");
@@ -405,7 +303,7 @@ int hip_cert_spki_verify(struct hip_common * msg) {
 	keylen = evpret;
 	if (keylen % 4 != 0)
 	    keylen = --keylen - keylen % 2;
-	HIP_DEBUG("keylen = %d (%d bits)\n", keylen, keylen * 8);
+	_HIP_DEBUG("keylen = %d (%d bits)\n", keylen, keylen * 8);
 	signature = malloc(keylen);
 	HIP_IFEL((!signature), -1, "Malloc for signature failed.\n");
         rsa->n = BN_bin2bn(modulus, keylen, 0);
@@ -864,7 +762,8 @@ int hip_cert_hostid2rsa(HIP_HASHTABLE * db, hip_hit_t * hit, RSA * rsa) {
         struct hip_host_id * hostid = NULL;
         struct hip_lhi * lhi = NULL;
         u8 *p;
- 
+        struct hip_rsa_keylen keylen;
+
         /* 
            Get the corresponding host id for the HIT.
            It will contain both the public and the private key
@@ -886,31 +785,42 @@ int hip_cert_hostid2rsa(HIP_HASHTABLE * db, hip_hit_t * hit, RSA * rsa) {
 
         /*
           Order of the key material in the host id rdata is the following
-           HIP_RSA_PUBLIC_EXPONENT_E_LEN 
-           HIP_RSA_PUBLIC_MODULUS_N_LEN 
-           HIP_RSA_PRIVATE_EXPONENT_D_LEN 
-           HIP_RSA_SECRET_PRIME_FACTOR_P_LEN
-           HIP_RSA_SECRET_PRIME_FACTOR_Q_LEN  
+           HIP_RSA_PUBLIC_EXPONENT_E
+           HIP_RSA_PUBLIC_MODULUS_N 
+           HIP_RSA_PRIVATE_EXPONENT_D 
+           HIP_RSA_SECRET_PRIME_FACTOR_P
+           HIP_RSA_SECRET_PRIME_FACTOR_Q  
+
+           For example with 1024 bit keys these values are
+           N = 128 bytes (1024 bits and so on)
+           E = 3 bytes
+           D = 128 bytes
+           P = 64 bytes
+           Q = 64 bytes
         */
-         
+
+	hip_get_rsa_keylen(hostid, &keylen, 1);
+	s = keylen.e_len;
+
         /* Public part of the key */
-        /* s starts from the first byte after the rdata struct thats why 1*/
+        /* s is the number of bytes at the start indicating the length of e */
         _HIP_DEBUG("s = %d\n",s);
-        rsa->e = BN_bin2bn(&p[s], HIP_RSA_PUBLIC_EXPONENT_E_LEN, 0);       
-        s += HIP_RSA_PUBLIC_EXPONENT_E_LEN;
+        rsa->e = BN_bin2bn(&p[s], keylen.e, 0);
+        s += keylen.e;
         _HIP_DEBUG("s = %d\n",s);
-        rsa->n = BN_bin2bn(&p[s], HIP_RSA_PUBLIC_MODULUS_N_LEN, 0);
-        s += HIP_RSA_PUBLIC_MODULUS_N_LEN;
+        rsa->n = BN_bin2bn(&p[s], keylen.n, 0);
+        s += keylen.n;
         _HIP_DEBUG("s = %d\n",s);
         /* Private part of the key */
-        rsa->d = BN_bin2bn(&p[s], HIP_RSA_PRIVATE_EXPONENT_D_LEN, 0);
-        s += HIP_RSA_PRIVATE_EXPONENT_D_LEN;
+        rsa->d = BN_bin2bn(&p[s], keylen.n, 0);
+        s += keylen.n;
         _HIP_DEBUG("s = %d\n",s);
-        rsa->p = BN_bin2bn(&p[s], HIP_RSA_SECRET_PRIME_FACTOR_P_LEN, 0);
-        s += HIP_RSA_SECRET_PRIME_FACTOR_P_LEN;
+        rsa->p = BN_bin2bn(&p[s], keylen.n / 2, 0);
+        s += keylen.n / 2;
         _HIP_DEBUG("s = %d\n",s);
-        rsa->q = BN_bin2bn(&p[s], HIP_RSA_SECRET_PRIME_FACTOR_Q_LEN, 0);
-        
+        rsa->q = BN_bin2bn(&p[s], keylen.n / 2, 0);
+
+
         _HIP_DEBUG("Hostid converted to RSA e=%s\n", BN_bn2hex(rsa->e));
         _HIP_DEBUG("Hostid converted to RSA n=%s\n", BN_bn2hex(rsa->n));
         _HIP_DEBUG("Hostid converted to RSA d=%s\n", BN_bn2hex(rsa->d));
@@ -960,38 +870,41 @@ int hip_cert_hostid2dsa(HIP_HASHTABLE * db, hip_hit_t * hit, DSA * dsa) {
           See also RFC 2536
           T = stored in the first octet, tells the key size 
           (0 < T < 8 are valid values)          
-
-          HIP_DSA_PUBLIC_Q_LEN
-          HIP_DSA_PUBLIC_P_LEN
-          HIP_DSA_PUBLIC_G_LEN
-          HIP_DSA_PUBLIC_KEY_LEN // Usually in literature defined as y 
-          HIP_DSA_SECRET_KEY_LEN // Usually in literature defined as x
+          
+          Q and SECRET key lengths change P,G, PUBLIC_KEY lengths
+          are always calculated like 64 + 8 * T
+          
+          HIP_DSA_PUBLIC_Q
+          HIP_DSA_PUBLIC_P
+          HIP_DSA_PUBLIC_G
+          HIP_DSA_PUBLIC_KEY // Usually in literature defined as y 
+          HIP_DSA_SECRET_KEY // Usually in literature defined as x
         */
          
         /* Public part of the key */
         /* Read the t telling the key len used below*/
         t = p[s++]; 
-        offs = (HIP_DSA_OCTET * t);
+        offs = 64 + (8 * t);
 
         HIP_DEBUG("s = %d\n",s);
-        dsa->q = BN_bin2bn(&p[s], HIP_DSA_PUBLIC_Q_LEN, 0);       
-        s += HIP_DSA_PUBLIC_Q_LEN;
+        dsa->q = BN_bin2bn(&p[s], DSA_PRIV, 0);       
+        s += DSA_PRIV;
 
         HIP_DEBUG("s = %d\n",s);
-        dsa->p = BN_bin2bn(&p[s], HIP_DSA_PUBLIC_P_LEN + offs, 0);
-        s += HIP_DSA_PUBLIC_P_LEN + offs;
+        dsa->p = BN_bin2bn(&p[s], offs, 0);
+        s += offs;
 
         HIP_DEBUG("s = %d\n",s);
-        dsa->g = BN_bin2bn(&p[s], HIP_DSA_PUBLIC_G_LEN + offs, 0);
-        s += HIP_DSA_PUBLIC_G_LEN + offs;
+        dsa->g = BN_bin2bn(&p[s], offs, 0);
+        s += offs;
 
         HIP_DEBUG("s = %d\n",s);
-        dsa->pub_key = BN_bin2bn(&p[s], HIP_DSA_PUBLIC_KEY_LEN + offs, 0);
-        s += HIP_DSA_PUBLIC_KEY_LEN + offs;
+        dsa->pub_key = BN_bin2bn(&p[s], offs, 0);
+        s += offs;
 
         /* Private part of the key */
         HIP_DEBUG("s = %d\n",s);
-        dsa->priv_key = BN_bin2bn(&p[s], HIP_DSA_SECRET_KEY_LEN, 0);
+        dsa->priv_key = BN_bin2bn(&p[s], DSA_PRIV, 0);
         
         HIP_DEBUG("Hostid converted to DSA q=%s\n", BN_bn2hex(dsa->q));
         HIP_DEBUG("Hostid converted to DSA p=%s\n", BN_bn2hex(dsa->p));
