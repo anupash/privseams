@@ -132,7 +132,7 @@ int hip_nat_on_for_ha(hip_ha_t *entry, void *not_used)
 	if(entry)
 	{
 		hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
-		entry->nat_mode = 1;
+		//entry->nat_mode = 1;
 		HIP_DEBUG("NAT status of host association %p: %d\n",
 			  entry, entry->nat_mode);
 	}

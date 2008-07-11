@@ -1982,12 +1982,15 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	     addr->sa_family = AF_INET6;
 	     memcpy(hip_cast_sa_addr(addr), &entry->local_address, hip_sa_addr_len(addr));
 	     add_address_to_list(addr, if_index);
+	     
+	     entry->nat_mode = hip_nat_status;
+	     
+	     
 	
 	}
 
 	hip_hadb_insert_state(entry);
 	hip_hold_ha(entry);
-	
 	_HIP_DEBUG("HA entry created.");
 	
 	/* If there was already state, these may be uninitialized */
@@ -1998,7 +2001,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		else
 			hip_init_us(entry, &i2->hitr);
 	}
-
 	/* If the incoming I2 packet has 50500 as destination port, NAT
 	   mode is set on for the host association, I2 source port is
 	   stored as the peer UDP port and send function is set to
@@ -2006,7 +2008,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	   here, since the source port can be different for I1 and I2. */
 	if(i2_info->dst_port == HIP_NAT_UDP_PORT)
 	{
-		if (!entry->nat_mode) entry->nat_mode = HIP_NAT_MODE_PLAIN_UDP;
+		if (entry->nat_mode == 0) entry->nat_mode = HIP_NAT_MODE_PLAIN_UDP;
 		entry->local_udp_port = i2_info->dst_port;
 		entry->peer_udp_port = i2_info->src_port;
 		HIP_DEBUG("entry->hadb_xmit_func: %p.\n", entry->hadb_xmit_func);
@@ -2014,7 +2016,8 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 			  entry);
 		hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
 	}
-
+	HIP_DEBUG("check nat mode for ice:1: %d,%d, %d\n",hip_get_nat_mode(entry),
+		     			hip_get_nat_mode(NULL),HIP_NAT_MODE_ICE_UDP);
 	entry->hip_transform = hip_tfm;
 	
 #ifdef CONFIG_HIP_BLIND
@@ -2098,8 +2101,10 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	
 //modified by santtu
 #ifdef HIP_USE_ICE	
- 	HIP_DEBUG("handle nat trasform in I2\n");
+ 	HIP_DEBUG("handle nat transform in I2\n");
  	hip_nat_handle_transform_in_server(i2, entry);
+ 	HIP_DEBUG("check nat mode for ice:2: %d,%d, %d\n",hip_get_nat_mode(entry),
+ 		     			hip_get_nat_mode(NULL),HIP_NAT_MODE_ICE_UDP);
 #endif	
 
 	/**nat_control is 0 means we use normal mode to create sa*/
