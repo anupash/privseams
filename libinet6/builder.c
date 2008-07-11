@@ -2292,46 +2292,32 @@ int hip_build_param_reg_response(hip_common_t *msg, const uint8_t lifetime,
 	return err;
 }
 
-/**
- * hip_build_param_reg_failed - build HIP REG_FAILED parameter
- * @param msg the message
- * @param failure_type reason for failure
- * @param type_list list of types to be appended
- * @param cnt number of addresses in type_list
- *
- * @return zero for success, or non-zero on error
- */
-int hip_build_param_reg_failed(struct hip_common *msg, uint8_t failure_type, 
-			uint8_t *type_list, int cnt)
+int hip_build_param_reg_failed(struct hip_common *msg, uint8_t failure_type,
+			       uint8_t *type_list, int type_count)
 {
 	int err = 0;
-	int i;
-	struct hip_reg_failed rfail;
-	uint8_t *array = NULL;
-
-	hip_set_param_type(&rfail, HIP_PARAM_REG_FAILED);
-	hip_calc_generic_param_len(&rfail, sizeof(struct hip_reg_failed),
-				   cnt * sizeof(uint8_t));
-
-	HIP_IFEL(!(array = (uint8_t *) HIP_MALLOC((cnt * sizeof(uint8_t)), GFP_KERNEL)),
-		-1, "Failed to allocate memory");
-	memset(array, (sizeof(uint8_t) * cnt), 0);
-	/* Wtf? */
-	for (i = 0; i < cnt; i++) {
-		uint8_t val = type_list[i];
-		array[i] = val;
-	}
+	struct hip_reg_failed reg_failed;
+		
+	if(type_count == 0) {
+		return 0;
+	} 
 	
-
-	rfail.failure_type = failure_type;
-	err = hip_build_generic_param(msg, &rfail, sizeof(struct hip_reg_failed),
-				      (void *)array);
-out_err: 
-	if (array)
-		HIP_FREE(array);	
-	return err;		
-}			
-
+	hip_set_param_type(&reg_failed, HIP_PARAM_REG_FAILED);
+	
+	reg_failed.failure_type = failure_type;
+	hip_calc_generic_param_len(&reg_failed, sizeof(struct hip_reg_failed),
+				   type_count * sizeof(type_list[0]));
+	
+	err = hip_build_generic_param(
+		msg, &reg_failed, sizeof(struct hip_reg_failed), (void *)type_list);
+	
+	HIP_DEBUG("Added REG_FAILED parameter with %u service%s.\n", type_count,
+		  (type_count > 1) ? "s" : "");
+	
+ out_err:
+	return err;
+	
+}
 
 /**
  * hip_build_param_puzzle - build and append a HIP puzzle into the message

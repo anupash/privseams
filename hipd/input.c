@@ -1270,7 +1270,7 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 		  in6_addr_t *i2_daddr, hip_ha_t *entry,
 		  hip_portpair_t *i2_info)
 {
-	struct hip_common *r2 = NULL, *i2 = NULL;
+	hip_common_t *r2 = NULL, *i2 = NULL;
 	struct hip_crypto_key hmac;
  	int err = 0;
 	uint16_t mask = 0;
@@ -1353,16 +1353,9 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 	HIP_IFEL(err, -ECOMM, "Sending R2 packet failed.\n");
 
  out_err:
-	if (r2 != NULL)
+	if (r2 != NULL) {
 		free(r2);
-	/* This 'if' had a condition that was never true. Probably a relic from
-	   old code. Anyhows, commented out this. -Lauri 11.06.2008 */
-	/*
-	if (entry != NULL) {
-		HIP_ERROR("About to do hip_put_ha, should this happen here?\n");
-		hip_put_ha(entry);
 	}
-	*/
 	
 	return err;
 }
@@ -1702,12 +1695,11 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	   stored as the peer UDP port and send function is set to
 	   "hip_send_udp()". Note that we must store the port not until
 	   here, since the source port can be different for I1 and I2. */
-	if(i2_info->dst_port == HIP_NAT_UDP_PORT)
-	{
+	if(i2_info->dst_port == HIP_NAT_UDP_PORT) {
 		entry->nat_mode = 1;
 		entry->peer_udp_port = i2_info->src_port;
 		HIP_DEBUG("entry->hadb_xmit_func: %p.\n", entry->hadb_xmit_func);
-		HIP_DEBUG("SETTING SEND FUNC TO UDP for entry %p from I2 info.\n",
+		HIP_DEBUG("Setting send func to UDP for entry %p from I2 info.\n",
 			  entry);
 		hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
 	}
@@ -1792,9 +1784,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	}
 	if (err) {
 		HIP_ERROR("Failed to setup inbound SA with SPI=%d\n", spi_in);
-		/* if (err == -EEXIST)
-		   HIP_ERROR("SA for SPI 0x%x already exists, this is perhaps a bug\n",
-		   spi_in); */
 		err = -1;
 		hip_hadb_delete_inbound_spi(entry, 0);
 		hip_hadb_delete_outbound_spi(entry, 0);

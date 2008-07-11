@@ -450,7 +450,9 @@ int hip_handle_param_reg_request(hip_ha_t *entry, hip_common_t *source_msg,
 		return err;
 	}
 	
-	HIP_DEBUG("REG_REQUEST parameter found.\n");
+	HIP_DEBUG("REG_REQUEST parameter found. Requested lifetime: 0x%x, "\
+		  "number of service types requested: %d.\n",
+		  reg_request->lifetime, type_count);
 	
 	/* Get the number of registration types. */
 	type_count = hip_get_param_contents_len(reg_request) -
@@ -482,26 +484,21 @@ int hip_handle_param_reg_request(hip_ha_t *entry, hip_common_t *source_msg,
 	memset(accepted_lifetimes, 0, sizeof(accepted_lifetimes));
 	memset(refused_requests, 0, sizeof(refused_requests));
 	memset(failure_types, 0, sizeof(failure_types));
-
-	HIP_DEBUG("REG_REQUEST lifetime: 0x%x, number of types: %d.\n",
-		  reg_request->lifetime, type_count);
-
+	
 	if(reg_request->lifetime == 0) {
-		HIP_DEBUG("Client is cancelling registration.\n");
 		hip_del_registration_server(
 			entry, reg_types, type_count, accepted_requests,
 			&accepted_count, refused_requests, failure_types,
 			&refused_count);
 	} else {
-		HIP_DEBUG("Client is registrating for new services.\n");
 		hip_add_registration_server(
 			entry, reg_request->lifetime, reg_types, type_count,
 			accepted_requests, accepted_lifetimes, &accepted_count,
 			refused_requests, failure_types, &refused_count);
 	}
 	
-	HIP_DEBUG("Accepted: %d, refused: %d.\n", accepted_count,
-		  refused_count);
+	HIP_DEBUG("Number of accepted service requests: %d, number of refused "\
+		  "service requests: %d.\n", accepted_count, refused_count);
 
 	/* The registration is now done. Next, we build the REG_RESPONSE and
 	   REG_FAILED parameters. */
@@ -1067,8 +1064,6 @@ int hip_has_duplicate_services(uint8_t *reg_types, int type_count)
 	if(reg_types == NULL || type_count <= 0) {
 		return -1;
 	}
-
-	HIP_DEBUG("Type count %d.\n", type_count);
 	
 	int i = 0, j = 0;
 

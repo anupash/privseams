@@ -103,8 +103,6 @@ int hip_build_param_notification(struct hip_common *, uint16_t, void *, size_t);
 int hip_build_param_puzzle(struct hip_common *, uint8_t, uint8_t, uint32_t,
                            uint64_t);
 int hip_build_param_r1_counter(struct hip_common *, uint64_t);
-int hip_build_param_reg_failed(struct hip_common *, uint8_t, uint8_t *, int);
-//int hip_build_param_reg_info(struct hip_common *, uint8_t, uint8_t, int *, int);
 
 int hip_build_param_rvs_hmac_contents(struct hip_common *,
                                       struct hip_crypto_key *);
@@ -254,5 +252,8 @@ int hip_build_param_reg_request(hip_common_t *msg, const uint8_t lifetime,
  */
 int hip_build_param_reg_response(hip_common_t *msg, const uint8_t lifetime,
 				 const uint8_t *type_list, const int type_count);
+
+int hip_build_param_reg_failed(struct hip_common *msg, uint8_t failure_type,
+			       uint8_t *type_list, int type_count);
 
 #endif /* HIP_BUILDER */
