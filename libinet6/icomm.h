@@ -174,13 +174,14 @@
 #define SO_HIP_ESP_PROT_EXT_TRANSFORM		146
 #define SO_HIP_IPSEC_UPDATE_ANCHOR_LIST		147
 #define SO_HIP_IPSEC_NEXT_ANCHOR		148
-#define SO_HIP_PARAM_LSI			149
 #define SO_HIP_GET_LSI_PEER                     150
 #define SO_HIP_GET_LSI_OUR			151
 #define SO_HIP_IS_OUR_LSI                       152
 #define SO_HIP_ADD_PEER_MAP_HIT_IP_LSI          153
-#define SO_HIP_FIREWALL_BEX_DONE                154
+#define SO_HIP_FW_BEX_DONE                      154
 #define SO_HIP_GET_PEER_HIT_BY_LSIS             155
+#define SO_HIP_FW_UPDATE_DB                     156
+#define SO_HIP_RESTART_DUMMY_INTERFACE		157
 /** @} */
 /* inclusive */
 #define HIP_SO_ROOT_MAX 			255

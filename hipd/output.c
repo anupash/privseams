@@ -363,7 +363,7 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	struct in6_addr daddr;
 	struct hip_common *i1_blind = NULL;
 	uint16_t mask = 0;
-	int err = 0;
+	int err = 0, n=0;
 		
 	HIP_DEBUG("\n");
 
@@ -372,6 +372,11 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	HIP_IFEL(hip_init_us(entry, src_hit), -EINVAL,
 		 "Could not assign a local host id\n");
 	
+		HIP_DEBUG("\n");
+	HIP_DEBUG("----**********----3--*********-----------------\n");
+	hip_for_each_ha(hip_print_info_hadb, &n);
+	HIP_DEBUG("----**********----3--*********-----------------\n");
+
 #ifdef CONFIG_HIP_BLIND
         if (hip_blind_get_status()) {
 	  HIP_DEBUG("Blind is activated, build blinded i1\n");
@@ -406,8 +411,15 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	HIP_HEXDUMP("HIT source", &i1->hits, sizeof(struct in6_addr));
 	HIP_HEXDUMP("HIT dest", &i1->hitr, sizeof(struct in6_addr));
 
+
 	HIP_IFEL(hip_hadb_get_peer_addr(entry, &daddr), -1, 
 		 "No preferred IP address for the peer.\n");
+	
+	HIP_DEBUG("\n");
+	HIP_DEBUG("----**********---4---*********-----------------\n");
+	hip_for_each_ha(hip_print_info_hadb, &n);
+	HIP_DEBUG("----**********---4---*********-----------------\n");
+
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	// if hitr is hashed null hit, send it as null on the wire
@@ -427,6 +439,8 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 						    i1_blind, entry, 1);
 	}
 #endif
+
+	HIP_DEBUG_HIT("BEFORE sending\n",&daddr);
 	if (!hip_blind_get_status()) {
 		err = entry->hadb_xmit_func->
 			hip_send_pkt(&entry->local_address, &daddr,
@@ -454,6 +468,11 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 		hip_send_opp_tcp_i1(entry);
 	}
 out_err:
+
+	HIP_DEBUG("----**********------*********-----------------\n");
+	hip_for_each_ha(hip_print_info_hadb, &n);
+	HIP_DEBUG("----**********------*********-----------------\n");
+
 	if (i1)
 	  HIP_FREE(i1);
 
@@ -586,7 +605,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	
 	HIP_DEBUG("mask=0x%x\n", mask);
 	/** @todo TH: hip_build_network_hdr has to be replaced with an
-	    apprporiate function pointer */
+	    appropriate function pointer */
 	HIP_DEBUG_HIT("src_hit used to build r1 network header", src_hit);
  	hip_build_network_hdr(msg, HIP_R1, mask, src_hit, NULL);
 

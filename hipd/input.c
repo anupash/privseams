@@ -1,4 +1,3 @@
-
 /** @file
  * This file defines handling functions for incoming packets for the Host
  * Identity Protocol (HIP).
@@ -454,7 +453,7 @@ int hip_receive_control_packet(struct hip_common *msg,
                                int filter)
 {
 	hip_ha_t tmp, *entry = NULL;
-	int err = 0, type, skip_sync = 0;
+	int err = 0, type, skip_sync = 0;	
 
 	/* Debug printing of received packet information. All received HIP
 	   control packets are first passed to this function. Therefore
@@ -959,20 +958,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		   "Failed to setup IPsec SPD/SA entries, peer:src\n");
 	}
 #endif
-
-	if (!hip_blind_get_status()) {
-	  HIP_DEBUG("Blind is OFF\n");
-	  /*Find lsi identifiers for the pair of hits given by the context */
-	  hip_ha_t *entry_aux = hip_hadb_find_byhits(&ctx->input->hits, &ctx->input->hitr);
-	  /* let the setup routine give us a SPI. */
-	  HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(r1_saddr, r1_daddr,
-			      &ctx->input->hits, &ctx->input->hitr,
-			      &spi_in, transform_esp_suite, 
-			      &ctx->esp_in, &ctx->auth_in, 0,
-			      HIP_SPI_DIRECTION_IN, 0, entry), -1, 
-		   "Failed to setup IPsec SPD/SA entries, peer:src\n");
-
-	}
 
 //modified by santtu
 	/**when nat control is 0, we create sa as normal mode, 
@@ -2342,7 +2327,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
                 
 //add by santtu	
     /***** LOCATOR PARAMETER *****/
-	hip_nat_handle_locator_parameter(i2, entry, esp_info);	
+	hip_handle_locator_parameter(i2, entry, esp_info);	
                
 #ifdef HIP_USE_ICE
 	
@@ -2623,7 +2608,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 
 //add by santtu	
     /***** LOCATOR PARAMETER *****/
-	hip_nat_handle_locator_parameter(r2, entry, esp_info);	
+	hip_handle_locator_parameter(r2, entry, esp_info);	
 //end add
 	
 	
@@ -2795,14 +2780,13 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 		entry->hip_msg_retrans.buf = NULL;
 	}
 	
-	//TODO Send the R2 Response to Firewall
-	
+	//TODO Send the R2 Response to Firewall	
 	
  out_err:
 	if (entry->state == HIP_STATE_ESTABLISHED)
-		hip_firewall_add_bex_data(entry, &entry->hit_our, &entry->hit_peer);
+	        hip_firewall_set_bex_data(SO_HIP_FW_BEX_DONE, entry, &entry->hit_our, &entry->hit_peer);
 	else
-		hip_firewall_add_bex_data(entry, NULL, NULL);
+		hip_firewall_set_bex_data(SO_HIP_FW_BEX_DONE, entry, NULL, NULL);
 
 	if (ctx) {
 		HIP_FREE(ctx);
