@@ -148,6 +148,8 @@ typedef struct{
         time_t lifetime;
 	/** Time when this record was created, seconds since epoch. */
 	time_t created;
+	/** Time when this record was last used, seconds since epoch. */
+	time_t last_contact;
 	/** HIT of Responder (Relay Client) */
 	hip_hit_t hit_r;
 	/** IP address of Responder (Relay Client) */

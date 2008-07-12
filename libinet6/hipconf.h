@@ -129,20 +129,21 @@
 #define TYPE_TTL           13
 #define TYPE_GW            14
 #define TYPE_GET           15
-#define TYPE_BLIND         16
-#define TYPE_HA            17
-#define TYPE_MODE          18
-#define TYPE_DEBUG         19
-#define TYPE_DAEMON        20
-#define TYPE_LOCATOR       21
-#define TYPE_RELAY         22
-#define TYPE_SET           23 /* DHT set <name> */
-#define TYPE_DHT           24
-#define TYPE_OPPTCP	   25
-#define TYPE_ORDER         26
-#define TYPE_TCPTIMEOUT	   27 /* add By Tao Wan, on 04.01.2008*/
-#define TYPE_HIPPROXY	   28
-#define TYPE_MAX           29 /* exclusive */
+#define TYPE_HA            16
+#define TYPE_MODE          17
+#define TYPE_DEBUG         18
+#define TYPE_DAEMON        19
+#define TYPE_LOCATOR       20
+#define TYPE_SET           21 /* DHT set <name> */
+#define TYPE_DHT           22
+#define TYPE_OPPTCP	   23
+#define TYPE_ORDER         24
+#define TYPE_TCPTIMEOUT	   25 /* add By Tao Wan, on 04.01.2008*/
+#define TYPE_HIPPROXY	   26
+#define TYPE_MAX           27 /* exclusive */
+
+/* #define TYPE_RELAY         22 */
+
 
 /* for handle_hi() only */
 #define OPT_HI_TYPE 0

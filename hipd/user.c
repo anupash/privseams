@@ -699,6 +699,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	     
 		err = hip_recreate_all_precreated_r1_packets();
 		break;
+#if 0
 	case SO_HIP_ADD_RELAY:
 	{
 		hip_pending_request_t *pending_req = NULL;
@@ -768,6 +769,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			 -1, "sending i1 failed\n");
 		break;
 	}    
+#endif /* 0 */
 	case SO_HIP_OFFER_HIPRELAY:
 		/* draft-ietf-hip-registration-02 HIPRELAY registration. Relay
 		   server handles this message. Message indicates that the
@@ -1017,7 +1019,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		}
 
 		len = hip_get_msg_total_len(msg);
-		n = hip_sendto(msg, src);
+		n = hip_sendto_user(msg, src);
 		if(n != len)	
 			err = -1;
 		else
