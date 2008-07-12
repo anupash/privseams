@@ -427,6 +427,8 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common * msg,  HIP_HASHTAB
         struct hip_cert_x509_req * subject;
         char subject_hit[41];
         char issuer_hit[41];
+	char ialtname[45];
+	char saltname[45];
         struct in6_addr * issuer_hit_n;
         RSA * rsa = NULL;
         char cert_str_pem[1024];
@@ -448,9 +450,13 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common * msg,  HIP_HASHTAB
         HIP_IFEL(!memset(subject_hit, '\0', sizeof(subject_hit)), -1,
                  "Failed to memset memory for subject\n");                
         HIP_IFEL(!memset(issuer_hit_n, 0, sizeof(struct in6_addr)), -1,
-                 "Failed to memser memory for issuer HIT\n");
+                 "Failed to memset memory for issuer HIT\n");
         HIP_IFEL(!memset(cert_str_pem, 0, sizeof(cert_str_pem)), -1,
-                 "Failed to memser memory for cert_str\n");
+                 "Failed to memset memory for cert_str\n");
+        HIP_IFEL(!memset(ialtname, 0, sizeof(ialtname)), -1,
+                 "Failed to memset memory for ialtname\n");
+        HIP_IFEL(!memset(saltname, 0, sizeof(saltname)), -1,
+                 "Failed to memset memory for saltname\n");
 
         /* malloc space for new rsa */
         rsa = RSA_new();
@@ -499,7 +505,7 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common * msg,  HIP_HASHTAB
                            secs = HIP_CERT_DAY * atoi(item->value);
                 }
         } 
-        HIP_IFEL(!(issuer = X509_NAME_new()), -1, "Failed to set create subject name");
+        HIP_IFEL(!(issuer = X509_NAME_new()), -1, "Failed to set create issuer name");
         nid = OBJ_txt2nid("commonName");
         HIP_IFEL((nid == NID_undef), -1, "NID text not defined\n");
         HIP_IFEL(!(ent = X509_NAME_ENTRY_create_by_NID (NULL, nid, MBSTRING_ASC,
@@ -527,6 +533,8 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common * msg,  HIP_HASHTAB
         HIP_IFEL((X509_REQ_set_subject_name (req, subj) != 1), -1,
                  "Failed to add subject name to certificate request\n");
           
+	/* XX TODO add a check to skip subjectAltName and issuerAltName because they are 
+	   already in use by with IP:<hit> stuff */
         if (sec_ext != NULL) {
                 /* Loop through the conf stack and add extensions to ext stack */
                 extlist = sk_X509_EXTENSION_new_null();
@@ -610,6 +618,23 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common * msg,  HIP_HASHTAB
                         }
                 }
         }
+	
+	/* add subjectAltName = IP:<HIT> */
+	sprintf(ialtname, "IP:%s",issuer_hit);
+	HIP_IFEL(!(ext = X509V3_EXT_conf(NULL, &ctx, 
+					 "issuerAltName", 
+					 ialtname)), -1, 
+		 "Failed to create extension\n");
+	HIP_IFEL((!X509_add_ext(cert, ext, -1)), -1,
+		 "Failed to add extensions to the cert\n");
+	/* add subjectAltName = IP:<HIT> */
+	sprintf(saltname, "IP:%s",subject_hit);
+	HIP_IFEL(!(ext = X509V3_EXT_conf(NULL, &ctx, 
+					 "subjectAltName", 
+					 saltname)), -1, 
+		 "Failed to create extension\n");
+	HIP_IFEL((!X509_add_ext(cert, ext, -1)), -1,
+		 "Failed to add extensions to the cert\n");
 
         digest = EVP_sha1();
         HIP_IFEL(!(X509_sign (cert, pkey, digest)), -1,
