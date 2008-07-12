@@ -75,7 +75,17 @@ struct hip_esp_packet {
 struct hip_esp {
 	uint32_t esp_spi;
 	uint32_t esp_seq;
-} __attribute((packed))__;
+} __attribute__ ((packed));;
+
+struct hip_esp_ext {
+	uint32_t esp_spi;
+	uint32_t esp_seq;
+	// additional hash-chain element
+	uint32_t hc_element;
+} __attribute__ ((packed));
+
+/* TODO define a typedef with same name, but depending on which header we want to use
+ * distinguish the headers using sizeof(typedef) */
 
 struct hip_esp_tail {
 	 uint8_t esp_padlen;

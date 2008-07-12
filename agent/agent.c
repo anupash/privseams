@@ -1,9 +1,10 @@
-/*
-    HIP Agent
-    
-    License: GNU/GPL
-    Authors: Antti Partanen <aehparta@cc.hut.fi>
-*/
+/** @file
+ *  HIP Agent
+ *  
+ * @author: Antti Partanen <aehparta@cc.hut.fi>
+ * @note:   Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @note:   HIPU: use --disable-agent to get rid of the gtk and gthread dependencies
+ */
 
 /******************************************************************************/
 /* INCLUDES */

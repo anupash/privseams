@@ -29,11 +29,14 @@ int hip_sendto_user(const struct hip_common *msg, const struct sockaddr *dst){
 int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 {
 	hip_hit_t *hit = NULL, *src_hit = NULL, *dst_hit = NULL;
+	hip_lsi_t *lsi, *src_lsi = NULL, *dst_lsi = NULL;
 	in6_addr_t *src_ip = NULL, *dst_ip = NULL;
-	hip_ha_t *entry = NULL;
-	int err = 0, msg_type = 0, n = 0, len = 0, state = 0, reti = 0;
+	hip_ha_t *entry = NULL, *server_entry = NULL;
+	int err = 0, msg_type = 0, n = 0, len = 0, state = 0, reti = 0, dhterr = 0;
 	int access_ok = 0, send_response = 1, is_root = 0;
-	
+	HIP_KEA * kea = NULL;
+	struct hip_tlv_common *param = NULL;
+
 	HIP_ASSERT(src->sin6_family == AF_INET6);
 
 	err = hip_check_userspace_msg(msg);
@@ -77,7 +80,8 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	case SO_HIP_DEL_LOCAL_HI:
 		err = hip_handle_del_local_hi(msg);
 		break;
-	case SO_HIP_ADD_PEER_MAP_HIT_IP:
+	case SO_HIP_ADD_PEER_MAP_HIT_IP:	
+		HIP_DEBUG("Handling SO_HIP_ADD_PEER_MAP_HIT_IP.\n");
 		err = hip_add_peer_map(msg);
 		if(err)
 		{
@@ -96,6 +100,8 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	case SO_HIP_BOS:
 		err = hip_send_bos(msg);
 		break;
+//modify by santtu
+#if 0
 	case SO_HIP_SET_NAT_ON:
 		/* Sets a flag for each host association that the current
 		   machine is behind a NAT. */
@@ -109,6 +115,24 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		HIP_IFEL(hip_nat_off(), -1, "Error when setting daemon NAT status to \"off\"\n");
 		hip_agent_update_status(SO_HIP_SET_NAT_OFF, NULL, 0);
 		break;
+#endif		
+	case SO_HIP_SET_NAT_ICE_UDP:
+		HIP_DEBUG("Setting LOCATOR ON, when ice is on\n");
+        hip_locator_status = SO_HIP_SET_LOCATOR_ON;
+        HIP_DEBUG("hip_locator status =  %d (should be %d)\n", 
+                  hip_locator_status, SO_HIP_SET_LOCATOR_ON);
+        
+        
+	case SO_HIP_SET_NAT_NONE:
+	case SO_HIP_SET_NAT_PLAIN_UDP:
+		HIP_IFEL(hip_user_nat_mode(msg_type), -1, "Error when setting daemon NAT status to \"on\"\n");
+		hip_agent_update_status(msg_type, NULL, 0);
+		
+		HIP_DEBUG("Recreate all R1s\n");
+		hip_recreate_all_precreated_r1_packets();
+		break;
+//end modify	
+		
         case SO_HIP_SET_LOCATOR_ON:
                 HIP_DEBUG("Setting LOCATOR ON\n");
                 hip_locator_status = SO_HIP_SET_LOCATOR_ON;
@@ -272,43 +296,45 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	}
 	break; 
         case SO_HIP_DHT_SERVING_GW:
-          {
-		  struct in_addr ip_gw;
-		  struct in6_addr ip_gw_mapped;
-		  int rett = 0, errr = 0;
-		  struct sockaddr_in *sa;
-		  if (opendht_serving_gateway == NULL) {
-			  opendht_serving_gateway = malloc(sizeof(struct addrinfo));
-			  memset(opendht_serving_gateway, 0, sizeof(struct addrinfo));
-		  }
-		  if (opendht_serving_gateway->ai_addr == NULL) {
-			  opendht_serving_gateway->ai_addr = malloc(sizeof(struct sockaddr_in));
-			  memset(opendht_serving_gateway->ai_addr, 0, sizeof(struct sockaddr_in));
-		  }
-		  sa = (struct sockaddr_in*)opendht_serving_gateway->ai_addr;
-		  rett = inet_pton(AF_INET, inet_ntoa(sa->sin_addr), &ip_gw);
-		  IPV4_TO_IPV6_MAP(&ip_gw, &ip_gw_mapped);
-		  if (hip_opendht_inuse == SO_HIP_DHT_ON) {
-			  errr = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped, 
-								 opendht_serving_gateway_ttl,
-								 opendht_serving_gateway_port);
-		  } else { /* not in use mark port and ttl to 0 so 'client' knows */
-			  errr = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped, 0,0);
-		  }
-		  
-		  if (errr)
-		  {
-			  HIP_ERROR("Build param hit failed: %s\n", strerror(errr));
-			  goto out_err;
-		  }
-		  errr = hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW, 0);
-		  if (errr)
-		  {
-			  HIP_ERROR("Build hdr failed: %s\n", strerror(errr));
-		  }
-		  HIP_DEBUG("Building gw_info complete\n");
-          }
-          break;
+        {
+	        struct in_addr ip_gw;
+		struct in6_addr ip_gw_mapped;
+		int rett = 0, errr = 0;
+		struct sockaddr_in *sa;
+		if (opendht_serving_gateway == NULL) {
+		        opendht_serving_gateway = malloc(sizeof(struct addrinfo));
+			memset(opendht_serving_gateway, 0, sizeof(struct addrinfo));
+		}
+		if (opendht_serving_gateway->ai_addr == NULL) {
+		        opendht_serving_gateway->ai_addr = malloc(sizeof(struct sockaddr_in));
+			memset(opendht_serving_gateway->ai_addr, 0, sizeof(struct sockaddr_in));
+		}
+		sa = (struct sockaddr_in*)opendht_serving_gateway->ai_addr;
+		rett = inet_pton(AF_INET, inet_ntoa(sa->sin_addr), &ip_gw);
+		IPV4_TO_IPV6_MAP(&ip_gw, &ip_gw_mapped);
+		HIP_DEBUG_HIT("dht gateway address (mapped) to be sent", &ip_gw_mapped);
+	    
+		memset(msg, 0, HIP_MAX_PACKET);
+	    	   
+		if (hip_opendht_inuse == SO_HIP_DHT_ON) {
+  		        errr = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped,
+							       opendht_serving_gateway_ttl,
+							       opendht_serving_gateway_port);
+		} else { /* not in use mark port and ttl to 0 so 'client' knows*/
+  		        errr = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped, 0,0);
+		}
+	    
+		if (errr) {
+		        HIP_ERROR("Build param hit failed: %s\n", strerror(errr));
+			goto out_err;
+		}
+		errr = hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW, 0);
+		if (errr){
+		        HIP_ERROR("Build hdr failed: %s\n", strerror(errr));
+		}
+		HIP_DEBUG("Building gw_info complete\n");
+        }
+        break;
         case SO_HIP_DHT_SET:
 	{
                 extern char opendht_name_mapping;
@@ -356,6 +382,11 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
                 HIP_DEBUG("hip_opendht_inuse =  %d (should be %d)\n", 
                           hip_opendht_inuse, SO_HIP_DHT_ON);
         	}
+		
+                dhterr = 0;
+                dhterr = hip_init_dht();
+                if (dhterr < 0) HIP_DEBUG("Initializing DHT returned error\n");
+		
             break;
             
         case SO_HIP_DHT_OFF:
@@ -668,7 +699,75 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	     
 		err = hip_recreate_all_precreated_r1_packets();
 		break;
+	case SO_HIP_ADD_RELAY:
+	{
+		hip_pending_request_t *pending_req = NULL;
 
+		/* draft-ietf-hip-registration-02 HIPRELAY registration.
+		   Responder (of I,Relay,R hierarchy) handles this message. Message
+		   indicates that the current machine wants to register to a HIP
+		   relay server. This message is received from hipconf. */
+		HIP_DEBUG("Handling ADD HIPRELAY user message.\n");
+		
+		/* Get HIP relay IP address and HIT that were given as commandline
+		   parameters to hipconf. */
+		HIP_IFEL(!(dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT)),
+			 -1, "Relay server HIT was not found from the message.\n");
+		HIP_IFEL(!(dst_ip = hip_get_param_contents(
+				   msg, HIP_PARAM_IPV6_ADDR)), -1, "Relay server "\
+			 "IP address was not found from the message.\n");
+		/* Create a new host association database entry from the message
+		   received from the hipconf. This creates a HIT to IP mapping
+		   of the relay server. */
+		HIP_IFEL(hip_add_peer_map(msg), -1, "Failed to create a new host "
+			 "association database entry for the relay server.\n");
+		/* Fetch the host association database entry just created. */
+		HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(dst_hit)),
+			 -1, "Unable to find host association database entry "\
+			 "matching relay server's HIT.\n");
+	     
+		/* Set a hiprelay request flag. */
+		hip_hadb_set_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_RELAY);
+		
+		pending_req = (hip_pending_request_t *)
+			malloc(sizeof(hip_pending_request_t));
+		if(pending_req == NULL) {
+			HIP_ERROR("Error on allocating memory for a "\
+				  "pending registration request.\n");
+			err = -1;
+			goto out_err;	
+		}
+
+		pending_req->entry    = entry;
+		pending_req->reg_type = HIP_SERVICE_RELAY;
+		/* Use a hard coded value for now. */
+		pending_req->lifetime = 200;
+		
+		HIP_DEBUG("Adding pending request.\n");
+		hip_add_pending_request(pending_req);
+#if 0
+		//removed by santtu here
+		/*
+		 * nat mode is more complex now, we must set nat mode
+		 * seperated, not alway assume that if relay is on, nat 
+		 * is plain UDP mode.
+		 * */
+		/* Since we are requesting UDP relay, we assume that we are behind
+		   a NAT. Therefore we set the NAT status on. This is needed only
+		   for the current host association, but since keep-alives are sent
+		   currently only if the global NAT status is on, we must call
+		   hip_nat_on() (which in turn sets the NAT status on for all host
+		   associations). */
+		HIP_IFEL(hip_nat_on(), -1, "Error when setting daemon NAT status"\
+			 "to \"on\"\n");
+		hip_agent_update_status(SO_HIP_SET_NAT_ON, NULL, 0);
+		//end remove
+#endif
+		/* Send a I1 packet to relay. */
+		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
+			 -1, "sending i1 failed\n");
+		break;
+	}    
 	case SO_HIP_OFFER_HIPRELAY:
 		/* draft-ietf-hip-registration-02 HIPRELAY registration. Relay
 		   server handles this message. Message indicates that the
@@ -725,7 +824,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		   the REG_INFO parameters here. */
 		err = hip_recreate_all_precreated_r1_packets();
 		break;
-#endif
+#endif /* CONFIG_HIP_RVS */
 	case SO_HIP_GET_HITS:		
 		/** 
 		 * @todo passing argument 1 of 'hip_for_each_hi' from incompatible
@@ -813,10 +912,79 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		break;
 	}
 	case SO_HIP_TRIGGER_BEX:
-		HIP_DUMP_MSG( msg);
+		HIP_DEBUG("SO_HIP_TRIGGER_BEX\n");
+		hip_firewall_status = 1;
 		err = hip_netdev_trigger_bex_msg(msg);
-		goto out_err;
-	  break;
+		break;
+	case SO_HIP_USERSPACE_IPSEC:
+		HIP_DUMP_MSG(msg);
+		err = hip_userspace_ipsec_activate(msg);
+		break;
+	case SO_HIP_RESTART_DUMMY_INTERFACE:
+		set_up_device(HIP_HIT_DEV, 0);
+		err = set_up_device(HIP_HIT_DEV, 1);
+		break;
+	case SO_HIP_ESP_PROT_EXT_TRANSFORM:
+		HIP_DUMP_MSG(msg);
+		err = hip_esp_protection_extension_transform(msg);
+		break;	
+	case SO_HIP_IPSEC_UPDATE_ANCHOR_LIST:
+		HIP_DUMP_MSG(msg);
+		err = update_anchor_db(msg);
+		break;
+	case SO_HIP_IPSEC_NEXT_ANCHOR:
+		// TODO implement
+		/* hip_send_update(struct hip_hadb_state *entry,
+		    struct hip_locator_info_addr_item *addr_list,
+		    int addr_count, int ifindex, int flags, 
+		    int is_add, struct sockaddr* addr) */
+		break;
+	case SO_HIP_GET_LSI_PEER:
+	case SO_HIP_GET_LSI_OUR:
+		while((param = hip_get_next_param(msg, param))){
+			if (hip_get_param_type(param) == HIP_PARAM_HIT){
+		    		if (!src_hit)
+		      			src_hit = (struct in6_addr *)hip_get_param_contents_direct(param);
+		    		else 
+		      			dst_hit = (struct in6_addr *)hip_get_param_contents_direct(param);
+		  	}
+	  	}
+		if (src_hit && dst_hit){
+		        entry = hip_hadb_find_byhits(src_hit, dst_hit);
+		        if (entry){
+			        lsi = (msg_type == SO_HIP_GET_LSI_PEER) ? &entry->lsi_peer : &entry->lsi_our;
+			        /*if(msg_type == SO_HIP_GET_LSI_PEER)
+		                        lsi = &aux->lsi_peer;
+			        else if(msg_type == SO_HIP_GET_LSI_OUR)
+				lsi = &aux->lsi_our;*/
+		        }
+		}
+	        break;
+	case SO_HIP_IS_OUR_LSI:
+		lsi = (hip_lsi_t *)hip_get_param_contents(msg, HIP_PARAM_LSI);
+	  	if (!hip_hidb_exists_lsi(lsi))
+	    		lsi = NULL;
+	  	break;
+	case SO_HIP_GET_STATE_HA:
+	case SO_HIP_GET_PEER_HIT_BY_LSIS:
+		while((param = hip_get_next_param(msg, param))){
+	    		if (hip_get_param_type(param) == HIP_PARAM_LSI){
+	      			if (!src_lsi)
+					src_lsi = (struct in_addr *)hip_get_param_contents_direct(param);
+	      			else 
+					dst_lsi = (struct in_addr *)hip_get_param_contents_direct(param);
+	    		}
+	  	}
+
+	  	entry = hip_hadb_try_to_find_by_pair_lsi(src_lsi, dst_lsi);
+          	if (entry && (entry->state == HIP_STATE_ESTABLISHED || 
+		    msg_type == SO_HIP_GET_PEER_HIT_BY_LSIS)){
+	    		HIP_DEBUG("Entry found in the ha database \n\n");
+	      		src_hit = &entry->hit_our;
+	      		dst_hit = &entry->hit_peer;
+	  	}
+	  	break;
+
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;
@@ -825,21 +993,37 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
  out_err:
 
 	if (send_response) {
+	        HIP_DEBUG("Send response\n");
 		if (err)
-			hip_set_msg_err(msg, 1);
-		/* send a response (assuming that it is written to the msg */
-		len = hip_get_msg_total_len(msg);
-		n = hip_sendto_user(msg, src);
-		if(n != len) {
-			HIP_ERROR("hip_sendto_user() failed.\n");
-			err = -1;
-		} else {
-			HIP_DEBUG("Response sent ok\n");
-		
+		        hip_set_msg_err(msg, 1);
+		else{
+		        if ((msg_type == SO_HIP_TRIGGER_BEX && lsi) ||
+		            msg_type == SO_HIP_GET_STATE_HA || 
+			    msg_type == SO_HIP_GET_PEER_HIT_BY_LSIS){
+			        if (src_hit)  
+				         HIP_IFEL(hip_build_param_contents(msg, (void *)src_hit,
+									   HIP_PARAM_HIT, sizeof(struct in6_addr)), -1,
+						  "build param HIP_PARAM_HIT  failed\n");
+				if (dst_hit)
+				         HIP_IFEL(hip_build_param_contents(msg, (void *)dst_hit,
+									   HIP_PARAM_HIT, sizeof(struct in6_addr)), -1,
+						  "build param HIP_PARAM_HIT  failed\n");
+		        }
+			if (((msg_type == SO_HIP_GET_LSI_PEER || msg_type == SO_HIP_GET_LSI_OUR) 
+			    && lsi) || msg_type == SO_HIP_IS_OUR_LSI)
+		                HIP_IFEL(hip_build_param_contents(msg, (void *)lsi,
+					 HIP_PARAM_LSI, sizeof(hip_lsi_t)), -1,
+				 	 "build param HIP_PARAM_LSI  failed\n");
 		}
-	} else {
+
+		len = hip_get_msg_total_len(msg);
+		n = hip_sendto(msg, src);
+		if(n != len)	
+			err = -1;
+		else
+			HIP_DEBUG("Response sent ok\n");	
+	} else
 		HIP_DEBUG("No response sent\n");
-	}
 
 	return err;
 }

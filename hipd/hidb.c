@@ -1,3 +1,4 @@
+
 /**
  * @file
  * HIP host id database and accessors.
@@ -6,6 +7,7 @@
  * @author Miika Komu <miika#iki.fi>
  * @author Mika Kousa <mkousa#iki.fi>
  * @author Kristian Slavov <kslavov#hiit.fi>
+ * @author Teresa Finez <tfinezmo#hut.tkk.fi> 
  */
 #include "hidb.h"
 
@@ -109,12 +111,26 @@ struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(
 }
 
 int hip_hidb_hit_is_our(const hip_hit_t *our) {
-	/* FIXME: This full scan is stupid, but we have no hashtables
-	   anyway... tkoponen */
 	return (hip_get_hostid_entry_by_lhi_and_algo(hip_local_hostid_db, our,
 						     HIP_ANY_ALGO, -1) != NULL);
-	//return hip_for_each_ha(hit_match, (void *) our);
 }
+
+
+int hip_hidb_get_lsi_by_hit(const hip_hit_t *our, hip_lsi_t *our_lsi){
+	struct hip_host_id_entry *id_entry;
+	hip_list_t *item;
+	int c, err = 1;
+
+	list_for_each(item, hip_local_hostid_db, c) {
+		id_entry = list_entry(item);
+		if (hip_hit_are_equal(&id_entry->lhi.hit, our)){
+			memcpy(our_lsi, &id_entry->lsi, sizeof(hip_lsi_t));
+			return 0;
+		}		
+	}
+	return err;
+}
+
 
 /*
  *
@@ -160,6 +176,7 @@ void hip_uninit_host_id_dbs(void)
  */
 int hip_add_host_id(hip_db_struct_t *db,
 		    const struct hip_lhi *lhi,
+		    hip_lsi_t *lsi,
 		    const struct hip_host_id *host_id,
 		    int (*insert)(struct hip_host_id_entry *, void **arg), 
 		    int (*remove)(struct hip_host_id_entry *, void **arg),
@@ -203,6 +220,10 @@ int hip_add_host_id(hip_db_struct_t *db,
 		goto out_err;
 	}
 
+	/* assign a free lsi address */
+	HIP_IFEL((hip_hidb_add_lsi(db, id_entry))<0, -EEXIST, "No LSI free\n");
+	
+	memcpy(lsi, &id_entry->lsi, sizeof(hip_lsi_t));
 	id_entry->insert = insert;
 	id_entry->remove = remove;
 	id_entry->arg = arg;
@@ -259,8 +280,8 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 	struct hip_lhi lhi;
 	struct hip_tlv_common *param = NULL;
 	struct hip_eid_endpoint *eid_endpoint = NULL;
-	hip_lsi_t lsi_tmp;
-	//struct in6_addr dsa_hit, rsa_hit;
+	struct in6_addr in6_lsi;
+	hip_lsi_t lsi;
 	
 	HIP_DEBUG("/* --------- */ \n");
 	HIP_DEBUG_IN6ADDR("input->hits = ", &input->hits);
@@ -275,58 +296,52 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 	  
 	  /* NOTE: changed to use hip_eid_endpoint structs instead of 
 	     hip_host_id:s when passing IDs from user space to kernel */
-	  if  (hip_get_param_type(param) != HIP_PARAM_EID_ENDPOINT)
-	    continue;
-	  HIP_DEBUG("host id found in the msg\n");
+		if  (hip_get_param_type(param) != HIP_PARAM_EID_ENDPOINT)
+	  		continue;
+	  	HIP_DEBUG("host id found in the msg\n");
 	  
-	  eid_endpoint = (struct hip_eid_endpoint *)param;
+		eid_endpoint = (struct hip_eid_endpoint *)param;
+	
+		HIP_IFEL(!eid_endpoint,-ENOENT,"No host endpoint in input\n");
 
-	  if (!eid_endpoint) {
-	    HIP_ERROR("No host endpoint in input\n");
-	    err = -ENOENT;
-	    goto out_err;
-	  }
-
-	  host_identity = &eid_endpoint->endpoint.id.host_id;
+		host_identity = &eid_endpoint->endpoint.id.host_id;
 	  
-	  _HIP_HEXDUMP("host id\n", host_identity,
+		_HIP_HEXDUMP("host id\n", host_identity,
 		       hip_get_param_total_len(host_identity));
 	  
-	  HIP_IFEL(hip_private_host_id_to_hit(host_identity, &lhi.hit,
+		HIP_IFEL(hip_private_host_id_to_hit(host_identity, &lhi.hit,
 					      HIP_HIT_TYPE_HASH100),
-		   -EFAULT,
-		   "Host id to hit conversion failed\n");
+			-EFAULT, "Host id to hit conversion failed\n");
 	  
-	  lhi.anonymous =
-		  (eid_endpoint->endpoint.flags & HIP_ENDPOINT_FLAG_ANON)
-		  ?
-		  1 : 0;
+		lhi.anonymous =
+			(eid_endpoint->endpoint.flags & HIP_ENDPOINT_FLAG_ANON)
+			?
+			1 : 0;
 
-	/*  lhi.algo = eid_endpoint.algo;*/
-	  
-	  HIP_IFEL(hip_add_host_id(HIP_DB_LOCAL_HID, &lhi, 
-					 host_identity, 
-					 NULL, NULL, NULL),
-		   -EFAULT,
-		   "adding of local host identity failed\n");
+		/*  lhi.algo = eid_endpoint.algo;*/
 
-	  /* Adding the route just in case it does not exist */
-	  hip_add_iface_local_route(&lhi.hit);
+		/* Adding the pair <HI,LSI> */
+		HIP_IFEL(hip_add_host_id(HIP_DB_LOCAL_HID, &lhi,
+					&lsi, host_identity,
+					NULL, NULL, NULL),
+			-EFAULT, "adding of local host identity failed\n");
 
-	  HIP_IFEL(hip_add_iface_local_hit(&lhi.hit), -1,
-		   "Failed to add HIT to the device\n");
-
-#if 0 /* LSIs are not supported yet  */
-	  lsi_tmp.s_addr = htonl(HIT2LSI((uint8_t *) &lhi.hit));
-	  hip_add_iface_local_route_lsi(lsi_tmp);
-	  HIP_IFEL(hip_add_iface_local_lsi(lsi_tmp), -1,
-		   "Failed to add LSI to the device\n");
-#endif
+	        
+		IPV4_TO_IPV6_MAP(&lsi, &in6_lsi);
+		/* Adding routes just in case they don't exist */
+		hip_add_iface_local_route(&lhi.hit);
+		hip_add_iface_local_route(&in6_lsi);
+		
+		/* Adding HITs and LSIs to the interface */
+		HIP_IFEL(hip_add_iface_local_hit(&lhi.hit), -1,
+			"Failed to add HIT to the device\n");
+		HIP_IFEL(hip_add_iface_local_hit(&in6_lsi), -1, 
+			"Failed to add LSI to the device\n");
 	}
 
 	HIP_DEBUG("Adding of HIP localhost identities was successful\n");
- out_err:
-	
+
+ out_err:	
 	return err;
 }
 
@@ -383,7 +398,7 @@ int hip_del_host_id(hip_db_struct_t *db, struct hip_lhi *lhi)
 /**
  * Handles the deletion of a localhost host identity.
  * 
- * @param msg the message containing the hit to be deleted.
+ * @param input the message containing the hit to be deleted.
  * @return    zero on success, or negative error value on failure.
  */
 int hip_handle_del_local_hi(const struct hip_common *input)
@@ -393,25 +408,20 @@ int hip_handle_del_local_hi(const struct hip_common *input)
 	char buf[46];
 	int err = 0;
 
-	
 	hit = (struct in6_addr *)
 		hip_get_param_contents(input, HIP_PARAM_HIT);
-	if (!hit) {
-		HIP_ERROR("no hit\n");
-		err = -ENODATA;
-		goto out_err;
-	}
+	HIP_IFEL(!hit, -ENODATA, "no hit\n");
 
 	hip_in6_ntop(hit, buf);
 	HIP_INFO("del HIT: %s\n", buf);
 
 	ipv6_addr_copy(&lhi.hit, hit);
 
-        err = hip_del_host_id(HIP_DB_LOCAL_HID, &lhi);
-        if (err) {
+        if (err = hip_del_host_id(HIP_DB_LOCAL_HID, &lhi)) {
 		HIP_ERROR("deleting of local host identity failed\n");
 		goto out_err;
         }
+
 	/** @todo remove associations from hadb & beetdb by the deleted HI. */
 	HIP_DEBUG("Removal of HIP localhost identity was successful\n");
  out_err:
@@ -453,13 +463,11 @@ int hip_get_any_localhost_hit(struct in6_addr *target, int algo, int anon)
 
 /**
  * Returns pointer to newly allocated area that contains a localhost HI. NULL
- * is returned is problems are encountered. 
+ * is returned if problems are encountered. 
  *
  * @param db   ...
  * @param lhi  HIT to match, if null, any.
  * @param algo algorithm to match, if HIP_ANY_ALGO, any.
- * @note       The memory that is allocated is 1024 bytes. If the key is longer,
- *             we fail.
  * @note       Remember to free the host id structure after use.
  */
 struct hip_host_id *hip_get_host_id(hip_db_struct_t *db, 
@@ -470,13 +478,13 @@ struct hip_host_id *hip_get_host_id(hip_db_struct_t *db,
 	unsigned long lf;
 	int t;
 
-	result = (struct hip_host_id *)HIP_MALLOC(1024, GFP_ATOMIC);
+	result = (struct hip_host_id *)HIP_MALLOC(HIP_MAX_HOST_ID_LEN, GFP_ATOMIC);
 	if (!result) {
 		HIP_ERROR("Out of memory.\n");
 		return NULL;
 	}
 
-	memset(result, 0, 1024);
+	memset(result, 0, HIP_MAX_HOST_ID_LEN);
 
 	HIP_READ_LOCK_DB(db);
 
@@ -489,7 +497,8 @@ struct hip_host_id *hip_get_host_id(hip_db_struct_t *db,
 	}
 
 	t = hip_get_param_total_len(tmp->host_id);
-	if (t > 1024) {
+	HIP_DEBUG("Host ID length is %d bytes", t);
+	if (t > HIP_MAX_HOST_ID_LEN) {
 		HIP_READ_UNLOCK_DB(db);
 		HIP_FREE(result);
 		return NULL;
@@ -534,7 +543,7 @@ static struct hip_host_id *hip_get_dsa_public_key(struct hip_host_id *hi)
 
 	/* the secret component of the DSA key is always 20 bytes */
 
-	hi->hi_length = htons(ntohs(hi->hi_length) - 20);
+	hi->hi_length = htons(ntohs(hi->hi_length) - DSA_PRIV);
 
 	_HIP_DEBUG("hi->hi_length=%d\n", htons(tmp->hi_length));
 
@@ -543,10 +552,10 @@ static struct hip_host_id *hip_get_dsa_public_key(struct hip_host_id *hi)
 	dilen = ntohs(hi->di_type_length) & 0x0FFF;
 
 	to = ((char *)(hi + 1)) - sizeof(struct hip_host_id_key_rdata) + ntohs(hi->hi_length);
-	from = to + 20;
+	from = to + DSA_PRIV;
 	memmove(to, from, dilen);
 
-	hip_set_param_contents_len(hi, (len - 20));
+	hip_set_param_contents_len(hi, (len - DSA_PRIV));
 
 	_HIP_DEBUG("Host ID len after cut-off: %d\n",
 		  hip_get_param_total_len(hi));
@@ -591,6 +600,8 @@ static struct hip_host_id *hip_get_rsa_public_key(struct hip_host_id *tmp)
 	hip_tlv_len_t len;
 	uint16_t dilen;
 	char *from, *to;
+	int rsa_priv_len;
+	struct hip_rsa_keylen keylen;
 
 	/** @todo check some value in the RSA key? */
       
@@ -598,43 +609,40 @@ static struct hip_host_id *hip_get_rsa_public_key(struct hip_host_id *tmp)
 	
 	len = hip_get_param_contents_len(tmp);
 
-	_HIP_DEBUG("Host ID len before cut-off: %d\n",
-		  hip_get_param_total_len(tmp));
+	HIP_DEBUG("Host ID len before cut-off: %d\n",
+		  			hip_get_param_total_len(tmp));
 
-	/* the secret component of the RSA key is always d+p+q bytes */
-	/* note: it's assumed that RSA key length is 1024 bits */
+	/* the secret component of the RSA key is d+p+q == 2*n bytes */
 
-	tmp->hi_length = htons(ntohs(tmp->hi_length) - 
-                               (HIP_RSA_PRIVATE_EXPONENT_D_LEN + 
-                                HIP_RSA_SECRET_PRIME_FACTOR_P_LEN +
-                                HIP_RSA_SECRET_PRIME_FACTOR_Q_LEN));	
+	hip_get_rsa_keylen(tmp, &keylen, 1);
+	rsa_priv_len = 2 * keylen.n;
 
-	_HIP_DEBUG("hi->hi_length=%d\n", htons(tmp->hi_length));
+	HIP_DEBUG("rsa_priv_len = %d (Key is %d bits.)\n", rsa_priv_len,
+							     rsa_priv_len * 4);
 
+	tmp->hi_length = htons(ntohs(tmp->hi_length) - rsa_priv_len);
+
+	_HIP_DEBUG("hi->hi_length=%d\n", ntohs(tmp->hi_length));
 	/* Move the hostname d+p+q bytes earlier */
 
 	dilen = ntohs(tmp->di_type_length) & 0x0FFF;
 
 	HIP_DEBUG("dilen: %d\n", dilen);
 
-	to = ((char *)(tmp + 1)) - sizeof(struct hip_host_id_key_rdata) + ntohs(tmp->hi_length);
-	from = to + (HIP_RSA_PRIVATE_EXPONENT_D_LEN + 
-                     HIP_RSA_SECRET_PRIME_FACTOR_P_LEN +
-                     HIP_RSA_SECRET_PRIME_FACTOR_Q_LEN);
+	to = ((char *)(tmp + 1)) - sizeof(struct hip_host_id_key_rdata) +
+							 ntohs(tmp->hi_length);
+	from = to + rsa_priv_len;
 
 	memmove(to, from, dilen);
 
-	hip_set_param_contents_len(tmp, (len - (HIP_RSA_PRIVATE_EXPONENT_D_LEN + 
-                                                HIP_RSA_SECRET_PRIME_FACTOR_P_LEN +
-                                                HIP_RSA_SECRET_PRIME_FACTOR_Q_LEN)));
-
+	hip_set_param_contents_len(tmp, (len -  rsa_priv_len));
 	HIP_DEBUG("Host ID len after cut-off: %d\n",
 		  hip_get_param_total_len(tmp));
-
+	HIP_DEBUG("hi_length after cut %d\n", tmp->hi_length);
 	/* make sure that the padding is zero (and not to reveal any bytes of
 	   the private key */
 	to = (char *)tmp + hip_get_param_contents_len(tmp) +
-	  sizeof(struct hip_tlv_common);
+	  					sizeof(struct hip_tlv_common);
 	memset(to, 0, 8);
 
 	_HIP_HEXDUMP("HOSTID... (public)", tmp, hip_get_param_total_len(tmp));
@@ -663,10 +671,8 @@ struct hip_host_id *hip_get_any_localhost_rsa_public_key(void)
 	res = hip_get_rsa_public_key(tmp);
 	if (!res)
 		HIP_FREE(tmp);
-	else {
+	else 
 		hip_host_id_to_hit(res, &peer_hit, HIP_HIT_TYPE_HASH100);
-		HIP_HEXDUMP("--->peer_hit:", &peer_hit, 16);
-	}
 	  
 	return res;	
 }
@@ -714,6 +720,63 @@ struct hip_host_id *hip_get_any_localhost_public_key(int algo)
 }
 
 /**
+ * Adds a free lsi to the entry
+ *
+ * @param  db		database structure
+ * @param  id_entry	contains an entry to the db, will contain an unsigned lsi
+ * @return		zero on success, or negative error value on failure.
+ */
+
+int hip_hidb_add_lsi(hip_db_struct_t *db, const struct hip_host_id_entry *id_entry)
+{
+	struct hip_host_id_entry *id_entry_aux;
+	hip_list_t *item;
+	hip_lsi_t lsi_aux;
+	int err = 0, used_lsi, c, i;
+	int len = sizeof(lsi_addresses)/sizeof(*lsi_addresses);
+
+	for(i=0; i < len; i++) {	
+		inet_aton(lsi_addresses[i],&lsi_aux);
+		used_lsi = 0;
+
+		list_for_each(item, db, c) {
+			id_entry_aux = list_entry(item);
+			if (hip_lsi_are_equal(&lsi_aux,&id_entry_aux->lsi)) {
+				used_lsi = 1;
+				c = -1;				
+			}
+		}
+
+		if (!used_lsi){
+			memcpy(&id_entry->lsi, &lsi_aux, sizeof(hip_lsi_t));
+			_HIP_DEBUG("LSI assigned:%s\n",inet_ntoa(id_entry->lsi));
+			break;
+		}
+	}
+	return err;	
+}
+
+/**
+* Search if the lsi exists already in the hidb
+*
+* @param lsi lsi we are searching
+* @return 0 if it's not in the hidb, 1 if it is
+*/
+int hip_hidb_exists_lsi(hip_lsi_t *lsi){
+	struct hip_host_id_entry *id_entry;
+	hip_list_t *item;
+	int c, res = 0;
+
+	list_for_each(item, hip_local_hostid_db, c) {
+		id_entry = list_entry(item);
+		if (hip_lsi_are_equal(&id_entry->lsi, lsi))
+			return 1;		
+	}
+	return res;
+}
+
+
+/**
  * Lists every hit in the database. 
  * 
  * @param func   a mapper function.
@@ -734,8 +797,9 @@ int hip_for_each_hi(int (*func)(struct hip_host_id_entry *entry, void *opaq), vo
 	list_for_each_safe(curr, iter, hip_local_hostid_db, c)
 	{
 		tmp = list_entry(curr);
-		HIP_HEXDUMP("Found HIT", &tmp->lhi.hit, 16);
-	
+		//HIP_HEXDUMP("Found HIT", &tmp->lhi.hit, 16);
+		HIP_DEBUG_HIT("Found HIT", &tmp->lhi.hit);
+		HIP_DEBUG_LSI("Found LSI", &tmp->lsi);
 		err = func(tmp, opaque);
 		if (err)
 		  goto out_err;
@@ -745,6 +809,44 @@ out_err:
 	HIP_READ_UNLOCK_DB(hip_local_hostid_db);
 
 	return (err);
+}
+
+struct hip_host_id_entry *hip_hidb_get_entry_by_lsi(
+     hip_db_struct_t *db, const struct in_addr *lsi)
+{
+	struct hip_host_id_entry *id_entry;
+	hip_list_t *item;
+	int c;
+
+	list_for_each(item, db, c) {
+		id_entry = list_entry(item);
+		if (!ipv4_addr_cmp(&id_entry->lsi, lsi))
+			return id_entry;
+	}
+	return NULL;
+}
+
+int hip_hidb_associate_default_hit_lsi(hip_hit_t *default_hit, hip_lsi_t *default_lsi){
+	int err = 0;
+	hip_lsi_t aux_lsi; 
+	struct hip_host_id_entry *tmp1;
+	struct hip_host_id_entry *tmp2;
+
+	//1. Check if default_hit already associated with default_lsi
+  	HIP_IFEL((err = hip_hidb_get_lsi_by_hit(default_hit, &aux_lsi)), -1, "Error no lsi associated to hit\n");
+
+    	if(ipv4_addr_cmp(&aux_lsi, default_lsi)){
+      		HIP_IFEL(!(tmp1 = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID, default_hit, HIP_ANY_ALGO, -1)),
+	       		 -1,"Default hit not found in hidb\n");
+      		HIP_IFEL(!(tmp2 = hip_hidb_get_entry_by_lsi(HIP_DB_LOCAL_HID, default_lsi)), -1,
+			 "Default lsi not found in hidb\n");
+
+      		memcpy(&tmp2->lsi, &tmp1->lsi, sizeof(tmp1->lsi));
+      		memcpy(&tmp1->lsi, default_lsi, sizeof(tmp2->lsi));
+	}
+
+ out_err:
+	return err;
 }
 
 //#ifdef CONFIG_HIP_BLIND

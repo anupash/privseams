@@ -137,6 +137,15 @@ static inline void set_hit_prefix(struct in6_addr *hit)
 	memcpy(hit, &hit_begin, sizeof(hip_closest_prefix_type_t));
 }
 
+static inline void set_lsi_prefix(hip_lsi_t *lsi)
+{
+	hip_closest_prefix_type_t lsi_begin;
+	memcpy(&lsi_begin, lsi, sizeof(hip_closest_prefix_type_t));
+	lsi_begin &= htonl(HIP_LSI_TYPE_MASK_CLEAR);
+	lsi_begin |= htonl(HIP_LSI_PREFIX);
+	memcpy(lsi, &lsi_begin, sizeof(hip_closest_prefix_type_t));
+}
+
 /* IN6_IS_ADDR_V4MAPPED(a) is defined in /usr/include/netinet/in.h */
 
 #define SET_NULL_HIT(hit)                           \
@@ -155,22 +164,40 @@ static inline void set_hit_prefix(struct in6_addr *hit)
 
 #define IPV6_EQ_IPV4(in6_addr_a,in_addr_b)   \
        ( IN6_IS_ADDR_V4MAPPED(in6_addr_a) && \
-	((in6_addr_a)->s6_addr32[3] == (in_addr_b)->s_addr)) 
-
+	((in6_addr_a)->s6_addr32[3] == (in_addr_b)->s_addr))
+ 
+/* LSI not based in HIT structure, so not necessary at the moment 
 #define HIT2LSI(a) ( 0x01000000L | \
                      (((a)[HIT_SIZE-3]<<16)+((a)[HIT_SIZE-2]<<8)+((a)[HIT_SIZE-1])))
+*/
 
 /** 
  * A macro to test if a uint32_t represents a Local Scope Identifier (LSI).
  *
  * @param a the uint32_t to test
- * @return  non-zero if @c a is from 1.0.0.0/8
+ * @return  true if @c a is from 1.0.0.0/8
  * @note    This macro tests directly uint32_t, not struct in_addr or a pointer
  *          to a struct in_addr. To use this macro in context with struct
  *          in_addr call it with ipv4->s_addr where ipv4 is a pointer to a
  *          struct in_addr.
  */
-#define IS_LSI32(a) ((a & 0x000000FF) == 0x00000001)
+//#define IS_LSI(a) ((a & 0x00FFFFFF) == 0x000000C0)
+
+/** 
+ * Checks if a uint32_t represents a Local Scope Identifier (LSI).
+ *
+ * @param       the uint32_t to test
+ * @return      true if @c a is from 1.0.0.0/8
+ * @note        This macro tests directly uint32_t, not struct in_addr or a pointer
+ *              to a struct in_addr. To use this macro in context with struct
+ *              in_addr call it with ipv4->s_addr where ipv4 is a pointer to a
+ *              struct in_addr.
+ */
+#define IS_LSI32(a) ((a & 0x00FFFFFF) == 0x000000C0)
+
+#define IS_LSI(a) ( (((struct sockaddr*)a)->sa_family == AF_INET) ? \
+                   (IS_LSI32(((struct sockaddr_in*)a)->sin_addr.s_addr)) : \
+                   (ipv6_addr_is_hit( &((struct sockaddr_in6*)a)->sin6_addr) )     )
 
 /** 
  * A macro to test if a uint32_t represents an IPv4 loopback address.
@@ -183,12 +210,6 @@ static inline void set_hit_prefix(struct in6_addr *hit)
  *          struct in_addr.
  */
 #define IS_IPV4_LOOPBACK(a) ((a & 0x000000FF) == 0x0000007F)
-
-#define HIT_IS_LSI(a) \
-        ((((__const uint32_t *) (a))[0] == 0)                                 \
-         && (((__const uint32_t *) (a))[1] == 0)                              \
-         && (((__const uint32_t *) (a))[2] == 0)                              \
-         && IS_LSI32(((__const uint32_t *) (a))[3]))        
 
 #ifndef MIN
 #  define MIN(a,b)	((a)<(b)?(a):(b))

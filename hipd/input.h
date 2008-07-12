@@ -161,6 +161,18 @@ int hip_verify_packet_hmac2(struct hip_common *msg,
 int hip_verify_packet_hmac(struct hip_common *, struct hip_crypto_key *);
 
 /**
+ * Verifies gerenal HMAC in HIP msg
+ *
+ * @param msg HIP packet
+ * @param entry HA
+ * @param parameter_type
+ * @return 0 if HMAC was validated successfully, < 0 if HMAC could
+ * not be validated.
+ */
+
+int hip_verify_packet_hmac_general(struct hip_common *msg,
+			   struct hip_crypto_key *crypto_key, hip_tlv_type_t parameter_type);
+/**
  * Verifies packet RVS_HMAC
  * @param msg HIP packet
  * @param entry HA
@@ -516,7 +528,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
  * @return 0 on success, < 0 on error.
  */
 int hip_create_r2(struct hip_context *, struct in6_addr *,
-		  struct in6_addr *, hip_ha_t *, hip_portpair_t *);
+		  struct in6_addr *, hip_ha_t *, hip_portpair_t *,
+		  struct in6_addr *,const in_port_t);
 
 // 2007-02-26 oleg
 // prototype

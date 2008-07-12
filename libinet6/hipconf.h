@@ -104,7 +104,7 @@
 #define ACTION_RESTART 18
 #define ACTION_LOCATOR 19
 #define ACTION_OPENDHT 20
-//#define ACTION_OPPTCP  21
+#define ACTION_OPPTCP  21
 #define ACTION_TRANSORDER 22
 #define ACTION_TCPTIMEOUT 23 /* add By Tao Wan, on 04.01.2008 */
 #define ACTION_HIPPROXY 24
@@ -129,22 +129,26 @@
 #define TYPE_TTL           13
 #define TYPE_GW            14
 #define TYPE_GET           15
-#define TYPE_HA            16
-#define TYPE_MODE          17
-#define TYPE_DEBUG         18
-#define TYPE_DAEMON        19
-#define TYPE_LOCATOR       20
-#define TYPE_SET           21 /* DHT set <name> */
-#define TYPE_DHT           22
-#define TYPE_ORDER         23
-#define TYPE_TCPTIMEOUT	   24 /* add By Tao Wan, on 04.01.2008*/
-#define TYPE_HIPPROXY	   25
-#define TYPE_MAX           26 /* exclusive */
+#define TYPE_BLIND         16
+#define TYPE_HA            17
+#define TYPE_MODE          18
+#define TYPE_DEBUG         19
+#define TYPE_DAEMON        20
+#define TYPE_LOCATOR       21
+#define TYPE_RELAY         22
+#define TYPE_SET           23 /* DHT set <name> */
+#define TYPE_DHT           24
+#define TYPE_OPPTCP	   25
+#define TYPE_ORDER         26
+#define TYPE_TCPTIMEOUT	   27 /* add By Tao Wan, on 04.01.2008*/
+#define TYPE_HIPPROXY	   28
+#define TYPE_MAX           29 /* exclusive */
 
 /* for handle_hi() only */
 #define OPT_HI_TYPE 0
 #define OPT_HI_FMT  1
 #define OPT_HI_FILE 2
+#define OPT_HI_KEYLEN 3
 
 #define HIPD_CONFIG_FILE     "/etc/hip/hipd_config"
 #define HIPD_CONFIG_FILE_EX \
@@ -191,7 +195,6 @@ int hip_conf_handle_set(hip_common_t *, int type, const char *opt[], int optc);
 int hip_conf_handle_dht_toggle(hip_common_t *, int type, const char *opt[], int optc);
 int hip_conf_handle_run_normal(hip_common_t *msg, int action,
 			       const char *opt[], int optc);
-int hip_get_all_hits(hip_common_t *msg,char *argv[]);
 int hip_get_action(char *action);
 int hip_get_type(char *type);
 int hip_conf_handle_ha(hip_common_t *msg, int action,const char *opt[], int optc);
