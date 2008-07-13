@@ -170,8 +170,6 @@ int add_esp_prot_anchor_to_I2(hip_common_t *i2, hip_ha_t *entry)
 			HIP_IFEL(hip_build_param_esp_prot_anchor(i2, anchor,
 					esp_prot_transforms[entry->esp_prot_transform]), -1,
 					"Building of ESP protection anchor failed\n");
-			HIP_HEXDUMP("added anchor: ", anchor,
-					esp_prot_transforms[entry->esp_prot_transform]);
 			
 			// store local_anchor
 			entry->esp_local_anchor = anchor;

@@ -23,6 +23,10 @@
 #include "esp_prot_common.h"
 #include "misc.h"
 
+// TODO implement concat function
+/* TODO also index from concat of dst addr and spi (inbound db) */
+
+#if 0
 /*
  * Globals
  */
@@ -54,58 +58,379 @@ hip_proto_sel_entry *hip_lookup_sel_entry(__u32 lsi, __u8 proto, __u8 *header,
 __u32 hip_proto_header_to_selector(__u32 lsi, __u8 proto, __u8 *header,int dir);
 hip_proto_sel_entry *hip_remove_proto_sel_entry(hip_proto_sel_entry *prev,
 	hip_proto_sel_entry *entry);
-/*
- * sadb_hashfn()
- *
- * SADB entries are index by hash of their SPI.
- * Since SPIs are assumedly randomly allocated, distribution of this should
- * be uniform and the hash function given here is very simple (and fast!).
- */
-int sadb_hashfn(__u32 spi) 
+#endif
+
+#define INDEX_HASH_LENGTH SHA_DIGEST_LENGTH;
+
+// database storing the sa entries, indexed by src _and_ dst hits
+HIP_HASHTABLE *sadb = NULL;
+// database storing shortcut to sa entries for incoming packets
+HIP_HASHTABLE *linkdb = NULL;
+
+int hip_sadb_init()
 {
-	return(spi % SADB_SIZE);
+	int err = 0;
+	
+	HIP_IFEL(!(sadb = hip_ht_init(&hip_hash_sa_entry, &hip_compare_sa_entries)), -1,
+			"failed to initialize sadb\n");
+
+  out_err:
+  	return err;
 }
 
-/*
- * sadb_dst_hashfn()
- *
- * A destination cache mainains IP to SADB entry mappings, for efficient
- * lookup for outgoing packets.
- */
-int sadb_dst_hashfn(struct sockaddr *dst)
+unsigned long hip_sa_entry_hash(const hip_sa_entry_t *sa_entry)
 {
-	__u32 addr;
-	struct sockaddr_in6 *addr6;
+	struct in6_addr addr_pair[2];		/* in BEET-mode these are HITs */
+	unsigned char hash[INDEX_HASH_LENGTH];
+	int err = 0;
 	
-	if (dst->sa_family == AF_INET) {
-		addr = htonl(((struct sockaddr_in*)dst)->sin_addr.s_addr);
-	} else {
-		addr6 = (struct sockaddr_in6*)dst;
-#ifdef __MACOSX__
-		addr = addr6->sin6_addr.__u6_addr.__u6_addr32[0];
-		addr ^= addr6->sin6_addr.__u6_addr.__u6_addr32[1];
-		addr ^= addr6->sin6_addr.__u6_addr.__u6_addr32[2];
-		addr ^= addr6->sin6_addr.__u6_addr.__u6_addr32[3];
-#else
-#ifdef __WIN32__
-		addr =  (*((__u32 *)&addr6->sin6_addr.s6_addr[0]));
-		addr ^= (*((__u32 *)&addr6->sin6_addr.s6_addr[2]));
-		addr ^= (*((__u32 *)&addr6->sin6_addr.s6_addr[4]));
-		addr ^= (*((__u32 *)&addr6->sin6_addr.s6_addr[6]));
-#else 
-#if !defined(__MACOSX__)
-		addr = addr6->sin6_addr.s6_addr32[0];
-		addr ^= addr6->sin6_addr.s6_addr32[1];
-		addr ^= addr6->sin6_addr.s6_addr32[2];
-		addr ^= addr6->sin6_addr.s6_addr32[3];
-#endif
-#endif
-#endif
+	// values have to be present
+	HIP_ASSERT(sa_entry != NULL && sa_entry->inner_src_addr != NULL
+			&& sa_entry->inner_dst_addr != NULL);
+	
+	memset(hash, 0, INDEX_HASH_LENGTH);
+	
+	if (sa_entry->mode == 3)
+	{
+		/* use hits to index in beet mode
+		 * 
+		 * NOTE: the index won't change during ongoing connection
+		 * NOTE: the HIT fields of an host association struct cannot be assumed to
+		 * be alligned consecutively. Therefore, we must copy them to a temporary
+		 * array. */
+		memcpy(&addr_pair[0], sa_entry->inner_src_addr, sizeof(struct in6_addr));
+		memcpy(&addr_pair[1], sa_entry->inner_dst_addr, sizeof(struct in6_addr));
+		
+	} else
+	{
+		HIP_ERROR("indexing for non-BEET-mode not implemented!\n");
+		
+		err = -1;
+		goto out_err;
+	}
+	 
+	HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, (void *)addr_pair, sizeof(addr_pair), hash),
+			-1, "failed to hash addresses\n");
+	
+  out_err:
+  	if (err)
+  	{
+  		*hash = 0;
+  	}
+  	
+	return *((unsigned long *)hash);
+}
+
+int hip_sa_entries_compare(const hip_sa_entry_t *sa_entry1, hip_sa_entry_t *sa_entry2)
+{
+	int err = 0;
+	unsigned long hash1 = 0;
+	unsigned long hash2 = 0;
+	
+	// values have to be present
+	HIP_ASSERT(sa_entry1 != NULL && sa_entry1->inner_src_addr != NULL
+			&& sa_entry1->inner_dst_addr != NULL);
+	HIP_ASSERT(sa_entry2 != NULL && sa_entry2->inner_src_addr != NULL
+				&& sa_entry2->inner_dst_addr != NULL);
+
+	HIP_IFEL(!(hash1 = hip_hash_sa_entry(sa_entry1)), -1, "failed to hash sa entry\n");
+	HIP_IFEL(!(hash2 = hip_hash_sa_entry(sa_entry2), , -1, "failed to hash sa entry\n");
+	
+	if (hash1 != hash2 || sa_entry1->spi != sa_entry2->spi)
+	{
+		err = 1;
 	}
 	
-	return(addr % SADB_SIZE);
+  out_err:
+    return err;
 }
 
+int hip_sadb_add()
+{
+	int err = 0;
+	
+	if (update)
+		HIP_IFEL(hip_sa_entry_update(), -1, "failed to update sa entry\n");
+	else
+		HIP_IFEL(hip_sa_entry_add(), -1, "failed to add sa entry\n");
+	
+  out_err:
+  	return err;
+}
+
+int hip_sa_entry_add(__u32 mode, struct sockaddr *inner_src,
+    struct sockaddr *inner_dst, struct sockaddr *src, struct sockaddr *dst, __u16 sport,
+    __u16 dport, int direction, __u32 spi, __u8 *e_key, __u32 e_type, __u32 e_keylen,
+    __u8 *a_key, __u32 a_type, __u32 a_keylen, __u32 lifetime, __u16 hitmagic,
+    uint8_t nat_mode, uint8_t esp_prot_transform, unsigned char *esp_prot_anchor)
+{
+	hip_sa_entry_t *entry = NULL;
+	int key_len = 0; 							/* for 3-DES */
+	unsigned char key1[8], key2[8], key3[8]; 	/* for 3-DES */
+	int err = 0;
+	
+	/* initialize members to 0/NULL */
+	HIP_IFEL(!(entry = (hip_sa_entry_t *) malloc(sizeof(hip_sa_entry_t))), -1,
+			"failed to allocate memory\n");
+	memset(entry, 0, sizeof(hip_sa_entry_t));
+	
+	HIP_IFEL(!(entry->src_addr = (struct in6_addr *) malloc(sizeof(struct in6_addr))), -1,
+			"failed to allocate memory\n");
+	memset(entry->src_addr, 0, sizeof(struct in6_addr));
+	HIP_IFEL(!(entry->dst_addr = (struct in6_addr *) malloc(sizeof(struct in6_addr))), -1,
+			"failed to allocate memory\n");
+	memset(entry->dst_addr, 0, sizeof(struct in6_addr));
+	HIP_IFEL(!(entry->inner_src_addr = (struct in6_addr *) malloc(sizeof(struct in6_addr))),
+			-1, "failed to allocate memory\n");
+	memset(entry->inner_src_addr, 0, sizeof(struct in6_addr));
+	HIP_IFEL(!(entry->inner_dst_addr = (struct in6_addr *) malloc(sizeof(struct in6_addr))),
+			-1, "failed to allocate memory\n");
+	memset(entry->inner_dst_addr, 0, sizeof(struct in6_addr));
+	
+	HIP_IFEL(!(entry->a_key = (unsigned char *) malloc(a_keylen)), -1,
+			"failed to allocate memory\n");
+	memset(entry->a_key, 0, a_keylen);
+	if (e_keylen > 0)
+	{
+		HIP_IFEL(!(entry->e_key = (unsigned char *) malloc(e_keylen)), -1,
+				"failed to allocate memory\n");
+		memset(entry->e_key, 0, e_keylen);
+	}
+	
+	/* copy values for non-zero members */
+	entry->direction = direction;
+	entry->spi = spi;
+	entry->mode = mode;
+	memcpy(&entry->src_addr, src, sizeof(struct in6_addr));
+	memcpy(&entry->dst_addr, dst, sizeof(struct in6_addr));
+	if (entry->mode == 3)
+	{ 
+		memcpy(&entry->inner_src_addr, inner_src, sizeof(struct in6_addr));
+		memcpy(&entry->inner_dst_addr, inner_dst, sizeof(struct in6_addr));
+	}	
+	entry->encap_mode = encap_mode;
+	entry->src_port = sport;
+	entry->dst_port = dport;
+	
+	entry->a_type = a_type;
+	entry->e_type = e_type;
+	entry->a_keylen = a_keylen;
+	entry->e_keylen = e_keylen;
+	
+	HIP_DEBUG("e_type value is: %d\n", e_type);
+	HIP_DEBUG("a_type value is: %d \n", a_type);
+	
+	HIP_DEBUG("SADB_EALG_3DESCBC value is: %d \n ", SADB_EALG_3DESCBC);
+	HIP_DEBUG("SADB_X_EALG_AESCBC value is:%d \n", SADB_X_EALG_AESCBC);
+	HIP_DEBUG("SADB_X_EALG_BLOWFISHCBC value is: %d \n", SADB_X_EALG_BLOWFISHCBC);
+	
+	// copy raw keys
+	memcpy(entry->a_key, a_key, a_keylen);
+	if (e_keylen > 0)
+		memcpy(entry->e_key, e_key, e_keylen);
+	
+	// set up keys for the transform in use
+	if ((e_keylen > 0) && (e_type == SADB_EALG_3DESCBC))
+	{
+		key_len = e_keylen/3;
+		memset(key1, 0, key_len);
+		memset(key2, 0, key_len);
+		memset(key3, 0, key_len);
+		memcpy(key1, &e_key[0], key_len);
+		memcpy(key2, &e_key[8], key_len);
+		memcpy(key3, &e_key[16], key_len);
+		des_set_odd_parity((des_cblock*)key1);
+		des_set_odd_parity((des_cblock*)key2);
+		des_set_odd_parity((des_cblock*)key3);
+		err = des_set_key_checked((des_cblock*)key1, entry->ks[0]);
+		err += des_set_key_checked((des_cblock*)key2, entry->ks[1]);
+		err += des_set_key_checked((des_cblock*)key3, entry->ks[2]);
+		HIP_IFEL(err, -1, "3DES key problem\n");
+		
+	} else if ((e_keylen > 0) && (e_type == SADB_X_EALG_AESCBC))
+	{
+		/* AES key differs for encryption/decryption, so we set
+		 * it upon first use in the SA */
+		entry->aes_key = NULL;
+		
+	} else if ((e_keylen > 0) && (e_type == SADB_X_EALG_BLOWFISHCBC))
+	{
+		entry->bf_key = (BF_KEY *) malloc(sizeof(BF_KEY));
+		BF_set_key(entry->bf_key, e_keylen, e_key);
+	}
+	
+	entry->sequence = 1;
+	entry->lifetime = lifetime;
+	
+	// set the esp protection extension transform
+	entry->active_transform = esp_prot_transform;
+	HIP_DEBUG("entry->active_transform: %u\n", entry->active_transform);
+	
+	// only set up the anchor or hchain, if esp extension is used
+	if (esp_prot_transform > ESP_PROT_TRANSFORM_UNUSED)
+	{
+		HIP_DEBUG("setting up ESP extension parameters...\n");
+		
+		/* set up hash chains or anchors depending on the direction */
+		if (direction == HIP_SPI_DIRECTION_IN)
+		{
+			// set anchor for inbound SA
+			entry->active_anchor = esp_prot_anchor;
+			entry->tolerance = DEFAULT_VERIFY_WINDOW;
+		} else
+		{
+			// set hchain for outbound SA
+			HIP_IFEL(esp_prot_get_corresponding_hchain(esp_prot_anchor, esp_prot_transform,
+					entry->active_hchain), -1, "corresponding hchain not found\n");
+		}
+	}
+	
+	HIP_DEBUG("adding new sadb entry...\n");
+	// TODO lock hashtable?
+	hip_ht_add(sadb, entry);
+	
+	// TODO implement linkdb and link to this entry
+	
+  out_err:
+  	if (err)
+  	{
+  		if (entry)
+  		{
+  			hip_sa_entry_free(entry);
+  			free(entry);
+  		}
+  		entry = NULL;
+  	}
+  
+  	return err;
+}
+
+int hip_sa_entry_update(struct in6_addr *src_addr, struct in6_addr *dst_addr)
+{
+	hip_sa_entry_t *stored_entry = NULL;
+	int err = 0;
+	
+	// we need the sadb entry to go through entries in the linkdb
+	HIP_IFEL(!(stored_entry = hip_sa_entry_find_outbound(src_addr, dst_addr)), -1,
+			"failed to retrieve sa entry\n");
+	
+	/* TODO delete entries in inbound db for all (addr, oldspi)
+	 * or just those with (oldaddr, spi) */
+	// TODO lock link hashtable
+	
+	/* TODO add new links and change entries in common db */
+	
+  out_err:
+  	return err;
+}
+
+hip_sa_entry_t * hip_sa_entry_find_inbound(struct in6_addr *dst_addr, uint32_t spi)
+{
+	// TODO search the linkdb for the link to the corresponding entry
+}
+
+hip_sa_entry_t * hip_sa_entry_find_outbound(struct in6_addr *src_addr,
+		struct in6_addr *dst_addr)
+{
+	hip_sa_entry_t *search_entry = NULL, *stored_entry = NULL;
+	int err = 0;
+	
+	HIP_IFEL(!(search_entry = (hip_sa_entry_t *) malloc(sizeof(hip_sa_entry_t))), -1,
+			"failed to allocate memory\n");
+	memset(search_entry, 0, sizeof(hip_sa_entry_t));
+	
+	// fill search entry with information needed by the hash function
+	search_entry->inner_src_addr = src_addr;
+	search_entry->inner_dst_addr = dst_addr;
+	
+	// find entry in sadb db
+	HIP_IFEL(!(stored_entry = hip_ht_find(sadb, search_entry)), -1,
+			"failed to retrieve sa entry\n");
+	
+  out_err:
+  	if (err)
+  		stored_entry = NULL;
+  
+  	if (search_entry)
+  		free(search_entry);
+  	
+  	return stored_entry;
+}
+
+int hip_sa_entry_delete(struct in6_addr *src_addr, struct in6_addr *dst_addr)
+{
+	hip_sa_entry_t *stored_entry = NULL;
+	int err = 0;
+	
+	/* TODO find entry in sadb and delete entries in linkdb for all (addr, spi) */
+	HIP_IFEL(!(stored_entry = hip_sa_entry_find_outbound(src_addr, dst_addr)), -1,
+			"failed to retrieve sa entry\n");
+	
+	// free all entry members
+	hip_sa_entry_free(stored_entry);
+	
+	// TODO lock hashtable?
+	hip_ht_delete(stored_entry);
+	if (stored_entry)
+	{
+		HIP_DEBUG("this does not yet delete the entry\n");
+		free(stored_entry);
+	}
+	
+  out_err:
+  	return err;
+}
+
+void hip_sa_entry_free(hip_sa_entry_t * entry)
+{
+	if (entry)
+	{
+		// TODO lock entry
+		
+		if (entry->src_addr)
+			free(entry->src_addr);
+		if (entry->dst_addr)
+			free(entry->dst_addr);
+		if (entry->inner_src_addr)
+			free(entry->inner_src_addr);
+		if (entry->inner_dst_addr)
+			free(entry->inner_dst_addr);
+		if (entry->a_key)
+			free(entry->a_key);
+		if (entry->e_key)
+			free(entry->e_key);
+		if (entry->ks)
+			free(entry->ks);
+		if (entry->aes_key)
+			free(entry->aes_key);
+		if (entry->bf_key)
+			free(entry->bf_key);
+		if (entry->active_hchain)
+			free(entry->active_hchain);
+		if (entry->next_hchain)
+			free(entry->next_hchain);
+		if (entry->active_anchor)
+			free(entry->active_anchor);
+		if (entry->next_anchor)
+			free(entry->next_anchor);
+	}
+}
+
+int hip_sadb_flush()
+{
+	int err = 0;
+	
+	// TODO lock hashtable
+	// TODO free members of entries
+	hip_ht_uninit(sadb);
+	HIP_DEBUG("sadb flushed\n");
+	
+  out_err:
+  	return err;
+}
+
+
+#if 0
 /*
  * init_sadb()
  *
@@ -118,11 +443,6 @@ void hip_sadb_init() {
     memset(hip_proto_sel, 0, sizeof(hip_proto_sel));
 }
 
-/*
- * hip_sadb_add()
- *
- * Add an SADB entry to the SADB hash table.
- */ 
 int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
     struct sockaddr *inner_dst, struct sockaddr *src, struct sockaddr *dst, __u16 sport,
     __u16 dport, int direction, __u32 spi, __u8 *e_key, __u32 e_type, __u32 e_keylen,
@@ -452,6 +772,48 @@ int hip_sadb_delete_entry(hip_sadb_entry *entry)
 	return(0);
 }
 
+/*
+ * sadb_hashfn()
+ *
+ * SADB entries are index by hash of their SPI.
+ * Since SPIs are assumedly randomly allocated, distribution of this should
+ * be uniform and the hash function given here is very simple (and fast!).
+ */
+int sadb_hashfn(uint32_t spi) 
+{
+	return(spi % SADB_SIZE);
+}
+
+/*
+ * sadb_dst_hashfn()
+ *
+ * A destination cache mainains IP to SADB entry mappings, for efficient
+ * lookup for outgoing packets.
+ */
+int sadb_dst_hashfn(struct sockaddr *dst)
+{
+	uint32_t addr;
+	struct sockaddr_in6 *addr6;
+	
+	if (dst->sa_family == AF_INET) {
+		addr = htonl(((struct sockaddr_in*)dst)->sin_addr.s_addr);
+	} else {
+		addr6 = (struct sockaddr_in6*)dst;
+		addr = addr6->sin6_addr.s6_addr32[0];
+		addr ^= addr6->sin6_addr.s6_addr32[1];
+		addr ^= addr6->sin6_addr.s6_addr32[2];
+		addr ^= addr6->sin6_addr.s6_addr32[3];
+	}
+	
+	return(addr % SADB_SIZE);
+}
+
+/*
+ * hip_sadb_add()
+ *
+ * Add an SADB entry to the SADB hash table.
+ */ 
+
 void free_addr_list(sockaddr_list *a)
 {
 	sockaddr_list *a_next;
@@ -557,100 +919,6 @@ void hip_add_lsi(struct sockaddr *addr, struct sockaddr *lsi4,
 	if (lsi6)
 		memcpy(&entry->lsi6, lsi6, SALEN(lsi6));
 	memcpy(&entry->addr, addr, SALEN(addr));
-}
-
-/*
- * buffer_packet()
- *
- * Outgoing packets that trigger the HIP exchange are embargoed into
- * a buffer until the SAs are created.
- */
-int buffer_packet(struct sockaddr *lsi, __u8 *data, int len)
-{
-	int is_new_entry = 0;
-	hip_lsi_entry *entry;
-
-	/* find entry, or create a new one */
-	if (!(entry = hip_lookup_lsi(lsi))) {
-		entry = create_lsi_entry(lsi);
-		is_new_entry = 1;
-	}
-
-	/* add packet to queue if there is room */
-	if ((len + entry->next_packet) > LSI_PKT_BUFFER_SIZE)
-		return 0;
-	/* TODO: log packet buffer overflow, drop newer/older packets? */
-	memcpy(&entry->packet_buffer[entry->next_packet], data, len);
-	entry->num_packets++;
-	entry->next_packet += len;
-	return is_new_entry;
-}
-
-/*
- * unbuffer_packets()
- *
- * Send embargoed packets that have been buffered, using the 
- * TAP-Win32 interface.
- */
-void unbuffer_packets(hip_lsi_entry *entry)
-{
-	struct ip *iph;
-	struct ip6_hdr *ip6h;
-	__u8 *data;
-	int len, next_hdr = 0;
-	char ipstr[5];
-
-	g_read_usec = 1000000;
-	entry->send_packets = 0;
-	if (entry->num_packets > 0)
-		printf("Retransmitting %d user data packets.\n", 
-			entry->num_packets);
-	while (entry->num_packets > 0) {
-		entry->num_packets--;
-		data = &entry->packet_buffer[next_hdr];
-		/* read first byte to determine if IPv4/IPv6, and get length */
-		iph = (struct ip*) &data[14];
-		ip6h = (struct ip6_hdr*) &data[14];
-		if (iph->ip_v == 4) {/* IPv4 packet */
-			len = ntohs(iph->ip_len) + 14;
-			sprintf(ipstr, "IPv4");
-		} else if ((ip6h->ip6_vfc & 0xF0) == 0x60) {/* IPv6 packet */
-			len = ntohs(ip6h->ip6_plen) + 14 + 
-				sizeof(struct ip6_hdr);
-			sprintf(ipstr, "IPv6");
-		} else { /* unknown header! */
-			printf("Warning: unknown IP header in buffered "
-				"packet, freeing.\n");
-			/* cannot determine length, so expire this entry */
-			entry->send_packets = 0;
-			entry->creation_time.tv_sec = 0;
-			break;
-		}
-		if ((next_hdr + len) > LSI_PKT_BUFFER_SIZE) {
-			printf(	"Warning: buffered packet with length=%d "
-				"is too large for buffer, dropping.\n", len);
-			entry->send_packets = 0;
-			entry->creation_time.tv_sec = 0;
-			break;
-		}
-		next_hdr += len;
-#if 0
-#ifdef __WIN32__
-		if (send(readsp[0], data, len, 0) < 0) {
-#else
-		if (write(readsp[0], data, len) < 0) {
-#endif
-			printf("unbuffer_packets: write error: %s",
-				strerror(errno));
-
-			break;
-		}
-#endif
-		printf("FIXME: not fully implemented");
-	}
-
-	entry->num_packets = 0;
-	entry->next_packet = 0;
 }
 
 /*
@@ -841,190 +1109,4 @@ hip_sadb_entry *hip_sadb_get_next(hip_sadb_entry *placemark)
 	/* no more entries */
 	return(NULL);
 }
-
-/*
- * hip_select_family_by_proto()
- *
- * Given an upper-layer protocol number and header, return the
- * address family that should be used. This determines whether
- * an IPv4 or IPv6 header is built upon decrypting a packet.
- */
-int hip_select_family_by_proto(__u32 lsi, __u8 proto, __u8 *header,
-	struct timeval *now)
-{
-	hip_proto_sel_entry *sel;
-
-	/* no entry needed for these protocols */
-	if (proto == IPPROTO_ICMP)
-		return(AF_INET);
-	if (proto == IPPROTO_ICMPV6)
-		return(AF_INET6);
-
-	/* perform lookup using incoming dir */
-	sel = hip_lookup_sel_entry(lsi, proto, header, 1);
-
-	/* protocol selector entry exists, update the time */
-	if (sel) {
-		sel->last_used.tv_sec = now->tv_sec;
-		return (sel->family);
-	/* selector entry does not exist, create a new 
-	 * entry with the default address family */
-	} else {
-		hip_add_proto_sel_entry(lsi, proto, header, 
-					PROTO_SEL_DEFAULT_FAMILY, 
-					1, now);
-		return (PROTO_SEL_DEFAULT_FAMILY);
-	}
-}
-
-/*
- * hip_add_proto_sel_entry()
- *
- * Add a protocol selector entry for the given protocol
- * number, header, and address family. The address family
- * of outgoing packets can then be matched for incoming
- * packets.
- *
- * 	dir = 0 for outgoing, 1 for incoming
- */
-int hip_add_proto_sel_entry(__u32 lsi, __u8 proto, __u8 *header, int family,
-	int dir, struct timeval *now)
-{
-	hip_proto_sel_entry *entry;
-	__u32 selector = hip_proto_header_to_selector(lsi, proto, header, dir);
-	
-	entry = &hip_proto_sel[hip_proto_sel_hash(selector)];
-	if (entry->family) { /* another entry matches hash value */
-		/* advance to end of linked list */
-		for ( ; entry->next; entry = entry->next);
-		/* create a new entry at end of list */
-		entry->next = malloc(sizeof(hip_proto_sel_entry));
-		if (!entry->next)
-			return(-1);
-		entry = entry->next;
-	}
-
-	/* add the new entry */
-	memset(entry, 0, sizeof(hip_proto_sel_entry));
-	entry->next = NULL;
-	entry->selector = selector;
-	entry->family = family;
-	entry->last_used.tv_sec = now->tv_sec;
-	return(0);
-}
-
-hip_proto_sel_entry *hip_lookup_sel_entry(__u32 lsi, __u8 proto, __u8 *header,
-	int dir)
-{
-	hip_proto_sel_entry *entry;
-	__u32 selector = hip_proto_header_to_selector(lsi, proto, header, dir);
-	
-	entry = &hip_proto_sel[hip_proto_sel_hash(selector)];
-	for ( ; entry; entry=entry->next) {
-		if (selector == entry->selector)
-			return(entry);
-	}
-	return(NULL);
-}
-
-__u32 hip_proto_header_to_selector(__u32 lsi, __u8 proto, __u8 *header, int dir)
-{
-	struct tcphdr *tcph;
-	struct udphdr *udph;
-	__u32 selector;
-	
-	switch (proto) {
-	case IPPROTO_TCP:
-		tcph = (struct tcphdr *)header;
-#ifdef __MACOSX__
-		selector = (dir == 1) ? (tcph->th_sport<< 16)+ tcph->th_dport :
-					(tcph->th_dport << 16)+ tcph->th_sport;
-#else
-		selector = (dir == 1) ? (tcph->source<< 16)+ tcph->dest :
-					(tcph->dest << 16)+ tcph->source;
 #endif
-		break;
-	case IPPROTO_UDP:
-		udph = (struct udphdr *)header;
-#ifdef __MACOSX__
-		selector = (dir == 1) ? (udph->uh_sport << 16)+ udph->uh_dport :
-					(udph->uh_dport << 16)+ udph->uh_sport;
-#else
-		selector = (dir == 1) ? (udph->source << 16)+ udph->dest :
-					(udph->dest << 16)+ udph->source;
-#endif
-		break;
-	case IPPROTO_ESP:
-		/* could use SPI for selector, but ESP has different
-		 * incoming and outgoing SPIs */
-		selector = 1;
-		break;
-	/* TODO: write other selectors here as needed */
-	default:
-		selector = 0;
-		break;
-	}
-	selector += lsi;
-	return(selector);
-}
-
-/*
- * hip_remove_expired_sel_entries()
- */
-void hip_remove_expired_sel_entries()
-{
-	static unsigned int last = 0;
-	struct timeval now;
-	int i;
-	hip_proto_sel_entry *entry, *prev;
-
-
-	/* rate limit - every 30 seconds */
-	gettimeofday(&now, NULL);
-	if ((last > 0) && ((now.tv_sec - last) < 30))
-		return;
-	else
-		last = now.tv_sec;
-		
-		
-	for (i=0; i<PROTO_SEL_SIZE; i++) {
-		prev = NULL;
-		entry = &hip_proto_sel[i]; /* traverse list in each bucket */
-		while (entry) {
-			if (!entry->family) /* empty bucket, continue to next */
-				break;
-			/* check for expiration */
-			if ((now.tv_sec - entry->last_used.tv_sec) > 
-				PROTO_SEL_ENTRY_LIFETIME) {
-				entry = hip_remove_proto_sel_entry(prev, entry);
-			} else {
-				prev = entry;
-				entry = entry->next;
-			}	
-		}
-	}
-}
-
-hip_proto_sel_entry *hip_remove_proto_sel_entry(hip_proto_sel_entry *prev,
-	hip_proto_sel_entry *entry)
-{
-	hip_proto_sel_entry *next;
-	
-	if (prev) { /* unlink the entry from the list */
-		prev->next = entry->next;
-		memset(entry, 0, sizeof(hip_proto_sel_entry));
-		free(entry);
-		return(prev->next);
-	} else if (entry->next) { /* replace entry in table w/next in list */
-		next = entry->next;
-		memcpy(entry, next, sizeof(hip_proto_sel_entry));
-		memset(next, 0, sizeof(hip_proto_sel_entry));
-		free(next); /* remove duplicate */
-		return(entry);
-	} else { /* no prev or next, just erase single entry */
-		memset(entry, 0, sizeof(hip_proto_sel_entry));
-		return(NULL);
-	}
-}
-
-

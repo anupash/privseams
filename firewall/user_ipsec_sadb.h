@@ -33,21 +33,9 @@
 #include <sys/time.h>		/* timeval */
 #include "debug.h"
 #include "hashchain.h"
+#include "hashtable.h"
 
-/**** HIPL <-> OpenHIP compatibility defs ****/
-
-typedef struct _sockaddr_list
-{
-        struct _sockaddr_list *next;
-        struct sockaddr_storage addr; /* 128 bytes, enough to store any size */
-        int if_index;   /* link index */
-        int lifetime;   /* address lifetime in seconds*/
-        int status;     /* status from enum ADDRESS_STATES */
-        int preferred;  /* set to TRUE if it's a new pending preferred addr */
-        __u32 nonce;    /* random value for address verification */
-        struct timeval creation_time;
-} sockaddr_list;
-
+#if 0
 /*
  * Macros from hip.h and elsewhere
  */
@@ -57,6 +45,7 @@ typedef struct _sockaddr_list
 #define SALEN(x) hip_sockaddr_len(x)
 #define SAIPLEN(x) hip_sa_addr_len(x)
 #define SA(x) ((struct sockaddr*)x)
+#define LSI4(a) (((struct sockaddr_in*)a)->sin_addr.s_addr)
 
 #define HIP_ESP_UDP_PORT       HIP_NAT_UDP_PORT
 #define HIP_KEEPALIVE_TIMEOUT  HIP_NAT_KEEP_ALIVE_INTERVAL
@@ -68,21 +57,44 @@ typedef struct _sockaddr_list
  * definitions
  */
 #define SADB_SIZE 512 
-#define LSI4(a) (((struct sockaddr_in*)a)->sin_addr.s_addr)
+#endif
 
 /* HIP Security Association entry */
-typedef struct _hip_sadb_entry 
+typedef struct hip_sa_entry 
 {
-	struct _hip_sadb_entry *next;
-	__u32 spi;			/* primary index into SADB */
-	int direction;			/* in/out */
-	__u16 hit_magic;		/* for quick checksum calculation */
-	sockaddr_list *src_addrs;	/* source addresses 		*/
-	sockaddr_list *dst_addrs;	/* destination addresses 	*/
+	pthread_mutex_t rw_lock;				/* keep other threads from modifying */
+	int direction;							/* direction of the SA: inbound/outbound */
+	uint32_t spi;							/* needed for demultiplexing incoming packets */
+	uint32_t mode; 							/* ESP mode :  1-transport, 2-tunnel, 3-beet */
+	struct in6_addr *src_addr;				/* source address of outer IP header */
+	struct in6_addr *dst_addr;				/* destination address of outer IP header */
 	/* inner addresses for BEET SAs (the above addresses
 	 * are used as outer addresses) */
-	sockaddr_list *inner_src_addrs;
-	sockaddr_list *inner_dst_addrs;
+	// TODO check if needed somewhere else than BEET -> rename
+	struct in6_addr *inner_src_addr;
+	struct in6_addr *inner_dst_addr;
+	uint8_t encap_mode;						/* Encapsulation mode: 0 - none, 1 - udp */
+	uint16_t src_port;						/* src port for UDP encaps. ESP */
+	uint16_t dst_port;						/* dst port for UDP encaps. ESP */
+	/****************** crypto parameters *******************/
+	uint32_t a_type;						/* crypto transform in use */
+	uint32_t e_type;
+	uint32_t a_keylen;						/* length of raw keys */
+	uint32_t e_keylen;
+	unsigned char *a_key;					/* raw crypto keys */
+	unsigned char *e_key;
+	des_key_schedule ks[3];					/* 3-DES keys */
+	AES_KEY *aes_key;						/* AES key */
+	BF_KEY *bf_key;							/* BLOWFISH key */
+	/*********************************************************/
+	uint64_t lifetime;			/* seconds until expiration */
+	uint64_t bytes;				/* bytes transmitted */
+	struct timeval usetime;		/* last used timestamp */
+	struct timeval usetime_ka;	/* last used timestamp, incl keep-alives */
+	uint32_t sequence;			/* sequence number counter */
+	uint32_t replay_win;		/* anti-replay window */
+	uint32_t replay_map;		/* anti-replay bitmap */
+	/*********** esp protection extension params *************/
 	/* hash chain parameters for this SA used in secure ESP extension */
 	/* for outgoing SA */
 	hash_chain_t *active_hchain;
@@ -94,34 +106,11 @@ typedef struct _hip_sadb_entry
 	/* for both */
 	uint8_t active_transform;
 	uint8_t next_transform;
-	__u32 mode; 	/* ESP mode :  0-default 1-transport 2-tunnel 3-beet */
-	// TODO add encap_mode (= UDP / TCP)
-	__u16 src_port;
-	__u16 dst_port;			/* UDP dest. port for encaps. ESP */
-	uint8_t nat_mode;			/* 0 - none, 1 - udp */
-	struct timeval usetime_ka;  /* last used timestamp, incl keep-alives */
-	struct sockaddr_storage lsi;	/* LSI 				*/
-	struct sockaddr_storage lsi6;	/* IPv6 LSI (peer HIT)		*/
-	__u32 a_type;			/* crypto parameters 		*/
-	__u32 e_type;
-	__u32 a_keylen;
-	__u32 e_keylen;
-	__u8 *a_key;			/* raw crypto keys */
-	__u8 *e_key;
-	__u64 lifetime;			/* seconds until expiration */
-	__u64 bytes;			/* bytes transmitted */
-	struct timeval usetime;		/* last used timestamp */
-	__u32 sequence;			/* sequence number counter */
-	__u32 replay_win;		/* anti-replay window */
-	__u32 replay_map;		/* anti-replay bitmap */
-	char iv[8];
-	des_key_schedule ks[3];		/* 3-DES keys */
-	AES_KEY *aes_key;		/* AES key */
-	BF_KEY *bf_key;			/* BLOWFISH key */
-	pthread_mutex_t rw_lock;
-} hip_sadb_entry;
+} hip_sa_entry_t;
 
-/* HIP SADB desintation cache entry */
+
+#if 0
+/* HIP SADB destintation cache entry */
 typedef struct _hip_sadb_dst_entry
 {
 	struct _hip_sadb_dst_entry *next;
@@ -129,35 +118,6 @@ typedef struct _hip_sadb_dst_entry
 	hip_sadb_entry *sadb_entry;
 	
 } hip_sadb_dst_entry;
-
-/* HIP LSI table entry */
-#define LSI_PKT_BUFFER_SIZE 2000
-#define LSI_ENTRY_LIFETIME 120
-typedef struct _hip_lsi_entry
-{
-	struct _hip_lsi_entry *next;
-	struct sockaddr_storage addr;
-	struct sockaddr_storage lsi4;
-	struct sockaddr_storage lsi6;
-	__u8 packet_buffer[LSI_PKT_BUFFER_SIZE];
-	int num_packets;
-	int next_packet;
-	int send_packets;
-	struct timeval creation_time;
-} hip_lsi_entry;
-/* protocol selector entry */
-#define PROTO_SEL_SIZE 512
-#define PROTO_SEL_ENTRY_LIFETIME 900
-#define PROTO_SEL_DEFAULT_FAMILY AF_INET
-#define hip_proto_sel_hash(a) (a % PROTO_SEL_SIZE)
-typedef struct _hip_proto_sel_entry
-{
-        struct _hip_proto_sel_entry *next;
-        __u32 selector;         /* upper layer protocol-specific selector */
-        int family;             /* guidance on which address family to use */
-        struct timeval last_used;
-} hip_proto_sel_entry;
-
 
 /*
  * functions
@@ -185,6 +145,7 @@ int hip_select_family_by_proto(__u32 lsi, __u8 proto, __u8 *header,
 int hip_add_proto_sel_entry(__u32 lsi, __u8 proto, __u8 *header, int family,
         int dir, struct timeval *now);
 void hip_remove_expired_sel_entries();
+#endif
 
 #endif /* USER_IPSEC_SADB_H_ */
 
