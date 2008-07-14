@@ -41,6 +41,9 @@ endif
 
 conntest_client_opp_LDADD += ../opendht/.libs/libhipopendht.a
 LDADD += ../opendht/.libs/libhipopendht.a
+if HIP_PERFORMANCE
+LDADD += ../performance/.libs/libperformance.a
+endif
 CFLAGS += $(HIPL_XMLL)
 
 opendhtteststub_LDFLAGS= -lcrypto $(HIP_XMLL) 
@@ -73,7 +76,9 @@ bin_PROGRAMS += listtest
 bin_PROGRAMS += opendhtteststub
 bin_PROGRAMS += certteststub
 bin_PROGRAMS += sqliteteststub
-
+if HIP_PERFORMANCE
+bin_PROGRAMS += dh_performance
+endif
 #sbin_SCRIPTS = hipsetup
 
 #ttcp_SOURCES = ttcp.c
@@ -98,7 +103,9 @@ listtest_SOURCES = listtest.c
 opendhtteststub_SOURCES = opendhtteststub.c
 certteststub_SOURCES = certteststub.c
 sqliteteststub_SOURCES = sqliteteststub.c
-
+if HIP_PERFORMANCE
+dh_performance_SOURCES = dh_performance.c
+endif
 #EXTRA_DIST = $(sbin_SCRIPTS)
 
 # The sources depend on FILE.c, but it is located elsewhere. Linking is
