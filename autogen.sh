@@ -4,6 +4,7 @@ echo "Generating configure files... may take a while."
 
 echo "Configuring pjproject"
 cd pjproject && ./configure || (echo "Failed to configure pjproject" && exit 1)
+make dep
 cd ..
 
 echo "Pjproject was configured successfully"
