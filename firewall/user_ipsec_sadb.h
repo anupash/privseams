@@ -23,17 +23,18 @@
 #ifndef USER_IPSEC_SADB_H_
 #define USER_IPSEC_SADB_H_
 
-#include <asm/types.h>		/* __u16, __u32, etc */
-#include <sys/types.h>		/* for socket.h */
-#include <sys/socket.h>		/* struct sockaddr */
-#include <netinet/in.h>		/* struct sockaddr_in */
+//#include <asm/types.h>		/* __u16, __u32, etc */
+//#include <sys/types.h>		/* for socket.h */
+//#include <sys/socket.h>		/* struct sockaddr */
+//#include <netinet/in.h>		/* struct sockaddr_in */
 #include <openssl/des.h>	/* des_key_schedule */
 #include <openssl/aes.h>	/* aes_key */
 #include <openssl/blowfish.h>	/* bf_key */
-#include <sys/time.h>		/* timeval */
-#include "debug.h"
+#include <inttypes.h>
+//#include <sys/time.h>		/* timeval */
+//#include "debug.h"
 #include "hashchain.h"
-#include "hashtable.h"
+#include "ife.h"
 
 #if 0
 /*
@@ -70,7 +71,6 @@ typedef struct hip_sa_entry
 	struct in6_addr *dst_addr;				/* destination address of outer IP header */
 	/* inner addresses for BEET SAs (the above addresses
 	 * are used as outer addresses) */
-	// TODO check if needed somewhere else than BEET -> rename
 	struct in6_addr *inner_src_addr;
 	struct in6_addr *inner_dst_addr;
 	uint8_t encap_mode;						/* Encapsulation mode: 0 - none, 1 - udp */
@@ -108,6 +108,59 @@ typedef struct hip_sa_entry
 	uint8_t next_transform;
 } hip_sa_entry_t;
 
+typedef struct hip_link_entry
+{
+	struct in6_addr *dst_addr;				/* destination address of outer IP header */
+	uint32_t spi;							/* needed for demultiplexing incoming packets */
+	hip_sa_entry_t *linked_sa_entry;		/* direct link to sa entry */
+} hip_link_entry_t;
+
+
+int hip_sadb_init(void);
+unsigned long hip_sa_entry_hash(const void *ptr);
+int hip_sa_entries_compare(const void *ptr1, const void *ptr2);
+unsigned long hip_link_entry_hash(const void *ptr);
+int hip_link_entries_compare(const void *ptr1, const void *ptr2);
+int hip_sadb_add(int direction, uint32_t spi, uint32_t mode,
+		struct in6_addr *src_addr, struct in6_addr *dst_addr,
+		struct in6_addr *inner_src_addr, struct in6_addr *inner_dst_addr,
+		uint8_t encap_mode, uint16_t src_port, uint16_t dst_port,
+		uint32_t a_type, uint32_t e_type, uint32_t a_keylen, uint32_t e_keylen,
+		unsigned char *a_key, unsigned char *e_key, uint64_t lifetime,
+		uint8_t esp_prot_transform, unsigned char *esp_prot_anchor,
+		int retransmission, int update);
+int hip_sa_entry_add(int direction, uint32_t spi, uint32_t mode,
+		struct in6_addr *src_addr, struct in6_addr *dst_addr,
+		struct in6_addr *inner_src_addr, struct in6_addr *inner_dst_addr,
+		uint8_t encap_mode, uint16_t src_port, uint16_t dst_port,
+		uint32_t a_type, uint32_t e_type, uint32_t a_keylen, uint32_t e_keylen,
+		unsigned char *a_key, unsigned char *e_key, uint64_t lifetime,
+		uint8_t esp_prot_transform, unsigned char *esp_prot_anchor);
+int hip_sa_entry_update(int direction, uint32_t spi, uint32_t mode,
+		struct in6_addr *src_addr, struct in6_addr *dst_addr,
+		struct in6_addr *inner_src_addr, struct in6_addr *inner_dst_addr,
+		uint8_t encap_mode, uint16_t src_port, uint16_t dst_port,
+		uint32_t a_type, uint32_t e_type, uint32_t a_keylen, uint32_t e_keylen,
+		unsigned char *a_key, unsigned char *e_key, uint64_t lifetime,
+		uint8_t esp_prot_transform, unsigned char *esp_prot_anchor);
+int hip_sa_entry_set(hip_sa_entry_t *entry, int direction, uint32_t spi, uint32_t mode,
+		struct in6_addr *src_addr, struct in6_addr *dst_addr,
+		struct in6_addr *inner_src_addr, struct in6_addr *inner_dst_addr,
+		uint8_t encap_mode, uint16_t src_port, uint16_t dst_port,
+		uint32_t a_type, uint32_t e_type, uint32_t a_keylen, uint32_t e_keylen,
+		unsigned char *a_key, unsigned char *e_key, uint64_t lifetime,
+		uint8_t esp_prot_transform, unsigned char *esp_prot_anchor);
+hip_sa_entry_t * hip_sa_entry_find_inbound(struct in6_addr *dst_addr, uint32_t spi);
+hip_sa_entry_t * hip_sa_entry_find_outbound(struct in6_addr *src_addr,
+		struct in6_addr *dst_addr);
+int hip_sa_entry_delete(struct in6_addr *src_addr, struct in6_addr *dst_addr);
+int hip_link_entry_add(struct in6_addr *dst_addr, hip_sa_entry_t *entry);
+int hip_link_entries_add(hip_sa_entry_t *entry);
+hip_link_entry_t *hip_link_entry_find(struct in6_addr *dst_addr, uint32_t spi);
+int hip_link_entry_delete(struct in6_addr *dst_addr, hip_sa_entry_t *entry);
+int hip_link_entries_delete_all(hip_sa_entry_t *entry);
+void hip_sa_entry_free(hip_sa_entry_t * entry);
+int hip_sadb_flush();
 
 #if 0
 /* HIP SADB destintation cache entry */

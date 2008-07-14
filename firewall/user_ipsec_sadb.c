@@ -20,47 +20,11 @@
  *
  */
 #include "user_ipsec_sadb.h"
-#include "esp_prot_common.h"
-#include "misc.h"
+#include "hashtable.h"
+#include "esp_prot.h"
+#include <openssl/sha.h>
 
-// TODO implement concat function
-/* TODO also index from concat of dst addr and spi (inbound db) */
-
-#if 0
-/*
- * Globals
- */
-extern int readsp[2];
-extern long g_read_usec;
-
-/* the SADB hash table */
-hip_sadb_entry hip_sadb[SADB_SIZE];
-/* the SADB destination cache hash table */
-hip_sadb_dst_entry hip_sadb_dst[SADB_SIZE];
-/* the temporary LSI table and embargoed packet buffer */
-hip_lsi_entry *lsi_temp=NULL;
-/* the protocol selector table for determining address family */
-hip_proto_sel_entry hip_proto_sel[PROTO_SEL_SIZE];
-
-/* 
- * Local function delcarations
- */
-hip_lsi_entry *create_lsi_entry(struct sockaddr *lsi);
-void free_addr_list(sockaddr_list *a);
-int hip_sadb_delete_entry(hip_sadb_entry *entry);
-hip_lsi_entry *hip_lookup_lsi_by_addr(struct sockaddr *addr);
-hip_lsi_entry *hip_lookup_lsi(struct sockaddr *lsi);
-int hip_sadb_add_dst_entry(struct sockaddr *addr, hip_sadb_entry *entry);
-int hip_sadb_delete_dst_entry(struct sockaddr *addr);
-
-hip_proto_sel_entry *hip_lookup_sel_entry(__u32 lsi, __u8 proto, __u8 *header,
-	int dir);
-__u32 hip_proto_header_to_selector(__u32 lsi, __u8 proto, __u8 *header,int dir);
-hip_proto_sel_entry *hip_remove_proto_sel_entry(hip_proto_sel_entry *prev,
-	hip_proto_sel_entry *entry);
-#endif
-
-#define INDEX_HASH_LENGTH SHA_DIGEST_LENGTH;
+#define INDEX_HASH_LENGTH SHA_DIGEST_LENGTH
 
 // database storing the sa entries, indexed by src _and_ dst hits
 HIP_HASHTABLE *sadb = NULL;
@@ -71,18 +35,23 @@ int hip_sadb_init()
 {
 	int err = 0;
 	
-	HIP_IFEL(!(sadb = hip_ht_init(&hip_hash_sa_entry, &hip_compare_sa_entries)), -1,
+	HIP_IFEL(!(sadb = hip_ht_init(hip_sa_entry_hash, hip_sa_entries_compare)), -1,
 			"failed to initialize sadb\n");
+	HIP_IFEL(!(linkdb = hip_ht_init(hip_link_entry_hash, hip_link_entries_compare)), -1,
+			"failed to initialize linkdb\n");
 
   out_err:
   	return err;
 }
 
-unsigned long hip_sa_entry_hash(const hip_sa_entry_t *sa_entry)
+unsigned long hip_sa_entry_hash(const void *ptr)
 {
+	hip_sa_entry_t *sa_entry = NULL;
 	struct in6_addr addr_pair[2];		/* in BEET-mode these are HITs */
 	unsigned char hash[INDEX_HASH_LENGTH];
 	int err = 0;
+	
+	sa_entry = (hip_sa_entry_t *) ptr;
 	
 	// values have to be present
 	HIP_ASSERT(sa_entry != NULL && sa_entry->inner_src_addr != NULL
@@ -121,11 +90,15 @@ unsigned long hip_sa_entry_hash(const hip_sa_entry_t *sa_entry)
 	return *((unsigned long *)hash);
 }
 
-int hip_sa_entries_compare(const hip_sa_entry_t *sa_entry1, hip_sa_entry_t *sa_entry2)
+int hip_sa_entries_compare(const void *ptr1, const void *ptr2)
 {
+	hip_sa_entry_t *sa_entry1 = NULL, *sa_entry2 = NULL;
 	int err = 0;
 	unsigned long hash1 = 0;
 	unsigned long hash2 = 0;
+	
+	sa_entry1 = (hip_sa_entry_t *) ptr1;
+	sa_entry2 = (hip_sa_entry_t *) ptr2;
 	
 	// values have to be present
 	HIP_ASSERT(sa_entry1 != NULL && sa_entry1->inner_src_addr != NULL
@@ -133,8 +106,8 @@ int hip_sa_entries_compare(const hip_sa_entry_t *sa_entry1, hip_sa_entry_t *sa_e
 	HIP_ASSERT(sa_entry2 != NULL && sa_entry2->inner_src_addr != NULL
 				&& sa_entry2->inner_dst_addr != NULL);
 
-	HIP_IFEL(!(hash1 = hip_hash_sa_entry(sa_entry1)), -1, "failed to hash sa entry\n");
-	HIP_IFEL(!(hash2 = hip_hash_sa_entry(sa_entry2), , -1, "failed to hash sa entry\n");
+	HIP_IFEL(!(hash1 = hip_sa_entry_hash(sa_entry1)), -1, "failed to hash sa entry\n");
+	HIP_IFEL(!(hash2 = hip_sa_entry_hash(sa_entry2)), -1, "failed to hash sa entry\n");
 	
 	if (hash1 != hash2 || sa_entry1->spi != sa_entry2->spi)
 	{
@@ -145,28 +118,106 @@ int hip_sa_entries_compare(const hip_sa_entry_t *sa_entry1, hip_sa_entry_t *sa_e
     return err;
 }
 
-int hip_sadb_add()
+unsigned long hip_link_entry_hash(const void *ptr)
+{
+	hip_link_entry_t *link_entry = NULL;
+	unsigned char hash_input[sizeof(struct in6_addr) + sizeof(uint32_t)];
+	unsigned char hash[INDEX_HASH_LENGTH];
+	int err = 0;
+	
+	link_entry = (hip_link_entry_t *) ptr;
+	
+	// values have to be present
+	HIP_ASSERT(link_entry != NULL && link_entry->dst_addr != NULL && link_entry->spi != 0);
+	
+	memset(hash, 0, INDEX_HASH_LENGTH);
+	
+	/* concatenate dst_addr and spi */
+	memcpy(&hash_input[0], link_entry->dst_addr, sizeof(struct in6_addr));
+	memcpy(&hash_input[sizeof(struct in6_addr) - 1], &link_entry->spi, sizeof(uint32_t));
+	 
+	HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, (void *)hash_input, sizeof(hash_input), hash),
+			-1, "failed to hash addresses\n");
+	
+  out_err:
+  	if (err)
+  	{
+  		*hash = 0;
+  	}
+  	
+	return *((unsigned long *)hash);
+}
+
+int hip_link_entries_compare(const void *ptr1, const void *ptr2)
+{
+	hip_link_entry_t *link_entry1 = NULL, *link_entry2 = NULL;
+	int err = 0;
+	unsigned long hash1 = 0;
+	unsigned long hash2 = 0;
+	
+	link_entry1 = (hip_link_entry_t *) ptr1;
+	link_entry2 = (hip_link_entry_t *) ptr2;
+	
+	// values have to be present
+	HIP_ASSERT(link_entry1 != NULL && link_entry1->dst_addr != NULL
+			&& link_entry1->spi != 0);
+	HIP_ASSERT(link_entry2 != NULL && link_entry2->dst_addr != NULL
+				&& link_entry2->spi != 0);
+
+	HIP_IFEL(!(hash1 = hip_link_entry_hash(link_entry1)), -1,
+			"failed to hash link entry\n");
+	HIP_IFEL(!(hash2 = hip_link_entry_hash(link_entry2)), -1,
+			"failed to hash link entry\n");
+	
+	if (hash1 != hash2)
+	{
+		err = 1;
+	}
+	
+  out_err:
+    return err;
+}
+
+int hip_sadb_add(int direction, uint32_t spi, uint32_t mode,
+		struct in6_addr *src_addr, struct in6_addr *dst_addr,
+		struct in6_addr *inner_src_addr, struct in6_addr *inner_dst_addr,
+		uint8_t encap_mode, uint16_t src_port, uint16_t dst_port,
+		uint32_t a_type, uint32_t e_type, uint32_t a_keylen, uint32_t e_keylen,
+		unsigned char *a_key, unsigned char *e_key, uint64_t lifetime,
+		uint8_t esp_prot_transform, unsigned char *esp_prot_anchor,
+		int retransmission, int update)
 {
 	int err = 0;
 	
+	// TODO handle retransmission and update correctly
+	
 	if (update)
-		HIP_IFEL(hip_sa_entry_update(), -1, "failed to update sa entry\n");
-	else
-		HIP_IFEL(hip_sa_entry_add(), -1, "failed to add sa entry\n");
+	{
+		HIP_IFEL(hip_sa_entry_update(direction, spi, mode, src_addr, dst_addr, inner_src_addr,
+				inner_dst_addr, encap_mode, src_port, dst_port, a_type, e_type, a_keylen,
+				e_keylen, a_key, e_key, lifetime, esp_prot_transform, esp_prot_anchor), -1,
+				"failed to update sa entry\n");
+	} else
+	{
+		HIP_IFEL(hip_sa_entry_add(direction, spi, mode, src_addr, dst_addr, inner_src_addr,
+				inner_dst_addr, encap_mode, src_port, dst_port, a_type, e_type, a_keylen,
+				e_keylen, a_key, e_key, lifetime, esp_prot_transform, esp_prot_anchor), -1,
+				"failed to add sa entry\n");
+	}
 	
   out_err:
   	return err;
 }
 
-int hip_sa_entry_add(__u32 mode, struct sockaddr *inner_src,
-    struct sockaddr *inner_dst, struct sockaddr *src, struct sockaddr *dst, __u16 sport,
-    __u16 dport, int direction, __u32 spi, __u8 *e_key, __u32 e_type, __u32 e_keylen,
-    __u8 *a_key, __u32 a_type, __u32 a_keylen, __u32 lifetime, __u16 hitmagic,
-    uint8_t nat_mode, uint8_t esp_prot_transform, unsigned char *esp_prot_anchor)
+int hip_sa_entry_add(int direction, uint32_t spi, uint32_t mode,
+		struct in6_addr *src_addr, struct in6_addr *dst_addr,
+		struct in6_addr *inner_src_addr, struct in6_addr *inner_dst_addr,
+		uint8_t encap_mode, uint16_t src_port, uint16_t dst_port,
+		uint32_t a_type, uint32_t e_type, uint32_t a_keylen, uint32_t e_keylen,
+		unsigned char *a_key, unsigned char *e_key, uint64_t lifetime,
+		uint8_t esp_prot_transform, unsigned char *esp_prot_anchor)
 {
 	hip_sa_entry_t *entry = NULL;
-	int key_len = 0; 							/* for 3-DES */
-	unsigned char key1[8], key2[8], key3[8]; 	/* for 3-DES */
 	int err = 0;
 	
 	/* initialize members to 0/NULL */
@@ -197,20 +248,96 @@ int hip_sa_entry_add(__u32 mode, struct sockaddr *inner_src,
 		memset(entry->e_key, 0, e_keylen);
 	}
 	
+	HIP_IFEL(hip_sa_entry_set(entry, direction, spi, mode, src_addr, dst_addr,
+			inner_src_addr, inner_dst_addr, encap_mode, src_port, dst_port, a_type, e_type,
+			a_keylen, e_keylen, a_key, e_key, lifetime, esp_prot_transform, esp_prot_anchor),
+			-1, "failed to set the entry members\n");
+	
+	hip_ht_add(sadb, entry);
+	
+	// add links to this entry for incoming packets
+	HIP_IFEL(hip_link_entries_add(entry), -1, "failed to add link entries\n");
+	
+	HIP_DEBUG("sa entry added\n");
+	
+  out_err:
+  	if (err)
+  	{
+  		if (entry)
+  		{
+  			hip_link_entries_delete_all(entry);
+  			hip_sa_entry_free(entry);
+  			free(entry);
+  		}
+  		entry = NULL;
+  	}
+  
+  	return err;
+}
+
+int hip_sa_entry_update(int direction, uint32_t spi, uint32_t mode,
+		struct in6_addr *src_addr, struct in6_addr *dst_addr,
+		struct in6_addr *inner_src_addr, struct in6_addr *inner_dst_addr,
+		uint8_t encap_mode, uint16_t src_port, uint16_t dst_port,
+		uint32_t a_type, uint32_t e_type, uint32_t a_keylen, uint32_t e_keylen,
+		unsigned char *a_key, unsigned char *e_key, uint64_t lifetime,
+		uint8_t esp_prot_transform, unsigned char *esp_prot_anchor)
+{
+	hip_sa_entry_t *stored_entry = NULL;
+	int err = 0;
+	
+	// we need the sadb entry to go through entries in the linkdb
+	HIP_IFEL(!(stored_entry = hip_sa_entry_find_outbound(inner_src_addr, inner_dst_addr)),
+			-1, "failed to retrieve sa entry\n");
+	
+	pthread_mutex_lock(stored_entry->rw_lock);
+	/* delete all links
+	 * 
+	 * TODO more efficient to delete entries in inbound db for all (addr, oldspi)
+	 * or just those with (oldaddr, spi) */
+	HIP_IFEL(hip_link_entries_delete_all(stored_entry), -1, "failed to remove links\n");
+	
+	/* change members of entry in sadb and add new links */
+	HIP_IFEL(hip_sa_entry_set(stored_entry, direction, spi, mode, src_addr, dst_addr,
+			inner_src_addr, inner_dst_addr, encap_mode, src_port, dst_port, a_type, e_type,
+			a_keylen, e_keylen, a_key, e_key, lifetime, esp_prot_transform, esp_prot_anchor),
+			-1, "failed to update the entry members\n");
+	
+	HIP_IFEL(hip_link_entries_add(stored_entry), -1, "failed to add links\n");
+	pthread_mutex_unlock(stored_entry->rw_lock);
+	
+	HIP_DEBUG("sa entry updated\n");
+	
+  out_err:
+  	return err;
+}
+
+int hip_sa_entry_set(hip_sa_entry_t *entry, int direction, uint32_t spi, uint32_t mode,
+		struct in6_addr *src_addr, struct in6_addr *dst_addr,
+		struct in6_addr *inner_src_addr, struct in6_addr *inner_dst_addr,
+		uint8_t encap_mode, uint16_t src_port, uint16_t dst_port,
+		uint32_t a_type, uint32_t e_type, uint32_t a_keylen, uint32_t e_keylen,
+		unsigned char *a_key, unsigned char *e_key, uint64_t lifetime,
+		uint8_t esp_prot_transform, unsigned char *esp_prot_anchor)
+{
+	int key_len = 0; 							/* for 3-DES */
+	unsigned char key1[8], key2[8], key3[8]; 	/* for 3-DES */
+	int err = 0;
+	
 	/* copy values for non-zero members */
 	entry->direction = direction;
 	entry->spi = spi;
 	entry->mode = mode;
-	memcpy(&entry->src_addr, src, sizeof(struct in6_addr));
-	memcpy(&entry->dst_addr, dst, sizeof(struct in6_addr));
+	memcpy(&entry->src_addr, src_addr, sizeof(struct in6_addr));
+	memcpy(&entry->dst_addr, dst_addr, sizeof(struct in6_addr));
 	if (entry->mode == 3)
 	{ 
-		memcpy(&entry->inner_src_addr, inner_src, sizeof(struct in6_addr));
-		memcpy(&entry->inner_dst_addr, inner_dst, sizeof(struct in6_addr));
+		memcpy(&entry->inner_src_addr, inner_src_addr, sizeof(struct in6_addr));
+		memcpy(&entry->inner_dst_addr, inner_dst_addr, sizeof(struct in6_addr));
 	}	
 	entry->encap_mode = encap_mode;
-	entry->src_port = sport;
-	entry->dst_port = dport;
+	entry->src_port = src_port;
+	entry->dst_port = dst_port;
 	
 	entry->a_type = a_type;
 	entry->e_type = e_type;
@@ -220,17 +347,13 @@ int hip_sa_entry_add(__u32 mode, struct sockaddr *inner_src,
 	HIP_DEBUG("e_type value is: %d\n", e_type);
 	HIP_DEBUG("a_type value is: %d \n", a_type);
 	
-	HIP_DEBUG("SADB_EALG_3DESCBC value is: %d \n ", SADB_EALG_3DESCBC);
-	HIP_DEBUG("SADB_X_EALG_AESCBC value is:%d \n", SADB_X_EALG_AESCBC);
-	HIP_DEBUG("SADB_X_EALG_BLOWFISHCBC value is: %d \n", SADB_X_EALG_BLOWFISHCBC);
-	
 	// copy raw keys
 	memcpy(entry->a_key, a_key, a_keylen);
 	if (e_keylen > 0)
 		memcpy(entry->e_key, e_key, e_keylen);
 	
 	// set up keys for the transform in use
-	if ((e_keylen > 0) && (e_type == SADB_EALG_3DESCBC))
+	if ((e_keylen > 0) && (e_type == HIP_HIP_3DES_SHA1))
 	{
 		key_len = e_keylen/3;
 		memset(key1, 0, key_len);
@@ -247,13 +370,13 @@ int hip_sa_entry_add(__u32 mode, struct sockaddr *inner_src,
 		err += des_set_key_checked((des_cblock*)key3, entry->ks[2]);
 		HIP_IFEL(err, -1, "3DES key problem\n");
 		
-	} else if ((e_keylen > 0) && (e_type == SADB_X_EALG_AESCBC))
+	} else if ((e_keylen > 0) && (e_type == HIP_ESP_AES_SHA1))
 	{
 		/* AES key differs for encryption/decryption, so we set
 		 * it upon first use in the SA */
 		entry->aes_key = NULL;
 		
-	} else if ((e_keylen > 0) && (e_type == SADB_X_EALG_BLOWFISHCBC))
+	} else if ((e_keylen > 0) && (e_type == HIP_HIP_BLOWFISH_SHA1))
 	{
 		entry->bf_key = (BF_KEY *) malloc(sizeof(BF_KEY));
 		BF_set_key(entry->bf_key, e_keylen, e_key);
@@ -262,63 +385,8 @@ int hip_sa_entry_add(__u32 mode, struct sockaddr *inner_src,
 	entry->sequence = 1;
 	entry->lifetime = lifetime;
 	
-	// set the esp protection extension transform
-	entry->active_transform = esp_prot_transform;
-	HIP_DEBUG("entry->active_transform: %u\n", entry->active_transform);
-	
-	// only set up the anchor or hchain, if esp extension is used
-	if (esp_prot_transform > ESP_PROT_TRANSFORM_UNUSED)
-	{
-		HIP_DEBUG("setting up ESP extension parameters...\n");
-		
-		/* set up hash chains or anchors depending on the direction */
-		if (direction == HIP_SPI_DIRECTION_IN)
-		{
-			// set anchor for inbound SA
-			entry->active_anchor = esp_prot_anchor;
-			entry->tolerance = DEFAULT_VERIFY_WINDOW;
-		} else
-		{
-			// set hchain for outbound SA
-			HIP_IFEL(esp_prot_get_corresponding_hchain(esp_prot_anchor, esp_prot_transform,
-					entry->active_hchain), -1, "corresponding hchain not found\n");
-		}
-	}
-	
-	HIP_DEBUG("adding new sadb entry...\n");
-	// TODO lock hashtable?
-	hip_ht_add(sadb, entry);
-	
-	// TODO implement linkdb and link to this entry
-	
-  out_err:
-  	if (err)
-  	{
-  		if (entry)
-  		{
-  			hip_sa_entry_free(entry);
-  			free(entry);
-  		}
-  		entry = NULL;
-  	}
-  
-  	return err;
-}
-
-int hip_sa_entry_update(struct in6_addr *src_addr, struct in6_addr *dst_addr)
-{
-	hip_sa_entry_t *stored_entry = NULL;
-	int err = 0;
-	
-	// we need the sadb entry to go through entries in the linkdb
-	HIP_IFEL(!(stored_entry = hip_sa_entry_find_outbound(src_addr, dst_addr)), -1,
-			"failed to retrieve sa entry\n");
-	
-	/* TODO delete entries in inbound db for all (addr, oldspi)
-	 * or just those with (oldaddr, spi) */
-	// TODO lock link hashtable
-	
-	/* TODO add new links and change entries in common db */
+	HIP_IFEL(esp_prot_set_sadb(entry, esp_prot_transform, esp_prot_anchor, direction), -1,
+			"failed to set esp protection members\n");
 	
   out_err:
   	return err;
@@ -326,7 +394,20 @@ int hip_sa_entry_update(struct in6_addr *src_addr, struct in6_addr *dst_addr)
 
 hip_sa_entry_t * hip_sa_entry_find_inbound(struct in6_addr *dst_addr, uint32_t spi)
 {
-	// TODO search the linkdb for the link to the corresponding entry
+	hip_link_entry_t *stored_link = NULL;
+	hip_sa_entry_t *stored_entry = NULL;
+	int err = 0;
+	
+	HIP_IFEL(!(stored_link = hip_link_entry_find(dst_addr, spi)), -1,
+			"failed to find link entry");
+	
+	stored_entry = stored_link->linked_sa_entry;
+	
+  out_err:
+  	if (err)
+  		stored_entry = NULL;
+  	
+  	return stored_entry;
 }
 
 hip_sa_entry_t * hip_sa_entry_find_outbound(struct in6_addr *src_addr,
@@ -362,15 +443,20 @@ int hip_sa_entry_delete(struct in6_addr *src_addr, struct in6_addr *dst_addr)
 	hip_sa_entry_t *stored_entry = NULL;
 	int err = 0;
 	
-	/* TODO find entry in sadb and delete entries in linkdb for all (addr, spi) */
+	/* find entry in sadb and delete entries in linkdb for all (addr, spi)-matches */
 	HIP_IFEL(!(stored_entry = hip_sa_entry_find_outbound(src_addr, dst_addr)), -1,
 			"failed to retrieve sa entry\n");
+	
+	/* NOTE: no need to unlock mutex as the entry is already freed and can't be
+	 * accessed any more */
+	pthread_mutex_lock(stored_entry->rw_lock);
+	
+	HIP_IFEL(hip_link_entries_delete_all(stored_entry), -1, "failed to delete links\n");
 	
 	// free all entry members
 	hip_sa_entry_free(stored_entry);
 	
-	// TODO lock hashtable?
-	hip_ht_delete(stored_entry);
+	hip_ht_delete(sadb, stored_entry);
 	if (stored_entry)
 	{
 		HIP_DEBUG("this does not yet delete the entry\n");
@@ -381,12 +467,114 @@ int hip_sa_entry_delete(struct in6_addr *src_addr, struct in6_addr *dst_addr)
   	return err;
 }
 
+int hip_link_entry_add(struct in6_addr *dst_addr, hip_sa_entry_t *entry)
+{
+	hip_link_entry_t *link = NULL;
+	int err = 0;
+	
+	HIP_IFEL(!(link = (hip_link_entry_t *) malloc(sizeof(hip_link_entry_t))), -1,
+					"failed to allocate memory\n");
+			
+	link->dst_addr = dst_addr;
+	link->spi = entry->spi;
+	link->linked_sa_entry = entry;
+	
+	hip_ht_add(linkdb, link);
+	
+  out_err:
+  	return err;
+}
+
+int hip_link_entries_add(hip_sa_entry_t *entry)
+{
+	int err = 0;
+	
+	HIP_DEBUG("adding links to this sadb entry...\n");
+	
+	// TODO add multihoming support here
+	//while (entry has more dst_addr)
+	HIP_IFEL(hip_link_entry_add(entry->dst_addr, entry), -1,
+				"failed to add link entry\n");
+	
+  out_err:
+  	return err;
+}
+
+hip_link_entry_t *hip_link_entry_find(struct in6_addr *dst_addr, uint32_t spi)
+{
+	hip_link_entry_t *search_link = NULL, *stored_link = NULL;
+	int err = 0;
+		
+	HIP_IFEL(!(search_link = (hip_link_entry_t *) malloc(sizeof(hip_link_entry_t))), -1,
+				"failed to allocate memory\n");
+	memset(search_link, 0, sizeof(hip_link_entry_t));
+	
+	// search the linkdb for the link to the corresponding entry
+	search_link->dst_addr = dst_addr;
+	search_link->spi = spi;
+	
+	HIP_IFEL(!(stored_link = hip_ht_find(linkdb, search_link)), -1,
+				"failed to retrieve link entry\n");
+  out_err:
+  	if (err)
+  		stored_link = NULL;
+  
+	if (search_link)
+	  	free(search_link);
+	
+	return stored_link;
+}
+
+int hip_link_entry_delete(struct in6_addr *dst_addr, hip_sa_entry_t *entry)
+{
+	hip_link_entry_t *stored_link = NULL;
+	int err = 0;
+	
+	HIP_IFEL(!(stored_link = (hip_link_entry_t *) malloc(sizeof(hip_link_entry_t))), -1,
+					"failed to allocate memory\n");
+			
+	stored_link->dst_addr = dst_addr;
+	stored_link->spi = entry->spi;
+	stored_link->linked_sa_entry = entry;
+	
+	// find link entry and free members
+	HIP_IFEL(!(stored_link = hip_link_entry_find(dst_addr, entry->spi)), -1,
+				"failed to retrieve sa entry\n");
+	
+	if (stored_link->dst_addr)
+		free(stored_link->dst_addr);
+	
+	// delete the link
+	hip_ht_delete(linkdb, stored_link);
+	if (stored_link)
+	{
+		HIP_DEBUG("this does not yet delete the entry\n");
+		free(stored_link);
+	}
+	
+  out_err:
+  	return err;
+}
+
+int hip_link_entries_delete_all(hip_sa_entry_t *entry)
+{
+	int err = -1;
+	
+	HIP_DEBUG("adding links to this sadb entry...\n");
+	
+	// TODO lock link hashtable and add multihoming support here
+	//while (entry has more dst_addr)
+	HIP_IFEL(hip_link_entry_delete(entry->dst_addr, entry), -1,
+			"failed to add link entry\n");
+	
+  out_err:
+  	return err;
+}
+
 void hip_sa_entry_free(hip_sa_entry_t * entry)
 {
 	if (entry)
 	{
-		// TODO lock entry
-		
 		if (entry->src_addr)
 			free(entry->src_addr);
 		if (entry->dst_addr)
@@ -418,11 +606,18 @@ void hip_sa_entry_free(hip_sa_entry_t * entry)
 
 int hip_sadb_flush()
 {
-	int err = 0;
+	int err = 0, i = 0;
+	hip_list_t *item = NULL, *tmp = NULL;
+	hip_sa_entry_t *entry = NULL;
 	
-	// TODO lock hashtable
-	// TODO free members of entries
-	hip_ht_uninit(sadb);
+	// iterating over all elements
+	list_for_each_safe(item, tmp, sadb, i)
+	{
+		HIP_IFEL(!(entry = list_entry(item)), -1, "failed to get list entry\n");
+		HIP_IFEL(hip_sa_entry_delete(entry->inner_src_addr, entry->inner_dst_addr), -1,
+				"failed to delete sa entry\n");
+	}
+	
 	HIP_DEBUG("sadb flushed\n");
 	
   out_err:

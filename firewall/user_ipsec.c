@@ -2,10 +2,11 @@
  * @author René Hummen
  */
 
-#include <sys/socket.h>		/* socket() */
-#include <sys/time.h>		/* timeval */
+//#include <sys/socket.h>		/* socket() */
+//#include <sys/time.h>		/* timeval */
 #include "user_ipsec.h"
-#include "misc.h"			/* hip conversion functions */
+//#include "ife.h"
+//#include "misc.h"			/* hip conversion functions */
 
 //#define ESP_PACKET_SIZE 2500
 // this is the maximum buffer-size needed for an userspace ipsec esp packet
@@ -14,12 +15,13 @@
 		+ sizeof(struct hip_esp) + MAX_ESP_PADDING + sizeof(struct hip_esp_tail) \
 		+ EVP_MAX_MD_SIZE)
 
-/* For wrapper the API of the usespace IPsec implementation */
-#define TYPE_USERSPACE_IPSEC 0 /* Type is not used currently*/
+
 /* mode: 1-transport, 2-tunnel, 3-beet 
  * 
  * however right now we only support mode 3, no need for variable yet */
-#define IPSEC_MODE 3
+#define BEET_MODE 3
+// not implemented yet
+#define DEFAULT_LIFETIME 0
 
 // this is the ESP packet we are about to build
 unsigned char *esp_packet = NULL;
@@ -127,16 +129,12 @@ out_err:
 /* prepares the environment for esp encryption */
 int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 {
-	// peer HIT, sockaddr does not provide enough space for sockaddr_in6
-	struct sockaddr_storage sockaddr_peer_hit;
 	// entry matching the peer HIT
-	hip_sadb_entry *entry = NULL;
-	// the routable addresses as used in OpenHIP
-	struct sockaddr_storage preferred_local_sockaddr;
-	struct sockaddr_storage preferred_peer_sockaddr;
+	hip_sa_entry_t *entry = NULL;
 	// the routable addresses as used in HIPL
 	struct in6_addr preferred_local_addr;
 	struct in6_addr preferred_peer_addr;
+	struct sockaddr_storage preferred_peer_sockaddr;
 	struct timeval now;
 	int esp_packet_len = 0;
 	int out_ip_version = 0;
@@ -162,11 +160,8 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	memset(esp_packet, 0, ESP_PACKET_SIZE);
 	gettimeofday(&now, NULL);
 	
-	// SAs directing outwards are indexed with the peer's HIT
-	// FIXME this will only allow one connection to this peer HIT
-	hip_addr_to_sockaddr(&ctx->dst, &sockaddr_peer_hit);
-	
-	entry = hip_sadb_lookup_addr((struct sockaddr *) &sockaddr_peer_hit);
+	// SAs directing outwards are indexed with local and peer HIT
+	entry = hip_sa_entry_find_outbound(&ctx->src, &ctx->dst);
 	
 	// create new SA entry, if none exists yet
 	if (entry == NULL)
@@ -187,12 +182,11 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 		
 	HIP_DEBUG("matching SA entry found\n");
 	
-	// get preferred routable addresses
-	HIP_IFE(get_preferred_sockaddr(entry->src_addrs, &preferred_local_sockaddr), -1);
-	HIP_IFE(get_preferred_sockaddr(entry->dst_addrs, &preferred_peer_sockaddr), -1);
-	HIP_IFE(cast_sockaddr_to_in6_addr(&preferred_local_sockaddr, &preferred_local_addr), -1);
-	HIP_IFE(cast_sockaddr_to_in6_addr(&preferred_peer_sockaddr, &preferred_peer_addr), -1);
-
+	/* get preferred routable addresses */
+	// TODO add multihoming support -> look up preferred address here
+	memcpy(&preferred_local_addr, entry->src_addr, sizeof(struct in6_addr));
+	memcpy(&preferred_peer_addr, entry->dst_addr, sizeof(struct in6_addr));
+	
 	HIP_DEBUG_HIT("preferred_local_addr", &preferred_local_addr);
 	HIP_DEBUG_HIT("preferred_peer_addr", &preferred_peer_addr);
 	
@@ -218,6 +212,9 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	// encrypt transport layer and create new packet
 	HIP_IFEL(hip_beet_mode_output(ctx, entry, &preferred_local_addr, &preferred_peer_addr,
 			esp_packet, &esp_packet_len), 1, "failed to create ESP packet");
+	
+	// create sockaddr for sendto
+	hip_addr_to_sockaddr(&preferred_peer_addr, &preferred_peer_sockaddr);
 
 	// reinsert the esp packet into the network stack
 	if (out_ip_version == 4)
@@ -254,10 +251,11 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 {
 	struct hip_esp *esp_hdr = NULL;
 	struct hip_esp_ext *esp_exthdr = NULL;
+	struct sockaddr_storage local_sockaddr;
 	// entry matching the SPI
-	hip_sadb_entry *entry = NULL;
+	hip_sa_entry_t *entry = NULL;
 	// return entry
-	hip_sadb_entry *inverse_entry = NULL;
+	hip_sa_entry_t *inverse_entry = NULL;
 	struct in6_addr src_hit;
 	struct in6_addr dst_hit;
 	struct timeval now;
@@ -281,13 +279,16 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	spi = ntohl(esp_hdr->esp_spi);
 	seq_no = ntohl(esp_hdr->esp_seq);
 	
-	// lookup corresponding SA entry by SPI
-	HIP_IFEL(!(entry = hip_sadb_lookup_spi(spi)), -1,
-			"no SA entry found for SPI %u \n", spi);
+	// lookup corresponding SA entry by dst_addr and SPI
+	HIP_IFEL(!(entry = hip_sa_entry_find_inbound(&ctx->dst, spi)), -1,
+			"no SA entry found for dst_addr and SPI %u \n", spi);
 	HIP_DEBUG("matching SA entry found\n");
 	
 	// do a partial consistency check of the entry
-	HIP_ASSERT(entry->inner_src_addrs && entry->inner_dst_addrs);
+	HIP_ASSERT(entry->inner_src_addr && entry->inner_dst_addr);
+	
+	HIP_DEBUG_HIT("src hit: ", &entry->inner_src_addr);
+	HIP_DEBUG_HIT("dst hit: ", &entry->inner_dst_addr);
 
 	// TODO implement check with seq window
 	// check for correct SEQ no.
@@ -300,20 +301,12 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 			-1, "hash could not be verified");
 	
 	// check if we have a SA entry to reply to
-	HIP_IFEL(!(inverse_entry = hip_sadb_lookup_addr(
-		(struct sockaddr *)&entry->inner_src_addrs->addr)), 1,
-		"corresponding sadb entry for outgoing packets not found\n");
-	
-	// convert HITs to type used in hipl	
-	HIP_IFE(cast_sockaddr_to_in6_addr(&entry->inner_src_addrs->addr, &src_hit), -1);
-	HIP_IFE(cast_sockaddr_to_in6_addr(&entry->inner_dst_addrs->addr, &dst_hit), -1);
-	
-	HIP_DEBUG_HIT("src hit: ", &src_hit);
-	HIP_DEBUG_HIT("dst hit: ", &dst_hit);
+	HIP_IFEL(!(inverse_entry = hip_sa_entry_find_outbound(entry->inner_dst_addr,
+			entry->inner_src_addr)), -1,
+			"corresponding sadb entry for outgoing packets not found\n");
 	
 	// decrypt the packet and create a new HIT-based one
-	HIP_IFEL(hip_beet_mode_input(ctx, entry, &src_hit, &dst_hit,
-			decrypted_packet, &decrypted_packet_len), 1,
+	HIP_IFEL(hip_beet_mode_input(ctx, entry, decrypted_packet, &decrypted_packet_len), 1,
 			"failed to recreate original packet\n");
 	
 	HIP_HEXDUMP("restored original packet: ", decrypted_packet, decrypted_packet_len);
@@ -323,10 +316,13 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	HIP_DEBUG("ip6_hdr->ip6_nxt: %u \n", ip6_hdr->ip6_nxt);
 	HIP_DEBUG("ip6_hdr->ip6_hlim: %u \n", ip6_hdr->ip6_hlim);
 	
+	// create sockaddr for sendto
+	hip_addr_to_sockaddr(entry->inner_dst_addr, &local_sockaddr);
+	
 	// re-insert the original HIT-based (-> IPv6) packet into the network stack
 	err = sendto(raw_sock_v6, decrypted_packet, decrypted_packet_len, 0,
-					(struct sockaddr *)&entry->inner_dst_addrs->addr,
-					hip_sockaddr_len(&entry->inner_dst_addrs->addr));
+					(struct sockaddr *)&local_sockaddr,
+					hip_sockaddr_len(&local_sockaddr));
 	if (err < 0) {
 		HIP_DEBUG("hip_esp_input(): sendto() failed\n");
 	} else
@@ -350,25 +346,27 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 int handle_sa_add_request(struct hip_common * msg,
 			  struct hip_tlv_common *param)
 {
-	struct in6_addr *saddr = NULL, *daddr = NULL;
+	struct in6_addr *src_addr = NULL, *dst_addr = NULL;
 	struct in6_addr *src_hit = NULL, *dst_hit = NULL;
-	uint32_t spi_ipsec = 0;
-	int ealg, err = 0;
+	uint32_t spi = 0;
+	int ealg = 0, err = 0;
 	struct hip_crypto_key *enckey = NULL, *authkey = NULL;
-	int retransmission = 0, direction = 0, update = 0, local_port = 0, peer_port = 0;
-	uint8_t nat_mode = 0;
-	uint8_t esp_prot_transform = 0;
+	int retransmission = 0, direction = 0, update = 0;
+	uint16_t local_port = 0, peer_port = 0;
+	uint8_t encap_mode = 0, esp_prot_transform = 0;
 	unsigned char *esp_prot_anchor = NULL;
+	unsigned char *e_key = NULL, *a_key = NULL;
+	uint32_t e_keylen = 0, a_keylen = 0, e_type = 0, a_type = 0;
 	
 	// get all attributes from the message
 	
 	param = (struct hip_tlv_common *)hip_get_param(msg, HIP_PARAM_IPV6_ADDR);
-	saddr = (struct in6_addr *) hip_get_param_contents_direct(param);
-	HIP_DEBUG_IN6ADDR("Source IP address: ", saddr);
+	src_addr = (struct in6_addr *) hip_get_param_contents_direct(param);
+	HIP_DEBUG_IN6ADDR("Source IP address: ", src_addr);
 	
 	param = hip_get_next_param(msg, param);
-	daddr = (struct in6_addr *) hip_get_param_contents_direct(param);
-	HIP_DEBUG_IN6ADDR("Destination IP address : ", daddr);
+	dst_addr = (struct in6_addr *) hip_get_param_contents_direct(param);
+	HIP_DEBUG_IN6ADDR("Destination IP address : ", dst_addr);
 	
 	param = (struct hip_tlv_common *)hip_get_param(msg, HIP_PARAM_HIT);
 	src_hit = (struct in6_addr *) hip_get_param_contents_direct(param);
@@ -379,22 +377,22 @@ int handle_sa_add_request(struct hip_common * msg,
 	HIP_DEBUG_HIT("Destination HIT: ", dst_hit);
 	
 	param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_UINT);
-	spi_ipsec = *((uint32_t *) hip_get_param_contents_direct(param));
-	HIP_DEBUG("the spi value is : %u \n", spi_ipsec);
+	spi = *((uint32_t *) hip_get_param_contents_direct(param));
+	HIP_DEBUG("the spi value is : %u \n", spi);
 	
 	param = hip_get_next_param(msg, param);
-	nat_mode = *((uint8_t *) hip_get_param_contents_direct(param));
-	HIP_DEBUG("the nat_mode value is %u \n", nat_mode);
+	encap_mode = *((uint8_t *) hip_get_param_contents_direct(param));
+	HIP_DEBUG("the nat_mode value is %u \n", encap_mode);
 	
-	param =  hip_get_next_param(msg, param);
+	param = hip_get_next_param(msg, param);
 	local_port = *((uint16_t *) hip_get_param_contents_direct(param));
 	HIP_DEBUG("the local_port value is %u \n", local_port);
 	
-	param =  hip_get_next_param(msg, param);
+	param = hip_get_next_param(msg, param);
 	peer_port = *((uint16_t *) hip_get_param_contents_direct(param));
 	HIP_DEBUG("the peer_port value is %u \n", peer_port);
 	
-	param =  hip_get_next_param(msg, param);
+	param = hip_get_next_param(msg, param);
 	esp_prot_transform = *((uint8_t *) hip_get_param_contents_direct(param));
 	HIP_DEBUG("esp protection extension transform is %u \n", esp_prot_transform);
 	
@@ -434,24 +432,47 @@ int handle_sa_add_request(struct hip_common * msg,
 	update = *((int *) hip_get_param_contents_direct(param));
 	HIP_DEBUG("the update value is %d \n", update);
 	
+	/******* MAP HIP ESP encryption INDEX to SADB encryption INDEX *******/
+	switch(ealg) {
+		case HIP_ESP_AES_SHA1:
+			e_type = SADB_X_EALG_AESCBC;
+			a_type = SADB_AALG_SHA1HMAC;
+			break;
+		case HIP_HIP_3DES_SHA1:
+			e_type = SADB_EALG_3DESCBC;
+			a_type = SADB_AALG_SHA1HMAC;
+			break;
+		case HIP_HIP_BLOWFISH_SHA1:
+			e_type = SADB_X_EALG_BLOWFISHCBC;
+			a_type = SADB_AALG_SHA1HMAC;
+			break;
+	}
+	
+	a_keylen = hip_auth_key_length_esp(ealg);
+	e_keylen = hip_enc_key_length(ealg);
+	
+	e_key = (unsigned char *) enckey->key;
+	a_key = (unsigned char *) authkey->key;
+	
+	HIP_HEXDUMP("auth key: ", a_key, a_keylen);
+	HIP_HEXDUMP("enc key: ", e_key, e_keylen);
+	
+	HIP_IFEL(hip_sadb_add(direction, spi, BEET_MODE, src_addr, dst_addr,
+			src_hit, dst_hit, encap_mode, local_port, peer_port, a_type,
+			e_type, a_keylen, e_keylen, a_key, e_key, DEFAULT_LIFETIME,
+			esp_prot_transform, esp_prot_anchor, retransmission, update), -1,
+			"failed to add user_space IPsec security association\n");
+	
 	if (dst_hit)
-		err = firewall_set_bex_state(src_hit, dst_hit, 1);
-	else
-		err = firewall_set_bex_state(src_hit, dst_hit, -1);
+  		err = firewall_set_bex_state(src_hit, dst_hit, 1);
+  	else
+  		err = firewall_set_bex_state(src_hit, dst_hit, -1);
 	
-	
-	err = hipl_userspace_ipsec_sadb_add_wrapper(saddr, daddr, 
-						    src_hit, dst_hit, 
-						    spi_ipsec, nat_mode,
-						    local_port, peer_port,
-						    esp_prot_transform,
-						    esp_prot_anchor, ealg,
-						    enckey, 
-						    authkey, retransmission, 
-						    direction, update);
+  out_err:
 	return err;
 }
 
+#if 0
 int hipl_userspace_ipsec_sadb_add_wrapper(struct in6_addr *saddr,
 					      struct in6_addr *daddr,
 					      struct in6_addr *src_hit, 
@@ -514,16 +535,6 @@ int hipl_userspace_ipsec_sadb_add_wrapper(struct in6_addr *saddr,
 	hip_addr_to_sockaddr(src_hit, &inner_src); /* source HIT conversion */
 	hip_addr_to_sockaddr(dst_hit, &inner_dst); /* destination HIT conversion */
 	
-#if 0
-	/* hit_magic is the 16-bit sum of the bytes of both HITs. 
-	 * the checksum is calculated as other Internet checksum, according to 
-	 * the HIP spec this is the sum of 16-bit words from the input data a 
-	 * 32-bit accumulator is used but the end result is folded into a 16-bit
-	 * sum
-	 */
-	hit_magic = checksum_magic(src_hit, dst_hit);
-#endif
-	
 	/* looking at the usermode code, it may be that the lifetime is stored in
 	 * the hip_sadb_entry but never used. It is supposed to be the value in
 	 * seconds after which the SA expires but I don't think this is
@@ -545,90 +556,7 @@ int hipl_userspace_ipsec_sadb_add_wrapper(struct in6_addr *saddr,
 	
 	return err;
 }
-
-#if 0
-/*
- * * function checksum_magic()
- * *
- * * Calculates the hitMagic value given two HITs.
- * * Note that since this is simple addition, it doesn't matter
- * * which HIT is given first, and the one's complement is not
- * * taken.
- */
-uint16_t checksum_magic(const struct in6_addr *initiator, const struct in6_addr *receiver)
-{
-	int count;
-	unsigned long sum = 0;
-	unsigned short *p; /* 16-bit */
-	
-	/* 
-	 * * this checksum algorithm can be found 
-	 * * in RFC 1071 section 4.1, pseudo-header
-	 * * from RFC 2460
-	 * */
-	
-	/* one's complement sum 16-bit words of data */
-	/* sum initiator's HIT */
-	count = HIT_SIZE;
-	// TODO check if this is right
-	p = (unsigned short *) initiator;
-	
-	while (count > 1)  {
-		sum += *p++;
-		count -= 2;
-	}
-	
-	/* sum responder's HIT */
-	count = HIT_SIZE;
-	p = (unsigned short*) receiver;
-	
-	while (count > 1)  {
-		sum += *p++;
-		count -= 2;
-	}
-	
-	/*  Fold 32-bit sum to 16 bits */
-	while (sum>>16)
-		sum = (sum & 0xffff) + (sum >> 16);
-	
-	HIP_DEBUG("hitMagic checksum over %d bytes: 0x%x\n",
-		  2*HIT_SIZE, (uint16_t)sum);
-	
-	/* don't take the one's complement of the sum */
-	return((uint16_t)sum);
-}
 #endif
-
-// resolve HIT to routable addresses selecting the preferred ones
-int get_preferred_sockaddr(sockaddr_list *addr_list, struct sockaddr_storage *preferred_addr)
-{
-	int err = 0;
-	
-	while (addr_list != NULL)
-	{
-		// TODO find preferred address and don't select first one in list
-		//if (addr_list->preferred)
-		//{
-			HIP_DEBUG("found preferred addr\n");
-			
-			*preferred_addr = addr_list->addr;
-			
-			break;
-		//}
-
-		addr_list = addr_list->next;
-	}
-	
-	if (addr_list == NULL)
-	{
-		HIP_DEBUG("unable to resolve HIT to preferred address\n");
-		
-		err = 1;
-	}
-	
-  out_err:
-  	return err;
-}
 
 int cast_sockaddr_to_in6_addr(struct sockaddr_storage *sockaddr, struct in6_addr *in6_addr)
 {

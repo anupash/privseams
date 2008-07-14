@@ -40,7 +40,7 @@
 
 /* - encrypt payload
  * - set up other headers */
-int hip_beet_mode_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
+int hip_beet_mode_output(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
 		struct in6_addr *preferred_local_addr, struct in6_addr *preferred_peer_addr,
 		unsigned char *esp_packet, int *esp_packet_len)
 {
@@ -71,7 +71,7 @@ int hip_beet_mode_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 		next_hdr_offset = sizeof(struct ip);
 		
 		// check whether to use UDP encapsulation or not
-		if (entry->nat_mode == 1)
+		if (entry->encap_mode == 1)
 		{
 			out_udp_hdr = (struct udphdr *) (esp_packet + next_hdr_offset);
 			next_hdr_offset += sizeof(struct udphdr);
@@ -129,7 +129,7 @@ int hip_beet_mode_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 		*esp_packet_len += encryption_len;
 
 		// finally we have all the information to set up the missing headers
-		if (entry->nat_mode == 1) {
+		if (entry->encap_mode == 1) {
 			// the length field covers everything starting with UDP header
 			add_udp_header(out_udp_hdr, *esp_packet_len - sizeof(struct ip), entry,
 					preferred_local_addr, preferred_peer_addr);
@@ -214,8 +214,7 @@ int hip_beet_mode_output(hip_fw_context_t *ctx, hip_sadb_entry *entry,
  * them, adding HIT or LSI headers and sending them out the TAP-Win32 interface.
  * Also, expires temporary LSI entries and retransmits buffered packets.
  */
-int hip_beet_mode_input(hip_fw_context_t *ctx, hip_sadb_entry *entry,
-		struct in6_addr *src_hit, struct in6_addr *dst_hit,
+int hip_beet_mode_input(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
 		unsigned char *decrypted_packet, int *decrypted_packet_len)
 {
 	int next_hdr_offset = 0;
@@ -255,8 +254,8 @@ int hip_beet_mode_input(hip_fw_context_t *ctx, hip_sadb_entry *entry,
 	*decrypted_packet_len += decrypted_data_len;
 	
 	// now we know the next_hdr and can set up the IPv6 header
-	add_ipv6_header((struct ip6_hdr *)decrypted_packet, src_hit, dst_hit,
-			*decrypted_packet_len, next_hdr);
+	add_ipv6_header((struct ip6_hdr *)decrypted_packet, entry->inner_src_addr,
+			entry->inner_dst_addr, *decrypted_packet_len, next_hdr);
 	
 	HIP_DEBUG("original packet length: %i \n", *decrypted_packet_len);
 	
@@ -279,7 +278,7 @@ int hip_beet_mode_input(hip_fw_context_t *ctx, hip_sadb_entry *entry,
  * Perform actual ESP encryption and authentication of packets.
  */
 int hip_payload_encrypt(unsigned char *in, uint8_t in_type, int in_len,
-		unsigned char *out, int *out_len, hip_sadb_entry *entry)
+		unsigned char *out, int *out_len, hip_sa_entry_t *entry)
 {
 	/* elen is length of data to encrypt */
 	int elen = in_len;
@@ -507,7 +506,7 @@ int hip_payload_encrypt(unsigned char *in, uint8_t in_type, int in_len,
  * Perform authentication and decryption of ESP packets.
  */
 int hip_payload_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8_t *out_type,
-		int *out_len, hip_sadb_entry *entry)
+		int *out_len, hip_sa_entry_t *entry)
 {
 	/* elen is length of data to encrypt */
 	int elen = 0;
@@ -798,7 +797,7 @@ void add_ipv6_header(struct ip6_hdr *ip6_hdr, struct in6_addr *src_addr, struct 
 	memcpy(&ip6_hdr->ip6_dst, dst_addr, sizeof(struct in6_addr));
 }
 
-void add_udp_header(struct udphdr *udp_hdr, int packet_len, hip_sadb_entry *entry,
+void add_udp_header(struct udphdr *udp_hdr, int packet_len, hip_sa_entry_t *entry,
 		struct in6_addr *src_addr, struct in6_addr *dst_addr)
 {
 	//udp_hdr->source = htons(HIP_ESP_UDP_PORT);

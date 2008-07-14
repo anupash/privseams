@@ -42,7 +42,41 @@ int esp_prot_init()
   	return err;
 }
 
-int add_esp_prot_hash(unsigned char *out_hash, int *out_length, hip_sadb_entry *entry)
+int esp_prot_set_sadb(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
+		unsigned char *esp_prot_anchor, int direction)
+{
+	int err = 0;
+	
+	// TODO add update support
+	
+	// set the esp protection extension transform
+	entry->active_transform = esp_prot_transform;
+	HIP_DEBUG("entry->active_transform: %u\n", entry->active_transform);
+	
+	// only set up the anchor or hchain, if esp extension is used
+	if (esp_prot_transform > ESP_PROT_TRANSFORM_UNUSED)
+	{
+		HIP_DEBUG("setting up ESP extension parameters...\n");
+		
+		/* set up hash chains or anchors depending on the direction */
+		if (direction == HIP_SPI_DIRECTION_IN)
+		{
+			// set anchor for inbound SA
+			entry->active_anchor = esp_prot_anchor;
+			entry->tolerance = DEFAULT_VERIFY_WINDOW;
+		} else
+		{
+			// set hchain for outbound SA
+			HIP_IFEL(esp_prot_get_corresponding_hchain(esp_prot_anchor, esp_prot_transform,
+					entry->active_hchain), -1, "corresponding hchain not found\n");
+		}
+	}
+
+  out_err:
+  	return err;
+}
+
+int add_esp_prot_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *entry)
 {
 	int err = 0;
 	
@@ -84,7 +118,7 @@ int add_esp_prot_hash(unsigned char *out_hash, int *out_length, hip_sadb_entry *
 }
 
 /* verifies received hchain-elements */
-int verify_esp_prot_hash(hip_sadb_entry *entry, unsigned char *hash_value)
+int verify_esp_prot_hash(hip_sa_entry_t *entry, unsigned char *hash_value)
 {
 	int hash_length = 0;
 	int err = 0;
@@ -168,12 +202,12 @@ int esp_prot_get_corresponding_hchain(unsigned char *hchain_anchor, uint8_t tran
   	return err;
 }
 
-int get_esp_data_offset(hip_sadb_entry *entry)
+int get_esp_data_offset(hip_sa_entry_t *entry)
 {
 	return (sizeof(struct hip_esp) + esp_prot_transforms[entry->active_transform]);
 }
 
-int esp_prot_ext_maintainance(hip_sadb_entry *entry)
+int esp_prot_ext_maintainance(hip_sa_entry_t *entry)
 {
 	int err = 0, decreased_store_count = 0;
 	
