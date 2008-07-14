@@ -182,7 +182,7 @@ int hip_sadb_add(int direction, uint32_t spi, uint32_t mode,
 		struct in6_addr *src_addr, struct in6_addr *dst_addr,
 		struct in6_addr *inner_src_addr, struct in6_addr *inner_dst_addr,
 		uint8_t encap_mode, uint16_t src_port, uint16_t dst_port,
-		uint32_t a_type, uint32_t e_type, uint32_t a_keylen, uint32_t e_keylen,
+		int ealg, uint32_t a_keylen, uint32_t e_keylen,
 		unsigned char *a_key, unsigned char *e_key, uint64_t lifetime,
 		uint8_t esp_prot_transform, unsigned char *esp_prot_anchor,
 		int retransmission, int update)
@@ -194,13 +194,13 @@ int hip_sadb_add(int direction, uint32_t spi, uint32_t mode,
 	if (update)
 	{
 		HIP_IFEL(hip_sa_entry_update(direction, spi, mode, src_addr, dst_addr, inner_src_addr,
-				inner_dst_addr, encap_mode, src_port, dst_port, a_type, e_type, a_keylen,
+				inner_dst_addr, encap_mode, src_port, dst_port, ealg, a_keylen,
 				e_keylen, a_key, e_key, lifetime, esp_prot_transform, esp_prot_anchor), -1,
 				"failed to update sa entry\n");
 	} else
 	{
 		HIP_IFEL(hip_sa_entry_add(direction, spi, mode, src_addr, dst_addr, inner_src_addr,
-				inner_dst_addr, encap_mode, src_port, dst_port, a_type, e_type, a_keylen,
+				inner_dst_addr, encap_mode, src_port, dst_port, ealg, a_keylen,
 				e_keylen, a_key, e_key, lifetime, esp_prot_transform, esp_prot_anchor), -1,
 				"failed to add sa entry\n");
 	}
@@ -213,7 +213,7 @@ int hip_sa_entry_add(int direction, uint32_t spi, uint32_t mode,
 		struct in6_addr *src_addr, struct in6_addr *dst_addr,
 		struct in6_addr *inner_src_addr, struct in6_addr *inner_dst_addr,
 		uint8_t encap_mode, uint16_t src_port, uint16_t dst_port,
-		uint32_t a_type, uint32_t e_type, uint32_t a_keylen, uint32_t e_keylen,
+		int ealg, uint32_t a_keylen, uint32_t e_keylen,
 		unsigned char *a_key, unsigned char *e_key, uint64_t lifetime,
 		uint8_t esp_prot_transform, unsigned char *esp_prot_anchor)
 {
@@ -249,7 +249,7 @@ int hip_sa_entry_add(int direction, uint32_t spi, uint32_t mode,
 	}
 	
 	HIP_IFEL(hip_sa_entry_set(entry, direction, spi, mode, src_addr, dst_addr,
-			inner_src_addr, inner_dst_addr, encap_mode, src_port, dst_port, a_type, e_type,
+			inner_src_addr, inner_dst_addr, encap_mode, src_port, dst_port, ealg,
 			a_keylen, e_keylen, a_key, e_key, lifetime, esp_prot_transform, esp_prot_anchor),
 			-1, "failed to set the entry members\n");
 	
@@ -279,7 +279,7 @@ int hip_sa_entry_update(int direction, uint32_t spi, uint32_t mode,
 		struct in6_addr *src_addr, struct in6_addr *dst_addr,
 		struct in6_addr *inner_src_addr, struct in6_addr *inner_dst_addr,
 		uint8_t encap_mode, uint16_t src_port, uint16_t dst_port,
-		uint32_t a_type, uint32_t e_type, uint32_t a_keylen, uint32_t e_keylen,
+		int ealg, uint32_t a_keylen, uint32_t e_keylen,
 		unsigned char *a_key, unsigned char *e_key, uint64_t lifetime,
 		uint8_t esp_prot_transform, unsigned char *esp_prot_anchor)
 {
@@ -299,8 +299,8 @@ int hip_sa_entry_update(int direction, uint32_t spi, uint32_t mode,
 	
 	/* change members of entry in sadb and add new links */
 	HIP_IFEL(hip_sa_entry_set(stored_entry, direction, spi, mode, src_addr, dst_addr,
-			inner_src_addr, inner_dst_addr, encap_mode, src_port, dst_port, a_type, e_type,
-			a_keylen, e_keylen, a_key, e_key, lifetime, esp_prot_transform, esp_prot_anchor),
+			inner_src_addr, inner_dst_addr, encap_mode, src_port, dst_port, ealg, a_keylen,
+			e_keylen, a_key, e_key, lifetime, esp_prot_transform, esp_prot_anchor),
 			-1, "failed to update the entry members\n");
 	
 	HIP_IFEL(hip_link_entries_add(stored_entry), -1, "failed to add links\n");
@@ -316,7 +316,7 @@ int hip_sa_entry_set(hip_sa_entry_t *entry, int direction, uint32_t spi, uint32_
 		struct in6_addr *src_addr, struct in6_addr *dst_addr,
 		struct in6_addr *inner_src_addr, struct in6_addr *inner_dst_addr,
 		uint8_t encap_mode, uint16_t src_port, uint16_t dst_port,
-		uint32_t a_type, uint32_t e_type, uint32_t a_keylen, uint32_t e_keylen,
+		int ealg, uint32_t a_keylen, uint32_t e_keylen,
 		unsigned char *a_key, unsigned char *e_key, uint64_t lifetime,
 		uint8_t esp_prot_transform, unsigned char *esp_prot_anchor)
 {
@@ -339,13 +339,11 @@ int hip_sa_entry_set(hip_sa_entry_t *entry, int direction, uint32_t spi, uint32_
 	entry->src_port = src_port;
 	entry->dst_port = dst_port;
 	
-	entry->a_type = a_type;
-	entry->e_type = e_type;
+	entry->ealg = ealg;
 	entry->a_keylen = a_keylen;
 	entry->e_keylen = e_keylen;
 	
-	HIP_DEBUG("e_type value is: %d\n", e_type);
-	HIP_DEBUG("a_type value is: %d \n", a_type);
+	HIP_DEBUG("ealg value is: %d\n", ealg);
 	
 	// copy raw keys
 	memcpy(entry->a_key, a_key, a_keylen);
@@ -353,33 +351,52 @@ int hip_sa_entry_set(hip_sa_entry_t *entry, int direction, uint32_t spi, uint32_
 		memcpy(entry->e_key, e_key, e_keylen);
 	
 	// set up keys for the transform in use
-	if ((e_keylen > 0) && (e_type == HIP_HIP_3DES_SHA1))
+	switch (ealg)
 	{
-		key_len = e_keylen/3;
-		memset(key1, 0, key_len);
-		memset(key2, 0, key_len);
-		memset(key3, 0, key_len);
-		memcpy(key1, &e_key[0], key_len);
-		memcpy(key2, &e_key[8], key_len);
-		memcpy(key3, &e_key[16], key_len);
-		des_set_odd_parity((des_cblock*)key1);
-		des_set_odd_parity((des_cblock*)key2);
-		des_set_odd_parity((des_cblock*)key3);
-		err = des_set_key_checked((des_cblock*)key1, entry->ks[0]);
-		err += des_set_key_checked((des_cblock*)key2, entry->ks[1]);
-		err += des_set_key_checked((des_cblock*)key3, entry->ks[2]);
-		HIP_IFEL(err, -1, "3DES key problem\n");
-		
-	} else if ((e_keylen > 0) && (e_type == HIP_ESP_AES_SHA1))
-	{
-		/* AES key differs for encryption/decryption, so we set
-		 * it upon first use in the SA */
-		entry->aes_key = NULL;
-		
-	} else if ((e_keylen > 0) && (e_type == HIP_HIP_BLOWFISH_SHA1))
-	{
-		entry->bf_key = (BF_KEY *) malloc(sizeof(BF_KEY));
-		BF_set_key(entry->bf_key, e_keylen, e_key);
+		case HIP_ESP_3DES_SHA1:
+		case HIP_ESP_3DES_MD5:
+			key_len = e_keylen/3;
+			
+			memset(key1, 0, key_len);
+			memset(key2, 0, key_len);
+			memset(key3, 0, key_len);
+			
+			memcpy(key1, &e_key[0], key_len);
+			memcpy(key2, &e_key[8], key_len);
+			memcpy(key3, &e_key[16], key_len);
+			
+			des_set_odd_parity((des_cblock*)key1);
+			des_set_odd_parity((des_cblock*)key2);
+			des_set_odd_parity((des_cblock*)key3);
+			
+			err = des_set_key_checked((des_cblock*)key1, entry->ks[0]);
+			err += des_set_key_checked((des_cblock*)key2, entry->ks[1]);
+			err += des_set_key_checked((des_cblock*)key3, entry->ks[2]);
+			
+			HIP_IFEL(err, -1, "3DES key problem\n");
+			
+			break;
+		case HIP_ESP_AES_SHA1:
+			/* AES key differs for encryption/decryption, so we set
+			 * it upon first use in the SA */
+			entry->aes_key = NULL;
+			
+			break;
+		case HIP_ESP_BLOWFISH_SHA1:
+			entry->bf_key = (BF_KEY *) malloc(sizeof(BF_KEY));
+			BF_set_key(entry->bf_key, e_keylen, e_key);
+			
+			break;
+		case HIP_ESP_NULL_SHA1:
+			// same encryption chiper as next transform
+		case HIP_ESP_NULL_MD5:
+			// nothing needs to be set up
+			break;
+		default:
+			HIP_ERROR("Unsupported encryption transform: %i.\n", ealg);
+			
+			err = -1;
+			goto out_err;
 	}
 	
 	entry->sequence = 1;

@@ -302,9 +302,11 @@ int hip_payload_encrypt(unsigned char *in, uint8_t in_type, int in_len,
 	 */
 
 	/* Check keys and set initialisation vector length */
-	switch (entry->e_type)
+	switch (entry->ealg)
 	{
-		case SADB_EALG_3DESCBC:
+		case HIP_ESP_3DES_SHA1:
+			// same encryption chiper as next transform
+		case HIP_ESP_3DES_MD5:
 			iv_len = 8;
 			if (!entry->e_key || entry->e_keylen == 0) {
 				HIP_ERROR("3-DES key missing.\n");
@@ -313,7 +315,7 @@ int hip_payload_encrypt(unsigned char *in, uint8_t in_type, int in_len,
 				goto out_err;
 			}
 			break;
-		case SADB_X_EALG_BLOWFISHCBC:
+		case HIP_ESP_BLOWFISH_SHA1:
 			iv_len = 8;
 			if (!entry->bf_key) {
 				HIP_ERROR("BLOWFISH key missing.\n");
@@ -322,10 +324,12 @@ int hip_payload_encrypt(unsigned char *in, uint8_t in_type, int in_len,
 				goto out_err;
 			}
 			break;
-		case SADB_EALG_NULL:
+		case HIP_ESP_NULL_SHA1:
+			// same encryption chiper as next transform
+		case HIP_ESP_NULL_MD5:
 			iv_len = 0;
 			break;
-		case SADB_X_EALG_AESCBC:
+		case HIP_ESP_AES_SHA1:
 			// initalisation vector has the same size as the aes block size
 			iv_len = AES_BLOCK_SIZE;
 			if (!entry->aes_key && entry->e_key) {
@@ -345,14 +349,8 @@ int hip_payload_encrypt(unsigned char *in, uint8_t in_type, int in_len,
 				goto out_err;
 			}
 			break;
-		case SADB_EALG_NONE:
-		case SADB_EALG_DESCBC:
-		case SADB_X_EALG_CASTCBC:
-		case SADB_X_EALG_SERPENTCBC:
-		case SADB_X_EALG_TWOFISHCBC:
 		default:
-			HIP_DEBUG("Unsupported encryption transform (%d).\n",
-				entry->e_type);
+			HIP_ERROR("Unsupported encryption transform: %i\n", entry->ealg);
 			
 			err = -1;
 			goto out_err;
@@ -392,32 +390,34 @@ int hip_payload_encrypt(unsigned char *in, uint8_t in_type, int in_len,
 	
 	/* Apply the encryption cipher directly into out buffer
 	 * to avoid extra copying */
-	switch (entry->e_type)
+	switch (entry->ealg)
 	{
-		case SADB_EALG_3DESCBC:
+		case HIP_ESP_3DES_SHA1:
+			// same encryption chiper as next transform
+		case HIP_ESP_3DES_MD5:
 			des_ede3_cbc_encrypt(in, &out[esp_data_offset + iv_len], elen,
 					     entry->ks[0], entry->ks[1], entry->ks[2],
 					     (des_cblock *) cbc_iv, DES_ENCRYPT);
 			
 			break;
-		case SADB_X_EALG_BLOWFISHCBC:
+		case HIP_ESP_BLOWFISH_SHA1:
 			BF_cbc_encrypt(in, &out[esp_data_offset + iv_len], elen,
 					entry->bf_key, cbc_iv, BF_ENCRYPT);
 			
 			break;
-		case SADB_EALG_NULL:
+		case HIP_ESP_NULL_SHA1:
+		case HIP_ESP_NULL_MD5:
 			// NOTE: in this case there is no IV
 			memcpy(out, in, elen);
 			
 			break;
-		case SADB_X_EALG_AESCBC:
+		case HIP_ESP_AES_SHA1:
 			AES_cbc_encrypt(in, &out[esp_data_offset + iv_len], elen, 
 					entry->aes_key, cbc_iv, AES_ENCRYPT);
 			
 			break;
 		default:
-			HIP_DEBUG("Unsupported encryption transform (%d).\n",
-					entry->e_type);
+			HIP_ERROR("Unsupported encryption transform: %i\n", entry->ealg);
 						
 			err = -1;
 			goto out_err;
@@ -436,11 +436,11 @@ int hip_payload_encrypt(unsigned char *in, uint8_t in_type, int in_len,
 	elen += esp_data_offset;
 	
 	/* Check keys and calculate hashes */
-	switch (entry->a_type)
+	switch (entry->ealg)
 	{
-		case SADB_AALG_NONE:
-			break;
-		case SADB_AALG_MD5HMAC:
+		case HIP_ESP_3DES_MD5:
+			// same authentication chiper as next transform
+		case HIP_ESP_NULL_MD5:
 			if (!entry->a_key || entry->a_keylen == 0) {
 				HIP_ERROR("authentication keys missing\n");
 				
@@ -454,7 +454,9 @@ int hip_payload_encrypt(unsigned char *in, uint8_t in_type, int in_len,
 			HIP_DEBUG("alen: %i \n", alen);
 			
 			break;
-		case SADB_AALG_SHA1HMAC:
+		case HIP_ESP_3DES_SHA1:	
+		case HIP_ESP_NULL_SHA1:
+		case HIP_ESP_AES_SHA1:	
 			if (!entry->a_key || entry->a_keylen == 0) {
 				HIP_ERROR("authentication keys missing\n");
 				
@@ -468,14 +470,8 @@ int hip_payload_encrypt(unsigned char *in, uint8_t in_type, int in_len,
 			HIP_DEBUG("alen: %i \n", alen);
 			
 			break;
-		case SADB_X_AALG_SHA2_256HMAC:
-		case SADB_X_AALG_SHA2_384HMAC:
-		case SADB_X_AALG_SHA2_512HMAC:
-		case SADB_X_AALG_RIPEMD160HMAC:
-		case SADB_X_AALG_NULL:
 		default:
-			HIP_DEBUG("Unsupported authentication algorithm (%d).\n",
-							entry->a_type);
+			HIP_DEBUG("Unsupported authentication algorithm: %i\n", entry->ealg);
 			
 			err = -1;
 			goto out_err;
@@ -533,10 +529,10 @@ int hip_payload_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8
 	 */
 	
 	/* check keys, set up auth environment and finally auth */
-	switch (entry->a_type) {
-		case SADB_AALG_NONE:
-			break;
-		case SADB_AALG_MD5HMAC:
+	switch (entry->ealg) {
+		case HIP_ESP_3DES_MD5:
+			// same authentication chiper as next transform
+		case HIP_ESP_NULL_MD5:
 			// even if hash digest might be longer, we are only using this much here
 			alen = ICV_LENGTH;
 			//alen = MD5_DIGEST_LENGTH;
@@ -563,7 +559,9 @@ int hip_payload_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8
 				goto out_err;
 			}
 			break;
-		case SADB_AALG_SHA1HMAC:
+		case HIP_ESP_3DES_SHA1:	
+		case HIP_ESP_NULL_SHA1:
+		case HIP_ESP_AES_SHA1:
 			// even if hash digest might be longer, we are only using this much here
 			alen = ICV_LENGTH;
 			//alen = SHA_DIGEST_LENGTH;
@@ -592,14 +590,8 @@ int hip_payload_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8
 			}
 			
 			break;
-		case SADB_X_AALG_SHA2_256HMAC:
-		case SADB_X_AALG_SHA2_384HMAC:
-		case SADB_X_AALG_SHA2_512HMAC:
-		case SADB_X_AALG_RIPEMD160HMAC:
-		case SADB_X_AALG_NULL:
 		default:
-			HIP_ERROR("Unsupported authentication algorithm (%d).\n",
-										entry->a_type);
+			HIP_ERROR("Unsupported authentication algorithm: %i\n", entry->ealg);
 						
 			err = -1;
 			goto out_err;
@@ -615,8 +607,10 @@ int hip_payload_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8
 	elen -= esp_data_offset;
 
 	/* Check keys and set initialisation vector length */
-	switch (entry->e_type) {
-		case SADB_EALG_3DESCBC:
+	switch (entry->ealg) {
+		case HIP_ESP_3DES_SHA1:
+			// same encryption chiper as next transform
+		case HIP_ESP_3DES_MD5:
 			iv_len = 8;
 			if (!entry->e_key || entry->e_keylen == 0) {
 				HIP_ERROR("3-DES key missing.\n");
@@ -625,7 +619,7 @@ int hip_payload_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8
 				goto out_err;
 			}
 			break;
-		case SADB_X_EALG_BLOWFISHCBC:
+		case HIP_ESP_BLOWFISH_SHA1:
 			iv_len = 8;
 			if (!entry->bf_key) {
 				HIP_ERROR("BLOWFISH key missing.\n");
@@ -634,10 +628,11 @@ int hip_payload_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8
 				goto out_err;
 			}
 			break;
-		case SADB_EALG_NULL:
+		case HIP_ESP_NULL_SHA1:
+		case HIP_ESP_NULL_MD5:
 			iv_len = 0;
 			break;
-		case SADB_X_EALG_AESCBC:
+		case HIP_ESP_AES_SHA1:
 			iv_len = 16;
 			if (!entry->aes_key && entry->e_key) {
 				entry->aes_key = malloc(sizeof(AES_KEY));
@@ -657,14 +652,8 @@ int hip_payload_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8
 				goto out_err;
 			}
 			break;
-		case SADB_EALG_NONE:
-		case SADB_EALG_DESCBC:
-		case SADB_X_EALG_CASTCBC:
-		case SADB_X_EALG_SERPENTCBC:
-		case SADB_X_EALG_TWOFISHCBC:
 		default:
-			HIP_ERROR("Unsupported decryption algorithm (%d)\n", 
-				entry->e_type);
+			HIP_ERROR("Unsupported decryption algorithm: %i\n", entry->ealg);
 
 			err = -1;
 			goto out_err;
@@ -676,26 +665,27 @@ int hip_payload_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8
 	/* also don't include IV as part of ciphertext */
 	elen -= iv_len; 
 	
-	switch (entry->e_type) {
-		case SADB_EALG_3DESCBC:
+	switch (entry->ealg) {
+		case HIP_ESP_3DES_SHA1:
+		case HIP_ESP_3DES_MD5:
 			des_ede3_cbc_encrypt(&in[esp_data_offset + iv_len], out, elen,
 					     entry->ks[0], entry->ks[1], entry->ks[2],
 					     (des_cblock *) cbc_iv, DES_DECRYPT);
 			break;
-		case SADB_X_EALG_BLOWFISHCBC:
+		case HIP_ESP_BLOWFISH_SHA1:
 			BF_cbc_encrypt(&in[esp_data_offset + iv_len], out, elen,
 					entry->bf_key, cbc_iv, BF_DECRYPT);
 			break;
-		case SADB_EALG_NULL:
+		case HIP_ESP_NULL_SHA1:
+		case HIP_ESP_NULL_MD5:
 			memcpy(out, &in[esp_data_offset], elen);
 			break;
-		case SADB_X_EALG_AESCBC:
+		case HIP_ESP_AES_SHA1:
 			AES_cbc_encrypt(&in[esp_data_offset + iv_len], out, elen,
 					entry->aes_key, cbc_iv, AES_DECRYPT);
 			break;
 		default:
-			HIP_ERROR("Unsupported decryption algorithm (%d)\n", 
-					entry->e_type);
+			HIP_ERROR("Unsupported decryption algorithm: %i\n", entry->ealg);
 
 			err = -1;
 			goto out_err;

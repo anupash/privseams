@@ -433,24 +433,12 @@ int handle_sa_add_request(struct hip_common * msg,
 	HIP_DEBUG("the update value is %d \n", update);
 	
 	/******* MAP HIP ESP encryption INDEX to SADB encryption INDEX *******/
-	switch(ealg) {
-		case HIP_ESP_AES_SHA1:
-			e_type = SADB_X_EALG_AESCBC;
-			a_type = SADB_AALG_SHA1HMAC;
-			break;
-		case HIP_HIP_3DES_SHA1:
-			e_type = SADB_EALG_3DESCBC;
-			a_type = SADB_AALG_SHA1HMAC;
-			break;
-		case HIP_HIP_BLOWFISH_SHA1:
-			e_type = SADB_X_EALG_BLOWFISHCBC;
-			a_type = SADB_AALG_SHA1HMAC;
-			break;
-	}
 	
+	// TODO move to user_ipsec_esp.c -> don't store in entry
 	a_keylen = hip_auth_key_length_esp(ealg);
 	e_keylen = hip_enc_key_length(ealg);
 	
+	// TODO store hip_crypto_keys -> do not convert
 	e_key = (unsigned char *) enckey->key;
 	a_key = (unsigned char *) authkey->key;
 	
@@ -458,8 +446,8 @@ int handle_sa_add_request(struct hip_common * msg,
 	HIP_HEXDUMP("enc key: ", e_key, e_keylen);
 	
 	HIP_IFEL(hip_sadb_add(direction, spi, BEET_MODE, src_addr, dst_addr,
-			src_hit, dst_hit, encap_mode, local_port, peer_port, a_type,
-			e_type, a_keylen, e_keylen, a_key, e_key, DEFAULT_LIFETIME,
+			src_hit, dst_hit, encap_mode, local_port, peer_port, ealg,
+			a_keylen, e_keylen, a_key, e_key, DEFAULT_LIFETIME,
 			esp_prot_transform, esp_prot_anchor, retransmission, update), -1,
 			"failed to add user_space IPsec security association\n");
 	
