@@ -159,10 +159,8 @@ int hipd_init(int flush_ipsec, int killold)
 	hip_init_puzzle_defaults();
 #endif
 
-       /* Initialize a hashtable for services, if any service is enabled. */
+	/* Service initialization. */
 	hip_init_services();
-	/* The new service initialization. */
-	hip_init_xxx_services();
 
 #ifdef CONFIG_HIP_RVS
 	
@@ -750,7 +748,6 @@ void hip_exit(int signal)
 
 	/* Next line is needed only if RVS or escrow, hiprelay is in use. */
 	hip_uninit_services();
-	hip_uninit_xxx_services();
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	hip_oppdb_uninit();

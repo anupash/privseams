@@ -121,7 +121,16 @@ void hip_set_opportunistic_tcp_status(struct hip_common *msg)
 	sock_addr.sin6_addr = in6addr_loopback;		
 
 	for (retry = 0; retry < 3; retry++) {
-		n = hip_sendto(msg, &sock_addr);		
+		/* Switched from hip_sendto() to hip_sendto_user() due to
+		   namespace collision. Both message.h and user.c had functions
+		   hip_sendto(). Introducing a prototype hip_sendto() to user.h
+		   led to compiler errors --> user.c hip_sendto() renamed to
+		   hip_sendto_user().
+
+		   Lesson learned: use function prototypes unless functions are
+		   ment only for local (inside the same file where defined) use.
+		   -Lauri 11.07.2008 */
+		n = hip_sendto_user(msg, &sock_addr);
 		if (n <= 0) {
 			HIP_ERROR("hipconf opptcp failed (round %d)\n", retry);
 			HIP_DEBUG("Sleeping few seconds to wait for fw\n");
@@ -523,15 +532,12 @@ int hipd_main(int argc, char *argv[])
 		{
 			/* Receiving of a message from user socket. */
 			struct sockaddr_storage app_src;
+			
 			HIP_DEBUG("Receiving user message.\n");
+			
 			hip_msg_init(hipd_msg);
-
-			HIP_DEBUG("Receiving a message from user socket "\
-				  "(file descriptor: %d).\n",
-				  hip_user_sock);
-
-			if (hip_read_user_control_msg(hip_user_sock, hipd_msg, &app_src))
-			{
+			
+			if (hip_read_user_control_msg(hip_user_sock, hipd_msg, &app_src)) {
 				HIP_ERROR("Reading user msg failed\n");
 			}
 			else { 
