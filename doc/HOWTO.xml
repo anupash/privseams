@@ -1216,9 +1216,10 @@
 		"/etc/hip/hosts", are left blank. The files are left blank
 		because the rendezvous server is assumed to have no information
 		of its clients beforehand. The RVS can have some whitelisted
-		HITs as beforehand information but it is not required to have
-		none whatsoever. Using the whitelist to filter HITs is local
-		policy and as such is not part of the registration procedure.
+		HITs as beforehand information, however, but it is not required
+		to have none whatsoever. Using the whitelist to filter HITs is
+		local policy and as such is not part of the registration
+		procedure.
 	      </para>
 	    </listitem>
 	  </orderedlist>
@@ -1239,7 +1240,9 @@
 	</listitem>
       </itemizedlist>
       <para>
-	Finally, we are ready to test the actual connection establishment:
+	Finally, we are ready to test the actual connection establishment. You
+	will need two shells open on each host, one for the HIP daemon and other
+	for the hipconf tool:
       </para>
       <orderedlist>
 	<listitem><para>
@@ -1251,11 +1254,13 @@
 	</para></listitem>
 	<listitem id="listitem_rvs"><para>
 	  At the responder, we have to register to the rendezvous server:
-	  <programlisting>tools/hipconf add rvs &lt;RVS-HIT&gt; &lt;RVS-IP&gt; &lt;LIFETIME&gt;</programlisting>
-	  This will establish a HIP SA between the rendezvous server and the responder.
-	  Please use the default HIT of the rendezvous server ("tools/hipconf get hi default" at the RVS).
-	  The lifetime value is in seconds. Note, that requesting a desired lifetime is
-	  currently only supported for the rendezvous service.
+	  <programlisting>tools/hipconf add rvs &lt;RVS-HIT&gt; &lt;RVS-IP&gt; &lt;LIFETIME-IN-SECONDS&gt;</programlisting>
+	  This will launch a base exchange i.e. establish a HIP SA between the
+	  rendezvous server and the responder. Please use the default HIT of
+	  the rendezvous server ("tools/hipconf get hi default" at the RVS).
+	  The &lt;LIFETIME-IN-SECONDS&gt; value represents the number of seconds
+	  we would like our service registration to last, but it is not
+	  necessarily the number of seconds we are granted the service.
 	</para></listitem>
 	<listitem><para>
 	  At the responder, start a server listening for incoming connections:
@@ -1266,10 +1271,41 @@
 	  <programlisting>test/conntest-client-hip &lt;RESPONDER-HOSTNAME&gt; tcp 5000</programlisting>
 	</para></listitem>
 	<listitem><para>
-	  At the initiator, type some text and press CTRL + d. If everything works
-	  OK the typed text should now be echoed at the responder.
+	  At the initiator, type some text and press CTRL + d. If everything
+	  works as it should, the typed text should now be echoed at
+	  the responder.
 	</para></listitem>
       </orderedlist>
+      <para>
+	Related hipconf commands:
+      </para>
+      <itemizedlist>
+	<listitem>
+	  <para>
+	    Server side commands i.e. commands run on the rendezvous server;
+	  </para>
+	  <itemizedlist>
+	    <listitem>
+	      <para>
+		To cancel the rendezvous service without killing the HIP daemon
+		type:
+		<programlisting>tools/hipconf del service rvs</programlisting>
+		This will delete all existing rendezvous server registrations
+		and remove the rendezvous service from the offered services.
+	      </para>
+	    </listitem>
+	    <listitem>
+	      <para>
+		To reinitialize the rendezvous service after modifications to
+		the configuration file without killing the HIP daemon type:
+		<programlisting>tools/hipconf reinit service rvs</programlisting>
+		The changes that you have made to the configuration file affect the
+		clients registering after the reinitialization.
+	      </para>
+	    </listitem>
+	  </itemizedlist>
+	</listitem>
+      </itemizedlist>
       <para>
 	Notes:
       </para>
