@@ -396,7 +396,12 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
 		addr_to6->sin6_family = AF_INET6;
 		ipv6_addr_copy(&addr_to6->sin6_addr, daddr);
 	}
-
+	
+//added by santtu
+	if (hip_read_control_msg_plugin_handler(hip_msg,len, saddr,msg_info->src_port))
+		goto out_err;
+//endadd	
+	
 	if (is_ipv4 && (encap_hdr_size == IPV4_HDR_SIZE)) {/* raw IPv4, !UDP */
 		/* For some reason, the IPv4 header is always included.
 		   Let's remove it here. */
@@ -446,3 +451,15 @@ int hip_read_control_msg_v4(int socket, struct hip_common *hip_msg,
 }
 
 
+int hip_read_control_msg_plugin_handler(void* msg, int len, in6_addr_t * src_addr,in_port_t port){
+	int err = 0;
+#if 0
+	//handle stun msg
+	if (hip_external_ice_receive_pkt_all(msg, len, src_addr,port)) {
+		err = 1;
+		goto out_err;
+	}
+#endif
+out_err:
+	return err;
+}

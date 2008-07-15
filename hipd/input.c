@@ -474,7 +474,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 	type = hip_get_msg_type(msg);
 	entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
 	if(type == HIP_UPDATE && entry){
-		hip_external_ice_receive_pkt(msg,entry,src_addr,msg_info->src_port);
+		hip_external_ice_receive_pkt(msg+1,msg->payload_len,entry,src_addr,msg_info->src_port);
 	}
 #endif
 //end add	

@@ -192,5 +192,10 @@ int hip_nat_send_keep_alive(hip_ha_t *, void *);
 int hip_nat_handle_transform_in_client(struct hip_common *msg , hip_ha_t *entry);
 int hip_nat_handle_transform_in_server(struct hip_common *msg , hip_ha_t *entry);
 uint16_t hip_nat_get_control();
+
+
+int hip_external_ice_receive_pkt(void * msg,int len, 
+		hip_ha_t *entry, in6_addr_t * src_addr,in_port_t port );
+
 #endif /* __NAT_H__ */
 

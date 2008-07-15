@@ -763,6 +763,8 @@ pj_status_t hip_on_tx_pkt(pj_ice_sess *ice, unsigned comp_id, const void *pkt, p
 	hip_ha_t *entry;
 //	int error = 0;
 	
+	hip_dump_pj_stun_msg(pkt,size);
+
 	HIP_IFEL(!(msg = hip_msg_alloc()), -ENOMEM, "Out of memory\n");
 	
 	HIP_DEBUG("send ice: len %d \n", size);
@@ -808,9 +810,13 @@ pj_status_t hip_on_tx_pkt(pj_ice_sess *ice, unsigned comp_id, const void *pkt, p
 	int retransmit = 0;
 	
 	if(err = hip_send_udp(local_addr, &peer_addr, src_port,dst_port, msg, msg->payload_len,0) )
+	//if(err = hip_send_udp_stun(local_addr, &peer_addr, src_port,dst_port, pkt, size) )
 		goto out_err;
 	//TODO check out what should be returned
 	else return PJ_SUCCESS;
+	
+	
+	
 	
 out_err:
 		//	if (host_id_pub)
@@ -1169,7 +1175,7 @@ int hip_external_ice_end(){
     pj_caching_pool_destroy(&cp);
 }
 */
-int hip_external_ice_receive_pkt(struct hip_common * msg, hip_ha_t *entry, in6_addr_t * src_addr,in_port_t port ){
+int hip_external_ice_receive_pkt(void * msg,int len, hip_ha_t *entry, in6_addr_t * src_addr,in_port_t port ){
 
     int i, addr_len;
     pj_sockaddr_in pj_addr;
@@ -1188,7 +1194,7 @@ int hip_external_ice_receive_pkt(struct hip_common * msg, hip_ha_t *entry, in6_a
      if(entry->ice_session){
     	
     	
-    	pj_ice_sess_on_rx_pkt(entry->ice_session,1,msg+1, msg->payload_len, &pj_addr,addr_len);
+    	pj_ice_sess_on_rx_pkt(entry->ice_session,1,msg, len, &pj_addr,addr_len);
     }
     else{
     	HIP_DEBUG("ice is not init in entry.\n");
@@ -1196,6 +1202,32 @@ int hip_external_ice_receive_pkt(struct hip_common * msg, hip_ha_t *entry, in6_a
     
 	
 	return 0;
+}
+
+int hip_external_ice_receive_pkt_all(void* msg, int len, in6_addr_t * src_addr,in_port_t port ){
+
+    int i=0, addr_len, err= 0;
+    pj_sockaddr_in pj_addr; 
+    
+	hip_ha_t *ha_n, *entry;
+	hip_list_t *item = NULL, *tmp = NULL;
+
+	if (pj_stun_msg_check(msg,len,PJ_STUN_IS_DATAGRAM) != PJ_SUCCESS){
+		err = 0;
+		goto out_err;
+	}
+	
+	list_for_each_safe(item, tmp, hadb_hit, i) {
+	    ha_n = list_entry(item);
+	    if(ha_n->ice_session){
+	    	entry = ha_n;
+	    	hip_external_ice_receive_pkt(msg,len,entry,src_addr, port);
+	    	err = 1;
+	    }
+	}
+	
+out_err:
+	return err;
 }
 
 int hip_nat_parse_pj_addr(pj_sockaddr_in *pj_addr,in6_addr_t * hip_addr, in_port_t *port, int *priority,int *type ){
@@ -1401,3 +1433,47 @@ out_err:
 	
 }
 
+
+int hip_dump_pj_stun_msg(void* pdu, int len){
+	
+	int err = 0;
+	pj_stun_password_attr * stun_password;
+	pj_stun_username_attr * stun_username;
+	pj_stun_msg * msg, *response;
+	pj_pool_t *pool ;
+	pj_size_t parse_len;
+	char buffer[1000];
+	unsigned print_len = 1000;
+	
+	HIP_DEBUG("dump_pj_stun_msg\n");
+ 	pool = pj_pool_create(&cpp->factory, NULL, 4000, 4000, NULL);
+ 	
+ 	
+ 	HIP_DEBUG("dump_pj_stun_msg1\n");
+ 	
+ 	pj_stun_msg_decode(pool,pdu,len, 0, &msg, &parse_len,&response);
+		
+	//parse the stun
+ 	HIP_DEBUG("dump_pj_stun_msg2\n");
+ 	stun_password = pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_PASSWORD, 0);
+ 	stun_username = pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_USERNAME, 0);
+	
+ 	
+ 	
+	if(stun_password)
+		HIP_DEBUG("password is %s\n",stun_password->value.ptr);
+	if(stun_username)
+		HIP_DEBUG("username is %s\n",stun_username->value.ptr);
+
+	HIP_DEBUG("official dump\n %s\n",pj_stun_msg_dump(msg,buffer,1000,&print_len));
+	
+	
+	
+out_err:
+ 	if(pool)
+ 			pj_pool_release(pool);
+ 		return err;
+ 		
+	
+ 	
+}
