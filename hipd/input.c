@@ -1453,12 +1453,12 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 
 #ifdef HIP_USE_ICE
     	/********* LOCATOR PARAMETER ************/
-		/** Type 193 **/ 
-		if (hip_locator_status == SO_HIP_SET_LOCATOR_ON) {
-		    HIP_DEBUG("Building nat LOCATOR parameter\n");
-		    if ((err = hip_nat_build_locators(r2)) < 0) 
-		        HIP_DEBUG("nat LOCATOR parameter building failed\n");
-		}  	
+	/** Type 193 **/ 
+	if (hip_locator_status == SO_HIP_SET_LOCATOR_ON) {
+		HIP_DEBUG("Building nat LOCATOR parameter\n");
+		if ((err = hip_nat_build_locators(r2)) < 0) 
+			HIP_DEBUG("nat LOCATOR parameter building failed\n");
+	}  	
 #endif	
 	
 #if defined(CONFIG_HIP_RVS) || defined(CONFIG_HIP_ESCROW)
@@ -1579,7 +1579,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	extern uint8_t hip_esp_prot_ext_transform;
 	//add by santtu        
 #ifdef HIP_USE_ICE
-	void * ice_session = 0;
+	void * ice_session = NULL;
 	int i;
 #endif
 #ifdef CONFIG_HIP_HI3

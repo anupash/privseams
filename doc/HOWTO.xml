@@ -70,7 +70,7 @@
       </para></listitem>
       <listitem><para>
 	Check that you DON'T have libpthread-dev installed (Ubuntu/debian)
-	because atleast in Ubuntu Feisty it messes up the compilation.
+	because at least in Ubuntu Feisty it messes up the compilation.
       </para></listitem>
     </itemizedlist>
     <para>
@@ -991,7 +991,7 @@
 	the HIP relay server serve as an initial contact point ("rendezvous
 	point") for its clients. The clients of an RVS / HIP relay server are
 	HIP nodes that use the HIP Registration Protocol to register their
-	HIT->IP address mappings with the server. After this registration,
+	HIT to IP address mappings with the server. After this registration,
 	other HIP nodes can initiate a base exchange using the IP address of the
 	server instead of the current IP address of the node they attempt to
 	contact. Essentially, the clients of a server become reachable at the
@@ -1060,9 +1060,14 @@
       <title>The RVS and HIP Relay configuration file</title>
       <para>
 	The rendezvous server and the HIP relay server are configured using a
-	configuration file: "/etc/hip/relay_config". This file is shared between
-	the RVS and the HIP relay because both of these services use the same
-	internal database to store the HIT->IP mappings. A default configuration
+	configuration file: "/etc/hip/relay_config". Note, that this file is
+	server side configuration file i.e. you only need to configure the file
+	at the relay or rendezvous server, not at the client.
+      </para>
+      <para>
+	This file is shared between the RVS and the HIP relay because both of
+	these services use the same internal database to store the HIT to IP
+	address mappings. A default configuration
 	file is created once the HIP daemon is started the first time, thus if the
 	daemon has not been started before, please start and stop the daemon
 	once to create the default file. In the configuration file we have the
@@ -1105,12 +1110,22 @@
 	<programlisting>
 	  minimum_lifetime = "60"
 	  maximum_lifetime = "3600"</programlisting>
-	These values are seconds. However, the registration extension
+	These values are seconds. The registration extension, however,
 	uses an 8-bit encoding to represent the lifetimes. The values that are
-	given in the configuration file are used to calculate the reallife
+	given in the configuration file are used to calculate the real life
 	time and therefore do not represent the exact life time as such. The
-	formula for the calculations is given in the registration draft:
-	"draft-ietf-hip-registration-02".
+	formula for the calculations is given in RFC 5203: "Host Identity
+	Protocol (HIP) Registration Extension": seconds = 2^((lifetime - 64)/8).
+      </para>
+      <para>
+	Using this formula we can get the lifetime value:
+	lifetime = (8 * (log(seconds) / log(2))) + 64. For the aforementioned
+	default values in seconds (60 and 3600) we get lifetime values 112 and
+	158 (using ceil() foor lower boundary and floor() for higher boundary).
+	These lifetime values correspond to 64 and 3444 respectively. Therefore
+	when you have values 60 and 3600 seconds in the configuration file, you
+	will effectively end up having lifetime value boundaries of 64 and 3444
+	seconds.
       </para>
       <para>
 	If you have already started a HIP daemon that functions as an RVS or a
@@ -1138,7 +1153,7 @@
       </para>
       <para>
 	The rendezvous server is similar to the home agent in Mobile IP. The
-	rendezvous server provides a stable IP for the responder and forwards
+	rendezvous server provides a stable IP address for the responder and forwards
 	the initial I1 packet to the current location of the responder. The
 	idea is that I wants to connect to R's HIT but only knows RVS's IP
 	address (and that RVS is representing R). In this section, we show how

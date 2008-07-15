@@ -37,14 +37,11 @@ void hip_init_services()
 	hip_services[2].max_lifetime = HIP_RELREC_MAX_LIFETIME;
 
 	hip_ll_init(&pending_requests);
-		
-	HIP_DEBUG("NEW SERVICE INITIALIZATION DONE.\n");
 }
 
 void hip_uninit_services()
 {
 	hip_ll_uninit(&pending_requests, free);
-	HIP_DEBUG("NEW SERVICE UNINITIALIZATION DONE.\n");
 }
 
 void hip_registration_maintenance()

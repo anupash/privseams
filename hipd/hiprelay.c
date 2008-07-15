@@ -751,7 +751,7 @@ int hip_relay_read_config(){
 					   value. We want the minimum to be at
 					   least the value specified. */
 					if(val < max) {
-						val ++;
+						val++;
 					}
 					hiprelay_min_lifetime = val;
 				}
@@ -1163,7 +1163,7 @@ int hip_relay_handle_relay_from(hip_common_t *source_msg,
 		  
 		  memcpy(dest_ip, &relay_from->address, sizeof(relay_from->address));
 		  	*dest_port = ntohs(relay_from->port);
-		//	*dest_port = relay_from->port;
+			//	*dest_port = relay_from->port;
 			HIP_DEBUG("RELAY_FROM port in I. %d \n", *dest_port);
      }
      
