@@ -454,10 +454,12 @@ int handle_sa_add_request(struct hip_common * msg,
 			esp_prot_transform, esp_prot_anchor, retransmission, update), -1,
 			"failed to add user_space IPsec security association\n");
 	
+#if 0
 	if (dst_hit)
   		err = firewall_set_bex_state(src_hit, dst_hit, 1);
   	else
   		err = firewall_set_bex_state(src_hit, dst_hit, -1);
+#endif
 	
   out_err:
 	return err;
