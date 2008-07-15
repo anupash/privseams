@@ -752,6 +752,12 @@ $ rsync *.dsc *.orig.tar.gz *.diff.gz root@packages.infrahip.net:/var/www/html/u
 
 $ sudo dpkg-scansources . /dev/null | sudo gzip -9c > Sources.gz
 
+VALGRIND AND HIPD
+=================
+
+On some machines, valgrind does not work without the following:
+  
+  ./configure --disable-privsep && make clean all
 
 
 TEST MATRIX
