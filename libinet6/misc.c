@@ -1,13 +1,12 @@
-/*
- * Miscellaneous functions
+/**@file
+ * This file defines miscellaneous utility functions
  *
- * Licence: GNU/GPL
- * Authors:
- * - Miika Komu <miika@iki.fi>
- * - Mika Kousa <mkousa@iki.fi>
- * - Bing Zhou <bingzhou@cc.hut.fi>
+ * @author Miika Komu
+ * @author Mika Kousa
+ * @author Bing Zhou
+ * @note   Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @see    misc.h
  */
-
 #include "misc.h"
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
@@ -1514,7 +1513,7 @@ void *hip_cast_sa_addr(void *sockaddr) {
   return ret;
 }
 
-int hip_sockaddr_len(void *sockaddr) {
+int hip_sockaddr_len(const void *sockaddr) {
   struct sockaddr *sa = (struct sockaddr *) sockaddr;
   int len;
   
@@ -1579,21 +1578,21 @@ int hip_remove_lock_file(char *filename) {
 }
 
 int hip_create_lock_file(char *filename, int killold) {
-	int err = 0, fd = 0, old_pid = 0;
-	char old_pid_str[64], new_pid_str[64];
-	int new_pid_str_len;
 	
+	int err = 0, fd = 0, old_pid = 0, new_pid_str_len = 0;
+	char old_pid_str[64], new_pid_str[64];
+		
 	memset(old_pid_str, 0, sizeof(old_pid_str));
 	memset(new_pid_str, 0, sizeof(new_pid_str));
 
 	/* New pid */
 	snprintf(new_pid_str, sizeof(new_pid_str)-1, "%d\n", getpid());
-	new_pid_str_len = strnlen(new_pid_str, sizeof(new_pid_str)-1);
-	HIP_IFEL((new_pid_str_len <= 0), -1, "pid length\n");
+	new_pid_str_len = strnlen(new_pid_str, sizeof(new_pid_str) - 1);
+	HIP_IFEL((new_pid_str_len <= 0), -1, "pID length error.\n");
 		
 	/* Read old pid */
 	fd = open(filename, O_RDWR | O_CREAT, 0644);
-	HIP_IFEL((fd <= 0), -1, "opening lock file failed\n");
+	HIP_IFEL((fd <= 0), -1, "Opening lock file failed.\n");
 
 	read(fd, old_pid_str, sizeof(old_pid_str) - 1);
 	old_pid = atoi(old_pid_str);
@@ -1601,47 +1600,53 @@ int hip_create_lock_file(char *filename, int killold) {
 	if (lockf(fd, F_TLOCK, 0) < 0)
 	{ 
 		HIP_IFEL(!killold, -12,
-			 "\nHIP daemon already running with pid %d\n"
-			 "Give: -k option to kill old daemon.\n",old_pid);
+			 "\nHIP daemon already running with pID %d\n"
+			 "Give: -k option to kill old daemon.\n", old_pid);
 		
-		HIP_INFO("\nDaemon is already running with pid %d\n"
+		HIP_INFO("\nDaemon is already running with pID %d\n"
 			 "-k option given, terminating old one...\n", old_pid);
 		/* Erase the old lock file to avoid having multiple pids
 		   in the file */
 		lockf(fd, F_ULOCK, 0);
 		close(fd);
-		HIP_IFEL(hip_remove_lock_file(filename), -1,"remove lock file\n");
+		HIP_IFEL(hip_remove_lock_file(filename), -1,
+			 "Removing lock file failed.\n");
+		
                 /* fd = open(filename, O_RDWR | O_CREAT, 0644); */
 		fd = open(filename, O_RDWR | O_CREAT | O_TRUNC, 0644);
-                /* don't close file descriptor because new started process is running */
-		HIP_IFEL((fd <= 0), -1, "Opening lock file failed\n");
-		HIP_IFEL(lockf(fd, F_TLOCK, 0), -1,"lock attempt failed\n");  
-                 /* HIP_IFEL(kill(old_pid, SIGKILL), -1, "kill failed\n"); */
+		
+                /* Don't close file descriptor because new started process is
+		   running. */
+		HIP_IFEL((fd <= 0), -1, "Opening lock file failed.\n");
+		HIP_IFEL(lockf(fd, F_TLOCK, 0), -1, "Lock attempt failed.\n");  
+		
 		err = kill(old_pid, SIGKILL);
-		if (err != 0)
-		{
-                 HIP_INFO("\nError %d while trying to kill pid %d\n", err,old_pid);
+		if (err != 0) {
+			HIP_ERROR("\nError when trying to send signal SIGKILL "\
+				  "process identified by process identifier "\
+				  "%d.\n", old_pid);
+			HIP_PERROR("errno after kill() is: ");
 		} 
 	}
 	/* else if (killold)
-	{	
-		lseek(fd,0,SEEK_SET);
-		write(fd, new_pid_str, new_pid_str_len);
-                system("NEW_PID=$(sudo awk NR==1 /var/lock/hipd.lock)");
-		system("OLD_PID=$(/bin/pidof -o $NEW_PID hipd)");
-		system("kill -9 $OLD_PID"); 
-	} */
-
-	lseek(fd,0,SEEK_SET);
+	   {	
+	   lseek(fd,0,SEEK_SET);
+	   write(fd, new_pid_str, new_pid_str_len);
+	   system("NEW_PID=$(sudo awk NR==1 /var/lock/hipd.lock)");
+	   system("OLD_PID=$(/bin/pidof -o $NEW_PID hipd)");
+	   system("kill -9 $OLD_PID"); 
+	   } */
+	
+	lseek(fd, 0, SEEK_SET);
+	
 	HIP_IFEL((write(fd, new_pid_str, new_pid_str_len) != new_pid_str_len),
-		 "Writing new pid failed\n", -1);
-
-out_err:
-	if (err == -12)
-	{
-	  exit(0);
+		 -1, "Writing new process identifier failed.\n");
+	
+ out_err:
+	if (err == -12) {
+		exit(0);
 	}
-
+	
 	return err;
 }
 
@@ -2126,4 +2131,38 @@ int e_len = tmp[offset++];
   ret->e_len = offset;
   ret->e = e_len;
   ret->n = bytes;
+}
+
+int hip_string_to_lowercase(char *to, const char *from, const size_t count)
+{
+	if(to == NULL || from == NULL || count == 0)
+		return -1;
+
+	int i = 0;
+
+	for(; i < count; i++) {
+		if(isalpha(from[i])) {
+			to[i] = tolower(from[i]);
+		} else {
+			to[i] = from[i];
+		}
+	}
+
+	return 0;
+}
+
+int hip_string_is_digit(const char *string)
+{
+	if(string == NULL)
+		return -1;
+	
+	int i = 0;
+	
+	while(string[i] != '\0') {
+		if(!isdigit(string[i])) {
+			return -1;
+		}
+		i++;
+	}
+	return 0;
 }
