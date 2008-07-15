@@ -36,6 +36,11 @@
 #include "hashchain.h"
 #include "ife.h"
 
+/* mode: 1-transport, 2-tunnel, 3-beet 
+ * 
+ * however right now we only support mode 3, no need for variable yet */
+#define BEET_MODE 3
+
 #if 0
 /*
  * Macros from hip.h and elsewhere
@@ -150,8 +155,8 @@ int hip_sa_entry_set(hip_sa_entry_t *entry, int direction, uint32_t spi, uint32_
 		unsigned char *a_key, unsigned char *e_key, uint64_t lifetime,
 		uint8_t esp_prot_transform, unsigned char *esp_prot_anchor);
 hip_sa_entry_t * hip_sa_entry_find_inbound(struct in6_addr *dst_addr, uint32_t spi);
-hip_sa_entry_t * hip_sa_entry_find_outbound(struct in6_addr *src_addr,
-		struct in6_addr *dst_addr);
+hip_sa_entry_t * hip_sa_entry_find_outbound(struct in6_addr *src_hit,
+		struct in6_addr *dst_hit);
 int hip_sa_entry_delete(struct in6_addr *src_addr, struct in6_addr *dst_addr);
 int hip_link_entry_add(struct in6_addr *dst_addr, hip_sa_entry_t *entry);
 int hip_link_entries_add(hip_sa_entry_t *entry);

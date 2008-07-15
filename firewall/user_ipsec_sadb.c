@@ -429,8 +429,8 @@ hip_sa_entry_t * hip_sa_entry_find_inbound(struct in6_addr *dst_addr, uint32_t s
   	return stored_entry;
 }
 
-hip_sa_entry_t * hip_sa_entry_find_outbound(struct in6_addr *src_addr,
-		struct in6_addr *dst_addr)
+hip_sa_entry_t * hip_sa_entry_find_outbound(struct in6_addr *src_hit,
+		struct in6_addr *dst_hit)
 {
 	hip_sa_entry_t *search_entry = NULL, *stored_entry = NULL;
 	int err = 0;
@@ -440,8 +440,9 @@ hip_sa_entry_t * hip_sa_entry_find_outbound(struct in6_addr *src_addr,
 	memset(search_entry, 0, sizeof(hip_sa_entry_t));
 	
 	// fill search entry with information needed by the hash function
-	search_entry->inner_src_addr = src_addr;
-	search_entry->inner_dst_addr = dst_addr;
+	search_entry->inner_src_addr = src_hit;
+	search_entry->inner_dst_addr = dst_hit;
+	search_entry->mode = BEET_MODE;
 	
 	// find entry in sadb db
 	HIP_IFEL(!(stored_entry = hip_ht_find(sadb, search_entry)), -1,
