@@ -128,18 +128,19 @@ QUICK-AND-DIRTY ARCH INSTRUCTIONS FOR DEVELOPERS
 ================================================
 
 These instructions assume that you want to access the HIPL source code
-using ssh. Note: tla and bazaar provide the same functionality but
-bazaar was faster and more user friendly when this was written.
+using ssh. Note: tla and bazaar (baz) provide the same functionality
+but bazaar was faster and more user friendly when this was
+written. Notice that HIP sources are NOT managed with bzr!
 
 # Register an account:
 #
-baz register-archive hipl-dev@freelists.org--hipl \
+tla register-archive hipl-dev@freelists.org--hipl \
        sftp://mkomu@hipl.hiit.fi/var/archive/hipl
-baz my-default-archive hipl-dev@freelists.org--hipl
+tla my-default-archive hipl-dev@freelists.org--hipl
 
 # Get a working copy from the main branch:
 #
-baz get hipl--main--2.6 hipl--main--2.6
+tla get hipl--main--2.6 hipl--main--2.6
 
 # Copy the tla hook if you want to get your commit logs to the mailing list:
 #
@@ -147,46 +148,46 @@ cp hipl--main--2.6/test/tla-hook ~/.arch-params/hook
 
 # Different ways to commit code:
 #
-a) baz commit # Open's your default editor and commits.
+a) tla commit # Open's your default editor and commits.
 b) emacs `tla make-log`; tla commit
-c) baz commit -s "Explanation jaada jaada"
+c) tla commit -s "Explanation jaada jaada"
 
 # How to check what your have modified in the tree
 #
-baz changes
+tla changes
 
 # How to make a branch from the current version of the main branch
 #
-baz my-default archive # Make sure that you are accessing the HIPL archive
-baz archive-setup hipl--mybranch--2.6
-baz tag hipl--main--2.6 hipl--mybranch--2.6
+tla my-default archive # Make sure that you are accessing the HIPL archive
+tla archive-setup hipl--mybranch--2.6
+tla tag hipl--main--2.6 hipl--mybranch--2.6
 
 # Get the new branch
 #
-baz get hipl--mybranch--2.6 hipl--mybranch--2.6
+tla get hipl--mybranch--2.6 hipl--mybranch--2.6
 
 # How to synchronize branches... remember to make clean commits, i.e. do
 # NOT commit a merge and local modifications in the same commit!
 #
 cd hipl--mybranch--2.6
-baz changes # Check that the tree is unmodified
-baz star-merge hipl--main--2.6
+tla changes # Check that the tree is unmodified
+tla star-merge hipl--main--2.6
 
 --- Optional ---
 
 Below are some instructions on using revision libraries. They speed-up
-tla/baz operations.
+tla/tla operations.
 
 # Make a revision library (otherwise e.g. commit and changes take up to
 # 15 mins!)
 #
 mkdir ~/.tla-rev-lib
-baz my-revision-library ~/.tla-rev-lib/
-baz library-config --greedy --sparse ~/.tla-rev-lib/
+tla my-revision-library ~/.tla-rev-lib/
+tla library-config --greedy --sparse ~/.tla-rev-lib/
 
 # Get a working copy from the main branch using revision libraries:
 #
-baz get --link hipl--main--2.6 hipl--main--2.6
+tla get --link hipl--main--2.6 hipl--main--2.6
 
 Also, the tla usage is optimized using hard-linked revision
 libraries.
@@ -196,7 +197,7 @@ libraries.
 # revision libraries in your local copy:
 #
 cd hipl--main--2.6
-baz changes --link
+tla changes --link
 
 ARCH POLICY
 ===========
@@ -359,7 +360,7 @@ Doxygen comment blocks have a tendency to bloat the code. Generally, if
 possible, place the doxygen comment in the header file instead of the c-file.
 This applies to all Doxygen comments, not just function comments.
 
-Doxygen includes a special tag for todo items. The todo tags is "@todo". The todo
+Doxygen includes a special tag for todo items. The todo tag is "@todo". The todo
 tag can be placed anywhere in the code. When placed inside of a function, the
 todo item becomes a todo item for the respective function. When placed outside
 of a function, the todo item becomes a todo item for the whole file. To create
@@ -752,6 +753,12 @@ $ rsync *.dsc *.orig.tar.gz *.diff.gz root@packages.infrahip.net:/var/www/html/u
 
 $ sudo dpkg-scansources . /dev/null | sudo gzip -9c > Sources.gz
 
+VALGRIND AND HIPD
+=================
+
+On some machines, valgrind does not work without the following:
+  
+  ./configure --disable-privsep && make clean all
 
 
 TEST MATRIX

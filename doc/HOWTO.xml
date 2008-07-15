@@ -301,10 +301,10 @@
     </para>
     <itemizedlist>
       <listitem><para>
-	cd hipl
+	cd hipl--main--2.6
       </para></listitem>
       <listitem><para>
-	If the file autogen.sh exists (to test type ls autogen.sh), run it:
+        and then run the following:
       </para></listitem>
       <listitem><para>
 	./autogen.sh
@@ -317,7 +317,7 @@
       ./configure &amp;&amp; make install
     </para>
     <para>
-      Note2: you can optionally compile a binary package with "make deb" or "make rpm".
+      Notes: you can optionally compile a binary package with "make deb" or "make rpm". If you want to use valgrind with hipd, you may need execute ./configure --disable-privsep (and make clean all)
     </para>
     <para>
       Some features, like the HIP firewall are not compiled by default.
@@ -949,7 +949,7 @@
   <chapter id="ch_tips_for_hip">
     <title>Tips for Using HIP with Some Applications</title>
     <section id="sec_using_hip_proxy">
-      <title> Using HIP Enabled Proxy Server</title>
+      <title> Using HIP Enabled Web Proxy</title>
       <para>
 	In the deployment phase, it is interesting to set-up a proxy server that 
 	translates the TCP/IP traffic into HIP. For instance, this is convenient 
@@ -1008,7 +1008,7 @@
 	examples of configuration changes and instructions.
       </para>
     </section>
-  <section>
+  <section id="sec_openldap">
   <title>OpenLDAP</title>
   <para>
   Tested with stable version openldap-2.3.38 and with release version
@@ -1032,7 +1032,7 @@
   from <ulink url="http://www.cs.helsinki.fi/u/sklvarjo/openldap.htm" />
   </para>
   </section>
-  <section>
+  <section id="sec_networking_scripts">
   <title>Networking scripts and instructions for virtual machines and HIP</title>
   <para>
   These pages contain some scripts for vmware, virtualbox and UML
@@ -1913,9 +1913,8 @@
 			</note>
 		</para>
 </section>
-
-
-<section><title>Agent database</title>
+<section id="sec_agent_database">
+  <title>Agent database</title>
 	<para>
         Agent uses Sqlite3 database. You can view and alter data
 	with sqlite3 command line tool. On most distros 'aptitude
@@ -2337,34 +2336,34 @@ combo-newgroup=&lt;create new...&gt;
   	Follow these steps to compile and initialize escrow functionality:
   	</para>
   	<para>
-  	&nbsp; 1. Run autogen.sh
+  	1. Run autogen.sh
   	</para>
   	<para>
-  	&nbsp; ./autogen.sh
+  	<programlisting>./autogen.sh</programlisting>
   	</para>
   	<para>
-  	&nbsp; 2. Run configure with flag --enable-escrow and --enable-firewall if firewall is used
+  	2. Run configure with flag --enable-escrow and --enable-firewall if firewall is used
   	</para>
   	<para>
-  	&nbsp; ./configure --enable-escrow --enable-firewall
+  	<programlisting>./configure --enable-escrow --enable-firewall</programlisting>
   	</para>
   	<para>
-  	&nbsp; 3. Run make
+  	3. Run make
   	</para>
   	<para>
-  	&nbsp; make
+  	<programlisting>make</programlisting>
   	</para>
   	<para>
-  	&nbsp; 4. Start hip daemon on all machines
+  	4. Start hip daemon on all machines
   	</para>
   	<para>
-  	&nbsp; ./hipd/hipd -b
+  	<programlisting>./hipd/hipd -b</programlisting>
   	</para>
   	<para>
-  	&nbsp; 5. On the server enable escrow service using hipconf
+  	5. On the server enable escrow service using hipconf
   	</para>
   	<para>
-  	&nbsp; ./tools/hipconf add service escrow
+  	<programlisting>./tools/hipconf add service escrow</programlisting>
   	</para>
   	<para>
   	Start firewall using firewall instructions. Use state flag --decrypt_contents in rule file to enable decryption.
@@ -2373,14 +2372,14 @@ combo-newgroup=&lt;create new...&gt;
   	 On client host register to escrow server using hipconf.
   	</para>
   	<para>
-  	&nbsp; ./tools/hipconf add escrow hit address
-  	</para>
+	  <programlisting>tools/hipconf add server escrow &lt;ESCROW-SERVER-HIT&gt; &lt;ESCROW-SERVER-IP&gt; &lt;LIFETIME-IN-SECONDS&gt;</programlisting>
+	</para>
   	<para>
   	After this connection between client and the other host can be tested using conntest-server and conntest-client-hip. 
   	</para>
   	<para>
-  	&nbsp; ./test/conntest-server tcp 5000 
-  	&nbsp; ./test/conntest-client-hip hostname tcp 5000 
+	  <programlisting>./test/conntest-server tcp 5000</programlisting>
+	  <programlisting>./test/conntest-client-hip hostname tcp 5000</programlisting>
   	</para>
   	<para>
   	During base exchange session data is sent to escrow server in update-messages. 
@@ -2409,7 +2408,7 @@ combo-newgroup=&lt;create new...&gt;
       information, please refer to parse-key-3.py and myasn.py.
     </para>
   </chapter>
-  <chapter>
+  <chapter id="sec_dns_proxy">
     <title>DNS proxy</title>
     <para>
       In tools directory, there is dnsproxy.py script, which provides DNS

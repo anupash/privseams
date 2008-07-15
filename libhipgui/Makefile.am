@@ -3,8 +3,9 @@ AUTOMAKE_OPTIONS = foreign
 
 CFLAGS = $(hipl_common_cflags)
 
-if HIP_AGENT
+GTKLDADD = `pkg-config gtk+-2.0 --libs`
 
+if HIP_AGENT
 libhipgui_adir = $(pkgdatadir)/libhipgui
 
 noinst_LIBRARIES = libhipgui.a

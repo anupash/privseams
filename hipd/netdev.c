@@ -1267,6 +1267,7 @@ int hip_get_default_hit(struct in6_addr *hit)
 	int family = AF_INET6;
 	int rtnl_rtdsfield_init;
 	char *rtnl_rtdsfield_tab[256] = { 0 };
+	int i;
 	struct idxmap *idxmap[16] = { 0 };
 	hip_hit_t hit_tmpl;
 
@@ -1279,6 +1280,29 @@ int hip_get_default_hit(struct in6_addr *hit)
 	set_hit_prefix(&hit_tmpl);
 	HIP_IFEL(hip_iproute_get(&hip_nl_route, hit, &hit_tmpl, NULL, NULL,family, idxmap),
 		 -1,"Finding ip route failed\n");
+	
+ out_err:
+
+	for (i = 0; i < 256; i++) {
+	    if (rtnl_rtdsfield_tab[i])
+		free(rtnl_rtdsfield_tab[i]);
+	}
+
+	return err;
+}
+
+int hip_get_default_hit_msg(struct hip_common *msg)
+{
+	int err = 0;
+	hip_hit_t hit;
+ 	hip_lsi_t lsi;
+	
+	hip_get_default_hit(&hit);
+ 	hip_get_default_lsi(&lsi);
+	HIP_DEBUG_HIT("Default hit is ", &hit);
+ 	HIP_DEBUG_LSI("Default lsi is ", &lsi);
+	hip_build_param_contents(msg, &hit, HIP_PARAM_HIT, sizeof(hit));
+ 	hip_build_param_contents(msg, &lsi, HIP_PARAM_LSI, sizeof(lsi));
 	
  out_err:
 	return err;
@@ -1304,23 +1328,6 @@ int hip_get_default_lsi(struct in_addr *lsi){
 
 	if(IN6_IS_ADDR_V4MAPPED(&lsi_aux6))
 	        IPV6_TO_IPV4_MAP(&lsi_aux6, lsi);
- out_err:
-	return err;
-}
-
-int hip_get_default_hit_msg(struct hip_common *msg)
-{
-	int err = 0;
-	hip_hit_t hit;
-	hip_lsi_t lsi;
-	
-	hip_get_default_hit(&hit);
-	hip_get_default_lsi(&lsi);
-	HIP_DEBUG_HIT("Default hit is ", &hit);
-	HIP_DEBUG_LSI("Default lsi is ", &lsi);
-	hip_build_param_contents(msg, &hit, HIP_PARAM_HIT, sizeof(hit));
-	hip_build_param_contents(msg, &lsi, HIP_PARAM_LSI, sizeof(lsi));
-
  out_err:
 	return err;
 }
