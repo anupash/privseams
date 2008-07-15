@@ -36,7 +36,7 @@ int hip_fw_handle_stun_packet(hip_fw_context_t* ctx){
 	new_udp_len = udp_len + HIP_UDP_ZERO_BYTES_LEN + sizeof(struct hip_common);
 	new_ip_len = ip_len + HIP_UDP_ZERO_BYTES_LEN + sizeof(struct hip_common);
 	
-	HIP_IFEL(!(new_ip_msg = HIP_MALLOC(new_ip_len, 0), -1, "malloc\n");
+	HIP_IFEL(!(new_ip_msg = HIP_MALLOC(new_ip_len, 0)), -1, "malloc\n");
 	new_udp_msg = (struct udphdr *)(new_ip_msg +1);
 	
 	memset(new_ip_msg, 0, new_ip_len);
