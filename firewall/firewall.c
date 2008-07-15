@@ -1495,7 +1495,7 @@ int main(int argc, char **argv)
 	memset(&proxy_hit, 0, sizeof(default_hit));
 
 	
-	if (!hip_query_default_local_hit_from_hipd())
+	if (!hip_query_default_local_hit_from_hipd(&default_hit))
 		ipv6_addr_copy(&proxy_hit, (struct in6_addr *) hip_fw_get_default_hit());
 	HIP_DEBUG_HIT("Default hit is ",  &proxy_hit);
 
