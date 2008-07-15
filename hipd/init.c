@@ -917,7 +917,6 @@ int hip_init_certs(void) {
 			"# Section containing HIP related information\n"
 			"#\n"
 			"# issuerhit = what hit is to be used when signing\n"
-			"# commonName = userfriendly name\n"
 			"# days = how long is this key valid\n"
 			"\n"
 			"[ hip_x509v3 ]\n"
@@ -928,12 +927,15 @@ int hip_init_certs(void) {
 			"\n"
 			"[ hip_x509v3_name ]\n"
 			"issuerhit = %s\n"
-			"commonName = alias"
                         "\n"
                         "# Uncomment this section to add x509 extensions\n"
                         "# to the certificate\n"
-                        "# [ hip_x509v3_extensions ]\n"
-                        "# issuerAltName = DNS:mydomain.com\n",
+                        "#\n"
+                        "# DO NOT use subjectAltName, issuerAltName or\n"
+                        "# basicConstraints implementation uses them already\n"
+                        "# All other extensions are allowed\n"
+                        "\n"
+                        "# [ hip_x509v3_extensions ]\n",
 			hit, HIP_CERT_INIT_DAYS,
                         hit, HIP_CERT_INIT_DAYS,
 			hit, hostname);		

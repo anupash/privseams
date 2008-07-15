@@ -639,8 +639,8 @@ out_err:
  *
  * @return 0 on success negative otherwise. 
  *
- * @note the request part is just for informational purposes, in practice it
- * is not needed
+ * @note the adds to request are just for informational purposes, 
+ * in practice it is not needed
  */ 
 int hip_cert_x509v3_handle_request_to_sign(struct hip_common * msg,  HIP_HASHTABLE * db) {
 	int err = 0, i = 0, nid = 0, ret = 0, secs = 0, algo = 0;
@@ -699,10 +699,6 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common * msg,  HIP_HASHTAB
                  "Failed to memset memory for ialtname\n");
         HIP_IFEL(!memset(saltname, 0, sizeof(saltname)), -1,
                  "Failed to memset memory for saltname\n");
-
-        /* malloc space for new rsa */
-        rsa = RSA_new();
-        HIP_IFEL(!rsa, -1, "Failed to malloc RSA\n");
        
         OpenSSL_add_all_algorithms();
         ERR_load_crypto_strings();
@@ -828,12 +824,24 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common * msg,  HIP_HASHTAB
                                              issuer_hit_n, &rsa, &dsa)) <= 0), -1, 
                 "Error constructing the keys from hidb entry\n");
         algo = err;
-
-        HIP_IFEL(!EVP_PKEY_assign_RSA(pkey, rsa), -1, 
-                 "Failed to convert RSA to EVP_PKEY\n");
-        HIP_IFEL((X509_set_pubkey (cert, pkey) != 1), -1, 
-                 "Failed to set public key of the certificate\n");
+        err = 0;
         
+        if (algo == HIP_HI_RSA) {
+                
+                HIP_IFEL(!EVP_PKEY_assign_RSA(pkey, rsa), -1, 
+                         "Failed to convert RSA to EVP_PKEY\n");
+                HIP_IFEL((X509_set_pubkey (cert, pkey) != 1), -1, 
+                         "Failed to set public key of the certificate\n");
+
+        } else if (algo == HIP_HI_DSA) {
+
+                HIP_IFEL(!EVP_PKEY_assign_DSA(pkey, dsa), -1, 
+                         "Failed to convert DSA to EVP_PKEY\n");
+                HIP_IFEL((X509_set_pubkey (cert, pkey) != 1), -1, 
+                         "Failed to set public key of the certificate\n");
+                
+        } else HIP_IFEL (1==0, -1, "Unknown algorithm\n");
+
 	X509V3_set_ctx(&ctx, cert, cert, NULL, NULL, 0);
 
         if (sec_ext != NULL) {
@@ -841,27 +849,50 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common * msg,  HIP_HASHTAB
                         item = sk_CONF_VALUE_value(sec_ext, i);
                         _HIP_DEBUG("Sec: %s, Key; %s, Val %s\n", 
                                    item->section, item->name, item->value);
+                        /* 
+                           Skip issuerAltName and subjectAltName because 
+                           HITs use them already. Skip also basicConstraint =
+                           CA:true and subjectKeyIdentifier because they are
+                           added automatically in the code below 
+                        */
+                        if (!strcmp(item->name, "issuerAltname")) continue;
+                        if (!strcmp(item->name, "subjectAltname")) continue;
+                        if (0 == memcmp(subject_hit, issuer_hit, sizeof(issuer_hit))) {
+                                if (!strcmp(item->name, "basicConstraints") &&
+                                    !strcmp(item->value, "CA:true"))
+                                        continue;
+                                if (!strcmp(item->name, "subjectKeyIdentifier"))
+                                        continue;
+                        }
                         HIP_IFEL(!(ext = X509V3_EXT_conf(NULL, &ctx, 
-                                                       item->name, item->value )), -1, 
+                                                         item->name, item->value )), -1, 
                                  "Failed to create extension\n");
                         HIP_IFEL((!X509_add_ext(cert, ext, -1)), -1,
-                                 "Failed to add extensions to the cert\n");
-                        if (!strcmp(item->name, "basicConstraints") &&
-                            !strcmp(item->value, "CA:true")) {
-                                /* We are writing a CA cert and in CA self-signed
-                                   certificate you have to have subject key identifier
-                                   present, when adding subjectKeyIdentifier give string
-                                   hash to the */
-                                HIP_IFEL(!(ext = X509V3_EXT_conf(NULL, &ctx, 
-                                                                 "subjectKeyIdentifier", 
-                                                                 "hash")), -1, 
-                                         "Failed to create extension\n");
-                                HIP_IFEL((!X509_add_ext(cert, ext, -1)), -1,
-                                         "Failed to add extensions to the cert\n");
-                        }
+                                 "Failed to add extensions to the cert\n");         
                 }
         }
 	
+        if (0 == memcmp(subject_hit, issuer_hit, sizeof(issuer_hit))) {
+                /* We are writing a CA cert and in CA self-signed
+                   certificate you have to have subject key identifier
+                   present, when adding subjectKeyIdentifier give string
+                   hash to the X509_EXT_conf it knows what to do with it */
+
+                HIP_IFEL(!(ext = X509V3_EXT_conf(NULL, &ctx, 
+                                                 "basicConstraints", 
+                                                 "CA:true")), -1, 
+                         "Failed to create extension\n");
+                HIP_IFEL((!X509_add_ext(cert, ext, -1)), -1,
+                         "Failed to add extensions to the cert\n");
+
+                HIP_IFEL(!(ext = X509V3_EXT_conf(NULL, &ctx, 
+                                                 "subjectKeyIdentifier", 
+                                                 "hash")), -1, 
+                         "Failed to create extension\n");
+                HIP_IFEL((!X509_add_ext(cert, ext, -1)), -1,
+                         "Failed to add extensions to the cert\n");
+        }
+
 	/* add subjectAltName = IP:<HIT> */
 	sprintf(ialtname, "IP:%s",issuer_hit);
 	HIP_IFEL(!(ext = X509V3_EXT_conf(NULL, &ctx, 
@@ -879,7 +910,13 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common * msg,  HIP_HASHTAB
 	HIP_IFEL((!X509_add_ext(cert, ext, -1)), -1,
 		 "Failed to add extensions to the cert\n");
 
-        digest = EVP_sha1();
+        if (algo == HIP_HI_RSA)
+                digest = EVP_sha1();
+        else if (algo == HIP_HI_DSA)
+                digest = EVP_dss1();
+        else
+                HIP_IFEL((1==0), -1, "Unknown algorithm\n");
+
         HIP_IFEL(!(X509_sign (cert, pkey, digest)), -1,
                  "Failed to sign x509v3 certificate\n"); 
 #if 0
