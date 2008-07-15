@@ -13,6 +13,8 @@
  */
 #include "cert.h"
 
+/** XX TODO XX get rid off compiler warnings **/
+
 /****************************************************************************
  *
  * SPKI
@@ -28,36 +30,33 @@
  * @return 0 if signature was created without errors negative otherwise
  */
 int hip_cert_spki_sign(struct hip_common * msg, HIP_HASHTABLE * db) {
-        int err = 0, sig_len = 0, hex_len = 0, evpret = 0;
+        int err = 0, sig_len = 0, hex_len = 0, evpret = 0, algo = 0, t = 0;
         struct hip_cert_spki_info * p_cert;
         struct hip_cert_spki_info * cert;
         char sha_digest[21];
-        unsigned char *sha_retval;
-        char * e_bin = NULL;
-        char * n_bin = NULL;
         char * signature_b64 = NULL;
         char * digest_b64 = NULL;
-        char * e_hex = NULL;
-        char * n_b64 = NULL;
-        char * key_n = NULL;
+        unsigned char *sha_retval;
         u8 * signature = NULL;
-        RSA *rsa = NULL;
-        DSA *dsa = NULL;
+        DSA_SIG * dsa_sig = NULL;
         
+        /* RSA needed variables */
+        RSA *rsa = NULL;
+        char * e_bin = NULL, * n_bin = NULL;
+        char * e_hex = NULL, * n_b64 = NULL;
+        /* DSA needed variables */
+        DSA * dsa = NULL;
+        char * p_bin = NULL, * q_bin = NULL, * g_bin = NULL, * y_bin = NULL;
+        char * p_b64 = NULL, * q_b64 = NULL, * g_b64 = NULL, * y_b64 = NULL;
+                           
         cert = malloc(sizeof(struct hip_cert_spki_info));
         HIP_IFEL((!cert), -1, "Malloc for cert failed\n");
         memset(cert, 0, sizeof(struct hip_cert_spki_info));
 
-        /* XX TODO malloc space for new rsa DO THIS WHEN YOU KNOW which one you need 
-         Figure out how to present DSA in SPKI public-key can it be done?*/
-        rsa = RSA_new();
-        HIP_IFEL(!rsa, -1, "Failed to malloc RSA\n");
-        dsa = DSA_new();
-        HIP_IFEL(!dsa, -1, "Failed to malloc DSA\n");
-
         HIP_IFEL(!(p_cert = hip_get_param(msg,HIP_PARAM_CERT_SPKI_INFO)), 
                  -1, "No cert_info struct found\n");
         memcpy(cert, p_cert, sizeof(struct hip_cert_spki_info));
+
 	_HIP_DEBUG("\n\n** CONTENTS of public key sequence **\n"
                    "%s\n\n",cert->public_key);
         _HIP_DEBUG("\n\n** CONTENTS of cert sequence to be signed **\n"
@@ -66,65 +65,96 @@ int hip_cert_spki_sign(struct hip_common * msg, HIP_HASHTABLE * db) {
                    "%s\n\n",cert->signature);
         _HIP_DEBUG_HIT("Getting keys for HIT",&cert->issuer_hit);
   
-        /*   
-        HIP_IFEL((err = hip_cert_hostid2dsa(hip_local_hostid_db,
-                                            &cert->issuer_hit, dsa)), -1, 
-                "Error constructing the keys from hidb entry\n");
-        */   
-        HIP_IFEL((err = hip_cert_hostid2rsa(hip_local_hostid_db,
-                                            &cert->issuer_hit, rsa)), -1, 
-                "Error constructing the keys from hidb entry\n");
-        
+        HIP_IFEL(((err = hip_cert_hostid2key(hip_local_hostid_db,
+                                             &cert->issuer_hit, &rsa, &dsa)) <= 0), -1, 
+                 "Error constructing the keys from hidb entry\n");
+        algo = err;
+
         memset(sha_digest, '\0', sizeof(sha_digest));
 
         digest_b64 = malloc(30); 
         HIP_IFEL((!digest_b64), -1, "Malloc for digest_b64 failed\n");
         memset(digest_b64, 0, 30);
 
-        signature_b64 = malloc(RSA_size(rsa)); 
-        HIP_IFEL((!signature_b64), -1, "Malloc for signature_b64 failed\n");
-        memset(signature_b64, 0, RSA_size(rsa));
-
-        n_b64 = malloc(RSA_size(rsa) + 20);
-        HIP_IFEL((!n_b64), -1, "Malloc for n_b64 failed\n");
-        memset(n_b64, 0, (RSA_size(rsa) + 20));
-
-	e_bin = malloc(BN_num_bytes(rsa->e) + 1);
-        HIP_IFEL((!e_bin), -1, "Malloc for e_bin failed\n");
-        memset(e_bin, 0, (BN_num_bytes(rsa->e) + 1));
-
-	n_bin = malloc(RSA_size(rsa) + 1);
-        HIP_IFEL((!n_bin), -1, "Malloc for n_bin failed\n");
-
-	key_n = malloc(RSA_size(rsa));
-        HIP_IFEL((!key_n), -1, "Malloc for key_n failed\n");
-
         /* build sha1 digest that will be signed */
         HIP_IFEL(!(sha_retval = SHA1(cert->cert, strlen(cert->cert), sha_digest)),
                  -1, "SHA1 error when creating digest.\n");        
-        _HIP_HEXDUMP("SHA1 digest of cert sequence ", sha_digest, sizeof(sha_digest));          
+        _HIP_HEXDUMP("SHA1 digest of cert sequence ", sha_digest, sizeof(sha_digest));
 
-        /* sign the digest */
-        sig_len = RSA_size(rsa);
-	signature = malloc(sig_len);
-        HIP_IFEL((!signature), -1, "Malloc for signature failed\n");
-	memset(signature, 0, sig_len);
+        if (algo == HIP_HI_RSA) {
 
-	err = RSA_sign(NID_sha1, sha_digest, SHA_DIGEST_LENGTH, signature,
-		       &sig_len, rsa);
-        HIP_IFEL((err = err == 0 ? -1 : 0), -1, "RSA_sign error\n");
+                signature_b64 = malloc(RSA_size(rsa)); 
+                HIP_IFEL((!signature_b64), -1, "Malloc for signature_b64 failed\n");
+                memset(signature_b64, 0, RSA_size(rsa));
+                
+                n_bin = malloc(RSA_size(rsa) + 1);
+                HIP_IFEL((!n_bin), -1, "Malloc for n_bin failed\n");
 
-        _HIP_HEXDUMP("Signature created for the certificate ", signature, sig_len);
-        _HIP_DEBUG("Siglen %d, err :%d\n", sig_len, err);
+                n_b64 = malloc(RSA_size(rsa) + 20);
+                HIP_IFEL((!n_b64), -1, "Malloc for n_b64 failed\n");
+                memset(n_b64, 0, (RSA_size(rsa) + 20));
+                 
+                e_bin = malloc(BN_num_bytes(rsa->e) + 1);
+                HIP_IFEL((!e_bin), -1, "Malloc for e_bin failed\n");
+                memset(e_bin, 0, (BN_num_bytes(rsa->e) + 1));
+                                
+                /* RSA sign the digest */ 
+                sig_len = RSA_size(rsa);
+                signature = malloc(sig_len);
+                HIP_IFEL((!signature), -1, "Malloc for signature failed\n");
+                memset(signature, 0, sig_len);
+
+                err = RSA_sign(NID_sha1, sha_digest, SHA_DIGEST_LENGTH, signature,
+                               &sig_len, rsa);
+                HIP_IFEL((err = err == 0 ? -1 : 0), -1, "RSA_sign error\n");
+
+                _HIP_HEXDUMP("Signature created for the certificate ", signature, sig_len);
+                _HIP_DEBUG("Siglen %d, err :%d\n", sig_len, err);
+
+        } else if (algo == HIP_HI_DSA) {
+
+                p_bin = malloc(BN_num_bytes(dsa->p) + 1);
+                HIP_IFEL((!p_bin), -1, "Malloc for p_bin failed\n");
+
+                q_bin = malloc(BN_num_bytes(dsa->q) + 1);
+                HIP_IFEL((!q_bin), -1, "Malloc for q_bin failed\n");
+                
+                g_bin = malloc(BN_num_bytes(dsa->g) + 1);
+                HIP_IFEL((!g_bin), -1, "Malloc for g_bin failed\n");
+                
+                y_bin = malloc(BN_num_bytes(dsa->pub_key) + 1);
+                HIP_IFEL((!y_bin), -1, "Malloc for y_bin failed\n");
+                
+                p_b64 = malloc(BN_num_bytes(dsa->p) + 20);
+                HIP_IFEL((!p_b64), -1, "Malloc for p_b64 failed\n");
+
+                q_b64 = malloc(BN_num_bytes(dsa->q) + 20);
+                HIP_IFEL((!q_b64), -1, "Malloc for q_b64 failed\n");
+
+                g_b64 = malloc(BN_num_bytes(dsa->g) + 20);
+                HIP_IFEL((!g_b64), -1, "Malloc for g_b64 failed\n");
+
+                y_b64 = malloc(BN_num_bytes(dsa->pub_key) + 20);
+                HIP_IFEL((!y_b64), -1, "Malloc for y_b64 failed\n");
+
+                signature = malloc(HIP_DSA_SIG_SIZE);
+                memset(signature, 0, HIP_DSA_SIG_SIZE);
+
+                t = BN_num_bytes(dsa->p);
+                t = (t - 64) / 8;
+                HIP_IFEL(t > 8, 1, "Illegal DSA key\n");
+
+                signature[0] = t;
+                dsa_sig = DSA_do_sign(sha_digest, SHA_DIGEST_LENGTH, dsa);
+                bn2bin_safe(dsa_sig->r, &signature[1], DSA_PRIV);
+                bn2bin_safe(dsa_sig->s, &signature[1 + DSA_PRIV], DSA_PRIV);
+                sig_len = SHA_DIGEST_LENGTH + DSA_PRIV * 2;
+
+        } else HIP_IFEL(1 == 0, -1, "Unknown algorithm for signing\n");
 
         /* clearing signature field just to be sure */
         memset(cert->signature, '\0', sizeof(cert->signature));
 
-        /* 
-           compiler warning for the next 2 lines
-	   cert.c:103: warning: cast to pointer from integer of different size
-	   cert.c:105: warning: cast to pointer from integer of different size
-	*/
         digest_b64 = (char *)base64_encode((unsigned char *)sha_digest, 
                                          (unsigned int)sizeof(sha_digest));
         signature_b64 = (char *)base64_encode((unsigned char *)signature, 
@@ -137,25 +167,65 @@ int hip_cert_spki_sign(struct hip_common * msg, HIP_HASHTABLE * db) {
         _HIP_DEBUG("Sig sequence \n%s\n",cert->signature);
 
         /* Create the public key sequence */
-	/*
-	  compiler warning for the next line
-	  cert.c:117: warning: cast to pointer from integer of different size
-	*/
+        if (algo == HIP_HI_RSA) {
 
-        HIP_IFEL(!(BN_bn2bin(rsa->n, n_bin)), -1,
-                 "Error in converting public exponent from BN to bin\n");
+                /* 
+                   RSA public-key
+                   draft-paajarvi-xml-spki-cert-00 section 3.1.1 
 
-        n_b64 = (char *)base64_encode((unsigned char *)n_bin, RSA_size(rsa));
-        /* FOR DEBUGGING, just checking we can decode the base 64 */
-        evpret = EVP_DecodeBlock(key_n, n_b64, strlen(n_b64));
-        _HIP_HEXDUMP("Key N ", key_n, RSA_size(rsa));
+                   <!ELEMENT rsa-pubkey (rsa-e,rsa-n)>
+                   <!ELEMENT rsa-e (#PCDATA)>
+                   <!ELEMENT rsa-n (#PCDATA)>
+                */
+                HIP_IFEL(!(BN_bn2bin(rsa->n, n_bin)), -1,
+                         "Error in converting public exponent from BN to bin\n");
+                
+                n_b64 = (char *)base64_encode((unsigned char *)n_bin, RSA_size(rsa));
+                 
+                HIP_IFEL(!(BN_bn2bin(rsa->e, e_bin)), -1,
+                         "Error in converting public exponent from BN to bin\n");
+                e_hex = BN_bn2hex(rsa->e);
+                
+                sprintf(cert->public_key, "(public_key (rsa-pkcs1-sha1 (e #%s#)(n |%s|)))", 
+                        e_hex, n_b64);
 
-        HIP_IFEL(!(BN_bn2bin(rsa->e, e_bin)), -1,
-                 "Error in converting public exponent from BN to bin\n");
-	e_hex = BN_bn2hex(rsa->e);
+        } else if (algo == HIP_HI_DSA) {
 
-        sprintf(cert->public_key, "(public_key (rsa-pkcs1-sha1 (e #%s#)(n |%s|)))", 
-                e_hex, n_b64);
+                /* 
+                   DSA public-key
+                   draft-paajarvi-xml-spki-cert-00 section 3.1.2 
+
+                   <!ELEMENT dsa-pubkey (dsa-p,dsa-q,dsa-g,dsa-y)>
+                   <!ELEMENT dsa-p (#PCDATA)>
+                   <!ELEMENT dsa-q (#PCDATA)>
+                   <!ELEMENT dsa-g (#PCDATA)>
+                   <!ELEMENT dsa-y (#PCDATA)>
+                */
+                HIP_IFEL(!(BN_bn2bin(dsa->p, p_bin)), -1,
+                         "Error in converting public exponent from BN to bin\n");
+                p_b64 = (char *)base64_encode((unsigned char *)p_bin, 
+                                              BN_num_bytes(dsa->p)); 
+                
+                HIP_IFEL(!(BN_bn2bin(dsa->q, q_bin)), -1,
+                         "Error in converting public exponent from BN to bin\n");
+                q_b64 = (char *)base64_encode((unsigned char *)q_bin, 
+                                              BN_num_bytes(dsa->q));
+
+                HIP_IFEL(!(BN_bn2bin(dsa->g, g_bin)), -1,
+                         "Error in converting public exponent from BN to bin\n");
+                g_b64 = (char *)base64_encode((unsigned char *)g_bin, 
+                                              BN_num_bytes(dsa->g));
+                
+                HIP_IFEL(!(BN_bn2bin(dsa->pub_key, y_bin)), -1,
+                         "Error in converting public exponent from BN to bin\n");
+                y_b64 = (char *)base64_encode((unsigned char *)y_bin, 
+                                              BN_num_bytes(dsa->pub_key));
+                
+                sprintf(cert->public_key, "(public_key (dsa-pkcs1-sha1 (p |%s|)(q |%s|)"
+                                                                      "(g |%s|)(y |%s|)))", 
+                        p_b64, q_b64, g_b64, y_b64);
+
+        } else HIP_IFEL(1 == 0, -1, "Unknown algorithm for public-key element\n");
 
         _HIP_DEBUG("\n\nPublic-key sequence:\n%s\n\n",cert->public_key);
         _HIP_DEBUG("\n\nCert sequence:\n%s\n\n",cert->cert);
@@ -183,13 +253,34 @@ int hip_cert_spki_sign(struct hip_common * msg, HIP_HASHTABLE * db) {
 	/* free malloced memory */
 	if (digest_b64) free(digest_b64);
 	if (signature_b64) free(signature_b64);
-	if (n_b64) free(n_b64);
-        if (rsa) RSA_free(rsa);
+	if (signature) free(signature);
+
+        /* openssl structs */
+        if (algo == HIP_HI_RSA) {
+                if (rsa) RSA_free(rsa);
+        } else if(algo == HIP_HI_DSA) {
+                if (dsa) DSA_free(dsa);
+        }
+        /* RSA pubkey */
 	if (e_bin) free(e_bin);
 	if (n_bin) free(n_bin);
-	if (key_n) free(key_n);
-	if (signature) free(signature);
+        /* encoded */
 	if (e_hex) OPENSSL_free(e_hex);
+	if (n_b64) free(n_b64);
+
+        /* DSA pubkey */ 
+	if (p_bin) free(p_bin);
+        if (q_bin) free(q_bin);
+        if (g_bin) free(g_bin);
+        if (y_bin) free(y_bin);
+        /* encoded */
+	if (p_b64) free(p_b64);
+        if (q_b64) free(q_b64);
+        if (g_b64) free(g_b64);
+        if (y_b64) free(y_b64);
+
+	if (dsa_sig)
+		DSA_SIG_free(dsa_sig);
 
         return err;
 }
@@ -216,18 +307,39 @@ int hip_cert_spki_verify(struct hip_common * msg) {
         struct hip_cert_spki_info * p_cert;
         struct hip_cert_spki_info * cert = NULL;
         RSA *rsa = NULL;
+        DSA *dsa = NULL;
         char * signature = NULL;
 
         /* rules for regular expressions */
 
         /* 
-           rule to get the public exponent. 
+           Rule to get DSA p
+        */
+        char p_rule[] = "";
+
+        /*
+          Rule to get DSA q
+        */
+        char q_rule[] = "";
+
+        /*
+          Rule to get DSA g
+        */
+        char g_rule[] = "";
+
+        /*
+          Rule to get DSA y / pub_key
+        */
+        char y_rule[] = "";
+
+        /* 
+           rule to get the public exponent RSA 
            Look for the part that says # and after that some hex blob and #
         */
         char e_rule[] = "[#][0-9A-Fa-f]*[#]";
 
         /* 
-           rule to get the public modulus 
+           rule to get the public modulus RSA
            Look for the part that starts with '|' and after that anything
            that is in base 64 char set and then '|' again
         */
@@ -403,9 +515,9 @@ out_err:
  * is not needed
  */ 
 int hip_cert_x509v3_handle_request_to_sign(struct hip_common * msg,  HIP_HASHTABLE * db) {
-	int err = 0, i = 0, nid = 0, ret = 0, secs = 0;
+	int err = 0, i = 0, nid = 0, ret = 0, secs = 0, algo = 0;
 	CONF * conf;
-	CONF_VALUE *item;
+	CONF_VALUE * item;
 	STACK_OF(CONF_VALUE) * sec = NULL;
 	STACK_OF(CONF_VALUE) * sec_general = NULL;
 	STACK_OF(CONF_VALUE) * sec_name = NULL;
@@ -431,6 +543,8 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common * msg,  HIP_HASHTAB
 	char saltname[45];
         struct in6_addr * issuer_hit_n;
         RSA * rsa = NULL;
+        DSA * dsa = NULL;
+        void * key = NULL;
         char cert_str_pem[1024];
         BIO *out;
         int read_bytes = 0;
@@ -582,9 +696,10 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common * msg,  HIP_HASHTAB
                  "Error setting ending time of the certificate");
 
         HIP_DEBUG("Getting the key\n");
-        HIP_IFEL((err = hip_cert_hostid2rsa(hip_local_hostid_db,
-                                            issuer_hit_n, rsa)), -1, 
+        HIP_IFEL(((err = hip_cert_hostid2key(hip_local_hostid_db,
+                                             issuer_hit_n, &rsa, &dsa)) <= 0), -1, 
                 "Error constructing the keys from hidb entry\n");
+        algo = err;
 
         HIP_IFEL(!EVP_PKEY_assign_RSA(pkey, rsa), -1, 
                  "Failed to convert RSA to EVP_PKEY\n");
@@ -650,26 +765,14 @@ int hip_cert_x509v3_handle_request_to_sign(struct hip_common * msg,  HIP_HASHTAB
         /* DEBUG PART END for the certificate */
 #endif
 
-        /** XX TODO Send the cert back to the client **/
-        hip_msg_init(msg);
-
-#if 0
-        /* removed in favor of DER encoding on the wire 
-         if enabled  again uncomment BIO stuff also from out_err */
-        /* Write PEM to char array cert_str_pem */                
-        out = BIO_new(BIO_s_mem());
-        HIP_IFEL((PEM_write_bio_X509(out, cert) != 1), -1,
-                 "Failed to write the x509 in PEM to stdout\n");
-        read_bytes = BIO_read(out, cert_str_pem, sizeof(cert_str_pem));
-        _HIP_DEBUG("Cert_str_pem:\n%s\nRead bytes %d\n", cert_str_pem, read_bytes);
-#endif
-
         /** DER **/
         HIP_IFEL(((der_cert_len = i2d_X509(cert, &der_cert)) < 0), -1, 
                  "Failed to convert cert to DER\n");
         _HIP_HEXDUMP("DER:\n", der_cert, der_cert_len);
         _HIP_DEBUG("DER length %d\n", der_cert_len);
         /** end DER **/
+
+        hip_msg_init(msg);
 
         HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_CERT_X509V3_SIGN, 0), -1, 
                  "Failed to build user header\n");
@@ -716,7 +819,6 @@ int hip_cert_x509v3_handle_request_to_verify(struct hip_common * msg) {
         memcpy(&verify, p, sizeof(struct hip_cert_x509_resp));
       
         der_cert = &p->der;
-        /* XX TODO check why the end contains extra fluff */
 
         _HIP_HEXDUMP("DER:\n", verify.der, verify.der_len);
         _HIP_DEBUG("DER length %d\n", verify.der_len);
@@ -775,53 +877,33 @@ int hip_cert_x509v3_handle_request_to_verify(struct hip_common * msg) {
 /**
  * Function that extracts the key from hidb entry and constructs a RSA struct from it
  *
- * @param db is the db to query for the hostid entry
  * @param hit is a pointer to a host identity tag to be searched
  * @param rsa is the resulting struct that contains the key material
  *
- * @return 0 if signature matches, -1 if error or signature did NOT match
+ * @return HIP_HI_RSA, -1 if error
  */
-int hip_cert_hostid2rsa(HIP_HASHTABLE * db, hip_hit_t * hit, RSA * rsa) {
-        int err = 0, s = 1;
-        struct hip_host_id_entry * hostid_entry = NULL;
-        struct hip_host_id * hostid = NULL;
-        struct hip_lhi * lhi = NULL;
+int hip_cert_hostid2rsa(struct hip_host_id * hostid, RSA * rsa) {
+        int err = HIP_HI_RSA, s = 1;
         u8 *p;
         struct hip_rsa_keylen keylen;
 
-        /* 
-           Get the corresponding host id for the HIT.
-           It will contain both the public and the private key
-        */
-	_HIP_DEBUG_HIT("HIT we are looking for ", hit);
-        hostid_entry = hip_get_hostid_entry_by_lhi_and_algo(db, 
-                                                            hit,
-                                                            HIP_ANY_ALGO, -1);  
-	if (hostid_entry == NULL) {
-		err = -1;
-		goto out_err;
-	}
-        lhi = &hostid_entry->lhi;
-        hostid = hostid_entry->host_id;
         p = (u8 *)(hostid + 1);
-
-        _HIP_DEBUG_HIT("HIT from hostid entry", &lhi->hit);
-        _HIP_DEBUG("type = %d len = %d\n", htons(hostid->type), hostid->hi_length);
 
         /*
           Order of the key material in the host id rdata is the following
-           HIP_RSA_PUBLIC_EXPONENT_E
-           HIP_RSA_PUBLIC_MODULUS_N 
-           HIP_RSA_PRIVATE_EXPONENT_D 
-           HIP_RSA_SECRET_PRIME_FACTOR_P
-           HIP_RSA_SECRET_PRIME_FACTOR_Q  
-
-           For example with 1024 bit keys these values are
-           N = 128 bytes (1024 bits and so on)
-           E = 3 bytes
-           D = 128 bytes
-           P = 64 bytes
-           Q = 64 bytes
+          See also RFC3110
+          HIP_RSA_PUBLIC_EXPONENT_E
+          HIP_RSA_PUBLIC_MODULUS_N 
+          HIP_RSA_PRIVATE_EXPONENT_D 
+          HIP_RSA_SECRET_PRIME_FACTOR_P
+          HIP_RSA_SECRET_PRIME_FACTOR_Q  
+          
+          For example with 1024 bit keys these values are
+          N = 128 bytes (1024 bits and so on)
+          E = 3 bytes
+          D = 128 bytes
+          P = 64 bytes
+          Q = 64 bytes
         */
 
 	hip_get_rsa_keylen(hostid, &keylen, 1);
@@ -859,36 +941,16 @@ int hip_cert_hostid2rsa(HIP_HASHTABLE * db, hip_hit_t * hit, RSA * rsa) {
 /**
  * Function that extracts the key from hidb entry and constructs a DSA struct from it
  *
- * @param db is the db to query for the hostid entry
  * @param hit is a pointer to a host identity tag to be searched
- * @param rsa is the resulting struct that contains the key material
+ * @param dsa is the resulting struct that contains the key material
  *
- * @return 0 if signature matches, -1 if error or signature did NOT match
+ * @return HIP_HI_DSA, -1 if error
  */
-int hip_cert_hostid2dsa(HIP_HASHTABLE * db, hip_hit_t * hit, DSA * dsa) {
-        int err = 0, s = 0, t = 0, offs;
-        struct hip_host_id_entry * hostid_entry = NULL;
-        struct hip_host_id * hostid = NULL;
-        struct hip_lhi * lhi = NULL;
+int hip_cert_hostid2dsa(struct hip_host_id * hostid, DSA * dsa) {
+        int err = HIP_HI_DSA, s = 0, t = 0, offs = 0;
         u8 *p;
  
-        /* 
-           Get the corresponding host id for the HIT.
-           It will contain both the public and the private key
-        */
-	_HIP_DEBUG_HIT("HIT we are looking for ", hit);
-        hostid_entry = hip_get_hostid_entry_by_lhi_and_algo(db, hit,
-                                                            HIP_ANY_ALGO, -1);  
-	if (hostid_entry == NULL) {
-		err = -1;
-		goto out_err;
-	}
-        lhi = &hostid_entry->lhi;
-        hostid = hostid_entry->host_id;
         p = (u8 *)(hostid + 1);
-
-        _HIP_DEBUG_HIT("HIT from hostid entry", &lhi->hit);
-        _HIP_DEBUG("type = %d len = %d\n", htons(hostid->type), hostid->hi_length);
 
         /*
           Order of the key material in the host id rdata is the following  
@@ -910,25 +972,20 @@ int hip_cert_hostid2dsa(HIP_HASHTABLE * db, hip_hit_t * hit, DSA * dsa) {
         /* Read the t telling the key len used below*/
         t = p[s++]; 
         offs = 64 + (8 * t);
-
-        HIP_DEBUG("s = %d\n",s);
+        _HIP_DEBUG("s = %d\n",s);
         dsa->q = BN_bin2bn(&p[s], DSA_PRIV, 0);       
         s += DSA_PRIV;
-
-        HIP_DEBUG("s = %d\n",s);
+        _HIP_DEBUG("s = %d\n",s);
         dsa->p = BN_bin2bn(&p[s], offs, 0);
         s += offs;
-
-        HIP_DEBUG("s = %d\n",s);
+        _HIP_DEBUG("s = %d\n",s);
         dsa->g = BN_bin2bn(&p[s], offs, 0);
         s += offs;
-
-        HIP_DEBUG("s = %d\n",s);
+        _HIP_DEBUG("s = %d\n",s);
         dsa->pub_key = BN_bin2bn(&p[s], offs, 0);
         s += offs;
-
         /* Private part of the key */
-        HIP_DEBUG("s = %d\n",s);
+        _HIP_DEBUG("s = %d\n",s);
         dsa->priv_key = BN_bin2bn(&p[s], DSA_PRIV, 0);
         
         HIP_DEBUG("Hostid converted to DSA q=%s\n", BN_bn2hex(dsa->q));
@@ -939,4 +996,53 @@ int hip_cert_hostid2dsa(HIP_HASHTABLE * db, hip_hit_t * hit, DSA * dsa) {
 
  out_err: 
         return(err);
+}
+
+/**
+ * Function that extracts the key from hidb entry and constructs a key struct from it
+ *
+ * @param db is the db to query for the hostid entry
+ * @param hit is a pointer to a host identity tag to be searched
+ * @param pointer returned to RSA
+ * @param pointer returned to DSA
+ *
+ * @return HIP_HI_RSA or HIP_HI_DSA if successfull, -1 if error
+ * @note only either RSA pointer or DSA pointer is returned
+ */
+int hip_cert_hostid2key(HIP_HASHTABLE * db, hip_hit_t * hit, 
+                        RSA ** key_rsa, DSA ** key_dsa) {
+        int err = 0;
+        struct hip_host_id_entry * hostid_entry = NULL;
+        struct hip_lhi * lhi = NULL;
+        struct hip_host_id * hostid = NULL; 
+        u8 *p;
+        RSA * rsa = NULL;
+        DSA * dsa = NULL;
+
+        hostid_entry = hip_get_hostid_entry_by_lhi_and_algo(db, 
+                                                            hit,
+                                                            HIP_ANY_ALGO, -1);  
+	if (hostid_entry == NULL) {
+		err = -1;
+		goto out_err;
+	}
+        lhi = &hostid_entry->lhi; 
+        hostid = hostid_entry->host_id;        
+
+        if (hostid->rdata.algorithm == HIP_HI_RSA) { 
+                rsa = RSA_new();
+                HIP_IFEL(!rsa, -1, "Failed to malloc RSA\n");
+                HIP_IFEL(((err = hip_cert_hostid2rsa(hostid, rsa)) < 0), -1, 
+                         "Failed in hostid2rsa\n");
+                *key_rsa = rsa;
+        } else if (hostid->rdata.algorithm == HIP_HI_DSA) {
+                dsa = DSA_new();
+                HIP_IFEL(!dsa, -1, "Failed to malloc DSA\n");
+                HIP_IFEL(((err = hip_cert_hostid2dsa(hostid, dsa)) < 0), -1,
+                         "Failed in hostid2dsa\n");
+                *key_dsa = dsa;
+        } else
+                HIP_IFEL((1==0),-1,"Unknown algorithm in hostid2key\n");         
+ out_err:
+        return err;
 }
