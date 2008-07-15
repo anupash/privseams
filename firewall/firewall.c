@@ -421,7 +421,7 @@ int firewall_init_rules()
 		system("iptables -I OUTPUT -p 17 --sport 50500 -j QUEUE");
 
 		/* LSI support: XX FIXME: REMOVE HARDCODING */
-		system("iptables -I OUTPUT -d 192.0.0.0/8 -j QUEUE");
+		system("iptables -I OUTPUT -d 1.0.0.0/8 -j QUEUE");
 
 
 		system("ip6tables -I INPUT -p 139 -j QUEUE");
