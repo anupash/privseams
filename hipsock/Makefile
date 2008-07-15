@@ -16,11 +16,15 @@ all:	warn links
 links:
 	$(LN) $(LIBHIPTOOL)/builder.c
 	$(LN) $(LIBHIPTOOL)/builder.h
-	$(LN) $(LIBHIPTOOL)/hip.h
-	$(LN) $(HIPD)/hidb.h
+	$(LN) $(LIBHIPTOOL)/protodefs.h
+	$(LN) $(LIBHIPTOOL)/utils.h
 	$(LN) $(LIBHIPTOOL)/misc.c
 	$(LN) $(LIBHIPTOOL)/misc.h
+	$(LN) $(LIBHIPTOOL)/state.h
+	$(LN) $(LIBHIPTOOL)/icomm.h
+	$(LN) $(LIBHIPTOOL)/ife.h
 	$(LN) $(HIPD)/timer.h
+	$(LN) $(HIPD)/hidb.h
 
 warn:
 	@echo ""

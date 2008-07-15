@@ -1,28 +1,22 @@
 #ifndef RULE_MANAGEMENT_H
 #define RULE_MANAGEMENT_H 
 
-#include <glib.h>
-#include <glib/glist.h>
 #include <netinet/in.h>
+#include <linux/types.h>
 #include <linux/netfilter.h>
 #include <libipq.h>
-#include <glib.h>
-#include <glib/glist.h>
-#include <glib/gthread.h>
+
 #include <stdio.h>
 #include <openssl/dsa.h>
 #include <openssl/rsa.h>
 #include <openssl/pem.h>
+#include <limits.h>
 #include <linux/netfilter_ipv6.h>
 
 #include "builder.h"
 #include "crypto.h"
 #include "debug.h"
-#include "firewall.h"
-#include "conntrack.h"
-#include "helpers.h"
-#include "debug.h"
-#include "firewall.h"
+#include "dlist.h"
 
 //string tokens for rule parsing
 #define SRC_HIT_STR "-src_hit"
@@ -34,6 +28,7 @@
 #define SRC_HI_STR "--hi"
 #define VERIFY_RESPONDER_STR "--verify_responder"
 #define ACCEPT_MOBILE_STR "--accept_mobile"
+#define DECRYPT_CONTENTS_STR "--decrypt_contents" 
 #define NEGATE_STR "!"
 #define INPUT_STR "INPUT"
 #define OUTPUT_STR "OUTPUT"
@@ -47,9 +42,6 @@
 //rule
 #define DROP 0;
 #define ACCEPT 1;
-
-
-struct GList;
 
 enum {
   NO_OPTION,
@@ -86,6 +78,7 @@ struct state_option{
   struct int_option int_opt;
   int verify_responder; //1 if responder signatures are verified
   int accept_mobile; //1 if state can be established from updates signalling 
+  int decrypt_contents;
 };
 
 // can be turned to more generic string option if necessary
@@ -120,13 +113,13 @@ void print_rule_table();
 
 struct rule * parse_rule(char * string);
 void read_file(char * file_name);
-struct GList * read_rules(int hook);
+struct DList * read_rules(int hook);
 void read_rules_exit(int hook);
 
 //rule management functions
 void insert_rule(const struct rule * rule, int hook);
 int delete_rule(const struct rule * rule, int hook);
-GList * list_rules(int hook);
+struct _DList * list_rules(int hook);
 int flush(int hook);
 
 void test_rule_management();

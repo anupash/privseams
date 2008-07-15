@@ -30,9 +30,9 @@ int main(int argc, char **argv) {
   }
 
   hints.ai_flags = AI_CANONNAME | AI_HIP;
-  hints.ai_family = AF_INET;
-//  hints.ai_family = AF_UNSPEC;
-//  hints.ai_family = AF_INET6;
+  //  hints.ai_family = AF_INET;
+  //  hints.ai_family = AF_UNSPEC;
+  hints.ai_family = AF_INET6;
   hints.ai_socktype = 0;
   hints.ai_protocol = 0;
 

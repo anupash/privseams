@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+
+<RDF xmlns="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+  xmlns:em="http://www.mozilla.org/2004/em-rdf#">
+
+<Description about="urn:mozilla:install-manifest">
+
+	<em:name>ShowIP</em:name>
+  	<em:id>{3e9bb2a7-62ca-4efa-a4e6-f6f6168a652d}</em:id>
+	<em:version>0.8.02</em:version>
+	<em:description>Show the IP address of the current page in the status bar. It also allows querying custom services by IP (right mouse button) and Hostname (left mouse button), like whois, netcraft. Additionally you can copy the IP address to the clipboard. This extension was formerly known as ipv6ident.
+	</em:description>
+	<em:creator>Jan Dittmer</em:creator>
+	<em:homepageURL>http://l4x.org/showip</em:homepageURL>
+
+	<em:optionsURL>chrome://ipv6ident/content/ipv6ident-pref.xul</em:optionsURL>
+	<!--
+	<em:updateURL>http://l4x.org/showip/update.php?v=0.8.02</em:updateURL>
+	<em:aboutURL>chrome://ipv6ident/content/ipv6ident-about.xul</em:aboutURL>
+	-->
+<!-- firefox -->
+<em:targetApplication>
+<Description>
+	<em:id>{ec8030f7-c20a-464f-9b0e-13a3a9e97384}</em:id>
+	<em:minVersion>1.0</em:minVersion>
+	<em:maxVersion>2.0.0.*</em:maxVersion>
+</Description>
+</em:targetApplication> 
+
+<!-- mozilla suite -->
+<em:targetApplication>
+<Description>
+<em:id>{86c18b42-e466-45a9-ae7a-9b95ba6f5640}</em:id>
+<em:minVersion>1.0</em:minVersion>
+<em:maxVersion>1.8</em:maxVersion>
+</Description>
+</em:targetApplication> 
+
+<em:file>
+<Description about="urn:mozilla:extension:file:ipv6ident.jar">
+	<em:package>content/</em:package>
+	<em:locale>locale/en-US/showip/</em:locale>
+</Description>
+</em:file>
+
+</Description>
+
+</RDF>

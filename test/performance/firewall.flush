@@ -1,0 +1,6 @@
+#!/bin/sh
+
+ip6tables -F INPUT
+ip6tables -F OUTPUT
+ip6tables -F FORWARD
+

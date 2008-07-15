@@ -45,7 +45,7 @@ struct hip_eid_db_entry *hip_db_find_eid_entry_by_hit_no_lock(struct hip_db_stru
         HIP_DEBUG("\n");
 
         list_for_each_entry(entry, &db->db_head, next) {
-                /* XX TODO: Skip the anonymous bit. Is it ok? */
+                /*! \todo Skip the anonymous bit. Is it ok? */
                 if (!ipv6_addr_cmp(&entry->lhi.hit,
                                    (struct in6_addr *) &lhi->hit))
                         return entry;
@@ -109,7 +109,7 @@ int hip_db_set_eid(struct sockaddr_eid *eid,
                 /* Finished. Add the entry to the list. */
                 list_add(&entry->next, &db->db_head);
         } else {
-                /* XX TODO: Ownership is not changed here; should it? */
+                /*! \todo Ownership is not changed here; should it? */
                 memcpy(eid, &entry->eid, sizeof(struct sockaddr_eid));
         }
 
@@ -212,8 +212,8 @@ int hip_socket_handle_set_my_eid(struct hip_common *msg)
                 if (hip_get_param_type(param) != HIP_PARAM_EID_IFACE)
                         continue;
                 iface = (struct hip_eid_iface *) param;
-                /* XX TODO: convert and store the iface somewhere?? */
-                /* XX TODO: check also the UID permissions for storing
+                /*! \todo convert and store the iface somewhere?? */
+                /*! \todo check also the UID permissions for storing
                    the ifaces before actually storing them */
         }
         
@@ -225,7 +225,7 @@ int hip_socket_handle_set_my_eid(struct hip_common *msg)
            (eid_endpoint->endpoint.flags & HIP_ENDPOINT_FLAG_ANON) ?
                 1 : 0;
         
-        /* XX TODO: check UID/GID permissions before adding ? */
+        /*! \todo check UID/GID permissions before adding ? */
         err = hip_db_set_my_eid(&eid, &lhi, &owner_info);
         if (err) {
                 HIP_ERROR("Could not set my eid into the db\n");

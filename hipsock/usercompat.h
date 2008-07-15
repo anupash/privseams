@@ -9,7 +9,6 @@
 #include <linux/slab.h>
 #include <asm/byteorder.h>
 
-#include "hip.h"
 #include "debug.h"
 #include "misc.h"
 #include "builder.h"

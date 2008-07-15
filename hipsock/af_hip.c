@@ -10,6 +10,7 @@
 *   - Miika Komu <miika@iki.fi>
 *   - Laura Takkinen <laura.takkinen@hut.fi>
 * Licence: GNU/GPL
+* @note HIPU: This is a kernel module specifically for Linux. It needs to be rewritten for MAC OS X.
 *
 */
 
@@ -171,9 +172,9 @@ out_err:
 
 /** hip_create_socket - create a new HIP socket
  * 
- *  @sock	function pointer to socket (used as return value)
- *  @protocol	protocol number
- *  @return 	returns .1 in case of an error, 0 otherwise
+ *  @param sock function pointer to socket (used as return value)
+ *  @param protocol protocol number
+ *  @return returns 1 in case of an error, 0 otherwise
  */ 
 int hip_create_socket(struct socket *sock, int protocol)
 {
@@ -228,8 +229,8 @@ int hip_socket_bind(struct socket *sock,
 	int err = 0;
 	struct sockaddr_in6 sockaddr_in6;
 	struct proto_ops *socket_handler;
-	struct sock *sk = sock->sk;
-	struct ipv6_pinfo *pinfo = inet6_sk(sk);
+	//struct sock *sk = sock->sk;
+	//struct ipv6_pinfo *pinfo = inet6_sk(sk); TH: removed because unused
 	struct hip_lhi lhi;
 	struct sockaddr_eid *sockaddr_eid = (struct sockaddr_eid *) umyaddr;
 
@@ -622,12 +623,12 @@ int hip_socket_setsockopt(struct socket *sock,
 	case SO_HIP_RST:
 		err = hip_socket_handle_rst(msg);
 		break;
-	case SO_HIP_ADD_RVS:
+	case SO_HIP_ADD_DEL_SERVER:
 		err = hip_socket_handle_rvs(msg);
 		break;
-// XX TODO: not supported for now, this message should be moved as
-// such to the userspace anyway i.e. create WORKORDER:
-// HIP_WO_SUBTYPE_SEND_BOS:
+        /** @todo Not supported for now, this message should be moved as
+	    such to the userspace anyway i.e. create WORKORDER: */
+        // HIP_WO_SUBTYPE_SEND_BOS:
 	case SO_HIP_BOS:
 		err = hip_socket_bos_wo(msg);
 		//err = hip_socket_send_bos(msg);

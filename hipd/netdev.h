@@ -13,21 +13,28 @@
 #include <linux/netlink.h>      /* get_my_addresses() support   */
 #include <linux/rtnetlink.h>    /* get_my_addresses() support   */
 #include <netinet/ip6.h>
+#include <openssl/rand.h>
 
 #include "nlink.h"
-#include "hip.h"
 #include "list.h"
 #include "debug.h"
 
+#define HIP_RTDS_TAB_LEN 256
+
+extern int suppress_af_family; /* Defined in hipd/hipd.c*/
 extern int address_count;
-extern struct list_head addresses;
+extern HIP_HASHTABLE *addresses;
 struct rtnl_handle;
 
+
+int hip_get_default_hit(struct in6_addr *hit);
 int hip_devaddr2ifindex(struct in6_addr *addr);
 int hip_netdev_init_addresses(struct rtnl_handle *nl);
 void delete_all_addresses(void);
 int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg);
 int filter_address(struct sockaddr *addr, int ifindex);
+int hip_get_default_hit(struct in6_addr *hit);
+int hip_get_default_lsi(struct in_addr *lsi);
 
 void add_address_to_list(struct sockaddr *addr, int ifindex);
 #endif /* NETDEV_H */

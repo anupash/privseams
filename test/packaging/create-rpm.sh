@@ -2,14 +2,15 @@
 
 MAJOR=1
 MINOR=0
-RELEASE=1
+RELEASE=4
 VERSION="$MAJOR.$MINOR"
 SUFFIX="-$VERSION.$RELEASE"
 NAME=hipl
 PKGROOT=$PWD
 HIPL=$PWD/..
 PKGDIR=$PKGROOT/${NAME}$SUFFIX
-
+#OS_REV_NUM=`cat /etc/fedora-release | /usr/bin/awk '{print $3}'`
+#OS_REV_NAME=`cat /etc/fedora-release | /usr/bin/awk '{print $4}' | sed s/.*\(// | sed s/\)// `
 error_cleanup()
 {
  if [ -n "$PKGDIR" -a -d "$PKGDIR" ];then
@@ -38,6 +39,7 @@ make dist
 
 #echo "** Package building root is '$PKGROOT'" 
 tar xzf ${NAME}-main.tar.gz
+find ${NAME}-main -name '.arch*' | xargs rm -rf
 mv -v ${NAME}-main $PKGDIR
 
 echo "** Creating source package $PKGROOT/${NAME}${SUFFIX}.tar.gz"
@@ -46,13 +48,15 @@ ls -l $PKGROOT/hipl${SUFFIX}.tar.gz
 
 cat <<EOF
 
-*** Now, execute the following commands as root:
+#############################################
+# Assuming that you are in /etc/sudoers!!!! #
+#############################################
 
-mv $PKGROOT/hipl${SUFFIX}.tar.gz /usr/src/redhat/SOURCES
-rpmbuild -ba $PKGROOT/test/packaging/hipl.spec
-
-
-*** The RPMs can be found from /usr/src/redhat/ SRPMS and RPMS
 EOF
+
+# The RPMs can be found from /usr/src/redhat/ SRPMS and RPMS
+
+sudo mv -f $PKGROOT/hipl${SUFFIX}.tar.gz /usr/src/redhat/SOURCES
+sudo rpmbuild -ba $PKGROOT/test/packaging/hipl.spec
 
 error_cleanup

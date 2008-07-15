@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+
+<?xml-stylesheet href="chrome://ipv6ident/content/ipv6ident.css" type="text/css"?> 
+
+<overlay id="ipv6ident-overlay" 
+  xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+
+	<script type="text/javascript" src="ipv6ident-pref.js"/> <!-- for preferences -->
+	<script type="text/javascript" src="ipv6ident.js"/>
+
+	<stringbundleset id="stringbundleset">
+	<stringbundle id="showip_strings" src="chrome://ipv6ident/locale/showip.properties"/>
+	</stringbundleset>
+
+	<statusbar id="status-bar">
+	<!--
+		<deck id="ipv6_deck" class="chromeclass-toolbar-additional" insertafter="statusbarpanel-updates" selectedIndex="0">
+		<hbox id="ipv6_hbox">
+		-->
+		<statusbarpanel label="ShowIP" id="showip_status" class="statusbarpanel-iconic"
+			xpopup="ipv6_hostmenu" xcontext="ipv6_ipmenu"
+			xonclick="IPV6_showpopup(event)"
+			 > <!-- status="none" type="menu" -->
+			<!-- onclick="alert(event.button)" -->
+		</statusbarpanel>
+		<!--
+		</hbox>
+		</deck>
+		-->
+	</statusbar>
+	<!-- firefox -->
+	<menupopup id="menu_ToolsPopup">
+		<menuitem insertafter="devToolsSeparator" label="ShowIP"
+			accesskey="I" oncommand="showipExtPrefs.Show();" />
+	</menupopup>
+	<!-- mozilla -->
+	<menupopup id="taskPopup">
+		<menuitem insertafter="devToolsSeparator" label="ShowIP"
+			accesskey="I" oncommand="showipExtPrefs.Show();" />
+	</menupopup>
+</overlay>
