@@ -54,13 +54,17 @@ int hip_fw_handle_stun_packet(hip_fw_context_t* ctx){
 //ip: checksum
 	new_ip_msg->check = checksum_ip(new_ip_msg,new_ip_msg->ihl);
 //send:
+#if 0
 	HIP_IFEL(bind(firewall_raw_sock_udp_v4, (struct sockaddr *) &src, sizeof(src)),
 			-1, "Binding to raw sock failed\n");
-	HIP_IFEL((sendto(firewall_raw_sock_udp_v4,new_ip_msg,new_ip_len,0, &dst,sizeof(dst)) != new_ip_len),
+#endif
+	HIP_IFEL((sendto(raw_sock_v4,new_ip_msg,new_ip_len,0, &dst,sizeof(dst)) != new_ip_len),
 			-1,"send udp failed");
+#if 0
 	memset(&src, 0, sizeof(src));
 	HIP_IFEL(bind(firewall_raw_sock_udp_v4, (struct sockaddr *) &src, sizeof(src)),
 			-1, "Binding to raw sock failed\n");
+#endif
 	HIP_DEBUG("hip_fw_handle_stun_packet end\n");
 out_err:
 	if(new_ip_msg)

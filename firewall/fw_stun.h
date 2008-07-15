@@ -5,4 +5,6 @@
 #include "ife.h"
 #include "debug.h"
 
+extern int raw_sock_v4;
+
 #endif /*FW_STUN_H_*/
