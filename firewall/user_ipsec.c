@@ -434,12 +434,6 @@ int handle_sa_add_request(struct hip_common * msg,
 	update = *((int *) hip_get_param_contents_direct(param));
 	HIP_DEBUG("the update value is %d \n", update);
 	
-	if (dst_hit)
-		err = firewall_set_bex_state(src_hit, dst_hit, 1);
-	else
-		err = firewall_set_bex_state(src_hit, dst_hit, -1);
-	
-	
 	err = hipl_userspace_ipsec_sadb_add_wrapper(saddr, daddr, 
 						    src_hit, dst_hit, 
 						    spi_ipsec, nat_mode,
