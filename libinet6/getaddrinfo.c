@@ -1817,7 +1817,5 @@ int gaih_inet_get_hip_hosts_file_info(hip_db_struct_t *db)
  out_err:		
 	if (fp)                                                               
                 fclose(fp);
-	if (aux.hostname)
-	  free(aux.hostname);
 	return err;		
 }

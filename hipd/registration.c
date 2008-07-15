@@ -21,7 +21,7 @@ hip_srv_t hip_services[HIP_TOTAL_EXISTING_SERVICES];
  */
 hip_ll_t pending_requests;
 
-void hip_init_xxx_services()
+void hip_init_services()
 {
 	hip_services[0].reg_type     = HIP_SERVICE_RENDEZVOUS;
 	hip_services[0].status       = HIP_SERVICE_OFF;
@@ -41,10 +41,15 @@ void hip_init_xxx_services()
 	HIP_DEBUG("NEW SERVICE INITIALIZATION DONE.\n");
 }
 
-void hip_uninit_xxx_services()
+void hip_uninit_services()
 {
 	hip_ll_uninit(&pending_requests, free);
 	HIP_DEBUG("NEW SERVICE UNINITIALIZATION DONE.\n");
+}
+
+void hip_registration_maintenance()
+{
+	while (hip_del_pending_request_by_expiration() == 0);
 }
 
 int hip_set_srv_status(uint8_t reg_type, hip_srv_status_t status)
@@ -171,10 +176,10 @@ int hip_del_pending_request(hip_ha_t *entry)
 	int index = 0;
 	hip_ll_node_t *iter = NULL;
 	
-	/* Iterate through the linked list. We're deleting a node from the list
-	   even though we use an iterator here, but it's okay, since we do not
-	   use the iterator after the deletion. Again, we don't have to check
-	   for NULL request as the linked list does that for us. */
+	/* Iterate through the linked list. The iterator itself can't be used
+	   for deleting nodes from the list. Therefore, we just get the index of
+	   the element to be deleted using the iterator and then call
+	   hip_ll_del() to do the actual deletion. */
 	while((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
 		if(((hip_pending_request_t *)(iter->ptr))->entry == entry) {
 			
@@ -195,15 +200,36 @@ int hip_del_pending_request_by_type(hip_ha_t *entry, uint8_t reg_type)
 	hip_ll_node_t *iter = NULL;
 	hip_pending_request_t * request = NULL;
 
-	/* Iterate through the linked list. We're deleting a node from the list
-	   even though we use an iterator here, but it's okay, since we do not
-	   use the iterator after the deletion. */
+	/* See hip_del_pending_request() for a comment. */
 	while((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
 		request = (hip_pending_request_t *)(iter->ptr);
 		if(request->entry == entry && request->reg_type == reg_type) {
 			
 			HIP_DEBUG("Deleting and freeing a pending request by "\
 				  "type at index %u.\n", index);
+			hip_ll_del(&pending_requests, index, free);
+			return 0;
+		}
+		index++;
+	}
+
+	return -1;
+}
+
+int hip_del_pending_request_by_expiration()
+{
+	int index = 0;
+	hip_ll_node_t *iter = NULL;
+	hip_pending_request_t * request = NULL;
+	time_t now = time(NULL); 
+
+	/* See hip_del_pending_request() for a comment. */
+	while((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
+		request = (hip_pending_request_t *)(iter->ptr);
+		if(now - request->created > HIP_PENDING_REQUEST_LIFETIME ) {
+			HIP_DEBUG("Deleting and freeing a pending request by "\
+				  "expiration (%u seconds) at index %u.\n",
+				  now - request->created, index);
 			hip_ll_del(&pending_requests, index, free);
 			return 0;
 		}
@@ -253,50 +279,47 @@ int hip_get_pending_request_count(hip_ha_t *entry)
 	return request_count;
 }
 
-int hip_handle_param_reg_info(hip_common_t *msg, hip_ha_t *entry)
+int hip_handle_param_reg_info(hip_ha_t *entry, hip_common_t *source_msg,
+			      hip_common_t *target_msg)
 {
 	struct hip_reg_info *reg_info = NULL;
 	uint8_t *reg_types = NULL, reg_type = 0;
 	unsigned int type_count = 0;
-	int i = 0;
+	int err = 0, i = 0;
 	
-	reg_info = hip_get_param(msg, HIP_PARAM_REG_INFO);
+	reg_info = hip_get_param(source_msg, HIP_PARAM_REG_INFO);
 	
 	if(reg_info == NULL) {
-#ifdef CONFIG_HIP_ESCROW
-		/* The escrow part is just a copy paste from the previous HIPL
-		   registration implementation. It is not tested to work.
-		   Besides, it makes no sense to do anything except return
-		   zero here. Why should we take action if the responder does
-		   NOT offer the service? -Lauri. */ 
-		HIP_DEBUG("No REG_INFO parameter found. The Responder offers "\
+		HIP_DEBUG("No REG_INFO parameter found. The server offers "\
 			  "no services.\n");
-		HIP_KEA *kea;
-		kea = hip_kea_find(&entry->hit_our);
 		
-		if (kea && (kea->keastate == HIP_KEASTATE_REGISTERING))
-			kea->keastate = HIP_KEASTATE_INVALID;
-		if (kea)
-			hip_keadb_put_entry(kea);	
-		/** @todo remove base keas */
-#endif /* CONFIG_HIP_ESCROW */		
-		return -1;
+#ifdef CONFIG_HIP_ESCROW
+		HIP_KEA *kea = hip_kea_find(&entry->hit_our);
+		if (kea != NULL) {
+			hip_keadb_put_entry(kea);
+		}
+#endif /* CONFIG_HIP_ESCROW */
+
+		err = -1;
+		goto out_err;
 	}
 	
 	HIP_DEBUG("REG_INFO parameter found.\n");
-
+	
 	/* Get a pointer registration types and the type count. */
 	reg_types  = reg_info->reg_type;
 	type_count = hip_get_param_contents_len(reg_info) -
-		(sizeof(reg_info->min_lifetime) + sizeof(reg_info->max_lifetime));
+		(sizeof(reg_info->min_lifetime) +
+		 sizeof(reg_info->max_lifetime));
 	
-	/* Check draft-ietf-hip-registration-02 chapter 3.1. */
+	/* Check RFC 5203 Chapter 3.1. */
 	if(type_count == 0){
 		HIP_INFO("The server is currently unable to provide services "\
 			 "due to transient conditions.\n");
-		return 0;
+		err = 0;
+		goto out_err;
 	}
-
+	
 	/* Loop through all the registration types found in REG_INFO parameter
 	   and store the information of responder's capability to offer a
 	   service. */
@@ -305,55 +328,112 @@ int hip_handle_param_reg_info(hip_common_t *msg, hip_ha_t *entry)
 		switch(reg_types[i]) {
 		case HIP_SERVICE_RENDEZVOUS:
 			HIP_INFO("Responder offers rendezvous service.\n");
-						
+			
 			hip_hadb_set_peer_controls(
 				entry ,HIP_HA_CTRL_PEER_RVS_CAPABLE);
 			
 			break;
-
-#ifdef CONFIG_HIP_ESCROW		
-		case HIP_SERVICE_ESCROW:
-			/* The escrow part is just a copy paste from the
-			   previous HIPL registration implementation. It is not
-			   tested to work. -Lauri */
-			HIP_INFO("Responder offers escrow service.\n");
-			HIP_KEA *kea;
-			
-			hip_hadb_set_peer_controls(
-				entry, HIP_HA_CTRL_PEER_ESCROW_CAPABLE);
-			
-			kea = hip_kea_find(&entry->hit_our);
-			if (kea && kea->keastate == HIP_KEASTATE_REGISTERING) {
-				HIP_DEBUG("Registering to escrow service.\n");
-				hip_keadb_put_entry(kea);
-			} else if(kea){
-				kea->keastate = HIP_KEASTATE_INVALID;
-				HIP_DEBUG("Not doing escrow registration, "\
-					  "invalid kea state.\n");
-				hip_keadb_put_entry(kea);	  
-			} else {
-				HIP_DEBUG("Not doing escrow registration.\n");
-			}
-
-			break;
-#endif /* CONFIG_HIP_ESCROW */				
 		case HIP_SERVICE_RELAY:
 			HIP_INFO("Responder offers relay service.\n");
 			hip_hadb_set_peer_controls(
 				entry, HIP_HA_CTRL_PEER_RELAY_CAPABLE);
 			
 			break;
+#ifdef CONFIG_HIP_ESCROW	
+		case HIP_SERVICE_ESCROW:
+			/* The escrow part is just a copy paste from the
+			   previous HIPL registration implementation. It is not
+			   tested to work. -Lauri */
+			HIP_INFO("Responder offers escrow service.\n");
+			hip_hadb_set_peer_controls(
+				entry, HIP_HA_CTRL_PEER_ESCROW_CAPABLE);
+			HIP_KEA *kea = hip_kea_find(&entry->hit_our);
+			
+			if (kea != NULL) {
+				if(kea->keastate != HIP_KEASTATE_REGISTERING) {
+					kea->keastate = HIP_KEASTATE_INVALID;
+				}
+				
+				hip_keadb_put_entry(kea);
+			} else {
+				HIP_DEBUG("No KEA found. Not doing escrow "\
+					  "registration.\n");
+			}
+			
+			break;
+#endif /* CONFIG_HIP_ESCROW */
 			
 		default:
 			HIP_INFO("Responder offers unsupported service.\n");
 		}
 	}
+
+	/* This far we have stored the information of what services the server
+	   offers. Next we check if we have requested any of those services from
+	   command line using hipconf. If we have requested, we have pending
+	   requests stored. We build a REG_REQUEST parameter containing each
+	   service that we have requested and the server offers. */
 	
-	return 0;
+	if(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_ANY) {
+		int request_count = hip_get_pending_request_count(entry);
+		if(request_count > 0) {
+			int j = 0, types_to_request = 0;
+			uint8_t type_array[request_count], valid_lifetime = 0;
+			hip_pending_request_t *requests[request_count];
+						
+			i = 0;
+			hip_get_pending_requests(entry, requests);
+			
+			/* If we have requested for a cancellation of a service
+			   we use lifetime of zero. Otherwise we must check
+			   that the requested lifetime falls between the offered
+			   lifetime boundaries. */
+			if(requests[0]->lifetime == 0) {
+				valid_lifetime = 0;
+			} else {
+				valid_lifetime = MIN(requests[0]->lifetime,
+						     reg_info->max_lifetime);
+				valid_lifetime = MAX(valid_lifetime,
+						     reg_info->min_lifetime);
+			}
+
+			/* Copy the Reg Types to an array. Outer loop for the
+			   services we have requested, inner loop for the
+			   services the server offers. */
+			for(i = 0; i < request_count; i++) {
+				for(j = 0; j < type_count; j++) {
+					if(requests[i]->reg_type ==
+					   reg_types[j]) { 
+						type_array[types_to_request] =
+							requests[i]->reg_type;
+						types_to_request++;
+						break;
+					}
+				}
+			}
+			
+			if (types_to_request > 0) {
+				HIP_IFEL(hip_build_param_reg_request(
+						 target_msg, valid_lifetime,
+						 type_array, types_to_request),
+					 -1,
+					 "Failed to build a REG_REQUEST "\
+					 "parameter.\n");
+				
+			}
+		}
+		/* We do not delete the pending requests for this entry yet, but
+		   only after R2 has arrived. We do not need pending requests
+		   when R2 arrives, but in case the I2 is to be retransmitted,
+		   we must be able to produce the REG_REQUEST parameter. */
+	}
+
+ out_err:
+	return err;
 }
 
-int hip_handle_param_rrq(hip_ha_t *entry, hip_common_t *source_msg,
-			 hip_common_t *target_msg)
+int hip_handle_param_reg_request(hip_ha_t *entry, hip_common_t *source_msg,
+				 hip_common_t *target_msg)
 {
 	int err = 0, type_count = 0, accepted_count = 0, refused_count = 0;
 	struct hip_reg_request *reg_request = NULL;
@@ -363,7 +443,6 @@ int hip_handle_param_rrq(hip_ha_t *entry, hip_common_t *source_msg,
 	
 	if(reg_request == NULL) {
 		err = -1;
-		_HIP_DEBUG("No REG_REQUEST parameter found.\n");
 		/* Have to use return instead of 'goto out_err' because of
 		   the arrays initialised later. Otherwise this won't compile:
 		   error: jump into scope of identifier with variably modified
@@ -371,7 +450,9 @@ int hip_handle_param_rrq(hip_ha_t *entry, hip_common_t *source_msg,
 		return err;
 	}
 	
-	HIP_DEBUG("REG_REQUEST parameter found.\n");
+	HIP_DEBUG("REG_REQUEST parameter found. Requested lifetime: 0x%x, "\
+		  "number of service types requested: %d.\n",
+		  reg_request->lifetime, type_count);
 	
 	/* Get the number of registration types. */
 	type_count = hip_get_param_contents_len(reg_request) -
@@ -383,7 +464,7 @@ int hip_handle_param_rrq(hip_ha_t *entry, hip_common_t *source_msg,
 	/* Check that the request has at most one value of each type. */
 	if(hip_has_duplicate_services(reg_types, type_count)) {
 		/* We consider this as a protocol error, and do not build
-		   REG_FAILED parameters. The initiator might be rogue and
+		   REG_FAILED parameters. The initiator may be rogue and
 		   trying to stress the server with malformed service
 		   requests. */
 		err = -1;
@@ -399,30 +480,25 @@ int hip_handle_param_rrq(hip_ha_t *entry, hip_common_t *source_msg,
 	uint8_t accepted_requests[type_count], accepted_lifetimes[type_count];
 	uint8_t refused_requests[type_count], failure_types[type_count];
 	
-	memset(accepted_requests, '0', sizeof(accepted_requests));
-	memset(accepted_lifetimes, '0', sizeof(accepted_lifetimes));
-	memset(refused_requests, '0', sizeof(refused_requests));
-	memset(failure_types, '0', sizeof(failure_types));
+	memset(accepted_requests, 0, sizeof(accepted_requests));
+	memset(accepted_lifetimes, 0, sizeof(accepted_lifetimes));
+	memset(refused_requests, 0, sizeof(refused_requests));
+	memset(failure_types, 0, sizeof(failure_types));
 	
-	HIP_DEBUG("REG_REQUEST lifetime: 0x%x, number of types: %d.\n",
-		  reg_request->lifetime, type_count);
-
 	if(reg_request->lifetime == 0) {
-		HIP_DEBUG("Client is cancelling registration.\n");
 		hip_del_registration_server(
 			entry, reg_types, type_count, accepted_requests,
-			accepted_lifetimes, &accepted_count, refused_requests,
-			failure_types, &refused_count);
+			&accepted_count, refused_requests, failure_types,
+			&refused_count);
 	} else {
-		HIP_DEBUG("Client is registrating for new services.\n");
 		hip_add_registration_server(
 			entry, reg_request->lifetime, reg_types, type_count,
 			accepted_requests, accepted_lifetimes, &accepted_count,
 			refused_requests, failure_types, &refused_count);
 	}
 	
-	HIP_DEBUG("Accepted: %d, refused: %d.\n", accepted_count,
-		  refused_count);
+	HIP_DEBUG("Number of accepted service requests: %d, number of refused "\
+		  "service requests: %d.\n", accepted_count, refused_count);
 
 	/* The registration is now done. Next, we build the REG_RESPONSE and
 	   REG_FAILED parameters. */
@@ -478,17 +554,16 @@ int hip_handle_param_reg_response(hip_ha_t *entry, hip_common_t *msg)
 	int err = 0, type_count = 0;
 	struct hip_reg_response *reg_response = NULL;
 	uint8_t *reg_types = NULL;
-
-	HIP_DEBUG("New REG_RESPONSE handler.\n");
 	
 	reg_response = hip_get_param(msg, HIP_PARAM_REG_RESPONSE);
-
+	
 	if(reg_response == NULL) {
 		err = -1;
-		HIP_DEBUG("No REG_RESPONSE parameter found.\n");
 		goto out_err;
 	}
 	
+	HIP_DEBUG("REG_RESPONSE parameter found.\n");
+
 	type_count = hip_get_param_contents_len(reg_response) -
 		sizeof(reg_response->lifetime);
 	reg_types = hip_get_param_contents_direct(reg_response) +
@@ -507,8 +582,91 @@ int hip_handle_param_reg_response(hip_ha_t *entry, hip_common_t *msg)
 
 int hip_handle_param_reg_failed(hip_ha_t *entry, hip_common_t *msg)
 {
-	/** @todo implement. */
-	return 0;
+	int err = 0, type_count = 0, i = 0;
+	struct hip_reg_failed *reg_failed = NULL;
+	uint8_t *reg_types = NULL;
+	char reason[256];
+
+	reg_failed = hip_get_param(msg, HIP_PARAM_REG_FAILED);
+	
+	if(reg_failed == NULL) {
+		err = -1;
+		goto out_err;
+	}
+	
+	HIP_DEBUG("REG_FAILED parameter found.\n");
+
+	/* There can be more than one REG_FAILED parameters in the message. We
+	   have to loop through every one. */
+	while(hip_get_param_type(reg_failed) == HIP_PARAM_REG_FAILED) {
+
+		type_count = hip_get_param_contents_len(reg_failed) -
+			sizeof(reg_failed->failure_type);
+		reg_types = hip_get_param_contents_direct(reg_failed) +
+			sizeof(reg_failed->failure_type);
+		hip_get_registration_failure_string(reg_failed->failure_type,
+						    reason);
+	
+		for(; i < type_count; i++) {
+			
+			switch(reg_types[i]) {
+			case HIP_SERVICE_RENDEZVOUS:
+			{
+				HIP_DEBUG("The server has refused to grant us "\
+					  "rendezvous service.\n%s\n", reason);
+				hip_hadb_cancel_local_controls(
+					entry, HIP_HA_CTRL_LOCAL_REQ_RVS); 
+				hip_del_pending_request_by_type(
+					entry, HIP_SERVICE_RENDEZVOUS);
+				break;
+			}
+			case HIP_SERVICE_RELAY:
+			{
+				HIP_DEBUG("The server has refused to grant us "\
+					  "relay service.\n%s\n", reason);
+				hip_hadb_cancel_local_controls(
+					entry, HIP_HA_CTRL_LOCAL_REQ_RELAY); 
+				hip_del_pending_request_by_type(
+					entry, HIP_SERVICE_RELAY);
+				
+				break;
+			}
+			case HIP_SERVICE_ESCROW:
+			{
+				HIP_DEBUG("The server has refused to grant us "\
+					  "escrow service.\n%s\n", reason);
+				hip_hadb_cancel_local_controls(
+					entry, HIP_HA_CTRL_LOCAL_REQ_ESCROW); 
+				hip_del_pending_request_by_type(
+					entry, HIP_SERVICE_ESCROW);
+				/* Not tested to work. Just moved here from an old
+				   registration implementation. */
+			
+				break;
+			}
+			default:
+				HIP_DEBUG("The server has refused to grant us "\
+					  "an unknown service (%u).\n%s\n",
+					  reg_types[i], reason);
+				hip_del_pending_request_by_type(
+					entry, reg_types[i]);
+				break;
+			}
+		}
+		
+		/* Iterate to the next parameter and break the loop if there are
+		   no more parameters left. */
+		i = 0;
+		reg_failed = (struct hip_reg_failed *)
+			hip_get_next_param(msg, (hip_tlv_common_t *)reg_failed);
+		
+		if(reg_failed == NULL)
+			break;
+	}
+
+ out_err:
+	
+	return err;
 }
 
 int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
@@ -518,7 +676,6 @@ int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
 				int *accepted_count, uint8_t refused_requests[],
 				uint8_t failure_types[], int *refused_count)
 {
-	
 	int err = 0, i = 0;
 	hip_relrec_t dummy, *fetch_record = NULL, *new_record = NULL;
 	uint8_t granted_lifetime = 0;
@@ -538,10 +695,13 @@ int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
 			hip_rvs_validate_lifetime(lifetime, &granted_lifetime);
 
 			fetch_record = hip_relht_get(&dummy);
-			/* Check if we already have an relay record for the
-			   given HIT. Note that the fetched record type does not
+			/* Check that
+			   a) the rvs/relay is ON;
+			   b) there already is no relay record for the given
+			   HIT. Note that the fetched record type does not
 			   matter, since the relay and RVS types cannot co-exist
-			   for a single entry. */
+			   for a single entry;
+			   c) the client is whitelisted if the whitelist is on. */
 			if(hip_relay_get_status() == HIP_RELAY_OFF) {
 				HIP_DEBUG("RVS/Relay is not ON.\n");
 				refused_requests[*refused_count] = reg_types[i];
@@ -564,8 +724,8 @@ int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
 			} else {
 				/* Set the type of the relay record. */
 				hip_relrec_type_t type =
-					(reg_types[i] == HIP_RVSRELAY) ?
-					HIP_RVSRELAY : HIP_FULLRELAY;
+					(reg_types[i] == HIP_SERVICE_RELAY) ?
+					HIP_FULLRELAY : HIP_RVSRELAY;
 				
 				/* Allocate a new relay record. */
 				new_record = hip_relrec_alloc(
@@ -648,12 +808,118 @@ int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
 
 int hip_del_registration_server(hip_ha_t *entry, uint8_t *reg_types,
 				int type_count, uint8_t accepted_requests[],
-				uint8_t accepted_lifetimes[],
 				int *accepted_count, uint8_t refused_requests[],
 				uint8_t failure_types[], int *refused_count)
 {
-	/** @todo Implement. */
-	return 0;
+	int err = 0, i = 0;
+	hip_relrec_t dummy, *fetch_record = NULL, *new_record = NULL;
+	
+	memcpy(&(dummy.hit_r), &(entry->hit_peer), sizeof(entry->hit_peer));
+	
+	/* Loop through all registrations types in reg_types. This loop calls
+	   the actual registration functions. */
+	for(; i < type_count; i++) {
+
+		switch(reg_types[i]) {
+		case HIP_SERVICE_RENDEZVOUS:
+		case HIP_SERVICE_RELAY: {
+			/* Set the type of the relay record. */
+			hip_relrec_type_t type_to_delete = 0;
+
+			/* RVS and relay deletions are identical except the
+			   relay record type. */
+			if(reg_types[i] == HIP_SERVICE_RENDEZVOUS) {
+				HIP_DEBUG("Client is cancelling registration "\
+					  "to rendezvous service.\n");
+				type_to_delete = HIP_RVSRELAY;
+			} else {
+				HIP_DEBUG("Client is cancelling registration "\
+					  "to relay service.\n");
+				type_to_delete = HIP_FULLRELAY;
+			}
+						
+			fetch_record = hip_relht_get(&dummy);
+			/* Check that
+			   a) the rvs/relay is ON;
+			   b) there is an relay record to delete for the given
+			   HIT.
+			   c) the fetched record type is correct.
+			   d) the client is whitelisted if the whitelist is on. */
+
+			if(hip_relay_get_status() == HIP_RELAY_OFF) {
+				HIP_DEBUG("RVS/Relay is not ON.\n");
+				refused_requests[*refused_count] = reg_types[i];
+				failure_types[*refused_count] =
+					HIP_REG_TYPE_UNAVAILABLE;
+				(*refused_count)++;
+			} else if(fetch_record == NULL) {
+				HIP_DEBUG("There is no relay record to "\
+					  "cancel.\n");
+				refused_requests[*refused_count] = reg_types[i];
+				failure_types[*refused_count] =
+					HIP_REG_TYPE_UNAVAILABLE;
+				(*refused_count)++;
+			} else if(fetch_record->type != type_to_delete) {
+				HIP_DEBUG("The relay record to be cancelled "\
+					  "is of wrong type.\n");
+				refused_requests[*refused_count] = reg_types[i];
+				failure_types[*refused_count] =
+					HIP_REG_TYPE_UNAVAILABLE;
+				(*refused_count)++; 
+			} else if(hip_relwl_get_status() &&
+				  hip_relwl_get(&dummy.hit_r) == NULL) {
+				HIP_DEBUG("Client is not whitelisted.\n");
+				refused_requests[*refused_count] = reg_types[i];
+				failure_types[*refused_count] =
+					HIP_REG_INSUFFICIENT_CREDENTIALS;
+				(*refused_count)++;
+			} else {
+				/* Delete the relay record. */
+				hip_relht_rec_free(&dummy);
+				/* Check that the relay record really got deleted. */
+				if(hip_relht_get(&dummy) == NULL) {
+					accepted_requests[*accepted_count] =
+						reg_types[i];
+					(*accepted_count)++;
+					HIP_DEBUG("Cancellation accepted.\n");
+				} else {
+					refused_requests[*refused_count] =
+						reg_types[i];
+					failure_types[*refused_count] =
+						HIP_REG_TRANSIENT_CONDITIONS;
+					(*refused_count)++;
+					HIP_ERROR("Cancellation refused.\n");
+				}
+			}
+			
+			break;
+		}
+		case HIP_SERVICE_ESCROW:
+			/** @todo Implement escrow cancellation. */
+			HIP_DEBUG("Client is cancelling registration to "
+				  "escrow service. Escrow cancellation is not "\
+				  "supported yet.\n");
+			refused_requests[*refused_count] = reg_types[i];
+			failure_types[*refused_count] =
+				HIP_REG_TYPE_UNAVAILABLE;
+			(*refused_count)++;
+
+			break;
+		default:
+			HIP_DEBUG("Client is trying to cancel an unsupported "\
+				  "service.\nCancellation refused.\n");
+			refused_requests[*refused_count] = reg_types[i];
+			failure_types[*refused_count] =
+				HIP_REG_TYPE_UNAVAILABLE;
+			(*refused_count)++;
+			
+			break;
+		}
+	}
+
+ out_err:
+
+	return err;
 }
 
 int hip_add_registration_client(hip_ha_t *entry, uint8_t lifetime,
@@ -662,16 +928,12 @@ int hip_add_registration_client(hip_ha_t *entry, uint8_t lifetime,
 	int err = 0, i = 0;
 	time_t seconds = 0;
 	
+	/* 'seconds' is just just for debug prints. */
 	hip_get_lifetime_seconds(lifetime, &seconds);
 
         /* Check what services we have been granted. Cancel the local requests
 	   bit, set the peer granted bit and delete the pending request. */
-	/** @todo This has a slight chance of a memory leak. We create a pending
-	    request when the user issues a hipconf command but delete the
-	    request only when a REG_RESPONSE parameter is received. Should the
-	    parameter never be received, the pending request is never freed. The
-	    requests should be timestamped and deleted in periodic maintenance. */
-	/** @todo We are not storing the granted lifetime anywhere but we 
+	/** @todo We are not storing the granted lifetime anywhere as we 
 	    obviously should. */
 	for(; i < type_count; i++) {
 		
@@ -743,7 +1005,57 @@ int hip_add_registration_client(hip_ha_t *entry, uint8_t lifetime,
 int hip_del_registration_client(hip_ha_t *entry, uint8_t *reg_types,
 				int type_count)
 {
-	/** @todo Implement. */
+	int err = 0, i = 0;
+	
+        /* Check what service registration cancellations we have been granted.
+	   Cancel the local requests and delete the pending request. */
+	/** @todo We are not storing information about cancellation anywhere. */
+	for(; i < type_count; i++) {
+		
+		switch(reg_types[i]) {
+		case HIP_SERVICE_RENDEZVOUS:
+		{
+			HIP_DEBUG("The server has cancelled our rendezvous "\
+				  "service.\n");
+			hip_hadb_cancel_local_controls(
+				entry, HIP_HA_CTRL_LOCAL_REQ_RVS); 
+			hip_del_pending_request_by_type(
+				entry, HIP_SERVICE_RENDEZVOUS);
+			break;
+		}
+		case HIP_SERVICE_RELAY:
+		{
+			HIP_DEBUG("The server has cancelled our relay "\
+				  "service.\n");
+			hip_hadb_cancel_local_controls(
+				entry, HIP_HA_CTRL_LOCAL_REQ_RELAY); 
+			hip_del_pending_request_by_type(
+				entry, HIP_SERVICE_RELAY);
+
+			break;
+		}
+		case HIP_SERVICE_ESCROW:
+		{
+			HIP_DEBUG("The server has cancelled our escrow "\
+				  "service.\n");
+			hip_hadb_cancel_local_controls(
+				entry, HIP_HA_CTRL_LOCAL_REQ_ESCROW); 
+			hip_del_pending_request_by_type(
+				entry, HIP_SERVICE_ESCROW);
+			
+			break;
+		}
+		default:
+		{
+			HIP_DEBUG("The server has cancelled our registration "\
+				  "to an unknown service.\n");
+			break;
+		}
+		}
+	}
+	
+ out_err:
+	
 	return 0;
 }
 
@@ -757,11 +1069,89 @@ int hip_has_duplicate_services(uint8_t *reg_types, int type_count)
 
 	for(; i < type_count; i++) {
 		for(j = i + 1; j < type_count; j++) {
-			if(reg_types[i] = reg_types[j]) {
+			if(reg_types[i] == reg_types[j]) {
 				return -1;
 			}
 		}
 	}
 
 	return 0;
+}
+
+int hip_get_registration_failure_string(uint8_t failure_type,
+					char *type_string) {
+	if(type_string == NULL)
+		return -1;
+	
+	switch (failure_type) {
+	case HIP_REG_INSUFFICIENT_CREDENTIALS:
+		memcpy(type_string,
+		       "Registration requires additional credentials.",
+		       sizeof("Registration requires additional credentials."));
+		break;
+	case HIP_REG_TYPE_UNAVAILABLE:
+		memcpy(type_string, "Registration type unavailable.",
+		       sizeof("Registration type unavailable."));
+		break;
+	case HIP_REG_CANCEL_REQUIRED:
+		memcpy(type_string,
+		       "Cancellation of a previously granted service is "\
+		       "required.",
+		       sizeof("Cancellation of a previously granted service "\
+			      "is required."));
+		break;
+	case HIP_REG_TRANSIENT_CONDITIONS:
+		memcpy(type_string,
+		       "The server is currently unable to provide services "\
+		       "due to transient conditions.",
+		       sizeof("The server is currently unable to provide services "\
+			      "due to transient conditions."));
+		break;
+	default:
+		memcpy(type_string, "Unknown failure type.",
+		       sizeof("Unknown failure type."));
+		break;
+	}
+	
+	return 0;
+}
+
+// add by santtu from here
+int hip_handle_reg_from(hip_ha_t *entry, struct hip_common *msg){
+	 int err = 0;
+     uint8_t lifetime = 0;
+     struct hip_reg_from *rfrom = NULL;
+
+	 
+        
+     HIP_DEBUG("Checking msg for REG_FROM parameter.\n");
+     rfrom = hip_get_param(msg, HIP_PARAM_REG_FROM);
+     if(rfrom){
+		_HIP_DEBUG("received a for REG_FROM parameter \n");
+		
+		_HIP_DEBUG_IN6ADDR("the received reg_from address is ", &rfrom->address);
+		_HIP_DEBUG_IN6ADDR("the local address is ", &entry->local_address);
+		//check if it is a local address
+		if(!ipv6_addr_cmp(&rfrom->address,&entry->local_address) ){	
+			
+			HIP_DEBUG("the host is not behind nat \n");
+		}
+		else{
+			_HIP_DEBUG("found a nat @port %d \n ", ntohs(rfrom->port));
+			memcpy(&entry->local_reflexive_address,rfrom->address,sizeof(struct  in6_addr) );
+			entry->local_reflexive_udp_port = ntohs(rfrom->port);
+			HIP_DEBUG_HIT("set reflexive address:", &entry->local_reflexive_address);
+			HIP_DEBUG("set reflexive port: %d \n", entry->local_reflexive_udp_port);
+			_HIP_DEBUG("the entry address is %d \n", entry);
+			
+			 
+		}
+			
+     }
+		
+	 else err = 1;
+		
+ out_err:
+     return err;
+     
 }

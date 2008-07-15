@@ -51,7 +51,7 @@ int hip_cert_spki_create_cert(struct hip_cert_spki_info * content,
 
         /* Malloc needed */
         tmp_issuer = malloc(128);
-        if (!tmp_issuer) goto out_err;
+        if (!tmp_issuer) goto out_err; /* Why does this return 0? */
         tmp_subject = malloc(128);
         if (!tmp_subject) goto out_err;
         tmp_before = malloc(128);

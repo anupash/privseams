@@ -1480,32 +1480,35 @@ void hip_hadb_set_default_out_addr(hip_ha_t *entry, struct hip_spi_out_item *spi
 }
 
 /* have_esp_info is 1, if there is ESP_INFO in the same packet as the ACK was */
-void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_esp_info){
-	size_t n, i;
-	uint32_t *peer_update_id;
-
-	/* assumes locked entry  */
-
-	HIP_DEBUG("have_esp_info=%d\n", have_esp_info);
-
-	if (!ack)
-	{
-		HIP_ERROR("NULL ack\n");
+void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_esp_info)
+{
+	size_t n = 0, i = 0;
+	uint32_t *peer_update_id = NULL;
+	
+	HIP_DEBUG("hip_update_handle_ack() invoked with have_esp_info = %d.\n",
+		  have_esp_info);
+	
+	if (ack == NULL) {
+		HIP_ERROR("Function parameter ack was NULL in "\
+			  "hip_update_handle_ack().\n");
 		goto out_err;
 	}
 
-	if (hip_get_param_contents_len(ack) % sizeof(uint32_t))
-	{
-		HIP_ERROR("ACK param length not divisible by 4 (%u)\n",
+	if (hip_get_param_contents_len(ack) % sizeof(uint32_t)) {
+		HIP_ERROR("ACK parameter length is not divisible by 4 (%u).\n",
 			  hip_get_param_contents_len(ack));
 		goto out_err;
 	}
 
 	n = hip_get_param_contents_len(ack) / sizeof(uint32_t);
-	HIP_DEBUG("%d pUIDs in ACK param\n", n);
-	peer_update_id = (uint32_t *) ((void *)ack+sizeof(struct hip_tlv_common));
-	for (i = 0; i < n; i++, peer_update_id++)
-	{
+	
+	HIP_DEBUG("Number of peer Update IDs in ACK parameter: %d.\n", n);
+	
+	peer_update_id =
+		(uint32_t *) ((void *)ack + sizeof(struct hip_tlv_common));
+	
+	/* Loop through all peer Update IDs in the ACK parameter. */
+	for (i = 0; i < n; i++, peer_update_id++) {
 		hip_list_t *item, *tmp;
 		struct hip_spi_in_item *in_item;
 		uint32_t puid = ntohl(*peer_update_id);
@@ -1513,20 +1516,23 @@ void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_esp_in
 
 		_HIP_DEBUG("peer Update ID=%u\n", puid);
 
-		/* see if your ESP_INFO is acked and maybe if corresponging ESP_INFO was received */
-		list_for_each_safe(item, tmp, entry->spis_in, i)
-		{
+		/* See if your ESP_INFO is acked and maybe if corresponging
+		   ESP_INFO was received */
+		list_for_each_safe(item, tmp, entry->spis_in, i) {
 			in_item = list_entry(item);
 			_HIP_DEBUG("test item: spi_in=0x%x seq=%u\n",
 				   in_item->spi, in_item->seq_update_id);
-			if (in_item->seq_update_id == puid)
-			{
+			if (in_item->seq_update_id == puid) {
 				_HIP_DEBUG("SEQ and ACK match\n");
-				in_item->update_state_flags |= 0x1; /* recv'd ACK */
-				if (have_esp_info) in_item->update_state_flags |= 0x2; /* recv'd also ESP_INFO */
+				/* Received ACK */
+				in_item->update_state_flags |= 0x1;
+				/* Received also ESP_INFO */
+				if (have_esp_info) {
+					in_item->update_state_flags |= 0x2;
+				}
 			}
 		}
-
+		
 	}
  out_err:
 	return;
@@ -2219,8 +2225,7 @@ unsigned long hip_hadb_hash_file_hits(const void *ptr){
         HIP_DEBUG("string %s\n",((hip_hosts_entry *)ptr)->hostname);
 	char *fqdn = ((hip_hosts_entry *)ptr)->hostname;
         uint8_t hash[HIP_AH_SHA_LEN];
-  
-	//hip_build_digest(HIP_DIGEST_SHA1, hit, sizeof(*hit), hash);
+        
 	hip_build_digest(HIP_DIGEST_SHA1, fqdn, strlen(fqdn)+1, hash);
 	return *((unsigned long *)hash);
 }
@@ -2236,7 +2241,7 @@ void hip_hadb_init_db_file_hits(void){
 
 /*Initialize hadb with values contained in /etc/hip/hosts*/
 int hip_init_hadb_hip_host(){
-  int err = 0, i = 0, n = 0;
+        int err = 0, i = 0;
 	hip_hosts_entry *element = NULL;
 	hip_list_t *item, *tmp;
 	struct in6_addr address;
@@ -2251,17 +2256,11 @@ int hip_init_hadb_hip_host(){
 	        element = list_entry(item);
 		memset(&address, 0, sizeof(struct in6_addr));
 		hip_find_address(element->hostname, &address);
-		n++;
-		HIP_DEBUG(" hostname %s \n", element->hostname);
-		HIP_DEBUG_HIT(" hit \n", &element->hit);  
-		HIP_DEBUG_LSI(" lsi \n", &element->lsi); 
-
 		if ((element->lsi).s_addr == 0)
 		        hip_hadb_add_peer_info(&element->hit, &address, NULL);
 		else
 		        hip_hadb_add_peer_info(&element->hit, &address, &element->lsi);		     		
 	}
-	HIP_DEBUG("n = %d\n",n);
 	return err;
 } 
 
