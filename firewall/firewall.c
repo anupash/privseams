@@ -819,7 +819,7 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version)
 
 	/* Santtu: XX FIXME: needs to be inside the following if */
 	//else if (hip_is_stun_msg(udphdr) {
-	else if (pj_stun_msg_check(udphdr+1,udphdr->len - sizeof(udphdr),PJ_STUN_IS_DATAGRAM) == PJ_SUCCESS){
+	else if (pj_stun_msg_check(udphdr+1,ntohs(udphdr->len) - sizeof(udphdr),PJ_STUN_IS_DATAGRAM) == PJ_SUCCESS){
 		HIP_DEBUG("Found a UDP STUN\n");
 		ctx->is_stun = 1;
 	    goto end_init;
