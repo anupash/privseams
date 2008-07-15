@@ -126,8 +126,7 @@ int firewall_set_bex_state(struct in6_addr *hit_s, struct in6_addr *hit_r, int s
 	lsi_peer = hip_get_lsi_peer_by_hits(hit_s, hit_r);
 
 	if (lsi_peer){
-	        HIP_IFEL(!(entry_update = firewall_hit_lsi_db_match(lsi_peer)), -1,
-			 "Entry not found in fwdb");
+	        HIP_IFE(!(entry_update = firewall_hit_lsi_db_match(lsi_peer)), -1);
 		entry_update->bex_state = state;
 		hip_ht_add(firewall_lsi_hit_db, entry_update); 
 	}
