@@ -41,6 +41,9 @@ int userspace_ipsec_init()
 	
 	if (!is_init)
 	{
+		// init sadb
+		HIP_IFEL(hip_sadb_init(), -1, "failed to init sadb\n");
+		
 		HIP_DEBUG("ESP_PACKET_SIZE is %i\n", ESP_PACKET_SIZE);
 		// allocate memory for the packet buffers
 		HIP_IFE(!(esp_packet = (unsigned char *)malloc(ESP_PACKET_SIZE)), -1);
