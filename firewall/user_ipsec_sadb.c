@@ -39,6 +39,8 @@ int hip_sadb_init()
 			"failed to initialize sadb\n");
 	HIP_IFEL(!(linkdb = hip_ht_init(hip_link_entry_hash, hip_link_entries_compare)), -1,
 			"failed to initialize linkdb\n");
+	
+	HIP_DEBUG("sadb initialized\n");
 
   out_err:
   	return err;
@@ -328,12 +330,12 @@ int hip_sa_entry_set(hip_sa_entry_t *entry, int direction, uint32_t spi, uint32_
 	entry->direction = direction;
 	entry->spi = spi;
 	entry->mode = mode;
-	memcpy(&entry->src_addr, src_addr, sizeof(struct in6_addr));
-	memcpy(&entry->dst_addr, dst_addr, sizeof(struct in6_addr));
+	memcpy(entry->src_addr, src_addr, sizeof(struct in6_addr));
+	memcpy(entry->dst_addr, dst_addr, sizeof(struct in6_addr));
 	if (entry->mode == 3)
 	{ 
-		memcpy(&entry->inner_src_addr, inner_src_addr, sizeof(struct in6_addr));
-		memcpy(&entry->inner_dst_addr, inner_dst_addr, sizeof(struct in6_addr));
+		memcpy(entry->inner_src_addr, inner_src_addr, sizeof(struct in6_addr));
+		memcpy(entry->inner_dst_addr, inner_dst_addr, sizeof(struct in6_addr));
 	}	
 	entry->encap_mode = encap_mode;
 	entry->src_port = src_port;
