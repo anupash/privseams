@@ -1249,7 +1249,7 @@ int hip_fw_handle_other_input(hip_fw_context_t *ctx)
 	} else if (ctx->is_stun == 1) {
 		HIP_DEBUG("Santtu is the king\n");
 		// Santtu FIXME
-		/* verdict = hip_fw_handle_stun_packet(ctx); */
+		verdict = hip_fw_handle_stun_packet(ctx); 
 		// verdict zero drops the original so that you can send a new one
 		// alloc new memory, copy the packet and add some zeroes (and hip header?)
 		// changed ip and udp lengths and checksums accordingly
