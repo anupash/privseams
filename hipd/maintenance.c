@@ -403,14 +403,17 @@ void register_to_dht ()
                                                               NULL); 
                         publish_hit(&opendht_name_mapping, tmp_hit_str, tmp_addr_str);
                         pub_addr_ret = publish_addr(tmp_hit_str, tmp_addr_str);
+
+			free(tmp_hit_str);
+			free(tmp_addr_str);
                         continue;
                 }
         }
  out_err:
-        if (tmp_hit_str)
+        /*if (tmp_hit_str)
 		free(tmp_hit_str);
         if (tmp_addr_str)
-		free(tmp_addr_str);
+		free(tmp_addr_str);*/
         return;
 }
 
