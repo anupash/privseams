@@ -1246,7 +1246,8 @@ int hip_fw_handle_other_input(hip_fw_context_t *ctx)
 	        	//LSI check
 	        	verdict = hip_fw_handle_incoming_hit(ctx->ipq_packet,&ctx->src,&ctx->dst);
 	  	}
-	} else /* (if ctx->is_stun == 1) */ {
+	} else if (ctx->is_stun == 1) {
+		HIP_DEBUG("Santtu is the king\n");
 		// Santtu FIXME
 		/* verdict = hip_fw_handle_stun_packet(ctx); */
 		// verdict zero drops the original so that you can send a new one
