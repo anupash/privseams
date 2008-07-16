@@ -439,8 +439,6 @@ hip_sa_entry_t * hip_sa_entry_find_outbound(struct in6_addr *src_hit,
 	hip_sa_entry_t *search_entry = NULL, *stored_entry = NULL;
 	int err = 0;
 	
-	hip_sadb_print();
-	
 	HIP_IFEL(!(search_entry = (hip_sa_entry_t *) malloc(sizeof(hip_sa_entry_t))), -1,
 			"failed to allocate memory\n");
 	memset(search_entry, 0, sizeof(hip_sa_entry_t));
@@ -454,6 +452,8 @@ hip_sa_entry_t * hip_sa_entry_find_outbound(struct in6_addr *src_hit,
 	HIP_DEBUG_HIT("inner_src_addr", search_entry->inner_src_addr);
 	HIP_DEBUG_HIT("inner_dst_addr", search_entry->inner_dst_addr);
 	HIP_DEBUG("mode: %i\n", search_entry->mode);
+	
+	hip_sadb_print();
 	
 	// find entry in sadb db
 	HIP_IFEL(!(stored_entry = hip_ht_find(sadb, search_entry)), -1,
@@ -670,6 +670,7 @@ void hip_sa_entry_print(hip_sa_entry_t *entry)
 		HIP_DEBUG("encap_mode: %u\n", entry->encap_mode);
 		HIP_DEBUG("src_port: %u\n", entry->src_port);
 		HIP_DEBUG("dst_port: %u\n", entry->dst_port);
+		HIP_DEBUG("... (more members)\n");
 // TODO print the rest
 #if 0
 		/****************** crypto parameters *******************/
@@ -726,6 +727,11 @@ void hip_sadb_print()
 			break;
 		}
 		hip_sa_entry_print(entry);
+	}
+	
+	if (i == 0)
+	{
+		HIP_DEBUG("sadb contains no items\n");
 	}
 }
 
