@@ -340,7 +340,7 @@
     <para>
       We will show how to test IPv4 and IPv6 applications. Meanwhile IPv6 applications use the 
       HIT identifier, supporting IPv4-only applications, introduces another identifier called LSI. 
-      In HIPL this identifier is a class C IPv4 address in the range 192.0.0.0/24.
+      In HIPL this identifier is an IPv4 address in the range 1.0.0.0/8.
       First we explain how to configure HIPL for using this identifier. Secondly, we explain how 
       to test with IPv6 applications and finally we discuss the interoperability between IPv4 and IPv6, 
       and an example of that.
@@ -351,7 +351,7 @@
 	    <para>We have different mechanism for mapping the HIT-LSI information. 
 		We can choose whatever of the next possibilities. The user can introduce manually 
 	        the LSI or this can be created automatically by the hip daemon. It should be noticed
-	        that the address interval between <emphasis>192.0.0.1 - 192.0.0.4</emphasis> is already 
+	        that the address interval between <emphasis>1.0.0.1 - 1.0.0.4</emphasis> is already 
 	        in use by the hipd, so the user must choose a free LSI.
 	    </para>
 	    <para>crash:</para>

@@ -665,8 +665,8 @@ int hip_conf_handle_map(hip_common_t *msg, int action, const char *opt[],
 
      if(optc == 3){
 	     HIP_IFEL(convert_string_to_address_v4(opt[2], &lsi), -1,
-		      "string to address conversion failed\n");
-
+		      "string to address conversion failed\n");	     
+	     HIP_IFEL(!IS_LSI32(lsi.s_addr),-1, "Wrong LSI value\n");
 	     HIP_IFEL(hip_build_param_contents(msg, (void *) &lsi,
 				       HIP_PARAM_LSI,
 				       sizeof(struct in_addr)), -1,
@@ -1555,8 +1555,6 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
      /* Call handler function from the handler function pointer
 	array at index "type" with given commandline arguments. 
 	The functions build a hip_common message. */
-     if (action == ACTION_GET)
-	     err = hip_get_hits(msg,argv);
      if (argc == 3)
 	  err = (*action_handler[type])(msg, action, (const char **)&argv[2], argc - 3);
      else
@@ -1566,7 +1564,6 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
 	     HIP_ERROR("Failed to build a message to hip daemon.\n");
 	     goto out_err;
      }
-
      /* hipconf new hi does not involve any messages to hipd */
      if (hip_get_msg_type(msg) == 0)
 	  goto out_err;
@@ -1673,6 +1670,7 @@ int hip_get_hits(hip_common_t *msg, char *opt[], int optc)
     //struct hip_hadb_user_info_state *ha;
      hip_tlv_type_t param_type;
 
+ 
     HIP_IFEL(optc != 1, -EINVAL, "Invalid number of arguments.\n");
 
     if (!strcmp(opt[0], "all")) {

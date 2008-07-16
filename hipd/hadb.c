@@ -2222,7 +2222,6 @@ void hip_init_hadb(void)
 }
 
 unsigned long hip_hadb_hash_file_hits(const void *ptr){
-        HIP_DEBUG("string %s\n",((hip_hosts_entry *)ptr)->hostname);
 	char *fqdn = ((hip_hosts_entry *)ptr)->hostname;
         uint8_t hash[HIP_AH_SHA_LEN];
         
