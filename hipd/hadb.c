@@ -432,9 +432,9 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 
 	if (entry)
 		hip_db_put_ha(entry, hip_hadb_delete_state);
-
+        /*
 	hip_for_each_ha(hip_print_info_hadb, &n);
-
+        */
 out_err:
 	return err;
 }

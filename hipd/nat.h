@@ -42,6 +42,8 @@
 //add by santtu
 #define HIP_USE_ICE
 
+#define HIP_REFLEXIVE_LOCATOR_ITEM_AMOUNT_MAX 1
+
 
 #define ICE_ROLE_CONTROLLING  	PJ_ICE_SESS_ROLE_CONTROLLING
 #define ICE_ROLE_CONTROLLED  	PJ_ICE_SESS_ROLE_CONTROLLED
@@ -172,6 +174,9 @@ extern int hip_nat_sock_udp;
 /** Specifies the NAT status of the daemon. This value indicates if the current
     machine is behind a NAT. Defined in hipd.c */
 extern int hip_nat_status;
+extern HIP_HASHTABLE *hadb_hit;
+
+
 /*
 int hip_nat_on();
 int hip_nat_off();

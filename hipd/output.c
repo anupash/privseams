@@ -373,9 +373,11 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 		 "Could not assign a local host id\n");
 	
 		HIP_DEBUG("\n");
-	HIP_DEBUG("----**********----3--*********-----------------\n");
+	_HIP_DEBUG("----**********----3--*********-----------------\n");
+        /*
 	hip_for_each_ha(hip_print_info_hadb, &n);
-	HIP_DEBUG("----**********----3--*********-----------------\n");
+        */
+	_HIP_DEBUG("----**********----3--*********-----------------\n");
 
 #ifdef CONFIG_HIP_BLIND
         if (hip_blind_get_status()) {
@@ -416,9 +418,11 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 		 "No preferred IP address for the peer.\n");
 	
 	HIP_DEBUG("\n");
-	HIP_DEBUG("----**********---4---*********-----------------\n");
+	_HIP_DEBUG("----**********---4---*********-----------------\n");
+        /*
 	hip_for_each_ha(hip_print_info_hadb, &n);
-	HIP_DEBUG("----**********---4---*********-----------------\n");
+	*/
+        _HIP_DEBUG("----**********---4---*********-----------------\n");
 
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
@@ -469,9 +473,11 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	}
 out_err:
 
-	HIP_DEBUG("----**********------*********-----------------\n");
-	hip_for_each_ha(hip_print_info_hadb, &n);
-	HIP_DEBUG("----**********------*********-----------------\n");
+	_HIP_DEBUG("----**********------*********-----------------\n");
+	/*
+        hip_for_each_ha(hip_print_info_hadb, &n);
+        */
+	_HIP_DEBUG("----**********------*********-----------------\n");
 
 	if (i1)
 	  HIP_FREE(i1);
@@ -498,7 +504,6 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 				 const struct hip_host_id *host_id_pub,
 				 int cookie_k)
 {
-    extern int hip_transform_order;
 	struct hip_locator_info_addr_item *addr_list = NULL;
 	struct hip_locator *locator = NULL;
  	struct hip_locator_info_addr_item *locators = NULL;
@@ -606,7 +611,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
  	hip_build_network_hdr(msg, HIP_R1, mask, src_hit, NULL);
 
 	/********** R1_COUNTER (OPTIONAL) *********/
-#ifndef HIP_USE_ICE
+
 	/********* LOCATOR PARAMETER ************/
         /** Type 193 **/ 
         if (hip_locator_status == SO_HIP_SET_LOCATOR_ON) {
@@ -615,7 +620,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
                 HIP_DEBUG("LOCATOR parameter building failed\n");
             _HIP_DUMP_MSG(msg);
         }
-#endif
+
 #ifdef HIP_USE_ICE
 	hip_build_param_nat_transform(msg, hip_nat_get_control(NULL));
 #endif
@@ -733,69 +738,6 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
  		HIP_FREE(dh_data2);
 
   	return NULL;
-}
-
-/**
- * Builds locator list to msg
- *
- * @param msg          a pointer to hip_common to append the LOCATORS
- * @return             len of LOCATOR on success, or negative error value on error
- */
-int hip_build_locators(struct hip_common *msg) 
-{
-    int err = 0, i = 0, ii = 0;
-    struct netdev_address *n;
-    hip_list_t *item = NULL, *tmp = NULL;
-    struct hip_locator_info_addr_item *locs = NULL;
-    int addr_count = 0;
-
-#ifdef CONFIG_HIP_HI3 // we need addresses for HI3 in any case (if they exist)
-    if (address_count > 0) {
-#else
-    if (address_count > 0) {
-#endif
-        HIP_IFEL(!(locs = malloc(address_count * 
-                                 sizeof(struct hip_locator_info_addr_item))), 
-                 -1, "Malloc for LOCATORS failed\n");
-        memset(locs,0,(address_count * 
-                       sizeof(struct hip_locator_info_addr_item)));
-        list_for_each_safe(item, tmp, addresses, i) {
-            n = list_entry(item);
-            if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
-                continue;
-            if (!IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
-                memcpy(&locs[ii].address, hip_cast_sa_addr(&n->addr), 
-                       sizeof(struct in6_addr));
-                locs[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
-                locs[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_IPV6;
-                locs[ii].locator_length = sizeof(struct in6_addr) / 4;
-                locs[ii].reserved = 0;
-                ii++;
-            }
-        }
-        list_for_each_safe(item, tmp, addresses, i) {
-            n = list_entry(item);
-            if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
-                continue;
-            if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
-                memcpy(&locs[ii].address, hip_cast_sa_addr(&n->addr), 
-                       sizeof(struct in6_addr));
-                locs[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
-                locs[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_IPV6;
-                locs[ii].locator_length = sizeof(struct in6_addr) / 4;
-                locs[ii].reserved = 0;
-                ii++;
-            }
-        }
-        err = hip_build_param_locator(msg, locs, address_count);
-    }
-    else
-        HIP_DEBUG("Host has no addresses no point "
-                  "in building LOCATOR parameters\n");
- out_err:
-
-    if (locs) free(locs);
-    return err;
 }
 
 /**
