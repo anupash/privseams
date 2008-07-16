@@ -44,8 +44,11 @@
  *     after a structure definition really mean.</li>
  * <li><a href="http://c-faq.com/">Frequently Asked Questions</a> at comp.lang.c.</li>
  * </ul>
- *
- * @date   15.04.2008
+ * <ul>
+ * <li><a href="http://www.docbook.org/tdg/en/html/">DocBook: The Definitive Guide</a>.</li>
+ * A guide for the @b docbook tool that is used to create the HIPL user manual.
+ * </ul>
+ * @date   16.07.2008
  */ 
 
 /**
