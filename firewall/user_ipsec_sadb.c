@@ -87,6 +87,8 @@ unsigned long hip_sa_entry_hash(const hip_sa_entry_t *sa_entry)
 	HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, (void *)addr_pair, sizeof(addr_pair), hash),
 			-1, "failed to hash addresses\n");
 	
+	HIP_HEXDUMP("sa entry hash: ", hash, INDEX_HASH_LENGTH);
+	
   out_err:
   	if (err)
   	{
