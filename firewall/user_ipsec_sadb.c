@@ -95,6 +95,8 @@ unsigned long hip_sa_entry_hash(const hip_sa_entry_t *sa_entry)
   		*hash = 0;
   	}
   	
+  	HIP_DEBUG("hash (converted): %lu\n", *((unsigned long *)hash));
+  	
 	return *((unsigned long *)hash);
 }
 
