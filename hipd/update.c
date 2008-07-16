@@ -2727,11 +2727,16 @@ int hip_update_locator_parameter(hip_ha_t *entry,
 	struct hip_spi_out_item *spi_out;
 	struct hip_peer_addr_list_item *a, *tmp, addr;
 	struct netdev_address *n;
- 
+
+#if 0 
+        /*REMOVED:
+          We should handle received locators always and not only then when we 
+           are sending them in BEX packets ourselves -SAMU */
     if (hip_locator_status == SO_HIP_SET_LOCATOR_OFF) {
     	HIP_DEBUG("stop updating locator if the locator mode is off\n");
     	goto out_err;
     }
+#endif
  
 	HIP_INFO_LOCATOR("santtu: let's update locator:", locator);
  
