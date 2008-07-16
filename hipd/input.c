@@ -780,7 +780,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	}
 
 	
-#ifndef HIP_USE_ICE
+
 	/********* LOCATOR PARAMETER ************/
         /** Type 193 **/ 
 		HIP_DEBUG("Building LOCATOR parameter 	1\n");
@@ -789,18 +789,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
             if ((err = hip_build_locators(i2)) < 0) 
                 HIP_DEBUG("LOCATOR parameter building failed\n");
         }
-#endif
-#ifdef HIP_USE_ICE
-    	/********* LOCATOR PARAMETER ************/
-		/** Type 193 **/ 
-        HIP_DEBUG("Building nat LOCATOR parameter 1: %d\n",hip_locator_status==SO_HIP_SET_LOCATOR_ON);
-		if (hip_locator_status == SO_HIP_SET_LOCATOR_ON) {
-		    HIP_DEBUG("Building nat LOCATOR parameter 2\n");
-		    if ((err = hip_nat_build_locators(i2)) < 0) 
-		        HIP_DEBUG("nat LOCATOR parameter building failed\n");
-		}        
 
-        
+#ifdef HIP_USE_ICE
         hip_build_param_nat_tranform(i2, entry->nat_control);
 #endif
 	/********** SOLUTION **********/
@@ -1451,15 +1441,13 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 	
 	/************************************************/
 
-#ifdef HIP_USE_ICE
     	/********* LOCATOR PARAMETER ************/
-		/** Type 193 **/ 
-		if (hip_locator_status == SO_HIP_SET_LOCATOR_ON) {
-		    HIP_DEBUG("Building nat LOCATOR parameter\n");
-		    if ((err = hip_nat_build_locators(r2)) < 0) 
-		        HIP_DEBUG("nat LOCATOR parameter building failed\n");
-		}  	
-#endif	
+	/** Type 193 **/ 
+	if (hip_locator_status == SO_HIP_SET_LOCATOR_ON) {
+		HIP_DEBUG("Building nat LOCATOR parameter\n");
+		if ((err = hip_build_locators(r2)) < 0) 
+			HIP_DEBUG("nat LOCATOR parameter building failed\n");
+	}  	
 	
 #if defined(CONFIG_HIP_RVS) || defined(CONFIG_HIP_ESCROW)
 	/********** REG_REQUEST **********/

@@ -745,69 +745,6 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 }
 
 /**
- * Builds locator list to msg
- *
- * @param msg          a pointer to hip_common to append the LOCATORS
- * @return             len of LOCATOR on success, or negative error value on error
- */
-int hip_build_locators(struct hip_common *msg) 
-{
-    int err = 0, i = 0, ii = 0;
-    struct netdev_address *n;
-    hip_list_t *item = NULL, *tmp = NULL;
-    struct hip_locator_info_addr_item *locs = NULL;
-    int addr_count = 0;
-
-#ifdef CONFIG_HIP_HI3 // we need addresses for HI3 in any case (if they exist)
-    if (address_count > 0) {
-#else
-    if (address_count > 0) {
-#endif
-        HIP_IFEL(!(locs = malloc(address_count * 
-                                 sizeof(struct hip_locator_info_addr_item))), 
-                 -1, "Malloc for LOCATORS failed\n");
-        memset(locs,0,(address_count * 
-                       sizeof(struct hip_locator_info_addr_item)));
-        list_for_each_safe(item, tmp, addresses, i) {
-            n = list_entry(item);
-            if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
-                continue;
-            if (!IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
-                memcpy(&locs[ii].address, hip_cast_sa_addr(&n->addr), 
-                       sizeof(struct in6_addr));
-                locs[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
-                locs[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_IPV6;
-                locs[ii].locator_length = sizeof(struct in6_addr) / 4;
-                locs[ii].reserved = 0;
-                ii++;
-            }
-        }
-        list_for_each_safe(item, tmp, addresses, i) {
-            n = list_entry(item);
-            if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
-                continue;
-            if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
-                memcpy(&locs[ii].address, hip_cast_sa_addr(&n->addr), 
-                       sizeof(struct in6_addr));
-                locs[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
-                locs[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_IPV6;
-                locs[ii].locator_length = sizeof(struct in6_addr) / 4;
-                locs[ii].reserved = 0;
-                ii++;
-            }
-        }
-        err = hip_build_param_locator(msg, locs, address_count);
-    }
-    else
-        HIP_DEBUG("Host has no addresses no point "
-                  "in building LOCATOR parameters\n");
- out_err:
-
-    if (locs) free(locs);
-    return err;
-}
-
-/**
  * Transmits an R1 packet to the network.
  *
  * Sends an R1 packet to the peer and stores the cookie information that was
