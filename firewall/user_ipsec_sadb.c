@@ -113,13 +113,12 @@ int hip_sa_entries_compare(const hip_sa_entry_t *sa_entry1,
 	HIP_ASSERT(sa_entry2 != NULL && sa_entry2->inner_src_addr != NULL
 				&& sa_entry2->inner_dst_addr != NULL);
 
+	HIP_DEBUG("calculating hash1:\n");
 	HIP_IFEL(!(hash1 = hip_sa_entry_hash(sa_entry1)), -1, "failed to hash sa entry\n");
+	HIP_DEBUG("calculating hash2:\n");
 	HIP_IFEL(!(hash2 = hip_sa_entry_hash(sa_entry2)), -1, "failed to hash sa entry\n");
 	
-	if (hash1 != hash2 || sa_entry1->spi != sa_entry2->spi)
-	{
-		err = 1;
-	}
+	err = (hash1 != hash2);
 	
   out_err:
     return err;
