@@ -1,4 +1,4 @@
- #!/bin/sh
+#!/bin/sh
 
 echo "Generating configure files... may take a while."
 
@@ -9,7 +9,7 @@ cd ..
 
 echo "Pjproject was configured successfully"
 echo "Now configuring hipl"
-autoreconf --install --force  \
+autoreconf --install --force && \
   echo "" && \
   echo "NOTE: The commands above only build the userspace apps." && \
   echo "NOTE: You have to build and install the linux kernel separately." && \
