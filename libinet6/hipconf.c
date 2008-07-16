@@ -27,19 +27,13 @@ const char *hipconf_usage =
 "add|del escrow <hit>\n"
 #endif
 "add|del map <hit> <ipv6> [lsi]\n"
-"Server side:\n\tadd|del service escrow|rvs|hiprelay\n"
-"\treinit service rvs|hiprelay\n"
-"Client side:\n\tadd rvs|hiprelay <hit> <ipv6> <lifetime in seconds>\n"
-"del hi <hit>\n"
-"del hi all\n"
+"del hi <hit>|all\n"
 "get hi default|all\n"
 #ifdef CONFIG_HIP_ICOOKIE
 "get|set|inc|dec|new puzzle all|<hit>\n"
 #else
 "get|set|inc|dec|new puzzle all\n"
 #endif
-"del hi <hit>\n"
-"get hi default\n"
 "bos all\n"
 //modify by santtu
 //"nat on|off|<peer_hit>\n"
@@ -54,8 +48,8 @@ const char *hipconf_usage =
 "handoff mode lazy|active\n"
 "run normal|opp <binary>\n"
 "Server side:\n"
-"\tadd|del service escrow|rvs|hiprelay\n"
-"\treinit service rvs|hiprelay\n"
+"\tadd|del service escrow|rvs|relay\n"
+"\treinit service rvs|relay\n"
 "Client side:\n"
 "\tadd server rvs|relay|escrow <HIT> <IP address> <lifetime in seconds>\n"
 "\tdel server rvs|relay|escrow <HIT> <IP address>\n"
@@ -1442,7 +1436,7 @@ int hip_conf_handle_dht_toggle(hip_common_t *msg, int action, const char *opt[],
  * @param action the numeric action identifier for the action to be performed on
  *               the given mapping.
  * @param opt    an array of pointers to the command line arguments after
- *               the action and type (pointer to @b "escrow", @b "rvs" or @b "hiprelay").
+ *               the action and type (pointer to @b "escrow", @b "rvs" or @b "relay").
  * @param optc   the number of elements in the array.
  * @return       zero on success, or negative error value on error.
  */
@@ -1468,7 +1462,7 @@ int hip_conf_handle_service(hip_common_t *msg, int action, const char *opt[],
 			HIP_INFO("Adding rendezvous service.\n");
 			HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OFFER_RVS, 0), -1,
 				 "Failed to build user message header.\n");
-		} else if (strcmp(opt[0], "hiprelay") == 0) {
+		} else if (strcmp(opt[0], "relay") == 0) {
 			HIP_INFO("Adding HIP UDP relay service.\n");
 			HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OFFER_HIPRELAY, 0), -1,
 				 "Failed to build user message header.\n");
@@ -1479,7 +1473,7 @@ int hip_conf_handle_service(hip_common_t *msg, int action, const char *opt[],
 		if (strcmp(opt[0], "rvs") == 0) {
 			HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_REINIT_RVS, 0), -1,
 				 "Failed to build user message header.\n");
-		} else if (strcmp(opt[0], "hiprelay") == 0) {
+		} else if (strcmp(opt[0], "relay") == 0) {
 			HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_REINIT_RELAY, 0), -1,
 				 "Failed to build user message header.\n");
 		} else if (strcmp(opt[0], "escrow") == 0) {
@@ -1496,7 +1490,7 @@ int hip_conf_handle_service(hip_common_t *msg, int action, const char *opt[],
 			HIP_INFO("Deleting rendezvous service.\n");
 			HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_CANCEL_RVS, 0),
 				 -1, "Failed to build user message header.\n");
-		} else if (strcmp(opt[0], "hiprelay") == 0) {
+		} else if (strcmp(opt[0], "relay") == 0) {
 			HIP_INFO("Deleting HIP UDP relay service.\n");
 			HIP_IFEL(hip_build_user_hdr(
 					 msg, SO_HIP_CANCEL_HIPRELAY, 0), -1,

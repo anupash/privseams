@@ -28,7 +28,7 @@
       manually.  If you don't want to build the HIPL software manually,
       you can install the userspace binary images from the
       release. Before reporting any bugs with last release, please
-      build the the bleeding edge software from the source because your issue
+      build the bleeding edge software from the source because your issue
       may have been already resolved there.
     </para>
     <para>
@@ -1057,90 +1057,132 @@
       </itemizedlist>
     </section>
     <section id="sec_relay_conf">
-      <title>The RVS and HIP Relay configuration file</title>
-      <para>
-	The rendezvous server and the HIP relay server are configured using a
-	configuration file: "/etc/hip/relay_config". Note, that this file is
-	server side configuration file i.e. you only need to configure the file
-	at the relay or rendezvous server, not at the client.
-      </para>
-      <para>
-	This file is shared between the RVS and the HIP relay because both of
-	these services use the same internal database to store the HIT to IP
-	address mappings. A default configuration
-	file is created once the HIP daemon is started the first time, thus if the
-	daemon has not been started before, please start and stop the daemon
-	once to create the default file. In the configuration file we have the
-	following options:
-	<programlisting>
-	  whitelist_enabled = "yes"
-	  whitelist = ""
-	  minimum_lifetime = "60"
+      <title>The RVS and HIP Relay Configuration File</title>
+      <abstract>
+	<para>
+	  In this section, we show how to edit the configuration file:
+	  "/etc/hip/relay_config".
+	</para>
+	<para>16th of July 2008</para>
+      </abstract>
+      <section id="sec_relay_conf_about">
+	<title>About the RVS and HIP Relay Configuration File</title>
+	<para>
+	  The rendezvous server and the HIP relay server are configured using a
+	  configuration file: "/etc/hip/relay_config". Note, that this file is
+	  server side configuration file i.e. you only need to configure the file
+	  at the relay or rendezvous server, not at the client. This file is
+	  shared between the RVS and the HIP relay because both of these services
+	  use the same internal database to store the HIT to IP address mappings.
+	  A default configuration file is created once the HIP daemon is started
+	  the first time, thus if the daemon has not been started before, please
+	  start and stop the daemon once to create the default file.
+	</para>
+      </section>
+      <section id="sec_relay_conf_setup">
+	<title>Configuration File Setup</title>
+	
+	<para>
+	  In the configuration file we have the
+	  following options:
+	  <programlisting>
+	    whitelist_enabled = "yes"
+	    whitelist = ""
+	    minimum_lifetime = "60"
 	  maximum_lifetime = "3600"</programlisting>
 	  
-	HIPL supports RVS / HIP relay server client whitelisting which means that
-	only those clients whose HITs are listed in the whitelist are allowed to
-	register to the RVS / HIP relay server. So before R can register with the
-	server, R's HIT must be added to the whitelist. To do this, please start
-	the HIP daemon at the responder and use the hipconf tool from another
-	shell at the responder to get the default hi:
-	<programlisting>
+	  HIPL supports RVS / HIP relay server client whitelisting which means that
+	  only those clients whose HITs are listed in the whitelist are allowed to
+	  register to the RVS / HIP relay server. So before R can register with the
+	  server, R's HIT must be added to the whitelist. To do this, please start
+	  the HIP daemon at the responder and use the hipconf tool from another
+	  shell at the responder to get the default hi:
+	  <programlisting>
 	  tools/hipconf get hi default</programlisting>
-	Now, add this HIT in between the whitelist quotation marks in the
-	configuration file of the RVS / HIP relay server:
-	<programlisting>
+	  Now, add this HIT in between the whitelist quotation marks in the
+	  configuration file of the RVS / HIP relay server:
+	  <programlisting>
 	  whitelist = "2001:0018:8321:4e1a:c009:1ff8:fed4:8e9c"</programlisting>
-	,where 2001:0018:8321:4e1a:c009:1ff8:fed4:8e9c is the HIT of the
-	responder. Multiple HITs are separated with commas:
-	<programlisting>
+	  ,where 2001:0018:8321:4e1a:c009:1ff8:fed4:8e9c is the HIT of the
+	  responder. Multiple HITs are separated with commas:
+	  <programlisting>
 	  whitelist = "2001:0018:8321:4e1a:c009:1ff8:fed4:8e9c","2001:11:91e3:528e:7c41:9560:82ae:630f"</programlisting>
-	Alternatively you can add multiple HITs by adding multiple "whitelist"
-	stanzas:
-	<programlisting>
-	  whitelist = "2001:0018:8321:4e1a:c009:1ff8:fed4:8e9c"
+	  Alternatively you can add multiple HITs by adding multiple "whitelist"
+	  stanzas:
+	  <programlisting>
+	    whitelist = "2001:0018:8321:4e1a:c009:1ff8:fed4:8e9c"
 	  whitelist = "2001:0011:91e3:528e:7c41:9560:82ae:630f"</programlisting>
-	If you do not wish to filter the clients who are granted access to the
-	rendezvous and HIP relay services, you can disable the whitelist:
-	<programlisting>
+	  If you do not wish to filter the clients who are granted access to the
+	  rendezvous and HIP relay services, you can disable the whitelist:
+	  <programlisting>
 	  whitelist_enabled = "no"</programlisting>
-	When the whitelist is disabled, it does not matter if you have HITs
-	listed in the whitelist or not since every HIT is allowed to register.
-	Finally, you can set the boundary values for the time window limiting
-	the service lifetime:
-	<programlisting>
-	  minimum_lifetime = "60"
+	  When the whitelist is disabled, it does not matter if you have HITs
+	  listed in the whitelist or not since every HIT is allowed to register.
+	  Finally, you can set the boundary values for the time window limiting
+	  the service lifetime:
+	  <programlisting>
+	    minimum_lifetime = "60"
 	  maximum_lifetime = "3600"</programlisting>
-	These values are seconds. The registration extension, however,
-	uses an 8-bit encoding to represent the lifetimes. The values that are
-	given in the configuration file are used to calculate the real life
-	time and therefore do not represent the exact life time as such. The
-	formula for the calculations is given in RFC 5203: "Host Identity
-	Protocol (HIP) Registration Extension": seconds = 2^((lifetime - 64)/8).
-      </para>
-      <para>
-	Using this formula we can get the lifetime value:
-	lifetime = (8 * (log(seconds) / log(2))) + 64. For the aforementioned
-	default values in seconds (60 and 3600) we get lifetime values 112 and
-	158 (using ceil() foor lower boundary and floor() for higher boundary).
-	These lifetime values correspond to 64 and 3444 respectively. Therefore
-	when you have values 60 and 3600 seconds in the configuration file, you
-	will effectively end up having lifetime value boundaries of 64 and 3444
-	seconds.
-      </para>
-      <para>
-	If you have already started a HIP daemon that functions as an RVS or a
-	HIP relay server and you have to add values to the whitelist or
-	otherwise modify the configuration file, you can reinitialize the server
-	without restarting the daemon itself using the "hipconf" tool:
-	<programlisting>
-	  tools/hipconf reinit service rvs</programlisting>
-	or
-	<programlisting>
-	  tools/hipconf reinit service hiprelay</programlisting>
-	The reinitializion does not have any effect on the existing
-	RVS / HIP relay server clients, but only affects clients registering
-	after the reinitialization.
-      </para>
+	  These values are seconds. The registration extension, however, uses an
+	  8-bit encoding to represent the lifetimes. See notes for details on the
+	  <xref linkend="listitem_lifetime_formula"/>.
+	</para>
+	<section id="sec_relay_conf_related">
+	  <title>Related hipconf commands</title>
+	  <itemizedlist>
+	    <listitem>
+	      <para>
+		Server side commands i.e. commands run on the server.
+	      </para>
+	      <itemizedlist>
+		<listitem>
+		  <para>
+		    If you have already started a HIP daemon that functions as an RVS or a
+		    HIP relay server and you have to add values to the whitelist or
+		    otherwise modify the configuration file, you can reinitialize the server
+		    without restarting the daemon itself using the "hipconf" tool:
+		    <programlisting>
+		    tools/hipconf reinit service rvs</programlisting>
+		    or
+		    <programlisting>
+		    tools/hipconf reinit service relay</programlisting>
+		    The reinitializion does not have any effect on the existing
+		    RVS / HIP relay server clients, but only affects clients registering
+		    after the reinitialization.
+		  </para>
+		</listitem>
+	      </itemizedlist>
+	    </listitem>
+	  </itemizedlist>
+	</section>
+	<section id="sec_relay_conf_notes">
+	  <title>Notes</title>
+	  <itemizedlist>
+	    <listitem id="listitem_lifetime_formula" xreflabel="lifetime formula">
+	      <para>
+		The values that are given in the configuration file are used to
+		calculate the real life time and therefore do not represent the
+		exact life time as such. The formula for the calculations is
+		given in <ulink url="http://www.rfc-editor.org/rfc/rfc5203">RFC
+		5203: Host Identity Protocol (HIP) Registration
+		Extension</ulink>:
+		<programlisting>seconds = 2^((lifetime - 64)/8)</programlisting>
+		
+		Using this formula we can get the lifetime value:
+		<programlisting>lifetime = (8 * (log(seconds) / log(2))) + 64</programlisting>
+		
+		For the aforementioned
+		default values in seconds (60 and 3600) we get lifetime values 112 and
+		158 (using ceil() foor lower boundary and floor() for higher boundary).
+		These lifetime values correspond to 64 and 3444 respectively. Therefore
+		when you have values 60 and 3600 seconds in the configuration file, you
+		will effectively end up having lifetime value boundaries of 64 and 3444
+		seconds.
+	      </para>
+	    </listitem>
+	  </itemizedlist>
+	</section>
+      </section>
     </section>
     <section id="sec_rvs">
       <title>HIP Rendezvous Mechanisms</title>
@@ -1346,18 +1388,29 @@
 	    <listitem>
 	      <para>
 		At the time of writing this section, the UPDATE packet
-		implementation of HIPL was under heavy renovation. Therefore the
+		implementation of HIPL was under heavy renovation. Therefore
 		the RVS extension does not have UPDATE packet support.
 		Effectively this means that the current rendezvous service
 		implementation uses base exchange packets to signal any changes
 		in the service status.
 	      </para>
+	      <para>
+		For example, when you first register to the RVS service and then
+		cancel the service, HIPL will launch a base exchange for both
+		the service registration and the service cancellation. According
+		to RFC 5204 the service cancellation should use UPDATE packets
+		since there already is a HIP connection between the client and
+		the server.
+	      </para>
 	    </listitem>
 	    <listitem>
 	      <para>
-		The rendezvous server is only supposed to relay the I1 packet. Once the
-		I1 packet has been successfully relayed to the responder, all successive traffic
-		flows directly between the initiator and the responder.
+		The rendezvous server relays only the I1 packet. Once the
+		I1 packet has been successfully relayed to the responder, the
+		responder sends an R1 packet directly to the initiator and the
+		initiator learns the responder's location from the IP header of
+		the R1 packet. Therefore, all successive traffic flows directly
+		between the initiator and the responder.
 	      </para>
 	    </listitem>
 	    <listitem>
@@ -1365,6 +1418,12 @@
 		The initiator does not yet store the IP addresses received in the
 		VIA_RVS parameter encapsulated in R1 packet. This means that the double
 		jump scenario does not work.
+	      </para>
+	    </listitem>
+	    <listitem>
+	      <para>
+		The responder does not yet store the granted service lifetime
+		anywhere.
 	      </para>
 	    </listitem>
 	  </itemizedlist>
@@ -1443,11 +1502,11 @@
 	</para></listitem>
 	<listitem><para>
 	  At the HIP relay server, we have to indicate that we are willing to offer
-	 HIP relay service:<programlisting>tools/hipconf add service hiprelay</programlisting>
+	 HIP relay service:<programlisting>tools/hipconf add service relay</programlisting>
 	</para></listitem>
 	<listitem id="listitem_relay"><para>
 	  At the responder, we have to register to the HIP relay server:
-	  <programlisting>tools/hipconf add hiprelay &lt;HIPRELAY-HIT&gt; &lt;HIPRELAY-IP&gt;</programlisting>
+	  <programlisting>tools/hipconf add relay &lt;HIPRELAY-HIT&gt; &lt;HIPRELAY-IP&gt;</programlisting>
 	  This will establish a HIP SA between the HIP relay server and the responder.
 	  Please use the default HIT of the HIP relay server ("tools/hipconf get hi default" at the HIP relay server).
 	</para></listitem>
@@ -1478,7 +1537,7 @@
 	  <para>
 	    If you wish to cancel the HIP relay service just use the "hipconf"
 	    tool at the server:
-	    <programlisting>tools/hipconf del service hiprelay</programlisting>
+	    <programlisting>tools/hipconf del service relay</programlisting>
 	    This will delete all existing HIP relay server registrations.
 	  </para>
 	</listitem>
@@ -1486,7 +1545,7 @@
 	  <para>
 	    If you wish to reinitialize the HIP relay service just use the
 	    "hipconf" tool at the server:
-	    <programlisting>tools/hipconf reinit service hiprelay</programlisting>
+	    <programlisting>tools/hipconf reinit service relay</programlisting>
 	    The changes that you have made to the configuration file affect the
 	    on clients registering after the reinitialization.
 	  </para>
