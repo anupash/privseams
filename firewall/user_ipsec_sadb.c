@@ -255,12 +255,17 @@ int hip_sa_entry_add(int direction, uint32_t spi, uint32_t mode,
 			a_keylen, e_keylen, a_key, e_key, lifetime, esp_prot_transform, esp_prot_anchor),
 			-1, "failed to set the entry members\n");
 	
+	HIP_DEBUG("adding sa entry with following index attributes:\n");
+	HIP_DEBUG_HIT("inner_src_addr", entry->inner_src_addr);
+	HIP_DEBUG_HIT("inner_dst_addr", entry->inner_dst_addr);
+	HIP_DEBUG("mode: %i\n", entry->mode);
+	
 	hip_ht_add(sadb, entry);
 	
 	// add links to this entry for incoming packets
 	HIP_IFEL(hip_link_entries_add(entry), -1, "failed to add link entries\n");
 	
-	HIP_DEBUG("sa entry added\n");
+	HIP_DEBUG("sa entry successfully added\n");
 	
   out_err:
   	if (err)
@@ -443,6 +448,11 @@ hip_sa_entry_t * hip_sa_entry_find_outbound(struct in6_addr *src_hit,
 	search_entry->inner_src_addr = src_hit;
 	search_entry->inner_dst_addr = dst_hit;
 	search_entry->mode = BEET_MODE;
+	
+	HIP_DEBUG("looking up sa entry with following index attributes:\n");
+	HIP_DEBUG_HIT("inner_src_addr", search_entry->inner_src_addr);
+	HIP_DEBUG_HIT("inner_dst_addr", search_entry->inner_dst_addr);
+	HIP_DEBUG("mode: %i\n", search_entry->mode);
 	
 	// find entry in sadb db
 	HIP_IFEL(!(stored_entry = hip_ht_find(sadb, search_entry)), -1,

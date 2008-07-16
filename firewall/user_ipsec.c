@@ -15,11 +15,6 @@
 		+ sizeof(struct hip_esp) + MAX_ESP_PADDING + sizeof(struct hip_esp_tail) \
 		+ EVP_MAX_MD_SIZE)
 
-
-/* mode: 1-transport, 2-tunnel, 3-beet 
- * 
- * however right now we only support mode 3, no need for variable yet */
-#define BEET_MODE 3
 // not implemented yet
 #define DEFAULT_LIFETIME 0
 
@@ -156,8 +151,8 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	HIP_DEBUG("ip6_hdr->ip6_nxt: %u \n", ip6_hdr->ip6_nxt);
 	HIP_DEBUG("ip6_hdr->ip6_hlim: %u \n", ip6_hdr->ip6_hlim);
 	
-	HIP_DEBUG_HIT("src_hit: ", &ctx->src);
-	HIP_DEBUG_HIT("dst_hit: ", &ctx->dst);
+	HIP_DEBUG_HIT("src_hit", &ctx->src);
+	HIP_DEBUG_HIT("dst_hit", &ctx->dst);
 	
 	// re-use allocated esp_packet memory space
 	memset(esp_packet, 0, ESP_PACKET_SIZE);
@@ -172,7 +167,7 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 		HIP_DEBUG("pfkey send acquire\n");
 	
 		/* no SADB entry -> trigger base exchange providing destination hit only */
-		HIP_IFEL(hip_trigger_bex(NULL, &ctx->dst, NULL, NULL, NULL, NULL), -1,
+		HIP_IFEL(hip_trigger_bex(&ctx->src, &ctx->dst, NULL, NULL, NULL, NULL), -1,
 			 "trigger bex\n");
 				
 		// as we don't buffer the packet right now, we have to drop it
