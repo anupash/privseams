@@ -2715,9 +2715,16 @@ out_err:
 	HIP_DEBUG("Peer learning: Adding of address failed\n");
 	return (-1);
 }
-//add by santtu
-int hip_update_locator_parameter(hip_ha_t *entry, 
-    	                struct hip_locator *locator, struct hip_esp_info *esp_info){
+
+
+/**
+ * handles locator parameter in msg and in entry.
+ * 
+ * 
+ * */
+int hip_handle_locator_parameter(hip_ha_t *entry,
+                                 struct hip_locator *loc,
+				 struct hip_esp_info *esp_info) {
 	uint32_t old_spi = 0, new_spi = 0, i, err = 0;
 	int zero = 0, n_addrs = 0, ii = 0;
 	int same_af = 0, local_af = 0, comp_af = 0, tmp_af = 0;
@@ -2727,21 +2734,15 @@ int hip_update_locator_parameter(hip_ha_t *entry,
 	struct hip_spi_out_item *spi_out;
 	struct hip_peer_addr_list_item *a, *tmp, addr;
 	struct netdev_address *n;
+	struct hip_locator *locator = NULL;
 
-#if 0 
-        /*REMOVED:
-          We should handle received locators always and not only then when we 
-           are sending them in BEX packets ourselves -SAMU */
-    if (hip_locator_status == SO_HIP_SET_LOCATOR_OFF) {
-    	HIP_DEBUG("stop updating locator if the locator mode is off\n");
-    	goto out_err;
-    }
-#endif
- 
-	HIP_INFO_LOCATOR("santtu: let's update locator:", locator);
- 
-	entry->locator = locator;
- 
+	if ((locator = loc) == NULL) {
+		HIP_DEBUG("NULL locator\n");
+		locator = entry->locator;
+	}
+
+	HIP_IFEL(!locator, -1, "No locator to handle\n");
+
 	old_spi = ntohl(esp_info->new_spi);
 	new_spi = ntohl(esp_info->new_spi);
 	HIP_DEBUG("LOCATOR SPI old=0x%x new=0x%x\n", old_spi, new_spi);
@@ -2847,34 +2848,4 @@ out_of_loop:
 
 out_err:
 	return err;
-}
-
-/**
- * handles locator parameter in msg and in entry.
- * 
- * 
- * */
-int hip_handle_locator_parameter(hip_common_t *msg, hip_ha_t *entry,
-                                 struct hip_esp_info *esp_info) {
-	int err = 0;
-	struct hip_locator *locator = NULL;
-	
-	if (hip_locator_status == SO_HIP_SET_LOCATOR_OFF) 
-		goto out_err;
-	
-	HIP_DEBUG("%d    %d",hip_locator_status,SO_HIP_SET_LOCATOR_OFF);
-	
-        locator = hip_get_param(msg, HIP_PARAM_LOCATOR);
-        if (locator){   
-                HIP_IFEL(hip_update_locator_parameter(entry, 
-                                                      locator, esp_info),
-                         -1, "hip_handle_locator_parameter from msg failed\n");
-        }
-        else if (entry->locator){   
-                HIP_IFEL(hip_update_locator_parameter(entry, 
-                                                      entry->locator, esp_info),
-                         -1, "hip_handle_locator_parameter from entry failed\n");
-        }
-out_err:
-   	return err;
 }
