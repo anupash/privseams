@@ -53,6 +53,14 @@ void hip_firewall_hldb_dump(void)
 	HIP_UNLOCK_HT(&firewall_lsi_hit_db);
 }
 
+/*
+* Adds the hit_pair, the lsi_peer and the bex state to the firewall_lsi_hit_db
+* The argument state identifies the state of the BEX:
+*  = 0   Trigger BEX
+*  = 1   BEX done
+*  = 2   BEX already triggered, waiting it finishes
+*  = -1  BEX failed
+*/
 int firewall_add_hit_lsi(struct in6_addr *hit_our, struct in6_addr *hit_peer, hip_lsi_t *lsi, int state){
 	int err = 0;
 	firewall_hl_t *new_entry = NULL;

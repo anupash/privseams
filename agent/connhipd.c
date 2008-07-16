@@ -31,30 +31,34 @@ int hip_agent_connected = 0;
 
 	@return 0 on success, -1 on errors.
 */
-int connhipd_init(void)
+int connhipd_init_sock(void)
 {
-	/* Variables. */
-	int err = 0, n, len;
+	int err = 0;
 	struct sockaddr_in6 agent_addr;
-	struct hip_common *msg = NULL;
-	socklen_t alen;
 
-	/* Allocate message. */
-	HIP_IFEL(((msg = hip_msg_alloc()) == NULL), -1,
-		 "Failed to Allocate message.\n");
-
-	/* Create and bind daemon socket. */
 	hip_agent_sock = socket(AF_INET6, SOCK_DGRAM, 0);
 	HIP_IFEL(hip_agent_sock < 0, -1, "Failed to create socket.\n");
 
-	bzero(&agent_addr, sizeof(agent_addr));
+	memset(&agent_addr, 0, sizeof(agent_addr));
         agent_addr.sin6_family = AF_INET6;
         agent_addr.sin6_addr = in6addr_loopback;
 	agent_addr.sin6_port = htons(HIP_AGENT_PORT);
 
 	HIP_IFEL(hip_daemon_bind_socket(hip_agent_sock, &agent_addr), -1,
 		 "bind failed\n");
+
+  out_err:
+	return err;
+}
 	
+
+int connhipd_run_thread(void)
+{
+	int err = 0;
+	struct hip_common *msg = NULL;
+
+	HIP_IFEL(!(msg = hip_msg_alloc()), -1, "Failed to Allocate message.\n");
+
 	hip_agent_thread_started = 0;
 	pthread_create(&connhipd_pthread, NULL, connhipd_thread, msg);
 
@@ -62,12 +66,10 @@ int connhipd_init(void)
 		usleep(100 * 1000);
 	usleep(100 * 1000);
 
-	return (0);
-
 out_err:
-	if (hip_agent_sock)
+	if (err && hip_agent_sock)
 		close(hip_agent_sock);
-	if (msg != NULL)
+	if (err && msg)
 		HIP_FREE(msg);
 
 	return err;

@@ -599,13 +599,9 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 		 -1, "Failed to alloc memory for dh_data2\n");
 	memset(dh_data2, 0, dh_size2);
 
-	_HIP_DEBUG("dh_size=%d\n", dh_size2);
-	
- 	/* Ready to begin building of the R1 packet */
-	
-	HIP_DEBUG("mask=0x%x\n", mask);
+	/* Ready to begin building of the R1 packet */
 	/** @todo TH: hip_build_network_hdr has to be replaced with an
-	    apprporiate function pointer */
+	    appropriate function pointer */
 	HIP_DEBUG_HIT("src_hit used to build r1 network header", src_hit);
  	hip_build_network_hdr(msg, HIP_R1, mask, src_hit, NULL);
 
@@ -632,7 +628,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 					0, 0),  -1, 
 		 "Cookies were burned. Bummer!\n");
 
- 	/********** Diffie-Hellman **********/
+ 	/* Parameter Diffie-Hellman */
 	HIP_IFEL((written1 = hip_insert_dh(dh_data1, dh_size1,
 					  HIP_FIRST_DH_GROUP_ID)) < 0,
 		 -1, "Could not extract the first DH public key\n");
@@ -652,26 +648,30 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 		       HIP_MAX_DH_GROUP_ID, dh_data2, 0), -1,
 		       "Building of DH failed.\n");
 
- 	/********** HIP transform. **********/
+ 	/* Parameter HIP transform. */
  	HIP_IFEL(hip_build_param_transform(msg, HIP_PARAM_HIP_TRANSFORM,
 					   transform_hip_suite,
 					   sizeof(transform_hip_suite) /
 					   sizeof(hip_transform_suite_t)), -1, 
 		 "Building of HIP transform failed\n");
 
-	/********** HOST_ID **********/
+	/* Parameter HOST_ID */
 	_HIP_DEBUG("This HOST ID belongs to: %s\n", 
 		   hip_get_param_host_id_hostname(host_id_pub));
 	HIP_IFEL(hip_build_param(msg, host_id_pub), -1, 
 		 "Building of host id failed\n");
 
- 	/********** ESP-ENC transform. **********/
+	/* Parameter REG_INFO */
+	hip_get_active_services(service_list, &service_count);
+	hip_build_param_reg_info(msg, service_list, service_count);
+
+ 	/* Parameter ESP-ENC transform. */
  	HIP_IFEL(hip_build_param_transform(msg, HIP_PARAM_ESP_TRANSFORM,  
 					   transform_esp_suite,
 					   sizeof(transform_esp_suite) /
 					   sizeof(hip_transform_suite_t)), -1, 
 		 "Building of ESP transform failed\n");
- 	
+	
  	/********** ESP-PROT transform (OPTIONAL) **********/
  	
  	HIP_IFEL(add_esp_prot_transform_to_r1(msg), -1,
@@ -685,12 +685,12 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 
 	//HIP_HEXDUMP("Pubkey:", host_id_pub, hip_get_param_total_len(host_id_pub));
 
- 	/********** Signature 2 **********/	
+ 	/* Parameter Signature 2 */	
 
  	HIP_IFEL(sign(host_id_priv, msg), -1, "Signing of R1 failed.\n");
 	_HIP_HEXDUMP("R1", msg, hip_get_msg_total_len(msg));
-
-	/********** ECHO_REQUEST (OPTIONAL) *********/
+	
+	/* Parameter ECHO_REQUEST (OPTIONAL) */
 	
 	/* Fill puzzle parameters */
 	{
@@ -712,8 +712,8 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 		pz->I = random_i;
 	}
 
- 	/************** Packet ready ***************/
-
+ 	/* Packet ready */
+	
         // 	if (host_id_pub)
 	//		HIP_FREE(host_id_pub);
  	if (dh_data1)
