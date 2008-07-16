@@ -20,7 +20,6 @@
  *
  */
 #include "user_ipsec_sadb.h"
-#include "hashtable.h"
 #include "esp_prot.h"
 #include <openssl/sha.h>
 
@@ -31,13 +30,21 @@ HIP_HASHTABLE *sadb = NULL;
 // database storing shortcut to sa entries for incoming packets
 HIP_HASHTABLE *linkdb = NULL;
 
+//callback wrappers providing per-variable casts before calling the type-specific callbacks
+static IMPLEMENT_LHASH_HASH_FN(hip_sa_entry_hash, const hip_sa_entry_t *)
+static IMPLEMENT_LHASH_COMP_FN(hip_sa_entries_compare, const hip_sa_entry_t *)
+static IMPLEMENT_LHASH_HASH_FN(hip_link_entry_hash, const hip_link_entry_t *)
+static IMPLEMENT_LHASH_COMP_FN(hip_link_entries_compare, const hip_link_entry_t *)
+
 int hip_sadb_init()
 {
 	int err = 0;
 	
-	HIP_IFEL(!(sadb = hip_ht_init(hip_sa_entry_hash, hip_sa_entries_compare)), -1,
+	HIP_IFEL(!(sadb = hip_ht_init(LHASH_HASH_FN(hip_sa_entry_hash),
+			LHASH_COMP_FN(hip_sa_entries_compare))), -1,
 			"failed to initialize sadb\n");
-	HIP_IFEL(!(linkdb = hip_ht_init(hip_link_entry_hash, hip_link_entries_compare)), -1,
+	HIP_IFEL(!(linkdb = hip_ht_init(LHASH_HASH_FN(hip_link_entry_hash),
+			LHASH_COMP_FN(hip_link_entries_compare))), -1,
 			"failed to initialize linkdb\n");
 	
 	HIP_DEBUG("sadb initialized\n");
@@ -46,14 +53,11 @@ int hip_sadb_init()
   	return err;
 }
 
-unsigned long hip_sa_entry_hash(const void *ptr)
+unsigned long hip_sa_entry_hash(const hip_sa_entry_t *sa_entry)
 {
-	hip_sa_entry_t *sa_entry = NULL;
 	struct in6_addr addr_pair[2];		/* in BEET-mode these are HITs */
 	unsigned char hash[INDEX_HASH_LENGTH];
 	int err = 0;
-	
-	sa_entry = (hip_sa_entry_t *) ptr;
 	
 	// values have to be present
 	HIP_ASSERT(sa_entry != NULL && sa_entry->inner_src_addr != NULL
@@ -92,15 +96,12 @@ unsigned long hip_sa_entry_hash(const void *ptr)
 	return *((unsigned long *)hash);
 }
 
-int hip_sa_entries_compare(const void *ptr1, const void *ptr2)
+int hip_sa_entries_compare(const hip_sa_entry_t *sa_entry1,
+		const hip_sa_entry_t *sa_entry2)
 {
-	hip_sa_entry_t *sa_entry1 = NULL, *sa_entry2 = NULL;
 	int err = 0;
 	unsigned long hash1 = 0;
 	unsigned long hash2 = 0;
-	
-	sa_entry1 = (hip_sa_entry_t *) ptr1;
-	sa_entry2 = (hip_sa_entry_t *) ptr2;
 	
 	// values have to be present
 	HIP_ASSERT(sa_entry1 != NULL && sa_entry1->inner_src_addr != NULL
@@ -120,14 +121,11 @@ int hip_sa_entries_compare(const void *ptr1, const void *ptr2)
     return err;
 }
 
-unsigned long hip_link_entry_hash(const void *ptr)
+unsigned long hip_link_entry_hash(const hip_link_entry_t *link_entry)
 {
-	hip_link_entry_t *link_entry = NULL;
 	unsigned char hash_input[sizeof(struct in6_addr) + sizeof(uint32_t)];
 	unsigned char hash[INDEX_HASH_LENGTH];
 	int err = 0;
-	
-	link_entry = (hip_link_entry_t *) ptr;
 	
 	// values have to be present
 	HIP_ASSERT(link_entry != NULL && link_entry->dst_addr != NULL && link_entry->spi != 0);
@@ -150,15 +148,12 @@ unsigned long hip_link_entry_hash(const void *ptr)
 	return *((unsigned long *)hash);
 }
 
-int hip_link_entries_compare(const void *ptr1, const void *ptr2)
+int hip_link_entries_compare(const hip_link_entry_t *link_entry1,
+		const hip_link_entry_t *link_entry2)
 {
-	hip_link_entry_t *link_entry1 = NULL, *link_entry2 = NULL;
 	int err = 0;
 	unsigned long hash1 = 0;
 	unsigned long hash2 = 0;
-	
-	link_entry1 = (hip_link_entry_t *) ptr1;
-	link_entry2 = (hip_link_entry_t *) ptr2;
 	
 	// values have to be present
 	HIP_ASSERT(link_entry1 != NULL && link_entry1->dst_addr != NULL
@@ -260,16 +255,20 @@ int hip_sa_entry_add(int direction, uint32_t spi, uint32_t mode,
 	HIP_DEBUG_HIT("inner_dst_addr", entry->inner_dst_addr);
 	HIP_DEBUG("mode: %i\n", entry->mode);
 	
-	hip_ht_add(sadb, entry);
+	/* returns the replaced item or NULL on normal operation and error.
+	 * A new entry should not replace another one! */
+	HIP_IFEL(hip_ht_add(sadb, entry), -1, "hash collision detected!\n");
 	
 	// add links to this entry for incoming packets
 	HIP_IFEL(hip_link_entries_add(entry), -1, "failed to add link entries\n");
 	
-	HIP_DEBUG("sa entry successfully added\n");
+	HIP_DEBUG("sa entry added successfully\n");
+	
+	hip_sadb_print();
 	
   out_err:
   	if (err)
-  	{
+  	{	
   		if (entry)
   		{
   			hip_link_entries_delete_all(entry);
@@ -439,6 +438,8 @@ hip_sa_entry_t * hip_sa_entry_find_outbound(struct in6_addr *src_hit,
 {
 	hip_sa_entry_t *search_entry = NULL, *stored_entry = NULL;
 	int err = 0;
+	
+	hip_sadb_print();
 	
 	HIP_IFEL(!(search_entry = (hip_sa_entry_t *) malloc(sizeof(hip_sa_entry_t))), -1,
 			"failed to allocate memory\n");
@@ -640,6 +641,7 @@ int hip_sadb_flush()
 	hip_list_t *item = NULL, *tmp = NULL;
 	hip_sa_entry_t *entry = NULL;
 	
+	// TODO use DO_ALL makro here
 	// iterating over all elements
 	list_for_each_safe(item, tmp, sadb, i)
 	{
@@ -652,6 +654,79 @@ int hip_sadb_flush()
 	
   out_err:
   	return err;
+}
+
+void hip_sa_entry_print(hip_sa_entry_t *entry)
+{
+	if (entry)
+	{
+		HIP_DEBUG("direction: %i\n", entry->direction);
+		HIP_DEBUG("spi: %u\n", entry->spi);
+		HIP_DEBUG("mode: %u\n", entry->mode);
+		HIP_DEBUG_HIT("src_addr", entry->src_addr);
+		HIP_DEBUG_HIT("dst_addr", entry->dst_addr);
+		HIP_DEBUG_HIT("inner_src_addr", entry->inner_src_addr);
+		HIP_DEBUG_HIT("inner_dst_addr", entry->inner_dst_addr);
+		HIP_DEBUG("encap_mode: %u\n", entry->encap_mode);
+		HIP_DEBUG("src_port: %u\n", entry->src_port);
+		HIP_DEBUG("dst_port: %u\n", entry->dst_port);
+// TODO print the rest
+#if 0
+		/****************** crypto parameters *******************/
+		int ealg;								/* crypto transform in use */
+		uint32_t a_keylen;						/* length of raw keys */
+		uint32_t e_keylen;
+		unsigned char *a_key;					/* raw crypto keys */
+		unsigned char *e_key;
+		des_key_schedule ks[3];					/* 3-DES keys */
+		AES_KEY *aes_key;						/* AES key */
+		BF_KEY *bf_key;							/* BLOWFISH key */
+		/*********************************************************/
+		uint64_t lifetime;			/* seconds until expiration */
+		uint64_t bytes;				/* bytes transmitted */
+		struct timeval usetime;		/* last used timestamp */
+		struct timeval usetime_ka;	/* last used timestamp, incl keep-alives */
+		uint32_t sequence;			/* sequence number counter */
+		uint32_t replay_win;		/* anti-replay window */
+		uint32_t replay_map;		/* anti-replay bitmap */
+		/*********** esp protection extension params *************/
+		/* hash chain parameters for this SA used in secure ESP extension */
+		/* for outgoing SA */
+		hash_chain_t *active_hchain;
+		hash_chain_t *next_hchain;
+		/* for incoming SA */
+		int tolerance;
+		unsigned char *active_anchor;
+		unsigned char *next_anchor;
+		/* for both */
+		uint8_t active_transform;
+		uint8_t next_transform;
+#endif
+	} else
+	{
+		HIP_DEBUG("entry is NULL\n");
+	}
+}
+
+void hip_sadb_print()
+{
+	int i = 0;
+	hip_list_t *item = NULL, *tmp = NULL;
+	hip_sa_entry_t *entry = NULL;
+	
+	HIP_DEBUG("printing sadb...\n");
+	
+	// TODO use DO_ALL makro here
+	// iterating over all elements
+	list_for_each_safe(item, tmp, sadb, i)
+	{
+		if (!(entry = list_entry(item)))
+		{
+			HIP_ERROR("failed to get list entry\n");
+			break;
+		}
+		hip_sa_entry_print(entry);
+	}
 }
 
 

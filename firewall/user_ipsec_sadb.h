@@ -34,6 +34,7 @@
 //#include <sys/time.h>		/* timeval */
 //#include "debug.h"
 #include "hashchain.h"
+#include "hashtable.h"
 #include "ife.h"
 
 /* mode: 1-transport, 2-tunnel, 3-beet 
@@ -119,12 +120,18 @@ typedef struct hip_link_entry
 	hip_sa_entry_t *linked_sa_entry;		/* direct link to sa entry */
 } hip_link_entry_t;
 
+static DECLARE_LHASH_HASH_FN(hip_sa_entry_hash, const hip_sa_entry_t *);
+static DECLARE_LHASH_COMP_FN(hip_sa_entries_compare, const hip_sa_entry_t *);
+static DECLARE_LHASH_HASH_FN(hip_link_entry_hash, const hip_sa_entry_t *);
+static DECLARE_LHASH_COMP_FN(hip_link_entries_compare, const hip_sa_entry_t *);
 
 int hip_sadb_init(void);
-unsigned long hip_sa_entry_hash(const void *ptr);
-int hip_sa_entries_compare(const void *ptr1, const void *ptr2);
-unsigned long hip_link_entry_hash(const void *ptr);
-int hip_link_entries_compare(const void *ptr1, const void *ptr2);
+unsigned long hip_sa_entry_hash(const hip_sa_entry_t *sa_entry);
+int hip_sa_entries_compare(const hip_sa_entry_t *sa_entry1,
+		const hip_sa_entry_t *sa_entry2);
+unsigned long hip_link_entry_hash(const hip_link_entry_t *link_entry);
+int hip_link_entries_compare(const hip_link_entry_t *link_entry1,
+		const hip_link_entry_t *link_entry2);
 int hip_sadb_add(int direction, uint32_t spi, uint32_t mode,
 		struct in6_addr *src_addr, struct in6_addr *dst_addr,
 		struct in6_addr *inner_src_addr, struct in6_addr *inner_dst_addr,
@@ -165,6 +172,8 @@ int hip_link_entry_delete(struct in6_addr *dst_addr, hip_sa_entry_t *entry);
 int hip_link_entries_delete_all(hip_sa_entry_t *entry);
 void hip_sa_entry_free(hip_sa_entry_t * entry);
 int hip_sadb_flush();
+void hip_sa_entry_print(hip_sa_entry_t *entry);
+void hip_sadb_print(void);
 
 #if 0
 /* HIP SADB destintation cache entry */
