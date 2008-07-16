@@ -84,10 +84,8 @@ unsigned long hip_sa_entry_hash(const hip_sa_entry_t *sa_entry)
 		goto out_err;
 	}
 	 
-	HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, (void *)addr_pair, sizeof(addr_pair), hash),
-			-1, "failed to hash addresses\n");
-	
-	HIP_HEXDUMP("sa entry hash: ", hash, INDEX_HASH_LENGTH);
+	HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, (void *)addr_pair,
+			2 * sizeof(struct in6_addr), hash), -1, "failed to hash addresses\n");
 	
   out_err:
   	if (err)
@@ -95,6 +93,7 @@ unsigned long hip_sa_entry_hash(const hip_sa_entry_t *sa_entry)
   		*hash = 0;
   	}
   	
+  	HIP_HEXDUMP("sa entry hash: ", hash, INDEX_HASH_LENGTH);
   	HIP_DEBUG("hash (converted): %lu\n", *((unsigned long *)hash));
   	
 	return *((unsigned long *)hash);
@@ -126,7 +125,8 @@ int hip_sa_entries_compare(const hip_sa_entry_t *sa_entry1,
 
 unsigned long hip_link_entry_hash(const hip_link_entry_t *link_entry)
 {
-	unsigned char hash_input[sizeof(struct in6_addr) + sizeof(uint32_t)];
+	int input_length = sizeof(struct in6_addr) + sizeof(uint32_t);
+	unsigned char hash_input[input_length];
 	unsigned char hash[INDEX_HASH_LENGTH];
 	int err = 0;
 	
@@ -139,7 +139,7 @@ unsigned long hip_link_entry_hash(const hip_link_entry_t *link_entry)
 	memcpy(&hash_input[0], link_entry->dst_addr, sizeof(struct in6_addr));
 	memcpy(&hash_input[sizeof(struct in6_addr) - 1], &link_entry->spi, sizeof(uint32_t));
 	 
-	HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, (void *)hash_input, sizeof(hash_input), hash),
+	HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, (void *)hash_input, input_length, hash),
 			-1, "failed to hash addresses\n");
 	
   out_err:
@@ -147,6 +147,9 @@ unsigned long hip_link_entry_hash(const hip_link_entry_t *link_entry)
   	{
   		*hash = 0;
   	}
+  	
+  	HIP_HEXDUMP("sa entry hash: ", hash, INDEX_HASH_LENGTH);
+  	HIP_DEBUG("hash (converted): %lu\n", *((unsigned long *)hash));
   	
 	return *((unsigned long *)hash);
 }
@@ -164,15 +167,14 @@ int hip_link_entries_compare(const hip_link_entry_t *link_entry1,
 	HIP_ASSERT(link_entry2 != NULL && link_entry2->dst_addr != NULL
 				&& link_entry2->spi != 0);
 
+	HIP_DEBUG("calculating hash1:\n");
 	HIP_IFEL(!(hash1 = hip_link_entry_hash(link_entry1)), -1,
 			"failed to hash link entry\n");
+	HIP_DEBUG("calculating hash2:\n");
 	HIP_IFEL(!(hash2 = hip_link_entry_hash(link_entry2)), -1,
 			"failed to hash link entry\n");
 	
-	if (hash1 != hash2)
-	{
-		err = 1;
-	}
+	err = (hash1 != hash2);
 	
   out_err:
     return err;
@@ -425,7 +427,7 @@ hip_sa_entry_t * hip_sa_entry_find_inbound(struct in6_addr *dst_addr, uint32_t s
 	int err = 0;
 	
 	HIP_IFEL(!(stored_link = hip_link_entry_find(dst_addr, spi)), -1,
-			"failed to find link entry");
+			"failed to find link entry\n");
 	
 	stored_entry = stored_link->linked_sa_entry;
 	
@@ -547,6 +549,12 @@ hip_link_entry_t *hip_link_entry_find(struct in6_addr *dst_addr, uint32_t spi)
 	search_link->dst_addr = dst_addr;
 	search_link->spi = spi;
 	
+	HIP_DEBUG("looking up link entry with following index attributes:\n");
+	HIP_DEBUG_HIT("dst_addr", search_link->dst_addr);
+	HIP_DEBUG("spi: %u\n", search_link->spi);
+	
+	hip_linkdb_print();
+	
 	HIP_IFEL(!(stored_link = hip_ht_find(linkdb, search_link)), -1,
 				"failed to retrieve link entry\n");
   out_err:
@@ -603,6 +611,21 @@ int hip_link_entries_delete_all(hip_sa_entry_t *entry)
 	
   out_err:
   	return err;
+}
+
+void hip_link_entry_print(hip_link_entry_t *entry)
+{
+	if (entry)
+	{
+		HIP_DEBUG_HIT("dst_addr", entry->dst_addr);
+		HIP_DEBUG("spi: %u\n", entry->spi);
+		HIP_DEBUG("> sa entry:\n");
+		hip_sa_entry_print(entry->linked_sa_entry);
+
+	} else
+	{
+		HIP_DEBUG("link entry is NULL\n");
+	}
 }
 
 void hip_sa_entry_free(hip_sa_entry_t * entry)
@@ -708,7 +731,7 @@ void hip_sa_entry_print(hip_sa_entry_t *entry)
 #endif
 	} else
 	{
-		HIP_DEBUG("entry is NULL\n");
+		HIP_DEBUG("sa entry is NULL\n");
 	}
 }
 
@@ -729,6 +752,7 @@ void hip_sadb_print()
 			HIP_ERROR("failed to get list entry\n");
 			break;
 		}
+		HIP_DEBUG("sa entry %i:\n", i + 1);
 		hip_sa_entry_print(entry);
 	}
 	
@@ -738,6 +762,32 @@ void hip_sadb_print()
 	}
 }
 
+void hip_linkdb_print()
+{
+	int i = 0;
+	hip_list_t *item = NULL, *tmp = NULL;
+	hip_link_entry_t *entry = NULL;
+	
+	HIP_DEBUG("printing linkdb...\n");
+	
+	// TODO use DO_ALL makro here
+	// iterating over all elements
+	list_for_each_safe(item, tmp, linkdb, i)
+	{
+		if (!(entry = list_entry(item)))
+		{
+			HIP_ERROR("failed to get list entry\n");
+			break;
+		}
+		HIP_DEBUG("link entry %i:\n", i + 1);
+		hip_link_entry_print(entry);
+	}
+	
+	if (i == 0)
+	{
+		HIP_DEBUG("linkdb contains no items\n");
+	}
+}
 
 #if 0
 /*
