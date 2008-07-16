@@ -2737,11 +2737,13 @@ int hip_handle_locator_parameter(hip_ha_t *entry,
 	struct hip_locator *locator = NULL;
 
 	if ((locator = loc) == NULL) {
-		HIP_DEBUG("NULL locator\n");
+		HIP_DEBUG("No locator as input\n");
 		locator = entry->locator;
 	}
 
 	HIP_IFEL(!locator, -1, "No locator to handle\n");
+
+	HIP_DEBUG("Using entry->locator\n");
 
 	old_spi = ntohl(esp_info->new_spi);
 	new_spi = ntohl(esp_info->new_spi);
