@@ -27,7 +27,7 @@ hipfw_SOURCES += user_ipsec.c user_ipsec_esp.c user_ipsec_sadb.c esp_prot.c
 hipfw_SOURCES += proxy.c opptcp.c firewalldb.c lsi.c
 hipfw_SOURCES += midauth.c pisa.c
 
-hipfw_LDADD = /usr/lib/libipq.a ../libinet6/.libs/libinet6.a
+hipfw_LDADD = -lipq ../libinet6/.libs/libinet6.a
 if HIP_CORPORATE
   hipfw_LDADD += -lhiptool
 else
