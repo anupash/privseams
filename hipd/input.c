@@ -2442,7 +2442,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 
 //add by santtu	
     /***** LOCATOR PARAMETER *****/
-	HIP_IFEL(hip_handle_locator_parameter(entry, NULL; esp_info), -1,
+	HIP_IFEL(hip_handle_locator_parameter(entry, NULL, esp_info), -1,
 		 "HIP handle locator failed\n");
 //end add
 	
