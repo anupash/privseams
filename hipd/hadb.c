@@ -479,8 +479,10 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr, hip_
 
 	memcpy(&peer_map.peer_hit, peer_hit, sizeof(hip_hit_t));
 	memcpy(&peer_map.peer_addr, peer_addr, sizeof(struct in6_addr));
+
 	if (peer_lsi)
 	        memcpy(&peer_map.peer_lsi, peer_lsi, sizeof(struct in6_addr));
+
 	HIP_IFEL(hip_select_source_address(
 			 &peer_map.our_addr, &peer_map.peer_addr),
 		 -1, "Cannot find source address\n");

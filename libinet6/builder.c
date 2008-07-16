@@ -1070,7 +1070,9 @@ char* hip_message_type_name(const uint8_t msg_type){
 	case SO_HIP_SET_TCPTIMEOUT_ON: return "SO_HIP_SET_TCPTIMEOUT_ON";
 	case SO_HIP_SET_TCPTIMEOUT_OFF: return "SO_HIP_SET_TCPTIMEOUT_OFF";
 	case SO_HIP_SET_NAT_ICE_UDP: return "SO_HIP_SET_NAT_ICE_UDP";
-		
+	case SO_HIP_IS_OUR_LSI: return "SO_HIP_IS_OUR_LSI";
+	case SO_HIP_GET_PEER_HIT_BY_LSIS: return "SO_HIP_GET_PEER_HIT_BY_LSIS";
+	case SO_HIP_TRIGGER_BEX: return "SO_HIP_TRIGGER_BEX";  	
 	default:
 		return "UNDEFINED";
 	}
@@ -1149,8 +1151,8 @@ char* hip_param_type_name(const hip_tlv_type_t param_type){
 	case HIP_PARAM_ESP_PROT_ANCHOR: return "HIP_PARAM_ESP_PROT_ANCHOR";
 	//add by santtu
 	case HIP_PARAM_NAT_TRANSFORM: return "HIP_PARAM_NAT_TRANSFORM";	
-	//end add
-	case HIP_PARAM_LSI: return "HIP_PARAM_LSI";	
+	//end add      
+	case HIP_PARAM_LSI: return "HIP_PARAM_LSI";
 	}
 	return "UNDEFINED";
 }

@@ -49,7 +49,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	msg_type = hip_get_msg_type(msg);
 	
 	is_root = (ntohs(src->sin6_port) < 1024);
-
 	if (is_root) {
 		access_ok = 1;
 	} else if (!is_root &&
