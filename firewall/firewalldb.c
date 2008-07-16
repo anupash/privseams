@@ -536,10 +536,9 @@ int firewall_send_outgoing_pkt(struct in6_addr *src_hit, struct in6_addr *dst_hi
 			  	firewall_raw_sock = firewall_raw_sock_udp_v6;
 			  	((struct udphdr*)msg)->check = ipv6_checksum(IPPROTO_UDP, &sock_src6->sin6_addr, 
 									     &sock_dst6->sin6_addr, msg, len);
-				HIP_DEBUG(">>>src_port is %d\n",ntohs(((struct udphdr*)msg)->source));
-				HIP_DEBUG(">>>dst_port is %d\n",ntohs(((struct udphdr*)msg)->dest));
-				HIP_DEBUG(">>>checksum is %x\n",ntohs(((struct udphdr*)msg)->check));
-				HIP_DEBUG(">>>udp lengt %d\n",ntohs(((struct udphdr*)msg)->len));
+				HIP_DEBUG("src_port is %d\n",ntohs(((struct udphdr*)msg)->source));
+				HIP_DEBUG("dst_port is %d\n",ntohs(((struct udphdr*)msg)->dest));
+				HIP_DEBUG("checksum is %x\n",ntohs(((struct udphdr*)msg)->check));
 			}else{
 			  	firewall_raw_sock = firewall_raw_sock_udp_v4;
 				((struct udphdr*)msg)->check = ipv4_checksum(IPPROTO_TCP, &(sock_src4->sin_addr), 

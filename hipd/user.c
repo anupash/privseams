@@ -68,9 +68,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		return hip_recv_agent(msg);
 	}
 	
-	HIP_DEBUG("HIP user message type is: %s.\n",
-		  hip_message_type_name(msg_type));
-	
 	switch(msg_type)
 	{
 	case SO_HIP_ADD_LOCAL_HI:
