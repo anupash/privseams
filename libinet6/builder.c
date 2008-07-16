@@ -3826,10 +3826,11 @@ int hip_build_param_locator2(struct hip_common *msg,
 		   sizeof(struct hip_tlv_common) +
 		   addrs_len1+addrs_len2);
 
-	memcpy(locator_info + 1, addresses1, addrs_len1);
+	memcpy((char *)(locator_info + 1), addresses1, addrs_len1);
 	if(address_count2 >0)
-	memcpy(((char*)(locator_info + 1))+addrs_len1, addresses2, addrs_len2);
-	
+               memcpy(((char *)((locator_info + 1) + addrs_len1)), 
+                      addresses2, addrs_len2);
+
 	HIP_IFE(hip_build_param(msg, locator_info), -1);
 
 	_HIP_DEBUG("msgtotlen=%d addrs_len=%d\n", hip_get_msg_total_len(msg),
