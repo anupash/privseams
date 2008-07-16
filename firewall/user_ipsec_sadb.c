@@ -458,7 +458,7 @@ hip_sa_entry_t * hip_sa_entry_find_outbound(struct in6_addr *src_hit,
 	hip_sadb_print();
 	
 	// find entry in sadb db
-	HIP_IFEL(!(stored_entry = hip_ht_find(sadb, search_entry)), -1,
+	HIP_IFEL(!(stored_entry = (hip_sa_entry_t *)hip_ht_find(sadb, search_entry)), -1,
 			"failed to retrieve sa entry\n");
 	
   out_err:
