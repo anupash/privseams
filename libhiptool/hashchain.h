@@ -13,6 +13,7 @@
 #ifndef HASH_CHAIN_H
 #define HASH_CHAIN_H
 
+#include <sys/types.h>
 #include <openssl/sha.h>
 
 /* value used by Tobias Heer */
