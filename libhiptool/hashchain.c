@@ -12,6 +12,7 @@
 */
 #include "hashchain.h"
 #include <openssl/rand.h>
+#include "crypto.h"
 #include "misc.h"
 
 /* these are not needed and therefore not implemented
@@ -402,8 +403,7 @@ int concat_n_hash_SHA(unsigned char* hash, unsigned char** parts, int* part_leng
 	}
 	HIP_HEXDUMP("Buffer: ", buffer, total_len);
 	/* hash the buffer */
-	// TODO get this right
-	SHA(buffer, total_len, hash);
+	HIP_SHA(buffer, total_len, hash);
 	HIP_HEXDUMP("Buffer: ", buffer, total_len);
 
 	/* free buffer memory*/ 
