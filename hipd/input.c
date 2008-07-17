@@ -2179,8 +2179,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
 //add by santtu
     /***** LOCATOR PARAMETER *****/
-	HIP_IFEL(hip_handle_locator_parameter(entry, NULL, esp_info), -1,
-		 "Handle locator failed\n");
+	hip_handle_locator_parameter(entry, NULL, esp_info);
                
 #ifdef HIP_USE_ICE
 
@@ -2381,15 +2380,9 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	int err = 0, tfm = 0, retransmission = 0, type_count = 0, idx;
 	int *reg_types = NULL;
 	uint32_t spi_recvd = 0, spi_in = 0;
-
-
-//add by santtu
-#ifdef HIP_USE_ICE
-    void * ice_session = 0;
-    int i;
-#endif
-//end add
-
+	int i;
+	void * ice_session = 0;
+	
 #ifdef CONFIG_HIP_HI3
 	if( r2_info->hi3_in_use ) {
 		/* In hi3 real addresses should already be in entry, received on
@@ -2463,62 +2456,13 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 
 //add by santtu
     /***** LOCATOR PARAMETER *****/
-	HIP_IFEL(hip_handle_locator_parameter(entry, NULL, esp_info), -1,
-		 "HIP handle locator failed\n");
+	hip_handle_locator_parameter(entry, NULL, esp_info);
 //end add
-
 
 	HIP_HEXDUMP("local_anchor: ", entry->esp_local_anchor,
 			esp_prot_transforms[entry->esp_prot_transform]);
 	HIP_HEXDUMP("peer_anchor: ", entry->esp_peer_anchor,
 			esp_prot_transforms[entry->esp_prot_transform]);
-
-
-// moved from hip_create_i2
-#ifdef CONFIG_HIP_BLIND
-	if (hip_blind_get_status()) {
-	  /* let the setup routine give us a SPI. */
-	  HIP_DEBUG("Blind is ON\n");
-	  HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(r1_saddr, r1_daddr,
-			      &entry->hit_peer, &entry->hit_our,
-			      entry, &spi_in, transform_esp_suite,
-			      &ctx->esp_in, &ctx->auth_in, 0,
-			      HIP_SPI_DIRECTION_IN, 0, entry), -1,
-		   "Failed to setup IPsec SPD/SA entries, peer:src\n");
-	}
-#endif
-
-//modified by santtu
-	/**when nat control is 0, we create sa as normal mode,
-	 * but if it is not, we use other connectivity engine to create sa***/
-	if(entry->nat_control == 0){
-		if (!hip_blind_get_status()) {
-		  HIP_DEBUG("Blind is OFF\n");
-		  HIP_DEBUG_HIT("hit our", &entry->hit_our);
-		  HIP_DEBUG_HIT("hit peer", &entry->hit_peer);
-		  HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(r2_saddr,
-				  r2_daddr, &ctx->input->hits, &ctx->input->hitr,
-				  &spi_in, tfm, &entry->esp_in, &entry->auth_in, 0,
-				  HIP_SPI_DIRECTION_IN, 0, entry), -1,
-				  "Failed to setup IPsec SPD/SA entries, peer:src\n");
-		}
-	} else{
-		HIP_DEBUG("ICE engine will be used, no sa created here\n");
-	}
-#if 0
-	else{
-		//spi should be created
-		get_random_bytes(&spi_in, sizeof(uint32_t));
-	}
-#endif
-// end of move
-
-
-
-
-
-
-
 
 #ifdef CONFIG_HIP_BLIND
 	if (use_blind) {
