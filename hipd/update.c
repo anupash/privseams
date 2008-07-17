@@ -2538,7 +2538,7 @@ static int hip_update_get_all_valid(hip_ha_t *entry, void *op)
 		rk->array[rk->count] = entry;
 		rk->count++;
 	} else
-		HIP_DEBUG("skipping HA entry 0x%p (state=%s)\n",
+		_HIP_DEBUG("skipping HA entry 0x%p (state=%s)\n",
 			  entry, hip_state_str(entry->state));
      
 	return 0;
