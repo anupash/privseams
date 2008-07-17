@@ -292,12 +292,11 @@ int hip_hchain_store_get_hchain(int hchain_length, hash_chain_t *stored_hchain)
 	return err;
 }
 
-int hip_hchain_bexstore_get_hchain(unsigned char *anchor, int hash_length,
-		hash_chain_t *stored_hchain)
+hash_chain_t * hip_hchain_bexstore_get_hchain(unsigned char *anchor, int hash_length)
 {
+	hash_chain_t *stored_hchain = NULL;
 	int i, err = 0;
 	int num_hchains = 0;
-	stored_hchain = NULL;
 
 	HIP_DEBUG("hash_length: %i\n", hash_length);
 	HIP_HEXDUMP("search_anchor: ", anchor, hash_length);
@@ -335,7 +334,10 @@ int hip_hchain_bexstore_get_hchain(unsigned char *anchor, int hash_length,
   out_err:
 	hchain_store_unlock();
 
-  	return err;
+	if (err)
+		stored_hchain = NULL;
+
+  	return stored_hchain;
 }
 
 /**
