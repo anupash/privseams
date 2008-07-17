@@ -357,36 +357,7 @@ uint16_t hip_nat_get_control(){
 #endif
 
 }
-/**
- * handles locator parameter in msg and in entry.
- * 
- * 
- * */
-int hip_nat_handle_locator_parameter(hip_common_t *msg,hip_ha_t *entry,struct hip_esp_info *esp_info){
-	int err = 0;
-	struct hip_locator *locator = NULL;
-	
-	if (hip_locator_status == SO_HIP_SET_LOCATOR_OFF) 
-		goto out_err;
-	
-	HIP_DEBUG("%d    %d",hip_locator_status,SO_HIP_SET_LOCATOR_OFF);
-	
-    locator = hip_get_param(msg, HIP_PARAM_LOCATOR);
-    if (locator){   
-    	HIP_IFEL(hip_update_locator_parameter(entry, 
-    	                locator, esp_info),
-    	                -1, "hip_update_handle_locator_parameter from msg failed\n");
-        }
-    else if (entry->locator){   
-    	HIP_IFEL(hip_update_locator_parameter(entry, 
-        			 	entry->locator, esp_info),
-        	            -1, "hip_update_handle_locator_parameter from entry failed\n");
-            }
-    
-   
-out_err:
-   	return err;
-}
+
 /**
  * Builds udp and raw locator items into locator list to msg
  * this is the extension of hip_build_locators in output.c
