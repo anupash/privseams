@@ -695,30 +695,45 @@ void uint32_to_binstring(uint32_t val, char *buffer)
 	buffer[i] = '\0';
 }
 
+
+/* THIS ONE WORKS -SAMU */
 void hip_print_locator_addresses(struct hip_common * in_msg) {
     struct hip_locator *locator;
-    int n_addrs = 0, i = 0;
-    struct hip_locator_info_addr_item *locator_address_item = NULL;
+    int i = 0;
+    unsigned char * tmp = NULL;
+    struct hip_locator_info_addr_item *item = NULL;
+    struct hip_locator_info_addr_item2 *item2 = NULL;
+    char *address_pointer; 
+	
+    _HIP_DUMP_MSG(in_msg);
 
     locator = hip_get_param((struct hip_common *)in_msg,
                             HIP_PARAM_LOCATOR);
-    if (locator) {
-        n_addrs = hip_get_locator_addr_item_count(locator);
-        locator_address_item = hip_get_locator_first_addr_item(locator);
-                       
-        for (i = 0; i < n_addrs; i++) {
-            _HIP_HEXDUMP("LOC HEX", &locator_address_item[i],
-                                       sizeof(struct hip_locator_info_addr_item));
-            if (locator_address_item[i].locator_type == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
-                
-                HIP_DEBUG_HIT("LOCATOR",
-                              (struct in6_addr *)&locator_address_item[i].address);
-                _HIP_HEXDUMP("Should be in6_addr", 
-                             &locator_address_item[i].address,
-                             sizeof(struct in6_addr));
-                
-            }
-        }
+    if (locator) {	
+	address_pointer =(char*) (locator + 1);
+       
+	for(;address_pointer < ((char*)locator) + hip_get_param_contents_len(locator); ) {
+		if (((struct hip_locator_info_addr_item*)address_pointer)->locator_type 
+                    == HIP_LOCATOR_LOCATOR_TYPE_UDP) {
+			item2 = (struct hip_locator_info_addr_item2 *)address_pointer;
+			HIP_DEBUG_HIT("LOCATOR", (struct in6_addr *)&item2->address);
+                        address_pointer += sizeof(struct hip_locator_info_addr_item2);
+                }
+                else if(((struct hip_locator_info_addr_item*)address_pointer)->locator_type 
+                        == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI) {
+			item = (struct hip_locator_info_addr_item *)address_pointer;
+			HIP_DEBUG_HIT("LOCATOR", (struct in6_addr *)&item->address);
+                        address_pointer += sizeof(struct hip_locator_info_addr_item);
+                } 
+                else if(((struct hip_locator_info_addr_item*)address_pointer)->locator_type 
+                        == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
+			item = (struct hip_locator_info_addr_item *)address_pointer;
+			HIP_DEBUG_HIT("LOCATOR", (struct in6_addr *)&item->address);
+                        address_pointer += sizeof(struct hip_locator_info_addr_item);
+                } 
+                else
+                        address_pointer += sizeof(struct hip_locator_info_addr_item);
+	}	
     }
 }
 
@@ -752,8 +767,11 @@ void hip_print_locator(int debug_level, const char *file, int line, const char *
 		   const char *str, const struct in6_addr *locator)
 {
 
+/* XXTRASHXX Totally useless does anything but what it is supposed to do -SAMU */
+
 	int n_addrs = 0, i = 0;
-	struct hip_locator_info_addr_item *first_address_item = NULL, *locator_address_item = NULL;
+	struct hip_locator_info_addr_item *first_address_item = NULL, 
+		*locator_address_item = NULL;
 	struct hip_locator_info_addr_item2 * locator_address_item2 = NULL;
 	   /* locator = hip_get_param((struct hip_common *)in_msg,
 	HIP_PARAM_LOCATOR);*/
@@ -765,10 +783,12 @@ void hip_print_locator(int debug_level, const char *file, int line, const char *
 	first_address_item = hip_get_locator_first_addr_item(locator);
 	               
 	for (i = 0; i < n_addrs; i++) {
-		locator_address_item = (struct hip_locator_info_addr_item *) hip_get_locator_item(first_address_item, i);
+		locator_address_item = (struct hip_locator_info_addr_item *) 
+			hip_get_locator_item(first_address_item, i);
 	    _HIP_HEXDUMP("LOC HEX", &locator_address_item[i],
 	                           sizeof(struct hip_locator_info_addr_item));
-	HIP_DEBUG("locator items index %d, type is %d \n", i,locator_address_item->locator_type );
+	HIP_DEBUG("locator items index %d, type is %d \n", i,
+		  locator_address_item->locator_type );
 	if (locator_address_item->locator_type == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
 	    
 		HIP_INFO_HIT("LOCATOR from DHT",

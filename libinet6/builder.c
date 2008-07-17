@@ -2659,11 +2659,7 @@ int hip_build_param_locator(struct hip_common *msg,
 			struct hip_locator_info_addr_item *addresses,
 			int address_count)
 {
-        /* Is this actually deprecated?
-           This knows only how to build locator type 1s 
-           If zeroed, returns error if you try to use it --Samu */
-	int err = -1;
-#if 0
+	int err = 0;
 	struct hip_locator *locator_info = NULL;
 	int addrs_len = address_count *
 		(sizeof(struct hip_locator_info_addr_item));
@@ -2691,7 +2687,6 @@ int hip_build_param_locator(struct hip_common *msg,
  out_err:
 	if (locator_info)
 		free(locator_info);
-#endif
 	return err;
 }
 #endif /* !__KERNEL__ */
@@ -3683,20 +3678,72 @@ int hip_get_locator_addr_item_count(struct hip_locator *locator) {
 union hip_locator_info_addr * hip_get_locator_item(void* item_list, int index){
 	int i= 0;
 	struct hip_locator_info_addr_item *temp;
-	char *result = (char*) item_list;
-	
+ 	char *result = (char*) item_list;
 	
 	for(;i<index;i++){
 		temp = (struct hip_locator_info_addr_item*) result;
-		if (temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI)
-			result  +=  sizeof(struct hip_locator_info_addr_item);
+		if (temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI) 
+			result += sizeof(struct hip_locator_info_addr_item);		
 		else 
-			result  +=  sizeof(struct hip_locator_info_addr_item2);
-		
+			result += sizeof(struct hip_locator_info_addr_item2);		
 	}
-	return (union hip_locator_info_addr *) result ;
-	
+	return (union hip_locator_info_addr *) result;
 } 
+
+/**
+ * retreive a locator address item from a list
+ *
+ * retreive a @c LOCATOR ADDRESS ITEM@c from a list.
+ *
+ * @param item_list      a pointer to the first item in the list
+ * @param index     the index of the item in the list
+ * @note DO NOT GIVE TOO LARGE INDEX
+ */
+struct hip_locator_info_addr_item * hip_get_locator_item_as_one(
+	struct hip_locator_info_addr_item* item_list, int index){
+
+    char * address_pointer; 
+    int i = 0;
+    struct hip_locator_info_addr_item *item = NULL;
+    struct hip_locator_info_addr_item2 *item2 = NULL;
+   
+    address_pointer = (char *)item_list;
+
+    if (index != 0) {
+	    for(i = 0; i <= index; i++) {
+		    if (((struct hip_locator_info_addr_item *)address_pointer)->locator_type 
+			== HIP_LOCATOR_LOCATOR_TYPE_UDP) {
+			    address_pointer += sizeof(struct hip_locator_info_addr_item2);
+		    }
+		    else if(((struct hip_locator_info_addr_item *)address_pointer)->locator_type 
+			    == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI) {
+			    address_pointer += sizeof(struct hip_locator_info_addr_item);
+		    } 
+		    else if(((struct hip_locator_info_addr_item *)address_pointer)->locator_type 
+			    == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
+			    address_pointer += sizeof(struct hip_locator_info_addr_item);
+		    } 
+		    else
+			    address_pointer += sizeof(struct hip_locator_info_addr_item);   
+	    }
+    }
+    if (((struct hip_locator_info_addr_item *)address_pointer)->locator_type 
+	== HIP_LOCATOR_LOCATOR_TYPE_UDP) {
+	    item2 = (struct hip_locator_info_addr_item2 *)address_pointer;
+	    HIP_DEBUG_IN6ADDR("LOCATOR", (struct in6_addr *)&item2->address);
+    }
+    else if(((struct hip_locator_info_addr_item *)address_pointer)->locator_type 
+	    == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI) {
+	    item = (struct hip_locator_info_addr_item *)address_pointer;
+	    HIP_DEBUG_IN6ADDR("LOCATOR", (struct in6_addr *)&item->address);
+    } 
+    else if(((struct hip_locator_info_addr_item *)address_pointer)->locator_type 
+	    == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
+	    item = (struct hip_locator_info_addr_item *)address_pointer;
+	    HIP_DEBUG_IN6ADDR("LOCATOR", (struct in6_addr *)&item->address);
+    } 
+    return (struct hip_locator_info_addr_item *)address_pointer;
+}
 
 /**
  * retreive a IP address  from a locator item structure
