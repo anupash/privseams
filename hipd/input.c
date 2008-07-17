@@ -1495,31 +1495,6 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 		i2_daddr, i2_saddr, (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
 		entry->peer_udp_port, r2, entry, 1);
 	
-	/* Why is err reset to zero? -Lauri 11.06.2008 */
-	if (err == 1) {
-		err = 0;
-	}
-
-	HIP_IFEL(entry->sign(entry->our_priv, r2), -EINVAL, "Could not sign R2. Failing\n");
-
-//add by santtu
-#ifdef CONFIG_HIP_RVS
-	if(!ipv6_addr_any(dest))
-	 {
-	      HIP_INFO("create replay_to parameter in R2\n");
-		  hip_build_param_relay_to(
-		       r2, dest, dest_port);
-	  }
-	  if(hip_relay_get_status() == HIP_RELAY_ON) {
-	 		hip_build_param_reg_from(r2,i2_saddr, i2_info->src_port);
-	  }
-#endif
-//end add
-
-	err = entry->hadb_xmit_func->hip_send_pkt(i2_daddr, i2_saddr,
-						  (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
-	                                          entry->peer_udp_port, r2, entry, 1);
-	if (err == 1) err = 0;
 	HIP_IFEL(err, -ECOMM, "Sending R2 packet failed.\n");
 
  out_err:
