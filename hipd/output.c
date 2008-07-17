@@ -365,17 +365,19 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	uint16_t mask = 0;
 	int err = 0, n=0;
 		
-	HIP_DEBUG("\n");
-
 	/* Assign a local private key, public key and HIT to HA */
 	HIP_DEBUG_HIT("src_hit", src_hit);
 	HIP_IFEL(hip_init_us(entry, src_hit), -EINVAL,
 		 "Could not assign a local host id\n");
 	
-		HIP_DEBUG("\n");
-	HIP_DEBUG("----**********----3--*********-----------------\n");
+	/* Who the hell is using debug prints that produce crap like this?
+	   Keep puke like this on your own branch and delete it before
+	   merging. Btw. we're trying to clean up the code currently...
+	   
+	   Best of regards, Lauri. */		
+	_HIP_DEBUG("----**********----3--*********-----------------\n");
 	hip_for_each_ha(hip_print_info_hadb, &n);
-	HIP_DEBUG("----**********----3--*********-----------------\n");
+	_HIP_DEBUG("----**********----3--*********-----------------\n");
 
 #ifdef CONFIG_HIP_BLIND
         if (hip_blind_get_status()) {

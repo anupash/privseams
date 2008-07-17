@@ -439,6 +439,13 @@ int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[],
 		goto out_err;
 	}
 	
+	if(optc > 13) {
+		HIP_ERROR("Too many services requested.\n");
+		err = -1;
+		goto out_err;
+	}
+		
+
 	/* Every commandline argument in opt[] from '0' to 'optc - 4' should
 	   be either one of the predefined strings or a number between
 	   0 and 255 (inclusive). */

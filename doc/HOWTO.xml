@@ -1676,14 +1676,14 @@
       <title>Additional RVS and HIP Relay Features</title>
       <abstract>
 	<para>
-	  In this section, we reveal some additional RVS and HIP relay features
-	  of HIPL.
+	  In this section, we discuss some issues in RFC 5203 as well as reveal
+	  some additional RVS and HIP relay features of HIPL.
 	</para>
       </abstract>
       <section id="sec_rfc5203_issues">
 	<title>Issues in RFC 5203</title>
 	<para>
-	  Unfortunately,
+	  Unfortunately
 	  <ulink url="http://www.rfc-editor.org/rfc/rfc5203">RFC 5203:
 	  Host Identity Protocol (HIP) Registration Extension</ulink> has some
 	  vaguely defined instructions. Some may call them features, some
@@ -1724,11 +1724,103 @@
 		"<emphasis>Reg Type</emphasis>" values, i.e. for example the
 		registration type of RVS listed twice in one parameter.
 	      </para>
-	      </listitem>
+	    </listitem>
+	    <listitem>
+	      <para>
+		RFC 5203 provides us no instructions how to deal with failed
+		registration cancellations. That is, how should the client react
+		when the server responses with a REG_FAILED parameter to a
+		REG_REQUEST parameter having lifetime of zero?
+	      </para>
+	    </listitem>
 	  </orderedlist>
 	</para>
+      </section>
+      <section id="sec_rfc5203_solutions">
+	<title>HIPL Solutions to the Issues in RFC 5203</title>
+	<para>
+	  These are the HIPL solutions for the three issues presented in the
+	  previous section:
+	</para>
+	<orderedlist>
+	    <listitem>
+	      <para>
+		The client cannot request multiple lifetimes. You can input
+		only a single lifetime to "<emphasis>hipconf</emphasis>".
+	      </para> 
+	      <para>
+		The server, on the other hand, uses the first given lifetime
+		boundaries for every offered service in REG_INFO parameters
+		(If "<emphasis>/etc/hip/relay_config</emphasis>" would provide
+		a way to define individual lifetime boundaries for each service,
+		the boudaries listed first would be used for every service).
+	      </para> 
+	    </listitem>
+	    <listitem>
+	      <para>
+		If the client receives an REG_RESPONSE parameter with duplicate
+		"<emphasis>Reg Types</emphasis>", it processes each registration
+		type one after other. It is up to each service how the service
+		reacts to a duplicate response. If the server receives an
+		REG_REQUEST parameter that includes duplicate "<emphasis>Reg
+		Types</emphasis>", the whole parameter is silently dropped.
+	      </para>
+	    </listitem>
+	    <listitem>
+	      <para>
+		Receiving a REG_FAILED as an response to a service cancellation
+		is handled excatly the same was as a REG_FAILED received as an
+		response to a service request. That is, the client just assumes
+		that the server is not able to provide the requested service.
+	      </para>
+	    </listitem>
+	  </orderedlist>
 	<para>17th of July 2008</para>
       </section>
+      <section id="sec_relay_additional_commands">
+	  <title>Additional hipconf commands</title>
+	  <itemizedlist>
+	    <listitem>
+	      <para>
+		Client side commands i.e. commands run on the responder (server
+		client).
+	      </para>
+	      <itemizedlist>
+		<listitem>
+		  <para>
+		    Although HIPL currently only supports RVS, relay and escrow
+		    services, you can request for any service using the
+		    "<emphasis>hipconf</emphasis>" tool. This feature is
+		    provided for testing purposes, especially to test how HIPL
+		    reacts with other HIP implementions that have the
+		    registration extension implemented.
+		  </para>
+		  <para>
+		    The services are identified by "<emphasis>Reg
+		    Types</emphasis>" i.e. numbers between 0 and 255 (both
+		    inclusive).
+		    <programlisting>
+		      tools/hipconf del relay &lt;RELAY-HIT&gt; &lt;RELAY-IP&gt;
+		    </programlisting>
+		    This will send a HIP message asking for relay service
+		    cancellation to the relay server.
+		  </para>
+		</listitem>
+		<listitem>
+		  <para>
+		    To request multiple services using one service request you
+		    can chain the service types:
+		    <programlisting>
+		      tools/hipconf del relay &lt;RELAY-HIT&gt; &lt;RELAY-IP&gt;
+		    </programlisting>
+		    This will send a HIP message asking for relay service
+		    cancellation to the relay server.
+		  </para>
+		</listitem>
+	      </itemizedlist>
+	    </listitem>
+	  </itemizedlist>
+	</section>
     </section>
   </chapter>
   <chapter id="ch_hip_bos">
