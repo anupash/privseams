@@ -1,4 +1,3 @@
-
 /** @file
  * This file defines handling functions for incoming packets for the Host
  * Identity Protocol (HIP).
@@ -2889,15 +2888,14 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 		free(entry->hip_msg_retrans.buf);
 		entry->hip_msg_retrans.buf = NULL;
 	}
-
-	//TODO Send the R2 Response to Firewall
-
-
+	
+	//TODO Send the R2 Response to Firewall	
+	
  out_err:
 	if (entry->state == HIP_STATE_ESTABLISHED)
-		hip_firewall_add_bex_data(entry, &entry->hit_our, &entry->hit_peer);
+	        hip_firewall_set_bex_data(SO_HIP_FW_BEX_DONE, entry, &entry->hit_our, &entry->hit_peer);
 	else
-		hip_firewall_add_bex_data(entry, NULL, NULL);
+		hip_firewall_set_bex_data(SO_HIP_FW_BEX_DONE, entry, NULL, NULL);
 
 	if (ctx) {
 		HIP_FREE(ctx);

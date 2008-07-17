@@ -383,5 +383,5 @@ int hip_hadb_find_lsi(hip_ha_t *entry, void *lsi);
 hip_ha_t *hip_hadb_try_to_find_by_peer_lsi(hip_lsi_t *lsi);
 hip_ha_t *hip_hadb_try_to_find_by_pair_lsi(hip_lsi_t *lsi_src, hip_lsi_t *lsi_dst);
 hip_hit_t *hip_hadb_get_peer_hit_by_peer_lsi(hip_lsi_t *lsi);
-
+//int hip_hadb_add_peer_info_etc_hosts_file(List *lhip_hosts);
 #endif /* HIP_HADB_H */

@@ -1916,7 +1916,7 @@ hip_lsi_t *hip_get_lsi_peer_by_hits(struct in6_addr *hit_s, struct in6_addr *hit
 	/* check error value */
 	HIP_IFEL(hip_get_msg_err(msg), -1, "Got erroneous message!\n");
 	
-	lsi = (hip_lsi_t *)hip_get_param_contents(msg, SO_HIP_PARAM_LSI);
+	lsi = (hip_lsi_t *)hip_get_param_contents(msg, HIP_PARAM_LSI);
 	
  out_err:
 	//if(msg)                                                                                                                                                                                              
@@ -1952,7 +1952,7 @@ hip_lsi_t *hip_get_lsi_our_by_hits(struct in6_addr *hit_s, struct in6_addr *hit_
 	/* check error value */
 	HIP_IFEL(hip_get_msg_err(msg), -1, "Got erroneous message!\n");
 	
-	lsi = (hip_lsi_t *)hip_get_param_contents(msg, SO_HIP_PARAM_LSI);
+	lsi = (hip_lsi_t *)hip_get_param_contents(msg, HIP_PARAM_LSI);
 	
  out_err:
 	//if(msg)                                                                                                                                                                                              
@@ -2047,14 +2047,14 @@ int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
         // destination LSI is obligatory
         if (dst_lsi)
                 HIP_IFEL(hip_build_param_contents(msg, (void *)(dst_lsi),
-                                                  SO_HIP_PARAM_LSI,
+                                                  HIP_PARAM_LSI,
                                                   sizeof(struct in6_addr)), -1,
 			 "build param HIP_PARAM_LSI failed\n");
         
         // source LSI is optional
         if (src_lsi)
 		HIP_IFEL(hip_build_param_contents(msg, (void *)(src_lsi),
-						  SO_HIP_PARAM_LSI,
+						  HIP_PARAM_LSI,
 						  sizeof(struct in6_addr)), -1,
 			 "build param HIP_PARAM_LSI failed\n");
         
@@ -2102,14 +2102,14 @@ int hip_get_hit_peer_by_lsi_pair(hip_lsi_t *src_lsi, hip_lsi_t *dst_lsi,
 
 	if (src_lsi)
 		HIP_IFEL(hip_build_param_contents(msg, (void *)(src_lsi),
-						  SO_HIP_PARAM_LSI,
+						  HIP_PARAM_LSI,
 						  sizeof(struct in_addr)), -1,
 			 "build param HIP_PARAM_LSI failed\n");
 
 
 	if (dst_lsi)
 	        HIP_IFEL(hip_build_param_contents(msg, (void *) dst_lsi,
-                                                  SO_HIP_PARAM_LSI,
+                                                  HIP_PARAM_LSI,
                                                   sizeof(struct in_addr)), -1,
                          "build param HIP_PARAM_LSI failed\n");
 	
@@ -2147,7 +2147,7 @@ int hip_find_local_lsi(hip_lsi_t * dst_lsi){
 
         if (dst_lsi){
                 HIP_IFEL(hip_build_param_contents(msg, (void *) dst_lsi,
-                                                  SO_HIP_PARAM_LSI,
+                                                  HIP_PARAM_LSI,
                                                   sizeof(struct in_addr)), -1,
                          "build param HIP_PARAM_LSI failed\n");
 
@@ -2164,7 +2164,7 @@ int hip_find_local_lsi(hip_lsi_t * dst_lsi){
                 {
                         param_type = hip_get_param_type(current_param);
 
-                        if (param_type == SO_HIP_PARAM_LSI){
+                        if (param_type == HIP_PARAM_LSI){
                                 aux_lsi = (struct in_addr *)hip_get_param_contents_direct(current_param);
                                 if (aux_lsi){
                                         exist = 1;
