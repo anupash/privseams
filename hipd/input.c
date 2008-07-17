@@ -888,12 +888,12 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 	/********** ESP-PROT transform (OPTIONAL) **********/
 
-	HIP_IFEL(add_esp_prot_transform_to_I2(i2, entry, ctx), -1,
+	HIP_IFEL(add_esp_prot_transform_i2(i2, entry, ctx), -1,
 			"failed to add esp protection transform\n");
 
 	/********** ESP-PROT anchor (OPTIONAL) **********/
 
-	HIP_IFEL(add_esp_prot_anchor_to_I2(i2, entry), -1,
+	HIP_IFEL(add_esp_prot_anchor_i2(i2, entry), -1,
 			"failed to add esp protection anchor\n");
 
 	/************************************************/
@@ -1131,6 +1131,11 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 			  (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
 			  r1_info->src_port, i2, entry, 1);
 	HIP_IFEL(err < 0, -ECOMM, "Sending I2 packet failed.\n");
+
+	HIP_HEXDUMP("local_anchor: ", entry->esp_local_anchor,
+			esp_prot_transforms[entry->esp_prot_transform]);
+	HIP_DEBUG("entry addr: 0x%p\n", entry);
+	HIP_DEBUG("local_anchor addr: 0x%p\n", entry->esp_local_anchor);
 
  out_err:
 	if (i2)
@@ -1584,7 +1589,7 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 
 	/********** ESP-PROT anchor (OPTIONAL) **********/
 
-	HIP_IFEL(add_esp_prot_anchor_to_R2(r2, entry), -1,
+	HIP_IFEL(add_esp_prot_anchor_r2(r2, entry), -1,
 			"failed to add esp protection anchor\n");
 
 	/************************************************/
@@ -2124,12 +2129,12 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
 	/********** ESP-PROT transform (OPTIONAL) **********/
 
-	HIP_IFEL(handle_esp_prot_transform_in_I2(entry, ctx), -1,
+	HIP_IFEL(handle_esp_prot_transform_i2(entry, ctx), -1,
 			"failed to handle esp prot transform\n");
 
 	/********** ESP-PROT anchor (OPTIONAL) **********/
 
-	HIP_IFEL(handle_esp_prot_anchor_in_I2(entry, ctx), -1,
+	HIP_IFEL(handle_esp_prot_anchor_i2(entry, ctx), -1,
 			"failed to handle esp prot anchor\n");
 
 	/************************************************/
@@ -2656,7 +2661,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 
 	/********** ESP-PROT anchor (OPTIONAL) **********/
 
-	HIP_IFEL(handle_esp_prot_anchor_in_R2(entry, ctx), -1,
+	HIP_IFEL(handle_esp_prot_anchor_r2(entry, ctx), -1,
 			"failed to handle esp prot anchor\n");
 
 	/************************************************/
@@ -2667,7 +2672,10 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 //end add
 
 
-
+	HIP_HEXDUMP("local_anchor: ", entry->esp_local_anchor,
+			esp_prot_transforms[entry->esp_prot_transform]);
+	HIP_HEXDUMP("peer_anchor: ", entry->esp_peer_anchor,
+			esp_prot_transforms[entry->esp_prot_transform]);
 
 
 // moved from hip_create_i2
@@ -3099,6 +3107,11 @@ int hip_receive_r2(struct hip_common *hip_common,
 	uint16_t mask = 0;
 
 	_HIP_DEBUG("hip_receive_r2() invoked.\n");
+
+	HIP_HEXDUMP("local_anchor: ", entry->esp_local_anchor,
+			esp_prot_transforms[entry->esp_prot_transform]);
+	HIP_DEBUG("entry addr: 0x%p\n", entry);
+	HIP_DEBUG("local_anchor addr: 0x%p\n", entry->esp_local_anchor);
 
 	HIP_IFEL(ipv6_addr_any(&hip_common->hitr), -1,
 		 "Received NULL receiver HIT in R2. Dropping\n");

@@ -72,6 +72,7 @@ int esp_prot_add_sa(hip_ha_t *entry, struct hip_common *msg, int direction)
 
 		HIP_HEXDUMP("the esp protection anchor is ", hchain_anchor,
 				esp_prot_transforms[entry->esp_prot_transform]);
+
 		HIP_IFEL(hip_build_param_contents(msg, (void *)hchain_anchor,
 				HIP_PARAM_HCHAIN_ANCHOR, esp_prot_transforms[entry->esp_prot_transform]),
 				-1, "build param contents failed\n");
@@ -84,7 +85,7 @@ int esp_prot_add_sa(hip_ha_t *entry, struct hip_common *msg, int direction)
 	return err;
 }
 
-int add_esp_prot_transform_to_r1(hip_common_t *msg)
+int add_esp_prot_transform_r1(hip_common_t *msg)
 {
 	extern uint8_t hip_esp_prot_ext_transform;
 	int err = 0;
@@ -119,7 +120,7 @@ int add_esp_prot_transform_to_r1(hip_common_t *msg)
  	return err;
 }
 
-int add_esp_prot_transform_to_I2(hip_common_t *i2, hip_ha_t *entry, struct hip_context *ctx)
+int add_esp_prot_transform_i2(hip_common_t *i2, hip_ha_t *entry, struct hip_context *ctx)
 {
 	struct hip_param *param = NULL;
 	struct esp_prot_transform *prot_transform = NULL;
@@ -146,6 +147,7 @@ int add_esp_prot_transform_to_I2(hip_common_t *i2, hip_ha_t *entry, struct hip_c
 			if (hip_esp_prot_ext_transform > ESP_PROT_TRANSFORM_UNUSED)
 			{
 				// check if the transforms match
+				// TODO add negotiation of transforms here
 				if (hip_esp_prot_ext_transform == transform)
 				{
 					HIP_DEBUG("matching ESP extension transform: %u\n",
@@ -195,7 +197,7 @@ int add_esp_prot_transform_to_I2(hip_common_t *i2, hip_ha_t *entry, struct hip_c
  	return err;
 }
 
-int add_esp_prot_anchor_to_I2(hip_common_t *i2, hip_ha_t *entry)
+int add_esp_prot_anchor_i2(hip_common_t *i2, hip_ha_t *entry)
 {
 	unsigned char *anchor = NULL;
 	int err = 0;
@@ -212,7 +214,12 @@ int add_esp_prot_anchor_to_I2(hip_common_t *i2, hip_ha_t *entry)
 					"Building of ESP protection anchor failed\n");
 
 			// store local_anchor
-			entry->esp_local_anchor = anchor;
+			memset(entry->esp_local_anchor, 0, MAX_HASH_LENGTH);
+			memcpy(entry->esp_local_anchor, anchor,
+					esp_prot_transforms[entry->esp_prot_transform]);
+
+			HIP_HEXDUMP("stored local anchor: ", entry->esp_local_anchor,
+					esp_prot_transforms[entry->esp_prot_transform]);
 		} else
 		{
 			// fall back
@@ -222,10 +229,13 @@ int add_esp_prot_anchor_to_I2(hip_common_t *i2, hip_ha_t *entry)
 	}
 
   out_err:
+	if (anchor)
+		free(anchor);
+
  	return err;
 }
 
-int handle_esp_prot_transform_in_I2(hip_ha_t *entry, struct hip_context *ctx)
+int handle_esp_prot_transform_i2(hip_ha_t *entry, struct hip_context *ctx)
 {
 	struct hip_param *param = NULL;
 	struct esp_prot_transform *prot_transform = NULL;
@@ -276,11 +286,10 @@ int handle_esp_prot_transform_in_I2(hip_ha_t *entry, struct hip_context *ctx)
  	return err;
 }
 
-int handle_esp_prot_anchor_in_I2(hip_ha_t *entry, struct hip_context *ctx)
+int handle_esp_prot_anchor_i2(hip_ha_t *entry, struct hip_context *ctx)
 {
 	struct hip_param *param = NULL;
 	struct esp_prot_anchor *prot_anchor = NULL;
-	unsigned char *anchor = NULL;
 	int err = 0;
 
 	/* only process the anchor parameter, if we are going to use it */
@@ -293,13 +302,12 @@ int handle_esp_prot_anchor_in_I2(hip_ha_t *entry, struct hip_context *ctx)
 			// distinguish different hash lengths/transforms
 			if (entry->esp_prot_transform > ESP_PROT_TRANSFORM_UNUSED)
 			{
-				anchor = (unsigned char *)
-						malloc(esp_prot_transforms[entry->esp_prot_transform]);
-
-				memcpy(anchor, prot_anchor->anchor,
+				// store peer_anchor
+				memset(entry->esp_peer_anchor, 0, MAX_HASH_LENGTH);
+				memcpy(entry->esp_peer_anchor, prot_anchor->anchor,
 						esp_prot_transforms[entry->esp_prot_transform]);
 
-				HIP_HEXDUMP("received anchor: ", anchor,
+				HIP_HEXDUMP("received anchor: ", entry->esp_peer_anchor,
 						esp_prot_transforms[entry->esp_prot_transform]);
 			} else
 			{
@@ -307,9 +315,6 @@ int handle_esp_prot_anchor_in_I2(hip_ha_t *entry, struct hip_context *ctx)
 
 				entry->esp_prot_transform = ESP_PROT_TRANSFORM_UNUSED;
 			}
-
-			// store peer_anchor
-			entry->esp_peer_anchor = anchor;
 		} else
 		{
 			// fall back option
@@ -323,7 +328,7 @@ int handle_esp_prot_anchor_in_I2(hip_ha_t *entry, struct hip_context *ctx)
  	return err;
 }
 
-int add_esp_prot_anchor_to_R2(hip_common_t *r2, hip_ha_t *entry)
+int add_esp_prot_anchor_r2(hip_common_t *r2, hip_ha_t *entry)
 {
 	unsigned char *anchor = NULL;
 	int err = 0;
@@ -342,7 +347,12 @@ int add_esp_prot_anchor_to_R2(hip_common_t *r2, hip_ha_t *entry)
 					esp_prot_transforms[entry->esp_prot_transform]);
 
 			// store local_anchor
-			entry->esp_local_anchor = anchor;
+			memset(entry->esp_local_anchor, 0, MAX_HASH_LENGTH);
+			memcpy(entry->esp_local_anchor, anchor,
+					esp_prot_transforms[entry->esp_prot_transform]);
+
+			HIP_HEXDUMP("stored local anchor: ", entry->esp_local_anchor,
+					esp_prot_transforms[entry->esp_prot_transform]);
 		} else
 		{
 			// fall back
@@ -352,10 +362,13 @@ int add_esp_prot_anchor_to_R2(hip_common_t *r2, hip_ha_t *entry)
 	}
 
   out_err:
+	if (anchor)
+		free(anchor);
+
  	return err;
 }
 
-int handle_esp_prot_anchor_in_R2(hip_ha_t *entry, struct hip_context *ctx)
+int handle_esp_prot_anchor_r2(hip_ha_t *entry, struct hip_context *ctx)
 {
 	struct hip_param *param = NULL;
 	struct esp_prot_anchor *prot_anchor = NULL;
@@ -368,15 +381,12 @@ int handle_esp_prot_anchor_in_R2(hip_ha_t *entry, struct hip_context *ctx)
 	{
 		prot_anchor = (struct esp_prot_anchor *) param;
 
-		anchor = (unsigned char *)malloc(esp_prot_transforms[entry->esp_prot_transform]);
-		memcpy(anchor, prot_anchor->anchor,
+		memset(entry->esp_peer_anchor, 0, MAX_HASH_LENGTH);
+		memcpy(entry->esp_peer_anchor, prot_anchor->anchor,
 				esp_prot_transforms[entry->esp_prot_transform]);
 
-		HIP_HEXDUMP("received anchor: ", anchor,
+		HIP_HEXDUMP("received anchor: ", entry->esp_peer_anchor,
 				esp_prot_transforms[entry->esp_prot_transform]);
-
-		// store peer_anchor
-		entry->esp_peer_anchor = anchor;
 	} else
 	{
 		HIP_DEBUG("agreed on using esp hchain extension, but no anchor sent or error\n");

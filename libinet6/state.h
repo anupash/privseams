@@ -8,6 +8,7 @@
 #define _HIP_STATE
 
 #include "hashtable.h"
+#include "esp_prot_common.h"
 
 #define HIP_HIT_KNOWN 1
 #define HIP_HIT_ANON  2
@@ -324,9 +325,9 @@ struct hip_hadb_state
 	/** ESP extension protection transform */
 	uint8_t						 esp_prot_transform;
 	/** ESP extension protection local_anchor */
-	unsigned char *				 esp_local_anchor;
+	unsigned char				esp_local_anchor[MAX_HASH_LENGTH];
 	/** ESP extension protection peer_anchor */
-	unsigned char *				 esp_peer_anchor;
+	unsigned char				esp_peer_anchor[MAX_HASH_LENGTH];
 	/** Something to do with the birthday paradox.
 	    @todo Please clarify what this field is. */
 	uint64_t                     birthday;
