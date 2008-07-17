@@ -810,15 +810,13 @@ int hip_relay_write_config()
 	return err;
 }
 
-//////add by santtu
 /**
- * 
  * this relay full function is to use to relay package from i or r.
- * 
- * 
- * 
- * */
-
+ * @todo     Xiang! Please, add decent Doxygen comments, check the doxy syntax
+ *           from doc/HACKING. Stick to C-coding style using LINUX indendation.
+ *           No lines over 80 characters. No capital letters in funcion names
+ *           (C-style). Function commmends should be in header file.
+ */
 int hip_relay_forward_I(const hip_common_t *i1, const in6_addr_t *i1_saddr,
 			const in6_addr_t *i1_daddr, hip_relrec_t *rec,
 			const hip_portpair_t *i1_info,
@@ -938,7 +936,12 @@ int hip_relay_forward_I(const hip_common_t *i1, const in6_addr_t *i1_saddr,
 	return err;
 }
 
-
+/**
+ * @todo     Xiang! Please, add decent Doxygen comments, check the doxy syntax
+ *           from doc/HACKING. Stick to C-coding style using LINUX indendation.
+ *           No lines over 80 characters. No capital letters in funcion names
+ *           (C-style). Function commmends should be in header file.
+ */
 int hip_relay_handle_relay_to(struct hip_common * msg,
 			      int msg_type, 			      
 			      struct in6_addr *src_addr,
@@ -998,7 +1001,12 @@ int hip_relay_handle_relay_to(struct hip_common * msg,
 	return err;    
 }
 
-
+/**
+ * @todo     Xiang! Please, add decent Doxygen comments, check the doxy syntax
+ *           from doc/HACKING. Stick to C-coding style using LINUX indendation.
+ *           No lines over 80 characters. No capital letters in funcion names
+ *           (C-style). Function commmends should be in header file.
+ */
 int hip_relay_forward_response(const hip_common_t *r,
 			       const uint8_t type_hdr, 
 			       const in6_addr_t *r_saddr,
@@ -1066,6 +1074,10 @@ int hip_relay_forward_response(const hip_common_t *r,
  * function return -1 means error
  * return 0, means parameter not found
  * return 1, means parameter found and verified
+ * @todo     Xiang! Please, add decent Doxygen comments, check the doxy syntax
+ *           from doc/HACKING. Stick to C-coding style using LINUX indendation.
+ *           No lines over 80 characters. No capital letters in funcion names
+ *           (C-style). Function commmends should be in header file.
  * 
  */
 int hip_relay_handle_from(hip_common_t *source_msg,
@@ -1134,7 +1146,7 @@ int hip_relay_handle_from(hip_common_t *source_msg,
  * @todo     Xiang! Please, add decent Doxygen comments, check the doxy syntax
  *           from doc/HACKING. Stick to C-coding style using LINUX indendation.
  *           No lines over 80 characters. No capital letters in funcion names
- *           (C-style)
+ *           (C-style). Function commmends should be in header file.
  */
 int hip_relay_handle_relay_from(hip_common_t *source_msg,
 				in6_addr_t *relay_ip,
