@@ -35,16 +35,7 @@ int hip_for_each_locator_addr_item(
      
 	n_addrs = hip_get_locator_addr_item_count(locator);
 	HIP_IFEL((n_addrs < 0), -1, "Negative address count\n");
-	/**
-	   @todo Here we have wrong checking, because function  
-	   hip_get_locator_addr_item_count(locator) has already
-	   divided the length on sizeof(struct hip_locator_info_addr_item)
-	   hence we already have number of elements. Andrey
-	*/ 
-	/*  if (n_addrs % sizeof(struct hip_locator_info_addr_item))
-	    HIP_ERROR(addr item list len modulo not zero, (len=%d)\n",
-	    ntohs(locator->length));
-	*/
+
 	HIP_DEBUG("LOCATOR has %d address(es), loc param len=%d\n",
 		  n_addrs, hip_get_param_total_len(locator));
      
@@ -56,7 +47,7 @@ int hip_for_each_locator_addr_item(
 	for (i = 0; i < n_addrs; i++ ) {
 		HIP_IFEL(func(entry, locator_address_item, opaque, msg), -1,
 			 "Locator handler function returned error\n");
-		locator_address_item = hip_get_locator_item(locator_address_item,1);
+		locator_address_item = hip_get_locator_item(locator_address_item,i+1);
 	}
 //end modify     
      
@@ -646,7 +637,7 @@ int hip_update_finish_rekeying(hip_common_t *msg, hip_ha_t *entry,
 	    entry parameter --Abi */
 	entry->local_udp_port = entry->nat_mode ? HIP_NAT_UDP_PORT : 0;
 
-	err = hip_add_sa(&entry->preferred_address, &entry->local_address, hits,
+	err = entry->hadb_ipsec_func->hip_add_sa(&entry->preferred_address, &entry->local_address, hits,
 			 hitr,  &new_spi_in, esp_transform,
 			 (we_are_HITg ? &espkey_lg : &espkey_gl),
 			 (we_are_HITg ? &authkey_lg : &authkey_gl),
@@ -656,7 +647,7 @@ int hip_update_finish_rekeying(hip_common_t *msg, hip_ha_t *entry,
 	HIP_DEBUG("New outbound SA created with SPI=0x%x\n", new_spi_out);
 	HIP_DEBUG("Setting up new inbound SA, SPI=0x%x\n", new_spi_in);
 
-	err = hip_add_sa(&entry->local_address, &entry->preferred_address, hitr,
+	err = entry->hadb_ipsec_func->hip_add_sa(&entry->local_address, &entry->preferred_address, hitr,
 			 hits, &new_spi_out, esp_transform,
 			 (we_are_HITg ? &espkey_gl : &espkey_lg),
 			 (we_are_HITg ? &authkey_gl : &authkey_lg),
@@ -1648,7 +1639,7 @@ int hip_update_peer_preferred_address(hip_ha_t *entry,
 
 	entry->local_udp_port = entry->nat_mode ? HIP_NAT_UDP_PORT : 0;
 	
-	HIP_IFEL(hip_add_sa(&local_addr, &addr->address, &entry->hit_our,
+	HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(&local_addr, &addr->address, &entry->hit_our,
 			    &entry->hit_peer, &entry->default_spi_out,
 			    entry->esp_transform, &entry->esp_out,
 			    &entry->auth_out, 1, HIP_SPI_DIRECTION_OUT, 0, entry), -1,
@@ -1662,7 +1653,7 @@ int hip_update_peer_preferred_address(hip_ha_t *entry,
 		 "Setting up SP pair failed\n");
 #endif
 
-	HIP_IFEL(hip_add_sa(&addr->address, &local_addr,
+	HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(&addr->address, &local_addr,
 			    &entry->hit_peer, &entry->hit_our, 
 			    &spi_in, entry->esp_transform,
 			    &entry->esp_in, &entry->auth_in, 1, 
@@ -2048,7 +2039,7 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
 
      entry->local_udp_port = entry->nat_mode ? HIP_NAT_UDP_PORT : 0;
      
-     HIP_IFEL(hip_add_sa(&srcaddr, &destaddr, &entry->hit_our,
+     HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(&srcaddr, &destaddr, &entry->hit_our,
 			 &entry->hit_peer, &entry->default_spi_out,
 			 entry->esp_transform, &entry->esp_out,
 			 &entry->auth_out, 1, HIP_SPI_DIRECTION_OUT, 0, entry), -1, 
@@ -2068,7 +2059,7 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
 	      -1, "Setting up SP pair failed\n");
 #endif
 
-     HIP_IFEL(hip_add_sa(&destaddr, &srcaddr, 
+     HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(&destaddr, &srcaddr, 
 			 &entry->hit_peer, &entry->hit_our,
 			 &spi_in, entry->esp_transform,
 			 &entry->esp_in, &entry->auth_in, 1,
@@ -2626,7 +2617,7 @@ static int hip_update_get_all_valid(hip_ha_t *entry, void *op)
 		rk->array[rk->count] = entry;
 		rk->count++;
 	} else
-		HIP_DEBUG("skipping HA entry 0x%p (state=%s)\n",
+		_HIP_DEBUG("skipping HA entry 0x%p (state=%s)\n",
 			  entry, hip_state_str(entry->state));
      
 	return 0;
@@ -2680,6 +2671,7 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 				ipv6_addr_copy(local_addr, &addr_sin6);
 			}
 #endif
+                        HIP_DEBUG_HIT("ADDR_SIN6",&addr_sin6);
 			hip_send_update(rk.array[i], addr_list, addr_count,
 					ifindex, flags, is_add,
 					(struct sockaddr *) &addr_sin6);
@@ -2794,9 +2786,16 @@ out_err:
 	HIP_DEBUG("Peer learning: Adding of address failed\n");
 	return (-1);
 }
-//add by santtu
-int hip_update_locator_parameter(hip_ha_t *entry, 
-    	                struct hip_locator *locator, struct hip_esp_info *esp_info){
+
+
+/**
+ * handles locator parameter in msg and in entry.
+ * 
+ * 
+ * */
+int hip_handle_locator_parameter(hip_ha_t *entry,
+                                 struct hip_locator *loc,
+				 struct hip_esp_info *esp_info) {
 	uint32_t old_spi = 0, new_spi = 0, i, err = 0;
 	int zero = 0, n_addrs = 0, ii = 0;
 	int same_af = 0, local_af = 0, comp_af = 0, tmp_af = 0;
@@ -2806,16 +2805,16 @@ int hip_update_locator_parameter(hip_ha_t *entry,
 	struct hip_spi_out_item *spi_out;
 	struct hip_peer_addr_list_item *a, *tmp, addr;
 	struct netdev_address *n;
- 
-    if (hip_locator_status == SO_HIP_SET_LOCATOR_OFF) {
-    	HIP_DEBUG("stop updating locator if the locator mode is off\n");
-    	goto out_err;
-    }
- 
-	HIP_INFO_LOCATOR("santtu: let's update locator:", locator);
- 
-	entry->locator = locator;
- 
+	struct hip_locator *locator = NULL;
+
+	if ((locator = loc) == NULL) {
+		HIP_DEBUG("No locator as input\n");
+		locator = entry->locator;
+                HIP_DEBUG("Using entry->locator\n");
+	}
+
+	HIP_IFEL(!locator, -1, "No locator to handle\n");
+
 	old_spi = ntohl(esp_info->new_spi);
 	new_spi = ntohl(esp_info->new_spi);
 	HIP_DEBUG("LOCATOR SPI old=0x%x new=0x%x\n", old_spi, new_spi);
@@ -2924,31 +2923,140 @@ out_err:
 }
 
 /**
- * handles locator parameter in msg and in entry.
- * 
- * 
- * */
-int hip_handle_locator_parameter(hip_common_t *msg, hip_ha_t *entry,
-                                 struct hip_esp_info *esp_info) {
-	int err = 0;
-	struct hip_locator *locator = NULL;
-	
-	if (hip_locator_status == SO_HIP_SET_LOCATOR_OFF) 
-		goto out_err;
-	
-	HIP_DEBUG("%d    %d",hip_locator_status,SO_HIP_SET_LOCATOR_OFF);
-	
-        locator = hip_get_param(msg, HIP_PARAM_LOCATOR);
-        if (locator){   
-                HIP_IFEL(hip_update_locator_parameter(entry, 
-                                                      locator, esp_info),
-                         -1, "hip_handle_locator_parameter from msg failed\n");
-        }
-        else if (entry->locator){   
-                HIP_IFEL(hip_update_locator_parameter(entry, 
-                                                      entry->locator, esp_info),
-                         -1, "hip_handle_locator_parameter from entry failed\n");
-        }
-out_err:
-   	return err;
+ * Builds udp and raw locator items into locator list to msg
+ * this is the extension of hip_build_locators in output.c
+ * type2 locators are collected also
+ *
+ * @param msg          a pointer to hip_common to append the LOCATORS
+ * @return             len of LOCATOR2 on success, or negative error value on error
+ */
+int hip_build_locators(struct hip_common *msg) 
+{
+    int err = 0, i = 0, ii = 0;
+    struct netdev_address *n;
+    hip_ha_t *ha_n;
+    hip_list_t *item = NULL, *tmp = NULL;
+    struct hip_locator_info_addr_item2 *locs2 = NULL;
+    struct hip_locator_info_addr_item *locs1 = NULL;
+    int addr_count1 = 0,addr_count2 = 0 ;
+    int UDP_relay_count = 0;
+    
+    
+    //TODO count the number of UDP relay servers.
+    // check the control state of every hatb_state. 
+
+    if (address_count == 0) {
+	    HIP_DEBUG("Host has only one or no addresses no point "
+		      "in building LOCATOR2 parameters\n");
+	    goto out_err;
+    }
+
+
+    //TODO check out the count for UDP and hip raw.
+    addr_count1 = address_count;
+    // type 2 locator number is the 
+    /**wrong impemetation
+     *  hip_relht_size() is the size of relay client in server side*/
+    //addr_count2 = hip_relht_size();
+    //let's put 10 here for now. anyhow 10 additional type 2 addresses should be enough
+    addr_count2 = HIP_REFLEXIVE_LOCATOR_ITEM_AMOUNT_MAX;
+		
+    
+    
+    HIP_IFEL(!(locs1 = malloc(addr_count1 * 
+			      sizeof(struct hip_locator_info_addr_item))), 
+	     -1, "Malloc for LOCATORS type1 failed\n");
+    HIP_IFEL(!(locs2 = malloc(addr_count2 * 
+			      sizeof(struct hip_locator_info_addr_item2))), 
+                 -1, "Malloc for LOCATORS type2 failed\n");
+    
+    
+    memset(locs1,0,(addr_count1 * 
+		    sizeof(struct hip_locator_info_addr_item)));
+    
+    memset(locs2,0,(addr_count2 *  
+		    sizeof(struct hip_locator_info_addr_item2)));  
+    
+    HIP_DEBUG("there are %d type 1 locator item" , addr_count1);
+
+    list_for_each_safe(item, tmp, addresses, i) {
+            n = list_entry(item);
+            if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
+		    continue;
+            if (!IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
+		    memcpy(&locs1[ii].address, hip_cast_sa_addr(&n->addr), 
+			   sizeof(struct in6_addr));
+		    locs1[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
+		    locs1[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI;
+		    locs1[ii].locator_length = sizeof(struct in6_addr) / 4;
+		    locs1[ii].reserved = 0;
+		    HIP_DEBUG_HIT("Created one locator item: ", &locs1[ii].address);
+		    ii++;
+		    
+            }
+    }
+    i = 0; 
+    list_for_each_safe(item, tmp, addresses, i) {
+            n = list_entry(item);
+            if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
+		    continue;
+            if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
+		    memcpy(&locs1[ii].address, hip_cast_sa_addr(&n->addr), 
+			   sizeof(struct in6_addr));
+		    locs1[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
+		    locs1[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI;
+		    locs1[ii].locator_length = sizeof(struct in6_addr) / 4;
+		    locs1[ii].reserved = 0;
+		    HIP_DEBUG_HIT("Created one locator item: ", &locs1[ii].address);
+                    ii++;
+            }
+    }
+    
+    HIP_DEBUG("Looking for reflexive addresses\n");
+    ii = 0;             
+    i = 0;  
+    
+    list_for_each_safe(item, tmp, hadb_hit, i) {
+            ha_n = list_entry(item);
+            if (ii>= addr_count2)
+		    break;
+            _HIP_DEBUG_HIT("Looking for reflexive, prefered addres: ",
+                           &ha_n->preferred_address );
+            _HIP_DEBUG_HIT("Looking for reflexive, local addres: ",
+                           &ha_n->local_address );
+            _HIP_DEBUG("Looking for reflexive port: %d \n",
+                       ha_n->local_reflexive_udp_port);
+            _HIP_DEBUG_HIT("Looking for reflexive addr: ",
+                           &ha_n->local_reflexive_address);
+            _HIP_DEBUG("The entry address is %d \n", ha_n);
+            /* Check if this entry has reflexive port */
+            if(ha_n->local_reflexive_udp_port){
+		    memcpy(&locs2[ii].address, &ha_n->local_reflexive_address, 
+			   sizeof(struct in6_addr));
+		    locs2[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
+		    locs2[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_UDP;
+		    locs2[ii].locator_length = sizeof(struct in6_addr) / 4;
+		    locs2[ii].reserved = 0;
+		    // for IPv4 we add UDP information
+		    locs2[ii].port = htons(ha_n->local_reflexive_udp_port);
+                    locs2[ii].transport_protocol = 0;
+                    locs2[ii].kind = 0;
+                    locs2[ii].spi = 1;
+                    locs2[ii].priority = htonl(HIP_LOCATOR_LOCATOR_TYPE_REFLEXIVE_PRIORITY);
+		    HIP_DEBUG_HIT("Created one reflexive locator item: ", 
+                                  &locs1[ii].address);
+                    ii++;
+                    if (ii>= addr_count2)
+                            break;
+            }                        
+    }
+
+    HIP_DEBUG("hip_build_locators: found relay address account:%d \n", ii);
+    err = hip_build_param_locator2(msg, locs1,locs2, addr_count1, ii);
+
+ out_err:
+
+    if (locs1) free(locs1);
+    if (locs2) free(locs2);
+    return err;
 }

@@ -636,6 +636,4 @@ int hip_update_send_ack(hip_ha_t *entry, hip_common_t *msg,
  */
 int hip_peer_learning(struct hip_esp_info * esp_info, hip_ha_t *entry, in6_addr_t * src_ip);
 
-int hip_handle_locator_parameter(hip_common_t *, hip_ha_t *,struct hip_esp_info *);
-
 #endif /* HIP_UPDATE_H */

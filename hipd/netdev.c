@@ -147,6 +147,8 @@ int exists_address_in_list(struct sockaddr *addr, int ifindex)
 	struct netdev_address *n;
 	hip_list_t *tmp, *t;
 	int c;
+        struct in6_addr *in6;
+        struct in_addr *in;
 
 	list_for_each_safe(tmp, t, addresses, c) {
 		int mapped = 0;
@@ -157,23 +159,22 @@ int exists_address_in_list(struct sockaddr *addr, int ifindex)
 		mapped = IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr));
 		HIP_DEBUG("mapped=%d\n", mapped);
 		
-		if (mapped) //|| addr->sa_family == AF_INET) 
-		{
-			struct in6_addr *in6 = (struct in6_addr * ) hip_cast_sa_addr(&n->addr);
-			struct in_addr *in = (struct in_addr *) hip_cast_sa_addr(addr);
+		if (mapped) { //|| addr->sa_family == AF_INET
+			in6 = (struct in6_addr * )hip_cast_sa_addr(&n->addr);
+			in = (struct in_addr *) hip_cast_sa_addr(addr);
 			addr_match = IPV6_EQ_IPV4(in6, in);
 			family_match = 1;
 		} else if (!mapped && addr->sa_family == AF_INET6) {
-			addr_match = !memcmp(hip_cast_sa_addr(&n->addr), hip_cast_sa_addr(addr),
+			addr_match = !memcmp(hip_cast_sa_addr(&n->addr), 
+                                             hip_cast_sa_addr(addr),
 					     hip_sa_addr_len(&n->addr));
 			family_match = (n->addr.ss_family == addr->sa_family);
-		}
-		else { // addr->sa_family == AF_INET
-			// Hope never happen...If happens we need to add Mapping
-			HIP_DEBUG("Hope never happen...If happens we need to add Mapping\n");
+		} else { // addr->sa_family == AF_INET
+			HIP_DEBUG("Addr given was not IPv6 nor IPv4\n");
 		}
 		
-		HIP_DEBUG("n->addr.ss_family=%d, addr->sa_family=%d, n->if_index=%d, ifindex=%d\n",
+		HIP_DEBUG("n->addr.ss_family=%d, addr->sa_family=%d, "
+                          "n->if_index=%d, ifindex=%d\n",
 			  n->addr.ss_family, addr->sa_family, n->if_index, ifindex);
 		if (n->addr.ss_family == AF_INET6) {
 			HIP_DEBUG_IN6ADDR("addr6", hip_cast_sa_addr(&n->addr));
@@ -947,16 +948,18 @@ int hip_netdev_trigger_bex_msg(struct hip_common *msg) {
 
 int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 {
+        int err = 0, l = 0, is_add, i, ii;
 	struct ifinfomsg *ifinfo; /* link layer specific message */
 	struct ifaddrmsg *ifa; /* interface address message */
 	struct rtattr *rta = NULL, *tb[IFA_MAX+1];
-	int l = 0, is_add, i, ii;
 	struct sockaddr_storage ss_addr;
 	struct sockaddr *addr;
+        struct hip_locator *loc;
 	struct hip_locator_info_addr_item *locators;
 	struct netdev_address *n;
 	hip_list_t *item, *tmp;
 	int pre_if_address_count;
+        struct hip_common * locator_msg;
 
 	addr = (struct sockaddr*) &ss_addr;
 
@@ -1023,6 +1026,13 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 			HIP_DEBUG("Address event=%s ifindex=%d\n",
 				  is_add ? "add" : "del", ifa->ifa_index);
 
+                        if (addr->sa_family == AF_INET)
+                                HIP_DEBUG_LSI("Addr:", hip_cast_sa_addr(addr));
+                        else if (addr->sa_family == AF_INET6)
+                                HIP_DEBUG_HIT("Addr:", hip_cast_sa_addr(addr));
+                        else
+                                HIP_DEBUG("Unknown addr family in addr\n");
+
 			/* update our address list */
 			pre_if_address_count = count_if_addresses(ifa->ifa_index);
 			HIP_DEBUG("%d addr(s) in ifindex %d before add/del\n",
@@ -1061,7 +1071,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 				hip_send_update_all(NULL, 0, ifa->ifa_index,
 						    SEND_UPDATE_LOCATOR, is_add, addr);
 				
-				goto out;
+				goto out_err;
 			}
 			else if (i == 0)
 			{
@@ -1069,71 +1079,25 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 				goto skip_readdr;
 			}
 
-			locators = (struct hip_locator_info_addr_item *)
-				malloc(i * sizeof(struct hip_locator_info_addr_item));
-			if (locators)
-			{
-				i = 0;
-                                /* BUG ID 392 thats why v6 first and v4 after */
-				list_for_each_safe(item, tmp, addresses, ii)
-				{
-					n = list_entry(item);
-					/* advertise only the addresses which are in
-					   the same interface which caused the event */
-					if (n->if_index != ifa->ifa_index)
-						continue;
-                                        if (!IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
-                                            memcpy(&locators[i].address, hip_cast_sa_addr(&n->addr),
-                                                   hip_sa_addr_len(&n->addr));
-                                            /* FIXME: Is this ok? (tkoponen), for boeing it is*/
-                                            locators[i].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
-                                            locators[i].locator_type = HIP_LOCATOR_LOCATOR_TYPE_IPV6;
-                                            locators[i].locator_length = sizeof(struct in6_addr) / 4;
-                                            
-                                            /* For testing preferred address */
-                                            //locators[i].reserved =
-                                            //	i == 0 ? htonl(1 << 7) : 0;
-                                            
-                                            locators[i].lifetime = 0;
-                                            i++;
-                                        }
-				}
-                                ii = 0;
-                                item = NULL;
-                                tmp = NULL;
-				list_for_each_safe(item, tmp, addresses, ii)
-				{
-					n = list_entry(item);
-					/* advertise only the addresses which are in
-					   the same interface which caused the event */
-					if (n->if_index != ifa->ifa_index)
-						continue;
-
-                                        if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
-                                            memcpy(&locators[i].address, hip_cast_sa_addr(&n->addr),
-                                                   hip_sa_addr_len(&n->addr));
-                                            /* FIXME: Is this ok? (tkoponen), for boeing it is*/
-                                            locators[i].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
-                                            locators[i].locator_type = HIP_LOCATOR_LOCATOR_TYPE_IPV6;
-                                            locators[i].locator_length = sizeof(struct in6_addr) / 4;
-
-                                            /* For testing preferred address */
-                                            //locators[i].reserved =
-                                            //	i == 0 ? htonl(1 << 7) : 0;
-                                            
-                                            locators[i].lifetime = 0;
-                                            i++;
-                                        }
-				}
-				HIP_DEBUG("UPDATE to be sent contains %i addr(s)\n", i);
-				hip_send_update_all(locators, i,
-						    ifa->ifa_index,
-						    SEND_UPDATE_LOCATOR, is_add, addr);
-                                if (hip_locator_status == SO_HIP_SET_LOCATOR_ON)
-                                    hip_recreate_all_precreated_r1_packets();    
-				free(locators);
-				break;
-			}
+                        /* Locator_msg is just a container for building */
+                        locator_msg = malloc(HIP_MAX_PACKET);
+                        HIP_IFEL(!locator_msg, -1, "Failed to malloc locator_msg\n");
+                        hip_msg_init(locator_msg);                                
+                        HIP_IFEL(hip_build_locators(locator_msg), -1, 
+                                 "Failed to build locators\n");
+                        HIP_IFEL(hip_build_user_hdr(locator_msg, 
+                                                    SO_HIP_SET_LOCATOR_ON, 0), -1,
+                                 "Failed to add user header\n");
+                        loc = hip_get_param_contents(locator_msg, HIP_PARAM_LOCATOR);
+                        locators = hip_get_locator_first_addr_item(loc);
+                        HIP_DEBUG("UPDATE to be sent contains %i addr(s)\n", i);
+                        hip_send_update_all(locators, i,
+                                            ifa->ifa_index,
+                                            SEND_UPDATE_LOCATOR, is_add, addr);
+                        if (hip_locator_status == SO_HIP_SET_LOCATOR_ON)
+                                hip_recreate_all_precreated_r1_packets();    
+                        if (locator_msg) free(locator_msg);
+                        break;
 		case XFRMGRP_ACQUIRE:
 			/* XX TODO  does this ever happen? */
 			HIP_DEBUG("\n");
@@ -1191,7 +1155,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 		}
 	}
 
- out:
+ out_err:
 
 	return 0;
 }
