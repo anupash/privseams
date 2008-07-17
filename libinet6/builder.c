@@ -581,7 +581,7 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
 			//add by santtu
 			HIP_PARAM_REG_FROM,
 			//end add
-
+			HIP_PARAM_ESP_PROT_TRANSFORM,
 			HIP_PARAM_ESP_PROT_ANCHOR
 		};
 	hip_tlv_type_t type = hip_get_param_type(param);

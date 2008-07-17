@@ -49,6 +49,8 @@ int esp_prot_add_sa(hip_ha_t *entry, struct hip_common *msg, int direction)
 	unsigned char *hchain_anchor = NULL;
 	int err = 0;
 
+	HIP_DEBUG("direction: %i\n", direction);
+
 	HIP_DEBUG("esp protection extension transform is %u \n", entry->esp_prot_transform);
 	HIP_IFEL(hip_build_param_contents(msg, (void *)&entry->esp_prot_transform,
 			HIP_PARAM_UINT, sizeof(uint8_t)), -1,
@@ -61,11 +63,11 @@ int esp_prot_add_sa(hip_ha_t *entry, struct hip_common *msg, int direction)
 		if (direction == HIP_SPI_DIRECTION_IN)
 		{
 			HIP_IFEL(!(hchain_anchor = entry->esp_peer_anchor), -1,
-					"hchain anchor expected\n");
+					"hchain anchor expected, but not present\n");
 		} else
 		{
 			HIP_IFEL(!(hchain_anchor = entry->esp_local_anchor), -1,
-					"hchain anchor expected\n");
+					"hchain anchor expected, but not present\n");
 		}
 
 		HIP_HEXDUMP("the esp protection anchor is ", hchain_anchor,
