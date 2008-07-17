@@ -606,7 +606,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 
 	HIP_DEBUG("mask=0x%x\n", mask);
 	/** @todo TH: hip_build_network_hdr has to be replaced with an
-	    apprporiate function pointer */
+	    appropriate function pointer */
 	HIP_DEBUG_HIT("src_hit used to build r1 network header", src_hit);
  	hip_build_network_hdr(msg, HIP_R1, mask, src_hit, NULL);
 

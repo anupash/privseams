@@ -834,7 +834,7 @@ int hip_handle_user_msg(struct hip_common *msg,
 		   the REG_INFO parameters here. */
 		err = hip_recreate_all_precreated_r1_packets();
 		break;
-#endif
+#endif /* CONFIG_HIP_RVS */
 	case SO_HIP_GET_HITS:		
 		/** 
 		 * @todo passing argument 1 of 'hip_for_each_hi' from incompatible
@@ -927,6 +927,10 @@ int hip_handle_user_msg(struct hip_common *msg,
 		HIP_DUMP_MSG(msg);
 		err = hip_userspace_ipsec_activate(msg);
 		break;
+	case SO_HIP_RESTART_DUMMY_INTERFACE:
+		set_up_device(HIP_HIT_DEV, 0);
+		err = set_up_device(HIP_HIT_DEV, 1);
+		break;
 	case SO_HIP_ESP_PROT_EXT_TRANSFORM:
 		HIP_DUMP_MSG(msg);
 		err = hip_esp_protection_extension_transform(msg);
@@ -987,6 +991,7 @@ int hip_handle_user_msg(struct hip_common *msg,
 	      		dst_hit = &entry->hit_peer;
 	  	}
 	  	break;
+
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;

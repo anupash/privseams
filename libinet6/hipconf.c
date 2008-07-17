@@ -31,7 +31,8 @@ const char *hipconf_usage =
 "\treinit service rvs|hiprelay\n"
 "Client side:\n\tadd rvs|hiprelay <hit> <ipv6> <lifetime in seconds>\n"
 "del hi <hit>\n"
-"get hi default\n"
+"del hi all\n"
+"get hi default|all\n"
 #ifdef CONFIG_HIP_ICOOKIE
 "get|set|inc|dec|new puzzle all|<hit>\n"
 #else
@@ -44,7 +45,9 @@ const char *hipconf_usage =
 //end modify
 "rst all|<peer_hit>\n"
 "new|add hi anon|pub rsa|dsa filebasename\n"
+"new hi anon|pub rsa|dsa filebasename keylen\n"
 "new|add hi default (HI must be created as root)\n"
+"new hi default rsa_keybits dsa_keybits\n"
 "load config default\n"
 "handoff mode lazy|active\n"
 "run normal|opp <binary>\n"
@@ -476,13 +479,9 @@ int hip_conf_handle_hiprelay(hip_common_t *msg, int action,
 int hip_conf_handle_hi(hip_common_t *msg, int action, const char *opt[],
 		       int optc)
 {
-	int err = 0, anon = 0, use_default = 0, euid = -1;
-     
-     /* Get the effective user ID. This has to be zero (root), because root owns
-	the key files under /etc/hip/. */
-     euid = geteuid();
-     HIP_IFEL((euid != 0 && action == ACTION_SET), -1,
-	      "New default HI must be created as root.\n");
+	int err = 0, anon = 0, use_default = 0, rsa_key_bits = 0, 
+	dsa_key_bits = 0;
+	char *fmt = NULL, *file = NULL;
 
      _HIP_DEBUG("action=%d optc=%d\n", action, optc);
 
@@ -490,16 +489,13 @@ int hip_conf_handle_hi(hip_common_t *msg, int action, const char *opt[],
 
      if (action == ACTION_DEL)
 	  return hip_conf_handle_hi_del(msg, action, opt, optc);
-     else if (action == ACTION_GET)
-	  return hip_conf_handle_hi_get(msg, action, opt, optc);
+     if (action == ACTION_GET)
+     	  return hip_get_hits(msg, opt, optc);
+	  //return hip_conf_handle_hi_get(msg, action, opt, optc);
 
      /* Check min/max amount of args */
-     if (optc < 1 || optc > 3) {
-	  HIP_ERROR("Too few arguments\n");
-	  err = -EINVAL;
-	  goto out_err;
-     }
-  
+     HIP_IFEL((optc < 1 || optc > 4), -EINVAL, "Invalid number of arguments\n");
+
      if(!strcmp(opt[OPT_HI_TYPE], "pub")) {
 	  anon = 0;
      } else if(!strcmp(opt[OPT_HI_TYPE], "anon")) {
@@ -510,26 +506,61 @@ int hip_conf_handle_hi(hip_common_t *msg, int action, const char *opt[],
 	  HIP_ERROR("Bad hi type (not public, anon or default)\n");
 	  err = -EINVAL;
 	  goto out_err;
-     }  
-    
-     if (use_default) {
-	  if (optc != 1) {
-	       HIP_ERROR("Wrong number of args for default\n");
-	       err = -EINVAL;
-	       goto out_err;
-	  }
-     } else {
-	  if (optc != 3) {
-	       HIP_ERROR("Wrong number of args\n");
-	       err = -EINVAL;
-	       goto out_err;
-	  }
      }
 
-     err = hip_serialize_host_id_action(msg, action, anon, use_default,
-					opt[OPT_HI_FMT], opt[OPT_HI_FILE]);
+     if (use_default && action == ACTION_ADD) {
+	/* Add default keys in three steps: dsa, rsa anon, rsa pub.
+	   Necessary for large keys. */
 
-     HIP_INFO("\nNew default HI is now created.\nYou must restart hipd to make "\
+	if (err = hip_serialize_host_id_action(msg, ACTION_ADD, 0, 1,
+							   "dsa", NULL, 0, 0))
+	    goto out_err;
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "Sending msg failed.\n");
+
+	hip_msg_init(msg);
+	if (err = hip_serialize_host_id_action(msg, ACTION_ADD, 1, 1,
+							   "rsa", NULL, 0, 0))
+	    goto out_err;
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "Sending msg failed.\n");
+
+	hip_msg_init(msg);
+	err = hip_serialize_host_id_action(msg, ACTION_ADD, 0, 1,
+							   "rsa", NULL, 0, 0);
+
+	goto out_err;
+     }
+
+     if (use_default) {
+
+	  if (optc == 3) {
+	       rsa_key_bits = atoi(opt[1]);
+	       dsa_key_bits = atoi(opt[2]);
+	  } else {
+	       HIP_IFEL(optc != 1, -EINVAL, "Invalid number of arguments\n");
+	  }
+
+     } else {
+
+	  if (optc == 4)
+	       rsa_key_bits = dsa_key_bits = atoi(opt[OPT_HI_KEYLEN]);
+	  else
+	       HIP_IFEL(optc != 3, -EINVAL, "Invalid number of arguments\n");
+
+	  fmt = opt[OPT_HI_FMT];
+	  file = opt[OPT_HI_FILE];
+     }
+
+     if (rsa_key_bits < 384 || rsa_key_bits > HIP_MAX_RSA_KEY_LEN ||
+							rsa_key_bits % 64 != 0)
+	 rsa_key_bits = RSA_KEY_DEFAULT_BITS;
+     if (dsa_key_bits < 512 || dsa_key_bits > HIP_MAX_DSA_KEY_LEN ||
+							dsa_key_bits % 64 != 0)
+	 dsa_key_bits = DSA_KEY_DEFAULT_BITS;
+
+     err = hip_serialize_host_id_action(msg, action, anon, use_default,
+					fmt, file, rsa_key_bits, dsa_key_bits);
+
+    //HIP_INFO("\nNew default HI is now created.\nYou must restart hipd to make "\
 	      "the changes effective.\n\n");
 
  out_err:
@@ -623,49 +654,77 @@ int hip_conf_handle_map(hip_common_t *msg, int action, const char *opt[],
 int hip_conf_handle_hi_del(hip_common_t *msg, int action,
 			   const char *opt[], int optc) 
 {
-     int err;
+     int err = 0;
      int ret;
      in6_addr_t hit;
- 	
-     if (optc != 1) {
-	  HIP_ERROR("Missing arguments\n");
-	  err = -EINVAL;
-	  goto out;
-     }
- 	 	
+
+     HIP_IFEL(optc != 1, -EINVAL, "Invalid number of arguments\n");
+
+     if (!strcmp(opt[0], "all"))
+	return hip_conf_handle_hi_del_all(msg);
+
      ret = inet_pton(AF_INET6, opt[0], &hit);
-     if (ret < 0 && errno == EAFNOSUPPORT)
-     {
-	  HIP_PERROR("inet_pton: not a valid address family\n");
-	  err = -EAFNOSUPPORT;
-	  goto out;
-     } else if (ret == 0)
-     {
-	  HIP_ERROR("inet_pton: %s: not a valid network address\n", opt[0]);
-	  err = -EINVAL;
-	  goto out;
-     }
- 	
-     HIP_HEXDUMP("HIT to delete: ", &hit,
-		 sizeof(in6_addr_t));
- 	
-     err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
-				    sizeof(in6_addr_t));
-     if (err)
-     {
+     HIP_IFEL((ret < 0 && errno == EAFNOSUPPORT), -EAFNOSUPPORT,
+				    "inet_pton: not a valid address family\n");
+     HIP_IFEL((ret == 0), -EINVAL, 
+		       "inet_pton: %s: not a valid network address\n", opt[0]);
+
+     HIP_HEXDUMP("HIT to delete: ", &hit, sizeof(in6_addr_t));
+
+     if (err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
+				    sizeof(in6_addr_t))) {
 	  HIP_ERROR("build param HIT failed: %s\n", strerror(err));
-	  goto out;
+	  goto out_err;
      }
- 	
-     err = hip_build_user_hdr(msg, SO_HIP_DEL_LOCAL_HI, 0);
-     if (err)
-     {
+
+     if (err = hip_build_user_hdr(msg, SO_HIP_DEL_LOCAL_HI, 0)) {
 	  HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
-	  goto out;
+	  goto out_err;
      }
- 	
- out:
+
+ out_err:
      return err;
+}
+
+int hip_conf_handle_hi_del_all(hip_common_t *msg)
+{
+    int err = 0;
+    struct hip_tlv_common *param = NULL;
+    struct endpoint_hip *endp;
+    hip_common_t *msg_tmp = NULL;
+
+    msg_tmp = hip_msg_alloc();
+    HIP_IFEL(!msg_tmp, -ENOMEM, "Malloc for msg_tmp failed\n");
+
+    HIP_IFEL(hip_build_user_hdr(msg_tmp, SO_HIP_GET_HITS, 0),
+				  -1, "Failed to build user message header\n");
+    HIP_IFEL(hip_send_recv_daemon_info(msg_tmp), -1, "Sending msg failed.\n");
+
+    while((param = hip_get_next_param(msg_tmp, param)) != NULL) {
+
+	endp = (struct endpoint_hip *)hip_get_param_contents_direct(param);
+	HIP_IFEL(hip_build_param_contents(msg, (void *) &endp->id.hit, 
+					    HIP_PARAM_HIT, sizeof(in6_addr_t)),
+					    -1, "Failed to build HIT param\n");
+
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEL_LOCAL_HI, 0),
+-				  -1, "Failed to build user message header\n");
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "Sending msg failed.\n");
+
+	hip_msg_init(msg);
+
+    }
+
+    /*FIXME Deleting HITs from the interface isn't working, so we restart it */
+    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_RESTART_DUMMY_INTERFACE, 0),
+				-1, "Failed to build message header\n");
+
+    HIP_INFO("All HIs deleted.\n");
+
+  out_err:
+    if (msg_tmp)
+	free(msg_tmp);
+    return err;
 }
 
 /**
@@ -1444,10 +1503,10 @@ int hip_conf_handle_run_normal(hip_common_t *msg, int action,
 
 int hip_do_hipconf(int argc, char *argv[], int send_only)
 {
-     int err = 0, type_arg = 0, i = 0;
-     long int action = 0, type = 0, hiparg = 0;
+     int err = 0, type_arg = 0;
+     long int action = 0, type = 0;
      hip_common_t *msg = NULL;
-     char *text = NULL;
+     //char *text = NULL;
      
      /* Check that we have at least one command line argument. */
      HIP_IFEL((argc < 2), -1, "Invalid arguments.\n\n%s usage:\n%s\n",
@@ -1457,13 +1516,13 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
      action = hip_conf_get_action(argv[1]);
      HIP_IFEL((action == -1), -1,
 	      "Invalid action argument '%s'\n", argv[1]);
-     
-     /* Check that we have at least the minimum number of arguments
+
+     /* Check that we have at least the minumum number of arguments
 	for the given action. */
      HIP_IFEL((argc < hip_conf_check_action_argc(action) + 2), -1,
 	      "Not enough arguments given for the action '%s'\n",
 	      argv[1]);
-     
+
      /* Is this redundant? What does it do? -Lauri 19.03.2008 19:46. */
      HIP_IFEL(((type_arg = hip_conf_get_type_arg(action)) < 0), -1,
 	      "Could not parse type\n");
@@ -1471,7 +1530,7 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
      type = hip_conf_get_type(argv[type_arg],argv);
      HIP_IFEL((type <= 0 || type >= TYPE_MAX), -1,
 	      "Invalid type argument '%s'\n", argv[type_arg]);
-     
+
      /* Get the type argument for the given action. */
      HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed.\n");
      memset(msg, 0, HIP_MAX_PACKET);
@@ -1480,7 +1539,7 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
 	array at index "type" with given commandline arguments. 
 	The functions build a hip_common message. */
      if (action == ACTION_GET)
-	     err = hip_get_all_hits(msg,argv);
+	     err = hip_get_hits(msg,argv);
      if (argc == 3)
 	  err = (*action_handler[type])(msg, action, (const char **)&argv[2], argc - 3);
      else
@@ -1494,7 +1553,7 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
      /* hipconf new hi does not involve any messages to hipd */
      if (hip_get_msg_type(msg) == 0)
 	  goto out_err;
-	
+
      /* Tell hip daemon, that this message is from agent. */
      /* if (from_agent)
 	{
@@ -1586,64 +1645,64 @@ int hip_conf_handle_handoff(hip_common_t *msg, int action,const char *opt[], int
      return err;
 }
 
-
-int hip_get_all_hits(hip_common_t *msg,char *argv[])
-{	
-     struct hip_tlv_common *current_param = NULL;
-     struct endpoint_hip *endp = NULL;
-     int err = 0;
-     struct sockaddr_in6 addr;
-     struct in6_addr *defhit;
-     struct in_addr *deflsi;
-     struct hip_hadb_user_info_state *ha;
+int hip_get_hits(hip_common_t *msg, char *opt[], int optc)
+{
+    struct hip_tlv_common *current_param = NULL;
+    struct endpoint_hip *endp = NULL;
+    int err=0;
+    //struct sockaddr_in6 addr;
+    in6_addr_t *defhit;
+    struct in_addr *deflsi;
+    //struct hip_hadb_user_info_state *ha;
      hip_tlv_type_t param_type;
-	
-     if (strcmp(argv[1], "get") == 0)
-     {
-	
-	  if ((strcmp(argv[3],"all") == 0) && (strcmp(argv[2],"hi") == 0))
-	  {
-	       HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HITS,0),-1, "Fail to get hits");
-	       hip_send_recv_daemon_info(msg);
-		
-	       while((current_param = hip_get_next_param(msg, current_param)) != NULL)
-	       {
-		    endp = (struct endpoint_hip *)hip_get_param_contents_direct(current_param);
-		    if (strcmp(argv[3], "all") == 0)
-		    {
-			 HIP_INFO("hi is %s ",endp->flags == HIP_ENDPOINT_FLAG_HIT ? "anonymous" : "public");
-			 HIP_INFO("%s",endp->algo == HIP_HI_DSA ? "dsa" : "rsa");
-			 HIP_INFO_HIT("\n",&endp->id.hit);
-		    }
-				
-	       }
-	  }
-	  else if (strcmp(argv[3], "default") == 0)
-	  {
-	       HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEFAULT_HIT,0),-1, "Fail to get hits");
-	       hip_send_recv_daemon_info(msg);
-	
-	       while((current_param = hip_get_next_param(msg, current_param)) != NULL)
-	       {
-		    param_type = hip_get_param_type(current_param);
 
-		    if (param_type == HIP_PARAM_HIT){
-		           defhit = (struct in6_addr *)hip_get_param_contents_direct(current_param);
-			   set_hit_prefix(defhit);
-			   HIP_INFO_HIT("default hi is ", defhit);
-		    }
-		    else if (param_type == HIP_PARAM_LSI){
-		           deflsi = (struct in_addr *)hip_get_param_contents_direct(current_param);
-			   HIP_DEBUG_LSI("default lsi is ", deflsi);
-		    }
-	       }
-	  }
-     }
+    HIP_IFEL(optc != 1, -EINVAL, "Invalid number of arguments.\n");
+
+    if (!strcmp(opt[0], "all")) {
+
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HITS, 0), -1, "Building header failed\n");
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "Sending msg failed\n");
+
+	while((current_param = hip_get_next_param(msg, current_param)) != NULL) {
+	    endp = (struct endpoint_hip *)hip_get_param_contents_direct(current_param);
+	    HIP_INFO("hi is %s ", endp->flags == HIP_ENDPOINT_FLAG_HIT ? "anonymous" : "public");
+	    HIP_INFO("%s", endp->algo == HIP_HI_DSA ? "dsa" : "rsa");
+	    HIP_INFO_HIT("\n", &endp->id.hit);
+	}
+
+	HIP_INFO("All HITs printed.\n");
+
+    } else if (!strcmp(opt[0], "default")) {
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEFAULT_HIT, 0), -1, "Building header failed\n");
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "Sending msg failed\n");
+
+	while((current_param = hip_get_next_param(msg, current_param)) != NULL)
+	{
+		param_type = hip_get_param_type(current_param);
+		
+		if (param_type == HIP_PARAM_HIT){
+			defhit = (struct in6_addr *)hip_get_param_contents_direct(current_param);
+			set_hit_prefix(defhit);
+			HIP_INFO_HIT("default hi is ", defhit);
+		}
+		else if (param_type == HIP_PARAM_LSI){
+			deflsi = (struct in_addr *)hip_get_param_contents_direct(current_param);
+			HIP_DEBUG_LSI("default lsi is ", deflsi);
+		}
+	}
+    } else {
+	HIP_ERROR("Invalid argument. Specify default or all.\n");
+        err = -EINVAL;
+	goto out_err;
+    }
+
+    /* Clear message so do_hipconf() doesn't send it again */
+    hip_msg_init(msg);
 
  out_err:
      return err;
-	
 }
+
 
 /**
  * hip_append_pathtolib: Creates the string intended to set the 

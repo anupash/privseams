@@ -529,42 +529,59 @@ int hip_init_host_ids()
 	   a minor overhead, but as a result we can reuse the code
 	   with hipconf. */
 
-	HIP_IFE((!(user_msg = hip_msg_alloc())), -1);
-		
+	HIP_IFE(!(user_msg = hip_msg_alloc()), -1);
+
 	/* Create default keys if necessary. */
 
-	if (stat(DEFAULT_CONFIG_DIR "/" DEFAULT_HOST_RSA_KEY_FILE_BASE DEFAULT_PUB_HI_FILE_NAME_SUFFIX, &status) && errno == ENOENT)
-	{
-		hip_msg_init(user_msg);
-		err = hip_serialize_host_id_action(user_msg,
-						   ACTION_NEW, 0, 1,
-						   NULL, NULL);
-		if (err)
-		{
-			err = 1;
-			HIP_ERROR("Failed to create keys to %s\n",
-				  DEFAULT_CONFIG_DIR);
-			goto out_err;
-		}
+	if (stat(DEFAULT_CONFIG_DIR "/" DEFAULT_HOST_RSA_KEY_FILE_BASE DEFAULT_PUB_HI_FILE_NAME_SUFFIX, &status) && errno == ENOENT) {
+		//hip_msg_init(user_msg); already called by hip_msg_alloc()
+
+	    HIP_IFEL(hip_serialize_host_id_action(user_msg, ACTION_NEW, 0, 1,
+			NULL, NULL, RSA_KEY_DEFAULT_BITS, DSA_KEY_DEFAULT_BITS),
+			1, "Failed to create keys to %s\n", DEFAULT_CONFIG_DIR);
 	}
 
         /* Retrieve the keys to hipd */
+	/* Three steps because multiple large keys will not fit in the same message */
+
+	/* dsa anon and pub */
 	hip_msg_init(user_msg);
-	err = hip_serialize_host_id_action(user_msg, ACTION_ADD, 0, 1, NULL, NULL);
-	if (err)
-	{
-		HIP_ERROR("Could not load default keys\n");
+	if (err = hip_serialize_host_id_action(user_msg, ACTION_ADD, 
+						0, 1, "dsa", NULL, 0, 0)) {
+		HIP_ERROR("Could not load default keys (DSA)\n");
 		goto out_err;
 	}
-	
-	err = hip_handle_add_local_hi(user_msg);
-
-	if (err)
-	{
-		HIP_ERROR("Adding of keys failed\n");
+	if (err = hip_handle_add_local_hi(user_msg)) {
+		HIP_ERROR("Adding of keys failed (DSA)\n");
 		goto out_err;
 	}
 
+	/* rsa anon */
+	hip_msg_init(user_msg);
+	if (err = hip_serialize_host_id_action(user_msg, ACTION_ADD, 
+						1, 1, "rsa", NULL, 0, 0)) {
+		HIP_ERROR("Could not load default keys (RSA anon)\n");
+		goto out_err;
+	}
+	if (err = hip_handle_add_local_hi(user_msg)) {
+		HIP_ERROR("Adding of keys failed (RSA anon)\n");
+		goto out_err;
+	}
+
+	/* rsa pub */
+	hip_msg_init(user_msg);
+	if (err = hip_serialize_host_id_action(user_msg, ACTION_ADD,
+						0, 1, "rsa", NULL, 0, 0)) {
+		HIP_ERROR("Could not load default keys (RSA pub)\n");
+		goto out_err;
+	}
+
+	if (err = hip_handle_add_local_hi(user_msg)) {
+		HIP_ERROR("Adding of keys failed (RSA pub)\n");
+		goto out_err;
+	}
+
+	HIP_DEBUG("Keys added\n");
 	hip_get_default_hit(&default_hit);
 	hip_get_default_lsi(&default_lsi);
 
