@@ -2012,7 +2012,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		}
 	} else {
 		//sa not created, but spi must be created
-		get_random_bytes(&spi_in, sizeof(uint32_t));
+		//get_random_bytes(&spi_in, sizeof(uint32_t));
 	}
 //end modify
 	/** @todo Check -EAGAIN */
