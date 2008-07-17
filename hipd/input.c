@@ -1644,6 +1644,43 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 //end add
 
 
+#ifdef CONFIG_HIP_BLIND
+	if (hip_blind_get_status()) {
+	   err = entry->hadb_ipsec_func->hip_add_sa(i2_daddr, i2_saddr,
+			   &entry->hit_our, &entry->hit_peer,
+			   &spi_out, esp_tfm,
+			   &ctx->esp_out, &ctx->auth_out,
+			   1, HIP_SPI_DIRECTION_OUT, 0, entry);
+	}
+#endif
+
+//moved from hip_handle_i2
+//modified by santtu
+	/**nat_control is 0 means we use normal mode to create sa*/
+	if (entry->nat_control == 0) {
+		if (!hip_blind_get_status()) {
+		  err = entry->hadb_ipsec_func->hip_add_sa(i2_daddr, i2_saddr,
+				   &ctx->input->hitr, &ctx->input->hits,
+				   &entry->default_spi_out, entry->esp_transform,
+				   &ctx->esp_out, &ctx->auth_out,
+				   1, HIP_SPI_DIRECTION_OUT, 0, entry);
+		}
+		if (err) {
+			HIP_ERROR("Failed to setup outbound SA with SPI = %d.\n",
+					entry->default_spi_out);
+
+			/* delete all IPsec related SPD/SA for this entry*/
+			hip_hadb_delete_inbound_spi(entry, 0);
+			hip_hadb_delete_outbound_spi(entry, 0);
+			goto out_err;
+		}
+	}else{
+		HIP_DEBUG("ICE engine will be used, no sa created here\n");
+	}
+//end modify
+	/* @todo Check if err = -EAGAIN... */
+	HIP_DEBUG("Set up outbound IPsec SA, SPI=0x%x\n", entry->default_spi_out);
+// end move
 
 
 	err = entry->hadb_xmit_func->hip_send_pkt(i2_daddr, i2_saddr,
@@ -2158,6 +2195,8 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	spi_out = ntohl(esp_info->new_spi);
 	HIP_DEBUG("Setting up outbound IPsec SA, SPI=0x%x\n", spi_out);
 
+// moved to hip_create_r2
+#if 0
 #ifdef CONFIG_HIP_BLIND
 	if (use_blind) {
 	   err = entry->hadb_ipsec_func->hip_add_sa(i2_daddr, i2_saddr,
@@ -2193,6 +2232,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 //end modify
 	/* @todo Check if err = -EAGAIN... */
 	HIP_DEBUG("Set up outbound IPsec SA, SPI=0x%x\n", spi_out);
+#endif
 
 #ifdef CONFIG_HIP_BLIND
     if (use_blind) {
@@ -2658,6 +2698,8 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 				  HIP_SPI_DIRECTION_IN, 0, entry), -1,
 				  "Failed to setup IPsec SPD/SA entries, peer:src\n");
 		}
+	} else{
+		HIP_DEBUG("ICE engine will be used, no sa created here\n");
 	}
 #if 0
 	else{
