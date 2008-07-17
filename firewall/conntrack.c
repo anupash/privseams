@@ -98,16 +98,27 @@ struct hip_data * get_hip_data(const struct hip_common * buf){
   _HIP_DEBUG("get_hip_data:\n");
 
   return data;
-} 
+}
+
 
 /* fetches the hip_tuple from connection table. 
  * Returns the tuple or NULL, if not found.
+ * 
+ * ## Explanation of changes due to the opportunistic mode ##
+ * If the tuple is not found and it is an R1 packet
+ * we try to update the hit of the opportunistic entries
+ * that are related to the particular peer in the db and
+ * then check again afterwards if we can find the entry.
  */
-struct tuple * get_tuple_by_hip(struct hip_data * data){
+struct tuple * get_tuple_by_hip(struct hip_data * data,
+				uint8_t type_hdr,
+				struct in6_addr * ip6_from){
   struct _DList * list = (struct _DList *) hipList;
+
   while(list)
     {
       struct hip_tuple * tuple = (struct hip_tuple *)list->data;
+
       if(IN6_ARE_ADDR_EQUAL(&data->src_hit, &tuple->data->src_hit) &&
 	 IN6_ARE_ADDR_EQUAL(&data->dst_hit, &tuple->data->dst_hit))
 	{
@@ -117,9 +128,49 @@ struct tuple * get_tuple_by_hip(struct hip_data * data){
 	}
       list = list->next;
     }
+
+  if(type_hdr == HIP_R1){
+    update_peer_opp_info(data, ip6_from);
+    return get_tuple_by_hip(data, -1, ip6_from);
+  }
+
   HIP_DEBUG("get_tuple_by_hip: no connection found\n");
   return NULL;
 }
+
+
+/*
+ * replaces the pseudo-hits of the opportunistic entries
+ * related to a particular peer with the real hit
+*/
+void update_peer_opp_info(struct hip_data * data, 
+			  struct in6_addr * ip6_from){
+  struct _DList * list = (struct _DList *) hipList;
+  hip_hit_t phit;
+
+  HIP_DEBUG("updating opportunistic entries\n");
+  //the pseudo hit is compared with the hit in the entries
+  hip_opportunistic_ipv6_to_hit(ip6_from, &phit, HIP_HIT_TYPE_HASH100);
+
+  while(list)
+    {
+      struct hip_tuple * tuple = (struct hip_tuple *)list->data;
+
+      if(IN6_ARE_ADDR_EQUAL(&data->dst_hit, &tuple->data->src_hit) &&
+	 IN6_ARE_ADDR_EQUAL(&phit, &tuple->data->dst_hit))
+      {
+        ipv6_addr_copy(&tuple->data->dst_hit, &data->src_hit);
+      }
+      if(IN6_ARE_ADDR_EQUAL(&phit, &tuple->data->src_hit) &&
+	 IN6_ARE_ADDR_EQUAL(&data->dst_hit, &tuple->data->dst_hit))
+      {
+        ipv6_addr_copy(&tuple->data->src_hit, &data->src_hit);
+      }
+      list = list->next;
+    }
+  return ;
+}
+
 
 /* fetches the hip_tuple from connection table. 
  * Returns the tuple or NULL, if not found.
@@ -152,16 +203,18 @@ struct esp_address * get_esp_address(struct SList * addr_list,
   struct _SList * list = (struct _SList *) addr_list;
   struct esp_address * esp_addr;
   HIP_DEBUG("get_esp_address\n");
-  
+
   while(list)
     {
       esp_addr = (struct esp_address *)list->data;
-      HIP_DEBUG("addr: %s ", addr_to_numeric(&esp_addr->dst_addr));
+      HIP_DEBUG("addr: %s \n", addr_to_numeric(&esp_addr->dst_addr));
+
       if(IN6_ARE_ADDR_EQUAL(&esp_addr->dst_addr, addr))
 	{
 	  HIP_DEBUG("addr found\n");
 	  return esp_addr;
 	}
+
       list = list->next;
     }   
   HIP_DEBUG("get_esp_address: addr %s not found\n", addr_to_numeric(addr));
@@ -177,6 +230,7 @@ struct SList * update_esp_address(struct SList * addr_list,
 		     const uint32_t * upd_id)
 {
   HIP_DEBUG("update_esp_address: address: %s \n", addr_to_numeric(addr));
+
   struct esp_address * esp_addr = get_esp_address(addr_list, addr);
   if (!addr_list) 
     {
@@ -214,6 +268,7 @@ struct SList * update_esp_address(struct SList * addr_list,
 struct tuple * get_tuple_by_esp(const struct in6_addr * dst_addr, uint32_t spi)
 {
   struct _SList * list = (struct _SList *) espList;
+
   if (!list) 
     {
       HIP_DEBUG ("Esp tuple list is empty\n");
@@ -233,6 +288,9 @@ struct tuple * get_tuple_by_esp(const struct in6_addr * dst_addr, uint32_t spi)
     }
   HIP_DEBUG("get_tuple_by_esp: dst addr %s spi %d no connection found\n",
 	     addr_to_numeric(dst_addr), spi);
+
+HIP_DEBUG_INADDR("DST", dst_addr);
+
   return NULL;
 }
 
@@ -1226,6 +1284,8 @@ int check_packet(const struct in6_addr * ip6_src,
 		 int verify_responder,
 		 int accept_mobile)
 {
+  hip_hit_t phit;
+  struct in6_addr all_zero_addr;
   int return_value = 1;
   _HIP_DEBUG("check packet: type %d \n", common->type_hdr);
   //new connection can only be started with I1 of from update packets
@@ -1254,8 +1314,17 @@ int check_packet(const struct in6_addr * ip6_src,
     {
       if(tuple == NULL)
 	{
-	  struct hip_data * data = get_hip_data(common);	  
+	  struct hip_data * data = get_hip_data(common);
+
+	  //if peer hit is empty in I1 packet, replace it with pseudo hit
+	  memset(&all_zero_addr, 0, sizeof(struct in6_addr));
+	  if(IN6_ARE_ADDR_EQUAL(&common->hitr, &all_zero_addr)){
+	    hip_opportunistic_ipv6_to_hit(ip6_dst, &phit, HIP_HIT_TYPE_HASH100);
+	    data->dst_hit = (struct in6_addr)phit;
+	  }
+
 	  insert_new_connection(data);
+
 	  // FIXME this does not free all memory -> DEBUG still outputs
 	  // sth similar to HITs
 	  free(data);
@@ -1326,7 +1395,7 @@ int filter_esp_state(const struct in6_addr *dst_addr,
 	struct hip_tuple * hip_tuple = NULL; 
 	struct esp_tuple *esp_tuple = NULL;
 	int escrow_deny = 0;
-	
+
 	// needed to de-multiplex ESP traffic
 	uint32_t spi = ntohl(esp->esp_spi);
 	
@@ -1451,7 +1520,8 @@ int filter_state(const struct in6_addr * ip6_src,
 //  g_mutex_lock(connectionTableMutex);
   _HIP_DEBUG("filter_state:locked mutex\n");
   data = get_hip_data(buf);
-  tuple = get_tuple_by_hip(data);
+  tuple = get_tuple_by_hip(data, buf->type_hdr, ip6_src);
+
   _HIP_DEBUG("filter_state: hip_data: \n");
   //print_data(data);
   free(data);
@@ -1533,14 +1603,14 @@ void conntrack(const struct in6_addr * ip6_src,
 	       struct hip_common * buf) 
 {
   struct hip_data * data;
-  struct tuple * tuple;
+  struct tuple * tuple = NULL;
   struct connection * connection;
 
   _HIP_DEBUG("conntrack \n");  
 //  g_mutex_lock(connectionTableMutex);
   _HIP_DEBUG("conntrack:locked mutex\n");
   data = get_hip_data(buf);
-  tuple = get_tuple_by_hip(data);
+  tuple = get_tuple_by_hip(data, buf->type_hdr, ip6_src);
   _HIP_DEBUG("conntrack:checking packet \n");
   //the accept_mobile parameter is true as packets 
   //are not filtered here
