@@ -372,12 +372,10 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	HIP_IFEL(hip_init_us(entry, src_hit), -EINVAL,
 		 "Could not assign a local host id\n");
 	
-#if 0
-	HIP_DEBUG("\n");
-	HIP_DEBUG("----**********----3--*********-----------------\n");
-	hip_for_each_ha(hip_print_info_hadb, &n);
-	HIP_DEBUG("----**********----3--*********-----------------\n");
-#endif
+	_HIP_DEBUG("\n");
+	_HIP_DEBUG("----**********----3--*********-----------------\n");
+	//hip_for_each_ha(hip_print_info_hadb, &n);
+	_HIP_DEBUG("----**********----3--*********-----------------\n");
 
 #ifdef CONFIG_HIP_BLIND
         if (hip_blind_get_status()) {
@@ -417,9 +415,11 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 		 "No preferred IP address for the peer.\n");
 	
 	HIP_DEBUG("\n");
-	HIP_DEBUG("----**********---4---*********-----------------\n");
+	_HIP_DEBUG("----**********---4---*********-----------------\n");
+        /*
 	hip_for_each_ha(hip_print_info_hadb, &n);
-	HIP_DEBUG("----**********---4---*********-----------------\n");
+	*/
+        _HIP_DEBUG("----**********---4---*********-----------------\n");
 
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
@@ -470,9 +470,11 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	}
 out_err:
 
-	HIP_DEBUG("----**********------*********-----------------\n");
-	hip_for_each_ha(hip_print_info_hadb, &n);
-	HIP_DEBUG("----**********------*********-----------------\n");
+	_HIP_DEBUG("----**********------*********-----------------\n");
+	/*
+        hip_for_each_ha(hip_print_info_hadb, &n);
+        */
+	_HIP_DEBUG("----**********------*********-----------------\n");
 
 	if (i1)
 	  HIP_FREE(i1);

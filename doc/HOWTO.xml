@@ -301,10 +301,10 @@
     </para>
     <itemizedlist>
       <listitem><para>
-	cd hipl
+	cd hipl--main--2.6
       </para></listitem>
       <listitem><para>
-	If the file autogen.sh exists (to test type ls autogen.sh), run it:
+        and then run the following:
       </para></listitem>
       <listitem><para>
 	./autogen.sh
@@ -317,7 +317,7 @@
       ./configure &amp;&amp; make install
     </para>
     <para>
-      Note2: you can optionally compile a binary package with "make deb" or "make rpm".
+      Notes: you can optionally compile a binary package with "make deb" or "make rpm". If you want to use valgrind with hipd, you may need execute ./configure --disable-privsep (and make clean all)
     </para>
     <para>
       Some features, like the HIP firewall are not compiled by default.
