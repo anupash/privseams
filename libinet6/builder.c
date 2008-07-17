@@ -642,7 +642,7 @@ int hip_check_param_contents_len(const struct hip_common *msg,
  * @param msg           a pointer to the beginning of the message header
  * @param current_param a pointer to the current parameter, or NULL if the msg
  *                      is to be searched from the beginning.
- * @return              the next parameter after the current_param in msg, or
+ * @return              the next parameter after the current_param in @c msg, or
  *                      NULL if no parameters were found.
  */
 struct hip_tlv_common *hip_get_next_param(const struct hip_common *msg,
@@ -692,7 +692,7 @@ struct hip_tlv_common *hip_get_next_param(const struct hip_common *msg,
 
 /**
  * Gets  the first parameter of the given type.
-  *
+ *
  * If there are multiple parameters of the same type, one should use
  * hip_get_next_param() after calling this function to iterate through
  * them all.
@@ -704,8 +704,7 @@ struct hip_tlv_common *hip_get_next_param(const struct hip_common *msg,
  *                   or NULL if no parameters of the type param_type were not
  *                   found.
  */
-void *hip_get_param(const struct hip_common *msg,
-		    hip_tlv_type_t param_type)
+void *hip_get_param(const struct hip_common *msg, hip_tlv_type_t param_type)
 {
 	void *matched = NULL;
 	struct hip_tlv_common *current_param = NULL;
@@ -938,10 +937,11 @@ void hip_calc_param_len(void *tlv_common, hip_tlv_len_t contents_size)
 }
 
 /**
- * hip_dump_msg - dump the message contents using HIP debug interface
- * @param msg the message to be dumped using the HIP debug interface
- *
- * Do not call this function directly, use the HIP_DUMP_MSG macro instead.
+ * Prints HIP message contents using HIP debug interface.
+ * 
+ * @param msg a pointer to the message to be printed.
+ * @note      Do not call this function directly, use the HIP_DUMP_MSG() macro
+ *            instead.
  */
 void hip_dump_msg(const struct hip_common *msg)
 {
@@ -993,37 +993,88 @@ void hip_dump_msg(const struct hip_common *msg)
  **/
 char* hip_message_type_name(const uint8_t msg_type){
 	switch (msg_type) {
-	case SO_HIP_ADD_DB_HI: return "SO_HIP_ADD_DB_HI";
-	case SO_HIP_ADD_ESCROW_DATA: return "SO_HIP_ADD_ESCROW_DATA";
-	case SO_HIP_AGENT_PING_REPLY: return "HIP_SO_AGENT_PING_REPLY";
-	case SO_HIP_AGENT_PING: return "HIP_SO_AGENT_PING";
-	case SO_HIP_AGENT_QUIT: return "SO_HIP_AGENT_QUIT";
-	case HIP_BOS: return "HIP_BOS";
-	case HIP_CER: return "HIP_CER";
-	case HIP_CLOSE_ACK: return "HIP_CLOSE_ACK";
-	case HIP_CLOSE: return "HIP_CLOSE";
-	case SO_HIP_DAEMON_QUIT: return "SO_HIP_DAEMON_QUIT";
-	case SO_HIP_DELETE_ESCROW_DATA: return "HIP_DELETE_ESCROW_DATA";
-	case SO_HIP_FIREWALL_PING_REPLY: return "HIP_FIREWALL_PING_REPLY";
-	case SO_HIP_FIREWALL_PING: return "HIP_FIREWALL_PING";
-	case SO_HIP_FIREWALL_QUIT: return "HIP_FIREWALL_QUIT";
-	case SO_HIP_I1_REJECT: return "HIP_I1_REJECT";
 	case HIP_I1: return "HIP_I1";
+	case HIP_R1: return "HIP_R1";
 	case HIP_I2: return "HIP_I2";
-	case SO_HIP_SET_NAT_NONE: return "SO_HIP_SET_NAT_NONE:";
-	case SO_HIP_SET_NAT_PLAIN_UDP: return "SO_HIP_SET_NAT_PLAIN_UDP:";
-	case SO_HIP_SET_NAT_ICE_UDP: return "SO_HIP_SET_NAT_ICE_UDP:";
+	case HIP_R2: return "HIP_R2";
+	case HIP_UPDATE: return "HIP_UPDATE";
 	case HIP_NOTIFY: return "HIP_NOTIFY";
+	case HIP_CLOSE: return "HIP_CLOSE";
+	case HIP_CLOSE_ACK: return "HIP_CLOSE_ACK";
+	case HIP_CER: return "HIP_CER";
 	case HIP_PAYLOAD: return "HIP_PAYLOAD";
 	case HIP_PSIG: return "HIP_PSIG";
-	case HIP_R1: return "HIP_R1";
-	case HIP_R2: return "HIP_R2";
-	case SO_HIP_SET_ESCROW_ACTIVE: return "HIP_SET_ESCROW_ACTIVE";
-	case SO_HIP_SET_ESCROW_INACTIVE: return "HIP_SET_ESCROW_INACTIVE";
 	case HIP_TRIG: return "HIP_TRIG";
-	case SO_HIP_UPDATE_HIU: return "HIP_UPDATE_HIU";
-	case HIP_UPDATE: return "HIP_UPDATE";
-	default:            return "UNDEFINED";
+		
+	case SO_HIP_ADD_LOCAL_HI: return "SO_HIP_ADD_LOCAL_HI";
+	case SO_HIP_DEL_LOCAL_HI: return "SO_HIP_DEL_LOCAL_HI";
+	case SO_HIP_RUN_UNIT_TEST: return "SO_HIP_RUN_UNIT_TEST";
+	case SO_HIP_RST: return "SO_HIP_RST";
+	case SO_HIP_UNIT_TEST: return "SO_HIP_UNIT_TEST";
+	case SO_HIP_BOS: return "SO_HIP_BOS";
+	case SO_HIP_NETLINK_DUMMY: return "SO_HIP_NETLINK_DUMMY";
+	case SO_HIP_CONF_PUZZLE_NEW: return "SO_HIP_CONF_PUZZLE_NEW";
+	case SO_HIP_CONF_PUZZLE_SET: return "SO_HIP_CONF_PUZZLE_SET";
+	case SO_HIP_CONF_PUZZLE_INC: return "SO_HIP_CONF_PUZZLE_INC";
+	case SO_HIP_CONF_PUZZLE_DEC: return "SO_HIP_CONF_PUZZLE_DEC";
+	case SO_HIP_SET_OPPORTUNISTIC_MODE: return "SO_HIP_SET_OPPORTUNISTIC_MODE";
+	case SO_HIP_SET_BLIND_ON: return "SO_HIP_SET_BLIND_ON";
+	case SO_HIP_SET_BLIND_OFF: return "SO_HIP_SET_BLIND_OFF";
+	case SO_HIP_DHT_GW: return "SO_HIP_DHT_GW";
+	case SO_HIP_SET_DEBUG_ALL: return "SO_HIP_SET_DEBUG_ALL";
+	case SO_HIP_SET_DEBUG_MEDIUM: return "SO_HIP_SET_DEBUG_MEDIUM";
+	case SO_HIP_SET_DEBUG_NONE: return "SO_HIP_SET_DEBUG_NONE";
+	case SO_HIP_HANDOFF_ACTIVE: return "SO_HIP_HANDOFF_ACTIVE";
+	case SO_HIP_HANDOFF_LAZY: return "SO_HIP_HANDOFF_LAZY";
+	case SO_HIP_RESTART: return "SO_HIP_RESTART";
+	case SO_HIP_SET_LOCATOR_ON: return "SO_HIP_SET_LOCATOR_ON";
+	case SO_HIP_SET_LOCATOR_OFF: return "SO_HIP_SET_LOCATOR_OFF";
+	case SO_HIP_DHT_SET: return "SO_HIP_DHT_SET";
+	case SO_HIP_DHT_ON: return "SO_HIP_DHT_ON";
+	case SO_HIP_DHT_OFF: return "SO_HIP_DHT_OFF";
+	case SO_HIP_SET_OPPTCP_ON: return "SO_HIP_SET_OPPTCP_ON";
+	case SO_HIP_SET_OPPTCP_OFF: return "SO_HIP_SET_OPPTCP_OFF";
+	case SO_HIP_OPPTCP_UNBLOCK_APP: return "SO_HIP_OPPTCP_UNBLOCK_APP";
+	case SO_HIP_OPPTCP_OPPIPDB_ADD_ENTRY: return "SO_HIP_OPPTCP_OPPIPDB_ADD_ENTRY";
+	case SO_HIP_OPPTCP_SEND_TCP_PACKET: return "SO_HIP_OPPTCP_SEND_TCP_PACKET";
+	case SO_HIP_TRANSFORM_ORDER: return "SO_HIP_TRANSFORM_ORDER";
+	case SO_HIP_OFFER_RVS: return "SO_HIP_OFFER_RVS";
+	case SO_HIP_CANCEL_RVS: return "SO_HIP_CANCEL_RVS";
+	case SO_HIP_REINIT_RVS: return "SO_HIP_REINIT_RVS";
+	case SO_HIP_ADD_DEL_SERVER: return "SO_HIP_ADD_DEL_SERVER";
+	case SO_HIP_OFFER_HIPRELAY: return "SO_HIP_OFFER_HIPRELAY";
+	case SO_HIP_CANCEL_HIPRELAY: return "SO_HIP_CANCEL_HIPRELAY";
+	case SO_HIP_REINIT_RELAY: return "SO_HIP_REINIT_RELAY";
+	case SO_HIP_OFFER_ESCROW: return "SO_HIP_OFFER_ESCROW";
+	case SO_HIP_CANCEL_ESCROW: return "SO_HIP_CANCEL_ESCROW";
+	case SO_HIP_ADD_DB_HI: return "SO_HIP_ADD_DB_HI";
+	case SO_HIP_ADD_ESCROW_DATA: return "SO_HIP_ADD_ESCROW_DATA";
+	case SO_HIP_DELETE_ESCROW_DATA: return "SO_HIP_DELETE_ESCROW_DATA";
+	case SO_HIP_SET_ESCROW_ACTIVE: return "SO_HIP_SET_ESCROW_ACTIVE";
+	case SO_HIP_SET_ESCROW_INACTIVE: return "SO_HIP_SET_ESCROW_INACTIVE";
+	case SO_HIP_FIREWALL_PING: return "SO_HIP_FIREWALL_PING";
+	case SO_HIP_FIREWALL_PING_REPLY: return "SO_HIP_FIREWALL_PING_REPLY";
+	case SO_HIP_FIREWALL_QUIT: return "SO_HIP_FIREWALL_QUIT";
+	case SO_HIP_AGENT_PING: return "SO_HIP_AGENT_PING";
+	case SO_HIP_AGENT_PING_REPLY: return "SO_HIP_AGENT_PING_REPLY";
+	case SO_HIP_AGENT_QUIT: return "SO_HIP_AGENT_QUIT";
+	case SO_HIP_DAEMON_QUIT: return "SO_HIP_DAEMON_QUIT";
+	case SO_HIP_I1_REJECT: return "SO_HIP_I1_REJECT";
+	case SO_HIP_UPDATE_HIU: return "SO_HIP_UPDATE_HIU";
+	case SO_HIP_SET_NAT_PLAIN_UDP: return "SO_HIP_SET_NAT_PLAIN_UDP";
+	case SO_HIP_SET_NAT_NONE: return "SO_HIP_SET_NAT_NONE";
+	case SO_HIP_SET_HIPPROXY_ON: return "SO_HIP_SET_HIPPROXY_ON";
+	case SO_HIP_SET_HIPPROXY_OFF: return "SO_HIP_SET_HIPPROXY_OFF";
+	case SO_HIP_GET_PROXY_LOCAL_ADDRESS: return "SO_HIP_GET_PROXY_LOCAL_ADDRESS";
+	case SO_HIP_HIPPROXY_STATUS_REQUEST: return "SO_HIP_HIPPROXY_STATUS_REQUEST";
+	case SO_HIP_OPPTCP_UNBLOCK_AND_BLACKLIST: return "SO_HIP_OPPTCP_UNBLOCK_AND_BLACKLIST";
+	case SO_HIP_FW_BEX_DONE: return "SO_HIP_FW_BEX_DONE";
+	case SO_HIP_SET_TCPTIMEOUT_ON: return "SO_HIP_SET_TCPTIMEOUT_ON";
+	case SO_HIP_SET_TCPTIMEOUT_OFF: return "SO_HIP_SET_TCPTIMEOUT_OFF";
+	case SO_HIP_SET_NAT_ICE_UDP: return "SO_HIP_SET_NAT_ICE_UDP";
+		
+	default:
+		return "UNDEFINED";
 	}
 }
 
@@ -2190,16 +2241,18 @@ static inline int hip_reg_param_core(hip_common_t *msg, void *param,
 				       type_list);
 }
 
-int hip_build_param_reg_info(hip_common_t *msg, const void *srv_list,
+/* Hmmm... Because of some weird linker (?) error we cannot use the defined type
+   hip_srv_t here, but have to settle for using struct hip_srv. Not that this
+   would rock the world, but we definately have something fishy in the makefiles
+   or in whatever makes the linker work. -Lauri 11.07.2008. */
+int hip_build_param_reg_info(hip_common_t *msg,
+			     const struct hip_srv *service_list,
 			     const unsigned int service_count)
 {
 	int err = 0, i = 0;
 	struct hip_reg_info reg_info;
 	uint8_t reg_type[service_count];
-	/* @todo: using a void pointer as a workaround to avoid
-	   weird compilation warning */
-	const hip_srv_t *service_list = (const hip_srv_t *) srv_list;
-
+	
 	if(service_count == 0) {
 		return 0;
 	}
@@ -2233,9 +2286,9 @@ int hip_build_param_reg_info(hip_common_t *msg, const void *srv_list,
 	err = hip_build_generic_param(
 		msg, &reg_info, sizeof(struct hip_reg_info), (void *)reg_type);
 
-	HIP_DEBUG("Added REG_INFO parameter with %u service%s.\n", service_count,
-		  (service_count > 1) ? "s" : "");
-
+	_HIP_DEBUG("Added REG_INFO parameter with %u service%s.\n", service_count,
+		   (service_count > 1) ? "s" : "");
+	
  out_err:
 	return err;
 }
@@ -2276,36 +2329,31 @@ int hip_build_param_reg_response(hip_common_t *msg, const uint8_t lifetime,
  * @return zero for success, or non-zero on error
  */
 int hip_build_param_reg_failed(struct hip_common *msg, uint8_t failure_type,
-			uint8_t *type_list, int cnt)
+			       uint8_t *type_list, int type_count)
 {
 	int err = 0;
-	int i;
-	struct hip_reg_failed rfail;
-	uint8_t *array = NULL;
-
-	hip_set_param_type(&rfail, HIP_PARAM_REG_FAILED);
-	hip_calc_generic_param_len(&rfail, sizeof(struct hip_reg_failed),
-				   cnt * sizeof(uint8_t));
-
-	HIP_IFEL(!(array = (uint8_t *) HIP_MALLOC((cnt * sizeof(uint8_t)), GFP_KERNEL)),
-		-1, "Failed to allocate memory");
-	memset(array, (sizeof(uint8_t) * cnt), 0);
-	/* Wtf? */
-	for (i = 0; i < cnt; i++) {
-		uint8_t val = type_list[i];
-		array[i] = val;
-	}
-
-
-	rfail.failure_type = failure_type;
-	err = hip_build_generic_param(msg, &rfail, sizeof(struct hip_reg_failed),
-				      (void *)array);
-out_err:
-	if (array)
-		HIP_FREE(array);
+	struct hip_reg_failed reg_failed;
+		
+	if(type_count == 0) {
+		return 0;
+	} 
+	
+	hip_set_param_type(&reg_failed, HIP_PARAM_REG_FAILED);
+	
+	reg_failed.failure_type = failure_type;
+	hip_calc_generic_param_len(&reg_failed, sizeof(struct hip_reg_failed),
+				   type_count * sizeof(type_list[0]));
+	
+	err = hip_build_generic_param(
+		msg, &reg_failed, sizeof(struct hip_reg_failed), (void *)type_list);
+	
+	HIP_DEBUG("Added REG_FAILED parameter with %u service%s.\n", type_count,
+		  (type_count > 1) ? "s" : "");
+	
+ out_err:
 	return err;
+	
 }
-
 
 /**
  * hip_build_param_puzzle - build and append a HIP puzzle into the message

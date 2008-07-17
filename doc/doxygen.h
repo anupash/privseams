@@ -559,6 +559,10 @@
  * Numbers 0-200 are reserved by IANA.
  * Numbers 201 - 255 are reserved by IANA for private use.
  */
+
+/**
+ * @defgroup hip_proxy HIP proxy types
+ */
  
  /** 
  * @file libinet6/protodefs.h
@@ -671,7 +675,7 @@
  * @def HIP_HA_CTRL_LOCAL_REQ_RVS
  *      The host association has requested rendezvous service in an I1 or an
  *      UPDATE packet.
- * @def HIP_HA_CTRL_LOCAL_REQ_ALL
+ * @def HIP_HA_CTRL_LOCAL_REQ_ANY
  *      An OR mask of every existing local request mask.
  * @def HIP_HA_CTRL_PEER_GRANTED_ESCROW
  *      The peer has granted us escrow service in a REG_RESPONSE parameter

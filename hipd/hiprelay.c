@@ -288,7 +288,6 @@ hip_relrec_t *hip_relrec_alloc(const hip_relrec_type_t type,
 	rec->send_fn = func;
 	hip_relrec_set_lifetime(rec, lifetime);
 	rec->created = time(NULL);
-	rec->last_contact = time(NULL);
      
 	return rec;
 }
@@ -329,8 +328,6 @@ void hip_relrec_info(const hip_relrec_t *rec)
 			  rec->lifetime);
 	cursor += sprintf(cursor, " Record created: %lu seconds ago\n",
 			  time(NULL) - rec->created);
-	cursor += sprintf(cursor, " Last contact: %lu seconds ago\n",
-			  time(NULL) - rec->last_contact);
 	cursor += sprintf(cursor, " HIT of R: %04x:%04x:%04x:%04x:"\
 			  "%04x:%04x:%04x:%04x\n",
 			  ntohs(rec->hit_r.s6_addr16[0]),
