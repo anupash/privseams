@@ -1,4 +1,3 @@
-
 /** @file
  * This file defines building and parsing functions for Host Identity Protocol
  * (HIP) kernel module and user messages.
@@ -56,6 +55,7 @@
  */
 #include "builder.h"
 #include "registration.h"
+#include "esp_prot_common.h"
 
 static enum select_dh_key_t select_dh_key = STRONGER_KEY;
 
@@ -624,11 +624,11 @@ int hip_check_param_contents_len(const struct hip_common *msg,
 	if (pos == ((void *)msg)) {
 		HIP_ERROR("use hip_check_msg_len()\n");
 	} else if (pos + param_len > ((void *) msg) + HIP_MAX_PACKET) {
-		_HIP_DEBUG("param far too long (%d)\n", param_len);
+		HIP_DEBUG("param far too long (%d)\n", param_len);
 	} else if (param_len > hip_get_msg_total_len(msg)) {
-		_HIP_DEBUG("param too long (%d)\n", param_len);
+		HIP_DEBUG("param too long (%d)\n", param_len);
 	} else {
-		_HIP_DEBUG("param ok\n");
+		_HIP_DEBUG("param length ok (%d)\n", param_len);
 		ok = 1;
 	}
 	return ok;
@@ -640,7 +640,7 @@ int hip_check_param_contents_len(const struct hip_common *msg,
  * @param msg           a pointer to the beginning of the message header
  * @param current_param a pointer to the current parameter, or NULL if the msg
  *                      is to be searched from the beginning.
- * @return              the next parameter after the current_param in msg, or
+ * @return              the next parameter after the current_param in @c msg, or
  *                      NULL if no parameters were found.
  */
 struct hip_tlv_common *hip_get_next_param(const struct hip_common *msg,
@@ -690,7 +690,7 @@ struct hip_tlv_common *hip_get_next_param(const struct hip_common *msg,
 
 /**
  * Gets  the first parameter of the given type.
-  *
+ *
  * If there are multiple parameters of the same type, one should use
  * hip_get_next_param() after calling this function to iterate through
  * them all.
@@ -702,8 +702,7 @@ struct hip_tlv_common *hip_get_next_param(const struct hip_common *msg,
  *                   or NULL if no parameters of the type param_type were not
  *                   found. 
  */
-void *hip_get_param(const struct hip_common *msg,
-		    hip_tlv_type_t param_type)
+void *hip_get_param(const struct hip_common *msg, hip_tlv_type_t param_type)
 {
 	void *matched = NULL;
 	struct hip_tlv_common *current_param = NULL;
@@ -936,10 +935,11 @@ void hip_calc_param_len(void *tlv_common, hip_tlv_len_t contents_size)
 }
 
 /**
- * hip_dump_msg - dump the message contents using HIP debug interface
- * @param msg the message to be dumped using the HIP debug interface
- *
- * Do not call this function directly, use the HIP_DUMP_MSG macro instead.
+ * Prints HIP message contents using HIP debug interface.
+ * 
+ * @param msg a pointer to the message to be printed.
+ * @note      Do not call this function directly, use the HIP_DUMP_MSG() macro
+ *            instead.
  */
 void hip_dump_msg(const struct hip_common *msg)
 {
@@ -958,6 +958,9 @@ void hip_dump_msg(const struct hip_common *msg)
      HIP_DEBUG("Msg length:     %d\n", hip_get_msg_total_len(msg));
      HIP_DEBUG("Msg err:        %d\n", hip_get_msg_err(msg));
      HIP_DEBUG("Msg controls:   0x%04x\n", msg->control);
+     
+     _HIP_DEBUG_HIT("Msg hits:       ", &msg->hits );
+     _HIP_DEBUG_HIT("Msg hitr:       ", &msg->hitr );
 	
      while((current_param = hip_get_next_param(msg, current_param)) != NULL)
      {
@@ -988,38 +991,87 @@ void hip_dump_msg(const struct hip_common *msg)
  **/
 char* hip_message_type_name(const uint8_t msg_type){
 	switch (msg_type) {
-	case SO_HIP_ADD_DB_HI: return "SO_HIP_ADD_DB_HI";
-	case SO_HIP_ADD_ESCROW_DATA: return "SO_HIP_ADD_ESCROW_DATA";
-	case SO_HIP_AGENT_PING_REPLY: return "HIP_SO_AGENT_PING_REPLY";
-	case SO_HIP_AGENT_PING: return "HIP_SO_AGENT_PING";
-	case SO_HIP_AGENT_QUIT: return "SO_HIP_AGENT_QUIT";
-	case HIP_BOS: return "HIP_BOS";
-	case HIP_CER: return "HIP_CER";
-	case HIP_CLOSE_ACK: return "HIP_CLOSE_ACK";
-	case HIP_CLOSE: return "HIP_CLOSE";
-	case SO_HIP_DAEMON_QUIT: return "SO_HIP_DAEMON_QUIT";
-	case SO_HIP_DELETE_ESCROW_DATA: return "HIP_DELETE_ESCROW_DATA";
-	case SO_HIP_FIREWALL_PING_REPLY: return "HIP_FIREWALL_PING_REPLY";
-	case SO_HIP_FIREWALL_PING: return "HIP_FIREWALL_PING";
-	case SO_HIP_FIREWALL_QUIT: return "HIP_FIREWALL_QUIT";
-	case SO_HIP_I1_REJECT: return "HIP_I1_REJECT";
 	case HIP_I1: return "HIP_I1";
+	case HIP_R1: return "HIP_R1";
 	case HIP_I2: return "HIP_I2";
-	case SO_HIP_SET_NAT_NONE: return "SO_HIP_SET_NAT_NONE:";
-	case SO_HIP_SET_NAT_PLAIN_UDP: return "SO_HIP_SET_NAT_PLAIN_UDP:";
-	case SO_HIP_SET_NAT_ICE_UDP: return "SO_HIP_SET_NAT_ICE_UDP:";
+	case HIP_R2: return "HIP_R2";
+	case HIP_UPDATE: return "HIP_UPDATE";
 	case HIP_NOTIFY: return "HIP_NOTIFY";
+	case HIP_CLOSE: return "HIP_CLOSE";
+	case HIP_CLOSE_ACK: return "HIP_CLOSE_ACK";
+	case HIP_CER: return "HIP_CER";
 	case HIP_PAYLOAD: return "HIP_PAYLOAD";
 	case HIP_PSIG: return "HIP_PSIG";
-	case HIP_R1: return "HIP_R1";
-	case HIP_R2: return "HIP_R2";
-	case SO_HIP_SET_ESCROW_ACTIVE: return "HIP_SET_ESCROW_ACTIVE";
-	case SO_HIP_SET_ESCROW_INACTIVE: return "HIP_SET_ESCROW_INACTIVE";
 	case HIP_TRIG: return "HIP_TRIG";
 	case SO_HIP_UPDATE_HIU: return "HIP_UPDATE_HIU";
-	case HIP_UPDATE: return "HIP_UPDATE";
 	case HIP_HDRR: return "HIP_HDRR";
-	default:            return "UNDEFINED";
+	case SO_HIP_ADD_LOCAL_HI: return "SO_HIP_ADD_LOCAL_HI";
+	case SO_HIP_DEL_LOCAL_HI: return "SO_HIP_DEL_LOCAL_HI";
+	case SO_HIP_RUN_UNIT_TEST: return "SO_HIP_RUN_UNIT_TEST";
+	case SO_HIP_RST: return "SO_HIP_RST";
+	case SO_HIP_UNIT_TEST: return "SO_HIP_UNIT_TEST";
+	case SO_HIP_BOS: return "SO_HIP_BOS";
+	case SO_HIP_NETLINK_DUMMY: return "SO_HIP_NETLINK_DUMMY";
+	case SO_HIP_CONF_PUZZLE_NEW: return "SO_HIP_CONF_PUZZLE_NEW";
+	case SO_HIP_CONF_PUZZLE_SET: return "SO_HIP_CONF_PUZZLE_SET";
+	case SO_HIP_CONF_PUZZLE_INC: return "SO_HIP_CONF_PUZZLE_INC";
+	case SO_HIP_CONF_PUZZLE_DEC: return "SO_HIP_CONF_PUZZLE_DEC";
+	case SO_HIP_SET_OPPORTUNISTIC_MODE: return "SO_HIP_SET_OPPORTUNISTIC_MODE";
+	case SO_HIP_SET_BLIND_ON: return "SO_HIP_SET_BLIND_ON";
+	case SO_HIP_SET_BLIND_OFF: return "SO_HIP_SET_BLIND_OFF";
+	case SO_HIP_DHT_GW: return "SO_HIP_DHT_GW";
+	case SO_HIP_SET_DEBUG_ALL: return "SO_HIP_SET_DEBUG_ALL";
+	case SO_HIP_SET_DEBUG_MEDIUM: return "SO_HIP_SET_DEBUG_MEDIUM";
+	case SO_HIP_SET_DEBUG_NONE: return "SO_HIP_SET_DEBUG_NONE";
+	case SO_HIP_HANDOFF_ACTIVE: return "SO_HIP_HANDOFF_ACTIVE";
+	case SO_HIP_HANDOFF_LAZY: return "SO_HIP_HANDOFF_LAZY";
+	case SO_HIP_RESTART: return "SO_HIP_RESTART";
+	case SO_HIP_SET_LOCATOR_ON: return "SO_HIP_SET_LOCATOR_ON";
+	case SO_HIP_SET_LOCATOR_OFF: return "SO_HIP_SET_LOCATOR_OFF";
+	case SO_HIP_DHT_SET: return "SO_HIP_DHT_SET";
+	case SO_HIP_DHT_ON: return "SO_HIP_DHT_ON";
+	case SO_HIP_DHT_OFF: return "SO_HIP_DHT_OFF";
+	case SO_HIP_SET_OPPTCP_ON: return "SO_HIP_SET_OPPTCP_ON";
+	case SO_HIP_SET_OPPTCP_OFF: return "SO_HIP_SET_OPPTCP_OFF";
+	case SO_HIP_OPPTCP_UNBLOCK_APP: return "SO_HIP_OPPTCP_UNBLOCK_APP";
+	case SO_HIP_OPPTCP_OPPIPDB_ADD_ENTRY: return "SO_HIP_OPPTCP_OPPIPDB_ADD_ENTRY";
+	case SO_HIP_OPPTCP_SEND_TCP_PACKET: return "SO_HIP_OPPTCP_SEND_TCP_PACKET";
+	case SO_HIP_TRANSFORM_ORDER: return "SO_HIP_TRANSFORM_ORDER";
+	case SO_HIP_OFFER_RVS: return "SO_HIP_OFFER_RVS";
+	case SO_HIP_CANCEL_RVS: return "SO_HIP_CANCEL_RVS";
+	case SO_HIP_REINIT_RVS: return "SO_HIP_REINIT_RVS";
+	case SO_HIP_ADD_DEL_SERVER: return "SO_HIP_ADD_DEL_SERVER";
+	case SO_HIP_OFFER_HIPRELAY: return "SO_HIP_OFFER_HIPRELAY";
+	case SO_HIP_CANCEL_HIPRELAY: return "SO_HIP_CANCEL_HIPRELAY";
+	case SO_HIP_REINIT_RELAY: return "SO_HIP_REINIT_RELAY";
+	case SO_HIP_OFFER_ESCROW: return "SO_HIP_OFFER_ESCROW";
+	case SO_HIP_CANCEL_ESCROW: return "SO_HIP_CANCEL_ESCROW";
+	case SO_HIP_ADD_DB_HI: return "SO_HIP_ADD_DB_HI";
+	case SO_HIP_ADD_ESCROW_DATA: return "SO_HIP_ADD_ESCROW_DATA";
+	case SO_HIP_DELETE_ESCROW_DATA: return "SO_HIP_DELETE_ESCROW_DATA";
+	case SO_HIP_SET_ESCROW_ACTIVE: return "SO_HIP_SET_ESCROW_ACTIVE";
+	case SO_HIP_SET_ESCROW_INACTIVE: return "SO_HIP_SET_ESCROW_INACTIVE";
+	case SO_HIP_FIREWALL_PING: return "SO_HIP_FIREWALL_PING";
+	case SO_HIP_FIREWALL_PING_REPLY: return "SO_HIP_FIREWALL_PING_REPLY";
+	case SO_HIP_FIREWALL_QUIT: return "SO_HIP_FIREWALL_QUIT";
+	case SO_HIP_AGENT_PING: return "SO_HIP_AGENT_PING";
+	case SO_HIP_AGENT_PING_REPLY: return "SO_HIP_AGENT_PING_REPLY";
+	case SO_HIP_AGENT_QUIT: return "SO_HIP_AGENT_QUIT";
+	case SO_HIP_DAEMON_QUIT: return "SO_HIP_DAEMON_QUIT";
+	case SO_HIP_I1_REJECT: return "SO_HIP_I1_REJECT";
+	case SO_HIP_SET_NAT_NONE: return "SO_HIP_SET_NAT_NONE";
+	case SO_HIP_SET_HIPPROXY_ON: return "SO_HIP_SET_HIPPROXY_ON";
+	case SO_HIP_SET_HIPPROXY_OFF: return "SO_HIP_SET_HIPPROXY_OFF";
+	case SO_HIP_GET_PROXY_LOCAL_ADDRESS: return "SO_HIP_GET_PROXY_LOCAL_ADDRESS";
+	case SO_HIP_HIPPROXY_STATUS_REQUEST: return "SO_HIP_HIPPROXY_STATUS_REQUEST";
+	case SO_HIP_OPPTCP_UNBLOCK_AND_BLACKLIST: return "SO_HIP_OPPTCP_UNBLOCK_AND_BLACKLIST";
+	case SO_HIP_FW_BEX_DONE: return "SO_HIP_FW_BEX_DONE";
+	case SO_HIP_SET_TCPTIMEOUT_ON: return "SO_HIP_SET_TCPTIMEOUT_ON";
+	case SO_HIP_SET_TCPTIMEOUT_OFF: return "SO_HIP_SET_TCPTIMEOUT_OFF";
+	case SO_HIP_SET_NAT_ICE_UDP: return "SO_HIP_SET_NAT_ICE_UDP";
+		
+	default:
+		return "UNDEFINED";
 	}
 }
 
@@ -1091,11 +1143,13 @@ char* hip_param_type_name(const hip_tlv_type_t param_type){
 	case HIP_PARAM_UINT: return "HIP_PARAM_UINT";
 	case HIP_PARAM_UNIT_TEST: return "HIP_PARAM_UNIT_TEST";
 	case HIP_PARAM_VIA_RVS: return "HIP_PARAM_VIA_RVS";
-	case HIP_PARAM_PSEUDO_HIT: return "HIP_PARAM_PSEUDO_HIT";	
+	case HIP_PARAM_PSEUDO_HIT: return "HIP_PARAM_PSEUDO_HIT";
+	case HIP_PARAM_ESP_PROT_TRANSFORM: return "HIP_PARAM_ESP_PROT_TRANSFORM";
+	case HIP_PARAM_ESP_PROT_ANCHOR: return "HIP_PARAM_ESP_PROT_ANCHOR";
 	//add by santtu
 	case HIP_PARAM_NAT_TRANSFORM: return "HIP_PARAM_NAT_TRANSFORM";	
 	//end add
-	case SO_HIP_PARAM_LSI: return "SO_HIP_PARAM_LSI";	
+	case HIP_PARAM_LSI: return "HIP_PARAM_LSI";	
 	}
 	return "UNDEFINED";
 }
@@ -2184,16 +2238,18 @@ static inline int hip_reg_param_core(hip_common_t *msg, void *param,
 				       type_list);	
 }
 
-int hip_build_param_reg_info(hip_common_t *msg, const void *srv_list,
+/* Hmmm... Because of some weird linker (?) error we cannot use the defined type
+   hip_srv_t here, but have to settle for using struct hip_srv. Not that this
+   would rock the world, but we definately have something fishy in the makefiles
+   or in whatever makes the linker work. -Lauri 11.07.2008. */
+int hip_build_param_reg_info(hip_common_t *msg,
+			     const struct hip_srv *service_list,
 			     const unsigned int service_count)
 {
 	int err = 0, i = 0;
 	struct hip_reg_info reg_info;
 	uint8_t reg_type[service_count];
-	/* @todo: using a void pointer as a workaround to avoid
-	   weird compilation warning */
-	const hip_srv_t *service_list = (const hip_srv_t *) srv_list;
-
+	
 	if(service_count == 0) {
 		return 0;
 	} 
@@ -2227,8 +2283,8 @@ int hip_build_param_reg_info(hip_common_t *msg, const void *srv_list,
 	err = hip_build_generic_param(
 		msg, &reg_info, sizeof(struct hip_reg_info), (void *)reg_type);
 
-	HIP_DEBUG("Added REG_INFO parameter with %u service%s.\n", service_count,
-		  (service_count > 1) ? "s" : "");
+	_HIP_DEBUG("Added REG_INFO parameter with %u service%s.\n", service_count,
+		   (service_count > 1) ? "s" : "");
 	
  out_err:
 	return err;
@@ -2260,46 +2316,32 @@ int hip_build_param_reg_response(hip_common_t *msg, const uint8_t lifetime,
 	return err;
 }
 
-/**
- * hip_build_param_reg_failed - build HIP REG_FAILED parameter
- * @param msg the message
- * @param failure_type reason for failure
- * @param type_list list of types to be appended
- * @param cnt number of addresses in type_list
- *
- * @return zero for success, or non-zero on error
- */
-int hip_build_param_reg_failed(struct hip_common *msg, uint8_t failure_type, 
-			uint8_t *type_list, int cnt)
+int hip_build_param_reg_failed(struct hip_common *msg, uint8_t failure_type,
+			       uint8_t *type_list, int type_count)
 {
 	int err = 0;
-	int i;
-	struct hip_reg_failed rfail;
-	uint8_t *array = NULL;
-
-	hip_set_param_type(&rfail, HIP_PARAM_REG_FAILED);
-	hip_calc_generic_param_len(&rfail, sizeof(struct hip_reg_failed),
-				   cnt * sizeof(uint8_t));
-
-	HIP_IFEL(!(array = (uint8_t *) HIP_MALLOC((cnt * sizeof(uint8_t)), GFP_KERNEL)),
-		-1, "Failed to allocate memory");
-	memset(array, (sizeof(uint8_t) * cnt), 0);
-	/* Wtf? */
-	for (i = 0; i < cnt; i++) {
-		uint8_t val = type_list[i];
-		array[i] = val;
-	}
+	struct hip_reg_failed reg_failed;
+		
+	if(type_count == 0) {
+		return 0;
+	} 
 	
-
-	rfail.failure_type = failure_type;
-	err = hip_build_generic_param(msg, &rfail, sizeof(struct hip_reg_failed),
-				      (void *)array);
-out_err: 
-	if (array)
-		HIP_FREE(array);	
-	return err;		
-}			
-
+	hip_set_param_type(&reg_failed, HIP_PARAM_REG_FAILED);
+	
+	reg_failed.failure_type = failure_type;
+	hip_calc_generic_param_len(&reg_failed, sizeof(struct hip_reg_failed),
+				   type_count * sizeof(type_list[0]));
+	
+	err = hip_build_generic_param(
+		msg, &reg_failed, sizeof(struct hip_reg_failed), (void *)type_list);
+	
+	HIP_DEBUG("Added REG_FAILED parameter with %u service%s.\n", type_count,
+		  (type_count > 1) ? "s" : "");
+	
+ out_err:
+	return err;
+	
+}
 
 /**
  * hip_build_param_puzzle - build and append a HIP puzzle into the message
@@ -2337,9 +2379,9 @@ int hip_build_param_puzzle(struct hip_common *msg, uint8_t val_K,
 	/* puzzle.opaque[2] = (opaque & 0xFF0000) >> 16; */
 	puzzle.I = random_i;
 
-        err = hip_build_generic_param(msg, &puzzle,
-				      sizeof(struct hip_tlv_common),
-				      hip_get_param_contents_direct(&puzzle));
+    err = hip_build_generic_param(msg, &puzzle,
+			      sizeof(struct hip_tlv_common),
+			      hip_get_param_contents_direct(&puzzle));
 	return err;
 
 }
@@ -2617,7 +2659,11 @@ int hip_build_param_locator(struct hip_common *msg,
 			struct hip_locator_info_addr_item *addresses,
 			int address_count)
 {
-	int err = 0;
+        /* Is this actually deprecated?
+           This knows only how to build locator type 1s 
+           If zeroed, returns error if you try to use it --Samu */
+	int err = -1;
+#if 0
 	struct hip_locator *locator_info = NULL;
 	int addrs_len = address_count *
 		(sizeof(struct hip_locator_info_addr_item));
@@ -2645,7 +2691,7 @@ int hip_build_param_locator(struct hip_common *msg,
  out_err:
 	if (locator_info)
 		free(locator_info);
-
+#endif
 	return err;
 }
 #endif /* !__KERNEL__ */
@@ -2751,6 +2797,62 @@ int hip_build_param_ack(struct hip_common *msg, uint32_t peer_update_id)
         ack.peer_update_id = htonl(peer_update_id);
         err = hip_build_param(msg, &ack);
         return err;
+}
+
+/**
+ * hip_build_param_esp_prot_mode - build and append ESP PROT transform parameter
+ * @param msg the message where the parameter will be appended
+ * @param transform the transform to be used for the esp extension header
+ * 
+ * @return 0 on success, otherwise < 0.
+ */
+int hip_build_param_esp_prot_transform(struct hip_common *msg, uint8_t transform)
+{
+	int err = 0;
+	
+	struct esp_prot_transform prot_transform;
+
+	hip_set_param_type(&prot_transform, HIP_PARAM_ESP_PROT_TRANSFORM);
+	hip_calc_generic_param_len(&prot_transform, sizeof(struct esp_prot_transform), 0);
+	prot_transform.transform = transform;
+	
+	err = hip_build_param(msg, &prot_transform);
+	
+	HIP_DEBUG("added esp_prot_transform: %u\n", transform);
+	
+	return err;
+}
+
+/**
+ * hip_build_param_esp_prot_mode - build and append ESP PROT anchor parameter
+ * @param msg the message where the parameter will be appended
+ * @param anchor the anchor for the hchain to be used for extended esp protection
+ * 
+ * @return 0 on success, otherwise < 0.
+ */
+int hip_build_param_esp_prot_anchor(struct hip_common *msg, unsigned char *anchor,
+		int hash_length)
+{
+	int err = 0;
+	
+	struct esp_prot_anchor esp_anchor;
+
+	hip_set_param_type(&esp_anchor, HIP_PARAM_ESP_PROT_ANCHOR);
+	
+	HIP_DEBUG("hash length: %i\n", hash_length);
+	
+	/* note: the length cannot be calculated with calc_param_len() */
+	hip_set_param_contents_len(&esp_anchor, hash_length);
+	
+	memcpy(esp_anchor.anchor, anchor, hash_length);
+	
+	err = hip_build_generic_param(msg, &esp_anchor,
+					      sizeof(struct hip_tlv_common),
+					      hip_get_param_contents_direct(&esp_anchor));
+	
+	HIP_HEXDUMP("added esp protection anchor: ", anchor, hash_length);
+	
+	return err;
 }
 
 /**
@@ -2920,7 +3022,6 @@ void hip_build_param_host_id_hdr(struct hip_host_id *host_id_hdr,
 {
 	uint16_t hi_len = sizeof(struct hip_host_id_key_rdata) + rr_data_len;
 	uint16_t fqdn_len;
-
         /* reserve 1 byte for NULL termination */
 	if (hostname)
 		fqdn_len = (strlen(hostname) + 1) & 0x0FFF;
@@ -3370,7 +3471,6 @@ int alloc_and_set_host_id_param_hdr(struct hip_host_id **host_id,
 {
   int err = 0;
   struct hip_host_id host_id_hdr;
-
   hip_build_param_host_id_hdr(&host_id_hdr, hostname,
 			      key_rr_len, algo);
 
@@ -3388,11 +3488,9 @@ int alloc_and_build_param_host_id_only(struct hip_host_id **host_id,
 				       unsigned char *key_rr, int key_rr_len,
 				       int algo, char *hostname) {
   int err = 0;
-
   HIP_IFEL(alloc_and_set_host_id_param_hdr(host_id, key_rr_len, algo,
 					   hostname), -1, "alloc\n");
   hip_build_param_host_id_only(*host_id, key_rr, "hostname");
-
  out_err:
   if (err && *host_id) {
     *host_id = NULL;
@@ -3481,16 +3579,6 @@ int hip_private_dsa_to_hit(DSA *dsa_key, unsigned char *dsa, int type,
   return hip_any_key_to_hit(dsa_key, dsa, type, hit, 0, 1);
 }
 
-
-
-
-
-
-//add by santtu
-
-
-
-
 /**
  * Builds a @c FULLRELAY_HMAC parameter.
  *
@@ -3526,8 +3614,6 @@ int hip_build_param_full_relay_hmac_contents(struct hip_common *msg,
 	return err;
 }
 
-
-
 /**
  * Builds a @c NAT_Transfer  parameter.
  *
@@ -3552,47 +3638,37 @@ int hip_build_param_nat_tranform(struct hip_common *msg, hip_transform_suite_t n
 	return err;
 }
 
-
-
 void hip_set_locator_addr_length(void * locator, hip_tlv_len_t  length){
 	((struct hip_locator *)locator)->length = htons(length);
 	return;
 }
 
-
 /**
  * 
  * return the amount the locator items(type 1 and 2 are both supproted).
  * */
- 
 int hip_get_locator_addr_item_count(struct hip_locator *locator) {	
-	
 	char *address_pointer =(char*) (locator + 1);
 	int amount = 0;
-	
-	
-	
-	for(;address_pointer < ((char*)locator) + hip_get_param_contents_len(locator); ){
-		if(((struct hip_locator_info_addr_item*)address_pointer)->locator_type == 
-					HIP_LOCATOR_LOCATOR_TYPE_UDP){
-                		address_pointer += sizeof(struct hip_locator_info_addr_item2);
-                		amount += 1;
-                	}
-        else if(((struct hip_locator_info_addr_item*)address_pointer)->locator_type == 
-        			HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI){
-    		address_pointer += sizeof(struct hip_locator_info_addr_item);
-    		amount += 1;
-    	} 
-    	else if(((struct hip_locator_info_addr_item*)address_pointer)->locator_type == 
-        			HIP_LOCATOR_LOCATOR_TYPE_IPV6){
-    		address_pointer += sizeof(struct hip_locator_info_addr_item);
-    		amount += 1;
-    	} 
-    	else
-        	address_pointer += sizeof(struct hip_locator_info_addr_item);
-	}
-	
-	
+	for(;address_pointer < ((char*)locator) + hip_get_param_contents_len(locator); ) {
+		if (((struct hip_locator_info_addr_item*)address_pointer)->locator_type 
+                    == HIP_LOCATOR_LOCATOR_TYPE_UDP) {
+                        address_pointer += sizeof(struct hip_locator_info_addr_item2);
+                        amount += 1;
+                }
+                else if(((struct hip_locator_info_addr_item*)address_pointer)->locator_type 
+                        == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI) {
+                        address_pointer += sizeof(struct hip_locator_info_addr_item);
+                        amount += 1;
+                } 
+                else if(((struct hip_locator_info_addr_item*)address_pointer)->locator_type 
+                        == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
+                        address_pointer += sizeof(struct hip_locator_info_addr_item);
+                        amount += 1;
+                } 
+                else
+                        address_pointer += sizeof(struct hip_locator_info_addr_item);
+	}	
 	return amount;
 }
 
@@ -3693,7 +3769,7 @@ uint32_t hip_get_locator_item_priority(void* item){
  * @param item_list      a pointer to the first item
  * @param amount          the number of items in the list
  */
-int hip_get_locator_item_list_length(void* item_list, int amount){
+int hip_get_locator_item_list_length(void* item_list, int amount) {
 
 	int i= 0;
 	struct hip_locator_info_addr_item *temp;
@@ -3726,45 +3802,34 @@ int hip_build_param_locator2(struct hip_common *msg,
 			struct hip_locator_info_addr_item  *addresses1,
 			struct hip_locator_info_addr_item2 *addresses2,
 			int address_count1,
-			int address_count2)
-{
+			int address_count2) {
 	int err = 0;
 	struct hip_locator *locator_info = NULL;
 	int addrs_len1 = address_count1 *
 		(sizeof(struct hip_locator_info_addr_item));
 	int addrs_len2 = address_count2 *
 		(sizeof(struct hip_locator_info_addr_item2));
-	
-	_HIP_DEBUG("Santtu: create total locator items : %d \n", address_count1 + address_count2 );
-	_HIP_DEBUG("Santtu: create total locator length : %d \n", addrs_len1 + addrs_len2 );
-		
+        
 	HIP_IFE(!(locator_info =
 		  malloc(sizeof(struct hip_locator) + addrs_len1 + addrs_len2 )), -1);
-
+        
 	hip_set_param_type(locator_info, HIP_PARAM_LOCATOR);
 	hip_calc_generic_param_len(locator_info,
 				   sizeof(struct hip_locator),
 				   addrs_len1+addrs_len2);
-	_HIP_DEBUG("params size=%d\n", sizeof(struct hip_locator) -
-		   sizeof(struct hip_tlv_common) +
-		   addrs_len1+addrs_len2);
 
 	memcpy(locator_info + 1, addresses1, addrs_len1);
-	if(address_count2 >0)
-	memcpy(((char*)(locator_info + 1))+addrs_len1, addresses2, addrs_len2);
-	
+	if(address_count2 > 0)
+               memcpy(((char *)(locator_info + 1) + addrs_len1), 
+                      addresses2, addrs_len2);
+
 	HIP_IFE(hip_build_param(msg, locator_info), -1);
 
 	_HIP_DEBUG("msgtotlen=%d addrs_len=%d\n", hip_get_msg_total_len(msg),
 		   addrs_len);
-	//if (addrs_len > 0)
-	//	memcpy((void *)msg+hip_get_msg_total_len(msg)-addrs_len,
-	//	       addresses, addrs_len);
-
  out_err:
 	if (locator_info)
 		free(locator_info);
-
 	return err;
 }
 

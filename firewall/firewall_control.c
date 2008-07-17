@@ -9,7 +9,6 @@ int hip_fw_sock = 0;
 int control_thread_started = 0;
 //GThread * control_thread = NULL; 
 
-
 void* run_control_thread(void* data)
 {
 	/* Variables. */
@@ -86,17 +85,15 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 	
 	type = hip_get_msg_type(msg);
 	
-	
 	switch(type) {
-	case SO_HIP_FIREWALL_BEX_DONE:
+	case SO_HIP_FW_BEX_DONE:
+	case SO_HIP_FW_UPDATE_DB:
 	        HIP_IFEL(handle_bex_state_update(msg), -1, "hip bex state NOT updated\n");
 	        break;
-	case SO_HIP_IPSEC_ADD_SA: {
+	case SO_HIP_IPSEC_ADD_SA:
 		HIP_DEBUG("Received add sa request from hipd\n");
 		HIP_IFEL(handle_sa_add_request(msg, param), -1, "hip userspace sadb add did NOT succeed\n");
 		break;
-	}
-		
 	case SO_HIP_ADD_ESCROW_DATA:
 		while((param = hip_get_next_param(msg, param)))
 		{
@@ -115,7 +112,7 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 				int auth_len;
 				int key_len;
 				int spi;
-			
+				
 				keys = (struct hip_keys *)param;
 				
 				// TODO: Check values!!
@@ -126,7 +123,7 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 		 		//spi_old = ntohl(keys->spi_old);
 		 		key_len = ntohs(keys->key_len);
 		 		alg = ntohs(keys->alg_id);
-			
+				
 				if (alg == HIP_ESP_3DES_SHA1)
 					auth_len = 24;
 				else if (alg == HIP_ESP_AES_SHA1)
@@ -216,8 +213,8 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 		err = -1;
 		break;
 	}
-out_err:	
-
+ out_err:	
+		
 	return err;
 }
 
@@ -354,10 +351,13 @@ out_err:
 }
 #endif /* CONFIG_HIP_HIPPROXY */
 
-int handle_bex_state_update(struct hip_common * msg, struct hip_tlv_common *param)
+int handle_bex_state_update(struct hip_common * msg)
 {
 	struct in6_addr *src_hit = NULL, *dst_hit = NULL;
-	int err = 0;
+	struct hip_tlv_common *param = NULL;
+	int err = 0, msg_type = 0;
+	
+	msg_type = hip_get_msg_type(msg);
 
 	/* src_hit */
         param = (struct hip_tlv_common *)hip_get_param(msg, HIP_PARAM_HIT);
@@ -370,86 +370,19 @@ int handle_bex_state_update(struct hip_common * msg, struct hip_tlv_common *para
 	HIP_DEBUG_HIT("Destination HIT: ", dst_hit);
 
 	/* update bex_state in firewalldb */
-	if (dst_hit)
-		err = firewall_set_bex_state(src_hit, dst_hit, 1);
-	else
-		err = firewall_set_bex_state(src_hit, dst_hit, -1);
-
-}
-
-int handle_sa_add_request(struct hip_common * msg, struct hip_tlv_common *param)
-{
-	struct in6_addr *saddr = NULL, *daddr = NULL;
-	struct in6_addr *src_hit = NULL, *dst_hit = NULL;
-	uint32_t *spi_ipsec = NULL;
-	int ealg, err = 0;
-	struct hip_crypto_key *enckey = NULL, *authkey = NULL;
-	int already_acquired, direction, update, sport, dport;
-	
-	// get all attributes from the message
-	
-	param = (struct hip_tlv_common *)hip_get_param(msg, HIP_PARAM_IPV6_ADDR);
-	saddr = (struct in6_addr *) hip_get_param_contents_direct(param);
-	HIP_DEBUG_IN6ADDR("Source IP address: ", saddr);
-	
-	param = hip_get_next_param(msg, param);
-	daddr = (struct in6_addr *) hip_get_param_contents_direct(param);
-	HIP_DEBUG_IN6ADDR("Destination IP address : ", daddr);
-	
-	param = (struct hip_tlv_common *)hip_get_param(msg, HIP_PARAM_HIT);
-	src_hit = (struct in6_addr *) hip_get_param_contents_direct(param);
-	HIP_DEBUG_HIT("Source Hit: ", src_hit);
-	
-	param = hip_get_next_param(msg, param);
-	dst_hit = (struct in6_addr *) hip_get_param_contents_direct(param);
-	HIP_DEBUG_HIT("Destination HIT: ", dst_hit);
-	
-	param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_UINT);
-	spi_ipsec = (uint32_t *) hip_get_param_contents_direct(param);
-	HIP_DEBUG("the spi value is : %u \n", *spi_ipsec);
-
-	param =  hip_get_next_param(msg, param);
-	sport = *((unsigned int *) hip_get_param_contents_direct(param));
-	HIP_DEBUG("the sport vaule is %d \n", sport);
-	
-	param =  hip_get_next_param(msg, param);
-	dport = *((unsigned int *) hip_get_param_contents_direct(param));
-	HIP_DEBUG("the dport value is %d \n", dport);
-
-	param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_KEYS);
-	enckey = (struct hip_crypto_key *) hip_get_param_contents_direct(param);
-	HIP_HEXDUMP("crypto key :", enckey, sizeof(struct hip_crypto_key));
-	
-	param = hip_get_next_param(msg, param);
-	authkey = (struct hip_crypto_key *)hip_get_param_contents_direct(param);
-	HIP_HEXDUMP("authen key :", authkey, sizeof(struct hip_crypto_key));
-	
-	param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_INT);
-	ealg = *((int *) hip_get_param_contents_direct(param));
-	HIP_DEBUG("ealg value is %d \n", ealg);
-
-	param =  hip_get_next_param(msg, param);		
-	already_acquired = *((int *) hip_get_param_contents_direct(param));
-	HIP_DEBUG("already_acquired value is %d \n", already_acquired);
-	
-	param =  hip_get_next_param(msg, param);		
-	direction = *((int *) hip_get_param_contents_direct(param));
-	HIP_DEBUG("the direction value is %d \n", direction);
-	
-	param =  hip_get_next_param(msg, param);
-	update = *((int *) hip_get_param_contents_direct(param));
-	HIP_DEBUG("the update value is %d \n", update);
-
-	if (dst_hit)
-		err = firewall_set_bex_state(src_hit, dst_hit, 1);
-	else
-		err = firewall_set_bex_state(src_hit, dst_hit, -1);
-
-	
-	return hipl_userspace_ipsec_sadb_add_wrapper(saddr, daddr, 
-							 src_hit, dst_hit, 
-							 spi_ipsec, ealg, enckey, 
-							 authkey, already_acquired, 
-							 direction, update, 
-							 sport, dport);
+	switch(msg_type)
+	{
+	        case SO_HIP_FW_BEX_DONE:
+		        if (dst_hit)
+		                err = firewall_set_bex_state(src_hit, dst_hit, 1);
+			else
+			        err = firewall_set_bex_state(src_hit, dst_hit, -1);
+			break;
+                case SO_HIP_FW_UPDATE_DB:
+		        err = firewall_set_bex_state(src_hit, dst_hit, 0);
+			break;
+                default:
+		        break;
+	}
+	return err;
 }

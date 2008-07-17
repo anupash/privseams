@@ -5,6 +5,8 @@
 #ifndef _HIP_PROTODEFS
 #define _HIP_PROTODEFS
 
+#include "hashchain.h"
+
 #define HIP_MAX_PACKET 2048
 
 /** @addtogroup hip_msg
@@ -72,12 +74,14 @@
 #define HIP_PARAM_CERT                 768
 #define HIP_PARAM_NOTIFICATION         832
 #define HIP_PARAM_ECHO_REQUEST_SIGN    897
-#define HIP_PARAM_REG_INFO	       930
+#define HIP_PARAM_REG_INFO	       	   930
 #define HIP_PARAM_REG_REQUEST	       932
 #define HIP_PARAM_REG_RESPONSE	       934
 #define HIP_PARAM_REG_FAILED	       936
 #define HIP_PARAM_ECHO_RESPONSE_SIGN   961
 #define HIP_PARAM_ESP_TRANSFORM        4095
+#define HIP_PARAM_ESP_PROT_TRANSFORM   4120
+#define HIP_PARAM_ESP_PROT_ANCHOR	   4121
 
 /* Range 32768 - 49141 can be used for HIPL private parameters i.e. to
    parameters passed from hipconf to hipdaemon. */
@@ -113,7 +117,8 @@
 #define HIP_PARAM_ADD_OPTION		32801
 #define HIP_PARAM_PEER_HIT		32802
 #define HIP_PARAM_HDRR_INFO		32803 
-
+#define HIP_PARAM_HCHAIN_ANCHOR		32804
+#define HIP_PARAM_LSI		        32805 /* xx todo: this should be icomm.h */
 /* End of HIPL private parameters. */
 
 #define HIP_PARAM_HMAC                 61505
@@ -250,7 +255,7 @@
 #define HIP_HA_CTRL_LOCAL_REQ_RELAY      0x4000
 #define HIP_HA_CTRL_LOCAL_REQ_RVS        0x8000
 /* Keep inside parentheses. */
-#define HIP_HA_CTRL_LOCAL_REQ_ALL        (\
+#define HIP_HA_CTRL_LOCAL_REQ_ANY        (\
                                          HIP_HA_CTRL_LOCAL_REQ_ESCROW |\
                                          HIP_HA_CTRL_LOCAL_REQ_RELAY |\
                                          HIP_HA_CTRL_LOCAL_REQ_RVS\
@@ -277,17 +282,15 @@
 #define HIP_SERVICE_RENDEZVOUS	         1
 #define HIP_SERVICE_ESCROW	         201
 #define HIP_SERVICE_RELAY            	 202
-#define HIP_SERVICE_RELAY_UDP_HIP	 203
-#define HIP_SERVICE_RELAY_UDP_ESP	 204
+/* IMPORTANT! This must be the sum of above services. */
+#define HIP_TOTAL_EXISTING_SERVICES      3
+/* @} */
 
 /** @addtogroup hip_proxy
  * @{ 
  */
 #define HIP_PROXY_PASSTHROUGH		0
-#define HIP_PROXY_TRANSLATE 			1
-
-/* IMPORTANT! This must be the sum of above services. */
-#define HIP_TOTAL_EXISTING_SERVICES      3
+#define HIP_PROXY_TRANSLATE 		1
 /* @} */
 
 /* Registration failure types as specified in draft-ietf-hip-registration-02.
@@ -387,6 +390,18 @@ struct hip_keymat_keymat
 	size_t keymatlen; /**< Length of the key material */
 	void *keymatdst;  /**< Pointer to beginning of key material */
 };
+
+struct esp_prot_transform {
+	hip_tlv_type_t     type;
+	hip_tlv_len_t      length;
+	uint8_t     	   transform;
+} __attribute__ ((packed));
+
+struct esp_prot_anchor {
+	hip_tlv_type_t     type;
+	hip_tlv_len_t      length;
+	unsigned char  	   anchor[MAX_HASH_LENGTH];
+} __attribute__ ((packed));
 
 /**
  * Used in executing a unit test case in a test suite in the kernel module.
@@ -621,7 +636,7 @@ struct hip_seq {
 struct hip_ack {
 	hip_tlv_type_t type;
 	hip_tlv_len_t length;
-	uint32_t peer_update_id; /**< n items */
+	uint32_t peer_update_id; /**< n items */ /* This only fits one... */
 } __attribute__ ((packed));
 
 struct hip_notification {
@@ -765,7 +780,8 @@ struct hip_reg_response {
 struct hip_reg_failed {
 	hip_tlv_type_t type;
 	hip_tlv_len_t  length;
-	uint8_t       failure_type;
+	uint8_t        failure_type;
+	uint8_t        reg_type[0];
 } __attribute__ ((packed));
 
 struct hip_keys {
@@ -829,4 +845,3 @@ struct hip_reg_from {
 } __attribute__ ((packed));
 
 #endif /* _HIP_PROTODEFS */
-

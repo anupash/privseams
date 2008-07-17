@@ -24,6 +24,8 @@
 #include "hidb.h"
 #include "maintenance.h"
 #include "accessor.h"
+#include "message.h"
+#include "esp_prot_common.h"
 
 #ifdef CONFIG_HIP_HI3
 #include "i3_client_api.h"

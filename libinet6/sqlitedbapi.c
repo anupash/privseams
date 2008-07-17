@@ -38,9 +38,9 @@ static int hip_sqlite_callback(void *NotUsed, int argc, char **argv, char **azCo
  * @note Always remember to close the db, even if it did return error!
  */
 sqlite3 * hip_sqlite_open_db(const char * db_path, const char * create_table_sql) {
-        int err = 0, existed = 0, rc = 0;
-        FILE * db_file;
-        sqlite3 * p_db;
+        int err = 0, existed = 0;
+        FILE * db_file = NULL;
+        sqlite3 * p_db = NULL;
 
         db_file = fopen(db_path, "r");
         if (!db_file) {
@@ -51,12 +51,9 @@ sqlite3 * hip_sqlite_open_db(const char * db_path, const char * create_table_sql
                 fclose(db_file);
         }
         HIP_DEBUG("Opening the db\n");
-        rc = sqlite3_open(db_path, &p_db);
-        if (rc) {
-                HIP_DEBUG("Can't open database: %s\n", sqlite3_errmsg(p_db));
-                err = -1;
-                goto out_err;
-        }
+	HIP_IFEL(sqlite3_open(db_path, &p_db),
+			-1, "Can't open database: %s\n", sqlite3_errmsg(p_db));
+
         /* Tables need to be created */
         if (existed == -1) {
                 HIP_DEBUG("Database did not exist so it needs tables too\n");
@@ -64,9 +61,15 @@ sqlite3 * hip_sqlite_open_db(const char * db_path, const char * create_table_sql
                          -1, "Failed to create tables\n");
                 HIP_DEBUG("Table creation returned OK\n");
         }
-        return(p_db);
+
  out_err:
-        return(NULL);
+
+	if (err && p_db) {
+	    if (sqlite3_close(p_db))
+		HIP_ERROR("Error closing database: %s\n", sqlite3_errmsg(p_db));
+	    p_db = NULL;
+	}
+        return(p_db);
 }
 
 /**

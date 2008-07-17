@@ -1,4 +1,3 @@
-
 /** @file
  * This file defines handling functions for incoming packets for the Host
  * Identity Protocol (HIP).
@@ -11,6 +10,7 @@
  * @author  Bing Zhou
  * @author  Tobias Heer
  * @author  Laura Takkinen //blind code
+ * @author  Rene Hummen
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  * @note    Doxygen comments for functions are now in the header file.
  *          Lauri 19.09.2007 16:43
@@ -453,7 +453,7 @@ int hip_receive_control_packet(struct hip_common *msg,
                                int filter)
 {
 	hip_ha_t tmp, *entry = NULL;
-	int err = 0, type, skip_sync = 0;
+	int err = 0, type, skip_sync = 0;	
 
 	/* Debug printing of received packet information. All received HIP
 	   control packets are first passed to this function. Therefore
@@ -469,6 +469,18 @@ int hip_receive_control_packet(struct hip_common *msg,
 		  msg_info->src_port, msg_info->dst_port);
 	HIP_DUMP_MSG(msg);
 
+//add by santtu	
+#ifdef HIP_USE_ICE
+	type = hip_get_msg_type(msg);
+	entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
+	if(type == HIP_UPDATE && entry){
+		hip_external_ice_receive_pkt(msg,entry,src_addr,msg_info->src_port);
+	}
+#endif
+//end add	
+	
+	
+	
 	HIP_IFEL(hip_check_network_msg(msg), -1,
 		 "checking control message failed\n", -1);
 
@@ -607,7 +619,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 		//HIP_STOP_TIMER(KMM_GLOBAL,"Base Exchange");
 		break;
 		
-	case HIP_UPDATE:
+	case HIP_UPDATE:		
 		HIP_IFCS(entry, err = entry->hadb_rcv_func->
 			 hip_receive_update(msg, src_addr, dst_addr, entry,
 					    msg_info));
@@ -693,12 +705,9 @@ int hip_receive_udp_control_packet(struct hip_common *msg,
 	return err;
 }
 
-int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle, 
-		  struct in6_addr *r1_saddr,
-		  struct in6_addr *r1_daddr,
-		  hip_ha_t *entry,
-	          hip_portpair_t *r1_info,
-		  struct hip_dh_public_value *dhpv)
+int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
+		  in6_addr_t *r1_saddr, in6_addr_t *r1_daddr, hip_ha_t *entry,
+	          hip_portpair_t *r1_info, struct hip_dh_public_value *dhpv)
 {
 	
 	hip_transform_suite_t transform_hip_suite, transform_esp_suite; 
@@ -717,6 +726,9 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	uint32_t spi_in = 0;
 
 	_HIP_DEBUG("hip_create_i2() invoked.\n");
+
+	HIP_DEBUG("R1 source port %u, destination port %d\n",
+		  r1_info->src_port, r1_info->dst_port);
 
 	HIP_ASSERT(entry);
 
@@ -768,25 +780,17 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	}
 
 	
-#ifndef HIP_USE_ICE
+
 	/********* LOCATOR PARAMETER ************/
         /** Type 193 **/ 
+		HIP_DEBUG("Building LOCATOR parameter 	1\n");
         if (hip_locator_status == SO_HIP_SET_LOCATOR_ON) {
-            HIP_DEBUG("Building LOCATOR parameter\n");
+            HIP_DEBUG("Building LOCATOR parameter 2\n");
             if ((err = hip_build_locators(i2)) < 0) 
                 HIP_DEBUG("LOCATOR parameter building failed\n");
         }
-#endif
-#ifdef HIP_USE_ICE
-    	/********* LOCATOR PARAMETER ************/
-		/** Type 193 **/ 
-		if (hip_locator_status == SO_HIP_SET_LOCATOR_ON) {
-		    HIP_DEBUG("Building nat LOCATOR parameter\n");
-		    if ((err = hip_nat_build_locators(i2)) < 0) 
-		        HIP_DEBUG("nat LOCATOR parameter building failed\n");
-		}        
 
-        
+#ifdef HIP_USE_ICE
         hip_build_param_nat_tranform(i2, entry->nat_control);
 #endif
 	/********** SOLUTION **********/
@@ -811,7 +815,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		 HIP_MAX_DH_GROUP_ID, NULL, 0), -1,
 		 "Building of DH failed.\n");
 
-        /********** HIP transform. **********/
+    /********** HIP transform. **********/
 	HIP_IFE(!(param = hip_get_param(ctx->input, HIP_PARAM_HIP_TRANSFORM)), -ENOENT);
 	HIP_IFEL((transform_hip_suite =
 		  hip_select_hip_transform((struct hip_hip_transform *) param)) == 0, 
@@ -859,7 +863,11 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
  		HIP_IFEL(1, -ENOSYS, "HIP transform not supported (%d)\n",
 			 transform_hip_suite);
 	}
-
+	
+	/* REG_INFO parameter. This builds a REG_REQUEST parameter in the I2
+	   packet. */
+	hip_handle_param_reg_info(entry, ctx->input, i2);
+	
 	/********** ESP-ENC transform. **********/
 	HIP_IFE(!(param = hip_get_param(ctx->input, HIP_PARAM_ESP_TRANSFORM)), -ENOENT);
 
@@ -870,7 +878,19 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	HIP_IFEL(hip_build_param_transform(i2, HIP_PARAM_ESP_TRANSFORM,
 					   &transform_esp_suite, 1), -1,
 		 "Building of ESP transform failed\n");
-
+	
+	/********** ESP-PROT transform (OPTIONAL) **********/
+	
+	HIP_IFEL(add_esp_prot_transform_to_I2(i2, entry, ctx), -1,
+			"failed to add esp protection transform\n");
+	
+	/********** ESP-PROT anchor (OPTIONAL) **********/
+	
+	HIP_IFEL(add_esp_prot_anchor_to_I2(i2, entry), -1,
+			"failed to add esp protection anchor\n");
+	
+	/************************************************/
+	
 	HIP_HEXDUMP("enc(host_id)", host_id_in_enc,
 		    hip_get_param_total_len(host_id_in_enc));
 
@@ -914,6 +934,9 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	 * try to set up inbound IPsec SA, similarly as in hip_create_r2 */
 
 	HIP_DEBUG("src %d, dst %d\n", r1_info->src_port, r1_info->dst_port);
+	
+	entry->local_udp_port = r1_info->src_port;
+	entry->peer_udp_port = r1_info->dst_port;
 
 	entry->hip_transform = transform_hip_suite;
 
@@ -925,26 +948,34 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 			      &entry->hit_peer, &entry->hit_our,
 			      entry, &spi_in, transform_esp_suite, 
 			      &ctx->esp_in, &ctx->auth_in, 0,
-			      HIP_SPI_DIRECTION_IN, 0,
-			      r1_info->src_port, r1_info->dst_port), -1, 
-		         "Failed to setup IPsec SPD/SA entries, peer:src\n");
+			      HIP_SPI_DIRECTION_IN, 0, entry), -1, 
+		   "Failed to setup IPsec SPD/SA entries, peer:src\n");
 	}
 #endif
 
-	if (!hip_blind_get_status()) {
-	  HIP_DEBUG("Blind is OFF\n");
-	  /*Find lsi identifiers for the pair of hits given by the context */
-	  hip_ha_t *entry_aux = hip_hadb_find_byhits(&ctx->input->hits, &ctx->input->hitr);
-	  /* let the setup routine give us a SPI. */
-	  HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(r1_saddr, r1_daddr,
-			      &ctx->input->hits, &ctx->input->hitr,
-			      &spi_in, transform_esp_suite, 
-			      &ctx->esp_in, &ctx->auth_in, 0,
-			      HIP_SPI_DIRECTION_IN, 0,
-			      r1_info->src_port, r1_info->dst_port), -1, 
-		   "Failed to setup IPsec SPD/SA entries, peer:src\n");
-
+//modified by santtu
+	/**when nat control is 0, we create sa as normal mode, 
+	 * but is it is not, we use other connectivity engine to create sa***/
+	if(entry->nat_control==0){
+		if (!hip_blind_get_status()) {
+		  HIP_DEBUG("Blind is OFF\n");
+		  HIP_DEBUG_HIT("hit our", &entry->hit_our);
+		  HIP_DEBUG_HIT("hit peer", &entry->hit_peer);
+		  /* let the setup routine give us a SPI. */
+		  HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(r1_saddr, r1_daddr,
+				      &ctx->input->hits, &ctx->input->hitr,
+				      &spi_in, transform_esp_suite, 
+				      &ctx->esp_in, &ctx->auth_in, 0,
+				      HIP_SPI_DIRECTION_IN, 0,
+				      entry), -1, 
+			   "Failed to setup IPsec SPD/SA entries, peer:src\n");
+		}
 	}
+	else{
+		//spi should be created
+		get_random_bytes(&spi_in, sizeof(uint32_t));
+	}
+//end modify
 	/* XXX: -EAGAIN */
 	HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
 	
@@ -969,57 +1000,21 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	/* LSI not created, as it is local, and we do not support IPv4 */
 
 #ifdef CONFIG_HIP_ESCROW
-    if (hip_deliver_escrow_data(r1_saddr, r1_daddr, &ctx->input->hits, 
-        &ctx->input->hitr, &spi_in, transform_esp_suite, &ctx->esp_in, 
-        HIP_ESCROW_OPERATION_ADD) != 0)
-    {  
-        HIP_DEBUG("Could not deliver escrow data to server.\n");
-    }             
+	if (hip_deliver_escrow_data(r1_saddr, r1_daddr, &ctx->input->hits,
+				    &ctx->input->hitr, &spi_in,
+				    transform_esp_suite, &ctx->esp_in, 
+				    HIP_ESCROW_OPERATION_ADD) != 0)
+	{  
+		HIP_DEBUG("Could not deliver escrow data to server.\n");
+	}             
 #endif //CONFIG_HIP_ESCROW
 
-    /* Check if we have requested any services. The request bits are set in
-       user.c. */
-    if(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_ALL) {
-	    int request_count = hip_get_pending_request_count(entry);
-	    if(request_count > 0) {
-		    int i = 0;
-		    uint8_t reg_types[request_count];
-		    hip_pending_request_t *requests[request_count];
-		    hip_get_pending_requests(entry, requests);
-		    
-		    /* Copy the reg_types to an array. */
-		    for(;i < request_count; i++) {
-			    reg_types[i] = requests[i]->reg_type;
-		    }
-		    
-		    HIP_IFEL(hip_build_param_reg_request(
-				     i2, requests[0]->lifetime, reg_types,
-				     request_count), -1,
-			     "Failed to build a REG_REQUEST parameter.\n");
-		    /* We do not delete the pending requests for this entry yet,
-		       but only after R2 has arrived. We do not need pending
-		       requests when R2 arrives, but in case the I2 is to be
-		       retransmitted, we must be able to produce the REG_REQUEST
-		       parameter. */
-	    }
-    }
-
-    /* Old crap soon to be removed...
-    uint8_t services[HIP_TOTAL_EXISTING_SERVICES];
-    type_count = hip_get_incomplete_registrations(&reg_type, entry, 1, services); 
-    if (type_count > 0) {
-    HIP_DEBUG("Adding REG_REQUEST parameter with %d reg types.\n", type_count);
-    HIP_IFEL(hip_build_param_reg_request(i2, 255, services, type_count),
-    -1, "Could not build REG_REQUEST parameter\n");
-    }
-    */
-
-    /******** NONCE *************************/
+	/******** NONCE *************************/
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status()) {
-	  HIP_DEBUG("add nonce to the message\n");
-	  HIP_IFEL(hip_build_param_blind_nonce(i2, entry->blind_nonce_i), 
-		   -1, "Unable to attach nonce to the message.\n");
+		HIP_DEBUG("add nonce to the message\n");
+		HIP_IFEL(hip_build_param_blind_nonce(i2, entry->blind_nonce_i), 
+			 -1, "Unable to attach nonce to the message.\n");
 	}
 #endif
 
@@ -1072,7 +1067,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	/* Store the keys until we receive R2 */
 	HIP_IFEB(hip_store_base_exchange_keys(entry, ctx, 1), -1, HIP_UNLOCK_HA(entry));
 
-	/* todo: Also store the keys that will be given to ESP later */
+	/** @todo Also store the keys that will be given to ESP later */
 	HIP_IFE(hip_hadb_get_peer_addr(entry, &daddr), -1); 
 
 	/* R1 packet source port becomes the I2 packet destination port. */
@@ -1097,7 +1092,6 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 	struct hip_context *ctx = NULL;
 	struct hip_host_id *peer_host_id = NULL;
 	struct hip_r1_counter *r1cntr = NULL;
-	struct hip_reg_info *reg_info = NULL;
 	struct hip_dh_public_value *dhpv = NULL;
         struct hip_locator *locator = NULL;
 #ifdef CONFIG_HIP_HI3
@@ -1219,98 +1213,6 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
         else
             HIP_DEBUG("R1 did not have locator\n");
 
-	/* Handle REG_INFO parameter. */
-	hip_handle_param_reg_info(r1, entry);
-	/*
-	  reg_info = hip_get_param(r1, HIP_PARAM_REG_INFO);
-	
-	  if (reg_info) {
-	  int i;
-	  uint8_t current_reg_type = 0;
-	  uint8_t size_of_lifetimes = sizeof(reg_info->min_lifetime)
-	  + sizeof(reg_info->max_lifetime);
-	  int typecount;
-	
-	  uint8_t *reg_types = (uint8_t *)
-	  (hip_get_param_contents_direct(reg_info)) + size_of_lifetimes;
-
-	  typecount = hip_get_param_contents_len(reg_info) - size_of_lifetimes;
-		
-	  if(typecount == 0){
-	  HIP_DEBUG("REG_INFO had no services listed.\n");
-	  HIP_INFO("Responder is currently unable to provide "\
-	  "services due to transient conditions.\n");
-	  }
-
-	  HIP_DEBUG("Responder offers %d %s.\n", typecount,
-	  (typecount == 1) ? "service" : "services");
-	  HIP_HEXDUMP("Reg types are (one byte each): ", reg_types, typecount);
-
-	  for(i = 0; i < typecount; i++){
-	  current_reg_type = reg_types[i];
-		     
-	  switch(current_reg_type){
-	  #ifdef CONFIG_HIP_ESCROW
-	  case HIP_SERVICE_ESCROW:
-	  HIP_INFO("Responder offers escrow service.\n");
-						
-	  HIP_KEA *kea;
-	  kea = hip_kea_find(&entry->hit_our);
-	  if (kea && kea->keastate == HIP_KEASTATE_REGISTERING) {
-	  HIP_DEBUG("Registering to escrow service.\n");
-	  hip_keadb_put_entry(kea);
-	  } 
-	  else if(kea){
-	  kea->keastate = HIP_KEASTATE_INVALID;
-	  HIP_DEBUG("Not doing escrow registration, "\
-	  "invalid kea state.\n");
-	  hip_keadb_put_entry(kea);	  
-	  }
-	  else{
-	  HIP_DEBUG("Not doing escrow registration.\n");
-	  }
-
-	  break;
-	  #endif
-	  #ifdef CONFIG_HIP_RVS
-	  case HIP_SERVICE_RENDEZVOUS:
-	  HIP_INFO("Responder offers rendezvous service.\n");
-		
-	  if(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_RVS)
-	  {
-	  hip_hadb_set_peer_controls(
-	  entry, HIP_HA_CTRL_PEER_RVS_CAPABLE);
-	  }
-	  break;
-	  case HIP_SERVICE_RELAY:
-	  HIP_INFO("Responder offers UDP relay service for "\
-	  "HIP packets.\n");
-			  
-	  if(entry->local_controls & HIP_HA_CTRL_LOCAL_REQ_RELAY)
-	  {
-	  hip_hadb_set_peer_controls(
-	  entry, HIP_HA_CTRL_PEER_RELAY_CAPABLE);
-
-	  }
-	  break;
-	  #endif
-	  default:
-	  HIP_INFO("Responder offers unsupported service.\n");
-	  }
-	  }
-	  }
-	  #ifdef CONFIG_HIP_ESCROW
-	  else {
-	  HIP_DEBUG("No REG_INFO found in R1: no services available \n");
-	  HIP_KEA *kea;
-	  kea = hip_kea_find(&entry->hit_our);
-	  if (kea && (kea->keastate == HIP_KEASTATE_REGISTERING))
-	  kea->keastate = HIP_KEASTATE_INVALID;
-	  if (kea)
-	  hip_keadb_put_entry(kea);	
-	  }
-	  #endif */
-
 	/* R1 generation check */
 
 	/* We have problems with creating precreated R1s in reasonable
@@ -1368,6 +1270,9 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 			  len, hip_get_param_host_id_hostname(peer_host_id));
 	}
 	
+	/* We haven't handled REG_INFO parameter. We do that in hip_create_i2()
+	   because we must create an REG_REQUEST parameter based on the data
+	   of the REG_INFO parameter. */
  	err = entry->hadb_misc_func->
 	     hip_create_i2(ctx, solved_puzzle, r1_saddr, r1_daddr, entry,
 			   r1_info, dhpv);
@@ -1483,46 +1388,43 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 		  in6_addr_t *dest,
 		  const in_port_t dest_port)
 {
-	struct hip_reg_request *reg_request = NULL;
- 	struct hip_common *r2 = NULL, *i2 = NULL;
- 	int err = 0, clear = 0;
+	hip_common_t *r2 = NULL, *i2 = NULL;
+	struct hip_crypto_key hmac;
+ 	int err = 0;
 	uint16_t mask = 0;
-	uint8_t lifetime;
-	uint32_t spi_in;
+	uint32_t spi_in = 0;
         
 	_HIP_DEBUG("hip_create_r2() invoked.\n");
 	/* Assume already locked entry */
 	i2 = ctx->input;
-
+	
 	/* Build and send R2: IP ( HIP ( SPI, HMAC, HIP_SIGNATURE ) ) */
 	HIP_IFEL(!(r2 = hip_msg_alloc()), -ENOMEM, "No memory for R2\n");
-
-
+	
 #ifdef CONFIG_HIP_BLIND
 	// For blind: we must add encrypted public host id
 	if (hip_blind_get_status()) {
-	  HIP_DEBUG("Set HIP_PACKET_CTRL_BLIND for R2\n");
-	  mask |= HIP_PACKET_CTRL_BLIND;
-	  
-	  // Build network header by using blinded HITs
-	  entry->hadb_misc_func->
-	    hip_build_network_hdr(r2, HIP_R2, mask, &entry->hit_our_blind,
-				  &entry->hit_peer_blind);
+		HIP_DEBUG("Set HIP_PACKET_CTRL_BLIND for R2\n");
+		mask |= HIP_PACKET_CTRL_BLIND;
+		
+		// Build network header by using blinded HITs
+		entry->hadb_misc_func->
+			hip_build_network_hdr(r2, HIP_R2, mask, &entry->hit_our_blind,
+					      &entry->hit_peer_blind);
 	}
 #endif
-	/* Just swap the addresses to use the I2's destination HIT as
-	 * the R2's source HIT */
+	/* Just swap the addresses to use the I2's destination HIT as the R2's
+	   source HIT. */
 	if (!hip_blind_get_status()) {
-	  entry->hadb_misc_func->
-	    hip_build_network_hdr(r2, HIP_R2, mask, &entry->hit_our,
-				  &entry->hit_peer);
+		entry->hadb_misc_func->
+			hip_build_network_hdr(r2, HIP_R2, mask, &entry->hit_our,
+					      &entry->hit_peer);
 	}
 
- 	/********** ESP_INFO **********/
+ 	/* ESP_INFO */
 	spi_in = hip_hadb_get_latest_inbound_spi(entry);
-	HIP_IFEL(hip_build_param_esp_info(r2, ctx->esp_keymat_index,
-					  0, spi_in), -1,
-		 "building of ESP_INFO failed.\n");
+	HIP_IFEL(hip_build_param_esp_info(r2, ctx->esp_keymat_index, 0, spi_in),
+		 -1, "building of ESP_INFO failed.\n");
 
 #ifdef CONFIG_HIP_BLIND
 	// For blind: we must add encrypted public host id
@@ -1531,43 +1433,54 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 	  	   -1, "hip_blind_build_r2 failed\n");
 	}
 #endif
+	
+	/********** ESP-PROT anchor (OPTIONAL) **********/
+	
+	HIP_IFEL(add_esp_prot_anchor_to_R2(r2, entry), -1,
+			"failed to add esp protection anchor\n");
+	
+	/************************************************/
 
-#ifdef HIP_USE_ICE
     	/********* LOCATOR PARAMETER ************/
-		/** Type 193 **/ 
-		if (hip_locator_status == SO_HIP_SET_LOCATOR_ON) {
-		    HIP_DEBUG("Building nat LOCATOR parameter\n");
-		    if ((err = hip_nat_build_locators(r2)) < 0) 
-		        HIP_DEBUG("nat LOCATOR parameter building failed\n");
-		}  	
-#endif	
+	/** Type 193 **/ 
+	if (hip_locator_status == SO_HIP_SET_LOCATOR_ON) {
+		HIP_DEBUG("Building nat LOCATOR parameter\n");
+		if ((err = hip_build_locators(r2)) < 0) 
+			HIP_DEBUG("nat LOCATOR parameter building failed\n");
+	}  	
 	
 #if defined(CONFIG_HIP_RVS) || defined(CONFIG_HIP_ESCROW)
 	/********** REG_REQUEST **********/
-	/* This part should only be executed in HIP relay or in the host
-	   offering escrow service.
-	   (hip_relay_get_status() == HIP_RELAY_ON || we_are_escrow_server()).
-	   But since I don't have a way to detect if we are an escrow server
-	   this part is executed on I and R also. -Lauri 27.09.2007*/
-	//hip_handle_regrequest(entry, i2, r2);
+	/* This part should only be executed at server offering rvs, relay or
+	   escrow services. Since we don't have a way to detect if we are an
+	   escrow server this part is executed on I and R also.
+	   -Lauri 11.06.2008
 	
 	/* Handle REG_REQUEST parameter. */
-	HIP_DEBUG("Entering new REG_REQUEST handler.\n");
-	hip_handle_param_rrq(entry, i2, r2);
+	hip_handle_param_reg_request(entry, i2, r2);
 #endif	
- 	/* HMAC2 */
-	{
-		struct hip_crypto_key hmac;
-		if (entry->our_pub == NULL) {
-			HIP_DEBUG("entry->our_pub is null\n");
-		} else {
-			_HIP_HEXDUMP("Host id for HMAC2", entry->our_pub,
-				    hip_get_param_total_len(entry->our_pub));
-		}
-		
-		memcpy(&hmac, &entry->hip_hmac_out, sizeof(hmac));
-		HIP_IFEL(hip_build_param_hmac2_contents(r2, &hmac, entry->our_pub), -1,
-			 "Building of hmac failed\n");
+ 	/* Create HMAC2 parameter. */
+	if (entry->our_pub == NULL) {
+		HIP_DEBUG("entry->our_pub is NULL.\n");
+	} else {
+		_HIP_HEXDUMP("Host ID for HMAC2", entry->our_pub,
+			     hip_get_param_total_len(entry->our_pub));
+	}
+	
+	memcpy(&hmac, &entry->hip_hmac_out, sizeof(hmac));
+	HIP_IFEL(hip_build_param_hmac2_contents(r2, &hmac, entry->our_pub), -1,
+		 "Failed to build parameter HMAC2 contents.\n");
+	
+	HIP_IFEL(entry->sign(entry->our_priv, r2), -EINVAL,
+		 "Failed to sign R2 packet.\n");
+	
+	err = entry->hadb_xmit_func->hip_send_pkt(
+		i2_daddr, i2_saddr, (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+		entry->peer_udp_port, r2, entry, 1);
+	
+	/* Why is err reset to zero? -Lauri 11.06.2008 */
+	if (err == 1) {
+		err = 0;
 	}
 
 	HIP_IFEL(entry->sign(entry->our_priv, r2), -EINVAL, "Could not sign R2. Failing\n");
@@ -1587,8 +1500,6 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 //end add
 	
 	
-
-
 	err = entry->hadb_xmit_func->hip_send_pkt(i2_daddr, i2_saddr,
 						  (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
 	                                          entry->peer_udp_port, r2, entry, 1);
@@ -1596,13 +1507,10 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 	HIP_IFEL(err, -ECOMM, "Sending R2 packet failed.\n");
 
  out_err:
-	if (r2)
+	if (r2 != NULL) {
 		free(r2);
-        if (clear && entry) {
-		/** @todo Should this putting happen here? */
-		HIP_ERROR("About to do hip_put_ha, should this happen here?\n");
-		hip_put_ha(entry);
 	}
+	
 	return err;
 }
 
@@ -1636,7 +1544,8 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	struct hip_esp_info *esp_info = NULL;
 	struct hip_dh_public_value *dhpv = NULL;
 	struct hip_spi_in_item spi_in_data;
-	struct hip_locator *locator = NULL;
+//removed by santtu
+	//struct hip_locator *locator = NULL;
 	struct hip_solution *sol = NULL;
 	hip_tlv_common_t *param = NULL;
 	in6_addr_t *plain_peer_hit = NULL, *plain_local_hit = NULL;
@@ -1648,10 +1557,19 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	uint32_t spi_in = 0, spi_out = 0;
 	uint16_t crypto_len = 0, nonce = 0;
 	int err = 0, retransmission = 0, replay = 0, use_blind = 0, state;
-	
-    in6_addr_t dest; // For the IP address in RELAY_FROM
-    in_port_t  dest_port = 0; // For the port in RELAY_FROM
-        
+	in6_addr_t dest; // For the IP address in RELAY_FROM
+	in_port_t  dest_port = 0; // For the port in RELAY_FROM
+	struct esp_prot_anchor *prot_anchor = NULL;
+	unsigned char *anchor = NULL;
+	int item_length = 0;
+	struct esp_prot_transform *prot_transform = NULL;
+	uint8_t transform = 0;
+	extern uint8_t hip_esp_prot_ext_transform;
+	//add by santtu        
+#ifdef HIP_USE_ICE
+	void * ice_session = 0;
+	int i;
+#endif
 #ifdef CONFIG_HIP_HI3
 	int n_addrs = 0;
 	struct hip_locator_info_addr_item* first = NULL;
@@ -1703,10 +1621,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		 -ENOMSG, "Cookie solution rejected.\n");
 	
  	HIP_DEBUG("Cookie accepted\n");
-#ifdef HIP_USE_ICE	
- 	HIP_DEBUG("handle nat trasform in I2\n");
- 	hip_nat_handle_transform_in_server(i2, entry);
-#endif	
+
 	
  	
 #ifdef CONFIG_HIP_HI3
@@ -1955,9 +1870,10 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	if(i2_info->dst_port == HIP_NAT_UDP_PORT)
 	{
 		entry->nat_mode = 1;
+		entry->local_udp_port = i2_info->dst_port;
 		entry->peer_udp_port = i2_info->src_port;
 		HIP_DEBUG("entry->hadb_xmit_func: %p.\n", entry->hadb_xmit_func);
-		HIP_DEBUG("SETTING SEND FUNC TO UDP for entry %p from I2 info.\n",
+		HIP_DEBUG("Setting send func to UDP for entry %p from I2 info.\n",
 			  entry);
 		hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
 	}
@@ -2019,6 +1935,19 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	HIP_DEBUG("retransmission: %s\n", (retransmission ? "yes" : "no"));
 	HIP_DEBUG("replay: %s\n", (replay ? "yes" : "no"));
 	HIP_DEBUG("src %d, dst %d\n", i2_info->src_port, i2_info->dst_port);
+	
+	/********** ESP-PROT transform (OPTIONAL) **********/
+	
+	HIP_IFEL(handle_esp_prot_transform_in_I2(entry, ctx), -1,
+			"failed to handle esp prot transform\n");
+	
+	/********** ESP-PROT anchor (OPTIONAL) **********/
+	
+	HIP_IFEL(handle_esp_prot_anchor_in_I2(entry, ctx), -1,
+			"failed to handle esp prot anchor\n");
+	
+	/************************************************/
+	
 #ifdef CONFIG_HIP_BLIND
 	if (use_blind) {
 	  /* Set up IPsec associations */
@@ -2026,30 +1955,40 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 			   &entry->hit_peer, &entry->hit_our,
 			   entry, &spi_in,
 			   esp_tfm,  &ctx->esp_in, &ctx->auth_in,
-			   retransmission, HIP_SPI_DIRECTION_IN, 0, i2_info->src_port, 
-			   i2_info->dst_port);
+			   retransmission, HIP_SPI_DIRECTION_IN, 0, entry);
 	}
 #endif
+	
+//modified by santtu
+#ifdef HIP_USE_ICE	
+ 	HIP_DEBUG("handle nat trasform in I2\n");
+ 	hip_nat_handle_transform_in_server(i2, entry);
+#endif	
 
-	if (!use_blind) {
-	/* Set up IPsec associations */
-	err = entry->hadb_ipsec_func->hip_add_sa(i2_saddr, i2_daddr,
-			 &ctx->input->hits, &ctx->input->hitr,
-			 &spi_in, esp_tfm, &ctx->esp_in, &ctx->auth_in,
-			 retransmission, HIP_SPI_DIRECTION_IN, 0,
-			 i2_info->src_port, i2_info->dst_port);
+	/**nat_control is 0 means we use normal mode to create sa*/
+	if(entry->nat_control == 0) {
+	
+		if (!use_blind) {
+			/* Set up IPsec associations */
+			err = entry->hadb_ipsec_func->hip_add_sa(i2_saddr, i2_daddr,
+					 &ctx->input->hits, &ctx->input->hitr,
+					 &spi_in,
+					 esp_tfm,  &ctx->esp_in, &ctx->auth_in,
+					 retransmission, HIP_SPI_DIRECTION_IN, 0,
+					 entry);
+		}
+		if (err) {
+			HIP_ERROR("Failed to setup inbound SA with SPI=%d\n", spi_in);
+			err = -1;
+			hip_hadb_delete_inbound_spi(entry, 0);
+			hip_hadb_delete_outbound_spi(entry, 0);
+			goto out_err;
+		}
+	} else {
+		//sa not created, but spi must be created
+		get_random_bytes(&spi_in, sizeof(uint32_t));
 	}
-	if (err) {
-		HIP_ERROR("Failed to setup inbound SA with SPI=%d\n", spi_in);
-		/* if (err == -EEXIST)
-		   HIP_ERROR("SA for SPI 0x%x already exists, this is perhaps a bug\n",
-		   spi_in); */
-		err = -1;
-		hip_hadb_delete_inbound_spi(entry, 0);
-		hip_hadb_delete_outbound_spi(entry, 0);
-		goto out_err;
-	}
-
+//end modify
 	/** @todo Check -EAGAIN */
 	
 	/* ok, found an unused SPI to use */
@@ -2073,27 +2012,33 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 			   &entry->hit_our, &entry->hit_peer,
 			   &spi_out, esp_tfm, 
 			   &ctx->esp_out, &ctx->auth_out,
-			   1, HIP_SPI_DIRECTION_OUT, 0, i2_info->dst_port, i2_info->src_port);
+			   1, HIP_SPI_DIRECTION_OUT, 0, entry);
 	}
 #endif
 
-	if (!use_blind) {
-	  err = entry->hadb_ipsec_func->hip_add_sa(i2_daddr, i2_saddr,
-			   &ctx->input->hitr, &ctx->input->hits,
-			   &spi_out, esp_tfm, 
-			   &ctx->esp_out, &ctx->auth_out,
-			   1, HIP_SPI_DIRECTION_OUT, 0, i2_info->dst_port, i2_info->src_port);
+//modified by santtu
+	/**nat_control is 0 means we use normal mode to create sa*/
+	if (entry->nat_control == 0) {
+		if (!use_blind) {
+		  err = entry->hadb_ipsec_func->hip_add_sa(i2_daddr, i2_saddr,
+				   &ctx->input->hitr, &ctx->input->hits,
+				   &spi_out, esp_tfm, 
+				   &ctx->esp_out, &ctx->auth_out,
+				   1, HIP_SPI_DIRECTION_OUT, 0, entry);
+		}
+		if (err) {
+			HIP_ERROR("Failed to setup outbound SA with SPI = %d.\n",
+				  spi_out);
+			
+			/* delete all IPsec related SPD/SA for this entry*/
+			hip_hadb_delete_inbound_spi(entry, 0);
+			hip_hadb_delete_outbound_spi(entry, 0);
+			goto out_err;
+		}
+	}else{
+		HIP_DEBUG("ICE engine will be used, no sa created here\n");
 	}
-	if (err) {
-		HIP_ERROR("Failed to setup outbound SA with SPI = %d.\n",
-			  spi_out);
-		
-		/* delete all IPsec related SPD/SA for this entry*/
-		hip_hadb_delete_inbound_spi(entry, 0);
-		hip_hadb_delete_outbound_spi(entry, 0);
-		goto out_err;
-	}
-	
+//end modify
 	/* @todo Check if err = -EAGAIN... */
 	HIP_DEBUG("Set up outbound IPsec SA, SPI=0x%x\n", spi_out);
 
@@ -2114,9 +2059,15 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
 	/* Source IPv6 address is implicitly the preferred address after the
 	   base exchange. */
+//modify by santtu
+    //port must be added
+#ifndef HIP_USE_ICE    
 	HIP_IFEL(hip_hadb_add_addr_to_spi(entry, spi_out, i2_saddr, 1, 0, 1),
 		 -1,  "Failed to add an address to SPI list\n");
-	
+#else
+	HIP_IFEL(hip_hadb_add_udp_addr_to_spi(entry, spi_out, i2_saddr, 1, 0, 1,i2_info->src_port, HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY),
+			 -1,  "Failed to add an address to SPI list\n");
+#endif
 	memset(&spi_in_data, 0, sizeof(struct hip_spi_in_item));
 	spi_in_data.spi = spi_in;
 	spi_in_data.ifindex = hip_devaddr2ifindex(i2_daddr);
@@ -2145,23 +2096,22 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		  hip_state_str(entry->state), entry->default_spi_out);
 	
 	
-	//add by santtu	
-	    /***** LOCATOR PARAMETER *****/
-		hip_nat_handle_locator_parameter(i2, entry, esp_info);	
-		
-	#ifdef CONFIG_HIP_RVS
-		ipv6_addr_copy(&dest, &in6addr_any);
-	    if(hip_relay_get_status() == HIP_RELAY_OFF) {
+//add by santtu	
 
-		state = hip_relay_handle_relay_from(i2, i2_saddr, &dest, &dest_port);
-		if( state == -1 ){
-			HIP_DEBUG( "Handling RELAY_FROM of  I2 packet failed.\n");
-			 goto out_err;
-		 }
-				
-	     }
-	#endif 
-	//end add 	
+	
+#ifdef CONFIG_HIP_RVS
+	ipv6_addr_copy(&dest, &in6addr_any);
+    if(hip_relay_get_status() == HIP_RELAY_OFF) {
+
+	state = hip_relay_handle_relay_from(i2, i2_saddr, &dest, &dest_port);
+	if( state == -1 ){
+		HIP_DEBUG( "Handling RELAY_FROM of  I2 packet failed.\n");
+		 goto out_err;
+	 }
+			
+     }
+#endif 
+//end add 	
 	
 	
 	
@@ -2170,11 +2120,10 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	
 	/* Note that we haven't handled the REG_REQUEST yet. This is because we
 	   must create an REG_RESPONSE parameter into the R2 packet based on the
-	   REG_REQUEST parameter. We could allocate a new R2 here and store it
-	   to the context, but since the allocation is done in hip_create_r2(),
-	   we choose handle the REG_REQUEST parameter there - although that is
-	   somewhat illogical. -Lauri 06.05.2008 */
-
+	   REG_REQUEST parameter. We handle the REG_REQUEST parameter in
+	   hip_create_r2() - although that is somewhat illogical.
+	   -Lauri 06.05.2008 */
+	
 	/* Create an R2 packet in response. */
 	HIP_IFEL(entry->hadb_misc_func->hip_create_r2(
 			 ctx, i2_saddr, i2_daddr, entry, i2_info, &dest, dest_port), -1, 
@@ -2188,33 +2137,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		HIP_DEBUG("Could not deliver escrow data to server\n");
 	}
 #endif //CONFIG_HIP_ESCROW
-        /*      
-	#ifdef CONFIG_HIP_RVS
-	if (entry != NULL) {
-	if(hip_relay_get_status() == HIP_RELAY_ON) {
-	entry->state = HIP_STATE_ESTABLISHED;
-	} else {
-	if (entry->state == HIP_STATE_UNASSOCIATED) {
-	entry->state = HIP_STATE_ESTABLISHED;
-	} else if (entry->state == HIP_STATE_ESTABLISHED) {
-	HIP_DEBUG("Initiator rebooted, but base "\
-	"exchange completed. Staying in "\
-	"ESTABLISHED.\n");
-	}
-	}
-	}
-	#else
-	if (entry != NULL) {
-	if (entry->state == HIP_STATE_UNASSOCIATED) {
-			
-	entry->state = HIP_STATE_ESTABLISHED;
-	} else if (entry->state == HIP_STATE_ESTABLISHED) {
-	HIP_DEBUG("Initiator rebooted, but base "\
-	"exchange completed. Staying in "\
-	"ESTABLISHED.\n");
-	}
-	}
-	#endif */ /* CONFIG_HIP_RVS */
 	
 	/** @todo Should wait for ESP here or wait for implementation specific
 	    time. */
@@ -2234,16 +2156,69 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
         /***** LOCATOR PARAMETER ******/
 	/* Why do we process the LOCATOR parameter only after R2 has been sent?
 	   -Lauri 29.04.2008. */
-	locator = hip_get_param(i2, HIP_PARAM_LOCATOR);
-        
-	if (locator != NULL && esp_info != NULL) {
-                HIP_IFEL(hip_update_handle_locator_parameter(
-				 entry, locator, esp_info), -1,
-			 "hip_update_handle_locator_parameter() failed.\n");
-	} else {
-		HIP_DEBUG("Both LOCATOR and ESP_INFO parameters were missing "\
-			  "from the incoming I2 packet.\n");
-	}
+
+                
+//add by santtu	
+    /***** LOCATOR PARAMETER *****/
+	hip_handle_locator_parameter(entry, NULL, esp_info);
+               
+#ifdef HIP_USE_ICE
+	
+	hip_nat_start_ice(entry, esp_info,ICE_ROLE_CONTROLLING);
+		/*
+                //if the client  choose to use ICE 
+        if(!(entry->nat_control)){
+        	//TODO check other nat control type. currently only ICE 
+        	 HIP_DEBUG("ice is not selected\n");
+     
+        }else{
+        //init the session right after the locator receivd
+                HIP_DEBUG("init Ice in I2\n");
+		        ice_session = hip_external_ice_init(ICE_ROLE_CONTROLLING);
+		        		HIP_DEBUG("end init Ice in I2\n");
+		        if(ice_session){
+		        	entry->ice_session = ice_session;
+		        	//add the type 1 address first
+		        	hip_list_t *item, *tmp;
+		        	struct netdev_address *n;
+		        	i=0;
+		        	list_for_each_safe(item, tmp, addresses, i) {
+		        		n = list_entry(item);
+		        		
+		        		
+		        		if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
+		        		    continue;
+		        		HIP_DEBUG_HIT("add Ice local in I2 address", hip_cast_sa_addr(&n->addr));
+		        		if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
+		        			hip_external_ice_add_local_candidates(ice_session,hip_cast_sa_addr(&n->addr),50500,1);
+		        		}
+		        		
+		        		
+		        	}
+		        	//TODO add reflexive address 
+		        	
+		        	//TODO add relay address
+		        	// add remote address
+		        	
+		        	HIP_DEBUG("ICE add remote in I2\n");
+		        	struct hip_spi_out_item* spi_out;
+		        	
+		        	list_for_each_safe(item, tmp, entry->spis_out, i) {
+		        		spi_out = list_entry(item);
+		        		hip_external_ice_add_remote_candidates(ice_session, spi_out->peer_addr_list,1);
+		        	}
+		        	HIP_DEBUG("ICE start checking in I2\n");
+		        	hip_ice_start_check(ice_session);
+		        }
+        }
+        */
+                
+#endif
+                                
+//end add                
+                
+                
+
 	
 	HIP_DEBUG("Reached %s state\n", hip_state_str(entry->state));
 	if (entry->hip_msg_retrans.buf) {
@@ -2383,9 +2358,11 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	struct hip_context *ctx = NULL;
  	struct hip_esp_info *esp_info = NULL;
 	struct hip_spi_out_item spi_out_data;
-	int err = 0, tfm = 0, retransmission = 0, type_count = 0;
+	int err = 0, tfm = 0, retransmission = 0, type_count = 0, idx;
 	int *reg_types = NULL;
 	uint32_t spi_recvd = 0, spi_in = 0;
+	int i;
+	void * ice_session = 0;
 	
 #ifdef CONFIG_HIP_HI3
 	if( r2_info->hi3_in_use ) {
@@ -2448,14 +2425,18 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	
 	HIP_DEBUG("R2 packet source port: %d, destination port %d.\n",
 		  r2_info->src_port, r2_info->dst_port);
+	
+	/********** ESP-PROT anchor (OPTIONAL) **********/
+
+	HIP_IFEL(handle_esp_prot_anchor_in_R2(entry, ctx), -1,
+			"failed to handle esp prot anchor\n");
+	
+	/************************************************/
 
 //add by santtu	
     /***** LOCATOR PARAMETER *****/
-	hip_nat_handle_locator_parameter(r2, entry, esp_info);	
+	hip_handle_locator_parameter(entry, NULL, esp_info);
 //end add
-	
-	
-	
 	
 #ifdef CONFIG_HIP_BLIND
 	if (use_blind) {
@@ -2463,24 +2444,31 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 			   &entry->hit_our, &entry->hit_peer,
 			   &spi_recvd, tfm,
 			   &ctx->esp_out, &ctx->auth_out, 1,
-			   HIP_SPI_DIRECTION_OUT, 0, r2_info->src_port, r2_info->dst_port);
+			   HIP_SPI_DIRECTION_OUT, 0, entry);
 	}
 #endif
-	if (!hip_blind_get_status()) {
-	  err = entry->hadb_ipsec_func->hip_add_sa(r2_daddr, r2_saddr,
-				 &ctx->input->hitr, &ctx->input->hits,
-				 &spi_recvd, tfm,
-				 &ctx->esp_out, &ctx->auth_out, 1,
-				 HIP_SPI_DIRECTION_OUT, 0, r2_info->src_port,
-				 r2_info->dst_port);
+//modified by santtu
+	/**nat_control is 0 means we use normal mode to create sa*/
+	if(entry->nat_control == 0){
+		if (!hip_blind_get_status()) {
+		  err = entry->hadb_ipsec_func->hip_add_sa(r2_daddr, r2_saddr,
+					 &ctx->input->hitr, &ctx->input->hits,
+					 &spi_recvd, tfm,
+					 &ctx->esp_out, &ctx->auth_out, 1,
+					 HIP_SPI_DIRECTION_OUT, 0, entry);
+		}
+		
+		if (err) {
+			/** @todo Remove inbound IPsec SA. */
+			HIP_ERROR("hip_add_sa() failed, peer:dst (err = %d).\n", err);
+			err = -1;
+			goto out_err;
+		}
 	}
-
-	if (err) {
-		/** @todo Remove inbound IPsec SA. */
-		HIP_ERROR("hip_add_sa() failed, peer:dst (err = %d).\n", err);
-		err = -1;
-		goto out_err;
+	else{
+		HIP_DEBUG("ICE engine will be used, no sa created here\n");
 	}
+//end modify
 	/** @todo Check for -EAGAIN */
 	HIP_DEBUG("Set up outbound IPsec SA, SPI = 0x%x (host).\n", spi_recvd);
 	
@@ -2495,7 +2483,20 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	
         /* Source IPv6 address is implicitly the preferred address after the
 	   base exchange. */
+	
+//modify by santtu
+    //port must be added
+#ifndef HIP_USE_ICE    
 	err = hip_hadb_add_addr_to_spi(entry, spi_recvd, r2_saddr, 1, 0, 1);
+#else
+	// when ice implemenation is included
+	// if ice mode is on, we do not add the current address into peer list (can be added also, but set the is_prefered off)
+	err = 0;
+	if(entry->nat_control==0)
+	HIP_IFEL(hip_hadb_add_udp_addr_to_spi(entry, spi_recvd, r2_saddr, 1, 0, 1,r2_info->src_port, HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY),
+			 -1,  "Failed to add an address to SPI list\n");
+#endif	
+	
 	if (err) {
 		HIP_ERROR("hip_hadb_add_addr_to_spi() err = %d not handled.\n",
 			  err);
@@ -2504,32 +2505,75 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	entry->default_spi_out = spi_recvd;
 	HIP_DEBUG("Set default SPI out = 0x%x\n", spi_recvd);
 		
-	err = hip_devaddr2ifindex(r2_daddr);
+	idx = hip_devaddr2ifindex(r2_daddr);
 	
-	if (err != 0) {
-		HIP_DEBUG("ifindex = %d\n", err);
-		hip_hadb_set_spi_ifindex(entry, spi_in, err);
+	if (idx != 0) {
+		HIP_DEBUG("ifindex = %d\n", idx);
+		hip_hadb_set_spi_ifindex(entry, spi_in, idx);
 	} else {
 		HIP_ERROR("Couldn't get device ifindex of address\n");
 	}
+   	
+#ifdef HIP_USE_ICE
+    	
+	hip_nat_start_ice(entry,esp_info,ICE_ROLE_CONTROLLED);
+        /*    
+        //check the nat transform mode
+        if(!(entry->nat_control)){
+        }
+        else{
+                //init the session right after the locator receivd
+	    	HIP_DEBUG("ICE init \n");
+	    	ice_session = hip_external_ice_init(ICE_ROLE_CONTROLLED);
+	        if(ice_session){
+	        	entry->ice_session = ice_session;
+	        	HIP_DEBUG("ICE add local \n");
+	        	
+	        	//add the type 1 address first
+	        	hip_list_t *item, *tmp;
+	        	struct netdev_address *n;
+	        	i=0;
+	        	list_for_each_safe(item, tmp, addresses, i) {
+	        		n = list_entry(item);
+	        		
+	        		
+	        		if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
+	        		    continue;
+	        		HIP_DEBUG_HIT("add Ice local in R2 address", hip_cast_sa_addr(&n->addr));
+	        		if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
+	        			hip_external_ice_add_local_candidates(ice_session,hip_cast_sa_addr(&n->addr),50500,PJ_ICE_CAND_TYPE_HOST);
+	        		}
+	        		
+	        		
+	        	}
+	        	//TODO add reflexive address 
+	        	
+	        	//TODO add relay address
+	        	
+	        	HIP_DEBUG("ICE add remote IN R2, spi is %d\n", ntohl(esp_info->new_spi));
+	        	
+	        	struct hip_spi_out_item* spi_out;
 	
-	err = 0;
-
-        /***** LOCATOR PARAMETER ******/
-
-        if (entry->locator) {
-                HIP_IFEL(hip_update_handle_locator_parameter(
-				 entry, entry->locator, esp_info), -1,
-			 "hip_update_handle_locator_parameter failed\n");
-	} else {
-		HIP_DEBUG("entry->locator did not have locators from r1\n");
-	}
-	//#endif /* CONFIG_HIP_HI3 */
+	        	HIP_IFEL(!(spi_out = hip_hadb_get_spi_list(entry, ntohl(esp_info->new_spi))), -1,
+	        		      "Bug: outbound SPI 0x%x does not exist\n", ntohl(esp_info->new_spi)); 
+	        	
+	        	HIP_DEBUG("ICE add remote IN R2, peer list mem address is %d\n", spi_out->peer_addr_list);
+	        	hip_external_ice_add_remote_candidates(ice_session, spi_out->peer_addr_list);
 	
+	        	HIP_DEBUG("ICE start checking \n");
+	
+	        hip_ice_start_check(ice_session);
+	        }
+        	
+        }
+        */
+                
+#endif	   	
 	
 	/* Handle REG_RESPONSE and REG_FAILED parameters. */
 	hip_handle_param_reg_response(entry, r2);
 	hip_handle_param_reg_failed(entry, r2);
+
 //add by santtu
 	hip_handle_reg_from(entry, r2);
 //end add
@@ -2560,14 +2604,13 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 		entry->hip_msg_retrans.buf = NULL;
 	}
 	
-	//TODO Send the R2 Response to Firewall
-	
+	//TODO Send the R2 Response to Firewall	
 	
  out_err:
 	if (entry->state == HIP_STATE_ESTABLISHED)
-		hip_firewall_add_bex_data(entry, &entry->hit_our, &entry->hit_peer);
+	        hip_firewall_set_bex_data(SO_HIP_FW_BEX_DONE, entry, &entry->hit_our, &entry->hit_peer);
 	else
-		hip_firewall_add_bex_data(entry, NULL, NULL);
+		hip_firewall_set_bex_data(SO_HIP_FW_BEX_DONE, entry, NULL, NULL);
 
 	if (ctx) {
 		HIP_FREE(ctx);
@@ -3069,7 +3112,7 @@ int hip_handle_firewall_i1_request(struct hip_common *msg, struct in6_addr *i1_s
 	int err = 0, if_index = 0, is_ipv4_locator,
 		reuse_hadb_local_address = 0, ha_nat_mode = hip_nat_status,
                 old_global_nat_mode = hip_nat_status;
-        in_port_t ha_peer_port;
+    in_port_t ha_local_port, ha_peer_port;
 	hip_ha_t *entry;
 	hip_hit_t *src_hit, *dst_hit;
 	hip_hit_t *lsi =NULL;
@@ -3125,6 +3168,7 @@ int hip_handle_firewall_i1_request(struct hip_common *msg, struct in6_addr *i1_s
 			HIP_DEBUG_IN6ADDR("reusing HA",
 					  &entry->preferred_address);
 			ipv6_addr_copy(&dst_addr, &entry->preferred_address);
+			ha_local_port = entry->local_udp_port;
 			ha_peer_port = entry->peer_udp_port;
 			ha_nat_mode = entry->nat_mode;
 			err = 0;
@@ -3170,6 +3214,7 @@ int hip_handle_firewall_i1_request(struct hip_common *msg, struct in6_addr *i1_s
 		ipv6_addr_copy(&(entry->local_address), &src_addr);
 	
 	/* Preserve NAT status with peer */
+	entry->local_udp_port = ha_local_port;
 	entry->peer_udp_port = ha_peer_port;
 	entry->nat_mode = ha_nat_mode;
 

@@ -44,22 +44,7 @@
 
 typedef  HIP_HASHTABLE hip_db_struct_t;
 
-/* 
-   Defines to help with the handling of the keys
-   For example with 1024 bit keys these values are
-   N = 128 bytes (1024 bits and so on)
-   E = 3 bytes
-   D = 128 bytes
-   P = 64 bytes
-   Q = 64 bytes
-*/
-/* Public part of the key */
-#define HIP_RSA_PUBLIC_EXPONENT_E_LEN 3
-#define HIP_RSA_PUBLIC_MODULUS_N_LEN 128
-/* Private part of the key */
-#define HIP_RSA_PRIVATE_EXPONENT_D_LEN 128
-#define HIP_RSA_SECRET_PRIME_FACTOR_P_LEN 64
-#define HIP_RSA_SECRET_PRIME_FACTOR_Q_LEN 64
+#define HIP_MAX_HOST_ID_LEN 1600
 
 #define HIP_MAX_COOKIE_INFO 10
 /* for debugging with in6_ntop */
@@ -125,7 +110,7 @@ int hip_blind_find_local_hi(uint16_t *nonce, struct in6_addr *test_hit,
 int hip_hidb_add_lsi(hip_db_struct_t *db, const struct hip_host_id_entry *id_entry);
 int hip_hidb_exists_lsi(hip_lsi_t *lsi);
 struct hip_host_id_entry *hip_hidb_get_entry_by_lsi(hip_db_struct_t *db, const struct in_addr *lsi);
-int hip_associate_default_hit_lsi(hip_hit_t *default_hit, hip_lsi_t *default_lsi);
+int hip_hidb_associate_default_hit_lsi(hip_hit_t *default_hit, hip_lsi_t *default_lsi);
 int hip_hidb_get_lsi_by_hit(const hip_hit_t *our, hip_lsi_t *our_lsi);
 
 /* existence */
