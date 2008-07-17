@@ -640,7 +640,7 @@ int hip_update_finish_rekeying(hip_common_t *msg, hip_ha_t *entry,
 	    entry parameter --Abi */
 	entry->local_udp_port = entry->nat_mode ? HIP_NAT_UDP_PORT : 0;
 
-	err = hip_add_sa(&entry->preferred_address, &entry->local_address, hits,
+	err = entry->hadb_ipsec_func->hip_add_sa(&entry->preferred_address, &entry->local_address, hits,
 			 hitr,  &new_spi_in, esp_transform,
 			 (we_are_HITg ? &espkey_lg : &espkey_gl),
 			 (we_are_HITg ? &authkey_lg : &authkey_gl),
@@ -650,7 +650,7 @@ int hip_update_finish_rekeying(hip_common_t *msg, hip_ha_t *entry,
 	HIP_DEBUG("New outbound SA created with SPI=0x%x\n", new_spi_out);
 	HIP_DEBUG("Setting up new inbound SA, SPI=0x%x\n", new_spi_in);
 
-	err = hip_add_sa(&entry->local_address, &entry->preferred_address, hitr,
+	err = entry->hadb_ipsec_func->hip_add_sa(&entry->local_address, &entry->preferred_address, hitr,
 			 hits, &new_spi_out, esp_transform,
 			 (we_are_HITg ? &espkey_gl : &espkey_lg),
 			 (we_are_HITg ? &authkey_gl : &authkey_lg),
@@ -1569,7 +1569,7 @@ int hip_update_peer_preferred_address(hip_ha_t *entry,
 
 	entry->local_udp_port = entry->nat_mode ? HIP_NAT_UDP_PORT : 0;
 	
-	HIP_IFEL(hip_add_sa(&local_addr, &addr->address, &entry->hit_our,
+	HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(&local_addr, &addr->address, &entry->hit_our,
 			    &entry->hit_peer, &entry->default_spi_out,
 			    entry->esp_transform, &entry->esp_out,
 			    &entry->auth_out, 1, HIP_SPI_DIRECTION_OUT, 0, entry), -1,
@@ -1583,7 +1583,7 @@ int hip_update_peer_preferred_address(hip_ha_t *entry,
 		 "Setting up SP pair failed\n");
 #endif
 
-	HIP_IFEL(hip_add_sa(&addr->address, &local_addr,
+	HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(&addr->address, &local_addr,
 			    &entry->hit_peer, &entry->hit_our, 
 			    &spi_in, entry->esp_transform,
 			    &entry->esp_in, &entry->auth_in, 1, 
@@ -1969,7 +1969,7 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
 
      entry->local_udp_port = entry->nat_mode ? HIP_NAT_UDP_PORT : 0;
      
-     HIP_IFEL(hip_add_sa(&srcaddr, &destaddr, &entry->hit_our,
+     HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(&srcaddr, &destaddr, &entry->hit_our,
 			 &entry->hit_peer, &entry->default_spi_out,
 			 entry->esp_transform, &entry->esp_out,
 			 &entry->auth_out, 1, HIP_SPI_DIRECTION_OUT, 0, entry), -1, 
@@ -1989,7 +1989,7 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
 	      -1, "Setting up SP pair failed\n");
 #endif
 
-     HIP_IFEL(hip_add_sa(&destaddr, &srcaddr, 
+     HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(&destaddr, &srcaddr, 
 			 &entry->hit_peer, &entry->hit_our,
 			 &spi_in, entry->esp_transform,
 			 &entry->esp_in, &entry->auth_in, 1,
@@ -2715,9 +2715,16 @@ out_err:
 	HIP_DEBUG("Peer learning: Adding of address failed\n");
 	return (-1);
 }
-//add by santtu
-int hip_update_locator_parameter(hip_ha_t *entry, 
-    	                struct hip_locator *locator, struct hip_esp_info *esp_info){
+
+
+/**
+ * handles locator parameter in msg and in entry.
+ * 
+ * 
+ * */
+int hip_handle_locator_parameter(hip_ha_t *entry,
+                                 struct hip_locator *loc,
+				 struct hip_esp_info *esp_info) {
 	uint32_t old_spi = 0, new_spi = 0, i, err = 0;
 	int zero = 0, n_addrs = 0, ii = 0;
 	int same_af = 0, local_af = 0, comp_af = 0, tmp_af = 0;
@@ -2727,16 +2734,15 @@ int hip_update_locator_parameter(hip_ha_t *entry,
 	struct hip_spi_out_item *spi_out;
 	struct hip_peer_addr_list_item *a, *tmp, addr;
 	struct netdev_address *n;
- 
-    if (hip_locator_status == SO_HIP_SET_LOCATOR_OFF) {
-    	HIP_DEBUG("stop updating locator if the locator mode is off\n");
-    	goto out_err;
-    }
- 
-	HIP_INFO_LOCATOR("santtu: let's update locator:", locator);
- 
-	entry->locator = locator;
- 
+	struct hip_locator *locator = NULL;
+
+	if ((locator = loc) == NULL) {
+		HIP_DEBUG("NULL locator\n");
+		locator = entry->locator;
+	}
+
+	HIP_IFEL(!locator, -1, "No locator to handle\n");
+
 	old_spi = ntohl(esp_info->new_spi);
 	new_spi = ntohl(esp_info->new_spi);
 	HIP_DEBUG("LOCATOR SPI old=0x%x new=0x%x\n", old_spi, new_spi);
@@ -2842,34 +2848,4 @@ out_of_loop:
 
 out_err:
 	return err;
-}
-
-/**
- * handles locator parameter in msg and in entry.
- * 
- * 
- * */
-int hip_handle_locator_parameter(hip_common_t *msg, hip_ha_t *entry,
-                                 struct hip_esp_info *esp_info) {
-	int err = 0;
-	struct hip_locator *locator = NULL;
-	
-	if (hip_locator_status == SO_HIP_SET_LOCATOR_OFF) 
-		goto out_err;
-	
-	HIP_DEBUG("%d    %d",hip_locator_status,SO_HIP_SET_LOCATOR_OFF);
-	
-        locator = hip_get_param(msg, HIP_PARAM_LOCATOR);
-        if (locator){   
-                HIP_IFEL(hip_update_locator_parameter(entry, 
-                                                      locator, esp_info),
-                         -1, "hip_handle_locator_parameter from msg failed\n");
-        }
-        else if (entry->locator){   
-                HIP_IFEL(hip_update_locator_parameter(entry, 
-                                                      entry->locator, esp_info),
-                         -1, "hip_handle_locator_parameter from entry failed\n");
-        }
-out_err:
-   	return err;
 }
