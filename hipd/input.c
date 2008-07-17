@@ -2179,7 +2179,8 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
 //add by santtu
     /***** LOCATOR PARAMETER *****/
-	hip_handle_locator_parameter(i2, entry, esp_info);	
+	HIP_IFEL(hip_handle_locator_parameter(entry, NULL, esp_info), -1,
+		 "Handle locator failed\n");
                
 #ifdef HIP_USE_ICE
 
@@ -2462,7 +2463,8 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 
 //add by santtu
     /***** LOCATOR PARAMETER *****/
-	hip_handle_locator_parameter(r2, entry, esp_info);	
+	HIP_IFEL(hip_handle_locator_parameter(entry, NULL, esp_info), -1,
+		 "HIP handle locator failed\n");
 //end add
 
 

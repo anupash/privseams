@@ -501,7 +501,6 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 				 const struct hip_host_id *host_id_pub,
 				 int cookie_k)
 {
-    extern int hip_transform_order;
 	struct hip_locator_info_addr_item *addr_list = NULL;
 	struct hip_locator *locator = NULL;
  	struct hip_locator_info_addr_item *locators = NULL;
@@ -610,7 +609,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
  	hip_build_network_hdr(msg, HIP_R1, mask, src_hit, NULL);
 
 	/********** R1_COUNTER (OPTIONAL) *********/
-#ifndef HIP_USE_ICE
+
 	/********* LOCATOR PARAMETER ************/
         /** Type 193 **/
         if (hip_locator_status == SO_HIP_SET_LOCATOR_ON) {
@@ -619,7 +618,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
                 HIP_DEBUG("LOCATOR parameter building failed\n");
             _HIP_DUMP_MSG(msg);
         }
-#endif
+
 #ifdef HIP_USE_ICE
 	{
 		hip_transform_suite_t suite = hip_nat_get_control();
