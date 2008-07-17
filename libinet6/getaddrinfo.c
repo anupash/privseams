@@ -301,7 +301,7 @@ gaih_local (const char *name, const struct gaih_service *service,
 	      sizeof (sunp->sun_path))
 	    return GAIH_OKIFUNSPEC | -EAI_SERVICE;
 
-	  __stpcpy (__stpcpy (sunp->sun_path, P_tmpdir "/"), service->name);
+	  stpcpy (stpcpy (sunp->sun_path, P_tmpdir "/"), service->name);
 	}
     }
   else

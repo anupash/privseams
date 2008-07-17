@@ -147,6 +147,8 @@ int exists_address_in_list(struct sockaddr *addr, int ifindex)
 	struct netdev_address *n;
 	hip_list_t *tmp, *t;
 	int c;
+        struct in6_addr *in6;
+        struct in_addr *in;
 
 	list_for_each_safe(tmp, t, addresses, c) {
 		int mapped = 0;
@@ -157,23 +159,22 @@ int exists_address_in_list(struct sockaddr *addr, int ifindex)
 		mapped = IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr));
 		HIP_DEBUG("mapped=%d\n", mapped);
 		
-		if (mapped) //|| addr->sa_family == AF_INET) 
-		{
-			struct in6_addr *in6 = (struct in6_addr * ) hip_cast_sa_addr(&n->addr);
-			struct in_addr *in = (struct in_addr *) hip_cast_sa_addr(addr);
+		if (mapped) { //|| addr->sa_family == AF_INET
+			in6 = (struct in6_addr * )hip_cast_sa_addr(&n->addr);
+			in = (struct in_addr *) hip_cast_sa_addr(addr);
 			addr_match = IPV6_EQ_IPV4(in6, in);
 			family_match = 1;
 		} else if (!mapped && addr->sa_family == AF_INET6) {
-			addr_match = !memcmp(hip_cast_sa_addr(&n->addr), hip_cast_sa_addr(addr),
+			addr_match = !memcmp(hip_cast_sa_addr(&n->addr), 
+                                             hip_cast_sa_addr(addr),
 					     hip_sa_addr_len(&n->addr));
 			family_match = (n->addr.ss_family == addr->sa_family);
-		}
-		else { // addr->sa_family == AF_INET
-			// Hope never happen...If happens we need to add Mapping
-			HIP_DEBUG("Hope never happen...If happens we need to add Mapping\n");
+		} else { // addr->sa_family == AF_INET
+			HIP_DEBUG("Addr given was not IPv6 nor IPv4\n");
 		}
 		
-		HIP_DEBUG("n->addr.ss_family=%d, addr->sa_family=%d, n->if_index=%d, ifindex=%d\n",
+		HIP_DEBUG("n->addr.ss_family=%d, addr->sa_family=%d, "
+                          "n->if_index=%d, ifindex=%d\n",
 			  n->addr.ss_family, addr->sa_family, n->if_index, ifindex);
 		if (n->addr.ss_family == AF_INET6) {
 			HIP_DEBUG_IN6ADDR("addr6", hip_cast_sa_addr(&n->addr));
@@ -1024,6 +1025,13 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 			       RTA_PAYLOAD(tb[IFA_LOCAL]) );
 			HIP_DEBUG("Address event=%s ifindex=%d\n",
 				  is_add ? "add" : "del", ifa->ifa_index);
+
+                        if (addr->sa_family == AF_INET)
+                                HIP_DEBUG_LSI("Addr:", hip_cast_sa_addr(addr));
+                        else if (addr->sa_family == AF_INET6)
+                                HIP_DEBUG_HIT("Addr:", hip_cast_sa_addr(addr));
+                        else
+                                HIP_DEBUG("Unknown addr family in addr\n");
 
 			/* update our address list */
 			pre_if_address_count = count_if_addresses(ifa->ifa_index);
