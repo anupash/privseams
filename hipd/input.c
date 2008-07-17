@@ -1602,7 +1602,8 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
  	HIP_DEBUG("Cookie accepted\n");
 
-
+	//sa not created, but spi must be created
+	get_random_bytes(&spi_in, sizeof(uint32_t));
 
 #ifdef CONFIG_HIP_HI3
         locator = hip_get_param(i2, HIP_PARAM_LOCATOR);
@@ -1964,9 +1965,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 			hip_hadb_delete_outbound_spi(entry, 0);
 			goto out_err;
 		}
-	} else {
-		//sa not created, but spi must be created
-		get_random_bytes(&spi_in, sizeof(uint32_t));
 	}
 //end modify
 	/** @todo Check -EAGAIN */
@@ -2056,11 +2054,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
      }
 #endif
 //end add
-
-
-
-
-
 
 	/* Note that we haven't handled the REG_REQUEST yet. This is because we
 	   must create an REG_RESPONSE parameter into the R2 packet based on the
