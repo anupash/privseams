@@ -2660,7 +2660,11 @@ int hip_build_param_locator(struct hip_common *msg,
 			struct hip_locator_info_addr_item *addresses,
 			int address_count)
 {
-	int err = 0;
+        /* Is this actually deprecated?
+           This knows only how to build locator type 1s 
+           If zeroed, returns error if you try to use it --Samu */
+	int err = -1;
+#if 0
 	struct hip_locator *locator_info = NULL;
 	int addrs_len = address_count *
 		(sizeof(struct hip_locator_info_addr_item));
@@ -2688,7 +2692,7 @@ int hip_build_param_locator(struct hip_common *msg,
  out_err:
 	if (locator_info)
 		free(locator_info);
-
+#endif
 	return err;
 }
 #endif /* !__KERNEL__ */
@@ -3564,16 +3568,6 @@ int hip_private_dsa_to_hit(DSA *dsa_key, unsigned char *dsa, int type,
   return hip_any_key_to_hit(dsa_key, dsa, type, hit, 0, 1);
 }
 
-
-
-
-
-
-//add by santtu
-
-
-
-
 /**
  * Builds a @c FULLRELAY_HMAC parameter.
  *
@@ -3609,8 +3603,6 @@ int hip_build_param_full_relay_hmac_contents(struct hip_common *msg,
 	return err;
 }
 
-
-
 /**
  * Builds a @c NAT_Transfer  parameter.
  *
@@ -3635,13 +3627,10 @@ int hip_build_param_nat_tranform(struct hip_common *msg, hip_transform_suite_t n
 	return err;
 }
 
-
-
 void hip_set_locator_addr_length(void * locator, hip_tlv_len_t  length){
 	((struct hip_locator *)locator)->length = htons(length);
 	return;
 }
-
 
 /**
  * 
@@ -3770,7 +3759,7 @@ uint32_t hip_get_locator_item_priority(void* item){
  * @param item_list      a pointer to the first item
  * @param amount          the number of items in the list
  */
-int hip_get_locator_item_list_length(void* item_list, int amount){
+int hip_get_locator_item_list_length(void* item_list, int amount) {
 
 	int i= 0;
 	struct hip_locator_info_addr_item *temp;
@@ -3803,46 +3792,34 @@ int hip_build_param_locator2(struct hip_common *msg,
 			struct hip_locator_info_addr_item  *addresses1,
 			struct hip_locator_info_addr_item2 *addresses2,
 			int address_count1,
-			int address_count2)
-{
+			int address_count2) {
 	int err = 0;
 	struct hip_locator *locator_info = NULL;
 	int addrs_len1 = address_count1 *
 		(sizeof(struct hip_locator_info_addr_item));
 	int addrs_len2 = address_count2 *
 		(sizeof(struct hip_locator_info_addr_item2));
-	
-	_HIP_DEBUG("Santtu: create total locator items : %d \n", address_count1 + address_count2 );
-	_HIP_DEBUG("Santtu: create total locator length : %d \n", addrs_len1 + addrs_len2 );
-		
+        
 	HIP_IFE(!(locator_info =
 		  malloc(sizeof(struct hip_locator) + addrs_len1 + addrs_len2 )), -1);
-
+        
 	hip_set_param_type(locator_info, HIP_PARAM_LOCATOR);
 	hip_calc_generic_param_len(locator_info,
 				   sizeof(struct hip_locator),
 				   addrs_len1+addrs_len2);
-	_HIP_DEBUG("params size=%d\n", sizeof(struct hip_locator) -
-		   sizeof(struct hip_tlv_common) +
-		   addrs_len1+addrs_len2);
 
-	memcpy((char *)(locator_info + 1), addresses1, addrs_len1);
-	if(address_count2 >0)
-               memcpy(((char *)((locator_info + 1) + addrs_len1)), 
+	memcpy(locator_info + 1, addresses1, addrs_len1);
+	if(address_count2 > 0)
+               memcpy(((char *)(locator_info + 1) + addrs_len1), 
                       addresses2, addrs_len2);
 
 	HIP_IFE(hip_build_param(msg, locator_info), -1);
 
 	_HIP_DEBUG("msgtotlen=%d addrs_len=%d\n", hip_get_msg_total_len(msg),
 		   addrs_len);
-	//if (addrs_len > 0)
-	//	memcpy((void *)msg+hip_get_msg_total_len(msg)-addrs_len,
-	//	       addresses, addrs_len);
-
  out_err:
 	if (locator_info)
 		free(locator_info);
-
 	return err;
 }
 
