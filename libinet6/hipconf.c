@@ -444,8 +444,7 @@ int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[],
 		err = -1;
 		goto out_err;
 	}
-		
-
+	
 	/* Every commandline argument in opt[] from '0' to 'optc - 4' should
 	   be either one of the predefined strings or a number between
 	   0 and 255 (inclusive). */

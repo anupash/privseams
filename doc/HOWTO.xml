@@ -823,7 +823,7 @@
       </para>
       <para>
 	First of all, you should have installed and configured properly your proxy
-	server to employ HIP. This includes alowing HITs to connect the server 
+	server to employ HIP. This includes allowing HITs to connect the server 
 	(settings in the httpd.conf file) and restarting httpd using HIP.
       </para>
       <para>
@@ -1094,16 +1094,16 @@
 	    minimum_lifetime = "60"
 	    maximum_lifetime = "3600"
 	  </programlisting>
-	  HIPL supports RVS / HIP relay server client whitelisting which means that
-	  only those clients whose HITs are listed in the whitelist are allowed to
+	  HIPL supports RVS / HIP relay server client white listing which means that
+	  only those clients whose HITs are listed in the white list are allowed to
 	  register to the RVS / HIP relay server. Before R can register with the
-	  server, R's HIT must be added to the whitelist. To do this, please start
+	  server, R's HIT must be added to the white list. To do this, please start
 	  the HIP daemon at the responder and use the "<emphasis>hipconf</emphasis>" tool from another
 	  shell at the responder to get the default hi:
 	  <programlisting>
 	    tools/hipconf get hi default
 	  </programlisting>
-	  Now, add this HIT in between the whitelist quotation marks in the
+	  Now, add this HIT in between the white list quotation marks in the
 	  configuration file of the RVS / HIP relay server:
 	  <programlisting>
 	    whitelist = "2001:0018:8321:4e1a:c009:1ff8:fed4:8e9c"
@@ -1120,12 +1120,12 @@
 	    whitelist = "2001:0011:91e3:528e:7c41:9560:82ae:630f"
 	  </programlisting>
 	  If you do not wish to filter the clients who are granted access to the
-	  rendezvous and HIP relay services, you can disable the whitelist:
+	  rendezvous and HIP relay services, you can disable the white list:
 	  <programlisting>
 	    whitelist_enabled = "no"
 	  </programlisting>
-	  When the whitelist is disabled, it does not matter if you have HITs
-	  listed in the whitelist or not since every HIT is allowed to register.
+	  When the white list is disabled, it does not matter if you have HITs
+	  listed in the white list or not since every HIT is allowed to register.
 	  Finally, you can set the boundary values for the time window limiting
 	  the service lifetime:
 	  <programlisting>
@@ -1147,7 +1147,7 @@
 		<listitem>
 		  <para>
 		    If you have already started a HIP daemon that functions as an RVS or a
-		    HIP relay server and you have to add values to the whitelist or
+		    HIP relay server and you have to add values to the white list or
 		    otherwise modify the configuration file, you can reinitialize the server
 		    without restarting the daemon itself using the "<emphasis>hipconf</emphasis>" tool:
 		    <programlisting>
@@ -1155,7 +1155,7 @@
 		    or
 		    <programlisting>
 		    tools/hipconf reinit service relay</programlisting>
-		    The reinitializion does not have any effect on the existing
+		    The reinitialization does not have any effect on the existing
 		    RVS / HIP relay server clients, but only affects clients registering
 		    after the reinitialization.
 		  </para>
@@ -1280,9 +1280,9 @@
 		  Both files, "<emphasis>/etc/hosts</emphasis>" and
 		  "<emphasis>/etc/hip/hosts</emphasis>", are left blank. The files are left blank
 		  because the rendezvous server is assumed to have no information
-		  of its clients beforehand. The RVS can have some whitelisted
+		  of its clients beforehand. The RVS can have some white listed
 		  HITs as beforehand information, however, but it is not required
-		  to have none whatsoever. Using the whitelist to filter HITs is
+		  to have none whatsoever. Using the white list to filter HITs is
 		  local policy and as such is not part of the registration
 		  procedure.
 		</para>
@@ -1417,7 +1417,7 @@
 	      </para>
 	      <para>
 		For example, when you register to the RVS service and then
-		cancel the service, teh HIP daemon will launch a base exchange for both
+		cancel the service, the HIP daemon will launch a base exchange for both
 		the service registration and the service cancellation. According
 		to RFC 5203 the service cancellation should use UPDATE packets
 		since there already is a HIP connection between the client and
@@ -1564,13 +1564,13 @@
 	    At the responder, start a server listening for incoming connections
 	    (5000 is an example port number):
 	    <programlisting>
-	    test/conntest-server tcp 5000
+	      test/conntest-server tcp 5000
 	    </programlisting>
 	  </para></listitem>
 	  <listitem><para>
 	    At the initiator, start a connection test client:
 	    <programlisting>
-	    test/conntest-client-hip &lt;RESPONDER-HOSTNAME&gt; tcp 5000
+	      test/conntest-client-hip &lt;RESPONDER-HOSTNAME&gt; tcp 5000
 	    </programlisting>
 	  </para></listitem>
 	  <listitem><para>
@@ -1654,7 +1654,7 @@
 	      </para>
 	      <para>
 		For example, when you register to the relay service and then
-		cancel the service, teh HIP daemon will launch a base exchange for both
+		cancel the service, the HIP daemon will launch a base exchange for both
 		the service registration and the service cancellation. According
 		to RFC 5203 the service cancellation should use UPDATE packets
 		since there already is a HIP connection between the client and
@@ -1689,7 +1689,7 @@
 	  vaguely defined instructions. Some may call them features, some
 	  unanswered questions and some just plain design faults. What ever the
 	  case, we have had to take into account these issues when
-	  implementating the registration extension. We present these issues
+	  implementing the registration extension. We present these issues
 	  next:
 	  <orderedlist>
 	    <listitem>
@@ -1743,84 +1743,101 @@
 	  previous section:
 	</para>
 	<orderedlist>
-	    <listitem>
-	      <para>
-		The client cannot request multiple lifetimes. You can input
-		only a single lifetime to "<emphasis>hipconf</emphasis>".
-	      </para> 
-	      <para>
-		The server, on the other hand, uses the first given lifetime
-		boundaries for every offered service in REG_INFO parameters
-		(If "<emphasis>/etc/hip/relay_config</emphasis>" would provide
-		a way to define individual lifetime boundaries for each service,
-		the boudaries listed first would be used for every service).
-	      </para> 
-	    </listitem>
-	    <listitem>
-	      <para>
-		If the client receives an REG_RESPONSE parameter with duplicate
-		"<emphasis>Reg Types</emphasis>", it processes each registration
-		type one after other. It is up to each service how the service
-		reacts to a duplicate response. If the server receives an
-		REG_REQUEST parameter that includes duplicate "<emphasis>Reg
-		Types</emphasis>", the whole parameter is silently dropped.
-	      </para>
-	    </listitem>
-	    <listitem>
-	      <para>
-		Receiving a REG_FAILED as an response to a service cancellation
-		is handled excatly the same was as a REG_FAILED received as an
-		response to a service request. That is, the client just assumes
-		that the server is not able to provide the requested service.
-	      </para>
-	    </listitem>
-	  </orderedlist>
-	<para>17th of July 2008</para>
+	  <listitem>
+	    <para>
+	      The client cannot request multiple lifetimes. You can input
+	      only a single lifetime to "<emphasis>hipconf</emphasis>".
+	    </para> 
+	    <para>
+	      The server, on the other hand, uses the first given lifetime
+	      boundaries for every offered service in REG_INFO parameters
+	      (If "<emphasis>/etc/hip/relay_config</emphasis>" would provide
+	      a way to define individual lifetime boundaries for each service,
+	      the boundaries listed first would be used for every service).
+	    </para> 
+	  </listitem>
+	  <listitem>
+	    <para>
+	      If the client receives an REG_RESPONSE parameter with duplicate
+	      "<emphasis>Reg Types</emphasis>", it processes each registration
+	      type one after other. It is up to each service how the service
+	      reacts to a duplicate response. If the server receives an
+	      REG_REQUEST parameter that includes duplicate "<emphasis>Reg
+	      Types</emphasis>", the whole parameter is silently dropped.
+	    </para>
+	  </listitem>
+	  <listitem>
+	    <para>
+	      Receiving a REG_FAILED as an response to a service cancellation
+	      is handled exactly the same was as a REG_FAILED received as an
+	      response to a service request. That is, the client just assumes
+	      that the server is not able to provide the requested service.
+	    </para>
+	  </listitem>
+	</orderedlist>
+	
       </section>
       <section id="sec_relay_additional_commands">
-	  <title>Additional hipconf commands</title>
-	  <itemizedlist>
-	    <listitem>
-	      <para>
-		Client side commands i.e. commands run on the responder (server
-		client).
-	      </para>
-	      <itemizedlist>
-		<listitem>
-		  <para>
-		    Although HIPL currently only supports RVS, relay and escrow
-		    services, you can request for any service using the
-		    "<emphasis>hipconf</emphasis>" tool. This feature is
-		    provided for testing purposes, especially to test how HIPL
-		    reacts with other HIP implementions that have the
-		    registration extension implemented.
-		  </para>
-		  <para>
-		    The services are identified by "<emphasis>Reg
-		    Types</emphasis>" i.e. numbers between 0 and 255 (both
-		    inclusive).
-		    <programlisting>
-		      tools/hipconf del relay &lt;RELAY-HIT&gt; &lt;RELAY-IP&gt;
-		    </programlisting>
-		    This will send a HIP message asking for relay service
-		    cancellation to the relay server.
-		  </para>
-		</listitem>
-		<listitem>
-		  <para>
-		    To request multiple services using one service request you
-		    can chain the service types:
-		    <programlisting>
-		      tools/hipconf del relay &lt;RELAY-HIT&gt; &lt;RELAY-IP&gt;
-		    </programlisting>
-		    This will send a HIP message asking for relay service
-		    cancellation to the relay server.
-		  </para>
-		</listitem>
-	      </itemizedlist>
-	    </listitem>
-	  </itemizedlist>
-	</section>
+	<title>Additional hipconf commands</title>
+	<itemizedlist>
+	  <listitem>
+	    <para>
+	      Client side commands i.e. commands run on the responder (server
+	      client).
+	    </para>
+	    <itemizedlist>
+	      <listitem>
+		<para>
+		  Although HIPL currently only supports RVS, relay and escrow
+		  services, you can request for any service using the
+		  "<emphasis>hipconf</emphasis>" tool. This feature is
+		  provided for testing purposes, especially to test how HIPL
+		  reacts with other HIP implementations that have the
+		  registration extension implemented.
+		</para>
+		<para>
+		  The services are identified by "<emphasis>Reg
+		  Types</emphasis>" i.e. numbers between 0 and 255 (both
+		  inclusive). Instead of using the predefined strings, you can
+		  use these service numbers to request a service. For
+		  example, to request a service identified by number 1 (the
+		  rendezvous service), you can type 
+		  <programlisting>
+		    tools/hipconf add server 1 &lt;SERVER-HIT&gt; &lt;SERVER-IP&gt; &lt;LIFETIME-IN-SECONDS&gt;
+		  </programlisting>
+		  Notice, however, that if the server does not support the
+		  service you have requested, a request is never sent.
+		</para>
+	      </listitem>
+	      <listitem>
+		<para>
+		  To request multiple services using one service request you
+		  can chain the service types. For example, to request services
+		  identified by registration types 3, 10 and 245 you can type:
+		  <programlisting>
+		    tools/hipconf add server 3 10 245 &lt;SERVER-HIT&gt; &lt;SERVER-IP&gt; &lt;LIFETIME-IN-SECONDS&gt;
+		  </programlisting>
+		  Using this chaining method one can request up to ten
+		  services with one REG_REQUEST parameter.
+		</para>
+	      </listitem>
+	      <listitem>
+		<para>
+		  To cancel multiple service registrations using one service
+		  request you can chain the service types as with
+		  registration.
+		  <programlisting>
+		    tools/hipconf del server 3 10 245 &lt;SERVER-HIT&gt; &lt;SERVER-IP&gt;
+		  </programlisting>
+		  Using this chaining method one can request up to ten
+		  service cancellations with one REG_REQUEST parameter.
+		</para>
+	      </listitem>
+	    </itemizedlist>
+	  </listitem>
+	</itemizedlist>
+	<para>17th of July 2008</para>
+      </section>
     </section>
   </chapter>
   <chapter id="ch_hip_bos">
