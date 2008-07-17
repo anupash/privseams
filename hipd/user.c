@@ -671,10 +671,10 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 				hip_hadb_set_local_controls(
 					entry, HIP_HA_CTRL_LOCAL_REQ_UNSUP);
 				/*
-				HIP_DEBUG("Deleting pending service request "\
-					  "for service %u.\n", reg_types[i]);
-				hip_del_pending_request_by_type(entry,
-								reg_types[i]);
+				  HIP_DEBUG("Deleting pending service request "\
+				  "for service %u.\n", reg_types[i]);
+				  hip_del_pending_request_by_type(entry,
+				  reg_types[i]);
 				*/
 				break;
 			}
