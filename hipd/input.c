@@ -1604,6 +1604,8 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
 	//sa not created, but spi must be created
 	get_random_bytes(&spi_in, sizeof(uint32_t));
+	HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
+
 
 #ifdef CONFIG_HIP_HI3
         locator = hip_get_param(i2, HIP_PARAM_LOCATOR);
@@ -2413,12 +2415,6 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	} else{
 		HIP_DEBUG("ICE engine will be used, no sa created here\n");
 	}
-#if 0
-	else{
-		//spi should be created
-		get_random_bytes(&spi_in, sizeof(uint32_t));
-	}
-#endif
 // end of move
 
 #ifdef CONFIG_HIP_BLIND
