@@ -2001,11 +2001,15 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 				int esp_info_old_spi, int is_add,
 				struct sockaddr* addr)
 {	   	
-	int err = 0, i, preferred_address_found = 0; 
+	int err = 0, i = 0, ii = 0, preferred_address_found = 0; 
 	int choose_random = 0, change_preferred_address = 0;
 	struct hip_spi_in_item *spi_in = NULL;
 	struct hip_locator_info_addr_item *loc_addr_item = addr_list;
 	in6_addr_t *saddr, *comp_addr = hip_cast_sa_addr(addr);
+	hip_list_t *item = NULL, *tmp = NULL, *item_outer = NULL,
+		*tmp_outer = NULL;
+	struct hip_peer_addr_list_item *addr_li;
+	struct hip_spi_out_item *spi_out;
 
 	HIP_DEBUG("\n");
 	
@@ -2064,7 +2068,14 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 	choose_random:
 		loc_addr_item = addr_list;
 		for(i = 0; i < addr_count; i++, loc_addr_item++) {
-			in6_addr_t *saddr = &loc_addr_item->address;
+/*
+		comp_af = IN6_IS_ADDR_V4MAPPED(hip_get_locator_item_address(hip_get_locator_item(locator_address_item, i)))
+
+ */
+			saddr = hip_get_locator_item_address(hip_get_locator_item_as_one(loc_addr_item, i));
+//			saddr = &loc_addr_item->address;
+			HIP_DEBUG_IN6ADDR("Saddr: ", saddr);
+			HIP_DEBUG_IN6ADDR("Daddr: ", daddr);
 			if (memcmp(comp_addr, saddr, sizeof(in6_addr_t)) == 0) {
 				if (IN6_IS_ADDR_V4MAPPED(saddr) ==
 				    IN6_IS_ADDR_V4MAPPED(daddr))
@@ -2087,11 +2098,11 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 			}
 		}
 		if ((preferred_address_found == 0) && (been_here == 0)) {
-			hip_list_t *item = NULL, *tmp = NULL, *item_outer = NULL,
-				*tmp_outer = NULL;
-			struct hip_peer_addr_list_item *addr_li;
-			struct hip_spi_out_item *spi_out;
-			int i = 0, ii = 0;
+			item = NULL;
+			tmp = NULL; 
+			item_outer = NULL;
+			tmp_outer = NULL;
+		        i = 0, ii = 0;			
 			list_for_each_safe(item_outer, tmp_outer, entry->spis_out, i) {
 				spi_out = list_entry(item_outer);
 				ii = 0;
@@ -2131,7 +2142,7 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 			loc_addr_item->reserved = ntohl(1 << 7);
 			HIP_DEBUG_IN6ADDR("first match: ", saddr);
 			HIP_IFEL(hip_update_preferred_address(
-					 entry, saddr, daddr,&spi_in->spi), -1, 
+					 entry, saddr, daddr, &spi_in->spi), -1, 
 				 "Setting New Preferred Address Failed\n");
 			preferred_address_found = 1;
 			break;
@@ -2551,7 +2562,10 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 	int err = 0, i;
 	hip_ha_t *entries[HIP_MAX_HAS] = {0};
 	struct hip_update_kludge rk;
-	struct sockaddr_in6 addr_sin6;
+	struct sockaddr_in * p = NULL;
+	struct sockaddr_in6 *addr_sin6 = NULL;
+	struct in_addr ipv4;
+	struct in6_addr ipv6;
 
 	/** @todo check UPDATE also with radvd (i.e. same address is added
 	    twice). */
@@ -2562,14 +2576,27 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 			  "UPDATE)\n");
 		return;
 	}
+
+	if (addr->sa_family == AF_INET)
+		HIP_DEBUG_LSI("Addr", hip_cast_sa_addr(addr));
+	else if (addr->sa_family == AF_INET6)
+		HIP_DEBUG_HIT("Addr", hip_cast_sa_addr(addr));
+	else
+		HIP_DEBUG("Unknown addr family in addr\n");
      
 	if (addr->sa_family == AF_INET) {
-		memset(&addr_sin6, 0, sizeof(addr_sin6));
-		addr_sin6.sin6_family = AF_INET6;
-		IPV4_TO_IPV6_MAP(((struct in_addr *) hip_cast_sa_addr(addr)),
-				 ((in6_addr_t *) hip_cast_sa_addr(&addr_sin6)));
+		addr_sin6 = malloc(sizeof(struct sockaddr_in6));
+		HIP_IFEL(!addr_sin6, -1, "Failed to malloc for address\n");
+		memset(addr_sin6, 0, sizeof(struct sockaddr_in6));
+		memset(&ipv4, 0, sizeof(struct in_addr));
+		memset(&ipv6, 0, sizeof(struct in6_addr));
+		p = (struct sockaddr_in *)addr;
+		memcpy(&ipv4, &p->sin_addr, sizeof(struct in_addr));
+		IPV4_TO_IPV6_MAP(&ipv4,&ipv6);			
+		memcpy(&addr_sin6->sin6_addr, &ipv6, sizeof(struct in6_addr));
+		addr_sin6->sin6_family = AF_INET6;
 	} else if (addr->sa_family == AF_INET6) {
-		memcpy(&addr_sin6, addr, sizeof(addr_sin6));
+		memcpy(addr_sin6, addr, sizeof(addr_sin6));
 	} else {
 		HIP_ERROR("Bad address family %d\n", addr->sa_family);
 		return;
@@ -2578,7 +2605,7 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 	rk.array = entries;
 	rk.count = 0;
 	rk.length = HIP_MAX_HAS;
-	/* AB: rk.length = 100 rk is NULL next line opulates rk with all valid
+	/* AB: rk.length = 100 rk is NULL next line populates rk with all valid
 	   ha entries */
 	HIP_IFEL(hip_for_each_ha(hip_update_get_all_valid, &rk), 0, 
 		 "for_each_ha err.\n");
@@ -2589,13 +2616,13 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 #if 0
 			if (is_add && !ipv6_addr_cmp(local_addr, &zero_addr)) {
 				HIP_DEBUG("Zero addresses, adding new default\n");
-				ipv6_addr_copy(local_addr, &addr_sin6);
+				ipv6_addr_copy(local_addr, addr_sin6);
 			}
 #endif
-                        HIP_DEBUG_HIT("ADDR_SIN6",&addr_sin6);
+                        HIP_DEBUG_HIT("ADDR_SIN6",&addr_sin6->sin6_addr);
 			hip_send_update(rk.array[i], addr_list, addr_count,
 					ifindex, flags, is_add,
-					(struct sockaddr *) &addr_sin6);
+					(struct sockaddr *) addr_sin6);
 	       
 #if 0
 			if (!is_add && addr_count == 0) {
@@ -2608,6 +2635,7 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 	}
      
  out_err:
+        if (addr_sin6) free (addr_sin6);
 	return;
 }
 
@@ -2853,15 +2881,12 @@ out_err:
  */
 int hip_build_locators(struct hip_common *msg) 
 {
-    int err = 0, i = 0, ii = 0;
+	int err = 0, i = 0, ii = 0, addr_count1 = 0, addr_count2 = 0,UDP_relay_count = 0;
     struct netdev_address *n;
     hip_ha_t *ha_n;
     hip_list_t *item = NULL, *tmp = NULL;
-    struct hip_locator_info_addr_item2 *locs2 = NULL;
     struct hip_locator_info_addr_item *locs1 = NULL;
-    int addr_count1 = 0,addr_count2 = 0 ;
-    int UDP_relay_count = 0;
-    
+    struct hip_locator_info_addr_item2 *locs2 = NULL;    
     
     //TODO count the number of UDP relay servers.
     // check the control state of every hatb_state. 
@@ -2973,7 +2998,7 @@ int hip_build_locators(struct hip_common *msg)
     }
 
     HIP_DEBUG("hip_build_locators: found relay address account:%d \n", ii);
-    err = hip_build_param_locator2(msg, locs1,locs2, addr_count1, ii);
+    err = hip_build_param_locator2(msg, locs1, locs2, addr_count1, ii);
 
  out_err:
 

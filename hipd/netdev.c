@@ -955,7 +955,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 	struct sockaddr_storage ss_addr;
 	struct sockaddr *addr;
         struct hip_locator *loc;
-	struct hip_locator_info_addr_item *locators;
+	struct hip_locator_addr_item *locators;
 	struct netdev_address *n;
 	hip_list_t *item, *tmp;
 	int pre_if_address_count;
@@ -1027,9 +1027,9 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 				  is_add ? "add" : "del", ifa->ifa_index);
 
                         if (addr->sa_family == AF_INET)
-                                HIP_DEBUG_LSI("Addr:", hip_cast_sa_addr(addr));
+                                HIP_DEBUG_LSI("Addr", hip_cast_sa_addr(addr));
                         else if (addr->sa_family == AF_INET6)
-                                HIP_DEBUG_HIT("Addr:", hip_cast_sa_addr(addr));
+                                HIP_DEBUG_HIT("Addr", hip_cast_sa_addr(addr));
                         else
                                 HIP_DEBUG("Unknown addr family in addr\n");
 
@@ -1088,11 +1088,12 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
                         HIP_IFEL(hip_build_user_hdr(locator_msg, 
                                                     SO_HIP_SET_LOCATOR_ON, 0), -1,
                                  "Failed to add user header\n");
-                        loc = hip_get_param_contents(locator_msg, HIP_PARAM_LOCATOR);
-                        locators = hip_get_locator_first_addr_item(loc);
+                        loc = hip_get_param(locator_msg, HIP_PARAM_LOCATOR);
+			hip_print_locator_addresses(locator_msg);
+			locators = hip_get_locator_first_addr_item(loc);
                         HIP_DEBUG("UPDATE to be sent contains %i addr(s)\n", i);
                         hip_send_update_all(locators, i,
-                                            ifa->ifa_index,
+                                            ifa->ifa_index, 
                                             SEND_UPDATE_LOCATOR, is_add, addr);
                         if (hip_locator_status == SO_HIP_SET_LOCATOR_ON)
                                 hip_recreate_all_precreated_r1_packets();    
