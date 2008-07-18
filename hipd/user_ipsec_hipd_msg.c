@@ -71,7 +71,7 @@ struct hip_common * create_add_sa_msg(struct in6_addr *saddr,
 							    struct in6_addr *daddr,
 							    struct in6_addr *src_hit,
 							    struct in6_addr *dst_hit,
-							    uint32_t *spi, int ealg,
+							    uint32_t spi, int ealg,
 							    struct hip_crypto_key *enckey,
 							    struct hip_crypto_key *authkey,
 							    int retransmission,
@@ -113,15 +113,17 @@ struct hip_common * create_add_sa_msg(struct in6_addr *saddr,
 					  sizeof(struct in6_addr)), -1,
 					  "build param contents failed\n");
 
+#if 0
 	if (!retransmission || *spi == 0) {
 		*spi = hip_userspace_ipsec_acquire_spi((hip_hit_t *) src_hit,
 						       (hip_hit_t *) dst_hit);
 
 		HIP_DEBUG("getting random spi value: %x\n", *spi);
 	}
+#endif
 
-	HIP_DEBUG("the spi value is : %x \n", *spi);
-	HIP_IFEL(hip_build_param_contents(msg, (void *)spi, HIP_PARAM_UINT,
+	HIP_DEBUG("the spi value is : %x \n", spi);
+	HIP_IFEL(hip_build_param_contents(msg, (void *)&spi, HIP_PARAM_UINT,
 					  sizeof(unsigned int)), -1,
 					  "build param contents failed\n");
 
