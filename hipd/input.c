@@ -1542,7 +1542,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	extern uint8_t hip_esp_prot_ext_transform;
 	//add by santtu
 #ifdef HIP_USE_ICE
-	void * ice_session = 0;
+	void * ice_session = NULL;
 	int i;
 #endif
 #ifdef CONFIG_HIP_HI3
