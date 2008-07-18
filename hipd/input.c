@@ -1445,10 +1445,6 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 	HIP_IFEL(entry->sign(entry->our_priv, r2), -EINVAL,
 		 "Failed to sign R2 packet.\n");
 	
-	err = entry->hadb_xmit_func->hip_send_pkt(
-		i2_daddr, i2_saddr, (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
-		entry->peer_udp_port, r2, entry, 1);
-
 //moved from hip_handle_i2
 //modified by santtu
 	/**nat_control is 0 means we use normal mode to create sa*/
@@ -1479,11 +1475,10 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 		  entry->default_spi_out);
 // end move
 
-        err = entry->hadb_xmit_func->hip_send_pkt(i2_daddr, i2_saddr,
-				     (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
-                                     entry->peer_udp_port,
-				     r2, entry, 1);
-	
+	err = entry->hadb_xmit_func->hip_send_pkt(
+		i2_daddr, i2_saddr, (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+		entry->peer_udp_port, r2, entry, 1);
+
 	HIP_IFEL(err, -ECOMM, "Sending R2 packet failed.\n");
 
  out_err:
