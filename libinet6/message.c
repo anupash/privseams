@@ -300,8 +300,8 @@ int hip_send_daemon_info_wrapper(struct hip_common *msg, int send_only) {
 	HIP_IFE(((hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0)) < 0), -1);
 
 	memset(&addr, 0, sizeof(addr));
-    addr.sin6_family = AF_INET6;
-    addr.sin6_addr = in6addr_loopback;
+	addr.sin6_family = AF_INET6;
+	addr.sin6_addr = in6addr_loopback;
 
 	HIP_IFEL(hip_daemon_bind_socket(hip_user_sock,
 					(struct sockaddr *) &addr), -1,
