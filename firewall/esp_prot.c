@@ -125,69 +125,76 @@ int verify_esp_prot_hash(hip_sa_entry_t *entry, unsigned char *hash_value)
 	int hash_length = 0;
 	int err = 0;
 
-	HIP_DEBUG("verifying hash chain element for incoming packet...\n");
-
-	hash_length = esp_prot_transforms[entry->active_transform];
-	HIP_DEBUG("hash length is %i\n", hash_length);
-
-	// only verify the hash, if extension is switched on
-	if (hash_length <= 0)
+	if (entry->active_transform > ESP_PROT_TRANSFORM_UNUSED)
 	{
-		// extension might not be in use, no need to verify
-		HIP_DEBUG("not expecting any hash-chain element\n");
-		goto out_err;
-	}
+		hash_length = esp_prot_transforms[entry->active_transform];
+		HIP_DEBUG("hash length is %i\n", hash_length);
 
-	if (hchain_verify(hash_value, entry->active_anchor,
-			hash_length, entry->tolerance))
-	{
-		// this will allow only increasing elements to be accepted
-		memcpy(entry->active_anchor, hash_value, hash_length);
+		HIP_DEBUG("hchain element of incoming packet to be verified: ");
+		HIP_HEXDUMP("", hash_value, hash_length);
 
-		HIP_DEBUG("hash matches element in actice hash-chain\n");
-
-	} else
-	{
-		// there might still be a chance that we have to switch to the next hchain
-		hash_length = esp_prot_transforms[entry->next_transform];
-
-		if (hash_length <= 0)
-		{
-			// next chain not set (yet), no need to verify
-			goto out_err;
-		}
-
-		// check if there was an implicit change to the next hchain
-		if (hchain_verify(hash_value, entry->next_anchor,
+		HIP_DEBUG("checking active hchain...\n");
+		if (hchain_verify(hash_value, entry->active_anchor,
 				hash_length, entry->tolerance))
 		{
-			HIP_DEBUG("hash matches element in next hash-chain\n");
-
-			// beware, the hash lengths might differ between 2 different hchains
-			if (entry->active_transform != entry->next_transform)
-			{
-				free(entry->active_anchor);
-				entry->active_anchor = (unsigned char *)malloc(hash_length);
-				entry->active_transform = entry->next_transform;
-			}
-
+			// this will allow only increasing elements to be accepted
 			memcpy(entry->active_anchor, hash_value, hash_length);
 
-			free(entry->next_anchor);
-			entry->next_anchor = NULL;
-			entry->next_transform = ESP_PROT_TRANSFORM_UNUSED;
+			HIP_DEBUG("hash matches element in active hash-chain\n");
 
 		} else
 		{
-			// handle incorrect elements -> drop packet
-			HIP_DEBUG("INVALID hash-chain element!\n");
+			if (entry->next_transform > ESP_PROT_TRANSFORM_UNUSED)
+			{
+				// there might still be a chance that we have to switch to the next hchain
+				hash_length = esp_prot_transforms[entry->next_transform];
 
-			err = 1;
-			goto out_err;
+				// check if there was an implicit change to the next hchain
+				HIP_DEBUG("checking next hchain...\n");
+				if (hchain_verify(hash_value, entry->next_anchor,
+						hash_length, entry->tolerance))
+				{
+					HIP_DEBUG("hash matches element in next hash-chain\n");
+
+					// beware, the hash lengths might differ between 2 different hchains
+					if (entry->active_transform != entry->next_transform)
+					{
+						free(entry->active_anchor);
+						entry->active_anchor = (unsigned char *)malloc(hash_length);
+						entry->active_transform = entry->next_transform;
+					}
+
+					memcpy(entry->active_anchor, hash_value, hash_length);
+
+					free(entry->next_anchor);
+					entry->next_anchor = NULL;
+					entry->next_transform = ESP_PROT_TRANSFORM_UNUSED;
+				}
+				else
+				{
+					// handle incorrect elements -> drop packet
+					err = 1;
+					goto out_err;
+				}
+
+			} else
+			{
+				// handle incorrect elements -> drop packet
+				err = 1;
+				goto out_err;
+			}
 		}
+	} else
+	{
+		HIP_DEBUG("esp protection extension UNUSED\n");
 	}
 
   out_err:
+	if (err == 1)
+	{
+		HIP_DEBUG("INVALID hash-chain element!\n");
+	}
+
     return err;
 }
 
