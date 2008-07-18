@@ -3,9 +3,9 @@
 *  packet signatures
 *
 * Description:
-* 
 *
-* Authors: 
+*
+* Authors:
 *   - Tobias Heer <heer@tobobox.de> 2006
 *  * Licence: GNU/GPL
 *
@@ -50,7 +50,7 @@ int hchain_verify(const unsigned char * current_hash, const unsigned char * last
 hash_chain_t *hchain_create(int hchain_length, int hash_length);
 
 /* remove and return the next element from the hash chain */
-int hchain_pop(hash_chain_t * hash_chain, int hash_length, unsigned char *popped_hash);
+unsigned char * hchain_pop(hash_chain_t * hash_chain, int hash_length);
 
 /* return the next element from the hash chain */
 int hchain_next(const hash_chain_t *hash_chain, int hash_length, unsigned char *next_hash);
