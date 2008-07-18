@@ -938,53 +938,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 	entry->hip_transform = transform_hip_suite;
 
-/* moved to hip_handle_r2 as we need to know the peer's anchor element for the esp
- * protection extension before adding the inbound sa entry.
- *
- * NOTE: we need to create the spi no. for inbound packets here
- * NOTE: this also ensures that we only add established connections to the sadb
- */
-
 	get_random_bytes(&spi_in, sizeof(uint32_t));
-
-#if 0
-#ifdef CONFIG_HIP_BLIND
-	if (hip_blind_get_status()) {
-	  /* let the setup routine give us a SPI. */
-	  HIP_DEBUG("Blind is ON\n");
-	  HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(r1_saddr, r1_daddr,
-			      &entry->hit_peer, &entry->hit_our,
-			      entry, &spi_in, transform_esp_suite,
-			      &ctx->esp_in, &ctx->auth_in, 0,
-			      HIP_SPI_DIRECTION_IN, 0, entry), -1,
-		   "Failed to setup IPsec SPD/SA entries, peer:src\n");
-	}
-#endif
-
-//modified by santtu
-	/**when nat control is 0, we create sa as normal mode,
-	 * but is it is not, we use other connectivity engine to create sa***/
-	if(entry->nat_control==0){
-		if (!hip_blind_get_status()) {
-		  HIP_DEBUG("Blind is OFF\n");
-		  HIP_DEBUG_HIT("hit our", &entry->hit_our);
-		  HIP_DEBUG_HIT("hit peer", &entry->hit_peer);
-		  /* let the setup routine give us a SPI. */
-		  HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(r1_saddr, r1_daddr,
-				      &ctx->input->hits, &ctx->input->hitr,
-				      &spi_in, transform_esp_suite,
-				      &ctx->esp_in, &ctx->auth_in, 0,
-				      HIP_SPI_DIRECTION_IN, 0,
-				      entry), -1,
-			   "Failed to setup IPsec SPD/SA entries, peer:src\n");
-		}
-	}
-	else{
-		//spi should be created
-		get_random_bytes(&spi_in, sizeof(uint32_t));
-	}
-//end modify
-#endif
 
 	/* XXX: -EAGAIN */
 	HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
@@ -1491,20 +1445,6 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 	HIP_IFEL(entry->sign(entry->our_priv, r2), -EINVAL,
 		 "Failed to sign R2 packet.\n");
 
-// removed as not there before merge -> causes duplicate R2s
-#if 0
-	err = entry->hadb_xmit_func->hip_send_pkt(
-		i2_daddr, i2_saddr, (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
-		entry->peer_udp_port, r2, entry, 1);
-
-	/* Why is err reset to zero? -Lauri 11.06.2008 */
-	if (err == 1) {
-		err = 0;
-	}
-#endif
-
-	HIP_IFEL(entry->sign(entry->our_priv, r2), -EINVAL, "Could not sign R2. Failing\n");
-
 //add by santtu
 #ifdef CONFIG_HIP_RVS
 	if(!ipv6_addr_any(dest))
@@ -1561,6 +1501,7 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 						  (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
 	                                          entry->peer_udp_port, r2, entry, 1);
 	if (err == 1) err = 0;
+
 	HIP_IFEL(err, -ECOMM, "Sending R2 packet failed.\n");
 
  out_err:
@@ -1624,7 +1565,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	extern uint8_t hip_esp_prot_ext_transform;
 	//add by santtu
 #ifdef HIP_USE_ICE
-	void * ice_session = 0;
+	void * ice_session = NULL;
 	int i;
 #endif
 #ifdef CONFIG_HIP_HI3
@@ -1679,6 +1620,9 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
  	HIP_DEBUG("Cookie accepted\n");
 
+	//sa not created, but spi must be created
+	//get_random_bytes(&spi_in, sizeof(uint32_t));
+	//HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
 
 
 #ifdef CONFIG_HIP_HI3
@@ -2041,9 +1985,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 			hip_hadb_delete_outbound_spi(entry, 0);
 			goto out_err;
 		}
-	} else {
-		//sa not created, but spi must be created
-		get_random_bytes(&spi_in, sizeof(uint32_t));
 	}
 //end modify
 	/** @todo Check -EAGAIN */
@@ -2062,45 +2003,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
 	spi_out = ntohl(esp_info->new_spi);
 	HIP_DEBUG("Setting up outbound IPsec SA, SPI=0x%x\n", spi_out);
-
-// moved to hip_create_r2
-#if 0
-#ifdef CONFIG_HIP_BLIND
-	if (use_blind) {
-	   err = entry->hadb_ipsec_func->hip_add_sa(i2_daddr, i2_saddr,
-			   &entry->hit_our, &entry->hit_peer,
-			   &spi_out, esp_tfm,
-			   &ctx->esp_out, &ctx->auth_out,
-			   1, HIP_SPI_DIRECTION_OUT, 0, entry);
-	}
-#endif
-
-//modified by santtu
-	/**nat_control is 0 means we use normal mode to create sa*/
-	if (entry->nat_control == 0) {
-		if (!use_blind) {
-		  err = entry->hadb_ipsec_func->hip_add_sa(i2_daddr, i2_saddr,
-				   &ctx->input->hitr, &ctx->input->hits,
-				   &spi_out, esp_tfm,
-				   &ctx->esp_out, &ctx->auth_out,
-				   1, HIP_SPI_DIRECTION_OUT, 0, entry);
-		}
-		if (err) {
-			HIP_ERROR("Failed to setup outbound SA with SPI = %d.\n",
-				  spi_out);
-
-			/* delete all IPsec related SPD/SA for this entry*/
-			hip_hadb_delete_inbound_spi(entry, 0);
-			hip_hadb_delete_outbound_spi(entry, 0);
-			goto out_err;
-		}
-	}else{
-		HIP_DEBUG("ICE engine will be used, no sa created here\n");
-	}
-//end modify
-	/* @todo Check if err = -EAGAIN... */
-	HIP_DEBUG("Set up outbound IPsec SA, SPI=0x%x\n", spi_out);
-#endif
 
 #ifdef CONFIG_HIP_BLIND
     if (use_blind) {
@@ -2161,22 +2063,15 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
 #ifdef CONFIG_HIP_RVS
 	ipv6_addr_copy(&dest, &in6addr_any);
-    if(hip_relay_get_status() == HIP_RELAY_OFF) {
-
-	state = hip_relay_handle_relay_from(i2, i2_saddr, &dest, &dest_port);
-	if( state == -1 ){
-		HIP_DEBUG( "Handling RELAY_FROM of  I2 packet failed.\n");
-		 goto out_err;
-	 }
-
-     }
+	if(hip_relay_get_status() == HIP_RELAY_OFF) {
+		state = hip_relay_handle_relay_from(i2, i2_saddr, &dest, &dest_port);
+		if( state == -1 ){
+			HIP_DEBUG( "Handling RELAY_FROM of  I2 packet failed.\n");
+			goto out_err;
+		}
+	}
 #endif
 //end add
-
-
-
-
-
 
 	/* Note that we haven't handled the REG_REQUEST yet. This is because we
 	   must create an REG_RESPONSE parameter into the R2 packet based on the
@@ -2505,6 +2400,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	HIP_HEXDUMP("peer_anchor: ", entry->esp_peer_anchor,
 			esp_prot_transforms[entry->esp_prot_transform]);
 
+<<<<<<< TREE
 // moved from hip_create_i2
 #ifdef CONFIG_HIP_BLIND
 	if (use_blind) {
@@ -2544,6 +2440,41 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 #endif
 // end of move
 
+=======
+// moved from hip_create_i2
+#ifdef CONFIG_HIP_BLIND
+	if (hip_blind_get_status()) {
+	  /* let the setup routine give us a SPI. */
+	  HIP_DEBUG("Blind is ON\n");
+	  HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(r1_saddr, r1_daddr,
+			      &entry->hit_peer, &entry->hit_our,
+			      entry, &spi_in, transform_esp_suite,
+			      &ctx->esp_in, &ctx->auth_in, 0,
+			      HIP_SPI_DIRECTION_IN, 0, entry), -1,
+		   "Failed to setup IPsec SPD/SA entries, peer:src\n");
+	}
+#endif
+
+//modified by santtu
+	/**when nat control is 0, we create sa as normal mode,
+	 * but if it is not, we use other connectivity engine to create sa***/
+	if(entry->nat_control == 0){
+		if (!hip_blind_get_status()) {
+		  HIP_DEBUG("Blind is OFF\n");
+		  HIP_DEBUG_HIT("hit our", &entry->hit_our);
+		  HIP_DEBUG_HIT("hit peer", &entry->hit_peer);
+		  HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(r2_saddr,
+				  r2_daddr, &ctx->input->hits, &ctx->input->hitr,
+				  &spi_in, tfm, &entry->esp_in, &entry->auth_in, 0,
+				  HIP_SPI_DIRECTION_IN, 0, entry), -1,
+				  "Failed to setup IPsec SPD/SA entries, peer:src\n");
+		}
+	} else{
+		HIP_DEBUG("ICE engine will be used, no sa created here\n");
+	}
+// end of move
+
+>>>>>>> MERGE-SOURCE
 #ifdef CONFIG_HIP_BLIND
 	if (use_blind) {
 	  err = entry->hadb_ipsec_func->hip_add_sa(r2_daddr, r2_saddr,
@@ -2575,6 +2506,10 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 		HIP_DEBUG("ICE engine will be used, no sa created here\n");
 	}
 //end modify
+
+
+
+
 	/** @todo Check for -EAGAIN */
 	HIP_DEBUG("Set up outbound IPsec SA, SPI = 0x%x (host).\n", spi_recvd);
 

@@ -248,19 +248,23 @@
 /* REMEMBER TO UPDATE BITMAP IN DOC/DOXYGEN.H WHEN YOU ADD/CHANGE THESE! */
 #define HIP_HA_CTRL_NONE                 0x0000
 
+#define HIP_HA_CTRL_LOCAL_REQ_UNSUP      0x0001
 #define HIP_HA_CTRL_LOCAL_REQ_ESCROW     0x2000
 #define HIP_HA_CTRL_LOCAL_REQ_RELAY      0x4000
 #define HIP_HA_CTRL_LOCAL_REQ_RVS        0x8000
 /* Keep inside parentheses. */
 #define HIP_HA_CTRL_LOCAL_REQ_ANY        (\
+                                         HIP_HA_CTRL_LOCAL_REQ_UNSUP |\
                                          HIP_HA_CTRL_LOCAL_REQ_ESCROW |\
                                          HIP_HA_CTRL_LOCAL_REQ_RELAY |\
                                          HIP_HA_CTRL_LOCAL_REQ_RVS\
                                          )
 
+#define HIP_HA_CTRL_PEER_GRANTED_UNSUP   0x0001 
 #define HIP_HA_CTRL_PEER_GRANTED_ESCROW  0x0400 
 #define HIP_HA_CTRL_PEER_GRANTED_RELAY   0x0800 
 #define HIP_HA_CTRL_PEER_GRANTED_RVS     0x1000
+#define HIP_HA_CTRL_PEER_UNSUP_CAPABLE   0x0002 
 #define HIP_HA_CTRL_PEER_ESCROW_CAPABLE  0x2000 
 #define HIP_HA_CTRL_PEER_RELAY_CAPABLE   0x4000 
 #define HIP_HA_CTRL_PEER_RVS_CAPABLE     0x8000

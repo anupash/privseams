@@ -37,14 +37,11 @@ void hip_init_services()
 	hip_services[2].max_lifetime = HIP_RELREC_MAX_LIFETIME;
 
 	hip_ll_init(&pending_requests);
-		
-	HIP_DEBUG("NEW SERVICE INITIALIZATION DONE.\n");
 }
 
 void hip_uninit_services()
 {
 	hip_ll_uninit(&pending_requests, free);
-	HIP_DEBUG("NEW SERVICE UNINITIALIZATION DONE.\n");
 }
 
 void hip_registration_maintenance()
@@ -365,6 +362,8 @@ int hip_handle_param_reg_info(hip_ha_t *entry, hip_common_t *source_msg,
 			
 		default:
 			HIP_INFO("Responder offers unsupported service.\n");
+			hip_hadb_set_peer_controls(
+				entry ,HIP_HA_CTRL_PEER_UNSUP_CAPABLE);
 		}
 	}
 
@@ -992,6 +991,12 @@ int hip_add_registration_client(hip_ha_t *entry, uint8_t lifetime,
 			HIP_DEBUG("The server has granted us an unknown "\
 				  "service for %u seconds (lifetime 0x%x.)\n",
 				  seconds, lifetime);
+			hip_hadb_cancel_local_controls(
+				entry, HIP_HA_CTRL_LOCAL_REQ_UNSUP); 
+			hip_hadb_set_peer_controls(
+				entry, HIP_HA_CTRL_PEER_GRANTED_UNSUP); 
+			hip_del_pending_request_by_type(
+				entry, reg_types[i]);
 			break;
 		}
 		}
