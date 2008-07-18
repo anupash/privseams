@@ -1603,8 +1603,8 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
  	HIP_DEBUG("Cookie accepted\n");
 
 	//sa not created, but spi must be created
-	get_random_bytes(&spi_in, sizeof(uint32_t));
-	HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
+	//get_random_bytes(&spi_in, sizeof(uint32_t));
+	//HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
 
 
 #ifdef CONFIG_HIP_HI3
@@ -2045,15 +2045,13 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
 #ifdef CONFIG_HIP_RVS
 	ipv6_addr_copy(&dest, &in6addr_any);
-    if(hip_relay_get_status() == HIP_RELAY_OFF) {
-
-	state = hip_relay_handle_relay_from(i2, i2_saddr, &dest, &dest_port);
-	if( state == -1 ){
-		HIP_DEBUG( "Handling RELAY_FROM of  I2 packet failed.\n");
-		 goto out_err;
-	 }
-
-     }
+	if(hip_relay_get_status() == HIP_RELAY_OFF) {
+		state = hip_relay_handle_relay_from(i2, i2_saddr, &dest, &dest_port);
+		if( state == -1 ){
+			HIP_DEBUG( "Handling RELAY_FROM of  I2 packet failed.\n");
+			goto out_err;
+		}
+	}
 #endif
 //end add
 
