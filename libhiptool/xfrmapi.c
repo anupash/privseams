@@ -9,7 +9,7 @@ struct rtnl_handle *hip_xfrmapi_nl_ipsec;
 int hip_xfrmapi_beet;
 int hip_xfrmapi_sa_default_prefix;
 
-char **e_algo_names; 
+char **e_algo_names;
 char **a_algo_names;
 
 /* Mappings from HIP to XFRM algo names < 2.6.19 */
@@ -84,7 +84,7 @@ int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
 
 	memset(&req, 0, sizeof(req));
 	memset(&tmpls_buf, 0, sizeof(tmpls_buf));
-	
+
 	req.n.nlmsg_len = NLMSG_LENGTH(sizeof(req.xpinfo));
 	req.n.nlmsg_flags = NLM_F_REQUEST|flags;
 	req.n.nlmsg_type = cmd;
@@ -108,7 +108,7 @@ int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
 	} else {
 		tmpl->family = preferred_family;
 	}
-		
+
 
 	/* The mode has to be BEET */
 	if (proto) {
@@ -147,7 +147,7 @@ int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
 	}
 
 out_err:
-	
+
 	return err;
 }
 
@@ -253,7 +253,7 @@ int hip_xfrm_policy_delete(struct rtnl_handle *rth,
 
 /**
  * Modifies a Security Association.
- * 
+ *
  * @param cmd command. %XFRM_MSG_NEWSA | %XFRM_MSG_UPDSA
  * @param id_our Source HIT or LSI
  * @param id_peer Peer HIT or LSI
@@ -264,8 +264,8 @@ int hip_xfrm_policy_delete(struct rtnl_handle *rth,
  */
 int hip_xfrm_state_modify(struct rtnl_handle *rth,
 			  int cmd, struct in6_addr *saddr,
-			  struct in6_addr *daddr, 
-			  struct in6_addr *src_id, 
+			  struct in6_addr *daddr,
+			  struct in6_addr *src_id,
 			  struct in6_addr *dst_id,
 			  __u32 spi, int ealg,
 			  struct hip_crypto_key *enckey,
@@ -289,11 +289,11 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 	HIP_DEBUG("sport %d, dport %d\n", sport, dport);
 	HIP_DEBUG_IN6ADDR("saddr in sa", saddr);
 	HIP_DEBUG_IN6ADDR("daddr in sa", daddr);
-	
+
 	memset(&req, 0, sizeof(req));
 
 	if(IN6_IS_ADDR_V4MAPPED(saddr) || IN6_IS_ADDR_V4MAPPED(daddr))
-	{	
+	{
 		req.xsinfo.saddr.a4 = saddr->s6_addr32[3];
 		req.xsinfo.id.daddr.a4 = daddr->s6_addr32[3];
 		req.xsinfo.family = AF_INET;
@@ -317,16 +317,16 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 	req.xsinfo.id.spi = htonl(spi);
 
 	/* Selector */
-	HIP_IFE(xfrm_fill_selector(&req.xsinfo.sel, src_id, dst_id, 
+	HIP_IFE(xfrm_fill_selector(&req.xsinfo.sel, src_id, dst_id,
 			   0, hip_xfrmapi_sa_default_prefix, 0,0, AF_INET6), -1);
 	if(req.xsinfo.family == AF_INET && (sport || dport))
 	{
-		xfrm_fill_encap(&encap, (sport ? sport : HIP_NAT_UDP_PORT), 
+		xfrm_fill_encap(&encap, (sport ? sport : HIP_NAT_UDP_PORT),
 			(dport ? dport : HIP_NAT_UDP_PORT), saddr);
 		HIP_IFE(addattr_l(&req.n, sizeof(req.buf), XFRMA_ENCAP,
                                   (void *)&encap, sizeof(encap)), -1);
 	}
-	
+
 	{
 		struct {
 			struct xfrm_algo algo;
@@ -356,7 +356,7 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 		HIP_IFE(xfrm_algo_parse((void *)&alg, XFRMA_ALG_CRYPT, e_name,
 					enckey->key, enckey_len,
 					sizeof(alg.buf)), -1);
-	
+
 		len = sizeof(struct xfrm_algo) + alg.algo.alg_key_len;
 
 		HIP_IFE(addattr_l(&req.n, sizeof(req.buf), XFRMA_ALG_CRYPT,
@@ -414,12 +414,12 @@ int hip_xfrm_state_delete(struct rtnl_handle *rth,
 	}
 
 	HIP_DEBUG("sport %d, dport %d\n", sport, dport);
-	
+
         /** @todo Fill in information for UDP-NAT SAs. */
 	if (req.xsid.family == AF_INET && (sport || dport))
 	{
 		HIP_DEBUG("FILLING UDP Port info while deleting\n");
-		xfrm_fill_encap(&encap, (sport ? sport : HIP_NAT_UDP_PORT), 
+		xfrm_fill_encap(&encap, (sport ? sport : HIP_NAT_UDP_PORT),
 			(dport ? dport : HIP_NAT_UDP_PORT), peer_addr);
 		HIP_IFE(addattr_l(&req.n, sizeof(req.buf), XFRMA_ENCAP,
                                   (void *)&encap, sizeof(encap)), -1);
@@ -463,7 +463,7 @@ uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit)
  */
 uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 		    struct in6_addr *src_hit, struct in6_addr *dst_hit,
-		    uint32_t *spi, int ealg,
+		    uint32_t spi, int ealg,
 		    struct hip_crypto_key *enckey,
 		    struct hip_crypto_key *authkey,
 		    int already_acquired,
@@ -476,23 +476,25 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 	int aalg = ealg;
 	int cmd = update ? XFRM_MSG_UPDSA : XFRM_MSG_NEWSA;
 
-	HIP_ASSERT(spi);
-	
+	HIP_ASSERT(spi != 0);
+
 	authkey_len = hip_auth_key_length_esp(aalg);
 	enckey_len = hip_enc_key_length(ealg);
 
 	HIP_IFEL((enckey_len < 0 || authkey_len < 0), 1,
 		 "Bad enc or auth key len\n");
 
+#if 0
 	/* XX CHECK: is there some kind of range for the SPIs ? */
 	if (!already_acquired)
 		get_random_bytes(spi, sizeof(uint32_t));
+#endif
 /*
 	if(!ice_ok)
 		goto out_err;
 	HIP_DEBUG("...........inside add sa..............\n");
-*/	
-	
+*/
+
 	HIP_DEBUG("************************************\n");
 	HIP_DEBUG("%s SA\n", (update ? "updating" : "adding new"));
 	HIP_DEBUG_HIT("src_hit", src_hit);
@@ -503,33 +505,33 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 	_HIP_DEBUG("sport %d\n", sport);
 	_HIP_DEBUG("dport %d\n", dport);
 	HIP_DEBUG("direction %d\n", direction);
-	HIP_DEBUG("SPI=0x%x\n",*spi);
+	HIP_DEBUG("SPI=0x%x\n", spi);
 	HIP_DEBUG("************************************\n");
-	
+
 	HIP_IFE(hip_xfrm_state_modify(hip_xfrmapi_nl_ipsec, cmd,
-				      saddr, daddr, 
-				      src_hit, dst_hit, *spi,
+				      saddr, daddr,
+				      src_hit, dst_hit, spi,
 				      ealg, enckey, enckey_len, aalg,
 				      authkey, authkey_len, AF_INET6,
 				      entry->local_udp_port, entry->peer_udp_port), 1);
-				      
+
  out_err:
 	return err;
 }
 
 /*
-Calculates the prefix length to use depending on identifier's type: LSI or HIT 
+Calculates the prefix length to use depending on identifier's type: LSI or HIT
 */
 int hip_calc_sp_prefix(struct in6_addr *src_id, int use_full_prefix){
-	
+
 	u8 prefix;
 
 	if (IN6_IS_ADDR_V4MAPPED(src_id)){
 		HIP_DEBUG("ipv4 address mapped as ipv6\n");
-		prefix = (use_full_prefix) ? 32 : HIP_LSI_PREFIX_LEN;	
+		prefix = (use_full_prefix) ? 32 : HIP_LSI_PREFIX_LEN;
 	}
 	else
-		prefix = (use_full_prefix) ? 128 : HIP_HIT_PREFIX_LEN;	
+		prefix = (use_full_prefix) ? 128 : HIP_HIT_PREFIX_LEN;
 
 	return prefix;
 }

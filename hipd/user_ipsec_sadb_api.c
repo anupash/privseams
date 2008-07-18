@@ -10,7 +10,7 @@ uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr,
 				    struct in6_addr *daddr,
 				    struct in6_addr *src_hit,
 				    struct in6_addr *dst_hit,
-				    uint32_t *spi, int ealg,
+				    uint32_t spi, int ealg,
 				    struct hip_crypto_key *enckey,
 				    struct hip_crypto_key *authkey,
 				    int retransmission,
@@ -21,6 +21,8 @@ uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr,
 	struct sockaddr_in6 hip_firewall_addr;
 	struct in6_addr loopback = in6addr_loopback;
 	int err = 0;
+
+	HIP_ASSERT(spi != 0);
 
 	HIP_IFEL(!(msg = create_add_sa_msg(saddr, daddr, src_hit, dst_hit, spi, ealg, enckey,
 		    authkey, retransmission, direction, update, entry)), -1,
