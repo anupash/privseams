@@ -10,26 +10,11 @@ dist_sbin_SCRIPTS  += util.py
 # Note: .. is included because libinet6/debug.h is included; otherwise this
 # won't build because there is also the linux/net/ipv6/hip/debug.h include.
 #
-
-if HIP_OPENWRT
-	CFLAGS =
-	INCLUDES += -I $(HIPL) -I $(HIPL_HIPD) -I $(HIPL_LIBHIPTOOL) -I $(HIPL_LIBOPPHIP) -I $(HIPL_TOOLS) -I $(HIPL_OPENDHT) -I $(HIPL_LIBINET6) -I $(HIPL_LIBIPSEC) -I $(HIPL_I3) -I $(HIPL_I3_CLIENT) -I $(HIPL_AESHASH) -I $(HIPL_I3_CHORD) -I $(HIPL_I3_UTILS)
-else
-	CFLAGS = $(hipl_common_cflags) # -L$(HIPL_LIBINET6_LIB)
-	INCLUDES += $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
-endif
+INCLUDES = -I $(HIPL) -I $(HIPL_HIPD) -I $(HIPL_LIBHIPTOOL) -I $(HIPL_LIBOPPHIP) -I $(HIPL_TOOLS) -I $(HIPL_LIBINET6)  -I $(HIPL_OPENDHT) -I $(HIPL_LIBIPSEC) -I $(HIPL_I3) -I $(HIPL_I3_CLIENT) -I $(HIPL_AESHASH) -I $(HIPL_I3_CHORD) -I $(HIPL_I3_UTILS)
+CFLAGS = $(hipl_common_cflags) # -L$(HIPL_LIBINET6_LIB)
   
-  include_HEADERS = hipconftool.h
-
-if HIP_OPENWRT
-	CFLAGS =
-else
-	CFLAGS = $(hipl_common_cflags) # -L$(HIPL_LIBINET6_LIB)
-endif
-
-INCLUDES = $(hipl_common_include_paths) #-I$(HIPL_LIBINET6_INCLUDE)
-
 include_HEADERS = hipconftool.h
+
 
 LDFLAGS = -lc -lcrypto $(HIP_XMLL) $(OPENWRT)
 
