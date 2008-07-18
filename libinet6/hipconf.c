@@ -535,16 +535,13 @@ int hip_conf_handle_hi(hip_common_t *msg, int action, const char *opt[],
 	int dsa_key_bits = 0;
 	char *fmt = NULL, *file = NULL;
 	
-	HIP_DEBUG("Handle HI invoked.\n");
-	
-	HIP_DEBUG("Opt count %d.\n", optc);
+	/*HIP_DEBUG("Opt count %d.\n", optc);
 
 	int i;
 	for(i = 0; i < optc; i++) {
 		HIP_DEBUG("action: %d, opt[%d] = %s.\n", action, i, opt[i]);
 	}
-	
-	/* @todo: the ACTION_GET is bypassed in hip_do_hipconf() */
+	*/
 
 	if (action == ACTION_DEL) {
 		return hip_conf_handle_hi_del(msg, action, opt, optc);
@@ -554,10 +551,13 @@ int hip_conf_handle_hi(hip_common_t *msg, int action, const char *opt[],
 		
 		return hip_get_hits(msg, opt[0]);
 	}
-	//return hip_conf_handle_hi_get(msg, action, opt, optc);
+	
+	HIP_IFEL((optc < 1), -1, "Missing arguments.\n");
+	HIP_IFEL((optc > 4), -1, "Too many arguments.\n");
 
-	/* Check min/max amount of args */
-	HIP_IFEL((optc < 1 || optc > 4), -EINVAL, "Invalid number of arguments\n");
+	/* What is this supposed to do? And how? What are the actions allowed?
+	   hipconf help string specifies also the action NEW, but this function
+	   does not test for it. */
 	
 	if(!strcmp(opt[OPT_HI_TYPE], "pub")) {
 		anon = 0;
@@ -1566,9 +1566,6 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
 	/* Call handler function from the handler function pointer
 	   array at index "type" with given commandline arguments. 
 	   The functions build a hip_common message. */
-	/*HIP_DEBUG("ARGC: %d.\n", argc);
-	if (action == ACTION_GET)
-	err = hip_get_hits(msg, argv);*/
 	if (argc == 3)
 		err = (*action_handler[type])(msg, action, (const char **)&argv[2], argc - 3);
 	else
@@ -1685,19 +1682,12 @@ int hip_get_hits(hip_common_t *msg, char *opt)
 	hip_tlv_type_t param_type = 0;
 	char hit_s[INET6_ADDRSTRLEN], lsi_s[INET_ADDRSTRLEN];
 
-	HIP_DEBUG("Get HITS invoked %s.\n", opt);
-
-	memset(hit_s, 0, sizeof(hit_s));
-	memset(lsi_s, 0, sizeof(lsi_s));
-	
 	if (strcmp(opt, "all") == 0) {
 		/* Build a HIP message with socket option to get default HIT. */
 		HIP_IFE(hip_build_user_hdr(msg, SO_HIP_GET_HITS, 0), -1);
 		/* Send the message to the daemon. The daemon fills the
 		   message. */
 		HIP_IFE(hip_send_recv_daemon_info(msg), -ECOMM);
-		
-		HIP_DUMP_MSG(msg);
 		
 		/* Loop through all the parameters in the message just filled. */
 		while((current_param =
@@ -1712,18 +1702,18 @@ int hip_get_hits(hip_common_t *msg, char *opt)
 				inet_ntop(AF_INET6, &endp->id.hit, hit_s,
 					  INET6_ADDRSTRLEN);
 				
-				HIP_INFO("%s", (endp->flags == HIP_ENDPOINT_FLAG_ANON ? "Anonymous" : "Public"));
-				//HIP_INFO("hi is %s ", endp->flags == HIP_ENDPOINT_FLAG_HIT ? "anonymous" : "public");
-				HIP_INFO("%s", endp->algo == HIP_HI_DSA ? "dsa" : "rsa");
-				HIP_INFO_HIT("\n", &endp->id.hit);
+				HIP_INFO("%s %s HIT: %s\n",
+					 (endp->flags ==
+					  HIP_ENDPOINT_FLAG_ANON ?
+					  "Anonymous" : "Public   "),
+					 (endp->algo == HIP_HI_DSA ?
+					  "DSA" : "RSA"), hit_s);
 			} else {
 				HIP_ERROR("Unrelated parameter in user "\
 					  "message.\n");
 			}
 		}
-
-		HIP_INFO("All HITs printed.\n");
-
+		
 	} else if (strcmp(opt, "default") == 0) {
 		/* Build a HIP message with socket option to get default HIT. */
 		HIP_IFE(hip_build_user_hdr(msg, SO_HIP_DEFAULT_HIT, 0), -1);
@@ -1755,7 +1745,7 @@ int hip_get_hits(hip_common_t *msg, char *opt)
 			}
 		}
 
-		HIP_INFO("Default HIT is: %s\nDefault LSI is: %s\n", hit_s, lsi_s);
+		HIP_INFO("Default HIT: %s\nDefault LSI: %s\n", hit_s, lsi_s);
 	} else {
 		HIP_ERROR("Invalid argument \"%s\". Use \"default\" or "\
 			  "\"all\".\n", opt);
@@ -1764,7 +1754,7 @@ int hip_get_hits(hip_common_t *msg, char *opt)
 	}
 
 	/* Clear message so do_hipconf() doesn't send it again */
-	hip_msg_init(msg);
+	//hip_msg_init(msg);
 
  out_err:
     
