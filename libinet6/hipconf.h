@@ -169,15 +169,6 @@ debug medium        # debug verbosity: all, medium or none\n"
 #2001:1e:361f:8a55:6730:6f82:ef36:2fff kyle kyle.com # This is a HIT with alias\n\
 #2001:17:53ab:9ff1:3cba:15f:86d6:ea2e kenny       # This is a HIT without alias\n"
 
-/*typedef int (*sendto_delegate_hipd)(void *, size_t,
-			   					   struct sockaddr*,
-			   					   struct sockaddr*,
-			   					   int *);
-			   					  */
-typedef int(*sendto_delegate_hipd)(int * , void *, size_t );
-
-typedef int(*recvfrom_delegate_hipd)(int * , void *, size_t);
-
 int hip_handle_exec_application(int fork, int type, int argc, char **argv);
 int hip_conf_handle_restart(hip_common_t *, int type, const char *opt[], int optc);
 int hip_append_pathtolib(char **libs, char *lib_all, int lib_all_length);
@@ -211,9 +202,7 @@ int hip_get_type(char *type);
 int hip_conf_handle_ha(hip_common_t *msg, int action,const char *opt[], int optc);
 int hip_conf_handle_handoff(hip_common_t *msg, int action,const char *opt[], int optc);
 int hip_conf_handle_opptcp(hip_common_t *, int type, const char *opt[], int optc);
-int hip_do_hipconf(int argc, char *argv[], int send_only, 
-				   sendto_delegate_hipd delegate_sendto,
-				   recvfrom_delegate_hipd delegate_recvfrom);
+int hip_do_hipconf(int argc, char *argv[], int send_only);
 int hip_conf_handle_opptcp(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_tcptimeout(struct hip_common *, int type, const char *opt[], int optc); /*added by Tao Wan, 04.Jan.2008*/
 int hip_conf_handle_hipproxy(struct hip_common *msg, int action, const char *opt[], int optc);

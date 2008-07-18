@@ -43,9 +43,7 @@ int main(int argc, char *argv[]) {
 	  "Error: Cannot set the debugging parameter.\n");
 
 	
-	HIP_IFEL(hip_do_hipconf(argc, argv, 1, 
-							&callback_sendto_hipd,
-							&callback_recvfrom_hipd), -2,
+	HIP_IFEL(hip_do_hipconf(argc, argv, 1), -2,
 	  "Error: Cannot configure hip daemon.\n");
 
  out_err:

@@ -1415,9 +1415,7 @@ int hip_conf_handle_run_normal(hip_common_t *msg, int action,
 					   (char **) &opt[0]);
 }
 
-int hip_do_hipconf(int argc, char *argv[], int send_only,  
-				   sendto_delegate_hipd delegate_sendto,
-				   recvfrom_delegate_hipd delegate_recvfrom)
+int hip_do_hipconf(int argc, char *argv[], int send_only)
 {
      int err = 0, type_arg = 0, i = 0;
      long int action = 0, type = 0, hiparg = 0;
