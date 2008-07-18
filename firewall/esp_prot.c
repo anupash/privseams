@@ -47,22 +47,27 @@ int esp_prot_set_sadb(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 {
 	int err = 0;
 
-	// TODO add update support
-
-	HIP_DEBUG("setting up ESP extension parameters...\n");
-
-	// set the esp protection extension transform
-	entry->active_transform = esp_prot_transform;
-	HIP_DEBUG("entry->active_transform: %u\n", entry->active_transform);
-
 	// only set up the anchor or hchain, if esp extension is used
 	if (esp_prot_transform > ESP_PROT_TRANSFORM_UNUSED)
 	{
+		// TODO add update support
+
+		HIP_DEBUG("setting up ESP extension parameters...\n");
+
+		// set the esp protection extension transform
+		entry->active_transform = esp_prot_transform;
+		HIP_DEBUG("entry->active_transform: %u\n", entry->active_transform);
+
 		/* set up hash chains or anchors depending on the direction */
 		if (direction == HIP_SPI_DIRECTION_IN)
 		{
+			HIP_IFEL(!(entry->active_anchor = (unsigned char *)
+					malloc(esp_prot_transforms[entry->active_transform])), -1,
+					"failed to allocate memory\n");
+
 			// set anchor for inbound SA
-			entry->active_anchor = esp_prot_anchor;
+			memcpy(entry->active_anchor, esp_prot_anchor,
+					esp_prot_transforms[entry->active_transform]);
 			entry->tolerance = DEFAULT_VERIFY_WINDOW;
 		} else
 		{
@@ -135,7 +140,7 @@ int verify_esp_prot_hash(hip_sa_entry_t *entry, unsigned char *hash_value)
 		HIP_DEBUG("hchain element of incoming packet to be verified:\n");
 		HIP_HEXDUMP("-> ", hash_value, hash_length);
 
-		HIP_DEBUG("checking active hchain...\n");
+		HIP_DEBUG("checking active_anchor...\n");
 		if (hchain_verify(hash_value, entry->active_anchor,
 				hash_length, entry->tolerance))
 		{
@@ -152,7 +157,7 @@ int verify_esp_prot_hash(hip_sa_entry_t *entry, unsigned char *hash_value)
 				hash_length = esp_prot_transforms[entry->next_transform];
 
 				// check if there was an implicit change to the next hchain
-				HIP_DEBUG("checking next hchain...\n");
+				HIP_DEBUG("checking next_anchor...\n");
 				if (hchain_verify(hash_value, entry->next_anchor,
 						hash_length, entry->tolerance))
 				{
