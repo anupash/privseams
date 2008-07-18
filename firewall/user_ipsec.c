@@ -295,8 +295,9 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	//HIP_IFEL(entry->sequence != seq_no, -1, "ESP sequence numbers do not match\n");
 
 	// verify the esp extension hash, if in use
+	HIP_HEXDUMP("hash element: ", ((unsigned char *)esp_hdr) + sizeof(struct hip_esp), 8);
 	HIP_IFEL(verify_esp_prot_hash(entry, ((unsigned char *)esp_hdr) + sizeof(struct hip_esp)),
-			-1, "hash could not be verified");
+			-1, "hash could not be verified\n");
 
 // this is helpful for testing
 #if 0

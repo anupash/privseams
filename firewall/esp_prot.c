@@ -130,8 +130,8 @@ int verify_esp_prot_hash(hip_sa_entry_t *entry, unsigned char *hash_value)
 		hash_length = esp_prot_transforms[entry->active_transform];
 		HIP_DEBUG("hash length is %i\n", hash_length);
 
-		HIP_DEBUG("hchain element of incoming packet to be verified: ");
-		HIP_HEXDUMP("", hash_value, hash_length);
+		HIP_DEBUG("hchain element of incoming packet to be verified:\n");
+		HIP_HEXDUMP("->", hash_value, hash_length);
 
 		HIP_DEBUG("checking active hchain...\n");
 		if (hchain_verify(hash_value, entry->active_anchor,
