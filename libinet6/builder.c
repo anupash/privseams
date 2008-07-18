@@ -1375,6 +1375,7 @@ int hip_build_generic_param(struct hip_common *msg,
 
 	if (dst + hip_get_param_total_len(param) > max_dst) {
 		err = -EMSGSIZE;
+		HIP_DEBUG("dst == %d\n",dst);
 		HIP_ERROR("hipd build param: contents size (%d) too long\n",
 			  hip_get_param_contents_len(param));
 		goto out;
@@ -1439,8 +1440,7 @@ int hip_build_param_contents(struct hip_common *msg,
 {
 	struct hip_tlv_common param;
 	hip_set_param_type(&param, param_type);
-	hip_set_param_contents_len(&param, contents_size);
-
+	hip_set_param_contents_len(&param, contents_size);	
 	return hip_build_generic_param(msg, &param,
 				       sizeof(struct hip_tlv_common),
 				       contents);
