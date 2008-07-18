@@ -1465,7 +1465,7 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 	if (hip_blind_get_status()) {
 	   err = entry->hadb_ipsec_func->hip_add_sa(i2_daddr, i2_saddr,
 			   &entry->hit_our, &entry->hit_peer,
-			   &spi_out, esp_tfm,
+			   spi_out, esp_tfm,
 			   &ctx->esp_out, &ctx->auth_out,
 			   1, HIP_SPI_DIRECTION_OUT, 0, entry);
 	}
@@ -1477,7 +1477,7 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 		if (!hip_blind_get_status()) {
 		  err = entry->hadb_ipsec_func->hip_add_sa(i2_daddr, i2_saddr,
 				   &ctx->input->hitr, &ctx->input->hits,
-				   &entry->default_spi_out, entry->esp_transform,
+				   entry->default_spi_out, entry->esp_transform,
 				   &ctx->esp_out, &ctx->auth_out,
 				   1, HIP_SPI_DIRECTION_OUT, 0, entry);
 		}
@@ -1955,7 +1955,10 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	 * 		 so we only get a new one, if it's not set yet
 	 */
 	if (spi_in == 0)
+	{
+		HIP_DEBUG("creating new spi...\n");
 		get_random_bytes(&spi_in, sizeof(uint32_t));
+	}
 
 	/* XXX: -EAGAIN */
 	HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
@@ -1965,7 +1968,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	  /* Set up IPsec associations */
 	  err = entry->hadb_ipsec_func->hip_add_sa(i2_saddr, i2_daddr,
 			   &entry->hit_peer, &entry->hit_our,
-			   entry, &spi_in,
+			   entry, spi_in,
 			   esp_tfm,  &ctx->esp_in, &ctx->auth_in,
 			   retransmission, HIP_SPI_DIRECTION_IN, 0, entry);
 	}
@@ -2001,7 +2004,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 #ifdef CONFIG_HIP_ESCROW
 	if (hip_deliver_escrow_data(
 		    i2_saddr, i2_daddr, &ctx->input->hits, &ctx->input->hitr,
-		    &spi_in, esp_tfm, &ctx->esp_in, HIP_ESCROW_OPERATION_ADD)
+		    spi_in, esp_tfm, &ctx->esp_in, HIP_ESCROW_OPERATION_ADD)
 	    != 0) {
 		HIP_DEBUG("Could not deliver escrow data to server\n");
 	}
@@ -2413,7 +2416,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	  HIP_DEBUG("Blind is ON\n");
 	  HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(r1_saddr, r1_daddr,
 				  &entry->hit_peer, &entry->hit_our,
-				  entry, &spi_in, transform_esp_suite,
+				  entry, spi_in, transform_esp_suite,
 				  &ctx->esp_in, &ctx->auth_in, 0,
 				  HIP_SPI_DIRECTION_IN, 0, entry), -1,
 		   "Failed to setup IPsec SPD/SA entries, peer:src\n");
@@ -2449,7 +2452,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	if (use_blind) {
 	  err = entry->hadb_ipsec_func->hip_add_sa(r2_daddr, r2_saddr,
 			   &entry->hit_our, &entry->hit_peer,
-			   &spi_recvd, tfm,
+			   spi_recvd, tfm,
 			   &ctx->esp_out, &ctx->auth_out, 1,
 			   HIP_SPI_DIRECTION_OUT, 0, entry);
 	}
