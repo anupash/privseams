@@ -34,16 +34,7 @@ int hip_for_each_locator_addr_item(
      
 	n_addrs = hip_get_locator_addr_item_count(locator);
 	HIP_IFEL((n_addrs < 0), -1, "Negative address count\n");
-	/**
-	   @todo Here we have wrong checking, because function  
-	   hip_get_locator_addr_item_count(locator) has already
-	   divided the length on sizeof(struct hip_locator_info_addr_item)
-	   hence we already have number of elements. Andrey
-	*/ 
-	/*  if (n_addrs % sizeof(struct hip_locator_info_addr_item))
-	    HIP_ERROR(addr item list len modulo not zero, (len=%d)\n",
-	    ntohs(locator->length));
-	*/
+
 	HIP_DEBUG("LOCATOR has %d address(es), loc param len=%d\n",
 		  n_addrs, hip_get_param_total_len(locator));
      
@@ -55,7 +46,7 @@ int hip_for_each_locator_addr_item(
 	for (i = 0; i < n_addrs; i++ ) {
 		HIP_IFEL(func(entry, locator_address_item, opaque), -1,
 			 "Locator handler function returned error\n");
-		locator_address_item = hip_get_locator_item(locator_address_item,1);
+		locator_address_item = hip_get_locator_item(locator_address_item,i+1);
 	}
 //end modify     
  out_err:
@@ -2010,11 +2001,15 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 				int esp_info_old_spi, int is_add,
 				struct sockaddr* addr)
 {	   	
-	int err = 0, i, preferred_address_found = 0; 
+	int err = 0, i = 0, ii = 0, preferred_address_found = 0; 
 	int choose_random = 0, change_preferred_address = 0;
 	struct hip_spi_in_item *spi_in = NULL;
 	struct hip_locator_info_addr_item *loc_addr_item = addr_list;
 	in6_addr_t *saddr, *comp_addr = hip_cast_sa_addr(addr);
+	hip_list_t *item = NULL, *tmp = NULL, *item_outer = NULL,
+		*tmp_outer = NULL;
+	struct hip_peer_addr_list_item *addr_li;
+	struct hip_spi_out_item *spi_out;
 
 	HIP_DEBUG("\n");
 	
@@ -2073,7 +2068,14 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 	choose_random:
 		loc_addr_item = addr_list;
 		for(i = 0; i < addr_count; i++, loc_addr_item++) {
-			in6_addr_t *saddr = &loc_addr_item->address;
+/*
+		comp_af = IN6_IS_ADDR_V4MAPPED(hip_get_locator_item_address(hip_get_locator_item(locator_address_item, i)))
+
+ */
+			saddr = hip_get_locator_item_address(hip_get_locator_item_as_one(loc_addr_item, i));
+//			saddr = &loc_addr_item->address;
+			HIP_DEBUG_IN6ADDR("Saddr: ", saddr);
+			HIP_DEBUG_IN6ADDR("Daddr: ", daddr);
 			if (memcmp(comp_addr, saddr, sizeof(in6_addr_t)) == 0) {
 				if (IN6_IS_ADDR_V4MAPPED(saddr) ==
 				    IN6_IS_ADDR_V4MAPPED(daddr))
@@ -2096,11 +2098,11 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 			}
 		}
 		if ((preferred_address_found == 0) && (been_here == 0)) {
-			hip_list_t *item = NULL, *tmp = NULL, *item_outer = NULL,
-				*tmp_outer = NULL;
-			struct hip_peer_addr_list_item *addr_li;
-			struct hip_spi_out_item *spi_out;
-			int i = 0, ii = 0;
+			item = NULL;
+			tmp = NULL; 
+			item_outer = NULL;
+			tmp_outer = NULL;
+		        i = 0, ii = 0;			
 			list_for_each_safe(item_outer, tmp_outer, entry->spis_out, i) {
 				spi_out = list_entry(item_outer);
 				ii = 0;
@@ -2140,7 +2142,7 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 			loc_addr_item->reserved = ntohl(1 << 7);
 			HIP_DEBUG_IN6ADDR("first match: ", saddr);
 			HIP_IFEL(hip_update_preferred_address(
-					 entry, saddr, daddr,&spi_in->spi), -1, 
+					 entry, saddr, daddr, &spi_in->spi), -1, 
 				 "Setting New Preferred Address Failed\n");
 			preferred_address_found = 1;
 			break;
@@ -2547,7 +2549,7 @@ static int hip_update_get_all_valid(hip_ha_t *entry, void *op)
 		rk->array[rk->count] = entry;
 		rk->count++;
 	} else
-		HIP_DEBUG("skipping HA entry 0x%p (state=%s)\n",
+		_HIP_DEBUG("skipping HA entry 0x%p (state=%s)\n",
 			  entry, hip_state_str(entry->state));
      
 	return 0;
@@ -2560,7 +2562,10 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 	int err = 0, i;
 	hip_ha_t *entries[HIP_MAX_HAS] = {0};
 	struct hip_update_kludge rk;
-	struct sockaddr_in6 addr_sin6;
+	struct sockaddr_in * p = NULL;
+	struct sockaddr_in6 *addr_sin6 = NULL;
+	struct in_addr ipv4;
+	struct in6_addr ipv6;
 
 	/** @todo check UPDATE also with radvd (i.e. same address is added
 	    twice). */
@@ -2571,14 +2576,27 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 			  "UPDATE)\n");
 		return;
 	}
+
+	if (addr->sa_family == AF_INET)
+		HIP_DEBUG_LSI("Addr", hip_cast_sa_addr(addr));
+	else if (addr->sa_family == AF_INET6)
+		HIP_DEBUG_HIT("Addr", hip_cast_sa_addr(addr));
+	else
+		HIP_DEBUG("Unknown addr family in addr\n");
      
 	if (addr->sa_family == AF_INET) {
-		memset(&addr_sin6, 0, sizeof(addr_sin6));
-		addr_sin6.sin6_family = AF_INET6;
-		IPV4_TO_IPV6_MAP(((struct in_addr *) hip_cast_sa_addr(addr)),
-				 ((in6_addr_t *) hip_cast_sa_addr(&addr_sin6)));
+		addr_sin6 = malloc(sizeof(struct sockaddr_in6));
+		HIP_IFEL(!addr_sin6, -1, "Failed to malloc for address\n");
+		memset(addr_sin6, 0, sizeof(struct sockaddr_in6));
+		memset(&ipv4, 0, sizeof(struct in_addr));
+		memset(&ipv6, 0, sizeof(struct in6_addr));
+		p = (struct sockaddr_in *)addr;
+		memcpy(&ipv4, &p->sin_addr, sizeof(struct in_addr));
+		IPV4_TO_IPV6_MAP(&ipv4,&ipv6);			
+		memcpy(&addr_sin6->sin6_addr, &ipv6, sizeof(struct in6_addr));
+		addr_sin6->sin6_family = AF_INET6;
 	} else if (addr->sa_family == AF_INET6) {
-		memcpy(&addr_sin6, addr, sizeof(addr_sin6));
+		memcpy(addr_sin6, addr, sizeof(addr_sin6));
 	} else {
 		HIP_ERROR("Bad address family %d\n", addr->sa_family);
 		return;
@@ -2587,7 +2605,7 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 	rk.array = entries;
 	rk.count = 0;
 	rk.length = HIP_MAX_HAS;
-	/* AB: rk.length = 100 rk is NULL next line opulates rk with all valid
+	/* AB: rk.length = 100 rk is NULL next line populates rk with all valid
 	   ha entries */
 	HIP_IFEL(hip_for_each_ha(hip_update_get_all_valid, &rk), 0, 
 		 "for_each_ha err.\n");
@@ -2598,12 +2616,13 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 #if 0
 			if (is_add && !ipv6_addr_cmp(local_addr, &zero_addr)) {
 				HIP_DEBUG("Zero addresses, adding new default\n");
-				ipv6_addr_copy(local_addr, &addr_sin6);
+				ipv6_addr_copy(local_addr, addr_sin6);
 			}
 #endif
+                        HIP_DEBUG_HIT("ADDR_SIN6",&addr_sin6->sin6_addr);
 			hip_send_update(rk.array[i], addr_list, addr_count,
 					ifindex, flags, is_add,
-					(struct sockaddr *) &addr_sin6);
+					(struct sockaddr *) addr_sin6);
 	       
 #if 0
 			if (!is_add && addr_count == 0) {
@@ -2616,6 +2635,7 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 	}
      
  out_err:
+        if (addr_sin6) free (addr_sin6);
 	return;
 }
 
@@ -2739,11 +2759,10 @@ int hip_handle_locator_parameter(hip_ha_t *entry,
 	if ((locator = loc) == NULL) {
 		HIP_DEBUG("No locator as input\n");
 		locator = entry->locator;
+                HIP_DEBUG("Using entry->locator\n");
 	}
 
 	HIP_IFEL(!locator, -1, "No locator to handle\n");
-
-	HIP_DEBUG("Using entry->locator\n");
 
 	old_spi = ntohl(esp_info->new_spi);
 	new_spi = ntohl(esp_info->new_spi);
@@ -2862,15 +2881,12 @@ out_err:
  */
 int hip_build_locators(struct hip_common *msg) 
 {
-    int err = 0, i = 0, ii = 0;
+	int err = 0, i = 0, ii = 0, addr_count1 = 0, addr_count2 = 0,UDP_relay_count = 0;
     struct netdev_address *n;
     hip_ha_t *ha_n;
     hip_list_t *item = NULL, *tmp = NULL;
-    struct hip_locator_info_addr_item2 *locs2 = NULL;
     struct hip_locator_info_addr_item *locs1 = NULL;
-    int addr_count1 = 0,addr_count2 = 0 ;
-    int UDP_relay_count = 0;
-    
+    struct hip_locator_info_addr_item2 *locs2 = NULL;    
     
     //TODO count the number of UDP relay servers.
     // check the control state of every hatb_state. 
@@ -2908,7 +2924,7 @@ int hip_build_locators(struct hip_common *msg)
 		    sizeof(struct hip_locator_info_addr_item2)));  
     
     HIP_DEBUG("there are %d type 1 locator item" , addr_count1);
-    //starting
+
     list_for_each_safe(item, tmp, addresses, i) {
             n = list_entry(item);
             if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
@@ -2920,11 +2936,12 @@ int hip_build_locators(struct hip_common *msg)
 		    locs1[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI;
 		    locs1[ii].locator_length = sizeof(struct in6_addr) / 4;
 		    locs1[ii].reserved = 0;
-		    HIP_DEBUG_HIT("create one locator item, address: ", &locs1[ii].address);
+		    HIP_DEBUG_HIT("Created one locator item: ", &locs1[ii].address);
 		    ii++;
 		    
             }
     }
+    i = 0; 
     list_for_each_safe(item, tmp, addresses, i) {
             n = list_entry(item);
             if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
@@ -2936,30 +2953,29 @@ int hip_build_locators(struct hip_common *msg)
 		    locs1[ii].locator_type = HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI;
 		    locs1[ii].locator_length = sizeof(struct in6_addr) / 4;
 		    locs1[ii].reserved = 0;
-		    HIP_DEBUG_HIT("create one locator item, address: ", &locs1[ii].address);
-                ii++;
+		    HIP_DEBUG_HIT("Created one locator item: ", &locs1[ii].address);
+                    ii++;
             }
     }
     
-    //ending
-    /***for reflexive locator
-     * retreive the whole entry list
-     * if there is a reflexive  **/
-    HIP_DEBUG("\n santtu: start looking for reflexive address\n");
+    HIP_DEBUG("Looking for reflexive addresses\n");
     ii = 0;             
     i = 0;  
     
     list_for_each_safe(item, tmp, hadb_hit, i) {
             ha_n = list_entry(item);
-            // if there are more addresses than we can take, just break it.
             if (ii>= addr_count2)
 		    break;
-            // check if the reflexive udp port. if it not 0. it means addresses found
-            HIP_DEBUG_HIT("santtu: look for reflexive, prefered addres  : ",&ha_n->preferred_address );
-            HIP_DEBUG_HIT("santtu: look for reflexive, local addres  : ",&ha_n->local_address );
-            HIP_DEBUG("santtu: look for reflexive port: %d \n",ha_n->local_reflexive_udp_port);
-            HIP_DEBUG_HIT("santtu: look for reflexive addr: ",&ha_n->local_reflexive_address);
-            HIP_DEBUG("santtu: the entry address is %d \n", ha_n);
+            _HIP_DEBUG_HIT("Looking for reflexive, prefered addres: ",
+                           &ha_n->preferred_address );
+            _HIP_DEBUG_HIT("Looking for reflexive, local addres: ",
+                           &ha_n->local_address );
+            _HIP_DEBUG("Looking for reflexive port: %d \n",
+                       ha_n->local_reflexive_udp_port);
+            _HIP_DEBUG_HIT("Looking for reflexive addr: ",
+                           &ha_n->local_reflexive_address);
+            _HIP_DEBUG("The entry address is %d \n", ha_n);
+            /* Check if this entry has reflexive port */
             if(ha_n->local_reflexive_udp_port){
 		    memcpy(&locs2[ii].address, &ha_n->local_reflexive_address, 
 			   sizeof(struct in6_addr));
@@ -2969,26 +2985,20 @@ int hip_build_locators(struct hip_common *msg)
 		    locs2[ii].reserved = 0;
 		    // for IPv4 we add UDP information
 		    locs2[ii].port = htons(ha_n->local_reflexive_udp_port);
-                locs2[ii].transport_protocol = 0;
-                locs2[ii].kind = 0;
-                locs2[ii].spi = 1;
-                //TODO change into constant
-                locs2[ii].priority = htonl(HIP_LOCATOR_LOCATOR_TYPE_REFLEXIVE_PRIORITY);
-                ii++;
-                // if there are more addresses than we can take, just break it.
-		if (ii>= addr_count2)
-			break;
-            }
-            
-            // check turn server
-	    
-            
+                    locs2[ii].transport_protocol = 0;
+                    locs2[ii].kind = 0;
+                    locs2[ii].spi = 1;
+                    locs2[ii].priority = htonl(HIP_LOCATOR_LOCATOR_TYPE_REFLEXIVE_PRIORITY);
+		    HIP_DEBUG_HIT("Created one reflexive locator item: ", 
+                                  &locs1[ii].address);
+                    ii++;
+                    if (ii>= addr_count2)
+                            break;
+            }                        
     }
 
-    HIP_DEBUG("hip_build_locators: find relay address account:%d \n", ii);
-    //ii is the real amount of type2 locator.addr_count2 is the max value we can accept
-    err = hip_build_param_locator2(msg, locs1,locs2, addr_count1,ii);
-    //err = hip_build_param_locator2(msg, locs1,locs2, addr_count1,addr_count2);
+    HIP_DEBUG("hip_build_locators: found relay address account:%d \n", ii);
+    err = hip_build_param_locator2(msg, locs1, locs2, addr_count1, ii);
 
  out_err:
 
