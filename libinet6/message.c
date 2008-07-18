@@ -256,8 +256,6 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 		HIP_ERROR("Could not send message to daemon.\n");
 		err = -ECOMM;
 		goto out_err;
-	} else {
-		HIP_DEBUG("Message of size %d was sent\n", n);
 	}
 	
 	HIP_DEBUG("Waiting to receive daemon info.\n");
