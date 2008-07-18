@@ -1088,7 +1088,6 @@ int filter_hip(const struct in6_addr * ip6_src,
       		 * 
       		 * this will also check the signature of the packet, if we already
       		 * have a src_HI stored for the _connection_ */
-
     		if(!filter_state(ip6_src, ip6_dst, buf, rule->state, rule->accept))
     		{
     			match = 0;
@@ -1186,31 +1185,16 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx)
 
 int hip_fw_handle_hip_output(hip_fw_context_t *ctx)
 {
-	struct in6_addr src;
-	struct in6_addr dst;
 	int verdict = accept_hip_esp_traffic_by_default;
 
 	HIP_DEBUG("\n");
 
-	if (ctx->ip_version == 4){
-		IPV4_TO_IPV6_MAP(&ctx->ip_hdr.ipv4->ip_src, &src);
-		IPV4_TO_IPV6_MAP(&ctx->ip_hdr.ipv4->ip_dst, &dst);
-		//memcpy();
-		verdict = filter_hip(&src, 
-				&dst,
-				ctx->transport_hdr.hip, 
-				ctx->ipq_packet->hook,
-				ctx->ipq_packet->indev_name,
-				ctx->ipq_packet->outdev_name);
-	}
-	else if (ctx->ip_version == 6){
-		verdict = filter_hip(&ctx->ip_hdr.ipv6->ip6_src, 
-				&ctx->ip_hdr.ipv6->ip6_dst,
-				ctx->transport_hdr.hip, 
-				ctx->ipq_packet->hook,
-				ctx->ipq_packet->indev_name,
-				ctx->ipq_packet->outdev_name);
-	}
+	verdict = filter_hip(&ctx->src, 
+					&ctx->dst, 
+					ctx->transport_hdr.hip, 
+					ctx->ipq_packet->hook,
+					ctx->ipq_packet->indev_name,
+					ctx->ipq_packet->outdev_name);
 
  out_err:
 	/* zero return value means that the packet should be dropped */
@@ -1219,22 +1203,11 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx)
 
 int hip_fw_handle_esp_output(hip_fw_context_t *ctx)
 {
-	struct in6_addr dst;
 	int verdict = accept_hip_esp_traffic_by_default;
 
 	HIP_DEBUG("\n");
-
-	//map the ip_addr to ip6_addr
-	if(ctx->ip_version == 4){
-		IPV4_TO_IPV6_MAP(&ctx->ip_hdr.ipv4->ip_dst, &dst);
-	}
-	else if(ctx->ip_version == 6){
-		dst = ctx->ip_hdr.ipv6->ip6_dst;
-	}
-
-	verdict = filter_esp(&dst,
-			ctx->transport_hdr.esp,
-			ctx->ipq_packet->hook);
+	verdict = filter_esp(&ctx->dst, ctx->transport_hdr.esp, ctx->ipq_packet->hook);
+			 		
 	return verdict;
 }
 
@@ -1282,24 +1255,15 @@ int hip_fw_handle_hip_input(hip_fw_context_t *ctx)
 
 int hip_fw_handle_esp_input(hip_fw_context_t *ctx)
 {
-	struct in6_addr dst;
 	int verdict = accept_hip_esp_traffic_by_default;
 
 	HIP_DEBUG("\n");
 
 	/* XX FIXME: ADD LSI INPUT AFTER USERSPACE IPSEC */
-	
-	//map the ip_addr to ip6_addr
-	if(ctx->ip_version == 4){
-		IPV4_TO_IPV6_MAP(&ctx->ip_hdr.ipv4->ip_dst, &dst);
-	}
-	else if(ctx->ip_version == 6){
-		dst = ctx->ip_hdr.ipv6->ip6_dst;
-	}
 
 	// first of all check if this belongs to one of our connections
-	verdict = filter_esp(&dst, ctx->transport_hdr.esp, ctx->ipq_packet->hook);
-
+	verdict = filter_esp(&ctx->dst, ctx->transport_hdr.esp, ctx->ipq_packet->hook);
+	
 	if (verdict && hip_userspace_ipsec) {
 		HIP_DEBUG("userspace ipsec input\n");
 		// added by Tao Wan
@@ -1360,22 +1324,14 @@ int hip_fw_handle_hip_forward(hip_fw_context_t *ctx)
 
 int hip_fw_handle_esp_forward(hip_fw_context_t *ctx)
 {
-	struct in6_addr dst;
 	int verdict = accept_hip_esp_traffic_by_default;
 
 	HIP_DEBUG("\n");
 
-	//map the ip_addr to ip6_addr
-	if(ctx->ip_version == 4){
-		IPV4_TO_IPV6_MAP(&ctx->ip_hdr.ipv4->ip_dst, &dst);
-	}
-	else if(ctx->ip_version == 6){
-		dst = ctx->ip_hdr.ipv6->ip6_dst;
-	}
+	// check if this belongs to one of the connections pass through
+	verdict = filter_esp(&ctx->dst, ctx->transport_hdr.esp, ctx->ipq_packet->hook);
 
-	verdict = filter_esp(&dst, ctx->transport_hdr.esp, ctx->ipq_packet->hook);
-
-out_err:
+ out_err:
 	return verdict;
 }
 
