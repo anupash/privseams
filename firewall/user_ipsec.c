@@ -164,7 +164,7 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	// create new SA entry, if none exists yet
 	if (entry == NULL)
 	{
-		HIP_DEBUG("pfkey send acquire\n");
+		HIP_DEBUG("triggering BEX...\n");
 
 		/* no SADB entry -> trigger base exchange providing destination hit only */
 		HIP_IFEL(hip_trigger_bex(&ctx->src, &ctx->dst, NULL, NULL, NULL, NULL), -1,
@@ -297,7 +297,7 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	// verify the esp extension hash, if in use
 	HIP_HEXDUMP("hash element: ", ((unsigned char *)esp_hdr) + sizeof(struct hip_esp), 8);
 	HIP_IFEL(verify_esp_prot_hash(entry, ((unsigned char *)esp_hdr) + sizeof(struct hip_esp)),
-			-1, "hash could not be verified\n");
+			-1, "hash could NOT be verified\n");
 
 // this is helpful for testing
 #if 0

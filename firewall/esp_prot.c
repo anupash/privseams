@@ -82,14 +82,14 @@ int add_esp_prot_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *
 	unsigned char *tmp_hash = NULL;
 	int err = 0;
 
-	HIP_DEBUG("adding hash chain element to outgoing packet...\n");
-
-	// first determine hash length
-	*out_length = esp_prot_transforms[entry->active_transform];
-	HIP_DEBUG("hash length is %i\n", *out_length);
-
-	if (*out_length > 0)
+	if (entry->active_transform > ESP_PROT_TRANSFORM_UNUSED)
 	{
+		HIP_DEBUG("adding hash chain element to outgoing packet...\n");
+
+		// first determine hash length
+		*out_length = esp_prot_transforms[entry->active_transform];
+		HIP_DEBUG("hash length is %i\n", *out_length);
+
 		HIP_IFEL(!(tmp_hash = hchain_pop(entry->active_hchain, *out_length)), -1,
 				"unable to retrieve hash element from hash-chain\n");
 
@@ -98,6 +98,8 @@ int add_esp_prot_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *
 		if (!memcmp(tmp_hash, entry->active_hchain->anchor_element->hash,
 				*out_length))
 		{
+			HIP_DEBUG("this is the hchain anchor -> get next element\n");
+
 			// get next element
 			HIP_IFEL(!(tmp_hash = hchain_pop(entry->active_hchain, *out_length)), -1,
 					"unable to retrieve hash element from hash-chain\n");
@@ -112,7 +114,7 @@ int add_esp_prot_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *
 				"esp protection extension maintainance operations failed\n");
 	} else
 	{
-		HIP_DEBUG("not adding any hash-chain elements\n");
+		HIP_DEBUG("esp prot extension UNUSED, not adding hash\n");
 	}
 
   out_err:
@@ -131,7 +133,7 @@ int verify_esp_prot_hash(hip_sa_entry_t *entry, unsigned char *hash_value)
 		HIP_DEBUG("hash length is %i\n", hash_length);
 
 		HIP_DEBUG("hchain element of incoming packet to be verified:\n");
-		HIP_HEXDUMP("->", hash_value, hash_length);
+		HIP_HEXDUMP("-> ", hash_value, hash_length);
 
 		HIP_DEBUG("checking active hchain...\n");
 		if (hchain_verify(hash_value, entry->active_anchor,
