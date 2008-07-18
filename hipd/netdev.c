@@ -4,6 +4,7 @@
  */
  
 #include "netdev.h"
+#include "maintenance.h"
 #include "opendht/libhipopendht.h"
 #include "debug.h"
 #include "libinet6/util.h"
@@ -600,8 +601,8 @@ int hip_find_address(char *fqdn_str, struct in6_addr *res){
 	return err;
 }
 
-
-int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *res)
+#if 0
+int opendht_get_endpointinfo2(const char *node_hit, struct in6_addr *res)
 {
         int err = 0;
         char dht_response[1024];
@@ -632,11 +633,41 @@ int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *res)
  out_err:
         return(err);
 }
+#endif
 
-int hip_map_hit_to_addr(hip_hit_t *dst_hit, struct in6_addr *dst_addr) {
+/*this function returns the locator for the given HIT from opendht(lookup)*/
+int opendht_get_endpointinfo(const char *node_hit, void *msg)
+{
+	int err = -1;
+	char dht_locator_last[1024];
+	extern int hip_opendht_inuse;
+	int locator_item_count = 0;
+	struct hip_locator_info_addr_item *locator_address_item = NULL;
+	struct in6_addr addr6;
+	struct hip_locator *locator ;
+	         
+	if (hip_opendht_inuse == SO_HIP_DHT_ON) {
+    	memset(dht_locator_last, '\0', sizeof(dht_locator_last));
+		HIP_IFEL(hip_opendht_get_key(&handle_hdrr_value, opendht_serving_gateway, node_hit, msg,1), -1, 
+			"DHT get in opendht_get_endpoint failed!\n"); 
+		inet_pton(AF_INET6, node_hit, &addr6.s6_addr) ; 
+		/*HDRR verification */
+		HIP_IFEL(verify_hdrr((hip_common_t*)msg, &addr6), -1, "HDRR Signature and/or host id verification failed!\n");
+               
+		locator = hip_get_param((hip_common_t*)msg, HIP_PARAM_LOCATOR);
+		locator_item_count = hip_get_locator_addr_item_count(locator);
+		if (locator_item_count > 0)
+			err = 0;
+		}
+out_err:
+	return(err);
+}
+
+int hip_map_hit_to_addr(hip_hit_t *dst_hit ,struct in6_addr *dst_addr, void *msg)
+{
 	char peer_hit[INET6_ADDRSTRLEN];	
 	int err = -1; /* Assume that resolving fails */
-        extern int hip_opendht_inuse;
+    	extern int hip_opendht_inuse;
 
 	/* Try to resolve the HIT to a hostname from /etc/hip/hosts,
 	   then resolve the hostname to an IP. The natural place to
@@ -644,7 +675,6 @@ int hip_map_hit_to_addr(hip_hit_t *dst_hit, struct in6_addr *dst_addr) {
 	   getendpointinfo function with AI_NUMERICHOST flag set.
 	   We can fallback to e.g. DHT search if the mapping is not
 	   found from local files.*/
-	
 	
 	hip_in6_ntop(dst_hit, peer_hit);
 	
@@ -659,10 +689,11 @@ int hip_map_hit_to_addr(hip_hit_t *dst_hit, struct in6_addr *dst_addr) {
 		 0, "hip_get_peer_endpointinfo succeeded\n");
 	
 	/* try to resolve HIT to IPv4/IPv6 address with OpenDHT server */
-        if (hip_opendht_inuse == SO_HIP_DHT_ON) {
-                err = opendht_get_endpointinfo((const char *) peer_hit, dst_addr);
-                if (err) HIP_DEBUG("Got IP for HIT from DHT err = \n", err);
-        }
+	if (hip_opendht_inuse == SO_HIP_DHT_ON) {
+		//err = opendht_get_endpointinfo((const char *) peer_hit, dst_addr, dst_addr2);
+		err = opendht_get_endpointinfo((const char *) peer_hit, msg);
+	if (err) HIP_DEBUG("Got IP for HIT from DHT err = \n", err);
+	}
 
 out_err:
 	return err;
@@ -684,8 +715,16 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit, hip_hit_t *dst_hit,
 	struct sockaddr *addr;
 	hip_hit_t default_hit;
 	addr = (struct sockaddr*) &ss_addr;
-
-
+	/*Variables for handling locator param from lookup (opendht)*/
+	struct hip_locator *locator; 
+	char dht_locator_temp[1000];
+	struct hip_locator_info_addr_item *locator_address_item = NULL;
+	int locator_item_count = 0 ;
+	void *msg ;
+	int x= 0 ; /*loop variable*/
+    
+	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
+	memset(msg,0,HIP_MAX_PACKET);
 	if (src_lsi && dst_lsi && !(dst_hit || src_hit)){
 	        //hit_peer already mapped because hipconf command and non-opportunistic mode
 	        HIP_DEBUG_LSI("Param is an lsi!!", src_lsi);
@@ -739,7 +778,8 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit, hip_hit_t *dst_hit,
 	}
 	
 	if (err) {
-		err = hip_map_hit_to_addr(dst_hit, &dst_addr);
+		//err = hip_map_hit_to_addr(dst_hit, &dst_addr);
+		err = hip_map_hit_to_addr(dst_hit, &dst_addr, msg);
 	}
 
 	if (err) {
@@ -778,8 +818,33 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit, hip_hit_t *dst_hit,
 	/* @fixme: changing global state won't work with threads */
 	hip_nat_status = ha_nat_mode;
 
-	HIP_IFEL(hip_hadb_add_peer_info(dst_hit, &dst_addr, dst_lsi), -1,
-		 "map failed\n");
+	locator = hip_get_param((hip_common_t*)msg, HIP_PARAM_LOCATOR);
+	if(locator)
+   	 {
+    		locator_address_item = hip_get_locator_first_addr_item(locator);
+		locator_item_count = hip_get_locator_addr_item_count(locator);
+	}
+	/*For every address found in the locator of Peer HDRR
+	 * Add it to the HADB. It stores first to some temp location in entry
+	 * and then copies it to the SPI Out's peer addr list, ater BE*/
+	if(locator_item_count > 0)
+	{
+	    	for ( x = 0; x < locator_item_count ; x++)
+	    	{
+	    		memcpy(&dst_addr, 
+        		(struct in6_addr*)&locator_address_item[x].address, 
+        		sizeof(struct in6_addr));
+	        	hip_in6_ntop(&dst_addr, (char*)dht_locator_temp);
+			HIP_DEBUG("Value: %s\n", (char*)dht_locator_temp);
+	        	HIP_IFEL(hip_hadb_add_peer_info(dst_hit, &dst_addr, dst_lsi), -1,
+		 	"map failed\n");
+		} /*For loop ends */
+	}
+	else /*To make it follow the same route as it was doing before HDRR/loactors*/
+	{
+		HIP_IFEL(hip_hadb_add_peer_info(dst_hit, &dst_addr, dst_lsi), -1,
+		 	"map failed\n");
+	}
 
 	hip_nat_status = old_global_nat_mode; /* restore nat status */
 	
@@ -840,6 +905,8 @@ skip_entry_creation:
 		 "Sending of I1 failed\n");
 
 out_err:
+	if(msg)
+		free (msg);
 	return err;
 }
 
@@ -1298,4 +1365,30 @@ int hip_get_default_lsi(struct in_addr *lsi){
 	        IPV6_TO_IPV4_MAP(&lsi_aux6, lsi);
  out_err:
 	return err;
+}
+
+/* This function copies the addresses stored in entry->peer_addr_list_to_be_added
+ * to entry->spi_out->peer_addr_list after R2 has been received
+ * @param entry: state after base exchange */
+void hip_copy_peer_addrlist_to_spi(hip_ha_t *entry) {
+	hip_list_t *item = NULL, *tmp = NULL; 
+	struct hip_peer_addr_list_item *addr_li;
+	struct hip_spi_out_item *spi_out;
+	int i = 0;
+	
+	struct hip_spi_out_item *spi_list;
+	spi_list = hip_hadb_get_spi_list(entry, entry->default_spi_out);
+
+	if (!spi_list)
+	{
+		HIP_ERROR("did not find SPI list for SPI 0x%x\n", entry->default_spi_out);
+		
+	}
+	list_for_each_safe(item, tmp, entry->peer_addr_list_to_be_added, i) {
+			addr_li = list_entry(item);
+			list_add(addr_li, spi_list->peer_addr_list);
+			HIP_DEBUG_HIT("SPI out address", &addr_li->address);
+	}
+	hip_print_peer_addresses (entry);
+	
 }

@@ -466,15 +466,15 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 	List list;
 	
 	/* Used for HDRR response */
-    struct hip_common *hipcommonmsg;	/* hip common message to be sent to daemon*/
-    struct hip_locator *locator;		/* To examine DHT response which contains locator in HDRR*/
+   	 struct hip_common *hipcommonmsg;	/* hip common message to be sent to daemon*/
+	    struct hip_locator *locator;		/* To examine DHT response which contains locator in HDRR*/
 	struct in6_addr addrkey;			/* To convert DHT key (HIT) to in6_addr structure for verification*/
-	struct hip_hdrr_info hdrr_info;		/* To examine DHT response which contains locator in HDRR*/
-	struct hip_hdrr_info *hdrr_info_response; /* To examine daemon response in msg sent for verification*/
-	char dht_response_addresses[1024] = "";
+	
+	char dht_response_addresses[HIP_MAX_PACKET] = "";
 	struct hip_locator_info_addr_item *locator_address_item ;	
-    int locator_item_count = 0;
-	errno = 0;
+	int locator_item_count = 0;
+	int x= 0 ;
+   	errno = 0;
 
 	/* Can't use the IFE macros here, since labe skip_dht is under label
 	   out_err. */
@@ -558,60 +558,18 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
          * verification can be done and locators can be manipulated */
         if (ret_hit == 0 && (strlen((char *)dht_response_hit) > 1)) {
                 ret_addr = hip_opendht_get_key(&handle_hdrr_value, serving_gateway, 
-                                           dht_response_hit, dht_response_addr);
+                                           dht_response_hit, dht_response_addr,0);
                 if (ret_addr == 0)
                         HIP_INFO("Address received from DHT: %s.\n",dht_response_addr);
 		}
-	  /*
-        * It sends the dht response to hipdaemon
-        * first appending one more user param for holding a structure hdrr_info
-        * hdrr_info is used by daemon to mark signature and host id verification
-        * Then adding user header for recognizing the message at daemon side
-        */
-	    hipcommonmsg = (struct hip_common *)dht_response_addr ;
-        _HIP_DUMP_MSG (hipcommonmsg);
-    	if (inet_pton(AF_INET6, &dht_response_hit, &addrkey.s6_addr) == 0)
-    	{ 
-    		HIP_DEBUG("HIT not found from DHT");
-    		goto out_err ;
-    	}
-    	/* Inititalize values for hip_hdrr_info structure before sending it to daemon
-    	 * */
-       	memcpy(&hdrr_info.dht_key, &addrkey, sizeof(struct in6_addr));
-    	hdrr_info.sig_verified = -1;
-    	hdrr_info.hit_verified = -1;
-    	hip_build_param_hip_hdrr_info(hipcommonmsg, &hdrr_info);
-    	_HIP_DUMP_MSG (hipcommonmsg);
+	hipcommonmsg = (struct hip_common *)dht_response_addr ;
+	/* get the locator and its item count to chain addresses in gaih_tuple */
+	locator = hip_get_param(hipcommonmsg, HIP_PARAM_LOCATOR);
+	locator_item_count = hip_get_locator_addr_item_count(locator);
 	
-	     /* ASK Signature and Host Id verification INFO FROM DAEMON */
-        HIP_INFO("Asking signature verification info from daemon...\n");
-        HIP_IFEL(hip_build_user_hdr(hipcommonmsg, SO_HIP_VERIFY_DHT_HDRR_RESP,0),-1,
-                 "Building daemon header failed\n");
-        HIP_IFEL(hip_send_recv_daemon_info(hipcommonmsg), -1, "Send recv daemon info failed\n");
-      
-      	/* Now reading response from the hip common message 
-      	 * if modified by the daemon for the flags for signature and host id
-      	 * verification set in struc hip_hdrr_info
-      	 * */
-	  	hdrr_info_response = hip_get_param (hipcommonmsg, HIP_PARAM_HDRR_INFO);
-      	_HIP_DUMP_MSG (hipcommonmsg);
-        HIP_DEBUG ("Sig verified (0=true): %d\nHit Verified (0=true): %d \n",hdrr_info_response->sig_verified, hdrr_info_response->hit_verified);
-		
-		/*IF signature or host id is not verified*/
-		if(hdrr_info_response->sig_verified != 0 || hdrr_info_response->hit_verified != 0)
-		{
-			HIP_DEBUG ("HDRR Signature and/or Host Id verification failed\n");
-			err = -1 ;
-			goto out_err ;
-		}
-		
-		/* get the locator and its item count to chain addresses in gaih_tuple */
-		locator = hip_get_param(hipcommonmsg, HIP_PARAM_LOCATOR);
-		locator_item_count = hip_get_locator_addr_item_count(locator);
-	
-		/* commenting some checks, for HDRR locators
-		 *  as now we deal with all locator addresses*/
-	    if ((ret_hit == 0) && (ret_addr == 0) && 
+	/* commenting some checks, for HDRR locators
+	 *  as now we deal with all locator addresses*/
+	if ((ret_hit == 0) && (ret_addr == 0) && 
             (dht_response_hit[0] != '\0') /*&& (dht_response_addr[0] != '\0')*/) { 
                 if (inet_pton(AF_INET6, dht_response_hit, &tmp_hit) >0 &&
                     /*inet_pton(AF_INET6, dht_response_addresses, &tmp_addr)*/
@@ -861,6 +819,10 @@ send_hipd_addr(struct gaih_addrtuple * orig_at)
 				hip_build_param_contents(msg, (void *) &lsi, HIP_PARAM_LSI, sizeof(hip_lsi_t));
 				is_lsi = 0;
 		    	}
+			/*In case of opendht (lookup) this will be called 
+		         * as many times as there are addresses in the locators parameter
+			 * of HDRR for peer's unique hit. And daemon saves all the addresses. But 
+			 * prefered address will be set to the last address sent */
 		    	hip_build_user_hdr(msg, SO_HIP_ADD_PEER_MAP_HIT_IP, 0);
 		    	hip_send_recv_daemon_info(msg);
 		}//for at_ip

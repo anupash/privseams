@@ -2569,7 +2569,10 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
         */
                 
 #endif	   	
-	
+	/*Copying address list from temp location in entry "entry->peer_addr_list_to_be_added" 
+	 * to spi out's peer address list - Pardeep */
+	hip_copy_peer_addrlist_to_spi(entry);
+
 	/* Handle REG_RESPONSE and REG_FAILED parameters. */
 	hip_handle_param_reg_response(entry, r2);
 	hip_handle_param_reg_failed(entry, r2);

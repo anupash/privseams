@@ -556,7 +556,7 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
 
 	entry->spis_in = hip_ht_init(hip_hash_spi, hip_match_spi);
 	entry->spis_out = hip_ht_init(hip_hash_spi, hip_match_spi);
-	
+	entry->peer_addr_list_to_be_added = hip_ht_init(hip_hash_peer_addr, hip_match_peer_addr);
 #ifdef CONFIG_HIP_HIPPROXY
 	entry->hipproxy = 0;
 #endif
@@ -791,6 +791,23 @@ int hip_hadb_add_peer_addr(hip_ha_t *entry, struct in6_addr *new_addr,
 		}
 		ipv6_addr_copy(&entry->preferred_address, new_addr);
 		HIP_DEBUG_IN6ADDR("entry->preferred_address \n", &entry->preferred_address);
+		
+		/*Adding the peer address to the entry->peer_addr_list_to_be_added
+		 * So that later aftre base exchange it can be transfered to 
+		 * SPI OUT's peer address list*/
+		a_item = (struct hip_peer_addr_list_item *)HIP_MALLOC(sizeof(struct hip_peer_addr_list_item), GFP_KERNEL);
+		if (!a_item)
+		{
+			HIP_ERROR("item HIP_MALLOC failed\n");
+			err = -ENOMEM;
+			goto out_err;
+		}
+		a_item->lifetime = lifetime;
+		ipv6_addr_copy(&a_item->address, new_addr);
+		a_item->address_state = state;
+		do_gettimeofday(&a_item->modified_time);
+
+		list_add(a_item, entry->peer_addr_list_to_be_added);
 		goto out_err;
 	}
 

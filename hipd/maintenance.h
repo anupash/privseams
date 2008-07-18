@@ -29,7 +29,7 @@ void hip_set_firewall_status();
 int hip_agent_update_status(int msg_type, void *data, size_t size);
 int hip_agent_update(void);
 int hip_get_firewall_status();
-
+int verify_hdrr (struct hip_common *msg,struct in6_addr *addrkey);
 /*Communication with firewall daemon*/
 int hip_firewall_set_bex_data(int action, hip_ha_t *entry, struct in6_addr *hit_s, 
 			      struct in6_addr *hit_r);

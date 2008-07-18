@@ -605,14 +605,15 @@ int opendht_read_response(int sockfd, char * answer)
  */
 int hip_opendht_get_key(int (*value_handler)(unsigned char * packet,
              void * answer),struct addrinfo * gateway, 
-            	  	const unsigned char * key, void * opaque_answer)
+            	  	const unsigned char * key, void * opaque_answer, int dont_verify_hdrr)
 {
-		int err = 0, sfd = -1;
+	int err = 0, sfd = -1;
         char dht_response[1400];
         char hostname[256];
         char *host_addr = NULL;
         struct hostent *hoste = NULL;
-            
+         struct in6_addr hit_key;			/* To convert DHT key (HIT) to in6_addr structure for verification*/
+    
         memset(hostname,'\0',sizeof(hostname));
         HIP_IFEL((gethostname(hostname, sizeof(hostname))),-1,"Error getting hostname\n");
         HIP_IFEL(!(hoste = gethostbyname(hostname)),-1,
@@ -646,14 +647,40 @@ int hip_opendht_get_key(int (*value_handler)(unsigned char * packet,
         //Call the handler function , passed as a fuunction pointer
         err = value_handler(&dht_response, opaque_answer);
         
+ 	/*Check if we found the key from lokup service or not*/
+        if( ((struct hip_common *)dht_response)->payload_len != NULL)
+        {
+        	/*Call the hdrr verification function, in case of hdrr
+         	* if key for lookup is hit, it has to be hdrr*/
+        
+        	if (inet_pton(AF_INET6, key, &hit_key.s6_addr) == 0 || dont_verify_hdrr)
+    		{ 
+    			HIP_DEBUG("lookup is not for HDRR or HDRR verification flag not set so skipping verification \n");
+    		}
+    		else
+    		{
+    			err = verify_hddr_lib ((struct hip_common *)dht_response,&hit_key);
+    		}
+    		if (err != 0)
+    		{
+    			/*HDRR verification failed*/
+    			opaque_answer = NULL ;
+    			HIP_DEBUG("HDRR verification failed \n");
+    			err = -1 ;
+    		}
+        }
+        else
+        {
+        	err = -1;
+        }
 out_err:
- 		// Following line is added by Pardeep to take DHT response back to the caller
- 		// memcpy(value, dht_response,1024);
-        if (sfd) close(sfd); 
+ 	if (sfd) close(sfd); 
         return(err);
 }
 	
 
+/*This function copies the HDRR packet returned from lookup
+ * to the void pointer: hdrr */
 int handle_hdrr_value (unsigned char *packet, void *hdrr)
 {
 	// What to check in response -- why locator ? -- should be nothing
@@ -662,13 +689,31 @@ int handle_hdrr_value (unsigned char *packet, void *hdrr)
         if (locator)
         { 
         	//TODO Define size of HDRR packet
-        		memcpy(hdrr, packet, 1024);
+        		memcpy(hdrr, packet, HIP_MAX_PACKET);
         		return 0 ;
         }
         else
         	return -1 ;		
 }
 
+/*This function gets the locator parameter of HDRR
+ * and copies it to locator_complete */
+int handle_locator_all_values (unsigned char *packet, void *locator_complete)
+{
+	 struct hip_locator *locator;
+	 locator = hip_get_param((struct hip_common *)packet, HIP_PARAM_LOCATOR);
+        if (locator)
+        { 
+        	//TODO Define size of HDRR packet
+        		memcpy(locator_complete, locator, HIP_MAX_PACKET);
+        		return 0 ;
+        }
+        else
+        	return -1 ;		
+}
+
+/*This function gets the last address in the locator parameter of HDRR
+ * and copies it to locator_ipv4 */
 int handle_locator_value (unsigned char *packet, void *locator_ipv4)
 {
 	 struct hip_locator *locator;
@@ -702,6 +747,8 @@ int handle_locator_value (unsigned char *packet, void *locator_ipv4)
         	return -1;	
 }
 
+/*It handles HIT returned by lookup services
+ * and copies it to the void hit pointer */
 int handle_hit_value (unsigned char *packet, void *hit)
 {
 	 if (ipv6_addr_is_hit((struct in6_addr*)packet)) 
@@ -718,3 +765,40 @@ int handle_hit_value (unsigned char *packet, void *hit)
        
         			
 }
+/*It sends the dht response to hipdaemon
+* first appending one more user param for holding a structure hdrr_info
+* hdrr_info is used by daemon to mark signature and host id verification results to flags
+* Then adding user header for recognizing the message at daemon side
+*/
+int verify_hddr_lib (struct hip_common *hipcommonmsg,struct in6_addr *addrkey)
+{
+	struct hip_hdrr_info hdrr_info;		/* To examine DHT response which contains locator in HDRR*/
+	struct hip_hdrr_info *hdrr_info_response; /* To examine daemon response in msg sent for verification*/
+	int err = 0 ;
+	
+	/* Inititalize values for hip_hdrr_info structure before sending it to daemon
+	 * */
+	memcpy(&hdrr_info.dht_key, addrkey, sizeof(struct in6_addr));
+	hdrr_info.sig_verified = -1;
+	hdrr_info.hit_verified = -1;
+	hip_build_param_hip_hdrr_info(hipcommonmsg, &hdrr_info);
+	HIP_DUMP_MSG (hipcommonmsg);
+	/* ASK Signature and Host Id verification INFO FROM DAEMON */
+	HIP_INFO("Asking signature verification info from daemon...\n");
+	HIP_IFEL(hip_build_user_hdr(hipcommonmsg, 152/*SO_HIP_VERIFY_DHT_HDRR_RESP*/,0),-1,
+			"Building daemon header failed\n");
+	HIP_IFEL(hip_send_recv_daemon_info(hipcommonmsg), -1, "Send recv daemon info failed\n");
+      
+	/* Now reading response from the hip common message 
+     * if modified by the daemon for the flags for signature and host id
+     * verification set in struc hip_hdrr_info
+     * */
+	hdrr_info_response = hip_get_param (hipcommonmsg, HIP_PARAM_HDRR_INFO);
+	HIP_DUMP_MSG (hipcommonmsg);
+	HIP_DEBUG ("Sig verified (0=true): %d\nHit Verified (0=true): %d \n",hdrr_info_response->sig_verified, hdrr_info_response->hit_verified);
+	return (hdrr_info_response->sig_verified | hdrr_info_response->hit_verified);
+
+out_err:
+	return err;
+}
+
