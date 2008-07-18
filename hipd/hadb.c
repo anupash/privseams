@@ -432,9 +432,9 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 
 	if (entry)
 		hip_db_put_ha(entry, hip_hadb_delete_state);
-
+        /*
 	hip_for_each_ha(hip_print_info_hadb, &n);
-
+        */
 out_err:
 	return err;
 }
@@ -2360,6 +2360,7 @@ void hip_hadb_set_local_controls(hip_ha_t *entry, hip_controls_t mask)
 
 		case HIP_HA_CTRL_NONE:
 			entry->local_controls &= mask;
+		case HIP_HA_CTRL_LOCAL_REQ_UNSUP:
 		case HIP_HA_CTRL_LOCAL_REQ_ESCROW:
 		case HIP_HA_CTRL_LOCAL_REQ_RELAY:
 		case HIP_HA_CTRL_LOCAL_REQ_RVS:
@@ -2381,9 +2382,11 @@ void hip_hadb_set_peer_controls(hip_ha_t *entry, hip_controls_t mask)
 
 		case HIP_HA_CTRL_NONE:
 			entry->peer_controls &= mask;
+		case HIP_HA_CTRL_PEER_UNSUP_CAPABLE:
 		case HIP_HA_CTRL_PEER_ESCROW_CAPABLE:
 		case HIP_HA_CTRL_PEER_RVS_CAPABLE:
 		case HIP_HA_CTRL_PEER_RELAY_CAPABLE:
+		case HIP_HA_CTRL_PEER_GRANTED_UNSUP:
 		case HIP_HA_CTRL_PEER_GRANTED_ESCROW:
 		case HIP_HA_CTRL_PEER_GRANTED_RVS:
 		case HIP_HA_CTRL_PEER_GRANTED_RELAY:

@@ -153,12 +153,10 @@ int hipd_init(int flush_ipsec, int killold)
 #if 0
 	hip_init_puzzle_defaults();
 #endif
-
 	/* Service initialization. */
 	hip_init_services();
 
 #ifdef CONFIG_HIP_RVS
-	
 	HIP_INFO("Initializing HIP relay / RVS.\n");
 	hip_relay_init();
 #endif
