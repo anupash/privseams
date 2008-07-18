@@ -175,44 +175,6 @@ hip_sendto_hipd(int socket, void *msg, size_t len)
 	return n;
 }
 
-int hip_send_recv_daemon_info_by_ext(struct hip_common *msg, 
-									 sendto_delegate_hipd sendto_delegate,
-									 recvfrom_delegate_hipd recvfrom_delegate) {	
-	int *sock = 0, err = 0, n = 0, len = 0;
-	if ((len = hip_get_msg_total_len(msg)) < 0) {
-		err = -EBADMSG;
-		goto out_err;
-	}
-	HIP_DEBUG("Handling DEBUG ALL user message.\n");
-	HIP_IFEL(hip_set_logdebug(LOGDEBUG_ALL), -1,
-			 "Error when setting daemon DEBUG status to ALL\n");
-	n = sendto_delegate (&sock, (void *)msg, len);
-
-	n = recvfrom_delegate (&sock, msg, len);
- 	
-	if (n == 0) {
-		HIP_INFO("The HIP daemon has performed an "\
-			 "orderly shutdown.\n");
-		// Note. This is not an error condition, thus we return zero.
-		goto out_err;
-	} else if(n < sizeof(struct hip_common)) {
-		HIP_ERROR("Could not receive message from daemon.\n");
-		goto out_err;
-	}
-	
-	if (hip_get_msg_err(msg)) {
-		HIP_ERROR("HIP message contained an error.\n");
-		err = -EHIP;
-	}
-	
- out_err:
-	
-	if (sock)
-		close(sock);
-	
-	return err;
-}
-
 int hip_send_recv_daemon_info(struct hip_common *msg) {
 	
 	int hip_user_sock = 0, err = 0, n = 0, len = 0;
