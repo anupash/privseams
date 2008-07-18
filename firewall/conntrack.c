@@ -98,7 +98,7 @@ struct hip_data * get_hip_data(const struct hip_common * buf){
   _HIP_DEBUG("get_hip_data:\n");
 
   return data;
-}
+} 
 
 
 /* fetches the hip_tuple from connection table. 
@@ -137,7 +137,6 @@ struct tuple * get_tuple_by_hip(struct hip_data * data,
   HIP_DEBUG("get_tuple_by_hip: no connection found\n");
   return NULL;
 }
-
 
 /*
  * replaces the pseudo-hits of the opportunistic entries
@@ -203,18 +202,22 @@ struct esp_address * get_esp_address(struct SList * addr_list,
   struct _SList * list = (struct _SList *) addr_list;
   struct esp_address * esp_addr;
   HIP_DEBUG("get_esp_address\n");
+  
+HIP_DEBUG_HIT("333 - ", addr);
 
   while(list)
     {
       esp_addr = (struct esp_address *)list->data;
-      HIP_DEBUG("addr: %s \n", addr_to_numeric(&esp_addr->dst_addr));
+      HIP_DEBUG("addr: %s ", addr_to_numeric(&esp_addr->dst_addr));
+
+HIP_DEBUG_HIT("111", &esp_addr->dst_addr);
+HIP_DEBUG_HIT("222", addr);
 
       if(IN6_ARE_ADDR_EQUAL(&esp_addr->dst_addr, addr))
 	{
 	  HIP_DEBUG("addr found\n");
 	  return esp_addr;
 	}
-
       list = list->next;
     }   
   HIP_DEBUG("get_esp_address: addr %s not found\n", addr_to_numeric(addr));
@@ -1316,15 +1319,16 @@ int check_packet(const struct in6_addr * ip6_src,
 	{
 	  struct hip_data * data = get_hip_data(common);
 
+
 	  //if peer hit is empty in I1 packet, replace it with pseudo hit
 	  memset(&all_zero_addr, 0, sizeof(struct in6_addr));
 	  if(IN6_ARE_ADDR_EQUAL(&common->hitr, &all_zero_addr)){
 	    hip_opportunistic_ipv6_to_hit(ip6_dst, &phit, HIP_HIT_TYPE_HASH100);
 	    data->dst_hit = (struct in6_addr)phit;
 	  }
+  
 
 	  insert_new_connection(data);
-
 	  // FIXME this does not free all memory -> DEBUG still outputs
 	  // sth similar to HITs
 	  free(data);
@@ -1603,7 +1607,7 @@ void conntrack(const struct in6_addr * ip6_src,
 	       struct hip_common * buf) 
 {
   struct hip_data * data;
-  struct tuple * tuple = NULL;
+  struct tuple * tuple;
   struct connection * connection;
 
   _HIP_DEBUG("conntrack \n");  
@@ -1611,6 +1615,7 @@ void conntrack(const struct in6_addr * ip6_src,
   _HIP_DEBUG("conntrack:locked mutex\n");
   data = get_hip_data(buf);
   tuple = get_tuple_by_hip(data, buf->type_hdr, ip6_src);
+
   _HIP_DEBUG("conntrack:checking packet \n");
   //the accept_mobile parameter is true as packets 
   //are not filtered here
