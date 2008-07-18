@@ -676,8 +676,8 @@ int hip_conf_handle_map(hip_common_t *msg, int action, const char *opt[],
 
      if(optc == 3){
 	     HIP_IFEL(convert_string_to_address_v4(opt[2], &lsi), -1,
-		      "string to address conversion failed\n");
-
+		      "string to address conversion failed\n");	     
+	     HIP_IFEL(!IS_LSI32(lsi.s_addr),-1, "Wrong LSI value\n");
 	     HIP_IFEL(hip_build_param_contents(msg, (void *) &lsi,
 				       HIP_PARAM_LSI,
 				       sizeof(struct in_addr)), -1,

@@ -454,7 +454,7 @@ int hip_init_host_ids()
 	hip_hidb_associate_default_hit_lsi(&default_hit, &default_lsi);
 
 	/*Initializes the hadb with the information contained in /etc/hip/hosts*/
-	hip_init_hadb_hip_host();
+	//hip_init_hadb_hip_host();
 
  out_err:
 

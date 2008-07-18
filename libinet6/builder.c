@@ -1072,7 +1072,9 @@ char* hip_message_type_name(const uint8_t msg_type){
 	case SO_HIP_SET_TCPTIMEOUT_ON: return "SO_HIP_SET_TCPTIMEOUT_ON";
 	case SO_HIP_SET_TCPTIMEOUT_OFF: return "SO_HIP_SET_TCPTIMEOUT_OFF";
 	case SO_HIP_SET_NAT_ICE_UDP: return "SO_HIP_SET_NAT_ICE_UDP";
-		
+	case SO_HIP_IS_OUR_LSI: return "SO_HIP_IS_OUR_LSI";
+	case SO_HIP_GET_PEER_HIT_BY_LSIS: return "SO_HIP_GET_PEER_HIT_BY_LSIS";
+	case SO_HIP_TRIGGER_BEX: return "SO_HIP_TRIGGER_BEX";  	
 	default:
 		return "UNDEFINED";
 	}
@@ -1150,9 +1152,9 @@ char* hip_param_type_name(const hip_tlv_type_t param_type){
 	case HIP_PARAM_ESP_PROT_TRANSFORM: return "HIP_PARAM_ESP_PROT_TRANSFORM";
 	case HIP_PARAM_ESP_PROT_ANCHOR: return "HIP_PARAM_ESP_PROT_ANCHOR";
 	//add by santtu
-	case HIP_PARAM_NAT_TRANSFORM: return "HIP_PARAM_NAT_TRANSFORM";
-	//end add
-	case HIP_PARAM_LSI: return "HIP_PARAM_LSI";	
+	case HIP_PARAM_NAT_TRANSFORM: return "HIP_PARAM_NAT_TRANSFORM";	
+	//end add      
+	case HIP_PARAM_LSI: return "HIP_PARAM_LSI";
 	}
 	return "UNDEFINED";
 }
@@ -1375,6 +1377,7 @@ int hip_build_generic_param(struct hip_common *msg,
 
 	if (dst + hip_get_param_total_len(param) > max_dst) {
 		err = -EMSGSIZE;
+		HIP_DEBUG("dst == %d\n",dst);
 		HIP_ERROR("hipd build param: contents size (%d) too long\n",
 			  hip_get_param_contents_len(param));
 		goto out;
@@ -1439,8 +1442,7 @@ int hip_build_param_contents(struct hip_common *msg,
 {
 	struct hip_tlv_common param;
 	hip_set_param_type(&param, param_type);
-	hip_set_param_contents_len(&param, contents_size);
-
+	hip_set_param_contents_len(&param, contents_size);	
 	return hip_build_generic_param(msg, &param,
 				       sizeof(struct hip_tlv_common),
 				       contents);

@@ -49,6 +49,8 @@ int esp_prot_set_sadb(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 
 	// TODO add update support
 
+	HIP_DEBUG("setting up ESP extension parameters...\n");
+
 	// set the esp protection extension transform
 	entry->active_transform = esp_prot_transform;
 	HIP_DEBUG("entry->active_transform: %u\n", entry->active_transform);
@@ -56,8 +58,6 @@ int esp_prot_set_sadb(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 	// only set up the anchor or hchain, if esp extension is used
 	if (esp_prot_transform > ESP_PROT_TRANSFORM_UNUSED)
 	{
-		HIP_DEBUG("setting up ESP extension parameters...\n");
-
 		/* set up hash chains or anchors depending on the direction */
 		if (direction == HIP_SPI_DIRECTION_IN)
 		{
