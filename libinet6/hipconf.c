@@ -1482,16 +1482,8 @@ int hip_do_hipconf(int argc, char *argv[], int send_only,
 	}*/
 
      /* send msg to hipd */
-/*     if (delegate_sendto != NULL && 
-     	 delegate_recvfrom != NULL) {
-       HIP_INFO("Using delegates to send/recv HIP messages \n");
-       HIP_IFEL(hip_send_recv_daemon_info_by_ext(msg, 
-       											 delegate_sendto, 
-       											 delegate_recvfrom), -1, "sending msg failed\n");  
-     } else { */
-       HIP_IFEL(hip_send_daemon_info_wrapper(msg, send_only), -1, "sending msg failed\n"); 	
-//     }
-    
+
+    HIP_IFEL(hip_send_daemon_info_wrapper(msg, send_only), -1, "sending msg failed\n"); 	
     
     
     HIP_INFO("hipconf command successful\n");

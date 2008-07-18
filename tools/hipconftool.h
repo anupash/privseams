@@ -20,8 +20,4 @@
 
 #include "hipconf.h"
 
-int callback_sendto_hipd(int * sock, void *msg, size_t len);
-
-int callback_recvfrom_hipd(int sock, void *msg, size_t len);
-
 #endif /* HIPCONFTOOL_H */

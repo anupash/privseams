@@ -292,7 +292,7 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 }
 
 int hip_send_daemon_info_wrapper(struct hip_common *msg, int send_only) {
-	HIP_DEBUG("hip_send_daemon_info_wrapper()\n");
+
 	int hip_user_sock = 0, err = 0, n, len;
 	struct sockaddr_in6 addr;
 	
@@ -314,7 +314,7 @@ int hip_send_daemon_info_wrapper(struct hip_common *msg, int send_only) {
 
 	len = hip_get_msg_total_len(msg);
 	n = send(hip_user_sock, msg, len, 0);
-//	n = hip_sendto_hipd (hip_user_sock, msg, len);
+
 	if (n < len) {
 		HIP_ERROR("Could not send message to daemon.\n");
 		err = -1;
