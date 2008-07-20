@@ -20,7 +20,7 @@ int hip_hchain_bexstore_set_item_length(int hchain_length);
 int hip_hchain_store_fill(int num_new_items, int hchain_length, int hash_length);
 int hip_hchain_bexstore_fill(int num_new_items, int hash_length);
 int hip_hchain_stores_refill(int hash_length);
-int hip_hchain_store_get_hchain(int hchain_length, hash_chain_t *stored_hchain);
+hash_chain_t * hip_hchain_store_get_hchain(int hchain_length);
 hash_chain_t * hip_hchain_bexstore_get_hchain(unsigned char *anchor, int hash_length);
 int hip_hchain_store_get_store(int hchain_length);
 int hip_hchain_store_remaining(int hchain_length);

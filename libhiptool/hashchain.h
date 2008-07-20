@@ -53,11 +53,10 @@ hash_chain_t *hchain_create(int hchain_length, int hash_length);
 unsigned char * hchain_pop(hash_chain_t * hash_chain, int hash_length);
 
 /* return the next element from the hash chain */
-int hchain_next(const hash_chain_t *hash_chain, int hash_length, unsigned char *next_hash);
+unsigned char * hchain_next(const hash_chain_t *hash_chain, int hash_length);
 
 /* return the current element from the hash chain */
-int hchain_current(const hash_chain_t *hash_chain, int hash_length,
-		unsigned char *current_hash);
+unsigned char * hchain_current(const hash_chain_t *hash_chain, int hash_length);
 
 /* delete hash chain and free memory */
 int hchain_destruct(hash_chain_t *hash_chain);

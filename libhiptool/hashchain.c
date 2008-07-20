@@ -283,10 +283,10 @@ unsigned char * hchain_pop(hash_chain_t * hash_chain, int hash_length)
  * @hash_chain: the hash chain
  * @return: next element of the hash chain or NULL if the hash chain is depleted.
  */
-int hchain_next(const hash_chain_t *hash_chain, int hash_length, unsigned char *next_hash)
+unsigned char * hchain_next(const hash_chain_t *hash_chain, int hash_length)
 {
+	unsigned char *next_hash = NULL;
 	int err = 0;
-	next_hash = NULL;
 
 	HIP_ASSERT(hash_chain != NULL);
 
@@ -309,7 +309,10 @@ int hchain_next(const hash_chain_t *hash_chain, int hash_length, unsigned char *
 	}
 
   out_err:
-  	return err;
+	if (err)
+		next_hash = NULL;
+
+  	return next_hash;
 }
 
 /**
@@ -317,11 +320,10 @@ int hchain_next(const hash_chain_t *hash_chain, int hash_length, unsigned char *
  * @hash_chain: the hash chain
  * @return: current element of the hash chain or NULL if the hash chain is depleted.
  */
-int hchain_current(const hash_chain_t *hash_chain, int hash_length,
-		unsigned char *current_hash)
+unsigned char * hchain_current(const hash_chain_t *hash_chain, int hash_length)
 {
+	unsigned char *current_hash = NULL;
 	int err = 0;
-	current_hash = NULL;
 
 	HIP_ASSERT(hash_chain != NULL);
 	HIP_ASSERT(hash_chain->current_element != NULL);
@@ -329,7 +331,10 @@ int hchain_current(const hash_chain_t *hash_chain, int hash_length,
 	current_hash = hash_chain->current_element->hash;
 
   out_err:
-	return err;
+	if (err)
+		current_hash = NULL;
+
+	return current_hash;
 }
 
 /**

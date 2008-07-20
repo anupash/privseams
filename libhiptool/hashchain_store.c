@@ -51,6 +51,23 @@ struct hip_hchain_storage
 	hip_ll_t *hchain_store;
 };
 
+#if 0
+struct hip_hchain_storage
+{
+	int num_hash_func;
+
+	/* the number of different hash chain lengths */
+	int	num_stores;
+
+	/* the length for the respective hash chain store (array) */
+	int *store_hchain_length;
+
+	/* the hash chain stores (array of lists storing the hashchains of
+	 * the respective length) */
+	hip_ll_t *hchain_store;
+};
+#endif
+
 
 
 
@@ -259,10 +276,10 @@ int hip_hchain_stores_refill(int hash_length)
  * @item_length: length of the desired hash chain
  * @return pointer to a hash chain of length @item_length, NULL on error
 **/
-int hip_hchain_store_get_hchain(int hchain_length, hash_chain_t *stored_hchain)
+hash_chain_t * hip_hchain_store_get_hchain(int hchain_length)
 {
+	hash_chain_t *stored_hchain = NULL;
 	int store = 0, err = 0;
-	stored_hchain = NULL;
 
 	/* find the appropriate store */
 	HIP_IFEL((store = hip_hchain_store_get_store(hchain_length)) <= 0, -1,
@@ -289,7 +306,10 @@ int hip_hchain_store_get_hchain(int hchain_length, hash_chain_t *stored_hchain)
   out_err:
 	hchain_store_unlock();
 
-	return err;
+	if (err)
+		stored_hchain = NULL;
+
+	return stored_hchain;
 }
 
 hash_chain_t * hip_hchain_bexstore_get_hchain(unsigned char *anchor, int hash_length)
