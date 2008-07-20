@@ -23,7 +23,7 @@ SList * append_to_slist (SList * list,
 	SList *new_list;
   	SList *last;
 
-	new_list = alloc_slist ();
+	new_list = alloc_slist();
   	new_list->data = data;	
   	new_list->next = NULL;
 
@@ -75,8 +75,7 @@ SList* remove_link_slist (SList *list,
 }
 
 
-SList*
-remove_from_slist (SList *  list,
+SList *remove_from_slist (SList *  list,
 				   const void  *  data) {
 	SList *tmp, *prev = NULL;
 

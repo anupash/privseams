@@ -21,6 +21,16 @@
 #include "protodefs.h" // For service type values and hip_ha_t
 #include "linkedlist.h" // For pending service requests.
 
+/**
+ * Pending request lifetime. Pending requests are created when the requester
+ * requests a service i.e. sends an I1 packet to the server. Pending requests
+ * are normally deleted when the requester receives an REG_RESPONSE or
+ * REG_FAILED parameter. Should these parameters never be received, the pending
+ * requests can be deleted after the lifetime has expired. This value is in
+ * seconds.
+ */
+#define HIP_PENDING_REQUEST_LIFETIME 120
+
 /** Possible service states. */
 typedef enum{HIP_SERVICE_OFF = 0, HIP_SERVICE_ON = 1}hip_srv_status_t;
 
@@ -39,17 +49,31 @@ typedef struct{
 	hip_ha_t *entry;
 	uint8_t reg_type;
 	uint8_t lifetime;
+	/** Time when this record was created, seconds since epoch. */
+	time_t created;
 }hip_pending_request_t;
 
 /**
  * Initializes the services. Initializes the @c hip_services array.
  */ 
-void hip_init_xxx_services();
+void hip_init_services();
 
 /**
  * Uninitializes the services. Removes all pending requests.
  */
-void hip_uninit_xxx_services();
+void hip_uninit_services();
+
+/**
+ * Periodic maintenance function of the registration extension. This function
+ * should be called every now and then. A suitable time between calls could be
+ * 10 minutes for example. This function deletes the expired pending requests by
+ * calling @c hip_del_pending_request_by_expiration() until there are no expired
+ * pending requests left.
+ * 
+ * An expired pending requests is one that has not been deleted within
+ * @c HIP_PENDING_REQUEST_LIFETIME seconds.
+ */
+void hip_registration_maintenance();
 
 /**
  * Sets service status for a given service. Sets service status to value
@@ -156,6 +180,12 @@ int hip_del_pending_request(hip_ha_t *entry);
 int hip_del_pending_request_by_type(hip_ha_t *entry, uint8_t reg_type);
 
 /**
+ * Deletes one expired pending request. Deletes the first exipired pending
+ * request from the pending request linked list @c pending_requests.
+ */
+int hip_del_pending_request_by_expiration();
+
+/**
  * Gets all pending requests for given host association. Gets all pending
  * requests for host association @c entry.
  * 
@@ -184,18 +214,25 @@ int hip_get_pending_request_count(hip_ha_t *entry);
 
 /**
  * Handles param REG_INFO. Digs out the REG_INFO parameter from the HIP message
- * @c msg and sets the peer control bits accordingly. I.e. the peer controls are
- * set to indicate which services the peer offers.
+ * @c source_msg, sets the peer control bits accordingly and builds REG_REQUEST
+ * in response to the HIP message @c target_msg. The peer controls are set to
+ * indicate which services the peer offers.
+ * 
+ * REG_REQUEST is build only if the server offers at least one of the services
+ * we have requested. Only those services as requested that the server offers.
  *
- * @param  msg      a pointer to HIP message from where to dig out the REG_INFO
- *                  parameter.
- * @parameter entry a pointer to a host association for which to set the peer
- *                  control bits.
- * @return          -1 if the message @c msg did not contain a REG_INFO
- *                  parameter zero otherwise.
- * @see             peer_controls
+ * @param source_msg a pointer to HIP message from where to dig out the
+ *                   REG_INFO parameter.
+ * @param target_msg a pointer to HIP message where to build the REG_REQUEST
+ *                   parameter.
+ * @param entry      a pointer to a host association for which to set the peer
+ *                   control bits.
+ * @return           -1 if the message @c msg did not contain a REG_INFO
+ *                   parameter zero otherwise.
+ * @see              peer_controls
  */ 
-int hip_handle_param_reg_info(hip_common_t *msg, hip_ha_t *entry);
+int hip_handle_param_reg_info(hip_ha_t *entry, hip_common_t *source_msg,
+			      hip_common_t *target_msg);
 
 /**
  * Handles param REG_REQUEST. Digs out the REG_REQUEST parameter from the HIP
@@ -218,26 +255,26 @@ int hip_handle_param_reg_info(hip_common_t *msg, hip_ha_t *entry);
  * Once the aforementioned functions return, a REG_RESPONSE and/or a required
  * number of REG_FAILED parameters are built to 
  * 
- * @parameter entry   a pointer to a host association which is registering.
- * @param  source_msg a pointer to HIP message from where to dig out the
- *                    REG_INFO parameter.
- * @param  target_msg a pointer to HIP message where to build the REG_RESPONSE
- *                    and/or REG_FAILED parameters.
- * @return            -1 if the message @c source_msg did not contain a
- *                    REG_REQUEST parameter or the parameter had duplicate
- *                    services, zero otherwise.
- * @see               hip_has_duplicate_services().
- * @see               hip_add_registration_server().
- * @see               hip_del_registration_server().
+ * @param entry      a pointer to a host association which is registering.
+ * @param source_msg a pointer to HIP message from where to dig out the
+ *                   REG_INFO parameter.
+ * @param target_msg a pointer to HIP message where to build the REG_RESPONSE
+ *                   and/or REG_FAILED parameters.
+ * @return           -1 if the message @c source_msg did not contain a
+ *                   REG_REQUEST parameter or the parameter had duplicate
+ *                   services, zero otherwise.
+ * @see              hip_has_duplicate_services().
+ * @see              hip_add_registration_server().
+ * @see              hip_del_registration_server().
  */
-int hip_handle_param_rrq(hip_ha_t *entry, hip_common_t *source_msg,
-			 hip_common_t *target_msg);
+int hip_handle_param_reg_request(hip_ha_t *entry, hip_common_t *source_msg,
+				 hip_common_t *target_msg);
 
 /**
  * Handles param REG_RESPONSE. Digs out the REG_RESPONSE parameter from the HIP
  * message @c msg and takes action based on the contents of the
  * REG_RESPONSE parameter.
- * 
+ *
  * Unlike the REG_REQUEST parameter, the REG_RESPONSE parameter is allowed to
  * have duplicate services listed. This is because the initiator has the option
  * not to contact the server in the first place. If the server sends
@@ -260,23 +297,16 @@ int hip_handle_param_rrq(hip_ha_t *entry, hip_common_t *source_msg,
 int hip_handle_param_reg_response(hip_ha_t *entry, hip_common_t *msg);
 
 /**
- * Handles param REG_FAILED. Digs out the REG_FAILED parameter from the HIP
- * message @c msg and takes action based on the contents of the
- * REG_FAILED parameter.
+ * Handles all REG_FAILED parameters. Digs out the REG_FAILED parameters one
+ * after other from the HIP message @c msg and takes action based on the
+ * contents of the current REG_FAILED parameter. The function first cancels the
+ * 'request' bit and then removes the corresponding pending request.
  * 
- * Unlike the REG_REQUEST parameter, the REG_FAILED parameter is allowed to
- * have duplicate services listed. This is because the initiator has the option
- * not to contact the server in the first place. If the server sends
- * REG_FAILED parameters that contain duplicate services, we just handle each
- * duplicate Reg Type one after the other.
- *
  * @parameter entry a pointer to a host association which is registering.
  * @param  msg      a pointer to HIP message from where to dig out the
- *                  REG_FAILED parameter.
+ *                  REG_FAILED parameters.
  * @return          -1 if the message @c msg did not contain a REG_FAILED
  *                  parameter, zero otherwise.
- * @see             hip_add_registration_client().
- * @see             hip_del_registration_client().
  */
 int hip_handle_param_reg_failed(hip_ha_t *entry, hip_common_t *msg);
 
@@ -350,7 +380,6 @@ int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
  */ 
 int hip_del_registration_server(hip_ha_t *entry, uint8_t *reg_types,
 				int type_count, uint8_t accepted_requests[],
-				uint8_t accepted_lifetimes[],
 				int *accepted_count, uint8_t refused_requests[],
 				uint8_t failure_types[], int *refused_count);
 
@@ -358,7 +387,9 @@ int hip_del_registration_server(hip_ha_t *entry, uint8_t *reg_types,
  * Adds new registrations to services at the client. This function tries to add
  * all new services listed and indentified by @c types. This is client side
  * addition, meaning that the client calls this function to add entries to the
- * list of services it has been granted.
+ * list of services it has been granted. It first cancels the 'request' bit,
+ * then sets the 'granted' bit and finally removes the corresponding pending
+ * request.
  *
  * @param  entry              a pointer to a host association.
  * @param  lifetime           granted lifetime.
@@ -395,4 +426,15 @@ int hip_del_registration_client(hip_ha_t *entry, uint8_t *reg_types,
  * @return            zero if there are no duplicate values, -1 otherwise.
  */ 
 int hip_has_duplicate_services(uint8_t *values, int type_count);
+
+/**
+ * Gets a string representation related to a registration failure type.
+ *
+ * @param  failure_type the Failure Type of a REG_FAILED parameter.
+ * @param  type_string  a target buffer where to store the string
+ *                      representation. This should be at least 256 bytes long.
+ * @return              -1 if @c type_string is NULL, zero otherwise.
+ */ 
+int hip_get_registration_failure_string(uint8_t failure_type,
+					char *type_string);
 #endif /* HIP_REGISTRATION_H */

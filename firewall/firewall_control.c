@@ -5,11 +5,9 @@
  
 #include "firewall_control.h"
 
-
 int hip_fw_sock = 0;
 int control_thread_started = 0;
 //GThread * control_thread = NULL; 
-
 
 void* run_control_thread(void* data)
 {
@@ -27,8 +25,9 @@ void* run_control_thread(void* data)
 	HIP_DEBUG("Executing connection thread\n");
 
 	HIP_DEBUG("Waiting messages...\n\n");
-
+      
 	/* Start handling. */
+
 	control_thread_started = 1;
 	while (control_thread_started)
 	{
@@ -77,34 +76,27 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 {
 	/* Variables. */
 	struct hip_tlv_common *param = NULL;
-	hip_hdr_type_t type;
 	socklen_t alen;
-	int err = 0;
+	int type, err = 0, param_type;
+	struct hip_keys *keys = NULL;
+	struct in6_addr *hit_s = NULL, *hit_r = NULL;	
 	
 	HIP_DEBUG("Handling message from hipd\n");
 	
 	type = hip_get_msg_type(msg);
 	
-	//for(param = hip_get_next_) {
-	//	switch (type = hip_get_param_type(param))) 
-	//      PARAM_XX:
-	//      break;
-	//}
-	
 	switch(type) {
-	case SO_HIP_IPSEC_ADD_SA: {
+	case SO_HIP_FW_BEX_DONE:
+	case SO_HIP_FW_UPDATE_DB:
+	        handle_bex_state_update(msg);
+	        break;
+	case SO_HIP_IPSEC_ADD_SA:
 		HIP_DEBUG("Received add sa request from hipd\n");
 		HIP_IFEL(handle_sa_add_request(msg, param), -1, "hip userspace sadb add did NOT succeed\n");
 		break;
-	}
-		
 	case SO_HIP_ADD_ESCROW_DATA:
 		while((param = hip_get_next_param(msg, param)))
 		{
-			struct hip_keys * keys = NULL;
-			struct in6_addr * hit_s = NULL;
-			struct in6_addr * hit_r = NULL;
-			
 			if (hip_get_param_type(param) == HIP_PARAM_HIT)
 			{
 				_HIP_DEBUG("Handling HIP_PARAM_HIT\n");
@@ -126,11 +118,11 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 				// TODO: Check values!!
 				auth_len = 0;
 				//op = ntohs(keys->operation);
-	 			//spi = ntohl(keys->spi);
-	 			spi = ntohl(keys->spi);
-	 			//spi_old = ntohl(keys->spi_old);
-	 			key_len = ntohs(keys->key_len);
-	 			alg = ntohs(keys->alg_id);
+		 		//spi = ntohl(keys->spi);
+		 		spi = ntohl(keys->spi);
+		 		//spi_old = ntohl(keys->spi_old);
+		 		key_len = ntohs(keys->key_len);
+		 		alg = ntohs(keys->alg_id);
 				
 				if (alg == HIP_ESP_3DES_SHA1)
 					auth_len = 24;
@@ -140,13 +132,10 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 					auth_len = 32;	
 				else	
 					HIP_DEBUG("Authentication algorithm unsupported\n");
-				
 				err = add_esp_decryption_data(hit_s, hit_r, (struct in6_addr *)&keys->address, 
-							      spi, alg, auth_len, key_len, &keys->enc);
-				if (err < 0) {
-					HIP_ERROR("Adding esp decryption data failed");
-					goto out_err;
-				}
+		     					      spi, alg, auth_len, key_len, &keys->enc);
+		     		
+				HIP_IFEL(err < 0, -1,"Adding esp decryption data failed"); 
 				_HIP_DEBUG("Successfully added esp decryption data\n");	
 			}
 		}
@@ -224,7 +213,8 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 		err = -1;
 		break;
 	}
-out_err:
+ out_err:	
+		
 	return err;
 }
 
@@ -245,6 +235,88 @@ int sendto_hipd(void *msg, size_t len)
 	
 
 	return (n);
+}
+
+inline u16 inchksum(const void *data, u32 length){
+	long sum = 0;
+    	const u16 *wrd =  (u16 *) data;
+    	long slen = (long) length;
+
+    	while (slen > 1) {
+        	sum += *wrd++;
+        	slen -= 2;
+    	}
+
+    	if (slen > 0)
+        	sum += * ((u8 *)wrd);
+
+    	while (sum >> 16)
+        	sum = (sum & 0xffff) + (sum >> 16);
+
+    	return (u16) sum;
+}
+
+u16 ipv4_checksum(u8 protocol, u8 src[], u8 dst[], u8 data[], u16 len)
+{
+
+	u16 word16;
+	u32 sum;	
+	u16 i;
+
+	//initialize sum to zero
+	sum=0;
+
+	// make 16 bit words out of every two adjacent 8 bit words and 
+	// calculate the sum of all 16 vit words
+	for (i=0;i<len;i=i+2){
+		word16 =((((u16)(data[i]<<8)))&0xFF00)+(((u16)data[i+1])&0xFF);
+		sum = sum + (unsigned long)word16;
+	}	
+	// add the TCP pseudo header which contains:
+	// the IP source and destination addresses,
+	for (i=0;i<4;i=i+2){
+		word16 =((src[i]<<8)&0xFF00)+(src[i+1]&0xFF);
+		sum=sum+word16;	
+	}
+	for (i=0;i<4;i=i+2)
+	{
+		word16 =((dst[i]<<8)&0xFF00)+(dst[i+1]&0xFF);
+		sum=sum+word16; 	
+	}
+	// the protocol number and the length of the TCP packet
+	sum = sum + protocol + len;
+
+	// keep only the last 16 bits of the 32 bit calculated sum and add the carries
+	while (sum>>16)
+		sum = (sum & 0xFFFF)+(sum >> 16);
+
+	// Take the one's complement of sum
+	sum = ~sum;
+	return (htons((unsigned short) sum));
+}
+
+u16 ipv6_checksum(u8 protocol, struct in6_addr *src, struct in6_addr *dst, void *data, u16 len)
+{   
+	u32 chksum = 0;
+    	pseudo_v6 pseudo;
+    	memset(&pseudo, 0, sizeof(pseudo_v6));
+
+    	pseudo.src = *src;
+    	pseudo.dst = *dst;
+    	pseudo.length = htons(len);
+    	pseudo.next = protocol;
+
+    	chksum = inchksum(&pseudo, sizeof(pseudo_v6));
+    	chksum += inchksum(data, len);
+
+    	chksum = (chksum >> 16) + (chksum & 0xffff);
+    	chksum += (chksum >> 16);
+
+    	chksum = (u16)(~chksum);
+    	if (chksum == 0)
+    		chksum = 0xffff;
+
+    	return chksum;
 }
 
 #ifdef CONFIG_HIP_HIPPROXY
@@ -280,73 +352,38 @@ out_err:
 }
 #endif /* CONFIG_HIP_HIPPROXY */
 
-int handle_sa_add_request(struct hip_common * msg, struct hip_tlv_common *param)
+int handle_bex_state_update(struct hip_common * msg)
 {
-	struct in6_addr *saddr = NULL, *daddr = NULL;
 	struct in6_addr *src_hit = NULL, *dst_hit = NULL;
-	uint32_t *spi_ipsec = NULL;
-	int ealg;
-	struct hip_crypto_key *enckey = NULL, *authkey = NULL;
-	int already_acquired, direction, update, sport, dport;
+	struct hip_tlv_common *param = NULL;
+	int err = 0, msg_type = 0;
 	
-	// get all attributes from the message
-	
-	param = (struct hip_tlv_common *)hip_get_param(msg, HIP_PARAM_IPV6_ADDR);
-	saddr = (struct in6_addr *) hip_get_param_contents_direct(param);
-	HIP_DEBUG_IN6ADDR("Source IP address: ", saddr);
-	
-	param = hip_get_next_param(msg, param);
-	daddr = (struct in6_addr *) hip_get_param_contents_direct(param);
-	HIP_DEBUG_IN6ADDR("Destination IP address : ", daddr);
-	
-	param = (struct hip_tlv_common *)hip_get_param(msg, HIP_PARAM_HIT);
+	msg_type = hip_get_msg_type(msg);
+
+	/* src_hit */
+        param = (struct hip_tlv_common *)hip_get_param(msg, HIP_PARAM_HIT);
 	src_hit = (struct in6_addr *) hip_get_param_contents_direct(param);
-	HIP_DEBUG_HIT("Source Hit: ", src_hit);
+	HIP_DEBUG_HIT("Source HIT: ", src_hit);
 	
+	/* dst_hit */
 	param = hip_get_next_param(msg, param);
 	dst_hit = (struct in6_addr *) hip_get_param_contents_direct(param);
 	HIP_DEBUG_HIT("Destination HIT: ", dst_hit);
-	
-	param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_UINT);
-	spi_ipsec = (uint32_t *) hip_get_param_contents_direct(param);
-	HIP_DEBUG("the spi value is : %u \n", *spi_ipsec);
 
-	param =  hip_get_next_param(msg, param);
-	sport = *((unsigned int *) hip_get_param_contents_direct(param));
-	HIP_DEBUG("the sport vaule is %d \n", sport);
-	
-	param =  hip_get_next_param(msg, param);
-	dport = *((unsigned int *) hip_get_param_contents_direct(param));
-	HIP_DEBUG("the dport value is %d \n", dport);
-
-	param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_KEYS);
-	enckey = (struct hip_crypto_key *) hip_get_param_contents_direct(param);
-	HIP_HEXDUMP("crypto key :", enckey, sizeof(struct hip_crypto_key));
-	
-	param = hip_get_next_param(msg, param);
-	authkey = (struct hip_crypto_key *)hip_get_param_contents_direct(param);
-	HIP_HEXDUMP("authen key :", authkey, sizeof(struct hip_crypto_key));
-	
-	param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_INT);
-	ealg = *((int *) hip_get_param_contents_direct(param));
-	HIP_DEBUG("ealg value is %d \n", ealg);
-
-	param =  hip_get_next_param(msg, param);		
-	already_acquired = *((int *) hip_get_param_contents_direct(param));
-	HIP_DEBUG("already_acquired value is %d \n", already_acquired);
-	
-	param =  hip_get_next_param(msg, param);		
-	direction = *((int *) hip_get_param_contents_direct(param));
-	HIP_DEBUG("the direction value is %d \n", direction);
-	
-	param =  hip_get_next_param(msg, param);
-	update = *((int *) hip_get_param_contents_direct(param));
-	HIP_DEBUG("the update value is %d \n", update);
-	
-	return hipl_userspace_ipsec_sadb_add_wrapper(saddr, daddr, 
-							 src_hit, dst_hit, 
-							 spi_ipsec, ealg, enckey, 
-							 authkey, already_acquired, 
-							 direction, update, 
-							 sport, dport);
+	/* update bex_state in firewalldb */
+	switch(msg_type)
+	{
+	        case SO_HIP_FW_BEX_DONE:
+		        if (dst_hit)
+		                err = firewall_set_bex_state(src_hit, dst_hit, 1);
+			else
+			        err = firewall_set_bex_state(src_hit, dst_hit, -1);
+			break;
+                case SO_HIP_FW_UPDATE_DB:
+		        err = firewall_set_bex_state(src_hit, dst_hit, 0);
+			break;
+                default:
+		        break;
+	}
+	return err;
 }

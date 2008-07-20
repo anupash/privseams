@@ -63,7 +63,7 @@ int hip_peek_recv_total_len(int socket, int encap_hdr_size)
 	}
 
 	bytes += encap_hdr_size;
-	
+
  out_err:
 	if (msg != NULL) {
 		free(msg);
@@ -244,7 +244,7 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 	}
 	
  out_err:
-	
+
 	if (hip_user_sock)
 		close(hip_user_sock);
 	
@@ -252,7 +252,6 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 }
 
 int hip_send_daemon_info_wrapper(struct hip_common *msg, int send_only) {
-
 	int hip_user_sock = 0, err = 0, n, len;
 	struct sockaddr_in6 addr;
 	
@@ -315,8 +314,9 @@ int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,
 	HIP_IFEL(((bytes = recvfrom(socket, hip_msg, total, 0,
 				    (struct sockaddr *) saddr,
 				    &len)) != total), -1, "recv\n");
-
-	HIP_DEBUG("received user message from local port %d\n", ntohs(saddr->sin6_port));
+	
+	_HIP_DEBUG("received user message from local port %d\n",
+		   ntohs(saddr->sin6_port));
 	_HIP_DEBUG("read_user_control_msg recv len=%d\n", len);
 	_HIP_HEXDUMP("recv saddr ", saddr, sizeof(struct sockaddr_un));
 	_HIP_DEBUG("read %d bytes succesfully\n", bytes);
@@ -451,6 +451,8 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
 					   len - encap_hdr_size), -1,
 		 "verifying network header failed\n");
 
+	
+
 	if (saddr)
 		HIP_DEBUG_IN6ADDR("src", saddr);
 	if (daddr)
@@ -479,3 +481,5 @@ int hip_read_control_msg_v4(int socket, struct hip_common *hip_msg,
 	return hip_read_control_msg_all(socket, hip_msg, saddr,
 					daddr, msg_info, encap_hdr_size, 1);
 }
+
+

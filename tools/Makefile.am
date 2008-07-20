@@ -17,7 +17,7 @@ CFLAGS = $(hipl_common_cflags) # -L$(HIPL_LIBINET6_LIB)
 include_HEADERS = hipconftool.h
 
 
-LDFLAGS = -lc -lcrypto $(HIP_XMLL) $(OPENWRT)
+LDFLAGS = @LDFLAGS@ -lc -lcrypto $(HIP_XMLL) $(OPENWRT)
 
 if HIP_OPENDHT
   INCLUDES += -I../opendht
@@ -32,7 +32,9 @@ LDADD=
 #  LDADD += ../libopphip/.libs/libopphip.a
 #endif
 
-LDADD+= $(OPENWRT_LIB_STATIC)
+if HIP_OPENWRT
+LDADD += $(OPENWRT_LIB_STATIC)
+endif
 
 LDADD += ../libinet6/.libs/libinet6.a
 if HIP_CORPORATE

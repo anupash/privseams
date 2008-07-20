@@ -4,7 +4,7 @@ CFLAGS= $(hipl_common_cflags) $(HIPL_XMLI) -DHIP_UNITTEST_MODE -L$(HIPL_LIBINET6
 INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE) 
 
 include_HEADERS = libhipopendht.h libhipopendhtxml.h
-LDFLAGS= $(OPENWRT) -lcrypto $(HIP_XMLL) 
+LDFLAGS= @LDFLAGS@ $(OPENWRT) -lcrypto $(HIP_XMLL) 
 
 LDADD  = ../libinet6/.libs/libinet6.a
 if HIP_CORPORATE

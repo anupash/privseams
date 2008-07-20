@@ -1,9 +1,8 @@
 #ifndef SLIST_H_
 #define SLIST_H_
 
-#include "common_types.h"
-
 #include <stdlib.h>
+#include "common_types.h"
 
 SList * alloc_slist (void);
 
