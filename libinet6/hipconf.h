@@ -111,38 +111,39 @@
 #define ACTION_REINIT 25
 #define ACTION_MAX 26 /* exclusive */
 
-/* Important! These values are used as array indexes, so keep in this order.
+/* Important! These values are used as array indexes, so keep these in order.
    Add values after the last value and increment TYPE_MAX. */
 /* 0 is reserved */
 #define TYPE_HI      	   1
 #define TYPE_MAP     	   2
 #define TYPE_RST           3
-#define TYPE_RVS     	   4
+#define TYPE_SERVER        4
 #define TYPE_BOS     	   5
 #define TYPE_PUZZLE  	   6
 #define TYPE_NAT           7
 #define TYPE_OPP     	   EXEC_LOADLIB_OPP /* Should be 8 */
-#define TYPE_ESCROW  	   9
+#define TYPE_BLIND  	   9
 #define TYPE_SERVICE 	   10
 #define TYPE_CONFIG        11
 #define TYPE_RUN     	   EXEC_LOADLIB_HIP /* Should be 12 */
 #define TYPE_TTL           13
 #define TYPE_GW            14
 #define TYPE_GET           15
-#define TYPE_BLIND         16
-#define TYPE_HA            17
-#define TYPE_MODE          18
-#define TYPE_DEBUG         19
-#define TYPE_DAEMON        20
-#define TYPE_LOCATOR       21
-#define TYPE_RELAY         22
-#define TYPE_SET           23 /* DHT set <name> */
-#define TYPE_DHT           24
-#define TYPE_OPPTCP	   25
-#define TYPE_ORDER         26
-#define TYPE_TCPTIMEOUT	   27 /* add By Tao Wan, on 04.01.2008*/
-#define TYPE_HIPPROXY	   28
-#define TYPE_MAX           29 /* exclusive */
+#define TYPE_HA            16
+#define TYPE_MODE          17
+#define TYPE_DEBUG         18
+#define TYPE_DAEMON        19
+#define TYPE_LOCATOR       20
+#define TYPE_SET           21 /* DHT set <name> */
+#define TYPE_DHT           22
+#define TYPE_OPPTCP	   23
+#define TYPE_ORDER         24
+#define TYPE_TCPTIMEOUT	   25 /* add By Tao Wan, on 04.01.2008*/
+#define TYPE_HIPPROXY	   26
+#define TYPE_MAX           27 /* exclusive */
+
+/* #define TYPE_RELAY         22 */
+
 
 /* for handle_hi() only */
 #define OPT_HI_TYPE 0
@@ -178,15 +179,13 @@ int hip_conf_handle_map(hip_common_t *, int type, const char *opt[], int optc);
 int hip_conf_handle_rst(hip_common_t *, int type, const char *opt[], int optc);
 int hip_conf_handle_debug(hip_common_t *, int type, const char *opt[], int optc);
 int hip_conf_handle_bos(hip_common_t *, int type, const char *opt[], int optc);
-int hip_conf_handle_rvs(hip_common_t *msg, int action, const char *opt[], int optc);
-int hip_conf_handle_hiprelay(hip_common_t *msg, int action, const char *opt[], int optc);
+int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[], int optc);
 int hip_conf_handle_del(hip_common_t *, int type, const char *opt[], int optc);
 int hip_conf_handle_nat(hip_common_t *, int type, const char *opt[], int optc);
 int hip_conf_handle_locator(hip_common_t *, int type, const char *opt[], int optc);
 int hip_conf_handle_puzzle(hip_common_t *, int type, const char *opt[], int optc);
 int hip_conf_handle_opp(hip_common_t *msg, int action, const char *opt[], int optc);
 int hip_conf_handle_blind(hip_common_t *, int type, const char **opt, int optc);
-int hip_conf_handle_escrow(hip_common_t *msg, int action, const char *opt[], int optc);
 int hip_conf_handle_service(hip_common_t *msg, int action, const char *opt[], int optc);
 int hip_conf_handle_load(hip_common_t *, int type, const char *opt[], int optc);
 int hip_conf_handle_ttl(hip_common_t *, int type, const char *opt[], int optc);
@@ -206,5 +205,15 @@ int hip_do_hipconf(int argc, char *argv[], int send_only);
 int hip_conf_handle_opptcp(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_tcptimeout(struct hip_common *, int type, const char *opt[], int optc); /*added by Tao Wan, 04.Jan.2008*/
 int hip_conf_handle_hipproxy(struct hip_common *msg, int action, const char *opt[], int optc);
+
+/**
+ * Prints the HIT values in use. Prints either all or the default HIT value to
+ * stdout.
+ *
+ * @param  a pointer to a message to be sent to the HIP daemon.
+ * @param  a pointer to a commman line option. Either "default" or "all".
+ * @return zero if the HITs were printed successfully, negative otherwise.
+ */ 
+int hip_get_hits(hip_common_t *msg, char *opt);
 
 #endif /* HIPCONF */

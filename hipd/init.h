@@ -7,10 +7,7 @@
 #include <sys/resource.h>
 #include <sys/wait.h>
 #include <sys/utsname.h>
-#include <linux/capability.h>
-#include <sys/prctl.h>
 #include <sys/types.h>
-#include <pwd.h>
 #include "xfrmapi.h"
 #include "hipconf.h"
 #include "oppipdb.h"

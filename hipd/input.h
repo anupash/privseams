@@ -482,7 +482,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
  *                     packet was received.
  * @param notify_daddr a pointer to the destination address where to the NOTIFY
  *                     packet was sent to (own address).
- * @param entry        a pointer to the current host association database state.
+ * @param entry        a pointer to a host association
  */
 int hip_handle_notify(const struct hip_common *, const struct in6_addr *,
 		      const struct in6_addr *, hip_ha_t*);
@@ -504,17 +504,21 @@ int hip_produce_keying_material(struct hip_common *, struct hip_context *,
 				struct hip_dh_public_value **);
 
 /**
- * hip_create_i2 - Create I2 packet and send it
- * @param ctx Context that includes the incoming R1 packet
- * @param solved_puzzle Value that solves the puzzle
- * @param entry HA
- * @param dhpv the DH public value choosen 
+ * @brief Creates an I2 packet and sends it.
+ * 
+ * @param ctx           context that includes the incoming R1 packet
+ * @param solved_puzzle a value that solves the puzzle
+ * @param r1_saddr      a pointer to R1 packet source IP address
+ * @param r1_daddr      a pointer to R1 packet destination IP address
+ * @param entry         a pointer to a host association
+ * @param r1_info       a pointer to R1 packet source and destination ports
+ * @param dhpv          a pointer to the DH public value chosen
  *
  * @return zero on success, non-negative on error.
  */
-int hip_create_i2(struct hip_context *, uint64_t, struct in6_addr *,
-		  struct in6_addr *, hip_ha_t *, hip_portpair_t *,
-		  struct hip_dh_public_value *);
+int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
+		  in6_addr_t *r1_saddr, in6_addr_t *r1_daddr, hip_ha_t *entry,
+	          hip_portpair_t *r1_info, struct hip_dh_public_value *dhpv);
 
 /**
  * hip_create_r2 - Creates and transmits R2 packet.

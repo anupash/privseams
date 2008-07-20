@@ -17,7 +17,6 @@
 #include "builder.h"
 #include "hadb.h"
 #include "escrow.h"
-#include "reg.h"
 
 /* FIXME: where to include these from in userspace? */
 #define IPV6_ADDR_ANY           0x0000U
@@ -191,15 +190,29 @@ int hip_update_set_preferred(hip_ha_t *entry,
 			     void *pref);
 
 /**
- * Handles an incoming UPDATE packet received in ESTABLISHED state.
+ * Processes locator parameters in the UPDATE message.
+ * 
+ * @param entry    a pointer to corresponding hadb entry of the peer.
+ * @param locator  a pointer to the locator parameter in the packet.
+ * @param esp_info a pointer to ...
+ * 
+ * @note   @c entry must be is locked when this function is called.
+ * @return 0 if the locator parameter was processed successfully, otherwise < 0.
+ */
+int hip_update_handle_locator_parameter(hip_ha_t *entry,
+					struct hip_locator *locator,
+					struct hip_esp_info *esp_info);
+
+/**
+ * @brief Handles an incoming UPDATE packet received in ESTABLISHED state.
  *
  * This function handles case 7 in section 8.11 Processing UPDATE packets in
  * state ESTABLISHED of the base draft.
  *
- * @param entry  hadb entry corresponding to the peer.
- * @param msg    the HIP packet.
+ * @param entry  a pointer to a hadb entry corresponding to the peer.
+ * @param msg    a pointer to a HIP packet.
  * @param src_ip source IPv6 address from where the UPDATE was sent.
- * @param dst_ip destination IPv6 address where the UPDATE was received.
+ * @param dst_ip destination IPv6 address to which the UPDATE was sent.
  * @return       0 if successful, otherwise < 0.
  * @note         @c entry must be is locked when this function is called.
  */
@@ -402,33 +415,6 @@ int hip_set_rekeying_state(hip_ha_t *entry,
  */
 int hip_handle_esp_info(hip_common_t *msg, hip_ha_t *entry);
 
-/**
- * Creates a REG_RESPONSE parameter.
- *
- * @param entry         a pointer to a hadb entry.
- * @param reg           a pointer to REG_RESPONSE parameter struct.
- * @param requests      a pointer to registration type values.
- * @param request_count number of requests in @c requests.
- * @param src_ip        a pointer to source IP address.
- * @param dst_ip        a pointer to destination IP address.
- * @return       
- */
-int hip_create_reg_response(hip_ha_t *entry, struct hip_tlv_common *reg,
-			    uint8_t *requests, int request_count,
-			    in6_addr_t *src_ip, in6_addr_t *dst_ip);
-
-/**
- * Function Doxygen comments missing.
- *
- * @param entry      a pointer to a hadb entry.
- * @param reg        a pointer to a REG_INFO parameter to be handled.
- * @param types      a pointer to the registration types in the parameter.
- * @param type_count the number of registration types in the parameter.
- * @return      ...
- */
-int hip_handle_reg_info(hip_ha_t *entry, struct hip_tlv_common *reg, 
-			uint8_t *types, int type_count);
-
 #ifdef CONFIG_HIP_ESCROW
 /**
  * Function Doxygen comments missing.
@@ -474,18 +460,35 @@ int hip_update_handle_echo_response(hip_ha_t *entry,
                                     in6_addr_t *src_ip);
 
 /**
- * Receives an UPDATE packet.
+ * @addtogroup receive_functions
+ * @{ 
+ */
+/**
+ * @brief Receives an UPDATE packet.
  *
  * This is the initial function which is called when an UPDATE packet is
- * received. The validity of the packet is checked and then this function acts
+ * received. The UPDATE packet is only processed when the HIP state machine is
+ * in state ESTABLISHED (see section 6.12. Receiving UPDATE Packets of RFC
+ * 5201). However, if the state machine is in state R2-SENT and an UPDATE is
+ * received, the state machine should move to state ESTABLISHED (see table 5
+ * under section 4.4.2. HIP State Processes). Therefore this function processes
+ * the received UPDATE packet in both of the states, R2-sent and ESTABLISHED.
+ * When received in state R2-SENT, we move to state ESTABLISHED as instructed in
+ * RFC 5201.
+ * 
+ * If there is no corresponding HIP association (@c entry is NULL) or if the
+ * state machine is in any other state than R2-SENT or ESTABLISHED the packet is
+ * not processed and -1 is returned.
+ * 
+ * The validity of the packet is checked and then this function acts
  * according to whether this packet is a reply or not.
  *
- * @param msg          a pointer to a buffer where the HIP packet is in.
+ * @param msg          a pointer to a HIP packet.
  * @param update_saddr a pointer to the UPDATE packet source IP address.
  * @param update_daddr a pointer to the UPDATE packet destination IP address.
  * @param entry        a pointer to a hadb entry.
- * @param sinfo        a pointer to a struct containing the UPDATE packet source
- *                     and destination ports.
+ * @param sinfo        a pointer to a structure containing the UPDATE packet
+ *                     source and destination ports.
  * @return             0 if successful (HMAC and signature (if needed) are
  *                     validated, and the rest of the packet is handled if
  *                     current state allows it), otherwise < 0.
@@ -493,6 +496,7 @@ int hip_update_handle_echo_response(hip_ha_t *entry,
 int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 		       in6_addr_t *update_daddr, hip_ha_t *entry,
 		       hip_portpair_t *sinfo);
+/* @} */
 
 /**
  * Copies addresses to the inbound SPI.
@@ -594,20 +598,6 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_nes);
 
 /**
- * Internal function copied originally from rea.c.
- * 
- * @param entry      a pointer to a hadb entry.
- * @param server_hit a pointer to server HIT.
- * @param types      a pointer to...
- * @param type_count number of types in @c types.
- * @param op         zero or one. Zero for cancelling registration.
- * @return           zero on success, non-zero otherwise.
- */
-int hip_update_send_registration_request(hip_ha_t *entry,
-					 in6_addr_t *server_hit, int *types,
-					 int type_count, int op);
-
-/**
  * Sends an UPDATE acknowledgement.
  * 
  * @param entry  a pointer to a hadb entry corresponding to the peer.
@@ -630,7 +620,5 @@ int hip_update_send_ack(hip_ha_t *entry, hip_common_t *msg,
  * @return       zero on success, non-zero otherwise.
  */
 int hip_peer_learning(struct hip_esp_info * esp_info, hip_ha_t *entry, in6_addr_t * src_ip);
-
-int hip_handle_locator_parameter(hip_common_t *, hip_ha_t *,struct hip_esp_info *);
 
 #endif /* HIP_UPDATE_H */
