@@ -33,6 +33,8 @@
 #include <sys/time.h>
 #include <assert.h>
 
+#include "debug.h"
+
 /* Return nonzero if DIR is an existent directory.  */
 static int
 direxists (const char *dir)
