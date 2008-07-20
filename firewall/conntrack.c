@@ -129,15 +129,23 @@ struct tuple * get_tuple_by_hip(struct hip_data * data,
       list = list->next;
     }
 
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+  //if the entry was not found, we check
+  //if it was an opportunistic entry and
+  //place the real peer hit in the entries
   if(type_hdr == HIP_R1){
     update_peer_opp_info(data, ip6_from);
     return get_tuple_by_hip(data, -1, ip6_from);
   }
+#endif
 
   HIP_DEBUG("get_tuple_by_hip: no connection found\n");
   return NULL;
 }
 
+
+
+#ifdef CONFIG_HIP_OPPORTUNISTIC
 /*
  * replaces the pseudo-hits of the opportunistic entries
  * related to a particular peer with the real hit
@@ -169,6 +177,8 @@ void update_peer_opp_info(struct hip_data * data,
     }
   return ;
 }
+#endif
+
 
 
 /* fetches the hip_tuple from connection table. 
@@ -1319,14 +1329,14 @@ int check_packet(const struct in6_addr * ip6_src,
 	{
 	  struct hip_data * data = get_hip_data(common);
 
-
-	  //if peer hit is empty in I1 packet, replace it with pseudo hit
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+	  //if peer hit is all-zero in I1 packet, replace it with pseudo hit
 	  memset(&all_zero_addr, 0, sizeof(struct in6_addr));
 	  if(IN6_ARE_ADDR_EQUAL(&common->hitr, &all_zero_addr)){
 	    hip_opportunistic_ipv6_to_hit(ip6_dst, &phit, HIP_HIT_TYPE_HASH100);
 	    data->dst_hit = (struct in6_addr)phit;
 	  }
-  
+#endif
 
 	  insert_new_connection(data);
 	  // FIXME this does not free all memory -> DEBUG still outputs
