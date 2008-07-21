@@ -436,7 +436,7 @@ static void pisa_accept_connection(struct in6_addr *hits, uint32_t spi_s,
 
 	HIP_DEBUG_HIT("pcd->hit[0]: ", &pcd->hit[0]);
 	HIP_DEBUG_HIT("pcd->hit[1]: ", &pcd->hit[1]);
-	HIP_DEBUG("spi[0]: %i, spi[1]", pcd->spi[0], pcd->spi[1]);
+	HIP_DEBUG("spi[0]: 0x%x, spi[1]: 0x%x\n", pcd->spi[0], pcd->spi[1]);
 
 	HIP_INFO("PISA accepted the connection.\n");
 }
