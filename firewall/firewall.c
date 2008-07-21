@@ -1041,7 +1041,8 @@ int filter_hip(const struct in6_addr * ip6_src,
 		    		match);
 	  	}
 
-      	// TODO comment
+      	/* this checks, if the the input interface of the packet matches the
+		 * one specified in the rule */
       	if(match && rule->in_if)
 	  	{
     		if(!match_string(rule->in_if->value, in_if, rule->in_if->boolean))
@@ -1054,7 +1055,8 @@ int filter_hip(const struct in6_addr * ip6_src,
 	      			in_if, rule->in_if->boolean, match);
 	  	}
 
-      	// TODO comment
+      	/* this checks, if the the output interface of the packet matches the
+      	 * one specified in the rule */
       	if(match && rule->out_if)
 	  	{
     		if(!match_string(rule->out_if->value,
