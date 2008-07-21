@@ -938,7 +938,7 @@ void hip_calc_param_len(void *tlv_common, hip_tlv_len_t contents_size)
 
 /**
  * Prints HIP message contents using HIP debug interface.
- * 
+ *
  * @param msg a pointer to the message to be printed.
  * @note      Do not call this function directly, use the HIP_DUMP_MSG() macro
  *            instead.
@@ -1005,7 +1005,7 @@ char* hip_message_type_name(const uint8_t msg_type){
 	case HIP_PAYLOAD: return "HIP_PAYLOAD";
 	case HIP_PSIG: return "HIP_PSIG";
 	case HIP_TRIG: return "HIP_TRIG";
-		
+
 	case SO_HIP_ADD_LOCAL_HI: return "SO_HIP_ADD_LOCAL_HI";
 	case SO_HIP_DEL_LOCAL_HI: return "SO_HIP_DEL_LOCAL_HI";
 	case SO_HIP_RUN_UNIT_TEST: return "SO_HIP_RUN_UNIT_TEST";
@@ -1072,7 +1072,12 @@ char* hip_message_type_name(const uint8_t msg_type){
 	case SO_HIP_SET_TCPTIMEOUT_ON: return "SO_HIP_SET_TCPTIMEOUT_ON";
 	case SO_HIP_SET_TCPTIMEOUT_OFF: return "SO_HIP_SET_TCPTIMEOUT_OFF";
 	case SO_HIP_SET_NAT_ICE_UDP: return "SO_HIP_SET_NAT_ICE_UDP";
-		
+	case SO_HIP_IPSEC_ADD_SA: return "SO_HIP_IPSEC_ADD_SA";
+	case SO_HIP_USERSPACE_IPSEC: return "SO_HIP_USERSPACE_IPSEC";
+	case SO_HIP_ESP_PROT_EXT_TRANSFORM: return "SO_HIP_ESP_PROT_EXT_TRANSFORM";
+	case SO_HIP_IPSEC_UPDATE_ANCHOR_LIST: return "SO_HIP_IPSEC_UPDATE_ANCHOR_LIST";
+	case SO_HIP_IPSEC_NEXT_ANCHOR: return "SO_HIP_IPSEC_NEXT_ANCHOR";
+
 	default:
 		return "UNDEFINED";
 	}
@@ -1152,7 +1157,7 @@ char* hip_param_type_name(const hip_tlv_type_t param_type){
 	//add by santtu
 	case HIP_PARAM_NAT_TRANSFORM: return "HIP_PARAM_NAT_TRANSFORM";
 	//end add
-	case HIP_PARAM_LSI: return "HIP_PARAM_LSI";	
+	case HIP_PARAM_LSI: return "HIP_PARAM_LSI";
 	}
 	return "UNDEFINED";
 }
@@ -2252,7 +2257,7 @@ int hip_build_param_reg_info(hip_common_t *msg,
 	int err = 0, i = 0;
 	struct hip_reg_info reg_info;
 	uint8_t reg_type[service_count];
-	
+
 	if(service_count == 0) {
 		return 0;
 	}
@@ -2288,7 +2293,7 @@ int hip_build_param_reg_info(hip_common_t *msg,
 
 	_HIP_DEBUG("Added REG_INFO parameter with %u service%s.\n", service_count,
 		   (service_count > 1) ? "s" : "");
-	
+
  out_err:
 	return err;
 }
@@ -2333,26 +2338,26 @@ int hip_build_param_reg_failed(struct hip_common *msg, uint8_t failure_type,
 {
 	int err = 0;
 	struct hip_reg_failed reg_failed;
-		
+
 	if(type_count == 0) {
 		return 0;
-	} 
-	
+	}
+
 	hip_set_param_type(&reg_failed, HIP_PARAM_REG_FAILED);
-	
+
 	reg_failed.failure_type = failure_type;
 	hip_calc_generic_param_len(&reg_failed, sizeof(struct hip_reg_failed),
 				   type_count * sizeof(type_list[0]));
-	
+
 	err = hip_build_generic_param(
 		msg, &reg_failed, sizeof(struct hip_reg_failed), (void *)type_list);
-	
+
 	HIP_DEBUG("Added REG_FAILED parameter with %u service%s.\n", type_count,
 		  (type_count > 1) ? "s" : "");
-	
+
  out_err:
 	return err;
-	
+
 }
 
 /**
@@ -3644,27 +3649,27 @@ void hip_set_locator_addr_length(void * locator, hip_tlv_len_t  length){
  * */
 int hip_get_locator_addr_item_count(struct hip_locator *locator) {
 	char *address_pointer =(char*) (locator + 1);
-	int amount = 0; 
-       
+	int amount = 0;
+
 	for(;address_pointer < ((char*)locator) + hip_get_param_contents_len(locator); ) {
-		if (((struct hip_locator_info_addr_item*)address_pointer)->locator_type 
+		if (((struct hip_locator_info_addr_item*)address_pointer)->locator_type
                     == HIP_LOCATOR_LOCATOR_TYPE_UDP) {
                         address_pointer += sizeof(struct hip_locator_info_addr_item2);
                         amount += 1;
                 }
-                else if(((struct hip_locator_info_addr_item*)address_pointer)->locator_type 
+                else if(((struct hip_locator_info_addr_item*)address_pointer)->locator_type
                         == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI) {
                         address_pointer += sizeof(struct hip_locator_info_addr_item);
                         amount += 1;
-                } 
-                else if(((struct hip_locator_info_addr_item*)address_pointer)->locator_type 
+                }
+                else if(((struct hip_locator_info_addr_item*)address_pointer)->locator_type
                         == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
                         address_pointer += sizeof(struct hip_locator_info_addr_item);
                         amount += 1;
-                } 
+                }
                 else
                         address_pointer += sizeof(struct hip_locator_info_addr_item);
-	}	
+	}
 	return amount;
 }
 
@@ -3680,16 +3685,16 @@ union hip_locator_info_addr * hip_get_locator_item(void* item_list, int index){
 	int i= 0;
 	struct hip_locator_info_addr_item *temp;
  	char *result = (char*) item_list;
-	
+
 	for(;i<index;i++){
 		temp = (struct hip_locator_info_addr_item*) result;
-		if (temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI) 
-			result += sizeof(struct hip_locator_info_addr_item);		
-		else 
-			result += sizeof(struct hip_locator_info_addr_item2);		
+		if (temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI)
+			result += sizeof(struct hip_locator_info_addr_item);
+		else
+			result += sizeof(struct hip_locator_info_addr_item2);
 	}
 	return (union hip_locator_info_addr *) result;
-} 
+}
 
 /**
  * retreive a locator address item from a list
@@ -3703,46 +3708,46 @@ union hip_locator_info_addr * hip_get_locator_item(void* item_list, int index){
 struct hip_locator_info_addr_item * hip_get_locator_item_as_one(
 	struct hip_locator_info_addr_item* item_list, int index){
 
-    char * address_pointer; 
+    char * address_pointer;
     int i = 0;
     struct hip_locator_info_addr_item *item = NULL;
     struct hip_locator_info_addr_item2 *item2 = NULL;
-   
+
     address_pointer = (char *)item_list;
 
     if (index != 0) {
 	    for(i = 0; i <= index; i++) {
-		    if (((struct hip_locator_info_addr_item *)address_pointer)->locator_type 
+		    if (((struct hip_locator_info_addr_item *)address_pointer)->locator_type
 			== HIP_LOCATOR_LOCATOR_TYPE_UDP) {
 			    address_pointer += sizeof(struct hip_locator_info_addr_item2);
 		    }
-		    else if(((struct hip_locator_info_addr_item *)address_pointer)->locator_type 
+		    else if(((struct hip_locator_info_addr_item *)address_pointer)->locator_type
 			    == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI) {
 			    address_pointer += sizeof(struct hip_locator_info_addr_item);
-		    } 
-		    else if(((struct hip_locator_info_addr_item *)address_pointer)->locator_type 
+		    }
+		    else if(((struct hip_locator_info_addr_item *)address_pointer)->locator_type
 			    == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
 			    address_pointer += sizeof(struct hip_locator_info_addr_item);
-		    } 
+		    }
 		    else
-			    address_pointer += sizeof(struct hip_locator_info_addr_item);   
+			    address_pointer += sizeof(struct hip_locator_info_addr_item);
 	    }
     }
-    if (((struct hip_locator_info_addr_item *)address_pointer)->locator_type 
+    if (((struct hip_locator_info_addr_item *)address_pointer)->locator_type
 	== HIP_LOCATOR_LOCATOR_TYPE_UDP) {
 	    item2 = (struct hip_locator_info_addr_item2 *)address_pointer;
 	    HIP_DEBUG_IN6ADDR("LOCATOR", (struct in6_addr *)&item2->address);
     }
-    else if(((struct hip_locator_info_addr_item *)address_pointer)->locator_type 
+    else if(((struct hip_locator_info_addr_item *)address_pointer)->locator_type
 	    == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI) {
 	    item = (struct hip_locator_info_addr_item *)address_pointer;
 	    HIP_DEBUG_IN6ADDR("LOCATOR", (struct in6_addr *)&item->address);
-    } 
-    else if(((struct hip_locator_info_addr_item *)address_pointer)->locator_type 
+    }
+    else if(((struct hip_locator_info_addr_item *)address_pointer)->locator_type
 	    == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
 	    item = (struct hip_locator_info_addr_item *)address_pointer;
 	    HIP_DEBUG_IN6ADDR("LOCATOR", (struct in6_addr *)&item->address);
-    } 
+    }
     return (struct hip_locator_info_addr_item *)address_pointer;
 }
 
@@ -3860,7 +3865,7 @@ int hip_build_param_locator2(struct hip_common *msg,
 
 	HIP_IFE(!(locator_info =
 		  malloc(sizeof(struct hip_locator) + addrs_len1 + addrs_len2 )), -1);
-        
+
 	hip_set_param_type(locator_info, HIP_PARAM_LOCATOR);
 	hip_calc_generic_param_len(locator_info,
 				   sizeof(struct hip_locator),
@@ -3868,7 +3873,7 @@ int hip_build_param_locator2(struct hip_common *msg,
 
 	memcpy(locator_info + 1, addresses1, addrs_len1);
 	if(address_count2 > 0)
-               memcpy(((char *)(locator_info + 1) + addrs_len1), 
+               memcpy(((char *)(locator_info + 1) + addrs_len1),
                       addresses2, addrs_len2);
 
 	HIP_IFE(hip_build_param(msg, locator_info), -1);

@@ -10,7 +10,7 @@
    headers refer to libinet6 headers which in turn require the
    definition of the struct. */
 #ifdef CONFIG_HIP_HI3
-#   include "i3_client_api.h" 
+#   include "i3_client_api.h"
 #endif
 
 //#define HIP_DAEMONADDR_PATH		        "/tmp/hip_daemonaddr_path.tmp"
@@ -50,7 +50,7 @@
 #define SO_HIP_DEFAULT_HIT			16
 #define SO_HIP_GET_PEER_LIST                    17
 #define SO_HIP_CONF_PUZZLE_GET                  18
-#define SO_HIP_GET_PSEUDO_HIT                   19 
+#define SO_HIP_GET_PSEUDO_HIT                   19
 #define SO_HIP_GET_LOCAL_HI                     20
 #define SO_HIP_GET_HITS                         21
 #define SO_HIP_GET_HA_INFO			22
@@ -150,7 +150,7 @@
 #define SO_HIP_GET_PROXY_LOCAL_ADDRESS		133
 #define SO_HIP_HIPPROXY_STATUS_REQUEST		134
 #define SO_HIP_OPPTCP_UNBLOCK_AND_BLACKLIST     135
-#define SO_HIP_IPSEC_ADD_SA             	    136 /* addes by Tao Wan, for informing the firewall the BEX is done*/
+#define SO_HIP_IPSEC_ADD_SA             	    136
 #define SO_HIP_SET_TCPTIMEOUT_ON                137
 #define SO_HIP_SET_TCPTIMEOUT_OFF               138
 #define SO_HIP_SET_NAT_ICE_UDP                  139
@@ -159,10 +159,10 @@
 #define SO_HIP_CERT_SPKI_VERIFY                 142
 #define SO_HIP_CERT_X509V3_SIGN                 143
 #define SO_HIP_CERT_X509V3_VERIFY               144
-#define SO_HIP_USERSPACE_IPSEC			145
-#define SO_HIP_ESP_PROT_EXT_TRANSFORM		146
-#define SO_HIP_IPSEC_UPDATE_ANCHOR_LIST		147
-#define SO_HIP_IPSEC_NEXT_ANCHOR		148
+#define SO_HIP_USERSPACE_IPSEC					145
+#define SO_HIP_ESP_PROT_EXT_TRANSFORM			146
+#define SO_HIP_IPSEC_UPDATE_ANCHOR_LIST			147
+#define SO_HIP_IPSEC_NEXT_ANCHOR				148
 #define SO_HIP_GET_LSI_PEER                     150
 #define SO_HIP_GET_LSI_OUR			151
 #define SO_HIP_IS_OUR_LSI                       152
