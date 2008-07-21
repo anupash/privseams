@@ -83,7 +83,7 @@
 /**
  * The minimum lifetime the relay / RVS client is granted the service. This
  * value is used as a 8-bit integer value. The lifetime value in seconds is
- * calculated using the formula given in the registration draft.
+ * calculated using the formula given in RFC 5203.
  * @note this is a fallback value if we are not able to read the configuration
  *       file.
  */
@@ -91,11 +91,11 @@
 /**
  * The maximum lifetime the relay / RVS client is granted the service. This
  * value is used as a 8-bit integer value. The lifetime value in seconds is
- * calculated using the formula given in the registration draft.
+ * calculated using the formula given in RFC 5203.
  * @note this is a fallback value if we are not able to read the configuration
  *       file.
  */
-#define HIP_RELREC_MAX_LIFETIME 159 // Equals 3756.049 seconds.
+#define HIP_RELREC_MAX_LIFETIME 159 // Equals 3756 seconds.
 /** HIP relay config file name and path. */
 #define HIP_RELAY_CONFIG_FILE  "/etc/hip/relay_config"
 /** HIP relay config file default content. If the file @c HIP_RELAY_CONFIG_FILE
@@ -166,7 +166,8 @@ typedef struct{
  * Relay record encapsulation modes used in a relay record. This mode is between
  * the Relay and the Responder.
  */
-typedef enum{HIP_FULLRELAY, HIP_RVSRELAY}hip_relrec_type_t;
+typedef enum{HIP_FULLRELAY = HIP_SERVICE_RELAY,
+		     HIP_RVSRELAY = HIP_SERVICE_RENDEZVOUS}hip_relrec_type_t;
 /** Possible states of the RVS / relay. */
 typedef enum{HIP_RELAY_OFF = 0, HIP_RELAY_ON = 1}hip_relay_status_t;
 /** Possible states of the whitelist. */
@@ -661,25 +662,22 @@ int hip_relay_read_config();
  */ 
 int hip_relay_write_config();
 
-//add by santtu
-
-/****
+/**
  * function for full relay service. from I to R
  *
  */
-
 int hip_relay_forward_I(const hip_common_t *i1,
-		  const in6_addr_t *i1_saddr,
-		  const in6_addr_t *i1_daddr, hip_relrec_t *rec,
-		  const hip_portpair_t *i1_info,
-		  const uint8_t);
-//from R to I
+			const in6_addr_t *i1_saddr,
+			const in6_addr_t *i1_daddr, hip_relrec_t *rec,
+			const hip_portpair_t *i1_info,
+			const uint8_t);
+
 int hip_relay_forward_response(const hip_common_t *r,
-			const uint8_t type_hdr, 
-			const in6_addr_t *r_saddr,
-			const in6_addr_t *r_daddr , 
-			const hip_portpair_t *r_info , 
-			const in6_addr_t *relay_to_addr,
-			const in_port_t relay_to_port);
+			       const uint8_t type_hdr, 
+			       const in6_addr_t *r_saddr,
+			       const in6_addr_t *r_daddr , 
+			       const hip_portpair_t *r_info , 
+			       const in6_addr_t *relay_to_addr,
+			       const in_port_t relay_to_port);
 
 #endif /* HIP_HIPRELAY_H */

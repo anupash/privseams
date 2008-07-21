@@ -48,12 +48,13 @@ void print_usage()
 	printf("      -d = debugging output\n");
 	printf("      -v = verbose output\n");
 	printf("      -t = timeout for packet capture (default %d secs)\n", 
-			HIP_FW_DEFAULT_TIMEOUT);
+	       HIP_FW_DEFAULT_TIMEOUT);
 	printf("      -F = do not flush iptables rules\n");
 	printf("      -b = fork the firewall to background\n");
+	printf("      -p = run with lowered priviledges. iptables rules will not be flushed on exit\n");
 	printf("      -k = kill running firewall pid\n");
-	printf("      -i = switch on userspace ipsec\n");
-	printf("      -e = use esp protection extension (also sets -i)\n");
+ 	printf("      -i = switch on userspace ipsec\n");
+ 	printf("      -e = use esp protection extension (also sets -i)\n");
 	printf("      -h = print this help\n\n");
 }
 
@@ -277,6 +278,22 @@ int hip_fw_uninit_esp_prot()
     return err;
 }
 
+/*
+ * Adds an LSI rule
+ * @ip is a pointer to the first part of the rule, before specifying the LSI
+ * @opt is a pointer to the options that can be present after the LSI
+*/
+void firewall_add_lsi_rule(char *ip, char *opt)
+{
+        char *result = (char *)calloc(strlen(ip) + strlen(HIP_FULL_LSI_STR) + strlen(opt) + 1, 
+                        sizeof(char));
+
+	strcpy(result, ip);
+	strcat(strcat(result, HIP_FULL_LSI_STR),opt);		
+	system(result);
+}
+
+
 /*----------------INIT/EXIT FUNCTIONS----------------------*/
 
 /*
@@ -419,10 +436,9 @@ int firewall_init_rules()
 		system("iptables -I OUTPUT -p 17 --dport 50500 -j QUEUE");
 		system("iptables -I OUTPUT -p 17 --sport 50500 -j QUEUE");
 
-		/* LSI support: XX FIXME: REMOVE HARDCODING */
-		system("iptables -I OUTPUT -d 192.0.0.0/8 -j QUEUE");
-
-
+		/* LSI support: output packets with LSI value */
+		firewall_add_lsi_rule("iptables -I OUTPUT -d "," -j QUEUE");
+	
 		system("ip6tables -I INPUT -p 139 -j QUEUE");
 		system("ip6tables -I INPUT -p 50 -j QUEUE");
 		system("ip6tables -I INPUT -p 17 --dport 50500 -j QUEUE");
@@ -432,13 +448,15 @@ int firewall_init_rules()
 		system("ip6tables -I OUTPUT -p 50 -j QUEUE");
 		system("ip6tables -I OUTPUT -p 17 --dport 50500 -j QUEUE");
 		system("ip6tables -I OUTPUT -p 17 --sport 50500 -j QUEUE");
-	}
-	// Initializing db for mapping LSI-HIT in the firewall
-	firewall_init_hldb();
 
-	/* For LSIs ??? */
-	system("ip6tables -I INPUT -d 2001:0010::/28 -j QUEUE");
-                    
+		/* LSI support: incoming HIT packets, captured for decide if 
+		   HITs may be mapped to LSIs */
+		system("ip6tables -I INPUT -d 2001:0010::/28 -j QUEUE");
+	}
+
+	// Initializing local database for mapping LSI-HIT in the firewall
+	firewall_init_hldb();
+                          
 	if (hip_opptcp)
 		hip_fw_init_opptcp();
 
@@ -474,6 +492,9 @@ void hip_fw_flush_iptables(void)
 void firewall_exit()
 {
 	HIP_DEBUG("Firewall exit\n");
+	
+	hip_fw_uninit_esp_prot();
+	hip_fw_uninit_userspace_ipsec();
 
 	if (flush_iptables)
 	{
@@ -485,8 +506,6 @@ void firewall_exit()
 	}
 
 	hip_firewall_delete_hldb();
-	hip_fw_uninit_esp_prot();
-	hip_fw_uninit_userspace_ipsec();
 	
 	hip_remove_lock_file(HIP_FIREWALL_LOCK_FILE);
 }
@@ -1466,6 +1485,7 @@ int main(int argc, char **argv)
 	struct timeval timeout;
 	unsigned char buf[BUFSIZE];
 	hip_fw_context_t ctx;
+	int limit_capabilities;
 
 	if (geteuid() != 0) {
 		HIP_ERROR("firewall must be run as root\n");
@@ -1476,7 +1496,7 @@ int main(int argc, char **argv)
 	memset(&proxy_hit, 0, sizeof(default_hit));
 
 	
-	if (!hip_query_default_local_hit_from_hipd())
+	if (!hip_query_default_local_hit_from_hipd(&default_hit))
 		ipv6_addr_copy(&proxy_hit, (struct in6_addr *) hip_fw_get_default_hit());
 	HIP_DEBUG_HIT("Default hit is ",  &proxy_hit);
 
@@ -1486,7 +1506,7 @@ int main(int argc, char **argv)
 	
 	hip_set_logdebug(LOGDEBUG_NONE);
 
-	while ((ch = getopt(argc, argv, "f:t:vdFHAbkieh")) != -1)
+	while ((ch = getopt(argc, argv, "f:t:vdFHAbkipeh")) != -1)
 	{
 		switch (ch)
 		{
@@ -1520,6 +1540,9 @@ int main(int argc, char **argv)
 			break;
 		case 'k':
 			killold = 1;
+			break;
+		case 'p':
+			limit_capabilities = 1;
 			break;
 		case 'i':
 			hip_userspace_ipsec = 1;
@@ -1622,6 +1645,10 @@ int main(int argc, char **argv)
 	HIP_IFEL(bind(hip_fw_sock, (struct sockaddr *)& sock_addr,
 		      sizeof(sock_addr)), -1, "Bind on firewall socket addr failed\n");
 
+	if (limit_capabilities) {
+		HIP_IFEL(hip_set_lowcapability(1), -1, "Failed to reduce priviledges");
+		flush_iptables = 0;
+	}
 
 	//init_timeout_checking(timeout);
 	
@@ -1695,8 +1722,8 @@ int main(int argc, char **argv)
 			
 			if (ntohs(sock_addr.sin6_port) != HIP_DAEMON_LOCAL_PORT) {
 			  	int type = hip_get_msg_type(msg);
-			        if (type == SO_HIP_FIREWALL_BEX_DONE){
-				  HIP_DEBUG("SO_HIP_FIREWALL_BEX_DONE\n");
+			        if (type == SO_HIP_FW_BEX_DONE){
+				  HIP_DEBUG("SO_HIP_FW_BEX_DONE\n");
 				  HIP_DEBUG("%d == %d\n", ntohs(sock_addr.sin6_port), HIP_DAEMON_LOCAL_PORT);
 				}
 				HIP_DEBUG("Drop, message not from hipd\n");

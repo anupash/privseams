@@ -1,5 +1,20 @@
 #include "opptcp.h"
 
+/* This file produces the following compiler warnings:
+opptcp.c: In function 'tcp_packet_has_i1_option':
+opptcp.c:186: warning: case label value exceeds maximum value for type
+opptcp.c:187: warning: case label value exceeds maximum value for type
+opptcp.c: In function 'hip_request_send_tcp_packet':
+opptcp.c:357: warning: passing argument 1 of 'hip_build_param_contents' discards qualifiers from pointer target type
+opptcp.c:362: warning: passing argument 1 of 'hip_build_param_contents' discards qualifiers from pointer target type
+opptcp.c:367: warning: passing argument 1 of 'hip_build_param_contents' discards qualifiers from pointer target type
+opptcp.c:372: warning: passing argument 1 of 'hip_build_param_contents' discards qualifiers from pointer target type
+opptcp.c:377: warning: passing argument 1 of 'hip_build_param_contents' discards qualifiers from pointer target type
+opptcp.c:383: warning: passing argument 1 of 'hip_build_user_hdr' discards qualifiers from pointer target type
+opptcp.c:387: warning: passing argument 1 of 'hip_send_daemon_info_wrapper' discards qualifiers from pointer target type
+-Lauri 09.07.2008
+*/
+
 /**
  * Analyzes incoming TCP packets
  * 
