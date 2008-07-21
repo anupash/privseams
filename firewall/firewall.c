@@ -1485,7 +1485,7 @@ int main(int argc, char **argv)
 	struct timeval timeout;
 	unsigned char buf[BUFSIZE];
 	hip_fw_context_t ctx;
-	int limit_capabilities;
+	int limit_capabilities = 0;
 
 	if (geteuid() != 0) {
 		HIP_ERROR("firewall must be run as root\n");
