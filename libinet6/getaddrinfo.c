@@ -455,7 +455,7 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 	hip_lsi_t lsi;
 	struct in_addr tmp_v4;
 	struct in6_addr lsi_ip6;
-	char dht_response_hit[1024], dht_response_addr[1024], line[500];
+	char dht_response_hit[1024], dht_response_addr[HIP_MAX_PACKET], line[500];
 	char ownaddr[] = "127.0.0.1", tmp_ip_str[INET_ADDRSTRLEN];
         char *fqdn_str = NULL;
 	hip_common_t *msg = NULL;
@@ -549,7 +549,7 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
         HIP_IFEL((error < 0), -1,
                  "Error in resolving the DHT gateway address, skipping DHT.\n");
 
-        ret_hit = hip_opendht_get_key(&handle_hit_value,serving_gateway, name, dht_response_hit);
+        ret_hit = hip_opendht_get_key(&handle_hit_value,serving_gateway, name, dht_response_hit,1);
 	
         if (ret_hit == 0) {
                 HIP_INFO("HIT received from DHT: %s.\n", dht_response_hit);
@@ -560,12 +560,15 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
                 ret_addr = hip_opendht_get_key(&handle_hdrr_value, serving_gateway, 
                                            dht_response_hit, dht_response_addr,0);
                 if (ret_addr == 0)
-                        HIP_INFO("Address received from DHT: %s.\n",dht_response_addr);
+                {
+                    HIP_INFO("Address received from DHT: %s.\n",dht_response_addr);
+                    hipcommonmsg = (struct hip_common *)dht_response_addr ;
+					/* get the locator and its item count to chain addresses in gaih_tuple */
+					locator = hip_get_param(hipcommonmsg, HIP_PARAM_LOCATOR);
+					locator_item_count = hip_get_locator_addr_item_count(locator);
+                }
 		}
-	hipcommonmsg = (struct hip_common *)dht_response_addr ;
-	/* get the locator and its item count to chain addresses in gaih_tuple */
-	locator = hip_get_param(hipcommonmsg, HIP_PARAM_LOCATOR);
-	locator_item_count = hip_get_locator_addr_item_count(locator);
+	
 	
 	/* commenting some checks, for HDRR locators
 	 *  as now we deal with all locator addresses*/

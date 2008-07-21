@@ -607,13 +607,13 @@ int hip_opendht_get_key(int (*value_handler)(unsigned char * packet,
              void * answer),struct addrinfo * gateway, 
             	  	const unsigned char * key, void * opaque_answer, int dont_verify_hdrr)
 {
-	int err = 0, sfd = -1;
-        char dht_response[1400];
+		int err = 0, sfd = -1;
+        char dht_response[HIP_MAX_PACKET];
         char hostname[256];
         char *host_addr = NULL;
         struct hostent *hoste = NULL;
-         struct in6_addr hit_key;			/* To convert DHT key (HIT) to in6_addr structure for verification*/
-    
+        struct in6_addr hit_key;			/* To convert DHT key (HIT) to in6_addr structure for verification*/
+        
         memset(hostname,'\0',sizeof(hostname));
         HIP_IFEL((gethostname(hostname, sizeof(hostname))),-1,"Error getting hostname\n");
         HIP_IFEL(!(hoste = gethostbyname(hostname)),-1,
@@ -647,13 +647,13 @@ int hip_opendht_get_key(int (*value_handler)(unsigned char * packet,
         //Call the handler function , passed as a fuunction pointer
         err = value_handler(&dht_response, opaque_answer);
         
- 	/*Check if we found the key from lokup service or not*/
+        /*Check if we found the key from lokup service or not*/
         if( ((struct hip_common *)dht_response)->payload_len != NULL)
         {
         	/*Call the hdrr verification function, in case of hdrr
          	* if key for lookup is hit, it has to be hdrr*/
         
-        	if (inet_pton(AF_INET6, key, &hit_key.s6_addr) == 0 || dont_verify_hdrr)
+        	if ( (inet_pton(AF_INET6, key, &hit_key.s6_addr) == 0) || dont_verify_hdrr)
     		{ 
     			HIP_DEBUG("lookup is not for HDRR or HDRR verification flag not set so skipping verification \n");
     		}
@@ -674,9 +674,10 @@ int hip_opendht_get_key(int (*value_handler)(unsigned char * packet,
         	err = -1;
         }
 out_err:
- 	if (sfd) close(sfd); 
+ 		if (sfd) close(sfd); 
         return(err);
 }
+
 	
 
 /*This function copies the HDRR packet returned from lookup
@@ -785,7 +786,7 @@ int verify_hddr_lib (struct hip_common *hipcommonmsg,struct in6_addr *addrkey)
 	HIP_DUMP_MSG (hipcommonmsg);
 	/* ASK Signature and Host Id verification INFO FROM DAEMON */
 	HIP_INFO("Asking signature verification info from daemon...\n");
-	HIP_IFEL(hip_build_user_hdr(hipcommonmsg, 152/*SO_HIP_VERIFY_DHT_HDRR_RESP*/,0),-1,
+	HIP_IFEL(hip_build_user_hdr(hipcommonmsg, 158/*SO_HIP_VERIFY_DHT_HDRR_RESP*/,0),-1,
 			"Building daemon header failed\n");
 	HIP_IFEL(hip_send_recv_daemon_info(hipcommonmsg), -1, "Send recv daemon info failed\n");
       

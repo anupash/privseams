@@ -352,11 +352,15 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 		hip_hadb_dump_spis_out(entry);
 		HIP_DEBUG_LSI("    Peer lsi   ",&entry->lsi_peer);
 		/*Compare if different lsi's*/
+		/* Commetning this check, confirmed with teresa
+		 * as we need to add peer addresses hence we need to modify
+		 * entry state information for the peer with same LSI and HIT
+		 * but different IP
 		if (peer_lsi){			
 			HIP_IFEL(hip_lsi_are_equal(&entry->lsi_peer, peer_lsi) || 
 				 peer_lsi->s_addr == 0 , 0,
 				 "Ignoring new mapping, old one exists\n");	
-		}     
+		} */    
 	}
 
 	if (!entry){
