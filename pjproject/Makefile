@@ -91,12 +91,15 @@ xhdrid:
 	done
 
 prefix = /usr/local
+
+# Miika: removed install target as it breaks "make rpm" target
 install:
-	mkdir -p $(DESTDIR)$(prefix)/lib
-	cp -L $$(find . -name '*.a') $(DESTDIR)$(prefix)/lib
-	mkdir -p $(DESTDIR)$(prefix)/include
-	cp -RL $$(find  . -name include) $(DESTDIR)$(prefix)
-#	This just caused some errors -miika
+
+##	mkdir -p $(DESTDIR)$(prefix)/lib
+##	cp -L $$(find . -name '*.a') $(DESTDIR)$(prefix)/lib
+##	mkdir -p $(DESTDIR)$(prefix)/include
+##	cp -RL $$(find  . -name include) $(DESTDIR)$(prefix)
+# Miika: This just caused some errors
 #	cd $(DESTDIR)$(prefix)/lib && for i in $$(find . -name 'libpj*a'); do\
 #		ln -s $$i $$(echo $$i | sed -e "s/-$(TARGET_NAME)//");\
 #	done

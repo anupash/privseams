@@ -28,8 +28,10 @@ other related tools and test software.
 %setup
 
 # Note: in subsequent releases me may want to use --disable-debugging
+# TBD: The pjproject needs to glued in better.
 %build
-%configure
+./autogen.sh --target=`uname -m`-redhat-linux-gnu
+#%configure
 make -C doc all
 
 # Currently we are not going to install all includes and test software.
