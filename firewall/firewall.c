@@ -1630,9 +1630,7 @@ int main(int argc, char **argv)
 
 	if (limit_capabilities) {
 		HIP_IFEL(hip_set_lowcapability(1), -1, "Failed to reduce priviledges");
-#if 0
 		flush_iptables = 0;
-#endif
 	}
 
 	//init_timeout_checking(timeout);
