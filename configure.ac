@@ -294,6 +294,8 @@ if test x"$ac_cv_use_debug" = x"yes"; then
 	AC_SUBST(GDB_CFLAG, "-g")
 fi
 
+AC_SUBST(PJPROJECT_FILES, `find pjproject -type f|egrep -v '(\.arch-ids|.*\.depend|.*\.a|.*\.o)'|xargs echo`)
+
 AC_PREFIX_DEFAULT("/usr/local")
 
 # Path definitions

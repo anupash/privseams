@@ -40,7 +40,8 @@ make dist
 #echo "** Package building root is '$PKGROOT'" 
 tar xzf ${NAME}-main.tar.gz
 find ${NAME}-main -name '.arch*' | xargs rm -rf
-cd ${NAME}-main && cd pjproject && ./configure && make dep && cd ..
+cd ${NAME}-main && ./autogen.sh && cd pjproject && \
+  ./configure && make dep && cd ../..
 mv -v ${NAME}-main $PKGDIR
 
 echo "** Creating source package $PKGROOT/${NAME}${SUFFIX}.tar.gz"
