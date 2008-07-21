@@ -16,6 +16,7 @@ EXTRA_DIST += doc/doxygen.h doc/Doxyfile showip/showip-hipmod-0.8.02-fx-mz.xpi
 EXTRA_DIST += doc/docshot-agent-main-window.png doc/docshot-agent-tray-icon.png
 EXTRA_DIST += test/packaging/i386/DEBIAN test/packaging/amd64/DEBIAN test/packaging/armel/DEBIAN
 EXTRA_DIST += i3-cfg-PL.xml
+EXTRA_DIST += autogen.sh
 
 # Note: libinet6 has to be the first one
 #
