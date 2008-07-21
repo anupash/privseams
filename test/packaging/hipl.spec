@@ -102,20 +102,22 @@ Group: System Environment/Kernel
 rm -rf %{buildroot}
 
 #added by CentOS
-install -d %{buildroot}/%{prefix}/share/pixmaps
+install -d %{buildroot}%{prefix}/share/pixmaps
 #end CentOS add
 
-install -d %{buildroot}/%{prefix}/bin
-install -d %{buildroot}/%{prefix}/sbin
-install -d %{buildroot}/%{prefix}/lib
+# XX FIXME: add more python stuff from tools directory
+
+install -d %{buildroot}%{prefix}/bin
+install -d %{buildroot}%{prefix}/sbin
+install -d %{buildroot}%{prefix}/lib
 install -d %{buildroot}/etc/rc.d/init.d
 install -d %{buildroot}/doc
 make DESTDIR=%{buildroot} install
 install -m 700 test/packaging/rh-init.d-hipfw %{buildroot}/etc/rc.d/init.d/hipfw
 install -m 700 test/packaging/rh-init.d-hipd %{buildroot}/etc/rc.d/init.d/hipd
 install -m 644 doc/HOWTO.txt %{buildroot}/doc
-install -d %{buildroot}/%{python_sitelib}/DNS
-install -t %{buildroot}/%{python_sitelib}/DNS tools/DNS/*py
+install -d %{buildroot}%{python_sitelib}/DNS
+install -t %{buildroot}%{python_sitelib}/DNS tools/DNS/*py
 
 %post lib
 /sbin/ldconfig 
@@ -204,10 +206,13 @@ rm -rf %{buildroot}
 %doc doc/HOWTO.txt doc/howto-html
 
 %changelog
+* Mon Jul 21 2008 Miika Komu <miika@iki.fi>
+- Rpmbuild fixes for Fedora 8 build
 * Thu Jul 17 2008 Johnny Hughes <johnny@centos.org>
 - added two perl searches and installed one directory in the spec file
 - added libtool, libcap-devel and xmlto to BuildRequires 
-
+* Thu May 29 2008 Juha Jylhakoski <juha.jylhakoski@hiit.fi>
+- Split hipl.spec was split to different packages
 * Tue May 9 2006 Miika Komu <miika@iki.fi>
 - init.d script, buildroot
 * Mon May 6 2006 Miika Komu <miika@iki.fi>

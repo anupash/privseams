@@ -270,6 +270,7 @@ copy_and_package_files ()
     cp tools/myasn.py $PKGDIR/usr/bin/
     cp tools/parse-key-3.py $PKGDIR/usr/bin/
 
+#   XX FIXME: add more stuff from tools dir
     cp tools/dnsproxy.py $PKGDIR/usr/bin/
     cp tools/hosts.py $PKGDIR/usr/bin/
     cp tools/pyip6.py $PKGDIR/usr/bin/

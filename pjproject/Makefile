@@ -103,5 +103,6 @@ install:
 #	cd $(DESTDIR)$(prefix)/lib && for i in $$(find . -name 'libpj*a'); do\
 #		ln -s $$i $$(echo $$i | sed -e "s/-$(TARGET_NAME)//");\
 #	done
-	mkdir -p $(DESTDIR)$(prefix)/lib/pkgconfig
-	sed -e "s!@PREFIX@!$(DESTDIR)$(prefix)!" libpj.pc.in > $(DESTDIR)/$(prefix)/lib/pkgconfig/libpj.pc
+# Miika This caused further errors in "make rpm"
+#	mkdir -p $(DESTDIR)$(prefix)/lib/pkgconfig
+#	sed -e "s!@PREFIX@!$(DESTDIR)$(prefix)!" libpj.pc.in > $(DESTDIR)/$(prefix)/lib/pkgconfig/libpj.pc
