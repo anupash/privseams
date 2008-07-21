@@ -494,7 +494,7 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 				peer_addr.in6_u.u6_addr32[3] = (uint32_t)addr.ipv4.sin_addr.s_addr;
 				
 				
-				hip_hadb_add_udp_addr_to_spi(entry, spi, &peer_addr, 1, 0, 1,addr.ipv4.sin_port, HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY);
+				hip_hadb_add_udp_addr_to_spi(entry, spi, &peer_addr, 1, 0, 1,addr.ipv4.sin_port, HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY, NULL);
 				memcpy(&entry->preferred_address, &peer_addr, sizeof(struct in6_addr));
 				entry->peer_udp_port = addr.ipv4.sin_port;
 				

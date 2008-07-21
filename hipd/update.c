@@ -233,11 +233,11 @@ int hip_update_add_peer_addr_item(
 			&& port == entry->peer_udp_port) {
 		HIP_IFE(hip_hadb_add_udp_addr_to_spi(entry, spi, locator_address,
 						 0,
-						 lifetime, 1, port,priority), -1);
+						 lifetime, 1, port,priority, msg), -1);
 	} else {
 		HIP_IFE(hip_hadb_add_udp_addr_to_spi(entry, spi, locator_address,
 						 0,
-						 lifetime, is_preferred, port,priority), -1);
+						 lifetime, is_preferred, port,priority, msg), -1);
 	}
 //end add
 /*
@@ -1145,7 +1145,7 @@ int hip_handle_update_plain_locator(hip_ha_t *entry, hip_common_t *msg,
 			  "yet)\n", spi_out);
 	}
 
-	HIP_IFEL(hip_handle_locator_parameter(entry, locator, esp_info),
+	HIP_IFEL(hip_handle_locator_parameter(entry, locator, esp_info, msg),
 		 -1, "hip_handle_locator_parameter failed\n");
 
  out_err:
@@ -2823,7 +2823,8 @@ out_err:
  * */
 int hip_handle_locator_parameter(hip_ha_t *entry,
                                  struct hip_locator *loc,
-				 struct hip_esp_info *esp_info) {
+				 struct hip_esp_info *esp_info,
+				 struct hip_common *msg) {
 	uint32_t old_spi = 0, new_spi = 0, i, err = 0;
 	int zero = 0, n_addrs = 0, ii = 0;
 	int same_af = 0, local_af = 0, comp_af = 0, tmp_af = 0;
@@ -2937,7 +2938,7 @@ int hip_handle_locator_parameter(hip_ha_t *entry,
 out_of_loop:
 	if(locator)
 		HIP_IFEL(hip_for_each_locator_addr_item(hip_update_add_peer_addr_item,
-						  entry, locator, &new_spi, NULL), -1,
+						  entry, locator, &new_spi, msg), -1,
 						  "Locator handling failed\n"); 
 
 #if 0 /* Let's see if this is really needed -miika */
