@@ -535,14 +535,6 @@ int hip_conf_handle_hi(hip_common_t *msg, int action, const char *opt[],
 	int dsa_key_bits = 0;
 	char *fmt = NULL, *file = NULL;
 	
-	/*HIP_DEBUG("Opt count %d.\n", optc);
-
-	int i;
-	for(i = 0; i < optc; i++) {
-		HIP_DEBUG("action: %d, opt[%d] = %s.\n", action, i, opt[i]);
-	}
-	*/
-
 	if (action == ACTION_DEL) {
 		return hip_conf_handle_hi_del(msg, action, opt, optc);
 	} else if (action == ACTION_GET) {
@@ -550,23 +542,25 @@ int hip_conf_handle_hi(hip_common_t *msg, int action, const char *opt[],
 		HIP_IFEL((optc > 1), -1, "Too many arguments.\n");
 		
 		return hip_get_hits(msg, opt[0]);
+	} else if (action != ACTION_ADD && action != ACTION_NEW) {
+		HIP_ERROR("Only actions \"add\", \"new\", \"del\" and \"get\" "\
+			  "are supported for \"hi\".\n");
+		err = -1;
+		goto out_err;
 	}
 	
 	HIP_IFEL((optc < 1), -1, "Missing arguments.\n");
 	HIP_IFEL((optc > 4), -1, "Too many arguments.\n");
 
-	/* What is this supposed to do? And how? What are the actions allowed?
-	   hipconf help string specifies also the action NEW, but this function
-	   does not test for it. */
-	
-	if(!strcmp(opt[OPT_HI_TYPE], "pub")) {
+	if(strcmp(opt[0], "pub") == 0) {
 		anon = 0;
-	} else if(!strcmp(opt[OPT_HI_TYPE], "anon")) {
+	} else if(strcmp(opt[0], "anon") == 0) {
 		anon = 1;
-	} else if(!strcmp(opt[OPT_HI_TYPE], "default")) {
+	} else if(strcmp(opt[OPT_HI_TYPE], "default") == 0) {
 		use_default = 1;
 	} else {
-		HIP_ERROR("Bad HI type (not public, anon or default)\n");
+		HIP_ERROR("Bad HI type %s. Please use \"public\", \"anon\" or "\
+			  "\"default\".\n", opt[0]);
 		err = -EINVAL;
 		goto out_err;
 	}
@@ -1702,12 +1696,25 @@ int hip_get_hits(hip_common_t *msg, char *opt)
 				inet_ntop(AF_INET6, &endp->id.hit, hit_s,
 					  INET6_ADDRSTRLEN);
 				
-				HIP_INFO("%s %s HIT: %s\n",
-					 (endp->flags ==
-					  HIP_ENDPOINT_FLAG_ANON ?
-					  "Anonymous" : "Public   "),
-					 (endp->algo == HIP_HI_DSA ?
-					  "DSA" : "RSA"), hit_s);
+				if(endp->flags == HIP_ENDPOINT_FLAG_PUBKEY) {
+					HIP_INFO("Public   ");	
+				} else if(endp->flags ==
+					  HIP_ENDPOINT_FLAG_ANON) {
+					HIP_INFO("Anonymous");	
+				} else if(endp->flags ==
+					  HIP_ENDPOINT_FLAG_HIT) {
+					HIP_INFO("?????????");	
+				}
+
+				if(endp->algo == HIP_HI_DSA) {
+					HIP_INFO(" DSA ");	
+				} else if(endp->algo == HIP_HI_RSA) {
+					HIP_INFO(" RSA ");
+				} else {
+					HIP_INFO(" Unknown algorithm ");	
+				}
+				HIP_INFO("%s\n", hit_s);
+				
 			} else {
 				HIP_ERROR("Unrelated parameter in user "\
 					  "message.\n");
@@ -1752,9 +1759,6 @@ int hip_get_hits(hip_common_t *msg, char *opt)
 		err = -EINVAL;
 		goto out_err;
 	}
-
-	/* Clear message so do_hipconf() doesn't send it again */
-	//hip_msg_init(msg);
 
  out_err:
     

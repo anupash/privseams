@@ -3249,9 +3249,11 @@ int hip_host_id_entry_to_endpoint(struct hip_host_id_entry *entry,
 	   endpoint.flags is a binary flag value. The entry lhi.anonymous should
 	   be converted to binary flag to avoid this kind of mistakes.
 	   -Lauri 18.07.2008 */
-	if(entry->lhi.anonymous) {
+	if(entry->lhi.anonymous == 0) {
+		endpoint.flags = HIP_ENDPOINT_FLAG_PUBKEY;
+	}else if(entry->lhi.anonymous) {
 		endpoint.flags = HIP_ENDPOINT_FLAG_ANON;
-	} else {
+	}else {
 		endpoint.flags = HIP_ENDPOINT_FLAG_HIT;
 	}
 	//endpoint.flags  = entry->lhi.anonymous;
