@@ -3,7 +3,7 @@
 #include "firewall_defines.h"
 
 // different hc_length in order not to spoil calculation time for short connections
-#define HC_LENGTH_BEX_STORE 10
+#define HC_LENGTH_BEX_STORE 100
 #define HC_LENGTH_STEP1 10
 #define REMAIN_THRESHOLD 0.2
 
