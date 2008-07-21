@@ -9,7 +9,7 @@ Vendor: InfraHIP
 License: GPL
 Group: System Environment/Kernel
 Requires: openssl gtk2 libxml2 glib2 iptables-devel
-BuildRequires: openssl-devel gtk2-devel libxml2-devel glib2-devel iptables-devel
+BuildRequires: openssl-devel gtk2-devel libxml2-devel glib2-devel iptables-devel xmlto libtool libcap-devel 
 ExclusiveOS: linux
 BuildRoot: %{_tmppath}/%{name}-%{version}-root
 Prefix: /usr
@@ -26,6 +26,14 @@ other related tools and test software.
 
 %prep
 %setup
+
+#added by CentOS
+%ifarch x86_64 ppc64 sparc64 ia64
+%{__perl} -p -i -e 's,/usr/lib/libipq.a,/usr/lib64/libipq.a,g' firewall/Makefile.in
+%endif
+
+%{__perl} -p -i -e 's,/usr/share/pixmaps,\$(DESTDIR)/usr/share/pixmaps,g' libhipgui/Makefile.in
+#end CentOS changes
 
 # Note: in subsequent releases me may want to use --disable-debugging
 # TBD: The pjproject needs to glued in better.
@@ -92,6 +100,11 @@ Group: System Environment/Kernel
 
 %install
 rm -rf %{buildroot}
+
+#added by CentOS
+install -d %{buildroot}/%{prefix}/share/pixmaps
+#end CentOS add
+
 install -d %{buildroot}/%{prefix}/bin
 install -d %{buildroot}/%{prefix}/sbin
 install -d %{buildroot}/%{prefix}/lib
@@ -191,6 +204,10 @@ rm -rf %{buildroot}
 %doc doc/HOWTO.txt doc/howto-html
 
 %changelog
+* Thu Jul 17 2008 Johnny Hughes <johnny@centos.org>
+- added two perl searches and installed one directory in the spec file
+- added libtool, libcap-devel and xmlto to BuildRequires 
+
 * Tue May 9 2006 Miika Komu <miika@iki.fi>
 - init.d script, buildroot
 * Mon May 6 2006 Miika Komu <miika@iki.fi>
