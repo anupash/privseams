@@ -126,8 +126,7 @@ int firewall_set_bex_state(struct in6_addr *hit_s, struct in6_addr *hit_r, int s
 	lsi_peer = hip_get_lsi_peer_by_hits(hit_s, hit_r);
 
 	if (lsi_peer){
-	        HIP_IFEL(!(entry_update = firewall_hit_lsi_db_match(lsi_peer)), -1,
-			 "Entry not found in fwdb");
+	        HIP_IFE(!(entry_update = firewall_hit_lsi_db_match(lsi_peer)), -1);
 		entry_update->bex_state = state;
 		hip_ht_add(firewall_lsi_hit_db, entry_update); 
 	}
@@ -537,10 +536,9 @@ int firewall_send_outgoing_pkt(struct in6_addr *src_hit, struct in6_addr *dst_hi
 			  	firewall_raw_sock = firewall_raw_sock_udp_v6;
 			  	((struct udphdr*)msg)->check = ipv6_checksum(IPPROTO_UDP, &sock_src6->sin6_addr, 
 									     &sock_dst6->sin6_addr, msg, len);
-				HIP_DEBUG(">>>src_port is %d\n",ntohs(((struct udphdr*)msg)->source));
-				HIP_DEBUG(">>>dst_port is %d\n",ntohs(((struct udphdr*)msg)->dest));
-				HIP_DEBUG(">>>checksum is %x\n",ntohs(((struct udphdr*)msg)->check));
-				HIP_DEBUG(">>>udp lengt %d\n",ntohs(((struct udphdr*)msg)->len));
+				HIP_DEBUG("src_port is %d\n",ntohs(((struct udphdr*)msg)->source));
+				HIP_DEBUG("dst_port is %d\n",ntohs(((struct udphdr*)msg)->dest));
+				HIP_DEBUG("checksum is %x\n",ntohs(((struct udphdr*)msg)->check));
 			}else{
 			  	firewall_raw_sock = firewall_raw_sock_udp_v4;
 				((struct udphdr*)msg)->check = ipv4_checksum(IPPROTO_TCP, &(sock_src4->sin_addr), 

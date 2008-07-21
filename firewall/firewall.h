@@ -135,6 +135,8 @@ int hip_fw_init_esp_prot(void);
 int hip_fw_uninit_esp_prot(void);
 int firewall_init_rules(void);
 
+void firewall_add_lsi_rule(char *ip, char *opt);
+
 void firewall_close(int signal);
 void hip_fw_flush_iptables(void);
 void firewall_exit(void);

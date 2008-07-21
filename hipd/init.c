@@ -153,12 +153,10 @@ int hipd_init(int flush_ipsec, int killold)
 #if 0
 	hip_init_puzzle_defaults();
 #endif
-
 	/* Service initialization. */
 	hip_init_services();
 
 #ifdef CONFIG_HIP_RVS
-	
 	HIP_INFO("Initializing HIP relay / RVS.\n");
 	hip_relay_init();
 #endif
@@ -456,7 +454,7 @@ int hip_init_host_ids()
 	hip_hidb_associate_default_hit_lsi(&default_hit, &default_lsi);
 
 	/*Initializes the hadb with the information contained in /etc/hip/hosts*/
-	hip_init_hadb_hip_host();
+	//hip_init_hadb_hip_host();
 
  out_err:
 

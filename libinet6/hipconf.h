@@ -206,4 +206,14 @@ int hip_conf_handle_opptcp(struct hip_common *, int type, const char *opt[], int
 int hip_conf_handle_tcptimeout(struct hip_common *, int type, const char *opt[], int optc); /*added by Tao Wan, 04.Jan.2008*/
 int hip_conf_handle_hipproxy(struct hip_common *msg, int action, const char *opt[], int optc);
 
+/**
+ * Prints the HIT values in use. Prints either all or the default HIT value to
+ * stdout.
+ *
+ * @param  a pointer to a message to be sent to the HIP daemon.
+ * @param  a pointer to a commman line option. Either "default" or "all".
+ * @return zero if the HITs were printed successfully, negative otherwise.
+ */ 
+int hip_get_hits(hip_common_t *msg, char *opt);
+
 #endif /* HIPCONF */
