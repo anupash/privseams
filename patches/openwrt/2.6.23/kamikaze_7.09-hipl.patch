@@ -34,7 +34,7 @@ diff -Naur a/kamikaze_7.09/package/hipl/Makefile b/kamikaze_7.09/package/hipl/Ma
 -	
 -define Build/Configure
 -	(cd $(PKG_BUILD_DIR); rm -rf config.{cache,status}; \
--		./autogen.sh				    \
+-		./autogen.sh  --host=$(GNU_TARGET_NAME) --target=$(GNU_TARGET_NAME)	\
 -	);
 -
 -	(cd  $(PKG_BUILD_DIR)/libinet6;  ln -v -s include_glibc23 include; \

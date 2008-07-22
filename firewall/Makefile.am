@@ -15,7 +15,7 @@ include_HEADERS += esp_decrypt.h firewall_defines.h proxydb.h conndb.h esp_decry
 include_HEADERS += user_ipsec.h user_ipsec_esp.h user_ipsec_sadb.h esp_prot.h
 include_HEADERS += proxy.h opptcp.h firewalldb.h lsi.h
 
-INCLUDES = $(hipl_common_include_paths)
+INCLUDES = $(hipl_common_include_paths)  -I$(HIPL_PJPROJECT_NATH)/include -I$(HIPL_PJPROJECT_LIB)/include -I$(HIPL_PJPROJECT_LIB_UTIL)/include -I$(HIPL_PJPROJECT_MEDIA)/include
 
 if HIP_FIREWALL
 
