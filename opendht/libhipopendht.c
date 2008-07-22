@@ -19,7 +19,7 @@
 #include "debug.h"
 #include "fcntl.h"
 #include "ife.h"
-
+#include "icomm.h"
 
 /**
  *  For interrupting the connect in gethosts_hit 
@@ -786,7 +786,7 @@ int verify_hddr_lib (struct hip_common *hipcommonmsg,struct in6_addr *addrkey)
 	HIP_DUMP_MSG (hipcommonmsg);
 	/* ASK Signature and Host Id verification INFO FROM DAEMON */
 	HIP_INFO("Asking signature verification info from daemon...\n");
-	HIP_IFEL(hip_build_user_hdr(hipcommonmsg, 158/*SO_HIP_VERIFY_DHT_HDRR_RESP*/,0),-1,
+	HIP_IFEL(hip_build_user_hdr(hipcommonmsg, SO_HIP_VERIFY_DHT_HDRR_RESP,0),-1,
 			"Building daemon header failed\n");
 	HIP_IFEL(hip_send_recv_daemon_info(hipcommonmsg), -1, "Send recv daemon info failed\n");
       
