@@ -353,98 +353,6 @@ int opendht_get(int sockfd,
 }
 
 /**
- * opendht_get_key - creates socket, connects to OpenDHT and gets the value under given key
- *
- * @param gateway A addrinfo struct containing the gateway address
- * @param key Pointer to key to be fetched
- * @param value Pointer to memory area where the corresponding value will be saved
- * VALUE contains HIT (string) in case of HIT Lookup OR
- * VALUE contains HIP_COMMON structure in case of HDRR lookup
- * @return integer -1 on error, on success 0
- */
-
-/*Commenthing this fucntion AS WE NOW USE hip_opendht_get_key*/
-#if 0
-int opendht_get_key(struct addrinfo * gateway, const unsigned char * key,
-		    unsigned char *value)
-{
-        int err = 0, sfd = -1, n_addrs = 0;
-        int locator_item_count = 0;
-        char dht_response[1400];
-        char hostname[256];
-        char *host_addr = NULL;
-        struct hostent *hoste = NULL;
-        struct hip_locator *locator;
-        struct hip_locator_info_addr_item *locator_address_item = NULL;
-        struct in6_addr addr6;
-        struct in_addr addr4;
-        
-        memset(hostname,'\0',sizeof(hostname));
-        HIP_IFEL((gethostname(hostname, sizeof(hostname))),-1,"Error getting hostname\n");
-        HIP_IFEL(!(hoste = gethostbyname(hostname)),-1,
-                 "Encountered an error when getting host address\n");
-        if (hoste->h_addrtype == AF_INET)
-                host_addr = inet_ntoa(*(struct in_addr *)*hoste->h_addr_list);
-        else if (hoste->h_addrtype == AF_INET6) {
-                HIP_IFEL(inet_ntop(AF_INET6, &hoste->h_addr_list, 
-                                   host_addr, sizeof(INET6_ADDRSTRLEN)),
-                         -1,"Error converting host IPv6 address\n");
-        }
-        else {
-                HIP_DEBUG("Unknown host address family\n");
-                goto out_err;
-        }
-        /* TODO
-         * Following line Temporarily inserted line for openlokup, MUST BE REMOVED
-         */
-         host_addr = OPENDHT_GATEWAY;
-        _HIP_DEBUG("Host addresss %s\n", host_addr);
-        sfd = init_dht_gateway_socket(sfd);
-        HIP_IFEL((err = connect_dht_gateway(sfd, gateway, 1))
-                 ,-1,"OpenDHT connect error\n");  
-        memset(dht_response, '\0', sizeof(dht_response));
-        HIP_IFEL((err = opendht_get(sfd, (unsigned char *)key, (unsigned char *)host_addr, 5851)),
-                 -1, "Opendht_get error");
-        HIP_IFEL(opendht_read_response(sfd, dht_response), -1,"Opendht_read_response error\n"); 
-        _HIP_DUMP_MSG((struct hip_common *)dht_response);
-   
-        /* check if there is locator, if is, take first and give it for the caller
-           should give the whole locator and let the caller decide */
-        locator = hip_get_param((struct hip_common *)dht_response, HIP_PARAM_LOCATOR);
-        if (locator) {
-        		memcpy(value, dht_response, 1024);
-        	/*Commented by Pardeep to return whole response back in case od HDRR*/
-        	
-        	/*
-                locator_item_count = hip_get_locator_addr_item_count(locator);
-                locator_item_count--;
-                locator_address_item = hip_get_locator_first_addr_item(locator);
-                  memcpy(&addr6, 
-                       (struct in6_addr*)&locator_address_item[locator_item_count].address, 
-                       sizeof(struct in6_addr));
-                if (IN6_IS_ADDR_V4MAPPED(&addr6)) {
-                        IPV6_TO_IPV4_MAP(&addr6, &addr4);
-                        sprintf(value, "%s", inet_ntoa(addr4));
-                } else {
-                        hip_in6_ntop(&addr6, value);
-                        HIP_DEBUG("Value: %s\n", value);
-                }
-                */
-        } else {
-                if (ipv6_addr_is_hit((struct in6_addr*)dht_response)) {
-                        /* if IPv6 must be HIT */
-                        hip_in6_ntop((struct in6_addr *)dht_response, value);
-                } else {
-                        memcpy(value, dht_response, strlen(dht_response));
-               	  }
-     	  }	
- out_err:
- 		
-        if (sfd) close(sfd); 
-        return(err);
-}
-#endif /*Commetning above function*/
-/**
  * opendht_handle_value Modifies the key to suitable format for OpenDHT
  *
  * @param value Value to be handled
@@ -612,7 +520,7 @@ int hip_opendht_get_key(int (*value_handler)(unsigned char * packet,
         char hostname[256];
         char *host_addr = NULL;
         struct hostent *hoste = NULL;
-        struct in6_addr hit_key;			/* To convert DHT key (HIT) to in6_addr structure for verification*/
+        struct in6_addr hit_key; /* To convert DHT key (HIT) to in6_addr structure */
         
         memset(hostname,'\0',sizeof(hostname));
         HIP_IFEL((gethostname(hostname, sizeof(hostname))),-1,"Error getting hostname\n");
@@ -655,7 +563,8 @@ int hip_opendht_get_key(int (*value_handler)(unsigned char * packet,
         
         	if ( (inet_pton(AF_INET6, key, &hit_key.s6_addr) == 0) || dont_verify_hdrr)
     		{ 
-    			HIP_DEBUG("lookup is not for HDRR or HDRR verification flag not set so skipping verification \n");
+    			HIP_DEBUG("lookup is not for HDRR or" 
+				"HDRR verification flag not set so skipping verification \n");
     		}
     		else
     		{
@@ -773,7 +682,7 @@ int handle_hit_value (unsigned char *packet, void *hit)
 */
 int verify_hddr_lib (struct hip_common *hipcommonmsg,struct in6_addr *addrkey)
 {
-	struct hip_hdrr_info hdrr_info;		/* To examine DHT response which contains locator in HDRR*/
+	struct hip_hdrr_info hdrr_info;	/* To examine DHT response which contains locator in HDRR*/
 	struct hip_hdrr_info *hdrr_info_response; /* To examine daemon response in msg sent for verification*/
 	int err = 0 ;
 	
@@ -796,7 +705,8 @@ int verify_hddr_lib (struct hip_common *hipcommonmsg,struct in6_addr *addrkey)
      * */
 	hdrr_info_response = hip_get_param (hipcommonmsg, HIP_PARAM_HDRR_INFO);
 	HIP_DUMP_MSG (hipcommonmsg);
-	HIP_DEBUG ("Sig verified (0=true): %d\nHit Verified (0=true): %d \n",hdrr_info_response->sig_verified, hdrr_info_response->hit_verified);
+	HIP_DEBUG ("Sig verified (0=true): %d\nHit Verified (0=true): %d \n"
+		,hdrr_info_response->sig_verified, hdrr_info_response->hit_verified);
 	return (hdrr_info_response->sig_verified | hdrr_info_response->hit_verified);
 
 out_err:

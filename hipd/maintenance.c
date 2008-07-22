@@ -381,7 +381,7 @@ void register_to_dht ()
 	int i, pub_addr_ret = 0;
 	struct netdev_address *opendht_n;
         struct in6_addr tmp_hit;
-        char *tmp_hit_str = NULL;//, *tmp_addr_str = NULL;
+        char *tmp_hit_str = NULL;
         
         if (hip_opendht_inuse == SO_HIP_DHT_ON) {
                 HIP_DEBUG("DHT error count now %d/%d.\n", 
@@ -402,8 +402,6 @@ void register_to_dht ()
                         
                         //TODO checkout a better way to find OPENDHT_GATEWAY address to be sent as HOST 
                         // param value in HTTP header
-                        //tmp_addr_str = hip_convert_hit_to_str(hip_cast_sa_addr(&opendht_n->addr), NULL);
-                        //tmp_addr_str = OPENDHT_GATEWAY; 
                         publish_hit(&opendht_name_mapping, tmp_hit_str,  OPENDHT_GATEWAY);
                         pub_addr_ret = publish_addr(tmp_hit_str,  OPENDHT_GATEWAY);
                         continue;

@@ -601,40 +601,6 @@ int hip_find_address(char *fqdn_str, struct in6_addr *res){
 	return err;
 }
 
-#if 0
-int opendht_get_endpointinfo2(const char *node_hit, struct in6_addr *res)
-{
-        int err = 0;
-        char dht_response[1024];
-        struct in_addr tmp_v4;
-        extern int hip_opendht_inuse;
-
-                
-        if (hip_opendht_inuse == SO_HIP_DHT_ON) {
-                memset(dht_response, '\0', sizeof(dht_response));
-                HIP_IFEL(hip_opendht_get_key(&handle_locator_value, opendht_serving_gateway, node_hit, dht_response), -1, 
-                         "DHT get in opendht_get_endpoint failed!\n"); 
-               
-                HIP_DEBUG("Value received from DHT: %s\n",dht_response);
-                
-                if(inet_pton(AF_INET6,(const char *) dht_response, (void *) res)==1) {
-                        HIP_DEBUG("Got the peer address successfully\n");
-                        err = 0;
-                }
-                if (inet_aton(dht_response, &tmp_v4)) {
-                        IPV4_TO_IPV6_MAP(&tmp_v4, res);
-                        HIP_DEBUG("Got the peer address successfully\n");
-                        err = 0;
-                } else {
-                        HIP_DEBUG("failed to get the peer address successfully\n");
-                        err = -1;
-                }
-        }
- out_err:
-        return(err);
-}
-#endif
-
 /*this function returns the locator for the given HIT from opendht(lookup)*/
 int opendht_get_endpointinfo(const char *node_hit, void *msg)
 {

@@ -573,12 +573,10 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 	/* commenting some checks, for HDRR locators
 	 *  as now we deal with all locator addresses*/
 	if ((ret_hit == 0) && (ret_addr == 0) && 
-            (dht_response_hit[0] != '\0') /*&& (dht_response_addr[0] != '\0')*/) { 
+            (dht_response_hit[0] != '\0') ) { 
                 if (inet_pton(AF_INET6, dht_response_hit, &tmp_hit) >0 &&
-                    /*inet_pton(AF_INET6, dht_response_addresses, &tmp_addr)*/
                     locator_item_count >0) {
                         /*locators are there and hit also exists, now creating gaih_addrtuple*/ 
-                      //  **pat = NULL ;      			
                        	if (**pat == NULL) {						
                            	    if ((**pat = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){
                                	        HIP_ERROR("Memory allocation error\n");
