@@ -7,6 +7,21 @@
 
 #include "blind.h"
 
+int hip_check_whether_to_use_blind(hip_common_t *msg, int *use_blind)
+{
+	if(msg == NULL || use_blind == NULL) {
+		return -1;
+	}
+	
+	if ((ntohs(msg->control) & HIP_PACKET_CTRL_BLIND) &&
+	    hip_blind_get_status()) {
+		*use_blind = 1;
+	}
+
+	return 0;
+}
+
+
 /* For internal use only */
 int hip_set_blind_on_sa(hip_ha_t *entry, void *not_used)
 {
@@ -62,9 +77,11 @@ int hip_set_blind_off(void)
   return err;
 }
 
-/* This functions is used to query if the blind is in use.
- * returns 0 if blind is off and 1 if blind is on.
-*/
+/**
+ * @brief This functions is used to query if the blind is in use.
+ * 
+ * @return Zero if blind is off and 1 if blind is on.
+ */
 int hip_blind_get_status(void)
 {
   return hip_blind_status;
