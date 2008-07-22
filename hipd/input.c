@@ -336,21 +336,26 @@ int hip_produce_keying_material(struct hip_common *msg, struct hip_context *ctx,
 	HIP_DEBUG_HIT("key_material msg->hitr (local)", &msg->hitr);
 
 	if (hip_blind_get_status()) {
-	  type = hip_get_msg_type(msg);
-
+		type = hip_get_msg_type(msg);
+	  
 	  /* Initiator produces keying material for I2:
 	   * uses own blinded hit and plain initiator hit
 	   */
 	  if (type == HIP_R1) {
-	    HIP_IFEL((blind_entry = hip_hadb_find_by_blind_hits(&msg->hitr, &msg->hits)) == NULL,
-		     -1, "Could not found blinded hip_ha_t entry\n");
-	    hip_make_keymat(dh_shared_key, dh_shared_len,
-			    &km, keymat, keymat_len,
-			    &blind_entry->hit_peer, &msg->hitr, &ctx->keymat_calc_index, I, J);
+		  if((blind_entry =
+		      hip_hadb_find_by_blind_hits(&msg->hitr, &msg->hits))
+		     == NULL){
+			  err = -1;
+			  HIP_ERROR("Could not found blinded hip_ha_t entry\n");
+			  goto out_err;
+		  }
+		  hip_make_keymat(dh_shared_key, dh_shared_len,
+				  &km, keymat, keymat_len,
+				  &blind_entry->hit_peer, &msg->hitr,
+				  &ctx->keymat_calc_index, I, J);
 	  }
 	  /* Responder produces keying material for handling I2:
-	   * uses own plain hit and blinded initiator hit
-	   */
+	   * uses own plain hit and blinded initiator hit */
 	  else if (type == HIP_I2) {
 	    HIP_IFEL((plain_local_hit = HIP_MALLOC(sizeof(struct in6_addr), 0)) == NULL,
 		     -1, "Couldn't allocate memory\n");
@@ -1556,8 +1561,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	uint32_t spi_in = 0, spi_out = 0;
 	uint64_t I = 0, J = 0;
 	in_port_t dest_port = 0; // For the port in RELAY_FROM
-	
-	/* Poiters */
+	/* Pointers */
 	in6_addr_t *plain_peer_hit = NULL, *plain_local_hit = NULL; 
 	char *tmp_enc = NULL, *enc = NULL;
 	unsigned char *iv = NULL;
@@ -1571,7 +1575,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	struct hip_solution *sol = NULL;
 	struct esp_prot_anchor *prot_anchor = NULL;
 	struct esp_prot_transform *prot_transform = NULL;
-	
 	/* Data structures. */
 	in6_addr_t dest; // dest for the IP address in RELAY_FROM
 	hip_transform_suite_t esp_tfm, hip_tfm;
@@ -2437,16 +2440,21 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 			esp_prot_transforms[entry->esp_prot_transform]);
 
 // moved from hip_create_i2
+/* For the above comment. When doing fixes like the above move, please check
+   that the code compiles with the affected flags. With CONFIG_HIP_BLIND we get
+   five errors and two warnings. They are now fixed, but the code is not tested
+   to work. I.e. the code compiles but does not neccessarily work.
+    Lauri 22.07.2008
+*/
 #ifdef CONFIG_HIP_BLIND
-	if (use_blind) {
-	  /* let the setup routine give us a SPI. */
-	  HIP_DEBUG("Blind is ON\n");
-	  HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(r1_saddr, r1_daddr,
-				  &entry->hit_peer, &entry->hit_our,
-				  entry, spi_in, transform_esp_suite,
-				  &ctx->esp_in, &ctx->auth_in, 0,
-				  HIP_SPI_DIRECTION_IN, 0, entry), -1,
-		   "Failed to setup IPsec SPD/SA entries, peer:src\n");
+	if (hip_blind_get_status()) {
+		/* let the setup routine give us a SPI. */
+		HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(
+				 r2_saddr, r2_daddr, &entry->hit_peer,
+				 &entry->hit_our, spi_in, entry->esp_transform,
+				 &ctx->esp_in, &ctx->auth_in, 0,
+				 HIP_SPI_DIRECTION_IN, 0, entry), -1,
+			 "BLIND: Failed to setup IPsec SPD/SA entries.\n");
 	}
 #endif
 
@@ -2476,12 +2484,11 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 // end of move
 
 #ifdef CONFIG_HIP_BLIND
-	if (use_blind) {
-	  err = entry->hadb_ipsec_func->hip_add_sa(r2_daddr, r2_saddr,
-			   &entry->hit_our, &entry->hit_peer,
-			   spi_recvd, tfm,
-			   &ctx->esp_out, &ctx->auth_out, 1,
-			   HIP_SPI_DIRECTION_OUT, 0, entry);
+	if (hip_blind_get_status()) {
+		err = entry->hadb_ipsec_func->hip_add_sa(
+			r2_daddr, r2_saddr, &entry->hit_our, &entry->hit_peer,
+			spi_recvd, tfm, &ctx->esp_out, &ctx->auth_out, 1,
+			HIP_SPI_DIRECTION_OUT, 0, entry);
 	}
 #endif
 //modified by santtu

@@ -361,7 +361,6 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 {
 	struct hip_common *i1 = 0;
 	struct in6_addr daddr;
-	struct hip_common *i1_blind = NULL;
 	uint16_t mask = 0;
 	int err = 0, n=0;
 		
@@ -370,18 +369,17 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	HIP_IFEL(hip_init_us(entry, src_hit), -EINVAL,
 		 "Could not assign a local host id\n");
 	
-	_HIP_DEBUG("\n");
-	_HIP_DEBUG("----**********----3--*********-----------------\n");
-	//hip_for_each_ha(hip_print_info_hadb, &n);
-	_HIP_DEBUG("----**********----3--*********-----------------\n");
-
 #ifdef CONFIG_HIP_BLIND
-        if (hip_blind_get_status()) {
-	  HIP_DEBUG("Blind is activated, build blinded i1\n");
-	  // Build i1 message: use blind HITs and put nonce in the message
-	  HIP_IFEL((i1_blind = hip_blind_build_i1(entry, &mask)) == NULL,
-		   -1, "hip_blind_build_i1() failed\n");
-	  HIP_DUMP_MSG(i1_blind);
+	struct hip_common *i1_blind = NULL;
+        
+	if (hip_blind_get_status()) {
+		HIP_DEBUG("Blind is activated, building blinded I1 packet.\n");
+		
+		if((i1_blind = hip_blind_build_i1(entry, &mask)) == NULL) {
+			err = -1;
+			HIP_ERROR("hip_blind_build_i1() failed.\n");
+			goto out_err;
+		}
 	}
 #endif
 
@@ -411,14 +409,6 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 
 	HIP_IFEL(hip_hadb_get_peer_addr(entry, &daddr), -1,
 		 "No preferred IP address for the peer.\n");
-	
-	HIP_DEBUG("\n");
-	_HIP_DEBUG("----**********---4---*********-----------------\n");
-        /*
-	hip_for_each_ha(hip_print_info_hadb, &n);
-	*/
-        _HIP_DEBUG("----**********---4---*********-----------------\n");
-
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	// if hitr is hashed null hit, send it as null on the wire
@@ -770,8 +760,8 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
                 in6_addr_t *dst_ip, const in_port_t dst_port,
                 hip_portpair_t *i1_info, uint16_t relay_para_type)
 {
-	struct hip_common *r1pkt = NULL;
-	struct in6_addr *r1_dst_addr, *local_plain_hit = NULL;
+	hip_common_t *r1pkt = NULL;
+	in6_addr_t *r1_dst_addr, *local_plain_hit = NULL;
 	in_port_t r1_dst_port = 0;
 	int err = 0;
 
@@ -820,17 +810,31 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 #endif
 
 #ifdef CONFIG_HIP_BLIND
-	if (hip_blind_get_status())
-	{
-	     HIP_IFEL((local_plain_hit = HIP_MALLOC(sizeof(struct in6_addr), 0)) == NULL,
-		      -1, "Couldn't allocate memory\n");
-	     HIP_IFEL(hip_plain_fingerprint(nonce, &i1->hitr, local_plain_hit),
-		      -1, "hip_plain_fingerprints failed\n");
-	     HIP_IFEL(!(r1pkt = hip_get_r1(r1_dst_addr, i1_daddr,
-					   local_plain_hit, &i1->hits)),
-		      -ENOENT, "No precreated R1\n");
-	     // replace the plain hit with the blinded hit
-	     ipv6_addr_copy(&r1pkt->hits, &i1->hitr);
+	if (hip_blind_get_status()) {
+		/* Compiler error:
+		   'nonce' undeclared (first use in this function)
+		   introduced nonce here and initialized it zero.
+		   -Lauri 22.07.2008.
+		*/
+		uint16_t nonce = 0;
+		if((local_plain_hit =
+		    (in6_addr_t *)malloc(sizeof(struct in6_addr))) == NULL) {
+			err = -1;
+			HIP_ERROR("Error when allocating memory to local "\
+				  "plain HIT.\n");
+			goto out_err;
+		}
+		HIP_IFEL(hip_plain_fingerprint(
+				 &nonce, &i1->hitr, local_plain_hit), -1,
+			 "hip_plain_fingerprints() failed.\n");
+		
+		if((r1pkt = hip_get_r1(r1_dst_addr, i1_daddr, local_plain_hit,
+				       &i1->hits)) == NULL) {
+			HIP_ERROR("Unable to get a precreated R1 packet.\n");
+		}
+		
+		/* Replace the plain HIT with the blinded HIT. */
+		ipv6_addr_copy(&r1pkt->hits, &i1->hitr);
 	}
 #endif
 	if (!hip_blind_get_status()) {
