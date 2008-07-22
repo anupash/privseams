@@ -329,6 +329,25 @@ hash_chain_t * hcstore_get_hchain_by_anchor(hchain_store_t *hcstore, int functio
 	return stored_hchain;
 }
 
+hash_function_t hcstore_get_hash_function(hchain_store_t *hcstore, int hash_function_id)
+{
+	HIP_ASSERT(hcstore != NULL);
+	HIP_ASSERT(function_id >= 0 && function_id < hcstore->num_functions);
+
+	return hcstore->hash_functions[function_id];
+}
+
+int hcstore_get_hash_length(hchain_store_t *hcstore, int hash_function_id,
+		int hash_length_id)
+{
+	HIP_ASSERT(hcstore != NULL);
+	HIP_ASSERT(function_id >= 0 && function_id < hcstore->num_functions);
+	HIP_ASSERT(hash_length_id >= 0
+			&& hash_length_id < hcstore->num_hash_length[function_id]);
+
+	return hcstore->hash_length[function_id][hash_length_id];
+}
+
 // this does the same as init but additionally destructs the hchains
 void hcstore_uninit(hchain_store_t *hcstore)
 {

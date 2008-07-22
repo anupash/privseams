@@ -15,35 +15,6 @@
 #include "hashchain.h"
 #include "builder.h"
 
-/* IDs for all supported transforms
- *
- * NOTE: if you change these, make sure to also change the helper defines
- *       NUM_*
- */
-#define SHA1_8_TRANSFORM		0
-#define SHA1_16_TRANSFORM		1
-#define SHA1_20_TRANSFORM		2
-#define MD5_8_TRANSFORM			3
-#define MD5_20_TRANSFORM		4
-
-/* maps from the transform_id defined above to the hash-function id
- * and hash length id
- *
- * NOTE: this ensures, we don't use uninitialised
- *       (hash_function, hash_length)-combinations
- */
-typedef struct hchain_transform
-{
-	int hash_func_id;
-	int hash_length_id;
-} hchain_transform_t;
-
-// stores the mapping transform_id -> (function_id, hash_length_id)
-hchain_transform_t hchain_transforms[NUM_TRANSFORMS];
-
-
-
-
 
 // max amount of different hash-functions that can be stored
 #define MAX_FUNCTIONS			5
@@ -105,8 +76,11 @@ hash_chain_t * hcstore_get_hchain(hchain_store_t *hcstore, int function_id,
 		int hash_length_id, int hchain_length);
 hash_chain_t * hcstore_get_hchain_by_anchor(hchain_store_t *hcstore, int function_id,
 		int hash_length_id, unsigned char *anchor);
+hash_function_t hcstore_get_hash_function(hchain_store_t *hcstore, int hash_function_id);
+int hcstore_get_hash_length(hchain_store_t *hcstore, int hash_function_id,
+		int hash_length_id);
 void hcstore_uninit(hchain_store_t *hcstore);
-struct hip_common *create_anchors_message(int hash_length);
+struct hip_common *create_anchors_message(hchain_store_t *hcstore);
 
 
 #if 0
