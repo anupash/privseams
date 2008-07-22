@@ -765,11 +765,11 @@ int hip_conf_handle_hi_del_all(hip_common_t *msg)
 					    -1, "Failed to build HIT param\n");
 
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEL_LOCAL_HI, 0),
--				  -1, "Failed to build user message header\n");
+		 -1, "Failed to build user message header\n");
 	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "Sending msg failed.\n");
-
+	
 	hip_msg_init(msg);
-
+	
     }
 
     /*FIXME Deleting HITs from the interface isn't working, so we restart it */
