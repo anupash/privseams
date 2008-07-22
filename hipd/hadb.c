@@ -1,9 +1,9 @@
 // FIXME: whenever something that is replicated in beet db is
 // modified, the modifications must be written there too.
 #include "hadb.h"
- 
+
+int test = 0;
 HIP_HASHTABLE *hadb_hit;
-HIP_HASHTABLE *hadb_file_hits;
 struct in_addr peer_lsi_index;
 
 /** A callback wrapper of the prototype required by @c lh_new(). */
@@ -432,9 +432,9 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 
 	if (entry)
 		hip_db_put_ha(entry, hip_hadb_delete_state);
-
+        /*
 	hip_for_each_ha(hip_print_info_hadb, &n);
-
+        */
 out_err:
 	return err;
 }
@@ -479,8 +479,10 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr, hip_
 
 	memcpy(&peer_map.peer_hit, peer_hit, sizeof(hip_hit_t));
 	memcpy(&peer_map.peer_addr, peer_addr, sizeof(struct in6_addr));
+
 	if (peer_lsi)
 	        memcpy(&peer_map.peer_lsi, peer_lsi, sizeof(struct in6_addr));
+
 	HIP_IFEL(hip_select_source_address(
 			 &peer_map.our_addr, &peer_map.peer_addr),
 		 -1, "Cannot find source address\n");
@@ -2221,49 +2223,6 @@ void hip_init_hadb(void)
      }
 }
 
-unsigned long hip_hadb_hash_file_hits(const void *ptr){
-        HIP_DEBUG("string %s\n",((hip_hosts_entry *)ptr)->hostname);
-	char *fqdn = ((hip_hosts_entry *)ptr)->hostname;
-        uint8_t hash[HIP_AH_SHA_LEN];
-        
-	hip_build_digest(HIP_DIGEST_SHA1, fqdn, strlen(fqdn)+1, hash);
-	return *((unsigned long *)hash);
-}
-
-int hip_hadb_hash_match_file_hits(const void *ptr1, const void *ptr2){
-        return (hip_hadb_hash_file_hits(ptr1) != hip_hadb_hash_file_hits(ptr2));
-}
-
-void hip_hadb_init_db_file_hits(void){
-        hadb_file_hits = hip_ht_init(hip_hadb_hash_file_hits,hip_hadb_hash_match_file_hits);
-}
-
-
-/*Initialize hadb with values contained in /etc/hip/hosts*/
-int hip_init_hadb_hip_host(){
-        int err = 0, i = 0;
-	hip_hosts_entry *element = NULL;
-	hip_list_t *item, *tmp;
-	struct in6_addr address;
-	
-	hip_hadb_init_db_file_hits();
-
-	/* Look up /etc/hip/host */
-        gaih_inet_get_hip_hosts_file_info(hadb_file_hits);
-
-	/* Add the information to the HADB */
-	list_for_each_safe(item, tmp, hadb_file_hits, i){
-	        element = list_entry(item);
-		memset(&address, 0, sizeof(struct in6_addr));
-		hip_find_address(element->hostname, &address);
-		if ((element->lsi).s_addr == 0)
-		        hip_hadb_add_peer_info(&element->hit, &address, NULL);
-		else
-		        hip_hadb_add_peer_info(&element->hit, &address, &element->lsi);		     		
-	}
-	return err;
-} 
-
 hip_xmit_func_set_t *hip_get_xmit_default_func_set() {
 	return &default_xmit_func_set;
 }
@@ -2401,6 +2360,7 @@ void hip_hadb_set_local_controls(hip_ha_t *entry, hip_controls_t mask)
 
 		case HIP_HA_CTRL_NONE:
 			entry->local_controls &= mask;
+		case HIP_HA_CTRL_LOCAL_REQ_UNSUP:
 		case HIP_HA_CTRL_LOCAL_REQ_ESCROW:
 		case HIP_HA_CTRL_LOCAL_REQ_RELAY:
 		case HIP_HA_CTRL_LOCAL_REQ_RVS:
@@ -2422,9 +2382,11 @@ void hip_hadb_set_peer_controls(hip_ha_t *entry, hip_controls_t mask)
 
 		case HIP_HA_CTRL_NONE:
 			entry->peer_controls &= mask;
+		case HIP_HA_CTRL_PEER_UNSUP_CAPABLE:
 		case HIP_HA_CTRL_PEER_ESCROW_CAPABLE:
 		case HIP_HA_CTRL_PEER_RVS_CAPABLE:
 		case HIP_HA_CTRL_PEER_RELAY_CAPABLE:
+		case HIP_HA_CTRL_PEER_GRANTED_UNSUP:
 		case HIP_HA_CTRL_PEER_GRANTED_ESCROW:
 		case HIP_HA_CTRL_PEER_GRANTED_RVS:
 		case HIP_HA_CTRL_PEER_GRANTED_RELAY:
@@ -2732,7 +2694,8 @@ int hip_handle_get_ha_info(hip_ha_t *entry, struct hip_common *msg)
 	
 	int err = 0;
     	struct hip_hadb_user_info_state hid;
-
+	
+	test++;
 	memset(&hid, 0, sizeof(hid));
 	hid.state = entry->state;
     	ipv6_addr_copy(&hid.hit_our, &entry->hit_our);
@@ -2742,6 +2705,9 @@ int hip_handle_get_ha_info(hip_ha_t *entry, struct hip_common *msg)
 	ipv4_addr_copy(&hid.lsi_our, &entry->lsi_our);
 	ipv4_addr_copy(&hid.lsi_peer, &entry->lsi_peer);
 
+	hip_print_debug_info(&hid.ip_our,&hid.ip_peer,&hid.hit_our,&hid.hit_peer,&hid.lsi_peer);
+
+	HIP_DEBUG("test %d\n",test);
 	err = hip_build_param_contents(msg, &hid, HIP_PARAM_HA_INFO,
 				       sizeof(hid));
 	if (err)
@@ -2857,16 +2823,40 @@ struct in_addr hip_generate_peer_lsi()
 	return lsi_prefix;
 }
 
+int hip_host_file_info_exists_lsi(struct in_addr *add){
+        int err = 0, equal = 0, i = 0;
+	hip_lsi_t lsi_aux;
+	List list;
+
+	initlist(&list);
+	
+	/* Look up /etc/hip/host for lsis */
+        gaih_inet_get_hip_hosts_file_lsis(&list);
+
+	while(i < length(&list) && !equal){
+	        err = inet_pton(AF_INET, getitem(&list,i), &lsi_aux);	 
+		if (err)
+		        equal = hip_lsi_are_equal(&lsi_aux, add);
+		i++;
+	}
+
+	destroy(&list);
+
+	return equal;
+}
+
 /**
 * Checks if exists a local or peer lsi that matches with this prefix 
 */
 int lsi_assigned(struct in_addr add)
 {
-	int ret = 0;
-	ret = hip_hidb_exists_lsi(&add);
-	if (!ret)
-		ret = hip_hadb_exists_lsi(&add);
-	return ret;
+	int exist = 0;
+	exist = hip_hidb_exists_lsi(&add);
+	if (!exist)
+		exist = hip_hadb_exists_lsi(&add);
+	if (!exist)
+	        exist = hip_host_file_info_exists_lsi(&add);
+	return exist;
 }
 
 int hip_hadb_exists_lsi(hip_lsi_t *lsi)

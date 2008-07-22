@@ -88,7 +88,7 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 	switch(type) {
 	case SO_HIP_FW_BEX_DONE:
 	case SO_HIP_FW_UPDATE_DB:
-	        HIP_IFEL(handle_bex_state_update(msg), -1, "hip bex state NOT updated\n");
+	        handle_bex_state_update(msg);
 	        break;
 	case SO_HIP_IPSEC_ADD_SA:
 		HIP_DEBUG("Received add sa request from hipd\n");

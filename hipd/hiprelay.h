@@ -662,25 +662,22 @@ int hip_relay_read_config();
  */ 
 int hip_relay_write_config();
 
-//add by santtu
-
-/****
+/**
  * function for full relay service. from I to R
  *
  */
-
 int hip_relay_forward_I(const hip_common_t *i1,
-		  const in6_addr_t *i1_saddr,
-		  const in6_addr_t *i1_daddr, hip_relrec_t *rec,
-		  const hip_portpair_t *i1_info,
-		  const uint8_t);
-//from R to I
+			const in6_addr_t *i1_saddr,
+			const in6_addr_t *i1_daddr, hip_relrec_t *rec,
+			const hip_portpair_t *i1_info,
+			const uint8_t);
+
 int hip_relay_forward_response(const hip_common_t *r,
-			const uint8_t type_hdr, 
-			const in6_addr_t *r_saddr,
-			const in6_addr_t *r_daddr , 
-			const hip_portpair_t *r_info , 
-			const in6_addr_t *relay_to_addr,
-			const in_port_t relay_to_port);
+			       const uint8_t type_hdr, 
+			       const in6_addr_t *r_saddr,
+			       const in6_addr_t *r_daddr , 
+			       const hip_portpair_t *r_info , 
+			       const in6_addr_t *relay_to_addr,
+			       const in_port_t relay_to_port);
 
 #endif /* HIP_HIPRELAY_H */

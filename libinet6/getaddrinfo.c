@@ -301,7 +301,7 @@ gaih_local (const char *name, const struct gaih_service *service,
 	      sizeof (sunp->sun_path))
 	    return GAIH_OKIFUNSPEC | -EAI_SERVICE;
 
-	  __stpcpy (__stpcpy (sunp->sun_path, P_tmpdir "/"), service->name);
+	  stpcpy (stpcpy (sunp->sun_path, P_tmpdir "/"), service->name);
 	}
     }
   else
@@ -1730,18 +1730,15 @@ void freeaddrinfo (struct addrinfo *ai)
 	}
 }
 
-int gaih_inet_get_hip_hosts_file_info(hip_db_struct_t *db)
-{        
-	int c, ret, is_lsi, is_hit;
-	int lineno = 0, i = 0, err = 0, add_new = 0;
-	hip_hit_t hit, tmp_hit, tmp_addr;
+/*
+ * Returns a list with the LSIs present in the file /etc/hip/hosts
+*/
+int gaih_inet_get_hip_hosts_file_lsis(List *list_lsis){
+	int i = 0, err = 0;
 	hip_lsi_t lsi;
-        char *fqdn_str = NULL;
 	char line[500];
-	hip_common_t *msg = NULL;
 	FILE *fp = NULL;				
 	List list;
-	hip_hosts_entry *new_el = NULL, aux;
 
         fp = fopen(_PATH_HIP_HOSTS, "r");
 	if(fp == NULL)
@@ -1752,13 +1749,11 @@ int gaih_inet_get_hip_hosts_file_info(hip_db_struct_t *db)
 	
 	/* Loop through all lines in the file. */
         while (fp && getwithoutnewline(line, 500, fp) != NULL) {		
-	        c = ret = is_lsi = is_hit = 0;
 		
-		/* Keep track of line number for debugging purposes. */
-		lineno++;
 		/* Skip empty and single character lines. */
                 if(strlen(line) <= 1) 
 			continue;
+
 		/* Init a list for the substrings of the line. Note that this is
 		   done for every line. Break the line into substrings next. */
                 initlist(&list);
@@ -1771,45 +1766,13 @@ int gaih_inet_get_hip_hosts_file_info(hip_db_struct_t *db)
 		   aliases that the hosts has. */
 
 		for (i = 0; i < length(&list); i++) {
-		        err = inet_pton(AF_INET6, getitem(&list,i), &hit);  
-                        if (err == 0){
-				err = inet_pton(AF_INET, getitem(&list,i), &lsi);				
-				if (err && IS_LSI32(lsi.s_addr)){
-				        is_lsi = 1;
-					break;
-				}
-			}		       
-			if (err != 1)
-			        fqdn_str = getitem(&list,i); 
-			else
-			        is_hit = 1;
-                }
-
-		// Comment line
-		if(strstr(fqdn_str,"#"))
-		        continue;
-		
-		//Search entry in the db
-		memset(&aux, 0, sizeof(hip_hosts_entry));
-		aux.hostname = malloc(strlen(fqdn_str)+1);
-		strcpy(aux.hostname, fqdn_str);	
-		new_el = (hip_hosts_entry *) hip_ht_find(db, &aux);
-		
-		if (!new_el){
-		        // Not exist : Create new entry
-		  	HIP_IFEL(!(new_el = (hip_hosts_entry *) HIP_MALLOC(sizeof(hip_hosts_entry),0)),
-				 -ENOMEM,"No memory available\n");
-			memset(new_el, 0, sizeof(hip_hosts_entry));
-			new_el->hostname = malloc(strlen(fqdn_str)+1);
-			strcpy(new_el->hostname, fqdn_str);		  
+		        err = inet_pton(AF_INET, getitem(&list,i), &lsi);				
+			if (err && IS_LSI32(lsi.s_addr)){
+			        insert(list_lsis, getitem(&list,i));
+				break;
+			}
 		}
-		// Exist: modify content
-		if (is_lsi)
-		        ipv4_addr_copy(&new_el->lsi, &lsi);
-		else if (is_hit)
-		        ipv6_addr_copy(&new_el->hit, &hit);
 
-		hip_ht_add(db, new_el);
 		destroy(&list);
         } // end of while
 
@@ -1817,4 +1780,5 @@ int gaih_inet_get_hip_hosts_file_info(hip_db_struct_t *db)
 	if (fp)                                                               
                 fclose(fp);
 	return err;		
+
 }
