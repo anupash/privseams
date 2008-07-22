@@ -2166,13 +2166,13 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 			struct hip_locator_info_addr_item *spi_addr_item = 
 				(struct hip_locator_info_addr_item *) spi_in->addresses + j;
 			if(ipv6_addr_cmp(&spi_addr_item->address, iter_addr)) {
-				loc_addr_item->state = spi_addr_item->state;
+				//loc_addr_item->state = spi_addr_item->state;
 				addr_exists = 1;
 			}
 		}	
-		if(!addr_exists) {
-			loc_addr_item->state = ADDR_STATE_WAITING_ECHO_REQ;
-		}
+		//if(!addr_exists) {
+			//loc_addr_item->state = ADDR_STATE_WAITING_ECHO_REQ;
+		//}
 	}
  out_err:
 	return err;

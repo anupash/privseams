@@ -910,7 +910,11 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 		HIP_DEBUG("peer list item address: %d ",peer_addr_list_item);
 		
 		HIP_DEBUG_HIT("add Ice remote address:", &peer_addr_list_item->address);
-	//	hip_print_lsi("add Ice remote address 1: ", ((int *) (&peer_addr_list_item->address)+3));
+		/*
+		  // removed, seg faults, why does it point to +3 -samu
+		hip_print_lsi("add Ice remote address 1: ", 
+		((int *) (&peer_addr_list_item->address)+3));
+		*/
 		HIP_DEBUG("add Ice remote port: %d \n", peer_addr_list_item->port);
 		if (ipv6_addr_is_hit(&peer_addr_list_item->address))
 		    continue;

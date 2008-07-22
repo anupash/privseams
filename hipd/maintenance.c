@@ -708,15 +708,15 @@ int hip_firewall_set_bex_data(int action, hip_ha_t *entry, struct in6_addr *hit_
 	hip_msg_init(msg);
 	HIP_IFEL(hip_build_user_hdr(msg, action, 0), -1, 
                  "Build hdr failed\n");
-		            
+	            
         HIP_IFEL(hip_build_param_contents(msg, (void *)hit_s, HIP_PARAM_HIT,
                  sizeof(struct in6_addr)), -1, "build param contents failed\n");
 	HIP_IFEL(hip_build_param_contents(msg, (void *)hit_r, HIP_PARAM_HIT,
                  sizeof(struct in6_addr)), -1, "build param contents failed\n");
 
-	
+
 	socklen_t alen = sizeof(hip_firewall_addr);
-	
+
 	bzero(&hip_firewall_addr, alen);
 	hip_firewall_addr.sin6_family = AF_INET6;
 	hip_firewall_addr.sin6_port = htons(HIP_FIREWALL_PORT);
@@ -726,14 +726,17 @@ int hip_firewall_set_bex_data(int action, hip_ha_t *entry, struct in6_addr *hit_
 	        n = sendto(hip_firewall_sock_lsi_fd, msg, hip_get_msg_total_len(msg),
 			   0, &hip_firewall_addr, alen);
 	}
-                      
+
 	if (n < 0)
 	  HIP_DEBUG("Send to firewall failed str errno %s\n",strerror(errno));
 	HIP_IFEL( n < 0, -1, "Sendto firewall failed.\n");   
-	          
+
 	HIP_DEBUG("Sendto firewall OK.\n");
 
 out_err:
+	if (msg)
+		free(msg);
+
 	return err;
 }
 

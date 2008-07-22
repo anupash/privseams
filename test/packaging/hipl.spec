@@ -9,7 +9,7 @@ Vendor: InfraHIP
 License: GPL
 Group: System Environment/Kernel
 Requires: openssl gtk2 libxml2 glib2 iptables-devel
-BuildRequires: openssl-devel gtk2-devel libxml2-devel glib2-devel iptables-devel
+BuildRequires: openssl-devel gtk2-devel libxml2-devel glib2-devel iptables-devel xmlto libtool libcap-devel 
 ExclusiveOS: linux
 BuildRoot: %{_tmppath}/%{name}-%{version}-root
 Prefix: /usr
@@ -27,9 +27,19 @@ other related tools and test software.
 %prep
 %setup
 
+#added by CentOS
+%ifarch x86_64 ppc64 sparc64 ia64
+%{__perl} -p -i -e 's,/usr/lib/libipq.a,/usr/lib64/libipq.a,g' firewall/Makefile.in
+%endif
+
+%{__perl} -p -i -e 's,/usr/share/pixmaps,\$(DESTDIR)/usr/share/pixmaps,g' libhipgui/Makefile.in
+#end CentOS changes
+
 # Note: in subsequent releases me may want to use --disable-debugging
+# TBD: The pjproject needs to glued in better.
 %build
-%configure
+./autogen.sh --target=`uname -m`-redhat-linux-gnu
+#%configure
 make -C doc all
 
 # Currently we are not going to install all includes and test software.
@@ -90,16 +100,24 @@ Group: System Environment/Kernel
 
 %install
 rm -rf %{buildroot}
-install -d %{buildroot}/%{prefix}/bin
-install -d %{buildroot}/%{prefix}/sbin
-install -d %{buildroot}/%{prefix}/lib
+
+#added by CentOS
+install -d %{buildroot}%{prefix}/share/pixmaps
+#end CentOS add
+
+# XX FIXME: add more python stuff from tools directory
+
+install -d %{buildroot}%{prefix}/bin
+install -d %{buildroot}%{prefix}/sbin
+install -d %{buildroot}%{prefix}/lib
 install -d %{buildroot}/etc/rc.d/init.d
 install -d %{buildroot}/doc
 make DESTDIR=%{buildroot} install
+install -m 700 test/packaging/rh-init.d-hipfw %{buildroot}/etc/rc.d/init.d/hipfw
 install -m 700 test/packaging/rh-init.d-hipd %{buildroot}/etc/rc.d/init.d/hipd
 install -m 644 doc/HOWTO.txt %{buildroot}/doc
-install -d %{buildroot}/%{python_sitelib}/DNS
-install -t %{buildroot}/%{python_sitelib}/DNS tools/DNS/*py
+install -d %{buildroot}%{python_sitelib}/DNS
+install -t %{buildroot}%{python_sitelib}/DNS tools/DNS/*py
 
 %post lib
 /sbin/ldconfig 
@@ -109,9 +127,27 @@ install -t %{buildroot}/%{python_sitelib}/DNS tools/DNS/*py
 /sbin/chkconfig --level 2 hipd on
 /sbin/service hipd start
 
+#%post
+#/sbin/chkconfig --add hipfw
+#/sbin/chkconfig --level 2 hipfw on
+#/sbin/service hipfw start
+#`/usr/sbin/hipfw -bk`
+
+%post firewall
+/sbin/chkconfig --add hipfw
+/sbin/chkconfig --level 2 hipfw on
+/sbin/service hipfw start
+#/etc/rc.d/init.d/hipfw start
+#/usr/sbin/hipfw -bk`
+
 %preun daemon
 /sbin/service hipd stop
 /sbin/chkconfig --del hipd
+
+%preun firewall
+/sbin/service hipfw stop
+/sbin/chkconfig --del hipfw
+#/etc/rc.d/init.d/hipfw stop
 
 %clean
 rm -rf %{buildroot}
@@ -164,11 +200,19 @@ rm -rf %{buildroot}
 
 %files firewall
 %{prefix}/sbin/hipfw
+%config /etc/rc.d/init.d/hipfw
 
 %files doc
 %doc doc/HOWTO.txt doc/howto-html
 
 %changelog
+* Mon Jul 21 2008 Miika Komu <miika@iki.fi>
+- Rpmbuild fixes for Fedora 8 build
+* Thu Jul 17 2008 Johnny Hughes <johnny@centos.org>
+- added two perl searches and installed one directory in the spec file
+- added libtool, libcap-devel and xmlto to BuildRequires 
+* Thu May 29 2008 Juha Jylhakoski <juha.jylhakoski@hiit.fi>
+- Split hipl.spec was split to different packages
 * Tue May 9 2006 Miika Komu <miika@iki.fi>
 - init.d script, buildroot
 * Mon May 6 2006 Miika Komu <miika@iki.fi>
