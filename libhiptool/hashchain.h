@@ -3,7 +3,8 @@
 *  packet signatures
 *
 * Description:
-*
+* In the current version hash-chains created with any hash-function, which
+* output is <= 20 bytes are supported.
 *
 * Authors:
 *   - Tobias Heer <heer@tobobox.de> 2006
@@ -16,14 +17,23 @@
 #include <sys/types.h>
 #include <openssl/sha.h>
 
-/* value used by Tobias Heer */
-//#define HCHAIN_ELEMENT_LENGTH 20 // (in bytes)
 
-// modify this when changing the hash function
+
+/* Hash-functions with longer output than SHA1 are easily supported
+ * by increasing this. Right now there is no need to increase the buffer.
+ *
+ * @note this does not influence the amount of the memory used for a
+ *       hash-chain
+ * @note hash-lengths of hash-functions used right now when
+ *       creating hash-chains:
+ *       MD5_DIGEST_LENGTH == 16
+ *       SHA_DIGEST_LENGTH == 20
+ */
 #define MAX_HASH_LENGTH SHA_DIGEST_LENGTH
 
-typedef struct hash_chain hash_chain_t;
+
 typedef struct hash_chain_element hash_chain_element_t;
+typedef struct hash_chain hash_chain_t;
 
 struct hash_chain_element
 {
@@ -33,17 +43,25 @@ struct hash_chain_element
 
 struct hash_chain
 {
+	/* pointer to the hash-function used to create and verify the hchain
+	 *
+	 * @note params: (in_buffer, in_length, out_buffer)
+	 * @note out_buffer should be size MAX_HASH_LENGTH */
+	unsigned char * (*hash_function)(const unsigned char *, unsigned long,
+			unsigned char *);
+	int hash_length;	/* length of the hashes, of which the hchain consist */
 	int hchain_length;	/* number of initial elements in the hash-chain */
-	int remaining;	/* remaining elements int the hash-chain */
+	int remaining;		/* remaining elements int the hash-chain */
 	hash_chain_element_t *current_element;
-	hash_chain_element_t *source_element; /* seed - first element */
-	hash_chain_element_t *anchor_element; /* anchor - last element */
+	hash_chain_element_t *source_element;	/* seed - first element */
+	hash_chain_element_t *anchor_element;	/* anchor - last element */
 };
 
 void hchain_print(const hash_chain_t * hash_chain, int hash_length);
 
 /* check if a hash is part of a hash chain */
 int hchain_verify(const unsigned char * current_hash, const unsigned char * last_hash,
+		unsigned char * (*hash_function)(const unsigned char *, unsigned long, unsigned char *),
 		int hash_length, int tolerance);
 
 /* create a new hash chain on the heap */

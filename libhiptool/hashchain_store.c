@@ -24,6 +24,24 @@
 #include "misc.h"
 #include "linkedlist.h"
 
+
+hchain_store_t hchain_store;
+
+int hchain_store_init()
+{
+	hchain_store.num_functions = 0;
+	...
+}
+
+int hchain_register_function();
+
+
+
+
+
+
+
+
 #define hchain_store_lock() {}
 #define hchain_store_unlock() {}
 

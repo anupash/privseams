@@ -20,7 +20,7 @@
 #define HCHAIN_LOCK(lock_id)
 #define HCHAIN_UNLOCK(lock_id)
 
-void hchain_print(const hash_chain_t * hash_chain, int hash_length)
+void hchain_print(const hash_chain_t * hash_chain)
 {
 	hash_chain_element_t *current_element = NULL;
 	int i;
@@ -32,7 +32,7 @@ void hchain_print(const hash_chain_t * hash_chain, int hash_length)
 		if(hash_chain->current_element != NULL)
 		{
 			HIP_HEXDUMP("currrent element: ", hash_chain->current_element->hash,
-					hash_length);
+					hash_chain->hash_length);
 		} else
 		{
 			HIP_DEBUG(" -- hash chain not in use -- \n");
@@ -53,7 +53,7 @@ void hchain_print(const hash_chain_t * hash_chain, int hash_length)
 				HIP_DEBUG("(-) element %i:\n", i + 1);
 			}
 
-			HIP_HEXDUMP("\t", current_element->hash, hash_length);
+			HIP_HEXDUMP("\t", current_element->hash, hash_chain->hash_length);
 		}
 	} else
 	{
@@ -69,7 +69,9 @@ void hchain_print(const hash_chain_t * hash_chain, int hash_length)
  *             0 means that only sequential hash values are considered as valid.
  * @return: returns 1 if the hash authentication was successfull, 0 otherwise
  */
-int hchain_verify(const unsigned char *current_hash, const unsigned char *last_hash,
+// TODO modify
+int hchain_verify(const unsigned char * current_hash, const unsigned char * last_hash,
+		unsigned char * (*hash_function)(const unsigned char *, unsigned long, unsigned char *),
 		int hash_length, int tolerance)
 {
 	// this will store the intermediate hash calculation results
@@ -132,7 +134,10 @@ int hchain_verify(const unsigned char *current_hash, const unsigned char *last_h
  * @length: number of hash entries
  * @return: returns a pointer to the newly created hash_chain
  */
-hash_chain_t *hchain_create(int hchain_length, int hash_length)
+// TODO modify
+hash_chain_t *hchain_create(int hchain_length,
+		unsigned char * (*hash_function)(const unsigned char *, unsigned long, unsigned char *),
+		int hash_length)
 {
 	hash_chain_t *return_hchain = NULL;
 	hash_chain_element_t *last_element = NULL, *current_element = NULL;
@@ -235,7 +240,7 @@ hash_chain_t *hchain_create(int hchain_length, int hash_length)
  * @hash_chain: the hash chain which has to be popped
  * @return: pointer to the current hash_chain element
  */
-unsigned char * hchain_pop(hash_chain_t * hash_chain, int hash_length)
+unsigned char * hchain_pop(hash_chain_t * hash_chain)
 {
 	int err = 0;
 	hash_chain_element_t *tmp_element = NULL;
@@ -261,7 +266,7 @@ unsigned char * hchain_pop(hash_chain_t * hash_chain, int hash_length)
 
 	popped_hash = tmp_element->hash;
 
-	HIP_HEXDUMP("Popping hash chain element: ", popped_hash, hash_length);
+	HIP_HEXDUMP("Popping hash chain element: ", popped_hash, hash_chain->hash_length);
 
 	// hchain update
 	hash_chain->current_element = tmp_element;
@@ -283,7 +288,7 @@ unsigned char * hchain_pop(hash_chain_t * hash_chain, int hash_length)
  * @hash_chain: the hash chain
  * @return: next element of the hash chain or NULL if the hash chain is depleted.
  */
-unsigned char * hchain_next(const hash_chain_t *hash_chain, int hash_length)
+unsigned char * hchain_next(const hash_chain_t *hash_chain)
 {
 	unsigned char *next_hash = NULL;
 	int err = 0;
@@ -308,6 +313,8 @@ unsigned char * hchain_next(const hash_chain_t *hash_chain, int hash_length)
 		next_hash = hash_chain->anchor_element->hash;
 	}
 
+	HIP_HEXDUMP("Next hash chain element: ", next_hash, hash_chain->hash_length);
+
   out_err:
 	if (err)
 		next_hash = NULL;
@@ -320,7 +327,7 @@ unsigned char * hchain_next(const hash_chain_t *hash_chain, int hash_length)
  * @hash_chain: the hash chain
  * @return: current element of the hash chain or NULL if the hash chain is depleted.
  */
-unsigned char * hchain_current(const hash_chain_t *hash_chain, int hash_length)
+unsigned char * hchain_current(const hash_chain_t *hash_chain)
 {
 	unsigned char *current_hash = NULL;
 	int err = 0;
@@ -329,6 +336,8 @@ unsigned char * hchain_current(const hash_chain_t *hash_chain, int hash_length)
 	HIP_ASSERT(hash_chain->current_element != NULL);
 
 	current_hash = hash_chain->current_element->hash;
+
+	HIP_HEXDUMP("Current hash chain element: ", current_hash, hash_chain->hash_length);
 
   out_err:
 	if (err)
@@ -360,6 +369,8 @@ int hchain_destruct(hash_chain_t *hash_chain)
 		free(hash_chain);
 		hash_chain = NULL;
 	}
+
+	HIP_DEBUG("hash-chain destructed\n");
 
   out_err:
 	return err;
