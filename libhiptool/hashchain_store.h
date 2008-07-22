@@ -64,10 +64,6 @@ typedef struct hchain_store
 
 typedef struct hchain_shelf
 {
-	/* pointer to the hash-function used to create the hchains */
-	return_val (*func_ptr)(params);
-	/* hash length of the hashes, of which the hchains consist */
-	int hash_length;
 	/* number of different hchain lengths currently used for this
 	 * (hash-function, hash_length)-combination */
 	int num_hchain_length;

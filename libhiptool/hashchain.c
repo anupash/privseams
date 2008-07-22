@@ -81,12 +81,13 @@ int hchain_verify(const unsigned char * current_hash, const unsigned char * last
 	unsigned char *hash_value = NULL;
 	int err = 0, i;
 
-	HIP_ASSERT(hash_length >= 0 && tolerance >= 0);
 	HIP_ASSERT(current_hash != NULL && last_hash != NULL);
+	HIP_ASSERT(hash_function != NULL);
+	HIP_ASSERT(hash_length > 0 && tolerance => 0);
 
-	HIP_IFEL(!(buffer = (unsigned char*)malloc(hash_length)), -1,
+	HIP_IFEL(!(buffer = (unsigned char *)malloc(hash_length)), -1,
 			"failed to allocate memory\n");
-	HIP_IFEL(!(hash_value = (unsigned char*)malloc(MAX_HASH_LENGTH)), -1,
+	HIP_IFEL(!(hash_value = (unsigned char *)malloc(MAX_HASH_LENGTH)), -1,
 			"failed to allocate memory\n");
 
 	// init buffer with the hash we want to verify
@@ -96,12 +97,11 @@ int hchain_verify(const unsigned char * current_hash, const unsigned char * last
 	HIP_DEBUG("\t<->\n");
 	HIP_HEXDUMP("last known hash: ", last_hash, hash_length);
 
-	for(i = 0; i < tolerance - 1; i++)
+	for(i = 1; i < tolerance; i++)
 	{
-		HIP_DEBUG("Calculating round %i:\n", i + 1);
+		HIP_DEBUG("Calculating round %i:\n", i);
 
-		// (input, input_length, output) -> output_length == 20
-		SHA1(buffer, hash_length, hash_value);
+		hash_function(buffer, hash_length, hash_value);
 		memcpy(buffer, hash_value, hash_length);
 
 		HIP_HEXDUMP("comparing buffer: ", buffer, hash_length);
@@ -134,23 +134,25 @@ int hchain_verify(const unsigned char * current_hash, const unsigned char * last
  * @length: number of hash entries
  * @return: returns a pointer to the newly created hash_chain
  */
-// TODO modify
-hash_chain_t *hchain_create(int hchain_length,
-		unsigned char * (*hash_function)(const unsigned char *, unsigned long, unsigned char *),
-		int hash_length)
+hash_chain_t * hchain_create(unsigned char *
+		(*hash_function)(const unsigned char *, unsigned long, unsigned char *),
+		int hash_length, int hchain_length)
 {
 	hash_chain_t *return_hchain = NULL;
 	hash_chain_element_t *last_element = NULL, *current_element = NULL;
 	unsigned char *hash_value = NULL;
 	int i, err = 0;
 
+	HIP_ASSERT(hash_function != NULL);
 	// make sure that the hash we want to use is smaller than the max output
 	HIP_ASSERT(hash_length > 0 && hash_length <= MAX_HASH_LENGTH);
+	HIP_ASSERT(hchain_length > 0);
 
 	/* the hash function output might be longer than needed
 	 * allocate enough memory for the hash function output */
 	HIP_IFEL(!(hash_value = (unsigned char *)malloc(MAX_HASH_LENGTH)), -1,
 			"failed to allocate memory\n");
+
 	// allocate memory for a new hash chain and set members to 0/NULL
 	HIP_IFEL(!(return_hchain = (hash_chain_t *)malloc(sizeof(hash_chain_t))), -1,
 			"failed to allocate memory\n");
@@ -158,6 +160,9 @@ hash_chain_t *hchain_create(int hchain_length,
 
 	for(i = 0; i < hchain_length; i++)
 	{
+		// reuse memory for hash-value buffer
+		memset(hash_value, 0, MAX_HASH_LENGTH);
+
 		// allocate memory for a new element
 		HIP_IFEL(!(current_element = (hash_chain_element_t *)
 				malloc(sizeof(hash_chain_element_t))), -1, "failed to allocate memory\n");
@@ -167,7 +172,7 @@ hash_chain_t *hchain_create(int hchain_length,
 		if (last_element != NULL)
 		{
 			// (input, input_length, output) -> output_length == 20
-			HIP_IFEL(!(SHA1(last_element->hash, hash_length, hash_value)), -1,
+			HIP_IFEL(!(hash_function(last_element->hash, hash_length, hash_value)), -1,
 					"failed to calculate hash\n");
 			// only consider DEFAULT_HASH_LENGTH highest bytes
 			memcpy(current_element->hash, hash_value, hash_length);
@@ -186,6 +191,8 @@ hash_chain_t *hchain_create(int hchain_length,
 		last_element = current_element;
 	}
 
+	return_hchain->hash_function = hash_function;
+	return_hchain->hash_length = hash_length;
 	return_hchain->hchain_length = hchain_length;
 	return_hchain->remaining = hchain_length;
 	// hash_chain->source_element set above
@@ -196,7 +203,7 @@ hash_chain_t *hchain_create(int hchain_length,
 			hash_length);
 	//hchain_print(return_hchain, hash_length);
 	HIP_IFEL(!(hchain_verify(return_hchain->source_element->hash, return_hchain->anchor_element->hash,
-			hash_length, hchain_length)), -1, "failed to verify the hchain\n");
+			hash_function, hash_length, hchain_length)), -1, "failed to verify the hchain\n");
 	HIP_DEBUG("hchain successfully verfied\n");
 
   out_err:
@@ -205,7 +212,7 @@ hash_chain_t *hchain_create(int hchain_length,
     	// try to free all that's there
     	if (return_hchain->anchor_element)
     	{
-    		// hchain was created
+    		// hchain was fully created
     		hchain_destruct(return_hchain);
     	} else
     	{
@@ -227,9 +234,6 @@ hash_chain_t *hchain_create(int hchain_length,
     // normal clean-up
     if (hash_value)
     	free(hash_value);
-  	hash_value = NULL;
-  	last_element = NULL;
-  	current_element = NULL;
 
 	return return_hchain;
 }
