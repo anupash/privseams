@@ -69,10 +69,8 @@ void hchain_print(const hash_chain_t * hash_chain)
  *             0 means that only sequential hash values are considered as valid.
  * @return: returns 1 if the hash authentication was successfull, 0 otherwise
  */
-// TODO modify
 int hchain_verify(const unsigned char * current_hash, const unsigned char * last_hash,
-		unsigned char * (*hash_function)(const unsigned char *, unsigned long, unsigned char *),
-		int hash_length, int tolerance)
+		hash_function_t hash_function, int hash_length, int tolerance)
 {
 	// this will store the intermediate hash calculation results
 	unsigned char *buffer = NULL;
@@ -134,9 +132,8 @@ int hchain_verify(const unsigned char * current_hash, const unsigned char * last
  * @length: number of hash entries
  * @return: returns a pointer to the newly created hash_chain
  */
-hash_chain_t * hchain_create(unsigned char *
-		(*hash_function)(const unsigned char *, unsigned long, unsigned char *),
-		int hash_length, int hchain_length)
+hash_chain_t * hchain_create(hash_function_t hash_function, int hash_length,
+		int hchain_length)
 {
 	hash_chain_t *return_hchain = NULL;
 	hash_chain_element_t *last_element = NULL, *current_element = NULL;
@@ -355,7 +352,7 @@ unsigned char * hchain_current(const hash_chain_t *hash_chain)
  * @hash_chain: the hash chain which has to be removed
  * @return: 0 in case of success
  */
-int hchain_destruct(hash_chain_t *hash_chain)
+int hchain_free(hash_chain_t *hash_chain)
 {
 	hash_chain_element_t *current_element = NULL;
 	int err = 0;
@@ -371,7 +368,6 @@ int hchain_destruct(hash_chain_t *hash_chain)
 		}
 
 		free(hash_chain);
-		hash_chain = NULL;
 	}
 
 	HIP_DEBUG("hash-chain destructed\n");

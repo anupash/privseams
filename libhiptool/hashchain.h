@@ -33,6 +33,9 @@
 #define MAX_HASH_LENGTH SHA_DIGEST_LENGTH
 
 
+typedef unsigned char * (*hash_function_t)(const unsigned char *, unsigned long,
+		unsigned char *);
+
 typedef struct hash_chain_element hash_chain_element_t;
 typedef struct hash_chain hash_chain_t;
 
@@ -48,8 +51,7 @@ struct hash_chain
 	 *
 	 * @note params: (in_buffer, in_length, out_buffer)
 	 * @note out_buffer should be size MAX_HASH_LENGTH */
-	unsigned char * (*hash_function)(const unsigned char *, unsigned long,
-			unsigned char *);
+	hash_function_t hash_function;
 	int hash_length;	/* length of the hashes, of which the hchain consist */
 	int hchain_length;	/* number of initial elements in the hash-chain */
 	int remaining;		/* remaining elements int the hash-chain */
@@ -62,13 +64,11 @@ void hchain_print(const hash_chain_t * hash_chain);
 
 /* check if a hash is part of a hash chain */
 int hchain_verify(const unsigned char * current_hash, const unsigned char * last_hash,
-		unsigned char * (*hash_function)(const unsigned char *, unsigned long, unsigned char *),
-		int hash_length, int tolerance);
+		hash_function_t hash_function, int hash_length, int tolerance);
 
 /* create a new hash chain on the heap */
-hash_chain_t * hchain_create(unsigned char *
-		(*hash_function)(const unsigned char *, unsigned long, unsigned char *),
-		int hash_length, int hchain_length);
+hash_chain_t * hchain_create(hash_function_t hash_function, int hash_length,
+		int hchain_length);
 
 /* remove and return the next element from the hash chain */
 unsigned char * hchain_pop(hash_chain_t * hash_chain);
@@ -80,7 +80,7 @@ unsigned char * hchain_next(const hash_chain_t *hash_chain);
 unsigned char * hchain_current(const hash_chain_t *hash_chain);
 
 /* delete hash chain and free memory */
-int hchain_destruct(hash_chain_t *hash_chain);
+int hchain_free(hash_chain_t *hash_chain);
 
 int hchain_get_num_remaining(const hash_chain_t * hash_chain);
 

@@ -7,13 +7,30 @@
 #define HC_LENGTH_STEP1 10
 #define REMAIN_THRESHOLD 0.2
 
+// this store only contains hchains used when negotiating esp protection in BEX
+hchain_store_t bex_store;
+// this stores hchains used during UPDATE
+hchain_store_t update_store;
+
 int esp_prot_init()
 {
 	int err = 0;
 
 	HIP_DEBUG("intializing the hash-chain stores...\n");
 
-	/***** init the hash-chain store *****/
+	/* init the hash-chain stores */
+	HIP_IFEL(hcstore_init(&bex_store), -1, "failed to initialise the bex_store\n");
+	HIP_IFEL(hcstore_init(&update_store), -1, "failed to initialise the update_store\n");
+
+	/* set up meta-info for each store */
+
+
+	/* fill the stores */
+	HIP_IFEL(hcstore_refill(&bex_store) < 0, -1, "failed to fill the bex_store\n");
+	HIP_IFEL(hcstore_refill(&update_store) < 0, -1, "failed to fill the update_store\n");
+
+
+#if 0
 	int hc_element_lengths[] = {HC_LENGTH_STEP1};
 
 	HIP_IFEL(hip_hchain_store_init(hc_element_lengths, 1), -1,
@@ -38,6 +55,7 @@ int esp_prot_init()
 
 		err = 0;
 	}
+#endif
 
   out_err:
   	return err;

@@ -6,41 +6,431 @@
 *
 *
 * Authors:
-*   - Tobias Heer <heer@tobobox.de> 2006
-* 	- Rene Hummen <rene.hummen@rwth-aachen.de> 2008 (see UPDATE)
-*  * Licence: GNU/GPL
+*   - Tobias Heer <heer@tobobox.de> 2006 (original hash-chain store)
+* 	- Rene Hummen <rene.hummen@rwth-aachen.de> 2008 (extension and
+* 	  complete reimplemtation)
 *
+*  * Licence: GNU/GPL
 */
 
-/* UPDATE: store with offset 0 is a special store with hash-chains
- * only for BEX and is shared with the hipd.
- * it is treated seperately to make sure that firewall and hipd
- * are in sync.
- *
- * the hash length can be specified now. however we only support one
- * single length for all items at the moment */
-
 #include "hashchain_store.h"
-#include "misc.h"
-#include "linkedlist.h"
 
-
-hchain_store_t hchain_store;
-
-int hchain_store_init()
+// sets all hash-chain store members and their dependencies to 0 / NULL
+int hcstore_init(hchain_store_t *hcstore)
 {
-	hchain_store.num_functions = 0;
-	...
+	int err = 0, i, j, g, h;
+
+	HIP_ASSERT(hcstore != NULL);
+
+	hcstore->num_functions = 0;
+
+	for (i = 0; i < MAX_FUNCTIONS; i++)
+	{
+		hcstore->hash_functions[i] = NULL;
+		hcstore->num_hash_length[i] = 0;
+
+		for (j = 0; j < MAX_NUM_HASH_LENGTH; j++)
+		{
+			hcstore->hash_length[i][j] = 0;
+			hcstore->hchain_shelves[i][j].num_hchain_length = 0;
+
+			for (g = 0; g < MAX_NUM_HCHAIN_LENGTH; g++)
+			{
+				hcstore->hchain_shelves[i][j].hchain_length[g] = 0;
+				hcstore->hchain_shelves[i][j].hchain_items[g].num_hchains = 0;
+
+				for (h = 0; h < MAX_HCHAINS_PER_ITEM; h++)
+				{
+					hcstore->hchain_shelves[i][j].hchain_items[g].hchains[h] = NULL;
+				}
+			}
+
+		}
+	}
+
+	HIP_DEBUG("hash-chain store initialized\n");
+
+  out_err:
+	return err;
 }
 
-int hchain_register_function();
+/* >= 0 - function id in store
+ * < 0 - store full
+ */
+int hcstore_register_function(hchain_store_t *hcstore, hash_function_t hash_function)
+{
+	int err = 0, i;
+
+	HIP_ASSERT(hcstore != NULL);
+	HIP_ASSERT(hash_function != NULL);
+
+	// first check that there's still some space left
+	HIP_IFEL(hcstore->num_functions == MAX_FUNCTIONS, -1,
+			"space for function-storage is full\n");
+
+	// also check if the function is already stored
+	for (i = 0; i < hcstore->num_functions; i++)
+	{
+		if (hcstore->hash_functions[i] == hash_function)
+		{
+			HIP_DEBUG("hchain store already contains this function\n");
+
+			err = i;
+			goto out_err;
+		}
+	}
+
+	// store the hash-function
+	err = hcstore->num_functions;
+	hcstore->hash_functions[hcstore->num_functions];
+	hcstore->num_functions++;
+
+	HIP_DEBUG("hash function successfully registered\n");
+
+  out_err:
+	return err;
+}
+
+/* >= 0 - hash_length id in store
+ * < 0 - store full
+ */
+int hcstore_register_hash_length(hchain_store_t *hcstore, int function_id,
+		int hash_length)
+{
+	int err = 0, i;
+
+	HIP_ASSERT(hcstore != NULL);
+	HIP_ASSERT(function_id >= 0 && function_id < hcstore->num_functions);
+	HIP_ASSERT(hash_length > 0);
+
+	// first check that there's still some space left
+	HIP_IFEL(hcstore->num_hash_length[function_id] == MAX_NUM_HASH_LENGTH, -1,
+			"space for hash_length-storage is full\n");
+
+	// also check if the hash length is already stored for this function
+	for (i = 0; i < hcstore->num_hash_length[function_id]; i++)
+	{
+		if (hcstore->hash_length[function_id][i] == hash_length)
+		{
+			HIP_DEBUG("hchain store already contains this hash length\n");
+
+			err = i;
+			goto out_err;
+		}
+	}
+
+	// store the hash length
+	err = hcstore->num_hash_length[function_id];
+	hcstore->hash_length[function_id][hcstore->num_hash_length[function_id]] = hash_length;
+	hcstore->num_hash_length[function_id]++;
+
+	HIP_DEBUG("hash length successfully registered\n");
+
+  out_err:
+	return err;
+}
+
+/* >= 0 - hchain_length id in store
+ * < 0 - store full
+ */
+int hcstore_register_hchain_length(hchain_store_t *hcstore, int function_id,
+		int hash_length_id, int hchain_length)
+{
+	int err = 0, i;
+
+	HIP_ASSERT(hcstore != NULL);
+	HIP_ASSERT(function_id >= 0 && function_id < hcstore->num_functions);
+	HIP_ASSERT(hash_length_id >= 0
+			&& hash_length_id < hcstore->num_hash_length[function_id]);
+	HIP_ASSERT(hchain_length > 0);
+
+	// first check that there's still some space left
+	HIP_IFEL(hcstore->hchain_shelves[function_id][hash_length_id].num_hchain_length
+			== MAX_NUM_HCHAIN_LENGTH, -1, "space for hchain_length-storage is full\n");
+
+	// also check if the hash length is already stored for this function
+	for (i = 0; i < hcstore->hchain_shelves[function_id][hash_length_id].num_hchain_length;
+			i++)
+	{
+		if (hcstore->hchain_shelves[function_id][hash_length_id].hchain_length[i]
+			  == hchain_length)
+		{
+			HIP_DEBUG("hchain store already contains this hchain length\n");
+
+			err = i;
+			goto out_err;
+		}
+	}
+
+	// store the hchain length
+	err = hcstore->hchain_shelves[function_id][hash_length_id].num_hchain_length;
+	hcstore->hchain_shelves[function_id][hash_length_id].hchain_length[hcstore->hchain_shelves[function_id][hash_length_id].num_hchain_length]
+			  = hchain_length;
+	hcstore->hchain_shelves[function_id][hash_length_id].num_hchain_length++;
+
+	HIP_DEBUG("hchain length successfully registered\n");
+
+  out_err:
+	return err;
+}
+
+int hcstore_refill(hchain_store_t *hcstore)
+{
+	int hash_length, hchain_length, err = 0;
+	hash_function_t hash_function = NULL;
+
+	HIP_ASSERT(hcstore != NULL);
+
+	/* go through the store setting up information neccessary for creating a new
+	 * hchain in the respective item */
+	for (i = 0; i < hcstore->num_functions; i++)
+	{
+		hash_function = hcstore->hash_functions[i];
+
+		for (j = 0; j < hcstore->num_hash_length[i]; j++)
+		{
+			hash_length = hcstore->hash_length[i][j];
+
+			for (g = 0; g < hcstore->hchain_shelves[i][j].num_hchain_length; g++)
+			{
+				hchain_length = hcstore->hchain_shelves[i][j].hchain_length[g];
+
+				// how many hchains are missing to fill up the item again
+				create_hchains = MAX_HCHAINS_PER_ITEM
+					- hcstore->hchain_shelves[i][j].hchain_items[g].num_hchains;
+
+				if (create_hchains >= ITEM_THRESHHOLD * MAX_HCHAINS_PER_ITEM)
+				{
+					// count the overall amount of created hchains
+					err += create_hchains;
+
+					for (h = 0; h < create_hchains; h++)
+					{
+						/* hchains are taken from the beginning of the array, so here
+						 * we can safely put the new hchains in the first free slots */
+						HIP_IFEL(!(hcstore->hchain_shelves[i][j].hchain_items[g].hchains[h]
+							 = hchain_create(hash_function, hash_length, hchain_length)),
+							 -1, "failed to create new hchain\n");
+					}
+				}
+			}
+		}
+	}
+
+	HIP_DEBUG("total amount of created hash-chains: %i\n", err);
+
+  out_err:
+	return err;
+}
+
+hash_chain_t * hcstore_get_hchain(hchain_store_t *hcstore, int function_id,
+		int hash_length_id, int hchain_length)
+{
+	int err = 0, item_offset = 0, hchain_offset = 0, i;
+	hash_chain_t *stored_hchain = NULL;
+
+	HIP_ASSERT(hcstore != NULL);
+	HIP_ASSERT(function_id >= 0 && function_id < hcstore->num_functions);
+	HIP_ASSERT(hash_length_id >= 0
+			&& hash_length_id < hcstore->num_hash_length[function_id]);
+	HIP_ASSERT(hchain_length > 0);
+
+	// first find the correct hchain item
+	for (i = 0; i < hcstore->hchain_shelves[function_id][hash_length_id].num_hchain_length;
+			i++)
+	{
+		if (hcstore->hchain_shelves[function_id][hash_length_id].hchain_length[i]
+				== hchain_length)
+		{
+			found = 1;
+			break;
+		}
+	}
+
+	// handle unknow hchain length
+	if (!item_offset)
+	{
+		HIP_DEBUG("hchain length not registered yet: %i\n", hchain_length);
+
+		err = -1;
+		goto out_err;
+	}
+
+	// calculate offset of next hchain with the requested length
+	hchain_offset = MAX_HCHAINS_PER_ITEM
+				- hcstore->hchain_shelves[function_id][hash_length_id].hchain_items[item_offset].num_hchains;
+
+	stored_hchain = hcstore->hchain_shelves[function_id][hash_length_id].hchain_items[item_offset].hchains[hchain_offset];
+
+	// remove this hchain from the store
+	hcstore->hchain_shelves[function_id][hash_length_id].hchain_items[item_offset].hchains[hchain_offset] = NULL;
+
+  out_err:
+	if (err)
+	{
+		if (stored_hchain)
+			hchain_free(stored_hchain);
+
+		stored_hchain = NULL;
+	}
+
+	return stored_hchain;
+}
+
+hash_chain_t * hcstore_get_hchain_by_anchor(hchain_store_t *hcstore, int function_id,
+		int hash_length_id, unsigned char *anchor)
+{
+	hash_chain_t *stored_hchain = NULL;
+	int err = 0, i, j;
+
+	HIP_ASSERT(hcstore != NULL);
+	HIP_ASSERT(function_id >= 0 && function_id < hcstore->num_functions);
+	HIP_ASSERT(hash_length_id >= 0
+			&& hash_length_id < hcstore->num_hash_length[function_id]);
+	HIP_ASSERT(anchor != NULL);
+
+	for (i = 0; i < hcstore->hchain_shelves[function_id][hash_length_id].num_hchain_length;
+			i++)
+	{
+		for (j = 0; j < hcstore->hchain_shelves[function_id][hash_length_id].hchain_items[i].num_hchains;
+				j++)
+		{
+			if (!memcmp(anchor,
+					hcstore->hchain_shelves[function_id][hash_length_id].hchain_items[i].hchains[j]->anchor_element.hash,
+					hash_length))
+			{
+				stored_hchain = hcstore->hchain_shelves[function_id][hash_length_id].hchain_items[i].hchains[j];
+
+				// remove this hchain from the store
+				hcstore->hchain_shelves[function_id][hash_length_id].hchain_items[i].hchains[j] = NULL;
+
+				HIP_ERROR("hash-chain matching the anchor found\n");
+				HIP_HEXDUMP("anchor: ", anchor, hash_length);
+				//hchain_print(stored_hchain);
+
+				goto out_err;
+			}
+		}
+	}
+
+	HIP_ERROR("hash-chain matching the anchor NOT found\n");
+	HIP_HEXDUMP("anchor: ", anchor, hash_length);
+	err = -1;
+
+  out_err:
+	if (err)
+	{
+		if (stored_hchain)
+			hchain_free(stored_hchain);
+
+		stored_hchain = NULL;
+	}
+
+	return stored_hchain;
+}
+
+// this does the same as init but additionally destructs the hchains
+void hcstore_uninit(hchain_store_t *hcstore)
+{
+	int err = 0, i, j, g, h;
+
+	HIP_ASSERT(hcstore != NULL);
+
+	hcstore->num_functions = 0;
+
+	for (i = 0; i < MAX_FUNCTIONS; i++)
+	{
+		hcstore->hash_functions[i] = NULL;
+		hcstore->num_hash_length[i] = 0;
+
+		for (j = 0; j < MAX_NUM_HASH_LENGTH; j++)
+		{
+			hcstore->hash_length[i][j] = 0;
+			hcstore->hchain_shelves[i][j].num_hchain_length = 0;
+
+			for (g = 0; g < MAX_NUM_HCHAIN_LENGTH; g++)
+			{
+				hcstore->hchain_shelves[i][j].hchain_length[g] = 0;
+				hcstore->hchain_shelves[i][j].hchain_items[g].num_hchains = 0;
+
+				for (h = 0; h < MAX_HCHAINS_PER_ITEM; h++)
+				{
+					// free each hchain in the store
+					hchain_free(hcstore->hchain_shelves[i][j].hchain_items[g].hchains[h]);
+					hcstore->hchain_shelves[i][j].hchain_items[g].hchains[h] = NULL;
+				}
+			}
+
+		}
+	}
+
+	HIP_DEBUG("hash-chain store uninitialized\n");
+}
+
+/* this will only consider the first hchain item in each shelf, as only
+ * this should be set up for the store containing the hchains for the BEX */
+struct hip_common *create_anchors_message(hchain_store_t *hcstore)
+{
+	struct hip_common *msg = NULL;
+	hash_chain_t *bex_hchain = NULL;
+	unsigned char *anchor = NULL;
+	int err = 0, i, num_hchains = 0;
+
+	HIP_ASSERT(hcstore != NULL);
+
+	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1,
+		 "alloc memory for adding sa entry\n");
+
+	hip_msg_init(msg);
+
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_IPSEC_UPDATE_ANCHOR_LIST, 0), -1,
+		 "build hdr failed\n");
+
+	// make sure there are some anchors to send
+	num_hchains = hip_ll_get_size(&hip_hchain_storage.hchain_store[0]);
+	if (num_hchains > 0)
+	{
+		HIP_DEBUG("adding anchors to message...\n");
+
+		for (i = 0; i < num_hchains; i++)
+		{
+			HIP_IFEL(!(bex_hchain = (hash_chain_t *)
+					hip_ll_get(&hip_hchain_storage.hchain_store[0], i)), -1,
+					"failed to get first hchain from bex store\n");
+
+			//hchain_print(bex_hchain, hash_length);
+
+			anchor = bex_hchain->anchor_element->hash;
+			HIP_HEXDUMP("anchor: ", anchor, hash_length);
+
+			HIP_IFEL(hip_build_param_contents(msg, (void *)anchor,
+					HIP_PARAM_HCHAIN_ANCHOR, hash_length),
+					-1, "build param contents failed\n");
+		}
+	} else
+	{
+		HIP_ERROR("bex store anchor message issued, but no anchors\n");
+
+		err = 1;
+		goto out_err;
+	}
+
+  out_err:
+  	if (err)
+  	{
+  		free(msg);
+  		msg = NULL;
+  	}
+
+  	return msg;
+}
 
 
 
 
 
 
-
+#if 0
 
 #define hchain_store_lock() {}
 #define hchain_store_unlock() {}
@@ -425,56 +815,4 @@ int hip_hchain_store_remaining(int hchain_length)
 	return err;
 }
 
-struct hip_common *create_bexstore_anchors_message(int hash_length)
-{
-	struct hip_common *msg = NULL;
-	hash_chain_t *bex_hchain = NULL;
-	unsigned char *anchor = NULL;
-	int err = 0, i, num_hchains = 0;
-
-	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1,
-		 "alloc memory for adding sa entry\n");
-
-	hip_msg_init(msg);
-
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_IPSEC_UPDATE_ANCHOR_LIST, 0), -1,
-		 "build hdr failed\n");
-
-	// make sure there are some anchors to send
-	num_hchains = hip_ll_get_size(&hip_hchain_storage.hchain_store[0]);
-	if (num_hchains > 0)
-	{
-		HIP_DEBUG("adding anchors to message...\n");
-
-		for (i = 0; i < num_hchains; i++)
-		{
-			HIP_IFEL(!(bex_hchain = (hash_chain_t *)
-					hip_ll_get(&hip_hchain_storage.hchain_store[0], i)), -1,
-					"failed to get first hchain from bex store\n");
-
-			//hchain_print(bex_hchain, hash_length);
-
-			anchor = bex_hchain->anchor_element->hash;
-			HIP_HEXDUMP("anchor: ", anchor, hash_length);
-
-			HIP_IFEL(hip_build_param_contents(msg, (void *)anchor,
-					HIP_PARAM_HCHAIN_ANCHOR, hash_length),
-					-1, "build param contents failed\n");
-		}
-	} else
-	{
-		HIP_ERROR("bex store anchor message issued, but no anchors\n");
-
-		err = 1;
-		goto out_err;
-	}
-
-  out_err:
-  	if (err)
-  	{
-  		free(msg);
-  		msg = NULL;
-  	}
-
-  	return msg;
-}
+#endif
