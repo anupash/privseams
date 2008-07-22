@@ -131,7 +131,9 @@ int hipd_init(int flush_ipsec, int killold)
 	hip_init_hostid_db(NULL);
 
 	hip_set_os_dep_variables();
-
+#ifdef CONFIG_HIP_DEBUG
+	hip_print_sysinfo();
+#endif
 	hip_probe_kernel_modules();
 
 	/* Register signal handlers */
@@ -821,3 +823,56 @@ out_err:
 	if (algo == HIP_HI_RSA) return (tmp);
 	return NULL;
 }
+
+#ifdef CONFIG_HIP_DEBUG
+void hip_print_sysinfo()
+{
+	FILE *fp = NULL;
+	char str[256];
+
+	fp = fopen("/etc/debian_version", "r");
+	if(!fp)
+		fp = fopen("/etc/redhat-release", "r");
+
+	if(fp) {
+
+		while(fgets(str, sizeof(str), fp)) {
+			HIP_DEBUG("version=%s", str);
+		}
+		fclose(fp);
+		fp = NULL;
+
+	}
+
+	fp = fopen("/proc/cpuinfo", "r");
+	if(fp) {
+
+		HIP_DEBUG("Printing /proc/cpuinfo\n");
+		while(fgets(str, sizeof(str), fp)) {
+			HIP_DEBUG(str);
+		}
+		fclose(fp);
+		fp = NULL;
+
+	} else {
+		HIP_ERROR("Failed to open file /proc/cpuinfo\n");
+	}
+
+	system("lsmod > /etc/hip/.lsmodout");
+	fp = fopen("/etc/hip/.lsmodout", "r");
+	if(fp) {
+
+		HIP_DEBUG("Printing lsmod output\n");
+		while(fgets(str, sizeof(str), fp)) {
+			HIP_DEBUG(str);
+		}
+		fclose(fp);
+
+	} else {
+		HIP_ERROR("Failed to open temp file /etc/hip/.lsmodout\n");
+	}
+
+	if(unlink("/etc/hip/.lsmodout"))
+		HIP_ERROR("Failed to delete temp file /etc/hip/.lsmodout\n");
+}
+#endif

@@ -189,7 +189,7 @@ int exists_address_in_list(struct sockaddr *addr, int ifindex)
 
 void add_address_to_list(struct sockaddr *addr, int ifindex)
 {
-	struct netdev_address *n, *aux;
+	struct netdev_address *n;//, *aux;
         unsigned char tmp_secret[40];
         int err_rand = 0;
 
@@ -201,14 +201,14 @@ void add_address_to_list(struct sockaddr *addr, int ifindex)
 		HIP_DEBUG("Unknown family\n");
 	
 	if (filter_address(addr, ifindex)) {
-		HIP_DEBUG("address accepted\n");
+		HIP_DEBUG("adadress accepted\n");
 	} else {
 		HIP_DEBUG("filtering this address\n");
 		return;
 	}
 
 	n = (struct netdev_address *) malloc(sizeof(struct netdev_address));
-	aux = (struct netdev_address *) malloc(sizeof(struct netdev_address));
+	//aux = (struct netdev_address *) malloc(sizeof(struct netdev_address));
 
 	if (!n)
 	{
@@ -250,10 +250,10 @@ void add_address_to_list(struct sockaddr *addr, int ifindex)
 	list_add(n, addresses);
 	address_count++;
 	HIP_DEBUG("added address, address_count at exit=%d\n", address_count);
-	/*if (n)
+	/* if(n)
 		HIP_FREE(n);
 	if(aux)
-		HIP_FREE(aux);*/
+		HIP_FREE(aux); */
 }
 
 static void delete_address_from_list(struct sockaddr *addr, int ifindex)
@@ -1265,29 +1265,29 @@ int hip_get_default_hit(struct in6_addr *hit)
 {
 	int err = 0;
 	int family = AF_INET6;
-	int rtnl_rtdsfield_init;
-	char *rtnl_rtdsfield_tab[256] = { 0 };
+	//int rtnl_rtdsfield_init;
+	//char *rtnl_rtdsfield_tab[256] = { 0 };
 	int i;
 	struct idxmap *idxmap[16] = { 0 };
 	hip_hit_t hit_tmpl;
 
 	HIP_DEBUG("Getting default hit!!!\n");
 	/* rtnl_rtdsfield_initialize() */
-        rtnl_rtdsfield_init = 1;
+        //rtnl_rtdsfield_init = 1;
 
-        rtnl_tab_initialize("/etc/iproute2/rt_dsfield",rtnl_rtdsfield_tab, 256);
+        //rtnl_tab_initialize("/etc/iproute2/rt_dsfield",rtnl_rtdsfield_tab, 256);
 	memset(&hit_tmpl, 0xab, sizeof(hit_tmpl));
 	set_hit_prefix(&hit_tmpl);
-	HIP_IFEL(hip_iproute_get(&hip_nl_route, hit, &hit_tmpl, NULL, NULL,family, idxmap),
+	HIP_IFEL(hip_iproute_get(&hip_nl_route, hit, &hit_tmpl, NULL, NULL, family, idxmap),
 		 -1,"Finding ip route failed\n");
 	
  out_err:
-
+/*
 	for (i = 0; i < 256; i++) {
 	    if (rtnl_rtdsfield_tab[i])
 		free(rtnl_rtdsfield_tab[i]);
 	}
-
+*/
 	return err;
 }
 
@@ -1310,16 +1310,17 @@ int hip_get_default_hit_msg(struct hip_common *msg)
 
 
 int hip_get_default_lsi(struct in_addr *lsi){
-	char *rtnl_rtdsfield_tab[256] = { 0 };
+	//char *rtnl_rtdsfield_tab[256] = { 0 };
 	struct idxmap *idxmap[16] = { 0 };
 	struct in6_addr lsi_addr;
 	struct in6_addr lsi_aux6;
 	hip_lsi_t lsi_tmpl;
 	int err = 0;
+	int i;
 	int family = AF_INET;	
-	int rtnl_rtdsfield_init = 1;
+	//int rtnl_rtdsfield_init = 1;
 
-        rtnl_tab_initialize("/etc/iproute2/rt_dsfield",rtnl_rtdsfield_tab, 256);
+        //rtnl_tab_initialize("/etc/iproute2/rt_dsfield",rtnl_rtdsfield_tab, 256);
 	memset(&lsi_tmpl, 0, sizeof(lsi_tmpl));
 	set_lsi_prefix(&lsi_tmpl);
 	IPV4_TO_IPV6_MAP(&lsi_tmpl, &lsi_addr);
@@ -1329,5 +1330,11 @@ int hip_get_default_lsi(struct in_addr *lsi){
 	if(IN6_IS_ADDR_V4MAPPED(&lsi_aux6))
 	        IPV6_TO_IPV4_MAP(&lsi_aux6, lsi);
  out_err:
+/*
+	for (i = 0; i < 256; i++) {
+	    if (rtnl_rtdsfield_tab[i])
+		free(rtnl_rtdsfield_tab[i]);
+	}
+*/
 	return err;
 }

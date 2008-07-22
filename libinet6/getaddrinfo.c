@@ -1810,7 +1810,6 @@ int gaih_inet_get_hip_hosts_file_info(hip_db_struct_t *db)
 		        ipv6_addr_copy(&new_el->hit, &hit);
 
 		hip_ht_add(db, new_el);
-
 		destroy(&list);
         } // end of while
 
