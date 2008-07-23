@@ -8,6 +8,7 @@
 
 extern int hip_blind_status; //blind on/off flag
 
+int hip_check_whether_to_use_blind(hip_common_t *msg, int *use_blind);
 int hip_set_blind_on(void);
 int hip_set_blind_off(void);
 int hip_blind_get_status(void);
@@ -23,7 +24,7 @@ int hip_blind_verify(uint16_t *nonce,
 int hip_blind_verify_r2(struct hip_common *r2, 
 			     hip_ha_t *entry);
  
-struct hip_common *hip_blind_build_i1(hip_ha_t *entry, int *mask);
+struct hip_common *hip_blind_build_i1(hip_ha_t *entry, uint16_t *mask);
 int hip_blind_build_r2(struct hip_common *i2, 
 			 struct hip_common *r2,
 			 hip_ha_t *entry, 
