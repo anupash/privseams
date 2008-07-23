@@ -465,7 +465,8 @@ int hip_hadb_add_peer_info_wrapper(struct hip_host_id_entry *entry,
 	return err;
 }
 
-int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr, hip_lsi_t *peer_lsi)
+int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr,
+			   hip_lsi_t *peer_lsi)
 {
 	int err = 0;
 	hip_ha_t *entry;
