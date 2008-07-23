@@ -469,8 +469,8 @@ int hip_receive_control_packet(struct hip_common *msg,
 		  msg_info->src_port, msg_info->dst_port);
 	HIP_DUMP_MSG(msg);
 
-//add by santtu
-#ifdef HIP_USE_ICE
+//add by santtu	
+#if 0
 	type = hip_get_msg_type(msg);
 	entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
 	if(type == HIP_UPDATE && entry){
@@ -611,30 +611,41 @@ int hip_receive_control_packet(struct hip_common *msg,
 			 hip_receive_r1(msg, src_addr, dst_addr, entry,
 					msg_info));
 		break;
-
+		
 	case HIP_R2:
 		HIP_IFCS(entry, err = entry->hadb_rcv_func->
 			 hip_receive_r2(msg, src_addr, dst_addr, entry,
 					msg_info));
 		//HIP_STOP_TIMER(KMM_GLOBAL,"Base Exchange");
 		break;
-
+		
 	case HIP_UPDATE:
-		HIP_IFCS(entry, err = entry->hadb_rcv_func->
-			 hip_receive_update(msg, src_addr, dst_addr, entry,
-					    msg_info));
+		HIP_DEBUG_HIT("receive a stun  from:  " ,src_addr );
+		if(entry){
+			HIP_IFCS(entry, err = entry->hadb_rcv_func->
+				 hip_receive_update(msg, src_addr, dst_addr, entry,
+						    msg_info));
+		}
+		//add the santtu
+		/**to support stun from firewall**/
+		else{
+			HIP_DEBUG("FOUND A UPDATE FROM FIREWALL \n");
+			hip_receive_update(msg, src_addr, dst_addr, entry,
+				    msg_info);
+		}
+		//end add
 		break;
-
+		
 	case HIP_NOTIFY:
 		HIP_IFCS(entry, err = entry->hadb_rcv_func->
 			 hip_receive_notify(msg, src_addr, dst_addr, entry));
 		break;
-
+		
 	case HIP_BOS:
 	     HIP_IFCS(entry, err = entry->hadb_rcv_func->
 		      hip_receive_bos(msg, src_addr, dst_addr, entry,
 				      msg_info));
-
+	     
 	     /*In case of BOS the msg->hitr is null, therefore it is replaced
 	       with our own HIT, so that the beet state can also be
 	       synchronized. */
@@ -1439,18 +1450,29 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 		_HIP_HEXDUMP("Host ID for HMAC2", entry->our_pub,
 			     hip_get_param_total_len(entry->our_pub));
 	}
-
+	
 	memcpy(&hmac, &entry->hip_hmac_out, sizeof(hmac));
 	HIP_IFEL(hip_build_param_hmac2_contents(r2, &hmac, entry->our_pub), -1,
 		 "Failed to build parameter HMAC2 contents.\n");
-
+/*	
 	HIP_IFEL(entry->sign(entry->our_priv, r2), -EINVAL,
 		 "Failed to sign R2 packet.\n");
+	
+	err = entry->hadb_xmit_func->hip_send_pkt(
+		i2_daddr, i2_saddr, (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+		entry->peer_udp_port, r2, entry, 1);
+	*/
+	/* Why is err reset to zero? -Lauri 11.06.2008 */
+	if (err == 1) {
+		err = 0;
+	}
 
-//add by santtu
+	HIP_IFEL(entry->sign(entry->our_priv, r2), -EINVAL, "Could not sign R2. Failing\n");
+	
+//add by santtu	
 #ifdef CONFIG_HIP_RVS
 	if(!ipv6_addr_any(dest))
-	 {
+	 {  	   
 	      HIP_INFO("create replay_to parameter in R2\n");
 		  hip_build_param_relay_to(
 		       r2, dest, dest_port);

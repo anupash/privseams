@@ -1669,8 +1669,21 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 	struct hip_echo_request *echo_request = NULL;
 	struct hip_echo_response *echo_response = NULL;
 	struct hip_tlv_common *encrypted = NULL;
+	struct hip_stun *stun = NULL;
      	
 	HIP_DEBUG("hip_receive_update() invoked.\n");
+	HIP_DEBUG_HIT("receive a stun  from 3:  " ,update_saddr );
+	
+//stun does not need a entry,	
+	stun = hip_get_param(msg, HIP_PARAM_STUN);
+	if (stun) {
+		err = hip_update_handle_stun((void *)(stun+1),
+									 hip_get_param_contents_len(stun),
+									 update_saddr, update_daddr, entry,
+					                 sinfo);
+		goto out_err;
+	}
+	
 	
         /* RFC 5201: If there is no corresponding HIP association, the
 	 * implementation MAY reply with an ICMP Parameter Problem. */
@@ -1699,6 +1712,8 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 	src_ip = update_saddr;
 	dst_ip = update_daddr;
 	hits = &msg->hits;
+
+
 	
 	/* RFC 5201: The UPDATE packet contains mandatory HMAC and HIP_SIGNATURE
 	   parameters, and other optional parameters. The UPDATE packet contains
@@ -3005,4 +3020,18 @@ int hip_build_locators(struct hip_common *msg)
     if (locs1) free(locs1);
     if (locs2) free(locs2);
     return err;
+}
+
+int hip_update_handle_stun(void* pkg, int len, 
+									 in6_addr_t *src_addr, in6_addr_t * dst_addr,
+									 hip_ha_t *entry,
+									 hip_portpair_t *sinfo){
+	if(entry){
+		HIP_DEBUG_HIT("receive a stun  from 2:  " ,src_addr );
+		hip_external_ice_receive_pkt(pkg, len, entry, src_addr, sinfo->src_port);
+	}
+	else{
+		HIP_DEBUG_HIT("receive a stun  from 1:   " ,src_addr );
+		hip_external_ice_receive_pkt_all(pkg, len, src_addr, sinfo->src_port);
+	}
 }

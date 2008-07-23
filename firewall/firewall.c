@@ -166,9 +166,12 @@ int hip_fw_init_userspace_ipsec()
 {
 	int err = 0;
 	
+	HIP_IFEL(userspace_ipsec_init(), -1, "failed to initialize userspace ipsec\n");
+	
+	
 	if (hip_userspace_ipsec)
 	{
-		HIP_IFEL(userspace_ipsec_init(), -1, "failed to initialize userspace ipsec\n");
+		
 		
 		// activate userspace ipsec in hipd
 		HIP_IFE(send_userspace_ipsec_to_hipd(hip_userspace_ipsec), -1);
@@ -594,7 +597,7 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version)
 	// length of packet starting at udp header
 	uint16_t udp_len = 0;
 	struct udphdr *udphdr = NULL;
-	int udp_encap_zero_bytes = 0;
+	int udp_encap_zero_bytes = 0, stun_ret;
 	
 	// default assumption
 	ctx->packet_type = OTHER_PACKET;
@@ -804,7 +807,9 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version)
 			goto end_init;
 		}
 	}
-	    
+
+	HIP_DEBUG("udp hdr len %d\n", ntohs(udphdr->len));
+	HIP_HEXDUMP("hexdump ",udphdr, 20);
 	// HIP packets have zero bytes (IPv4 only right now)
 	if(ctx->ip_version == 4 && udphdr
 			&& ((udphdr->source == ntohs(HIP_NAT_UDP_PORT)) || 
@@ -837,7 +842,9 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version)
 
 	/* Santtu: XX FIXME: needs to be inside the following if */
 	//else if (hip_is_stun_msg(udphdr) {
-	else if (pj_stun_msg_check(udphdr+1,ntohs(udphdr->len) - sizeof(udphdr),PJ_STUN_IS_DATAGRAM) == PJ_SUCCESS){
+	else if ((stun_ret = pj_stun_msg_check(udphdr+1,ntohs(udphdr->len) - 
+			sizeof(struct udphdr),PJ_STUN_IS_DATAGRAM)) 
+			== PJ_SUCCESS){
 		HIP_DEBUG("Found a UDP STUN\n");
 		ctx->is_stun = 1;
 	    goto end_init;
@@ -850,6 +857,10 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version)
 		       (udphdr->dest == ntohs(HIP_NAT_UDP_PORT)))
 		   && !udp_encap_zero_bytes)
 	{
+		
+		HIP_HEXDUMP("stun check failed in UDP",udphdr+1, 20);
+		HIP_DEBUG("stun return is %d \n",stun_ret);
+		HIP_DEBUG("stun len is %d \n",ntohs(udphdr->len) - sizeof(udphdr));
 		/* from the ports and the non zero SPI we can tell that this
 		 * is an ESP packet */
 		HIP_DEBUG("UDP encapsulated ESP packet or STUN PACKET\n");

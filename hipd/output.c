@@ -620,7 +620,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 #ifdef HIP_USE_ICE
 	{
 		hip_transform_suite_t suite = hip_nat_get_control();
-		hip_build_param_nat_tranform(msg, suite);
+		hip_build_param_nat_transform(msg, suite);
 	}
 #endif
  	/********** PUZZLE ************/

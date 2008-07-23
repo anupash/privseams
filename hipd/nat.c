@@ -1306,27 +1306,12 @@ int hip_dump_pj_stun_msg(void* pdu, int len){
 	unsigned print_len = 1000;
 	
 	HIP_DEBUG("dump_pj_stun_msg\n");
- 	pool = pj_pool_create(&cpp->factory, NULL, 4000, 4000, NULL);
- 	
- 	
- 	HIP_DEBUG("dump_pj_stun_msg1\n");
- 	
+ 	pool = pj_pool_create(&cpp->factory, NULL, 4000, 4000, NULL);	
  	pj_stun_msg_decode(pool,pdu,len, 0, &msg, &parse_len,&response);
 		
-	//parse the stun
- 	HIP_DEBUG("dump_pj_stun_msg2\n");
- 	stun_password = pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_PASSWORD, 0);
- 	stun_username = pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_USERNAME, 0);
-	
- 	
- 	
-	if(stun_password)
-		HIP_DEBUG("password is %s\n",stun_password->value.ptr);
-	if(stun_username)
-		HIP_DEBUG("username is %s\n",stun_username->value.ptr);
-
 	HIP_DEBUG("official dump\n %s\n",pj_stun_msg_dump(msg,buffer,1000,&print_len));
-	
+	HIP_HEXDUMP("hex dump for stun",pdu,20);
+	HIP_DEBUG("stun len is %d \n",len);
 	
 	
 out_err:

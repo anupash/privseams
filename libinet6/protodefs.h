@@ -58,6 +58,8 @@
 #define HIP_PARAM_LOCATOR              193
 //NAT branch
 #define HIP_PARAM_NAT_TRANSFORM        194
+	/*195 is temp value, check me later**/
+#define HIP_PARAM_STUN        		   195
 //end NAT branch
 #define HIP_PARAM_HASH_CHAIN_VALUE     221
 #define HIP_PARAM_HASH_CHAIN_ANCHORS   222
@@ -837,6 +839,12 @@ struct hip_reg_from {
      hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
      uint8_t address[16]; /**< IPv6 address */
      in_port_t port; /**< Port number. */
+} __attribute__ ((packed));
+
+
+struct hip_stun {
+     hip_tlv_type_t type; /**< Type code for the parameter. */
+     hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
 } __attribute__ ((packed));
 
 #endif /* _HIP_PROTODEFS */

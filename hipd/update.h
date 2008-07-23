@@ -621,4 +621,11 @@ int hip_update_send_ack(hip_ha_t *entry, hip_common_t *msg,
  */
 int hip_peer_learning(struct hip_esp_info * esp_info, hip_ha_t *entry, in6_addr_t * src_ip);
 
+
+
+
+int hip_update_handle_stun(void* pkg, int len, 
+			   in6_addr_t *src_addr, in6_addr_t * dst_addr,
+			   hip_ha_t *entry,
+			   hip_portpair_t *sinfo);
 #endif /* HIP_UPDATE_H */
