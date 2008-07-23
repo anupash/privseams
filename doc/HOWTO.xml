@@ -47,10 +47,6 @@
 	Linux Operating System
       </para></listitem>
       <listitem><para>
-	A BEET patched Linux 2.6 kernel with the modules listed in
-	<xref linkend="ch_kernel" />.
-      </para></listitem>
-      <listitem><para>
 	OpenSSL-library and developer headers
       </para></listitem>
       <listitem><para>
@@ -77,6 +73,11 @@
       Optional Software Requirements:
     </para>
     <itemizedlist>
+      <listitem><para>
+	A BEET patched Linux 2.6 kernel with the modules listed in
+	<xref linkend="ch_kernel" />. Otherwise, you can use
+	userspace ipsec.
+      </para></listitem>
       <listitem><para>
 	iputils-ping (or netkit-ping): ping, ping6
       </para></listitem>
@@ -164,10 +165,24 @@
   </chapter>
   <chapter id="ch_kernel">
     <title>Compiling the Kernel</title>
+
+    <para>
+      Compiling a kernel with HIP-related patches is optional, but
+      there are two benefits in patching your kernel. First, the IPsec
+      protected data traffic will be faster. Second, you can use the
+      native programming interface for HIP to implement HIP-aware
+      applications. The drawback of patching your kernel is that it
+      requires some expertise and possibly installing e.g. some
+      wireless firmware images manually. As compromise, the HIPL
+      website has some readily built images, but you may still have to
+      install some firmware images manually. If you are unsure, you can
+      try the userspace ipsec as described later in this manual.
+    </para>
     
     <para>
-      If you haven't configured linux kernel before, please consult
-      linux/README before doing that. We have some example
+      If you haven't configured linux kernel before, please use the userspace
+      ipsec instead (as described later in this document), or at least consult
+      linux/README. We have some example
       configurations files in hipl/test/configs for "typical" systems. You
       can use one of those as a template, and modify it to suite the needs
       of your system. Read hipl/test/configs/README before doing so.
@@ -331,6 +346,11 @@
       We will show in this section how to connect two hosts using HIP. We assume 
       two machines called crash and oops that are in the same network. Crash is the one
       that starts a communication against oops.
+    </para>
+    <para>
+      If you did not patch your kernel with HIP-related patches, you
+      need to use the userspace ipsec. You can turn on the userspace ipsec
+      by running firewall/hipfw with the -i option on a host.
     </para>
     <para>  
       They are used through this whole document as examples even though you probably have 
@@ -618,6 +638,7 @@
     </table>
 
   </chapter>
+
   <chapter id="ch_closing_hip">
     <title>Closing HIP Security Associations Manually</title>
     <para>

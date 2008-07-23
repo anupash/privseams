@@ -1617,7 +1617,8 @@ int hip_update_peer_preferred_address(hip_ha_t *entry,
 
 	/** @todo Enabling 1s makes hard handovers work, but softhandovers fail. */
 #if 1
-	entry->hadb_ipsec_func->hip_delete_hit_sp_pair(&entry->hit_our, &entry->hit_peer, IPPROTO_ESP, 1);
+	entry->hadb_ipsec_func->hip_delete_hit_sp_pair(&entry->hit_our, 
+                                                       &entry->hit_peer, IPPROTO_ESP, 1);
 
 	hip_delete_sa(entry->default_spi_out, &addr->address, &local_addr, 
 		      AF_INET6, (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
@@ -1625,29 +1626,33 @@ int hip_update_peer_preferred_address(hip_ha_t *entry,
 #endif
 
 #if 1
-	entry->hadb_ipsec_func->hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
+	entry->hadb_ipsec_func->hip_delete_hit_sp_pair(&entry->hit_peer, 
+                                                       &entry->hit_our, IPPROTO_ESP, 1);
 #endif 
 
 	hip_delete_sa(spi_in, &addr->address, &local_addr, AF_INET6,
 		      (int)entry->peer_udp_port,
 		      (entry->nat_mode ? HIP_NAT_UDP_PORT : 0));
 
-	HIP_IFEL(entry->hadb_ipsec_func->hip_setup_hit_sp_pair(&entry->hit_our, &entry->hit_peer,
+	HIP_IFEL(entry->hadb_ipsec_func->hip_setup_hit_sp_pair(&entry->hit_our, 
+                                                               &entry->hit_peer,
 				       &local_addr, &addr->address,
 				       IPPROTO_ESP, 1, 0), -1,
 		 "Setting up SP pair failed\n");
 
 	entry->local_udp_port = entry->nat_mode ? HIP_NAT_UDP_PORT : 0;
 	
-	HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(&local_addr, &addr->address, &entry->hit_our,
-			    &entry->hit_peer, &entry->default_spi_out,
+	HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(&local_addr, &addr->address, 
+                                                    &entry->hit_our,
+			    &entry->hit_peer, entry->default_spi_out,
 			    entry->esp_transform, &entry->esp_out,
 			    &entry->auth_out, 1, HIP_SPI_DIRECTION_OUT, 0, entry), -1,
 		 "Error while changing outbound security association for new "\
 		 "peer preferred address\n");
      
 #if 1
-	HIP_IFEL(entry->hadb_ipsec_func->hip_setup_hit_sp_pair(&entry->hit_peer, &entry->hit_our,
+	HIP_IFEL(entry->hadb_ipsec_func->hip_setup_hit_sp_pair(&entry->hit_peer, 
+                                                               &entry->hit_our,
 				       &addr->address, &local_addr,
 				       IPPROTO_ESP, 1, 0), -1,
 		 "Setting up SP pair failed\n");
@@ -1655,7 +1660,7 @@ int hip_update_peer_preferred_address(hip_ha_t *entry,
 
 	HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(&addr->address, &local_addr,
 			    &entry->hit_peer, &entry->hit_our, 
-			    &spi_in, entry->esp_transform,
+			    spi_in, entry->esp_transform,
 			    &entry->esp_in, &entry->auth_in, 1, 
 			    HIP_SPI_DIRECTION_IN, 0, entry), -1, 
 		 "Error while changing inbound security association for new "\
@@ -2038,9 +2043,12 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
 	      -1, "Setting up SP pair failed\n");
 
      entry->local_udp_port = entry->nat_mode ? HIP_NAT_UDP_PORT : 0;
-     
+
+     _HIP_DEBUG("SPI out =0x%x\n", entry->default_spi_out);     
+     _HIP_DEBUG("SPI in =0x%x\n", spi_in);     
+
      HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(&srcaddr, &destaddr, &entry->hit_our,
-			 &entry->hit_peer, &entry->default_spi_out,
+			 &entry->hit_peer, entry->default_spi_out,
 			 entry->esp_transform, &entry->esp_out,
 			 &entry->auth_out, 1, HIP_SPI_DIRECTION_OUT, 0, entry), -1, 
 	      "Error while changing outbound security association for new "\
@@ -2061,7 +2069,7 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
 
      HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(&destaddr, &srcaddr, 
 			 &entry->hit_peer, &entry->hit_our,
-			 &spi_in, entry->esp_transform,
+			 spi_in, entry->esp_transform,
 			 &entry->esp_in, &entry->auth_in, 1,
 			 HIP_SPI_DIRECTION_IN, 0, entry), -1, 
 	      "Error while changing inbound security association for new "\
