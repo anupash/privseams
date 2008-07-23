@@ -32,18 +32,19 @@
 #define HIP_HIT_TYPE_HAA_HASH   2
 #define HIP_HIT_TYPE_MASK_HAA   0x00000080 /**< depracated -miika */
 #define HIP_HIT_TYPE_MASK_100   0x20010010
-#define HIP_LSI_TYPE_MASK_192	0xC0000000
+#define HIP_LSI_TYPE_MASK_1	0x01000000
 #define HIP_HIT_TYPE_MASK_CLEAR 0x0000000f
 #define HIP_LSI_TYPE_MASK_CLEAR 0x000000ff
 #define HIP_HIT_TYPE_MASK_INV   0xfffffff0
 #define HIP_HIT_PREFIX          HIP_HIT_TYPE_MASK_100
-#define HIP_LSI_PREFIX          HIP_LSI_TYPE_MASK_192
+#define HIP_LSI_PREFIX          HIP_LSI_TYPE_MASK_1
 #define HIP_HIT_PREFIX_LEN      28	/* bits */
 #define HIP_LSI_PREFIX_LEN	24	/* bits */
 #define HIP_HIT_FULL_PREFIX_STR "/128"
 #define HIP_HIT_PREFIX_STR      "/28"
 #define HIP_LSI_FULL_PREFIX_STR "/24"
 #define HIP_LSI_PREFIX_STR	"/24"
+#define HIP_FULL_LSI_STR	"1.0.0.0/8"
 #define HIP_KHI_CONTEXT_ID_INIT { 0xF0,0xEF,0xF0,0x2F,0xBF,0xF4,0x3D,0x0F, \
                                   0xE7,0x93,0x0C,0x3C,0x6E,0x61,0x74,0xEA }
 
@@ -114,8 +115,8 @@
 #define HIP_PARAM_ADD_HIT		32800
 #define HIP_PARAM_ADD_OPTION		32801
 #define HIP_PARAM_PEER_HIT		32802
-#define HIP_PARAM_HCHAIN_ANCHOR			32803
-
+#define HIP_PARAM_HCHAIN_ANCHOR		32803
+#define HIP_PARAM_LSI		        32804
 /* End of HIPL private parameters. */
 
 #define HIP_PARAM_HMAC                 61505
@@ -248,19 +249,23 @@
 /* REMEMBER TO UPDATE BITMAP IN DOC/DOXYGEN.H WHEN YOU ADD/CHANGE THESE! */
 #define HIP_HA_CTRL_NONE                 0x0000
 
+#define HIP_HA_CTRL_LOCAL_REQ_UNSUP      0x0001
 #define HIP_HA_CTRL_LOCAL_REQ_ESCROW     0x2000
 #define HIP_HA_CTRL_LOCAL_REQ_RELAY      0x4000
 #define HIP_HA_CTRL_LOCAL_REQ_RVS        0x8000
 /* Keep inside parentheses. */
-#define HIP_HA_CTRL_LOCAL_REQ_ALL        (\
+#define HIP_HA_CTRL_LOCAL_REQ_ANY        (\
+                                         HIP_HA_CTRL_LOCAL_REQ_UNSUP |\
                                          HIP_HA_CTRL_LOCAL_REQ_ESCROW |\
                                          HIP_HA_CTRL_LOCAL_REQ_RELAY |\
                                          HIP_HA_CTRL_LOCAL_REQ_RVS\
                                          )
 
+#define HIP_HA_CTRL_PEER_GRANTED_UNSUP   0x0001 
 #define HIP_HA_CTRL_PEER_GRANTED_ESCROW  0x0400 
 #define HIP_HA_CTRL_PEER_GRANTED_RELAY   0x0800 
 #define HIP_HA_CTRL_PEER_GRANTED_RVS     0x1000
+#define HIP_HA_CTRL_PEER_UNSUP_CAPABLE   0x0002 
 #define HIP_HA_CTRL_PEER_ESCROW_CAPABLE  0x2000 
 #define HIP_HA_CTRL_PEER_RELAY_CAPABLE   0x4000 
 #define HIP_HA_CTRL_PEER_RVS_CAPABLE     0x8000
@@ -279,17 +284,15 @@
 #define HIP_SERVICE_RENDEZVOUS	         1
 #define HIP_SERVICE_ESCROW	         201
 #define HIP_SERVICE_RELAY            	 202
-#define HIP_SERVICE_RELAY_UDP_HIP	 203
-#define HIP_SERVICE_RELAY_UDP_ESP	 204
+/* IMPORTANT! This must be the sum of above services. */
+#define HIP_TOTAL_EXISTING_SERVICES      3
+/* @} */
 
 /** @addtogroup hip_proxy
  * @{ 
  */
 #define HIP_PROXY_PASSTHROUGH		0
-#define HIP_PROXY_TRANSLATE 			1
-
-/* IMPORTANT! This must be the sum of above services. */
-#define HIP_TOTAL_EXISTING_SERVICES      3
+#define HIP_PROXY_TRANSLATE 		1
 /* @} */
 
 /* Registration failure types as specified in draft-ietf-hip-registration-02.
@@ -424,10 +427,12 @@ struct hip_locator_info_addr_item {
         uint8_t reserved;  /**< last bit is P (prefered) */
 	uint32_t lifetime;
 	struct in6_addr address;
+        /** Removed the state because it is against the nat-draft and mobility rfc
+         Same in the type 2 locator below --SAMU**/
 	/* end of fixed part - locator of arbitrary length follows but 
 	   currently support only IPv6 */
-	int state; /**<State of our addresses, possible states are:
-		      WAITING_ECHO_REQUEST, ACTIVE */
+	//int state; /**<State of our addresses, possible states are:
+	//	      WAITING_ECHO_REQUEST, ACTIVE */
 
 }  __attribute__ ((packed));
 //add by santtu
@@ -447,8 +452,8 @@ struct hip_locator_info_addr_item2 {
        	uint32_t spi;
        	struct in6_addr address;
 
-	int state; /**<State of our addresses, possible states are:
-		      WAITING_ECHO_REQUEST, ACTIVE */
+        //	int state; /**<State of our addresses, possible states are:
+	//	      WAITING_ECHO_REQUEST, ACTIVE */
 
 }  __attribute__ ((packed));
 
@@ -635,7 +640,7 @@ struct hip_seq {
 struct hip_ack {
 	hip_tlv_type_t type;
 	hip_tlv_len_t length;
-	uint32_t peer_update_id; /**< n items */
+	uint32_t peer_update_id; /**< n items */ /* This only fits one... */
 } __attribute__ ((packed));
 
 struct hip_notification {
@@ -779,7 +784,8 @@ struct hip_reg_response {
 struct hip_reg_failed {
 	hip_tlv_type_t type;
 	hip_tlv_len_t  length;
-	uint8_t       failure_type;
+	uint8_t        failure_type;
+	uint8_t        reg_type[0];
 } __attribute__ ((packed));
 
 struct hip_keys {
@@ -834,4 +840,3 @@ struct hip_reg_from {
 } __attribute__ ((packed));
 
 #endif /* _HIP_PROTODEFS */
-

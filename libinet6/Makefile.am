@@ -44,6 +44,7 @@ libinet6_la_SOURCES += sa_len.c tempname.c
 # HIP additions
 libinet6_la_SOURCES += getendpointinfo.c util.c debug.c builder.c misc.c
 libinet6_la_SOURCES += hipconf.c message.c certtools.c sqlitedbapi.c
+libinet6_la_SOURCES += capability.c
 
 # Original flags.
 CFLAGS  = -D_LIBC_REENTRANT -D_USAGI -D_GNU_SOURCE

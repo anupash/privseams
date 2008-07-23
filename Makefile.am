@@ -7,7 +7,7 @@ EXTRA_DIST += doc/README doc/design_choices.bib test/configs patches
 EXTRA_DIST += doc/base-exchange-relay.png doc/base-exchange-rvs.png
 EXTRA_DIST += hipsock jip
 EXTRA_DIST += test/packaging/create-deb.sh test/packaging/create-rpm.sh test/packaging/hipl.spec
-EXTRA_DIST += test/packaging/rh-init.d-hipd test/packaging/debian-init.d-hipd
+EXTRA_DIST += test/packaging/rh-init.d-hipd test/packaging/rh-init.d-hipfw test/packaging/debian-init.d-hipd
 # The design choices doc is currently depracated
 EXTRA_DIST += doc/design_choices.tex doc/hipl.tex doc/acronyms.tex
 EXTRA_DIST += doc/design_choices_macros.tex doc/catalogue.tex doc/fig
@@ -16,10 +16,12 @@ EXTRA_DIST += doc/doxygen.h doc/Doxyfile showip/showip-hipmod-0.8.02-fx-mz.xpi
 EXTRA_DIST += doc/docshot-agent-main-window.png doc/docshot-agent-tray-icon.png
 EXTRA_DIST += test/packaging/i386/DEBIAN test/packaging/amd64/DEBIAN test/packaging/armel/DEBIAN
 EXTRA_DIST += i3-cfg-PL.xml
+EXTRA_DIST += autogen.sh
+EXTRA_DIST += @PJPROJECT_FILES@
 
 # Note: libinet6 has to be the first one
 #
-SUBDIRS = libinet6 libhiptool pjproject libopphip libipsec opendht i3 tools hipd test firewall libhipgui agent hipfwmi
+SUBDIRS = pjproject libinet6 libhiptool libopphip libipsec opendht i3 tools hipd test firewall libhipgui agent hipfwmi
 
 showip:
 	cd showip && sh create.sh

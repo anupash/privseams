@@ -78,7 +78,6 @@
 #include "message.h"
 #include "util.h"
 #include "libhipopendht.h"
-#include "hip_usermode.h"
 #include "bos.h"
 
 #define GAIH_OKIFUNSPEC 0x0100
@@ -154,6 +153,8 @@ static const struct addrinfo default_hints;
 static const struct addrinfo default_hints =
 	{ 0, PF_UNSPEC, 0, 0, 0, NULL, NULL, NULL };
 #endif
+
+int max_line_etc_hip = 500;
 
 static int addrconfig (sa_family_t af)
 {
@@ -300,7 +301,7 @@ gaih_local (const char *name, const struct gaih_service *service,
 	      sizeof (sunp->sun_path))
 	    return GAIH_OKIFUNSPEC | -EAI_SERVICE;
 
-	  __stpcpy (__stpcpy (sunp->sun_path, P_tmpdir "/"), service->name);
+	  stpcpy (stpcpy (sunp->sun_path, P_tmpdir "/"), service->name);
 	}
     }
   else
@@ -770,7 +771,7 @@ send_hipd_addr(struct gaih_addrtuple * orig_at)
 
 			if (is_lsi){
 		      		HIP_DEBUG_LSI("LSI", &lsi);
-				hip_build_param_contents(msg, (void *) &lsi, SO_HIP_PARAM_LSI, sizeof(hip_lsi_t));
+				hip_build_param_contents(msg, (void *) &lsi, HIP_PARAM_LSI, sizeof(hip_lsi_t));
 				is_lsi = 0;
 		    	}
 		    	hip_build_user_hdr(msg, SO_HIP_ADD_PEER_MAP_HIT_IP, 0);
@@ -1727,4 +1728,57 @@ void freeaddrinfo (struct addrinfo *ai)
 		ai = ai->ai_next;
 		free (p);
 	}
+}
+
+/*
+ * Returns a list with the LSIs present in the file /etc/hip/hosts
+*/
+int gaih_inet_get_hip_hosts_file_lsis(List *list_lsis){
+	int i = 0, err = 0;
+	hip_lsi_t lsi;
+	char line[500];
+	FILE *fp = NULL;				
+	List list;
+
+        fp = fopen(_PATH_HIP_HOSTS, "r");
+	if(fp == NULL)
+	{
+		HIP_ERROR("Error opening file '%s' for reading.\n",
+			  _PATH_HIP_HOSTS);
+        }
+	
+	/* Loop through all lines in the file. */
+        while (fp && getwithoutnewline(line, 500, fp) != NULL) {		
+		
+		/* Skip empty and single character lines. */
+                if(strlen(line) <= 1) 
+			continue;
+
+		/* Init a list for the substrings of the line. Note that this is
+		   done for every line. Break the line into substrings next. */
+                initlist(&list);
+                extractsubstrings(line,&list);
+		
+		/* Loop through the substrings just created. We check if the 
+		   list item is an IPv6 or IPv4 address. If the conversion is NOT
+		   successful, we assume that the substring represents a fully
+		   qualified domain name. Note that this omits the possible
+		   aliases that the hosts has. */
+
+		for (i = 0; i < length(&list); i++) {
+		        err = inet_pton(AF_INET, getitem(&list,i), &lsi);				
+			if (err && IS_LSI32(lsi.s_addr)){
+			        insert(list_lsis, getitem(&list,i));
+				break;
+			}
+		}
+
+		destroy(&list);
+        } // end of while
+
+ out_err:		
+	if (fp)                                                               
+                fclose(fp);
+	return err;		
+
 }

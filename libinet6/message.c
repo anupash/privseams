@@ -32,45 +32,48 @@ int hip_peek_recv_total_len(int socket, int encap_hdr_size)
 	errno = 0;
 	
 	msg = (char *)malloc(hdr_size);
-	
-	if(msg == NULL) {
-		HIP_ERROR("Error allocating memory.\n");
-		err = -ENOMEM;
-		goto out_err;
-	}
-	
+	HIP_IFEL(!msg, -ENOMEM, "Error allocating memory.\n");
 
-	bytes = recvfrom(socket, msg, hdr_size, MSG_PEEK, NULL, NULL);
-	
-	if(bytes != hdr_size) {
-		err = bytes;
+	bytes = recv(socket, msg, hdr_size, MSG_PEEK);
+
+	HIP_IFEL(bytes < 0, -1, "recv() peek error\n");
+
+	if (bytes < hdr_size) {
+		HIP_ERROR("Packet payload is smaller than HIP header. Dropping.\n");
+		/* Read and discard the datagram */
+		recv(socket, msg, 0, 0);
+		err = -bytes;
 		goto out_err;
 	}
 
 	hip_hdr = (struct hip_common *) (msg + encap_hdr_size);
 	bytes = hip_get_msg_total_len(hip_hdr);
-	
+
 	if(bytes == 0) {
+		HIP_ERROR("HIP message is of zero length. Dropping.\n");
+		recv(socket, msg, 0, 0);
 		err = -EBADMSG;
 		errno = EBADMSG;
-		HIP_ERROR("HIP message is of zero length.\n");
-		goto out_err;
-	} else if(bytes > HIP_MAX_PACKET) {
-		err = -EMSGSIZE;
-		errno = EMSGSIZE;
-		HIP_ERROR("HIP message max length exceeded.\n");
 		goto out_err;
 	}
+
+	/* The maximum possible length value is equal to HIP_MAX_PACKET.
+	if(bytes > HIP_MAX_PACKET) {
+		HIP_ERROR("HIP message max length exceeded. Dropping.\n");
+		recv(socket, msg, 0, 0);
+		err = -EMSGSIZE;
+		errno = EMSGSIZE;
+		goto out_err;
+	} */
 
 	bytes += encap_hdr_size;
 
  out_err:
-	if (msg != NULL) {
+	if (msg)
 		free(msg);
-	}
-	if (err != 0) {
+
+	if (err)
 		return err;
-	}
 
 	return bytes;
 }
@@ -278,8 +281,9 @@ int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,
 	HIP_IFEL(((bytes = recvfrom(socket, hip_msg, total, 0,
 				    (struct sockaddr *) saddr,
 				    &len)) != total), -1, "recv\n");
-
-	HIP_DEBUG("received user message from local port %d\n", ntohs(saddr->sin6_port));
+	
+	_HIP_DEBUG("received user message from local port %d\n",
+		   ntohs(saddr->sin6_port));
 	_HIP_DEBUG("read_user_control_msg recv len=%d\n", len);
 	_HIP_HEXDUMP("recv saddr ", saddr, sizeof(struct sockaddr_un));
 	_HIP_DEBUG("read %d bytes succesfully\n", bytes);
@@ -311,13 +315,14 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
         char cbuff[CMSG_SPACE(256)];
         int err = 0, len;
 	int cmsg_level, cmsg_type;
+	char tmp[1];
 
 	HIP_ASSERT(saddr);
 	HIP_ASSERT(daddr);
 
 	HIP_DEBUG("hip_read_control_msg_all() invoked.\n");
 
-	HIP_IFEL(((len = hip_peek_recv_total_len(socket, encap_hdr_size))<= 0),
+	HIP_IFEL((len = hip_peek_recv_total_len(socket, encap_hdr_size))<= 0,
 		 -1, "Bad packet length (%d)\n", len);
 
 	memset(msg_info, 0, sizeof(hip_portpair_t));

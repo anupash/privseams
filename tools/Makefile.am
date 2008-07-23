@@ -17,7 +17,7 @@ INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
 
 include_HEADERS = hipconftool.h
 
-LDFLAGS = -lcrypto $(HIP_XMLL)
+LDFLAGS = @LDFLAGS@ -lcrypto $(HIP_XMLL)
 
 if HIP_OPENDHT
   INCLUDES += -I../opendht

@@ -64,8 +64,8 @@ int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m, struct in6_addr *ip_src, str
 		if(lsi_our && lsi_peer){
 		        IPV4_TO_IPV6_MAP(lsi_our, &src_addr);
 			IPV4_TO_IPV6_MAP(lsi_peer, &dst_addr);
-			_HIP_DEBUG_LSI("******lsi_src : ", lsi_our);
-			_HIP_DEBUG_LSI("******lsi_dst : ", lsi_peer);
+			HIP_DEBUG_LSI("******lsi_src : ", lsi_our);
+			HIP_DEBUG_LSI("******lsi_dst : ", lsi_peer);
 			reinject_packet(dst_addr, src_addr, m, 6, 1);
 		}
 	}
@@ -99,8 +99,14 @@ int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src, str
 
 	if (entry_peer){
 		HIP_IFEL(entry_peer->bex_state == -1, -1, "Base Exchange Failed");
-	  	if(entry_peer->bex_state)
+	  	if (entry_peer->bex_state == 1)
 			reinject_packet(entry_peer->hit_our, entry_peer->hit_peer, m, 4, 0);
+		else if (entry_peer->bex_state == 0){
+		        /*Case after the connections established are reseted*/
+		        HIP_IFEL(hip_trigger_bex(&entry_peer->hit_our, &entry_peer->hit_peer, 
+						 &src_lsi, &dst_lsi, NULL, NULL), -1, 
+			 	 "Base Exchange Trigger failed\n"); 
+		}
 	}else{
 	        /*Check if bex is already established: Server case*/
 	        int state_ha = hip_trigger_is_bex_established(&src_hit, &dst_hit, lsi_src, lsi_dst);
@@ -115,7 +121,7 @@ int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src, str
 			err = hip_get_hit_peer_by_lsi_pair(lsi_src, lsi_dst, &src_hit, &dst_hit);
 			HIP_IFEL(hip_trigger_bex(&src_hit, &dst_hit, &src_lsi, &dst_lsi, NULL, NULL), -1, 
 			 	 "Base Exchange Trigger failed\n");
-		  	firewall_add_hit_lsi(&src_hit, &dst_hit, lsi_dst, 0);
+		  	firewall_add_hit_lsi(&src_hit, &dst_hit, lsi_dst, 2);
 		}
 	}
 out_err: 

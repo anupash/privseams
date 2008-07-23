@@ -86,8 +86,9 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 	type = hip_get_msg_type(msg);
 	
 	switch(type) {
-	case SO_HIP_FIREWALL_BEX_DONE:
-	        HIP_IFEL(handle_bex_state_update(msg), -1, "hip bex state NOT updated\n");
+	case SO_HIP_FW_BEX_DONE:
+	case SO_HIP_FW_UPDATE_DB:
+	        handle_bex_state_update(msg);
 	        break;
 	case SO_HIP_IPSEC_ADD_SA:
 		HIP_DEBUG("Received add sa request from hipd\n");
@@ -320,7 +321,7 @@ u16 ipv6_checksum(u8 protocol, struct in6_addr *src, struct in6_addr *dst, void 
 #ifdef CONFIG_HIP_HIPPROXY
 int request_hipproxy_status(void)
 {
-        struct hip_common *msg;
+        struct hip_common *msg = NULL;
         int err = 0;
         int n;
         socklen_t alen;
@@ -346,15 +347,20 @@ int request_hipproxy_status(void)
                 HIP_DEBUG("HIP_HIPPROXY_STATUS_REQUEST: Sendto firewall OK.\n");
         }  
 out_err:
+	if(msg)
+		free(msg);
         return err;
 }
 #endif /* CONFIG_HIP_HIPPROXY */
 
-int handle_bex_state_update(struct hip_common * msg, struct hip_tlv_common *param)
+int handle_bex_state_update(struct hip_common * msg)
 {
 	struct in6_addr *src_hit = NULL, *dst_hit = NULL;
-	int err = 0;
+	struct hip_tlv_common *param = NULL;
+	int err = 0, msg_type = 0;
 	
+	msg_type = hip_get_msg_type(msg);
+
 	/* src_hit */
         param = (struct hip_tlv_common *)hip_get_param(msg, HIP_PARAM_HIT);
 	src_hit = (struct in6_addr *) hip_get_param_contents_direct(param);
@@ -366,114 +372,19 @@ int handle_bex_state_update(struct hip_common * msg, struct hip_tlv_common *para
 	HIP_DEBUG_HIT("Destination HIT: ", dst_hit);
 
 	/* update bex_state in firewalldb */
-	if (dst_hit)
-		err = firewall_set_bex_state(src_hit, dst_hit, 1);
-	else
-		err = firewall_set_bex_state(src_hit, dst_hit, -1);
-
-}
-
-int handle_sa_add_request(struct hip_common * msg,
-			  struct hip_tlv_common *param)
-{
-	struct in6_addr *saddr = NULL, *daddr = NULL;
-	struct in6_addr *src_hit = NULL, *dst_hit = NULL;
-	uint32_t spi_ipsec = 0;
-	int ealg, err = 0;
-	struct hip_crypto_key *enckey = NULL, *authkey = NULL;
-	int retransmission = 0, direction = 0, update = 0, local_port = 0, peer_port = 0;
-	uint8_t nat_mode = 0;
-	uint8_t esp_prot_transform = 0;
-	unsigned char *esp_prot_anchor = NULL;
-	
-	// get all attributes from the message
-	
-	param = (struct hip_tlv_common *)hip_get_param(msg, HIP_PARAM_IPV6_ADDR);
-	saddr = (struct in6_addr *) hip_get_param_contents_direct(param);
-	HIP_DEBUG_IN6ADDR("Source IP address: ", saddr);
-	
-	param = hip_get_next_param(msg, param);
-	daddr = (struct in6_addr *) hip_get_param_contents_direct(param);
-	HIP_DEBUG_IN6ADDR("Destination IP address : ", daddr);
-	
-	param = (struct hip_tlv_common *)hip_get_param(msg, HIP_PARAM_HIT);
-	src_hit = (struct in6_addr *) hip_get_param_contents_direct(param);
-	HIP_DEBUG_HIT("Source Hit: ", src_hit);
-	
-	param = hip_get_next_param(msg, param);
-	dst_hit = (struct in6_addr *) hip_get_param_contents_direct(param);
-	HIP_DEBUG_HIT("Destination HIT: ", dst_hit);
-	
-	param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_UINT);
-	spi_ipsec = *((uint32_t *) hip_get_param_contents_direct(param));
-	HIP_DEBUG("the spi value is : %u \n", spi_ipsec);
-	
-	param = hip_get_next_param(msg, param);
-	nat_mode = *((uint8_t *) hip_get_param_contents_direct(param));
-	HIP_DEBUG("the nat_mode value is %u \n", nat_mode);
-	
-	param =  hip_get_next_param(msg, param);
-	local_port = *((uint16_t *) hip_get_param_contents_direct(param));
-	HIP_DEBUG("the local_port value is %u \n", local_port);
-	
-	param =  hip_get_next_param(msg, param);
-	peer_port = *((uint16_t *) hip_get_param_contents_direct(param));
-	HIP_DEBUG("the peer_port value is %u \n", peer_port);
-	
-	param =  hip_get_next_param(msg, param);
-	esp_prot_transform = *((uint8_t *) hip_get_param_contents_direct(param));
-	HIP_DEBUG("esp protection extension transform is %u \n", esp_prot_transform);
-	
-	// this parameter is only included, if the esp extension is used
-	if (esp_prot_transform > ESP_PROT_TRANSFORM_UNUSED)
+	switch(msg_type)
 	{
-		param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_HCHAIN_ANCHOR);
-		esp_prot_anchor = (unsigned char *) hip_get_param_contents_direct(param);
-		HIP_HEXDUMP("the esp protection anchor is ", esp_prot_anchor,
-			    esp_prot_transforms[esp_prot_transform]);
-	} else
-	{
-		esp_prot_anchor = NULL;
+	        case SO_HIP_FW_BEX_DONE:
+		        if (dst_hit)
+		                err = firewall_set_bex_state(src_hit, dst_hit, 1);
+			else
+			        err = firewall_set_bex_state(src_hit, dst_hit, -1);
+			break;
+                case SO_HIP_FW_UPDATE_DB:
+		        err = firewall_set_bex_state(src_hit, dst_hit, 0);
+			break;
+                default:
+		        break;
 	}
-	
-	param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_KEYS);
-	enckey = (struct hip_crypto_key *) hip_get_param_contents_direct(param);
-	HIP_HEXDUMP("crypto key :", enckey, sizeof(struct hip_crypto_key));
-	
-	param = hip_get_next_param(msg, param);
-	authkey = (struct hip_crypto_key *)hip_get_param_contents_direct(param);
-	HIP_HEXDUMP("authen key :", authkey, sizeof(struct hip_crypto_key));
-	
-	param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_INT);
-	ealg = *((int *) hip_get_param_contents_direct(param));
-	HIP_DEBUG("ealg value is %d \n", ealg);
-	
-	param =  hip_get_next_param(msg, param);		
-	retransmission = *((int *) hip_get_param_contents_direct(param));
-	HIP_DEBUG("already_acquired value is %d \n", retransmission);
-	
-	param =  hip_get_next_param(msg, param);		
-	direction = *((int *) hip_get_param_contents_direct(param));
-	HIP_DEBUG("the direction value is %d \n", direction);
-	
-	param =  hip_get_next_param(msg, param);
-	update = *((int *) hip_get_param_contents_direct(param));
-	HIP_DEBUG("the update value is %d \n", update);
-	
-	if (dst_hit)
-		err = firewall_set_bex_state(src_hit, dst_hit, 1);
-	else
-		err = firewall_set_bex_state(src_hit, dst_hit, -1);
-	
-	
-	err = hipl_userspace_ipsec_sadb_add_wrapper(saddr, daddr, 
-						    src_hit, dst_hit, 
-						    spi_ipsec, nat_mode,
-						    local_port, peer_port,
-						    esp_prot_transform,
-						    esp_prot_anchor, ealg,
-						    enckey, 
-						    authkey, retransmission, 
-						    direction, update);
 	return err;
 }
