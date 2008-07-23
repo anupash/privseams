@@ -21,13 +21,12 @@ unsigned short in_cksum(u16 *ptr,int nbytes){
 	register u32 sum;
 	u16 oddbyte;
 	register u16 answer;
-
+	
 	/*
 	 * Our algorithm is simple, using a 32-bit accumulator (sum),
 	 * we add sequential 16-bit words to it, and at the end, fold back
 	 * all the carry bits from the top 16 bits into the lower 16 bits.
 	 */
-
 	sum = 0;
 	while (nbytes > 1){
 		sum += *ptr++;
@@ -44,60 +43,45 @@ unsigned short in_cksum(u16 *ptr,int nbytes){
 	/*
 	 * Add back carry outs from top 16 bits to low 16 bits.
 	 */
-
 	sum  = (sum >> 16) + (sum & 0xffff);    /* add high-16 to low-16 */
 	sum += (sum >> 16);                     /* add carry */
 	answer = ~sum;          /* ones-complement, then truncate to 16 bits */
 	return(answer);
 }
 
-
-
 /**
- * adds the i1 option to a packet if required
- * adds the default HIT after the i1 option (if i1 option should be added)
- * and sends it off with the correct checksum
-
- * trafficType - 4 or 6 - standing for ipv4 and ipv6
- */
-/**
- * Sends a TCP packet through a raw socket.
+ * @brief Sends a TCP packet through a raw socket.
  *
- * @param *ptr	pointer to an integer that indicates
- * 		the type of traffic: 4 - ipv4; 6 - ipv6.
- * @param *ptr
-
-
- * @return	nothing, this function loops forever,
- * 		until the firewall is stopped.
+ * @param  hdr         
+ * @param  newSize     
+ * @param  trafficType 4 or 6 - standing for ipv4 and ipv6
+ * @param  sockfd      a socket file descriptor
+ * @param  addOption   adds the I1 option to a packet if required
+ * @param  addHIT      adds the default HIT after the I1 option (if I1 option
+ *                     should be added)
+ * @return             ?
  */
-int send_tcp_packet(void *hdr,
-		    int   newSize,
-		    int   trafficType,
-		    int   sockfd,
-		    int   addOption,
-		    int   addHIT){
-	int    on = 1, i, j, err = 0, off = 0;
-	int    hdr_size, newHdr_size, twoHdrsSize;
-	char  *packet;
-	char  *bytes =(char*)hdr;
+int send_tcp_packet(void *hdr, int newSize, int trafficType, int sockfd,
+		    int addOption, int addHIT)
+{
+	int on = 1, i = 0, j = 0, err = 0, off = 0, hdr_size = 0;
+	int newHdr_size = 0, twoHdrsSize = 0;
+	char *packet = NULL, *HITbytes = NULL;
+	char *bytes = (char*)hdr;
+	void  *pointer = NULL;
+	struct tcphdr *tcphdr = NULL, *newTcphdr = NULL;
+	struct ip *iphdr = NULL, *newIphdr = NULL;
+	struct ip6_hdr *ip6_hdr = NULL, *newIp6_hdr = NULL;
+	struct pseudo_hdr *pseudo = NULL;
+	struct pseudo6_hdr *pseudo6 = NULL;
 	struct sockaddr_in  sin_addr;
 	struct sockaddr_in6 sin6_addr;
 	struct in_addr  dstAddr;
 	struct in6_addr dst6Addr;
-	struct tcphdr *tcphdr;
-	struct tcphdr *newTcphdr;
-	struct ip * iphdr;
-	struct ip * newIphdr;
-	struct ip6_hdr * ip6_hdr;
-	struct ip6_hdr * newIp6_hdr;
-	struct pseudo_hdr  *pseudo;
-	struct pseudo6_hdr *pseudo6;
-	void  *pointer;
-	struct in6_addr *defaultHit = HIP_MALLOC(sizeof(char)*16, 0);
-	char   newHdr [newSize + 4*addOption + (sizeof(struct in6_addr))*addHIT];
-	char  *HITbytes;
-
+		
+	in6_addr_t *defaultHit = (in6_addr_t *)malloc(sizeof(char) * 16);
+	char newHdr[newSize + 4*addOption + (sizeof(struct in6_addr))*addHIT];
+	
 	if(addOption)
 		newSize = newSize + 4;
 	if(addHIT)
@@ -457,18 +441,14 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 		hip_send_opp_tcp_i1(entry);
 	}
 out_err:
-
-	_HIP_DEBUG("----**********------*********-----------------\n");
-	/*
-        hip_for_each_ha(hip_print_info_hadb, &n);
-        */
-	_HIP_DEBUG("----**********------*********-----------------\n");
-
-	if (i1)
-	  HIP_FREE(i1);
-
-	if (i1_blind)
-	  HIP_FREE(i1_blind);
+	if (i1 != NULL) {
+		free(i1);
+	}
+#ifdef CONFIG_HIP_BLIND
+	if (i1_blind != NULL) {
+		free(i1_blind);
+	}
+#endif
 	return err;
 }
 
