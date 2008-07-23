@@ -105,6 +105,7 @@ class ResolvConf:
         self.restore_resolvconf()
 
 class Global:
+    default_hiphosts = "/etc/hip/hosts"
     re_nameserver = re.compile(r'nameserver\s([0-9\.]+)$')
     def __init__(gp):
         gp.resolv_conf = '/etc/resolv.conf'
@@ -166,12 +167,23 @@ class Global:
                 return r
         return None
 
+    def getbyaaaa(gp,ahn):
+        for h in gp.hosts:
+            r = h.getbyaaaa(ahn)
+            if r:
+                return r
+        return None
+
     def doit(gp,args):
         gp.read_resolv_conf()
         gp.parameter_defaults()
         gp.hosts = []
-        for hn in gp.hostsnames:
-            gp.hosts.append(hosts.Hosts(hn))
+        if gp.hostsnames:
+            for hn in gp.hostsnames:
+                gp.hosts.append(hosts.Hosts(hn))
+        else:
+            if os.path.exists(gp.default_hiphosts):
+                gp.hosts.append(hosts.Hosts(gp.default_hiphosts))
         util.init_wantdown()
         util.init_wantdown_int()        # Keyboard interrupts
         fout = sys.stdout
@@ -204,7 +216,7 @@ class Global:
                 fout.write('%s %s\n' % (r.header,r.questions,))
                 q1 = r.questions[0]
                 qtype = q1['qtype']
-                sent_anser = 0
+                sent_answer = 0
                 m = None
                 if qtype == 28:     # AAAA
                     nam = q1['qname']
@@ -247,9 +259,32 @@ class Global:
                     if m:
                         m.addAAAA(a2['name'],a2['class'],a2['ttl'],a2['data'])
                         s.sendto(m.buf,from_a)
-                        sent_anser = 1
+                        sent_answer = 1
 
-                if not sent_anser:
+                elif qtype == 12:     # PTR
+                    nam = q1['qname']
+                    lr = gp.getbyaaaa(nam)
+                    fout.write('Hosts PTR 1 (%s)\n' % (lr,))
+                    if lr:
+                        lr = lr.pop()
+                        a2 = {'name': nam,
+                              'data': lr,
+                              'type': 12,
+                              'class': 1,
+                              'ttl': 10,
+                              }
+                        m = DNS.Lib.Mpacker()
+                        m.addHeader(r.header['id'],
+                                    0, 0, 0, 0, 1, 0, 0, 0,
+                                    1, 1, 0, 0)
+                        m.addQuestion(nam,qtype,1)
+                        fout.write('Hosts PTR 5 (%s)\n' % (lr,))
+                    if m:
+                        m.addPTR(a2['name'],a2['class'],a2['ttl'],a2['data'])
+                        s.sendto(m.buf,from_a)
+                        sent_answer = 1
+                        
+                if not sent_answer:
                     s2.send(buf)
                     r2 = s2.recv(2048)
 

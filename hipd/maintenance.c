@@ -13,6 +13,7 @@
 
 #include "maintenance.h"
 
+int hip_firewall_sock_lsi_fd = -1;
 
 float retrans_counter = HIP_RETRANSMIT_INIT;
 float opp_fallback_counter = HIP_OPP_FALLBACK_INIT;
@@ -356,11 +357,15 @@ out_err:
 int hip_agent_update(void)
 {
 	hip_agent_add_lhits();
-	
+	/* remove by santtu
 	if (hip_nat_is())
 		hip_agent_update_status(SO_HIP_SET_NAT_ON, NULL, 0);
 	else
 		hip_agent_update_status(SO_HIP_SET_NAT_OFF, NULL, 0);
+		*/
+	//add by santtu
+	hip_agent_update_status(hip_get_nat_mode(), NULL, 0);
+	//end add
 }
 
 
@@ -398,14 +403,17 @@ void register_to_dht ()
                                                               NULL); 
                         publish_hit(&opendht_name_mapping, tmp_hit_str, tmp_addr_str);
                         pub_addr_ret = publish_addr(tmp_hit_str, tmp_addr_str);
+
+			free(tmp_hit_str);
+			free(tmp_addr_str);
                         continue;
                 }
         }
  out_err:
-        if (tmp_hit_str)
+        /*if (tmp_hit_str)
 		free(tmp_hit_str);
         if (tmp_addr_str)
-		free(tmp_addr_str);
+		free(tmp_addr_str);*/
         return;
 }
 
@@ -613,10 +621,14 @@ int periodic_maintenance()
         }
 
 //#ifdef CONFIG_HIP_UDPRELAY
-	/* Clear expired records from the relay hashtable. */
+	/* Clear the expired records from the relay hashtable. */
 	hip_relht_maintenance();
 //#endif
-
+	/* Clear the expired pending service requests. This is by no means time
+	   critical operation and is not needed to be done on every maintenance
+	   cycle. Once every 10 minutes or so should be enough. Just for the
+	   record, if periodic_maintenance() is ever to be optimized. */
+	hip_registration_maintenance();
 
 	/* Sending of NAT Keep-Alives. */
 	if(hip_nat_status && nat_keep_alive_counter < 0){
@@ -629,6 +641,10 @@ int periodic_maintenance()
  out_err:
 	
 	return err;
+}
+
+int hip_get_firewall_status(){
+	return hip_firewall_status;
 }
 
 int hip_firewall_is_alive()
@@ -651,28 +667,16 @@ int hip_firewall_is_alive()
 int hip_firewall_add_escrow_data(hip_ha_t *entry, struct in6_addr * hit_s, 
         struct in6_addr * hit_r, struct hip_keys *keys)
 {
-		struct hip_common *msg;
-		int err = 0;
-		int n;
+		hip_common_t *msg = NULL;
+		int err = 0, n = 0;
 		socklen_t alen;
-		//struct in6_addr * hit_s;
-		//struct in6_addr * hit_r;
-				
+		
 		HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
 		hip_msg_init(msg);
 		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ADD_ESCROW_DATA, 0), -1, 
                         "Build hdr failed\n");
 		
-		/*if (hip_match_hit(&keys->hit, &entry->hit_our)) {
-			hit_s = &entry->hit_peer;
-			hit_r = &entry->hit_our;
-		}
-		else {
-			hit_r = &entry->hit_peer;
-			hit_s = &entry->hit_our;
-		}*/
-                
-                HIP_IFEL(hip_build_param_contents(msg, (void *)hit_s, HIP_PARAM_HIT,
+		HIP_IFEL(hip_build_param_contents(msg, (void *)hit_s, HIP_PARAM_HIT,
                         sizeof(struct in6_addr)), -1, "build param contents failed\n");
 		HIP_IFEL(hip_build_param_contents(msg, (void *)hit_r, HIP_PARAM_HIT,
                         sizeof(struct in6_addr)), -1, "build param contents failed\n");
@@ -680,19 +684,61 @@ int hip_firewall_add_escrow_data(hip_ha_t *entry, struct in6_addr * hit_s,
 		HIP_IFEL(hip_build_param(msg, (struct hip_tlv_common *)keys), -1, 
                         "hip build param failed\n");
 
-		n = hip_sendto(msg, &hip_firewall_addr);                   
+		n = hip_sendto_firewall(msg);             
 		if (n < 0)
 		{
 			HIP_ERROR("Sendto firewall failed.\n");
 			err = -1;
 			goto out_err;
 		}
+		
 		else HIP_DEBUG("Sendto firewall OK.\n");
 
 out_err:
 	return err;
 
 }     
+
+int hip_firewall_set_bex_data(int action, hip_ha_t *entry, struct in6_addr *hit_s, struct in6_addr *hit_r)
+{
+        struct hip_common *msg = NULL;
+	struct sockaddr_in6 hip_firewall_addr;
+	int err = 0, n = 0;
+	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
+	hip_msg_init(msg);
+	HIP_IFEL(hip_build_user_hdr(msg, action, 0), -1, 
+                 "Build hdr failed\n");
+	            
+        HIP_IFEL(hip_build_param_contents(msg, (void *)hit_s, HIP_PARAM_HIT,
+                 sizeof(struct in6_addr)), -1, "build param contents failed\n");
+	HIP_IFEL(hip_build_param_contents(msg, (void *)hit_r, HIP_PARAM_HIT,
+                 sizeof(struct in6_addr)), -1, "build param contents failed\n");
+
+
+	socklen_t alen = sizeof(hip_firewall_addr);
+
+	bzero(&hip_firewall_addr, alen);
+	hip_firewall_addr.sin6_family = AF_INET6;
+	hip_firewall_addr.sin6_port = htons(HIP_FIREWALL_PORT);
+	hip_firewall_addr.sin6_addr = in6addr_loopback;
+
+	if (hip_get_firewall_status()) {
+	        n = sendto(hip_firewall_sock_lsi_fd, msg, hip_get_msg_total_len(msg),
+			   0, &hip_firewall_addr, alen);
+	}
+
+	if (n < 0)
+	  HIP_DEBUG("Send to firewall failed str errno %s\n",strerror(errno));
+	HIP_IFEL( n < 0, -1, "Sendto firewall failed.\n");   
+
+	HIP_DEBUG("Sendto firewall OK.\n");
+
+out_err:
+	if (msg)
+		free(msg);
+
+	return err;
+}
 
 int hip_firewall_remove_escrow_data(struct in6_addr *addr, uint32_t spi)
 {
@@ -712,9 +758,19 @@ int hip_firewall_remove_escrow_data(struct in6_addr *addr, uint32_t spi)
                 sizeof(struct in6_addr)), -1, "build param contents failed\n");
         HIP_IFEL(hip_build_param_contents(msg, (void *)&spi, HIP_PARAM_UINT,
                 sizeof(unsigned int)), -1, "build param contents failed\n"); 
-                
-        n = hip_sendto(msg, &hip_firewall_addr);                   
-        if (n < 0)
+	
+	/* Switched from hip_sendto() to hip_sendto_user() due to
+	   namespace collision. Both message.h and user.c had functions
+	   hip_sendto(). Introducing a prototype hip_sendto() to user.h
+	   led to compiler errors --> user.c hip_sendto() renamed to
+	   hip_sendto_user().
+
+	   Lesson learned: use function prototypes unless functions are
+	   ment only for local (inside the same file where defined) use.
+	   -Lauri 11.07.2008 */
+	n = hip_sendto_user(msg, (struct sockaddr *)&hip_firewall_addr);
+	
+	if (n < 0)
         {
                 HIP_ERROR("Sendto firewall failed.\n");
                 err = -1;
@@ -739,8 +795,18 @@ int hip_firewall_set_escrow_active(int activate)
         HIP_IFEL(hip_build_user_hdr(msg, 
                 (activate ? SO_HIP_SET_ESCROW_ACTIVE : SO_HIP_SET_ESCROW_INACTIVE), 0), 
                 -1, "Build hdr failed\n");
-                
-        n = hip_sendto(msg, &hip_firewall_addr);                   
+        
+        /* Switched from hip_sendto() to hip_sendto_user() due to
+	   namespace collision. Both message.h and user.c had functions
+	   hip_sendto(). Introducing a prototype hip_sendto() to user.h
+	   led to compiler errors --> user.c hip_sendto() renamed to
+	   hip_sendto_user().
+
+	   Lesson learned: use function prototypes unless functions are
+	   ment only for local (inside the same file where defined) use.
+	   -Lauri 11.07.2008 */
+	n = hip_sendto_user(msg, (struct sockaddr *)&hip_firewall_addr);
+        
         if (n < 0) {
                 HIP_ERROR("Sendto firewall failed.\n");
                 err = -1;
@@ -752,6 +818,7 @@ int hip_firewall_set_escrow_active(int activate)
 out_err:
         return err;
 }
+
 
 int opendht_put_locator(int sockfd, 
                    unsigned char * key, 
@@ -791,7 +858,3 @@ int opendht_put_locator(int sockfd,
     return(err);
 }
 
-int hip_get_firewall_status()
-{
-	return hip_firewall_status;
-}

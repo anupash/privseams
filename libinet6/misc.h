@@ -1,3 +1,12 @@
+/**@file
+ * A header file for misc.c
+ *
+ * @author Miika Komu
+ * @author Mika Kousa
+ * @author Bing Zhou
+ * @note   Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @see    misc.h
+ */
 #ifndef HIP_MISC_H
 #define HIP_MISC_H
 
@@ -20,6 +29,31 @@
 
 #define HIP_OPP_IP_DB_SIZE		16
 
+typedef struct _hip_hosts_entry
+{
+        hip_hit_t hit;
+        hip_lsi_t lsi;
+        char *hostname;
+} hip_hosts_entry;
+
+struct hip_rsa_keylen {
+	int e_len;
+	int e;
+	int n;
+};
+
+static inline int ipv4_addr_cmp(const struct in_addr *a1,
+				const struct in_addr *a2)
+{
+	return memcmp((const void *) a1, (const void *) a2,
+		      sizeof(struct in_addr));
+}
+
+static inline void ipv4_addr_copy(struct in_addr *a1,
+				  const struct in_addr *a2)
+{
+	memcpy((void *) a1, (const void *) a2, sizeof(struct in_addr));
+}
 
 static inline int ipv6_addr_cmp(const struct in6_addr *a1,
 				const struct in6_addr *a2)
@@ -58,7 +92,12 @@ int hip_in6_ntop2(const struct in6_addr *in6, char *buf);
 char* hip_hit_ntop(const hip_hit_t *hit, char *buf);
 int hip_host_id_contains_private_key(struct hip_host_id *host_id);
 u8 *hip_host_id_extract_public_key(u8 *buffer, struct hip_host_id *data);
+
+int hip_lsi_are_equal(const hip_lsi_t *lsi1,
+		      const hip_lsi_t *lsi2);
 int hip_hit_is_bigger(const struct in6_addr *hit1,
+		      const struct in6_addr *hit2);
+int hip_hit_are_equal(const struct in6_addr *hit1,
 		      const struct in6_addr *hit2);
 void hip_xor_hits(struct in6_addr *res, 
 		  const struct in6_addr *hit1, 
@@ -69,6 +108,7 @@ unsigned long hip_hash_spi(const void *spi);
 int hip_match_spi(const void *, const void *);
 int hip_match_hit(const void *, const void *);
 const char *hip_algorithm_to_string(int algo);
+int convert_string_to_address_v4(const char *str, struct in_addr *ip);
 
 hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht);
 hip_transform_suite_t hip_select_hip_transform(struct hip_hip_transform *ht);
@@ -80,7 +120,7 @@ int hip_birthday_success(uint64_t old_bd, uint64_t new_bd);
 uint64_t hip_get_current_birthday(void);
 int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
 				 int use_default, const char *hi_fmt,
-				 const char *hi_file);
+				 const char *hi_file, int rsa_key_bits, int dsa_key_bits);
 char *hip_convert_hit_to_str(const hip_hit_t *local_hit, const char *prefix);
 int maxof(int num_args, ...);
 
@@ -91,15 +131,46 @@ int hip_build_digest(const int type, const void *in, int in_len, void *out);
 int dsa_to_dns_key_rr(DSA *dsa, unsigned char **buf);
 
 void *hip_cast_sa_addr(void *sockaddr);
-int hip_sockaddr_len(void *sockaddr);
+int hip_sockaddr_len(const void *sockaddr);
 int hip_sa_addr_len(void *sockaddr);
 int hip_create_lock_file(char *filename, int killold);
 int hip_remove_lock_file(char *filename);
 
-void hip_addr_to_sockaddr(struct in6_addr *addr, struct sockaddr *sa);
+void hip_addr_to_sockaddr(struct in6_addr *addr, struct sockaddr_storage *sa);
 
 uint64_t hip_solve_puzzle(void *puzzle, struct hip_common *hdr, int mode);
+hip_lsi_t *hip_get_lsi_peer_by_hits(struct in6_addr *hit_s, struct in6_addr *hit_r);
 
 int hip_create_lock_file(char *filename, int killold);
+
+/**
+ * Converts a string to lowercase. Converts parameter @c from string to a
+ * lowercase string and places the result in @c to. All alphabetic (isalpha())
+ * characters are converted. Non-alphabetic are copied from source buffer
+ * @c from to target buffer @c to without conversion.
+ *
+ * @param  to    a target buffer where to put the converted string
+ * @param  from  a source buffer which to convert.
+ * @param  count number of characters in @c from <b>including null
+ *               termination</b>. Use strlen(from) + 1.
+ * @return       -1 if @c count is zero or if @c to or @c from are NULL, zero
+ *               otherwise.
+ */ 
+int hip_string_to_lowercase(char *to, const char *from, const size_t count);
+
+/**
+ * Checks whether a string consists only of digits (isdigit()).
+ *
+ * @param  string the string to check
+ * @return        -1 if @c string is NULL or if the string has characters other
+ *                than digits, zero otherwise.
+ */ 
+int hip_string_is_digit(const char *string);
+
+void hip_get_rsa_keylen(const struct hip_host_id *host_id, struct hip_rsa_keylen *ret, int is_priv);
+
+int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
+                    struct in6_addr *src_lsi, struct in6_addr *dst_lsi,
+                    struct in6_addr *src_ip, struct in6_addr *dst_ip);
 
 #endif /* HIP_MISC_H */

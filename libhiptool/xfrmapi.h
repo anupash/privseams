@@ -1,7 +1,7 @@
 /**
  * BEET API for the kernel and the userspace. XFRM API is for
  * management of IPsec SAs and BEET API is for management of
- * HIT<->SPI,IP mappings. 
+ * HIT<->SPI,IP mappings.
  */
 #ifndef HIP_BEET_H
 #define HIP_BEET_H
@@ -48,7 +48,7 @@ struct hip_xfrm_state {
         //int                  dir;                 /* Direction */
         hip_hit_t            hit_our;             /* The HIT we use with
                                                    * this host */
-        hip_hit_t            hit_peer;            /* Peer's HIT */ 
+        hip_hit_t            hit_peer;            /* Peer's HIT */
 	hip_hit_t            hash_key;            /* key for the hash table */
 	struct in6_addr      preferred_peer_addr; /* preferred dst
 						   * address to use when
@@ -71,15 +71,19 @@ void hip_beetdb_put_entry(void *entry);
  */
 void hip_xfrm_set_nl_ipsec(struct rtnl_handle *nl_ipsec);
 int hip_xfrm_dst_init(struct in6_addr * dst_hit, struct in6_addr * dst_addr);
-int hip_xfrm_update(hip_hit_t *hit, hip_hit_t *hit2, struct in6_addr *addr, 
+int hip_xfrm_update(hip_hit_t *hit, hip_hit_t *hit2, struct in6_addr *addr,
 		    uint32_t spi, int state, int dir, hip_portpair_t *sa_info);
 int hip_xfrm_delete(hip_hit_t * hit, uint32_t spi, int dir);
+
+
 int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
-			   struct in6_addr *hit_our,
-			   struct in6_addr *hit_peer, 
+			   struct in6_addr *id_our,
+			   struct in6_addr *id_peer,
 			   struct in6_addr *tmpl_saddr,
 			   struct in6_addr *tmpl_daddr, int dir, u8 proto,
-			   u8 hit_prefix, int preferred_family);
+			   u8 id_prefix, int preferred_family);
+
+
 int hip_xfrm_policy_delete(struct rtnl_handle *rth,
 			   struct in6_addr *hit_our,
 			   struct in6_addr *hit_peer,
@@ -88,8 +92,8 @@ int hip_xfrm_policy_delete(struct rtnl_handle *rth,
 
 int hip_xfrm_state_modify(struct rtnl_handle *rth,
 			  int cmd, struct in6_addr *saddr,
-			  struct in6_addr *daddr, 
-			  struct in6_addr *src_hit, 
+			  struct in6_addr *daddr,
+			  struct in6_addr *src_hit,
 			  struct in6_addr *dst_hit,
 			  __u32 spi, int ealg, struct hip_crypto_key *enckey,
 			  int enckey_len,
@@ -105,12 +109,12 @@ uint32_t hip_acquire_spi(hip_hit_t *srchit, hip_hit_t *dsthit);
 /* Setups the SA (with a given SPI if so said) */
 uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 		    struct in6_addr *src_hit, struct in6_addr *dst_hit,
-		    uint32_t *spi, int ealg, struct hip_crypto_key *enckey,
+		    uint32_t spi, int ealg, struct hip_crypto_key *enckey,
 		    struct hip_crypto_key *authkey,
 		    int already_acquired, int direction, int update,
-			int sport, int dport);
+		    hip_ha_t *entry);
 
-void hip_delete_sa(u32 spi, struct in6_addr *peer_addr, struct in6_addr *dst_addr, 
+void hip_delete_sa(u32 spi, struct in6_addr *peer_addr, struct in6_addr *dst_addr,
 		   int family, int sport, int dport);
 
 

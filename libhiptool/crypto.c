@@ -452,34 +452,28 @@ int bn2bin_safe(const BIGNUM *a, unsigned char *to, int len)
  */
 int impl_dsa_sign(u8 *digest, u8 *private_key, u8 *signature)
 {
-	DSA_SIG *dsa_sig;
+	DSA_SIG *dsa_sig = NULL;
 	DSA *dsa = NULL;
-	int offset = 0, err = 1;
+	int offset = 0, err = 0;
 	int t = private_key[offset++];
-	int len;
+	int key_len = 64 + 8 * t;
 
 	HIP_IFEL(t > 8, 1, "Illegal DSA key\n");
 
 	dsa = DSA_new();
-	len = DSA_PRIV;
-	dsa->q = BN_bin2bn(&private_key[offset], len, 0);
-	offset += len;
+	HIP_IFEL(!dsa, 1, "Failed to allocate DSA\n");
 
-	len = 64+8*t;
-	dsa->p = BN_bin2bn(&private_key[offset], len, 0);
-	offset += len;
+	dsa->q = BN_bin2bn(&private_key[offset], DSA_PRIV, 0);
+	offset += DSA_PRIV;
 
-	len = 64+8*t;
-	dsa->g = BN_bin2bn(&private_key[offset], len, 0);
-	offset += len;
+	dsa->p = BN_bin2bn(&private_key[offset], key_len, 0);
+	offset += key_len;
+	dsa->g = BN_bin2bn(&private_key[offset], key_len, 0);
+	offset += key_len;
+	dsa->pub_key = BN_bin2bn(&private_key[offset], key_len, 0);
+	offset += key_len;
 
-	len = 64+8*t;
-	dsa->pub_key = BN_bin2bn(&private_key[offset], len, 0);
-	offset += len;
-
-	len = DSA_PRIV;
-	dsa->priv_key = BN_bin2bn(&private_key[offset], len, 0);
-	offset += len;
+	dsa->priv_key = BN_bin2bn(&private_key[offset], DSA_PRIV, 0);
 
 	//HIP_DEBUG("DSA.q: %s\n", BN_bn2hex(dsa->q));
 	//HIP_DEBUG("DSA.p: %s\n", BN_bn2hex(dsa->p));
@@ -488,7 +482,7 @@ int impl_dsa_sign(u8 *digest, u8 *private_key, u8 *signature)
 	//HIP_DEBUG("DSA.privkey: %s\n", BN_bn2hex(dsa->priv_key));
 
 	memset(signature, 0, HIP_DSA_SIG_SIZE);
-	signature[0] = 8;
+	signature[0] = t;
 
 	//HIP_HEXDUMP("DSA signing digest", digest, SHA_DIGEST_LENGTH);
 
@@ -499,16 +493,16 @@ int impl_dsa_sign(u8 *digest, u8 *private_key, u8 *signature)
 	//HIP_DEBUG("DSAsig.s: %s\n", BN_bn2hex(dsa_sig->s));
 
 	/* build signature from DSA_SIG struct */
-	bn2bin_safe(dsa_sig->r, &signature[1], 20);
-	bn2bin_safe(dsa_sig->s, &signature[21], 20);
-	DSA_SIG_free(dsa_sig);
- 	err = 0;
+	bn2bin_safe(dsa_sig->r, &signature[1], DSA_PRIV);
+	bn2bin_safe(dsa_sig->s, &signature[1 + DSA_PRIV], DSA_PRIV);
 
 	_HIP_HEXDUMP("signature",signature,HIP_DSA_SIGNATURE_LEN);
 
  out_err:
 	if (dsa)
 		DSA_free(dsa);
+	if (dsa_sig)
+		DSA_SIG_free(dsa_sig);
 
 	return err;
 }
@@ -519,7 +513,7 @@ int impl_dsa_sign(u8 *digest, u8 *private_key, u8 *signature)
  */
 int impl_dsa_verify(u8 *digest, u8 *public_key, u8 *signature)
 {
-	DSA_SIG dsa_sig;
+	DSA_SIG *dsa_sig;
 	DSA *dsa;
 	int offset = 0, err;
 	u8 t = public_key[offset++];
@@ -527,6 +521,7 @@ int impl_dsa_verify(u8 *digest, u8 *public_key, u8 *signature)
 
 	/* Build the public key */
 	dsa = DSA_new();
+	HIP_IFEL(!dsa, 1, "Failed to allocate DSA\n");
 	/* get Q, P, G, and Y */
 	dsa->q = BN_bin2bn(&public_key[offset], DSA_PRIV, 0);
 	offset += DSA_PRIV;
@@ -541,9 +536,11 @@ int impl_dsa_verify(u8 *digest, u8 *public_key, u8 *signature)
 	//HIP_DEBUG("DSA.g: %s\n", BN_bn2hex(dsa->g));
 	//HIP_DEBUG("DSA.pubkey: %s\n", BN_bn2hex(dsa->pub_key));
 
-	/* build the DSA structure */
-	dsa_sig.r = BN_bin2bn(&signature[1], 20, NULL);
-	dsa_sig.s = BN_bin2bn(&signature[21], 20, NULL);
+	/* build the signature structure */
+	dsa_sig = DSA_SIG_new();
+	HIP_IFEL(!dsa_sig, 1, "Failed to allocate DSA_SIG\n");
+	dsa_sig->r = BN_bin2bn(&signature[1], DSA_PRIV, NULL);
+	dsa_sig->s = BN_bin2bn(&signature[1 + DSA_PRIV], DSA_PRIV, NULL);
 
 	//HIP_DEBUG("DSAsig.r: %s\n", BN_bn2hex(dsa_sig.r));
 	//HIP_DEBUG("DSAsig.s: %s\n", BN_bn2hex(dsa_sig.s));
@@ -551,136 +548,103 @@ int impl_dsa_verify(u8 *digest, u8 *public_key, u8 *signature)
 	//HIP_HEXDUMP("DSA verifying digest", digest, SHA_DIGEST_LENGTH);
 
 	/* verify the DSA signature */
-	err = DSA_do_verify(digest, SHA_DIGEST_LENGTH, &dsa_sig, dsa);
-	BN_free(dsa_sig.r);
-	BN_free(dsa_sig.s);
-	DSA_free(dsa);
-	HIP_DEBUG("DSA verify: %d\n", err);
-	
-	return err == 1 ? 0 : 1;
+	err = DSA_do_verify(digest, SHA_DIGEST_LENGTH, dsa_sig, dsa) == 0 ? 1 : 0;
+
+  out_err:
+	if (dsa)
+	    DSA_free(dsa);
+	if (dsa_sig)
+	    DSA_SIG_free(dsa_sig);
+	return err;
 }
 
 /*
  * return 0 on success.
  */
-int impl_rsa_sign(u8 *digest, u8 *private_key, u8 *signature, int priv_klen)
+int impl_rsa_sign(u8 *digest, u8 *private_key, u8 *signature, struct hip_rsa_keylen *keylen)
 {
-	RSA *rsa;
-	BN_CTX *ctx;
-	u8 *data = private_key;
-	int offset = 0;
-	int len = data[offset++];
-	int slice, err, res = 1;
+	RSA *rsa = NULL;
+	BN_CTX *ctx = NULL;
+	int offset;
+	int err;
 	unsigned int sig_len;
-	
+
 	/* Build the private key */
 	rsa = RSA_new();
-	if (!rsa) {
-		goto err;
-	}
+	HIP_IFEL(!rsa, 1, "Failed to allocate RSA\n");
 
-	rsa->e = BN_bin2bn(&data[offset], len, 0);
-	offset += len;
-
-        slice = (priv_klen - len) / 6;
-        len = 2 * slice;
-	rsa->n = BN_bin2bn(&data[offset], len, 0);
-	offset += len;
-
-        len = 2 * slice;
-	rsa->d = BN_bin2bn(&data[offset], len, 0);
-	offset += len;
-
-        len = slice;
-	rsa->p = BN_bin2bn(&data[offset], len, 0);
-	offset += len;
-
-        len = slice;
-	rsa->q = BN_bin2bn(&data[offset], len, 0);
-	offset += len;
+	offset = keylen->e_len;
+	rsa->e = BN_bin2bn(&private_key[offset], keylen->e, 0);
+	offset += keylen->e;
+	rsa->n = BN_bin2bn(&private_key[offset], keylen->n, 0);
+	offset += keylen->n;
+	rsa->d = BN_bin2bn(&private_key[offset], keylen->n, 0);
+	offset += keylen->n;
+	rsa->p = BN_bin2bn(&private_key[offset], keylen->n / 2, 0);
+	offset += keylen->n / 2;
+	rsa->q = BN_bin2bn(&private_key[offset], keylen->n / 2, 0);
 
 	ctx = BN_CTX_new();
-	if (!ctx) {
-		goto err;
-	}
+	HIP_IFEL(!ctx, 1, "Failed to allocate BN_CTX\n");
 
 	rsa->iqmp = BN_mod_inverse(NULL, rsa->p, rsa->q, ctx);
-	if (!rsa->iqmp) {
-		HIP_ERROR("Unable to invert.\n");
-		goto err;
-	}
+	HIP_IFEL(!rsa->iqmp, 1, "Unable to invert.\n");
 
 	/* assuming RSA_sign() uses PKCS1 - RFC 3110/2437
 	 * hash = SHA1 ( data )
 	 * prefix = 30 21 30 09 06 05 2B 0E 03 02 1A 05 00 04 14 
 	 * signature = ( 00 | FF* | 00 | prefix | hash) ** e (mod n)
 	 */
-	sig_len = RSA_size(rsa);
-	memset(signature, 0, sig_len);
-	err = RSA_sign(NID_sha1, digest, SHA_DIGEST_LENGTH, signature,
-		       &sig_len, rsa);
-	res = err == 0 ? 1 : 0;
-	
-	
-	_HIP_DEBUG("***********RSA SIGNING ERROR*************\n");
-	_HIP_DEBUG("Siglen %d,signature length %d,  err :%d\n",sig_len,strlen(signature),err);
-	_HIP_DEBUG("***********RSA SIGNING ERROR*************\n");
-	
 
-	_HIP_HEXDUMP("signature",signature,HIP_RSA_SIGNATURE_LEN);
- err:
+	memset(signature, 0, keylen->n);
+	/* RSA_sign returns 0 on failure */
+	err = RSA_sign(NID_sha1, digest, SHA_DIGEST_LENGTH, signature,
+		       &sig_len, rsa) == 0 ? 1 : 0;
+
+	_HIP_DEBUG("***********RSA SIGNING ERROR*************\n");
+	_HIP_DEBUG("Siglen %d,  err :%d\n",sig_len, ,err);
+	_HIP_DEBUG("***********RSA SIGNING ERROR*************\n");
+
+	_HIP_HEXDUMP("signature",signature,sig_len);
+ out_err:
 	if (rsa)
 		RSA_free(rsa);
 	if (ctx)
 		BN_CTX_free(ctx);
 
-	return res;
+	return err;
 }
 
-int impl_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen)
+int impl_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, struct hip_rsa_keylen *keylen)
 {
-	RSA *rsa;
-	struct hip_sig *sig = (struct hip_sig *)(signature - 1);
-	u8 *data = public_key;
-	int offset = 0;
-	int e_len, key_len, sig_len, err;
+	RSA *rsa = NULL;
+	//struct hip_sig *sig = (struct hip_sig *)(signature - 1);
+	int err;
+	int offset;
 
-	e_len = data[offset++];
-	if (e_len == 0) {
-		e_len = (u16) data[offset];
-		e_len = ntohs(e_len);
-		offset += 2;
-	}
-
-	if (e_len > 512) { /* RFC 3110 limits this field to 4096 bits */
-		HIP_ERROR("RSA HI has invalid exponent length of %u\n",
-			  e_len);
-		return(-1);
-	}
-
-	key_len = pub_klen - (e_len + ((e_len > 255) ? 3 : 1));
-	
+        HIP_IFEL(keylen->e > 512, /* RFC 3110 limits this field to 4096 bits */
+		   1, "RSA HI has invalid exponent length of %d\n", keylen->e);
 
 	/* Build the public key */
 	rsa = RSA_new();
-	rsa->e = BN_bin2bn(&data[offset], e_len, 0);
-	offset += e_len;
-	rsa->n = BN_bin2bn(&data[offset], key_len, 0);
+	HIP_IFEL(!rsa, 1, "Failed to allocate RSA\n");
 
-	sig_len = ntohs(sig->length) - 1; /* exclude algorithm */
+	offset = keylen->e_len;
+	rsa->e = BN_bin2bn(&public_key[offset], keylen->e, 0);
+	offset += keylen->e;
+	rsa->n = BN_bin2bn(&public_key[offset], keylen->n, 0);
 
-	//HIP_DEBUG("INSIDE impl_rsa_verfiy :: key_len=%d, sig_len= %d, sig->length = %d\n",key_len,sig_len,sig->length);
+	//sig_len = ntohs(sig->length) - 1; /* exclude algorithm */
+	//HIP_DEBUG("INSIDE impl_rsa_verify :: key_len=%d, sig_len= %d, sig->length = %d\n",key_len,sig_len,sig->length);
 	/* verify the RSA signature */
-	err = RSA_verify(NID_sha1, digest, SHA_DIGEST_LENGTH,
-			 signature,RSA_size(rsa) , rsa);
-	/*RSA_verify returns 1 if success.*/
+	/* RSA_verify returns 0 on failure */
+	err = RSA_verify(NID_sha1, digest, SHA_DIGEST_LENGTH, signature,
+			RSA_size(rsa), rsa) == 0 ? 1 : 0;
 
-	
+    if(err) {
 	unsigned long e_code = ERR_get_error();
 	ERR_load_crypto_strings();
-	
 
-		
 	_HIP_DEBUG("***********RSA ERROR*************\n");
 	_HIP_DEBUG("htons %d , RSA_size(rsa) = %d\n",htons(sig->length),RSA_size(rsa));
 	char buf[200];
@@ -692,14 +656,16 @@ int impl_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen)
 	_HIP_DEBUG("func error :%s\n",ERR_func_error_string(e_code));
 	_HIP_DEBUG("Reason error :%s\n",ERR_reason_error_string(e_code));
 	_HIP_DEBUG("***********RSA ERROR*************\n");
-	
-	
-	RSA_free(rsa);
+	ERR_free_strings();
+    }
 
-	HIP_DEBUG("RSA verify: %d\n", err);
+  out_err:
+	if (rsa)
+	    RSA_free(rsa);
 
-	return err == 1 ? 0 : 1;
+	return err;
 }
+
 int hip_gen_dh_shared_key(DH *dh, u8 *peer_key, size_t peer_len, u8 *dh_shared_key,
 			  size_t outlen)
 {
@@ -713,7 +679,7 @@ int hip_gen_dh_shared_key(DH *dh, u8 *peer_key, size_t peer_len, u8 *dh_shared_k
 	err = DH_compute_key(dh_shared_key, peer_pub_key, dh);
 
  out_err:
-	if (peer_pub_key) 
+	if (peer_pub_key)
 		BN_free(peer_pub_key);
 
 	return err;
@@ -798,12 +764,11 @@ u16 hip_get_dh_size(u8 hip_dh_group_type) {
  */
 DSA *create_dsa_key(int bits) {
   DSA *dsa = NULL;
-  int ok;
 
-  if (bits < 1 || bits > HIP_MAX_DSA_KEY_LEN) {
+/*  if (bits < 1 || bits > HIP_MAX_DSA_KEY_LEN) {
     HIP_ERROR("create_dsa_key failed (illegal bits value %d)\n", bits);
     goto err_out;
-  }
+  } Checked before calling function */
 
   dsa = DSA_generate_parameters(bits, NULL, 0, NULL, NULL, NULL, NULL);
   if (!dsa) {
@@ -813,13 +778,13 @@ DSA *create_dsa_key(int bits) {
   }
 
   /* generate private and public keys */
-  ok = DSA_generate_key(dsa);
-  if (!ok) {
+  if (!DSA_generate_key(dsa)) {
     HIP_ERROR("create_dsa_key failed (DSA_generate_key): %s\n",
 	     ERR_error_string(ERR_get_error(), NULL));
     goto err_out;
   }
-  HIP_DEBUG("*****************Creting DSA of %d bits\n\n\n", bits);
+
+  HIP_DEBUG("*****************Creating DSA of %d bits\n\n\n", bits);
   return dsa;
 
  err_out:
@@ -841,22 +806,21 @@ DSA *create_dsa_key(int bits) {
  */
 RSA *create_rsa_key(int bits) {
   RSA *rsa = NULL;
-  int ok;
 
-  if (bits < 1 || bits > HIP_MAX_RSA_KEY_LEN) {
+ /* if (bits < 1 || bits > HIP_MAX_RSA_KEY_LEN) {
     HIP_ERROR("create_rsa_key failed (illegal bits value %d)\n", bits);
     goto err_out;
-  }
+  } Checked before calling function */
 
   /* generate private and public keys */
   rsa = RSA_generate_key(bits, RSA_F4, NULL, NULL);
   if (!rsa) {
     HIP_ERROR("create_rsa_key failed (RSA_generate_key): %s\n",
-	     ERR_error_string(ERR_get_error(), NULL));
+	     			ERR_error_string(ERR_get_error(), NULL));
     goto err_out;
   }
 
-  HIP_DEBUG("*****************Creting RSA of %d bits\n\n\n", bits);
+  HIP_DEBUG("*****************Creating RSA of %d bits\n\n\n", bits);
   return rsa;
 
  err_out:
@@ -884,27 +848,21 @@ RSA *create_rsa_key(int bits) {
  * occurred.
  */
 int save_dsa_private_key(const char *filenamebase, DSA *dsa) {
-  int err = 0;
+  int err = 0, files = 0, ret;
   char *pubfilename;
   int pubfilename_len;
   FILE *fp;
 
-  if (!filenamebase) {
-    HIP_ERROR("NULL filenamebase\n");
-    return 1;
-  }
+  HIP_IFEL(!filenamebase, 1, "NULL filenamebase\n");
 
   pubfilename_len =
     strlen(filenamebase) + strlen(DEFAULT_PUB_FILE_SUFFIX) + 1;
   pubfilename = malloc(pubfilename_len);
-  if (!pubfilename) {
-    HIP_ERROR("malloc(%d) failed\n", pubfilename_len);
-    goto out_err;
-  }
+  HIP_IFEL(!pubfilename, 1, "malloc for pubfilename failed\n");
 
-  /* check retval */
-  snprintf(pubfilename, pubfilename_len, "%s%s", filenamebase,
+  ret = snprintf(pubfilename, pubfilename_len, "%s%s", filenamebase,
 	   DEFAULT_PUB_FILE_SUFFIX);
+  HIP_IFEL(ret <= 0, 1, "Failed to create pubfilename\n");
 
   HIP_INFO("Saving DSA keys to: pub='%s' priv='%s'\n", pubfilename,
 	   filenamebase);
@@ -917,45 +875,59 @@ int save_dsa_private_key(const char *filenamebase, DSA *dsa) {
   /* rewrite using PEM_write_PKCS8PrivateKey */
 
   fp = fopen(pubfilename, "wb" /* mode */);
-  if (!fp) {
-    HIP_ERROR("Couldn't open public key file %s for writing\n", filenamebase);
+  HIP_IFEL(!fp, 1,
+		"Couldn't open public key file %s for writing\n", pubfilename);
+
+  err = PEM_write_DSA_PUBKEY(fp, dsa) == 0 ? 1 : 0;;
+  files++;
+  if (err) {
+    HIP_ERROR("Write failed for %s\n", pubfilename);
+    goto out_err;
+  }
+  if(err = fclose(fp)) {
+    HIP_ERROR("Error closing file\n");
     goto out_err;
   }
 
-  err = PEM_write_DSA_PUBKEY(fp, dsa);
-  if (!err) {
-    HIP_ERROR("Write failed for %s\n", pubfilename);
-    fclose(fp); /* add error check */
-    goto out_err_pub;
-  }
-  fclose(fp); /* add error check */
-
   fp = fopen(filenamebase, "wb" /* mode */);
-  if (!fp) {
-    HIP_ERROR("Couldn't open private key file %s for writing\n", filenamebase);
-    goto out_err_pub;
-  }
+  HIP_IFEL(!fp, 1,
+	      "Couldn't open private key file %s for writing\n", filenamebase);
 
-  err = PEM_write_DSAPrivateKey(fp, dsa, NULL, NULL, 0, NULL, NULL);
-  if (!err) {
+  err = PEM_write_DSAPrivateKey(fp, dsa, NULL, NULL, 0, NULL, NULL) == 0 ? 1 : 0;
+  files++;
+  if (err) {
     HIP_ERROR("Write failed for %s\n", filenamebase);
-    fclose(fp); /* add error check */
-    goto out_err_priv;
+    goto out_err;
   }
-  fclose(fp); /* add error check */
 
-  free(pubfilename);
-
-  return 0;
-
- out_err_priv:
-   unlink(filenamebase); /* add error check */
- out_err_pub:
-   unlink(pubfilename); /* add error check */
-
-   free(pubfilename);
  out_err:
-  return 1;
+
+  if(err && fp) {
+    if (fclose(fp))
+	HIP_ERROR("Error closing file\n");
+  }
+  else if(fp) {
+    if (err = fclose(fp))
+	HIP_ERROR("Error closing file\n");
+  }
+
+  if(err) {
+    switch(files) {
+	case 2:
+	    if (unlink(filenamebase)) /* add error check */
+		HIP_ERROR("Could not delete file %s\n", filenamebase);
+	case 1:
+	    if (unlink(pubfilename)) /* add error check */
+		HIP_ERROR("Could not delete file %s\n", pubfilename);
+	default:
+	    break;
+    }
+  }
+
+  if(pubfilename)
+    free(pubfilename);
+
+  return err;
 }
 
 /**
@@ -975,27 +947,21 @@ int save_dsa_private_key(const char *filenamebase, DSA *dsa) {
  * error occurred.
  */
 int save_rsa_private_key(const char *filenamebase, RSA *rsa) {
-  int err = 0;
+  int err = 0, files = 0, ret;
   char *pubfilename;
   int pubfilename_len;
   FILE *fp;
 
-  if (!filenamebase) {
-    HIP_ERROR("NULL filenamebase\n");
-    return 1;
-  }
+  HIP_IFEL(!filenamebase, 1, "NULL filenamebase\n");
 
   pubfilename_len =
     strlen(filenamebase) + strlen(DEFAULT_PUB_FILE_SUFFIX) + 1;
   pubfilename = malloc(pubfilename_len);
-  if (!pubfilename) {
-    HIP_ERROR("malloc(%d) failed\n", pubfilename_len);
-    goto out_err;
-  }
+  HIP_IFEL(!pubfilename, 1, "malloc for pubfilename failed\n");
 
-  /* check retval */
-  snprintf(pubfilename, pubfilename_len, "%s%s", filenamebase,
+  ret = snprintf(pubfilename, pubfilename_len, "%s%s", filenamebase,
 	   DEFAULT_PUB_FILE_SUFFIX);
+  HIP_IFEL(ret <= 0, 1, "Failed to create pubfilename\n");
 
   HIP_INFO("Saving RSA keys to: pub='%s' priv='%s'\n", pubfilename,
 	   filenamebase);
@@ -1008,49 +974,60 @@ int save_rsa_private_key(const char *filenamebase, RSA *rsa) {
   /* rewrite using PEM_write_PKCS8PrivateKey */
 
   fp = fopen(pubfilename, "wb" /* mode */);
-  if (!fp) {
-    HIP_ERROR("Couldn't open public key file %s for writing\n",
-	      filenamebase);
+  HIP_IFEL(!fp, 1, 
+		"Couldn't open public key file %s for writing\n", pubfilename);
+
+  err = PEM_write_RSA_PUBKEY(fp, rsa) == 0 ? 1 : 0;
+  files++;
+  if (err) {
+    HIP_ERROR("Write failed for %s\n", pubfilename);
+    goto out_err;
+  }
+  if(err = fclose(fp)) {
+    HIP_ERROR("Error closing file\n");
     goto out_err;
   }
 
-  err = PEM_write_RSA_PUBKEY(fp, rsa);
-  if (!err) {
-    HIP_ERROR("Write failed for %s\n", pubfilename);
-    fclose(fp); /* add error check */
-    goto out_err_pub;
-  }
-  fclose(fp); /* add error check */
-
   fp = fopen(filenamebase, "wb" /* mode */);
-  if (!fp) {
-    HIP_ERROR("Couldn't open private key file %s for writing\n",
-	      filenamebase);
-    goto out_err_pub;
-  }
+  HIP_IFEL(!fp, 1, 
+	"Couldn't open private key file %s for writing\n", filenamebase);
 
-  err = PEM_write_RSAPrivateKey(fp, rsa, NULL, NULL, 0, NULL, NULL);
-  if (!err) {
+  err = PEM_write_RSAPrivateKey(fp, rsa, NULL, NULL, 0, NULL, NULL) == 0 ? 1 : 0;
+  files++;
+  if (err) {
     HIP_ERROR("Write failed for %s\n", filenamebase);
-    fclose(fp); /* add error check */
-    goto out_err_priv;
+    goto out_err;
   }
-  fclose(fp); /* add error check */
 
-  free(pubfilename);
-
-  return 0;
-
- out_err_priv:
-   unlink(filenamebase); /* add error check */
- out_err_pub:
-   unlink(pubfilename); /* add error check */
-
-   free(pubfilename);
  out_err:
-  return 1;
-}
 
+  if(err && fp) {
+    if (fclose(fp))
+	HIP_ERROR("Error closing file\n");
+  }
+  else if(fp) {
+    if (err = fclose(fp))
+	HIP_ERROR("Error closing file\n");
+  }
+
+  if(err) {
+    switch(files) {
+	case 2:
+	    if (unlink(filenamebase)) /* add error check */
+		HIP_ERROR("Could not delete file %s\n", filenamebase);
+	case 1:
+	    if (unlink(pubfilename)) /* add error check */
+		HIP_ERROR("Could not delete file %s\n", pubfilename);
+	default:
+	    break;
+    }
+  }
+
+  if(pubfilename)
+    free(pubfilename);
+
+  return err;
+}
 
 
 /**
@@ -1058,47 +1035,33 @@ int save_rsa_private_key(const char *filenamebase, RSA *rsa) {
  * @param filenamebase the file name base of the host DSA key
  * @param dsa Pointer to the DSA key structure.
  *
- * Loads DSA public and private keys from the given files, public key
- * from file filenamebase.pub and private key from file filenamebase. DSA
- * struct will be allocated dynamically and it is the responsibility
+ * Loads DSA private key from file filename. DSA struct
+ * will be allocated dynamically and it is the responsibility
  * of the caller to free it with DSA_free.
  *
- * XX FIXME: change filenamebase to filename! There is no need for a
- * filenamebase!!!
- *
- * @return On success *dsa contains the RSA structure. On failure
+ * @return On success *dsa contains the DSA structure. On failure
  * *dsa contins NULL if the key could not be loaded (not in PEM format
  * or file not found, etc).
  */
-int load_dsa_private_key(const char *filenamebase, DSA **dsa) {
-  char *pubfilename = NULL;
-  int pubfilename_len;
-  char *paramsfilename = NULL;
-  int paramsfilename_len;
+int load_dsa_private_key(const char *filename, DSA **dsa) {
   FILE *fp = NULL;
   int err = 0;
 
   *dsa = NULL;
 
-  if (!filenamebase) {
-    HIP_ERROR("NULL filename\n");
-    err = -ENOENT;
-    goto out_err;
-  }
+  HIP_IFEL(!filename, -ENOENT, "NULL filename\n");
 
-  fp = fopen(filenamebase, "rb");
-  if (!fp) {
-    HIP_ERROR("Could not open public key file %s for reading\n", filenamebase);
-    err = -ENOMEM;
-    goto out_err;
-  }
+  fp = fopen(filename, "rb");
+  HIP_IFEL(!fp, -ENOMEM,
+		"Could not open private key file %s for reading\n", filename);
 
   *dsa = PEM_read_DSAPrivateKey(fp, NULL, NULL, NULL);
-  if (!*dsa) {
-    HIP_ERROR("Read failed for %s\n", filenamebase);
-    err = -EINVAL;
+  if(err = fclose(fp)) {
+    HIP_ERROR("Error closing file\n");
     goto out_err;
   }
+  HIP_IFEL(!*dsa, -EINVAL, "Read failed for %s\n", filename);
+
   _HIP_DEBUG("Loaded host DSA pubkey=%s\n", BN_bn2hex((*dsa)->pub_key));
   _HIP_DEBUG("Loaded host DSA privkey=%s\n", BN_bn2hex((*dsa)->priv_key));
   _HIP_DEBUG("Loaded host DSA p=%s\n", BN_bn2hex((*dsa)->p));
@@ -1106,14 +1069,6 @@ int load_dsa_private_key(const char *filenamebase, DSA **dsa) {
   _HIP_DEBUG("Loaded host DSA g=%s\n", BN_bn2hex((*dsa)->g));
 
  out_err:
-
-  if (fp)
-    err = fclose(fp);
-  if (err && *dsa) {
-    /* maybe useless */
-    DSA_free(*dsa);
-    *dsa = NULL;
-  }
 
   return err;
 }
@@ -1123,47 +1078,33 @@ int load_dsa_private_key(const char *filenamebase, DSA **dsa) {
  * @param filenamebase the file name base of the host RSA key
  * @param rsa Pointer to the RSA key structure.
  *
- * Loads RSA public and private keys from the given files, public key
- * from file filenamebase.pub and private key from file filenamebase. RSA
- * struct will be allocated dynamically and it is the responsibility
+ * Loads RSA private key from file filename. RSA struct
+ * will be allocated dynamically and it is the responsibility
  * of the caller to free it with RSA_free.
- *
- * XX FIXME: change filenamebase to filename! There is no need for a
- * filenamebase!!!
  *
  * @return On success *rsa contains the RSA structure. On failure
  * *rsa contains NULL if the key could not be loaded (not in PEM
  * format or file not found, etc).
  */
-int load_rsa_private_key(const char *filenamebase, RSA **rsa) {
-  char *pubfilename = NULL;
-  int pubfilename_len;
-  char *paramsfilename = NULL;
-  int paramsfilename_len;
+int load_rsa_private_key(const char *filename, RSA **rsa) {
   FILE *fp = NULL;
   int err = 0;
 
   *rsa = NULL;
 
-  if (!filenamebase) {
-    HIP_ERROR("NULL filename\n");
-    err = -ENOENT;
-    goto out_err;
-  }
+  HIP_IFEL(!filename, -ENOENT, "NULL filename\n");
 
-  fp = fopen(filenamebase, "rb");
-  if (!fp) {
-    HIP_ERROR("Couldn't open public key file %s for reading\n", filenamebase);
-    err = -ENOMEM;
-    goto out_err;
-  }
+  fp = fopen(filename, "rb");
+  HIP_IFEL(!fp, -ENOMEM,
+		"Couldn't open private key file %s for reading\n", filename);
 
   *rsa = PEM_read_RSAPrivateKey(fp, NULL, NULL, NULL);
-  if (!*rsa) {
-    HIP_ERROR("Read failed for %s\n", filenamebase);
-    err = -EINVAL;
+  if(err = fclose(fp)) {
+    HIP_ERROR("Error closing file\n");
     goto out_err;
   }
+  HIP_IFEL(!*rsa, -EINVAL, "Read failed for %s\n", filename);
+
   _HIP_DEBUG("Loaded host RSA n=%s\n", BN_bn2hex((*rsa)->n));
   _HIP_DEBUG("Loaded host RSA e=%s\n", BN_bn2hex((*rsa)->e));
   _HIP_DEBUG("Loaded host RSA d=%s\n", BN_bn2hex((*rsa)->d));
@@ -1171,14 +1112,6 @@ int load_rsa_private_key(const char *filenamebase, RSA **rsa) {
   _HIP_DEBUG("Loaded host RSA q=%s\n", BN_bn2hex((*rsa)->q));
 
  out_err:
-
-  if (fp)
-    err = fclose(fp);
-  if (err && *rsa) {
-    /* maybe useless */
-    RSA_free(*rsa);
-    *rsa = NULL;
-  }
 
   return err;
 }
@@ -1192,11 +1125,9 @@ int load_rsa_private_key(const char *filenamebase, RSA **rsa) {
  * The DSA struct will be allocated dynamically and it is the responsibility
  * of the caller to free it with DSA_free.
  *
- * @return NULL if the key could not be loaded (not in PEM format or file
- * not found, etc).
+ * @return 0 on success, non-zero otherwise.
  */
 int load_dsa_public_key(const char *filename, DSA **dsa) {
-  DSA *dsa_tmp = NULL;
   FILE *fp = NULL;
   int err = 0;
 
@@ -1204,49 +1135,19 @@ int load_dsa_public_key(const char *filename, DSA **dsa) {
 
   *dsa = NULL;
 
-  if (!filename) {
-    HIP_ERROR("NULL filename %s\n", filename);
-    err = -ENOENT;
-    goto out_err;
-  }
-
-  /* optimize as in load_rsa_private_key */
-  *dsa = DSA_new();
-  if (!*dsa) {
-    HIP_ERROR("!dsa\n");
-    err = -ENOMEM;
-    goto out_err;
-  }
-  dsa_tmp = DSA_new();
-  if (!dsa_tmp) {
-    HIP_ERROR("!dsa_tmp\n");
-    err = -ENOMEM;
-    goto out_err;
-  }
+  HIP_IFEL(!filename, -ENOENT, "NULL filename %s\n", filename);
 
   fp = fopen(filename, "rb");
-  if (!fp) {
-    HIP_ERROR("Couldn't open public key file %s for reading\n", filename);
-    err = -ENOENT; // XX FIX: USE ERRNO
-    goto out_err;
-  }
+  HIP_IFEL(!fp, -ENOENT, // XX FIX: USE ERRNO
+		"Couldn't open public key file %s for reading\n", filename);
 
-  dsa_tmp = PEM_read_DSA_PUBKEY(fp, NULL, NULL, NULL);
-  if (!dsa_tmp) {
-    HIP_ERROR("Read failed for %s\n", filename);
-    err = -EINVAL; // XX FIX: USE ERRNO
+  *dsa = PEM_read_DSA_PUBKEY(fp, NULL, NULL, NULL);
+  if(err = fclose(fp)) {
+    HIP_ERROR("Error closing file\n");
     goto out_err;
   }
-
-  (*dsa)->pub_key = BN_dup(dsa_tmp->pub_key);
-  (*dsa)->p = BN_dup(dsa_tmp->p);
-  (*dsa)->q = BN_dup(dsa_tmp->q);
-  (*dsa)->g = BN_dup(dsa_tmp->g);
-  if (!(*dsa)->p || !(*dsa)->q || !(*dsa)->g || !(*dsa)->pub_key) {
-    HIP_ERROR("BN_copy\n");
-    err = -EINVAL; // XX FIX: USE ERRNO
-    goto out_err;
-  }
+  /* XX FIX: USE ERRNO */
+  HIP_IFEL(!*dsa, -EINVAL, "Read failed for %s\n", filename);
 
   _HIP_DEBUG("Loaded host DSA pubkey=%s\n", BN_bn2hex((*dsa)->pub_key));
   _HIP_DEBUG("Loaded host DSA p=%s\n", BN_bn2hex((*dsa)->p));
@@ -1254,13 +1155,6 @@ int load_dsa_public_key(const char *filename, DSA **dsa) {
   _HIP_DEBUG("Loaded host DSA g=%s\n", BN_bn2hex((*dsa)->g));
 
  out_err:
-  if (err && *dsa)
-    DSA_free(*dsa);
-  if (dsa_tmp)
-    DSA_free(dsa_tmp);
-  if (fp)
-    err = fclose(fp);
-
   return err;
 }
 
@@ -1273,11 +1167,9 @@ int load_dsa_public_key(const char *filename, DSA **dsa) {
  * The RSA struct will be allocated dynamically and it is the responsibility
  * of the caller to free it with RSA_free.
  *
- * @return NULL if the key could not be loaded (not in PEM format or file
- * not found, etc).
+ * @return 0 on success, non-zero otherwise.
  */
 int load_rsa_public_key(const char *filename, RSA **rsa) {
-  RSA *rsa_tmp = NULL;
   FILE *fp = NULL;
   int err = 0;
 
@@ -1285,61 +1177,23 @@ int load_rsa_public_key(const char *filename, RSA **rsa) {
 
   _HIP_DEBUG("load_rsa_public_key called\n");
 
-  if (!filename) {
-    HIP_ERROR("NULL filename\n");
-    err = -ENOENT;
-    goto out_err;
-  }
-
-  /* optimize as in load_rsa_private_key */
-  *rsa = RSA_new();
-  if (!*rsa) {
-    HIP_ERROR("!rsa\n");
-    err = -ENOMEM;
-    goto out_err;
-  }
-  rsa_tmp = RSA_new();
-  if (!rsa_tmp) {
-    HIP_ERROR("!rsa_tmp\n");
-    err = -ENOMEM;
-    goto out_err;
-  }
+  HIP_IFEL(!filename, -ENOENT, "NULL filename\n");
 
   fp = fopen(filename, "rb");
-  if (!fp) {
-    HIP_ERROR("Couldn't open public key file %s for reading\n", filename);
-    err = -ENOENT; // XX FIX: USE ERRNO
-    goto out_err;
-  }
+  HIP_IFEL(!fp, -ENOENT, // XX FIX: USE ERRNO
+		"Couldn't open public key file %s for reading\n", filename);
 
-  rsa_tmp = PEM_read_RSA_PUBKEY(fp, NULL, NULL, NULL);
-  if (!rsa_tmp) {
-    HIP_ERROR("Read failed for %s\n", filename);
-    err = -EINVAL; // XX FIX: USE ERRNO
+  *rsa = PEM_read_RSA_PUBKEY(fp, NULL, NULL, NULL);
+  if(err = fclose(fp)) {
+    HIP_ERROR("Error closing file\n");
     goto out_err;
   }
-
-  (*rsa)->n = BN_dup(rsa_tmp->n);
-  (*rsa)->e = BN_dup(rsa_tmp->e);
-  (*rsa)->dmp1 = BN_dup(rsa_tmp->dmp1);
-  (*rsa)->dmq1 = BN_dup(rsa_tmp->dmq1);
-  (*rsa)->iqmp = BN_dup(rsa_tmp->iqmp);
-  if (!(*rsa)->n || !(*rsa)->e) {
-    HIP_ERROR("BN_copy\n");
-    err = -EINVAL; // XX FIX: USE ERRNO
-    goto out_err;
-  }
+  /* XX FIX: USE ERRNO */
+  HIP_IFEL(!*rsa, -EINVAL, "Read failed for %s\n", filename);
 
   _HIP_DEBUG("Loaded host RSA n=%s\n", BN_bn2hex((*rsa)->n));
   _HIP_DEBUG("Loaded host RSA e=%s\n", BN_bn2hex((*rsa)->e));
 
  out_err:
-  if (err && *rsa)
-    RSA_free(*rsa);
-  if (rsa_tmp)
-    RSA_free(rsa_tmp);
-  if (fp)
-    err = fclose(fp);
-
   return err;
 }

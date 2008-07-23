@@ -10,6 +10,7 @@
 *   - Miika Komu <miika@iki.fi>
 *   - Laura Takkinen <laura.takkinen@hut.fi>
 * Licence: GNU/GPL
+* @note HIPU: This is a kernel module specifically for Linux. It needs to be rewritten for MAC OS X.
 *
 */
 
@@ -622,7 +623,7 @@ int hip_socket_setsockopt(struct socket *sock,
 	case SO_HIP_RST:
 		err = hip_socket_handle_rst(msg);
 		break;
-	case SO_HIP_ADD_RVS:
+	case SO_HIP_ADD_DEL_SERVER:
 		err = hip_socket_handle_rvs(msg);
 		break;
         /** @todo Not supported for now, this message should be moved as

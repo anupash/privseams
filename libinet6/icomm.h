@@ -27,6 +27,9 @@
 
 /** @addtogroup hip_so
  * HIP socket options.
+ * @note Values 1 - 64 overlap the message values and thus cannot be used in
+ *       hip_message_type_name().
+ * @todo Should socket option values 1 - 64 be renumbered starting from 65?
  * @{
  */
 #define HIP_SO_ANY_MIN 				1
@@ -53,6 +56,13 @@
 #define SO_HIP_GET_HA_INFO			22
 #define SO_HIP_TRIGGER_BEX                      23
 #define SO_HIP_DHT_SERVING_GW                   24
+#define SO_HIP_GET_STATE_HA		        25
+#define SO_HIP_GET_LSI_PEER                     26
+#define SO_HIP_GET_LSI_OUR			27
+#define SO_HIP_IS_OUR_LSI                       28
+#define SO_HIP_FW_BEX_DONE                      29
+#define SO_HIP_GET_PEER_HIT_BY_LSIS             30
+#define SO_HIP_FW_UPDATE_DB                     31
 /* inclusive */
 #define HIP_SO_ANY_MAX 				63
 
@@ -107,12 +117,11 @@
 #define SO_HIP_CANCEL_RVS                       102
 /** Socket option for the server to reinit the RVS service. (server side) */
 #define SO_HIP_REINIT_RVS                       103
-/** Socket option to ask for the RVS service, i.e.\ send REG_REQUEST parameter
-    to the server. (client side) */
-#define SO_HIP_ADD_RVS			        104
-/** Socket option to ask for cancellation of the RVS service, i.e.\ send
-    REG_REQUEST parameter with zero lifetime to the server. (client side) */
-#define SO_HIP_DEL_RVS                          105
+/**
+ * Socket option to ask for additional services or service cancellation from a
+ * server, i.e.\ to send a REG_REQUEST parameter to the server. (client side)
+ */
+#define SO_HIP_ADD_DEL_SERVER                   104
 /** Socket option for the server to offer the HIP relay service. (server
     side) */
 #define SO_HIP_OFFER_HIPRELAY                   106
@@ -121,22 +130,10 @@
 #define SO_HIP_CANCEL_HIPRELAY                  107
 /** Socket option for hipconf to reinit the HIP relay service. (server side) */
 #define SO_HIP_REINIT_RELAY                     108
-/** Socket option to ask for the HIP relay service, i.e.\ send REG_REQUEST
-    parameter to the server. (client side) */
-#define SO_HIP_ADD_RELAY                        109
-/** Socket option to ask for cancellation of the HIP relay service, i.e.\ send
-    REG_REQUEST parameter with zero lifetime to the server. (client side) */
-#define SO_HIP_DEL_RELAY                        110
 /** Socket option for the server to offer the escrow service. (server side) */
 #define SO_HIP_OFFER_ESCROW			111
 /** Socket option for the server to cancel the escrow service. (server side) */
 #define SO_HIP_CANCEL_ESCROW                    112
-/** Socket option to ask for the escrow service, i.e.\ send REG_REQUEST parameter
-    to the server. (client side) */
-#define SO_HIP_ADD_ESCROW			113
-/** Socket option to ask for cancellation of the escrow service, i.e.\ send
-    REG_REQUEST parameter with zero lifetime to the server. (client side) */
-#define SO_HIP_DEL_ESCROW			114
 #define SO_HIP_ADD_DB_HI                        115
 #define SO_HIP_ADD_ESCROW_DATA                  116
 #define SO_HIP_DELETE_ESCROW_DATA               117
@@ -152,22 +149,33 @@
 #define SO_HIP_I1_REJECT                        127
 #define SO_HIP_UPDATE_HIU                       128
 #define SO_HIP_SET_NAT_PLAIN_UDP                129
-#define SO_HIP_SET_NAT_ON                       129 // XX FIXME: REMOVE
-#define SO_HIP_SET_NAT_PLAIN_UDP                129
 #define SO_HIP_SET_NAT_NONE                     130
-#define SO_HIP_SET_NAT_OFF                      130 // XX FIXME: REMOVE
+#define SO_HIP_SET_NAT_OFF                      SO_HIP_SET_NAT_NONE // XX FIXME: REMOVE
 #define SO_HIP_SET_HIPPROXY_ON		      	131
 #define SO_HIP_SET_HIPPROXY_OFF			132
 #define SO_HIP_GET_PROXY_LOCAL_ADDRESS		133
 #define SO_HIP_HIPPROXY_STATUS_REQUEST		134
 #define SO_HIP_OPPTCP_UNBLOCK_AND_BLACKLIST     135
-#define SO_HIP_FIREWALL_BEX_DONE                136 /* addes by Tao Wan, for informing the firewall the BEX is done*/
+#define SO_HIP_IPSEC_ADD_SA             	    136 /* addes by Tao Wan, for informing the firewall the BEX is done*/
 #define SO_HIP_SET_TCPTIMEOUT_ON                137
 #define SO_HIP_SET_TCPTIMEOUT_OFF               138
 #define SO_HIP_SET_NAT_ICE_UDP                  139
+#define HIP_PARAM_INT                           140
+#define SO_HIP_CERT_SPKI_SIGN                   141
+#define SO_HIP_CERT_SPKI_VERIFY                 142
+#define SO_HIP_CERT_X509V3_SIGN                 143
+#define SO_HIP_CERT_X509V3_VERIFY               144
+#define SO_HIP_USERSPACE_IPSEC			145
+#define SO_HIP_ESP_PROT_EXT_TRANSFORM		146
+#define SO_HIP_IPSEC_UPDATE_ANCHOR_LIST		147
+#define SO_HIP_IPSEC_NEXT_ANCHOR		148
+#define SO_HIP_ADD_PEER_MAP_HIT_IP_LSI          153
+#define SO_HIP_RESTART_DUMMY_INTERFACE		154
 /** @} */
 /* inclusive */
 #define HIP_SO_ROOT_MAX 			255
+
+#define SO_HIP_SET_NAT_ON                     SO_HIP_SET_NAT_PLAIN_UDP
 
 #endif /* _HIP_ICOMM */
 

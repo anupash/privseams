@@ -3,8 +3,9 @@ AUTOMAKE_OPTIONS = foreign
 
 CFLAGS = $(hipl_common_cflags)
 
-if HIP_AGENT
+GTKLDADD = `pkg-config gtk+-2.0 --libs`
 
+if HIP_AGENT
 libhipgui_adir = $(pkgdatadir)/libhipgui
 
 noinst_LIBRARIES = libhipgui.a
@@ -25,4 +26,4 @@ tags:
 	etags $(libhipgui_a_SOURCES) $(include_HEADERS)
 
 install:
-	cp hipmanager.png /usr/share/pixmaps/hipmanager.png
+	$(install_sh_DATA) hipmanager.png $(DESTDIR)$(datadir)/pixmaps/hipmanager.png

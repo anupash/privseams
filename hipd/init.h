@@ -7,10 +7,7 @@
 #include <sys/resource.h>
 #include <sys/wait.h>
 #include <sys/utsname.h>
-#include <linux/capability.h>
-#include <sys/prctl.h>
 #include <sys/types.h>
-#include <pwd.h>
 #include "xfrmapi.h"
 #include "hipconf.h"
 #include "oppipdb.h"
@@ -48,13 +45,15 @@
 #include "hi3.h"
 
 #define USER_NOBODY "nobody"
-
+ 
 extern char *i3_config_file;
 extern char *hip_i3_config_file;
 extern int hip_use_i3;
 extern hip_ipsec_func_set_t default_ipsec_func_set;
 extern int hip_firewall_sock_fd;
+extern int hip_firewall_sock_lsi_fd;
 
+int hip_associate_default_hit_lsi();
 
 int hipd_init(int flush_ipsec, int killold);
 int hip_init_host_ids();
@@ -66,6 +65,7 @@ void hip_close(int signal);
 void hip_exit(int signal);
 void hip_probe_kernel_modules();
 int hip_init_dht();
-
+int hip_init_certs();
+struct hip_host_id_entry * hip_return_first_rsa(void);
 #endif /* _HIP_INIT */
 

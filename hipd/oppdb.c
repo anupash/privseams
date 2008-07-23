@@ -242,8 +242,17 @@ int hip_opp_unblock_app(const struct sockaddr_in6 *app_id, hip_hit_t *hit,
 		         "build param HIP_PARAM_HIT  failed\n");
 		HIP_DEBUG("message len: %d\n", hip_get_msg_total_len(message));
 	}
+	/* Switched from hip_sendto() to hip_sendto_user() due to
+	   namespace collision. Both message.h and user.c had functions
+	   hip_sendto(). Introducing a prototype hip_sendto() to user.h
+	   led to compiler errors --> user.c hip_sendto() renamed to
+	   hip_sendto_user().
 
-	n = hip_sendto(message, app_id);
+	   Lesson learned: use function prototypes unless functions are
+	   ment only for local (inside the same file where defined) use.
+	   -Lauri 11.07.2008 */
+	n = hip_sendto_user(message, app_id);
+	
 	if(n < 0){
 		HIP_ERROR("hip_sendto() failed.\n");
 		err = -1;
@@ -327,7 +336,7 @@ int hip_receive_opp_r1(struct hip_common *msg,
 	HIP_DEBUG_IN6ADDR("!!!! local addr=", dst_addr);
 	
 	HIP_IFEL(hip_hadb_add_peer_info_complete(&msg->hitr, &msg->hits,
-						 dst_addr, src_addr), -1,
+						 NULL, dst_addr, src_addr), -1,
 		 "Failed to insert peer map\n");
 	
 	HIP_IFEL(!(entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr)), -1,
@@ -465,7 +474,7 @@ int hip_opp_get_peer_hit(struct hip_common *msg,
 					   &dst_ip), -1,
 		 "Cannot find source address\n");
 	
-	err = hip_hadb_add_peer_info_complete(&hit_our, &phit, &our_addr, &dst_ip);
+	err = hip_hadb_add_peer_info_complete(&hit_our, &phit, NULL, &our_addr, &dst_ip);
 	HIP_IFEL(!(ha = hip_hadb_find_byhits(&hit_our, &phit)), -1,
 		 "Did not find entry\n");
 

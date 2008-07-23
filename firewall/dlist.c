@@ -67,7 +67,7 @@ DList * list_last (DList * list) {
 }
 
 unsigned int list_length (DList * list) {
-	HIP_DEBUG("list_length()");
+	HIP_DEBUG("list_length()\n");
 	unsigned int length = 0;
 	list = list_first (list);
 	if (list) {
@@ -76,7 +76,7 @@ unsigned int list_length (DList * list) {
 			list = list->next;
 		}	
 	}
-	HIP_DEBUG("list_length()");
+	HIP_DEBUG("list_length()\n");
 	return length;	
 }
 
@@ -95,13 +95,13 @@ DList * append_to_list (DList * list,
       last->next = new_list;
       new_list->prev = last;
       
-	  HIP_DEBUG("List is not empty. Length %d", list_length(list)); 
+	  HIP_DEBUG("List is not empty. Length %d\n", list_length(list)); 
       return list;
     }
   else
     {
       new_list->prev = NULL;
-      HIP_DEBUG("List is empty inserting first node");
+      HIP_DEBUG("List is empty inserting first node\n");
       return new_list;
     }	 	
 }

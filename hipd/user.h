@@ -19,6 +19,8 @@
 #include "bos.h"
 #include "close.h"
 #include "accessor.h"
+#include "hidb.h"
+#include "cert.h"
 /* added by Tao Wan, 10.Jan.2008*/
 #include "tcptimeout.h"
 #include "registration.h"
@@ -32,5 +34,8 @@ extern int hip_locator_status;
 extern int hip_tcptimeout_status; /* Tao added, 09.Jan.2008 for tcp timeout*/
 extern int hip_opendht_inuse;
 extern int hip_opendht_error_count;
+
+int hip_sendto_user(const struct hip_common *msg, const struct sockaddr *dst);
+int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src);
 
 #endif /* HIP_WORKQUEUE */
