@@ -6,41 +6,17 @@
 
 /* defines the default tolerance when verifying hash-chain elements */
 #define DEFAULT_VERIFY_WINDOW 		10
+/* if unused hchain element count of the active_hchain falls below
+ * this threshold (% of max count), it will trigger the setup of
+ * a new next_hchain */
 #define REMAIN_ELEMENTS_TRESHOLD	0.2
+
 /* as using different hchain lengths is not implemented in esp_prot for now,
  * we can set a default length statically */
 #define DEFAULT_HCHAIN_LENGTH_ID	0
 
-#define NUM_TRANSFORMS				1
-#define NUM_HASH_FUNCTIONS			1
-#define NUM_HASH_LENGTHS			1
-
-#if 0
- /**** helper defines for the index boundaries of the static arrays defined below ****/
-
-/* When adding a new transform, make sure to also add it in esp_prot_common.h.
- * Ensure to add new hash-functions in the end of hash_functions[] and keep the
- * same order of the hash-lengths in hash_lengths[][] as in the define list for the
- * transforms in esp_prot_common.h. */
-
-/* for transforms array, ESP_PROT_TFM_UNUSED is not counted here */
-#define NUM_TRANSFORMS				5
-/* for first dimension of hash_lengths[][] */
-#define NUM_HASH_FUNCTIONS			2
-/* for second dimension of hash_lengths[][] */
-#define NUM_HASH_LENGTHS			3
-#endif
-
  /* for update_hchain_lengths[] */
 #define NUM_UPDATE_HCHAIN_LENGTHS	1
-
-static const hash_function_t hash_functions[] = {SHA1};
-static const int hash_lengths[][] = {{8}};
-
-#if 0
-static const hash_function_t hash_functions[] = {SHA1, MD5};
-static const int hash_lengths[][] = {{8, 16, 20}, {8, 20, 0}};
-#endif
 
 static const int bex_hchain_length = 100;
 static const int update_hchain_lengths[] = {1000};

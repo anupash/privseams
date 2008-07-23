@@ -44,6 +44,9 @@ int esp_prot_init()
 		{
 			if (hash_lengths[i][j] > 0)
 			{
+				// ensure correct boundaries
+				HIP_ASSERT(transform_id < NUM_TRANSFORMS);
+
 				// now we can register the hash lengths for this function
 				HIP_IFEL((bex_hash_length_id = hcstore_register_hash_length(&bex_store,
 						function_id, hash_lengths[i][j])) < 0, -1,

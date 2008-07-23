@@ -26,7 +26,7 @@ int send_esp_prot_to_hipd(int active)
 		transform = ESP_PROT_TFM_UNUSED;
 
 	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1,
-		 "alloc memory for adding sa entry\n");
+		 "failed to allocate memory\n");
 
 	hip_msg_init(msg);
 
@@ -91,52 +91,62 @@ int send_bex_store_update_to_hipd(hchain_store_t *bex_store)
 	return err;
 }
 
-/* this will only consider the first hchain item in each shelf, as only
- * this should be set up for the store containing the hchains for the BEX */
+/* @note this will only consider the first hchain item in each shelf, as only
+ *       this should be set up for the store containing the hchains for the BEX
+ * @note the created message contains hash_length and anchors for each transform
+ */
 struct hip_common *create_bex_store_update_msg(hchain_store_t *hcstore)
 {
 	struct hip_common *msg = NULL;
+	int hash_length = 0;
+	esp_prot_transform_t *transform = NULL;
 	unsigned char *anchor = NULL;
-	int err = 0, i, num_hchains = 0;
+	int err = 0, j;
+	uint8_t i;
 
 	HIP_ASSERT(hcstore != NULL);
 
 	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1,
-		 "alloc memory for adding sa entry\n");
+		 "failed to allocate memory\n");
 
 	hip_msg_init(msg);
 
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_BEX_STORE_UPDATE, 0), -1,
 		 "build hdr failed\n");
 
-	// TODO modify
-	// make sure there are some anchors to send
-	num_hchains = hip_ll_get_size(&hip_hchain_storage.hchain_store[0]);
-	if (num_hchains > 0)
+	// now add the hchain anchors
+	for (i = 0; i < NUM_TRANSFORMS; i++)
 	{
-		HIP_DEBUG("adding anchors to message...\n");
+		HIP_DEBUG("transform %i:\n", i + 1);
 
-		for (i = 0; i < num_hchains; i++)
+		transform = esp_prot_resolve_transform(i);
+
+		hash_length = hash_lengths[transform->hash_func_id][transform->hash_length_id];
+		num_hchains = hcstore->hchain_shelves[transform->hash_func_id][transform->hash_length_id].hchain_items[DEFAULT_HCHAIN_LENGTH_ID].num_hchains;
+
+		// add num_hchains for this transform, needed on receiver side
+		HIP_DEBUG("adding num_hchains: %i\n", num_hchains);
+		HIP_IFEL(hip_build_param_contents(msg, (void *)&num_hchains,
+				HIP_PARAM_INT, sizeof(int)), -1,
+				"build param contents failed\n");
+
+		// add the hash_length for this transform, needed on receiver side
+		HIP_DEBUG("adding hash_length: %i\n", hash_length);
+		HIP_IFEL(hip_build_param_contents(msg, (void *)&hash_length,
+				HIP_PARAM_INT, sizeof(int)), -1,
+				"build param contents failed\n");
+
+		// add anchor with this transform
+		for (j = 0; j < hcstore->hchain_shelves[transform->hash_func_id][transform->hash_length_id].hchain_items[DEFAULT_HCHAIN_LENGTH_ID].num_hchains;
+				j++)
 		{
-			HIP_IFEL(!(bex_hchain = (hash_chain_t *)
-					hip_ll_get(&hip_hchain_storage.hchain_store[0], i)), -1,
-					"failed to get first hchain from bex store\n");
+			anchor = hcstore->hchain_shelves[transform->hash_func_id][transform->hash_length_id].hchain_items[DEFAULT_HCHAIN_LENGTH_ID].hchains[j]->anchor_element->hash;
 
-			//hchain_print(bex_hchain, hash_length);
-
-			anchor = bex_hchain->anchor_element->hash;
-			HIP_HEXDUMP("anchor: ", anchor, hash_length);
-
+			HIP_HEXDUMP("adding anchor: ", anchor, hash_length);
 			HIP_IFEL(hip_build_param_contents(msg, (void *)anchor,
 					HIP_PARAM_HCHAIN_ANCHOR, hash_length),
 					-1, "build param contents failed\n");
 		}
-	} else
-	{
-		HIP_ERROR("bex store anchor message issued, but no anchors\n");
-
-		err = 1;
-		goto out_err;
 	}
 
   out_err:
@@ -166,7 +176,7 @@ int trigger_update(hip_sa_entry_t *entry)
 			-1, "error or tried to resolve UNUSED transform\n");
 
 	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1,
-		 "alloc memory for adding sa entry\n");
+		 "failed to allocate memory\n");
 
 	hip_msg_init(msg);
 
