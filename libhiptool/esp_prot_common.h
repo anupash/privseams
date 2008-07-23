@@ -13,7 +13,7 @@
 #define ESP_PROT_TFM_SHA1_16		2
 #define ESP_PROT_TFM_SHA1_20		3
 #define ESP_PROT_TFM_MD5_8			4
-#define ESP_PROT_TFM_MD5_20			5
+#define ESP_PROT_TFM_MD5_16			5
 
 // TODO remove after test
 #define NUM_TRANSFORMS				1
@@ -41,7 +41,7 @@ static const int hash_lengths[][] = {{8}};
 
 #if 0
 static const hash_function_t hash_functions[] = {SHA1, MD5};
-static const int hash_lengths[][] = {{8, 16, 20}, {8, 20, 0}};
+static const int hash_lengths[][] = {{8, 16, 20}, {8, 16, 0}};
 #endif
 
 // TODO remove, only there for compatibility with old approach

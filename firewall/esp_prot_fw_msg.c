@@ -98,7 +98,7 @@ int send_bex_store_update_to_hipd(hchain_store_t *bex_store)
 struct hip_common *create_bex_store_update_msg(hchain_store_t *hcstore)
 {
 	struct hip_common *msg = NULL;
-	int hash_length = 0;
+	int hash_length = 0, num_hchains = 0;
 	esp_prot_transform_t *transform = NULL;
 	unsigned char *anchor = NULL;
 	int err = 0, j;

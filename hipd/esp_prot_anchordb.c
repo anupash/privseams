@@ -1,17 +1,41 @@
 #include "esp_prot_anchordb.h"
-#include "linkedlist.h"
 
-hip_ll_t anchor_list;
+// set to support max amount of anchors possible
 
-void init_anchor_db()
+anchor_db_t anchor_db;
+
+void anchor_db_init()
 {
 	HIP_DEBUG("initializing hchain anchorDB...\n");
-	hip_ll_init(&anchor_list);
+
+	// set to 0 / NULL
+	memset(anchor_db.num_anchors, 0, NUM_TRANSFORMS);
+	memset(anchor_db.anchors, 0, NUM_TRANSFORMS * MAX_HCHAINS_PER_ITEM);
 }
 
+void anchor_db_uninit()
+{
+	int i, j;
+
+	// free all hashes
+	for (i = 0; i < NUM_TRANSFORMS; i++)
+	{
+		anchor_db.num_anchors[i] = 0;
+
+		for (j = 0; j < MAX_HCHAINS_PER_ITEM; j++)
+		{
+			if (anchor_db.anchors[i][j])
+				free(anchor_db.anchors[i][j]);
+
+			anchor_db.anchors[i][j] = NULL;
+		}
+	}
+}
+
+// TODO modify
 /* simply deletes all elements in the list and adds new ones */
 // TODO reimplement as ineffcient -> only add non-existing elements
-int update_anchor_db(struct hip_common *msg)
+int anchor_db_update(struct hip_common *msg)
 {
 	struct hip_tlv_common *param = NULL;
 	unsigned char *anchor = NULL, *tmp_anchor = NULL;
@@ -23,7 +47,7 @@ int update_anchor_db(struct hip_common *msg)
 	hip_ll_uninit(&anchor_list, free);
 	HIP_DEBUG("uninited hchain anchorDB\n");
 
-	if (hip_esp_prot_ext_transform > ESP_PROT_TRANSFORM_UNUSED)
+	if (hip_esp_prot_ext_transform > ESP_PROT_TFM_UNUSED)
 	{
 		hash_length = esp_prot_transforms[hip_esp_prot_ext_transform];
 		HIP_DEBUG("hash length is %i \n", hash_length);
@@ -54,16 +78,19 @@ int update_anchor_db(struct hip_common *msg)
 	return err;
 }
 
-int has_more_anchors()
+int has_more_anchors(uint8_t transform)
 {
-	if (hip_ll_get_size(&anchor_list))
+	HIP_ASSERT(transform >= 0 && transform < NUM_TRANSFORMS);
+
+	if (anchor_db.num_anchors[transform] > 0)
 		return 1;
 	else
 		return 0;
 }
 
+// TODO modify
 /* gets the first element of the list into the supplied buffer */
-unsigned char * get_next_anchor()
+unsigned char * get_next_anchor(uint8_t transform)
 {
 	unsigned char *return_anchor = NULL;
 	int err = 0;
