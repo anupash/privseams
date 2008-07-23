@@ -86,8 +86,9 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 	type = hip_get_msg_type(msg);
 	
 	switch(type) {
-	case SO_HIP_FIREWALL_BEX_DONE:
-	        HIP_IFEL(handle_bex_state_update(msg), -1, "hip bex state NOT updated\n");
+	case SO_HIP_FW_BEX_DONE:
+	case SO_HIP_FW_UPDATE_DB:
+	        handle_bex_state_update(msg);
 	        break;
 	case SO_HIP_IPSEC_ADD_SA:
 		HIP_DEBUG("Received add sa request from hipd\n");
@@ -320,7 +321,7 @@ u16 ipv6_checksum(u8 protocol, struct in6_addr *src, struct in6_addr *dst, void 
 #ifdef CONFIG_HIP_HIPPROXY
 int request_hipproxy_status(void)
 {
-        struct hip_common *msg;
+        struct hip_common *msg = NULL;
         int err = 0;
         int n;
         socklen_t alen;
@@ -346,15 +347,20 @@ int request_hipproxy_status(void)
                 HIP_DEBUG("HIP_HIPPROXY_STATUS_REQUEST: Sendto firewall OK.\n");
         }  
 out_err:
+	if(msg)
+		free(msg);
         return err;
 }
 #endif /* CONFIG_HIP_HIPPROXY */
 
-int handle_bex_state_update(struct hip_common * msg, struct hip_tlv_common *param)
+int handle_bex_state_update(struct hip_common * msg)
 {
 	struct in6_addr *src_hit = NULL, *dst_hit = NULL;
-	int err = 0;
+	struct hip_tlv_common *param = NULL;
+	int err = 0, msg_type = 0;
 	
+	msg_type = hip_get_msg_type(msg);
+
 	/* src_hit */
         param = (struct hip_tlv_common *)hip_get_param(msg, HIP_PARAM_HIT);
 	src_hit = (struct in6_addr *) hip_get_param_contents_direct(param);
@@ -366,9 +372,19 @@ int handle_bex_state_update(struct hip_common * msg, struct hip_tlv_common *para
 	HIP_DEBUG_HIT("Destination HIT: ", dst_hit);
 
 	/* update bex_state in firewalldb */
-	if (dst_hit)
-		err = firewall_set_bex_state(src_hit, dst_hit, 1);
-	else
-		err = firewall_set_bex_state(src_hit, dst_hit, -1);
-
+	switch(msg_type)
+	{
+	        case SO_HIP_FW_BEX_DONE:
+		        if (dst_hit)
+		                err = firewall_set_bex_state(src_hit, dst_hit, 1);
+			else
+			        err = firewall_set_bex_state(src_hit, dst_hit, -1);
+			break;
+                case SO_HIP_FW_UPDATE_DB:
+		        err = firewall_set_bex_state(src_hit, dst_hit, 0);
+			break;
+                default:
+		        break;
+	}
+	return err;
 }

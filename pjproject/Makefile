@@ -1,7 +1,39 @@
 include build.mak
 include build/host-$(HOST_NAME).mak
 
-DIRS = pjlib pjlib-util pjnath third_party pjmedia pjsip pjsip-apps
+# Miika: some unnecessary builds for HIPL are commented
+DIRS = pjlib pjlib-util pjnath # third_party pjmedia pjsip pjsip-apps
+
+distdir:
+
+# Miika: required for "make dist" 
+# distdir generated using autoconf=2.61, automake=1.10.1
+#distdir:
+#	@srcdirstrip=`echo "$(srcdir)" | sed 's/[].[^$$\\*]/\\\\&/g'`; \
+#	topsrcdirstrip=`echo "$(top_srcdir)" | sed 's/[].[^$$\\*]/\\\\&/g'`; \
+#	@list="`find . -type f|egrep -v '(\.arch-ids|.*\.depend|.*\.a|.*\.o)'`"; \
+#	  dist_files=`for file in $$list; do echo $$file; done | \
+#	  sed -e "s|^$$srcdirstrip/||;t" \
+#	      -e "s|^$$topsrcdirstrip/|$(top_builddir)/|;t"`; \
+#	case $$dist_files in \
+#	  */*) $(MKDIR_P) `echo "$$dist_files" | \
+#			   sed '/\//!d;s|^|$(distdir)/|;s,/[^/]*$$,,' | \
+#			   sort -u` ;; \
+#	esac; \
+#	for file in $$dist_files; do \
+#	  if test -f $$file || test -d $$file; then d=.; else d=$(srcdir); fi; \
+#	  if test -d $$d/$$file; then \
+#	    dir=`echo "/$$file" | sed -e 's,/[^/]*$$,,'`; \
+#	    if test -d $(srcdir)/$$file && test $$d != $(srcdir); then \
+#	      cp -pR $(srcdir)/$$file $(distdir)$$dir || exit 1; \
+#	    fi; \
+#	    cp -pR $$d/$$file $(distdir)$$dir || exit 1; \
+#	  else \
+#	    test -f $(distdir)/$$file \
+#	    || cp -p $$d/$$file $(distdir)/$$file \
+#	    || exit 1; \
+#	  fi; \
+#	done
 
 ifdef MINSIZE
 MAKE_FLAGS := MINSIZE=1
@@ -16,16 +48,18 @@ all clean dep depend distclean doc print realclean:
 		fi; \
 	done
 
+# Miika: some unnecessary builds for HIPL are commented
 LIBS = 	pjlib/lib/libpj-$(TARGET_NAME).a \
 	pjlib-util/lib/libpjlib-util-$(TARGET_NAME).a \
 	pjnath/lib/libpjnath-$(TARGET_NAME).a \
-	pjmedia/lib/libpjmedia-$(TARGET_NAME).a \
-	pjmedia/lib/libpjmedia-codec-$(TARGET_NAME).a \
-       	pjsip/lib/libpjsip-$(TARGET_NAME).a \
-	pjsip/lib/libpjsip-ua-$(TARGET_NAME).a \
-	pjsip/lib/libpjsip-simple-$(TARGET_NAME).a \
-	pjsip/lib/libpjsua-$(TARGET_NAME).a
-BINS = 	pjsip-apps/bin/pjsua-$(TARGET_NAME)$(HOST_EXE) 
+	#pjmedia/lib/libpjmedia-$(TARGET_NAME).a \
+	#pjmedia/lib/libpjmedia-codec-$(TARGET_NAME).a \
+       	#pjsip/lib/libpjsip-$(TARGET_NAME).a \
+	#pjsip/lib/libpjsip-ua-$(TARGET_NAME).a \
+	#pjsip/lib/libpjsip-simple-$(TARGET_NAME).a \
+	#pjsip/lib/libpjsua-$(TARGET_NAME).a
+# Miika: some unnecessary builds for HIPL are commented
+BINS = 	#pjsip-apps/bin/pjsua-$(TARGET_NAME)$(HOST_EXE) 
 
 size:
 	@echo -n 'Date: '
@@ -57,14 +91,18 @@ xhdrid:
 	done
 
 prefix = /usr/local
+
+# Miika: removed install target as it breaks "make rpm" target
 install:
-	mkdir -p $(DESTDIR)$(prefix)/lib
-	cp -L $$(find . -name '*.a') $(DESTDIR)$(prefix)/lib
-	mkdir -p $(DESTDIR)$(prefix)/include
-	cp -RL $$(find  . -name include) $(DESTDIR)$(prefix)
-#	This just caused some errors -miika
+
+##	mkdir -p $(DESTDIR)$(prefix)/lib
+##	cp -L $$(find . -name '*.a') $(DESTDIR)$(prefix)/lib
+##	mkdir -p $(DESTDIR)$(prefix)/include
+##	cp -RL $$(find  . -name include) $(DESTDIR)$(prefix)
+# Miika: This just caused some errors
 #	cd $(DESTDIR)$(prefix)/lib && for i in $$(find . -name 'libpj*a'); do\
 #		ln -s $$i $$(echo $$i | sed -e "s/-$(TARGET_NAME)//");\
 #	done
-	mkdir -p $(DESTDIR)$(prefix)/lib/pkgconfig
-	sed -e "s!@PREFIX@!$(DESTDIR)$(prefix)!" libpj.pc.in > $(DESTDIR)/$(prefix)/lib/pkgconfig/libpj.pc
+# Miika This caused further errors in "make rpm"
+#	mkdir -p $(DESTDIR)$(prefix)/lib/pkgconfig
+#	sed -e "s!@PREFIX@!$(DESTDIR)$(prefix)!" libpj.pc.in > $(DESTDIR)/$(prefix)/lib/pkgconfig/libpj.pc

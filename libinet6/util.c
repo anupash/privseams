@@ -176,3 +176,26 @@ char *getitem(List *ilist, int n) {
   }
   return NULL;
 }
+
+
+char *setdataitem(List *ilist, int n, char *data){
+  Listitem *ptr;
+  int count = 0;
+
+  if (!ilist->head) return NULL;
+  ptr = ilist->head;
+  if (n==0) return ptr->data;
+  while(ptr->next) {
+    ptr=ptr->next;
+    count++;
+    if(n==count){
+      //memset(new->data, 0, MAX_ITEM_LEN);
+      strncpy(ptr->data, data, MAX_ITEM_LEN);
+      return ptr->data;
+    }
+  }
+  return NULL;
+
+}
+
+
