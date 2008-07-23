@@ -176,7 +176,7 @@ int hcstore_register_hchain_length(hchain_store_t *hcstore, int function_id,
 
 int hcstore_refill(hchain_store_t *hcstore)
 {
-	int hash_length, hchain_length, err = 0;
+	int hash_length = 0, hchain_length = 0, err = 0, i, j, g, h;
 	hash_function_t hash_function = NULL;
 
 	HIP_ASSERT(hcstore != NULL);
@@ -384,64 +384,6 @@ void hcstore_uninit(hchain_store_t *hcstore)
 	}
 
 	HIP_DEBUG("hash-chain store uninitialized\n");
-}
-
-/* this will only consider the first hchain item in each shelf, as only
- * this should be set up for the store containing the hchains for the BEX */
-struct hip_common *create_anchors_message(hchain_store_t *hcstore)
-{
-	struct hip_common *msg = NULL;
-	hash_chain_t *bex_hchain = NULL;
-	unsigned char *anchor = NULL;
-	int err = 0, i, num_hchains = 0;
-
-	HIP_ASSERT(hcstore != NULL);
-
-	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1,
-		 "alloc memory for adding sa entry\n");
-
-	hip_msg_init(msg);
-
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_IPSEC_UPDATE_ANCHOR_LIST, 0), -1,
-		 "build hdr failed\n");
-
-	// make sure there are some anchors to send
-	num_hchains = hip_ll_get_size(&hip_hchain_storage.hchain_store[0]);
-	if (num_hchains > 0)
-	{
-		HIP_DEBUG("adding anchors to message...\n");
-
-		for (i = 0; i < num_hchains; i++)
-		{
-			HIP_IFEL(!(bex_hchain = (hash_chain_t *)
-					hip_ll_get(&hip_hchain_storage.hchain_store[0], i)), -1,
-					"failed to get first hchain from bex store\n");
-
-			//hchain_print(bex_hchain, hash_length);
-
-			anchor = bex_hchain->anchor_element->hash;
-			HIP_HEXDUMP("anchor: ", anchor, hash_length);
-
-			HIP_IFEL(hip_build_param_contents(msg, (void *)anchor,
-					HIP_PARAM_HCHAIN_ANCHOR, hash_length),
-					-1, "build param contents failed\n");
-		}
-	} else
-	{
-		HIP_ERROR("bex store anchor message issued, but no anchors\n");
-
-		err = 1;
-		goto out_err;
-	}
-
-  out_err:
-  	if (err)
-  	{
-  		free(msg);
-  		msg = NULL;
-  	}
-
-  	return msg;
 }
 
 

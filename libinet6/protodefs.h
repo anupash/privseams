@@ -48,7 +48,7 @@
                                   0xE7,0x93,0x0C,0x3C,0x6E,0x61,0x74,0xEA }
 
 /** @addtogroup hip_param_type_numbers
- * @{ 
+ * @{
  */
 #define HIP_PARAM_MIN                  -1
 
@@ -95,7 +95,7 @@
 #define HIP_PARAM_EID_ADDR              32777
 #define HIP_PARAM_UINT                  32778 /**< Unsigned integer */
 #define HIP_PARAM_KEYS                  32779
-#define HIP_PARAM_PSEUDO_HIT            32780 
+#define HIP_PARAM_PSEUDO_HIT            32780
 #define HIP_PARAM_BLIND_NONCE           32785 /**< Pass blind nonce */
 #define HIP_PARAM_OPENDHT_GW_INFO       32786
 #define HIP_PARAM_ENCAPS_MSG		32787
@@ -114,8 +114,9 @@
 #define HIP_PARAM_ADD_HIT		32800
 #define HIP_PARAM_ADD_OPTION		32801
 #define HIP_PARAM_PEER_HIT		32802
-#define HIP_PARAM_HCHAIN_ANCHOR		32803
-#define HIP_PARAM_LSI		        32804
+#define HIP_PARAM_ESP_PROT_TFM		32803
+#define HIP_PARAM_HCHAIN_ANCHOR		32804
+#define HIP_PARAM_LSI		        32805
 /* End of HIPL private parameters. */
 
 #define HIP_PARAM_HMAC                 61505
@@ -138,7 +139,7 @@
 /* @} */
 
 /** @addtogroup notification
- * @{ 
+ * @{
  */
 #define HIP_NTF_UNSUPPORTED_CRITICAL_PARAMETER_TYPE 1
 #define HIP_NTF_INVALID_SYNTAX                      7
@@ -239,7 +240,7 @@
 
 #define HIP_VER_RES                 0x01     /* Version 1, reserved 0 */
 #define HIP_VER_MASK                0xF0
-#define HIP_RES_MASK                0x0F 
+#define HIP_RES_MASK                0x0F
 
 /**
  * @addtogroup hip_ha_controls
@@ -260,25 +261,25 @@
                                          HIP_HA_CTRL_LOCAL_REQ_RVS\
                                          )
 
-#define HIP_HA_CTRL_PEER_GRANTED_UNSUP   0x0001 
-#define HIP_HA_CTRL_PEER_GRANTED_ESCROW  0x0400 
-#define HIP_HA_CTRL_PEER_GRANTED_RELAY   0x0800 
+#define HIP_HA_CTRL_PEER_GRANTED_UNSUP   0x0001
+#define HIP_HA_CTRL_PEER_GRANTED_ESCROW  0x0400
+#define HIP_HA_CTRL_PEER_GRANTED_RELAY   0x0800
 #define HIP_HA_CTRL_PEER_GRANTED_RVS     0x1000
-#define HIP_HA_CTRL_PEER_UNSUP_CAPABLE   0x0002 
-#define HIP_HA_CTRL_PEER_ESCROW_CAPABLE  0x2000 
-#define HIP_HA_CTRL_PEER_RELAY_CAPABLE   0x4000 
+#define HIP_HA_CTRL_PEER_UNSUP_CAPABLE   0x0002
+#define HIP_HA_CTRL_PEER_ESCROW_CAPABLE  0x2000
+#define HIP_HA_CTRL_PEER_RELAY_CAPABLE   0x4000
 #define HIP_HA_CTRL_PEER_RVS_CAPABLE     0x8000
 /* @} */
 
 /** @addtogroup hip_packet_controls
- * @{ 
+ * @{
  */
 #define HIP_PACKET_CTRL_ANON             0x0001 /**< HIP packet Controls value */
 #define HIP_PACKET_CTRL_BLIND	         0x0004 /**< HIP packet Controls value */
 /* @} */
 
 /** @addtogroup hip_services
- * @{ 
+ * @{
  */
 #define HIP_SERVICE_RENDEZVOUS	         1
 #define HIP_SERVICE_ESCROW	         201
@@ -288,7 +289,7 @@
 /* @} */
 
 /** @addtogroup hip_proxy
- * @{ 
+ * @{
  */
 #define HIP_PROXY_PASSTHROUGH		0
 #define HIP_PROXY_TRANSLATE 		1
@@ -426,7 +427,7 @@ struct hip_locator_info_addr_item {
         uint8_t reserved;  /**< last bit is P (prefered) */
 	uint32_t lifetime;
 	struct in6_addr address;
-	/* end of fixed part - locator of arbitrary length follows but 
+	/* end of fixed part - locator of arbitrary length follows but
 	   currently support only IPv6 */
 	int state; /**<State of our addresses, possible states are:
 		      WAITING_ECHO_REQUEST, ACTIVE */
@@ -496,7 +497,7 @@ struct sockaddr_eid {
  * Use accessor functions defined in builder.c, do not access members
  * directly to avoid hassle with byte ordering and number conversion.
  */
-struct hip_common { 
+struct hip_common {
 	uint8_t      payload_proto;
 	uint8_t      payload_len;
 	uint8_t      type_hdr;
@@ -510,7 +511,7 @@ struct hip_common {
 /**
  * Use accessor functions defined in hip_build.h, do not access members
  * directly to avoid hassle with byte ordering and length conversion.
- */ 
+ */
 struct hip_tlv_common {
 	hip_tlv_type_t     type;
 	hip_tlv_len_t      length;
@@ -526,7 +527,7 @@ struct hip_esp_info {
 } __attribute__ ((packed));
 
 /** @addtogroup hip_tlv
- * @{ 
+ * @{
  */
 struct hip_r1_counter {
 	hip_tlv_type_t     type;
@@ -555,7 +556,7 @@ struct hip_solution {
 } __attribute__ ((packed));
 
 struct hip_dh_public_value {
-	uint8_t           group_id;  
+	uint8_t           group_id;
 	uint16_t          pub_len;
 	/* fixed part ends */
         uint8_t           public_value[0];
@@ -728,7 +729,7 @@ struct hip_relay_via {
      in_port_t port; /**< Port number. */
 } __attribute__ ((packed));
 
-/** 
+/**
  * draft-ietf-hip-nat-traversal-01
  * @note obsolete.
  */

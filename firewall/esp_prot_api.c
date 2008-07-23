@@ -63,12 +63,10 @@ int esp_prot_init()
 
 				/* also register the the hchain lengths for this function and this
 				 * hash length */
-				for (g = 0; g < NUM_BEX_HCHAIN_LENGTHS; g++)
-				{
-					HIP_IFEL(hcstore_register_hchain_length(&bex_store, function_id,
-							hash_length_id, bex_hchain_lengths[g]) < 0, -1,
-							"failed to register hchain-length in bex-store\n");
-				}
+				HIP_IFEL(hcstore_register_hchain_length(&bex_store, function_id,
+						hash_length_id, bex_hchain_length) < 0, -1,
+						"failed to register hchain-length in bex-store\n");
+
 				for (g = 0; g < NUM_UPDATE_HCHAIN_LENGTHS; g++)
 				{
 					HIP_IFEL(hcstore_register_hchain_length(&update_store, function_id,
@@ -124,10 +122,17 @@ int esp_prot_set_sadb(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 {
 	int hash_length = 0, err = 0;
 
+	HIP_ASSERT(entry != 0);
+	HIP_ASSERT(esp_prot_transform >= 0);
+	HIP_ASSERT(direction == 1 || direction == 2);
+
 	// only set up the anchor or hchain, if esp extension is used
 	if (esp_prot_transform > ESP_PROT_TFM_UNUSED)
 	{
 		// TODO add update support
+
+		// if the extension is used, an anchor should be provided by the peer
+		HIP_ASSERT(esp_prot_anchor != NULL);
 
 		HIP_DEBUG("setting up ESP extension parameters...\n");
 
@@ -169,6 +174,10 @@ int add_esp_prot_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *
 	unsigned char *tmp_hash = NULL;
 	int err = 0;
 
+	HIP_ASSERT(out_hash != NULL);
+	HIP_ASSERT(*out_length == 0);
+	HIP_ASSERT(entry != NULL);
+
 	if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED)
 	{
 		HIP_DEBUG("adding hash chain element to outgoing packet...\n");
@@ -197,7 +206,7 @@ int add_esp_prot_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *
 		HIP_HEXDUMP("added esp protection hash: ", out_hash, *out_length);
 
 		// now do some maintenance operations
-		HIP_IFEL(esp_prot_ext_maintenance(entry), -1,
+		HIP_IFEL(esp_prot_sadb_maintenance(entry), -1,
 				"esp protection extension maintenance operations failed\n");
 	} else
 	{
@@ -215,8 +224,12 @@ int verify_esp_prot_hash(hip_sa_entry_t *entry, unsigned char *hash_value)
 	int hash_length = 0;
 	int err = 0;
 
+	HIP_ASSERT(entry != NULL);
+
 	if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED)
 	{
+		HIP_ASSERT(hash_value != NULL);
+
 		hash_function = esp_prot_get_hash_function(entry->esp_prot_transform);
 		hash_length = esp_prot_get_hash_length(entry->esp_prot_transform);
 		HIP_DEBUG("hash length is %i\n", hash_length);
@@ -277,38 +290,52 @@ int verify_esp_prot_hash(hip_sa_entry_t *entry, unsigned char *hash_value)
     return err;
 }
 
-// TODO handle UNUSED case
+/* returns NULL for UNUSED transform */
 esp_prot_transform_t * esp_prot_resolve_transform(uint8_t transform)
 {
+	HIP_ASSERT(transform >= 0);
+
 	HIP_DEBUG("resolving transform: %u\n", transform);
 
-	return &esp_prot_transforms[transform - 1];
+	if (transform > ESP_PROT_TFM_UNUSED)
+		return &esp_prot_transforms[transform - 1];
+	else
+		return NULL;
 }
 
-// TODO handle UNUSED case
+/* returns NULL for UNUSED transform */
 hash_function_t esp_prot_get_hash_function(uint8_t transform)
 {
 	esp_prot_transform_t *prot_transform = NULL;
+	hash_function_t hash_function = NULL;
 	int err = 0;
 
-	HIP_IFEL(!(prot_transform = esp_prot_resolve_transform(transform)),
-			-1, "failed to resolve transform\n");
+	HIP_ASSERT(transform >= 0);
+
+	HIP_IFEL(!(prot_transform = esp_prot_resolve_transform(transform)), 1,
+			"tried to resolve UNUSED transform\n");
 
 	// as both stores' meta-data are in sync, we can use any
-	err = hcstore_get_hash_function(bex_store, prot_transform->hash_func_id);
+	hash_function = hcstore_get_hash_function(bex_store, prot_transform->hash_func_id);
 
   out_err:
-	return err;
+	if (err)
+		hash_function = NULL;
+
+	return hash_function;
 }
 
-// TODO handle UNUSED case
+/* returns length of hash, 0 for UNUSED */
 int esp_prot_get_hash_length(uint8_t transform)
 {
 	esp_prot_transform_t *prot_transform = NULL;
 	int err = 0;
 
-	HIP_IFEL(!(prot_transform = esp_prot_resolve_transform(transform)),
-			-1, "failed to resolve transform\n");
+	HIP_ASSERT(transform >= 0);
+
+	// return length 0 for UNUSED transform
+	HIP_IFEL(!(prot_transform = esp_prot_resolve_transform(transform)), 0,
+			"tried to resolve UNUSED transform\n");
 
 	// as both stores' meta-data are in sync, we can use any
 	err = hcstore_get_hash_length(bex_store, prot_transform->hash_func_id,
@@ -318,16 +345,39 @@ int esp_prot_get_hash_length(uint8_t transform)
 	return err;
 }
 
-// TODO check
-hash_chain_t * esp_prot_get_hchain_by_anchor(unsigned char *hchain_anchor,
+/* returns corresponding hash-chain, refills bex_store and sends update
+ * message to hipd
+ */
+hash_chain_t * esp_prot_get_bex_hchain_by_anchor(unsigned char *hchain_anchor,
 		uint8_t transform)
 {
-	int err = 0;
+	esp_prot_transform_t *prot_transform = NULL;
 	hash_chain_t *return_hchain = NULL;
+	int err = 0;
 
-	HIP_IFEL(!(return_hchain = hip_hchain_bexstore_get_hchain(hchain_anchor,
-			esp_prot_transforms[transform])), -1,
-			"unable to retrieve hchain from bex store\n");
+	HIP_ASSERT(hchain_anchor != NULL);
+	HIP_ASSERT(transform >= 0);
+
+	HIP_IFEL(!(prot_transform = esp_prot_resolve_transform(transform)), 1,
+			"tried to resolve UNUSED transform\n");
+
+	HIP_IFEL(!(return_hchain = hcstore_get_hchain_by_anchor(&bex_store,
+			prot_transform->hash_func_id, prot_transform->hash_length_id, hchain_anchor)),
+			-1, "unable to retrieve hchain from bex store\n");
+
+	// refill bex-store if necessary
+	HIP_IFEL((err = hcstore_refill(&bex_store)) < 0, -1,
+			"failed to refill the bex-store\n");
+
+	// some elements have been added, tell hipd about them
+	if (err > 0)
+	{
+		HIP_IFEL(send_bex_store_update_to_hipd(entry->esp_prot_transform), -1,
+				"unable to send bex-store update to hipd\n");
+
+		// this is not an error condition
+		err = 0;
+	}
 
   out_err:
 	if (err)
@@ -336,35 +386,52 @@ hash_chain_t * esp_prot_get_hchain_by_anchor(unsigned char *hchain_anchor,
   	return return_hchain;
 }
 
-// TODO check
 int get_esp_data_offset(hip_sa_entry_t *entry)
 {
-	return (sizeof(struct hip_esp) + esp_prot_transforms[entry->active_transform]);
+	HIP_ASSERT(entry != NULL);
+
+	return (sizeof(struct hip_esp) + esp_prot_get_hash_length(entry->esp_prot_transform));
 }
 
-// TODO check
-int esp_prot_ext_maintainance(hip_sa_entry_t *entry)
+/* sets entry->next_hchain, if necessary
+ * changes to next_hchain
+ * refills the update_store
+ */
+int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 {
-	int err = 0, decreased_store_count = 0;
+	esp_prot_transform_t *prot_transform = NULL;
+	int err = 0;
 
-	// first check the extension is used
-	if (entry->active_transform > ESP_PROT_TRANSFORM_UNUSED)
+	HIP_ASSERT(entry != NULL);
+
+	// first check the extension is used for this connection
+	if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED)
 	{
-
 		/* make sure that the next hash-chain is set up before the active one
 		 * depletes */
 		if (!entry->next_hchain && entry->active_hchain->remaining
-					<= entry->active_hchain->hchain_length * REMAIN_THRESHOLD)
+					<= entry->active_hchain->hchain_length * REMAIN_ELEMENTS_TRESHOLD)
 		{
-			// set next hchain
-			HIP_IFEL(entry->next_hchain = hip_hchain_store_get_hchain(HC_LENGTH_STEP1),
-					-1, "unable to retrieve hchain from store\n");
-			// issue UPDATE message to be sent by hipd
-			HIP_IFEL(send_next_anchor_to_hipd(entry->next_hchain->anchor_element->hash,
-					entry->active_transform), -1,
-					"unable to send next anchor message to hipd\n");
+			HIP_IFEL(!(prot_transform = esp_prot_resolve_transform(entry->esp_prot_transform)),
+					1, "tried to resolve UNUSED transform\n");
 
-			decreased_store_count = 1;
+			/* set next hchain with DEFAULT_HCHAIN_LENGTH_ID
+			 *
+			 * @note this needs to be extended when implementing usage of different
+			 *       hchain lengths
+			 */
+			HIP_IFEL(!(entry->next_hchain = hcstore_get_hchain(&update_store,
+					prot_transform->hash_func_id, prot_transform->hash_length_id,
+					update_hchain_lengths[DEFAULT_HCHAIN_LENGTH_ID])),
+					-1, "unable to retrieve hchain from store\n");
+
+			// issue UPDATE message to be sent by hipd
+			HIP_IFEL(trigger_update(entry), -1,
+					"unable to trigger update at hipd\n");
+
+			// refill update-store
+			HIP_IFEL((err = hcstore_refill(&update_store)) < 0, -1,
+					"failed to refill the update-store\n");
 		}
 
 		// activate next hchain if current one is depleted
@@ -376,25 +443,6 @@ int esp_prot_ext_maintainance(hip_sa_entry_t *entry)
 			HIP_DEBUG("changing to next_hchain\n");
 			entry->active_hchain = entry->next_hchain;
 			entry->next_hchain = NULL;
-		}
-
-		// check if we should refill the stores
-		if (decreased_store_count)
-		{
-			err = hip_hchain_stores_refill(esp_prot_transforms[entry->active_transform]);
-			if (err < 0)
-			{
-				HIP_ERROR("error refilling the stores\n");
-				goto out_err;
-			} else if (err > 0)
-			{
-				// this means the bex store was updated
-				HIP_DEBUG("sending anchor update...\n");
-				HIP_IFEL(send_anchor_list_update_to_hipd(entry->active_transform), -1,
-						"unable to send anchor list update to hipd\n");
-
-				err = 0;
-			}
 		}
 	}
 

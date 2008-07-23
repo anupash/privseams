@@ -80,7 +80,6 @@ hash_function_t hcstore_get_hash_function(hchain_store_t *hcstore, int hash_func
 int hcstore_get_hash_length(hchain_store_t *hcstore, int hash_function_id,
 		int hash_length_id);
 void hcstore_uninit(hchain_store_t *hcstore);
-struct hip_common *create_anchors_message(hchain_store_t *hcstore);
 
 
 #if 0

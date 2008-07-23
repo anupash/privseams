@@ -160,9 +160,9 @@
 #define SO_HIP_CERT_X509V3_SIGN                 143
 #define SO_HIP_CERT_X509V3_VERIFY               144
 #define SO_HIP_USERSPACE_IPSEC					145
-#define SO_HIP_ESP_PROT_EXT_TRANSFORM			146
-#define SO_HIP_IPSEC_UPDATE_ANCHOR_LIST			147
-#define SO_HIP_IPSEC_NEXT_ANCHOR				148
+#define SO_HIP_ESP_PROT_TFM						146
+#define SO_HIP_BEX_STORE_UPDATE					147
+#define SO_HIP_TRIGGER_UPDATE					148
 #define SO_HIP_GET_LSI_PEER                     150
 #define SO_HIP_GET_LSI_OUR			151
 #define SO_HIP_IS_OUR_LSI                       152

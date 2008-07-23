@@ -395,21 +395,8 @@ int handle_sa_add_request(struct hip_common * msg,
 	peer_port = *((uint16_t *) hip_get_param_contents_direct(param));
 	HIP_DEBUG("the peer_port value is %u \n", peer_port);
 
-	param = hip_get_next_param(msg, param);
-	esp_prot_transform = *((uint8_t *) hip_get_param_contents_direct(param));
-	HIP_DEBUG("esp protection extension transform is %u \n", esp_prot_transform);
-
-	// this parameter is only included, if the esp extension is used
-	if (esp_prot_transform > ESP_PROT_TRANSFORM_UNUSED)
-	{
-		param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_HCHAIN_ANCHOR);
-		esp_prot_anchor = (unsigned char *) hip_get_param_contents_direct(param);
-		HIP_HEXDUMP("the esp protection anchor is ", esp_prot_anchor,
-			    esp_prot_transforms[esp_prot_transform]);
-	} else
-	{
-		esp_prot_anchor = NULL;
-	}
+	// parse the esp protection extension parameters
+	esp_prot_anchor = esp_prot_handle_sa_add_request(msg, &esp_prot_transform);
 
 	param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_KEYS);
 	enckey = (struct hip_crypto_key *) hip_get_param_contents_direct(param);

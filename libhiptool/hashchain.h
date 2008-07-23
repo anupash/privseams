@@ -15,22 +15,12 @@
 #define HASH_CHAIN_H
 
 #include <sys/types.h>
+#include <openssl/rand.h>
 #include <openssl/sha.h>
+#include <openssl/md5.h>
 
-
-
-/* Hash-functions with longer output than SHA1 are easily supported
- * by increasing this. Right now there is no need to increase the buffer.
- *
- * @note this does not influence the amount of the memory used for a
- *       hash-chain
- * @note hash-lengths of hash-functions used right now when
- *       creating hash-chains:
- *       MD5_DIGEST_LENGTH == 16
- *       SHA_DIGEST_LENGTH == 20
- */
-// TODO make this dynamic
-#define MAX_HASH_LENGTH SHA_DIGEST_LENGTH
+/* biggest digest in openssl lib */
+#define MAX_HASH_LENGTH SHA512_DIGEST_LENGTH
 
 
 typedef unsigned char * (*hash_function_t)(const unsigned char *, unsigned long,
@@ -59,6 +49,7 @@ struct hash_chain
 	hash_chain_element_t *source_element;	/* seed - first element */
 	hash_chain_element_t *anchor_element;	/* anchor - last element */
 };
+
 
 void hchain_print(const hash_chain_t * hash_chain);
 

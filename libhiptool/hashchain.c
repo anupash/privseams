@@ -7,13 +7,13 @@
 *
 * Authors:
 *   - Tobias Heer <heer@tobibox.de> 2006
+*   - Rene Hummen
 *  * Licence: GNU/GPL
 *
 */
 #include "hashchain.h"
-#include <openssl/rand.h>
-#include "crypto.h"
-#include "misc.h"
+//#include "crypto.h"
+//#include "misc.h"
 
 /* these are not needed and therefore not implemented
    right now but they should be used where necessary */

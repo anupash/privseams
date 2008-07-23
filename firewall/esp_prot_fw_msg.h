@@ -9,9 +9,14 @@
 #define ESP_PROT_MSG_H_
 
 #include <inttypes.h>
+#include "builder.h"
+#include "hashchain_store.h"
 
-int send_esp_protection_to_hipd(int active);
-int send_anchor_list_update_to_hipd(uint8_t transform);
-int send_next_anchor_to_hipd(unsigned char *anchor, uint8_t transform);
+int send_esp_prot_to_hipd(int active);
+int send_bex_store_update_to_hipd(hchain_store_t *bex_store);
+struct hip_common *create_bex_store_update_msg(hchain_store_t *hcstore);
+int trigger_update(hip_sa_entry_t *entry);
+unsigned char * esp_prot_handle_sa_add_request(struct hip_common *msg,
+		uint8_t *esp_prot_transform);
 
 #endif /* ESP_PROT_MSG_H_ */
