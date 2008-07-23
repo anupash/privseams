@@ -1234,10 +1234,9 @@ int hip_fw_handle_hip_forward(hip_fw_context_t *ctx)
 #ifdef CONFIG_HIP_MIDAUTH
 	if (use_midauth)
 		return midauth_filter_hip(ctx);
-#else
+#endif
 	// for now forward and output are handled symmetrically
 	return hip_fw_handle_hip_output(ctx);
-#endif
 }
 
 int hip_fw_handle_esp_forward(hip_fw_context_t *ctx)
