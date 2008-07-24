@@ -1825,7 +1825,8 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	     HIP_DEBUG("No entry, creating new.\n");
 	     HIP_IFEL(!(entry = hip_hadb_create_state(GFP_KERNEL)), -ENOMSG,
 		      "Failed to create or find entry\n");
-	     HIP_DEBUG("After creating a new state\n");
+
+	     HIP_DEBUG("After creating a new state, entry: %p\n", entry);
 	     /* The rest of the code assume already locked entry, so lock the
 		newly created entry as well. */
 	     HIP_LOCK_HA(entry);
@@ -1834,14 +1835,16 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	     if (use_blind) {
 		     ipv6_addr_copy(&entry->hit_peer, &plain_peer_hit);
 		     hip_init_us(entry, &plain_local_hit);
-		     HIP_DEBUG("Using blinding\n");
+		     HIP_DEBUG("BLIND is in use.\n");
+	     } else {
+		     ipv6_addr_copy(&entry->hit_peer, &i2->hits);
+		     hip_init_us(entry, &i2->hitr);
+		     HIP_DEBUG("BLIND is not in use.\n");
 	     }
 #else
 	     ipv6_addr_copy(&entry->hit_peer, &i2->hits);
 	     hip_init_us(entry, &i2->hitr);
-	     HIP_DEBUG("Not Using blinding\n");
 #endif
-	     
 	     HIP_DEBUG("Before inserting state entry in hadb\n");
 	     hip_hadb_insert_state(entry);
 		HIP_DEBUG("After inserting state entry in hadb\n");
@@ -2032,29 +2035,35 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	HIP_DEBUG("Setting up outbound IPsec SA, SPI=0x%x\n", spi_out);
 
 #ifdef CONFIG_HIP_BLIND
-    if (use_blind) {
-      HIP_IFEL(entry->hadb_ipsec_func->hip_setup_hit_sp_pair(&entry->hit_peer,
-				     &entry->hit_our,
-				     i2_saddr, i2_daddr, IPPROTO_ESP, 1, 1),
-	       -1, "Setting up SP pair failed\n");
-    }
+	if (use_blind) {
+		HIP_IFEL(entry->hadb_ipsec_func->hip_setup_hit_sp_pair(
+				 &entry->hit_peer, &entry->hit_our, i2_saddr,
+				 i2_daddr, IPPROTO_ESP, 1, 1), -1,
+			 "Failed to set up an SP pair.\n");
+	} else {
+		HIP_IFEL(entry->hadb_ipsec_func->hip_setup_hit_sp_pair(
+			 &i2_context.input->hits, &i2_context.input->hitr,
+			 i2_saddr, i2_daddr, IPPROTO_ESP, 1, 1), -1,
+		 "Failed to set up an SP pair.\n");
+	}
 #else
-    HIP_IFEL(entry->hadb_ipsec_func->hip_setup_hit_sp_pair(&i2_context.input->hits,
-							   &i2_context.input->hitr,
-							   i2_saddr, i2_daddr, IPPROTO_ESP, 1, 1),
-	     -1, "Setting up SP pair failed\n");
+	HIP_IFEL(entry->hadb_ipsec_func->hip_setup_hit_sp_pair(
+			 &i2_context.input->hits, &i2_context.input->hitr,
+			 i2_saddr, i2_daddr, IPPROTO_ESP, 1, 1), -1,
+		 "Failed to set up an SP pair.\n");
 #endif
 	/* Source IPv6 address is implicitly the preferred address after the
 	   base exchange. */
 //modify by santtu
-    //port must be added
+	//port must be added
 #ifndef HIP_USE_ICE
 	HIP_IFEL(hip_hadb_add_addr_to_spi(entry, spi_out, i2_saddr, 1, 0, 1),
 		 -1,  "Failed to add an address to SPI list\n");
 #else
 	HIP_IFEL(hip_hadb_add_udp_addr_to_spi(entry, spi_out, i2_saddr, 1, 0, 1,i2_info->src_port, HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY),
-			 -1,  "Failed to add an address to SPI list\n");
+		 -1,  "Failed to add an address to SPI list\n");
 #endif
+
 	memset(&spi_in_data, 0, sizeof(struct hip_spi_in_item));
 	spi_in_data.spi = spi_in;
 	spi_in_data.ifindex = hip_devaddr2ifindex(i2_daddr);
