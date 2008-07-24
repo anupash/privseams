@@ -143,7 +143,7 @@ struct hip_common * create_add_sa_msg(struct in6_addr *saddr,
 					  "build param contents failed\n");
 
 	// params needed by the esp protection extension
-	HIP_IFEL(esp_prot_add_sa(entry, msg, direction), -1, "failed to add esp prot params\n");
+	HIP_IFEL(esp_prot_sa_add(entry, msg, direction), -1, "failed to add esp prot params\n");
 
 	HIP_HEXDUMP("crypto key :", enckey, sizeof(struct hip_crypto_key));
 	HIP_IFEL(hip_build_param_contents(msg,

@@ -24,7 +24,7 @@ sbin_PROGRAMS = hipfw
 
 hipfw_SOURCES = firewall.c conntrack.c rule_management.c helpers.c firewall_control.c esp_decrypt.c proxydb.c conndb.c dlist.c hslist.c
 hipfw_SOURCES += user_ipsec_api.c user_ipsec_esp.c user_ipsec_sadb.c
-hipfw_SOURCES += esp_prot.c esp_prot_fw_msg.c
+hipfw_SOURCES += esp_prot_api.c esp_prot_fw_msg.c
 hipfw_SOURCES += proxy.c opptcp.c firewalldb.c lsi.c
 
 hipfw_LDADD = /usr/lib/libipq.a ../libinet6/.libs/libinet6.a

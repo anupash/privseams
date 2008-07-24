@@ -7,6 +7,7 @@
 
 #include "esp_prot_fw_msg.h"
 #include "esp_prot_common.h"
+#include "esp_prot_api.h"
 
 /* this sends the prefered transform to hipd implicitely turning on
  * the esp protection extension there */
@@ -61,17 +62,17 @@ int send_esp_prot_to_hipd(int active)
 /* sends a list of all available anchor elements in the bex store
  * to the hipd, which then draws the element used in the bex from
  * this list */
-int send_bex_store_update_to_hipd(hchain_store_t *bex_store)
+int send_bex_store_update_to_hipd(hchain_store_t *hcstore)
 {
 	struct hip_common *msg = NULL;
 	int hash_length = 0;
 	int err = 0;
 
-	HIP_ASSERT(bex_store != NULL);
+	HIP_ASSERT(hcstore != NULL);
 
 	HIP_DEBUG("sending bex-store update to hipd...\n");
 
-	HIP_IFEL(!(msg = (struct hip_common *)create_bexstore_anchors_message(bex_store)),
+	HIP_IFEL(!(msg = (struct hip_common *)create_bex_store_update_msg(hcstore)),
 			-1, "failed to create bex store anchors update message\n");
 
 	HIP_DUMP_MSG(msg);
@@ -95,11 +96,11 @@ int send_bex_store_update_to_hipd(hchain_store_t *bex_store)
  *       this should be set up for the store containing the hchains for the BEX
  * @note the created message contains hash_length and anchors for each transform
  */
-struct hip_common *create_bex_store_update_msg(hchain_store_t *hcstore)
+hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore)
 {
 	struct hip_common *msg = NULL;
 	int hash_length = 0, num_hchains = 0;
-	esp_prot_transform_t *transform = NULL;
+	esp_prot_tfm_t *transform = NULL;
 	unsigned char *anchor = NULL;
 	int err = 0, j;
 	uint8_t i;
@@ -119,10 +120,16 @@ struct hip_common *create_bex_store_update_msg(hchain_store_t *hcstore)
 	{
 		HIP_DEBUG("transform %i:\n", i + 1);
 
-		transform = esp_prot_resolve_transform(i);
+		HIP_IFEL(!(transform = esp_prot_resolve_transform(i)), -1,
+				"failed to resolve transform\n");
 
-		hash_length = hash_lengths[transform->hash_func_id][transform->hash_length_id];
-		num_hchains = hcstore->hchain_shelves[transform->hash_func_id][transform->hash_length_id].hchain_items[DEFAULT_HCHAIN_LENGTH_ID].num_hchains;
+		HIP_IFEL((hash_length = esp_prot_get_hash_length(i)) > 0, -1,
+				"hash_length <= 0, expecting something bigger\n");
+
+		HIP_IFEL((num_hchains =
+				hcstore->hchain_shelves[transform->hash_func_id][transform->hash_length_id].
+				hchain_items[DEFAULT_HCHAIN_LENGTH_ID].num_hchains) > 0, -1,
+				"num_hchains <= 0, expecting something bigger\n");
 
 		// add num_hchains for this transform, needed on receiver side
 		HIP_DEBUG("adding num_hchains: %i\n", num_hchains);
@@ -145,10 +152,13 @@ struct hip_common *create_bex_store_update_msg(hchain_store_t *hcstore)
 		transform = esp_prot_resolve_transform(i);
 
 		// add anchor with this transform
-		for (j = 0; j < hcstore->hchain_shelves[transform->hash_func_id][transform->hash_length_id].hchain_items[DEFAULT_HCHAIN_LENGTH_ID].num_hchains;
-				j++)
+		for (j = 0;
+				j < hcstore->hchain_shelves[transform->hash_func_id][transform->hash_length_id].
+				hchain_items[DEFAULT_HCHAIN_LENGTH_ID].num_hchains; j++)
 		{
-			anchor = hcstore->hchain_shelves[transform->hash_func_id][transform->hash_length_id].hchain_items[DEFAULT_HCHAIN_LENGTH_ID].hchains[j]->anchor_element->hash;
+			anchor =
+				hcstore->hchain_shelves[transform->hash_func_id][transform->hash_length_id].
+				hchain_items[DEFAULT_HCHAIN_LENGTH_ID].hchains[j]->anchor_element->hash;
 
 			HIP_HEXDUMP("adding anchor: ", anchor, hash_length);
 			HIP_IFEL(hip_build_param_contents(msg, (void *)anchor,
@@ -209,8 +219,9 @@ int trigger_update(hip_sa_entry_t *entry)
 				sizeof(int)), -1, "build param contents failed\n");
 
 	HIP_HEXDUMP("anchor: ", entry->next_hchain->anchor_element->hash, hash_length);
-	HIP_IFEL(hip_build_param_contents(msg, (void *)anchor, HIP_PARAM_HCHAIN_ANCHOR,
-			esp_prot_transforms[transform]), -1, "build param contents failed\n");
+	HIP_IFEL(hip_build_param_contents(msg, (void *)entry->next_hchain->anchor_element->hash,
+			HIP_PARAM_HCHAIN_ANCHOR, hash_length), -1,
+			"build param contents failed\n");
 
 	HIP_DUMP_MSG(msg);
 
@@ -232,6 +243,7 @@ int trigger_update(hip_sa_entry_t *entry)
 unsigned char * esp_prot_handle_sa_add_request(struct hip_common *msg,
 		uint8_t *esp_prot_transform)
 {
+	struct hip_tlv_common *param = NULL;
 	unsigned char *esp_prot_anchor = NULL;
 	int hash_length = 0, err = 0;
 	*esp_prot_transform = 0;

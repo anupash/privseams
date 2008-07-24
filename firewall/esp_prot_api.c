@@ -1,10 +1,20 @@
-#include "esp_prot.h"
+#include "esp_prot_api.h"
 #include "esp_prot_fw_msg.h"
 #include "firewall_defines.h"
 
 
+static const hash_function_t hash_functions[NUM_HASH_FUNCTIONS] = {SHA1};
+static const int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS] = {{8}};
+
+#if 0
+static const hash_function_t hash_functions[NUM_HASH_FUNCTIONS]
+				   = {SHA1, MD5};
+static const int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS]
+				   = {{8, 16, 20}, {8, 16, 0}};
+#endif
+
 // stores the mapping transform_id -> (function_id, hash_length_id)
-esp_prot_transform_t esp_prot_transforms[NUM_TRANSFORMS];
+esp_prot_tfm_t esp_prot_transforms[NUM_TRANSFORMS];
 
 // this store only contains hchains used when negotiating esp protection in BEX
 hchain_store_t bex_store;
@@ -17,7 +27,7 @@ int esp_prot_init()
 	int bex_function_id = 0, update_function_id = 0;
 	int bex_hash_length_id = 0, update_hash_length_id = 0;
 	int transform_id = 0;
-	int err = 0, i, j;
+	int err = 0, i, j, g;
 
 	HIP_DEBUG("Initializing the esp protection extension...\n");
 
@@ -49,31 +59,32 @@ int esp_prot_init()
 
 				// now we can register the hash lengths for this function
 				HIP_IFEL((bex_hash_length_id = hcstore_register_hash_length(&bex_store,
-						function_id, hash_lengths[i][j])) < 0, -1,
+						bex_function_id, hash_lengths[i][j])) < 0, -1,
 						"failed to register hash-length in bex-store\n");
 				HIP_IFEL((update_hash_length_id = hcstore_register_hash_length(
-						&update_store, function_id, hash_lengths[i][j])) < 0, -1,
+						&update_store, update_function_id, hash_lengths[i][j])) < 0, -1,
 						"failed to register hash-length in update-store\n");
 
 				// ensure the 2 stores are in sync
 				HIP_ASSERT(bex_hash_length_id == update_hash_length_id);
 
 				// store these IDs in the transforms array
-				HIP_DEBUG("adding transform: %i\n", transform_id);
-				esp_prot_transforms[transform_id].hash_func_id = function_id;
-				esp_prot_transforms[transform_id].hash_length_id = hash_length_id;
+				HIP_DEBUG("adding transform: %i\n", transform_id + 1);
+				esp_prot_transforms[transform_id].hash_func_id = bex_function_id;
+				esp_prot_transforms[transform_id].hash_length_id = bex_hash_length_id;
 				transform_id++;
 
 				/* also register the the hchain lengths for this function and this
 				 * hash length */
-				HIP_IFEL(hcstore_register_hchain_length(&bex_store, function_id,
-						hash_length_id, bex_hchain_length) < 0, -1,
+				HIP_IFEL(hcstore_register_hchain_length(&bex_store, bex_function_id,
+						bex_hash_length_id, bex_hchain_length) < 0, -1,
 						"failed to register hchain-length in bex-store\n");
 
 				for (g = 0; g < NUM_UPDATE_HCHAIN_LENGTHS; g++)
 				{
-					HIP_IFEL(hcstore_register_hchain_length(&update_store, function_id,
-							hash_length_id, update_hchain_lengths[g]) < 0, -1,
+					HIP_IFEL(hcstore_register_hchain_length(&update_store,
+							update_function_id, update_hash_length_id,
+							update_hchain_lengths[g]) < 0, -1,
 							"failed to register hchain-length in update-store\n");
 				}
 			} else
@@ -88,34 +99,6 @@ int esp_prot_init()
 	HIP_IFEL(hcstore_refill(&bex_store) < 0, -1, "failed to fill the bex-store\n");
 	HIP_IFEL(hcstore_refill(&update_store) < 0, -1, "failed to fill the update-store\n");
 
-
-#if 0
-	int hc_element_lengths[] = {HC_LENGTH_STEP1};
-
-	HIP_IFEL(hip_hchain_store_init(hc_element_lengths, 1), -1,
-			"failed to initialize the hchain stores\n");
-
-	HIP_IFEL(hip_hchain_bexstore_set_item_length(HC_LENGTH_BEX_STORE), -1,
-			"failed to set item length for bex store\n");
-
-	// ... and fill it with elements
-	HIP_DEBUG("filling the hchain stores...\n");
-	err = hip_hchain_stores_refill(esp_prot_transforms[ESP_PROT_TRANSFORM_DEFAULT]);
-	if (err < 0)
-	{
-		HIP_ERROR("error refilling the stores\n");
-		goto out_err;
-	} else if (err > 0)
-	{
-		// this means the bex store was updated
-		HIP_DEBUG("sending anchor list update to hipd...\n");
-		HIP_IFEL(send_anchor_list_update_to_hipd(ESP_PROT_TRANSFORM_DEFAULT), -1,
-				"unable to send anchor list update to hipd\n");
-
-		err = 0;
-	}
-#endif
-
   out_err:
   	return err;
 }
@@ -126,7 +109,7 @@ int esp_prot_set_sadb(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 	int hash_length = 0, err = 0;
 
 	HIP_ASSERT(entry != 0);
-	HIP_ASSERT(esp_prot_transform >= 0);
+	HIP_ASSERT(esp_prot_transform >= 0 && esp_prot_transform <= NUM_TRANSFORMS);
 	HIP_ASSERT(direction == 1 || direction == 2);
 
 	// only set up the anchor or hchain, if esp extension is used
@@ -160,7 +143,7 @@ int esp_prot_set_sadb(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 		{
 			// set hchain for outbound SA
 			HIP_IFEL(!(entry->active_hchain =
-				esp_prot_get_hchain_by_anchor(esp_prot_anchor, esp_prot_transform)),
+				esp_prot_get_bex_hchain_by_anchor(esp_prot_anchor, esp_prot_transform)),
 				-1, "corresponding hchain not found\n");
 		}
 	} else
@@ -183,6 +166,9 @@ int add_esp_prot_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *
 
 	if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED)
 	{
+		HIP_ASSERT(entry->esp_prot_transform > 0
+				&& entry->esp_prot_transform <= NUM_TRANSFORMS);
+
 		HIP_DEBUG("adding hash chain element to outgoing packet...\n");
 
 		// first determine hash length
@@ -232,6 +218,8 @@ int verify_esp_prot_hash(hip_sa_entry_t *entry, unsigned char *hash_value)
 	if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED)
 	{
 		HIP_ASSERT(hash_value != NULL);
+		HIP_ASSERT(entry->esp_prot_transform > 0
+				&& entry->esp_prot_transform <= NUM_TRANSFORMS);
 
 		hash_function = esp_prot_get_hash_function(entry->esp_prot_transform);
 		hash_length = esp_prot_get_hash_length(entry->esp_prot_transform);
@@ -257,7 +245,7 @@ int verify_esp_prot_hash(hip_sa_entry_t *entry, unsigned char *hash_value)
 				 * next hchain implicitly */
 				HIP_DEBUG("checking next_anchor...\n");
 				if (hchain_verify(hash_value, entry->next_anchor, hash_function,
-						hash_length, entry->tolerance))
+						hash_length, entry->esp_prot_tolerance))
 				{
 					HIP_DEBUG("hash matches element in next hash-chain\n");
 
@@ -294,9 +282,9 @@ int verify_esp_prot_hash(hip_sa_entry_t *entry, unsigned char *hash_value)
 }
 
 /* returns NULL for UNUSED transform */
-esp_prot_transform_t * esp_prot_resolve_transform(uint8_t transform)
+esp_prot_tfm_t * esp_prot_resolve_transform(uint8_t transform)
 {
-	HIP_ASSERT(transform >= 0);
+	HIP_ASSERT(transform >= 0 && transform <= NUM_TRANSFORMS);
 
 	HIP_DEBUG("resolving transform: %u\n", transform);
 
@@ -309,17 +297,17 @@ esp_prot_transform_t * esp_prot_resolve_transform(uint8_t transform)
 /* returns NULL for UNUSED transform */
 hash_function_t esp_prot_get_hash_function(uint8_t transform)
 {
-	esp_prot_transform_t *prot_transform = NULL;
+	esp_prot_tfm_t *prot_transform = NULL;
 	hash_function_t hash_function = NULL;
 	int err = 0;
 
-	HIP_ASSERT(transform >= 0);
+	HIP_ASSERT(transform >= 0 && transform <= NUM_TRANSFORMS);
 
 	HIP_IFEL(!(prot_transform = esp_prot_resolve_transform(transform)), 1,
 			"tried to resolve UNUSED transform\n");
 
 	// as both stores' meta-data are in sync, we can use any
-	hash_function = hcstore_get_hash_function(bex_store, prot_transform->hash_func_id);
+	hash_function = hcstore_get_hash_function(&bex_store, prot_transform->hash_func_id);
 
   out_err:
 	if (err)
@@ -331,17 +319,17 @@ hash_function_t esp_prot_get_hash_function(uint8_t transform)
 /* returns length of hash, 0 for UNUSED */
 int esp_prot_get_hash_length(uint8_t transform)
 {
-	esp_prot_transform_t *prot_transform = NULL;
+	esp_prot_tfm_t *prot_transform = NULL;
 	int err = 0;
 
-	HIP_ASSERT(transform >= 0);
+	HIP_ASSERT(transform >= 0 && transform <= NUM_TRANSFORMS);
 
 	// return length 0 for UNUSED transform
 	HIP_IFEL(!(prot_transform = esp_prot_resolve_transform(transform)), 0,
 			"tried to resolve UNUSED transform\n");
 
 	// as both stores' meta-data are in sync, we can use any
-	err = hcstore_get_hash_length(bex_store, prot_transform->hash_func_id,
+	err = hcstore_get_hash_length(&bex_store, prot_transform->hash_func_id,
 			prot_transform->hash_length_id);
 
   out_err:
@@ -354,12 +342,12 @@ int esp_prot_get_hash_length(uint8_t transform)
 hash_chain_t * esp_prot_get_bex_hchain_by_anchor(unsigned char *hchain_anchor,
 		uint8_t transform)
 {
-	esp_prot_transform_t *prot_transform = NULL;
+	esp_prot_tfm_t *prot_transform = NULL;
 	hash_chain_t *return_hchain = NULL;
 	int err = 0;
 
 	HIP_ASSERT(hchain_anchor != NULL);
-	HIP_ASSERT(transform >= 0);
+	HIP_ASSERT(transform >= 0 && transform <= NUM_TRANSFORMS);
 
 	HIP_IFEL(!(prot_transform = esp_prot_resolve_transform(transform)), 1,
 			"tried to resolve UNUSED transform\n");
@@ -375,7 +363,7 @@ hash_chain_t * esp_prot_get_bex_hchain_by_anchor(unsigned char *hchain_anchor,
 	// some elements have been added, tell hipd about them
 	if (err > 0)
 	{
-		HIP_IFEL(send_bex_store_update_to_hipd(entry->esp_prot_transform), -1,
+		HIP_IFEL(send_bex_store_update_to_hipd(&bex_store), -1,
 				"unable to send bex-store update to hipd\n");
 
 		// this is not an error condition
@@ -402,7 +390,7 @@ int get_esp_data_offset(hip_sa_entry_t *entry)
  */
 int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 {
-	esp_prot_transform_t *prot_transform = NULL;
+	esp_prot_tfm_t *prot_transform = NULL;
 	int err = 0;
 
 	HIP_ASSERT(entry != NULL);
@@ -410,6 +398,9 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 	// first check the extension is used for this connection
 	if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED)
 	{
+		HIP_ASSERT(entry->esp_prot_transform > 0
+				&& entry->esp_prot_transform <= NUM_TRANSFORMS);
+
 		/* make sure that the next hash-chain is set up before the active one
 		 * depletes */
 		if (!entry->next_hchain && entry->active_hchain->remaining
@@ -441,7 +432,7 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 		if (entry->next_hchain && entry->active_hchain->remaining == 0)
 		{
 			// this will free all linked elements in the hchain
-			hchain_destruct(entry->active_hchain);
+			hchain_free(entry->active_hchain);
 
 			HIP_DEBUG("changing to next_hchain\n");
 			entry->active_hchain = entry->next_hchain;

@@ -24,7 +24,7 @@
 // oleg 2006-11-22
 #define SYSLOG_FACILITY   LOG_LOCAL6
 
-/** 
+/**
  * @addtogroup ife
  * @{
  */
@@ -35,7 +35,7 @@
 #define HIP_ASSERT(s) { if (!(s)) HIP_DIE("assertion failed\n"); }
 /** @} */
 
-/** 
+/**
  * @addtogroup debug
  * @{
  */
@@ -44,7 +44,7 @@
 #define HIP_HEXDUMP(prefix, str, len) \
             hip_hexdump(__FILE__, __LINE__, __FUNCTION__, prefix, str, len)
 #define HIP_DUMP_PACKET(prefix, str, len) \
-            hip_hexdump_parsed(__FILE__, __LINE__, __FUNCTION__, prefix, str, len)            
+            hip_hexdump_parsed(__FILE__, __LINE__, __FUNCTION__, prefix, str, len)
 #define HIP_DEBUG_SOCKADDR(prefix, sockaddr) \
  hip_print_sockaddr(__FILE__, __LINE__, __FUNCTION__, prefix, sockaddr)
 #define HIP_DUMP_MSG(msg) { hip_print_str(DEBUG_LEVEL_DEBUG, __FILE__, __LINE__, __FUNCTION__, " dump: \n"); hip_dump_msg(msg); }
@@ -66,7 +66,7 @@
 
 /* Debug groups define groups of debug messages which belong to the
    same logical part of hip. Debug messages can be enabled or disabled more
-   finegrained by only printing messages which belong to a debug group */	
+   finegrained by only printing messages which belong to a debug group */
 # define HIP_DEBUG_GROUP_ALL		770
 # define HIP_DEBUG_GROUP_DEFAULT	771
 # define HIP_DEBUG_GROUP_ADAPT		772
@@ -76,10 +76,10 @@
 /* Current debug group */
 # define HIP_DEBUG_GROUP HIP_DEBUG_GROUP_INIT
 
-/* Debug messages are divided into several levels. Severe errors 
+/* Debug messages are divided into several levels. Severe errors
    or abnormal conditions are the lowest level. Higher levels are
    considered as less severe or less important. The highes level means
-   every debug message which matches the current switch is printed. 
+   every debug message which matches the current switch is printed.
    The hignes debug level number must be assigned to HIP_DEBUG_ALL*/
 # define HIP_DEBUG_LEVEL_ERRORS		0
 # define HIP_DEBUG_LEVEL_IMPORTANT	10
@@ -146,7 +146,7 @@ void hip_perror_wrapper(const char *file, int line, const char *function,
 void hip_hexdump(const char *file, int line, const char *function,
 		 const char *prefix, const void *str, int len);
 void hip_print_packet(const char *file, int line, const char *function,
-		 const char *prefix, const void *str, int len);		 
+		 const char *prefix, const void *str, int len);
 void hip_print_sockaddr(const char *file, int line, const char *function,
 			const char *prefix,
 			const struct sockaddr *sockaddr);
@@ -154,7 +154,7 @@ void hip_print_str(int debug_level, const char *file, int line, const char *func
 
 /**
  * Gets a binary string representation from an uint8_t value.
- * 
+ *
  * @val    the value to convert.
  * @buffer a target buffer where to put the binary string.
  * @note   make sure the buffer has at least size of 8 * sizeof(char).
@@ -163,7 +163,7 @@ void uint8_to_binstring(uint8_t val, char *buffer);
 
 /**
  * Gets a binary string representation from an uint16_t value.
- * 
+ *
  * @val    the value to convert.
  * @buffer a target buffer where to put the binary string.
  * @note   make sure the buffer has at least size of 17 * sizeof(char).
@@ -172,7 +172,7 @@ void uint16_to_binstring(uint16_t val, char *buffer);
 
 /**
  * Gets a binary string representation from an uint32_t value.
- * 
+ *
  * @val    the value to convert.
  * @buffer a target buffer where to put the binary string.
  * @note   make sure the buffer has at least size of 33 * sizeof(char).
@@ -186,7 +186,7 @@ void hip_print_peer_addresses(hip_ha_t *);
 
 /**
  * Gets the name of a state.
- * 
+ *
  * @param  a state state value
  * @return a state name as a string.
  */
@@ -211,7 +211,7 @@ static inline const char *hip_state_str(unsigned int state)
 		str = states[state];
         else
 		HIP_ERROR("invalid state %u\n", state);
-	
+
         return str;
 }
 

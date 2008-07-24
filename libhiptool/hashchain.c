@@ -14,6 +14,8 @@
 #include "hashchain.h"
 //#include "crypto.h"
 //#include "misc.h"
+#include "debug.h"
+#include "ife.h"
 
 /* these are not needed and therefore not implemented
    right now but they should be used where necessary */
@@ -29,7 +31,7 @@ void hchain_print(const hash_chain_t * hash_chain)
 	{
 		HIP_DEBUG("Hash chain: %d\n", (int) hash_chain);
 
-		if(hash_chain->current_element != NULL)
+		if(hash_chain->current_element)
 		{
 			HIP_HEXDUMP("currrent element: ", hash_chain->current_element->hash,
 					hash_chain->hash_length);
@@ -81,7 +83,7 @@ int hchain_verify(const unsigned char * current_hash, const unsigned char * last
 
 	HIP_ASSERT(current_hash != NULL && last_hash != NULL);
 	HIP_ASSERT(hash_function != NULL);
-	HIP_ASSERT(hash_length > 0 && tolerance => 0);
+	HIP_ASSERT(hash_length > 0 && tolerance >= 0);
 
 	HIP_IFEL(!(buffer = (unsigned char *)malloc(hash_length)), -1,
 			"failed to allocate memory\n");
@@ -95,9 +97,9 @@ int hchain_verify(const unsigned char * current_hash, const unsigned char * last
 	HIP_DEBUG("\t<->\n");
 	HIP_HEXDUMP("last known hash: ", last_hash, hash_length);
 
-	for(i = 1; i < tolerance; i++)
+	for(i = 1; i <= tolerance; i++)
 	{
-		HIP_DEBUG("Calculating round %i:\n", i);
+		HIP_DEBUG("Calculating round %i:\n", i + 1);
 
 		hash_function(buffer, hash_length, hash_value);
 		memcpy(buffer, hash_value, hash_length);
@@ -210,7 +212,7 @@ hash_chain_t * hchain_create(hash_function_t hash_function, int hash_length,
     	if (return_hchain->anchor_element)
     	{
     		// hchain was fully created
-    		hchain_destruct(return_hchain);
+    		hchain_free(return_hchain);
     	} else
     	{
     		while (current_element)
@@ -387,7 +389,8 @@ int hchain_get_num_remaining(const hash_chain_t * hash_chain)
 	return hash_chain->remaining;
 }
 
-
+// previously used by lightweight hip, but not maintained
+#if 0
 /*************** Helper functions ********************/
 
 /**
@@ -430,3 +433,4 @@ int concat_n_hash_SHA(unsigned char* hash, unsigned char** parts, int* part_leng
 		free(buffer);
 	return 0;
 }
+#endif

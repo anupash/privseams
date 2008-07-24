@@ -4,7 +4,7 @@
 
 //#include <sys/socket.h>		/* socket() */
 //#include <sys/time.h>		/* timeval */
-#include "user_ipsec.h"
+#include "user_ipsec_api.h"
 //#include "ife.h"
 //#include "misc.h"			/* hip conversion functions */
 

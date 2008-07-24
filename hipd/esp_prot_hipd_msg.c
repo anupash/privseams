@@ -8,7 +8,7 @@
  * NOTE: this is called by the hipd when receiving the respective message
  * from the firewall
  **/
-int hip_set_esp_prot_transform(struct hip_common *msg)
+int esp_prot_set_transform(struct hip_common *msg)
 {
 	struct hip_tlv_common *param = NULL;
 	int err = 0;
@@ -44,21 +44,25 @@ int hip_set_esp_prot_transform(struct hip_common *msg)
   	return err;
 }
 
-int esp_prot_add_sa(hip_ha_t *entry, struct hip_common *msg, int direction)
+int esp_prot_sa_add(hip_ha_t *entry, struct hip_common *msg, int direction)
 {
 	unsigned char *hchain_anchor = NULL;
+	int hash_length = 0;
 	int err = 0;
 
 	HIP_DEBUG("direction: %i\n", direction);
 
+	// we always tell the negotiated transform to the firewall
 	HIP_DEBUG("esp protection extension transform is %u \n", entry->esp_prot_transform);
 	HIP_IFEL(hip_build_param_contents(msg, (void *)&entry->esp_prot_transform,
 			HIP_PARAM_ESP_PROT_TFM, sizeof(uint8_t)), -1,
 			"build param contents failed\n");
 
-	// only transmit the anchor to the firewall, if the esp extension is used
+	// but we only transmit the anchor to the firewall, if the esp extension is used
 	if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED)
 	{
+		hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
+
 		// choose the anchor depending on the direction
 		if (direction == HIP_SPI_DIRECTION_IN)
 		{
@@ -70,12 +74,11 @@ int esp_prot_add_sa(hip_ha_t *entry, struct hip_common *msg, int direction)
 					"hchain anchor expected, but not present\n");
 		}
 
-		HIP_HEXDUMP("esp protection anchor is ", hchain_anchor,
-				esp_prot_transforms[entry->esp_prot_transform]);
+		HIP_HEXDUMP("esp protection anchor is ", hchain_anchor, hash_length);
 
 		HIP_IFEL(hip_build_param_contents(msg, (void *)hchain_anchor,
-				HIP_PARAM_HCHAIN_ANCHOR, esp_prot_transforms[entry->esp_prot_transform]),
-				-1, "build param contents failed\n");
+				HIP_PARAM_HCHAIN_ANCHOR, hash_length), -1,
+				"build param contents failed\n");
 	} else
 	{
 		HIP_DEBUG("no anchor added, transform UNUSED\n");
@@ -85,7 +88,7 @@ int esp_prot_add_sa(hip_ha_t *entry, struct hip_common *msg, int direction)
 	return err;
 }
 
-int add_esp_prot_transform_r1(hip_common_t *msg)
+int esp_prot_r1_add_transform(hip_common_t *msg)
 {
 	extern uint8_t hip_esp_prot_ext_transform;
 	int err = 0;
@@ -120,7 +123,7 @@ int add_esp_prot_transform_r1(hip_common_t *msg)
  	return err;
 }
 
-int add_esp_prot_transform_i2(hip_common_t *i2, hip_ha_t *entry, struct hip_context *ctx)
+int esp_prot_i2_add_transform(hip_common_t *i2, hip_ha_t *entry, struct hip_context *ctx)
 {
 	struct hip_param *param = NULL;
 	struct esp_prot_transform *prot_transform = NULL;
@@ -197,29 +200,30 @@ int add_esp_prot_transform_i2(hip_common_t *i2, hip_ha_t *entry, struct hip_cont
  	return err;
 }
 
-int add_esp_prot_anchor_i2(hip_common_t *i2, hip_ha_t *entry)
+int esp_prot_i2_add_anchor(hip_common_t *i2, hip_ha_t *entry)
 {
 	unsigned char *anchor = NULL;
+	int hash_length = 0;
 	int err = 0;
 
 	// only add, if extension in use and we agreed on a transform
-	if (entry->esp_prot_transform)
+	if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED)
 	{
-		if (has_more_anchors())
+		if (anchor_db_has_more_anchors(entry->esp_prot_transform))
 		{
-			HIP_IFEL(!(anchor = get_next_anchor()), -1,
+			hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
+
+			HIP_IFEL(!(anchor = anchor_db_get_anchor(entry->esp_prot_transform)), -1,
 					"no anchor elements available, threading?\n");
-			HIP_IFEL(hip_build_param_esp_prot_anchor(i2, anchor,
-					esp_prot_transforms[entry->esp_prot_transform]), -1,
+			HIP_IFEL(hip_build_param_esp_prot_anchor(i2, anchor, hash_length), -1,
 					"Building of ESP protection anchor failed\n");
 
 			// store local_anchor
 			memset(entry->esp_local_anchor, 0, MAX_HASH_LENGTH);
-			memcpy(entry->esp_local_anchor, anchor,
-					esp_prot_transforms[entry->esp_prot_transform]);
+			memcpy(entry->esp_local_anchor, anchor, hash_length);
 
-			HIP_HEXDUMP("stored local anchor: ", entry->esp_local_anchor,
-					esp_prot_transforms[entry->esp_prot_transform]);
+			HIP_HEXDUMP("stored local anchor: ", entry->esp_local_anchor, hash_length);
+
 		} else
 		{
 			// fall back
@@ -235,7 +239,7 @@ int add_esp_prot_anchor_i2(hip_common_t *i2, hip_ha_t *entry)
  	return err;
 }
 
-int handle_esp_prot_transform_i2(hip_ha_t *entry, struct hip_context *ctx)
+int esp_prot_i2_handle_transform(hip_ha_t *entry, struct hip_context *ctx)
 {
 	struct hip_param *param = NULL;
 	struct esp_prot_transform *prot_transform = NULL;
@@ -286,14 +290,15 @@ int handle_esp_prot_transform_i2(hip_ha_t *entry, struct hip_context *ctx)
  	return err;
 }
 
-int handle_esp_prot_anchor_i2(hip_ha_t *entry, struct hip_context *ctx)
+int esp_prot_i2_handle_anchor(hip_ha_t *entry, struct hip_context *ctx)
 {
 	struct hip_param *param = NULL;
 	struct esp_prot_anchor *prot_anchor = NULL;
+	int hash_length = 0;
 	int err = 0;
 
 	/* only process the anchor parameter, if we are going to use it */
-	if (entry->esp_prot_transform)
+	if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED)
 	{
 		if (param = hip_get_param(ctx->input, HIP_PARAM_ESP_PROT_ANCHOR))
 		{
@@ -302,13 +307,14 @@ int handle_esp_prot_anchor_i2(hip_ha_t *entry, struct hip_context *ctx)
 			// distinguish different hash lengths/transforms
 			if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED)
 			{
+				hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
+
 				// store peer_anchor
 				memset(entry->esp_peer_anchor, 0, MAX_HASH_LENGTH);
-				memcpy(entry->esp_peer_anchor, prot_anchor->anchor,
-						esp_prot_transforms[entry->esp_prot_transform]);
+				memcpy(entry->esp_peer_anchor, prot_anchor->anchor, hash_length);
 
-				HIP_HEXDUMP("received anchor: ", entry->esp_peer_anchor,
-						esp_prot_transforms[entry->esp_prot_transform]);
+				HIP_HEXDUMP("received anchor: ", entry->esp_peer_anchor, hash_length);
+
 			} else
 			{
 				HIP_ERROR("received anchor with unknown transform, falling back\n");
@@ -328,31 +334,30 @@ int handle_esp_prot_anchor_i2(hip_ha_t *entry, struct hip_context *ctx)
  	return err;
 }
 
-int add_esp_prot_anchor_r2(hip_common_t *r2, hip_ha_t *entry)
+int esp_prot_r2_add_anchor(hip_common_t *r2, hip_ha_t *entry)
 {
 	unsigned char *anchor = NULL;
+	int hash_length = 0;
 	int err = 0;
 
 	// only add, if extension in use, we agreed on a transform and no error until now
-	if (entry->esp_prot_transform)
+	if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED)
 	{
-		if (has_more_anchors())
+		if (anchor_db_has_more_anchors(entry->esp_prot_transform))
 		{
-			HIP_IFEL(!(anchor = get_next_anchor()), -1,
-					"no anchor elements available, threading?\n");
-			HIP_IFEL(hip_build_param_esp_prot_anchor(r2, anchor,
-					esp_prot_transforms[entry->esp_prot_transform]), -1,
+			hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
+
+			HIP_IFEL(!(anchor = anchor_db_get_anchor(entry->esp_prot_transform)),
+					-1, "no anchor elements available, threading?\n");
+			HIP_IFEL(hip_build_param_esp_prot_anchor(r2, anchor, hash_length), -1,
 					"Building of ESP protection anchor failed\n");
-			HIP_HEXDUMP("added anchor: ", anchor,
-					esp_prot_transforms[entry->esp_prot_transform]);
+			HIP_HEXDUMP("added anchor: ", anchor, hash_length);
 
 			// store local_anchor
 			memset(entry->esp_local_anchor, 0, MAX_HASH_LENGTH);
-			memcpy(entry->esp_local_anchor, anchor,
-					esp_prot_transforms[entry->esp_prot_transform]);
+			memcpy(entry->esp_local_anchor, anchor, hash_length);
 
-			HIP_HEXDUMP("stored local anchor: ", entry->esp_local_anchor,
-					esp_prot_transforms[entry->esp_prot_transform]);
+			HIP_HEXDUMP("stored local anchor: ", entry->esp_local_anchor, hash_length);
 		} else
 		{
 			// fall back
@@ -368,25 +373,26 @@ int add_esp_prot_anchor_r2(hip_common_t *r2, hip_ha_t *entry)
  	return err;
 }
 
-int handle_esp_prot_anchor_r2(hip_ha_t *entry, struct hip_context *ctx)
+int esp_prot_r2_handle_anchor(hip_ha_t *entry, struct hip_context *ctx)
 {
 	struct hip_param *param = NULL;
 	struct esp_prot_anchor *prot_anchor = NULL;
 	unsigned char *anchor = NULL;
+	int hash_length = 0;
 	int err = 0;
 
 	param = hip_get_param(ctx->input, HIP_PARAM_ESP_PROT_ANCHOR);
 	// only process anchor, if we agreed on using it before
-	if (entry->esp_prot_transform && param)
+	if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED && param)
 	{
+		hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
+
 		prot_anchor = (struct esp_prot_anchor *) param;
 
 		memset(entry->esp_peer_anchor, 0, MAX_HASH_LENGTH);
-		memcpy(entry->esp_peer_anchor, prot_anchor->anchor,
-				esp_prot_transforms[entry->esp_prot_transform]);
+		memcpy(entry->esp_peer_anchor, prot_anchor->anchor, hash_length);
 
-		HIP_HEXDUMP("received anchor: ", entry->esp_peer_anchor,
-				esp_prot_transforms[entry->esp_prot_transform]);
+		HIP_HEXDUMP("received anchor: ", entry->esp_peer_anchor, hash_length);
 	} else
 	{
 		HIP_DEBUG("agreed on using esp hchain extension, but no anchor sent or error\n");

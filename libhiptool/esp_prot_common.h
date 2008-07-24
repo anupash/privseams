@@ -36,17 +36,4 @@
 #define NUM_HASH_LENGTHS			3
 #endif
 
-static const hash_function_t hash_functions[] = {SHA1};
-static const int hash_lengths[][] = {{8}};
-
-#if 0
-static const hash_function_t hash_functions[] = {SHA1, MD5};
-static const int hash_lengths[][] = {{8, 16, 20}, {8, 16, 0}};
-#endif
-
-// TODO remove, only there for compatibility with old approach
-#define ESP_PROT_TRANSFORM_UNUSED		0
-#define ESP_PROT_TRANSFORM_DEFAULT		1
-static const int esp_prot_transforms[2] = {0, 8};
-
 #endif /*EXT_ESP_PROT_COMMON_H_*/

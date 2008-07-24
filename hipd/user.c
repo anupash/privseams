@@ -933,11 +933,11 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		break;
 	case SO_HIP_ESP_PROT_TFM:
 		HIP_DUMP_MSG(msg);
-		err = hip_set_esp_prot_transform(msg);
+		err = esp_prot_set_transform(msg);
 		break;
 	case SO_HIP_BEX_STORE_UPDATE:
 		HIP_DUMP_MSG(msg);
-		err = update_anchor_db(msg);
+		err = anchor_db_update(msg);
 		break;
 	case SO_HIP_TRIGGER_UPDATE:
 		// TODO implement

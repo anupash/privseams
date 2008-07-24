@@ -14,7 +14,7 @@
 #ifndef HASH_CHAIN_H
 #define HASH_CHAIN_H
 
-#include <sys/types.h>
+//#include <sys/types.h>
 #include <openssl/rand.h>
 #include <openssl/sha.h>
 #include <openssl/md5.h>
@@ -22,8 +22,7 @@
 /* biggest digest in openssl lib */
 #define MAX_HASH_LENGTH SHA512_DIGEST_LENGTH
 
-
-typedef unsigned char * (*hash_function_t)(const unsigned char *, unsigned long,
+typedef unsigned char * (*hash_function_t)(const unsigned char *, size_t,
 		unsigned char *);
 
 typedef struct hash_chain_element hash_chain_element_t;
@@ -75,7 +74,10 @@ int hchain_free(hash_chain_t *hash_chain);
 
 int hchain_get_num_remaining(const hash_chain_t * hash_chain);
 
+#if 0
 /*************** Helper functions ********************/
 int concat_n_hash_SHA(unsigned char *hash, unsigned char** parts, int* part_length,
 		int num_parts);
+#endif
+
 #endif /*HASH_CHAIN_H*/

@@ -1,10 +1,12 @@
-#ifndef USER_IPSEC_H_
-#define USER_IPSEC_H_
+#ifndef USER_IPSEC_API_H_
+#define USER_IPSEC_API_H_
 
 #include "firewall.h"
+#include "user_ipsec_sadb.h"
 #include "user_ipsec_esp.h"
-#include "utils.h"
-#include "hashchain_store.h"
+//#include "utils.h"
+//#include "hashchain_store.h"
+#include "esp_prot_api.h"
 
 int userspace_ipsec_init(void);
 int hip_firewall_userspace_ipsec_input(hip_fw_context_t *ctx);
@@ -16,7 +18,7 @@ int handle_sa_add_request(struct hip_common * msg, struct hip_tlv_common *param)
 /* openHIP SADB Wrapper function converting from HIPL API */
 int hipl_userspace_ipsec_sadb_add_wrapper(struct in6_addr *saddr,
 					      struct in6_addr *daddr,
-					      struct in6_addr *src_hit, 
+					      struct in6_addr *src_hit,
 					      struct in6_addr *dst_hit,
 					      uint32_t spi, uint8_t nat_mode,
 					      uint16_t local_port,
@@ -30,4 +32,4 @@ int hipl_userspace_ipsec_sadb_add_wrapper(struct in6_addr *saddr,
 
 int send_userspace_ipsec_to_hipd(int active);
 
-#endif /* USER_IPSEC_H_ */
+#endif /* USER_IPSEC_API_H_ */

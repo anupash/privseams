@@ -237,7 +237,7 @@ int hip_fw_init_esp_prot()
 		 *
 		 * TODO we need to set this first otherwise hipd won't understand the
 		 * anchor message */
-		HIP_IFEL(send_esp_protection_to_hipd(hip_esp_protection), -1,
+		HIP_IFEL(send_esp_prot_to_hipd(hip_esp_protection), -1,
 				"failed to activate the esp protection in hipd\n");
 
 		// userspace ipsec is a prerequisite for esp protection
@@ -268,7 +268,7 @@ int hip_fw_uninit_esp_prot()
 		HIP_DEBUG("switching off esp protection in hipd...\n");
 
 		// also deactivate the extension in hipd
-		HIP_IFEL(send_esp_protection_to_hipd(hip_esp_protection), -1,
+		HIP_IFEL(send_esp_prot_to_hipd(hip_esp_protection), -1,
 				"failed to activate the esp protection in hipd\n");
 
 		// TODO check if we have to uninit anything here

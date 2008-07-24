@@ -364,12 +364,12 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	struct hip_common *i1_blind = NULL;
 	uint16_t mask = 0;
 	int err = 0, n=0;
-		
+
 	/* Assign a local private key, public key and HIT to HA */
 	HIP_DEBUG_HIT("src_hit", src_hit);
 	HIP_IFEL(hip_init_us(entry, src_hit), -EINVAL,
 		 "Could not assign a local host id\n");
-	
+
 	_HIP_DEBUG("\n");
 	_HIP_DEBUG("----**********----3--*********-----------------\n");
 	//hip_for_each_ha(hip_print_info_hadb, &n);
@@ -411,7 +411,7 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 
 	HIP_IFEL(hip_hadb_get_peer_addr(entry, &daddr), -1,
 		 "No preferred IP address for the peer.\n");
-	
+
 	HIP_DEBUG("\n");
 	_HIP_DEBUG("----**********---4---*********-----------------\n");
         /*
@@ -657,7 +657,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 		 "Building of HIP transform failed\n");
 
 	/* Parameter HOST_ID */
-	_HIP_DEBUG("This HOST ID belongs to: %s\n", 
+	_HIP_DEBUG("This HOST ID belongs to: %s\n",
 		   hip_get_param_host_id_hostname(host_id_pub));
 	HIP_IFEL(hip_build_param(msg, host_id_pub), -1,
 		 "Building of host id failed\n");
@@ -667,7 +667,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	hip_build_param_reg_info(msg, service_list, service_count);
 
  	/* Parameter ESP-ENC transform. */
- 	HIP_IFEL(hip_build_param_transform(msg, HIP_PARAM_ESP_TRANSFORM,  
+ 	HIP_IFEL(hip_build_param_transform(msg, HIP_PARAM_ESP_TRANSFORM,
 					   transform_esp_suite,
 					   sizeof(transform_esp_suite) /
 					   sizeof(hip_transform_suite_t)), -1,
@@ -675,7 +675,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 
  	/********** ESP-PROT transform (OPTIONAL) **********/
 
- 	HIP_IFEL(add_esp_prot_transform_r1(msg), -1,
+ 	HIP_IFEL(esp_prot_r1_add_transform(msg), -1,
  			"failed to add optional esp transform parameter\n");
 
 	/********** REG_INFO *********/
@@ -686,13 +686,13 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 
 	//HIP_HEXDUMP("Pubkey:", host_id_pub, hip_get_param_total_len(host_id_pub));
 
- 	/* Parameter Signature 2 */	
+ 	/* Parameter Signature 2 */
 
  	HIP_IFEL(sign(host_id_priv, msg), -1, "Signing of R1 failed.\n");
 	_HIP_HEXDUMP("R1", msg, hip_get_msg_total_len(msg));
-	
+
 	/* Parameter ECHO_REQUEST (OPTIONAL) */
-	
+
 	/* Fill puzzle parameters */
 	{
 		struct hip_puzzle *pz;
@@ -714,7 +714,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	}
 
  	/* Packet ready */
-	
+
         // 	if (host_id_pub)
 	//		HIP_FREE(host_id_pub);
  	if (dh_data1)

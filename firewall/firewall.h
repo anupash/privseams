@@ -75,7 +75,7 @@ typedef struct firewall_hl firewall_hl_t;
 typedef struct hip_fw_context {
 	// queued packet
 	ipq_packet_msg_t *ipq_packet;
-	
+
 	// IP layer information
 	int ip_version; /* 4, 6 */
 	int ip_hdr_len;
@@ -84,7 +84,7 @@ typedef struct hip_fw_context {
 		struct ip6_hdr *ipv6;
 		struct ip *ipv4;
 	} ip_hdr;
-		
+
 	// transport layer information
 	int packet_type; /* HIP_PACKET, ESP_PACKET, etc  */
 	union {
@@ -107,8 +107,8 @@ struct hip_conn_key {
 typedef struct hip_conn_t  {
 	struct hip_conn_key key;
 	int state;
-	struct in6_addr addr_client; // addr_proxy_client	
-	struct in6_addr addr_peer; // addr_proxy_peer	
+	struct in6_addr addr_client; // addr_proxy_client
+	struct in6_addr addr_peer; // addr_proxy_peer
 } hip_conn_t;
 
 typedef int (*hip_fw_handler_t)(hip_fw_context_t *);
@@ -152,10 +152,10 @@ void drop_packet(struct ipq_handle *handle, unsigned long packetId);
 int filter_esp(const struct in6_addr * dst_addr, struct hip_esp * esp,
 	       unsigned int hook);
 int filter_hip(const struct in6_addr * ip6_src,
-               const struct in6_addr * ip6_dst, 
-               struct hip_common *buf, 
-               unsigned int hook, 
-               const char * in_if, 
+               const struct in6_addr * ip6_dst,
+               struct hip_common *buf,
+               unsigned int hook,
+               const char * in_if,
                const char * out_if);
 
 int hip_fw_handle_other_output(hip_fw_context_t *ctx);
@@ -182,6 +182,6 @@ void firewall_probe_kernel_modules();
 void firewall_increase_netlink_buffers();
 
 // dependent on typedefs in here
-#include "user_ipsec.h"
+#include "user_ipsec_api.h"
 
 #endif

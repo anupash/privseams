@@ -1,6 +1,6 @@
 /** @file
  * A header file for builder.c.
- * 
+ *
  * @author  Miika Komu <miika_iki.fi>
  * @author  Mika Kousa <mkousa_iki.fi>
  * @author  Tobias Heer <heer_tobibox.de>
@@ -45,7 +45,7 @@ uint32_t hip_get_param_lsi_value(const struct hip_esp_info *);
 
 #ifdef CONFIG_HIP_BLIND
 int hip_build_param_blind_nonce(struct hip_common *msg, uint16_t nonce);
-#endif	
+#endif
 
 void hip_build_endpoint_hdr(struct endpoint_hip *, const char *, se_hip_flags_t,
                             uint8_t, unsigned int);
@@ -90,12 +90,12 @@ int hip_build_param_hmac2_contents(struct hip_common *, struct hip_crypto_key *,
                                    struct hip_host_id *);
 int hip_build_param_hmac_contents(struct hip_common *, struct hip_crypto_key *);
 int hip_build_param_keys_hdr(struct hip_keys *, uint16_t, uint16_t,
-                             struct in6_addr *, struct in6_addr *, 
-                             struct in6_addr *, uint32_t, uint32_t, uint16_t, 
+                             struct in6_addr *, struct in6_addr *,
+                             struct in6_addr *, uint32_t, uint32_t, uint16_t,
                              struct hip_crypto_key *);
 int hip_build_param_keys(struct hip_common *, uint16_t, uint16_t,
-                         struct in6_addr *, struct in6_addr *, 
-                         struct in6_addr *, uint32_t, uint32_t, uint16_t, 
+                         struct in6_addr *, struct in6_addr *,
+                         struct in6_addr *, uint32_t, uint32_t, uint16_t,
                          struct hip_crypto_key *);
 int hip_build_param_locator(struct hip_common *,
                             struct hip_locator_info_addr_item *, int);
@@ -157,12 +157,12 @@ int hip_get_locator_addr_item_count(struct hip_locator *);
  * following formula: <code>lifetime = (8 * (log(seconds) / log(2)))
  * + 64</code> and truncated. The formula is the inverse of the formula given
  * in the registration draft.
- * 
+ *
  * @param  seconds  the lifetime to convert.
  * @param  lifetime a target buffer for the coverted lifetime.
  * @return          zero on success, -1 on error. Error occurs when @c seconds
  *                  is zero or greater than 15384774.
- */ 
+ */
 int hip_get_lifetime_value(time_t seconds, uint8_t *lifetime);
 
 /**
@@ -174,7 +174,7 @@ int hip_get_lifetime_value(time_t seconds, uint8_t *lifetime);
  * @param  seconds  a target buffer for the converted lifetime.
  * @return          zero on success, -1 on error. Error occurs when @c lifetime
  *                  is zero.
- */ 
+ */
 int hip_get_lifetime_seconds(uint8_t lifetime, time_t *seconds);
 
 struct hip_locator_info_addr_item *hip_get_locator_first_addr_item(
@@ -219,7 +219,7 @@ int dsa_to_hip_endpoint(DSA *dsa, struct endpoint_hip **endpoint,
 			se_hip_flags_t endpoint_flags, const char *hostname);
 /**
  * Builds a REG_INFO parameter.
- * 
+ *
  * @param msg           a pointer to a HIP message where to build the parameter.
  * @param service_list  a pointer to a structure containing all active services.
  * @param service_count number of registration services in @c service_list.
@@ -230,7 +230,7 @@ int hip_build_param_reg_info(hip_common_t *msg,
 			     const unsigned int service_count);
 /**
  * Builds a REG_REQUEST parameter.
- * 
+ *
  * @param msg        a pointer to a HIP message where to build the parameter.
  * @param lifetime   the lifetime to be put into the parameter.
  * @param type_list  a pointer to an array containing the registration types to
@@ -242,7 +242,7 @@ int hip_build_param_reg_request(hip_common_t *msg, const uint8_t lifetime,
 				const uint8_t *type_list, const int type_count);
 /**
  * Builds a REG_RESPONSE parameter.
- * 
+ *
  * @param msg        a pointer to a HIP message where to build the parameter.
  * @param lifetime   the lifetime to be put into the parameter.
  * @param type_list  a pointer to an array containing the registration types to
@@ -255,12 +255,12 @@ int hip_build_param_reg_response(hip_common_t *msg, const uint8_t lifetime,
 //add by santtu
 int hip_build_param_full_relay_hmac_contents(struct hip_common *,
                                       struct hip_crypto_key *);
-int hip_build_param_nat_tranform(struct hip_common *msg, 
+int hip_build_param_nat_tranform(struct hip_common *msg,
 							hip_transform_suite_t nat_control);
 
 /**
  * Builds a REG_FAILED parameter.
- * 
+ *
  * @param msg        a pointer to a HIP message where to build the parameter.
  * @param lifetime   the failure type to be put into the parameter.
  * @param type_list  a pointer to an array containing the registration types to
