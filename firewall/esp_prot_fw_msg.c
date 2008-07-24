@@ -114,7 +114,7 @@ struct hip_common *create_bex_store_update_msg(hchain_store_t *hcstore)
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_BEX_STORE_UPDATE, 0), -1,
 		 "build hdr failed\n");
 
-	// now add the hchain anchors
+	// first add hash_length and num_hchain for each transform
 	for (i = 0; i < NUM_TRANSFORMS; i++)
 	{
 		HIP_DEBUG("transform %i:\n", i + 1);
@@ -135,6 +135,14 @@ struct hip_common *create_bex_store_update_msg(hchain_store_t *hcstore)
 		HIP_IFEL(hip_build_param_contents(msg, (void *)&hash_length,
 				HIP_PARAM_INT, sizeof(int)), -1,
 				"build param contents failed\n");
+	}
+
+	// now add the hchain anchors
+	for (i = 0; i < NUM_TRANSFORMS; i++)
+	{
+		HIP_DEBUG("transform %i:\n", i + 1);
+
+		transform = esp_prot_resolve_transform(i);
 
 		// add anchor with this transform
 		for (j = 0; j < hcstore->hchain_shelves[transform->hash_func_id][transform->hash_length_id].hchain_items[DEFAULT_HCHAIN_LENGTH_ID].num_hchains;

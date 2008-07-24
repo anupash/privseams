@@ -70,7 +70,7 @@ int esp_prot_add_sa(hip_ha_t *entry, struct hip_common *msg, int direction)
 					"hchain anchor expected, but not present\n");
 		}
 
-		HIP_HEXDUMP("the esp protection anchor is ", hchain_anchor,
+		HIP_HEXDUMP("esp protection anchor is ", hchain_anchor,
 				esp_prot_transforms[entry->esp_prot_transform]);
 
 		HIP_IFEL(hip_build_param_contents(msg, (void *)hchain_anchor,
