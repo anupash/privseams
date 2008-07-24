@@ -1581,18 +1581,13 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	void *ice_session = NULL;
 	int i = 0;
 #endif
-#ifdef CONFIG_HIP_HI3
-	int n_addrs = 0, ii = 0, use_ip4 = 1;
-	struct hip_locator_info_addr_item *first = NULL;
-	struct netdev_address *n = NULL;
-	struct hip_locator *locator = NULL;
-	hip_list_t *item = NULL, *tmp = NULL;
-#endif
 #ifdef CONFIG_HIP_BLIND
 	int use_blind = 0;
 	in6_addr_t plain_peer_hit, plain_local_hit;
+
 	memset(&plain_peer_hit, 0, sizeof(plain_peer_hit));
 	memset(&plain_local_hit, 0, sizeof(plain_local_hit));
+	
 	HIP_IFEL(hip_check_whether_to_use_blind(i2, entry, &use_blind), -EINVAL,
 		 "Error when checking whether to use BLIND.\n");
 #endif
@@ -1605,6 +1600,10 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	memset(&hip_tfm, 0, sizeof(hip_tfm));
 	memset(&spi_in_data, 0, sizeof(spi_in_data));
 	memset(&i2_context, 0, sizeof(i2_context));
+	
+	i2_context.input = NULL;
+	i2_context.output = NULL;
+	i2_context.dh_shared_key = NULL;
 	
 	/* Store a pointer to the incoming i2 message in the context just
 	   allocted. From the context struct we can then access the I2 in
@@ -1631,54 +1630,13 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	HIP_IFEL(hip_verify_cookie(i2_saddr, i2_daddr, i2, solution), -EPROTO,
 		 "Cookie solution rejected. Dropping the I2 packet.\n");
 	
- 	HIP_DEBUG("Cookie accepted.\n");
-
 #ifdef CONFIG_HIP_HI3
-        locator = hip_get_param(i2, HIP_PARAM_LOCATOR);
-
-        if (locator) {
-		n_addrs = hip_get_locator_addr_item_count(locator);
-
-		if( i2_info->hi3_in_use && n_addrs > 0 ) {
-
-                        first = (char*)locator + sizeof(struct hip_locator);
-                        memcpy(i2_saddr, &first->address,
-			       sizeof(struct in6_addr));
-
-                        list_for_each_safe(item, tmp, addresses, ii) {
-                                        n = list_entry(item);
-
-                                        if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr))) {
-                                                continue;
-					}
-                                        if (!IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
-						memcpy(i2_daddr, hip_cast_sa_addr(&n->addr),
-                                                       hip_sa_addr_len(&n->addr));
-                                                ii = -1;
-                                                use_ip4 = 0;
-                                                break;
-                                        }
-			}
-                        if( use_ip4 ) {
-                                list_for_each_safe(item, tmp, addresses, ii) {
-					n = list_entry(item);
-
-					if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr))) {
-						continue;
-					}
-					if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
-						memcpy(i2_daddr, hip_cast_sa_addr(&n->addr),
-						       hip_sa_addr_len(&n->addr));
-						ii = -1;
-						break;
-					}
-				}
-                        }
-
-
-                }
-	}
+	struct hip_locator *locator = NULL;
+	
+	locator = hip_get_param(i2, HIP_PARAM_LOCATOR);
+	hip_do_i3_stuff_for_i2(locator, i2_info, i2_saddr, i2_daddr);
 #endif
+
 	if(entry != NULL) {
 		/* If the I2 packet is a retransmission, we need reuse the
 		   SPI/keymat that was setup already when the first I2 was
@@ -1700,8 +1658,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	}
 
 	/* Check HIP and ESP transforms, and produce keying material. */
-	i2_context.dh_shared_key = NULL;
-
+	
 	/* Note: we could skip keying material generation in the case of a
 	   retransmission but then we'd had to fill i2_context.hmac etc. TH: I'm not
 	   sure if this could be replaced with a function pointer which is set
