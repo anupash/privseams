@@ -1049,7 +1049,7 @@ int hip_external_ice_receive_pkt(void * msg,int len, hip_ha_t *entry, in6_addr_t
     HIP_DEBUG("receive a stun  port:  %d\n" ,port);
     //TODO filter out ipv6
 	 pj_addr.sin_family=PJ_AF_INET;
-	 pj_addr.sin_port = port;
+	 pj_addr.sin_port = htons(port);
 	 pj_addr.sin_addr.s_addr =*((pj_uint32_t*) &src_addr->s6_addr32[3]);
 	 
 	 addr_len = sizeof(pj_sockaddr_in);
