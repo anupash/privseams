@@ -8,7 +8,8 @@
 
 extern int hip_blind_status; //blind on/off flag
 
-int hip_check_whether_to_use_blind(hip_common_t *msg, int *use_blind);
+int hip_check_whether_to_use_blind(hip_common_t *msg, hip_ha_t *entry,
+				   int *use_blind);
 int hip_set_blind_on(void);
 int hip_set_blind_off(void);
 int hip_blind_get_status(void);
