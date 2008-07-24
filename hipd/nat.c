@@ -457,6 +457,8 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 	uint32_t spi = 0;
 	struct in6_addr peer_addr;
 	
+	
+	
     entry = hip_get_entry_from_ice(ice);
     if(!entry) {
     	
@@ -469,6 +471,7 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
        	HIP_DEBUG("spi not found in ice complete\n");
        	return;
        }
+
 
 	// the verified list 
 	//if(status == PJ_TRUE){
@@ -497,7 +500,8 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 				
 				hip_hadb_add_udp_addr_to_spi(entry, spi, &peer_addr, 1, 0, 1,addr.ipv4.sin_port, HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY);
 				memcpy(&entry->preferred_address, &peer_addr, sizeof(struct in6_addr));
-				entry->peer_udp_port = addr.ipv4.sin_port;
+				entry->peer_udp_port = ntohs(addr.ipv4.sin_port);
+				
 				
 				/*			
 				k= 0;
@@ -656,7 +660,7 @@ pj_status_t hip_on_tx_pkt(pj_ice_sess *ice, unsigned comp_id, const void *pkt, p
 
 	HIP_DEBUG("length of the stun package is %d\n", size );
 	
-	dst_port = addr->sin_port;
+	dst_port = ntohs(addr->sin_port);
 	HIP_DEBUG("hip_on_tx_pkt 3: \n");
 	int msg_len ;
 	int retransmit = 0;
@@ -839,12 +843,12 @@ int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, 
 	 
 	 
 	 pj_addr.sin_family=PJ_AF_INET;
-	 pj_addr.sin_port = port;
+	 pj_addr.sin_port = htons(port);
 	 pj_addr.sin_addr.s_addr =*((pj_uint32_t*) &hip_addr->s6_addr32[3]);
 	 
 	 
 	 pj_addr_base.sin_family=PJ_AF_INET;
-	 pj_addr_base.sin_port = port_base;
+	 pj_addr_base.sin_port = htons(port_base);
 	 pj_addr_base.sin_addr.s_addr =*((pj_uint32_t*) &hip_addr_base->s6_addr32[3]);
 	 
 	 addr_len = sizeof(pj_sockaddr_in);
@@ -926,18 +930,18 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 		
 			temp_cand->addr.ipv4.sin_family = PJ_AF_INET;
 			if( peer_addr_list_item->port)
-				temp_cand->addr.ipv4.sin_port = peer_addr_list_item->port;
+				temp_cand->addr.ipv4.sin_port = htons(peer_addr_list_item->port);
 			else 
-				temp_cand->addr.ipv4.sin_port = HIP_NAT_UDP_PORT;
+				temp_cand->addr.ipv4.sin_port = htons(HIP_NAT_UDP_PORT);
 			temp_cand->addr.ipv4.sin_addr.s_addr = *((pj_uint32_t *) &peer_addr_list_item->address.s6_addr32[3]) ;
 			
 			HIP_DEBUG("add remote address in integer is : %d \n", temp_cand->addr.ipv4.sin_addr.s_addr);
 			
 			temp_cand->base_addr.ipv4.sin_family = PJ_AF_INET;
 			if( peer_addr_list_item->port)
-				temp_cand->base_addr.ipv4.sin_port = peer_addr_list_item->port;
+				temp_cand->base_addr.ipv4.sin_port = htons(peer_addr_list_item->port);
 			else 
-				temp_cand->base_addr.ipv4.sin_port = HIP_NAT_UDP_PORT;
+				temp_cand->base_addr.ipv4.sin_port = htons(HIP_NAT_UDP_PORT);
 			temp_cand->base_addr.ipv4.sin_addr.s_addr = *((pj_uint32_t*) &peer_addr_list_item->address.s6_addr32[3]);
 						
 			
