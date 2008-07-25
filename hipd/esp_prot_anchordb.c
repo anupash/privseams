@@ -40,6 +40,7 @@ void anchor_db_uninit()
 int anchor_db_update(struct hip_common *msg)
 {
 	struct hip_tlv_common *param = NULL;
+	unsigned char *anchor = NULL;
 	int err = 0, i, j;
 	extern uint8_t hip_esp_prot_ext_transform;
 
@@ -74,6 +75,7 @@ int anchor_db_update(struct hip_common *msg)
 				-1, "parameter missing in user-message from fw\n");
 	}
 
+#if 0
 	// test for more int params
 	HIP_IFEL(param, -1, "too many INT params in user-message from fw\n");
 
@@ -81,7 +83,8 @@ int anchor_db_update(struct hip_common *msg)
 	// get first anchor
 	HIP_IFEL(!(param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_HCHAIN_ANCHOR)),
 			-1, "parameter missing in user-message from fw\n");
-
+#endif
+// TODO get param count right
 	for (i = 0; i < NUM_TRANSFORMS; i++)
 	{
 		HIP_DEBUG("transform %i:\n", i + 1);
@@ -91,9 +94,8 @@ int anchor_db_update(struct hip_common *msg)
 			HIP_IFEL(!(anchor_db.anchors[i][j] = (unsigned char *)malloc(anchor_db.anchor_lengths[i])),
 					-1, "failed to allocate memory\n");
 
-			HIP_IFEL(!(param = (struct hip_tlv_common *) hip_get_next_param(msg, param)),
-					-1, "parameter missing in user-message from fw\n");
-			anchor_db.anchors[i][j] = (unsigned char *) hip_get_param_contents_direct(param);
+			anchor = (unsigned char *) hip_get_param_contents_direct(param);
+			memcpy(anchor_db.anchors[i][j], anchor, anchor_db.anchor_lengths[i]);
 			HIP_HEXDUMP("adding anchor: ", anchor_db.anchors[i][j],
 					anchor_db.anchor_lengths[i]);
 
@@ -101,9 +103,6 @@ int anchor_db_update(struct hip_common *msg)
 					-1, "parameter missing in user-message from fw\n");
 		}
 	}
-
-	// test for more anchors
-	HIP_IFEL(param,	-1, "too many ANCHOR params in user-message from fw\n");
 
 	HIP_DEBUG("anchor_db successfully updated\n");
 
