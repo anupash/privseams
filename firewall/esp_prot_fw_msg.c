@@ -101,6 +101,7 @@ hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore)
 	struct hip_common *msg = NULL;
 	int hash_length = 0, num_hchains = 0;
 	esp_prot_tfm_t *transform = NULL;
+	hash_chain_t *hchain = NULL;
 	unsigned char *anchor = NULL;
 	int err = 0, j;
 	uint8_t i;
@@ -126,9 +127,8 @@ hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore)
 		HIP_IFEL((hash_length = esp_prot_get_hash_length(i)) <= 0, -1,
 				"hash_length <= 0, expecting something bigger\n");
 
-		HIP_IFEL((num_hchains =
-				hcstore->hchain_shelves[transform->hash_func_id][transform->hash_length_id].
-				hchain_items[DEFAULT_HCHAIN_LENGTH_ID].num_hchains) <= 0, -1,
+		HIP_IFEL((num_hchains = hip_ll_get_size(&hcstore->hchain_shelves[transform->hash_func_id]
+		        [transform->hash_length_id].hchains[DEFAULT_HCHAIN_LENGTH_ID])) <= 0, -1,
 				"num_hchains <= 0, expecting something bigger\n");
 
 		// add num_hchains for this transform, needed on receiver side
@@ -159,14 +159,14 @@ hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore)
 				&& transform->hash_length_id < NUM_HASH_LENGTHS);
 
 		// add anchor with this transform
-		for (j = 0;
-				j < hcstore->hchain_shelves[transform->hash_func_id][transform->hash_length_id].
-				hchain_items[DEFAULT_HCHAIN_LENGTH_ID].num_hchains; j++)
+		for (j = 0; j <  hip_ll_get_size(&hcstore->hchain_shelves[transform->hash_func_id]
+				[transform->hash_length_id].hchains[DEFAULT_HCHAIN_LENGTH_ID]); j++)
 		{
-			anchor =
-				hcstore->hchain_shelves[transform->hash_func_id][transform->hash_length_id].
-				hchain_items[DEFAULT_HCHAIN_LENGTH_ID].hchains[j]->anchor_element->hash;
+			HIP_IFEL(!(hchain = hip_ll_get(&hcstore->hchain_shelves[transform->hash_func_id]
+				[transform->hash_length_id].hchains[DEFAULT_HCHAIN_LENGTH_ID], j)), -1,
+				"failed to retrieve hchain\n");
 
+			anchor = hchain->anchor_element->hash;
 			HIP_HEXDUMP("adding anchor: ", anchor, hash_length);
 			HIP_IFEL(hip_build_param_contents(msg, (void *)anchor,
 					HIP_PARAM_HCHAIN_ANCHOR, hash_length),

@@ -14,6 +14,7 @@
 
 #include "hashchain.h"
 #include "builder.h"
+#include "linkedlist.h"
 
 
 // max amount of different hash-functions that can be stored
@@ -29,14 +30,6 @@
 #define ITEM_THRESHOLD 0.5
 
 
-typedef struct hchain_item
-{
-	/* amount of currently used hchains */
-	int num_hchains;
-	/* the hchains themselves */
-	hash_chain_t *hchains[MAX_HCHAINS_PER_ITEM];
-} hchain_item_t;
-
 typedef struct hchain_shelf
 {
 	/* number of different hchain lengths currently used for this
@@ -44,8 +37,8 @@ typedef struct hchain_shelf
 	int num_hchain_lengths;
 	/* the different hchain lengths */
 	int hchain_lengths[MAX_NUM_HCHAIN_LENGTH];
-	/* hchains with the respective length */
-	hchain_item_t hchain_items[MAX_NUM_HCHAIN_LENGTH];
+	/* hchains with the respective hchain length */
+	hip_ll_t hchains[MAX_NUM_HCHAIN_LENGTH];
 } hchain_shelf_t;
 
 typedef struct hchain_store
@@ -68,6 +61,7 @@ typedef struct hchain_store
 
 int hcstore_init(hchain_store_t *hcstore);
 void hcstore_uninit(hchain_store_t *hcstore);
+void hcstore_free_hchain(void *hchain);
 int hcstore_register_function(hchain_store_t *hcstore, hash_function_t hash_function);
 int hcstore_register_hash_length(hchain_store_t *hcstore, int function_id,
 		int hash_length);
