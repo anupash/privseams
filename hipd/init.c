@@ -367,7 +367,9 @@ int hip_init_dht()
                         memset(&opendht_name_mapping, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
                         if (gethostname(&opendht_name_mapping, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1))
                                 HIP_DEBUG("gethostname failed\n");
-			register_to_dht(); 
+						register_to_dht();
+						init_dht_sockets(1); /*1 and 2 is just a flag for alternating*/
+						init_dht_sockets(2); /* two sockets used for dht connection*/
                         destroy(&list);
                 }
         } else {

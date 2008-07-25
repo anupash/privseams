@@ -27,8 +27,8 @@ int connect_dht_gateway(int, struct addrinfo *, int);
 int opendht_put_rm(int, unsigned char *, unsigned char *, 
                    unsigned char *, unsigned char *, int, int);
 
-int opendht_put(int, unsigned char *, unsigned char *, 
-                unsigned char *, int, int);
+//int opendht_put(int, unsigned char *, unsigned char *, 
+ //               unsigned char *, int, int, struct hip_queue *x);
 
 int opendht_rm(int, unsigned char *, unsigned char *,
                unsigned char *, unsigned char *, int, int);

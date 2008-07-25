@@ -20,7 +20,7 @@
 #include "fcntl.h"
 #include "ife.h"
 #include "icomm.h"
-
+#include "misc.h"
 /**
  *  For interrupting the connect in gethosts_hit 
  *  @param signo signal number
@@ -224,11 +224,11 @@ int opendht_put(int sockfd,
                 unsigned char * value, 
                 unsigned char * host,
                 int opendht_port,
-                int opendht_ttl)
+                int opendht_ttl, void *put_packet)
 {
     int key_len = 0;
     int value_len = 0;
-    char put_packet[2048];
+    //char put_packet[2048];
     char tmp_key[21];   
     char tmp_value[21];
         
@@ -236,7 +236,7 @@ int opendht_put(int sockfd,
     value_len = opendht_handle_value(value, tmp_value);
            
     /* Put operation FQDN->HIT */
-    memset(put_packet, '\0', sizeof(put_packet));
+    memset(put_packet, '\0', sizeof((char*)put_packet));
     
     if (key_len > 0) {
             if (build_packet_put((unsigned char *)tmp_key,
@@ -245,7 +245,7 @@ int opendht_put(int sockfd,
                                  value_len,
                                  opendht_port,
                                  (unsigned char *)host,
-                                 put_packet, opendht_ttl) != 0)
+                                 (char*)put_packet, opendht_ttl) != 0)
                     {
                             HIP_DEBUG("Put packet creation failed.\n");
                             return(-1);
@@ -257,18 +257,31 @@ int opendht_put(int sockfd,
                                  strlen((char *)value),
                                  opendht_port,
                                  (unsigned char *)host,
-                                 put_packet, opendht_ttl) != 0)
+                                 (char*)put_packet, opendht_ttl) != 0)
                     {
                             HIP_DEBUG("Put packet creation failed.\n");
                             return(-1);
                     }
     }
-    HIP_DEBUG("Host address in OpenDHT put : %s\n", host); 
-    HIP_DEBUG("Actual OpenDHT send starts here\n");
-    send(sockfd, put_packet, strlen(put_packet), 0);
+    HIP_DEBUG("HTTP packet for put is ready to be sent to queue\n"); 
+    //HIP_DEBUG("Actual OpenDHT send starts here\n");
+    /*Pardeep testing commetning line below and adding packet to the queue)
+     * send(sockfd, put_packet, strlen(put_packet), 0);
+     */
     return(0);
 }
 
+int opendht_send(int sockfd, void *packet)
+{
+	/*size of packet ???*/
+    char put_packet[2048];
+    memcpy (put_packet, (char*)packet, strlen((char*)packet)+1);    
+    HIP_DEBUG("Actual OpenDHT send starts here\n");
+    HIP_DEBUG("Packet: %s\n",put_packet);
+    HIP_DEBUG("Packet length: %d\n",strlen(put_packet));
+    send(sockfd, put_packet, strlen(put_packet), 0);
+    return(0);
+}
 /** 
  * opendht_rm - Builds XML RPC packet and sends it through given socket and reads the response
  * @param sockfd Socket to be used with the send
@@ -470,8 +483,8 @@ int opendht_read_response(int sockfd, char * answer)
 {
     int ret = 0, pton_ret = 0;
     int bytes_read;
-    char read_buffer[2048];
-    char tmp_buffer[2048];
+    char read_buffer[HIP_MAX_PACKET];
+    char tmp_buffer[HIP_MAX_PACKET];
     struct in_addr ipv4;
     struct in6_addr ipv6;
 

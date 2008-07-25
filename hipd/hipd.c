@@ -66,8 +66,9 @@ int hip_opendht_sock_fqdn = -1; /* FQDN->HIT mapping */
 int hip_opendht_sock_hit = -1; /* HIT->IP mapping */
 int hip_opendht_fqdn_sent = STATE_OPENDHT_IDLE;
 int hip_opendht_hit_sent = STATE_OPENDHT_IDLE;
+hip_queue *queue;
 int opendht_error = 0;
-char opendht_response[1024];
+char opendht_response[HIP_MAX_PACKET];
 struct addrinfo * opendht_serving_gateway = NULL;
 int opendht_serving_gateway_port = OPENDHT_PORT;
 int opendht_serving_gateway_ttl = OPENDHT_TTL;
@@ -562,13 +563,13 @@ int hipd_main(int argc, char *argv[])
                                         opendht_error = opendht_read_response(hip_opendht_sock_fqdn, 
                                                                               opendht_response); 
                                         if (opendht_error == -1) {
-                                                HIP_DEBUG("Put was unsuccesfull (FQDN->HIT)\n");
+                                                HIP_DEBUG("Put was unsuccesfull \n");
                                                 hip_opendht_error_count++;
                                                 HIP_DEBUG("DHT error count now %d/%d.\n", 
                                                           hip_opendht_error_count, OPENDHT_ERROR_COUNT_MAX);
                                         }
                                         else 
-                                                HIP_DEBUG("Put was success (FQDN->HIT)\n");
+                                                HIP_DEBUG("Put was success \n");
                                         
                                         close(hip_opendht_sock_fqdn);
                                         hip_opendht_sock_fqdn = 0;
@@ -593,13 +594,13 @@ int hipd_main(int argc, char *argv[])
                                         opendht_error = opendht_read_response(hip_opendht_sock_hit, 
                                                                               opendht_response); 
                                         if (opendht_error == -1) {
-                                                HIP_DEBUG("Put was unsuccesfull (HIT->IP)\n");
+                                                HIP_DEBUG("Put was unsuccesfull \n");
                                                 hip_opendht_error_count++;
                                                 HIP_DEBUG("DHT error count now %d/%d.\n", 
                                                           hip_opendht_error_count, OPENDHT_ERROR_COUNT_MAX);
                                         }
                                         else 
-                                                HIP_DEBUG("Put was success (HIT->IP)\n");
+                                                HIP_DEBUG("Put was success \n");
                                         close(hip_opendht_sock_hit);
                                         hip_opendht_sock_hit = 0;
                                         hip_opendht_sock_hit = init_dht_gateway_socket(hip_opendht_sock_hit);

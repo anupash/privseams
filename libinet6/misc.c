@@ -8,6 +8,7 @@
  * @see    misc.h
  */
 #include "misc.h"
+#include <string.h>
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip, struct in6_addr *hit, int hit_type)
