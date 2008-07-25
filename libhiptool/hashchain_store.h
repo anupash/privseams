@@ -23,7 +23,11 @@
 #define MAX_NUM_HASH_LENGTH		5
 // this includes the BEX-item
 #define MAX_NUM_HCHAIN_LENGTH	5
-// max amount of hchains that can be stored per hchain_item
+/* max amount of hchains that can be stored per hchain_item
+ *
+ * @note we are using a list here, so we might also use some other
+ *       mechanism to stop the hcstore_refill() */
+// TODO move this to esp_prot_api
 #define MAX_HCHAINS_PER_ITEM	5
 
 // determines when to refill a store

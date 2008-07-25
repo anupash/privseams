@@ -338,6 +338,9 @@ hash_chain_t * hcstore_get_hchain_by_anchor(hchain_store_t *hcstore, int functio
 
 			if (!memcmp(anchor, stored_hchain->anchor_element->hash, hash_length))
 			{
+				stored_hchain = (hash_chain_t *) hip_ll_del(&hcstore->hchain_shelves[function_id]
+					[hash_length_id].hchains[i], j, NULL);
+
 				HIP_DEBUG("hash-chain matching the anchor found\n");
 				//hchain_print(stored_hchain);
 
