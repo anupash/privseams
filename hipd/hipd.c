@@ -102,7 +102,9 @@ int hip_use_i3 = 0; // false
  * It will not use if hip_use_userspace_ipsec = 0. Added By Tao Wan
  */
 int hip_use_userspace_ipsec = 0;
-uint8_t hip_esp_prot_ext_transform = ESP_PROT_TFM_UNUSED;
+
+int esp_prot_num_transforms = 0;
+uint8_t esp_prot_transforms[NUM_TRANSFORMS];
 
 int hip_use_opptcp = 0; // false
 

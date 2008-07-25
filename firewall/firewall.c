@@ -233,13 +233,6 @@ int hip_fw_init_esp_prot()
 
 	if (hip_esp_protection)
 	{
-		/* activate the extension in hipd
-		 *
-		 * TODO we need to set this first otherwise hipd won't understand the
-		 * anchor message */
-		HIP_IFEL(send_esp_prot_to_hipd(hip_esp_protection), -1,
-				"failed to activate the esp protection in hipd\n");
-
 		// userspace ipsec is a prerequisite for esp protection
 		if (hip_userspace_ipsec)
 		{
@@ -247,6 +240,8 @@ int hip_fw_init_esp_prot()
 
 		} else
 		{
+			HIP_ERROR("userspace ipsec needs to be turned on for this to work\n");
+
 			err = 1;
 			goto out_err;
 		}
@@ -262,16 +257,10 @@ int hip_fw_uninit_esp_prot()
 
 	if (hip_esp_protection)
 	{
-		// set global variable to off
+		// set global variable to off in fw
 		hip_esp_protection = 0;
 
-		HIP_DEBUG("switching off esp protection in hipd...\n");
-
-		// also deactivate the extension in hipd
-		HIP_IFEL(send_esp_prot_to_hipd(hip_esp_protection), -1,
-				"failed to activate the esp protection in hipd\n");
-
-		// TODO check if we have to uninit anything here
+		HIP_IFEL(esp_prot_uninit(), -1, "failed to uninit esp protection\n");
 	}
 
   out_err:

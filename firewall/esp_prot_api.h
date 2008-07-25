@@ -33,6 +33,7 @@ typedef struct esp_prot_tfm
 
 
 int esp_prot_init(void);
+int esp_prot_uninit(void);
 int esp_prot_set_sadb(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 		unsigned char *esp_prot_anchor, int direction);
 int add_esp_prot_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *entry);

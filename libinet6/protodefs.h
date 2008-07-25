@@ -6,6 +6,7 @@
 #define _HIP_PROTODEFS
 
 #include "hashchain.h"
+#include "esp_prot_common.h"
 
 #define HIP_MAX_PACKET 2048
 
@@ -78,7 +79,7 @@
 #define HIP_PARAM_REG_FAILED	       936
 #define HIP_PARAM_ECHO_RESPONSE_SIGN   961
 #define HIP_PARAM_ESP_TRANSFORM        4095
-#define HIP_PARAM_ESP_PROT_TRANSFORM   4120
+#define HIP_PARAM_ESP_PROT_TRANSFORMS  4120
 #define HIP_PARAM_ESP_PROT_ANCHOR	   4121
 
 /* Range 32768 - 49141 can be used for HIPL private parameters i.e. to
@@ -393,15 +394,17 @@ struct hip_keymat_keymat
 	void *keymatdst;  /**< Pointer to beginning of key material */
 };
 
-struct esp_prot_transform {
+struct esp_prot_preferred_tfms {
 	hip_tlv_type_t     type;
 	hip_tlv_len_t      length;
-	uint8_t     	   transform;
+	uint8_t			   num_transforms;
+	uint8_t     	   transforms[NUM_TRANSFORMS];
 } __attribute__ ((packed));
 
 struct esp_prot_anchor {
 	hip_tlv_type_t     type;
 	hip_tlv_len_t      length;
+	uint8_t     	   transform;
 	unsigned char  	   anchor[MAX_HASH_LENGTH];
 } __attribute__ ((packed));
 

@@ -40,11 +40,19 @@ int esp_prot_init()
 	int bex_hash_length_id = 0, update_hash_length_id = 0;
 	int transform_id = 0;
 	int err = 0, i, j, g;
+	int activate = 1;
 
 	HIP_DEBUG("Initializing the esp protection extension...\n");
 
-	/* init the hash-chain stores */
+	/* activate the extension in hipd
+	 *
+	 * @note this has to be set first, otherwise hipd won't understand the
+	 *       anchor message */
+	HIP_DEBUG("activating esp prot in hipd...\n");
+	HIP_IFEL(send_esp_prot_to_hipd(activate), -1,
+			"failed to activate the esp protection in hipd\n");
 
+	/* init the hash-chain stores */
 	HIP_IFEL(hcstore_init(&bex_store), -1, "failed to initialize the bex-store\n");
 	HIP_IFEL(hcstore_init(&update_store), -1, "failed to initialize the update-store\n");
 
@@ -117,6 +125,21 @@ int esp_prot_init()
 
   out_err:
   	return err;
+}
+
+int esp_prot_uninit()
+{
+	int err = 0;
+	int activate = 0;
+
+	// also deactivate the extension in hipd
+	HIP_IFEL(send_esp_prot_to_hipd(activate), -1,
+			"failed to activate the esp protection in hipd\n");
+
+	// TODO implement the rest
+
+  out_err:
+	return err;
 }
 
 int esp_prot_set_sadb(hip_sa_entry_t *entry, uint8_t esp_prot_transform,

@@ -3,7 +3,7 @@
 
 #include "misc.h"
 
-int esp_prot_set_transform(struct hip_common *msg);
+int esp_prot_set_preferred_transforms(struct hip_common *msg);
 int esp_prot_sa_add(hip_ha_t *entry, struct hip_common *msg, int direction);
 int esp_prot_r1_add_transform(hip_common_t *msg);
 int esp_prot_i2_add_transform(hip_common_t *i2, hip_ha_t *entry, struct hip_context *ctx);

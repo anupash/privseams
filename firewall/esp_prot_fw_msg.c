@@ -9,22 +9,16 @@
 #include "esp_prot_common.h"
 #include "esp_prot_api.h"
 
-/* this sends the prefered transform to hipd implicitely turning on
+/* this sends the preferred transform to hipd implicitely turning on
  * the esp protection extension there */
-int send_esp_prot_to_hipd(int active)
+int send_esp_prot_to_hipd(int activate)
 {
-	int err = 0;
 	struct hip_common *msg = NULL;
+	int num_transforms = 0;
 	uint8_t transform = 0;
+	int err = 0;
 
 	HIP_ASSERT(active >= 0);
-
-	// for now this is the only transform we support
-	// TODO extend to support more transforms
-	if (active > 0)
-		transform = ESP_PROT_TFM_SHA1_8;
-	else
-		transform = ESP_PROT_TFM_UNUSED;
 
 	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1,
 		 "failed to allocate memory\n");
@@ -34,12 +28,45 @@ int send_esp_prot_to_hipd(int active)
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ESP_PROT_TFM, 0), -1,
 		 "build hdr failed\n");
 
-	HIP_DEBUG("esp_prot_transform: %u\n", transform);
-	HIP_IFEL(hip_build_param_contents(msg, (void *)&transform,
-			HIP_PARAM_ESP_PROT_TFM, sizeof(uint8_t)), -1,
-			"build param contents failed\n");
+	if (activate > 0)
+	{
+		/*** activation case ***/
+		HIP_DEBUG("sending preferred esp prot transforms to hipd...\n");
 
-	HIP_DEBUG("sending esp protection transform to hipd...\n");
+		num_transforms = NUM_TRANSFORMS;
+
+		HIP_DEBUG("adding num_transforms: %i\n", num_transforms);
+		HIP_IFEL(hip_build_param_contents(msg, (void *)&num_transforms,
+				HIP_PARAM_INT, sizeof(int)), -1,
+				"build param contents failed\n");
+
+		for (i = 0; i < num_transforms; i++)
+		{
+			HIP_DEBUG("adding transform %i: %u\n", i + 1, preferred_transforms[i]);
+			HIP_IFEL(hip_build_param_contents(msg, (void *)&preferred_transforms[i],
+					HIP_PARAM_ESP_PROT_TFM, sizeof(uint8_t)), -1,
+					"build param contents failed\n");
+		}
+	} else
+	{
+		/*** deactivation case ***/
+		HIP_DEBUG("sending esp prot transform ESP_PROT_TFM_UNUSED to hipd...\n");
+
+		// we are only sending ESP_PROT_TFM_UNUSED
+		num_transforms = 1;
+		transform = ESP_PROT_TFM_UNUSED;
+
+		HIP_DEBUG("adding num_transforms: %i\n", num_transforms);
+		HIP_IFEL(hip_build_param_contents(msg, (void *)&num_transforms,
+				HIP_PARAM_INT, sizeof(int)), -1,
+				"build param contents failed\n");
+
+		HIP_DEBUG("adding transform ESP_PROT_TFM_UNUSED: %u\n", transform);
+		HIP_IFEL(hip_build_param_contents(msg, (void *)&transform,
+				HIP_PARAM_ESP_PROT_TFM, sizeof(uint8_t)), -1,
+				"build param contents failed\n");
+	}
+
 	HIP_DUMP_MSG(msg);
 
 	/* send msg to hipd and receive corresponding reply */
@@ -49,8 +76,6 @@ int send_esp_prot_to_hipd(int active)
 	HIP_IFEL(hip_get_msg_err(msg), -1, "hipd returned error message!\n");
 
 	HIP_DEBUG("send_recv msg succeeded\n");
-
-	HIP_DEBUG("esp extension transform successfully set up\n");
 
  out_err:
 	if (msg)

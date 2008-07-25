@@ -2818,19 +2818,26 @@ int hip_build_param_ack(struct hip_common *msg, uint32_t peer_update_id)
  *
  * @return 0 on success, otherwise < 0.
  */
-int hip_build_param_esp_prot_transform(struct hip_common *msg, uint8_t transform)
+int hip_build_param_esp_prot_transform(struct hip_common *msg, int num_transforms,
+		uint8_t *transforms)
 {
-	int err = 0;
+	struct esp_prot_preferred_tfms prot_transforms;
+	int err = 0, i;
 
-	struct esp_prot_transform prot_transform;
+	hip_set_param_type(&prot_transforms, HIP_PARAM_ESP_PROT_TRANSFORMS);
 
-	hip_set_param_type(&prot_transform, HIP_PARAM_ESP_PROT_TRANSFORM);
-	hip_calc_generic_param_len(&prot_transform, sizeof(struct esp_prot_transform), 0);
-	prot_transform.transform = transform;
+	/* note: the length cannot be calculated with calc_param_len() */
+	hip_set_param_contents_len(&prot_transforms, (num_transforms + 1) * sizeof(uint8_t));
 
-	err = hip_build_param(msg, &prot_transform);
+	prot_transforms.num_transforms = num_transforms;
+	for (i = 0; i < num_transforms; i++)
+	{
+		prot_transforms.transforms[i] = transforms[i];
+	}
 
-	HIP_DEBUG("added esp_prot_transform: %u\n", transform);
+	err = hip_build_generic_param(msg, &prot_transforms,
+						      sizeof(struct hip_tlv_common),
+						      hip_get_param_contents_direct(&prot_transforms));
 
 	return err;
 }
