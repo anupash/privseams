@@ -120,7 +120,7 @@ int hcstore_register_function(hchain_store_t *hcstore, hash_function_t hash_func
 
 	// store the hash-function
 	err = hcstore->num_functions;
-	hcstore->hash_functions[hcstore->num_functions];
+	hcstore->hash_functions[hcstore->num_functions] = hash_function;
 	hcstore->num_functions++;
 
 	HIP_DEBUG("hash function successfully registered\n");
