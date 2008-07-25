@@ -334,7 +334,7 @@
       <orderedlist>
         <listitem>
           <para>
-        Install required packages on your system
+        Install required packages on your system:
           </para>
           <para>
         gcc, binutils, patch, bzip2, flex, bison, make, gettext, pkg-config, unzip, libz-dev and libc.
@@ -345,7 +345,9 @@
         In Debian/Ubuntu Linux, for example, do like this:
           </para>
           <para>
-        # apt-get install gcc binutils-dev patch bzip2 libbz2-dev flex bison make gettext pkg-config unzip zlib1g-dev libc6-dev
+<programlisting>
+# apt-get install gcc binutils-dev patch bzip2 libbz2-dev flex bison make gettext pkg-config unzip zlib1g-dev libc6-dev
+</programlisting>
           </para>
         </listitem>
         <listitem>
@@ -353,14 +355,10 @@
         If you are using bash, make sure that your shell option does not include the noclobber option. First check if noclobber is included in your shell option.
           </para>
           <para>
-    <itemizedlist>
-      <listitem><para>
-        $ set | grep -i noclobber
-      </para></listitem>
-      <listitem><para>
+<programlisting>
+$ set | grep -i noclobber
 SHELLOPTS=braceexpand:emacs:hashall:histexpand:interactive-comments:monitor:noclobber:notify
-      </para></listitem>
-    </itemizedlist>
+</programlisting>
           </para>
           <para>
         Like this case, if you have that option, you must remove set -o noclobber in your $HOME/.bashrc file. Otherwise you might encounter a lot of errors while building OpenWRT, like "cannot overwrite existing files".
@@ -374,50 +372,22 @@ SHELLOPTS=braceexpand:emacs:hashall:histexpand:interactive-comments:monitor:nocl
         <listitem>
           <para>
         Your configuration should include these options:
-    <itemizedlist>
-      <listitem><para>
-        Target System (Atheros [2.6])
-      </para></listitem>
-      <listitem><para>
-        Target Images (jffs2, squashfs)
-      </para></listitem>
-      <listitem><para>
-        Image configuration --->
-      </para></listitem>
-      <listitem><para>
-         (static) LAN Protocol (NEW)
-      </para></listitem>
-      <listitem><para>
-        (192.168.5.30) LAN IP Address (NEW)
-      </para></listitem>
-      <listitem><para>
-        (255.255.255.0) LAN Network Mask (NEW)
-      </para></listitem>
-      <listitem><para>
-        Network  --->
-      </para></listitem>
-      <listitem><para>
-        &lt;*&gt; ipsec-tools (for PISA development)
-      </para></listitem>
-      <listitem><para>
-        &lt;*&gt; isakmpd (for PISA development)
-      </para></listitem>
-      <listitem><para>
-        &lt;*&gt; ip6tables (for PISA development)
-      </para></listitem>
-      <listitem><para>
-        &lt;*&gt; hostapd (for PISA development)
-      </para></listitem>
-      <listitem><para>
-        Advanced configuration options (for developers)  --->
-      </para></listitem>
-      <listitem><para>
-        Build Options  --->
-      </para></listitem>
-      <listitem><para>
-        (8)   Number of jobs to run simultaneously (for PISA development. Speeds up compilation dramatically on multicore systems)
-      </para></listitem>
-    </itemizedlist>
+<programlisting>
+Target System (Atheros [2.6])
+Target Images (jffs2, squashfs)
+Image configuration --->
+(static) LAN Protocol (NEW)
+(192.168.5.30) LAN IP Address (NEW)
+(255.255.255.0) LAN Network Mask (NEW)
+Network  --->
+&lt;*&gt; ipsec-tools (for PISA development)
+&lt;*&gt; isakmpd (for PISA development)
+&lt;*&gt; ip6tables (for PISA development)
+&lt;*&gt; hostapd (for PISA development)
+Advanced configuration options (for developers)  --->
+Build Options  --->
+(8)   Number of jobs to run simultaneously (for PISA development. Speeds up compilation dramatically on multicore systems)
+</programlisting>
           </para>
           <para>
 		  NOTE: Don't use hostapd-mini, because it causes build errors. Use hostapd instead.
@@ -428,7 +398,9 @@ SHELLOPTS=braceexpand:emacs:hashall:histexpand:interactive-comments:monitor:nocl
 		  Now build it.
           </para>
           <para>
-		  $ make
+<programlisting>
+$ make
+</programlisting>
           </para>
         </listitem>
         <listitem>
@@ -436,7 +408,9 @@ SHELLOPTS=braceexpand:emacs:hashall:histexpand:interactive-comments:monitor:nocl
 		  If you cannot make jffs2 images without root privilege, try building with root privilege to get around it. In Debian Linux 4.0, you need to add FORCE=1 to ignore a weird make error, which complains make version has to be greater than 3.81 even though it actually is.
           </para>
           <para>
-		  $ make FORCE=1
+<programlisting>
+$ make FORCE=1
+</programlisting>
           </para>
         </listitem>
         <listitem>
@@ -444,7 +418,9 @@ SHELLOPTS=braceexpand:emacs:hashall:histexpand:interactive-comments:monitor:nocl
 		  If you get any error during the build, try using the verbose mode to figure out what's going on.
           </para>
           <para>
-		  $ make V=99
+<programlisting>
+$ make V=99
+</programlisting>
           </para>
         </listitem>
         <listitem>
@@ -452,35 +428,17 @@ SHELLOPTS=braceexpand:emacs:hashall:histexpand:interactive-comments:monitor:nocl
 		  If the build has succeeded, you can see firmware images in your bin directory. 
           </para>
           <para>
-    <itemizedlist>
-      <listitem><para>
-		$ ls -l bin/
-      </para></listitem>
-      <listitem><para>
+<programlisting>
+$ ls -l bin/
 1668 -rw-r--r-- 1 root root 1703936 2008-06-11 14:03 openwrt-atheros-2.6-root.jffs2-128k
-      </para></listitem>
-      <listitem><para>
 1668 -rw-r--r-- 1 root root 1703936 2008-06-11 14:03 openwrt-atheros-2.6-root.jffs2-256k
-      </para></listitem>
-      <listitem><para>
 1668 -rw-r--r-- 1 root root 1703936 2008-06-11 14:03 openwrt-atheros-2.6-root.jffs2-64k
-      </para></listitem>
-      <listitem><para>
 1156 -rw-r--r-- 1 root root 1179648 2008-06-11 14:03 openwrt-atheros-2.6-root.squashfs
-      </para></listitem>
-      <listitem><para>
 2380 -rwxr-xr-x 1 root root 2425928 2008-06-11 14:03 openwrt-atheros-2.6-vmlinux.elf
-      </para></listitem>
-      <listitem><para>
 1032 -rw-r--r-- 1 root root 1048576 2008-06-11 14:03 openwrt-atheros-2.6-vmlinux.gz
-      </para></listitem>
-      <listitem><para>
  776 -rw-r--r-- 1 root root  786432 2008-06-11 14:03 openwrt-atheros-2.6-vmlinux.lzma
-      </para></listitem>
-      <listitem><para>
    4 drwxr-xr-x 2 root root    4096 2008-06-11 14:03 packages/
-      </para></listitem>
-    </itemizedlist>
+</programlisting>
           </para>
         </listitem>
         <listitem>
@@ -498,35 +456,23 @@ SHELLOPTS=braceexpand:emacs:hashall:histexpand:interactive-comments:monitor:nocl
           <para>
           Get and extract OpenWRT kamikaze 7.09 source.
           </para>
-          <para>
-		  $ tar xzf kamikaze_7.09.tar.gz
-          </para>
+  <programlisting>
+  $ tar xzf kamikaze_7.09.tar.gz
+  </programlisting>
         </listitem>
         <listitem>
           <para>
 		  Get a patch for HIPL on OpenWRT from <ulink url="http://dongsupark.de/hipl/openwrt/7.09/patches/hipl_openwrt-7.09.diff" />, which produces Makefiles for hipl, libxml2, etc. And apply it into the kamikaze_7.09 source tree. Then you can find package/hipl/Makefile. NOTE: this patch is originally made by Dmitriy Kuptsov. Thanks.
           </para>
           <para>
-    <itemizedlist>
-      <listitem><para>
-    	$ ls
-      </para></listitem>
-      <listitem><para>
-    	hipl_openwrt-7.09.diff    kamikaze_7.09
-      </para></listitem>
-      <listitem><para>
-        $ cd kamikaze_7.09
-      </para></listitem>
-      <listitem><para>
-        $ patch -p1 &lt; ../hipl_openwrt-7.09.diff
-      </para></listitem>
-      <listitem><para>
-        $ ls package/hipl/Makefile
-      </para></listitem>
-      <listitem><para>
-        Makefile
-      </para></listitem>
-    </itemizedlist>
+  <programlisting>
+  $ ls
+  hipl_openwrt-7.09.diff    kamikaze_7.09
+  $ cd kamikaze_7.09
+  $ patch -p1 &lt; ../hipl_openwrt-7.09.diff
+  $ ls package/hipl/Makefile
+  Makefile
+  </programlisting>
           </para>
           <para>
           Note that you might also change the kernel version in &lt;path_to_kamikaze&gt;/target/linux/atheros-2.6/Makefile into 2.6.23 or a similar version number, especially if you are using vanilla kamikaze sources.
@@ -543,17 +489,11 @@ SHELLOPTS=braceexpand:emacs:hashall:histexpand:interactive-comments:monitor:nocl
           Or you can get the newest hipl source tree from the hipl repository, pack them as a tarball and place it under the dl directory.
           </para>
           <para>
-    <itemizedlist>
-      <listitem><para>
-          $ tla get hipl--openwrt--2.6 hipl--openwrt--2.6
-      </para></listitem>
-      <listitem><para>
-          $ rm -rf hipl--openwrt--2.6/{arch}
-      </para></listitem>
-      <listitem><para>
-          $ tar czf kamikaze_7.09/dl/hipl--openwrt--2.6.tar.gz hipl--openwrt--2.6
-      </para></listitem>
-    </itemizedlist>
+  <programlisting>
+  $ tla get hipl--openwrt--2.6 hipl--openwrt--2.6
+  $ rm -rf hipl--openwrt--2.6/{arch}
+  $ tar czf kamikaze_7.09/dl/hipl--openwrt--2.6.tar.gz hipl--openwrt--2.6
+  </programlisting>
           </para>
         </listitem>
         <listitem>
@@ -561,14 +501,10 @@ SHELLOPTS=braceexpand:emacs:hashall:histexpand:interactive-comments:monitor:nocl
           Enable hipl in the Networking menu by executing "make menuconfig".
           </para>
           <para>
-    <itemizedlist>
-      <listitem><para>
-          Network  --->
-      </para></listitem>
-      <listitem><para>
-          &lt;*&gt; hipl
-      </para></listitem>
-    </itemizedlist>
+  <programlisting>
+  Network  --->
+  &lt;*&gt; hipl
+  </programlisting>
           </para>
         </listitem>
         <listitem>
@@ -576,13 +512,17 @@ SHELLOPTS=braceexpand:emacs:hashall:histexpand:interactive-comments:monitor:nocl
           Build OpenWRT, make a vmlinuz and a rootfs image.
           </para>
           <para>
-          $ make V=99
+  <programlisting>
+  $ make V=99
+  </programlisting>
           </para>
           <para>
           Or you can also build just a hipl package.
           </para>
           <para>
-          $ make package/hipl-install V=99
+  <programlisting>
+  $ make package/hipl-install V=99
+  </programlisting>
           </para>
         </listitem>
         <listitem>
@@ -595,32 +535,16 @@ SHELLOPTS=braceexpand:emacs:hashall:histexpand:interactive-comments:monitor:nocl
           If you are able to reboot your device with your image, the next thing to do is to install kernel module packages needed for running hipl. Make sure first that the following packages are available in your kamikaze tree.
           </para>
           <para>
-    <itemizedlist>
-      <listitem><para>
-          $ cd bin/packages/
-      </para></listitem>
-      <listitem><para>
-          $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
-      </para></listitem>
-      <listitem><para>
-          176 -rw-r--r-- 1 advance users 169225 2008-06-18 11:41 kmod-crypto_2.6.21.3-atheros-1_mips.ipk
-      </para></listitem>
-      <listitem><para>
-           36 -rw-r--r-- 1 advance users  32461 2008-06-18 11:41 kmod-ipsec_2.6.21.3-atheros-1_mips.ipk
-      </para></listitem>
-      <listitem><para>
-           16 -rw-r--r-- 1 advance users  10813 2008-06-18 11:41 kmod-ipsec4_2.6.21.3-atheros-1_mips.ipk
-      </para></listitem>
-      <listitem><para>
-           20 -rw-r--r-- 1 advance users  13259 2008-06-18 11:41 kmod-ipsec6_2.6.21.3-atheros-1_mips.ipk
-      </para></listitem>
-      <listitem><para>
-          172 -rw-r--r-- 1 advance users 167391 2008-06-18 11:41 kmod-ipv6_2.6.21.3-atheros-1_mips.ipk
-      </para></listitem>
-      <listitem><para>
-           12 -rw-r--r-- 1 advance users   6800 2008-06-18 11:41 kmod-tun_2.6.21.3-atheros-1_mips.ipk
-      </para></listitem>
-    </itemizedlist>
+  <programlisting>
+  $ cd bin/packages/
+  $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
+  176 -rw-r--r-- 1 pisa users 169225 2008-06-18 11:41 kmod-crypto_2.6.21.3-atheros-1_mips.ipk
+  36 -rw-r--r-- 1 pisa users  32461 2008-06-18 11:41 kmod-ipsec_2.6.21.3-atheros-1_mips.ipk
+  16 -rw-r--r-- 1 pisa users  10813 2008-06-18 11:41 kmod-ipsec4_2.6.21.3-atheros-1_mips.ipk
+  20 -rw-r--r-- 1 pisa users  13259 2008-06-18 11:41 kmod-ipsec6_2.6.21.3-atheros-1_mips.ipk
+  172 -rw-r--r-- 1 pisa users 167391 2008-06-18 11:41 kmod-ipv6_2.6.21.3-atheros-1_mips.ipk
+  12 -rw-r--r-- 1 pisa users   6800 2008-06-18 11:41 kmod-tun_2.6.21.3-atheros-1_mips.ipk
+  </programlisting>
           </para>
           <para>
           If they are not available, configure your OpenWRT again to add them as packages.("&lt;M&gt;")
@@ -631,14 +555,10 @@ SHELLOPTS=braceexpand:emacs:hashall:histexpand:interactive-comments:monitor:nocl
           Install the packages in your La Fonera device. On your device console:
           </para>
           <para>
-    <itemizedlist>
-      <listitem><para>
-          # scp user@srv:path/to/kamikaze_7.09/bin/packages/kmod-{crypto,ipsec,ipv6,tun}* .
-      </para></listitem>
-      <listitem><para>
-          # ipkg install kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
-      </para></listitem>
-    </itemizedlist>
+  <programlisting>
+  # scp user@srv:path/to/kamikaze_7.09/bin/packages/kmod-{crypto,ipsec,ipv6,tun}* .
+  # ipkg install kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
+  </programlisting>
           </para>
         </listitem>
         <listitem>
@@ -646,176 +566,172 @@ SHELLOPTS=braceexpand:emacs:hashall:histexpand:interactive-comments:monitor:nocl
           Load the installed modules, unless you already have /etc/modules.d/35-hipl.
           </para>
           <para>
-    <itemizedlist>
-      <listitem><para>
-          # cd /lib/modules/2.6.21.3
-      </para></listitem>
-      <listitem><para>
-          # insmod crypto_null.ko
-      </para></listitem>
-      <listitem><para>
-          # insmod sha1.ko
-      </para></listitem>
-      <listitem><para>
-          # insmod aes.ko
-      </para></listitem>
-      <listitem><para>
-          # insmod crypto_hash.ko
-      </para></listitem>
-      <listitem><para>
-          # insmod hmac.ko
-      </para></listitem>
-      <listitem><para>
-          # insmod tun.ko
-      </para></listitem>
-      <listitem><para>
-          # insmod ipv6.ko
-      </para></listitem>
-      <listitem><para>
-          # insmod af_key.ko
-      </para></listitem>
-      <listitem><para>
-          # insmod xfrm_user.ko
-      </para></listitem>
-      <listitem><para>
-          # insmod ah4.ko
-      </para></listitem>
-      <listitem><para>
-          # insmod esp4.ko
-      </para></listitem>
-      <listitem><para>
-          # insmod ipcomp.ko
-      </para></listitem>
-      <listitem><para>
-          # insmod xfrm_tunnel.ko
-      </para></listitem>
-      <listitem><para>
-          # insmod ah6.ko
-      </para></listitem>
-      <listitem><para>
-          # insmod esp6.ko
-      </para></listitem>
-      <listitem><para>
-          # insmod ipcomp6.ko
-      </para></listitem>
-      <listitem><para>
-          # insmod tunnel6.ko
-      </para></listitem>
-      <listitem><para>
-          # insmod xfrm6_tunnel.ko
-      </para></listitem>
-    </itemizedlist>
+  <programlisting>
+  # cd /lib/modules/2.6.21.3
+  # insmod crypto_null.ko
+  # insmod sha1.ko
+  # insmod aes.ko
+  # insmod crypto_hash.ko
+  # insmod hmac.ko
+  # insmod tun.ko
+  # insmod ipv6.ko
+  # insmod af_key.ko
+  # insmod xfrm_user.ko
+  # insmod ah4.ko
+  # insmod esp4.ko
+  # insmod ipcomp.ko
+  # insmod xfrm_tunnel.ko
+  # insmod ah6.ko
+  # insmod esp6.ko
+  # insmod ipcomp6.ko
+  # insmod tunnel6.ko
+  # insmod xfrm6_tunnel.ko
+  </programlisting>
           </para>
         </listitem>
       </orderedlist>
-      <formalpara><title>For building HIPL on the kamikaze release 7.09</title><para></para></formalpara>
+      <formalpara><title>For building HIPL on the kamikaze development version</title><para></para></formalpara>
       <orderedlist>
         <listitem>
           <para>
+          Get OpenWRT source codes from the subversion repository.
           </para>
           <para>
-          </para>
-        </listitem>
-        <listitem>
-          <para>
-          </para>
-          <para>
+<programlisting>
+$ svn checkout https://svn.openwrt.org/openwrt/trunk
+</programlisting>
           </para>
         </listitem>
         <listitem>
           <para>
+          Apply a patch for hipl packages in OpenWRT <ulink url="http://dongsupark.de/hipl/openwrt/devel/patches/hipl_openwrt_packages-svn.diff" />, and also a patch for hipl kernel configs in OpenWRT <ulink url="http://dongsupark.de/hipl/openwrt/devel/patches/hipl_openwrt_kernel-svn.diff" />.
           </para>
           <para>
-          </para>
-        </listitem>
-        <listitem>
-          <para>
-          </para>
-          <para>
-          </para>
-        </listitem>
-        <listitem>
-          <para>
-          </para>
-          <para>
-          </para>
-        </listitem>
-        <listitem>
-          <para>
-          </para>
-          <para>
+<programlisting>
+$ cd trunk
+$ patch -p1 &lt; ../hipl_openwrt_packages-svn.diff
+patching file package/hipl/files/hipl.init
+patching file package/hipl/files/hipl.modules
+patching file package/hipl/Makefile
+patching file package/libxml2/Makefile
+$ patch -p1 &lt; ../hipl_openwrt_kernel-svn.diff
+patching file target/linux/atheros/config-2.6.21
+patching file target/linux/atheros/Makefile
+patching file target/linux/atheros/patches-2.6.21/beet-interfamily-sleep-loopback-2.6.21.3.patch
+</programlisting>
           </para>
         </listitem>
         <listitem>
           <para>
+          Enable hipl in the Networking menu by executing "make menuconfig".
           </para>
           <para>
-          </para>
-        </listitem>
-        <listitem>
-          <para>
-          </para>
-          <para>
-          </para>
-        </listitem>
-        <listitem>
-          <para>
-          </para>
-          <para>
+<programlisting>
+Network  --->
+ &lt;*&gt; hipl
+</programlisting>
           </para>
         </listitem>
         <listitem>
           <para>
+          Get a hipl tarball from <ulink url="http://dongsupark.de/hipl/hipl--openwrt--2.6.tar.gz" />, and place it in the directory kamikaze_7.09/dl/.
           </para>
           <para>
-          </para>
-        </listitem>
-        <listitem>
-          <para>
-          </para>
-          <para>
-          </para>
-        </listitem>
-        <listitem>
-          <para>
+<programlisting>
+$ wget http://dongsupark.de/hipl/hipl--openwrt--2.6.tar.gz -O kamikaze_7.09/dl/hipl--openwrt--2.6.tar.gz
+</programlisting>
           </para>
           <para>
-          </para>
-        </listitem>
-        <listitem>
-          <para>
+          Or you can get the newest hipl source tree from the hipl repository, pack them as a tarball and place it under the dl directory.
           </para>
           <para>
+<programlisting>
+$ tla get hipl--openwrt--2.6 hipl--openwrt--2.6
+$ rm -rf hipl--openwrt--2.6/{arch}
+$ tar czf kamikaze_7.09/dl/hipl--openwrt--2.6.tar.gz hipl--openwrt--2.6
+</programlisting>
           </para>
         </listitem>
         <listitem>
           <para>
+          Build OpenWRT, make a vmlinuz and a rootfs image.
           </para>
           <para>
-          </para>
-        </listitem>
-        <listitem>
-          <para>
-          </para>
-          <para>
-          </para>
-        </listitem>
-        <listitem>
-          <para>
+<programlisting>
+$ make V=99
+</programlisting>
           </para>
           <para>
-          </para>
-        </listitem>
-        <listitem>
-          <para>
+          Or you can also build just a hipl package.
           </para>
           <para>
+<programlisting>
+$ make package/hipl-install V=99
+</programlisting>
           </para>
         </listitem>
         <listitem>
           <para>
+          Load the images on La Fonera and reboot.
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+          If you are able to reboot your device with your image, the next thing to do is to install kernel module packages needed for running hipl. Make sure first that the following packages are available in your kamikaze tree.
           </para>
           <para>
+<programlisting>
+$ cd bin/packages/
+$ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
+176 -rw-r--r-- 1 pisa users 169225 2008-06-18 11:41 kmod-crypto_2.6.21.3-atheros-1_mips.ipk
+ 36 -rw-r--r-- 1 pisa users  32461 2008-06-18 11:41 kmod-ipsec_2.6.21.3-atheros-1_mips.ipk
+ 16 -rw-r--r-- 1 pisa users  10813 2008-06-18 11:41 kmod-ipsec4_2.6.21.3-atheros-1_mips.ipk
+ 20 -rw-r--r-- 1 pisa users  13259 2008-06-18 11:41 kmod-ipsec6_2.6.21.3-atheros-1_mips.ipk
+172 -rw-r--r-- 1 pisa users 167391 2008-06-18 11:41 kmod-ipv6_2.6.21.3-atheros-1_mips.ipk
+ 12 -rw-r--r-- 1 pisa users   6800 2008-06-18 11:41 kmod-tun_2.6.21.3-atheros-1_mips.ipk
+</programlisting>
+          </para>
+          <para>
+          If they are not available, configure your OpenWRT again to add them as packages.("&lt;M&gt;")
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+          Install the packages in your La Fonera device. On your device console:
+          </para>
+          <para>
+<programlisting>
+# scp user@srv:path/to/kamikaze-svn/bin/packages/kmod-{crypto,ipsec,ipv6,tun}* .
+# ipkg install kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
+</programlisting>
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+          Load the installed modules, unless you already have /etc/modules.d/35-hipl.
+          </para>
+          <para>
+<programlisting>
+# cd /lib/modules/2.6.21.3
+# insmod crypto_null.ko
+# insmod sha1.ko
+# insmod aes.ko
+# insmod crypto_hash.ko
+# insmod hmac.ko
+# insmod tun.ko
+# insmod ipv6.ko
+# insmod af_key.ko
+# insmod xfrm_user.ko
+# insmod ah4.ko
+# insmod esp4.ko
+# insmod ipcomp.ko
+# insmod xfrm_tunnel.ko
+# insmod ah6.ko
+# insmod esp6.ko
+# insmod ipcomp6.ko
+# insmod tunnel6.ko
+# insmod xfrm6_tunnel.ko
+</programlisting>
           </para>
         </listitem>
       </orderedlist>
@@ -830,13 +746,41 @@ SHELLOPTS=braceexpand:emacs:hashall:histexpand:interactive-comments:monitor:nocl
         As La Fonera has only limited flash memory space, you should limit the final rootfs image up to 4 MB at most. It means you are not afford to add packages as you wish. If you are just about to add all of the hipl binary files into your rootfs image, your flash memory would not able to load the oversized image. Therefore the hipl install part in Makefile is carefully designed to copy only necessary files into the rootfs image.
         </para>
         <para>
-      <itemizedlist>
-        <listitem>
-          <para>
-		  TODO
-          </para>
-        </listitem>
-      </itemizedlist>
+<programlisting>
+define Package/hipl/install
+    $(INSTALL_DIR) $(1)/etc/init.d/
+    $(INSTALL_DIR) $(1)/etc/hip/
+    $(INSTALL_DIR) $(1)/etc/modules.d/
+    $(INSTALL_DIR) $(1)/usr/bin/
+    $(INSTALL_DIR) $(1)/usr/include/
+    $(INSTALL_DIR) $(1)/usr/include/libipsec
+    $(INSTALL_DIR) $(1)/usr/lib/
+    $(INSTALL_DIR) $(1)/usr/sbin/
+
+    $(INSTALL_DATA) ./files/hipl.init $(1)/etc/init.d/hipl
+    $(INSTALL_DATA) ./files/hipl.init ./files/hipl.modules $(1)/etc/modules.d/35-hipl
+    $(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/conntest* $(1)/usr/bin/
+    $(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/hipsetup* $(1)/usr/bin/
+    $(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/libinet6test* $(1)/usr/bin/
+    $(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/listifaces* $(1)/usr/bin/
+    $(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libhip* $(1)/usr/lib/
+    $(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libinet6* $(1)/usr/lib/
+    $(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libopphip* $(1)/usr/lib/
+    $(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/* $(1)/usr/sbin/
+endif
+</programlisting>
+        </para>
+        <para>
+        As you see above, /usr/local directory is totally excluded, and only limited numbers of files in /usr/bin are included, to decrease the total image size as much as possible. If hipl deploys additional binaries besides them, this Makefile also needs to be updated as long as the size of final rootfs image does not exceed 4 MB.
+        </para>
+        <para>
+        If you meet an error like "libintl.h: no such file or directory", try rebuilding gcc and uClibc in toolchain.
+        </para>
+        <para>
+        If you meet an error like "-luuid: cannot find", try rebuilding e2fsprogs.
+        </para>
+        <para>
+        Building hipl under the kamikaze devel tree does not go well always. It could cause you to correct numerous errors while building it. You are warned!
         </para>
     </section>
   </chapter>
