@@ -6,12 +6,24 @@
 static const hash_function_t hash_functions[NUM_HASH_FUNCTIONS] = {SHA1};
 static const int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS] = {{8}};
 
+/* preference of the supported transforms in decreasing order
+ *
+ * @note make sure to always include ESP_PROT_TFM_UNUSED
+ */
+static const uint8_t preferred_transforms[NUM_TRANSFORMS + 1] =
+		{ESP_PROT_TFM_SHA1_8, ESP_PROT_TFM_UNUSED};
+
 #if 0
 static const hash_function_t hash_functions[NUM_HASH_FUNCTIONS]
 				   = {SHA1, MD5};
 static const int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS]
 				   = {{8, 16, 20}, {8, 16, 0}};
 #endif
+
+
+static const int bex_hchain_length = 10;
+static const int update_hchain_lengths[NUM_UPDATE_HCHAIN_LENGTHS] = {10};
+
 
 // stores the mapping transform_id -> (function_id, hash_length_id)
 esp_prot_tfm_t esp_prot_transforms[NUM_TRANSFORMS];
@@ -417,7 +429,7 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 		/* make sure that the next hash-chain is set up before the active one
 		 * depletes */
 		if (!entry->next_hchain && entry->active_hchain->remaining
-					<= entry->active_hchain->hchain_length * REMAIN_ELEMENTS_TRESHOLD)
+					<= entry->active_hchain->hchain_length * REMAIN_HASHES_TRESHOLD)
 		{
 			HIP_IFEL(!(prot_transform = esp_prot_resolve_transform(entry->esp_prot_transform)),
 					1, "tried to resolve UNUSED transform\n");

@@ -11,17 +11,12 @@
 /* if unused hchain element count of the active_hchain falls below
  * this threshold (% of max count), it will trigger the setup of
  * a new next_hchain */
-#define REMAIN_ELEMENTS_TRESHOLD	0.2
-
-/* as using different hchain lengths is not implemented in esp_prot for now,
+#define REMAIN_HASHES_TRESHOLD		0.2
+/* as using different hchain lengths for bex is not supported in esp_prot,
  * we can set a default length statically */
 #define DEFAULT_HCHAIN_LENGTH_ID	0
-
  /* for update_hchain_lengths[] */
 #define NUM_UPDATE_HCHAIN_LENGTHS	1
-
-static const int bex_hchain_length = 10;
-static const int update_hchain_lengths[NUM_UPDATE_HCHAIN_LENGTHS] = {10};
 
 
 /* maps from the transform_id defined above to the hash-function id

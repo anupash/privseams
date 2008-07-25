@@ -15,7 +15,6 @@
 #define ESP_PROT_TFM_MD5_8			4
 #define ESP_PROT_TFM_MD5_16			5
 
-// TODO remove after test
 #define NUM_TRANSFORMS				1
 #define NUM_HASH_FUNCTIONS			1
 #define NUM_HASH_LENGTHS			1
