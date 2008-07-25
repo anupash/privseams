@@ -190,6 +190,9 @@ int trigger_update(hip_sa_entry_t *entry)
 
 	HIP_ASSERT(entry != NULL);
 
+	// esp_prot_transform >= 0 due to datatype
+	HIP_ASSERT(entry->esp_prot_transform <= NUM_TRANSFORMS);
+
 	HIP_IFEL((hash_length = esp_prot_get_hash_length(entry->esp_prot_transform)) <= 0,
 			-1, "error or tried to resolve UNUSED transform\n");
 
@@ -255,6 +258,9 @@ unsigned char * esp_prot_handle_sa_add_request(struct hip_common *msg,
 			-1, "esp prot transform missing\n");
 	*esp_prot_transform = *((uint8_t *) hip_get_param_contents_direct(param));
 	HIP_DEBUG("esp protection transform is %u\n", *esp_prot_transform);
+
+	// esp_prot_transform >= 0 due to datatype
+	HIP_ASSERT(*esp_prot_transform <= NUM_TRANSFORMS);
 
 	// this parameter is only included, if the esp extension is used
 	if (*esp_prot_transform > ESP_PROT_TFM_UNUSED)

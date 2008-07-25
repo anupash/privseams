@@ -109,7 +109,8 @@ int esp_prot_set_sadb(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 	int hash_length = 0, err = 0;
 
 	HIP_ASSERT(entry != 0);
-	HIP_ASSERT(esp_prot_transform >= 0 && esp_prot_transform <= NUM_TRANSFORMS);
+	// esp_prot_transform >= 0 due to datatype
+	HIP_ASSERT(esp_prot_transform <= NUM_TRANSFORMS);
 	HIP_ASSERT(direction == 1 || direction == 2);
 
 	// only set up the anchor or hchain, if esp extension is used
@@ -166,8 +167,8 @@ int add_esp_prot_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *
 
 	if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED)
 	{
-		HIP_ASSERT(entry->esp_prot_transform > 0
-				&& entry->esp_prot_transform <= NUM_TRANSFORMS);
+		// esp_prot_transform >= 0 due to data-type
+		HIP_ASSERT(entry->esp_prot_transform <= NUM_TRANSFORMS);
 
 		HIP_DEBUG("adding hash chain element to outgoing packet...\n");
 
@@ -218,8 +219,8 @@ int verify_esp_prot_hash(hip_sa_entry_t *entry, unsigned char *hash_value)
 	if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED)
 	{
 		HIP_ASSERT(hash_value != NULL);
-		HIP_ASSERT(entry->esp_prot_transform > 0
-				&& entry->esp_prot_transform <= NUM_TRANSFORMS);
+		// esp_prot_transform >= 0 due to data-type
+		HIP_ASSERT(entry->esp_prot_transform <= NUM_TRANSFORMS);
 
 		hash_function = esp_prot_get_hash_function(entry->esp_prot_transform);
 		hash_length = esp_prot_get_hash_length(entry->esp_prot_transform);
@@ -284,7 +285,8 @@ int verify_esp_prot_hash(hip_sa_entry_t *entry, unsigned char *hash_value)
 /* returns NULL for UNUSED transform */
 esp_prot_tfm_t * esp_prot_resolve_transform(uint8_t transform)
 {
-	HIP_ASSERT(transform >= 0 && transform <= NUM_TRANSFORMS);
+	// esp_prot_transform >= 0 due to data-type
+	HIP_ASSERT(transform <= NUM_TRANSFORMS);
 
 	HIP_DEBUG("resolving transform: %u\n", transform);
 
@@ -301,7 +303,8 @@ hash_function_t esp_prot_get_hash_function(uint8_t transform)
 	hash_function_t hash_function = NULL;
 	int err = 0;
 
-	HIP_ASSERT(transform >= 0 && transform <= NUM_TRANSFORMS);
+	// esp_prot_transform >= 0 due to data-type
+	HIP_ASSERT(transform <= NUM_TRANSFORMS);
 
 	HIP_IFEL(!(prot_transform = esp_prot_resolve_transform(transform)), 1,
 			"tried to resolve UNUSED transform\n");
@@ -322,7 +325,8 @@ int esp_prot_get_hash_length(uint8_t transform)
 	esp_prot_tfm_t *prot_transform = NULL;
 	int err = 0;
 
-	HIP_ASSERT(transform >= 0 && transform <= NUM_TRANSFORMS);
+	// esp_prot_transform >= 0 due to data-type
+	HIP_ASSERT(transform <= NUM_TRANSFORMS);
 
 	// return length 0 for UNUSED transform
 	HIP_IFEL(!(prot_transform = esp_prot_resolve_transform(transform)), 0,
@@ -347,7 +351,8 @@ hash_chain_t * esp_prot_get_bex_hchain_by_anchor(unsigned char *hchain_anchor,
 	int err = 0;
 
 	HIP_ASSERT(hchain_anchor != NULL);
-	HIP_ASSERT(transform >= 0 && transform <= NUM_TRANSFORMS);
+	// esp_prot_transform >= 0 due to data-type
+	HIP_ASSERT(transform <= NUM_TRANSFORMS);
 
 	HIP_IFEL(!(prot_transform = esp_prot_resolve_transform(transform)), 1,
 			"tried to resolve UNUSED transform\n");
@@ -380,6 +385,8 @@ hash_chain_t * esp_prot_get_bex_hchain_by_anchor(unsigned char *hchain_anchor,
 int get_esp_data_offset(hip_sa_entry_t *entry)
 {
 	HIP_ASSERT(entry != NULL);
+	// esp_prot_transform >= 0 due to data-type
+	HIP_ASSERT(entry->esp_prot_transform <= NUM_TRANSFORMS);
 
 	return (sizeof(struct hip_esp) + esp_prot_get_hash_length(entry->esp_prot_transform));
 }
@@ -394,6 +401,8 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 	int err = 0;
 
 	HIP_ASSERT(entry != NULL);
+	// esp_prot_transform >= 0 due to data-type
+	HIP_ASSERT(entry->esp_prot_transform <= NUM_TRANSFORMS);
 
 	// first check the extension is used for this connection
 	if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED)
