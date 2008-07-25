@@ -2427,7 +2427,8 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 
 //add by santtu
     /***** LOCATOR PARAMETER *****/
-	hip_handle_locator_parameter(entry, NULL, esp_info);
+	hip_handle_locator_parameter(entry, 
+			hip_get_param(r2, HIP_PARAM_LOCATOR), esp_info);
 //end add
 
 	HIP_HEXDUMP("local_anchor: ", entry->esp_local_anchor,

@@ -159,7 +159,7 @@ int hip_nat_off_for_ha(hip_ha_t *entry, void *not_used)
 		entry->nat_mode = 0;
 		hip_hadb_set_xmit_function_set(entry, &default_xmit_func_set);
 	}
- out_err:
+out_err:
 	return err;
 }
 #endif
@@ -180,7 +180,7 @@ int hip_nat_refresh_port()
 	HIP_IFEL(hip_for_each_ha(hip_nat_send_keep_alive, NULL),
 		 -1, "for_each_ha() err.\n");
 	
- out_err:
+out_err:
 	return err;
 }
 
@@ -253,7 +253,7 @@ int hip_nat_send_keep_alive(hip_ha_t *entry, void *not_used)
 			     HIP_NAT_UDP_PORT, HIP_NAT_UDP_PORT, msg,
 			     entry, 0);
 
- out_err:
+out_err:
 	if (msg)
 		free(msg);
 
@@ -487,11 +487,13 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 		//	if (valid_list->checks[i].nominated == PJ_TRUE){
 				//set the prefered peer
 				HIP_DEBUG("find a nominated candiate\n");
-				rcand = valid_list->checks[0].rcand;
-				addr = rcand->addr;
+				
+				
+				addr = valid_list->checks[0].rcand->addr;
+				
 				
 			//	hip_print_lsi("set prefered the peer_addr : ", &addr.ipv4.sin_addr.s_addr );
-				HIP_DEBUG("set prefered the peer_addr port: %d\n", addr.ipv4.sin_port );
+		
 				peer_addr.in6_u.u6_addr32[0] = (uint32_t)0;
 				peer_addr.in6_u.u6_addr32[1] = (uint32_t)0;
 				peer_addr.in6_u.u6_addr32[2] = (uint32_t)htonl (0xffff);
@@ -501,7 +503,7 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 				hip_hadb_add_udp_addr_to_spi(entry, spi, &peer_addr, 1, 0, 1,addr.ipv4.sin_port, HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY);
 				memcpy(&entry->preferred_address, &peer_addr, sizeof(struct in6_addr));
 				entry->peer_udp_port = ntohs(addr.ipv4.sin_port);
-				
+				HIP_DEBUG("set prefered the peer_addr port: %d\n",ntohs(addr.ipv4.sin_port ));
 				
 				/*			
 				k= 0;

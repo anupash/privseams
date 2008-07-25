@@ -2766,8 +2766,8 @@ out_err:
  * 
  * */
 int hip_handle_locator_parameter(hip_ha_t *entry,
-                                 struct hip_locator *loc,
-				 struct hip_esp_info *esp_info) {
+		struct hip_locator *loc,
+		struct hip_esp_info *esp_info) {
 	uint32_t old_spi = 0, new_spi = 0, i, err = 0;
 	int zero = 0, n_addrs = 0, ii = 0;
 	int same_af = 0, local_af = 0, comp_af = 0, tmp_af = 0;
@@ -2779,11 +2779,15 @@ int hip_handle_locator_parameter(hip_ha_t *entry,
 	struct netdev_address *n;
 	struct hip_locator *locator = NULL;
 
+	
+	
 	if ((locator = loc) == NULL) {
 		HIP_DEBUG("No locator as input\n");
 		locator = entry->locator;
                 HIP_DEBUG("Using entry->locator\n");
 	}
+	
+	HIP_INFO_LOCATOR("in handle locator", locator);
 
 	HIP_IFEL(!locator, -1, "No locator to handle\n");
 
@@ -3014,13 +3018,14 @@ int hip_build_locators(struct hip_common *msg)
                     locs2[ii].priority = htonl(HIP_LOCATOR_LOCATOR_TYPE_REFLEXIVE_PRIORITY);
 		    HIP_DEBUG_HIT("Created one reflexive locator item: ", 
                                   &locs1[ii].address);
-                    ii++;
-                    if (ii>= addr_count2)
-                            break;
+		    HIP_DEBUG("Created one reflexive locator item: %d", ha_n->local_reflexive_udp_port);
+            ii++;
+            if (ii>= addr_count2)
+                    break;
             }                        
     }
 
-    HIP_DEBUG("hip_build_locators: found relay address account:%d \n", ii);
+    HIP_DEBUG("hip_build_locators: found reflexive address account:%d \n", ii);
     err = hip_build_param_locator2(msg, locs1, locs2, addr_count1, ii);
 
  out_err:
@@ -3031,9 +3036,10 @@ int hip_build_locators(struct hip_common *msg)
 }
 
 int hip_update_handle_stun(void* pkg, int len, 
-									 in6_addr_t *src_addr, in6_addr_t * dst_addr,
-									 hip_ha_t *entry,
-									 hip_portpair_t *sinfo){
+	 in6_addr_t *src_addr, in6_addr_t * dst_addr,
+	 hip_ha_t *entry,
+	 hip_portpair_t *sinfo)
+{
 	if(entry){
 		HIP_DEBUG_HIT("receive a stun  from 2:  " ,src_addr );
 		hip_external_ice_receive_pkt(pkg, len, entry, src_addr, sinfo->src_port);
@@ -3043,3 +3049,4 @@ int hip_update_handle_stun(void* pkg, int len,
 		hip_external_ice_receive_pkt_all(pkg, len, src_addr, sinfo->src_port);
 	}
 }
+
