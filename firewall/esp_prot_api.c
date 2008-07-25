@@ -99,6 +99,10 @@ int esp_prot_init()
 	HIP_IFEL(hcstore_refill(&bex_store) < 0, -1, "failed to fill the bex-store\n");
 	HIP_IFEL(hcstore_refill(&update_store) < 0, -1, "failed to fill the update-store\n");
 
+	/* ...and send the bex-store anchors to hipd */
+	HIP_IFEL(send_bex_store_update_to_hipd(&bex_store), -1,
+		"failed to send bex-store update to hipd\n");
+
   out_err:
   	return err;
 }

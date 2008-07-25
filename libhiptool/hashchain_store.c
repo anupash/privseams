@@ -159,7 +159,8 @@ int hcstore_register_hash_length(hchain_store_t *hcstore, int function_id,
 
 	// store the hash length
 	err = hcstore->num_hash_lengths[function_id];
-	hcstore->hash_lengths[function_id][hcstore->num_hash_lengths[function_id]] = hash_length;
+	hcstore->hash_lengths[function_id][hcstore->num_hash_lengths[function_id]] =
+				hash_length;
 	hcstore->num_hash_lengths[function_id]++;
 
 	HIP_DEBUG("hash length successfully registered\n");
@@ -187,8 +188,8 @@ int hcstore_register_hchain_length(hchain_store_t *hcstore, int function_id,
 			== MAX_NUM_HCHAIN_LENGTH, -1, "space for hchain_length-storage is full\n");
 
 	// also check if the hash length is already stored for this function
-	for (i = 0; i < hcstore->hchain_shelves[function_id][hash_length_id].num_hchain_lengths;
-			i++)
+	for (i = 0; i < hcstore->hchain_shelves[function_id][hash_length_id].
+			num_hchain_lengths; i++)
 	{
 		if (hcstore->hchain_shelves[function_id][hash_length_id].hchain_lengths[i]
 			  == hchain_length)
@@ -202,8 +203,9 @@ int hcstore_register_hchain_length(hchain_store_t *hcstore, int function_id,
 
 	// store the hchain length
 	err = hcstore->hchain_shelves[function_id][hash_length_id].num_hchain_lengths;
-	hcstore->hchain_shelves[function_id][hash_length_id].hchain_lengths[hcstore->hchain_shelves[function_id][hash_length_id].num_hchain_lengths]
-			  = hchain_length;
+	hcstore->hchain_shelves[function_id][hash_length_id].
+			hchain_lengths[hcstore->hchain_shelves[function_id][hash_length_id].
+			        num_hchain_lengths] = hchain_length;
 	hcstore->hchain_shelves[function_id][hash_length_id].num_hchain_lengths++;
 
 	HIP_DEBUG("hchain length successfully registered\n");
@@ -246,9 +248,13 @@ int hcstore_refill(hchain_store_t *hcstore)
 
 					for (h = 0; h < create_hchains; h++)
 					{
-						/* hchains are taken from the beginning of the array, so here
-						 * we can safely put the new hchains in the first free slots */
-						HIP_IFEL(!(hcstore->hchain_shelves[i][j].hchain_items[g].hchains[h]
+						/* hchains are taken from the end of the array, so here
+						 * we can safely put the new hchains in the last (free) slots
+						 *
+						 * @note this directly increases num_hchains */
+						HIP_IFEL(!(hcstore->hchain_shelves[i][j].hchain_items[g].
+							hchains[hcstore->hchain_shelves[i][j].hchain_items[g].
+							        num_hchains++]
 							 = hchain_create(hash_function, hash_length, hchain_length)),
 							 -1, "failed to create new hchain\n");
 					}
@@ -278,8 +284,8 @@ hash_chain_t * hcstore_get_hchain(hchain_store_t *hcstore, int function_id,
 	HIP_ASSERT(hchain_length > 0);
 
 	// first find the correct hchain item
-	for (i = 0; i < hcstore->hchain_shelves[function_id][hash_length_id].num_hchain_lengths;
-			i++)
+	for (i = 0; i < hcstore->hchain_shelves[function_id][hash_length_id].
+			num_hchain_lengths; i++)
 	{
 		if (hcstore->hchain_shelves[function_id][hash_length_id].hchain_lengths[i]
 				== hchain_length)
@@ -295,15 +301,19 @@ hash_chain_t * hcstore_get_hchain(hchain_store_t *hcstore, int function_id,
 	HIP_IFEL(item_offset < 0, -1, "hchain with unregistered hchain length requested\n");
 
 	// set offset of next unused hchain with the requested length to last hchain in store
-	hchain_offset = hcstore->hchain_shelves[function_id][hash_length_id].hchain_items[item_offset].num_hchains - 1;
+	hchain_offset = hcstore->hchain_shelves[function_id][hash_length_id].
+			hchain_items[item_offset].num_hchains - 1;
 
-	stored_hchain = hcstore->hchain_shelves[function_id][hash_length_id].hchain_items[item_offset].hchains[hchain_offset];
+	stored_hchain = hcstore->hchain_shelves[function_id][hash_length_id].
+			hchain_items[item_offset].hchains[hchain_offset];
 
 	HIP_ASSERT(stored_hchain != NULL);
 
 	// remove this hchain from the store
-	hcstore->hchain_shelves[function_id][hash_length_id].hchain_items[item_offset].hchains[hchain_offset] = NULL;
-	hcstore->hchain_shelves[function_id][hash_length_id].hchain_items[item_offset].num_hchains--;
+	hcstore->hchain_shelves[function_id][hash_length_id].hchain_items[item_offset].
+			hchains[hchain_offset] = NULL;
+	hcstore->hchain_shelves[function_id][hash_length_id].hchain_items[item_offset].
+			num_hchains--;
 
   out_err:
 	if (err)
@@ -317,6 +327,7 @@ hash_chain_t * hcstore_get_hchain(hchain_store_t *hcstore, int function_id,
 	return stored_hchain;
 }
 
+// TODO this will not work as hchain array fragmented
 hash_chain_t * hcstore_get_hchain_by_anchor(hchain_store_t *hcstore, int function_id,
 		int hash_length_id, unsigned char *anchor)
 {
@@ -334,20 +345,24 @@ hash_chain_t * hcstore_get_hchain_by_anchor(hchain_store_t *hcstore, int functio
 
 	HIP_ASSERT(hash_length > 0);
 
-	for (i = 0; i < hcstore->hchain_shelves[function_id][hash_length_id].num_hchain_lengths;
-			i++)
+	for (i = 0; i < hcstore->hchain_shelves[function_id][hash_length_id].
+			num_hchain_lengths; i++)
 	{
-		for (j = 0; j < hcstore->hchain_shelves[function_id][hash_length_id].hchain_items[i].num_hchains;
-				j++)
+		for (j = 0; j < hcstore->hchain_shelves[function_id][hash_length_id].
+				hchain_items[i].num_hchains; j++)
 		{
 			if (!memcmp(anchor,
-					hcstore->hchain_shelves[function_id][hash_length_id].hchain_items[i].hchains[j]->anchor_element->hash,
-					hash_length))
+					hcstore->hchain_shelves[function_id][hash_length_id].
+					hchain_items[i].hchains[j]->anchor_element->hash, hash_length))
 			{
-				stored_hchain = hcstore->hchain_shelves[function_id][hash_length_id].hchain_items[i].hchains[j];
+				stored_hchain = hcstore->hchain_shelves[function_id][hash_length_id].
+						hchain_items[i].hchains[j];
 
 				// remove this hchain from the store
-				hcstore->hchain_shelves[function_id][hash_length_id].hchain_items[i].hchains[j] = NULL;
+				hcstore->hchain_shelves[function_id][hash_length_id].hchain_items[i].
+						hchains[j] = NULL;
+				hcstore->hchain_shelves[function_id][hash_length_id].hchain_items[i].
+						num_hchains--;
 
 				HIP_ERROR("hash-chain matching the anchor found\n");
 				HIP_HEXDUMP("anchor: ", anchor, hash_length);

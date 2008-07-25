@@ -116,19 +116,19 @@ hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore)
 		 "build hdr failed\n");
 
 	// first add hash_length and num_hchain for each transform
-	for (i = 0; i < NUM_TRANSFORMS; i++)
+	for (i = 1; i <= NUM_TRANSFORMS; i++)
 	{
-		HIP_DEBUG("transform %i:\n", i + 1);
+		HIP_DEBUG("transform %i:\n", i);
 
 		HIP_IFEL(!(transform = esp_prot_resolve_transform(i)), -1,
 				"failed to resolve transform\n");
 
-		HIP_IFEL((hash_length = esp_prot_get_hash_length(i)) > 0, -1,
+		HIP_IFEL((hash_length = esp_prot_get_hash_length(i)) <= 0, -1,
 				"hash_length <= 0, expecting something bigger\n");
 
 		HIP_IFEL((num_hchains =
 				hcstore->hchain_shelves[transform->hash_func_id][transform->hash_length_id].
-				hchain_items[DEFAULT_HCHAIN_LENGTH_ID].num_hchains) > 0, -1,
+				hchain_items[DEFAULT_HCHAIN_LENGTH_ID].num_hchains) <= 0, -1,
 				"num_hchains <= 0, expecting something bigger\n");
 
 		// add num_hchains for this transform, needed on receiver side
@@ -145,11 +145,18 @@ hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore)
 	}
 
 	// now add the hchain anchors
-	for (i = 0; i < NUM_TRANSFORMS; i++)
+	for (i = 1; i <= NUM_TRANSFORMS; i++)
 	{
-		HIP_DEBUG("transform %i:\n", i + 1);
+		HIP_DEBUG("transform %i:\n", i);
 
-		transform = esp_prot_resolve_transform(i);
+		HIP_IFEL(!(transform = esp_prot_resolve_transform(i)), -1,
+				"failed to resolve transform\n");
+
+		// ensure correct boundaries
+		HIP_ASSERT(transform->hash_func_id >= 0
+				&& transform->hash_func_id < NUM_HASH_FUNCTIONS);
+		HIP_ASSERT(transform->hash_length_id >= 0
+				&& transform->hash_length_id < NUM_HASH_LENGTHS);
 
 		// add anchor with this transform
 		for (j = 0;

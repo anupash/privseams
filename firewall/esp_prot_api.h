@@ -20,8 +20,8 @@
  /* for update_hchain_lengths[] */
 #define NUM_UPDATE_HCHAIN_LENGTHS	1
 
-static const int bex_hchain_length = 100;
-static const int update_hchain_lengths[] = {1000};
+static const int bex_hchain_length = 10;
+static const int update_hchain_lengths[NUM_UPDATE_HCHAIN_LENGTHS] = {10};
 
 
 /* maps from the transform_id defined above to the hash-function id
