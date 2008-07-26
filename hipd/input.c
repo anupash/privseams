@@ -2150,64 +2150,13 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
 //add by santtu
     /***** LOCATOR PARAMETER *****/
-	hip_handle_locator_parameter(entry, NULL, esp_info);
+	hip_handle_locator_parameter(entry, hip_get_param(i2, HIP_PARAM_LOCATOR), esp_info);
 
 #ifdef HIP_USE_ICE
-
 	hip_nat_start_ice(entry, esp_info,ICE_ROLE_CONTROLLING);
-		/*
-                //if the client  choose to use ICE
-        if(!(entry->nat_control)){
-        	//TODO check other nat control type. currently only ICE
-        	 HIP_DEBUG("ice is not selected\n");
-
-        }else{
-        //init the session right after the locator receivd
-                HIP_DEBUG("init Ice in I2\n");
-		        ice_session = hip_external_ice_init(ICE_ROLE_CONTROLLING);
-		        		HIP_DEBUG("end init Ice in I2\n");
-		        if(ice_session){
-		        	entry->ice_session = ice_session;
-		        	//add the type 1 address first
-		        	hip_list_t *item, *tmp;
-		        	struct netdev_address *n;
-		        	i=0;
-		        	list_for_each_safe(item, tmp, addresses, i) {
-		        		n = list_entry(item);
-
-
-		        		if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
-		        		    continue;
-		        		HIP_DEBUG_HIT("add Ice local in I2 address", hip_cast_sa_addr(&n->addr));
-		        		if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
-		        			hip_external_ice_add_local_candidates(ice_session,hip_cast_sa_addr(&n->addr),50500,1);
-		        		}
-
-
-		        	}
-		        	//TODO add reflexive address
-
-		        	//TODO add relay address
-		        	// add remote address
-
-		        	HIP_DEBUG("ICE add remote in I2\n");
-		        	struct hip_spi_out_item* spi_out;
-
-		        	list_for_each_safe(item, tmp, entry->spis_out, i) {
-		        		spi_out = list_entry(item);
-		        		hip_external_ice_add_remote_candidates(ice_session, spi_out->peer_addr_list,1);
-		        	}
-		        	HIP_DEBUG("ICE start checking in I2\n");
-		        	hip_ice_start_check(ice_session);
-		        }
-        }
-        */
-
 #endif
 
 //end add
-
-
 
 
 	HIP_DEBUG("Reached %s state\n", hip_state_str(entry->state));
@@ -2464,16 +2413,13 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 				  HIP_SPI_DIRECTION_IN, 0, entry), -1,
 				  "Failed to setup IPsec SPD/SA entries, peer:src\n");
 		}
-	} else{
-		HIP_DEBUG("ICE engine will be used, no sa created here\n");
 	}
-#if 0
 	else{
 		//spi should be created
-		get_random_bytes(&spi_in, sizeof(uint32_t));
+		HIP_DEBUG("ICE engine will be used, no sa created here\n");
 	}
-#endif
-// end of move
+
+// end of modify
 
 #ifdef CONFIG_HIP_BLIND
 	if (use_blind) {

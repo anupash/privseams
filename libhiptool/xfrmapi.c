@@ -507,14 +507,23 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 	HIP_DEBUG("direction %d\n", direction);
 	HIP_DEBUG("SPI=0x%x\n", spi);
 	HIP_DEBUG("************************************\n");
-
-	HIP_IFE(hip_xfrm_state_modify(hip_xfrmapi_nl_ipsec, cmd,
+	
+	if(direction == HIP_SPI_DIRECTION_OUT){
+		HIP_IFE(hip_xfrm_state_modify(hip_xfrmapi_nl_ipsec, cmd,
 				      saddr, daddr,
 				      src_hit, dst_hit, spi,
 				      ealg, enckey, enckey_len, aalg,
 				      authkey, authkey_len, AF_INET6,
 				      entry->local_udp_port, entry->peer_udp_port), 1);
-
+	}
+	else{
+		HIP_IFE(hip_xfrm_state_modify(hip_xfrmapi_nl_ipsec, cmd,
+					      saddr, daddr,
+					      src_hit, dst_hit, spi,
+					      ealg, enckey, enckey_len, aalg,
+					      authkey, authkey_len, AF_INET6,
+					      entry->peer_udp_port,entry->local_udp_port ), 1);
+	}
  out_err:
 	return err;
 }

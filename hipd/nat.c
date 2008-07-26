@@ -454,7 +454,7 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
     hip_list_t *item1 = NULL, *tmp1 = NULL;
 	struct hip_peer_addr_list_item * peer_addr_list_item;
 //	struct hip_spi_out_item* spi_out;
-	uint32_t spi = 0;
+	uint32_t spi_out, spi_in = 0;
 	struct in6_addr peer_addr;
 	
 	
@@ -465,10 +465,11 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
     	HIP_DEBUG("entry not found in ice complete\n");
     	return;
     }
-    spi = hip_hadb_get_outbound_spi(entry);
-    if(!spi) {
+    spi_out = hip_hadb_get_outbound_spi(entry);
+
+    if(!spi_out) {
        	
-       	HIP_DEBUG("spi not found in ice complete\n");
+       	HIP_DEBUG("spi_out not found in ice complete\n");
        	return;
        }
 
@@ -488,8 +489,15 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 				//set the prefered peer
 				HIP_DEBUG("find a nominated candiate\n");
 				
-				
-				addr = valid_list->checks[0].rcand->addr;
+			//	if(valid_list->checks[0].lcand->type = ICE_CAND_TYPE_PRFLX){
+				if(0){
+					HIP_DEBUG("it is peer reflexive\n");
+					addr = valid_list->checks[0].lcand->addr;
+				}
+				else{	
+					HIP_DEBUG("it is not peer reflexive\n");
+					addr = valid_list->checks[0].rcand->addr;
+				}
 				
 				
 			//	hip_print_lsi("set prefered the peer_addr : ", &addr.ipv4.sin_addr.s_addr );
@@ -500,7 +508,7 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 				peer_addr.in6_u.u6_addr32[3] = (uint32_t)addr.ipv4.sin_addr.s_addr;
 				
 				
-				hip_hadb_add_udp_addr_to_spi(entry, spi, &peer_addr, 1, 0, 1,addr.ipv4.sin_port, HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY);
+				hip_hadb_add_udp_addr_to_spi(entry, spi_out, &peer_addr, 1, 0, 1,addr.ipv4.sin_port, HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY);
 				memcpy(&entry->preferred_address, &peer_addr, sizeof(struct in6_addr));
 				entry->peer_udp_port = ntohs(addr.ipv4.sin_port);
 				HIP_DEBUG("set prefered the peer_addr port: %d\n",ntohs(addr.ipv4.sin_port ));
@@ -561,13 +569,13 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 
 
 
-		uint32_t spi_in, spi_out;
+	/*	uint32_t spi_in, spi_out;*/
 		if (entry->state == HIP_STATE_ESTABLISHED)
 					spi_in = hip_hadb_get_latest_inbound_spi(entry);
 		
 		err =hip_add_sa(&entry->local_address, &entry->preferred_address,
 						 &entry->hit_our, &entry->hit_peer,
-						 &entry->default_spi_out, entry->esp_transform,
+						 spi_out, entry->esp_transform,
 						 &entry->esp_out, &entry->auth_out, 1,
 						 HIP_SPI_DIRECTION_OUT, 0, entry);
 		if (err) {
@@ -579,7 +587,7 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 		
 		err =hip_add_sa(&entry->preferred_address,&entry->local_address, 
 						&entry->hit_peer,&entry->hit_our, 
-						&spi_in,
+						spi_in,
 						entry->esp_transform,
 						 &entry->esp_in, &entry->auth_in, 1,
 						 HIP_SPI_DIRECTION_IN, 0, entry);
@@ -937,7 +945,7 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 				temp_cand->addr.ipv4.sin_port = htons(HIP_NAT_UDP_PORT);
 			temp_cand->addr.ipv4.sin_addr.s_addr = *((pj_uint32_t *) &peer_addr_list_item->address.s6_addr32[3]) ;
 			
-			HIP_DEBUG("add remote address in integer is : %d \n", temp_cand->addr.ipv4.sin_addr.s_addr);
+		
 			
 			temp_cand->base_addr.ipv4.sin_family = PJ_AF_INET;
 			if( peer_addr_list_item->port)
@@ -1268,7 +1276,7 @@ int hip_nat_start_ice(hip_ha_t *entry, struct hip_esp_info *esp_info, int ice_co
 	        					&ha_n->local_address,
 	        					ha_n->local_reflexive_udp_port,
 	        					HIP_NAT_UDP_PORT,
-	        					ICE_CAND_TYPE_SRFLX);
+	        					ICE_CAND_TYPE_PRFLX);
                 	        		}
 
                 }

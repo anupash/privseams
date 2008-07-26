@@ -740,16 +740,12 @@ static const char *dump_check(char *buffer, unsigned bufsize,
 
     if (lcand->addr.addr.sa_family == pj_AF_INET()) {
 	len = pj_ansi_snprintf(buffer, bufsize,
-			       "%d: [%d] %s:%d;%s:%d-->%s:%d;%s:%d ",
+			       "%d: [%d] %s:%d-->%s:%d",
 			       GET_CHECK_ID(clist, check),
 			       check->lcand->comp_id,
 			       laddr, (int)pj_ntohs(lcand->addr.ipv4.sin_port),
 			       pj_inet_ntoa(rcand->addr.ipv4.sin_addr),
-			       (int)pj_ntohs(lcand->base_addr.ipv4.sin_port),
-			       pj_inet_ntoa(rcand->base_addr.ipv4.sin_addr),
-			       (int)pj_ntohs(rcand->addr.ipv4.sin_port),
-			       pj_inet_ntoa(rcand->base_addr.ipv4.sin_addr),
-			       (int)pj_ntohs(rcand->base_addr.ipv4.sin_port));
+			       (int)pj_ntohs(rcand->addr.ipv4.sin_port));
     } else {
 	len = pj_ansi_snprintf(buffer, bufsize, "IPv6->IPv6");
     }
@@ -1275,7 +1271,14 @@ PJ_DEF(pj_status_t) pj_ice_sess_create_check_list(
     ice->rcand_cnt = 0;
     for (i=0; i<rcand_cnt; ++i) {
 	pj_ice_sess_cand *cn = &ice->rcand[ice->rcand_cnt];
-
+	char buffer[CHECK_NAME_LEN];
+	pj_ansi_snprintf(buffer, CHECK_NAME_LEN,
+	       "%s:%d",
+	       pj_inet_ntoa(rcand[i].addr.ipv4.sin_addr), 
+	       (int)pj_ntohs(rcand[i].addr.ipv4.sin_port));
+	
+	LOG4((rem_ufrag,"%s",buffer));
+	
 	/* Ignore candidate which has no matching component ID */
 	if (rcand[i].comp_id==0 || rcand[i].comp_id > ice->comp_cnt) {
 	    continue;
@@ -1319,14 +1322,26 @@ PJ_DEF(pj_status_t) pj_ice_sess_create_check_list(
 	    chk->state = PJ_ICE_SESS_CHECK_STATE_FROZEN;
 
 	    chk->prio = CALC_CHECK_PRIO(ice, lcand, rcand);
+	    
+		
 
 	    clist->count++;
 	}
     }
-
+    
+    char buffer[CHECK_NAME_LEN];
+	pj_ansi_snprintf(buffer, CHECK_NAME_LEN,
+	       "%s:%d",
+	       pj_inet_ntoa(clist->checks[0].rcand->addr.ipv4.sin_addr), 
+	       (int)pj_ntohs(clist->checks[0].rcand->addr.ipv4.sin_port));
+	
+	LOG4((rem_ufrag,"%s",buffer));
+	
+	
+    dump_checklist("Checklist before sort:", ice, clist);
     /* Sort checklist based on priority */
     sort_checklist(clist);
-
+    dump_checklist("Checklist before prune:", ice, clist);
     /* Prune the checklist */
     status = prune_checklist(ice, clist);
     if (status != PJ_SUCCESS) {

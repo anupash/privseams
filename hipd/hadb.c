@@ -1646,6 +1646,7 @@ uint32_t hip_hadb_get_latest_inbound_spi(hip_ha_t *entry)
 	list_for_each_safe(item, tmp, entry->spis_in, i)
 	{
 		spi_item = list_entry(item);
+		HIP_DEBUG("spi_in in loop is 0x%x\n", spi_item->spi);
 		if (now - spi_item->timestamp < t)
 		{
 			spi = spi_item->spi;
