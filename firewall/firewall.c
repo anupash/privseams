@@ -25,6 +25,7 @@ int foreground = 1;
 int hip_opptcp = 0;
 int hip_userspace_ipsec = 0;
 int hip_esp_protection = 0;
+int hip_stun = 0;
 
 /* Default HIT - do not access this directly, call hip_fw_get_default_hit() */
 struct in6_addr default_hit;
@@ -55,6 +56,7 @@ void print_usage()
 	printf("      -k = kill running firewall pid\n");
  	printf("      -i = switch on userspace ipsec\n");
  	printf("      -e = use esp protection extension (also sets -i)\n");
+ 	printf("      -s = stun/ice message support\n");
 	printf("      -h = print this help\n\n");
 }
 
@@ -925,6 +927,10 @@ int filter_esp(const struct in6_addr * dst_addr, struct hip_esp * esp,
 	int use_escrow = 0;
 	struct _DList * list = NULL;
 	struct rule * rule = NULL;
+
+	/* @todo: ESP access control have some issues ICE/STUN */
+	if (hip_stun)
+		verdict = 1;
 	
 	// if key escrow is active we have to handle it here too
 	if (is_escrow_active())
@@ -1275,7 +1281,7 @@ int hip_fw_handle_other_input(hip_fw_context_t *ctx)
 	        	//LSI check
 	        	verdict = hip_fw_handle_incoming_hit(ctx->ipq_packet,&ctx->src,&ctx->dst);
 	  	}
-	} else if (ctx->is_stun == 1) {
+	} else if (hip_stun && ctx->is_stun == 1) {
 		HIP_DEBUG("Santtu is the king\n");
 		// Santtu FIXME
 		verdict = hip_fw_handle_stun_packet(ctx); 
@@ -1535,7 +1541,7 @@ int main(int argc, char **argv)
 	
 	hip_set_logdebug(LOGDEBUG_NONE);
 
-	while ((ch = getopt(argc, argv, "f:t:vdFHAbkipeh")) != -1)
+	while ((ch = getopt(argc, argv, "f:t:vdFHAbkipehs")) != -1)
 	{
 		switch (ch)
 		{
@@ -1579,6 +1585,9 @@ int main(int argc, char **argv)
 		case 'e':
 			hip_userspace_ipsec = 1;
 			hip_esp_protection = 1;
+			break;
+		case 's':
+			hip_stun = 1;
 			break;
 		case 'h':
 			print_usage();
