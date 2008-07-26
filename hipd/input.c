@@ -2103,6 +2103,11 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		if( state == -1 ){
 			HIP_DEBUG( "Handling RELAY_FROM of  I2 packet failed.\n");
 			goto out_err;
+		}else{ 
+			if(dest_port)
+			HIP_IFEL( hip_hadb_add_udp_addr_to_spi(entry, spi_out, &dest, 0, 0, 0, dest_port, HIP_LOCATOR_LOCATOR_TYPE_REFLEXIVE_PRIORITY),
+					 -1,  "Failed to add a reflexive address to SPI list\n");
+
 		}
 	}
 #endif
