@@ -581,7 +581,7 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
 			//add by santtu
 			HIP_PARAM_REG_FROM,
 			//end add
-			HIP_PARAM_ESP_PROT_TRANSFORM,
+			HIP_PARAM_ESP_PROT_TRANSFORMS,
 			HIP_PARAM_ESP_PROT_ANCHOR
 		};
 	hip_tlv_type_t type = hip_get_param_type(param);
@@ -1152,7 +1152,7 @@ char* hip_param_type_name(const hip_tlv_type_t param_type){
 	case HIP_PARAM_UNIT_TEST: return "HIP_PARAM_UNIT_TEST";
 	case HIP_PARAM_VIA_RVS: return "HIP_PARAM_VIA_RVS";
 	case HIP_PARAM_PSEUDO_HIT: return "HIP_PARAM_PSEUDO_HIT";
-	case HIP_PARAM_ESP_PROT_TRANSFORM: return "HIP_PARAM_ESP_PROT_TRANSFORM";
+	case HIP_PARAM_ESP_PROT_TRANSFORMS: return "HIP_PARAM_ESP_PROT_TRANSFORMS";
 	case HIP_PARAM_ESP_PROT_ANCHOR: return "HIP_PARAM_ESP_PROT_ANCHOR";
 	//add by santtu
 	case HIP_PARAM_NAT_TRANSFORM: return "HIP_PARAM_NAT_TRANSFORM";
@@ -2845,30 +2845,42 @@ int hip_build_param_esp_prot_transform(struct hip_common *msg, int num_transform
 /**
  * hip_build_param_esp_prot_mode - build and append ESP PROT anchor parameter
  * @param msg the message where the parameter will be appended
- * @param anchor the anchor for the hchain to be used for extended esp protection
+ * @param transform the esp protection transform used for this anchor,
+ *        if UNUSED 1 byte of 0 is sent
+ * @param anchor the anchor for the hchain to be used for extended esp protection,
+ *        if NULL
  *
  * @return 0 on success, otherwise < 0.
  */
-int hip_build_param_esp_prot_anchor(struct hip_common *msg, unsigned char *anchor,
-		int hash_length)
+int hip_build_param_esp_prot_anchor(struct hip_common *msg, uint8_t transform,
+		unsigned char *anchor, int hash_length)
 {
 	int err = 0;
-
 	struct esp_prot_anchor esp_anchor;
+
+	HIP_ASSERT(msg != NULL);
+	// NULL-anchor only allowed for UNUSED-transform
+	HIP_ASSERT((!transform && !anchor) || (transform && anchor));
 
 	hip_set_param_type(&esp_anchor, HIP_PARAM_ESP_PROT_ANCHOR);
 
-	HIP_DEBUG("hash length: %i\n", hash_length);
+	esp_anchor.transform = transform;
+
+	if (!transform)
+	{
+		hash_length = 1;
+		memset(esp_anchor.anchor, 0, hash_length);
+	} else
+		memcpy(esp_anchor.anchor, anchor, hash_length);
 
 	/* note: the length cannot be calculated with calc_param_len() */
-	hip_set_param_contents_len(&esp_anchor, hash_length);
-
-	memcpy(esp_anchor.anchor, anchor, hash_length);
+	hip_set_param_contents_len(&esp_anchor, hash_length + sizeof(uint8_t));
 
 	err = hip_build_generic_param(msg, &esp_anchor,
 					      sizeof(struct hip_tlv_common),
 					      hip_get_param_contents_direct(&esp_anchor));
 
+	HIP_DEBUG("added esp protection transform: %u\n", transform);
 	HIP_HEXDUMP("added esp protection anchor: ", anchor, hash_length);
 
 	return err;

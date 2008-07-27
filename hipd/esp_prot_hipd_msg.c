@@ -121,13 +121,10 @@ int esp_prot_r1_add_transforms(hip_common_t *msg)
  	return err;
 }
 
-// TODO check
-int esp_prot_r1_handle_transforms(hip_common_t *i2, hip_ha_t *entry,
-		struct hip_context *ctx)
+int esp_prot_r1_handle_transforms(hip_ha_t *entry, struct hip_context *ctx)
 {
 	struct hip_param *param = NULL;
-	int esp_prot_num_transforms;
-	uint8_t esp_prot_transforms[NUM_TRANSFORMS];
+	struct esp_prot_preferred_tfms *prot_transforms = NULL;
 	int err = 0;
 
 	/* this is only handled if we are using userspace ipsec,
@@ -135,38 +132,41 @@ int esp_prot_r1_handle_transforms(hip_common_t *i2, hip_ha_t *entry,
 	if (hip_use_userspace_ipsec)
 	{
 		HIP_DEBUG("userspace IPsec hint: ESP extension might be in use\n");
+
 		param = hip_get_param(ctx->input, HIP_PARAM_ESP_PROT_TRANSFORMS);
 
 		// check if the transform parameter was sent
 		if (param)
 		{
-			prot_transform = (struct esp_prot_transform *) param;
+			HIP_DEBUG("received preferred transforms from peer\n");
 
-			// TODO parse the transform parameter
+			prot_transforms = (struct esp_prot_preferred_tfms *) param;
 
 			// select transform and store it for this connection
-			entry->esp_prot_transform = esp_prot_select_transform(esp_prot_num_transforms,
-					esp_prot_transforms);
+			entry->esp_prot_transform = esp_prot_select_transform(prot_transforms->num_transforms,
+					prot_transforms->transforms);
 
 			// transform >= 0 due to data-type
 			HIP_ASSERT(entry->esp_prot_transform <= NUM_TRANSFORMS);
 
 		} else
 		{
-			HIP_DEBUG("R1 does not contain ESP protection transform, setting UNUSED\n");
+			HIP_DEBUG("R1 does not contain preferred ESP protection transforms, " \
+					"locally setting UNUSED\n");
 
 			// if the other end-host does not want to use the extension, we don't either
 			entry->esp_prot_transform = ESP_PROT_TFM_UNUSED;
 		}
 	} else
 	{
-		HIP_DEBUG("no userspace IPsec hint for ESP extension, setting UNUSED\n");
+		HIP_DEBUG("no userspace IPsec hint for ESP extension, locally setting UNUSED\n");
 
 		// make sure we don't add the anchor now and don't add any transform or anchor
 		entry->esp_prot_transform = ESP_PROT_TFM_UNUSED;
 	}
 }
 
+#if 0
 // TODO check
 int esp_prot_i2_add_transform(hip_common_t *i2, hip_ha_t *entry, struct hip_context *ctx)
 {
@@ -198,15 +198,18 @@ int esp_prot_i2_add_transform(hip_common_t *i2, hip_ha_t *entry, struct hip_cont
   out_err:
  	return err;
 }
+#endif
 
-// TODO check
-int esp_prot_i2_add_anchor(hip_common_t *i2, hip_ha_t *entry)
+int esp_prot_i2_add_anchor(hip_common_t *i2, hip_ha_t *entry, struct hip_context *ctx)
 {
+	struct hip_param *param = NULL;
 	unsigned char *anchor = NULL;
 	int hash_length = 0;
 	int err = 0;
 
-	// only add, if extension in use and we agreed on a transform
+	/* only add, if extension in use and we agreed on a transform
+	 *
+	 * @note the transform was selected in handle R1 */
 	if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED)
 	{
 		if (anchor_db_has_more_anchors(entry->esp_prot_transform))
@@ -215,7 +218,8 @@ int esp_prot_i2_add_anchor(hip_common_t *i2, hip_ha_t *entry)
 
 			HIP_IFEL(!(anchor = anchor_db_get_anchor(entry->esp_prot_transform)), -1,
 					"no anchor elements available, threading?\n");
-			HIP_IFEL(hip_build_param_esp_prot_anchor(i2, anchor, hash_length), -1,
+			HIP_IFEL(hip_build_param_esp_prot_anchor(i2, entry->esp_prot_transform,
+					anchor, hash_length), -1,
 					"Building of ESP protection anchor failed\n");
 
 			// store local_anchor
@@ -227,7 +231,31 @@ int esp_prot_i2_add_anchor(hip_common_t *i2, hip_ha_t *entry)
 		} else
 		{
 			// fall back
-			HIP_ERROR("we agreed on using esp hchain protection, but no elements");
+			HIP_ERROR("agreed on using esp hchain protection, but no elements");
+
+			entry->esp_prot_transform = ESP_PROT_TFM_UNUSED;
+
+			// inform our peer
+			HIP_IFEL(hip_build_param_esp_prot_anchor(i2, entry->esp_prot_transform,
+					NULL, 0), -1,
+					"Building of ESP protection anchor failed\n");
+		}
+	} else
+	{
+		// only reply, if transforms param in R1; send UNUSED param
+		if (param = hip_get_param(ctx->input, HIP_PARAM_ESP_PROT_TRANSFORMS))
+		{
+			HIP_DEBUG("R1 contained transforms, but agreed not to use the extension\n");
+
+			entry->esp_prot_transform = ESP_PROT_TFM_UNUSED;
+
+			HIP_IFEL(hip_build_param_esp_prot_anchor(i2, entry->esp_prot_transform,
+					NULL, 0), -1,
+					"Building of ESP protection anchor failed\n");
+		} else
+		{
+			HIP_DEBUG("peer didn't send transforms in R1, locally setting UNUSED\n");
+
 			entry->esp_prot_transform = ESP_PROT_TFM_UNUSED;
 		}
 	}
@@ -239,6 +267,7 @@ int esp_prot_i2_add_anchor(hip_common_t *i2, hip_ha_t *entry)
  	return err;
 }
 
+#if 0
 int esp_prot_i2_handle_transform(hip_ha_t *entry, struct hip_context *ctx)
 {
 	struct hip_param *param = NULL;
@@ -289,32 +318,45 @@ int esp_prot_i2_handle_transform(hip_ha_t *entry, struct hip_context *ctx)
   out_err:
  	return err;
 }
+#endif
 
 int esp_prot_i2_handle_anchor(hip_ha_t *entry, struct hip_context *ctx)
 {
+	extern int esp_prot_num_transforms;
 	struct hip_param *param = NULL;
 	struct esp_prot_anchor *prot_anchor = NULL;
 	int hash_length = 0;
 	int err = 0;
 
-	/* only process the anchor parameter, if we are going to use it */
-	if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED)
-	{
+	/* only supported in user-mode ipsec and optional there */
+ 	if (hip_use_userspace_ipsec && esp_prot_num_transforms > 1)
+ 	{
+ 		HIP_DEBUG("userspace IPsec hint: esp protection extension might be in use\n");
+
 		if (param = hip_get_param(ctx->input, HIP_PARAM_ESP_PROT_ANCHOR))
 		{
 			prot_anchor = (struct esp_prot_anchor *) param;
 
-			// distinguish different hash lengths/transforms
-			if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED)
+			// check if the anchor has a supported transform
+			if (esp_prot_check_transform(prot_anchor->transform) >= 0)
 			{
-				hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
+				// we know this transform
+				entry->esp_prot_transform = prot_anchor->transform;
 
-				// store peer_anchor
-				memset(entry->esp_peer_anchor, 0, MAX_HASH_LENGTH);
-				memcpy(entry->esp_peer_anchor, prot_anchor->anchor, hash_length);
+				if (entry->esp_prot_transform == ESP_PROT_TFM_UNUSED)
+				{
+					HIP_DEBUG("agreed not to use esp protection extension\n");
 
-				HIP_HEXDUMP("received anchor: ", entry->esp_peer_anchor, hash_length);
+				} else
+				{
+					hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
 
+					// store peer_anchor
+					memset(entry->esp_peer_anchor, 0, MAX_HASH_LENGTH);
+					memcpy(entry->esp_peer_anchor, prot_anchor->anchor, hash_length);
+
+					HIP_HEXDUMP("received anchor: ", entry->esp_peer_anchor, hash_length);
+				}
 			} else
 			{
 				HIP_ERROR("received anchor with unknown transform, falling back\n");
@@ -323,11 +365,15 @@ int esp_prot_i2_handle_anchor(hip_ha_t *entry, struct hip_context *ctx)
 			}
 		} else
 		{
-			// fall back option
-			HIP_DEBUG("agreed on using esp hchain extension, but no anchor sent or error\n");
+			HIP_DEBUG("NO esp anchor sent, locally setting UNUSED\n");
 
 			entry->esp_prot_transform = ESP_PROT_TFM_UNUSED;
 		}
+	} else
+	{
+		HIP_DEBUG("userspace IPsec hint: esp protection extension NOT in use\n");
+
+		entry->esp_prot_transform = ESP_PROT_TFM_UNUSED;
 	}
 
   out_err:
@@ -349,9 +395,9 @@ int esp_prot_r2_add_anchor(hip_common_t *r2, hip_ha_t *entry)
 
 			HIP_IFEL(!(anchor = anchor_db_get_anchor(entry->esp_prot_transform)),
 					-1, "no anchor elements available, threading?\n");
-			HIP_IFEL(hip_build_param_esp_prot_anchor(r2, anchor, hash_length), -1,
+			HIP_IFEL(hip_build_param_esp_prot_anchor(r2, entry->esp_prot_transform,
+					anchor, hash_length), -1,
 					"Building of ESP protection anchor failed\n");
-			HIP_HEXDUMP("added anchor: ", anchor, hash_length);
 
 			// store local_anchor
 			memset(entry->esp_local_anchor, 0, MAX_HASH_LENGTH);
@@ -361,9 +407,20 @@ int esp_prot_r2_add_anchor(hip_common_t *r2, hip_ha_t *entry)
 		} else
 		{
 			// fall back
-			HIP_ERROR("we agreed on using esp hchain protection, but no elements");
+			HIP_ERROR("agreed on using esp hchain protection, but no elements");
+
 			entry->esp_prot_transform = ESP_PROT_TFM_UNUSED;
+
+			// inform our peer
+			HIP_IFEL(hip_build_param_esp_prot_anchor(r2, entry->esp_prot_transform,
+					NULL, 0), -1,
+					"Building of ESP protection anchor failed\n");
 		}
+	} else
+	{
+		HIP_DEBUG("esp protection extension NOT in use for this connection\n");
+
+		entry->esp_prot_transform = ESP_PROT_TFM_UNUSED;
 	}
 
   out_err:
@@ -381,22 +438,48 @@ int esp_prot_r2_handle_anchor(hip_ha_t *entry, struct hip_context *ctx)
 	int hash_length = 0;
 	int err = 0;
 
-	param = hip_get_param(ctx->input, HIP_PARAM_ESP_PROT_ANCHOR);
 	// only process anchor, if we agreed on using it before
-	if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED && param)
+	if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED)
 	{
-		hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
+		if (param = hip_get_param(ctx->input, HIP_PARAM_ESP_PROT_ANCHOR))
+		{
+			prot_anchor = (struct esp_prot_anchor *) param;
 
-		prot_anchor = (struct esp_prot_anchor *) param;
+			// check if the anchor has got the negotiated transform
+			if (prot_anchor->transform == entry->esp_prot_transform)
+			{
+				hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
 
-		memset(entry->esp_peer_anchor, 0, MAX_HASH_LENGTH);
-		memcpy(entry->esp_peer_anchor, prot_anchor->anchor, hash_length);
+				memset(entry->esp_peer_anchor, 0, MAX_HASH_LENGTH);
+				memcpy(entry->esp_peer_anchor, prot_anchor->anchor, hash_length);
 
-		HIP_HEXDUMP("received anchor: ", entry->esp_peer_anchor, hash_length);
+				HIP_HEXDUMP("received anchor: ", entry->esp_peer_anchor, hash_length);
+
+			} else if (prot_anchor->transform == ESP_PROT_TFM_UNUSED)
+			{
+				HIP_DEBUG("peer encountered problems and did fallback\n");
+
+				// also fallback
+				entry->esp_prot_transform = ESP_PROT_TFM_UNUSED;
+
+			} else
+			{
+				HIP_ERROR("received anchor does NOT use negotiated transform, falling back\n");
+
+				// fallback
+				entry->esp_prot_transform = ESP_PROT_TFM_UNUSED;
+			}
+		} else
+		{
+			HIP_DEBUG("agreed on using esp hchain extension, but no anchor sent or error\n");
+
+			// fall back option
+			entry->esp_prot_transform = ESP_PROT_TFM_UNUSED;
+		}
 	} else
 	{
-		HIP_DEBUG("agreed on using esp hchain extension, but no anchor sent or error\n");
-		// fall back option
+		HIP_DEBUG("NOT using esp protection extension\n");
+
 		entry->esp_prot_transform = ESP_PROT_TFM_UNUSED;
 	}
 
@@ -404,12 +487,33 @@ int esp_prot_r2_handle_anchor(hip_ha_t *entry, struct hip_context *ctx)
  	return err;
 }
 
+/* simple transform selection: find first match in both arrays
+ *
+ * returns transform, UNUSED transform on error
+ */
 uint8_t esp_prot_select_transform(int num_transforms, uint8_t *transforms)
 {
+	extern int esp_prot_num_transforms;
+	extern uint8_t esp_prot_transforms[NUM_TRANSFORMS];
 	uint8_t transform = ESP_PROT_TFM_UNUSED;
-	int err = 0;
+	int err = 0, i, j;
 
-	// TODO implement
+	for (i = 0; i < esp_prot_num_transforms; i++)
+	{
+		for (j = 0; j < num_transforms; j++)
+		{
+			if (esp_prot_transforms[i] == transforms[j])
+			{
+				HIP_DEBUG("found matching transform\n");
+
+				transform = esp_prot_transforms[i];
+				goto out_err;
+			}
+		}
+	}
+
+	HIP_ERROR("NO matching transform found\n");
+	transform = ESP_PROT_TFM_UNUSED;
 
   out_err:
 	if (err)
@@ -418,4 +522,29 @@ uint8_t esp_prot_select_transform(int num_transforms, uint8_t *transforms)
 	}
 
 	return transform;
+}
+
+/* returns index, if contained; else -1 */
+int esp_prot_check_transform(uint8_t transform)
+{
+	extern int esp_prot_num_transforms;
+	extern uint8_t esp_prot_transforms[NUM_TRANSFORMS];
+	int err = -1, i;
+
+	// check if local preferred transforms contain passed transform
+	for (i = 0; i < esp_prot_num_transforms; i++)
+	{
+		if (esp_prot_transforms[i] == transform)
+		{
+			HIP_DEBUG("transform found in local preferred transforms\n");
+
+			err = i;
+			goto out_err;
+		}
+	}
+
+	HIP_DEBUG("transform NOT found in local preferred transforms\n");
+
+  out_err:
+	return err;
 }

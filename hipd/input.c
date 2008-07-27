@@ -877,10 +877,12 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 					   &transform_esp_suite, 1), -1,
 		 "Building of ESP transform failed\n");
 
+#if 0
 	/********** ESP-PROT transform (OPTIONAL) **********/
 
 	HIP_IFEL(esp_prot_i2_add_transform(i2, entry, ctx), -1,
 			"failed to add esp protection transform\n");
+#endif
 
 	/********** ESP-PROT anchor (OPTIONAL) **********/
 
@@ -1234,6 +1236,13 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 		HIP_DEBUG("Identity type: %s, Length: %d, Name: %s\n", str,
 			  len, hip_get_param_host_id_hostname(peer_host_id));
 	}
+
+	/********* ESP protection preferred transforms [OPTIONAL] *********/
+
+	HIP_IFEL(esp_prot_r1_handle_transforms(entry, ctx), -1,
+			"failed to handle preferred esp protection transforms\n");
+
+	/******************************************************************/
 
 	/* We haven't handled REG_INFO parameter. We do that in hip_create_i2()
 	   because we must create an REG_REQUEST parameter based on the data
@@ -1933,10 +1942,12 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	HIP_DEBUG("replay: %s\n", (replay ? "yes" : "no"));
 	HIP_DEBUG("src %d, dst %d\n", i2_info->src_port, i2_info->dst_port);
 
+#if 0
 	/********** ESP-PROT transform (OPTIONAL) **********/
 
 	HIP_IFEL(esp_prot_i2_handle_transform(entry, ctx), -1,
 			"failed to handle esp prot transform\n");
+#endif
 
 	/********** ESP-PROT anchor (OPTIONAL) **********/
 

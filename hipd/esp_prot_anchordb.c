@@ -42,10 +42,10 @@ int anchor_db_update(struct hip_common *msg)
 	struct hip_tlv_common *param = NULL;
 	unsigned char *anchor = NULL;
 	int err = 0, i, j;
-	extern uint8_t hip_esp_prot_ext_transform;
+	extern int esp_prot_num_transforms;
 
 	// if this function is called, the extension should be active
-	HIP_ASSERT(hip_esp_prot_ext_transform > ESP_PROT_TFM_UNUSED);
+	HIP_ASSERT(esp_prot_num_transforms > 1);
 	HIP_ASSERT(msg != NULL);
 
 	HIP_DEBUG("updating hchain anchorDB...\n");

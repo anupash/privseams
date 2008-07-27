@@ -16,9 +16,10 @@ int send_esp_prot_to_hipd(int activate)
 	struct hip_common *msg = NULL;
 	int num_transforms = 0;
 	uint8_t transform = 0;
-	int err = 0;
+	int err = 0, i;
+	extern uint8_t preferred_transforms[];
 
-	HIP_ASSERT(active >= 0);
+	HIP_ASSERT(activate >= 0);
 
 	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1,
 		 "failed to allocate memory\n");
