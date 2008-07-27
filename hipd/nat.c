@@ -718,84 +718,95 @@ void hip_on_rx_data(pj_ice_sess *ice, unsigned comp_id, void *pkt, pj_size_t siz
 void* hip_external_ice_init(pj_ice_sess_role role){
 	pj_ice_sess *  	p_ice;
 	pj_status_t status;
-
-	pj_pool_t *pool ;
+	pj_pool_t *pool, *io_pool ;
+	unsigned   comp_cnt = 1;	
+	const pj_str_t    	 local_ufrag = pj_str("user");
+	const pj_str_t   	local_passwd = pj_str("pass");
+	const char *  name = "hip_ice";
+	pj_stun_config  stun_cfg;
+	pj_ice_sess_role   	 ice_role = role;
+	struct pj_ice_sess_cb cb;
+	pj_ioqueue_t *ioqueue;
+	pj_timer_heap_t *timer_heap;
+	
+		
+	//configure the call back handle
+	cb.on_ice_complete = &hip_on_ice_complete;
+	cb.on_tx_pkt = &hip_on_tx_pkt;
+	cb.on_rx_data= &hip_on_rx_data;
 	
 	//init for PJproject
 	status = pj_init();
 	pjlib_util_init();
 	
-	
-    if (status != PJ_SUCCESS) {
-        HIP_DEBUG("Error initializing PJLIB", status);
-        return 0;
-    }
-    pj_log_set_level(5);
+		
+	if (status != PJ_SUCCESS) {
+		HIP_DEBUG("Error initializing PJLIB", status);
+	        return 0;
+	}
+	pj_log_set_level(5);
 	//init for memery pool factroy
-    // using default pool policy.
-
-    pj_dump_config();
+	// using default pool policy.
+	
+	pj_dump_config();
     
-    if(cpp == 0){
-    	cpp= &cp;
-    	pj_caching_pool_init(cpp, NULL, 6024*2024 );  
-    }
+	if(cpp == 0){
+		cpp= &cp;
+	    	pj_caching_pool_init(cpp, NULL, 6024*2024 );  
+	}
 
-    pjnath_init();
+	pjnath_init();
     
-	
-	pj_stun_config  stun_cfg;
-	
-	const char *  name = "hip_ice";
-	pj_ice_sess_role   	 ice_role = role;
-	
-	
-	struct pj_ice_sess_cb cb;
+		
+		
 	
 	//hip_ice_sess_cb.
 	//DOTO tobe reset
- 	unsigned   	 comp_cnt = 1;
- 	
- 	const pj_str_t    	 local_ufrag = pj_str("user");
- 	const pj_str_t   	local_passwd = pj_str("pass");
 
-    pj_ioqueue_t *ioqueue;
-    pj_timer_heap_t *timer_heap;
-	   //end copy
- 	
- 	//configure the call back handle
- 	cb.on_ice_complete = &hip_on_ice_complete;
- 	cb.on_tx_pkt = &hip_on_tx_pkt;
- 	cb.on_rx_data= &hip_on_rx_data;
-  	   
-   pool = pj_pool_create(&cpp->factory, NULL, 8000, 4000, NULL);
-   pj_ioqueue_create(pool, 12, &ioqueue);
-   pj_timer_heap_create(pool, 100, &timer_heap);
- 	   
-   pj_stun_config_init(&stun_cfg, &cp.factory, 0, ioqueue, timer_heap);
- 	//end copy
- 	     
- 	//check if there is already a session
- 	   
- 	  status =  pj_ice_sess_create( 
- 	 			&stun_cfg,
- 	 			name,
- 	 			ice_role,
- 	 			comp_cnt,
- 	 			&cb,
- 	 			&local_ufrag,
- 	 			&local_passwd,
- 	 			&p_ice	 
- 	 		);
- 	   
- 	   
- 	 if(PJ_SUCCESS ==  status){
- 		 return p_ice;
- 	  }
- 	 else 
- 		 HIP_DEBUG("ice init fail %d \n", status); 
- 	
- 	 return 0;
+	  	   
+	pool = pj_pool_create(&cpp->factory, NULL, 8000, 4000, NULL);
+	io_pool = pj_pool_create(&cpp->factory, NULL, 8000, 4000, NULL);
+	
+	status=pj_ioqueue_create(pool, 12, &ioqueue);
+	if(status != PJ_SUCCESS){
+		HIP_DEBUG("IO create failed\n");
+		goto out_err;
+	}
+	status = pj_timer_heap_create(io_pool, 100, &timer_heap);
+	if(status != PJ_SUCCESS){
+		HIP_DEBUG("timer heap create failed\n");
+	   	goto out_err;
+	}
+	pj_stun_config_init(&stun_cfg, &cp.factory, 0, ioqueue, timer_heap);
+	
+	 	//end copy
+	     
+	//check if there is already a session
+	   
+	status =  pj_ice_sess_create( 
+			&stun_cfg,
+ 			name,
+ 			ice_role,
+ 			comp_cnt,
+ 			&cb,
+ 			&local_ufrag,
+ 			&local_passwd,
+ 			&p_ice	 
+	 		);
+	   
+	   
+	 if(PJ_SUCCESS ==  status){
+		 return p_ice;
+	  }
+	 else {
+		 HIP_DEBUG("pj_ice_sess_create failed\n");
+		 goto out_err;
+	 }
+
+ 	 
+out_err: 
+	HIP_DEBUG("ice init fail %d \n", status);
+ 	return 0;
  	
 }
 
@@ -979,11 +990,11 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 	pj_status_t t;
 	HIP_DEBUG("add remote number: %d \n", rem_cand_cnt);
 	if(rem_cand_cnt > 0 )
-	t= pj_ice_sess_create_check_list  	(  	session,
-	    &local_ufrag,
-		 &local_passwd,
-		rem_cand_cnt,
-		rem_cand 
+	t= pj_ice_sess_create_check_list(session,
+			&local_ufrag,
+			&local_passwd,
+			rem_cand_cnt,
+			rem_cand 
 	) ;
 	HIP_DEBUG("add remote result: %d \n", t);
 out_err:

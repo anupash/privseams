@@ -1510,7 +1510,7 @@ static pj_status_t start_periodic_check(pj_timer_heap_t *th,
 		pj_mutex_unlock(ice->mutex);
 		return status;
 	    }
-
+	    LOG5((ice->obj_name, "periodic check waiting looping %d", i));
 	    ++start_count;
 	    break;
 	}
@@ -1519,7 +1519,8 @@ static pj_status_t start_periodic_check(pj_timer_heap_t *th,
     /* If we don't have anything in Waiting state, perform check to
      * highest priority pair that is in Frozen state.
      */
-    if (start_count==0) {
+//    if (start_count==0) {
+    if(1){
 	for (i=0; i<clist->count; ++i) {
 	    pj_ice_sess_check *check = &clist->checks[i];
 
@@ -1529,7 +1530,7 @@ static pj_status_t start_periodic_check(pj_timer_heap_t *th,
 		    pj_mutex_unlock(ice->mutex);
 		    return status;
 		}
-
+		LOG5((ice->obj_name, "periodic check frozen looping %d", i));
 		++start_count;
 		break;
 	    }

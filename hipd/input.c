@@ -2158,7 +2158,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	hip_handle_locator_parameter(entry, hip_get_param(i2, HIP_PARAM_LOCATOR), esp_info);
 
 #ifdef HIP_USE_ICE
-	hip_nat_start_ice(entry, esp_info,ICE_ROLE_CONTROLLING);
+	hip_nat_start_ice(entry, esp_info,ICE_ROLE_CONTROLLED);
 #endif
 
 //end add
@@ -2508,7 +2508,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 
 #ifdef HIP_USE_ICE
 
-	hip_nat_start_ice(entry,esp_info,ICE_ROLE_CONTROLLED);
+	hip_nat_start_ice(entry,esp_info,ICE_ROLE_CONTROLLING);
         /*
         //check the nat transform mode
         if(!(entry->nat_control)){
