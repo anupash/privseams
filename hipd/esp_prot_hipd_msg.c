@@ -167,6 +167,9 @@ int esp_prot_r1_handle_transforms(hip_ha_t *entry, struct hip_context *ctx)
 		// make sure we don't add the anchor now and don't add any transform or anchor
 		entry->esp_prot_transform = ESP_PROT_TFM_UNUSED;
 	}
+
+  out_err:
+	return err;
 }
 
 #if 0
@@ -507,7 +510,7 @@ uint8_t esp_prot_select_transform(int num_transforms, uint8_t *transforms)
 		{
 			if (esp_prot_transforms[i] == transforms[j])
 			{
-				HIP_DEBUG("found matching transform\n");
+				HIP_DEBUG("found matching transform: %u\n", esp_prot_transforms[i]);
 
 				transform = esp_prot_transforms[i];
 				goto out_err;
