@@ -315,8 +315,10 @@ int hip_nat_handle_transform_in_client(struct hip_common *msg , hip_ha_t *entry)
     	// in the furtue, we should check all the transform type and pick only one
     	// but now, we have only one choice, which is ICE, so the code is the same as
     	//in the server side.
-    	entry->nat_control = (ntohs(nat_transform->suite_id[0])) & hip_nat_get_control(entry);
+	    entry->nat_control = (ntohs(nat_transform->suite_id[0])) & hip_nat_get_control(entry);
     }
+    else 
+	    entry->nat_control = 0;    
 out_err:
 	return err;
 	  
@@ -328,9 +330,12 @@ int hip_nat_handle_transform_in_server(struct hip_common *msg , hip_ha_t *entry)
 	
 	
     nat_transform = hip_get_param(msg, HIP_PARAM_NAT_TRANSFORM);
-    if(nat_transform&&entry){
-    	// check if the requested tranform is also supported in the server.
-    	entry->nat_control = (ntohs(nat_transform->suite_id[0])) & hip_nat_get_control(entry);
+    if(entry){
+	    if(nat_transform)
+		    // check if the requested tranform is also supported in the server.
+		    entry->nat_control = (ntohs(nat_transform->suite_id[0])) & hip_nat_get_control(entry);
+	    else
+		    entry->nat_control = 0;
     }
     else{
     	HIP_DEBUG("handle nat transform failed: entry %d,nat transform %d\n", entry, nat_transform);
@@ -1068,6 +1073,9 @@ int hip_external_ice_receive_pkt(void * msg,int len, hip_ha_t *entry, in6_addr_t
     
     HIP_DEBUG_HIT("receive a stun  from:  " ,src_addr );
     HIP_DEBUG("receive a stun  port:  %d\n" ,port);
+    hip_dump_pj_stun_msg(msg, len);
+    
+    
     //TODO filter out ipv6
 	 pj_addr.sin_family=PJ_AF_INET;
 	 pj_addr.sin_port = htons(port);

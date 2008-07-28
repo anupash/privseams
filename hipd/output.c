@@ -620,8 +620,11 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 #ifdef HIP_USE_ICE
 	{
 		hip_transform_suite_t suite = hip_nat_get_control(NULL);
-		HIP_DEBUG("build nat transform in R1: %d\n", suite);
-		hip_build_param_nat_transform(msg, suite);
+		/**add the parameter only when ice exist**/
+		if(suite){
+			HIP_DEBUG("build nat transform in R1: %d\n", suite);
+			hip_build_param_nat_transform(msg, suite);
+		}
 	}
 #endif
  	/********** PUZZLE ************/
