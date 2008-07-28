@@ -17,7 +17,7 @@ int send_esp_prot_to_hipd(int activate)
 	int num_transforms = 0;
 	uint8_t transform = 0;
 	int err = 0, i;
-	extern uint8_t preferred_transforms[];
+	extern const uint8_t preferred_transforms[];
 
 	HIP_ASSERT(activate >= 0);
 

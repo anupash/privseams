@@ -10,7 +10,7 @@ static const int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS] = {{8}};
  *
  * @note make sure to always include ESP_PROT_TFM_UNUSED
  */
-static const uint8_t preferred_transforms[NUM_TRANSFORMS + 1] =
+extern const uint8_t preferred_transforms[NUM_TRANSFORMS + 1] =
 		{ESP_PROT_TFM_SHA1_8, ESP_PROT_TFM_UNUSED};
 
 #if 0
