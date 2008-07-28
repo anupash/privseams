@@ -1152,6 +1152,7 @@ char* hip_param_type_name(const hip_tlv_type_t param_type){
 	case HIP_PARAM_UNIT_TEST: return "HIP_PARAM_UNIT_TEST";
 	case HIP_PARAM_VIA_RVS: return "HIP_PARAM_VIA_RVS";
 	case HIP_PARAM_PSEUDO_HIT: return "HIP_PARAM_PSEUDO_HIT";
+	case HIP_PARAM_HCHAIN_ANCHOR: return "HIP_PARAM_HCHAIN_ANCHOR";
 	case HIP_PARAM_ESP_PROT_TRANSFORMS: return "HIP_PARAM_ESP_PROT_TRANSFORMS";
 	case HIP_PARAM_ESP_PROT_ANCHOR: return "HIP_PARAM_ESP_PROT_ANCHOR";
 	//add by santtu

@@ -159,16 +159,16 @@ hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore)
 				"num_hchains <= 0, expecting something bigger\n");
 
 		// add num_hchains for this transform, needed on receiver side
-		HIP_DEBUG("adding num_hchains: %i\n", num_hchains);
 		HIP_IFEL(hip_build_param_contents(msg, (void *)&num_hchains,
 				HIP_PARAM_INT, sizeof(int)), -1,
 				"build param contents failed\n");
+		HIP_DEBUG("added num_hchains: %i\n", num_hchains);
 
 		// add the hash_length for this transform, needed on receiver side
-		HIP_DEBUG("adding hash_length: %i\n", hash_length);
 		HIP_IFEL(hip_build_param_contents(msg, (void *)&hash_length,
 				HIP_PARAM_INT, sizeof(int)), -1,
 				"build param contents failed\n");
+		HIP_DEBUG("added hash_length: %i\n", hash_length);
 	}
 
 	// now add the hchain anchors
@@ -178,6 +178,9 @@ hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore)
 
 		HIP_IFEL(!(transform = esp_prot_resolve_transform(i)), -1,
 				"failed to resolve transform\n");
+
+		HIP_IFEL((hash_length = esp_prot_get_hash_length(i)) <= 0, -1,
+				"hash_length <= 0, expecting something bigger\n");
 
 		// ensure correct boundaries
 		HIP_ASSERT(transform->hash_func_id >= 0
@@ -194,10 +197,10 @@ hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore)
 				"failed to retrieve hchain\n");
 
 			anchor = hchain->anchor_element->hash;
-			HIP_HEXDUMP("adding anchor: ", anchor, hash_length);
 			HIP_IFEL(hip_build_param_contents(msg, (void *)anchor,
 					HIP_PARAM_HCHAIN_ANCHOR, hash_length),
 					-1, "build param contents failed\n");
+			HIP_HEXDUMP("added anchor: ", anchor, hash_length);
 		}
 	}
 
