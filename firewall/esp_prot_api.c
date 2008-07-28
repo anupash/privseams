@@ -3,30 +3,31 @@
 #include "firewall_defines.h"
 
 
-static const hash_function_t hash_functions[NUM_HASH_FUNCTIONS] = {SHA1};
-static const int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS] = {{8}};
-
 /* preference of the supported transforms in decreasing order
  *
  * @note make sure to always include ESP_PROT_TFM_UNUSED
  */
 extern const uint8_t preferred_transforms[NUM_TRANSFORMS + 1] =
-		{ESP_PROT_TFM_SHA1_8, ESP_PROT_TFM_UNUSED};
+		{ESP_PROT_TFM_SHA1_20, ESP_PROT_TFM_SHA1_16, ESP_PROT_TFM_MD5_16,
+				ESP_PROT_TFM_SHA1_8, ESP_PROT_TFM_MD5_8, ESP_PROT_TFM_UNUSED};
 
-#if 0
 static const hash_function_t hash_functions[NUM_HASH_FUNCTIONS]
 				   = {SHA1, MD5};
 static const int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS]
 				   = {{8, 16, 20}, {8, 16, 0}};
-#endif
 
 
 static const int bex_hchain_length = 10;
 static const int update_hchain_lengths[NUM_UPDATE_HCHAIN_LENGTHS] = {10};
 
 
-// stores the mapping transform_id -> (function_id, hash_length_id)
+/* stores the mapping transform_id -> (function_id, hash_length_id)
+ *
+ * @note no mapping for UNUSED transform */
 esp_prot_tfm_t esp_prot_transforms[NUM_TRANSFORMS];
+
+
+
 
 // this store only contains hchains used when negotiating esp protection in BEX
 hchain_store_t bex_store;

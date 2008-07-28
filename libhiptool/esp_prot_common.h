@@ -15,11 +15,6 @@
 #define ESP_PROT_TFM_MD5_8			4
 #define ESP_PROT_TFM_MD5_16			5
 
-#define NUM_TRANSFORMS				1
-#define NUM_HASH_FUNCTIONS			1
-#define NUM_HASH_LENGTHS			1
-
-#if 0
  /**** helper defines for the index boundaries of the static arrays defined below ****/
 
 /* When adding a new transform, make sure to also add it in esp_prot_common.h.
@@ -33,6 +28,5 @@
 #define NUM_HASH_FUNCTIONS			2
 /* for second dimension of hash_lengths[][] */
 #define NUM_HASH_LENGTHS			3
-#endif
 
 #endif /*EXT_ESP_PROT_COMMON_H_*/
