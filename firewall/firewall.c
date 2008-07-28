@@ -209,6 +209,8 @@ int hip_fw_uninit_userspace_ipsec()
 		// deactivate userspace ipsec in hipd
 		HIP_IFE(send_userspace_ipsec_to_hipd(hip_userspace_ipsec), -1);
 
+// right now all rules are flushed on exit, this would remove non-existing ones
+#if 0
 		// delete all rules previously set up for this extension
 		system("iptables -D INPUT -p 50 -j QUEUE"); /*  */
 		system("iptables -D INPUT -p 17 --dport 50500 -j QUEUE");
@@ -219,8 +221,8 @@ int hip_fw_uninit_userspace_ipsec()
 		system("ip6tables -D OUTPUT -p 58 -d 2001:0010::/28 -j QUEUE");
 		system("ip6tables -D OUTPUT -p 6 -d 2001:0010::/28 -j QUEUE");
 		system("ip6tables -D OUTPUT -p 17 -d 2001:0010::/28 -j QUEUE");
+#endif
 
-		// TODO check if we have to uninit anything here
 	}
 
   out_err:
@@ -465,9 +467,6 @@ void firewall_exit()
 {
 	HIP_DEBUG("Firewall exit\n");
 
-	hip_fw_uninit_esp_prot();
-	hip_fw_uninit_userspace_ipsec();
-
 	if (flush_iptables)
 	{
 		hip_fw_flush_iptables();
@@ -476,6 +475,11 @@ void firewall_exit()
 	{
 		HIP_DEBUG("Some dagling iptables rules may be present!\n");
 	}
+
+	/* rules have to be removed first, otherwise HIP packets won't pass through
+	 * at this time any more */
+	hip_fw_uninit_esp_prot();
+	hip_fw_uninit_userspace_ipsec();
 
 	hip_firewall_delete_hldb();
 

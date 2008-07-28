@@ -16,7 +16,7 @@ int hip_userspace_ipsec_activate(struct hip_common *msg)
 	/* remove the policies from the kernel-mode IPsec when switching to userspace,
 	 * otherwise app-packets will still be captured and processed by the kernel
 	 *
-	 * wo don't have to to this when we switch back to kernel-mode, as it will
+	 * we don't have to to this when we switch back to kernel-mode, as it will
 	 * only be the case when the firewall is shut down
 	 * -> firewall might already be closed when user-message arrives */
 	if (hip_use_userspace_ipsec)
@@ -56,12 +56,11 @@ int hip_userspace_ipsec_activate(struct hip_common *msg)
 	     default_ipsec_func_set.hip_acquire_spi = hip_acquire_spi;
 	     default_ipsec_func_set.hip_delete_default_prefix_sp_pair = hip_delete_default_prefix_sp_pair;
 	     default_ipsec_func_set.hip_setup_default_sp_prefix_pair = hip_setup_default_sp_prefix_pair;
+
+	     // re-enable triggering of the BEX by the kernel
+	     HIP_IFEL(default_ipsec_func_set.hip_setup_default_sp_prefix_pair(), -1,
+	    		 "failed to set up default sp prefix pair\n");
      }
-	/*
-	HIP_DEBUG("re-initializing the hadb...\n");
-	hip_uninit_hadb();
-	hip_init_hadb();
-	*/
 
   out_err:
 	return err;
