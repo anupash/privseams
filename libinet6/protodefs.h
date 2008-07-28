@@ -398,7 +398,8 @@ struct esp_prot_preferred_tfms {
 	hip_tlv_type_t     type;
 	hip_tlv_len_t      length;
 	uint8_t			   num_transforms;
-	uint8_t     	   transforms[NUM_TRANSFORMS];
+	// this will also contain the UNUSED transform
+	uint8_t     	   transforms[NUM_TRANSFORMS + 1];
 } __attribute__ ((packed));
 
 struct esp_prot_anchor {

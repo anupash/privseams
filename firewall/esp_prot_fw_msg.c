@@ -34,7 +34,8 @@ int send_esp_prot_to_hipd(int activate)
 		/*** activation case ***/
 		HIP_DEBUG("sending preferred esp prot transforms to hipd...\n");
 
-		num_transforms = NUM_TRANSFORMS;
+		// all "in use" transforms + UNUSED
+		num_transforms = NUM_TRANSFORMS + 1;
 
 		HIP_DEBUG("adding num_transforms: %i\n", num_transforms);
 		HIP_IFEL(hip_build_param_contents(msg, (void *)&num_transforms,

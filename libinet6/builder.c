@@ -2830,9 +2830,12 @@ int hip_build_param_esp_prot_transform(struct hip_common *msg, int num_transform
 	hip_set_param_contents_len(&prot_transforms, (num_transforms + 1) * sizeof(uint8_t));
 
 	prot_transforms.num_transforms = num_transforms;
-	for (i = 0; i < num_transforms; i++)
+	HIP_DEBUG("added num_transforms: %u\n", prot_transforms.num_transforms);
+
+	for (i = 0; i < prot_transforms.num_transforms; i++)
 	{
 		prot_transforms.transforms[i] = transforms[i];
+		HIP_DEBUG("added transform %i: %u\n", i + 1, transforms[i]);
 	}
 
 	err = hip_build_generic_param(msg, &prot_transforms,
@@ -2874,7 +2877,7 @@ int hip_build_param_esp_prot_anchor(struct hip_common *msg, uint8_t transform,
 		memcpy(esp_anchor.anchor, anchor, hash_length);
 
 	/* note: the length cannot be calculated with calc_param_len() */
-	hip_set_param_contents_len(&esp_anchor, hash_length + sizeof(uint8_t));
+	hip_set_param_contents_len(&esp_anchor, sizeof(uint8_t) + hash_length);
 
 	err = hip_build_generic_param(msg, &esp_anchor,
 					      sizeof(struct hip_tlv_common),

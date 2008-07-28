@@ -59,7 +59,8 @@ int anchor_db_update(struct hip_common *msg)
 	HIP_IFEL(!(param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_INT)),
 			-1, "parameter missing in user-message from fw\n");
 
-	for (i = 0; i < NUM_TRANSFORMS; i++)
+	// don't set up anything for UNUSED transform
+	for (i = 0; i < esp_prot_num_transforms - 1; i++)
 	{
 		HIP_DEBUG("transform %i:\n", i + 1);
 

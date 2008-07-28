@@ -110,6 +110,9 @@ int esp_prot_r1_add_transforms(hip_common_t *msg)
 		HIP_IFEL(hip_build_param_esp_prot_transform(msg, esp_prot_num_transforms,
 				esp_prot_transforms), -1,
 				"Building of ESP protection mode failed\n");
+
+		HIP_DEBUG("ESP prot transforms param built\n");
+
  	} else
  	{
  		HIP_DEBUG("userspace IPsec hint: esp protection extension UNUSED, skip\n");

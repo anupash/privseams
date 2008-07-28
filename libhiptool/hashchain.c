@@ -93,20 +93,20 @@ int hchain_verify(const unsigned char * current_hash, const unsigned char * last
 	// init buffer with the hash we want to verify
 	memcpy(buffer, current_hash, hash_length);
 
-	HIP_HEXDUMP("comparing given hash: ", buffer, hash_length);
-	HIP_DEBUG("\t<->\n");
-	HIP_HEXDUMP("last known hash: ", last_hash, hash_length);
+	_HIP_HEXDUMP("comparing given hash: ", buffer, hash_length);
+	_HIP_DEBUG("\t<->\n");
+	_HIP_HEXDUMP("last known hash: ", last_hash, hash_length);
 
 	for(i = 1; i <= tolerance; i++)
 	{
-		HIP_DEBUG("Calculating round %i:\n", i + 1);
+		_HIP_DEBUG("Calculating round %i:\n", i + 1);
 
 		hash_function(buffer, hash_length, hash_value);
 		memcpy(buffer, hash_value, hash_length);
 
-		HIP_HEXDUMP("comparing buffer: ", buffer, hash_length);
-		HIP_DEBUG("\t<->\n");
-		HIP_HEXDUMP("last known hash: ", last_hash, hash_length);
+		_HIP_HEXDUMP("comparing buffer: ", buffer, hash_length);
+		_HIP_DEBUG("\t<->\n");
+		_HIP_HEXDUMP("last known hash: ", last_hash, hash_length);
 
 		// compare the elements
 		if(!(memcmp(buffer, last_hash, hash_length)))
@@ -183,7 +183,7 @@ hash_chain_t * hchain_create(hash_function_t hash_function, int hash_length,
 			return_hchain->source_element = current_element;
 		}
 
-		HIP_HEXDUMP("element created: ", current_element->hash, hash_length);
+		_HIP_HEXDUMP("element created: ", current_element->hash, hash_length);
 
 		// list with backwards links
 		current_element->next = last_element;
