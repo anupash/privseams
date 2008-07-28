@@ -1,3 +1,4 @@
+
 AUTOMAKE_OPTIONS = foreign
 
 # Note: .. is included because libinet6/debug.h is included; otherwise this
@@ -14,7 +15,7 @@ include_HEADERS += escrow.h init.h maintenance.h accessor.h oppipdb.h
 include_HEADERS += tcptimeout.h cert.h user_ipsec_sadb_api.h user_ipsec_hipd_msg.h
 include_HEADERS += esp_prot_hipd_msg.h esp_prot_anchordb.h
 
-INCLUDES = $(hipl_common_include_paths)
+INCLUDES = $(hipl_common_include_paths)  -I$(HIPL_PJPROJECT_NATH)/include -I$(HIPL_PJPROJECT_LIB)/include -I$(HIPL_PJPROJECT_LIB_UTIL)/include -I$(HIPL_PJPROJECT_MEDIA)/include
 
 sbin_PROGRAMS = hipd
 hipd_SOURCES = update.c hipd.c keymat.c blind.c hiprelay.c registration.c
