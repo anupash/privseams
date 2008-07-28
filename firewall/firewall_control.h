@@ -11,6 +11,7 @@
 #include "builder.h"
 #include "protodefs.h"
 #include "firewalldb.h"
+#include "user_ipsec_fw_msg.h"
 
 typedef struct pseudo_v6 {
        struct  in6_addr src;

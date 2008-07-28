@@ -170,9 +170,6 @@ int hip_fw_init_userspace_ipsec()
 	{
 		HIP_IFEL(userspace_ipsec_init(), -1, "failed to initialize userspace ipsec\n");
 
-		// activate userspace ipsec in hipd
-		HIP_IFE(send_userspace_ipsec_to_hipd(hip_userspace_ipsec), -1);
-
 		// queue incoming ESP over IPv4 and IPv4 UDP encapsulated traffic
 		system("iptables -I INPUT -p 50 -j QUEUE"); /*  */
 		system("iptables -I INPUT -p 17 --dport 50500 -j QUEUE");
@@ -204,10 +201,7 @@ int hip_fw_uninit_userspace_ipsec()
 		// set global variable to off
 		hip_userspace_ipsec = 0;
 
-		HIP_DEBUG("switching hipd to kernel-mode ipsec...\n");
-
-		// deactivate userspace ipsec in hipd
-		HIP_IFE(send_userspace_ipsec_to_hipd(hip_userspace_ipsec), -1);
+		HIP_IFEL(userspace_ipsec_uninit(), -1, "failed to uninit user ipsec\n");
 
 // right now all rules are flushed on exit, this would remove non-existing ones
 #if 0
@@ -1789,3 +1783,43 @@ void firewall_increase_netlink_buffers()
 	popen("echo 1048576 > /proc/sys/net/core/rmem_default; echo 1048576 > /proc/sys/net/core/rmem_max;echo 1048576 > /proc/sys/net/core/wmem_default;echo 1048576 > /proc/sys/net/core/wmem_max", "r");
 }
 
+/* TODO move this and next function where they belong
+ *
+ * @note located in user_ipsec_api before, but now also used for proxy and some
+ *       strange stuff done around line 1471
+ */
+hip_hit_t *hip_fw_get_default_hit(void)
+{
+	if (ipv6_addr_is_null(&default_hit))
+	{
+		_HIP_DEBUG("Querying hipd for default hit\n");
+		if (hip_query_default_local_hit_from_hipd(&default_hit))
+			return NULL;
+	}
+
+	return &default_hit;
+}
+
+/* Get default HIT*/
+int hip_query_default_local_hit_from_hipd(hip_hit_t *hit)
+{
+	int err = 0;
+	struct hip_common *msg = NULL;
+	struct hip_tlv_common *param = NULL;
+	hip_hit_t *default_hit  = NULL;
+	struct endpoint_hip *endp = NULL;
+
+	HIP_IFE(!(msg = hip_msg_alloc()), -1);
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEFAULT_HIT,0),-1,
+		 "Fail to get hits");
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1,
+		 "send/recv daemon info\n");
+
+	HIP_IFE(!(param = hip_get_param(msg, HIP_PARAM_HIT)), -1);
+	default_hit = hip_get_param_contents_direct(param);
+	ipv6_addr_copy(hit, default_hit);
+
+out_err:
+	return err;
+
+}

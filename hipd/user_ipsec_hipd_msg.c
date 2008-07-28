@@ -203,7 +203,7 @@ struct hip_common * create_delete_sa_msg(uint32_t spi, struct in6_addr *peer_add
 	HIP_IFEL(hip_build_param_contents(msg, (void *)peer_addr, HIP_PARAM_IPV6_ADDR,
 			sizeof(struct in6_addr)), -1, "build param contents failed\n");
 
-	HIP_DEBUG_IN6ADDR("destination address : ", dst_addr);
+	HIP_DEBUG_IN6ADDR("destination address: ", dst_addr);
 	HIP_IFEL(hip_build_param_contents(msg, (void *)dst_addr, HIP_PARAM_IPV6_ADDR,
 			sizeof(struct in6_addr)), -1, "build param contents failed\n");
 

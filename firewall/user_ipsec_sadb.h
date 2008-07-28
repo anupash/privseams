@@ -35,6 +35,8 @@
  *
  * however right now we only support mode 3, no need for variable yet */
 #define BEET_MODE 3
+// not implemented yet
+#define DEFAULT_LIFETIME 0
 
 /* HIP Security Association entry */
 typedef struct hip_sa_entry
@@ -94,7 +96,21 @@ static DECLARE_LHASH_COMP_FN(hip_sa_entries_compare, const hip_sa_entry_t *);
 static DECLARE_LHASH_HASH_FN(hip_link_entry_hash, const hip_sa_entry_t *);
 static DECLARE_LHASH_COMP_FN(hip_link_entries_compare, const hip_sa_entry_t *);
 
+
 int hip_sadb_init(void);
+int hip_sadb_uninit(void);
+int hip_sadb_add(int direction, uint32_t spi, uint32_t mode,
+		struct in6_addr *src_addr, struct in6_addr *dst_addr,
+		struct in6_addr *inner_src_addr, struct in6_addr *inner_dst_addr,
+		uint8_t encap_mode, uint16_t src_port, uint16_t dst_port,
+		int ealg, uint32_t a_keylen, uint32_t e_keylen,
+		unsigned char *a_key, unsigned char *e_key, uint64_t lifetime,
+		uint8_t esp_prot_transform, unsigned char *esp_prot_anchor,
+		int retransmission, int update);
+int hip_sadb_delete(struct in6_addr *dst_addr, uint32_t spi);
+int hip_sadb_flush(void);
+void hip_sadb_print(void);
+
 
 /******** hashtable helper functions *********/
 unsigned long hip_sa_entry_hash(const hip_sa_entry_t *sa_entry);
@@ -104,14 +120,7 @@ unsigned long hip_link_entry_hash(const hip_link_entry_t *link_entry);
 int hip_link_entries_compare(const hip_link_entry_t *link_entry1,
 		const hip_link_entry_t *link_entry2);
 
-int hip_sadb_add(int direction, uint32_t spi, uint32_t mode,
-		struct in6_addr *src_addr, struct in6_addr *dst_addr,
-		struct in6_addr *inner_src_addr, struct in6_addr *inner_dst_addr,
-		uint8_t encap_mode, uint16_t src_port, uint16_t dst_port,
-		int ealg, uint32_t a_keylen, uint32_t e_keylen,
-		unsigned char *a_key, unsigned char *e_key, uint64_t lifetime,
-		uint8_t esp_prot_transform, unsigned char *esp_prot_anchor,
-		int retransmission, int update);
+/******** sadb helper functions *********/
 int hip_sa_entry_add(int direction, uint32_t spi, uint32_t mode,
 		struct in6_addr *src_addr, struct in6_addr *dst_addr,
 		struct in6_addr *inner_src_addr, struct in6_addr *inner_dst_addr,
@@ -144,9 +153,7 @@ int hip_link_entry_delete(struct in6_addr *dst_addr, hip_sa_entry_t *entry);
 int hip_link_entries_delete_all(hip_sa_entry_t *entry);
 void hip_link_entry_print(hip_link_entry_t *entry);
 void hip_sa_entry_free(hip_sa_entry_t * entry);
-int hip_sadb_flush(void);
 void hip_sa_entry_print(hip_sa_entry_t *entry);
-void hip_sadb_print(void);
 void hip_linkdb_print(void);
 
 #endif /* USER_IPSEC_SADB_H_ */
