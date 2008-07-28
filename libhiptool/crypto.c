@@ -31,6 +31,11 @@
 
 #include "crypto.h"
 
+#ifdef CONFIG_HIP_PERFORMANCE
+#include "performance.h"
+#endif
+
+
 /*
  * Diffie-Hellman primes
  */
@@ -487,7 +492,15 @@ int impl_dsa_sign(u8 *digest, u8 *private_key, u8 *signature)
 	//HIP_HEXDUMP("DSA signing digest", digest, SHA_DIGEST_LENGTH);
 
 	/* calculate the DSA signature of the message hash */   
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Start PERF_DSA_SIGN_IMPL\n");
+	hip_perf_start_benchmark(perf_set, PERF_DSA_SIGN_IMPL);
+#endif
 	dsa_sig = DSA_do_sign(digest, SHA_DIGEST_LENGTH, dsa);
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Stop PERF_DSA_SIGN_IMPL\n");
+	hip_perf_stop_benchmark(perf_set, PERF_DSA_SIGN_IMPL);
+#endif
 
 	//HIP_DEBUG("DSAsig.r: %s\n", BN_bn2hex(dsa_sig->r));
 	//HIP_DEBUG("DSAsig.s: %s\n", BN_bn2hex(dsa_sig->s));
@@ -548,7 +561,15 @@ int impl_dsa_verify(u8 *digest, u8 *public_key, u8 *signature)
 	//HIP_HEXDUMP("DSA verifying digest", digest, SHA_DIGEST_LENGTH);
 
 	/* verify the DSA signature */
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Start PERF_DSA_VERIFY_IMPL\n");
+	hip_perf_start_benchmark(perf_set, PERF_DSA_VERIFY_IMPL);
+#endif
 	err = DSA_do_verify(digest, SHA_DIGEST_LENGTH, dsa_sig, dsa) == 0 ? 1 : 0;
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Stop PERF_DSA_VERIFY_IMPL\n");
+	hip_perf_stop_benchmark(perf_set, PERF_DSA_VERIFY_IMPL);
+#endif
 
   out_err:
 	if (dsa)
@@ -598,8 +619,16 @@ int impl_rsa_sign(u8 *digest, u8 *private_key, u8 *signature, struct hip_rsa_key
 
 	memset(signature, 0, keylen->n);
 	/* RSA_sign returns 0 on failure */
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Start PERF_RSA_SIGN_IMPL\n");
+	hip_perf_start_benchmark(perf_set, PERF_RSA_SIGN_IMPL);
+#endif
 	err = RSA_sign(NID_sha1, digest, SHA_DIGEST_LENGTH, signature,
 		       &sig_len, rsa) == 0 ? 1 : 0;
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Stop PERF_RSA_SIGN_IMPL\n");
+	hip_perf_stop_benchmark(perf_set, PERF_RSA_SIGN_IMPL);
+#endif
 
 	_HIP_DEBUG("***********RSA SIGNING ERROR*************\n");
 	_HIP_DEBUG("Siglen %d,  err :%d\n",sig_len, ,err);
@@ -638,8 +667,16 @@ int impl_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, struct hip_rsa_ke
 	//HIP_DEBUG("INSIDE impl_rsa_verify :: key_len=%d, sig_len= %d, sig->length = %d\n",key_len,sig_len,sig->length);
 	/* verify the RSA signature */
 	/* RSA_verify returns 0 on failure */
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Start PERF_RSA_VERIFY_IMPL\n");
+	hip_perf_start_benchmark(perf_set, PERF_RSA_VERIFY_IMPL);
+#endif
 	err = RSA_verify(NID_sha1, digest, SHA_DIGEST_LENGTH, signature,
 			RSA_size(rsa), rsa) == 0 ? 1 : 0;
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Stop PERF_RSA_VERIFY_IMPL\n");
+	hip_perf_stop_benchmark(perf_set, PERF_RSA_VERIFY_IMPL);
+#endif
 
     if(err) {
 	unsigned long e_code = ERR_get_error();

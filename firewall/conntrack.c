@@ -1,6 +1,10 @@
 #include "conntrack.h"
 #include "dlist.h"
 
+#ifdef CONFIG_HIP_PERFORMANCE
+#include "performance.h"
+#endif
+
 struct DList * hipList = NULL;
 struct DList * espList = NULL;
  
@@ -676,6 +680,10 @@ int insert_connection_from_update(struct hip_data * data,
 int verify_packet_signature(struct hip_host_id * hi, 
 			    struct hip_common * common) 
 {
+#ifdef CONFIG_HIP_PERFORMANCE
+  HIP_DEBUG("Start PERF_VERIFY\n");
+  hip_perf_start_benchmark(perf_set, PERF_VERIFY);
+#endif
   int value = -1;
   if(hi->rdata.algorithm == HIP_HI_RSA) 
     return hip_rsa_verify(hi, common);
@@ -1017,6 +1025,10 @@ int handle_update(const struct in6_addr * ip6_src,
   uint32_t spi_old = 0;
   
   _HIP_DEBUG("handle_update\n");
+#ifdef CONFIG_HIP_PERFORMANCE
+  HIP_DEBUG("Start PERF_HANDLE_UPDATE_1\n");
+  hip_perf_start_benchmark(perf_set, PERF_HANDLE_UPDATE_1);
+#endif
   seq = (struct hip_seq *) hip_get_param(common, HIP_PARAM_SEQ);
   esp_info = (struct hip_esp_info *) hip_get_param(common, HIP_PARAM_ESP_INFO);
   ack = (struct hip_ack *) hip_get_param(common, HIP_PARAM_ACK);
@@ -1237,6 +1249,11 @@ int handle_update(const struct in6_addr * ip6_src,
 	  _HIP_DEBUG("handle_update: echo found res\n");
 	}
     }
+#ifdef CONFIG_HIP_PERFORMANCE
+  HIP_DEBUG("Stop and write PERF_HANDLE_UPDATE_1\n");
+  hip_perf_stop_benchmark(perf_set, PERF_HANDLE_UPDATE_1);
+  hip_perf_write_benchmark(perf_set, PERF_HANDLE_UPDATE_1);
+#endif
   return 1;
 }
 
@@ -1250,6 +1267,10 @@ int handle_close(const struct in6_addr * ip6_src,
 		 const struct hip_common * common, 
 		 struct tuple * tuple)
 {
+#ifdef CONFIG_HIP_PERFORMANCE
+  HIP_DEBUG("Start PERF_HANDLE_CLOSE\n");
+  hip_perf_start_benchmark(perf_set, PERF_HANDLE_CLOSE);
+#endif
   //set timeout UAL + MSL ++ (?)
 	long int timeout = 20; // TODO: Should this be UAL + MSL?  
   
@@ -1262,6 +1283,11 @@ int handle_close(const struct in6_addr * ip6_src,
 	//	init_timeout_checking(timeout);	
   	//else 
   	//	timeoutValue = timeout;  	
+#ifdef CONFIG_HIP_PERFORMANCE
+  HIP_DEBUG("Stop and write PERF_HANDLE_CLOSE\n");
+  hip_perf_stop_benchmark(perf_set, PERF_HANDLE_CLOSE);
+  hip_perf_write_benchmark(perf_set, PERF_HANDLE_CLOSE);
+#endif
   return 1; 
 }
 
@@ -1275,12 +1301,22 @@ int handle_close_ack(const struct in6_addr * ip6_src,
 		 const struct hip_common * common, 
 		 struct tuple * tuple)
 {
+#ifdef CONFIG_HIP_PERFORMANCE
+  HIP_DEBUG("Start PERF_HANDLE_CLOSE_ACK\n");
+  hip_perf_start_benchmark(perf_set, PERF_HANDLE_CLOSE_ACK);
+#endif
+
   //set timeout UAL + 2MSL ++ (?)
   _HIP_DEBUG("handle_close_ack\n");
   if (tuple == NULL)
    	return 0;
    tuple->state = STATE_CLOSING;  
    remove_connection(tuple->connection);
+#ifdef CONFIG_HIP_PERFORMANCE
+  HIP_DEBUG("Stop and write PERF_HANDLE_CLOSE_ACK\n");
+  hip_perf_stop_benchmark(perf_set, PERF_HANDLE_CLOSE_ACK);
+  hip_perf_write_benchmark(perf_set, PERF_HANDLE_CLOSE_ACK);
+#endif
   return 1; //notify details not specified
 }
 

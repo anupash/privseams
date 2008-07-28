@@ -1,5 +1,9 @@
 #include "pk.h"
 
+#ifdef CONFIG_HIP_PERFORMANCE
+#include "performance.h"
+#endif
+
 int hip_rsa_sign(struct hip_host_id *priv, struct hip_common *msg) {
 	u8 sha1_digest[HIP_AH_SHA_LEN];
 	u8 *signature;
@@ -111,6 +115,16 @@ static int verify(struct hip_host_id *peer_pub, struct hip_common *msg, int rsa)
 							       sig->signature);
 	}
 
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Stop and write PERF_VERIFY, PERF_RSA_VERIFY_IMPL, PERF_DSA_VERIFY_IMPL\n");
+	hip_perf_stop_benchmark(perf_set, PERF_VERIFY);
+	hip_perf_stop_benchmark(perf_set, PERF_RSA_VERIFY_IMPL);
+	hip_perf_stop_benchmark(perf_set, PERF_DSA_VERIFY_IMPL);
+	hip_perf_write_benchmark(perf_set, PERF_VERIFY);
+	hip_perf_write_benchmark(perf_set, PERF_RSA_VERIFY_IMPL);
+	hip_perf_write_benchmark(perf_set, PERF_DSA_VERIFY_IMPL);
+#endif
+
 	if (hip_get_msg_type(msg) == HIP_R1) {
 	    memcpy(pz->opaque, opaque, 3);
 	    pz->I = randi;
@@ -138,10 +152,18 @@ static int verify(struct hip_host_id *peer_pub, struct hip_common *msg, int rsa)
 
 int hip_rsa_verify(struct hip_host_id *peer_pub, struct hip_common *msg)
 {
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Start PERF_RSA_VERIFY_IMPL\n");
+	hip_perf_start_benchmark(perf_set, PERF_RSA_VERIFY_IMPL);
+#endif
 	return verify(peer_pub, msg, 1);
 }
 
 int hip_dsa_verify(struct hip_host_id *peer_pub, struct hip_common *msg)
 {
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Start PERF_DSA_VERIFY_IMPL\n");
+	hip_perf_start_benchmark(perf_set, PERF_DSA_VERIFY_IMPL);
+#endif
 	return verify(peer_pub, msg, 0);
 }

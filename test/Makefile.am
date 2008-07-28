@@ -42,7 +42,9 @@ endif
 conntest_client_opp_LDADD += ../opendht/.libs/libhipopendht.a
 LDADD += ../opendht/.libs/libhipopendht.a
 if HIP_PERFORMANCE
-LDADD += ../performance/.libs/libperformance.a
+  conntest_client_opp_LDADD += ../performance/.libs/libperformance.a
+  hashtest_LDADD += ../performance/.libs/libperformance.a
+  LDADD += ../performance/.libs/libperformance.a
 endif
 CFLAGS += $(HIPL_XMLL)
 
@@ -52,6 +54,10 @@ if HIP_CORPORATE
   opendhtteststub_LDADD += -lhiptool
 else
   opendhtteststub_LDADD += ../libhiptool/.libs/libhiptool.a
+endif
+
+if HIP_PERFORMANCE
+  opendhtteststub_LDADD += ../performance/.libs/libperformance.a
 endif
 
 bin_PROGRAMS = conntest-client-opp

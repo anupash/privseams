@@ -16,6 +16,10 @@
 #define PISA_NONCE_LEN_1SPI (4 + HIP_AH_SHA_LEN)
 #define PISA_NONCE_LEN_2SPI (8 + HIP_AH_SHA_LEN)
 
+#ifdef CONFIG_HIP_PERFORMANCE
+#include "performance.h"
+#endif
+
 /*#define PISA_TEST_MULTIPLE_PARAMETERS*/
 /*#define PISA_INTRODUCE_ERROR_NONCE*/
 /*#define PISA_INTRODUCE_ERROR_PUZZLE_OPAQUE*/
@@ -516,11 +520,20 @@ static void pisa_reject_connection(hip_fw_context_t *ctx,
  */
 static int pisa_handler_i2(hip_fw_context_t *ctx)
 {
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Start PERF_I2\n");
+	hip_perf_start_benchmark(perf_set, PERF_I2);
+#endif
 	int verdict = NF_ACCEPT;
 
 	pisa_insert_nonce_1spi(ctx);
 	pisa_insert_puzzle(ctx);
 
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Stop and write PERF_I2\n");
+	hip_perf_stop_benchmark(perf_set, PERF_I2);
+	hip_perf_write_benchmark(perf_set, PERF_I2);
+#endif
 	return verdict;
 }
 
@@ -532,6 +545,10 @@ static int pisa_handler_i2(hip_fw_context_t *ctx)
  */
 static int pisa_handler_r2(hip_fw_context_t *ctx)
 {
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Start PERF_R2\n");
+	hip_perf_start_benchmark(perf_set, PERF_R2);
+#endif
 	int verdict = NF_DROP, sig = 0;
 	struct hip_solution_m *solution = NULL;
 	struct hip_tlv_common *nonce = NULL;
@@ -551,6 +568,13 @@ static int pisa_handler_r2(hip_fw_context_t *ctx)
 		verdict = NF_ACCEPT;
 	}
 
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Stop and write PERF_R2, PERF_BASE\n");
+	hip_perf_stop_benchmark(perf_set, PERF_R2);
+	hip_perf_stop_benchmark(perf_set, PERF_BASE);
+	hip_perf_write_benchmark(perf_set, PERF_R2);
+	hip_perf_write_benchmark(perf_set, PERF_BASE);
+#endif
 	return verdict;
 }
 

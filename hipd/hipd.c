@@ -8,6 +8,10 @@
  */ 
 #include "hipd.h" 
 
+#ifdef CONFIG_HIP_PERFORMANCE
+#include "performance.h"
+#endif
+
 
 /* Defined as a global just to allow freeing in exit(). Do not use outside
    of this file! */
@@ -294,6 +298,40 @@ int hipd_main(int argc, char *argv[])
 	   disturb further base exchanges. Use -N flag to disable this. */
 	int flush_ipsec = 1;
 
+#ifdef CONFIG_HIP_PERFORMANCE
+	int bench_set = 0;
+	HIP_DEBUG("Creating perf set\n");
+	perf_set = hip_perf_create(PERF_MAX);
+	
+	hip_perf_set_name(perf_set, PERF_I1_SEND, "results/PERF_I1_SEND.csv");
+	hip_perf_set_name(perf_set, PERF_I1,"results/PERF_I1.csv");
+	hip_perf_set_name(perf_set, PERF_R1,"results/PERF_R1.csv");
+	hip_perf_set_name(perf_set, PERF_I2,"results/PERF_I2.csv");
+	hip_perf_set_name(perf_set, PERF_R2,"results/PERF_R2.csv");
+	hip_perf_set_name(perf_set, PERF_DH_CREATE,"results/PERF_DH_CREATE.csv");
+	hip_perf_set_name(perf_set, PERF_SIGN,"results/PERF_SIGN.csv");
+	hip_perf_set_name(perf_set, PERF_DSA_SIGN_IMPL,"results/PERF_DSA_SIGN_IMPL.csv");
+	hip_perf_set_name(perf_set, PERF_VERIFY,"results/PERF_VERIFY.csv");
+	hip_perf_set_name(perf_set, PERF_BASE,"results/PERF_BASE.csv");
+	hip_perf_set_name(perf_set, PERF_ALL,"results/PERF_ALL.csv");
+	hip_perf_set_name(perf_set, PERF_UPDATE_SEND,"results/PERF_UPDATE_SEND.csv");
+	hip_perf_set_name(perf_set, PERF_VERIFY_UPDATE,"results/PERF_VERIFY_UPDATE.csv");
+	hip_perf_set_name(perf_set, PERF_UPDATE_COMPLETE,"results/PERF_UPDATE_COMPLETE.csv");
+	hip_perf_set_name(perf_set, PERF_HANDLE_UPDATE_ESTABLISHED,"results/PERF_HANDLE_UPDATE_ESTABLISHED.csv");
+	hip_perf_set_name(perf_set, PERF_HANDLE_UPDATE_REKEYING,"results/PERF_HANDLE_UPDATE_REKEYING.csv");
+	hip_perf_set_name(perf_set, PERF_UPDATE_FINISH_REKEYING,"results/PERF_UPDATE_FINISH_REKEYING.csv");
+	hip_perf_set_name(perf_set, PERF_CLOSE_SEND,"results/PERF_CLOSE_SEND.csv");
+	hip_perf_set_name(perf_set, PERF_HANDLE_CLOSE,"results/PERF_HANDLE_CLOSE.csv");
+	hip_perf_set_name(perf_set, PERF_HANDLE_CLOSE_ACK,"results/PERF_HANDLE_CLOSE_ACK.csv");
+	hip_perf_set_name(perf_set, PERF_HANDLE_UPDATE_1,"results/PERF_HANDLE_UPDATE_1.csv");
+	hip_perf_set_name(perf_set, PERF_HANDLE_UPDATE_2,"results/PERF_HANDLE_UPDATE_2.csv");
+	hip_perf_set_name(perf_set, PERF_CLOSE_COMPLETE,"results/PERF_CLOSE_COMPLETE.csv");
+	hip_perf_set_name(perf_set, PERF_DSA_VERIFY_IMPL,"results/PERF_DSA_VERIFY_IMPL.csv");
+	hip_perf_set_name(perf_set, PERF_RSA_VERIFY_IMPL,"results/PERF_RSA_VERIFY_IMPL.csv");
+	hip_perf_set_name(perf_set, PERF_RSA_SIGN_IMPL,"results/PERF_RSA_SIGN_IMPL.csv");
+	hip_perf_open(perf_set);
+#endif
+
 	/* Parse command-line options */
 	while ((ch = getopt(argc, argv, ":bk3:")) != -1)
 	{		
@@ -417,6 +455,15 @@ int hipd_main(int argc, char *argv[])
                                 goto to_maintenance;
                         } 
                 }
+#ifdef CONFIG_HIP_PERFORMANCE
+		if(bench_set){ //1 = true; 0 = false
+			HIP_DEBUG("Stop and write PERF_ALL\n");
+			hip_perf_stop_benchmark(perf_set, PERF_ALL);
+			hip_perf_write_benchmark(perf_set, PERF_ALL);
+			bench_set  = 0;
+		}
+#endif
+
 
                 /* see bugzilla bug id 392 to see why */
                 if (FD_ISSET(hip_raw_sock_v6, &read_fdset) && 
@@ -453,6 +500,12 @@ int hipd_main(int argc, char *argv[])
                     }
                 } else {
                     if (FD_ISSET(hip_raw_sock_v6, &read_fdset)) {
+#ifdef CONFIG_HIP_PERFORMANCE
+			HIP_DEBUG("Start PERF_ALL\n");
+			bench_set = 1; //1 = true; 0 = false
+			hip_perf_start_benchmark(perf_set, PERF_ALL);
+#endif
+			
                         /* Receiving of a raw HIP message from IPv6 socket. */
 			struct in6_addr saddr, daddr;
 			hip_portpair_t pkt_info;                        

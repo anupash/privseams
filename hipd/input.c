@@ -21,6 +21,10 @@
 extern unsigned int opportunistic_mode;
 #endif
 
+#ifdef CONFIG_HIP_PERFORMANCE
+#include "performance.h"
+#endif
+
 /** A function set for NAT travelsal. */
 extern hip_xmit_func_set_t nat_xmit_func_set;
 extern int hip_build_param_esp_info(struct hip_common *msg,
@@ -320,6 +324,10 @@ int hip_produce_keying_material(struct hip_common *msg, struct hip_context *ctx,
 	_HIP_DEBUG("dhpv->group_id= %d\n",(*dhpv)->group_id);
 	_HIP_DEBUG("dhpv->pub_len= %d\n", ntohs((*dhpv)->pub_len));
 
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Start PERF_DH_CREATE\n");
+	hip_perf_start_benchmark(perf_set, PERF_DH_CREATE);
+#endif
 	HIP_IFEL((dh_shared_len = hip_calculate_shared_secret(
 			  (*dhpv)->public_value, (*dhpv)->group_id,
 			  ntohs((*dhpv)->pub_len), dh_shared_key,
@@ -407,6 +415,10 @@ int hip_produce_keying_material(struct hip_common *msg, struct hip_context *ctx,
  		hip_keymat_draw_and_copy(ctx->esp_out.key, 	&km,	esp_transf_length);
  		hip_keymat_draw_and_copy(ctx->auth_out.key, 	&km,	auth_transf_length);
  	}
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Stop PERF_DH_CREATE\n");
+	hip_perf_stop_benchmark(perf_set, PERF_DH_CREATE);
+#endif
  	HIP_HEXDUMP("HIP-gl encryption:", &ctx->hip_enc_out.key, hip_transf_length);
  	HIP_HEXDUMP("HIP-gl integrity (HMAC) key:", &ctx->hip_hmac_out.key,
  		    hmac_transf_length);
@@ -618,16 +630,29 @@ int hip_receive_control_packet(struct hip_common *msg,
 
 	switch(type) {
 	case HIP_I1:
+#ifdef CONFIG_HIP_PERFORMANCE
+	  HIP_DEBUG("Start PERF_I1\n");
+	  hip_perf_start_benchmark(perf_set, PERF_I1);
+#endif
 		/* No state. */
 	  HIP_DEBUG("Received HIP_I1 message\n");
 	  err = (hip_get_rcv_default_func_set())->hip_receive_i1(msg, src_addr,
 								 dst_addr,
 								 entry,
 								 msg_info);
+#ifdef CONFIG_HIP_PERFORMANCE
+	  HIP_DEBUG("Stop and write PERF_I1\n");
+	  hip_perf_stop_benchmark(perf_set, PERF_I1);
+	  hip_perf_write_benchmark(perf_set, PERF_I1);
+#endif
 	  break;
 
 	case HIP_I2:
 		/* Possibly state. */
+#ifdef CONFIG_HIP_PERFORMANCE
+		HIP_DEBUG("Start PERF_I2\n");
+		hip_perf_start_benchmark(perf_set, PERF_I2);
+#endif
 		if(entry){
 		     err = entry->hadb_rcv_func->
 			  hip_receive_i2(msg, src_addr, dst_addr, entry,
@@ -638,21 +663,44 @@ int hip_receive_control_packet(struct hip_common *msg,
 				hip_receive_i2(msg, src_addr, dst_addr, entry,
 					       msg_info);
 		}
+#ifdef CONFIG_HIP_PERFORMANCE
+		HIP_DEBUG("Stop and write PERF_I2\n");
+		hip_perf_stop_benchmark(perf_set, PERF_I2);
+		hip_perf_write_benchmark(perf_set, PERF_I2);
+#endif
 		break;
 
 	case HIP_R1:
+#ifdef CONFIG_HIP_PERFORMANCE
+		HIP_DEBUG("Start PERF_R1\n");
+		hip_perf_start_benchmark(perf_set, PERF_R1);
+#endif
 	  	/* State. */
 	        HIP_IFEL(!entry, -1, "No entry when receiving R1\n");
 		HIP_IFCS(entry, err = entry->hadb_rcv_func->
 			 hip_receive_r1(msg, src_addr, dst_addr, entry,
 					msg_info));
+#ifdef CONFIG_HIP_PERFORMANCE
+		HIP_DEBUG("Stop and write PERF_R1\n");
+		hip_perf_stop_benchmark(perf_set, PERF_R1);
+		hip_perf_write_benchmark(perf_set, PERF_R1);
+#endif
 		break;
 
 	case HIP_R2:
+#ifdef CONFIG_HIP_PERFORMANCE
+		HIP_DEBUG("Start PERF_R2\n");
+		hip_perf_start_benchmark(perf_set, PERF_R2);
+#endif
 		HIP_IFCS(entry, err = entry->hadb_rcv_func->
 			 hip_receive_r2(msg, src_addr, dst_addr, entry,
 					msg_info));
 		//HIP_STOP_TIMER(KMM_GLOBAL,"Base Exchange");
+#ifdef CONFIG_HIP_PERFORMANCE
+		HIP_DEBUG("Stop and write PERF_R2\n");
+		hip_perf_stop_benchmark(perf_set, PERF_R2);
+		hip_perf_write_benchmark(perf_set, PERF_R2);
+#endif
 		break;
 
 	case HIP_UPDATE:
@@ -681,13 +729,31 @@ int hip_receive_control_packet(struct hip_common *msg,
 	     skip_sync = 0;
 	     break;
 	case HIP_CLOSE:
+#ifdef CONFIG_HIP_PERFORMANCE
+		HIP_DEBUG("Start PERF_HANDLE_CLOSE\n");
+		hip_perf_start_benchmark(perf_set, PERF_HANDLE_CLOSE);
+#endif
 		HIP_IFCS(entry, err = entry->hadb_rcv_func->
 			 hip_receive_close(msg, entry));
+#ifdef CONFIG_HIP_PERFORMANCE
+		HIP_DEBUG("Stop and write PERF_HANDLE_CLOSE");
+		hip_perf_stop_benchmark(perf_set, PERF_HANDLE_CLOSE);
+		hip_perf_write_benchmark(perf_set, PERF_HANDLE_CLOSE);
+#endif
 		break;
 
 	case HIP_CLOSE_ACK:
+#ifdef CONFIG_HIP_PERFORMANCE
+		HIP_DEBUG("Start PERF_HANDLE_CLOSE_ACK\n");
+		hip_perf_start_benchmark(perf_set, PERF_HANDLE_CLOSE_ACK);
+#endif
 		HIP_IFCS(entry, err = entry->hadb_rcv_func->
 			 hip_receive_close_ack(msg, entry));
+#ifdef CONFIG_HIP_PERFORMANCE
+		HIP_DEBUG("Stop and write PERF_HANDLE_CLOSE_ACK\n");
+		hip_perf_stop_benchmark(perf_set, PERF_HANDLE_CLOSE_ACK);
+		hip_perf_write_benchmark(perf_set, PERF_HANDLE_CLOSE_ACK);
+#endif
 		break;
 
 	default:
@@ -695,6 +761,16 @@ int hip_receive_control_packet(struct hip_common *msg,
 		err = -ENOSYS;
 	}
 
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Write PERF_SIGN, PERF_DSA_SIGN_IMPL, PERF_RSA_SIGN_IMPL, PERF_VERIFY, PERF_DSA_VERIFY_IMPL, PERF_RSA_VERIFY_IMPL, PERF_DH_CREATE\n");
+	hip_perf_write_benchmark(perf_set, PERF_SIGN);
+	hip_perf_write_benchmark(perf_set, PERF_DSA_SIGN_IMPL);
+	hip_perf_write_benchmark(perf_set, PERF_RSA_SIGN_IMPL);
+	hip_perf_write_benchmark(perf_set, PERF_VERIFY);
+	hip_perf_write_benchmark(perf_set, PERF_DSA_VERIFY_IMPL);
+	hip_perf_write_benchmark(perf_set, PERF_RSA_VERIFY_IMPL);
+	hip_perf_write_benchmark(perf_set, PERF_DH_CREATE);
+#endif	
 	HIP_DEBUG("Done with control packet, err is %d.\n", err);
 
 	if (err)
@@ -848,6 +924,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		 dhpv->group_id, dhpv->public_value, written,
 		 HIP_MAX_DH_GROUP_ID, NULL, 0), -1,
 		 "Building of DH failed.\n");
+
 
     /********** HIP transform. **********/
 	HIP_IFE(!(param = hip_get_param(ctx->input, HIP_PARAM_HIP_TRANSFORM)), -ENOENT);
@@ -1063,7 +1140,15 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	/********** Signature **********/
 	/* Build a digest of the packet built so far. Signature will
 	   be calculated over the digest. */
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Start PERF_SIGN\n");
+	hip_perf_start_benchmark(perf_set, PERF_SIGN);
+#endif
 	HIP_IFEL(entry->sign(entry->our_priv, i2), -EINVAL, "Could not create signature\n");
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Stop PERF_SIGN\n");
+	hip_perf_stop_benchmark(perf_set, PERF_SIGN);
+#endif
 
 	/********** ECHO_RESPONSE (OPTIONAL) ************/
 	/* must reply */
@@ -1157,8 +1242,16 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 			 -ENOENT, "No HOST_ID found in R1\n");
 
 		HIP_IFE(hip_init_peer(entry, r1, peer_host_id), -EINVAL);
+#ifdef CONFIG_HIP_PERFORMANCE
+		HIP_DEBUG("Start PERF_VERIFY\n");
+		hip_perf_start_benchmark(perf_set, PERF_VERIFY);
+#endif
 		HIP_IFEL(entry->verify(entry->peer_pub, r1), -EINVAL,
 			 "Verification of R1 signature failed\n");
+#ifdef CONFIG_HIP_PERFORMANCE
+		HIP_DEBUG("Stop PERF_VERIFY\n");
+		hip_perf_stop_benchmark(perf_set, PERF_VERIFY);
+#endif
         }
 
 	/* R1 packet had destination port 50500, which means that the peer is
@@ -1536,8 +1629,16 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 	HIP_IFEL(hip_build_param_hmac2_contents(r2, &hmac, entry->our_pub), -1,
 		 "Failed to build parameter HMAC2 contents.\n");
 
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Start PERF_SIGN\n");
+	hip_perf_start_benchmark(perf_set, PERF_SIGN);
+#endif
 	HIP_IFEL(entry->sign(entry->our_priv, r2), -EINVAL,
 		 "Failed to sign R2 packet.\n");
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Stop PERF_SIGN\n");
+	hip_perf_stop_benchmark(perf_set, PERF_SIGN);
+#endif
 
 //add by santtu
 #ifdef CONFIG_HIP_RVS
@@ -1991,8 +2092,16 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	HIP_IFE(hip_init_peer(entry, i2, host_id_in_enc), -EINVAL);
 
 	/* Validate signature */
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Start PERF_VERIFY(2)\n");
+	hip_perf_start_benchmark(perf_set, PERF_VERIFY);
+#endif
 	HIP_IFEL(entry->verify(entry->peer_pub, ctx->input), -EINVAL,
 		 "Verification of I2 signature failed\n");
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Stop PERF_VERIFY(2)\n");
+	hip_perf_stop_benchmark(perf_set, PERF_VERIFY);
+#endif
 
 	/* If we have old SAs with these HITs delete them */
 	hip_hadb_delete_inbound_spi(entry, 0);
@@ -2275,6 +2384,11 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 //end add
 
 
+#ifdef CONFIG_HIP_PERFORMANCE
+        HIP_DEBUG("Stop and write PERF_BASE\n");
+        hip_perf_stop_benchmark(perf_set, PERF_BASE);
+        hip_perf_write_benchmark(perf_set, PERF_BASE);
+#endif
 
 
 	HIP_DEBUG("Reached %s state\n", hip_state_str(entry->state));
@@ -2460,8 +2574,17 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	}
 
 	/* Signature validation */
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Start PERF_VERIFY(3)\n");
+	hip_perf_start_benchmark(perf_set, PERF_VERIFY);
+#endif
  	HIP_IFEL(entry->verify(entry->peer_pub, r2), -EINVAL,
 		 "R2 signature verification failed.\n");
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Stop PERF_VERIFY(3)\n");
+	hip_perf_stop_benchmark(perf_set, PERF_VERIFY);
+#endif
+
 
     /* The rest */
  	HIP_IFEL(!(esp_info = hip_get_param(r2, HIP_PARAM_ESP_INFO)), -EINVAL,
@@ -2480,7 +2603,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	HIP_DEBUG("spi_in: 0x%x\n", spi_in);
 
 	tfm = entry->esp_transform;
-	HIP_DEBUG("esp_transform: %i\ņ", tfm);
+	HIP_DEBUG("esp_transform: %i\n", tfm);
 
 	HIP_DEBUG("R2 packet source port: %d, destination port %d.\n",
 		  r2_info->src_port, r2_info->dst_port);
@@ -2706,6 +2829,11 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	hip_oppipdb_delentry(&(entry->preferred_address));
 #endif
 	HIP_DEBUG("Reached ESTABLISHED state\n");
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Stop and write PERF_BASE\n");
+	hip_perf_stop_benchmark(perf_set, PERF_BASE);
+	hip_perf_write_benchmark(perf_set, PERF_BASE);
+#endif
 	if (entry->hip_msg_retrans.buf) {
 		free(entry->hip_msg_retrans.buf);
 		entry->hip_msg_retrans.buf = NULL;
@@ -2732,6 +2860,10 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		  struct in6_addr *i1_daddr, hip_ha_t *entry,
 		  hip_portpair_t *i1_info)
 {
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Start PERF_BASE\n");
+	hip_perf_start_benchmark(perf_set, PERF_BASE);
+#endif
      int err = 0, state;
      hip_tlv_type_t  relay_para_type = 0;
      uint16_t nonce = 0;

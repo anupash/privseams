@@ -61,4 +61,35 @@ int hip_perf_write_benchmark(perf_set_t * perf_set, int slot);
 
 int hip_perf_close(perf_set_t *perf_set);
 
+#define PERF_I1                         0
+#define PERF_R1                         1
+#define PERF_I2                         2
+#define PERF_R2                         3
+#define PERF_DH_CREATE                  5
+#define PERF_SIGN                       6
+#define PERF_DSA_SIGN_IMPL              7
+#define PERF_VERIFY                     8
+#define PERF_BASE                       9
+#define PERF_I1_SEND                    10
+#define PERF_UPDATE_SEND                11
+#define PERF_VERIFY_UPDATE              12
+#define PERF_UPDATE_COMPLETE            13
+#define PERF_ALL                        14
+#define PERF_HANDLE_UPDATE_ESTABLISHED  15
+#define PERF_HANDLE_UPDATE_REKEYING     16
+#define PERF_UPDATE_FINISH_REKEYING     17
+#define PERF_CLOSE_SEND                 18
+#define PERF_HANDLE_CLOSE               19
+#define PERF_HANDLE_CLOSE_ACK           20
+#define PERF_CLOSE_COMPLETE             21
+#define PERF_HANDLE_UPDATE_1            22
+#define PERF_HANDLE_UPDATE_2            23
+#define PERF_DSA_VERIFY_IMPL            24
+#define PERF_RSA_VERIFY_IMPL            25
+#define PERF_RSA_SIGN_IMPL              25
+
+#define PERF_MAX                        26 /* number of sensors */
+
+perf_set_t *perf_set;
+
 #endif

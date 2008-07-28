@@ -15,6 +15,9 @@
  *          <a href="http://www1.ietf.org/mail-archive/web/hipsec/current/msg01745.html">Simplified state machine</a>
  */
 #include "update.h"
+#ifdef CONFIG_HIP_PERFORMANCE
+#include "performance.h"
+#endif
 
 /* All Doxygen function comments are now moved to the header file. Some comments
    are inadequate. */
@@ -352,6 +355,11 @@ int hip_handle_update_established(hip_ha_t *entry, hip_common_t *msg,
 				  in6_addr_t *dst_ip, 
 				  hip_portpair_t *update_info)
 {
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Start PERF_UPDATE_COMPLETE, PERF_HANDLE_UPDATE_ESTABLISHED\n");
+	hip_perf_start_benchmark(perf_set, PERF_UPDATE_COMPLETE);
+	hip_perf_start_benchmark(perf_set, PERF_HANDLE_UPDATE_ESTABLISHED);
+#endif
 	int err = -1;
 #if 0 
 	in6_addr_t *hits = &msg->hits, *hitr = &msg->hitr;
@@ -513,6 +521,11 @@ int hip_handle_update_established(hip_ha_t *entry, hip_common_t *msg,
 	/* 5.  The system sends the UPDATE packet and transitions to state
 	   REKEYING. */
 	entry->update_state = HIP_UPDATE_STATE_REKEYING;
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Stop and write PERF_HANDLE_UPDATE_ESTABLISHED\n");
+	hip_perf_stop_benchmark( perf_set, PERF_HANDLE_UPDATE_ESTABLISHED);
+	hip_perf_write_benchmark( perf_set, PERF_HANDLE_UPDATE_ESTABLISHED);
+#endif
 	
 	/* Destination port of the received packet becomes the source
 	   port of the UPDATE packet. */
@@ -553,6 +566,10 @@ int hip_update_finish_rekeying(hip_common_t *msg, hip_ha_t *entry,
 	struct hip_crypto_key espkey_gl, authkey_gl;
 	struct hip_crypto_key espkey_lg, authkey_lg;
 
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Start PERF_UPDATE_FINISH_REKEYING\n");
+	hip_perf_start_benchmark( perf_set, PERF_UPDATE_FINISH_REKEYING);
+#endif
 	HIP_DEBUG("\n");
 	ack = hip_get_param(msg, HIP_PARAM_ACK);
 
@@ -726,6 +743,14 @@ int hip_update_finish_rekeying(hip_common_t *msg, hip_ha_t *entry,
 	} else
 		_HIP_DEBUG("prev SPI_in = new SPI_in, not deleting the inbound SA\n");
 
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Stop and write PERF_UPDATE_COMPLETE, PERF_UPDATE_FINISH_REKEYING\n");
+	hip_perf_stop_benchmark(perf_set, PERF_UPDATE_COMPLETE);
+	hip_perf_stop_benchmark(perf_set, PERF_UPDATE_FINISH_REKEYING);
+	hip_perf_write_benchmark(perf_set, PERF_UPDATE_COMPLETE);
+	hip_perf_write_benchmark(perf_set, PERF_UPDATE_FINISH_REKEYING);
+#endif
+
 	/* start verifying addresses */
 	HIP_DEBUG("start verifying addresses for new spi 0x%x\n", new_spi_out);
 	err = entry->hadb_update_func->hip_update_send_addr_verify(
@@ -775,6 +800,10 @@ int hip_handle_update_rekeying(hip_ha_t *entry, hip_common_t *msg,
 	//u8 signature[HIP_RSA_SIGNATURE_LEN]; /* RSA sig > DSA sig */
      
 	/* 8.11.2  Processing an UPDATE packet in state REKEYING */
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Start PERF_HANDLE_UPDATE_REKEYING\n");
+	hip_perf_start_benchmark( perf_set, PERF_HANDLE_UPDATE_REKEYING);
+#endif
 
 	HIP_DEBUG("\n");
 
@@ -832,6 +861,11 @@ int hip_handle_update_rekeying(hip_ha_t *entry, hip_common_t *msg,
 		 "Could not sign UPDATE. Failing\n");
 	HIP_IFEL(hip_hadb_get_peer_addr(entry, &daddr), -1,
 		 "Failed to get peer address\n");
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Stop and write PERF_HANDLE_UPDATE_REKEYING\n");
+	hip_perf_stop_benchmark( perf_set, PERF_HANDLE_UPDATE_REKEYING);
+	hip_perf_write_benchmark( perf_set, PERF_HANDLE_UPDATE_REKEYING);
+#endif
 
 	HIP_IFEL(entry->hadb_xmit_func->
 		 hip_send_pkt(&entry->local_address, &daddr,
@@ -1745,6 +1779,10 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 		       in6_addr_t *update_daddr, hip_ha_t *entry,
 		       hip_portpair_t *sinfo)
 {
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Start PERF_HANDLE_UPDATE_1\n");
+	hip_perf_start_benchmark( perf_set, PERF_HANDLE_UPDATE_1);
+#endif
 	int err = 0, has_esp_info = 0, pl = 0, send_ack = 0;
 	in6_addr_t *hits = NULL;
 	in6_addr_t *src_ip = NULL , *dst_ip = NULL;
@@ -1797,6 +1835,10 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 	   and only after successful verification, we can move to handling the
 	   optional parameters. */
 
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Start PERF_VERIFY_UPDATE\n");
+	hip_perf_start_benchmark(perf_set, PERF_VERIFY_UPDATE);
+#endif
 	/* RFC 5201: The system MUST verify the HMAC in the UPDATE packet. If
 	   the verification fails, the packet MUST be dropped. */
 	HIP_IFEL(hip_verify_packet_hmac(msg, &entry->hip_hmac_in), -1, 
@@ -1808,6 +1850,11 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 	HIP_IFEL(entry->verify(entry->peer_pub, msg), -1, 
 		 "Verification of UPDATE signature failed.\n");
 	
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Stop and write PERF_VERIFY_UPDATE\n");
+	hip_perf_stop_benchmark(perf_set, PERF_VERIFY_UPDATE);
+	hip_perf_write_benchmark(perf_set, PERF_VERIFY_UPDATE);
+#endif
 	/* RFC 5201: If both ACK and SEQ parameters are present, first ACK is
 	   processed, then the rest of the packet is processed as with SEQ. */
 	ack = hip_get_param(msg, HIP_PARAM_ACK);
@@ -1839,6 +1886,12 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 	locator = hip_get_param(msg, HIP_PARAM_LOCATOR);
 	echo_request = hip_get_param(msg, HIP_PARAM_ECHO_REQUEST);
 	echo_response = hip_get_param(msg, HIP_PARAM_ECHO_RESPONSE);
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Stop PERF_HANDLE_UPDATE_1\n");
+	hip_perf_stop_benchmark( perf_set, PERF_HANDLE_UPDATE_1);
+	HIP_DEBUG("Start PERF_HANDLE_UPDATE_2\n");
+	hip_perf_start_benchmark(perf_set, PERF_HANDLE_UPDATE_2);
+#endif
 	if (locator != NULL) {
 		HIP_DEBUG("LOCATOR parameter found.\n");
 		err = entry->hadb_update_func->hip_handle_update_plain_locator(
@@ -1927,7 +1980,15 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 		HIP_IFEL(hip_update_send_ack(entry, msg, src_ip, dst_ip), -1, 
 			 "Error sending UPDATE ACK.\n");
 	}
-	
+      
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Stop and write PERF_HANDLE_UPDATE_2\n");
+	hip_perf_stop_benchmark(perf_set,  PERF_HANDLE_UPDATE_2);
+	hip_perf_write_benchmark(perf_set, PERF_HANDLE_UPDATE_2);
+	HIP_DEBUG("Write PERF_HANDLE_UPDATE_1\n");
+	hip_perf_write_benchmark( perf_set, PERF_HANDLE_UPDATE_1);
+#endif
+
  out_err:
 	if (err != 0)
 		HIP_ERROR("UPDATE handler failed, err=%d\n", err);
@@ -2272,6 +2333,12 @@ int hip_send_update(struct hip_hadb_state *entry,
 		    int addr_count, int ifindex, int flags, 
 		    int is_add, struct sockaddr* addr)
 {
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Start PERF_UPDATE_COMPLETE, PERF_UPDATE_SEND\n");
+	hip_perf_start_benchmark(perf_set, PERF_UPDATE_COMPLETE);
+	hip_perf_start_benchmark(perf_set, PERF_UPDATE_SEND);
+#endif
+
 	int err = 0, make_new_sa = 0, add_locator;
 	int was_bex_addr = -1;
 	int i = 0;
@@ -2590,6 +2657,11 @@ skip_src_addr_change:
  out_of_loop:
 
      HIP_DEBUG("Sending initial UPDATE packet.\n");
+#ifdef CONFIG_HIP_PERFORMANCE
+     HIP_DEBUG("Stop and write PERF_UPDATE_SEND\n");
+     hip_perf_stop_benchmark(perf_set, PERF_UPDATE_SEND);
+     hip_perf_write_benchmark(perf_set, PERF_UPDATE_SEND);
+#endif
      /* guarantees retransmissions */
      entry->update_state = HIP_UPDATE_STATE_REKEYING;
 

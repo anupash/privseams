@@ -32,6 +32,9 @@ if HIP_CORPORATE
 else
   hipd_LDADD += ../libhiptool/.libs/libhiptool.a
 endif
+if HIP_PERFORMANCE
+  hipd_LDADD += ../performance/.libs/libperformance.a
+endif
 
 # Required for pjsip
 hipd_LDADD += -lpthread -luuid
