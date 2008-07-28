@@ -437,7 +437,7 @@ out_err:
 	return err;
 }
 
-void hip_delete_sa(u32 spi, struct in6_addr *peer_addr,
+void hip_delete_sa(uint32_t spi, struct in6_addr *peer_addr,
                    struct in6_addr *dst_addr,
                    int family, int sport, int dport)
 {

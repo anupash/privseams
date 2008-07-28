@@ -3,9 +3,7 @@
 
 int hip_firewall_sock_fd = -1;
 
-/* hipd sends a packet to the firewall making it add a new sa entry
- *
- * this function is called by hip daemon */
+/* adds a new SA entry for the specified direction to the sadb in userspace ipsec */
 uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr,
 				    struct in6_addr *daddr,
 				    struct in6_addr *src_hit,
@@ -53,39 +51,79 @@ uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr,
 	return err;
 }
 
+/* deletes the specified SA entry from the sadb in userspace ipsec */
+void hip_userspace_ipsec_delete_sa(u32 spi, struct in6_addr *peer_addr,
+		struct in6_addr *dst_addr, int family, int sport, int dport)
+{
+	// TODO implement
+	HIP_DEBUG("THIS HAS TO BE IMPLEMENTED\n");
+}
+
+/* deletes all SA entries in the sadb in userspace ipsec */
+int hip_userspace_ipsec_flush_all_sa()
+{
+	// TODO implement
+	HIP_DEBUG("THIS HAS TO BE IMPLEMENTED\n");
+}
+
+/* security policies are not used by userspace ipsec, as we have static
+ * rules in iptables capturing all matching packets */
 int hip_userspace_ipsec_setup_hit_sp_pair(hip_hit_t *src_hit,
 					  hip_hit_t *dst_hit,
 					  struct in6_addr *src_addr,
 					  struct in6_addr *dst_addr, u8 proto,
-					  int use_full_prefix, int update) {
-	/* XX FIXME: TAO */
+					  int use_full_prefix, int update)
+{
+	/* if called anywhere in hipd code, we pretend to have had a successful
+	 * operation */
 	return 0;
 }
 
+/* security policies are not used by userspace ipsec, as we have static
+ * rules in iptables capturing all matching packets */
 void hip_userspace_ipsec_delete_hit_sp_pair(hip_hit_t *src_hit,
 					    hip_hit_t *dst_hit, u8 proto,
-					    int use_full_prefix) {
-	/* XX FIXME: TAO */
+					    int use_full_prefix)
+{
+	// nothing to do here
 }
 
-int hip_userspace_ipsec_flush_all_policy() {
-	/* XX FIXME: TAO */
+/* security policies are not used by userspace ipsec, as we have static
+ * rules in iptables capturing all matching packets */
+int hip_userspace_ipsec_flush_all_policy()
+{
+	/* if called anywhere in hipd code, we pretend to have had a successful
+	 * operation */
+	return 0;
 }
 
-int hip_userspace_ipsec_flush_all_sa() {
-	/* XX FIXME: TAO */
-}
-
+/* returns a random SPI value */
 uint32_t hip_userspace_ipsec_acquire_spi(hip_hit_t *srchit,
-					 hip_hit_t *dsthit) {
-	return hip_acquire_spi(srchit, dsthit);
+					 hip_hit_t *dsthit)
+{
+	uint32_t spi = 0;
+
+	get_random_bytes(&spi, sizeof(uint32_t));
+
+	return spi;
 }
 
-void hip_userspace_ipsec_delete_default_prefix_sp_pair() {
-	/* XX FIXME: TAO */
+/* securitiy policies are not used by userspace ipsec, as we have static
+ * rules in iptables capturing all packets matching HITs.
+ *
+ * @note we could delete the iptables rules here instead of at firewall exit */
+void hip_userspace_ipsec_delete_default_prefix_sp_pair()
+{
+	// nothing to do here
 }
 
-int hip_userspace_ipsec_setup_default_sp_prefix_pair() {
-	/* XX FIXME: TAO */
+/* securitiy policies are not used by userspace ipsec, as we have static
+ * rules in iptables capturing all packets matching HITs.
+ *
+ * @note we could set up the iptables rules here instead of at firewall init */
+int hip_userspace_ipsec_setup_default_sp_prefix_pair()
+{
+	/* if called anywhere in hipd code, we pretend to have had a successful
+	 * operation */
 	return 0;
 }

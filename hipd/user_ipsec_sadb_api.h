@@ -13,6 +13,8 @@ uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr, struct in6_addr *dad
 			      int already_acquired,
 			      int direction, int update,
 			      hip_ha_t *entry);
+void hip_userspace_ipsec_delete_sa(u32 spi, struct in6_addr *peer_addr,
+		struct in6_addr *dst_addr, int family, int sport, int dport);
 int hip_userspace_ipsec_setup_hit_sp_pair(hip_hit_t *src_hit, hip_hit_t *dst_hit,
 				    struct in6_addr *src_addr,
 				    struct in6_addr *dst_addr, u8 proto,

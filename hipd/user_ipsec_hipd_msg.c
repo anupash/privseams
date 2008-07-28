@@ -37,6 +37,7 @@ int hip_userspace_ipsec_activate(struct hip_common *msg)
 		 HIP_DEBUG("reseting ipsec function set to userspace api\n");
 
 	     default_ipsec_func_set.hip_add_sa = hip_userspace_ipsec_add_sa;
+	     default_ipsec_func_set.hip_delete_sa = hip_userspace_ipsec_delete_sa;
 	     default_ipsec_func_set.hip_setup_hit_sp_pair = hip_userspace_ipsec_setup_hit_sp_pair;
 	     default_ipsec_func_set.hip_delete_hit_sp_pair = hip_userspace_ipsec_delete_hit_sp_pair;
 	     default_ipsec_func_set.hip_flush_all_policy = hip_userspace_ipsec_flush_all_policy;
@@ -49,6 +50,7 @@ int hip_userspace_ipsec_activate(struct hip_common *msg)
     	 HIP_DEBUG("reseting ipsec function set to kernel-mode api\n");
 
 	     default_ipsec_func_set.hip_add_sa = hip_add_sa;
+	     default_ipsec_func_set.hip_delete_sa = hip_delete_sa;
 	     default_ipsec_func_set.hip_setup_hit_sp_pair = hip_setup_hit_sp_pair;
 	     default_ipsec_func_set.hip_delete_hit_sp_pair = hip_delete_hit_sp_pair;
 	     default_ipsec_func_set.hip_flush_all_policy = hip_flush_all_policy;
