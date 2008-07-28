@@ -2885,7 +2885,7 @@ int hip_build_param_esp_prot_anchor(struct hip_common *msg, uint8_t transform,
 					      hip_get_param_contents_direct(&esp_anchor));
 
 	HIP_DEBUG("added esp protection transform: %u\n", transform);
-	HIP_HEXDUMP("added esp protection anchor: ", anchor, hash_length);
+	HIP_HEXDUMP("added esp protection anchor: ", esp_anchor.anchor, hash_length);
 
 	return err;
 }

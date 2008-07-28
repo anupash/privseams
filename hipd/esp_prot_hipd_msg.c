@@ -143,6 +143,9 @@ int esp_prot_r1_handle_transforms(hip_ha_t *entry, struct hip_context *ctx)
 		{
 			HIP_DEBUG("received preferred transforms from peer\n");
 
+			// store that we received the param for further processing
+			ctx->esp_prot_param = 1;
+
 			prot_transforms = (struct esp_prot_preferred_tfms *) param;
 
 			// select transform and store it for this connection
@@ -156,6 +159,9 @@ int esp_prot_r1_handle_transforms(hip_ha_t *entry, struct hip_context *ctx)
 		{
 			HIP_DEBUG("R1 does not contain preferred ESP protection transforms, " \
 					"locally setting UNUSED\n");
+
+			// store that we didn't received the param
+			ctx->esp_prot_param = 0;
 
 			// if the other end-host does not want to use the extension, we don't either
 			entry->esp_prot_transform = ESP_PROT_TFM_UNUSED;
@@ -249,7 +255,7 @@ int esp_prot_i2_add_anchor(hip_common_t *i2, hip_ha_t *entry, struct hip_context
 	} else
 	{
 		// only reply, if transforms param in R1; send UNUSED param
-		if (param = hip_get_param(ctx->input, HIP_PARAM_ESP_PROT_TRANSFORMS))
+		if (ctx->esp_prot_param)
 		{
 			HIP_DEBUG("R1 contained transforms, but agreed not to use the extension\n");
 

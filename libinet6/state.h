@@ -161,6 +161,8 @@ struct hip_context
 				      during the keymat calculation. */
 	uint16_t keymat_index; /**< KEYMAT offset. */
 	uint16_t esp_keymat_index; /**< A pointer to the esp keymat index. */
+
+	int esp_prot_param;
 };
 
 /*
