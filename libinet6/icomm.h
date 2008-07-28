@@ -171,6 +171,8 @@
 #define SO_HIP_GET_PEER_HIT_BY_LSIS             155
 #define SO_HIP_FW_UPDATE_DB                     156
 #define SO_HIP_RESTART_DUMMY_INTERFACE		157
+#define SO_HIP_IPSEC_DELETE_SA             	    158
+#define SO_HIP_IPSEC_FLUSH_ALL_SA          	    159
 /** @} */
 /* inclusive */
 #define HIP_SO_ROOT_MAX 			255

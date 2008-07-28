@@ -1,10 +1,40 @@
 #include "user_ipsec_sadb_api.h"
 #include "esp_prot_common.h"
 
-int hip_firewall_sock_fd = -1;
+int hip_userspace_ipsec_send_to_fw(struct hip_common *msg)
+{
+	struct sockaddr_in6 hip_firewall_addr;
+	struct in6_addr loopback = in6addr_loopback;
+	int err = 0;
+
+	HIP_ASSERT(msg != NULL);
+
+	// destination is firewall
+	hip_firewall_addr.sin6_family = AF_INET6;
+	hip_firewall_addr.sin6_port = htons(HIP_FIREWALL_PORT);
+	ipv6_addr_copy(&(hip_firewall_addr.sin6_addr.s6_addr), &loopback);
+
+	err = hip_sendto_user(msg, &hip_firewall_addr);
+	if (err < 0)
+	{
+		HIP_ERROR("sending of message to firewall failed\n");
+
+		err = -1;
+		goto out_err;
+	} else
+	{
+		HIP_DEBUG("sending of message to firewall successful\n");
+
+		// this is needed if we want to use HIP_IFEL
+		err = 0;
+	}
+
+  out_err:
+	return err;
+}
 
 /* adds a new SA entry for the specified direction to the sadb in userspace ipsec */
-uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr,
+int hip_userspace_ipsec_add_sa(struct in6_addr *saddr,
 				    struct in6_addr *daddr,
 				    struct in6_addr *src_hit,
 				    struct in6_addr *dst_hit,
@@ -13,11 +43,9 @@ uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr,
 				    struct hip_crypto_key *authkey,
 				    int retransmission,
 				    int direction, int update,
-				    hip_ha_t *entry) {
-
+				    hip_ha_t *entry)
+{
 	struct hip_common *msg = NULL;
-	struct sockaddr_in6 hip_firewall_addr;
-	struct in6_addr loopback = in6addr_loopback;
 	int err = 0;
 
 	HIP_ASSERT(spi != 0);
@@ -26,44 +54,41 @@ uint32_t hip_userspace_ipsec_add_sa(struct in6_addr *saddr,
 		    authkey, retransmission, direction, update, entry)), -1,
 		    "failed to create add_sa message\n");
 
-	hip_firewall_addr.sin6_family = AF_INET6;
-	hip_firewall_addr.sin6_port = htons(HIP_FIREWALL_PORT);
-	ipv6_addr_copy(&(hip_firewall_addr.sin6_addr.s6_addr), &loopback);
-
-	HIP_DEBUG_IN6ADDR("sending message to loopback: ",
-			  hip_firewall_addr.sin6_addr.s6_addr);
-
-	err = sendto(hip_firewall_sock_fd, msg, hip_get_msg_total_len(msg), 0,
-		   &hip_firewall_addr, sizeof(hip_firewall_addr));
-	if (err < 0)
-	{
-		HIP_ERROR("Sendto firewall failed.\n");
-		err = -1;
-		goto out_err;
-	} else
-	{
-		HIP_DEBUG("hipd ipsec_add_sa --> Sendto firewall OK.\n");
-		// this is needed if we want to use HIP_IFEL
-		err = 0;
-	}
+	HIP_IFEL(hip_userspace_ipsec_send_to_fw(msg), -1, "failed to send msg to fw\n");
 
  out_err:
 	return err;
 }
 
 /* deletes the specified SA entry from the sadb in userspace ipsec */
-void hip_userspace_ipsec_delete_sa(u32 spi, struct in6_addr *peer_addr,
+void hip_userspace_ipsec_delete_sa(uint32_t spi, struct in6_addr *peer_addr,
 		struct in6_addr *dst_addr, int family, int sport, int dport)
 {
-	// TODO implement
-	HIP_DEBUG("THIS HAS TO BE IMPLEMENTED\n");
+	struct hip_common *msg = NULL;
+	int err = 0;
+
+	HIP_IFEL(!(msg = create_delete_sa_msg(spi, peer_addr, dst_addr, family, sport, dport)),
+			-1, "failed to create delete_sa message\n");
+
+	HIP_IFEL(hip_userspace_ipsec_send_to_fw(msg), -1, "failed to send msg to fw\n");
+
+  out_err:
+	return err;
 }
 
 /* deletes all SA entries in the sadb in userspace ipsec */
 int hip_userspace_ipsec_flush_all_sa()
 {
-	// TODO implement
-	HIP_DEBUG("THIS HAS TO BE IMPLEMENTED\n");
+	struct hip_common *msg = NULL;
+	int err = 0;
+
+	HIP_IFEL(!(msg = create_flush_all_sa_msg()), -1,
+			"failed to create delete_sa message\n");
+
+	HIP_IFEL(hip_userspace_ipsec_send_to_fw(msg), -1, "failed to send msg to fw\n");
+
+  out_err:
+	return err;
 }
 
 /* security policies are not used by userspace ipsec, as we have static
