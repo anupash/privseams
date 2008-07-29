@@ -567,8 +567,8 @@ int hip_opendht_get_key(int (*value_handler)(unsigned char * packet,
         
         //Call the handler function , passed as a fuunction pointer
         err = value_handler(&dht_response, opaque_answer);
-        
-        /*Check if we found the key from lokup service or not*/
+       
+       /*Check if we found the key from lokup service or not*/
         if( ((struct hip_common *)dht_response)->payload_len != NULL)
         {
         	/*Call the hdrr verification function, in case of hdrr
@@ -576,20 +576,21 @@ int hip_opendht_get_key(int (*value_handler)(unsigned char * packet,
         
         	if ( (inet_pton(AF_INET6, key, &hit_key.s6_addr) == 0) || dont_verify_hdrr)
     		{ 
-    			HIP_DEBUG("lookup is not for HDRR or" 
+    			HIP_DEBUG("lookup is not for HDRR or " 
 				"HDRR verification flag not set so skipping verification \n");
     		}
     		else
     		{
     			err = verify_hddr_lib ((struct hip_common *)dht_response,&hit_key);
+    			if (err != 0)
+    			{
+    				/*HDRR verification failed*/
+    				opaque_answer = NULL ;
+    				HIP_DEBUG("HDRR verification failed \n");
+    				err = -1 ;
+    			}
     		}
-    		if (err != 0)
-    		{
-    			/*HDRR verification failed*/
-    			opaque_answer = NULL ;
-    			HIP_DEBUG("HDRR verification failed \n");
-    			err = -1 ;
-    		}
+    		
         }
         else
         {
@@ -688,6 +689,27 @@ int handle_hit_value (unsigned char *packet, void *hit)
        
         			
 }
+
+/*It handles just IP (not locator) returned by lookup services
+ * and copies it to the void hit pointer */
+int handle_ip_value (unsigned char *packet, void *ip)
+{
+	/* if IPv6 must be HIT */
+	hip_in6_ntop((struct in6_addr *)packet, (char*)ip);
+    if ((char*)ip)
+    {
+         return 0 ;
+    }
+    else 
+    {
+    	return -1 ;
+    }
+        	
+       
+        			
+}
+
+
 /*It sends the dht response to hipdaemon
 * first appending one more user param for holding a structure hdrr_info
 * hdrr_info is used by daemon to mark signature and host id verification results to flags

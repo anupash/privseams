@@ -51,5 +51,6 @@ int handle_hdrr_value (unsigned char *packet, void *hdrr);
 int handle_locator_value (unsigned char *packet, void *locator_ipv4);
 int handle_hit_value (unsigned char *packet, void *hit); 
 int handle_locator_all_values (unsigned char *packet, void *locator_complete);
+int handle_ip_value (unsigned char *packet, void *ip);
 int verify_hddr_lib (struct hip_common *hipcommonmsg,struct in6_addr *addrkey);
 #endif /* lib_opendht */

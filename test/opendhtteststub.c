@@ -39,16 +39,18 @@ int main(int argc, char *argv[])
     }
 
     int s, ret, error;
-    int ttl = 60;
+    int ttl = 240;
     /*
     struct in6_addr val_hit_addr;
     struct in6_addr val_ip_addr; 
     */
-    char opendht[] = "opendht.nyuld.net";
+    //char opendht[] = "opendht.nyuld.net";
+    char opendht[] = "openlookup.net";
     /* both responses were 1024 before */
     /* now more because base64 lengthens the message */
-    char dht_response[1400]; 
-    char dht_response2[1400]; 
+    char dht_response[2048]; 
+    char dht_response2[2048];
+    char put_packet[2048]; 
     /* Test values */  
     char val_bogus[] = "BogusKey";
     char val_host[] = "testhostname";
@@ -61,10 +63,10 @@ int main(int argc, char *argv[])
     char val_tenbyte[] = "1234567890";
     /* smaller than 1K actually because any larger will bounce from DHT */
     char val_onekilo[985]; 
-    char val_hit[] = "2001:0071:7c97:a5b4:6c73:1b1b:081e:126d";
-    char val_ip[] = "128.196.1.100";
+    char val_hit[] = "2001:001a:3aa1:3a84:5b38:de59:28ff:41ea";
+    char val_ip[] = "2001:0708:0140:0220:0213:a9ff:fec0:58f6";
     /* TODO change this to something smarter :) */
-    char host_addr[] = "127.0.0.1"; 
+    char host_addr[] = "openlookup.net"; 
     int n = 0, iter = 0;
     struct timeval conn_before, conn_after; 
     struct timeval stat_before, stat_after;
@@ -78,6 +80,7 @@ int main(int argc, char *argv[])
     unsigned long rm_diff_sec, rm_diff_usec;
     iter = atoi(argv[2]);
     struct addrinfo * serving_gateway;
+    int port = 80; //5851 for opendht
 
     /* resolve the gateway address */
     error = resolve_dht_gateway_info (opendht, &serving_gateway);
@@ -101,8 +104,10 @@ int main(int argc, char *argv[])
             ret = opendht_put(s, 
                               (unsigned char *)val_host,
                               (unsigned char *)val_hit, 
-                              (unsigned char *)host_addr,5851,ttl);   
-            ret = opendht_read_response(s, dht_response); 
+                              (unsigned char *)host_addr,port,ttl,put_packet);   
+            ret = opendht_send (s,put_packet);
+            if (ret == -1) exit(1);
+            ret = opendht_read_response(s, dht_response);
             if (ret == -1) exit(1);
             printf("Put packet (fqdn->hit) sent and ...\n");
             printf("Put was success\n");
@@ -116,7 +121,9 @@ int main(int argc, char *argv[])
             ret = opendht_put(s, 
                               (unsigned char *)val_hit,
                               (unsigned char *)val_ip, 
-                              (unsigned char *)host_addr,5851,ttl);
+                              (unsigned char *)host_addr,port,ttl,put_packet);
+			ret = opendht_send (s,put_packet);
+            if (ret == -1) exit(1);
             ret = opendht_read_response(s, dht_response); 
             if (ret == -1) exit(1);
             printf("Put packet (hit->ip) sent and ...\n");
@@ -130,14 +137,15 @@ int main(int argc, char *argv[])
             if (error < 0) exit(0);
             ret = 0;
             memset(dht_response, '\0', sizeof(dht_response));
-            ret = opendht_get(s, (unsigned char *)val_host, (unsigned char *)host_addr, 5851);
+            ret = opendht_get(s, (unsigned char *)val_host, (unsigned char *)host_addr, port);
             ret = opendht_read_response(s, dht_response); 
+            ret = handle_hit_value(&dht_response, (void *)dht_response2);
             // if (ret == -1) exit (1);
             printf("Get packet (fqdn) sent and ...\n");
             if (ret == 0) 
                 {
-                    printf("Teststub: Value received from DHT: %s\n", dht_response);
-                    if (!strcmp(dht_response, val_hit)) 
+                    printf("Teststub: Value received from DHT: %s\n", dht_response2);
+                    if (!strcmp(dht_response2, val_hit)) 
                         printf("Did match the sent value.\n");
                     else
                         printf("Did NOT match the sent value!\n");
@@ -151,14 +159,17 @@ int main(int argc, char *argv[])
             if (error < 0) exit(0);
             ret = 0;
             memset(dht_response2, '\0', sizeof(dht_response2));
-            ret = opendht_get(s, (unsigned char *)val_hit, (unsigned char *)host_addr, 5851); 
-            ret = opendht_read_response(s, dht_response2); 
+            ret = opendht_get(s, (unsigned char *)val_hit, (unsigned char *)host_addr, port); 
+            ret = opendht_read_response(s, dht_response2);
+            memset(dht_response, '\0', sizeof(dht_response));
+            hip_in6_ntop((struct in6_addr *)dht_response2, dht_response);
+            HIP_DEBUG("Value: %s\n", (char*)dht_response);
             if (ret == -1) exit (1);
             printf("Get packet (hit) sent and ...\n");
             if (ret == 0)
                 {
-                    printf("Teststub: Value received from DHT: %s\n",dht_response2);
-                    if (!strcmp(dht_response2, val_ip))
+                    printf("Teststub: Value received from DHT: %s\n",dht_response);
+                    if (!strcmp(dht_response, val_ip))
                         printf("Did match the sent value.\n");
                     else
                         printf("Did NOT match the sent value!\n");
@@ -172,7 +183,7 @@ int main(int argc, char *argv[])
             if (error < 0) exit(0);
             ret = 0;
             memset(dht_response2, '\0', sizeof(dht_response2));
-            ret = opendht_get(s, (unsigned char *)val_bogus, (unsigned char *)host_addr, 5851); 
+            ret = opendht_get(s, (unsigned char *)val_bogus, (unsigned char *)host_addr, port); 
             ret = opendht_read_response(s, dht_response2); 
             // if (ret == -1) exit (1);
             printf("Get packet (bogus, will not be found (hopefully)) sent and ...\n");
@@ -192,7 +203,7 @@ int main(int argc, char *argv[])
                                  (unsigned char *)val_host_test,
                                  (unsigned char *)val_something,
                                  (unsigned char *)secret_str,
-                                 (unsigned char *)host_addr,5851,ttl);   
+                                 (unsigned char *)host_addr,port,ttl);   
             ret = opendht_read_response(s, dht_response2); 
             if (ret == -1) exit(1);
             printf("Put(rm) packet (fqdn->hit) sent and ...\n");
@@ -205,7 +216,7 @@ int main(int argc, char *argv[])
             ret = 0;
             memset(dht_response2, '\0', sizeof(dht_response2));
             ret = opendht_get(s, (unsigned char *)val_host_test, 
-                              (unsigned char *)host_addr, 5851); 
+                              (unsigned char *)host_addr, port); 
             ret = opendht_read_response(s, dht_response2); 
             // if (ret == -1) exit (1);
             printf("Get packet sent and (value should be found, just sent it)...\n");
@@ -221,7 +232,7 @@ int main(int argc, char *argv[])
                                  (unsigned char *)val_host_test,
                                  (unsigned char *)val_something,
                                  (unsigned char *)secret_str,
-                                 (unsigned char *)host_addr,5851,ttl);   
+                                 (unsigned char *)host_addr,port,ttl);   
             ret = opendht_read_response(s, dht_response2); 
             if (ret == -1) exit(1);
             printf("Rm packet sent and ...\n");
@@ -235,7 +246,7 @@ int main(int argc, char *argv[])
             ret = 0;
             memset(dht_response2, '\0', sizeof(dht_response2));
             ret = opendht_get(s, (unsigned char *)val_host_test, 
-                              (unsigned char *)host_addr, 5851); 
+                              (unsigned char *)host_addr, port); 
             ret = opendht_read_response(s, dht_response2); 
             // if (ret == -1) exit (1);
             printf("Get packet (was removed, will not be found (hopefully)) sent and ...\n");
@@ -246,7 +257,7 @@ int main(int argc, char *argv[])
             memset(dht_response, '\0', sizeof(dht_response));
             ret = 0;
             HIP_DEBUG("\n\nTrying out get wrapper\n");
-            ret = hip_opendht_get_key(&handle_hit_value, serving_gateway, val_hit, dht_response);
+            ret = hip_opendht_get_key(&handle_ip_value, serving_gateway, val_hit, dht_response);
 
             if (!ret)
                 HIP_DEBUG("DHT get succeeded\n");
