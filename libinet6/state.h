@@ -65,6 +65,7 @@
 
 #define SEND_UPDATE_ESP_INFO             (1 << 0)
 #define SEND_UPDATE_LOCATOR              (1 << 1)
+#define SEND_UPDATE_ESP_ANCHOR           (1 << 2)
 
 #define HIP_SPI_DIRECTION_OUT            1
 #define HIP_SPI_DIRECTION_IN             2
@@ -327,9 +328,9 @@ struct hip_hadb_state
 	/** ESP extension protection transform */
 	uint8_t						 esp_prot_transform;
 	/** ESP extension protection local_anchor */
-	unsigned char				esp_local_anchor[MAX_HASH_LENGTH];
+	unsigned char				 esp_local_anchor[MAX_HASH_LENGTH];
 	/** ESP extension protection peer_anchor */
-	unsigned char				esp_peer_anchor[MAX_HASH_LENGTH];
+	unsigned char				 esp_peer_anchor[MAX_HASH_LENGTH];
 	/** Something to do with the birthday paradox.
 	    @todo Please clarify what this field is. */
 	uint64_t                     birthday;

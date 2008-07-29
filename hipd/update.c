@@ -2387,6 +2387,19 @@ int hip_send_update(struct hip_hadb_state *entry,
 			   0x1 | 0x2 | 0x8, update_id_out, 0, NULL,
 			   entry->current_keymat_index);
 
+     /********** ESP-PROT anchor (OPTIONAL) **********/
+
+     /* @note params mandatory for this UPDATE type are the generally mandatory
+      *       params HMAC and HIP_SIGNATURE as well as this ESP_PROT_ANCHOR and
+      *       the SEQ param (to guaranty freshness of the ANCHOR) in the signed
+      *       part of the message
+      * @note the acknowledgement should trigger an add_sa where update = 1
+      *       and direction = OUTBOUND */
+	 HIP_IFEL(esp_prot_update_add_anchor(update_packet, entry, flags), -1,
+			 "failed to add esp prot anchor\n");
+
+     /************************************************/
+
      /* Add HMAC */
      HIP_IFEL(hip_build_param_hmac_contents(update_packet,
 					    &entry->hip_hmac_out), -1,

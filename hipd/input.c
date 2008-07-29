@@ -886,7 +886,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 
 	/********** ESP-PROT anchor (OPTIONAL) **********/
 
-	HIP_IFEL(esp_prot_i2_add_anchor(i2, entry), -1,
+	HIP_IFEL(esp_prot_i2_add_anchor(i2, entry, ctx), -1,
 			"failed to add esp protection anchor\n");
 
 	/************************************************/

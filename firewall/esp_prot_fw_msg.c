@@ -219,7 +219,7 @@ hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore)
  *
  * sends src_hit, dst_hit, transform, hash_length and hash
  */
-int trigger_update(hip_sa_entry_t *entry)
+int send_trigger_update(hip_sa_entry_t *entry)
 {
 	int err = 0;
 	struct hip_common *msg = NULL;
@@ -253,10 +253,6 @@ int trigger_update(hip_sa_entry_t *entry)
 	HIP_IFEL(hip_build_param_contents(msg, (void *)&entry->esp_prot_transform,
 			HIP_PARAM_ESP_PROT_TFM, sizeof(uint8_t)), -1,
 			"build param contents failed\n");
-
-	HIP_DEBUG("hash-length: %i\n", hash_length);
-	HIP_IFEL(hip_build_param_contents(msg, (void *)&hash_length, HIP_PARAM_INT,
-				sizeof(int)), -1, "build param contents failed\n");
 
 	HIP_HEXDUMP("anchor: ", entry->next_hchain->anchor_element->hash, hash_length);
 	HIP_IFEL(hip_build_param_contents(msg, (void *)entry->next_hchain->anchor_element->hash,

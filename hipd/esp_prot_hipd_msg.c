@@ -49,6 +49,69 @@ int esp_prot_set_preferred_transforms(struct hip_common *msg)
   	return err;
 }
 
+int esp_prot_handle_trigger_update_msg(struct hip_common *msg)
+{
+	struct hip_tlv_common *param = NULL;
+	hip_hit_t *local_hit = NULL, *peer_hit = NULL;
+	uint8_t esp_prot_tfm = 0;
+	int hash_length = 0;
+	unsigned char *esp_prot_anchor = NULL;
+	hip_ha_t *entry = NULL;
+	int err = 0;
+
+	param = hip_get_param(msg, HIP_PARAM_HIT);
+	local_hit = (hip_hit_t *) hip_get_param_contents_direct(param);
+	HIP_DEBUG_HIT("src_hit", local_hit);
+
+	param = hip_get_next_param(msg, param);
+	peer_hit = (hip_hit_t *) hip_get_param_contents_direct(param);
+	HIP_DEBUG_HIT("dst_hit", peer_hit);
+
+	param = hip_get_param(msg, HIP_PARAM_ESP_PROT_TFM);
+	esp_prot_tfm = *((uint8_t *) hip_get_param_contents_direct(param));
+	HIP_DEBUG("esp_prot_transform: %u\n", esp_prot_tfm);
+
+	param = hip_get_param(msg, HIP_PARAM_HCHAIN_ANCHOR);
+	esp_prot_anchor = (unsigned char *) hip_get_param_contents_direct(param);
+	HIP_HEXDUMP("anchor: ", esp_prot_anchor, hash_length);
+
+
+	// get matching entry from hadb for HITs provided above
+	HIP_IFEL(!(entry = hip_hadb_find_byhits(local_hit, peer_hit)), -1,
+			"failed to retrieve requested HA entry\n");
+
+	// check if transforms are matching and add anchor as new local_anchor
+	HIP_IFEL(entry->esp_prot_transform != esp_prot_tfm, -1,
+			"esp prot transform changed without new BEX\n");
+	HIP_DEBUG("esp prot transforms match\n");
+
+	// we need to know the hash_length for this transform
+	hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
+
+	memset(entry->esp_local_anchor, 0, MAX_HASH_LENGTH);
+	memcpy(entry->esp_local_anchor, esp_prot_anchor, hash_length);
+
+	/* this should send an update only containing the mandatory params
+	 * HMAC and HIP_SIGNATURE as well as the ESP_PROT_ANCHOR and the
+	 * SEQ param (to garanty freshness of the ANCHOR) in the signed part
+	 * of the message
+	 *
+	 * params used for this call:
+	 * - hadb entry matching the HITs passed in the trigger msg
+	 * - not sending locators -> list = NULL and count = 0
+	 * - no interface triggers this event -> if 0
+	 * - bitwise telling about which params to add to UPDATE -> set 3rd bit to 1
+	 * - UPDATE not due to adding of a new addresses
+	 * - ???
+	 *
+	 */
+	HIP_IFEL(hip_send_update(entry, NULL, 0, 0, SEND_UPDATE_ESP_ANCHOR, 0,
+			struct sockaddr* addr), -1, "failed to send anchor update\n");
+
+  out_err:
+	return err;
+}
+
 int esp_prot_sa_add(hip_ha_t *entry, struct hip_common *msg, int direction)
 {
 	unsigned char *hchain_anchor = NULL;
@@ -497,6 +560,36 @@ int esp_prot_r2_handle_anchor(hip_ha_t *entry, struct hip_context *ctx)
 
   out_err:
  	return err;
+}
+
+int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry, int flags)
+{
+	int hash_length = 0;
+	int err = 0;
+
+	// check if we should send a new anchor
+	if (flags & SEND_UPDATE_ESP_ANCHOR)
+	{
+		// we can safely assume that this UPDATE was triggered by the firewall
+		hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
+
+		HIP_IFEL(hip_build_param_esp_prot_anchor(update, entry->esp_prot_transform,
+				entry->esp_local_anchor, hash_length), -1,
+				"building of ESP protection anchor failed\n");
+	}
+
+  out_err:
+	return err;
+}
+
+int esp_prot_update_handle_anchor()
+{
+	int err = -1;
+
+	// TODO implement
+
+  out_err:
+	return err;
 }
 
 /* simple transform selection: find first match in both arrays
