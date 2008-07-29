@@ -940,11 +940,8 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		err = anchor_db_update(msg);
 		break;
 	case SO_HIP_TRIGGER_UPDATE:
-		// TODO implement
-		/* hip_send_update(struct hip_hadb_state *entry,
-		    struct hip_locator_info_addr_item *addr_list,
-		    int addr_count, int ifindex, int flags,
-		    int is_add, struct sockaddr* addr) */
+		HIP_DUMP_MSG(msg);
+		err = esp_prot_handle_trigger_update_msg(msg);
 		break;
 	case SO_HIP_GET_LSI_PEER:
 	case SO_HIP_GET_LSI_OUR:
