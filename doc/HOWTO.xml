@@ -638,6 +638,10 @@
     </tgroup>
     </table>
 
+    <para>
+      The servers are running ssh and http. They are not running "conntest-server" software as described elsewhere in this document.
+    </para>
+
   </chapter>
 
   <chapter id="ch_closing_hip">
