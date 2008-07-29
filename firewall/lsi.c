@@ -56,16 +56,29 @@ int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m, struct in6_addr *ip_src, str
     
 	if (portDest)
 		proto6 = getproto_info(ntohs(portDest), proto);
-
+/*
 	if (!proto6){
+HIP_DEBUG_HIT("#### SRC HIT", ip_src);
+HIP_DEBUG_HIT("#### DST HIT", ip_dst);
 	        lsi_our = (hip_lsi_t *)hip_get_lsi_our_by_hits(ip_src, ip_dst);
 		lsi_peer = (hip_lsi_t *)hip_get_lsi_peer_by_hits(ip_src, ip_dst);
-
 		if(lsi_our && lsi_peer){
 		        IPV4_TO_IPV6_MAP(lsi_our, &src_addr);
 			IPV4_TO_IPV6_MAP(lsi_peer, &dst_addr);
 			HIP_DEBUG_LSI("******lsi_src : ", lsi_our);
 			HIP_DEBUG_LSI("******lsi_dst : ", lsi_peer);
+			reinject_packet(dst_addr, src_addr, m, 6, 1);
+		}
+	}
+*/
+
+	if (!proto6){
+HIP_DEBUG_HIT("#### SRC HIT", ip_src);
+HIP_DEBUG_HIT("#### DST HIT", ip_dst);
+		int res = hip_get_ips_by_hits(ip_src, ip_dst, &src_addr, &dst_addr);
+		if(res > -1){
+			HIP_DEBUG_IN6ADDR("******ip_src : ", src_addr);
+			HIP_DEBUG_IN6ADDR("******ip_dst : ", dst_addr);
 			reinject_packet(dst_addr, src_addr, m, 6, 1);
 		}
 	}
@@ -112,21 +125,129 @@ int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src, str
 	        int state_ha = hip_trigger_is_bex_established(&src_hit, &dst_hit, lsi_src, lsi_dst);
 		if (state_ha){
 		        HIP_DEBUG("ha is ESTABLISHED!\n");
-			firewall_add_hit_lsi(&src_hit, &dst_hit, lsi_dst, state_ha);
+			firewall_add_hit_lsi_ip(&src_hit, &dst_hit, lsi_dst, lsi_dst, state_ha);
 			reinject_packet(src_hit, dst_hit, m, 4, 0);
 		}
 		else{
 			// Run bex to initialize SP and SA
 			HIP_INFO("Firewall_db empty and no ha ESTABLISHED. Triggering Base Exchange\n");
 			err = hip_get_hit_peer_by_lsi_pair(lsi_src, lsi_dst, &src_hit, &dst_hit);
-			HIP_IFEL(hip_trigger_bex(&src_hit, &dst_hit, &src_lsi, &dst_lsi, NULL, NULL), -1, 
-			 	 "Base Exchange Trigger failed\n");
-		  	firewall_add_hit_lsi(&src_hit, &dst_hit, lsi_dst, 2);
+			HIP_IFEL(hip_trigger_bex(&src_hit, &dst_hit, &src_lsi, &dst_lsi, NULL, NULL),
+				 -1, "Base Exchange Trigger failed\n");
+		  	firewall_add_hit_lsi_ip(&src_hit, &dst_hit, lsi_dst, lsi_dst, 2);
 		}
 	}
 out_err: 
 	return err;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+//#######################################################
+
+
+/*
+ * exactly the same function as hip_request_peer_hit_from_hipd(...)
+ * 
+ */
+int hip_request_peer_hit_from_hipd_at_firewall(const struct in6_addr *peer_ip,
+				         struct in6_addr *peer_hit,
+				   const struct in6_addr *local_hit,
+				   in_port_t src_tcp_port,
+				   in_port_t dst_tcp_port,
+				   int *fallback,
+				   int *reject)
+{
+	struct hip_common *msg = NULL;
+	struct in6_addr *hit_recv = NULL;
+	hip_hit_t *ptr = NULL;
+	int err = 0;
+	int ret = 0;
+
+	*fallback = 1;
+	*reject = 0;
+
+	HIP_IFE(!(msg = hip_msg_alloc()), -1);
+	
+	HIP_IFEL(hip_build_param_contents(msg, (void *)(local_hit),
+					  HIP_PARAM_HIT,
+					  sizeof(struct in6_addr)), -1,
+		 "build param HIP_PARAM_HIT  failed\n");
+	HIP_IFEL(hip_build_param_contents(msg, (void *)(peer_ip),
+					  HIP_PARAM_IPV6_ADDR,
+					  sizeof(struct in6_addr)), -1,
+		 "build param HIP_PARAM_IPV6_ADDR failed\n");
+
+	HIP_IFEL(hip_build_param_contents(msg, (void *)(&src_tcp_port),
+					  HIP_PARAM_SRC_TCP_PORT,
+					  sizeof(in_port_t)), -1,
+		 "build param HIP_PARAM_SRC_TCP_PORT failed\n");
+
+	HIP_IFEL(hip_build_param_contents(msg, (void *)(&dst_tcp_port),
+					  HIP_PARAM_DST_TCP_PORT,
+					  sizeof(in_port_t)), -1,
+		 "build param HIP_PARAM_DST_TCP_PORT failed\n");
+	
+	/* build the message header */
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT_AT_FIREWALL, 0), -1,
+		 "build hdr failed\n");
+
+	/* send and receive msg to/from hipd */
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send_recv msg failed\n");
+	_HIP_DEBUG("send_recv msg succeed\n");
+
+/*#################
+	// check error value 
+	HIP_IFEL(hip_get_msg_err(msg), -1, "Got erroneous message!\n");
+	
+	ptr = (hip_hit_t *) hip_get_param_contents(msg, HIP_PARAM_HIT);
+	if (ptr) {
+		memcpy(peer_hit, ptr, sizeof(hip_hit_t));
+		HIP_DEBUG_HIT("peer_hit", peer_hit);
+		*fallback = 0;
+	}
+
+	ptr = hip_get_param(msg, HIP_PARAM_AGENT_REJECT);
+	if (ptr)
+	{
+		HIP_DEBUG("Connection is to be rejected\n");
+		*reject = 1;
+	}
+#################*/
+
+ out_err:
+	
+	if(msg)
+		free(msg);
+	
+	return err;
+}
+
+//#######################################################
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /**
  * Executes the packet reinjection

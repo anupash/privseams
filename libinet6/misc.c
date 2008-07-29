@@ -1855,9 +1855,11 @@ int hip_trigger_is_bex_established(struct in6_addr *src_hit, struct in6_addr *ds
 	while((current_param = hip_get_next_param(msg, current_param)) != NULL) {
 		ha = hip_get_param_contents_direct(current_param);
 
-		if ( (((ipv4_addr_cmp(src_ip, &ha->lsi_our) == 0) && (ipv4_addr_cmp(dst_ip, &ha->lsi_peer) == 0))
-		      || ((ipv4_addr_cmp(dst_ip, &ha->lsi_our) == 0) &&  (ipv4_addr_cmp(src_ip, &ha->lsi_peer) == 0)))
-		     && ha->state == HIP_STATE_ESTABLISHED){
+		if ( (((ipv4_addr_cmp(src_ip, &ha->lsi_our) == 0) &&
+		       (ipv4_addr_cmp(dst_ip, &ha->lsi_peer) == 0))  ||
+		      ((ipv4_addr_cmp(dst_ip, &ha->lsi_our) == 0) &&
+		       (ipv4_addr_cmp(src_ip, &ha->lsi_peer) == 0)))     &&
+			ha->state == HIP_STATE_ESTABLISHED){
 			*src_hit = ha->hit_our;
 			*dst_hit = ha->hit_peer;
 			res = 1;
@@ -1874,6 +1876,157 @@ int hip_trigger_is_bex_established(struct in6_addr *src_hit, struct in6_addr *ds
         return res;
 
 }
+
+
+
+//################################
+int hip_trigger_get_bex_state(struct in6_addr *src_ip,
+			      struct in6_addr *dst_ip,
+			      struct in6_addr *src_hit,
+			      struct in6_addr *dst_hit,
+			      hip_lsi_t       *src_lsi,
+			      hip_lsi_t       *dst_lsi){
+
+	int err = 0, res = -1;//res == -1 indicates lack of entry
+	hip_lsi_t src_ip4, dst_ip4;
+	struct hip_tlv_common *current_param = NULL;
+	struct hip_common *msg = NULL;
+	struct hip_hadb_user_info_state *ha;
+  
+	HIP_ASSERT(src_ip != NULL && dst_ip != NULL);
+
+	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
+
+	hip_msg_init(msg);
+
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0), -1,
+		 "Building of daemon header failed\n");
+
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1,
+		 "send recv daemon info\n");
+
+	while((current_param = hip_get_next_param(msg, current_param)) != NULL) {
+		ha = hip_get_param_contents_direct(current_param);
+
+		if( (ipv6_addr_cmp(dst_ip, &ha->ip_our) == 0) &&
+		    (ipv6_addr_cmp(src_ip, &ha->ip_peer) == 0) ){
+			*src_hit = ha->hit_peer;
+			*dst_hit = ha->hit_our;
+			*src_lsi = ha->lsi_peer;
+			*dst_lsi = ha->lsi_our;
+
+			res = ha->state;
+			break;
+		}
+		else if( (ipv6_addr_cmp(src_ip, &ha->ip_our) == 0) &&
+		         (ipv6_addr_cmp(dst_ip, &ha->ip_peer) == 0) ){
+			*src_hit = ha->hit_our;
+			*dst_hit = ha->hit_peer;
+			*src_lsi = ha->lsi_our;
+			*dst_lsi = ha->lsi_peer;
+
+			res = ha->state;
+			break;
+		}
+	}
+        
+ out_err:
+        if(msg)
+                HIP_FREE(msg);  
+        return res;
+
+}
+
+//**********************
+
+int hip_get_ips_by_hits(struct in6_addr *src_hit,
+			struct in6_addr *dst_hit,
+			struct in6_addr *src_ip,
+			struct in6_addr *dst_ip){
+
+	int err = 0, res = -1;//res == -1 indicates lack of entry
+	hip_lsi_t src_ip4, dst_ip4;
+	struct hip_tlv_common *current_param = NULL;
+	struct hip_common *msg = NULL;
+	struct hip_hadb_user_info_state *ha;
+  
+	HIP_ASSERT(src_hit != NULL && dst_hit != NULL);
+
+	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
+
+	hip_msg_init(msg);
+
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0), -1,
+		 "Building of daemon header failed\n");
+
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1,
+		 "send recv daemon info\n");
+
+	while((current_param = hip_get_next_param(msg, current_param)) != NULL) {
+		ha = hip_get_param_contents_direct(current_param);
+
+		if (( ((ipv6_addr_cmp(src_hit, &ha->hit_our) == 0)  &&
+		       (ipv6_addr_cmp(dst_hit, &ha->hit_peer) == 0))    ||
+		      ((ipv6_addr_cmp(dst_hit, &ha->hit_our) == 0)  &&
+		       (ipv6_addr_cmp(src_hit, &ha->hit_peer) == 0))    )  &&
+			ha->state == HIP_STATE_ESTABLISHED){
+			*src_ip = ha->ip_our;
+			*dst_ip = ha->ip_peer;
+			res = ha->state;
+			break;
+		}
+	}
+        
+ out_err:
+        if(msg)
+                HIP_FREE(msg);  
+        return res;
+
+}
+
+//**********************
+
+int hit_is_local_hit(struct in6_addr *hit){
+	int res = 0;
+	int err = 0;
+	struct hip_tlv_common *current_param = NULL;
+	struct endpoint_hip *endp = NULL;
+	hip_tlv_type_t param_type = 0;
+	struct hip_common *msg = NULL;
+
+	HIP_DEBUG("\n");
+
+	/* Build a HIP message with socket option to get all HITs. */
+	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
+	hip_msg_init(msg);
+	HIP_IFE(hip_build_user_hdr(msg, SO_HIP_GET_HITS, 0), -1);
+
+	/* Send the message to the daemon.
+	The daemon fills the message. */
+	HIP_IFE(hip_send_recv_daemon_info(msg), -ECOMM);
+
+	/* Loop through all the parameters in the message just filled. */
+	while((current_param = hip_get_next_param(msg, current_param)) != NULL){
+
+		param_type = hip_get_param_type(current_param);
+
+		if(param_type == HIP_PARAM_EID_ENDPOINT){
+			endp = (struct endpoint_hip *)
+				hip_get_param_contents_direct(
+					current_param);
+
+			if(ipv6_addr_cmp(hit, &endp->id.hit) == 0)
+				return 1;
+		}
+	}
+
+ out_err:
+	return res;
+}
+
+//################################
+
+
 
 /* This builds a msg which will be sent to the HIPd in order to trigger
  * a BEX there.

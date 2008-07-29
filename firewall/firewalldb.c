@@ -23,6 +23,19 @@ firewall_hl_t *firewall_hit_lsi_db_match(hip_lsi_t *lsi_peer){
   
 }
 
+
+/**
+ * firewall_hit_ip_db_match:
+ * Search in the database the given ip
+ *
+ * @param ip_peer: entrance that we are searching in the db
+ * @return NULL if not found and otherwise the firewall_hl_t structure
+ */
+firewall_hl_t *firewall_hit_ip_db_match(struct in6_addr *ip_peer){
+  return (firewall_hl_t *)hip_ht_find(firewall_lsi_hit_db, (void *)ip_peer);
+}
+
+
 firewall_hl_t *hip_create_hl_entry(void){
 	firewall_hl_t *entry = NULL;
 	int err = 0;
@@ -54,27 +67,29 @@ void hip_firewall_hldb_dump(void)
 }
 
 /*
-* Adds the hit_pair, the lsi_peer and the bex state to the firewall_lsi_hit_db
+* Adds the hit_pair, the lsi_peer, the ip_peer and the bex state to the firewall_lsi_hit_db
 * The argument state identifies the state of the BEX:
 *  = 0   Trigger BEX
 *  = 1   BEX done
 *  = 2   BEX already triggered, waiting it finishes
 *  = -1  BEX failed
 */
-int firewall_add_hit_lsi(struct in6_addr *hit_our, struct in6_addr *hit_peer, hip_lsi_t *lsi, int state){
+int firewall_add_hit_lsi_ip(struct in6_addr *hit_our, struct in6_addr *hit_peer, hip_lsi_t *lsi, struct in6_addr *ip, int state){
 	int err = 0;
 	firewall_hl_t *new_entry = NULL;
 
-	HIP_DEBUG_HIT("hit_our ",hit_our);
-	HIP_DEBUG_HIT("hit_peer ",hit_peer);
-	HIP_DEBUG_LSI("lsi ",lsi);
-	HIP_ASSERT(hit_our != NULL && hit_peer != NULL && lsi != NULL);
-	_HIP_DEBUG("Start firewall_add_hit_lsi\n");
+	HIP_DEBUG_HIT("hit_our ", hit_our);
+	HIP_DEBUG_HIT("hit_peer ", hit_peer);
+	HIP_DEBUG_LSI("lsi ", lsi);
+	HIP_DEBUG_IN6ADDR("ip ", ip);
+	HIP_ASSERT(hit_our != NULL && hit_peer != NULL && lsi != NULL && ip != NULL);
+	_HIP_DEBUG("Start firewall_add_hit_lsi_ip\n");
 	
 	new_entry = hip_create_hl_entry();
 	ipv6_addr_copy(&new_entry->hit_our, hit_our);
 	ipv6_addr_copy(&new_entry->hit_peer, hit_peer);
 	ipv4_addr_copy(&new_entry->lsi, lsi);
+	ipv4_addr_copy(&new_entry->ip_peer, ip);
 	new_entry->bex_state = state;
 	hip_ht_add(firewall_lsi_hit_db, new_entry);
 

@@ -20,6 +20,7 @@
 HIP_HASHTABLE *firewall_lsi_hit_db;
 
 struct firewall_hl {
+	struct in6_addr ip_peer;
 	hip_lsi_t lsi;
 	hip_hit_t hit_our;
         hip_hit_t hit_peer;
@@ -37,7 +38,7 @@ int hip_firewall_match_lsi(const void *ptr1, const void *ptr2);
 
 /*Consult/Modify operations in firewall database*/
 firewall_hl_t *firewall_hit_lsi_db_match(hip_lsi_t *lsi_peer);
-int firewall_add_hit_lsi(struct in6_addr *hit_our, struct in6_addr *hit_peer, hip_lsi_t *lsi, int state);
+int firewall_add_hit_lsi_ip(struct in6_addr *hit_our, struct in6_addr *hit_peer, hip_lsi_t *lsi, struct in6_addr *ip, int state);
 int firewall_set_bex_state(struct in6_addr *hit_s, struct in6_addr *hit_r, int state);
 void hip_firewall_delete_hldb(void);
 

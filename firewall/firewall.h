@@ -55,6 +55,7 @@
 "\n"
 
 struct firewall_hl {
+	struct in6_addr ip_peer;
 	hip_lsi_t lsi;
 	hip_hit_t hit_our;
         hip_hit_t hit_peer;
