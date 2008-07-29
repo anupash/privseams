@@ -130,20 +130,27 @@ int esp_prot_init()
 
 int esp_prot_uninit()
 {
-	int err = 0;
+	int err = 0, i;
 	int activate = 0;
 
 	// also deactivate the extension in hipd
 	HIP_IFEL(send_esp_prot_to_hipd(activate), -1,
 			"failed to activate the esp protection in hipd\n");
 
-	// TODO implement the rest
+	// uninit hcstores
+	hcstore_uninit(&bex_store);
+	hcstore_uninit(&update_store);
+	for (i = 0; i < NUM_TRANSFORMS; i++)
+	{
+		esp_prot_transforms[i].hash_func_id = NULL;
+		esp_prot_transforms[i].hash_length_id = 0;
+	}
 
   out_err:
 	return err;
 }
 
-int esp_prot_set_sadb(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
+int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 		unsigned char *esp_prot_anchor, int direction)
 {
 	int hash_length = 0, err = 0;
@@ -194,6 +201,18 @@ int esp_prot_set_sadb(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 
   out_err:
   	return err;
+}
+
+void esp_prot_sa_entry_free(hip_sa_entry_t *entry)
+{
+	if (entry->active_anchor)
+		free(entry->active_anchor);
+	if (entry->next_anchor)
+		free(entry->next_anchor);
+	if (entry->active_hchain)
+		hchain_free(entry->active_hchain);
+	if (entry->next_hchain)
+		hchain_free(entry->next_hchain);
 }
 
 int add_esp_prot_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *entry)

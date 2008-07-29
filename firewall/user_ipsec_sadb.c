@@ -489,7 +489,7 @@ int hip_sa_entry_set(hip_sa_entry_t *entry, int direction, uint32_t spi, uint32_
 	entry->sequence = 1;
 	entry->lifetime = lifetime;
 
-	HIP_IFEL(esp_prot_set_sadb(entry, esp_prot_transform, esp_prot_anchor, direction), -1,
+	HIP_IFEL(esp_prot_sa_entry_set(entry, esp_prot_transform, esp_prot_anchor, direction), -1,
 			"failed to set esp protection members\n");
 
   out_err:
@@ -734,6 +734,9 @@ void hip_sa_entry_free(hip_sa_entry_t * entry)
 			free(entry->active_anchor);
 		if (entry->next_anchor)
 			free(entry->next_anchor);
+
+		// also free all hchain related members
+		esp_prot_sa_entry_free(entry);
 	}
 }
 

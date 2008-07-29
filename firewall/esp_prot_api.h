@@ -34,8 +34,9 @@ typedef struct esp_prot_tfm
 
 int esp_prot_init(void);
 int esp_prot_uninit(void);
-int esp_prot_set_sadb(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
+int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 		unsigned char *esp_prot_anchor, int direction);
+void esp_prot_sa_entry_free(hip_sa_entry_t *entry);
 int add_esp_prot_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *entry);
 int verify_esp_prot_hash(hip_sa_entry_t *entry, unsigned char *hash_value);
 esp_prot_tfm_t * esp_prot_resolve_transform(uint8_t transform);
