@@ -726,14 +726,6 @@ void hip_sa_entry_free(hip_sa_entry_t * entry)
 			free(entry->aes_key);
 		if (entry->bf_key)
 			free(entry->bf_key);
-		if (entry->active_hchain)
-			free(entry->active_hchain);
-		if (entry->next_hchain)
-			free(entry->next_hchain);
-		if (entry->active_anchor)
-			free(entry->active_anchor);
-		if (entry->next_anchor)
-			free(entry->next_anchor);
 
 		// also free all hchain related members
 		esp_prot_sa_entry_free(entry);
