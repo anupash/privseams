@@ -21,13 +21,12 @@ unsigned short in_cksum(u16 *ptr,int nbytes){
 	register u32 sum;
 	u16 oddbyte;
 	register u16 answer;
-
+	
 	/*
 	 * Our algorithm is simple, using a 32-bit accumulator (sum),
 	 * we add sequential 16-bit words to it, and at the end, fold back
 	 * all the carry bits from the top 16 bits into the lower 16 bits.
 	 */
-
 	sum = 0;
 	while (nbytes > 1){
 		sum += *ptr++;
@@ -44,60 +43,45 @@ unsigned short in_cksum(u16 *ptr,int nbytes){
 	/*
 	 * Add back carry outs from top 16 bits to low 16 bits.
 	 */
-
 	sum  = (sum >> 16) + (sum & 0xffff);    /* add high-16 to low-16 */
 	sum += (sum >> 16);                     /* add carry */
 	answer = ~sum;          /* ones-complement, then truncate to 16 bits */
 	return(answer);
 }
 
-
-
 /**
- * adds the i1 option to a packet if required
- * adds the default HIT after the i1 option (if i1 option should be added)
- * and sends it off with the correct checksum
-
- * trafficType - 4 or 6 - standing for ipv4 and ipv6
- */
-/**
- * Sends a TCP packet through a raw socket.
+ * @brief Sends a TCP packet through a raw socket.
  *
- * @param *ptr	pointer to an integer that indicates
- * 		the type of traffic: 4 - ipv4; 6 - ipv6.
- * @param *ptr
-
-
- * @return	nothing, this function loops forever,
- * 		until the firewall is stopped.
+ * @param  hdr         
+ * @param  newSize     
+ * @param  trafficType 4 or 6 - standing for ipv4 and ipv6
+ * @param  sockfd      a socket file descriptor
+ * @param  addOption   adds the I1 option to a packet if required
+ * @param  addHIT      adds the default HIT after the I1 option (if I1 option
+ *                     should be added)
+ * @return             ?
  */
-int send_tcp_packet(void *hdr,
-		    int   newSize,
-		    int   trafficType,
-		    int   sockfd,
-		    int   addOption,
-		    int   addHIT){
-	int    on = 1, i, j, err = 0, off = 0;
-	int    hdr_size, newHdr_size, twoHdrsSize;
-	char  *packet;
-	char  *bytes =(char*)hdr;
+int send_tcp_packet(void *hdr, int newSize, int trafficType, int sockfd,
+		    int addOption, int addHIT)
+{
+	int on = 1, i = 0, j = 0, err = 0, off = 0, hdr_size = 0;
+	int newHdr_size = 0, twoHdrsSize = 0;
+	char *packet = NULL, *HITbytes = NULL;
+	char *bytes = (char*)hdr;
+	void  *pointer = NULL;
+	struct tcphdr *tcphdr = NULL, *newTcphdr = NULL;
+	struct ip *iphdr = NULL, *newIphdr = NULL;
+	struct ip6_hdr *ip6_hdr = NULL, *newIp6_hdr = NULL;
+	struct pseudo_hdr *pseudo = NULL;
+	struct pseudo6_hdr *pseudo6 = NULL;
 	struct sockaddr_in  sin_addr;
 	struct sockaddr_in6 sin6_addr;
 	struct in_addr  dstAddr;
 	struct in6_addr dst6Addr;
-	struct tcphdr *tcphdr;
-	struct tcphdr *newTcphdr;
-	struct ip * iphdr;
-	struct ip * newIphdr;
-	struct ip6_hdr * ip6_hdr;
-	struct ip6_hdr * newIp6_hdr;
-	struct pseudo_hdr  *pseudo;
-	struct pseudo6_hdr *pseudo6;
-	void  *pointer;
-	struct in6_addr *defaultHit = HIP_MALLOC(sizeof(char)*16, 0);
-	char   newHdr [newSize + 4*addOption + (sizeof(struct in6_addr))*addHIT];
-	char  *HITbytes;
-
+		
+	in6_addr_t *defaultHit = (in6_addr_t *)malloc(sizeof(char) * 16);
+	char newHdr[newSize + 4*addOption + (sizeof(struct in6_addr))*addHIT];
+	
 	if(addOption)
 		newSize = newSize + 4;
 	if(addHIT)
@@ -361,7 +345,6 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 {
 	struct hip_common *i1 = 0;
 	struct in6_addr daddr;
-	struct hip_common *i1_blind = NULL;
 	uint16_t mask = 0;
 	int err = 0, n=0;
 		
@@ -370,18 +353,17 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	HIP_IFEL(hip_init_us(entry, src_hit), -EINVAL,
 		 "Could not assign a local host id\n");
 	
-	_HIP_DEBUG("\n");
-	_HIP_DEBUG("----**********----3--*********-----------------\n");
-	//hip_for_each_ha(hip_print_info_hadb, &n);
-	_HIP_DEBUG("----**********----3--*********-----------------\n");
-
 #ifdef CONFIG_HIP_BLIND
-        if (hip_blind_get_status()) {
-	  HIP_DEBUG("Blind is activated, build blinded i1\n");
-	  // Build i1 message: use blind HITs and put nonce in the message
-	  HIP_IFEL((i1_blind = hip_blind_build_i1(entry, &mask)) == NULL,
-		   -1, "hip_blind_build_i1() failed\n");
-	  HIP_DUMP_MSG(i1_blind);
+	struct hip_common *i1_blind = NULL;
+        
+	if (hip_blind_get_status()) {
+		HIP_DEBUG("Blind is activated, building blinded I1 packet.\n");
+		
+		if((i1_blind = hip_blind_build_i1(entry, &mask)) == NULL) {
+			err = -1;
+			HIP_ERROR("hip_blind_build_i1() failed.\n");
+			goto out_err;
+		}
 	}
 #endif
 
@@ -411,14 +393,6 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 
 	HIP_IFEL(hip_hadb_get_peer_addr(entry, &daddr), -1,
 		 "No preferred IP address for the peer.\n");
-	
-	HIP_DEBUG("\n");
-	_HIP_DEBUG("----**********---4---*********-----------------\n");
-        /*
-	hip_for_each_ha(hip_print_info_hadb, &n);
-	*/
-        _HIP_DEBUG("----**********---4---*********-----------------\n");
-
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	// if hitr is hashed null hit, send it as null on the wire
@@ -467,18 +441,14 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 		hip_send_opp_tcp_i1(entry);
 	}
 out_err:
-
-	_HIP_DEBUG("----**********------*********-----------------\n");
-	/*
-        hip_for_each_ha(hip_print_info_hadb, &n);
-        */
-	_HIP_DEBUG("----**********------*********-----------------\n");
-
-	if (i1)
-	  HIP_FREE(i1);
-
-	if (i1_blind)
-	  HIP_FREE(i1_blind);
+	if (i1 != NULL) {
+		free(i1);
+	}
+#ifdef CONFIG_HIP_BLIND
+	if (i1_blind != NULL) {
+		free(i1_blind);
+	}
+#endif
 	return err;
 }
 
@@ -770,8 +740,8 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
                 in6_addr_t *dst_ip, const in_port_t dst_port,
                 hip_portpair_t *i1_info, uint16_t relay_para_type)
 {
-	struct hip_common *r1pkt = NULL;
-	struct in6_addr *r1_dst_addr, *local_plain_hit = NULL;
+	hip_common_t *r1pkt = NULL;
+	in6_addr_t *r1_dst_addr, *local_plain_hit = NULL;
 	in_port_t r1_dst_port = 0;
 	int err = 0;
 
@@ -820,17 +790,31 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 #endif
 
 #ifdef CONFIG_HIP_BLIND
-	if (hip_blind_get_status())
-	{
-	     HIP_IFEL((local_plain_hit = HIP_MALLOC(sizeof(struct in6_addr), 0)) == NULL,
-		      -1, "Couldn't allocate memory\n");
-	     HIP_IFEL(hip_plain_fingerprint(nonce, &i1->hitr, local_plain_hit),
-		      -1, "hip_plain_fingerprints failed\n");
-	     HIP_IFEL(!(r1pkt = hip_get_r1(r1_dst_addr, i1_daddr,
-					   local_plain_hit, &i1->hits)),
-		      -ENOENT, "No precreated R1\n");
-	     // replace the plain hit with the blinded hit
-	     ipv6_addr_copy(&r1pkt->hits, &i1->hitr);
+	if (hip_blind_get_status()) {
+		/* Compiler error:
+		   'nonce' undeclared (first use in this function)
+		   introduced nonce here and initialized it zero.
+		   -Lauri 22.07.2008.
+		*/
+		uint16_t nonce = 0;
+		if((local_plain_hit =
+		    (in6_addr_t *)malloc(sizeof(struct in6_addr))) == NULL) {
+			err = -1;
+			HIP_ERROR("Error when allocating memory to local "\
+				  "plain HIT.\n");
+			goto out_err;
+		}
+		HIP_IFEL(hip_plain_fingerprint(
+				 &nonce, &i1->hitr, local_plain_hit), -1,
+			 "hip_plain_fingerprints() failed.\n");
+		
+		if((r1pkt = hip_get_r1(r1_dst_addr, i1_daddr, local_plain_hit,
+				       &i1->hits)) == NULL) {
+			HIP_ERROR("Unable to get a precreated R1 packet.\n");
+		}
+		
+		/* Replace the plain HIT with the blinded HIT. */
+		ipv6_addr_copy(&r1pkt->hits, &i1->hitr);
 	}
 #endif
 	if (!hip_blind_get_status()) {
@@ -1036,7 +1020,8 @@ int hip_queue_packet(struct in6_addr *src_addr, struct in6_addr *peer_addr,
             entry->hip_msg_retrans.buf= NULL;
 	}
 
-	HIP_IFE(!(entry->hip_msg_retrans.buf = HIP_MALLOC(len, 0)), -ENOMEM);
+	HIP_IFE(!(entry->hip_msg_retrans.buf =
+		  HIP_MALLOC(len + HIP_UDP_ZERO_BYTES_LEN, 0)), -ENOMEM);
 	memcpy(entry->hip_msg_retrans.buf, msg, len);
 	memcpy(&entry->hip_msg_retrans.saddr, src_addr,
 	       sizeof(struct in6_addr));
