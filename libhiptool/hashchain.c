@@ -372,7 +372,7 @@ int hchain_free(hash_chain_t *hash_chain)
 		free(hash_chain);
 	}
 
-	HIP_DEBUG("hash-chain destructed\n");
+	HIP_DEBUG("all hash-chain elements freed\n");
 
   out_err:
 	return err;
