@@ -522,7 +522,7 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 					-1, "unable to retrieve hchain from store\n");
 
 			// issue UPDATE message to be sent by hipd
-			HIP_IFEL(trigger_update(entry), -1,
+			HIP_IFEL(send_trigger_update(entry), -1,
 					"unable to trigger update at hipd\n");
 
 			// refill update-store

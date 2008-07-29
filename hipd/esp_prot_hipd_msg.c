@@ -105,8 +105,8 @@ int esp_prot_handle_trigger_update_msg(struct hip_common *msg)
 	 * - ???
 	 *
 	 */
-	HIP_IFEL(hip_send_update(entry, NULL, 0, 0, SEND_UPDATE_ESP_ANCHOR, 0,
-			struct sockaddr* addr), -1, "failed to send anchor update\n");
+	HIP_IFEL(hip_send_update(entry, NULL, 0, 0, SEND_UPDATE_ESP_ANCHOR, 0, NULL),
+			-1, "failed to send anchor update\n");
 
   out_err:
 	return err;
