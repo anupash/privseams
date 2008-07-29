@@ -79,16 +79,16 @@ int hip_sadb_add(int direction, uint32_t spi, uint32_t mode,
 
 	if (update)
 	{
-		HIP_IFEL(hip_sa_entry_update(direction, spi, mode, src_addr, dst_addr, inner_src_addr,
-				inner_dst_addr, encap_mode, src_port, dst_port, ealg, a_keylen,
-				e_keylen, a_key, e_key, lifetime, esp_prot_transform, esp_prot_anchor), -1,
-				"failed to update sa entry\n");
+		HIP_IFEL(hip_sa_entry_update(direction, spi, mode, src_addr, dst_addr,
+				inner_src_addr, inner_dst_addr, encap_mode, src_port, dst_port, ealg,
+				a_keylen, e_keylen, a_key, e_key, lifetime, esp_prot_transform,
+				esp_prot_anchor, update), -1, "failed to update sa entry\n");
 	} else
 	{
-		HIP_IFEL(hip_sa_entry_add(direction, spi, mode, src_addr, dst_addr, inner_src_addr,
-				inner_dst_addr, encap_mode, src_port, dst_port, ealg, a_keylen,
-				e_keylen, a_key, e_key, lifetime, esp_prot_transform, esp_prot_anchor), -1,
-				"failed to add sa entry\n");
+		HIP_IFEL(hip_sa_entry_add(direction, spi, mode, src_addr, dst_addr,
+				inner_src_addr, inner_dst_addr, encap_mode, src_port, dst_port, ealg,
+				a_keylen, e_keylen, a_key, e_key, lifetime, esp_prot_transform,
+				esp_prot_anchor, update), -1, "failed to add sa entry\n");
 	}
 
   out_err:
@@ -293,7 +293,7 @@ int hip_sa_entry_add(int direction, uint32_t spi, uint32_t mode,
 		uint8_t encap_mode, uint16_t src_port, uint16_t dst_port,
 		int ealg, uint32_t a_keylen, uint32_t e_keylen,
 		unsigned char *a_key, unsigned char *e_key, uint64_t lifetime,
-		uint8_t esp_prot_transform, unsigned char *esp_prot_anchor)
+		uint8_t esp_prot_transform, unsigned char *esp_prot_anchor, int update)
 {
 	hip_sa_entry_t *entry = NULL;
 	int err = 0;
@@ -328,8 +328,8 @@ int hip_sa_entry_add(int direction, uint32_t spi, uint32_t mode,
 
 	HIP_IFEL(hip_sa_entry_set(entry, direction, spi, mode, src_addr, dst_addr,
 			inner_src_addr, inner_dst_addr, encap_mode, src_port, dst_port, ealg,
-			a_keylen, e_keylen, a_key, e_key, lifetime, esp_prot_transform, esp_prot_anchor),
-			-1, "failed to set the entry members\n");
+			a_keylen, e_keylen, a_key, e_key, lifetime, esp_prot_transform,
+			esp_prot_anchor, update), -1, "failed to set the entry members\n");
 
 	HIP_DEBUG("adding sa entry with following index attributes:\n");
 	HIP_DEBUG_HIT("inner_src_addr", entry->inner_src_addr);
@@ -368,7 +368,7 @@ int hip_sa_entry_update(int direction, uint32_t spi, uint32_t mode,
 		uint8_t encap_mode, uint16_t src_port, uint16_t dst_port,
 		int ealg, uint32_t a_keylen, uint32_t e_keylen,
 		unsigned char *a_key, unsigned char *e_key, uint64_t lifetime,
-		uint8_t esp_prot_transform, unsigned char *esp_prot_anchor)
+		uint8_t esp_prot_transform, unsigned char *esp_prot_anchor, int update)
 {
 	hip_sa_entry_t *stored_entry = NULL;
 	int err = 0;
@@ -386,9 +386,9 @@ int hip_sa_entry_update(int direction, uint32_t spi, uint32_t mode,
 
 	/* change members of entry in sadb and add new links */
 	HIP_IFEL(hip_sa_entry_set(stored_entry, direction, spi, mode, src_addr, dst_addr,
-			inner_src_addr, inner_dst_addr, encap_mode, src_port, dst_port, ealg, a_keylen,
-			e_keylen, a_key, e_key, lifetime, esp_prot_transform, esp_prot_anchor),
-			-1, "failed to update the entry members\n");
+			inner_src_addr, inner_dst_addr, encap_mode, src_port, dst_port, ealg,
+			a_keylen, e_keylen, a_key, e_key, lifetime, esp_prot_transform,
+			esp_prot_anchor, update), -1, "failed to update the entry members\n");
 
 	HIP_IFEL(hip_link_entries_add(stored_entry), -1, "failed to add links\n");
 	pthread_mutex_unlock(&stored_entry->rw_lock);
@@ -405,7 +405,7 @@ int hip_sa_entry_set(hip_sa_entry_t *entry, int direction, uint32_t spi, uint32_
 		uint8_t encap_mode, uint16_t src_port, uint16_t dst_port,
 		int ealg, uint32_t a_keylen, uint32_t e_keylen,
 		unsigned char *a_key, unsigned char *e_key, uint64_t lifetime,
-		uint8_t esp_prot_transform, unsigned char *esp_prot_anchor)
+		uint8_t esp_prot_transform, unsigned char *esp_prot_anchor, int update)
 {
 	int key_len = 0; 							/* for 3-DES */
 	unsigned char key1[8], key2[8], key3[8]; 	/* for 3-DES */
@@ -489,8 +489,8 @@ int hip_sa_entry_set(hip_sa_entry_t *entry, int direction, uint32_t spi, uint32_
 	entry->sequence = 1;
 	entry->lifetime = lifetime;
 
-	HIP_IFEL(esp_prot_sa_entry_set(entry, esp_prot_transform, esp_prot_anchor, direction), -1,
-			"failed to set esp protection members\n");
+	HIP_IFEL(esp_prot_sa_entry_set(entry, esp_prot_transform, esp_prot_anchor, update),
+			-1, "failed to set esp protection members\n");
 
   out_err:
   	return err;

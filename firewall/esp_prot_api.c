@@ -140,6 +140,7 @@ int esp_prot_uninit()
 	// uninit hcstores
 	hcstore_uninit(&bex_store);
 	hcstore_uninit(&update_store);
+	// ...and set transforms to 0/NULL
 	for (i = 0; i < NUM_TRANSFORMS; i++)
 	{
 		esp_prot_transforms[i].hash_func_id = NULL;
@@ -151,51 +152,84 @@ int esp_prot_uninit()
 }
 
 int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
-		unsigned char *esp_prot_anchor, int direction)
+		unsigned char *esp_prot_anchor, int update)
 {
 	int hash_length = 0, err = 0;
 
 	HIP_ASSERT(entry != 0);
 	// esp_prot_transform >= 0 due to datatype
 	HIP_ASSERT(esp_prot_transform <= NUM_TRANSFORMS);
-	HIP_ASSERT(direction == 1 || direction == 2);
+	HIP_ASSERT(entry->direction == 1 || entry->direction == 2);
 
 	// only set up the anchor or hchain, if esp extension is used
 	if (esp_prot_transform > ESP_PROT_TFM_UNUSED)
 	{
-		// TODO add update support
-
 		// if the extension is used, an anchor should be provided by the peer
 		HIP_ASSERT(esp_prot_anchor != NULL);
 
-		HIP_DEBUG("setting up ESP extension parameters...\n");
-
-		// set the esp protection extension transform
-		entry->esp_prot_transform = esp_prot_transform;
-		HIP_DEBUG("entry->esp_prot_transform: %u\n", entry->esp_prot_transform);
-
-		/* set up hash chains or anchors depending on the direction */
-		if (direction == HIP_SPI_DIRECTION_IN)
+		// distinguish the creation of a new entry and the update of an old one
+		if (update)
 		{
+			HIP_DEBUG("updating up ESP prot parameters...\n");
+
+			// check if current and next transform are matching
+			HIP_IFEL(entry->esp_prot_transform != esp_prot_transform, 1,
+					"transform for active esp prot and next are different\n");
+			HIP_DEBUG("found matching esp prot transforms\n");
+
 			// we have to get the hash_length
 			hash_length = esp_prot_get_hash_length(esp_prot_transform);
 
-			HIP_IFEL(!(entry->active_anchor = (unsigned char *)
-					malloc(hash_length)), -1, "failed to allocate memory\n");
+			/* set up hash chains or anchors depending on the direction */
+			if (entry->direction == HIP_SPI_DIRECTION_IN)
+			{
+				HIP_IFEL(!(entry->next_anchor = (unsigned char *)
+						malloc(hash_length)), -1, "failed to allocate memory\n");
 
-			// set anchor for inbound SA
-			memcpy(entry->active_anchor, esp_prot_anchor, hash_length);
+				// set anchor for inbound SA
+				memcpy(entry->next_anchor, esp_prot_anchor, hash_length);
 
-			entry->esp_prot_tolerance = DEFAULT_VERIFY_WINDOW;
+			} else
+			{
+				/* esp_prot_sadb_maintenance should have already set up the next_hchain,
+				 * check that the anchor belongs to the one that is set */
+				HIP_IFEL(memcmp(esp_prot_anchor, entry->next_hchain->anchor_element->hash,
+						hash_length), -1,
+						"received a non-matching anchor from hipd for next_hchain\n");
+			}
 		} else
 		{
-			// set hchain for outbound SA
-			HIP_IFEL(!(entry->active_hchain =
-				esp_prot_get_bex_hchain_by_anchor(esp_prot_anchor, esp_prot_transform)),
-				-1, "corresponding hchain not found\n");
+			HIP_DEBUG("setting up ESP prot parameters for new entry...\n");
+
+			// set the esp protection transform
+			entry->esp_prot_transform = esp_prot_transform;
+			HIP_DEBUG("entry->esp_prot_transform: %u\n", entry->esp_prot_transform);
+
+			/* set up hash chains or anchors depending on the direction */
+			if (entry->direction == HIP_SPI_DIRECTION_IN)
+			{
+				// we have to get the hash_length
+				hash_length = esp_prot_get_hash_length(esp_prot_transform);
+
+				HIP_IFEL(!(entry->active_anchor = (unsigned char *)
+						malloc(hash_length)), -1, "failed to allocate memory\n");
+
+				// set anchor for inbound SA
+				memcpy(entry->active_anchor, esp_prot_anchor, hash_length);
+
+				entry->esp_prot_tolerance = DEFAULT_VERIFY_WINDOW;
+			} else
+			{
+				// set hchain for outbound SA
+				HIP_IFEL(!(entry->active_hchain =
+					esp_prot_get_bex_hchain_by_anchor(esp_prot_anchor, esp_prot_transform)),
+					-1, "corresponding hchain not found\n");
+			}
 		}
 	} else
 	{
+		HIP_DEBUG("no esp prot related params set, as UNUSED\n");
+
 		entry->esp_prot_transform = ESP_PROT_TFM_UNUSED;
 	}
 
