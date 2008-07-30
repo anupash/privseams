@@ -45,7 +45,7 @@ static int hip_verify_hmac(struct hip_common *buffer, u8 *hmac,
 
 	_HIP_HEXDUMP("HMAC", hmac_res, HIP_AH_SHA_LEN);
 	HIP_IFE(memcmp(hmac_res, hmac, HIP_AH_SHA_LEN), -EINVAL);
-	memcmp(hmac_res, hmac, HIP_AH_SHA_LEN); /* why is the same as the line before it?. Tao Wan*/
+
  out_err:
 	if (hmac_res)
 		HIP_FREE(hmac_res);
@@ -96,11 +96,12 @@ int hip_verify_packet_hmac(struct hip_common *msg,
 int hip_verify_packet_hmac_general(struct hip_common *msg,
 			   struct hip_crypto_key *crypto_key, hip_tlv_type_t parameter_type)
 {
-	HIP_DEBUG("hip_verify_packet_hmac() invoked.\n");
 	int err = 0, len = 0, orig_len = 0;
 	u8 orig_checksum = 0;
 	struct hip_crypto_key tmpkey;
 	struct hip_hmac *hmac = NULL;
+
+	HIP_DEBUG("hip_verify_packet_hmac() invoked.\n");
 
 	HIP_IFEL(!(hmac = hip_get_param(msg, parameter_type)),
 		 -ENOMSG, "No HMAC parameter\n");
