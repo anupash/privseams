@@ -384,6 +384,15 @@ Network  --->
 &lt;*&gt; isakmpd (for PISA development)
 &lt;*&gt; ip6tables (for PISA development)
 &lt;*&gt; hostapd (for PISA development)
+Kernel modules  ---> 
+&lt;*&gt; kmod-crypto 
+&lt;*&gt; kmod-ipsec 
+&lt;*&gt; kmod-ipsec4 
+&lt;*&gt; kmod-ipsec6 
+&lt;*&gt; kmod-iptunnel4 
+&lt;*&gt; kmod-ipv6 
+&lt;*&gt; kmod-madwifi 
+&lt;*&gt; kmod-tun 
 Advanced configuration options (for developers)  --->
 Build Options  --->
 (8)   Number of jobs to run simultaneously (for PISA development. Speeds up compilation dramatically on multicore systems)
