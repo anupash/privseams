@@ -603,7 +603,8 @@ int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry, int flags)
 	return err;
 }
 
-int esp_prot_update_handle_anchor(hip_common_t *update, hip_ha_t *entry)
+int esp_prot_update_handle_anchor(hip_common_t *update, hip_ha_t *entry,
+		int *send_ack)
 {
 	struct hip_tlv_common *param = NULL;
 	struct esp_prot_anchor *esp_anchor = NULL;
@@ -625,6 +626,8 @@ int esp_prot_update_handle_anchor(hip_common_t *update, hip_ha_t *entry)
 		// set the update anchor as the new peer anchor
 		memset(entry->esp_peer_anchor, 0, MAX_HASH_LENGTH);
 		memcpy(entry->esp_peer_anchor, esp_anchor->anchor, hash_length);
+
+		*send_ack = 1;
 
 		// TODO trigger sa_add now?
 	}
