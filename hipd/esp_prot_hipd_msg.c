@@ -603,11 +603,31 @@ int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry, int flags)
 	return err;
 }
 
-int esp_prot_update_handle_anchor()
+int esp_prot_update_handle_anchor(hip_common_t *update, hip_ha_t *entry)
 {
-	int err = -1;
+	struct hip_tlv_common *param = NULL;
+	struct esp_prot_anchor *esp_anchor = NULL;
+	int hash_length = 0;
+	int err = 0;
 
-	// TODO implement
+	if (param = hip_get_param(update, HIP_PARAM_ESP_PROT_ANCHOR))
+	{
+		esp_anchor = (struct esp_prot_anchor *)param;
+
+		// check that we are receiving an anchor matching the negotiated transform
+		HIP_IFEL(entry->esp_prot_transform != esp_anchor->transform, -1,
+				"esp prot transform changed without new BEX\n");
+		HIP_DEBUG("esp prot transforms match\n");
+
+		// we need to know the hash_length for this transform
+		hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
+
+		// set the update anchor as the new peer anchor
+		memset(entry->esp_peer_anchor, 0, MAX_HASH_LENGTH);
+		memcpy(entry->esp_peer_anchor, esp_anchor->anchor, hash_length);
+
+		// TODO trigger sa_add now?
+	}
 
   out_err:
 	return err;

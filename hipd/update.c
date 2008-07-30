@@ -1672,7 +1672,7 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 
 	HIP_DEBUG("hip_receive_update() invoked.\n");
 
-        /* RFC 5201: If there is no corresponding HIP association, the
+    /* RFC 5201: If there is no corresponding HIP association, the
 	 * implementation MAY reply with an ICMP Parameter Problem. */
 	if(entry == NULL) {
 		HIP_ERROR("No host association database entry found.\n");
@@ -1738,6 +1738,10 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 			  ntohl(seq->update_id));
 		HIP_IFEL(hip_handle_update_seq(entry, msg), -1,
 			 "Error when handling parameter SEQ.\n");
+
+		/* RFC 5201: presence of a SEQ parameter indicates that the
+		 * receiver MUST ACK the UPDATE */
+		send_ack = 1;
 	}
 
 	esp_info = hip_get_param(msg, HIP_PARAM_ESP_INFO);
@@ -1836,6 +1840,13 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 		hip_handle_param_reg_response(entry, msg);
 		hip_handle_param_reg_failed(entry, msg);
 	}
+
+	/********** ESP-PROT anchor (OPTIONAL) **********/
+
+	 HIP_IFEL(esp_prot_update_handle_anchor(msg, entry), -1,
+			 "failed to handle received esp prot anchor\n");
+
+	 /************************************************/
 
 	if(send_ack) {
 		HIP_IFEL(hip_update_send_ack(entry, msg, src_ip, dst_ip), -1,
