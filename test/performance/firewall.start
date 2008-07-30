@@ -35,4 +35,4 @@ do
 done
 
 firewall.init
-firewall $RULE_FILE $TIMEOUT
+hipfw $RULE_FILE $TIMEOUT
