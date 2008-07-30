@@ -1730,6 +1730,9 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 			  ntohl(ack->peer_update_id));
 		entry->hadb_update_func->hip_update_handle_ack(
 			entry, ack, has_esp_info);
+
+		// we need to set the update-state to 0 for ANCHOR-updates
+		esp_prot_update_handle_ack(entry);
 	}
 
 	seq = hip_get_param(msg, HIP_PARAM_SEQ);

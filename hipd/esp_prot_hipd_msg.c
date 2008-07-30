@@ -636,6 +636,17 @@ int esp_prot_update_handle_anchor(hip_common_t *update, hip_ha_t *entry,
 	return err;
 }
 
+void esp_prot_update_handle_ack(hip_ha_t *entry)
+{
+	HIP_ASSERT(entry != NULL);
+
+	// make sure we only alter the behavior when esp prot is active
+	if (*(entry->esp_update_anchor) != 0)
+		entry->update_state = 0;
+
+	// TODO trigger sa_add now?
+}
+
 /* simple transform selection: find first match in both arrays
  *
  * returns transform, UNUSED transform on error
