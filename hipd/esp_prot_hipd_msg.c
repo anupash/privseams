@@ -604,11 +604,12 @@ int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry, int flags)
 }
 
 int esp_prot_update_handle_anchor(hip_common_t *update, hip_ha_t *entry,
-		int *send_ack)
+		in6_addr_t *src_ip, in6_addr_t *dst_ip, int *send_ack)
 {
 	struct hip_tlv_common *param = NULL;
 	struct esp_prot_anchor *esp_anchor = NULL;
 	int hash_length = 0;
+	uint32_t spi_in = 0;
 	int err = 0;
 
 	if (param = hip_get_param(update, HIP_PARAM_ESP_PROT_ANCHOR))
@@ -629,22 +630,43 @@ int esp_prot_update_handle_anchor(hip_common_t *update, hip_ha_t *entry,
 
 		*send_ack = 1;
 
-		// TODO trigger sa_add now?
+		/* like this we do NOT support multihoming
+		 *
+		 * @todo change when merging with UPDATE re-implementation
+		 */
+		spi_in = hip_hadb_get_latest_inbound_spi(entry);
+
+		// notify sadb about next anchor
+		HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(src_ip, dst_ip,
+				&entry->hit_peer, &entry->hit_our, spi_in, entry->esp_transform,
+				&entry->esp_in, &entry->auth_in, 0, HIP_SPI_DIRECTION_IN, 1, entry),
+				-1, "failed to notify sadb about next anchor\n");
 	}
 
   out_err:
 	return err;
 }
 
-void esp_prot_update_handle_ack(hip_ha_t *entry)
+int esp_prot_update_handle_ack(hip_ha_t *entry, in6_addr_t *src_ip,
+		in6_addr_t *dst_ip)
 {
+	int err = 0;
+
 	HIP_ASSERT(entry != NULL);
 
 	// make sure we only alter the behavior when esp prot is active
 	if (*(entry->esp_update_anchor) != 0)
 		entry->update_state = 0;
 
-	// TODO trigger sa_add now?
+	// notify sadb about next anchor
+	HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(dst_ip, src_ip,
+			&entry->hit_our, &entry->hit_peer, &entry->default_spi_out,
+			entry->esp_transform, &entry->esp_out, &entry->auth_out, 0,
+			HIP_SPI_DIRECTION_OUT, 0, entry), -1,
+			"failed to notify sadb about next anchor\n");
+
+  out_err:
+	return err;
 }
 
 /* simple transform selection: find first match in both arrays

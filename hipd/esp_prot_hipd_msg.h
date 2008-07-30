@@ -14,8 +14,9 @@ int esp_prot_r2_add_anchor(hip_common_t *r2, hip_ha_t *entry);
 int esp_prot_r2_handle_anchor(hip_ha_t *entry, struct hip_context *ctx);
 int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry, int flags);
 int esp_prot_update_handle_anchor(hip_common_t *update, hip_ha_t *entry,
-		int *send_ack);
-void esp_prot_update_handle_ack(hip_ha_t *entry);
+		in6_addr_t *src_ip, in6_addr_t *dst_ip, int *send_ack);
+int esp_prot_update_handle_ack(hip_ha_t *entry, in6_addr_t *src_ip,
+		in6_addr_t *dst_ip);
 uint8_t esp_prot_select_transform(int num_transforms, uint8_t *transforms);
 int esp_prot_check_transform(uint8_t transform);
 
