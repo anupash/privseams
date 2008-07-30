@@ -2599,19 +2599,17 @@ int hip_build_param_transform(struct hip_common *msg,
 }
 
 /**
- * hip_get_param_transform_suite_id - get a suite id from a transform structure
- * @param transform_tlv the transform structure
- * @param index the index of the suite id in transform_tlv
- *
- * XX FIXME: REMOVE INDEX, XX RENAME
- *
- * @return the suite id on transform_tlv on index
+ * @brief Gets a suite id from a transform structure.
+ * 
+ * @param transform_tlv a pointer to a transform structure
+ * @param index         the index of the suite ID in transform_tlv
+ * @return              the suite id on transform_tlv on index
+ * @todo                Remove index and rename.
  */
-hip_transform_suite_t hip_get_param_transform_suite_id(const void *transform_tlv,
-						       const uint16_t index)
+hip_transform_suite_t hip_get_param_transform_suite_id(
+	const void *transform_tlv, const uint16_t index)
 {
-	/* XX FIXME: WHY DO WE HAVE HIP_SELECT_ESP_TRANSFORM SEPARATELY??? */
-
+	/** @todo Why do we have hip_select_esp_transform separately? */
 	hip_tlv_type_t type;
  	uint16_t supported_hip_tf[] = { HIP_HIP_NULL_SHA1,
  					HIP_HIP_3DES_SHA1,
@@ -2652,7 +2650,8 @@ hip_transform_suite_t hip_get_param_transform_suite_id(const void *transform_tlv
  			}
  		}
  	}
- 	HIP_ERROR("usable suite not found\n");
+ 	HIP_ERROR("Usable suite not found.\n");
+	
  	return 0;
 }
 
