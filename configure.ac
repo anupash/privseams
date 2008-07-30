@@ -355,7 +355,7 @@ AC_SUBST(HIPL_PJPROJECT_LIB_UTIL, "$HIPL_PJPROJECT/pjlib-util")
 AC_SUBST(HIPL_PJPROJECT_NATH, "$HIPL_PJPROJECT/pjnath")
 AC_SUBST(HIPL_PJPROJECT_MEDIA, "$HIPL_PJPROJECT/pjmedia")
 AC_SUBST(HIPL_PJPROJECT_SIP, "$HIPL_PJPROJECT/pjsip")
-AC_SUBST(PJPROJECT_FILES, `find pjproject -type f|egrep -v '(\.arch-ids|.*\.depend|.*\.a|.*\.o|.*\/bin\/)'|xargs echo`)
+#AC_SUBST(PJPROJECT_FILES, `find pjproject -type f|egrep -v '(\.arch-ids|.*\.depend|.*\.a|.*\.o|.*\/bin\/)'|xargs echo`)
 AC_SUBST(HIPL_PERFORMANCE, "$HIPL/performance")
 AC_SUBST(HIPL_PERFORMANCE_LIB, "HIPL_PERFORMANCE/.libs/performance.a")
 
