@@ -2197,11 +2197,15 @@ int hip_send_update(struct hip_hadb_state *entry,
 	in6_addr_t saddr = { 0 }, daddr = { 0 };
 	struct netdev_address *n;
 	struct hip_own_addr_list_item *own_address_item, *tmp;
+	int anchor_update = 0;
 
 	HIP_DEBUG("\n");
 	HIP_IFE(hip_hadb_get_peer_addr(entry, &daddr), -1);
 
 	HIP_IFEL(entry->is_loopback, 0, "Skipping loopback\n");
+
+	// used to distinguish anchor-update from other message types
+	anchor_update = flags & SEND_UPDATE_ESP_ANCHOR;
 
 	old_spi = hip_hadb_get_spi(entry, -1);
 
@@ -2223,6 +2227,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 	entry->hadb_misc_func->hip_build_network_hdr(update_packet, HIP_UPDATE,
 						     mask, &entry->hit_our,
 						     &entry->hit_peer);
+
 	if (add_locator) {
 		/* mm stuff, per-ifindex SA
 		   reuse old SA if we have one, else create a new SA.
@@ -2244,6 +2249,9 @@ int hip_send_update(struct hip_hadb_state *entry,
 	} else {
 		/* base draft UPDATE, create a new SA anyway */
 		_HIP_DEBUG("base draft UPDATE, create a new SA\n");
+
+		// we reuse the old spi for the ANCHOR update
+		mapped_spi = hip_hadb_get_spi(entry, -1);
 	}
 
 	/* If this is mm-UPDATE (ifindex should be then != 0) avoid
@@ -2300,7 +2308,9 @@ int hip_send_update(struct hip_hadb_state *entry,
 			esp_info_old_spi = mapped_spi;
 			esp_info_new_spi = mapped_spi;
 		}
-	} else {
+	//} else /* hack to prevent sending of ESP-update when only ANCHOR-update */
+	} else if (!anchor_update)
+	{
 		HIP_DEBUG("adding ESP_INFO, Old SPI <> New SPI\n");
 		/* plain UPDATE or readdress with rekeying */
 		/* update the SA of the interface which caused the event */
@@ -2311,11 +2321,21 @@ int hip_send_update(struct hip_hadb_state *entry,
 		hip_set_spi_update_status(entry, esp_info_old_spi, 1);
 		//esp_info_new_spi = new_spi_in; /* see bug id 434 */
 		esp_info_new_spi = esp_info_old_spi;
+	} else
+	{
+		HIP_DEBUG("Reusing old SPI\n");
+		esp_info_old_spi = mapped_spi;
+		esp_info_new_spi = mapped_spi;
 	}
 
-	/* if del then we have to remove SAs for that address */
-	was_bex_addr = ipv6_addr_cmp(hip_cast_sa_addr(addr),
-				     &entry->local_address);
+	/* this if is another hack to make sure we don't send ESP-update
+	 * when we only want a pure ANCHOR-update */
+	if (addr != NULL)
+	{
+		/* if del then we have to remove SAs for that address */
+		was_bex_addr = ipv6_addr_cmp(hip_cast_sa_addr(addr),
+						 &entry->local_address);
+	}
 
 	if (is_add && !ipv6_addr_cmp(&entry->local_address, &zero_addr))
 	{
@@ -2356,23 +2376,30 @@ int hip_send_update(struct hip_hadb_state *entry,
 			goto out_err;
 	}
 
-	/* Send UPDATE(ESP_INFO, LOCATOR, SEQ) */
-	HIP_DEBUG("esp_info_old_spi=0x%x esp_info_new_spi=0x%x\n",
-		  esp_info_old_spi, esp_info_new_spi);
-	HIP_IFEL(hip_build_param_esp_info(
-			 update_packet, entry->current_keymat_index,
-			 esp_info_old_spi, esp_info_new_spi),
-		 -1, "Building of ESP_INFO param failed\n");
+	if (!anchor_update)
+	{
+		/* Send UPDATE(ESP_INFO, LOCATOR, SEQ) */
+		HIP_DEBUG("esp_info_old_spi=0x%x esp_info_new_spi=0x%x\n",
+			  esp_info_old_spi, esp_info_new_spi);
+		HIP_IFEL(hip_build_param_esp_info(
+				 update_packet, entry->current_keymat_index,
+				 esp_info_old_spi, esp_info_new_spi),
+			 -1, "Building of ESP_INFO param failed\n");
 
-	if (add_locator) {
-		err = hip_build_param_locator(update_packet, addr_list,
-					      addr_count);
-	  HIP_IFEL(err, err, "Building of LOCATOR param failed\n");
-	} else
-	  HIP_DEBUG("not adding LOCATOR\n");
+		if (add_locator)
+		{
+			err = hip_build_param_locator(update_packet, addr_list,
+							  addr_count);
+		  HIP_IFEL(err, err, "Building of LOCATOR param failed\n");
+		} else
+		  HIP_DEBUG("not adding LOCATOR\n");
 
-     hip_update_set_new_spi_in(entry, esp_info_old_spi,
-			       esp_info_new_spi, 0);
+		 hip_update_set_new_spi_in(entry, esp_info_old_spi,
+					   esp_info_new_spi, 0);
+	}
+
+	/*************** SEQ (OPTIONAL) ***************/
+
      entry->update_id_out++;
      update_id_out = entry->update_id_out;
      _HIP_DEBUG("outgoing UPDATE ID=%u\n", update_id_out);
@@ -2394,7 +2421,9 @@ int hip_send_update(struct hip_hadb_state *entry,
       *       the SEQ param (to guaranty freshness of the ANCHOR) in the signed
       *       part of the message
       * @note the acknowledgement should trigger an add_sa where update = 1
-      *       and direction = OUTBOUND */
+      *       and direction = OUTBOUND
+      * @note combination with other optional params is possible
+      *       -> when locator update this will include anchor too */
 	 HIP_IFEL(esp_prot_update_add_anchor(update_packet, entry, flags), -1,
 			 "failed to add esp prot anchor\n");
 

@@ -88,8 +88,18 @@ int esp_prot_handle_trigger_update_msg(struct hip_common *msg)
 	// we need to know the hash_length for this transform
 	hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
 
-	memset(entry->esp_local_anchor, 0, MAX_HASH_LENGTH);
-	memcpy(entry->esp_local_anchor, esp_prot_anchor, hash_length);
+	// we can assume that the last update's anchor is in use right now
+	// TODO make this more explicit using a message from the fw
+	// int esp_prot_handle_notify_hchain_change(struct hip_common *msg)
+	if (*(entry->esp_update_anchor) != 0)
+	{
+		memset(entry->esp_local_anchor, 0, MAX_HASH_LENGTH);
+		memcpy(entry->esp_local_anchor, entry->esp_update_anchor, hash_length);
+	}
+
+	// set the update anchor
+	memset(entry->esp_update_anchor, 0, MAX_HASH_LENGTH);
+	memcpy(entry->esp_update_anchor, esp_prot_anchor, hash_length);
 
 	/* this should send an update only containing the mandatory params
 	 * HMAC and HIP_SIGNATURE as well as the ESP_PROT_ANCHOR and the
@@ -99,13 +109,13 @@ int esp_prot_handle_trigger_update_msg(struct hip_common *msg)
 	 * params used for this call:
 	 * - hadb entry matching the HITs passed in the trigger msg
 	 * - not sending locators -> list = NULL and count = 0
-	 * - no interface triggers this event -> if 0
+	 * - no interface triggers this event -> -1
 	 * - bitwise telling about which params to add to UPDATE -> set 3rd bit to 1
 	 * - UPDATE not due to adding of a new addresses
 	 * - ???
 	 *
 	 */
-	HIP_IFEL(hip_send_update(entry, NULL, 0, 0, SEND_UPDATE_ESP_ANCHOR, 0, NULL),
+	HIP_IFEL(hip_send_update(entry, NULL, 0, -1, SEND_UPDATE_ESP_ANCHOR, 0, NULL),
 			-1, "failed to send anchor update\n");
 
   out_err:
@@ -567,6 +577,17 @@ int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry, int flags)
 	int hash_length = 0;
 	int err = 0;
 
+	// on-path middleboxes have to learn about the anchors in use
+	if ((flags & SEND_UPDATE_LOCATOR) && (flags & SEND_UPDATE_ESP_ANCHOR))
+	{
+		// we can safely assume that this UPDATE was triggered by the firewall
+		hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
+
+		HIP_IFEL(hip_build_param_esp_prot_anchor(update, entry->esp_prot_transform,
+				entry->esp_local_anchor, hash_length), -1,
+				"building of ESP protection anchor failed\n");
+	}
+
 	// check if we should send a new anchor
 	if (flags & SEND_UPDATE_ESP_ANCHOR)
 	{
@@ -574,7 +595,7 @@ int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry, int flags)
 		hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
 
 		HIP_IFEL(hip_build_param_esp_prot_anchor(update, entry->esp_prot_transform,
-				entry->esp_local_anchor, hash_length), -1,
+				entry->esp_update_anchor, hash_length), -1,
 				"building of ESP protection anchor failed\n");
 	}
 
