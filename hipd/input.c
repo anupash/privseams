@@ -1666,16 +1666,19 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
 	HIP_IFEL(hip_produce_keying_material(i2_context.input, &i2_context,
 					     solution->I, solution->J, &dhpv),
-		 -1, "Unable to produce keying material. Dropping I2.\n");
+		 -EPROTO, "Unable to produce keying material. Dropping the I2 "\
+		 "packet.\n");
 	
 	/* Verify HMAC. */
 	if (hip_hidb_hit_is_our(&i2->hits)) {
 		/* loopback */
 		HIP_IFEL(hip_verify_packet_hmac(i2, &i2_context.hip_hmac_out),
-			 -EPROTO, "HMAC loopback validation on I2 failed.\n");
+			 -EPROTO, "HMAC loopback validation on I2 failed. "\
+			 "Dropping the I2 packet.\n");
 	} else {
 		HIP_IFEL(hip_verify_packet_hmac(i2, &i2_context.hip_hmac_in),
-			 -EPROTO, "HMAC validation on I2 failed.\n");
+			 -EPROTO, "HMAC validation on I2 failed. Dropping the "\
+			 "I2 packet.\n");
 	}
 	
 	/* Decrypt the HOST_ID and verify it against the sender HIT. */
@@ -1719,10 +1722,16 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		   1) the encrypted HOST ID parameter inside the "Encrypted
 		      data" field of the ENCRYPTED parameter.
 		   2) Initialization vector from the ENCRYPTED parameter.
-		   and the length of the "Encrypted data" field in the ENCRYPTED
+		   
+		   Get the length of the "Encrypted data" field in the ENCRYPTED
 		   parameter. */
 		
 		switch (hip_tfm) {
+		case HIP_HIP_RESERVED:
+			HIP_ERROR("Found HIP suite ID 'RESERVED'. Dropping "\
+				  "the I2 packet.\n");
+			err = -EOPNOTSUPP;
+			goto out_err;
 		case HIP_HIP_AES_SHA1:
 			host_id_in_enc = (struct hip_host_id *)
 				(tmp_enc +
@@ -1770,29 +1779,32 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 				  "HMAC-MD5'. Support for this suite ID is "\
 				  "not implemented. Dropping the I2 packet.\n");
 			err = -ENOSYS;
-			break;
+			goto out_err;
 		default:
 			HIP_ERROR("Found unknown HIP suite ID '%d'. Dropping "\
 				  "the I2 packet.\n", hip_tfm);
-			err = -ENOSYS;
-			break;
+			err = -EOPNOTSUPP;
+			goto out_err;
 		}
 	}
 	
-	HIP_DEBUG("Crypto encrypted\n");
-
-	HIP_IFEL(hip_crypto_encrypted(host_id_in_enc, iv, hip_tfm,
-				      crypto_len, &i2_context.hip_enc_in.key,
+        /* This far we have succesfully produced the keying material (key),
+	   identified which HIP transform is use (hip_tfm), retrieved pointers
+	   both to the encrypted HOST_ID (host_id_in_enc) and initialization
+	   vector (iv) and we know the length of the encrypted HOST_ID
+	   parameter (crypto_len). We are ready to decrypt the actual host
+	   identity. If the decryption succeeds, we have the decrypted HOST_ID
+	   parameter in the 'host_id_in_enc' buffer. */
+	HIP_IFEL(hip_crypto_encrypted(host_id_in_enc, iv, hip_tfm, crypto_len,
+				      &i2_context.hip_enc_in.key,
 				      HIP_DIRECTION_DECRYPT), -EINVAL,
-		 "Decryption of Host ID failed\n");
+		 "Failed to decrypt the HOST_ID parameter. Dropping the I2 "\
+		 "packet.\n");
 
 	if (!hip_hidb_hit_is_our(&i2->hits))  {
 		HIP_IFEL(hip_get_param_type(host_id_in_enc) != HIP_PARAM_HOST_ID, -EINVAL,
 			 "The decrypted parameter is not a host id\n");
 	}
-
-	_HIP_HEXDUMP("Decrypted HOST_ID", host_id_in_enc,
-		     hip_get_param_total_len(host_id_in_enc));
 
 #ifdef CONFIG_HIP_BLIND
 	if (use_blind) {
@@ -1851,7 +1863,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 #endif
 	     HIP_DEBUG("Before inserting state entry in hadb\n");
 	     hip_hadb_insert_state(entry);
-		HIP_DEBUG("After inserting state entry in hadb\n");
+	     HIP_DEBUG("After inserting state entry in hadb\n");
 	     hip_hold_ha(entry);
 
 	     ipv6_addr_copy(&entry->local_address, i2_daddr);
