@@ -808,7 +808,7 @@ int main(int argc, char ** argv){
 	for( i = 0; i < sw_hashloops/100; i++){
 		if(sw_file_output) hip_perf_start_benchmark(perf_set, PS_HASH);
  		for(j = 0; j < 100; j++){
-			SHA(buffer1, HASH_LEN, buffer2);
+			HIP_SHA(buffer1, HASH_LEN, buffer2);
 		}
 		if(sw_file_output){
 			hip_perf_stop_benchmark(perf_set, PS_HASH);
