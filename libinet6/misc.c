@@ -1832,7 +1832,7 @@ hip_lsi_t *hip_get_lsi_our_by_hits(struct in6_addr *hit_s, struct in6_addr *hit_
 	
 }
 
-int hip_trigger_is_bex_established(struct in6_addr *src_hit, struct in6_addr *dst_hit, struct in_addr *src_ip, struct in_addr *dst_ip){
+int hip_trigger_is_bex_established(struct in6_addr *src_hit, struct in6_addr *dst_hit, struct in_addr *src_lsi, struct in_addr *dst_lsi){
 
 	int err = 0, res = 0;
 	hip_lsi_t src_ip4, dst_ip4;
@@ -1840,7 +1840,7 @@ int hip_trigger_is_bex_established(struct in6_addr *src_hit, struct in6_addr *ds
 	struct hip_common *msg = NULL;
 	struct hip_hadb_user_info_state *ha;
   
-	HIP_ASSERT(src_ip != NULL && dst_ip != NULL);
+	HIP_ASSERT(src_lsi != NULL && dst_lsi != NULL);
 
 	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
 
@@ -1854,11 +1854,11 @@ int hip_trigger_is_bex_established(struct in6_addr *src_hit, struct in6_addr *ds
 
 	while((current_param = hip_get_next_param(msg, current_param)) != NULL) {
 		ha = hip_get_param_contents_direct(current_param);
-
-		if ( (((ipv4_addr_cmp(src_ip, &ha->lsi_our) == 0) &&
-		       (ipv4_addr_cmp(dst_ip, &ha->lsi_peer) == 0))  ||
-		      ((ipv4_addr_cmp(dst_ip, &ha->lsi_our) == 0) &&
-		       (ipv4_addr_cmp(src_ip, &ha->lsi_peer) == 0)))     &&
+/*
+		if ( (((ipv4_addr_cmp(src_lsi, &ha->lsi_our) == 0) &&
+		       (ipv4_addr_cmp(dst_lsi, &ha->lsi_peer) == 0))  ||
+		      ((ipv4_addr_cmp(dst_lsi, &ha->lsi_our) == 0) &&
+		       (ipv4_addr_cmp(src_lsi, &ha->lsi_peer) == 0)))     &&
 			ha->state == HIP_STATE_ESTABLISHED){
 			*src_hit = ha->hit_our;
 			*dst_hit = ha->hit_peer;
@@ -1867,6 +1867,29 @@ int hip_trigger_is_bex_established(struct in6_addr *src_hit, struct in6_addr *ds
 			HIP_DEBUG_HIT("hip_trigger_ha dst_hit",dst_hit);
 			break;
 		}
+*/
+
+
+		if( (ipv6_addr_cmp(dst_lsi, &ha->lsi_our) == 0)  &&
+		    (ipv6_addr_cmp(src_lsi, &ha->lsi_peer) == 0) &&
+		    ha->state == HIP_STATE_ESTABLISHED){
+			*src_hit = ha->hit_peer;
+			*dst_hit = ha->hit_our;
+			res = 1;
+
+			break;
+		}
+		else if( (ipv6_addr_cmp(src_lsi, &ha->lsi_our) == 0)  &&
+		         (ipv6_addr_cmp(dst_lsi, &ha->lsi_peer) == 0) &&
+			 ha->state == HIP_STATE_ESTABLISHED){
+			*src_hit = ha->hit_our;
+			*dst_hit = ha->hit_peer;
+			res = 1;
+
+			break;
+		}
+
+
         
 	}
         
@@ -1990,9 +2013,9 @@ int hit_is_local_hit(struct in6_addr *hit){
 	int res = 0;
 	int err = 0;
 	struct hip_tlv_common *current_param = NULL;
-	struct endpoint_hip *endp = NULL;
-	hip_tlv_type_t param_type = 0;
-	struct hip_common *msg = NULL;
+	struct endpoint_hip   *endp = NULL;
+	hip_tlv_type_t         param_type = 0;
+	struct hip_common     *msg = NULL;
 
 	HIP_DEBUG("\n");
 
@@ -2019,7 +2042,6 @@ int hit_is_local_hit(struct in6_addr *hit){
 				return 1;
 		}
 	}
-
  out_err:
 	return res;
 }

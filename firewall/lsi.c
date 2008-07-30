@@ -111,10 +111,10 @@ int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src, str
 	entry_peer = (firewall_hl_t *)firewall_hit_lsi_db_match(lsi_dst);	
 
 	if (entry_peer){
-		HIP_IFEL(entry_peer->bex_state == -1, -1, "Base Exchange Failed");
-	  	if (entry_peer->bex_state == 1)
+		HIP_IFEL(entry_peer->bex_state == FIREWALL_STATE_BEX_UNDEFINED, -1, "Base Exchange Failed");
+	  	if (entry_peer->bex_state == FIREWALL_STATE_BEX_ESTABLISHED)
 			reinject_packet(entry_peer->hit_our, entry_peer->hit_peer, m, 4, 0);
-		else if (entry_peer->bex_state == 0){
+		else if (entry_peer->bex_state == FIREWALL_STATE_BEX_NOT_ESTABLISHED){
 		        /*Case after the connections established are reseted*/
 		        HIP_IFEL(hip_trigger_bex(&entry_peer->hit_our, &entry_peer->hit_peer, 
 						 &src_lsi, &dst_lsi, NULL, NULL), -1, 

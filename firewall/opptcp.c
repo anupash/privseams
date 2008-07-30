@@ -42,6 +42,9 @@ int hip_fw_examine_incoming_tcp_packet(void *hdr,
 	struct in6_addr peer_hit;
 	in_port_t        src_tcp_port;
 	in_port_t        dst_tcp_port;
+	/*this is needed for puting in default values
+	  for the hits and lsi in the firewall entry*/
+	struct in6_addr all_zero_default;
 
 	HIP_DEBUG("\n");
 
@@ -70,13 +73,13 @@ int hip_fw_examine_incoming_tcp_packet(void *hdr,
 	 * The purpose is to process the packets as soon as possible.
 	 * Many packets have SYN 0 and RST 0, so they get accepted quickly. 
 	 */
-	if((tcphdr->syn == 0) && (tcphdr->rst == 0)){
-		return -1;
+	if((tcphdr->syn == 0) && (tcphdr->rst == 0) && (tcphdr->fin == 0)){
+		return 1;//return -1;
 	}
 
 	//check that there are no options
 	if(tcphdr->doff == 5){
-		return -1;
+		return 1;//return -1;
 	}
 
 	if((tcphdr->syn == 1) && (tcphdr->ack == 0)){	//incoming, syn=1 and ack=0
@@ -116,11 +119,12 @@ int hip_fw_examine_incoming_tcp_packet(void *hdr,
 			return 0;
 		}
 		else{
-			return -1;
+			return 1;//return -1;
 		}
 	}
-	else if(((tcphdr->syn == 1) && (tcphdr->ack == 1)) ||	//incoming, syn=1 and ack=1
-		((tcphdr->rst == 1) && (tcphdr->ack == 1))){	//incoming, rst=1 and ack=1
+	else if( ((tcphdr->syn == 1) && (tcphdr->ack == 1)) ||	//incoming, syn=1 and ack=1
+		 ((tcphdr->rst == 1) && (tcphdr->ack == 1)) ||
+		 ((tcphdr->fin == 1) && (tcphdr->ack == 1))   ){	//incoming, rst=1 and ack=1
 		//with the new implementation, the i1 is sent out directly
 		/*if(tcp_packet_has_i1_option(hdrBytes, 4*tcphdr->doff)){
 			// tcp header pointer + 20(minimum header length)
@@ -138,14 +142,20 @@ int hip_fw_examine_incoming_tcp_packet(void *hdr,
 			//save in db that peer does not support hip
 			hip_fw_unblock_and_blacklist(&peer_ip);
 
+			memset(&all_zero_default, 0, sizeof(struct in6_addr));
+			firewall_update_entry(&all_zero_default,
+						&all_zero_default,
+						&all_zero_default,
+						&peer_ip,
+						FIREWALL_STATE_BEX_NOT_SUPPORTED);
 			//normal traffic connections should be allowed to be created
-			return -1;
+			return 1;//return -1;
 		/*}*/
 	}
 
 out_err:
 	/* Allow rest */
-	return -1;
+	return 1;//return -1;
 }
 
 /**

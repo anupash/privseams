@@ -73,6 +73,17 @@ typedef struct firewall_hl firewall_hl_t;
 
 #define FW_PROTO_NUM          6 /* Other, HIP, ESP, TCP */
 
+
+/*
+ * 
+ * 
+ */
+#define FIREWALL_STATE_BEX_UNDEFINED 		-1
+#define FIREWALL_STATE_BEX_NOT_ESTABLISHED	0
+#define FIREWALL_STATE_BEX_ESTABLISHED		1
+#define FIREWALL_STATE_BEX_NOT_SUPPORTED		2
+
+
 typedef struct hip_fw_context {
 	// queued packet
 	ipq_packet_msg_t *ipq_packet;
