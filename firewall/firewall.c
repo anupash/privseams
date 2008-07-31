@@ -1541,9 +1541,11 @@ int main(int argc, char **argv)
 	}
 
 #ifdef CONFIG_HIP_PERFORMANCE
-        HIP_DEBUG("Creating perf set\n");
-        perf_set = hip_perf_create(PERF_MAX);
-	
+	HIP_DEBUG("Creating perf set\n");
+	perf_set = hip_perf_create(PERF_MAX);
+
+	check_and_create_dir("results", 755);
+
 	/* To keep things simple, we use a subset of the performance set originally created for the HIP daemon. */
         //hip_perf_set_name(perf_set, PERF_I1_SEND, "results/PERF_I1_SEND.csv");
 	hip_perf_set_name(perf_set, PERF_I1,"results/PERF_I1.csv");
