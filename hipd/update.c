@@ -2435,12 +2435,12 @@ int hip_send_update(struct hip_hadb_state *entry,
 
      /* @note params mandatory for this UPDATE type are the generally mandatory
       *       params HMAC and HIP_SIGNATURE as well as this ESP_PROT_ANCHOR and
-      *       the SEQ param (to guaranty freshness of the ANCHOR) in the signed
-      *       part of the message
+      *       the SEQ and ECHO_REQ param (to guaranty freshness of the ANCHOR)
+      *       in the signed part of the message
       * @note the acknowledgement should trigger an add_sa where update = 1
       *       and direction = OUTBOUND
       * @note combination with other optional params is possible
-      *       -> when locator update this will include anchor too */
+      *       -> when locator update this will include active anchor too */
 	 HIP_IFEL(esp_prot_update_add_anchor(update_packet, entry, flags), -1,
 			 "failed to add esp prot anchor\n");
 

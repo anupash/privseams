@@ -639,10 +639,10 @@ int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry, int flags)
 
 		HIP_IFEL(hip_build_param_esp_prot_anchor(update, entry->esp_prot_transform,
 				entry->esp_local_anchor, hash_length), -1,
-				"building of ESP protection anchor failed\n");
+				"building of ESP protection ANCHOR failed\n");
 	}
 
-	// check if we should send a new anchor
+	// check if we should send an anchor-type update
 	if (flags & SEND_UPDATE_ESP_ANCHOR)
 	{
 		// we can safely assume that this UPDATE was triggered by the firewall
@@ -650,7 +650,20 @@ int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry, int flags)
 
 		HIP_IFEL(hip_build_param_esp_prot_anchor(update, entry->esp_prot_transform,
 				entry->esp_update_anchor, hash_length), -1,
-				"building of ESP protection anchor failed\n");
+				"building of ESP protection ANCHOR failed\n");
+
+		/* add a signed ECHO_REQUEST param containing the currently used anchor
+		 * for the outbound direction to ensure freshness of this update
+		 *
+		 * @note anchor chosen as this should be a value that can be verified/
+		 *       know by middleboxes and like this no dependency on ESP transform
+		 *       which would have been introduce by using the SPI value
+		 * @note SEQ not sufficient to guaranty freshness of the UPDATE, could be
+		 *       an UPDATE from a previous connection of these hosts with same
+		 *       SEQ number. However SEQ allows to distinguish a resent UPDATE
+		 *       from a new anchor-update occuring for some reason at the peer. */
+		HIP_IFEL(hip_build_param_echo(update, entry->esp_local_anchor, hash_length,
+				 1, 1),  -1, "building of ESP protection ECHO_REQ failed\n");
 	}
 
   out_err:
