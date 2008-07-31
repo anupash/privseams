@@ -155,13 +155,15 @@ int esp_prot_handle_hchain_change_msg(struct hip_common *msg)
 	hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
 
 	// make sure that the update-anchor is set
-	HIP_IFEL(*(entry->esp_update_anchor) == 0, -1,
-			"hchain changed in fw, but no update-anchor set in hipd\n");
+	HIP_IFEL(memcmp(entry->esp_update_anchor, esp_prot_anchor, hash_length), -1,
+			"hchain-anchors used for outbound connections NOT in sync\n");
 
 	// set update anchor as new active local anchor
 	memset(entry->esp_local_anchor, 0, MAX_HASH_LENGTH);
 	memcpy(entry->esp_local_anchor, entry->esp_update_anchor, hash_length);
 	memset(entry->esp_update_anchor, 0, MAX_HASH_LENGTH);
+
+	HIP_DEBUG("changed local_anchor to update_anchor\n");
 
   out_err:
 	return err;
