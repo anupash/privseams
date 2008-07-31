@@ -634,6 +634,9 @@ int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry, int flags)
 	// this respects the param-type order
 	if (flags & SEND_UPDATE_ESP_ANCHOR)
 	{
+		// we can safely assume that this UPDATE was triggered by the firewall
+		hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
+
 		/* add a signed ECHO_REQUEST param containing the currently used anchor
 		 * for the outbound direction to ensure freshness of this update
 		 *
@@ -662,9 +665,7 @@ int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry, int flags)
 	// check if we should send an anchor
 	if (flags & SEND_UPDATE_ESP_ANCHOR)
 	{
-		// we can safely assume that this UPDATE was triggered by the firewall
-		hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
-
+		// hash_length already set above
 		HIP_IFEL(hip_build_param_esp_prot_anchor(update, entry->esp_prot_transform,
 				entry->esp_update_anchor, hash_length), -1,
 				"building of ESP protection ANCHOR failed\n");
