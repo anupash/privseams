@@ -1077,6 +1077,7 @@ char* hip_message_type_name(const uint8_t msg_type){
 	case SO_HIP_ESP_PROT_TFM: return "SO_HIP_ESP_PROT_TFM";
 	case SO_HIP_BEX_STORE_UPDATE: return "SO_HIP_BEX_STORE_UPDATE";
 	case SO_HIP_TRIGGER_UPDATE: return "SO_HIP_TRIGGER_UPDATE";
+	case SO_HIP_HCHAIN_CHANGE: return "SO_HIP_HCHAIN_CHANGE";
 
 	default:
 		return "UNDEFINED";

@@ -714,7 +714,7 @@ int esp_prot_update_handle_ack(hip_ha_t *entry, in6_addr_t *src_ip,
 
 	// notify sadb about next anchor
 	HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(dst_ip, src_ip,
-			&entry->hit_our, &entry->hit_peer, &entry->default_spi_out,
+			&entry->hit_our, &entry->hit_peer, entry->default_spi_out,
 			entry->esp_transform, &entry->esp_out, &entry->auth_out, 0,
 			HIP_SPI_DIRECTION_OUT, 1, entry), -1,
 			"failed to notify sadb about next anchor\n");
