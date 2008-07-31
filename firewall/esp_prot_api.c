@@ -350,6 +350,11 @@ int verify_esp_prot_hash(hip_sa_entry_t *entry, unsigned char *hash_value)
 					free(entry->active_anchor);
 					entry->active_anchor = entry->next_anchor;
 					entry->next_anchor = NULL;
+
+					/* notify hipd about the switch to the next hash-chain for
+					 * consistency reasons */
+					HIP_IFEL(send_hchain_change_to_hipd(entry), -1,
+							"unable to notify hipd about hchain change\n");
 				}
 				else
 				{

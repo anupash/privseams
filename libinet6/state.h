@@ -329,10 +329,12 @@ struct hip_hadb_state
 	uint8_t						 esp_prot_transform;
 	/** ESP extension protection local_anchor */
 	unsigned char				 esp_local_anchor[MAX_HASH_LENGTH];
+	/** another local anchor used for UPDATE messages */
+	unsigned char				 esp_local_update_anchor[MAX_HASH_LENGTH];
 	/** ESP extension protection peer_anchor */
 	unsigned char				 esp_peer_anchor[MAX_HASH_LENGTH];
-	/** another local anchor used for UPDATE messages */
-	unsigned char				 esp_update_anchor[MAX_HASH_LENGTH];
+	/** another peer anchor used for UPDATE messages */
+	unsigned char				 esp_peer_update_anchor[MAX_HASH_LENGTH];
 	/** Something to do with the birthday paradox.
 	    @todo Please clarify what this field is. */
 	uint64_t                     birthday;

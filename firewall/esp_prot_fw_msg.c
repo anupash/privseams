@@ -276,11 +276,12 @@ int send_trigger_update_to_hipd(hip_sa_entry_t *entry)
 	return err;
 }
 
-int send_hchain_change_to_hipd(hip_sa_entry_t *entry)
+int send_anchor_change_to_hipd(hip_sa_entry_t *entry)
 {
 	int err = 0;
 	struct hip_common *msg = NULL;
 	int hash_length = 0;
+	int direction = 0;
 
 	HIP_ASSERT(entry != NULL);
 
@@ -305,6 +306,10 @@ int send_hchain_change_to_hipd(hip_sa_entry_t *entry)
 	HIP_DEBUG_HIT("dst_hit", entry->inner_dst_addr);
 	HIP_IFEL(hip_build_param_contents(msg, (void *)entry->inner_dst_addr,
 			HIP_PARAM_HIT, sizeof(struct in6_addr)), -1, "build param contents failed\n");
+
+	HIP_DEBUG("direction: %i\n", entry->direction);
+	HIP_IFEL(hip_build_param_contents(msg, (void *)&entry->direction,
+			HIP_PARAM_INT, sizeof(int)), -1, "build param contents failed\n");
 
 	HIP_DEBUG("esp_prot_transform: %u\n", entry->esp_prot_transform);
 	HIP_IFEL(hip_build_param_contents(msg, (void *)&entry->esp_prot_transform,

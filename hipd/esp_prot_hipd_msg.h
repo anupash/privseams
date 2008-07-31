@@ -5,7 +5,7 @@
 
 int esp_prot_set_preferred_transforms(struct hip_common *msg);
 int esp_prot_handle_trigger_update_msg(struct hip_common *msg);
-int esp_prot_handle_hchain_change_msg(struct hip_common *msg);
+int esp_prot_handle_anchor_change_msg(struct hip_common *msg);
 int esp_prot_sa_add(hip_ha_t *entry, struct hip_common *msg, int direction,
 		int update);
 int esp_prot_r1_add_transforms(hip_common_t *msg);

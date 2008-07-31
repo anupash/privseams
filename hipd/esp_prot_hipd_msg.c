@@ -89,12 +89,12 @@ int esp_prot_handle_trigger_update_msg(struct hip_common *msg)
 	hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
 
 	// make sure that the update-anchor is not set yet
-	HIP_IFEL(*(entry->esp_update_anchor) != 0, -1,
+	HIP_IFEL(*(entry->esp_local_update_anchor) != 0, -1,
 			"next hchain changed in fw, but we still have the last update-anchor set!");
 
 	// set the update anchor
-	memset(entry->esp_update_anchor, 0, MAX_HASH_LENGTH);
-	memcpy(entry->esp_update_anchor, esp_prot_anchor, hash_length);
+	memset(entry->esp_local_update_anchor, 0, MAX_HASH_LENGTH);
+	memcpy(entry->esp_local_update_anchor, esp_prot_anchor, hash_length);
 
 	/* this should send an update only containing the mandatory params
 	 * HMAC and HIP_SIGNATURE as well as the ESP_PROT_ANCHOR and the
@@ -115,7 +115,7 @@ int esp_prot_handle_trigger_update_msg(struct hip_common *msg)
 	return err;
 }
 
-int esp_prot_handle_hchain_change_msg(struct hip_common *msg)
+int esp_prot_handle_anchor_change_msg(struct hip_common *msg)
 {
 	struct hip_tlv_common *param = NULL;
 	hip_hit_t *local_hit = NULL, *peer_hit = NULL;
@@ -123,6 +123,7 @@ int esp_prot_handle_hchain_change_msg(struct hip_common *msg)
 	int hash_length = 0;
 	unsigned char *esp_prot_anchor = NULL;
 	hip_ha_t *entry = NULL;
+	int direction = 0;
 	int err = 0;
 
 	param = hip_get_param(msg, HIP_PARAM_HIT);
@@ -132,6 +133,10 @@ int esp_prot_handle_hchain_change_msg(struct hip_common *msg)
 	param = hip_get_next_param(msg, param);
 	peer_hit = (hip_hit_t *) hip_get_param_contents_direct(param);
 	HIP_DEBUG_HIT("dst_hit", peer_hit);
+
+	param = hip_get_param(msg, HIP_PARAM_INT);
+	direction = *((int *) hip_get_param_contents_direct(param));
+	HIP_DEBUG("direction: %i\n", direction);
 
 	param = hip_get_param(msg, HIP_PARAM_ESP_PROT_TFM);
 	esp_prot_tfm = *((uint8_t *) hip_get_param_contents_direct(param));
@@ -154,14 +159,28 @@ int esp_prot_handle_hchain_change_msg(struct hip_common *msg)
 	// we need to know the hash_length for this transform
 	hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
 
-	// make sure that the update-anchor is set
-	HIP_IFEL(memcmp(entry->esp_update_anchor, esp_prot_anchor, hash_length), -1,
-			"hchain-anchors used for outbound connections NOT in sync\n");
+	if (direction == HIP_SPI_DIRECTION_OUT)
+	{
+		// make sure that the update-anchor is set
+		HIP_IFEL(memcmp(entry->esp_local_update_anchor, esp_prot_anchor, hash_length),
+				-1, "hchain-anchors used for outbound connections NOT in sync\n");
 
-	// set update anchor as new active local anchor
-	memset(entry->esp_local_anchor, 0, MAX_HASH_LENGTH);
-	memcpy(entry->esp_local_anchor, entry->esp_update_anchor, hash_length);
-	memset(entry->esp_update_anchor, 0, MAX_HASH_LENGTH);
+		// set update anchor as new active local anchor
+		memset(entry->esp_local_anchor, 0, MAX_HASH_LENGTH);
+		memcpy(entry->esp_local_anchor, entry->esp_local_update_anchor, hash_length);
+		memset(entry->esp_local_update_anchor, 0, MAX_HASH_LENGTH);
+
+	} else
+	{
+		// make sure that the update-anchor is set
+		HIP_IFEL(memcmp(entry->esp_peer_update_anchor, esp_prot_anchor, hash_length),
+				-1, "hchain-anchors used for outbound connections NOT in sync\n");
+
+		// set update anchor as new active local anchor
+		memset(entry->esp_peer_anchor, 0, MAX_HASH_LENGTH);
+		memcpy(entry->esp_peer_anchor, entry->esp_peer_update_anchor, hash_length);
+		memset(entry->esp_peer_update_anchor, 0, MAX_HASH_LENGTH);
+	}
 
 	HIP_DEBUG("changed local_anchor to update_anchor\n");
 
@@ -190,20 +209,30 @@ int esp_prot_sa_add(hip_ha_t *entry, struct hip_common *msg, int direction,
 		hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
 
 		// choose the anchor depending on the direction and update or add
-		if (direction == HIP_SPI_DIRECTION_OUT && update)
+		if (update)
 		{
-			HIP_IFEL(!(hchain_anchor = entry->esp_update_anchor), -1,
-					"hchain anchor expected, but not present\n");
+			if (direction == HIP_SPI_DIRECTION_OUT)
+			{
+				HIP_IFEL(!(hchain_anchor = entry->esp_local_update_anchor), -1,
+						"hchain anchor expected, but not present\n");
 
-		} else if (direction == HIP_SPI_DIRECTION_OUT)
-		{
-			HIP_IFEL(!(hchain_anchor = entry->esp_local_anchor), -1,
-					"hchain anchor expected, but not present\n");
-
+			} else
+			{
+				HIP_IFEL(!(hchain_anchor = entry->esp_peer_update_anchor), -1,
+						"hchain anchor expected, but not present\n");
+			}
 		} else
 		{
-			HIP_IFEL(!(hchain_anchor = entry->esp_peer_anchor), -1,
-					"hchain anchor expected, but not present\n");
+			if (direction == HIP_SPI_DIRECTION_OUT)
+			{
+				HIP_IFEL(!(hchain_anchor = entry->esp_local_anchor), -1,
+						"hchain anchor expected, but not present\n");
+
+			} else
+			{
+				HIP_IFEL(!(hchain_anchor = entry->esp_peer_anchor), -1,
+						"hchain anchor expected, but not present\n");
+			}
 		}
 
 		HIP_HEXDUMP("esp protection anchor is ", hchain_anchor, hash_length);
@@ -667,7 +696,7 @@ int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry, int flags)
 	{
 		// hash_length already set above
 		HIP_IFEL(hip_build_param_esp_prot_anchor(update, entry->esp_prot_transform,
-				entry->esp_update_anchor, hash_length), -1,
+				entry->esp_local_update_anchor, hash_length), -1,
 				"building of ESP protection ANCHOR failed\n");
 	}
 
@@ -680,6 +709,7 @@ int esp_prot_update_handle_anchor(hip_common_t *update, hip_ha_t *entry,
 {
 	struct hip_tlv_common *param = NULL;
 	struct esp_prot_anchor *esp_anchor = NULL;
+	unsigned char *esp_peer_anchor = NULL;
 	int hash_length = 0;
 	uint32_t spi_in = 0;
 	int err = 0;
@@ -696,16 +726,30 @@ int esp_prot_update_handle_anchor(hip_common_t *update, hip_ha_t *entry,
 		// we need to know the hash_length for this transform
 		hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
 
-		// set the update anchor as the new peer anchor
-		memset(entry->esp_peer_anchor, 0, MAX_HASH_LENGTH);
-		memcpy(entry->esp_peer_anchor, esp_anchor->anchor, hash_length);
+		/* check that we are receiving a fresh UPDATE by comparing the anchor
+		 * in the ECHO_REQUEST param with the currently active peer_anchor
+		 *
+		 * XX TODO make sure to inspect the correct ECHO_REQUEST here in case
+		 *         there are more than 1 when merging with UPDATE re-implementation */
+		param = hip_get_param(update, HIP_PARAM_ECHO_REQUEST_SIGN);
+		esp_peer_anchor = (unsigned char *) param;
 
+		HIP_IFEL(memcmp(entry->esp_peer_anchor, esp_peer_anchor, hash_length), -1,
+				"received active peer-anchor and stored one do NOT match, REPLAY ATTACK?\n")
+
+		// set the update anchor as the peer's update anchor
+		memset(entry->esp_peer_update_anchor, 0, MAX_HASH_LENGTH);
+		memcpy(entry->esp_peer_update_anchor, esp_anchor->anchor, hash_length);
+
+		// we have to ACK the SEQ
 		*send_ack = 1;
 
-		/* like this we do NOT support multihoming
+		/* XX TODO make sure to automatically add ECHO_RESPONSE params in correct
+		 *         order when merging with UPDATE re-implementation */
+
+		/* @note like this we do NOT support multihoming
 		 *
-		 * @todo change when merging with UPDATE re-implementation
-		 */
+		 * XX TODO change when merging with UPDATE re-implementation */
 		spi_in = hip_hadb_get_latest_inbound_spi(entry);
 
 		// notify sadb about next anchor
@@ -727,15 +771,23 @@ int esp_prot_update_handle_ack(hip_ha_t *entry, in6_addr_t *src_ip,
 	HIP_ASSERT(entry != NULL);
 
 	// make sure we only alter the behavior when esp prot is active
-	if (*(entry->esp_update_anchor) != 0)
+	if (*(entry->esp_local_update_anchor) != 0)
+	{
+		/* @note this will stop the UPDATE even if other UPDATE-types need
+		 *       more rounds
+		 * XX TODO change when merging with reimplemented UPDATE */
 		entry->update_state = 0;
 
-	// notify sadb about next anchor
-	HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(dst_ip, src_ip,
-			&entry->hit_our, &entry->hit_peer, entry->default_spi_out,
-			entry->esp_transform, &entry->esp_out, &entry->auth_out, 0,
-			HIP_SPI_DIRECTION_OUT, 1, entry), -1,
-			"failed to notify sadb about next anchor\n");
+		/* XX TODO make sure to automatically check ECHO_RESPONSE params in correct
+		 *         order when merging with UPDATE re-implementation */
+
+		// notify sadb about next anchor
+		HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(dst_ip, src_ip,
+				&entry->hit_our, &entry->hit_peer, entry->default_spi_out,
+				entry->esp_transform, &entry->esp_out, &entry->auth_out, 0,
+				HIP_SPI_DIRECTION_OUT, 1, entry), -1,
+				"failed to notify sadb about next anchor\n");
+	}
 
   out_err:
 	return err;
