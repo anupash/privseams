@@ -167,7 +167,8 @@ int esp_prot_handle_hchain_change_msg(struct hip_common *msg)
 	return err;
 }
 
-int esp_prot_sa_add(hip_ha_t *entry, struct hip_common *msg, int direction)
+int esp_prot_sa_add(hip_ha_t *entry, struct hip_common *msg, int direction,
+		int update)
 {
 	unsigned char *hchain_anchor = NULL;
 	int hash_length = 0;
@@ -186,16 +187,20 @@ int esp_prot_sa_add(hip_ha_t *entry, struct hip_common *msg, int direction)
 	{
 		hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
 
-		// TODO handle outbound update case
-
-		// choose the anchor depending on the direction
-		if (direction == HIP_SPI_DIRECTION_IN)
+		// choose the anchor depending on the direction and update or add
+		if (direction == HIP_SPI_DIRECTION_OUT && update)
 		{
-			HIP_IFEL(!(hchain_anchor = entry->esp_peer_anchor), -1,
+			HIP_IFEL(!(hchain_anchor = entry->esp_update_anchor), -1,
 					"hchain anchor expected, but not present\n");
-		} else
+
+		} else if (direction == HIP_SPI_DIRECTION_OUT)
 		{
 			HIP_IFEL(!(hchain_anchor = entry->esp_local_anchor), -1,
+					"hchain anchor expected, but not present\n");
+
+		} else
+		{
+			HIP_IFEL(!(hchain_anchor = entry->esp_peer_anchor), -1,
 					"hchain anchor expected, but not present\n");
 		}
 
@@ -709,7 +714,7 @@ int esp_prot_update_handle_ack(hip_ha_t *entry, in6_addr_t *src_ip,
 	HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(dst_ip, src_ip,
 			&entry->hit_our, &entry->hit_peer, &entry->default_spi_out,
 			entry->esp_transform, &entry->esp_out, &entry->auth_out, 0,
-			HIP_SPI_DIRECTION_OUT, 0, entry), -1,
+			HIP_SPI_DIRECTION_OUT, 1, entry), -1,
 			"failed to notify sadb about next anchor\n");
 
   out_err:

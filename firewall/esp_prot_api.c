@@ -170,7 +170,7 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 		// distinguish the creation of a new entry and the update of an old one
 		if (update)
 		{
-			HIP_DEBUG("updating up ESP prot parameters...\n");
+			HIP_DEBUG("updating ESP prot parameters...\n");
 
 			// check if current and next transform are matching
 			HIP_IFEL(entry->esp_prot_transform != esp_prot_transform, 1,
@@ -189,6 +189,8 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 				// set anchor for inbound SA
 				memcpy(entry->next_anchor, esp_prot_anchor, hash_length);
 
+				HIP_DEBUG("next_anchor set for inbound SA\n");
+
 			} else
 			{
 				/* esp_prot_sadb_maintenance should have already set up the next_hchain,
@@ -196,6 +198,8 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 				HIP_IFEL(memcmp(esp_prot_anchor, entry->next_hchain->anchor_element->hash,
 						hash_length), -1,
 						"received a non-matching anchor from hipd for next_hchain\n");
+
+				HIP_DEBUG("next_hchain-anchor and received anchor from hipd match\n");
 			}
 		} else
 		{

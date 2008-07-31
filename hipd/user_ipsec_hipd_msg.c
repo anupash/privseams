@@ -123,17 +123,16 @@ struct hip_common * create_add_sa_msg(struct in6_addr *saddr,
 					  "build param contents failed\n");
 
 	HIP_DEBUG("the local_port value is %u \n", entry->peer_udp_port);
-	HIP_IFEL(hip_build_param_contents(msg, (void *)&entry->local_udp_port, HIP_PARAM_UINT,
-					  sizeof(uint16_t)), -1,
-					  "build param contents failed\n");
+	HIP_IFEL(hip_build_param_contents(msg, (void *)&entry->local_udp_port,
+			HIP_PARAM_UINT, sizeof(uint16_t)), -1, "build param contents failed\n");
 
 	HIP_DEBUG("the peer_port value is %u \n", entry->peer_udp_port);
-	HIP_IFEL(hip_build_param_contents(msg, (void *)&entry->peer_udp_port, HIP_PARAM_UINT,
-					  sizeof(uint16_t)), -1,
-					  "build param contents failed\n");
+	HIP_IFEL(hip_build_param_contents(msg, (void *)&entry->peer_udp_port,
+			HIP_PARAM_UINT, sizeof(uint16_t)), -1, "build param contents failed\n");
 
 	// params needed by the esp protection extension
-	HIP_IFEL(esp_prot_sa_add(entry, msg, direction), -1, "failed to add esp prot params\n");
+	HIP_IFEL(esp_prot_sa_add(entry, msg, direction, update), -1,
+			"failed to add esp prot params\n");
 
 	HIP_HEXDUMP("crypto key :", enckey, sizeof(struct hip_crypto_key));
 	HIP_IFEL(hip_build_param_contents(msg,
