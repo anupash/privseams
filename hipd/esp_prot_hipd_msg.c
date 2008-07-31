@@ -631,27 +631,9 @@ int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry, int flags)
 	int hash_length = 0;
 	int err = 0;
 
-	// on-path middleboxes have to learn about the anchors in use
-	if ((flags & SEND_UPDATE_LOCATOR) && (flags & SEND_UPDATE_ESP_ANCHOR))
-	{
-		// we can safely assume that this UPDATE was triggered by the firewall
-		hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
-
-		HIP_IFEL(hip_build_param_esp_prot_anchor(update, entry->esp_prot_transform,
-				entry->esp_local_anchor, hash_length), -1,
-				"building of ESP protection ANCHOR failed\n");
-	}
-
-	// check if we should send an anchor-type update
+	// this respects the param-type order
 	if (flags & SEND_UPDATE_ESP_ANCHOR)
 	{
-		// we can safely assume that this UPDATE was triggered by the firewall
-		hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
-
-		HIP_IFEL(hip_build_param_esp_prot_anchor(update, entry->esp_prot_transform,
-				entry->esp_update_anchor, hash_length), -1,
-				"building of ESP protection ANCHOR failed\n");
-
 		/* add a signed ECHO_REQUEST param containing the currently used anchor
 		 * for the outbound direction to ensure freshness of this update
 		 *
@@ -664,6 +646,28 @@ int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry, int flags)
 		 *       from a new anchor-update occuring for some reason at the peer. */
 		HIP_IFEL(hip_build_param_echo(update, entry->esp_local_anchor, hash_length,
 				 1, 1),  -1, "building of ESP protection ECHO_REQ failed\n");
+	}
+
+	// on-path middleboxes have to learn about the anchors in use
+	if ((flags & SEND_UPDATE_LOCATOR) && (flags & SEND_UPDATE_ESP_ANCHOR))
+	{
+		// we can safely assume that this UPDATE was triggered by the firewall
+		hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
+
+		HIP_IFEL(hip_build_param_esp_prot_anchor(update, entry->esp_prot_transform,
+				entry->esp_local_anchor, hash_length), -1,
+				"building of ESP protection ANCHOR failed\n");
+	}
+
+	// check if we should send an anchor
+	if (flags & SEND_UPDATE_ESP_ANCHOR)
+	{
+		// we can safely assume that this UPDATE was triggered by the firewall
+		hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
+
+		HIP_IFEL(hip_build_param_esp_prot_anchor(update, entry->esp_prot_transform,
+				entry->esp_update_anchor, hash_length), -1,
+				"building of ESP protection ANCHOR failed\n");
 	}
 
   out_err:
