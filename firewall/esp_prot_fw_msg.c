@@ -311,8 +311,9 @@ int send_hchain_change_to_hipd(hip_sa_entry_t *entry)
 			HIP_PARAM_ESP_PROT_TFM, sizeof(uint8_t)), -1,
 			"build param contents failed\n");
 
-	HIP_HEXDUMP("anchor: ", entry->next_hchain->anchor_element->hash, hash_length);
-	HIP_IFEL(hip_build_param_contents(msg, (void *)entry->next_hchain->anchor_element->hash,
+	// the anchor change has already occured on fw-side
+	HIP_HEXDUMP("anchor: ", entry->active_hchain->anchor_element->hash, hash_length);
+	HIP_IFEL(hip_build_param_contents(msg, (void *)entry->active_hchain->anchor_element->hash,
 			HIP_PARAM_HCHAIN_ANCHOR, hash_length), -1,
 			"build param contents failed\n");
 
