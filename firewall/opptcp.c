@@ -140,14 +140,18 @@ int hip_fw_examine_incoming_tcp_packet(void *hdr,
 		else{*/
 			//signal for the normal TCP packets not to be blocked for this peer
 			//save in db that peer does not support hip
-			hip_fw_unblock_and_blacklist(&peer_ip);
-
+			firewall_hl_t *entry_peer = NULL;
+			entry_peer = firewall_ip_db_match(&peer_ip);
+			if(entry_peer->bex_state != FIREWALL_STATE_BEX_ESTABLISHED)
+				hip_fw_unblock_and_blacklist(&peer_ip);
+/*
 			memset(&all_zero_default, 0, sizeof(struct in6_addr));
 			firewall_update_entry(&all_zero_default,
 						&all_zero_default,
 						&all_zero_default,
 						&peer_ip,
 						FIREWALL_STATE_BEX_NOT_SUPPORTED);
+*/
 			//normal traffic connections should be allowed to be created
 			return 1;//return -1;
 		/*}*/

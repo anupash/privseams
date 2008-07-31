@@ -17,22 +17,10 @@ int firewall_raw_sock_icmp_outbound = 0;
  * @param lsi_peer: entrance that we are searching in the db
  * @return NULL if not found and otherwise the firewall_hl_t structure
  */
-firewall_hl_t *firewall_hit_lsi_db_match(hip_lsi_t *lsi_peer){
+firewall_hl_t *firewall_ip_db_match(hip_lsi_t *lsi_peer){
   //hip_firewall_hldb_dump();
   return (firewall_hl_t *)hip_ht_find(firewall_lsi_hit_db, (void *)lsi_peer);
   
-}
-
-
-/**
- * firewall_hit_ip_db_match:
- * Search in the database the given ip
- *
- * @param ip_peer: entrance that we are searching in the db
- * @return NULL if not found and otherwise the firewall_hl_t structure
- */
-firewall_hl_t *firewall_hit_ip_db_match(struct in6_addr *ip_peer){
-  return (firewall_hl_t *)hip_ht_find(firewall_lsi_hit_db, (void *)ip_peer);
 }
 
 
@@ -80,12 +68,12 @@ int firewall_add_hit_lsi_ip(struct in6_addr *hit_our, struct in6_addr *hit_peer,
 	int err = 0;
 	firewall_hl_t *new_entry = NULL;
 
-	HIP_DEBUG_HIT("hit_our ", hit_our);
-	HIP_DEBUG_HIT("hit_peer ", hit_peer);
-	HIP_DEBUG_LSI("lsi ", lsi);
-	HIP_DEBUG_IN6ADDR("ip ", ip);
+	//HIP_DEBUG_HIT("hit_our ", hit_our);
+	//HIP_DEBUG_HIT("hit_peer ", hit_peer);
+	//HIP_DEBUG_LSI("lsi ", lsi);
+	//HIP_DEBUG_IN6ADDR("ip ", ip);
 	HIP_ASSERT(hit_our != NULL && hit_peer != NULL && lsi != NULL && ip != NULL);
-	_HIP_DEBUG("Start firewall_add_hit_lsi_ip\n");
+	HIP_DEBUG("Start firewall_add_hit_lsi_ip\n");
 
 	new_entry = hip_create_hl_entry();
 	ipv6_addr_copy(&new_entry->hit_our, hit_our);
@@ -107,31 +95,37 @@ out_err:
 int firewall_add_default_entry(struct in6_addr *ip, int state){
 	struct in6_addr all_zero_default;
 	int err = 0;
-	firewall_hl_t *new_entry = NULL;
+	firewall_hl_t *new_entry  = NULL;
+	firewall_hl_t *entry_peer = NULL;
 
 	HIP_DEBUG("\n");
 
 	HIP_ASSERT(ip != NULL);
 
-	memset(&all_zero_default, 0, sizeof(struct in6_addr));
-	HIP_DEBUG_IN6ADDR("ip ", ip);
+	entry_peer = firewall_ip_db_match(ip);
 
-	new_entry = hip_create_hl_entry();
-	ipv6_addr_copy(&new_entry->hit_our, &all_zero_default);
-	ipv6_addr_copy(&new_entry->hit_peer, &all_zero_default);
-	ipv4_addr_copy(&new_entry->lsi, &all_zero_default);
-	ipv6_addr_copy(&new_entry->ip_peer, ip);
-	new_entry->bex_state = FIREWALL_STATE_BEX_UNDEFINED;
+	if(!entry_peer){
+		memset(&all_zero_default, 0, sizeof(struct in6_addr));
+		HIP_DEBUG_IN6ADDR("ip ", ip);
 
-	HIP_DEBUG_IN6ADDR("ip ", &new_entry->ip_peer);
+		new_entry = hip_create_hl_entry();
+		ipv6_addr_copy(&new_entry->hit_our, &all_zero_default);
+		ipv6_addr_copy(&new_entry->hit_peer, &all_zero_default);
+		ipv4_addr_copy(&new_entry->lsi, &all_zero_default);
+		ipv6_addr_copy(&new_entry->ip_peer, ip);
+		new_entry->bex_state = FIREWALL_STATE_BEX_UNDEFINED;
 
-	hip_ht_add(firewall_lsi_hit_db, new_entry);
+		HIP_DEBUG_IN6ADDR("ip ", &new_entry->ip_peer);
+
+		hip_ht_add(firewall_lsi_hit_db, new_entry);
+	}
 
 out_err:
 	return err;
 }
 
-/* 
+
+/*
  * find the entry based on ip
  * and update all the other fields
  */
@@ -140,8 +134,8 @@ int firewall_update_entry(struct in6_addr *hit_our, struct in6_addr *hit_peer, h
 	hip_lsi_t *lsi_peer = NULL;
 	hip_list_t *item, *tmp;
 	firewall_hl_t *this;
-	////firewall_hl_t *entry_update = NULL;
 	int i;
+	firewall_hl_t *entry_update = NULL;
 
 	HIP_DEBUG("\n");
 
@@ -152,35 +146,13 @@ int firewall_update_entry(struct in6_addr *hit_our, struct in6_addr *hit_peer, h
 		    state == FIREWALL_STATE_BEX_NOT_SUPPORTED 	  )
 		  );
 
-	HIP_LOCK_HT(&firewall_lsi_hit_db);
+	HIP_IFE(!(entry_update = firewall_ip_db_match(ip)), -1);
 
-	list_for_each_safe(item, tmp, firewall_lsi_hit_db, i)
-	{
-		this = list_entry(item);
-
-HIP_DEBUG_HIT("old hit_our", &this->hit_our);
-HIP_DEBUG_HIT("old hit_peer", &this->hit_peer);
-HIP_DEBUG_LSI("old lsi", &this->lsi);
-HIP_DEBUG_IN6ADDR("old ip", &this->ip_peer);
-HIP_DEBUG("old bex_state %d \n", this->bex_state);
-
-HIP_DEBUG_HIT("new hit_our", hit_our);
-HIP_DEBUG_HIT("new hit_peer", hit_peer);
-HIP_DEBUG_LSI("new lsi", lsi);
-HIP_DEBUG_IN6ADDR("new ip", ip);
-HIP_DEBUG("new bex_state %d \n", state);
-
-		if(ipv6_addr_cmp(&this->ip_peer, ip) == 0){
-			HIP_DEBUG("Updating a firewall entry\n");
-
-			//update the fields
-			ipv6_addr_copy(&this->hit_our, hit_our);
-			ipv6_addr_copy(&this->hit_peer, hit_peer);
-			ipv4_addr_copy(&this->lsi, lsi);
-			this->bex_state = state;
-		}
-	}
-	HIP_UNLOCK_HT(&firewall_lsi_hit_db);
+	//update the fields
+	ipv6_addr_copy(&entry_update->hit_our, hit_our);
+	ipv6_addr_copy(&entry_update->hit_peer, hit_peer);
+	ipv4_addr_copy(&entry_update->lsi, lsi);
+	entry_update->bex_state = state;
 
  out_err:
 	return err;
@@ -198,11 +170,11 @@ HIP_DEBUG("new bex_state %d \n", state);
  *
  * @return hash information
  */
-unsigned long hip_firewall_hash_lsi(const void *ptr){
-        hip_lsi_t *lsi = &((firewall_hl_t *)ptr)->lsi;
+unsigned long hip_firewall_hash_ip_peer(const void *ptr){
+        struct in6_addr *ip_peer = &((firewall_hl_t *)ptr)->ip_peer;
 	uint8_t hash[HIP_AH_SHA_LEN];     
 	     
-	hip_build_digest(HIP_DIGEST_SHA1, lsi, sizeof(*lsi), hash);     
+	hip_build_digest(HIP_DIGEST_SHA1, ip_peer, sizeof(*ip_peer), hash);     
 	return *((unsigned long *)hash);
 }
 
@@ -215,14 +187,20 @@ unsigned long hip_firewall_hash_lsi(const void *ptr){
  *
  * @return 0 if hashes identical, otherwise 1
  */
-int hip_firewall_match_lsi(const void *ptr1, const void *ptr2){
-	return (hip_firewall_hash_lsi(ptr1) != hip_firewall_hash_lsi(ptr2));
+int hip_firewall_match_ip_peer(const void *ptr1, const void *ptr2){
+	return (hip_firewall_hash_ip_peer(ptr1) != hip_firewall_hash_ip_peer(ptr2));
 }
 
 void firewall_init_hldb(void){
-	firewall_lsi_hit_db = hip_ht_init(hip_firewall_hash_lsi, hip_firewall_match_lsi);
+	firewall_lsi_hit_db = hip_ht_init(hip_firewall_hash_ip_peer, hip_firewall_match_ip_peer);
 	firewall_init_raw_sockets();
 }
+
+//***********************************
+
+
+
+
 
 int firewall_set_bex_state(struct in6_addr *hit_s, struct in6_addr *hit_r, int state){
 	int err = 0;
@@ -232,7 +210,7 @@ int firewall_set_bex_state(struct in6_addr *hit_s, struct in6_addr *hit_r, int s
 	lsi_peer = hip_get_lsi_peer_by_hits(hit_s, hit_r);
 
 	if (lsi_peer){
-	        HIP_IFE(!(entry_update = firewall_hit_lsi_db_match(lsi_peer)), -1);
+	        HIP_IFE(!(entry_update = firewall_ip_db_match(lsi_peer)), -1);
 		entry_update->bex_state = state;
 		hip_ht_add(firewall_lsi_hit_db, entry_update); 
 	}

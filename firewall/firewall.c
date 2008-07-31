@@ -27,12 +27,6 @@ int hip_userspace_ipsec = 0;
 int hip_esp_protection = 0;
 
 
-
-//###################
-int i1_sent = 0;
-//###################
-
-
 /* Default HIT - do not access this directly, call hip_fw_get_default_hit() */
 struct in6_addr default_hit;
 
@@ -1248,26 +1242,65 @@ int hip_fw_handle_outgoing_ip(hip_fw_context_t *ctx/*, struct in_addr *src_ip, s
 ////	HIP_DEBUG("FIREWALL_TRIGGERING OUTGOING IP %s\n",inet_ntoa(*dst_ip));
 
 	hip_firewall_hldb_dump();
-	entry_peer = (firewall_hl_t *)firewall_hit_ip_db_match(&ctx->dst);	
+	entry_peer = firewall_ip_db_match(&ctx->dst);	
 
-	if (entry_peer){
+	if(entry_peer){
 		//check the correctness of the entry
-		HIP_ASSERT(/*entry_peer->bex_state == FIREWALL_STATE_BEX_UNDEFINED ||*/
+		HIP_ASSERT(entry_peer->bex_state == FIREWALL_STATE_BEX_UNDEFINED ||
 			   entry_peer->bex_state == FIREWALL_STATE_BEX_NOT_ESTABLISHED ||
 			   entry_peer->bex_state == FIREWALL_STATE_BEX_ESTABLISHED ||
 			   entry_peer->bex_state == FIREWALL_STATE_BEX_NOT_SUPPORTED);
 
-		/*HIP_IFEL(entry_peer->bex_state == FIREWALL_STATE_BEX_UNDEFINED,
-			 -1, "Base Exchange Failed");*/
+HIP_DEBUG_HIT("OUR  HIT ", &entry_peer->hit_our);
+HIP_DEBUG_HIT("PEER HIT ", &entry_peer->hit_peer);
+HIP_DEBUG("STATE %d \n", entry_peer->bex_state);
 
-		if (entry_peer->bex_state == FIREWALL_STATE_BEX_UNDEFINED){
-			verdict = 1;
+
+		//if the firewall entry is still undefined
+		//check whether the base exchange has been established
+		//other cases to be added here TO DO
+		if(entry_peer->bex_state == FIREWALL_STATE_BEX_UNDEFINED){
+			//get current connection state from hipd
+			state_ha = hip_trigger_get_bex_state(&ctx->src, &ctx->dst,
+						     &src_hit, &dst_hit,
+						     &src_lsi, &dst_lsi);
+
+			if(state_ha == HIP_STATE_ESTABLISHED){
+				firewall_update_entry(&src_hit, &dst_hit,
+						      &dst_lsi, &ctx->dst,
+						      FIREWALL_STATE_BEX_ESTABLISHED);
+			}
+			//other cases here TO DO
+
+			//reobtain the entry in case it has been updated
+			entry_peer = firewall_ip_db_match(&ctx->dst);
 		}
-	  	if (entry_peer->bex_state == FIREWALL_STATE_BEX_ESTABLISHED){
-			reinject_packet(entry_peer->hit_our, entry_peer->hit_peer, ctx->ipq_packet, 4, 0);
+
+
+		if(entry_peer->bex_state == FIREWALL_STATE_BEX_UNDEFINED){
+			verdict = 0;//verdict = 1;
+		}
+	  	else if(entry_peer->bex_state == FIREWALL_STATE_BEX_ESTABLISHED){
+/*
+			reinject_packet(entry_peer->hit_our,
+					entry_peer->hit_peer,
+					ctx->ipq_packet, 4, 0);
 			verdict = 0;
+*/
+			if(hit_is_local_hit(&entry_peer->hit_our)){
+		        	HIP_DEBUG("is local hit\n");
+
+				reinject_packet(entry_peer->hit_our,
+						entry_peer->hit_peer,
+						ctx->ipq_packet, 4, 0);
+				verdict = 0;
+			}
+			else{
+				HIP_DEBUG("is NOT local hit\n");
+				verdict = 1;
+			}
 		}
-		else if (entry_peer->bex_state == FIREWALL_STATE_BEX_NOT_ESTABLISHED){
+		else if(entry_peer->bex_state == FIREWALL_STATE_BEX_NOT_ESTABLISHED){
 		        //Case after the connections established are reseted
 		        /*HIP_IFEL(hip_trigger_bex(&entry_peer->hit_our,
 						 &entry_peer->hit_peer, 
@@ -1285,7 +1318,7 @@ int hip_fw_handle_outgoing_ip(hip_fw_context_t *ctx/*, struct in_addr *src_ip, s
 				&reject);
 			verdict = 0;
 		}
-		else if (entry_peer->bex_state == FIREWALL_STATE_BEX_NOT_SUPPORTED){
+		else if(entry_peer->bex_state == FIREWALL_STATE_BEX_NOT_SUPPORTED){
 			verdict = 1;
 		}
 
@@ -1298,13 +1331,13 @@ int hip_fw_handle_outgoing_ip(hip_fw_context_t *ctx/*, struct in_addr *src_ip, s
 						     &src_hit, &dst_hit,
 						     &src_lsi, &dst_lsi);
 
-HIP_DEBUG("### STATE %d \n", state_ha);
-HIP_DEBUG_IN6ADDR("### src ip ", &ctx->src);
-HIP_DEBUG_IN6ADDR("### dst ip", &ctx->dst);
-HIP_DEBUG_IN6ADDR("### src lsi ", &src_lsi);
-HIP_DEBUG_IN6ADDR("### dst lsi", &dst_lsi);
-HIP_DEBUG_HIT("### src hit ", &src_hit);
-HIP_DEBUG_HIT("### dst hit ", &dst_hit);
+HIP_DEBUG("** state %d \n", state_ha);
+HIP_DEBUG_IN6ADDR("** src ip ", &ctx->src);
+HIP_DEBUG_IN6ADDR("** dst ip", &ctx->dst);
+HIP_DEBUG_IN6ADDR("** src lsi ", &src_lsi);
+HIP_DEBUG_IN6ADDR("** dst lsi", &dst_lsi);
+HIP_DEBUG_HIT("** src hit ", &src_hit);
+HIP_DEBUG_HIT("** dst hit ", &dst_hit);
 
 		if((state_ha == -1) ||
 		   (state_ha == HIP_STATE_CLOSING) ||
@@ -1327,11 +1360,13 @@ HIP_DEBUG("Initiate bex\n");
 
 			if(hit_is_local_hit(&src_hit)){
 		        	HIP_DEBUG("is local hit\n");
-				/*firewall_add_hit_lsi_ip(&src_hit, &dst_hit, &dst_lsi,
-							&ctx->dst, FIREWALL_STATE_BEX_ESTABLISHED);*/
-				firewall_update_entry(&src_hit, &dst_hit, &dst_lsi,
-							&ctx->dst, FIREWALL_STATE_BEX_ESTABLISHED);
-				reinject_packet(src_hit, dst_hit, ctx->ipq_packet, 4, 0);
+
+				firewall_update_entry(&src_hit, &dst_hit,
+						      &dst_lsi, &ctx->dst,
+						      FIREWALL_STATE_BEX_ESTABLISHED);
+				
+				reinject_packet(src_hit, dst_hit,
+						ctx->ipq_packet, 4, 0);
 				verdict = 0;
 			}
 			else{
@@ -1345,22 +1380,19 @@ HIP_DEBUG("Initiate bex\n");
 			verdict = 0;
 		}
 		else if(state_ha == HIP_STATE_FAILED){
+			//to do
+			//update the firewall entry
+
 			//do nothing if already failed
 			verdict = 1;
 		}
 		else if(state_ha == HIP_STATE_R2_SENT){
 			verdict = 1;
 		}
-		else{//initiate the bex
-			/*memset(&all_zero_hit, 0, sizeof(struct sockaddr_in6));
-			hip_request_peer_hit_from_hipd_at_firewall(
-				&(ctx->dst),
-				&all_zero_hit.sin6_addr,
-				(const struct in6_addr *)hip_fw_get_default_hit(),
-				&(ctx->transport_hdr.tcp)->source,
-				&(ctx->transport_hdr.tcp)->dest,
-				&fallback,
-				&reject);*/
+		else{
+			//initiate the bex
+			//???
+
 			verdict = 0;
 		}
 
@@ -1376,7 +1408,7 @@ HIP_DEBUG("Initiate bex\n");
 				#define HIP_STATE_CLOSED                 9
 */
 	}
-out_err: 
+out_err:
 	return verdict;
 }
 //###############################################

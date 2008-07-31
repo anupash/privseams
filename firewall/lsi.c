@@ -108,7 +108,7 @@ int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src, str
 	IPV4_TO_IPV6_MAP(lsi_src, &src_lsi);
 
 	hip_firewall_hldb_dump();
-	entry_peer = (firewall_hl_t *)firewall_hit_lsi_db_match(lsi_dst);	
+	////////entry_peer = (firewall_hl_t *)firewall_ip_db_match(lsi_dst);	
 
 	if (entry_peer){
 		HIP_IFEL(entry_peer->bex_state == FIREWALL_STATE_BEX_UNDEFINED, -1, "Base Exchange Failed");
