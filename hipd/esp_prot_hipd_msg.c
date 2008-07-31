@@ -88,14 +88,9 @@ int esp_prot_handle_trigger_update_msg(struct hip_common *msg)
 	// we need to know the hash_length for this transform
 	hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
 
-	// we can assume that the last update's anchor is in use right now
-	// TODO make this more explicit using a message from the fw
-	// int esp_prot_handle_notify_hchain_change(struct hip_common *msg)
-	if (*(entry->esp_update_anchor) != 0)
-	{
-		memset(entry->esp_local_anchor, 0, MAX_HASH_LENGTH);
-		memcpy(entry->esp_local_anchor, entry->esp_update_anchor, hash_length);
-	}
+	// make sure that the update-anchor is not set yet
+	HIP_IFEL(*(entry->esp_update_anchor) != 0, -1,
+			"next hchain changed in fw, but we still have the last update-anchor set!");
 
 	// set the update anchor
 	memset(entry->esp_update_anchor, 0, MAX_HASH_LENGTH);
@@ -112,11 +107,61 @@ int esp_prot_handle_trigger_update_msg(struct hip_common *msg)
 	 * - no interface triggers this event -> -1
 	 * - bitwise telling about which params to add to UPDATE -> set 3rd bit to 1
 	 * - UPDATE not due to adding of a new addresses
-	 * - ???
-	 *
-	 */
+	 * - not setting any address, as none is updated */
 	HIP_IFEL(hip_send_update(entry, NULL, 0, -1, SEND_UPDATE_ESP_ANCHOR, 0, NULL),
 			-1, "failed to send anchor update\n");
+
+  out_err:
+	return err;
+}
+
+int esp_prot_handle_hchain_change_msg(struct hip_common *msg)
+{
+	struct hip_tlv_common *param = NULL;
+	hip_hit_t *local_hit = NULL, *peer_hit = NULL;
+	uint8_t esp_prot_tfm = 0;
+	int hash_length = 0;
+	unsigned char *esp_prot_anchor = NULL;
+	hip_ha_t *entry = NULL;
+	int err = 0;
+
+	param = hip_get_param(msg, HIP_PARAM_HIT);
+	local_hit = (hip_hit_t *) hip_get_param_contents_direct(param);
+	HIP_DEBUG_HIT("src_hit", local_hit);
+
+	param = hip_get_next_param(msg, param);
+	peer_hit = (hip_hit_t *) hip_get_param_contents_direct(param);
+	HIP_DEBUG_HIT("dst_hit", peer_hit);
+
+	param = hip_get_param(msg, HIP_PARAM_ESP_PROT_TFM);
+	esp_prot_tfm = *((uint8_t *) hip_get_param_contents_direct(param));
+	HIP_DEBUG("esp_prot_transform: %u\n", esp_prot_tfm);
+
+	param = hip_get_param(msg, HIP_PARAM_HCHAIN_ANCHOR);
+	esp_prot_anchor = (unsigned char *) hip_get_param_contents_direct(param);
+	HIP_HEXDUMP("anchor: ", esp_prot_anchor, hash_length);
+
+
+	// get matching entry from hadb for HITs provided above
+	HIP_IFEL(!(entry = hip_hadb_find_byhits(local_hit, peer_hit)), -1,
+			"failed to retrieve requested HA entry\n");
+
+	// check if transforms are matching and add anchor as new local_anchor
+	HIP_IFEL(entry->esp_prot_transform != esp_prot_tfm, -1,
+			"esp prot transform changed without new BEX\n");
+	HIP_DEBUG("esp prot transforms match\n");
+
+	// we need to know the hash_length for this transform
+	hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
+
+	// make sure that the update-anchor is set
+	HIP_IFEL(*(entry->esp_update_anchor) == 0, -1,
+			"hchain changed in fw, but no update-anchor set in hipd\n");
+
+	// set update anchor as new active local anchor
+	memset(entry->esp_local_anchor, 0, MAX_HASH_LENGTH);
+	memcpy(entry->esp_local_anchor, entry->esp_update_anchor, hash_length);
+	memset(entry->esp_update_anchor, 0, MAX_HASH_LENGTH);
 
   out_err:
 	return err;
@@ -140,6 +185,8 @@ int esp_prot_sa_add(hip_ha_t *entry, struct hip_common *msg, int direction)
 	if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED)
 	{
 		hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
+
+		// TODO handle outbound update case
 
 		// choose the anchor depending on the direction
 		if (direction == HIP_SPI_DIRECTION_IN)

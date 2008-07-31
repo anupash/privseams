@@ -219,7 +219,7 @@ hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore)
  *
  * sends src_hit, dst_hit, transform, hash_length and hash
  */
-int send_trigger_update(hip_sa_entry_t *entry)
+int send_trigger_update_to_hipd(hip_sa_entry_t *entry)
 {
 	int err = 0;
 	struct hip_common *msg = NULL;
@@ -239,6 +239,63 @@ int send_trigger_update(hip_sa_entry_t *entry)
 	hip_msg_init(msg);
 
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_TRIGGER_UPDATE, 0), -1,
+		 "build hdr failed\n");
+
+	HIP_DEBUG_HIT("src_hit", entry->inner_src_addr);
+	HIP_IFEL(hip_build_param_contents(msg, (void *)entry->inner_src_addr,
+			HIP_PARAM_HIT, sizeof(struct in6_addr)), -1, "build param contents failed\n");
+
+	HIP_DEBUG_HIT("dst_hit", entry->inner_dst_addr);
+	HIP_IFEL(hip_build_param_contents(msg, (void *)entry->inner_dst_addr,
+			HIP_PARAM_HIT, sizeof(struct in6_addr)), -1, "build param contents failed\n");
+
+	HIP_DEBUG("esp_prot_transform: %u\n", entry->esp_prot_transform);
+	HIP_IFEL(hip_build_param_contents(msg, (void *)&entry->esp_prot_transform,
+			HIP_PARAM_ESP_PROT_TFM, sizeof(uint8_t)), -1,
+			"build param contents failed\n");
+
+	HIP_HEXDUMP("anchor: ", entry->next_hchain->anchor_element->hash, hash_length);
+	HIP_IFEL(hip_build_param_contents(msg, (void *)entry->next_hchain->anchor_element->hash,
+			HIP_PARAM_HCHAIN_ANCHOR, hash_length), -1,
+			"build param contents failed\n");
+
+	HIP_DUMP_MSG(msg);
+
+	/* send msg to hipd and receive corresponding reply */
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send_recv msg failed\n");
+
+	/* check error value */
+	HIP_IFEL(hip_get_msg_err(msg), -1, "hipd returned error message!\n");
+
+	HIP_DEBUG("send_recv msg succeeded\n");
+
+ out_err:
+	if (msg)
+		free(msg);
+
+	return err;
+}
+
+int send_hchain_change_to_hipd(hip_sa_entry_t *entry)
+{
+	int err = 0;
+	struct hip_common *msg = NULL;
+	int hash_length = 0;
+
+	HIP_ASSERT(entry != NULL);
+
+	// esp_prot_transform >= 0 due to datatype
+	HIP_ASSERT(entry->esp_prot_transform <= NUM_TRANSFORMS);
+
+	HIP_IFEL((hash_length = esp_prot_get_hash_length(entry->esp_prot_transform)) <= 0,
+			-1, "error or tried to resolve UNUSED transform\n");
+
+	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1,
+		 "failed to allocate memory\n");
+
+	hip_msg_init(msg);
+
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_HCHAIN_CHANGE, 0), -1,
 		 "build hdr failed\n");
 
 	HIP_DEBUG_HIT("src_hit", entry->inner_src_addr);
