@@ -303,7 +303,7 @@ int hipd_main(int argc, char *argv[])
 	HIP_DEBUG("Creating perf set\n");
 	perf_set = hip_perf_create(PERF_MAX);
 
-	check_and_create_dir("results", 755);
+	check_and_create_dir("results", DEFAULT_CONFIG_DIR_MODE);
 	
 	hip_perf_set_name(perf_set, PERF_I1_SEND, "results/PERF_I1_SEND.csv");
 	hip_perf_set_name(perf_set, PERF_I1,"results/PERF_I1.csv");

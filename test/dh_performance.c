@@ -418,7 +418,7 @@ int main(int argc, char ** argv){
 	if(sw_file_output){
 		perf_set = hip_perf_create(PS_MAX);
 
-		check_and_create_dir("results", 755);
+		check_and_create_dir("results", DEFAULT_CONFIG_DIR_MODE);
 
 		hip_perf_set_name(perf_set, PS_DH_CREATE,"PS_DH_CREATE.csv");
 		hip_perf_set_name(perf_set, PS_DH_SHARE,"PS_DH_SHARE.csv");
