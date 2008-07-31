@@ -116,7 +116,7 @@ int hip_perf_open(perf_set_t *perf_set){
 			if(!perf_set->files[i])
 				HIP_ERROR("Error opening file for slot %d\n",i);
 		}else{
-			HIP_ERROR("Name for slot %d not set \n");
+			HIP_ERROR("Name for slot %d not set \n",i);
 			err = 1;
 		}
 	}
