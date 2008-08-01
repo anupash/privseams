@@ -637,15 +637,6 @@ int handle_r1(struct hip_common * common, const struct tuple * tuple,
 	HIP_IFEL(!(hi = (struct hip_host_id *) hip_get_param(common, HIP_PARAM_HOST_ID)), 0,
 			"no hi found\n");
 
-// same as above
-#if 0
-	if(hi == NULL)
-	{
-		HIP_DEBUG("handle_r1: no hi found\n");
-		return 0;
-	}
-#endif
-
 	HIP_DEBUG("verify_responder: %i\n", verify_responder);
 
 	if (verify_responder)
@@ -676,7 +667,7 @@ int handle_r1(struct hip_common * common, const struct tuple * tuple,
 
 		HIP_DEBUG("signature successfully verified\n");
 
-		// store the HI
+		// store the HI param of the R1 message
 		HIP_IFEL(!(hi_tuple = (struct hip_host_id *) malloc(hip_get_param_total_len(hi))),
 				0, "failed to allocate memory\n");
 		memcpy(hi_tuple, hi, hip_get_param_total_len(hi));

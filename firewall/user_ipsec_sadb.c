@@ -15,6 +15,7 @@
  *  hip_sadb.c
  *
  *  Authors: Jeff Ahrenholz <jeffrey.m.ahrenholz@boeing.com>
+ *  		 Rene Hummen <rene.hummen@rwth-aachen.de>
  *
  * the HIP Security Association database
  *
@@ -25,12 +26,13 @@
 
 #define INDEX_HASH_LENGTH SHA_DIGEST_LENGTH
 
-// database storing the sa entries, indexed by src _and_ dst hits
+/* database storing the sa entries, indexed by src _and_ dst hits */
 HIP_HASHTABLE *sadb = NULL;
-// database storing shortcut to sa entries for incoming packets
+/* database storing shortcuts to sa entries for incoming packets */
 HIP_HASHTABLE *linkdb = NULL;
 
-//callback wrappers providing per-variable casts before calling the type-specific callbacks
+/* callback wrappers providing per-variable casts before calling the
+ * type-specific callbacks */
 static IMPLEMENT_LHASH_HASH_FN(hip_sa_entry_hash, const hip_sa_entry_t *)
 static IMPLEMENT_LHASH_COMP_FN(hip_sa_entries_compare, const hip_sa_entry_t *)
 static IMPLEMENT_LHASH_HASH_FN(hip_link_entry_hash, const hip_link_entry_t *)
