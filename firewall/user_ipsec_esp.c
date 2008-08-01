@@ -80,7 +80,7 @@ int hip_beet_mode_output(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
 		 *
 		 * @note we are not putting the hash into the actual header definition
 		 *       in order to be more flexible about the hash length */
-		HIP_IFEL(add_esp_prot_hash(esp_packet + *esp_packet_len, &esp_prot_hash_length,
+		HIP_IFEL(esp_prot_add_hash(esp_packet + *esp_packet_len, &esp_prot_hash_length,
 					entry), -1, "failed to add the esp protection extension hash\n");
 		HIP_DEBUG("esp prot hash_length: %i\n", esp_prot_hash_length);
 		HIP_HEXDUMP("esp prot hash: ", esp_packet + *esp_packet_len, esp_prot_hash_length);
@@ -164,7 +164,7 @@ int hip_beet_mode_output(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
 		 *
 		 * @note we are not putting the hash into the actual header definition
 		 *       in order to be more flexible about the hash length */
-		HIP_IFEL(add_esp_prot_hash(esp_packet + *esp_packet_len, &esp_prot_hash_length,
+		HIP_IFEL(esp_prot_add_hash(esp_packet + *esp_packet_len, &esp_prot_hash_length,
 					entry), -1, "failed to add the esp protection extension hash\n");
 		HIP_DEBUG("esp prot hash_length: %i\n", esp_prot_hash_length);
 		HIP_HEXDUMP("esp prot hash: ", esp_packet + *esp_packet_len, esp_prot_hash_length);
@@ -280,7 +280,7 @@ int hip_payload_encrypt(unsigned char *in, uint8_t in_type, int in_len,
 	int i = 0;
 	int err = 0;
 
-	esp_data_offset = get_esp_data_offset(entry);
+	esp_data_offset = esp_prot_get_data_offset(entry);
 
 	/*
 	 * Encryption
@@ -493,7 +493,7 @@ int hip_payload_decrypt(unsigned char *in, int in_len, unsigned char *out,
 	int err = 0;
 
 	// different offset if esp extension used or not
-	esp_data_offset = get_esp_data_offset(entry);
+	esp_data_offset = esp_prot_get_data_offset(entry);
 
 	/*
 	 *   Authentication

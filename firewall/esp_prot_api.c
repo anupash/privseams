@@ -253,7 +253,8 @@ void esp_prot_sa_entry_free(hip_sa_entry_t *entry)
 		hchain_free(entry->next_hchain);
 }
 
-int add_esp_prot_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *entry)
+int esp_prot_add_hash(unsigned char *out_hash, int *out_length,
+		hip_sa_entry_t *entry)
 {
 	unsigned char *tmp_hash = NULL;
 	int err = 0;
@@ -305,7 +306,7 @@ int add_esp_prot_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *
 }
 
 /* verifies received hchain-elements */
-int verify_esp_prot_hash(hip_sa_entry_t *entry, unsigned char *hash_value)
+int esp_prot_verify_hash(hip_sa_entry_t *entry, unsigned char *hash_value)
 {
 	hash_function_t hash_function = NULL;
 	int hash_length = 0;
@@ -484,7 +485,7 @@ hash_chain_t * esp_prot_get_bex_hchain_by_anchor(unsigned char *hchain_anchor,
   	return return_hchain;
 }
 
-int get_esp_data_offset(hip_sa_entry_t *entry)
+int esp_prot_get_data_offset(hip_sa_entry_t *entry)
 {
 	HIP_ASSERT(entry != NULL);
 	// esp_prot_transform >= 0 due to data-type

@@ -37,14 +37,15 @@ int esp_prot_uninit(void);
 int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 		unsigned char *esp_prot_anchor, int update);
 void esp_prot_sa_entry_free(hip_sa_entry_t *entry);
-int add_esp_prot_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *entry);
-int verify_esp_prot_hash(hip_sa_entry_t *entry, unsigned char *hash_value);
+int esp_prot_add_hash(unsigned char *out_hash, int *out_length,
+		hip_sa_entry_t *entry);
+int esp_prot_verify_hash(hip_sa_entry_t *entry, unsigned char *hash_value);
 esp_prot_tfm_t * esp_prot_resolve_transform(uint8_t transform);
 hash_function_t esp_prot_get_hash_function(uint8_t transform);
 int esp_prot_get_hash_length(uint8_t transform);
 hash_chain_t * esp_prot_get_bex_hchain_by_anchor(unsigned char *hchain_anchor,
 		uint8_t transform);
-int get_esp_data_offset(hip_sa_entry_t *entry);
+int esp_prot_get_data_offset(hip_sa_entry_t *entry);
 int esp_prot_sadb_maintenance(hip_sa_entry_t *entry);
 
 #endif /*ESP_PROT_API_H_*/
