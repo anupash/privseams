@@ -74,13 +74,19 @@ int hip_fw_examine_incoming_tcp_packet(void *hdr,
 	 * Many packets have SYN 0 and RST 0, so they get accepted quickly. 
 	 */
 	if((tcphdr->syn == 0) && (tcphdr->rst == 0) && (tcphdr->fin == 0)){
-		return 1;//return -1;
+		return 1;
 	}
-
-	//check that there are no options
+	
+	/* this shortcut check was removed
+	 * because we need to analyze incoming
+	 * TCP SYN_ACK, RST_ACK and FIN_ACK packets
+	 * even when there are no options
+	 * for updating the firewall entry
+	 */
+	/*//check that there are no options
 	if(tcphdr->doff == 5){
-		return 1;//return -1;
-	}
+		return 1;
+	}*/
 
 	if((tcphdr->syn == 1) && (tcphdr->ack == 0)){	//incoming, syn=1 and ack=0
 		if(tcp_packet_has_i1_option(hdrBytes, 4*tcphdr->doff)){
@@ -119,7 +125,7 @@ int hip_fw_examine_incoming_tcp_packet(void *hdr,
 			return 0;
 		}
 		else{
-			return 1;//return -1;
+			return 1;
 		}
 	}
 	else if( ((tcphdr->syn == 1) && (tcphdr->ack == 1)) ||	//incoming, syn=1 and ack=1
@@ -138,28 +144,34 @@ int hip_fw_examine_incoming_tcp_packet(void *hdr,
 			return;
 		}
 		else{*/
-			//signal for the normal TCP packets not to be blocked for this peer
+			//signal for the normal TCP packets
+			//not to be blocked for this peer
 			//save in db that peer does not support hip
+			//if the bex has not succeeded yet
+HIP_DEBUG("3333\n");
 			firewall_hl_t *entry_peer = NULL;
 			entry_peer = firewall_ip_db_match(&peer_ip);
-			if(entry_peer->bex_state != FIREWALL_STATE_BEX_ESTABLISHED)
+			if(entry_peer->bex_state != FIREWALL_STATE_BEX_ESTABLISHED){
+HIP_DEBUG("444\n");
+				//blacklist in the hipd db
 				hip_fw_unblock_and_blacklist(&peer_ip);
-/*
-			memset(&all_zero_default, 0, sizeof(struct in6_addr));
-			firewall_update_entry(&all_zero_default,
-						&all_zero_default,
-						&all_zero_default,
-						&peer_ip,
-						FIREWALL_STATE_BEX_NOT_SUPPORTED);
-*/
+HIP_DEBUG("555\n");
+				//update the firewall db entry
+				HIP_DEBUG("updating fw entry state to NOT_SUPPORTED\n");
+				firewall_update_entry(NULL, NULL,
+					      NULL, &peer_ip,
+					      FIREWALL_STATE_BEX_NOT_SUPPORTED);
+HIP_DEBUG("666\n");
+			}
+
 			//normal traffic connections should be allowed to be created
-			return 1;//return -1;
+			return 1;
 		/*}*/
 	}
 
 out_err:
 	/* Allow rest */
-	return 1;//return -1;
+	return 1;
 }
 
 /**

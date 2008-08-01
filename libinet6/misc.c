@@ -1903,7 +1903,7 @@ int hip_trigger_is_bex_established(struct in6_addr *src_hit, struct in6_addr *ds
 
 
 //################################
-int hip_trigger_get_bex_state(struct in6_addr *src_ip,
+int hip_get_bex_state(struct in6_addr *src_ip,
 			      struct in6_addr *dst_ip,
 			      struct in6_addr *src_hit,
 			      struct in6_addr *dst_hit,
@@ -1958,6 +1958,50 @@ int hip_trigger_get_bex_state(struct in6_addr *src_ip,
                 HIP_FREE(msg);  
         return res;
 
+}
+
+//**********************
+
+int hip_get_peerIP_from_peerLSI(struct in_addr  *dst_lsi/*input */,
+				struct in6_addr *dst_ip /*output*/){
+	int err = 0;
+	hip_lsi_t src_ip4, dst_ip4;
+	struct hip_tlv_common *current_param = NULL;
+	struct hip_common *msg = NULL;
+	struct hip_hadb_user_info_state *ha;
+  
+	HIP_ASSERT(dst_ip != NULL);
+
+	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
+
+	hip_msg_init(msg);
+
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0), -1,
+		 "Building of daemon header failed\n");
+
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1,
+		 "send recv daemon info\n");
+
+	while((current_param = hip_get_next_param(msg, current_param)) != NULL) {
+		ha = hip_get_param_contents_direct(current_param);
+
+		if(ipv6_addr_cmp(dst_lsi, &ha->lsi_our) == 0){
+			*dst_ip = ha->ip_our;
+			break;
+		}
+		else if(ipv6_addr_cmp(dst_lsi, &ha->lsi_peer) == 0){
+			/**src_hit = ha->hit_our;
+			*dst_hit = ha->hit_peer;
+			*src_lsi = ha->lsi_our;*/
+			*dst_ip = ha->ip_peer;
+			break;
+		}
+	}
+        
+ out_err:
+        if(msg)
+                HIP_FREE(msg);  
+        return err;
 }
 
 //**********************
@@ -2238,10 +2282,10 @@ int getproto_info(int port_dest, char *proto)
 	char path[11+sizeof(proto)];
         char *fqdn_str = NULL, *separator = NULL, *sub_string_port_hex = NULL;
         
-	if(!strcmp(proto,"tcp6")){
+	if( (!strcmp(proto,"tcp6")) || (!strcmp(proto,"tcp")) ){
            index_addr_port = 15;
 	}
-	else if(!strcmp(proto,"udp6")){
+	else if( (!strcmp(proto,"udp6")) || (!strcmp(proto,"udp")) ){
 	   index_addr_port = 10;
 	}
 

@@ -1006,8 +1006,18 @@ int filter_hip(const struct in6_addr * ip6_src,
     		HIP_DEBUG("packet type: R1\n");
     	else if (buf->type_hdr == HIP_I2)
     		HIP_DEBUG("packet type: I2\n");
-    	else if (buf->type_hdr == HIP_R2)
+    	else if (buf->type_hdr == HIP_R2){
     		HIP_DEBUG("packet type: R2\n");
+		//update the state of the firewall entry
+		//if the receiving hit is one of our own
+		if(hit_is_local_hit(&(buf->hitr))){
+			HIP_DEBUG("updating fw entry state to ESTABLISHED\n");
+			firewall_update_entry(NULL, NULL,
+					      NULL, ip6_src,
+					      FIREWALL_STATE_BEX_ESTABLISHED);
+		}
+		
+	}
     	else if (buf->type_hdr == HIP_UPDATE)
     		HIP_DEBUG("packet type: UPDATE\n");
     	else if (buf->type_hdr == HIP_NOTIFY)
@@ -1261,7 +1271,7 @@ HIP_DEBUG("STATE %d \n", entry_peer->bex_state);
 		//other cases to be added here TO DO
 		if(entry_peer->bex_state == FIREWALL_STATE_BEX_UNDEFINED){
 			//get current connection state from hipd
-			state_ha = hip_trigger_get_bex_state(&ctx->src, &ctx->dst,
+			state_ha = hip_get_bex_state(&ctx->src, &ctx->dst,
 						     &src_hit, &dst_hit,
 						     &src_lsi, &dst_lsi);
 
@@ -1306,7 +1316,7 @@ HIP_DEBUG("STATE %d \n", entry_peer->bex_state);
 						 &entry_peer->hit_peer, 
 						 &src_lsi, &dst_lsi, NULL, NULL),
 				 -1, "Base Exchange Trigger failed\n");*/
-
+			HIP_DEBUG("Initiate bex after check in firewall db\n");
 			memset(&all_zero_hit, 0, sizeof(struct sockaddr_in6));
 			hip_request_peer_hit_from_hipd_at_firewall(
 				&(ctx->dst),
@@ -1327,9 +1337,9 @@ HIP_DEBUG("STATE %d \n", entry_peer->bex_state);
 		firewall_add_default_entry(&ctx->dst);
 
 		//get current connection state from hipd
-		state_ha = hip_trigger_get_bex_state(&ctx->src, &ctx->dst,
-						     &src_hit, &dst_hit,
-						     &src_lsi, &dst_lsi);
+		state_ha = hip_get_bex_state(&ctx->src, &ctx->dst,
+					     &src_hit, &dst_hit,
+					     &src_lsi, &dst_lsi);
 
 HIP_DEBUG("** state %d \n", state_ha);
 HIP_DEBUG_IN6ADDR("** src ip ", &ctx->src);
@@ -1342,7 +1352,7 @@ HIP_DEBUG_HIT("** dst hit ", &dst_hit);
 		if((state_ha == -1) ||
 		   (state_ha == HIP_STATE_CLOSING) ||
 		   (state_ha == HIP_STATE_CLOSED)){
-HIP_DEBUG("Initiate bex\n");
+HIP_DEBUG("Initiate bex after check in hipd db\n");
 			//initiate the bex
 			memset(&all_zero_hit, 0, sizeof(struct sockaddr_in6));
 			hip_request_peer_hit_from_hipd_at_firewall(
@@ -1355,7 +1365,7 @@ HIP_DEBUG("Initiate bex\n");
 				&reject);
 			verdict = 0;
 		}
-		else if(state_ha == HIP_STATE_ESTABLISHED){
+		/*else if(state_ha == HIP_STATE_ESTABLISHED){
 		        HIP_DEBUG("ha is ESTABLISHED!\n");
 
 			if(hit_is_local_hit(&src_hit)){
@@ -1373,7 +1383,7 @@ HIP_DEBUG("Initiate bex\n");
 				HIP_DEBUG("is NOT local hit\n");
 				verdict = 1;
 			}			
-		}
+		}*/
 		else if((state_ha == HIP_STATE_I1_SENT) || 
 			(state_ha == HIP_STATE_I2_SENT)){
 			//already initiated the bex, nothing to do

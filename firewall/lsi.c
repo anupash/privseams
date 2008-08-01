@@ -30,7 +30,7 @@ int is_packet_reinjection(struct in_addr *ip_src)
 
 int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m, struct in6_addr *ip_src, struct in6_addr *ip_dst)
 {
-        int proto6 = 0, ip_hdr_size = 0, portDest = 0;
+        int proto6 = 0, proto4_LSI = 0, ip_hdr_size = 0, portDest = 0;
 	char *proto;
 	hip_lsi_t *lsi_our = NULL, *lsi_peer = NULL;
 	struct in6_addr src_addr, dst_addr;
@@ -54,8 +54,18 @@ int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m, struct in6_addr *ip_src, str
 		 	break;
 	}
     
-	if (portDest)
+	if(portDest)
 		proto6 = getproto_info(ntohs(portDest), proto);
+
+	if(proto6)
+		return proto6;
+
+
+	if(portDest){
+		proto = "tcp";
+		proto4_LSI = getproto_info(ntohs(portDest), proto);
+	}
+	
 /*
 	if (!proto6){
 HIP_DEBUG_HIT("#### SRC HIT", ip_src);
@@ -100,6 +110,7 @@ int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src, str
 	int err, msg_type;
 	struct in6_addr src_lsi, dst_lsi;
 	struct in6_addr src_hit, dst_hit;
+	struct in6_addr dst_ip;
 	firewall_hl_t *entry_peer = NULL;
 
 	HIP_DEBUG("FIREWALL_TRIGGERING OUTGOING LSI %s\n",inet_ntoa(*lsi_dst));
@@ -108,7 +119,10 @@ int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src, str
 	IPV4_TO_IPV6_MAP(lsi_src, &src_lsi);
 
 	hip_firewall_hldb_dump();
-	////////entry_peer = (firewall_hl_t *)firewall_ip_db_match(lsi_dst);	
+	//get the corresponding ip address for this lsi
+	hip_get_peerIP_from_peerLSI(lsi_dst, &dst_ip);
+	//get firewall db entry
+	entry_peer = (firewall_hl_t *)firewall_ip_db_match(&dst_ip);	
 
 	if (entry_peer){
 		HIP_IFEL(entry_peer->bex_state == FIREWALL_STATE_BEX_UNDEFINED, -1, "Base Exchange Failed");
