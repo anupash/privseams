@@ -2610,6 +2610,12 @@ hip_transform_suite_t hip_get_param_transform_suite_id(
 	const void *transform_tlv, const uint16_t index)
 {
 	/** @todo Why do we have hip_select_esp_transform separately? */
+
+        /* RFC 5201 chapter 6.9.:  
+           The I2 MUST have a single value in the HIP_TRANSFORM parameter,
+	   which MUST match one of the values offered to the Initiator in
+	   the R1 packet. Does this function check this? 
+	   -Lauri 01.08.2008. */
 	hip_tlv_type_t type;
  	uint16_t supported_hip_tf[] = { HIP_HIP_NULL_SHA1,
  					HIP_HIP_3DES_SHA1,

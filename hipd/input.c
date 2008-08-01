@@ -1548,6 +1548,9 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
  * @return         zero on success, or negative error value on error. Success
  *                 indicates that I2 payloads are checked and R2 is created and
  *                 sent.
+ * @see            Section 6.9. "Processing Incoming I2 Packets" of
+ *                 <a href="http://www.rfc-editor.org/rfc/rfc5201.txt">
+ *                 RFC 5201</a>.
  */
 int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		  hip_ha_t *entry, hip_portpair_t *i2_info)
@@ -1602,22 +1605,32 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	memset(&spi_in_data, 0, sizeof(spi_in_data));
 	memset(&i2_context, 0, sizeof(i2_context));
 	
+	/* The context structure is used to gather the context created from
+	   processing the I2 packet, as well as storing the original packet. 
+	   From the context struct we can then access the I2 in hip_create_r2()
+	   later. */
 	i2_context.input = NULL;
 	i2_context.output = NULL;
 	i2_context.dh_shared_key = NULL;
-	
-	/* Store a pointer to the incoming i2 message in the context just
-	   allocted. From the context struct we can then access the I2 in
-	   hip_create_r2() later. */
 	i2_context.input = i2;
+	
+	/* Check that the Responder's HIT is one of ours. According to RFC 5201,
+	   this MUST be done. This check was added by Lauri on 01.08.2008. Note,
+	   that this condition is not satisfied at the HIP relay server. */
+	if(!hip_hidb_hit_is_our(&i2->hitr)) {
+		err = -EPROTO;
+		HIP_ERROR("Responder's HIT in the received I2 packet does not "\
+			  "corresponds to one of our own HITs. Dropping the I2 "\
+			  "packet.\n");
+		goto out_err;
+	}
 	
 	/* Fetch the R1_COUNTER parameter. */
 	r1cntr = hip_get_param(i2, HIP_PARAM_R1_COUNTER);
 
-	/* Here we should that the destination HIT is one of ours. We should
-	   also check the 'system boot counter' using the R1_COUNTER parameter.
-	   However, our precreated R1 packets do not support system boot counter
-	   so we do not check it. */
+	/* Here we should check the 'system boot counter' using the R1_COUNTER
+	   parameter. However, our precreated R1 packets do not support system
+	   boot counter so we do not check it. */
 	
 	/* Check solution for cookie */
 	solution = hip_get_param(i2_context.input, HIP_PARAM_SOLUTION);
@@ -1725,7 +1738,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		   
 		   Get the length of the "Encrypted data" field in the ENCRYPTED
 		   parameter. */
-		
 		switch (hip_tfm) {
 		case HIP_HIP_RESERVED:
 			HIP_ERROR("Found HIP suite ID 'RESERVED'. Dropping "\
@@ -1797,7 +1809,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	   parameter in the 'host_id_in_enc' buffer. */
 	HIP_IFEL(hip_crypto_encrypted(host_id_in_enc, iv, hip_tfm, crypto_len,
 				      &i2_context.hip_enc_in.key,
-				      HIP_DIRECTION_DECRYPT), -EINVAL,
+				      HIP_DIRECTION_DECRYPT), -EKEYREJECTED,
 		 "Failed to decrypt the HOST_ID parameter. Dropping the I2 "\
 		 "packet.\n");
 

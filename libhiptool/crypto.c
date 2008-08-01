@@ -417,7 +417,7 @@ int hip_crypto_encrypted(void *data, const void *iv_orig, int alg, int len,
                 break;
 
         default:
-                HIP_IFEL(1, -EFAULT, "Attempted to use unknown CI (alg = %d)\n", alg);
+                HIP_IFEL(1, -EINVAL, "Attempted to use unknown CI (alg = %d)\n", alg);
         }
 	
 	_HIP_HEXDUMP("hip_crypto_encrypted decrypt data: ", result, len);	
