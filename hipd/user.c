@@ -945,7 +945,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		break;
 	case SO_HIP_HCHAIN_CHANGE:
 		HIP_DUMP_MSG(msg);
-		err = esp_prot_handle_hchain_change_msg(msg);
+		err = esp_prot_handle_anchor_change_msg(msg);
 		break;
 	case SO_HIP_GET_LSI_PEER:
 	case SO_HIP_GET_LSI_OUR:

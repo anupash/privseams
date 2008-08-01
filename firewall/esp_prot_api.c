@@ -353,7 +353,7 @@ int verify_esp_prot_hash(hip_sa_entry_t *entry, unsigned char *hash_value)
 
 					/* notify hipd about the switch to the next hash-chain for
 					 * consistency reasons */
-					HIP_IFEL(send_hchain_change_to_hipd(entry), -1,
+					HIP_IFEL(send_anchor_change_to_hipd(entry), -1,
 							"unable to notify hipd about hchain change\n");
 				}
 				else
@@ -551,7 +551,7 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 
 			/* notify hipd about the switch to the next hash-chain for
 			 * consistency reasons */
-			HIP_IFEL(send_hchain_change_to_hipd(entry), -1,
+			HIP_IFEL(send_anchor_change_to_hipd(entry), -1,
 					"unable to notify hipd about hchain change\n");
 		}
 	}
