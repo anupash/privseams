@@ -51,12 +51,11 @@ int handle_sa_add_request(struct hip_common * msg)
 	struct in6_addr *src_hit = NULL, *dst_hit = NULL;
 	uint32_t spi = 0;
 	int ealg = 0, err = 0;
-	struct hip_crypto_key *enckey = NULL, *authkey = NULL;
+	struct hip_crypto_key *enc_key = NULL, *auth_key = NULL;
 	int retransmission = 0, direction = 0, update = 0;
 	uint16_t local_port = 0, peer_port = 0;
 	uint8_t encap_mode = 0, esp_prot_transform = 0;
 	unsigned char *esp_prot_anchor = NULL;
-	unsigned char *e_key = NULL, *a_key = NULL;
 	uint32_t e_keylen = 0, a_keylen = 0, e_type = 0, a_type = 0;
 
 	// get all attributes from the message
@@ -97,12 +96,12 @@ int handle_sa_add_request(struct hip_common * msg)
 	esp_prot_anchor = esp_prot_handle_sa_add_request(msg, &esp_prot_transform);
 
 	param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_KEYS);
-	enckey = (struct hip_crypto_key *) hip_get_param_contents_direct(param);
-	HIP_HEXDUMP("crypto key :", enckey, sizeof(struct hip_crypto_key));
+	enc_key = (struct hip_crypto_key *) hip_get_param_contents_direct(param);
+	HIP_HEXDUMP("crypto key:", enc_key, sizeof(struct hip_crypto_key));
 
 	param = hip_get_next_param(msg, param);
-	authkey = (struct hip_crypto_key *)hip_get_param_contents_direct(param);
-	HIP_HEXDUMP("authen key :", authkey, sizeof(struct hip_crypto_key));
+	auth_key = (struct hip_crypto_key *)hip_get_param_contents_direct(param);
+	HIP_HEXDUMP("auth key:", auth_key, sizeof(struct hip_crypto_key));
 
 	param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_INT);
 	ealg = *((int *) hip_get_param_contents_direct(param));
@@ -120,23 +119,10 @@ int handle_sa_add_request(struct hip_common * msg)
 	update = *((int *) hip_get_param_contents_direct(param));
 	HIP_DEBUG("the update value is %d \n", update);
 
-	/******* MAP HIP ESP encryption INDEX to SADB encryption INDEX *******/
-
-	// TODO move to user_ipsec_esp.c -> don't store in entry
-	a_keylen = hip_auth_key_length_esp(ealg);
-	e_keylen = hip_enc_key_length(ealg);
-
-	// TODO store hip_crypto_keys -> do not convert
-	e_key = (unsigned char *) enckey->key;
-	a_key = (unsigned char *) authkey->key;
-
-	HIP_HEXDUMP("auth key: ", a_key, a_keylen);
-	HIP_HEXDUMP("enc key: ", e_key, e_keylen);
-
 	HIP_IFEL(hip_sadb_add(direction, spi, BEET_MODE, src_addr, dst_addr,
 			src_hit, dst_hit, encap_mode, local_port, peer_port, ealg,
-			a_keylen, e_keylen, a_key, e_key, DEFAULT_LIFETIME,
-			esp_prot_transform, esp_prot_anchor, retransmission, update), -1,
+			auth_key, enc_key, DEFAULT_LIFETIME, esp_prot_transform,
+			esp_prot_anchor, retransmission, update), -1,
 			"failed to add user_space IPsec security association\n");
 
   out_err:

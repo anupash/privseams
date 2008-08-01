@@ -56,10 +56,8 @@ typedef struct hip_sa_entry
 	uint16_t dst_port;						/* dst port for UDP encaps. ESP */
 	/****************** crypto parameters *******************/
 	int ealg;								/* crypto transform in use */
-	uint32_t a_keylen;						/* length of raw keys */
-	uint32_t e_keylen;
-	unsigned char *a_key;					/* raw crypto keys */
-	unsigned char *e_key;
+	struct hip_crypto_key *auth_key;		/* raw crypto keys */
+	struct hip_crypto_key *enc_key;
 	des_key_schedule ks[3];					/* 3-DES keys */
 	AES_KEY *aes_key;						/* AES key */
 	BF_KEY *bf_key;							/* BLOWFISH key */
@@ -103,10 +101,9 @@ int hip_sadb_add(int direction, uint32_t spi, uint32_t mode,
 		struct in6_addr *src_addr, struct in6_addr *dst_addr,
 		struct in6_addr *inner_src_addr, struct in6_addr *inner_dst_addr,
 		uint8_t encap_mode, uint16_t src_port, uint16_t dst_port,
-		int ealg, uint32_t a_keylen, uint32_t e_keylen,
-		unsigned char *a_key, unsigned char *e_key, uint64_t lifetime,
-		uint8_t esp_prot_transform, unsigned char *esp_prot_anchor,
-		int retransmission, int update);
+		int ealg, struct hip_crypto_key *auth_key, struct hip_crypto_key *enc_key,
+		uint64_t lifetime, uint8_t esp_prot_transform,
+		unsigned char *esp_prot_anchor, int retransmission, int update);
 int hip_sadb_delete(struct in6_addr *dst_addr, uint32_t spi);
 int hip_sadb_flush(void);
 void hip_sadb_print(void);
@@ -125,23 +122,23 @@ int hip_sa_entry_add(int direction, uint32_t spi, uint32_t mode,
 		struct in6_addr *src_addr, struct in6_addr *dst_addr,
 		struct in6_addr *inner_src_addr, struct in6_addr *inner_dst_addr,
 		uint8_t encap_mode, uint16_t src_port, uint16_t dst_port,
-		int ealg, uint32_t a_keylen, uint32_t e_keylen,
-		unsigned char *a_key, unsigned char *e_key, uint64_t lifetime,
-		uint8_t esp_prot_transform, unsigned char *esp_prot_anchor, int update);
+		int ealg, struct hip_crypto_key *auth_key, struct hip_crypto_key *enc_key,
+		uint64_t lifetime, uint8_t esp_prot_transform,
+		unsigned char *esp_prot_anchor, int update);
 int hip_sa_entry_update(int direction, uint32_t spi, uint32_t mode,
 		struct in6_addr *src_addr, struct in6_addr *dst_addr,
 		struct in6_addr *inner_src_addr, struct in6_addr *inner_dst_addr,
 		uint8_t encap_mode, uint16_t src_port, uint16_t dst_port,
-		int ealg, uint32_t a_keylen, uint32_t e_keylen,
-		unsigned char *a_key, unsigned char *e_key, uint64_t lifetime,
-		uint8_t esp_prot_transform, unsigned char *esp_prot_anchor, int update);
-int hip_sa_entry_set(hip_sa_entry_t *entry, int direction, uint32_t spi, uint32_t mode,
-		struct in6_addr *src_addr, struct in6_addr *dst_addr,
+		int ealg, struct hip_crypto_key *auth_key, struct hip_crypto_key *enc_key,
+		uint64_t lifetime, uint8_t esp_prot_transform,
+		unsigned char *esp_prot_anchor, int update);
+int hip_sa_entry_set(hip_sa_entry_t *entry, int direction, uint32_t spi,
+		uint32_t mode, struct in6_addr *src_addr, struct in6_addr *dst_addr,
 		struct in6_addr *inner_src_addr, struct in6_addr *inner_dst_addr,
 		uint8_t encap_mode, uint16_t src_port, uint16_t dst_port,
-		int ealg, uint32_t a_keylen, uint32_t e_keylen,
-		unsigned char *a_key, unsigned char *e_key, uint64_t lifetime,
-		uint8_t esp_prot_transform, unsigned char *esp_prot_anchor, int update);
+		int ealg, struct hip_crypto_key *auth_key, struct hip_crypto_key *enc_key,
+		uint64_t lifetime, uint8_t esp_prot_transform,
+		unsigned char *esp_prot_anchor, int update);
 hip_sa_entry_t * hip_sa_entry_find_inbound(struct in6_addr *dst_addr, uint32_t spi);
 hip_sa_entry_t * hip_sa_entry_find_outbound(struct in6_addr *src_hit,
 		struct in6_addr *dst_hit);

@@ -325,7 +325,7 @@ int hip_payload_encrypt(unsigned char *in, uint8_t in_type, int in_len,
 			// same encryption chiper as next transform
 		case HIP_ESP_3DES_MD5:
 			iv_len = 8;
-			if (!entry->e_key || entry->e_keylen == 0) {
+			if (!entry->enc_key) {
 				HIP_ERROR("3-DES key missing.\n");
 
 				err = -1;
@@ -349,11 +349,12 @@ int hip_payload_encrypt(unsigned char *in, uint8_t in_type, int in_len,
 		case HIP_ESP_AES_SHA1:
 			// initalisation vector has the same size as the aes block size
 			iv_len = AES_BLOCK_SIZE;
-			if (!entry->aes_key && entry->e_key) {
+			if (!entry->aes_key && entry->enc_key) {
 				entry->aes_key = malloc(sizeof(AES_KEY));
 				// needs length of key in bits
-				if (AES_set_encrypt_key(entry->e_key, 8 * entry->e_keylen,
-							entry->aes_key)) {
+				if (AES_set_encrypt_key(entry->enc_key->key,
+						8 * hip_enc_key_length(entry->ealg),
+						entry->aes_key)) {
 					HIP_ERROR("AES key problem!\n");
 
 					err = -1;
@@ -458,15 +459,16 @@ int hip_payload_encrypt(unsigned char *in, uint8_t in_type, int in_len,
 		case HIP_ESP_3DES_MD5:
 			// same authentication chiper as next transform
 		case HIP_ESP_NULL_MD5:
-			if (!entry->a_key || entry->a_keylen == 0) {
+			if (!entry->auth_key) {
 				HIP_ERROR("authentication keys missing\n");
 
 				err = -1;
 				goto out_err;
 			}
 
-			HMAC(EVP_md5(), entry->a_key, entry->a_keylen,
-				out, elen, &out[elen], &alen);
+			HMAC(EVP_md5(), entry->auth_key->key,
+					hip_auth_key_length_esp(entry->ealg),
+					out, elen, &out[elen], &alen);
 
 			HIP_DEBUG("alen: %i \n", alen);
 
@@ -474,14 +476,15 @@ int hip_payload_encrypt(unsigned char *in, uint8_t in_type, int in_len,
 		case HIP_ESP_3DES_SHA1:
 		case HIP_ESP_NULL_SHA1:
 		case HIP_ESP_AES_SHA1:
-			if (!entry->a_key || entry->a_keylen == 0) {
+			if (!entry->auth_key) {
 				HIP_ERROR("authentication keys missing\n");
 
 				err = -1;
 				goto out_err;
 			}
 
-			HMAC(EVP_sha1(), entry->a_key, entry->a_keylen,
+			HMAC(EVP_sha1(), entry->auth_key->key,
+					hip_auth_key_length_esp(entry->ealg),
 					out, elen, &out[elen], &alen);
 
 			HIP_DEBUG("alen: %i \n", alen);
@@ -518,8 +521,8 @@ int hip_payload_encrypt(unsigned char *in, uint8_t in_type, int in_len,
  *
  * Perform authentication and decryption of ESP packets.
  */
-int hip_payload_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8_t *out_type,
-		int *out_len, hip_sa_entry_t *entry)
+int hip_payload_decrypt(unsigned char *in, int in_len, unsigned char *out,
+		uint8_t *out_type, int *out_len, hip_sa_entry_t *entry)
 {
 	/* elen is length of data to encrypt */
 	int elen = 0;
@@ -557,15 +560,16 @@ int hip_payload_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8
 			// length of the authenticated payload, includes ESP header
 			elen = in_len - alen;
 
-			if (!entry->a_key || entry->a_keylen == 0) {
+			if (!entry->auth_key) {
 				HIP_ERROR("authentication keys missing\n");
 
 				err = -1;
 				goto out_err;
 			}
 
-			HMAC(EVP_md5(), entry->a_key, entry->a_keylen,
-				in, elen, hmac_md, &hmac_md_len);
+			HMAC(EVP_md5(), entry->auth_key->key,
+					hip_auth_key_length_esp(entry->ealg),
+					in, elen, hmac_md, &hmac_md_len);
 
 			// actual auth verification
 			if (memcmp(&in[elen], hmac_md, hmac_md_len) != 0)
@@ -586,15 +590,16 @@ int hip_payload_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8
 			// length of the encrypted payload
 			elen = in_len - alen;
 
-			if (!entry->a_key || entry->a_keylen == 0) {
+			if (!entry->auth_key) {
 				HIP_ERROR("authentication keys missing\n");
 
 				err = -1;
 				goto out_err;
 			}
 
-			HMAC(EVP_sha1(), entry->a_key, entry->a_keylen,
-				in, elen, hmac_md, &hmac_md_len);
+			HMAC(EVP_sha1(), entry->auth_key->key,
+					hip_auth_key_length_esp(entry->ealg),
+					in, elen, hmac_md, &hmac_md_len);
 
 			// actual auth verification
 			//if (memcmp(&in[elen], hmac_md, hmac_md_len) != 0)
@@ -629,7 +634,7 @@ int hip_payload_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8
 			// same encryption chiper as next transform
 		case HIP_ESP_3DES_MD5:
 			iv_len = 8;
-			if (!entry->e_key || entry->e_keylen == 0) {
+			if (!entry->enc_key) {
 				HIP_ERROR("3-DES key missing.\n");
 
 				err = -1;
@@ -651,11 +656,13 @@ int hip_payload_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8
 			break;
 		case HIP_ESP_AES_SHA1:
 			iv_len = 16;
-			if (!entry->aes_key && entry->e_key) {
+			if (!entry->aes_key && entry->enc_key) {
 				entry->aes_key = malloc(sizeof(AES_KEY));
 
-				if (AES_set_decrypt_key(entry->e_key, 8*entry->e_keylen,
-							entry->aes_key)) {
+				if (AES_set_decrypt_key(entry->enc_key->key,
+						8 * hip_enc_key_length(entry->ealg),
+						entry->aes_key))
+				{
 					HIP_ERROR("AES key problem!\n");
 
 					err = -1;

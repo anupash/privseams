@@ -68,10 +68,9 @@ int hip_sadb_add(int direction, uint32_t spi, uint32_t mode,
 		struct in6_addr *src_addr, struct in6_addr *dst_addr,
 		struct in6_addr *inner_src_addr, struct in6_addr *inner_dst_addr,
 		uint8_t encap_mode, uint16_t src_port, uint16_t dst_port,
-		int ealg, uint32_t a_keylen, uint32_t e_keylen,
-		unsigned char *a_key, unsigned char *e_key, uint64_t lifetime,
-		uint8_t esp_prot_transform, unsigned char *esp_prot_anchor,
-		int retransmission, int update)
+		int ealg, struct hip_crypto_key *auth_key, struct hip_crypto_key *enc_key,
+		uint64_t lifetime, uint8_t esp_prot_transform,
+		unsigned char *esp_prot_anchor, int retransmission, int update)
 {
 	int err = 0;
 
@@ -81,14 +80,14 @@ int hip_sadb_add(int direction, uint32_t spi, uint32_t mode,
 	{
 		HIP_IFEL(hip_sa_entry_update(direction, spi, mode, src_addr, dst_addr,
 				inner_src_addr, inner_dst_addr, encap_mode, src_port, dst_port, ealg,
-				a_keylen, e_keylen, a_key, e_key, lifetime, esp_prot_transform,
-				esp_prot_anchor, update), -1, "failed to update sa entry\n");
+				auth_key, enc_key, lifetime, esp_prot_transform, esp_prot_anchor,
+				update), -1, "failed to update sa entry\n");
 	} else
 	{
 		HIP_IFEL(hip_sa_entry_add(direction, spi, mode, src_addr, dst_addr,
 				inner_src_addr, inner_dst_addr, encap_mode, src_port, dst_port, ealg,
-				a_keylen, e_keylen, a_key, e_key, lifetime, esp_prot_transform,
-				esp_prot_anchor, update), -1, "failed to add sa entry\n");
+				auth_key, enc_key, lifetime, esp_prot_transform, esp_prot_anchor,
+				update), -1, "failed to add sa entry\n");
 	}
 
   out_err:
@@ -116,7 +115,6 @@ int hip_sadb_flush()
 	hip_list_t *item = NULL, *tmp = NULL;
 	hip_sa_entry_t *entry = NULL;
 
-	// TODO use DO_ALL makro here
 	// iterating over all elements
 	list_for_each_safe(item, tmp, sadb, i)
 	{
@@ -139,7 +137,6 @@ void hip_sadb_print()
 
 	HIP_DEBUG("printing sadb...\n");
 
-	// TODO use DO_ALL makro here
 	// iterating over all elements
 	list_for_each_safe(item, tmp, sadb, i)
 	{
@@ -291,9 +288,9 @@ int hip_sa_entry_add(int direction, uint32_t spi, uint32_t mode,
 		struct in6_addr *src_addr, struct in6_addr *dst_addr,
 		struct in6_addr *inner_src_addr, struct in6_addr *inner_dst_addr,
 		uint8_t encap_mode, uint16_t src_port, uint16_t dst_port,
-		int ealg, uint32_t a_keylen, uint32_t e_keylen,
-		unsigned char *a_key, unsigned char *e_key, uint64_t lifetime,
-		uint8_t esp_prot_transform, unsigned char *esp_prot_anchor, int update)
+		int ealg, struct hip_crypto_key *auth_key, struct hip_crypto_key *enc_key,
+		uint64_t lifetime, uint8_t esp_prot_transform,
+		unsigned char *esp_prot_anchor, int update)
 {
 	hip_sa_entry_t *entry = NULL;
 	int err = 0;
@@ -316,20 +313,20 @@ int hip_sa_entry_add(int direction, uint32_t spi, uint32_t mode,
 			-1, "failed to allocate memory\n");
 	memset(entry->inner_dst_addr, 0, sizeof(struct in6_addr));
 
-	HIP_IFEL(!(entry->a_key = (unsigned char *) malloc(a_keylen)), -1,
-			"failed to allocate memory\n");
-	memset(entry->a_key, 0, a_keylen);
-	if (e_keylen > 0)
+	HIP_IFEL(!(entry->auth_key = (struct hip_crypto_key *)
+			malloc(hip_auth_key_length_esp(ealg))), -1, "failed to allocate memory\n");
+	memset(entry->auth_key, 0, hip_auth_key_length_esp(ealg));
+	if (hip_enc_key_length(ealg) > 0)
 	{
-		HIP_IFEL(!(entry->e_key = (unsigned char *) malloc(e_keylen)), -1,
-				"failed to allocate memory\n");
-		memset(entry->e_key, 0, e_keylen);
+		HIP_IFEL(!(entry->enc_key = (struct hip_crypto_key *)
+				malloc(hip_enc_key_length(ealg))), -1, "failed to allocate memory\n");
+		memset(entry->enc_key, 0, hip_enc_key_length(ealg));
 	}
 
 	HIP_IFEL(hip_sa_entry_set(entry, direction, spi, mode, src_addr, dst_addr,
 			inner_src_addr, inner_dst_addr, encap_mode, src_port, dst_port, ealg,
-			a_keylen, e_keylen, a_key, e_key, lifetime, esp_prot_transform,
-			esp_prot_anchor, update), -1, "failed to set the entry members\n");
+			auth_key, enc_key, lifetime, esp_prot_transform, esp_prot_anchor,
+			update), -1, "failed to set the entry members\n");
 
 	HIP_DEBUG("adding sa entry with following index attributes:\n");
 	HIP_DEBUG_HIT("inner_src_addr", entry->inner_src_addr);
@@ -366,29 +363,29 @@ int hip_sa_entry_update(int direction, uint32_t spi, uint32_t mode,
 		struct in6_addr *src_addr, struct in6_addr *dst_addr,
 		struct in6_addr *inner_src_addr, struct in6_addr *inner_dst_addr,
 		uint8_t encap_mode, uint16_t src_port, uint16_t dst_port,
-		int ealg, uint32_t a_keylen, uint32_t e_keylen,
-		unsigned char *a_key, unsigned char *e_key, uint64_t lifetime,
-		uint8_t esp_prot_transform, unsigned char *esp_prot_anchor, int update)
+		int ealg, struct hip_crypto_key *auth_key, struct hip_crypto_key *enc_key,
+		uint64_t lifetime, uint8_t esp_prot_transform,
+		unsigned char *esp_prot_anchor, int update)
 {
 	hip_sa_entry_t *stored_entry = NULL;
 	int err = 0;
 
 	// we need the sadb entry to go through entries in the linkdb
-	HIP_IFEL(!(stored_entry = hip_sa_entry_find_outbound(inner_src_addr, inner_dst_addr)),
-			-1, "failed to retrieve sa entry\n");
+	HIP_IFEL(!(stored_entry = hip_sa_entry_find_outbound(inner_src_addr,
+			inner_dst_addr)), -1, "failed to retrieve sa entry\n");
 
 	pthread_mutex_lock(&stored_entry->rw_lock);
 	/* delete all links
 	 *
-	 * TODO more efficient to delete entries in inbound db for all (addr, oldspi)
+	 * XX TODO more efficient to delete entries in inbound db for all (addr, oldspi)
 	 * or just those with (oldaddr, spi) */
 	HIP_IFEL(hip_link_entries_delete_all(stored_entry), -1, "failed to remove links\n");
 
 	/* change members of entry in sadb and add new links */
 	HIP_IFEL(hip_sa_entry_set(stored_entry, direction, spi, mode, src_addr, dst_addr,
 			inner_src_addr, inner_dst_addr, encap_mode, src_port, dst_port, ealg,
-			a_keylen, e_keylen, a_key, e_key, lifetime, esp_prot_transform,
-			esp_prot_anchor, update), -1, "failed to update the entry members\n");
+			auth_key, enc_key, lifetime, esp_prot_transform, esp_prot_anchor,
+			update), -1, "failed to update the entry members\n");
 
 	HIP_IFEL(hip_link_entries_add(stored_entry), -1, "failed to add links\n");
 	pthread_mutex_unlock(&stored_entry->rw_lock);
@@ -399,13 +396,13 @@ int hip_sa_entry_update(int direction, uint32_t spi, uint32_t mode,
   	return err;
 }
 
-int hip_sa_entry_set(hip_sa_entry_t *entry, int direction, uint32_t spi, uint32_t mode,
-		struct in6_addr *src_addr, struct in6_addr *dst_addr,
+int hip_sa_entry_set(hip_sa_entry_t *entry, int direction, uint32_t spi,
+		uint32_t mode, struct in6_addr *src_addr, struct in6_addr *dst_addr,
 		struct in6_addr *inner_src_addr, struct in6_addr *inner_dst_addr,
 		uint8_t encap_mode, uint16_t src_port, uint16_t dst_port,
-		int ealg, uint32_t a_keylen, uint32_t e_keylen,
-		unsigned char *a_key, unsigned char *e_key, uint64_t lifetime,
-		uint8_t esp_prot_transform, unsigned char *esp_prot_anchor, int update)
+		int ealg, struct hip_crypto_key *auth_key, struct hip_crypto_key *enc_key,
+		uint64_t lifetime, uint8_t esp_prot_transform,
+		unsigned char *esp_prot_anchor, int update)
 {
 	int key_len = 0; 							/* for 3-DES */
 	unsigned char key1[8], key2[8], key3[8]; 	/* for 3-DES */
@@ -427,30 +424,27 @@ int hip_sa_entry_set(hip_sa_entry_t *entry, int direction, uint32_t spi, uint32_
 	entry->dst_port = dst_port;
 
 	entry->ealg = ealg;
-	entry->a_keylen = a_keylen;
-	entry->e_keylen = e_keylen;
-
 	HIP_DEBUG("ealg value is: %d\n", ealg);
 
 	// copy raw keys
-	memcpy(entry->a_key, a_key, a_keylen);
-	if (e_keylen > 0)
-		memcpy(entry->e_key, e_key, e_keylen);
+	memcpy(entry->auth_key, auth_key, hip_auth_key_length_esp(ealg));
+	if (hip_enc_key_length(ealg) > 0)
+		memcpy(entry->enc_key, enc_key, hip_enc_key_length(ealg));
 
 	// set up keys for the transform in use
 	switch (ealg)
 	{
 		case HIP_ESP_3DES_SHA1:
 		case HIP_ESP_3DES_MD5:
-			key_len = e_keylen/3;
+			key_len = hip_enc_key_length(ealg)/3;
 
 			memset(key1, 0, key_len);
 			memset(key2, 0, key_len);
 			memset(key3, 0, key_len);
 
-			memcpy(key1, &e_key[0], key_len);
-			memcpy(key2, &e_key[8], key_len);
-			memcpy(key3, &e_key[16], key_len);
+			memcpy(key1, &enc_key[0], key_len);
+			memcpy(key2, &enc_key[8], key_len);
+			memcpy(key3, &enc_key[16], key_len);
 
 			des_set_odd_parity((des_cblock*)key1);
 			des_set_odd_parity((des_cblock*)key2);
@@ -471,7 +465,7 @@ int hip_sa_entry_set(hip_sa_entry_t *entry, int direction, uint32_t spi, uint32_
 			break;
 		case HIP_ESP_BLOWFISH_SHA1:
 			entry->bf_key = (BF_KEY *) malloc(sizeof(BF_KEY));
-			BF_set_key(entry->bf_key, e_keylen, e_key);
+			BF_set_key(entry->bf_key, hip_enc_key_length(ealg), enc_key->key);
 
 			break;
 		case HIP_ESP_NULL_SHA1:
@@ -602,7 +596,7 @@ int hip_link_entries_add(hip_sa_entry_t *entry)
 
 	HIP_DEBUG("adding links to this sadb entry...\n");
 
-	// TODO add multihoming support here
+	// XX TODO add multihoming support here
 	//while (entry has more dst_addr)
 	HIP_IFEL(hip_link_entry_add(entry->dst_addr, entry), -1,
 				"failed to add link entry\n");
@@ -680,7 +674,7 @@ int hip_link_entries_delete_all(hip_sa_entry_t *entry)
 
 	HIP_DEBUG("delete all links to this sadb entry...\n");
 
-	// TODO lock link hashtable and add multihoming support here
+	// XX TODO lock link hashtable and add multihoming support here
 	//while (entry has more dst_addr)
 	HIP_IFEL(hip_link_entry_delete(entry->dst_addr, entry), -1,
 			"failed to add link entry\n");
@@ -718,10 +712,10 @@ void hip_sa_entry_free(hip_sa_entry_t * entry)
 			free(entry->inner_src_addr);
 		if (entry->inner_dst_addr)
 			free(entry->inner_dst_addr);
-		if (entry->a_key)
-			free(entry->a_key);
-		if (entry->e_key)
-			free(entry->e_key);
+		if (entry->auth_key)
+			free(entry->auth_key);
+		if (entry->enc_key)
+			free(entry->enc_key);
 		if (entry->aes_key)
 			free(entry->aes_key);
 		if (entry->bf_key)
@@ -747,7 +741,7 @@ void hip_sa_entry_print(hip_sa_entry_t *entry)
 		HIP_DEBUG("src_port: %u\n", entry->src_port);
 		HIP_DEBUG("dst_port: %u\n", entry->dst_port);
 		HIP_DEBUG("... (more members)\n");
-// TODO print the rest
+// XX TODO print the rest in case this information is needed
 #if 0
 		/****************** crypto parameters *******************/
 		int ealg;								/* crypto transform in use */
@@ -793,7 +787,6 @@ void hip_linkdb_print()
 
 	HIP_DEBUG("printing linkdb...\n");
 
-	// TODO use DO_ALL makro here
 	// iterating over all elements
 	list_for_each_safe(item, tmp, linkdb, i)
 	{
