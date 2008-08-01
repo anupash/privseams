@@ -89,9 +89,8 @@ int hip_beet_mode_output(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
 		/* put the esp protection extension hash right behind the header
 		 * (virtual header extension)
 		 *
-		 * NOTE: we are not putting the hash into the actual header definition
-		 *       in order to be more flexible about the hash length
-		 **/
+		 * @note we are not putting the hash into the actual header definition
+		 *       in order to be more flexible about the hash length */
 		HIP_IFEL(add_esp_prot_hash(esp_packet + *esp_packet_len, &esp_prot_hash_length,
 					entry), -1, "failed to add the esp protection extension hash\n");
 		HIP_DEBUG("esp prot hash_length: %i\n", esp_prot_hash_length);
@@ -170,6 +169,19 @@ int hip_beet_mode_output(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
 		// packet to be re-inserted into network stack has at least
 		// length of defined headers
 		*esp_packet_len += next_hdr_offset + sizeof(struct hip_esp);
+
+		/* put the esp protection extension hash right behind the header
+		 * (virtual header extension)
+		 *
+		 * @note we are not putting the hash into the actual header definition
+		 *       in order to be more flexible about the hash length */
+		HIP_IFEL(add_esp_prot_hash(esp_packet + *esp_packet_len, &esp_prot_hash_length,
+					entry), -1, "failed to add the esp protection extension hash\n");
+		HIP_DEBUG("esp prot hash_length: %i\n", esp_prot_hash_length);
+		HIP_HEXDUMP("esp prot hash: ", esp_packet + *esp_packet_len, esp_prot_hash_length);
+
+		// ... and the eventual hash
+		*esp_packet_len += esp_prot_hash_length;
 
 
 		/* Set up information needed for ESP encryption */
