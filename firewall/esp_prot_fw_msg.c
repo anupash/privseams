@@ -282,6 +282,7 @@ int send_anchor_change_to_hipd(hip_sa_entry_t *entry)
 	struct hip_common *msg = NULL;
 	int hash_length = 0;
 	int direction = 0;
+	unsigned char *anchor = NULL;
 
 	HIP_ASSERT(entry != NULL);
 
@@ -290,6 +291,15 @@ int send_anchor_change_to_hipd(hip_sa_entry_t *entry)
 
 	HIP_IFEL((hash_length = esp_prot_get_hash_length(entry->esp_prot_transform)) <= 0,
 			-1, "error or tried to resolve UNUSED transform\n");
+
+	if (entry->direction == HIP_SPI_DIRECTION_OUT)
+	{
+		anchor = entry->active_hchain->anchor_element->hash;
+
+	} else
+	{
+		anchor = entry->active_anchor;
+	}
 
 	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1,
 		 "failed to allocate memory\n");
@@ -317,8 +327,8 @@ int send_anchor_change_to_hipd(hip_sa_entry_t *entry)
 			"build param contents failed\n");
 
 	// the anchor change has already occured on fw-side
-	HIP_HEXDUMP("anchor: ", entry->active_hchain->anchor_element->hash, hash_length);
-	HIP_IFEL(hip_build_param_contents(msg, (void *)entry->active_hchain->anchor_element->hash,
+	HIP_HEXDUMP("anchor: ", anchor, hash_length);
+	HIP_IFEL(hip_build_param_contents(msg, (void *)anchor,
 			HIP_PARAM_HCHAIN_ANCHOR, hash_length), -1,
 			"build param contents failed\n");
 
