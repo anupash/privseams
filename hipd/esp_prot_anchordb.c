@@ -1,19 +1,18 @@
 #include "esp_prot_anchordb.h"
 
 
+/* stores all anchors sent by the firewall */
 anchor_db_t anchor_db;
 
 
 void anchor_db_init()
 {
-	HIP_DEBUG("initializing hchain anchorDB...\n");
-
 	// set to 0 / NULL
 	memset(anchor_db.num_anchors, 0, NUM_TRANSFORMS);
 	memset(anchor_db.anchor_lengths, 0, NUM_TRANSFORMS);
 	memset(anchor_db.anchors, 0, NUM_TRANSFORMS * MAX_HCHAINS_PER_ITEM);
 
-	HIP_DEBUG("uninited hchain anchorDB\n");
+	HIP_DEBUG("inited hchain anchorDB\n");
 }
 
 void anchor_db_uninit()
@@ -34,9 +33,10 @@ void anchor_db_uninit()
 			anchor_db.anchors[i][j] = NULL;
 		}
 	}
+
+	HIP_DEBUG("uninited hchain anchorDB\n");
 }
 
-/* simply deletes all elements in the list and adds new ones */
 int anchor_db_update(struct hip_common *msg)
 {
 	struct hip_tlv_common *param = NULL;
@@ -75,16 +75,6 @@ int anchor_db_update(struct hip_common *msg)
 		HIP_IFEL(!(param = (struct hip_tlv_common *) hip_get_next_param(msg, param)),
 				-1, "parameter missing in user-message from fw\n");
 	}
-
-#if 0
-	// test for more int params
-	HIP_IFEL(param, -1, "too many INT params in user-message from fw\n");
-
-	/*** now we got all information needed to store the anchors ***/
-	// get first anchor
-	HIP_IFEL(!(param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_HCHAIN_ANCHOR)),
-			-1, "parameter missing in user-message from fw\n");
-#endif
 
 	for (i = 0; i < NUM_TRANSFORMS; i++)
 	{
@@ -125,7 +115,6 @@ int anchor_db_has_more_anchors(uint8_t transform)
 		return 0;
 }
 
-/* returns an unused anchor element or NULL if empty */
 unsigned char * anchor_db_get_anchor(uint8_t transform)
 {
 	unsigned char *stored_anchor = NULL;
