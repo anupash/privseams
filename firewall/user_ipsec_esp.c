@@ -19,27 +19,16 @@
  *
  * User-mode HIP ESP implementation.
  *
- * tunreader portions Copyright (C) 2004 UC Berkeley
- * @note HIPU: The userspace IPsec must be used.
  */
 
 #include "user_ipsec_esp.h"
 #include "esp_prot_api.h"
 #include "utils.h"
 
-// for some reason the ICV for ESP authentication is truncated to 12 bytes
+/* for some reason the ICV for ESP authentication is truncated to 12 bytes */
 #define ICV_LENGTH 12
 
-/*
- * hip_esp_output()
- *
- * The ESP output thread. Reads ethernet packets from the socketpair
- * connected to the TAP-Win32 interface, and performs necessary ESP
- * encryption. Also handles ARP requests with artificial replies.
- */
 
-/* - encrypt payload
- * - set up other headers */
 int hip_beet_mode_output(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
 		struct in6_addr *preferred_local_addr, struct in6_addr *preferred_peer_addr,
 		unsigned char *esp_packet, int *esp_packet_len)
@@ -224,13 +213,6 @@ int hip_beet_mode_output(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
   	return err;
 }
 
-/*
- * hip_esp_input()
- *
- * The ESP input thread. Reads ESP packets from the network and decrypts
- * them, adding HIT or LSI headers and sending them out the TAP-Win32 interface.
- * Also, expires temporary LSI entries and retransmits buffered packets.
- */
 int hip_beet_mode_input(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
 		unsigned char *decrypted_packet, int *decrypted_packet_len)
 {
@@ -280,20 +262,6 @@ int hip_beet_mode_input(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
   	return err;
 }
 
-/*
- * hip_esp_encrypt()
- *
- * in:	in		pointer to data to encrypt
- * 		in_len	length of input-data
- * 		out		pointer to where to store encrypted data
- * 		out_len	length of encrypted data
- * 		entry 	the SADB entry
- *
- * out:	Encrypted data out, out_len.
- * 		Returns 0 on success, -1 otherwise.
- *
- * Perform actual ESP encryption and authentication of packets.
- */
 int hip_payload_encrypt(unsigned char *in, uint8_t in_type, int in_len,
 		unsigned char *out, int *out_len, hip_sa_entry_t *entry)
 {
@@ -504,23 +472,6 @@ int hip_payload_encrypt(unsigned char *in, uint8_t in_type, int in_len,
 	return err;
 }
 
-/*
- * hip_esp_decrypt()
- *
- * in:	in	pointer to IP header of ESP packet to decrypt
- * 		len	packet length
- * 		out	pointer of where to build decrypted packet
- * 		offset	offset where decrypted packet is stored: &out[offset]
- * 		outlen	length of new packet
- * 		entry	the SADB entry
- * 		iph     IPv4 header or NULL for IPv6
- * 		now	pointer to current time (avoid extra gettimeofday call)
- *
- * out:		New packet is built in out, outlen.
- * 		Returns 0 on success, -1 otherwise.
- *
- * Perform authentication and decryption of ESP packets.
- */
 int hip_payload_decrypt(unsigned char *in, int in_len, unsigned char *out,
 		uint8_t *out_type, int *out_len, hip_sa_entry_t *entry)
 {
@@ -726,16 +677,10 @@ int hip_payload_decrypt(unsigned char *in, int in_len, unsigned char *out,
 	return err;
 }
 
-/* TODO copy as much header information as possible */
+/* XX TODO copy as much header information as possible */
 
-/*
- * add_ipv4_header()
- *
- * Build an IPv4 header, copying some parameters from an old ip header,
- * src and dst in host byte order. old may be NULL.
- */
-void add_ipv4_header(struct ip *ip_hdr, struct in6_addr *src_addr, struct in6_addr *dst_addr,
-		int packet_len, uint8_t next_hdr)
+void add_ipv4_header(struct ip *ip_hdr, struct in6_addr *src_addr,
+		struct in6_addr *dst_addr, int packet_len, uint8_t next_hdr)
 {
 	struct in_addr src_in_addr;
 	struct in_addr dst_in_addr;
@@ -761,45 +706,8 @@ void add_ipv4_header(struct ip *ip_hdr, struct in6_addr *src_addr, struct in6_ad
 	ip_hdr->ip_sum = checksum_ip(ip_hdr, ip_hdr->ip_hl);
 }
 
-#if 0
-/* OLD CODE TAKEN FROM OPENHIP -> will be usefull for UDP encapsulation with IPv6
- *
- * add_ipv6_pseudo_header()
- *
- * Build an IPv6 pseudo-header for upper-layer checksum calculation.
- */
-void add_ipv6_pseudo_header(__u8 *data, struct sockaddr *src,
-	struct sockaddr *dst, __u32 len, __u8 proto)
-{
-	int l;
-	struct _ph {
-		__u32 ph_len;
-		__u8 ph_zero[3];
-		__u8 ph_next_header;
-	} *ph;
-	memset(data, 0, 40);
-
-	/* 16 bytes source address, 16 bytes destination address */
-	l = sizeof(struct in6_addr);
-	memcpy(&data[0], SA2IP(src), l);
-	memcpy(&data[l], SA2IP(dst), l);
-	l += sizeof(struct in6_addr);
-	/* upper-layer packet length, zero, next header */
-	ph = (struct _ph*) &data[l];
-	ph->ph_len = htonl(len);
-	memset(ph->ph_zero, 0, 3);
-	ph->ph_next_header = proto;
-}
-#endif
-
-/*
- * add_ipv6_header()
- *
- * Build an IPv6 header, copying some parameters from an old header (old),
- * src and dst in network byte order.
- */
-void add_ipv6_header(struct ip6_hdr *ip6_hdr, struct in6_addr *src_addr, struct in6_addr *dst_addr,
-		int packet_len, uint8_t next_hdr)
+void add_ipv6_header(struct ip6_hdr *ip6_hdr, struct in6_addr *src_addr,
+		struct in6_addr *dst_addr, int packet_len, uint8_t next_hdr)
 {
 	ip6_hdr->ip6_flow = 0; /* zero the version (4), TC (8) and flow-ID (20) */
 	/* set version to 6 and leave first 4 bits of TC at 0 */
@@ -827,11 +735,8 @@ void add_udp_header(struct udphdr *udp_hdr, int packet_len, hip_sa_entry_t *entr
 	udp_hdr->check = checksum_udp(udp_hdr, src_addr, dst_addr);
 }
 
-/* TODO put checksums in one function and copy add function from openhip
- * needed for UDP */
+/* XX TODO create one generic checksum function */
 
-/* This isn't the 'fast' checksum, since the GCC inline ASM version is not
- * available in Windows; this is the same code from hip_util.c */
 uint16_t checksum_ip(struct ip *ip_hdr, unsigned int ip_hl)
 {
 	uint16_t checksum;
@@ -862,12 +767,6 @@ uint16_t checksum_ip(struct ip *ip_hdr, unsigned int ip_hl)
 	return checksum;
 }
 
-/*
- * function checksum_udp_packet()
- *
- * Calculates the checksum of a UDP packet with pseudo-header
- * src and dst are IPv4 addresses in network byte order
- */
 uint16_t checksum_udp(struct udphdr *udp_hdr, struct in6_addr *src_addr,
 		struct in6_addr *dst_addr)
 {

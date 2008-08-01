@@ -24,6 +24,7 @@
 #include "esp_prot_api.h"
 #include <openssl/sha.h>
 
+/* the length of the hash value used for indexing */
 #define INDEX_HASH_LENGTH SHA_DIGEST_LENGTH
 
 /* database storing the sa entries, indexed by src _and_ dst hits */
@@ -127,6 +128,60 @@ int hip_sadb_flush()
 
   out_err:
   	return err;
+}
+
+hip_sa_entry_t * hip_sa_entry_find_inbound(struct in6_addr *dst_addr, uint32_t spi)
+{
+	hip_link_entry_t *stored_link = NULL;
+	hip_sa_entry_t *stored_entry = NULL;
+	int err = 0;
+
+	HIP_IFEL(!(stored_link = hip_link_entry_find(dst_addr, spi)), -1,
+			"failed to find link entry\n");
+
+	stored_entry = stored_link->linked_sa_entry;
+
+  out_err:
+  	if (err)
+  		stored_entry = NULL;
+
+  	return stored_entry;
+}
+
+hip_sa_entry_t * hip_sa_entry_find_outbound(struct in6_addr *src_hit,
+		struct in6_addr *dst_hit)
+{
+	hip_sa_entry_t *search_entry = NULL, *stored_entry = NULL;
+	int err = 0;
+
+	HIP_IFEL(!(search_entry = (hip_sa_entry_t *) malloc(sizeof(hip_sa_entry_t))), -1,
+			"failed to allocate memory\n");
+	memset(search_entry, 0, sizeof(hip_sa_entry_t));
+
+	// fill search entry with information needed by the hash function
+	search_entry->inner_src_addr = src_hit;
+	search_entry->inner_dst_addr = dst_hit;
+	search_entry->mode = BEET_MODE;
+
+	HIP_DEBUG("looking up sa entry with following index attributes:\n");
+	HIP_DEBUG_HIT("inner_src_addr", search_entry->inner_src_addr);
+	HIP_DEBUG_HIT("inner_dst_addr", search_entry->inner_dst_addr);
+	HIP_DEBUG("mode: %i\n", search_entry->mode);
+
+	//hip_sadb_print();
+
+	// find entry in sadb db
+	HIP_IFEL(!(stored_entry = (hip_sa_entry_t *)hip_ht_find(sadb, search_entry)), -1,
+			"failed to retrieve sa entry\n");
+
+  out_err:
+  	if (err)
+  		stored_entry = NULL;
+
+  	if (search_entry)
+  		free(search_entry);
+
+  	return stored_entry;
 }
 
 void hip_sadb_print()
@@ -492,59 +547,6 @@ int hip_sa_entry_set(hip_sa_entry_t *entry, int direction, uint32_t spi,
   	return err;
 }
 
-hip_sa_entry_t * hip_sa_entry_find_inbound(struct in6_addr *dst_addr, uint32_t spi)
-{
-	hip_link_entry_t *stored_link = NULL;
-	hip_sa_entry_t *stored_entry = NULL;
-	int err = 0;
-
-	HIP_IFEL(!(stored_link = hip_link_entry_find(dst_addr, spi)), -1,
-			"failed to find link entry\n");
-
-	stored_entry = stored_link->linked_sa_entry;
-
-  out_err:
-  	if (err)
-  		stored_entry = NULL;
-
-  	return stored_entry;
-}
-
-hip_sa_entry_t * hip_sa_entry_find_outbound(struct in6_addr *src_hit,
-		struct in6_addr *dst_hit)
-{
-	hip_sa_entry_t *search_entry = NULL, *stored_entry = NULL;
-	int err = 0;
-
-	HIP_IFEL(!(search_entry = (hip_sa_entry_t *) malloc(sizeof(hip_sa_entry_t))), -1,
-			"failed to allocate memory\n");
-	memset(search_entry, 0, sizeof(hip_sa_entry_t));
-
-	// fill search entry with information needed by the hash function
-	search_entry->inner_src_addr = src_hit;
-	search_entry->inner_dst_addr = dst_hit;
-	search_entry->mode = BEET_MODE;
-
-	HIP_DEBUG("looking up sa entry with following index attributes:\n");
-	HIP_DEBUG_HIT("inner_src_addr", search_entry->inner_src_addr);
-	HIP_DEBUG_HIT("inner_dst_addr", search_entry->inner_dst_addr);
-	HIP_DEBUG("mode: %i\n", search_entry->mode);
-
-	//hip_sadb_print();
-
-	// find entry in sadb db
-	HIP_IFEL(!(stored_entry = (hip_sa_entry_t *)hip_ht_find(sadb, search_entry)), -1,
-			"failed to retrieve sa entry\n");
-
-  out_err:
-  	if (err)
-  		stored_entry = NULL;
-
-  	if (search_entry)
-  		free(search_entry);
-
-  	return stored_entry;
-}
 
 int hip_sa_entry_delete(struct in6_addr *src_addr, struct in6_addr *dst_addr)
 {

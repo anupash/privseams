@@ -1,10 +1,7 @@
 /*
- * user_ipsec_fw_msg.c
- *
  *  Created on: Jul 28, 2008
- *      Author: Rene Hummen
+ *      Author: Rene Hummen <rene.hummen@rwth-aachen.de>
  */
-
 #include "user_ipsec_fw_msg.h"
 #include "user_ipsec_sadb.h"
 #include "esp_prot_api.h"
