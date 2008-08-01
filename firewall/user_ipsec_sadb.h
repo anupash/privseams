@@ -146,7 +146,7 @@ int hip_sa_entry_delete(struct in6_addr *src_addr, struct in6_addr *dst_addr);
 int hip_link_entry_add(struct in6_addr *dst_addr, hip_sa_entry_t *entry);
 int hip_link_entries_add(hip_sa_entry_t *entry);
 hip_link_entry_t *hip_link_entry_find(struct in6_addr *dst_addr, uint32_t spi);
-int hip_link_entry_delete(struct in6_addr *dst_addr, hip_sa_entry_t *entry);
+int hip_link_entry_delete(struct in6_addr *dst_addr, uint32_t spi);
 int hip_link_entries_delete_all(hip_sa_entry_t *entry);
 void hip_link_entry_print(hip_link_entry_t *entry);
 void hip_sa_entry_free(hip_sa_entry_t * entry);

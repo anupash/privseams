@@ -74,8 +74,6 @@ int hip_sadb_add(int direction, uint32_t spi, uint32_t mode,
 {
 	int err = 0;
 
-	// TODO handle retransmission and update correctly
-
 	if (update)
 	{
 		HIP_IFEL(hip_sa_entry_update(direction, spi, mode, src_addr, dst_addr,
@@ -408,6 +406,8 @@ int hip_sa_entry_set(hip_sa_entry_t *entry, int direction, uint32_t spi,
 	unsigned char key1[8], key2[8], key3[8]; 	/* for 3-DES */
 	int err = 0;
 
+	// XX TODO handle update case, introducing backup of spi and keying material
+
 	/* copy values for non-zero members */
 	entry->direction = direction;
 	entry->spi = spi;
@@ -636,23 +636,14 @@ hip_link_entry_t *hip_link_entry_find(struct in6_addr *dst_addr, uint32_t spi)
 	return stored_link;
 }
 
-int hip_link_entry_delete(struct in6_addr *dst_addr, hip_sa_entry_t *entry)
+int hip_link_entry_delete(struct in6_addr *dst_addr, uint32_t spi)
 {
 	hip_link_entry_t *stored_link = NULL;
 	int err = 0;
 
-#if 0
-	HIP_IFEL(!(stored_link = (hip_link_entry_t *) malloc(sizeof(hip_link_entry_t))), -1,
-					"failed to allocate memory\n");
-
-	stored_link->dst_addr = dst_addr;
-	stored_link->spi = entry->spi;
-	stored_link->linked_sa_entry = entry;
-#endif
-
 	// find link entry and free members
-	HIP_IFEL(!(stored_link = hip_link_entry_find(dst_addr, entry->spi)), -1,
-				"failed to retrieve sa entry\n");
+	HIP_IFEL(!(stored_link = hip_link_entry_find(dst_addr, spi)), -1,
+				"failed to retrieve link entry\n");
 
 	/* @note do NOT free dst_addr, as this is a pointer to the same memory used by the
 	 *       sa entry */
@@ -676,7 +667,7 @@ int hip_link_entries_delete_all(hip_sa_entry_t *entry)
 
 	// XX TODO lock link hashtable and add multihoming support here
 	//while (entry has more dst_addr)
-	HIP_IFEL(hip_link_entry_delete(entry->dst_addr, entry), -1,
+	HIP_IFEL(hip_link_entry_delete(entry->dst_addr, entry->spi), -1,
 			"failed to add link entry\n");
 
 	HIP_DEBUG("all link entries for this sa entry deleted\n");

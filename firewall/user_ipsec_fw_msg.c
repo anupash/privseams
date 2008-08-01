@@ -165,7 +165,7 @@ int handle_sa_delete_request(struct hip_common * msg)
 	HIP_DEBUG("dst_port: %i\n", dst_port);
 
 	// work-around due to broken sa_delete in hipd
-	// TODO remove when fixed
+	// XX TODO remove when fixed
 	if (ipv6_addr_is_hit(peer_addr) || spi == 0)
 	{
 		// drop these cases

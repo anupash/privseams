@@ -50,8 +50,8 @@ int anchor_db_update(struct hip_common *msg)
 
 	HIP_DEBUG("updating hchain anchorDB...\n");
 
-	/* @todo extend as ineffcient -> only add non-existing elements
-	 *       instead of uniniting and adding all elements again */
+	/* XX TODO ineffcient -> only add non-existing elements instead of
+	 *         uniniting and adding all elements again */
 	anchor_db_uninit();
 
 	/*** set up anchor_db.num_anchors and anchor_db.anchor_lengths ***/

@@ -143,7 +143,7 @@ int esp_prot_uninit()
 	// ...and set transforms to 0/NULL
 	for (i = 0; i < NUM_TRANSFORMS; i++)
 	{
-		esp_prot_transforms[i].hash_func_id = NULL;
+		esp_prot_transforms[i].hash_func_id = 0;
 		esp_prot_transforms[i].hash_length_id = 0;
 	}
 

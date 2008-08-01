@@ -163,7 +163,7 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	HIP_DEBUG("matching SA entry found\n");
 
 	/* get preferred routable addresses */
-	// TODO add multihoming support -> look up preferred address here
+	// XX TODO add multihoming support -> look up preferred address here
 	memcpy(&preferred_local_addr, entry->src_addr, sizeof(struct in6_addr));
 	memcpy(&preferred_peer_addr, entry->dst_addr, sizeof(struct in6_addr));
 
@@ -270,7 +270,7 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	HIP_DEBUG_HIT("src hit: ", entry->inner_src_addr);
 	HIP_DEBUG_HIT("dst hit: ", entry->inner_dst_addr);
 
-	// TODO implement check with seq window
+	// XX TODO implement check with seq window
 	// check for correct SEQ no.
 	HIP_DEBUG("SEQ no. of entry: %u \n", entry->sequence);
 	HIP_DEBUG("SEQ no. of incoming packet: %u \n", seq_no);
