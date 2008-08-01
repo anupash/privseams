@@ -709,7 +709,7 @@ int esp_prot_update_handle_anchor(hip_common_t *update, hip_ha_t *entry,
 {
 	struct hip_tlv_common *param = NULL;
 	struct esp_prot_anchor *esp_anchor = NULL;
-	unsigned char *esp_peer_anchor = NULL;
+	struct hip_echo_request *echo_anchor = NULL;
 	int hash_length = 0;
 	uint32_t spi_in = 0;
 	int err = 0;
@@ -731,13 +731,19 @@ int esp_prot_update_handle_anchor(hip_common_t *update, hip_ha_t *entry,
 		 *
 		 * XX TODO make sure to inspect the correct ECHO_REQUEST here in case
 		 *         there are more than 1 when merging with UPDATE re-implementation */
-		param = hip_get_param(update, HIP_PARAM_ECHO_REQUEST_SIGN);
-		esp_peer_anchor = (unsigned char *) param;
+		HIP_IFEL(!(param = hip_get_param(update, HIP_PARAM_ECHO_REQUEST_SIGN)), -1,
+				"mandatory ECHO_REQUEST_SIGN param missing\n");
 
-		HIP_IFEL(memcmp(entry->esp_peer_anchor, esp_peer_anchor, hash_length), -1,
+		HIP_IFEL(hip_get_param_contents_len(param) != hash_length, -1,
+				"hash-length of negotiated transform and ECHO_REQUEST anchor differ\n");
+
+		HIP_IFEL(memcmp(entry->esp_peer_anchor,
+				(void *)param + sizeof(struct hip_tlv_common), hash_length), -1,
 				"received active peer-anchor and stored one do NOT match, REPLAY ATTACK?\n")
+		HIP_DEBUG("received active peer-anchor and stored one match\n");
 
 		// set the update anchor as the peer's update anchor
+		HIP_DEBUG("setting peer_update_anchor...\n");
 		memset(entry->esp_peer_update_anchor, 0, MAX_HASH_LENGTH);
 		memcpy(entry->esp_peer_update_anchor, esp_anchor->anchor, hash_length);
 

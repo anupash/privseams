@@ -296,7 +296,7 @@ int send_anchor_change_to_hipd(hip_sa_entry_t *entry)
 
 	hip_msg_init(msg);
 
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_HCHAIN_CHANGE, 0), -1,
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_ANCHOR_CHANGE, 0), -1,
 		 "build hdr failed\n");
 
 	HIP_DEBUG_HIT("src_hit", entry->inner_src_addr);
