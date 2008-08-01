@@ -1,26 +1,25 @@
 /**
- * @author René Hummen
+ * @author René Hummen <rene.hummen@rwth-aachen.de>
  */
-
 #include "user_ipsec_api.h"
 
-//#define ESP_PACKET_SIZE 2500
-// this is the maximum buffer-size needed for an userspace ipsec esp packet
+/* this is the maximum buffer-size needed for an userspace ipsec esp packet
+ * including a hash value of the ESP protection extension */
 #define MAX_ESP_PADDING 255
 #define ESP_PACKET_SIZE (HIP_MAX_PACKET + sizeof(struct udphdr) \
 		+ sizeof(struct hip_esp) + MAX_ESP_PADDING + sizeof(struct hip_esp_tail) \
-		+ EVP_MAX_MD_SIZE)
+		+ EVP_MAX_MD_SIZE) + MAX_HASH_LENGTH
 
-// this is the ESP packet we are about to build
+/* this is the ESP packet we are about to build */
 unsigned char *esp_packet = NULL;
-// the original packet before ESP encryption
+/* the original packet before ESP decryption */
 unsigned char *decrypted_packet = NULL;
-// sockets in order to re-insert the esp packet into the stack
+/* sockets needed in order to reinject the ESP packet into the network stack */
 int raw_sock_v4 = 0, raw_sock_v6 = 0;
+/* allows us to make sure that we only init ones */
 int is_init = 0;
 
-/* this will initialize the esp_packet buffer and the sockets,
- * they are not set yet */
+
 int userspace_ipsec_init()
 {
 	int on = 1, err = 0;
@@ -102,11 +101,16 @@ int userspace_ipsec_uninit()
 	// uninit sadb
 	HIP_IFEL(hip_sadb_uninit(), -1, "failed to uninit sadb\n");
 
+	// free the members
+	if (esp_packet)
+		free(esp_packet);
+	if (decrypted_packet)
+		free(decrypted_packet);
+
   out_err:
 	return err;
 }
 
-/* prepares the environment for esp encryption */
 int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 {
 	// entry matching the peer HIT
