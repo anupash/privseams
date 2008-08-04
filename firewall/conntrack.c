@@ -627,11 +627,14 @@ int verify_packet_signature(struct hip_host_id * hi,
 int handle_r1(struct hip_common * common, const struct tuple * tuple,
 		int verify_responder)
 {
+	struct hip_param *param = NULL;
+	struct esp_prot_preferred_tfms *prot_transforms = NULL;
+	int num_transforms = 0;
 	struct hip_host_id *hi = NULL, *hi_tuple = NULL;
 	struct in6_addr hit;
 	int sig_alg = 0;
 	// assume correct packet
-	int err = 1;
+	int err = 1, i;
 
 	// R1 should contain the HI
 	HIP_IFEL(!(hi = (struct hip_host_id *) hip_get_param(common, HIP_PARAM_HOST_ID)), 0,
@@ -681,7 +684,37 @@ int handle_r1(struct hip_common * common, const struct tuple * tuple,
 			tuple->hip_tuple->data->verify = hip_dsa_verify;
 	}
 
-	// TODO add hchain support here
+	// check if the R1 contains ESP protection transforms
+	if (param = hip_get_param(common, HIP_PARAM_ESP_PROT_TRANSFORMS))
+	{
+		HIP_DEBUG("ESP protection extension transforms found\n");
+
+		prot_transforms = (struct esp_prot_preferred_tfms *) param;
+
+		// make sure we only process as many transforms as we can handle
+		if (prot_transforms->num_transforms > NUM_TRANSFORMS)
+		{
+				HIP_DEBUG("received more transforms than we can handle, " \
+						"processing max\n");
+
+				num_transforms = NUM_TRANSFORMS;
+
+		} else
+		{
+			num_transforms = prot_transforms->num_transforms;
+		}
+
+		HIP_DEBUG("adding %i transforms...\n", num_transforms);
+
+		// store the transforms
+		for (i = 0; i < num_transforms; i++)
+		{
+			tuple->connection->esp_prot_tfms[i] = prot_transforms->transforms[i];
+
+			HIP_DEBUG("added transform %i: %u\n", i + 1,
+					tuple->connection->esp_prot_tfms[i]);
+		}
+	}
 
   out_err:
 	return err;
@@ -697,6 +730,7 @@ int handle_r1(struct hip_common * common, const struct tuple * tuple,
 int handle_i2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 		const struct hip_common * common, struct tuple * tuple)
 {
+	struct hip_param *param = NULL;
 	struct hip_esp_info * spi = NULL, * spi_tuple = NULL;
 	struct tuple * other_dir = NULL;
 	struct esp_tuple * esp_tuple = NULL;
@@ -706,8 +740,8 @@ int handle_i2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 
 	HIP_DEBUG("\n");
 
-	HIP_IFEL(!(spi = (struct hip_esp_info *) hip_get_param(common, HIP_PARAM_ESP_INFO)),
-			0, "no spi found\n");
+	HIP_IFEL(!(spi = (struct hip_esp_info *) hip_get_param(common,
+			HIP_PARAM_ESP_INFO)), 0, "no spi found\n");
 
 	// TODO: clean up
 	// TEST
@@ -749,6 +783,39 @@ int handle_i2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 
 	// TEST_END
 
+	// check if the I2 contains ESP protection anchor
+	if (param = hip_get_param(ctx->input, HIP_PARAM_ESP_PROT_ANCHOR))
+	{
+		prot_anchor = (struct esp_prot_anchor *) param;
+
+		// check if the anchor has a supported transform
+		if (esp_prot_check_transform(prot_anchor->transform) >= 0)
+		{
+			// we know this transform
+			entry->esp_prot_transform = prot_anchor->transform;
+
+			if (entry->esp_prot_transform == ESP_PROT_TFM_UNUSED)
+			{
+				HIP_DEBUG("agreed not to use esp protection extension\n");
+
+			} else
+			{
+				hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
+
+				// store peer_anchor
+				memset(entry->esp_peer_anchor, 0, MAX_HASH_LENGTH);
+				memcpy(entry->esp_peer_anchor, prot_anchor->anchor, hash_length);
+
+				HIP_HEXDUMP("received anchor: ", entry->esp_peer_anchor, hash_length);
+			}
+		} else
+		{
+			HIP_ERROR("received anchor with unknown transform, falling back\n");
+
+			entry->esp_prot_transform = ESP_PROT_TFM_UNUSED;
+		}
+	}
+
 	// store in tuple of other direction that will be using
 	// this spi and dst address
 	/*if(tuple->direction == ORIGINAL_DIR)
@@ -770,6 +837,7 @@ int handle_i2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 int handle_r2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 		const struct hip_common * common, struct tuple * tuple)
 {
+	struct hip_param *param = NULL;
 	struct hip_esp_info * spi = NULL, * spi_tuple = NULL;
 	struct tuple * other_dir = NULL;
 	struct SList * other_dir_esps = NULL;
@@ -824,6 +892,16 @@ int handle_r2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 	}
 
 	// TEST_END
+
+	// check if the I2 contains ESP protection anchor
+	if (param = hip_get_param(common, HIP_PARAM_ESP_PROT_ANCHOR))
+	{
+		HIP_DEBUG("ESP protection extension anchor\n");
+
+		// TODO parse and store
+		//esp_tuple->esp_prot_tfm
+		//esp_tuple->active_anchor
+	}
 
 	/*if(tuple->direction == ORIGINAL_DIR)
 	other_dir = &tuple->connection->reply;
@@ -964,253 +1042,287 @@ int update_esp_tuple(const struct hip_esp_info * esp_info,
 /**
  * check parameters for update packet. if packet ok returns 1, otherwise 0
  */
-// When announcin new spis/addresses, the other end may still keep sending
+// When announcing new spis/addresses, the other end may still keep sending
 // data with old spis and addresses ->
 // old values are valid until ack is received
 // SPI parameters don't work in current HIPL -> can not be used for creating
-// connection state fro updates
+// connection state for updates
 int handle_update(const struct in6_addr * ip6_src,
                 const struct in6_addr * ip6_dst,
 		  const struct hip_common * common,
 		  struct tuple * tuple)
 {
+	//Anything that can come out of an update packet
+	struct hip_tlv_common * param = NULL;
+	struct hip_seq * seq = NULL;
+	struct hip_esp_info * esp_info = NULL;
+	struct hip_ack * ack = NULL;
+	struct hip_locator * locator = NULL;
+	struct hip_spi * spi = NULL;
+	struct hip_locator_info_addr_item * locator_addr = NULL;
+	struct hip_echo_request * echo_req = NULL;
+	struct hip_echo_response * echo_res = NULL;
+	struct tuple * other_dir_tuple = NULL;
+	uint32_t spi_new = 0;
+	uint32_t spi_old = 0;
 
-  //Anything that can come out of an update packet
-  struct hip_tlv_common * param = NULL;
-  struct hip_seq * seq = NULL;
-  struct hip_esp_info * esp_info = NULL;
-  struct hip_ack * ack = NULL;
-  struct hip_locator * locator = NULL;
-  struct hip_spi * spi = NULL;
-  struct hip_locator_info_addr_item * locator_addr = NULL;
-  struct hip_echo_request * echo_req = NULL;
-  struct hip_echo_response * echo_res = NULL;
-  struct tuple * other_dir_tuple = NULL;
-  uint32_t spi_new = 0;
-  uint32_t spi_old = 0;
+	_HIP_DEBUG("handle_update\n");
+	seq = (struct hip_seq *) hip_get_param(common, HIP_PARAM_SEQ);
+	esp_info = (struct hip_esp_info *) hip_get_param(common, HIP_PARAM_ESP_INFO);
+	ack = (struct hip_ack *) hip_get_param(common, HIP_PARAM_ACK);
+	locator = (struct hip_locator *) hip_get_param(common, HIP_PARAM_LOCATOR);
+	spi = (struct hip_spi *) hip_get_param(common, HIP_PARAM_ESP_INFO);
+	echo_req = (struct hip_echo_request *) hip_get_param(common,
+			HIP_PARAM_ECHO_REQUEST);
+	echo_res = (struct hip_echo_response *) hip_get_param(common,
+			HIP_PARAM_ECHO_RESPONSE);
 
-  _HIP_DEBUG("handle_update\n");
-  seq = (struct hip_seq *) hip_get_param(common, HIP_PARAM_SEQ);
-  esp_info = (struct hip_esp_info *) hip_get_param(common, HIP_PARAM_ESP_INFO);
-  ack = (struct hip_ack *) hip_get_param(common, HIP_PARAM_ACK);
-  locator = (struct hip_locator *) hip_get_param(common, HIP_PARAM_LOCATOR);
-  spi = (struct hip_spi *) hip_get_param(common, HIP_PARAM_ESP_INFO);
-  echo_req = (struct hip_echo_request *) hip_get_param(common,
-						       HIP_PARAM_ECHO_REQUEST);
-  echo_res = (struct hip_echo_response *) hip_get_param(common, HIP_PARAM_ECHO_RESPONSE);
-  if(spi)
-    _HIP_DEBUG("handle_update: spi param, spi: %d \n", ntohl(spi->spi));
-  if(tuple == NULL)// attempt to create state for new connection
-    {
-      if(esp_info && locator && seq)
-	{
-	  struct hip_data *data;
-	  data = get_hip_data(common);
-	  if(!insert_connection_from_update(data, esp_info, locator, seq))
-	    {
-	      free(data);
-	      return 0;
-	    }
-	  free(data);
-	}
-      else
-	return 0;
-    }
-  else
-    {
-      int n = 0;
-      struct SList * other_dir_esps = NULL;
-      struct esp_tuple * esp_tuple = NULL;
-      if(tuple->direction == ORIGINAL_DIR)
-	{
-	  other_dir_tuple = &tuple->connection->reply;
-	  other_dir_esps = tuple->connection->reply.esp_tuples;
-	}
-      else
-	{
-	  other_dir_tuple = &tuple->connection->original;
-	  other_dir_esps = tuple->connection->original.esp_tuples;
-	}
-      if(seq != NULL){//announces something new
+	if(spi)
+		_HIP_DEBUG("handle_update: spi param, spi: %d \n", ntohl(spi->spi));
 
-	_HIP_DEBUG("handle_update: seq found, update id %d\n", seq->update_id);
-      }
-      //handling single esp_info and locator parameters
-      //Readdress with mobile-initiated rekey
-      if(esp_info && locator && seq)
+	// connection changed to a path going through this firewall
+	if(tuple == NULL)
 	{
-	  _HIP_DEBUG("handle_update: esp_info and locator found\n");
-	  struct esp_tuple * new_esp = NULL;
-	  if(esp_info->old_spi != esp_info->new_spi)//update existing
-	    {
-	      esp_tuple = find_esp_tuple(other_dir_esps, ntohl(esp_info->old_spi));
-	      if(esp_tuple == NULL)
+		// attempt to create state for new connection
+
+		if(esp_info && locator && seq)
 		{
-		  _HIP_DEBUG("No suitable esp_tuple found for updating\n");
-		  return 0;
+			struct hip_data *data;
+			data = get_hip_data(common);
+
+			if(!insert_connection_from_update(data, esp_info, locator, seq))
+			{
+				free(data);
+				return 0;
+			}
+
+			free(data);
+
+		} else
+		{
+			return 0;
 		}
-	      if(!update_esp_tuple(esp_info, locator, seq, esp_tuple))
-		return 0;
-	    }
-	  else//create new
-	    {
-	      new_esp = esp_tuple_from_esp_info_locator(esp_info, locator, seq, other_dir_tuple);
-	      if(new_esp == NULL)
-		return 0;//locator must contain adress for this spi
-	      other_dir_esps = (struct SList *) append_to_slist((struct _SList *) other_dir_esps,
+	} else
+	{
+		// we already know this connection
+
+		int n = 0;
+		struct SList * other_dir_esps = NULL;
+		struct esp_tuple * esp_tuple = NULL;
+
+		if(tuple->direction == ORIGINAL_DIR)
+		{
+			other_dir_tuple = &tuple->connection->reply;
+			other_dir_esps = tuple->connection->reply.esp_tuples;
+
+		} else
+		{
+			other_dir_tuple = &tuple->connection->original;
+			other_dir_esps = tuple->connection->original.esp_tuples;
+		}
+
+		if(seq != NULL)
+		{
+			//announces something new
+
+			_HIP_DEBUG("handle_update: seq found, update id %d\n", seq->update_id);
+		}
+
+		//handling single esp_info and locator parameters
+		//Readdress with mobile-initiated rekey
+		if(esp_info && locator && seq)
+		{
+			_HIP_DEBUG("handle_update: esp_info and locator found\n");
+			struct esp_tuple * new_esp = NULL;
+
+			if(esp_info->old_spi != esp_info->new_spi)//update existing
+			{
+				esp_tuple = find_esp_tuple(other_dir_esps, ntohl(esp_info->old_spi));
+
+				if(esp_tuple == NULL)
+				{
+					_HIP_DEBUG("No suitable esp_tuple found for updating\n");
+					return 0;
+				}
+
+				if(!update_esp_tuple(esp_info, locator, seq, esp_tuple))
+					return 0;
+
+			} else//create new
+			{
+				new_esp = esp_tuple_from_esp_info_locator(esp_info, locator, seq, other_dir_tuple);
+
+				if(new_esp == NULL)
+					return 0;//locator must contain adress for this spi
+
+				other_dir_esps = (struct SList *) append_to_slist((struct _SList *)
+						other_dir_esps, (void *) new_esp);
+
+				insert_esp_tuple(new_esp);
+			}
+		} else if(locator && seq) //Readdress without rekeying
+		{
+			_HIP_DEBUG("handle_update: locator found\n");
+			esp_tuple = find_esp_tuple(other_dir_esps, ntohl(esp_info->new_spi));
+
+			if(esp_tuple == NULL)
+			{
+				_HIP_DEBUG("No suitable esp_tuple found for updating\n");
+				return 0;
+				//if mobile host spi not intercepted, but valid,
+			}
+
+			if(!update_esp_tuple(NULL, locator, seq, esp_tuple))
+			{
+				return 0;
+			}
+		} else if(esp_info && seq) //replying to Readdress with mobile-initiated rekey
+		{
+			_HIP_DEBUG("handle_update: esp_info found old:%d new:%d\n",
+					ntohl(esp_info->old_spi), ntohl(esp_info->new_spi));
+
+			if(ntohl(esp_info->old_spi) != ntohl(esp_info->new_spi))
+			{
+				esp_tuple = find_esp_tuple(other_dir_esps, ntohl(esp_info->old_spi));
+
+				if(esp_tuple == NULL)
+				{
+					if(tuple->connection->state != STATE_ESTABLISHING_FROM_UPDATE)
+					{
+						_HIP_DEBUG("No suitable esp_tuple found for updating\n");
+						return 0;
+
+					} else//connection state is being established from update
+					{
+						struct esp_tuple * new_esp = esp_tuple_from_esp_info(
+								esp_info, ip6_src, other_dir_tuple);
+
+						other_dir_esps = (struct SList *)
+						append_to_slist((struct _SList *) other_dir_esps,
 								(void *) new_esp);
-	      insert_esp_tuple(new_esp);
-	    }
-	}
-      //Readdress without rekeying
-      else if(locator && seq)
-	{
-	  _HIP_DEBUG("handle_update: locator found\n");
-	  esp_tuple = find_esp_tuple(other_dir_esps, ntohl(esp_info->new_spi));
-	  if(esp_tuple == NULL)
-	    {
-	      _HIP_DEBUG("No suitable esp_tuple found for updating\n");
-	      return 0;
-	      //if mobile host spi not intercepted, but valid,
-	    }
-	  if(!update_esp_tuple(NULL, locator, seq, esp_tuple))
-	    {
-	      return 0;
-	    }
-	}
-      //replying to Readdress with mobile-initiated rekey
-      else if(esp_info && seq)
-	{
-	  _HIP_DEBUG("handle_update: esp_info found old:%d new:%d\n",
-		    ntohl(esp_info->old_spi), ntohl(esp_info->new_spi));
-	  if(ntohl(esp_info->old_spi) != ntohl(esp_info->new_spi))
-	    {
-	      esp_tuple = find_esp_tuple(other_dir_esps, ntohl(esp_info->old_spi));
-	      if(esp_tuple == NULL)
-		{
-		  if(tuple->connection->state != STATE_ESTABLISHING_FROM_UPDATE)
-		    {
-		      _HIP_DEBUG("No suitable esp_tuple found for updating\n");
-		      return 0;
-		    }
-		  else//connection state is being established from update
-		    {
-		      struct esp_tuple * new_esp =
-			esp_tuple_from_esp_info(esp_info,
-					   ip6_src,
-					   other_dir_tuple);
-		      other_dir_esps = (struct SList *)
-			append_to_slist((struct _SList *) other_dir_esps,
-				       (void *) new_esp);
-		      insert_esp_tuple(new_esp);
-		      tuple->connection->state = STATE_ESTABLISHED;
-		    }
+						insert_esp_tuple(new_esp);
+						tuple->connection->state = STATE_ESTABLISHED;
+					}
+				} else if(!update_esp_tuple(esp_info, NULL, seq, esp_tuple))
+				{
+					return 0;
+				}
+			} else
+			{
+				struct esp_tuple * new_esp = esp_tuple_from_esp_info(esp_info,
+						ip6_src, other_dir_tuple);
+
+				other_dir_esps = (struct SList *) append_to_slist((struct _SList *)
+						other_dir_esps, (void *) new_esp);
+				insert_esp_tuple(new_esp);
+			}
 		}
-	      else if(!update_esp_tuple(esp_info, NULL, seq, esp_tuple))
-		return 0;
 
-	    }
-	  else
-	    {
-
-	      struct esp_tuple * new_esp =
-		esp_tuple_from_esp_info(esp_info,
-				   ip6_src,
-				   other_dir_tuple);
-	      other_dir_esps = (struct SList *) append_to_slist((struct _SList *) other_dir_esps,
-								(void *) new_esp);
-	      insert_esp_tuple(new_esp);
-	    }
-	}
-      //multiple update_id values in same ack not tested
-      //couldn't get that out of HIPL
-      if(ack != NULL)
-	{
-	  struct _SList * esp_tuples = (struct _SList *) tuple->esp_tuples,
-	    * temp_tuple_list;
-	  uint32_t * upd_id = &ack->peer_update_id;
-	  int n = (hip_get_param_total_len(ack) - sizeof(struct hip_ack))/
-	    sizeof(uint32_t);
-	  //Get all update id:s from ack parameter
-	  //for each update id
-	  n++; //first one included in hip_ack structure
-	  while(n > 0)
-	    {
-	      //find esp tuple of the connection where
-	      //addresses have the update id
-	      temp_tuple_list = esp_tuples;
-	      struct esp_tuple * esp_tuple;
-	      struct _SList * original_addr_list, *addr_list,
-		* delete_addr_list = NULL, * delete_original_list = NULL;
-	      int found = 0;
-	      while(temp_tuple_list)
+		//multiple update_id values in same ack not tested
+		//couldn't get that out of HIPL
+		if(ack != NULL)
 		{
-		  esp_tuple = (struct esp_tuple *)temp_tuple_list->data;
-		  //  original_addr_list = esp_tuple->dst_addr_list;
+			struct _SList * esp_tuples = (struct _SList *) tuple->esp_tuples,
+				* temp_tuple_list;
 
-		  //is ack for changing spi?
-		  if(esp_tuple->spi_update_id == *upd_id)
-		    {
-		      esp_tuple->spi = ntohl(esp_tuple->new_spi);
-		      _HIP_DEBUG("handle_update: ack update id %d, updated spi: %d\n", *upd_id, ntohl(esp_tuple->spi));
-		    }
+			uint32_t * upd_id = &ack->peer_update_id;
+			int n = (hip_get_param_total_len(ack) - sizeof(struct hip_ack)) /
+					sizeof(uint32_t);
 
-		  addr_list = (struct _SList *)esp_tuple->dst_addr_list;
-		  struct esp_address * esp_addr;
-		  while(addr_list)
-		    {
-		      esp_addr = (struct esp_address *) addr_list->data;
-		      //if address has no update id, remove the address
-		      if(esp_addr->update_id == NULL)
+			//Get all update id:s from ack parameter
+			//for each update id
+			n++; //first one included in hip_ack structure
+			while(n > 0)
 			{
-			  delete_addr_list = append_to_slist(delete_addr_list,
-							    (void *)esp_addr);
+				//find esp tuple of the connection where
+				//addresses have the update id
+				temp_tuple_list = esp_tuples;
+				struct esp_tuple * esp_tuple;
+				struct _SList * original_addr_list, *addr_list,
+					* delete_addr_list = NULL, * delete_original_list = NULL;
+				int found = 0;
+
+				while(temp_tuple_list)
+				{
+					esp_tuple = (struct esp_tuple *)temp_tuple_list->data;
+					//  original_addr_list = esp_tuple->dst_addr_list;
+
+					//is ack for changing spi?
+					if(esp_tuple->spi_update_id == *upd_id)
+					{
+						esp_tuple->spi = ntohl(esp_tuple->new_spi);
+						_HIP_DEBUG("handle_update: ack update id %d, updated spi: %d\n",
+								*upd_id, ntohl(esp_tuple->spi));
+					}
+
+					addr_list = (struct _SList *)esp_tuple->dst_addr_list;
+					struct esp_address * esp_addr;
+
+					while(addr_list)
+					{
+						esp_addr = (struct esp_address *) addr_list->data;
+						//if address has no update id, remove the address
+
+						if(esp_addr->update_id == NULL)
+						{
+							delete_addr_list = append_to_slist(delete_addr_list,
+									(void *)esp_addr);
+
+						} else if(*esp_addr->update_id == *upd_id)
+						{
+							//if address has the update id, set the update id to null
+							free(esp_addr->update_id);
+							esp_addr->update_id = NULL;
+							found = 1;
+						}
+
+						addr_list = addr_list->next;
+					}
+
+					//if this was the right tuple,
+					//actually remove the deleted addresses
+					if(found)
+					{
+						delete_original_list = delete_addr_list;
+
+						while(delete_addr_list)
+						{
+							esp_tuple->dst_addr_list = (struct SList *)
+							remove_from_slist((struct _SList *) esp_tuple->dst_addr_list,
+							delete_addr_list->data);
+							delete_addr_list = delete_addr_list->next;
+						}
+
+						free_slist(delete_original_list);
+					}
+
+					if(found)
+					{
+						_HIP_DEBUG("handle_update: ack update id %d,   updated: \n",
+								ack->peer_update_id);
+						//print_esp_tuple(esp_tuple);
+					}
+
+					temp_tuple_list = temp_tuple_list->next;
+				}
+
+				n--;
+				upd_id++;
 			}
-		      //if address has the update id, set the update id to null
-		      else if(*esp_addr->update_id == *upd_id)
-			{
-			  free(esp_addr->update_id);
-			  esp_addr->update_id = NULL;
-			  found = 1;
-			}
-		      addr_list = addr_list->next;
-		    }
-		  //if this was the right tuple,
-		  //actually remove the deleted addresses
-		  if(found)
-		    {
-		      delete_original_list = delete_addr_list;
-		      while(delete_addr_list)
-			{
-			  esp_tuple->dst_addr_list = (struct SList *)
-			    remove_from_slist((struct _SList *) esp_tuple->dst_addr_list,
-					   delete_addr_list->data);
-			  delete_addr_list = delete_addr_list->next;
-			}
-		      free_slist(delete_original_list);
-		    }
-		  if(found)
-		    {
-		      _HIP_DEBUG("handle_update: ack update id %d,   updated: \n",
-				ack->peer_update_id);
-		      //print_esp_tuple(esp_tuple);
-		    }
-		  temp_tuple_list = temp_tuple_list->next;
 		}
-	      n--;
-	      upd_id++;
-	    }
+
+		if(echo_req != NULL)
+		{
+			_HIP_DEBUG("handle_update: echo found req\n");
+		}
+
+		if(echo_res != NULL)
+		{
+			_HIP_DEBUG("handle_update: echo found res\n");
+		}
 	}
-      if(echo_req != NULL)
-	{
-	  _HIP_DEBUG("handle_update: echo found req\n");
-	}
-      if(echo_res != NULL)
-	{
-	  _HIP_DEBUG("handle_update: echo found res\n");
-	}
-    }
-  return 1;
+
+	return 1;
 }
 
 /**

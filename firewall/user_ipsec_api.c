@@ -4,11 +4,12 @@
 #include "user_ipsec_api.h"
 
 /* this is the maximum buffer-size needed for an userspace ipsec esp packet
- * including a hash value of the ESP protection extension */
+ * including the initialization vector for ESP and the hash value of the
+ * ESP protection extension */
 #define MAX_ESP_PADDING 255
 #define ESP_PACKET_SIZE (HIP_MAX_PACKET + sizeof(struct udphdr) \
-		+ sizeof(struct hip_esp) + MAX_ESP_PADDING + sizeof(struct hip_esp_tail) \
-		+ EVP_MAX_MD_SIZE) + MAX_HASH_LENGTH
+		+ sizeof(struct hip_esp) + AES_BLOCK_SIZE + MAX_ESP_PADDING \
+		+ sizeof(struct hip_esp_tail) + EVP_MAX_MD_SIZE) + MAX_HASH_LENGTH
 
 /* this is the ESP packet we are about to build */
 unsigned char *esp_packet = NULL;
