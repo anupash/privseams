@@ -34,7 +34,8 @@ AUTOMAKE_OPTIONS = foreign
 
 lib_LTLIBRARIES = libhiptool.la
 
-libhiptool_la_SOURCES = crypto.c pk.c nlink.c hashchain_store.c hashchain.c linkedlist.c
+libhiptool_la_SOURCES = crypto.c pk.c nlink.c esp_prot_common.c hashchain_store.c hashchain.c
+libhiptool_la_SOURCES += linkedlist.c
 
 if HIP_PFKEY
 else

@@ -1,6 +1,8 @@
 #ifndef EXT_ESP_PROT_COMMON_H_
 #define EXT_ESP_PROT_COMMON_H_
 
+#include <inttypes.h>
+
 /* IDs for all supported transforms
  *
  * @note If you change these, make sure to also change the helper defines
@@ -28,5 +30,16 @@
 #define NUM_HASH_FUNCTIONS			2
 /* for second dimension of hash_lengths[][] */
 #define NUM_HASH_LENGTHS			3
+
+
+/** checks if the passed transform is one of our locally preferred transforms
+ *
+ * @param	num_transforms amount of transforms contained in the array
+ * @param	preferred_transforms the transforms against which should be checked
+ * @param	transform the ESP protection extension transform to be checked
+ * @return	index in the preferred_transforms array, -1 if no match found
+ */
+int esp_prot_check_transform(int num_transforms, uint8_t *preferred_transforms,
+		uint8_t transform);
 
 #endif /*EXT_ESP_PROT_COMMON_H_*/

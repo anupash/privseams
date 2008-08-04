@@ -394,3 +394,101 @@ unsigned char * esp_prot_handle_sa_add_request(struct hip_common *msg,
 
 	return esp_prot_anchor;
 }
+
+int esp_prot_conntrack_bex_tfms(struct hip_common * common, const struct tuple * tuple)
+{
+	struct hip_param *param = NULL;
+	struct esp_prot_preferred_tfms *prot_transforms = NULL;
+	int err = 0, i;
+
+	if (param = hip_get_param(common, HIP_PARAM_ESP_PROT_TRANSFORMS))
+	{
+		HIP_DEBUG("ESP protection extension transforms found\n");
+
+		prot_transforms = (struct esp_prot_preferred_tfms *) param;
+
+		// make sure we only process as many transforms as we can handle
+		if (prot_transforms->num_transforms > NUM_TRANSFORMS + 1)
+		{
+			HIP_DEBUG("received more transforms than we can handle, " \
+					"processing max\n");
+
+			// transforms + UNUSED
+			tuple->connection->num_esp_prot_tfms = NUM_TRANSFORMS + 1;
+
+		} else
+		{
+			tuple->connection->num_esp_prot_tfms = prot_transforms->num_transforms;
+		}
+
+		HIP_DEBUG("adding %i transforms...\n", tuple->connection->num_esp_prot_tfms);
+
+		// store the transforms
+		for (i = 0; i <= tuple->connection->num_esp_prot_tfms; i++)
+		{
+			// only store transforms we support
+			if (prot_transforms->transforms[i] > ESP_PROT_TFM_UNUSED &&
+					prot_transforms->transforms[i] <= NUM_TRANSFORMS)
+			{
+				tuple->connection->esp_prot_tfms[i] = prot_transforms->transforms[i];
+
+				HIP_DEBUG("added transform %i: %u\n", i + 1,
+							tuple->connection->esp_prot_tfms[i]);
+
+			} else
+			{
+				tuple->connection->esp_prot_tfms[i] = ESP_PROT_TFM_UNUSED;
+
+				HIP_DEBUG("unknown transform, set to UNUSED\n");
+			}
+		}
+	}
+
+  out_err:
+	return err;
+}
+
+int esp_prot_conntrack_bex_anchor(const struct hip_common * common,
+		struct esp_tuple * esp_tuple)
+{
+	struct hip_param *param = NULL;
+	struct esp_prot_anchor *prot_anchor = NULL;
+	int hash_length = 0;
+	int err = 0;
+
+	if (param = hip_get_param(common, HIP_PARAM_ESP_PROT_ANCHOR))
+	{
+		prot_anchor = (struct esp_prot_anchor *) param;
+
+		// check if the anchor has a supported transform
+		if (esp_prot_check_transform(esp_tuple->tuple->connection->num_esp_prot_tfms,
+				esp_tuple->tuple->connection->esp_prot_tfms, prot_anchor->transform) >= 0)
+		{
+			// it's one of the supported and advertised transforms
+			esp_tuple->esp_prot_tfm = prot_anchor->transform;
+			HIP_DEBUG("using esp prot transform: %u\n", esp_tuple->esp_prot_tfm);
+
+			// clear anchor
+			memset(esp_tuple->active_anchor, 0, MAX_HASH_LENGTH);
+
+			if (esp_tuple->esp_prot_tfm > ESP_PROT_TFM_UNUSED)
+			{
+				hash_length = esp_prot_get_hash_length(esp_tuple->esp_prot_tfm);
+
+				// store the anchor
+				memcpy(esp_tuple->active_anchor, prot_anchor->anchor, hash_length);
+
+				HIP_HEXDUMP("received anchor: ", esp_tuple->active_anchor, hash_length);
+			}
+		} else
+		{
+			HIP_ERROR("received anchor with unknown transform, DROPPING\n");
+
+			err = 1;
+			goto out_err;
+		}
+	}
+
+  out_err:
+	return err;
+}

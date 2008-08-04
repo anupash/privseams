@@ -70,11 +70,4 @@ int esp_prot_update_handle_ack(hip_ha_t *entry, in6_addr_t *src_ip,
  */
 uint8_t esp_prot_select_transform(int num_transforms, uint8_t *transforms);
 
-/** checks if the passed transform is one of our locally preferred transforms
- *
- * @param	transform the ESP protection extension transform to be checked
- * @return	index in the preferred_transforms array, -1 if no match found
- */
-int esp_prot_check_transform(uint8_t transform);
-
 #endif /*ESP_PROT_HIPD_MSG_H_*/

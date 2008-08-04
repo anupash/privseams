@@ -12,6 +12,7 @@
 #include "builder.h"
 #include "hashchain_store.h"
 #include "user_ipsec_sadb.h"
+#include "conntrack.h"
 
 int send_esp_prot_to_hipd(int active);
 int send_bex_store_update_to_hipd(hchain_store_t *hcstore);
@@ -20,5 +21,8 @@ int send_trigger_update_to_hipd(hip_sa_entry_t *entry);
 int send_anchor_change_to_hipd(hip_sa_entry_t *entry);
 unsigned char * esp_prot_handle_sa_add_request(struct hip_common *msg,
 		uint8_t *esp_prot_transform);
+int esp_prot_conntrack_bex_tfms(struct hip_common * common, const struct tuple * tuple);
+int esp_prot_conntrack_bex_anchor(const struct hip_common * common,
+		struct esp_tuple * esp_tuple);
 
 #endif /* ESP_PROT_FW_MSG_H_ */

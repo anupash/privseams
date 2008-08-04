@@ -627,14 +627,11 @@ int verify_packet_signature(struct hip_host_id * hi,
 int handle_r1(struct hip_common * common, const struct tuple * tuple,
 		int verify_responder)
 {
-	struct hip_param *param = NULL;
-	struct esp_prot_preferred_tfms *prot_transforms = NULL;
-	int num_transforms = 0;
 	struct hip_host_id *hi = NULL, *hi_tuple = NULL;
 	struct in6_addr hit;
 	int sig_alg = 0;
 	// assume correct packet
-	int err = 1, i;
+	int err = 1;
 
 	// R1 should contain the HI
 	HIP_IFEL(!(hi = (struct hip_host_id *) hip_get_param(common, HIP_PARAM_HOST_ID)), 0,
@@ -685,36 +682,8 @@ int handle_r1(struct hip_common * common, const struct tuple * tuple,
 	}
 
 	// check if the R1 contains ESP protection transforms
-	if (param = hip_get_param(common, HIP_PARAM_ESP_PROT_TRANSFORMS))
-	{
-		HIP_DEBUG("ESP protection extension transforms found\n");
-
-		prot_transforms = (struct esp_prot_preferred_tfms *) param;
-
-		// make sure we only process as many transforms as we can handle
-		if (prot_transforms->num_transforms > NUM_TRANSFORMS)
-		{
-				HIP_DEBUG("received more transforms than we can handle, " \
-						"processing max\n");
-
-				num_transforms = NUM_TRANSFORMS;
-
-		} else
-		{
-			num_transforms = prot_transforms->num_transforms;
-		}
-
-		HIP_DEBUG("adding %i transforms...\n", num_transforms);
-
-		// store the transforms
-		for (i = 0; i < num_transforms; i++)
-		{
-			tuple->connection->esp_prot_tfms[i] = prot_transforms->transforms[i];
-
-			HIP_DEBUG("added transform %i: %u\n", i + 1,
-					tuple->connection->esp_prot_tfms[i]);
-		}
-	}
+	HIP_IFEL(esp_prot_conntrack_bex_tfms(common, tuple), -1,
+			"failed to track esp protection extension transforms\n");
 
   out_err:
 	return err;
@@ -731,6 +700,8 @@ int handle_i2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 		const struct hip_common * common, struct tuple * tuple)
 {
 	struct hip_param *param = NULL;
+	struct esp_prot_anchor *prot_anchor = NULL;
+	int hash_length = 0;
 	struct hip_esp_info * spi = NULL, * spi_tuple = NULL;
 	struct tuple * other_dir = NULL;
 	struct esp_tuple * esp_tuple = NULL;
@@ -783,38 +754,9 @@ int handle_i2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 
 	// TEST_END
 
-	// check if the I2 contains ESP protection anchor
-	if (param = hip_get_param(ctx->input, HIP_PARAM_ESP_PROT_ANCHOR))
-	{
-		prot_anchor = (struct esp_prot_anchor *) param;
-
-		// check if the anchor has a supported transform
-		if (esp_prot_check_transform(prot_anchor->transform) >= 0)
-		{
-			// we know this transform
-			entry->esp_prot_transform = prot_anchor->transform;
-
-			if (entry->esp_prot_transform == ESP_PROT_TFM_UNUSED)
-			{
-				HIP_DEBUG("agreed not to use esp protection extension\n");
-
-			} else
-			{
-				hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
-
-				// store peer_anchor
-				memset(entry->esp_peer_anchor, 0, MAX_HASH_LENGTH);
-				memcpy(entry->esp_peer_anchor, prot_anchor->anchor, hash_length);
-
-				HIP_HEXDUMP("received anchor: ", entry->esp_peer_anchor, hash_length);
-			}
-		} else
-		{
-			HIP_ERROR("received anchor with unknown transform, falling back\n");
-
-			entry->esp_prot_transform = ESP_PROT_TFM_UNUSED;
-		}
-	}
+	/* check if the I2 contains ESP protection anchor and store state */
+	HIP_IFEL(esp_prot_conntrack_bex_anchor(common, esp_tuple), -1,
+			"failed to track esp protection extension state\n");
 
 	// store in tuple of other direction that will be using
 	// this spi and dst address
@@ -837,7 +779,6 @@ int handle_i2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 int handle_r2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 		const struct hip_common * common, struct tuple * tuple)
 {
-	struct hip_param *param = NULL;
 	struct hip_esp_info * spi = NULL, * spi_tuple = NULL;
 	struct tuple * other_dir = NULL;
 	struct SList * other_dir_esps = NULL;
@@ -893,15 +834,9 @@ int handle_r2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 
 	// TEST_END
 
-	// check if the I2 contains ESP protection anchor
-	if (param = hip_get_param(common, HIP_PARAM_ESP_PROT_ANCHOR))
-	{
-		HIP_DEBUG("ESP protection extension anchor\n");
-
-		// TODO parse and store
-		//esp_tuple->esp_prot_tfm
-		//esp_tuple->active_anchor
-	}
+	/* check if the R2 contains ESP protection anchor and store state */
+	HIP_IFEL(esp_prot_conntrack_bex_anchor(common, esp_tuple), -1,
+			"failed to track esp protection extension state\n");
 
 	/*if(tuple->direction == ORIGINAL_DIR)
 	other_dir = &tuple->connection->reply;

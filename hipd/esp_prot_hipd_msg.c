@@ -398,6 +398,7 @@ int esp_prot_i2_add_anchor(hip_common_t *i2, hip_ha_t *entry, struct hip_context
 int esp_prot_i2_handle_anchor(hip_ha_t *entry, struct hip_context *ctx)
 {
 	extern int esp_prot_num_transforms;
+	extern uint8_t esp_prot_transforms[NUM_TRANSFORMS];
 	struct hip_param *param = NULL;
 	struct esp_prot_anchor *prot_anchor = NULL;
 	int hash_length = 0;
@@ -413,7 +414,8 @@ int esp_prot_i2_handle_anchor(hip_ha_t *entry, struct hip_context *ctx)
 			prot_anchor = (struct esp_prot_anchor *) param;
 
 			// check if the anchor has a supported transform
-			if (esp_prot_check_transform(prot_anchor->transform) >= 0)
+			if (esp_prot_check_transform(esp_prot_num_transforms, esp_prot_transforms,
+					prot_anchor->transform) >= 0)
 			{
 				// we know this transform
 				entry->esp_prot_transform = prot_anchor->transform;
@@ -741,29 +743,4 @@ uint8_t esp_prot_select_transform(int num_transforms, uint8_t *transforms)
 	}
 
 	return transform;
-}
-
-/* returns index, if contained; else -1 */
-int esp_prot_check_transform(uint8_t transform)
-{
-	extern int esp_prot_num_transforms;
-	extern uint8_t esp_prot_transforms[NUM_TRANSFORMS];
-	int err = -1, i;
-
-	// check if local preferred transforms contain passed transform
-	for (i = 0; i < esp_prot_num_transforms; i++)
-	{
-		if (esp_prot_transforms[i] == transform)
-		{
-			HIP_DEBUG("transform found in local preferred transforms\n");
-
-			err = i;
-			goto out_err;
-		}
-	}
-
-	HIP_DEBUG("transform NOT found in local preferred transforms\n");
-
-  out_err:
-	return err;
 }

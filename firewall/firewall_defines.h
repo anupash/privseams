@@ -75,7 +75,8 @@ struct connection
 	struct timeval time_stamp;
 	/* members needed for ESP protection extension */
 	int num_esp_prot_tfms;
-	uint8_t esp_prot_tfms[NUM_TRANSFORMS];
+	// transforms + UNUSED
+	uint8_t esp_prot_tfms[NUM_TRANSFORMS + 1];
 };
 
 struct hip_esp_packet
