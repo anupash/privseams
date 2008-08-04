@@ -229,47 +229,55 @@ void hip_uninit_r1(struct hip_r1entry *hip_r1table)
  * @param ip_r     a pointer to Responder's IP address.
  * @param hdr      a pointer to HIP packet common header
  * @param solution a pointer to a solution structure
- * @return         1 if puzzle ok, 0 if not-ok.
- * @todo           the return value of this function is in conflict with HIPL
- *                 coding convention.
+ * @return         Zero if the cookie was verified succesfully, negative
+ *                 otherwise.
  */ 
 int hip_verify_cookie(in6_addr_t *ip_i, in6_addr_t *ip_r, 
 		      hip_common_t *hdr, struct hip_solution *solution)
 {
+	/* In a effort to conform the HIPL coding convention, the return value
+	   of this function was inverted. I.e. This function now returns
+	   negative for error conditions, zero otherwise. It used to be the
+	   other way around. -Lauri 23.07.2008. */
 	struct hip_puzzle *puzzle = NULL;
 	struct hip_r1entry *result = NULL;
 	struct hip_host_id_entry *hid = NULL;
 	struct in6_addr *plain_local_hit = NULL;
-	int err = 1;
+	int err = 0;
 	uint16_t nonce = 0;
-
+	
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status()) {
 		HIP_IFEL((plain_local_hit = HIP_MALLOC(sizeof(struct in6_addr), 0)) == NULL,
 			 -1, "Couldn't allocate memory.\n");
-		HIP_IFEL(hip_blind_get_nonce(hdr, &nonce), -1, "hip_blind_get_nonce failed\n");
-		HIP_IFEL(hip_plain_fingerprint(&nonce, &hdr->hitr, plain_local_hit), 
+		HIP_IFEL(hip_blind_get_nonce(hdr, &nonce), -1,
+			 "hip_blind_get_nonce failed\n");
+		HIP_IFEL(hip_plain_fingerprint(&nonce,
+					       &hdr->hitr, plain_local_hit), 
 			 -1, "hip_plain_fingerprint failed\n");
-		HIP_DEBUG_HIT("plain_local_hit", plain_local_hit);
 		
 		/* Find the proper R1 table, use plain hit */
-		HIP_READ_LOCK_DB(HIP_DB_LOCAL_HID);
-		HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID, plain_local_hit, HIP_ANY_ALGO, -1)), 
-			 0, "Requested source HIT not (any more) available.\n");
+		HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(
+				   HIP_DB_LOCAL_HID, plain_local_hit,
+				   HIP_ANY_ALGO, -1)), 
+			 -1, "Requested source HIT not (any more) available.\n");
+		
 		result = &hid->blindr1[hip_calc_cookie_idx(ip_i, ip_r, &hdr->hits)];
 	}
 #endif
 	
 	/* Find the proper R1 table, no blind used */
 	if (!hip_blind_get_status()) {
-		HIP_READ_LOCK_DB(HIP_DB_LOCAL_HID);
-		HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID, &hdr->hitr, HIP_ANY_ALGO, -1)), 
-			 0, "Requested source HIT not (any more) available.\n");
+		
+		HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(
+				   HIP_DB_LOCAL_HID, &hdr->hitr, HIP_ANY_ALGO,
+				   -1)), 
+			 -1, "Requested source HIT not (any more) available.\n");
 		result = &hid->r1[hip_calc_cookie_idx(ip_i, ip_r, &hdr->hits)];
 	}
 
 	puzzle = hip_get_param(result->r1, HIP_PARAM_PUZZLE);
-	HIP_IFEL(!puzzle, 0, "Internal error: could not find the cookie\n");
+	HIP_IFEL(!puzzle, -1, "Internal error: could not find the cookie\n");
 
 	_HIP_HEXDUMP("opaque in solution", solution->opaque,
 		     HIP_PUZZLE_OPAQUE_LEN);
@@ -279,9 +287,9 @@ int hip_verify_cookie(in6_addr_t *ip_i, in6_addr_t *ip_r,
 		     HIP_PUZZLE_OPAQUE_LEN);
 
 	HIP_IFEL(memcmp(solution->opaque, puzzle->opaque,
-			HIP_PUZZLE_OPAQUE_LEN), 0, 
+			HIP_PUZZLE_OPAQUE_LEN), -1, 
 		 "Received cookie opaque does not match the sent opaque\n");
-
+	
 	HIP_DEBUG("Solution's I (0x%llx), sent I (0x%llx)\n",
 		  solution->I, puzzle->I);
 
@@ -296,31 +304,35 @@ int hip_verify_cookie(in6_addr_t *ip_i, in6_addr_t *ip_r,
 		HIP_INFO("Solution's K (%d) does not match sent K (%d)\n",
 			 solution->K, puzzle->K);
 		
-		HIP_IFEL(solution->K != result->Ck, 0,
+		HIP_IFEL(solution->K != result->Ck, -1,
 			 "Solution's K did not match any sent Ks.\n");
-		HIP_IFEL(solution->I != result->Ci, 0, 
+		HIP_IFEL(solution->I != result->Ci, -1, 
 			 "Solution's I did not match the sent I\n");
-		HIP_IFEL(memcmp(solution->opaque, result->Copaque, HIP_PUZZLE_OPAQUE_LEN), 0,
-			 "Solution's opaque data does not match sent opaque data\n");
+		HIP_IFEL(memcmp(solution->opaque, result->Copaque,
+				HIP_PUZZLE_OPAQUE_LEN), -1,
+			 "Solution's opaque data does not match sent opaque "\
+			 "data.\n");
 		HIP_DEBUG("Received solution to an old puzzle\n");
 
 	} else {
 		HIP_HEXDUMP("solution", solution, sizeof(*solution));
 		HIP_HEXDUMP("puzzle", puzzle, sizeof(*puzzle));
-		HIP_IFEL(solution->I != puzzle->I, 0,
+		HIP_IFEL(solution->I != puzzle->I, -1,
 			 "Solution's I did not match the sent I\n");
 		HIP_IFEL(memcmp(solution->opaque, puzzle->opaque,
-				HIP_PUZZLE_OPAQUE_LEN), 0, 
-			 "Solution's opaque data does not match the opaque data sent\n");
+				HIP_PUZZLE_OPAQUE_LEN), -1, 
+			 "Solution's opaque data does not match the opaque "\
+			 "data sent\n");
 	}
-
-	HIP_IFEL(!hip_solve_puzzle(solution, hdr, HIP_VERIFY_PUZZLE), 0, 
-		 "Puzzle incorrectly solved\n");
+	
+	HIP_IFEL(!hip_solve_puzzle(solution, hdr, HIP_VERIFY_PUZZLE), -1, 
+		 "Puzzle incorrectly solved.\n");
 	
  out_err:
-	HIP_READ_UNLOCK_DB(HIP_DB_LOCAL_HID);
-	if(plain_local_hit)
-		HIP_FREE(plain_local_hit);
+	if(plain_local_hit != NULL) {
+		free(plain_local_hit);
+	}
+	
 	return err;
 }
 

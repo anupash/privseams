@@ -106,20 +106,22 @@ int hip_query_default_local_hit_from_hipd(hip_hit_t *hit)
 	int err = 0;
 	struct hip_common *msg = NULL;
 	struct hip_tlv_common *param = NULL;
-	hip_hit_t *defhit  = NULL;	
+	hip_hit_t *defhit  = NULL;
 	struct endpoint_hip *endp = NULL;
-	
+
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEFAULT_HIT,0),-1,
 		 "Fail to get hits");
 	HIP_IFEL(hip_send_recv_daemon_info(msg), -1,
 		 "send/recv daemon info\n");
-	
+
 	HIP_IFE(!(param = hip_get_param(msg, HIP_PARAM_HIT)), -1); 
 	defhit = hip_get_param_contents_direct(param);
 	ipv6_addr_copy(hit, defhit);
 
 out_err:
+	if(msg)
+		free(msg);
 	return err;
 
 }
@@ -143,7 +145,7 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	HIP_ASSERT(ipv6_addr_is_hit(&ctx->src) && ipv6_addr_is_hit(&ctx->dst));
 	
 	HIP_DEBUG("original packet length: %u \n", ctx->ipq_packet->data_len);
-	HIP_HEXDUMP("original packet :", ctx->ipq_packet->payload, ctx->ipq_packet->data_len);
+	_HIP_HEXDUMP("original packet :", ctx->ipq_packet->payload, ctx->ipq_packet->data_len);
 	
 	struct ip6_hdr *ip6_hdr = (struct ip6_hdr *)ctx->ipq_packet->payload;
 	HIP_DEBUG("ip6_hdr->ip6_vfc: 0x%x \n", ip6_hdr->ip6_vfc);
@@ -307,7 +309,7 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	HIP_IFEL(hip_beet_mode_input(ctx, entry, decrypted_packet, &decrypted_packet_len), 1,
 			"failed to recreate original packet\n");
 	
-	HIP_HEXDUMP("restored original packet: ", decrypted_packet, decrypted_packet_len);
+	_HIP_HEXDUMP("restored original packet: ", decrypted_packet, decrypted_packet_len);
 	struct ip6_hdr *ip6_hdr = (struct ip6_hdr *)decrypted_packet;
 	HIP_DEBUG("ip6_hdr->ip6_vfc: 0x%x \n", ip6_hdr->ip6_vfc);
 	HIP_DEBUG("ip6_hdr->ip6_plen: %u \n", ip6_hdr->ip6_plen);
@@ -399,7 +401,7 @@ int handle_sa_add_request(struct hip_common * msg,
 	{
 		param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_HCHAIN_ANCHOR);
 		esp_prot_anchor = (unsigned char *) hip_get_param_contents_direct(param);
-		HIP_HEXDUMP("the esp protection anchor is ", esp_prot_anchor,
+		_HIP_HEXDUMP("the esp protection anchor is ", esp_prot_anchor,
 			    esp_prot_transforms[esp_prot_transform]);
 	} else
 	{
@@ -408,11 +410,11 @@ int handle_sa_add_request(struct hip_common * msg,
 	
 	param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_KEYS);
 	enckey = (struct hip_crypto_key *) hip_get_param_contents_direct(param);
-	HIP_HEXDUMP("crypto key :", enckey, sizeof(struct hip_crypto_key));
+	_HIP_HEXDUMP("crypto key :", enckey, sizeof(struct hip_crypto_key));
 	
 	param = hip_get_next_param(msg, param);
 	authkey = (struct hip_crypto_key *)hip_get_param_contents_direct(param);
-	HIP_HEXDUMP("authen key :", authkey, sizeof(struct hip_crypto_key));
+	_HIP_HEXDUMP("authen key :", authkey, sizeof(struct hip_crypto_key));
 	
 	param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_INT);
 	ealg = *((int *) hip_get_param_contents_direct(param));
@@ -440,8 +442,8 @@ int handle_sa_add_request(struct hip_common * msg,
 	e_key = (unsigned char *) enckey->key;
 	a_key = (unsigned char *) authkey->key;
 	
-	HIP_HEXDUMP("auth key: ", a_key, a_keylen);
-	HIP_HEXDUMP("enc key: ", e_key, e_keylen);
+	_HIP_HEXDUMP("auth key: ", a_key, a_keylen);
+	_HIP_HEXDUMP("enc key: ", e_key, e_keylen);
 	
 	HIP_IFEL(hip_sadb_add(direction, spi, BEET_MODE, src_addr, dst_addr,
 			src_hit, dst_hit, encap_mode, local_port, peer_port, ealg,
@@ -509,8 +511,8 @@ int hipl_userspace_ipsec_sadb_add_wrapper(struct in6_addr *saddr,
 	ipsec_e_key = (uint8_t *) enckey->key;
 	ipsec_a_key = (uint8_t *) authkey->key;
 	
-	HIP_HEXDUMP("auth key: ", ipsec_a_key, ipsec_a_keylen);
-	HIP_HEXDUMP("enc key: ", ipsec_e_key, ipsec_e_keylen);
+	_HIP_HEXDUMP("auth key: ", ipsec_a_key, ipsec_a_keylen);
+	_HIP_HEXDUMP("enc key: ", ipsec_e_key, ipsec_e_keylen);
 	
 	HIP_DEBUG_HIT("source hit: ", src_hit);
 	HIP_DEBUG_IN6ADDR("source ip: ", saddr);

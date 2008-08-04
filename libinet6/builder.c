@@ -20,7 +20,7 @@
  * <ul>
  * <li>sender of "add mapping", i.e. the hip module in kernel</li>
  * <ul>
- * <li>struct hip_common *msg = k/malloc(HIP_MAX_PACKET);</li>
+ * <li>struct hip_common *msg = malloc(HIP_MAX_PACKET);</li>
  * <li>hip_msg_init(msg);</li>
  * <li>err = hip_build_user_hdr(msg, SO_HIP_ADD_MAP_HIT_IP, 0);</li>
  * <li>err = hip_build_param_contents(msg, &hit, HIP_PARAM_HIT,
@@ -31,7 +31,7 @@
  * </ul>
  * <li>receiver of "add mapping", i.e. the daemon</li>
  * <ul>
- * <li>struct hip_common *msg = k/malloc(HIP_MAX_PACKET);</li>
+ * <li>struct hip_common *msg = malloc(HIP_MAX_PACKET);</li>
  * <li>receive the message from kernel.</li>
  * <li>if (msg->err) goto_error_handler;</li>
  * <li>hit = (struct in6addr *) hip_get_param_contents(msg, HIP_PARAM_HIT);</li>
@@ -792,23 +792,23 @@ void *hip_get_nth_param(const struct hip_common *msg,
 }
 
 /**
- * hip_find_free_param - find the first free position in message
- * @param msg pointer to the beginning of the message header
+ * @brief Finds the first free parameter position in message.
  *
  * This function does not check whether the new parameter to be appended
- * would overflow the msg buffer. It is the responsibilty of the caller
+ * would overflow the @c msg buffer. It is the responsibilty of the caller
  * to check such circumstances because this function does not know
  * the length of the object to be appended in the message. Still, this
  * function checks the special situation where the buffer is completely
- * full and returns a null value in such a case.
+ * full and returns NULL in such a case.
  *
- * @return pointer to the first free (padded) position, or NULL if
- *          the message was completely full
+ * @param msg a pointer to the beginning of the message header
+ * @return    a pointer to the first free (padded) position, or NULL if
+ *            the message was completely full
+ * @todo      Should this function should return hip_tlv_common?
  */
 void *hip_find_free_param(const struct hip_common *msg)
 {
-	/*! \todo this function should return hip_tlv_common ? */
-        struct hip_tlv_common *current_param = NULL;
+	struct hip_tlv_common *current_param = NULL;
 	struct hip_tlv_common *last_used_pos = NULL;
 	void *free_pos = NULL;
 	void *first_pos = ((void *) msg) + sizeof(struct hip_common);
@@ -847,12 +847,13 @@ void *hip_find_free_param(const struct hip_common *msg)
 
 
 /**
- * hip_calc_hdr_len - update messsage header length
- * @param msg pointer to the beginning of the message header
- *
+ * @brief Updates messsage header length
+  *
  * This function is called always when a parameter has been added or the
- * daemon/network header was written. This functions writes the new
+ * daemon/network header was written. This function writes the new
  * header length directly into the message.
+ *
+ * @param msg a pointer to the beginning of the message header
  */
 void hip_calc_hdr_len(struct hip_common *msg)
 {
@@ -1331,45 +1332,39 @@ int hip_check_network_msg(const struct hip_common *msg)
  * @see                  hip_build_param().
  * @see                  hip_build_param_contents().
  */
-
-
-int hip_build_generic_param(struct hip_common *msg,
-			    const void *parameter_hdr,
-			    hip_tlv_len_t param_hdr_size,
-			    const void *contents)
+int hip_build_generic_param(struct hip_common *msg, const void *parameter_hdr,
+			    hip_tlv_len_t param_hdr_size, const void *contents)
 {
 	const struct hip_tlv_common *param =
 		(struct hip_tlv_common *) parameter_hdr;
-	void *src = NULL;
-	void *dst = NULL;
-	int err = 0;
-	int size = 0;
+	void *src = NULL, *dst = NULL;
+	int err = 0, size = 0;
 	void *max_dst = ((void *) msg) + HIP_MAX_PACKET;
 
 	_HIP_DEBUG("\n");
 
-	if (!msg) {
-		HIP_ERROR("message is null\n");
+	if (msg == NULL) {
+		HIP_ERROR("Message is NULL.\n");
 		err = -EFAULT;
 		goto out;
 	}
 
-	if (!contents) {
-		HIP_ERROR("object is null\n");
+	if (contents == NULL) {
+		HIP_ERROR("Parameter contents to build is NULL.\n");
 		err = -EFAULT;
 		goto out;
 	}
 
 	if (param_hdr_size < sizeof(struct hip_tlv_common)) {
-		HIP_ERROR("parameter size too small\n");
+		HIP_ERROR("Size of the parameter build is too small.\n");
 		err = -EMSGSIZE;
 		goto out;
 	}
 
 	dst = hip_find_free_param(msg);
-	if (!dst) {
+	if (dst == NULL) {
 		err = -EMSGSIZE;
-		HIP_ERROR("msg full\n");
+		HIP_ERROR("The message has no room for new parameters.\n");
 		goto out;
 	}
 
@@ -1377,8 +1372,11 @@ int hip_build_generic_param(struct hip_common *msg,
 
 	if (dst + hip_get_param_total_len(param) > max_dst) {
 		err = -EMSGSIZE;
-		HIP_DEBUG("dst == %d\n",dst);
-		HIP_ERROR("hipd build param: contents size (%d) too long\n",
+		_HIP_DEBUG("dst == %d\n",dst);
+		HIP_ERROR("The parameter to build does not fit in the message "\
+			  "because if the parameter would be appended to "\
+			  "the message, maximum HIP packet length would be "\
+			  "exceeded.\n",
 			  hip_get_param_contents_len(param));
 		goto out;
 	}
@@ -1405,7 +1403,7 @@ int hip_build_generic_param(struct hip_common *msg,
 	   will fail when it checks the header length */
 	hip_calc_hdr_len(msg);
 	if (hip_get_msg_total_len(msg) == 0) {
-		HIP_ERROR("could not calculate temporary header length\n");
+		HIP_ERROR("Could not calculate temporary header length.\n");
 		err = -EFAULT;
 	}
 
@@ -1495,7 +1493,7 @@ int hip_build_param(struct hip_common *msg, const void *tlv_common)
 }
 
 /**
- * Builds a header for userspace-kernel communication.
+ * @brief Builds a header for userspace-kernel communication.
  *
  * This function builds the header that can be used for HIP kernel-userspace
  * communication. It is commonly used by the daemon, hipconf, resolver or
@@ -1511,9 +1509,8 @@ int hip_build_param(struct hip_common *msg, const void *tlv_common)
  *                  (usually just zero for no errors).
  * @return          zero on success, or negative on error.
  */
-int hip_build_user_hdr(struct hip_common *msg,
-			 hip_hdr_type_t base_type,
-			 hip_hdr_err_t err_val)
+int hip_build_user_hdr(struct hip_common *msg, hip_hdr_type_t base_type,
+		       hip_hdr_err_t err_val)
 {
 	int err = 0;
 
@@ -2602,19 +2599,17 @@ int hip_build_param_transform(struct hip_common *msg,
 }
 
 /**
- * hip_get_param_transform_suite_id - get a suite id from a transform structure
- * @param transform_tlv the transform structure
- * @param index the index of the suite id in transform_tlv
- *
- * XX FIXME: REMOVE INDEX, XX RENAME
- *
- * @return the suite id on transform_tlv on index
+ * @brief Gets a suite id from a transform structure.
+ * 
+ * @param transform_tlv a pointer to a transform structure
+ * @param index         the index of the suite ID in transform_tlv
+ * @return              the suite id on transform_tlv on index
+ * @todo                Remove index and rename.
  */
-hip_transform_suite_t hip_get_param_transform_suite_id(const void *transform_tlv,
-						       const uint16_t index)
+hip_transform_suite_t hip_get_param_transform_suite_id(
+	const void *transform_tlv, const uint16_t index)
 {
-	/* XX FIXME: WHY DO WE HAVE HIP_SELECT_ESP_TRANSFORM SEPARATELY??? */
-
+	/** @todo Why do we have hip_select_esp_transform separately? */
 	hip_tlv_type_t type;
  	uint16_t supported_hip_tf[] = { HIP_HIP_NULL_SHA1,
  					HIP_HIP_3DES_SHA1,
@@ -2655,7 +2650,8 @@ hip_transform_suite_t hip_get_param_transform_suite_id(const void *transform_tlv
  			}
  		}
  	}
- 	HIP_ERROR("usable suite not found\n");
+ 	HIP_ERROR("Usable suite not found.\n");
+	
  	return 0;
 }
 
@@ -3179,12 +3175,12 @@ void hip_build_endpoint(struct endpoint_hip *endpoint,
 }
 
 int hip_build_param_eid_endpoint_from_host_id(struct hip_common *msg,
-					   const struct endpoint_hip *endpoint)
+					      const struct endpoint_hip *endpoint)
 {
 	int err = 0;
-
+	
 	HIP_ASSERT(!(endpoint->flags & HIP_ENDPOINT_FLAG_HIT));
-
+	
 	err = hip_build_param_contents(msg, endpoint, HIP_PARAM_EID_ENDPOINT,
 				       endpoint->length);
 	return err;
@@ -3225,30 +3221,45 @@ int hip_build_param_eid_endpoint(struct hip_common *msg,
 				 const struct endpoint_hip *endpoint)
 {
 	int err = 0;
-
+	
 	if (endpoint->flags & HIP_ENDPOINT_FLAG_HIT) {
 		err = hip_build_param_eid_endpoint_from_hit(msg, endpoint);
 	} else {
 		err = hip_build_param_eid_endpoint_from_host_id(msg, endpoint);
 	}
-	_HIP_DEBUG("err=%d\n", err);
+	
 	return err;
 }
 
-int hip_host_id_entry_to_endpoint(struct hip_host_id_entry *entry, struct hip_common *msg)
+int hip_host_id_entry_to_endpoint(struct hip_host_id_entry *entry,
+				  struct hip_common *msg)
 {
 	struct endpoint_hip endpoint;
 	int err = 0;
 
 	endpoint.family = PF_HIP;
 	endpoint.length = sizeof(struct endpoint_hip);
+	
+	/* struct endpoint flags were incorrectly assigned directly from
+	   entry->lhi.anonymous. entry->lhi.anonymous is a boolean value while
+	   endpoint.flags is a binary flag value. The entry lhi.anonymous should
+	   be converted to binary flag to avoid this kind of mistakes.
+	   -Lauri 18.07.2008 */
+	if(entry->lhi.anonymous == 0) {
+		endpoint.flags = HIP_ENDPOINT_FLAG_PUBKEY;
+	}else if(entry->lhi.anonymous) {
+		endpoint.flags = HIP_ENDPOINT_FLAG_ANON;
+	}else {
+		endpoint.flags = HIP_ENDPOINT_FLAG_HIT;
+	}
+	//endpoint.flags  = entry->lhi.anonymous;
 	/* Next line is useless see couple of lines further --SAMU */
-	endpoint.algo= entry->lhi.algo;
-	endpoint.flags=entry->lhi.anonymous;
-	endpoint.algo=hip_get_host_id_algo(entry->host_id);
+	//endpoint.algo   = entry->lhi.algo;
+	endpoint.algo   = hip_get_host_id_algo(entry->host_id);
 	ipv6_addr_copy(&endpoint.id.hit, &entry->lhi.hit);
-
-	HIP_IFEL(hip_build_param_eid_endpoint(msg, &endpoint), -1, "build error\n");
+	
+	HIP_IFEL(hip_build_param_eid_endpoint(msg, &endpoint), -1,
+		 "Error when building parameter HIP_PARAM_EID_ENDPOINT.\n");
 
   out_err:
 	return err;

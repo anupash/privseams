@@ -57,11 +57,20 @@ copy_tarball ()
         cp ${HIPL}/hipl-main.tar.gz ${PKGDIR_SRC}/${NAME}_${VERSION}.orig.tar.gz
 
 	echo "** Copying Debian control files to '${SRCDIR}/debian'"
+
 	mkdir -p "${SRCDIR}/debian"
 	cp ${PKGROOT}/$DEBIAN/control-src ${SRCDIR}/debian/control
-	for f in changelog copyright rules;do
-	cp ${PKGROOT}/$DEBIAN/$f "${SRCDIR}/debian"
+	for f in changelog copyright rules preinst postinst prerm postrm;do
+		cp ${PKGROOT}/$DEBIAN/$f "${SRCDIR}/debian"
 	done
+
+        if [ $TMP = "firewall" ]; then
+		mkdir -p "${SRCDIR}/debian"
+		for f in preinst postinst prerm postrm;do
+		cp "${PKGROOT}/$DEBIAN-FW/$f" "${SRCDIR}/debian"
+		done
+	fi
+
 	
 	set +e
 }
@@ -72,10 +81,20 @@ copy_files_gpl()
 	echo "** Copying Debian control files to '$PKGDIRGPL/DEBIAN'"
 	
 	set -e
+
 	mkdir -p "$PKGDIRGPL/DEBIAN"
-	for f in control changelog copyright postinst prerm;do
-	cp $DEBIANGPL/$f "$PKGDIRGPL/DEBIAN"
+	for f in control changelog copyright preinst postinst prerm postrm;do
+		cp $DEBIANGPL/$f "$PKGDIRGPL/DEBIAN"
 	done
+
+        if [ $TMP = "firewall" ]; then
+		mkdir -p "$PKGDIRGPL/DEBIAN-FW"
+		for f in preinst postinst prerm postrm;do
+			cp $DEBIANGPL/$f "$PKGDIRGPL/DEBIAN-FW"
+		done
+        fi
+
+	
 	
 	echo "** Copying binary files to '$PKGDIRGPL'"
 	mkdir -p "$PKGDIRGPL/usr"
@@ -86,7 +105,7 @@ copy_files_gpl()
 	cd "$HIPL"
 	
 	for suffix in a so so.0 so.0.0.0;do
-	cp -d libhiptool/.libs/libhiptool.$suffix $PKGDIRGPL/usr/lib/
+		cp -d libhiptool/.libs/libhiptool.$suffix $PKGDIRGPL/usr/lib/
 	done
 	cp -L libhiptool/.libs/libhiptool.la $PKGDIRGPL/usr/lib/
 	
@@ -109,32 +128,38 @@ init_files ()
 	echo '#!/bin/sh' > $PKGDIR/DEBIAN/postinst
 	chmod a+rx  $PKGDIR/DEBIAN/postinst
 	echo "ldconfig" >> $PKGDIR/DEBIAN/postinst
-
-    	#for f in postinst;do
-	#	cp $DEBIAN/$f "$PKGDIR/DEBIAN" 
-    	#done
-	#sed -i '2,10d' $PKGDIR\/DEBIAN\/postinst
-        #sed -i '$a\ldconfig\' $PKGDIR\/DEBIAN\/postinst
     fi
 
-    for f in control changelog copyright;do
-	cp $DEBIAN/$f "$PKGDIR/DEBIAN" 
-    done
-   
+  
+	if [ $TMP = "firewall" ]; then
+        	for f in preinst postinst prerm postrm;do
+		   cp $DEBIAN-FW/$f "$PKGDIR/DEBIAN" 
+    		done
+	fi
 
-    echo "** Modifying Debian control file for $DEBLIB $TMP and $DEBARCH"
+    	for f in control changelog copyright;do
+		cp $DEBIAN/$f "$PKGDIR/DEBIAN" 
+    	done
+	
+
+	echo "** Modifying Debian control file for $DEBLIB $TMP and $DEBARCH"
     
-    if [ "$DEBLIB" = "" ]; then
-     sed -i '/'"$LINE0"'/d' $PKGDIR\/DEBIAN\/control
-    else
-     sed -i '/'"$LINE1"'/a\'"$LINE0"' '"$DEBLIB"'' $PKGDIR\/DEBIAN\/control
-    fi
+    	if [ "$DEBLIB" = "" ]; then
+     		sed -i '/'"$LINE0"'/d' $PKGDIR\/DEBIAN\/control
+    	else
+     		sed -i '/'"$LINE1"'/a\'"$LINE0"' '"$DEBLIB"'' $PKGDIR\/DEBIAN\/control
+    	fi
 
-    sed -i '/'"$LINE2"'/ s/.*/&\-'"$TMP"'/' $PKGDIR\/DEBIAN\/control
-    sed -i 's/"$LINE3"/&'" $DEBARCH"'/' $PKGDIR\/DEBIAN\/control
+    	sed -i '/'"$LINE2"'/ s/.*/&\-'"$TMP"'/' $PKGDIR\/DEBIAN\/control
+    	sed -i 's/"$LINE3"/&'" $DEBARCH"'/' $PKGDIR\/DEBIAN\/control
 
-    # cp $PKGDIR/DEBIAN/postinst $PKGROOT/postinst-$TMP
-   
+    	# cp $PKGDIR/DEBIAN/postinst $PKGROOT/postinst-$TMP
+       
+    #for f in postinst;do
+    #	cp $DEBIAN/$f "$PKGDIR/DEBIAN" 
+    #done
+    #sed -i '2,10d' $PKGDIR\/DEBIAN\/postinst
+    #sed -i '$a\ldconfig\' $PKGDIR\/DEBIAN\/postinst
 }
 
 # copy and build package files
@@ -214,11 +239,15 @@ copy_and_package_files ()
     mkdir -p "$PKGDIR/usr"
     cd "$PKGDIR"
 
-    mkdir -p usr/sbin
+    # mkdir -p usr/sbin
+    mkdir -p usr/sbin usr/bin etc/init.d etc/hipfw
     cd "$HIPL"
 
     echo "** Copying firewall to $PKGDIR"
     cp firewall/hipfw $PKGDIR/usr/sbin/
+
+    echo "** Copying init.d script to $PKGDIR"
+    cp test/packaging/debian-init.d-hipfw $PKGDIR/etc/init.d/hipfw
 
     PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
     create_sub_package;
@@ -241,6 +270,7 @@ copy_and_package_files ()
     cp tools/myasn.py $PKGDIR/usr/bin/
     cp tools/parse-key-3.py $PKGDIR/usr/bin/
 
+#   XX FIXME: add more stuff from tools dir
     cp tools/dnsproxy.py $PKGDIR/usr/bin/
     cp tools/hosts.py $PKGDIR/usr/bin/
     cp tools/pyip6.py $PKGDIR/usr/bin/
