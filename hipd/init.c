@@ -134,7 +134,9 @@ int hipd_init(int flush_ipsec, int killold)
 #ifdef CONFIG_HIP_DEBUG
 	hip_print_sysinfo();
 #endif
+#ifndef CONFIG_HIP_OPENWRT
 	hip_probe_kernel_modules();
+#endif
 
 	/* Register signal handlers */
 	signal(SIGINT, hip_close);
@@ -535,8 +537,10 @@ int hip_init_nat_sock_udp(int *hip_nat_sock_udp)
 	/* see bug id 212 why RECV_ERR is off */
 	err = setsockopt(*hip_nat_sock_udp, IPPROTO_IP, IP_RECVERR, &off, sizeof(on));
 	HIP_IFEL(err, -1, "setsockopt udp recverr failed\n");
+#ifndef CONFIG_HIP_OPENWRT
 	err = setsockopt(*hip_nat_sock_udp, SOL_UDP, HIP_UDP_ENCAP, &encap_on, sizeof(encap_on));
 	HIP_IFEL(err, -1, "setsockopt udp encap failed\n");
+#endif
 	err = setsockopt(*hip_nat_sock_udp, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
 	HIP_IFEL(err, -1, "setsockopt udp reuseaddr failed\n");
 	err = setsockopt(*hip_nat_sock_udp, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on));
