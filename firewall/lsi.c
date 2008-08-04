@@ -34,6 +34,7 @@ int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m, struct in6_addr *ip_src, str
 	char *proto;
 	hip_lsi_t *lsi_our = NULL, *lsi_peer = NULL;
 	struct in6_addr src_addr, dst_addr;
+	struct in_addr src_v4, dst_v4;
 	
 	struct ip6_hdr* ip6_hdr = (struct ip6_hdr*) m->payload;
 	ip_hdr_size = sizeof(struct ip6_hdr);
@@ -61,37 +62,66 @@ int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m, struct in6_addr *ip_src, str
 		return proto6;
 
 
-	if(portDest){
-		proto = "tcp";
-		proto4_LSI = getproto_info(ntohs(portDest), proto);
-	}
-	
+
+HIP_DEBUG("HEREEEEE\n");
 /*
-	if (!proto6){
-HIP_DEBUG_HIT("#### SRC HIT", ip_src);
-HIP_DEBUG_HIT("#### DST HIT", ip_dst);
-	        lsi_our = (hip_lsi_t *)hip_get_lsi_our_by_hits(ip_src, ip_dst);
-		lsi_peer = (hip_lsi_t *)hip_get_lsi_peer_by_hits(ip_src, ip_dst);
-		if(lsi_our && lsi_peer){
-		        IPV4_TO_IPV6_MAP(lsi_our, &src_addr);
-			IPV4_TO_IPV6_MAP(lsi_peer, &dst_addr);
-			HIP_DEBUG_LSI("******lsi_src : ", lsi_our);
-			HIP_DEBUG_LSI("******lsi_dst : ", lsi_peer);
-			reinject_packet(dst_addr, src_addr, m, 6, 1);
-		}
+	if((!proto6) && portDest){
+		proto = "tcp";
+		IPV6_TO_IPV4_MAP(ip_src, &src_v4);
+		IPV6_TO_IPV4_MAP(ip_dst, &dst_v4);
+		proto4_LSI = getproto_info2(ntohs(portDest), proto, &src_v4, &dst_v4);
 	}
 */
+	
 
-	if (!proto6){
+
+
+
 HIP_DEBUG_HIT("#### SRC HIT", ip_src);
 HIP_DEBUG_HIT("#### DST HIT", ip_dst);
-		int res = hip_get_ips_by_hits(ip_src, ip_dst, &src_addr, &dst_addr);
+        lsi_our = (hip_lsi_t *)hip_get_lsi_our_by_hits(ip_src, ip_dst);
+	lsi_peer = (hip_lsi_t *)hip_get_lsi_peer_by_hits(ip_src, ip_dst);
+
+	if(lsi_our && lsi_peer){
+		proto = "tcp";
+		//IPV6_TO_IPV4_MAP(ip_src, &src_v4);
+		//IPV6_TO_IPV4_MAP(ip_dst, &dst_v4);
+		proto4_LSI = getproto_info2(ntohs(portDest), proto, lsi_our);
+
+
+	        IPV4_TO_IPV6_MAP(lsi_our, &src_addr);
+		IPV4_TO_IPV6_MAP(lsi_peer, &dst_addr);
+		HIP_DEBUG_LSI("******lsi_src : ", lsi_our);
+		HIP_DEBUG_LSI("******lsi_dst : ", lsi_peer);
+		reinject_packet(dst_addr, src_addr, m, 6, 1);
+	}
+
+
+
+
+HIP_DEBUG_HIT("#### SRC HIT", ip_src);
+HIP_DEBUG_HIT("#### DST HIT", ip_dst);
+		int res = hip_get_ips_by_hits(ip_src, ip_dst, &dst_addr);
 		if(res > -1){
+			proto = "tcp";
+			IPV6_TO_IPV4_MAP(&src_addr, &src_v4);
+			IPV6_TO_IPV4_MAP(&dst_addr, &dst_v4);
+			proto4_LSI = getproto_info2(ntohs(portDest), proto, &src_v4, &dst_v4);
+
 			HIP_DEBUG_IN6ADDR("******ip_src : ", src_addr);
 			HIP_DEBUG_IN6ADDR("******ip_dst : ", dst_addr);
 			reinject_packet(dst_addr, src_addr, m, 6, 1);
 		}
-	}
+
+
+
+
+
+	return proto4_LSI;
+
+
+
+	
 	return proto6;
 }
 

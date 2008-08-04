@@ -2281,11 +2281,11 @@ int getproto_info(int port_dest, char *proto)
         List list;
 	char path[11+sizeof(proto)];
         char *fqdn_str = NULL, *separator = NULL, *sub_string_port_hex = NULL;
-        
-	if( (!strcmp(proto,"tcp6")) || (!strcmp(proto,"tcp")) ){
+
+	if(!strcmp(proto,"tcp6")){
            index_addr_port = 15;
 	}
-	else if( (!strcmp(proto,"udp6")) || (!strcmp(proto,"udp")) ){
+	else if(!strcmp(proto,"udp6")){
 	   index_addr_port = 10;
 	}
 
@@ -2294,31 +2294,115 @@ int getproto_info(int port_dest, char *proto)
         fd = fopen(path, "r");		
         
         while (fd && getwithoutnewline(line, 500, fd) != NULL && !exists) {		
-                lineno++;
-		if (lineno > 1){
-		  if(strlen(line)<=1) continue;
-		  initlist(&list);                                                    
-		  extractsubstrings(line, &list); 
-		  fqdn_str = getitem(&list, index_addr_port);
-		  if (fqdn_str)
-		    separator = strrchr(fqdn_str, ':');
-		  if (separator){
-		    sub_string_port_hex = strtok(separator,":");
-		    //sprintf(port_dest_hex, "%x", port_dest);
-		    //HIP_DEBUG("sub_string_port_hex %s\n",sub_string_port_hex);
-		    sscanf(sub_string_port_hex,"%X",&result);
-		    HIP_DEBUG("Result %i\n",result);
-		    HIP_DEBUG("port dest %i\n",port_dest);
-		    if (result == port_dest)
-		      exists = 1;		    
-		  }
-		}
-        } // end of while	              							
+	   lineno++;
+	   if (lineno > 1){
+	      if(strlen(line)<=1) continue;
+	      initlist(&list);                                                    
+	      extractsubstrings(line, &list); 
+	      fqdn_str = getitem(&list, index_addr_port);
+	      if(fqdn_str)
+	         separator = strrchr(fqdn_str, ':');
+	      if(separator){
+	         sub_string_port_hex = strtok(separator,":");
+		 //sprintf(port_dest_hex, "%x", port_dest);
+		 //HIP_DEBUG("sub_string_port_hex %s\n",sub_string_port_hex);
+		 sscanf(sub_string_port_hex,"%X",&result);
+		 HIP_DEBUG("Result %i\n",result);
+		 HIP_DEBUG("port dest %i\n",port_dest);
+		 if(result == port_dest)
+		    exists = 1;	    
+	      }
+	   }
+	}//end of while
         if (fd)                                                               
                 fclose(fd);		
-        return exists;	        				
-
+        return exists;
 }
+
+
+
+
+
+
+
+//#######################################
+int getproto_info2(int port_dest, char *proto, struct in_addr *local)
+{	 								
+        FILE *fd = NULL;
+        char line[500];
+	int lineno = 0, index_addr_port;
+        int exists = 0, result;
+        List list;
+	char path[11+sizeof(proto)];
+        char *fqdn_str = NULL, *separator = NULL;
+	char *sub_string_port_hex = NULL;
+
+        char sub_string_addr_hex[8];
+	uint32_t result_addr;
+	struct in_addr addr;
+        
+	if(!strcmp(proto,"tcp")){
+           index_addr_port = 15;
+	}
+	else if(!strcmp(proto,"udp")){
+	   index_addr_port = 10;
+	}
+
+	strcpy(path,"/proc/net/"); 
+	strcat(path, proto);
+        fd = fopen(path, "r");		
+        
+        while(fd && getwithoutnewline(line, 500, fd) != NULL && !exists){		
+	   lineno++;
+	   if(lineno > 1){
+	      if(strlen(line)<=1) continue;
+	      initlist(&list);                                                    
+	      extractsubstrings(line, &list); 
+	      fqdn_str = getitem(&list, index_addr_port);
+	      if(fqdn_str)
+	         separator = strrchr(fqdn_str, ':');
+	      if(separator){
+	         sub_string_port_hex = strtok(separator, ":");
+	         //sprintf(port_dest_hex, "%x", port_dest);
+	         //HIP_DEBUG("sub_string_port_hex %s\n",sub_string_port_hex);
+	         sscanf(sub_string_port_hex, "%X", &result);
+	         HIP_DEBUG("Result %i\n", result);
+	         HIP_DEBUG("port dest %i\n", port_dest);
+	         if( (result == port_dest) &&
+		     IS_LSI32(addr.s_addr) &&
+		     (ipv4_addr_cmp(local, &addr) == 0) ){
+
+// test equality of src or dst , added above
+
+/*
+printf("Whole token %s\n", fqdn_str);
+strncpy(sub_string_addr_hex, fqdn_str, 8);
+sscanf(sub_string_addr_hex, "%X", &result_addr);
+HIP_DEBUG("Addr part %i\n", result_addr);
+addr.s_addr = result_addr;
+HIP_DEBUG_INADDR("333 ", &addr);
+		////////if(IS_LSI32(addr.s_addr))
+		////////	exists = 1;
+HIP_DEBUG_INADDR("111 ", src);
+HIP_DEBUG_INADDR("222 ", dst);
+//HIP_DEBUG("Addr part %s\n", inet_ntoa(result_addr));
+HIP_DEBUG("Addr part %s\n", inet_ntoa(*src));
+HIP_DEBUG("Addr part %s\n", inet_ntoa(*dst));
+*/
+	         }
+	      }
+	   }
+        }//end of while	              							
+        if (fd)                                                               
+                fclose(fd);		
+        return exists;
+}
+//#######################################
+
+
+
+
+
 
 void hip_get_rsa_keylen(const struct hip_host_id *host_id, 
 				       struct hip_rsa_keylen *ret, int is_priv)

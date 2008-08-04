@@ -1473,9 +1473,10 @@ int hip_fw_handle_other_input(hip_fw_context_t *ctx)
 	HIP_DEBUG("\n");
 	
 	if (ip_hits){
-		if (hip_proxy_status)
+		if (hip_proxy_status){
 			verdict = handle_proxy_inbound_traffic(ctx->ipq_packet,
 							       &ctx->src);
+		}
 	  	else{
 	        	//LSI check
 	        	verdict = hip_fw_handle_incoming_hit(ctx->ipq_packet,&ctx->src,&ctx->dst);
