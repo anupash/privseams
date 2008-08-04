@@ -1,5 +1,5 @@
 /** @file
- * HIP Firewwall
+ * HIP Firewall
  * 
  * @note: This code is GNU/GPL.
  * @note: HIPU: requires libipq, might need pcap libraries
