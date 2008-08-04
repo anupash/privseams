@@ -191,7 +191,7 @@ int hip_fw_init_userspace_ipsec()
 		system("ip6tables -I OUTPUT -p 17 -d 2001:0010::/28 -j QUEUE");
 
 		HIP_DEBUG("Decreasing MTU for userspace ipsec\n");
-		system("ifconfig dummy0 mtu 353");
+		system("ifconfig dummy0 mtu 1147");
 	}
 	
   out_err:
