@@ -257,9 +257,6 @@ int hipd_init(int flush_ipsec, int killold)
 
 	HIP_IFE(hip_init_host_ids(), 1);
 
-	HIP_DEBUG("Decreasing MTU for userspace ipsec\n");
-	system("ifconfig dummy0 mtu 353");
-	
 	hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0);
 	HIP_IFEL((hip_user_sock < 0), 1, "Could not create socket for user communication.\n");
 	bzero(&daemon_addr, sizeof(daemon_addr));
