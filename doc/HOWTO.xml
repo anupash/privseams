@@ -135,6 +135,22 @@
     </para>
     <para>On 64-bit Fedora 8, ln -s /usr/lib64/libipq.a /usr/lib/libipq.a was necessary. This has not been fixed in the HIPL build properly yet.
     </para>
+    <para>
+    You should allow also HIP related traffic in your firewall. For example:
+    </para>
+    <itemizedlist>
+    <listitem><para>iptables -A INPUT -p 139 -j ACCEPT</para></listitem>
+    <listitem><para>iptables -A OUTPUT -p139 -j ACCEPT</para></listitem>
+    <listitem><para>iptables -A INPUT -p udp --sport 50500 -j ACCEPT</para></listitem>
+    <listitem><para>iptables -A OUTPUT -p udp --dport 50500 -j ACCEPT</para></listitem>
+    <listitem><para>iptables -A INPUT -p 50 -j ACCEPT</para></listitem>
+    <listitem><para>iptables -A OUTPUT -p 50 -j ACCEPT</para></listitem>
+    <listitem><para>ip6tables -A INPUT -s 2001:0010::/28 -d 2001:0010::/28 -j ACCEPT</para></listitem>
+    <listitem><para>ip6tables -A OUTPUT -s 2001:0010::/28 -d 2001:0010::/28 -j ACCEPT</para></listitem>
+    </itemizedlist>
+    <para>
+    The last two rules basically allow the whole orchid namespace. You can set up more specific rules for HITs or use the hipfw to filter traffic (as explained in a later section).
+    </para>
   </chapter>
   <chapter id="ch_building_doc">
     <title> Building the HIPL Documentation</title>
