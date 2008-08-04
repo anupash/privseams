@@ -305,79 +305,113 @@ int esp_prot_add_hash(unsigned char *out_hash, int *out_length,
     return err;
 }
 
-/* verifies received hchain-elements */
-int esp_prot_verify_hash(hip_sa_entry_t *entry, unsigned char *hash_value)
+int esp_prot_verify(hip_sa_entry_t *entry, unsigned char *hash_value)
+{
+	int err = 0;
+
+	HIP_ASSERT(entry != NULL);
+	HIP_ASSERT(hash_value != NULL);
+
+	HIP_IFEL((err = esp_prot_verify_hash(entry->esp_prot_transform, entry->active_anchor,
+			entry->next_anchor, hash_value, entry->esp_prot_tolerance)) < 0, -1,
+			"failed to verify hash\n");
+
+	// anchors have changed, tell hipd about it
+	if (err > 0)
+	{
+		/* notify hipd about the switch to the next hash-chain for
+		 * consistency reasons */
+		HIP_IFEL(send_anchor_change_to_hipd(entry), -1,
+				"unable to notify hipd about hchain change\n");
+
+		err = 0;
+	}
+
+  out_err:
+	return err;
+}
+
+/* verifies received hchain-elements
+ *
+ * returns 0 - ok or UNUSED, < 0 err, > 0 anchor change */
+int esp_prot_verify_hash(uint8_t transform, unsigned char *active_anchor,
+		unsigned char *next_anchor, unsigned char *hash_value, int tolerance)
 {
 	hash_function_t hash_function = NULL;
 	int hash_length = 0;
 	int err = 0;
 
-	HIP_ASSERT(entry != NULL);
+	// esp_prot_transform >= 0 due to data-type
+	HIP_ASSERT(transform <= NUM_TRANSFORMS);
+	HIP_ASSERT(active_anchor != NULL);
+	HIP_ASSERT(next_anchor != NULL);
+	HIP_ASSERT(hash_value != NULL);
+	HIP_ASSERT(tolerance >= 0);
 
-	if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED)
+	if (transform > ESP_PROT_TFM_UNUSED)
 	{
 		HIP_ASSERT(hash_value != NULL);
 		// esp_prot_transform >= 0 due to data-type
-		HIP_ASSERT(entry->esp_prot_transform <= NUM_TRANSFORMS);
+		HIP_ASSERT(transform <= NUM_TRANSFORMS);
 
-		hash_function = esp_prot_get_hash_function(entry->esp_prot_transform);
-		hash_length = esp_prot_get_hash_length(entry->esp_prot_transform);
+		hash_function = esp_prot_get_hash_function(transform);
+		hash_length = esp_prot_get_hash_length(transform);
 		HIP_DEBUG("hash length is %i\n", hash_length);
 
 		HIP_DEBUG("hchain element of incoming packet to be verified:\n");
 		HIP_HEXDUMP("-> ", hash_value, hash_length);
 
 		HIP_DEBUG("checking active_anchor...\n");
-		if (hchain_verify(hash_value, entry->active_anchor, hash_function,
-				hash_length, entry->esp_prot_tolerance))
+		if (hchain_verify(hash_value, active_anchor, hash_function,
+				hash_length, tolerance))
 		{
 			// this will allow only increasing elements to be accepted
-			memcpy(entry->active_anchor, hash_value, hash_length);
+			memcpy(active_anchor, hash_value, hash_length);
 
 			HIP_DEBUG("hash matches element in active hash-chain\n");
 
 		} else
 		{
-			if (entry->next_anchor)
+			if (*next_anchor != 0)
 			{
 				/* there might still be a chance that we have to switch to the
 				 * next hchain implicitly */
 				HIP_DEBUG("checking next_anchor...\n");
-				if (hchain_verify(hash_value, entry->next_anchor, hash_function,
-						hash_length, entry->esp_prot_tolerance))
+				if (hchain_verify(hash_value, next_anchor, hash_function,
+						hash_length, tolerance))
 				{
 					HIP_DEBUG("hash matches element in next hash-chain\n");
 
-					free(entry->active_anchor);
-					entry->active_anchor = entry->next_anchor;
-					entry->next_anchor = NULL;
+					memcpy(active_anchor, next_anchor, hash_length);
+					memset(next_anchor, 0, hash_length);
 
-					/* notify hipd about the switch to the next hash-chain for
-					 * consistency reasons */
-					HIP_IFEL(send_anchor_change_to_hipd(entry), -1,
-							"unable to notify hipd about hchain change\n");
-				}
-				else
+					// we might need to tell hipd about the change
+					err = 1;
+
+				} else
 				{
 					// handle incorrect elements -> drop packet
-					err = 1;
+					err = -1;
 					goto out_err;
 				}
 
 			} else
 			{
 				// handle incorrect elements -> drop packet
-				err = 1;
+				err = -1;
 				goto out_err;
 			}
 		}
 	} else
 	{
 		HIP_DEBUG("esp protection extension UNUSED\n");
+
+		// this explicitly is no error condition
+		err = 0;
 	}
 
   out_err:
-	if (err == 1)
+	if (err == -1)
 	{
 		HIP_DEBUG("INVALID hash-chain element!\n");
 	}

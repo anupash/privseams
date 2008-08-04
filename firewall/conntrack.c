@@ -1,5 +1,6 @@
 #include "conntrack.h"
 #include "dlist.h"
+#include "esp_prot_api.h"
 
 struct DList * hipList = NULL;
 struct DList * espList = NULL;
@@ -1459,12 +1460,11 @@ int filter_esp_state(const struct in6_addr *dst_addr,
 		     struct hip_esp *esp, struct rule * rule, int use_escrow)
 {
 	struct tuple * tuple = NULL;
-	// don't accept packet with this rule by default
-	int verdict = 0;
-
 	struct hip_tuple * hip_tuple = NULL;
 	struct esp_tuple *esp_tuple = NULL;
 	int escrow_deny = 0;
+	// don't accept packet with this rule by default
+	int err = 0;
 
 	// needed to de-multiplex ESP traffic
 	uint32_t spi = ntohl(esp->esp_spi);
@@ -1482,15 +1482,23 @@ int filter_esp_state(const struct in6_addr *dst_addr,
 		HIP_DEBUG("dst addr %s spi %d no connection found\n",
 				addr_to_numeric(dst_addr), spi);
 
-		verdict = 0;
-		goto out;
+		err = 0;
+		goto out_err;
 	} else
 	{
 		HIP_DEBUG("dst addr %s spi %d connection found\n",
 				addr_to_numeric(dst_addr), spi);
 
-		verdict = 1;
+		err = 1;
 	}
+
+	/* check ESP protection anchor if extension is in use */
+	HIP_IFEL(!(esp_tuple = find_esp_tuple(tuple->esp_tuples, spi)), -1,
+			"could NOT find corresponding esp_tuple\n");
+
+	HIP_IFEL(esp_prot_verify_hash(esp_tuple->esp_prot_tfm, esp_tuple->active_anchor,
+		esp_tuple->next_anchor, ((unsigned char *) esp) + sizeof(struct hip_esp),
+		DEFAULT_VERIFY_WINDOW) < 0, -1, "failed to verify ESP protection hash\n");
 
 	// do some extra work for key escrow
 	if (use_escrow)
@@ -1512,8 +1520,8 @@ int filter_esp_state(const struct in6_addr *dst_addr,
 				HIP_ERROR("FIXME: wrong rule\n");
 
 				// drop packet to make sure it's noticed that this didn't work
-				verdict = 0;
-				goto out;
+				err = 0;
+				goto out_err;
 			}
 		}
 
@@ -1529,17 +1537,9 @@ int filter_esp_state(const struct in6_addr *dst_addr,
 				HIP_ERROR("FIXME: wrong rule\n");
 
 				// drop packet to make sure it's noticed that this didn't work
-				verdict = 0;
-				goto out;
+				err = 0;
+				goto out_err;
 			}
-		}
-
-		// If decryption data for this spi exists, decrypt the contents
-		esp_tuple = find_esp_tuple(tuple->esp_tuples, spi);
-
-		if (!esp_tuple)
-		{
-			HIP_DEBUG("Could not find corresponding esp_tuple\n");
 		}
 
 		/* Decrypt contents */
@@ -1548,29 +1548,29 @@ int filter_esp_state(const struct in6_addr *dst_addr,
 			HIP_DEBUG_HIT("dst hit: ", &esp_tuple->tuple->hip_tuple->data->dst_hit);
 
 			// if there's no error allow the packet
-			verdict = !decrypt_packet(dst_addr, esp_tuple, esp);
+			err = !decrypt_packet(dst_addr, esp_tuple, esp);
 		} else
 		{
 			// If contents cannot be decrypted, drop packet
 			// TODO: Is this what we want?
 			HIP_DEBUG("Contents cannot be decrypted -> DROP\n");
 
-			verdict = 0;
+			err = 0;
 		}
 	}
 
-  out:
+  out_err:
 	// if we are going to accept the packet, update time stamp of the connection
-	if(verdict)
+	if(err > 0)
 	{
-		gettimeofday (&tuple->connection->time_stamp, NULL);
+		gettimeofday(&tuple->connection->time_stamp, NULL);
 	}
 
 	//g_mutex_unlock(connectionTableMutex);
 
-	HIP_DEBUG("filter state: verdict %d \n", verdict);
+	HIP_DEBUG("verdict %d \n", err);
 
-	return verdict;
+	return err;
 }
 
 //check the verdict in rule, so connections can only be created when necessary
