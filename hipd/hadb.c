@@ -544,56 +544,46 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
 {
 	hip_ha_t *entry = NULL;
 	int err = 0;
-
-	entry = (hip_ha_t *)HIP_MALLOC(sizeof(struct hip_hadb_state), gfpmask);
-	if (!entry)
+	
+	entry = (hip_ha_t *) malloc(sizeof(struct hip_hadb_state));
+	if (entry == NULL) {
 		return NULL;
-
+	}
+	
 	memset(entry, 0, sizeof(*entry));
-
-/*	INIT_LIST_HEAD(&entry->next_hit);
-	INIT_LIST_HEAD(&entry->spis_in);
-	INIT_LIST_HEAD(&entry->spis_out);*/
-
-	entry->spis_in = hip_ht_init(hip_hash_spi, hip_match_spi);
-	entry->spis_out = hip_ht_init(hip_hash_spi, hip_match_spi);
 	
 #ifdef CONFIG_HIP_HIPPROXY
 	entry->hipproxy = 0;
 #endif
-	HIP_LOCK_INIT(entry);
-	//atomic_set(&entry->refcnt,0);
-
+	entry->spis_in = hip_ht_init(hip_hash_spi, hip_match_spi);
+	entry->spis_out = hip_ht_init(hip_hash_spi, hip_match_spi);
 	entry->state = HIP_STATE_UNASSOCIATED;
 	entry->hastate = HIP_HASTATE_INVALID;
-
-        /* SYNCH: does it really need to be syncronized to beet-xfrm? -miika
-	   No dst hit. */
 	
-	/* Function pointer sets which define HIP behavior in respect to the
+        /* Function pointer sets which define HIP behavior in respect to the
 	   hadb_entry. */
 	HIP_IFEL(hip_hadb_set_rcv_function_set(entry, &default_rcv_func_set),
-		 -1, "Can't set new function pointer set\n");
+		 -1, "Can't set new function pointer set.\n");
 	HIP_IFEL(hip_hadb_set_handle_function_set(entry,
 						  &default_handle_func_set),
-		 -1, "Can't set new function pointer set\n");
+		 -1, "Can't set new function pointer set.\n");
 	HIP_IFEL(hip_hadb_set_update_function_set(entry,
 						  &default_update_func_set),
-		 -1, "Can't set new function pointer set\n");
+		 -1, "Can't set new function pointer set.\n");
 		    
 	HIP_IFEL(hip_hadb_set_misc_function_set(entry, &default_misc_func_set),
-		 -1, "Can't set new function pointer set\n");
+		 -1, "Can't set new function pointer set.\n");
 	/* Set the xmit function set as function set for sending raw HIP. */
 	HIP_IFEL(hip_hadb_set_xmit_function_set(entry, &default_xmit_func_set),
-		 -1, "Can't set new function pointer set\n");
+		 -1, "Can't set new function pointer set.\n");
 
 	HIP_IFEL(hip_hadb_set_input_filter_function_set(
 			 entry, &default_input_filter_func_set),
-		 -1, "Can't set new function pointer set\n");
+		 -1, "Can't set new function pointer set.\n");
 
 	HIP_IFEL(hip_hadb_set_output_filter_function_set(
 			 entry,& default_output_filter_func_set),
-		 -1, "Can't set new function pointer set\n");
+		 -1, "Can't set new function pointer set.\n");
 
 	/* added by Tao Wan, on 24, Jan, 2008 */ 
 	entry->hadb_ipsec_func = &default_ipsec_func_set;

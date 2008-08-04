@@ -252,10 +252,10 @@ void hip_set_param_contents_len(void *tlv_common,
 }
 
 /**
- * hip_get_param_type - get type of parameter
- * @param tlv_common pointer to the parameter
+ * @brief Gets the type of a HIP parameter
  *
- * @return The type of the parameter (in host byte order).
+ * @param tlv_common pointer to the parameter
+ * @return           the type of the parameter (in host byte order)
  */
 hip_tlv_type_t hip_get_param_type(const void *tlv_common) {
 	return ntohs(((const struct hip_tlv_common *)tlv_common)->type);
