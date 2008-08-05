@@ -53,7 +53,7 @@ diff -Naur a/kamikaze_7.09/package/hipl/Makefile b/kamikaze_7.09/package/hipl/Ma
 -		--disable-nls \
 -		--disable-agent  \
 -		--enable-opendht \
--		--enable-opewrt  \
+-		--enable-openwrt  \
 -		--disable-privsep \
 -	);
 -endef
