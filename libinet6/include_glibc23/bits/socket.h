@@ -40,21 +40,19 @@ typedef __socklen_t socklen_t;
 /* Types of sockets.  */
 enum __socket_type
 {
-#ifdef HIP_OPENWRT
+#ifdef CONFIG_HIP_OPENWRT
   SOCK_STREAM = 2,		/* Sequenced, reliable, connection-based
 				   byte streams.  */
 #else
   SOCK_STREAM = 1,
 #endif
-
 #define SOCK_STREAM SOCK_STREAM
-#ifdef SOCK_STREAM
+#ifdef CONFIG_HIP_OPENWRT
   SOCK_DGRAM = 1,		/* Connectionless, unreliable datagrams
 				   of fixed maximum length.  */
 #else
   SOCK_DGRAM = 2,
 #endif
-
 #define SOCK_DGRAM SOCK_DGRAM
   SOCK_RAW = 3,			/* Raw protocol interface.  */
 #define SOCK_RAW SOCK_RAW
