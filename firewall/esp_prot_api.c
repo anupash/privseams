@@ -349,13 +349,14 @@ int esp_prot_verify_hash(uint8_t transform, unsigned char *active_anchor,
 
 	// esp_prot_transform >= 0 due to data-type
 	HIP_ASSERT(transform <= NUM_TRANSFORMS);
-	HIP_ASSERT(active_anchor != NULL);
 	// next_anchor may be NULL
 	HIP_ASSERT(hash_value != NULL);
 	HIP_ASSERT(tolerance >= 0);
 
 	if (transform > ESP_PROT_TFM_UNUSED)
 	{
+		HIP_ASSERT(active_anchor != NULL);
+
 		hash_function = esp_prot_get_hash_function(transform);
 		hash_length = esp_prot_get_hash_length(transform);
 		HIP_DEBUG("hash length is %i\n", hash_length);
