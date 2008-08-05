@@ -1688,7 +1688,9 @@ int main(int argc, char **argv)
 			rule_file, timeout);
 
 	firewall_increase_netlink_buffers();
+#ifndef CONFIG_HIP_OPENWRT
 	firewall_probe_kernel_modules();
+#endif
 
 #ifdef CONFIG_HIP_MIDAUTH
 	midauth_init();
