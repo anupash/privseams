@@ -1854,21 +1854,6 @@ int hip_trigger_is_bex_established(struct in6_addr *src_hit, struct in6_addr *ds
 
 	while((current_param = hip_get_next_param(msg, current_param)) != NULL) {
 		ha = hip_get_param_contents_direct(current_param);
-/*
-		if ( (((ipv4_addr_cmp(src_lsi, &ha->lsi_our) == 0) &&
-		       (ipv4_addr_cmp(dst_lsi, &ha->lsi_peer) == 0))  ||
-		      ((ipv4_addr_cmp(dst_lsi, &ha->lsi_our) == 0) &&
-		       (ipv4_addr_cmp(src_lsi, &ha->lsi_peer) == 0)))     &&
-			ha->state == HIP_STATE_ESTABLISHED){
-			*src_hit = ha->hit_our;
-			*dst_hit = ha->hit_peer;
-			res = 1;
-			HIP_DEBUG_HIT("hip_trigger_ha src_hit",src_hit);
-			HIP_DEBUG_HIT("hip_trigger_ha dst_hit",dst_hit);
-			break;
-		}
-*/
-
 
 		if( (ipv6_addr_cmp(dst_lsi, &ha->lsi_our) == 0)  &&
 		    (ipv6_addr_cmp(src_lsi, &ha->lsi_peer) == 0) &&
@@ -1888,9 +1873,6 @@ int hip_trigger_is_bex_established(struct in6_addr *src_hit, struct in6_addr *ds
 
 			break;
 		}
-
-
-        
 	}
         
  out_err:
@@ -1904,11 +1886,11 @@ int hip_trigger_is_bex_established(struct in6_addr *src_hit, struct in6_addr *ds
 
 //################################
 int hip_get_bex_state(struct in6_addr *src_ip,
-			      struct in6_addr *dst_ip,
-			      struct in6_addr *src_hit,
-			      struct in6_addr *dst_hit,
-			      hip_lsi_t       *src_lsi,
-			      hip_lsi_t       *dst_lsi){
+		      struct in6_addr *dst_ip,
+		      struct in6_addr *src_hit,
+		      struct in6_addr *dst_hit,
+		      hip_lsi_t       *src_lsi,
+		      hip_lsi_t       *dst_lsi){
 
 	int err = 0, res = -1;//res == -1 indicates lack of entry
 	hip_lsi_t src_ip4, dst_ip4;
@@ -1937,7 +1919,6 @@ int hip_get_bex_state(struct in6_addr *src_ip,
 			*dst_hit = ha->hit_our;
 			*src_lsi = ha->lsi_peer;
 			*dst_lsi = ha->lsi_our;
-
 			res = ha->state;
 			break;
 		}
@@ -1947,7 +1928,6 @@ int hip_get_bex_state(struct in6_addr *src_ip,
 			*dst_hit = ha->hit_peer;
 			*src_lsi = ha->lsi_our;
 			*dst_lsi = ha->lsi_peer;
-
 			res = ha->state;
 			break;
 		}
@@ -1964,7 +1944,7 @@ int hip_get_bex_state(struct in6_addr *src_ip,
 
 int hip_get_peerIP_from_peerLSI(struct in_addr  *dst_lsi/*input */,
 				struct in6_addr *dst_ip /*output*/){
-	int err = 0;
+	int err = 0, res = -1;//res == -1 indicates lack of entry
 	hip_lsi_t src_ip4, dst_ip4;
 	struct hip_tlv_common *current_param = NULL;
 	struct hip_common *msg = NULL;
@@ -1985,15 +1965,14 @@ int hip_get_peerIP_from_peerLSI(struct in_addr  *dst_lsi/*input */,
 	while((current_param = hip_get_next_param(msg, current_param)) != NULL) {
 		ha = hip_get_param_contents_direct(current_param);
 
-		if(ipv6_addr_cmp(dst_lsi, &ha->lsi_our) == 0){
+		if(ipv4_addr_cmp(dst_lsi, &ha->lsi_our) == 0){
 			*dst_ip = ha->ip_our;
+			res = ha->state;
 			break;
 		}
-		else if(ipv6_addr_cmp(dst_lsi, &ha->lsi_peer) == 0){
-			/**src_hit = ha->hit_our;
-			*dst_hit = ha->hit_peer;
-			*src_lsi = ha->lsi_our;*/
+		else if(ipv4_addr_cmp(dst_lsi, &ha->lsi_peer) == 0){
 			*dst_ip = ha->ip_peer;
+			res = ha->state;
 			break;
 		}
 	}
@@ -2001,7 +1980,7 @@ int hip_get_peerIP_from_peerLSI(struct in_addr  *dst_lsi/*input */,
  out_err:
         if(msg)
                 HIP_FREE(msg);  
-        return err;
+        return res;
 }
 
 //**********************
@@ -2032,11 +2011,17 @@ int hip_get_ips_by_hits(struct in6_addr *src_hit,
 	while((current_param = hip_get_next_param(msg, current_param)) != NULL) {
 		ha = hip_get_param_contents_direct(current_param);
 
-		if (( ((ipv6_addr_cmp(src_hit, &ha->hit_our) == 0)  &&
-		       (ipv6_addr_cmp(dst_hit, &ha->hit_peer) == 0))    ||
-		      ((ipv6_addr_cmp(dst_hit, &ha->hit_our) == 0)  &&
-		       (ipv6_addr_cmp(src_hit, &ha->hit_peer) == 0))    )  &&
-			ha->state == HIP_STATE_ESTABLISHED){
+		if( (ipv6_addr_cmp(dst_hit, &ha->hit_our) == 0)  &&
+		    (ipv6_addr_cmp(src_hit, &ha->hit_peer) == 0) &&
+		    ha->state == HIP_STATE_ESTABLISHED){
+			*src_ip = ha->ip_peer;
+			*dst_ip = ha->ip_our;
+			res = ha->state;
+			break;
+		}
+		else if( (ipv6_addr_cmp(src_hit, &ha->hit_our) == 0)  &&
+		         (ipv6_addr_cmp(dst_hit, &ha->hit_peer) == 0) &&
+			 ha->state == HIP_STATE_ESTABLISHED){
 			*src_ip = ha->ip_our;
 			*dst_ip = ha->ip_peer;
 			res = ha->state;
@@ -2124,47 +2109,47 @@ int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
         if (dst_hit)
 	        HIP_IFEL(hip_build_param_contents(msg, (void *)(dst_hit),
                                                   HIP_PARAM_HIT,
-					          sizeof(struct in6_addr)), -1,
-			 "build param HIP_PARAM_HIT failed\n");
+					          sizeof(struct in6_addr)),
+				-1, "build param HIP_PARAM_HIT failed\n");
         
         // source HIT is optional
         if (src_hit)
 	        HIP_IFEL(hip_build_param_contents(msg, (void *)(src_hit),
 						  HIP_PARAM_HIT,
-						  sizeof(struct in6_addr)), -1,
-			 "build param HIP_PARAM_HIT failed\n");
+						  sizeof(struct in6_addr)),
+				-1, "build param HIP_PARAM_HIT failed\n");
         
         // destination LSI is obligatory
         if (dst_lsi)
                 HIP_IFEL(hip_build_param_contents(msg, (void *)(dst_lsi),
                                                   HIP_PARAM_LSI,
-                                                  sizeof(struct in6_addr)), -1,
-			 "build param HIP_PARAM_LSI failed\n");
+                                                  sizeof(struct in6_addr)),
+				-1, "build param HIP_PARAM_LSI failed\n");
         
         // source LSI is optional
         if (src_lsi)
 		HIP_IFEL(hip_build_param_contents(msg, (void *)(src_lsi),
 						  HIP_PARAM_LSI,
-						  sizeof(struct in6_addr)), -1,
-			 "build param HIP_PARAM_LSI failed\n");
+						  sizeof(struct in6_addr)),
+				-1, "build param HIP_PARAM_LSI failed\n");
         
         // if no destination HIT is provided this has to be there
         if (dst_ip)
                 HIP_IFEL(hip_build_param_contents(msg, (void *)(dst_ip),
                                                   HIP_PARAM_IPV6_ADDR,
-                                                  sizeof(struct in6_addr)), -1,
-                         "build param HIP_PARAM_IPV6_ADDR failed\n");
+                                                  sizeof(struct in6_addr)),
+				-1, "build param HIP_PARAM_IPV6_ADDR failed\n");
         
         // this again is optional
         if (src_ip)
         	HIP_IFEL(hip_build_param_contents(msg, (void *)(src_ip),
 						  HIP_PARAM_IPV6_ADDR,
-						  sizeof(struct in6_addr)), -1,
-			 "build param HIP_PARAM_IPV6_ADDR failed\n");
+						  sizeof(struct in6_addr)),
+				-1, "build param HIP_PARAM_IPV6_ADDR failed\n");
         
         /* build the message header */
-        HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_TRIGGER_BEX, 0), -1,
-                 "build hdr failed\n");
+        HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_TRIGGER_BEX, 0),
+					-1, "build hdr failed\n");
 
         HIP_DUMP_MSG(msg);
         
@@ -2368,27 +2353,24 @@ int getproto_info2(int port_dest, char *proto, struct in_addr *local)
 	         sscanf(sub_string_port_hex, "%X", &result);
 	         HIP_DEBUG("Result %i\n", result);
 	         HIP_DEBUG("port dest %i\n", port_dest);
-	         if( (result == port_dest) &&
-		     IS_LSI32(addr.s_addr) &&
-		     (ipv4_addr_cmp(local, &addr) == 0) ){
-
-// test equality of src or dst , added above
-
-/*
+	         if(result == port_dest){
 printf("Whole token %s\n", fqdn_str);
 strncpy(sub_string_addr_hex, fqdn_str, 8);
 sscanf(sub_string_addr_hex, "%X", &result_addr);
 HIP_DEBUG("Addr part %i\n", result_addr);
 addr.s_addr = result_addr;
-HIP_DEBUG_INADDR("333 ", &addr);
-		////////if(IS_LSI32(addr.s_addr))
-		////////	exists = 1;
-HIP_DEBUG_INADDR("111 ", src);
-HIP_DEBUG_INADDR("222 ", dst);
-//HIP_DEBUG("Addr part %s\n", inet_ntoa(result_addr));
-HIP_DEBUG("Addr part %s\n", inet_ntoa(*src));
-HIP_DEBUG("Addr part %s\n", inet_ntoa(*dst));
-*/
+HIP_DEBUG_INADDR("111 ", &addr);
+HIP_DEBUG_INADDR("222 ", local);
+	            if( IS_LSI32(addr.s_addr)    &&
+		        (ipv4_addr_cmp(local, &addr) == 0) ){
+HIP_DEBUG("Equal\n");
+	               exists = 1;
+	            }
+		    else{
+HIP_DEBUG("NOT equal\n");
+	               exists = 0;
+		    }
+	            break;
 	         }
 	      }
 	   }

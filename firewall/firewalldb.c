@@ -11,15 +11,15 @@ int firewall_raw_sock_icmp_outbound = 0;
 
 
 /**
- * firewall_hit_lsi_db_match:
+ * firewall_ip_db_match:
  * Search in the database the given lsi
  *
- * @param lsi_peer: entrance that we are searching in the db
+ * @param ip_peer: entrance that we are searching in the db
  * @return NULL if not found and otherwise the firewall_hl_t structure
  */
-firewall_hl_t *firewall_ip_db_match(hip_lsi_t *lsi_peer){
+firewall_hl_t *firewall_ip_db_match(struct in6_addr *ip_peer){
   //hip_firewall_hldb_dump();
-  return (firewall_hl_t *)hip_ht_find(firewall_lsi_hit_db, (void *)lsi_peer);
+  return (firewall_hl_t *)hip_ht_find(firewall_lsi_hit_db, (void *)ip_peer);
   
 }
 
@@ -63,7 +63,7 @@ void hip_firewall_hldb_dump(void)
 *  = 2   BEX already triggered, waiting it finishes
 *  = -1  BEX failed
 */
-
+/*
 int firewall_add_hit_lsi_ip(struct in6_addr *hit_our, struct in6_addr *hit_peer, hip_lsi_t *lsi, struct in6_addr *ip, int state){
 	int err = 0;
 	firewall_hl_t *new_entry = NULL;
@@ -87,12 +87,12 @@ out_err:
 	_HIP_DEBUG("End firewall_add_hit_lsi\n");
 	return err;
 }
-
+*/
 
 
 //#########################################
 
-int firewall_add_default_entry(struct in6_addr *ip, int state){
+int firewall_add_default_entry(struct in6_addr *ip){
 	struct in6_addr all_zero_default;
 	int err = 0;
 	firewall_hl_t *new_entry  = NULL;
@@ -129,7 +129,11 @@ out_err:
  * find the entry based on ip
  * and update all the other fields
  */
-int firewall_update_entry(struct in6_addr *hit_our, struct in6_addr *hit_peer, hip_lsi_t *lsi, struct in6_addr *ip, int state){
+int firewall_update_entry(struct in6_addr *hit_our,
+			  struct in6_addr *hit_peer,
+			  hip_lsi_t *lsi,
+			  struct in6_addr *ip,
+			  int state){
 	int err = 0;
 	hip_lsi_t *lsi_peer = NULL;
 	hip_list_t *item, *tmp;

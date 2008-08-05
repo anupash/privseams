@@ -151,6 +151,11 @@ int hip_fw_examine_incoming_tcp_packet(void *hdr,
 HIP_DEBUG("3333\n");
 			firewall_hl_t *entry_peer = NULL;
 			entry_peer = firewall_ip_db_match(&peer_ip);
+			if(!entry_peer){
+				firewall_add_default_entry(&peer_ip);
+				entry_peer = firewall_ip_db_match(&peer_ip);
+			}
+				
 			if(entry_peer->bex_state != FIREWALL_STATE_BEX_ESTABLISHED){
 HIP_DEBUG("444\n");
 				//blacklist in the hipd db

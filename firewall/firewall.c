@@ -1255,11 +1255,6 @@ int hip_fw_handle_outgoing_ip(hip_fw_context_t *ctx/*, struct in_addr *src_ip, s
 	entry_peer = firewall_ip_db_match(&ctx->dst);	
 
 	if(entry_peer){
-		//check the correctness of the entry
-		HIP_ASSERT(entry_peer->bex_state == FIREWALL_STATE_BEX_UNDEFINED ||
-			   entry_peer->bex_state == FIREWALL_STATE_BEX_NOT_ESTABLISHED ||
-			   entry_peer->bex_state == FIREWALL_STATE_BEX_ESTABLISHED ||
-			   entry_peer->bex_state == FIREWALL_STATE_BEX_NOT_SUPPORTED);
 
 HIP_DEBUG_HIT("OUR  HIT ", &entry_peer->hit_our);
 HIP_DEBUG_HIT("PEER HIT ", &entry_peer->hit_peer);
@@ -1288,7 +1283,7 @@ HIP_DEBUG("STATE %d \n", entry_peer->bex_state);
 
 
 		if(entry_peer->bex_state == FIREWALL_STATE_BEX_UNDEFINED){
-			verdict = 0;//verdict = 1;
+			verdict = 0;
 		}
 	  	else if(entry_peer->bex_state == FIREWALL_STATE_BEX_ESTABLISHED){
 /*
@@ -1341,14 +1336,6 @@ HIP_DEBUG("STATE %d \n", entry_peer->bex_state);
 					     &src_hit, &dst_hit,
 					     &src_lsi, &dst_lsi);
 
-HIP_DEBUG("** state %d \n", state_ha);
-HIP_DEBUG_IN6ADDR("** src ip ", &ctx->src);
-HIP_DEBUG_IN6ADDR("** dst ip", &ctx->dst);
-HIP_DEBUG_IN6ADDR("** src lsi ", &src_lsi);
-HIP_DEBUG_IN6ADDR("** dst lsi", &dst_lsi);
-HIP_DEBUG_HIT("** src hit ", &src_hit);
-HIP_DEBUG_HIT("** dst hit ", &dst_hit);
-
 		if((state_ha == -1) ||
 		   (state_ha == HIP_STATE_CLOSING) ||
 		   (state_ha == HIP_STATE_CLOSED)){
@@ -1365,16 +1352,14 @@ HIP_DEBUG("Initiate bex after check in hipd db\n");
 				&reject);
 			verdict = 0;
 		}
-		/*else if(state_ha == HIP_STATE_ESTABLISHED){
+		else if(state_ha == HIP_STATE_ESTABLISHED){
 		        HIP_DEBUG("ha is ESTABLISHED!\n");
 
 			if(hit_is_local_hit(&src_hit)){
 		        	HIP_DEBUG("is local hit\n");
-
 				firewall_update_entry(&src_hit, &dst_hit,
 						      &dst_lsi, &ctx->dst,
 						      FIREWALL_STATE_BEX_ESTABLISHED);
-				
 				reinject_packet(src_hit, dst_hit,
 						ctx->ipq_packet, 4, 0);
 				verdict = 0;
@@ -1383,7 +1368,7 @@ HIP_DEBUG("Initiate bex after check in hipd db\n");
 				HIP_DEBUG("is NOT local hit\n");
 				verdict = 1;
 			}			
-		}*/
+		}
 		else if((state_ha == HIP_STATE_I1_SENT) || 
 			(state_ha == HIP_STATE_I2_SENT)){
 			//already initiated the bex, nothing to do
