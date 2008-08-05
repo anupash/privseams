@@ -463,12 +463,12 @@ int firewall_init_rules()
 	HIP_IFEL(hip_fw_init_userspace_ipsec(), -1, "failed to load extension\n");
 	HIP_IFEL(hip_fw_init_esp_prot(), -1, "failed to load extension\n");
 
-	system("iptables -A INPUT -j HIPFW-INPUT");
-	system("iptables -A OUTPUT -j HIPFW-OUTPUT");
-	system("iptables -A FORWARD -j HIPFW-FORWARD");
-	system("ip6tables -A INPUT -j HIPFW-INPUT");
-	system("ip6tables -A OUTPUT -j HIPFW-OUTPUT");
-	system("ip6tables -A FORWARD -j HIPFW-FORWARD");
+	system("iptables -I INPUT -j HIPFW-INPUT");
+	system("iptables -I OUTPUT -j HIPFW-OUTPUT");
+	system("iptables -I FORWARD -j HIPFW-FORWARD");
+	system("ip6tables -I INPUT -j HIPFW-INPUT");
+	system("ip6tables -I OUTPUT -j HIPFW-OUTPUT");
+	system("ip6tables -I FORWARD -j HIPFW-FORWARD");
 
  out_err:
 	return err;
