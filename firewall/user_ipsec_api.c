@@ -130,7 +130,7 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	HIP_ASSERT(ipv6_addr_is_hit(&ctx->src) && ipv6_addr_is_hit(&ctx->dst));
 
 	HIP_DEBUG("original packet length: %u \n", ctx->ipq_packet->data_len);
-	HIP_HEXDUMP("original packet :", ctx->ipq_packet->payload, ctx->ipq_packet->data_len);
+	_HIP_HEXDUMP("original packet :", ctx->ipq_packet->payload, ctx->ipq_packet->data_len);
 
 	struct ip6_hdr *ip6_hdr = (struct ip6_hdr *)ctx->ipq_packet->payload;
 	HIP_DEBUG("ip6_hdr->ip6_vfc: 0x%x \n", ip6_hdr->ip6_vfc);
@@ -298,7 +298,7 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	HIP_IFEL(hip_beet_mode_input(ctx, entry, decrypted_packet, &decrypted_packet_len), 1,
 			"failed to recreate original packet\n");
 
-	HIP_HEXDUMP("restored original packet: ", decrypted_packet, decrypted_packet_len);
+	_HIP_HEXDUMP("restored original packet: ", decrypted_packet, decrypted_packet_len);
 	struct ip6_hdr *ip6_hdr = (struct ip6_hdr *)decrypted_packet;
 	HIP_DEBUG("ip6_hdr->ip6_vfc: 0x%x \n", ip6_hdr->ip6_vfc);
 	HIP_DEBUG("ip6_hdr->ip6_plen: %u \n", ip6_hdr->ip6_plen);
