@@ -42,13 +42,6 @@ struct hip_rsa_keylen {
 	int n;
 };
 
-typedef struct _hip_queue
-{
-	void* data;
-	struct _hip_queue * next;
-	int count;
-} hip_queue;
-
 static inline int ipv4_addr_cmp(const struct in_addr *a1,
 				const struct in_addr *a2)
 {

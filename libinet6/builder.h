@@ -219,6 +219,7 @@ int dsa_to_hip_endpoint(DSA *dsa, struct endpoint_hip **endpoint,
 			se_hip_flags_t endpoint_flags, const char *hostname);
 int hip_build_param_hip_hdrr_info(struct hip_common * msg,
 				    struct hip_hdrr_info * hdrr_info);
+//int hip_build_param_hip_uadb_info(struct hip_common *msg, struct hip_uadb_info *uadb_info);
 /**
  * Builds a REG_INFO parameter.
  * 

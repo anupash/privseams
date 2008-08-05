@@ -14,6 +14,7 @@
 extern struct hip_common *hipd_msg;
 extern struct hip_common *hipd_msg_v4;
 
+sqlite3 *daemon_db ;
 /******************************************************************************/
 /** Catch SIGCHLD. */
 void hip_sig_chld(int signum) 
@@ -118,7 +119,7 @@ void hip_set_os_dep_variables()
 int hipd_init(int flush_ipsec, int killold)
 {
 	hip_hit_t peer_hit;
-	int err = 0, certerr = 0, dhterr = 0;
+	int err = 0, certerr = 0, dhterr = 0, hitdberr = 0;
 	char str[64];
 	struct sockaddr_in6 daemon_addr;
 	extern int hip_opendht_sock_fqdn;
@@ -274,6 +275,10 @@ int hipd_init(int flush_ipsec, int killold)
 	certerr = 0;
 	certerr = hip_init_certs();
 	if (certerr < 0) HIP_DEBUG("Initializing cert configuration file returned error\n");
+	
+	hitdberr = 0;
+	hitdberr = hip_init_daemon_hitdb();
+	if (hitdberr < 0) HIP_DEBUG("Initializing daemon hit database returned error\n");
 	
 #if 0
 	/* init new tcptimeout parameters, added by Tao Wan on 14.Jan.2008*/
@@ -822,4 +827,33 @@ out_err:
 	HIP_READ_UNLOCK_DB(hip_local_hostid_db);
 	if (algo == HIP_HI_RSA) return (tmp);
 	return NULL;
+}
+
+/**
+ * hip_init_daemon_hitdb - The function initialzies the database at daemon
+ * which recives the information from agent to be stored
+ */
+int hip_init_daemon_hitdb()
+{
+	/*Macro for db file name and path
+	 * Open the file from the path
+	 * if it doesnt exist create one (with tables)
+	 * unlock the db*/
+	char *file = HIP_CERT_DB_PATH_AND_NAME;
+	FILE * db_file = NULL;
+	int err = 0 ;
+	extern sqlite3* daemon_db;
+_HIP_DEBUG("Loading HIT database from %s.\n", file);
+      
+        db_file = fopen(file, "r");
+        if (!db_file) {
+                HIP_DEBUG("Db file doesnt exist creating it n\n");
+        }
+        daemon_db = hip_sqlite_open_db(file, HIP_CERT_DB_CREATE_TBLS);
+	HIP_IFE(!daemon_db, -1);
+
+out_err:
+	if (db_file) fclose(db_file);
+	//hip_sqlite_close_db(daemon_db);
+	return (err);
 }

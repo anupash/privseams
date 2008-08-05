@@ -116,7 +116,8 @@ int connhipd_handle_msg(struct hip_common *msg,
 	struct in6_addr *lhit, *rhit;
 	int err = 0, ret, n, direction, check;
 	char chit[128], *type_s;
-
+	
+	struct in6_addr hitr ;
 	type = hip_get_msg_type(msg);
 
 	if (type == SO_HIP_AGENT_PING_REPLY)
@@ -223,8 +224,15 @@ int connhipd_handle_msg(struct hip_common *msg,
 		/* Check the remote HIT from database. */
 		if (l) 
 		{
+			memcpy(&hitr,&hit.hit, sizeof(struct in6_addr));
 			ret = check_hit(&hit, 0);
 			
+			/* If ret = 0, hit is accepted and added. Call a function which builds a user message.
+			Multiples in database(msg) should contain at least HIT that we used 
+			HIT we accepted and variable length field called cert (char)
+			AND send it to daemon*/
+			if (ret == 0)
+				connhipd_send_hitdata_to_daemon (msg, &hitr, &hit.g->l->lhit) ;
 			/* Reset local HIT, if outgoing I1. */
 			/*HIP_HEXDUMP("Old local HIT: ", &msg->hits, 16);
 			HIP_HEXDUMP("New local HIT: ", &hit.g->l->lhit, 16);
@@ -404,6 +412,36 @@ void connhipd_quit(void)
 	pthread_join(connhipd_pthread, NULL);
 }
 /* END OF FUNCTION */
+
+/**
+ * connhipd_send_hitdata_to_daemon - builds a param containing hits to be
+ * sent to the daemon
+ * @param *msg packet to be sent to daemon
+ * @param *hitr remote hit accepted
+ * @param *hitl local hit used
+ * @return 0 on success, -1 on error
+ */
+int connhipd_send_hitdata_to_daemon(struct hip_common * msg , struct in6_addr * hitr, struct in6_addr * hitl)
+{
+	int err = 0;
+	struct hip_uadb_info uadb_info ;
+	char hittest[40];
+	HIP_DEBUG("Building User Agent DB info message to be sent to daemon.\n");
+	memcpy(&uadb_info.hitr,hitr, sizeof(struct in6_addr)) ;
+	memcpy(&uadb_info.hitl,hitl, sizeof(struct in6_addr)) ;
+	hip_in6_ntop(&uadb_info.hitr, hittest);
+    HIP_DEBUG("Value: %s\n", hittest);
+	
+	memcpy(uadb_info.cert,"certificate\0",sizeof("certificate\0"));
+	
+	HIP_DEBUG("Testing sizeof for my struct %d\n",sizeof(struct hip_uadb_info));
+	hip_build_param_hip_uadb_info(msg, &uadb_info);
+	HIP_DUMP_MSG (msg);
+out_err:
+	return (err);
+}
+
+
 
 
 /* END OF SOURCE FILE */

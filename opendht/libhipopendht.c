@@ -219,8 +219,7 @@ int opendht_put_rm(int sockfd,
  *
  * @return Returns integer -1 on error, on success 0
  */
-int opendht_put(int sockfd, 
-                unsigned char * key,
+int opendht_put(unsigned char * key,
                 unsigned char * value, 
                 unsigned char * host,
                 int opendht_port,
@@ -264,10 +263,6 @@ int opendht_put(int sockfd,
                     }
     }
     HIP_DEBUG("HTTP packet for put is ready to be sent to queue\n"); 
-    //HIP_DEBUG("Actual OpenDHT send starts here\n");
-    /*Pardeep testing commetning line below and adding packet to the queue)
-     * send(sockfd, put_packet, strlen(put_packet), 0);
-     */
     return(0);
 }
 
@@ -409,66 +404,70 @@ int opendht_handle_value(char * value, char * out_value)
 int opendht_handle_key(char * key, char * out_key) 
 {
     int err = 0, key_len = 0, i = 0 ;
-    char tmp_key[21];
+    unsigned char tmp_key[21];
     struct in6_addr addrkey;
     unsigned char *sha_retval;
 	int key_len_specified_in_bytes = 20;
-	unsigned char *paddedkey = malloc(key_len_specified_in_bytes +4);
+	unsigned char *paddedkey ;
 	/* Below three variables are used for key padding logic*/
 	int k = 0;
 	unsigned char tempChar1 =' ';
 	unsigned char tempChar2 =' ';
 		
-	 
-	memset(paddedkey, '\0', key_len_specified_in_bytes +4);
-    /* check for too long keys and convert HITs to numeric form */
+	/* check for too long keys and convert HITs to numeric form */
     memset(tmp_key, '\0', sizeof(tmp_key));
 
-    if (inet_pton(AF_INET6, (char *)key, &addrkey.s6_addr) == 0)
+	if (inet_pton(AF_INET6, (char *)key, &addrkey.s6_addr) == 0)
 	{
  		/* inet_pton failed because of invalid IPv6 address */
 		memset(tmp_key,'\0',sizeof(tmp_key));
 		/* strlen works now but maybe not later */
-        for (i = 0; i < strlen(key); i++ )
+		for (i = 0; i < strlen(key); i++ )
             key[i] = tolower(key[i]);
         if (key[strlen(key)] == '.')
             key[strlen(key)] == '\0';
         sha_retval = SHA1(key, strlen(key), tmp_key); 
         key_len = 20;
-        err = key_len;
+		err = key_len;
         _HIP_HEXDUMP("KEY FOR OPENDHT", tmp_key, key_len);
         if (!sha_retval)
         {
         	HIP_DEBUG("SHA1 error when creating key for OpenDHT.\n");
             return(-1);
         }                
-    } 
+    }
     else 
     {
-       	/* We require only last 100 bits of the HIT. That is to say
-		 to ignore first 28 bits we need to shift 28 bits left the HIT.
-		 Follwoing logic does it and zero padding is already done in memset
-		 above for tmp_key to make it 160 bit long key */
-		 memcpy(paddedkey, addrkey.s6_addr, sizeof(addrkey.s6_addr));		
-		 paddedkey = addrkey.s6_addr + 3;
-				
-		 while (k <13)
-		 { 	/*We get the MSB hex byte from tempchar1 and LSB temchar2 */
-		 	tempChar1 = *(paddedkey+k);
+		/* We require only last 100 bits of the HIT. That is to say
+		to ignore first 28 bits we need to shift 28 bits left the HIT.
+		Follwoing logic does it and zero padding is already done in memset
+		above for tmp_key to make it 160 bit long key */
+		paddedkey = malloc(key_len_specified_in_bytes +4);
+		memset(paddedkey, '\0', key_len_specified_in_bytes +4);
+    	memcpy(paddedkey, addrkey.s6_addr, sizeof(addrkey.s6_addr));		
+		paddedkey = paddedkey + 3;
+		while (k <13)
+		{ 	/*We get the MSB hex byte from tempchar1 and LSB temchar2 */
+			tempChar1 = *(paddedkey+k);
 		 	tempChar2 = *(paddedkey+k+1);
 		 	tempChar1 = tempChar1 << 4 ;
 		 	tempChar2 = tempChar2 >> 4 ;
 		 	*(paddedkey+k) = tempChar1 | tempChar2 ;
-		     k++;
+		 	k++;
 		 }
-		 HIP_DEBUG("New key value:  %d.\n", strlen(paddedkey));
-		 memcpy(tmp_key, paddedkey, strlen(paddedkey)+1);
-		 key_len = key_len_specified_in_bytes ;
-		 err = key_len;
-    }
-    memcpy(out_key, tmp_key, sizeof(tmp_key));
- out_err:
-    return(err);
+		HIP_DEBUG("New key value:  %d.\n", k);
+		memcpy(tmp_key, paddedkey, k+1);
+		key_len = key_len_specified_in_bytes ;
+		err = key_len;
+	}
+	memcpy(out_key, tmp_key, sizeof(tmp_key));
+out_err:
+	if(paddedkey)
+	{
+		paddedkey = paddedkey -3 ;
+		free(paddedkey);
+	}
+	return(err);
 }
 
 /** 
@@ -522,7 +521,7 @@ int opendht_read_response(int sockfd, char * answer)
  * @param key Pointer to key to be fetched
  * @param opaque_answer Pointer to memory area where the corresponding value will be saved
  * opaque_answer is set by poiner function sent as param
- *  @return integer -1 on error, on success 0
+ * @return integer -1 on error, on success 0
  */
 int hip_opendht_get_key(int (*value_handler)(unsigned char * packet,
              void * answer),struct addrinfo * gateway, 
@@ -603,8 +602,12 @@ out_err:
 
 	
 
-/*This function copies the HDRR packet returned from lookup
- * to the void pointer: hdrr */
+/**
+ * handle_hdrr_value - This function gets the HDRR from packet returned from lookup
+ * @param *packet response returned from the lookup service
+ * @param *hdrr opaque pointer passed to point to the hdrr result
+ * @return status of the operation 0 on success, -1 on failure
+ */
 int handle_hdrr_value (unsigned char *packet, void *hdrr)
 {
 	// What to check in response -- why locator ? -- should be nothing
@@ -612,7 +615,6 @@ int handle_hdrr_value (unsigned char *packet, void *hdrr)
 	 locator = hip_get_param((struct hip_common *)packet, HIP_PARAM_LOCATOR);
         if (locator)
         { 
-        	//TODO Define size of HDRR packet
         		memcpy(hdrr, packet, HIP_MAX_PACKET);
         		return 0 ;
         }
@@ -620,8 +622,12 @@ int handle_hdrr_value (unsigned char *packet, void *hdrr)
         	return -1 ;		
 }
 
-/*This function gets the locator parameter of HDRR
- * and copies it to locator_complete */
+/**
+ * handle_locator_all_values - This function copies the locator from packet returned from lookup
+ * @param *packet response returned from the lookup service
+ * @param *locator_complete opaque pointer passed to point to the locator result
+ * @return status of the operation 0 on success, -1 on failure
+ */
 int handle_locator_all_values (unsigned char *packet, void *locator_complete)
 {
 	 struct hip_locator *locator;
@@ -636,8 +642,14 @@ int handle_locator_all_values (unsigned char *packet, void *locator_complete)
         	return -1 ;		
 }
 
-/*This function gets the last address in the locator parameter of HDRR
- * and copies it to locator_ipv4 */
+/**
+ * handle_locator_value - This function copies the 2nd address (ipv4) from
+ * the locator from packet returned from lookup
+ * 
+ * @param *packet response returned from the lookup service
+ * @param *locator_ipv4 opaque pointer passed to point to the ipv4 address
+ * @return status of the operation 0 on success, -1 on failure
+ */
 int handle_locator_value (unsigned char *packet, void *locator_ipv4)
 {
 	 struct hip_locator *locator;
@@ -671,8 +683,12 @@ int handle_locator_value (unsigned char *packet, void *locator_ipv4)
         	return -1;	
 }
 
-/*It handles HIT returned by lookup services
- * and copies it to the void hit pointer */
+/**
+ * handle_hit_value - This function copies the hit returned from the lookup service
+ * @param *packet response returned from the lookup service
+ * @param *hit opaque pointer passed to point to the HIT
+ * @return status of the operation 0 on success, -1 on failure
+ */
 int handle_hit_value (unsigned char *packet, void *hit)
 {
 	 if (ipv6_addr_is_hit((struct in6_addr*)packet)) 
@@ -690,8 +706,12 @@ int handle_hit_value (unsigned char *packet, void *hit)
         			
 }
 
-/*It handles just IP (not locator) returned by lookup services
- * and copies it to the void hit pointer */
+/**
+ * handle_hit_value - handles just IP (not locator) returned by lookup services
+ * @param *packet response returned from the lookup service
+ * @param *hit opaque pointer passed to point to the ip
+ * @return status of the operation 0 on success, -1 on failure
+ */
 int handle_ip_value (unsigned char *packet, void *ip)
 {
 	/* if IPv6 must be HIT */
@@ -710,11 +730,16 @@ int handle_ip_value (unsigned char *packet, void *ip)
 }
 
 
-/*It sends the dht response to hipdaemon
-* first appending one more user param for holding a structure hdrr_info
-* hdrr_info is used by daemon to mark signature and host id verification results to flags
-* Then adding user header for recognizing the message at daemon side
-*/
+/**
+ * verify_hddr_lib - It sends the dht response to hipdaemon
+ * first appending one more user param for holding a structure hdrr_info
+ * hdrr_info is used by daemon to mark signature and host id verification results to flags
+ * Then adding user header for recognizing the message at daemon side
+ * 
+ * @param *hipcommonmsg packet returned from the lookup service
+ * @param *addrkey key used for the lookup
+ * @return OR of the signature and host id verification, 0 in case of success
+ */
 int verify_hddr_lib (struct hip_common *hipcommonmsg,struct in6_addr *addrkey)
 {
 	struct hip_hdrr_info hdrr_info;	/* To examine DHT response which contains locator in HDRR*/

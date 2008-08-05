@@ -3373,6 +3373,18 @@ int hip_build_param_hip_hdrr_info(struct hip_common * msg,
 	return err;
 }
 
+int hip_build_param_hip_uadb_info(struct hip_common *msg, struct hip_uadb_info *uadb_info)
+{
+	int err = 0;
+	hip_set_param_type(uadb_info, HIP_PARAM_UADB_INFO);
+	hip_calc_param_len(uadb_info,
+			   sizeof(struct hip_uadb_info) -
+			   sizeof(struct hip_tlv_common));
+	err = hip_build_param(msg, uadb_info);
+	return err;
+}
+
+
 int dsa_to_hip_endpoint(DSA *dsa, struct endpoint_hip **endpoint,
 			se_hip_flags_t endpoint_flags, const char *hostname)
 {

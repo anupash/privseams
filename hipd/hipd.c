@@ -7,8 +7,7 @@
  * @note HIPU: lcap is used by HIPD. It needs to be changed to generic posix functions.
  */ 
 #include "hipd.h" 
-
-
+//#include "init.c"
 /* Defined as a global just to allow freeing in exit(). Do not use outside
    of this file! */
 struct hip_common *hipd_msg = NULL;
@@ -190,7 +189,9 @@ int hip_recv_agent(struct hip_common *msg)
 	socklen_t alen;
 	hip_hdr_type_t msg_type;
 	hip_opp_block_t *entry;
-	
+	/*Pardeep test variables*/
+	char hit[40];
+	struct hip_uadb_info *uadb_info ;
 	HIP_DEBUG("Received a message from agent\n");
 
 	msg_type = hip_get_msg_type(msg);
@@ -245,10 +246,57 @@ int hip_recv_agent(struct hip_common *msg)
 			HIP_IFEL(err, 0, "for_each_ha err.\n");
 #endif
 		}
+		/*Pardeep test code*/
+		uadb_info = hip_get_param(msg, HIP_PARAM_UADB_INFO);
+		if (uadb_info)
+		{
+			HIP_DEBUG("Received User Agent DB info from agent.\n");
+			hip_in6_ntop(&uadb_info->hitl, hit);
+        	HIP_DEBUG("Value: %s\n", hit);
+        	add_cert_and_hits_to_db(uadb_info);
+		}
 	}
-	
+		
 out_err:
 	return err;
+}
+
+static int hip_sqlite_callback(void *NotUsed, int argc, char **argv, char **azColName) {
+        int i;
+        for(i=0; i<argc; i++){
+                HIP_DEBUG("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
+        }
+        return 0;
+}
+
+/**
+ * add_cert_and_hits_to_db - Adds information recieved from the agent to
+ * the daemon database
+ * @param *uadb_info structure containing data sent by the agent
+ * @return 0 on success, -1 on failure
+ */
+int add_cert_and_hits_to_db (struct hip_uadb_info *uadb_info)
+{
+	extern sqlite3* daemon_db;
+	//char *file = HIP_CERT_DB_PATH_AND_NAME;
+	//FILE * db_file = NULL;
+	int err = 0 ;
+	char insert_into[512];
+	char hit[40];
+	char hit2[40];
+	hip_in6_ntop(&uadb_info->hitr, hit);
+	hip_in6_ntop(&uadb_info->hitl, hit2);
+    HIP_DEBUG("Value: %s\n", hit);
+	sprintf(insert_into, "INSERT INTO hits VALUES("
+                        "'%s', '%s', '%s', '%s');", 
+                        "Pardip", hit2, hit, uadb_info->cert);
+   // daemon_db = hip_sqlite_open_db(file, HIP_CERT_DB_CREATE_TBLS);
+	err = hip_sqlite_insert_into_table(daemon_db, insert_into);
+	//ret = hip_sqlite_select(daemon_db, HIP_CERT_DB_SELECT_HITS,hip_sqlite_callback);
+
+out_err:
+	//hip_sqlite_close_db(daemon_db);
+	return (err) ;
 }
 
 int hip_sendto_firewall(const struct hip_common *msg){

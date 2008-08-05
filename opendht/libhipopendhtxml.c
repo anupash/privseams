@@ -91,14 +91,6 @@ int build_packet_put_rm(unsigned char * key,
     xmlDocDumpFormatMemory(xml_doc, &xml_buffer, &xml_len, 0);
 
     memset(out_buffer, '\0', sizeof(out_buffer));
-    //Commented yb Pardeep for openlookup sample format header
-    /*sprintf(out_buffer, 
-            "POST /RPC2 HTTP/1.0\r\nUser-Agent: "
-            "hipl\r\nHost: %s:%d\r\nContent-Type: "
-            "text/xml\r\nContent-length: %d\r\n\r\n", 
-            host_ip, port, xml_len);
-            */ 
-    // This is how it is in sample python requests file created http headers 
     sprintf(out_buffer, 
             "POST / HTTP/1.0\r\nHost: %s:%d\r\nUser-Agent: "
             "hipl\r\nContent-Type: "
@@ -190,15 +182,6 @@ int build_packet_get(unsigned char * key,
     xmlDocDumpFormatMemory(xml_doc, &xml_buffer, &xml_len, 0);
 
     memset(out_buffer, '\0', sizeof(out_buffer));
-    //Commented yb Pardeep for openlookup sample format header
-    /*
-    sprintf(out_buffer, 
-            "POST /RPC2 HTTP/1.0\r\nUser-Agent: "
-            "hipl\r\nHost: %s:%d\r\nContent-Type: "
-            "text/xml\r\nContent-length: %d\r\n\r\n", 
-            host_ip, port, xml_len); 
-      */      
-    // This is how it is in sample python requests file created http headers 
     sprintf(out_buffer, 
             "POST / HTTP/1.0\r\nHost: %s:%d\r\nUser-Agent: "
             "hipl\r\nContent-Type: "
@@ -281,15 +264,6 @@ int build_packet_rm(unsigned char * key,
     xmlDocDumpFormatMemory(xml_doc, &xml_buffer, &xml_len, 0);
 
     memset(out_buffer, '\0', sizeof(out_buffer));
-      //Commented yb Pardeep for openlookup sample format header
-    /*
-    sprintf(out_buffer, 
-            "POST /RPC2 HTTP/1.0\r\nUser-Agent: "
-            "hipl\r\nHost: %s:%d\r\nContent-Type: "
-            "text/xml\r\nContent-length: %d\r\n\r\n", 
-            host_ip, port, xml_len); 
-      */      
-    // This is how it is in sample python requests file created http headers 
     sprintf(out_buffer, 
             "POST / HTTP/1.0\r\nHost: %s:%d\r\nUser-Agent: "
             "hipl\r\nContent-Type: "

@@ -119,6 +119,7 @@
 #define HIP_PARAM_HDRR_INFO		32803 
 #define HIP_PARAM_HCHAIN_ANCHOR		32804
 #define HIP_PARAM_LSI		        32805 /* xx todo: this should be icomm.h */
+#define HIP_PARAM_UADB_INFO		32806
 /* End of HIPL private parameters. */
 
 #define HIP_PARAM_HMAC                 61505
@@ -826,6 +827,14 @@ struct hip_hdrr_info {
         int sig_verified;
         int hit_verified;
 }__attribute__ ((packed));
+
+struct hip_uadb_info {
+	hip_tlv_type_t		type;
+	hip_tlv_len_t		length;
+	struct in6_addr		hitr ;
+	struct in6_addr		hitl ;
+    char				cert[512] ;
+}__attribute__ ((packed)) ;
 
 //add by santtu from here
 
