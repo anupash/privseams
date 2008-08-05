@@ -1598,7 +1598,9 @@ int main(int argc, char **argv)
 			rule_file, timeout);
 
 	firewall_increase_netlink_buffers();
+#ifndef CONFIG_HIP_OPENWRT
 	firewall_probe_kernel_modules();
+#endif
 
 	// create firewall queue handles for IPv4 traffic
 	// FIXME died handle will still be used below
