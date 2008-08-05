@@ -44,7 +44,9 @@ static struct pisa_conn *pisa_find_conn(struct pisa_conn
 	struct pisa_conn *pcd;
 
 	while (l) {
+		HIP_DEBUG("l=0x%x\n", l);
 		pcd = f(l, data);
+		HIP_DEBUG("pcd=0x%x\n", pcd);
 		if (pcd != NULL)
 			return pcd;
 		l = l->next;
@@ -85,8 +87,10 @@ static struct pisa_conn *pisa_find_conn_by_spi2(SList *s, void *p)
 	uint32_t *spi = (uint32_t *) p;
 	struct pisa_conn *data;
 
+	HIP_DEBUG("s->data = %x\n", s->data);
 	if (s && s->data) {
 		data = (struct pisa_conn *) s->data;
+		HIP_DEBUG("data->spi[0] = 0x%x, data->spi[1] = 0x%x\n", data->spi[0], data->spi[1]);
 		if (data->spi[0] == *spi || data->spi[1] == *spi)
 			return data;
 	}
@@ -430,6 +434,7 @@ static void pisa_accept_connection(struct in6_addr *hits, uint32_t spi_s,
 	/* add a new connection or update an old one */
 	if ((pcd = pisa_find_conn_by_hits(hits, hitr)) == NULL) {
 		pcd = malloc(sizeof(struct pisa_conn));
+		HIP_DEBUG("Adding pcd = 0x%x\n", pcd);
 		append_to_slist(pisa_connections, pcd);
 	}
 
@@ -666,7 +671,9 @@ static int pisa_handler_esp(hip_fw_context_t *ctx)
 	esp = ctx->transport_hdr.esp;
 	HIP_IFEL(esp == NULL, NF_DROP, "No ESP Header found.\n");
 	
+	HIP_DEBUG("Before pisa_find_conn, spi=%d\n", esp->esp_spi);
 	pcd = pisa_find_conn_by_spi(esp->esp_spi);
+	HIP_DEBUG("After pisa_find_conn, pcd=%d\n", pcd);
 	HIP_IFEL(pcd == NULL, NF_DROP, "Connection not found.\n");
 
 	err = NF_ACCEPT;
