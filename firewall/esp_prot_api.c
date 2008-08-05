@@ -312,13 +312,19 @@ int esp_prot_verify(hip_sa_entry_t *entry, unsigned char *hash_value)
 	HIP_ASSERT(entry != NULL);
 	HIP_ASSERT(hash_value != NULL);
 
-	HIP_IFEL((err = esp_prot_verify_hash(entry->esp_prot_transform, entry->active_anchor,
-			entry->next_anchor, hash_value, entry->esp_prot_tolerance)) < 0, -1,
-			"failed to verify hash\n");
+	HIP_IFEL((err = esp_prot_verify_hash(entry->esp_prot_transform,
+			entry->active_anchor, entry->next_anchor, hash_value,
+			entry->esp_prot_tolerance)) < 0, -1, "failed to verify hash\n");
 
 	// anchors have changed, tell hipd about it
 	if (err > 0)
 	{
+		if (entry->next_anchor)
+		{
+			HIP_DEBUG("we have to set the next_anchor to NULL here\n");
+			entry->next_anchor = NULL;
+		}
+
 		/* notify hipd about the switch to the next hash-chain for
 		 * consistency reasons */
 		HIP_IFEL(send_anchor_change_to_hipd(entry), -1,
@@ -344,20 +350,17 @@ int esp_prot_verify_hash(uint8_t transform, unsigned char *active_anchor,
 	// esp_prot_transform >= 0 due to data-type
 	HIP_ASSERT(transform <= NUM_TRANSFORMS);
 	HIP_ASSERT(active_anchor != NULL);
-	HIP_ASSERT(next_anchor != NULL);
+	// next_anchor may be NULL
 	HIP_ASSERT(hash_value != NULL);
 	HIP_ASSERT(tolerance >= 0);
 
 	if (transform > ESP_PROT_TFM_UNUSED)
 	{
-		HIP_ASSERT(hash_value != NULL);
-		// esp_prot_transform >= 0 due to data-type
-		HIP_ASSERT(transform <= NUM_TRANSFORMS);
-
 		hash_function = esp_prot_get_hash_function(transform);
 		hash_length = esp_prot_get_hash_length(transform);
 		HIP_DEBUG("hash length is %i\n", hash_length);
 
+		HIP_HEXDUMP("active_anchor: ", active_anchor, hash_length);
 		HIP_DEBUG("hchain element of incoming packet to be verified:\n");
 		HIP_HEXDUMP("-> ", hash_value, hash_length);
 
@@ -372,18 +375,21 @@ int esp_prot_verify_hash(uint8_t transform, unsigned char *active_anchor,
 
 		} else
 		{
-			if (*next_anchor != 0)
+			if (next_anchor != NULL)
 			{
 				/* there might still be a chance that we have to switch to the
 				 * next hchain implicitly */
 				HIP_DEBUG("checking next_anchor...\n");
+				HIP_HEXDUMP("next_anchor: ", next_anchor, hash_length);
+
 				if (hchain_verify(hash_value, next_anchor, hash_function,
 						hash_length, tolerance))
 				{
 					HIP_DEBUG("hash matches element in next hash-chain\n");
 
 					memcpy(active_anchor, next_anchor, hash_length);
-					memset(next_anchor, 0, hash_length);
+					free(next_anchor);
+					next_anchor = NULL;
 
 					// we might need to tell hipd about the change
 					err = 1;

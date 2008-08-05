@@ -919,11 +919,17 @@ int filter_esp(const struct in6_addr * dst_addr, struct hip_esp * esp,
 
 	//the entire rule is passed as argument as hits can only be
 	//filtered with the state information
-	if (filter_esp_state(dst_addr, esp, rule, use_escrow))
+	if (filter_esp_state(dst_addr, esp, rule, use_escrow) > 0)
 	{
 		verdict = 1;
 
 		HIP_DEBUG("ESP packet successfully passed filtering\n");
+
+	} else
+	{
+		verdict = 0;
+
+		HIP_DEBUG("ESP packet NOT authed in ESP filtering\n");
 	}
 
   out_err:

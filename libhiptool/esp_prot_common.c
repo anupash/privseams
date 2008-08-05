@@ -17,7 +17,7 @@ int esp_prot_check_transform(int num_transforms, uint8_t *preferred_transforms,
 	{
 		if (preferred_transforms[i] == transform)
 		{
-			HIP_DEBUG("transform found in local preferred transforms\n");
+			HIP_DEBUG("transform found in preferred transforms\n");
 
 			err = i;
 			goto out_err;

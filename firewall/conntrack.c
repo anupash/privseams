@@ -51,7 +51,7 @@ void print_tuple(const struct hip_tuple * hiptuple)
 
 void print_esp_tuple(const struct esp_tuple * esp_tuple)
 {
-  HIP_DEBUG("esp_tuple: spi:%d new_spi:%d spi_update_id:%d tuple dir:%d\n",
+  HIP_DEBUG("esp_tuple: spi:%u new_spi:%u spi_update_id:%d tuple dir:%d\n",
 	    esp_tuple->spi, esp_tuple->new_spi, esp_tuple->spi_update_id,
 	    esp_tuple->tuple->direction);
   print_esp_addr_list(esp_tuple->dst_addr_list);
@@ -351,26 +351,32 @@ void free_hip_tuple(struct hip_tuple * hip_tuple)
  */
 void free_esp_tuple(struct esp_tuple * esp_tuple)
 {
-  HIP_DEBUG("free_esp_tuple:\n");
-  //print_esp_tuple(esp_tuple);
-  if(esp_tuple)
-    {
-      struct _SList * list = (struct _SList *) esp_tuple->dst_addr_list;
-      struct esp_address * addr = NULL;
-      while(list)
+	HIP_DEBUG("free_esp_tuple:\n");
+	//print_esp_tuple(esp_tuple);
+
+	if(esp_tuple)
 	{
-	  esp_tuple->dst_addr_list = (struct SList *) remove_link_slist((struct _SList *)esp_tuple->dst_addr_list,
-							 list);
-	  addr = (struct esp_address *) list->data;
-	  free(addr->update_id);
-	  free(addr);
-	  list = (struct _SList *) esp_tuple->dst_addr_list;
+		struct _SList * list = (struct _SList *) esp_tuple->dst_addr_list;
+		struct esp_address * addr = NULL;
+
+		while(list)
+		{
+			esp_tuple->dst_addr_list = (struct SList *) remove_link_slist((struct _SList *)esp_tuple->dst_addr_list,
+						 list);
+			addr = (struct esp_address *) list->data;
+
+			free(addr->update_id);
+			free(addr);
+			list = (struct _SList *) esp_tuple->dst_addr_list;
+		}
+
+		if (esp_tuple->dec_data)
+			free(esp_tuple->dec_data);
+
+		free(esp_tuple);
 	}
-	if (esp_tuple->dec_data)
-		free(esp_tuple->dec_data);
-      free(esp_tuple);
-    }
-  HIP_DEBUG("free_esp_tuple\n");
+
+	HIP_DEBUG("free_esp_tuple\n");
 }
 
 /**
@@ -756,7 +762,7 @@ int handle_i2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 	// TEST_END
 
 	/* check if the I2 contains ESP protection anchor and store state */
-	HIP_IFEL(esp_prot_conntrack_bex_anchor(common, esp_tuple), -1,
+	HIP_IFEL(esp_prot_conntrack_bex_anchor(common, tuple), -1,
 			"failed to track esp protection extension state\n");
 
 	// store in tuple of other direction that will be using
@@ -836,7 +842,7 @@ int handle_r2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 	// TEST_END
 
 	/* check if the R2 contains ESP protection anchor and store state */
-	HIP_IFEL(esp_prot_conntrack_bex_anchor(common, esp_tuple), -1,
+	HIP_IFEL(esp_prot_conntrack_bex_anchor(common, tuple), -1,
 			"failed to track esp protection extension state\n");
 
 	/*if(tuple->direction == ORIGINAL_DIR)
@@ -1492,13 +1498,25 @@ int filter_esp_state(const struct in6_addr *dst_addr,
 		err = 1;
 	}
 
-	/* check ESP protection anchor if extension is in use */
-	HIP_IFEL(!(esp_tuple = find_esp_tuple(tuple->esp_tuples, spi)), -1,
-			"could NOT find corresponding esp_tuple\n");
 
-	HIP_IFEL(esp_prot_verify_hash(esp_tuple->esp_prot_tfm, esp_tuple->active_anchor,
-		esp_tuple->next_anchor, ((unsigned char *) esp) + sizeof(struct hip_esp),
-		DEFAULT_VERIFY_WINDOW) < 0, -1, "failed to verify ESP protection hash\n");
+	/* check ESP protection anchor if extension is in use */
+	HIP_IFEL((err = esp_prot_verify_hash(tuple->esp_prot_tfm, tuple->active_anchor,
+		tuple->next_anchor, ((unsigned char *) esp) + sizeof(struct hip_esp),
+		DEFAULT_VERIFY_WINDOW)) < 0, -1, "failed to verify ESP protection hash\n");
+
+	// this means there was a change in the anchors
+	if (err > 0)
+	{
+		if (tuple->next_anchor)
+		{
+			HIP_DEBUG("we have to set the next_anchor to NULL here\n");
+			tuple->next_anchor = NULL;
+		}
+
+		// no error case
+		err = 0;
+	}
+
 
 	// do some extra work for key escrow
 	if (use_escrow)
@@ -1541,6 +1559,9 @@ int filter_esp_state(const struct in6_addr *dst_addr,
 				goto out_err;
 			}
 		}
+
+		HIP_IFEL(!(esp_tuple = find_esp_tuple(tuple->esp_tuples, spi)), -1,
+				"could NOT find corresponding esp_tuple\n");
 
 		/* Decrypt contents */
 		if (esp_tuple && esp_tuple->dec_data) {

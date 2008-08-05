@@ -401,6 +401,11 @@ int esp_prot_conntrack_bex_tfms(struct hip_common * common, const struct tuple *
 	struct esp_prot_preferred_tfms *prot_transforms = NULL;
 	int err = 0, i;
 
+	// initialize the ESP protection params in the connection
+	tuple->connection->num_esp_prot_tfms = 0;
+	memset(tuple->connection->esp_prot_tfms, 0, NUM_TRANSFORMS + 1);
+
+	// check if message contains optional ESP protection transforms
 	if (param = hip_get_param(common, HIP_PARAM_ESP_PROT_TRANSFORMS))
 	{
 		HIP_DEBUG("ESP protection extension transforms found\n");
@@ -424,11 +429,10 @@ int esp_prot_conntrack_bex_tfms(struct hip_common * common, const struct tuple *
 		HIP_DEBUG("adding %i transforms...\n", tuple->connection->num_esp_prot_tfms);
 
 		// store the transforms
-		for (i = 0; i <= tuple->connection->num_esp_prot_tfms; i++)
+		for (i = 0; i < tuple->connection->num_esp_prot_tfms; i++)
 		{
-			// only store transforms we support
-			if (prot_transforms->transforms[i] > ESP_PROT_TFM_UNUSED &&
-					prot_transforms->transforms[i] <= NUM_TRANSFORMS)
+			// only store transforms we support, >= UNUSED true to data-type
+			if (prot_transforms->transforms[i] <= NUM_TRANSFORMS)
 			{
 				tuple->connection->esp_prot_tfms[i] = prot_transforms->transforms[i];
 
@@ -449,36 +453,53 @@ int esp_prot_conntrack_bex_tfms(struct hip_common * common, const struct tuple *
 }
 
 int esp_prot_conntrack_bex_anchor(const struct hip_common * common,
-		struct esp_tuple * esp_tuple)
+		struct tuple * tuple)
 {
 	struct hip_param *param = NULL;
 	struct esp_prot_anchor *prot_anchor = NULL;
 	int hash_length = 0;
 	int err = 0;
 
+	HIP_ASSERT(common != NULL);
+	HIP_ASSERT(tuple != NULL);
+
+	// initialize ESP protection parameters for this esp_tuple
+	tuple->esp_prot_tfm = 0;
+	tuple->active_anchor = NULL;
+	tuple->next_anchor = NULL;
+
+	// check if message contains optional ESP protection anchor
 	if (param = hip_get_param(common, HIP_PARAM_ESP_PROT_ANCHOR))
 	{
 		prot_anchor = (struct esp_prot_anchor *) param;
 
 		// check if the anchor has a supported transform
-		if (esp_prot_check_transform(esp_tuple->tuple->connection->num_esp_prot_tfms,
-				esp_tuple->tuple->connection->esp_prot_tfms, prot_anchor->transform) >= 0)
+		if (esp_prot_check_transform(tuple->connection->num_esp_prot_tfms,
+				tuple->connection->esp_prot_tfms,
+				prot_anchor->transform) >= 0)
 		{
 			// it's one of the supported and advertised transforms
-			esp_tuple->esp_prot_tfm = prot_anchor->transform;
-			HIP_DEBUG("using esp prot transform: %u\n", esp_tuple->esp_prot_tfm);
+			tuple->esp_prot_tfm = prot_anchor->transform;
+			HIP_DEBUG("using esp prot transform: %u\n", tuple->esp_prot_tfm);
 
-			// clear anchor
-			memset(esp_tuple->active_anchor, 0, MAX_HASH_LENGTH);
-
-			if (esp_tuple->esp_prot_tfm > ESP_PROT_TFM_UNUSED)
+			if (tuple->esp_prot_tfm > ESP_PROT_TFM_UNUSED)
 			{
-				hash_length = esp_prot_get_hash_length(esp_tuple->esp_prot_tfm);
+				hash_length = esp_prot_get_hash_length(tuple->esp_prot_tfm);
 
 				// store the anchor
-				memcpy(esp_tuple->active_anchor, prot_anchor->anchor, hash_length);
+				HIP_IFEL(!(tuple->active_anchor = (unsigned char *)
+						malloc(hash_length)), -1, "failed to allocate memory\n");
+				memcpy(tuple->active_anchor, prot_anchor->anchor, hash_length);
 
-				HIP_HEXDUMP("received anchor: ", esp_tuple->active_anchor, hash_length);
+				HIP_HEXDUMP("received anchor: ", tuple->active_anchor,
+						hash_length);
+
+			} else
+			{
+				HIP_DEBUG("setting anchor to NULL\n");
+				tuple->active_anchor = NULL;
+
+				goto out_err;
 			}
 		} else
 		{

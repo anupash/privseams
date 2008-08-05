@@ -23,6 +23,6 @@ unsigned char * esp_prot_handle_sa_add_request(struct hip_common *msg,
 		uint8_t *esp_prot_transform);
 int esp_prot_conntrack_bex_tfms(struct hip_common * common, const struct tuple * tuple);
 int esp_prot_conntrack_bex_anchor(const struct hip_common * common,
-		struct esp_tuple * esp_tuple);
+		struct tuple * tuple);
 
 #endif /* ESP_PROT_FW_MSG_H_ */
