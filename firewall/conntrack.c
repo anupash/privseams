@@ -1500,6 +1500,7 @@ int filter_esp_state(const struct in6_addr *dst_addr,
 
 
 	/* check ESP protection anchor if extension is in use */
+#if 0
 	HIP_IFEL((err = esp_prot_verify_hash(tuple->esp_prot_tfm, tuple->active_anchor,
 		tuple->next_anchor, ((unsigned char *) esp) + sizeof(struct hip_esp),
 		DEFAULT_VERIFY_WINDOW)) < 0, -1, "failed to verify ESP protection hash\n");
@@ -1514,8 +1515,9 @@ int filter_esp_state(const struct in6_addr *dst_addr,
 		}
 
 		// no error case
-		err = 0;
+		err = 1;
 	}
+#endif
 
 
 	// do some extra work for key escrow
