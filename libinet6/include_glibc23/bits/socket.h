@@ -40,14 +40,14 @@ typedef __socklen_t socklen_t;
 /* Types of sockets.  */
 enum __socket_type
 {
-#ifdef CONFIG_HIP_OPENWRT
+#if defined(CONFIG_HIP_OPENWRT) && defined(CONFIG_HIP_OPENWRT_MIPSLINUX)
   SOCK_STREAM = 2,		/* Sequenced, reliable, connection-based
 				   byte streams.  */
 #else
   SOCK_STREAM = 1,
 #endif
 #define SOCK_STREAM SOCK_STREAM
-#ifdef CONFIG_HIP_OPENWRT
+#if defined(CONFIG_HIP_OPENWRT) && defined(CONFIG_HIP_OPENWRT_MIPSLINUX)
   SOCK_DGRAM = 1,		/* Connectionless, unreliable datagrams
 				   of fixed maximum length.  */
 #else

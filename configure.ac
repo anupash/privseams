@@ -32,6 +32,35 @@ AC_HEADER_STDC
 AC_HEADER_STDBOOL
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h inttypes.h libintl.h limits.h locale.h malloc.h netdb.h netinet/in.h paths.h stddef.h stdint.h stdlib.h string.h strings.h sys/file.h sys/ioctl.h sys/param.h sys/socket.h sys/time.h sys/vfs.h syslog.h termios.h unistd.h utime.h utmp.h openssl/dsa.h])
 
+case "$host" in
+  alpha*)
+    TARGET=ALPHA;
+    ;;
+  arm*)
+    TARGET=ARM;
+    ;;
+  hppa*linux* | parisc*linux*)
+    TARGET=PA_LINUX;
+    ;;
+  i?86*)
+    TARGET=X86;
+    ;;
+  ia64*)
+    TARGET=IA64;
+    ;;
+  mips*linux*)
+    TARGET=MIPS_LINUX;
+    ;;
+  powerpc*linux*)
+    TARGET=POWERPC;
+    ;;
+  x86_64*)
+    TARGET=X86_64;
+    ;;
+esac
+
+AC_SUBST(TARGET)
+
 # Checks for typedefs, structures, and compiler characteristics.
 #AC_C_CONST
 #AC_TYPE_UID_T
@@ -190,7 +219,10 @@ AC_CACHE_CHECK([whether to use OpenWRT],
                [ac_cv_use_openwrt], [ac_cv_use_openwrt=no])
 if test x"$ac_cv_use_openwrt" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_OPENWRT, AC_PREREQ(2.53))
-	AC_SUBST(OPENWRT_CFLAGS, "-lc")
+        AC_SUBST(OPENWRT_CFLAGS, "-lc")
+        if test x"$TARGET" = x"MIPS_LINUX"; then
+                AC_DEFINE(CONFIG_HIP_OPENWRT_MIPSLINUX, AC_PREREQ(2.53))
+        fi
 fi
 AM_CONDITIONAL(HIP_OPENWRT, test x"$ac_cv_use_openwrt" = x"yes")
 
