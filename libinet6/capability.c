@@ -94,13 +94,14 @@ int hip_set_lowcapability(int run_as_nobody) {
 	uid_t ruid,euid;
 	cap_t cap_p;
 	char *cap_s;
+	char *nobody = USER_NOBODY;
 	struct passwd *pswd;
-	char *name;
+	char name[L_cuserid];
 
 	if (run_as_nobody)
-	    name = USER_NOBODY;
+		memcpy(name, nobody, strlen(nobody));
 	else
-	    HIP_IFEL(!(name = getlogin()), -1,
+	    HIP_IFEL(!(cuserid(name)), -1,
 			"Failed to determine current username\n");
 
 	HIP_IFEL(prctl(PR_SET_KEEPCAPS, 1), -1, "prctl err\n");
