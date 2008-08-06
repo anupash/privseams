@@ -677,8 +677,9 @@ struct hip_host_id *hip_get_any_localhost_rsa_public_key(void)
 /** 
  * Transforms a private public key pair to a public key, private key is deleted.
  *
- * @param hid ...
- * @return    ...
+ * @param hid a pointer to a host identity.
+ * @return    a pointer to a host identity if the transformation was
+ *            successful, NULL otherwise.
  */
 struct hip_host_id *hip_get_public_key(struct hip_host_id *hid) 
 {

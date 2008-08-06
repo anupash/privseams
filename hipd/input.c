@@ -1825,12 +1825,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 			  "Dropping the I2 packet.\n");
 		goto out_err;
 	}
-	/*
-	if (!hip_hidb_hit_is_our(&i2->hits))  {
-		HIP_IFEL(hip_get_param_type(host_id_in_enc) != HIP_PARAM_HOST_ID, -EINVAL,
-			 "The decrypted parameter is not a host id\n");
-	}
-	*/
+
 #ifdef CONFIG_HIP_BLIND
 	if (use_blind) {
 		HIP_IFEL(hip_host_id_to_hit(host_id_in_enc, &plain_peer_hit,
@@ -1860,15 +1855,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 				  "HIP association. Dropping the I2 packet.\n");
 			goto out_err;
 		}
-				
-		/*HIP_IFEL(!(entry = hip_hadb_create_state(GFP_KERNEL)), -ENOMSG,
-		  "Failed to create or find entry\n");*/
-
-		//HIP_DEBUG("After creating a new state, entry: %p\n", entry);
-		/* The rest of the code assume already locked entry, so lock the
-		   newly created entry as well. */
-		//HIP_LOCK_HA(entry);
-
+		
 #ifdef CONFIG_HIP_BLIND
 		if (use_blind) {
 			ipv6_addr_copy(&entry->hit_peer, &plain_peer_hit);
@@ -1881,9 +1868,21 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		}
 #else
 		HIP_DEBUG("PING.\n");
+		
+		/* Next, we initialize the new HIP association. Peer HIT is the
+		   source HIT of the received I2 packet. We can have many Host
+		   Identities and using any of those Host Identities we can
+		   calculate diverse HITs depending on the used algorithm. When
+		   we sent one of our pre-created R1 packets, we have used one
+		   of our Host Identities and thus of our HITs as source. We
+		   must dig out the original Host Identity using the destination
+		   HIT of the I2 packet as a key. The initialized HIP
+		   association will not, however, have the I2 destination HIT as
+		   source, but one that is calculated using the Host Identity
+		   that we have dug out. */
 		ipv6_addr_copy(&entry->hit_peer, &i2->hits);
 		hip_init_us(entry, &i2->hitr);
-		HIP_DEBUG("POGN.\n");
+		HIP_DEBUG("PONG.\n");
 #endif
 		HIP_DEBUG("Before inserting state entry in hadb\n");
 		hip_hadb_insert_state(entry);

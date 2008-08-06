@@ -2034,7 +2034,18 @@ int hip_init_peer(hip_ha_t *entry, struct hip_common *msg,
 	return err;
 }
 
-int hip_init_us(hip_ha_t *entry, struct in6_addr *hit_our)
+
+/**
+ * Initializes a HIP association.
+ *
+ * Initializes a new allocated HIP association @c entry. 
+ * 
+ * @param  a pointer to a HIP association to be initialized.
+ * @param  a pointer to a HIT value that is to be bound with the HIP association
+ *         @c entry
+ * @return zero if success, negative otherwise.
+ */ 
+int hip_init_us(hip_ha_t *entry, hip_hit_t *hit_our)
 {
         int err = 0, len = 0, alg = 0;
 
@@ -2043,7 +2054,9 @@ int hip_init_us(hip_ha_t *entry, struct in6_addr *hit_our)
 		entry->our_priv = NULL;
 	}
 	
-	/* Try to fetch our private host identity first using RSA then using DSA. */
+	/* Try to fetch our private host identity first using RSA then using DSA.
+	   Note, that hip_get_host_id() allocates a new buffer and this buffer
+	   must be freed in out_err if an error occurs. */
 	entry->our_priv =
 		hip_get_host_id(HIP_DB_LOCAL_HID, hit_our, HIP_HI_RSA);
 	    
@@ -2060,7 +2073,7 @@ int hip_init_us(hip_ha_t *entry, struct in6_addr *hit_our)
 	}
 	/* Get RFC2535 3.1 KEY RDATA format algorithm (Integer value). */
 	alg = hip_get_host_id_algo(entry->our_priv);
-	/* Using this intger we get a function pointer to a a function that
+	/* Using this integer we get a function pointer to a function that
 	   signs our host identity. */
 	entry->sign = (alg == HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign);
 
@@ -2070,23 +2083,40 @@ int hip_init_us(hip_ha_t *entry, struct in6_addr *hit_our)
 	}
 	
 	len = hip_get_param_total_len(entry->our_priv);
-	HIP_IFEL(!(entry->our_pub = HIP_MALLOC(len, GFP_KERNEL)), -1, "Could not allocate a public key\n");
+	
+	if((entry->our_pub = (struct hip_host_id *)malloc(len)) == NULL) {
+		err = -ENOMEM;
+		HIP_ERROR("Out of memory when allocating memory for a public "\
+			  "key.\n");
+		goto out_err;
+	}
+	
+	/* Transform the private/public key pair to a public key. */
 	memcpy(entry->our_pub, entry->our_priv, len);
 	entry->our_pub = hip_get_public_key(entry->our_pub);
-
-	//hip_hidb_get_lsi_by_hit(hit_our, &entry->lsi_our);
-
+	
+	/* Calculate our HIT from our public Host Identifier (HI).
+	   Note, that currently (06.08.2008) both of these functions use DSA. */
 	err = alg == HIP_HI_DSA ? 
-		hip_dsa_host_id_to_hit(entry->our_pub, &entry->hit_our, HIP_HIT_TYPE_HASH100) :
-		hip_rsa_host_id_to_hit(entry->our_pub, &entry->hit_our, HIP_HIT_TYPE_HASH100);
-	HIP_IFEL(err, err, "Unable to digest the HIT out of public key.");
+		hip_dsa_host_id_to_hit(entry->our_pub, &entry->hit_our,
+				       HIP_HIT_TYPE_HASH100) :
+		hip_rsa_host_id_to_hit(entry->our_pub, &entry->hit_our,
+				       HIP_HIT_TYPE_HASH100);
+	if(err != 0) {
+		HIP_ERROR("Unable to digest the HIT out of public key.");
+		goto out_err;
+	}
 	
  out_err:
-	if (err && entry->our_priv) 
-		HIP_FREE(entry->our_priv);
-	if (err && entry->our_pub) 
-		HIP_FREE(entry->our_pub);
-
+	if(err) {
+		if(entry->our_priv != NULL) {
+			free(entry->our_priv);
+		}
+		if(entry->our_pub != NULL) {
+			free(entry->our_pub);
+		}
+	}
+	
 	return err;
 }
 
