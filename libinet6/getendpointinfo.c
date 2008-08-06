@@ -2251,6 +2251,12 @@ int hip_conf_handle_load(struct hip_common *msg, int action,
 			args[len - i - 1] = getitem(&list, i);
 		}
 		err = hip_do_hipconf(len, args, 1);
+		if (err) {
+			HIP_ERROR("Error on the following line: %s\n", line);
+			HIP_ERROR("Ignoring error on hipd configuration\n");
+			err = 0;
+		}
+
 		destroy(&list);
 	}
 
