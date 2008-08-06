@@ -94,15 +94,16 @@ int hip_set_lowcapability(int run_as_nobody) {
 	uid_t ruid,euid;
 	cap_t cap_p;
 	char *cap_s;
-	char *nobody = USER_NOBODY;
+	char *user = USER_NOBODY;
 	struct passwd *pswd;
 	char name[L_cuserid];
 
-	if (run_as_nobody)
-		memcpy(name, nobody, strlen(nobody));
-	else
-	    HIP_IFEL(!(cuserid(name)), -1,
+	/* @todo: does this work when you start hipd as root (without sudo) */
+	if (!run_as_nobody)
+	    HIP_IFEL(!(user = getenv("SUDO_USER")), -1,
 			"Failed to determine current username\n");
+
+	memcpy(name, user, strlen(user));
 
 	HIP_IFEL(prctl(PR_SET_KEEPCAPS, 1), -1, "prctl err\n");
 
