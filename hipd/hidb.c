@@ -96,7 +96,7 @@ struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(
 		id_entry = list_entry(item);
                 
 		_HIP_DEBUG("ALGO VALUE :%d, algo value of id entry :%d\n",
-			  algo, hip_get_host_id_algo(id_entry->host_id));
+			   algo, hip_get_host_id_algo(id_entry->host_id));
                 _HIP_DEBUG_HIT("Comparing HIT", &id_entry->lhi.hit);
                 
 		if ((hit == NULL || !ipv6_addr_cmp(&id_entry->lhi.hit, hit)) &&
@@ -105,7 +105,7 @@ struct hip_host_id_entry *hip_get_hostid_entry_by_lhi_and_algo(
 		    (anon == -1 || id_entry->lhi.anonymous == anon))
 			return id_entry;
 	}
-	HIP_DEBUG("Failed to find host id entry, RETURNING NULL\n");
+	HIP_DEBUG("Failed to find a host ID entry, Returning NULL.\n");
 	return NULL;
 
 }
@@ -465,7 +465,7 @@ int hip_get_any_localhost_hit(struct in6_addr *target, int algo, int anon)
  * Returns pointer to newly allocated area that contains a localhost HI. NULL
  * is returned if problems are encountered. 
  *
- * @param db   ...
+ * @param db   a pointer to a database.
  * @param lhi  HIT to match, if null, any.
  * @param algo algorithm to match, if HIP_ANY_ALGO, any.
  * @note       Remember to free the host id structure after use.
@@ -473,13 +473,13 @@ int hip_get_any_localhost_hit(struct in6_addr *target, int algo, int anon)
 struct hip_host_id *hip_get_host_id(hip_db_struct_t *db, 
 				    struct in6_addr *hit, int algo)
 {
-	struct hip_host_id_entry *tmp;
-	struct hip_host_id *result;
-	unsigned long lf;
-	int t;
+	struct hip_host_id_entry *tmp = NULL;
+	struct hip_host_id *result = NULL;
+	unsigned long lf = 0;
+	int t = 0;
 
 	result = (struct hip_host_id *)HIP_MALLOC(HIP_MAX_HOST_ID_LEN, GFP_ATOMIC);
-	if (!result) {
+	if (result == NULL) {
 		HIP_ERROR("Out of memory.\n");
 		return NULL;
 	}
@@ -491,13 +491,13 @@ struct hip_host_id *hip_get_host_id(hip_db_struct_t *db,
 	tmp = hip_get_hostid_entry_by_lhi_and_algo(db, hit, algo, -1);
 	if (!tmp) {
 		HIP_READ_UNLOCK_DB(db);
-		HIP_ERROR("No host id found\n");
+		HIP_ERROR("No host ID found.\n");
 		HIP_FREE(result);
 		return NULL;
 	}
 
 	t = hip_get_param_total_len(tmp->host_id);
-	HIP_DEBUG("Host ID length is %d bytes", t);
+	_HIP_DEBUG("Host ID length is %d bytes.\n", t);
 	if (t > HIP_MAX_HOST_ID_LEN) {
 		HIP_READ_UNLOCK_DB(db);
 		HIP_FREE(result);
@@ -608,9 +608,9 @@ static struct hip_host_id *hip_get_rsa_public_key(struct hip_host_id *tmp)
 	_HIP_HEXDUMP("HOSTID...",tmp, hip_get_param_total_len(tmp));
 	
 	len = hip_get_param_contents_len(tmp);
-
+	
 	HIP_DEBUG("Host ID len before cut-off: %d\n",
-		  			hip_get_param_total_len(tmp));
+		  hip_get_param_total_len(tmp));
 
 	/* the secret component of the RSA key is d+p+q == 2*n bytes */
 

@@ -1880,8 +1880,10 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 			HIP_DEBUG("BLIND is not in use.\n");
 		}
 #else
+		HIP_DEBUG("PING.\n");
 		ipv6_addr_copy(&entry->hit_peer, &i2->hits);
 		hip_init_us(entry, &i2->hitr);
+		HIP_DEBUG("POGN.\n");
 #endif
 		HIP_DEBUG("Before inserting state entry in hadb\n");
 		hip_hadb_insert_state(entry);

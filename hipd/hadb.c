@@ -562,28 +562,27 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
 	
         /* Function pointer sets which define HIP behavior in respect to the
 	   hadb_entry. */
-	HIP_IFEL(hip_hadb_set_rcv_function_set(entry, &default_rcv_func_set),
-		 -1, "Can't set new function pointer set.\n");
-	HIP_IFEL(hip_hadb_set_handle_function_set(entry,
-						  &default_handle_func_set),
-		 -1, "Can't set new function pointer set.\n");
-	HIP_IFEL(hip_hadb_set_update_function_set(entry,
-						  &default_update_func_set),
-		 -1, "Can't set new function pointer set.\n");
-		    
-	HIP_IFEL(hip_hadb_set_misc_function_set(entry, &default_misc_func_set),
-		 -1, "Can't set new function pointer set.\n");
-	/* Set the xmit function set as function set for sending raw HIP. */
-	HIP_IFEL(hip_hadb_set_xmit_function_set(entry, &default_xmit_func_set),
-		 -1, "Can't set new function pointer set.\n");
-
+	HIP_IFEL(hip_hadb_set_rcv_function_set(
+			 entry, &default_rcv_func_set), -1,
+		 "Can't set new function receive pointer set.\n");
+	HIP_IFEL(hip_hadb_set_handle_function_set(
+			 entry, &default_handle_func_set), -1,
+		 "Can't set new handle function pointer set.\n");
+	HIP_IFEL(hip_hadb_set_update_function_set(
+			 entry, &default_update_func_set), -1,
+		 "Can't set new update function pointer set.\n");
+	HIP_IFEL(hip_hadb_set_misc_function_set(
+			 entry, &default_misc_func_set), -1,
+		 "Can't set new misc function pointer set.\n");
+	HIP_IFEL(hip_hadb_set_xmit_function_set(
+			 entry, &default_xmit_func_set), -1,
+		 "Can't set new xmit function pointer set.\n");
 	HIP_IFEL(hip_hadb_set_input_filter_function_set(
-			 entry, &default_input_filter_func_set),
-		 -1, "Can't set new function pointer set.\n");
-
+			 entry, &default_input_filter_func_set), -1,
+		 "Can't set new input filter function pointer set.\n");
 	HIP_IFEL(hip_hadb_set_output_filter_function_set(
-			 entry,& default_output_filter_func_set),
-		 -1, "Can't set new function pointer set.\n");
+			 entry, &default_output_filter_func_set), -1,
+		 "Can't set new output filter function pointer set.\n");
 
 	/* added by Tao Wan, on 24, Jan, 2008 */ 
 	entry->hadb_ipsec_func = &default_ipsec_func_set;
@@ -2037,28 +2036,40 @@ int hip_init_peer(hip_ha_t *entry, struct hip_common *msg,
 
 int hip_init_us(hip_ha_t *entry, struct in6_addr *hit_our)
 {
-        int err = 0, len, alg;
+        int err = 0, len = 0, alg = 0;
 
 	if (entry->our_priv) {
-		HIP_FREE(entry->our_priv);
+		free(entry->our_priv);
 		entry->our_priv = NULL;
 	}
-	if (!(entry->our_priv = hip_get_host_id(HIP_DB_LOCAL_HID, hit_our,
-						HIP_HI_RSA))) {
-		HIP_DEBUG("Could not acquire a local host id with RSA, trying with DSA\n");
-		HIP_IFEL(!(entry->our_priv = hip_get_host_id(HIP_DB_LOCAL_HID,
-							     hit_our,
-						     HIP_HI_DSA)),
-		 -1, "Could not acquire a local host id with DSA\n");
+	
+	/* Try to fetch our private host identity first using RSA then using DSA. */
+	entry->our_priv =
+		hip_get_host_id(HIP_DB_LOCAL_HID, hit_our, HIP_HI_RSA);
+	    
+	if (entry->our_priv == NULL) {
+		entry->our_priv =
+			hip_get_host_id(HIP_DB_LOCAL_HID, hit_our, HIP_HI_DSA);
+		
+		if (entry->our_priv == NULL) {
+			err = -ENOMEDIUM;
+			HIP_ERROR("Could not acquire a local host identity. "\
+				  "Tried with RSA and DSA.\n");
+			goto out_err;
+		}
 	}
+	/* Get RFC2535 3.1 KEY RDATA format algorithm (Integer value). */
 	alg = hip_get_host_id_algo(entry->our_priv);
-	entry->sign = alg == HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign;
+	/* Using this intger we get a function pointer to a a function that
+	   signs our host identity. */
+	entry->sign = (alg == HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign);
 
-	len = hip_get_param_total_len(entry->our_priv);
-	if (entry->our_pub) {
-		HIP_FREE(entry->our_pub);
+	if (entry->our_pub != NULL) {
+		free(entry->our_pub);
 		entry->our_pub = NULL;
 	}
+	
+	len = hip_get_param_total_len(entry->our_priv);
 	HIP_IFEL(!(entry->our_pub = HIP_MALLOC(len, GFP_KERNEL)), -1, "Could not allocate a public key\n");
 	memcpy(entry->our_pub, entry->our_priv, len);
 	entry->our_pub = hip_get_public_key(entry->our_pub);
@@ -2083,22 +2094,21 @@ int hip_init_us(hip_ha_t *entry, struct in6_addr *hit_our)
 
 unsigned long hip_hash_ha(const hip_ha_t *ha)
 {
-     if(ha == NULL || &(ha->hit_our) == NULL || &(ha->hit_peer) == NULL)
-     {
-	  return 0;
-     }
+	if(ha == NULL || &(ha->hit_our) == NULL || &(ha->hit_peer) == NULL) {
+		return 0;
+	}
      
-     /* The HIT fields of an host association struct cannot be assumed to be
-	alligned consecutively. Therefore, we must copy them to a temporary
-	array. */
-     hip_hit_t hitpair[2];
-     memcpy(&hitpair[0], &(ha->hit_our), sizeof(ha->hit_our));
-     memcpy(&hitpair[1], &(ha->hit_peer), sizeof(ha->hit_peer));
+	/* The HIT fields of an host association struct cannot be assumed to be
+	   alligned consecutively. Therefore, we must copy them to a temporary
+	   array. */
+	hip_hit_t hitpair[2];
+	memcpy(&hitpair[0], &(ha->hit_our), sizeof(ha->hit_our));
+	memcpy(&hitpair[1], &(ha->hit_peer), sizeof(ha->hit_peer));
      
-     uint8_t hash[HIP_AH_SHA_LEN];
-     hip_build_digest(HIP_DIGEST_SHA1, (void *)hitpair, sizeof(hitpair), hash);
+	uint8_t hash[HIP_AH_SHA_LEN];
+	hip_build_digest(HIP_DIGEST_SHA1, (void *)hitpair, sizeof(hitpair), hash);
      
-     return *((unsigned long *)hash);
+	return *((unsigned long *)hash);
 }
 
 int hip_compare_ha(const hip_ha_t *ha1, const hip_ha_t *ha2)

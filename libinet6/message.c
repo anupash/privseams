@@ -28,17 +28,22 @@ int hip_peek_recv_total_len(int socket, int encap_hdr_size)
 	char *msg = NULL;
 	hip_common_t *hip_hdr = NULL;
 	
-        /* We're using system call here add thus reseting errno. */
+        /* We're using system call here, thus reseting errno. */
 	errno = 0;
 	
-	msg = (char *)malloc(hdr_size);
-	HIP_IFEL(!msg, -ENOMEM, "Error allocating memory.\n");
-
+	if((msg = (char *)malloc(hdr_size)) == NULL) {
+		err = -ENOMEM;
+		HIP_ERROR("Error allocating memory.\n");
+		goto out_err;
+	}
+	
 	bytes = recv(socket, msg, hdr_size, MSG_PEEK);
 
-	HIP_IFEL(bytes < 0, -1, "recv() peek error\n");
-
-	if (bytes < hdr_size) {
+	if(bytes < 0) {
+		HIP_ERROR("recv() peek error.\n");
+		err = -EAGAIN;
+		goto out_err;
+	} else if (bytes < hdr_size) {
 		HIP_ERROR("Packet payload is smaller than HIP header. Dropping.\n");
 		/* Read and discard the datagram */
 		recv(socket, msg, 0, 0);
@@ -69,7 +74,7 @@ int hip_peek_recv_total_len(int socket, int encap_hdr_size)
 	bytes += encap_hdr_size;
 
  out_err:
-	if (msg)
+	if (msg != NULL)
 		free(msg);
 
 	if (err)
