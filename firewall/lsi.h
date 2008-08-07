@@ -4,17 +4,6 @@
 #include <libipq.h>
 #include "firewalldb.h"
 
-
-/*
- * 
- * 
- */
-#define FIREWALL_STATE_BEX_UNDEFINED 		-1
-#define FIREWALL_STATE_BEX_NOT_ESTABLISHED	0
-#define FIREWALL_STATE_BEX_ESTABLISHED		1
-#define FIREWALL_STATE_BEX_NOT_SUPPORTED	2
-
-
 int is_packet_reinjection(struct in_addr *ip_src);
 
 int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m, struct in6_addr *ip_src, struct in6_addr *ip_dst);

@@ -38,8 +38,8 @@ struct in6_addr default_hit;
  */
 hip_fw_handler_t hip_fw_handler[NF_IP_NUMHOOKS][FW_PROTO_NUM];
 
-void print_usage()
-{
+
+void print_usage(){
 	printf("HIP Firewall\n");
 	printf("Usage: hipfw [-f file_name] [-t timeout] [-d|-v] [-F] [-H] [-A] [-b] [-k] [-h]\n");
 	printf("      -H drop non-HIP traffic by default (default: accept non-hip traffic)\n");
@@ -59,31 +59,31 @@ void print_usage()
 	printf("      -h = print this help\n\n");
 }
 
+
 //currently done at all times, rule_management 
 //delete rule needs checking for state options in 
 //all chains
-void set_stateful_filtering(int v)
-{
+void set_stateful_filtering(int v){
 	statefulFiltering = 1;
 }
 
-int get_stateful_filtering()
-{
+
+int get_stateful_filtering(){
 	return statefulFiltering;
 }
 
-void set_escrow_active(int active)
-{
+
+void set_escrow_active(int active){
 	escrow_active = active;
 }
 
-int is_escrow_active()
-{
+
+int is_escrow_active(){
 	return escrow_active;
 }
 
-void hip_fw_init_opptcp()
-{
+
+void hip_fw_init_opptcp(){
 	HIP_DEBUG("\n");
 
 	system("iptables -I INPUT -p 6 ! -d 127.0.0.1 -j QUEUE"); /* @todo: ! LSI PREFIX */
@@ -92,8 +92,8 @@ void hip_fw_init_opptcp()
 	system("ip6tables -I OUTPUT -p 6 ! -d 2001:0010::/28 -j QUEUE");
 }
 
-void hip_fw_uninit_opptcp()
-{
+
+void hip_fw_uninit_opptcp(){
 	HIP_DEBUG("\n");
 
 	system("iptables -D INPUT -p 6 ! -d 127.0.0.1 -j QUEUE");  /* @todo: ! LSI PREFIX */
@@ -102,8 +102,8 @@ void hip_fw_uninit_opptcp()
 	system("ip6tables -D OUTPUT -p 6 ! -d 2001:0010::/28 -j QUEUE");
 }
 
-void hip_fw_init_proxy()
-{
+
+void hip_fw_init_proxy(){
 	//allow forward hip packets
 	system("iptables -I FORWARD -p 139 -j ACCEPT");
 	system("iptables -I FORWARD -p 139 -j ACCEPT");
@@ -135,8 +135,8 @@ void hip_fw_init_proxy()
 	hip_init_conn_db();
 }
 
-void hip_fw_uninit_proxy()
-{
+
+void hip_fw_uninit_proxy(){
 	//delete forward hip packets
 	system("iptables -D FORWARD -p 139 -j ACCEPT");
 	system("iptables -D FORWARD -p 139 -j ACCEPT");
@@ -163,8 +163,8 @@ void hip_fw_uninit_proxy()
 	//system("ip6tables -D INPUT -p icmpv6 -j QUEUE");
 }
 
-int hip_fw_init_userspace_ipsec()
-{
+
+int hip_fw_init_userspace_ipsec(){
 	int err = 0;
 	
 	if (hip_userspace_ipsec)
@@ -196,8 +196,8 @@ int hip_fw_init_userspace_ipsec()
   	return err;
 }
 
-int hip_fw_uninit_userspace_ipsec()
-{
+
+int hip_fw_uninit_userspace_ipsec(){
 	int err = 0;
 	
 	if (hip_userspace_ipsec)
@@ -228,8 +228,8 @@ int hip_fw_uninit_userspace_ipsec()
   	return err;
 }
 
-int hip_fw_init_esp_prot()
-{
+
+int hip_fw_init_esp_prot(){
 	int err = 0;
 	
 	if (hip_esp_protection)
@@ -257,8 +257,8 @@ int hip_fw_init_esp_prot()
     return err;
 }
 
-int hip_fw_uninit_esp_prot()
-{
+
+int hip_fw_uninit_esp_prot(){
 	int err = 0;
 	
 	if (hip_esp_protection)
@@ -279,13 +279,13 @@ int hip_fw_uninit_esp_prot()
     return err;
 }
 
+
 /*
  * Adds an LSI rule
  * @ip is a pointer to the first part of the rule, before specifying the LSI
  * @opt is a pointer to the options that can be present after the LSI
 */
-void firewall_add_lsi_rule(char *ip, char *opt)
-{
+void firewall_add_lsi_rule(char *ip, char *opt){
         char *result = (char *)calloc(strlen(ip) + strlen(HIP_FULL_LSI_STR) + strlen(opt) + 1, 
                         sizeof(char));
 
@@ -356,8 +356,7 @@ void firewall_add_lsi_rule(char *ip, char *opt)
  *   2. Proxy input
  *   
  */
-int firewall_init_rules()
-{
+int firewall_init_rules(){
 	int err = 0;
 	
 	HIP_DEBUG("Initializing firewall\n");
@@ -471,8 +470,8 @@ int firewall_init_rules()
 	return err;
 }
 
-void firewall_close(int signal)
-{
+
+void firewall_close(int signal){
 	HIP_DEBUG("Closing firewall...\n");
 	//hip_uninit_proxy_db();
 	//hip_uninit_conn_db();
@@ -480,8 +479,8 @@ void firewall_close(int signal)
 	exit(signal);
 }
 
-void hip_fw_flush_iptables(void)
-{
+
+void hip_fw_flush_iptables(void){
 	HIP_DEBUG("Flushing all rules\n");
 	
 	// -F flushes the chains
@@ -493,8 +492,8 @@ void hip_fw_flush_iptables(void)
 	system("ip6tables -F FORWARD");
 }
 
-void firewall_exit()
-{
+
+void firewall_exit(){
 	HIP_DEBUG("Firewall exit\n");
 	
 	hip_fw_uninit_esp_prot();
@@ -517,8 +516,7 @@ void firewall_exit()
 
 /*-------------PACKET FILTERING FUNCTIONS------------------*/
 
-int match_hit(struct in6_addr match_hit, struct in6_addr packet_hit, int boolean)
-{
+int match_hit(struct in6_addr match_hit, struct in6_addr packet_hit, int boolean){
 	int i= IN6_ARE_ADDR_EQUAL(&match_hit, &packet_hit);
 	HIP_DEBUG("match_hit: hit1: %s hit2: %s bool: %d match: %d\n",
 			addr_to_numeric(&match_hit), addr_to_numeric(&packet_hit), boolean, i);
@@ -528,12 +526,12 @@ int match_hit(struct in6_addr match_hit, struct in6_addr packet_hit, int boolean
 		return !i;
 }
 
+
 /**
  *inspects host identity by verifying sender signature
  * returns 1 if verified succesfully otherwise 0
  */
-int match_hi(struct hip_host_id * hi, struct hip_common * packet)
-{
+int match_hi(struct hip_host_id * hi, struct hip_common * packet){
 	int value = 0;
 	if (packet->type_hdr == HIP_I1)
 	{
@@ -551,16 +549,16 @@ int match_hi(struct hip_host_id * hi, struct hip_common * packet)
 	return 0;
 }
 
-int match_int(int match, int packet, int boolean)
-{
+
+int match_int(int match, int packet, int boolean){
 	if (boolean)
 		return match == packet;
 	else
 		return !(match == packet);
 }
 
-int match_string(const char * match, const char * packet, int boolean)
-{
+
+int match_string(const char * match, const char * packet, int boolean){
 	if (boolean)
 		return !strcmp(match, packet);
 	else
@@ -569,13 +567,13 @@ int match_string(const char * match, const char * packet, int boolean)
 
 /*------------------------------------------------*/
 
-static void die(struct ipq_handle *h)
-{
+static void die(struct ipq_handle *h){
 	HIP_DEBUG("dying\n");
 	ipq_perror("passer");
 	ipq_destroy_handle(h);
 	firewall_close(1);
 }
+
 
 /**
  * Returns the packet type of an IP packet.
@@ -592,8 +590,7 @@ static void die(struct ipq_handle *h)
  * @param ipVersion	  the IP version for this packet
  * @return            One if @c hdr is a HIP packet, zero otherwise.
  */ 
-int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version)
-{
+int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 	int ip_hdr_len, err = 0;
 	// length of packet starting at udp header
 	uint16_t udp_len = 0;
@@ -620,8 +617,7 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version)
 	
 	ctx->ip_version = ip_version;
 
-	if (ctx->ip_version == 4)
-	{
+	if(ctx->ip_version == 4){
 		_HIP_DEBUG("IPv4 packet\n");
 		
 		struct ip *iphdr = (struct ip *) ctx->ipq_packet->payload;
@@ -867,6 +863,7 @@ end_init:
 	return err;
 }
 
+
 /**
  * Allow a packet to pass
  * 
@@ -874,12 +871,12 @@ end_init:
  * @param packetId	the packet ID.
  * @return		nothing
  */
-void allow_packet(struct ipq_handle *handle, unsigned long packetId)
-{
+void allow_packet(struct ipq_handle *handle, unsigned long packetId){
 	ipq_set_verdict(handle, packetId, NF_ACCEPT, 0, NULL);
 	// TODO error to be handled?
 	HIP_DEBUG("Packet accepted \n\n");
 }
+
 
 /**
  * Not allow a packet to pass
@@ -888,22 +885,20 @@ void allow_packet(struct ipq_handle *handle, unsigned long packetId)
  * @param packetId	the packet ID.
  * @return		nothing
  */
-void drop_packet(struct ipq_handle *handle, unsigned long packetId)
-{
+void drop_packet(struct ipq_handle *handle, unsigned long packetId){
 	ipq_set_verdict(handle, packetId, NF_DROP, 0, NULL);
 	// TODO error to be handled?
 	HIP_DEBUG("Packet dropped \n\n");
 }
 
 
-
 /* We only match the esp packet with the state in the connection
   * tracking. There is no need to match the rule-set again as we
   * already filtered the HIP control packets. If we wanted to
   * disallow a connection, we should do it there! */
-int filter_esp(const struct in6_addr * dst_addr, struct hip_esp * esp,
-	       unsigned int hook)
-{
+int filter_esp(const struct in6_addr * dst_addr,
+	       struct hip_esp * esp,
+	       unsigned int hook){
 	// drop packet by default
 	int verdict = 0;
 	int use_escrow = 0;
@@ -964,6 +959,7 @@ int filter_esp(const struct in6_addr * dst_addr, struct hip_esp * esp,
   	return verdict;
 }
 
+
 /* filter hip packet according to rules.
  * return verdict
  */
@@ -972,8 +968,7 @@ int filter_hip(const struct in6_addr * ip6_src,
                struct hip_common *buf, 
                unsigned int hook, 
                const char * in_if, 
-               const char * out_if)
-{
+               const char * out_if){
 	// complete rule list for hook (== IN / OUT / FORWARD)
   	struct _DList * list = (struct _DList *) read_rules(hook);
   	struct rule * rule = NULL;
@@ -1175,8 +1170,8 @@ int filter_hip(const struct in6_addr * ip6_src,
   	return verdict; 
 }
 
-int hip_fw_handle_other_output(hip_fw_context_t *ctx)
-{
+
+int hip_fw_handle_other_output(hip_fw_context_t *ctx){
         hip_lsi_t src_lsi, dst_lsi;
 	hip_lsi_t src_ip, dst_ip;
 	struct sockaddr_in6 dst_hit;
@@ -1233,112 +1228,68 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx)
 }
 
 
-
-
-
 //###############################################
-int hip_fw_handle_outgoing_ip(hip_fw_context_t *ctx/*, struct in_addr *src_ip, struct in_addr *dst_ip*/)
-{
-	int err, msg_type;
+int hip_fw_handle_outgoing_ip(hip_fw_context_t *ctx){
+	int err, msg_type, state_ha, fallback, reject, new_fw_entry_state;
 	struct in6_addr src_lsi, dst_lsi;
 	struct in6_addr src_hit, dst_hit;
 	struct in6_addr src6_ip, dst6_ip;
 	firewall_hl_t *entry_peer = NULL;
 	struct sockaddr_in6 all_zero_hit;
-	int fallback, reject;
-	int state_ha;
 	int verdict = accept_normal_traffic_by_default;
 
-////	HIP_DEBUG("FIREWALL_TRIGGERING OUTGOING IP %s\n",inet_ntoa(*dst_ip));
+	HIP_DEBUG("\n");
 
-	hip_firewall_hldb_dump();
-	entry_peer = firewall_ip_db_match(&ctx->dst);	
-
+	//get firewall db entry
+	entry_peer = firewall_ip_db_match(&ctx->dst);
 	if(entry_peer){
-
-HIP_DEBUG_HIT("OUR  HIT ", &entry_peer->hit_our);
-HIP_DEBUG_HIT("PEER HIT ", &entry_peer->hit_peer);
-HIP_DEBUG("STATE %d \n", entry_peer->bex_state);
-
-
 		//if the firewall entry is still undefined
 		//check whether the base exchange has been established
-		//other cases to be added here TO DO
-		if(entry_peer->bex_state == FIREWALL_STATE_BEX_UNDEFINED){
+		if(entry_peer->bex_state == FIREWALL_STATE_BEX_DEFAULT){
 			//get current connection state from hipd
-			state_ha = hip_get_bex_state(&ctx->src, &ctx->dst,
-						     &src_hit, &dst_hit,
-						     &src_lsi, &dst_lsi);
+			state_ha = hip_get_bex_state_from_IPs(&ctx->src, &ctx->dst, &src_hit,
+						     &dst_hit,  &src_lsi,  &dst_lsi);
 
-			if(state_ha == HIP_STATE_ESTABLISHED){
-				firewall_update_entry(&src_hit, &dst_hit,
-						      &dst_lsi, &ctx->dst,
-						      FIREWALL_STATE_BEX_ESTABLISHED);
-			}
-			//other cases here TO DO
+			//find the correct state for the fw entry state
+			if(state_ha == HIP_STATE_ESTABLISHED)
+				new_fw_entry_state = FIREWALL_STATE_BEX_ESTABLISHED;
+			else if( (state_ha == HIP_STATE_FAILED)  ||
+				 (state_ha == HIP_STATE_CLOSING) ||
+				 (state_ha == HIP_STATE_CLOSED)     )
+				new_fw_entry_state = FIREWALL_STATE_BEX_NOT_SUPPORTED;
+			else
+				new_fw_entry_state = FIREWALL_STATE_BEX_DEFAULT;
+
+			//update fw entry state accordingly
+			firewall_update_entry(&src_hit, &dst_hit, &dst_lsi,
+					      &ctx->dst, new_fw_entry_state);
 
 			//reobtain the entry in case it has been updated
 			entry_peer = firewall_ip_db_match(&ctx->dst);
 		}
 
-
-		if(entry_peer->bex_state == FIREWALL_STATE_BEX_UNDEFINED){
+		//decide what to do with the packet
+		if(entry_peer->bex_state == FIREWALL_STATE_BEX_DEFAULT)
 			verdict = 0;
-		}
-	  	else if(entry_peer->bex_state == FIREWALL_STATE_BEX_ESTABLISHED){
-/*
-			reinject_packet(entry_peer->hit_our,
-					entry_peer->hit_peer,
-					ctx->ipq_packet, 4, 0);
-			verdict = 0;
-*/
+		else if(entry_peer->bex_state == FIREWALL_STATE_BEX_NOT_SUPPORTED)
+			verdict = 1;
+		else if(entry_peer->bex_state == FIREWALL_STATE_BEX_ESTABLISHED){
 			if(hit_is_local_hit(&entry_peer->hit_our)){
-		        	HIP_DEBUG("is local hit\n");
-
-				reinject_packet(entry_peer->hit_our,
-						entry_peer->hit_peer,
+				reinject_packet(entry_peer->hit_our, entry_peer->hit_peer,
 						ctx->ipq_packet, 4, 0);
 				verdict = 0;
-			}
-			else{
-				HIP_DEBUG("is NOT local hit\n");
+			}else
 				verdict = 1;
-			}
 		}
-		else if(entry_peer->bex_state == FIREWALL_STATE_BEX_NOT_ESTABLISHED){
-		        //Case after the connections established are reseted
-		        /*HIP_IFEL(hip_trigger_bex(&entry_peer->hit_our,
-						 &entry_peer->hit_peer, 
-						 &src_lsi, &dst_lsi, NULL, NULL),
-				 -1, "Base Exchange Trigger failed\n");*/
-			HIP_DEBUG("Initiate bex after check in firewall db\n");
-			memset(&all_zero_hit, 0, sizeof(struct sockaddr_in6));
-			hip_request_peer_hit_from_hipd_at_firewall(
-				&(ctx->dst),
-				&all_zero_hit.sin6_addr,
-				(const struct in6_addr *)hip_fw_get_default_hit(),
-				&(ctx->transport_hdr.tcp)->source,
-				&(ctx->transport_hdr.tcp)->dest,
-				&fallback,
-				&reject);
-			verdict = 0;
-		}
-		else if(entry_peer->bex_state == FIREWALL_STATE_BEX_NOT_SUPPORTED){
-			verdict = 1;
-		}
-
 	}else{
-		//add default entry in the firewall
+		//add default entry in the firewall db
 		firewall_add_default_entry(&ctx->dst);
 
 		//get current connection state from hipd
-		state_ha = hip_get_bex_state(&ctx->src, &ctx->dst,
-					     &src_hit, &dst_hit,
-					     &src_lsi, &dst_lsi);
+		state_ha = hip_get_bex_state_from_IPs(&ctx->src, &ctx->dst, &src_hit,
+					     &dst_hit, &src_lsi, &dst_lsi);
 
-		if((state_ha == -1) ||
-		   (state_ha == HIP_STATE_CLOSING) ||
-		   (state_ha == HIP_STATE_CLOSED)){
+		if(state_ha == -1){
 HIP_DEBUG("Initiate bex after check in hipd db\n");
 			//initiate the bex
 			memset(&all_zero_hit, 0, sizeof(struct sockaddr_in6));
@@ -1351,57 +1302,21 @@ HIP_DEBUG("Initiate bex after check in hipd db\n");
 				&fallback,
 				&reject);
 			verdict = 0;
-		}
-		else if(state_ha == HIP_STATE_ESTABLISHED){
-		        HIP_DEBUG("ha is ESTABLISHED!\n");
-
+		}else if(state_ha == HIP_STATE_ESTABLISHED){
 			if(hit_is_local_hit(&src_hit)){
 		        	HIP_DEBUG("is local hit\n");
-				firewall_update_entry(&src_hit, &dst_hit,
-						      &dst_lsi, &ctx->dst,
-						      FIREWALL_STATE_BEX_ESTABLISHED);
-				reinject_packet(src_hit, dst_hit,
-						ctx->ipq_packet, 4, 0);
+				firewall_update_entry(&src_hit, &dst_hit, &dst_lsi,
+					&ctx->dst, FIREWALL_STATE_BEX_ESTABLISHED);
+				reinject_packet(src_hit, dst_hit, ctx->ipq_packet, 4, 0);
 				verdict = 0;
-			}
-			else{
-				HIP_DEBUG("is NOT local hit\n");
+			}else
 				verdict = 1;
-			}			
-		}
-		else if((state_ha == HIP_STATE_I1_SENT) || 
-			(state_ha == HIP_STATE_I2_SENT)){
-			//already initiated the bex, nothing to do
-			verdict = 0;
-		}
-		else if(state_ha == HIP_STATE_FAILED){
-			//to do
-			//update the firewall entry
-
-			//do nothing if already failed
+		}else if( (state_ha == HIP_STATE_FAILED)  ||
+			  (state_ha == HIP_STATE_CLOSING) ||
+			  (state_ha == HIP_STATE_CLOSED)     )
 			verdict = 1;
-		}
-		else if(state_ha == HIP_STATE_R2_SENT){
-			verdict = 1;
-		}
-		else{
-			//initiate the bex
-			//???
-
+		else
 			verdict = 0;
-		}
-
-/*
-#define HIP_STATE_NONE                   0
-#define HIP_STATE_UNASSOCIATED           1
-				#define HIP_STATE_I1_SENT                2
-				#define HIP_STATE_I2_SENT                3
-				#define HIP_STATE_R2_SENT                4
-				#define HIP_STATE_ESTABLISHED            5
-				#define HIP_STATE_FAILED                 7
-				#define HIP_STATE_CLOSING                8
-				#define HIP_STATE_CLOSED                 9
-*/
 	}
 out_err:
 	return verdict;
@@ -1409,11 +1324,7 @@ out_err:
 //###############################################
 
 
-
-
-
-int hip_fw_handle_hip_output(hip_fw_context_t *ctx)
-{
+int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
 	int verdict = accept_hip_esp_traffic_by_default;
 
 	HIP_DEBUG("\n");
@@ -1430,8 +1341,8 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx)
 	return verdict;
 }
 
-int hip_fw_handle_esp_output(hip_fw_context_t *ctx)
-{
+
+int hip_fw_handle_esp_output(hip_fw_context_t *ctx){
 	int verdict = accept_hip_esp_traffic_by_default;
 
 	HIP_DEBUG("\n");
@@ -1440,8 +1351,8 @@ int hip_fw_handle_esp_output(hip_fw_context_t *ctx)
 	return verdict;
 }
 
-int hip_fw_handle_tcp_output(hip_fw_context_t *ctx)
-{
+
+int hip_fw_handle_tcp_output(hip_fw_context_t *ctx){
 
 	HIP_DEBUG("\n");
 
@@ -1451,8 +1362,8 @@ int hip_fw_handle_tcp_output(hip_fw_context_t *ctx)
 	return hip_fw_handle_other_output(ctx);
 }
 
-int hip_fw_handle_other_input(hip_fw_context_t *ctx)
-{
+
+int hip_fw_handle_other_input(hip_fw_context_t *ctx){
 	int verdict = accept_normal_traffic_by_default;
 	int ip_hits = ipv6_addr_is_hit(&ctx->src) && ipv6_addr_is_hit(&ctx->dst);
 	HIP_DEBUG("\n");
@@ -1474,8 +1385,8 @@ int hip_fw_handle_other_input(hip_fw_context_t *ctx)
 	return verdict;
 }
 
-int hip_fw_handle_hip_input(hip_fw_context_t *ctx)
-{
+
+int hip_fw_handle_hip_input(hip_fw_context_t *ctx){
 
 	HIP_DEBUG("\n");
 
@@ -1483,8 +1394,8 @@ int hip_fw_handle_hip_input(hip_fw_context_t *ctx)
 	return hip_fw_handle_hip_output(ctx);
 }
 
-int hip_fw_handle_esp_input(hip_fw_context_t *ctx)
-{
+
+int hip_fw_handle_esp_input(hip_fw_context_t *ctx){
 	int verdict = accept_hip_esp_traffic_by_default;
 
 	HIP_DEBUG("\n");
@@ -1504,8 +1415,8 @@ int hip_fw_handle_esp_input(hip_fw_context_t *ctx)
 	return verdict;
 }
 
-int hip_fw_handle_tcp_input(hip_fw_context_t *ctx)
-{
+
+int hip_fw_handle_tcp_input(hip_fw_context_t *ctx){
 	int verdict = accept_normal_traffic_by_default;
 
 	HIP_DEBUG("\n");
@@ -1530,8 +1441,8 @@ HIP_DEBUG_HIT("#### TCP INPUT HIT src### ", &ctx->dst);
 	return verdict;
 }
 
-int hip_fw_handle_other_forward(hip_fw_context_t *ctx)
-{
+
+int hip_fw_handle_other_forward(hip_fw_context_t *ctx){
 	int verdict = accept_normal_traffic_by_default;
 
 	HIP_DEBUG("\n");
@@ -1548,8 +1459,8 @@ int hip_fw_handle_other_forward(hip_fw_context_t *ctx)
 	return verdict;
 }
 
-int hip_fw_handle_hip_forward(hip_fw_context_t *ctx)
-{
+
+int hip_fw_handle_hip_forward(hip_fw_context_t *ctx){
 
 	HIP_DEBUG("\n");
 
@@ -1557,8 +1468,8 @@ int hip_fw_handle_hip_forward(hip_fw_context_t *ctx)
 	return hip_fw_handle_hip_output(ctx);
 }
 
-int hip_fw_handle_esp_forward(hip_fw_context_t *ctx)
-{
+
+int hip_fw_handle_esp_forward(hip_fw_context_t *ctx){
 	int verdict = accept_hip_esp_traffic_by_default;
 
 	HIP_DEBUG("\n");
@@ -1570,12 +1481,13 @@ int hip_fw_handle_esp_forward(hip_fw_context_t *ctx)
 	return verdict;
 }
 
-int hip_fw_handle_tcp_forward(hip_fw_context_t *ctx)
-{
+
+int hip_fw_handle_tcp_forward(hip_fw_context_t *ctx){
 	HIP_DEBUG("\n");
 
 	return hip_fw_handle_other_forward(ctx);
 }
+
 
 /**
  * Analyzes packets.
@@ -1585,9 +1497,10 @@ int hip_fw_handle_tcp_forward(hip_fw_context_t *ctx)
  * @return	nothing, this function loops forever,
  * 		until the firewall is stopped.
  */
-int hip_fw_handle_packet(char *buf, struct ipq_handle *hndl, int ip_version,
-		hip_fw_context_t *ctx)
-{
+int hip_fw_handle_packet(char *buf,
+			 struct ipq_handle *hndl,
+			 int ip_version,
+			 hip_fw_context_t *ctx){
 	// assume DROP
 	int verdict = 0;
 	
@@ -1647,8 +1560,8 @@ int hip_fw_handle_packet(char *buf, struct ipq_handle *hndl, int ip_version,
 	return 0;
 }
 
-void check_and_write_default_config()
-{
+
+void check_and_write_default_config(){
 	struct stat status;
 	FILE *fp= NULL;
 	ssize_t items;
@@ -1673,8 +1586,7 @@ void check_and_write_default_config()
 }
 
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv){
 	int err = 0, highest_descriptor;
 	int status, n, len;
 	long int hip_ha_timeout = 1;
@@ -1968,13 +1880,13 @@ int main(int argc, char **argv)
 	return 0;
 }
 
+
 /**
  * Loads several modules that are neede by th firewall.
  * 
  * @return	nothing.
  */
-void firewall_probe_kernel_modules()
-{
+void firewall_probe_kernel_modules(){
 	int count, err, status;
 	char cmd[40];
 	int mod_total;
@@ -2006,6 +1918,7 @@ void firewall_probe_kernel_modules()
 	HIP_DEBUG("Probing completed\n");
 }
 
+
 /**
  * Increases the netlink buffer capacity.
  * 
@@ -2020,8 +1933,7 @@ void firewall_probe_kernel_modules()
  *
  * @return	nothing.
  */
-void firewall_increase_netlink_buffers()
-{
+void firewall_increase_netlink_buffers(){
 	HIP_DEBUG("Increasing the netlink buffers\n");
 
 	popen("echo 1048576 > /proc/sys/net/core/rmem_default; echo 1048576 > /proc/sys/net/core/rmem_max;echo 1048576 > /proc/sys/net/core/wmem_default;echo 1048576 > /proc/sys/net/core/wmem_max", "r");

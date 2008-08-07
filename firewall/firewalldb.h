@@ -17,22 +17,7 @@
 //#include "utils.h"
 #include "misc.h"
 
-#define FIREWALL_STATE_BEX_UNDEFINED 		-1
-#define FIREWALL_STATE_BEX_NOT_ESTABLISHED	0
-#define FIREWALL_STATE_BEX_ESTABLISHED		1
-#define FIREWALL_STATE_BEX_NOT_SUPPORTED	2
-
-HIP_HASHTABLE *firewall_lsi_hit_db;
-
-struct firewall_hl {
-	struct in6_addr ip_peer;
-	hip_lsi_t lsi;
-	hip_hit_t hit_our;
-        hip_hit_t hit_peer;
-        int bex_state;
-};
-
-typedef struct firewall_hl firewall_hl_t;
+HIP_HASHTABLE *firewall_hit_lsi_ip_db;
 
 /*Initializes the firewall database*/
 void firewall_init_hldb(void);

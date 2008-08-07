@@ -149,13 +149,14 @@ int hip_fw_examine_incoming_tcp_packet(void *hdr,
 			//save in db that peer does not support hip
 			//if the bex has not succeeded yet
 HIP_DEBUG("3333\n");
+HIP_DEBUG_IN6ADDR("FIND", &peer_ip);
 			firewall_hl_t *entry_peer = NULL;
 			entry_peer = firewall_ip_db_match(&peer_ip);
 			if(!entry_peer){
 				firewall_add_default_entry(&peer_ip);
 				entry_peer = firewall_ip_db_match(&peer_ip);
 			}
-				
+HIP_DEBUG("999\n");		
 			if(entry_peer->bex_state != FIREWALL_STATE_BEX_ESTABLISHED){
 HIP_DEBUG("444\n");
 				//blacklist in the hipd db

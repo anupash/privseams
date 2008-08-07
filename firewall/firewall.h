@@ -7,7 +7,6 @@
 #include <libipq.h>
 #include <linux/netfilter.h>
 #include <linux/netfilter_ipv4.h>
-#include <netinet/in.h>
 #include <netinet/ip.h>
 #include <netinet/ip_icmp.h>
 #include <netinet/ip6.h>
@@ -54,16 +53,6 @@
 "#\n"\
 "\n"
 
-struct firewall_hl {
-	struct in6_addr ip_peer;
-	hip_lsi_t lsi;
-	hip_hit_t hit_our;
-        hip_hit_t hit_peer;
-        int bex_state;
-};
-
-typedef struct firewall_hl firewall_hl_t;
-
 #define OTHER_PACKET          0
 #define HIP_PACKET            1
 #define ESP_PACKET            2
@@ -73,18 +62,7 @@ typedef struct firewall_hl firewall_hl_t;
 
 #define FW_PROTO_NUM          6 /* Other, HIP, ESP, TCP */
 
-
-/*
- * 
- * 
- */
-#define FIREWALL_STATE_BEX_UNDEFINED 		-1
-#define FIREWALL_STATE_BEX_NOT_ESTABLISHED	0
-#define FIREWALL_STATE_BEX_ESTABLISHED		1
-#define FIREWALL_STATE_BEX_NOT_SUPPORTED		2
-
-
-typedef struct hip_fw_context {
+typedef struct hip_fw_context{
 	// queued packet
 	ipq_packet_msg_t *ipq_packet;
 	
@@ -108,17 +86,17 @@ typedef struct hip_fw_context {
 	//uint32_t spi;
 } hip_fw_context_t;
 
-struct hip_conn_key {
-	uint8_t protocol;
+struct hip_conn_key{
+	uint8_t  protocol;
 	uint16_t port_client;
 	uint16_t port_peer;
 	struct in6_addr hit_peer;
 	struct in6_addr hit_proxy;
 }  __attribute__ ((packed));
 
-typedef struct hip_conn_t  {
+typedef struct hip_conn_t{
 	struct hip_conn_key key;
-	int state;
+	int    state;
 	struct in6_addr addr_client; // addr_proxy_client	
 	struct in6_addr addr_peer; // addr_proxy_peer	
 } hip_conn_t;

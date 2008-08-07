@@ -67,7 +67,7 @@ int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m, struct in6_addr *ip_src, str
 	lsi_peer = (hip_lsi_t *)hip_get_lsi_peer_by_hits(ip_src, ip_dst);
 	if(lsi_our && lsi_peer){
 		proto = "tcp";
-		proto4_LSI = getproto_info2(ntohs(portDest), proto, lsi_our);
+		proto4_LSI = getproto_info_lsi(ntohs(portDest), proto, lsi_our);
 		if(proto4_LSI){
 			IPV4_TO_IPV6_MAP(lsi_our, &src_addr);
 			IPV4_TO_IPV6_MAP(lsi_peer, &dst_addr);
@@ -104,87 +104,80 @@ int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m, struct in6_addr *ip_src, str
  */
 int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src, struct in_addr *lsi_dst)
 {
-	int err, msg_type, ha_state;
+	int err, msg_type, state_ha, new_fw_entry_state;
 	struct in6_addr src_lsi, dst_lsi;
 	struct in6_addr src_hit, dst_hit;
-	struct in6_addr dst_ip;
+	struct in6_addr src_ip, dst_ip;
 	firewall_hl_t *entry_peer = NULL;
 
-	HIP_DEBUG("FIREWALL_TRIGGERING OUTGOING LSI %s\n",inet_ntoa(*lsi_dst));
+	HIP_DEBUG("FIREWALL_TRIGGERING OUTGOING LSI %s\n", inet_ntoa(*lsi_dst));
 
-	IPV4_TO_IPV6_MAP(lsi_dst, &dst_lsi);
-	IPV4_TO_IPV6_MAP(lsi_src, &src_lsi);
-
-	hip_firewall_hldb_dump();
-	//get the corresponding ip address for this lsi
-	ha_state = hip_get_peerIP_from_peerLSI(lsi_dst, &dst_ip);
-HIP_DEBUG_INADDR("LSI DST - ", lsi_dst);
-HIP_DEBUG_IN6ADDR("IP OF LSI - ", &dst_ip);
 	//get firewall db entry
 	entry_peer = (firewall_hl_t *)firewall_ip_db_match(&dst_ip);	
-
-	if (entry_peer){
-		////HIP_IFEL(entry_peer->bex_state == FIREWALL_STATE_BEX_UNDEFINED, -1, "Base Exchange Failed");
+	if(entry_peer){
+		/*//with LSI, the bex has to succeed
+		HIP_IFEL(entry_peer->bex_state == FIREWALL_STATE_BEX_DEFAULT, -1, "Base Exchange Failed");*/
 
 		//if the firewall entry is still undefined
 		//check whether the base exchange has been established
-		//other cases to be added here TO DO
-		if(entry_peer->bex_state == FIREWALL_STATE_BEX_UNDEFINED){
-			if(ha_state == HIP_STATE_ESTABLISHED){
-				firewall_update_entry(NULL, NULL,
-						      NULL, &dst_ip,
-						      FIREWALL_STATE_BEX_ESTABLISHED);
-			}
-			//other cases here TO DO ???
+		if(entry_peer->bex_state == FIREWALL_STATE_BEX_DEFAULT){
+			//get the corresponding ip address for this lsi,
+			//as well as the current ha state
+			state_ha = hip_get_peerIP_from_peerLSI(lsi_dst, &dst_ip);
+
+			//find the correct state for the fw entry state
+			if(state_ha == HIP_STATE_ESTABLISHED)
+				new_fw_entry_state = FIREWALL_STATE_BEX_ESTABLISHED;
+			else if( (state_ha == HIP_STATE_FAILED)  ||
+				 (state_ha == HIP_STATE_CLOSING) ||
+				 (state_ha == HIP_STATE_CLOSED)     )
+				new_fw_entry_state = FIREWALL_STATE_BEX_NOT_SUPPORTED;
+			else
+				new_fw_entry_state = FIREWALL_STATE_BEX_DEFAULT;
+
+			//update fw entry state accordingly
+			firewall_update_entry(NULL, NULL, NULL, &dst_ip,
+					      FIREWALL_STATE_BEX_ESTABLISHED);
 
 			//reobtain the entry in case it has been updated
 			entry_peer = firewall_ip_db_match(&dst_ip);
 		}
 
-
-		/*if(entry_peer->bex_state == FIREWALL_STATE_BEX_UNDEFINED){
-			verdict = 0;
-		}
-	  	else */if (entry_peer->bex_state == FIREWALL_STATE_BEX_ESTABLISHED)
+		//decide whether to reinject the packet
+		if (entry_peer->bex_state == FIREWALL_STATE_BEX_ESTABLISHED)
 			reinject_packet(entry_peer->hit_our, entry_peer->hit_peer, m, 4, 0);
-		else if (entry_peer->bex_state == FIREWALL_STATE_BEX_NOT_ESTABLISHED){
-		        /*Case after the connections established are reseted*/
-		        HIP_IFEL(hip_trigger_bex(&entry_peer->hit_our,
-						 &entry_peer->hit_peer, 
-						 &src_lsi, &dst_lsi,
-						 NULL, NULL),
-				-1, "Base Exchange Trigger failed\n"); 
-		}
 	}else{
-	        /*Check if bex is already established: Server case*/
-	        int state_ha = hip_trigger_is_bex_established(&src_hit, &dst_hit, lsi_src, lsi_dst);
+		//add default entry in the firewall db
 		firewall_add_default_entry(&dst_ip);
 
-		if (state_ha){
-		        HIP_DEBUG("ha is ESTABLISHED!\n");
-			/*firewall_add_hit_lsi_ip(&src_hit, &dst_hit, lsi_dst, lsi_dst, state_ha);*/
-			firewall_update_entry(&src_hit, &dst_hit,
-					      lsi_dst, &dst_ip,
+	        //Check if bex is already established: server case
+	        /*state_ha = hip_trigger_is_bex_established(&src_hit, &dst_hit,
+						lsi_src, lsi_dst);*/
+		//get current connection state from hipd
+		state_ha = hip_get_bex_state_from_LSIs(lsi_src, lsi_dst,
+						&src_ip,  &dst_ip,
+						&src_hit, &dst_hit);
+HIP_DEBUG("STATE %d \n", state_ha);
+		if( (state_ha == -1)                     || 
+		    (state_ha == HIP_STATE_NONE)         || 
+		    (state_ha == HIP_STATE_UNASSOCIATED)    ){
+			// Run bex to initialize SP and SA
+			HIP_INFO("No ha found, triggering bex\n");
+/*err = hip_get_hit_peer_by_lsi_pair(lsi_src, lsi_dst,
+				&src_hit, &dst_hit);*/
+			IPV4_TO_IPV6_MAP(lsi_src, &src_lsi);
+			IPV4_TO_IPV6_MAP(lsi_dst, &dst_lsi);
+			HIP_IFEL(hip_trigger_bex(&src_hit, &dst_hit, &src_lsi,
+						 &dst_lsi, NULL, NULL),
+				 	-1, "Base Exchange Trigger failed\n");
+			
+			firewall_update_entry(&src_hit, &dst_hit, lsi_dst, &dst_ip,
+					      FIREWALL_STATE_BEX_DEFAULT);
+		}
+		if(state_ha == HIP_STATE_ESTABLISHED){			
+			firewall_update_entry(&src_hit, &dst_hit, lsi_dst, &dst_ip,
 					      FIREWALL_STATE_BEX_ESTABLISHED);
 			reinject_packet(src_hit, dst_hit, m, 4, 0);
-		}
-		else{
-			// Run bex to initialize SP and SA
-			HIP_INFO("Firewall_db empty and no ha ESTABLISHED. Triggering Base Exchange\n");
-			err = hip_get_hit_peer_by_lsi_pair(lsi_src, lsi_dst,
-							   &src_hit, &dst_hit);
-			HIP_IFEL(hip_trigger_bex(&src_hit, &dst_hit,
-						 &src_lsi, &dst_lsi,
-						 NULL, NULL),
-				 -1, "Base Exchange Trigger failed\n");
-
-		  	/*firewall_add_hit_lsi_ip(&src_hit, &dst_hit,
-						lsi_dst, &dst_ip,
-						FIREWALL_STATE_BEX_UNDEFINED - -2);*/
-			
-			firewall_update_entry(&src_hit, &dst_hit,
-					      lsi_dst, &dst_ip,
-					      FIREWALL_STATE_BEX_UNDEFINED);
 		}
 	}
 out_err: 
