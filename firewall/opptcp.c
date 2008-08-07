@@ -148,26 +148,24 @@ int hip_fw_examine_incoming_tcp_packet(void *hdr,
 			//not to be blocked for this peer
 			//save in db that peer does not support hip
 			//if the bex has not succeeded yet
-HIP_DEBUG("3333\n");
-HIP_DEBUG_IN6ADDR("FIND", &peer_ip);
+
 			firewall_hl_t *entry_peer = NULL;
 			entry_peer = firewall_ip_db_match(&peer_ip);
+
+			//if there is no entry in fw, add a default one
 			if(!entry_peer){
 				firewall_add_default_entry(&peer_ip);
 				entry_peer = firewall_ip_db_match(&peer_ip);
 			}
-HIP_DEBUG("999\n");		
+		
 			if(entry_peer->bex_state != FIREWALL_STATE_BEX_ESTABLISHED){
-HIP_DEBUG("444\n");
 				//blacklist in the hipd db
 				hip_fw_unblock_and_blacklist(&peer_ip);
-HIP_DEBUG("555\n");
+
 				//update the firewall db entry
 				HIP_DEBUG("updating fw entry state to NOT_SUPPORTED\n");
-				firewall_update_entry(NULL, NULL,
-					      NULL, &peer_ip,
+				firewall_update_entry(NULL, NULL, NULL, &peer_ip,
 					      FIREWALL_STATE_BEX_NOT_SUPPORTED);
-HIP_DEBUG("666\n");
 			}
 
 			//normal traffic connections should be allowed to be created

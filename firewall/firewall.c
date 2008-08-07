@@ -1290,7 +1290,6 @@ int hip_fw_handle_outgoing_ip(hip_fw_context_t *ctx){
 					     &dst_hit, &src_lsi, &dst_lsi);
 
 		if(state_ha == -1){
-HIP_DEBUG("Initiate bex after check in hipd db\n");
 			//initiate the bex
 			memset(&all_zero_hit, 0, sizeof(struct sockaddr_in6));
 			hip_request_peer_hit_from_hipd_at_firewall(

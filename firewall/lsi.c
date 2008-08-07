@@ -112,6 +112,10 @@ int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src, str
 
 	HIP_DEBUG("FIREWALL_TRIGGERING OUTGOING LSI %s\n", inet_ntoa(*lsi_dst));
 
+	//get the corresponding ip address for this lsi,
+	//as well as the current ha state
+	state_ha = hip_get_peerIP_from_LSIs(lsi_src, lsi_dst, &dst_ip);
+
 	//get firewall db entry
 	entry_peer = (firewall_hl_t *)firewall_ip_db_match(&dst_ip);	
 	if(entry_peer){
@@ -121,10 +125,6 @@ int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src, str
 		//if the firewall entry is still undefined
 		//check whether the base exchange has been established
 		if(entry_peer->bex_state == FIREWALL_STATE_BEX_DEFAULT){
-			//get the corresponding ip address for this lsi,
-			//as well as the current ha state
-			state_ha = hip_get_peerIP_from_peerLSI(lsi_dst, &dst_ip);
-
 			//find the correct state for the fw entry state
 			if(state_ha == HIP_STATE_ESTABLISHED)
 				new_fw_entry_state = FIREWALL_STATE_BEX_ESTABLISHED;
@@ -154,49 +154,33 @@ int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src, str
 	        /*state_ha = hip_trigger_is_bex_established(&src_hit, &dst_hit,
 						lsi_src, lsi_dst);*/
 		//get current connection state from hipd
-		state_ha = hip_get_bex_state_from_LSIs(lsi_src, lsi_dst,
-						&src_ip,  &dst_ip,
-						&src_hit, &dst_hit);
-HIP_DEBUG("STATE %d \n", state_ha);
+		state_ha = hip_get_bex_state_from_LSIs(lsi_src, lsi_dst, &src_ip,
+						       &dst_ip,	&src_hit, &dst_hit);
+
 		if( (state_ha == -1)                     || 
 		    (state_ha == HIP_STATE_NONE)         || 
 		    (state_ha == HIP_STATE_UNASSOCIATED)    ){
-			// Run bex to initialize SP and SA
-			HIP_INFO("No ha found, triggering bex\n");
-/*err = hip_get_hit_peer_by_lsi_pair(lsi_src, lsi_dst,
-				&src_hit, &dst_hit);*/
+			// initialize bex
 			IPV4_TO_IPV6_MAP(lsi_src, &src_lsi);
 			IPV4_TO_IPV6_MAP(lsi_dst, &dst_lsi);
 			HIP_IFEL(hip_trigger_bex(&src_hit, &dst_hit, &src_lsi,
 						 &dst_lsi, NULL, NULL),
 				 	-1, "Base Exchange Trigger failed\n");
-			
+			//update fw db entry
 			firewall_update_entry(&src_hit, &dst_hit, lsi_dst, &dst_ip,
 					      FIREWALL_STATE_BEX_DEFAULT);
 		}
-		if(state_ha == HIP_STATE_ESTABLISHED){			
+		if(state_ha == HIP_STATE_ESTABLISHED){
+			//update fw db entry
 			firewall_update_entry(&src_hit, &dst_hit, lsi_dst, &dst_ip,
 					      FIREWALL_STATE_BEX_ESTABLISHED);
+
 			reinject_packet(src_hit, dst_hit, m, 4, 0);
 		}
 	}
 out_err: 
 	return err;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-//#######################################################
 
 
 /*

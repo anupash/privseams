@@ -184,13 +184,15 @@ int firewall_set_bex_state(struct in6_addr *hit_s,
 			   struct in6_addr *hit_r,
 			   int state){
 	int err = 0;
+	hip_lsi_t *lsi_our = NULL;
 	hip_lsi_t *lsi_peer = NULL;
 	firewall_hl_t *entry_update = NULL;
 	struct in6_addr ip_src, ip_dst;
 
+	lsi_our  = hip_get_lsi_our_by_hits(hit_s, hit_r);
 	lsi_peer = hip_get_lsi_peer_by_hits(hit_s, hit_r);
 	if(lsi_peer){
-		hip_get_peerIP_from_peerLSI(lsi_peer, &ip_dst);
+		hip_get_peerIP_from_LSIs(lsi_our, lsi_peer, &ip_dst);
 		//update only the state of the entry
 		firewall_update_entry(NULL, NULL, NULL, &ip_dst, state); 
 	}
