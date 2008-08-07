@@ -2858,35 +2858,54 @@ int hip_build_param_esp_prot_transform(struct hip_common *msg, int num_transform
  * @return 0 on success, otherwise < 0.
  */
 int hip_build_param_esp_prot_anchor(struct hip_common *msg, uint8_t transform,
-		unsigned char *anchor, int hash_length)
+		unsigned char *active_anchor, unsigned char *next_anchor, int hash_length)
 {
 	int err = 0;
-	struct esp_prot_anchor esp_anchor;
+	unsigned char			*anchors = NULL;
+	struct esp_prot_anchor	esp_anchor;
 
 	HIP_ASSERT(msg != NULL);
-	// NULL-anchor only allowed for UNUSED-transform
-	HIP_ASSERT((!transform && !anchor) || (transform && anchor));
+	// NULL-active_anchor only allowed for UNUSED-transform
+	HIP_ASSERT((!transform && !active_anchor) || (transform && active_anchor));
+	// next_anchor might be NULL
 
+	// set parameter type
 	hip_set_param_type(&esp_anchor, HIP_PARAM_ESP_PROT_ANCHOR);
 
+	// set parameter values
 	esp_anchor.transform = transform;
 
+	// distinguish UNUSED from any other case
 	if (!transform)
 	{
+		// send 1 byte of 0 per anchor in UNUSED case
 		hash_length = 1;
-		memset(esp_anchor.anchor, 0, hash_length);
-	} else
-		memcpy(esp_anchor.anchor, anchor, hash_length);
 
-	/* note: the length cannot be calculated with calc_param_len() */
-	hip_set_param_contents_len(&esp_anchor, sizeof(uint8_t) + hash_length);
+		memset(&esp_anchor.anchors[0], 0, hash_length);
+		memset(&esp_anchor.anchors[hash_length], 0, hash_length);
+
+	} else
+	{
+		memcpy(&esp_anchor.anchors[0], active_anchor, hash_length);
+
+		// send 0 if next_anchor not present
+		if (next_anchor != NULL)
+			memcpy(&esp_anchor.anchors[hash_length], next_anchor, hash_length);
+		else
+			memset(&esp_anchor.anchors[hash_length], 0, hash_length);
+	}
+
+	hip_set_param_contents_len(&esp_anchor, sizeof(uint8_t) + 2 * hash_length);
 
 	err = hip_build_generic_param(msg, &esp_anchor,
 					      sizeof(struct hip_tlv_common),
 					      hip_get_param_contents_direct(&esp_anchor));
 
 	HIP_DEBUG("added esp protection transform: %u\n", transform);
-	HIP_HEXDUMP("added esp protection anchor: ", esp_anchor.anchor, hash_length);
+	HIP_HEXDUMP("added esp protection active_anchor: ", &esp_anchor.anchors[0],
+			hash_length);
+	HIP_HEXDUMP("added esp protection next_anchor: ",
+			&esp_anchor.anchors[hash_length], hash_length);
 
 	return err;
 }

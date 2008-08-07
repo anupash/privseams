@@ -347,7 +347,7 @@ int esp_prot_i2_add_anchor(hip_common_t *i2, hip_ha_t *entry, struct hip_context
 			HIP_IFEL(!(anchor = anchor_db_get_anchor(entry->esp_prot_transform)), -1,
 					"no anchor elements available, threading?\n");
 			HIP_IFEL(hip_build_param_esp_prot_anchor(i2, entry->esp_prot_transform,
-					anchor, hash_length), -1,
+					anchor, NULL, hash_length), -1,
 					"Building of ESP protection anchor failed\n");
 
 			// store local_anchor
@@ -365,7 +365,7 @@ int esp_prot_i2_add_anchor(hip_common_t *i2, hip_ha_t *entry, struct hip_context
 
 			// inform our peer
 			HIP_IFEL(hip_build_param_esp_prot_anchor(i2, entry->esp_prot_transform,
-					NULL, 0), -1,
+					NULL, NULL, 0), -1,
 					"Building of ESP protection anchor failed\n");
 		}
 	} else
@@ -378,7 +378,7 @@ int esp_prot_i2_add_anchor(hip_common_t *i2, hip_ha_t *entry, struct hip_context
 			entry->esp_prot_transform = ESP_PROT_TFM_UNUSED;
 
 			HIP_IFEL(hip_build_param_esp_prot_anchor(i2, entry->esp_prot_transform,
-					NULL, 0), -1,
+					NULL, NULL, 0), -1,
 					"Building of ESP protection anchor failed\n");
 		} else
 		{
@@ -422,7 +422,7 @@ int esp_prot_i2_handle_anchor(hip_ha_t *entry, struct hip_context *ctx)
 
 				if (entry->esp_prot_transform == ESP_PROT_TFM_UNUSED)
 				{
-					HIP_DEBUG("agreed not to use esp protection extension\n");
+					HIP_DEBUG("agreed NOT to use esp protection extension\n");
 
 				} else
 				{
@@ -430,9 +430,18 @@ int esp_prot_i2_handle_anchor(hip_ha_t *entry, struct hip_context *ctx)
 
 					// store peer_anchor
 					memset(entry->esp_peer_anchor, 0, MAX_HASH_LENGTH);
-					memcpy(entry->esp_peer_anchor, prot_anchor->anchor, hash_length);
+					memcpy(entry->esp_peer_anchor, &prot_anchor->anchor[0],
+							hash_length);
 
-					HIP_HEXDUMP("received anchor: ", entry->esp_peer_anchor, hash_length);
+					// ignore a possible update anchor
+#if 0
+					memset(entry->esp_peer_update_anchor, 0, MAX_HASH_LENGTH);
+					memcpy(entry->esp_peer_update_anchor,
+							&prot_anchor->anchor[hash_length], hash_length);
+#endif
+
+					HIP_HEXDUMP("received anchor: ", entry->esp_peer_anchor,
+							hash_length);
 				}
 			} else
 			{
@@ -473,7 +482,7 @@ int esp_prot_r2_add_anchor(hip_common_t *r2, hip_ha_t *entry)
 			HIP_IFEL(!(anchor = anchor_db_get_anchor(entry->esp_prot_transform)),
 					-1, "no anchor elements available, threading?\n");
 			HIP_IFEL(hip_build_param_esp_prot_anchor(r2, entry->esp_prot_transform,
-					anchor, hash_length), -1,
+					anchor, NULL, hash_length), -1,
 					"Building of ESP protection anchor failed\n");
 
 			// store local_anchor
@@ -490,7 +499,7 @@ int esp_prot_r2_add_anchor(hip_common_t *r2, hip_ha_t *entry)
 
 			// inform our peer
 			HIP_IFEL(hip_build_param_esp_prot_anchor(r2, entry->esp_prot_transform,
-					NULL, 0), -1,
+					NULL, NULL, 0), -1,
 					"Building of ESP protection anchor failed\n");
 		}
 	} else
@@ -528,7 +537,14 @@ int esp_prot_r2_handle_anchor(hip_ha_t *entry, struct hip_context *ctx)
 				hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
 
 				memset(entry->esp_peer_anchor, 0, MAX_HASH_LENGTH);
-				memcpy(entry->esp_peer_anchor, prot_anchor->anchor, hash_length);
+				memcpy(entry->esp_peer_anchor, &prot_anchor->anchor[0], hash_length);
+
+				// ignore a possible update anchor
+#if 0
+				memset(entry->esp_peer_update_anchor, 0, MAX_HASH_LENGTH);
+				memcpy(entry->esp_peer_update_anchor,
+						&prot_anchor->anchor[hash_length], hash_length);
+#endif
 
 				HIP_HEXDUMP("received anchor: ", entry->esp_peer_anchor, hash_length);
 
@@ -569,44 +585,15 @@ int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry, int flags)
 	int hash_length = 0;
 	int err = 0;
 
-	// this respects the param-type order
-	if (flags & SEND_UPDATE_ESP_ANCHOR)
-	{
-		// we can safely assume that this UPDATE was triggered by the firewall
-		hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
-
-		/* add a signed ECHO_REQUEST param containing the currently used anchor
-		 * for the outbound direction to ensure freshness of this update
-		 *
-		 * @note anchor chosen as this should be a value that can be verified/
-		 *       know by middleboxes and like this no dependency on ESP transform
-		 *       which would have been introduce by using the SPI value
-		 * @note SEQ not sufficient to guaranty freshness of the UPDATE, could be
-		 *       an UPDATE from a previous connection of these hosts with same
-		 *       SEQ number. However SEQ allows to distinguish a resent UPDATE
-		 *       from a new anchor-update occuring for some reason at the peer. */
-		HIP_IFEL(hip_build_param_echo(update, entry->esp_local_anchor, hash_length,
-				 1, 1),  -1, "building of ESP protection ECHO_REQ failed\n");
-	}
-
-	// on-path middleboxes have to learn about the anchors in use
-	if ((flags & SEND_UPDATE_LOCATOR) && (flags & SEND_UPDATE_ESP_ANCHOR))
-	{
-		// we can safely assume that this UPDATE was triggered by the firewall
-		hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
-
-		HIP_IFEL(hip_build_param_esp_prot_anchor(update, entry->esp_prot_transform,
-				entry->esp_local_anchor, hash_length), -1,
-				"building of ESP protection ANCHOR failed\n");
-	}
-
 	// check if we should send an anchor
 	if (flags & SEND_UPDATE_ESP_ANCHOR)
 	{
-		// hash_length already set above
+		// we need to know the hash_length for this transform
+		hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
+
 		HIP_IFEL(hip_build_param_esp_prot_anchor(update, entry->esp_prot_transform,
-				entry->esp_local_update_anchor, hash_length), -1,
-				"building of ESP protection ANCHOR failed\n");
+				entry->esp_local_anchor, entry->esp_local_update_anchor,
+				hash_length), -1, "building of ESP protection ANCHOR failed\n");
 	}
 
   out_err:
@@ -617,50 +604,36 @@ int esp_prot_update_handle_anchor(hip_common_t *update, hip_ha_t *entry,
 		in6_addr_t *src_ip, in6_addr_t *dst_ip, int *send_ack)
 {
 	struct hip_tlv_common *param = NULL;
-	struct esp_prot_anchor *esp_anchor = NULL;
-	struct hip_echo_request *echo_anchor = NULL;
+	struct esp_prot_anchor *prot_anchor = NULL;
 	int hash_length = 0;
 	uint32_t spi_in = 0;
 	int err = 0;
 
 	if (param = hip_get_param(update, HIP_PARAM_ESP_PROT_ANCHOR))
 	{
-		esp_anchor = (struct esp_prot_anchor *)param;
+		prot_anchor = (struct esp_prot_anchor *)param;
 
 		// check that we are receiving an anchor matching the negotiated transform
-		HIP_IFEL(entry->esp_prot_transform != esp_anchor->transform, -1,
+		HIP_IFEL(entry->esp_prot_transform != prot_anchor->transform, -1,
 				"esp prot transform changed without new BEX\n");
 		HIP_DEBUG("esp prot transforms match\n");
 
 		// we need to know the hash_length for this transform
 		hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
 
-		/* check that we are receiving a fresh UPDATE by comparing the anchor
-		 * in the ECHO_REQUEST param with the currently active peer_anchor
-		 *
-		 * XX TODO make sure to inspect the correct ECHO_REQUEST here in case
-		 *         there are more than 1 when merging with UPDATE re-implementation */
-		HIP_IFEL(!(param = hip_get_param(update, HIP_PARAM_ECHO_REQUEST_SIGN)), -1,
-				"mandatory ECHO_REQUEST_SIGN param missing\n");
-
-		HIP_IFEL(hip_get_param_contents_len(param) != hash_length, -1,
-				"hash-length of negotiated transform and ECHO_REQUEST anchor differ\n");
-
-		HIP_IFEL(memcmp(entry->esp_peer_anchor,
-				(void *)param + sizeof(struct hip_tlv_common), hash_length), -1,
-				"received active peer-anchor and stored one do NOT match, REPLAY ATTACK?\n")
-		HIP_DEBUG("received active peer-anchor and stored one match\n");
+		// check that we are receiving an anchor matching the active one
+		HIP_IFEL(memcmp(&prot_anchor->anchors[0], entry->esp_peer_anchor,
+				hash_length), -1, "esp prot active peer anchors do NOT match\n");
+		HIP_DEBUG("esp prot active peer anchors match\n");
 
 		// set the update anchor as the peer's update anchor
 		HIP_DEBUG("setting peer_update_anchor...\n");
 		memset(entry->esp_peer_update_anchor, 0, MAX_HASH_LENGTH);
-		memcpy(entry->esp_peer_update_anchor, esp_anchor->anchor, hash_length);
+		memcpy(entry->esp_peer_update_anchor, &prot_anchor->anchors[hash_length],
+				hash_length);
 
 		// we have to ACK the SEQ
 		*send_ack = 1;
-
-		/* XX TODO make sure to automatically add ECHO_RESPONSE params in correct
-		 *         order when merging with UPDATE re-implementation */
 
 		/* @note like this we do NOT support multihoming
 		 *
