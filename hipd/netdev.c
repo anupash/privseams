@@ -342,11 +342,33 @@ void delete_all_addresses(void)
 
 int hip_netdev_find_if(struct sockaddr *addr)
 {
-	struct netdev_address *n;
-	hip_list_t *item, *tmp;
-	int i;
+	struct netdev_address *n = NULL;
+	hip_list_t *item = NULL, *tmp = NULL;
+	int i = 0;
 
-	HIP_DEBUG_IN6ADDR("Trying to find addr", &(((struct sockaddr_in6 *)addr)->sin6_addr));
+#ifdef CONFIG_HIP_DEBUG /* Debug block. */
+	{
+		char ipv6_str[INET6_ADDRSTRLEN], *fam_str;
+		inet_ntop(AF_INET6, &(((struct sockaddr_in6 *)addr)->sin6_addr),
+			  ipv6_str, INET6_ADDRSTRLEN);
+		if(addr->sa_family == AF_INET6) {
+			fam_str = "AF_INET6";
+		} else if(addr->sa_family == AF_INET) {
+			fam_str = "AF_INET";
+		} else {
+			fam_str = "not AF_INET or AF_INET6";
+		}
+
+		HIP_DEBUG("Trying to find interface index for a network "\
+			  "device with IP address %s of address family %s.\n",
+			  ipv6_str, fam_str);
+	}
+#endif
+
+	HIP_DEBUG_IN6ADDR("Trying to find interface index for a network "\
+			  "device with IP address",
+			  &(((struct sockaddr_in6 *)addr)->sin6_addr));
+	HIP_DEBUG("Address family: (%d) %s.\n", addr->sa_family, addr->sa_family == AF_INET ? "AF_INET" : "AF_INET6");
 
 	list_for_each_safe(item, tmp, addresses, i)
 	{
@@ -369,12 +391,20 @@ int hip_netdev_find_if(struct sockaddr *addr)
 	return 0;
 }
 
-/* base exchange IPv6 addresses need to be put into ifindex2spi map,
+/**
+ * Gets a interface index of an network address.
+ * 
+ * Base exchange IPv6 addresses need to be put into ifindex2spi map,
  * so a function is needed which gets the ifindex of the network
- * device which has the address @addr
+ * device which has the address @c addr.
+ *
+ * @param  addr a pointer to an IPv6 address whose interface index is to be
+ *              searched.
+ * @return      interface index if the network address is bound to one, zero if
+ *              no interface index was found and negative in error case.
+ * @todo        The caller of this should be generalized to both IPv4 and IPv6
+ *              so that this function can be removed (tkoponen).
  */
-/* FIXME: The caller of this shoul be generalized to both IPv4 and
-   IPv6 so that this function can be removed (tkoponen) */
 int hip_devaddr2ifindex(struct in6_addr *addr)
 {
 	struct sockaddr_in6 a;
@@ -382,6 +412,7 @@ int hip_devaddr2ifindex(struct in6_addr *addr)
 	ipv6_addr_copy(&a.sin6_addr, addr);
 	return hip_netdev_find_if((struct sockaddr *)&a);
 }
+
 int static add_address(const struct nlmsghdr *h, int len, void *arg)
 {
         struct sockaddr_storage ss_addr;

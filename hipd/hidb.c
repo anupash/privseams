@@ -595,6 +595,13 @@ struct hip_host_id *hip_get_any_localhost_dsa_public_key(void)
 	return res;
 }
 
+/** 
+ * Gets the RSA public key from a Host Identity
+ *
+ * @param tmp a pointer to a Host Identity.
+ * @return    a pointer to the parameter Host Identity @c tmp with the 
+ *            the private key deleted and public key filled.
+ */
 static struct hip_host_id *hip_get_rsa_public_key(struct hip_host_id *tmp)
 {
 	hip_tlv_len_t len;
@@ -609,7 +616,7 @@ static struct hip_host_id *hip_get_rsa_public_key(struct hip_host_id *tmp)
 	
 	len = hip_get_param_contents_len(tmp);
 	
-	HIP_DEBUG("Host ID len before cut-off: %d\n",
+	_HIP_DEBUG("Host ID len before cut-off: %u\n",
 		  hip_get_param_total_len(tmp));
 
 	/* the secret component of the RSA key is d+p+q == 2*n bytes */
@@ -619,12 +626,12 @@ static struct hip_host_id *hip_get_rsa_public_key(struct hip_host_id *tmp)
 
 	tmp->hi_length = htons(ntohs(tmp->hi_length) - rsa_priv_len);
 
-	_HIP_DEBUG("hi->hi_length=%d\n", ntohs(tmp->hi_length));
+	_HIP_DEBUG("hi->hi_length=%u\n", ntohs(tmp->hi_length));
 	/* Move the hostname d+p+q bytes earlier */
 
 	dilen = ntohs(tmp->di_type_length) & 0x0FFF;
 
-	HIP_DEBUG("dilen: %d\n", dilen);
+	_HIP_DEBUG("dilen: %u\n", dilen);
 
 	to = ((char *)(tmp + 1)) - sizeof(struct hip_host_id_key_rdata) +
 							 ntohs(tmp->hi_length);
@@ -633,9 +640,10 @@ static struct hip_host_id *hip_get_rsa_public_key(struct hip_host_id *tmp)
 	memmove(to, from, dilen);
 
 	hip_set_param_contents_len(tmp, (len -  rsa_priv_len));
-	HIP_DEBUG("Host ID len after cut-off: %d\n",
+	
+	_HIP_DEBUG("Host ID len after cut-off: %u\n",
 		  hip_get_param_total_len(tmp));
-	HIP_DEBUG("hi_length after cut %d\n", tmp->hi_length);
+	_HIP_DEBUG("hi_length after cut %u\n", ntohs(tmp->hi_length));
 	/* make sure that the padding is zero (and not to reveal any bytes of
 	   the private key */
 	to = (char *)tmp + hip_get_param_contents_len(tmp) +
@@ -675,7 +683,7 @@ struct hip_host_id *hip_get_any_localhost_rsa_public_key(void)
 }
 
 /** 
- * Transforms a private public key pair to a public key, private key is deleted.
+ * Transforms a private/public key pair to a public key, private key is deleted.
  *
  * @param hid a pointer to a host identity.
  * @return    a pointer to a host identity if the transformation was

@@ -216,11 +216,8 @@ hip_ha_t *hip_hadb_try_to_find_by_peer_hit(hip_hit_t *hit)
  */
 int hip_hadb_insert_state(hip_ha_t *ha)
 {
-	hip_hastate_t st;
+	hip_hastate_t st = 0;
 	hip_ha_t *tmp = NULL;
-	
-	HIP_DEBUG("hip_hadb_insert_state() invoked. Inserting a new state to "\
-		  "the HIP association hash table.\n");
 	
 	if(ha == NULL) {
 		HIP_DIE("Trying to insert a NULL HIP association to the HIP "\
@@ -232,22 +229,42 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 	}
 		
 	st = ha->hastate;
-	
-	if (!ipv6_addr_any(&ha->hit_peer) && !(st & HIP_HASTATE_HITOK)) {
-		HIP_HEXDUMP("ha->hit_our is: ", &ha->hit_our, 16);
-		HIP_HEXDUMP("ha->hit_peer is: ", &ha->hit_peer, 16);
-		tmp = hip_ht_find(hadb_hit, ha);
 
+#ifdef CONFIG_HIP_DEBUG /* Debug block. */
+	{
+		char hito[INET6_ADDRSTRLEN], hitp[INET6_ADDRSTRLEN];
+		inet_ntop(AF_INET6, &ha->hit_our, hito, INET6_ADDRSTRLEN);
+		inet_ntop(AF_INET6, &ha->hit_peer, hitp, INET6_ADDRSTRLEN);
+		HIP_DEBUG("\nTrying to insert a new state to the HIP "\
+			  "association database.\n\tOur HIT: %s\n"\
+			  "\tPeer HIT: %s\n\tHIP association state: %d\n",
+			  hito, hitp, ha->hastate);
+	}
+#endif
+
+	/* We're using hastate here as if it was a binary mask. hastate,
+	   however, is of signed type and all of the predefined values are not
+	   in the power of two. -Lauri 07.08.2008 */
+	if (!(st & HIP_HASTATE_HITOK)) {
+		tmp = hip_ht_find(hadb_hit, ha);
+		
 		if (tmp == NULL) {
-		        if ((ha->lsi_peer).s_addr == 0)
+		        if ((ha->lsi_peer).s_addr == 0) {
 		                hip_hadb_set_lsi_pair(ha);
+			}
 			hip_ht_add(hadb_hit, ha);
 			st |= HIP_HASTATE_HITOK;
-			HIP_DEBUG("New state added\n");
+			HIP_DEBUG("HIP association was inserted "\
+				  "successfully.\n");
 		} else {
 			hip_db_put_ha(tmp, hip_hadb_delete_state);
-			HIP_DEBUG("HIT already taken\n");
+			HIP_DEBUG("HIP association was NOT inserted because "\
+				  "a HIP association with matching HITs was "\
+				  "already present in the database.\n");
 		}
+	} else {
+		HIP_DEBUG("HIP association was NOT inserted because the "\
+			  "HIP association state is not OK.\n");
 	}
 
 #ifdef CONFIG_HIP_ESCROW
@@ -312,7 +329,7 @@ void hip_hadb_set_lsi_pair(hip_ha_t *entry)
 		//Assign lsi_peer 
 		aux = hip_generate_peer_lsi();
 		memcpy(&entry->lsi_peer, &aux, sizeof(hip_lsi_t));
-		HIP_DEBUG_LSI("entry->lsi_peer is ", &entry->lsi_peer);
+		_HIP_DEBUG_LSI("entry->lsi_peer is ", &entry->lsi_peer);
 	}
 }
 
@@ -2849,11 +2866,12 @@ struct in_addr hip_generate_peer_lsi()
 {
 	struct in_addr lsi_prefix;
 	int index = 1;
-	do{	
-		lsi_prefix.s_addr = htonl(HIP_LSI_PREFIX|index++);
-	}while(lsi_assigned(lsi_prefix));
 	
-	HIP_DEBUG_LSI("lsi free final value is ", &lsi_prefix);
+	do {	
+		lsi_prefix.s_addr = htonl(HIP_LSI_PREFIX|index++);
+	} while(lsi_assigned(lsi_prefix));
+	
+	_HIP_DEBUG_LSI("lsi free final value is ", &lsi_prefix);
 	return lsi_prefix;
 }
 

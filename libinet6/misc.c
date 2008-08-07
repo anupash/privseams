@@ -1529,20 +1529,21 @@ int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr) {
 }
 
 void *hip_cast_sa_addr(void *sockaddr) {
-  struct sockaddr *sa = (struct sockaddr *) sockaddr;
-  void *ret;
+	struct sockaddr *sa = (struct sockaddr *) sockaddr;
+	void *ret = NULL;
   
-  switch(sa->sa_family) {
-  case AF_INET:
-    ret = &(((struct sockaddr_in *) sockaddr)->sin_addr);
-    break;
-  case AF_INET6:
-    ret = &(((struct sockaddr_in6 *) sockaddr)->sin6_addr);
-    break;
-  default:
-    ret = NULL;
-  }
-  return ret;
+	switch(sa->sa_family) {
+	case AF_INET:
+		ret = &(((struct sockaddr_in *) sockaddr)->sin_addr);
+		break;
+	case AF_INET6:
+		ret = &(((struct sockaddr_in6 *) sockaddr)->sin6_addr);
+		break;
+	default:
+		ret = NULL;
+	}
+	
+	return ret;
 }
 
 int hip_sockaddr_len(const void *sockaddr) {

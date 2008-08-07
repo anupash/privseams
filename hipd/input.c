@@ -1881,17 +1881,29 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		   source, but one that is calculated using the Host Identity
 		   that we have dug out. */
 		ipv6_addr_copy(&entry->hit_peer, &i2->hits);
+		HIP_DEBUG("Initializing the HIP association.\n");
 		hip_init_us(entry, &i2->hitr);
 		HIP_DEBUG("PONG.\n");
 #endif
-		HIP_DEBUG("Before inserting state entry in hadb\n");
+		HIP_DEBUG("Inserting the new HIP association in the HIP "\
+			  "association database.\n");
 		hip_hadb_insert_state(entry);
-		HIP_DEBUG("After inserting state entry in hadb\n");
 		
 		ipv6_addr_copy(&entry->local_address, i2_daddr);
 		
-		HIP_IFEL(((if_index = hip_devaddr2ifindex(&entry->local_address)) <0), -1,
-			 "if_index NOT determined\n");
+		/* Get the interface index of the network device which has our
+		   local IP address. */
+		if((if_index =
+		    hip_devaddr2ifindex(&entry->local_address)) < 0) {
+			err = -ENXIO;
+			HIP_ERROR("Interface index for local IPv6 address "\
+				  "could not be determined. Dropping the I2 "\
+				  "packet.\n");
+			goto out_err;
+		}
+
+		//HIP_IFEL(((if_index = hip_devaddr2ifindex(&entry->local_address)) <0), -1,
+		// "if_index NOT determined\n");
 
 		memset(addr, 0, sizeof(struct sockaddr_storage));
 		addr->sa_family = AF_INET6;
@@ -1900,7 +1912,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	}
 
 	hip_hadb_insert_state(entry);
-	hip_hold_ha(entry);
 
 	_HIP_DEBUG("HA entry created.");
 
