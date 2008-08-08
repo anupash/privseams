@@ -184,17 +184,17 @@ out_err:
 
 
 /*
- * exactly the same function as hip_request_peer_hit_from_hipd(...)
+ * similar to the hip_request_peer_hit_from_hipd(...) function
  * 
  */
-int hip_request_peer_hit_from_hipd_at_firewall(const struct in6_addr *peer_ip,
-				         struct in6_addr *peer_hit,
-				   const struct in6_addr *local_hit,
-				   in_port_t src_tcp_port,
-				   in_port_t dst_tcp_port,
-				   int *fallback,
-				   int *reject)
-{
+int hip_request_peer_hit_from_hipd_at_firewall(
+			const struct in6_addr *peer_ip,
+	         	struct in6_addr       *peer_hit,
+			const struct in6_addr *local_hit,
+			in_port_t             *src_tcp_port,
+			in_port_t             *dst_tcp_port,
+			int                   *fallback,
+			int                   *reject){
 	struct hip_common *msg = NULL;
 	struct in6_addr *hit_recv = NULL;
 	hip_hit_t *ptr = NULL;
@@ -215,12 +215,12 @@ int hip_request_peer_hit_from_hipd_at_firewall(const struct in6_addr *peer_ip,
 					  sizeof(struct in6_addr)), -1,
 		 "build param HIP_PARAM_IPV6_ADDR failed\n");
 
-	HIP_IFEL(hip_build_param_contents(msg, (void *)(&src_tcp_port),
+	HIP_IFEL(hip_build_param_contents(msg, (void *)(src_tcp_port),
 					  HIP_PARAM_SRC_TCP_PORT,
 					  sizeof(in_port_t)), -1,
 		 "build param HIP_PARAM_SRC_TCP_PORT failed\n");
 
-	HIP_IFEL(hip_build_param_contents(msg, (void *)(&dst_tcp_port),
+	HIP_IFEL(hip_build_param_contents(msg, (void *)(dst_tcp_port),
 					  HIP_PARAM_DST_TCP_PORT,
 					  sizeof(in_port_t)), -1,
 		 "build param HIP_PARAM_DST_TCP_PORT failed\n");
@@ -233,47 +233,11 @@ int hip_request_peer_hit_from_hipd_at_firewall(const struct in6_addr *peer_ip,
 	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send_recv msg failed\n");
 	_HIP_DEBUG("send_recv msg succeed\n");
 
-/*#################
-	// check error value 
-	HIP_IFEL(hip_get_msg_err(msg), -1, "Got erroneous message!\n");
-	
-	ptr = (hip_hit_t *) hip_get_param_contents(msg, HIP_PARAM_HIT);
-	if (ptr) {
-		memcpy(peer_hit, ptr, sizeof(hip_hit_t));
-		HIP_DEBUG_HIT("peer_hit", peer_hit);
-		*fallback = 0;
-	}
-
-	ptr = hip_get_param(msg, HIP_PARAM_AGENT_REJECT);
-	if (ptr)
-	{
-		HIP_DEBUG("Connection is to be rejected\n");
-		*reject = 1;
-	}
-#################*/
-
  out_err:
-	
 	if(msg)
 		free(msg);
-	
 	return err;
 }
-
-//#######################################################
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 /**

@@ -1260,6 +1260,7 @@ int hip_fw_handle_outgoing_ip(hip_fw_context_t *ctx){
 			else
 				new_fw_entry_state = FIREWALL_STATE_BEX_DEFAULT;
 
+HIP_DEBUG("New state %d - \n", new_fw_entry_state);
 			//update fw entry state accordingly
 			firewall_update_entry(&src_hit, &dst_hit, &dst_lsi,
 					      &ctx->dst, new_fw_entry_state);
@@ -1296,8 +1297,8 @@ int hip_fw_handle_outgoing_ip(hip_fw_context_t *ctx){
 				&ctx->dst,
 				&all_zero_hit.sin6_addr,
 				(const struct in6_addr *)hip_fw_get_default_hit(),
-				&(ctx->transport_hdr.tcp)->source,
-				&(ctx->transport_hdr.tcp)->dest,
+				(in_port_t *) &(ctx->transport_hdr.tcp)->source,
+				(in_port_t *) &(ctx->transport_hdr.tcp)->dest,
 				&fallback,
 				&reject);
 			verdict = 0;
