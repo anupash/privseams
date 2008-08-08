@@ -45,6 +45,7 @@ int hip_fw_examine_incoming_tcp_packet(void *hdr,
 	/*this is needed for puting in default values
 	  for the hits and lsi in the firewall entry*/
 	struct in6_addr all_zero_default;
+	firewall_hl_t *entry_peer = NULL;
 
 	HIP_DEBUG("\n");
 
@@ -128,9 +129,9 @@ int hip_fw_examine_incoming_tcp_packet(void *hdr,
 			return 1;
 		}
 	}
-	else if( ((tcphdr->syn == 1) && (tcphdr->ack == 1)) ||	//incoming, syn=1 and ack=1
-		 ((tcphdr->rst == 1) && (tcphdr->ack == 1)) ||
-		 ((tcphdr->fin == 1) && (tcphdr->ack == 1))   ){	//incoming, rst=1 and ack=1
+	else if( ((tcphdr->syn == 1) && (tcphdr->ack == 1)) ||	 //SYN_ACK
+		 ((tcphdr->rst == 1) && (tcphdr->ack == 1)) ||   //RST_ACK
+		 ((tcphdr->fin == 1) && (tcphdr->ack == 1))   ){ //FIN_ACK
 		//with the new implementation, the i1 is sent out directly
 		/*if(tcp_packet_has_i1_option(hdrBytes, 4*tcphdr->doff)){
 			// tcp header pointer + 20(minimum header length)
@@ -144,29 +145,27 @@ int hip_fw_examine_incoming_tcp_packet(void *hdr,
 			return;
 		}
 		else{*/
-			//signal for the normal TCP packets
-			//not to be blocked for this peer
-			//save in db that peer does not support hip
-			//if the bex has not succeeded yet
 
-			firewall_hl_t *entry_peer = NULL;
-			entry_peer = firewall_ip_db_match(&peer_ip);
+			/* Signal for normal TCP not
+			 * to be blocked with this peer.
+			 * Blacklist peer in the hipd db*/
+			hip_fw_unblock_and_blacklist(&peer_ip);
 
+
+			/* updating the fw db if necessary*/
+			entry_peer = (firewall_hl_t *)firewall_ip_db_match(&peer_ip);
 			//if there is no entry in fw, add a default one
 			if(!entry_peer){
 				firewall_add_default_entry(&peer_ip);
-				entry_peer = firewall_ip_db_match(&peer_ip);
+				entry_peer = (firewall_hl_t *)firewall_ip_db_match(&peer_ip);
 			}
-		
 			if(entry_peer->bex_state != FIREWALL_STATE_BEX_ESTABLISHED){
-				//blacklist in the hipd db
-				hip_fw_unblock_and_blacklist(&peer_ip);
-
 				//update the firewall db entry
 				HIP_DEBUG("updating fw entry state to NOT_SUPPORTED\n");
 				firewall_update_entry(NULL, NULL, NULL, &peer_ip,
 					      FIREWALL_STATE_BEX_NOT_SUPPORTED);
 			}
+
 
 			//normal traffic connections should be allowed to be created
 			return 1;
