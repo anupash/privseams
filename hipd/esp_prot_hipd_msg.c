@@ -430,7 +430,7 @@ int esp_prot_i2_handle_anchor(hip_ha_t *entry, struct hip_context *ctx)
 
 					// store peer_anchor
 					memset(entry->esp_peer_anchor, 0, MAX_HASH_LENGTH);
-					memcpy(entry->esp_peer_anchor, &prot_anchor->anchor[0],
+					memcpy(entry->esp_peer_anchor, &prot_anchor->anchors[0],
 							hash_length);
 
 					// ignore a possible update anchor
@@ -537,13 +537,13 @@ int esp_prot_r2_handle_anchor(hip_ha_t *entry, struct hip_context *ctx)
 				hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
 
 				memset(entry->esp_peer_anchor, 0, MAX_HASH_LENGTH);
-				memcpy(entry->esp_peer_anchor, &prot_anchor->anchor[0], hash_length);
+				memcpy(entry->esp_peer_anchor, &prot_anchor->anchors[0], hash_length);
 
 				// ignore a possible update anchor
 #if 0
 				memset(entry->esp_peer_update_anchor, 0, MAX_HASH_LENGTH);
 				memcpy(entry->esp_peer_update_anchor,
-						&prot_anchor->anchor[hash_length], hash_length);
+						&prot_anchor->anchors[hash_length], hash_length);
 #endif
 
 				HIP_HEXDUMP("received anchor: ", entry->esp_peer_anchor, hash_length);

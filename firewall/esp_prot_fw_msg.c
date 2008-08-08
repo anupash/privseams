@@ -489,7 +489,7 @@ int esp_prot_conntrack_bex_anchor(const struct hip_common * common,
 				// store the anchor
 				HIP_IFEL(!(tuple->active_anchor = (unsigned char *)
 						malloc(hash_length)), -1, "failed to allocate memory\n");
-				memcpy(tuple->active_anchor, &prot_anchor->anchor[0], hash_length);
+				memcpy(tuple->active_anchor, &prot_anchor->anchors[0], hash_length);
 
 				HIP_HEXDUMP("received anchor: ", tuple->active_anchor,
 						hash_length);
