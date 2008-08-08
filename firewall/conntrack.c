@@ -1,9 +1,10 @@
 #include "conntrack.h"
 #include "dlist.h"
+#include "hslist.h"
 #include "esp_prot_api.h"
 
-struct DList * hipList = NULL;
-struct DList * espList = NULL;
+DList * hipList = NULL;
+DList * espList = NULL;
 
 int timeoutChecking = 0;
 unsigned long timeoutValue = 0;
@@ -26,9 +27,9 @@ void print_data(struct hip_data * data)
  * prints out the list of addresses of esp_addr_list
  *
  */
-void print_esp_addr_list(struct SList * addr_list)
+void print_esp_addr_list(SList * addr_list)
 {
-  struct _SList * list = (struct _SList *)addr_list;
+  SList * list = (SList *)addr_list;
   struct esp_address * addr;
   HIP_DEBUG("ESP dst addr list:\n");
   while(list){
@@ -61,7 +62,7 @@ void print_esp_tuple(const struct esp_tuple * esp_tuple)
 
 void print_esp_list()
 {
-  struct _DList * list = (struct _DList *)espList;
+  DList * list = (DList *)espList;
   HIP_DEBUG("ESP LIST: \n");
   while(list){
     print_esp_tuple((struct esp_tuple *) list->data);
@@ -72,7 +73,7 @@ void print_esp_list()
 
 void print_tuple_list()
 {
-  struct _DList * list = (struct _DList *)hipList;
+  DList * list = (DList *)hipList;
   HIP_DEBUG("TUPLE LIST: \n");
   if (list) {
   	while(list){
@@ -105,7 +106,7 @@ struct hip_data * get_hip_data(const struct hip_common * buf){
  * Returns the tuple or NULL, if not found.
  */
 struct tuple * get_tuple_by_hip(struct hip_data * data){
-  struct _DList * list = (struct _DList *) hipList;
+  DList * list = (DList *) hipList;
   while(list)
     {
       struct hip_tuple * tuple = (struct hip_tuple *)list->data;
@@ -126,7 +127,7 @@ struct tuple * get_tuple_by_hip(struct hip_data * data){
  * Returns the tuple or NULL, if not found.
  */
 struct tuple * get_tuple_by_hits(const struct in6_addr * src_hit, const struct in6_addr *dst_hit){
-  struct _DList * list = (struct _DList *) hipList;
+  DList * list = (DList *) hipList;
   while(list)
     {
       struct hip_tuple * tuple = (struct hip_tuple *)list->data;
@@ -147,10 +148,10 @@ struct tuple * get_tuple_by_hits(const struct in6_addr * src_hit, const struct i
  * returns esp_address structure if one is found with address matching
  * the argument, otherwise NULL;
  */
-struct esp_address * get_esp_address(struct SList * addr_list,
+struct esp_address * get_esp_address(SList * addr_list,
 				     const struct in6_addr * addr)
 {
-  struct _SList * list = (struct _SList *) addr_list;
+  SList * list = (SList *) addr_list;
   struct esp_address * esp_addr;
   HIP_DEBUG("get_esp_address\n");
 
@@ -173,7 +174,7 @@ struct esp_address * get_esp_address(struct SList * addr_list,
  * Insert address into list of addresses. If same address exists already
  * the update_id is repplaced with the new value. Returns the address list.
  */
-struct SList * update_esp_address(struct SList * addr_list,
+SList * update_esp_address(SList * addr_list,
 		     const struct in6_addr * addr,
 		     const uint32_t * upd_id)
 {
@@ -204,7 +205,7 @@ struct SList * update_esp_address(struct SList * addr_list,
   else
     esp_addr->update_id = NULL;
   HIP_DEBUG("update_esp_address: addr created and added\n");
-  return (struct SList *)append_to_slist((struct _SList *)addr_list,
+  return (SList *)append_to_slist((SList *)addr_list,
 					 (void *) esp_addr);
 }
 
@@ -214,7 +215,7 @@ struct SList * update_esp_address(struct SList * addr_list,
  */
 struct tuple * get_tuple_by_esp(const struct in6_addr * dst_addr, uint32_t spi)
 {
-  struct _SList * list = (struct _SList *) espList;
+  SList * list = (SList *) espList;
   if (!list)
     {
       HIP_DEBUG ("Esp tuple list is empty\n");
@@ -241,9 +242,9 @@ struct tuple * get_tuple_by_esp(const struct in6_addr * dst_addr, uint32_t spi)
  * find esp_tuple from a list that matches the argument spi value
  * returns NULL is no such esp_tuple is found
  */
-struct esp_tuple * find_esp_tuple(const struct SList * esp_list, uint32_t spi)
+struct esp_tuple * find_esp_tuple(const SList * esp_list, uint32_t spi)
 {
-  struct _SList * list = (struct _SList *) esp_list;
+  SList * list = (SList *) esp_list;
   struct esp_tuple * esp_tuple;
   if (!list)
     {
@@ -265,7 +266,7 @@ struct esp_tuple * find_esp_tuple(const struct SList * esp_list, uint32_t spi)
 void insert_new_connection(struct hip_data * data){
   HIP_DEBUG("insert_new_connection\n");
   struct connection * connection = (struct connection *) malloc(sizeof(struct connection));
-  struct _DList * list = (struct _DList *) hipList;
+  DList * list = (DList *) hipList;
 
   connection->state = STATE_ESTABLISHED;
   //set time stamp
@@ -306,9 +307,9 @@ void insert_new_connection(struct hip_data * data){
   connection->reply.hip_tuple->data->verify = NULL;
 
   //add tuples to list
-  hipList = (struct DList *) append_to_list((struct _DList *)hipList,
+  hipList = (DList *) append_to_list((DList *)hipList,
 					   (void *)connection->original.hip_tuple);
-  hipList = (struct DList *) append_to_list((struct _DList *)hipList,
+  hipList = (DList *) append_to_list((DList *)hipList,
 					   (void *)connection->reply.hip_tuple);
   HIP_DEBUG("inserting connection \n");
   print_data(data);
@@ -316,8 +317,8 @@ void insert_new_connection(struct hip_data * data){
 
 void insert_esp_tuple(const struct esp_tuple * esp_tuple )
 {
-  struct _DList * list = (struct _DList *) espList;
-  espList = (struct DList *) append_to_list((struct _DList *)espList,
+  DList * list = (DList *) espList;
+  espList = (DList *) append_to_list((DList *)espList,
 					   (void *)esp_tuple);
 
   HIP_DEBUG("insert_esp_tuple:\n");
@@ -356,18 +357,18 @@ void free_esp_tuple(struct esp_tuple * esp_tuple)
 
 	if(esp_tuple)
 	{
-		struct _SList * list = (struct _SList *) esp_tuple->dst_addr_list;
+		SList * list = (SList *) esp_tuple->dst_addr_list;
 		struct esp_address * addr = NULL;
 
 		while(list)
 		{
-			esp_tuple->dst_addr_list = (struct SList *) remove_link_slist((struct _SList *)esp_tuple->dst_addr_list,
+			esp_tuple->dst_addr_list = (SList *) remove_link_slist((SList *)esp_tuple->dst_addr_list,
 						 list);
 			addr = (struct esp_address *) list->data;
 
 			free(addr->update_id);
 			free(addr);
-			list = (struct _SList *) esp_tuple->dst_addr_list;
+			list = (SList *) esp_tuple->dst_addr_list;
 		}
 
 		if (esp_tuple->dec_data)
@@ -389,20 +390,20 @@ void remove_tuple(struct tuple * tuple)
   HIP_DEBUG("remove_tuple\n");
   if(tuple)
     {
-      hipList = (struct DList *) remove_link_dlist((struct _DList *) hipList,
-						    find_in_dlist((struct _DList *)
+      hipList = (DList *) remove_link_dlist((DList *) hipList,
+						    find_in_dlist((DList *)
 								hipList,
 								tuple->hip_tuple));
       free_hip_tuple(tuple->hip_tuple);
-      struct _SList * list = (struct _SList *)tuple->esp_tuples;
+      SList * list = (SList *)tuple->esp_tuples;
       while(list)
 	{
-	  espList = (struct DList *) remove_link_dlist((struct _DList *)
-							espList, (struct _DList *) find_in_dlist((struct _DList *)espList, list->data));
-	  tuple->esp_tuples = (struct SList *) remove_link_slist((struct _SList *)tuple->esp_tuples,
+	  espList = (DList *) remove_link_dlist((DList *)
+							espList, (DList *) find_in_dlist((DList *)espList, list->data));
+	  tuple->esp_tuples = (SList *) remove_link_slist((SList *)tuple->esp_tuples,
 								    list);
 	  free_esp_tuple((struct esp_tuple *)list->data);
-	  list = (struct _SList *) tuple->esp_tuples;
+	  list = (SList *) tuple->esp_tuples;
 	}
     }
   HIP_DEBUG("remove_tuple\n");
@@ -471,8 +472,8 @@ struct esp_tuple *esp_tuple_from_esp_info_locator(const struct hip_esp_info * es
 		     sizeof(struct in6_addr));
 	      esp_address->update_id = malloc(sizeof(uint32_t));
 	      *esp_address->update_id = seq->update_id;
-	      new_esp->dst_addr_list = (struct SList *)
-		append_to_slist((struct _SList *)new_esp->dst_addr_list,
+	      new_esp->dst_addr_list = (SList *)
+		append_to_slist((SList *)new_esp->dst_addr_list,
 			       (void *) esp_address);
 	      HIP_DEBUG("esp_tuple_from_esp_info_locator: \n");
 	      //print_esp_tuple(new_esp);
@@ -514,7 +515,7 @@ struct esp_tuple * esp_tuple_from_esp_info(const struct hip_esp_info * esp_info,
 
       esp_address->update_id = NULL;
       new_esp->dst_addr_list = NULL;
-      new_esp->dst_addr_list = (struct SList *)append_to_slist((struct _SList *)new_esp->dst_addr_list,
+      new_esp->dst_addr_list = (SList *)append_to_slist((SList *)new_esp->dst_addr_list,
 							       (void *) esp_address);
 	  HIP_DEBUG("esp_tuple_from_esp_info: \n");
 	  //print_esp_tuple(new_esp);
@@ -533,7 +534,7 @@ int insert_connection_from_update(struct hip_data * data,
 				  struct hip_seq * seq)
 {
   struct connection * connection = (struct connection *) malloc(sizeof(struct connection));
-  struct _DList * list = (struct _DList *) hipList;
+  DList * list = (DList *) hipList;
   struct esp_tuple * esp_tuple = NULL;
 
   _HIP_DEBUG("insert_connection_from_update\n");
@@ -578,7 +579,7 @@ int insert_connection_from_update(struct hip_data * data,
 #ifdef CONFIG_HIP_HIPPROXY
   connection->reply.hipproxy = hip_proxy_status;
 #endif /* CONFIG_HIP_HIPPROXY */
-  connection->reply.esp_tuples = (struct SList *)append_to_slist((struct _SList *)
+  connection->reply.esp_tuples = (SList *)append_to_slist((SList *)
 						connection->reply.esp_tuples,
 						(void *) esp_tuple);
   insert_esp_tuple(esp_tuple);
@@ -595,9 +596,9 @@ int insert_connection_from_update(struct hip_data * data,
 
 
   //add tuples to list
-  hipList = (struct DList *) append_to_list((struct _DList *)hipList,
+  hipList = (DList *) append_to_list((DList *)hipList,
 					   (void *)connection->original.hip_tuple);
-  hipList = (struct DList *) append_to_list((struct _DList *)hipList,
+  hipList = (DList *) append_to_list((DList *)hipList,
 					   (void *)connection->reply.hip_tuple);
   HIP_DEBUG("insert_connection_from_update \n");
   //print_data(data);
@@ -712,7 +713,7 @@ int handle_i2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 	struct hip_esp_info * spi = NULL, * spi_tuple = NULL;
 	struct tuple * other_dir = NULL;
 	struct esp_tuple * esp_tuple = NULL;
-	struct SList * other_dir_esps = NULL;
+	SList * other_dir_esps = NULL;
 	// assume correct packet
 	int err = 1;
 
@@ -752,8 +753,8 @@ int handle_i2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 					ip6_src, NULL);
 		esp_tuple->tuple = other_dir;
 		esp_tuple->dec_data = NULL;
-		other_dir->esp_tuples = (struct SList *)
-			append_to_slist((struct _SList *)other_dir->esp_tuples, esp_tuple);
+		other_dir->esp_tuples = (SList *)
+			append_to_slist((SList *)other_dir->esp_tuples, esp_tuple);
 		insert_esp_tuple(esp_tuple);
 
 	} else
@@ -790,7 +791,7 @@ int handle_r2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 {
 	struct hip_esp_info * spi = NULL, * spi_tuple = NULL;
 	struct tuple * other_dir = NULL;
-	struct SList * other_dir_esps = NULL;
+	SList * other_dir_esps = NULL;
 	struct esp_tuple * esp_tuple = NULL;
 	int err = 1;
 
@@ -815,8 +816,33 @@ int handle_r2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 
 	if (!esp_tuple)
 	{
-		HIP_IFEL(!(esp_tuple = malloc(sizeof(struct esp_tuple))), 0,
-				"failed to allocate memory\n");
+		/* normally there should NOT be any esp_tuple for the other direction yet,
+		 * but when tracking anchor elements, the other one was already set up
+		 * when handling the I2 */
+		if (other_dir_esps)
+		{
+			/* there should only be one esp_tuple in the other direction's esp_tuple
+			 * list */
+			HIP_IFEL(other_dir_esps->next, -1,
+					"expecting 1 esp_tuple in the list, but there are several\n");
+
+			// get the esp_tuple for the other direction
+			HIP_IFEL(!(esp_tuple = (struct esp_tuple *) other_dir_esps->data), -1,
+					"expecting 1 esp_tuple in the list, but there is NONE\n");
+
+		} else
+		{
+			HIP_IFEL(!(esp_tuple = malloc(sizeof(struct esp_tuple))), 0,
+					"failed to allocate memory\n");
+			memset(esp_tuple, 0, sizeof(struct esp_tuple));
+
+			//add esp_tuple to list of tuples
+			other_dir->esp_tuples = (SList *)
+						append_to_slist((SList *)other_dir->esp_tuples,
+						esp_tuple);
+		}
+
+		// this has to be set in both cases
 		esp_tuple->spi = ntohl(spi->new_spi);
 		esp_tuple->new_spi = 0;
 		esp_tuple->spi_update_id = 0;
@@ -826,26 +852,21 @@ int handle_r2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 
 		esp_tuple->dec_data = NULL;
 		esp_tuple->tuple = other_dir;
-		//add esp_tuple to list of tuples
-		other_dir->esp_tuples = (struct SList *)
-					append_to_slist((struct _SList *)other_dir->esp_tuples, esp_tuple);
-
-		HIP_DEBUG("spi found %d\n", esp_tuple->spi);
 
 		insert_esp_tuple(esp_tuple);
 
-		HIP_DEBUG("inserted spi\n");
+		HIP_DEBUG("ESP tuple inserted\n");
 
 	} else
 	{
 		HIP_DEBUG("ESP tuple already exists!\n");
 	}
 
-	// TEST_END
-
 	/* check if the R2 contains ESP protection anchor and store state */
 	HIP_IFEL(esp_prot_conntrack_R2_anchor(common, tuple), -1,
 			"failed to track esp protection extension state\n");
+
+	// TEST_END
 
 	/*if(tuple->direction == ORIGINAL_DIR)
 	other_dir = &tuple->connection->reply;
@@ -1051,7 +1072,7 @@ int handle_update(const struct in6_addr * ip6_src,
 		// we already know this connection
 
 		int n = 0;
-		struct SList * other_dir_esps = NULL;
+		SList * other_dir_esps = NULL;
 		struct esp_tuple * esp_tuple = NULL;
 
 		if(tuple->direction == ORIGINAL_DIR)
@@ -1099,7 +1120,7 @@ int handle_update(const struct in6_addr * ip6_src,
 				if(new_esp == NULL)
 					return 0;//locator must contain adress for this spi
 
-				other_dir_esps = (struct SList *) append_to_slist((struct _SList *)
+				other_dir_esps = (SList *) append_to_slist((SList *)
 						other_dir_esps, (void *) new_esp);
 
 				insert_esp_tuple(new_esp);
@@ -1141,8 +1162,8 @@ int handle_update(const struct in6_addr * ip6_src,
 						struct esp_tuple * new_esp = esp_tuple_from_esp_info(
 								esp_info, ip6_src, other_dir_tuple);
 
-						other_dir_esps = (struct SList *)
-						append_to_slist((struct _SList *) other_dir_esps,
+						other_dir_esps = (SList *)
+						append_to_slist((SList *) other_dir_esps,
 								(void *) new_esp);
 						insert_esp_tuple(new_esp);
 						tuple->connection->state = STATE_ESTABLISHED;
@@ -1156,7 +1177,7 @@ int handle_update(const struct in6_addr * ip6_src,
 				struct esp_tuple * new_esp = esp_tuple_from_esp_info(esp_info,
 						ip6_src, other_dir_tuple);
 
-				other_dir_esps = (struct SList *) append_to_slist((struct _SList *)
+				other_dir_esps = (SList *) append_to_slist((SList *)
 						other_dir_esps, (void *) new_esp);
 				insert_esp_tuple(new_esp);
 			}
@@ -1166,7 +1187,7 @@ int handle_update(const struct in6_addr * ip6_src,
 		//couldn't get that out of HIPL
 		if(ack != NULL)
 		{
-			struct _SList * esp_tuples = (struct _SList *) tuple->esp_tuples,
+			SList * esp_tuples = (SList *) tuple->esp_tuples,
 				* temp_tuple_list;
 
 			uint32_t * upd_id = &ack->peer_update_id;
@@ -1182,7 +1203,7 @@ int handle_update(const struct in6_addr * ip6_src,
 				//addresses have the update id
 				temp_tuple_list = esp_tuples;
 				struct esp_tuple * esp_tuple;
-				struct _SList * original_addr_list, *addr_list,
+				SList * original_addr_list, *addr_list,
 					* delete_addr_list = NULL, * delete_original_list = NULL;
 				int found = 0;
 
@@ -1199,7 +1220,7 @@ int handle_update(const struct in6_addr * ip6_src,
 								*upd_id, ntohl(esp_tuple->spi));
 					}
 
-					addr_list = (struct _SList *)esp_tuple->dst_addr_list;
+					addr_list = (SList *)esp_tuple->dst_addr_list;
 					struct esp_address * esp_addr;
 
 					while(addr_list)
@@ -1231,8 +1252,8 @@ int handle_update(const struct in6_addr * ip6_src,
 
 						while(delete_addr_list)
 						{
-							esp_tuple->dst_addr_list = (struct SList *)
-							remove_from_slist((struct _SList *) esp_tuple->dst_addr_list,
+							esp_tuple->dst_addr_list = (SList *)
+							remove_from_slist((SList *) esp_tuple->dst_addr_list,
 							delete_addr_list->data);
 							delete_addr_list = delete_addr_list->next;
 						}
@@ -1785,7 +1806,7 @@ int add_esp_decryption_data(const struct in6_addr * hit_s,
   		esp_tuple->dst_addr_list = update_esp_address(esp_tuple->dst_addr_list,
 						dst_addr, NULL);
   		esp_tuple->tuple = other_dir;
- 		other_dir->esp_tuples = (struct SList *)append_to_slist((struct _SList *)other_dir->esp_tuples, esp_tuple);
+ 		other_dir->esp_tuples = (SList *)append_to_slist((SList *)other_dir->esp_tuples, esp_tuple);
   		insert_esp_tuple(esp_tuple);
 		HIP_DEBUG("Created new esp tuple!\n");
 	}
@@ -1866,7 +1887,7 @@ void * check_for_timeouts(void * data)
       _HIP_DEBUG("check_for_timeouts: checking for timed out connections\n");
 //      g_mutex_lock(connectionTableMutex);
       _HIP_DEBUG("check_for_timeouts:locked mutex\n");
-      struct _DList * list = (struct _DList *)hipList;
+      DList * list = (DList *)hipList;
       struct hip_tuple * hip_tuple = NULL;
       struct timeval current;
       long difference = 0;

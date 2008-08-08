@@ -23,7 +23,7 @@ struct esp_tuple
 	uint32_t spi;
 	uint32_t new_spi;
 	uint32_t spi_update_id;
-	struct SList * dst_addr_list;
+	SList * dst_addr_list;
 	struct tuple * tuple;
 	struct decryption_data * dec_data;
 	/* members needed for ESP protection extension */
@@ -57,7 +57,7 @@ struct hip_tuple
 struct tuple
 {
 	struct hip_tuple * hip_tuple;
-	struct SList * esp_tuples;
+	SList * esp_tuples;
 	int direction;
 	struct connection * connection;
 	int state;

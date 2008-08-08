@@ -452,8 +452,8 @@ int esp_prot_conntrack_R1_tfms(struct hip_common * common, const struct tuple * 
 	return err;
 }
 
-int esp_prot_conntrack_I2_anchor(const struct hip_common * common,
-		struct tuple * tuple)
+int esp_prot_conntrack_I2_anchor(const struct hip_common *common,
+		struct tuple *tuple)
 {
 	struct hip_param *param = NULL;
 	struct esp_prot_anchor *prot_anchor = NULL;
@@ -542,12 +542,66 @@ int esp_prot_conntrack_I2_anchor(const struct hip_common * common,
 	return err;
 }
 
-int esp_prot_conntrack_R2_anchor(const struct hip_common * common,
-		struct tuple * tuple)
+int esp_prot_conntrack_R2_anchor(const struct hip_common *common,
+		struct tuple *tuple)
 {
+	struct hip_param *param = NULL;
+	struct esp_prot_anchor *prot_anchor = NULL;
+	struct esp_tuple *esp_tuple = NULL;
+	int hash_length = 0;
 	int err = 0;
+
+	HIP_ASSERT(common != NULL);
+	HIP_ASSERT(tuple != NULL);
+
+	// check if message contains optional ESP protection anchor
+	if (param = hip_get_param(common, HIP_PARAM_ESP_PROT_ANCHOR))
+	{
+		prot_anchor = (struct esp_prot_anchor *) param;
+
+		// check if the anchor has a supported transform
+		if (esp_prot_check_transform(tuple->connection->num_esp_prot_tfms,
+				tuple->connection->esp_prot_tfms,
+				prot_anchor->transform) >= 0)
+		{
+			// for BEX there should be only one ESP tuple for this direction
+			HIP_IFEL(tuple->esp_tuples->next, -1,
+					"expecting 1 esp_tuple in the list, but there are several\n");
+
+			HIP_IFEL(!(esp_tuple = (struct esp_tuple *) tuple->esp_tuples->data), -1,
+					"expecting 1 esp_tuple in the list, but there is NONE\n");
+
+			esp_tuple->esp_prot_tfm = prot_anchor->transform;
+			HIP_DEBUG("using esp prot transform: %u\n", esp_tuple->esp_prot_tfm);
+
+			if (esp_tuple->esp_prot_tfm > ESP_PROT_TFM_UNUSED)
+			{
+				hash_length = esp_prot_get_hash_length(esp_tuple->esp_prot_tfm);
+
+				// store the anchor
+				HIP_IFEL(!(esp_tuple->active_anchor = (unsigned char *)
+						malloc(hash_length)), -1, "failed to allocate memory\n");
+				memcpy(esp_tuple->active_anchor, &prot_anchor->anchors[0], hash_length);
+
+				HIP_HEXDUMP("received anchor: ", esp_tuple->active_anchor,
+						hash_length);
+
+			} else
+			{
+				HIP_DEBUG("received anchor with non-matching transform, DROPPING\n");
+
+				err = 1;
+				goto out_err;
+			}
+		} else
+		{
+			HIP_ERROR("received anchor with unknown transform, DROPPING\n");
+
+			err = 1;
+			goto out_err;
+		}
+	}
 
   out_err:
 	return err;
-
 }
