@@ -1543,6 +1543,13 @@ int filter_esp_state(const struct in6_addr *dst_addr,
 
 		// no error case
 		err = 1;
+	} if (err == 0)
+	{
+		//conversion needed for verdicts
+		err = 1;
+	} else
+	{
+		err = 0;
 	}
 
 
