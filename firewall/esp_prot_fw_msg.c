@@ -395,7 +395,7 @@ unsigned char * esp_prot_handle_sa_add_request(struct hip_common *msg,
 	return esp_prot_anchor;
 }
 
-int esp_prot_conntrack_bex_tfms(struct hip_common * common, const struct tuple * tuple)
+int esp_prot_conntrack_R1_tfms(struct hip_common * common, const struct tuple * tuple)
 {
 	struct hip_param *param = NULL;
 	struct esp_prot_preferred_tfms *prot_transforms = NULL;
@@ -452,26 +452,38 @@ int esp_prot_conntrack_bex_tfms(struct hip_common * common, const struct tuple *
 	return err;
 }
 
-int esp_prot_conntrack_bex_anchor(const struct hip_common * common,
+int esp_prot_conntrack_I2_anchor(const struct hip_common * common,
 		struct tuple * tuple)
 {
 	struct hip_param *param = NULL;
 	struct esp_prot_anchor *prot_anchor = NULL;
+	struct esp_tuple *esp_tuple = NULL;
 	int hash_length = 0;
 	int err = 0;
 
 	HIP_ASSERT(common != NULL);
 	HIP_ASSERT(tuple != NULL);
 
-	// initialize ESP protection parameters for this esp_tuple
-	tuple->esp_prot_tfm = 0;
-	tuple->active_anchor = NULL;
-	tuple->next_anchor = NULL;
-
 	// check if message contains optional ESP protection anchor
 	if (param = hip_get_param(common, HIP_PARAM_ESP_PROT_ANCHOR))
 	{
 		prot_anchor = (struct esp_prot_anchor *) param;
+
+		/* create esp_tuple for direction of this message only storing
+		 * the sent anchor, no SPI known yet -> will be sent in R2
+		 *
+		 * @note this needs to be done as SPIs are signaled in one direction
+		 *       but used in the other while anchors are signaled and used
+		 *       in the same direction
+		 */
+
+		/* check esp_tuple count for this direction, should be 0 */
+		HIP_IFEL(tuple->esp_tuples, -1,
+				"expecting empty esp_tuple list, but it is NOT\n");
+
+		HIP_IFEL(!(esp_tuple = malloc(sizeof(struct esp_tuple))), 0,
+						"failed to allocate memory\n");
+		memset(esp_tuple, 0, sizeof(struct esp_tuple));
 
 		// check if the anchor has a supported transform
 		if (esp_prot_check_transform(tuple->connection->num_esp_prot_tfms,
@@ -479,26 +491,31 @@ int esp_prot_conntrack_bex_anchor(const struct hip_common * common,
 				prot_anchor->transform) >= 0)
 		{
 			// it's one of the supported and advertised transforms
-			tuple->esp_prot_tfm = prot_anchor->transform;
-			HIP_DEBUG("using esp prot transform: %u\n", tuple->esp_prot_tfm);
+			esp_tuple->esp_prot_tfm = prot_anchor->transform;
+			HIP_DEBUG("using esp prot transform: %u\n", esp_tuple->esp_prot_tfm);
 
-			if (tuple->esp_prot_tfm > ESP_PROT_TFM_UNUSED)
+			if (esp_tuple->esp_prot_tfm > ESP_PROT_TFM_UNUSED)
 			{
-				hash_length = esp_prot_get_hash_length(tuple->esp_prot_tfm);
+				hash_length = esp_prot_get_hash_length(esp_tuple->esp_prot_tfm);
 
 				// store the anchor
-				HIP_IFEL(!(tuple->active_anchor = (unsigned char *)
+				HIP_IFEL(!(esp_tuple->active_anchor = (unsigned char *)
 						malloc(hash_length)), -1, "failed to allocate memory\n");
-				memcpy(tuple->active_anchor, &prot_anchor->anchors[0], hash_length);
+				memcpy(esp_tuple->active_anchor, &prot_anchor->anchors[0], hash_length);
 
-				HIP_HEXDUMP("received anchor: ", tuple->active_anchor,
+				HIP_HEXDUMP("received anchor: ", esp_tuple->active_anchor,
 						hash_length);
+
+				// add the tuple to this direction's esp_tuple list
+				HIP_IFEL(!(tuple->esp_tuples = (struct SList *)
+						append_to_slist((struct _SList *)tuple->esp_tuples,
+						esp_tuple)), -1, "failed to insert esp_tuple\n");
 
 			} else
 			{
-				HIP_DEBUG("setting anchor to NULL\n");
-				tuple->active_anchor = NULL;
+				HIP_DEBUG("received anchor with non-matching transform, DROPPING\n");
 
+				err = 1;
 				goto out_err;
 			}
 		} else
@@ -511,5 +528,26 @@ int esp_prot_conntrack_bex_anchor(const struct hip_common * common,
 	}
 
   out_err:
+	if (err)
+	{
+		if (esp_tuple)
+		{
+			if (esp_tuple->active_anchor)
+				free(esp_tuple->active_anchor);
+
+			free(esp_tuple);
+		}
+	}
+
 	return err;
+}
+
+int esp_prot_conntrack_R2_anchor(const struct hip_common * common,
+		struct tuple * tuple)
+{
+	int err = 0;
+
+  out_err:
+	return err;
+
 }

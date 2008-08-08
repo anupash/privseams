@@ -26,6 +26,10 @@ struct esp_tuple
 	struct SList * dst_addr_list;
 	struct tuple * tuple;
 	struct decryption_data * dec_data;
+	/* members needed for ESP protection extension */
+	uint8_t esp_prot_tfm;
+	unsigned char *active_anchor;
+	unsigned char *next_anchor;
 };
 
 struct decryption_data
@@ -60,13 +64,6 @@ struct tuple
 #ifdef CONFIG_HIP_HIPPROXY
 	int hipproxy;
 #endif
-	/* members needed for ESP protection extension
-	 *
-	 * @note we can store ESP specific information here as for now HIP only
-	 *       supports one ESP-pair per HIT-pair */
-	uint8_t esp_prot_tfm;
-	unsigned char *active_anchor;
-	unsigned char *next_anchor;
 };
 
 struct connection

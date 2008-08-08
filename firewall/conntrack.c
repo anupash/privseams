@@ -689,7 +689,7 @@ int handle_r1(struct hip_common * common, const struct tuple * tuple,
 	}
 
 	// check if the R1 contains ESP protection transforms
-	HIP_IFEL(esp_prot_conntrack_bex_tfms(common, tuple), -1,
+	HIP_IFEL(esp_prot_conntrack_R1_tfms(common, tuple), -1,
 			"failed to track esp protection extension transforms\n");
 
   out_err:
@@ -742,6 +742,8 @@ int handle_i2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 		// esp_tuple does not exist yet
 		HIP_IFEL(!(esp_tuple = malloc(sizeof(struct esp_tuple))), 0,
 				"failed to allocate memory\n");
+		memset(esp_tuple, 0, sizeof(struct esp_tuple));
+
 		esp_tuple->spi = ntohl(spi->new_spi);
 		esp_tuple->new_spi = 0;
 		esp_tuple->spi_update_id = 0;
@@ -752,7 +754,7 @@ int handle_i2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 		esp_tuple->dec_data = NULL;
 		other_dir->esp_tuples = (struct SList *)
 			append_to_slist((struct _SList *)other_dir->esp_tuples, esp_tuple);
-						insert_esp_tuple(esp_tuple);
+		insert_esp_tuple(esp_tuple);
 
 	} else
 	{
@@ -762,7 +764,7 @@ int handle_i2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 	// TEST_END
 
 	/* check if the I2 contains ESP protection anchor and store state */
-	HIP_IFEL(esp_prot_conntrack_bex_anchor(common, tuple), -1,
+	HIP_IFEL(esp_prot_conntrack_I2_anchor(common, tuple), -1,
 			"failed to track esp protection extension state\n");
 
 	// store in tuple of other direction that will be using
@@ -842,7 +844,7 @@ int handle_r2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 	// TEST_END
 
 	/* check if the R2 contains ESP protection anchor and store state */
-	HIP_IFEL(esp_prot_conntrack_bex_anchor(common, tuple), -1,
+	HIP_IFEL(esp_prot_conntrack_R2_anchor(common, tuple), -1,
 			"failed to track esp protection extension state\n");
 
 	/*if(tuple->direction == ORIGINAL_DIR)
