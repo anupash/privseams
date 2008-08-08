@@ -1521,26 +1521,29 @@ int filter_esp_state(const struct in6_addr *dst_addr,
 		err = 1;
 	}
 
+	// move here from escrow processing
+	HIP_IFEL(!(esp_tuple = find_esp_tuple(tuple->esp_tuples, spi)), -1,
+					"could NOT find corresponding esp_tuple\n");
 
 	/* check ESP protection anchor if extension is in use */
-#if 0
-	HIP_IFEL((err = esp_prot_verify_hash(tuple->esp_prot_tfm, tuple->active_anchor,
-		tuple->next_anchor, ((unsigned char *) esp) + sizeof(struct hip_esp),
-		DEFAULT_VERIFY_WINDOW)) < 0, -1, "failed to verify ESP protection hash\n");
+	HIP_IFEL((err = esp_prot_verify_hash(esp_tuple->esp_prot_tfm,
+			esp_tuple->active_anchor, esp_tuple->next_anchor,
+			((unsigned char *) esp) + sizeof(struct hip_esp),
+			DEFAULT_VERIFY_WINDOW)) < 0, -1,
+			"failed to verify ESP protection hash\n");
 
 	// this means there was a change in the anchors
 	if (err > 0)
 	{
-		if (tuple->next_anchor)
+		if (esp_tuple->next_anchor)
 		{
 			HIP_DEBUG("we have to set the next_anchor to NULL here\n");
-			tuple->next_anchor = NULL;
+			esp_tuple->next_anchor = NULL;
 		}
 
 		// no error case
 		err = 1;
 	}
-#endif
 
 
 	// do some extra work for key escrow
@@ -1584,9 +1587,6 @@ int filter_esp_state(const struct in6_addr *dst_addr,
 				goto out_err;
 			}
 		}
-
-		HIP_IFEL(!(esp_tuple = find_esp_tuple(tuple->esp_tuples, spi)), -1,
-				"could NOT find corresponding esp_tuple\n");
 
 		/* Decrypt contents */
 		if (esp_tuple && esp_tuple->dec_data) {
