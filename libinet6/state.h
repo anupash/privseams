@@ -109,7 +109,8 @@ typedef struct hip_stateless_info
 	in_port_t src_port; /**< The source port of an incoming packet. */
 	in_port_t dst_port; /**< The destination port of an incoming packet. */
 #ifdef CONFIG_HIP_HI3
-	int hi3_in_use; // varibale says is the received message sent through i3 or not
+	int hi3_in_use; /**< A boolean to indicate whether this message was
+                             sent through I3 or not .*/
 #endif
 } hip_portpair_t;
 
@@ -315,7 +316,7 @@ struct hip_hadb_state
 	struct in6_addr              local_address;
 	/** Peer's Local Scope Identifier (LSI). A Local Scope Identifier is a
 	    32-bit localized representation for a Host Identity.*/
-    hip_lsi_t                    lsi_peer;
+	hip_lsi_t                    lsi_peer;
 	/** Our Local Scope Identifier (LSI). A Local Scope Identifier is a
 	    32-bit localized representation for a Host Identity.*/
 	hip_lsi_t                    lsi_our;
@@ -341,7 +342,7 @@ struct hip_hadb_state
 	uint8_t	                     nat_mode;
 	/* this might seem redundant as dst_port == HIP_NAT_UDP_PORT, but it makes
 	 * port handling easier in other functions */
-	in_port_t					 local_udp_port;
+	in_port_t		     local_udp_port;
 	 /** NAT mangled port (source port of I2 packet). */
 	in_port_t	             	 peer_udp_port;
 	/** Non-zero if the escrow service is in use. */
@@ -460,16 +461,16 @@ struct hip_hadb_state
 #ifdef CONFIG_HIP_HIPPROXY
 	int hipproxy;
 #endif
-
+	
 //NAT Branch
 	//pointer for ice engine
-    void* ice_session;
-    /** a 16 bits flag for nat connectiviy checking engine control*/
-    uint16_t nat_control;
-
-	/**reflexive address(NAT box out bound) when register to relay or RVS**/
+	void* ice_session;
+	/** a 16 bits flag for nat connectiviy checking engine control*/
+	uint16_t nat_control;
+	
+	/**reflexive address(NAT box out bound) when register to relay or RVS */
 	struct in6_addr              local_reflexive_address;
-	/**reflexive address port (NAT box out bound) when register to relay or RVS**/
+	/**reflexive address port (NAT box out bound) when register to relay or RVS */
 	in_port_t local_reflexive_udp_port;
 //end NAT Branch
 

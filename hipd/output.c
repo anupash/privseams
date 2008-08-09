@@ -1095,7 +1095,8 @@ int hip_queue_packet(struct in6_addr *src_addr, struct in6_addr *peer_addr,
             entry->hip_msg_retrans.buf= NULL;
 	}
 
-	HIP_IFE(!(entry->hip_msg_retrans.buf = HIP_MALLOC(len, 0)), -ENOMEM);
+	HIP_IFE(!(entry->hip_msg_retrans.buf =
+		  HIP_MALLOC(len + HIP_UDP_ZERO_BYTES_LEN, 0)), -ENOMEM);
 	memcpy(entry->hip_msg_retrans.buf, msg, len);
 	memcpy(&entry->hip_msg_retrans.saddr, src_addr,
 	       sizeof(struct in6_addr));
