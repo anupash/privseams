@@ -475,6 +475,9 @@ void hip_fw_flush_iptables(void)
 void firewall_exit()
 {
 	HIP_DEBUG("Firewall exit\n");
+	
+	hip_fw_uninit_esp_prot();
+	hip_fw_uninit_userspace_ipsec();
 
 	if (flush_iptables)
 	{
@@ -486,8 +489,6 @@ void firewall_exit()
 	}
 
 	hip_firewall_delete_hldb();
-	hip_fw_uninit_esp_prot();
-	hip_fw_uninit_userspace_ipsec();
 	
 	hip_remove_lock_file(HIP_FIREWALL_LOCK_FILE);
 }
