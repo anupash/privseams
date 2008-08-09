@@ -311,8 +311,8 @@ hash_chain_t * hip_hchain_bexstore_get_hchain(unsigned char *anchor, int hash_le
 				hip_ll_get(&hip_hchain_storage.hchain_store[0], i)), -1,
 				"failed to get hchain from bex store\n");
 
-		HIP_DEBUG("anchor (store %i): ");
-		HIP_HEXDUMP("", stored_hchain->anchor_element->hash, hash_length);
+		HIP_DEBUG("anchor elements:\n");
+		HIP_HEXDUMP("> ", stored_hchain->anchor_element->hash, hash_length);
 
 		// compare passed anchor to anchor element of each hchain in the bex store
 		if (!memcmp(stored_hchain->anchor_element->hash, anchor, hash_length))
