@@ -57,6 +57,12 @@
 #define SO_HIP_TRIGGER_BEX                      23
 #define SO_HIP_DHT_SERVING_GW                   24
 #define SO_HIP_GET_STATE_HA		        25
+#define SO_HIP_GET_LSI_PEER                     26
+#define SO_HIP_GET_LSI_OUR			27
+#define SO_HIP_IS_OUR_LSI                       28
+#define SO_HIP_FW_BEX_DONE                      29
+#define SO_HIP_GET_PEER_HIT_BY_LSIS             30
+#define SO_HIP_FW_UPDATE_DB                     31
 /* inclusive */
 #define HIP_SO_ANY_MAX 				63
 
@@ -163,7 +169,7 @@
 #define SO_HIP_ESP_PROT_EXT_TRANSFORM		146
 #define SO_HIP_IPSEC_UPDATE_ANCHOR_LIST		147
 #define SO_HIP_IPSEC_NEXT_ANCHOR		148
-/* 149 is free */
+#define SO_HIP_RESTART_DUMMY_INTERFACE		149
 #define SO_HIP_GET_LSI_PEER                     150
 #define SO_HIP_GET_LSI_OUR			151
 #define SO_HIP_IS_OUR_LSI                       152
@@ -173,7 +179,7 @@
 #define SO_HIP_FW_UPDATE_DB                     156
 #define SO_HIP_RESTART_DUMMY_INTERFACE		157
 #define SO_HIP_VERIFY_DHT_HDRR_RESP             158
-#define SO_HIP_ADD_UADB_INFO					159
+#define SO_HIP_ADD_UADB_INFO			159
 /** @} */
 /* inclusive */
 #define HIP_SO_ROOT_MAX 			255
