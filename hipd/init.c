@@ -132,7 +132,9 @@ int hipd_init(int flush_ipsec, int killold)
 	hip_init_hostid_db(NULL);
 
 	hip_set_os_dep_variables();
-
+#ifdef CONFIG_HIP_DEBUG
+	hip_print_sysinfo();
+#endif
 	hip_probe_kernel_modules();
 
 	/* Register signal handlers */
@@ -855,3 +857,88 @@ out_err:
 	//hip_sqlite_close_db(daemon_db);
 	return (err);
 }
+
+#ifdef CONFIG_HIP_DEBUG
+void hip_print_sysinfo()
+{
+	FILE *fp = NULL;
+	char str[256];
+	int pipefd[2];
+	int stdout_fd;
+
+	fp = fopen("/etc/debian_version", "r");
+	if(!fp)
+		fp = fopen("/etc/redhat-release", "r");
+
+	if(fp) {
+
+		while(fgets(str, sizeof(str), fp)) {
+			HIP_DEBUG("version=%s", str);
+		}
+		if (fclose(fp))
+			HIP_ERROR("Error closing version file\n");
+		fp = NULL;
+
+	}
+
+	fp = fopen("/proc/cpuinfo", "r");
+	if(fp) {
+
+		HIP_DEBUG("Printing /proc/cpuinfo\n");
+		while(fgets(str, sizeof(str), fp)) {
+			HIP_DEBUG(str);
+		}
+		if (fclose(fp))
+			HIP_ERROR("Error closing /proc/cpuinfo\n");
+		fp = NULL;
+
+	} else {
+		HIP_ERROR("Failed to open file /proc/cpuinfo\n");
+	}
+
+	/* Route stdout into a pipe to capture lsmod output */
+
+	stdout_fd = dup(1);
+	if (stdout_fd < 0) {
+		HIP_ERROR("Stdout backup failed\n");
+		return;
+	}
+	if (pipe(pipefd)) {
+		HIP_ERROR("Pipe creation failed\n");
+		return;
+	}
+	if (dup2(pipefd[1], 1) < 0) {
+		HIP_ERROR("Stdout capture failed\n");
+		if (close(pipefd[1]))
+			HIP_ERROR("Error closing write end of pipe\n");
+		if (close(pipefd[0]))
+			HIP_ERROR("Error closing read end of pipe\n");
+		return;
+	}
+
+	system("lsmod");
+
+	if (dup2(stdout_fd, 1) < 0)
+		HIP_ERROR("Stdout restore failed\n");
+	if (close(stdout_fd))
+		HIP_ERROR("Error closing stdout backup\n");
+	if (close(pipefd[1]))
+		HIP_ERROR("Error closing write end of pipe\n");
+
+	fp = fdopen(pipefd[0], "r");
+	if(fp) {
+
+		HIP_DEBUG("Printing lsmod output\n");
+		while(fgets(str, sizeof(str), fp)) {
+			HIP_DEBUG(str);
+		}
+		if (fclose(fp))
+			HIP_ERROR("Error closing read end of pipe\n");
+
+	} else {
+		HIP_ERROR("Error opening pipe for reading\n");
+		if (close(pipefd[0]))
+			HIP_ERROR("Error closing read end of pipe\n");
+	}
+}
+#endif

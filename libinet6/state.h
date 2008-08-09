@@ -13,6 +13,7 @@
 #define HIP_HIT_KNOWN 1
 #define HIP_HIT_ANON  2
 
+#define HIP_ENDPOINT_FLAG_PUBKEY           0
 #define HIP_ENDPOINT_FLAG_HIT              1
 #define HIP_ENDPOINT_FLAG_ANON             2
 #define HIP_HI_REUSE_UID                   4

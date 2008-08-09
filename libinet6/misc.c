@@ -700,8 +700,6 @@ int hip_private_rsa_host_id_to_hit(const struct hip_host_id *host_id,
 	hip_get_rsa_keylen(host_id, &keylen, 1);
 	rsa_priv_len = 2 * keylen.n;
 
-	HIP_DEBUG("Treating RSA key as %d bits. Private part is %d bytes.\n", keylen.n * 8, rsa_priv_len);
-
 	memcpy(host_id_pub, host_id,
 	       sizeof(struct hip_tlv_common) + contents_len - rsa_priv_len);
 
@@ -809,198 +807,228 @@ void change_key_file_perms(char *filenamebase) {
 int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
 				 int use_default, const char *hi_fmt,
 				 const char *hi_file, int rsa_key_bits,
-				 int dsa_key_bits) {
-  int err, ret;
-  hip_hdr_type_t numeric_action = 0;
-  char addrstr[INET6_ADDRSTRLEN];
-  char *dsa_filenamebase = NULL, *rsa_filenamebase = NULL, 
-    *dsa_filenamebase_pub = NULL, *rsa_filenamebase_pub = NULL;
-  struct hip_lhi rsa_lhi, dsa_lhi, rsa_pub_lhi, dsa_pub_lhi;
-  struct hip_host_id *dsa_host_id = NULL, *rsa_host_id = NULL,
-    *dsa_pub_host_id = NULL, *rsa_pub_host_id = NULL;
-  unsigned char *dsa_key_rr = NULL, *rsa_key_rr = NULL, 
-    *dsa_pub_key_rr = NULL, *rsa_pub_key_rr = NULL;
-  int dsa_key_rr_len, rsa_key_rr_len, dsa_pub_key_rr_len, rsa_pub_key_rr_len;
-  DSA *dsa_key = NULL, *dsa_pub_key = NULL;
-  RSA *rsa_key = NULL, *rsa_pub_key = NULL;
-  char hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
-  int fmt;
-  struct endpoint_hip *endpoint_dsa_hip = NULL, *endpoint_dsa_pub_hip = NULL;
-  struct endpoint_hip *endpoint_rsa_hip = NULL, *endpoint_rsa_pub_hip = NULL;
-  struct in6_addr *dsa_hit = NULL;
+				 int dsa_key_bits)
+{
+	int err = 0, ret = 0, dsa_key_rr_len = 0, rsa_key_rr_len = 0;
+	int dsa_pub_key_rr_len = 0, rsa_pub_key_rr_len = 0;
+	int fmt = HIP_KEYFILE_FMT_HIP_PEM; 
+	hip_hdr_type_t numeric_action = 0;
+	char addrstr[INET6_ADDRSTRLEN], hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
+	char *dsa_filenamebase = NULL, *rsa_filenamebase = NULL;
+	char *dsa_filenamebase_pub = NULL, *rsa_filenamebase_pub = NULL;
+	unsigned char *dsa_key_rr = NULL, *rsa_key_rr = NULL;
+	unsigned char *dsa_pub_key_rr = NULL, *rsa_pub_key_rr = NULL;
+	DSA *dsa_key = NULL, *dsa_pub_key = NULL;
+	RSA *rsa_key = NULL, *rsa_pub_key = NULL;
+	struct hip_lhi rsa_lhi, dsa_lhi, rsa_pub_lhi, dsa_pub_lhi;
+	struct hip_host_id *dsa_host_id = NULL, *rsa_host_id = NULL;
+	struct hip_host_id *dsa_pub_host_id = NULL, *rsa_pub_host_id = NULL;
+	struct endpoint_hip *endpoint_dsa_hip = NULL;
+	struct endpoint_hip *endpoint_dsa_pub_hip = NULL;
+	struct endpoint_hip *endpoint_rsa_hip = NULL;
+	struct endpoint_hip *endpoint_rsa_pub_hip = NULL;
+	struct in6_addr *dsa_hit = NULL;
 
-  memset(hostname, 0, HIP_HOST_ID_HOSTNAME_LEN_MAX);
-  if (err = -gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1)) {
-    HIP_ERROR("gethostname failed (%d)\n", err);
-    goto out_err;
-  }
+	memset(addrstr, '\0', INET6_ADDRSTRLEN);
+	memset(hostname, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX);
+		
+	if (err = -gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1)) {
+		HIP_ERROR("Failed to get hostname. Err is (%d).\n", err);
+		goto out_err;
+	}
+		
+	HIP_INFO("Using hostname: %s\n", hostname);
 
-  HIP_INFO("Using hostname: %s\n", hostname);
+	HIP_IFEL((!use_default && strcmp(hi_fmt, "rsa") && strcmp(hi_fmt, "dsa")),
+		 -ENOSYS, "Only RSA and DSA keys are supported\n");
 
-  fmt = HIP_KEYFILE_FMT_HIP_PEM;
+	/* Set filenamebase (depending on whether the user supplied a
+	   filenamebase or not) */
+	if (!use_default) {
+		if(!strcmp(hi_fmt, "dsa")) {
+			dsa_filenamebase = malloc(strlen(hi_file) + 1);
+			HIP_IFEL(!dsa_filenamebase, -ENOMEM,
+				 "Could not allocate DSA filename.\n");
+			memcpy(dsa_filenamebase, hi_file, strlen(hi_file));
+		} else /*rsa*/ {
+			rsa_filenamebase = malloc(strlen(hi_file) + 1);
+			HIP_IFEL(!rsa_filenamebase, -ENOMEM,
+				 "Could not allocate RSA filename.\n");
+			memcpy(rsa_filenamebase, hi_file, strlen(hi_file));
+		}
+	} else { /* create dynamically default filenamebase */
+		int rsa_filenamebase_len = 0, dsa_filenamebase_len = 0, ret;
 
-  HIP_IFEL((!use_default && strcmp(hi_fmt, "rsa") && strcmp(hi_fmt, "dsa")),
-			      -ENOSYS, "Only rsa and dsa keys are supported\n");
+		HIP_INFO("No key file given, using default.\n");
 
-  /* Set filenamebase (depending on whether the user supplied a
-     filenamebase or not) */
-  if (!use_default) {
-    if(!strcmp(hi_fmt, "dsa")) {
-      dsa_filenamebase = malloc(strlen(hi_file) + 1);
-      HIP_IFEL(!dsa_filenamebase, -ENOMEM, "Could not allocate DSA filename\n");
-      memcpy(dsa_filenamebase, hi_file, strlen(hi_file));
-    } else /*rsa*/ {
-      rsa_filenamebase = malloc(strlen(hi_file) + 1);
-      HIP_IFEL(!rsa_filenamebase, -ENOMEM, "Could not allocate RSA filename\n");
-      memcpy(rsa_filenamebase, hi_file, strlen(hi_file));
-    }
-  } else { /* create dynamically default filenamebase */
-    int rsa_filenamebase_len, dsa_filenamebase_len, ret;
+		/* Default_config_dir/default_host_dsa_key_file_base/
+		   default_anon_hi_file_name_suffix\0 */
+		/* Creation of default keys is called with hi_fmt = NULL,
+		   adding is called separately for DSA, RSA anon and RSA pub */
+		if (hi_fmt == NULL || !strcmp(hi_fmt, "dsa")) {
+			dsa_filenamebase_len =
+				strlen(DEFAULT_CONFIG_DIR) + strlen("/") +
+				strlen(DEFAULT_HOST_DSA_KEY_FILE_BASE) + 1;
+			dsa_filenamebase = malloc(HOST_ID_FILENAME_MAX_LEN);
+			HIP_IFEL(!dsa_filenamebase, -ENOMEM,
+				 "Could not allocate DSA filename.\n");
 
-    HIP_INFO("No key file given, use default\n");
+			ret = snprintf(dsa_filenamebase,
+				       dsa_filenamebase_len +
+				       strlen(DEFAULT_ANON_HI_FILE_NAME_SUFFIX),
+				       "%s/%s%s",
+				       DEFAULT_CONFIG_DIR,
+				       DEFAULT_HOST_DSA_KEY_FILE_BASE,
+				       DEFAULT_ANON_HI_FILE_NAME_SUFFIX);
+			HIP_IFE(ret <= 0, -EINVAL);
 
-    /* DEFAULT_CONFIG_DIR/DEFAULT_HOST_DSA_KEY_FILE_BASE.DEFAULT_ANON_HI_FILE_NAME_SUFFIX)\0 */
-    /* Creation of default keys is called with hi_fmt = NULL,
-       adding is called separately for DSA, RSA anon and RSA pub */
-    if (hi_fmt == NULL || !strcmp(hi_fmt, "dsa")) {
-	dsa_filenamebase_len = strlen(DEFAULT_CONFIG_DIR) + strlen("/") +
-				    strlen(DEFAULT_HOST_DSA_KEY_FILE_BASE) + 1;
-	dsa_filenamebase = malloc(HOST_ID_FILENAME_MAX_LEN);
-	HIP_IFEL(!dsa_filenamebase, -ENOMEM, "Could not allocate DSA filename\n");
+			dsa_filenamebase_pub = malloc(HOST_ID_FILENAME_MAX_LEN);
+			HIP_IFEL(!dsa_filenamebase_pub, -ENOMEM, 
+				 "Could not allocate DSA (pub) filename.\n");
 
-	ret = snprintf(dsa_filenamebase,
-		   	dsa_filenamebase_len +
-		   	strlen(DEFAULT_ANON_HI_FILE_NAME_SUFFIX),
-		   	"%s/%s%s",
-                   	DEFAULT_CONFIG_DIR,
-		   	DEFAULT_HOST_DSA_KEY_FILE_BASE,
-		   	DEFAULT_ANON_HI_FILE_NAME_SUFFIX);
-	HIP_IFE(ret <= 0, -EINVAL);
+			ret = snprintf(dsa_filenamebase_pub,
+				       HOST_ID_FILENAME_MAX_LEN, "%s/%s%s",
+				       DEFAULT_CONFIG_DIR,
+				       DEFAULT_HOST_DSA_KEY_FILE_BASE,
+				       DEFAULT_PUB_HI_FILE_NAME_SUFFIX);
+			HIP_IFE(ret <= 0, -EINVAL);
 
-	dsa_filenamebase_pub = malloc(HOST_ID_FILENAME_MAX_LEN);
-	HIP_IFEL(!dsa_filenamebase_pub, -ENOMEM, 
-			"Could not allocate DSA (pub) filename\n");
-
-	ret = snprintf(dsa_filenamebase_pub, HOST_ID_FILENAME_MAX_LEN, "%s/%s%s",
-		   	DEFAULT_CONFIG_DIR,
-		   	DEFAULT_HOST_DSA_KEY_FILE_BASE,
-		   	DEFAULT_PUB_HI_FILE_NAME_SUFFIX);
-	HIP_IFE(ret <= 0, -EINVAL);
-
-	HIP_DEBUG("Using dsa (anon hi) filenamebase: %s\n", dsa_filenamebase);
-	HIP_DEBUG("Using dsa (pub hi) filenamebase: %s\n", dsa_filenamebase_pub);
-    }
-
-    if (hi_fmt == NULL || !strcmp(hi_fmt, "rsa")) {
-	rsa_filenamebase_len = strlen(DEFAULT_CONFIG_DIR) + strlen("/") +
+			HIP_DEBUG("Using dsa (anon hi) filenamebase: %s\n",
+				  dsa_filenamebase);
+			HIP_DEBUG("Using dsa (pub hi) filenamebase: %s\n",
+				  dsa_filenamebase_pub);
+		}
+		
+		if (hi_fmt == NULL || !strcmp(hi_fmt, "rsa")) {
+			rsa_filenamebase_len =
+				strlen(DEFAULT_CONFIG_DIR) + strlen("/") +
 				strlen(DEFAULT_HOST_RSA_KEY_FILE_BASE) + 1;
 
-	if (anon || hi_fmt == NULL) {
-	    rsa_filenamebase = malloc(HOST_ID_FILENAME_MAX_LEN);
-	    HIP_IFEL(!rsa_filenamebase, -ENOMEM,
-					"Could not allocate RSA filename\n");
+			if (anon || hi_fmt == NULL) {
+				rsa_filenamebase =
+					malloc(HOST_ID_FILENAME_MAX_LEN);
+				HIP_IFEL(!rsa_filenamebase, -ENOMEM,
+					 "Could not allocate RSA filename.\n");
+				
+				ret = snprintf(
+					rsa_filenamebase,
+					HOST_ID_FILENAME_MAX_LEN, "%s/%s%s",
+					DEFAULT_CONFIG_DIR,
+					DEFAULT_HOST_RSA_KEY_FILE_BASE,
+					DEFAULT_ANON_HI_FILE_NAME_SUFFIX);
+				
+				HIP_IFE(ret <= 0, -EINVAL);
 
-	    ret = snprintf(rsa_filenamebase, HOST_ID_FILENAME_MAX_LEN, "%s/%s%s",
-                   		DEFAULT_CONFIG_DIR,
-		   		DEFAULT_HOST_RSA_KEY_FILE_BASE,
-		   		DEFAULT_ANON_HI_FILE_NAME_SUFFIX);
-	    HIP_IFE(ret <= 0, -EINVAL);
+				HIP_DEBUG("Using RSA (anon HI) filenamebase: "\
+					  "%s.\n", rsa_filenamebase);
+			}
 
-	    HIP_DEBUG("Using rsa (anon hi) filenamebase: %s\n", rsa_filenamebase);
+			if (!anon || hi_fmt == NULL) {
+				rsa_filenamebase_pub =
+					malloc(HOST_ID_FILENAME_MAX_LEN);
+				HIP_IFEL(!rsa_filenamebase_pub, -ENOMEM, 
+					 "Could not allocate RSA (pub) "\
+					 "filename.\n");
+
+				ret = snprintf(
+					rsa_filenamebase_pub,
+					rsa_filenamebase_len +
+					strlen(DEFAULT_PUB_HI_FILE_NAME_SUFFIX),
+					"%s/%s%s", DEFAULT_CONFIG_DIR,
+					DEFAULT_HOST_RSA_KEY_FILE_BASE,
+					DEFAULT_PUB_HI_FILE_NAME_SUFFIX);
+				
+				HIP_IFE(ret <= 0, -EINVAL);
+
+				HIP_DEBUG("Using RSA (pub HI) filenamebase: "\
+					  "%s\n", rsa_filenamebase_pub);
+			}
+		}
 	}
 
-	if (!anon || hi_fmt == NULL) {
-	    rsa_filenamebase_pub = malloc(HOST_ID_FILENAME_MAX_LEN);
-	    HIP_IFEL(!rsa_filenamebase_pub, -ENOMEM, 
-				"Could not allocate RSA (pub) filename\n");
+	switch(action) {
+	case ACTION_NEW:
+		/* zero means "do not send any message to hipd */
+		numeric_action = 0;
 
-	    ret = snprintf(rsa_filenamebase_pub,
-		   	rsa_filenamebase_len+
-		   	strlen(DEFAULT_PUB_HI_FILE_NAME_SUFFIX),
-		   	"%s/%s%s",
-                   	DEFAULT_CONFIG_DIR,
-		   	DEFAULT_HOST_RSA_KEY_FILE_BASE,
-		   	DEFAULT_PUB_HI_FILE_NAME_SUFFIX);
-	    HIP_IFE(ret <= 0, -EINVAL);
+		/* Default directory is created only in "hipconf new default hi" */
+		if (use_default) {
+			if (err = check_and_create_dir(
+				    DEFAULT_CONFIG_DIR,
+				    DEFAULT_CONFIG_DIR_MODE)) {
+				HIP_ERROR("Could not create default "\
+					  "directory.\n");
+				goto out_err;
+			}
+		} else if (!use_default) {
+			
+			if (!strcmp(hi_fmt, "dsa")) {
+				dsa_key = create_dsa_key(dsa_key_bits);
+				HIP_IFEL(!dsa_key, -EINVAL, 
+					 "Creation of DSA key failed.\n");
+				if (err = save_dsa_private_key(
+					    dsa_filenamebase, dsa_key)) {
+					
+					HIP_ERROR("Saving of DSA key failed.\n");
+					goto out_err;
+				}
+			} else { /*RSA*/
+				rsa_key = create_rsa_key(rsa_key_bits);
+				HIP_IFEL(!rsa_key, -EINVAL,
+					 "Creation of RSA key failed.\n");
+				if (err = save_rsa_private_key(rsa_filenamebase,
+							       rsa_key)) {
+					HIP_ERROR("Saving of RSA key failed.\n");
+					goto out_err;
+				}
+			}
+			HIP_DEBUG("Key saved.\n");
+			break;
+		}
 
-	    HIP_DEBUG("Using rsa (pub hi) filenamebase: %s\n", rsa_filenamebase_pub);
-	}
-    }
+		/* Using default */
+		dsa_key = create_dsa_key(dsa_key_bits);
+		HIP_IFEL(!dsa_key, -EINVAL,
+			 "Creation of DSA key failed.\n");
 
-  }
+		dsa_pub_key = create_dsa_key(dsa_key_bits);
+		HIP_IFEL(!dsa_pub_key, -EINVAL,
+			 "Creation of public DSA key failed.\n");
 
-  switch(action) {
-  case ACTION_NEW:
-    /* zero means "do not send any message to hipd */
-    numeric_action = 0;
+		rsa_key = create_rsa_key(rsa_key_bits);
+		HIP_IFEL(!rsa_key, -EINVAL,
+			 "Creation of RSA key failed.\n");
 
-    /* Default directory is created only in "hipconf new default hi" */
-    if (use_default) {
-	if (err = check_and_create_dir(DEFAULT_CONFIG_DIR,
-				 	DEFAULT_CONFIG_DIR_MODE)) {
-	    HIP_ERROR("Could not create default directory\n");
-	    goto out_err;
-	}
-    }
+		rsa_pub_key = create_rsa_key(rsa_key_bits);
+		HIP_IFEL(!dsa_pub_key, -EINVAL,
+			 "Creation of public RSA key failed.\n");
 
-    if (!use_default) {
+		if (err = save_dsa_private_key(dsa_filenamebase, dsa_key)) {
+			HIP_ERROR("Saving of DSA key failed.\n");
+			goto out_err;
+		}
 
-      if (!strcmp(hi_fmt, "dsa")) {
-	  dsa_key = create_dsa_key(dsa_key_bits);
-	  HIP_IFEL(!dsa_key, -EINVAL, "creation of dsa key failed\n");
-	  if (err = save_dsa_private_key(dsa_filenamebase, dsa_key)) {
-	      HIP_ERROR("saving of dsa key failed\n");
-	      goto out_err;
-	  }
-      } else { /*RSA*/
-	  rsa_key = create_rsa_key(rsa_key_bits);
-	  HIP_IFEL(!rsa_key, -EINVAL, "creation of rsa key failed\n");
-	  if (err = save_rsa_private_key(rsa_filenamebase, rsa_key)) {
-	      HIP_ERROR("saving of rsa key failed\n");
-	      goto out_err;
-	  }
-      }
-      HIP_DEBUG("saved key\n");
-      break;
+		if (err = save_dsa_private_key(dsa_filenamebase_pub,
+					       dsa_pub_key)) {
+			HIP_ERROR("Saving of public DSA key failed.\n");
+			goto out_err;
+		}
 
-    }
+		if (err = save_rsa_private_key(rsa_filenamebase, rsa_key)) {
+			HIP_ERROR("Saving of RSA key failed.\n");
+			goto out_err;
+		}
 
-    /* using default */
-    dsa_key = create_dsa_key(dsa_key_bits);
-    HIP_IFEL(!dsa_key, -EINVAL, "creation of dsa key failed\n");
-
-    dsa_pub_key = create_dsa_key(dsa_key_bits);
-    HIP_IFEL(!dsa_pub_key, -EINVAL, "creation of dsa key (pub) failed\n");
-
-    rsa_key = create_rsa_key(rsa_key_bits);
-    HIP_IFEL(!rsa_key, -EINVAL, "creation of rsa key failed\n");
-
-    rsa_pub_key = create_rsa_key(rsa_key_bits);
-    HIP_IFEL(!dsa_pub_key, -EINVAL, "creation of rsa key (pub) failed\n");
-
-    if (err = save_dsa_private_key(dsa_filenamebase, dsa_key)) {
-        HIP_ERROR("saving of dsa key failed\n");
-        goto out_err;
-    }
-
-    if (err = save_dsa_private_key(dsa_filenamebase_pub, dsa_pub_key)) {
-        HIP_ERROR("saving of dsa key failed\n");
-        goto out_err;
-    }
-
-    if (err = save_rsa_private_key(rsa_filenamebase, rsa_key)) {
-        HIP_ERROR("saving of rsa key failed\n");
-        goto out_err;
-    }
-
-    if (err = save_rsa_private_key(rsa_filenamebase_pub, rsa_pub_key)) {
-        HIP_ERROR("saving of rsa key failed\n");
-        goto out_err;
-    }
-    break;
-
-  case ACTION_ADD:
-    numeric_action = SO_HIP_ADD_LOCAL_HI;
+		if (err = save_rsa_private_key(rsa_filenamebase_pub,
+					       rsa_pub_key)) {
+			HIP_ERROR("Saving of public RSA key failed.\n");
+			goto out_err;
+		}
+		
+		break;
+		
+	case ACTION_ADD:
+	  numeric_action = SO_HIP_ADD_LOCAL_HI;
 
     if (!use_default) {
       if (!strcmp(hi_fmt, "dsa")) {
