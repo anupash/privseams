@@ -1012,10 +1012,14 @@ int handle_update(const struct in6_addr * ip6_src,
 	struct hip_echo_request * echo_req = NULL;
 	struct hip_echo_response * echo_res = NULL;
 	struct tuple * other_dir_tuple = NULL;
+	struct esp_prot_anchor *esp_anchors = NULL;
 	uint32_t spi_new = 0;
 	uint32_t spi_old = 0;
+	int err = 0;
 
 	_HIP_DEBUG("handle_update\n");
+
+	// get params from UPDATE message
 	seq = (struct hip_seq *) hip_get_param(common, HIP_PARAM_SEQ);
 	esp_info = (struct hip_esp_info *) hip_get_param(common, HIP_PARAM_ESP_INFO);
 	ack = (struct hip_ack *) hip_get_param(common, HIP_PARAM_ACK);
@@ -1025,6 +1029,8 @@ int handle_update(const struct in6_addr * ip6_src,
 			HIP_PARAM_ECHO_REQUEST);
 	echo_res = (struct hip_echo_response *) hip_get_param(common,
 			HIP_PARAM_ECHO_RESPONSE);
+	esp_anchors = (struct esp_prot_anchor *) hip_get_param(common,
+			HIP_PARAM_ESP_PROT_ANCHOR);
 
 	if(spi)
 		_HIP_DEBUG("handle_update: spi param, spi: %d \n", ntohl(spi->spi));
@@ -1032,25 +1038,48 @@ int handle_update(const struct in6_addr * ip6_src,
 	// connection changed to a path going through this firewall
 	if(tuple == NULL)
 	{
-		// attempt to create state for new connection
+		_HIP_DEBUG("unknown connection\n");
 
+		// TODO this should only be the case, if (old_spi == 0) != new_spi -> check
+
+		// attempt to create state for new connection
 		if(esp_info && locator && seq)
 		{
-			struct hip_data *data;
+			struct hip_data *data = NULL;
+
+			HIP_DEBUG("setting up a new connection...\n");
+
 			data = get_hip_data(common);
+
+			/* TODO also process anchor here
+			 *
+			 * active_anchor is set, next_anchor might be NULL
+			 */
 
 			if(!insert_connection_from_update(data, esp_info, locator, seq))
 			{
+				// insertion failed
+				HIP_DEBUG("connection insertion failed\n");
+
 				free(data);
-				return 0;
+				err = 0;
+				goto out_err;
 			}
+
+			// insertion successful -> go on
+			HIP_DEBUG("connection insertion successful\n");
 
 			free(data);
 
 		} else
 		{
-			return 0;
+			// unknown connection, but insufficient parameters to set up state
+			HIP_DEBUG("insufficient parameters to create new connection with UPDATE\n");
+
+			err = 0;
+			goto out_err;
 		}
+
 	} else
 	{
 		// we already know this connection
@@ -1077,56 +1106,87 @@ int handle_update(const struct in6_addr * ip6_src,
 			_HIP_DEBUG("handle_update: seq found, update id %d\n", seq->update_id);
 		}
 
-		//handling single esp_info and locator parameters
-		//Readdress with mobile-initiated rekey
+		/* distinguishing different UPDATE types and type combinations
+		 *
+		 * TODO check processing of parameter combinations
+		 */
 		if(esp_info && locator && seq)
 		{
+			// handling single esp_info and locator parameters
+			// Readdress with mobile-initiated rekey
+
 			_HIP_DEBUG("handle_update: esp_info and locator found\n");
 			struct esp_tuple * new_esp = NULL;
 
-			if(esp_info->old_spi != esp_info->new_spi)//update existing
+			/* TODO check processing of SPI
+			 *
+			 * old_spi == 0, new_spi = x means that host is requesting a new SA
+			 * old_spi == new_spi means only location update
+			 * old_spi != new_spi means esp_tuple update */
+			if(esp_info->old_spi != esp_info->new_spi) //update existing
 			{
 				esp_tuple = find_esp_tuple(other_dir_esps, ntohl(esp_info->old_spi));
 
-				if(esp_tuple == NULL)
+				if(!esp_tuple)
 				{
 					_HIP_DEBUG("No suitable esp_tuple found for updating\n");
-					return 0;
+
+					err = 0;
+					goto out_err;
 				}
 
 				if(!update_esp_tuple(esp_info, locator, seq, esp_tuple))
-					return 0;
+				{
+					_HIP_DEBUG("failed to update the esp_tuple\n");
 
-			} else//create new
+					err = 0;
+					goto out_err;
+				}
+
+			} else //create new esp_tuple
 			{
-				new_esp = esp_tuple_from_esp_info_locator(esp_info, locator, seq, other_dir_tuple);
+				new_esp = esp_tuple_from_esp_info_locator(esp_info, locator, seq,
+						other_dir_tuple);
 
 				if(new_esp == NULL)
-					return 0;//locator must contain adress for this spi
+				{
+					//locator must contain address for this spi
+					err = 0;
+					goto out_err;
+				}
 
 				other_dir_esps = (SList *) append_to_slist((SList *)
 						other_dir_esps, (void *) new_esp);
 
 				insert_esp_tuple(new_esp);
 			}
-		} else if(locator && seq) //Readdress without rekeying
+
+		} else if(locator && seq)
 		{
+			// Readdress without rekeying
+
 			_HIP_DEBUG("handle_update: locator found\n");
 			esp_tuple = find_esp_tuple(other_dir_esps, ntohl(esp_info->new_spi));
 
 			if(esp_tuple == NULL)
 			{
 				_HIP_DEBUG("No suitable esp_tuple found for updating\n");
-				return 0;
-				//if mobile host spi not intercepted, but valid,
+
+				err = 0;
+				goto out_err;
+				// if mobile host spi not intercepted, but valid
 			}
 
 			if(!update_esp_tuple(NULL, locator, seq, esp_tuple))
 			{
-				return 0;
+				err = 0;
+				goto out_err;
 			}
-		} else if(esp_info && seq) //replying to Readdress with mobile-initiated rekey
+
+		} else if(esp_info && seq)
 		{
+			//replying to Readdress with mobile-initiated rekey
+
 			_HIP_DEBUG("handle_update: esp_info found old:%d new:%d\n",
 					ntohl(esp_info->old_spi), ntohl(esp_info->new_spi));
 
@@ -1139,7 +1199,9 @@ int handle_update(const struct in6_addr * ip6_src,
 					if(tuple->connection->state != STATE_ESTABLISHING_FROM_UPDATE)
 					{
 						_HIP_DEBUG("No suitable esp_tuple found for updating\n");
-						return 0;
+
+						err = 0;
+						goto out_err;
 
 					} else//connection state is being established from update
 					{
@@ -1152,10 +1214,13 @@ int handle_update(const struct in6_addr * ip6_src,
 						insert_esp_tuple(new_esp);
 						tuple->connection->state = STATE_ESTABLISHED;
 					}
+
 				} else if(!update_esp_tuple(esp_info, NULL, seq, esp_tuple))
 				{
-					return 0;
+					err = 0;
+					goto out_err;
 				}
+
 			} else
 			{
 				struct esp_tuple * new_esp = esp_tuple_from_esp_info(esp_info,
@@ -1260,18 +1325,19 @@ int handle_update(const struct in6_addr * ip6_src,
 			}
 		}
 
-		if(echo_req != NULL)
+		if(echo_req)
 		{
 			_HIP_DEBUG("handle_update: echo found req\n");
 		}
 
-		if(echo_res != NULL)
+		if(echo_res)
 		{
 			_HIP_DEBUG("handle_update: echo found res\n");
 		}
 	}
 
-	return 1;
+  out_err:
+	return err;
 }
 
 /**
