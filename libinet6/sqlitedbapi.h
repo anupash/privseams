@@ -20,7 +20,6 @@
 #define HIP_CERT_DB_PATH_AND_NAME "/etc/hip/certdb.db"
 
 #define HIP_CERT_DB_CREATE_TBLS "CREATE TABLE hits (" \
-                                 "lname VARCHAR(65), " \
                                  "lhit VARCHAR(41), " \
                                  "rhit VARCHAR(41), " \
                                  "cert VARCHAR(1048) " \

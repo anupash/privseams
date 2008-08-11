@@ -105,6 +105,7 @@ int hip_use_userspace_ipsec = 0;
 uint8_t hip_esp_prot_ext_transform = ESP_PROT_TRANSFORM_UNUSED;
 
 int hip_use_opptcp = 0; // false
+sqlite3 *daemon_db ;
 
 void hip_set_opportunistic_tcp_status(struct hip_common *msg)
 {
@@ -261,14 +262,6 @@ out_err:
 	return err;
 }
 
-static int hip_sqlite_callback(void *NotUsed, int argc, char **argv, char **azColName) {
-        int i;
-        for(i=0; i<argc; i++){
-                HIP_DEBUG("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
-        }
-        return 0;
-}
-
 /**
  * add_cert_and_hits_to_db - Adds information recieved from the agent to
  * the daemon database
@@ -277,9 +270,6 @@ static int hip_sqlite_callback(void *NotUsed, int argc, char **argv, char **azCo
  */
 int add_cert_and_hits_to_db (struct hip_uadb_info *uadb_info)
 {
-	extern sqlite3* daemon_db;
-	//char *file = HIP_CERT_DB_PATH_AND_NAME;
-	//FILE * db_file = NULL;
 	int err = 0 ;
 	char insert_into[512];
 	char hit[40];
@@ -288,14 +278,11 @@ int add_cert_and_hits_to_db (struct hip_uadb_info *uadb_info)
 	hip_in6_ntop(&uadb_info->hitl, hit2);
     HIP_DEBUG("Value: %s\n", hit);
 	sprintf(insert_into, "INSERT INTO hits VALUES("
-                        "'%s', '%s', '%s', '%s');", 
-                        "Pardip", hit2, hit, uadb_info->cert);
-   // daemon_db = hip_sqlite_open_db(file, HIP_CERT_DB_CREATE_TBLS);
-	err = hip_sqlite_insert_into_table(daemon_db, insert_into);
-	//ret = hip_sqlite_select(daemon_db, HIP_CERT_DB_SELECT_HITS,hip_sqlite_callback);
-
+                        "'%s', '%s', '%s');", 
+                        hit2, hit, uadb_info->cert);
+    err = hip_sqlite_insert_into_table(daemon_db, insert_into);
+  
 out_err:
-	//hip_sqlite_close_db(daemon_db);
 	return (err) ;
 }
 

@@ -226,12 +226,11 @@ int connhipd_handle_msg(struct hip_common *msg,
 		{
 			memcpy(&hitr,&hit.hit, sizeof(struct in6_addr));
 			ret = check_hit(&hit, 0);
-			
-			/* If ret = 0, hit is accepted and added. Call a function which builds a user message.
-			Multiples in database(msg) should contain at least HIT that we used 
-			HIT we accepted and variable length field called cert (char)
-			AND send it to daemon*/
-			if (ret == 0)
+			/*Send our hits -- peer hit to daemon*/
+			if (ret == 1)
+				ret = 0; /*hit already exist in the database and is accepted
+							so no need to send it to daemon*/
+			else if (ret == 0)
 				connhipd_send_hitdata_to_daemon (msg, &hitr, &hit.g->l->lhit) ;
 			/* Reset local HIT, if outgoing I1. */
 			/*HIP_HEXDUMP("Old local HIT: ", &msg->hits, 16);
@@ -434,7 +433,6 @@ int connhipd_send_hitdata_to_daemon(struct hip_common * msg , struct in6_addr * 
 	
 	memcpy(uadb_info.cert,"certificate\0",sizeof("certificate\0"));
 	
-	HIP_DEBUG("Testing sizeof for my struct %d\n",sizeof(struct hip_uadb_info));
 	hip_build_param_hip_uadb_info(msg, &uadb_info);
 	HIP_DUMP_MSG (msg);
 out_err:

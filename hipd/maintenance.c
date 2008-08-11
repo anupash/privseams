@@ -22,6 +22,7 @@ int nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_INTERVAL;
 float opendht_counter = OPENDHT_REFRESH_INIT;
 float queue_counter = QUEUE_CHECK_INIT;
 int force_exit_counter = FORCE_EXIT_COUNTER_START;
+int cert_publish_counter = CERTIFICATE_PUBLISH_INTERVAL;
 
 int hip_firewall_status = 0;
 int fall, retr;
@@ -442,7 +443,6 @@ void publish_hit(char *hostname, char *tmp_hit_str, char *tmp_addr_str)
        
         if (opendht_error < 0) {
         	HIP_DEBUG("HTTP packet creation for FDQN->HIT PUT failed.\n");
-			//hip_opendht_error_count++;
 		}
 		else
 		{
@@ -450,7 +450,6 @@ void publish_hit(char *hostname, char *tmp_hit_str, char *tmp_addr_str)
 			opendht_error = write_fifo_queue(out_packet,strlen(out_packet)+1);
 			if (opendht_error < 0) {
         		HIP_DEBUG ("Failed to insert FDQN->HIT PUT data in queue \n");
-			//hip_opendht_error_count++;
 			}
 		}
                        
@@ -471,33 +470,30 @@ void publish_hit(char *hostname, char *tmp_hit_str, char *tmp_addr_str)
  */
 int publish_addr(char *tmp_hit_str, char *tmp_addr_str)
 {
-        //extern int hip_opendht_error_count;
-        extern int opendht_serving_gateway_port;
-        extern int opendht_serving_gateway_ttl;
-        extern int opendht_error;
-        char out_packet[2048];
+	extern int opendht_serving_gateway_port;
+	extern int opendht_serving_gateway_ttl;
+	extern int opendht_error;
+	char out_packet[2048];
         
-        if (hip_opendht_inuse == SO_HIP_DHT_ON) {
-             opendht_error = opendht_put_locator((unsigned char *)tmp_hit_str, 
-                 (unsigned char *)tmp_addr_str,
-                 opendht_serving_gateway_port,
-             	 opendht_serving_gateway_ttl,out_packet);
-                 if (opendht_error < 0) {
-                 	 HIP_DEBUG("HTTP packet creation for HIT->IP PUT failed.\n");
-                     //hip_opendht_error_count++;
-                     return -1;
-                 } 
-                 else
-                 {
-                 	HIP_DEBUG("Sending HTTP HIT->IP PUT packet to queue.\n");
-					opendht_error = write_fifo_queue(out_packet,strlen(out_packet)+1);
-					if (opendht_error < 0) {
-        				HIP_DEBUG ("Failed to insert HIT->IP PUT data in queue \n");
-					//hip_opendht_error_count++;
-						return -1;
-					}
-				 }
-        }
+	if (hip_opendht_inuse == SO_HIP_DHT_ON) {
+		opendht_error = opendht_put_locator((unsigned char *)tmp_hit_str, 
+						(unsigned char *)tmp_addr_str,
+						opendht_serving_gateway_port,
+						opendht_serving_gateway_ttl,out_packet);
+		if (opendht_error < 0) {
+			HIP_DEBUG("HTTP packet creation for HIT->IP PUT failed.\n");
+			return -1;
+		} 
+		else
+		{
+			HIP_DEBUG("Sending HTTP HIT->IP PUT packet to queue.\n");
+			opendht_error = write_fifo_queue(out_packet,strlen(out_packet)+1);
+			if (opendht_error < 0) {
+				HIP_DEBUG ("Failed to insert HIT->IP PUT data in queue \n");
+				return -1;
+			}
+		}
+	}
  out_err:
         return 0;
 }
@@ -506,47 +502,30 @@ int publish_addr(char *tmp_hit_str, char *tmp_addr_str)
  * send_queue_data - This function reads the data from hip_queue
  * and sends it to the lookup service for publishing
  * 
- * @param sock_num it is used as a flag to alternate between 
- * two sockets created for communiaction, to use them
- * simultaneously
+ * @param *socket socket to be initialzied
+ * @param *socket_status updates the status of the socket after every socket oepration
  *
  * @return int
  */
-int send_queue_data(int sock_num)
+int send_queue_data(int *socket, int *socket_status)
 {
 	extern int hip_opendht_error_count;
 	extern int hip_opendht_inuse;
-	extern int hip_opendht_sock_fqdn;  
-	extern int hip_opendht_fqdn_sent;
-	extern int hip_opendht_sock_hit;
-	extern int hip_opendht_hit_sent;
 	extern int opendht_error;
 	extern struct addrinfo * opendht_serving_gateway; 
 	extern int opendht_serving_gateway_port;
 	extern int opendht_serving_gateway_ttl;
 	char packet[2048];
-	int socket;
-	int socket_status ;
 	int err = 0 ;
 		
-	if(sock_num ==1 )
-	{
-		socket = hip_opendht_sock_fqdn;
-		socket_status = hip_opendht_fqdn_sent;
-	}
-	else
-	{
-		socket = hip_opendht_sock_hit;
-		socket_status = hip_opendht_hit_sent;
-	}
 	if (hip_opendht_inuse == SO_HIP_DHT_ON) {
-        if (socket_status == STATE_OPENDHT_IDLE) 
+        if (*socket_status == STATE_OPENDHT_IDLE) 
 		{
-			HIP_DEBUG("Connecting to the DHT with socket no: %d \n", sock_num);
-			if (socket < 1)
-				socket = init_dht_gateway_socket(socket);
+			HIP_DEBUG("Connecting to the DHT with socket no: %d \n", *socket);
+			if (*socket < 1)
+				*socket = init_dht_gateway_socket(*socket);
 			opendht_error = 0;
-			opendht_error = connect_dht_gateway(socket, 
+			opendht_error = connect_dht_gateway(*socket, 
 								opendht_serving_gateway, 0); 
 			if (opendht_error > -1 && opendht_error != EINPROGRESS) {
 				/*Get packet from queue, if there then proceed*/
@@ -558,20 +537,20 @@ int send_queue_data(int sock_num)
                     }
                     else
                     {
-                       	opendht_error = opendht_send(socket,packet);
+                       	opendht_error = opendht_send(*socket,packet);
                        	if (opendht_error < 0) {
-                    	    HIP_DEBUG("Error sending data to the DHT. Socket No: %d\n", sock_num);
+                    	    HIP_DEBUG("Error sending data to the DHT. Socket No: %d\n", *socket);
                         	           	hip_opendht_error_count++;
                         }
-                        else socket_status = STATE_OPENDHT_WAITING_ANSWER;
+                        else *socket_status = STATE_OPENDHT_WAITING_ANSWER;
                     } 
 			} 
             if (opendht_error == EINPROGRESS) {
-				socket_status = STATE_OPENDHT_WAITING_CONNECT; 
+				*socket_status = STATE_OPENDHT_WAITING_CONNECT; 
 				/* connect not ready */
-				HIP_DEBUG("OpenDHT connect unfinished. Socket No: %d \n",sock_num);
+				HIP_DEBUG("OpenDHT connect unfinished. Socket No: %d \n",*socket);
 			}
-		} else if (socket_status == STATE_OPENDHT_START_SEND) {
+		} else if (*socket_status == STATE_OPENDHT_START_SEND) {
 			/* connect finished send the data */
 			/*Get packet from queue, if there then proceed*/
 			memset(packet, '\0', sizeof(packet));
@@ -582,24 +561,16 @@ int send_queue_data(int sock_num)
 			}
 			else
             {
-              	opendht_error = opendht_send(socket,packet);
+              	opendht_error = opendht_send(*socket,packet);
                	if (opendht_error < 0) {
-                   	HIP_DEBUG("Error sending data to the DHT. Socket No: %d\n", sock_num);
+                   	HIP_DEBUG("Error sending data to the DHT. Socket No: %d\n", *socket);
                             	hip_opendht_error_count++;
                	}
-               	else socket_status = STATE_OPENDHT_WAITING_ANSWER;
+               	else *socket_status = STATE_OPENDHT_WAITING_ANSWER;
             } 
 		}
 	}
  out_err:
- 	if(sock_num ==1 )
-	{
-		hip_opendht_fqdn_sent = socket_status ;
-	}
-	else
-	{
-		hip_opendht_hit_sent = socket_status ;
-	}
 	return err;
 }
 
@@ -670,7 +641,16 @@ int periodic_maintenance()
         			queue_counter = QUEUE_CHECK_INIT;
                 } else {
                 	queue_counter--;
-                }		
+                }
+                if(cert_publish_counter < 0) {
+                	//Call some function which publishes packet to queue
+                	publish_certificates();
+                	cert_publish_counter = CERTIFICATE_PUBLISH_INTERVAL ;
+                } else {
+                	cert_publish_counter-- ;
+                }
+                
+                		
         }
 
 //#ifdef CONFIG_HIP_UDPRELAY
@@ -1001,67 +981,146 @@ out_err:
 void send_packet_to_lookup_from_queue ()
 {
 	/* send socks for sending*/
-	/*1 and 2 is for using alternatively two sockets
-	 * we have*/
-	send_queue_data (1);
-	send_queue_data (2);
-}
-/* init_dht_sockets - The finction initalized two sockets used for
- * connection with lookup service(opendht)
- * @param sock_num used as a flag to alternate between the two sockets
- */
- 
-void init_dht_sockets (int sock_num)
-{
-	int socket;
-	int socket_status ;
-	extern int hip_opendht_inuse;
 	extern int hip_opendht_sock_fqdn;  
 	extern int hip_opendht_fqdn_sent;
 	extern int hip_opendht_sock_hit;
 	extern int hip_opendht_hit_sent;
+	send_queue_data (&hip_opendht_sock_fqdn, &hip_opendht_fqdn_sent);
+	send_queue_data (&hip_opendht_sock_hit, &hip_opendht_hit_sent);
+}
+/* init_dht_sockets - The finction initalized two sockets used for
+ * connection with lookup service(opendht)
+ * @param *socket socket to be initialzied
+ * @param *socket_status updates the status of the socket after every socket oepration
+ */
+ 
+void init_dht_sockets (int *socket, int *socket_status)
+{
+	extern int hip_opendht_inuse;
 	extern struct addrinfo * opendht_serving_gateway; 
 	extern int opendht_error;
 	
-	if(sock_num ==1 )
-	{
-		socket = hip_opendht_sock_fqdn;
-		socket_status = hip_opendht_fqdn_sent;
-	}
-	else
-	{
-		socket = hip_opendht_sock_hit;
-		socket_status = hip_opendht_hit_sent;
-	}
 	if (hip_opendht_inuse == SO_HIP_DHT_ON) 
 	{
-		if (socket_status == STATE_OPENDHT_IDLE) 
+		if (*socket_status == STATE_OPENDHT_IDLE) 
 		{
-			HIP_DEBUG("Connecting to the DHT with socket no: %d \n", sock_num);
-			if (socket < 1)
-				socket = init_dht_gateway_socket(socket);
+			HIP_DEBUG("Connecting to the DHT with socket no: %d \n", *socket);
+			if (*socket < 1)
+				*socket = init_dht_gateway_socket(*socket);
 			opendht_error = 0;
-			opendht_error = connect_dht_gateway(socket, 
+			opendht_error = connect_dht_gateway(*socket, 
 							opendht_serving_gateway, 0); 
 		}
 		if (opendht_error == EINPROGRESS) 
 		{
-			socket_status = STATE_OPENDHT_WAITING_CONNECT; 
+			*socket_status = STATE_OPENDHT_WAITING_CONNECT; 
 			/* connect not ready */
-			HIP_DEBUG("OpenDHT connect unfinished. Socket No: %d \n",sock_num);
+			HIP_DEBUG("OpenDHT connect unfinished. Socket No: %d \n",*socket);
         }
         else if (opendht_error > -1 && opendht_error != EINPROGRESS)
         {
-        	socket_status = STATE_OPENDHT_START_SEND ;
+        	*socket_status = STATE_OPENDHT_START_SEND ;
         }
         
 	}
-	if(sock_num ==1 )
+}
+
+int prepare_send_cert_put(unsigned char * key, unsigned char * value, int keylen, int valuelen)
+{
+	extern int opendht_serving_gateway_port;
+	extern int opendht_serving_gateway_ttl;
+	//extern int hip_opendht_error_count;
+	extern int opendht_error;
+	//OPENDHT_GATEWAY
+	int key_len = keylen;
+    int value_len = valuelen;/*length of certificate*/
+    char put_packet[2048];
+	unsigned char tmp_key[21];
+	unsigned char *sha_retval;
+	
+	memset(tmp_key,'\0',sizeof(tmp_key));	
+	sha_retval = SHA1(key, keylen, tmp_key); 
+	key_len = 20;
+	_HIP_HEXDUMP("KEY FOR OPENDHT", tmp_key, key_len);
+	if (!sha_retval)
 	{
-		hip_opendht_fqdn_sent = socket_status ;
-	}
-	else
+     	HIP_DEBUG("SHA1 error when creating key for OpenDHT.\n");
+		return(-1);
+	}       
+    
+    if (build_packet_put((unsigned char *)tmp_key,
+                                 key_len,
+                                 (unsigned char *)value,
+                                 value_len,
+                                 opendht_serving_gateway_port,
+                                 (unsigned char *)OPENDHT_GATEWAY,
+                                 (char*)put_packet, opendht_serving_gateway_ttl)
+                                 != 0)
 	{
-		hip_opendht_hit_sent = socket_status ;
+		HIP_DEBUG("Put packet creation failed.\n");
+		return(-1);
 	}
+	opendht_error = write_fifo_queue(put_packet,strlen(put_packet)+1);
+	if (opendht_error < 0) 
+    	HIP_DEBUG ("Failed to insert CERT PUT data in queue \n");
+    return 0 ;
+}
+
+static int hip_sqlite_callback(void *NotUsed, int argc, char **argv, char **azColName) {
+	int i;
+	struct in6_addr lhit, rhit;
+	void *conc_hits = NULL ;
+	int err = 0 ;
+	char cert[512];
+	for(i=0; i<argc; i++){
+		HIP_DEBUG("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
+		if (!strcmp(azColName[i],"lhit"))
+		{
+        	/*convret hit to inet6_addr*/
+          	err = inet_pton(AF_INET6, (char *)argv[i], &lhit.s6_addr);
+		}
+		else if (!strcmp(azColName[i],"rhit"))
+		{
+         	err = inet_pton(AF_INET6, (char *)argv[i], &rhit.s6_addr);
+          	/*convret hit to inet6_addr*/
+		}
+		else if (!strcmp(azColName[i],"cert"))
+		{
+			if(!(char *)argv)
+				err = -1 ;
+			else
+         		memcpy(cert, (char *)argv[i], 512/*should be size of certificate*/);
+          	/*convret hit to inet6_addr*/
+		} 
+	}
+	if(err)
+		{
+			conc_hits = malloc (sizeof(rhit.s6_addr)*2);
+			/*concatenate both*/	
+			memcpy(conc_hits,&rhit.s6_addr,sizeof(rhit.s6_addr));
+			memcpy(conc_hits+sizeof(rhit.s6_addr),
+						&lhit.s6_addr,sizeof(lhit.s6_addr));
+			/*send key-value pair to dht*/
+			prepare_send_cert_put(conc_hits, cert, sizeof(rhit.s6_addr)*2, sizeof(cert) );
+		} 
+	if(conc_hits)
+		free (conc_hits);
+	return err;
+}
+
+int publish_certificates ()
+{
+	/**
+	 * Go to the daemon_db
+	 * Read all the rows from hits table
+	 * Create SHA1 (accepted HIT | our HIT)
+	 * This sha1 value is the opendht key
+	 * certificate is the value
+	 * publish it to the lookup 
+	 */
+	 int err = 0 ;
+	 extern sqlite3* daemon_db;
+	 
+	 err = hip_sqlite_select(daemon_db, HIP_CERT_DB_SELECT_HITS,hip_sqlite_callback);
+    
 }

@@ -14,7 +14,6 @@
 extern struct hip_common *hipd_msg;
 extern struct hip_common *hipd_msg_v4;
 
-sqlite3 *daemon_db ;
 /******************************************************************************/
 /** Catch SIGCHLD. */
 void hip_sig_chld(int signum) 
@@ -276,20 +275,19 @@ int hipd_init(int flush_ipsec, int killold)
 	certerr = hip_init_certs();
 	if (certerr < 0) HIP_DEBUG("Initializing cert configuration file returned error\n");
 	
-	hitdberr = 0;
-	hitdberr = hip_init_daemon_hitdb();
-	if (hitdberr < 0) HIP_DEBUG("Initializing daemon hit database returned error\n");
-	
 #if 0
 	/* init new tcptimeout parameters, added by Tao Wan on 14.Jan.2008*/
 
 	HIP_IFEL(set_new_tcptimeout_parameters_value(), -1,
 			"set new tcptimeout parameters error\n");
 #endif
-
-
+	
+	hitdberr = 0;
+	hitdberr = hip_init_daemon_hitdb();
+	if (hitdberr < 0) HIP_DEBUG("Initializing daemon hit database returned error\n");
+	/*TODO uncheck the below comment anyhow !*/
 	HIP_IFEL(hip_set_lowcapability(1), -1, "Failed to set capabilities\n");
-
+	
 #ifdef CONFIG_HIP_HI3
 	if( hip_use_i3 ) 
 	{
@@ -317,6 +315,8 @@ int hip_init_dht()
         extern int hip_opendht_error_count;
         extern int hip_opendht_sock_fqdn;  
         extern int hip_opendht_sock_hit;  
+        extern int hip_opendht_fqdn_sent;
+        extern int hip_opendht_hit_sent;
         char *serveraddr_str;
         char *servername_str;
         FILE *fp = NULL; 
@@ -373,8 +373,8 @@ int hip_init_dht()
                         if (gethostname(&opendht_name_mapping, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1))
                                 HIP_DEBUG("gethostname failed\n");
 						register_to_dht();
-						init_dht_sockets(1); /*1 and 2 is just a flag for alternating*/
-						init_dht_sockets(2); /* two sockets used for dht connection*/
+						init_dht_sockets(&hip_opendht_sock_fqdn, &hip_opendht_fqdn_sent); /*1 and 2 is just a flag for alternating*/
+						init_dht_sockets(&hip_opendht_sock_hit, &hip_opendht_hit_sent); /* two sockets used for dht connection*/
                         destroy(&list);
                 }
         } else {
@@ -839,21 +839,22 @@ int hip_init_daemon_hitdb()
 	 * Open the file from the path
 	 * if it doesnt exist create one (with tables)
 	 * unlock the db*/
+	extern sqlite3* daemon_db;
 	char *file = HIP_CERT_DB_PATH_AND_NAME;
 	FILE * db_file = NULL;
 	int err = 0 ;
 	extern sqlite3* daemon_db;
 _HIP_DEBUG("Loading HIT database from %s.\n", file);
       
-        db_file = fopen(file, "r");
+      /*  db_file = fopen(file, "r");
         if (!db_file) {
                 HIP_DEBUG("Db file doesnt exist creating it n\n");
-        }
+        }*/
         daemon_db = hip_sqlite_open_db(file, HIP_CERT_DB_CREATE_TBLS);
 	HIP_IFE(!daemon_db, -1);
 
 out_err:
-	if (db_file) fclose(db_file);
+	//if (db_file) fclose(db_file);
 	//hip_sqlite_close_db(daemon_db);
 	return (err);
 }

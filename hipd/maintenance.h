@@ -31,7 +31,7 @@ int hip_agent_update(void);
 int hip_get_firewall_status();
 int verify_hdrr (struct hip_common *msg,struct in6_addr *addrkey);
 void send_packet_to_lookup_from_queue();
-void init_dht_sockets (int sock_num);
+void init_dht_sockets (int *socket, int *socket_status);
 /*Communication with firewall daemon*/
 int hip_firewall_set_bex_data(int action, hip_ha_t *entry, struct in6_addr *hit_s, 
 			      struct in6_addr *hit_r);
