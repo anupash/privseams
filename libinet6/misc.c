@@ -704,8 +704,6 @@ int hip_private_rsa_host_id_to_hit(const struct hip_host_id *host_id,
 	hip_get_rsa_keylen(host_id, &keylen, 1);
 	rsa_priv_len = 2 * keylen.n;
 
-	HIP_DEBUG("Treating RSA key as %d bits. Private part is %d bytes.\n", keylen.n * 8, rsa_priv_len);
-
 	memcpy(host_id_pub, host_id,
 	       sizeof(struct hip_tlv_common) + contents_len - rsa_priv_len);
 
