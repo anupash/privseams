@@ -1,5 +1,5 @@
 
-r#                                               -*- Autoconf -*-
+#                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 #
 # Generated with autoscan and manually edited -Miika
@@ -85,7 +85,7 @@ AC_ARG_ENABLE(firewall,
 AC_CACHE_CHECK([whether to use firewall],
                [ac_cv_use_firewall], [ac_cv_use_firewall=yes])
 if test x"$ac_cv_use_firewall" = x"yes"; then
-        AC_CHECK_LIB(ipq, ipq_create_handle,, AC_MSG_ERROR(libipq not found))
+        AC_CHECK_LIB(ipq, ipq_create_handle,, AC_MSG_ERROR(libipq not found, install iptables developer headers))
 #        AC_CHECK_LIB(glib-2.0, g_list_append,, AC_MSG_ERROR(glib not found))
 # Do not work -mk
 #        AC_CHECK_HEADERS(glib-2.0/glib/glist.h,,
@@ -114,7 +114,7 @@ AC_CACHE_CHECK([whether to use agent],
                [ac_cv_use_agent], [ac_cv_use_agent=yes])
 if test x"$ac_cv_use_agent" = x"yes"; then
 	AC_DEFINE(CONFIG_HIP_AGENT, AC_PREREQ(2.53))
-        AC_CHECK_LIB(sqlite3, sqlite3_open,, AC_MSG_ERROR(libsqlite3 not found))	
+        AC_CHECK_LIB(sqlite3, sqlite3_open,, AC_MSG_ERROR(libsqlite3-dev not found))	
 fi
 AM_CONDITIONAL(HIP_AGENT, test x"$ac_cv_use_agent" = x"yes")
 
@@ -232,7 +232,7 @@ AC_ARG_ENABLE(privsep,
 AC_CACHE_CHECK([whether to use privsep],
                [ac_cv_use_privsep], [ac_cv_use_privsep=yes])
 if test x"$ac_cv_use_privsep" = x"yes"; then
-	AC_CHECK_LIB(cap, cap_get_proc,, AC_MSG_ERROR(Cap lib not found))
+	AC_CHECK_LIB(cap, cap_get_proc,, AC_MSG_ERROR(libcap-dev developer headers not found))
         AC_DEFINE(CONFIG_HIP_PRIVSEP, AC_PREREQ(2.53))
 fi
 AM_CONDITIONAL(HIP_PRIVSEP, test x"$ac_cv_use_privsep" = x"yes")
