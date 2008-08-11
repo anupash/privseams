@@ -355,11 +355,15 @@ int hip_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 	
 	HIP_IFEL(hip_build_param_contents(msg, (void *)(local_hit),
-					  HIP_PARAM_HIT,
+					  HIP_PARAM_HIT_PEER,
+					  sizeof(struct in6_addr)), -1,
+		 "build param HIP_PARAM_HIT  failed\n");
+	HIP_IFEL(hip_build_param_contents(msg, (void *)(local_hit),
+					  HIP_PARAM_HIT_LOCAL,
 					  sizeof(struct in6_addr)), -1,
 		 "build param HIP_PARAM_HIT  failed\n");
 	HIP_IFEL(hip_build_param_contents(msg, (void *)(peer_ip),
-					  HIP_PARAM_IPV6_ADDR,
+					  HIP_PARAM_IPV6_ADDR_PEER,
 					  sizeof(struct in6_addr)), -1,
 		 "build param HIP_PARAM_IPV6_ADDR failed\n");
 
@@ -384,7 +388,7 @@ int hip_request_peer_hit_from_hipd(const struct in6_addr *peer_ip,
 	/* check error value */
 	HIP_IFEL(hip_get_msg_err(msg), -1, "Got erroneous message!\n");
 	
-	ptr = (hip_hit_t *) hip_get_param_contents(msg, HIP_PARAM_HIT);
+	ptr = (hip_hit_t *) hip_get_param_contents(msg, HIP_PARAM_HIT_PEER);
 	if (ptr) {
 		memcpy(peer_hit, ptr, sizeof(hip_hit_t));
 		HIP_DEBUG_HIT("peer_hit", peer_hit);
