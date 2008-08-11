@@ -2,12 +2,22 @@
 #define FIREWALL_DEFINES_H_
 
 #include <sys/time.h>
+#include "linkedlist.h"
+
 //int hip_proxy_status;
 
 
 #include "common_types.h"
 
 /********** State table structures **************/
+
+struct anchor_tuple
+{
+	uint32_t update_id;
+	uint8_t transform;
+	unsigned char *active_anchor;
+	unsigned char *next_anchor;
+};
 
 struct esp_address
 {
@@ -64,6 +74,9 @@ struct tuple
 #ifdef CONFIG_HIP_HIPPROXY
 	int hipproxy;
 #endif
+	/* list temporarily storing anchor elements until the consecutive update
+	 * msg reveals which esp_tuple we have to update */
+	hip_ll_t anchor_cache;
 };
 
 struct connection

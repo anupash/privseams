@@ -8,6 +8,7 @@
 #include "esp_prot_fw_msg.h"
 #include "esp_prot_common.h"
 #include "esp_prot_api.h"
+#include "hslist.h"
 
 /* this sends the preferred transform to hipd implicitely turning on
  * the esp protection extension there */
@@ -507,8 +508,7 @@ int esp_prot_conntrack_I2_anchor(const struct hip_common *common,
 						hash_length);
 
 				// add the tuple to this direction's esp_tuple list
-				HIP_IFEL(!(tuple->esp_tuples = (struct SList *)
-						append_to_slist((struct _SList *)tuple->esp_tuples,
+				HIP_IFEL(!(tuple->esp_tuples =  append_to_slist(tuple->esp_tuples,
 						esp_tuple)), -1, "failed to insert esp_tuple\n");
 
 			} else
@@ -525,6 +525,9 @@ int esp_prot_conntrack_I2_anchor(const struct hip_common *common,
 			err = 1;
 			goto out_err;
 		}
+
+		// finally init the anchor cache needed for tracking UPDATEs
+		hip_ll_init(&tuple->anchor_cache);
 	}
 
   out_err:
@@ -629,6 +632,114 @@ int esp_prot_conntrack_R2_anchor(const struct hip_common *common,
 
 			err = 1;
 			goto out_err;
+		}
+
+		// finally init the anchor cache needed for tracking UPDATEs
+		hip_ll_init(&tuple->anchor_cache);
+	}
+
+  out_err:
+	return err;
+}
+
+int esp_prot_conntrack_update_anchor(const hip_common_t * update, struct tuple * tuple)
+{
+	struct hip_seq * seq = NULL;
+	struct esp_prot_anchor *esp_anchors = NULL;
+	struct anchor_tuple *anchors = NULL;
+	int hash_length = 0;
+	int err = 0;
+
+	// get params from UPDATE message needed for further processing
+	HIP_IFEL(!(seq = (struct hip_seq *) hip_get_param(update, HIP_PARAM_SEQ)), -1,
+			"expecting SEQ param, but UPDATE msg does NOT contain it\n");
+	HIP_IFEL(!(esp_anchors = (struct esp_prot_anchor *) hip_get_param(update,
+			HIP_PARAM_ESP_PROT_ANCHOR)), -1,
+			"expecting ANCHOR param, but UPDATE msg does NOT contain it\n");
+
+	/* when finding an anchor in a update message, we have to store it
+	 * in the current direction's tuple indexed with the SEQ number for
+	 * reference reasons with the consecutive update reply */
+
+	// needed for allocating and copying the anchors
+	hash_length = esp_prot_get_hash_length(esp_anchors->transform);
+
+	HIP_IFEL(!(anchors = (unsigned char *) malloc(sizeof(struct esp_tuple))), -1,
+			"failed to allocate memory\n");
+	// active_anchor has to be present at least
+	HIP_IFEL(!(anchors->active_anchor = (unsigned char *) malloc(sizeof(struct esp_tuple))), -1,
+				"failed to allocate memory\n");
+
+	anchors->update_id = seq->update_id;
+	anchors->transform = esp_anchors->transform;
+	memcpy(anchors->active_anchor, &esp_anchors->anchors[0], hash_length);
+
+	// check if next_anchor is set
+	if (memcmp(&esp_anchors->anchors[hash_length], 0, hash_length))
+	{
+		// copy too as it is set
+		memcpy(anchors->next_anchor, &esp_anchors->anchors[hash_length], hash_length);
+
+	} else
+	{
+		anchors->next_anchor = NULL;
+	}
+
+	// add this anchor to the list for this direction's tuple
+	HIP_IFEL(hip_ll_add_first(&tuple->anchor_cache, anchors), -1,
+			"failed to add anchor to anchor_cache\n");
+
+  out_err:
+	return err;
+}
+
+int esp_prot_conntrack_update_esp_info(const hip_common_t *update,
+		struct tuple * other_dir_tuple)
+{
+	struct hip_ack *ack = NULL;
+	struct hip_esp_info *esp_info = NULL;
+	struct anchor_tuple *anchors = NULL;
+	struct esp_tuple *esp_tuple = NULL;
+	// assume no matching anchor
+	int err = 1, i;
+
+	/* the update reply to an anchor in anchor message contains the ESP_INFO
+	 * parameter with the SPI number of the esp_tuple to be update with the
+	 * anchor sent before */
+	// XX TODO check for each ACK in case of aggregated ACKs
+	HIP_IFEL(!(ack = (struct hip_ack *) hip_get_param(update, HIP_PARAM_ACK)), -1,
+			"expecting ACK param, but UPDATE msg does NOT contain it\n");
+	HIP_IFEL(!(esp_info = (struct hip_esp_info *) hip_get_param(update,
+			HIP_PARAM_ESP_INFO)), -1,
+			"expecting ESP_INFO param, but UPDATE msg does NOT contain it\n");
+
+	// search for corresponding anchor in other direction's anchor cache
+	for (i = 0; i < hip_ll_get_size(&other_dir_tuple->anchor_cache); i++)
+	{
+		anchors = (struct anchor_tuple *) hip_ll_get(&other_dir_tuple->anchor_cache, i);
+
+		if (anchors->update_id == ack->peer_update_id)
+		{
+			HIP_DEBUG("matching SEQ and ACK for anchor update found\n");
+
+			// remove from cache
+			anchors = (struct anchor_tuple *) hip_ll_del(&other_dir_tuple->anchor_cache,
+					i, NULL);
+
+			// update corresponding esp_tuple
+			// TODO distinguish the different update cases
+			/* esp_tuple = find_esp_tuple(other_dir_esps, ntohl(esp_info->old_spi));
+			esp_tuple->esp_prot_tfm
+			esp_tuple->active_anchor
+			esp_tuple->next_anchor
+
+			esp_tuple = find_esp_tuple(other_dir_esps, ntohl(esp_info->new_spi));
+			esp_tuple->esp_prot_tfm
+			esp_tuple->active_anchor
+			esp_tuple->next_anchor */
+
+			err = 0;
+			break;
 		}
 	}
 

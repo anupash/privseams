@@ -1012,7 +1012,6 @@ int handle_update(const struct in6_addr * ip6_src,
 	struct hip_echo_request * echo_req = NULL;
 	struct hip_echo_response * echo_res = NULL;
 	struct tuple * other_dir_tuple = NULL;
-	struct esp_prot_anchor *esp_anchors = NULL;
 	uint32_t spi_new = 0;
 	uint32_t spi_old = 0;
 	int err = 0;
@@ -1029,8 +1028,6 @@ int handle_update(const struct in6_addr * ip6_src,
 			HIP_PARAM_ECHO_REQUEST);
 	echo_res = (struct hip_echo_response *) hip_get_param(common,
 			HIP_PARAM_ECHO_RESPONSE);
-	esp_anchors = (struct esp_prot_anchor *) hip_get_param(common,
-			HIP_PARAM_ESP_PROT_ANCHOR);
 
 	if(spi)
 		_HIP_DEBUG("handle_update: spi param, spi: %d \n", ntohl(spi->spi));
