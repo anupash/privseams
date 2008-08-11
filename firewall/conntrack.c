@@ -812,25 +812,9 @@ int handle_r2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 	}
 
 	// try to look up esp_tuple for this connection
-	esp_tuple = find_esp_tuple(other_dir_esps, ntohl(spi->new_spi));
-
-	if (!esp_tuple)
+	if (!(esp_tuple = find_esp_tuple(other_dir_esps, ntohl(spi->new_spi))))
 	{
-		/* normally there should NOT be any esp_tuple for the other direction yet,
-		 * but when tracking anchor elements, the other one was already set up
-		 * when handling the I2 */
-		if (other_dir_esps)
-		{
-			/* there should only be one esp_tuple in the other direction's esp_tuple
-			 * list */
-			HIP_IFEL(other_dir_esps->next, -1,
-					"expecting 1 esp_tuple in the list, but there are several\n");
-
-			// get the esp_tuple for the other direction
-			HIP_IFEL(!(esp_tuple = (struct esp_tuple *) other_dir_esps->data), -1,
-					"expecting 1 esp_tuple in the list, but there is NONE\n");
-
-		} else
+		if (!(esp_tuple = esp_prot_conntrack_R2_esp_tuple(other_dir_esps)))
 		{
 			HIP_IFEL(!(esp_tuple = malloc(sizeof(struct esp_tuple))), 0,
 					"failed to allocate memory\n");
@@ -842,7 +826,7 @@ int handle_r2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 						esp_tuple);
 		}
 
-		// this has to be set in both cases
+		// this also has to be set in esp protection extension case
 		esp_tuple->spi = ntohl(spi->new_spi);
 		esp_tuple->new_spi = 0;
 		esp_tuple->spi_update_id = 0;
@@ -881,8 +865,8 @@ int handle_r2(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 /**
  * updates esp tuple according to parameters
  * esp_info or locator may be null and spi or ip_addr is
- * not updated in tha case
- * returns 1 if succesfull 0 otherwise
+ * not updated in that case
+ * returns 1 if successful 0 otherwise
  */
 int update_esp_tuple(const struct hip_esp_info * esp_info,
 		     const struct hip_locator * locator,

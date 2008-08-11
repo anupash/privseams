@@ -24,6 +24,7 @@ unsigned char * esp_prot_handle_sa_add_request(struct hip_common *msg,
 int esp_prot_conntrack_R1_tfms(struct hip_common * common, const struct tuple * tuple);
 int esp_prot_conntrack_I2_anchor(const struct hip_common * common,
 		struct tuple * tuple);
+struct esp_tuple * esp_prot_conntrack_R2_esp_tuple(SList *other_dir_esps);
 int esp_prot_conntrack_R2_anchor(const struct hip_common * common,
 		struct tuple * tuple);
 

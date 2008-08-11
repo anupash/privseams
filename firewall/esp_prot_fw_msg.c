@@ -542,6 +542,36 @@ int esp_prot_conntrack_I2_anchor(const struct hip_common *common,
 	return err;
 }
 
+struct esp_tuple * esp_prot_conntrack_R2_esp_tuple(SList *other_dir_esps)
+{
+	struct esp_tuple *esp_tuple = NULL;
+	int err = 0;
+
+	/* normally there should NOT be any esp_tuple for the other direction yet,
+	 * but when tracking anchor elements, the other one was already set up
+	 * when handling the I2 */
+	if (other_dir_esps)
+	{
+		/* there should only be one esp_tuple in the other direction's esp_tuple
+		 * list */
+		HIP_IFEL(other_dir_esps->next, -1,
+				"expecting 1 esp_tuple in the list, but there are several\n");
+
+		// get the esp_tuple for the other direction
+		HIP_IFEL(!(esp_tuple = (struct esp_tuple *) other_dir_esps->data), -1,
+				"expecting 1 esp_tuple in the list, but there is NONE\n");
+
+	}
+
+  out_err:
+	if (err)
+	{
+		esp_tuple = NULL;
+	}
+
+	return esp_tuple;
+}
+
 int esp_prot_conntrack_R2_anchor(const struct hip_common *common,
 		struct tuple *tuple)
 {
