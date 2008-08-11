@@ -1,5 +1,5 @@
 /** @file
- * HIP Firewwall
+ * HIP Firewall
  * 
  * @note: This code is GNU/GPL.
  * @note: HIPU: requires libipq, might need pcap libraries
@@ -191,6 +191,7 @@ int hip_fw_init_userspace_ipsec(){
 		system("ip6tables -I OUTPUT -p 58 -d 2001:0010::/28 -j QUEUE");
 		system("ip6tables -I OUTPUT -p 6 -d 2001:0010::/28 -j QUEUE");
 		system("ip6tables -I OUTPUT -p 17 -d 2001:0010::/28 -j QUEUE");
+
 	}
 	
   out_err:

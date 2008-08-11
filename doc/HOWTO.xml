@@ -1496,7 +1496,7 @@
 	  </para></listitem>
 	  <listitem id="listitem_rvs"><para>
 	    At the responder, we have to register to the rendezvous server:
-	    <programlisting>tools/hipconf add rvs &lt;RVS-HIT&gt; &lt;RVS-IP&gt; &lt;LIFETIME-IN-SECONDS&gt;</programlisting>
+	    <programlisting>tools/hipconf add server rvs &lt;RVS-HIT&gt; &lt;RVS-IP&gt; &lt;LIFETIME-IN-SECONDS&gt;</programlisting>
 	    This will launch a base exchange i.e. establish a HIP SA between the
 	    rendezvous server and the responder. Please use the default HIT of
 	    the rendezvous server ("<emphasis>tools/hipconf get hi default</emphasis>" at the RVS).
@@ -1561,7 +1561,7 @@
 		  <para>
 		    To cancel the registration to the rendezvous service type:
 		    <programlisting>
-		      tools/hipconf del rvs &lt;RVS-HIT&gt; &lt;RVS-IP&gt;
+		      tools/hipconf del server rvs &lt;RVS-HIT&gt; &lt;RVS-IP&gt;
 		    </programlisting>
 		    This will send a HIP message asking for rendezvous service
 		    cancellation to the rendezvous server.
@@ -1727,7 +1727,7 @@
 	  <listitem><para>
 	    At the responder, we have to register to the relay server:
 	    <programlisting>
-	      tools/hipconf add relay &lt;RELAY-HIT&gt; &lt;RELAY-IP&gt; &lt;LIFETIME-IN-SECONDS&gt;
+	      tools/hipconf add server relay &lt;RELAY-HIT&gt; &lt;RELAY-IP&gt; &lt;LIFETIME-IN-SECONDS&gt;
 	    </programlisting>
 	    This will launch a base exchange i.e. establish a HIP SA between the
 	    relay server and the responder. Please use the default HIT of the
@@ -1798,7 +1798,7 @@
 		  <para>
 		    To cancel the registration to the relay service type:
 		    <programlisting>
-		      tools/hipconf del relay &lt;RELAY-HIT&gt; &lt;RELAY-IP&gt;
+		      tools/hipconf del server relay &lt;RELAY-HIT&gt; &lt;RELAY-IP&gt;
 		    </programlisting>
 		    This will send a HIP message asking for relay service
 		    cancellation to the relay server.
