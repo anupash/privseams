@@ -336,21 +336,26 @@ int hip_produce_keying_material(struct hip_common *msg, struct hip_context *ctx,
 	HIP_DEBUG_HIT("key_material msg->hitr (local)", &msg->hitr);
 
 	if (hip_blind_get_status()) {
-	  type = hip_get_msg_type(msg);
-
+		type = hip_get_msg_type(msg);
+	  
 	  /* Initiator produces keying material for I2:
 	   * uses own blinded hit and plain initiator hit
 	   */
 	  if (type == HIP_R1) {
-	    HIP_IFEL((blind_entry = hip_hadb_find_by_blind_hits(&msg->hitr, &msg->hits)) == NULL,
-		     -1, "Could not found blinded hip_ha_t entry\n");
-	    hip_make_keymat(dh_shared_key, dh_shared_len,
-			    &km, keymat, keymat_len,
-			    &blind_entry->hit_peer, &msg->hitr, &ctx->keymat_calc_index, I, J);
+		  if((blind_entry =
+		      hip_hadb_find_by_blind_hits(&msg->hitr, &msg->hits))
+		     == NULL){
+			  err = -1;
+			  HIP_ERROR("Could not found blinded hip_ha_t entry\n");
+			  goto out_err;
+		  }
+		  hip_make_keymat(dh_shared_key, dh_shared_len,
+				  &km, keymat, keymat_len,
+				  &blind_entry->hit_peer, &msg->hitr,
+				  &ctx->keymat_calc_index, I, J);
 	  }
 	  /* Responder produces keying material for handling I2:
-	   * uses own plain hit and blinded initiator hit
-	   */
+	   * uses own plain hit and blinded initiator hit */
 	  else if (type == HIP_I2) {
 	    HIP_IFEL((plain_local_hit = HIP_MALLOC(sizeof(struct in6_addr), 0)) == NULL,
 		     -1, "Couldn't allocate memory\n");
@@ -1461,16 +1466,26 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 //end add
 
 //moved from hip_handle_i2
+/* For the above comment. When doing fixes like the above move, please check that
+   the code compiles with the affected flags. With CONFIG_HIP_BLIND we get
+   'spi_out' undeclared (first use in this function)
+   'esp_tfm' undeclared (first use in this function)
+
+   Fixed:
+   spi_out --> entry->default_spi_out
+   esp_tfm --> entry->esp_transform
+   
+   Lauri 22.07.2008
+*/
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status()) {
-	   err = entry->hadb_ipsec_func->hip_add_sa(i2_daddr, i2_saddr,
-			   &entry->hit_our, &entry->hit_peer,
-			   spi_out, esp_tfm,
-			   &ctx->esp_out, &ctx->auth_out,
-			   1, HIP_SPI_DIRECTION_OUT, 0, entry);
+	   err = entry->hadb_ipsec_func->hip_add_sa(
+		   i2_daddr, i2_saddr, &entry->hit_our, &entry->hit_peer,
+		   entry->default_spi_out, entry->esp_transform, &ctx->esp_out,
+		   &ctx->auth_out, 1, HIP_SPI_DIRECTION_OUT, 0, entry);
 	}
 #endif
-
+	
 //modified by santtu
 	/**nat_control is 0 means we use normal mode to create sa*/
 	if (entry->nat_control == 0) {
@@ -1535,50 +1550,54 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
  *                 sent.
  */
 int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
-		  hip_ha_t *ha, hip_portpair_t *i2_info)
-{
+		  hip_ha_t *entry, hip_portpair_t *i2_info)
+{	
+	/* Primitive data types. */
+	extern uint8_t hip_esp_prot_ext_transform;
+	int err = 0, retransmission = 0, replay = 0, use_blind = 0, state = 0;
+	int item_length = 0;
+	uint8_t transform = 0;
+	uint16_t crypto_len = 0, nonce = 0;
+	uint32_t spi_in = 0, spi_out = 0;
+	uint64_t I = 0, J = 0;
+	in_port_t dest_port = 0; // For the port in RELAY_FROM
+	/* Pointers */
+	in6_addr_t *plain_peer_hit = NULL, *plain_local_hit = NULL; 
+	char *tmp_enc = NULL, *enc = NULL;
+	unsigned char *iv = NULL;
+	hip_tlv_common_t *param = NULL;
+	unsigned char *anchor = NULL;
 	struct hip_context *ctx = NULL;
 	struct hip_host_id *host_id_in_enc = NULL;
 	struct hip_r1_counter *r1cntr = NULL;
 	struct hip_esp_info *esp_info = NULL;
 	struct hip_dh_public_value *dhpv = NULL;
-	struct hip_spi_in_item spi_in_data;
-//removed by santtu
-	//struct hip_locator *locator = NULL;
 	struct hip_solution *sol = NULL;
-	hip_tlv_common_t *param = NULL;
-	in6_addr_t *plain_peer_hit = NULL, *plain_local_hit = NULL;
-	hip_ha_t *entry = ha;
-	char *tmp_enc = NULL, *enc = NULL;
-	unsigned char *iv = NULL;
-	hip_transform_suite_t esp_tfm, hip_tfm;
-	uint64_t I = 0, J = 0;
-	uint32_t spi_in = 0, spi_out = 0;
-	uint16_t crypto_len = 0, nonce = 0;
-	int err = 0, retransmission = 0, replay = 0, use_blind = 0, state;
-	in6_addr_t dest; // For the IP address in RELAY_FROM
-	in_port_t  dest_port = 0; // For the port in RELAY_FROM
 	struct esp_prot_anchor *prot_anchor = NULL;
-	unsigned char *anchor = NULL;
-	int item_length = 0;
 	struct esp_prot_transform *prot_transform = NULL;
-	uint8_t transform = 0;
-	extern uint8_t hip_esp_prot_ext_transform;
-	//add by santtu
+	/* Data structures. */
+	in6_addr_t dest; // dest for the IP address in RELAY_FROM
+	hip_transform_suite_t esp_tfm, hip_tfm;
+	struct hip_spi_in_item spi_in_data;
+
 #ifdef HIP_USE_ICE
-	void * ice_session = NULL;
-	int i;
+	void *ice_session = NULL;
+	int i = 0;
 #endif
 #ifdef CONFIG_HIP_HI3
-	int n_addrs = 0;
-	struct hip_locator_info_addr_item* first = NULL;
+	int n_addrs = 0, ii = 0, use_ip4 = 1;
+	struct hip_locator_info_addr_item *first = NULL;
 	struct netdev_address *n = NULL;
 	hip_list_t *item = NULL, *tmp = NULL;
-	int ii = 0;
-	int use_ip4 = 1;
 #endif
-
+	
 	_HIP_DEBUG("hip_handle_i2() invoked.\n");
+
+	/* Initialize the statically allocated data structures. */
+	memset(&dest, 0, sizeof(dest));
+	memset(&esp_tfm, 0, sizeof(esp_tfm));
+	memset(&hip_tfm, 0, sizeof(hip_tfm));
+	memset(&spi_in_data, 0, sizeof(spi_in_data));
 
 	if ((ntohs(i2->control) & HIP_PACKET_CTRL_BLIND) &&
 	    hip_blind_get_status()) {
@@ -1962,15 +1981,26 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
 	/* XXX: -EAGAIN */
 	HIP_DEBUG("set up inbound IPsec SA, SPI=0x%x (host)\n", spi_in);
+/*
+  With CONFIG_HIP_BLIND enabled we got the following warnings/error:
+  warning: passing argument 5 of 'entry->hadb_ipsec_func->hip_add_sa' makes
+  integer from pointer without a cast
+  warning: passing argument 7 of 'entry->hadb_ipsec_func->hip_add_sa' makes
+  pointer from integer without a cast
+  warning: passing argument 9 of 'entry->hadb_ipsec_func->hip_add_sa' makes
+  integer from pointer without a cast
+  error: too many arguments to function 'entry->hadb_ipsec_func->hip_add_sa'
 
+  Fixed: removed extra 'entry' from the parameter list.
+  -Lauri 22.07.2008
+*/
 #ifdef CONFIG_HIP_BLIND
 	if (use_blind) {
-	  /* Set up IPsec associations */
-	  err = entry->hadb_ipsec_func->hip_add_sa(i2_saddr, i2_daddr,
-			   &entry->hit_peer, &entry->hit_our,
-			   entry, spi_in,
-			   esp_tfm,  &ctx->esp_in, &ctx->auth_in,
-			   retransmission, HIP_SPI_DIRECTION_IN, 0, entry);
+		/* Set up IPsec associations */
+		err = entry->hadb_ipsec_func->hip_add_sa(
+			i2_saddr, i2_daddr, &entry->hit_peer, &entry->hit_our,
+			spi_in, esp_tfm,  &ctx->esp_in, &ctx->auth_in,
+			retransmission, HIP_SPI_DIRECTION_IN, 0, entry);
 	}
 #endif
 
@@ -2197,7 +2227,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	   the reference. */
 	/* 'entry' cannot be NULL here anymore since it has been used in this
 	   function directly without NULL check. -Lauri. */
-	if(ha == NULL && entry != NULL) {
+	if(entry != NULL) {
 		/* unlock the entry created in this function */
 		HIP_UNLOCK_HA(entry);
 		hip_put_ha(entry);
@@ -2322,11 +2352,11 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	struct hip_context *ctx = NULL;
  	struct hip_esp_info *esp_info = NULL;
 	struct hip_spi_out_item spi_out_data;
-	int err = 0, tfm = 0, retransmission = 0, type_count = 0, idx;
+	int err = 0, tfm = 0, retransmission = 0, type_count = 0, idx = 0;
 	int *reg_types = NULL;
 	uint32_t spi_recvd = 0, spi_in = 0;
-	int i;
-	void * ice_session = 0;
+	int i = 0;
+	void *ice_session = 0;
 
 #ifdef CONFIG_HIP_HI3
 	if( r2_info->hi3_in_use ) {
@@ -2349,7 +2379,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
         ctx->input = r2;
 
 #ifdef CONFIG_HIP_BLIND
-	if (use_blind) {
+	if (hip_blind_get_status()) {
 		HIP_IFEL(hip_blind_verify_r2(r2, entry), -1,
 			 "hip_blind_verify_host_id() failed.\n");
 	}
@@ -2369,8 +2399,8 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	/* Signature validation */
  	HIP_IFEL(entry->verify(entry->peer_pub, r2), -EINVAL,
 		 "R2 signature verification failed.\n");
-
-    /* The rest */
+	
+	/* The rest */
  	HIP_IFEL(!(esp_info = hip_get_param(r2, HIP_PARAM_ESP_INFO)), -EINVAL,
 		 "Parameter SPI not found.\n");
 
@@ -2387,7 +2417,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	HIP_DEBUG("spi_in: 0x%x\n", spi_in);
 
 	tfm = entry->esp_transform;
-	HIP_DEBUG("esp_transform: %i\ņ", tfm);
+	HIP_DEBUG("esp_transform: %i.\n", tfm);
 
 	HIP_DEBUG("R2 packet source port: %d, destination port %d.\n",
 		  r2_info->src_port, r2_info->dst_port);
@@ -2410,16 +2440,21 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 			esp_prot_transforms[entry->esp_prot_transform]);
 
 // moved from hip_create_i2
+/* For the above comment. When doing fixes like the above move, please check
+   that the code compiles with the affected flags. With CONFIG_HIP_BLIND we get
+   five errors and two warnings. They are now fixed, but the code is not tested
+   to work. I.e. the code compiles but does not neccessarily work.
+    Lauri 22.07.2008
+*/
 #ifdef CONFIG_HIP_BLIND
-	if (use_blind) {
-	  /* let the setup routine give us a SPI. */
-	  HIP_DEBUG("Blind is ON\n");
-	  HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(r1_saddr, r1_daddr,
-				  &entry->hit_peer, &entry->hit_our,
-				  entry, spi_in, transform_esp_suite,
-				  &ctx->esp_in, &ctx->auth_in, 0,
-				  HIP_SPI_DIRECTION_IN, 0, entry), -1,
-		   "Failed to setup IPsec SPD/SA entries, peer:src\n");
+	if (hip_blind_get_status()) {
+		/* let the setup routine give us a SPI. */
+		HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(
+				 r2_saddr, r2_daddr, &entry->hit_peer,
+				 &entry->hit_our, spi_in, entry->esp_transform,
+				 &ctx->esp_in, &ctx->auth_in, 0,
+				 HIP_SPI_DIRECTION_IN, 0, entry), -1,
+			 "BLIND: Failed to setup IPsec SPD/SA entries.\n");
 	}
 #endif
 
@@ -2449,12 +2484,11 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 // end of move
 
 #ifdef CONFIG_HIP_BLIND
-	if (use_blind) {
-	  err = entry->hadb_ipsec_func->hip_add_sa(r2_daddr, r2_saddr,
-			   &entry->hit_our, &entry->hit_peer,
-			   spi_recvd, tfm,
-			   &ctx->esp_out, &ctx->auth_out, 1,
-			   HIP_SPI_DIRECTION_OUT, 0, entry);
+	if (hip_blind_get_status()) {
+		err = entry->hadb_ipsec_func->hip_add_sa(
+			r2_daddr, r2_saddr, &entry->hit_our, &entry->hit_peer,
+			spi_recvd, tfm, &ctx->esp_out, &ctx->auth_out, 1,
+			HIP_SPI_DIRECTION_OUT, 0, entry);
 	}
 #endif
 //modified by santtu
