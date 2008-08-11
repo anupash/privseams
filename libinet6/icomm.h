@@ -109,9 +109,9 @@
 #define SO_HIP_DHT_OFF                          93
 #define SO_HIP_SET_OPPTCP_ON			94
 #define SO_HIP_SET_OPPTCP_OFF			95
-/* slot 96 is free */
-#define SO_HIP_OPPTCP_UNBLOCK_APP		97
-#define SO_HIP_OPPTCP_OPPIPDB_ADD_ENTRY		98
+/* slot 96 is FREE */
+/* slot 97 is FREE */
+/* slot 98 is FREE */
 #define SO_HIP_OPPTCP_SEND_TCP_PACKET		99
 #define SO_HIP_TRANSFORM_ORDER                  100
 

@@ -17,6 +17,7 @@ int statefulFiltering = 1;
 int escrow_active = 0;
 int accept_normal_traffic_by_default = 1;
 int accept_hip_esp_traffic_by_default = 0;
+int system_based_opp_mode = 0;
 int flush_iptables = 1;
 
 int counter = 0;
@@ -1001,18 +1002,8 @@ int filter_hip(const struct in6_addr * ip6_src,
     		HIP_DEBUG("packet type: R1\n");
     	else if (buf->type_hdr == HIP_I2)
     		HIP_DEBUG("packet type: I2\n");
-    	else if (buf->type_hdr == HIP_R2){
+    	else if (buf->type_hdr == HIP_R2)
     		HIP_DEBUG("packet type: R2\n");
-		//update the state of the firewall entry
-		//if the receiving hit is one of our own
-		if(hit_is_local_hit(&(buf->hitr))){
-			HIP_DEBUG("updating fw entry state to ESTABLISHED\n");
-			firewall_update_entry(NULL, NULL,
-					      NULL, ip6_src,
-					      FIREWALL_STATE_BEX_ESTABLISHED);
-		}
-		
-	}
     	else if (buf->type_hdr == HIP_UPDATE)
     		HIP_DEBUG("packet type: UPDATE\n");
     	else if (buf->type_hdr == HIP_NOTIFY)
@@ -1183,6 +1174,8 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 	int verdict = accept_normal_traffic_by_default;
 	int packet_id = ctx->ipq_packet->packet_id;
 
+	HIP_DEBUG("\n");
+
 	if (hip_userspace_ipsec)
 	{
 		HIP_DEBUG_HIT("destination hit: ", &ctx->dst);
@@ -1196,11 +1189,11 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 	}
 						   
 	/* LSI HOOKS */
-	if (ctx->ip_version == 4){	  
-		IPV6_TO_IPV4_MAP(&(ctx->src),&src_lsi);
-		IPV6_TO_IPV4_MAP(&(ctx->dst),&dst_lsi);
-		if (IS_LSI32(src_lsi.s_addr)){
-			if (is_packet_reinjection(&dst_lsi))
+	if(ctx->ip_version == 4){	  
+		IPV6_TO_IPV4_MAP(&(ctx->src), &src_lsi);
+		IPV6_TO_IPV4_MAP(&(ctx->dst), &dst_lsi);
+		if(IS_LSI32(src_lsi.s_addr)){
+			if(is_packet_reinjection(&dst_lsi))
 				verdict = 1;
 		      	else{
 			    	hip_fw_handle_outgoing_lsi(ctx->ipq_packet, &src_lsi, &dst_lsi);
@@ -1228,7 +1221,16 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 }
 
 
-//###############################################
+/**
+ * Checks if the outgoing packet has already ESTABLISHED
+ * the Base Exchange with the peer host. In case the BEX
+ * is not done, it triggers it. Otherwise, it looks up
+ * in the local database the necessary information for
+ * doing the packet reinjection with HITs.
+ *
+ * @param *ctx	the contect of the packet
+ * @return	the verdict for the packet
+ */
 int hip_fw_handle_outgoing_ip(hip_fw_context_t *ctx){
 	int err, msg_type, state_ha, fallback, reject, new_fw_entry_state;
 	struct in6_addr src_lsi, dst_lsi;
@@ -1291,17 +1293,19 @@ HIP_DEBUG("New state %d - \n", new_fw_entry_state);
 					     &dst_hit, &src_lsi, &dst_lsi);
 
 		if(state_ha == -1){
-			//initiate the bex
-			memset(&all_zero_hit, 0, sizeof(struct sockaddr_in6));
-			hip_request_peer_hit_from_hipd_at_firewall(
-				&ctx->dst,
-				&all_zero_hit.sin6_addr,
-				(const struct in6_addr *)hip_fw_get_default_hit(),
-				(in_port_t *) &(ctx->transport_hdr.tcp)->source,
-				(in_port_t *) &(ctx->transport_hdr.tcp)->dest,
-				&fallback,
-				&reject);
-			verdict = 0;
+			if(system_based_opp_mode){
+				//initiate the bex
+				memset(&all_zero_hit, 0, sizeof(struct sockaddr_in6));
+				hip_request_peer_hit_from_hipd_at_firewall(
+					&ctx->dst,
+					&all_zero_hit.sin6_addr,
+					(const struct in6_addr *)hip_fw_get_default_hit(),
+					(in_port_t *) &(ctx->transport_hdr.tcp)->source,
+					(in_port_t *) &(ctx->transport_hdr.tcp)->dest,
+					&fallback,
+					&reject);
+				verdict = 0;
+			}
 		}else if(state_ha == HIP_STATE_ESTABLISHED){
 			if(hit_is_local_hit(&src_hit)){
 		        	HIP_DEBUG("is local hit\n");
@@ -1634,7 +1638,7 @@ int main(int argc, char **argv){
 	
 	hip_set_logdebug(LOGDEBUG_NONE);
 
-	while ((ch = getopt(argc, argv, "f:t:vdFHAbkipeh")) != -1)
+	while ((ch = getopt(argc, argv, "f:t:vdFHAbkipehs")) != -1)
 	{
 		switch (ch)
 		{
@@ -1682,6 +1686,9 @@ int main(int argc, char **argv){
 		case 'h':
 			print_usage();
 			exit(2);
+			break;
+		case 's':
+			system_based_opp_mode = 1;
 			break;
 		case '?':
 			printf("Unrecognized option: -%c\n", optopt);
