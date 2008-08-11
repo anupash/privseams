@@ -101,20 +101,12 @@ void hip_fw_uninit_opptcp()
 
 void hip_fw_init_proxy()
 {
-	//allow forward hip packets
-	system("iptables -I HIPFW-FORWARD -p 139 -j ACCEPT");
-	system("iptables -I HIPFW-FORWARD -p 139 -j ACCEPT");
-	
 	system("iptables -I HIPFW-FORWARD -p tcp -j QUEUE");
 	system("iptables -I HIPFW-FORWARD -p udp -j QUEUE");
 	//system("iptables -I FORWARD -p icmp -j QUEUE");
 	//system("iptables -I FORWARD -p icmpv6 -j QUEUE");
 	
 	//system("iptables -t nat -A POSTROUTING -o vmnet2 -j SNAT --to-source 10.0.0.1");
-	
-	//allow forward hip packets
-	system("ip6tables -I HIPFW-FORWARD -p 139 -j ACCEPT");
-	system("ip6tables -I HIPFW-FORWARD -p 139 -j ACCEPT");
 	
 	system("ip6tables -I HIPFW-FORWARD -p tcp ! -d 2001:0010::/28 -j QUEUE");
 	system("ip6tables -I HIPFW-FORWARD -p udp ! -d  2001:0010::/28 -j QUEUE");
@@ -127,8 +119,9 @@ void hip_fw_init_proxy()
 	//system("ip6tables -I INPUT -p udp -j QUEUE");
 	//system("ip6tables -I INPUT -p icmp -j QUEUE");
 	//system("ip6tables -I INPUT -p icmpv6 -j QUEUE");
-	
+
 	hip_init_proxy_db();
+	hip_proxy_init_raw_sockets();
 	hip_init_conn_db();
 }
 
