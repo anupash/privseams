@@ -394,9 +394,9 @@ int hip_netdev_find_if(struct sockaddr *addr)
 /**
  * Gets a interface index of an network address.
  * 
- * Base exchange IPv6 addresses need to be put into ifindex2spi map,
- * so a function is needed which gets the ifindex of the network
- * device which has the address @c addr.
+ * Base exchange IPv6 addresses need to be put into ifindex2spi map, so we need
+ * a function that gets the ifindex of the network device which has the address
+ * @c addr.
  *
  * @param  addr a pointer to an IPv6 address whose interface index is to be
  *              searched.

@@ -1843,9 +1843,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	/* If there is no HIP association, we must create one now. */ 
 	if (entry == NULL) {
 		int if_index = 0;
-		struct sockaddr_storage ss_addr;
-		struct sockaddr *addr = NULL;
-		addr = (struct sockaddr*) &ss_addr;
+		
 		
 		HIP_DEBUG("No HIP association found. Creating a new one.\n");
 
@@ -1887,6 +1885,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 #endif
 		HIP_DEBUG("Inserting the new HIP association in the HIP "\
 			  "association database.\n");
+		/* Should we handle the case where the insertion fails? */
 		hip_hadb_insert_state(entry);
 		
 		ipv6_addr_copy(&entry->local_address, i2_daddr);
@@ -1902,9 +1901,9 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 			goto out_err;
 		}
 
-		//HIP_IFEL(((if_index = hip_devaddr2ifindex(&entry->local_address)) <0), -1,
-		// "if_index NOT determined\n");
-
+		struct sockaddr_storage ss_addr;
+		struct sockaddr *addr = NULL;
+		addr = (struct sockaddr*) &ss_addr;
 		memset(addr, 0, sizeof(struct sockaddr_storage));
 		addr->sa_family = AF_INET6;
 		memcpy(hip_cast_sa_addr(addr), &entry->local_address, hip_sa_addr_len(addr));
