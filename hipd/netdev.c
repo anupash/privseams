@@ -156,7 +156,7 @@ int exists_address_in_list(struct sockaddr *addr, int ifindex)
 		int family_match = 0;
 		n = list_entry(tmp);
 		
-		mapped = IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr));
+		mapped = hip_sockaddr_is_v6_mapped(&n->addr);
 		HIP_DEBUG("mapped=%d\n", mapped);
 		
 		if (mapped) { //|| addr->sa_family == AF_INET

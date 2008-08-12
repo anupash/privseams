@@ -1274,7 +1274,7 @@ int hip_nat_start_ice(hip_ha_t *entry, struct hip_esp_info *esp_info, int ice_co
         		    continue;
         		HIP_DEBUG_HIT("add Ice local address", hip_cast_sa_addr(&n->addr));
         		
-        		if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
+        		if (hip_sockaddr_is_v6_mapped(&n->addr)) {
         			hip_external_ice_add_local_candidates(ice_session,
         					hip_cast_sa_addr(&n->addr),hip_cast_sa_addr(&n->addr),
         					HIP_NAT_UDP_PORT,HIP_NAT_UDP_PORT,

@@ -1687,7 +1687,7 @@ int hip_update_send_echo(hip_ha_t *entry,
             /* check if we have one, otherwise let fail */
             list_for_each_safe(item, tmp, addresses, i) {
                 n = list_entry(item);
-                if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr)) 
+                if (hip_sockaddr_is_v6_mapped(&n->addr)
                     != IN6_IS_ADDR_V4MAPPED(&entry->local_address)) {
                     HIP_IFEL(entry->hadb_xmit_func->
                              hip_send_pkt(hip_cast_sa_addr(&n->addr), 

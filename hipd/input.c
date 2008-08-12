@@ -1156,7 +1156,7 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 					n = list_entry(item);
 					if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
 						continue;
-					if (!IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr)))
+					if (!hip_sockaddr_is_v6_mapped(&n->addr)))
 					{
 						memcpy(r1_daddr, hip_cast_sa_addr(&n->addr),
 						       hip_sa_addr_len(&n->addr));
@@ -1172,7 +1172,7 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 						n = list_entry(item);
 						if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
 							continue;
-						if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr)))
+						if (hip_sockaddr_is_v6_mapped(&n->addr))
 						{
 							memcpy(r1_daddr, hip_cast_sa_addr(&n->addr),
 							       hip_sa_addr_len(&n->addr));
@@ -1669,7 +1669,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
                                         if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr))) {
                                                 continue;
 					}
-                                        if (!IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
+                                        if (!hip_sockaddr_is_v6_mapped(&n->addr)) {
 						memcpy(i2_daddr, hip_cast_sa_addr(&n->addr),
                                                        hip_sa_addr_len(&n->addr));
                                                 ii = -1;
@@ -1684,7 +1684,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 					if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr))) {
 						continue;
 					}
-					if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
+					if (hip_sockaddr_is_v6_mapped(&n->addr)) {
 						memcpy(i2_daddr, hip_cast_sa_addr(&n->addr),
 						       hip_sa_addr_len(&n->addr));
 						ii = -1;
@@ -2534,7 +2534,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	        		if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
 	        		    continue;
 	        		HIP_DEBUG_HIT("add Ice local in R2 address", hip_cast_sa_addr(&n->addr));
-	        		if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
+	        		if (hip_sockaddr_is_v6_mapped(&n->addr)) {
 	        			hip_external_ice_add_local_candidates(ice_session,hip_cast_sa_addr(&n->addr),50500,PJ_ICE_CAND_TYPE_HOST);
 	        		}
 

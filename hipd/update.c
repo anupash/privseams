@@ -1520,7 +1520,7 @@ int hip_update_peer_preferred_address(hip_ha_t *entry,
 			  "same AF\n");
 		list_for_each_safe(item_nd, tmp_nd, addresses, i) {
 			n = list_entry(item_nd);
-			if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr)) 
+			if (hip_sockaddr_is_v6_mapped(&n->addr) 
 			    == IN6_IS_ADDR_V4MAPPED(&addr->address)) {
 				HIP_DEBUG("Found addr with same AF\n");
 				memset(&local_addr, 0, sizeof(in6_addr_t));
@@ -2478,7 +2478,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 	  list_for_each_safe(item, tmp_li, addresses, i) {
 	       n = list_entry(item);
 	       if (IN6_IS_ADDR_V4MAPPED(&daddr) == 
-		   IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
+		   hip_sockaddr_is_v6_mapped(&n->addr)) {
 		    HIP_DEBUG_IN6ADDR("chose address", hip_cast_sa_addr(&n->addr)); 
                     memcpy(&saddr, hip_cast_sa_addr(&n->addr), sizeof(saddr));
                     ipv6_addr_copy(&entry->local_address, &saddr); 
@@ -2854,8 +2854,8 @@ int hip_handle_locator_parameter(hip_ha_t *entry,
 	/* look for local address with family == comp_af */
 	list_for_each_safe(item, tmplist, addresses, ii) {
 		n = list_entry(item);
-		tmp_af = IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr)) ?
-				AF_INET : AF_INET6;
+		tmp_af = hip_sockaddr_is_v6_mapped(&n->addr) ?
+			AF_INET : AF_INET6;
 		if (tmp_af == comp_af) {
 			HIP_DEBUG("LOCATOR did not contain same family members "
 					"as local_address, changing local_address and "
@@ -2956,7 +2956,7 @@ int hip_build_locators(struct hip_common *msg)
             n = list_entry(item);
             if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
 		    continue;
-            if (!IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
+            if (!hip_sockaddr_is_v6_mapped(&n->addr)) {
 		    memcpy(&locs1[ii].address, hip_cast_sa_addr(&n->addr), 
 			   sizeof(struct in6_addr));
 		    locs1[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
@@ -2973,7 +2973,7 @@ int hip_build_locators(struct hip_common *msg)
             n = list_entry(item);
             if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
 		    continue;
-            if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
+            if (hip_sockaddr_is_v6_mapped(&n->addr)) {
 		    memcpy(&locs1[ii].address, hip_cast_sa_addr(&n->addr), 
 			   sizeof(struct in6_addr));
 		    locs1[ii].traffic_type = HIP_LOCATOR_TRAFFIC_TYPE_DUAL;
