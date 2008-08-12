@@ -1,11 +1,9 @@
 #!/bin/sh
 
-IN_OPTS=$@
-
 echo "Generating configure files... may take a while."
 
 echo "Configuring pjproject"
-cd pjproject && ./configure ${IN_OPTS} || (echo "Failed to configure pjproject" && exit 1)
+cd pjproject && ./configure $@ || (echo "Failed to configure pjproject" && exit 1)
 make dep
 cd ..
 
