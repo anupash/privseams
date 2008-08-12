@@ -3110,6 +3110,13 @@ combo-newgroup=&lt;create new...&gt;
 
   <chapter id="ch_hi3_support">
     <title>Hi3 Support (Experimental!)</title>
+    <note><title>NOTE:</title>
+      <para>
+	It has been a while since this extension was implementated and tested.
+	As of 24th July 2008, the code compiles but HIP daemon does not respond
+	to hipconf commands. This extension is defunct.
+      </para>
+    </note>
     <itemizedlist>
     <listitem><para>
           Compile hipl--main--2.6 with ./configure --enable-hi3 --disable-opendht

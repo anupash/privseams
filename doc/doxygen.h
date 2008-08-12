@@ -620,7 +620,7 @@
  * Bitmask for local controls:
  * <pre>
  * 0000 0000 0000 0000
- * |||| |||| |||| |||+- 0x0001 - free -
+ * |||| |||| |||| |||+- 0x0001 We have requested an unsupported service.
  * |||| |||| |||| ||+-- 0x0002 - free -
  * |||| |||| |||| |+--- 0x0004 - free -
  * |||| |||| |||| +---- 0x0008 - free -
@@ -640,8 +640,8 @@
  * Bitmask for peer controls:
  * <pre>
  * 0000 0000 0000 0000
- * |||| |||| |||| |||+- 0x0001 - free -
- * |||| |||| |||| ||+-- 0x0002 - free -
+ * |||| |||| |||| |||+- 0x0001 Peer granted an unsupported service to us.
+ * |||| |||| |||| ||+-- 0x0002 Peer offers an unsupported service.
  * |||| |||| |||| |+--- 0x0004 - free -
  * |||| |||| |||| +---- 0x0008 - free -
  * |||| |||| |||+------ 0x0010 - free -
