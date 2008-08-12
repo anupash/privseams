@@ -71,6 +71,7 @@ const char *hipconf_usage =
 #ifdef CONFIG_HIP_HIPPROXY
 "hipproxy on|off\n"
 #endif
+"buddies on|off\n"
 ;
 
 /** Function pointer array containing pointers to handler functions.
@@ -107,6 +108,7 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc) 
         hip_conf_handle_trans_order,
 	hip_conf_handle_tcptimeout, /* added by Tao Wan*/
         hip_conf_handle_hipproxy,
+	hip_conf_handle_buddies_toggle,
 	NULL /* run */
 };
 
@@ -167,8 +169,10 @@ int hip_conf_get_action(char *text)
 	else if (!strcmp("hipproxy", text))
 		ret = ACTION_HIPPROXY;
 #endif
+	else if (!strcmp("buddies", text))
+		ret = ACTION_BUDDIES;
 	
-        return ret;
+	return ret;
 }
 
 /**
@@ -280,7 +284,9 @@ int hip_conf_get_type(char *text,char *argv[]) {
 	else if (strcmp("hipproxy", argv[1])==0)
 		ret = TYPE_HIPPROXY;
 #endif
-     return ret;
+	else if (strcmp("buddies", argv[1])==0)
+		ret = TYPE_BUDDIES;
+	return ret;
 }
 
 /* What does this function do? */
@@ -301,6 +307,7 @@ int hip_conf_get_type_arg(int action)
 	case ACTION_LOAD:
 	case ACTION_DHT:
 	case ACTION_OPENDHT:
+	case ACTION_BUDDIES:
 	case ACTION_LOCATOR:
 	case ACTION_RST:
 	case ACTION_BOS:
@@ -1427,6 +1434,29 @@ int hip_conf_handle_dht_toggle(hip_common_t *msg, int action, const char *opt[],
                 status = SO_HIP_DHT_ON; 
         } else if (!strcmp("off",opt[0])) {
                 status = SO_HIP_DHT_OFF;
+        } else {
+                HIP_IFEL(1, -1, "bad args\n");
+        }
+        HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, 
+                 "Failed to build user message header.: %s\n", strerror(err));        
+        
+ out_err:
+        return(err);
+}
+
+/**
+ * Function that is used to set BUDDIES on or off
+ *
+ * @return       zero on success, or negative error value on error.
+ */
+int hip_conf_handle_buddies_toggle(hip_common_t *msg, int action, const char *opt[], int optc)
+{
+        int err = 0, status = 0;
+        
+        if (!strcmp("on",opt[0])) {
+                status = SO_HIP_BUDDIES_ON; 
+        } else if (!strcmp("off",opt[0])) {
+                status = SO_HIP_BUDDIES_OFF;
         } else {
                 HIP_IFEL(1, -1, "bad args\n");
         }

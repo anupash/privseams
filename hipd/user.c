@@ -995,6 +995,19 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	      		dst_hit = &entry->hit_peer;
 	  	}
 	  	break;
+	case SO_HIP_BUDDIES_ON:
+		HIP_DEBUG("Setting BUDDIES ON\n");
+		hip_buddies_inuse = SO_HIP_BUDDIES_ON;
+		HIP_DEBUG("hip_buddies_inuse =  %d (should be %d)\n", 
+		hip_buddies_inuse, SO_HIP_BUDDIES_ON);
+		break;
+            
+	case SO_HIP_BUDDIES_OFF:
+		HIP_DEBUG("Setting BUDDIES OFF\n");
+		hip_buddies_inuse = SO_HIP_BUDDIES_OFF;
+		HIP_DEBUG("hip_buddies_inuse =  %d (should be %d)\n", 
+			hip_buddies_inuse, SO_HIP_BUDDIES_OFF);
+		break;
 
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);

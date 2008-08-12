@@ -447,7 +447,7 @@ void publish_hit(char *hostname, char *tmp_hit_str, char *tmp_addr_str)
 		else
 		{
 			HIP_DEBUG("Sending FDQN->HIT PUT packet to queue.\n");
-			opendht_error = write_fifo_queue(out_packet,strlen(out_packet)+1);
+			//opendht_error = write_fifo_queue(out_packet,strlen(out_packet)+1);
 			if (opendht_error < 0) {
         		HIP_DEBUG ("Failed to insert FDQN->HIT PUT data in queue \n");
 			}
@@ -487,7 +487,7 @@ int publish_addr(char *tmp_hit_str, char *tmp_addr_str)
 		else
 		{
 			HIP_DEBUG("Sending HTTP HIT->IP PUT packet to queue.\n");
-			opendht_error = write_fifo_queue(out_packet,strlen(out_packet)+1);
+			//opendht_error = write_fifo_queue(out_packet,strlen(out_packet)+1);
 			if (opendht_error < 0) {
 				HIP_DEBUG ("Failed to insert HIT->IP PUT data in queue \n");
 				return -1;
@@ -629,29 +629,30 @@ int periodic_maintenance()
 		precreate_counter--;
 	}
 
-        if (hip_opendht_inuse == SO_HIP_DHT_ON) {
-                if (opendht_counter < 0) {
-                        register_to_dht();
-                        opendht_counter = OPENDHT_REFRESH_INIT;
-                } else {
-                        opendht_counter--;
-                }
-                if (queue_counter < 0) {
-        			send_packet_to_lookup_from_queue();
-        			queue_counter = QUEUE_CHECK_INIT;
-                } else {
-                	queue_counter--;
-                }
-                if(cert_publish_counter < 0) {
-                	//Call some function which publishes packet to queue
-                	publish_certificates();
-                	cert_publish_counter = CERTIFICATE_PUBLISH_INTERVAL ;
-                } else {
-                	cert_publish_counter-- ;
-                }
-                
+	if (hip_opendht_inuse == SO_HIP_DHT_ON) {
+		if (opendht_counter < 0) {
+			register_to_dht();
+			opendht_counter = OPENDHT_REFRESH_INIT;
+		} else {
+			opendht_counter--;
+			}
+		if (queue_counter < 0) {
+			send_packet_to_lookup_from_queue();
+        	queue_counter = QUEUE_CHECK_INIT;
+		} else {
+			queue_counter--;
+			}
+		if (hip_buddies_inuse == SO_HIP_BUDDIES_ON) {
+			if(cert_publish_counter < 0) {
+				//Call some function which publishes packet to queue
+				publish_certificates();
+				cert_publish_counter = CERTIFICATE_PUBLISH_INTERVAL ;
+			} else {
+				cert_publish_counter-- ;
+				}
+		}
                 		
-        }
+	}
 
 //#ifdef CONFIG_HIP_UDPRELAY
 	/* Clear the expired records from the relay hashtable. */
@@ -1102,6 +1103,7 @@ static int hip_sqlite_callback(void *NotUsed, int argc, char **argv, char **azCo
 						&lhit.s6_addr,sizeof(lhit.s6_addr));
 			/*send key-value pair to dht*/
 			prepare_send_cert_put(conc_hits, cert, sizeof(rhit.s6_addr)*2, sizeof(cert) );
+			err = 0 ;
 		} 
 	if(conc_hits)
 		free (conc_hits);

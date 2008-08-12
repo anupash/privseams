@@ -179,7 +179,10 @@
 #define SO_HIP_FW_UPDATE_DB                     156
 #define SO_HIP_RESTART_DUMMY_INTERFACE		157
 #define SO_HIP_VERIFY_DHT_HDRR_RESP             158
-#define SO_HIP_ADD_UADB_INFO			159
+#define SO_HIP_ADD_UADB_INFO					159
+#define SO_HIP_BUDDIES_SET						160
+#define SO_HIP_BUDDIES_ON                       161
+#define SO_HIP_BUDDIES_OFF                      162
 /** @} */
 /* inclusive */
 #define HIP_SO_ROOT_MAX 			255

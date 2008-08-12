@@ -286,7 +286,7 @@ int hipd_init(int flush_ipsec, int killold)
 	hitdberr = hip_init_daemon_hitdb();
 	if (hitdberr < 0) HIP_DEBUG("Initializing daemon hit database returned error\n");
 	/*TODO uncheck the below comment anyhow !*/
-	HIP_IFEL(hip_set_lowcapability(1), -1, "Failed to set capabilities\n");
+	//HIP_IFEL(hip_set_lowcapability(1), -1, "Failed to set capabilities\n");
 	
 #ifdef CONFIG_HIP_HI3
 	if( hip_use_i3 ) 
@@ -841,7 +841,6 @@ int hip_init_daemon_hitdb()
 	 * unlock the db*/
 	extern sqlite3* daemon_db;
 	char *file = HIP_CERT_DB_PATH_AND_NAME;
-	FILE * db_file = NULL;
 	int err = 0 ;
 	extern sqlite3* daemon_db;
 _HIP_DEBUG("Loading HIT database from %s.\n", file);

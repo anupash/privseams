@@ -77,6 +77,8 @@ char opendht_name_mapping[HIP_HOST_ID_HOSTNAME_LEN_MAX]; /* what name should be 
 int hip_opendht_inuse = SO_HIP_DHT_OFF;
 int hip_opendht_error_count = 0; /* Error count, counting errors from libhipopendht */
 
+int hip_buddies_inuse = SO_HIP_BUDDIES_OFF;
+
 /* Tells to the daemon should it build LOCATOR parameters to R1 and I2 */
 int hip_locator_status = SO_HIP_SET_LOCATOR_OFF;
 
@@ -274,6 +276,10 @@ int add_cert_and_hits_to_db (struct hip_uadb_info *uadb_info)
 	char insert_into[512];
 	char hit[40];
 	char hit2[40];
+	char *file = HIP_CERT_DB_PATH_AND_NAME;
+	
+	//daemon_db = hip_sqlite_open_db(file, HIP_CERT_DB_CREATE_TBLS);
+	HIP_IFE(!daemon_db, -1);
 	hip_in6_ntop(&uadb_info->hitr, hit);
 	hip_in6_ntop(&uadb_info->hitl, hit2);
     HIP_DEBUG("Value: %s\n", hit);
