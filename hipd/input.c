@@ -2160,8 +2160,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
                 
 //add by santtu	
     /***** LOCATOR PARAMETER *****/
-	HIP_IFEL(hip_handle_locator_parameter(i2, entry, esp_info), -1,
-		 "Handle locator failed\n");
+	hip_handle_locator_parameter(entry, NULL, esp_info);
                
 #ifdef HIP_USE_ICE
 	
@@ -2362,14 +2361,8 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	int err = 0, tfm = 0, retransmission = 0, type_count = 0, idx;
 	int *reg_types = NULL;
 	uint32_t spi_recvd = 0, spi_in = 0;
-	
-	
-//add by santtu        
-#ifdef HIP_USE_ICE
-    void * ice_session = 0;
-    int i;
-#endif
-//end add	
+	int i;
+	void * ice_session = 0;
 	
 #ifdef CONFIG_HIP_HI3
 	if( r2_info->hi3_in_use ) {
@@ -2442,12 +2435,8 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 
 //add by santtu	
     /***** LOCATOR PARAMETER *****/
-	HIP_IFEL(hip_handle_locator_parameter(r2, entry, esp_info), -1,
-		 "HIP handle locator failed\n");
+	hip_handle_locator_parameter(entry, NULL, esp_info);
 //end add
-	
-	
-	
 	
 #ifdef CONFIG_HIP_BLIND
 	if (use_blind) {
