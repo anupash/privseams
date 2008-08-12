@@ -1528,6 +1528,18 @@ int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr) {
   return rsa_key_rr_len;
 }
 
+/**
+ * Casts a socket address to an IPv4 or IPv6 address.
+ *
+ * The parameter @c sockaddr is first cast to a struct sockaddr and the IP
+ * address cast is then done based on the value of the sa_family field in the
+ * struct sockaddr. If sa_family is neither AF_INET nor AF_INET6, the cast
+ * fails.
+ * 
+ * @param  sockaddr a pointer to a socket address that holds the IP address. 
+ * @return          a pointer to an IPv4 or IPv6 address inside @c sockaddr or
+ *                  NULL if the cast fails.
+ */ 
 void *hip_cast_sa_addr(void *sockaddr) {
 	struct sockaddr *sa = (struct sockaddr *) sockaddr;
 	void *ret = NULL;

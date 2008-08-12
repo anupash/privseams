@@ -1843,7 +1843,8 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	/* If there is no HIP association, we must create one now. */ 
 	if (entry == NULL) {
 		int if_index = 0;
-		
+		struct sockaddr_storage ss_addr;
+		struct sockaddr *addr = NULL;
 		
 		HIP_DEBUG("No HIP association found. Creating a new one.\n");
 
@@ -1900,20 +1901,22 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 				  "packet.\n");
 			goto out_err;
 		}
-
-		struct sockaddr_storage ss_addr;
-		struct sockaddr *addr = NULL;
+		
+		/* We need our local IP address as a sockaddr because
+		   add_address_to_list() eats only sockaddr structures. */
+		memset(&ss_addr, 0, sizeof(struct sockaddr_storage));
 		addr = (struct sockaddr*) &ss_addr;
-		memset(addr, 0, sizeof(struct sockaddr_storage));
 		addr->sa_family = AF_INET6;
-		memcpy(hip_cast_sa_addr(addr), &entry->local_address, hip_sa_addr_len(addr));
+
+		memcpy(hip_cast_sa_addr(addr), &entry->local_address,
+		       hip_sa_addr_len(addr));
 		add_address_to_list(addr, if_index);
 	}
 
 	hip_hadb_insert_state(entry);
 
 	_HIP_DEBUG("HA entry created.");
-
+	
 	/* If there was already state, these may be uninitialized */
 	entry->hip_transform = hip_tfm;
 	if (!entry->our_pub) {

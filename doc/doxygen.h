@@ -58,6 +58,10 @@
  *     <ul>
  *     <li><a href="http://www.rfc-editor.org/rfc/rfc2553.txt">
  *     RFC 2553: Basic Socket Interface Extensions for IPv6</a>.</li>
+ *     <li><a href="http://www.kame.net/newsletter/19980604/">
+ *     Implementing AF-independent application</a>. A document that describes
+ *     how a programmer can handle multiple address families at ease. 
+ *     </li>
  *     <li>
  *     <code>sockaddr_in</code> is defined in /usr/include/linux/in.h. See
  *     <a href="http://linux.die.net/man/7/ip">ip(7) - Linux man page</a>.
