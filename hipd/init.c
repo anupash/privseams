@@ -846,7 +846,7 @@ int hip_init_certs(void) {
 	FILE * conf_file;
 	struct hip_host_id_entry * entry;
 	char hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
-
+        
 	memset(hostname, 0, HIP_HOST_ID_HOSTNAME_LEN_MAX);
 	HIP_IFEL(gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1), -1,
 		 "gethostname failed\n");    
@@ -868,25 +868,38 @@ int hip_init_certs(void) {
 		fprintf(conf_file,
 			"# Section containing SPKI related information\n"
 			"#\n"
-			"# hit = what hit is to be used when signing\n"                          
+			"# issuerhit = what hit is to be used when signing\n"   
 			"# days = how long is this key valid\n"
 			"\n"
 			"[ hip_spki ]\n"
-			"hit = %s\n"
+			"issuerhit = %s\n"
 			"days = %d\n"
 			"\n"
 			"# Section containing HIP related information\n"
 			"#\n"
-			"# hit = what hit is to be used when signing\n"
-			"# alias = userfriendly name\n"         
+			"# issuerhit = what hit is to be used when signing\n"
 			"# days = how long is this key valid\n"
 			"\n"
 			"[ hip_x509v3 ]\n"
-			"hit = %s\n"
-			"alias = %s\n"
-			"days = %d\n", 
+			"issuerhit = %s\n"
+			"days = %d\n"
+			"\n"
+			"#Section containing the name section for the x509v3 issuer name"
+			"\n"
+			"[ hip_x509v3_name ]\n"
+			"issuerhit = %s\n"
+                        "\n"
+                        "# Uncomment this section to add x509 extensions\n"
+                        "# to the certificate\n"
+                        "#\n"
+                        "# DO NOT use subjectAltName, issuerAltName or\n"
+                        "# basicConstraints implementation uses them already\n"
+                        "# All other extensions are allowed\n"
+                        "\n"
+                        "# [ hip_x509v3_extensions ]\n",
 			hit, HIP_CERT_INIT_DAYS,
-			hit, hostname, HIP_CERT_INIT_DAYS);		
+                        hit, HIP_CERT_INIT_DAYS,
+			hit, hostname);		
 		fclose(conf_file);
 	} else {
 		HIP_DEBUG("Configuration file existed exiting hip_init_certs\n");

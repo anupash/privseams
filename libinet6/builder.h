@@ -125,6 +125,10 @@ int hip_build_param_relay_to(struct hip_common *msg,
 int hip_build_param_via_rvs(struct hip_common *msg,
 			    const struct in6_addr rvs_addresses[]);
 
+int hip_build_param_cert_x509_req(struct hip_common *,struct in6_addr *);
+int hip_build_param_cert_x509_resp(struct hip_common *, char *, int);
+int hip_build_param_cert_x509_ver(struct hip_common *, char *, int);
+
 int hip_build_param_opendht_set(struct hip_common *, char *);
 /** @} */
 
