@@ -172,18 +172,6 @@ static inline void set_lsi_prefix(hip_lsi_t *lsi)
 */
 
 /** 
- * A macro to test if a uint32_t represents a Local Scope Identifier (LSI).
- *
- * @param a the uint32_t to test
- * @return  true if @c a is from 1.0.0.0/8
- * @note    This macro tests directly uint32_t, not struct in_addr or a pointer
- *          to a struct in_addr. To use this macro in context with struct
- *          in_addr call it with ipv4->s_addr where ipv4 is a pointer to a
- *          struct in_addr.
- */
-//#define IS_LSI(a) ((a & 0x00FFFFFF) == 0x000000C0)
-
-/** 
  * Checks if a uint32_t represents a Local Scope Identifier (LSI).
  *
  * @param       the uint32_t to test
@@ -193,7 +181,7 @@ static inline void set_lsi_prefix(hip_lsi_t *lsi)
  *              in_addr call it with ipv4->s_addr where ipv4 is a pointer to a
  *              struct in_addr.
  */
-#define IS_LSI32(a) ((a & 0x00FFFFFF) == 0x000000C0)
+#define IS_LSI32(a) ((a & 0x00FFFFFF) == 0x00000001)
 
 #define IS_LSI(a) ( (((struct sockaddr*)a)->sa_family == AF_INET) ? \
                    (IS_LSI32(((struct sockaddr_in*)a)->sin_addr.s_addr)) : \

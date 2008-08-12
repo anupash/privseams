@@ -797,7 +797,6 @@ int hip_for_each_hi(int (*func)(struct hip_host_id_entry *entry, void *opaq), vo
 	list_for_each_safe(curr, iter, hip_local_hostid_db, c)
 	{
 		tmp = list_entry(curr);
-		//HIP_HEXDUMP("Found HIT", &tmp->lhi.hit, 16);
 		HIP_DEBUG_HIT("Found HIT", &tmp->lhi.hit);
 		HIP_DEBUG_LSI("Found LSI", &tmp->lsi);
 		err = func(tmp, opaque);

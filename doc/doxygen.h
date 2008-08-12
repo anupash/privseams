@@ -44,8 +44,11 @@
  *     after a structure definition really mean.</li>
  * <li><a href="http://c-faq.com/">Frequently Asked Questions</a> at comp.lang.c.</li>
  * </ul>
- *
- * @date   15.04.2008
+ * <ul>
+ * <li><a href="http://www.docbook.org/tdg/en/html/">DocBook: The Definitive Guide</a>.</li>
+ * A guide for the @b docbook tool that is used to create the HIPL user manual.
+ * </ul>
+ * @date   16.07.2008
  */ 
 
 /**
@@ -666,6 +669,11 @@
  *      Clears all control values. To clear all local controls call
  *      hip_hadb_set_local_controls() with this mask. To clear all peer controls
  *      call hip_hadb_set_peer_controls() with this mask.
+  * @def HIP_HA_CTRL_LOCAL_REQ_UNSUP
+ *      The host association has requested unsupported service in an I1 or an
+ *      UPDATE packet. This flag is set if the user requests a service that
+ *      is unsupported in HIPL. A service request of such kind is possible using
+ *      <code>hipconf add server</code> with service numbers. 
  * @def HIP_HA_CTRL_LOCAL_REQ_ESCROW
  *      The host association has requested escrow service in an I1 or an UPDATE
  *      packet.
@@ -677,6 +685,10 @@
  *      UPDATE packet.
  * @def HIP_HA_CTRL_LOCAL_REQ_ANY
  *      An OR mask of every existing local request mask.
+ * @def HIP_HA_CTRL_PEER_GRANTED_UNSUP
+ *      The peer has granted us unsupported service in a REG_RESPONSE parameter
+ *      received in an R2 packet or an UPDATE packet. The peer has granted us
+ *      a service that HIPL does not support.
  * @def HIP_HA_CTRL_PEER_GRANTED_ESCROW
  *      The peer has granted us escrow service in a REG_RESPONSE parameter
  *      received in an R2 packet or an UPDATE packet.
@@ -686,9 +698,9 @@
  * @def HIP_HA_CTRL_PEER_GRANTED_RVS
  *      The peer has granted us rendezvous service in a REG_RESPONSE parameter
  *      received in an R2 packet or an UPDATE packet.
- * @def HIP_HA_CTRL_PEER_GRANTED
- *      The peer has announced in a R1 or UPDATE packet that it offers escrow
- *      service.
+ * @def HIP_HA_CTRL_PEER_UNSUP_CAPABLE
+ *      The peer has announced in an R1 or UPDATE packet that it offers an
+ *      unsupported service.
  * @def HIP_HA_CTRL_PEER_ESCROW_CAPABLE
  *      The peer has announced in an R1 or UPDATE packet that it offers escrow
  *      service.

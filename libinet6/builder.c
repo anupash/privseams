@@ -1072,7 +1072,9 @@ char* hip_message_type_name(const uint8_t msg_type){
 	case SO_HIP_SET_TCPTIMEOUT_ON: return "SO_HIP_SET_TCPTIMEOUT_ON";
 	case SO_HIP_SET_TCPTIMEOUT_OFF: return "SO_HIP_SET_TCPTIMEOUT_OFF";
 	case SO_HIP_SET_NAT_ICE_UDP: return "SO_HIP_SET_NAT_ICE_UDP";
-		
+	case SO_HIP_IS_OUR_LSI: return "SO_HIP_IS_OUR_LSI";
+	case SO_HIP_GET_PEER_HIT_BY_LSIS: return "SO_HIP_GET_PEER_HIT_BY_LSIS";
+	case SO_HIP_TRIGGER_BEX: return "SO_HIP_TRIGGER_BEX";  	
 	default:
 		return "UNDEFINED";
 	}
@@ -1150,9 +1152,9 @@ char* hip_param_type_name(const hip_tlv_type_t param_type){
 	case HIP_PARAM_ESP_PROT_TRANSFORM: return "HIP_PARAM_ESP_PROT_TRANSFORM";
 	case HIP_PARAM_ESP_PROT_ANCHOR: return "HIP_PARAM_ESP_PROT_ANCHOR";
 	//add by santtu
-	case HIP_PARAM_NAT_TRANSFORM: return "HIP_PARAM_NAT_TRANSFORM";
-	//end add
-	case HIP_PARAM_LSI: return "HIP_PARAM_LSI";	
+	case HIP_PARAM_NAT_TRANSFORM: return "HIP_PARAM_NAT_TRANSFORM";	
+	//end add      
+	case HIP_PARAM_LSI: return "HIP_PARAM_LSI";
 	}
 	return "UNDEFINED";
 }
@@ -1375,6 +1377,7 @@ int hip_build_generic_param(struct hip_common *msg,
 
 	if (dst + hip_get_param_total_len(param) > max_dst) {
 		err = -EMSGSIZE;
+		HIP_DEBUG("dst == %d\n",dst);
 		HIP_ERROR("hipd build param: contents size (%d) too long\n",
 			  hip_get_param_contents_len(param));
 		goto out;
@@ -1439,8 +1442,7 @@ int hip_build_param_contents(struct hip_common *msg,
 {
 	struct hip_tlv_common param;
 	hip_set_param_type(&param, param_type);
-	hip_set_param_contents_len(&param, contents_size);
-
+	hip_set_param_contents_len(&param, contents_size);	
 	return hip_build_generic_param(msg, &param,
 				       sizeof(struct hip_tlv_common),
 				       contents);
@@ -3177,12 +3179,12 @@ void hip_build_endpoint(struct endpoint_hip *endpoint,
 }
 
 int hip_build_param_eid_endpoint_from_host_id(struct hip_common *msg,
-					   const struct endpoint_hip *endpoint)
+					      const struct endpoint_hip *endpoint)
 {
 	int err = 0;
-
+	
 	HIP_ASSERT(!(endpoint->flags & HIP_ENDPOINT_FLAG_HIT));
-
+	
 	err = hip_build_param_contents(msg, endpoint, HIP_PARAM_EID_ENDPOINT,
 				       endpoint->length);
 	return err;
@@ -3223,30 +3225,43 @@ int hip_build_param_eid_endpoint(struct hip_common *msg,
 				 const struct endpoint_hip *endpoint)
 {
 	int err = 0;
-
+	
 	if (endpoint->flags & HIP_ENDPOINT_FLAG_HIT) {
 		err = hip_build_param_eid_endpoint_from_hit(msg, endpoint);
 	} else {
 		err = hip_build_param_eid_endpoint_from_host_id(msg, endpoint);
 	}
-	_HIP_DEBUG("err=%d\n", err);
+	
 	return err;
 }
 
-int hip_host_id_entry_to_endpoint(struct hip_host_id_entry *entry, struct hip_common *msg)
+int hip_host_id_entry_to_endpoint(struct hip_host_id_entry *entry,
+				  struct hip_common *msg)
 {
 	struct endpoint_hip endpoint;
 	int err = 0;
 
 	endpoint.family = PF_HIP;
 	endpoint.length = sizeof(struct endpoint_hip);
+	
+	/* struct endpoint flags were incorrectly assigned directly from
+	   entry->lhi.anonymous. entry->lhi.anonymous is a boolean value while
+	   endpoint.flags is a binary flag value. The entry lhi.anonymous should
+	   be converted to binary flag to avoid this kind of mistakes.
+	   -Lauri 18.07.2008 */
+	if(entry->lhi.anonymous) {
+		endpoint.flags = HIP_ENDPOINT_FLAG_ANON;
+	} else {
+		endpoint.flags = HIP_ENDPOINT_FLAG_HIT;
+	}
+	//endpoint.flags  = entry->lhi.anonymous;
 	/* Next line is useless see couple of lines further --SAMU */
-	endpoint.algo= entry->lhi.algo;
-	endpoint.flags=entry->lhi.anonymous;
-	endpoint.algo=hip_get_host_id_algo(entry->host_id);
+	//endpoint.algo   = entry->lhi.algo;
+	endpoint.algo   = hip_get_host_id_algo(entry->host_id);
 	ipv6_addr_copy(&endpoint.id.hit, &entry->lhi.hit);
-
-	HIP_IFEL(hip_build_param_eid_endpoint(msg, &endpoint), -1, "build error\n");
+	
+	HIP_IFEL(hip_build_param_eid_endpoint(msg, &endpoint), -1,
+		 "Error when building parameter HIP_PARAM_EID_ENDPOINT.\n");
 
   out_err:
 	return err;

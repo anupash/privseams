@@ -278,6 +278,22 @@ int hip_fw_uninit_esp_prot()
     return err;
 }
 
+/*
+ * Adds an LSI rule
+ * @ip is a pointer to the first part of the rule, before specifying the LSI
+ * @opt is a pointer to the options that can be present after the LSI
+*/
+void firewall_add_lsi_rule(char *ip, char *opt)
+{
+        char *result = (char *)calloc(strlen(ip) + strlen(HIP_FULL_LSI_STR) + strlen(opt) + 1, 
+                        sizeof(char));
+
+	strcpy(result, ip);
+	strcat(strcat(result, HIP_FULL_LSI_STR),opt);		
+	system(result);
+}
+
+
 /*----------------INIT/EXIT FUNCTIONS----------------------*/
 
 /*
@@ -420,10 +436,9 @@ int firewall_init_rules()
 		system("iptables -I OUTPUT -p 17 --dport 50500 -j QUEUE");
 		system("iptables -I OUTPUT -p 17 --sport 50500 -j QUEUE");
 
-		/* LSI support: XX FIXME: REMOVE HARDCODING */
-		system("iptables -I OUTPUT -d 1.0.0.0/8 -j QUEUE");
-
-
+		/* LSI support: output packets with LSI value */
+		firewall_add_lsi_rule("iptables -I OUTPUT -d "," -j QUEUE");
+	
 		system("ip6tables -I INPUT -p 139 -j QUEUE");
 		system("ip6tables -I INPUT -p 50 -j QUEUE");
 		system("ip6tables -I INPUT -p 17 --dport 50500 -j QUEUE");
@@ -433,13 +448,15 @@ int firewall_init_rules()
 		system("ip6tables -I OUTPUT -p 50 -j QUEUE");
 		system("ip6tables -I OUTPUT -p 17 --dport 50500 -j QUEUE");
 		system("ip6tables -I OUTPUT -p 17 --sport 50500 -j QUEUE");
-	}
-	// Initializing db for mapping LSI-HIT in the firewall
-	firewall_init_hldb();
 
-	/* For LSIs ??? */
-	system("ip6tables -I INPUT -d 2001:0010::/28 -j QUEUE");
-                    
+		/* LSI support: incoming HIT packets, captured for decide if 
+		   HITs may be mapped to LSIs */
+		system("ip6tables -I INPUT -d 2001:0010::/28 -j QUEUE");
+	}
+
+	// Initializing local database for mapping LSI-HIT in the firewall
+	firewall_init_hldb();
+                          
 	if (hip_opptcp)
 		hip_fw_init_opptcp();
 
@@ -1468,7 +1485,7 @@ int main(int argc, char **argv)
 	struct timeval timeout;
 	unsigned char buf[BUFSIZE];
 	hip_fw_context_t ctx;
-	int limit_capabilities;
+	int limit_capabilities = 0;
 
 	if (geteuid() != 0) {
 		HIP_ERROR("firewall must be run as root\n");

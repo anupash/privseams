@@ -49,7 +49,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	msg_type = hip_get_msg_type(msg);
 	
 	is_root = (ntohs(src->sin6_port) < 1024);
-
 	if (is_root) {
 		access_ok = 1;
 	} else if (!is_root &&
@@ -68,9 +67,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	if (ntohs(src->sin6_port) == HIP_AGENT_PORT) {
 		return hip_recv_agent(msg);
 	}
-	
-	HIP_DEBUG("HIP user message type is: %s.\n",
-		  hip_message_type_name(msg_type));
 	
 	switch(msg_type)
 	{
@@ -683,13 +679,18 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			default:
 				HIP_INFO("Undefined service type (%u) "\
 					 "requested in the service "\
-					 "request. As a result, the local "\
-					 "service request flag was not set "\
-					 "for this service.\n", reg_types[i]);
-				HIP_DEBUG("Deleting pending service request "\
-					  "for service %u.\n", reg_types[i]);
-				hip_del_pending_request_by_type(entry,
-								reg_types[i]);
+					 "request.\n", reg_types[i]);
+				/* For testing purposes we allow the user to
+				   request services that HIPL does not support.
+				*/
+				hip_hadb_set_local_controls(
+					entry, HIP_HA_CTRL_LOCAL_REQ_UNSUP);
+				/*
+				  HIP_DEBUG("Deleting pending service request "\
+				  "for service %u.\n", reg_types[i]);
+				  hip_del_pending_request_by_type(entry,
+				  reg_types[i]);
+				*/
 				break;
 			}
 		}

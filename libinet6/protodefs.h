@@ -32,18 +32,19 @@
 #define HIP_HIT_TYPE_HAA_HASH   2
 #define HIP_HIT_TYPE_MASK_HAA   0x00000080 /**< depracated -miika */
 #define HIP_HIT_TYPE_MASK_100   0x20010010
-#define HIP_LSI_TYPE_MASK_192	0xC0000000
+#define HIP_LSI_TYPE_MASK_1	0x01000000
 #define HIP_HIT_TYPE_MASK_CLEAR 0x0000000f
 #define HIP_LSI_TYPE_MASK_CLEAR 0x000000ff
 #define HIP_HIT_TYPE_MASK_INV   0xfffffff0
 #define HIP_HIT_PREFIX          HIP_HIT_TYPE_MASK_100
-#define HIP_LSI_PREFIX          HIP_LSI_TYPE_MASK_192
+#define HIP_LSI_PREFIX          HIP_LSI_TYPE_MASK_1
 #define HIP_HIT_PREFIX_LEN      28	/* bits */
 #define HIP_LSI_PREFIX_LEN	24	/* bits */
 #define HIP_HIT_FULL_PREFIX_STR "/128"
 #define HIP_HIT_PREFIX_STR      "/28"
 #define HIP_LSI_FULL_PREFIX_STR "/24"
 #define HIP_LSI_PREFIX_STR	"/24"
+#define HIP_FULL_LSI_STR	"1.0.0.0/8"
 #define HIP_KHI_CONTEXT_ID_INIT { 0xF0,0xEF,0xF0,0x2F,0xBF,0xF4,0x3D,0x0F, \
                                   0xE7,0x93,0x0C,0x3C,0x6E,0x61,0x74,0xEA }
 
@@ -250,19 +251,23 @@
 /* REMEMBER TO UPDATE BITMAP IN DOC/DOXYGEN.H WHEN YOU ADD/CHANGE THESE! */
 #define HIP_HA_CTRL_NONE                 0x0000
 
+#define HIP_HA_CTRL_LOCAL_REQ_UNSUP      0x0001
 #define HIP_HA_CTRL_LOCAL_REQ_ESCROW     0x2000
 #define HIP_HA_CTRL_LOCAL_REQ_RELAY      0x4000
 #define HIP_HA_CTRL_LOCAL_REQ_RVS        0x8000
 /* Keep inside parentheses. */
 #define HIP_HA_CTRL_LOCAL_REQ_ANY        (\
+                                         HIP_HA_CTRL_LOCAL_REQ_UNSUP |\
                                          HIP_HA_CTRL_LOCAL_REQ_ESCROW |\
                                          HIP_HA_CTRL_LOCAL_REQ_RELAY |\
                                          HIP_HA_CTRL_LOCAL_REQ_RVS\
                                          )
 
+#define HIP_HA_CTRL_PEER_GRANTED_UNSUP   0x0001 
 #define HIP_HA_CTRL_PEER_GRANTED_ESCROW  0x0400 
 #define HIP_HA_CTRL_PEER_GRANTED_RELAY   0x0800 
 #define HIP_HA_CTRL_PEER_GRANTED_RVS     0x1000
+#define HIP_HA_CTRL_PEER_UNSUP_CAPABLE   0x0002 
 #define HIP_HA_CTRL_PEER_ESCROW_CAPABLE  0x2000 
 #define HIP_HA_CTRL_PEER_RELAY_CAPABLE   0x4000 
 #define HIP_HA_CTRL_PEER_RVS_CAPABLE     0x8000
