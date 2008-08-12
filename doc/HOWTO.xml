@@ -47,10 +47,6 @@
 	Linux Operating System
       </para></listitem>
       <listitem><para>
-	A BEET patched Linux 2.6 kernel with the modules listed in
-	<xref linkend="ch_kernel" />.
-      </para></listitem>
-      <listitem><para>
 	OpenSSL-library and developer headers
       </para></listitem>
       <listitem><para>
@@ -77,6 +73,11 @@
       Optional Software Requirements:
     </para>
     <itemizedlist>
+      <listitem><para>
+	A BEET patched Linux 2.6 kernel with the modules listed in
+	<xref linkend="ch_kernel" />. Otherwise, you can use
+	userspace ipsec.
+      </para></listitem>
       <listitem><para>
 	iputils-ping (or netkit-ping): ping, ping6
       </para></listitem>
@@ -134,6 +135,22 @@
     </para>
     <para>On 64-bit Fedora 8, ln -s /usr/lib64/libipq.a /usr/lib/libipq.a was necessary. This has not been fixed in the HIPL build properly yet.
     </para>
+    <para>
+    You should allow also HIP related traffic in your firewall. For example:
+    </para>
+    <itemizedlist>
+    <listitem><para>iptables -A INPUT -p 139 -j ACCEPT</para></listitem>
+    <listitem><para>iptables -A OUTPUT -p139 -j ACCEPT</para></listitem>
+    <listitem><para>iptables -A INPUT -p udp --sport 50500 -j ACCEPT</para></listitem>
+    <listitem><para>iptables -A OUTPUT -p udp --dport 50500 -j ACCEPT</para></listitem>
+    <listitem><para>iptables -A INPUT -p 50 -j ACCEPT</para></listitem>
+    <listitem><para>iptables -A OUTPUT -p 50 -j ACCEPT</para></listitem>
+    <listitem><para>ip6tables -A INPUT -s 2001:0010::/28 -d 2001:0010::/28 -j ACCEPT</para></listitem>
+    <listitem><para>ip6tables -A OUTPUT -s 2001:0010::/28 -d 2001:0010::/28 -j ACCEPT</para></listitem>
+    </itemizedlist>
+    <para>
+    The last two rules basically allow the whole orchid namespace. You can set up more specific rules for HITs or use the hipfw to filter traffic (as explained in a later section).
+    </para>
   </chapter>
   <chapter id="ch_building_doc">
     <title> Building the HIPL Documentation</title>
@@ -164,10 +181,24 @@
   </chapter>
   <chapter id="ch_kernel">
     <title>Compiling the Kernel</title>
+
+    <para>
+      Compiling a kernel with HIP-related patches is optional, but
+      there are two benefits in patching your kernel. First, the IPsec
+      protected data traffic will be faster. Second, you can use the
+      native programming interface for HIP to implement HIP-aware
+      applications. The drawback of patching your kernel is that it
+      requires some expertise and possibly installing e.g. some
+      wireless firmware images manually. As compromise, the HIPL
+      website has some readily built images, but you may still have to
+      install some firmware images manually. If you are unsure, you can
+      try the userspace ipsec as described later in this manual.
+    </para>
     
     <para>
-      If you haven't configured linux kernel before, please consult
-      linux/README before doing that. We have some example
+      If you haven't configured linux kernel before, please use the userspace
+      ipsec instead (as described later in this document), or at least consult
+      linux/README. We have some example
       configurations files in hipl/test/configs for "typical" systems. You
       can use one of those as a template, and modify it to suite the needs
       of your system. Read hipl/test/configs/README before doing so.
@@ -331,6 +362,11 @@
       We will show in this section how to connect two hosts using HIP. We assume 
       two machines called crash and oops that are in the same network. Crash is the one
       that starts a communication against oops.
+    </para>
+    <para>
+      If you did not patch your kernel with HIP-related patches, you
+      need to use the userspace ipsec. You can turn on the userspace ipsec
+      by running firewall/hipfw with the -i option on a host.
     </para>
     <para>  
       They are used through this whole document as examples even though you probably have 
@@ -609,6 +645,7 @@
 	<row><entry>Server</entry><entry>HIT</entry><entry>IPv4 address</entry><entry>IPv6 address</entry><entry>HI algo</entry></row>
       </thead>
       <tbody>
+	<row><entry>felwood.infrahip.net</entry><entry>2001:16:7d5a:88d7:51af:cdd1:6bf5:3d15</entry><entry>193.167.187.130</entry><entry>2001:708:140:220::3</entry><entry>DSA</entry></row>
 	<row><entry>crossroads.infrahip.net</entry><entry>2001:0019:b673:8406:e32d:6754:db0b:cde7</entry><entry>193.167.187.134</entry><entry>2001:708:140:220:213:21ff:feb1:2d05</entry><entry>RSA</entry></row>
 	<row><entry>crossroads.infrahip.net</entry><entry>2001:0019:810e:713d:7183:f05f:6063:b82b</entry><entry>193.167.187.134</entry><entry>2001:708:140:220:213:21ff:feb1:2d05</entry><entry>DSA</entry></row>
 	<row><entry>ashenvale.infrahip.net</entry><entry>2001:0012:55f8:25ab:a6de:af77:b617:34ec</entry><entry>193.167.187.133</entry><entry>2001:708:140:220:212:79ff:fed9:15e8</entry><entry>RSA</entry></row>
@@ -617,7 +654,12 @@
     </tgroup>
     </table>
 
+    <para>
+      The servers are running ssh and http. They are not running "conntest-server" software as described elsewhere in this document.
+    </para>
+
   </chapter>
+
   <chapter id="ch_closing_hip">
     <title>Closing HIP Security Associations Manually</title>
     <para>
@@ -2612,6 +2654,13 @@ combo-newgroup=&lt;create new...&gt;
 
   <chapter id="ch_hi3_support">
     <title>Hi3 Support (Experimental!)</title>
+    <note><title>NOTE:</title>
+      <para>
+	It has been a while since this extension was implementated and tested.
+	As of 24th July 2008, the code compiles but HIP daemon does not respond
+	to hipconf commands. This extension is defunct.
+      </para>
+    </note>
     <itemizedlist>
     <listitem><para>
           Compile hipl--main--2.6 with ./configure --enable-hi3 --disable-opendht

@@ -75,30 +75,34 @@ static enum logfmt_t logfmt = LOGFMT_SHORT;
 static enum logdebug_t logdebug = LOGDEBUG_ALL;
 
 /**
- * hip_set_logtype - set logging to to stderr or syslog
+ * @brief Sets logging to stderr or syslog.
+ * 
+ * Defines where HIP daemon DEBUG, INFO, ERROR etc. messages are printed. 
+ * 
  * @param new_logtype the type of logging output, either LOGTYPE_STDERR or
- *               LOGTYPE_SYSLOG
- *
+ *                    LOGTYPE_SYSLOG
  */
 void hip_set_logtype(int new_logtype) {
   logtype = new_logtype;
 }
 
 /**
- * hip_set_logfmt - set the formatting of log output (short or long)
- * @param new_logfmt the format of the log output, either LOGFMT_SHORT or
- *              LOGFMT_LONG
+ * @brief Sets the formatting of log output.
  *
+ * Defines whether the messages should include file name and line number or not. 
+ * 
+ * @param new_logfmt the format of the log output, either LOGFMT_SHORT or
+ *                    LOGFMT_LONG
  */
 void hip_set_logfmt(int new_logfmt) {
   logfmt = new_logfmt;
 }
 
 /**
- * hip_set_logdebug - selects what logging messages to display
- * @param new_logdebug: either LOGDEBUG_ALL, LOGDEBUG_MEDIUM or LOGDEBUG_NONE
- * @return       zero on success.
- *
+ * @brief Selects what logging messages to display.
+ * 
+ * @param new_logdebug either LOGDEBUG_ALL, LOGDEBUG_MEDIUM or LOGDEBUG_NONE
+ * @return             always zero.
  */
 int hip_set_logdebug(int new_logdebug) {
   logdebug = new_logdebug;

@@ -324,20 +324,21 @@ out_err:
 
 int hip_nat_handle_transform_in_server(struct hip_common *msg , hip_ha_t *entry){
 	int err = 0;
-	struct hip_nat_transform *nat_transform  = NULL;
+	struct hip_nat_transform *nat_transform = NULL;
 	
+	nat_transform = hip_get_param(msg, HIP_PARAM_NAT_TRANSFORM);
 	
-    nat_transform = hip_get_param(msg, HIP_PARAM_NAT_TRANSFORM);
-    if(nat_transform&&entry){
-    	// check if the requested tranform is also supported in the server.
-    	entry->nat_control = (ntohs(nat_transform->suite_id[0])) & hip_nat_get_control();
-    }
-    else{
-    	HIP_DEBUG("handle nat transform failed: entry %d,nat transform %d\n", entry, nat_transform);
-    }
-out_err:
+	if(nat_transform != NULL && entry != NULL){
+		// check if the requested tranform is also supported in the server.
+		entry->nat_control = (ntohs(nat_transform->suite_id[0])) &
+			hip_nat_get_control();
+	} else {
+		HIP_DEBUG("handle nat transform failed: entry %d, "\
+			  "nat transform %d\n", entry, nat_transform);
+	}
+ out_err:
+	
 	return err;
-	  
 }
 
 uint16_t hip_nat_get_control(){
@@ -882,7 +883,11 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 		HIP_DEBUG("peer list item address: %d ",peer_addr_list_item);
 		
 		HIP_DEBUG_HIT("add Ice remote address:", &peer_addr_list_item->address);
-		hip_print_lsi("add Ice remote address 1: ", ((int *) (&peer_addr_list_item->address)+3));
+		/*
+		  // removed, seg faults, why does it point to +3 -samu
+		hip_print_lsi("add Ice remote address 1: ", 
+		((int *) (&peer_addr_list_item->address)+3));
+		*/
 		HIP_DEBUG("add Ice remote port: %d \n", peer_addr_list_item->port);
 		if (ipv6_addr_is_hit(&peer_addr_list_item->address))
 		    continue;
