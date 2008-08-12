@@ -1492,8 +1492,8 @@ int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr) {
 	free(*rsa_key_rr);
     return err;
   }
-  else
-    return rsa_key_rr_len;
+
+  return rsa_key_rr_len;
 }
 
 void *hip_cast_sa_addr(void *sockaddr) {
