@@ -225,6 +225,7 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 		err = sendto(raw_sock_v6, esp_packet, esp_packet_len, 0,
 						(struct sockaddr *)&preferred_peer_sockaddr,
 						hip_sockaddr_len(&preferred_peer_sockaddr));
+	HIP_PERROR("error when sending packet\n");
 	
 	if (err < 0) {
 		HIP_DEBUG("sendto() failed\n");
