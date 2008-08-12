@@ -76,8 +76,8 @@
  *     <pre>
  *     struct sockaddr_in6 {
  *            unsigned short int sin6_family;
- *            __be16		 sin6_port;
- *            __be32		 sin6_flowinfo;
+ *            __be16             sin6_port;
+ *            __be32             sin6_flowinfo;
  *           struct in6_addr     sin6_addr;
  *           __u32               sin6_scope_id;
  *     };</pre>
