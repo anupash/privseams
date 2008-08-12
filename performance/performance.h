@@ -61,34 +61,39 @@ int hip_perf_write_benchmark(perf_set_t * perf_set, int slot);
 
 int hip_perf_close(perf_set_t *perf_set);
 
+
 #define PERF_I1                         0
 #define PERF_R1                         1
 #define PERF_I2                         2
 #define PERF_R2                         3
-#define PERF_DH_CREATE                  4
-#define PERF_SIGN                       5
-#define PERF_DSA_SIGN_IMPL              6
-#define PERF_VERIFY                     7
-#define PERF_BASE                       8
-#define PERF_I1_SEND                    9
-#define PERF_UPDATE_SEND                10
-#define PERF_VERIFY_UPDATE              11
-#define PERF_UPDATE_COMPLETE            12
-#define PERF_ALL                        13
-#define PERF_HANDLE_UPDATE_ESTABLISHED  14
-#define PERF_HANDLE_UPDATE_REKEYING     15
-#define PERF_UPDATE_FINISH_REKEYING     16
-#define PERF_CLOSE_SEND                 17
-#define PERF_HANDLE_CLOSE               18
-#define PERF_HANDLE_CLOSE_ACK           19
-#define PERF_CLOSE_COMPLETE             20
-#define PERF_HANDLE_UPDATE_1            21
-#define PERF_HANDLE_UPDATE_2            22
-#define PERF_DSA_VERIFY_IMPL            23
-#define PERF_RSA_VERIFY_IMPL            24
+#define PERF_VERIFY                     4
+#define PERF_BASE                       5
+#define PERF_ALL                        6
+#define PERF_UPDATE_COMPLETE            7
+#define PERF_CLOSE_SEND                 8
+#define PERF_HANDLE_CLOSE               9
+#define PERF_HANDLE_CLOSE_ACK           10
+#define PERF_HANDLE_UPDATE_1            11
+#define PERF_CLOSE_COMPLETE             12
+#define PERF_DSA_VERIFY_IMPL            13
+#define PERF_RSA_VERIFY_IMPL            14
+
+/* The firewall only uses the sensors given above, hence it has a separate PERF_MAX. */
+#define PERF_MAX_FIREWALL		15
+
+#define PERF_DH_CREATE                  15
+#define PERF_SIGN                       16
+#define PERF_DSA_SIGN_IMPL              17
+#define PERF_I1_SEND                    18
+#define PERF_UPDATE_SEND                19
+#define PERF_VERIFY_UPDATE              20
+#define PERF_HANDLE_UPDATE_ESTABLISHED  21
+#define PERF_HANDLE_UPDATE_REKEYING     22
+#define PERF_UPDATE_FINISH_REKEYING     23
+#define PERF_HANDLE_UPDATE_2            24
 #define PERF_RSA_SIGN_IMPL              25
 
-#define PERF_MAX                        26 /* number of sensors */
+#define PERF_MAX                        26 /* Number of sensors for the HIP daemon. */
 
 perf_set_t *perf_set;
 
