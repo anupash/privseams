@@ -580,20 +580,36 @@ int esp_prot_r2_handle_anchor(hip_ha_t *entry, struct hip_context *ctx)
  	return err;
 }
 
-int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry, int flags)
+int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry)
 {
+	struct hip_seq * seq = NULL;
 	int hash_length = 0;
 	int err = 0;
 
-	// check if we should send an anchor
-	if (flags & SEND_UPDATE_ESP_ANCHOR)
+	// only do further processing when extension is in use
+	if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED)
 	{
-		// we need to know the hash_length for this transform
-		hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
+		/* check if we should send an anchor
+		 *
+		 * @note when there is a SEQ param present in the packet to be sent,
+		 *       that means either we are sending the first or second
+		 *       update packet of rekeying and or location update
+		 *       -> add anchors */
+		seq = (struct hip_seq *) hip_get_param(update, HIP_PARAM_SEQ);
 
-		HIP_IFEL(hip_build_param_esp_prot_anchor(update, entry->esp_prot_transform,
-				entry->esp_local_anchor, entry->esp_local_update_anchor,
-				hash_length), -1, "building of ESP protection ANCHOR failed\n");
+		if (seq)
+		{
+			// we need to know the hash_length for this transform
+			hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
+
+			/* @note update-anchor will be set, if there was a anchor UPDATE before
+			 *       or if this is an anchor UPDATE; otherwise update-anchor will
+			 *       be NULL */
+			HIP_IFEL(hip_build_param_esp_prot_anchor(update,
+					entry->esp_prot_transform, entry->esp_local_anchor,
+					entry->esp_local_update_anchor, hash_length), -1,
+					"building of ESP protection ANCHOR failed\n");
+		}
 	}
 
   out_err:
