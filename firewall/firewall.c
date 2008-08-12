@@ -363,8 +363,11 @@ int firewall_init_rules()
 	hip_fw_handler[NF_IP_LOCAL_OUT][TCP_PACKET] = hip_fw_handle_tcp_output;
 
 	hip_fw_handler[NF_IP_FORWARD][OTHER_PACKET] = hip_fw_handle_other_forward;
+
+	//apply rules for forwarded hip and esp traffic
 	hip_fw_handler[NF_IP_FORWARD][HIP_PACKET] = hip_fw_handle_hip_forward;
 	hip_fw_handler[NF_IP_FORWARD][ESP_PACKET] = hip_fw_handle_esp_forward;
+	//do not drop those files by default
 	hip_fw_handler[NF_IP_FORWARD][TCP_PACKET] = hip_fw_handle_tcp_forward;
 
 	HIP_DEBUG("Enabling forwarding for IPv4 and IPv6\n");
@@ -1604,34 +1607,35 @@ int main(int argc, char **argv)
 			rule_file, timeout);
 
 	firewall_increase_netlink_buffers();
+#ifndef CONFIG_HIP_OPENWRT
 	firewall_probe_kernel_modules();
+#endif
 
 	// create firewall queue handles for IPv4 traffic
 	// FIXME died handle will still be used below
 	h4 = ipq_create_handle(0, PF_INET);
-	if (!h4) {
-		HIP_ERROR("IPQ error: %s \n", ipq_errstr());
+	
+	if (!h4)
 		die(h4);
-	}
-		
+	HIP_DEBUG("IPv4 handle created\n");	
 	status = ipq_set_mode(h4, IPQ_COPY_PACKET, BUFSIZE);
-	if (status < 0) {
-		HIP_ERROR("IPQ error: %s \n", ipq_errstr());
+	
+	if (status < 0)
 		die(h4);
-	}
-
+	HIP_DEBUG("IPv4 handle mode COPY_PACKET set\n");
 	// create firewall queue handles for IPv6 traffic
 	// FIXME died handle will still be used below
 	h6 = ipq_create_handle(0, PF_INET6);
-	_HIP_DEBUG("IPQ error: %s \n", ipq_errstr());
+	
 	
 	if (!h6)
 		die(h6);
+	HIP_DEBUG("IPv6 handle created\n");		
 	status = ipq_set_mode(h6, IPQ_COPY_PACKET, BUFSIZE);
-	_HIP_DEBUG("IPQ error: %s \n", ipq_errstr());
+	
 	if (status < 0)
-		die(h6);
-
+		die(h6); 	
+	HIP_DEBUG("IPv6 handle mode COPY_PACKET set\n");
 	// set up ip(6)tables rules
 	HIP_IFEL(firewall_init_rules(), -1,
 		 "Firewall init failed\n");

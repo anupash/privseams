@@ -12,12 +12,12 @@ dist_sbin_SCRIPTS  += util.py
 #
 
 CFLAGS = $(hipl_common_cflags) # -L$(HIPL_LIBINET6_LIB)
-
 INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
-
+  
 include_HEADERS = hipconftool.h
 
-LDFLAGS = @LDFLAGS@ -lcrypto $(HIP_XMLL)
+
+LDFLAGS = @LDFLAGS@ -lc -lcrypto $(HIP_XMLL) $(OPENWRT)
 
 if HIP_OPENDHT
   INCLUDES += -I../opendht
@@ -31,6 +31,10 @@ LDADD=
 #if HIP_OPPORTUNISTIC
 #  LDADD += ../libopphip/.libs/libopphip.a
 #endif
+
+if HIP_OPENWRT
+LDADD += $(OPENWRT_LIB_STATIC)
+endif
 
 LDADD += ../libinet6/.libs/libinet6.a
 if HIP_CORPORATE
