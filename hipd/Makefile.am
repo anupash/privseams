@@ -36,13 +36,13 @@ endif
 
 # Required for pjsip
 hipd_LDADD += -lpthread -luuid
-hipd_LDADD += ../pjproject/pjnath/lib/libpjnath-${host}.a
-hipd_LDADD += ../pjproject/pjlib/lib/libpj-${host}.a
-hipd_LDADD += ../pjproject/pjlib-util/lib/libpjlib-util-${host}.a
+hipd_LDADD += ../pjproject/pjnath/lib/libpjnath-hipl.a
+hipd_LDADD += ../pjproject/pjlib/lib/libpj-hipl.a
+hipd_LDADD += ../pjproject/pjlib-util/lib/libpjlib-util-hipl.a
 
-../pjproject/pjlib/lib/libpj-${host}.a:
-../pjproject/pjlib-util/lib/libpjlib-util-${host}.a:
-../pjproject/pjnath/lib/libpjnath-${host}.a:
+../pjproject/pjlib/lib/libpj-hipl.a:
+../pjproject/pjlib-util/lib/libpjlib-util-hipl.a:
+../pjproject/pjnath/lib/libpjnath-hipl}.a:
 
 hipd_LDFLAGS = -lcrypto $(HIPL_XMLL) -lm -DHIPL_HIPD
 

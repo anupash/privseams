@@ -99,6 +99,7 @@ int handle_proxy_inbound_traffic(ipq_packet_msg_t *m,
 	HIP_DEBUG("receiving ESP packets from firewall!\n");
 	
 	HIP_IFEL(!hip_fw_get_default_hit(), 0, "Get Default HIT error!\n");
+	ipv6_addr_copy(&proxy_hit, &default_hit);
 	
 	if(protocol == IPPROTO_TCP)
 	{
@@ -113,6 +114,8 @@ int handle_proxy_inbound_traffic(ipq_packet_msg_t *m,
 	}
 	
 	HIP_DEBUG("client_port=%d, peer port=%d, protocol=%d\n", port_client, port_peer, protocol);
+	HIP_DEBUG_HIT("proxy_hit:", &proxy_hit);
+	HIP_DEBUG_IN6ADDR("src_addr:", src_addr);
 
 	//hip_get_local_hit_wrapper(&proxy_hit);
 	conn_entry = hip_conn_find_by_portinfo(&proxy_hit, src_addr, protocol, port_client, port_peer); 
@@ -169,6 +172,7 @@ int handle_proxy_outbound_traffic(ipq_packet_msg_t *m,
 	HIP_DEBUG("HIP PROXY OUTBOUND PROCESS:\n");
 
 	HIP_IFEL(!hip_fw_get_default_hit(), 0, "Get Default HIT error!\n");
+	ipv6_addr_copy(&proxy_hit, &default_hit);
 
 	if(ip_version == 4)
 		protocol = ((struct ip *) (m->payload))->ip_p;
@@ -192,13 +196,18 @@ int handle_proxy_outbound_traffic(ipq_packet_msg_t *m,
 
 	entry = hip_proxy_find_by_addr(src_addr, dst_addr);
 	//hip_get_local_hit_wrapper(&proxy_hit);
+
 	if (entry == NULL)
 	{
 		hip_proxy_add_entry(src_addr, dst_addr);
 		
 		entry = hip_proxy_find_by_addr(src_addr, dst_addr);
 		HIP_ASSERT(entry)
-		
+
+		ipv6_addr_copy(&entry->hit_proxy, &default_hit);
+		HIP_DEBUG_IN6ADDR("outbound address 1:", src_addr);
+		HIP_DEBUG_IN6ADDR("outbound address 2:", dst_addr);
+
 		/* Request a HIT of the peer from hipd. This will possibly
 		   launch an I1 with NULL HIT. The call does not block because
 		   otherwise single threaded firewall blocks too and does not
@@ -231,6 +240,7 @@ int handle_proxy_outbound_traffic(ipq_packet_msg_t *m,
 			u16 * msg;
 
 			//TODO: check the connection with same ip but different port, should be added into conndb
+
 			if(hip_conn_find_by_portinfo(&entry->hit_proxy, &entry->hit_peer, protocol, port_client, port_peer))
 			{
 				HIP_DEBUG("find same connection  in connDB\n");
@@ -245,8 +255,10 @@ int handle_proxy_outbound_traffic(ipq_packet_msg_t *m,
 					HIP_DEBUG("ConnDB add entry Successful!\n");
 #endif
 				/* add inbound entry */
+				HIP_DEBUG_HIT("proxy_hit:",  &entry->hit_proxy);
+				HIP_DEBUG_IN6ADDR("src_addr:",  &entry->addr_peer);				
 
-				if(hip_conn_add_entry(&entry->addr_proxy, &entry->addr_peer, &entry->hit_proxy, &entry->hit_peer, protocol, port_client, port_peer, HIP_PROXY_TRANSLATE))
+				if(hip_conn_add_entry(&entry->addr_client, &entry->addr_peer, &entry->hit_proxy, &entry->hit_peer, protocol, port_client, port_peer, HIP_PROXY_TRANSLATE))
 					HIP_DEBUG("ConnDB add entry Failed!\n");
 				else
 					HIP_DEBUG("ConnDB add entry Successful!\n");
