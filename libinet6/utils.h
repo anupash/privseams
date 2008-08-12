@@ -52,6 +52,15 @@ static int hip_tmpname(char *fname) {
  */
 #if 0
 static int hip_tmpname_gui(char *fname) {
+	/* mktemp results to a compiler warning - or actually in a host of
+	 * warnings since this function is called many times.
+	 * 
+	 * warning: the use of `mktemp' is dangerous, better use `mkstemp' or
+	 * `mkdtemp'
+	 *
+	 * Please fix it if you know it is safe to do so.
+	 * -Lauri 02.06.2008 15:55
+	 */
         int ret = 0;
 	memcpy(fname, HIP_TMP_FNAME_TEMPLATE, HIP_TMP_FNAME_LEN);        
 	if (mktemp(fname) == NULL) ret = -1;

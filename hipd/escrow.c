@@ -1,12 +1,16 @@
-/*
- * Key escrow functionality for HIP.
- *
- * Authors:
- * - Anu Markkola
- *
- * Licence: GNU/GPL
+/**
+ * @file
+ * This file defines key escrow functionality for HIP.
+ * 
+ * @author  Anu Markkola
+ * @version 1.0
+ * @date    2006
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @note    Since the creation of this file, implementations of both the
+ *          registration extension and UPDATE packet support have changed quite
+ *          a lot. This extension has not been tested since 2006 and therefore
+ *          is most likely be defunct. -Lauri 01.07.2008
  */
-
 #include "escrow.h"
 
 HIP_HASHTABLE *kea_table;
@@ -100,7 +104,7 @@ int hip_kea_create_base_entry(struct hip_host_id_entry *entry,
  * op = 0/1 (zero for cancelling registration)
  */
 int hip_launch_escrow_registration(struct hip_host_id_entry * id_entry, 
-	void * server_hit_void)
+				   void * server_hit_void)
 {
 	int err = 0;
 	hip_ha_t * entry = NULL;	
@@ -108,67 +112,43 @@ int hip_launch_escrow_registration(struct hip_host_id_entry * id_entry,
 	HIP_KEA * kea = NULL;
 	
 	HIP_IFEL(!(entry = hip_hadb_find_byhits(&id_entry->lhi.hit, server_hit_void)),
-			 -1, "internal error: no hadb entry found\n");
+		 -1, "Internal error: no haDB entry found.\n");
 	HIP_IFEL(!(kea = hip_kea_find(&entry->hit_our)), -1, "No KEA base entry found\n");
 	HIP_DEBUG_HIT("Registering to server from ", &entry->hit_our);
 	
         kea->keastate = HIP_KEASTATE_REGISTERING;
         hip_keadb_put_entry(kea);
 	
-        if (entry->state == HIP_STATE_UNASSOCIATED) {
-                HIP_IFEL(hip_send_i1(&entry->hit_our, server_hit, entry), 
-                        -1, "sending i1 failed\n");
-        }
-        else if (entry->state == HIP_STATE_ESTABLISHED) {
-                int reg_types[1] = { HIP_SERVICE_ESCROW }; 
-                /* Sending registration in update packet. TODO: maybe this
-                 * should be done somewhere else */
-                HIP_IFEL(hip_update_send_registration_request(entry, server_hit, 
-                        reg_types, 1, 1), -1, "Sending registration on update failed\n");
-        }
-		
-out_err:
-        if (entry)
+ out_err:
+        if (entry != NULL) {
                 hip_hadb_put_entry(entry);
+	}
+
 	return err;		
 }
 
 int hip_launch_cancel_escrow_registration(struct hip_host_id_entry * id_entry, 
-        void * server_hit_void)
+					  void * server_hit_void)
 {
         int err = 0;
         hip_ha_t * entry = NULL;        
         struct in6_addr * server_hit = server_hit_void;
         HIP_KEA * kea = NULL;
-		in_port_t *peer_port;
+	in_port_t *peer_port;
         
         HIP_IFEL(!(entry = hip_hadb_find_byhits(&id_entry->lhi.hit, server_hit_void)),
-                         -1, "internal error: no hadb entry found\n");
+		 -1, "Internal error: no haDB entry found\n");
         HIP_IFEL(!(kea = hip_kea_find(&entry->hit_our)), -1, "No KEA base entry found\n");
         HIP_DEBUG_HIT("Cancelling registration of ", &entry->hit_our);
         
         kea->keastate = HIP_KEASTATE_UNREGISTERING;
-               
+	
         hip_keadb_put_entry(kea);
-        
-        if (entry->state == HIP_STATE_UNASSOCIATED) {
-                /* TODO: can this situation ever happen? */
-                HIP_DEBUG("Cancelling registration but state is unassociated!\n");
-                HIP_IFEL(hip_send_i1(&entry->hit_our, server_hit, entry), 
-                        -1, "sending i1 failed\n");
-        }
-        else if (entry->state == HIP_STATE_ESTABLISHED) {
-                int reg_types[1] = { HIP_SERVICE_ESCROW }; 
-                /* Sending registration in update packet. TODO: maybe this
-                 * should be done somewhere else */
-                HIP_IFEL(hip_update_send_registration_request(entry, server_hit, 
-                        reg_types, 1, 0), -1, 
-                        "Sending registration on update failed\n");
-        }
-                
-out_err:
-        if (entry)
+	
+ out_err:
+        if (entry != NULL)
                 hip_put_ha(entry);
+	
         return err;             
 }
 
@@ -177,7 +157,8 @@ int hip_remove_escrow_data(hip_ha_t * entry, void * data)
 {
 	int err = 0;
 	entry->escrow_used = 0;
-out_err:	
+	
+ out_err:	
 	return err;
 }
 
@@ -825,8 +806,12 @@ int hip_cancel_escrow_service(void)
 		HIP_IFEL(hip_hadb_get_peer_addr(entry, &daddr), -1, 
 				"Failed to get peer address");
 		memcpy(&saddr, &entry->local_address, sizeof(saddr));
-		HIP_IFEL(hip_create_reg_response(entry, NULL, services, 1, &saddr, &daddr),
-				-1, "Error creating reg_response\n");
+		
+		/* Here we should send an UPDATE with REG_RESPONSE to current
+		   peer. The sending of the UPDATE was removed when the update.c
+		   was revised.
+		   -Lauri 01.07.2008 */
+		
 		hip_keadb_put_entry(kea);
 		HIP_IFEL(hip_cancel_escrow_registration(&entry->hit_peer), 
 				-1, "Error cancelling registration\n");

@@ -254,7 +254,7 @@
 #define HIP_HA_CTRL_LOCAL_REQ_RELAY      0x4000
 #define HIP_HA_CTRL_LOCAL_REQ_RVS        0x8000
 /* Keep inside parentheses. */
-#define HIP_HA_CTRL_LOCAL_REQ_ALL        (\
+#define HIP_HA_CTRL_LOCAL_REQ_ANY        (\
                                          HIP_HA_CTRL_LOCAL_REQ_ESCROW |\
                                          HIP_HA_CTRL_LOCAL_REQ_RELAY |\
                                          HIP_HA_CTRL_LOCAL_REQ_RVS\
@@ -281,17 +281,15 @@
 #define HIP_SERVICE_RENDEZVOUS	         1
 #define HIP_SERVICE_ESCROW	         201
 #define HIP_SERVICE_RELAY            	 202
-#define HIP_SERVICE_RELAY_UDP_HIP	 203
-#define HIP_SERVICE_RELAY_UDP_ESP	 204
+/* IMPORTANT! This must be the sum of above services. */
+#define HIP_TOTAL_EXISTING_SERVICES      3
+/* @} */
 
 /** @addtogroup hip_proxy
  * @{ 
  */
 #define HIP_PROXY_PASSTHROUGH		0
-#define HIP_PROXY_TRANSLATE 			1
-
-/* IMPORTANT! This must be the sum of above services. */
-#define HIP_TOTAL_EXISTING_SERVICES      3
+#define HIP_PROXY_TRANSLATE 		1
 /* @} */
 
 /* Registration failure types as specified in draft-ietf-hip-registration-02.
@@ -637,7 +635,7 @@ struct hip_seq {
 struct hip_ack {
 	hip_tlv_type_t type;
 	hip_tlv_len_t length;
-	uint32_t peer_update_id; /**< n items */
+	uint32_t peer_update_id; /**< n items */ /* This only fits one... */
 } __attribute__ ((packed));
 
 struct hip_notification {
@@ -781,7 +779,8 @@ struct hip_reg_response {
 struct hip_reg_failed {
 	hip_tlv_type_t type;
 	hip_tlv_len_t  length;
-	uint8_t       failure_type;
+	uint8_t        failure_type;
+	uint8_t        reg_type[0];
 } __attribute__ ((packed));
 
 struct hip_keys {
@@ -849,4 +848,3 @@ struct hip_reg_from {
 } __attribute__ ((packed));
 
 #endif /* _HIP_PROTODEFS */
-

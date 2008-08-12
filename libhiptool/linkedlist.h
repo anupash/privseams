@@ -148,10 +148,11 @@ static inline int hip_ll_add_last(hip_ll_t *linkedlist, void *ptr)
  * @param index        the list index of the @c node to be deleted. Indexing
  *                     starts from zero.
  * @param free_element a function pointer to a function for freeing the memory
- *                     allocated for an element at a node.
+ *                     allocated for an element at a node or NULL if the element
+ *                     itself is not to be freed.
  * @return             a pointer to the data stored at the deleted node or NULL
  *                     if there are less than (<code>index  -1</code>) nodes in the list.
- *                     NULL is returned when @free_element is not NULL i.e. the
+ *                     NULL is returned when @c free_element is not NULL i.e. the
  *                     element itself is deleted. NULL is also returned when
  *                     the list @c linkedlist itself is NULL.
  */
@@ -170,7 +171,8 @@ void *hip_ll_del(hip_ll_t *linkedlist, const unsigned int index,
  *
  * @param linkedlist   the list where from to remove the element.
  * @param free_element a function pointer to a function for freeing the memory
- *                     allocated for an element at a node.
+ *                     allocated for an element at a node or NULL if the element
+ *                     itself is not to be freed.
  * @return             a pointer to the data stored at the deleted node or NULL
  *                     if there are no nodes in the list. NULL is returned when
  *                     @free_element is not NULL i.e. the element itself is
@@ -194,7 +196,8 @@ static inline void *hip_ll_del_first(hip_ll_t *linkedlist,
  *
  * @param linkedlist   the list where from to remove the element.
  * @param free_element a function pointer to a function for freeing the memory
- *                     allocated for an element at a node.
+ *                     allocated for an element at a node or NULL if the element
+ *                     itself is not to be freed.
  * @return             a pointer to the data stored at the deleted node or NULL
  *                     if there are no nodes in the list. NULL is returned when
  *                     @free_element is not NULL i.e. the element itself is

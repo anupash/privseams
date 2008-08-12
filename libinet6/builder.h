@@ -103,8 +103,6 @@ int hip_build_param_notification(struct hip_common *, uint16_t, void *, size_t);
 int hip_build_param_puzzle(struct hip_common *, uint8_t, uint8_t, uint32_t,
                            uint64_t);
 int hip_build_param_r1_counter(struct hip_common *, uint64_t);
-int hip_build_param_reg_failed(struct hip_common *, uint8_t, uint8_t *, int);
-//int hip_build_param_reg_info(struct hip_common *, uint8_t, uint8_t, int *, int);
 
 int hip_build_param_rvs_hmac_contents(struct hip_common *,
                                       struct hip_crypto_key *);
@@ -232,7 +230,7 @@ int dsa_to_hip_endpoint(DSA *dsa, struct endpoint_hip **endpoint,
  * @return              zero on success, non-zero otherwise.
  */
 int hip_build_param_reg_info(hip_common_t *msg,
-			     const void *service_list,
+			     const struct hip_srv *service_list,
 			     const unsigned int service_count);
 /**
  * Builds a REG_REQUEST parameter.
@@ -263,5 +261,18 @@ int hip_build_param_full_relay_hmac_contents(struct hip_common *,
                                       struct hip_crypto_key *);
 int hip_build_param_nat_tranform(struct hip_common *msg, 
 							hip_transform_suite_t nat_control);
+
+/**
+ * Builds a REG_FAILED parameter.
+ * 
+ * @param msg        a pointer to a HIP message where to build the parameter.
+ * @param lifetime   the failure type to be put into the parameter.
+ * @param type_list  a pointer to an array containing the registration types to
+ *                   be put into the parameter.
+ * @param type_count number of registration types in @c type_list.
+ * @return           zero on success, non-zero otherwise.
+ */
+int hip_build_param_reg_failed(struct hip_common *msg, uint8_t failure_type,
+			       uint8_t *type_list, int type_count);
 
 #endif /* HIP_BUILDER */

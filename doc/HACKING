@@ -359,7 +359,7 @@ Doxygen comment blocks have a tendency to bloat the code. Generally, if
 possible, place the doxygen comment in the header file instead of the c-file.
 This applies to all Doxygen comments, not just function comments.
 
-Doxygen includes a special tag for todo items. The todo tags is "@todo". The todo
+Doxygen includes a special tag for todo items. The todo tag is "@todo". The todo
 tag can be placed anywhere in the code. When placed inside of a function, the
 todo item becomes a todo item for the respective function. When placed outside
 of a function, the todo item becomes a todo item for the whole file. To create
@@ -752,6 +752,12 @@ $ rsync *.dsc *.orig.tar.gz *.diff.gz root@packages.infrahip.net:/var/www/html/u
 
 $ sudo dpkg-scansources . /dev/null | sudo gzip -9c > Sources.gz
 
+VALGRIND AND HIPD
+=================
+
+On some machines, valgrind does not work without the following:
+  
+  ./configure --disable-privsep && make clean all
 
 
 TEST MATRIX
