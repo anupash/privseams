@@ -2,16 +2,10 @@
 #define HIP_PROXY_H
 
 #include "firewall.h"
+#include "proxydb.h"
 
-typedef struct hip_proxy_t {
-	hip_hit_t hit_our;
-	hip_hit_t hit_peer;
-	hip_hit_t hit_proxy;
-	struct in6_addr addr_our;
-	struct in6_addr addr_peer;
-	struct in6_addr addr_proxy;
-	int state;
-	int hip_capable;
-} hip_proxy_t;
+int hip_proxy_send_pkt(struct in6_addr *local_addr, struct in6_addr *peer_addr,	u8 *msg, u16 len, int protocol);
+int hip_proxy_send_inbound_icmp_pkt(struct in6_addr* src_addr, struct in6_addr* dst_addr, u8* buff, u16 len);
+int hip_proxy_send_to_client_pkt(struct in6_addr *local_addr, struct in6_addr *peer_addr, u8 *buff, u16 len);
 
 #endif /* HIP_PROXY_H */

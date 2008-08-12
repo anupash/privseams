@@ -526,13 +526,13 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		   the hip daemon wants either to register to a server for
 		   additional services or it wants to cancel a registration.
 		   Cancellation is identified with a zero lifetime. */
-		HIP_DEBUG("Handling ADD DEL SERVER user message.\n");
-
 		struct hip_reg_request *reg_req = NULL;
 		hip_pending_request_t *pending_req = NULL;
 		uint8_t *reg_types = NULL;
 		int i = 0, type_count = 0;
 		
+		HIP_DEBUG("Handling ADD DEL SERVER user message.\n");
+
 		/* Get RVS IP address, HIT and requested lifetime given as
 		   commandline parameters to hipconf. */
 		

@@ -56,8 +56,8 @@ void* run_control_thread(void* data)
 out_err:
 	/* Send quit message to daemon. */
 	hip_build_user_hdr(msg, SO_HIP_FIREWALL_QUIT, 0);
-	n = sendto_hipd(msg, sizeof(struct hip_common));
-	if (n < 0) HIP_ERROR("Could not send quit message to daemon.\n");
+	HIP_IFEL(hip_fw_sendto_hipd(msg), -1,
+		 "Could not send quit message to daemon.\n");
 	
 	if (hip_fw_sock)
 		close(hip_fw_sock);
@@ -208,6 +208,9 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 			hip_fw_uninit_opptcp();
 		hip_opptcp = 0;
 		break;
+	case SO_HIP_SET_PEER_HIT:
+		err = hip_fw_proxy_set_peer_hit(msg);
+		break;
 	default:
 		HIP_ERROR("Unhandled message type %d\n", type);
 		err = -1;
@@ -218,23 +221,24 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 	return err;
 }
 
-int sendto_hipd(void *msg, size_t len)
+int hip_fw_sendto_hipd(void *msg)
 {
-	/* Variables. */
-	struct sockaddr_in6 sock_addr;
-	int n, alen;
-	
-	bzero(&sock_addr, sizeof(sock_addr));
-	sock_addr.sin6_family = AF_INET6;
-	sock_addr.sin6_port = htons(HIP_DAEMON_LOCAL_PORT);
-	sock_addr.sin6_addr = in6addr_loopback;
-    
-	alen = sizeof(sock_addr);
-	n = sendto(hip_fw_sock, msg, len, 0,
-		   (struct sockaddr *)&sock_addr, alen);
-	
+       /* Variables. */
+       struct sockaddr_in6 sock_addr;
+       int n, alen, len;
+       
+       bzero(&sock_addr, sizeof(sock_addr));
+       sock_addr.sin6_family = AF_INET6;
+       sock_addr.sin6_port = htons(HIP_DAEMON_LOCAL_PORT);
+       sock_addr.sin6_addr = in6addr_loopback;
 
-	return (n);
+       len = hip_get_msg_total_len(msg);
+    
+       alen = sizeof(sock_addr);
+       n = sendto(hip_fw_sock, msg, len, 0,
+                  (struct sockaddr *)&sock_addr, alen);
+
+       return !(n == len);
 }
 
 inline u16 inchksum(const void *data, u32 length){
@@ -338,15 +342,10 @@ int request_hipproxy_status(void)
         //n = sendto(hip_fw_sock, msg, hip_get_msg_total_len(msg),
         //		0,(struct sockaddr *)dst, sizeof(struct sockaddr_in6));
         
-        n = sendto_hipd(msg, hip_get_msg_total_len(msg));
-        if (n < 0) {
-                HIP_ERROR("HIP_HIPPROXY_STATUS_REQUEST: Sendto HIPD failed.\n");
-                err = -1;
-                goto out_err;
-        }
-        else {
-                HIP_DEBUG("HIP_HIPPROXY_STATUS_REQUEST: Sendto firewall OK.\n");
-        }  
+        HIP_IFEL(hip_fw_sendto_hipd(msg), -1, 
+		 "HIP_HIPPROXY_STATUS_REQUEST: Sendto HIPD failed.\n");
+	HIP_DEBUG("HIP_HIPPROXY_STATUS_REQUEST: Sendto firewall OK.\n");
+
 out_err:
 	if(msg)
 		free(msg);
