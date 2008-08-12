@@ -551,7 +551,7 @@ hip_link_entry_t *hip_link_entry_find(struct in6_addr *dst_addr, uint32_t spi)
 	
 	HIP_DEBUG("looking up link entry with following index attributes:\n");
 	HIP_DEBUG_HIT("dst_addr", search_link->dst_addr);
-	HIP_DEBUG("spi: %u\n", search_link->spi);
+	HIP_DEBUG("spi: 0x%lx\n", search_link->spi);
 	
 	hip_linkdb_print();
 	
@@ -618,7 +618,7 @@ void hip_link_entry_print(hip_link_entry_t *entry)
 	if (entry)
 	{
 		HIP_DEBUG_HIT("dst_addr", entry->dst_addr);
-		HIP_DEBUG("spi: %u\n", entry->spi);
+		HIP_DEBUG("spi: %lx\n", entry->spi);
 		HIP_DEBUG("> sa entry:\n");
 		hip_sa_entry_print(entry->linked_sa_entry);
 
@@ -687,7 +687,7 @@ void hip_sa_entry_print(hip_sa_entry_t *entry)
 	if (entry)
 	{
 		HIP_DEBUG("direction: %i\n", entry->direction);
-		HIP_DEBUG("spi: %u\n", entry->spi);
+		HIP_DEBUG("spi: 0x%lx\n", entry->spi);
 		HIP_DEBUG("mode: %u\n", entry->mode);
 		HIP_DEBUG_HIT("src_addr", entry->src_addr);
 		HIP_DEBUG_HIT("dst_addr", entry->dst_addr);
