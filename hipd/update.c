@@ -2221,7 +2221,8 @@ int hip_send_update(struct hip_hadb_state *entry,
 	struct netdev_address *n;
 	struct hip_own_addr_list_item *own_address_item, *tmp;
 
-	HIP_DEBUG("\n");
+	HIP_DEBUG_SOCKADDR("addr", addr);
+	
 	HIP_IFE(hip_hadb_get_peer_addr(entry, &daddr), -1);
 
 	HIP_IFEL(entry->is_loopback, 0, "Skipping loopback\n");
@@ -2586,9 +2587,11 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 	hip_ha_t *entries[HIP_MAX_HAS] = {0};
 	struct hip_update_kludge rk;
 	struct sockaddr_in * p = NULL;
-	struct sockaddr_in6 *addr_sin6 = NULL;
+	struct sockaddr_in6 addr_sin6;
 	struct in_addr ipv4;
 	struct in6_addr ipv6;
+
+	HIP_DEBUG_SOCKADDR("addr", addr);
 
 	/** @todo check UPDATE also with radvd (i.e. same address is added
 	    twice). */
@@ -2600,26 +2603,17 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 		return;
 	}
 
-	if (addr->sa_family == AF_INET)
-		HIP_DEBUG_LSI("Addr", hip_cast_sa_addr(addr));
-	else if (addr->sa_family == AF_INET6)
-		HIP_DEBUG_HIT("Addr", hip_cast_sa_addr(addr));
-	else
-		HIP_DEBUG("Unknown addr family in addr\n");
-
-	addr_sin6 = malloc(sizeof(struct sockaddr_in6));     
 	if (addr->sa_family == AF_INET) {
-		HIP_IFEL(!addr_sin6, -1, "Failed to malloc for address\n");
-		memset(addr_sin6, 0, sizeof(struct sockaddr_in6));
+		memset(&addr_sin6, 0, sizeof(struct sockaddr_in6));
 		memset(&ipv4, 0, sizeof(struct in_addr));
 		memset(&ipv6, 0, sizeof(struct in6_addr));
 		p = (struct sockaddr_in *)addr;
 		memcpy(&ipv4, &p->sin_addr, sizeof(struct in_addr));
-		IPV4_TO_IPV6_MAP(&ipv4,&ipv6);			
-		memcpy(&addr_sin6->sin6_addr, &ipv6, sizeof(struct in6_addr));
-		addr_sin6->sin6_family = AF_INET6;
+		IPV4_TO_IPV6_MAP(&ipv4, &ipv6);			
+		memcpy(&addr_sin6.sin6_addr, &ipv6, sizeof(struct in6_addr));
+		addr_sin6.sin6_family = AF_INET6;
 	} else if (addr->sa_family == AF_INET6) {
-		memcpy(addr_sin6, addr, sizeof(addr_sin6));
+		memcpy(&addr_sin6, addr, sizeof(addr_sin6));
 	} else {
 		HIP_ERROR("Bad address family %d\n", addr->sa_family);
 		return;
@@ -2642,10 +2636,10 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 				ipv6_addr_copy(local_addr, addr_sin6);
 			}
 #endif
-                        HIP_DEBUG_HIT("ADDR_SIN6",&addr_sin6->sin6_addr);
+                        HIP_DEBUG_HIT("ADDR_SIN6",&addr_sin6.sin6_addr);
 			hip_send_update(rk.array[i], addr_list, addr_count,
 					ifindex, flags, is_add,
-					(struct sockaddr *) addr_sin6);
+					(struct sockaddr *) &addr_sin6);
 	       
 #if 0
 			if (!is_add && addr_count == 0) {
@@ -2658,7 +2652,7 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 	}
      
  out_err:
-        if (addr_sin6) free (addr_sin6);
+
 	return;
 }
 
