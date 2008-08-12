@@ -322,7 +322,7 @@ u16 ipv6_checksum(u8 protocol, struct in6_addr *src, struct in6_addr *dst, void 
 #ifdef CONFIG_HIP_HIPPROXY
 int request_hipproxy_status(void)
 {
-        struct hip_common *msg;
+        struct hip_common *msg = NULL;
         int err = 0;
         int n;
         socklen_t alen;
@@ -348,6 +348,8 @@ int request_hipproxy_status(void)
                 HIP_DEBUG("HIP_HIPPROXY_STATUS_REQUEST: Sendto firewall OK.\n");
         }  
 out_err:
+	if(msg)
+		free(msg);
         return err;
 }
 #endif /* CONFIG_HIP_HIPPROXY */
