@@ -9,11 +9,11 @@
  * @author  Anthony D. Joseph
  * @author  Bing Zhou
  * @author  Tobias Heer
- * @author  Laura Takkinen //blind code
+ * @author  Laura Takkinen (blind code)
  * @author  Rene Hummen
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  * @note    Doxygen comments for functions are now in the header file.
- *          Lauri 19.09.2007 16:43
+ *          Lauri 19.09.2007
  */
 #include "input.h"
 
@@ -1556,14 +1556,14 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	extern uint8_t hip_esp_prot_ext_transform;
 	int err = 0, retransmission = 0, replay = 0, state = 0, item_length = 0;
 	uint8_t transform = 0;
-	uint16_t crypto_len = 0, nonce = 0;
+	uint16_t crypto_len = 0;
 	uint32_t spi_in = 0, spi_out = 0;
 	in_port_t dest_port = 0; // For the port in RELAY_FROM
 	/* Pointers */
 	char *tmp_enc = NULL, *enc = NULL;
 	unsigned char *iv = NULL;
-	hip_tlv_common_t *param = NULL;
 	unsigned char *anchor = NULL;
+	struct hip_hip_transform *hip_transform = NULL;
 	struct hip_host_id *host_id_in_enc = NULL;
 	struct hip_r1_counter *r1cntr = NULL;
 	struct hip_esp_info *esp_info = NULL;
@@ -1583,6 +1583,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 #endif
 #ifdef CONFIG_HIP_BLIND
 	int use_blind = 0;
+	uint16_t nonce = 0;
 	in6_addr_t plain_peer_hit, plain_local_hit;
 
 	memset(&plain_peer_hit, 0, sizeof(plain_peer_hit));
@@ -1618,10 +1619,10 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	   However, our precreated R1 packets do not support system boot counter
 	   so we do not check it. */
 	
-	/* check solution for cookie */
+	/* Check solution for cookie */
 	solution = hip_get_param(i2_context.input, HIP_PARAM_SOLUTION);
 	if(solution == NULL) {
-		err = -EINVAL;
+		err = -ENODATA;
 		HIP_ERROR("SOLUTION parameter missing from I2 packet. "\
 			  "Dropping the I2 packet.\n");
 		goto out_err;
@@ -1640,13 +1641,11 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	if(entry != NULL) {
 		/* If the I2 packet is a retransmission, we need reuse the
 		   SPI/keymat that was setup already when the first I2 was
-		   received.
-		   
-		   If the initiator is in established state (it has possibly
-		   sent duplicate I2 packets), we must make sure that we are
-		   reusing the old SPI as the initiator will just drop the
-		   R2, thus discarding any new SPIs we create. Notice that
-		   this works also in the case when initiator is not in
+		   received. If the Initiator is in established state (it has
+		   possibly sent duplicate I2 packets), we must make sure that
+		   we are reusing the old SPI as the Initiator will just drop
+		   the R2, thus discarding any new SPIs we create. Notice that
+		   this works also in the case when Initiator is not in
 		   established state, as the initiator just picks up the SPI
 		   from the R2. */
 		if(entry->state == HIP_STATE_R2_SENT) {
@@ -1660,32 +1659,36 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	/* Check HIP and ESP transforms, and produce keying material. */
 	
 	/* Note: we could skip keying material generation in the case of a
-	   retransmission but then we'd had to fill i2_context.hmac etc. TH: I'm not
-	   sure if this could be replaced with a function pointer which is set
-	   from hadb. Usually you shouldn't have state here, right? */
+	   retransmission but then we'd had to fill i2_context.hmac etc.
+	   TH: I'm not sure if this could be replaced with a function pointer
+	   which is set from haDB. Usually you shouldn't have state here,
+	   right? */
 
 	HIP_IFEL(hip_produce_keying_material(i2_context.input, &i2_context,
 					     solution->I, solution->J, &dhpv),
-		 -1, "Unable to produce keying material. Dropping I2.\n");
-
+		 -EPROTO, "Unable to produce keying material. Dropping the I2 "\
+		 "packet.\n");
+	
 	/* Verify HMAC. */
 	if (hip_hidb_hit_is_our(&i2->hits)) {
 		/* loopback */
 		HIP_IFEL(hip_verify_packet_hmac(i2, &i2_context.hip_hmac_out),
-			 -ENOENT, "HMAC loopback validation on i2 failed\n");
+			 -EPROTO, "HMAC loopback validation on I2 failed. "\
+			 "Dropping the I2 packet.\n");
 	} else {
 		HIP_IFEL(hip_verify_packet_hmac(i2, &i2_context.hip_hmac_in),
-			 -ENOENT, "HMAC validation on i2 failed\n");
+			 -EPROTO, "HMAC validation on I2 failed. Dropping the "\
+			 "I2 packet.\n");
 	}
-
+	
 	/* Decrypt the HOST_ID and verify it against the sender HIT. */
-	HIP_IFEL(!(enc = hip_get_param(i2_context.input, HIP_PARAM_ENCRYPTED)),
-		 -ENOENT, "Could not find enc parameter\n");
-
-	HIP_IFEL(!(tmp_enc = HIP_MALLOC(hip_get_param_total_len(enc),
-					GFP_KERNEL)), -ENOMEM,
-		 "No memory for temporary host_id\n");
-
+	enc = hip_get_param(i2, HIP_PARAM_ENCRYPTED);
+	if(enc == NULL) {
+		err = -ENODATA;
+		HIP_ERROR("ENCRYPTED parameter missing from I2 packet. "\
+			  "Dropping the I2 packet.\n");
+		goto out_err;
+	}
 	/* Little workaround...
 	 * We have a function that calculates sha1 digest and then verifies the
 	 * signature. But since the sha1 digest in I2 must be calculated over
@@ -1694,58 +1697,114 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	 * forced to do some temporary copying. If ultimate speed is required,
 	 * then calculate the digest here as usual and feed it to signature
 	 * verifier. */
-	memcpy(tmp_enc, enc, hip_get_param_total_len(enc));
-
-	/* Decrypt ENCRYPTED field. */
-	_HIP_HEXDUMP("Recv. Key", &i2_context.hip_enc_in.key, 24);
-	HIP_IFEL(!(param = hip_get_param(i2_context.input, HIP_PARAM_HIP_TRANSFORM)),
-		 -ENOENT, "Did not find HIP transform\n");
-	HIP_IFEL((hip_tfm = hip_get_param_transform_suite_id(param, 0)) == 0,
-		 -EFAULT, "Bad HIP transform\n");
-
-	switch (hip_tfm) {
-	case HIP_HIP_AES_SHA1:
- 		host_id_in_enc = (struct hip_host_id *)
-		  (tmp_enc + sizeof(struct hip_encrypted_aes_sha1));
- 		iv = ((struct hip_encrypted_aes_sha1 *) tmp_enc)->iv;
- 		/* 4 = reserved, 16 = iv */
- 		crypto_len = hip_get_param_contents_len(enc) - 4 - 16;
-		HIP_DEBUG("aes crypto len: %d\n", crypto_len);
-		break;
-	case HIP_HIP_3DES_SHA1:
- 		host_id_in_enc = (struct hip_host_id *)
-		  (tmp_enc + sizeof(struct hip_encrypted_3des_sha1));
- 		iv = ((struct hip_encrypted_3des_sha1 *) tmp_enc)->iv;
- 		/* 4 = reserved, 8 = iv */
- 		crypto_len = hip_get_param_contents_len(enc) - 4 - 8;
-		break;
-	case HIP_HIP_NULL_SHA1:
-		host_id_in_enc = (struct hip_host_id *)
-			(tmp_enc + sizeof(struct hip_encrypted_null_sha1));
- 		iv = NULL;
- 		/* 4 = reserved */
- 		crypto_len = hip_get_param_contents_len(enc) - 4;
-		break;
-	default:
-		HIP_IFEL(1, -EINVAL, "Unknown HIP transform: %d\n", hip_tfm);
+	if((tmp_enc = (char *) malloc(hip_get_param_total_len(enc))) == NULL) {
+		err = -ENOMEM;
+		HIP_ERROR("Out of memory when allocating memory for temporary "\
+			  "ENCRYPTED parameter. Dropping the I2 packet.\n");
+		goto out_err;
 	}
-
-	HIP_DEBUG("Crypto encrypted\n");
-	/* Note: IV can be NULL */
-	_HIP_HEXDUMP("IV: ", iv, 16);
-
-	HIP_IFEL(hip_crypto_encrypted(host_id_in_enc, iv, hip_tfm,
-				      crypto_len, &i2_context.hip_enc_in.key,
+	memcpy(tmp_enc, enc, hip_get_param_total_len(enc));
+	
+	hip_transform = hip_get_param(i2, HIP_PARAM_HIP_TRANSFORM);
+	if(hip_transform == NULL) {
+		err = -ENODATA;
+		HIP_ERROR("HIP_TRANSFORM parameter missing from I2 packet. "\
+			  "Dropping the I2 packet.\n");
+		goto out_err;
+	} else if ((hip_tfm =
+		   hip_get_param_transform_suite_id(hip_transform, 0)) == 0) {
+		err = -EPROTO;
+		HIP_ERROR("Bad HIP transform. Dropping the I2 packet.\n");
+		goto out_err;
+		
+	} else {
+		/* Get pointers to:
+		   1) the encrypted HOST ID parameter inside the "Encrypted
+		      data" field of the ENCRYPTED parameter.
+		   2) Initialization vector from the ENCRYPTED parameter.
+		   
+		   Get the length of the "Encrypted data" field in the ENCRYPTED
+		   parameter. */
+		
+		switch (hip_tfm) {
+		case HIP_HIP_RESERVED:
+			HIP_ERROR("Found HIP suite ID 'RESERVED'. Dropping "\
+				  "the I2 packet.\n");
+			err = -EOPNOTSUPP;
+			goto out_err;
+		case HIP_HIP_AES_SHA1:
+			host_id_in_enc = (struct hip_host_id *)
+				(tmp_enc +
+				 sizeof(struct hip_encrypted_aes_sha1));
+			iv = ((struct hip_encrypted_aes_sha1 *) tmp_enc)->iv;
+			/* 4 = reserved, 16 = IV */
+			crypto_len = hip_get_param_contents_len(enc) - 4 - 16;
+			HIP_DEBUG("Found HIP suite ID "\
+				  "'AES-CBC with HMAC-SHA1'.\n");
+			break;
+		case HIP_HIP_3DES_SHA1:
+			host_id_in_enc = (struct hip_host_id *)
+				(tmp_enc +
+				 sizeof(struct hip_encrypted_3des_sha1));
+			iv = ((struct hip_encrypted_3des_sha1 *) tmp_enc)->iv;
+			/* 4 = reserved, 8 = IV */
+			crypto_len = hip_get_param_contents_len(enc) - 4 - 8;
+			HIP_DEBUG("Found HIP suite ID "\
+				  "'3DES-CBC with HMAC-SHA1'.\n");
+			break;
+		case HIP_HIP_3DES_MD5:
+			HIP_ERROR("Found HIP suite ID '3DES-CBC with "\
+				  "HMAC-MD5'. Support for this suite ID is "\
+				  "not implemented. Dropping the I2 packet.\n");
+			err = -ENOSYS;
+			goto out_err;
+		case HIP_HIP_BLOWFISH_SHA1:
+			HIP_ERROR("Found HIP suite ID 'BLOWFISH-CBC with "\
+				  "HMAC-SHA1'. Support for this suite ID is "\
+				  "not implemented. Dropping the I2 packet.\n");
+			err = -ENOSYS;
+			goto out_err;
+		case HIP_HIP_NULL_SHA1:
+			host_id_in_enc = (struct hip_host_id *)
+				(tmp_enc +
+				 sizeof(struct hip_encrypted_null_sha1));
+			iv = NULL;
+			/* 4 = reserved */
+			crypto_len = hip_get_param_contents_len(enc) - 4;
+			HIP_DEBUG("Found HIP suite ID "\
+				  "'NULL-ENCRYPT with HMAC-SHA1'.\n");
+			break;
+		case HIP_HIP_NULL_MD5:
+			HIP_ERROR("Found HIP suite ID 'NULL-ENCRYPT with "\
+				  "HMAC-MD5'. Support for this suite ID is "\
+				  "not implemented. Dropping the I2 packet.\n");
+			err = -ENOSYS;
+			goto out_err;
+		default:
+			HIP_ERROR("Found unknown HIP suite ID '%d'. Dropping "\
+				  "the I2 packet.\n", hip_tfm);
+			err = -EOPNOTSUPP;
+			goto out_err;
+		}
+	}
+	
+        /* This far we have succesfully produced the keying material (key),
+	   identified which HIP transform is use (hip_tfm), retrieved pointers
+	   both to the encrypted HOST_ID (host_id_in_enc) and initialization
+	   vector (iv) and we know the length of the encrypted HOST_ID
+	   parameter (crypto_len). We are ready to decrypt the actual host
+	   identity. If the decryption succeeds, we have the decrypted HOST_ID
+	   parameter in the 'host_id_in_enc' buffer. */
+	HIP_IFEL(hip_crypto_encrypted(host_id_in_enc, iv, hip_tfm, crypto_len,
+				      &i2_context.hip_enc_in.key,
 				      HIP_DIRECTION_DECRYPT), -EINVAL,
-		 "Decryption of Host ID failed\n");
+		 "Failed to decrypt the HOST_ID parameter. Dropping the I2 "\
+		 "packet.\n");
 
 	if (!hip_hidb_hit_is_our(&i2->hits))  {
 		HIP_IFEL(hip_get_param_type(host_id_in_enc) != HIP_PARAM_HOST_ID, -EINVAL,
 			 "The decrypted parameter is not a host id\n");
 	}
-
-	_HIP_HEXDUMP("Decrypted HOST_ID", host_id_in_enc,
-		     hip_get_param_total_len(host_id_in_enc));
 
 #ifdef CONFIG_HIP_BLIND
 	if (use_blind) {
@@ -1804,7 +1863,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 #endif
 	     HIP_DEBUG("Before inserting state entry in hadb\n");
 	     hip_hadb_insert_state(entry);
-		HIP_DEBUG("After inserting state entry in hadb\n");
+	     HIP_DEBUG("After inserting state entry in hadb\n");
 	     hip_hold_ha(entry);
 
 	     ipv6_addr_copy(&entry->local_address, i2_daddr);
@@ -2245,7 +2304,6 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
  	struct hip_esp_info *esp_info = NULL;
 	struct hip_spi_out_item spi_out_data;
 	int err = 0, tfm = 0, retransmission = 0, type_count = 0, idx = 0;
-	int *reg_types = NULL;
 	uint32_t spi_recvd = 0, spi_in = 0;
 	int i = 0;
 	void *ice_session = 0;
@@ -2517,14 +2575,6 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 //add by santtu
 	hip_handle_reg_from(entry, r2);
 //end add
-	/*
-	uint8_t services[HIP_TOTAL_EXISTING_SERVICES];
-
-        type_count = hip_get_incomplete_registrations(&reg_types, entry, 1, services);
-        if (type_count > 0) {
-	HIP_IFEL(hip_handle_registration_response(entry, r2), -1,
-	"Error handling reg_response\n");
-	}*/
 
 	/* These will change SAs' state from ACQUIRE to VALID, and wake up any
 	   transport sockets waiting for a SA. */
@@ -2554,9 +2604,6 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 
 	if (ctx) {
 		HIP_FREE(ctx);
-	}
-        if (reg_types) {
-                HIP_FREE(reg_types);
 	}
         return err;
 }

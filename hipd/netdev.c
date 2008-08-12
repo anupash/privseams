@@ -142,6 +142,23 @@ int filter_address(struct sockaddr *addr, int ifindex)
 	}
 }
 
+int exists_address_family_in_list(struct in6_addr *addr) {
+	struct netdev_address *n;
+	hip_list_t *tmp, *t;
+	int c;
+	int mapped = IN6_IS_ADDR_V4MAPPED(addr);
+
+	list_for_each_safe(tmp, t, addresses, c) {
+		int map;
+		n = list_entry(tmp);
+		
+		if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr)) == mapped)
+			return 1;
+	}
+	
+        return 0;
+}
+
 int exists_address_in_list(struct sockaddr *addr, int ifindex)
 {
 	struct netdev_address *n;
@@ -1202,7 +1219,6 @@ int hip_add_iface_local_route(const hip_hit_t *local_hit)
 	return err;
 }
 
-
 int hip_select_source_address(struct in6_addr *src, struct in6_addr *dst)
 {
 	int err = 0;
@@ -1215,8 +1231,11 @@ int hip_select_source_address(struct in6_addr *src, struct in6_addr *dst)
 //	rtnl_rtdsfield_init = 1;
 	
 //	rtnl_tab_initialize("/etc/iproute2/rt_dsfield", rtnl_rtdsfield_tab, 256);
-	HIP_DEBUG_IN6ADDR("Source", src);
-	HIP_DEBUG_IN6ADDR("Destination", dst);
+
+	_HIP_DEBUG_IN6ADDR("Source", src);
+	HIP_DEBUG_IN6ADDR("dst", dst);
+
+	HIP_IFEL(!exists_address_family_in_list(dst), -1, "No address of the same family\n");
 
 	HIP_IFEL(hip_iproute_get(&hip_nl_route, src, dst, NULL, NULL, family, idxmap), -1, "Finding ip route failed\n");
 

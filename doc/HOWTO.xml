@@ -135,6 +135,22 @@
     </para>
     <para>On 64-bit Fedora 8, ln -s /usr/lib64/libipq.a /usr/lib/libipq.a was necessary. This has not been fixed in the HIPL build properly yet.
     </para>
+    <para>
+    You should allow also HIP related traffic in your firewall. For example:
+    </para>
+    <itemizedlist>
+    <listitem><para>iptables -A INPUT -p 139 -j ACCEPT</para></listitem>
+    <listitem><para>iptables -A OUTPUT -p139 -j ACCEPT</para></listitem>
+    <listitem><para>iptables -A INPUT -p udp --sport 50500 -j ACCEPT</para></listitem>
+    <listitem><para>iptables -A OUTPUT -p udp --dport 50500 -j ACCEPT</para></listitem>
+    <listitem><para>iptables -A INPUT -p 50 -j ACCEPT</para></listitem>
+    <listitem><para>iptables -A OUTPUT -p 50 -j ACCEPT</para></listitem>
+    <listitem><para>ip6tables -A INPUT -s 2001:0010::/28 -d 2001:0010::/28 -j ACCEPT</para></listitem>
+    <listitem><para>ip6tables -A OUTPUT -s 2001:0010::/28 -d 2001:0010::/28 -j ACCEPT</para></listitem>
+    </itemizedlist>
+    <para>
+    The last two rules basically allow the whole orchid namespace. You can set up more specific rules for HITs or use the hipfw to filter traffic (as explained in a later section).
+    </para>
   </chapter>
   <chapter id="ch_building_doc">
     <title> Building the HIPL Documentation</title>
@@ -1106,6 +1122,7 @@ endif
 	<row><entry>Server</entry><entry>HIT</entry><entry>IPv4 address</entry><entry>IPv6 address</entry><entry>HI algo</entry></row>
       </thead>
       <tbody>
+	<row><entry>felwood.infrahip.net</entry><entry>2001:16:7d5a:88d7:51af:cdd1:6bf5:3d15</entry><entry>193.167.187.130</entry><entry>2001:708:140:220::3</entry><entry>DSA</entry></row>
 	<row><entry>crossroads.infrahip.net</entry><entry>2001:0019:b673:8406:e32d:6754:db0b:cde7</entry><entry>193.167.187.134</entry><entry>2001:708:140:220:213:21ff:feb1:2d05</entry><entry>RSA</entry></row>
 	<row><entry>crossroads.infrahip.net</entry><entry>2001:0019:810e:713d:7183:f05f:6063:b82b</entry><entry>193.167.187.134</entry><entry>2001:708:140:220:213:21ff:feb1:2d05</entry><entry>DSA</entry></row>
 	<row><entry>ashenvale.infrahip.net</entry><entry>2001:0012:55f8:25ab:a6de:af77:b617:34ec</entry><entry>193.167.187.133</entry><entry>2001:708:140:220:212:79ff:fed9:15e8</entry><entry>RSA</entry></row>
@@ -1113,6 +1130,10 @@ endif
       </tbody>
     </tgroup>
     </table>
+
+    <para>
+      The servers are running ssh and http. They are not running "conntest-server" software as described elsewhere in this document.
+    </para>
 
   </chapter>
 

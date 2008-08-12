@@ -7,6 +7,8 @@ cd pjproject && ./configure $@ || (echo "Failed to configure pjproject" && exit 
 make dep
 cd ..
 
+# Note: autogen options are also passed to HIPL configure.
+# See bug id 524)
 echo "Pjproject was configured successfully"
 echo "Now configuring hipl"
 autoreconf --install --force && \
