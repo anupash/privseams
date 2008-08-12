@@ -301,7 +301,7 @@ int hip_sa_entry_update(int direction, uint32_t spi, uint32_t mode,
 	HIP_IFEL(!(stored_entry = hip_sa_entry_find_outbound(inner_src_addr, inner_dst_addr)),
 			-1, "failed to retrieve sa entry\n");
 	
-	pthread_mutex_lock(stored_entry->rw_lock);
+	pthread_mutex_lock(&stored_entry->rw_lock);
 	/* delete all links
 	 * 
 	 * TODO more efficient to delete entries in inbound db for all (addr, oldspi)
@@ -315,7 +315,7 @@ int hip_sa_entry_update(int direction, uint32_t spi, uint32_t mode,
 			-1, "failed to update the entry members\n");
 	
 	HIP_IFEL(hip_link_entries_add(stored_entry), -1, "failed to add links\n");
-	pthread_mutex_unlock(stored_entry->rw_lock);
+	pthread_mutex_unlock(&stored_entry->rw_lock);
 	
 	HIP_DEBUG("sa entry updated\n");
 	
@@ -485,7 +485,7 @@ int hip_sa_entry_delete(struct in6_addr *src_addr, struct in6_addr *dst_addr)
 	
 	/* NOTE: no need to unlock mutex as the entry is already freed and can't be
 	 * accessed any more */
-	pthread_mutex_lock(stored_entry->rw_lock);
+	pthread_mutex_lock(&stored_entry->rw_lock);
 	
 	HIP_IFEL(hip_link_entries_delete_all(stored_entry), -1, "failed to delete links\n");
 	

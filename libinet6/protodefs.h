@@ -83,7 +83,8 @@
 #define HIP_PARAM_ESP_PROT_ANCHOR	   4121
 
 /* Range 32768 - 49141 can be used for HIPL private parameters i.e. to
-   parameters passed from hipconf to hipdaemon. */
+   parameters passed from hipconf to hipdaemon.
+   @todo: move these to icomm.h */
 #define HIP_PARAM_HIT                   32768
 #define HIP_PARAM_IPV6_ADDR             32769
 #define HIP_PARAM_DSA_SIGN_DATA         32770 /**< @todo change to digest */
@@ -119,6 +120,13 @@
 #define HIP_PARAM_CERT_X509_RESP        32804
 #define HIP_PARAM_HCHAIN_ANCHOR		32805
 #define HIP_PARAM_LSI		        32806
+#define HIP_PARAM_HCHAIN_ANCHOR		32807
+#define HIP_PARAM_LSI		        32808
+#define HIP_PARAM_HIT_LOCAL		32809
+#define HIP_PARAM_HIT_PEER		32810
+#define HIP_PARAM_IPV6_ADDR_LOCAL	32811
+#define HIP_PARAM_IPV6_ADDR_PEER        32812
+
 /* End of HIPL private parameters. */
 
 #define HIP_PARAM_HMAC                 61505
@@ -295,6 +303,8 @@
  */
 #define HIP_PROXY_PASSTHROUGH		0
 #define HIP_PROXY_TRANSLATE 		1
+#define HIP_PROXY_I1_SENT               2
+
 /* @} */
 
 /* Registration failure types as specified in draft-ietf-hip-registration-02.

@@ -23,7 +23,7 @@ typedef struct pseudo_v6 {
 
 void* run_control_thread(void* data);
 int control_thread_init(void);
-int sendto_hipd(void *msg, size_t len);
+int hip_fw_sendto_hipd(void *msg);
 int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr);
 int firewall_init_raw_sock_v6();
 int request_hipproxy_status(void);

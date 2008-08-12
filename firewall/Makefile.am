@@ -15,7 +15,7 @@ include_HEADERS += esp_decrypt.h firewall_defines.h proxydb.h conndb.h esp_decry
 include_HEADERS += user_ipsec.h user_ipsec_esp.h user_ipsec_sadb.h esp_prot.h
 include_HEADERS += proxy.h opptcp.h firewalldb.h lsi.h
 
-INCLUDES = $(hipl_common_include_paths)
+INCLUDES = $(hipl_common_include_paths)  -I$(HIPL_PJPROJECT_NATH)/include -I$(HIPL_PJPROJECT_LIB)/include -I$(HIPL_PJPROJECT_LIB_UTIL)/include -I$(HIPL_PJPROJECT_MEDIA)/include
 
 if HIP_FIREWALL
 
@@ -25,7 +25,7 @@ hipfw_SOURCES = firewall.c conntrack.c rule_management.c helpers.c firewall_cont
 hipfw_SOURCES += user_ipsec.c user_ipsec_esp.c user_ipsec_sadb.c esp_prot.c
 hipfw_SOURCES += proxy.c opptcp.c firewalldb.c lsi.c
 
-hipfw_LDADD = /usr/lib/libipq.a ../libinet6/.libs/libinet6.a
+hipfw_LDADD = -lipq ../libinet6/.libs/libinet6.a
 if HIP_CORPORATE
   hipfw_LDADD += -lhiptool
 else
