@@ -2168,6 +2168,8 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 					 entry, saddr, daddr, &spi_in->spi), -1, 
 				 "Setting New Preferred Address Failed\n");
 			preferred_address_found = 1;
+			HIP_DEBUG_IN6ADDR("New local address\n", saddr);
+			ipv6_addr_copy(&entry->local_address, saddr);
 			break;
 		}
 	}
@@ -2527,6 +2529,11 @@ skip_src_addr_change:
      HIP_DEBUG("Sending initial UPDATE packet.\n");
      /* guarantees retransmissions */
      entry->update_state = HIP_UPDATE_STATE_REKEYING;
+
+     HIP_DEBUG_IN6ADDR("ha local addr", &entry->local_address);
+     HIP_DEBUG_IN6ADDR("ha peer addr", &entry->preferred_address);
+     HIP_DEBUG_IN6ADDR("saddr", &saddr);
+     HIP_DEBUG_IN6ADDR("daddr", &daddr);
 
      if (!is_add && (was_bex_addr == 0)) {
 	  err = entry->hadb_xmit_func->
