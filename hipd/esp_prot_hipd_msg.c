@@ -589,12 +589,11 @@ int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry)
 	// only do further processing when extension is in use
 	if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED)
 	{
-		/* check if we should send an anchor
+		/* we only want to send anchors in 1. and 2. UPDATE message
 		 *
-		 * @note when there is a SEQ param present in the packet to be sent,
-		 *       that means either we are sending the first or second
-		 *       update packet of rekeying and or location update
-		 *       -> add anchors */
+		 * @note we can distinguish the 1. and 2. UPDATE message by
+		 * 		 looking at the presence of SEQ param in the packet
+		 * 		 to be sent */
 		seq = (struct hip_seq *) hip_get_param(update, HIP_PARAM_SEQ);
 
 		if (seq)
@@ -604,7 +603,11 @@ int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry)
 
 			/* @note update-anchor will be set, if there was a anchor UPDATE before
 			 *       or if this is an anchor UPDATE; otherwise update-anchor will
-			 *       be NULL */
+			 *       be NULL
+			 *
+			 * XX TODO we need to choose the correct SA with the anchor we want to
+			 *         update, when supporting multihoming and when this is a
+			 *         pure anchor-update */
 			HIP_IFEL(hip_build_param_esp_prot_anchor(update,
 					entry->esp_prot_transform, entry->esp_local_anchor,
 					entry->esp_local_update_anchor, hash_length), -1,
@@ -616,18 +619,118 @@ int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry)
 	return err;
 }
 
-int esp_prot_update_handle_anchor(hip_common_t *update, hip_ha_t *entry,
-		in6_addr_t *src_ip, in6_addr_t *dst_ip, int *send_ack)
+/* only processes pure ANCHOR-UPDATEs */
+int esp_prot_handle_update(hip_common_t *recv_update, hip_ha_t *entry,
+		in6_addr_t *src_ip, in6_addr_t *dst_ip)
 {
-	struct hip_tlv_common *param = NULL;
+	struct hip_seq * seq = NULL;
+	struct hip_ack * ack = NULL;
+	struct hip_esp_info * esp_info = NULL;
+	uint32_t spi = 0;
+	int err = 0;
+
+	HIP_ASSERT(entry != NULL);
+
+	seq = (struct hip_seq *) hip_get_param(recv_update, HIP_PARAM_SEQ);
+	ack = (struct hip_ack *) hip_get_param(recv_update, HIP_PARAM_ACK);
+	esp_info = (struct hip_esp_info *) hip_get_param(recv_update, HIP_PARAM_ESP_INFO);
+
+	if (seq && !ack && !esp_info)
+	{
+		/* this is the first ANCHOR-UPDATE msg
+		 *
+		 * @note contains anchors -> update inbound SA
+		 * @note response has to contain corresponding ACK and ESP_INFO */
+		HIP_IFEL((spi = esp_prot_update_handle_anchor(recv_update, entry,
+				src_ip, dst_ip)) < 0, -1,
+				"failed to handle anchor in UPDATE msg\n");
+		HIP_DEBUG("sucessfully processed anchors in ANCHOR-UPDATE\n");
+
+		// send ANCHOR_UPDATE response
+		HIP_IFEL(esp_prot_send_update_response(recv_update, entry, dst_ip,
+				src_ip, spi), -1, "failed to send UPDATE replay");
+
+	} else if (!seq && ack && esp_info)
+	{
+		/* this is the second ANCHOR-UPDATE msg
+		 *
+		 * @note contains ACK for previously sent anchors -> update outbound SA */
+		HIP_DEBUG("received ACK for previously sent ANCHOR-UPDATE\n");
+
+		// the update was successful, stop retransmission
+		entry->update_state = 0;
+
+		// notify sadb about next anchor
+		HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(dst_ip, src_ip,
+				&entry->hit_our, &entry->hit_peer, entry->default_spi_out,
+				entry->esp_transform, &entry->esp_out, &entry->auth_out, 0,
+				HIP_SPI_DIRECTION_OUT, 1, entry), -1,
+				"failed to notify sadb about next anchor\n");
+
+	} else
+	{
+		HIP_DEBUG("NOT a pure ANCHOR-UPDATE, unhandled\n");
+	}
+
+  out_err:
+	return err;
+}
+
+int esp_prot_send_update_response(hip_common_t *recv_update, hip_ha_t *entry,
+		in6_addr_t *src_ip, in6_addr_t *dst_ip, uint32_t spi)
+{
+	hip_common_t *resp_update = NULL;
+	struct hip_seq * seq = NULL;
+	uint16_t mask = 0;
+	int err = 0;
+
+	HIP_IFEL(!(seq = hip_get_param(recv_update, HIP_PARAM_SEQ)), -1,
+			"SEQ not found\n");
+
+	HIP_IFEL(!(resp_update = hip_msg_alloc()), -ENOMEM, "out of memory\n");
+
+	entry->hadb_misc_func->hip_build_network_hdr(resp_update, HIP_UPDATE, mask,
+			&recv_update->hitr, &recv_update->hits);
+
+	/* Add ACK */
+	HIP_IFEL(hip_build_param_ack(resp_update, ntohl(seq->update_id)), -1,
+			"Building of ACK failed\n");
+
+	/* Add ESP_INFO */
+	HIP_IFEL(hip_build_param_esp_info(resp_update, entry->current_keymat_index,
+			spi, spi), -1, "Building of ESP_INFO param failed\n");
+
+	/* Add HMAC */
+	HIP_IFEL(hip_build_param_hmac_contents(resp_update, &entry->hip_hmac_out), -1,
+			"Building of HMAC failed\n");
+
+	/* Add SIGNATURE */
+	HIP_IFEL(entry->sign(entry->our_priv, resp_update), -EINVAL,
+			"Could not sign UPDATE. Failing\n");
+
+	HIP_IFEL(entry->hadb_xmit_func->hip_send_pkt(src_ip, dst_ip,
+			(entry->nat_mode ? HIP_NAT_UDP_PORT : 0), entry->peer_udp_port,
+			resp_update, entry, 0), -1, "failed to send ANCHOR-UPDATE\n");
+
+  out_err:
+	return err;
+}
+
+uint32_t esp_prot_update_handle_anchor(hip_common_t *recv_update, hip_ha_t *entry,
+		in6_addr_t *src_ip, in6_addr_t *dst_ip)
+{
 	struct esp_prot_anchor *prot_anchor = NULL;
 	int hash_length = 0;
 	uint32_t spi_in = 0;
 	int err = 0;
 
-	if (param = hip_get_param(update, HIP_PARAM_ESP_PROT_ANCHOR))
+	prot_anchor = (struct esp_prot_anchor *) hip_get_param(recv_update,
+			HIP_PARAM_ESP_PROT_ANCHOR);
+
+	if (prot_anchor)
 	{
-		prot_anchor = (struct esp_prot_anchor *)param;
+		/* XX TODO find matching SA entry in host association for active_anchor
+		 *         and _inbound_ direction */
 
 		// check that we are receiving an anchor matching the negotiated transform
 		HIP_IFEL(entry->esp_prot_transform != prot_anchor->transform, -1,
@@ -643,20 +746,18 @@ int esp_prot_update_handle_anchor(hip_common_t *update, hip_ha_t *entry,
 		HIP_DEBUG("esp prot active peer anchors match\n");
 
 		// set the update anchor as the peer's update anchor
-		HIP_DEBUG("setting peer_update_anchor...\n");
 		memset(entry->esp_peer_update_anchor, 0, MAX_HASH_LENGTH);
 		memcpy(entry->esp_peer_update_anchor, &prot_anchor->anchors[hash_length],
 				hash_length);
-
-		// we have to ACK the SEQ
-		*send_ack = 1;
+		HIP_DEBUG("peer_update_anchor set\n");
 
 		/* @note like this we do NOT support multihoming
 		 *
-		 * XX TODO change when merging with UPDATE re-implementation */
+		 * XX TODO instead use the SA of the SPI looked up in TODO above
+		 * when merging with UPDATE re-implementation */
 		spi_in = hip_hadb_get_latest_inbound_spi(entry);
 
-		// notify sadb about next anchor
+		/* notify sadb about next anchor */
 		HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(src_ip, dst_ip,
 				&entry->hit_peer, &entry->hit_our, spi_in, entry->esp_transform,
 				&entry->esp_in, &entry->auth_in, 0, HIP_SPI_DIRECTION_IN, 1, entry),
@@ -664,36 +765,9 @@ int esp_prot_update_handle_anchor(hip_common_t *update, hip_ha_t *entry,
 	}
 
   out_err:
-	return err;
-}
+	if (!err)
+		err = spi_in;
 
-int esp_prot_update_handle_ack(hip_ha_t *entry, in6_addr_t *src_ip,
-		in6_addr_t *dst_ip)
-{
-	int err = 0;
-
-	HIP_ASSERT(entry != NULL);
-
-	// make sure we only alter the behavior when esp prot is active
-	if (*(entry->esp_local_update_anchor) != 0)
-	{
-		/* @note this will stop the UPDATE even if other UPDATE-types need
-		 *       more rounds
-		 * XX TODO change when merging with reimplemented UPDATE */
-		entry->update_state = 0;
-
-		/* XX TODO make sure to automatically check ECHO_RESPONSE params in correct
-		 *         order when merging with UPDATE re-implementation */
-
-		// notify sadb about next anchor
-		HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(dst_ip, src_ip,
-				&entry->hit_our, &entry->hit_peer, entry->default_spi_out,
-				entry->esp_transform, &entry->esp_out, &entry->auth_out, 0,
-				HIP_SPI_DIRECTION_OUT, 1, entry), -1,
-				"failed to notify sadb about next anchor\n");
-	}
-
-  out_err:
 	return err;
 }
 

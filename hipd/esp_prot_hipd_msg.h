@@ -54,10 +54,12 @@ int esp_prot_r2_handle_anchor(hip_ha_t *entry, struct hip_context *ctx);
 /******************** UPDATE parameters *******************/
 
 int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry);
-int esp_prot_update_handle_anchor(hip_common_t *update, hip_ha_t *entry,
-		in6_addr_t *src_ip, in6_addr_t *dst_ip, int *send_ack);
-int esp_prot_update_handle_ack(hip_ha_t *entry, in6_addr_t *src_ip,
-		in6_addr_t *dst_ip);
+int esp_prot_handle_update(hip_common_t *recv_update, hip_ha_t *entry,
+		in6_addr_t *src_ip, in6_addr_t *dst_ip);
+int esp_prot_send_update_response(hip_common_t *recv_update, hip_ha_t *entry,
+		in6_addr_t *src_ip, in6_addr_t *dst_ip, uint32_t spi);
+uint32_t esp_prot_update_handle_anchor(hip_common_t *recv_update, hip_ha_t *entry,
+		in6_addr_t *src_ip, in6_addr_t *dst_ip);
 
 /******************** helper functions ********************/
 
