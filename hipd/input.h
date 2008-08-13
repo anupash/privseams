@@ -16,6 +16,9 @@
 #ifdef CONFIG_HIP_RVS
 #  include "hiprelay.h"
 #endif
+#ifdef CONFIG_HIP_BLIND
+#  include "hadb.h"
+#endif
 
 #include "oppdb.h"
 #include "user.h"
