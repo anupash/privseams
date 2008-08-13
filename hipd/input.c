@@ -1866,8 +1866,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 			HIP_DEBUG("BLIND is not in use.\n");
 		}
 #else
-		HIP_DEBUG("PING.\n");
-		
 		/* Next, we initialize the new HIP association. Peer HIT is the
 		   source HIT of the received I2 packet. We can have many Host
 		   Identities and using any of those Host Identities we can
@@ -1882,7 +1880,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		ipv6_addr_copy(&entry->hit_peer, &i2->hits);
 		HIP_DEBUG("Initializing the HIP association.\n");
 		hip_init_us(entry, &i2->hitr);
-		HIP_DEBUG("PONG.\n");
 #endif
 		HIP_DEBUG("Inserting the new HIP association in the HIP "\
 			  "association database.\n");
@@ -1915,8 +1912,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
 	hip_hadb_insert_state(entry);
 
-	_HIP_DEBUG("HA entry created.");
-	
 	/* If there was already state, these may be uninitialized */
 	entry->hip_transform = hip_tfm;
 	if (!entry->our_pub) {
