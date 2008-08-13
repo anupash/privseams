@@ -339,7 +339,14 @@ void delete_all_addresses(void)
 		if (address_count != 0) HIP_DEBUG("BUG: address_count != 0\n", address_count);
 	}
 }
-
+/**
+ * Gets the interface index of a socket address.
+ *
+ * @param  addr a pointer to a socket address whose interface index is to be
+ *              searched.
+ * @return      interface index if the network address is bound to one, zero if
+ *              no interface index was found.
+ */
 int hip_netdev_find_if(struct sockaddr *addr)
 {
 	struct netdev_address *n = NULL;
@@ -348,51 +355,63 @@ int hip_netdev_find_if(struct sockaddr *addr)
 
 #ifdef CONFIG_HIP_DEBUG /* Debug block. */
 	{
-		char ipv6_str[INET6_ADDRSTRLEN], *fam_str;
-		inet_ntop(AF_INET6, &(((struct sockaddr_in6 *)addr)->sin6_addr),
-			  ipv6_str, INET6_ADDRSTRLEN);
+		char ipv6_str[INET6_ADDRSTRLEN], *fam_str = NULL;
+		
 		if(addr->sa_family == AF_INET6) {
 			fam_str = "AF_INET6";
+			inet_ntop(AF_INET6,
+				  &(((struct sockaddr_in6 *)addr)->sin6_addr),
+				  ipv6_str, INET6_ADDRSTRLEN);
 		} else if(addr->sa_family == AF_INET) {
 			fam_str = "AF_INET";
+			inet_ntop(AF_INET,
+				  &(((struct sockaddr_in *)addr)->sin_addr),
+				  ipv6_str, INET6_ADDRSTRLEN);
 		} else {
 			fam_str = "not AF_INET or AF_INET6";
+			memset(ipv6_str, 0, INET6_ADDRSTRLEN);
 		}
-
+		
 		HIP_DEBUG("Trying to find interface index for a network "\
 			  "device with IP address %s of address family %s.\n",
 			  ipv6_str, fam_str);
 	}
 #endif
-
-	HIP_DEBUG_IN6ADDR("Trying to find interface index for a network "\
-			  "device with IP address",
-			  &(((struct sockaddr_in6 *)addr)->sin6_addr));
-	HIP_DEBUG("Address family: (%d) %s.\n", addr->sa_family, addr->sa_family == AF_INET ? "AF_INET" : "AF_INET6");
-
+	/* Loop through all elements in list "addresses" and break if the loop
+	   address matches the search address. The "addresses" list stores
+	   socket address storages. */
 	list_for_each_safe(item, tmp, addresses, i)
-	{
-		n = list_entry(item);
-		HIP_DEBUG("n family %d, addr family %d\n", n->addr.ss_family ,addr->sa_family);
-		HIP_DEBUG_IN6ADDR("n addr ", &(((struct sockaddr_in6 *) &(n->addr))->sin6_addr));
-		HIP_DEBUG("index %d\n", n->if_index);
-		if ((n->addr.ss_family == addr->sa_family) &&
-		    ((memcmp(hip_cast_sa_addr(&n->addr), hip_cast_sa_addr(addr),
-			     hip_sa_addr_len(addr))==0)) ||
-			  IPV6_EQ_IPV4( &(((struct sockaddr_in6 *) &(n->addr))->sin6_addr), &((struct sockaddr_in *) addr)->sin_addr))
 		{
-			HIP_DEBUG("index %d\n", n->if_index);
-			return n->if_index;
+			n = list_entry(item);
+			
+			_HIP_DEBUG("Search item address family %s, interface "\
+				  "index %d.\n", (n->addr.ss_family == AF_INET)
+				  ? "AF_INET" : "AF_INET6", n->if_index);
+			_HIP_DEBUG_IN6ADDR("Search item IP address",
+					  &(((struct sockaddr_in6 *)
+					     &(n->addr))->sin6_addr));
+			
+			if ((n->addr.ss_family == addr->sa_family) &&
+			    ((memcmp(hip_cast_sa_addr(&n->addr),
+				     hip_cast_sa_addr(addr),
+				     hip_sa_addr_len(addr))==0)) ||
+			    IPV6_EQ_IPV4(&(((struct sockaddr_in6 *)
+					    &(n->addr))->sin6_addr),
+					 &((struct sockaddr_in *)
+					   addr)->sin_addr))
+			{
+				HIP_DEBUG("Matching network device index is "\
+					  "%d.\n", n->if_index);
+				return n->if_index;
+			}
 		}
 
-	}
-
-	/* No matching address found */
+	HIP_DEBUG("No matching network device index found.\n");
 	return 0;
 }
 
 /**
- * Gets a interface index of an network address.
+ * Gets a interface index of a network address.
  * 
  * Base exchange IPv6 addresses need to be put into ifindex2spi map, so we need
  * a function that gets the ifindex of the network device which has the address
