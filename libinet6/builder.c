@@ -566,6 +566,7 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
                         HIP_PARAM_LOCATOR,
 			//add by santtu
 			HIP_PARAM_NAT_TRANSFORM,
+			HIP_PARAM_STUN,
 			//end add
                         HIP_PARAM_NOTIFICATION,
                         HIP_PARAM_PUZZLE,
@@ -1154,8 +1155,9 @@ char* hip_param_type_name(const hip_tlv_type_t param_type){
 	case HIP_PARAM_ESP_PROT_ANCHOR: return "HIP_PARAM_ESP_PROT_ANCHOR";
 	//add by santtu
 	case HIP_PARAM_NAT_TRANSFORM: return "HIP_PARAM_NAT_TRANSFORM";	
-	//end add      
-	case HIP_PARAM_LSI: return "HIP_PARAM_LSI";
+	case HIP_PARAM_STUN: return "HIP_PARAM_STUN";	
+	//end add
+	case HIP_PARAM_LSI: return "HIP_PARAM_LSI";	
 	}
 	return "UNDEFINED";
 }
@@ -1839,12 +1841,14 @@ int hip_verify_network_header(struct hip_common *hip_common,
 		 hip_common->payload_proto);
 	HIP_IFEL(hip_common->ver_res != ((HIP_VER_RES << 4) | 1), -EPROTOTYPE,
 		 "Invalid version in received packet. Dropping\n");
+
 	HIP_IFEL(!ipv6_addr_is_hit(&hip_common->hits), -EAFNOSUPPORT,
 		 "Received a non-HIT in HIT-source. Dropping\n");
 	HIP_IFEL(!ipv6_addr_is_hit(&hip_common->hitr) &&
 		 !ipv6_addr_any(&hip_common->hitr),
 		 -EAFNOSUPPORT,
 		 "Received a non-HIT or non NULL in HIT-receiver. Dropping\n");
+	
 	HIP_IFEL(ipv6_addr_any(&hip_common->hits), -EAFNOSUPPORT,
 		 "Received a NULL in HIT-sender. Dropping\n");
 
@@ -3686,7 +3690,7 @@ int hip_build_param_full_relay_hmac_contents(struct hip_common *msg,
  * @see            <a href="http://tools.ietf.org/wg/hip/draft-ietf-hip-rvs/draft-ietf-hip-rvs-05.txt">
  *                 draft-ietf-hip-rvs-05</a> section 4.2.2.
  */
-int hip_build_param_nat_tranform(struct hip_common *msg, hip_transform_suite_t nat_control)
+int hip_build_param_nat_transform(struct hip_common *msg, hip_transform_suite_t nat_control)
 {
 	struct hip_nat_transform nat_transform;
 	int err = 0;

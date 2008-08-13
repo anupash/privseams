@@ -261,7 +261,7 @@ int hip_do_i3_stuff_for_i2(struct hip_locator *locator, hip_portpair_t *i2_info,
 				if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr))) {
 					continue;
 				}
-				if (!IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
+				if (!hip_sockaddr_is_v6_mapped(&n->addr)) {
 					memcpy(i2_daddr, hip_cast_sa_addr(&n->addr),
 					       hip_sa_addr_len(&n->addr));
 					ii = -1;
@@ -276,7 +276,7 @@ int hip_do_i3_stuff_for_i2(struct hip_locator *locator, hip_portpair_t *i2_info,
 					if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr))) {
 						continue;
 					}
-					if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
+					if (hip_sockaddr_is_v6_mapped(&n->addr)) {
 						memcpy(i2_daddr, hip_cast_sa_addr(&n->addr),
 						       hip_sa_addr_len(&n->addr));
 						ii = -1;
