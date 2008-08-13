@@ -33,6 +33,8 @@
 #include <sys/time.h>
 #include <assert.h>
 
+#include "debug.h"
+
 /* Return nonzero if DIR is an existent directory.  */
 static int
 direxists (const char *dir)
@@ -197,7 +199,7 @@ __gen_tempname (char *tmpl, int kind)
 	  continue;
 
 	default:
-	  assert (! "invalid KIND in __gen_tempname");
+	  HIP_ASSERT (! "invalid KIND in __gen_tempname");
 	}
 
       if (fd >= 0)

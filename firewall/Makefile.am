@@ -15,7 +15,7 @@ include_HEADERS += esp_decrypt.h firewall_defines.h proxydb.h conndb.h esp_decry
 include_HEADERS += user_ipsec.h user_ipsec_esp.h user_ipsec_sadb.h esp_prot.h
 include_HEADERS += proxy.h opptcp.h firewalldb.h lsi.h fw_stun.h
 
-INCLUDES = $(hipl_common_include_paths)
+INCLUDES = $(hipl_common_include_paths)  -I$(HIPL_PJPROJECT_NATH)/include -I$(HIPL_PJPROJECT_LIB)/include -I$(HIPL_PJPROJECT_LIB_UTIL)/include -I$(HIPL_PJPROJECT_MEDIA)/include
 
 if HIP_FIREWALL
 
@@ -25,15 +25,15 @@ hipfw_SOURCES = firewall.c conntrack.c rule_management.c helpers.c firewall_cont
 hipfw_SOURCES += user_ipsec.c user_ipsec_esp.c user_ipsec_sadb.c esp_prot.c
 hipfw_SOURCES += proxy.c opptcp.c firewalldb.c lsi.c fw_stun.c
 
-hipfw_LDADD = /usr/lib/libipq.a ../libinet6/.libs/libinet6.a
+hipfw_LDADD = -lipq ../libinet6/.libs/libinet6.a
 hipfw_LDADD += -lpthread -luuid
-hipfw_LDADD += ../pjproject/pjnath/lib/libpjnath-${host}.a
-hipfw_LDADD += ../pjproject/pjlib/lib/libpj-${host}.a
-hipfw_LDADD += ../pjproject/pjlib-util/lib/libpjlib-util-${host}.a
+hipfw_LDADD += ../pjproject/pjnath/lib/libpjnath-hipl.a
+hipfw_LDADD += ../pjproject/pjlib/lib/libpj-hipl.a
+hipfw_LDADD += ../pjproject/pjlib-util/lib/libpjlib-util-hipl.a
 
-../pjproject/pjlib/lib/libpj-${host}.a:
-../pjproject/pjlib-util/lib/libpjlib-util-${host}.a:
-../pjproject/pjnath/lib/libpjnath-${host}.a:
+../pjproject/pjlib/lib/libpj-hipl.a:
+../pjproject/pjlib-util/lib/libpjlib-util-hipl.a:
+../pjproject/pjnath/lib/libpjnath-hipl.a:
 
 if HIP_CORPORATE
   hipfw_LDADD += -lhiptool

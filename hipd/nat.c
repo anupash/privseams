@@ -326,23 +326,22 @@ out_err:
 
 int hip_nat_handle_transform_in_server(struct hip_common *msg , hip_ha_t *entry){
 	int err = 0;
-	struct hip_nat_transform *nat_transform  = NULL;
+	struct hip_nat_transform *nat_transform = NULL;
 	
+	nat_transform = hip_get_param(msg, HIP_PARAM_NAT_TRANSFORM);
 	
-    nat_transform = hip_get_param(msg, HIP_PARAM_NAT_TRANSFORM);
-    if(entry){
-	    if(nat_transform)
-		    // check if the requested tranform is also supported in the server.
-		    entry->nat_control = (ntohs(nat_transform->suite_id[0])) & hip_nat_get_control(entry);
-	    else
-		    entry->nat_control = 0;
-    }
-    else{
-    	HIP_DEBUG("handle nat transform failed: entry %d,nat transform %d\n", entry, nat_transform);
-    }
+	if(nat_transform != NULL && entry != NULL){
+		// check if the requested tranform is also supported in the server.
+		entry->nat_control = (ntohs(nat_transform->suite_id[0])) &
+			hip_nat_get_control();
+	} else {
+		HIP_DEBUG("handle nat transform failed: entry %d, "\
+			  "nat transform %d\n", entry, nat_transform);
+	}
+	
 out_err:
+
 	return err;
-	  
 }
 
 uint16_t hip_nat_get_control(hip_ha_t *entry){

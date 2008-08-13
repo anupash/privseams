@@ -17,6 +17,7 @@
 #include "hashtable.h"
 #include "builder.h"
 #include "util.h"
+#include "utils.h"
 #include "oppipdb.h"
 
 #define HIP_LOCK_OPP_INIT(entry)
@@ -25,9 +26,8 @@
 #define HIP_UNLOCK_OPP(entry)
 #define HIP_OPPDB_SIZE 533
 
-typedef struct hip_opp_hit_pair hip_opp_hit_pair_t;
-
 typedef struct hip_opp_blocking_request_entry hip_opp_block_t;
+typedef struct hip_opp_info hip_opp_info_t;
 
 void hip_init_opp_db();
 //void hip_uninit_opp_db();

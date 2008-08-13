@@ -113,13 +113,13 @@ void hip_oppdb_uninit()
 
 int hip_oppdb_unblock_group(hip_opp_block_t *entry, void *ptr)
 {
-	hip_opp_hit_pair_t *hit_pair = (hip_opp_hit_pair_t *) ptr;
+	hip_opp_info_t *opp_info = (hip_opp_info_t *) ptr;
 	int err = 0;
 
-	if (ipv6_addr_cmp(&entry->peer_phit, &hit_pair->pseudo_hit) != 0)
+	if (ipv6_addr_cmp(&entry->peer_phit, &opp_info->pseudo_peer_hit) != 0)
 		goto out_err;
 
-	HIP_IFEL(hip_opp_unblock_app(&entry->caller, &hit_pair->real_hit, 0), -1,
+	HIP_IFEL(hip_opp_unblock_app(&entry->caller, opp_info, 0), -1,
 		 "unblock failed\n");
 
 	hip_oppdb_del_entry_by_entry(entry);
@@ -218,7 +218,7 @@ void hip_oppdb_dump()
 	HIP_DEBUG("end oppdb dump\n");
 }
 
-int hip_opp_unblock_app(const struct sockaddr_in6 *app_id, hip_hit_t *hit,
+int hip_opp_unblock_app(const struct sockaddr_in6 *app_id, hip_opp_info_t *opp_info,
 			int reject) {
 	struct hip_common *message = NULL;
 	int err = 0, n;
@@ -226,12 +226,35 @@ int hip_opp_unblock_app(const struct sockaddr_in6 *app_id, hip_hit_t *hit,
 	HIP_IFE(!(message = hip_msg_alloc()), -1);
 	HIP_IFEL(hip_build_user_hdr(message, SO_HIP_SET_PEER_HIT, 0), -1,
 		 "build user header failed\n");
-	if (hit) {
-		HIP_IFEL(hip_build_param_contents(message, hit,
-		                                  HIP_PARAM_HIT,
-		                                  sizeof(struct in6_addr)), -1,
-		         "build param HIP_PARAM_HIT  failed\n");
-	}
+
+	if (!opp_info)
+		goto skip_hit_addr;
+
+	if (!ipv6_addr_any(&opp_info->real_peer_hit))
+		HIP_IFEL(hip_build_param_contents(message, &opp_info->real_peer_hit,
+						  HIP_PARAM_HIT_PEER,
+						  sizeof(hip_hit_t)), -1,
+			 "building peer real hit failed\n");
+
+	if (!ipv6_addr_any(&opp_info->local_hit))
+		HIP_IFEL(hip_build_param_contents(message, &opp_info->local_hit,
+						  HIP_PARAM_HIT_LOCAL,
+						  sizeof(hip_hit_t)), -1,
+			 "building local hit failed\n");
+
+	if (!ipv6_addr_any(&opp_info->peer_addr))
+		HIP_IFEL(hip_build_param_contents(message, &opp_info->peer_addr,
+						  HIP_PARAM_IPV6_ADDR_PEER,
+						  sizeof(struct in6_addr)), -1,
+			 "building peer addr failed\n");
+
+	if (!ipv6_addr_any(&opp_info->local_addr))
+		HIP_IFEL(hip_build_param_contents(message, &opp_info->local_addr,
+						  HIP_PARAM_IPV6_ADDR_LOCAL,
+						  sizeof(struct in6_addr)), -1,
+			 "building local addr failed\n");
+
+skip_hit_addr:
 	
 	if (reject) {
 		n = 1;
@@ -251,6 +274,7 @@ int hip_opp_unblock_app(const struct sockaddr_in6 *app_id, hip_hit_t *hit,
 	   Lesson learned: use function prototypes unless functions are
 	   ment only for local (inside the same file where defined) use.
 	   -Lauri 11.07.2008 */
+	HIP_DEBUG("Unblocking caller at port %d\n", ntohs(app_id->sin6_port));
 	n = hip_sendto_user(message, app_id);
 	
 	if(n < 0){
@@ -313,7 +337,7 @@ int hip_receive_opp_r1(struct hip_common *msg,
 		       struct in6_addr *dst_addr,
 		       hip_ha_t *opp_entry,
 		       hip_portpair_t *msg_info){
-	hip_opp_hit_pair_t hit_pair;
+	hip_opp_info_t opp_info;
 	hip_ha_t *entry;
 	hip_hit_t phit;
 	int n = 0, err = 0;
@@ -357,19 +381,22 @@ int hip_receive_opp_r1(struct hip_common *msg,
 		 "pseudo hit conversion failed\n");
 
 	
-	ipv6_addr_copy(&hit_pair.real_hit, &msg->hits);
-	ipv6_addr_copy(&hit_pair.pseudo_hit, &phit);
-	hip_for_each_opp(hip_oppdb_unblock_group, &hit_pair);
+	ipv6_addr_copy(&opp_info.real_peer_hit, &msg->hits);
+	ipv6_addr_copy(&opp_info.pseudo_peer_hit, &phit);
+	ipv6_addr_copy(&opp_info.local_hit, &msg->hitr);
+	ipv6_addr_copy(&opp_info.local_addr, dst_addr);
+	ipv6_addr_copy(&opp_info.peer_addr, src_addr);
+	hip_for_each_opp(hip_oppdb_unblock_group, &opp_info);
 
 	
 	/* why is the receive entry still pointing to hip_receive_opp_r1 ? */
 	entry->hadb_rcv_func->hip_receive_r1 = hip_receive_r1;
 	HIP_IFCS(entry,
-		 err = entry->hadb_rcv_func->hip_receive_r1(msg,
+		 (err = entry->hadb_rcv_func->hip_receive_r1(msg,
 							    src_addr,
 							    dst_addr,
 							    entry,
-							    msg_info));
+							     msg_info)));
 	hip_del_peer_info_entry(opp_entry);
 
  out_err:
@@ -390,7 +417,11 @@ int hip_opp_get_peer_hit(struct hip_common *msg,
 	hip_ha_t *ha = NULL;
 	in_port_t src_tcp_port = 0;
 	in_port_t dst_tcp_port = 0;
+
+	HIP_DUMP_MSG(msg);
 	
+	memset(&hit_our, 0, sizeof(struct in6_addr));
+
 	if(!opportunistic_mode) {
 		hip_msg_init(msg);
 		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_SET_PEER_HIT, 0), -1, 
@@ -417,20 +448,22 @@ int hip_opp_get_peer_hit(struct hip_common *msg,
 		dst_tcp_port = *((in_port_t *) ptr);
 		HIP_DEBUG("port src=%d dst=%d", src_tcp_port, dst_tcp_port);
 
-		memset(&hit_our, 0, sizeof(struct in6_addr));
 		hip_get_default_hit(&hit_our);
 	} else {
-		memset(&hit_our, 0, sizeof(struct in6_addr));
-		ptr = hip_get_param_contents(msg, HIP_PARAM_HIT);
-		HIP_IFEL(!ptr, -1, "No hit in msg\n");
+		ptr = hip_get_param_contents(msg, HIP_PARAM_HIT_LOCAL);
+		HIP_IFEL(!ptr, -1, "No local hit in msg\n");
 		memcpy(&hit_our, ptr, sizeof(hit_our));
 	}
 
 	HIP_DEBUG_HIT("hit_our=", &hit_our);
-	ptr = hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR);
+	ptr = hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR_PEER);
 	HIP_IFEL(!ptr, -1, "No ip in msg\n");
 	memcpy(&dst_ip, ptr, sizeof(dst_ip));
 	HIP_DEBUG_HIT("dst_ip=", &dst_ip);
+
+	HIP_IFEL(hip_select_source_address(&our_addr,
+					   &dst_ip), -1,
+		 "Cannot find source address\n");
 
 	hip_msg_init(msg);
 
@@ -441,7 +474,22 @@ int hip_opp_get_peer_hit(struct hip_common *msg,
 		HIP_DEBUG_HIT("existing HA found with HIT", &id);
 		HIP_IFEL(hip_build_param_contents(msg,
 					       (void *)(&id),
-					       HIP_PARAM_HIT,
+					       HIP_PARAM_HIT_PEER,
+					       sizeof(struct in6_addr)), -1,
+			 "build param HIP_PARAM_HIT  failed: %s\n");
+		HIP_IFEL(hip_build_param_contents(msg,
+					       (void *)(&hit_our),
+					       HIP_PARAM_HIT_LOCAL,
+					       sizeof(struct in6_addr)), -1,
+			 "build param HIP_PARAM_HIT  failed: %s\n");
+		HIP_IFEL(hip_build_param_contents(msg,
+					       (void *)(&our_addr),
+					       HIP_PARAM_IPV6_ADDR_PEER,
+					       sizeof(struct in6_addr)), -1,
+			 "build param HIP_PARAM_HIT  failed: %s\n");
+		HIP_IFEL(hip_build_param_contents(msg,
+					       (void *)(&dst_ip),
+					       HIP_PARAM_IPV6_ADDR_LOCAL,
 					       sizeof(struct in6_addr)), -1,
 			 "build param HIP_PARAM_HIT  failed: %s\n");
 		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_SET_PEER_HIT, 0), -1,
@@ -470,10 +518,6 @@ int hip_opp_get_peer_hit(struct hip_common *msg,
 	HIP_ASSERT(hit_is_opportunistic_hashed_hit(&phit)); 
 	HIP_DEBUG_HIT("phit", &phit);
 
-	HIP_IFEL(hip_select_source_address(&our_addr,
-					   &dst_ip), -1,
-		 "Cannot find source address\n");
-	
 	err = hip_hadb_add_peer_info_complete(&hit_our, &phit, NULL, &our_addr, &dst_ip);
 	HIP_IFEL(!(ha = hip_hadb_find_byhits(&hit_our, &phit)), -1,
 		 "Did not find entry\n");

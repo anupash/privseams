@@ -188,27 +188,27 @@ void free_gaih_servtuple(struct gaih_servtuple *tuple) {
 
 void dump_pai (struct gaih_addrtuple *at)
 {
-  struct gaih_addrtuple *a;
+	struct gaih_addrtuple *a;
 
-  if (at == NULL)
-    HIP_DEBUG("dump_pai: input NULL!\n");
+	if (at == NULL)
+		HIP_DEBUG("dump_pai: input NULL!\n");
   
-  for(a = at; a != NULL; a = a->next) {        
-    //HIP_DEBUG("scope_id=%lu\n", (long unsigned int)ai->scopeid);
-    if (a->family == AF_INET6) {
-      struct in6_addr *s = (struct in6_addr *)a->addr;
-      int i = 0;
-      HIP_DEBUG("AF_INET6\tin6_addr=0x");
-      for (i = 0; i < 16; i++)
-	HIP_DEBUG("%02x", (unsigned char) (s->in6_u.u6_addr8[i]));
-      HIP_DEBUG("\n");
-    } else if (a->family == AF_INET) {
-      struct in_addr *s = (struct in_addr *)a->addr;
-      long unsigned int ad = ntohl(s->s_addr);
-      HIP_DEBUG("AF_INET\tin_addr=0x%lx (%s)\n", ad, inet_ntoa(*s));
-    } else 
-      HIP_DEBUG("Unknown family\n");
- }
+	for(a = at; a != NULL; a = a->next) {        
+		//HIP_DEBUG("scope_id=%lu\n", (long unsigned int)ai->scopeid);
+		if (a->family == AF_INET6) {
+			struct in6_addr *s = (struct in6_addr *)a->addr;
+			int i = 0;
+			HIP_DEBUG("AF_INET6\tin6_addr=0x");
+			for (i = 0; i < 16; i++)
+				HIP_DEBUG("%02x", (unsigned char) (s->in6_u.u6_addr8[i]));
+			HIP_DEBUG("\n");
+		} else if (a->family == AF_INET) {
+			struct in_addr *s = (struct in_addr *)a->addr;
+			long unsigned int ad = ntohl(s->s_addr);
+			HIP_DEBUG("AF_INET\tin_addr=0x%lx (%s)\n", ad, inet_ntoa(*s));
+		} else 
+			HIP_DEBUG("Unknown family\n");
+	}
 }
 
 static int
@@ -734,16 +734,16 @@ send_hipd_addr(struct gaih_addrtuple * orig_at)
 	    		}
 
 			if (at_ip->family == AF_INET) {
-				HIP_DEBUG_LSI("AF_INET ",(struct in_addr *) at_ip->addr);
+				_HIP_DEBUG_LSI("AF_INET ",(struct in_addr *) at_ip->addr);
 			        IPV4_TO_IPV6_MAP(((struct in_addr *) at_ip->addr), &addr6);
 	    		}
 
 	    		if (at_ip->family != AF_INET6 && at_ip->family != AF_INET)
-	        		HIP_DEBUG("undef family!!!!!!!!!\n");
+	        		_HIP_DEBUG("undef family!!!!!!!!!\n");
 
 	    		hip_msg_init(msg);   
-	    		/* Clarified the printed output as this is used in conntest-client-gai.
-			   -Lauri 07.05.2008. */
+	    		/* Clarified the printed output as this is used in
+			   conntest-client-hip. -Lauri 07.05.2008. */
 			char hit_string[INET6_ADDRSTRLEN];
 			char ipv6_string[INET6_ADDRSTRLEN];
 			memset(hit_string, 0, INET6_ADDRSTRLEN);
@@ -1062,7 +1062,7 @@ int gaih_inet_get_name(const char *name, const struct addrinfo *req,
 		(req->ai_flags & AI_V4MAPPED);
 	char *namebuf = strdupa(name);
 	
-	HIP_DEBUG("gaih_inet_get_name() invoked.\n");
+	_HIP_DEBUG("gaih_inet_get_name() invoked.\n");
 
 	*at = malloc (sizeof (struct gaih_addrtuple));
 	
@@ -1073,7 +1073,7 @@ int gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	/* Is ipv4 address? */
 	if (inet_pton (AF_INET, name, (*at)->addr) > 0)
 	{
-		HIP_DEBUG("The name to resolve is an IPv4\n");
+		_HIP_DEBUG("The name to resolve is an IPv4.\n");
 		if (req->ai_family == AF_UNSPEC ||
 		    req->ai_family == AF_INET || v4mapped)
 		{
@@ -1092,7 +1092,7 @@ int gaih_inet_get_name(const char *name, const struct addrinfo *req,
 		char *namebuf = strdupa (name);
 		char *scope_delim;
 		
-		_HIP_DEBUG("not IPv4\n");
+		_HIP_DEBUG("The name to resolve is NOT an IPv4.\n");
 		
 		scope_delim = strchr (namebuf, SCOPE_DELIMITER);
 		if (scope_delim != NULL)
@@ -1103,7 +1103,7 @@ int gaih_inet_get_name(const char *name, const struct addrinfo *req,
 		/* Check if the addredd is an IPv6 address. */
 		if (inet_pton (AF_INET6, namebuf, (*at)->addr) > 0)
 		{
-			HIP_DEBUG("The name to resolve is an IPv6\n");
+			_HIP_DEBUG("The name to resolve is an IPv6.\n");
 			
 			if (req->ai_family == AF_UNSPEC ||
 			    req->ai_family == AF_INET6)
@@ -1166,9 +1166,12 @@ int gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	        int old_res_options = _res.options;
 	        int found_hits = 0;
       
-      		HIP_DEBUG("The name is not an IPv4 or IPv6 address, resolve name "\
+		/* Commented these debug lines since conntest-client-hip outputs
+		   all this. Perhaps conntest-client-hip should be modified to
+		   output only INFO and ERROR prints... */
+      		_HIP_DEBUG("The name is not an IPv4 or IPv6 address, resolve name "\
 			  "(!AI_NUMERICHOST)\n");
-      		HIP_DEBUG("&pat=%p pat=%p *pat=%p **pat=%p\n", &pat, pat, *pat, **pat);
+      		_HIP_DEBUG("&pat=%p pat=%p *pat=%p **pat=%p\n", &pat, pat, *pat, **pat);
       
 #ifdef UNDEF_CONFIG_HIP_AGENT
       		if ((hip_transparent_mode || req->ai_flags & AI_HIP) &&
@@ -1239,16 +1242,15 @@ int gaih_inet_get_name(const char *name, const struct addrinfo *req,
 			}
 		}
 
-		dump_pai(*at);
+		//dump_pai(*at);
 
 		/* perform HIT-IPv6 mapping if both are found 
 		AG: now the loop also takes in IPv4 addresses */
 	      	if (found_hits) 
 			send_hipd_addr(*at);
 
-		/*
-			Check if DNS returned HITs incase hosts file and DHT checks didn't contain HITs 
-	      	*/
+		/* Check if DNS returned HITs incase hosts file and DHT checks
+		   didn't contain HITs. */
 	      	if (!found_hits)
 		{
 			for (at_dns = *at; at_dns != NULL; at_dns = at_dns->next)
@@ -1398,8 +1400,8 @@ int gaih_inet_get_name(const char *name, const struct addrinfo *req,
 			}
 	      }
 
-	      HIP_DEBUG("Dumping the structure after removing IP addreses\n");
-	      dump_pai(*at);
+		_HIP_DEBUG("Dumping the structure after removing IP addreses\n");
+		//dump_pai(*at);
 	} /* (at->family == AF_UNSPEC && (req->ai_flags & AI_NUMERICHOST) == 0) */ 
 	return 0;
 }
@@ -1564,7 +1566,7 @@ int getaddrinfo(const char *name, const char *service,
 	struct gaih *g = gaih, *pg = NULL;
 	struct gaih_service gaih_service, *pservice = NULL;
 	
-	HIP_DEBUG("------------------GETADDRINFO--------------------\n");
+	_HIP_DEBUG("------------------GETADDRINFO--------------------\n");
 	/* These will segfault if lenght of name is one, but since this
 	   is well defined standard function, there must be a good reason
 	   for this behavior? */

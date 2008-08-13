@@ -160,7 +160,7 @@
 # locator on        # host sends all of its locators in base exchange \n\
 # opp normal|advanced|none \n\
 opendht off # Jan 2007: OpenDHT infrastructure is flaky -Samu/Miika\n\
-nat on              # the host is behind a NAT\n\
+nat plain-udp       # the host is behind a NAT\n\
 debug medium        # debug verbosity: all, medium or none\n"
 
 #define HIPD_HOSTS_FILE     "/etc/hip/hosts"

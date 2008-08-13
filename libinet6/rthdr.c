@@ -87,7 +87,7 @@ inet6_rthdr_init(bp, type)
 	 ch->cmsg_len = CMSG_LEN(sizeof(struct ip6_rthdr0));
 #endif 
 
-	 bzero(rthdr, sizeof(struct ip6_rthdr0));
+	 memset(rthdr, 0, sizeof(struct ip6_rthdr0));
 	 rthdr->ip6r_type = IPV6_RTHDR_TYPE_0;
 	 return(ch);
      default:

@@ -40,11 +40,19 @@ typedef __socklen_t socklen_t;
 /* Types of sockets.  */
 enum __socket_type
 {
-  SOCK_STREAM = 1,		/* Sequenced, reliable, connection-based
+#if defined(CONFIG_HIP_OPENWRT) && defined(CONFIG_HIP_OPENWRT_MIPSLINUX)
+  SOCK_STREAM = 2,		/* Sequenced, reliable, connection-based
 				   byte streams.  */
+#else
+  SOCK_STREAM = 1,
+#endif
 #define SOCK_STREAM SOCK_STREAM
-  SOCK_DGRAM = 2,		/* Connectionless, unreliable datagrams
+#if defined(CONFIG_HIP_OPENWRT) && defined(CONFIG_HIP_OPENWRT_MIPSLINUX)
+  SOCK_DGRAM = 1,		/* Connectionless, unreliable datagrams
 				   of fixed maximum length.  */
+#else
+  SOCK_DGRAM = 2,
+#endif
 #define SOCK_DGRAM SOCK_DGRAM
   SOCK_RAW = 3,			/* Raw protocol interface.  */
 #define SOCK_RAW SOCK_RAW
@@ -309,7 +317,6 @@ struct ucred
 
 /* Get socket manipulation related informations from kernel headers.  */
 #include <asm/socket.h>
-
 
 /* Structure used to manipulate the SO_LINGER option.  */
 struct linger
