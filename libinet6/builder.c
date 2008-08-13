@@ -1072,7 +1072,9 @@ char* hip_message_type_name(const uint8_t msg_type){
 	case SO_HIP_SET_TCPTIMEOUT_OFF: return "SO_HIP_SET_TCPTIMEOUT_OFF";
 	case SO_HIP_SET_NAT_ICE_UDP: return "SO_HIP_SET_NAT_ICE_UDP";
 	case SO_HIP_IS_OUR_LSI: return "SO_HIP_IS_OUR_LSI";
+	case SO_HIP_GET_PEER_HIT: return "SO_HIP_GET_PEER_HIT";
 	case SO_HIP_GET_PEER_HIT_BY_LSIS: return "SO_HIP_GET_PEER_HIT_BY_LSIS";
+	case SO_HIP_GET_PEER_HIT_AT_FIREWALL: return "SO_HIP_GET_PEER_HIT_AT_FIREWALL";
 	case SO_HIP_TRIGGER_BEX: return "SO_HIP_TRIGGER_BEX";  	
 	default:
 		return "UNDEFINED";
@@ -1118,11 +1120,15 @@ char* hip_param_type_name(const hip_tlv_type_t param_type){
 	case HIP_PARAM_HIP_TRANSFORM: return "HIP_PARAM_HIP_TRANSFORM";
 	case HIP_PARAM_HI: return "HIP_PARAM_HI";
 	case HIP_PARAM_HIT: return "HIP_PARAM_HIT";
+	case HIP_PARAM_HIT_LOCAL: return "HIP_PARAM_HIT_LOCAL";
+	case HIP_PARAM_HIT_PEER: return "HIP_PARAM_HIT_PEER";
 	case HIP_PARAM_HMAC2: return "HIP_PARAM_HMAC2";
 	case HIP_PARAM_HMAC: return "HIP_PARAM_HMAC";
 	case HIP_PARAM_HOST_ID: return "HIP_PARAM_HOST_ID";
 	case HIP_PARAM_INT: return "HIP_PARAM_INT";
 	case HIP_PARAM_IPV6_ADDR: return "HIP_PARAM_IPV6_ADDR";
+	case HIP_PARAM_IPV6_ADDR_LOCAL: return "HIP_PARAM_IPV6_ADDR_LOCAL";
+	case HIP_PARAM_IPV6_ADDR_PEER: return "HIP_PARAM_IPV6_ADDR_PEER";
 	case HIP_PARAM_KEYS: return "HIP_PARAM_KEYS";
 	case HIP_PARAM_LOCATOR: return "HIP_PARAM_LOCATOR";
 	case HIP_PARAM_NOTIFICATION: return "HIP_PARAM_NOTIFICATION";
@@ -1154,6 +1160,8 @@ char* hip_param_type_name(const hip_tlv_type_t param_type){
 	case HIP_PARAM_NAT_TRANSFORM: return "HIP_PARAM_NAT_TRANSFORM";	
 	//end add      
 	case HIP_PARAM_LSI: return "HIP_PARAM_LSI";
+	case HIP_PARAM_SRC_TCP_PORT: return "HIP_PARAM_SRC_TCP_PORT";
+	case HIP_PARAM_DST_TCP_PORT: return "HIP_PARAM_DST_TCP_PORT";
 	}
 	return "UNDEFINED";
 }

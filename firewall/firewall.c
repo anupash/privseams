@@ -1304,7 +1304,7 @@ HIP_DEBUG("New state %d - \n", new_fw_entry_state);
 
 		if(state_ha == -1){
 			if(system_based_opp_mode){
-				//initiate the bex
+				HIP_DEBUG("Initiate bex at firewall\n");
 				memset(&all_zero_hit, 0, sizeof(struct sockaddr_in6));
 				hip_request_peer_hit_from_hipd_at_firewall(
 					&ctx->dst,
