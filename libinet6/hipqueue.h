@@ -16,6 +16,7 @@ typedef struct _hip_queue
 	void* data;
 	struct _hip_queue * next;
 	int count;
+	int data_len;
 } hip_queue;
 
 int write_fifo_queue (void *write_data, int data_size_in_bytes);

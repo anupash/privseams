@@ -1315,7 +1315,8 @@ int hip_conf_handle_gw(hip_common_t *msg, int action, const char *opt[], int opt
         int ret;
         struct in_addr ip_gw;
         in6_addr_t ip_gw_mapped;
-        struct addrinfo new_gateway;
+        //struct addrinfo new_gateway;
+        struct addrinfo *new_gateway;
         struct hip_opendht_gw_info *gw_info;
 
         HIP_INFO("Resolving new gateway for openDHT %s\n", opt[0]);
@@ -1325,8 +1326,8 @@ int hip_conf_handle_gw(hip_common_t *msg, int action, const char *opt[], int opt
                 err = -EINVAL;
                 goto out_err;
         }
-	
-        memset(&new_gateway, '0', sizeof(new_gateway));
+		/*Pardeep commented*/	
+        //memset(&new_gateway, '0', sizeof(new_gateway));
         ret = 0;
         /* resolve the new gateway */
         /* warning: passing argument 1 of 'resolve_dht_gateway_info' discards
@@ -1335,7 +1336,7 @@ int hip_conf_handle_gw(hip_common_t *msg, int action, const char *opt[], int opt
 	   incompatible pointer type. 04.07.2008 */
         ret = resolve_dht_gateway_info(opt[0], &new_gateway);
         if (ret < 0) goto out_err;
-        struct sockaddr_in *sa = (struct sockaddr_in *)new_gateway.ai_addr;
+        struct sockaddr_in *sa = (struct sockaddr_in *)new_gateway->ai_addr;
 
         HIP_INFO("Gateway addr %s, port %s, TTL %s\n",
 		 inet_ntoa(sa->sin_addr), opt[1], opt[2]);

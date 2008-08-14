@@ -117,6 +117,8 @@ int hip_set_lowcapability(int run_as_nobody) {
 		if (hpswd != NULL) {
 			HIP_IFEL(chown(HIP_CERT_DB_PATH_AND_NAME, hpswd->pw_uid, hpswd->pw_gid),
 				 -1, "Failed to chown certdb file\n");
+			HIP_IFEL(chown("/etc/hip", hpswd->pw_uid, hpswd->pw_gid),
+				 -1, "Failed to chown hip dirctory\n");
 		}
 	} else
 		HIP_IFEL(!(name = getenv("SUDO_USER")), -1,

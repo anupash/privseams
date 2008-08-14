@@ -40,16 +40,19 @@ int write_fifo_queue (void *write_data, int data_size_in_bytes)
 		queue->next = NULL;
 		queue->count = 0;
 		queue->data = NULL ;
+		queue->data_len =0;
 	}
 	if (queue->count == 0)
 	{
 		queue->data = temp_data ;
+		queue->data_len = data_size_in_bytes;
 	}
 	else
 	{
 		temp_traversal = queue;
 		node = malloc (sizeof(hip_queue));
-	
+		
+		node->data_len = data_size_in_bytes;
 		node->data = temp_data;
 		node->next = NULL ;
 		while (temp_traversal-> next !=NULL)
@@ -75,7 +78,7 @@ int read_fifo_queue (void *read_data)
 	{
 		hip_queue *node = queue;
 		queue = queue->next;
-		memcpy (read_data,node->data, strlen ((char*)node->data)+1);
+		memcpy (read_data,node->data, node->data_len);
 		HIP_DEBUG ("Node data read: %s \n",(char*)read_data);
 		if (node->count >0)
 		{

@@ -227,7 +227,6 @@ int opendht_put(unsigned char * key,
 {
     int key_len = 0;
     int value_len = 0;
-    //char put_packet[2048];
     char tmp_key[21];   
     char tmp_value[21];
         
@@ -235,8 +234,6 @@ int opendht_put(unsigned char * key,
     value_len = opendht_handle_value(value, tmp_value);
            
     /* Put operation FQDN->HIT */
-    memset(put_packet, '\0', sizeof((char*)put_packet));
-    
     if (key_len > 0) {
             if (build_packet_put((unsigned char *)tmp_key,
                                  key_len,
@@ -772,4 +769,40 @@ int verify_hddr_lib (struct hip_common *hipcommonmsg,struct in6_addr *addrkey)
 out_err:
 	return err;
 }
+
+/**
+ * handle_cert_key - It prepares the key for publishing certificates
+ 
+ * @param *lhit local hit used
+ * @param *rhit hit of the remote host
+ * @param *final_key resulting key value after processing
+ * @return length of the key or -1 in case of error
+ */
+int handle_cert_key(struct in6_addr *lhit, struct in6_addr *rhit, void *final_key)
+{
+	int key_len = sizeof(rhit->s6_addr)*2;
+	void *result = NULL ;
+	result = malloc (key_len);
+		/*concatenate both*/	
+	memcpy(result,&rhit->s6_addr,sizeof(rhit->s6_addr));
+	memcpy(result+sizeof(rhit->s6_addr),
+				&lhit->s6_addr,sizeof(lhit->s6_addr));
+	
+    //unsigned char tmp_key[21];
+	unsigned char *sha_retval;
+	
+	//memset(tmp_key,'\0',sizeof(tmp_key));	
+	sha_retval = SHA1(result, key_len, final_key); 
+	key_len = 20;
+	_HIP_HEXDUMP("KEY FOR OPENDHT", final_key, key_len);
+	if (!sha_retval)
+	{
+     	HIP_DEBUG("SHA1 error when creating key for OpenDHT.\n");
+		key_len = -1;
+	}
+	if(result)
+		free (result);
+	return key_len ;
+}
+
 

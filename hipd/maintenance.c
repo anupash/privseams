@@ -431,11 +431,11 @@ void publish_hit(char *hostname, char *tmp_hit_str, char *tmp_addr_str)
 	extern int opendht_serving_gateway_ttl;
 	extern int hip_opendht_error_count;
 	extern int opendht_error;
-	char out_packet[2048];
+	char out_packet[HIP_MAX_PACKET]; /*Assuming HIP Max packet length, max for DHT put*/
 	
 	if (hip_opendht_inuse == SO_HIP_DHT_ON) {
-		
-		opendht_error = opendht_put((unsigned char *)hostname,
+		memset(out_packet, '\0', HIP_MAX_PACKET);
+    	opendht_error = opendht_put((unsigned char *)hostname,
 		(unsigned char *)tmp_hit_str, 
 		(unsigned char *)tmp_addr_str,
 		opendht_serving_gateway_port,
@@ -446,8 +446,8 @@ void publish_hit(char *hostname, char *tmp_hit_str, char *tmp_addr_str)
 		}
 		else
 		{
-			HIP_DEBUG("Sending FDQN->HIT PUT packet to queue.\n");
-			//opendht_error = write_fifo_queue(out_packet,strlen(out_packet)+1);
+			HIP_DEBUG("Sending FDQN->HIT PUT packet to queue. Packet Length: %d\n",strlen(out_packet)+1);
+			opendht_error = write_fifo_queue(out_packet,strlen(out_packet)+1);
 			if (opendht_error < 0) {
         		HIP_DEBUG ("Failed to insert FDQN->HIT PUT data in queue \n");
 			}
@@ -473,9 +473,10 @@ int publish_addr(char *tmp_hit_str, char *tmp_addr_str)
 	extern int opendht_serving_gateway_port;
 	extern int opendht_serving_gateway_ttl;
 	extern int opendht_error;
-	char out_packet[2048];
+	char out_packet[HIP_MAX_PACKET]; /*Assuming HIP Max packet length, max for DHT put*/
         
 	if (hip_opendht_inuse == SO_HIP_DHT_ON) {
+		memset(out_packet, '\0', HIP_MAX_PACKET);
 		opendht_error = opendht_put_locator((unsigned char *)tmp_hit_str, 
 						(unsigned char *)tmp_addr_str,
 						opendht_serving_gateway_port,
@@ -487,7 +488,7 @@ int publish_addr(char *tmp_hit_str, char *tmp_addr_str)
 		else
 		{
 			HIP_DEBUG("Sending HTTP HIT->IP PUT packet to queue.\n");
-			//opendht_error = write_fifo_queue(out_packet,strlen(out_packet)+1);
+			opendht_error = write_fifo_queue(out_packet,strlen(out_packet)+1);
 			if (opendht_error < 0) {
 				HIP_DEBUG ("Failed to insert HIT->IP PUT data in queue \n");
 				return -1;
@@ -879,8 +880,7 @@ int opendht_put_locator(unsigned char * key,
     value_len = hip_get_msg_total_len(fake_msg);
     _HIP_DEBUG("Value len %d\n",value_len);
            
-    /* Put operation FQDN->HIT */
-    memset(put_packet, '\0', strlen((char*)put_packet));
+    /* Put operation HIT->IP */
     if (build_packet_put((unsigned char *)tmp_key,
                          key_len,
                          (unsigned char *)fake_msg,
@@ -1026,30 +1026,25 @@ void init_dht_sockets (int *socket, int *socket_status)
 	}
 }
 
-int prepare_send_cert_put(unsigned char * key, unsigned char * value, int keylen, int valuelen)
+/**
+ * prepare_send_cert_put - builds xml rpc packet and then
+ * sends it to the queue for sending to the opendht
+ * 
+ * @param *key key for cert publish
+ * @param *value certificate
+ * @param key_len length of the key (20 in case of SHA1)
+ * @param valuelen length of the value content to be sent to the opendht
+ * @return 0 on success, negative value on error
+ */
+int prepare_send_cert_put(unsigned char * key, unsigned char * value, int key_len, int valuelen)
 {
 	extern int opendht_serving_gateway_port;
 	extern int opendht_serving_gateway_ttl;
-	//extern int hip_opendht_error_count;
 	extern int opendht_error;
-	//OPENDHT_GATEWAY
-	int key_len = keylen;
-    int value_len = valuelen;/*length of certificate*/
+	int value_len = valuelen;/*length of certificate*/
     char put_packet[2048];
-	unsigned char tmp_key[21];
-	unsigned char *sha_retval;
 	
-	memset(tmp_key,'\0',sizeof(tmp_key));	
-	sha_retval = SHA1(key, keylen, tmp_key); 
-	key_len = 20;
-	_HIP_HEXDUMP("KEY FOR OPENDHT", tmp_key, key_len);
-	if (!sha_retval)
-	{
-     	HIP_DEBUG("SHA1 error when creating key for OpenDHT.\n");
-		return(-1);
-	}       
-    
-    if (build_packet_put((unsigned char *)tmp_key,
+   if (build_packet_put((unsigned char *)key,
                                  key_len,
                                  (unsigned char *)value,
                                  value_len,
@@ -1067,12 +1062,26 @@ int prepare_send_cert_put(unsigned char * key, unsigned char * value, int keylen
     return 0 ;
 }
 
+/**
+ * hip_sqlite_callback - callbacl function called by sqliteselect
+ * The function processes the data returned by select
+ * to be sent to key_handler and then for sending to lookup
+ * 
+ * @param *NotUsed
+ * @param argc
+ * @param **argv
+ * @param **azColName
+ * @return 0
+ */
 static int hip_sqlite_callback(void *NotUsed, int argc, char **argv, char **azColName) {
 	int i;
 	struct in6_addr lhit, rhit;
-	void *conc_hits = NULL ;
+	unsigned char conc_hits_key[21] ;
 	int err = 0 ;
-	char cert[512];
+	char cert[512]; /*Should be size of certificate*/
+	int keylen = 0 ;
+	
+	memset(conc_hits_key, '\0', 21);
 	for(i=0; i<argc; i++){
 		HIP_DEBUG("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
 		if (!strcmp(azColName[i],"lhit"))
@@ -1095,31 +1104,32 @@ static int hip_sqlite_callback(void *NotUsed, int argc, char **argv, char **azCo
 		} 
 	}
 	if(err)
+	{
+		keylen = handle_cert_key(&lhit, &rhit, conc_hits_key);
+		/*send key-value pair to dht*/
+		if (keylen)
+		{ 
+			err = prepare_send_cert_put(conc_hits_key, cert, keylen, sizeof(cert) );
+		}
+		else
 		{
-			conc_hits = malloc (sizeof(rhit.s6_addr)*2);
-			/*concatenate both*/	
-			memcpy(conc_hits,&rhit.s6_addr,sizeof(rhit.s6_addr));
-			memcpy(conc_hits+sizeof(rhit.s6_addr),
-						&lhit.s6_addr,sizeof(lhit.s6_addr));
-			/*send key-value pair to dht*/
-			prepare_send_cert_put(conc_hits, cert, sizeof(rhit.s6_addr)*2, sizeof(cert) );
-			err = 0 ;
-		} 
-	if(conc_hits)
-		free (conc_hits);
+			HIP_DEBUG ("Unable to handle publish cert key\n");
+			err = -1 ;
+		}
+	} 
 	return err;
 }
 
+/**
+ * publish_certificates - Reads the daemon database
+ * and then publishes certificate after regular interval defined
+ * in hipd.h
+ * 
+ * @param
+ * @return error value 0 on success and negative on error
+ */
 int publish_certificates ()
 {
-	/**
-	 * Go to the daemon_db
-	 * Read all the rows from hits table
-	 * Create SHA1 (accepted HIT | our HIT)
-	 * This sha1 value is the opendht key
-	 * certificate is the value
-	 * publish it to the lookup 
-	 */
 	 int err = 0 ;
 	 extern sqlite3* daemon_db;
 	 

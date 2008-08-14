@@ -281,9 +281,19 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		if (ret == 0)
 		{
 			HIP_DEBUG("Serving gateway changed\n");
-			hip_opendht_fqdn_sent = 0;
-			hip_opendht_hit_sent = 0;
 			hip_opendht_error_count = 0;
+			if (hip_opendht_sock_fqdn > 0) {
+                        close(hip_opendht_sock_fqdn);
+                         hip_opendht_sock_fqdn = init_dht_gateway_socket(hip_opendht_sock_fqdn);
+                         hip_opendht_fqdn_sent = STATE_OPENDHT_IDLE;
+            }
+			if (hip_opendht_sock_hit > 0) {
+                         close(hip_opendht_sock_hit);
+                         hip_opendht_sock_hit = init_dht_gateway_socket(hip_opendht_sock_hit);
+                         hip_opendht_hit_sent = STATE_OPENDHT_IDLE;
+			}
+			init_dht_sockets(&hip_opendht_sock_fqdn, &hip_opendht_fqdn_sent); 
+			init_dht_sockets(&hip_opendht_sock_hit, &hip_opendht_hit_sent);
 		}
 		else
 		{
