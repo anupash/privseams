@@ -10,9 +10,9 @@
  * @author  Bing Zhou <bingzhou_cc.hut.fi>
  * @author  Anu Markkola
  * @author  Lauri Silvennoinen
+ * @author  Tao Wan  <twan@cc.hut.fi>
  * @author  Teresa Finez <tfinezmo_cc.hut.fi> Modifications
  * @author  Samu Varjonen
- * @author  Tao Wan  <twan_cc.hut.fi>
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>
  * @todo    add/del map
  * @todo    fix the rst kludges
@@ -106,7 +106,7 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc) 
 	hip_conf_handle_opptcp,
         hip_conf_handle_trans_order,
 	hip_conf_handle_tcptimeout, /* added by Tao Wan*/
-        hip_conf_handle_hipproxy,
+	hip_conf_handle_hipproxy,
 	NULL /* run */
 };
 
@@ -1996,7 +1996,8 @@ int hip_conf_handle_tcptimeout(struct hip_common *msg, int action,
 int hip_conf_handle_hipproxy(struct hip_common *msg, int action, const char *opt[], int optc)
 {
         int err = 0, status = 0;
- 
+ 		HIP_DEBUG("hip_conf_handle_hipproxy()\n");
+ 		
 #ifdef CONFIG_HIP_HIPPROXY
         if (!strcmp("on",opt[0])) {
                 status = SO_HIP_SET_HIPPROXY_ON; 

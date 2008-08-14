@@ -7,6 +7,8 @@
 #include "ife.h"
 
 #define USER_NOBODY "nobody"
+#define USER_HIPD "hipd"
+
 #endif /* CONFIG_HIP_PRIVSEP */
 
 #ifdef CONFIG_HIP_OPENWRT
@@ -94,14 +96,26 @@ int hip_set_lowcapability(int run_as_nobody) {
 	uid_t ruid,euid;
 	cap_t cap_p;
 	char *cap_s;
-	struct passwd *pswd;
 	char *name;
+	struct passwd *pswd = NULL;
+	struct passwd *hpswd = NULL;
 
-	if (run_as_nobody)
-	    name = USER_NOBODY;
-	else
-	    HIP_IFEL(!(name = getlogin()), -1,
-			"Failed to determine current username\n");
+	/* @todo: does this work when you start hipd as root (without sudo) */
+         
+	if (run_as_nobody) {
+		/* Check if user "hipd" exists if it does use it otherwise use "nobody" */
+		hpswd = getpwnam(USER_HIPD);
+		name = ((hpswd == NULL) ? USER_NOBODY : USER_HIPD);
+		/* Chown files that daemon needs to write */
+		/*
+		if (hpswd != NULL) {
+			HIP_IFEL(chown("/etc/hip/test.txt", hpswd->pw_uid, hpswd->pw_gid),
+				 -1, "Failed to chown test file\n");
+		}
+		*/
+	} else
+		HIP_IFEL(!(name = getenv("SUDO_USER")), -1,
+			 "Failed to determine current username\n");
 
 	HIP_IFEL(prctl(PR_SET_KEEPCAPS, 1), -1, "prctl err\n");
 
@@ -128,8 +142,10 @@ int hip_set_lowcapability(int run_as_nobody) {
 	HIP_DEBUG ("Going to clear all capabilities except the ones needed\n");
 	HIP_IFEL(cap_clear(cap_p)<0, -1, "Error clearing capabilities\n");
 
-	HIP_IFEL(cap_set_flag(cap_p, CAP_EFFECTIVE, ncap_list, cap_list, CAP_SET)<0, -1, "Error setting capability flags\n");
-	HIP_IFEL(cap_set_flag(cap_p, CAP_PERMITTED, ncap_list, cap_list, CAP_SET)<0, -1, "Error setting capability flags\n");
+	HIP_IFEL(cap_set_flag(cap_p, CAP_EFFECTIVE, ncap_list, cap_list, CAP_SET)<0, 
+		 -1, "Error setting capability flags\n");
+	HIP_IFEL(cap_set_flag(cap_p, CAP_PERMITTED, ncap_list, cap_list, CAP_SET)<0, 
+		 -1, "Error setting capability flags\n");
 	HIP_IFEL(cap_set_proc(cap_p)<0, -1, "Error modifying capabilities\n");
 	HIP_DEBUG("UID=%d EFF_UID=%d\n", getuid(), geteuid());	
 	HIP_DEBUG("cap_p %s\n", cap_s = cap_to_text(cap_p, NULL));
