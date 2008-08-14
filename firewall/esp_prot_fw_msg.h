@@ -27,8 +27,10 @@ int esp_prot_conntrack_I2_anchor(const struct hip_common * common,
 struct esp_tuple * esp_prot_conntrack_R2_esp_tuple(SList *other_dir_esps);
 int esp_prot_conntrack_R2_anchor(const struct hip_common * common,
 		struct tuple * tuple);
-int esp_prot_conntrack_update_anchor(const hip_common_t * update, struct tuple * tuple);
-int esp_prot_conntrack_update_esp_info(const hip_common_t *update,
-		struct tuple * other_dir_tuple);
+int esp_prot_conntrack_update(const hip_common_t *update, struct tuple * tuple);
+int esp_prot_conntrack_cache_anchor(struct tuple * tuple,
+		struct esp_prot_anchor *esp_anchors);
+int esp_prot_conntrack_update_anchor(struct tuple *tuple, struct hip_ack *ack,
+		struct hip_esp_info *esp_info);
 
 #endif /* ESP_PROT_FW_MSG_H_ */

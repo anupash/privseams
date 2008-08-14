@@ -11,14 +11,6 @@
 
 /********** State table structures **************/
 
-struct anchor_tuple
-{
-	uint32_t update_id;
-	uint8_t transform;
-	unsigned char *active_anchor;
-	unsigned char *next_anchor;
-};
-
 struct esp_address
 {
 	struct in6_addr dst_addr;

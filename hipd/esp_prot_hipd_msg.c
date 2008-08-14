@@ -680,11 +680,11 @@ int esp_prot_send_update_response(hip_common_t *recv_update, hip_ha_t *entry,
 		in6_addr_t *src_ip, in6_addr_t *dst_ip, uint32_t spi)
 {
 	hip_common_t *resp_update = NULL;
-	struct hip_seq * seq = NULL;
+	struct hip_seq *seq = NULL;
 	uint16_t mask = 0;
 	int err = 0;
 
-	HIP_IFEL(!(seq = hip_get_param(recv_update, HIP_PARAM_SEQ)), -1,
+	HIP_IFEL(!(seq = (struct hip_seq *) hip_get_param(recv_update, HIP_PARAM_SEQ)), -1,
 			"SEQ not found\n");
 
 	HIP_IFEL(!(resp_update = hip_msg_alloc()), -ENOMEM, "out of memory\n");
