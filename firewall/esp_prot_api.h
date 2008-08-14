@@ -31,7 +31,7 @@ typedef struct esp_prot_tfm
 	int hash_length_id;
 } esp_prot_tfm_t;
 
-typedef struct esp_anchor_item
+struct esp_anchor_item
 {
 	uint32_t seq;
 	uint8_t transform;

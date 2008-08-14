@@ -647,13 +647,13 @@ int esp_prot_conntrack_update(const hip_common_t *update, struct tuple * tuple)
 	struct hip_seq *seq = NULL;
 	struct hip_ack *ack = NULL;
 	struct hip_esp_info *esp_info = NULL;
-	struct esp_prot_anchor *esp_anchors = NULL;
+	struct esp_prot_anchor *esp_anchor = NULL;
 	int err = 0;
 
 	seq = (struct hip_seq *) hip_get_param(update, HIP_PARAM_SEQ);
 	esp_info = (struct hip_esp_info *) hip_get_param(update, HIP_PARAM_ESP_INFO);
 	ack = (struct hip_ack *) hip_get_param(update, HIP_PARAM_ACK);
-	esp_anchors = (struct esp_prot_anchor *) hip_get_param(update,
+	esp_anchor = (struct esp_prot_anchor *) hip_get_param(update,
 			HIP_PARAM_ESP_PROT_ANCHOR);
 
 	// distinguish packet types and process accordingly
@@ -662,7 +662,7 @@ int esp_prot_conntrack_update(const hip_common_t *update, struct tuple * tuple)
 		/* 1. UPDATE packet of ANCHOR UPDATE */
 
 		// cache ANCHOR
-		HIP_IFEL(esp_prot_conntrack_cache_anchor(tuple, esp_anchors), -1,
+		HIP_IFEL(esp_prot_conntrack_cache_anchor(tuple, seq, esp_anchor), -1,
 				"failed to cache ANCHOR parameter\n");
 
 	} else if (seq && ack && esp_info && esp_anchor)
@@ -701,15 +701,15 @@ int esp_prot_conntrack_update(const hip_common_t *update, struct tuple * tuple)
 /* caches an anchor found in a update message in the current direction's
  * tuple indexed with the SEQ number for reference reasons with consecutive
  * update replies */
-int esp_prot_conntrack_cache_anchor(struct tuple * tuple,
-		struct esp_prot_anchor *esp_anchors)
+int esp_prot_conntrack_cache_anchor(struct tuple * tuple, struct hip_seq *seq,
+		struct esp_prot_anchor *esp_anchor)
 {
 	struct esp_anchor_item *anchor_item = NULL;
 	int hash_length = 0;
 	int err = 0;
 
 	// needed for allocating and copying the anchors
-	hash_length = esp_prot_get_hash_length(esp_anchors->transform);
+	hash_length = esp_prot_get_hash_length(esp_anchor->transform);
 
 	HIP_IFEL(!(anchor_item = (struct esp_anchor_item *)
 			malloc(sizeof(struct esp_anchor_item))), -1,
@@ -720,19 +720,19 @@ int esp_prot_conntrack_cache_anchor(struct tuple * tuple,
 			malloc(hash_length)), -1, "failed to allocate memory\n");
 
 	anchor_item->seq = seq->update_id;
-	anchor_item->transform = esp_anchors->transform;
-	memcpy(anchor_item->active_anchor, &esp_anchors->anchors[0], hash_length);
+	anchor_item->transform = esp_anchor->transform;
+	memcpy(anchor_item->active_anchor, &esp_anchor->anchors[0], hash_length);
 
 	// check if next_anchor is set
-	if (memcmp(&esp_anchors->anchors[hash_length], 0, hash_length))
+	if (memcmp(&esp_anchor->anchors[hash_length], 0, hash_length))
 	{
 		// also copy this anchor as it is set
-		memcpy(anchor_item->next_anchor, &esp_anchors->anchors[hash_length],
+		memcpy(anchor_item->next_anchor, &esp_anchor->anchors[hash_length],
 				hash_length);
 
 	} else
 	{
-		anchors->next_anchor = NULL;
+		anchor_item->next_anchor = NULL;
 	}
 
 	// add this anchor to the list for this direction's tuple
@@ -751,7 +751,7 @@ int esp_prot_conntrack_update_anchor(struct tuple *tuple, struct hip_ack *ack,
 	struct esp_tuple *esp_tuple = NULL;
 	int hash_length = 0;
 	// assume not found
-	int err = 1;
+	int err = 1, i;
 
 	for (i = 0; i < hip_ll_get_size(&tuple->anchor_cache); i++)
 	{
