@@ -217,6 +217,9 @@ int hip_fw_uninit_userspace_ipsec()
 		system("ip6tables -D OUTPUT -p 17 -d 2001:0010::/28 -j QUEUE");
 #endif
 
+		system("ifconfig dummy0 mtu 1280");
+	} else {
+		system("ifconfig dummy0 mtu 1500");
 	}
 
   out_err:
