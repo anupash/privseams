@@ -1628,6 +1628,8 @@ int main(int argc, char **argv){
 	unsigned char buf[BUFSIZE];
 	hip_fw_context_t ctx;
 	int limit_capabilities = 0;
+	int is_root = 0, access_ok = 0, msg_type = 0;//variables for accepting user messages only from hipd
+
 
 	if (geteuid() != 0) {
 		HIP_ERROR("firewall must be run as root\n");
@@ -1842,6 +1844,25 @@ int main(int argc, char **argv){
 				HIP_ERROR("Error receiving message header from daemon.\n");
 				err = -1;
 				continue;
+			}
+
+
+			/*making sure user messages are received from hipd*/
+			//resetting vars to 0 because it is a loop
+			is_root = 0, access_ok = 0, msg_type = 0;
+			msg_type = hip_get_msg_type(msg);
+			is_root = (ntohs(sock_addr.sin6_port) < 1024);
+			if(is_root){
+				access_ok = 1;
+			}else if( !is_root &&
+				  (msg_type >= HIP_SO_ANY_MIN &&
+				   msg_type <= HIP_SO_ANY_MAX)    ){
+				access_ok = 1;
+			}
+			if(!access_ok){
+				HIP_ERROR("The sender of the message is not trusted.\n");
+				err = -1;
+				continue;	
 			}
 
 
