@@ -187,6 +187,9 @@ int hip_fw_init_userspace_ipsec()
 		system("ip6tables -I HIPFW-OUTPUT -p 6 -d 2001:0010::/28 -j QUEUE");
 		system("ip6tables -I HIPFW-OUTPUT -p 17 -d 2001:0010::/28 -j QUEUE");
 
+		system("ifconfig dummy0 mtu 1280");
+	} else {
+		system("ifconfig dummy0 mtu 1500");
 	}
 	
   out_err:
