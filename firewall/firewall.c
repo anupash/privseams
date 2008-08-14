@@ -1212,7 +1212,24 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx)
 	int verdict = accept_normal_traffic_by_default;
 	int packet_id = ctx->ipq_packet->packet_id;
 
-	if (hip_userspace_ipsec)
+	/* LSI HOOKS */
+	if (ctx->ip_version == 4){	  
+		IPV6_TO_IPV4_MAP(&(ctx->src),&src_lsi);
+		IPV6_TO_IPV4_MAP(&(ctx->dst),&dst_lsi);
+		if (IS_LSI32(src_lsi.s_addr)){
+			if (is_packet_reinjection(&dst_lsi)) {
+				verdict = 1;
+				goto out_err;
+		      	} else {
+			    	hip_fw_handle_outgoing_lsi(ctx->ipq_packet, &src_lsi, &dst_lsi);
+			    	/*Reject the packet*/
+			    	verdict = 0;
+				goto out_err;
+		      	}
+		}
+	}
+
+	if (ctx->ip_version == 6 && hip_userspace_ipsec)
 	{
 		HIP_DEBUG_HIT("destination hit: ", &ctx->dst);
 		HIP_DEBUG_HIT("default hit: ", hip_fw_get_default_hit());
@@ -1224,21 +1241,6 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx)
 			verdict = !hip_fw_userspace_ipsec_output(ctx);
 	}
 						   
-	/* LSI HOOKS */
-	if (ctx->ip_version == 4){	  
-		IPV6_TO_IPV4_MAP(&(ctx->src),&src_lsi);
-		IPV6_TO_IPV4_MAP(&(ctx->dst),&dst_lsi);
-		if (IS_LSI32(src_lsi.s_addr)){
-			if (is_packet_reinjection(&dst_lsi))
-				verdict = 1;
-		      	else{
-			    	hip_fw_handle_outgoing_lsi(ctx->ipq_packet, &src_lsi, &dst_lsi);
-			    	/*Reject the packet*/
-			    	verdict = 0;
-		      	}
-		}
-	}
-
 	/* No need to check default rules as it is handled by the
 	   iptables rules */
  out_err:
@@ -1291,11 +1293,11 @@ int hip_fw_handle_other_input(hip_fw_context_t *ctx)
 	int ip_hits = ipv6_addr_is_hit(&ctx->src) && ipv6_addr_is_hit(&ctx->dst);
 	HIP_DEBUG("\n");
 	
-	if (ip_hits){
+	if (ip_hits) {
 		if (hip_proxy_status)
 			verdict = handle_proxy_inbound_traffic(ctx->ipq_packet,
 							       &ctx->src);
-	  	else{
+	  	else {
 	        	//LSI check
 	        	verdict = hip_fw_handle_incoming_hit(ctx->ipq_packet,&ctx->src,&ctx->dst);
 	  	}
