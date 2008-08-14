@@ -2738,7 +2738,82 @@ combo-newgroup=&lt;create new...&gt;
     earlier in this section.
 </para>
 
+  <section id="efficient_HIP_detection">
+    <title>Opportunistic mode with efficient detection of peer HIP capability</title>
+	<para>
+	The normal HIP opportunistic mode experiences a delay when
+	a HIP peer tries to communicate with a non-HIP peer. This happens
+	because the initiator waits for a HIP response before falling
+	back on normal TCP communication. The efficient detection of
+	peer HIP capability enables us to detect peer HIP capability or
+	the lack thereof. If we detect that the peer supports HIP, we
+	continue the HIP opportunistic communication. Otherwise,
+	communication falls back on plain TCP. Efficient detection of
+	peer HIP capability is enabled with the second of the following
+	commands.
+	</para>
+  	<para>
+	As an example, we run the HIP daemon first.
+	</para>
+  	<para>
+	1. hipd
+	</para>
+  	<para>
+	Then, we enable efficient, undelayed detection of peer HIP
+	capability with the following command:
+	</para>
+  	<para>
+  	2. hipconf run opp advanced
+  	</para>
+	<para>
+	To try the feature, we initiate a TCP connection using the HIP
+	opportunistic library:
+	</para>
+	<para>
+	3. hipconf run opp wget IP-number
+	</para>
+  	<para>
+	One thing to stress here is that the receiver should also enable
+	the efficient HIP opportunistic mode in order to be ensure
+	being detected correctly. If this feature is not enabled at the
+	receiver, correct detection depends on the relative latency of a
+	TCP and a HIP packet.
+	</para>
+  	<para>
+	The enabling at the receiver is done by executing step 2 after
+	the HIP daemon has started. 
+	</para>
+  </section>
+
+  <section id="sys_based_opp_mode">
+    <title>System-based opportunistic mode</title>
+	<para>
+	The system-based opportunistic mode enables HIP communication
+	without the use of the opportunistic library. If the peer does
+	not support HIP, communication falls back on normal TCP
+	communication.
+	</para>
+	<para>
+	The system-based opportunistic mode is implemented at the HIP
+	firewall. It is enabled with the -s option as shown below:
+	</para>
+	<para>
+	hipfw -s
+	</para>
+	<para>
+	The system-based opportunistic mode uses the efficient detection
+	of peer HIP capability. Therefore, HIP efficient detection should
+	be enabled both at the initiator and at the receiver with the
+	following command:
+	</para>
+	<para>
+	hipconf run opp advanced
+	</para>
+  </section>
+
   </chapter>
+
+
   <chapter id="ch_mozilla_showip">
     <title>Mozilla/firefox showip addon</title> <itemizedlist>
 
