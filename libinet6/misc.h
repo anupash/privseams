@@ -42,6 +42,8 @@ struct hip_rsa_keylen {
 	int n;
 };
 
+int hip_sockaddr_is_v6_mapped(struct sockaddr *sa);
+
 static inline int ipv4_addr_cmp(const struct in_addr *a1,
 				const struct in_addr *a2)
 {

@@ -37,9 +37,13 @@
 #include "misc.h"
 #include "netdev.h"
 #include "lsi.h"
+
+#include "fw_stun.h"
+#include "pjnath.h"
 // include of "ext_user_ipsec.h" at the bottom due to dependency
 
 #define HIP_FW_DEFAULT_RULE_FILE "/etc/hip/firewall_conf"
+
 #define HIP_FW_DEFAULT_TIMEOUT   1
 #define HIP_FW_CONFIG_FILE_EX \
 "# format: HOOK [match] TARGET\n"\
@@ -93,6 +97,7 @@ typedef struct hip_fw_context {
 		struct tcphdr *tcp;
 	} transport_hdr;
 	struct udphdr *udp_encap_hdr;
+	int is_stun;
 	//uint32_t spi;
 } hip_fw_context_t;
 

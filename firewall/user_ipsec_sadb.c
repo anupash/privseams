@@ -301,7 +301,7 @@ int hip_sa_entry_update(int direction, uint32_t spi, uint32_t mode,
 	HIP_IFEL(!(stored_entry = hip_sa_entry_find_outbound(inner_src_addr, inner_dst_addr)),
 			-1, "failed to retrieve sa entry\n");
 	
-	pthread_mutex_lock(stored_entry->rw_lock);
+	pthread_mutex_lock(&stored_entry->rw_lock);
 	/* delete all links
 	 * 
 	 * TODO more efficient to delete entries in inbound db for all (addr, oldspi)
@@ -315,7 +315,7 @@ int hip_sa_entry_update(int direction, uint32_t spi, uint32_t mode,
 			-1, "failed to update the entry members\n");
 	
 	HIP_IFEL(hip_link_entries_add(stored_entry), -1, "failed to add links\n");
-	pthread_mutex_unlock(stored_entry->rw_lock);
+	pthread_mutex_unlock(&stored_entry->rw_lock);
 	
 	HIP_DEBUG("sa entry updated\n");
 	
@@ -485,7 +485,7 @@ int hip_sa_entry_delete(struct in6_addr *src_addr, struct in6_addr *dst_addr)
 	
 	/* NOTE: no need to unlock mutex as the entry is already freed and can't be
 	 * accessed any more */
-	pthread_mutex_lock(stored_entry->rw_lock);
+	pthread_mutex_lock(&stored_entry->rw_lock);
 	
 	HIP_IFEL(hip_link_entries_delete_all(stored_entry), -1, "failed to delete links\n");
 	
@@ -551,7 +551,7 @@ hip_link_entry_t *hip_link_entry_find(struct in6_addr *dst_addr, uint32_t spi)
 	
 	HIP_DEBUG("looking up link entry with following index attributes:\n");
 	HIP_DEBUG_HIT("dst_addr", search_link->dst_addr);
-	HIP_DEBUG("spi: %u\n", search_link->spi);
+	HIP_DEBUG("spi: 0x%lx\n", search_link->spi);
 	
 	hip_linkdb_print();
 	
@@ -618,7 +618,7 @@ void hip_link_entry_print(hip_link_entry_t *entry)
 	if (entry)
 	{
 		HIP_DEBUG_HIT("dst_addr", entry->dst_addr);
-		HIP_DEBUG("spi: %u\n", entry->spi);
+		HIP_DEBUG("spi: %lx\n", entry->spi);
 		HIP_DEBUG("> sa entry:\n");
 		hip_sa_entry_print(entry->linked_sa_entry);
 
@@ -687,7 +687,7 @@ void hip_sa_entry_print(hip_sa_entry_t *entry)
 	if (entry)
 	{
 		HIP_DEBUG("direction: %i\n", entry->direction);
-		HIP_DEBUG("spi: %u\n", entry->spi);
+		HIP_DEBUG("spi: 0x%lx\n", entry->spi);
 		HIP_DEBUG("mode: %u\n", entry->mode);
 		HIP_DEBUG_HIT("src_addr", entry->src_addr);
 		HIP_DEBUG_HIT("dst_addr", entry->dst_addr);

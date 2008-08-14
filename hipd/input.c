@@ -45,7 +45,7 @@ static int hip_verify_hmac(struct hip_common *buffer, u8 *hmac,
 
 	_HIP_HEXDUMP("HMAC", hmac_res, HIP_AH_SHA_LEN);
 	HIP_IFE(memcmp(hmac_res, hmac, HIP_AH_SHA_LEN), -EINVAL);
-	memcmp(hmac_res, hmac, HIP_AH_SHA_LEN); /* why is the same as the line before it?. Tao Wan*/
+
  out_err:
 	if (hmac_res)
 		HIP_FREE(hmac_res);
@@ -96,11 +96,12 @@ int hip_verify_packet_hmac(struct hip_common *msg,
 int hip_verify_packet_hmac_general(struct hip_common *msg,
 			   struct hip_crypto_key *crypto_key, hip_tlv_type_t parameter_type)
 {
-	HIP_DEBUG("hip_verify_packet_hmac() invoked.\n");
 	int err = 0, len = 0, orig_len = 0;
 	u8 orig_checksum = 0;
 	struct hip_crypto_key tmpkey;
 	struct hip_hmac *hmac = NULL;
+
+	HIP_DEBUG("hip_verify_packet_hmac() invoked.\n");
 
 	HIP_IFEL(!(hmac = hip_get_param(msg, parameter_type)),
 		 -ENOMSG, "No HMAC parameter\n");
@@ -474,12 +475,12 @@ int hip_receive_control_packet(struct hip_common *msg,
 		  msg_info->src_port, msg_info->dst_port);
 	HIP_DUMP_MSG(msg);
 
-//add by santtu
-#ifdef HIP_USE_ICE
+//add by santtu	
+#if 0
 	type = hip_get_msg_type(msg);
 	entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr);
 	if(type == HIP_UPDATE && entry){
-		hip_external_ice_receive_pkt(msg,entry,src_addr,msg_info->src_port);
+		hip_external_ice_receive_pkt(msg+1,msg->payload_len,entry,src_addr,msg_info->src_port);
 	}
 #endif
 //end add
@@ -616,30 +617,41 @@ int hip_receive_control_packet(struct hip_common *msg,
 			 hip_receive_r1(msg, src_addr, dst_addr, entry,
 					msg_info));
 		break;
-
+		
 	case HIP_R2:
 		HIP_IFCS(entry, err = entry->hadb_rcv_func->
 			 hip_receive_r2(msg, src_addr, dst_addr, entry,
 					msg_info));
 		//HIP_STOP_TIMER(KMM_GLOBAL,"Base Exchange");
 		break;
-
+		
 	case HIP_UPDATE:
-		HIP_IFCS(entry, err = entry->hadb_rcv_func->
-			 hip_receive_update(msg, src_addr, dst_addr, entry,
-					    msg_info));
+		HIP_DEBUG_HIT("receive a stun  from:  " ,src_addr );
+		if(entry){
+			HIP_IFCS(entry, err = entry->hadb_rcv_func->
+				 hip_receive_update(msg, src_addr, dst_addr, entry,
+						    msg_info));
+		}
+		//add the santtu
+		/**to support stun from firewall**/
+		else{
+			HIP_DEBUG("FOUND A UPDATE FROM FIREWALL \n");
+			hip_receive_update(msg, src_addr, dst_addr, entry,
+				    msg_info);
+		}
+		//end add
 		break;
-
+		
 	case HIP_NOTIFY:
 		HIP_IFCS(entry, err = entry->hadb_rcv_func->
 			 hip_receive_notify(msg, src_addr, dst_addr, entry));
 		break;
-
+		
 	case HIP_BOS:
 	     HIP_IFCS(entry, err = entry->hadb_rcv_func->
 		      hip_receive_bos(msg, src_addr, dst_addr, entry,
 				      msg_info));
-
+	     
 	     /*In case of BOS the msg->hitr is null, therefore it is replaced
 	       with our own HIT, so that the beet state can also be
 	       synchronized. */
@@ -794,7 +806,8 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
         }
 
 #ifdef HIP_USE_ICE
-        hip_build_param_nat_tranform(i2, entry->nat_control);
+        if(entry->nat_control)
+        	hip_build_param_nat_transform(i2, entry->nat_control);
 #endif
 	/********** SOLUTION **********/
 	{
@@ -1112,7 +1125,8 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 	   of R2 packet. Don't know if the entry is already locked... */
 	if(r1_info->dst_port == HIP_NAT_UDP_PORT) {
 		HIP_LOCK_HA(entry);
-		entry->nat_mode = 1;
+		if(!entry->nat_mode)
+			entry->nat_mode = HIP_NAT_MODE_PLAIN_UDP;
 		hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
 		HIP_UNLOCK_HA(entry);
 	}
@@ -1147,7 +1161,7 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 					n = list_entry(item);
 					if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
 						continue;
-					if (!IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr)))
+					if (!hip_sockaddr_is_v6_mapped(&n->addr)))
 					{
 						memcpy(r1_daddr, hip_cast_sa_addr(&n->addr),
 						       hip_sa_addr_len(&n->addr));
@@ -1163,7 +1177,7 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 						n = list_entry(item);
 						if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
 							continue;
-						if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr)))
+						if (hip_sockaddr_is_v6_mapped(&n->addr))
 						{
 							memcpy(r1_daddr, hip_cast_sa_addr(&n->addr),
 							       hip_sa_addr_len(&n->addr));
@@ -1443,18 +1457,29 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 		_HIP_HEXDUMP("Host ID for HMAC2", entry->our_pub,
 			     hip_get_param_total_len(entry->our_pub));
 	}
-
+	
 	memcpy(&hmac, &entry->hip_hmac_out, sizeof(hmac));
 	HIP_IFEL(hip_build_param_hmac2_contents(r2, &hmac, entry->our_pub), -1,
 		 "Failed to build parameter HMAC2 contents.\n");
-
+/*	
 	HIP_IFEL(entry->sign(entry->our_priv, r2), -EINVAL,
 		 "Failed to sign R2 packet.\n");
+	
+	err = entry->hadb_xmit_func->hip_send_pkt(
+		i2_daddr, i2_saddr, (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+		entry->peer_udp_port, r2, entry, 1);
+	*/
+	/* Why is err reset to zero? -Lauri 11.06.2008 */
+	if (err == 1) {
+		err = 0;
+	}
 
-//add by santtu
+	HIP_IFEL(entry->sign(entry->our_priv, r2), -EINVAL, "Could not sign R2. Failing\n");
+	
+//add by santtu	
 #ifdef CONFIG_HIP_RVS
 	if(!ipv6_addr_any(dest))
-	 {
+	 {  	   
 	      HIP_INFO("create replay_to parameter in R2\n");
 		  hip_build_param_relay_to(
 		       r2, dest, dest_port);
@@ -1908,6 +1933,8 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		memcpy(hip_cast_sa_addr(addr), &entry->local_address,
 		       hip_sa_addr_len(addr));
 		add_address_to_list(addr, if_index);
+
+		entry->nat_mode = hip_nat_status;
 	}
 
 	hip_hadb_insert_state(entry);
@@ -1925,7 +1952,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		hip_init_us(entry, &i2->hitr);
 #endif
 	}
-
 	/* If the incoming I2 packet has 50500 as destination port, NAT
 	   mode is set on for the host association, I2 source port is
 	   stored as the peer UDP port and send function is set to
@@ -1933,7 +1959,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	   here, since the source port can be different for I1 and I2. */
 	if(i2_info->dst_port == HIP_NAT_UDP_PORT)
 	{
-		entry->nat_mode = 1;
+		if (entry->nat_mode == 0) entry->nat_mode = HIP_NAT_MODE_PLAIN_UDP;
 		entry->local_udp_port = i2_info->dst_port;
 		entry->peer_udp_port = i2_info->src_port;
 		HIP_DEBUG("entry->hadb_xmit_func: %p.\n", entry->hadb_xmit_func);
@@ -1941,7 +1967,8 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 			  entry);
 		hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
 	}
-
+	HIP_DEBUG("check nat mode for ice:1: %d,%d, %d\n",hip_get_nat_mode(entry),
+		     			hip_get_nat_mode(NULL),HIP_NAT_MODE_ICE_UDP);
 	entry->hip_transform = hip_tfm;
 
 #ifdef CONFIG_HIP_BLIND
@@ -2048,6 +2075,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	/* nat_control is 0 means we use normal mode to create sa */
 	/* Lauri: What if nat_control is something else? Do we set up IPsec
 	   associations at all? */
+
 	if(entry->nat_control == 0) {
 		/* Set up IPsec associations */
 		err = entry->hadb_ipsec_func->hip_add_sa(
@@ -2147,6 +2175,11 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		if( state == -1 ){
 			HIP_DEBUG( "Handling RELAY_FROM of  I2 packet failed.\n");
 			goto out_err;
+		}else{ 
+			if(dest_port)
+			HIP_IFEL( hip_hadb_add_udp_addr_to_spi(entry, spi_out, &dest, 0, 0, 0, dest_port, HIP_LOCATOR_LOCATOR_TYPE_REFLEXIVE_PRIORITY),
+					 -1,  "Failed to add a reflexive address to SPI list\n");
+
 		}
 	}
 #endif
@@ -2192,11 +2225,11 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	   -Lauri 29.04.2008. */
 
 //add by santtu
-	/***** LOCATOR PARAMETER *****/
-	hip_handle_locator_parameter(entry, NULL, esp_info);
+    /***** LOCATOR PARAMETER *****/
+	hip_handle_locator_parameter(entry, hip_get_param(i2, HIP_PARAM_LOCATOR), esp_info);
 
 #ifdef HIP_USE_ICE
-	hip_nat_start_ice(entry, esp_info,ICE_ROLE_CONTROLLING);
+	hip_nat_start_ice(entry, esp_info,ICE_ROLE_CONTROLLED);
 #endif
 	
 //end add
@@ -2410,7 +2443,8 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 
 //add by santtu
     /***** LOCATOR PARAMETER *****/
-	hip_handle_locator_parameter(entry, NULL, esp_info);
+	hip_handle_locator_parameter(entry, 
+			hip_get_param(r2, HIP_PARAM_LOCATOR), esp_info);
 //end add
 
 	HIP_HEXDUMP("local_anchor: ", entry->esp_local_anchor,
@@ -2451,16 +2485,13 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 				  HIP_SPI_DIRECTION_IN, 0, entry), -1,
 				  "Failed to setup IPsec SPD/SA entries, peer:src\n");
 		}
-	} else{
-		HIP_DEBUG("ICE engine will be used, no sa created here\n");
 	}
-#if 0
 	else{
 		//spi should be created
-		get_random_bytes(&spi_in, sizeof(uint32_t));
+		HIP_DEBUG("ICE engine will be used, no sa created here\n");
 	}
-#endif
-// end of move
+
+// end of modify
 
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status()) {
@@ -2543,7 +2574,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 
 #ifdef HIP_USE_ICE
 
-	hip_nat_start_ice(entry,esp_info,ICE_ROLE_CONTROLLED);
+	hip_nat_start_ice(entry,esp_info,ICE_ROLE_CONTROLLING);
         /*
         //check the nat transform mode
         if(!(entry->nat_control)){
@@ -2567,7 +2598,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	        		if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
 	        		    continue;
 	        		HIP_DEBUG_HIT("add Ice local in R2 address", hip_cast_sa_addr(&n->addr));
-	        		if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
+	        		if (hip_sockaddr_is_v6_mapped(&n->addr)) {
 	        			hip_external_ice_add_local_candidates(ice_session,hip_cast_sa_addr(&n->addr),50500,PJ_ICE_CAND_TYPE_HOST);
 	        		}
 

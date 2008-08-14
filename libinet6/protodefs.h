@@ -58,6 +58,8 @@
 #define HIP_PARAM_LOCATOR              193
 //NAT branch
 #define HIP_PARAM_NAT_TRANSFORM        194
+	/*195 is temp value, check me later**/
+#define HIP_PARAM_STUN        		   195
 //end NAT branch
 #define HIP_PARAM_HASH_CHAIN_VALUE     221
 #define HIP_PARAM_HASH_CHAIN_ANCHORS   222
@@ -83,7 +85,8 @@
 #define HIP_PARAM_ESP_PROT_ANCHOR	   4121
 
 /* Range 32768 - 49141 can be used for HIPL private parameters i.e. to
-   parameters passed from hipconf to hipdaemon. */
+   parameters passed from hipconf to hipdaemon.
+   @todo: move these to icomm.h */
 #define HIP_PARAM_HIT                   32768
 #define HIP_PARAM_IPV6_ADDR             32769
 #define HIP_PARAM_DSA_SIGN_DATA         32770 /**< @todo change to digest */
@@ -115,8 +118,15 @@
 #define HIP_PARAM_ADD_HIT		32800
 #define HIP_PARAM_ADD_OPTION		32801
 #define HIP_PARAM_PEER_HIT		32802
-#define HIP_PARAM_HCHAIN_ANCHOR		32803
-#define HIP_PARAM_LSI		        32804
+#define HIP_PARAM_CERT_X509_REQ         32803
+#define HIP_PARAM_CERT_X509_RESP        32804
+#define HIP_PARAM_HCHAIN_ANCHOR		32805
+#define HIP_PARAM_LSI		        32806
+#define HIP_PARAM_HIT_LOCAL		32807
+#define HIP_PARAM_HIT_PEER		32808
+#define HIP_PARAM_IPV6_ADDR_LOCAL	32809
+#define HIP_PARAM_IPV6_ADDR_PEER        32810
+
 /* End of HIPL private parameters. */
 
 #define HIP_PARAM_HMAC                 61505
@@ -293,6 +303,8 @@
  */
 #define HIP_PROXY_PASSTHROUGH		0
 #define HIP_PROXY_TRANSLATE 		1
+#define HIP_PROXY_I1_SENT               2
+
 /* @} */
 
 /* Registration failure types as specified in draft-ietf-hip-registration-02.
@@ -816,6 +828,19 @@ struct hip_opendht_gw_info {
 	uint16_t        port;
 } __attribute__ ((packed));
 
+struct hip_cert_x509_req {
+	hip_tlv_type_t 	type;
+	hip_tlv_len_t 	length;
+	struct in6_addr addr;
+} __attribute__ ((packed));
+
+struct hip_cert_x509_resp {
+	hip_tlv_type_t 	type;
+	hip_tlv_len_t 	length;
+	unsigned char der[1024];
+        int der_len;
+} __attribute__ ((packed));
+
 struct hip_opendht_set {
 	hip_tlv_type_t 	type;
 	hip_tlv_len_t 	length;
@@ -837,6 +862,12 @@ struct hip_reg_from {
      hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
      uint8_t address[16]; /**< IPv6 address */
      in_port_t port; /**< Port number. */
+} __attribute__ ((packed));
+
+
+struct hip_stun {
+     hip_tlv_type_t type; /**< Type code for the parameter. */
+     hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
 } __attribute__ ((packed));
 
 #endif /* _HIP_PROTODEFS */

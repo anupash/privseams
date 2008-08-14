@@ -100,9 +100,12 @@ struct hip_opp_blocking_request_entry
   
 };
 
-struct hip_opp_hit_pair {
-	hip_hit_t real_hit;
-	hip_hit_t pseudo_hit;
+struct hip_opp_info {
+	hip_hit_t local_hit;
+	hip_hit_t real_peer_hit;
+	hip_hit_t pseudo_peer_hit;
+	struct in6_addr local_addr;
+	struct in6_addr peer_addr;
 };
 
 inline static int ipv6_addr_is_null(struct in6_addr *ip){
@@ -205,6 +208,12 @@ static inline void set_lsi_prefix(hip_lsi_t *lsi)
 
 #ifndef MAX
 #  define MAX(a,b)	((a)>(b)?(a):(b))
+#endif
+
+#ifdef CONFIG_HIP_OPENWRT
+# define HIP_CREATE_FILE(x)	creat((x), 0644)
+#else
+# define HIP_CREATE_FILE(x)	open((x), O_RDWR | O_CREAT, 0644)
 #endif
 
 #endif /* _HIP_UTILS */

@@ -1,5 +1,9 @@
 #include "conndb.h"
 
+/*
+ * HIP proxy connection tracking
+ */
+
 /** A callback wrapper of the prototype required by @c lh_new(). */
 //static IMPLEMENT_LHASH_HASH_FN(hip_hash_proxy_db, const hip_proxy_t *)
 /** A callback wrapper of the prototype required by @c lh_new(). */
@@ -101,13 +105,13 @@ void hip_uninit_conn_db()
 }
 
 int hip_conn_add_entry(struct in6_addr *addr_client, 
-													struct in6_addr *addr_peer,
-													struct in6_addr *hit_proxy, 
-													struct in6_addr *hit_peer, 
-													int protocol, 
-													int port_client, 
-													int port_peer,  
-													int state)
+		       struct in6_addr *addr_peer,
+		       struct in6_addr *hit_proxy, 
+		       struct in6_addr *hit_peer, 
+		       int protocol, 
+		       int port_client, 
+		       int port_peer,  
+		       int state)
 {
 	hip_conn_t *tmp = NULL, *new_item = NULL;
 	int err = 0;
@@ -135,6 +139,7 @@ int hip_conn_add_entry(struct in6_addr *addr_client,
 	HIP_DEBUG("conn adds connection state successfully!\n");
 	HIP_DEBUG_IN6ADDR("source ip addr",&new_item->addr_client);
 	HIP_DEBUG_IN6ADDR("destination ip addr",&new_item->addr_peer);
+	HIP_DEBUG("port_client=%d port_peer=%d protocol=%d\n", port_client, port_peer, protocol);
 
 	return err;
 }
@@ -186,3 +191,4 @@ int hip_conn_update_state(struct in6_addr *src_addr,
 	}
 }
 */
+
