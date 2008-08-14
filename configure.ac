@@ -1,5 +1,5 @@
 
-r#                                               -*- Autoconf -*-
+#                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 #
 # Generated with autoscan and manually edited -Miika
@@ -30,7 +30,36 @@ AC_HEADER_SYS_WAIT
 AC_HEADER_STDC
 
 AC_HEADER_STDBOOL
-AC_CHECK_HEADERS([arpa/inet.h fcntl.h inttypes.h libintl.h limits.h locale.h malloc.h netdb.h netinet/in.h paths.h stddef.h stdint.h stdlib.h string.h strings.h sys/file.h sys/ioctl.h sys/param.h sys/socket.h sys/time.h sys/vfs.h syslog.h termios.h unistd.h utime.h utmp.h openssl/dsa.h])
+AC_CHECK_HEADERS([arpa/inet.h fcntl.h inttypes.h limits.h locale.h malloc.h netdb.h netinet/in.h paths.h stddef.h stdint.h stdlib.h string.h strings.h sys/file.h sys/ioctl.h sys/param.h sys/socket.h sys/time.h sys/vfs.h syslog.h termios.h unistd.h utime.h utmp.h openssl/dsa.h])
+
+case "$host" in
+  alpha*)
+    TARGET=ALPHA;
+    ;;
+  arm*)
+    TARGET=ARM;
+    ;;
+  hppa*linux* | parisc*linux*)
+    TARGET=PA_LINUX;
+    ;;
+  i?86*)
+    TARGET=X86;
+    ;;
+  ia64*)
+    TARGET=IA64;
+    ;;
+  mips*linux*)
+    TARGET=MIPS_LINUX;
+    ;;
+  powerpc*linux*)
+    TARGET=POWERPC;
+    ;;
+  x86_64*)
+    TARGET=X86_64;
+    ;;
+esac
+
+AC_SUBST(TARGET)
 
 # Checks for typedefs, structures, and compiler characteristics.
 #AC_C_CONST
@@ -85,7 +114,7 @@ AC_ARG_ENABLE(firewall,
 AC_CACHE_CHECK([whether to use firewall],
                [ac_cv_use_firewall], [ac_cv_use_firewall=yes])
 if test x"$ac_cv_use_firewall" = x"yes"; then
-        AC_CHECK_LIB(ipq, ipq_create_handle,, AC_MSG_ERROR(libipq not found))
+        AC_CHECK_LIB(ipq, ipq_create_handle,, AC_MSG_ERROR(libipq not found, install iptables developer headers))
 #        AC_CHECK_LIB(glib-2.0, g_list_append,, AC_MSG_ERROR(glib not found))
 # Do not work -mk
 #        AC_CHECK_HEADERS(glib-2.0/glib/glist.h,,
@@ -114,7 +143,7 @@ AC_CACHE_CHECK([whether to use agent],
                [ac_cv_use_agent], [ac_cv_use_agent=yes])
 if test x"$ac_cv_use_agent" = x"yes"; then
 	AC_DEFINE(CONFIG_HIP_AGENT, AC_PREREQ(2.53))
-        AC_CHECK_LIB(sqlite3, sqlite3_open,, AC_MSG_ERROR(libsqlite3 not found))	
+        AC_CHECK_LIB(sqlite3, sqlite3_open,, AC_MSG_ERROR(libsqlite3-dev not found))	
 fi
 AM_CONDITIONAL(HIP_AGENT, test x"$ac_cv_use_agent" = x"yes")
 
@@ -183,14 +212,17 @@ if test x"$ac_cv_use_rvs" = x"yes"; then
 fi
 
 AC_ARG_ENABLE(openwrt,
-             AC_HELP_STRING([--enable-opewrt],
+             AC_HELP_STRING([--enable-openwrt],
                             [OpenWRT (default is NO)]),
              [ac_cv_use_openwrt=$enableval], [ac_cv_use_openwrt=no])
 AC_CACHE_CHECK([whether to use OpenWRT],
-               [ac_cv_use_openwrt], [ac_cv_use_opewrt=no])
+               [ac_cv_use_openwrt], [ac_cv_use_openwrt=no])
 if test x"$ac_cv_use_openwrt" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_OPENWRT, AC_PREREQ(2.53))
-	AC_SUBST(OPENWRT_CFLAGS, "-lc")
+        AC_DEFINE(CONFIG_HIP_OPENWRT, AC_PREREQ(2.53))5B
+        AC_SUBST(OPENWRT_CFLAGS, "-lc")
+        if test x"$TARGET" = x"MIPS_LINUX"; then
+                AC_DEFINE(CONFIG_HIP_OPENWRT_MIPSLINUX, AC_PREREQ(2.53))
+        fi
 fi
 AM_CONDITIONAL(HIP_OPENWRT, test x"$ac_cv_use_openwrt" = x"yes")
 
@@ -232,7 +264,7 @@ AC_ARG_ENABLE(privsep,
 AC_CACHE_CHECK([whether to use privsep],
                [ac_cv_use_privsep], [ac_cv_use_privsep=yes])
 if test x"$ac_cv_use_privsep" = x"yes"; then
-	AC_CHECK_LIB(cap, cap_get_proc,, AC_MSG_ERROR(Cap lib not found))
+	AC_CHECK_LIB(cap, cap_get_proc,, AC_MSG_ERROR(libcap-dev developer headers not found))
         AC_DEFINE(CONFIG_HIP_PRIVSEP, AC_PREREQ(2.53))
 fi
 AM_CONDITIONAL(HIP_PRIVSEP, test x"$ac_cv_use_privsep" = x"yes")

@@ -591,7 +591,7 @@ int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
 
        _HIP_HEXDUMP("digest", digest, sizeof(digest));
 
-       bzero(hit, sizeof(hip_hit_t));
+       memset(hit, 0, sizeof(hip_hit_t));
        HIP_IFEL(khi_encode(digest, sizeof(digest) * 8,
 			   ((u8 *) hit) + 3,
 			   sizeof(hip_hit_t) * 8 - HIP_HIT_PREFIX_LEN),
@@ -1541,6 +1541,16 @@ void *hip_cast_sa_addr(void *sockaddr) {
   return ret;
 }
 
+int hip_sockaddr_is_v6_mapped(struct sockaddr *sa) {
+  int family = sa->sa_family;
+
+  HIP_ASSERT(family == AF_INET || family == AF_INET6);
+  if (family != AF_INET6)
+    return 0;
+  else 
+    return IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(sa));
+}
+
 int hip_sockaddr_len(const void *sockaddr) {
   struct sockaddr *sa = (struct sockaddr *) sockaddr;
   int len;
@@ -1619,8 +1629,9 @@ int hip_create_lock_file(char *filename, int killold) {
 	HIP_IFEL((new_pid_str_len <= 0), -1, "pID length error.\n");
 		
 	/* Read old pid */
-	fd = open(filename, O_RDWR | O_CREAT, 0644);
-	HIP_IFEL((fd <= 0), -1, "Opening lock file failed.\n");
+
+	fd = HIP_CREATE_FILE(filename);
+	HIP_IFEL((fd <= 0), -1, "opening lock file failed\n");
 
 	read(fd, old_pid_str, sizeof(old_pid_str) - 1);
 	old_pid = atoi(old_pid_str);

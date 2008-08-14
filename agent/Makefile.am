@@ -15,7 +15,7 @@ include_HEADERS = agent.h     gui_interface.h  lang_english.h  language.h  tools
 connhipd.h  hitdb.h          lang_finnish.h  str_var.h   x.h
 
 
-INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBHIPGUI) -I$(HIPL_LIBINET6_INCLUDE)
+INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBHIPGUI) -I$(HIPL_LIBINET6_INCLUDE)  -I$(HIPL_PJPROJECT_NATH)/include -I$(HIPL_PJPROJECT_LIB)/include -I$(HIPL_PJPROJECT_LIB_UTIL)/include -I$(HIPL_PJPROJECT_MEDIA)/include
 
 if HIP_AGENT
 

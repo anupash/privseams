@@ -10,8 +10,10 @@ cd ..
 # Note: autogen options are also passed to HIPL configure.
 # See bug id 524)
 echo "Pjproject was configured successfully"
-echo "Now configuring hipl with default configure optons"
+
+echo "Now configuring hipl with default configure options"
 autoreconf --install --force && ./configure $@ && make  && \
+
   echo "" && \
   echo "NOTE: The commands above only build the userspace apps." && \
   echo "NOTE: You have to build and install the linux kernel separately." && \

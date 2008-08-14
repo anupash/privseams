@@ -12,7 +12,7 @@ endif
 include_HEADERS = checksum.h first_test.h hipsetup.h start-stop-daemon.h
 include_HEADERS += unittest.h conntest.h hipconftool.h misc_install.h unit.h
 
-INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
+INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)  -I$(HIPL_PJPROJECT_NATH)/include -I$(HIPL_PJPROJECT_LIB)/include -I$(HIPL_PJPROJECT_LIB_UTIL)/include -I$(HIPL_PJPROJECT_MEDIA)/include
 
 conntest_client_opp_LDADD = 
 if HIP_OPPORTUNISTIC
@@ -20,14 +20,16 @@ if HIP_OPPORTUNISTIC
   conntest_client_opp_LDADD += ../libopphip/.libs/libopphip.a
 endif
 
+conntest_client_opp_LDADD += $(OPENWRT_LIB_STATIC)
+
 conntest_client_opp_LDADD += ../libinet6/.libs/libinet6.a
-hashtest_LDADD = ../libinet6/.libs/libinet6.a
-listtest_LDADD =
+hashtest_LDADD = $(OPENWRT_LIB_STATIC) ../libinet6/.libs/libinet6.a
+listtest_LDADD = $(OPENWRT_LIB_STATIC)
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
 # Note: libhiptool needs to be the last library in LDADD!!
 #
-LDADD  = ../libinet6/.libs/libinet6.a
+LDADD  = $(OPENWRT_LIB_STATIC) ../libinet6/.libs/libinet6.a
 
 if HIP_CORPORATE
   conntest_client_opp_LDADD += -lhiptool
@@ -43,8 +45,15 @@ conntest_client_opp_LDADD += ../opendht/.libs/libhipopendht.a
 LDADD += ../opendht/.libs/libhipopendht.a
 CFLAGS += $(HIPL_XMLL)
 
-opendhtteststub_LDFLAGS= -lcrypto $(HIP_XMLL) 
-opendhtteststub_LDADD = ../opendht/.libs/libhipopendht.a ../libinet6/.libs/libinet6.a
+LDFLAGS = -lc -lcrypto $(HIP_XMLL) $(OPENWRT)
+
+opendhtteststub_LDFLAGS= -lcrypto  $(HIP_XMLL) 
+
+if HIP_OPENWRT
+	opendhtteststub_LDFLAGS+= -lc
+endif
+
+opendhtteststub_LDADD = ../opendht/.libs/libhipopendht.a $(OPENWRT_LIB_STATIC) ../libinet6/.libs/libinet6.a
 if HIP_CORPORATE
   opendhtteststub_LDADD += -lhiptool
 else
