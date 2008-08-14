@@ -1333,6 +1333,10 @@ int handle_update(const struct in6_addr * ip6_src,
 		}
 	}
 
+	// everything should be set now in order to process eventual anchor params
+	HIP_IFEL(esp_prot_conntrack_update(common, tuple), -1,
+			"failed to process anchor parameter\n");
+
   out_err:
 	return err;
 }
