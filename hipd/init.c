@@ -317,14 +317,21 @@ int hip_init_dht()
         extern int hip_opendht_sock_hit;  
         extern int hip_opendht_fqdn_sent;
         extern int hip_opendht_hit_sent;
+        extern int opendht_serving_gateway_port;
+        extern char opendht_serving_gateway_port_str[7];
         char *serveraddr_str;
         char *servername_str;
         FILE *fp = NULL; 
         char line[500]; 
         List list;
         
-        if (hip_opendht_inuse == SO_HIP_DHT_ON) {
+      	if (hip_opendht_inuse == SO_HIP_DHT_ON) {
                 hip_opendht_error_count = 0;
+                /*Initializing variable for dht gateway port used in resolve_dht_gateway_info
+                 *  in libhipopendht */
+				opendht_serving_gateway_port = OPENDHT_PORT ; /*Needs to be init here, because of
+                											 gateway change after threshold error count*/
+				sprintf(opendht_serving_gateway_port_str, "%d", opendht_serving_gateway_port); 
                 /* check the condition of the sockets, we may have come here in middle
                  of something so re-initializing might be needed */
                 if (hip_opendht_sock_fqdn > 0) {

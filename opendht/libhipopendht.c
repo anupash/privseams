@@ -21,6 +21,10 @@
 #include "ife.h"
 #include "icomm.h"
 #include "misc.h"
+
+
+char opendht_serving_gateway_port_str[7];
+   
 /**
  *  For interrupting the connect in gethosts_hit 
  *  @param signo signal number
@@ -67,13 +71,13 @@ int resolve_dht_gateway_info(char * gateway_name,
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_NODHT;
     error = 0;
-    error = getaddrinfo(gateway_name, OPENDHT_PORT_STR, &hints, gateway);
+    error = getaddrinfo(gateway_name, opendht_serving_gateway_port_str, &hints, gateway);
     if (error != 0)
         HIP_DEBUG("OpenDHT gateway resolving failed\n");
     else
 	{
-            sa = (struct sockaddr_in *) (*gateway)->ai_addr;
-            HIP_DEBUG("OpenDHT gateway IPv4: %s\n", inet_ntoa(sa->sin_addr));
+		sa = (struct sockaddr_in *) (*gateway)->ai_addr;
+		HIP_DEBUG("OpenDHT gateway IPv4: %s\n", inet_ntoa(sa->sin_addr));
 	}
     
     return error;

@@ -373,11 +373,10 @@ int hip_agent_update(void)
 
 
 /**
- * register_to_dht - Insert mapping for local host IP addresses to HITs to DHT.
+ * register_to_dht - Insert mapping for local host IP addresses to HITs to the queue.
  */
 void register_to_dht ()
 {  
-	extern int hip_opendht_error_count;
 	extern int hip_opendht_inuse;
 	extern char opendht_name_mapping;
 	hip_list_t *item = NULL, *tmp = NULL;
@@ -386,35 +385,28 @@ void register_to_dht ()
 	struct in6_addr tmp_hit;
 	char *tmp_hit_str = NULL;
       
-        if (hip_opendht_inuse == SO_HIP_DHT_ON) {
-                HIP_DEBUG("DHT error count now %d/%d.\n", 
-                          hip_opendht_error_count, OPENDHT_ERROR_COUNT_MAX);
-                if (hip_opendht_error_count > OPENDHT_ERROR_COUNT_MAX) {
-                        HIP_DEBUG("DHT error count reached resolving trying to change gateway\n");
-                        hip_init_dht();
-                }
-                list_for_each_safe(item, tmp, addresses, i) {
-                        opendht_n = list_entry(item);	
-                        if (ipv6_addr_is_hit(hip_cast_sa_addr(&opendht_n->addr))) 
-                                continue;
-                        if (hip_get_default_hit(&tmp_hit)) {
-                                HIP_ERROR("No HIT found\n");
-                                return;
-                        }
-                        tmp_hit_str =  hip_convert_hit_to_str(&tmp_hit, NULL);
-                        
-                        //TODO checkout a better way to find OPENDHT_GATEWAY address to be sent as HOST 
-                        // param value in HTTP header
-                        publish_hit(&opendht_name_mapping, tmp_hit_str,  OPENDHT_GATEWAY);
-                        pub_addr_ret = publish_addr(tmp_hit_str,  OPENDHT_GATEWAY);
-                        continue;
-                }
+	if (hip_opendht_inuse == SO_HIP_DHT_ON) {
+		list_for_each_safe(item, tmp, addresses, i) {
+			opendht_n = list_entry(item);	
+			if (ipv6_addr_is_hit(hip_cast_sa_addr(&opendht_n->addr))) 
+				continue;
+			if (hip_get_default_hit(&tmp_hit)) {
+				HIP_ERROR("No HIT found\n");
+				return;
+			}
+			tmp_hit_str =  hip_convert_hit_to_str(&tmp_hit, NULL);
+			//TODO checkout a better way to find OPENDHT_GATEWAY address to be sent as HOST 
+			// param value in HTTP header
+			publish_hit(&opendht_name_mapping, tmp_hit_str,  OPENDHT_GATEWAY);
+			pub_addr_ret = publish_addr(tmp_hit_str,  OPENDHT_GATEWAY);
+			continue;
+		}
              
-        }
+	}
  out_err:
- 	    if (tmp_hit_str)
-		free(tmp_hit_str);
-        return;
+	if (tmp_hit_str)
+	free(tmp_hit_str);
+	return;
 }
 /**
  * publish_hit
@@ -981,11 +973,18 @@ out_err:
  */
 void send_packet_to_lookup_from_queue ()
 {
-	/* send socks for sending*/
 	extern int hip_opendht_sock_fqdn;  
 	extern int hip_opendht_fqdn_sent;
 	extern int hip_opendht_sock_hit;
 	extern int hip_opendht_hit_sent;
+	extern int hip_opendht_error_count;
+	
+	HIP_DEBUG("DHT error count now %d/%d.\n", 
+			hip_opendht_error_count, OPENDHT_ERROR_COUNT_MAX);
+	if (hip_opendht_error_count > OPENDHT_ERROR_COUNT_MAX) {
+		HIP_DEBUG("DHT error count reached resolving trying to change gateway\n");
+		hip_init_dht();
+	}
 	send_queue_data (&hip_opendht_sock_fqdn, &hip_opendht_fqdn_sent);
 	send_queue_data (&hip_opendht_sock_hit, &hip_opendht_hit_sent);
 }
