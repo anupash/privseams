@@ -25,6 +25,7 @@ int foreground = 1;
 int hip_opptcp = 0;
 int hip_userspace_ipsec = 0;
 int hip_esp_protection = 0;
+int hip_stun = 0;
 
 
 /* Default HIT - do not access this directly, call hip_fw_get_default_hit() */
@@ -55,6 +56,7 @@ void print_usage(){
 	printf("      -k = kill running firewall pid\n");
  	printf("      -i = switch on userspace ipsec\n");
  	printf("      -e = use esp protection extension (also sets -i)\n");
+ 	printf("      -s = stun/ice message support\n");
 	printf("      -h = print this help\n\n");
 }
 
@@ -159,9 +161,12 @@ void hip_fw_uninit_proxy(){
 int hip_fw_init_userspace_ipsec(){
 	int err = 0;
 	
+	HIP_IFEL(userspace_ipsec_init(), -1, "failed to initialize userspace ipsec\n");
+	
+	
 	if (hip_userspace_ipsec)
 	{
-		HIP_IFEL(userspace_ipsec_init(), -1, "failed to initialize userspace ipsec\n");
+		
 		
 		// activate userspace ipsec in hipd
 		HIP_IFEL(send_userspace_ipsec_to_hipd(hip_userspace_ipsec), -1,
@@ -184,6 +189,16 @@ int hip_fw_init_userspace_ipsec(){
 		system("ip6tables -I HIPFW-OUTPUT -p 6 -d 2001:0010::/28 -j QUEUE");
 		system("ip6tables -I HIPFW-OUTPUT -p 17 -d 2001:0010::/28 -j QUEUE");
 
+		/* If you want to make this smaller, you have to change also
+		   /proc/sys/net/ipv6/conf/default/mtu, but it will have a
+		   negative impact on non-HIP IPv6 connectivity. MTU is
+		   set using system call rather than in do_chflags to avoid
+		   chicken and egg problems in hipd start up. If we decide
+		   to decrease the mtu also for kernelspace ipsec, this can
+		   be moved there. */
+		system("ifconfig dummy0 mtu 1280");
+	} else {
+		system("ifconfig dummy0 mtu 1500");
 	}
 	
   out_err:
@@ -365,8 +380,11 @@ int firewall_init_rules(){
 	hip_fw_handler[NF_IP_LOCAL_OUT][TCP_PACKET] = hip_fw_handle_tcp_output;
 
 	hip_fw_handler[NF_IP_FORWARD][OTHER_PACKET] = hip_fw_handle_other_forward;
+
+	//apply rules for forwarded hip and esp traffic
 	hip_fw_handler[NF_IP_FORWARD][HIP_PACKET] = hip_fw_handle_hip_forward;
 	hip_fw_handler[NF_IP_FORWARD][ESP_PACKET] = hip_fw_handle_esp_forward;
+	//do not drop those files by default
 	hip_fw_handler[NF_IP_FORWARD][TCP_PACKET] = hip_fw_handle_tcp_forward;
 
 	HIP_DEBUG("Enabling forwarding for IPv4 and IPv6\n");
@@ -606,7 +624,7 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 	// length of packet starting at udp header
 	uint16_t udp_len = 0;
 	struct udphdr *udphdr = NULL;
-	int udp_encap_zero_bytes = 0;
+	int udp_encap_zero_bytes = 0, stun_ret;
 	
 	// default assumption
 	ctx->packet_type = OTHER_PACKET;
@@ -815,7 +833,9 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 			goto end_init;
 		}
 	}
-	    
+
+	HIP_DEBUG("udp hdr len %d\n", ntohs(udphdr->len));
+	HIP_HEXDUMP("hexdump ",udphdr, 20);
 	// HIP packets have zero bytes (IPv4 only right now)
 	if(ctx->ip_version == 4 && udphdr
 			&& ((udphdr->source == ntohs(HIP_NAT_UDP_PORT)) || 
@@ -845,6 +865,17 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 		HIP_ERROR("communicating with BROKEN peer implementation of UDP encapsulation,"
 				" found zero bytes when receiving HIP control message\n");
 	}
+
+	/* Santtu: XX FIXME: needs to be inside the following if */
+	//else if (hip_is_stun_msg(udphdr) {
+	else if ((stun_ret = pj_stun_msg_check(udphdr+1,ntohs(udphdr->len) - 
+			sizeof(struct udphdr),PJ_STUN_IS_DATAGRAM)) 
+			== PJ_SUCCESS){
+		HIP_DEBUG("Found a UDP STUN\n");
+		ctx->is_stun = 1;
+	    goto end_init;
+	}
+	
 	
 	// ESP does not have zero bytes (IPv4 only right now)
 	else if (ctx->ip_version == 4 && udphdr
@@ -852,6 +883,10 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version){
 		       (udphdr->dest == ntohs(HIP_NAT_UDP_PORT)))
 		   && !udp_encap_zero_bytes)
 	{
+		
+		HIP_HEXDUMP("stun check failed in UDP",udphdr+1, 20);
+		HIP_DEBUG("stun return is %d \n",stun_ret);
+		HIP_DEBUG("stun len is %d \n",ntohs(udphdr->len) - sizeof(udphdr));
 		/* from the ports and the non zero SPI we can tell that this
 		 * is an ESP packet */
 		HIP_DEBUG("UDP encapsulated ESP packet or STUN PACKET\n");
@@ -915,6 +950,10 @@ int filter_esp(const struct in6_addr * dst_addr,
 	int use_escrow = 0;
 	struct _DList * list = NULL;
 	struct rule * rule = NULL;
+
+	/* @todo: ESP access control have some issues ICE/STUN */
+	if (hip_stun)
+		verdict = 1;
 	
 	// if key escrow is active we have to handle it here too
 	if (is_escrow_active())
@@ -1186,7 +1225,7 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 
 	HIP_DEBUG("\n");
 
-	if (hip_userspace_ipsec)
+	if (ctx->ip_version == 6 && hip_userspace_ipsec)
 	{
 		HIP_DEBUG_HIT("destination hit: ", &ctx->dst);
 		HIP_DEBUG_HIT("default hit: ", hip_fw_get_default_hit());
@@ -1199,16 +1238,18 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 	}
 						   
 	/* LSI HOOKS */
-	if(ctx->ip_version == 4){	  
-		IPV6_TO_IPV4_MAP(&(ctx->src), &src_lsi);
-		IPV6_TO_IPV4_MAP(&(ctx->dst), &dst_lsi);
-		if(IS_LSI32(src_lsi.s_addr)){
-			if(is_packet_reinjection(&dst_lsi))
+	if (ctx->ip_version == 4){	  
+		IPV6_TO_IPV4_MAP(&(ctx->src),&src_lsi);
+		IPV6_TO_IPV4_MAP(&(ctx->dst),&dst_lsi);
+		if (IS_LSI32(src_lsi.s_addr)){
+			if (is_packet_reinjection(&dst_lsi)) {
 				verdict = 1;
-		      	else{
+				goto out_err;
+		      	} else {
 			    	hip_fw_handle_outgoing_lsi(ctx->ipq_packet, &src_lsi, &dst_lsi);
 			    	//Reject the packet
 			    	verdict = 0;
+				goto out_err;
 		      	}
 		}
 		else if((ctx->ip_hdr.ipv4)->ip_p == 6){
@@ -1223,6 +1264,7 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 			}
 		}
 	}
+
 	/* No need to check default rules as it is handled by the
 	   iptables rules */
  out_err:
@@ -1382,17 +1424,25 @@ int hip_fw_handle_other_input(hip_fw_context_t *ctx){
 	int ip_hits = ipv6_addr_is_hit(&ctx->src) && ipv6_addr_is_hit(&ctx->dst);
 	HIP_DEBUG("\n");
 	
-	if (ip_hits){
-		if (hip_proxy_status){
+	if (ip_hits) {
+		if (hip_proxy_status)
 			verdict = handle_proxy_inbound_traffic(ctx->ipq_packet,
 							       &ctx->src);
-		}
-	  	else{
+	  	else {
 	        	//LSI check
 	        	verdict = hip_fw_handle_incoming_hit(ctx->ipq_packet,&ctx->src,&ctx->dst);
 	  	}
+	} else if (hip_stun && ctx->is_stun == 1) {
+		HIP_DEBUG("Santtu is the king\n");
+		// Santtu FIXME
+		verdict = hip_fw_handle_stun_packet(ctx); 
+		// verdict zero drops the original so that you can send a new one
+		// alloc new memory, copy the packet and add some zeroes (and hip header?)
+		// changed ip and udp lengths and checksums accordingly
+		// check handle_proxy_inbound_traffic() for examples
+		// use raw_sock_v4 to send the packets 
 	}
-
+		
 	/* No need to check default rules as it is handled by the iptables rules */
  out_err:
 
@@ -1692,6 +1742,9 @@ int main(int argc, char **argv){
 			hip_userspace_ipsec = 1;
 			hip_esp_protection = 1;
 			break;
+		case 's':
+			hip_stun = 1;
+			break;
 		case 'h':
 			print_usage();
 			exit(2);
@@ -1739,34 +1792,35 @@ int main(int argc, char **argv){
 			rule_file, timeout);
 
 	firewall_increase_netlink_buffers();
+#ifndef CONFIG_HIP_OPENWRT
 	firewall_probe_kernel_modules();
+#endif
 
 	// create firewall queue handles for IPv4 traffic
 	// FIXME died handle will still be used below
 	h4 = ipq_create_handle(0, PF_INET);
-	if (!h4) {
-		HIP_ERROR("IPQ error: %s \n", ipq_errstr());
+	
+	if (!h4)
 		die(h4);
-	}
-		
+	HIP_DEBUG("IPv4 handle created\n");	
 	status = ipq_set_mode(h4, IPQ_COPY_PACKET, BUFSIZE);
-	if (status < 0) {
-		HIP_ERROR("IPQ error: %s \n", ipq_errstr());
+	
+	if (status < 0)
 		die(h4);
-	}
-
+	HIP_DEBUG("IPv4 handle mode COPY_PACKET set\n");
 	// create firewall queue handles for IPv6 traffic
 	// FIXME died handle will still be used below
 	h6 = ipq_create_handle(0, PF_INET6);
-	_HIP_DEBUG("IPQ error: %s \n", ipq_errstr());
+	
 	
 	if (!h6)
 		die(h6);
+	HIP_DEBUG("IPv6 handle created\n");		
 	status = ipq_set_mode(h6, IPQ_COPY_PACKET, BUFSIZE);
-	_HIP_DEBUG("IPQ error: %s \n", ipq_errstr());
+	
 	if (status < 0)
-		die(h6);
-
+		die(h6); 	
+	HIP_DEBUG("IPv6 handle mode COPY_PACKET set\n");
 	// set up ip(6)tables rules
 	HIP_IFEL(firewall_init_rules(), -1,
 		 "Firewall init failed\n");

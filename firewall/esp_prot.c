@@ -77,7 +77,7 @@ int esp_prot_set_sadb(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
   	return err;
 }
 
-int add_esp_prot_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *entry)
+int add_esp_prot_hash(unsigned char *out_hash, uint16_t *out_length, hip_sa_entry_t *entry)
 {
 	unsigned char *tmp_hash = NULL;
 	int err = 0;

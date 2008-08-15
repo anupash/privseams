@@ -13,9 +13,9 @@ CFLAGS += `pkg-config --cflags`
 include_HEADERS =  firewall.h conntrack.h rule_management.h helpers.h firewall_control.h hslist.h common_types.h
 include_HEADERS += esp_decrypt.h firewall_defines.h proxydb.h conndb.h esp_decrypt.h dlist.h
 include_HEADERS += user_ipsec.h user_ipsec_esp.h user_ipsec_sadb.h esp_prot.h
-include_HEADERS += proxy.h opptcp.h firewalldb.h lsi.h
+include_HEADERS += proxy.h opptcp.h firewalldb.h lsi.h fw_stun.h
 
-INCLUDES = $(hipl_common_include_paths)
+INCLUDES = $(hipl_common_include_paths)  -I$(HIPL_PJPROJECT_NATH)/include -I$(HIPL_PJPROJECT_LIB)/include -I$(HIPL_PJPROJECT_LIB_UTIL)/include -I$(HIPL_PJPROJECT_MEDIA)/include
 
 if HIP_FIREWALL
 
@@ -23,9 +23,18 @@ sbin_PROGRAMS = hipfw
 
 hipfw_SOURCES = firewall.c conntrack.c rule_management.c helpers.c firewall_control.c esp_decrypt.c proxydb.c conndb.c dlist.c hslist.c
 hipfw_SOURCES += user_ipsec.c user_ipsec_esp.c user_ipsec_sadb.c esp_prot.c
-hipfw_SOURCES += proxy.c opptcp.c firewalldb.c lsi.c
+hipfw_SOURCES += proxy.c opptcp.c firewalldb.c lsi.c fw_stun.c
 
-hipfw_LDADD = /usr/lib/libipq.a ../libinet6/.libs/libinet6.a
+hipfw_LDADD = -lipq ../libinet6/.libs/libinet6.a
+hipfw_LDADD += -lpthread -luuid
+hipfw_LDADD += ../pjproject/pjnath/lib/libpjnath-hipl.a
+hipfw_LDADD += ../pjproject/pjlib/lib/libpj-hipl.a
+hipfw_LDADD += ../pjproject/pjlib-util/lib/libpjlib-util-hipl.a
+
+../pjproject/pjlib/lib/libpj-hipl.a:
+../pjproject/pjlib-util/lib/libpjlib-util-hipl.a:
+../pjproject/pjnath/lib/libpjnath-hipl.a:
+
 if HIP_CORPORATE
   hipfw_LDADD += -lhiptool
 else

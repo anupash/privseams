@@ -210,5 +210,11 @@ static inline void set_lsi_prefix(hip_lsi_t *lsi)
 #  define MAX(a,b)	((a)>(b)?(a):(b))
 #endif
 
+#ifdef CONFIG_HIP_OPENWRT
+# define HIP_CREATE_FILE(x)	creat((x), 0644)
+#else
+# define HIP_CREATE_FILE(x)	open((x), O_RDWR | O_CREAT, 0644)
+#endif
+
 #endif /* _HIP_UTILS */
 

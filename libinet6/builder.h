@@ -125,6 +125,10 @@ int hip_build_param_relay_to(struct hip_common *msg,
 int hip_build_param_via_rvs(struct hip_common *msg,
 			    const struct in6_addr rvs_addresses[]);
 
+int hip_build_param_cert_x509_req(struct hip_common *,struct in6_addr *);
+int hip_build_param_cert_x509_resp(struct hip_common *, char *, int);
+int hip_build_param_cert_x509_ver(struct hip_common *, char *, int);
+
 int hip_build_param_opendht_set(struct hip_common *, char *);
 /** @} */
 
@@ -255,8 +259,8 @@ int hip_build_param_reg_response(hip_common_t *msg, const uint8_t lifetime,
 //add by santtu
 int hip_build_param_full_relay_hmac_contents(struct hip_common *,
                                       struct hip_crypto_key *);
-int hip_build_param_nat_tranform(struct hip_common *msg, 
-							hip_transform_suite_t nat_control);
+int hip_build_param_nat_transform(struct hip_common *msg, 
+				  hip_transform_suite_t nat_control);
 
 /**
  * Builds a REG_FAILED parameter.

@@ -125,6 +125,7 @@ int hip_cert_spki_create_cert(struct hip_cert_spki_info * content,
            public-key and signature fields filled */
 
         /* build the msg to be sent to the daemon */
+	hip_msg_init(msg);
         HIP_IFEL(hip_build_param_cert_spki_info(msg, content), -1,
                  "Failed to build cert_info\n");         
         HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_CERT_SPKI_SIGN, 0), -1, 
@@ -325,25 +326,182 @@ int hip_cert_spki_send_to_verification(struct hip_cert_spki_info * to_verificati
  *******************************************************************************/
 
 /**
- * Function that creates the certificate request for a certificate and sends it to the daemon
- * to get the certificate.
+ * Function that requests for a certificate from daemon and gives it back
  *
- * @param section STACK_OF(CONF_VALUE) pointer that holds the configuration file section
- * that contains the naming information
+ * @param subject is the subject
  *
- * @return STACK_OF(CONF_VALUE) pointer if ok and NULL if error or unsuccesfull. 
- */
-int hip_cert_x509v3_request(STACK_OF(CONF_VALUE) * section) {
-	int err = 0;
+ * @param cert is pointer to where this function writes the completed cert 
+ *
+ * @return < 0 on success negative otherwise
+ * 
+ * @note The certificate is given in DER encoding
+ */ 
+int hip_cert_x509v3_request_certificate(struct in6_addr * subject, 
+                                        unsigned char * certificate) {
+        int err = 0;
+        struct hip_common * msg;
+        struct hip_cert_x509_resp * p;
+        
+        HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, 
+                 "Malloc for msg failed\n");   
+	hip_msg_init(msg);
+        /* build the msg to be sent to the daemon */
 
-out_err:
-	return err;
+        HIP_IFEL(hip_build_param_cert_x509_req(msg, subject), -1,
+                 "Failed to build cert_info\n");         
+        HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_CERT_X509V3_SIGN, 0), -1, 
+                 "Failed to build user header\n");
+        /* send and wait */
+        HIP_DEBUG("Sending request to sign x509 cert to "
+                  "daemon and waiting for answer\n");	
+        hip_send_recv_daemon_info(msg);
+        /* get the struct from the message sent back by the daemon */
+        HIP_IFEL(!(p = hip_get_param(msg, HIP_PARAM_CERT_X509_RESP)), -1,
+                 "No name x509 struct found\n");
+        _HIP_HEXDUMP("DER:\n", p->der, p->der_len);
+        _HIP_DEBUG("DER length %d\n", p->der_len);
+        memcpy(certificate, p->der, p->der_len);
+        err = p->der_len;
+	_HIP_DUMP_MSG(msg);
+
+ out_err:
+        if (msg) free(msg);
+        return(err);
+}
+
+/**
+ * Function that requests for a verification of a certificate from daemon and
+ * tells the result
+ *
+ * @param cert is pointer to a certificate to be verified
+ *
+ * @return 0 on success negative otherwise
+ *
+ * @note give the certificate in PEM encoding
+ */ 
+int hip_cert_x509v3_request_verification(unsigned char * certificate, int len) {
+        int err = 0;
+        struct hip_common * msg;
+        struct hip_cert_x509_resp * received;
+        
+        HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, 
+                 "Malloc for msg failed\n");   
+        hip_msg_init(msg);
+
+        _HIP_HEXDUMP("DER DUMP:\n", certificate, len);
+        _HIP_DEBUG("DER LEN %d\n", len);
+        
+        /* build the msg to be sent to the daemon */
+        HIP_IFEL(hip_build_param_cert_x509_ver(msg, certificate, len), -1, 
+                 "Failed to build cert_info\n");         
+        HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_CERT_X509V3_VERIFY, 0), -1, 
+                 "Failed to build user header\n");
+        /* send and wait */
+        HIP_DEBUG("Sending request to verify x509  cert to "
+                  "daemon and waiting for answer\n");
+        _HIP_DUMP_MSG(msg);	
+        hip_send_recv_daemon_info(msg);
+        /* get the struct from the message sent back by the daemon */
+        HIP_IFEL(!(received = hip_get_param(msg, HIP_PARAM_CERT_X509_RESP)), -1,
+                 "No x509 struct found\n");
+        err = hip_get_msg_err(msg); 
+        if (err == 0) HIP_DEBUG("Verified successfully\n");
+        else HIP_DEBUG("Verification failed\n");
+	_HIP_DUMP_MSG(msg);
+
+ out_err:
+        if (msg) free(msg);
+        return(err);
 }
 
 /*******************************************************************************
  * UTILITARY FUNCTIONS                                                         *
  *******************************************************************************/
 
+/**
+ * Function that displays the contents of the DER encoded x509 certificate
+ *
+ * @param pem points to DER encoded certificate
+ *
+ * @return void 
+ */
+void hip_cert_display_x509_der_contents(char * der, int length) {
+        int err = 0;
+	X509 * cert = NULL;
+
+	cert = hip_cert_der_to_x509(der, length);
+        HIP_IFEL((cert == NULL), -1, "Cert is NULL\n");
+        HIP_DEBUG("x.509v3 certificate in readable format\n\n");
+        HIP_IFEL(!X509_print_fp(stdout, cert), -1,
+                 "Failed to print x.509v3 in human readable format\n");    
+ out_err:
+        return;
+}
+
+/**
+ * Function that converts the DER encoded X509 to X509 struct
+ *
+ * @param der points to DER encoded certificate
+ * @param length of DER
+ *
+ * @return * X509
+ */
+X509 * hip_cert_der_to_x509(unsigned char * der, int length) {
+        int err = 0;
+        X509 * cert = NULL;
+
+        _HIP_HEXDUMP("DER:\n", der, length);
+        _HIP_DEBUG("DER length %d\n", length);
+
+        HIP_IFEL(((cert = d2i_X509(NULL, &der , length)) == NULL), -1,
+                 "Failed to convert cert from DER to internal format\n");
+ out_err:
+	if (err == -1) return NULL;
+        return cert;
+}
+
+/**
+ * Function that displays the contents of the PEM encoded x509 certificate
+ *
+ * @param pem points to PEM encoded certificate
+ *
+ * @return void 
+ */
+void hip_cert_display_x509_pem_contents(char * pem) {
+        int err = 0;
+	X509 * cert = NULL;
+
+	cert = hip_cert_pem_to_x509(pem);
+        HIP_IFEL((cert == NULL), -1, "Cert is NULL\n");
+        HIP_DEBUG("x.509v3 certificate in readable format\n\n");
+        HIP_IFEL(!X509_print_fp(stdout, cert), -1,
+                 "Failed to print x.509v3 in human readable format\n");    
+ out_err:
+        return;
+}
+
+/**
+ * Function that converts the PEM encoded X509 to X509 struct
+ *
+ * @param pem points to PEM encoded certificate
+ *
+ * @return *X509
+ */
+X509 * hip_cert_pem_to_x509(char * pem) {
+        int err = 0;
+        BIO *out = NULL; 
+        X509 * cert = NULL;
+
+        _HIP_DEBUG("PEM:\n%s\nLength of PEM %d\n", pem, strlen(pem));        
+        out = BIO_new_mem_buf(pem, -1);      
+        HIP_IFEL((NULL == (cert = PEM_read_bio_X509(out, NULL, 0, NULL))), -1,
+                 "Cert variable is NULL\n");
+ out_err:
+        if (out) BIO_flush(out);
+	if (err == -1) return NULL;
+        return cert;
+}
+ 
 /**
  * Function that reads configuration section from HIP_CERTCONF_PATH,
  *
@@ -364,7 +522,8 @@ STACK_OF(CONF_VALUE) * hip_cert_read_conf_section(char * section_name, CONF * co
 		 -1, "Error opening the configuration file");
 
 	HIP_IFEL(!(sec = NCONF_get_section(conf, section_name)), -1,
-		 "Error getting the section from configuration file\n");
+		 "Section %s was not in the configuration (%s)\n", 
+                 section_name,HIP_CERT_CONF_PATH);
 
 	for (i = 0; i < sk_CONF_VALUE_num(sec); i++) {
 		item = sk_CONF_VALUE_value(sec, i);
@@ -401,7 +560,7 @@ out_err:
 }
 
 /**
- * Function that opens an configuration file from HIP_CERTCONF_PATH,
+ * Function that frees the memory of a allocated configuration
  *
  * @param CONF pointer to the to be freed configuration 
  *
@@ -409,6 +568,31 @@ out_err:
  */
 void hip_cert_free_conf(CONF * conf) {
 	if (conf) NCONF_free(conf);
+}
+
+/**
+ * Function that goes through stack of conf values
+ *
+ * @param CONF pointer to the to be freed configuration 
+ *
+ * @return void 
+ */
+void hip_for_each_conf_value(STACK_OF(CONF_VALUE) * sconfv, 
+                             int (func)(char * name, char * value, void *opaq) , 
+                             void * opaque) {
+        int err = 0, i = 0;
+        CONF_VALUE *item;
+        
+        for (i = 0; i < sk_CONF_VALUE_num(sconfv); i++) {
+                item = sk_CONF_VALUE_value(sconfv, i);
+                _HIP_DEBUG("Sec: %s, Key; %s, Val %s\n", 
+                          item->section, item->name, item->value);
+                HIP_IFEL(func(item->name, item->value, opaque), -1, 
+                         "Error, see above lines\n");
+        }
+
+ out_err:
+        return;
 }
 
 /**
