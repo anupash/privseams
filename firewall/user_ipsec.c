@@ -253,6 +253,7 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	struct hip_esp *esp_hdr = NULL;
 	struct hip_esp_ext *esp_exthdr = NULL;
 	struct sockaddr_storage local_sockaddr;
+	struct ip6_hdr *ip6_hdr;
 	// entry matching the SPI
 	hip_sa_entry_t *entry = NULL;
 	// return entry
@@ -260,7 +261,7 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	struct in6_addr src_hit;
 	struct in6_addr dst_hit;
 	struct timeval now;
-	int decrypted_packet_len = 0;
+        uint16_t decrypted_packet_len = 0;
 	uint32_t spi = 0;
 	uint32_t seq_no = 0;
 	uint32_t hash = 0;
@@ -311,7 +312,9 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 			"failed to recreate original packet\n");
 	
 	_HIP_HEXDUMP("restored original packet: ", decrypted_packet, decrypted_packet_len);
-	struct ip6_hdr *ip6_hdr = (struct ip6_hdr *)decrypted_packet;
+
+	ip6_hdr = (struct ip6_hdr *)decrypted_packet;
+
 	HIP_DEBUG("ip6_hdr->ip6_vfc: 0x%x \n", ip6_hdr->ip6_vfc);
 	HIP_DEBUG("ip6_hdr->ip6_plen: %u \n", ip6_hdr->ip6_plen);
 	HIP_DEBUG("ip6_hdr->ip6_nxt: %u \n", ip6_hdr->ip6_nxt);
