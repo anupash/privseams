@@ -1285,14 +1285,14 @@ HIP_DEBUG("New state %d - \n", new_fw_entry_state);
 		if(entry_peer->bex_state == FIREWALL_STATE_BEX_DEFAULT)
 			verdict = 0;
 		else if(entry_peer->bex_state == FIREWALL_STATE_BEX_NOT_SUPPORTED)
-			verdict = 1;
+			verdict = accept_normal_traffic_by_default;
 		else if(entry_peer->bex_state == FIREWALL_STATE_BEX_ESTABLISHED){
 			if(hit_is_local_hit(&entry_peer->hit_our)){
 				reinject_packet(entry_peer->hit_our, entry_peer->hit_peer,
 						ctx->ipq_packet, 4, 0);
 				verdict = 0;
 			}else
-				verdict = 1;
+				verdict = accept_normal_traffic_by_default;
 		}
 	}else{
 		//add default entry in the firewall db
@@ -1324,11 +1324,11 @@ HIP_DEBUG("New state %d - \n", new_fw_entry_state);
 				reinject_packet(src_hit, dst_hit, ctx->ipq_packet, 4, 0);
 				verdict = 0;
 			}else
-				verdict = 1;
+				verdict = accept_normal_traffic_by_default;
 		}else if( (state_ha == HIP_STATE_FAILED)  ||
 			  (state_ha == HIP_STATE_CLOSING) ||
 			  (state_ha == HIP_STATE_CLOSED)     )
-			verdict = 1;
+			verdict = accept_normal_traffic_by_default;
 		else
 			verdict = 0;
 	}
