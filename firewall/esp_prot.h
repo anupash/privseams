@@ -7,7 +7,7 @@
 int esp_prot_init(void);
 int esp_prot_set_sadb(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 		unsigned char *esp_prot_anchor, int direction);
-int add_esp_prot_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *entry);
+int add_esp_prot_hash(unsigned char *out_hash, uint16_t *out_length, hip_sa_entry_t *entry);
 int verify_esp_prot_hash(hip_sa_entry_t *entry, unsigned char *hash_value);
 hash_chain_t * esp_prot_get_corresponding_hchain(unsigned char *hchain_anchor,
 		uint8_t transform);
