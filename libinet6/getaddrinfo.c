@@ -1565,7 +1565,7 @@ int getaddrinfo(const char *name, const char *service,
 	struct addrinfo *p = NULL, **end = NULL;
 	struct gaih *g = gaih, *pg = NULL;
 	struct gaih_service gaih_service, *pservice = NULL;
-	
+
 	_HIP_DEBUG("------------------GETADDRINFO--------------------\n");
 	/* These will segfault if lenght of name is one, but since this
 	   is well defined standard function, there must be a good reason
