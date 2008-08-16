@@ -18,18 +18,18 @@ long g_read_usec;
 
 int hip_beet_mode_output(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
 		struct in6_addr *preferred_local_addr, struct in6_addr *preferred_peer_addr,
-		unsigned char *esp_packet, int *esp_packet_len);
+		unsigned char *esp_packet, uint16_t *esp_packet_len);
 int hip_beet_mode_input(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
-		unsigned char *decrypted_packet, int *decrypted_packet_len);
-int hip_payload_encrypt(unsigned char *in, uint8_t in_type, int in_len,
-		unsigned char *out, int *out_len, hip_sa_entry_t *entry);
-int hip_payload_decrypt(unsigned char *in, int in_len, unsigned char *out, uint8_t *out_type,
-		int *out_len, hip_sa_entry_t *entry);
+		unsigned char *decrypted_packet, uint16_t *decrypted_packet_len);
+int hip_payload_encrypt(unsigned char *in, uint8_t in_type, uint16_t in_len,
+		unsigned char *out, uint16_t *out_len, hip_sa_entry_t *entry);
+int hip_payload_decrypt(unsigned char *in, uint16_t in_len, unsigned char *out, uint8_t *out_type,
+		uint16_t *out_len, hip_sa_entry_t *entry);
 void add_ipv4_header(struct ip *ip_hdr, struct in6_addr *src_addr, struct in6_addr *dst_addr,
-		int packet_len, uint8_t next_hdr);
+		uint16_t packet_len, uint8_t next_hdr);
 void add_ipv6_header(struct ip6_hdr *ip6_hdr, struct in6_addr *src_addr, struct in6_addr *dst_addr,
-		int packet_len, uint8_t next_hdr);
-void add_udp_header(struct udphdr *udp_hdr, int packet_len, hip_sa_entry_t *entry,
+		uint16_t packet_len, uint8_t next_hdr);
+void add_udp_header(struct udphdr *udp_hdr, uint16_t packet_len, hip_sa_entry_t *entry,
 		struct in6_addr *src_addr, struct in6_addr *dst_addr);
 uint16_t checksum_ip(struct ip *ip_hdr, unsigned int ip_hl);
 uint16_t checksum_udp(struct udphdr *udp_hdr, struct in6_addr *src_addr,
