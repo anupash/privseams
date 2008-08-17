@@ -183,16 +183,31 @@ int hip_link_entries_compare(const hip_link_entry_t *link_entry1,
 int hip_sadb_add(int direction, uint32_t spi, uint32_t mode,
 		struct in6_addr *src_addr, struct in6_addr *dst_addr,
 		struct in6_addr *inner_src_addr, struct in6_addr *inner_dst_addr,
-		uint8_t encap_mode, uint16_t src_port, uint16_t dst_port,
+		uint8_t encap_mode, uint16_t sport, uint16_t dport,
 		int ealg, uint32_t a_keylen, uint32_t e_keylen,
 		unsigned char *a_key, unsigned char *e_key, uint64_t lifetime,
 		uint8_t esp_prot_transform, unsigned char *esp_prot_anchor,
 		int retransmission, int update)
 {
 	int err = 0;
-	
+	uint16_t src_port, dst_port;
+	struct in6_addr *check_local_addr;
+
 	// TODO handle retransmission and update correctly
-	
+
+	if (direction == HIP_SPI_DIRECTION_OUT) {
+		src_port = sport;
+		dst_port = dport;
+		check_local_addr = inner_src_addr;
+	} else {
+		src_port = dport;
+		dst_port = sport;
+		check_local_addr = inner_dst_addr;
+	}
+
+	HIP_IFEL(!ipv6_addr_cmp(hip_fw_get_default_hit(), check_local_addr),
+		 -1, "Only default HIT supported in userspace ipsec\n");
+
 	if (update)
 	{
 		HIP_IFEL(hip_sa_entry_update(direction, spi, mode, src_addr, dst_addr, inner_src_addr,
