@@ -191,21 +191,25 @@ int hip_sadb_add(int direction, uint32_t spi, uint32_t mode,
 {
 	int err = 0;
 	uint16_t src_port, dst_port;
-	struct in6_addr *check_local_addr;
+	struct in6_addr *check_local_hit;
+	struct in6_addr *default_hit = hip_fw_get_default_hit();
 
 	// TODO handle retransmission and update correctly
 
 	if (direction == HIP_SPI_DIRECTION_OUT) {
 		src_port = sport;
 		dst_port = dport;
-		check_local_addr = inner_src_addr;
+		check_local_hit = inner_src_addr;
 	} else {
 		src_port = dport;
 		dst_port = sport;
-		check_local_addr = inner_dst_addr;
+		check_local_hit = inner_dst_addr;
 	}
 
-	HIP_IFEL(!ipv6_addr_cmp(hip_fw_get_default_hit(), check_local_addr),
+	HIP_DEBUG_HIT("default hit", default_hit);
+	HIP_DEBUG_HIT("check hit", check_local_hit);
+
+	HIP_IFEL(!ipv6_addr_cmp(default_hit, check_local_hit),
 		 -1, "Only default HIT supported in userspace ipsec\n");
 
 	if (update)
