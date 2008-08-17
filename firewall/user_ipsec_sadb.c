@@ -209,7 +209,7 @@ int hip_sadb_add(int direction, uint32_t spi, uint32_t mode,
 	HIP_DEBUG_HIT("default hit", default_hit);
 	HIP_DEBUG_HIT("check hit", check_local_hit);
 
-	HIP_IFEL(!ipv6_addr_cmp(default_hit, check_local_hit),
+	HIP_IFEL(ipv6_addr_cmp(default_hit, check_local_hit),
 		 -1, "Only default HIT supported in userspace ipsec\n");
 
 	if (update)
