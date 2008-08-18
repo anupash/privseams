@@ -259,8 +259,8 @@ int hip_build_param_reg_response(hip_common_t *msg, const uint8_t lifetime,
 //add by santtu
 int hip_build_param_full_relay_hmac_contents(struct hip_common *,
                                       struct hip_crypto_key *);
-int hip_build_param_nat_tranform(struct hip_common *msg, 
-							hip_transform_suite_t nat_control);
+int hip_build_param_nat_transform(struct hip_common *msg, 
+				  hip_transform_suite_t nat_control);
 
 /**
  * Builds a REG_FAILED parameter.

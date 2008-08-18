@@ -24,6 +24,7 @@ int foreground = 1;
 int hip_opptcp = 0;
 int hip_userspace_ipsec = 0;
 int hip_esp_protection = 0;
+int hip_stun = 0;
 
 /* Default HIT - do not access this directly, call hip_fw_get_default_hit() */
 struct in6_addr default_hit;
@@ -53,6 +54,7 @@ void print_usage()
 	printf("      -k = kill running firewall pid\n");
  	printf("      -i = switch on userspace ipsec\n");
  	printf("      -e = use esp protection extension (also sets -i)\n");
+ 	printf("      -s = stun/ice message support\n");
 	printf("      -h = print this help\n\n");
 }
 
@@ -157,9 +159,12 @@ int hip_fw_init_userspace_ipsec()
 {
 	int err = 0;
 	
+	HIP_IFEL(userspace_ipsec_init(), -1, "failed to initialize userspace ipsec\n");
+	
+	
 	if (hip_userspace_ipsec)
 	{
-		HIP_IFEL(userspace_ipsec_init(), -1, "failed to initialize userspace ipsec\n");
+		
 		
 		// activate userspace ipsec in hipd
 		HIP_IFEL(send_userspace_ipsec_to_hipd(hip_userspace_ipsec), -1,
@@ -182,6 +187,13 @@ int hip_fw_init_userspace_ipsec()
 		system("ip6tables -I HIPFW-OUTPUT -p 6 -d 2001:0010::/28 -j QUEUE");
 		system("ip6tables -I HIPFW-OUTPUT -p 17 -d 2001:0010::/28 -j QUEUE");
 
+		/* If you want to make this smaller, you have to change also
+		   /proc/sys/net/ipv6/conf/default/mtu, but it will have a
+		   negative impact on non-HIP IPv6 connectivity. MTU is
+		   set using system call rather than in do_chflags to avoid
+		   chicken and egg problems in hipd start up. If we decide
+		   to decrease the mtu also for kernelspace ipsec, this can
+		   be moved there. */
 	}
 	
   out_err:
@@ -609,7 +621,7 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version)
 	// length of packet starting at udp header
 	uint16_t udp_len = 0;
 	struct udphdr *udphdr = NULL;
-	int udp_encap_zero_bytes = 0;
+	int udp_encap_zero_bytes = 0, stun_ret;
 	
 	// default assumption
 	ctx->packet_type = OTHER_PACKET;
@@ -819,7 +831,9 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version)
 			goto end_init;
 		}
 	}
-	    
+
+	HIP_DEBUG("udp hdr len %d\n", ntohs(udphdr->len));
+	HIP_HEXDUMP("hexdump ",udphdr, 20);
 	// HIP packets have zero bytes (IPv4 only right now)
 	if(ctx->ip_version == 4 && udphdr
 			&& ((udphdr->source == ntohs(HIP_NAT_UDP_PORT)) || 
@@ -849,6 +863,17 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version)
 		HIP_ERROR("communicating with BROKEN peer implementation of UDP encapsulation,"
 				" found zero bytes when receiving HIP control message\n");
 	}
+
+	/* Santtu: XX FIXME: needs to be inside the following if */
+	//else if (hip_is_stun_msg(udphdr) {
+	else if ((stun_ret = pj_stun_msg_check(udphdr+1,ntohs(udphdr->len) - 
+			sizeof(struct udphdr),PJ_STUN_IS_DATAGRAM)) 
+			== PJ_SUCCESS){
+		HIP_DEBUG("Found a UDP STUN\n");
+		ctx->is_stun = 1;
+	    goto end_init;
+	}
+	
 	
 	// ESP does not have zero bytes (IPv4 only right now)
 	else if (ctx->ip_version == 4 && udphdr
@@ -856,6 +881,10 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version)
 		       (udphdr->dest == ntohs(HIP_NAT_UDP_PORT)))
 		   && !udp_encap_zero_bytes)
 	{
+		
+		HIP_HEXDUMP("stun check failed in UDP",udphdr+1, 20);
+		HIP_DEBUG("stun return is %d \n",stun_ret);
+		HIP_DEBUG("stun len is %d \n",ntohs(udphdr->len) - sizeof(udphdr));
 		/* from the ports and the non zero SPI we can tell that this
 		 * is an ESP packet */
 		HIP_DEBUG("UDP encapsulated ESP packet or STUN PACKET\n");
@@ -920,6 +949,10 @@ int filter_esp(const struct in6_addr * dst_addr, struct hip_esp * esp,
 	int use_escrow = 0;
 	struct _DList * list = NULL;
 	struct rule * rule = NULL;
+
+	/* @todo: ESP access control have some issues ICE/STUN */
+	if (hip_stun)
+		verdict = 1;
 	
 	// if key escrow is active we have to handle it here too
 	if (is_escrow_active())
@@ -1183,7 +1216,24 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx)
 	int verdict = accept_normal_traffic_by_default;
 	int packet_id = ctx->ipq_packet->packet_id;
 
-	if (hip_userspace_ipsec)
+	/* LSI HOOKS */
+	if (ctx->ip_version == 4){	  
+		IPV6_TO_IPV4_MAP(&(ctx->src),&src_lsi);
+		IPV6_TO_IPV4_MAP(&(ctx->dst),&dst_lsi);
+		if (IS_LSI32(src_lsi.s_addr)){
+			if (is_packet_reinjection(&dst_lsi)) {
+				verdict = 1;
+				goto out_err;
+		      	} else {
+			    	hip_fw_handle_outgoing_lsi(ctx->ipq_packet, &src_lsi, &dst_lsi);
+			    	/*Reject the packet*/
+			    	verdict = 0;
+				goto out_err;
+		      	}
+		}
+	}
+
+	if (ctx->ip_version == 6 && hip_userspace_ipsec)
 	{
 		HIP_DEBUG_HIT("destination hit: ", &ctx->dst);
 		HIP_DEBUG_HIT("default hit: ", hip_fw_get_default_hit());
@@ -1195,21 +1245,6 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx)
 			verdict = !hip_fw_userspace_ipsec_output(ctx);
 	}
 						   
-	/* LSI HOOKS */
-	if (ctx->ip_version == 4){	  
-		IPV6_TO_IPV4_MAP(&(ctx->src),&src_lsi);
-		IPV6_TO_IPV4_MAP(&(ctx->dst),&dst_lsi);
-		if (IS_LSI32(src_lsi.s_addr)){
-			if (is_packet_reinjection(&dst_lsi))
-				verdict = 1;
-		      	else{
-			    	hip_fw_handle_outgoing_lsi(ctx->ipq_packet, &src_lsi, &dst_lsi);
-			    	/*Reject the packet*/
-			    	verdict = 0;
-		      	}
-		}
-	}
-
 	/* No need to check default rules as it is handled by the
 	   iptables rules */
  out_err:
@@ -1262,16 +1297,25 @@ int hip_fw_handle_other_input(hip_fw_context_t *ctx)
 	int ip_hits = ipv6_addr_is_hit(&ctx->src) && ipv6_addr_is_hit(&ctx->dst);
 	HIP_DEBUG("\n");
 	
-	if (ip_hits){
+	if (ip_hits) {
 		if (hip_proxy_status)
 			verdict = handle_proxy_inbound_traffic(ctx->ipq_packet,
 							       &ctx->src);
-	  	else{
+	  	else {
 	        	//LSI check
 	        	verdict = hip_fw_handle_incoming_hit(ctx->ipq_packet,&ctx->src,&ctx->dst);
 	  	}
+	} else if (hip_stun && ctx->is_stun == 1) {
+		HIP_DEBUG("Santtu is the king\n");
+		// Santtu FIXME
+		verdict = hip_fw_handle_stun_packet(ctx); 
+		// verdict zero drops the original so that you can send a new one
+		// alloc new memory, copy the packet and add some zeroes (and hip header?)
+		// changed ip and udp lengths and checksums accordingly
+		// check handle_proxy_inbound_traffic() for examples
+		// use raw_sock_v4 to send the packets 
 	}
-
+		
 	/* No need to check default rules as it is handled by the iptables rules */
  out_err:
 
@@ -1501,6 +1545,8 @@ int main(int argc, char **argv)
 	unsigned char buf[BUFSIZE];
 	hip_fw_context_t ctx;
 	int limit_capabilities = 0;
+	int is_root = 0, access_ok = 0, msg_type = 0;//variables for accepting user messages only from hipd
+
 
 	if (geteuid() != 0) {
 		HIP_ERROR("firewall must be run as root\n");
@@ -1521,7 +1567,7 @@ int main(int argc, char **argv)
 	
 	hip_set_logdebug(LOGDEBUG_NONE);
 
-	while ((ch = getopt(argc, argv, "f:t:vdFHAbkipeh")) != -1)
+	while ((ch = getopt(argc, argv, "f:t:vdFHAbkipehs")) != -1)
 	{
 		switch (ch)
 		{
@@ -1562,6 +1608,9 @@ int main(int argc, char **argv)
 		case 'e':
 			hip_userspace_ipsec = 1;
 			hip_esp_protection = 1;
+			break;
+		case 's':
+			hip_stun = 1;
 			break;
 		case 'h':
 			print_usage();
@@ -1713,6 +1762,25 @@ int main(int argc, char **argv)
 				HIP_ERROR("Error receiving message header from daemon.\n");
 				err = -1;
 				continue;
+			}
+
+
+			/*making sure user messages are received from hipd*/
+			//resetting vars to 0 because it is a loop
+			is_root = 0, access_ok = 0, msg_type = 0;
+			msg_type = hip_get_msg_type(msg);
+			is_root = (ntohs(sock_addr.sin6_port) < 1024);
+			if(is_root){
+				access_ok = 1;
+			}else if( !is_root &&
+				  (msg_type >= HIP_SO_ANY_MIN &&
+				   msg_type <= HIP_SO_ANY_MAX)    ){
+				access_ok = 1;
+			}
+			if(!access_ok){
+				HIP_ERROR("The sender of the message is not trusted.\n");
+				err = -1;
+				continue;	
 			}
 
 
