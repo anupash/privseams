@@ -1089,6 +1089,13 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	HIP_DEBUG("Source port=%d, destination port=%d\n", src_port, dst_port);
 	HIP_DUMP_MSG(msg);
 
+	//check msg length
+	if (!hip_check_network_msg_len(msg)) {
+		err = -EMSGSIZE;
+		HIP_ERROR("bad msg len %d\n", hip_get_msg_total_len(msg));
+		goto out_err;
+	}
+
 	dst_is_ipv4 = IN6_IS_ADDR_V4MAPPED(peer_addr);
 	len = hip_get_msg_total_len(msg);
 
@@ -1288,7 +1295,7 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	/* There are four zeroed bytes between UDP and HIP headers. We
 	   use shifting later in this function */
 	HIP_ASSERT(hip_get_msg_total_len(msg) <=
-		   HIP_MAX_PACKET - HIP_UDP_ZERO_BYTES_LEN);
+		   HIP_MAX_NETWORK_PACKET - HIP_UDP_ZERO_BYTES_LEN);
 
 	/* Verify the existence of obligatory parameters. */
 	HIP_ASSERT(peer_addr != NULL && msg != NULL);
@@ -1478,6 +1485,12 @@ int hip_send_i3(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	int err = 0, msg_len;
 	char *buf;
 
+	//check msg length
+	if (!hip_check_network_msg_len(msg)) {
+		err = -EMSGSIZE;
+		HIP_ERROR("bad msg len %d\n", hip_get_msg_total_len(msg));
+		goto out_err;
+	}
 
 	msg_len = hip_get_msg_total_len(msg);
 
