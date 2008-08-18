@@ -196,9 +196,6 @@ int hip_fw_init_userspace_ipsec(){
 		   chicken and egg problems in hipd start up. If we decide
 		   to decrease the mtu also for kernelspace ipsec, this can
 		   be moved there. */
-		system("ifconfig dummy0 mtu 1280");
-	} else {
-		system("ifconfig dummy0 mtu 1500");
 	}
 	
   out_err:
@@ -539,6 +536,9 @@ void firewall_exit(){
 
 	hip_firewall_delete_hldb();
 	
+	HIP_DEBUG("Restoring MTU on dummy0");
+	system("ifconfig " HIP_HIT_DEV " mtu 1500");
+
 	hip_remove_lock_file(HIP_FIREWALL_LOCK_FILE);
 }
 
@@ -1795,6 +1795,9 @@ int main(int argc, char **argv){
 #ifndef CONFIG_HIP_OPENWRT
 	firewall_probe_kernel_modules();
 #endif
+
+	HIP_DEBUG("Lowering MTU on dummy0 for userspace ipsec and LSIs\n");
+	system("ifconfig " HIP_HIT_DEV "  mtu 1280");
 
 	// create firewall queue handles for IPv4 traffic
 	// FIXME died handle will still be used below
