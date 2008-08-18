@@ -804,16 +804,17 @@ int do_chflags(const char *dev, __u32 flags, __u32 mask)
                 return -1;
 
         err = ioctl(fd, SIOCGIFFLAGS, &ifr);// get interface dummy0 flags
-
-
         if (err) {
                 HIP_PERROR("SIOCGIFFLAGS");
                 close(fd);
                 return -1;
         }
+
         if ((ifr.ifr_flags^flags)&mask) {
                 ifr.ifr_flags &= ~mask;
                 ifr.ifr_flags |= mask&flags;
+		// the following did not work, see bug id 595
+		// ifr.ifr_mtu = HIP_DEFAULT_MTU;
                 err = ioctl(fd, SIOCSIFFLAGS, &ifr);
                 if (err)
                         HIP_PERROR("SIOCSIFFLAGS");
