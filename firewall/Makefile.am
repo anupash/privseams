@@ -25,7 +25,7 @@ hipfw_SOURCES = firewall.c conntrack.c rule_management.c helpers.c firewall_cont
 hipfw_SOURCES += user_ipsec.c user_ipsec_esp.c user_ipsec_sadb.c esp_prot.c
 hipfw_SOURCES += proxy.c opptcp.c firewalldb.c lsi.c fw_stun.c
 
-hipfw_LDADD = -lipq -liptc ../libinet6/.libs/libinet6.a
+hipfw_LDADD = -lipq ../libinet6/.libs/libinet6.a
 hipfw_LDADD += -lpthread -luuid
 hipfw_LDADD += ../pjproject/pjnath/lib/libpjnath-hipl.a
 hipfw_LDADD += ../pjproject/pjlib/lib/libpj-hipl.a
