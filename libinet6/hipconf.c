@@ -1315,7 +1315,6 @@ int hip_conf_handle_gw(hip_common_t *msg, int action, const char *opt[], int opt
         int ret;
         struct in_addr ip_gw;
         in6_addr_t ip_gw_mapped;
-        //struct addrinfo new_gateway;
         struct addrinfo *new_gateway;
         struct hip_opendht_gw_info *gw_info;
 
@@ -1326,9 +1325,7 @@ int hip_conf_handle_gw(hip_common_t *msg, int action, const char *opt[], int opt
                 err = -EINVAL;
                 goto out_err;
         }
-		/*Pardeep commented*/	
-        //memset(&new_gateway, '0', sizeof(new_gateway));
-        ret = 0;
+		ret = 0;
         /* resolve the new gateway */
         /* warning: passing argument 1 of 'resolve_dht_gateway_info' discards
 	   qualifiers from pointer target type. 04.07.2008 */
@@ -1403,7 +1400,7 @@ int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int op
                 HIP_INFO("DHT is not in use\n");
                 goto out_err;
         }
-        memset(&tmp_ip_str,'\0',20);
+        memset(&tmp_ip_str,'\0',sizeof(tmp_ip_str));
         tmp_ttl = gw_info->ttl;
         tmp_port = htons(gw_info->port);
         IPV6_TO_IPV4_MAP(&gw_info->addr, &tmp_v4);

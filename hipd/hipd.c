@@ -249,13 +249,13 @@ int hip_recv_agent(struct hip_common *msg)
 			HIP_IFEL(err, 0, "for_each_ha err.\n");
 #endif
 		}
-		/*Pardeep test code*/
+		/*Store the accepted HIT info from agent*/
 		uadb_info = hip_get_param(msg, HIP_PARAM_UADB_INFO);
 		if (uadb_info)
 		{
-			HIP_DEBUG("Received User Agent DB info from agent.\n");
+			HIP_DEBUG("Received User Agent accepted HIT info from agent.\n");
 			hip_in6_ntop(&uadb_info->hitl, hit);
-        	HIP_DEBUG("Value: %s\n", hit);
+        	_HIP_DEBUG("Value: %s\n", hit);
         	add_cert_and_hits_to_db(uadb_info);
 		}
 	}
@@ -278,11 +278,10 @@ int add_cert_and_hits_to_db (struct hip_uadb_info *uadb_info)
 	char hit2[40];
 	char *file = HIP_CERT_DB_PATH_AND_NAME;
 	
-	//daemon_db = hip_sqlite_open_db(file, HIP_CERT_DB_CREATE_TBLS);
 	HIP_IFE(!daemon_db, -1);
 	hip_in6_ntop(&uadb_info->hitr, hit);
 	hip_in6_ntop(&uadb_info->hitl, hit2);
-    HIP_DEBUG("Value: %s\n", hit);
+    _HIP_DEBUG("Value: %s\n", hit);
 	sprintf(insert_into, "INSERT INTO hits VALUES("
                         "'%s', '%s', '%s');", 
                         hit2, hit, uadb_info->cert);

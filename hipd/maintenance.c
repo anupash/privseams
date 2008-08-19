@@ -26,7 +26,7 @@ int cert_publish_counter = CERTIFICATE_PUBLISH_INTERVAL;
 
 int hip_firewall_status = 0;
 int fall, retr;
-//hip_queue *queue;
+
 /**
  * Handle packet retransmissions.
  */
@@ -488,7 +488,7 @@ int publish_addr(char *tmp_hit_str, char *tmp_addr_str)
 		}
 	}
  out_err:
-        return 0;
+	return 0;
 }
 
 /**
@@ -524,8 +524,8 @@ int send_queue_data(int *socket, int *socket_status)
 				/*Get packet from queue, if there then proceed*/
 				memset(packet, '\0', sizeof(packet));
 				opendht_error = read_fifo_queue (packet);
-				HIP_DEBUG("Packet: %s\n",packet);
-					if (opendht_error < 0) {
+				_HIP_DEBUG("Packet: %s\n",packet);
+					if (opendht_error < 0 && strlen (packet)>0) {
 						HIP_DEBUG("Packet reading from queue failed.\n");
                     }
                     else
@@ -548,18 +548,18 @@ int send_queue_data(int *socket, int *socket_status)
 			/*Get packet from queue, if there then proceed*/
 			memset(packet, '\0', sizeof(packet));
 			opendht_error = read_fifo_queue (packet);
-			HIP_DEBUG("Packet: %s\n",packet);
-			if (opendht_error < 0) {
+			_HIP_DEBUG("Packet: %s\n",packet);
+			if (opendht_error < 0  && strlen (packet)>0) {
                	HIP_DEBUG("Packet reading from queue failed.\n");
 			}
 			else
             {
               	opendht_error = opendht_send(*socket,packet);
                	if (opendht_error < 0) {
-                   	HIP_DEBUG("Error sending data to the DHT. Socket No: %d\n", *socket);
-                            	hip_opendht_error_count++;
-               	}
-               	else *socket_status = STATE_OPENDHT_WAITING_ANSWER;
+	               	HIP_DEBUG("Error sending data to the DHT. Socket No: %d\n", *socket);
+    	                       	hip_opendht_error_count++;
+        	   	}
+            	else *socket_status = STATE_OPENDHT_WAITING_ANSWER;
             } 
 		}
 	}
@@ -637,9 +637,13 @@ int periodic_maintenance()
 			}
 		if (hip_buddies_inuse == SO_HIP_BUDDIES_ON) {
 			if(cert_publish_counter < 0) {
-				//Call some function which publishes packet to queue
-				publish_certificates();
-				cert_publish_counter = CERTIFICATE_PUBLISH_INTERVAL ;
+				err = publish_certificates();
+				if(err < 0)
+				{
+					HIP_ERROR("Publishing certificates to the lookup returned an error\n");
+					err = 0 ;
+				}
+				cert_publish_counter = opendht_serving_gateway_ttl ;
 			} else {
 				cert_publish_counter-- ;
 				}
@@ -1099,8 +1103,7 @@ static int hip_sqlite_callback(void *NotUsed, int argc, char **argv, char **azCo
 				err = -1 ;
 			else
          		memcpy(cert, (char *)argv[i], 512/*should be size of certificate*/);
-          	/*convret hit to inet6_addr*/
-		} 
+     	} 
 	}
 	if(err)
 	{

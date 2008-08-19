@@ -718,14 +718,13 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
  */
 int hip_build_host_id_and_signature(struct hip_common *msg,  unsigned char * key) 
 {
-     struct in6_addr addrkey;
-	 struct hip_host_id *hi_private = NULL;
-	 struct hip_host_id *hi_public = NULL;
-	 
-	 int err = 0;
-	 int alg = -1;
+	struct in6_addr addrkey;
+	struct hip_host_id *hi_private = NULL;
+	struct hip_host_id *hi_public = NULL;
+	int err = 0;
+	int alg = -1;
     
-    if (inet_pton(AF_INET6, (char *)key, &addrkey.s6_addr) == 0)
+	if (inet_pton(AF_INET6, (char *)key, &addrkey.s6_addr) == 0)
     { 
     	_HIP_DEBUG("Lookup for HOST ID structure from HI DB failed as key provided is not a HIT ");
     	goto out_err;
@@ -756,16 +755,14 @@ int hip_build_host_id_and_signature(struct hip_common *msg,  unsigned char * key
     	}
     	HIP_IFEL((hip_get_public_key(hi_public)== NULL),-1, "Removal of private key from Host ID before sending it to openDHT failed \n");
     	err = hip_build_param(msg, hi_public);
-    	HIP_DUMP_MSG(msg);
+    	_HIP_DUMP_MSG(msg);
     	if (err != 0)
     	{
     		goto out_err;
     	}
     	
     	alg = hip_get_host_id_algo(hi_private);
-    	
-    	
-		switch (alg) {
+  		switch (alg) {
 			case HIP_HI_RSA:
 				hip_rsa_sign(hi_private, msg);
 				break;
@@ -776,7 +773,7 @@ int hip_build_host_id_and_signature(struct hip_common *msg,  unsigned char * key
 				HIP_ERROR("Unsupported HI algorithm (%d)\n", alg);
 				break;
 		}
-		HIP_DUMP_MSG(msg);
+		_HIP_DUMP_MSG(msg);
     }
     out_err:
      free (hi_private);

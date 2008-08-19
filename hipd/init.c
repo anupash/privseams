@@ -350,7 +350,11 @@ int hip_init_dht()
                 if (fp == NULL) {
                         HIP_DEBUG("No dhtservers file, using %s\n", OPENDHT_GATEWAY);
                         err = resolve_dht_gateway_info(OPENDHT_GATEWAY, &opendht_serving_gateway);
-                        if (err < 0) HIP_DEBUG("Error resolving openDHT gateway!\n");
+                        if (err < 0) 
+                        {
+                        	hip_opendht_error_count++;
+                        	HIP_DEBUG("Error resolving openDHT gateway!\n");
+                        }
                         err = 0;
                         memset(&opendht_name_mapping, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
                         if (gethostname(&opendht_name_mapping, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1))
@@ -374,7 +378,11 @@ int hip_init_dht()
                                   servername_str, serveraddr_str);
                         /* resolve it */
                         err = resolve_dht_gateway_info(serveraddr_str, &opendht_serving_gateway);  
-                        if (err < 0) HIP_DEBUG("Error resolving openDHT gateway!\n");
+                        if (err < 0) 
+                        {
+                        	hip_opendht_error_count++;
+                        	HIP_DEBUG("Error resolving openDHT gateway!\n");
+                        }
                         err = 0;
                         memset(&opendht_name_mapping, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
                         if (gethostname(&opendht_name_mapping, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1))
@@ -842,26 +850,16 @@ out_err:
  */
 int hip_init_daemon_hitdb()
 {
-	/*Macro for db file name and path
-	 * Open the file from the path
-	 * if it doesnt exist create one (with tables)
-	 * unlock the db*/
 	extern sqlite3* daemon_db;
 	char *file = HIP_CERT_DB_PATH_AND_NAME;
 	int err = 0 ;
 	extern sqlite3* daemon_db;
-_HIP_DEBUG("Loading HIT database from %s.\n", file);
-      
-      /*  db_file = fopen(file, "r");
-        if (!db_file) {
-                HIP_DEBUG("Db file doesnt exist creating it n\n");
-        }*/
-        daemon_db = hip_sqlite_open_db(file, HIP_CERT_DB_CREATE_TBLS);
+	
+	_HIP_DEBUG("Loading HIT database from %s.\n", file);
+	daemon_db = hip_sqlite_open_db(file, HIP_CERT_DB_CREATE_TBLS);
 	HIP_IFE(!daemon_db, -1);
 
 out_err:
-	//if (db_file) fclose(db_file);
-	//hip_sqlite_close_db(daemon_db);
 	return (err);
 }
 

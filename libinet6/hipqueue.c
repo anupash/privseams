@@ -24,8 +24,8 @@ int write_fifo_queue (void *write_data, int data_size_in_bytes)
 	hip_queue *node ;
 	int err = -1 ;
 	
-	HIP_DEBUG ("Node data: %s \n",(char*)write_data);
-	HIP_DEBUG ("Node data: %d \n",data_size_in_bytes);
+	_HIP_DEBUG ("Node data: %s \n",(char*)write_data);
+	_HIP_DEBUG ("Node data: %d \n",data_size_in_bytes);
 	temp_data = malloc(data_size_in_bytes);
 	if (!temp_data)
 	{
@@ -33,7 +33,7 @@ int write_fifo_queue (void *write_data, int data_size_in_bytes)
 		return err ;
 	}
 	memcpy (temp_data,write_data, data_size_in_bytes);
-	HIP_DEBUG ("Node data: %s \n",(char*)temp_data);
+	_HIP_DEBUG ("Node data: %s \n",(char*)temp_data);
 	if (!queue)
 	{
 		queue = malloc (sizeof(hip_queue));
@@ -79,7 +79,7 @@ int read_fifo_queue (void *read_data)
 		hip_queue *node = queue;
 		queue = queue->next;
 		memcpy (read_data,node->data, node->data_len);
-		HIP_DEBUG ("Node data read: %s \n",(char*)read_data);
+		_HIP_DEBUG ("Node data read: %s \n",(char*)read_data);
 		if (node->count >0)
 		{
 			free (node->data);

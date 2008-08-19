@@ -803,8 +803,8 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit, hip_hit_t *dst_hit,
 
 	locator = hip_get_param((hip_common_t*)msg, HIP_PARAM_LOCATOR);
 	if(locator)
-   	 {
-    		locator_address_item = hip_get_locator_first_addr_item(locator);
+ 	{
+    	locator_address_item = hip_get_locator_first_addr_item(locator);
 		locator_item_count = hip_get_locator_addr_item_count(locator);
 	}
 	/*For every address found in the locator of Peer HDRR
@@ -812,15 +812,15 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit, hip_hit_t *dst_hit,
 	 * and then copies it to the SPI Out's peer addr list, ater BE*/
 	if(locator_item_count > 0)
 	{
-	    	for ( x = 0; x < locator_item_count ; x++)
-	    	{
-	    		memcpy(&dst_addr, 
-        		(struct in6_addr*)&locator_address_item[x].address, 
-        		sizeof(struct in6_addr));
-	        	hip_in6_ntop(&dst_addr, (char*)dht_locator_temp);
-			HIP_DEBUG("Value: %s\n", (char*)dht_locator_temp);
-	        	HIP_IFEL(hip_hadb_add_peer_info(dst_hit, &dst_addr, dst_lsi), -1,
-		 	"map failed\n");
+	    for ( x = 0; x < locator_item_count ; x++)
+	    {
+	    	memcpy(&dst_addr, 
+        	(struct in6_addr*)&locator_address_item[x].address, 
+        	sizeof(struct in6_addr));
+	       	hip_in6_ntop(&dst_addr, (char*)dht_locator_temp);
+			_HIP_DEBUG("Value: %s\n", (char*)dht_locator_temp);
+	       	HIP_IFEL(hip_hadb_add_peer_info(dst_hit, &dst_addr, dst_lsi), -1,
+		"map failed\n");
 		} /*For loop ends */
 	}
 	else /*To make it follow the same route as it was doing before HDRR/loactors*/
