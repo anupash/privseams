@@ -505,34 +505,61 @@ void firewall_close(int signal)
 
 void hip_fw_flush_iptables(void)
 {
+	iptc_handle_t handle = NULL;
+	const char *tablename = "filter";
+
 	HIP_DEBUG("Firewall flush; may cause warnings on hipfw init\n");
 	HIP_DEBUG("Deleting hipfw subchains from main chains\n");
 
-	system("iptables -D INPUT -j HIPFW-INPUT");
-	system("iptables -D OUTPUT -j HIPFW-OUTPUT");
-	system("iptables -D FORWARD -j HIPFW-FORWARD");
-	system("ip6tables -D INPUT -j HIPFW-INPUT");
-	system("ip6tables -D OUTPUT -j HIPFW-OUTPUT");
-	system("ip6tables -D FORWARD -j HIPFW-FORWARD");
+	handle = iptc_init(tablename);
+	if (!handle) {
+		HIP_INFO("Cannot initialize iptc for getting table infos. skipping flush.\n");
+		return;
+	}
+
+	if (ip_chain_has_target(handle, "INPUT", "HIPFW-INPUT")) {
+		system("iptables -D INPUT -j HIPFW-INPUT");
+		system("ip6tables -D INPUT -j HIPFW-INPUT");
+	}
+	if (ip_chain_has_target(handle, "OUTPUT", "HIPFW-OUTPUT")) {
+		system("iptables -D OUTPUT -j HIPFW-OUTPUT");
+		system("ip6tables -D OUTPUT -j HIPFW-OUTPUT");
+	}
+	if (ip_chain_has_target(handle, "FORWARD", "HIPFW-FORWARD")) {
+		system("iptables -D FORWARD -j HIPFW-FORWARD");
+		system("ip6tables -D FORWARD -j HIPFW-FORWARD");
+	}
 
 	HIP_DEBUG("Flushing hipfw chains\n");
 
 	/* Flush in case there are some residual rules */
-	system("iptables -F HIPFW-INPUT");
-	system("iptables -F HIPFW-OUTPUT");
-	system("iptables -F HIPFW-FORWARD");
-	system("ip6tables -F HIPFW-INPUT");
-	system("ip6tables -F HIPFW-OUTPUT");
-	system("ip6tables -F HIPFW-FORWARD");
+	if (iptc_is_chain("HIPFW-INPUT", handle)) {
+		system("iptables -F HIPFW-INPUT");
+		system("ip6tables -F HIPFW-INPUT");
+	}
+	if (iptc_is_chain("HIPFW-OUTPUT", handle)) {
+		system("iptables -F HIPFW-OUTPUT");
+		system("ip6tables -F HIPFW-OUTPUT");
+	}
+	if (iptc_is_chain("HIPFW-FORWARD", handle)) {
+		system("iptables -F HIPFW-FORWARD");
+		system("ip6tables -F HIPFW-FORWARD");
+	}
 
 	HIP_DEBUG("Deleting hipfw chains\n");
 
-	system("iptables -X HIPFW-INPUT");
-	system("iptables -X HIPFW-OUTPUT");
-	system("iptables -X HIPFW-FORWARD");
-	system("ip6tables -X HIPFW-INPUT");
-	system("ip6tables -X HIPFW-OUTPUT");
-	system("ip6tables -X HIPFW-FORWARD");
+	if (iptc_is_chain("HIPFW-INPUT", handle)) {
+		system("iptables -X HIPFW-INPUT");
+		system("ip6tables -X HIPFW-INPUT");
+	}
+	if (iptc_is_chain("HIPFW-OUTPUT", handle)) {
+		system("iptables -X HIPFW-OUTPUT");
+		system("ip6tables -X HIPFW-OUTPUT");
+	}
+	if (iptc_is_chain("HIPFW-XORWARD", handle)) {
+		system("iptables -X HIPFW-FORWARD");
+		system("ip6tables -X HIPFW-FORWARD");
+	}
 }
 
 void firewall_exit()
@@ -1923,3 +1950,33 @@ void firewall_increase_netlink_buffers()
 	popen("echo 1048576 > /proc/sys/net/core/rmem_default; echo 1048576 > /proc/sys/net/core/rmem_max;echo 1048576 > /proc/sys/net/core/wmem_default;echo 1048576 > /proc/sys/net/core/wmem_max", "r");
 }
 
+/**
+ * Check if a chain has a certain target
+ * 
+ * @param *handle	handle for processing IPTC
+ * @param *chainname	name of the chain
+ * @param *targetname	name of the target
+ * @return	1, if the chain has the target
+ * 		0, if not
+ * @author	Dongsu Park
+ */
+static int ip_chain_has_target(iptc_handle_t handle, const char *chainname, const char *targetname)
+{
+	const char *tmptarget;
+	const char *chain = NULL;
+	const char *tablename = NULL;
+	const struct ipt_entry *entry;
+
+	if (!iptc_is_chain(chainname, handle))
+		return 0;
+
+	for (chain = iptc_first_chain(&handle); chain; chain = iptc_next_chain(&handle)) {
+		for (entry = iptc_first_rule(chain, &handle); entry; entry = iptc_next_rule(entry, &handle)) {
+			tmptarget = iptc_get_target(entry, &handle);
+			if (strcmp(tmptarget, targetname) == 0)
+				return 1;
+		}
+	}
+
+	return 0;
+}
