@@ -5,6 +5,7 @@
 #include <linux/types.h>
 #include <linux/netfilter.h>
 #include <libipq.h>
+#include <libiptc/libiptc.h>
 #include <linux/netfilter.h>
 #include <linux/netfilter_ipv4.h>
 #include <netinet/in.h>
@@ -187,6 +188,8 @@ void check_and_write_default_config(void);
 int main(int argc, char **argv);
 void firewall_probe_kernel_modules();
 void firewall_increase_netlink_buffers();
+
+static int ip_chain_has_target(iptc_handle_t handle, const char *chainname, const char *targetname);
 
 // dependent on typedefs in here
 #include "user_ipsec.h"
