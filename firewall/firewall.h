@@ -5,7 +5,8 @@
 #include <linux/types.h>
 #include <linux/netfilter.h>
 #include <libipq.h>
-#include <libiptc/libiptc.h>
+/* Fedora 9 does not have libiptc/libiptc.h */
+//#include <libiptc/libiptc.h>
 #include <linux/netfilter.h>
 #include <linux/netfilter_ipv4.h>
 #include <netinet/in.h>
@@ -64,6 +65,8 @@ struct firewall_hl {
 };
 
 typedef struct firewall_hl firewall_hl_t;
+/* Fedora 9 does not have libiptc/libiptc.h */
+typedef struct iptc_handle *iptc_handle_t;
 
 #define OTHER_PACKET          0
 #define HIP_PACKET            1
