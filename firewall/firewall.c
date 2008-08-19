@@ -57,7 +57,8 @@ void print_usage(){
  	printf("      -i = switch on userspace ipsec\n");
  	printf("      -e = use esp protection extension (also sets -i)\n");
  	printf("      -s = stun/ice message support\n");
-	printf("      -h = print this help\n\n");
+	printf("      -h = print this help\n");
+	printf("      -o = system-based opportunistic mode\n\n");
 }
 
 
@@ -1700,7 +1701,7 @@ int main(int argc, char **argv){
 	
 	hip_set_logdebug(LOGDEBUG_NONE);
 
-	while ((ch = getopt(argc, argv, "f:t:vdFHAbkipehs")) != -1)
+	while ((ch = getopt(argc, argv, "f:t:vdFHAbkipehso")) != -1)
 	{
 		switch (ch)
 		{
@@ -1749,7 +1750,7 @@ int main(int argc, char **argv){
 			print_usage();
 			exit(2);
 			break;
-		case 's':
+		case 'o':
 			system_based_opp_mode = 1;
 			break;
 		case '?':
