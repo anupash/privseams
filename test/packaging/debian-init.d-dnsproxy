@@ -4,7 +4,7 @@
 DNSPROXY_OPTS=
 PID_FILE=/var/run/dnsproxy.pid
 PID=`pidof -o $$ dnsproxy.py`
-EXEC=/usr/sbin/dnsproxy.py
+EXEC=/usr/local/sbin/dnsproxy.py
 
 set -e
 
@@ -26,8 +26,7 @@ stop_dnsproxy() {
 case "$1" in
   start)
         echo -n "Starting hip dnsproxy"
-	start-stop-daemon --start --quiet --oknodo --pidfile $PIDFILE --exec $EXEC -- $DNSPROXY_OPTS
-	start-stop-daemon --start --quiet --exec /usr/bin/dnsproxy.py -- $DNSPROXY_OPTS
+	start-stop-daemon --start --quiet --oknodo --pidfile $PID_FILE --exec $EXEC -- $DNSPROXY_OPTS
         echo "."
 	;;
   stop)

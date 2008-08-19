@@ -264,22 +264,24 @@ copy_and_package_files ()
     cd "$PKGDIR"
 
     mkdir -p usr/sbin usr/bin
-    mkdir -p usr/share/pyshared/DNS
+    mkdir -p $PKGDIR/$PYEXECDIR
+    mkdir -p $PKGDIR/$PYEXECDIR/dnshipproxy
+    mkdir -p $PKGDIR/$PYEXECDIR/parsehipkey
 
     cd "$HIPL"
 
     cp tools/hipconf $PKGDIR/usr/sbin/
-    cp tools/myasn.py $PKGDIR/usr/bin/
-    cp tools/parse-key-3.py $PKGDIR/usr/bin/
 
-#   XX FIXME: add more stuff from tools dir
-    cp tools/dnsproxy.py $PKGDIR/usr/bin/
-    cp tools/hosts.py $PKGDIR/usr/bin/
-    cp tools/pyip6.py $PKGDIR/usr/bin/
-    cp tools/util.py $PKGDIR/usr/bin/
-    cp tools/DNS/*py $PKGDIR/usr/share/pyshared/DNS
+    cp tools/dnsproxy.py* $PKGDIR/$PYEXECDIR/dnshipproxy
+    cp tools/pyip6.py* $PKGDIR/$PYEXECDIR/dnshipproxy
+    cp tools/hosts.py* $PKGDIR/$PYEXECDIR/dnshipproxy
+    cp tools/util.py* $PKGDIR/$PYEXECDIR/dnshipproxy
+    cp tools/parse-key-3.py* $PKGDIR/$PYEXECDIR/dnshipproxy
+    cp tools/myasn.py* $PKGDIR/$PYEXECDIR/parsehipkey
+    cp tools/DNS/*py* $PKGDIR/$PYEXECDIR/parsehipkey
 
-    chmod ugo+rx $PKGDIR/usr/bin/*.py
+    cp tools/dnshipproxy $PKGDIR/usr/sbin
+    cp tools/parsehipkey $PKGDIR/usr/sbin
 
     PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
     create_sub_package;
