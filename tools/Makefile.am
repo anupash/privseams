@@ -1,11 +1,31 @@
 AUTOMAKE_OPTIONS = foreign
 
-EXTRA_DIST =  DNS/Base.py DNS/Lib.py DNS/Type.py DNS/Class.py 
-EXTRA_DIST += DNS/Opcode.py DNS/win32dns.py DNS/__init__.py
-EXTRA_DIST += DNS/pyip6.py DNS/lazy.py DNS/Status.py
+CLEANFILES = dnshipproxy parsehipkey
 
-dist_sbin_SCRIPTS = dnsproxy.py myasn.py pyip6.py hosts.py parse-key-3.py
-dist_sbin_SCRIPTS  += util.py
+#EXTRA_DIST =  DNS/Base.py DNS/Lib.py DNS/Type.py DNS/Class.py 
+#EXTRA_DIST += DNS/Opcode.py DNS/win32dns.py DNS/__init__.py
+#EXTRA_DIST += DNS/pyip6.py DNS/lazy.py DNS/Status.py
+#dist_sbin_SCRIPTS = dnsproxy.py myasn.py pyip6.py hosts.py parse-key-3.py
+#dist_sbin_SCRIPTS  += util.py
+
+if HAVE_PYTHON
+
+# These two scripts are generated in the end to get the python paths correct.
+# Currently, I don't know a better way to deal with the python code. -miika
+dist_sbin_SCRIPTS = dnshipproxy parsehipkey
+
+dns_PYTHON = DNS/Base.py DNS/Lib.py DNS/Type.py DNS/Class.py
+dns_PYTHON += DNS/Opcode.py DNS/win32dns.py DNS/__init__.py
+dns_PYTHON += DNS/pyip6.py DNS/lazy.py DNS/Status.py
+dnsdir = $(pyexecdir)/DNS
+
+dnshipproxy_PYTHON = dnsproxy.py pyip6.py hosts.py util.py
+dnshipproxydir = $(pyexecdir)/dnshipproxy
+
+parsehipkey_PYTHON = parse-key-3.py myasn.py
+parsehipkeydir = $(pyexecdir)/parsehipkey
+
+endif
 
 # Note: .. is included because libinet6/debug.h is included; otherwise this
 # won't build because there is also the linux/net/ipv6/hip/debug.h include.
@@ -56,3 +76,11 @@ hipconf_SOURCES = hipconftool.c
 #
 $(HIPL_LIBINET6_LIB_STATIC):
 	$(MAKE) -C $(HIPL_LIBINET6)
+
+dnshipproxy:
+	@echo "#! /usr/bin/env PYTHONPATH=$(pyexecdir) python dnsproxy.pyc" >dnshipproxy
+	@chmod a+rx dnshipproxy
+
+parsehipkey:
+	@echo "#! /usr/bin/env PYTHONPATH=$(pyexecdir) python parse-key-3.pyc" >parsehipkey
+	@chmod a+rx parsehipkey

@@ -38,9 +38,9 @@ other related tools and test software.
 # Note: in subsequent releases me may want to use --disable-debugging
 # TBD: The pjproject needs to glued in better (convert it to automake).
 #      That way we can get rid of the double configure (the second one is
-#      currently required for 524)
+#      currently required for bug id 524)
 %build
-./autogen.sh --target=`uname -m`-redhat-linux-gnu --prefix=/usr
+./autogen.sh --target=hipl --prefix=/usr
 %configure
 make -C doc all
 
@@ -119,7 +119,15 @@ install -m 700 test/packaging/rh-init.d-hipfw %{buildroot}/etc/rc.d/init.d/hipfw
 install -m 700 test/packaging/rh-init.d-hipd %{buildroot}/etc/rc.d/init.d/hipd
 install -m 644 doc/HOWTO.txt %{buildroot}/doc
 install -d %{buildroot}%{python_sitelib}/DNS
-install -t %{buildroot}%{python_sitelib}/DNS tools/DNS/*py
+install -t %{buildroot}%{python_sitelib}/DNS tools/DNS/*py*
+install -d %{buildroot}%{python_sitelib}/dnshipproxy
+install -t %{buildroot}%{python_sitelib}/dnshipproxy tools/dnsproxy.py*
+install -t %{buildroot}%{python_sitelib}/dnshipproxy tools/pyip6.py*
+install -t %{buildroot}%{python_sitelib}/dnshipproxy tools/hosts.py*
+install -t %{buildroot}%{python_sitelib}/dnshipproxy tools/util.py*
+install -d %{buildroot}%{python_sitelib}/parsehipkey
+install -t %{buildroot}%{python_sitelib}/parsehipkey tools/parse-key-3.py*
+install -t %{buildroot}%{python_sitelib}/parsehipkey tools/myasn.py*
 
 %post lib
 /sbin/ldconfig 
@@ -165,30 +173,12 @@ rm -rf %{buildroot}
 %files agent
 %{prefix}/bin/hipagent
 
-#%{prefix}/bin/DNS/Base.py
-#%{prefix}/bin/DNS/Base.pyc
-#%{prefix}/bin/DNS/Class.py
-#%{prefix}/bin/DNS/Class.pyc
-#%{prefix}/bin/DNS/Lib.py
-#%{prefix}/bin/DNS/Status.py
-#%{prefix}/bin/DNS/Status.pyc
-#%{prefix}/bin/DNS/Type.py
-#%{prefix}/bin/DNS/Type.pyc
-#%{prefix}/bin/DNS/__init__.py
-#%{prefix}/bin/DNS/__init__.pyc
-#%{prefix}/bin/DNS/lazy.py
-#%{prefix}/bin/DNS/lazy.pyc
-#%{prefix}/bin/DNS/pyip6.py
-#%{prefix}/bin/DNS/win32dns.py
-
 %files tools
 %{prefix}/sbin/hipconf
-%{prefix}/sbin/myasn.py
-%{prefix}/sbin/parse-key-3.py
-%{prefix}/sbin/dnsproxy.py
-%{prefix}/sbin/hosts.py
-%{prefix}/sbin/pyip6.py
-%{prefix}/sbin/util.py
+%{prefix}/sbin/dnshipproxy
+%{prefix}/sbin/parsehipkey
+%{python_sitelib}/dnshipproxy
+%{python_sitelib}/parsehipkey
 %{python_sitelib}/DNS
 %defattr(755,root,root)
 

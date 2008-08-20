@@ -1373,7 +1373,7 @@ endif
     <section id="sec_easy_methods">
       <title>Easy Methods</title>
       <para>
-	1. Run the dnsproxy to handle mapping from hostnames to HITs.
+	1. Run the dnshipproxy to handle mapping from hostnames to HITs.
 	See <xref linkend="sec_dns_proxy" /> for more details.
       </para>
       <para>
@@ -3215,7 +3215,82 @@ combo-newgroup=&lt;create new...&gt;
     earlier in this section.
 </para>
 
+  <section id="efficient_HIP_detection">
+    <title>Opportunistic mode with efficient detection of peer HIP capability</title>
+	<para>
+	The normal HIP opportunistic mode experiences a delay when
+	a HIP peer tries to communicate with a non-HIP peer. This happens
+	because the initiator waits for a HIP response before falling
+	back on normal TCP communication. The efficient detection of
+	peer HIP capability enables us to detect peer HIP capability or
+	the lack thereof. If we detect that the peer supports HIP, we
+	continue the HIP opportunistic communication. Otherwise,
+	communication falls back on plain TCP. Efficient detection of
+	peer HIP capability is enabled with the second of the following
+	commands.
+	</para>
+  	<para>
+	As an example, we run the HIP daemon first.
+	</para>
+  	<para>
+	1. hipd
+	</para>
+  	<para>
+	Then, we enable efficient, undelayed detection of peer HIP
+	capability with the following command:
+	</para>
+  	<para>
+  	2. hipconf run opp advanced
+  	</para>
+	<para>
+	To try the feature, we initiate a TCP connection using the HIP
+	opportunistic library:
+	</para>
+	<para>
+	3. hipconf run opp wget IP-number
+	</para>
+  	<para>
+	One thing to stress here is that the receiver should also enable
+	the efficient HIP opportunistic mode in order to be ensure
+	being detected correctly. If this feature is not enabled at the
+	receiver, correct detection depends on the relative latency of a
+	TCP and a HIP packet.
+	</para>
+  	<para>
+	The enabling at the receiver is done by executing step 2 after
+	the HIP daemon has started. 
+	</para>
+  </section>
+
+  <section id="sys_based_opp_mode">
+    <title>System-based opportunistic mode</title>
+	<para>
+	The system-based opportunistic mode enables HIP communication
+	without the use of the opportunistic library. If the peer does
+	not support HIP, communication falls back on normal TCP
+	communication.
+	</para>
+	<para>
+	The system-based opportunistic mode is implemented at the HIP
+	firewall. It is enabled with the -s option as shown below:
+	</para>
+	<para>
+	hipfw -s
+	</para>
+	<para>
+	The system-based opportunistic mode uses the efficient detection
+	of peer HIP capability. Therefore, HIP efficient detection should
+	be enabled both at the initiator and at the receiver with the
+	following command:
+	</para>
+	<para>
+	hipconf run opp advanced
+	</para>
+  </section>
+
   </chapter>
+
+
   <chapter id="ch_mozilla_showip">
     <title>Mozilla/firefox showip addon</title> <itemizedlist>
 
@@ -3309,11 +3384,11 @@ combo-newgroup=&lt;create new...&gt;
   <chapter id="ch_dns_data">
     <title>DNS data manipulation</title>
     <para>
-      Tools contains the script parse-key-3.py which converts public
+      Tools contains the script parsehipkey which converts public
       key file contents to different DNS zone file formats. To convert
       to unpatched BIND9 format, use command:
       <programlisting>
-# ./parse-key-3.py &lt; felwood/hip_host_dsa_key_pub.pub felwood2.hip-test1.infrahip.net felwood.infrahip.net crossroads.infrahip.net | sed -n -e '/^9BIND */s///p'
+# ./parsehipkey &lt; felwood/hip_host_dsa_key_pub.pub felwood2.hip-test1.infrahip.net felwood.infrahip.net crossroads.infrahip.net | sed -n -e '/^9BIND */s///p'
       </programlisting>
       This outputs a line which can be inserted to a zone
       file. Similarly, with sed command:
@@ -3332,7 +3407,7 @@ combo-newgroup=&lt;create new...&gt;
   <chapter id="sec_dns_proxy">
     <title>DNS proxy</title>
     <para>
-      In tools directory, there is dnsproxy.py script, which provides DNS
+      In tools directory, there is dnshipproxy script, which provides DNS
       proxy functionality. The script has to be started with root priviledges.
     </para>
     <para>
@@ -3346,9 +3421,9 @@ combo-newgroup=&lt;create new...&gt;
       The DNS proxy is meant to be run under DJB's daemontools package
       <ulink url="http://cr.yp.to/daemontools.html" /> which is also
       used to provide necessary environmanet variables, see comments
-      in dnsproxy.py. It is recommended to use a DNS cache, like
+      in dnshipproxy. It is recommended to use a DNS cache, like
       <ulink url="http://cr.yp.to/djbdns.html" /> in front of
-      dnsproxy.py. The use without DNS cache results in longer
+      dnshipproxy. The use without DNS cache results in longer
       look up latencies.
     </para>
 

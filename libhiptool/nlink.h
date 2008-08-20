@@ -53,6 +53,10 @@ struct pseudo6_hdr{
 
 #define HIP_OPTION_KIND 30
 
+/* 1280 required for userspace ipsec, LSIs and
+   bandwith-consuming apps (see bug id 451) */
+#define HIP_DEFAULT_MTU 1280
+
 struct hip_work_order_hdr {
 	int type;
 	int subtype;

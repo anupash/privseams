@@ -30,15 +30,15 @@ doxygen:
 rpm:
 	test/packaging/create-rpm.sh
 deb:
-	test/packaging/create-deb.sh
-	test/packaging/create-deb.sh -s
+	env PYEXECDIR=$(pyexecdir) test/packaging/create-deb.sh
+	env PYEXECDIR=$(pyexecdir) test/packaging/create-deb.sh -s
 #	cd test/packaging && dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz
 source-deb:
-	test/packaging/create-deb.sh -s
+	env PYEXECDIR=$(pyexecdir) test/packaging/create-deb.sh -s
 corporate-deb:
-	test/packaging/create-deb.sh -c
+	env PYEXECDIR=$(pyexecdir) test/packaging/create-deb.sh -c
 agent-deb:
-	test/packaging/create-agent-deb.sh
+	env PYEXECDIR=$(pyexecdir) test/packaging/create-agent-deb.sh
 dist-hook:
 	rm -rf `find $(distdir) -name .arch-ids`
 

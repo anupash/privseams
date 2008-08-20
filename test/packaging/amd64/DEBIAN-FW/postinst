@@ -1,6 +1,9 @@
 #!/bin/sh
 
-update-rc.d hipfw defaults 
-echo "invoke-rc.d --quiet hipfw start" | at now + 1 min 2>/dev/null 
-echo "hipd firewall will start in one minute"
+# Note: hipfw must be currently started after hipd (runlevel 20)
+#update-rc.d hipfw defaults 
+update-rc.d hipfw multiuser 21
+
+echo "invoke-rc.d --quiet hipfw start" | at now + 2 min 2>/dev/null 
+echo "hip firewall starts in two minutes"
 

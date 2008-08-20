@@ -194,9 +194,6 @@ int hip_fw_init_userspace_ipsec()
 		   chicken and egg problems in hipd start up. If we decide
 		   to decrease the mtu also for kernelspace ipsec, this can
 		   be moved there. */
-		system("ifconfig dummy0 mtu 1280");
-	} else {
-		system("ifconfig dummy0 mtu 1500");
 	}
 	
   out_err:
@@ -1548,6 +1545,8 @@ int main(int argc, char **argv)
 	unsigned char buf[BUFSIZE];
 	hip_fw_context_t ctx;
 	int limit_capabilities = 0;
+	int is_root = 0, access_ok = 0, msg_type = 0;//variables for accepting user messages only from hipd
+
 
 	if (geteuid() != 0) {
 		HIP_ERROR("firewall must be run as root\n");
@@ -1766,6 +1765,25 @@ int main(int argc, char **argv)
 			}
 
 
+			/*making sure user messages are received from hipd*/
+			//resetting vars to 0 because it is a loop
+			is_root = 0, access_ok = 0, msg_type = 0;
+			msg_type = hip_get_msg_type(msg);
+			is_root = (ntohs(sock_addr.sin6_port) < 1024);
+			if(is_root){
+				access_ok = 1;
+			}else if( !is_root &&
+				  (msg_type >= HIP_SO_ANY_MIN &&
+				   msg_type <= HIP_SO_ANY_MAX)    ){
+				access_ok = 1;
+			}
+			if(!access_ok){
+				HIP_ERROR("The sender of the message is not trusted.\n");
+				err = -1;
+				continue;	
+			}
+
+
 			_HIP_DEBUG("Header received successfully\n");
 			alen = sizeof(sock_addr);
 			len = hip_get_msg_total_len(msg);
@@ -1873,4 +1891,3 @@ void firewall_increase_netlink_buffers()
 
 	popen("echo 1048576 > /proc/sys/net/core/rmem_default; echo 1048576 > /proc/sys/net/core/rmem_max;echo 1048576 > /proc/sys/net/core/wmem_default;echo 1048576 > /proc/sys/net/core/wmem_max", "r");
 }
-

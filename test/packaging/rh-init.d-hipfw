@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# chkconfig: 2345 10 90
+# chkconfig: 2345 21 79
 # Init file for hip firewall
 #
 # processname: hipfw
