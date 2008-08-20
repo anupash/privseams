@@ -76,3 +76,9 @@ hipconf_SOURCES = hipconftool.c
 #
 $(HIPL_LIBINET6_LIB_STATIC):
 	$(MAKE) -C $(HIPL_LIBINET6)
+
+dnshipproxy:
+	@sh gen-python-starter.sh $(pyexecdir)/dnshipproxy dnsproxy.py dnshipproxy
+
+parsehipkey:
+	@sh gen-python-starter.sh $(pyexecdir)/parsehipkey parse-key-3.py parsehipkey
