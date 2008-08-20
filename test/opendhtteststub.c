@@ -44,8 +44,8 @@ int main(int argc, char *argv[])
     struct in6_addr val_hit_addr;
     struct in6_addr val_ip_addr; 
     */
-    //char opendht[] = "opendht.nyuld.net";
-    char opendht[] = "openlookup.net";
+    char opendht[] = "129.170.214.191";//"opendht.nyuld.net";
+    //char opendht[] = "openlookup.net";
     /* both responses were 1024 before */
     /* now more because base64 lengthens the message */
     char dht_response[2048]; 
@@ -66,7 +66,7 @@ int main(int argc, char *argv[])
     char val_hit[] = "2001:001a:3aa1:3a84:5b38:de59:28ff:41ea";
     char val_ip[] = "2001:0708:0140:0220:0213:a9ff:fec0:58f6";
     /* TODO change this to something smarter :) */
-    char host_addr[] = "openlookup.net"; 
+    char host_addr[] = "127.0.0.1";//"openlookup.net"; 
     int n = 0, iter = 0;
     struct timeval conn_before, conn_after; 
     struct timeval stat_before, stat_after;
@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
     unsigned long rm_diff_sec, rm_diff_usec;
     iter = atoi(argv[2]);
     struct addrinfo * serving_gateway;
-    int port = 80; //5851 for opendht
+    int port = 5851; //5851 for opendht 80 for openlookup
 
     /* resolve the gateway address */
     error = resolve_dht_gateway_info (opendht, &serving_gateway);
@@ -101,7 +101,8 @@ int main(int argc, char *argv[])
             error = connect_dht_gateway(s, serving_gateway, 1);
             if (error < 0) exit(0);
             ret = 0;
-            ret = opendht_put(s, 
+            memset(put_packet, '\0', sizeof(put_packet));
+            ret = opendht_put( 
                               (unsigned char *)val_host,
                               (unsigned char *)val_hit, 
                               (unsigned char *)host_addr,port,ttl,put_packet);   
@@ -118,7 +119,8 @@ int main(int argc, char *argv[])
             error = connect_dht_gateway(s, serving_gateway, 1);
             if (error < 0) exit(0);
             ret = 0;
-            ret = opendht_put(s, 
+            memset(put_packet, '\0', sizeof(put_packet));
+            ret = opendht_put( 
                               (unsigned char *)val_hit,
                               (unsigned char *)val_ip, 
                               (unsigned char *)host_addr,port,ttl,put_packet);
@@ -319,9 +321,11 @@ int main(int argc, char *argv[])
             if (error < 0) exit(0);
             ret = 0;
             /* iterations by estimate seconds, so the value is there long enough */
-            ret = opendht_put(s, (unsigned char *)val_hit,
+            memset(put_packet, '\0', sizeof(put_packet));
+            ret = opendht_put( (unsigned char *)val_hit,
                               (unsigned char *)val_ip, 
-                              (unsigned char *)host_addr,5851,(iter * 3)); 
+                              (unsigned char *)host_addr,5851,(iter * 3),put_packet);
+			ret = opendht_send (s,put_packet); 
             ret = opendht_read_response(s, dht_response); 
             if (ret == -1) exit(1);
             printf("Put packet (hit->ip) sent and ...\n");
@@ -387,9 +391,11 @@ int main(int argc, char *argv[])
                             memset(dht_response2, '\0', sizeof(dht_response2));
                             gettimeofday(&stat_before, NULL);
                             /* TTL just 20 secs */
-                            ret = opendht_put(s, (unsigned char *)key_test,
+                            memset(put_packet, '\0', sizeof(put_packet));
+                            ret = opendht_put( (unsigned char *)key_test,
                                               (unsigned char *)val_tenbyte, 
-                                              (unsigned char *)host_addr,5851,20); 
+                                              (unsigned char *)host_addr,5851,20,put_packet);
+                            ret = opendht_send (s,put_packet); 
                             ret = opendht_read_response(s, dht_response); 
                             gettimeofday(&stat_after, NULL);
                             close(s);
@@ -431,9 +437,11 @@ int main(int argc, char *argv[])
                             memset(dht_response2, '\0', sizeof(dht_response2));
                             gettimeofday(&stat_before, NULL);
                             /* TTL just 20 secs */
-                            ret = opendht_put(s, (unsigned char *)key_test,
+                            memset(put_packet, '\0', sizeof(put_packet));
+                            ret = opendht_put( (unsigned char *)key_test,
                                               (unsigned char *)val_tenbyte, 
-                                              (unsigned char *)host_addr,5851,20); 
+                                              (unsigned char *)host_addr,5851,20,put_packet);
+                            ret = opendht_send (s,put_packet); 
                             ret = opendht_read_response(s, dht_response); 
                             gettimeofday(&stat_after, NULL);
                             close(s);
@@ -480,9 +488,11 @@ int main(int argc, char *argv[])
                             memset(dht_response2, '\0', sizeof(dht_response2));
                             gettimeofday(&stat_before, NULL);
                             /* TTL just 20 secs */
-                            ret = opendht_put(s, (unsigned char *)key_rand,
+                            memset(put_packet, '\0', sizeof(put_packet));
+                            ret = opendht_put((unsigned char *)key_rand,
                                               (unsigned char *)val_tenbyte, 
-                                              (unsigned char *)host_addr,5851,20); 
+                                              (unsigned char *)host_addr,5851,20,put_packet);
+                            ret = opendht_send (s,put_packet); 
                             ret = opendht_read_response(s, dht_response); 
                             gettimeofday(&stat_after, NULL);
                             close(s);
@@ -528,9 +538,11 @@ int main(int argc, char *argv[])
                             memset(dht_response2, '\0', sizeof(dht_response2));
                             gettimeofday(&stat_before, NULL);
                             /* TTL just 20 secs */
-                            ret = opendht_put(s, (unsigned char *)key_rand,
+                            memset(put_packet, '\0', sizeof(put_packet));
+                            ret = opendht_put( (unsigned char *)key_rand,
                                               (unsigned char *)val_tenbyte, 
-                                              (unsigned char *)host_addr,5851,20); 
+                                              (unsigned char *)host_addr,5851,20,put_packet);
+                            ret = opendht_send (s,put_packet); 
                             ret = opendht_read_response(s, dht_response); 
                             gettimeofday(&stat_after, NULL);
                             close(s);
@@ -578,9 +590,11 @@ int main(int argc, char *argv[])
                             memset(dht_response2, '\0', sizeof(dht_response2));
                             gettimeofday(&stat_before, NULL);
                             /* TTL just iter * 60 secs so values can be found in get test */
-                            ret = opendht_put(s, (unsigned char *)key_rand,
+                            memset(put_packet, '\0', sizeof(put_packet));
+                            ret = opendht_put( (unsigned char *)key_rand,
                                               (unsigned char *)val_onekilo, 
-                                              (unsigned char *)host_addr,5851,(iter* 60)); 
+                                              (unsigned char *)host_addr,5851,(iter* 60),put_packet);
+                            ret = opendht_send (s,put_packet); 
                             ret = opendht_read_response(s, dht_response); 
                             gettimeofday(&stat_after, NULL);
                             close(s);
@@ -628,9 +642,11 @@ int main(int argc, char *argv[])
                             memset(dht_response2, '\0', sizeof(dht_response2));
                             gettimeofday(&stat_before, NULL);
                             /* TTL just iter * 60 secs so values can be found in get test */
-                            ret = opendht_put(s, (unsigned char *)key_rand,
+                            memset(put_packet, '\0', sizeof(put_packet));
+                            ret = opendht_put((unsigned char *)key_rand,
                                               (unsigned char *)val_onekilo, 
-                                              (unsigned char *)host_addr,5851,(iter * 60)); 
+                                              (unsigned char *)host_addr,5851,(iter * 60),put_packet);
+                            ret = opendht_send (s,put_packet); 
                             ret = opendht_read_response(s, dht_response); 
                             gettimeofday(&stat_after, NULL);
                             close(s);
@@ -677,6 +693,7 @@ int main(int argc, char *argv[])
                         {
                             ret = 0;
                             memset(dht_response2, '\0', sizeof(dht_response2));
+                            memset(dht_response, '\0', sizeof(dht_response));
                             gettimeofday(&stat_before, NULL);
                             ret = opendht_get(s, (unsigned char *)key_rand, 
                                               (unsigned char *)host_addr, 5851); 

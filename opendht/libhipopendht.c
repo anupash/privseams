@@ -386,7 +386,12 @@ int opendht_handle_value(char * value, char * out_value)
 
     if (inet_pton(AF_INET6, (char *)value, &addrvalue.s6_addr) == 0)
         {
-            /* inet_pton failed because of invalid IPv6 address */ 
+            /* inet_pton failed because of invalid IPv6 address */
+            /*copy data to value as it is*/
+            /*restricting length to 21, data after it will be lost*/
+            memcpy(out_value, value, sizeof(tmp_value)); 
+            value_len = sizeof(tmp_value);
+            err = value_len;
         } 
     else 
         {
@@ -415,7 +420,7 @@ int opendht_handle_key(char * key, char * out_key)
     struct in6_addr addrkey;
     unsigned char *sha_retval;
 	int key_len_specified_in_bytes = 20;
-	unsigned char *paddedkey ;
+	unsigned char *paddedkey = NULL;
 	/* Below three variables are used for key padding logic*/
 	int k = 0;
 	unsigned char tempChar1 =' ';

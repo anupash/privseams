@@ -520,7 +520,12 @@ int send_queue_data(int *socket, int *socket_status)
 			opendht_error = 0;
 			opendht_error = connect_dht_gateway(*socket, 
 								opendht_serving_gateway, 0); 
-			if (opendht_error > -1 && opendht_error != EINPROGRESS) {
+			if (opendht_error == -1)
+			{
+				HIP_DEBUG("Error connecting to the DHT. Socket No: %d\n", *socket);
+				hip_opendht_error_count++;
+			}
+			else if (opendht_error > -1 && opendht_error != EINPROGRESS) {
 				/*Get packet from queue, if there then proceed*/
 				memset(packet, '\0', sizeof(packet));
 				opendht_error = read_fifo_queue (packet);
@@ -532,8 +537,8 @@ int send_queue_data(int *socket, int *socket_status)
                     {
                        	opendht_error = opendht_send(*socket,packet);
                        	if (opendht_error < 0) {
-                    	    HIP_DEBUG("Error sending data to the DHT. Socket No: %d\n", *socket);
-                        	           	hip_opendht_error_count++;
+           		       	    HIP_DEBUG("Error sending data to the DHT. Socket No: %d\n", *socket);
+               	           	hip_opendht_error_count++;
                         }
                         else *socket_status = STATE_OPENDHT_WAITING_ANSWER;
                     } 
@@ -556,8 +561,8 @@ int send_queue_data(int *socket, int *socket_status)
             {
               	opendht_error = opendht_send(*socket,packet);
                	if (opendht_error < 0) {
-	               	HIP_DEBUG("Error sending data to the DHT. Socket No: %d\n", *socket);
-    	                       	hip_opendht_error_count++;
+					HIP_DEBUG("Error sending data to the DHT. Socket No: %d\n", *socket);
+					hip_opendht_error_count++;
         	   	}
             	else *socket_status = STATE_OPENDHT_WAITING_ANSWER;
             } 
