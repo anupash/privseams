@@ -640,6 +640,7 @@ int main(int argc, char *argv[])
                         {
                             ret = 0;
                             memset(dht_response2, '\0', sizeof(dht_response2));
+                            memset(dht_response, '\0', sizeof(dht_response));
                             gettimeofday(&stat_before, NULL);
                             /* TTL just iter * 60 secs so values can be found in get test */
                             memset(put_packet, '\0', sizeof(put_packet));
