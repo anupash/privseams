@@ -15,17 +15,17 @@
 [ -f /etc/sysconfig/dnsproxy ] && . /etc/sysconfig/dnsproxy
 
 RETVAL=0
-DNSPROXY="/usr/sbin/dnsproxy.py"
+DNSPROXY="/usr/sbin/dnshipproxy"
 BASENAME="dnsproxy"
 
 #PID_FILE=/var/run/dnsproxy.pid
 LOCK_FILE=/var/lock/subsys/dnsproxy
-OPTIONS=""
+OPTIONS="-bk"
 
 start()
 {
 	echo -n $"Starting $BASENAME:"
-	daemon $DNSPROXY $OPTIONS && success || failure
+	$DNSPROXY $OPTIONS && success || failure
 	RETVAL=$?
 	[ "$RETVAL" = 0 ] && touch $LOCK_FILE
 	echo
@@ -34,7 +34,7 @@ start()
 stop()
 {
 	echo -n $"Stopping $BASENAME:"
-	killproc $DNSPROXY
+	killall $BASENAME
 	RETVAL=$?
 	[ "$RETVAL" = 0 ] && rm -f $LOCK_FILE
 	echo

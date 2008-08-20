@@ -1,10 +1,10 @@
 #! /bin/sh
 # /etc/init.d/dnsproxy: start and stop the HIP DNS Proxy
 
-DNSPROXY_OPTS=
+DNSPROXY_OPTS="-bk"
 PID_FILE=/var/run/dnsproxy.pid
 PID=`pidof -o $$ dnsproxy.py`
-EXEC=/usr/local/sbin/dnsproxy.py
+EXEC=/usr/sbin/dnshipproxy
 
 set -e
 
@@ -16,17 +16,13 @@ fi
 
 stop_dnsproxy() {
     # Ensure that we don't try to kill init.d script itself
-    start-stop-daemon --stop --quiet --oknodo --retry 30 --pidfile $PID_FILE
-    #if [ $PID ]
-    #then
-    #	kill $1 $PID
-    #fi
+    killall dnshipproxy
 }
 
 case "$1" in
   start)
         echo -n "Starting hip dnsproxy"
-	start-stop-daemon --start --quiet --oknodo --pidfile $PID_FILE --exec $EXEC -- $DNSPROXY_OPTS
+	start-stop-daemon --start --quiet --exec $EXEC -- $DNSPROXY_OPTS
         echo "."
 	;;
   stop)

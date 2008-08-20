@@ -76,11 +76,3 @@ hipconf_SOURCES = hipconftool.c
 #
 $(HIPL_LIBINET6_LIB_STATIC):
 	$(MAKE) -C $(HIPL_LIBINET6)
-
-dnshipproxy:
-	@echo "#! /usr/bin/env PYTHONPATH=$(pyexecdir) python dnsproxy.pyc" >dnshipproxy
-	@chmod a+rx dnshipproxy
-
-parsehipkey:
-	@echo "#! /usr/bin/env PYTHONPATH=$(pyexecdir) python parse-key-3.pyc" >parsehipkey
-	@chmod a+rx parsehipkey

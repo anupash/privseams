@@ -117,6 +117,7 @@ install -d %{buildroot}/doc
 make DESTDIR=%{buildroot} install
 install -m 700 test/packaging/rh-init.d-hipfw %{buildroot}/etc/rc.d/init.d/hipfw
 install -m 700 test/packaging/rh-init.d-hipd %{buildroot}/etc/rc.d/init.d/hipd
+install -m 700 test/packaging/rh-init.d-dnsproxy %{buildroot}/etc/rc.d/init.d/dnshipproxy
 install -m 644 doc/HOWTO.txt %{buildroot}/doc
 install -d %{buildroot}%{python_sitelib}/DNS
 install -t %{buildroot}%{python_sitelib}/DNS tools/DNS/*py*
@@ -150,6 +151,11 @@ install -t %{buildroot}%{python_sitelib}/parsehipkey tools/myasn.py*
 #/etc/rc.d/init.d/hipfw start
 #/usr/sbin/hipfw -bk`
 
+%post dnsproxy
+/sbin/chkconfig --add dnshipproxy
+/sbin/chkconfig --level 2 dnshipproxy on
+/sbin/service dnshipproxy start
+
 %preun daemon
 /sbin/service hipd stop
 /sbin/chkconfig --del hipd
@@ -158,6 +164,10 @@ install -t %{buildroot}%{python_sitelib}/parsehipkey tools/myasn.py*
 /sbin/service hipfw stop
 /sbin/chkconfig --del hipfw
 #/etc/rc.d/init.d/hipfw stop
+
+%preun dnsproxy
+/sbin/service dnshiproxy stop
+/sbin/chkconfig --del dnshipproxy
 
 %clean
 rm -rf %{buildroot}
@@ -173,13 +183,16 @@ rm -rf %{buildroot}
 %files agent
 %{prefix}/bin/hipagent
 
-%files tools
-%{prefix}/sbin/hipconf
+%files dnsproxy
 %{prefix}/sbin/dnshipproxy
 %{prefix}/sbin/parsehipkey
 %{python_sitelib}/dnshipproxy
 %{python_sitelib}/parsehipkey
 %{python_sitelib}/DNS
+%defattr(755,root,root)
+
+%files tools
+%{prefix}/sbin/hipconf
 %defattr(755,root,root)
 
 %files test
@@ -198,6 +211,8 @@ rm -rf %{buildroot}
 %doc doc/HOWTO.txt doc/howto-html
 
 %changelog
+* Wed Aug 20 2008 Miika Komu <miika@iki.fi>
+- Dnsproxy separated into a separate package. Python packaging improvements.
 * Mon Jul 21 2008 Miika Komu <miika@iki.fi>
 - Rpmbuild fixes for Fedora 8 build
 * Thu Jul 17 2008 Johnny Hughes <johnny@centos.org>
