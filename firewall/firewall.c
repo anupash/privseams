@@ -1547,6 +1547,10 @@ int main(int argc, char **argv)
 	int limit_capabilities = 0;
 	int is_root = 0, access_ok = 0, msg_type = 0;//variables for accepting user messages only from hipd
 
+	/* Make sure that root path is set up correcly (e.g. on Fedora 9).
+	   Otherwise may get warnings from system() commands.
+	   @todo: should append, not overwrite  */
+	setenv("PATH", HIP_DEFAULT_EXEC_PATH, 1);
 
 	if (geteuid() != 0) {
 		HIP_ERROR("firewall must be run as root\n");
