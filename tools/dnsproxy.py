@@ -1,5 +1,7 @@
 #! /usr/bin/env python
 
+# TBD: stderr/stdout should go via syslog if forked
+
 import sys
 import getopt
 import os
@@ -239,6 +241,7 @@ class Global:
 
         rc1.write({'nameserver': gp.bind_ip})
 
+        sys.stdout.write('Dns proxy for HIP started\n')
         while not util.wantdown():
             try:
                 gp.hosts_recheck()
