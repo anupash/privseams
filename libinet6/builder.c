@@ -452,13 +452,13 @@ int hip_get_lifetime_seconds(uint8_t lifetime, time_t *seconds){
 }
 
 /**
- * hip_check_msg_len - check validity of message length
+ * hip_check_user_msg_len - check validity of user message length
  * @param msg pointer to the message
  *
  * @return 1 if the message length is valid, or 0 if the message length is
  *          invalid
  */
-int hip_check_msg_len(const struct hip_common *msg) {
+int hip_check_user_msg_len(const struct hip_common *msg) {
 	uint16_t len;
 
 	HIP_ASSERT(msg);
@@ -470,6 +470,29 @@ int hip_check_msg_len(const struct hip_common *msg) {
 		return 1;
 	}
 }
+
+
+/**
+ * hip_check_network_msg_len - check validity of network message length
+ * @param msg pointer to the message
+ *
+ * @return 1 if the message length is valid, or 0 if the message length is
+ *          invalid
+ */
+int hip_check_network_msg_len(const struct hip_common *msg) {
+	uint16_t len;
+
+	HIP_ASSERT(msg);
+	len = hip_get_msg_total_len(msg);
+
+	if (len < sizeof(struct hip_common) || len > HIP_MAX_NETWORK_PACKET) {
+		return 0;
+	} else {
+		return 1;
+	}
+}
+
+
 
 /**
  * hip_check_network_msg_type - check the type of the network message
@@ -1172,7 +1195,7 @@ int hip_check_userspace_msg(const struct hip_common *msg) {
 	struct hip_tlv_common *current_param = NULL;
 	int err = 0;
 
-	if (!hip_check_msg_len(msg)) {
+	if (!hip_check_user_msg_len(msg)) {
 		err = -EMSGSIZE;
 		HIP_ERROR("bad msg len %d\n", hip_get_msg_total_len(msg));
 		goto out;
@@ -1268,7 +1291,8 @@ int hip_check_network_msg(const struct hip_common *msg)
 		goto out;
 	}
 
-	if (!hip_check_msg_len(msg)) {
+	//check msg length
+	if (!hip_check_network_msg_len(msg)) {
 		err = -EMSGSIZE;
 		HIP_ERROR("bad msg len %d\n", hip_get_msg_total_len(msg));
 		goto out;
@@ -1543,7 +1567,7 @@ int hip_build_user_hdr(struct hip_common *msg, hip_hdr_type_t base_type,
 		goto out;
 	}
 
-	if (!hip_check_msg_len(msg)) {
+	if (!hip_check_user_msg_len(msg)) {
 		HIP_ERROR("hipd build hdr: msg len (%d) invalid\n",
 			  hip_get_msg_total_len(msg));
 		err = -EMSGSIZE;
