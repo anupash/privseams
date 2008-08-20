@@ -188,12 +188,16 @@ class Global:
 
     # TBD: proper error handling
     def killold(gp):
-        f = open(gp.pidfile, 'r')
+        f = 0
+        try:
+            f = open(gp.pidfile, 'r')
+        except:
+            pass # TBD: should ignore only "no such file or dir"
         if (f):
             try:
                 os.kill(int(f.readline()), signal.SIGTERM)
             except OSError, (errno, strerror):
-                pass
+                pass # TBD: should ignore only "no such process"
             # sys.stdout.write('Ignoring kill error (%s) %s\n' % (errno, strerror))
             time.sleep(3)
             f.close()
