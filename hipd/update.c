@@ -1846,8 +1846,8 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 	 * should be added above in handling of SEQ, but this breaks
 	 * UPDATE as it might send duplicates the way ACKs are
 	 * implemented right now */
-	HIP_IFEL(esp_prot_update_handle_anchor(msg, entry, src_ip, dst_ip,
-			&spi), -1, "failed to handle received esp prot anchor\n");
+	HIP_IFEL(esp_prot_handle_update(msg, entry, src_ip, dst_ip), -1,
+			"failed to handle received esp prot anchor\n");
 
 	/************************************************/
 
