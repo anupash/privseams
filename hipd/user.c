@@ -278,11 +278,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			pret = inet_ntop(AF_INET, &tmp_v4, tmp_ip_str, 20); 
 			HIP_DEBUG("Got address %s, host name %s, port %d, TTL %d from hipconf\n", 
 			tmp_ip_str, tmp_host_name, tmp_port, tmp_ttl);
-			/*Modifying variable for dht gateway port used in resolve_dht_gateway_info
-			 *in libhipopendht */
-			memset (opendht_serving_gateway_port_str,'\0',sizeof(opendht_serving_gateway_port_str)) ;
-			sprintf(opendht_serving_gateway_port_str, "%d", tmp_port); 
-  			ret = resolve_dht_gateway_info (tmp_ip_str, &opendht_serving_gateway);
+			ret = resolve_dht_gateway_info (tmp_ip_str, &opendht_serving_gateway,tmp_port);
 			if (ret == 0)
 			{
 				HIP_DEBUG("Serving gateway changed\n");

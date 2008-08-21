@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
     struct in6_addr val_hit_addr;
     struct in6_addr val_ip_addr; 
     */
-    char opendht[] = "129.170.214.191";//"opendht.nyuld.net";
+    char opendht[] = "128.31.1.12";//"opendht.nyuld.net";
     //char opendht[] = "openlookup.net";
     /* both responses were 1024 before */
     /* now more because base64 lengthens the message */
@@ -83,7 +83,7 @@ int main(int argc, char *argv[])
     int port = 5851; //5851 for opendht 80 for openlookup
 
     /* resolve the gateway address */
-    error = resolve_dht_gateway_info (opendht, &serving_gateway);
+    error = resolve_dht_gateway_info (opendht, &serving_gateway,port);
     if (error < 0) {
         printf("Resolving error\n");
         exit(0);

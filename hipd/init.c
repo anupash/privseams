@@ -332,7 +332,6 @@ int hip_init_dht()
                  *  in libhipopendht */
 				opendht_serving_gateway_port = OPENDHT_PORT ; /*Needs to be init here, because of
                 											 gateway change after threshold error count*/
-				sprintf(opendht_serving_gateway_port_str, "%d", opendht_serving_gateway_port);
 				memcpy(opendht_host_name, OPENDHT_GATEWAY, strlen(OPENDHT_GATEWAY)); 
                 /* check the condition of the sockets, we may have come here in middle
                  of something so re-initializing might be needed */
@@ -351,7 +350,7 @@ int hip_init_dht()
                 fp = fopen(OPENDHT_SERVERS_FILE, "r");
                 if (fp == NULL) {
                         HIP_DEBUG("No dhtservers file, using %s\n", opendht_host_name);
-                        err = resolve_dht_gateway_info(opendht_host_name, &opendht_serving_gateway);
+                        err = resolve_dht_gateway_info(opendht_host_name, &opendht_serving_gateway,opendht_serving_gateway_port);
                         if (err < 0) 
                         {
                         	hip_opendht_error_count++;
@@ -381,7 +380,7 @@ int hip_init_dht()
                         /* resolve it */
                         memset(opendht_host_name, '\0', sizeof(opendht_host_name));
                         memcpy(opendht_host_name, servername_str, strlen(servername_str));
-                        err = resolve_dht_gateway_info(serveraddr_str, &opendht_serving_gateway);  
+                        err = resolve_dht_gateway_info(serveraddr_str, &opendht_serving_gateway,opendht_serving_gateway_port);  
                         if (err < 0) 
                         {
                         	hip_opendht_error_count++;

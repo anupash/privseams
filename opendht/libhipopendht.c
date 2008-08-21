@@ -23,8 +23,7 @@
 #include "misc.h"
 
 
-char opendht_serving_gateway_port_str[7];
-   
+
 /**
  *  For interrupting the connect in gethosts_hit 
  *  @param signo signal number
@@ -58,15 +57,14 @@ int init_dht_gateway_socket(int sockfd)
  * @param gateway Addrinfo struct where the result will be stored
  *
  * @return Returns 0 on success otherwise -1
- * NOTE : It uses global variable opendht_serving_gateway_port_str as dht port, modify
- * 			it if you dont want to use the dafault port prior to calling this function
  */
 int resolve_dht_gateway_info(char * gateway_name, 
-                             struct addrinfo ** gateway)
+                             struct addrinfo ** gateway, int gateway_port)
 {
     struct addrinfo hints;
     struct sockaddr_in *sa = NULL;
     int error;
+    char opendht_serving_gateway_port_str[7];
     
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;
@@ -74,9 +72,7 @@ int resolve_dht_gateway_info(char * gateway_name,
     hints.ai_flags = AI_NODHT;
     error = 0;
     
-    /*if dht port is not specified explicitly used the default one*/
-    if (!(strlen (opendht_serving_gateway_port_str) >0)) 
-		sprintf(opendht_serving_gateway_port_str, "%d", OPENDHT_PORT);
+    sprintf(opendht_serving_gateway_port_str, "%d", gateway_port);
     error = getaddrinfo(gateway_name, opendht_serving_gateway_port_str, &hints, gateway);
     if (error != 0)
         HIP_DEBUG("OpenDHT gateway resolving failed. Err: %s\n", gai_strerror(error));

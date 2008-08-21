@@ -1317,7 +1317,6 @@ int hip_conf_handle_gw(hip_common_t *msg, int action, const char *opt[], int opt
         in6_addr_t ip_gw_mapped;
         struct addrinfo *new_gateway;
         struct hip_opendht_gw_info *gw_info;
-		extern char opendht_serving_gateway_port_str[7];
 		
         HIP_INFO("Resolving new gateway for openDHT %s\n", opt[0]);
 
@@ -1327,13 +1326,12 @@ int hip_conf_handle_gw(hip_common_t *msg, int action, const char *opt[], int opt
                 goto out_err;
         }
 		ret = 0;
-		sprintf(opendht_serving_gateway_port_str, "%s", opt[1]); 
-        /* resolve the new gateway */
+		/* resolve the new gateway */
         /* warning: passing argument 1 of 'resolve_dht_gateway_info' discards
 	   qualifiers from pointer target type. 04.07.2008 */
 	/* warning: passing argument 2 of 'resolve_dht_gateway_info' from
 	   incompatible pointer type. 04.07.2008 */
-	    ret = resolve_dht_gateway_info(opt[0], &new_gateway);
+	    ret = resolve_dht_gateway_info(opt[0], &new_gateway,atoi(opt[1]));
         if (ret < 0) goto out_err;
         struct sockaddr_in *sa = (struct sockaddr_in *)new_gateway->ai_addr;
 
@@ -1410,7 +1408,7 @@ int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int op
         HIP_INFO("Got address %s, port %d, TTL %d from daemon\n",
                   tmp_ip_str, tmp_port, tmp_ttl);
 
-        HIP_IFEL(resolve_dht_gateway_info(tmp_ip_str, &serving_gateway),0,
+        HIP_IFEL(resolve_dht_gateway_info(tmp_ip_str, &serving_gateway,tmp_port),0,
                  "Resolve error!\n");
         HIP_IFEL(hip_opendht_get_key(&handle_hdrr_value,serving_gateway, opt[0], dht_response,0), 0,
                  "Get error!\n");

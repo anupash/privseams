@@ -37,7 +37,6 @@ extern int hip_opendht_error_count;
 extern int hip_buddies_inuse;
 extern int hip_opendht_sock_fqdn;  
 extern int hip_opendht_sock_hit;
-extern char opendht_serving_gateway_port_str[7];
 extern char opendht_host_name[256];
 
 int hip_sendto_user(const struct hip_common *msg, const struct sockaddr *dst);
