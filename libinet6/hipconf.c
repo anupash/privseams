@@ -1317,7 +1317,8 @@ int hip_conf_handle_gw(hip_common_t *msg, int action, const char *opt[], int opt
         in6_addr_t ip_gw_mapped;
         struct addrinfo *new_gateway;
         struct hip_opendht_gw_info *gw_info;
-
+		extern char opendht_serving_gateway_port_str[7];
+		
         HIP_INFO("Resolving new gateway for openDHT %s\n", opt[0]);
 
         if (optc != 3) {
@@ -1326,12 +1327,13 @@ int hip_conf_handle_gw(hip_common_t *msg, int action, const char *opt[], int opt
                 goto out_err;
         }
 		ret = 0;
+		sprintf(opendht_serving_gateway_port_str, "%s", opt[1]); 
         /* resolve the new gateway */
         /* warning: passing argument 1 of 'resolve_dht_gateway_info' discards
 	   qualifiers from pointer target type. 04.07.2008 */
 	/* warning: passing argument 2 of 'resolve_dht_gateway_info' from
 	   incompatible pointer type. 04.07.2008 */
-        ret = resolve_dht_gateway_info(opt[0], &new_gateway);
+	    ret = resolve_dht_gateway_info(opt[0], &new_gateway);
         if (ret < 0) goto out_err;
         struct sockaddr_in *sa = (struct sockaddr_in *)new_gateway->ai_addr;
 
@@ -1352,7 +1354,7 @@ int hip_conf_handle_gw(hip_common_t *msg, int action, const char *opt[], int opt
         }
 
 
-        err = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped, atoi(opt[2]), atoi(opt[1]));
+        err = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped, atoi(opt[2]), atoi(opt[1]), opt[0]);
         if (err) {
                 HIP_ERROR("build param hit failed: %s\n", strerror(err));
                 goto out_err;

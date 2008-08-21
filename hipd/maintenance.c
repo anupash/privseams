@@ -397,8 +397,8 @@ void register_to_dht ()
 			tmp_hit_str =  hip_convert_hit_to_str(&tmp_hit, NULL);
 			//TODO checkout a better way to find OPENDHT_GATEWAY address to be sent as HOST 
 			// param value in HTTP header
-			publish_hit(&opendht_name_mapping, tmp_hit_str,  OPENDHT_GATEWAY);
-			pub_addr_ret = publish_addr(tmp_hit_str,  OPENDHT_GATEWAY);
+			publish_hit(&opendht_name_mapping, tmp_hit_str);
+			pub_addr_ret = publish_addr(tmp_hit_str);
 			continue;
 		}
              
@@ -417,19 +417,20 @@ void register_to_dht ()
  *
  * @return void
  */
-void publish_hit(char *hostname, char *tmp_hit_str, char *tmp_addr_str)
+void publish_hit(char *hostname, char *tmp_hit_str)
 {
 	extern int opendht_serving_gateway_port;
 	extern int opendht_serving_gateway_ttl;
 	extern int hip_opendht_error_count;
 	extern int opendht_error;
+	extern char opendht_host_name[256];
 	char out_packet[HIP_MAX_PACKET]; /*Assuming HIP Max packet length, max for DHT put*/
 	
 	if (hip_opendht_inuse == SO_HIP_DHT_ON) {
 		memset(out_packet, '\0', HIP_MAX_PACKET);
     	opendht_error = opendht_put((unsigned char *)hostname,
 		(unsigned char *)tmp_hit_str, 
-		(unsigned char *)tmp_addr_str,
+		(unsigned char *)opendht_host_name,
 		opendht_serving_gateway_port,
 		opendht_serving_gateway_ttl,out_packet);
        
@@ -460,17 +461,18 @@ void publish_hit(char *hostname, char *tmp_hit_str, char *tmp_addr_str)
  *
  * @return int 0 connect unfinished, -1 error, 1 success
  */
-int publish_addr(char *tmp_hit_str, char *tmp_addr_str)
+int publish_addr(char *tmp_hit_str)
 {
 	extern int opendht_serving_gateway_port;
 	extern int opendht_serving_gateway_ttl;
 	extern int opendht_error;
 	char out_packet[HIP_MAX_PACKET]; /*Assuming HIP Max packet length, max for DHT put*/
+	extern char opendht_host_name[256];
         
 	if (hip_opendht_inuse == SO_HIP_DHT_ON) {
 		memset(out_packet, '\0', HIP_MAX_PACKET);
 		opendht_error = opendht_put_locator((unsigned char *)tmp_hit_str, 
-						(unsigned char *)tmp_addr_str,
+						(unsigned char *)opendht_host_name,
 						opendht_serving_gateway_port,
 						opendht_serving_gateway_ttl,out_packet);
 		if (opendht_error < 0) {
@@ -1051,13 +1053,14 @@ int prepare_send_cert_put(unsigned char * key, unsigned char * value, int key_le
 	extern int opendht_error;
 	int value_len = valuelen;/*length of certificate*/
     char put_packet[2048];
+    extern char opendht_host_name[256];
 	
    if (build_packet_put((unsigned char *)key,
                                  key_len,
                                  (unsigned char *)value,
                                  value_len,
                                  opendht_serving_gateway_port,
-                                 (unsigned char *)OPENDHT_GATEWAY,
+                                 (unsigned char *)opendht_host_name,
                                  (char*)put_packet, opendht_serving_gateway_ttl)
                                  != 0)
 	{
@@ -1091,7 +1094,7 @@ static int hip_sqlite_callback(void *NotUsed, int argc, char **argv, char **azCo
 	
 	memset(conc_hits_key, '\0', 21);
 	for(i=0; i<argc; i++){
-		HIP_DEBUG("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
+		_HIP_DEBUG("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
 		if (!strcmp(azColName[i],"lhit"))
 		{
         	/*convret hit to inet6_addr*/

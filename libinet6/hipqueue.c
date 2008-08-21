@@ -76,6 +76,7 @@ int read_fifo_queue (void *read_data)
 	extern hip_queue *queue ;
 	if (queue && queue->count >0)
 	{
+		HIP_DEBUG ("Reading Node data. Current node count in queue: %d \n",queue->count);
 		hip_queue *node = queue;
 		queue = queue->next;
 		memcpy (read_data,node->data, node->data_len);

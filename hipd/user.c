@@ -257,6 +257,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		{
 			char tmp_ip_str[20];
 			int tmp_ttl, tmp_port;
+			char tmp_host_name[256];
 			const char *pret;
 			int ret;
 			struct in_addr tmp_v4;
@@ -267,7 +268,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			memset(&tmp_ip_str,'\0',20);
 			tmp_ttl = gw_info->ttl;
 			tmp_port = htons(gw_info->port);
-           
+			memcpy(tmp_host_name,gw_info->host_name,strlen(gw_info->host_name));           
 
 			IPV6_TO_IPV4_MAP(&gw_info->addr, &tmp_v4); 
 			/** 
@@ -275,8 +276,8 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		 	* incompatible pointer type
 		 	*/
 			pret = inet_ntop(AF_INET, &tmp_v4, tmp_ip_str, 20); 
-			HIP_DEBUG("Got address %s, port %d, TTL %d from hipconf\n", 
-			tmp_ip_str, tmp_port, tmp_ttl);
+			HIP_DEBUG("Got address %s, host name %s, port %d, TTL %d from hipconf\n", 
+			tmp_ip_str, tmp_host_name, tmp_port, tmp_ttl);
 			/*Modifying variable for dht gateway port used in resolve_dht_gateway_info
 			 *in libhipopendht */
 			memset (opendht_serving_gateway_port_str,'\0',sizeof(opendht_serving_gateway_port_str)) ;
@@ -287,6 +288,11 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 				HIP_DEBUG("Serving gateway changed\n");
 				opendht_serving_gateway_ttl = tmp_ttl;
 				opendht_serving_gateway_port = tmp_port;
+				if(strlen(tmp_host_name) > 0)
+				{
+					memset(opendht_host_name, '\0', sizeof(opendht_host_name));
+					memcpy(opendht_host_name,tmp_host_name,strlen(tmp_host_name));
+				}
 				hip_opendht_error_count = 0;
 				if (hip_opendht_sock_fqdn > 0) {
 					close(hip_opendht_sock_fqdn);
@@ -331,7 +337,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		if (hip_opendht_inuse == SO_HIP_DHT_ON) {
   		        errr = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped,
 							       opendht_serving_gateway_ttl,
-							       opendht_serving_gateway_port);
+							       opendht_serving_gateway_port,opendht_host_name);
 		} else { /* not in use mark port and ttl to 0 so 'client' knows*/
   		        errr = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped, 0,0);
 		}

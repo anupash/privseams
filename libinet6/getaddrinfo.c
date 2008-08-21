@@ -561,7 +561,7 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
                                            dht_response_hit, dht_response_addr,0);
                 if (ret_addr == 0)
                 {
-                    HIP_INFO("Address received from DHT: %s.\n",dht_response_addr);
+                    HIP_INFO("HDRR received from DHT.\n");
                     hipcommonmsg = (struct hip_common *)dht_response_addr ;
 					/* get the locator and its item count to chain addresses in gaih_tuple */
 					locator = hip_get_param(hipcommonmsg, HIP_PARAM_LOCATOR);
@@ -763,7 +763,7 @@ send_hipd_addr(struct gaih_addrtuple * orig_at)
 			        	
 						is_lsi = 1;
 						HIP_DEBUG_LSI("lsi\n", &lsi);
-						HIP_DEBUG("IS_LSI32: %d\n", IS_LSI32(lsi.s_addr));
+						_HIP_DEBUG("IS_LSI32: %d\n", IS_LSI32(lsi.s_addr));
 						continue;
 			        }
 			        else
@@ -775,7 +775,7 @@ send_hipd_addr(struct gaih_addrtuple * orig_at)
 				}
 		   		else{
 			        	addr6 = *(struct in6_addr *) at_ip->addr;
-		   		        HIP_DEBUG_IN6ADDR("addr6\n", (struct in6_addr *)at_hit->addr); //unignoring it
+		   		        _HIP_DEBUG_IN6ADDR("addr6\n", (struct in6_addr *)at_hit->addr);
 		   		}
 	    		}
 

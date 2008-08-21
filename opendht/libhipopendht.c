@@ -587,7 +587,7 @@ int hip_opendht_get_key(int (*value_handler)(unsigned char * packet,
         
      	if ( (inet_pton(AF_INET6, key, &hit_key.s6_addr) == 0) || dont_verify_hdrr)
    		{ 
-   			HIP_DEBUG("lookup is not for HDRR or " 
+   			_HIP_DEBUG("lookup is not for HDRR or " 
 				"HDRR verification flag not set so skipping verification \n");
    		}
    		else

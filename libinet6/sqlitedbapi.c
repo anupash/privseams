@@ -108,10 +108,10 @@ int hip_sqlite_select(sqlite3 * db, const char *sql,
         int err = 0, rc = 0;
         char *zErrMsg = 0;
         
-        HIP_DEBUG("Executing %s\n", sql); 
+        _HIP_DEBUG("Executing %s\n", sql); 
         rc = sqlite3_exec(db, sql, callback, 0, &zErrMsg);                
         if (rc != SQLITE_OK) {
-                HIP_DEBUG("Failed to run SQL query against the database\n");
+                _HIP_DEBUG("Failed to run SQL query against the database\n");
                 err = -1;
                 HIP_DEBUG("SQL error: %s\n", zErrMsg);
                 sqlite3_free(zErrMsg);
