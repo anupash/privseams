@@ -746,13 +746,13 @@ int esp_prot_send_update_response(hip_common_t *recv_update, hip_ha_t *entry,
 	entry->hadb_misc_func->hip_build_network_hdr(resp_update, HIP_UPDATE, mask,
 			&recv_update->hitr, &recv_update->hits);
 
-	/* Add ACK */
-	HIP_IFEL(hip_build_param_ack(resp_update, ntohl(seq->update_id)), -1,
-			"Building of ACK failed\n");
-
 	/* Add ESP_INFO */
 	HIP_IFEL(hip_build_param_esp_info(resp_update, entry->current_keymat_index,
 			spi, spi), -1, "Building of ESP_INFO param failed\n");
+
+	/* Add ACK */
+	HIP_IFEL(hip_build_param_ack(resp_update, ntohl(seq->update_id)), -1,
+			"Building of ACK failed\n");
 
 	/* Add HMAC */
 	HIP_IFEL(hip_build_param_hmac_contents(resp_update, &entry->hip_hmac_out), -1,
