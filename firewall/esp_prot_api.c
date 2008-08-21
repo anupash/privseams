@@ -307,6 +307,7 @@ int esp_prot_add_hash(unsigned char *out_hash, int *out_length,
 
 int esp_prot_verify(hip_sa_entry_t *entry, unsigned char *hash_value)
 {
+	int hash_length = 0;
 	int err = 0;
 
 	HIP_ASSERT(entry != NULL);
@@ -319,11 +320,13 @@ int esp_prot_verify(hip_sa_entry_t *entry, unsigned char *hash_value)
 	// anchors have changed, tell hipd about it
 	if (err > 0)
 	{
-		if (entry->next_anchor)
-		{
-			HIP_DEBUG("we have to set the next_anchor to NULL here\n");
-			entry->next_anchor = NULL;
-		}
+		HIP_DEBUG("anchor change occurred, handled now\n");
+
+		hash_length = esp_prot_get_hash_length(entry->esp_prot_transform);
+
+		memcpy(entry->active_anchor, entry->next_anchor, hash_length);
+		free(entry->next_anchor);
+		entry->next_anchor = NULL;
 
 		/* notify hipd about the switch to the next hash-chain for
 		 * consistency reasons */
@@ -331,6 +334,38 @@ int esp_prot_verify(hip_sa_entry_t *entry, unsigned char *hash_value)
 				"unable to notify hipd about hchain change\n");
 
 		err = 0;
+	}
+
+  out_err:
+	return err;
+}
+
+int esp_prot_conntrack_verify(struct esp_tuple *esp_tuple, struct hip_esp *esp)
+{
+	int hash_length = 0;
+	int err = 0;
+
+	/* check ESP protection anchor if extension is in use */
+	HIP_IFEL((err = esp_prot_verify_hash(esp_tuple->esp_prot_tfm,
+			esp_tuple->active_anchor, esp_tuple->next_anchor,
+			((unsigned char *) esp) + sizeof(struct hip_esp),
+			DEFAULT_VERIFY_WINDOW)) < 0, -1,
+			"failed to verify ESP protection hash\n");
+
+	// this means there was a change in the anchors
+	if (err > 0)
+	{
+		HIP_DEBUG("anchor change occurred, handled now\n");
+
+		hash_length = esp_prot_get_hash_length(esp_tuple->esp_prot_tfm);
+
+		memcpy(esp_tuple->active_anchor, esp_tuple->next_anchor, hash_length);
+		free(esp_tuple->next_anchor);
+		esp_tuple->next_anchor = NULL;
+
+		// no error case
+		err = 0;
+
 	}
 
   out_err:
@@ -388,11 +423,7 @@ int esp_prot_verify_hash(uint8_t transform, unsigned char *active_anchor,
 				{
 					HIP_DEBUG("hash matches element in next hash-chain\n");
 
-					memcpy(active_anchor, next_anchor, hash_length);
-					free(next_anchor);
-					next_anchor = NULL;
-
-					// we might need to tell hipd about the change
+					// we have to notify about the change
 					err = 1;
 
 				} else

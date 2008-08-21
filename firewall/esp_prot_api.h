@@ -48,6 +48,7 @@ void esp_prot_sa_entry_free(hip_sa_entry_t *entry);
 int esp_prot_add_hash(unsigned char *out_hash, int *out_length,
 		hip_sa_entry_t *entry);
 int esp_prot_verify(hip_sa_entry_t *entry, unsigned char *hash_value);
+int esp_prot_conntrack_verify(struct esp_tuple *esp_tuple, struct hip_esp *esp);
 int esp_prot_verify_hash(uint8_t transform, unsigned char *active_anchor,
 		unsigned char *next_anchor, unsigned char *hash_value, int tolerance);
 esp_prot_tfm_t * esp_prot_resolve_transform(uint8_t transform);
