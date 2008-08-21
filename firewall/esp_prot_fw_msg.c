@@ -650,6 +650,9 @@ int esp_prot_conntrack_update(const hip_common_t *update, struct tuple * tuple)
 	struct esp_prot_anchor *esp_anchor = NULL;
 	int err = 0;
 
+	HIP_ASSERT(update != NULL);
+	HIP_ASSERT(tuple != NULL);
+
 	seq = (struct hip_seq *) hip_get_param(update, HIP_PARAM_SEQ);
 	esp_info = (struct hip_esp_info *) hip_get_param(update, HIP_PARAM_ESP_INFO);
 	ack = (struct hip_ack *) hip_get_param(update, HIP_PARAM_ACK);
@@ -665,12 +668,14 @@ int esp_prot_conntrack_update(const hip_common_t *update, struct tuple * tuple)
 		HIP_IFEL(esp_prot_conntrack_cache_anchor(tuple, seq, esp_anchor), -1,
 				"failed to cache ANCHOR parameter\n");
 
+		HIP_DEBUG("getting here\n");
+
 	} else if (seq && ack && esp_info && esp_anchor)
 	{
 		/* either 2. UPDATE packet of mutual ANCHOR UPDATE or LOCATION UPDATE */
 		// TODO implement
 
-		HIP_ERROR("not implementetd yet\n");
+		HIP_ERROR("not implemented yet\n");
 		err = -1;
 
 	} else if (!seq && ack && esp_info && !esp_anchor)
@@ -686,7 +691,7 @@ int esp_prot_conntrack_update(const hip_common_t *update, struct tuple * tuple)
 		/* 3. UPDATE packet of LOCATION UPDATE */
 		// TODO implement
 
-		HIP_ERROR("not implementetd yet\n");
+		HIP_ERROR("not implemented yet\n");
 		err = -1;
 
 	} else
@@ -705,8 +710,13 @@ int esp_prot_conntrack_cache_anchor(struct tuple * tuple, struct hip_seq *seq,
 		struct esp_prot_anchor *esp_anchor)
 {
 	struct esp_anchor_item *anchor_item = NULL;
+	unsigned char *cmp_value = NULL;
 	int hash_length = 0;
 	int err = 0;
+
+	HIP_ASSERT(tuple != NULL);
+	HIP_ASSERT(seq != NULL);
+	HIP_ASSERT(esp_anchor != NULL);
 
 	// needed for allocating and copying the anchors
 	hash_length = esp_prot_get_hash_length(esp_anchor->transform);
@@ -719,14 +729,22 @@ int esp_prot_conntrack_cache_anchor(struct tuple * tuple, struct hip_seq *seq,
 	HIP_IFEL(!(anchor_item->active_anchor = (unsigned char *)
 			malloc(hash_length)), -1, "failed to allocate memory\n");
 
+	// malloc and set cmp_value to be 0
+	HIP_IFEL(!(cmp_value = (unsigned char *)
+			malloc(hash_length)), -1, "failed to allocate memory\n");
+	memset(cmp_value, 0, hash_length);
+
 	anchor_item->seq = seq->update_id;
 	anchor_item->transform = esp_anchor->transform;
 	memcpy(anchor_item->active_anchor, &esp_anchor->anchors[0], hash_length);
 
 	// check if next_anchor is set
-	if (memcmp(&esp_anchor->anchors[hash_length], 0, hash_length))
+	if (memcmp(&esp_anchor->anchors[hash_length], cmp_value, hash_length))
 	{
 		// also copy this anchor as it is set
+		HIP_IFEL(!(anchor_item->next_anchor = (unsigned char *)
+				malloc(hash_length)), -1, "failed to allocate memory\n");
+
 		memcpy(anchor_item->next_anchor, &esp_anchor->anchors[hash_length],
 				hash_length);
 
@@ -734,6 +752,8 @@ int esp_prot_conntrack_cache_anchor(struct tuple * tuple, struct hip_seq *seq,
 	{
 		anchor_item->next_anchor = NULL;
 	}
+
+	HIP_DEBUG("getting here\n");
 
 	// add this anchor to the list for this direction's tuple
 	HIP_IFEL(hip_ll_add_first(&tuple->anchor_cache, anchor_item), -1,
@@ -752,6 +772,10 @@ int esp_prot_conntrack_update_anchor(struct tuple *tuple, struct hip_ack *ack,
 	int hash_length = 0;
 	// assume not found
 	int err = 1, i;
+
+	HIP_ASSERT(tuple != NULL);
+	HIP_ASSERT(ack != NULL);
+	HIP_ASSERT(esp_info != NULL);
 
 	for (i = 0; i < hip_ll_get_size(&tuple->anchor_cache); i++)
 	{
