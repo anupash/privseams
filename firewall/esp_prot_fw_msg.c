@@ -668,8 +668,6 @@ int esp_prot_conntrack_update(const hip_common_t *update, struct tuple * tuple)
 		HIP_IFEL(esp_prot_conntrack_cache_anchor(tuple, seq, esp_anchor), -1,
 				"failed to cache ANCHOR parameter\n");
 
-		HIP_DEBUG("getting here\n");
-
 	} else if (seq && ack && esp_info && esp_anchor)
 	{
 		/* either 2. UPDATE packet of mutual ANCHOR UPDATE or LOCATION UPDATE */
@@ -775,6 +773,7 @@ int esp_prot_conntrack_update_anchor(struct tuple *tuple, struct hip_ack *ack,
 		struct hip_esp_info *esp_info)
 {
 	struct esp_anchor_item *anchor_item = NULL;
+	struct tuple *other_dir_tuple = NULL;
 	struct esp_tuple *esp_tuple = NULL;
 	int hash_length = 0;
 	// assume not found
@@ -786,17 +785,26 @@ int esp_prot_conntrack_update_anchor(struct tuple *tuple, struct hip_ack *ack,
 
 	HIP_DEBUG("checking anchor cache for this direction...\n");
 
-	for (i = 0; i < hip_ll_get_size(&tuple->anchor_cache); i++)
+	if(tuple->direction == ORIGINAL_DIR)
+	{
+		other_dir_tuple = &tuple->connection->reply;
+
+	} else
+	{
+		other_dir_tuple = &tuple->connection->original;
+	}
+
+	for (i = 0; i < hip_ll_get_size(&other_dir_tuple->anchor_cache); i++)
 	{
 		HIP_IFEL(!(anchor_item = (struct esp_anchor_item *)
-				hip_ll_get(&tuple->anchor_cache, i)), -1,
+				hip_ll_get(&other_dir_tuple->anchor_cache, i)), -1,
 				"failed to look up anchor_item\n");
 
 		if (anchor_item->seq == ack->peer_update_id)
 		{
 			HIP_DEBUG("found match in the cache\n");
 
-			HIP_IFEL(!(esp_tuple = find_esp_tuple(tuple->esp_tuples,
+			HIP_IFEL(!(esp_tuple = find_esp_tuple(other_dir_tuple->esp_tuples,
 					ntohl(esp_info->old_spi))), -1,
 					"failed to look up esp_tuple\n");
 			HIP_DEBUG("found esp_tuple for received ESP_INFO\n");
@@ -812,7 +820,7 @@ int esp_prot_conntrack_update_anchor(struct tuple *tuple, struct hip_ack *ack,
 
 				// delete cached item from the list
 				HIP_IFEL(!(anchor_item = (struct esp_anchor_item *)
-						hip_ll_del(&tuple->anchor_cache, i, NULL)), -1,
+						hip_ll_del(&other_dir_tuple->anchor_cache, i, NULL)), -1,
 						"failed to remove anchor_item from list\n");
 
 				// update the esp_tuple
