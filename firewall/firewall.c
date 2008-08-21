@@ -95,10 +95,10 @@ void hip_fw_uninit_opptcp()
 {
 	HIP_DEBUG("\n");
 
-	system("iptables -D HIPFW-INPUT -p 6 ! -d 127.0.0.1 -j QUEUE");  /* @todo: ! LSI PREFIX */
-	system("iptables -D HIPFW-OUTPUT -p 6 ! -d 127.0.0.1 -j QUEUE"); /* @todo: ! LSI PREFIX */
-	system("ip6tables -D HIPFW-INPUT -p 6 ! -d 2001:0010::/28 -j QUEUE");
-	system("ip6tables -D HIPFW-OUTPUT -p 6 ! -d 2001:0010::/28 -j QUEUE");
+	system("iptables -D HIPFW-INPUT -p 6 ! -d 127.0.0.1 -j QUEUE 2>/dev/null");  /* @todo: ! LSI PREFIX */
+	system("iptables -D HIPFW-OUTPUT -p 6 ! -d 127.0.0.1 -j QUEUE 2>/dev/null"); /* @todo: ! LSI PREFIX */
+	system("ip6tables -D HIPFW-INPUT -p 6 ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
+	system("ip6tables -D HIPFW-OUTPUT -p 6 ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
 }
 
 void hip_fw_init_proxy()
@@ -130,29 +130,29 @@ void hip_fw_init_proxy()
 void hip_fw_uninit_proxy()
 {
 	//delete forward hip packets
-	system("iptables -D HIPFW-FORWARD -p 139 -j ACCEPT");
-	system("iptables -D HIPFW-FORWARD -p 139 -j ACCEPT");
+	system("iptables -D HIPFW-FORWARD -p 139 -j ACCEPT 2>/dev/null");
+	system("iptables -D HIPFW-FORWARD -p 139 -j ACCEPT 2>/dev/null");
 	
-	system("iptables -D HIPFW-FORWARD -p tcp -j QUEUE");
-	system("iptables -D HIPFW-FORWARD -p udp -j QUEUE");
-	//system("iptables -D FORWARD -p icmp -j QUEUE");
-	//system("iptables -D FORWARD -p icmpv6 -j QUEUE");
+	system("iptables -D HIPFW-FORWARD -p tcp -j QUEUE 2>/dev/null");
+	system("iptables -D HIPFW-FORWARD -p udp -j QUEUE 2>/dev/null");
+	//system("iptables -D FORWARD -p icmp -j QUEUE 2>/dev/null");
+	//system("iptables -D FORWARD -p icmpv6 -j QUEUE 2>/dev/null");
 	
 	//delete forward hip packets
-	system("ip6tables -D HIPFW-FORWARD -p 139 -j ACCEPT");
-	system("ip6tables -D HIPFW-FORWARD -p 139 -j ACCEPT");
+	system("ip6tables -D HIPFW-FORWARD -p 139 -j ACCEPT 2>/dev/null");
+	system("ip6tables -D HIPFW-FORWARD -p 139 -j ACCEPT 2>/dev/null");
 	
-	system("ip6tables -D HIPFW-FORWARD -p tcp ! -d 2001:0010::/28 -j QUEUE");
-	system("ip6tables -D HIPFW-FORWARD -p udp ! -d  2001:0010::/28 -j QUEUE");
-	//system("ip6tables -D FORWARD -p icmp -j QUEUE");
-	//system("ip6tables -D FORWARD -p icmpv6 -j QUEUE");
+	system("ip6tables -D HIPFW-FORWARD -p tcp ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
+	system("ip6tables -D HIPFW-FORWARD -p udp ! -d  2001:0010::/28 -j QUEUE 2>/dev/null");
+	//system("ip6tables -D FORWARD -p icmp -j QUEUE 2>/dev/null");
+	//system("ip6tables -D FORWARD -p icmpv6 -j QUEUE 2>/dev/null");
 	
-	system("ip6tables -D HIPFW-INPUT -p tcp -d 2001:0010::/28 -j QUEUE");
-	system("ip6tables -D HIPFW-INPUT -p udp -d 2001:0010::/28 -j QUEUE");
-	//system("ip6tables -D INPUT -p tcp  -j QUEUE");
-	//system("ip6tables -D INPUT -p udp -j QUEUE");
-	//system("ip6tables -D INPUT -p icmp -j QUEUE");
-	//system("ip6tables -D INPUT -p icmpv6 -j QUEUE");
+	system("ip6tables -D HIPFW-INPUT -p tcp -d 2001:0010::/28 -j QUEUE 2>/dev/null");
+	system("ip6tables -D HIPFW-INPUT -p udp -d 2001:0010::/28 -j QUEUE 2>/dev/null");
+	//system("ip6tables -D INPUT -p tcp  -j QUEUE 2>/dev/null");
+	//system("ip6tables -D INPUT -p udp -j QUEUE 2>/dev/null");
+	//system("ip6tables -D INPUT -p icmp -j QUEUE 2>/dev/null");
+	//system("ip6tables -D INPUT -p icmpv6 -j QUEUE 2>/dev/null");
 }
 
 int hip_fw_init_userspace_ipsec()
@@ -215,15 +215,15 @@ int hip_fw_uninit_userspace_ipsec()
 		HIP_IFE(send_userspace_ipsec_to_hipd(hip_userspace_ipsec), -1);
 			
 		// delete all rules previously set up for this extension
-		system("iptables -D HIPFW-INPUT -p 50 -j QUEUE"); /*  */
-		system("iptables -D HIPFW-INPUT -p 17 --dport 50500 -j QUEUE");
-		system("iptables -D HIPFW-INPUT -p 17 --sport 50500 -j QUEUE");
+		system("iptables -D HIPFW-INPUT -p 50 -j QUEUE 2>/dev/null"); /*  */
+		system("iptables -D HIPFW-INPUT -p 17 --dport 50500 -j QUEUE 2>/dev/null");
+		system("iptables -D HIPFW-INPUT -p 17 --sport 50500 -j QUEUE 2>/dev/null");
 		
-		system("ip6tables -D HIPFW-INPUT -p 50 -j QUEUE");
+		system("ip6tables -D HIPFW-INPUT -p 50 -j QUEUE 2>/dev/null");
 		
-		system("ip6tables -D HIPFW-OUTPUT -p 58 -d 2001:0010::/28 -j QUEUE");
-		system("ip6tables -D HIPFW-OUTPUT -p 6 -d 2001:0010::/28 -j QUEUE");
-		system("ip6tables -D HIPFW-OUTPUT -p 17 -d 2001:0010::/28 -j QUEUE");
+		system("ip6tables -D HIPFW-OUTPUT -p 58 -d 2001:0010::/28 -j QUEUE 2>/dev/null");
+		system("ip6tables -D HIPFW-OUTPUT -p 6 -d 2001:0010::/28 -j QUEUE 2>/dev/null");
+		system("ip6tables -D HIPFW-OUTPUT -p 17 -d 2001:0010::/28 -j QUEUE 2>/dev/null");
 		
 		// TODO check if we have to uninit anything here
 	}
@@ -496,31 +496,31 @@ void hip_fw_flush_iptables(void)
 	HIP_DEBUG("Firewall flush; may cause warnings on hipfw init\n");
 	HIP_DEBUG("Deleting hipfw subchains from main chains\n");
 
-	system("iptables -D INPUT -j HIPFW-INPUT");
-	system("iptables -D OUTPUT -j HIPFW-OUTPUT");
-	system("iptables -D FORWARD -j HIPFW-FORWARD");
-	system("ip6tables -D INPUT -j HIPFW-INPUT");
-	system("ip6tables -D OUTPUT -j HIPFW-OUTPUT");
-	system("ip6tables -D FORWARD -j HIPFW-FORWARD");
+	system("iptables -D INPUT -j HIPFW-INPUT 2>/dev/null");
+	system("iptables -D OUTPUT -j HIPFW-OUTPUT 2>/dev/null");
+	system("iptables -D FORWARD -j HIPFW-FORWARD 2>/dev/null");
+	system("ip6tables -D INPUT -j HIPFW-INPUT 2>/dev/null");
+	system("ip6tables -D OUTPUT -j HIPFW-OUTPUT 2>/dev/null");
+	system("ip6tables -D FORWARD -j HIPFW-FORWARD 2>/dev/null");
 
 	HIP_DEBUG("Flushing hipfw chains\n");
 
 	/* Flush in case there are some residual rules */
-	system("iptables -F HIPFW-INPUT");
-	system("iptables -F HIPFW-OUTPUT");
-	system("iptables -F HIPFW-FORWARD");
-	system("ip6tables -F HIPFW-INPUT");
-	system("ip6tables -F HIPFW-OUTPUT");
-	system("ip6tables -F HIPFW-FORWARD");
+	system("iptables -F HIPFW-INPUT 2>/dev/null");
+	system("iptables -F HIPFW-OUTPUT 2>/dev/null");
+	system("iptables -F HIPFW-FORWARD 2>/dev/null");
+	system("ip6tables -F HIPFW-INPUT 2>/dev/null");
+	system("ip6tables -F HIPFW-OUTPUT 2>/dev/null");
+	system("ip6tables -F HIPFW-FORWARD 2>/dev/null");
 
 	HIP_DEBUG("Deleting hipfw chains\n");
 
-	system("iptables -X HIPFW-INPUT");
-	system("iptables -X HIPFW-OUTPUT");
-	system("iptables -X HIPFW-FORWARD");
-	system("ip6tables -X HIPFW-INPUT");
-	system("ip6tables -X HIPFW-OUTPUT");
-	system("ip6tables -X HIPFW-FORWARD");
+	system("iptables -X HIPFW-INPUT 2>/dev/null");
+	system("iptables -X HIPFW-OUTPUT 2>/dev/null");
+	system("iptables -X HIPFW-FORWARD 2>/dev/null");
+	system("ip6tables -X HIPFW-INPUT 2>/dev/null");
+	system("ip6tables -X HIPFW-OUTPUT 2>/dev/null");
+	system("ip6tables -X HIPFW-FORWARD 2>/dev/null");
 }
 
 void firewall_exit()
