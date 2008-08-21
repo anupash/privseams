@@ -100,6 +100,11 @@ Summary: hip doc files
 Group: System Environment/Kernel
 %description doc
 
+%package dnsproxy
+Summary: dns proxy for hip
+Group: System Environment/Kernel
+%description dnsproxy
+
 %install
 rm -rf %{buildroot}
 
