@@ -1576,11 +1576,9 @@ int filter_esp_state(const struct in6_addr *dst_addr,
 	HIP_IFEL(!(esp_tuple = find_esp_tuple(tuple->esp_tuples, spi)), -1,
 				"could NOT find corresponding esp_tuple\n");
 
-#if 0
-	HIP_IFEL(esp_prot_verify_hash(esp_tuple, esp), -1,
+	// validate hashes of ESP packets if extension is in use
+	HIP_IFEL(esp_prot_conntrack_verify(esp_tuple, esp), -1,
 			"failed to verify esp hash\n");
-#endif
-
 
 	// do some extra work for key escrow
 	if (use_escrow)

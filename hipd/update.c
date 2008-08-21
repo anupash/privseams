@@ -1669,6 +1669,7 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 	struct hip_echo_request *echo_request = NULL;
 	struct hip_echo_response *echo_response = NULL;
 	struct hip_tlv_common *encrypted = NULL;
+	uint32_t spi = 0;
 
 	HIP_DEBUG("hip_receive_update() invoked.\n");
 
@@ -1730,12 +1731,6 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 			  ntohl(ack->peer_update_id));
 		entry->hadb_update_func->hip_update_handle_ack(
 			entry, ack, has_esp_info);
-
-#if 0
-		// we need to set the update-state to 0 for ANCHOR-updates
-		HIP_IFEL(esp_prot_update_handle_ack(entry, src_ip, dst_ip), -1,
-				"failed to handle ACK for esp prot\n");
-#endif
 	}
 
 	seq = hip_get_param(msg, HIP_PARAM_SEQ);
@@ -1851,8 +1846,8 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 	 * should be added above in handling of SEQ, but this breaks
 	 * UPDATE as it might send duplicates the way ACKs are
 	 * implemented right now */
-	HIP_IFEL((err = esp_prot_update_handle_anchor(msg, entry, src_ip, dst_ip)),
-			-1, "failed to handle received esp prot anchor\n");
+	HIP_IFEL(esp_prot_update_handle_anchor(msg, entry, src_ip, dst_ip,
+			&spi), -1, "failed to handle received esp prot anchor\n");
 
 	/************************************************/
 

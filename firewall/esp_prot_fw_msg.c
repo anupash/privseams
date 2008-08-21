@@ -662,7 +662,7 @@ int esp_prot_conntrack_update(const hip_common_t *update, struct tuple * tuple)
 	// distinguish packet types and process accordingly
 	if (seq && !ack && !esp_info && esp_anchor)
 	{
-		/* 1. UPDATE packet of ANCHOR UPDATE */
+		HIP_DEBUG("received 1. UPDATE packet of ANCHOR UPDATE\n");
 
 		// cache ANCHOR
 		HIP_IFEL(esp_prot_conntrack_cache_anchor(tuple, seq, esp_anchor), -1,
@@ -680,7 +680,7 @@ int esp_prot_conntrack_update(const hip_common_t *update, struct tuple * tuple)
 
 	} else if (!seq && ack && esp_info && !esp_anchor)
 	{
-		/* either 2. UPDATE packet of ANCHOR UPDATE or 3. of mutual one */
+		HIP_DEBUG("either received 2. UPDATE packet of ANCHOR UPDATE or 3. of mutual one\n");
 
 		// lookup cached ANCHOR and update corresponding esp_tuple
 		HIP_IFEL(esp_prot_conntrack_update_anchor(tuple, ack, esp_info), -1,
@@ -718,6 +718,8 @@ int esp_prot_conntrack_cache_anchor(struct tuple * tuple, struct hip_seq *seq,
 	HIP_ASSERT(seq != NULL);
 	HIP_ASSERT(esp_anchor != NULL);
 
+	HIP_DEBUG("caching anchor elements\n");
+
 	// needed for allocating and copying the anchors
 	hash_length = esp_prot_get_hash_length(esp_anchor->transform);
 
@@ -734,6 +736,7 @@ int esp_prot_conntrack_cache_anchor(struct tuple * tuple, struct hip_seq *seq,
 			malloc(hash_length)), -1, "failed to allocate memory\n");
 	memset(cmp_value, 0, hash_length);
 
+	HIP_DEBUG("setting active_anchor\n");
 	anchor_item->seq = seq->update_id;
 	anchor_item->transform = esp_anchor->transform;
 	memcpy(anchor_item->active_anchor, &esp_anchor->anchors[0], hash_length);
@@ -741,6 +744,8 @@ int esp_prot_conntrack_cache_anchor(struct tuple * tuple, struct hip_seq *seq,
 	// check if next_anchor is set
 	if (memcmp(&esp_anchor->anchors[hash_length], cmp_value, hash_length))
 	{
+		HIP_DEBUG("setting next_anchor\n");
+
 		// also copy this anchor as it is set
 		HIP_IFEL(!(anchor_item->next_anchor = (unsigned char *)
 				malloc(hash_length)), -1, "failed to allocate memory\n");
@@ -750,12 +755,14 @@ int esp_prot_conntrack_cache_anchor(struct tuple * tuple, struct hip_seq *seq,
 
 	} else
 	{
+		HIP_DEBUG("setting next_anchor ot NULL\n");
+
 		anchor_item->next_anchor = NULL;
 	}
 
-	HIP_DEBUG("getting here\n");
-
 	// add this anchor to the list for this direction's tuple
+	HIP_DEBUG("adding anchor_item to cache for this direction\n");
+
 	HIP_IFEL(hip_ll_add_first(&tuple->anchor_cache, anchor_item), -1,
 			"failed to add anchor_item to anchor_cache\n");
 
@@ -777,6 +784,8 @@ int esp_prot_conntrack_update_anchor(struct tuple *tuple, struct hip_ack *ack,
 	HIP_ASSERT(ack != NULL);
 	HIP_ASSERT(esp_info != NULL);
 
+	HIP_DEBUG("checking anchor cache for this direction...\n");
+
 	for (i = 0; i < hip_ll_get_size(&tuple->anchor_cache); i++)
 	{
 		HIP_IFEL(!(anchor_item = (struct esp_anchor_item *)
@@ -785,9 +794,12 @@ int esp_prot_conntrack_update_anchor(struct tuple *tuple, struct hip_ack *ack,
 
 		if (anchor_item->seq == ack->peer_update_id)
 		{
+			HIP_DEBUG("found match in the cache\n");
+
 			HIP_IFEL(!(esp_tuple = find_esp_tuple(tuple->esp_tuples,
 					ntohl(esp_info->old_spi))), -1,
 					"failed to look up esp_tuple\n");
+			HIP_DEBUG("found esp_tuple for received ESP_INFO\n");
 
 			// needed for allocating and copying the anchors
 			hash_length = esp_prot_get_hash_length(esp_tuple->esp_prot_tfm);
@@ -796,7 +808,9 @@ int esp_prot_conntrack_update_anchor(struct tuple *tuple, struct hip_ack *ack,
 			if (!memcmp(esp_tuple->active_anchor, anchor_item->active_anchor,
 					hash_length))
 			{
-				// TODO delete cached item from the list
+				HIP_DEBUG("active_anchors match\n");
+
+				// delete cached item from the list
 				HIP_IFEL(!(anchor_item = (struct esp_anchor_item *)
 						hip_ll_del(&tuple->anchor_cache, i, NULL)), -1,
 						"failed to remove anchor_item from list\n");
