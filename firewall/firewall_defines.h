@@ -31,6 +31,8 @@ struct esp_tuple
 	/* members needed for ESP protection extension */
 	uint8_t esp_prot_tfm;
 	unsigned char *active_anchor;
+	// need for verification of anchor updates
+	unsigned char *first_active_anchor;
 	unsigned char *next_anchor;
 };
 

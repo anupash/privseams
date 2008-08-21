@@ -360,6 +360,8 @@ int esp_prot_conntrack_verify(struct esp_tuple *esp_tuple, struct hip_esp *esp)
 		hash_length = esp_prot_get_hash_length(esp_tuple->esp_prot_tfm);
 
 		memcpy(esp_tuple->active_anchor, esp_tuple->next_anchor, hash_length);
+		memcpy(esp_tuple->first_active_anchor, esp_tuple->next_anchor,
+				hash_length);
 		free(esp_tuple->next_anchor);
 		esp_tuple->next_anchor = NULL;
 

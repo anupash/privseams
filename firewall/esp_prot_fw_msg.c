@@ -502,7 +502,14 @@ int esp_prot_conntrack_I2_anchor(const struct hip_common *common,
 				// store the anchor
 				HIP_IFEL(!(esp_tuple->active_anchor = (unsigned char *)
 						malloc(hash_length)), -1, "failed to allocate memory\n");
-				memcpy(esp_tuple->active_anchor, &prot_anchor->anchors[0], hash_length);
+				memcpy(esp_tuple->active_anchor, &prot_anchor->anchors[0],
+						hash_length);
+
+				// ...and make a backup of it for later verification of UPDATEs
+				HIP_IFEL(!(esp_tuple->first_active_anchor = (unsigned char *)
+						malloc(hash_length)), -1, "failed to allocate memory\n");
+				memcpy(esp_tuple->first_active_anchor, &prot_anchor->anchors[0],
+						hash_length);
 
 				HIP_HEXDUMP("received anchor: ", esp_tuple->active_anchor,
 						hash_length);
@@ -614,7 +621,14 @@ int esp_prot_conntrack_R2_anchor(const struct hip_common *common,
 				// store the anchor
 				HIP_IFEL(!(esp_tuple->active_anchor = (unsigned char *)
 						malloc(hash_length)), -1, "failed to allocate memory\n");
-				memcpy(esp_tuple->active_anchor, &prot_anchor->anchors[0], hash_length);
+				memcpy(esp_tuple->active_anchor, &prot_anchor->anchors[0],
+						hash_length);
+
+				// ...and make a backup of it for later verification of UPDATEs
+				HIP_IFEL(!(esp_tuple->first_active_anchor = (unsigned char *)
+						malloc(hash_length)), -1, "failed to allocate memory\n");
+				memcpy(esp_tuple->first_active_anchor, &prot_anchor->anchors[0],
+						hash_length);
 
 				HIP_HEXDUMP("received anchor: ", esp_tuple->active_anchor,
 						hash_length);
@@ -812,8 +826,13 @@ int esp_prot_conntrack_update_anchor(struct tuple *tuple, struct hip_ack *ack,
 			// needed for allocating and copying the anchors
 			hash_length = esp_prot_get_hash_length(esp_tuple->esp_prot_tfm);
 
+			HIP_HEXDUMP("esp_tuple->active_anchor: ",
+					esp_tuple->first_active_anchor, hash_length);
+			HIP_HEXDUMP("anchor_item->active_anchor: ", anchor_item->active_anchor,
+					hash_length);
+
 			// check if active_anchors are the same, further REPLAY PROTECTION
-			if (!memcmp(esp_tuple->active_anchor, anchor_item->active_anchor,
+			if (!memcmp(esp_tuple->first_active_anchor, anchor_item->active_anchor,
 					hash_length))
 			{
 				HIP_DEBUG("active_anchors match\n");
