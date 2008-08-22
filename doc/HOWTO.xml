@@ -3236,24 +3236,33 @@ combo-newgroup=&lt;create new...&gt;
 	1. hipd
 	</para>
   	<para>
+	Afterwards, we run the firewall as shown in the following command. The
+	firewall is needed in case the peer does not support HIP, because it
+	captures the incoming TCP SYN_ACK packet and notifies the HIPD of the
+	lack of HIP support at the peer:
+	</para>
+  	<para>
+  	2. hipfw -dA
+  	</para>
+  	<para>
 	Then, we enable efficient, undelayed detection of peer HIP
 	capability with the following command:
 	</para>
   	<para>
-  	2. hipconf run opp advanced
+  	3. hipconf run opp advanced
   	</para>
 	<para>
 	To try the feature, we initiate a TCP connection using the HIP
 	opportunistic library:
 	</para>
 	<para>
-	3. hipconf run opp wget IP-number
+	4. hipconf run opp wget IP-number
 	</para>
   	<para>
-	One thing to stress here is that the receiver should also enable
-	the efficient HIP opportunistic mode in order to be ensure
-	being detected correctly. If this feature is not enabled at the
-	receiver, correct detection depends on the relative latency of a
+	One thing to stress here is that the receiver should also run the
+	firewall and enable the efficient HIP opportunistic mode in order
+	to be ensure being detected correctly. If this feature is not enabled
+	at the receiver, correct detection depends on the relative latency of a
 	TCP and a HIP packet.
 	</para>
   	<para>
@@ -3272,20 +3281,55 @@ combo-newgroup=&lt;create new...&gt;
 	</para>
 	<para>
 	The system-based opportunistic mode is implemented at the HIP
-	firewall. It is enabled with the -s option as shown below:
+	firewall. It is enabled with the -o option as shown below:
 	</para>
 	<para>
-	hipfw -s
+	hipfw -o
 	</para>
 	<para>
 	The system-based opportunistic mode uses the efficient detection
-	of peer HIP capability. Therefore, HIP efficient detection should
-	be enabled both at the initiator and at the receiver with the
-	following command:
+	of peer HIP capability. Therefore, the firewall should be run at both
+	peers. Also, HIP efficient detection should be enabled both at the
+	initiator and at the receiver with the following command:
 	</para>
 	<para>
 	hipconf run opp advanced
 	</para>
+	<para>
+	Following is an example of all the steps to be followed at two peers 
+	for using the system-based opportunistic mode between them.
+	</para>
+  	<para>
+	At the receiver, one can execute these steps:
+	</para>
+  	<para>
+	1. hipd
+	</para>
+  	<para>
+  	2. hipfw -dA
+  	</para>
+  	<para>
+  	3. hipconf run opp advanced
+  	</para>
+  	<para>
+	4. nc -l -p port_no
+  	</para>
+  	<para>
+	At the initiator, one can execute these steps:
+	</para>
+ 	<para>
+	1. hipd
+	</para>
+  	<para>
+  	2. hipfw -dAo
+  	</para>
+  	<para>
+  	3. hipconf run opp advanced
+  	</para>
+	<para>
+  	4. nc IP_number port_no
+	</para>
+
   </section>
 
   </chapter>
