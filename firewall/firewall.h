@@ -35,7 +35,7 @@
 #include "utils.h"
 #include "misc.h"
 #include "netdev.h"
-#include "lsi.h"
+#include "lsi.h"5B
 
 #include "fw_stun.h"
 #include "pjnath.h"
@@ -65,8 +65,6 @@
 #define UDP_PACKET            5
 
 #define FW_PROTO_NUM          6 /* Other, HIP, ESP, TCP */
-
-typedef struct firewall_hl firewall_hl_t;
 
 typedef struct hip_fw_context{
 	// queued packet
