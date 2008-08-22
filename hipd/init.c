@@ -340,7 +340,8 @@ int hipd_init(int flush_ipsec, int killold)
 	HIP_DEBUG("Setting iface %s\n", HIP_HIT_DEV);
 	set_up_device(HIP_HIT_DEV, 0);
 	HIP_IFE(set_up_device(HIP_HIT_DEV, 1), 1);
-
+	HIP_DEBUG("Lowering " HIP_HIT_DEV " MTU\n");
+	system("ifconfig dummy0 mtu 1280"); /* see bug id 595 */
 
 #ifdef CONFIG_HIP_HI3
 	if( hip_use_i3 ) {

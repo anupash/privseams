@@ -1373,7 +1373,7 @@ endif
     <section id="sec_easy_methods">
       <title>Easy Methods</title>
       <para>
-	1. Run the dnsproxy to handle mapping from hostnames to HITs.
+	1. Run the dnshipproxy to handle mapping from hostnames to HITs.
 	See <xref linkend="sec_dns_proxy" /> for more details.
       </para>
       <para>
@@ -3428,11 +3428,11 @@ combo-newgroup=&lt;create new...&gt;
   <chapter id="ch_dns_data">
     <title>DNS data manipulation</title>
     <para>
-      Tools contains the script parse-key-3.py which converts public
+      Tools contains the script parsehipkey which converts public
       key file contents to different DNS zone file formats. To convert
       to unpatched BIND9 format, use command:
       <programlisting>
-# ./parse-key-3.py &lt; felwood/hip_host_dsa_key_pub.pub felwood2.hip-test1.infrahip.net felwood.infrahip.net crossroads.infrahip.net | sed -n -e '/^9BIND */s///p'
+# ./parsehipkey &lt; felwood/hip_host_dsa_key_pub.pub felwood2.hip-test1.infrahip.net felwood.infrahip.net crossroads.infrahip.net | sed -n -e '/^9BIND */s///p'
       </programlisting>
       This outputs a line which can be inserted to a zone
       file. Similarly, with sed command:
@@ -3451,7 +3451,7 @@ combo-newgroup=&lt;create new...&gt;
   <chapter id="sec_dns_proxy">
     <title>DNS proxy</title>
     <para>
-      In tools directory, there is dnsproxy.py script, which provides DNS
+      In tools directory, there is dnshipproxy script, which provides DNS
       proxy functionality. The script has to be started with root priviledges.
     </para>
     <para>
@@ -3465,9 +3465,9 @@ combo-newgroup=&lt;create new...&gt;
       The DNS proxy is meant to be run under DJB's daemontools package
       <ulink url="http://cr.yp.to/daemontools.html" /> which is also
       used to provide necessary environmanet variables, see comments
-      in dnsproxy.py. It is recommended to use a DNS cache, like
+      in dnshipproxy. It is recommended to use a DNS cache, like
       <ulink url="http://cr.yp.to/djbdns.html" /> in front of
-      dnsproxy.py. The use without DNS cache results in longer
+      dnshipproxy. The use without DNS cache results in longer
       look up latencies.
     </para>
 
