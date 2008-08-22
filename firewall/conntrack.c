@@ -105,7 +105,9 @@ struct hip_data * get_hip_data(const struct hip_common * buf){
 /* fetches the hip_tuple from connection table.
  * Returns the tuple or NULL, if not found.
  */
-struct tuple * get_tuple_by_hip(struct hip_data * data){
+struct tuple * get_tuple_by_hip(struct hip_data * data, uint8_t type_hdr,
+				struct in6_addr * ip6_from)
+{
   DList * list = (DList *) hipList;
   while(list)
     {
@@ -140,7 +142,7 @@ struct tuple * get_tuple_by_hip(struct hip_data * data){
  * replaces the pseudo-hits of the opportunistic entries
  * related to a particular peer with the real hit
 */
-void update_peer_opp_info(struct hip_data * data, 
+void update_peer_opp_info(struct hip_data * data,
 			  struct in6_addr * ip6_from){
   struct _DList * list = (struct _DList *) hipList;
   hip_hit_t phit;
@@ -165,12 +167,13 @@ void update_peer_opp_info(struct hip_data * data,
       }
       list = list->next;
     }
-  return ;
+  return;
 }
 #endif
 
 /**
  * Returns the tuple or NULL, if not found.
+ * fetches the hip_tuple from connection table.
  */
 struct tuple * get_tuple_by_hits(const struct in6_addr * src_hit, const struct in6_addr *dst_hit){
   DList * list = (DList *) hipList;
@@ -206,8 +209,8 @@ struct esp_address * get_esp_address(SList * addr_list,
       esp_addr = (struct esp_address *)list->data;
       HIP_DEBUG("addr: %s ", addr_to_numeric(&esp_addr->dst_addr));
 
-HIP_DEBUG_HIT("111", &esp_addr->dst_addr);
-HIP_DEBUG_HIT("222", addr);
+	  HIP_DEBUG_HIT("111", &esp_addr->dst_addr);
+	  HIP_DEBUG_HIT("222", addr);
 
       if(IN6_ARE_ADDR_EQUAL(&esp_addr->dst_addr, addr))
 	{
@@ -287,7 +290,7 @@ struct tuple * get_tuple_by_esp(const struct in6_addr * dst_addr, uint32_t spi)
   HIP_DEBUG("get_tuple_by_esp: dst addr %s spi %d no connection found\n",
 	     addr_to_numeric(dst_addr), spi);
 
-HIP_DEBUG_INADDR("DST", dst_addr);
+  HIP_DEBUG_INADDR("DST", dst_addr);
 
   return NULL;
 }
@@ -378,8 +381,6 @@ void insert_esp_tuple(const struct esp_tuple * esp_tuple )
   HIP_DEBUG("insert_esp_tuple:\n");
   print_esp_list();
 }
-
-
 
 /**
  * free hip_tuple structure
@@ -1462,17 +1463,18 @@ int check_packet(const struct in6_addr * ip6_src,
 		 int verify_responder,
 		 int accept_mobile)
 {
-<<<<<<< TREE
+	hip_hit_t phit;
+	struct in6_addr all_zero_addr;
 	int return_value = 1;
 
-	_HIP_DEBUG("check packet type %d\n", common->type_hdr);
+	_HIP_DEBUG("check packet: type %d \n", common->type_hdr);
 
-	// new connection can only be started with I1 or by update packets
+	// new connection can only be started with I1 of from update packets
 	// when accept_mobile is true
-	if (! (tuple || common->type_hdr == HIP_I1
-			|| (common->type_hdr == HIP_UPDATE && accept_mobile)))
-	{
-		HIP_DEBUG("hip packet type %d cannot start a new connection\n",
+	if(!(tuple || common->type_hdr == HIP_I1
+		|| (common->type_hdr == HIP_UPDATE && accept_mobile)))
+    {
+     	HIP_DEBUG("hip packet type %d cannot start a new connection\n",
 				common->type_hdr);
 
 		return_value = 0;
@@ -1483,39 +1485,7 @@ int check_packet(const struct in6_addr * ip6_src,
 	// no signature in I1 and handle_r1 does verification
 	if (tuple && common->type_hdr != HIP_I1 && common->type_hdr != HIP_R1
 			&& tuple->hip_tuple->data->src_hi != NULL)
-=======
-  hip_hit_t phit;
-  struct in6_addr all_zero_addr;
-  int return_value = 1;
-  _HIP_DEBUG("check packet: type %d \n", common->type_hdr);
-  //new connection can only be started with I1 of from update packets
-  //when accept_mobile is true
-  if(! (tuple || common->type_hdr == HIP_I1 || 
-	(common->type_hdr == HIP_UPDATE && accept_mobile)))
-    {
-      HIP_DEBUG("check packet: cannot start a new connection\n", common->type_hdr);
-      return 0;
-    }
-  //verify sender signature when required and available
-  //no signature in I1 and handle_r1 does verification
-  if(tuple && 
-     common->type_hdr != HIP_I1 &&
-     common->type_hdr != HIP_R1 && 
-     tuple->hip_tuple->data->src_hi != NULL)
-    {
-      if(verify_packet_signature(tuple->hip_tuple->data->src_hi, 
-				  common) != 0)
-	return 0;
-        HIP_DEBUG_HIT("src hit: ", &tuple->hip_tuple->data->src_hit);
-        HIP_DEBUG_HIT("dst hit: ", &tuple->hip_tuple->data->dst_hit);
-      HIP_DEBUG("check_packet: signature verification ok\n");
-    }
-  if(common->type_hdr == HIP_I1) 
-    {
-      if(tuple == NULL)
->>>>>>> MERGE-SOURCE
 	{
-<<<<<<< TREE
 		if (verify_packet_signature(tuple->hip_tuple->data->src_hi, common) != 0)
 		{
 			HIP_DEBUG("signature verification failed\n");
@@ -1528,34 +1498,27 @@ int check_packet(const struct in6_addr * ip6_src,
 		HIP_DEBUG_HIT("dst hit: ", &tuple->hip_tuple->data->dst_hit);
 
 		HIP_DEBUG("signature verification ok\n");
-=======
-	  struct hip_data * data = get_hip_data(common);
-
-#ifdef CONFIG_HIP_OPPORTUNISTIC
-	  //if peer hit is all-zero in I1 packet, replace it with pseudo hit
-	  memset(&all_zero_addr, 0, sizeof(struct in6_addr));
-	  if(IN6_ARE_ADDR_EQUAL(&common->hitr, &all_zero_addr)){
-	    hip_opportunistic_ipv6_to_hit(ip6_dst, &phit, HIP_HIT_TYPE_HASH100);
-	    data->dst_hit = (struct in6_addr)phit;
-	  }
-#endif
-
-	  insert_new_connection(data);
-	  // FIXME this does not free all memory -> DEBUG still outputs
-	  // sth similar to HITs
-	  free(data);
-        HIP_DEBUG_HIT("src hit: ", &data->src_hit);
-        HIP_DEBUG_HIT("dst hit: ", &data->dst_hit);
->>>>>>> MERGE-SOURCE
 	}
 
 	// handle different packet types now
-	if (common->type_hdr == HIP_I1)
+	if(common->type_hdr == HIP_I1)
 	{
-		if (tuple == NULL)
+		if(tuple == NULL)
 		{
 			// create a new tuple
 			struct hip_data * data = get_hip_data(common);
+
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+			//if peer hit is all-zero in I1 packet, replace it with pseudo hit
+			memset(&all_zero_addr, 0, sizeof(struct in6_addr));
+
+			if(IN6_ARE_ADDR_EQUAL(&common->hitr, &all_zero_addr))
+			{
+				hip_opportunistic_ipv6_to_hit(ip6_dst, &phit,
+						HIP_HIT_TYPE_HASH100);
+				data->dst_hit = (struct in6_addr)phit;
+	  		}
+#endif
 
 			insert_new_connection(data);
 
@@ -1651,6 +1614,7 @@ int filter_esp_state(const struct in6_addr *dst_addr,
 	int escrow_deny = 0;
 	// don't accept packet with this rule by default
 	int err = 0;
+
 	// needed to de-multiplex ESP traffic
 	uint32_t spi = ntohl(esp->esp_spi);
 
@@ -1759,7 +1723,6 @@ int filter_esp_state(const struct in6_addr *dst_addr,
 }
 
 //check the verdict in rule, so connections can only be created when necessary
-<<<<<<< TREE
 int filter_state(const struct in6_addr * ip6_src, const struct in6_addr * ip6_dst,
 		 struct hip_common * buf, const struct state_option * option, int accept)
 {
@@ -1769,16 +1732,16 @@ int filter_state(const struct in6_addr * ip6_src, const struct in6_addr * ip6_ds
 	// FIXME results in unsafe use in filter_hip()
 	int return_value = -1; //invalid value
 
-	_HIP_DEBUG("filter_state\n");
+	_HIP_DEBUG("\n");
 	//g_mutex_lock(connectionTableMutex);
 	_HIP_DEBUG("filter_state:locked mutex\n");
 
 	// get data form the buffer and put it in a new data structure
 	data = get_hip_data(buf);
 	// look up the tuple in the database
-	tuple = get_tuple_by_hip(data);
+	tuple = get_tuple_by_hip(data, buf->type_hdr, ip6_src);
 
-	_HIP_DEBUG("filter_state: hip_data: \n");
+	_HIP_DEBUG("hip_data:\n");
 	//print_data(data);
 	free(data);
 
@@ -1792,37 +1755,6 @@ int filter_state(const struct in6_addr * ip6_src, const struct in6_addr * ip6_ds
 			goto out_err;
 		}
     } else
-=======
-int filter_state(const struct in6_addr * ip6_src,
-                const struct in6_addr * ip6_dst, 
-		 struct hip_common * buf, 
-		 const struct state_option * option,
-		 int accept) 
-{
-  struct hip_data * data = NULL;
-  struct tuple * tuple = NULL;
-  struct connection * connection = NULL;
-  // FIXME results in unsafe use in filter_hip()
-  int return_value = -1; //invalid value 
-
-  _HIP_DEBUG("filter_state\n");
-//  g_mutex_lock(connectionTableMutex);
-  _HIP_DEBUG("filter_state:locked mutex\n");
-  data = get_hip_data(buf);
-  tuple = get_tuple_by_hip(data, buf->type_hdr, ip6_src);
-
-  _HIP_DEBUG("filter_state: hip_data: \n");
-  //print_data(data);
-  free(data);
-  
-  //cases where packet does not match
-  if(!tuple)
-    {
-      if((option->int_opt.value == CONN_NEW && 
-	  !option->int_opt.boolean) ||
-	 (option->int_opt.value == CONN_ESTABLISHED && 
-	  option->int_opt.boolean))
->>>>>>> MERGE-SOURCE
 	{
 		if((option->int_opt.value == CONN_ESTABLISHED && !option->int_opt.boolean) ||
 				(option->int_opt.value == CONN_NEW && option->int_opt.boolean))
@@ -1883,7 +1815,6 @@ void conntrack(const struct in6_addr * ip6_src,
         const struct in6_addr * ip6_dst,
 	       struct hip_common * buf)
 {
-<<<<<<< TREE
 	struct hip_data * data;
 	struct tuple * tuple;
 	struct connection * connection;
@@ -1895,7 +1826,7 @@ void conntrack(const struct in6_addr * ip6_src,
 	// convert to new data type
 	data = get_hip_data(buf);
 	// look up tuple in the db
-	tuple = get_tuple_by_hip(data);
+	tuple = get_tuple_by_hip(data, buf->type_hdr, ip6_src);
 
 	_HIP_DEBUG("checking packet...\n");
 
@@ -1907,25 +1838,6 @@ void conntrack(const struct in6_addr * ip6_src,
 	_HIP_DEBUG("unlocked mutex\n");
 
 	free(data);
-=======
-  struct hip_data * data;
-  struct tuple * tuple;
-  struct connection * connection;
-
-  _HIP_DEBUG("conntrack \n");  
-//  g_mutex_lock(connectionTableMutex);
-  _HIP_DEBUG("conntrack:locked mutex\n");
-  data = get_hip_data(buf);
-  tuple = get_tuple_by_hip(data, buf->type_hdr, ip6_src);
-
-  _HIP_DEBUG("conntrack:checking packet \n");
-  //the accept_mobile parameter is true as packets 
-  //are not filtered here
-  check_packet(ip6_src, ip6_dst, buf, tuple, 0, 1);
-//  g_mutex_unlock(connectionTableMutex);
-  _HIP_DEBUG("conntrack:unlocked mutex\n");
-  free(data);
->>>>>>> MERGE-SOURCE
 }
 
 
