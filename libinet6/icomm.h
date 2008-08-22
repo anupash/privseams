@@ -57,6 +57,10 @@
 #define SO_HIP_TRIGGER_BEX                      23
 #define SO_HIP_DHT_SERVING_GW                   24
 #define SO_HIP_GET_STATE_HA		        25
+#define SO_HIP_GET_LSI_PEER                     26
+#define SO_HIP_GET_LSI_OUR			27
+#define SO_HIP_IS_OUR_LSI                       28
+#define SO_HIP_GET_PEER_HIT_BY_LSIS             29
 /* inclusive */
 #define HIP_SO_ANY_MAX 				63
 
@@ -159,21 +163,21 @@
 #define SO_HIP_CERT_SPKI_VERIFY                 142
 #define SO_HIP_CERT_X509V3_SIGN                 143
 #define SO_HIP_CERT_X509V3_VERIFY               144
-#define SO_HIP_USERSPACE_IPSEC					145
-#define SO_HIP_ESP_PROT_TFM						146
-#define SO_HIP_BEX_STORE_UPDATE					147
-#define SO_HIP_TRIGGER_UPDATE					148
-#define SO_HIP_GET_LSI_PEER                     150
-#define SO_HIP_GET_LSI_OUR			151
-#define SO_HIP_IS_OUR_LSI                       152
-#define SO_HIP_ADD_PEER_MAP_HIT_IP_LSI          153
-#define SO_HIP_FW_BEX_DONE                      154
-#define SO_HIP_GET_PEER_HIT_BY_LSIS             155
-#define SO_HIP_FW_UPDATE_DB                     156
-#define SO_HIP_RESTART_DUMMY_INTERFACE		157
-#define SO_HIP_IPSEC_DELETE_SA             	    158
-#define SO_HIP_IPSEC_FLUSH_ALL_SA          	    159
-#define SO_HIP_ANCHOR_CHANGE					160
+#define SO_HIP_USERSPACE_IPSEC			145
+#define SO_HIP_ESP_PROT_TFM			146
+#define SO_HIP_BEX_STORE_UPDATE			147
+#define SO_HIP_TRIGGER_UPDATE			148
+#define SO_HIP_ADD_PEER_MAP_HIT_IP_LSI          149
+#define SO_HIP_RESTART_DUMMY_INTERFACE		150
+#define SO_HIP_FW_BEX_DONE                      151
+#define SO_HIP_FW_UPDATE_DB                     152
+#define SO_HIP_IPSEC_DELETE_SA                  153
+#define SO_HIP_IPSEC_FLUSH_ALL_SA          	154
+#define SO_HIP_ANCHOR_CHANGE			155
+
+//#define SO_HIP_ESP_PROT_EXT_TRANSFORM		xx
+//#define SO_HIP_IPSEC_UPDATE_ANCHOR_LIST	xx
+//#define SO_HIP_IPSEC_NEXT_ANCHOR		xx
 /** @} */
 /* inclusive */
 #define HIP_SO_ROOT_MAX 			255
