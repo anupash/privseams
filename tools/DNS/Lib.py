@@ -326,8 +326,13 @@ class RRpacker(Packer):
         self.addname(nsdname)
         self.endRR()
     def addPTR(self, name, klass, ttl, ptrdname):
-        self.addRRheader(name, Type.PTR, klass, ttl)
-        self.addname(ptrdname)
+        if type(ptrdname) == type([]):
+            for p in ptrdname:
+                self.addRRheader(name, Type.PTR, klass, ttl)
+                self.addname(p)
+        else:
+            self.addRRheader(name, Type.PTR, klass, ttl)
+            self.addname(ptrdname)
         self.endRR()
     def addSOA(self, name, klass, ttl,
               mname, rname, serial, refresh, retry, expire, minimum):

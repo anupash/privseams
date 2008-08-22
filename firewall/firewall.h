@@ -66,6 +66,8 @@
 
 #define FW_PROTO_NUM          6 /* Other, HIP, ESP, TCP */
 
+typedef struct firewall_hl firewall_hl_t;
+
 typedef struct hip_fw_context{
 	// queued packet
 	ipq_packet_msg_t *ipq_packet;

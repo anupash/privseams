@@ -214,6 +214,11 @@ int hipd_init(int flush_ipsec, int killold)
 	extern int hip_opendht_sock_fqdn;
 	extern int hip_opendht_sock_hit;
 
+	/* Make sure that root path is set up correcly (e.g. on Fedora 9).
+	   Otherwise may get warnings from system() commands.
+	   @todo: should append, not overwrite  */
+	setenv("PATH", HIP_DEFAULT_EXEC_PATH, 1);
+
 	/* Open daemon lock file and read pid from it. */
 	HIP_IFEL(hip_create_lock_file(HIP_DAEMON_LOCK_FILE, killold), -1,
 		 "locking failed\n");

@@ -1,10 +1,9 @@
 #! /bin/sh
 # /etc/init.d/dnsproxy: start and stop the HIP DNS Proxy
 
-DNSPROXY_OPTS=
+DNSPROXY_OPTS="-bk"
 PID_FILE=/var/run/dnsproxy.pid
-PID=`pidof -o $$ dnsproxy.py`
-EXEC=/usr/local/sbin/dnsproxy.py
+EXEC=/usr/sbin/dnshipproxy
 
 set -e
 
@@ -14,40 +13,23 @@ if test -f /etc/default/dnsproxy; then
     . /etc/default/dnsproxy
 fi
 
-stop_dnsproxy() {
-    # Ensure that we don't try to kill init.d script itself
-    start-stop-daemon --stop --quiet --oknodo --retry 30 --pidfile $PID_FILE
-    #if [ $PID ]
-    #then
-    #	kill $1 $PID
-    #fi
-}
-
 case "$1" in
   start)
         echo -n "Starting hip dnsproxy"
-	start-stop-daemon --start --quiet --oknodo --pidfile $PID_FILE --exec $EXEC -- $DNSPROXY_OPTS
+	start-stop-daemon --start --quiet --exec $EXEC -- $DNSPROXY_OPTS
         echo "."
 	;;
   stop)
         echo -n "Stopping hip dnsproxy"
-	stop_dnsproxy
+	start-stop-daemon --stop --pidfile $PID_FILE --quiet -- $DNSPROXY_OPTS
         echo "."
 	;;
 
-  reload|force-reload)
-        echo -n "Reloading hip dnsproxy"
-	start-stop-daemon --stop --signal 1 --quiet --oknodo --exec $EXEC
-	echo "."
-	;;
-
-  restart)
-        echo -n "Restarting hip dnsproxy"
-        # Daemon waits N seconds for closing of connections - just kill it
-	stop_dnsproxy -KILL
-	start-stop-daemon --start --quiet --exec $EXEC -- $DNSPROXY_OPTS
-	echo "."
-	;;
+#  restart)
+#        echo -n "Restarting hip dnsproxy"
+#        # Daemon waits N seconds for closing of connections - just kill it
+#	echo "."
+#	;;
 
   *)
 	echo "Usage: /etc/init.d/dnsproxy {start|stop|reload|force-reload|restart}"

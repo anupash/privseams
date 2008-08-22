@@ -78,9 +78,7 @@ $(HIPL_LIBINET6_LIB_STATIC):
 	$(MAKE) -C $(HIPL_LIBINET6)
 
 dnshipproxy:
-	@echo "#! /usr/bin/env PYTHONPATH=$(pyexecdir) python dnsproxy.pyc" >dnshipproxy
-	@chmod a+rx dnshipproxy
+	@sh gen-python-starter.sh $(pyexecdir)/dnshipproxy dnsproxy.py dnshipproxy
 
 parsehipkey:
-	@echo "#! /usr/bin/env PYTHONPATH=$(pyexecdir) python parse-key-3.pyc" >parsehipkey
-	@chmod a+rx parsehipkey
+	@sh gen-python-starter.sh $(pyexecdir)/parsehipkey parse-key-3.py parsehipkey

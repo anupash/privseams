@@ -42,7 +42,7 @@ hipd_LDADD += ../pjproject/pjlib-util/lib/libpjlib-util-hipl.a
 
 ../pjproject/pjlib/lib/libpj-hipl.a:
 ../pjproject/pjlib-util/lib/libpjlib-util-hipl.a:
-../pjproject/pjnath/lib/libpjnath-hipl}.a:
+../pjproject/pjnath/lib/libpjnath-hipl.a:
 
 hipd_LDFLAGS = -lcrypto $(HIPL_XMLL) -lm -DHIPL_HIPD
 
