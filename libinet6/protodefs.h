@@ -7,8 +7,8 @@
 
 #include "hashchain.h"
 
-#define HIP_MAX_PACKET 2048
-
+#define HIP_MAX_PACKET 4096
+#define HIP_MAX_NETWORK_PACKET 2048
 /** @addtogroup hip_msg
  * @{
  */

@@ -1,31 +1,31 @@
 #!/bin/bash
 #
-# Init file for hip daemon
+# Init file for hip dns proxy
 #
-# description: HIPL IPsec key and mobility management daemon
+# description: HIP DNS proxy
 #
-# processname: hipd
-# pidfile: /var/run/hipd.pid
+# processname: dnsproxy.py
+# pidfile: /var/run/dnsproxy.pid
 # chkconfig: 2345 20 80
 
 # source function library
 . /etc/rc.d/init.d/functions
 
 # pull in sysconfig settings
-[ -f /etc/sysconfig/hipd ] && . /etc/sysconfig/hipd
+[ -f /etc/sysconfig/dnsproxy ] && . /etc/sysconfig/dnsproxy
 
 RETVAL=0
-DAEMON="/usr/sbin/hipd"
-BASENAME="hipd"
+DNSPROXY="/usr/sbin/dnshipproxy"
+BASENAME="dnsproxy"
 
-#PID_FILE=/var/run/hipd.pid
-LOCK_FILE=/var/lock/subsys/hipd
+#PID_FILE=/var/run/dnsproxy.pid
+LOCK_FILE=/var/lock/subsys/dnsproxy
 OPTIONS="-bk"
 
 start()
 {
 	echo -n $"Starting $BASENAME:"
-	$DAEMON $OPTIONS && success || failure
+	$DNSPROXY $OPTIONS && success || failure
 	RETVAL=$?
 	[ "$RETVAL" = 0 ] && touch $LOCK_FILE
 	echo
@@ -34,7 +34,7 @@ start()
 stop()
 {
 	echo -n $"Stopping $BASENAME:"
-	killproc $DAEMON
+	killall $BASENAME
 	RETVAL=$?
 	[ "$RETVAL" = 0 ] && rm -f $LOCK_FILE
 	echo
@@ -52,7 +52,7 @@ case "$1" in
 		start
 		;;
 	status)
-		status $DAEMON
+		status $DNSPROXY
 		RETVAL=$?
 		;;
 	*)

@@ -214,6 +214,11 @@ int hipd_init(int flush_ipsec, int killold)
 	extern int hip_opendht_sock_fqdn;
 	extern int hip_opendht_sock_hit;
 
+	/* Make sure that root path is set up correcly (e.g. on Fedora 9).
+	   Otherwise may get warnings from system() commands.
+	   @todo: should append, not overwrite  */
+	setenv("PATH", HIP_DEFAULT_EXEC_PATH, 1);
+
 	/* Open daemon lock file and read pid from it. */
 	HIP_IFEL(hip_create_lock_file(HIP_DAEMON_LOCK_FILE, killold), -1,
 		 "locking failed\n");
@@ -340,7 +345,8 @@ int hipd_init(int flush_ipsec, int killold)
 	HIP_DEBUG("Setting iface %s\n", HIP_HIT_DEV);
 	set_up_device(HIP_HIT_DEV, 0);
 	HIP_IFE(set_up_device(HIP_HIT_DEV, 1), 1);
-
+	HIP_DEBUG("Lowering " HIP_HIT_DEV " MTU\n");
+	system("ifconfig dummy0 mtu 1280"); /* see bug id 595 */
 
 #ifdef CONFIG_HIP_HI3
 	if( hip_use_i3 ) {
