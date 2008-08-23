@@ -7,6 +7,21 @@
 
 #include "blind.h"
 
+int hip_check_whether_to_use_blind(hip_common_t *msg, int *use_blind)
+{
+	if(msg == NULL || use_blind == NULL) {
+		return -1;
+	}
+	
+	if ((ntohs(msg->control) & HIP_PACKET_CTRL_BLIND) &&
+	    hip_blind_get_status()) {
+		*use_blind = 1;
+	}
+
+	return 0;
+}
+
+
 /* For internal use only */
 int hip_set_blind_on_sa(hip_ha_t *entry, void *not_used)
 {
@@ -62,9 +77,11 @@ int hip_set_blind_off(void)
   return err;
 }
 
-/* This functions is used to query if the blind is in use.
- * returns 0 if blind is off and 1 if blind is on.
-*/
+/**
+ * @brief This functions is used to query if the blind is in use.
+ * 
+ * @return Zero if blind is off and 1 if blind is on.
+ */
 int hip_blind_get_status(void)
 {
   return hip_blind_status;
@@ -88,26 +105,25 @@ int hip_blind_get_nonce(struct hip_common *msg, uint16_t *msg_nonce)
   return err;
 }
 
-/* Forms the plain HIT from the blinded one.
- * @nonce Nonce that is used to calculate the plain HIT
- * @blind_hit Blinded HIT from where the plain HIT is formed
- * @plain_hit Calculated plain HIT
- * Returns 0 in success, otherwise returns -1.
+/**
+ * @brief Forms a plain HIT from a blinded one.
+ * 
+ * @param  nonce     Nonce that is used to calculate the plain HIT.
+ * @param  blind_hit Blinded HIT from where the plain HIT is formed.
+ * @param  plain_hit Calculated plain HIT
+ * @return           Zero in success, otherwise -1.
 */
-int hip_plain_fingerprint(uint16_t *nonce, 
-			  struct in6_addr *blind_hit, 
+int hip_plain_fingerprint(uint16_t *nonce,  struct in6_addr *blind_hit,
 			  struct in6_addr *plain_hit)
 {
-  int err = 0;
+	int err = 0;
     
-  HIP_DEBUG("\n");
-    
-  HIP_IFEL(hip_blind_find_local_hi(nonce, blind_hit, plain_hit), 
-	   -1, "hip_blind_find_local_hit failed\n");
-  HIP_DEBUG_HIT("local hit_found", plain_hit);
+	HIP_IFEL(hip_blind_find_local_hi(nonce, blind_hit, plain_hit), 
+		 -1, "hip_blind_find_local_hit failed\n");
+	_HIP_DEBUG_HIT("local hit_found", plain_hit);
 
  out_err:
-  return err;
+	return err;
 }
 
 /* Forms the blinded HIT from the key (SHA1 hash from the key).
@@ -226,7 +242,7 @@ int hip_blind_verify(uint16_t *nonce, struct in6_addr *plain_hit, struct in6_add
 }
 
 
-struct hip_common *hip_blind_build_i1(hip_ha_t *entry, int *mask)
+struct hip_common *hip_blind_build_i1(hip_ha_t *entry, uint16_t *mask)
 {
   struct hip_common *i1;
   int err = 0;

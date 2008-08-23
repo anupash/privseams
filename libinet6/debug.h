@@ -78,9 +78,9 @@
 
 /* Debug messages are divided into several levels. Severe errors
    or abnormal conditions are the lowest level. Higher levels are
-   considered as less severe or less important. The highes level means
-   every debug message which matches the current switch is printed.
-   The hignes debug level number must be assigned to HIP_DEBUG_ALL*/
+   considered as less severe or less important. The highest level means
+   every debug message which matches the current switch is printed. 
+   The highest debug level number must be assigned to HIP_DEBUG_ALL*/
 # define HIP_DEBUG_LEVEL_ERRORS		0
 # define HIP_DEBUG_LEVEL_IMPORTANT	10
 # define HIP_DEBUG_LEVEL_INFORMATIVE	20

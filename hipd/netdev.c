@@ -1247,11 +1247,10 @@ out_err:
 
 int hip_get_default_hit(struct in6_addr *hit)
 {
-	int err = 0;
-	int family = AF_INET6;
-	//int rtnl_rtdsfield_init;
-	//char *rtnl_rtdsfield_tab[256] = { 0 };
-	int i;
+	/* Where is rtnl_rtdsfield_init used? Why are rtnl_rtdsfield_tab and
+	   idxmap initialized as arrays although they're pointers? The same
+	   goes for hip_get_default_lsi() also. -Lauri 21.07.2008. */
+	int err = 0, i = 0, family = AF_INET6, rtnl_rtdsfield_init = 1;
 	struct idxmap *idxmap[16] = { 0 };
 	hip_hit_t hit_tmpl;
 
@@ -1262,8 +1261,9 @@ int hip_get_default_hit(struct in6_addr *hit)
         //rtnl_tab_initialize("/etc/iproute2/rt_dsfield",rtnl_rtdsfield_tab, 256);
 	memset(&hit_tmpl, 0xab, sizeof(hit_tmpl));
 	set_hit_prefix(&hit_tmpl);
-	HIP_IFEL(hip_iproute_get(&hip_nl_route, hit, &hit_tmpl, NULL, NULL, family, idxmap),
-		 -1,"Finding ip route failed\n");
+	HIP_IFEL(hip_iproute_get(&hip_nl_route, hit, &hit_tmpl, NULL, NULL,
+				 family, idxmap), -1,
+		 "Failed to find IP route.\n");
 	
  out_err:
 /*
@@ -1283,8 +1283,8 @@ int hip_get_default_hit_msg(struct hip_common *msg)
 	
 	hip_get_default_hit(&hit);
  	hip_get_default_lsi(&lsi);
-	HIP_DEBUG_HIT("Default hit is ", &hit);
- 	HIP_DEBUG_LSI("Default lsi is ", &lsi);
+	_HIP_DEBUG_HIT("Default hit is ", &hit);
+ 	_HIP_DEBUG_LSI("Default lsi is ", &lsi);
 	hip_build_param_contents(msg, &hit, HIP_PARAM_HIT, sizeof(hit));
  	hip_build_param_contents(msg, &lsi, HIP_PARAM_LSI, sizeof(lsi));
 	
@@ -1293,23 +1293,22 @@ int hip_get_default_hit_msg(struct hip_common *msg)
 }
 
 
-int hip_get_default_lsi(struct in_addr *lsi){
-	//char *rtnl_rtdsfield_tab[256] = { 0 };
+int hip_get_default_lsi(struct in_addr *lsi)
+{
+	int err = 0, family = AF_INET, rtnl_rtdsfield_init = 1;
+	char *rtnl_rtdsfield_tab[256] = { 0 };
 	struct idxmap *idxmap[16] = { 0 };
 	struct in6_addr lsi_addr;
 	struct in6_addr lsi_aux6;
 	hip_lsi_t lsi_tmpl;
-	int err = 0;
-	int i;
-	int family = AF_INET;	
-	//int rtnl_rtdsfield_init = 1;
-
-        //rtnl_tab_initialize("/etc/iproute2/rt_dsfield",rtnl_rtdsfield_tab, 256);
+	
+        rtnl_tab_initialize("/etc/iproute2/rt_dsfield",rtnl_rtdsfield_tab, 256);
 	memset(&lsi_tmpl, 0, sizeof(lsi_tmpl));
 	set_lsi_prefix(&lsi_tmpl);
 	IPV4_TO_IPV6_MAP(&lsi_tmpl, &lsi_addr);
-	HIP_IFEL(hip_iproute_get(&hip_nl_route, &lsi_aux6, &lsi_addr, NULL, NULL, family, idxmap),
-		 -1,"Finding ip route failed\n");
+	HIP_IFEL(hip_iproute_get(&hip_nl_route, &lsi_aux6, &lsi_addr, NULL,
+				 NULL, family, idxmap), -1,
+		 "Failed to find IP route.\n");
 
 	if(IN6_IS_ADDR_V4MAPPED(&lsi_aux6))
 	        IPV6_TO_IPV4_MAP(&lsi_aux6, lsi);
