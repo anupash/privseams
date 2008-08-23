@@ -93,6 +93,20 @@ int userspace_ipsec_uninit()
 {
 	int activate = 0;
 	int err = 0;
+	struct hip_common *msg = NULL;
+	struct hip_tlv_common *param = NULL;
+	hip_hit_t *defhit  = NULL;
+	struct endpoint_hip *endp = NULL;
+
+	HIP_IFE(!(msg = hip_msg_alloc()), -1);
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEFAULT_HIT,0),-1,
+		 "Fail to get hits");
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1,
+		 "send/recv daemon info\n");
+
+	HIP_IFE(!(param = hip_get_param(msg, HIP_PARAM_HIT)), -1); 
+	defhit = hip_get_param_contents_direct(param);
+	ipv6_addr_copy(hit, defhit);
 
 	// deactivate userspace ipsec in hipd
 	HIP_DEBUG("switching hipd to kernel-mode ipsec...\n");
@@ -109,6 +123,11 @@ int userspace_ipsec_uninit()
 		free(decrypted_packet);
 
   out_err:
+=======
+out_err:
+	if(msg)
+		free(msg);
+>>>>>>> MERGE-SOURCE
 	return err;
 }
 
