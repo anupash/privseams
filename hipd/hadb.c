@@ -203,30 +203,22 @@ hip_ha_t *hip_hadb_try_to_find_by_peer_hit(hip_hit_t *hit)
 }
 
 /**
- * hip_hadb_insert_state - Insert state to hash tables.
+ * @brief Inserts a HIP association to HIP association hash table.
  *
- * @todo SPI STUFF IS DEPRECATED
+ * Inserts a HIP association to HIP association hash table @c hadb_hit and
+ * updates the the hastate of the HIP association @c ha. This function can be
+ * called even if the @c ha is in the hash table already. <b>The peer address of
+ * the host association must be set (i.e. @c ha->hit_peer must not be
+ * ipv6_addr_any). </b> When @c ha is NULL or if @c ha->hit_peer is
+ * ipv6_addr_any this function will kill the HIP daemon.
  *
- * Adds @c ha to either SPI or HIT hash table, or _BOTH_.
- * As a side effect updates the hastate of the @c ha.
- *
- * Function can be called even if the HA is in either or
- * both hash tables already.
- *
- * PRECONDITIONS: To add to the SPI hash table the @c ha->spi_in
- * must be non-zero. To add to the HIT hash table the @c ha->hit_peer
- * must be non-zero (tested with ipv6_addr_any).
- *
- * Returns the hastate of the HA:
- * HIP_HASTATE_VALID = HA added to (or is in) both hash tables
- * HIP_HASTATE_SPIOK = HA added to (or is in) SPI hash table
- * HIP_HASTATE_HITOK = HA added to (or is in) HIT hash table
- * HIP_HASTATE_INVALID = HA was not added, nor is in either of the hash tables.
+ * @return The state of the HIP association (hip_hastate_t).
+ * @note   For multithreaded model: this function assumes that @c ha is locked. 
  */
 int hip_hadb_insert_state(hip_ha_t *ha)
 {
 	hip_hastate_t st;
-	hip_ha_t *tmp;
+	hip_ha_t *tmp = NULL;
 
 	HIP_DEBUG("hip_hadb_insert_state() invoked.\n");
 
@@ -236,6 +228,20 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 
 	st = ha->hastate;
 
+	HIP_DEBUG("hip_hadb_insert_state() invoked. Inserting a new state to "\
+		  "the HIP association hash table.\n");
+	
+	if(ha == NULL) {
+		HIP_DIE("Trying to insert a NULL HIP association to the HIP "\
+			"association hash table.\n");
+	} else if (ipv6_addr_any(&ha->hit_peer)) {
+		HIP_DIE("Trying to insert a HIP association with zero "\
+			"(ipv6_addr_any) peer HIT to the HIP association hash "\
+			"table.\n");
+	}
+		
+	st = ha->hastate;
+	
 	if (!ipv6_addr_any(&ha->hit_peer) && !(st & HIP_HASTATE_HITOK)) {
 		HIP_HEXDUMP("ha->hit_our is: ", &ha->hit_our, 16);
 		HIP_HEXDUMP("ha->hit_peer is: ", &ha->hit_peer, 16);
