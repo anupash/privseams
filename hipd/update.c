@@ -1974,8 +1974,11 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
 
      entry->local_udp_port = entry->nat_mode ? HIP_NAT_UDP_PORT : 0;
 
+     _HIP_DEBUG("SPI out =0x%x\n", entry->default_spi_out);     
+     _HIP_DEBUG("SPI in =0x%x\n", spi_in);     
+
      HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(&srcaddr, &destaddr, &entry->hit_our,
-			 &entry->hit_peer, &entry->default_spi_out,
+			 &entry->hit_peer, entry->default_spi_out,
 			 entry->esp_transform, &entry->esp_out,
 			 &entry->auth_out, 1, HIP_SPI_DIRECTION_OUT, 0, entry), -1,
 	      "Error while changing outbound security association for new "\
@@ -1996,7 +1999,7 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
 
      HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(&destaddr, &srcaddr,
 			 &entry->hit_peer, &entry->hit_our,
-			 &spi_in, entry->esp_transform,
+			 spi_in, entry->esp_transform,
 			 &entry->esp_in, &entry->auth_in, 1,
 			 HIP_SPI_DIRECTION_IN, 0, entry), -1,
 	      "Error while changing inbound security association for new "\
