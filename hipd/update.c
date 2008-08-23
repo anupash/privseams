@@ -2648,8 +2648,9 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 	else
 		HIP_DEBUG("Unknown addr family in addr\n");
 
+	addr_sin6 = malloc(sizeof(struct sockaddr_in6));     
+
 	if (addr->sa_family == AF_INET) {
-		addr_sin6 = malloc(sizeof(struct sockaddr_in6));
 		HIP_IFEL(!addr_sin6, -1, "Failed to malloc for address\n");
 		memset(addr_sin6, 0, sizeof(struct sockaddr_in6));
 		memset(&ipv4, 0, sizeof(struct in_addr));
