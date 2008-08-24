@@ -213,6 +213,7 @@ int hipd_init(int flush_ipsec, int killold)
 	struct sockaddr_in6 daemon_addr;
 	extern int hip_opendht_sock_fqdn;
 	extern int hip_opendht_sock_hit;
+	extern int hip_icmp_sock;
 
 	/* Make sure that root path is set up correcly (e.g. on Fedora 9).
 	   Otherwise may get warnings from system() commands.
@@ -327,10 +328,12 @@ int hipd_init(int flush_ipsec, int killold)
 	HIP_IFEL(hip_init_raw_sock_v6(&hip_raw_sock_v6), -1, "raw sock v6\n");
 	HIP_IFEL(hip_init_raw_sock_v4(&hip_raw_sock_v4), -1, "raw sock v4\n");
 	HIP_IFEL(hip_init_nat_sock_udp(&hip_nat_sock_udp), -1, "raw sock udp\n");		
+	HIP_IFEL(hip_init_icmp_v6(&hip_icmp_sock), -1, "icmpv6 sock\n");
 
 	HIP_DEBUG("hip_raw_sock = %d\n", hip_raw_sock_v6);
 	HIP_DEBUG("hip_raw_sock_v4 = %d\n", hip_raw_sock_v4);
 	HIP_DEBUG("hip_nat_sock_udp = %d\n", hip_nat_sock_udp);
+	HIP_DEBUG("hip_icmp_sock = %d\n", hip_icmp_sock);
 
 	if (flush_ipsec)
 	{
@@ -614,6 +617,32 @@ int hip_init_raw_sock_v4(int *hip_raw_sock_v4)
 }
 
 /**
+ * Init icmpv6 socket.
+ */
+int hip_init_icmp_v6(int *icmpsockfd)
+{
+	int err = 0, on = 1;
+	struct sockaddr_in6 addr6;
+	struct icmp6_filter filter;
+
+	*icmpsockfd = socket(AF_INET6, SOCK_RAW, IPPROTO_ICMPV6);
+	HIP_IFEL(*icmpsockfd <= 0, 1, "ICMPv6 socket creation failed\n");
+	
+	ICMP6_FILTER_SETBLOCKALL(&filter);
+	ICMP6_FILTER_SETPASS(ICMPV6_ECHO_REPLY, &filter);
+	err = setsockopt(*icmpsockfd, IPPROTO_ICMPV6, ICMPV6_FILTER, &filter, 
+			 sizeof(struct icmp6_filter));
+	HIP_IFEL(err, -1, "setsockopt icmp ICMP6_FILTER failed\n");
+
+
+	err = setsockopt(*icmpsockfd, IPPROTO_IPV6, IPV6_2292PKTINFO, &on, sizeof(on));
+	HIP_IFEL(err, -1, "setsockopt icmp IPV6_RECVPKTINFO failed\n");
+
+ out_err:
+	return err;
+}
+
+/**
  * Init udp socket for nat usage.
  */
 int hip_init_nat_sock_udp(int *hip_nat_sock_udp)
@@ -657,7 +686,7 @@ int hip_init_nat_sock_udp(int *hip_nat_sock_udp)
 		goto out_err;
 	}
 
-	HIP_DEBUG_INADDR("UDP socket created and binded to addr", &myaddr.sin_addr.s_addr);
+	HIP_DEBUG_INADDR("UDP socket created and bound to addr", &myaddr.sin_addr.s_addr);
 	return 0;
 
 out_err:

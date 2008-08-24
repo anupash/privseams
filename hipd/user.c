@@ -35,7 +35,9 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	int err = 0, msg_type = 0, n = 0, len = 0, state = 0, reti = 0, dhterr = 0;
 	int access_ok = 0, send_response = 1, is_root = 0;
 	HIP_KEA * kea = NULL;
-	struct hip_tlv_common *param = NULL;
+	extern int hip_icmp_interval;
+	struct hip_tlv_common *param = NULL;	
+	struct hip_heartbeat * heartbeat;
 
 	HIP_ASSERT(src->sin6_family == AF_INET6);
 
@@ -144,6 +146,11 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
                           hip_locator_status, SO_HIP_SET_LOCATOR_OFF);
                 hip_recreate_all_precreated_r1_packets();
                 break;
+        case SO_HIP_HEARTBEAT:
+		heartbeat = hip_get_param(msg, HIP_PARAM_HEARTBEAT);
+		hip_icmp_interval = heartbeat->heartbeat;
+		HIP_DEBUG("Received heartbeat interval (%d seconds)\n",hip_icmp_interval);
+		break;
 	case SO_HIP_SET_DEBUG_ALL:
 		/* Displays all debugging messages. */
 		_HIP_DEBUG("Handling DEBUG ALL user message.\n");

@@ -3375,6 +3375,18 @@ int hip_build_param_blind_nonce(struct hip_common *msg, uint16_t nonce)
 	return err;
 }
 
+int hip_build_param_heartbeat(struct hip_common *msg, int seconds) {
+	int err = 0;
+	struct hip_heartbeat heartbeat;
+	hip_set_param_type(&heartbeat, HIP_PARAM_HEARTBEAT);
+	hip_calc_param_len(&heartbeat, sizeof(struct hip_heartbeat) -
+			   sizeof(struct hip_tlv_common));
+	memcpy(&heartbeat.heartbeat, &seconds, sizeof(seconds));
+	err = hip_build_param(msg, &heartbeat);
+out_err:
+	return err;
+}
+
 int hip_build_param_opendht_set(struct hip_common *msg,
                                 char *name)
 {

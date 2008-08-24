@@ -457,7 +457,14 @@ struct hip_hadb_state
 #ifdef CONFIG_HIP_HIPPROXY
 	int hipproxy;
 #endif
-	
+        /** Counters of heartbeats (ICMPv6s) **/
+	int                          heartbeats_sent;
+	int                          heartbeats_received;	
+	/** Heartbeat current mean RTT **/
+        u_int32_t                    heartbeats_mean;
+	/** Heartbeat current mean varians RTT **/
+	int32_t                      heartbeats_mean_varians;
+
 //NAT Branch
 	//pointer for ice engine
 	void* ice_session;
@@ -483,6 +490,11 @@ struct hip_hadb_user_info_state
         hip_lsi_t            lsi_our;
         hip_lsi_t            lsi_peer;
 	int                  state;
+	int                  heartbeats_on;
+	int                  heartbeats_sent;
+	int                  heartbeats_received;	
+        u_int32_t            heartbeats_mean;
+	int32_t              heartbeats_mean_varians;
 };
 
 /** @addtogroup hadb_func
@@ -513,8 +525,7 @@ struct hip_hadb_rcv_func_set {
 	int (*hip_receive_r2)(struct hip_common *,
 				 struct in6_addr *,
 				 struct in6_addr *,
-				 hip_ha_t*,
-			     hip_portpair_t *);
+				 hip_ha_t*,			     hip_portpair_t *);
 
 	int (*hip_receive_update)(struct hip_common *,
 				  struct in6_addr *,

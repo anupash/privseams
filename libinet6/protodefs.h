@@ -118,15 +118,15 @@
 #define HIP_PARAM_ADD_HIT		32800
 #define HIP_PARAM_ADD_OPTION		32801
 #define HIP_PARAM_PEER_HIT		32802
-#define HIP_PARAM_CERT_X509_REQ         32803
-#define HIP_PARAM_CERT_X509_RESP        32804
-#define HIP_PARAM_HCHAIN_ANCHOR		32805
-#define HIP_PARAM_LSI		        32806
-#define HIP_PARAM_HIT_LOCAL		32807
-#define HIP_PARAM_HIT_PEER		32808
-#define HIP_PARAM_IPV6_ADDR_LOCAL	32809
-#define HIP_PARAM_IPV6_ADDR_PEER        32810
-
+#define HIP_PARAM_HCHAIN_ANCHOR		32803
+#define HIP_PARAM_LSI		        32804
+#define HIP_PARAM_HIT_LOCAL		32805
+#define HIP_PARAM_HIT_PEER		32806
+#define HIP_PARAM_IPV6_ADDR_LOCAL	32807
+#define HIP_PARAM_IPV6_ADDR_PEER        32808
+#define HIP_PARAM_HEARTBEAT             32809
+#define HIP_PARAM_CERT_X509_REQ         32810
+#define HIP_PARAM_CERT_X509_RESP        32811
 /* End of HIPL private parameters. */
 
 #define HIP_PARAM_HMAC                 61505
@@ -845,6 +845,12 @@ struct hip_opendht_set {
 	hip_tlv_type_t 	type;
 	hip_tlv_len_t 	length;
         char name[256];
+} __attribute__ ((packed));
+
+struct hip_heartbeat {
+	hip_tlv_type_t 	type;
+	hip_tlv_len_t 	length;
+        int heartbeat;
 } __attribute__ ((packed));
 
 //add by santtu from here

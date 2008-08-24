@@ -66,7 +66,8 @@
 #define SO_HIP_FW_BEX_DONE                      29
 #define SO_HIP_GET_PEER_HIT_BY_LSIS             30
 #define SO_HIP_FW_UPDATE_DB                     31
-#define SO_HIP_GET_PEER_HIT_AT_FIREWALL		32
+#define SO_HIP_GET_PEER_HIT_AT_FIREWALL         32
+#define SO_HIP_HEARTBEAT                        33
 /* inclusive */
 #define HIP_SO_ANY_MAX 				63
 

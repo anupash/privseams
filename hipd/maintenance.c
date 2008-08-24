@@ -21,6 +21,7 @@ float precreate_counter = HIP_R1_PRECREATE_INIT;
 int nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_INTERVAL;
 float opendht_counter = OPENDHT_REFRESH_INIT;
 int force_exit_counter = FORCE_EXIT_COUNTER_START;
+int heartbeat_counter = 0;
 
 int hip_firewall_status = 0;
 int fall, retr;
@@ -564,6 +565,8 @@ int publish_addr(char *tmp_hit_str, char *tmp_addr_str)
 int periodic_maintenance()
 {
 	int err = 0;
+	extern int hip_icmp_interval;
+	extern int hip_icmp_sock;
 	
 	if (hipd_get_state() == HIPD_STATE_CLOSING) {
 		if (force_exit_counter > 0) {
@@ -609,6 +612,23 @@ int periodic_maintenance()
 		precreate_counter = HIP_R1_PRECREATE_INIT;
 	} else {
 		precreate_counter--;
+	}
+
+	/* is heartbeat support on */
+	if (hip_icmp_interval > 0) {
+		/* Check if there any msgs in the ICMPv6 socket */
+		/*
+		HIP_IFEL(hip_icmp_recvmsg(hip_icmp_sock), -1, 
+			 "Failed to recvmsg from ICMPv6\n");
+		*/
+		/* Check if the heartbeats should be sent */
+		if (heartbeat_counter < 1) {
+			HIP_IFEL(hip_send_all_heartbeats(hip_icmp_sock), -1,
+				 "Failed to send heartbeats\n");
+			heartbeat_counter = hip_icmp_interval;
+		} else {
+			heartbeat_counter--;
+		}
 	}
 
         if (hip_opendht_inuse == SO_HIP_DHT_ON) {
@@ -858,3 +878,178 @@ int opendht_put_locator(int sockfd,
     return(err);
 }
 
+/**
+ * This function receives ICMPv6 msgs (heartbeats)
+ *
+ * @param sockfd to recv from 
+ *
+ * @return 0 on success otherwise negative
+ *
+ * @note see RFC2292
+ */
+int hip_icmp_recvmsg(int sockfd) {
+	int err = 0, ret = 0, identifier = 0;
+	struct msghdr mhdr;
+	struct cmsghdr * chdr;
+	struct iovec iov[1];
+	u_char cmsgbuf[CMSG_SPACE(sizeof(struct in6_pktinfo))];
+	u_char iovbuf[HIP_MAX_ICMP_PACKET];
+	struct icmp6hdr * icmph = NULL;
+	struct in6_pktinfo * pktinfo, * pktinfo_in6;
+	struct sockaddr_in6 src_sin6;
+	struct in6_addr * src = NULL, * dst = NULL;
+	struct timeval * stval = NULL, * rtval = NULL, * ptr = NULL;
+
+	/* malloc what you need */ 
+	stval = malloc(sizeof(struct timeval));
+	HIP_IFEL((!stval), -1, "Malloc for stval failed\n");
+	rtval = malloc(sizeof(struct timeval));
+	HIP_IFEL((!rtval), -1, "Malloc for rtval failed\n");
+	src = malloc(sizeof(struct in6_addr));
+	HIP_IFEL((!src), -1, "Malloc for dst6 failed\n");
+	dst = malloc(sizeof(struct in6_addr));
+	HIP_IFEL((!dst), -1, "Malloc for dst failed\n");
+
+	/* cast */
+	chdr = (struct cmsghdr *)cmsgbuf;
+	pktinfo = (struct in6_pktinfo *)(CMSG_DATA(chdr));
+
+	/* clear memory */
+	memset(stval, 0, sizeof(struct timeval));
+	memset(rtval, 0, sizeof(struct timeval));
+	memset(src, 0, sizeof(struct in6_addr));
+	memset(dst, 0, sizeof(struct in6_addr));
+	memset (&src_sin6, 0, sizeof (struct sockaddr_in6));
+	memset(&iov, 0, sizeof(&iov));
+	memset(&iovbuf, 0, sizeof(iovbuf)); 
+	memset(&mhdr, 0, sizeof(mhdr));
+	
+	/* receive control msg */
+        chdr->cmsg_level = IPPROTO_IPV6;
+	chdr->cmsg_type = IPV6_2292PKTINFO;
+	chdr->cmsg_len = CMSG_LEN (sizeof (struct in6_pktinfo));
+	
+	/* Input output buffer */
+	iov[0].iov_base = &iovbuf;
+	iov[0].iov_len = sizeof(iovbuf);
+
+	/* receive msg hdr */
+	mhdr.msg_iov = &iov;
+	mhdr.msg_iovlen = 1;
+	mhdr.msg_name = (caddr_t) &src_sin6;
+	mhdr.msg_namelen = sizeof (struct sockaddr_in6);
+	mhdr.msg_control = (caddr_t) cmsgbuf;
+	mhdr.msg_controllen = sizeof (cmsgbuf);
+
+	ret = recvmsg (sockfd, &mhdr, MSG_DONTWAIT);
+	_HIP_PERROR("RECVMSG ");
+	if (errno == EAGAIN) {
+		err = 0;
+		_HIP_DEBUG("Asynchronous, maybe next time\n");	
+		goto out_err;
+	}
+	if (ret < 0) {
+		HIP_DEBUG("Recvmsg on ICMPv6 failed\n");
+		err = -1;
+		goto out_err;
+ 	}
+	
+	/* Get the current time as the return time */
+	gettimeofday(rtval, (struct timezone *)NULL); 
+
+	/* Check if the process identifier is ours and that this really is echo response */
+	icmph = (struct icmpv6hdr *)&iovbuf;
+	if (icmph->icmp6_type != ICMPV6_ECHO_REPLY) {
+		err = 0;
+		goto out_err;
+	}
+	identifier = getpid() & 0xFFFF;
+	if (identifier != icmph->icmp6_identifier) {
+		err = 0;
+		goto out_err;
+	}
+
+	/* Get the timestamp as the sent time*/
+	ptr = (struct timeval *)(icmph + 1);
+	memcpy(stval, ptr, sizeof(struct timeval));
+
+	/* gather addresses */
+	memcpy (src, &src_sin6.sin6_addr, sizeof (struct in6_addr));
+	memcpy (dst, &pktinfo->ipi6_addr, sizeof (struct in6_addr));
+ 
+	if (!ipv6_addr_is_hit(src) && !ipv6_addr_is_hit(dst)) {
+	    HIP_DEBUG("Addresses are NOT HITs, this msg is not for us\n");
+	}
+
+	/* Calculate and store everything into the correct entry */
+	HIP_IFEL(hip_icmp_statistics(src, dst, stval, rtval), -1, 
+		 "Failed to calculate the statistics and store the values\n");
+
+out_err:
+	/* free memory, ivalid pointer or other error XXTODO */
+	/*
+	if (stval) free(stval);
+	if (rtval) free(rtval);
+	if (src) free(src);
+	if (dst) free(dst);
+	*/
+	return err;
+}
+
+
+/**
+ * This function calculates RTT and ... and then stores them to correct entry
+ *
+ * @param src HIT
+ * @param dst HIT
+ * @param time when sent
+ * @param time when received
+ *
+ * @return 0 if success negative otherwise
+ */
+int hip_icmp_statistics(struct in6_addr * src, struct in6_addr * dst,
+			struct timeval *stval, struct timeval *rtval) {
+	int err = 0;
+	unsigned long rtt = 0, usecs = 0, secs = 0;
+	unsigned long varians = 0;
+	char hit[INET6_ADDRSTRLEN];
+	hip_ha_t * entry = NULL;
+
+	hip_in6_ntop(src, hit);
+
+	/* Find the correct entry */
+	entry = hip_hadb_find_byhits(src, dst);
+	HIP_IFEL((!entry), -1, "Entry not found\n");
+	
+	/* Calculate the RTT from given timevals */
+	secs = (rtval->tv_sec - stval->tv_sec) * 1000000;
+	usecs = rtval->tv_usec - stval->tv_usec;
+	rtt = secs + usecs;
+
+	/* received count will vary from sent if errors */
+	entry->heartbeats_received++;
+
+	/* Calculate mean */
+	entry->heartbeats_mean += rtt;
+	if (entry->heartbeats_received > 1)
+		entry->heartbeats_mean /= 2; // max loss 0.999... of usec ( 1/1000000 of a sec)
+	
+	/* Calculate mean varians  */	
+	if (entry->heartbeats_received > 1) {
+		entry->heartbeats_mean_varians = (rtt - entry->heartbeats_mean);
+		entry->heartbeats_mean_varians = pow(entry->heartbeats_mean_varians, 2); 
+		entry->heartbeats_mean_varians /= 2;
+		entry->heartbeats_mean_varians = sqrt(entry->heartbeats_mean_varians);
+	}
+
+	HIP_DEBUG("\nHeartbeat from %s, RTT %.5f ms,\n%.5f ms mean, "
+		  "%.5f ms mean varians, packets sent %d recv %d lost %d\n", 
+		  hit, (rtt / 1000000.0), (entry->heartbeats_mean / 1000000.0),
+		  (entry->heartbeats_mean_varians / 1000000.0),
+		  entry->heartbeats_sent, entry->heartbeats_received,
+		  (entry->heartbeats_sent - entry->heartbeats_received));
+
+	
+out_err:
+	return err;
+}
