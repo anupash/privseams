@@ -55,6 +55,7 @@ esp_prot_tfm_t * esp_prot_resolve_transform(uint8_t transform);
 hash_function_t esp_prot_get_hash_function(uint8_t transform);
 int esp_prot_get_hash_length(uint8_t transform);
 hash_chain_t * esp_prot_get_bex_hchain_by_anchor(unsigned char *hchain_anchor,
+		uint8_t transform);
 
 #if 0
 int esp_prot_set_sadb(hip_sa_entry_t *entry, uint8_t esp_prot_transform,

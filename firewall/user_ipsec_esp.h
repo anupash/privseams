@@ -70,6 +70,7 @@ void add_ipv6_header(struct ip6_hdr *ip6_hdr, struct in6_addr *src_addr, struct 
 
 /** adds an UDP-header to the packet */
 void add_udp_header(struct udphdr *udp_hdr, uint16_t packet_len, hip_sa_entry_t *entry,
+		struct in6_addr *src_addr, struct in6_addr *dst_addr);
 
 /** calculates the IP-checksum
  *

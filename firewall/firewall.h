@@ -36,12 +36,9 @@
 #include "misc.h"
 #include "netdev.h"
 #include "lsi.h"
-// dependent on typedefs in here
-#include "user_ipsec_api.h"
-
 #include "fw_stun.h"
 #include "pjnath.h"
-// include of "ext_user_ipsec.h" at the bottom due to dependency
+// include of "user_ipsec.h" at the bottom due to dependency
 
 #define HIP_FW_DEFAULT_RULE_FILE "/etc/hip/firewall_conf"
 
@@ -181,5 +178,8 @@ void firewall_probe_kernel_modules();
 void firewall_increase_netlink_buffers();
 hip_hit_t *hip_fw_get_default_hit(void);
 int hip_query_default_local_hit_from_hipd(hip_hit_t *hit);
+
+// has been moved here for the following reason: dependent on typedefs above
+#include "user_ipsec_api.h"
 
 #endif
