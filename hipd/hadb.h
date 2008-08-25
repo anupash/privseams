@@ -198,6 +198,9 @@ int hip_hadb_get_peer_addr_info(hip_ha_t *entry, struct in6_addr *addr,
 int hip_hadb_add_peer_addr(hip_ha_t *entry, struct in6_addr *new_addr,
 			   uint32_t interface_id, uint32_t lifetime,
 			   int state);
+int hip_hadb_add_peer_udp_addr(hip_ha_t *entry, struct in6_addr *new_addr,
+			   in_port_t port,
+			   uint32_t spi, uint32_t lifetime, int state);
 
 void hip_hadb_delete_peer_addrlist_one(hip_ha_t *entry, struct in6_addr *addr);
 

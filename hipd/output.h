@@ -24,14 +24,18 @@
 #include "nat.h"
 #include "registration.h"
 #include <netinet/ip.h>
+#include <netinet/ip6.h>
 #include <netinet/tcp.h>
 #include <unistd.h>
+#include <linux/icmpv6.h>
 /* #include <libiptc/libiptc.h> */
 #include "esp_prot_hipd_msg.h"
 
 #ifdef CONFIG_HIP_HI3
 //#include "i3_id.h"
 #endif
+
+#define HIP_MAX_ICMP_PACKET 512
 
 extern int hip_raw_sock_v6;
 extern int hip_raw_sock_v4;

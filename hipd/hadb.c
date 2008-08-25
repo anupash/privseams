@@ -399,12 +399,12 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	   NAT, the NAT status of the host association is set on and the send
 	   function set is set to "nat_xmit_func_set". */
 	if(hip_nat_status && IN6_IS_ADDR_V4MAPPED(peer_addr)) {
-		entry->nat_mode = 1;
+		entry->nat_mode = hip_nat_status;
 		entry->peer_udp_port = HIP_NAT_UDP_PORT;
 		entry->hadb_xmit_func = &nat_xmit_func_set;
 	}
 	else {
-		entry->nat_mode = 0;
+		entry->nat_mode = hip_nat_status;
 		entry->peer_udp_port = 0;
 	}
 
@@ -782,6 +782,8 @@ int hip_hadb_get_peer_addr_info(hip_ha_t *entry, struct in6_addr *addr,
 int hip_hadb_add_peer_addr(hip_ha_t *entry, struct in6_addr *new_addr,
 			   uint32_t spi, uint32_t lifetime, int state)
 {
+	return hip_hadb_add_peer_udp_addr(entry, new_addr, 0, spi, lifetime, state);
+#if 0
 	int err = 0;
 	struct hip_peer_addr_list_item *a_item;
 	char addrstr[INET6_ADDRSTRLEN];
@@ -837,6 +839,77 @@ int hip_hadb_add_peer_addr(hip_ha_t *entry, struct in6_addr *new_addr,
 	}
 
 	a_item->lifetime = lifetime;
+	ipv6_addr_copy(&a_item->address, new_addr);
+	a_item->address_state = state;
+	do_gettimeofday(&a_item->modified_time);
+
+	list_add(a_item, spi_list->peer_addr_list);
+
+out_err:
+	return err;
+#endif
+}
+
+
+int hip_hadb_add_peer_udp_addr(hip_ha_t *entry, struct in6_addr *new_addr,in_port_t port,
+			   uint32_t spi, uint32_t lifetime, int state)
+{
+	int err = 0;
+	struct hip_peer_addr_list_item *a_item;
+	char addrstr[INET6_ADDRSTRLEN];
+	uint32_t prev_spi;
+	struct hip_spi_out_item *spi_list;
+
+	/* assumes already locked entry */
+
+	/* check if we are adding the peer's address during the base
+	 * exchange */
+	if (spi == 0) {
+		HIP_DEBUG("SPI is 0, set address as the bex address\n");
+		if (!ipv6_addr_any(&entry->preferred_address)) {
+			hip_in6_ntop(&entry->preferred_address, addrstr);
+			HIP_DEBUG("warning, overwriting existing preferred address %s\n",
+				  addrstr);
+		}
+		ipv6_addr_copy(&entry->preferred_address, new_addr);
+		HIP_DEBUG_IN6ADDR("entry->preferred_address \n", &entry->preferred_address);
+		goto out_err;
+	}
+
+	spi_list = hip_hadb_get_spi_list(entry, spi);
+
+	if (!spi_list)
+	{
+		HIP_ERROR("did not find SPI list for SPI 0x%x\n", spi);
+		err = -EEXIST;
+		goto out_err;
+	}
+
+	err = hip_hadb_get_peer_addr_info(entry, new_addr, &prev_spi, NULL, NULL);
+	if (err)
+	{
+		/** @todo validate previous vs. new interface id for 
+		    the new_addr ? */
+		if (prev_spi != spi)
+			HIP_DEBUG("todo: SPI changed: prev=%u new=%u\n", prev_spi,
+				  spi);
+
+		HIP_DEBUG("duplicate address not added (todo: update address lifetime ?)\n");
+		/** @todo update address lifetime ? */
+		err = 0;
+		goto out_err;
+	}
+
+	a_item = (struct hip_peer_addr_list_item *)HIP_MALLOC(sizeof(struct hip_peer_addr_list_item), GFP_KERNEL);
+	if (!a_item)
+	{
+		HIP_ERROR("item HIP_MALLOC failed\n");
+		err = -ENOMEM;
+		goto out_err;
+	}
+	
+	a_item->lifetime = lifetime;
+	a_item->port = port;
 	ipv6_addr_copy(&a_item->address, new_addr);
 	a_item->address_state = state;
 	do_gettimeofday(&a_item->modified_time);
@@ -1622,7 +1695,7 @@ int hip_update_send_echo(hip_ha_t *entry,
             /* check if we have one, otherwise let fail */
             list_for_each_safe(item, tmp, addresses, i) {
                 n = list_entry(item);
-                if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))
+                if (hip_sockaddr_is_v6_mapped(&n->addr)
                     != IN6_IS_ADDR_V4MAPPED(&entry->local_address)) {
                     HIP_IFEL(entry->hadb_xmit_func->
                              hip_send_pkt(hip_cast_sa_addr(&n->addr),
@@ -1654,6 +1727,7 @@ uint32_t hip_hadb_get_latest_inbound_spi(hip_ha_t *entry)
 	list_for_each_safe(item, tmp, entry->spis_in, i)
 	{
 		spi_item = list_entry(item);
+		HIP_DEBUG("spi_in in loop is 0x%x\n", spi_item->spi);
 		if (now - spi_item->timestamp < t)
 		{
 			spi = spi_item->spi;
@@ -2719,6 +2793,36 @@ int hip_for_each_ha(int (*func)(hip_ha_t *entry, void *opaq), void *opaque)
 	return fail;
 }
 
+/** 
+ * This function goes through the HA database and sends an icmp echo to all of them
+ *
+ * @param socket to send with
+ *
+ * @return 0 on success negative on error
+ */
+int hip_send_all_heartbeats(int sockfd) {
+	int err = 0, i = 0;
+        hip_ha_t *this;
+        hip_list_t *item, *tmp;
+
+	_HIP_DEBUG("Sending heartbeat to all active HAs (in ESTABLISHED state)\n");
+
+        HIP_LOCK_HT(&hadb_hit);
+        list_for_each_safe(item, tmp, hadb_hit, i)
+        {
+                this = list_entry(item);
+		if (this->state == HIP_STATE_ESTABLISHED) {
+			_HIP_DEBUG("list_for_each_safe\n");
+			err = hip_send_icmp(sockfd, this);
+			if (err) goto out_err;
+		}
+        }
+
+out_err:
+       HIP_UNLOCK_HT(&hadb_hit);
+	return err;
+}
+
 /** Enumeration for hip_count_open_connections */
 int hip_count_one_entry(hip_ha_t *entry, void *cntr)
 {
@@ -2748,6 +2852,7 @@ int hip_handle_get_ha_info(hip_ha_t *entry, struct hip_common *msg)
 
 	int err = 0;
     	struct hip_hadb_user_info_state hid;
+	extern int hip_icmp_interval;
 	
 	test++;
 	memset(&hid, 0, sizeof(hid));
@@ -2759,6 +2864,13 @@ int hip_handle_get_ha_info(hip_ha_t *entry, struct hip_common *msg)
 	ipv4_addr_copy(&hid.lsi_our, &entry->lsi_our);
 	ipv4_addr_copy(&hid.lsi_peer, &entry->lsi_peer);
 
+	hid.heartbeats_on = hip_icmp_interval;
+	hid.heartbeats_mean = entry->heartbeats_mean;
+	hid.heartbeats_mean_varians = entry->heartbeats_mean_varians;
+	hid.heartbeats_sent = entry->heartbeats_sent;
+	hid.heartbeats_received = entry->heartbeats_received;
+
+	/* does not print heartbeat info, but I do not think it even should -Samu*/
 	hip_print_debug_info(&hid.ip_our,&hid.ip_peer,&hid.hit_our,&hid.hit_peer,&hid.lsi_peer);
 
 	HIP_DEBUG("test %d\n",test);
@@ -3117,9 +3229,9 @@ int hip_hadb_add_udp_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 		} else {
 			HIP_DEBUG("address's state is set in state UNVERIFIED\n");
 			new_addr->address_state = PEER_ADDR_STATE_UNVERIFIED;
-//modify by santtu
-			if(entry->nat_control == 0){
-
+//modify by santtu		
+			if(entry->nat_control == 0 && hip_relay_get_status() != HIP_RELAY_ON){
+				
 				err = entry->hadb_update_func->hip_update_send_echo(entry, spi, new_addr);
 
 				/** @todo: check! If not acctually a problem (during Handover). Andrey. */

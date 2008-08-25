@@ -339,6 +339,57 @@ int hip_link_entries_compare(const hip_link_entry_t *link_entry1,
     return err;
 }
 
+int hip_sadb_add(int direction, uint32_t spi, uint32_t mode,
+		struct in6_addr *src_addr, struct in6_addr *dst_addr,
+		struct in6_addr *inner_src_addr, struct in6_addr *inner_dst_addr,
+		uint8_t encap_mode, uint16_t sport, uint16_t dport,
+		int ealg, uint32_t a_keylen, uint32_t e_keylen,
+		unsigned char *a_key, unsigned char *e_key, uint64_t lifetime,
+		uint8_t esp_prot_transform, unsigned char *esp_prot_anchor,
+		int retransmission, int update)
+{
+	int err = 0;
+	uint16_t src_port, dst_port;
+	struct in6_addr *check_local_hit;
+	struct in6_addr *default_hit = hip_fw_get_default_hit();
+
+	// TODO handle retransmission and update correctly
+
+	if (direction == HIP_SPI_DIRECTION_OUT) {
+		src_port = sport;
+		dst_port = dport;
+		check_local_hit = inner_src_addr;
+	} else {
+		src_port = dport;
+		dst_port = sport;
+		check_local_hit = inner_dst_addr;
+	}
+
+	HIP_DEBUG_HIT("default hit", default_hit);
+	HIP_DEBUG_HIT("check hit", check_local_hit);
+
+	HIP_IFEL(ipv6_addr_cmp(default_hit, check_local_hit),
+		 -1, "Only default HIT supported in userspace ipsec\n");
+
+	if (update)
+	{
+		HIP_IFEL(hip_sa_entry_update(direction, spi, mode, src_addr, dst_addr, inner_src_addr,
+				inner_dst_addr, encap_mode, src_port, dst_port, ealg, a_keylen,
+				e_keylen, a_key, e_key, lifetime, esp_prot_transform, esp_prot_anchor), -1,
+				"failed to update sa entry\n");
+	} else
+	{
+		HIP_IFEL(hip_sa_entry_add(direction, spi, mode, src_addr, dst_addr, inner_src_addr,
+				inner_dst_addr, encap_mode, src_port, dst_port, ealg, a_keylen,
+				e_keylen, a_key, e_key, lifetime, esp_prot_transform, esp_prot_anchor), -1,
+				"failed to add sa entry\n");
+	}
+	
+  out_err:
+  	return err;
+}
+
+
 int hip_sa_entry_add(int direction, uint32_t spi, uint32_t mode,
 		struct in6_addr *src_addr, struct in6_addr *dst_addr,
 		struct in6_addr *inner_src_addr, struct in6_addr *inner_dst_addr,
@@ -685,7 +736,7 @@ void hip_link_entry_print(hip_link_entry_t *entry)
 	if (entry)
 	{
 		HIP_DEBUG_HIT("dst_addr", entry->dst_addr);
-		HIP_DEBUG("spi: %u\n", entry->spi);
+		HIP_DEBUG("spi: %lx\n", entry->spi);
 		HIP_DEBUG("> sa entry:\n");
 		hip_sa_entry_print(entry->linked_sa_entry);
 
@@ -726,7 +777,7 @@ void hip_sa_entry_print(hip_sa_entry_t *entry)
 	if (entry)
 	{
 		HIP_DEBUG("direction: %i\n", entry->direction);
-		HIP_DEBUG("spi: %u\n", entry->spi);
+		HIP_DEBUG("spi: 0x%lx\n", entry->spi);
 		HIP_DEBUG("mode: %u\n", entry->mode);
 		HIP_DEBUG_HIT("src_addr", entry->src_addr);
 		HIP_DEBUG_HIT("dst_addr", entry->dst_addr);

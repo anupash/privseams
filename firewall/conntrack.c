@@ -100,7 +100,41 @@ struct hip_data * get_hip_data(const struct hip_common * buf){
   _HIP_DEBUG("get_hip_data:\n");
 
   return data;
+} 
+
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+/*
+ * replaces the pseudo-hits of the opportunistic entries
+ * related to a particular peer with the real hit
+*/
+void update_peer_opp_info(struct hip_data * data,
+                          struct in6_addr * ip6_from){
+  struct _DList * list = (struct _DList *) hipList;
+  hip_hit_t phit;
+
+  HIP_DEBUG("updating opportunistic entries\n");
+  //the pseudo hit is compared with the hit in the entries
+  hip_opportunistic_ipv6_to_hit(ip6_from, &phit, HIP_HIT_TYPE_HASH100);
+
+  while(list)
+    {
+      struct hip_tuple * tuple = (struct hip_tuple *)list->data;
+
+      if(IN6_ARE_ADDR_EQUAL(&data->dst_hit, &tuple->data->src_hit) &&
+         IN6_ARE_ADDR_EQUAL(&phit, &tuple->data->dst_hit))
+      {
+        ipv6_addr_copy(&tuple->data->dst_hit, &data->src_hit);
+      }
+      if(IN6_ARE_ADDR_EQUAL(&phit, &tuple->data->src_hit) &&
+         IN6_ARE_ADDR_EQUAL(&data->dst_hit, &tuple->data->dst_hit))
+      {
+        ipv6_addr_copy(&tuple->data->src_hit, &data->src_hit);
+      }
+      list = list->next;
+    }
+  return ;
 }
+#endif
 
 /* fetches the hip_tuple from connection table.
  * Returns the tuple or NULL, if not found.

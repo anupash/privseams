@@ -6,6 +6,8 @@ DIRS = pjlib pjlib-util pjnath # third_party pjmedia pjsip pjsip-apps
 
 distdir:
 
+uninstall:
+
 # Miika: required for "make dist" 
 # distdir generated using autoconf=2.61, automake=1.10.1
 #distdir:

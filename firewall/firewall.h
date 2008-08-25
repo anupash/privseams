@@ -7,7 +7,6 @@
 #include <libipq.h>
 #include <linux/netfilter.h>
 #include <linux/netfilter_ipv4.h>
-#include <netinet/in.h>
 #include <netinet/ip.h>
 #include <netinet/ip_icmp.h>
 #include <netinet/ip6.h>
@@ -37,9 +36,15 @@
 #include "misc.h"
 #include "netdev.h"
 #include "lsi.h"
+// dependent on typedefs in here
+#include "user_ipsec_api.h"
+
+#include "fw_stun.h"
+#include "pjnath.h"
 // include of "ext_user_ipsec.h" at the bottom due to dependency
 
 #define HIP_FW_DEFAULT_RULE_FILE "/etc/hip/firewall_conf"
+
 #define HIP_FW_DEFAULT_TIMEOUT   1
 #define HIP_FW_CONFIG_FILE_EX \
 "# format: HOOK [match] TARGET\n"\
@@ -54,15 +59,6 @@
 "#\n"\
 "\n"
 
-struct firewall_hl {
-	hip_lsi_t lsi;
-	hip_hit_t hit_our;
-        hip_hit_t hit_peer;
-        int bex_state;
-};
-
-typedef struct firewall_hl firewall_hl_t;
-
 #define OTHER_PACKET          0
 #define HIP_PACKET            1
 #define ESP_PACKET            2
@@ -72,7 +68,7 @@ typedef struct firewall_hl firewall_hl_t;
 
 #define FW_PROTO_NUM          6 /* Other, HIP, ESP, TCP */
 
-typedef struct hip_fw_context {
+typedef struct hip_fw_context{
 	// queued packet
 	ipq_packet_msg_t *ipq_packet;
 
@@ -93,18 +89,19 @@ typedef struct hip_fw_context {
 		struct tcphdr *tcp;
 	} transport_hdr;
 	struct udphdr *udp_encap_hdr;
+	int is_stun;
 	//uint32_t spi;
 } hip_fw_context_t;
 
-struct hip_conn_key {
-	uint8_t protocol;
+struct hip_conn_key{
+	uint8_t  protocol;
 	uint16_t port_client;
 	uint16_t port_peer;
 	struct in6_addr hit_peer;
 	struct in6_addr hit_proxy;
 }  __attribute__ ((packed));
 
-typedef struct hip_conn_t  {
+typedef struct hip_conn_t{
 	struct hip_conn_key key;
 	int state;
 	struct in6_addr addr_client; // addr_proxy_client
@@ -184,8 +181,5 @@ void firewall_probe_kernel_modules();
 void firewall_increase_netlink_buffers();
 hip_hit_t *hip_fw_get_default_hit(void);
 int hip_query_default_local_hit_from_hipd(hip_hit_t *hit);
-
-// dependent on typedefs in here
-#include "user_ipsec_api.h"
 
 #endif

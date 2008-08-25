@@ -1271,7 +1271,14 @@ PJ_DEF(pj_status_t) pj_ice_sess_create_check_list(
     ice->rcand_cnt = 0;
     for (i=0; i<rcand_cnt; ++i) {
 	pj_ice_sess_cand *cn = &ice->rcand[ice->rcand_cnt];
-
+	char buffer[CHECK_NAME_LEN];
+	pj_ansi_snprintf(buffer, CHECK_NAME_LEN,
+	       "%s:%d",
+	       pj_inet_ntoa(rcand[i].addr.ipv4.sin_addr), 
+	       (int)pj_ntohs(rcand[i].addr.ipv4.sin_port));
+	
+	LOG4((rem_ufrag,"%s",buffer));
+	
 	/* Ignore candidate which has no matching component ID */
 	if (rcand[i].comp_id==0 || rcand[i].comp_id > ice->comp_cnt) {
 	    continue;
@@ -1315,14 +1322,26 @@ PJ_DEF(pj_status_t) pj_ice_sess_create_check_list(
 	    chk->state = PJ_ICE_SESS_CHECK_STATE_FROZEN;
 
 	    chk->prio = CALC_CHECK_PRIO(ice, lcand, rcand);
+	    
+		
 
 	    clist->count++;
 	}
     }
-
+    
+    char buffer[CHECK_NAME_LEN];
+	pj_ansi_snprintf(buffer, CHECK_NAME_LEN,
+	       "%s:%d",
+	       pj_inet_ntoa(clist->checks[0].rcand->addr.ipv4.sin_addr), 
+	       (int)pj_ntohs(clist->checks[0].rcand->addr.ipv4.sin_port));
+	
+	LOG4((rem_ufrag,"%s",buffer));
+	
+	
+    dump_checklist("Checklist before sort:", ice, clist);
     /* Sort checklist based on priority */
     sort_checklist(clist);
-
+    dump_checklist("Checklist before prune:", ice, clist);
     /* Prune the checklist */
     status = prune_checklist(ice, clist);
     if (status != PJ_SUCCESS) {
@@ -1491,7 +1510,7 @@ static pj_status_t start_periodic_check(pj_timer_heap_t *th,
 		pj_mutex_unlock(ice->mutex);
 		return status;
 	    }
-
+	    LOG5((ice->obj_name, "periodic check waiting looping %d", i));
 	    ++start_count;
 	    break;
 	}
@@ -1500,7 +1519,8 @@ static pj_status_t start_periodic_check(pj_timer_heap_t *th,
     /* If we don't have anything in Waiting state, perform check to
      * highest priority pair that is in Frozen state.
      */
-    if (start_count==0) {
+//    if (start_count==0) {
+    if(1){
 	for (i=0; i<clist->count; ++i) {
 	    pj_ice_sess_check *check = &clist->checks[i];
 
@@ -1510,7 +1530,7 @@ static pj_status_t start_periodic_check(pj_timer_heap_t *th,
 		    pj_mutex_unlock(ice->mutex);
 		    return status;
 		}
-
+		LOG5((ice->obj_name, "periodic check frozen looping %d", i));
 		++start_count;
 		break;
 	    }
@@ -2363,6 +2383,8 @@ PJ_DEF(pj_status_t) pj_ice_sess_on_rx_pkt(pj_ice_sess *ice,
     stun_status = pj_stun_msg_check((const pj_uint8_t*)pkt, pkt_size, 
     				    PJ_STUN_IS_DATAGRAM);
     if (stun_status == PJ_SUCCESS) {
+	 LOG4((ice->obj_name, "suucessfully received a stun msg"
+	    		  ));
 	status = pj_stun_session_on_rx_pkt(comp->stun_sess, pkt, pkt_size,
 					   PJ_STUN_IS_DATAGRAM,
 					   NULL, src_addr, src_addr_len);

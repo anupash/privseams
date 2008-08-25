@@ -35,7 +35,9 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	int err = 0, msg_type = 0, n = 0, len = 0, state = 0, reti = 0, dhterr = 0;
 	int access_ok = 0, send_response = 1, is_root = 0;
 	HIP_KEA * kea = NULL;
-	struct hip_tlv_common *param = NULL;
+	extern int hip_icmp_interval;
+	struct hip_tlv_common *param = NULL;	
+	struct hip_heartbeat * heartbeat;
 
 	HIP_ASSERT(src->sin6_family == AF_INET6);
 
@@ -147,6 +149,11 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
                           hip_locator_status, SO_HIP_SET_LOCATOR_OFF);
                 hip_recreate_all_precreated_r1_packets();
                 break;
+        case SO_HIP_HEARTBEAT:
+		heartbeat = hip_get_param(msg, HIP_PARAM_HEARTBEAT);
+		hip_icmp_interval = heartbeat->heartbeat;
+		HIP_DEBUG("Received heartbeat interval (%d seconds)\n",hip_icmp_interval);
+		break;
 	case SO_HIP_SET_DEBUG_ALL:
 		/* Displays all debugging messages. */
 		_HIP_DEBUG("Handling DEBUG ALL user message.\n");
@@ -362,6 +369,25 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
                         HIP_DEBUG("SPKI cert signed sending it back to requester\n");
                 }
                 break;
+        case SO_HIP_CERT_X509V3_SIGN:
+                {
+                        HIP_DEBUG("Got an request to sign X509v3 cert\n");
+                        reti = hip_cert_x509v3_handle_request_to_sign(msg, 
+                                                                      hip_local_hostid_db);   
+                        HIP_IFEL(reti, -1, "Signing of x509v3 cert returned an error\n");
+                        HIP_DEBUG("X509v3 cert signed sending it back to requester\n");   
+                } 
+                break;
+        case SO_HIP_CERT_X509V3_VERIFY:
+                {
+                        HIP_DEBUG("Got an request to verify X509v3 cert\n");
+                        reti = hip_cert_x509v3_handle_request_to_verify(msg);   
+                        HIP_IFEL(reti, -1, "Verification of x509v3 cert "
+                                 "returned an error\n");
+                        HIP_DEBUG("X509v3 verification ended "
+                                  "sending it back to requester\n");   
+                } 
+                break;
         case SO_HIP_TRANSFORM_ORDER:
 	{
                 extern int hip_transform_order;
@@ -529,12 +555,12 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		   the hip daemon wants either to register to a server for
 		   additional services or it wants to cancel a registration.
 		   Cancellation is identified with a zero lifetime. */
-		HIP_DEBUG("Handling ADD DEL SERVER user message.\n");
-
 		struct hip_reg_request *reg_req = NULL;
 		hip_pending_request_t *pending_req = NULL;
 		uint8_t *reg_types = NULL;
 		int i = 0, type_count = 0;
+		
+		_HIP_DEBUG("Handling ADD DEL SERVER user message.\n");
 
 		/* Get RVS IP address, HIT and requested lifetime given as
 		   commandline parameters to hipconf. */
@@ -991,7 +1017,9 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	      		dst_hit = &entry->hit_peer;
 	  	}
 	  	break;
-
+	case SO_HIP_GET_PEER_HIT_AT_FIREWALL:
+		err = hip_opp_get_peer_hit(msg, src);
+		break;
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;

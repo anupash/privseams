@@ -10,9 +10,9 @@
  * @author  Bing Zhou <bingzhou_cc.hut.fi>
  * @author  Anu Markkola
  * @author  Lauri Silvennoinen
+ * @author  Tao Wan  <twan@cc.hut.fi>
  * @author  Teresa Finez <tfinezmo_cc.hut.fi> Modifications
  * @author  Samu Varjonen
- * @author  Tao Wan  <twan_cc.hut.fi>
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>
  * @todo    add/del map
  * @todo    fix the rst kludges
@@ -59,6 +59,7 @@ const char *hipconf_usage =
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 "set opp normal|advanced|none\n"
 #endif
+"heartbeat <seconds> (0 seconds means off)\n"
 "get ha all|HIT\n"
 "opendht on|off\n"
 "dht gw <IPv4|hostname> <port (OpenDHT default = 5851)> <TTL>\n"
@@ -107,6 +108,7 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc) 
         hip_conf_handle_trans_order,
 	hip_conf_handle_tcptimeout, /* added by Tao Wan*/
         hip_conf_handle_hipproxy,
+	hip_conf_handle_heartbeat,
 	NULL /* run */
 };
 
@@ -149,6 +151,8 @@ int hip_conf_get_action(char *text)
 		ret = ACTION_DHT;
 	else if (!strcmp("opendht", text))
 		ret = ACTION_OPENDHT;
+	else if (!strcmp("heartbeat", text))
+		ret = ACTION_HEARTBEAT;
 	else if (!strcmp("locator", text))
 		ret = ACTION_LOCATOR; 
 	else if (!strcmp("debug", text))
@@ -182,7 +186,7 @@ int hip_conf_check_action_argc(int action) {
 
 	switch (action) {
 	case ACTION_NEW: case ACTION_NAT: case ACTION_DEC: case ACTION_RST:
-	case ACTION_BOS: case ACTION_LOCATOR: case ACTION_OPENDHT:
+	case ACTION_BOS: case ACTION_LOCATOR: case ACTION_OPENDHT: case ACTION_HEARTBEAT:
                 break;
 	case ACTION_DEBUG: case ACTION_RESTART: case ACTION_REINIT:
 	case ACTION_TCPTIMEOUT:
@@ -266,6 +270,8 @@ int hip_conf_get_type(char *text,char *argv[]) {
 		ret = TYPE_ORDER;
 	else if (strcmp("opendht", argv[1])==0)
 		ret = TYPE_DHT;
+	else if (strcmp("heartbeat", argv[1])==0)
+		ret = TYPE_HEARTBEAT;
 	else if (!strcmp("ttl", text))
 		ret = TYPE_TTL;
 	else if (!strcmp("gw", text))
@@ -301,6 +307,7 @@ int hip_conf_get_type_arg(int action)
 	case ACTION_LOAD:
 	case ACTION_DHT:
 	case ACTION_OPENDHT:
+        case ACTION_HEARTBEAT:
 	case ACTION_LOCATOR:
 	case ACTION_RST:
 	case ACTION_BOS:
@@ -739,6 +746,41 @@ int hip_conf_handle_hi_del(hip_common_t *msg, int action,
 	  goto out_err;
      }
 
+ out_err:
+     return err;
+}
+
+/**
+ * Handles the hipconf command heartbeat <seconds>.
+ *
+ * @param msg    a pointer to the buffer where the message for kernel will
+ *               be written.
+ * @param action the numeric action identifier for the action to be performed.
+ * @param opt    an array of pointers to the command line arguments after
+ *               the action and type.
+ * @param optc   the number of elements in the array.
+ * @return       zero on success, or negative error value on error.
+ */
+int hip_conf_handle_heartbeat(hip_common_t *msg, int action,
+			   const char *opt[], int optc) 
+{
+	int err = 0, seconds = 0;
+	struct hip_heartbeat heartbeat;
+
+	seconds = atoi(opt[0]);
+	if (seconds < 0) {
+		HIP_ERROR("Invalid argument\n");
+		err = -EINVAL;
+		goto out_err;
+	} 
+
+	HIP_IFEL(hip_build_param_heartbeat(msg, seconds),
+		 -1, "Failed to build param heartbeat\n");
+
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_HEARTBEAT, 0),
+		 -1, "Failed to build user message header\n");
+
+     
  out_err:
      return err;
 }
@@ -1596,7 +1638,6 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
 
 int hip_conf_handle_ha(hip_common_t *msg, int action,const char *opt[], int optc)
 {
-
      struct hip_tlv_common *current_param = NULL;
      int err = 0, state, ret;
      in6_addr_t arg1, hit1;
@@ -1640,6 +1681,18 @@ int hip_conf_print_info_ha(struct hip_hadb_user_info_state *ha)
         HIP_DEBUG_LSI(" Peer  LSI", &ha->lsi_peer);
         HIP_INFO_IN6ADDR(" Local IP", &ha->ip_our);
         HIP_INFO_IN6ADDR(" Peer  IP", &ha->ip_peer);
+	if (ha->heartbeats_on > 0 && ha->state == HIP_STATE_ESTABLISHED) {
+		HIP_DEBUG("Heartbeat %.5f ms mean RTT, "
+			  "%.5f mean varians,\n"
+			  " %d packets sent,"
+			  " %d packets received,"
+			  " %d packets lost\n",
+			  ha->heartbeats_mean,
+			  ha->heartbeats_mean_varians,
+			  ha->heartbeats_sent,
+			  ha->heartbeats_received,
+			  (ha->heartbeats_sent - ha->heartbeats_received));
+        }
 	HIP_INFO("\n");
 
 }
@@ -1996,7 +2049,8 @@ int hip_conf_handle_tcptimeout(struct hip_common *msg, int action,
 int hip_conf_handle_hipproxy(struct hip_common *msg, int action, const char *opt[], int optc)
 {
         int err = 0, status = 0;
- 
+ 		HIP_DEBUG("hip_conf_handle_hipproxy()\n");
+ 		
 #ifdef CONFIG_HIP_HIPPROXY
         if (!strcmp("on",opt[0])) {
                 status = SO_HIP_SET_HIPPROXY_ON; 

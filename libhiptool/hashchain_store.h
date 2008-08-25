@@ -33,7 +33,6 @@
 // determines when to refill a store
 #define ITEM_THRESHOLD 0.5
 
-
 typedef struct hchain_shelf
 {
 	/* number of different hchain lengths currently used for this
