@@ -6,6 +6,7 @@
 #define _HIP_PROTODEFS
 
 #include "hashchain.h"
+#include "esp_prot_common.h"
 
 #define HIP_MAX_PACKET 4096
 #define HIP_MAX_NETWORK_PACKET 2048
@@ -49,7 +50,7 @@
                                   0xE7,0x93,0x0C,0x3C,0x6E,0x61,0x74,0xEA }
 
 /** @addtogroup hip_param_type_numbers
- * @{ 
+ * @{
  */
 #define HIP_PARAM_MIN                  -1
 
@@ -75,14 +76,14 @@
 #define HIP_PARAM_CERT                 768
 #define HIP_PARAM_NOTIFICATION         832
 #define HIP_PARAM_ECHO_REQUEST_SIGN    897
-#define HIP_PARAM_REG_INFO	       	   930
+#define HIP_PARAM_REG_INFO	       930
 #define HIP_PARAM_REG_REQUEST	       932
 #define HIP_PARAM_REG_RESPONSE	       934
 #define HIP_PARAM_REG_FAILED	       936
 #define HIP_PARAM_ECHO_RESPONSE_SIGN   961
 #define HIP_PARAM_ESP_TRANSFORM        4095
-#define HIP_PARAM_ESP_PROT_TRANSFORM   4120
-#define HIP_PARAM_ESP_PROT_ANCHOR	   4121
+#define HIP_PARAM_ESP_PROT_TRANSFORMS  4120
+#define HIP_PARAM_ESP_PROT_ANCHOR      4121
 
 /* Range 32768 - 49141 can be used for HIPL private parameters i.e. to
    parameters passed from hipconf to hipdaemon.
@@ -99,7 +100,7 @@
 #define HIP_PARAM_EID_ADDR              32777
 #define HIP_PARAM_UINT                  32778 /**< Unsigned integer */
 #define HIP_PARAM_KEYS                  32779
-#define HIP_PARAM_PSEUDO_HIT            32780 
+#define HIP_PARAM_PSEUDO_HIT            32780
 #define HIP_PARAM_BLIND_NONCE           32785 /**< Pass blind nonce */
 #define HIP_PARAM_OPENDHT_GW_INFO       32786
 #define HIP_PARAM_ENCAPS_MSG		32787
@@ -127,6 +128,7 @@
 #define HIP_PARAM_HEARTBEAT             32809
 #define HIP_PARAM_CERT_X509_REQ         32810
 #define HIP_PARAM_CERT_X509_RESP        32811
+#define HIP_PARAM_ESP_PROT_TFM		32812
 /* End of HIPL private parameters. */
 
 #define HIP_PARAM_HMAC                 61505
@@ -149,7 +151,7 @@
 /* @} */
 
 /** @addtogroup notification
- * @{ 
+ * @{
  */
 #define HIP_NTF_UNSUPPORTED_CRITICAL_PARAMETER_TYPE 1
 #define HIP_NTF_INVALID_SYNTAX                      7
@@ -250,7 +252,7 @@
 
 #define HIP_VER_RES                 0x01     /* Version 1, reserved 0 */
 #define HIP_VER_MASK                0xF0
-#define HIP_RES_MASK                0x0F 
+#define HIP_RES_MASK                0x0F
 
 /**
  * @addtogroup hip_ha_controls
@@ -271,25 +273,25 @@
                                          HIP_HA_CTRL_LOCAL_REQ_RVS\
                                          )
 
-#define HIP_HA_CTRL_PEER_GRANTED_UNSUP   0x0001 
-#define HIP_HA_CTRL_PEER_GRANTED_ESCROW  0x0400 
-#define HIP_HA_CTRL_PEER_GRANTED_RELAY   0x0800 
+#define HIP_HA_CTRL_PEER_GRANTED_UNSUP   0x0001
+#define HIP_HA_CTRL_PEER_GRANTED_ESCROW  0x0400
+#define HIP_HA_CTRL_PEER_GRANTED_RELAY   0x0800
 #define HIP_HA_CTRL_PEER_GRANTED_RVS     0x1000
-#define HIP_HA_CTRL_PEER_UNSUP_CAPABLE   0x0002 
-#define HIP_HA_CTRL_PEER_ESCROW_CAPABLE  0x2000 
-#define HIP_HA_CTRL_PEER_RELAY_CAPABLE   0x4000 
+#define HIP_HA_CTRL_PEER_UNSUP_CAPABLE   0x0002
+#define HIP_HA_CTRL_PEER_ESCROW_CAPABLE  0x2000
+#define HIP_HA_CTRL_PEER_RELAY_CAPABLE   0x4000
 #define HIP_HA_CTRL_PEER_RVS_CAPABLE     0x8000
 /* @} */
 
 /** @addtogroup hip_packet_controls
- * @{ 
+ * @{
  */
 #define HIP_PACKET_CTRL_ANON             0x0001 /**< HIP packet Controls value */
 #define HIP_PACKET_CTRL_BLIND	         0x0004 /**< HIP packet Controls value */
 /* @} */
 
 /** @addtogroup hip_services
- * @{ 
+ * @{
  */
 #define HIP_SERVICE_RENDEZVOUS	         1
 #define HIP_SERVICE_ESCROW	         201
@@ -299,7 +301,7 @@
 /* @} */
 
 /** @addtogroup hip_proxy
- * @{ 
+ * @{
  */
 #define HIP_PROXY_PASSTHROUGH		0
 #define HIP_PROXY_TRANSLATE 		1
@@ -405,16 +407,20 @@ struct hip_keymat_keymat
 	void *keymatdst;  /**< Pointer to beginning of key material */
 };
 
-struct esp_prot_transform {
+struct esp_prot_preferred_tfms {
 	hip_tlv_type_t     type;
 	hip_tlv_len_t      length;
-	uint8_t     	   transform;
+	uint8_t			   num_transforms;
+	// this will also contain the UNUSED transform
+	uint8_t     	   transforms[NUM_TRANSFORMS + 1];
 } __attribute__ ((packed));
 
 struct esp_prot_anchor {
 	hip_tlv_type_t     type;
 	hip_tlv_len_t      length;
-	unsigned char  	   anchor[MAX_HASH_LENGTH];
+	uint8_t     	   transform;
+	// contains active and next anchor
+	unsigned char  	   anchors[2 * MAX_HASH_LENGTH];
 } __attribute__ ((packed));
 
 /**
@@ -439,6 +445,7 @@ struct hip_locator_info_addr_item {
         uint8_t reserved;  /**< last bit is P (prefered) */
 	uint32_t lifetime;
 	struct in6_addr address;
+
         /** Removed the state because it is against the nat-draft and mobility rfc
          Same in the type 2 locator below --SAMU**/
 	/* end of fixed part - locator of arbitrary length follows but 
@@ -511,7 +518,7 @@ struct sockaddr_eid {
  * Use accessor functions defined in builder.c, do not access members
  * directly to avoid hassle with byte ordering and number conversion.
  */
-struct hip_common { 
+struct hip_common {
 	uint8_t      payload_proto;
 	uint8_t      payload_len;
 	uint8_t      type_hdr;
@@ -525,7 +532,7 @@ struct hip_common {
 /**
  * Use accessor functions defined in hip_build.h, do not access members
  * directly to avoid hassle with byte ordering and length conversion.
- */ 
+ */
 struct hip_tlv_common {
 	hip_tlv_type_t     type;
 	hip_tlv_len_t      length;
@@ -541,7 +548,7 @@ struct hip_esp_info {
 } __attribute__ ((packed));
 
 /** @addtogroup hip_tlv
- * @{ 
+ * @{
  */
 struct hip_r1_counter {
 	hip_tlv_type_t     type;
@@ -570,7 +577,7 @@ struct hip_solution {
 } __attribute__ ((packed));
 
 struct hip_dh_public_value {
-	uint8_t           group_id;  
+	uint8_t           group_id;
 	uint16_t          pub_len;
 	/* fixed part ends */
         uint8_t           public_value[0];
@@ -743,7 +750,7 @@ struct hip_relay_via {
      in_port_t port; /**< Port number. */
 } __attribute__ ((packed));
 
-/** 
+/**
  * draft-ietf-hip-nat-traversal-01
  * @note obsolete.
  */
