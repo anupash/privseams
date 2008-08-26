@@ -23,6 +23,7 @@
 #include "user_ipsec_sadb.h"
 #include "esp_prot_api.h"
 #include <openssl/sha.h>
+#include "firewall.h"
 
 /* the length of the hash value used for indexing */
 #define INDEX_HASH_LENGTH SHA_DIGEST_LENGTH
@@ -76,31 +77,36 @@ int hip_sadb_add(int direction, uint32_t spi, uint32_t mode,
 		unsigned char *esp_prot_anchor, int retransmission, int update)
 {
 	int err = 0;
-        struct in6_addr *check_local_hit;
-        struct in6_addr *default_hit = hip_fw_get_default_hit();
+    struct in6_addr *check_local_hit = NULL;
+    struct in6_addr *default_hit = NULL;
 	in_port_t src_port, dst_port;
 
-        /* @todo handle retransmission and update correctly */
+	/* @todo handle retransmission and update correctly */
+
+	default_hit = hip_fw_get_default_hit();
 
 	/*
-	 * Switch port numbers depending on direction and make sure that we
-	 * are testing correct local hit.
-	 */
-        if (direction == HIP_SPI_DIRECTION_OUT) {
-                src_port = local_port;
-                dst_port = peer_port;
-                check_local_hit = inner_src_addr;
-        } else {
+	* Switch port numbers depending on direction and make sure that we
+	* are testing correct local hit.
+	*/
+	if (direction == HIP_SPI_DIRECTION_OUT)
+	{
+		src_port = local_port;
+		dst_port = peer_port;
+		check_local_hit = inner_src_addr;
+
+	} else
+	{
 		src_port = peer_port;
 		dst_port = local_port;
-                check_local_hit = inner_dst_addr;
-        }
+		check_local_hit = inner_dst_addr;
+	}
 
-        HIP_DEBUG_HIT("default hit", default_hit);
-        HIP_DEBUG_HIT("check hit", check_local_hit);
+	HIP_DEBUG_HIT("default hit", default_hit);
+	HIP_DEBUG_HIT("check hit", check_local_hit);
 
-        HIP_IFEL(ipv6_addr_cmp(default_hit, check_local_hit),
-                 -1, "Only default HIT supported in userspace ipsec\n");
+	HIP_IFEL(ipv6_addr_cmp(default_hit, check_local_hit), -1,
+			"only default HIT supported in userspace ipsec\n");
 
 
 	if (update)

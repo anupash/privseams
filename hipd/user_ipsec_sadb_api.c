@@ -1,5 +1,6 @@
 #include "user_ipsec_sadb_api.h"
 #include "esp_prot_common.h"
+#include "user_ipsec_hipd_msg.h"
 
 int hip_userspace_ipsec_send_to_fw(struct hip_common *msg)
 {
@@ -12,9 +13,9 @@ int hip_userspace_ipsec_send_to_fw(struct hip_common *msg)
 	// destination is firewall
 	hip_firewall_addr.sin6_family = AF_INET6;
 	hip_firewall_addr.sin6_port = htons(HIP_FIREWALL_PORT);
-	ipv6_addr_copy(&(hip_firewall_addr.sin6_addr.s6_addr), &loopback);
+	ipv6_addr_copy(&hip_firewall_addr.sin6_addr, &loopback);
 
-	err = hip_sendto_user(msg, &hip_firewall_addr);
+	err = hip_sendto_user(msg, (struct sockaddr *) &hip_firewall_addr);
 	if (err < 0)
 	{
 		HIP_ERROR("sending of message to firewall failed\n");
@@ -71,7 +72,7 @@ void hip_userspace_ipsec_delete_sa(uint32_t spi, struct in6_addr *peer_addr,
 	HIP_IFEL(hip_userspace_ipsec_send_to_fw(msg), -1, "failed to send msg to fw\n");
 
   out_err:
-	return err;
+	return;
 }
 
 int hip_userspace_ipsec_flush_all_sa()

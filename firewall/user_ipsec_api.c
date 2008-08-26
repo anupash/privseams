@@ -121,7 +121,7 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	struct in6_addr preferred_peer_addr;
 	struct sockaddr_storage preferred_peer_sockaddr;
 	struct timeval now;
-	int esp_packet_len = 0;
+	uint16_t esp_packet_len = 0;
 	int out_ip_version = 0;
 	int err = 0;
 
@@ -244,7 +244,7 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	struct in6_addr src_hit;
 	struct in6_addr dst_hit;
 	struct timeval now;
-	int decrypted_packet_len = 0;
+	uint16_t decrypted_packet_len = 0;
 	uint32_t spi = 0;
 	uint32_t seq_no = 0;
 	uint32_t hash = 0;

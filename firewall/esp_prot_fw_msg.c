@@ -8,7 +8,9 @@
 #include "esp_prot_fw_msg.h"
 #include "esp_prot_common.h"
 #include "esp_prot_api.h"
+#include "linkedlist.h"
 #include "hslist.h"
+#include "conntrack.h"
 
 /* this sends the preferred transform to hipd implicitely turning on
  * the esp protection extension there */
