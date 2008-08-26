@@ -76,14 +76,14 @@
 #define HIP_PARAM_CERT                 768
 #define HIP_PARAM_NOTIFICATION         832
 #define HIP_PARAM_ECHO_REQUEST_SIGN    897
-#define HIP_PARAM_REG_INFO	       	   930
+#define HIP_PARAM_REG_INFO	       930
 #define HIP_PARAM_REG_REQUEST	       932
 #define HIP_PARAM_REG_RESPONSE	       934
 #define HIP_PARAM_REG_FAILED	       936
 #define HIP_PARAM_ECHO_RESPONSE_SIGN   961
 #define HIP_PARAM_ESP_TRANSFORM        4095
 #define HIP_PARAM_ESP_PROT_TRANSFORMS  4120
-#define HIP_PARAM_ESP_PROT_ANCHOR	   4121
+#define HIP_PARAM_ESP_PROT_ANCHOR      4121
 
 /* Range 32768 - 49141 can be used for HIPL private parameters i.e. to
    parameters passed from hipconf to hipdaemon.

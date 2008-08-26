@@ -14,16 +14,15 @@ typedef struct _pseudo_header
 	uint16_t packet_length;
 } pseudo_header;
 
-#if 0
+
 /** creates a packet according to BEET mode ESP specification
  *
  * @param	...
  * @return	0, if correct, != 0 else
  */
 int hip_beet_mode_output(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
-			 struct in6_addr *preferred_local_addr,
-			 struct in6_addr *preferred_peer_addr,
-			 unsigned char *esp_packet, uint16_t *esp_packet_len);
+		struct in6_addr *preferred_local_addr, struct in6_addr *preferred_peer_addr,
+		unsigned char *esp_packet, uint16_t *esp_packet_len);
 
 /** handles a received packet according to BEET mode ESP specification
  *
@@ -31,8 +30,8 @@ int hip_beet_mode_output(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
  * @return	0, if correct, != 0 else
  */
 int hip_beet_mode_input(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
-		unsigned char *decrypted_packet, uint16_t *decrypted_packet_len);
-#endif
+			unsigned char *decrypted_packet,
+			uint16_t *decrypted_packet_len);
 
 /** encrypts the payload of ESP packets and adds authentication
  *
@@ -45,7 +44,7 @@ int hip_beet_mode_input(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
  * @return	0, if correct, != 0 else
  */
 int hip_payload_encrypt(unsigned char *in, uint8_t in_type, uint16_t in_len,
-		unsigned char *out, int *out_len, hip_sa_entry_t *entry);
+		unsigned char *out, uint16_t *out_len, hip_sa_entry_t *entry);
 
 /** decrypts the payload of ESP packets and verifies authentication
  *
@@ -57,16 +56,16 @@ int hip_payload_encrypt(unsigned char *in, uint8_t in_type, uint16_t in_len,
  *          and key to be used
  * @return	0, if correct, != 0 else
  */
-int hip_payload_decrypt(unsigned char *in, uint16_t in_len, unsigned char *out, uint8_t *out_type,
-		uint16_t *out_len, hip_sa_entry_t *entry);
+int hip_payload_decrypt(unsigned char *in, uint16_t in_len, unsigned char *out,
+		uint8_t *out_type, uint16_t *out_len, hip_sa_entry_t *entry);
 
 /** adds an IPv4-header to the packet */
-void add_ipv4_header(struct ip *ip_hdr, struct in6_addr *src_addr, struct in6_addr *dst_addr,
-		uint16_t packet_len, uint8_t next_hdr);
+void add_ipv4_header(struct ip *ip_hdr, struct in6_addr *src_addr,
+		struct in6_addr *dst_addr, uint16_t packet_len, uint8_t next_hdr);
 
 /** adds an IPv6-header to the packet */
-void add_ipv6_header(struct ip6_hdr *ip6_hdr, struct in6_addr *src_addr, struct in6_addr *dst_addr,
-		uint16_t packet_len, uint8_t next_hdr);
+void add_ipv6_header(struct ip6_hdr *ip6_hdr, struct in6_addr *src_addr,
+		struct in6_addr *dst_addr, uint16_t packet_len, uint8_t next_hdr);
 
 /** adds an UDP-header to the packet */
 void add_udp_header(struct udphdr *udp_hdr, uint16_t packet_len, hip_sa_entry_t *entry,

@@ -93,20 +93,6 @@ int userspace_ipsec_uninit()
 {
 	int activate = 0;
 	int err = 0;
-	struct hip_common *msg = NULL;
-	struct hip_tlv_common *param = NULL;
-	hip_hit_t *defhit  = NULL;
-	struct endpoint_hip *endp = NULL;
-
-	HIP_IFE(!(msg = hip_msg_alloc()), -1);
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEFAULT_HIT,0),-1,
-		 "Fail to get hits");
-	HIP_IFEL(hip_send_recv_daemon_info(msg), -1,
-		 "send/recv daemon info\n");
-
-	HIP_IFE(!(param = hip_get_param(msg, HIP_PARAM_HIT)), -1); 
-	defhit = hip_get_param_contents_direct(param);
-	ipv6_addr_copy(hit, defhit);
 
 	// deactivate userspace ipsec in hipd
 	HIP_DEBUG("switching hipd to kernel-mode ipsec...\n");
@@ -123,8 +109,6 @@ int userspace_ipsec_uninit()
 		free(decrypted_packet);
 
   out_err:
-	if(msg)
-		free(msg);
 	return err;
 }
 
@@ -136,7 +120,6 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	struct in6_addr preferred_local_addr;
 	struct in6_addr preferred_peer_addr;
 	struct sockaddr_storage preferred_peer_sockaddr;
-	struct ip6_hdr *ip6_hdr;
 	struct timeval now;
 	int esp_packet_len = 0;
 	int out_ip_version = 0;
@@ -147,11 +130,9 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	HIP_ASSERT(ipv6_addr_is_hit(&ctx->src) && ipv6_addr_is_hit(&ctx->dst));
 
 	HIP_DEBUG("original packet length: %u \n", ctx->ipq_packet->data_len);
-
 	_HIP_HEXDUMP("original packet :", ctx->ipq_packet->payload, ctx->ipq_packet->data_len);
 
-	ip6_hdr = (struct ip6_hdr *)ctx->ipq_packet->payload;
-
+	struct ip6_hdr *ip6_hdr = (struct ip6_hdr *)ctx->ipq_packet->payload;
 	HIP_DEBUG("ip6_hdr->ip6_vfc: 0x%x \n", ip6_hdr->ip6_vfc);
 	HIP_DEBUG("ip6_hdr->ip6_plen: %u \n", ntohs(ip6_hdr->ip6_plen));
 	HIP_DEBUG("ip6_hdr->ip6_nxt: %u \n", ip6_hdr->ip6_nxt);
@@ -232,7 +213,6 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 
 	if (err < 0) {
 		HIP_DEBUG("sendto() failed\n");
-		HIP_PERROR("error when sending packet\n");
 	} else
 	{
 		HIP_DEBUG("new packet SUCCESSFULLY re-inserted into network stack\n");
@@ -257,7 +237,6 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	struct hip_esp *esp_hdr = NULL;
 	struct hip_esp_ext *esp_exthdr = NULL;
 	struct sockaddr_storage local_sockaddr;
-	struct ip6_hdr *ip6_hdr;
 	// entry matching the SPI
 	hip_sa_entry_t *entry = NULL;
 	// return entry
@@ -265,7 +244,7 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	struct in6_addr src_hit;
 	struct in6_addr dst_hit;
 	struct timeval now;
-        uint16_t decrypted_packet_len = 0;
+	int decrypted_packet_len = 0;
 	uint32_t spi = 0;
 	uint32_t seq_no = 0;
 	uint32_t hash = 0;
@@ -318,11 +297,9 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	// decrypt the packet and create a new HIT-based one
 	HIP_IFEL(hip_beet_mode_input(ctx, entry, decrypted_packet, &decrypted_packet_len), 1,
 			"failed to recreate original packet\n");
-	
+
 	_HIP_HEXDUMP("restored original packet: ", decrypted_packet, decrypted_packet_len);
-
-	ip6_hdr = (struct ip6_hdr *)decrypted_packet;
-
+	struct ip6_hdr *ip6_hdr = (struct ip6_hdr *)decrypted_packet;
 	HIP_DEBUG("ip6_hdr->ip6_vfc: 0x%x \n", ip6_hdr->ip6_vfc);
 	HIP_DEBUG("ip6_hdr->ip6_plen: %u \n", ip6_hdr->ip6_plen);
 	HIP_DEBUG("ip6_hdr->ip6_nxt: %u \n", ip6_hdr->ip6_nxt);
@@ -355,181 +332,11 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
   	return err;
 }
 
-int handle_sa_add_request(struct hip_common * msg,
-			  struct hip_tlv_common *param)
-{
-	struct in6_addr *src_addr = NULL, *dst_addr = NULL;
-	struct in6_addr *src_hit = NULL, *dst_hit = NULL;
-	uint32_t spi = 0;
-	int ealg = 0, err = 0;
-	struct hip_crypto_key *enckey = NULL, *authkey = NULL;
-	int retransmission = 0, direction = 0, update = 0;
-	uint16_t local_port = 0, peer_port = 0;
-	uint8_t encap_mode = 0, esp_prot_transform = 0;
-	unsigned char *esp_prot_anchor = NULL;
-	unsigned char *e_key = NULL, *a_key = NULL;
-	uint32_t e_keylen = 0, a_keylen = 0, e_type = 0, a_type = 0;
-	
-	// get all attributes from the message
-	
-	param = (struct hip_tlv_common *)hip_get_param(msg, HIP_PARAM_IPV6_ADDR);
-	src_addr = (struct in6_addr *) hip_get_param_contents_direct(param);
-	HIP_DEBUG_IN6ADDR("Source IP address: ", src_addr);
-	
-	param = hip_get_next_param(msg, param);
-	dst_addr = (struct in6_addr *) hip_get_param_contents_direct(param);
-	HIP_DEBUG_IN6ADDR("Destination IP address : ", dst_addr);
-	
-	param = (struct hip_tlv_common *)hip_get_param(msg, HIP_PARAM_HIT);
-	src_hit = (struct in6_addr *) hip_get_param_contents_direct(param);
-	HIP_DEBUG_HIT("Source Hit: ", src_hit);
-	
-	param = hip_get_next_param(msg, param);
-	dst_hit = (struct in6_addr *) hip_get_param_contents_direct(param);
-	HIP_DEBUG_HIT("Destination HIT: ", dst_hit);
-	
-	param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_UINT);
-	spi = *((uint32_t *) hip_get_param_contents_direct(param));
-	HIP_DEBUG("the spi value is : %u \n", spi);
-	
-	param = hip_get_next_param(msg, param);
-	encap_mode = *((uint8_t *) hip_get_param_contents_direct(param));
-	HIP_DEBUG("the nat_mode value is %u \n", encap_mode);
-	
-	param = hip_get_next_param(msg, param);
-	local_port = *((uint16_t *) hip_get_param_contents_direct(param));
-	HIP_DEBUG("the local_port value is %u \n", local_port);
-	
-	param = hip_get_next_param(msg, param);
-	peer_port = *((uint16_t *) hip_get_param_contents_direct(param));
-	HIP_DEBUG("the peer_port value is %u \n", peer_port);
-	
-	param = hip_get_next_param(msg, param);
-	esp_prot_transform = *((uint8_t *) hip_get_param_contents_direct(param));
-	HIP_DEBUG("esp protection extension transform is %u \n", esp_prot_transform);
-	
-	// this parameter is only included, if the esp extension is used
-	if (esp_prot_transform > ESP_PROT_TRANSFORM_UNUSED)
-	{
-		param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_HCHAIN_ANCHOR);
-		esp_prot_anchor = (unsigned char *) hip_get_param_contents_direct(param);
-		_HIP_HEXDUMP("the esp protection anchor is ", esp_prot_anchor,
-			    esp_prot_transforms[esp_prot_transform]);
-	} else
-	{
-		esp_prot_anchor = NULL;
-	}
-	
-	param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_KEYS);
-	enckey = (struct hip_crypto_key *) hip_get_param_contents_direct(param);
-	_HIP_HEXDUMP("crypto key :", enckey, sizeof(struct hip_crypto_key));
-	
-	param = hip_get_next_param(msg, param);
-	authkey = (struct hip_crypto_key *)hip_get_param_contents_direct(param);
-	_HIP_HEXDUMP("authen key :", authkey, sizeof(struct hip_crypto_key));
-	
-	param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_INT);
-	ealg = *((int *) hip_get_param_contents_direct(param));
-	HIP_DEBUG("ealg value is %d \n", ealg);
-	
-	param =  hip_get_next_param(msg, param);		
-	retransmission = *((int *) hip_get_param_contents_direct(param));
-	HIP_DEBUG("already_acquired value is %d \n", retransmission);
-	
-	param =  hip_get_next_param(msg, param);		
-	direction = *((int *) hip_get_param_contents_direct(param));
-	HIP_DEBUG("the direction value is %d \n", direction);
-	
-	param =  hip_get_next_param(msg, param);
-	update = *((int *) hip_get_param_contents_direct(param));
-	HIP_DEBUG("the update value is %d \n", update);
-	
-	/******* MAP HIP ESP encryption INDEX to SADB encryption INDEX *******/
-	
-	// TODO move to user_ipsec_esp.c -> don't store in entry
-	a_keylen = hip_auth_key_length_esp(ealg);
-	e_keylen = hip_enc_key_length(ealg);
-	
-	// TODO store hip_crypto_keys -> do not convert
-	e_key = (unsigned char *) enckey->key;
-	a_key = (unsigned char *) authkey->key;
-	
-	_HIP_HEXDUMP("auth key: ", a_key, a_keylen);
-	_HIP_HEXDUMP("enc key: ", e_key, e_keylen);
-	
-	HIP_IFEL(hip_sadb_add(direction, spi, BEET_MODE, src_addr, dst_addr,
-			src_hit, dst_hit, encap_mode, local_port, peer_port, ealg,
-			a_keylen, e_keylen, a_key, e_key, DEFAULT_LIFETIME,
-			esp_prot_transform, esp_prot_anchor, retransmission, update), -1,
-			"failed to add user_space IPsec security association\n");
-	
 #if 0
 int cast_sockaddr_to_in6_addr(struct sockaddr_storage *sockaddr, struct in6_addr *in6_addr)
 {
 	int err = 0;
 
-	/* MAP HIP ESP encryption INDEX to SADB encryption INDEX */
-	switch(ealg) {
-		case HIP_ESP_AES_SHA1:
-			ipsec_e_type = SADB_X_EALG_AESCBC;
-			ipsec_a_type = SADB_AALG_SHA1HMAC;
-			break;
-		case HIP_HIP_3DES_SHA1:
-			ipsec_e_type = SADB_EALG_3DESCBC;
-			ipsec_a_type = SADB_AALG_SHA1HMAC;
-			break;
-		case HIP_HIP_BLOWFISH_SHA1:
-			ipsec_e_type = SADB_X_EALG_BLOWFISHCBC;
-			ipsec_a_type = SADB_AALG_SHA1HMAC;
-			break;
-	}
-	
-	ipsec_a_keylen = hip_auth_key_length_esp(ealg);
-	ipsec_e_keylen = hip_enc_key_length(ealg);
-	
-	ipsec_e_key = (uint8_t *) enckey->key;
-	ipsec_a_key = (uint8_t *) authkey->key;
-	
-	_HIP_HEXDUMP("auth key: ", ipsec_a_key, ipsec_a_keylen);
-	_HIP_HEXDUMP("enc key: ", ipsec_e_key, ipsec_e_keylen);
-	
-	HIP_DEBUG_HIT("source hit: ", src_hit);
-	HIP_DEBUG_IN6ADDR("source ip: ", saddr);
-	HIP_DEBUG_HIT("dest hit: ", dst_hit);
-	HIP_DEBUG_IN6ADDR("dest ip: ", daddr);
-
-	/* ip6/ip4 (in6_addr) address conversion to sockddr_storage */
-	hip_addr_to_sockaddr(saddr, &src); /* source ip address conversion */
-	hip_addr_to_sockaddr(daddr, &dst); /* destination ip address conversion */
-	hip_addr_to_sockaddr(src_hit, &inner_src); /* source HIT conversion */
-	hip_addr_to_sockaddr(dst_hit, &inner_dst); /* destination HIT conversion */
-	
-	/* looking at the usermode code, it may be that the lifetime is stored in
-	 * the hip_sadb_entry but never used. It is supposed to be the value in
-	 * seconds after which the SA expires but I don't think this is
-	 * implemented. It is a preserved field from the kernel API, from the
-	 * PFKEY messages.
-	 * 
-	 * Here just give a value 100 to lifetime
-	 * */
-	HIP_IFEL(hip_sadb_add(TYPE_USERSPACE_IPSEC, IPSEC_MODE, (struct sockaddr *) &inner_src,
-			(struct sockaddr *) &inner_dst, (struct sockaddr *) &src,
-			(struct sockaddr *) &dst, local_port, peer_port, direction, spi, ipsec_e_key,
-			ipsec_e_type, ipsec_e_keylen, ipsec_a_key, ipsec_a_type, ipsec_a_keylen, 100 ,
-			hit_magic, nat_mode, esp_prot_transform, esp_prot_anchor), -1,
-			"HIP user_space IPsec security association DB add is not successful\n");
-	
-	HIP_DEBUG(" HIP user space IPsec security sadb is done \n\n");
-
- out_err:
-	
-	return err;
-}
-
-int cast_sockaddr_to_in6_addr(struct sockaddr_storage *sockaddr, struct in6_addr *in6_addr)
-{
-	int err = 0;
-	
 	if (sockaddr->ss_family == AF_INET)
 	{
 		IPV4_TO_IPV6_MAP((struct in_addr *)hip_cast_sa_addr(sockaddr),

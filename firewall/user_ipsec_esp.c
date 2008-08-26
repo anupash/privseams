@@ -40,13 +40,13 @@ int hip_beet_mode_output(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
 	struct hip_esp *out_esp_hdr = NULL;
 	unsigned char *in_transport_hdr = NULL;
 	uint8_t in_transport_type = 0;
-	uint16_t next_hdr_offset = 0;
+	int next_hdr_offset = 0;
 	// length of the data to be encrypted
 	uint16_t elen = 0;
 	// length of the esp payload
 	uint16_t encryption_len = 0;
 	// length of the hash value used by the esp protection extension
-	uint16_t esp_prot_hash_length = 0;
+	int esp_prot_hash_length = 0;
 	int err = 0;
 
 	_HIP_DEBUG("original packet length: %i \n", ctx->ipq_packet->data_len);
@@ -214,9 +214,10 @@ int hip_beet_mode_output(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
 }
 
 int hip_beet_mode_input(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
-		unsigned char *decrypted_packet, uint16_t *decrypted_packet_len)
+			unsigned char *decrypted_packet,
+			uint16_t *decrypted_packet_len)
 {
-	uint16_t next_hdr_offset = 0;
+	int next_hdr_offset = 0;
 	uint16_t esp_len = 0;
 	uint16_t decrypted_data_len = 0;
 	uint8_t next_hdr = 0;
@@ -262,22 +263,9 @@ int hip_beet_mode_input(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
   	return err;
 }
 
-/*
- * hip_esp_encrypt()
- * 
- * in:	in		pointer to data to encrypt
- * 		in_len	length of input-data
- * 		out		pointer to where to store encrypted data
- * 		out_len	length of encrypted data
- * 		entry 	the SADB entry
- *
- * out:	Encrypted data out, out_len.
- * 		Returns 0 on success, -1 otherwise.
- * 
- * Perform actual ESP encryption and authentication of packets.
- */
 int hip_payload_encrypt(unsigned char *in, uint8_t in_type, uint16_t in_len,
-		unsigned char *out, uint16_t *out_len, hip_sa_entry_t *entry)
+			unsigned char *out, uint16_t *out_len,
+			hip_sa_entry_t *entry)
 {
 	/* elen is length of data to encrypt */
 	uint16_t elen = in_len;
@@ -291,7 +279,7 @@ int hip_payload_encrypt(unsigned char *in, uint8_t in_type, uint16_t in_len,
 	struct hip_esp_tail *esp_tail = NULL;
 	// offset of the payload counting from the beginning of the esp header
 	uint16_t esp_data_offset = 0;
-	uint16_t i = 0;
+	int i = 0;
 	int err = 0;
 
 	esp_data_offset = esp_prot_get_data_offset(entry);
@@ -486,25 +474,8 @@ int hip_payload_encrypt(unsigned char *in, uint8_t in_type, uint16_t in_len,
 	return err;
 }
 
-/*
- * hip_esp_decrypt()
- *
- * in:	in	pointer to IP header of ESP packet to decrypt
- * 		len	packet length
- * 		out	pointer of where to build decrypted packet
- * 		offset	offset where decrypted packet is stored: &out[offset]
- * 		outlen	length of new packet
- * 		entry	the SADB entry
- * 		iph     IPv4 header or NULL for IPv6
- * 		now	pointer to current time (avoid extra gettimeofday call)
- *
- * out:		New packet is built in out, outlen.
- * 		Returns 0 on success, -1 otherwise.
- * 
- * Perform authentication and decryption of ESP packets.
- */
-int hip_payload_decrypt(unsigned char *in, uint16_t in_len, unsigned char *out, uint8_t *out_type,
-		uint16_t *out_len, hip_sa_entry_t *entry)
+int hip_payload_decrypt(unsigned char *in, uint16_t in_len, unsigned char *out,
+		uint8_t *out_type, uint16_t *out_len, hip_sa_entry_t *entry)
 {
 	/* elen is length of data to encrypt */
 	uint16_t elen = 0;
@@ -710,14 +681,8 @@ int hip_payload_decrypt(unsigned char *in, uint16_t in_len, unsigned char *out, 
 
 /* XX TODO copy as much header information as possible */
 
-/*
- * add_ipv4_header()
- *
- * Build an IPv4 header, copying some parameters from an old ip header,
- * src and dst in host byte order. old may be NULL.
- */
-void add_ipv4_header(struct ip *ip_hdr, struct in6_addr *src_addr, struct in6_addr *dst_addr,
-		uint16_t packet_len, uint8_t next_hdr)
+void add_ipv4_header(struct ip *ip_hdr, struct in6_addr *src_addr,
+		struct in6_addr *dst_addr, uint16_t packet_len, uint8_t next_hdr)
 {
 	struct in_addr src_in_addr;
 	struct in_addr dst_in_addr;
@@ -743,45 +708,8 @@ void add_ipv4_header(struct ip *ip_hdr, struct in6_addr *src_addr, struct in6_ad
 	ip_hdr->ip_sum = checksum_ip(ip_hdr, ip_hdr->ip_hl);
 }
 
-#if 0
-/* OLD CODE TAKEN FROM OPENHIP -> will be usefull for UDP encapsulation with IPv6
- * 
- * add_ipv6_pseudo_header()
- *
- * Build an IPv6 pseudo-header for upper-layer checksum calculation.
- */
-void add_ipv6_pseudo_header(__u8 *data, struct sockaddr *src, 
-	struct sockaddr *dst, __u32 len, __u8 proto)
-{
-	int l;
-	struct _ph {
-		__u32 ph_len;
-		__u8 ph_zero[3];
-		__u8 ph_next_header;
-	} *ph;
-	memset(data, 0, 40);
-
-	/* 16 bytes source address, 16 bytes destination address */
-	l = sizeof(struct in6_addr);
-	memcpy(&data[0], SA2IP(src), l);
-	memcpy(&data[l], SA2IP(dst), l);
-	l += sizeof(struct in6_addr);
-	/* upper-layer packet length, zero, next header */
-	ph = (struct _ph*) &data[l];
-	ph->ph_len = htonl(len);
-	memset(ph->ph_zero, 0, 3);
-	ph->ph_next_header = proto;
-}
-#endif
-
-/*
- * add_ipv6_header()
- *
- * Build an IPv6 header, copying some parameters from an old header (old),
- * src and dst in network byte order.
- */
-void add_ipv6_header(struct ip6_hdr *ip6_hdr, struct in6_addr *src_addr, struct in6_addr *dst_addr,
-		uint16_t packet_len, uint8_t next_hdr)
+void add_ipv6_header(struct ip6_hdr *ip6_hdr, struct in6_addr *src_addr,
+		struct in6_addr *dst_addr, uint16_t packet_len, uint8_t next_hdr)
 {
 	ip6_hdr->ip6_flow = 0; /* zero the version (4), TC (8) and flow-ID (20) */
 	/* set version to 6 and leave first 4 bits of TC at 0 */
