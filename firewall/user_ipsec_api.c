@@ -153,7 +153,8 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	{
 		HIP_DEBUG("triggering BEX...\n");
 
-		/* no SADB entry -> trigger base exchange providing destination hit only */
+		/* no SADB entry -> trigger base exchange providing src and dst hit as
+		 * used by the application */
 		HIP_IFEL(hip_trigger_bex(&ctx->src, &ctx->dst, NULL, NULL, NULL, NULL), -1,
 			 "trigger bex\n");
 
