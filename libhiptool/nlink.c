@@ -514,7 +514,7 @@ int addattr32(struct nlmsghdr *n, int maxlen, int type, __u32 data)
 
 int hip_iproute_modify(struct rtnl_handle *rth,
 		       int cmd, int flags, int family, char *ip,
-		       char *dev)
+		       char *dev, char *gw)
 {
         struct {
                 struct nlmsghdr         n;
@@ -522,6 +522,7 @@ int hip_iproute_modify(struct rtnl_handle *rth,
                 char                    buf[1024];
         } req1;
         inet_prefix dst;
+	inet_prefix gw_dst;
 	struct idxmap *idxmap[16];
         int dst_ok = 0, err;
         int idx, i;
@@ -545,13 +546,23 @@ int hip_iproute_modify(struct rtnl_handle *rth,
 
 	if (family== AF_INET) HIP_DEBUG("Setting %s as route for %s device with family %d\n",ip, dev, family);
         HIP_IFEL(get_prefix_1(&dst, ip, req1.r.rtm_family), -1, "prefix\n");
+	if(gw)
+		HIP_IFEL(get_prefix_1(&gw_dst, gw, req1.r.rtm_family), -1, "prefix\n");
         //if (req.r.rtm_family == AF_UNSPEC)
                 //req.r.rtm_family = dst.family;
         req1.r.rtm_dst_len = dst.bitlen;
         dst_ok = 1;
-        if (dst.bytelen)
+        if(dst.bytelen)
 		addattr_l(&req1.n, sizeof(req1), RTA_DST, &dst.data,
 			  dst.bytelen);
+
+        if(gw){
+		//addattr_l(&req1.n, sizeof(req1), RTA_GATEWAY, &gw_dst.data,
+		//	  gw_dst.bytelen);
+		addattr_l(&req1.n, sizeof(req1), RTA_SRC, &gw_dst.data,
+			  gw_dst.bytelen);
+	}
+
 
 	ll_init_map(rth, idxmap);
 
