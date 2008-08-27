@@ -181,6 +181,15 @@ class Global:
                 return r
         return None
 
+# Added by Tere
+    def getbya(gp,ahn):
+        for h in gp.hosts:
+            r = h.getbya(ahn)
+            if r:
+                return r
+        return None
+# End added by Tere
+
     def forkme(gp):
         pid = os.fork()
         if pid:
@@ -302,6 +311,20 @@ class Global:
                         s.sendto(m.buf,from_a)
                         sent_answer = 1
 
+### Added by Tere
+                elif qtype == 1:     # A
+                    nam = q1['qname']
+                    lr = gp.getbyname(nam)
+                    if lr:
+                        a2 = {'name': nam,
+                              'data': lr,
+                              'type': 1,
+                              'class': 1,
+                              'ttl': 10,
+                              }
+                        fout.write('Hosts A2  %s\n' % (a2,))
+### End added by Tere
+
                 elif qtype == 12:     # PTR
                     nam = q1['qname']
                     lr = gp.getbyaaaa(nam)
@@ -324,7 +347,7 @@ class Global:
                         m.addPTR(a2['name'],a2['class'],a2['ttl'],a2['data'])
                         s.sendto(m.buf,from_a)
                         sent_answer = 1
-                        
+
                 if not sent_answer:
                     s2.send(buf)
                     r2 = s2.recv(2048)

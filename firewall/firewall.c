@@ -1208,22 +1208,14 @@ int filter_hip(const struct in6_addr * ip6_src,
   	return verdict; 
 }
 
-
-int hip_fw_handle_other_output(hip_fw_context_t *ctx){
+int hip_fw_handle_other_output(hip_fw_context_t *ctx)
+{
         hip_lsi_t src_lsi, dst_lsi;
-	hip_lsi_t src_ip, dst_ip;
-	struct sockaddr_in6 dst_hit;
-	hip_lsi_t defaultLSI;
-	struct ip      *iphdr;
-	struct tcphdr  *tcphdr;
-	char 	       *hdrBytes = NULL;
 
 	int verdict = accept_normal_traffic_by_default;
 	int packet_id = ctx->ipq_packet->packet_id;
 
-	HIP_DEBUG("\n");
-
-	if (ctx->ip_version == 6 && hip_userspace_ipsec)
+	if (hip_userspace_ipsec)
 	{
 		HIP_DEBUG_HIT("destination hit: ", &ctx->dst);
 		HIP_DEBUG_HIT("default hit: ", hip_fw_get_default_hit());
@@ -1239,27 +1231,14 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 	if (ctx->ip_version == 4){	  
 		IPV6_TO_IPV4_MAP(&(ctx->src),&src_lsi);
 		IPV6_TO_IPV4_MAP(&(ctx->dst),&dst_lsi);
-		if (IS_LSI32(src_lsi.s_addr)){
-			if (is_packet_reinjection(&dst_lsi)) {
+		if (IS_LSI32(dst_lsi.s_addr)){
+			if (is_packet_reinjection(&dst_lsi))
 				verdict = 1;
-				goto out_err;
-		      	} else {
+		      	else{
 			    	hip_fw_handle_outgoing_lsi(ctx->ipq_packet, &src_lsi, &dst_lsi);
-			    	//Reject the packet
+			    	/*Reject the packet*/
 			    	verdict = 0;
-				goto out_err;
 		      	}
-		}
-		else if((ctx->ip_hdr.ipv4)->ip_p == 6){
-			iphdr = (struct ip *)ctx->ip_hdr.ipv4;
-			tcphdr = ((struct tcphdr *) (((char *) iphdr) + ctx->ip_hdr_len));
-			hdrBytes = ((char *) iphdr) + ctx->ip_hdr_len;
-
-			if(tcp_packet_has_i1_option(hdrBytes, 4*tcphdr->doff))
-				verdict = 1;
-			else{
-				verdict = hip_fw_handle_outgoing_ip(ctx);
-			}
 		}
 	}
 

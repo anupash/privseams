@@ -106,6 +106,12 @@ class Hosts:
         r = self.aaaa.get(self.sani(a))
         return r
 
+### Added by Tere : Must be modified 
+    def getbya(self,a):
+        r = self.a.get(self.sani(a))
+        return r
+### End added by Tere
+
 class Global:
     def __init__(gp):
         return

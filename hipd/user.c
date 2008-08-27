@@ -36,6 +36,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	int access_ok = 0, send_response = 1, is_root = 0;
 	HIP_KEA * kea = NULL;
 	struct hip_tlv_common *param = NULL;
+	char host[NI_MAXHOST];
 
 	HIP_ASSERT(src->sin6_family == AF_INET6);
 
@@ -67,7 +68,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	if (ntohs(src->sin6_port) == HIP_AGENT_PORT) {
 		return hip_recv_agent(msg);
 	}
-	
+
 	switch(msg_type)
 	{
 	case SO_HIP_ADD_LOCAL_HI:
@@ -976,12 +977,14 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	  	}
 
 	  	entry = hip_hadb_try_to_find_by_pair_lsi(src_lsi, dst_lsi);
-          	if (entry && (entry->state == HIP_STATE_ESTABLISHED || 
-		    msg_type == SO_HIP_GET_PEER_HIT_BY_LSIS)){
-	    		HIP_DEBUG("Entry found in the ha database \n\n");
-	      		src_hit = &entry->hit_our;
-	      		dst_hit = &entry->hit_peer;
-	  	}
+          	if (entry){ 
+		        if (entry->state == HIP_STATE_ESTABLISHED || 
+			        msg_type == SO_HIP_GET_PEER_HIT_BY_LSIS){
+			        HIP_DEBUG("Entry found in the ha database \n\n");
+				src_hit = &entry->hit_our;
+				dst_hit = &entry->hit_peer;
+			}
+	  	}	       		
 	  	break;
 	case SO_HIP_GET_PEER_HIT_AT_FIREWALL:
 		err = hip_opp_get_peer_hit(msg, src);
@@ -998,9 +1001,8 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		if (err)
 		        hip_set_msg_err(msg, 1);
 		else{
-		        if ((msg_type == SO_HIP_TRIGGER_BEX && lsi) ||
-		            msg_type == SO_HIP_GET_STATE_HA || 
-			    msg_type == SO_HIP_GET_PEER_HIT_BY_LSIS){
+		  if ( msg_type == SO_HIP_GET_STATE_HA || 
+		       msg_type == SO_HIP_GET_PEER_HIT_BY_LSIS){
 			        if (src_hit)  
 				         HIP_IFEL(hip_build_param_contents(msg, (void *)src_hit,
 									   HIP_PARAM_HIT, sizeof(struct in6_addr)), -1,

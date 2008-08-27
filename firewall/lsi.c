@@ -56,40 +56,23 @@ int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m, struct in6_addr *ip_src, str
 	       default:
 		 	break;
 	}
-	//check if it is ipv6 data
-	if(portDest)
+    
+	if (portDest)
 		proto6 = getproto_info(ntohs(portDest), proto);
-	if(proto6)
-		return proto6;
-	
-	//check if it is ipv4 LSI data
-        lsi_our = (hip_lsi_t *)hip_get_lsi_our_by_hits(ip_src, ip_dst);
-	lsi_peer = (hip_lsi_t *)hip_get_lsi_peer_by_hits(ip_src, ip_dst);
-	if(lsi_our && lsi_peer){
-		proto = "tcp";
-		proto4_LSI = getproto_info_lsi(ntohs(portDest), proto, lsi_our);
-		if(proto4_LSI){
-			IPV4_TO_IPV6_MAP(lsi_our, &src_addr);
+
+	if (!proto6){
+	        lsi_our = (hip_lsi_t *)hip_get_lsi_our_by_hits(ip_src, ip_dst);
+		lsi_peer = (hip_lsi_t *)hip_get_lsi_peer_by_hits(ip_src, ip_dst);
+
+		if(lsi_our && lsi_peer){
+		        IPV4_TO_IPV6_MAP(lsi_our, &src_addr);
 			IPV4_TO_IPV6_MAP(lsi_peer, &dst_addr);
-			HIP_DEBUG_LSI("******lsi_src : ", lsi_our);
-			HIP_DEBUG_LSI("******lsi_dst : ", lsi_peer);
+			//HIP_DEBUG_LSI("******lsi_src : ", lsi_our);
+			//HIP_DEBUG_LSI("******lsi_dst : ", lsi_peer);
 			reinject_packet(dst_addr, src_addr, m, 6, 1);
 		}
 	}
-	if(proto4_LSI)
-		return 0;
-
-	//reinject as ipv4 data
-	int res = hip_get_ips_by_hits(ip_src, ip_dst, &src_addr, &dst_addr);
-	if(res > -1){
-		proto = "tcp";
-		IPV6_TO_IPV4_MAP(&src_addr, &src_v4);
-		IPV6_TO_IPV4_MAP(&dst_addr, &dst_v4);
-		HIP_DEBUG_IN6ADDR("******ip_src : ", src_addr);
-		HIP_DEBUG_IN6ADDR("******ip_dst : ", dst_addr);
-		reinject_packet(src_addr, dst_addr, m, 6, 1);
-	}
-	return 0;
+	return proto6;
 }
 
 /**
