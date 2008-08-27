@@ -1258,8 +1258,6 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 			if(tcp_packet_has_i1_option(hdrBytes, 4*tcphdr->doff))
 				verdict = 1;
 			else{
-HIP_DEBUG("##### syn %d ack %d psh %d fin %d\n", tcphdr->syn, tcphdr->ack, tcphdr->psh, tcphdr->fin);
-HIP_DEBUG("##### seq %u  ack_seq %u\n", tcphdr->seq, tcphdr->ack_seq);
 				verdict = hip_fw_handle_outgoing_ip(ctx);
 			}
 		}
