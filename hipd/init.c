@@ -276,7 +276,7 @@ int hipd_init(int flush_ipsec, int killold)
 	HIP_DEBUG("Initializing the netdev_init_addresses\n");
 
 	hip_netdev_init_addresses(&hip_nl_ipsec);
-	
+
 	if (rtnl_open_byproto(&hip_nl_route,
 	                      RTMGRP_LINK | RTMGRP_IPV6_IFADDR | IPPROTO_IPV6
 	                      | RTMGRP_IPV4_IFADDR | IPPROTO_IP,
@@ -345,8 +345,6 @@ int hipd_init(int flush_ipsec, int killold)
 	HIP_DEBUG("Setting iface %s\n", HIP_HIT_DEV);
 	set_up_device(HIP_HIT_DEV, 0);
 	HIP_IFE(set_up_device(HIP_HIT_DEV, 1), 1);
-	HIP_DEBUG("Lowering " HIP_HIT_DEV " MTU\n");
-	system("ifconfig dummy0 mtu 1280"); /* see bug id 595 */
 
 #ifdef CONFIG_HIP_HI3
 	if( hip_use_i3 ) {
@@ -374,7 +372,7 @@ int hipd_init(int flush_ipsec, int killold)
 	certerr = 0;
 	certerr = hip_init_certs();
 	if (certerr < 0) HIP_DEBUG("Initializing cert configuration file returned error\n");
-	
+
 #if 0
 	/* init new tcptimeout parameters, added by Tao Wan on 14.Jan.2008*/
 
@@ -393,6 +391,8 @@ int hipd_init(int flush_ipsec, int killold)
 	}
 #endif
 	hip_firewall_sock_fd = hip_firewall_sock_lsi_fd = hip_user_sock;
+
+//hip_add_default_hit_route();
 
 out_err:
 	return err;
@@ -510,15 +510,16 @@ int hip_init_host_ids()
         /* Retrieve the keys to hipd */
 	/* Three steps because multiple large keys will not fit in the same message */
 
-	/* dsa anon and pub */
+	/* rsa pub */
 	hip_msg_init(user_msg);
-	if (err = hip_serialize_host_id_action(user_msg, ACTION_ADD, 
-						0, 1, "dsa", NULL, 0, 0)) {
-		HIP_ERROR("Could not load default keys (DSA)\n");
+	if (err = hip_serialize_host_id_action(user_msg, ACTION_ADD,
+						0, 1, "rsa", NULL, 0, 0)) {
+		HIP_ERROR("Could not load default keys (RSA pub)\n");
 		goto out_err;
 	}
+
 	if (err = hip_handle_add_local_hi(user_msg)) {
-		HIP_ERROR("Adding of keys failed (DSA)\n");
+		HIP_ERROR("Adding of keys failed (RSA pub)\n");
 		goto out_err;
 	}
 
@@ -534,18 +535,18 @@ int hip_init_host_ids()
 		goto out_err;
 	}
 
-	/* rsa pub */
+	/* dsa anon and pub */
 	hip_msg_init(user_msg);
-	if (err = hip_serialize_host_id_action(user_msg, ACTION_ADD,
-						0, 1, "rsa", NULL, 0, 0)) {
-		HIP_ERROR("Could not load default keys (RSA pub)\n");
+	if (err = hip_serialize_host_id_action(user_msg, ACTION_ADD, 
+						0, 1, "dsa", NULL, 0, 0)) {
+		HIP_ERROR("Could not load default keys (DSA)\n");
+		goto out_err;
+	}
+	if (err = hip_handle_add_local_hi(user_msg)) {
+		HIP_ERROR("Adding of keys failed (DSA)\n");
 		goto out_err;
 	}
 
-	if (err = hip_handle_add_local_hi(user_msg)) {
-		HIP_ERROR("Adding of keys failed (RSA pub)\n");
-		goto out_err;
-	}
 
 	HIP_DEBUG("Keys added\n");
 	hip_get_default_hit(&default_hit);
@@ -936,3 +937,4 @@ out_err:
 	if (algo == HIP_HI_RSA) return (tmp);
 	return NULL;
 }
+

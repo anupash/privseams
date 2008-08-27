@@ -433,6 +433,9 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
         /*
 	hip_for_each_ha(hip_print_info_hadb, &n);
         */
+
+	hip_add_default_hit_route(peer_hit);
+
 out_err:
 	return err;
 }
@@ -3166,4 +3169,84 @@ int hip_hadb_add_udp_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 	HIP_DEBUG("returning, err=%d\n", err);
 	return err;
 }
+
+
+
+int hip_add_default_hit_route(hip_hit_t *peer_hit){
+	struct hip_host_id_entry *entry;
+	int err = 0;
+	char *str_our_hit = NULL, *str_peer_hit = NULL;
+	char hit_hlp[14];
+	struct idxmap *idxmap[16] = {0};
+	int i;
+	char ch;
+	char tmp1[39];
+
+	HIP_READ_LOCK_DB(hip_local_hostid_db);
+	
+	entry = hip_get_hostid_entry_by_lhi_and_algo(hip_local_hostid_db,
+						     NULL, HIP_HI_RSA, 0);
+	if (!entry) {
+		err=-ENOENT;
+		goto out_err;
+	}
+
+	HIP_IFE((!(str_our_hit = hip_convert_hit_to_str(&entry->lhi.hit,
+					HIP_HIT_FULL_PREFIX_STR))), -1);
+	HIP_IFE((!(str_peer_hit = hip_convert_hit_to_str(peer_hit,
+					HIP_HIT_FULL_PREFIX_STR))), -1);
+
+memcpy(&tmp1[0], str_our_hit, 39);
+
+	HIP_DEBUG("Adding ip routes for the default HIT: %s %d\n", tmp1, strlen(str_our_hit));
+	HIP_DEBUG("Adding ip routes for the default HIT: %s %d\n", str_peer_hit, strlen(str_peer_hit));
+/*	memcpy(&hit_hlp[0], &str_our_hit[0], 14);
+	memcpy(&hit_hlp[10], &tmp, 4);
+	HIP_DEBUG("Adding ip routes for the default HIT: %s\n", &hit_hlp[0]);
+*/
+//ip route add DEST_HIT via RSA_PUB_HIT dev dummy0
+//hip_iproute_modify(struct rtnl_handle *rth, int cmd, int flags, int family,    char *ip, char *dev)
+
+	HIP_IFE(hip_iproute_modify(&hip_nl_route, RTM_NEWROUTE,
+				   NLM_F_CREATE|NLM_F_EXCL,
+				   AF_INET6, str_peer_hit, HIP_HIT_DEV, tmp1),
+			-1);
+
+	/*HIP_IFE(hip_iproute_modify(&hip_nl_route, RTM_NEWROUTE,
+				   NLM_F_CREATE|NLM_F_EXCL,
+				   AF_INET6, tmp2, HIP_HIT_DEV, tmp2),
+			-1);*/
+
+
+/*
+	ch = '0';
+	while(ch <= '9'){
+		//HIP_DEBUG("%c", ch);
+		memcpy(&hit_hlp[8], &ch, 1);
+		HIP_DEBUG("New: %s\n", hit_hlp);
+		HIP_IFE(hip_iproute_modify(&hip_nl_route, RTM_NEWROUTE,
+				   NLM_F_CREATE|NLM_F_EXCL,//NLM_F_REPLACE,
+				   AF_INET6, hit_hlp, HIP_HIT_DEV, str_our_hit),
+			-1);
+		ch++;
+	}
+	ch = 'a';
+	while(ch <= 'f'){
+		//HIP_DEBUG("%c", ch);
+		memcpy(&hit_hlp[8], &ch, 1);
+		HIP_DEBUG("New: %s\n", hit_hlp);
+		HIP_IFE(hip_iproute_modify(&hip_nl_route, RTM_NEWROUTE,
+				   NLM_F_CREATE|NLM_F_EXCL,//NLM_F_REPLACE,
+				   AF_INET6, hit_hlp, HIP_HIT_DEV, str_our_hit),
+			-1);
+		ch++;
+	}
+*/
+	err = 0;
+
+ out_err:
+	HIP_READ_UNLOCK_DB(hip_local_hostid_db);
+	return err;
+}
+
 
