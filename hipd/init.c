@@ -1,11 +1,11 @@
 /** @file
  * This file defines initialization functions for the HIP daemon.
- * 
+ *
  * @date    1.1.2007
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  * @note    HIPU: BSD platform needs to be autodetected in hip_set_lowcapability
  */
- 
+
 #include "init.h"
 
 #ifndef OPENWRT
@@ -22,11 +22,11 @@ extern struct hip_common *hipd_msg_v4;
 
 /******************************************************************************/
 /** Catch SIGCHLD. */
-void hip_sig_chld(int signum) 
-{ 
+void hip_sig_chld(int signum)
+{
 	union wait status;
 	int pid, i;
-	
+
 	signal(signum, hip_sig_chld);
 
 	/* Get child process status, so it wont be left as zombie for long time. */
@@ -129,10 +129,10 @@ void hip_load_configuration()
 	pid_t pid;
 	FILE *fp = NULL;
 	size_t items = 0;
-	int len_con = strlen(HIPD_CONFIG_FILE_EX), 
+	int len_con = strlen(HIPD_CONFIG_FILE_EX),
 	  len_hos = strlen(HIPD_HOSTS_FILE_EX);
 
-	/* HIPD_CONFIG_FILE, HIPD_CONFIG_FILE_EX, HIPD_HOSTS_FILE and 
+	/* HIPD_CONFIG_FILE, HIPD_CONFIG_FILE_EX, HIPD_HOSTS_FILE and
 	   HIPD_HOSTS_FILE_EX are defined in /libinet6/hipconf.h */
 
 	/* Create config file if does not exist */
@@ -213,6 +213,7 @@ int hipd_init(int flush_ipsec, int killold)
 	struct sockaddr_in6 daemon_addr;
 	extern int hip_opendht_sock_fqdn;
 	extern int hip_opendht_sock_hit;
+	extern int hip_icmp_sock;
 
 	/* Make sure that root path is set up correcly (e.g. on Fedora 9).
 	   Otherwise may get warnings from system() commands.
@@ -238,7 +239,7 @@ int hipd_init(int flush_ipsec, int killold)
 	signal(SIGINT, hip_close);
 	signal(SIGTERM, hip_close);
 	signal(SIGCHLD, hip_sig_chld);
- 
+
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	HIP_IFEL(hip_init_oppip_db(), -1,
 	         "Cannot initialize opportunistic mode IP database for "\
@@ -323,14 +324,16 @@ int hipd_init(int flush_ipsec, int killold)
                     HIP_DEBUG("Setting send buffer size of hip_nl_ipsec.fd failed\n");
 	}
 #endif
-	
+
 	HIP_IFEL(hip_init_raw_sock_v6(&hip_raw_sock_v6), -1, "raw sock v6\n");
 	HIP_IFEL(hip_init_raw_sock_v4(&hip_raw_sock_v4), -1, "raw sock v4\n");
 	HIP_IFEL(hip_init_nat_sock_udp(&hip_nat_sock_udp), -1, "raw sock udp\n");		
+	HIP_IFEL(hip_init_icmp_v6(&hip_icmp_sock), -1, "icmpv6 sock\n");
 
 	HIP_DEBUG("hip_raw_sock = %d\n", hip_raw_sock_v6);
 	HIP_DEBUG("hip_raw_sock_v4 = %d\n", hip_raw_sock_v4);
 	HIP_DEBUG("hip_nat_sock_udp = %d\n", hip_nat_sock_udp);
+	HIP_DEBUG("hip_icmp_sock = %d\n", hip_icmp_sock);
 
 	if (flush_ipsec)
 	{
@@ -341,10 +344,12 @@ int hipd_init(int flush_ipsec, int killold)
 	HIP_DEBUG("Setting SP\n");
 	default_ipsec_func_set.hip_delete_default_prefix_sp_pair();
 	HIP_IFE(default_ipsec_func_set.hip_setup_default_sp_prefix_pair(), -1);
-	
+
 	HIP_DEBUG("Setting iface %s\n", HIP_HIT_DEV);
 	set_up_device(HIP_HIT_DEV, 0);
 	HIP_IFE(set_up_device(HIP_HIT_DEV, 1), 1);
+	HIP_DEBUG("Lowering " HIP_HIT_DEV " MTU\n");
+	system("ifconfig dummy0 mtu 1280"); /* see bug id 595 */
 
 #ifdef CONFIG_HIP_HI3
 	if( hip_use_i3 ) {
@@ -384,15 +389,13 @@ int hipd_init(int flush_ipsec, int killold)
 	HIP_IFEL(hip_set_lowcapability(1), -1, "Failed to set capabilities\n");
 
 #ifdef CONFIG_HIP_HI3
-	if( hip_use_i3 ) 
+	if( hip_use_i3 )
 	{
 //		hip_get_default_hit(&peer_hit);
 		hip_i3_init(/*&peer_hit*/);
 	}
 #endif
-	hip_firewall_sock_fd = hip_firewall_sock_lsi_fd = hip_user_sock;
-
-//hip_add_default_hit_route();
+	hip_firewall_sock_lsi_fd = hip_user_sock;
 
 out_err:
 	return err;
@@ -403,21 +406,21 @@ out_err:
  *
  * Returns positive on success negative otherwise
  */
-int hip_init_dht() 
+int hip_init_dht()
 {
         int err = 0, lineno = 0, i = 0, randomno = 0;
         extern struct addrinfo * opendht_serving_gateway;
         extern char opendht_name_mapping;
         extern int hip_opendht_inuse;
         extern int hip_opendht_error_count;
-        extern int hip_opendht_sock_fqdn;  
-        extern int hip_opendht_sock_hit;  
+        extern int hip_opendht_sock_fqdn;
+        extern int hip_opendht_sock_hit;
         char *serveraddr_str;
         char *servername_str;
-        FILE *fp = NULL; 
-        char line[500]; 
+        FILE *fp = NULL;
+        char line[500];
         List list;
-        
+
         if (hip_opendht_inuse == SO_HIP_DHT_ON) {
                 hip_opendht_error_count = 0;
                 /* check the condition of the sockets, we may have come here in middle
@@ -427,7 +430,7 @@ int hip_init_dht()
                          hip_opendht_sock_fqdn = init_dht_gateway_socket(hip_opendht_sock_fqdn);
                          hip_opendht_fqdn_sent = STATE_OPENDHT_IDLE;
                 }
-                 
+
                 if (hip_opendht_sock_hit > 0) {
                         close(hip_opendht_sock_hit);
                          hip_opendht_sock_hit = init_dht_gateway_socket(hip_opendht_sock_hit);
@@ -444,7 +447,7 @@ int hip_init_dht()
                         if (gethostname(&opendht_name_mapping, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1))
                                 HIP_DEBUG("gethostname failed\n");
                 } else {
-                        /* dhtservers exists */ 
+                        /* dhtservers exists */
                         while (fp && getwithoutnewline(line, 500, fp) != NULL) {
                                 lineno++;
                         }
@@ -461,20 +464,20 @@ int hip_init_dht()
                         HIP_DEBUG("DHT gateway from dhtservers: %s (%s)\n",
                                   servername_str, serveraddr_str);
                         /* resolve it */
-                        err = resolve_dht_gateway_info(serveraddr_str, &opendht_serving_gateway);  
+                        err = resolve_dht_gateway_info(serveraddr_str, &opendht_serving_gateway);
                         if (err < 0) HIP_DEBUG("Error resolving openDHT gateway!\n");
                         err = 0;
                         memset(&opendht_name_mapping, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
                         if (gethostname(&opendht_name_mapping, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1))
                                 HIP_DEBUG("gethostname failed\n");
-			register_to_dht(); 
+			register_to_dht();
                         destroy(&list);
                 }
         } else {
                 HIP_DEBUG("DHT is not in use");
         }
  out_err:
-        if (fp) 
+        if (fp)
                 fclose(fp);
         return (err);
 }
@@ -510,6 +513,35 @@ int hip_init_host_ids()
         /* Retrieve the keys to hipd */
 	/* Three steps because multiple large keys will not fit in the same message */
 
+	/* DSA keys and RSA anonymous are not loaded by default until bug id
+	   522 is properly solved. Run hipconf add hi default if you want to
+	   enable non-default HITs. */
+#if 0
+	/* dsa anon and pub */
+	hip_msg_init(user_msg);
+	if (err = hip_serialize_host_id_action(user_msg, ACTION_ADD,
+						0, 1, "dsa", NULL, 0, 0)) {
+		HIP_ERROR("Could not load default keys (DSA)\n");
+		goto out_err;
+	}
+	if (err = hip_handle_add_local_hi(user_msg)) {
+		HIP_ERROR("Adding of keys failed (DSA)\n");
+		goto out_err;
+	}
+
+	/* rsa anon */
+	hip_msg_init(user_msg);
+	if (err = hip_serialize_host_id_action(user_msg, ACTION_ADD,
+						1, 1, "rsa", NULL, 0, 0)) {
+		HIP_ERROR("Could not load default keys (RSA anon)\n");
+		goto out_err;
+	}
+	if (err = hip_handle_add_local_hi(user_msg)) {
+		HIP_ERROR("Adding of keys failed (RSA anon)\n");
+		goto out_err;
+	}
+#endif
+
 	/* rsa pub */
 	hip_msg_init(user_msg);
 	if (err = hip_serialize_host_id_action(user_msg, ACTION_ADD,
@@ -522,31 +554,6 @@ int hip_init_host_ids()
 		HIP_ERROR("Adding of keys failed (RSA pub)\n");
 		goto out_err;
 	}
-
-	/* rsa anon */
-	hip_msg_init(user_msg);
-	if (err = hip_serialize_host_id_action(user_msg, ACTION_ADD, 
-						1, 1, "rsa", NULL, 0, 0)) {
-		HIP_ERROR("Could not load default keys (RSA anon)\n");
-		goto out_err;
-	}
-	if (err = hip_handle_add_local_hi(user_msg)) {
-		HIP_ERROR("Adding of keys failed (RSA anon)\n");
-		goto out_err;
-	}
-
-	/* dsa anon and pub */
-	hip_msg_init(user_msg);
-	if (err = hip_serialize_host_id_action(user_msg, ACTION_ADD, 
-						0, 1, "dsa", NULL, 0, 0)) {
-		HIP_ERROR("Could not load default keys (DSA)\n");
-		goto out_err;
-	}
-	if (err = hip_handle_add_local_hi(user_msg)) {
-		HIP_ERROR("Adding of keys failed (DSA)\n");
-		goto out_err;
-	}
-
 
 	HIP_DEBUG("Keys added\n");
 	hip_get_default_hit(&default_hit);
@@ -615,6 +622,32 @@ int hip_init_raw_sock_v4(int *hip_raw_sock_v4)
 }
 
 /**
+ * Init icmpv6 socket.
+ */
+int hip_init_icmp_v6(int *icmpsockfd)
+{
+	int err = 0, on = 1;
+	struct sockaddr_in6 addr6;
+	struct icmp6_filter filter;
+
+	*icmpsockfd = socket(AF_INET6, SOCK_RAW, IPPROTO_ICMPV6);
+	HIP_IFEL(*icmpsockfd <= 0, 1, "ICMPv6 socket creation failed\n");
+	
+	ICMP6_FILTER_SETBLOCKALL(&filter);
+	ICMP6_FILTER_SETPASS(ICMPV6_ECHO_REPLY, &filter);
+	err = setsockopt(*icmpsockfd, IPPROTO_ICMPV6, ICMPV6_FILTER, &filter, 
+			 sizeof(struct icmp6_filter));
+	HIP_IFEL(err, -1, "setsockopt icmp ICMP6_FILTER failed\n");
+
+
+	err = setsockopt(*icmpsockfd, IPPROTO_IPV6, IPV6_2292PKTINFO, &on, sizeof(on));
+	HIP_IFEL(err, -1, "setsockopt icmp IPV6_RECVPKTINFO failed\n");
+
+ out_err:
+	return err;
+}
+
+/**
  * Init udp socket for nat usage.
  */
 int hip_init_nat_sock_udp(int *hip_nat_sock_udp)
@@ -658,7 +691,7 @@ int hip_init_nat_sock_udp(int *hip_nat_sock_udp)
 		goto out_err;
 	}
 
-	HIP_DEBUG_INADDR("UDP socket created and binded to addr", &myaddr.sin_addr.s_addr);
+	HIP_DEBUG_INADDR("UDP socket created and bound to addr", &myaddr.sin_addr.s_addr);
 	return 0;
 
 out_err:
@@ -671,10 +704,10 @@ out_err:
 void hip_close(int signal)
 {
 	static int terminate = 0;
-	
+
 	HIP_ERROR("Signal: %d\n", signal);
 	terminate++;
-	
+
 	/* Close SAs with all peers */
 	if (terminate == 1) {
 		hip_send_close(NULL);
@@ -710,7 +743,7 @@ void hip_exit(int signal)
 		HIP_FREE(hipd_msg);
         if (hipd_msg_v4)
         	HIP_FREE(hipd_msg_v4);
-	
+
 	hip_delete_all_sp();//empty
 
 	delete_all_addresses();
@@ -756,7 +789,7 @@ void hip_exit(int signal)
 	if (hip_nl_ipsec.fd){
 		HIP_INFO("hip_nl_ipsec.fd\n");
 		rtnl_close(&hip_nl_ipsec);
-	}	
+	}
 	if (hip_nl_route.fd){
 		HIP_INFO("hip_nl_route.fd\n");
 		rtnl_close(&hip_nl_route);
@@ -772,9 +805,9 @@ void hip_exit(int signal)
 		hip_send_agent(msg);
 		free(msg);
 	}
-	
+
 	hip_remove_lock_file(HIP_DAEMON_LOCK_FILE);
-        
+
 	if (opendht_serving_gateway)
 		freeaddrinfo(opendht_serving_gateway);
 
@@ -828,7 +861,7 @@ void hip_probe_kernel_modules()
 
 	mod_total = sizeof(mod_name) / sizeof(char *);
 
-	HIP_DEBUG("Probing for %d modules. When the modules are built-in, the errors can be ignored\n", mod_total);	
+	HIP_DEBUG("Probing for %d modules. When the modules are built-in, the errors can be ignored\n", mod_total);
 
 	for (count = 0; count < mod_total; count++)
 	{
@@ -856,7 +889,7 @@ int hip_init_certs(void) {
         
 	memset(hostname, 0, HIP_HOST_ID_HOSTNAME_LEN_MAX);
 	HIP_IFEL(gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1), -1,
-		 "gethostname failed\n");    
+		 "gethostname failed\n");
 
 	conf_file = fopen(HIP_CERT_CONF_PATH, "r");
 	if (!conf_file) {
@@ -927,7 +960,7 @@ struct hip_host_id_entry * hip_return_first_rsa(void) {
 		tmp = list_entry(curr);
 		HIP_DEBUG_HIT("Found HIT", &tmp->lhi.hit);
 		algo = hip_get_host_id_algo(tmp->host_id);
-		HIP_DEBUG("hits algo %d HIP_HI_RSA = %d\n", 
+		HIP_DEBUG("hits algo %d HIP_HI_RSA = %d\n",
 			  algo, HIP_HI_RSA);
 		if (algo == HIP_HI_RSA) goto out_err;
 	}
@@ -937,4 +970,3 @@ out_err:
 	if (algo == HIP_HI_RSA) return (tmp);
 	return NULL;
 }
-

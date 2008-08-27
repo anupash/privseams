@@ -1,7 +1,7 @@
 /*
  * Host Identity Protocol
  * Copyright (C) 2002-04 the Boeing Company
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -15,7 +15,7 @@
  *  hip_sadb.h
  *
  *  Authors: Jeff Ahrenholz <jeffrey.m.ahrenholz@boeing.com>
- * 
+ *
  * the HIP Security Association database
  *
  */
@@ -23,51 +23,23 @@
 #ifndef USER_IPSEC_SADB_H_
 #define USER_IPSEC_SADB_H_
 
-//#include <asm/types.h>		/* __u16, __u32, etc */
-//#include <sys/types.h>		/* for socket.h */
-//#include <sys/socket.h>		/* struct sockaddr */
-//#include <netinet/in.h>		/* struct sockaddr_in */
-#include <openssl/des.h>	/* des_key_schedule */
-#include <openssl/aes.h>	/* aes_key */
+#include <openssl/des.h>		/* des_key_schedule */
+#include <openssl/aes.h>		/* aes_key */
 #include <openssl/blowfish.h>	/* bf_key */
 #include <inttypes.h>
-//#include <sys/time.h>		/* timeval */
-//#include "debug.h"
 #include "hashchain.h"
 #include "hashtable.h"
 #include "ife.h"
 
-/* mode: 1-transport, 2-tunnel, 3-beet 
- * 
+/* mode: 1-transport, 2-tunnel, 3-beet
+ *
  * however right now we only support mode 3, no need for variable yet */
 #define BEET_MODE 3
-
-#if 0
-/*
- * Macros from hip.h and elsewhere
- */
-/* get pointer to IP from a sockaddr 
- *    useful for inet_ntop calls     */
-#define SA2IP(x) hip_cast_sa_addr(x)
-#define SALEN(x) hip_sockaddr_len(x)
-#define SAIPLEN(x) hip_sa_addr_len(x)
-#define SA(x) ((struct sockaddr*)x)
-#define LSI4(a) (((struct sockaddr_in*)a)->sin_addr.s_addr)
-
-#define HIP_ESP_UDP_PORT       HIP_NAT_UDP_PORT
-#define HIP_KEEPALIVE_TIMEOUT  HIP_NAT_KEEP_ALIVE_INTERVAL
-
-/**** end of definitions from hip_types.h ****/
-
-
-/*
- * definitions
- */
-#define SADB_SIZE 512 
-#endif
+// not implemented yet
+#define DEFAULT_LIFETIME 0
 
 /* HIP Security Association entry */
-typedef struct hip_sa_entry 
+typedef struct hip_sa_entry
 {
 	pthread_mutex_t rw_lock;				/* keep other threads from modifying */
 	int direction;							/* direction of the SA: inbound/outbound */
@@ -84,10 +56,8 @@ typedef struct hip_sa_entry
 	uint16_t dst_port;						/* dst port for UDP encaps. ESP */
 	/****************** crypto parameters *******************/
 	int ealg;								/* crypto transform in use */
-	uint32_t a_keylen;						/* length of raw keys */
-	uint32_t e_keylen;
-	unsigned char *a_key;					/* raw crypto keys */
-	unsigned char *e_key;
+	struct hip_crypto_key *auth_key;		/* raw crypto keys */
+	struct hip_crypto_key *enc_key;
 	des_key_schedule ks[3];					/* 3-DES keys */
 	AES_KEY *aes_key;						/* AES key */
 	BF_KEY *bf_key;							/* BLOWFISH key */
@@ -105,14 +75,14 @@ typedef struct hip_sa_entry
 	hash_chain_t *active_hchain;
 	hash_chain_t *next_hchain;
 	/* for incoming SA */
-	int tolerance;
+	int esp_prot_tolerance;
 	unsigned char *active_anchor;
 	unsigned char *next_anchor;
 	/* for both */
-	uint8_t active_transform;
-	uint8_t next_transform;
+	uint8_t esp_prot_transform;
 } hip_sa_entry_t;
 
+/* stores short-cuts to an entry, indexed by dst_addr and spi */
 typedef struct hip_link_entry
 {
 	struct in6_addr *dst_addr;				/* destination address of outer IP header */
@@ -120,100 +90,186 @@ typedef struct hip_link_entry
 	hip_sa_entry_t *linked_sa_entry;		/* direct link to sa entry */
 } hip_link_entry_t;
 
+/* declarations for the callback wrappers */
 static DECLARE_LHASH_HASH_FN(hip_sa_entry_hash, const hip_sa_entry_t *);
 static DECLARE_LHASH_COMP_FN(hip_sa_entries_compare, const hip_sa_entry_t *);
 static DECLARE_LHASH_HASH_FN(hip_link_entry_hash, const hip_sa_entry_t *);
 static DECLARE_LHASH_COMP_FN(hip_link_entries_compare, const hip_sa_entry_t *);
 
+/** initializes the sadb and the linkdb
+ *
+ * @return 0, if no error occured, else -1
+ */
 int hip_sadb_init(void);
-unsigned long hip_sa_entry_hash(const hip_sa_entry_t *sa_entry);
-int hip_sa_entries_compare(const hip_sa_entry_t *sa_entry1,
-		const hip_sa_entry_t *sa_entry2);
-unsigned long hip_link_entry_hash(const hip_link_entry_t *link_entry);
-int hip_link_entries_compare(const hip_link_entry_t *link_entry1,
-		const hip_link_entry_t *link_entry2);
+
+/** uninits the sadb and linkdb by deleting all entries stored in there
+ *
+ * @return 0, if no error occured, else -1
+ */
+int hip_sadb_uninit(void);
+
+/** to be called when a SA entry is to be added or updated
+ *
+ * @param	...
+ * @return	0, if no error occured, else -1
+ */
 int hip_sadb_add(int direction, uint32_t spi, uint32_t mode,
 		struct in6_addr *src_addr, struct in6_addr *dst_addr,
 		struct in6_addr *inner_src_addr, struct in6_addr *inner_dst_addr,
 		uint8_t encap_mode, uint16_t src_port, uint16_t dst_port,
-		int ealg, uint32_t a_keylen, uint32_t e_keylen,
-		unsigned char *a_key, unsigned char *e_key, uint64_t lifetime,
-		uint8_t esp_prot_transform, unsigned char *esp_prot_anchor,
-		int retransmission, int update);
+		int ealg, struct hip_crypto_key *auth_key, struct hip_crypto_key *enc_key,
+		uint64_t lifetime, uint8_t esp_prot_transform,
+		unsigned char *esp_prot_anchor, int retransmission, int update);
+
+/** to be called if a SA entry and all its links should be remove from the sadb
+ *
+ * @param	dst_addr the destination ip address of the entry
+ * @param	spi the spi number of the entry
+ * @return	0, if no error occured, else -1
+ */
+int hip_sadb_delete(struct in6_addr *dst_addr, uint32_t spi);
+
+/** to be called, if the whole sadb should be flushed
+ *
+ * @return	0, if no error occured, else -1
+ */
+int hip_sadb_flush(void);
+
+/** searches the linkdb
+ *
+ * @param	dst_addr destination address of the searched entry
+ * @param	spi SPI number of the searched entry
+ * @return	the searched entry; NULL if no matching entry found
+ */
+hip_sa_entry_t * hip_sa_entry_find_inbound(struct in6_addr *dst_addr, uint32_t spi);
+
+/** searches the linkdb for a SA entry
+ *
+ * @param	src_hit the source HIT of the searched entry
+ * @param	dst_hit the destination HIT of the searched entry
+ * @return	the searched SA entry; NULL if no matching entry found
+ */
+hip_sa_entry_t * hip_sa_entry_find_outbound(struct in6_addr *src_hit,
+		struct in6_addr *dst_hit);
+
+/** prints the whole contents of the sadb
+ */
+void hip_sadb_print(void);
+
+
+/******** hashtable helper functions *********/
+
+/** hash function for the sa hash table */
+unsigned long hip_sa_entry_hash(const hip_sa_entry_t *sa_entry);
+
+/** compare function for the sa hash table */
+int hip_sa_entries_compare(const hip_sa_entry_t *sa_entry1,
+		const hip_sa_entry_t *sa_entry2);
+
+/** hash function for the link hash table */
+unsigned long hip_link_entry_hash(const hip_link_entry_t *link_entry);
+
+/** compare function for the link hash table */
+int hip_link_entries_compare(const hip_link_entry_t *link_entry1,
+		const hip_link_entry_t *link_entry2);
+
+/******** sadb helper functions *********/
+
+/** allocates memory for a new SA entry and adds it to the db
+ *
+ * @param	...
+ * @return	0, if no error occured, else != 0
+ */
 int hip_sa_entry_add(int direction, uint32_t spi, uint32_t mode,
 		struct in6_addr *src_addr, struct in6_addr *dst_addr,
 		struct in6_addr *inner_src_addr, struct in6_addr *inner_dst_addr,
 		uint8_t encap_mode, uint16_t src_port, uint16_t dst_port,
-		int ealg, uint32_t a_keylen, uint32_t e_keylen,
-		unsigned char *a_key, unsigned char *e_key, uint64_t lifetime,
-		uint8_t esp_prot_transform, unsigned char *esp_prot_anchor);
+		int ealg, struct hip_crypto_key *auth_key, struct hip_crypto_key *enc_key,
+		uint64_t lifetime, uint8_t esp_prot_transform,
+		unsigned char *esp_prot_anchor, int update);
+
+/** updates an already stored entry
+ *
+ * @param	...
+ * @return	0, if no error occured, else != 0
+ */
 int hip_sa_entry_update(int direction, uint32_t spi, uint32_t mode,
 		struct in6_addr *src_addr, struct in6_addr *dst_addr,
 		struct in6_addr *inner_src_addr, struct in6_addr *inner_dst_addr,
 		uint8_t encap_mode, uint16_t src_port, uint16_t dst_port,
-		int ealg, uint32_t a_keylen, uint32_t e_keylen,
-		unsigned char *a_key, unsigned char *e_key, uint64_t lifetime,
-		uint8_t esp_prot_transform, unsigned char *esp_prot_anchor);
-int hip_sa_entry_set(hip_sa_entry_t *entry, int direction, uint32_t spi, uint32_t mode,
-		struct in6_addr *src_addr, struct in6_addr *dst_addr,
+		int ealg, struct hip_crypto_key *auth_key, struct hip_crypto_key *enc_key,
+		uint64_t lifetime, uint8_t esp_prot_transform,
+		unsigned char *esp_prot_anchor, int update);
+
+/** sets all values of a SA entry
+ *
+ * @param	...
+ * @return	0, if no error occured, else != 0
+ */
+int hip_sa_entry_set(hip_sa_entry_t *entry, int direction, uint32_t spi,
+		uint32_t mode, struct in6_addr *src_addr, struct in6_addr *dst_addr,
 		struct in6_addr *inner_src_addr, struct in6_addr *inner_dst_addr,
 		uint8_t encap_mode, uint16_t src_port, uint16_t dst_port,
-		int ealg, uint32_t a_keylen, uint32_t e_keylen,
-		unsigned char *a_key, unsigned char *e_key, uint64_t lifetime,
-		uint8_t esp_prot_transform, unsigned char *esp_prot_anchor);
-hip_sa_entry_t * hip_sa_entry_find_inbound(struct in6_addr *dst_addr, uint32_t spi);
-hip_sa_entry_t * hip_sa_entry_find_outbound(struct in6_addr *src_hit,
-		struct in6_addr *dst_hit);
-int hip_sa_entry_delete(struct in6_addr *src_addr, struct in6_addr *dst_addr);
-int hip_link_entry_add(struct in6_addr *dst_addr, hip_sa_entry_t *entry);
-int hip_link_entries_add(hip_sa_entry_t *entry);
-hip_link_entry_t *hip_link_entry_find(struct in6_addr *dst_addr, uint32_t spi);
-int hip_link_entry_delete(struct in6_addr *dst_addr, hip_sa_entry_t *entry);
-int hip_link_entries_delete_all(hip_sa_entry_t *entry);
-void hip_link_entry_print(hip_link_entry_t *entry);
-void hip_sa_entry_free(hip_sa_entry_t * entry);
-int hip_sadb_flush(void);
-void hip_sa_entry_print(hip_sa_entry_t *entry);
-void hip_sadb_print(void);
-void hip_linkdb_print(void);
+		int ealg, struct hip_crypto_key *auth_key, struct hip_crypto_key *enc_key,
+		uint64_t lifetime, uint8_t esp_prot_transform,
+		unsigned char *esp_prot_anchor, int update);
 
-#if 0
-/* HIP SADB destintation cache entry */
-typedef struct _hip_sadb_dst_entry
-{
-	struct _hip_sadb_dst_entry *next;
-	struct sockaddr_storage addr;
-	hip_sadb_entry *sadb_entry;
-	
-} hip_sadb_dst_entry;
-
-/*
- * functions
+/** deletes a SA entry and all its links
+ *
+ * @param	...
+ * @return	0, if no error occured, else != 0
  */
-void hip_sadb_init();
-int hip_sadb_add(__u32 type, __u32 mode, struct sockaddr *inner_src,
-    struct sockaddr *inner_dst, struct sockaddr *src, struct sockaddr *dst, __u16 sport,
-    __u16 dport, int direction, __u32 spi, __u8 *e_key, __u32 e_type, __u32 e_keylen,
-    __u8 *a_key, __u32 a_type, __u32 a_keylen, __u32 lifetime, __u16 hitmagic,
-    uint8_t nat_mode, uint8_t esp_prot_transform, unsigned char *esp_prot_anchor);
-int hip_sadb_delete(__u32 type, struct sockaddr *src, struct sockaddr *dst,
-    __u32 spi);
-void hip_remove_expired_lsi_entries();
-void hip_add_lsi(struct sockaddr *addr, struct sockaddr *lsi4, 
-	struct sockaddr *lsi6);
-int buffer_packet(struct sockaddr *lsi, __u8 *data, int len);
-void unbuffer_packets(hip_lsi_entry *entry);
-hip_lsi_entry *hip_lookup_lsi(struct sockaddr *lsi);
-hip_sadb_entry *hip_sadb_lookup_spi(__u32 spi);
-hip_sadb_entry *hip_sadb_lookup_addr(struct sockaddr *addr);
-hip_sadb_entry *hip_sadb_get_next(hip_sadb_entry *placemark);
+int hip_sa_entry_delete(struct in6_addr *src_addr, struct in6_addr *dst_addr);
 
-int hip_select_family_by_proto(__u32 lsi, __u8 proto, __u8 *header,
-        struct timeval *now);
-int hip_add_proto_sel_entry(__u32 lsi, __u8 proto, __u8 *header, int family,
-        int dir, struct timeval *now);
-void hip_remove_expired_sel_entries();
-#endif
+/** adds a new entry to the passed entry in the linkdb
+ *
+ * @param	...
+ * @return	0, if no error occured, else != 0
+ */
+int hip_link_entry_add(struct in6_addr *dst_addr, hip_sa_entry_t *entry);
+
+/** adds new entries to the passed entry in the linkdb for all destination address
+ * and spi combination
+ *
+ * @param	...
+ * @return	0, if no error occured, else != 0
+ */
+int hip_link_entries_add(hip_sa_entry_t *entry);
+
+/** searches the linkdb for a link entry
+ *
+ * @param	dst_addr destination address of the searched entry
+ * @param	spi SPI number of the searched entry
+ * @return	the searched link entry; NULL if no matching entry found
+ */
+hip_link_entry_t *hip_link_entry_find(struct in6_addr *dst_addr, uint32_t spi);
+
+/** deletes a link entry from the linkdb
+ *
+ * @param	...
+ * @return	0, if no error occured, else != 0
+ */
+int hip_link_entry_delete(struct in6_addr *dst_addr, uint32_t spi);
+
+/** deletes all link entries to the passed entry in the linkdb for all
+ * destination address and spi combination
+ *
+ * @param	...
+ * @return	0, if no error occured, else != 0
+ */
+int hip_link_entries_delete_all(hip_sa_entry_t *entry);
+
+/** prints a link entry */
+void hip_link_entry_print(hip_link_entry_t *entry);
+
+/** frees all members of a SA entry */
+void hip_sa_entry_free(hip_sa_entry_t * entry);
+
+/** prints a SA entry */
+void hip_sa_entry_print(hip_sa_entry_t *entry);
+
+/** prints all entries in the the linkdb */
+void hip_linkdb_print(void);
 
 #endif /* USER_IPSEC_SADB_H_ */
 
