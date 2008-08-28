@@ -545,7 +545,12 @@ void firewall_exit()
 	hip_fw_flush_iptables();
 
 	hip_firewall_delete_hldb();
-	
+
+#ifdef CONFIG_HIP_PERFORMANCE
+	/* Deallocate memory of perf_set after finishing all of tests */
+	hip_perf_destroy(perf_set);
+#endif
+
 	hip_remove_lock_file(HIP_FIREWALL_LOCK_FILE);
 }
 

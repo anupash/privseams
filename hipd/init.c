@@ -16,6 +16,7 @@
 #include <sys/types.h>
 #include "debug.h"
 #include "hi3.h"
+#include "performance.h"
 
 extern struct hip_common *hipd_msg;
 extern struct hip_common *hipd_msg_v4;
@@ -770,6 +771,11 @@ void hip_exit(int signal)
         
 	if (opendht_serving_gateway)
 		freeaddrinfo(opendht_serving_gateway);
+
+#ifdef CONFIG_HIP_PERFORMANCE
+	/* Deallocate memory of perf_set after finishing all of tests */
+	hip_perf_destroy(perf_set);
+#endif
 
 	return;
 }

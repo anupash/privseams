@@ -234,3 +234,67 @@ int hip_perf_close(perf_set_t *perf_set){
 out_err:
 	return err;
 }
+
+/*!
+ * \brief Deallocate memory of a performance set
+ * 
+ * Deallocate memory of the given performance set, including each member of
+ * the perf_set_t data structure.
+ * \author	Dongsu Park
+ * 
+ * \see hip_perf_close
+ * 
+ * \param perf_set The respective performance measurement created by hip_perf_create.
+ * \return Nothing.
+ */
+void hip_perf_destroy(perf_set_t *perf_set){
+	int slot=0;
+
+	if (perf_set->files) {
+		free(perf_set->files);
+		perf_set->files = NULL;
+	}
+
+	/* Deallocate every slot in perf_set->names.
+	 * You need to do it because every slot memory is allocated
+	 * in hip_perf_set_name().
+	 */
+	if (perf_set->names) {
+		for (slot = 0; slot < PERF_MAX; slot++) {
+			if (perf_set->names[slot]) {
+				free(perf_set->names[slot]);
+				perf_set->names[slot] = NULL;
+			}
+		}
+		free(perf_set->names);
+		perf_set->names = NULL;
+	}
+
+	if (perf_set->linecount) {
+		free(perf_set->linecount);
+		perf_set->linecount = NULL;
+	}
+	if (perf_set->times) {
+		free(perf_set->times);
+		perf_set->times = NULL;
+	}
+	if (perf_set->result) {
+		free(perf_set->result);
+		perf_set->result = NULL;
+	}
+	if (perf_set->running) {
+		free(perf_set->running);
+		perf_set->running = NULL;
+	}
+	if (perf_set->writable) {
+		free(perf_set->writable);
+		perf_set->writable = NULL;
+	}
+
+	if (perf_set) {
+		free(perf_set);
+		perf_set = NULL;
+	}
+
+	return;
+}

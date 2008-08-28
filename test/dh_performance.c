@@ -822,6 +822,8 @@ int main(int argc, char ** argv){
 	printf("Hash calculation took %.3f sec (%.10f sec per hash)\n", bench_secs, bench_secs / sw_hashloops);
 	printf("%4.2f hashes per sec, %4.2f hashes per min\n", sw_bench_loops/bench_secs*1000, sw_hashloops/bench_secs*60*1000);
 
-
-
+#ifdef CONFIG_HIP_PERFORMANCE
+	/* Deallocate memory of perf_set after finishing all of tests */
+	hip_perf_destroy(perf_set);
+#endif
 }
