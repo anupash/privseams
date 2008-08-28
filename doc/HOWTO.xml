@@ -511,14 +511,22 @@ $ ls -l bin/
         </listitem>
         <listitem>
           <para>
-		  Get a patch for HIPL on OpenWRT from <ulink url="http://dongsupark.de/hipl/openwrt/7.09/patches/hipl_openwrt-7.09.diff" />, which produces Makefiles for hipl, libxml2, etc. And apply it into the kamikaze_7.09 source tree. Then you can find package/hipl/Makefile. NOTE: this patch is originally made by Dmitriy Kuptsov. Thanks.
+		  Get all patches for HIPL on OpenWRT from <ulink url="http://dongsupark.de/hipl/openwrt/7.09/patches/" />, which produce Makefiles and configuration files for necessary packages. And apply them into the kamikaze_7.09 source tree. NOTE: this patch is originally made by Dmitriy Kuptsov. Thanks.
           </para>
           <para>
   <programlisting>
   $ ls
-  hipl_openwrt-7.09.diff    kamikaze_7.09
+  64 etc_config_dhcp.diff      64 etc_firewall_user.diff
+  64 etc_config_network.diff   64 etc_hostapd.diff
+  64 etc_config_wireless.diff  64 hipl_openwrt-7.09.diff
+  64 kamikaze_7.09
   $ cd kamikaze_7.09
   $ patch -p1 &lt; ../hipl_openwrt-7.09.diff
+  $ patch -p1 &lt; ../etc_config_dhcp.diff
+  $ patch -p1 &lt; ../etc_config_network.diff
+  $ patch -p1 &lt; ../etc_config_wireless.diff
+  $ patch -p1 &lt; ../etc_firewall_user.diff
+  $ patch -p1 &lt; ../etc_hostapd.diff
   $ ls package/hipl/Makefile
   Makefile
   </programlisting>
@@ -653,20 +661,16 @@ $ svn checkout https://svn.openwrt.org/openwrt/trunk
         </listitem>
         <listitem>
           <para>
-          Apply a patch for hipl packages in OpenWRT <ulink url="http://dongsupark.de/hipl/openwrt/devel/patches/hipl_openwrt_packages-svn.diff" />, and also a patch for hipl kernel configs in OpenWRT <ulink url="http://dongsupark.de/hipl/openwrt/devel/patches/hipl_openwrt_kernel-svn.diff" />.
+          Get all patches for hipl packages in OpenWRT <ulink url="http://dongsupark.de/hipl/openwrt/devel/patches/" />, and apply them into the kamikaze_7.09 source tree.
           </para>
           <para>
 <programlisting>
-$ cd trunk
+$ ls
+64 hipl_openwrt_kernel-svn.diff  64 hipl_openwrt_packages-svn.diff
+64 kamikaze_7.09/
+$ cd kamikaze_7.09
 $ patch -p1 &lt; ../hipl_openwrt_packages-svn.diff
-patching file package/hipl/files/hipl.init
-patching file package/hipl/files/hipl.modules
-patching file package/hipl/Makefile
-patching file package/libxml2/Makefile
 $ patch -p1 &lt; ../hipl_openwrt_kernel-svn.diff
-patching file target/linux/atheros/config-2.6.21
-patching file target/linux/atheros/Makefile
-patching file target/linux/atheros/patches-2.6.21/beet-interfamily-sleep-loopback-2.6.21.3.patch
 </programlisting>
           </para>
         </listitem>
@@ -799,6 +803,7 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
 define Package/hipl/install
     $(INSTALL_DIR) $(1)/etc/init.d/
     $(INSTALL_DIR) $(1)/etc/hip/
+    $(INSTALL_DIR) $(1)/etc/hip/test/
     $(INSTALL_DIR) $(1)/etc/modules.d/
     $(INSTALL_DIR) $(1)/usr/bin/
     $(INSTALL_DIR) $(1)/usr/include/
@@ -806,8 +811,10 @@ define Package/hipl/install
     $(INSTALL_DIR) $(1)/usr/lib/
     $(INSTALL_DIR) $(1)/usr/sbin/
 
-    $(INSTALL_DATA) ./files/hipl.init $(1)/etc/init.d/hipl
-    $(INSTALL_DATA) ./files/hipl.init ./files/hipl.modules $(1)/etc/modules.d/35-hipl
+    $(INSTALL_DATA) ./files/hipd.init $(1)/etc/init.d/hipd
+    $(INSTALL_DATA) ./files/hipfw.init $(1)/etc/init.d/hipfw
+    $(INSTALL_DATA) ./files/hipl.modules $(1)/etc/modules.d/35-hipl
+    $(INSTALL_DATA) ./files/test/* $(1)/etc/init.d/test/
     $(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/conntest* $(1)/usr/bin/
     $(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/hipsetup* $(1)/usr/bin/
     $(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/libinet6test* $(1)/usr/bin/
