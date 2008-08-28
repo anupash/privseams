@@ -11,10 +11,13 @@ int hip_send_close(struct hip_common *msg)
 	if (msg)
 		hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
 
+	hip_for_each_opp(hip_oppdb_entry_clean_up, NULL);
+	hip_for_each_oppip(hip_oppipdb_del_entry_by_entry, NULL);
+
 	HIP_IFEL(hip_for_each_ha(&hip_xmit_close, (void *) hit), -1,
 		 "Failed to reset all HAs\n");
 
- out_err:
+out_err:
 
 	return err;
 }

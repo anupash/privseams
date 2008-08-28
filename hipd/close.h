@@ -14,6 +14,7 @@
 #include "crypto.h"
 #include "misc.h"
 #include "pk.h"
+#include "oppdb.h"
 
 int hip_send_close(struct hip_common *msg);
 int hip_xmit_close(hip_ha_t *entry, void *opaque);
