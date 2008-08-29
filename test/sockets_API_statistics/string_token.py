@@ -120,7 +120,13 @@ def simple_api_structure_counter(api_name, token_list):
 	for strings in temp:
 		#BUGGY here? how to make strong the "if" condition for getting
 		# the correct "struct" declaration.
-		if ((strings == api_name) and (temp[i - 1] == 'struct') and (temp[i + 1] != '*') and (temp[i - 2] != ',') and temp[i - 2] != '('):
+		#example: struct oops* 
+		#example: struct oops**
+		
+		if (i == 0):
+			continue
+		
+		if ((api_name in strings) and ('struct' in temp[i - 1])):
 			counter = counter + 1
 		i = i + 1
 	return counter
