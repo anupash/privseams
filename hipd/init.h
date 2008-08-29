@@ -8,6 +8,7 @@
 #include <sys/wait.h>
 #include <sys/utsname.h>
 #include <sys/types.h>
+#include <linux/icmpv6.h>
 #include "xfrmapi.h"
 #include "hipconf.h"
 #include "oppipdb.h"
@@ -43,6 +44,32 @@
 #include "hipconf.h"
 #include "oppipdb.h"
 #include "hi3.h"
+
+/** ICMPV6_FILTER related stuff **/
+#define BIT_CLEAR(nr, addr) do { ((__u32 *)(addr))[(nr) >> 5] &= ~(1U << ((nr) & 31)); } while(0)
+#define BIT_SET(nr, addr) do { ((__u32 *)(addr))[(nr) >> 5] |= (1U << ((nr) & 31)); } while(0)
+#define BIT_TEST(nr, addr) do { (__u32 *)(addr))[(nr) >> 5] & (1U << ((nr) & 31)); } while(0)
+
+#ifndef ICMP6_FILTER_WILLPASS
+#define ICMP6_FILTER_WILLPASS(type, filterp) \
+        (BIT_TEST((type), filterp) == 0)
+
+#define ICMP6_FILTER_WILLBLOCK(type, filterp) \
+        BIT_TEST((type), filterp)
+
+#define ICMP6_FILTER_SETPASS(type, filterp) \
+        BIT_CLEAR((type), filterp)
+
+#define ICMP6_FILTER_SETBLOCK(type, filterp) \
+        BIT_SET((type), filterp)
+
+#define ICMP6_FILTER_SETPASSALL(filterp) \
+        memset(filterp, 0, sizeof(struct icmp6_filter));
+
+#define ICMP6_FILTER_SETBLOCKALL(filterp) \
+        memset(filterp, 0xFF, sizeof(struct icmp6_filter));
+#endif
+/** end ICMPV6_FILTER related stuff **/
 
 #define USER_NOBODY "nobody"
  

@@ -11,7 +11,6 @@
 #include <netinet/ip_icmp.h>
 #include <linux/icmpv6.h>
 
-
 #include "debug.h"
 #include "hidb.h"
 #include "hashtable.h"
@@ -34,4 +33,4 @@ int hip_proxy_update_state(struct in6_addr *client_addr,
 			   hip_hit_t *peer_hit,
 			   int state);
 
-#endif
+#endif /* PROXYDB_H */

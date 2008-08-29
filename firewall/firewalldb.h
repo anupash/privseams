@@ -44,4 +44,5 @@ int firewall_init_raw_sock_udp_v6(int *firewall_raw_sock_v6);
 /*tcp*/
 int firewall_init_raw_sock_tcp_v6(int *firewall_raw_sock_v6);
 int firewall_init_raw_sock_tcp_v4(int *firewall_raw_sock_v4);
-#endif
+
+#endif /* HIP_FIREWALL_H */
