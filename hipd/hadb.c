@@ -961,6 +961,9 @@ void hip_hadb_delete_peer_addrlist_one(hip_ha_t *entry, struct in6_addr *addr)
 
 int hip_del_peer_info_entry(hip_ha_t *ha)
 {
+	hip_opp_block_t *opp_entry   = NULL;
+	hip_oppip_t     *oppip_entry = NULL;
+
 	hip_hadb_remove_state_hit(ha);
 	/* by now, if everything is according to plans, the refcnt
 	   should be 1 */
@@ -974,6 +977,22 @@ int hip_del_peer_info_entry(hip_ha_t *ha)
 	hip_hadb_delete_state(ha);
 	//hip_db_put_ha(ha, hip_hadb_delete_state);
 	/* and now zero --> deleted*/
+
+	//if the ha entry is there, the opp entry
+	//has already been removed
+
+	/*empty the two opp dbs*/
+
+	//delete entry from oppdb
+	opp_entry = hip_oppdb_find_by_ip(&ha->preferred_address);
+	if(opp_entry)
+		hip_oppdb_entry_clean_up(opp_entry);
+
+	//delete entry from oppipdb
+	oppip_entry = hip_oppipdb_find_byip(&ha->preferred_address);
+	if(oppip_entry)
+		hip_oppipdb_del_entry_by_entry(oppip_entry);
+
 	return 0;
 }
 

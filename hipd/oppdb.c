@@ -723,3 +723,38 @@ out_err:
 }
 
 #endif /* CONFIG_HIP_OPPORTUNISTIC */
+
+
+/**
+ * hip_oppdb_find_byip:
+ * Seeks an ip within the oppdb hash table.
+ * If the ip is found in the table, that host is not HIP capable.
+ *
+ * @param ip_peer: pointer to the ip of the host to check whether 
+ *                 it is HIP capable
+ * @return pointer to the entry if the ip is found in the table; NULL otherwise
+ */
+hip_opp_block_t *hip_oppdb_find_by_ip(const struct in6_addr *ip_peer)
+{
+	int i = 0;
+	hip_opp_block_t *this, *ret = NULL;
+	hip_list_t *item, *tmp;
+
+	HIP_LOCK_HT(&opp_db);
+	list_for_each_safe(item, tmp, oppdb, i)
+	{
+		this = list_entry(item);
+HIP_DEBUG_IN6ADDR("###### ", &this->peer_ip);
+HIP_DEBUG_IN6ADDR("###### ", ip_peer);
+		if(ipv6_addr_cmp(&this->peer_ip, ip_peer) == 0){
+			HIP_DEBUG("The ip was found in oppdb. Peer non-HIP capable.\n");
+			ret = this;
+			break;
+		}
+	}
+
+ out_err:
+	HIP_UNLOCK_HT(&opp_db);
+	return ret;
+}
+

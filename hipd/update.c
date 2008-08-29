@@ -1887,6 +1887,9 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 		hip_put_ha(entry);
 	}
 
+	//empty the oppipdb
+	empty_oppipdb();
+
 	return err;
 }
 
@@ -2723,6 +2726,9 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 		}
 	}
 
+	//empty the oppipdb
+	empty_oppipdb();
+
  out_err:
 
 	return;
@@ -3113,5 +3119,9 @@ int hip_update_handle_stun(void* pkg, int len,
 		HIP_DEBUG_HIT("receive a stun  from 1:   " ,src_addr );
 		hip_external_ice_receive_pkt_all(pkg, len, src_addr, sinfo->src_port);
 	}
+}
+
+void empty_oppipdb(){
+	hip_for_each_oppip(hip_oppipdb_del_entry_by_entry, NULL);
 }
 
