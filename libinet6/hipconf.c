@@ -1770,7 +1770,12 @@ int hip_get_hits(hip_common_t *msg, char *opt)
 				} else {
 					HIP_INFO(" Unknown algorithm ");	
 				}
-				HIP_INFO("%s\n", hit_s);
+				HIP_INFO("%s", hit_s);
+
+				inet_ntop(AF_INET, &endp->lsi, lsi_s,
+					  INET_ADDRSTRLEN);
+				
+				HIP_INFO("     LSI %s\n", lsi_s);				
 				
 			} else {
 				HIP_ERROR("Unrelated parameter in user "\

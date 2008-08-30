@@ -38,7 +38,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	struct hip_tlv_common *param = NULL;
 	char host[NI_MAXHOST];
 	extern int hip_icmp_interval;
-	struct hip_tlv_common *param = NULL;	
 	struct hip_heartbeat * heartbeat;
 
 	HIP_ASSERT(src->sin6_family == AF_INET6);
