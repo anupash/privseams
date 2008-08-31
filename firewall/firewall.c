@@ -1687,15 +1687,18 @@ int main(int argc, char **argv){
 	memset(&default_hit, 0, sizeof(default_hit));
 	memset(&proxy_hit, 0, sizeof(default_hit));
 
-
-	if (!hip_query_default_local_hit_from_hipd(&default_hit))
-		ipv6_addr_copy(&proxy_hit, (struct in6_addr *) hip_fw_get_default_hit());
-	HIP_DEBUG_HIT("Default hit is ",  &proxy_hit);
-
-//	HIP_DEBUG_HIT("proxy_hit: ", &proxy_hit);
+	// only needed by hip proxy
+	// XX TODO change proxy to use hip_fw_get_default_hit() instead of own variable
+	if (hip_proxy_status)
+	{
+		if (!hip_query_default_local_hit_from_hipd())
+			ipv6_addr_copy(&proxy_hit, (struct in6_addr *) hip_fw_get_default_hit());
+		HIP_DEBUG_HIT("Default hit is ",  &proxy_hit);
+	}
 
 	check_and_write_default_config();
 
+	// default debug level is none
 	hip_set_logdebug(LOGDEBUG_NONE);
 
 	while ((ch = getopt(argc, argv, "f:t:vdFHAbkipehsolF")) != -1)
@@ -1863,6 +1866,8 @@ int main(int argc, char **argv){
 
 	highest_descriptor = maxof(3, hip_fw_sock, h4->fd, h6->fd);
 
+	// let's show that the firewall is running even with debug NONE
+	printf("firewall running...\n");
 
 	// do all the work here
 	while (1) {
@@ -2035,30 +2040,14 @@ void firewall_increase_netlink_buffers(){
 	popen("echo 1048576 > /proc/sys/net/core/rmem_default; echo 1048576 > /proc/sys/net/core/rmem_max;echo 1048576 > /proc/sys/net/core/wmem_default;echo 1048576 > /proc/sys/net/core/wmem_max", "r");
 }
 
-/* TODO move this and next function where they belong
- *
- * @note located in user_ipsec_api before, but now also used for proxy
- */
-hip_hit_t *hip_fw_get_default_hit(void)
-{
-	if (ipv6_addr_is_null(&default_hit))
-	{
-		_HIP_DEBUG("Querying hipd for default hit\n");
-		if (hip_query_default_local_hit_from_hipd(&default_hit))
-			return NULL;
-	}
-
-	return &default_hit;
-}
 
 /* Get default HIT*/
-int hip_query_default_local_hit_from_hipd(hip_hit_t *hit)
+int hip_query_default_local_hit_from_hipd(void)
 {
 	int err = 0;
 	struct hip_common *msg = NULL;
 	struct hip_tlv_common *param = NULL;
-	hip_hit_t *default_hit  = NULL;
-	struct endpoint_hip *endp = NULL;
+	hip_hit_t *hit  = NULL;
 
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEFAULT_HIT,0),-1,
@@ -2067,12 +2056,29 @@ int hip_query_default_local_hit_from_hipd(hip_hit_t *hit)
 		 "send/recv daemon info\n");
 
 	HIP_IFE(!(param = hip_get_param(msg, HIP_PARAM_HIT)), -1);
-	default_hit = hip_get_param_contents_direct(param);
-	ipv6_addr_copy(hit, default_hit);
+	hit = hip_get_param_contents_direct(param);
+	ipv6_addr_copy(&default_hit, hit);
 
 out_err:
 	return err;
+}
 
+
+/* TODO move this and next function where they belong
+ *
+ * @note located in user_ipsec_api before, but now also used for proxy
+ */
+hip_hit_t *hip_fw_get_default_hit(void)
+{
+	// only query for default hit if global variable is not set
+	if (ipv6_addr_is_null(&default_hit))
+	{
+		_HIP_DEBUG("Querying hipd for default hit\n");
+		if (hip_query_default_local_hit_from_hipd())
+			return NULL;
+	}
+
+	return &default_hit;
 }
 
 

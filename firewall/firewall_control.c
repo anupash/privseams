@@ -58,7 +58,7 @@ out_err:
 	hip_build_user_hdr(msg, SO_HIP_FIREWALL_QUIT, 0);
 	HIP_IFEL(hip_fw_sendto_hipd(msg), -1,
 		 "Could not send quit message to daemon.\n");
-	
+
 	if (hip_fw_sock)
 		close(hip_fw_sock);
 	if (msg != NULL)
@@ -80,6 +80,7 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 	int type, err = 0, param_type;
 	struct hip_keys *keys = NULL;
 	struct in6_addr *hit_s = NULL, *hit_r = NULL;
+	extern int hip_lsi_support;
 
 	HIP_DEBUG("Handling message from hipd\n");
 
@@ -88,8 +89,9 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 	switch(type) {
 	case SO_HIP_FW_BEX_DONE:
 	case SO_HIP_FW_UPDATE_DB:
-	        handle_bex_state_update(msg);
-	        break;
+		if (hip_lsi_support)
+			handle_bex_state_update(msg);
+		break;
 	case SO_HIP_IPSEC_ADD_SA:
 		HIP_DEBUG("Received add sa request from hipd\n");
 		HIP_IFEL(handle_sa_add_request(msg), -1,
@@ -237,14 +239,14 @@ int hip_fw_sendto_hipd(void *msg)
        /* Variables. */
        struct sockaddr_in6 sock_addr;
        int n, alen, len;
-       
+
        bzero(&sock_addr, sizeof(sock_addr));
        sock_addr.sin6_family = AF_INET6;
        sock_addr.sin6_port = htons(HIP_DAEMON_LOCAL_PORT);
        sock_addr.sin6_addr = in6addr_loopback;
 
        len = hip_get_msg_total_len(msg);
-    
+
        alen = sizeof(sock_addr);
        n = sendto(hip_fw_sock, msg, len, 0,
                   (struct sockaddr *)&sock_addr, alen);
@@ -352,8 +354,8 @@ int request_hipproxy_status(void)
 
         //n = sendto(hip_fw_sock, msg, hip_get_msg_total_len(msg),
         //		0,(struct sockaddr *)dst, sizeof(struct sockaddr_in6));
-        
-        HIP_IFEL(hip_fw_sendto_hipd(msg), -1, 
+
+        HIP_IFEL(hip_fw_sendto_hipd(msg), -1,
 		 "HIP_HIPPROXY_STATUS_REQUEST: Sendto HIPD failed.\n");
 	HIP_DEBUG("HIP_HIPPROXY_STATUS_REQUEST: Sendto firewall OK.\n");
 
