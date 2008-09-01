@@ -75,6 +75,12 @@ void keygen_callback(int a, int b, void* arg);
 #define KEYGEN_CALLBACK NULL
 #endif
 
+#ifdef OPENSSL_NO_SHA0
+# define HIP_SHA(buffer, total_len, hash)	SHA1((buffer), (total_len), (hash));
+#else
+# define HIP_SHA(buffer, total_len, hash)	SHA((buffer), (total_len), (hash));
+#endif
+
 int ssl_rsa_verify(u8 *digest, u8 *public_key, u8 *signature, int pub_klen);
 int ssl_dsa_verify(u8 *digest, u8 *public_key, u8 *signature);
 

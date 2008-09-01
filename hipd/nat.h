@@ -42,6 +42,8 @@
 //add by santtu
 #define HIP_USE_ICE
 
+#define HIP_REFLEXIVE_LOCATOR_ITEM_AMOUNT_MAX 1
+
 
 #define ICE_ROLE_CONTROLLING  	PJ_ICE_SESS_ROLE_CONTROLLING
 #define ICE_ROLE_CONTROLLED  	PJ_ICE_SESS_ROLE_CONTROLLED
@@ -51,6 +53,11 @@
 #define ICE_CAND_TYPE_SRFLX 	PJ_ICE_CAND_TYPE_SRFLX
 #define ICE_CAND_TYPE_PRFLX 	PJ_ICE_CAND_TYPE_PRFLX
 #define ICE_CAND_TYPE_RELAYED 	PJ_ICE_CAND_TYPE_RELAYED
+
+#define ICE_CAND_PRE_HOST 65535; 
+#define ICE_CAND_PRE_SRFLX 65534;
+#define ICE_CAND_PRE_RELAYED 65533;
+
 /* reference of PJ constants
  * 
 enum pj_ice_cand_type
@@ -167,6 +174,9 @@ extern int hip_nat_sock_udp;
 /** Specifies the NAT status of the daemon. This value indicates if the current
     machine is behind a NAT. Defined in hipd.c */
 extern int hip_nat_status;
+extern HIP_HASHTABLE *hadb_hit;
+
+
 /*
 int hip_nat_on();
 int hip_nat_off();
@@ -187,5 +197,10 @@ int hip_nat_send_keep_alive(hip_ha_t *, void *);
 int hip_nat_handle_transform_in_client(struct hip_common *msg , hip_ha_t *entry);
 int hip_nat_handle_transform_in_server(struct hip_common *msg , hip_ha_t *entry);
 uint16_t hip_nat_get_control();
+
+
+int hip_external_ice_receive_pkt(void * msg,int len, 
+		hip_ha_t *entry, in6_addr_t * src_addr,in_port_t port );
+
 #endif /* __NAT_H__ */
 

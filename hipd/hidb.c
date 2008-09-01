@@ -320,10 +320,18 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 
 		/*  lhi.algo = eid_endpoint.algo;*/
 
+		err = hip_add_host_id(HIP_DB_LOCAL_HID, &lhi,
+				      &lsi, host_identity,
+				      NULL, NULL, NULL);
+
+		/* Currently only RSA pub is added by default (bug id 522).
+		   Ignore redundant adding in case user wants to enable
+		   multiple HITs. */
+		HIP_IFEL((err == -EEXIST), 0,
+			 "Ignoring redundant HI\n");
+
 		/* Adding the pair <HI,LSI> */
-		HIP_IFEL(hip_add_host_id(HIP_DB_LOCAL_HID, &lhi,
-					&lsi, host_identity,
-					NULL, NULL, NULL),
+		HIP_IFEL(err,
 			-EFAULT, "adding of local host identity failed\n");
 
 	        
@@ -617,9 +625,6 @@ static struct hip_host_id *hip_get_rsa_public_key(struct hip_host_id *tmp)
 	hip_get_rsa_keylen(tmp, &keylen, 1);
 	rsa_priv_len = 2 * keylen.n;
 
-	HIP_DEBUG("rsa_priv_len = %d (Key is %d bits.)\n", rsa_priv_len,
-							     rsa_priv_len * 4);
-
 	tmp->hi_length = htons(ntohs(tmp->hi_length) - rsa_priv_len);
 
 	_HIP_DEBUG("hi->hi_length=%d\n", ntohs(tmp->hi_length));
@@ -797,7 +802,6 @@ int hip_for_each_hi(int (*func)(struct hip_host_id_entry *entry, void *opaq), vo
 	list_for_each_safe(curr, iter, hip_local_hostid_db, c)
 	{
 		tmp = list_entry(curr);
-		//HIP_HEXDUMP("Found HIT", &tmp->lhi.hit, 16);
 		HIP_DEBUG_HIT("Found HIT", &tmp->lhi.hit);
 		HIP_DEBUG_LSI("Found LSI", &tmp->lsi);
 		err = func(tmp, opaque);

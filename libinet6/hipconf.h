@@ -109,40 +109,43 @@
 #define ACTION_TCPTIMEOUT 23 /* add By Tao Wan, on 04.01.2008 */
 #define ACTION_HIPPROXY 24
 #define ACTION_REINIT 25
-#define ACTION_MAX 26 /* exclusive */
+#define ACTION_HEARTBEAT 26
+#define ACTION_MAX 27 /* exclusive */
 
-/* Important! These values are used as array indexes, so keep in this order.
+/* Important! These values are used as array indexes, so keep these in order.
    Add values after the last value and increment TYPE_MAX. */
 /* 0 is reserved */
 #define TYPE_HI      	   1
 #define TYPE_MAP     	   2
 #define TYPE_RST           3
-#define TYPE_RVS     	   4
+#define TYPE_SERVER        4
 #define TYPE_BOS     	   5
 #define TYPE_PUZZLE  	   6
 #define TYPE_NAT           7
 #define TYPE_OPP     	   EXEC_LOADLIB_OPP /* Should be 8 */
-#define TYPE_ESCROW  	   9
+#define TYPE_BLIND  	   9
 #define TYPE_SERVICE 	   10
 #define TYPE_CONFIG        11
 #define TYPE_RUN     	   EXEC_LOADLIB_HIP /* Should be 12 */
 #define TYPE_TTL           13
 #define TYPE_GW            14
 #define TYPE_GET           15
-#define TYPE_BLIND         16
-#define TYPE_HA            17
-#define TYPE_MODE          18
-#define TYPE_DEBUG         19
-#define TYPE_DAEMON        20
-#define TYPE_LOCATOR       21
-#define TYPE_RELAY         22
-#define TYPE_SET           23 /* DHT set <name> */
-#define TYPE_DHT           24
-#define TYPE_OPPTCP	   25
-#define TYPE_ORDER         26
-#define TYPE_TCPTIMEOUT	   27 /* add By Tao Wan, on 04.01.2008*/
-#define TYPE_HIPPROXY	   28
-#define TYPE_MAX           29 /* exclusive */
+#define TYPE_HA            16
+#define TYPE_MODE          17
+#define TYPE_DEBUG         18
+#define TYPE_DAEMON        19
+#define TYPE_LOCATOR       20
+#define TYPE_SET           21 /* DHT set <name> */
+#define TYPE_DHT           22
+#define TYPE_OPPTCP	   23
+#define TYPE_ORDER         24
+#define TYPE_TCPTIMEOUT	   25 /* add By Tao Wan, on 04.01.2008*/
+#define TYPE_HIPPROXY	   26
+#define TYPE_HEARTBEAT     27
+#define TYPE_MAX           28 /* exclusive */
+
+/* #define TYPE_RELAY         22 */
+
 
 /* for handle_hi() only */
 #define OPT_HI_TYPE 0
@@ -153,13 +156,14 @@
 #define HIPD_CONFIG_FILE     "/etc/hip/hipd_config"
 #define HIPD_CONFIG_FILE_EX \
 "# Format of this file is as with hipconf, but without hipconf prefix.\n\
+# add hi default    # add all four HITs (see bug id 522) \n\
 # add map HIT IP    # preload some HIT-to-IP mappings to hipd \n\
 # add service rvs   # the host acts as HIP rendezvous\n\
 # dht gw host port port TTL # set dht gw hostname|ip port default=5851\n\
 # locator on        # host sends all of its locators in base exchange \n\
 # opp normal|advanced|none \n\
 opendht off # Jan 2007: OpenDHT infrastructure is flaky -Samu/Miika\n\
-nat on              # the host is behind a NAT\n\
+nat plain-udp       # the host is behind a NAT\n\
 debug medium        # debug verbosity: all, medium or none\n"
 
 #define HIPD_HOSTS_FILE     "/etc/hip/hosts"
@@ -178,15 +182,13 @@ int hip_conf_handle_map(hip_common_t *, int type, const char *opt[], int optc);
 int hip_conf_handle_rst(hip_common_t *, int type, const char *opt[], int optc);
 int hip_conf_handle_debug(hip_common_t *, int type, const char *opt[], int optc);
 int hip_conf_handle_bos(hip_common_t *, int type, const char *opt[], int optc);
-int hip_conf_handle_rvs(hip_common_t *msg, int action, const char *opt[], int optc);
-int hip_conf_handle_hiprelay(hip_common_t *msg, int action, const char *opt[], int optc);
+int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[], int optc);
 int hip_conf_handle_del(hip_common_t *, int type, const char *opt[], int optc);
 int hip_conf_handle_nat(hip_common_t *, int type, const char *opt[], int optc);
 int hip_conf_handle_locator(hip_common_t *, int type, const char *opt[], int optc);
 int hip_conf_handle_puzzle(hip_common_t *, int type, const char *opt[], int optc);
 int hip_conf_handle_opp(hip_common_t *msg, int action, const char *opt[], int optc);
 int hip_conf_handle_blind(hip_common_t *, int type, const char **opt, int optc);
-int hip_conf_handle_escrow(hip_common_t *msg, int action, const char *opt[], int optc);
 int hip_conf_handle_service(hip_common_t *msg, int action, const char *opt[], int optc);
 int hip_conf_handle_load(hip_common_t *, int type, const char *opt[], int optc);
 int hip_conf_handle_ttl(hip_common_t *, int type, const char *opt[], int optc);
@@ -206,5 +208,16 @@ int hip_do_hipconf(int argc, char *argv[], int send_only);
 int hip_conf_handle_opptcp(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_tcptimeout(struct hip_common *, int type, const char *opt[], int optc); /*added by Tao Wan, 04.Jan.2008*/
 int hip_conf_handle_hipproxy(struct hip_common *msg, int action, const char *opt[], int optc);
+int hip_conf_handle_heartbeat(hip_common_t *msg, int action, const char *opt[], int optc);
+ 
+/**
+ * Prints the HIT values in use. Prints either all or the default HIT value to
+ * stdout.
+ *
+ * @param  a pointer to a message to be sent to the HIP daemon.
+ * @param  a pointer to a commman line option. Either "default" or "all".
+ * @return zero if the HITs were printed successfully, negative otherwise.
+ */ 
+int hip_get_hits(hip_common_t *msg, char *opt);
 
 #endif /* HIPCONF */

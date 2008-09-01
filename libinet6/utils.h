@@ -52,6 +52,15 @@ static int hip_tmpname(char *fname) {
  */
 #if 0
 static int hip_tmpname_gui(char *fname) {
+	/* mktemp results to a compiler warning - or actually in a host of
+	 * warnings since this function is called many times.
+	 * 
+	 * warning: the use of `mktemp' is dangerous, better use `mkstemp' or
+	 * `mkdtemp'
+	 *
+	 * Please fix it if you know it is safe to do so.
+	 * -Lauri 02.06.2008 15:55
+	 */
         int ret = 0;
 	memcpy(fname, HIP_TMP_FNAME_TEMPLATE, HIP_TMP_FNAME_LEN);        
 	if (mktemp(fname) == NULL) ret = -1;
@@ -91,9 +100,12 @@ struct hip_opp_blocking_request_entry
   
 };
 
-struct hip_opp_hit_pair {
-	hip_hit_t real_hit;
-	hip_hit_t pseudo_hit;
+struct hip_opp_info {
+	hip_hit_t local_hit;
+	hip_hit_t real_peer_hit;
+	hip_hit_t pseudo_peer_hit;
+	struct in6_addr local_addr;
+	struct in6_addr peer_addr;
 };
 
 inline static int ipv6_addr_is_null(struct in6_addr *ip){
@@ -163,18 +175,6 @@ static inline void set_lsi_prefix(hip_lsi_t *lsi)
 */
 
 /** 
- * A macro to test if a uint32_t represents a Local Scope Identifier (LSI).
- *
- * @param a the uint32_t to test
- * @return  true if @c a is from 1.0.0.0/8
- * @note    This macro tests directly uint32_t, not struct in_addr or a pointer
- *          to a struct in_addr. To use this macro in context with struct
- *          in_addr call it with ipv4->s_addr where ipv4 is a pointer to a
- *          struct in_addr.
- */
-//#define IS_LSI(a) ((a & 0x00FFFFFF) == 0x000000C0)
-
-/** 
  * Checks if a uint32_t represents a Local Scope Identifier (LSI).
  *
  * @param       the uint32_t to test
@@ -184,7 +184,7 @@ static inline void set_lsi_prefix(hip_lsi_t *lsi)
  *              in_addr call it with ipv4->s_addr where ipv4 is a pointer to a
  *              struct in_addr.
  */
-#define IS_LSI32(a) ((a & 0x00FFFFFF) == 0x000000C0)
+#define IS_LSI32(a) ((a & 0x00FFFFFF) == 0x00000001)
 
 #define IS_LSI(a) ( (((struct sockaddr*)a)->sa_family == AF_INET) ? \
                    (IS_LSI32(((struct sockaddr_in*)a)->sin_addr.s_addr)) : \
@@ -208,6 +208,12 @@ static inline void set_lsi_prefix(hip_lsi_t *lsi)
 
 #ifndef MAX
 #  define MAX(a,b)	((a)>(b)?(a):(b))
+#endif
+
+#ifdef CONFIG_HIP_OPENWRT
+# define HIP_CREATE_FILE(x)	creat((x), 0644)
+#else
+# define HIP_CREATE_FILE(x)	open((x), O_RDWR | O_CREAT, 0644)
 #endif
 
 #endif /* _HIP_UTILS */

@@ -1,14 +1,19 @@
- #!/bin/sh
+#!/bin/sh
 
 echo "Generating configure files... may take a while."
 
 echo "Configuring pjproject"
-cd pjproject && ./configure || (echo "Failed to configure pjproject" && exit 1)
+cd pjproject && ./configure $@ || (echo "Failed to configure pjproject" && exit 1)
+make dep
 cd ..
 
+# Note: autogen options are also passed to HIPL configure.
+# See bug id 524)
 echo "Pjproject was configured successfully"
-echo "Now configuring hipl"
-autoreconf --install --force && ./configure && make  && \
+
+echo "Now configuring hipl with default configure options"
+autoreconf --install --force && ./configure $@ && make  && \
+
   echo "" && \
   echo "NOTE: The commands above only build the userspace apps." && \
   echo "NOTE: You have to build and install the linux kernel separately." && \

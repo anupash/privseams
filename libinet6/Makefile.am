@@ -44,6 +44,7 @@ libinet6_la_SOURCES += sa_len.c tempname.c
 # HIP additions
 libinet6_la_SOURCES += getendpointinfo.c util.c debug.c builder.c misc.c
 libinet6_la_SOURCES += hipconf.c message.c certtools.c sqlitedbapi.c
+libinet6_la_SOURCES += capability.c
 
 # Original flags.
 CFLAGS  = -D_LIBC_REENTRANT -D_USAGI -D_GNU_SOURCE
@@ -52,7 +53,7 @@ CFLAGS += -D_USAGI_LIBINET6=$(usagi_libc) -Iinclude_glibc$(usagi_libc)
 CFLAGS += -DHIPL_DEFAULT_PREFIX=\"$(prefix)\"
 
 # HIP additions to the flags.
-INCLUDES = $(hipl_common_include_paths) -Iinclude_glibc -I$(HIPL_LIBINET6_INCLUDE)
+INCLUDES = $(hipl_common_include_paths) -Iinclude_glibc -I$(HIPL_LIBINET6_INCLUDE) -I$(HIPL_PJPROJECT_NATH)/include -I$(HIPL_PJPROJECT_LIB)/include -I$(HIPL_PJPROJECT_LIB_UTIL)/include -I$(HIPL_PJPROJECT_MEDIA)/include 
 CFLAGS += $(hipl_common_cflags)
 # Enable the following option if you want to compile HIP enabled apps without
 # no changes to code using the legacy HIP API (assuming that the code uses

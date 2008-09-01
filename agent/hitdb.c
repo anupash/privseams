@@ -660,16 +660,17 @@ int hit_db_load_from_file(char *file)
                 init_in_progress = 1;
         }
         agent_db = hip_sqlite_open_db(file, HIP_AGENT_DB_CREATE_TBLS);
+	HIP_IFE(!agent_db, -1);
 
-        HIP_IFEL(hip_sqlite_select(agent_db, HIP_AGENT_DB_SELECT_LOCAL, 
+        HIP_IFEL(hip_sqlite_select(agent_db, HIP_AGENT_DB_SELECT_LOCAL,
                                    hip_agent_db_local_callback), -1,
-                 "Failed to execute select query (local) on the db\n");  
-        HIP_IFEL(hip_sqlite_select(agent_db, HIP_AGENT_DB_SELECT_GROUPS, 
+                 "Failed to execute select query (local) on the db\n");
+        HIP_IFEL(hip_sqlite_select(agent_db, HIP_AGENT_DB_SELECT_GROUPS,
                                    hip_agent_db_groups_callback), -1,
                  "Failed to execute select query (groups) on the db\n");
-        HIP_IFEL(hip_sqlite_select(agent_db, HIP_AGENT_DB_SELECT_REMOTE, 
+        HIP_IFEL(hip_sqlite_select(agent_db, HIP_AGENT_DB_SELECT_REMOTE,
                                    hip_agent_db_remote_callback), -1,
-                 "Failed to execute select query (remote) on the db\n");  
+                 "Failed to execute select query (remote) on the db\n");
 	
 out_err:
 	if (db_file) fclose(db_file);

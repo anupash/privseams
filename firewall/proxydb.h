@@ -11,31 +11,26 @@
 #include <netinet/ip_icmp.h>
 #include <linux/icmpv6.h>
 
-
 #include "debug.h"
 #include "hidb.h"
 #include "hashtable.h"
 #include "firewall_control.h"
 
-HIP_HASHTABLE *hip_proxy_db = NULL;
-int hip_proxy_raw_sock_tcp_v4 = 0;
-int hip_proxy_raw_sock_tcp_v6 = 0;
-int hip_proxy_raw_sock_udp_v4 = 0;
-int hip_proxy_raw_sock_udp_v6 = 0;
-int hip_proxy_raw_sock_icmp_v4 = 0;
-int hip_proxy_raw_sock_icmp_v6 = 0;
-int hip_proxy_raw_sock_icmp_inbound = 0;
-
-
 typedef struct hip_proxy_t {
-	hip_hit_t hit_our; // hit_proxy_client
+	hip_hit_t hit_proxy; // hit_proxy_client
 	hip_hit_t hit_peer;  // hit_proxy_peer
-	hip_hit_t hit_proxy; // hit_proxy_server
-	struct in6_addr addr_our; // addr_proxy_client
+	struct in6_addr addr_client; // addr_proxy_client
 	struct in6_addr addr_peer; // addr_proxy_peer
 	struct in6_addr addr_proxy; // addr_proxy_server
 	int state;
 	int hip_capable;
 } hip_proxy_t;
 
-#endif
+int hip_proxy_update_state(struct in6_addr *client_addr,
+			   struct in6_addr *peer_addr,
+			   struct in6_addr *proxy_addr,
+			   hip_hit_t *proxy_hit,
+			   hip_hit_t *peer_hit,
+			   int state);
+
+#endif /* PROXYDB_H */

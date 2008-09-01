@@ -1879,6 +1879,9 @@ int get_localhost_endpoint_no_setmyeid(const char *basename,
   
   if (ifaces)
     if_freenameindex(ifaces);
+
+  if (key_rr)
+    free(key_rr);
   
   return err;
 }
@@ -2084,6 +2087,9 @@ int get_localhost_endpoint(const char *basename,
   
   if (ifaces)
     if_freenameindex(ifaces);
+
+  if (key_rr)
+    free(key_rr);
   
   return err;
 }
@@ -2106,10 +2112,10 @@ int get_local_hits(const char *servname, struct gaih_addrtuple **adr) {
   char *filenamebase = NULL;
   int filenamebase_len, ret;
   struct endpointinfo modified_hints;
-  struct endpointinfo *new; 
-  struct hip_common *msg;
-  struct in6_addr *hiphit;
-  struct hip_tlv_common *det;
+  struct endpointinfo *new = NULL; 
+  //struct hip_common *msg;
+  //struct in6_addr *hiphit;
+  //struct hip_tlv_common *det;
   hip_hit_t *allhit;
   List list;
   
@@ -2126,7 +2132,7 @@ int get_local_hits(const char *servname, struct gaih_addrtuple **adr) {
   findkeyfiles(DEFAULT_CONFIG_DIR, &list);
   _HIP_DEBUG("LEN:%d\n",length(&list));
 
-  hip_build_user_hdr(&msg,HIP_PARAM_IPV6_ADDR, sizeof(struct endpointinfo));
+  //hip_build_user_hdr(&msg,HIP_PARAM_IPV6_ADDR, sizeof(struct endpointinfo));
   for(i=0; i<length(&list); i++) {
 	
 	_HIP_DEBUG("%s\n",getitem(&list,i));
@@ -2134,18 +2140,12 @@ int get_local_hits(const char *servname, struct gaih_addrtuple **adr) {
       	strlen(getitem(&list,i)) + 1;
     
     filenamebase = malloc(filenamebase_len);
-    if (!filenamebase) {
-      HIP_ERROR("Couldn't allocate file name\n");
-      err = -ENOMEM;
-      goto err_out;
-    }
+    HIP_IFEL(!filenamebase, -ENOMEM, "Couldn't allocate file name\n");
+
     ret = snprintf(filenamebase, filenamebase_len, "%s/%s",
 		   DEFAULT_CONFIG_DIR,
 		   getitem(&list,i));
-    if (ret <= 0) {
-      err = -EINVAL;
-      goto err_out;
-    }
+    HIP_IFE(ret <= 0, -EINVAL);
     
     //    get_localhost_endpoint(filenamebase, servname,
     //		   &modified_hints, &new, &hit);
@@ -2158,15 +2158,25 @@ int get_local_hits(const char *servname, struct gaih_addrtuple **adr) {
       *adr = malloc(sizeof(struct gaih_addrtuple));
       (*adr)->scopeid = 0;
     }				
-    (*adr)->next = NULL;			
-    (*adr)->family = AF_INET6;	
+    (*adr)->next = NULL;
+    (*adr)->family = AF_INET6;
     memcpy((*adr)->addr, &hit.hit, sizeof(struct in6_addr));
     adr = &((*adr)->next); // for opp mode -miika
+
+    free(filenamebase);
+    free(new->ei_canonname);
+    free(new->ei_endpoint);
+    free(new);
   }
 
- err_out:
-  if(filenamebase_len)
+  filenamebase = NULL;
+  //new = NULL;
+
+ out_err:
+  if(filenamebase)
     free(filenamebase);
+  //if(new)
+    //free(new);
   if(list.head)
     destroy(&list);
   
@@ -2241,6 +2251,12 @@ int hip_conf_handle_load(struct hip_common *msg, int action,
 			args[len - i - 1] = getitem(&list, i);
 		}
 		err = hip_do_hipconf(len, args, 1);
+		if (err) {
+			HIP_ERROR("Error on the following line: %s\n", line);
+			HIP_ERROR("Ignoring error on hipd configuration\n");
+			err = 0;
+		}
+
 		destroy(&list);
 	}
 

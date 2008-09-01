@@ -198,6 +198,9 @@ int hip_hadb_get_peer_addr_info(hip_ha_t *entry, struct in6_addr *addr,
 int hip_hadb_add_peer_addr(hip_ha_t *entry, struct in6_addr *new_addr,
 			   uint32_t interface_id, uint32_t lifetime,
 			   int state);
+int hip_hadb_add_peer_udp_addr(hip_ha_t *entry, struct in6_addr *new_addr,
+			   in_port_t port,
+			   uint32_t spi, uint32_t lifetime, int state);
 
 void hip_hadb_delete_peer_addrlist_one(hip_ha_t *entry, struct in6_addr *addr);
 
@@ -383,5 +386,4 @@ int hip_hadb_find_lsi(hip_ha_t *entry, void *lsi);
 hip_ha_t *hip_hadb_try_to_find_by_peer_lsi(hip_lsi_t *lsi);
 hip_ha_t *hip_hadb_try_to_find_by_pair_lsi(hip_lsi_t *lsi_src, hip_lsi_t *lsi_dst);
 hip_hit_t *hip_hadb_get_peer_hit_by_peer_lsi(hip_lsi_t *lsi);
-//int hip_hadb_add_peer_info_etc_hosts_file(List *lhip_hosts);
 #endif /* HIP_HADB_H */
