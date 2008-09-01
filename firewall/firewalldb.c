@@ -645,6 +645,10 @@ int firewall_send_outgoing_pkt(struct in6_addr *src_hit,
 		for (try_again = 0; try_again < 2; try_again++) {
 		        sent = sendto(firewall_raw_sock, msg, len, 0,
 			              (struct sockaddr *) &dst, sa_size);
+			if (sent == 104)
+			  HIP_DEBUG("AAAAAAAAAAAAAAAAAAAAAA\n");
+			if (sent > 1400)
+			  HIP_DEBUG("Number of sent bytes \n",sent);
 			if (sent != len) {
                 		HIP_ERROR("Could not send the all requested"\
                         	" data (%d/%d)\n", sent, len);

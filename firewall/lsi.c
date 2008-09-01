@@ -298,5 +298,7 @@ int reinject_packet(struct in6_addr src_hit, struct in6_addr dst_hit, ipq_packet
 		  }
 	}
 
+	if(msg)
+	        HIP_FREE(msg);
 	return err;	
 }
