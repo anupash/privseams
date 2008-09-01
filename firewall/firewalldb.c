@@ -536,6 +536,8 @@ int firewall_send_incoming_pkt(struct in6_addr *src_hit,
 
 	bind(firewall_raw_sock, (struct sockaddr *) &src, sa_size);
  not_sending:
+	if(msg)
+	        HIP_FREE(msg);
 	if (err)
 		HIP_DEBUG("sterror %s\n",strerror(errno));
 	return err;
