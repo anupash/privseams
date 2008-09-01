@@ -202,10 +202,9 @@ int firewall_set_bex_state(struct in6_addr *hit_s,
 	return err;
 }
 
-
 void hip_firewall_delete_hldb(void){
 	int i;
-	firewall_hl_t *this;
+	firewall_hl_t *this = NULL;
 	hip_list_t *item, *tmp;
 	
 	HIP_DEBUG("Start hldb delete\n");
@@ -214,7 +213,10 @@ void hip_firewall_delete_hldb(void){
 	list_for_each_safe(item, tmp, firewall_hit_lsi_ip_db, i)
 	{
 		this = list_entry(item);
+		// delete this 
 		hip_ht_delete(firewall_hit_lsi_ip_db, this);
+		// free this
+		free(this);
 	}
 	HIP_UNLOCK_HT(&firewall_lsi_hit_db);
 	HIP_DEBUG("End hldbdb delete\n");
