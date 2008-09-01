@@ -513,6 +513,10 @@ int hip_init_host_ids()
         /* Retrieve the keys to hipd */
 	/* Three steps because multiple large keys will not fit in the same message */
 
+	/* DSA keys and RSA anonymous are not loaded by default until bug id
+	   522 is properly solved. Run hipconf add hi default if you want to
+	   enable non-default HITs. */
+#if 0
 	/* dsa anon and pub */
 	hip_msg_init(user_msg);
 	if (err = hip_serialize_host_id_action(user_msg, ACTION_ADD,
@@ -536,6 +540,7 @@ int hip_init_host_ids()
 		HIP_ERROR("Adding of keys failed (RSA anon)\n");
 		goto out_err;
 	}
+#endif
 
 	/* rsa pub */
 	hip_msg_init(user_msg);

@@ -35,7 +35,7 @@ class fetchNetApps:
 	#private method for checking whether application is downloaded or not!
 	def __isDownloaded(self,app_name, app_list):
 		for name in app_list:
-			if app_name.lower() in name.lower():
+			if app_name.lower() in os.path.basename(name.lower()):
 				return True
 		return False
 

@@ -134,6 +134,9 @@ install -t %{buildroot}%{python_sitelib}/dnshipproxy tools/util.py*
 install -d %{buildroot}%{python_sitelib}/parsehipkey
 install -t %{buildroot}%{python_sitelib}/parsehipkey tools/parse-key-3.py*
 install -t %{buildroot}%{python_sitelib}/parsehipkey tools/myasn.py*
+# required in CentOS release 5.2
+install -m 700 tools/parsehipkey %{buildroot}%{prefix}/sbin/parsehipkey
+install -m 700 tools/dnshipproxy %{buildroot}%{prefix}/sbin/dnshipproxy
 
 %post lib
 /sbin/ldconfig 
