@@ -7,17 +7,16 @@
 
 #include "firewall.h"
 
-//#define HIP_HEADER_START 128 //bytes
 /* NOTE: if buffer size is changed, make sure to check
  * 		 the HIP packet size in hip_fw_init_context() */
 #define BUFSIZE HIP_MAX_PACKET
-//#define BUFSIZE 2048
 
 int statefulFiltering = 1;
 int escrow_active = 0;
 int accept_normal_traffic_by_default = 1;
 int accept_hip_esp_traffic_by_default = 0;
 int system_based_opp_mode = 0;
+int log_level = LOGDEBUG_NONE;
 
 int counter = 0;
 int hip_proxy_status = 0;
@@ -175,10 +174,6 @@ int hip_fw_init_userspace_ipsec(){
 		HIP_IFEL(userspace_ipsec_init(), -1,
 				"failed to initialize userspace ipsec\n");
 
-		// activate userspace ipsec in hipd
-		HIP_IFEL(send_userspace_ipsec_to_hipd(hip_userspace_ipsec), -1,
-				"turn hipd on before starting hipfw with userspace ipsec\n");
-
 		// queue incoming ESP over IPv4 and IPv4 UDP encapsulated traffic
 		system("iptables -I HIPFW-INPUT -p 50 -j QUEUE"); /*  */
 		system("iptables -I HIPFW-INPUT -p 17 --dport 50500 -j QUEUE");
@@ -278,19 +273,25 @@ int hip_fw_uninit_esp_prot(){
 }
 
 int hip_fw_init_lsi_support(){
+#if 0
 	char result[100];
 	char str1[] = "iptables -I HIPFW-OUTPUT -d ";
 	char str2[] = " -j QUEUE";
+#endif
 	int err = 0;
 
 	if (hip_lsi_support)
 	{
+#if 0
 		memset(result, 0, sizeof(result));
 		strcpy(result, str1);
 		strcat(strcat(result, HIP_FULL_LSI_STR), str2);
 
-		// now add the rule
 		system(result);
+#endif
+
+		// add the rule
+		system("iptables -I HIPFW-OUTPUT -d " HIP_FULL_LSI_STR " -j QUEUE");
 
 		/* LSI support: incoming HIT packets, captured to decide if
 		   HITs may be mapped to LSIs */
@@ -306,9 +307,11 @@ int hip_fw_init_lsi_support(){
 
 
 int hip_fw_uninit_lsi_support(){
+#if 0
 	char result[100];
 	char str1[] = "iptables -D HIPFW-OUTPUT -d ";
 	char str2[] = " -j QUEUE 2>/dev/null";
+#endif
 	int err = 0;
 
 	if (hip_lsi_support)
@@ -316,12 +319,16 @@ int hip_fw_uninit_lsi_support(){
 		// set global variable to off
 		hip_lsi_support = 0;
 
+#if 0
 		memset(result, 0, sizeof(result));
 		strcpy(result, str1);
 		strcat(strcat(result, HIP_FULL_LSI_STR), str2);
 
-		// remove the rule
 		system(result);
+#endif
+
+		// remove the rule
+		system("iptables -D HIPFW-OUTPUT -d " HIP_FULL_LSI_STR " -j QUEUE 2>/dev/null");
 
 		system("ip6tables -D HIPFW-INPUT -d 2001:0010::/28 -j QUEUE 2>/dev/null");
 
@@ -1696,20 +1703,19 @@ int main(int argc, char **argv){
 		HIP_DEBUG_HIT("Default hit is ",  &proxy_hit);
 	}
 
-	check_and_write_default_config();
+	hip_set_logdebug(LOGDEBUG_ALL);
 
-	// default debug level is none
-	hip_set_logdebug(LOGDEBUG_NONE);
+	check_and_write_default_config();
 
 	while ((ch = getopt(argc, argv, "f:t:vdFHAbkipehsolF")) != -1)
 	{
 		switch (ch)
 		{
 		case 'v':
-			hip_set_logdebug(LOGDEBUG_MEDIUM);
+			log_level = LOGDEBUG_MEDIUM;
 			break;
 		case 'd':
-			hip_set_logdebug(LOGDEBUG_ALL);
+			log_level = LOGDEBUG_ALL;
 			break;
 		case 'H':
 			accept_normal_traffic_by_default = 0;
@@ -1867,7 +1873,10 @@ int main(int argc, char **argv){
 	highest_descriptor = maxof(3, hip_fw_sock, h4->fd, h6->fd);
 
 	// let's show that the firewall is running even with debug NONE
-	printf("firewall running...\n");
+	HIP_DEBUG("firewall running. Entering select loop.\n");
+
+	// firewall started up, now respect the selected log level
+	hip_set_logdebug(log_level);
 
 	// do all the work here
 	while (1) {
