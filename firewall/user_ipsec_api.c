@@ -267,7 +267,7 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 
 	// lookup corresponding SA entry by dst_addr and SPI
 	HIP_IFEL(!(entry = hip_sa_entry_find_inbound(&ctx->dst, spi)), -1,
-			"no SA entry found for dst_addr and SPI %u \n", spi);
+			"no SA entry found for dst_addr and SPI\n");
 	HIP_DEBUG("matching SA entry found\n");
 
 	// do a partial consistency check of the entry
@@ -314,7 +314,7 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 					(struct sockaddr *)&local_sockaddr,
 					hip_sockaddr_len(&local_sockaddr));
 	if (err < 0) {
-		HIP_DEBUG("hip_esp_input(): sendto() failed\n");
+		HIP_DEBUG("sendto() failed\n");
 	} else
 	{
 		HIP_DEBUG("new packet SUCCESSFULLY re-inserted into network stack\n");

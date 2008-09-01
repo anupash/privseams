@@ -1530,24 +1530,50 @@ endif
   <title>OpenLDAP</title>
   <para>
   Tested with stable version openldap-2.3.38 and with release version
-  2.4.7. Using OpenLDAP with HIP is pretty straight forward thing to
-  do. Simplest way is to run hipd on both machines and just use
-  command like <emphasis>"hipconf run normal ldapsearch -x -H
-  ldap://&lt;fqdn&gt; -b
-  'dc=&lt;MY-DOMAIN&gt;,dc=&lt;COM&gt;' '(objectclass=*)'"</emphasis> The name can be
+  2.4.7. ACL part is tested using 2.4.11. Using OpenLDAP with HIP is
+  pretty straight forward thing to do. Simplest way is to run hipd on
+  both machines and just use command like
+  </para>
+  <programlisting>
+  hipconf run normal ldapsearch -x -H ldap://&lt;fqdn&gt; -b 'dc=&lt;MY-DOMAIN&gt;,dc=&lt;COM&gt;' '(objectclass=*)'
+  </programlisting> 
+  <para>
+  The name can be
   something found from <emphasis>/etc/hosts</emphasis>
   and <emphasis>/etc/hip/hosts</emphasis> or you can use OpenDHT to
   resolve names to HIT and address. Search can also be done directly
-  with HIT by command <emphasis>"ldapsearch -x -b 
-  'dc=&lt;MY-DOMAIN&gt;,dc=&lt;COM&gt;' -H ldap://[&lt;HIT&gt;]
-  '(objectclass=*)'"</emphasis>.
-
-  You can search also by using the opportunistic mode by using command 
-  <emphasis>"hipconf run opp ldapsearch -x -H ldap://&lt;fqdn&gt; -b  
-  'dc=&lt;MY-DOMAIN&gt;,dc=&lt;COM&gt;' '(objectclass=*)'"</emphasis>.
-  Ldapadd can be used similarly with LDAPURI and HIP. Longer tutorial
-  can be found
-  from <ulink url="http://www.cs.helsinki.fi/u/sklvarjo/openldap.htm" />
+  with HIT by command 
+  </para>
+  <programlisting>
+  hipconf run normal ldapsearch -x -H ldap://[&lt;HIT&gt;] -b 'dc=&lt;MY-DOMAIN&gt;,dc=&lt;COM&gt;' '(objectclass=*)'
+  </programlisting>
+  <para>
+  You can search also by using the opportunistic mode by using command
+  </para>
+  <programlisting>
+  hipconf run opp ldapsearch -x -H ldap://&lt;fqdn&gt; -b 'dc=&lt;MY-DOMAIN&gt;,dc=&lt;COM&gt;' '(objectclass=*)'
+  </programlisting>
+  <para>
+  Ldapadd can be used similarly with LDAPURI and HITs. 
+  </para>
+  <para>
+  Maybe the most intereseting part are the ACL rules with OpenLDAP. In
+  the newer versions you can use IPv6 formatted peername rules, so it
+  is interesting when we remember that HITs are IPv6 formatted. Below
+  is the basic example of a rule that grants write/read/search
+  permissions to self, read/search permissions to all processes from
+  HIT_1 without authentication and no permissions to the rest of the
+  world.  
+  </para>
+  <programlisting>
+      access to *
+            by self write
+            by peername.ipv6=&lt;HIT_1&gt; anonymous read
+            by * none
+  </programlisting> 
+  <para>
+  Longer how-to
+  can be found from <ulink url="http://www.cs.helsinki.fi/u/sklvarjo/openldap.htm" />
   </para>
   </section>
   <section id="sec_networking_scripts">

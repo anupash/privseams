@@ -35,10 +35,9 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	int err = 0, msg_type = 0, n = 0, len = 0, state = 0, reti = 0, dhterr = 0;
 	int access_ok = 0, send_response = 1, is_root = 0;
 	HIP_KEA * kea = NULL;
-	struct hip_tlv_common *param = NULL;
-	char host[NI_MAXHOST];
 	extern int hip_icmp_interval;
 	struct hip_heartbeat * heartbeat;
+	char host[NI_MAXHOST];
 
 	HIP_ASSERT(src->sin6_family == AF_INET6);
 
@@ -1011,14 +1010,12 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	  	}
 
 	  	entry = hip_hadb_try_to_find_by_pair_lsi(src_lsi, dst_lsi);
-          	if (entry){ 
-		        if (entry->state == HIP_STATE_ESTABLISHED || 
-			        msg_type == SO_HIP_GET_PEER_HIT_BY_LSIS){
-			        HIP_DEBUG("Entry found in the ha database \n\n");
-				src_hit = &entry->hit_our;
-				dst_hit = &entry->hit_peer;
-			}
-	  	}	       		
+          	if (entry && (entry->state == HIP_STATE_ESTABLISHED ||
+		    msg_type == SO_HIP_GET_PEER_HIT_BY_LSIS)){
+	    		HIP_DEBUG("Entry found in the ha database \n\n");
+	      		src_hit = &entry->hit_our;
+	      		dst_hit = &entry->hit_peer;
+	  	}
 	  	break;
 	case SO_HIP_GET_PEER_HIT_AT_FIREWALL:
 		err = hip_opp_get_peer_hit(msg, src);

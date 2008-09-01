@@ -38,16 +38,16 @@ d = path(os.environ['HOME'])
 
 # with os.path, if (like me) you can never remember how os.path.walk works
 #print all .cpp or .c or .cc , cp, c++, .h file
-def walk_tree_print_c_files(d, functions, structures, dic_whole_api):
+def walk_tree_print_c_files(d, constants, functions, structures, dic_whole_api):
 	for name in os.listdir(d):
 		path = os.path.join(d, name)
 		if os.path.isdir(path):
-			walk_tree_print_c_files(path, functions, structures, dic_whole_api)
+			walk_tree_print_c_files(path, constants, functions, structures, dic_whole_api)
 		elif (name.endswith('.c') or name.endswith('.cpp') or  name.endswith('.c++') or \
 		  	name.endswith('.cc') or name.endswith('.cpp') or name.endswith('.h')):
 			#print path
 			file_token = readFile(path)
-			api_counter(functions, structures, file_token, dic_whole_api)
+			api_counter(constants, functions, structures, file_token, dic_whole_api)
 
 
 
