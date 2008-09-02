@@ -72,6 +72,7 @@ int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m, struct in6_addr *ip_src, str
 			reinject_packet(dst_addr, src_addr, m, 6, 1);
 		}
 	}
+
 	return proto6;
 }
 
