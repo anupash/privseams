@@ -1727,7 +1727,7 @@ int main(int argc, char **argv){
 			rule_file = optarg;
 			break;
 		case 't':
-			hip_ha_timeout = atol(argv[optind]);
+			hip_ha_timeout = atol(optarg);
 			break;
 		case ':': /* -f or -p without operand */
 			printf("Option -%c requires an operand\n", optopt);
