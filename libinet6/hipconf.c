@@ -659,10 +659,10 @@ int hip_conf_handle_map(hip_common_t *msg, int action, const char *opt[],
      HIP_IFEL(convert_string_to_address(opt[0], &hit), -1,
 	      "string to address conversion failed\n");
 
-     HIP_IFEL(convert_string_to_address(opt[1], &ip6), -1,
+     HIP_IFEL(err = convert_string_to_address(opt[1], &ip6), -1,
 	      "string to address conversion failed\n");
      
-     if(!convert_string_to_address_v4(opt[1], &aux)){
+     if (err && !convert_string_to_address_v4(opt[1], &aux)){
 	     HIP_IFEL(IS_LSI32(aux.s_addr), -1, "Missing ip address before lsi\n");
      }
 
