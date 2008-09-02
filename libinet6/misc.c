@@ -2389,8 +2389,8 @@ int getproto_info(int port_dest, char *proto){
 		    if(result == port_dest)
 		        exists = 1;	    
 	        }
+		destroy(&list);
 	    }
-	    destroy(&list);
 	}//end of while
         if (fd)                                                               
                 fclose(fd);		
@@ -2454,8 +2454,8 @@ int getproto_info_lsi(int port_dest, char *proto, struct in_addr *local){	 		Lis
 	                break;
 	            }
 	        }		
+		destroy(&list);
 	    }
-	    destroy(&list);
 	}//end of while	              							
         if (fd)                                                               
                 fclose(fd);		

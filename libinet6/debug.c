@@ -617,7 +617,8 @@ void hip_print_lsi(int debug_level, const char *file, int line, const char *func
 {
 	char dst[INET_ADDRSTRLEN];
 	inet_ntop(AF_INET, lsi, dst, sizeof(dst));
-	hip_print_str(debug_level, file, line, function, "%s: %s\n", str, dst);
+	printf("%s: %s %s \n", function, str, dst);
+	//hip_print_str(debug_level, file, line, function, "%s: %s\n", str, dst);
 }
 /**
  * hip_print_hit - print a HIT
@@ -628,7 +629,8 @@ void hip_print_hit(int debug_level, const char *file, int line, const char *func
 		   const char *str, const struct in6_addr *hit)
 {
 	if(hit == NULL) {
-		HIP_DEBUG("%s: NULL\n", str);
+	  printf("hip null");
+	  //HIP_DEBUG("%s: NULL\n", str);
 		return;
 	}
 	else {
@@ -640,7 +642,8 @@ void hip_print_hit(int debug_level, const char *file, int line, const char *func
 			hip_print_lsi(debug_level, file, line, function, str, &in_addr);
 		} else {
 			hip_in6_ntop(hit, dst);
-			hip_print_str(debug_level, file, line, function, "%s: %s\n", str, dst);
+			printf("%s: %s %s \n", function, str, dst);
+			//hip_print_str(debug_level, file, line, function, "%s: %s\n", str, dst);
 		}
 		return;
 	}
