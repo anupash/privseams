@@ -98,8 +98,8 @@ int address_count;
 HIP_HASHTABLE *addresses;
 time_t load_time;
 
-char *hip_i3_config_file = NULL;
-int hip_use_i3 = 0; // false
+//char *hip_i3_config_file = NULL;
+//int hip_use_i3 = 0; // false
 
 /*Define hip_use_userspace_ipsec variable to indicate whether use
  * userspace ipsec or not. If it is 1, hip uses the user space ipsec.
@@ -111,9 +111,11 @@ int esp_prot_num_transforms = 0;
 uint8_t esp_prot_transforms[NUM_TRANSFORMS];
 
 int hip_use_opptcp = 0; // false
+int hip_use_hi3    = 0; // false
 
-void hip_set_opportunistic_tcp_status(struct hip_common *msg)
-{
+
+/* the opp tcp */
+void hip_set_opportunistic_tcp_status(struct hip_common *msg){
 	struct sockaddr_in6 sock_addr;
 	int retry, type, n;
 
@@ -156,18 +158,55 @@ void hip_set_opportunistic_tcp_status(struct hip_common *msg)
 		  (hip_use_opptcp ? "on" : "off"));
 }
 
-int hip_get_opportunistic_tcp_status()
-{
+int hip_get_opportunistic_tcp_status(){
         return hip_use_opptcp;
 }
+
+
+/* hi3 */
+void hip_set_hi3_status(struct hip_common *msg){
+	struct sockaddr_in6 sock_addr;
+	int retry, type, n;
+
+	type = hip_get_msg_type(msg);
+
+	_HIP_DEBUG("type=%d\n", type);
+
+	bzero(&sock_addr, sizeof(sock_addr));
+	sock_addr.sin6_family = AF_INET6;
+	sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
+	sock_addr.sin6_addr = in6addr_loopback;
+
+	for (retry = 0; retry < 3; retry++) {
+		n = hip_sendto_user(msg, &sock_addr);
+		if (n <= 0) {
+			HIP_ERROR("hipconf hi3 failed (round %d)\n", retry);
+			HIP_DEBUG("Sleeping few seconds to wait for fw\n");
+			sleep(2);
+		} else {
+			HIP_DEBUG("hipconf hi3 ok (sent %d bytes)\n", n);
+			break;
+		}
+	}
+
+	if (type == SO_HIP_SET_HI3_ON)
+		hip_use_hi3 = 1;
+	else
+		hip_use_hi3 = 0;
+
+	HIP_DEBUG("hi3 set %s\n",
+		  (hip_use_hi3 ? "on" : "off"));
+}
+
+int hip_get_hi3_status(){
+        return hip_use_hi3;
+}
+
 
 void usage() {
 	fprintf(stderr, "HIPL Daemon %.2f\n", HIPL_VERSION);
         fprintf(stderr, "Usage: hipd [options]\n\n");
 	fprintf(stderr, "  -b run in background\n");
-#ifdef CONFIG_HIP_HI3
-	fprintf(stderr, "  -3 <i3 client configuration file>\n");
-#endif
 	fprintf(stderr, "\n");
 }
 
@@ -304,7 +343,7 @@ int hipd_main(int argc, char *argv[])
 	struct msghdr msg;
 
 	/* Parse command-line options */
-	while ((ch = getopt(argc, argv, ":bk3:")) != -1)
+	while ((ch = getopt(argc, argv, ":bk:")) != -1)
 	{
 		switch (ch)
 		{
@@ -314,13 +353,6 @@ int hipd_main(int argc, char *argv[])
 		case 'k':
 			killold = 1;
 			break;
-#ifdef CONFIG_HIP_HI3
-		case '3':
-		  HIP_INFO("hipd is stared with i3 config file: %s", optarg);
-			hip_i3_config_file = strdup(optarg);
-			hip_use_i3 = 1; // true;
-			break;
-#endif
 		case 'N':
 			flush_ipsec = 0;
 			break;
@@ -331,13 +363,6 @@ int hipd_main(int argc, char *argv[])
 			return err;
 		}
 	}
-
-#ifdef CONFIG_HIP_HI3
-        /* Note that for now the Hi3 host identities are not loaded in. */
-	if( hip_use_i3 )
-		HIP_IFEL(!hip_i3_config_file, 1,
-		"Please do pass a valid i3 configuration file.\n");
-#endif
 
 	hip_set_logfmt(LOGFMT_LONG);
 

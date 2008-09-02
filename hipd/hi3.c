@@ -1,6 +1,9 @@
 #include "hi3.h"
 //#include "output.h"
-#ifdef CONFIG_HIP_HI3
+
+
+
+
 
 #define HI3_TRIGGER_MAX 10
 
@@ -32,12 +35,12 @@ cl_trigger* cl_pub_tr_set = NULL;
 
 int hip_i3_init()
 {
-	if( cl_init(hip_i3_config_file)!= CL_RET_OK)
+	if( cl_init(HIPD_HI3_FILE)!= CL_RET_OK)
 	{
 		HIP_ERROR("hi3: error creating context!\n");
 		exit(-1);
-	};
-
+	}
+	
 	cl_register_callback(CL_CBK_TRIGGER_NOT_FOUND, no_matching_trigger, NULL);
 
 	hip_hi3_insert_trigger();
@@ -45,6 +48,8 @@ int hip_i3_init()
 
 	return 0;
 }
+
+
 int hip_hi3_add_pub_trigger_id(struct hip_host_id_entry *entry, int* count)
 {
 	int i = *count;
@@ -60,6 +65,7 @@ int hip_hi3_add_pub_trigger_id(struct hip_host_id_entry *entry, int* count)
 
 	return 0;
 }
+
 
 int hip_addr_parse(char *buf, struct sockaddr_in6 *in6, int len, int *res) {
 	struct hi3_ipv4_addr *h4 = (struct hi3_ipv4_addr *)buf;
@@ -86,6 +92,7 @@ int hip_addr_parse(char *buf, struct sockaddr_in6 *in6, int len, int *res) {
 	HIP_ERROR("Illegal family. Dropping\n");
 	return 0;
 }
+
 
 /**
  * This is the i3 callback to process received data.
@@ -167,7 +174,7 @@ void hip_hi3_trigger_failure(cl_trigger *t, void *data, void *fun_ctx) {
 	cl_insert_trigger(t, 0);
 }
 
-int hip_hi3_insert_trigger(hip_hit_t *hit) {
+int hip_hi3_insert_trigger() {
 	Key key[HI3_TRIGGER_MAX];
 	int i;
 	hip_hit_t peer_hit;
@@ -287,4 +294,3 @@ int hip_do_i3_stuff_for_i2(struct hip_locator *locator, hip_portpair_t *i2_info,
 		}
 	}
 }
-#endif /* HIP_CONFIG_HI3 */

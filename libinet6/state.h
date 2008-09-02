@@ -457,6 +457,8 @@ struct hip_hadb_state
 #endif
 	/** Non-zero if opportunistic TCP mode is on. */
 	int                          hip_is_opptcp_on;
+	/** Non-zero if hi3 mode is on. */
+	int                          hip_is_hi3_on;
 	/** The local port from where the TCP SYN I1 packet will be sent */
 	in_port_t                    tcp_opptcp_src_port;
 	/** the port at the peer where the TCP SYN I1 packet will be sent */

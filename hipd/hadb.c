@@ -418,6 +418,7 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	}
 
      	entry->hip_is_opptcp_on = hip_get_opportunistic_tcp_status();
+	entry->hip_is_hi3_on =    hip_get_hi3_status();
 
 #ifdef CONFIG_HIP_HIPPROXY
      	entry->hipproxy = hip_get_hip_proxy_status();
@@ -2285,12 +2286,12 @@ void hip_init_hadb(void)
      /* xmit function set */
      /** @todo Add support for i3. */
      default_xmit_func_set.hip_send_pkt = hip_send_raw;
-#ifdef CONFIG_HIP_HI3
-     if( hip_use_i3 )
+////	#ifdef CONFIG_HIP_HI3
+     if(hip_get_hi3_status())
      {
 	  default_xmit_func_set.hip_send_pkt = hip_send_i3;
      }
-#endif
+////	#endif
      nat_xmit_func_set.hip_send_pkt = hip_send_udp;
 
      /* filter function sets */

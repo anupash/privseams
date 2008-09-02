@@ -44,6 +44,7 @@
 #include "libhipopendht.h"
 #include "registration.h"
 
+
 /*
  * DO NOT TOUCH THESE, unless you know what you are doing.
  * These values are used for TYPE_xxx macros.
@@ -111,6 +112,7 @@
 #define ACTION_REINIT 25
 #define ACTION_HEARTBEAT 26
 #define ACTION_MAX 27 /* exclusive */
+#define ACTION_HI3 28
 
 /* Important! These values are used as array indexes, so keep these in order.
    Add values after the last value and increment TYPE_MAX. */
@@ -142,7 +144,8 @@
 #define TYPE_TCPTIMEOUT	   25 /* add By Tao Wan, on 04.01.2008*/
 #define TYPE_HIPPROXY	   26
 #define TYPE_HEARTBEAT     27
-#define TYPE_MAX           28 /* exclusive */
+#define TYPE_HI3           28
+#define TYPE_MAX           29 /* exclusive */
 
 /* #define TYPE_RELAY         22 */
 
@@ -209,7 +212,7 @@ int hip_conf_handle_opptcp(struct hip_common *, int type, const char *opt[], int
 int hip_conf_handle_tcptimeout(struct hip_common *, int type, const char *opt[], int optc); /*added by Tao Wan, 04.Jan.2008*/
 int hip_conf_handle_hipproxy(struct hip_common *msg, int action, const char *opt[], int optc);
 int hip_conf_handle_heartbeat(hip_common_t *msg, int action, const char *opt[], int optc);
- 
+ int hip_conf_handle_hi3(hip_common_t *, int type, const char *opt[], int optc);
 /**
  * Prints the HIT values in use. Prints either all or the default HIT value to
  * stdout.

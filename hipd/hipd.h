@@ -27,9 +27,9 @@
 #include "message.h"
 #include "esp_prot_common.h"
 
-#ifdef CONFIG_HIP_HI3
+//#ifdef CONFIG_HIP_HI3
 #include "i3_client_api.h"
-#endif
+//#endif
 
 #ifdef CONFIG_HIP_BLIND
 #include "blind.h"

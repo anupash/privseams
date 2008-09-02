@@ -736,7 +736,7 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit, hip_hit_t *dst_hit,
 	HIP_DEBUG("No entry found; find first IP matching\n");
 	err = 1;
 
-	if (hip_use_i3) {
+	if(hip_get_hi3_status()){
 		struct in6_addr lpback = IN6ADDR_LOOPBACK_INIT;
 		memcpy(&dst_addr, &lpback, sizeof(struct in6_addr));
 		/*struct in_addr lpback = { INADDR_LOOPBACK };

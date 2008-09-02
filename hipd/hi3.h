@@ -7,11 +7,28 @@
 #include "protodefs.h"
 #include "i3_client_api.h"
 
-extern char* hip_i3_config_file;
+#define HIPD_HI3_FILE     "/etc/hip/hi3_conf"
+#define HIPD_HI3_FILE_EX \
+"<?xml version=\"1.0\"?>\n\
+<I3ConfigFile version=\"0.1\">\n\
+	<I3ServerDetails\n\
+		UsePing=\"yes\"\n\
+		UseTCP=\"yes\"\n\
+		ServerListURL=\"rose.cs.berkeley.edu:8080/i3_status.txt\"\n\
+	>\n\
+        <!-- If UsePing is false, you have to make sure that\n\
+             this first hop i3 server is running.  You can\n\
+             check the status of the i3 servers at\n\
+             http://i3.cs.berkeley.edu\n\
+             -->\n\
+\n\
+	</I3ServerDetails>\n\
+</I3ConfigFile>\n"
 
 int hip_i3_init();
 int hip_i3_clean();
 int hip_hi3_add_pub_trigger_id(struct hip_host_id_entry *entry, int* count);
+int hip_hi3_insert_trigger();
 
 /**
  * Does some i3 related stuff to I2 packet.

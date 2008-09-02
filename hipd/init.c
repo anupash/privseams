@@ -6,7 +6,7 @@
  * @note    HIPU: BSD platform needs to be autodetected in hip_set_lowcapability
  */
 
-#include "init.h"
+
 
 #ifndef OPENWRT
 //#include <sys/capability.h>
@@ -15,7 +15,7 @@
 
 #include <sys/types.h>
 #include "debug.h"
-#include "hi3.h"
+#include "init.h"
 
 extern struct hip_common *hipd_msg;
 extern struct hip_common *hipd_msg_v4;
@@ -130,13 +130,13 @@ void hip_load_configuration()
 	FILE *fp = NULL;
 	size_t items = 0;
 	int len_con = strlen(HIPD_CONFIG_FILE_EX),
-	  len_hos = strlen(HIPD_HOSTS_FILE_EX);
+	    len_hos = strlen(HIPD_HOSTS_FILE_EX),
+	    len_i3  = strlen(HIPD_HI3_FILE_EX);
 
 	/* HIPD_CONFIG_FILE, HIPD_CONFIG_FILE_EX, HIPD_HOSTS_FILE and
 	   HIPD_HOSTS_FILE_EX are defined in /libinet6/hipconf.h */
 
 	/* Create config file if does not exist */
-
 	if (stat(HIPD_CONFIG_FILE, &status) && errno == ENOENT) {
 		errno = 0;
 		fp = fopen(HIPD_CONFIG_FILE, "w" /* mode */);
@@ -147,7 +147,6 @@ void hip_load_configuration()
 	}
 
 	/* Create /etc/hip/hosts file if does not exist */
-
 	if (stat(HIPD_HOSTS_FILE, &status) && errno == ENOENT) {
 		errno = 0;
 		fp = fopen(HIPD_HOSTS_FILE, "w" /* mode */);
@@ -156,6 +155,21 @@ void hip_load_configuration()
 		HIP_ASSERT(items > 0);
 		fclose(fp);
 	}
+
+////	#ifdef CONFIG_HIP_HI3
+	//if(hip_get_hi3_status()){
+		/* Create /etc/hip/hi3_conf file if does not exist */
+		if (stat(HIPD_HI3_FILE, &status) && errno == ENOENT) {
+			errno = 0;
+			fp = fopen(HIPD_HI3_FILE, "w" /* mode */);
+			HIP_ASSERT(fp);
+			items = fwrite(HIPD_HI3_FILE_EX, len_i3, 1, fp);
+			HIP_ASSERT(items > 0);
+			fclose(fp);
+		}
+		hip_i3_init();
+	//}
+////	#endif
 
 	/* Load the configuration. The configuration is loaded as a sequence
 	   of hipd system calls. Assumably the user socket buffer is large
@@ -351,11 +365,11 @@ int hipd_init(int flush_ipsec, int killold)
 	HIP_DEBUG("Lowering " HIP_HIT_DEV " MTU\n");
 	system("ifconfig dummy0 mtu 1280"); /* see bug id 595 */
 
-#ifdef CONFIG_HIP_HI3
-	if( hip_use_i3 ) {
+////	#ifdef CONFIG_HIP_HI3
+	if(hip_get_hi3_status()){
 		hip_locator_status = SO_HIP_SET_LOCATOR_ON;
 	}
-#endif
+////	#endif
 
 	HIP_IFE(hip_init_host_ids(), 1);
 
@@ -385,16 +399,8 @@ int hipd_init(int flush_ipsec, int killold)
 			"set new tcptimeout parameters error\n");
 #endif
 
-
 	HIP_IFEL(hip_set_lowcapability(1), -1, "Failed to set capabilities\n");
 
-#ifdef CONFIG_HIP_HI3
-	if( hip_use_i3 )
-	{
-//		hip_get_default_hit(&peer_hit);
-		hip_i3_init(/*&peer_hit*/);
-	}
-#endif
 	hip_firewall_sock_lsi_fd = hip_user_sock;
 
 out_err:
@@ -757,9 +763,11 @@ void hip_exit(int signal)
 	hip_oppdb_uninit();
 #endif
 
-#ifdef CONFIG_HIP_HI3
-	hip_hi3_clean();
-#endif
+////	#ifdef CONFIG_HIP_HI3
+	//if(hip_get_hi3_status()){
+		hip_hi3_clean();
+	//}
+////	#endif
 
 #ifdef CONFIG_HIP_RVS
 	HIP_INFO("Uninitializing RVS / HIP relay database and whitelist.\n");

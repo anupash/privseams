@@ -43,7 +43,7 @@ const char *hipconf_usage =
 //"nat on|off|<peer_hit>\n"
 "nat none|plain-udp|ice-udp\n"
 //end modify
-"rst all|<peer_hit>\n"
+"rst all|peer_hit <peer_HIT>\n"
 "load config default\n"
 "handoff mode lazy|active\n"
 "run normal|opp <binary>\n"
@@ -72,6 +72,7 @@ const char *hipconf_usage =
 #ifdef CONFIG_HIP_HIPPROXY
 "hipproxy on|off\n"
 #endif
+"hi3 on|off\n"
 ;
 
 /** Function pointer array containing pointers to handler functions.
@@ -108,6 +109,7 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc) 
         hip_conf_handle_trans_order,
 	hip_conf_handle_tcptimeout, /* added by Tao Wan*/
         hip_conf_handle_hipproxy,
+	hip_conf_handle_hi3,
 	hip_conf_handle_heartbeat,
 	NULL /* run */
 };
@@ -167,6 +169,8 @@ int hip_conf_get_action(char *text)
 		ret = ACTION_TCPTIMEOUT;
 	else if (!strcmp("reinit", text))
 		ret = ACTION_REINIT;
+	else if (!strcmp("hi3", text))
+		ret = ACTION_HI3;
 #ifdef CONFIG_HIP_HIPPROXY
 	else if (!strcmp("hipproxy", text))
 		ret = ACTION_HIPPROXY;
@@ -286,6 +290,8 @@ int hip_conf_get_type(char *text,char *argv[]) {
 	else if (strcmp("hipproxy", argv[1])==0)
 		ret = TYPE_HIPPROXY;
 #endif
+        else if (strcmp("hi3", argv[1])==0)
+                ret = TYPE_HI3;
      return ret;
 }
 
@@ -318,6 +324,7 @@ int hip_conf_get_type_arg(int action)
 #ifdef CONFIG_HIP_HIPPROXY
 	case ACTION_HIPPROXY:
 #endif
+	case ACTION_HI3:
 	case ACTION_RESTART:
 		type_arg = 2;
 		break;
@@ -325,7 +332,6 @@ int hip_conf_get_type_arg(int action)
 	case ACTION_DEBUG:
 		type_arg = 1;
 		break;
-	
 	default:
 		break;
 	}
@@ -2065,4 +2071,35 @@ int hip_conf_handle_hipproxy(struct hip_common *msg, int action, const char *opt
         
  out_err:
         return(err);
+}
+
+
+/**
+ * Handles the hipconf commands where the type is @c locator.
+ *
+ * @param msg    a pointer to the buffer where the message for hipd will
+ *               be written.
+ * @param action the numeric action identifier for the action to be performed.
+ * @param opt    an array of pointers to the command line arguments after
+ *               the action and type.
+ * @param optc   the number of elements in the array (@b 0).
+ * @return       zero on success, or negative error value on error.
+ */
+int hip_conf_handle_hi3(hip_common_t *msg,
+			int action,
+			const char *opt[],
+			int optc){
+    int err = 0, status = 0;
+    
+    if (!strcmp("on",opt[0])) {
+        status = SO_HIP_SET_HI3_ON; 
+    } else if (!strcmp("off",opt[0])) {
+        status = SO_HIP_SET_HI3_OFF;
+    } else {
+        HIP_IFEL(1, -1, "bad args\n");
+    }
+    HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, "Failed to build user message header.: %s\n", strerror(err));
+    
+ out_err:
+    return err;
 }

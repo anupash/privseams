@@ -72,6 +72,42 @@ unsigned int hipd_get_state(void)
 
 
 /**
+ * No description.
+ */
+int hip_set_hi3_mode(const struct hip_common *msg)
+{
+	int err =  0;
+	unsigned int *mode = NULL;
+	
+	mode = hip_get_param_contents(msg, HIP_PARAM_UINT);
+	if (!mode) {
+		err = -EINVAL;
+		goto out_err;
+	}
+  
+	HIP_DEBUG("mode=%d\n", *mode);
+
+	if(*mode == 0 || *mode == 1 || *mode == 2){
+		opportunistic_mode = *mode;
+	} else {
+		HIP_ERROR("Invalid value for opportunistic mode\n");
+		err = -EINVAL;
+		goto out_err;
+	}
+
+	memset(msg, 0, HIP_MAX_PACKET);
+	HIP_IFE(hip_build_user_hdr(msg,
+				   (opportunistic_mode == 2 ? SO_HIP_SET_HI3_ON : SO_HIP_SET_HI3_OFF),
+				   0), -1);
+	hip_set_hi3_status(msg);
+	
+ out_err:
+	return err;
+}
+
+
+
+/**
  * Determines whether agent is alive, or not.
  *
  * @return non-zero, if agent is alive.

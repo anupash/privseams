@@ -744,8 +744,6 @@ hip_opp_block_t *hip_oppdb_find_by_ip(const struct in6_addr *ip_peer)
 	list_for_each_safe(item, tmp, oppdb, i)
 	{
 		this = list_entry(item);
-HIP_DEBUG_IN6ADDR("###### ", &this->peer_ip);
-HIP_DEBUG_IN6ADDR("###### ", ip_peer);
 		if(ipv6_addr_cmp(&this->peer_ip, ip_peer) == 0){
 			HIP_DEBUG("The ip was found in oppdb. Peer non-HIP capable.\n");
 			ret = this;

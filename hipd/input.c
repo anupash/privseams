@@ -1066,19 +1066,14 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 		  hip_ha_t *entry, hip_portpair_t *r1_info)
 {
-	int err = 0, retransmission = 0, n_addrs = 0, loc_size = 0;
+	int err = 0, retransmission = 0;
 	uint64_t solved_puzzle = 0, I = 0;
 	struct hip_context *ctx = NULL;
 	struct hip_host_id *peer_host_id = NULL;
 	struct hip_r1_counter *r1cntr = NULL;
 	struct hip_dh_public_value *dhpv = NULL;
         struct hip_locator *locator = NULL;
-#ifdef CONFIG_HIP_HI3
-	struct hip_locator_info_addr_item* first = NULL;
-	struct netdev_address *n = NULL;
-	hip_list_t *item = NULL, *tmp = NULL;
-	int ii = 0, use_ip4 = 1;
-#endif
+
 
 	_HIP_DEBUG("hip_handle_r1() invoked.\n");
 
@@ -1130,66 +1125,8 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 
         /***** LOCATOR PARAMETER ******/
         locator = hip_get_param(r1, HIP_PARAM_LOCATOR);
-        if (locator)
-            {
-                /* Lets save the LOCATOR to the entry 'till we
-                   get the esp_info in r2 then handle it */
-                n_addrs = hip_get_locator_addr_item_count(locator);
-                loc_size = sizeof(struct hip_locator) +
-                    (n_addrs * sizeof(struct hip_locator_info_addr_item));
-                HIP_IFEL(!(entry->locator = malloc(loc_size)),
-                       -1, "Malloc for entry->locators failed\n");
-                memcpy(entry->locator, locator, loc_size);
-
-#ifdef CONFIG_HIP_HI3
-		if( r1_info->hi3_in_use && n_addrs > 0 )
-		{
-			first = (char*)locator+sizeof(struct hip_locator);
-			memcpy(r1_saddr, &first->address, sizeof(struct in6_addr));
-
-			list_for_each_safe(item, tmp, addresses, ii)
-				{
-					n = list_entry(item);
-					if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
-						continue;
-					if (!hip_sockaddr_is_v6_mapped(&n->addr)))
-					{
-						memcpy(r1_daddr, hip_cast_sa_addr(&n->addr),
-						       hip_sa_addr_len(&n->addr));
-						ii = -1;
-						use_ip4 = 0;
-						break;
-					}
-				}
-			if( use_ip4 )
-			{
-				list_for_each_safe(item, tmp, addresses, ii)
-					{
-						n = list_entry(item);
-						if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
-							continue;
-						if (hip_sockaddr_is_v6_mapped(&n->addr))
-						{
-							memcpy(r1_daddr, hip_cast_sa_addr(&n->addr),
-							       hip_sa_addr_len(&n->addr));
-							ii = -1;
-							break;
-						}
-					}
-			}
-
-			struct in6_addr daddr;
-
-			memcpy(&entry->local_address, r1_daddr, sizeof(struct in6_addr));
-
-			hip_hadb_get_peer_addr(entry, &daddr);
-			hip_hadb_delete_peer_addrlist_one(entry, &daddr);
-			hip_hadb_add_peer_addr(entry, r1_saddr, 0, 0,
-					       PEER_ADDR_STATE_ACTIVE);
-		}
-
-#endif
-	    }
+        if(locator)
+		err = handle_locator(locator, r1_saddr, r1_daddr, entry, r1_info);
         else
             HIP_DEBUG("R1 did not have locator\n");
 
@@ -1601,6 +1538,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	struct hip_context i2_context;
 	extern int hip_icmp_interval;
 	extern int hip_icmp_sock;
+	struct hip_locator *locator = NULL;
 
 #ifdef HIP_USE_ICE
 	void *ice_session = NULL;
@@ -1656,12 +1594,12 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	HIP_IFEL(hip_verify_cookie(i2_saddr, i2_daddr, i2, solution), -EPROTO,
 		 "Cookie solution rejected. Dropping the I2 packet.\n");
 
-#ifdef CONFIG_HIP_HI3
-	struct hip_locator *locator = NULL;
-
-	locator = hip_get_param(i2, HIP_PARAM_LOCATOR);
-	hip_do_i3_stuff_for_i2(locator, i2_info, i2_saddr, i2_daddr);
-#endif
+////	#ifdef CONFIG_HIP_HI3
+	if(entry->hip_is_hi3_on){
+		locator = hip_get_param(i2, HIP_PARAM_LOCATOR);
+		hip_do_i3_stuff_for_i2(locator, i2_info, i2_saddr, i2_daddr);
+	}
+////	#endif
 
 	if(entry != NULL) {
 		/* If the I2 packet is a retransmission, we need reuse the
@@ -2354,14 +2292,16 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	extern int hip_icmp_interval;
 	extern int hip_icmp_sock;
 
-#ifdef CONFIG_HIP_HI3
-	if( r2_info->hi3_in_use ) {
-		/* In hi3 real addresses should already be in entry, received on
-		   r1 phase. */
-		memcpy(r2_saddr, &entry->preferred_address, sizeof(struct in6_addr));
-		memcpy(r2_daddr, &entry->local_address, sizeof(struct in6_addr));
+////	#ifdef CONFIG_HIP_HI3
+	if(entry->hip_is_hi3_on){
+		if(r2_info->hi3_in_use){
+			/* In hi3 real addresses should already be in entry, received on
+			   r1 phase. */
+			memcpy(r2_saddr, &entry->preferred_address, sizeof(struct in6_addr));
+			memcpy(r2_daddr, &entry->local_address, sizeof(struct in6_addr));
+		}
 	}
-#endif
+////	#endif
 	if (entry->state == HIP_STATE_ESTABLISHED) {
 		retransmission = 1;
 		HIP_DEBUG("Retransmission\n");
@@ -3182,8 +3122,8 @@ int hip_handle_firewall_i1_request(struct hip_common *msg,
 	/* No entry found; find first IP matching to the HIT and then
 	   create the entry */
 
-#ifdef CONFIG_HIP_HI3
-	if(hip_use_i3) {
+////	#ifdef CONFIG_HIP_HI3
+	if(hip_get_hi3_status()){
 		struct in_addr lpback = { htonl(INADDR_LOOPBACK) };
 		IPV4_TO_IPV6_MAP(&lpback, &dst_addr);
 		err = 0;
@@ -3191,9 +3131,9 @@ int hip_handle_firewall_i1_request(struct hip_common *msg,
 	else {
 		err = hip_map_hit_to_addr(dst_hit, &dst_addr);
 	}
-#else
-	err = hip_map_hit_to_addr(dst_hit, &dst_addr);
-#endif // CONFIG_HIP_HI3
+////	#else
+////		err = hip_map_hit_to_addr(dst_hit, &dst_addr);
+////	#endif // CONFIG_HIP_HI3
 
 	if (err) {
 		/* Search HADB for existing entries */
@@ -3309,6 +3249,82 @@ skip_entry_creation:
 
 	HIP_IFEL(hip_send_i1(&entry->hit_our, &entry->hit_peer, entry), -1,
 		 "Sending of I1 failed\n");
+
+out_err:
+	return err;
+}
+
+
+int handle_locator(struct hip_locator *locator,
+		   in6_addr_t         *r1_saddr,
+		   in6_addr_t         *r1_daddr,
+		   hip_ha_t           *entry,
+		   hip_portpair_t     *r1_info){
+	int n_addrs = 0, loc_size = 0, err = 0;
+	struct hip_locator_info_addr_item* first = NULL;
+	struct netdev_address *n = NULL;
+	hip_list_t *item = NULL, *tmp = NULL;
+	int ii = 0, use_ip4 = 1;
+
+	// Lets save the LOCATOR to the entry 'till we
+        //   get the esp_info in r2 then handle it 
+        n_addrs = hip_get_locator_addr_item_count(locator);
+        loc_size = sizeof(struct hip_locator) +
+            (n_addrs * sizeof(struct hip_locator_info_addr_item));
+        HIP_IFEL(!(entry->locator = malloc(loc_size)),
+               -1, "Malloc for entry->locators failed\n");
+        memcpy(entry->locator, locator, loc_size);
+
+
+////	#ifdef CONFIG_HIP_HI3
+	if(entry->hip_is_hi3_on){
+		if( r1_info->hi3_in_use && n_addrs > 0 )
+		{
+			first = (char*)locator+sizeof(struct hip_locator);
+			memcpy(r1_saddr, &first->address, sizeof(struct in6_addr));
+
+			list_for_each_safe(item, tmp, addresses, ii)
+			{
+				n = list_entry(item);
+				if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
+					continue;
+				if (!hip_sockaddr_is_v6_mapped(&n->addr))
+				{
+					memcpy(r1_daddr, hip_cast_sa_addr(&n->addr),
+					       hip_sa_addr_len(&n->addr));
+					ii = -1;
+					use_ip4 = 0;
+					break;
+				}
+			}
+			if( use_ip4 )
+			{
+				list_for_each_safe(item, tmp, addresses, ii)
+				{
+					n = list_entry(item);
+					if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
+						continue;
+					if (hip_sockaddr_is_v6_mapped(&n->addr))
+					{
+						memcpy(r1_daddr, hip_cast_sa_addr(&n->addr),
+						       hip_sa_addr_len(&n->addr));
+						ii = -1;
+						break;
+					}
+				}
+			}
+
+			struct in6_addr daddr;
+
+			memcpy(&entry->local_address, r1_daddr, sizeof(struct in6_addr));
+
+			hip_hadb_get_peer_addr(entry, &daddr);
+			hip_hadb_delete_peer_addrlist_one(entry, &daddr);
+			hip_hadb_add_peer_addr(entry, r1_saddr, 0, 0,
+					       PEER_ADDR_STATE_ACTIVE);
+		}
+	}
+////	#endif
 
 out_err:
 	return err;
