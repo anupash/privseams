@@ -10,7 +10,11 @@
 /* maximum packet size of a packet to be sent on the wire */
 #define MAX_PACKET_SIZE		1500
 
-/* see bug id 595 */
+/* see bug id 595
+ *
+ * @note if you want to make this smaller, you have to change also
+ *       /proc/sys/net/ipv6/conf/default/mtu, but it will have a
+ *       negative impact on non-HIP IPv6 connectivity. */
 #define MIN_HIP_MTU			1280
 
 /* max. ESP padding as defined in RFC ???
@@ -21,8 +25,11 @@
  *
  * @note calculated as max. block-size - 1 */
 #define CIPHER_ESP_PADDING	AES_BLOCK_SIZE - 1
+/* in the max packet size case we don't want to use any padding
+ * -> the payload should fill the whole last block */
+#define NO_ESP_PADDING		0
 /* change this if you want to use another padding */
-#define ESP_PADDING			CIPHER_ESP_PADDING
+#define ESP_PADDING			NO_ESP_PADDING
 
 /* overhead added by encapsulating the application packet in
  * an ESP packet

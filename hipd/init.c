@@ -356,6 +356,8 @@ int hipd_init(int flush_ipsec, int killold)
 	sprintf(mtu, "%u", HIP_HIT_DEV_MTU);
 	strcpy(str, "ifconfig dummy0 mtu ");
 	strcat(str, mtu);
+	/* MTU is set using system call rather than in do_chflags to avoid
+	 * chicken and egg problems in hipd start up. */
 	system(str);
 
 #if 0
