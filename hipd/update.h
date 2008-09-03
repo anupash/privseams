@@ -1,6 +1,6 @@
 /** @file
  * A header file for update.c.
- * 
+ *
  * @author  Mika Kousa <mkousa#iki.fi>
  * @author  Tobias Heer <tobi#tobibox.de>
  * @author  Abhijit Bagri <abagri#gmail.com>
@@ -17,10 +17,11 @@
 #include "builder.h"
 #include "hadb.h"
 #include "escrow.h"
+#include "esp_prot_hipd_msg.h"
 
 /* FIXME: where to include these from in userspace? */
 #define IPV6_ADDR_ANY           0x0000U
-#define IPV6_ADDR_UNICAST       0x0001U 
+#define IPV6_ADDR_UNICAST       0x0001U
 #define IPV6_ADDR_LOOPBACK      0x0010U
 #define IPV6_ADDR_LINKLOCAL     0x0020U
 #define IPV6_ADDR_SITELOCAL     0x0040U
@@ -45,7 +46,7 @@ struct hip_update_kludge {
  * @param entry   a pointer to a host association.
  * @param locator a pointer to ...
  * @param opaque  a pointer to ...
- * @return        zero on success or non-zero on error. 
+ * @return        zero on success or non-zero on error.
  */
 int hip_for_each_locator_addr_item(int (*func)
 				   (hip_ha_t *entry,
@@ -54,12 +55,12 @@ int hip_for_each_locator_addr_item(int (*func)
                                    struct hip_locator *locator, void *opaque);
 /**
  * Function Doxygen comments missing.
- * 
+ *
  * @param func    a function pointer to ...
  * @param entry   a pointer to a host association.
  * @param spi_out a pointer to ...
  * @param opaque  a pointer to ...
- * @return        zero on success or non-zero on error. 
+ * @return        zero on success or non-zero on error.
  */
 int hip_update_for_each_peer_addr(int (*func)
 				  (hip_ha_t *entry,
@@ -69,25 +70,25 @@ int hip_update_for_each_peer_addr(int (*func)
                                   struct hip_spi_out_item *spi_out, void *opaq);
 /**
  * Function Doxygen comments missing.
- * 
+ *
  * @param func   a function pointer to ...
  * @param entry  a pointer to a host association.
  * @param spi_in a pointer to ...
  * @param opaque a pointer to ...
- * @return       zero on success or non-zero on error. 
+ * @return       zero on success or non-zero on error.
  */
 int hip_update_for_each_local_addr(int (*func)
 				   (hip_ha_t *entry,
 				    struct hip_spi_in_item *spi_in,
 				    void *opaq), hip_ha_t *entry,
                                    void *opaq);
-/** 
+/**
  * Gets the keys needed by UPDATE.
- * 
+ *
  * On success, all encryption and integrity keys are successfully stored and
  * @c keymat_offset_new, @c calc_index_new, and @c Kn_out will contain
  * updated values.
- * 
+ *
  * @param entry             corresponding hadb entry of the peer.
  * @param keymat_offset_new value-result parameter for keymat index used.
  * @param calc_index_new    value-result parameter for the one byte index used.
@@ -109,7 +110,7 @@ int hip_update_get_sa_keys(hip_ha_t *entry, uint16_t *keymat_offset_new,
  *
  * Currently the following address types are ignored: unspecified (any),
  * loopback, link local, site local, and other not unicast addresses.
- * 
+ *
  * @param addr the IPv6 address to be tested.
  * @return     1 if address is ok to be used as a peer address, otherwise 0.
  */
@@ -117,7 +118,7 @@ int hip_update_test_locator_addr(in6_addr_t *addr);
 
 /**
  * Function Doxygen comments missing.
- * 
+ *
  * @param entry a pointer to a host association.
  * @param locator_address_item a pointer to ...
  * @param _spi a pointer to ...
@@ -191,11 +192,11 @@ int hip_update_set_preferred(hip_ha_t *entry,
 
 /**
  * Processes locator parameters in the UPDATE message.
- * 
+ *
  * @param entry    a pointer to corresponding hadb entry of the peer.
  * @param locator  a pointer to the locator parameter in the packet.
  * @param esp_info a pointer to ...
- * 
+ *
  * @note   @c entry must be is locked when this function is called.
  * @return 0 if the locator parameter was processed successfully, otherwise < 0.
  */
@@ -222,7 +223,7 @@ int hip_handle_update_established(hip_ha_t *entry, hip_common_t *msg,
 
 /**
  * Finishes the handling of REKEYING state.
- * 
+ *
  * Performs items described in 8.11.3 Leaving REKEYING state of he base
  * draft-01. Parameters in @c esp_info are host byte order. On success new IPsec
  * SAs are created. Old SAs are deleted if the UPDATE was not the multihoming
@@ -239,7 +240,7 @@ int hip_update_finish_rekeying(hip_common_t *msg, hip_ha_t *entry,
 
 /**
  * Function Doxygen comments missing.
- * 
+ *
  * @param  entry a pointer to an hadb entry corresponding to the peer.
  * @param  item  a pointer to ...
  * @param  msg   a pointer to ...
@@ -263,11 +264,11 @@ int hip_update_do_finish_rekey(hip_ha_t *entry,
  * @note         @c entry must be is locked when this function is called.
  */
 int hip_handle_update_rekeying(hip_ha_t *entry, hip_common_t *msg,
-			       in6_addr_t *src_ip); 
+			       in6_addr_t *src_ip);
 
 /**
  * Builds a verification packet.
- * 
+ *
  * @param entry a pointer to a hadb entry.
  * @param msg   a pointer to a HIP UPDATE packet to be build.
  * @param addr  a pointer to ...
@@ -281,7 +282,7 @@ int hip_build_verification_pkt(hip_ha_t *entry, hip_common_t *update_packet,
 
 /**
  * Function Doxygen comments missing.
- * 
+ *
  * @param entry   a pointer to a hadb entry.
  * @param addr    a pointer to ...
  * @param spi_out a pointer to ...
@@ -294,7 +295,7 @@ int hip_update_send_addr_verify_packet(hip_ha_t *entry,
 				       void *saddr);
 /**
  * Function Doxygen comments missing.
- * 
+ *
  * @param entry                   a pointer to a hadb entry.
  * @param addr                    a pointer to ...
  * @param spi_out                 a pointer to ...
@@ -310,7 +311,7 @@ int hip_update_send_addr_verify_packet_all(hip_ha_t *entry,
 
 /**
  * Sends address verification UPDATE.
- * 
+ *
  * @param entry  a pointer to a hadb entry corresponding to the peer.
  * @param msg    a pointer to the HIP packet.
  * @param src_ip source IPv6 address to use in the UPDATE to be sent out
@@ -323,7 +324,7 @@ int hip_update_send_addr_verify(hip_ha_t *entry, hip_common_t *msg,
 
 /**
  * Function Doxygen comments missing.
- * 
+ *
  * @param entry  a pointer to a hadb.
  * @param item   a pointer to ...
  * @param opaque a pointer to ...
@@ -334,7 +335,7 @@ int hip_update_find_address_match(hip_ha_t *entry,
 				  void *opaque);
 /**
  * Function Doxygen comments missing.
- * 
+ *
  * @param peer_ip a pointer to ...
  * @param locator a pointer to ...
  * @return        ...
@@ -346,14 +347,14 @@ int hip_update_check_simple_nat(in6_addr_t *peer_ip,
  *
  * For each address in the LOCATOR, we reply with ACK and
  * UPDATE(SPI, SEQ, ACK, ECHO_REQUEST).
- * 
+ *
  * @param entry  a pointer to a hadb entry corresponding to the peer.
  * @param msg    a pointer to the HIP packet.
  * @param src_ip a pointer to the source IPv6 address to use in the UPDATE to be
  *               sent out.
  * @param dst_ip a pointer to the destination IPv6 address to use in the UPDATE
  *               to be sent out.
- * @return       0 if successful, otherwise < 0. 
+ * @return       0 if successful, otherwise < 0.
  * @note         @c entry must be is locked when this function is called.
  */
 int hip_handle_update_plain_locator(hip_ha_t *entry, hip_common_t *msg,
@@ -362,7 +363,7 @@ int hip_handle_update_plain_locator(hip_ha_t *entry, hip_common_t *msg,
 				    struct hip_seq *seq);
 /**
  * Function Doxygen comments missing.
- * 
+ *
  * @param entry  a pointer to a hadb entry corresponding to the peer.
  * @param src_ip source IPv6 address to use in the UPDATE to be sent out
  * @return       ...
@@ -371,10 +372,10 @@ int set_address_state(hip_ha_t *entry, in6_addr_t *src_ip);
 
 /**
  * Handles address verification UPDATE.
- * 
+ *
  * Handles UPDATE(SPI, SEQ, ACK, ECHO_REQUEST) or UPDATE(SPI, SEQ,
  * ECHO_REQUEST).
- * 
+ *
  * @param entry  a pointer to a hadb entry corresponding to the peer.
  * @param msg    a pointer to a the HIP packet.
  * @param src_ip a pointer to a source IPv6 address to use in the UPDATE to be
@@ -389,7 +390,7 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, hip_common_t *msg,
 
 /**
  * Function Doxygen comments missing.
- * 
+ *
  * @param entry a pointer to a hadb entry.
  * @param msg   a pointer to a HIP message.
  * @return       ...
@@ -398,7 +399,7 @@ int hip_handle_update_seq(hip_ha_t *entry, hip_common_t *msg);
 
 /**
  * Function Doxygen comments missing.
- * 
+ *
  * @param entry    a pointer to a hadb entry.
  * @param esp_info a pointer to ...
  * @return         ...
@@ -456,12 +457,12 @@ int hip_update_peer_preferred_address(hip_ha_t *entry,
  * @return          ...
  */
 int hip_update_handle_echo_response(hip_ha_t *entry,
-				    struct hip_echo_response *echo_resp, 
+				    struct hip_echo_response *echo_resp,
                                     in6_addr_t *src_ip);
 
 /**
  * @addtogroup receive_functions
- * @{ 
+ * @{
  */
 /**
  * @brief Receives an UPDATE packet.
@@ -475,11 +476,11 @@ int hip_update_handle_echo_response(hip_ha_t *entry,
  * the received UPDATE packet in both of the states, R2-sent and ESTABLISHED.
  * When received in state R2-SENT, we move to state ESTABLISHED as instructed in
  * RFC 5201.
- * 
+ *
  * If there is no corresponding HIP association (@c entry is NULL) or if the
  * state machine is in any other state than R2-SENT or ESTABLISHED the packet is
  * not processed and -1 is returned.
- * 
+ *
  * The validity of the packet is checked and then this function acts
  * according to whether this packet is a reply or not.
  *
@@ -514,7 +515,7 @@ int hip_copy_spi_in_addresses(struct hip_locator_info_addr_item *src,
 
 /**
  * Changes the preferred address advertised to the peer for this connection.
- * 
+ *
  * @param entry         a pointer to a hadb entry corresponding to the peer.
  * @param new_pref_addr a pointer to the new prefferred address.
  * @param daddr         a pointer to destination address.
@@ -527,7 +528,7 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
 
 /**
  * Updates the source address list.
- * 
+ *
  * @param entry            a pointer to a hadb entry.
  * @param addr_list        a pointer to ...
  * @param daddr            a pointer to ...
@@ -537,15 +538,15 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
  * @param addr             ...
  * @return                 ...
  */
-int hip_update_src_address_list(struct hip_hadb_state *entry, 
-				struct hip_locator_info_addr_item *addr_list, 
+int hip_update_src_address_list(struct hip_hadb_state *entry,
+				struct hip_locator_info_addr_item *addr_list,
 				in6_addr_t *daddr, int addr_count,
 				int esp_info_old_spi, int is_add,
 				struct sockaddr* addr);
 
-/** 
+/**
  * Sends an initial UPDATE packet to the peer.
- * 
+ *
  * @param entry      a pointer to a hadb entry corresponding to the peer.
  * @param addr_list  a pointer to an address list. if non-NULL, LOCATOR
  *                   parameter is added to the UPDATE.
@@ -564,7 +565,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 
 /**
  * Internal function copied originally from rea.c.
- * 
+ *
  * @param entry a pointer to a hadb entry.
  * @param addr  op
  * @return      ...
@@ -590,7 +591,7 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 
 /**
  * Handles UPDATE acknowledgement.
- * 
+ *
  * @param entry    a pointer to a hadb entry corresponding to the peer.
  * @param ack      a pointer to ...
  * @param have_nes ...
@@ -599,7 +600,7 @@ void hip_update_handle_ack(hip_ha_t *entry, struct hip_ack *ack, int have_nes);
 
 /**
  * Sends an UPDATE acknowledgement.
- * 
+ *
  * @param entry  a pointer to a hadb entry corresponding to the peer.
  * @param msg    a pointer to a hip UPDATE message.
  * @param src_ip a pointer to source IP address.
@@ -610,9 +611,9 @@ int hip_update_send_ack(hip_ha_t *entry, hip_common_t *msg,
 			in6_addr_t *src_ip, in6_addr_t *dst_ip);
 
 /**
- * This function checks if the address in the ECHO_REQUEST is in the 
+ * This function checks if the address in the ECHO_REQUEST is in the
  * SPIs peer_addr_list. If not found it adds it into the list
- * 
+ *
  * @param esp_info  Structure pointer telling the SPI to use when adding.
  * @param entry  a pointer to a hadb entry corresponding to the peer.
  * @param src_ip a pointer to source IP address.
@@ -621,6 +622,11 @@ int hip_update_send_ack(hip_ha_t *entry, hip_common_t *msg,
  */
 int hip_peer_learning(struct hip_esp_info * esp_info, hip_ha_t *entry, in6_addr_t * src_ip);
 
-int hip_handle_locator_parameter(hip_common_t *, hip_ha_t *,struct hip_esp_info *);
 
+
+
+int hip_update_handle_stun(void* pkg, int len, 
+			   in6_addr_t *src_addr, in6_addr_t * dst_addr,
+			   hip_ha_t *entry,
+			   hip_portpair_t *sinfo);
 #endif /* HIP_UPDATE_H */

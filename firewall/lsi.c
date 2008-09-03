@@ -17,9 +17,10 @@ int is_packet_reinjection(struct in_addr *ip_src)
 }
 
 /**
- * Analyzes if the incoming packet with hits must be translated to lsis
- * If it must be translated, calls to reinject_packet in order to execute 
- * the packet reinjection
+ * Analyzes first whether the ipv6 packet belongs to an ipv6 socket.
+ * If not, it then analyzes whether the packet belongs to an
+ * ipv4 socket with an LSI as IP address.
+ * If not LSI data either, reinjects as ipv4 data.
  *
  * @param m           pointer to the packet
  * @param ip_src      ipv6 source address 
@@ -30,10 +31,12 @@ int is_packet_reinjection(struct in_addr *ip_src)
 
 int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m, struct in6_addr *ip_src, struct in6_addr *ip_dst)
 {
-        int proto6 = 0, ip_hdr_size = 0, portDest = 0;
+        int proto6 = 0, proto4_LSI = 0, proto4_IP = 0;
+	int ip_hdr_size = 0, portDest = 0;
 	char *proto;
 	hip_lsi_t *lsi_our = NULL, *lsi_peer = NULL;
 	struct in6_addr src_addr, dst_addr;
+	struct in_addr src_v4, dst_v4;
 	
 	struct ip6_hdr* ip6_hdr = (struct ip6_hdr*) m->payload;
 	ip_hdr_size = sizeof(struct ip6_hdr);
@@ -64,11 +67,12 @@ int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m, struct in6_addr *ip_src, str
 		if(lsi_our && lsi_peer){
 		        IPV4_TO_IPV6_MAP(lsi_our, &src_addr);
 			IPV4_TO_IPV6_MAP(lsi_peer, &dst_addr);
-			HIP_DEBUG_LSI("******lsi_src : ", lsi_our);
-			HIP_DEBUG_LSI("******lsi_dst : ", lsi_peer);
+			HIP_DEBUG_LSI("******lsi_our : ", lsi_our);
+			HIP_DEBUG_LSI("******lsi_peer : ", lsi_peer);
 			reinject_packet(dst_addr, src_addr, m, 6, 1);
 		}
 	}
+
 	return proto6;
 }
 
@@ -84,49 +88,143 @@ int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m, struct in6_addr *ip_src, str
  */
 int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src, struct in_addr *lsi_dst)
 {
-	int err, msg_type;
+	int err, msg_type, state_ha, new_fw_entry_state;
 	struct in6_addr src_lsi, dst_lsi;
 	struct in6_addr src_hit, dst_hit;
+	struct in6_addr src_ip, dst_ip;
 	firewall_hl_t *entry_peer = NULL;
 
-	HIP_DEBUG("FIREWALL_TRIGGERING OUTGOING LSI %s\n",inet_ntoa(*lsi_dst));
+	HIP_DEBUG("FIREWALL_TRIGGERING OUTGOING LSI %s\n", inet_ntoa(*lsi_dst));
 
-	IPV4_TO_IPV6_MAP(lsi_dst, &dst_lsi);
-	IPV4_TO_IPV6_MAP(lsi_src, &src_lsi);
+	//get the corresponding ip address for this lsi,
+	//as well as the current ha state
+	state_ha = hip_get_peerIP_from_LSIs(lsi_src, lsi_dst, &dst_ip);
 
-	hip_firewall_hldb_dump();
-	entry_peer = (firewall_hl_t *)firewall_hit_lsi_db_match(lsi_dst);	
+	//get firewall db entry
+	entry_peer = (firewall_hl_t *)firewall_ip_db_match(&dst_ip);	
+	if(entry_peer){
+		/*//with LSI, the bex has to succeed
+		HIP_IFEL(entry_peer->bex_state == FIREWALL_STATE_BEX_DEFAULT, -1, "Base Exchange Failed");*/
 
-	if (entry_peer){
-		HIP_IFEL(entry_peer->bex_state == -1, -1, "Base Exchange Failed");
-	  	if (entry_peer->bex_state == 1)
+		//if the firewall entry is still undefined
+		//check whether the base exchange has been established
+		if(entry_peer->bex_state == FIREWALL_STATE_BEX_DEFAULT){
+			//find the correct state for the fw entry state
+			if(state_ha == HIP_STATE_ESTABLISHED)
+				new_fw_entry_state = FIREWALL_STATE_BEX_ESTABLISHED;
+			else if( (state_ha == HIP_STATE_FAILED)  ||
+				 (state_ha == HIP_STATE_CLOSING) ||
+				 (state_ha == HIP_STATE_CLOSED)     )
+				new_fw_entry_state = FIREWALL_STATE_BEX_NOT_SUPPORTED;
+			else
+				new_fw_entry_state = FIREWALL_STATE_BEX_DEFAULT;
+
+			//update fw entry state accordingly
+			firewall_update_entry(NULL, NULL, NULL, &dst_ip,
+					      FIREWALL_STATE_BEX_ESTABLISHED);
+
+			//reobtain the entry in case it has been updated
+			entry_peer = firewall_ip_db_match(&dst_ip);
+		}
+
+		//decide whether to reinject the packet
+		if (entry_peer->bex_state == FIREWALL_STATE_BEX_ESTABLISHED)
 			reinject_packet(entry_peer->hit_our, entry_peer->hit_peer, m, 4, 0);
-		else if (entry_peer->bex_state == 0){
-		        /*Case after the connections established are reseted*/
-		        HIP_IFEL(hip_trigger_bex(&entry_peer->hit_our, &entry_peer->hit_peer, 
-						 &src_lsi, &dst_lsi, NULL, NULL), -1, 
-			 	 "Base Exchange Trigger failed\n"); 
-		}
 	}else{
-	        /*Check if bex is already established: Server case*/
-	        int state_ha = hip_trigger_is_bex_established(&src_hit, &dst_hit, lsi_src, lsi_dst);
-		if (state_ha){
-		        HIP_DEBUG("ha is ESTABLISHED!\n");
-			firewall_add_hit_lsi(&src_hit, &dst_hit, lsi_dst, state_ha);
-			reinject_packet(src_hit, dst_hit, m, 4, 0);
+		//add default entry in the firewall db
+		firewall_add_default_entry(&dst_ip);
+
+	        //Check if bex is already established: server case
+	        /*state_ha = hip_trigger_is_bex_established(&src_hit, &dst_hit,
+						lsi_src, lsi_dst);*/
+		//get current connection state from hipd
+		state_ha = hip_get_bex_state_from_LSIs(lsi_src, lsi_dst, &src_ip,
+						       &dst_ip,	&src_hit, &dst_hit);
+
+		if( (state_ha == -1)                     || 
+		    (state_ha == HIP_STATE_NONE)         || 
+		    (state_ha == HIP_STATE_UNASSOCIATED)    ){
+			// initialize bex
+			IPV4_TO_IPV6_MAP(lsi_src, &src_lsi);
+			IPV4_TO_IPV6_MAP(lsi_dst, &dst_lsi);
+			HIP_IFEL(hip_trigger_bex(&src_hit, &dst_hit, &src_lsi,
+						 &dst_lsi, NULL, NULL),
+				 	-1, "Base Exchange Trigger failed\n");
+			//update fw db entry
+			firewall_update_entry(&src_hit, &dst_hit, lsi_dst, &dst_ip,
+					      FIREWALL_STATE_BEX_DEFAULT);
 		}
-		else{
-			// Run bex to initialize SP and SA
-			HIP_INFO("Firewall_db empty and no ha ESTABLISHED. Triggering Base Exchange\n");
-			err = hip_get_hit_peer_by_lsi_pair(lsi_src, lsi_dst, &src_hit, &dst_hit);
-			HIP_IFEL(hip_trigger_bex(&src_hit, &dst_hit, &src_lsi, &dst_lsi, NULL, NULL), -1, 
-			 	 "Base Exchange Trigger failed\n");
-		  	firewall_add_hit_lsi(&src_hit, &dst_hit, lsi_dst, 2);
+		if(state_ha == HIP_STATE_ESTABLISHED){
+			//update fw db entry
+			firewall_update_entry(&src_hit, &dst_hit, lsi_dst, &dst_ip,
+					      FIREWALL_STATE_BEX_ESTABLISHED);
+
+			reinject_packet(src_hit, dst_hit, m, 4, 0);
 		}
 	}
 out_err: 
 	return err;
 }
+
+
+/*
+ * similar to the hip_request_peer_hit_from_hipd(...) function
+ * 
+ */
+int hip_request_peer_hit_from_hipd_at_firewall(
+			const struct in6_addr *peer_ip,
+	         	struct in6_addr       *peer_hit,
+			const struct in6_addr *local_hit,
+			in_port_t             *src_tcp_port,
+			in_port_t             *dst_tcp_port,
+			int                   *fallback,
+			int                   *reject){
+	struct hip_common *msg = NULL;
+	struct in6_addr *hit_recv = NULL;
+	hip_hit_t *ptr = NULL;
+	int err = 0;
+	int ret = 0;
+
+	*fallback = 1;
+	*reject = 0;
+
+	HIP_IFE(!(msg = hip_msg_alloc()), -1);
+
+	HIP_IFEL(hip_build_param_contents(msg, (void *)(local_hit),
+					  HIP_PARAM_HIT_LOCAL,
+					  sizeof(struct in6_addr)),
+			-1, "build param HIP_PARAM_HIT  failed\n");
+
+	HIP_IFEL(hip_build_param_contents(msg, (void *)(src_tcp_port),
+					  HIP_PARAM_SRC_TCP_PORT,
+					  sizeof(in_port_t)),
+			-1, "build param HIP_PARAM_SRC_TCP_PORT failed\n");
+
+	HIP_IFEL(hip_build_param_contents(msg, (void *)(dst_tcp_port),
+					  HIP_PARAM_DST_TCP_PORT,
+					  sizeof(in_port_t)),
+			-1, "build param HIP_PARAM_DST_TCP_PORT failed\n");
+
+	HIP_IFEL(hip_build_param_contents(msg, (void *)(peer_ip),
+					  HIP_PARAM_IPV6_ADDR_PEER,
+					  sizeof(struct in6_addr)),
+			-1, "build param HIP_PARAM_IPV6_ADDR failed\n");
+
+	/* build the message header */
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT_AT_FIREWALL, 0), -1,
+		 "build hdr failed\n");
+
+	/* send and receive msg to/from hipd */
+	HIP_IFEL(hip_send_daemon_info_wrapper(msg, 1), -1, "send msg failed\n");
+
+	_HIP_DEBUG("send_recv msg succeed\n");
+
+ out_err:
+	if(msg)
+		free(msg);
+	return err;
+}
+
 
 /**
  * Executes the packet reinjection
@@ -201,5 +299,7 @@ int reinject_packet(struct in6_addr src_hit, struct in6_addr dst_hit, ipq_packet
 		  }
 	}
 
+	if(msg)
+	        HIP_FREE(msg);
 	return err;	
 }

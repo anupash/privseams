@@ -75,30 +75,34 @@ static enum logfmt_t logfmt = LOGFMT_SHORT;
 static enum logdebug_t logdebug = LOGDEBUG_ALL;
 
 /**
- * hip_set_logtype - set logging to to stderr or syslog
+ * @brief Sets logging to stderr or syslog.
+ * 
+ * Defines where HIP daemon DEBUG, INFO, ERROR etc. messages are printed. 
+ * 
  * @param new_logtype the type of logging output, either LOGTYPE_STDERR or
- *               LOGTYPE_SYSLOG
- *
+ *                    LOGTYPE_SYSLOG
  */
 void hip_set_logtype(int new_logtype) {
   logtype = new_logtype;
 }
 
 /**
- * hip_set_logfmt - set the formatting of log output (short or long)
- * @param new_logfmt the format of the log output, either LOGFMT_SHORT or
- *              LOGFMT_LONG
+ * @brief Sets the formatting of log output.
  *
+ * Defines whether the messages should include file name and line number or not. 
+ * 
+ * @param new_logfmt the format of the log output, either LOGFMT_SHORT or
+ *                    LOGFMT_LONG
  */
 void hip_set_logfmt(int new_logfmt) {
   logfmt = new_logfmt;
 }
 
 /**
- * hip_set_logdebug - selects what logging messages to display
- * @param new_logdebug: either LOGDEBUG_ALL, LOGDEBUG_MEDIUM or LOGDEBUG_NONE
- * @return       zero on success.
- *
+ * @brief Selects what logging messages to display.
+ * 
+ * @param new_logdebug either LOGDEBUG_ALL, LOGDEBUG_MEDIUM or LOGDEBUG_NONE
+ * @return             always zero.
  */
 int hip_set_logdebug(int new_logdebug) {
   logdebug = new_logdebug;
@@ -199,7 +203,7 @@ int hip_set_auto_logdebug(const char *cfile){
  *
  */
 void hip_handle_log_error(int logtype) {
-  fprintf(stderr, "log (type=%d) failed, ignoring", logtype);
+  fprintf(stderr, "log (type=%d) failed, ignoring\n", logtype);
 }
 
 /**
@@ -415,9 +419,9 @@ void hip_hexdump(const char *file, int line, const char *function,
 	HIP_DIE("hexdump msg too long(%d)", hexdump_written);
 	} else {
 	hexdump_count -= hexdump_written;
-	assert(hexdump_count >=0);
+	HIP_ASSERT(hexdump_count >=0);
 	hexdump_index += hexdump_written;
-	assert(hexdump_index + hexdump_count == hexdump_max_size);
+	HIP_ASSERT(hexdump_index + hexdump_count == hexdump_max_size);
 	}
 	char_index++;
 	} while(char_index < len);
@@ -498,9 +502,9 @@ int hip_hexdump_parsed(const char *file, int line, const char *function,
 				HIP_DIE("hexdump msg too long(%d)", hexdump_written);
 			}
 			hexdump_count -= hexdump_written;
-			assert(hexdump_count >=0);
+			HIP_ASSERT(hexdump_count >=0);
 			hexdump_index += hexdump_written;
-			assert(hexdump_index + hexdump_count == hexdump_total_size);
+			HIP_ASSERT(hexdump_index + hexdump_count == hexdump_total_size);
 			
 			// Wite the character in ascii to asciidump line	
 			if (written > 32 && written < 127)
@@ -624,7 +628,7 @@ void hip_print_hit(int debug_level, const char *file, int line, const char *func
 		   const char *str, const struct in6_addr *hit)
 {
 	if(hit == NULL) {
-		HIP_DEBUG("%s: NULL\n", str);
+	        HIP_DEBUG("%s: NULL\n", str);
 		return;
 	}
 	else {
@@ -695,30 +699,45 @@ void uint32_to_binstring(uint32_t val, char *buffer)
 	buffer[i] = '\0';
 }
 
+
+/* THIS ONE WORKS -SAMU */
 void hip_print_locator_addresses(struct hip_common * in_msg) {
     struct hip_locator *locator;
-    int n_addrs = 0, i = 0;
-    struct hip_locator_info_addr_item *locator_address_item = NULL;
+    int i = 0;
+    unsigned char * tmp = NULL;
+    struct hip_locator_info_addr_item *item = NULL;
+    struct hip_locator_info_addr_item2 *item2 = NULL;
+    char *address_pointer; 
+	
+    _HIP_DUMP_MSG(in_msg);
 
     locator = hip_get_param((struct hip_common *)in_msg,
                             HIP_PARAM_LOCATOR);
-    if (locator) {
-        n_addrs = hip_get_locator_addr_item_count(locator);
-        locator_address_item = hip_get_locator_first_addr_item(locator);
-                       
-        for (i = 0; i < n_addrs; i++) {
-            _HIP_HEXDUMP("LOC HEX", &locator_address_item[i],
-                                       sizeof(struct hip_locator_info_addr_item));
-            if (locator_address_item[i].locator_type == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
-                
-                HIP_DEBUG_HIT("LOCATOR from DHT",
-                              (struct in6_addr *)&locator_address_item[i].address);
-                _HIP_HEXDUMP("Should be in6_addr", 
-                             &locator_address_item[i].address,
-                             sizeof(struct in6_addr));
-                
-            }
-        }
+    if (locator) {	
+	address_pointer =(char*) (locator + 1);
+       
+	for(;address_pointer < ((char*)locator) + hip_get_param_contents_len(locator); ) {
+		if (((struct hip_locator_info_addr_item*)address_pointer)->locator_type 
+                    == HIP_LOCATOR_LOCATOR_TYPE_UDP) {
+			item2 = (struct hip_locator_info_addr_item2 *)address_pointer;
+			HIP_DEBUG_HIT("LOCATOR", (struct in6_addr *)&item2->address);
+                        address_pointer += sizeof(struct hip_locator_info_addr_item2);
+                }
+                else if(((struct hip_locator_info_addr_item*)address_pointer)->locator_type 
+                        == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI) {
+			item = (struct hip_locator_info_addr_item *)address_pointer;
+			HIP_DEBUG_HIT("LOCATOR", (struct in6_addr *)&item->address);
+                        address_pointer += sizeof(struct hip_locator_info_addr_item);
+                } 
+                else if(((struct hip_locator_info_addr_item*)address_pointer)->locator_type 
+                        == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
+			item = (struct hip_locator_info_addr_item *)address_pointer;
+			HIP_DEBUG_HIT("LOCATOR", (struct in6_addr *)&item->address);
+                        address_pointer += sizeof(struct hip_locator_info_addr_item);
+                } 
+                else
+                        address_pointer += sizeof(struct hip_locator_info_addr_item);
+	}	
     }
 }
 
@@ -752,8 +771,11 @@ void hip_print_locator(int debug_level, const char *file, int line, const char *
 		   const char *str, const struct in6_addr *locator)
 {
 
+/* XXTRASHXX Totally useless does anything but what it is supposed to do -SAMU */
+
 	int n_addrs = 0, i = 0;
-	struct hip_locator_info_addr_item *first_address_item = NULL, *locator_address_item = NULL;
+	struct hip_locator_info_addr_item *first_address_item = NULL, 
+		*locator_address_item = NULL;
 	struct hip_locator_info_addr_item2 * locator_address_item2 = NULL;
 	   /* locator = hip_get_param((struct hip_common *)in_msg,
 	HIP_PARAM_LOCATOR);*/
@@ -765,10 +787,12 @@ void hip_print_locator(int debug_level, const char *file, int line, const char *
 	first_address_item = hip_get_locator_first_addr_item(locator);
 	               
 	for (i = 0; i < n_addrs; i++) {
-		locator_address_item = (struct hip_locator_info_addr_item *) hip_get_locator_item(first_address_item, i);
+		locator_address_item = (struct hip_locator_info_addr_item *) 
+			hip_get_locator_item(first_address_item, i);
 	    _HIP_HEXDUMP("LOC HEX", &locator_address_item[i],
 	                           sizeof(struct hip_locator_info_addr_item));
-	HIP_DEBUG("locator items index %d, type is %d \n", i,locator_address_item->locator_type );
+	HIP_DEBUG("locator items index %d, type is %d \n", i,
+		  locator_address_item->locator_type );
 	if (locator_address_item->locator_type == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
 	    
 		HIP_INFO_HIT("LOCATOR from DHT",

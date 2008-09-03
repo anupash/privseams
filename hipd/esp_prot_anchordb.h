@@ -1,11 +1,53 @@
 #ifndef ESP_PROT_ANCHORDB_H_
 #define ESP_PROT_ANCHORDB_H_
 
+#include "esp_prot_common.h"
+#include "hashchain_store.h"
 #include "builder.h"
 
-void init_anchor_db(void);
-int update_anchor_db(struct hip_common *msg);
-int has_more_anchors(void);
-unsigned char * get_next_anchor(void);
+/* defines the structure storing the anchors */
+typedef struct anchor_db
+{
+	/* amount of anchors for each transform */
+	int num_anchors[NUM_TRANSFORMS];
+	/* length of the anchors for each transform */
+	int anchor_lengths[NUM_TRANSFORMS];
+	/* set to support max amount of anchors possible */
+	unsigned char *anchors[NUM_TRANSFORMS][MAX_HCHAINS_PER_ITEM];
+} anchor_db_t;
+
+
+/** inits the anchorDB */
+void anchor_db_init(void);
+
+/** uninits the anchorDB */
+void anchor_db_uninit(void);
+
+/** handles a user-message sent by the firewall when the bex-store is updated
+ *
+ * @param	msg the user-message sent by fw
+ * @return	0 if ok, != 0 else
+ */
+int anchor_db_update(struct hip_common *msg);
+
+/** checks if the anchorDB has more elements for the given transform
+ *
+ * @param	transform the ESP protection extension transform
+ * @return	1 if more elements, 0 else
+ */
+int anchor_db_has_more_anchors(uint8_t transform);
+
+/* returns an unused anchor element for the given transform
+ *
+ * @param	transform the ESP protection extension transform
+ * @return	anchor, NULL if empty */
+unsigned char * anchor_db_get_anchor(uint8_t transform);
+
+/** returns the anchor-length for a given transform
+ *
+ * @param	transform the ESP protection extension transform
+ * @return	anchor-length, 0 for UNUSED transform
+ */
+int anchor_db_get_anchor_length(uint8_t transform);
 
 #endif /*ESP_PROT_ANCHORDB_H_*/

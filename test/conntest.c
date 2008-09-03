@@ -21,7 +21,7 @@ int create_serversocket(int type, int port) {
 
 	setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
 
-	bzero(&addr, sizeof(addr));
+ 	memset(&addr, 0, sizeof(addr));
 	addr.sin6_family = AF_INET6;
 	addr.sin6_port = htons(port);
 	addr.sin6_addr = in6addr_any;
@@ -243,7 +243,13 @@ int hip_connect_func(struct addrinfo *peer_ai, int *sock)
 	
 	/* Loop through every address in the address info. */
 	for(ai = peer_ai; ai != NULL; ai = ai->ai_next) {
-		ipv4 = &((struct sockaddr_in *)ai->ai_addr)->sin_addr;
+	        if (ai->ai_family == AF_INET)
+		  HIP_DEBUG("AF_INET\n");
+		else
+		  HIP_DEBUG("af_inet6\n");
+	}
+	for(ai = peer_ai; ai != NULL; ai = ai->ai_next) {
+	        ipv4 = &((struct sockaddr_in *)ai->ai_addr)->sin_addr;
 		ipv6 = &((struct sockaddr_in6 *)ai->ai_addr)->sin6_addr;
 
 		/* Check the type of address we are connecting to and print

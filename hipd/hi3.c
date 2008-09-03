@@ -1,7 +1,5 @@
 #include "hi3.h"
 //#include "output.h"
-
-
 #ifdef CONFIG_HIP_HI3
 
 #define HI3_TRIGGER_MAX 10
@@ -23,7 +21,6 @@ int hi3_pub_tr_count = 0;
  * @todo           tkoponen: should this somehow trigger the timeout for waiting
  *                 outbound traffic (state machine)?
  */
-
 static void no_matching_trigger(void *ctx_data, void *data, void *fun_ctx) {
 	char id[100];
 	sprintf_i3_id(id, (ID *)ctx_data);
@@ -237,8 +234,57 @@ int hip_hi3_clean()
 	cl_exit();
 }
 
+int hip_do_i3_stuff_for_i2(struct hip_locator *locator, hip_portpair_t *i2_info,
+			   in6_addr_t *i2_saddr, in6_addr_t *i2_daddr)
+{
+	int n_addrs = 0, ii = 0, use_ip4 = 1;
+	struct hip_locator_info_addr_item *first = NULL;
+	struct netdev_address *n = NULL;
+	hip_list_t *item = NULL, *tmp = NULL;
+
+	if(locator == NULL) {
+		return 0;
+	}
+	
+        if (locator) {
+		n_addrs = hip_get_locator_addr_item_count(locator);
+		
+		if(i2_info->hi3_in_use && n_addrs > 0) {
+			
+                        first = (char*)locator + sizeof(struct hip_locator);
+                        memcpy(i2_saddr, &first->address,
+			       sizeof(struct in6_addr));
+			
+                        list_for_each_safe(item, tmp, addresses, ii) {
+				n = list_entry(item);
+				
+				if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr))) {
+					continue;
+				}
+				if (!hip_sockaddr_is_v6_mapped(&n->addr)) {
+					memcpy(i2_daddr, hip_cast_sa_addr(&n->addr),
+					       hip_sa_addr_len(&n->addr));
+					ii = -1;
+					use_ip4 = 0;
+					break;
+				}
+			}
+                        if( use_ip4 ) {
+                                list_for_each_safe(item, tmp, addresses, ii) {
+					n = list_entry(item);
+					
+					if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr))) {
+						continue;
+					}
+					if (hip_sockaddr_is_v6_mapped(&n->addr)) {
+						memcpy(i2_daddr, hip_cast_sa_addr(&n->addr),
+						       hip_sa_addr_len(&n->addr));
+						ii = -1;
+						break;
+					}
+				}
+                        }
+		}
+	}
+}
 #endif /* HIP_CONFIG_HI3 */
- 
-
-
-

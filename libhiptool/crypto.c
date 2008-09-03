@@ -336,20 +336,22 @@ int hip_write_hmac(int type, void *key, void *in, int in_len, void *out)
 }
 
 /**
- * hip_crypto_encrypted - encrypt/decrypt data
- * @param data data to be encrypted/decrypted
- * @param iv_orig initialization vector
- * @param alg encryption algorithm to use
- * @param len length of data
- * @param key encryption/decryption key to use
- * @param direction flag for selecting encryption/decryption
+ * @brief Encrypt or decrypts data.
  *
- * @param direction is HIP_DIRECTION_ENCRYPT if data is to be encrypted
- * or HIP_DIRECTION_DECRYPT if data is to be decrypted.
+ * Encrypts/decrypts data in @c data and places the result in the same buffer
+ * @c data thus overwriting the original source data.
  *
- * The result of the encryption/decryption of data is overwritten to data.
+ * @param data      a pointer to a buffer of data to be encrypted/decrypted.
+ *                  This is both a source and a target buffer.
+ * @param iv_orig   a pointer to an initialization vector
+ * @param alg       encryption algorithm to use
+ * @param len       length of @c data
+ * @param key       encryption/decryption key to use
+ * @param direction flag for selecting encryption/decryption. Either
+ *                  HIP_DIRECTION_ENCRYPT or HIP_DIRECTION_DECRYPT
  *
- * @return 0 is encryption/decryption was successful, otherwise < 0.
+ * @return          Zero if the encryption/decryption was successful, negative
+ *                  otherwise.
  */
 int hip_crypto_encrypted(void *data, const void *iv_orig, int alg, int len,
 			 void* key, int direction)
@@ -417,7 +419,6 @@ int hip_crypto_encrypted(void *data, const void *iv_orig, int alg, int len,
         default:
                 HIP_IFEL(1, -EFAULT, "Attempted to use unknown CI (alg = %d)\n", alg);
         }
-
 	
 	_HIP_HEXDUMP("hip_crypto_encrypted decrypt data: ", result, len);	
 	err = 0;
@@ -1060,13 +1061,16 @@ int load_dsa_private_key(const char *filename, DSA **dsa) {
     HIP_ERROR("Error closing file\n");
     goto out_err;
   }
+
+  _HIP_DEBUG("Loaded host DSA q=%s\n", BN_bn2hex((*dsa)->q));
+  _HIP_DEBUG("Loaded host DSA p=%s\n", BN_bn2hex((*dsa)->p));
+  _HIP_DEBUG("Loaded host DSA g=%s\n", BN_bn2hex((*dsa)->g));
+
   HIP_IFEL(!*dsa, -EINVAL, "Read failed for %s\n", filename);
 
   _HIP_DEBUG("Loaded host DSA pubkey=%s\n", BN_bn2hex((*dsa)->pub_key));
   _HIP_DEBUG("Loaded host DSA privkey=%s\n", BN_bn2hex((*dsa)->priv_key));
-  _HIP_DEBUG("Loaded host DSA p=%s\n", BN_bn2hex((*dsa)->p));
-  _HIP_DEBUG("Loaded host DSA q=%s\n", BN_bn2hex((*dsa)->q));
-  _HIP_DEBUG("Loaded host DSA g=%s\n", BN_bn2hex((*dsa)->g));
+
 
  out_err:
 

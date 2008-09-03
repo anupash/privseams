@@ -8,10 +8,12 @@
 #define _HIP_STATE
 
 #include "hashtable.h"
+#include "esp_prot_common.h"
 
 #define HIP_HIT_KNOWN 1
 #define HIP_HIT_ANON  2
 
+#define HIP_ENDPOINT_FLAG_PUBKEY           0
 #define HIP_ENDPOINT_FLAG_HIT              1
 #define HIP_ENDPOINT_FLAG_ANON             2
 #define HIP_HI_REUSE_UID                   4
@@ -59,11 +61,12 @@
 /** for the triple nat mode*/
 #define HIP_NAT_MODE_NONE               0
 #define HIP_NAT_MODE_PLAIN_UDP          1
-#define HIP_NAT_MODE_ICE_UDP            2 
+#define HIP_NAT_MODE_ICE_UDP            2
 //end NAT branch
 
 #define SEND_UPDATE_ESP_INFO             (1 << 0)
 #define SEND_UPDATE_LOCATOR              (1 << 1)
+#define SEND_UPDATE_ESP_ANCHOR           (1 << 2)
 
 #define HIP_SPI_DIRECTION_OUT            1
 #define HIP_SPI_DIRECTION_IN             2
@@ -79,14 +82,14 @@
  * draft-ietf-hip-registration-02. But since we are just in the test phase of
  * HIP, we settle for a constant value of 600 seconds. Lauri 23.01.2008.
  */
-#define HIP_DEFAULT_RVA_LIFETIME         600          
+#define HIP_DEFAULT_RVA_LIFETIME         600
 
 /**
  * HIP host association state.
- * 
+ *
  * @todo remove HIP_HASTATE_SPIOK
  */
-typedef enum { 
+typedef enum {
 	HIP_HASTATE_INVALID = 0,
 	HIP_HASTATE_SPIOK = 1,
 	HIP_HASTATE_HITOK = 2,
@@ -100,14 +103,15 @@ typedef int (*hip_xmit_func_t)(struct in6_addr *, struct in6_addr *, in_port_t,
 
 /**
  * A data structure for storing the source and destination ports of an incoming
- * packet. 
+ * packet.
  */
-typedef struct hip_stateless_info 
+typedef struct hip_stateless_info
 {
 	in_port_t src_port; /**< The source port of an incoming packet. */
 	in_port_t dst_port; /**< The destination port of an incoming packet. */
 #ifdef CONFIG_HIP_HI3
-	int hi3_in_use; // varibale says is the received message sent through i3 or not
+	int hi3_in_use; /**< A boolean to indicate whether this message was
+                             sent through I3 or not .*/
 #endif
 } hip_portpair_t;
 
@@ -123,10 +127,10 @@ typedef struct hip_msg_retrans{
 	struct hip_common *buf;
 } hip_msg_retrans_t;
 
-/** 
+/**
  * A binder structure for storing an IPv6 address and transport layer port
  * number. This structure is used in hip_build_param_relay_to_old().
- * 
+ *
  * @note This has to be packed since it is used in building @c RELAY_FROM and
  *       @c RELAY_TO parameters.
  * @note obsolete
@@ -160,6 +164,8 @@ struct hip_context
 				      during the keymat calculation. */
 	uint16_t keymat_index; /**< KEYMAT offset. */
 	uint16_t esp_keymat_index; /**< A pointer to the esp keymat index. */
+
+	int esp_prot_param;
 };
 
 /*
@@ -172,7 +178,7 @@ struct hip_peer_addr_list_item
 	uint32_t padding;
 	unsigned long    hash_key;
 	struct in6_addr  address;
-	
+
 	int              address_state; /* current state of the
 					 * address (PEER_ADDR_STATE_xx) */
 	int              is_preferred;  /* 1 if this address was set as
@@ -183,11 +189,11 @@ struct hip_peer_addr_list_item
 	uint32_t         seq_update_id; /* the Update ID in SEQ parameter
 					   this address is related to */
 	uint8_t          echo_data[4];  /* data put into the ECHO_REQUEST parameter */
-//NAT branch	
+//NAT branch
 	uint8_t  		transport_protocol; /*value 1 for UDP*/
-	
+
 	uint16_t 		port /*port number for transport protocol*/;
-	
+
 	uint32_t 		priority;
 //end NAT branch
 };
@@ -244,9 +250,9 @@ struct hip_spi_out_item
 /* this struct is here instead of hidb.h to avoid some weird compilation
    warnings */
 struct hip_host_id_entry {
-	/* this needs to be first (list_for_each_entry, list 
+	/* this needs to be first (list_for_each_entry, list
 	   head being of different type) */
-	//hip_list_t next; 
+	//hip_list_t next;
 	struct hip_lhi lhi;
 	hip_lsi_t lsi;
 	/* struct in6_addr ipv6_addr[MAXIP]; */
@@ -268,7 +274,7 @@ struct hip_host_id_entry {
     different hosts leads to a new @c hip_hadb_state with @c state set to
     @c HIP_STATE_ESTABLISHED. */
 struct hip_hadb_state
-{	
+{
         /** Our Host Identity Tag (HIT). */
 	hip_hit_t                    hit_our;
 	/** Peer's Host Identity Tag (HIT). */
@@ -277,8 +283,8 @@ struct hip_hadb_state
 	    locking stuff which is currently unimplemented because the daemon
 	    is single threaded. When zero, the host association can be freed.
 	    @date 24.01.2008 */
-	hip_hastate_t                hastate; 
-	/** The state of this host association. @see hip_ha_state */ 
+	hip_hastate_t                hastate;
+	/** The state of this host association. @see hip_ha_state */
 	int                          state;
 	/** This guarantees that retransmissions work properly also in
 	    non-established state.*/
@@ -287,10 +293,10 @@ struct hip_hadb_state
 	    @todo Remove this kludge. */
 	int                          update_state;
 	/** Our control values related to this host association.
-	    @see hip_ha_controls */ 
+	    @see hip_ha_controls */
 	hip_controls_t               local_controls;
 	/** Peer control values related to this host association.
-	    @see hip_ha_controls */ 
+	    @see hip_ha_controls */
 	hip_controls_t               peer_controls;
 	/** If this host association is from a local HIT to a local HIT this
 	    is non-zero, otherwise zero. */
@@ -313,7 +319,7 @@ struct hip_hadb_state
 	struct in6_addr              local_address;
 	/** Peer's Local Scope Identifier (LSI). A Local Scope Identifier is a
 	    32-bit localized representation for a Host Identity.*/
-    hip_lsi_t                    lsi_peer;
+	hip_lsi_t                    lsi_peer;
 	/** Our Local Scope Identifier (LSI). A Local Scope Identifier is a
 	    32-bit localized representation for a Host Identity.*/
 	hip_lsi_t                    lsi_our;
@@ -324,27 +330,31 @@ struct hip_hadb_state
 	/** ESP extension protection transform */
 	uint8_t						 esp_prot_transform;
 	/** ESP extension protection local_anchor */
-	unsigned char *				 esp_local_anchor;
+	unsigned char				 esp_local_anchor[MAX_HASH_LENGTH];
+	/** another local anchor used for UPDATE messages */
+	unsigned char				 esp_local_update_anchor[MAX_HASH_LENGTH];
 	/** ESP extension protection peer_anchor */
-	unsigned char *				 esp_peer_anchor;
+	unsigned char				 esp_peer_anchor[MAX_HASH_LENGTH];
+	/** another peer anchor used for UPDATE messages */
+	unsigned char				 esp_peer_update_anchor[MAX_HASH_LENGTH];
 	/** Something to do with the birthday paradox.
 	    @todo Please clarify what this field is. */
 	uint64_t                     birthday;
 	/** A pointer to the Diffie-Hellman shared key. */
 	char                         *dh_shared_key;
-	/** The length of the Diffie-Hellman shared key. */ 
+	/** The length of the Diffie-Hellman shared key. */
 	size_t                       dh_shared_key_len;
 	/** A boolean value indicating whether there is a NAT between this host
 	    and the peer. */
 	uint8_t	                     nat_mode;
 	/* this might seem redundant as dst_port == HIP_NAT_UDP_PORT, but it makes
 	 * port handling easier in other functions */
-	in_port_t					 local_udp_port;
+	in_port_t		     local_udp_port;
 	 /** NAT mangled port (source port of I2 packet). */
 	in_port_t	             	 peer_udp_port;
-	/** Non-zero if the escrow service is in use. */ 
+	/** Non-zero if the escrow service is in use. */
 	int                          escrow_used;
-	/** Escrow server HIT. */ 
+	/** Escrow server HIT. */
 	struct in6_addr	             escrow_server_hit;
 	/* The Initiator computes the keys when it receives R1. The keys are
 	   needed only when R2 is received. We store them here in the mean
@@ -379,7 +389,7 @@ struct hip_hadb_state
 	uint32_t                     update_id_in;
 	/** Our public host identity. */
 	struct hip_host_id           *our_pub;
-	/** Our private host identity. */	
+	/** Our private host identity. */
 	struct hip_host_id           *our_priv;
         /** A function pointer to a function that signs our host identity. */
 	int                          (*sign)(struct hip_host_id *, struct hip_common *);
@@ -418,11 +428,11 @@ struct hip_hadb_state
 	/** Miscellaneous function set.
 	    @note Do not modify this value directly. Use
 	    hip_hadb_set_handle_function_set() instead. */
-	hip_misc_func_set_t          *hadb_misc_func;	
+	hip_misc_func_set_t          *hadb_misc_func;
 	/** Update function set.
 	    @note Do not modify this value directly. Use
 	    hip_hadb_set_handle_function_set() instead. */
-	hip_update_func_set_t        *hadb_update_func;	
+	hip_update_func_set_t        *hadb_update_func;
 	/** Transmission function set.
 	    @note Do not modify this value directly. Use
 	    hip_hadb_set_handle_function_set() instead. */
@@ -440,7 +450,7 @@ struct hip_hadb_state
 	    hip_hadb_set_output_filter_function_set() instead. */
 	hip_output_filter_func_set_t *hadb_output_filter_func;
 	/** True when agent is prompting user and fall back is disabled. */
-	int                          hip_opp_fallback_disable; 
+	int                          hip_opp_fallback_disable;
 #ifdef CONFIG_HIP_HI3
 	/** If the state for hi3, then this flag is 1, otherwise it is zero. */
 	int                          is_hi3_state ;
@@ -454,19 +464,26 @@ struct hip_hadb_state
 #ifdef CONFIG_HIP_HIPPROXY
 	int hipproxy;
 #endif
-	
+        /** Counters of heartbeats (ICMPv6s) **/
+	int                          heartbeats_sent;
+	int                          heartbeats_received;	
+	/** Heartbeat current mean RTT **/
+        u_int32_t                    heartbeats_mean;
+	/** Heartbeat current mean varians RTT **/
+	int32_t                      heartbeats_mean_varians;
+
 //NAT Branch
 	//pointer for ice engine
-    void* ice_session;
-    /** a 16 bits flag for nat connectiviy checking engine control*/
-    uint16_t nat_control;
-    
-	/**reflexive address(NAT box out bound) when register to relay or RVS**/
+	void* ice_session;
+	/** a 16 bits flag for nat connectiviy checking engine control*/
+	uint16_t nat_control;
+	
+	/**reflexive address(NAT box out bound) when register to relay or RVS */
 	struct in6_addr              local_reflexive_address;
-	/**reflexive address port (NAT box out bound) when register to relay or RVS**/
+	/**reflexive address port (NAT box out bound) when register to relay or RVS */
 	in_port_t local_reflexive_udp_port;
 //end NAT Branch
-	
+
 };
 
 /** A data structure defining host association information that is sent
@@ -480,6 +497,11 @@ struct hip_hadb_user_info_state
         hip_lsi_t            lsi_our;
         hip_lsi_t            lsi_peer;
 	int                  state;
+	int                  heartbeats_on;
+	int                  heartbeats_sent;
+	int                  heartbeats_received;	
+        u_int32_t            heartbeats_mean;
+	int32_t              heartbeats_mean_varians;
 };
 
 /** @addtogroup hadb_func
@@ -487,58 +509,57 @@ struct hip_hadb_user_info_state
  */
 struct hip_hadb_rcv_func_set {
 	int (*hip_receive_i1)(struct hip_common *,
-			      struct in6_addr *, 
+			      struct in6_addr *,
 			      struct in6_addr *,
 			      hip_ha_t*,
 			      hip_portpair_t *);
 
 	int (*hip_receive_r1)(struct hip_common *,
-				 struct in6_addr *, 
+				 struct in6_addr *,
 				 struct in6_addr *,
 				 hip_ha_t*,
 			      hip_portpair_t *);
-				 
+
 	/* as there is possibly no state established when i2
 	messages are received, the hip_handle_i2 function pointer
 	is not executed during the establishment of a new connection*/
 	int (*hip_receive_i2)(struct hip_common *,
-				 struct in6_addr *, 
+				 struct in6_addr *,
 				 struct in6_addr *,
 				 hip_ha_t*,
 			     hip_portpair_t *);
-				 
+
 	int (*hip_receive_r2)(struct hip_common *,
 				 struct in6_addr *,
 				 struct in6_addr *,
-				 hip_ha_t*,
-			     hip_portpair_t *);
-				 
+				 hip_ha_t*,			     hip_portpair_t *);
+
 	int (*hip_receive_update)(struct hip_common *,
 				  struct in6_addr *,
 				  struct in6_addr *,
 				  hip_ha_t*,
 				  hip_portpair_t *);
-				     
+
 	int (*hip_receive_notify)(const struct hip_common *,
 				  const struct in6_addr *,
 				  const struct in6_addr *,
 				  hip_ha_t*);
-  
+
 	int (*hip_receive_bos)(struct hip_common *,
 			       struct in6_addr *,
 			       struct in6_addr *,
 			       hip_ha_t*,
 			       hip_portpair_t *);
-				     
+
 	int (*hip_receive_close)(struct hip_common *,
 				 hip_ha_t*);
-				       
+
 	int (*hip_receive_close_ack)(struct hip_common *,
-				     hip_ha_t*);	 
-	
+				     hip_ha_t*);
+
 };
 
-struct hip_hadb_handle_func_set{   
+struct hip_hadb_handle_func_set{
 	int (*hip_handle_i1)(struct hip_common *r1,
 			     struct in6_addr *r1_saddr,
 			     struct in6_addr *r1_daddr,
@@ -550,7 +571,7 @@ struct hip_hadb_handle_func_set{
 			     struct in6_addr *r1_daddr,
 			     hip_ha_t *entry,
 			     hip_portpair_t *);
-			     
+
 	/* as there is possibly no state established when i2
 	   messages are received, the hip_handle_i2 function pointer
 	   is not executed during the establishment of a new connection*/
@@ -559,7 +580,7 @@ struct hip_hadb_handle_func_set{
 			     struct in6_addr *i2_daddr,
 			     hip_ha_t *ha,
 			     hip_portpair_t *i2_info);
-			     
+
 	int (*hip_handle_r2)(struct hip_common *r2,
 			     struct in6_addr *r2_saddr,
 			     struct in6_addr *r2_daddr,
@@ -576,8 +597,8 @@ struct hip_hadb_handle_func_set{
 				    hip_ha_t *entry);
 };
 
-struct hip_hadb_update_func_set{   
-	int (*hip_handle_update_plain_locator)(hip_ha_t *entry, 
+struct hip_hadb_update_func_set{
+	int (*hip_handle_update_plain_locator)(hip_ha_t *entry,
 					       struct hip_common *msg,
 					       struct in6_addr *src_ip,
 					       struct in6_addr *dst_ip,
@@ -591,7 +612,7 @@ struct hip_hadb_update_func_set{
 
 	void (*hip_update_handle_ack)(hip_ha_t *entry,
 				      struct hip_ack *ack,
-				      int have_nes);				      
+				      int have_nes);
 
 	int (*hip_handle_update_established)(hip_ha_t *entry,
 					     struct hip_common *msg,
@@ -612,16 +633,16 @@ struct hip_hadb_update_func_set{
 				    struct hip_peer_addr_list_item *addr);
 };
 
-struct hip_hadb_misc_func_set{ 
+struct hip_hadb_misc_func_set{
 	uint64_t (*hip_solve_puzzle)(void *puzzle,
 				  struct hip_common *hdr,
-				  int mode);  
+				  int mode);
 	int (*hip_produce_keying_material)(struct hip_common *msg,
 					   struct hip_context *ctx,
 					   uint64_t I,
 					   uint64_t J,
 					   struct hip_dh_public_value **);
-	int (*hip_create_i2)(struct hip_context *ctx, uint64_t solved_puzzle, 
+	int (*hip_create_i2)(struct hip_context *ctx, uint64_t solved_puzzle,
 			     struct in6_addr *r1_saddr,
 			     struct in6_addr *r1_daddr,
 			     hip_ha_t *entry,
@@ -635,7 +656,7 @@ struct hip_hadb_misc_func_set{
 //add by santtu for the relay address and port
 			     struct in6_addr *,
 			     const in_port_t
-//end add			     
+//end add
 				);
 	void (*hip_build_network_hdr)(struct hip_common *msg, uint8_t type_hdr,
 				      uint16_t control,
@@ -658,12 +679,16 @@ struct hip_ipsec_func_set {
 	/** A function pointer for userspace/kernelspace ipsec */
 	uint32_t (*hip_add_sa)(struct in6_addr *saddr, struct in6_addr *daddr,
 			       struct in6_addr *src_hit, struct in6_addr *dst_hit,
-			       uint32_t *spi, int ealg,
+			       uint32_t spi, int ealg,
 			       struct hip_crypto_key *enckey,
 			       struct hip_crypto_key *authkey,
 			       int already_acquired,
 			       int direction, int update,
 			       hip_ha_t *entry);
+	void (*hip_delete_sa)(uint32_t spi, struct in6_addr *peer_addr,
+	                   struct in6_addr *dst_addr,
+	                   int family, int sport, int dport);
+	int (*hip_flush_all_sa)();
 	int (*hip_setup_hit_sp_pair)(hip_hit_t *src_hit, hip_hit_t *dst_hit,
 				     struct in6_addr *src_addr,
 				     struct in6_addr *dst_addr, u8 proto,
@@ -671,18 +696,17 @@ struct hip_ipsec_func_set {
 	void (*hip_delete_hit_sp_pair)(hip_hit_t *src_hit, hip_hit_t *dst_hit, u8 proto,
 				       int use_full_prefix);
 	int (*hip_flush_all_policy)();
-	int (*hip_flush_all_sa)();
 	uint32_t (*hip_acquire_spi)(hip_hit_t *srchit, hip_hit_t *dsthit);
 	void (*hip_delete_default_prefix_sp_pair)();
 	int (*hip_setup_default_sp_prefix_pair)();
 };
 
 
-struct hip_hadb_input_filter_func_set { 
+struct hip_hadb_input_filter_func_set {
 	int (*hip_input_filter)(struct hip_common *msg);
 };
 
-struct hip_hadb_output_filter_func_set { 
+struct hip_hadb_output_filter_func_set {
 	int (*hip_output_filter)(struct hip_common *msg);
 };
 

@@ -29,6 +29,8 @@
 
 #define HIP_OPP_IP_DB_SIZE		16
 
+#define HIP_DEFAULT_EXEC_PATH "/sbin:/usr/sbin:/bin:/usr/bin:/usr/local/sbin:/usr/local/bin"
+
 typedef struct _hip_hosts_entry
 {
         hip_hit_t hit;
@@ -41,6 +43,8 @@ struct hip_rsa_keylen {
 	int e;
 	int n;
 };
+
+int hip_sockaddr_is_v6_mapped(struct sockaddr *sa);
 
 static inline int ipv4_addr_cmp(const struct in_addr *a1,
 				const struct in_addr *a2)
