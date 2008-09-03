@@ -503,6 +503,11 @@ int firewall_init_rules(){
 		firewall_add_lsi_rule("iptables -I HIPFW-OUTPUT -d "," -j QUEUE");
 #endif
 
+		system("ip6tables -I HIPFW-FORWARD -p 139 -j QUEUE");
+		system("ip6tables -I HIPFW-FORWARD -p 50 -j QUEUE");
+		system("ip6tables -I HIPFW-FORWARD -p 17 --dport 50500 -j QUEUE");
+		system("ip6tables -I HIPFW-FORWARD -p 17 --sport 50500 -j QUEUE");
+
 		system("ip6tables -I HIPFW-INPUT -p 139 -j QUEUE");
 		system("ip6tables -I HIPFW-INPUT -p 50 -j QUEUE");
 		system("ip6tables -I HIPFW-INPUT -p 17 --dport 50500 -j QUEUE");
