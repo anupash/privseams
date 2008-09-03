@@ -414,6 +414,36 @@ out_err:
 }
 
 /**
+ * Check the certificate of the packet.
+ *
+ * @param ctx context of the packet with the certificate to check
+ * @return success (0) or failure
+ */
+static int pisa_check_certificate(hip_fw_context_t *ctx)
+{
+	struct hip_common *hip = ctx->transport_hdr.hip;
+	struct hip_cert *cert;
+	char *buf;
+	int err = 0, len;
+
+	cert = hip_get_param(hip, HIP_PARAM_CERT);
+	HIP_IFEL(cert == NULL, -1, "No certificate found.\n");
+
+	len = ntohs(cert->length);
+	buf = malloc(len);
+	memset(buf, 0, len + 1);
+	memcpy(buf, cert + 1, len);
+	HIP_DEBUG("Found certificate with values %i %i %i %i\n", cert->cert_group, cert->cert_count, cert->cert_id, cert->cert_type);
+	HIP_DEBUG("Certificate length: %i data: \"%s\"\n", len, buf);
+
+	/* @todo: actually check the certificate */
+
+	free(buf);
+out_err:
+	return err;
+}
+
+/**
  * Accept a connection via PISA. Update firewall to allow further packages to
  * pass through.
  *
@@ -549,15 +579,16 @@ static int pisa_handler_r2(hip_fw_context_t *ctx)
 	HIP_DEBUG("Start PERF_R2\n");
 	hip_perf_start_benchmark(perf_set, PERF_R2);
 #endif
-	int verdict = NF_DROP, sig = 0;
+	int verdict = NF_DROP, sig = 0, cert = 0;
 	struct hip_solution_m *solution = NULL;
 	struct hip_tlv_common *nonce = NULL;
 
 	nonce = pisa_check_nonce(ctx);
 	solution = pisa_check_solution(ctx);
 	sig = pisa_check_signature(ctx);
+	cert = pisa_check_certificate(ctx);
 
-	if (nonce == NULL || solution == NULL || sig != 0) {
+	if (nonce == NULL || solution == NULL || sig != 0 || cert != 0) {
 		/* disallow further communication if either nonce, solution or
 		 * signature were not correct */
 		pisa_reject_connection(ctx, nonce);

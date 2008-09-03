@@ -25,6 +25,20 @@ extern unsigned int opportunistic_mode;
 #include "performance.h"
 #endif
 
+#ifdef CONFIG_HIP_MIDAUTH
+static char *midauth_cert="(sequence(public_key(rsa-pkcs1-sha1(e #010001#)\
+(n |n1CheoELqYRSkHYMQddub2TpILl+6H9wC/as6zFCZqOY43hsZgAjG0F\
+GoQwtyOyQjzO2Ykb2TmUCZemTYui/sR0zIbdwg1xafKl7ggZDkhk5an\
+PtGDxJxFalTYo6/A5ZQv8uatbaJgB/G7VM8G+O9HLucadad2zQUXpQf\
+gbK3S8=|)))(cert(issuer(hash hit 2001:0014:06cf:fae7:bb79:bf78:7d64:c056)\
+)(subject(hash hit 2001:0014:06cf:fae7:bb79:bf78:7d64:c056))\
+(not-before \"2008-07-12_22:11:07\")(not-after \"2008-07-22_22:11:07\")\
+)(signature(hash sha1 |kfElDhagiK0Bsqtj32Gq3t/1mxgA|)\
+|HiIqjjZIUzypvoxQyO0UovPm5uC4Xte0scEcBnENDIfn2DNy/bAtxGEdKq4O\
+dW80vTCmkF8/HXclgXLLVch3DxRNdSbYiiks000HpQt/OKqlTH+uUHBcHOAo\
+E42LmDskM9T5KQJoC/CH7871zfvojPnpkl2dUngOWv4q0r/wSJ0=|))";
+#endif
+
 /** A function set for NAT travelsal. */
 extern hip_xmit_func_set_t nat_xmit_func_set;
 extern int hip_build_param_esp_info(struct hip_common *msg,
@@ -1577,6 +1591,9 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 		if (ping != NULL)
 			HIP_IFEL(hip_build_param(r2, entry->our_pub), -1,
 			         "Building of host id failed\n");
+
+		/* For now we just add some random data to see if it works */
+		HIP_IFEL(hip_build_param_cert(r2, 1, 1, 1, 1, midauth_cert, strlen(midauth_cert)), -1, "Building of cert failed\n");
 
 		while (ping) {
 			int ln = hip_get_param_contents_len(ping);
