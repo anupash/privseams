@@ -17,6 +17,10 @@ AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
 
+# Check for python for tools directory
+AM_PATH_PYTHON([2.5],, [:])
+AM_CONDITIONAL([HAVE_PYTHON], [test "$PYTHON" != :])
+
 # Checks for libraries.
 AM_PROG_LIBTOOL
 AC_CHECK_LIB(crypto, DSA_generate_key,, AC_MSG_ERROR(openssl lib not found))

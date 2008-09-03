@@ -1,6 +1,6 @@
 /** @file
  * A header file for output.c.
- * 
+ *
  * @author  Janne Lundberg
  * @author  Miika Komu
  * @author  Mika Kousa
@@ -24,13 +24,18 @@
 #include "nat.h"
 #include "registration.h"
 #include <netinet/ip.h>
+#include <netinet/ip6.h>
 #include <netinet/tcp.h>
 #include <unistd.h>
+#include <linux/icmpv6.h>
 /* #include <libiptc/libiptc.h> */
+#include "esp_prot_hipd_msg.h"
 
 #ifdef CONFIG_HIP_HI3
 //#include "i3_id.h"
 #endif
+
+#define HIP_MAX_ICMP_PACKET 512
 
 extern int hip_raw_sock_v6;
 extern int hip_raw_sock_v4;
@@ -46,7 +51,7 @@ int hip_send_udp(struct in6_addr *, struct in6_addr *, in_port_t, in_port_t,
 		 struct hip_common*, hip_ha_t *, int);
 
 
-struct hip_common *hip_create_r1(const struct in6_addr *src_hit, 
+struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 				 int (*sign)(struct hip_host_id *p, struct hip_common *m),
 				 struct hip_host_id *host_id_priv,
 				 const struct hip_host_id *host_id_pub,
@@ -66,7 +71,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
  * @param i1_daddr      a pointer to the destination address where to the I1
  *                      packet was sent to (own address).
  * @param src_hit       a pointer to the source HIT i.e. responder HIT
- *                      (own HIT). 
+ *                      (own HIT).
  * @param dst_ip        a pointer to the destination IPv6 address where the R1
  *                      should be sent (peer ip).
  * @param dst_port      Destination port for R1. If zero, I1 source port is

@@ -58,8 +58,10 @@ class dbHandle:
 			i = i + 1
 		
 		creat_table = "CREATE TABLE socket_statistic (name varchar PRIMARY KEY, " + constant_temp + function_temp  + structure_temp + ")"
-
+		creat_sum_table =  "CREATE TABLE socket_statistic_sum (socket_api_name varchar PRIMARY KEY , sum_number int)"
+		
 		print creat_table
+		print creat_sum_table
 
 		#print creat_table		
 		
@@ -86,6 +88,12 @@ class dbHandle:
 			self.cursor.execute(creat_table)		
 		except:
 			print "socket_statistic table is already there or something wrong with creating DB!!!"
+
+
+		try:
+			self.cursor.execute(creat_sum_table)		
+		except:
+			print "socket_statistic_sum table is already there or something wrong with creating DB!!!"
 		#Create table
 
 
@@ -160,6 +168,67 @@ class dbHandle:
 
 
 		self.cursor.execute(insert_sql)
+
+# Insert sum to socket_statistic_sum and sort it.
+
+	def insert_sum_data(self):
+		apps_analysis_is_done = [] 
+		for app_names in self.cursor.execute("select name from socket_statistic"):
+   			print app_names
+			for app_name in app_names:
+				apps_analysis_is_done.append(app_name)
+	
+		insert_sql_sum = "insert into socket_statistic_sum (socket_api_name , sum_number) VALUES ("
+		print insert_sql_sum
+		
+		
+			
+		for constant in self.constants:
+			#for app_name in apps_analysis_is_done:
+			#print app_name
+			select_sum_command = "select " + "SUM" + "(" +  constant[0].strip() + ")"  + " from socket_statistic"
+			print select_sum_command
+			sum = self.cursor.execute(select_sum_command)
+			for sum_number in sum:
+				print sum_number[0]
+				
+			insert_sql_temp = insert_sql_sum + "'" + constant[0].strip() + "'"", " + str(sum_number[0]).strip() + ")"
+			print insert_sql_temp
+			
+			try:
+				self.cursor.execute(insert_sql_temp)
+			except:
+				continue
+		for  function in self.functions:
+			#for app_name in apps_analysis_is_done:
+			#	print app_name	
+			select_sum_command = "select " + "SUM" + "(" +  function[0].strip() + ")"  + " from socket_statistic"
+			print select_sum_command
+			sum = self.cursor.execute(select_sum_command)
+			for sum_number in sum:
+				print sum_number[0]
+			insert_sql_temp = insert_sql_sum + "'" + function[0].strip() + "'" +  ", " + str(sum_number[0]).strip() + ")"
+			print insert_sql_temp
+			
+			try:
+				self.cursor.execute(insert_sql_temp)
+			except:
+				continue
+		for structure in self.structures:
+			#for app_name in apps_analysis_is_done:
+				#print app_name
+			select_sum_command = "select " + "SUM" + "(" +  structure[0].strip() + ")"  + " from socket_statistic"
+			print select_sum_command
+			sum = self.cursor.execute(select_sum_command)
+			for sum_number in sum:
+				print sum_number[0]
+			insert_sql_temp = insert_sql_sum + "'" + structure[0].strip() + "'" + ", " + str(sum_number[0]).strip() + ")"
+			print insert_sql_temp
+			try:
+				self.cursor.execute(insert_sql_temp)
+			except:
+				continue
+
 
 
 

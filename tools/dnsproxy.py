@@ -1,5 +1,8 @@
 #! /usr/bin/env python
 
+# TBD: stderr/stdout should go via syslog if forked
+# Will fix soon. Basically just redirect fout.write and stderr.writes to syslog
+
 import sys
 import getopt
 import os
@@ -12,6 +15,7 @@ import pyip6
 import binascii
 import hosts
 import re
+import signal
 
 def usage(utyp, *msg):
     sys.stderr.write('Usage: %s\n' % os.path.split(sys.argv[0])[1])
@@ -25,6 +29,7 @@ if path != None:
 else:
     path = []
 
+# Done: forking affects this. Fixed in forkme
 myid = '%d-%d' % (time.time(),os.getpid())
 
 def has_resolvconf0():
@@ -66,7 +71,6 @@ class ResolvConf:
         os.remove(self.resolvconf_towrite)
         os.rename(self.resolvconf_bkname,self.resolvconf_towrite)
         return
-
     def write(self,params):
         if not self.oktowrite:
             throw(ResolvConfError('Cannot write resolv.conf'))
@@ -114,6 +118,9 @@ class Global:
 	gp.server_port = None
 	gp.bind_ip = None
 	gp.bind_port = None
+        gp.fork = False
+        gp.pidfile = '/var/run/dnshipproxy.pid'
+        gp.kill = False
         return
 
     def read_resolv_conf(gp):
@@ -174,6 +181,39 @@ class Global:
                 return r
         return None
 
+    def forkme(gp):
+        pid = os.fork()
+        if pid:
+            return False
+        else:
+            # we are the child
+            global myid
+            myid = '%d-%d' % (time.time(),os.getpid())
+            return True
+
+    # TBD: proper error handling
+    def killold(gp):
+        f = None
+        try:
+            f = file(gp.pidfile, 'r')
+        except:
+            pass # TBD: should ignore only "no such file or dir"
+        if f:
+            try:
+                os.kill(int(f.readline().rstrip()), signal.SIGTERM)
+            except OSError, (errno, strerror):
+                pass # TBD: should ignore only "no such process"
+            # sys.stdout.write('Ignoring kill error (%s) %s\n' % (errno, strerror))
+            time.sleep(3)
+            f.close()
+
+    # TBD: error handling
+    def savepid(gp):
+        f = file(gp.pidfile, 'w')
+        if f:
+            f.write('%d\n' % (os.getpid(),))
+            f.close()
+
     def doit(gp,args):
         gp.read_resolv_conf()
         gp.parameter_defaults()
@@ -204,6 +244,7 @@ class Global:
 
         rc1.write({'nameserver': gp.bind_ip})
 
+        fout.write('Dns proxy for HIP started\n')
         while not util.wantdown():
             try:
                 gp.hosts_recheck()
@@ -266,7 +307,6 @@ class Global:
                     lr = gp.getbyaaaa(nam)
                     fout.write('Hosts PTR 1 (%s)\n' % (lr,))
                     if lr:
-                        lr = lr.pop()
                         a2 = {'name': nam,
                               'data': lr,
                               'type': 12,
@@ -280,10 +320,11 @@ class Global:
                         m.addQuestion(nam,qtype,1)
                         fout.write('Hosts PTR 5 (%s)\n' % (lr,))
                     if m:
+                        fout.write('Hosts PTR 6 (%s)\n' % (a2,))
                         m.addPTR(a2['name'],a2['class'],a2['ttl'],a2['data'])
                         s.sendto(m.buf,from_a)
                         sent_answer = 1
-                        
+
                 if not sent_answer:
                     s2.send(buf)
                     r2 = s2.recv(2048)
@@ -310,8 +351,10 @@ def main(argv):
     gp = Global()
     try:
         opts, args = getopt.getopt(argv[1:],
-                                   'hf:c:H:s:p:l:i:',
-                                   ['help',
+                                   'bkhf:c:H:s:p:l:i:P:',
+                                   ['background',
+                                    'kill',
+                                    'help',
                                     'file=',
                                     'count=',
                                     'hosts=',
@@ -319,12 +362,17 @@ def main(argv):
                                     'serverport=',
                                     'ip=',
                                     'port=',
+                                    'pidfile='
                                     ])
     except getopt.error, msg:
         usage(1, msg)
 
     for opt, arg in opts:
-        if opt in ('-h', '--help'):
+        if opt in ('-k', '--kill'):
+            gp.kill = True
+        elif opt in ('-b', '--background'):
+            gp.fork = True
+        elif opt in ('-h', '--help'):
             usage(0)
         elif opt in ('-f', '--file'):
             gp.tarfilename = arg
@@ -342,8 +390,18 @@ def main(argv):
             gp.bind_ip = arg
         elif opt in ('-l', '--port'):
             gp.bind_port = int(arg)
+        elif opt in ('-P', '--pidfile'):
+            gp.pidfile = arg
 
-    gp.doit(args)
+    child = False;
+    if (gp.fork):
+        child = gp.forkme()
+
+    if (child or gp.fork == False):
+        if (gp.kill):
+            gp.killold()
+        gp.savepid()
+        gp.doit(args)
         
 if __name__ == '__main__':
     main(sys.argv)

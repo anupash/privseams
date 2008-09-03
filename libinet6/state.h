@@ -66,6 +66,7 @@
 
 #define SEND_UPDATE_ESP_INFO             (1 << 0)
 #define SEND_UPDATE_LOCATOR              (1 << 1)
+#define SEND_UPDATE_ESP_ANCHOR           (1 << 2)
 
 #define HIP_SPI_DIRECTION_OUT            1
 #define HIP_SPI_DIRECTION_IN             2
@@ -163,6 +164,8 @@ struct hip_context
 				      during the keymat calculation. */
 	uint16_t keymat_index; /**< KEYMAT offset. */
 	uint16_t esp_keymat_index; /**< A pointer to the esp keymat index. */
+
+	int esp_prot_param;
 };
 
 /*
@@ -327,9 +330,13 @@ struct hip_hadb_state
 	/** ESP extension protection transform */
 	uint8_t						 esp_prot_transform;
 	/** ESP extension protection local_anchor */
-	unsigned char				esp_local_anchor[MAX_HASH_LENGTH];
+	unsigned char				 esp_local_anchor[MAX_HASH_LENGTH];
+	/** another local anchor used for UPDATE messages */
+	unsigned char				 esp_local_update_anchor[MAX_HASH_LENGTH];
 	/** ESP extension protection peer_anchor */
-	unsigned char				esp_peer_anchor[MAX_HASH_LENGTH];
+	unsigned char				 esp_peer_anchor[MAX_HASH_LENGTH];
+	/** another peer anchor used for UPDATE messages */
+	unsigned char				 esp_peer_update_anchor[MAX_HASH_LENGTH];
 	/** Something to do with the birthday paradox.
 	    @todo Please clarify what this field is. */
 	uint64_t                     birthday;
@@ -457,7 +464,14 @@ struct hip_hadb_state
 #ifdef CONFIG_HIP_HIPPROXY
 	int hipproxy;
 #endif
-	
+        /** Counters of heartbeats (ICMPv6s) **/
+	int                          heartbeats_sent;
+	int                          heartbeats_received;	
+	/** Heartbeat current mean RTT **/
+        u_int32_t                    heartbeats_mean;
+	/** Heartbeat current mean varians RTT **/
+	int32_t                      heartbeats_mean_varians;
+
 //NAT Branch
 	//pointer for ice engine
 	void* ice_session;
@@ -483,6 +497,11 @@ struct hip_hadb_user_info_state
         hip_lsi_t            lsi_our;
         hip_lsi_t            lsi_peer;
 	int                  state;
+	int                  heartbeats_on;
+	int                  heartbeats_sent;
+	int                  heartbeats_received;	
+        u_int32_t            heartbeats_mean;
+	int32_t              heartbeats_mean_varians;
 };
 
 /** @addtogroup hadb_func
@@ -513,8 +532,7 @@ struct hip_hadb_rcv_func_set {
 	int (*hip_receive_r2)(struct hip_common *,
 				 struct in6_addr *,
 				 struct in6_addr *,
-				 hip_ha_t*,
-			     hip_portpair_t *);
+				 hip_ha_t*,			     hip_portpair_t *);
 
 	int (*hip_receive_update)(struct hip_common *,
 				  struct in6_addr *,
@@ -667,6 +685,10 @@ struct hip_ipsec_func_set {
 			       int already_acquired,
 			       int direction, int update,
 			       hip_ha_t *entry);
+	void (*hip_delete_sa)(uint32_t spi, struct in6_addr *peer_addr,
+	                   struct in6_addr *dst_addr,
+	                   int family, int sport, int dport);
+	int (*hip_flush_all_sa)();
 	int (*hip_setup_hit_sp_pair)(hip_hit_t *src_hit, hip_hit_t *dst_hit,
 				     struct in6_addr *src_addr,
 				     struct in6_addr *dst_addr, u8 proto,
@@ -674,7 +696,6 @@ struct hip_ipsec_func_set {
 	void (*hip_delete_hit_sp_pair)(hip_hit_t *src_hit, hip_hit_t *dst_hit, u8 proto,
 				       int use_full_prefix);
 	int (*hip_flush_all_policy)();
-	int (*hip_flush_all_sa)();
 	uint32_t (*hip_acquire_spi)(hip_hit_t *srchit, hip_hit_t *dsthit);
 	void (*hip_delete_default_prefix_sp_pair)();
 	int (*hip_setup_default_sp_prefix_pair)();
