@@ -44,10 +44,11 @@ hip_fw_handler_t hip_fw_handler[NF_IP_NUMHOOKS][FW_PROTO_NUM];
 void print_usage(){
 	printf("HIP Firewall\n");
 	printf("Usage: hipfw [-f file_name] [-t timeout] [-d|-v] [-F] [-H] [-A] [-b] [-k] [-h]\n");
-	printf("      -H drop non-HIP traffic by default (default: accept non-hip traffic)\n");
-	printf("      -A accept HIP traffic by default (default: drop all hip traffic)\n");
-	printf("      -f file_name is a path to a file containing firewall filtering rules (default %s)\n", HIP_FW_DEFAULT_RULE_FILE);
-	printf("      -t timeout is connection timeout value in seconds\n");
+	printf("      -H = drop all non-HIP traffic (default: accept non-HIP traffic)\n");
+	printf("      -A = accept all HIP traffic, still do HIP filtering (default: drop all non-authed HIP traffic)\n");
+ 	printf("      -F = accept all HIP traffic, deactivate HIP traffic filtering\n");
+	printf("      -f file_name = is a path to a file containing firewall filtering rules (default %s)\n",
+			HIP_FW_DEFAULT_RULE_FILE);
 	printf("      -d = debugging output\n");
 	printf("      -v = verbose output\n");
 	printf("      -t = timeout for packet capture (default %d secs)\n",
@@ -59,7 +60,6 @@ void print_usage(){
  	printf("      -i = switch on userspace ipsec\n");
  	printf("      -e = use esp protection extension (also sets -i)\n");
  	printf("      -s = stun/ice message support\n");
- 	printf("      -F = deactivate hip/esp traffic filtering\n");
 	printf("      -h = print this help\n");
 	printf("      -o = system-based opportunistic mode\n\n");
 }
@@ -1715,7 +1715,7 @@ int main(int argc, char **argv){
 			rule_file = optarg;
 			break;
 		case 't':
-			hip_ha_timeout = atol(argv[optind]);
+			hip_ha_timeout = atol(optarg);
 			break;
 		case ':': /* -f or -p without operand */
 			printf("Option -%c requires an operand\n", optopt);

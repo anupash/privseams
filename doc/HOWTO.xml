@@ -898,11 +898,11 @@ endif
 		  hipd/hipd # (to start as a background daemon process, add -b flag)
 	      </para></listitem>
 	      <listitem><para>
-		  firewall/hipfw 
+		  firewall/hipfw -l (to start the firewall with LSI support enabled)
 	      </para></listitem>
 	    </itemizedlist>
 	    <para>
-	      Furthermore, the following rules must be added in the file /etc/hip/firewall.conf
+	      Beforehand the following rules must be added in the file /etc/hip/firewall.conf
 	    </para> 
 	    <para>crash:</para>
 	      <itemizedlist>
@@ -1526,6 +1526,16 @@ endif
 	examples of configuration changes and instructions.
       </para>
     </section>
+  <section id="sec_vlc">
+  <title>VLC multimedia streamer</title>
+  <para>
+  First run at the client: vlc -vvv udp:
+  </para>
+  <para>
+  Then run at the server: vlc -vvv &lt;any avi video file&gt; --ipv6 --sout '#std{access=rtp,mux=ts,dst=[&lt;CLIENT's HIT&gt;]:1234}'
+
+  </para>
+  </section>
   <section id="sec_openldap">
   <title>OpenLDAP</title>
   <para>
