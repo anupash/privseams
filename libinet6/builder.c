@@ -3410,6 +3410,24 @@ int hip_build_param_eid_sockaddr(struct hip_common *msg,
         return err;
 }
 
+int hip_build_param_cert(struct hip_common *msg, uint8_t group, uint8_t count,
+			 uint8_t id, uint8_t type, void *data, size_t size)
+{
+	struct hip_cert cert;
+	int err;
+
+	hip_set_param_type(&cert, HIP_PARAM_CERT);
+	hip_calc_param_len(&cert, sizeof(struct hip_cert) -
+			   sizeof(struct hip_tlv_common) + size);
+	cert.cert_group = group;
+	cert.cert_count = count;
+	cert.cert_id = id;
+	cert.cert_type = type;
+	err = hip_build_generic_param(msg, &cert, sizeof(struct hip_cert), data);
+
+	return err;
+}
+
 /**
  * Builds a NOTIFICATION parameter.
  *

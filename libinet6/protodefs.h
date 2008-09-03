@@ -712,10 +712,11 @@ struct hip_hmac {
 struct hip_cert {
 	hip_tlv_type_t type;
 	hip_tlv_len_t  length;
+	uint8_t  cert_group;
 	uint8_t  cert_count;
 	uint8_t  cert_id;
-     uint8_t  cert_type;
-     /* end of fixed part */
+	uint8_t  cert_type;
+	/* end of fixed part */
 } __attribute__ ((packed));
 
 struct hip_echo_request {
