@@ -1812,8 +1812,9 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution,
 hip_lsi_t *hip_get_lsi_peer_by_hits(struct in6_addr *hit_s, struct in6_addr *hit_r){
 	int err;
 	struct hip_common *msg = NULL;
-	hip_lsi_t *lsi = NULL;
-
+	hip_lsi_t *lsi = NULL, *lsi_tmp = NULL;
+	
+	HIP_IFE(!(lsi = (hip_lsi_t *)malloc(sizeof(hip_lsi_t))), -1);
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 	
 	if(hit_s)
@@ -1836,11 +1837,12 @@ hip_lsi_t *hip_get_lsi_peer_by_hits(struct in6_addr *hit_s, struct in6_addr *hit
 	/* check error value */
 	HIP_IFEL(hip_get_msg_err(msg), -1, "Got erroneous message!\n");
 	
-	lsi = (hip_lsi_t *)hip_get_param_contents(msg, HIP_PARAM_LSI);
+	lsi_tmp = (hip_lsi_t *)hip_get_param_contents(msg, HIP_PARAM_LSI);
+	memcpy(lsi, lsi_tmp, sizeof(hip_lsi_t));
 	
  out_err:
-	//if(msg)                                                                                                                                                                                              
-	//      HIP_FREE(msg);                                                                                                                                                                                 
+	if(msg)
+	        HIP_FREE(msg);
 	return lsi;
 }
 
@@ -1848,8 +1850,10 @@ hip_lsi_t *hip_get_lsi_peer_by_hits(struct in6_addr *hit_s, struct in6_addr *hit
 hip_lsi_t *hip_get_lsi_our_by_hits(struct in6_addr *hit_s, struct in6_addr *hit_r){
 	int err;
 	struct hip_common *msg = NULL;
-	hip_lsi_t *lsi = NULL;
+	hip_lsi_t *lsi = NULL, *lsi_tmp = NULL;
 	
+	HIP_IFE(!(lsi = (hip_lsi_t *)malloc(sizeof(hip_lsi_t))), -1);
+
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 	
 	if(hit_s)
@@ -1873,13 +1877,13 @@ hip_lsi_t *hip_get_lsi_our_by_hits(struct in6_addr *hit_s, struct in6_addr *hit_
 	/* check error value */
 	HIP_IFEL(hip_get_msg_err(msg), -1, "Got erroneous message!\n");
 	
-	lsi = (hip_lsi_t *)hip_get_param_contents(msg, HIP_PARAM_LSI);
+	lsi_tmp = (hip_lsi_t *)hip_get_param_contents(msg, HIP_PARAM_LSI);
+	memcpy(lsi, lsi_tmp, sizeof(hip_lsi_t));
 	
  out_err:
-	//if(msg)                                                                                                                                                                                              
-	//      HIP_FREE(msg);                                                                                                                                                                                 
-	return lsi;
-	
+	if(msg)
+	        HIP_FREE(msg);
+	return lsi;	
 }
 
 
@@ -2385,6 +2389,7 @@ int getproto_info(int port_dest, char *proto){
 		    if(result == port_dest)
 		        exists = 1;	    
 	        }
+		destroy(&list);
 	    }
 	}//end of while
         if (fd)                                                               
@@ -2448,7 +2453,8 @@ int getproto_info_lsi(int port_dest, char *proto, struct in_addr *local){	 		Lis
 	                   exists = 0;
 	                break;
 	            }
-	        }
+	        }		
+		destroy(&list);
 	    }
 	}//end of while	              							
         if (fd)                                                               

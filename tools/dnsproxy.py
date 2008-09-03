@@ -324,7 +324,7 @@ class Global:
                         m.addPTR(a2['name'],a2['class'],a2['ttl'],a2['data'])
                         s.sendto(m.buf,from_a)
                         sent_answer = 1
-                        
+
                 if not sent_answer:
                     s2.send(buf)
                     r2 = s2.recv(2048)

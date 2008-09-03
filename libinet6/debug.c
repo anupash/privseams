@@ -628,7 +628,7 @@ void hip_print_hit(int debug_level, const char *file, int line, const char *func
 		   const char *str, const struct in6_addr *hit)
 {
 	if(hit == NULL) {
-		HIP_DEBUG("%s: NULL\n", str);
+	        HIP_DEBUG("%s: NULL\n", str);
 		return;
 	}
 	else {
