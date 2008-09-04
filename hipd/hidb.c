@@ -320,10 +320,18 @@ int hip_handle_add_local_hi(const struct hip_common *input)
 
 		/*  lhi.algo = eid_endpoint.algo;*/
 
+		err = hip_add_host_id(HIP_DB_LOCAL_HID, &lhi,
+				      &lsi, host_identity,
+				      NULL, NULL, NULL);
+
+		/* Currently only RSA pub is added by default (bug id 522).
+		   Ignore redundant adding in case user wants to enable
+		   multiple HITs. */
+		HIP_IFEL((err == -EEXIST), 0,
+			 "Ignoring redundant HI\n");
+
 		/* Adding the pair <HI,LSI> */
-		HIP_IFEL(hip_add_host_id(HIP_DB_LOCAL_HID, &lhi,
-					&lsi, host_identity,
-					NULL, NULL, NULL),
+		HIP_IFEL(err,
 			-EFAULT, "adding of local host identity failed\n");
 
 	        

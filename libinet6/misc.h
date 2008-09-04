@@ -29,6 +29,8 @@
 
 #define HIP_OPP_IP_DB_SIZE		16
 
+#define HIP_DEFAULT_EXEC_PATH "/sbin:/usr/sbin:/bin:/usr/bin:/usr/local/sbin:/usr/local/bin"
+
 typedef struct _hip_hosts_entry
 {
         hip_hit_t hit;
