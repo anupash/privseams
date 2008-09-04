@@ -190,15 +190,8 @@ int hip_fw_init_userspace_ipsec(){
 		// queue outgoing ICMP, TCP and UDP sent to HITs
 		system("ip6tables -I HIPFW-OUTPUT -p 58 -d 2001:0010::/28 -j QUEUE");
 		system("ip6tables -I HIPFW-OUTPUT -p 6 -d 2001:0010::/28 -j QUEUE");
+		system("ip6tables -I HIPFW-OUTPUT -p 1 -d 2001:0010::/28 -j QUEUE");
 		system("ip6tables -I HIPFW-OUTPUT -p 17 -d 2001:0010::/28 -j QUEUE");
-
-		/* If you want to make this smaller, you have to change also
-		   /proc/sys/net/ipv6/conf/default/mtu, but it will have a
-		   negative impact on non-HIP IPv6 connectivity. MTU is
-		   set using system call rather than in do_chflags to avoid
-		   chicken and egg problems in hipd start up. If we decide
-		   to decrease the mtu also for kernelspace ipsec, this can
-		   be moved there. */
 	}
 
   out_err:
@@ -511,6 +504,11 @@ int firewall_init_rules(){
 		firewall_add_lsi_rule("iptables -I HIPFW-OUTPUT -d "," -j QUEUE");
 #endif
 
+		system("ip6tables -I HIPFW-FORWARD -p 139 -j QUEUE");
+		system("ip6tables -I HIPFW-FORWARD -p 50 -j QUEUE");
+		system("ip6tables -I HIPFW-FORWARD -p 17 --dport 50500 -j QUEUE");
+		system("ip6tables -I HIPFW-FORWARD -p 17 --sport 50500 -j QUEUE");
+
 		system("ip6tables -I HIPFW-INPUT -p 139 -j QUEUE");
 		system("ip6tables -I HIPFW-INPUT -p 50 -j QUEUE");
 		system("ip6tables -I HIPFW-INPUT -p 17 --dport 50500 -j QUEUE");
@@ -601,8 +599,8 @@ void firewall_exit(){
 
 	/* rules have to be removed first, otherwise HIP packets won't pass through
 	 * at this time any more */
-	hip_fw_uninit_esp_prot();
 	hip_fw_uninit_userspace_ipsec();
+	hip_fw_uninit_esp_prot();
 	hip_fw_uninit_lsi_support();
 
 	hip_remove_lock_file(HIP_FIREWALL_LOCK_FILE);

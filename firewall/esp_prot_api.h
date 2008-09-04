@@ -6,8 +6,10 @@
 #include "esp_prot_fw_msg.h"
 #include "esp_prot_common.h"
 
-/* defines the default tolerance when verifying hash-chain elements */
-#define DEFAULT_VERIFY_WINDOW 		10
+/* defines the default tolerance when verifying hash-chain elements
+ *
+ * @note set to the preferred anti-replay window size of ESP */
+#define DEFAULT_VERIFY_WINDOW 		64
 /* if unused hchain element count of the active_hchain falls below
  * this threshold (% of max count), it will trigger the setup of
  * a new next_hchain */
