@@ -17,7 +17,7 @@ static const int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS]
 				   = {{8, 16, 20}, {8, 16, 0}};
 
 
-static const int bex_hchain_length = 100;
+static const int bex_hchain_length = 100000;
 static const int update_hchain_lengths[NUM_UPDATE_HCHAIN_LENGTHS] = {1000};
 
 
@@ -174,7 +174,7 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 
 			// check if current and next transform are matching
 			HIP_IFEL(entry->esp_prot_transform != esp_prot_transform, 1,
-					"transform for active esp prot and next are different\n");
+					"transform for active esp prot and next do NOT match\n");
 			HIP_DEBUG("found matching esp prot transforms\n");
 
 			// we have to get the hash_length
@@ -193,6 +193,8 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 
 			} else
 			{
+				HIP_ASSERT(entry->next_hchain != NULL);
+
 				/* esp_prot_sadb_maintenance should have already set up the next_hchain,
 				 * check that the anchor belongs to the one that is set */
 				HIP_IFEL(memcmp(esp_prot_anchor, entry->next_hchain->anchor_element->hash,
@@ -595,6 +597,8 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 			HIP_IFEL(!(prot_transform = esp_prot_resolve_transform(entry->esp_prot_transform)),
 					1, "tried to resolve UNUSED transform\n");
 
+			//printf("next_hchain should be set now...\n");
+
 			/* set next hchain with DEFAULT_HCHAIN_LENGTH_ID
 			 *
 			 * @note this needs to be extended when implementing usage of different
@@ -604,6 +608,8 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 					prot_transform->hash_func_id, prot_transform->hash_length_id,
 					update_hchain_lengths[DEFAULT_HCHAIN_LENGTH_ID])),
 					-1, "unable to retrieve hchain from store\n");
+
+			//printf("is set\n");
 
 			// issue UPDATE message to be sent by hipd
 			HIP_IFEL(send_trigger_update_to_hipd(entry), -1,
