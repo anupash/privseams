@@ -598,8 +598,8 @@ void firewall_exit(){
 
 	/* rules have to be removed first, otherwise HIP packets won't pass through
 	 * at this time any more */
-	hip_fw_uninit_esp_prot();
 	hip_fw_uninit_userspace_ipsec();
+	hip_fw_uninit_esp_prot();
 	hip_fw_uninit_lsi_support();
 
 	hip_remove_lock_file(HIP_FIREWALL_LOCK_FILE);

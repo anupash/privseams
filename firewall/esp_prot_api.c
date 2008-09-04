@@ -17,7 +17,7 @@ static const int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS]
 				   = {{8, 16, 20}, {8, 16, 0}};
 
 
-static const int bex_hchain_length = 100000;
+static const int bex_hchain_length = 500000;
 static const int update_hchain_lengths[NUM_UPDATE_HCHAIN_LENGTHS] = {1000};
 
 
@@ -133,10 +133,6 @@ int esp_prot_uninit()
 	int err = 0, i;
 	int activate = 0;
 
-	// also deactivate the extension in hipd
-	HIP_IFEL(send_esp_prot_to_hipd(activate), -1,
-			"failed to activate the esp protection in hipd\n");
-
 	// uninit hcstores
 	hcstore_uninit(&bex_store);
 	hcstore_uninit(&update_store);
@@ -146,6 +142,10 @@ int esp_prot_uninit()
 		esp_prot_transforms[i].hash_func_id = 0;
 		esp_prot_transforms[i].hash_length_id = 0;
 	}
+
+	// also deactivate the extension in hipd
+	HIP_IFEL(send_esp_prot_to_hipd(activate), -1,
+			"failed to activate the esp protection in hipd\n");
 
   out_err:
 	return err;
