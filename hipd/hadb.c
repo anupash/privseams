@@ -2861,11 +2861,15 @@ int hip_handle_get_ha_info(hip_ha_t *entry, struct hip_common *msg)
 	ipv4_addr_copy(&hid.lsi_our, &entry->lsi_our);
 	ipv4_addr_copy(&hid.lsi_peer, &entry->lsi_peer);
 
+	_HIP_HEXDUMP("HEXHID ", &hid, sizeof(struct hip_hadb_user_info_state));
+
 	hid.heartbeats_on = hip_icmp_interval;
 	hid.heartbeats_mean = entry->heartbeats_mean;
 	hid.heartbeats_varians = entry->heartbeats_varians;
 	hid.heartbeats_sent = entry->heartbeats_sent;
 	hid.heartbeats_received = entry->heartbeats_received;
+
+	_HIP_HEXDUMP("HEXHID ", &hid, sizeof(struct hip_hadb_user_info_state));
 
 	/* does not print heartbeat info, but I do not think it even should -Samu*/
 	hip_print_debug_info(&hid.ip_our,&hid.ip_peer,&hid.hit_our,&hid.hit_peer,&hid.lsi_peer);

@@ -1676,6 +1676,8 @@ out_err:
 
 int hip_conf_print_info_ha(struct hip_hadb_user_info_state *ha)
 {
+	_HIP_HEXDUMP("HEXHID ", ha, sizeof(struct hip_hadb_user_info_state));
+
         HIP_INFO("HA is %s\n", hip_state_str(ha->state));
         HIP_INFO_HIT(" Local HIT", &ha->hit_our);
 	HIP_INFO_HIT(" Peer  HIT", &ha->hit_peer);
@@ -1684,13 +1686,13 @@ int hip_conf_print_info_ha(struct hip_hadb_user_info_state *ha)
         HIP_INFO_IN6ADDR(" Local IP", &ha->ip_our);
         HIP_INFO_IN6ADDR(" Peer  IP", &ha->ip_peer);
 	if (ha->heartbeats_on > 0 && ha->state == HIP_STATE_ESTABLISHED) {
-		HIP_DEBUG("Heartbeat %.5f ms mean RTT, "
-			  "%.5f varians,\n"
+		HIP_DEBUG("Heartbeat %.6f ms mean RTT, "
+			  "%.6f varians,\n"
 			  " %d packets sent,"
 			  " %d packets received,"
-			  " %d packets lost\n",
-			  ha->heartbeats_mean,
-			  ha->heartbeats_varians,
+			  " %d packet lost\n",
+			  (ha->heartbeats_mean / 1000000.0),
+			  (ha->heartbeats_varians / 1000000.0),
 			  ha->heartbeats_sent,
 			  ha->heartbeats_received,
 			  (ha->heartbeats_sent - ha->heartbeats_received));
