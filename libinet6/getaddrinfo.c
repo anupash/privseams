@@ -1056,12 +1056,12 @@ int gaih_inet_get_name(const char *name, const struct addrinfo *req,
 		       struct gaih_servtuple *st, struct gaih_addrtuple **at,
 		       int hip_transparent_mode) 
 {
-        int err = 0, rc = 0, is_lsi = 0, found_addr = 0;
+        int err = 0, rc = 0, is_lsi = 0;
 	int v4mapped = (req->ai_family == PF_UNSPEC ||
 			req->ai_family == PF_INET6) &&
 		(req->ai_flags & AI_V4MAPPED);
 	char *namebuf = strdupa(name);
-	hip_lsi_t tmp_v4;
+	
 	_HIP_DEBUG("gaih_inet_get_name() invoked.\n");
 
 	*at = malloc (sizeof (struct gaih_addrtuple));
@@ -1297,21 +1297,23 @@ int gaih_inet_get_name(const char *name, const struct addrinfo *req,
 			  	_HIP_DEBUG("req->ai_family: %d   a->family: %d   ipv6_addr_is_hit: %d  ", 
 				    	   req->ai_family, a->family, 
 				    	   ipv6_addr_is_hit((struct in6_addr *)a->addr), a->addr);
-
+			  	if (a->family == AF_INET) {
+			      		_HIP_DEBUG_LSI("\na->addr",a->addr);
+			  	}
+			  	if (a->family == AF_INET6) {
+			      		_HIP_DEBUG_HIT("\na->addr",a->addr);
+			  	}
 			 	/* do not remove HIT if request is not IPv4 */
 			  	if (req->ai_family != AF_INET && 
-			      	    a->family == AF_INET6){
-				    HIP_DEBUG_HIT("a->addr",(struct in6_addr *)a->addr);
-				    found_addr++;
-			      	    //ipv6_addr_is_hit((struct in6_addr *)a->addr))
+			      	    a->family == AF_INET6 && 
+			      	    ipv6_addr_is_hit((struct in6_addr *)a->addr))
 			    		goto leave;
-				}
+			  
 			  	/* do not remove LSI if request is IPv4 */
-				if (req->ai_family == AF_INET && 
-			      	    a->family == AF_INET && is_lsi){
-				        _HIP_DEBUG_LSI("\na->addr",(struct in_addr *)a->addr);
+			  	if (req->ai_family == AF_INET && 
+			      	    a->family == AF_INET && is_lsi)
 			    		goto leave;
-				}
+
 				if (p != NULL){
 					while (aux->next != a)
 				      		aux = aux->next;
@@ -1337,18 +1339,6 @@ int gaih_inet_get_name(const char *name, const struct addrinfo *req,
 			*at = p;
 		}
 
-		if (found_addr == 2){
-		        //Found LSI and HIT in the file: drop the last entry found
-		        struct gaih_addrtuple *aux = *at;
-		        *at = (*at)->next;
-			free(aux);
-			if(!ipv6_addr_is_hit((struct in6_addr *)(*at)->addr)){
-			        //Address is LSI-> transform to IPv4
-			        IPV6_TO_IPV4_MAP((struct in6_addr *)(*at)->addr, &tmp_v4);
-			        memcpy((struct in_addr *)(*at)->addr, &tmp_v4, sizeof(hip_lsi_t));
-		                (*at)->family = AF_INET;
-			}		
-		}
 
 	      	/* HIP: If AF_UNSPEC flag is set, order the link list so HITs are first and then IPs. */
 		if (req->ai_flags == AF_UNSPEC) {
@@ -1409,14 +1399,6 @@ int gaih_inet_get_name(const char *name, const struct addrinfo *req,
 		  		}
 			}
 	      }
-
-		 /////////////////////////////
-		struct gaih_addrtuple *aux=*at;
-			while (aux != NULL) {
-			  HIP_DEBUG_HIT("\na->addr",(struct in6_addr *)aux->addr);
-			  aux = aux->next;
-			}
-		/////////////////////////////
 
 		_HIP_DEBUG("Dumping the structure after removing IP addreses\n");
 		//dump_pai(*at);
