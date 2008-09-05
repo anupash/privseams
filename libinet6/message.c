@@ -36,9 +36,11 @@ int hip_peek_recv_total_len(int socket, int encap_hdr_size)
 
 	bytes = recv(socket, msg, hdr_size, MSG_PEEK);
 
-	HIP_IFEL(bytes < 0, -1, "recv() peek error\n");
-
-	if (bytes < hdr_size) {
+	if(bytes < 0) {
+		HIP_ERROR("recv() peek error (is hipd running?)\n");
+		err = -EAGAIN;
+		goto out_err;
+	} else if (bytes < hdr_size) {
 		HIP_ERROR("Packet payload is smaller than HIP header. Dropping.\n");
 		/* Read and discard the datagram */
 		recv(socket, msg, 0, 0);
@@ -69,7 +71,7 @@ int hip_peek_recv_total_len(int socket, int encap_hdr_size)
 	bytes += encap_hdr_size;
 
  out_err:
-	if (msg)
+	if (msg != NULL)
 		free(msg);
 
 	if (err)
