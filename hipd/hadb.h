@@ -179,7 +179,8 @@ int hip_hadb_insert_state_spi_list(hip_hit_t *peer_hit, hip_hit_t *our_hit,
 				   uint32_t spi);
 int hip_init_peer(hip_ha_t *entry, struct hip_common *msg, 
 		     struct hip_host_id *peer);
-int hip_init_us(hip_ha_t *entry, struct in6_addr *our_hit);
+//int hip_init_us(hip_ha_t *entry, struct in6_addr *our_hit);
+int hip_init_us(hip_ha_t *entry, hip_hit_t *hit_our);
 
 /* debugging */
 int hip_print_info_hadb(hip_ha_t *entry, void *cntr);
