@@ -178,7 +178,7 @@ int hip_update_test_locator_addr(in6_addr_t *addr)
 		sin6->sin6_family = AF_INET6;
 	}
 
-	return filter_address((struct sockaddr *) &ss, -1);
+	return filter_address((struct sockaddr *) &ss);
 }
 
 int hip_update_add_peer_addr_item(

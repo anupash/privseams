@@ -665,10 +665,10 @@ int hip_conf_handle_map(hip_common_t *msg, int action, const char *opt[],
      HIP_IFEL(convert_string_to_address(opt[0], &hit), -1,
 	      "string to address conversion failed\n");
 
-     HIP_IFEL(convert_string_to_address(opt[1], &ip6), -1,
+     HIP_IFEL(err = convert_string_to_address(opt[1], &ip6), -1,
 	      "string to address conversion failed\n");
      
-     if(!convert_string_to_address_v4(opt[1], &aux)){
+     if (err && !convert_string_to_address_v4(opt[1], &aux)){
 	     HIP_IFEL(IS_LSI32(aux.s_addr), -1, "Missing ip address before lsi\n");
      }
 
@@ -1675,11 +1675,15 @@ int hip_conf_handle_ha(hip_common_t *msg, int action,const char *opt[], int optc
      }
 
 out_err:
-        return err;
+     memset(msg, 0, HIP_MAX_PACKET);
+
+     return err;
 }
 
 int hip_conf_print_info_ha(struct hip_hadb_user_info_state *ha)
 {
+	_HIP_HEXDUMP("HEXHID ", ha, sizeof(struct hip_hadb_user_info_state));
+
         HIP_INFO("HA is %s\n", hip_state_str(ha->state));
         HIP_INFO_HIT(" Local HIT", &ha->hit_our);
 	HIP_INFO_HIT(" Peer  HIT", &ha->hit_peer);
@@ -1688,13 +1692,13 @@ int hip_conf_print_info_ha(struct hip_hadb_user_info_state *ha)
         HIP_INFO_IN6ADDR(" Local IP", &ha->ip_our);
         HIP_INFO_IN6ADDR(" Peer  IP", &ha->ip_peer);
 	if (ha->heartbeats_on > 0 && ha->state == HIP_STATE_ESTABLISHED) {
-		HIP_DEBUG("Heartbeat %.5f ms mean RTT, "
-			  "%.5f mean varians,\n"
+		HIP_DEBUG("Heartbeat %.6f ms mean RTT, "
+			  "%.6f varians,\n"
 			  " %d packets sent,"
 			  " %d packets received,"
-			  " %d packets lost\n",
-			  ha->heartbeats_mean,
-			  ha->heartbeats_mean_varians,
+			  " %d packet lost\n",
+			  (ha->heartbeats_mean / 1000000.0),
+			  (ha->heartbeats_varians / 1000000.0),
 			  ha->heartbeats_sent,
 			  ha->heartbeats_received,
 			  (ha->heartbeats_sent - ha->heartbeats_received));
@@ -1722,6 +1726,8 @@ int hip_conf_handle_handoff(hip_common_t *msg, int action,const char *opt[], int
      HIP_IFEL(hip_send_recv_daemon_info(msg), -1,"send recv daemon info\n");
 
  out_err:
+     memset(msg, 0, HIP_MAX_PACKET);
+
      return err;
 }
 
@@ -1772,7 +1778,12 @@ int hip_get_hits(hip_common_t *msg, char *opt)
 				} else {
 					HIP_INFO(" Unknown algorithm ");	
 				}
-				HIP_INFO("%s\n", hit_s);
+				HIP_INFO("%s", hit_s);
+
+				inet_ntop(AF_INET, &endp->lsi, lsi_s,
+					  INET_ADDRSTRLEN);
+				
+				HIP_INFO("     LSI %s\n", lsi_s);				
 				
 			} else {
 				HIP_ERROR("Unrelated parameter in user "\
@@ -1820,6 +1831,7 @@ int hip_get_hits(hip_common_t *msg, char *opt)
 	}
 
  out_err:
+	memset(msg, 0, HIP_MAX_PACKET);
     
 	return err;
 }

@@ -202,10 +202,9 @@ int firewall_set_bex_state(struct in6_addr *hit_s,
 	return err;
 }
 
-
 void hip_firewall_delete_hldb(void){
 	int i;
-	firewall_hl_t *this;
+	firewall_hl_t *this = NULL;
 	hip_list_t *item, *tmp;
 	
 	HIP_DEBUG("Start hldb delete\n");
@@ -214,7 +213,10 @@ void hip_firewall_delete_hldb(void){
 	list_for_each_safe(item, tmp, firewall_hit_lsi_ip_db, i)
 	{
 		this = list_entry(item);
+		// delete this 
 		hip_ht_delete(firewall_hit_lsi_ip_db, this);
+		// free this
+		free(this);
 	}
 	HIP_UNLOCK_HT(&firewall_lsi_hit_db);
 	HIP_DEBUG("End hldbdb delete\n");
@@ -536,6 +538,8 @@ int firewall_send_incoming_pkt(struct in6_addr *src_hit,
 
 	bind(firewall_raw_sock, (struct sockaddr *) &src, sa_size);
  not_sending:
+	if(msg)
+	        HIP_FREE(msg);
 	if (err)
 		HIP_DEBUG("sterror %s\n",strerror(errno));
 	return err;
@@ -645,6 +649,10 @@ int firewall_send_outgoing_pkt(struct in6_addr *src_hit,
 		for (try_again = 0; try_again < 2; try_again++) {
 		        sent = sendto(firewall_raw_sock, msg, len, 0,
 			              (struct sockaddr *) &dst, sa_size);
+			if (sent == 104)
+			  HIP_DEBUG("AAAAAAAAAAAAAAAAAAAAAA\n");
+			if (sent > 1400)
+			  HIP_DEBUG("Number of sent bytes \n",sent);
 			if (sent != len) {
                 		HIP_ERROR("Could not send the all requested"\
                         	" data (%d/%d)\n", sent, len);

@@ -511,14 +511,22 @@ $ ls -l bin/
         </listitem>
         <listitem>
           <para>
-		  Get a patch for HIPL on OpenWRT from <ulink url="http://dongsupark.de/hipl/openwrt/7.09/patches/hipl_openwrt-7.09.diff" />, which produces Makefiles for hipl, libxml2, etc. And apply it into the kamikaze_7.09 source tree. Then you can find package/hipl/Makefile. NOTE: this patch is originally made by Dmitriy Kuptsov. Thanks.
+		  Get all patches for HIPL on OpenWRT from <ulink url="http://dongsupark.de/hipl/openwrt/7.09/patches/" />, which produce Makefiles and configuration files for necessary packages. And apply them into the kamikaze_7.09 source tree. NOTE: this patch is originally made by Dmitriy Kuptsov. Thanks.
           </para>
           <para>
   <programlisting>
   $ ls
-  hipl_openwrt-7.09.diff    kamikaze_7.09
+  64 etc_config_dhcp.diff      64 etc_firewall_user.diff
+  64 etc_config_network.diff   64 etc_hostapd.diff
+  64 etc_config_wireless.diff  64 hipl_openwrt-7.09.diff
+  64 kamikaze_7.09
   $ cd kamikaze_7.09
   $ patch -p1 &lt; ../hipl_openwrt-7.09.diff
+  $ patch -p1 &lt; ../etc_config_dhcp.diff
+  $ patch -p1 &lt; ../etc_config_network.diff
+  $ patch -p1 &lt; ../etc_config_wireless.diff
+  $ patch -p1 &lt; ../etc_firewall_user.diff
+  $ patch -p1 &lt; ../etc_hostapd.diff
   $ ls package/hipl/Makefile
   Makefile
   </programlisting>
@@ -653,20 +661,16 @@ $ svn checkout https://svn.openwrt.org/openwrt/trunk
         </listitem>
         <listitem>
           <para>
-          Apply a patch for hipl packages in OpenWRT <ulink url="http://dongsupark.de/hipl/openwrt/devel/patches/hipl_openwrt_packages-svn.diff" />, and also a patch for hipl kernel configs in OpenWRT <ulink url="http://dongsupark.de/hipl/openwrt/devel/patches/hipl_openwrt_kernel-svn.diff" />.
+          Get all patches for hipl packages in OpenWRT <ulink url="http://dongsupark.de/hipl/openwrt/devel/patches/" />, and apply them into the kamikaze_7.09 source tree.
           </para>
           <para>
 <programlisting>
-$ cd trunk
+$ ls
+64 hipl_openwrt_kernel-svn.diff  64 hipl_openwrt_packages-svn.diff
+64 kamikaze_7.09/
+$ cd kamikaze_7.09
 $ patch -p1 &lt; ../hipl_openwrt_packages-svn.diff
-patching file package/hipl/files/hipl.init
-patching file package/hipl/files/hipl.modules
-patching file package/hipl/Makefile
-patching file package/libxml2/Makefile
 $ patch -p1 &lt; ../hipl_openwrt_kernel-svn.diff
-patching file target/linux/atheros/config-2.6.21
-patching file target/linux/atheros/Makefile
-patching file target/linux/atheros/patches-2.6.21/beet-interfamily-sleep-loopback-2.6.21.3.patch
 </programlisting>
           </para>
         </listitem>
@@ -799,6 +803,7 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
 define Package/hipl/install
     $(INSTALL_DIR) $(1)/etc/init.d/
     $(INSTALL_DIR) $(1)/etc/hip/
+    $(INSTALL_DIR) $(1)/etc/hip/test/
     $(INSTALL_DIR) $(1)/etc/modules.d/
     $(INSTALL_DIR) $(1)/usr/bin/
     $(INSTALL_DIR) $(1)/usr/include/
@@ -806,8 +811,10 @@ define Package/hipl/install
     $(INSTALL_DIR) $(1)/usr/lib/
     $(INSTALL_DIR) $(1)/usr/sbin/
 
-    $(INSTALL_DATA) ./files/hipl.init $(1)/etc/init.d/hipl
-    $(INSTALL_DATA) ./files/hipl.init ./files/hipl.modules $(1)/etc/modules.d/35-hipl
+    $(INSTALL_DATA) ./files/hipd.init $(1)/etc/init.d/hipd
+    $(INSTALL_DATA) ./files/hipfw.init $(1)/etc/init.d/hipfw
+    $(INSTALL_DATA) ./files/hipl.modules $(1)/etc/modules.d/35-hipl
+    $(INSTALL_DATA) ./files/test/* $(1)/etc/init.d/test/
     $(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/conntest* $(1)/usr/bin/
     $(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/hipsetup* $(1)/usr/bin/
     $(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/libinet6test* $(1)/usr/bin/
@@ -840,23 +847,17 @@ endif
       two machines called crash and oops that are in the same network. Crash is the one
       that starts a communication against oops.
     </para>
-    <para>
-      If you did not patch your kernel with HIP-related patches, you
-      need to use the userspace ipsec. You can turn on the userspace ipsec
-      by running firewall/hipfw with the -i option on a host.
-    </para>
     <para>  
-      They are used through this whole document as examples even though you probably have 
-      your own naming and addressing conventions. It is possible to use IPv4 addresses on-wire as well 
-      as IPv6.
+      Both machines are used through this whole document as examples even though you probably have 
+      your own naming and addressing conventions. It is possible to use IPv4 addresses as well 
+      as IPv6 addresses on-wire.
     </para>
     <para>
       We will show how to test IPv4 and IPv6 applications. Meanwhile IPv6 applications use the 
-      HIT identifier, supporting IPv4-only applications, introduces another identifier called LSI. 
-      In HIPL this identifier is an IPv4 address in the range 1.0.0.0/8.
-      First we explain how to configure HIPL for using this identifier. Secondly, we explain how 
-      to test with IPv6 applications and finally we discuss the interoperability between IPv4 and IPv6, 
-      and an example of that.
+      HIT identifier, IPv4-only applications use the LSI identifier. This is an IPv4 address in the range 1.0.0.0/8.
+      Firstly, we explain how to configure HIPL when we want to use IPv4 applications. Secondly, we introduce some
+      tests with IPv6 applications. To finalize, we discuss the interoperability between IPv4 and IPv6 applications 
+      using HIP.
     </para>
     <section id="ipv4_appl">
       <title>Testing a HIP connection with an IPv4-only application</title>
@@ -865,7 +866,8 @@ endif
 		We can choose whatever of the next possibilities. The user can introduce manually 
 	        the LSI or this can be created automatically by the hip daemon. It should be noticed
 	        that the address interval between <emphasis>1.0.0.1 - 1.0.0.4</emphasis> is already 
-	        in use by the hipd, so the user must choose a free LSI.
+	        in use by the hipd, so the user must choose a free LSI. These four LSIs are the local LSIs assigned with
+	        the four local HITs.
 	    </para>
 	    <para>crash:</para>
 	    <itemizedlist>
@@ -887,12 +889,12 @@ endif
 		</para>
 	      </listitem>
 	    </itemizedlist>
-	    <para>If the command hipconf add map is not executed, we must add the peer ip in
+	    <para>If the command hipconf add map is not executed, we must add the peer IP in
 	    the file /etc/hosts</para>
 	     <itemizedlist>
-		    <listitem><para>OOPS_HIT oops</para></listitem>		    
+		    <listitem><para>OOPS_IP oops</para></listitem>		    
 		    </itemizedlist>
-	    <para>Appart from starting the hipd process, the hipfw process must be also 
+	    <para>Apart from starting the hipd process, the hipfw process must be also 
 		started in both machines, oops and crash.
 	    </para>   
 	    <itemizedlist>
@@ -903,11 +905,11 @@ endif
 		  hipd/hipd # (to start as a background daemon process, add -b flag)
 	      </para></listitem>
 	      <listitem><para>
-		  firewall/hipfw 
+		  firewall/hipfw -l (to start the firewall with LSI support enabled)
 	      </para></listitem>
 	    </itemizedlist>
 	    <para>
-	      Furthermore, the following rules must be added in the file /etc/hip/firewall.conf
+	      Beforehand the following rules must be added in the file /etc/hip/firewall.conf
 	    </para> 
 	    <para>crash:</para>
 	      <itemizedlist>
@@ -931,7 +933,7 @@ endif
 	      <para>Once we have finished the step before and started running hipd and hipfw, we can 
 	      run the application. If the LSI has been generated automatically, we can check its
 	      value with tools/hipconf get ha OOPS_HIT or tools/hipconf get ha all. 
-	      After, we start running the application, e.g.:		
+	      Afterwards, we start running the application, e.g.:		
 	      </para>
 	      <itemizedlist>
 		<listitem><para>ping OOPS_LSI</para></listitem>
@@ -947,7 +949,7 @@ endif
 	    <para> You should run conntest-client-hip and conntest-server with root privileges
 	      if conntest-server port number is less than 1024.</para>
 	    <para>In this section we will use ipv6 addresses, but you can use also ipv4 addresses. 
-	      Furthermore, the use of the hipfw is optional.</para>
+	      Furthermore, the use of hipfw is optional.</para>
     <para>
       oops:
     </para>
@@ -1531,28 +1533,64 @@ endif
 	examples of configuration changes and instructions.
       </para>
     </section>
+  <section id="sec_vlc">
+  <title>VLC multimedia streamer</title>
+  <para>
+  First run at the client: vlc -vvv udp:
+  </para>
+  <para>
+  Then run at the server: vlc -vvv &lt;any avi video file&gt; --ipv6 --sout '#std{access=rtp,mux=ts,dst=[&lt;CLIENT's HIT&gt;]:1234}'
+
+  </para>
+  </section>
   <section id="sec_openldap">
   <title>OpenLDAP</title>
   <para>
   Tested with stable version openldap-2.3.38 and with release version
-  2.4.7. Using OpenLDAP with HIP is pretty straight forward thing to
-  do. Simplest way is to run hipd on both machines and just use
-  command like <emphasis>"hipconf run normal ldapsearch -x -H
-  ldap://&lt;fqdn&gt; -b
-  'dc=&lt;MY-DOMAIN&gt;,dc=&lt;COM&gt;' '(objectclass=*)'"</emphasis> The name can be
+  2.4.7. ACL part is tested using 2.4.11. Using OpenLDAP with HIP is
+  pretty straight forward thing to do. Simplest way is to run hipd on
+  both machines and just use command like
+  </para>
+  <programlisting>
+  hipconf run normal ldapsearch -x -H ldap://&lt;fqdn&gt; -b 'dc=&lt;MY-DOMAIN&gt;,dc=&lt;COM&gt;' '(objectclass=*)'
+  </programlisting> 
+  <para>
+  The name can be
   something found from <emphasis>/etc/hosts</emphasis>
   and <emphasis>/etc/hip/hosts</emphasis> or you can use OpenDHT to
   resolve names to HIT and address. Search can also be done directly
-  with HIT by command <emphasis>"ldapsearch -x -b 
-  'dc=&lt;MY-DOMAIN&gt;,dc=&lt;COM&gt;' -H ldap://[&lt;HIT&gt;]
-  '(objectclass=*)'"</emphasis>.
-
-  You can search also by using the opportunistic mode by using command 
-  <emphasis>"hipconf run opp ldapsearch -x -H ldap://&lt;fqdn&gt; -b  
-  'dc=&lt;MY-DOMAIN&gt;,dc=&lt;COM&gt;' '(objectclass=*)'"</emphasis>.
-  Ldapadd can be used similarly with LDAPURI and HIP. Longer tutorial
-  can be found
-  from <ulink url="http://www.cs.helsinki.fi/u/sklvarjo/openldap.htm" />
+  with HIT by command 
+  </para>
+  <programlisting>
+  hipconf run normal ldapsearch -x -H ldap://[&lt;HIT&gt;] -b 'dc=&lt;MY-DOMAIN&gt;,dc=&lt;COM&gt;' '(objectclass=*)'
+  </programlisting>
+  <para>
+  You can search also by using the opportunistic mode by using command
+  </para>
+  <programlisting>
+  hipconf run opp ldapsearch -x -H ldap://&lt;fqdn&gt; -b 'dc=&lt;MY-DOMAIN&gt;,dc=&lt;COM&gt;' '(objectclass=*)'
+  </programlisting>
+  <para>
+  Ldapadd can be used similarly with LDAPURI and HITs. 
+  </para>
+  <para>
+  Maybe the most intereseting part are the ACL rules with OpenLDAP. In
+  the newer versions you can use IPv6 formatted peername rules, so it
+  is interesting when we remember that HITs are IPv6 formatted. Below
+  is the basic example of a rule that grants write/read/search
+  permissions to self, read/search permissions to all processes from
+  HIT_1 without authentication and no permissions to the rest of the
+  world.  
+  </para>
+  <programlisting>
+      access to *
+            by self write
+            by peername.ipv6=&lt;HIT_1&gt; anonymous read
+            by * none
+  </programlisting> 
+  <para>
+  Longer how-to
+  can be found from <ulink url="http://www.cs.helsinki.fi/u/sklvarjo/openldap.htm" />
   </para>
   </section>
   <section id="sec_networking_scripts">
