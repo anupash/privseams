@@ -1940,7 +1940,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		add_address_to_list(addr, if_index);
 	}
 
-	hip_hadb_insert_state(entry);
+	//hip_hadb_insert_state(entry);
 
 	/* If there was already state, these may be uninitialized */
 	entry->hip_transform = hip_tfm;
@@ -2160,7 +2160,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
 	entry->default_spi_out = spi_out;
 	HIP_IFE(hip_store_base_exchange_keys(entry, &i2_context, 0), -1);
-	hip_hadb_insert_state(entry);
+	//hip_hadb_insert_state(entry);
 
 	HIP_DEBUG("\nInserted a new host association state.\n"
 		  "\tHIP state: %s\n"\

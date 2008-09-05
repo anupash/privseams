@@ -4072,8 +4072,8 @@ int hip_build_param_reg_from(struct hip_common *msg,
 
      hip_set_param_type(&reg_from, HIP_PARAM_REG_FROM);
      ipv6_addr_copy((struct in6_addr *)&reg_from.address, addr);
-     HIP_DEBUG_IN6ADDR("santtu:reg_from address is ", &reg_from.address);
-     HIP_DEBUG_IN6ADDR("santtu:the given address is ", addr);
+     HIP_DEBUG_IN6ADDR("reg_from address is ", &reg_from.address);
+     HIP_DEBUG_IN6ADDR("the given address is ", addr);
      reg_from.port = htons(port);
      hip_calc_generic_param_len(&reg_from, sizeof(reg_from), 0);
      err = hip_build_param(msg, &reg_from);

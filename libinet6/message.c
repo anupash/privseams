@@ -37,7 +37,7 @@ int hip_peek_recv_total_len(int socket, int encap_hdr_size)
 	bytes = recv(socket, msg, hdr_size, MSG_PEEK);
 
 	if(bytes < 0) {
-		HIP_ERROR("recv() peek error.\n");
+		HIP_ERROR("recv() peek error (is hipd running?)\n");
 		err = -EAGAIN;
 		goto out_err;
 	} else if (bytes < hdr_size) {
