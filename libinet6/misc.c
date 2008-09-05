@@ -620,13 +620,6 @@ int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
 }
 
 
-/* Useless abstraction, goes to the same function anyway -- SAMU*/
-int hip_rsa_host_id_to_hit(const struct hip_host_id *host_id,
-			   struct in6_addr *hit,
-			   int hit_type){
-	return hip_dsa_host_id_to_hit(host_id, hit, hit_type);
-}
-
 int hip_host_id_to_hit(const struct hip_host_id *host_id,
 		       struct in6_addr *hit,
 		       int hit_type){

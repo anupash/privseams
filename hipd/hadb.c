@@ -2210,12 +2210,6 @@ int hip_init_us(hip_ha_t *entry, hip_hit_t *hit_our)
 		hip_rsa_host_id_to_hit(entry->our_pub, &entry->hit_our,
 				       HIP_HIT_TYPE_HASH100);
 	HIP_IFEL(err, err, "Unable to digest the HIT out of public key.");
-
-
-		hip_dsa_host_id_to_hit(entry->our_pub, &entry->hit_our,
-				       HIP_HIT_TYPE_HASH100) :
-		hip_rsa_host_id_to_hit(entry->our_pub, &entry->hit_our,
-				       HIP_HIT_TYPE_HASH100);
 	if(err != 0) {
 		HIP_ERROR("Unable to digest the HIT out of public key.");
 		goto out_err;
