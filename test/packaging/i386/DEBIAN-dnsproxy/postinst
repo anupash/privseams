@@ -1,0 +1,7 @@
+#!/bin/sh
+
+update-rc.d dnshipproxy defaults
+
+echo "invoke-rc.d --quiet dnshipproxy start" | at now + 1 min 2>/dev/null 
+echo "dns proxy for hip starts in one minute"
+

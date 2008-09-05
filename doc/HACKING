@@ -650,6 +650,7 @@ $ sudo yum install hipl-lib hipl-daemon hipl-tools
 Updating yum repository
 -----------------------
 
+
 - install repository tool to the web server 
 
 $ yum -y install createrepo
@@ -659,6 +660,10 @@ $ yum -y install createrepo
 $ mkdir -p /var/www/html/fedora/base/8/i386
 
 $ mkdir -p /var/www/html/fedora/base/8/x86_64
+
+- update version number hipl.spec and create-rpm-sh
+
+- make rpm
 
 - copy all hipl packages to the repository depending on the architecture
 
@@ -711,11 +716,15 @@ $ mkdir -p /var/www/html/ubuntu/dists/gutsy/main/binary-armel
 $ mkdir -p /var/www/html/ubuntu/dists/gutsy/main/binary-i386
 $ mkdir -p /var/www/html/ubuntu/dists/gutsy/main/binary-amd64
 
+- update version number in create-deb.sh
+
+- create new packages with "make deb"
+
 - to create overview file of Packages.gz for all hipl packages
 
 $ dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz
 
-- option -m for all -multiversions of hipl packages
+- option -m for all -multiversions of hipl packages (not really needed)
   
 $ dpkg-scanpackages -m . /dev/null | sudo gzip -9c > Packages.gz
 
