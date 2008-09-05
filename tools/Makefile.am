@@ -39,9 +39,7 @@ if HIP_OPENDHT
   INCLUDES += -I../opendht
 endif
 
-if HIP_HI3
- INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
-endif
+INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
 
 LDADD=
 #if HIP_OPPORTUNISTIC

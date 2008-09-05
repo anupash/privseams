@@ -40,7 +40,6 @@
 #include "registration.h"
 #include "esp_prot_hipd_msg.h"
 
-#if defined CONFIG_HIP_HI3
 #include "i3_client_api.h"
 #include "oppipdb.h"
 
@@ -53,8 +52,6 @@ struct hi3_ipv6_addr {
 	u8 sin6_family;
 	struct in6_addr sin6_addr;
 };
-
-#endif // CONFIG_HIP_HI3
 
 struct pseudo_header6
 {

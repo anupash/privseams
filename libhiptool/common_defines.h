@@ -7,6 +7,8 @@
 #ifndef COMMON_DEFINES_H_
 #define COMMON_DEFINES_H_
 
+#include <stdint.h>
+
 /* maximum packet size of a packet to be sent on the wire */
 #define MAX_PACKET_SIZE		1500
 

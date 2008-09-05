@@ -99,6 +99,11 @@ extern int hip_blind_status;
 /* For switch userspace / kernel IPsec */
 extern int hip_use_userspace_ipsec;
 
+extern int hip_send_i3(struct in6_addr *src_addr, struct in6_addr *peer_addr,
+		       in_port_t not_used, in_port_t not_used2,
+		       struct hip_common *msg,
+		       hip_ha_t *not_used3, int not_used4);
+
 void hip_hadb_hold_entry(void *entry);
 void hip_hadb_put_entry(void *entry);
 

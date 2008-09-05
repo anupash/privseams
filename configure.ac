@@ -151,17 +151,6 @@ if test x"$ac_cv_use_agent" = x"yes"; then
 fi
 AM_CONDITIONAL(HIP_AGENT, test x"$ac_cv_use_agent" = x"yes")
 
-AC_ARG_ENABLE(hi3,
-             AC_HELP_STRING([--enable-hi3],
-                            [Hi3 support (default is NO)]),
-             [ac_cv_use_hi3=$enableval], [ac_cv_use_hi3=no])
-AC_CACHE_CHECK([whether to use hi3],
-               [ac_cv_use_hi3], [ac_cv_use_hi3=no])
-if test x"$ac_cv_use_hi3" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_HI3, AC_PREREQ(2.53))
-fi
-AM_CONDITIONAL(HIP_HI3, test x"$ac_cv_use_hi3" = x"yes")
-
 AC_ARG_ENABLE(cookie,
              AC_HELP_STRING([--enable-cookie],
                             [HIP cookie extensions (default is NO)]),

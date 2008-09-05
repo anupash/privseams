@@ -1,6 +1,5 @@
 #ifndef HIP_HI3_H
 #define HIP_HI3_H
-#ifdef CONFIG_HIP_HI3
 
 #include "user.h"
 #include "hipd.h"
@@ -48,5 +47,4 @@ int hip_hi3_insert_trigger();
 int hip_do_i3_stuff_for_i2(struct hip_locator *locator, hip_portpair_t *i2_info,
 			   in6_addr_t *i2_saddr, in6_addr_t *i2_daddr);
 
-#endif /* CONFIG_HIP_HI3 */
 #endif /* HIP_HI3_H */

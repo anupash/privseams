@@ -3,8 +3,6 @@ AUTOMAKE_OPTIONS = foreign
 CFLAGS= $(hipl_common_cflags) $(HIPL_XMLI)
 INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE) 
 
-if HIP_HI3
-
 noinst_LIBRARIES = libi3client.a
 noinst_HEADERS =  downhill_simplex.h coordinates.h i3_client_api.h \
                     i3_client_api_ctx.h i3_client_api_ext.h i3_client_callback.h \
@@ -19,8 +17,6 @@ libi3client_a_SOURCES = downhill_simplex.c coordinates.c i3_client_api.c \
                         ping_thread.c http.c qsort.c 
                         
 libi3client_a_LIBADD = ../i3/libi3.a ../utils/libutils.a ../aeshash/libaes.a
-
-endif
 
 CLEANFILES = core *.core *~ *.rpo
 MAINTAINERCLEANFILES = Makefile.in

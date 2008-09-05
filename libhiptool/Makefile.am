@@ -56,7 +56,5 @@ INCLUDES = $(hipl_common_include_paths) -I/usr/include/libipq/ -I$(HIPL_LIBINET6
 # LDADD = ../opendht/.libs/libhipopendht.a
 
 
-if HIP_HI3
- INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
-endif
+INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
 
