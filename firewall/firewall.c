@@ -24,6 +24,7 @@ int foreground = 1;
 int filter_traffic = 1;
 int hip_opptcp = 0;
 int hip_userspace_ipsec = 0;
+int hip_kernel_ipsec_fallback = 0;
 int hip_esp_protection = 0;
 int hip_stun = 0;
 int hip_lsi_support = 0;
@@ -58,6 +59,7 @@ void print_usage(){
 	printf("      -k = kill running firewall pid\n");
 	printf("      -l = activate lsi support\n");
  	printf("      -i = switch on userspace ipsec\n");
+ 	printf("      -I = as -i, also allow fallback to kernel ipsec when exiting hipfw\n");
  	printf("      -e = use esp protection extension (also sets -i)\n");
  	printf("      -s = stun/ice message support\n");
 	printf("      -h = print this help\n");
@@ -1693,7 +1695,7 @@ int main(int argc, char **argv){
 
 	check_and_write_default_config();
 
-	while ((ch = getopt(argc, argv, "f:t:vdFHAbkipehsolF")) != -1)
+	while ((ch = getopt(argc, argv, "f:t:vdFHAbkiIpehsolF")) != -1)
 	{
 		switch (ch)
 		{
@@ -1736,6 +1738,11 @@ int main(int argc, char **argv){
 			break;
 		case 'i':
 			hip_userspace_ipsec = 1;
+			hip_kernel_ipsec_fallback = 0;
+			break;
+		case 'I':
+			hip_userspace_ipsec = 1;
+			hip_kernel_ipsec_fallback = 1;
 			break;
 		case 'e':
 			hip_userspace_ipsec = 1;
