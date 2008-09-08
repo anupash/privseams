@@ -342,7 +342,7 @@ int hipd_main(int argc, char *argv[])
 	struct msghdr msg;
 
 	/* Parse command-line options */
-	while ((ch = getopt(argc, argv, ":bk:")) != -1)
+	while ((ch = getopt(argc, argv, ":bk")) != -1)
 	{
 		switch (ch)
 		{
