@@ -1190,7 +1190,7 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
 		    <listitem><para>OOPS_IP oops</para></listitem>		    
 		    </itemizedlist>
 	    <para>Apart from starting the hipd process, the hipfw process must be also 
-		started in both machines, oops and crash.
+		started in both machines, oops and crash. Notice that hipfw must be started always after hipd!
 	    </para>   
 	    <itemizedlist>
 	      <listitem><para>
