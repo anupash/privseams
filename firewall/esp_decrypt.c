@@ -118,7 +118,9 @@ int print_decrypted_content(int proto, char * content, int content_len)
 {
 	_HIP_DEBUG("print_decryted_content\n");
 	_HIP_HEXDUMP("Decrypted data without padding: \n", content, content_len);
-	HIP_DUMP_PACKET("\nPacket contents: \n", content, content_len);
+	/* HIP_DUMP_PACKET won't compile when configure script is run with
+	   --disable-debug. -Lauri 13.08.2008 */
+	//HIP_DUMP_PACKET("\nPacket contents: \n", content, content_len);
 }
 
 

@@ -19,6 +19,10 @@ EXTRA_DIST += i3-cfg-PL.xml
 EXTRA_DIST += autogen.sh
 EXTRA_DIST += @PJPROJECT_FILES@
 
+CLEANFILES = pjproject/pjlib/lib/libpj-hipl.a \
+             pjproject/pjnath/lib/libpjnath-hipl.a \
+             pjproject/pjlib-util/lib/libpjlib-util-hipl.a
+
 # Note: libinet6 has to be the first one
 #
 SUBDIRS = pjproject libinet6 libhiptool libopphip libipsec opendht i3 tools hipd test firewall libhipgui agent hipfwmi

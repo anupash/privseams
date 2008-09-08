@@ -554,8 +554,8 @@ $ ls -l bin/
           <para>
   <programlisting>
   $ tla get hipl--openwrt--2.6 hipl--openwrt--2.6
-  $ rm -rf hipl--openwrt--2.6/{arch}
-  $ tar czf kamikaze_7.09/dl/hipl--openwrt--2.6.tar.gz hipl--openwrt--2.6
+  $ mkdir path/to/kamikaze/dl
+  $ tar czf path/to/kamikaze/dl/hipl--openwrt--2.6.tar.gz --exclude=\{arch\} hipl--openwrt--2.6
   </programlisting>
           </para>
         </listitem>
@@ -574,6 +574,9 @@ $ ls -l bin/
   &lt;*&gt; hipl
   </programlisting>
           </para>
+          <para>
+          Select the kernel modules kmod-ipsec, kmod-ipsec4 and kmod-ipsec6.
+          </para>
         </listitem>
         <listitem>
           <para>
@@ -585,7 +588,7 @@ $ ls -l bin/
   </programlisting>
           </para>
           <para>
-          Or you can also build just a hipl package.
+          Or you can also build just the hipl packages.
           </para>
           <para>
   <programlisting>
@@ -1187,7 +1190,7 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
 		    <listitem><para>OOPS_IP oops</para></listitem>		    
 		    </itemizedlist>
 	    <para>Apart from starting the hipd process, the hipfw process must be also 
-		started in both machines, oops and crash.
+		started in both machines, oops and crash. Notice that hipfw must be started always after hipd!
 	    </para>   
 	    <itemizedlist>
 	      <listitem><para>

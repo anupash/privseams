@@ -1440,7 +1440,7 @@ int get_peer_endpointinfo(const char *hostsfile,
  int get_peer_endpointinfo2(const char *nodename, struct in6_addr *res_hip, struct in6_addr *res){
   int err = -1, ret = 0, i = 0, found_hit = 0;
   unsigned int lineno = 0, fqdn_str_len = 0;
-  FILE *hip_hosts,*hosts = NULL;
+  FILE *hip_hosts = NULL,*hosts = NULL;
   char *hi_str, *fqdn_str, *temp_str;
   char line[500];
   struct in6_addr hit, dst_hit, ipv6_dst;
@@ -1509,6 +1509,7 @@ int get_peer_endpointinfo(const char *hostsfile,
     }
   }
   fclose(hip_hosts);
+  hip_hosts = NULL;
   err = -1;
   goto out_err;
 

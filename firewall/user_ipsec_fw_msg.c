@@ -10,20 +10,32 @@ int send_userspace_ipsec_to_hipd(int activate)
 {
 	int err = 0;
 	struct hip_common *msg = NULL;
+	extern int hip_kernel_ipsec_fallback;
 
 	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1,
 		 "alloc memory for adding sa entry\n");
 
 	hip_msg_init(msg);
 
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_USERSPACE_IPSEC, 0), -1,
-		 "build hdr failed\n");
+	// send this message on activation or for deactivation when -I is specified
+	if (activate || hip_kernel_ipsec_fallback)
+	{
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_USERSPACE_IPSEC, 0), -1,
+			 "build hdr failed\n");
 
-	HIP_IFEL(hip_build_param_contents(msg, (void *)&activate, HIP_PARAM_INT,
-					  sizeof(unsigned int)), -1,
-					  "build param contents failed\n");
+		HIP_IFEL(hip_build_param_contents(msg, (void *)&activate, HIP_PARAM_INT,
+						  sizeof(unsigned int)), -1,
+						  "build param contents failed\n");
 
-	HIP_DEBUG("sending userspace ipsec activation to hipd...\n");
+		HIP_DEBUG("sending userspace ipsec (de-)activation to hipd...\n");
+	} else
+	{
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_RST, 0), -1,
+					 "build hdr failed\n");
+
+		HIP_DEBUG("sending close all connections to hipd...\n");
+	}
+
 	HIP_DUMP_MSG(msg);
 
 	/* send msg to hipd and receive corresponding reply */
