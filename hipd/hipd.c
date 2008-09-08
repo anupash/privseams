@@ -166,6 +166,7 @@ void usage() {
         fprintf(stderr, "Usage: hipd [options]\n\n");
 	fprintf(stderr, "  -b run in background\n");
 	fprintf(stderr, "  -k kill existing hipd\n");
+	fprintf(stderr, "  -N do not flush ipsec rules on exit\n");
 #ifdef CONFIG_HIP_HI3
 	fprintf(stderr, "  -3 <i3 client configuration file>\n");
 #endif
