@@ -553,7 +553,17 @@ int khi_encode(unsigned char *orig, int orig_len,
 	return err;
 }
 
-
+/**
+ * Calculates a Host Identity Tag (HIT) from a Host Identifier (HI).
+ *
+ * Calculates a Host Identity Tag (HIT) from a Host Identifier (HI) using DSA
+ * encryption.
+ *
+ * @param  host_id  a pointer to a Host Identifier   
+ * @param  hit      a target buffer where to put the calculated HIT.
+ * @param  hit_type type of the HIT (must be HIP_HIT_TYPE_HASH100).
+ * @return          zero on success, negative otherwise.
+ */ 
 int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
 			   struct in6_addr *hit,
 			   int hit_type){
@@ -607,14 +617,6 @@ int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
 	       HIP_FREE(khi_data);
 
        return err;
-}
-
-
-/* Useless abstraction, goes to the same function anyway -- SAMU*/
-int hip_rsa_host_id_to_hit(const struct hip_host_id *host_id,
-			   struct in6_addr *hit,
-			   int hit_type){
-	return hip_dsa_host_id_to_hit(host_id, hit, hit_type);
 }
 
 
@@ -1534,22 +1536,34 @@ int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr){
   return rsa_key_rr_len;
 }
 
-
-void *hip_cast_sa_addr(void *sockaddr){
-  struct sockaddr *sa = (struct sockaddr *) sockaddr;
-  void *ret;
+/**
+ * Casts a socket address to an IPv4 or IPv6 address.
+ *
+ * The parameter @c sockaddr is first cast to a struct sockaddr and the IP
+ * address cast is then done based on the value of the sa_family field in the
+ * struct sockaddr. If sa_family is neither AF_INET nor AF_INET6, the cast
+ * fails.
+ * 
+ * @param  sockaddr a pointer to a socket address that holds the IP address. 
+ * @return          a pointer to an IPv4 or IPv6 address inside @c sockaddr or
+ *                  NULL if the cast fails.
+ */ 
+void *hip_cast_sa_addr(void *sockaddr) {
+	struct sockaddr *sa = (struct sockaddr *) sockaddr;
+	void *ret = NULL;
   
-  switch(sa->sa_family) {
-  case AF_INET:
-    ret = &(((struct sockaddr_in *) sockaddr)->sin_addr);
-    break;
-  case AF_INET6:
-    ret = &(((struct sockaddr_in6 *) sockaddr)->sin6_addr);
-    break;
-  default:
-    ret = NULL;
-  }
-  return ret;
+	switch(sa->sa_family) {
+	case AF_INET:
+		ret = &(((struct sockaddr_in *) sockaddr)->sin_addr);
+		break;
+	case AF_INET6:
+		ret = &(((struct sockaddr_in6 *) sockaddr)->sin6_addr);
+		break;
+	default:
+		ret = NULL;
+	}
+	
+	return ret;
 }
 
 int hip_sockaddr_is_v6_mapped(struct sockaddr *sa) {

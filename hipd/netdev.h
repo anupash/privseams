@@ -32,7 +32,7 @@ int hip_devaddr2ifindex(struct in6_addr *addr);
 int hip_netdev_init_addresses(struct rtnl_handle *nl);
 void delete_all_addresses(void);
 int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg);
-int filter_address(struct sockaddr *addr, int ifindex);
+int filter_address(struct sockaddr *addr);
 int hip_get_default_hit(struct in6_addr *hit);
 int hip_get_default_lsi(struct in_addr *lsi);
 

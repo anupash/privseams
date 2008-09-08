@@ -994,8 +994,22 @@ out_err:
 	if (dst) free(dst);
 	*/
 	return err;
-}
+} 
 
+static long llsqrt(long long a)
+{
+        long long prev = ~((long long)1 << 63);
+        long long x = a;
+
+        if (x > 0) {
+                while (x < prev) {
+                        prev = x;
+                        x = (x+(a/x))/2;
+                }
+        }
+
+        return (long)x;
+}
 
 /**
  * This function calculates RTT and ... and then stores them to correct entry
@@ -1010,8 +1024,8 @@ out_err:
 int hip_icmp_statistics(struct in6_addr * src, struct in6_addr * dst,
 			struct timeval *stval, struct timeval *rtval) {
 	int err = 0;
-	unsigned long rtt = 0, usecs = 0, secs = 0;
-	unsigned long varians = 0;
+	u_int32_t rtt = 0, usecs = 0, secs = 0, square = 0;
+	u_int32_t sum1 = 0, sum2 = 0; 
 	char hit[INET6_ADDRSTRLEN];
 	hip_ha_t * entry = NULL;
 
@@ -1030,22 +1044,24 @@ int hip_icmp_statistics(struct in6_addr * src, struct in6_addr * dst,
 	entry->heartbeats_received++;
 
 	/* Calculate mean */
-	entry->heartbeats_mean += rtt;
+	entry->heartbeats_total_rtt += rtt;
+	entry->heartbeats_total_rtt2 += rtt * rtt;
 	if (entry->heartbeats_received > 1)
-		entry->heartbeats_mean /= 2; // max loss 0.999... of usec ( 1/1000000 of a sec)
+		entry->heartbeats_mean = entry->heartbeats_total_rtt / entry->heartbeats_received;
 	
-	/* Calculate mean varians  */	
+	/* Calculate varians  */	
 	if (entry->heartbeats_received > 1) {
-		entry->heartbeats_mean_varians = (rtt - entry->heartbeats_mean);
-		entry->heartbeats_mean_varians = pow(entry->heartbeats_mean_varians, 2); 
-		entry->heartbeats_mean_varians /= 2;
-		entry->heartbeats_mean_varians = sqrt(entry->heartbeats_mean_varians);
+		sum1 = entry->heartbeats_total_rtt;
+		sum2 = entry->heartbeats_total_rtt2;
+		sum1 /= entry->heartbeats_received;
+		sum2 /= entry->heartbeats_received;
+		entry->heartbeats_varians = llsqrt(sum2 - sum1 * sum1);
 	}
 
-	HIP_DEBUG("\nHeartbeat from %s, RTT %.5f ms,\n%.5f ms mean, "
-		  "%.5f ms mean varians, packets sent %d recv %d lost %d\n", 
+	HIP_DEBUG("\nHeartbeat from %s, RTT %.6f ms,\n%.6f ms mean, "
+		  "%.6f ms varians, packets sent %d recv %d lost %d\n", 
 		  hit, (rtt / 1000000.0), (entry->heartbeats_mean / 1000000.0),
-		  (entry->heartbeats_mean_varians / 1000000.0),
+		  (entry->heartbeats_varians / 1000000.0),
 		  entry->heartbeats_sent, entry->heartbeats_received,
 		  (entry->heartbeats_sent - entry->heartbeats_received));
 
