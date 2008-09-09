@@ -9,12 +9,18 @@ ROUTE_TOv6=
 
 MEASUREMENT_COUNT=20
 
-HIPD_DIR=~/dev/hipl--esp--2.6/hipd
-HIPFW_DIR=~/dev/hipl--esp--2.6/firewall
+HIPL_DIR=~/dev/hipl--esp--2.6/
+HIPD_DIR=$HIPL_DIR/hipd
+HIPFW_DIR=$HIPL_DIR/firewall
 HIPFW_OPTS=
+STATS_DIR=$HIPL_DIR/test/performance
 
-OUTPUT_DIR=~/dev/measurements
-OUTPUT_FILE_POSTFIX=$(date +%Y_%m_%d)
+BASE_DIR=~/dev/measurements/$(date +%Y_%m_%d)
+FILE_PREFIX=
+FILE_POSTFIX=
+OUTPUT_DIR=$BASE_DIR/output
+STAGING_DIR=$BASE_DIR/staging
+RESULTS_DIR=$BASE_DIR/results
 
 # needed by the script - don't change these variables
 DEVICE_TYPE=0
@@ -28,6 +34,8 @@ WITH_MID=0
 MEASURE_RTT=0
 MEASURE_TPUT=0
 VERIFY_PATH=0
+
+FILE=
 
 # get the command line options
 NO_ARGS=0
@@ -78,40 +86,40 @@ shift $((OPTIND - 1))
 # set the output file's prefix
 if [ $RUN_HIPD -eq "1" ]
 then
-  OUTPUT_FILE_PREFIX="with_hipd-"
+  FILE_PREFIX=$FILE_PREFIX"with_hipd-"
 else
-  OUTPUT_FILE_PREFIX="no_hipd-"
+  FILE_PREFIX=$FILE_PREFIX"no_hipd-"
 fi
 
 if [ $RUN_USERIPSEC -eq "1" ]
 then
-  OUTPUT_FILE_PREFIX=$OUTPUT_FILE_PREFIX"with_useripsec-"
+  FILE_PREFIX=$FILE_PREFIX"with_useripsec-"
 else
-  OUTPUT_FILE_PREFIX=$OUTPUT_FILE_PREFIX"with_kernelipsec-"
+  FILE_PREFIX=$FILE_PREFIX"with_kernelipsec-"
 fi
 
 if [ $RUN_ESPEXT -eq "1" ]
 then
-  OUTPUT_FILE_PREFIX=$OUTPUT_FILE_PREFIX"with_esp_ext-"
+  FILE_PREFIX=$FILE_PREFIX"with_esp_ext-"
 else
-  OUTPUT_FILE_PREFIX=$OUTPUT_FILE_PREFIX"no_esp_ext-"
+  FILE_PREFIX=$FILE_PREFIX"no_esp_ext-"
 fi
 
 if [ $WITH_MID -eq "1" ]
 then
-  OUTPUT_FILE_PREFIX=$OUTPUT_FILE_PREFIX"with_pcfw-"
+  FILE_PREFIX=$FILE_PREFIX"with_pcfw-"
 elif [ $WITH_MID -eq "2" ]
 then
-  OUTPUT_FILE_PREFIX=$OUTPUT_FILE_PREFIX"with_routerfw-"
+  FILE_PREFIX=$FILE_PREFIX"with_routerfw-"
 else
-  OUTPUT_FILE_PREFIX=$OUTPUT_FILE_PREFIX"no_midfw-"
+  FILE_PREFIX=$FILE_PREFIX"no_midfw-"
 fi
 
 if [ $WITH_REORDER -eq "1" ]
 then
-  OUTPUT_FILE_PREFIX=$OUTPUT_FILE_PREFIX"with_reorder-"
+  FILE_PREFIX=$FILE_PREFIX"with_reorder-"
 else
-  OUTPUT_FILE_PREFIX=$OUTPUT_FILE_PREFIX"no_reorder-"
+  FILE_PREFIX=$FILE_PREFIX"no_reorder-"
 fi
 
 
@@ -260,22 +268,25 @@ fi
 # measure RTTs only on the client
 if [ $MEASURE_RTT -eq "1" -a $DEVICE_TYPE -eq "1" ]
 then
-  OUTPUT=$OUTPUT_DIR/$OUTPUT_FILE_PREFIX"rtt-"$OUTPUT_FILE_POSTFIX
+  FILE=$FILE_PREFIX"rtt-"$FILE_POSTFIX
   read -p "Measure RTT: [ENTER]"
 
   if [ $RUN_HIPD -eq "1" ]
   then
-    ping6 -c $MEASUREMENT_COUNT $DST_HIT | tee --append $OUTPUT
+    ping6 -c $MEASUREMENT_COUNT $DST_HIT | tee --append $OUTPUT_DIR/$FILE
   elif [ $ADDR_FAMILY -eq "4" ]
   then
-    ping -c $MEASUREMENT_COUNT $DST_IPv4 | tee --append $OUTPUT
+    ping -c $MEASUREMENT_COUNT $DST_IPv4 | tee --append $OUTPUT_DIR/$FILE
   elif [ $ADDR_FAMILY -eq "6" ]
   then
-    ping6 -c $MEASUREMENT_COUNT $DST_IPv6 | tee --append $OUTPUT
+    ping6 -c $MEASUREMENT_COUNT $DST_IPv6 | tee --append $OUTPUT_DIR/$FILE
   else
     echo "ERROR: Neither HIT nor correct address family specified."
     exit 1
   fi
+
+  # output post-processing
+  grep rtt $OUTPUT_DIR/$FILE | tee --append $STAGING_DIR/$FILE
 fi
 
 
@@ -288,13 +299,13 @@ then
   # client side
   if [ $DEVICE_TYPE -eq "1" ]
   then
-    OUTPUT=$OUTPUT_DIR/$OUTPUT_FILE_PREFIX"tcp-"$OUTPUT_FILE_POSTFIX
+    FILE=$FILE_PREFIX"tcp-"$FILE_POSTFIX
     i=0
     if [ $RUN_HIPD -eq "1" ]
     then
       while [ $i -lt $MEASUREMENT_COUNT ]
       do
-        iperf -V --client $DST_HIT | tee --append $OUTPUT
+        iperf -V --client $DST_HIT | tee --append $OUTPUT_DIR/$FILE
         i=`expr $i + 1`
         # for some reason iperf needs this to reset the timer
         # for throughput calc
@@ -304,7 +315,7 @@ then
     then
       while [ $i -lt $MEASUREMENT_COUNT ]
       do
-        iperf --client $DST_IPv4 | tee --append $OUTPUT
+        iperf --client $DST_IPv4 | tee --append $OUTPUT_DIR/$FILE
         i=`expr $i + 1`
         sleep 2
       done
@@ -312,7 +323,7 @@ then
     then
       while [ $i -lt $MEASUREMENT_COUNT ]
       do
-        iperf -V --client $DST_IPv6 | tee --append $OUTPUT
+        iperf -V --client $DST_IPv6 | tee --append $OUTPUT_DIR/$FILE
         i=`expr $i + 1`
         sleep 2
       done
@@ -320,6 +331,9 @@ then
       echo "ERROR: Neither HIT nor correct address family specified."
       exit 1
     fi
+
+    # client-side output post-processing
+    grep MBytes $OUTPUT_DIR/$FILE | $STATS_DIR/stats.pl 95 type '(MBytes)\s+(\S+)' | tee --append $STAGING_DIR/$FILE
 
   # server side
   elif [ $DEVICE_TYPE -eq "3" ]
@@ -352,13 +366,13 @@ then
   # client side
   if [ $DEVICE_TYPE -eq "1" ]
   then
-    OUTPUT=$OUTPUT_DIR/$OUTPUT_FILE_PREFIX"udp-"$OUTPUT_FILE_POSTFIX
+    OUTPUT_FILE=$OUTPUT_FILE_PREFIX"udp-"$OUTPUT_FILE_POSTFIX
     i=0
     if [ $RUN_HIPD -eq "1" ]
     then
       while [ $i -lt $MEASUREMENT_COUNT ]
       do
-        iperf -V --client $DST_HIT --udp --len 1370 --bandwidth 100M | tee --append $OUTPUT
+        iperf -V --client $DST_HIT --udp --len 1370 --bandwidth 100M | tee --append $OUTPUT_DIR/$OUTPUT_FILE
         i=`expr $i + 1`
         sleep 2
       done 
@@ -366,7 +380,7 @@ then
     then
       while [ $i -lt $MEASUREMENT_COUNT ]
       do
-        iperf --client $DST_IPv4 --udp --len 1370 --bandwidth 100M | tee --append $OUTPUT
+        iperf --client $DST_IPv4 --udp --len 1370 --bandwidth 100M | tee --append $OUTPUT_DIR/$OUTPUT_FILE
         i=`expr $i + 1`
         sleep 2
       done
@@ -374,7 +388,7 @@ then
     then
       while [ $i -lt $MEASUREMENT_COUNT ]
       do
-        iperf -V --client $DST_IPv6 --udp --len 1370 --bandwidth 100M | tee --append $OUTPUT
+        iperf -V --client $DST_IPv6 --udp --len 1370 --bandwidth 100M | tee --append $OUTPUT_DIR/$OUTPUT_FILE
         i=`expr $i + 1`
         sleep 2
       done
@@ -382,6 +396,9 @@ then
       echo "ERROR: Neither HIT nor correct address family specified."
       exit 1
     fi
+
+    # client-side output post-processing
+    #grep MBytes $OUTPUT_DIR/$FILE | $STATS_DIR/stats.pl 95 type '(MBytes)\s+(\S+)' | tee --append $STAGING_DIR/$FILE
 
   # server side
   elif [ $DEVICE_TYPE -eq "3" ]
@@ -403,15 +420,20 @@ then
 fi
 
 
-read -p "Clean up: [ENTER]"
-
-if [ $RUN_HIPD -eq "1" ]
+if [ $RUN_HIPD -eq "1" -o $RUN_HIPFW -eq "1" ]
 then
-  killall hipd
+  read -p "Clean up: [ENTER]"
+
+  if [ $RUN_HIPD -eq "1" ]
+  then
+    killall hipd
+  fi
+
+  if [ $RUN_HIPFW -eq "1" ]
+  then
+    killall hipfw
+  fi
 fi
 
-if [ $RUN_HIPFW -eq "1" ]
-then
-  killall hipfw
-fi
+exit 0
 
