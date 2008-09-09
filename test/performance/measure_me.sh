@@ -298,6 +298,7 @@ then
       do
         iperf -V --client $DST_HIT | tee --append $OUTPUT
         i=`expr $i + 1`
+        sleep 1
       done
     elif [ $ADDR_FAMILY -eq "4" ]
     then
@@ -305,6 +306,7 @@ then
       do
         iperf --client $DST_IPv4 | tee --append $OUTPUT
         i=`expr $i + 1`
+        sleep 1
       done
     elif [ $ADDR_FAMILY -eq "6" ]
     then
@@ -312,6 +314,7 @@ then
       do
         iperf -V --client $DST_IPv6 | tee --append $OUTPUT
         i=`expr $i + 1`
+        sleep 1
       done
     else
       echo "ERROR: Neither HIT nor correct address family specified."
@@ -357,6 +360,7 @@ then
       do
         iperf -V --client $DST_HIT --udp --len 1370 --bandwidth 100M | tee --append $OUTPUT
         i=`expr $i + 1`
+        sleep 1
       done 
     elif [ $ADDR_FAMILY -eq "4" ]
     then
@@ -364,6 +368,7 @@ then
       do
         iperf --client $DST_IPv4 --udp --len 1370 --bandwidth 100M | tee --append $OUTPUT
         i=`expr $i + 1`
+        sleep 1
       done
     elif [ $ADDR_FAMILY -eq "6" ]
     then
@@ -371,6 +376,7 @@ then
       do
         iperf -V --client $DST_IPv6 --udp --len 1370 --bandwidth 100M | tee --append $OUTPUT
         i=`expr $i + 1`
+        sleep 1
       done
     else
       echo "ERROR: Neither HIT nor correct address family specified."
