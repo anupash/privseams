@@ -15,12 +15,13 @@ HIPFW_DIR=$HIPL_DIR/firewall
 HIPFW_OPTS=
 STATS_DIR=$HIPL_DIR/test/performance
 
-BASE_DIR=~/dev/measurements/$(date +%Y_%m_%d)
+BASE_DIR=~/dev/measurements
+EXT_BASE_DIR=$BASE_DIR/$(date +%Y_%m_%d)
 FILE_PREFIX=
 FILE_POSTFIX=
-OUTPUT_DIR=$BASE_DIR/output
-STAGING_DIR=$BASE_DIR/staging
-RESULTS_DIR=$BASE_DIR/results
+OUTPUT_DIR=$EXT_BASE_DIR/output
+STAGING_DIR=$EXT_BASE_DIR/staging
+RESULTS_DIR=$EXT_BASE_DIR/results
 
 # needed by the script - don't change these variables
 DEVICE_TYPE=0
@@ -83,6 +84,7 @@ do
 done
 shift $((OPTIND - 1))
 
+
 # set the output file's prefix
 if [ $RUN_HIPD -eq "1" ]
 then
@@ -120,6 +122,33 @@ then
   FILE_PREFIX=$FILE_PREFIX"with_reorder-"
 else
   FILE_PREFIX=$FILE_PREFIX"no_reorder-"
+fi
+
+
+# create the directories, if they don't exist yet
+if [ ! -e $BASE_DIR ]
+then
+  mkdir $BASE_DIR
+fi
+
+if [ ! -e $EXT_BASE_DIR ]
+then
+  mkdir $EXT_BASE_DIR
+fi
+
+if [ ! -e  $OUTPUT_DIR ]
+then
+  mkdir $OUTPUT_DIR
+fi
+
+if [ ! -e $STAGING_DIR ]
+then
+  mkdir $STAGING_DIR
+fi
+
+if [ ! -e $RESULTS_DIR ]
+then
+  mkdir $RESULTS_DIR
 fi
 
 
@@ -268,7 +297,7 @@ fi
 # measure RTTs only on the client
 if [ $MEASURE_RTT -eq "1" -a $DEVICE_TYPE -eq "1" ]
 then
-  FILE=$FILE_PREFIX"rtt-"$FILE_POSTFIX
+  FILE=$FILE_PREFIX"rtt"$FILE_POSTFIX
   read -p "Measure RTT: [ENTER]"
 
   if [ $RUN_HIPD -eq "1" ]
@@ -299,7 +328,7 @@ then
   # client side
   if [ $DEVICE_TYPE -eq "1" ]
   then
-    FILE=$FILE_PREFIX"tcp-"$FILE_POSTFIX
+    FILE=$FILE_PREFIX"tcp"$FILE_POSTFIX
     i=0
     if [ $RUN_HIPD -eq "1" ]
     then
@@ -366,7 +395,7 @@ then
   # client side
   if [ $DEVICE_TYPE -eq "1" ]
   then
-    OUTPUT_FILE=$OUTPUT_FILE_PREFIX"udp-"$OUTPUT_FILE_POSTFIX
+    OUTPUT_FILE=$OUTPUT_FILE_PREFIX"udp"$OUTPUT_FILE_POSTFIX
     i=0
     if [ $RUN_HIPD -eq "1" ]
     then
