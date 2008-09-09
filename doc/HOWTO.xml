@@ -418,35 +418,41 @@ SHELLOPTS=braceexpand:emacs:hashall:histexpand:interactive-comments:monitor:nocl
 Target System (Atheros [2.6])
 Target Images (jffs2, squashfs)
 Image configuration --->
-(static) LAN Protocol (NEW)
-(192.168.5.30) LAN IP Address (NEW)
-(255.255.255.0) LAN Network Mask (NEW)
+ (static) LAN Protocol (NEW)
+ (192.168.5.30) LAN IP Address (NEW)
+ (255.255.255.0) LAN Network Mask (NEW)
+Base System  ---> 
+ Configuration  ---> 
+  Linux Module Utilities  ---> 
+   [*] modprobe 
+Libraries  --->
+ &lt;*&gt; libuuid
 Network  --->
-&lt;*&gt; ipsec-tools (for PISA development)
-&lt;*&gt; isakmpd (for PISA development)
-&lt;*&gt; ip6tables (for PISA development)
-&lt;*&gt; hostapd (for PISA development)
+ &lt;*&gt; ipsec-tools
+ &lt;*&gt; isakmpd
+ &lt;*&gt; ip6tables
+ &lt;*&gt; hostapd
 Kernel modules  ---> 
  Netfilter Extensions  ---> 
- &lt;*&gt; kmod-ip6tables 
- &lt;*&gt; kmod-ipt-filter 
- &lt;*&gt; kmod-ipt-ipsec 
- &lt;*&gt; kmod-ipt-nat 
- &lt;*&gt; kmod-ipt-queue 
-Network Support  ---> 
- &lt;*&gt; kmod-ipsec 
- &lt;*&gt;  kmod-ipsec4 
- &lt;*&gt;  kmod-ipsec6 
- &lt;*&gt; kmod-iptunnel4 
- &lt;*&gt; kmod-ipv6 
- &lt;*&gt; kmod-tun 
-Other modules  ---> 
- &lt;*&gt; kmod-crypto 
-Wireless Drivers  ---> 
- &lt;*&gt; kmod-madwifi 
+  &lt;*&gt; kmod-ip6tables 
+  &lt;*&gt; kmod-ipt-filter 
+  &lt;*&gt; kmod-ipt-ipsec 
+  &lt;*&gt; kmod-ipt-nat 
+  &lt;*&gt; kmod-ipt-queue 
+ Network Support  ---> 
+  &lt;*&gt; kmod-ipsec 
+  &lt;*&gt;  kmod-ipsec4 
+  &lt;*&gt;  kmod-ipsec6 
+  &lt;*&gt; kmod-iptunnel4 
+  &lt;*&gt; kmod-ipv6 
+  &lt;*&gt; kmod-tun 
+ Other modules  ---> 
+  &lt;*&gt; kmod-crypto 
+ Wireless Drivers  ---> 
+  &lt;*&gt; kmod-madwifi 
 Advanced configuration options (for developers)  --->
-Build Options  --->
-(8)   Number of jobs to run simultaneously (for PISA development. Speeds up compilation dramatically on multicore systems)
+ Build Options  --->
+  (8)   Number of jobs to run simultaneously (for PISA development. Speeds up compilation dramatically on multicore systems)
 </programlisting>
           </para>
           <para>
@@ -877,35 +883,41 @@ endif
 Target System (Broadcom BCM947xx/953xx [2.6])
 Target Images (jffs2, squashfs)
 Image configuration --->
-(static) LAN Protocol (NEW)
-(192.168.5.30) LAN IP Address (NEW)
-(255.255.255.0) LAN Network Mask (NEW)
+ (static) LAN Protocol (NEW)
+ (192.168.5.30) LAN IP Address (NEW)
+ (255.255.255.0) LAN Network Mask (NEW)
+Base System  ---> 
+ Configuration  ---> 
+  Linux Module Utilities  ---> 
+   [*] modprobe 
+Libraries  --->
+ &lt;*&gt; libuuid
 Network  --->
-&lt;*&gt; ipsec-tools (for PISA development)
-&lt;*&gt; isakmpd (for PISA development)
-&lt;*&gt; ip6tables (for PISA development)
-&lt;*&gt; hostapd (for PISA development)
+ &lt;*&gt; ipsec-tools
+ &lt;*&gt; isakmpd
+ &lt;*&gt; ip6tables
+ &lt;*&gt; hostapd
 Kernel modules  ---> 
  Netfilter Extensions  ---> 
- &lt;*&gt; kmod-ip6tables 
- &lt;*&gt; kmod-ipt-filter 
- &lt;*&gt; kmod-ipt-ipsec 
- &lt;*&gt; kmod-ipt-nat 
- &lt;*&gt; kmod-ipt-queue 
+  &lt;*&gt; kmod-ip6tables 
+  &lt;*&gt; kmod-ipt-filter 
+  &lt;*&gt; kmod-ipt-ipsec 
+  &lt;*&gt; kmod-ipt-nat 
+  &lt;*&gt; kmod-ipt-queue 
 Network Support  ---> 
- &lt;*&gt; kmod-ipsec 
- &lt;*&gt;  kmod-ipsec4 
- &lt;*&gt;  kmod-ipsec6 
- &lt;*&gt; kmod-iptunnel4 
- &lt;*&gt; kmod-ipv6 
- &lt;*&gt; kmod-tun 
+  &lt;*&gt; kmod-ipsec 
+  &lt;*&gt;  kmod-ipsec4 
+  &lt;*&gt;  kmod-ipsec6 
+  &lt;*&gt; kmod-iptunnel4 
+  &lt;*&gt; kmod-ipv6 
+  &lt;*&gt; kmod-tun 
 Other modules  ---> 
- &lt;*&gt; kmod-crypto 
+  &lt;*&gt; kmod-crypto 
 Wireless Drivers  ---> 
- &lt;*&gt; kmod-madwifi 
+  &lt;*&gt; kmod-madwifi 
 Advanced configuration options (for developers)  --->
-Build Options  --->
-(8)   Number of jobs to run simultaneously (for PISA development. Speeds up compilation dramatically on multicore systems)
+ Build Options  --->
+  (8)   Number of jobs to run simultaneously (for PISA development. Speeds up compilation dramatically on multicore systems)
 </programlisting>
           </para>
         </listitem>
