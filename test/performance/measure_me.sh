@@ -152,8 +152,7 @@ then
   do
     echo "0" > $f
   done
-elif
-then
+else
   echo "ERROR: proc-file not found."
   exit 1
 fi
@@ -164,8 +163,7 @@ then
   do
     echo "0" > $f
   done
-elif
-then
+else
   echo "ERROR: proc-file not found."
   exit 1
 fi
@@ -176,8 +174,7 @@ then
   do
     echo "0" > $f
   done
-elif
-then
+else
   echo "ERROR: proc-file not found."
   exit 1
 fi
