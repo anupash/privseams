@@ -264,8 +264,11 @@ then
 
   if [ $RUN_HIPFW -eq "1" ]
   then
-    echo "Waiting a bit for hipd to start up..."
-    sleep 2
+    if [ $RUN_HIPD -eq "1" ]
+    then
+      echo "Waiting a bit for hipd to start up..."
+      sleep 2
+    fi
     $HIPFW_DIR/hipfw -kb$HIPFW_OPTS
     ps -A | grep hipfw
   fi
