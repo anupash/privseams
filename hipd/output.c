@@ -1291,7 +1291,6 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	   points to the final source address (my_addr or local_addr). */
 	struct in6_addr my_addr, *my_addr_ptr = NULL;
 	int memmoved = 0;
-
 	/* sendmsg() crud */
 	struct msghdr hdr;
 	struct iovec iov;
@@ -1339,16 +1338,15 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		IPV6_TO_IPV4_MAP(&my_addr, &src4.sin_addr);
 	}
 
+	/* This is not really used */
+	src4.sin_port = htons(src_port);
+
         /* Destination address. */
 	HIP_IFEL(!IN6_IS_ADDR_V4MAPPED(peer_addr), -EPFNOSUPPORT,
 		 "Peer address is pure IPv6 address, IPv6 address family is "\
 		 "currently not supported on UDP/HIP.\n");
 	IPV6_TO_IPV4_MAP(peer_addr, &dst4.sin_addr);
 	HIP_DEBUG_INADDR("dst4", &dst4.sin_addr);
-
-	/* The socket is bound to port 50500.
-	src4.sin_port = htons(src_port);
-	*/
 
 	if(dst_port != 0) {
 		dst4.sin_port = htons(dst_port);
@@ -1374,13 +1372,6 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	packet_length += HIP_UDP_ZERO_BYTES_LEN;
 	memmoved = 1;
 
-	/*
-	  Currently disabled because I could not make this work -miika
-	HIP_IFEL(bind(hip_nat_sock_udp, (struct sockaddr *) &src4, sizeof(src4)),
-		 -1, "Binding to udp sock failed\n");
-
-	*/
-
 	/* Pass the correct source address to sendmsg() as ancillary data */
 	cmsg = &cmsgbuf;
 	memset(cmsg, 0, sizeof(cmsgbuf));
@@ -1388,7 +1379,7 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	cmsg->cmsg_level = IPPROTO_IP;
 	cmsg->cmsg_type = IP_PKTINFO;
 	pkt_info = CMSG_DATA(cmsg);
-	pkt_info->ipi_addr.s_addr = src4.sin_addr.s_addr;
+	pkt_info->ipi_addr.s_addr = htonl(src4.sin_addr.s_addr);
 
 	hdr.msg_name = &dst4;
 	hdr.msg_namelen = sizeof(dst4);
@@ -1401,8 +1392,6 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 
 	/* Try to send the data. */
 	do {
-		//chars_sent = sendto(hip_nat_sock_udp, msg, packet_length, 0,
-				    //(struct sockaddr *) &dst4, sizeof(dst4));
 		chars_sent = sendmsg(hip_nat_sock_udp, &hdr, 0);
 		if(chars_sent < 0) {
 			HIP_DEBUG("Problem in sending UDP packet. Sleeping "\

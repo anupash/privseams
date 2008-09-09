@@ -441,8 +441,8 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
      	entry->hipproxy = hip_get_hip_proxy_status();
 #endif
 
-	HIP_DEBUG_LSI("               entry->lsi_peer \n", &entry->lsi_peer);
-	int value = hip_hadb_insert_state(entry);
+	HIP_DEBUG_LSI("entry->lsi_peer \n", &entry->lsi_peer);
+	hip_hadb_insert_state(entry);
 
 	/* Released at the end */
 	hip_hold_ha(entry);
