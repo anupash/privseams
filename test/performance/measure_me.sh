@@ -195,15 +195,13 @@ fi
 if [ $ADDR_FAMILY -eq "4" ]
 then
   route add -host $DST_IPv4 netmask 0.0.0.0 gw $ROUTE_TOv4
+elif [ $ADDR_FAMILY -eq "6" ]
+then
+  echo "TODO route6 add"
+  exit 1
 else
-  if [ $ADDR_FAMILY -eq "6" ]
-  then
-     echo "TODO route6 add"
-     exit 1
-  else
-    echo "ERROR: Unknown address family or none specified."
-    exit 1
-  fi
+  echo "ERROR: Unknown address family or none specified."
+  exit 1
 fi
 
 
@@ -285,7 +283,7 @@ fi
 if [ $MEASURE_TPUT -eq "1" -o $MEASURE_TPUT -eq "3" ]
 then
 
-  read -p "Measure TCP throughput: [ENTER]"
+  read -p "Measure TCP throughput (start server first!): [ENTER]"
 
   # client side
   if [ $DEVICE_TYPE -eq "1" ]
@@ -298,7 +296,9 @@ then
       do
         iperf -V --client $DST_HIT | tee --append $OUTPUT
         i=`expr $i + 1`
-        sleep 1
+        # for some reason iperf needs this to reset the timer
+        # for throughput calc
+        sleep 2
       done
     elif [ $ADDR_FAMILY -eq "4" ]
     then
@@ -306,7 +306,7 @@ then
       do
         iperf --client $DST_IPv4 | tee --append $OUTPUT
         i=`expr $i + 1`
-        sleep 1
+        sleep 2
       done
     elif [ $ADDR_FAMILY -eq "6" ]
     then
@@ -314,7 +314,7 @@ then
       do
         iperf -V --client $DST_IPv6 | tee --append $OUTPUT
         i=`expr $i + 1`
-        sleep 1
+        sleep 2
       done
     else
       echo "ERROR: Neither HIT nor correct address family specified."
@@ -347,7 +347,7 @@ fi
 if [ $MEASURE_TPUT -eq "2" -o $MEASURE_TPUT -eq "3" ]
 then
 
-  read -p "Measure UDP throughput: [ENTER]"
+  read -p "Measure UDP throughput (start server first!): [ENTER]"
 
   # client side
   if [ $DEVICE_TYPE -eq "1" ]
@@ -360,7 +360,7 @@ then
       do
         iperf -V --client $DST_HIT --udp --len 1370 --bandwidth 100M | tee --append $OUTPUT
         i=`expr $i + 1`
-        sleep 1
+        sleep 2
       done 
     elif [ $ADDR_FAMILY -eq "4" ]
     then
@@ -368,7 +368,7 @@ then
       do
         iperf --client $DST_IPv4 --udp --len 1370 --bandwidth 100M | tee --append $OUTPUT
         i=`expr $i + 1`
-        sleep 1
+        sleep 2
       done
     elif [ $ADDR_FAMILY -eq "6" ]
     then
@@ -376,7 +376,7 @@ then
       do
         iperf -V --client $DST_IPv6 --udp --len 1370 --bandwidth 100M | tee --append $OUTPUT
         i=`expr $i + 1`
-        sleep 1
+        sleep 2
       done
     else
       echo "ERROR: Neither HIT nor correct address family specified."
