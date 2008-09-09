@@ -9,7 +9,7 @@ ROUTE_TOv6=
 
 MEASUREMENT_COUNT=20
 
-HIPL_DIR=~/dev/hipl--esp--2.6/
+HIPL_DIR=~/dev/hipl--esp--2.6
 HIPD_DIR=$HIPL_DIR/hipd
 HIPFW_DIR=$HIPL_DIR/firewall
 HIPFW_OPTS=
