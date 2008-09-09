@@ -109,8 +109,8 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc) 
         hip_conf_handle_trans_order,
 	hip_conf_handle_tcptimeout, /* added by Tao Wan*/
         hip_conf_handle_hipproxy,
-	hip_conf_handle_hi3,
 	hip_conf_handle_heartbeat,
+	hip_conf_handle_hi3,
 	NULL /* run */
 };
 

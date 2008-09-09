@@ -2339,14 +2339,13 @@ void hip_init_hadb(void)
      default_update_func_set.hip_update_send_echo	     = hip_update_send_echo;
 
      /* xmit function set */
-     /** @todo Add support for i3. */
-     default_xmit_func_set.hip_send_pkt = hip_send_raw;
-////	#ifdef CONFIG_HIP_HI3
-     if(hip_get_hi3_status())
-     {
+     if(hip_get_hi3_status()){
 	  default_xmit_func_set.hip_send_pkt = hip_send_i3;
      }
-////	#endif
+     else{
+	  default_xmit_func_set.hip_send_pkt = hip_send_raw;
+     }
+
      nat_xmit_func_set.hip_send_pkt = hip_send_udp;
 
      /* filter function sets */

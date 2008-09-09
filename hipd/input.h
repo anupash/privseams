@@ -71,9 +71,7 @@ struct pseudo_header
         u16 packet_length;
 };
 
-#ifdef CONFIG_HIP_HI3
 void hip_inbound(cl_trigger *t, void *data, void *ctx);
-#endif // CONFIG_HIP_HI3
 
 /**
  * Gets name for a message type

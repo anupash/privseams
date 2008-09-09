@@ -188,10 +188,16 @@ void hip_set_hi3_status(struct hip_common *msg){
 		}
 	}
 
-	if (type == SO_HIP_SET_HI3_ON)
+	if(type == SO_HIP_SET_HI3_ON){
+		hip_i3_init();
 		hip_use_hi3 = 1;
-	else
+		hip_locator_status = SO_HIP_SET_LOCATOR_ON;
+	}
+	else{
+		hip_locator_status = SO_HIP_SET_LOCATOR_OFF;
+		hip_hi3_clean();
 		hip_use_hi3 = 0;
+	}
 
 	HIP_DEBUG("hi3 set %s\n",
 		  (hip_use_hi3 ? "on" : "off"));
@@ -432,19 +438,35 @@ int hipd_main(int argc, char *argv[])
 		/* wait for socket activity */
 
                 /* If DHT is on have to use write sets for asynchronic communication */
-		              if (hip_opendht_inuse == SO_HIP_DHT_ON) {
-                        if ((err = HIPD_SELECT((highest_descriptor + 1), &read_fdset,
-                                               &write_fdset, NULL, &timeout)) < 0) {
-			HIP_ERROR("select() error: %s.\n", strerror(errno));
-			goto to_maintenance;
+		if (hip_opendht_inuse == SO_HIP_DHT_ON) {
+			if(hip_get_hi3_status()){
+				err = cl_select((highest_descriptor + 1), &read_fdset,
+                                               &write_fdset, NULL, &timeout);
+			}
+			else{
+				err = select((highest_descriptor + 1), &read_fdset,
+                                               &write_fdset, NULL, &timeout);
+			}
+
+                        if(err < 0){
+				HIP_ERROR("select() error: %s.\n", strerror(errno));
+				goto to_maintenance;
                         } else if (err == 0) {
                                 /* idle cycle - select() timeout */
                                 _HIP_DEBUG("Idle.\n");
                                 goto to_maintenance;
                         }
                 } else {
-                        if ((err = HIPD_SELECT((highest_descriptor + 1), &read_fdset,
-                                               NULL, NULL, &timeout)) < 0) {
+			if(hip_get_hi3_status()){
+				err = cl_select((highest_descriptor + 1), &read_fdset,
+                                               NULL, NULL, &timeout);
+			}
+			else{
+				err = select((highest_descriptor + 1), &read_fdset,
+                                               NULL, NULL, &timeout);
+			}
+
+                        if (err < 0) {
                                 HIP_ERROR("select() error: %s.\n", strerror(errno));
                                 goto to_maintenance;
                         } else if (err == 0) {

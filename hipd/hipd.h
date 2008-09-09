@@ -37,11 +37,11 @@
 
 #define HIP_HIT_DEV "dummy0"
 
-#ifdef CONFIG_HIP_HI3
+//#ifdef CONFIG_HIP_HI3
 #  define HIPD_SELECT(a,b,c,d,e) cl_select(a,b,c,d,e)
-#else
+/*#else
 #  define HIPD_SELECT(a,b,c,d,e) select(a,b,c,d,e)
-#endif
+#endif*/
 
 #define HIP_SELECT_TIMEOUT        1
 #define HIP_RETRANSMIT_MAX        5

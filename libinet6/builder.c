@@ -1106,6 +1106,9 @@ char* hip_message_type_name(const uint8_t msg_type){
 	case SO_HIP_GET_PEER_HIT: return "SO_HIP_GET_PEER_HIT";
 	case SO_HIP_GET_PEER_HIT_BY_LSIS: return "SO_HIP_GET_PEER_HIT_BY_LSIS";
 	case SO_HIP_GET_PEER_HIT_AT_FIREWALL: return "SO_HIP_GET_PEER_HIT_AT_FIREWALL";
+	case SO_HIP_SET_HI3_ON: return "SO_HIP_SET_HI3_ON";
+	case SO_HIP_SET_HI3_OFF: return "SO_HIP_SET_HI3_OFF";
+	case SO_HIP_HEARTBEAT: return "SO_HIP_HEARTBEAT";
 	default:
 		return "UNDEFINED";
 	}

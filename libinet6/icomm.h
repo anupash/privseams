@@ -9,9 +9,7 @@
 /* Do not move this before the definition of struct endpoint, as i3
    headers refer to libinet6 headers which in turn require the
    definition of the struct. */
-#ifdef CONFIG_HIP_HI3
 #   include "i3_client_api.h"
-#endif
 
 #include <netinet/in.h>
 #include "protodefs.h"
@@ -86,8 +84,7 @@
 #define SO_HIP_CONF_PUZZLE_SET                  73
 #define SO_HIP_CONF_PUZZLE_INC                  74
 #define SO_HIP_CONF_PUZZLE_DEC                  75
-/* One free slot here */
-#define SO_HIP_SET_HI3_MODE                     77
+/* Two free slots here */
 #define SO_HIP_SET_OPPORTUNISTIC_MODE           78
 #define SO_HIP_SET_BLIND_ON                     79
 #define SO_HIP_SET_BLIND_OFF                    80

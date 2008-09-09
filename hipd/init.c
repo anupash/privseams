@@ -156,20 +156,16 @@ void hip_load_configuration()
 		fclose(fp);
 	}
 
-////	#ifdef CONFIG_HIP_HI3
-	//if(hip_get_hi3_status()){
-		/* Create /etc/hip/hi3_conf file if does not exist */
-		if (stat(HIPD_HI3_FILE, &status) && errno == ENOENT) {
-			errno = 0;
-			fp = fopen(HIPD_HI3_FILE, "w" /* mode */);
-			HIP_ASSERT(fp);
-			items = fwrite(HIPD_HI3_FILE_EX, len_i3, 1, fp);
-			HIP_ASSERT(items > 0);
-			fclose(fp);
-		}
-		hip_i3_init();
-	//}
-////	#endif
+	/* Create /etc/hip/hi3_conf file if does not exist */
+	if (stat(HIPD_HI3_FILE, &status) && errno == ENOENT) {
+		errno = 0;
+		fp = fopen(HIPD_HI3_FILE, "w" /* mode */);
+		HIP_ASSERT(fp);
+		items = fwrite(HIPD_HI3_FILE_EX, len_i3, 1, fp);
+		HIP_ASSERT(items > 0);
+		fclose(fp);
+	}
+	//hip_i3_init();
 
 	/* Load the configuration. The configuration is loaded as a sequence
 	   of hipd system calls. Assumably the user socket buffer is large
@@ -378,11 +374,11 @@ int hipd_init(int flush_ipsec, int killold)
 	system("ifconfig dummy0 mtu 1280"); /* see bug id 595 */
 #endif
 
-////	#ifdef CONFIG_HIP_HI3
-	if(hip_get_hi3_status()){
-		hip_locator_status = SO_HIP_SET_LOCATOR_ON;
-	}
-////	#endif
+	/*
+	the following code was moved to hip_set_hi3_status(...)
+
+	hip_locator_status = SO_HIP_SET_LOCATOR_ON;
+	*/
 
 	HIP_IFE(hip_init_host_ids(), 1);
 
@@ -776,11 +772,7 @@ void hip_exit(int signal)
 	hip_oppdb_uninit();
 #endif
 
-////	#ifdef CONFIG_HIP_HI3
-	//if(hip_get_hi3_status()){
-		hip_hi3_clean();
-	//}
-////	#endif
+	hip_hi3_clean();
 
 #ifdef CONFIG_HIP_RVS
 	HIP_INFO("Uninitializing RVS / HIP relay database and whitelist.\n");
