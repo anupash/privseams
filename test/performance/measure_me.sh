@@ -344,7 +344,7 @@ fi
 if [ $MEASURE_TPUT -eq "2" -o $MEASURE_TPUT -eq "3" ]
 then
 
-  read -p "Measure TCP throughput: [ENTER]"
+  read -p "Measure UDP throughput: [ENTER]"
 
   # client side
   if [ $DEVICE_TYPE -eq "1" ]
@@ -380,12 +380,6 @@ then
   # server side
   elif [ $DEVICE_TYPE -eq "3" ]
   then
-
-    if [ $MEASURE_TPUT -eq "3" ]
-    then
-      killall iperf
-    fi
-
     if [ $RUN_HIPD -eq "1" ]
     then
       iperf -V --server --udp --len 1370
@@ -404,11 +398,6 @@ fi
 
 
 read -p "Clean up: [ENTER]"
-
-if [ $MEASURE_TPUT -eq "1" -a $DEVICE_TYPE -eq "3" ]
-then
-  killall iperf
-fi
 
 if [ $RUN_HIPD -eq "1" ]
 then
