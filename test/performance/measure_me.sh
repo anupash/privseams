@@ -66,10 +66,12 @@ do
   case $CMD_OPT in
     a) ADDR_FAMILY=$OPTARG;;
     d) RUN_HIPD=1;;
-    e) RUN_HIPFW=1
+    e) RUN_HIPD=1
+       RUN_HIPFW=1
        RUN_ESPEXT=1;;
     f) RUN_HIPFW=1;;
-    i) RUN_HIPFW=1
+    i) RUN_HIPD=1
+       RUN_HIPFW=1
        RUN_USERIPSEC=1;;
     t) DEVICE_TYPE=$OPTARG;;
     m) WITH_MID=1;;
