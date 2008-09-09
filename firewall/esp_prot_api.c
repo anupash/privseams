@@ -17,7 +17,7 @@ static const int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS]
 				   = {{8, 16, 20}, {8, 16, 0}};
 
 
-static const int bex_hchain_length = 500000;
+static const int bex_hchain_length = 200000;
 static const int update_hchain_lengths[NUM_UPDATE_HCHAIN_LENGTHS] = {1000};
 
 
