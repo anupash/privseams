@@ -395,13 +395,13 @@ then
   # client side
   if [ $DEVICE_TYPE -eq "1" ]
   then
-    OUTPUT_FILE=$OUTPUT_FILE_PREFIX"udp"$OUTPUT_FILE_POSTFIX
+    FILE=$FILE_PREFIX"udp"$FILE_POSTFIX
     i=0
     if [ $RUN_HIPD -eq "1" ]
     then
       while [ $i -lt $MEASUREMENT_COUNT ]
       do
-        iperf -V --client $DST_HIT --udp --len 1370 --bandwidth 100M | tee --append $OUTPUT_DIR/$OUTPUT_FILE
+        iperf -V --client $DST_HIT --udp --len 1370 --bandwidth 100M | tee --append $OUTPUT_DIR/$FILE
         i=`expr $i + 1`
         sleep 2
       done 
@@ -409,7 +409,7 @@ then
     then
       while [ $i -lt $MEASUREMENT_COUNT ]
       do
-        iperf --client $DST_IPv4 --udp --len 1370 --bandwidth 100M | tee --append $OUTPUT_DIR/$OUTPUT_FILE
+        iperf --client $DST_IPv4 --udp --len 1370 --bandwidth 100M | tee --append $OUTPUT_DIR/$FILE
         i=`expr $i + 1`
         sleep 2
       done
@@ -417,7 +417,7 @@ then
     then
       while [ $i -lt $MEASUREMENT_COUNT ]
       do
-        iperf -V --client $DST_IPv6 --udp --len 1370 --bandwidth 100M | tee --append $OUTPUT_DIR/$OUTPUT_FILE
+        iperf -V --client $DST_IPv6 --udp --len 1370 --bandwidth 100M | tee --append $OUTPUT_DIR/$FILE
         i=`expr $i + 1`
         sleep 2
       done
@@ -427,7 +427,7 @@ then
     fi
 
     # client-side output post-processing
-    #grep MBytes $OUTPUT_DIR/$FILE | $STATS_DIR/stats.pl 95 type '(MBytes)\s+(\S+)' | tee --append $STAGING_DIR/$FILE
+    grep % $OUTPUT_DIR/$FILE | $STATS_DIR/stats.pl 95 type '(MBytes)\s+(\S+)' | tee --append $STAGING_DIR/$FILE
 
   # server side
   elif [ $DEVICE_TYPE -eq "3" ]
