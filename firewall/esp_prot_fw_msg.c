@@ -461,6 +461,7 @@ int esp_prot_conntrack_I2_anchor(const struct hip_common *common,
 	struct hip_param *param = NULL;
 	struct esp_prot_anchor *prot_anchor = NULL;
 	struct esp_tuple *esp_tuple = NULL;
+	esp_prot_conntrack_tfm_t * conntrack_tfm = NULL;
 	int hash_length = 0;
 	int err = 0;
 
@@ -499,7 +500,9 @@ int esp_prot_conntrack_I2_anchor(const struct hip_common *common,
 
 			if (esp_tuple->esp_prot_tfm > ESP_PROT_TFM_UNUSED)
 			{
-				hash_length = esp_prot_get_hash_length(esp_tuple->esp_prot_tfm);
+				conntrack_tfm = esp_prot_conntrack_resolve_transform(
+						esp_tuple->esp_prot_tfm);
+				hash_length = conntrack_tfm->hash_length;
 
 				// store the anchor
 				HIP_IFEL(!(esp_tuple->active_anchor = (unsigned char *)
@@ -517,7 +520,7 @@ int esp_prot_conntrack_I2_anchor(const struct hip_common *common,
 						hash_length);
 
 				// add the tuple to this direction's esp_tuple list
-				HIP_IFEL(!(tuple->esp_tuples =  append_to_slist(tuple->esp_tuples,
+				HIP_IFEL(!(tuple->esp_tuples = append_to_slist(tuple->esp_tuples,
 						esp_tuple)), -1, "failed to insert esp_tuple\n");
 
 			} else
@@ -590,6 +593,7 @@ int esp_prot_conntrack_R2_anchor(const struct hip_common *common,
 	struct hip_param *param = NULL;
 	struct esp_prot_anchor *prot_anchor = NULL;
 	struct esp_tuple *esp_tuple = NULL;
+	esp_prot_conntrack_tfm_t * conntrack_tfm = NULL;
 	int hash_length = 0;
 	int err = 0;
 
@@ -618,7 +622,9 @@ int esp_prot_conntrack_R2_anchor(const struct hip_common *common,
 
 			if (esp_tuple->esp_prot_tfm > ESP_PROT_TFM_UNUSED)
 			{
-				hash_length = esp_prot_get_hash_length(esp_tuple->esp_prot_tfm);
+				conntrack_tfm = esp_prot_conntrack_resolve_transform(
+						esp_tuple->esp_prot_tfm);
+				hash_length = conntrack_tfm->hash_length;
 
 				// store the anchor
 				HIP_IFEL(!(esp_tuple->active_anchor = (unsigned char *)
@@ -725,6 +731,7 @@ int esp_prot_conntrack_cache_anchor(struct tuple * tuple, struct hip_seq *seq,
 {
 	struct esp_anchor_item *anchor_item = NULL;
 	unsigned char *cmp_value = NULL;
+	esp_prot_conntrack_tfm_t * conntrack_tfm = NULL;
 	int hash_length = 0;
 	int err = 0;
 
@@ -735,7 +742,9 @@ int esp_prot_conntrack_cache_anchor(struct tuple * tuple, struct hip_seq *seq,
 	HIP_DEBUG("caching anchor elements\n");
 
 	// needed for allocating and copying the anchors
-	hash_length = esp_prot_get_hash_length(esp_anchor->transform);
+	conntrack_tfm = esp_prot_conntrack_resolve_transform(
+			esp_anchor->transform);
+	hash_length = conntrack_tfm->hash_length;
 
 	HIP_IFEL(!(anchor_item = (struct esp_anchor_item *)
 			malloc(sizeof(struct esp_anchor_item))), -1,
@@ -791,6 +800,7 @@ int esp_prot_conntrack_update_anchor(struct tuple *tuple, struct hip_ack *ack,
 	struct esp_anchor_item *anchor_item = NULL;
 	struct tuple *other_dir_tuple = NULL;
 	struct esp_tuple *esp_tuple = NULL;
+	esp_prot_conntrack_tfm_t * conntrack_tfm = NULL;
 	int hash_length = 0;
 	// assume not found
 	int err = 1, i;
@@ -826,7 +836,9 @@ int esp_prot_conntrack_update_anchor(struct tuple *tuple, struct hip_ack *ack,
 			HIP_DEBUG("found esp_tuple for received ESP_INFO\n");
 
 			// needed for allocating and copying the anchors
-			hash_length = esp_prot_get_hash_length(esp_tuple->esp_prot_tfm);
+			conntrack_tfm = esp_prot_conntrack_resolve_transform(
+					esp_tuple->esp_prot_tfm);
+			hash_length = conntrack_tfm->hash_length;
 
 			HIP_HEXDUMP("esp_tuple->active_anchor: ",
 					esp_tuple->first_active_anchor, hash_length);

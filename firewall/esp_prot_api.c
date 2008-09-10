@@ -25,6 +25,7 @@ static const int update_hchain_lengths[NUM_UPDATE_HCHAIN_LENGTHS] = {100000};
  *
  * @note no mapping for UNUSED transform */
 esp_prot_tfm_t esp_prot_transforms[NUM_TRANSFORMS];
+esp_prot_conntrack_tfm_t esp_prot_conntrack_tfms[NUM_TRANSFORMS];
 
 
 
@@ -93,6 +94,11 @@ int esp_prot_init()
 				HIP_DEBUG("adding transform: %i\n", transform_id + 1);
 				esp_prot_transforms[transform_id].hash_func_id = bex_function_id;
 				esp_prot_transforms[transform_id].hash_length_id = bex_hash_length_id;
+
+				// do the same for the array used by conntrack
+				esp_prot_conntrack_tfms[transform_id].hash_function = hash_functions[i];
+				esp_prot_conntrack_tfms[transform_id].hash_length = hash_lengths[i][j];
+
 				transform_id++;
 
 				/* also register the the hchain lengths for this function and this
@@ -309,33 +315,40 @@ int esp_prot_add_hash(unsigned char *out_hash, int *out_length,
 
 int esp_prot_verify(hip_sa_entry_t *entry, unsigned char *hash_value)
 {
+	hash_function_t hash_function = NULL;
 	int hash_length = 0;
 	int err = 0;
 
 	HIP_ASSERT(entry != NULL);
 	HIP_ASSERT(hash_value != NULL);
+	// esp_prot_transform >= 0 due to data-type
+	HIP_ASSERT(entry->esp_prot_transform <= NUM_TRANSFORMS);
 
-	HIP_IFEL((err = esp_prot_verify_hash(entry->esp_prot_transform,
-			entry->active_anchor, entry->next_anchor, hash_value,
-			entry->esp_prot_tolerance)) < 0, -1, "failed to verify hash\n");
-
-	// anchors have changed, tell hipd about it
-	if (err > 0)
+	if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED)
 	{
-		HIP_DEBUG("anchor change occurred, handled now\n");
-
+		hash_function = esp_prot_get_hash_function(entry->esp_prot_transform);
 		hash_length = esp_prot_get_hash_length(entry->esp_prot_transform);
 
-		memcpy(entry->active_anchor, entry->next_anchor, hash_length);
-		free(entry->next_anchor);
-		entry->next_anchor = NULL;
+		HIP_IFEL((err = esp_prot_verify_hash(hash_function, hash_length,
+				entry->active_anchor, entry->next_anchor, hash_value,
+				entry->esp_prot_tolerance)) < 0, -1, "failed to verify hash\n");
 
-		/* notify hipd about the switch to the next hash-chain for
-		 * consistency reasons */
-		HIP_IFEL(send_anchor_change_to_hipd(entry), -1,
-				"unable to notify hipd about hchain change\n");
+		// anchors have changed, tell hipd about it
+		if (err > 0)
+		{
+			HIP_DEBUG("anchor change occurred, handled now\n");
 
-		err = 0;
+			memcpy(entry->active_anchor, entry->next_anchor, hash_length);
+			free(entry->next_anchor);
+			entry->next_anchor = NULL;
+
+			/* notify hipd about the switch to the next hash-chain for
+			 * consistency reasons */
+			HIP_IFEL(send_anchor_change_to_hipd(entry), -1,
+					"unable to notify hipd about hchain change\n");
+
+			err = 0;
+		}
 	}
 
   out_err:
@@ -344,105 +357,39 @@ int esp_prot_verify(hip_sa_entry_t *entry, unsigned char *hash_value)
 
 int esp_prot_conntrack_verify(struct esp_tuple *esp_tuple, struct hip_esp *esp)
 {
-	int hash_length = 0;
-	int err = 0;
-
-	/* check ESP protection anchor if extension is in use */
-	HIP_IFEL((err = esp_prot_verify_hash(esp_tuple->esp_prot_tfm,
-			esp_tuple->active_anchor, esp_tuple->next_anchor,
-			((unsigned char *) esp) + sizeof(struct hip_esp),
-			DEFAULT_VERIFY_WINDOW)) < 0, -1,
-			"failed to verify ESP protection hash\n");
-
-	// this means there was a change in the anchors
-	if (err > 0)
-	{
-		HIP_DEBUG("anchor change occurred, handled now\n");
-
-		hash_length = esp_prot_get_hash_length(esp_tuple->esp_prot_tfm);
-
-		memcpy(esp_tuple->active_anchor, esp_tuple->next_anchor, hash_length);
-		memcpy(esp_tuple->first_active_anchor, esp_tuple->next_anchor,
-				hash_length);
-		free(esp_tuple->next_anchor);
-		esp_tuple->next_anchor = NULL;
-
-		// no error case
-		err = 0;
-
-	}
-
-  out_err:
-	return err;
-}
-
-/* verifies received hchain-elements
- *
- * returns 0 - ok or UNUSED, < 0 err, > 0 anchor change */
-int esp_prot_verify_hash(uint8_t transform, unsigned char *active_anchor,
-		unsigned char *next_anchor, unsigned char *hash_value, int tolerance)
-{
-	hash_function_t hash_function = NULL;
-	int hash_length = 0;
+	esp_prot_conntrack_tfm_t * conntrack_tfm = NULL;
 	int err = 0;
 
 	// esp_prot_transform >= 0 due to data-type
-	HIP_ASSERT(transform <= NUM_TRANSFORMS);
-	// next_anchor may be NULL
-	HIP_ASSERT(hash_value != NULL);
-	HIP_ASSERT(tolerance >= 0);
+	HIP_ASSERT(esp_tuple->esp_prot_tfm <= NUM_TRANSFORMS);
 
-	if (transform > ESP_PROT_TFM_UNUSED)
+	if (esp_tuple->esp_prot_tfm > ESP_PROT_TFM_UNUSED)
 	{
-		HIP_ASSERT(active_anchor != NULL);
+		conntrack_tfm = esp_prot_conntrack_resolve_transform(
+				esp_tuple->esp_prot_tfm);
 
-		hash_function = esp_prot_get_hash_function(transform);
-		hash_length = esp_prot_get_hash_length(transform);
-		HIP_DEBUG("hash length is %i\n", hash_length);
+		/* check ESP protection anchor if extension is in use */
+		HIP_IFEL((err = esp_prot_verify_hash(conntrack_tfm->hash_function,
+				conntrack_tfm->hash_length,
+				esp_tuple->active_anchor, esp_tuple->next_anchor,
+				((unsigned char *) esp) + sizeof(struct hip_esp),
+				DEFAULT_VERIFY_WINDOW)) < 0, -1,
+				"failed to verify ESP protection hash\n");
 
-		HIP_HEXDUMP("active_anchor: ", active_anchor, hash_length);
-		HIP_DEBUG("hchain element of incoming packet to be verified:\n");
-		HIP_HEXDUMP("-> ", hash_value, hash_length);
-
-		HIP_DEBUG("checking active_anchor...\n");
-		if (hchain_verify(hash_value, active_anchor, hash_function,
-				hash_length, tolerance))
+		// this means there was a change in the anchors
+		if (err > 0)
 		{
-			// this will allow only increasing elements to be accepted
-			memcpy(active_anchor, hash_value, hash_length);
+			HIP_DEBUG("anchor change occurred, handled now\n");
 
-			HIP_DEBUG("hash matches element in active hash-chain\n");
+			memcpy(esp_tuple->active_anchor, esp_tuple->next_anchor,
+					conntrack_tfm->hash_length);
+			memcpy(esp_tuple->first_active_anchor, esp_tuple->next_anchor,
+					conntrack_tfm->hash_length);
+			free(esp_tuple->next_anchor);
+			esp_tuple->next_anchor = NULL;
 
-		} else
-		{
-			if (next_anchor != NULL)
-			{
-				/* there might still be a chance that we have to switch to the
-				 * next hchain implicitly */
-				HIP_DEBUG("checking next_anchor...\n");
-				HIP_HEXDUMP("next_anchor: ", next_anchor, hash_length);
-
-				if (hchain_verify(hash_value, next_anchor, hash_function,
-						hash_length, tolerance))
-				{
-					HIP_DEBUG("hash matches element in next hash-chain\n");
-
-					// we have to notify about the change
-					err = 1;
-
-				} else
-				{
-					// handle incorrect elements -> drop packet
-					err = -1;
-					goto out_err;
-				}
-
-			} else
-			{
-				// handle incorrect elements -> drop packet
-				err = -1;
-				goto out_err;
-			}
+			// no error case
+			err = 0;
 		}
 	} else
 	{
@@ -450,6 +397,73 @@ int esp_prot_verify_hash(uint8_t transform, unsigned char *active_anchor,
 
 		// this explicitly is no error condition
 		err = 0;
+	}
+
+  out_err:
+	return err;
+}
+
+/* verifies received hchain-elements - should only be called with ESP
+ * extension in use
+ *
+ * returns 0 - ok or UNUSED, < 0 err, > 0 anchor change */
+int esp_prot_verify_hash(hash_function_t hash_function, int hash_length,
+		unsigned char *active_anchor, unsigned char *next_anchor,
+		unsigned char *hash_value, int tolerance)
+{
+	int err = 0;
+
+	HIP_ASSERT(hash_function != NULL);
+	HIP_ASSERT(hash_length > 0);
+	HIP_ASSERT(active_anchor != NULL);
+	// next_anchor may be NULL
+	HIP_ASSERT(hash_value != NULL);
+	HIP_ASSERT(tolerance >= 0);
+
+	HIP_DEBUG("hash length is %i\n", hash_length);
+	HIP_HEXDUMP("active_anchor: ", active_anchor, hash_length);
+	HIP_DEBUG("hchain element of incoming packet to be verified:\n");
+	HIP_HEXDUMP("-> ", hash_value, hash_length);
+
+	HIP_DEBUG("checking active_anchor...\n");
+	if (hchain_verify(hash_value, active_anchor, hash_function,
+			hash_length, tolerance))
+	{
+		// this will allow only increasing elements to be accepted
+		memcpy(active_anchor, hash_value, hash_length);
+
+		HIP_DEBUG("hash matches element in active hash-chain\n");
+
+	} else
+	{
+		if (next_anchor != NULL)
+		{
+			/* there might still be a chance that we have to switch to the
+			 * next hchain implicitly */
+			HIP_DEBUG("checking next_anchor...\n");
+			HIP_HEXDUMP("next_anchor: ", next_anchor, hash_length);
+
+			if (hchain_verify(hash_value, next_anchor, hash_function,
+					hash_length, tolerance))
+			{
+				HIP_DEBUG("hash matches element in next hash-chain\n");
+
+				// we have to notify about the change
+				err = 1;
+
+			} else
+			{
+				// handle incorrect elements -> drop packet
+				err = -1;
+				goto out_err;
+			}
+
+		} else
+		{
+			// handle incorrect elements -> drop packet
+			err = -1;
+			goto out_err;
+		}
 	}
 
   out_err:
@@ -471,6 +485,20 @@ esp_prot_tfm_t * esp_prot_resolve_transform(uint8_t transform)
 
 	if (transform > ESP_PROT_TFM_UNUSED)
 		return &esp_prot_transforms[transform - 1];
+	else
+		return NULL;
+}
+
+/* returns NULL for UNUSED transform */
+esp_prot_conntrack_tfm_t * esp_prot_conntrack_resolve_transform(uint8_t transform)
+{
+	// esp_prot_transform >= 0 due to data-type
+	HIP_ASSERT(transform <= NUM_TRANSFORMS);
+
+	HIP_DEBUG("resolving transform: %u\n", transform);
+
+	if (transform > ESP_PROT_TFM_UNUSED)
+		return &esp_prot_conntrack_tfms[transform - 1];
 	else
 		return NULL;
 }

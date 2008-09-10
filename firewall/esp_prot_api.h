@@ -25,13 +25,19 @@
  * and hash length id
  *
  * NOTE: this ensures, we don't use uninitialized
- *       (hash_function, hash_length)-combinations
+ *       (hash_function, hash_length)-combinations in the array
  */
 typedef struct esp_prot_tfm
 {
 	int hash_func_id;
 	int hash_length_id;
 } esp_prot_tfm_t;
+
+typedef struct esp_prot_conntrack_tfm
+{
+	hash_function_t hash_function;
+	int hash_length;
+} esp_prot_conntrack_tfm_t;
 
 struct esp_anchor_item
 {
@@ -51,9 +57,11 @@ int esp_prot_add_hash(unsigned char *out_hash, int *out_length,
 		hip_sa_entry_t *entry);
 int esp_prot_verify(hip_sa_entry_t *entry, unsigned char *hash_value);
 int esp_prot_conntrack_verify(struct esp_tuple *esp_tuple, struct hip_esp *esp);
-int esp_prot_verify_hash(uint8_t transform, unsigned char *active_anchor,
-		unsigned char *next_anchor, unsigned char *hash_value, int tolerance);
+int esp_prot_verify_hash(hash_function_t hash_function, int hash_length,
+		unsigned char *active_anchor, unsigned char *next_anchor,
+		unsigned char *hash_value, int tolerance);
 esp_prot_tfm_t * esp_prot_resolve_transform(uint8_t transform);
+esp_prot_conntrack_tfm_t * esp_prot_conntrack_resolve_transform(uint8_t transform);
 hash_function_t esp_prot_get_hash_function(uint8_t transform);
 int esp_prot_get_hash_length(uint8_t transform);
 hash_chain_t * esp_prot_get_bex_hchain_by_anchor(unsigned char *hchain_anchor,
