@@ -620,13 +620,7 @@ This is what I did:
      %patch193 -p1
 
    * copied the patches to /usr/src/redhat/SOURCES
-   * rpmbuild --target i686 -ba /usr/src/redhat/SPECS/kernel-2.6.16.9.spec
-
-Note: on CentOS 5.2 I had to disable ABI checks:
-
-# Control whether we perform a compat. check against published ABI.
-#%define with_kabichk   %{?_without_kabichk:   0} %{?!_without_kabichk:   1}
-
+   * rpmbuild --target i686 -ba --without kabichk /usr/src/redhat/SPECS/kernel-2.6.16.9.spec
 
 RETRIEVING HIPL PACKAGES FROM A REPOSITORY
 ==========================================
