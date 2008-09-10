@@ -1,7 +1,7 @@
 #include "conntrack.h"
 #include "dlist.h"
 #include "hslist.h"
-#include "esp_prot_api.h"
+#include "esp_prot_conntrack.h"
 
 DList * hipList = NULL;
 DList * espList = NULL;

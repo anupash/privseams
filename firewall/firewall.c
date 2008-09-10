@@ -267,6 +267,35 @@ int hip_fw_uninit_esp_prot(){
     return err;
 }
 
+
+int hip_fw_init_esp_prot_conntrack(){
+	int err = 0;
+
+	if (filter_traffic)
+	{
+		HIP_IFEL(esp_prot_conntrack_init(), -1,
+				"failed to init esp protection conntracking\n");
+	}
+
+  out_err:
+    return err;
+}
+
+
+int hip_fw_uninit_esp_prot_conntrack(){
+	int err = 0;
+
+	if (filter_traffic)
+	{
+		HIP_IFEL(esp_prot_conntrack_uninit(), -1,
+				"failed to uninit esp protection conntracking\n");
+	}
+
+  out_err:
+    return err;
+}
+
+
 int hip_fw_init_lsi_support(){
 #if 0
 	char result[100];

@@ -11,9 +11,9 @@ extern const uint8_t preferred_transforms[NUM_TRANSFORMS + 1] =
 		{ESP_PROT_TFM_SHA1_20, ESP_PROT_TFM_SHA1_16, ESP_PROT_TFM_MD5_16,
 				ESP_PROT_TFM_SHA1_8, ESP_PROT_TFM_MD5_8, ESP_PROT_TFM_UNUSED};
 
-static const hash_function_t hash_functions[NUM_HASH_FUNCTIONS]
+extern const hash_function_t hash_functions[NUM_HASH_FUNCTIONS]
 				   = {SHA1, MD5};
-static const int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS]
+extern const int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS]
 				   = {{8, 16, 20}, {8, 16, 0}};
 
 
@@ -25,9 +25,6 @@ static const int update_hchain_lengths[NUM_UPDATE_HCHAIN_LENGTHS] = {100000};
  *
  * @note no mapping for UNUSED transform */
 esp_prot_tfm_t esp_prot_transforms[NUM_TRANSFORMS];
-esp_prot_conntrack_tfm_t esp_prot_conntrack_tfms[NUM_TRANSFORMS];
-
-
 
 
 // this store only contains hchains used when negotiating esp protection in BEX
@@ -92,12 +89,9 @@ int esp_prot_init()
 
 				// store these IDs in the transforms array
 				HIP_DEBUG("adding transform: %i\n", transform_id + 1);
+
 				esp_prot_transforms[transform_id].hash_func_id = bex_function_id;
 				esp_prot_transforms[transform_id].hash_length_id = bex_hash_length_id;
-
-				// do the same for the array used by conntrack
-				esp_prot_conntrack_tfms[transform_id].hash_function = hash_functions[i];
-				esp_prot_conntrack_tfms[transform_id].hash_length = hash_lengths[i][j];
 
 				transform_id++;
 
@@ -355,54 +349,6 @@ int esp_prot_verify(hip_sa_entry_t *entry, unsigned char *hash_value)
 	return err;
 }
 
-int esp_prot_conntrack_verify(struct esp_tuple *esp_tuple, struct hip_esp *esp)
-{
-	esp_prot_conntrack_tfm_t * conntrack_tfm = NULL;
-	int err = 0;
-
-	// esp_prot_transform >= 0 due to data-type
-	HIP_ASSERT(esp_tuple->esp_prot_tfm <= NUM_TRANSFORMS);
-
-	if (esp_tuple->esp_prot_tfm > ESP_PROT_TFM_UNUSED)
-	{
-		conntrack_tfm = esp_prot_conntrack_resolve_transform(
-				esp_tuple->esp_prot_tfm);
-
-		/* check ESP protection anchor if extension is in use */
-		HIP_IFEL((err = esp_prot_verify_hash(conntrack_tfm->hash_function,
-				conntrack_tfm->hash_length,
-				esp_tuple->active_anchor, esp_tuple->next_anchor,
-				((unsigned char *) esp) + sizeof(struct hip_esp),
-				DEFAULT_VERIFY_WINDOW)) < 0, -1,
-				"failed to verify ESP protection hash\n");
-
-		// this means there was a change in the anchors
-		if (err > 0)
-		{
-			HIP_DEBUG("anchor change occurred, handled now\n");
-
-			memcpy(esp_tuple->active_anchor, esp_tuple->next_anchor,
-					conntrack_tfm->hash_length);
-			memcpy(esp_tuple->first_active_anchor, esp_tuple->next_anchor,
-					conntrack_tfm->hash_length);
-			free(esp_tuple->next_anchor);
-			esp_tuple->next_anchor = NULL;
-
-			// no error case
-			err = 0;
-		}
-	} else
-	{
-		HIP_DEBUG("esp protection extension UNUSED\n");
-
-		// this explicitly is no error condition
-		err = 0;
-	}
-
-  out_err:
-	return err;
-}
-
 /* verifies received hchain-elements - should only be called with ESP
  * extension in use
  *
@@ -489,19 +435,7 @@ esp_prot_tfm_t * esp_prot_resolve_transform(uint8_t transform)
 		return NULL;
 }
 
-/* returns NULL for UNUSED transform */
-esp_prot_conntrack_tfm_t * esp_prot_conntrack_resolve_transform(uint8_t transform)
-{
-	// esp_prot_transform >= 0 due to data-type
-	HIP_ASSERT(transform <= NUM_TRANSFORMS);
 
-	HIP_DEBUG("resolving transform: %u\n", transform);
-
-	if (transform > ESP_PROT_TFM_UNUSED)
-		return &esp_prot_conntrack_tfms[transform - 1];
-	else
-		return NULL;
-}
 
 /* returns NULL for UNUSED transform */
 hash_function_t esp_prot_get_hash_function(uint8_t transform)
