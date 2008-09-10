@@ -3795,12 +3795,13 @@ combo-newgroup=&lt;create new...&gt;
       one, it responds with an AAAA response.
     </para>
     <para>
-      The DNS proxy is meant to be run under DJB's daemontools package
+      For faster DNS look ups, you can optionally run the DNS proxy
+      under DJB's daemontools package
       <ulink url="http://cr.yp.to/daemontools.html" /> which is also
-      used to provide necessary environmanet variables, see comments
-      in dnshipproxy. It is recommended to use a DNS cache, like
-      <ulink url="http://cr.yp.to/djbdns.html" /> in front of
-      dnshipproxy. The use without DNS cache results in longer
+      used to provide some necessary environment variables (see comments
+      in dnshipproxy). It acts as a DNS cache 
+      (see <ulink url="http://cr.yp.to/djbdns.html" />) in front of
+      dnshipproxy. The use of DNS proxy without DNS cache results in longer
       look up latencies.
     </para>
 
