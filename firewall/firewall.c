@@ -569,6 +569,7 @@ int firewall_init_rules(){
 
 	HIP_IFEL(hip_fw_init_userspace_ipsec(), -1, "failed to load extension\n");
 	HIP_IFEL(hip_fw_init_esp_prot(), -1, "failed to load extension\n");
+	HIP_IFEL(hip_fw_init_esp_prot_conntrack(), -1, "failed to load extension\n");
 
 	system("iptables -I INPUT -j HIPFW-INPUT");
 	system("iptables -I OUTPUT -j HIPFW-OUTPUT");
@@ -632,6 +633,7 @@ void firewall_exit(){
 	 * at this time any more */
 	hip_fw_uninit_userspace_ipsec();
 	hip_fw_uninit_esp_prot();
+	hip_fw_uninit_esp_prot_conntrack();
 	hip_fw_uninit_lsi_support();
 
 	hip_remove_lock_file(HIP_FIREWALL_LOCK_FILE);
