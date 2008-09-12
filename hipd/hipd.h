@@ -93,7 +93,8 @@ extern int hip_firewall_sock, hip_firewall_status;
 extern struct sockaddr_in6 hip_firewall_addr;
 
 
-extern int is_active_handover;
+extern int is_active_mhaddr;
+extern int is_hard_handover;
 
 int hip_agent_is_alive();
 

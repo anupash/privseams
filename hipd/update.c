@@ -2176,18 +2176,24 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 		HIP_ERROR("SPI listaddr list copy failed\n");
 		goto out_err;
 	}
-#ifndef CONFIG_HIP_MIDAUTH
-	if (addr_count == spi_in->addresses_n &&
-	    addr_list && spi_in->addresses &&
-	    memcmp(addr_list, spi_in->addresses,
-		   addr_count *
-		   sizeof(struct hip_locator_info_addr_item)) == 0) {
-		HIP_DEBUG("Same address set as before, return\n");
-		return GOTO_OUT;
-	} else {
-		HIP_DEBUG("Address set has changed, continue\n");
+
+	/* If soft handover mode is used, check if the addresses were used before,
+	 * and if yes, skip the following procedure for sending UPDATE packets.
+	 * If hard handover mode is forced to be used, do not check if the addresses
+	 * were used before and continue updating address lists and sending HIP
+	 * UPDATE packets. */
+	if (!is_hard_handover) {
+		if (addr_count == spi_in->addresses_n &&
+			addr_list && spi_in->addresses &&
+			memcmp(addr_list, spi_in->addresses,
+			   addr_count *
+			   sizeof(struct hip_locator_info_addr_item)) == 0) {
+			HIP_DEBUG("Same address set as before, return\n");
+			return GOTO_OUT;
+		} else {
+			HIP_DEBUG("Address set has changed, continue\n");
+		}
 	}
-#endif	/* !CONFIG_HIP_MIDAUTH */
 
 	/* dont go to out_err but to ... */
 	if(!addr_list) {
@@ -2209,7 +2215,7 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 		choose_random = 1;
 	}
 
-	if( is_add && is_active_handover ) {
+	if( is_add && is_active_mhaddr ) {
 		change_preferred_address = 1;/* comp_addr = hip_cast_sa_addr(addr); */
 	} else {
 		comp_addr = &entry->local_address;

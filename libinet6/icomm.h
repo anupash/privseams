@@ -94,8 +94,8 @@
 #define SO_HIP_SET_DEBUG_NONE			84
 /** Socket option for hipconf to ask about the used gateway with OpenDHT */
 /* 85 is free slot */
-#define SO_HIP_HANDOFF_ACTIVE			86
-#define SO_HIP_HANDOFF_LAZY			87
+#define SO_HIP_MHADDR_ACTIVE			86
+#define SO_HIP_MHADDR_LAZY			87
 /** Socket option for hipconf to restart daemon. */
 #define SO_HIP_RESTART		      		88
 #define SO_HIP_SET_LOCATOR_ON                   89
@@ -171,6 +171,9 @@
 #define SO_HIP_IPSEC_NEXT_ANCHOR		148
 #define SO_HIP_ADD_PEER_MAP_HIT_IP_LSI          153
 #define SO_HIP_RESTART_DUMMY_INTERFACE		154
+/** Socket option for hipconf to set handover mode, hard or soft. */
+#define SO_HIP_HANDOVER_HARD			155
+#define SO_HIP_HANDOVER_SOFT			156
 /** @} */
 /* inclusive */
 #define HIP_SO_ROOT_MAX 			255

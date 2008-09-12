@@ -100,7 +100,7 @@
 #define ACTION_RST 14
 #define ACTION_BOS 15
 #define ACTION_DEBUG 16
-#define ACTION_HANDOFF 17
+#define ACTION_MHADDR 17
 #define ACTION_RESTART 18
 #define ACTION_LOCATOR 19
 #define ACTION_OPENDHT 20
@@ -109,7 +109,8 @@
 #define ACTION_TCPTIMEOUT 23 /* add By Tao Wan, on 04.01.2008 */
 #define ACTION_HIPPROXY 24
 #define ACTION_REINIT 25
-#define ACTION_MAX 26 /* exclusive */
+#define ACTION_HANDOVER 26
+#define ACTION_MAX 27 /* exclusive */
 
 /* Important! These values are used as array indexes, so keep these in order.
    Add values after the last value and increment TYPE_MAX. */
@@ -199,7 +200,8 @@ int hip_conf_handle_run_normal(hip_common_t *msg, int action,
 int hip_get_action(char *action);
 int hip_get_type(char *type);
 int hip_conf_handle_ha(hip_common_t *msg, int action,const char *opt[], int optc);
-int hip_conf_handle_handoff(hip_common_t *msg, int action,const char *opt[], int optc);
+int hip_conf_handle_handover(hip_common_t *msg, int action,const char *opt[], int optc);
+int hip_conf_handle_mhaddr(hip_common_t *msg, int action,const char *opt[], int optc);
 int hip_conf_handle_opptcp(hip_common_t *, int type, const char *opt[], int optc);
 int hip_do_hipconf(int argc, char *argv[], int send_only);
 int hip_conf_handle_opptcp(struct hip_common *, int type, const char *opt[], int optc);

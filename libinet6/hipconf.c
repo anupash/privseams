@@ -45,7 +45,8 @@ const char *hipconf_usage =
 //end modify
 "rst all|<peer_hit>\n"
 "load config default\n"
-"handoff mode lazy|active\n"
+"mhaddr mode lazy|active\n"
+"handover mode hard|soft\n"
 "run normal|opp <binary>\n"
 "Server side:\n"
 "\tadd|del service escrow|rvs|relay\n"
@@ -97,7 +98,8 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc) 
 	hip_conf_handle_gw,
 	hip_conf_handle_get,
 	hip_conf_handle_ha,
-	hip_conf_handle_handoff,
+	hip_conf_handle_mhaddr,
+	hip_conf_handle_handover,
 	hip_conf_handle_debug,
 	hip_conf_handle_restart,
         hip_conf_handle_locator,
@@ -153,8 +155,10 @@ int hip_conf_get_action(char *text)
 		ret = ACTION_LOCATOR; 
 	else if (!strcmp("debug", text))
 		ret = ACTION_DEBUG;
-	else if (!strcmp("handoff", text))
-		ret = ACTION_HANDOFF;
+	else if (!strcmp("mhaddr", text))
+		ret = ACTION_MHADDR;
+	else if (!strcmp("handover", text))
+		ret = ACTION_HANDOVER;
 	else if (!strcmp("transform", text))
 		ret = ACTION_TRANSORDER;
 	else if (!strcmp("restart", text))
@@ -190,7 +194,7 @@ int hip_conf_check_action_argc(int action) {
 		break;
 	case ACTION_ADD: case ACTION_DEL: case ACTION_SET: case ACTION_INC:
 	case ACTION_GET: case ACTION_RUN: case ACTION_LOAD: case ACTION_DHT:
-	case ACTION_HA: case ACTION_HANDOFF: case ACTION_TRANSORDER:
+	case ACTION_HA: case ACTION_MHADDR: case ACTION_TRANSORDER:
 		count = 2;
 		break;
 #ifdef CONFIG_HIP_HIPPROXY
@@ -304,7 +308,7 @@ int hip_conf_get_type_arg(int action)
 	case ACTION_LOCATOR:
 	case ACTION_RST:
 	case ACTION_BOS:
-	case ACTION_HANDOFF:
+	case ACTION_MHADDR:
 	case ACTION_TCPTIMEOUT:
         case ACTION_TRANSORDER:
 	case ACTION_REINIT:
@@ -1644,20 +1648,42 @@ int hip_conf_print_info_ha(struct hip_hadb_user_info_state *ha)
 
 }
 
-int hip_conf_handle_handoff(hip_common_t *msg, int action,const char *opt[], int optc)
+int hip_conf_handle_mhaddr(hip_common_t *msg, int action,const char *opt[], int optc)
 {	
      int err=0;
 		
      if (strcmp("active",opt[0]) ==0)
      {
-	  HIP_IFEL(hip_build_user_hdr(msg,SO_HIP_HANDOFF_ACTIVE, 0), -1,
+	  HIP_IFEL(hip_build_user_hdr(msg,SO_HIP_MHADDR_ACTIVE, 0), -1,
 		   "Building of daemon header failed\n");
-	  HIP_INFO("handoff mode set to active successfully\n");
+	  HIP_INFO("mhaddr mode set to active successfully\n");
      }else
      {
-	  HIP_IFEL(hip_build_user_hdr(msg,SO_HIP_HANDOFF_LAZY, 0), -1,
+	  HIP_IFEL(hip_build_user_hdr(msg,SO_HIP_MHADDR_LAZY, 0), -1,
 		   "Building of daemon header failed\n");
-	  HIP_INFO("handoff mode set to lazy successfully\n");
+	  HIP_INFO("mhaddr mode set to lazy successfully\n");
+     }
+
+     HIP_IFEL(hip_send_recv_daemon_info(msg), -1,"send recv daemon info\n");
+
+ out_err:
+     return err;
+}
+
+int hip_conf_handle_handover(hip_common_t *msg, int action,const char *opt[], int optc)
+{	
+     int err=0;
+		
+     if (strcmp("hard",opt[0]) ==0)
+     {
+	  HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_HANDOVER_HARD, 0), -1,
+		   "Building of daemon header failed\n");
+	  HIP_INFO("handover mode set to hard successfully\n");
+     }else
+     {
+	  HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_HANDOVER_SOFT, 0), -1,
+		   "Building of daemon header failed\n");
+	  HIP_INFO("handover mode set to soft successfully\n");
      }
 
      HIP_IFEL(hip_send_recv_daemon_info(msg), -1,"send recv daemon info\n");

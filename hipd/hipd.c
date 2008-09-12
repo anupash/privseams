@@ -18,7 +18,8 @@
 struct hip_common *hipd_msg = NULL;
 struct hip_common *hipd_msg_v4 = NULL;
 
-int is_active_handover = 1;  /**< Which handover to use active or lazy? */
+int is_active_mhaddr = 1;  /**< Which mhaddr to use active or lazy? (default: active) */
+int is_hard_handover = 0;  /**< if hard handover is forced to be used (default: no) */
 int hip_blind_status = 0; /**< Blind status */
 
 /** Suppress advertising of none, AF_INET or AF_INET6 address in UPDATEs.
