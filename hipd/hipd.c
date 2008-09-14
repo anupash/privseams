@@ -54,15 +54,7 @@ int hip_agent_status = 0;
 struct sockaddr_in6 hip_firewall_addr;
 int hip_firewall_sock = 0;
 
-/*
-   HIP transform suite order
-   0 = AES_SHA1, 3DES_SHA1, NULL_SHA1
-   1 = 3DES_SHA1, AES_SHA1, NULL_SHA1
-   2 = AES_SHA1, NULL_SHA1, 3DES_SHA1
-   3 = 3DES_SHA1, NULL_SHA1, AES_SHA1
-   4 = NULL_SHA1, AES_SHA1, 3DES_SHA1
-   5 = NULL_SHA1, 3DES_SHA1, AES_SHA1
-*/
+/* used to change the transform order see hipconf usage to see the usage */
 int hip_transform_order = 0;
 
 /* OpenDHT related variables */
