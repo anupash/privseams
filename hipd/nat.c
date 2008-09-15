@@ -719,7 +719,7 @@ void hip_on_rx_data(pj_ice_sess *ice, unsigned comp_id, void *pkt, pj_size_t siz
  * return the pointer of the ice session 
  * */
 
-void* hip_external_ice_init(pj_ice_sess_role role){
+void* hip_external_ice_init(pj_ice_sess_role role,const struct in_addr *hit_our,const struct in_addr *hit_peer){
 	pj_ice_sess *  	p_ice;
 	pj_status_t status;
 	pj_pool_t *pool, *io_pool ;
@@ -732,6 +732,18 @@ void* hip_external_ice_init(pj_ice_sess_role role){
 	struct pj_ice_sess_cb cb;
 	pj_ioqueue_t *ioqueue;
 	pj_timer_heap_t *timer_heap;
+	
+	char dst[INET_ADDRSTRLEN * 2];
+	if(role == ICE_ROLE_CONTROLLING){
+		inet_ntop(AF_INET, hit_our, dst, INET_ADDRSTRLEN);
+		inet_ntop(AF_INET, hit_peer, dst+INET_ADDRSTRLEN, INET_ADDRSTRLEN);
+	}else{
+		inet_ntop(AF_INET, hit_peer, dst, INET_ADDRSTRLEN);
+		inet_ntop(AF_INET, hit_our, dst+INET_ADDRSTRLEN, INET_ADDRSTRLEN);
+	}	
+	HIP_DEBUG(dst);
+	HIP_DEBUG("\n");
+	//name = dst;
 	
 		
 	//configure the call back handle
@@ -1261,7 +1273,7 @@ int hip_nat_start_ice(hip_ha_t *entry, struct hip_esp_info *esp_info, int ice_co
     else{
             //init the session right after the locator receivd
     	HIP_DEBUG("ICE init \n");
-    	ice_session = hip_external_ice_init(ice_control_roll);
+    	ice_session = hip_external_ice_init(ice_control_roll, &entry->hit_our, &entry->hit_peer);
         if(ice_session){
         	entry->ice_session = ice_session;
         	HIP_DEBUG("ICE add local \n");
