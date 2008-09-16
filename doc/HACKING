@@ -620,7 +620,7 @@ This is what I did:
      %patch193 -p1
 
    * copied the patches to /usr/src/redhat/SOURCES
-   * rpmbuild --target i686 -ba /usr/src/redhat/SPECS/kernel-2.6.16.9.spec
+   * rpmbuild --target i686 -ba --without kabichk /usr/src/redhat/SPECS/kernel-2.6.16.9.spec
 
 RETRIEVING HIPL PACKAGES FROM A REPOSITORY
 ==========================================
