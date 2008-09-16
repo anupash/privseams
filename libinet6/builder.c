@@ -252,10 +252,10 @@ void hip_set_param_contents_len(void *tlv_common,
 }
 
 /**
- * hip_get_param_type - get type of parameter
- * @param tlv_common pointer to the parameter
+ * @brief Gets the type of a HIP parameter
  *
- * @return The type of the parameter (in host byte order).
+ * @param tlv_common pointer to the parameter
+ * @return           the type of the parameter (in host byte order)
  */
 hip_tlv_type_t hip_get_param_type(const void *tlv_common) {
 	return ntohs(((const struct hip_tlv_common *)tlv_common)->type);
@@ -2652,6 +2652,12 @@ hip_transform_suite_t hip_get_param_transform_suite_id(
 	const void *transform_tlv, const uint16_t index)
 {
 	/** @todo Why do we have hip_select_esp_transform separately? */
+
+        /* RFC 5201 chapter 6.9.:  
+           The I2 MUST have a single value in the HIP_TRANSFORM parameter,
+	   which MUST match one of the values offered to the Initiator in
+	   the R1 packet. Does this function check this? 
+	   -Lauri 01.08.2008. */
 	hip_tlv_type_t type;
  	uint16_t supported_hip_tf[] = { HIP_HIP_NULL_SHA1,
  					HIP_HIP_3DES_SHA1,
@@ -3340,7 +3346,8 @@ int hip_host_id_entry_to_endpoint(struct hip_host_id_entry *entry,
 	//endpoint.algo   = entry->lhi.algo;
 	endpoint.algo   = hip_get_host_id_algo(entry->host_id);
 	ipv6_addr_copy(&endpoint.id.hit, &entry->lhi.hit);
-	
+	ipv4_addr_copy(&endpoint.lsi, &entry->lsi);
+
 	HIP_IFEL(hip_build_param_eid_endpoint(msg, &endpoint), -1,
 		 "Error when building parameter HIP_PARAM_EID_ENDPOINT.\n");
 
@@ -3433,6 +3440,21 @@ int hip_build_param_heartbeat(struct hip_common *msg, int seconds) {
 	err = hip_build_param(msg, &heartbeat);
 out_err:
 	return err;
+}
+
+int hip_build_param_transform_order(struct hip_common *msg,
+                                int *order)
+{
+    int err = 0;
+    struct hip_transformation_order transorder;
+    hip_set_param_type(&transorder, HIP_PARAM_TRANSFORM_ORDER);
+    hip_calc_param_len(&transorder,
+                       sizeof(struct hip_transformation_order) -
+                       sizeof(struct hip_tlv_common));
+    transorder.transorder = order;
+    err = hip_build_param(msg, &transorder);
+ out_err:
+    return err;
 }
 
 int hip_build_param_opendht_set(struct hip_common *msg,
@@ -4065,8 +4087,8 @@ int hip_build_param_reg_from(struct hip_common *msg,
 
      hip_set_param_type(&reg_from, HIP_PARAM_REG_FROM);
      ipv6_addr_copy((struct in6_addr *)&reg_from.address, addr);
-     HIP_DEBUG_IN6ADDR("santtu:reg_from address is ", &reg_from.address);
-     HIP_DEBUG_IN6ADDR("santtu:the given address is ", addr);
+     HIP_DEBUG_IN6ADDR("reg_from address is ", &reg_from.address);
+     HIP_DEBUG_IN6ADDR("the given address is ", addr);
      reg_from.port = htons(port);
      hip_calc_generic_param_len(&reg_from, sizeof(reg_from), 0);
      err = hip_build_param(msg, &reg_from);

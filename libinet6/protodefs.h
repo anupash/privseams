@@ -129,6 +129,7 @@
 #define HIP_PARAM_CERT_X509_REQ         32810
 #define HIP_PARAM_CERT_X509_RESP        32811
 #define HIP_PARAM_ESP_PROT_TFM		32812
+#define HIP_PARAM_TRANSFORM_ORDER       32813
 /* End of HIPL private parameters. */
 
 #define HIP_PARAM_HMAC                 61505
@@ -379,10 +380,10 @@ struct hip_host_id_key_rdata {
 
 
 struct hip_host_id {
-	hip_tlv_type_t     type;
-	hip_tlv_len_t      length;
-	uint16_t     hi_length;
-	uint16_t     di_type_length;
+	hip_tlv_type_t type;
+	hip_tlv_len_t length;
+	uint16_t hi_length;
+	uint16_t di_type_length;
 	struct hip_host_id_key_rdata rdata;
 	/* fixed part ends */
 } __attribute__ ((packed));
@@ -502,6 +503,7 @@ struct endpoint_hip {
 	se_length_t         length; /**< length of the whole endpoint in octets */
 	se_hip_flags_t      flags;  /**< e.g. ANON or HIT */
 	uint8_t             algo;
+        hip_lsi_t           lsi;
 	union {
 		struct hip_host_id host_id;
 		struct in6_addr hit;
@@ -846,6 +848,12 @@ struct hip_cert_x509_resp {
 	hip_tlv_len_t 	length;
 	unsigned char der[1024];
         int der_len;
+} __attribute__ ((packed));
+
+struct hip_transformation_order {
+	hip_tlv_type_t 	type;
+	hip_tlv_len_t 	length;
+	int transorder;
 } __attribute__ ((packed));
 
 struct hip_opendht_set {

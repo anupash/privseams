@@ -25,8 +25,10 @@
 #include <openssl/sha.h>
 #include "firewall.h"
 
+/* hash functions used for calculating the entries' hashes */
+#define INDEX_HASH_FN		HIP_DIGEST_SHA1
 /* the length of the hash value used for indexing */
-#define INDEX_HASH_LENGTH SHA_DIGEST_LENGTH
+#define INDEX_HASH_LENGTH	SHA_DIGEST_LENGTH
 
 /* database storing the sa entries, indexed by src _and_ dst hits */
 HIP_HASHTABLE *sadb = NULL;
@@ -254,8 +256,6 @@ unsigned long hip_sa_entry_hash(const hip_sa_entry_t *sa_entry)
 	HIP_ASSERT(sa_entry != NULL && sa_entry->inner_src_addr != NULL
 			&& sa_entry->inner_dst_addr != NULL);
 
-	memset(hash, 0, INDEX_HASH_LENGTH);
-
 	if (sa_entry->mode == 3)
 	{
 		/* use hits to index in beet mode
@@ -275,7 +275,7 @@ unsigned long hip_sa_entry_hash(const hip_sa_entry_t *sa_entry)
 		goto out_err;
 	}
 
-	HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, (void *)addr_pair,
+	HIP_IFEL(hip_build_digest(INDEX_HASH_FN, (void *)addr_pair,
 			2 * sizeof(struct in6_addr), hash), -1, "failed to hash addresses\n");
 
   out_err:
@@ -322,15 +322,17 @@ unsigned long hip_link_entry_hash(const hip_link_entry_t *link_entry)
 	int err = 0;
 
 	// values have to be present
-	HIP_ASSERT(link_entry != NULL && link_entry->dst_addr != NULL && link_entry->spi != 0);
+	HIP_ASSERT(link_entry != NULL && link_entry->dst_addr != NULL &&
+			link_entry->spi != 0);
 
 	memset(hash, 0, INDEX_HASH_LENGTH);
 
 	/* concatenate dst_addr and spi */
 	memcpy(&hash_input[0], link_entry->dst_addr, sizeof(struct in6_addr));
-	memcpy(&hash_input[sizeof(struct in6_addr) - 1], &link_entry->spi, sizeof(uint32_t));
+	memcpy(&hash_input[sizeof(struct in6_addr)], &link_entry->spi,
+			sizeof(uint32_t));
 
-	HIP_IFEL(hip_build_digest(HIP_DIGEST_SHA1, (void *)hash_input, input_length, hash),
+	HIP_IFEL(hip_build_digest(INDEX_HASH_FN, (void *)hash_input, input_length, hash),
 			-1, "failed to hash addresses\n");
 
   out_err:
@@ -429,7 +431,8 @@ int hip_sa_entry_add(int direction, uint32_t spi, uint32_t mode,
 
 	HIP_DEBUG("sa entry added successfully\n");
 
-	hip_sadb_print();
+	//hip_sadb_print();
+	hip_linkdb_print();
 
   out_err:
   	if (err)
@@ -513,7 +516,6 @@ int hip_sa_entry_set(hip_sa_entry_t *entry, int direction, uint32_t spi,
 	entry->dst_port = dst_port;
 
 	entry->ealg = ealg;
-	HIP_DEBUG("ealg value is: %d\n", ealg);
 
 	// copy raw keys
 	memcpy(entry->auth_key, auth_key, hip_auth_key_length_esp(ealg));
@@ -646,8 +648,8 @@ hip_link_entry_t *hip_link_entry_find(struct in6_addr *dst_addr, uint32_t spi)
 	hip_link_entry_t *search_link = NULL, *stored_link = NULL;
 	int err = 0;
 
-	HIP_IFEL(!(search_link = (hip_link_entry_t *) malloc(sizeof(hip_link_entry_t))), -1,
-				"failed to allocate memory\n");
+	HIP_IFEL(!(search_link = (hip_link_entry_t *) malloc(sizeof(hip_link_entry_t))),
+			-1, "failed to allocate memory\n");
 	memset(search_link, 0, sizeof(hip_link_entry_t));
 
 	// search the linkdb for the link to the corresponding entry
@@ -662,6 +664,7 @@ hip_link_entry_t *hip_link_entry_find(struct in6_addr *dst_addr, uint32_t spi)
 
 	HIP_IFEL(!(stored_link = hip_ht_find(linkdb, search_link)), -1,
 				"failed to retrieve link entry\n");
+
   out_err:
   	if (err)
   		stored_link = NULL;
@@ -719,6 +722,7 @@ void hip_link_entry_print(hip_link_entry_t *entry)
 		HIP_DEBUG_HIT("dst_addr", entry->dst_addr);
 		HIP_DEBUG("spi: %u\n", entry->spi);
 		HIP_DEBUG("> sa entry:\n");
+
 		hip_sa_entry_print(entry->linked_sa_entry);
 
 	} else
@@ -768,6 +772,7 @@ void hip_sa_entry_print(hip_sa_entry_t *entry)
 		HIP_DEBUG("src_port: %u\n", entry->src_port);
 		HIP_DEBUG("dst_port: %u\n", entry->dst_port);
 		HIP_DEBUG("... (more members)\n");
+
 // XX TODO print the rest in case this information is needed
 #if 0
 		/****************** crypto parameters *******************/

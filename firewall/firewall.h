@@ -176,8 +176,8 @@ void check_and_write_default_config(void);
 int main(int argc, char **argv);
 void firewall_probe_kernel_modules();
 void firewall_increase_netlink_buffers();
+int hip_query_default_local_hit_from_hipd(void);
 hip_hit_t *hip_fw_get_default_hit(void);
-int hip_query_default_local_hit_from_hipd(hip_hit_t *hit);
 
 // has been moved here for the following reason: dependent on typedefs above
 #include "user_ipsec_api.h"

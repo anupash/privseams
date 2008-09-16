@@ -484,8 +484,9 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	hip_srv_t service_list[HIP_TOTAL_EXISTING_SERVICES];
 	u8 *dh_data1 = NULL, *dh_data2 = NULL;
 	uint32_t spi = 0;
+	char order[] = "000";
 	int err = 0, dh_size1 = 0, dh_size2 = 0, written1 = 0, written2 = 0;
-	int mask = 0, l = 0, is_add = 0, ii = 0, *list = NULL;
+	int mask = 0, l = 0, is_add = 0, i = 0, ii = 0, *list = NULL;
 	unsigned int service_count = 0;
 
 	/* Supported HIP and ESP transforms. */
@@ -496,64 +497,28 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
         hip_transform_suite_t transform_esp_suite[] = {
 		HIP_ESP_AES_SHA1,
 		HIP_ESP_3DES_SHA1,
-		HIP_ESP_NULL_SHA1
-	};
+		HIP_ESP_NULL_SHA1	};
         /* change order if necessary */
-        if (hip_transform_order == 0) {
-                transform_hip_suite[0] = HIP_HIP_AES_SHA1;
-                transform_hip_suite[1] = HIP_HIP_3DES_SHA1;
-                transform_hip_suite[2] = HIP_HIP_NULL_SHA1;
-
-                transform_esp_suite[0] = HIP_ESP_AES_SHA1;
-                transform_esp_suite[1] = HIP_ESP_3DES_SHA1;
-                transform_esp_suite[2] = HIP_ESP_NULL_SHA1;
-                HIP_DEBUG("Transform order 0\n");
-        } else if (hip_transform_order == 1) {
-                transform_hip_suite[0] = HIP_HIP_3DES_SHA1;
-                transform_hip_suite[1] =  HIP_HIP_AES_SHA1;
-                transform_hip_suite[2] = HIP_HIP_NULL_SHA1;
-
-                transform_esp_suite[0] = HIP_ESP_3DES_SHA1;
-                transform_esp_suite[1] =  HIP_ESP_AES_SHA1;
-                transform_esp_suite[2] = HIP_ESP_NULL_SHA1;
-                HIP_DEBUG("Transform order 1\n");
-        } else if (hip_transform_order == 2) {
-                transform_hip_suite[0] = HIP_HIP_AES_SHA1;
-                transform_hip_suite[1] = HIP_HIP_NULL_SHA1;
-                transform_hip_suite[2] = HIP_HIP_3DES_SHA1;
-
-                transform_esp_suite[0] = HIP_ESP_AES_SHA1;
-                transform_esp_suite[1] = HIP_ESP_NULL_SHA1;
-                transform_esp_suite[2] = HIP_ESP_3DES_SHA1;
-                HIP_DEBUG("Transform order 2\n");
-        } else if (hip_transform_order == 3) {
-                transform_hip_suite[0] = HIP_HIP_3DES_SHA1;
-                transform_hip_suite[1] = HIP_HIP_NULL_SHA1;
-                transform_hip_suite[2] = HIP_HIP_AES_SHA1;
-
-                transform_esp_suite[0] = HIP_ESP_3DES_SHA1;
-                transform_esp_suite[1] = HIP_ESP_NULL_SHA1;
-                transform_esp_suite[2] = HIP_ESP_AES_SHA1;
-                HIP_DEBUG("Transform order 3\n");
-        } else if (hip_transform_order == 4) {
-                transform_hip_suite[0] = HIP_HIP_NULL_SHA1;
-                transform_hip_suite[1] = HIP_HIP_AES_SHA1;
-                transform_hip_suite[2] = HIP_HIP_3DES_SHA1;
-
-                transform_esp_suite[0] = HIP_ESP_NULL_SHA1;
-                transform_esp_suite[1] = HIP_ESP_AES_SHA1;
-                transform_esp_suite[2] = HIP_ESP_3DES_SHA1;
-                HIP_DEBUG("Transform order 4\n");
-        } else if (hip_transform_order == 5) {
-                transform_hip_suite[0] = HIP_HIP_NULL_SHA1;
-                transform_hip_suite[1] = HIP_HIP_3DES_SHA1;
-                transform_hip_suite[2] = HIP_HIP_AES_SHA1;
-
-                transform_esp_suite[0] = HIP_ESP_NULL_SHA1;
-                transform_esp_suite[1] = HIP_ESP_3DES_SHA1;
-                transform_esp_suite[2] = HIP_ESP_AES_SHA1;
-                HIP_DEBUG("Transform order 5\n");
-        }
+	sprintf(&order, "%d", hip_transform_order);
+	for ( i = 0; i < 3; i++) {
+		switch (order[0]) {
+		case 1:
+			transform_hip_suite[i] = HIP_HIP_AES_SHA1;
+			transform_esp_suite[i] = HIP_ESP_AES_SHA1;
+			HIP_DEBUG("Transform order index 0 is AES\n");
+			break;
+		case 2:
+			transform_hip_suite[i] = HIP_HIP_3DES_SHA1;
+			transform_esp_suite[i] = HIP_ESP_3DES_SHA1;
+			HIP_DEBUG("Transform order index 1 is 3DES\n");
+			break;
+		case 3:
+ 			transform_hip_suite[i] = HIP_HIP_NULL_SHA1;
+			transform_esp_suite[i] = HIP_ESP_NULL_SHA1;
+			HIP_DEBUG("Transform order index 2 is NULL_SHA1\n");
+			break;
+		}
+	}
 
  	_HIP_DEBUG("hip_create_r1() invoked.\n");
 	HIP_IFEL(!(msg = hip_msg_alloc()), -ENOMEM, "Out of memory\n");
@@ -1284,16 +1249,19 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		 struct hip_common* msg, hip_ha_t *entry, int retransmit)
 {
 	int sockfd = 0, err = 0, xmit_count = 0;
-	/* IPv4 Internet socket addresses. */
 	struct sockaddr_in src4, dst4;
-	/* Length of the HIP message. */
 	uint16_t packet_length = 0;
-	/* Number of characters sent. */
 	ssize_t chars_sent = 0;
 	/* If local address is not given, we fetch one in my_addr. my_addr_ptr
 	   points to the final source address (my_addr or local_addr). */
 	struct in6_addr my_addr, *my_addr_ptr = NULL;
 	int memmoved = 0;
+	/* sendmsg() crud */
+	struct msghdr hdr;
+	struct iovec iov;
+	unsigned char cmsgbuf[CMSG_SPACE(sizeof(struct in_pktinfo))];
+	struct cmsghdr *cmsg;
+	struct in_pktinfo *pkt_info;
 
 	_HIP_DEBUG("hip_send_udp() invoked.\n");
 
@@ -1335,6 +1303,9 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		IPV6_TO_IPV4_MAP(&my_addr, &src4.sin_addr);
 	}
 
+	/* This is not really used */
+	src4.sin_port = htons(src_port);
+
         /* Destination address. */
 	HIP_IFEL(!IN6_IS_ADDR_V4MAPPED(peer_addr), -EPFNOSUPPORT,
 		 "Peer address is pure IPv6 address, IPv6 address family is "\
@@ -1342,33 +1313,19 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	IPV6_TO_IPV4_MAP(peer_addr, &dst4.sin_addr);
 	HIP_DEBUG_INADDR("dst4", &dst4.sin_addr);
 
-        /* Source port */
-	if(src_port != 0) {
-		src4.sin_port = htons(src_port);
-	}
-	else {
-		src4.sin_port = 0;
-	}
-
-	/* Destination port. */
 	if(dst_port != 0) {
 		dst4.sin_port = htons(dst_port);
-	}
-	else {
+	} else {
 		dst4.sin_port = htons(HIP_NAT_UDP_PORT);
 	}
 
-	/* Zero message HIP checksum. */
 	hip_zero_msg_checksum(msg);
-
-	/* Get the packet total length for sendto(). */
 	packet_length = hip_get_msg_total_len(msg);
 
 	HIP_DEBUG("Trying to send %u bytes on UDP with source port: %u and "\
 		  "destination port: %u.\n",
 		  packet_length, ntohs(src4.sin_port), ntohs(dst4.sin_port));
 
-	/* If this is a retransmission, the packet is queued before sending. */
 	if (retransmit) {
 		HIP_IFEL(hip_queue_packet(my_addr_ptr, peer_addr, msg,
 					  entry), -1, "Queueing failed.\n");
@@ -1380,28 +1337,33 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	packet_length += HIP_UDP_ZERO_BYTES_LEN;
 	memmoved = 1;
 
-	/*
-	  Currently disabled because I could not make this work -miika
-	HIP_IFEL(bind(hip_nat_sock_udp, (struct sockaddr *) &src4, sizeof(src4)),
-		 -1, "Binding to udp sock failed\n");
+	/* Pass the correct source address to sendmsg() as ancillary data */
+	cmsg = &cmsgbuf;
+	memset(cmsg, 0, sizeof(cmsgbuf));
+	cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
+	cmsg->cmsg_level = IPPROTO_IP;
+	cmsg->cmsg_type = IP_PKTINFO;
+	pkt_info = CMSG_DATA(cmsg);
+	pkt_info->ipi_addr.s_addr = src4.sin_addr.s_addr;
 
-	*/
+	hdr.msg_name = &dst4;
+	hdr.msg_namelen = sizeof(dst4);
+	iov.iov_base = msg;
+	iov.iov_len = packet_length;
+	hdr.msg_iov = &iov;
+	hdr.msg_iovlen = 1;
+	hdr.msg_control = &cmsgbuf;
+	hdr.msg_controllen = sizeof(cmsgbuf);
 
 	/* Try to send the data. */
 	do {
-		chars_sent = sendto(hip_nat_sock_udp, msg, packet_length, 0,
-				    (struct sockaddr *) &dst4, sizeof(dst4));
-		if(chars_sent < 0)
-		{
-			/* Failure. */
+		chars_sent = sendmsg(hip_nat_sock_udp, &hdr, 0);
+		if(chars_sent < 0) {
 			HIP_DEBUG("Problem in sending UDP packet. Sleeping "\
 				  "for %d seconds and trying again.\n",
 				  HIP_NAT_SLEEP_TIME);
 			sleep(HIP_NAT_SLEEP_TIME);
-		}
-		else
-		{
-			/* Success. */
+		} else {
 			break;
 		}
 		xmit_count++;
@@ -1675,6 +1637,12 @@ int hip_send_udp_stun(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	   points to the final source address (my_addr or local_addr). */
 	struct in6_addr my_addr, *my_addr_ptr = NULL;
 	int memmoved = 0;
+
+	struct msghdr hdr;
+	struct iovec iov;
+	unsigned char cmsgbuf[CMSG_SPACE(sizeof(struct in_pktinfo))];
+	struct cmsghdr *cmsg;
+	struct in_pktinfo *pkt_info;
 	
 	_HIP_DEBUG("hip_send_udp() invoked.\n");
 
@@ -1760,10 +1728,29 @@ int hip_send_udp_stun(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	
 	*/
 
+	/* Pass the correct source address to sendmsg() as ancillary data */
+	cmsg = &cmsgbuf;
+	memset(cmsg, 0, sizeof(cmsgbuf));
+	cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
+	cmsg->cmsg_level = IPPROTO_IP;
+	cmsg->cmsg_type = IP_PKTINFO;
+	pkt_info = CMSG_DATA(cmsg);
+	pkt_info->ipi_addr.s_addr = src4.sin_addr.s_addr;
+
+	hdr.msg_name = &dst4;
+	hdr.msg_namelen = sizeof(dst4);
+	iov.iov_base = msg;
+	iov.iov_len = packet_length;
+	hdr.msg_iov = &iov;
+	hdr.msg_iovlen = 1;
+	hdr.msg_control = &cmsgbuf;
+	hdr.msg_controllen = sizeof(cmsgbuf);
+
 	/* Try to send the data. */
 	do {
-		chars_sent = sendto(hip_nat_sock_udp, msg, packet_length, 0,
-				    (struct sockaddr *) &dst4, sizeof(dst4));
+		//chars_sent = sendto(hip_nat_sock_udp, msg, packet_length, 0,
+				    //(struct sockaddr *) &dst4, sizeof(dst4));
+		chars_sent = sendmsg(hip_nat_sock_udp, &hdr, 0);
 		if(chars_sent < 0)
 		{
 			/* Failure. */
