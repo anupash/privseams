@@ -3445,6 +3445,21 @@ out_err:
 	return err;
 }
 
+int hip_build_param_transform_order(struct hip_common *msg,
+                                int *order)
+{
+    int err = 0;
+    struct hip_transformation_order transorder;
+    hip_set_param_type(&transorder, HIP_PARAM_TRANSFORM_ORDER);
+    hip_calc_param_len(&transorder,
+                       sizeof(struct hip_transformation_order) -
+                       sizeof(struct hip_tlv_common));
+    transorder.transorder = order;
+    err = hip_build_param(msg, &transorder);
+ out_err:
+    return err;
+}
+
 int hip_build_param_opendht_set(struct hip_common *msg,
                                 char *name)
 {

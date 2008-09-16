@@ -1567,9 +1567,9 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	memset(&hip_tfm, 0, sizeof(hip_tfm));
 	memset(&spi_in_data, 0, sizeof(spi_in_data));
 	memset(&i2_context, 0, sizeof(i2_context));
-	
+
 	/* The context structure is used to gather the context created from
-	   processing the I2 packet, as well as storing the original packet. 
+	   processing the I2 packet, as well as storing the original packet.
 	   From the context struct we can then access the I2 in hip_create_r2()
 	   later. */
 	i2_context.input = NULL;
@@ -1580,7 +1580,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	   allocted. From the context struct we can then access the I2 in
 	   hip_create_r2() later. */
 	i2_context.input = i2;
-	
+
 	/* Check that the Responder's HIT is one of ours. According to RFC5201,
 	   this MUST be done. This check was added by Lauri on 01.08.2008.
 	   Note that this condition is not satisfied at the HIP relay server */
@@ -1591,14 +1591,14 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 			  "packet.\n");
 		goto out_err;
 	}
-	
+
 	/* Fetch the R1_COUNTER parameter. */
 	r1cntr = hip_get_param(i2, HIP_PARAM_R1_COUNTER);
 
 	/* Here we should check the 'system boot counter' using the R1_COUNTER
 	   parameter. However, our precreated R1 packets do not support system
 	   boot counter so we do not check it. */
-	
+
 	/* Check solution for cookie */
 	solution = hip_get_param(i2_context.input, HIP_PARAM_SOLUTION);
 	if(solution == NULL) {
@@ -1777,7 +1777,13 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	   Note, that the original packet has the data still encrypted. */
 	HIP_IFEL(hip_crypto_encrypted(host_id_in_enc, iv, hip_tfm, crypto_len,
 				      &i2_context.hip_enc_in.key,
-				      HIP_DIRECTION_DECRYPT), -EKEYREJECTED,
+				      HIP_DIRECTION_DECRYPT),
+#ifdef CONFIG_HIP_OPENWRT
+				      // workaround for non-included errno-base.h in openwrt
+				      -EINVAL,
+#else
+				      -EKEYREJECTED,
+#endif
 		 "Failed to decrypt the HOST_ID parameter. Dropping the I2 "\
 		 "packet.\n");
 
@@ -1804,12 +1810,12 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 			 -1, "hip_blind_verify failed\n");
 	}
 #endif
-	/* If there is no HIP association, we must create one now. */ 
+	/* If there is no HIP association, we must create one now. */
 	if (entry == NULL) {
 		int if_index = 0;
 		struct sockaddr_storage ss_addr;
 		struct sockaddr *addr = NULL;
-		
+
 		HIP_DEBUG("No HIP association found. Creating a new one.\n");
 
 		if((entry = hip_hadb_create_state(GFP_KERNEL)) == NULL) {
@@ -1818,7 +1824,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 				  "HIP association. Dropping the I2 packet.\n");
 			goto out_err;
 		}
-		
+
 #ifdef CONFIG_HIP_BLIND
 		if (use_blind) {
 			ipv6_addr_copy(&entry->hit_peer, &plain_peer_hit);
@@ -1849,9 +1855,9 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 			  "association database.\n");
 		/* Should we handle the case where the insertion fails? */
 		hip_hadb_insert_state(entry);
-		
+
 		ipv6_addr_copy(&entry->local_address, i2_daddr);
-		
+
 		/* Get the interface index of the network device which has our
 		   local IP address. */
 		if((if_index =

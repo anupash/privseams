@@ -40,7 +40,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	struct hip_heartbeat * heartbeat;
 	char host[NI_MAXHOST];
 
-	HIP_ASSERT(src->sin6_family == AF_INET6);
+	HIP_ASSERT(src->sin6_family == AF_INET6); 
 
 	err = hip_check_userspace_msg(msg);
 
@@ -399,11 +399,11 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	{
                 extern int hip_transform_order;
                 err = 0;
-                struct hip_opendht_set *name_info;
-                HIP_IFEL(!(name_info = hip_get_param(msg, HIP_PARAM_OPENDHT_SET)), -1,
-                         "no name struct found (should contain transform order)\n");
-                _HIP_DEBUG("Transform order received from hipconf:  %s\n" , name_info->name);
-                hip_transform_order = atoi(name_info->name);
+                struct hip_transformation_order *transorder;
+                HIP_IFEL(!(transorder = hip_get_param(msg, HIP_PARAM_TRANSFORM_ORDER)), -1,
+                         "no transform order struct found (should contain transform order)\n");
+                HIP_DEBUG("Transform order received from hipconf: %d\n" ,transorder->transorder);
+                hip_transform_order = transorder->transorder;
                 hip_recreate_all_precreated_r1_packets();
 	}
 	break;

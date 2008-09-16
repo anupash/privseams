@@ -129,6 +129,7 @@
 #define HIP_PARAM_CERT_X509_REQ         32810
 #define HIP_PARAM_CERT_X509_RESP        32811
 #define HIP_PARAM_ESP_PROT_TFM		32812
+#define HIP_PARAM_TRANSFORM_ORDER       32813
 /* End of HIPL private parameters. */
 
 #define HIP_PARAM_HMAC                 61505
@@ -847,6 +848,12 @@ struct hip_cert_x509_resp {
 	hip_tlv_len_t 	length;
 	unsigned char der[1024];
         int der_len;
+} __attribute__ ((packed));
+
+struct hip_transformation_order {
+	hip_tlv_type_t 	type;
+	hip_tlv_len_t 	length;
+	int transorder;
 } __attribute__ ((packed));
 
 struct hip_opendht_set {

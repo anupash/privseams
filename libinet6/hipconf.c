@@ -69,6 +69,9 @@ const char *hipconf_usage =
 "debug all|medium|none\n"
 "restart daemon\n"
 "set tcptimeout on|off\n" /*added by Tao Wan*/
+"transform order <integer> "
+" (1=AES, 2=3DES, 3=NULL and place them to order\n"
+"  like 213 for the order 3DES, AES and NULL)\n"
 #ifdef CONFIG_HIP_HIPPROXY
 "hipproxy on|off\n"
 #endif
@@ -199,7 +202,7 @@ int hip_conf_check_action_argc(int action) {
 	case ACTION_ADD: case ACTION_DEL: case ACTION_SET: case ACTION_INC:
 	case ACTION_GET: case ACTION_RUN: case ACTION_LOAD: case ACTION_DHT:
 	case ACTION_HA: case ACTION_HANDOFF: case ACTION_TRANSORDER:
-		count = 2;
+		count = 2; 
 		break;
 #ifdef CONFIG_HIP_HIPPROXY
     case ACTION_HIPPROXY:
@@ -846,39 +849,48 @@ int hip_conf_handle_hi_del_all(hip_common_t *msg)
 int hip_conf_handle_trans_order(hip_common_t *msg, int action,
                                 const char *opt[], int optc) 
 {
-     int err, ret, transorder;
+	int err = 0, ret = 0, transorder = 0, i = 0, k = 0;
      
-     if (optc != 1) {
-	  HIP_ERROR("Missing arguments\n");
-	  err = -EINVAL;
-	  goto out;
-     }
- 	 	
-     transorder = atoi(opt[0]);
-     if (transorder < 0 || transorder > 5) {
-             HIP_ERROR("Invalid argument\n");
-             err = -EINVAL;
-             goto out;
-     } 
-     
-     /* a bit wastefull but works */
-     /* warning: passing argument 2 of 'hip_build_param_opendht_set' discards
-	qualifiers from pointer target type. 04.07.2008. */
-     err = hip_build_param_opendht_set(msg, opt[0]);
-     if (err) {
-             HIP_ERROR("build param hit failed: %s\n", strerror(err));
-             goto out;
-     }
- 	
-     err = hip_build_user_hdr(msg, SO_HIP_TRANSFORM_ORDER, 0);
-     if (err)
-     {
-	  HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
-	  goto out;
-     }
+	if (optc != 1) {
+		HIP_ERROR("Missing arguments\n");
+		err = -EINVAL;
+		goto out;
+	}
+	
+	transorder = atoi(opt[0]);
+	
+	/* has to be over 100 three options (and less than 321) */
+	if (transorder < 100 && transorder > 322)  {
+		HIP_ERROR("Invalid argument\n");
+		err = -EINVAL;
+		goto out;
+	} 
+	
+	/* Check individual numbers has to be in range 1 to 3 (3 options) */
+	for (i = 0; i<3; i++) {
+		k = (int)opt[0][i];
+		k -= 48; // easy way to remove junk
+		if (k < 0 || k > 3) {
+			HIP_ERROR("Invalid argument\n");
+			err = -EINVAL;
+			goto out;
+		}
+	}
+	 
+	err = hip_build_param_transform_order(msg, transorder);
+	if (err) {
+		HIP_ERROR("build param hit failed: %s\n", strerror(err));
+		goto out;
+	}
+
+	err = hip_build_user_hdr(msg, SO_HIP_TRANSFORM_ORDER, 0);
+	if (err) {
+		HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
+		goto out;
+	}
  	
  out:
-     return err;
+	return err;
 }
 
 /**
@@ -1692,8 +1704,8 @@ int hip_conf_print_info_ha(struct hip_hadb_user_info_state *ha)
         HIP_INFO_IN6ADDR(" Local IP", &ha->ip_our);
         HIP_INFO_IN6ADDR(" Peer  IP", &ha->ip_peer);
 	if (ha->heartbeats_on > 0 && ha->state == HIP_STATE_ESTABLISHED) {
-		HIP_DEBUG("Heartbeat %.6f ms mean RTT, "
-			  "%.6f varians,\n"
+		HIP_DEBUG(" Heartbeat %.6f ms mean RTT, "
+			  "%.6f ms varians,\n"
 			  " %d packets sent,"
 			  " %d packets received,"
 			  " %d packet lost\n",
