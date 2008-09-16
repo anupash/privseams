@@ -195,6 +195,7 @@ int hip_conf_check_action_argc(int action) {
 	case ACTION_ADD: case ACTION_DEL: case ACTION_SET: case ACTION_INC:
 	case ACTION_GET: case ACTION_RUN: case ACTION_LOAD: case ACTION_DHT:
 	case ACTION_HA: case ACTION_MHADDR: case ACTION_TRANSORDER:
+	case ACTION_HANDOVER:
 		count = 2;
 		break;
 #ifdef CONFIG_HIP_HIPPROXY
@@ -309,6 +310,7 @@ int hip_conf_get_type_arg(int action)
 	case ACTION_RST:
 	case ACTION_BOS:
 	case ACTION_MHADDR:
+	case ACTION_HANDOVER:
 	case ACTION_TCPTIMEOUT:
         case ACTION_TRANSORDER:
 	case ACTION_REINIT:

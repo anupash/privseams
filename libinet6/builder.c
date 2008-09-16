@@ -1033,6 +1033,8 @@ char* hip_message_type_name(const uint8_t msg_type){
 	case SO_HIP_SET_DEBUG_NONE: return "SO_HIP_SET_DEBUG_NONE";
 	case SO_HIP_MHADDR_ACTIVE: return "SO_HIP_MHADDR_ACTIVE";
 	case SO_HIP_MHADDR_LAZY: return "SO_HIP_MHADDR_LAZY";
+	case SO_HIP_HANDOVER_HARD: return "SO_HIP_HANDOVER_HARD";
+	case SO_HIP_HANDOVER_SOFT: return "SO_HIP_HANDOVER_SOFT";
 	case SO_HIP_RESTART: return "SO_HIP_RESTART";
 	case SO_HIP_SET_LOCATOR_ON: return "SO_HIP_SET_LOCATOR_ON";
 	case SO_HIP_SET_LOCATOR_OFF: return "SO_HIP_SET_LOCATOR_OFF";
