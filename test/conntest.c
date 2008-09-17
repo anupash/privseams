@@ -119,7 +119,7 @@ out_err:
 	return err;
 }
 
-int udp_make_ipv4_socket(in_port_t port) {
+int udp_make_ipv4_socket(in_port_t local_port) {
 	int ipv4_sock = -1, err = 0, on = 1, sendnum;
 	struct sockaddr_in inaddr_any;
 
@@ -144,7 +144,7 @@ int udp_make_ipv4_socket(in_port_t port) {
 	}
 
 	inaddr_any.sin_family = AF_INET;
-	inaddr_any.sin_port = htons(port);
+	inaddr_any.sin_port = htons(local_port);
 	inaddr_any.sin_addr.s_addr = htonl(INADDR_ANY);
 	err = bind(ipv4_sock, (struct sockaddr *) &inaddr_any,
 		   sizeof(inaddr_any));
@@ -240,7 +240,7 @@ out_err:
 	return err;
 }
 
-int main_server_udp(int serversock, in_port_t port) {
+int main_server_udp(int serversock, in_port_t local_port) {
 	/* Use recvmsg/sendmsg instead of recvfrom/sendto because
 	   the latter combination may choose a different source
 	   HIT for the server */
@@ -300,7 +300,7 @@ int main_server_udp(int serversock, in_port_t port) {
 		
 		if (is_ipv4) {
 			peer_addr.in4.sin_family = AF_INET;
-			peer_addr.in4.sin_port = htons(port);
+			peer_addr.in4.sin_port = htons(local_port);
 			peer_addr.in4.sin_addr.s_addr =
 				pktinfo.in4->ipi_addr.s_addr;
 			HIP_DEBUG_INADDR("peer addr",
@@ -310,7 +310,7 @@ int main_server_udp(int serversock, in_port_t port) {
 			memcpy(&peer_addr.in6.sin6_addr,
 			       &pktinfo.in6->ipi6_addr,
 			       sizeof(struct in6_addr));
-			peer_addr.in6.sin6_port = htons(port);
+			peer_addr.in6.sin6_port = htons(local_port);
 			HIP_DEBUG_IN6ADDR("peer addr",
 					  &peer_addr.in6.sin6_addr);
 		}
@@ -321,7 +321,8 @@ int main_server_udp(int serversock, in_port_t port) {
 		if (is_ipv4) {
 			struct sockaddr_in sin;
 			sin.sin_family = AF_INET;
-			sin.sin_port = local_addr.in6.sin6_port;
+			//sin.sin_port = local_addr.in6.sin6_port;
+			sin.sin_port = htons(local_port);
 			IPV6_TO_IPV4_MAP(&local_addr.in6.sin6_addr,
 					 &sin.sin_addr);
 			//sin.sin_addr.s_addr = htonl(sin.sin_addr.s_addr);
