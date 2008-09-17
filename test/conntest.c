@@ -119,13 +119,53 @@ out_err:
 	return err;
 }
 
+int udp_make_ipv4_socket(in_port_t port) {
+	int ipv4_sock = -1, err = 0, on = 1, sendnum;
+	struct sockaddr_in inaddr_any;
+
+	/* IPv6 "server" sockets support incoming IPv4 packets with
+	   IPv4-in-IPv6 format. However, outgoing packets with IPv4-in-IPv6
+	   formatted address stop working in some kernel version. Here
+	   we create a socket for sending IPv4 packets. */
+	ipv4_sock = socket(AF_INET, SOCK_DGRAM, 0);
+	if (ipv4_sock < 0) {
+		printf("ipv4 socket\n");
+		err = -1;
+		goto out_err;
+	}
+
+	setsockopt(ipv4_sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+
+        err = setsockopt(ipv4_sock, IPPROTO_IP,
+			 IP_PKTINFO, &on, sizeof(on));
+	if (err != 0) {
+		perror("setsockopt IP_PKTINFO");
+		goto out_err;
+	}
+
+	inaddr_any.sin_family = AF_INET;
+	inaddr_any.sin_port = htons(port);
+	inaddr_any.sin_addr.s_addr = htonl(INADDR_ANY);
+	err = bind(ipv4_sock, (struct sockaddr *) &inaddr_any,
+		   sizeof(inaddr_any));
+	if (err) {
+		perror("bind\n");
+		goto out_err;
+	}
+
+out_err:
+	if (err == 0)
+		return ipv4_sock;
+	else
+		return -1;
+
+}
+
 int udp_send_msg(int serversock, uint8_t *data, size_t data_len,
 		 struct sockaddr *local_addr,
 		 struct sockaddr *peer_addr) {
 	int ipv4_sock = -1, err = 0, on = 1, sendnum;
 	int is_ipv4 = ((peer_addr->sa_family == AF_INET) ? 1 : 0);
-//	uint8_t cmsgbuf[CMSG_SPACE(sizeof(struct in6_addr)) +
-//			CMSG_SPACE(sizeof(struct in6_pktinfo))];
 	uint8_t cmsgbuf[CMSG_SPACE(sizeof(struct in6_pktinfo))];
         struct cmsghdr *cmsg = (struct cmsghdr *) cmsgbuf;
 	struct msghdr msg;
@@ -135,24 +175,16 @@ int udp_send_msg(int serversock, uint8_t *data, size_t data_len,
 		struct in6_pktinfo *in6;
 	} pktinfo;
 
-	/* IPv6 "server" sockets support incoming IPv4 packets with
-	   IPv4-in-IPv6 format. However, outgoing packets with IPv4-in-IPv6
-	   formatted address stop working in some kernel version. Here
-	   we create a socket for sending IPv4 packets. */
-	ipv4_sock = socket(AF_INET, SOCK_STREAM, 0);
-	if (ipv4_sock < 0) {
-		printf("ipv4 socket\n");
-		err = -1;
-		goto out_err;
-	}
+	//memset(&pktinfo, 0, sizeof(&pktinfo));
 
-	//err = bind(ipv4_sock, );
-
-        err = setsockopt(ipv4_sock, IPPROTO_IP,
-			 IP_PKTINFO, &on, sizeof(on));
-	if (err != 0) {
-		perror("setsockopt IP_PKTINFO");
-		goto out_err;
+	if (is_ipv4) {
+		struct sockaddr_in *in = (struct sockaddr_in *) local_addr;
+		ipv4_sock = udp_make_ipv4_socket(ntohs(in->sin_port));
+		if (ipv4_sock < 0) {
+			printf("Could not create ipv4 socket\n");
+			err = -1;
+			goto out_err;
+		}
 	}
 
 	/* send only the data we received (notice that there is
@@ -164,7 +196,7 @@ int udp_send_msg(int serversock, uint8_t *data, size_t data_len,
 		msg.msg_namelen = sizeof(struct sockaddr_in6);
 	msg.msg_iov = &iov;
 	msg.msg_iovlen = 1;
-	msg.msg_control =  cmsgbuf;
+	msg.msg_control = cmsgbuf;
 	msg.msg_controllen = sizeof(cmsgbuf);
 	msg.msg_flags = 0;
 	
