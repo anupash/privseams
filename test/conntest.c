@@ -240,7 +240,7 @@ int udp_send_msg(int sock, uint8_t *data, size_t data_len,
 	}
 	
 	printf("=== Sent string successfully back ===\n");
-	printf("=== Server listening INADDR_ANY/IN6ADDR_ANY ===\n");
+	printf("=== Server listening IN6ADDR_ANY ===\n");
 
 out_err:
 
@@ -273,7 +273,7 @@ int main_server_udp(int ipv4_sock, int ipv6_sock, in_port_t local_port) {
 	FD_SET(ipv6_sock, &read_fdset);
 	highest_descriptor = maxof(2, ipv4_sock, ipv6_sock);
 
-	printf("=== Server listening IN6ADDR_ANY ===\n");
+	printf("=== Server listening INADDR_ANY/IN6ADDR_ANY ===\n");
 	
 	while(select((highest_descriptor + 1), &read_fdset,
 		     NULL, NULL, NULL)) {
