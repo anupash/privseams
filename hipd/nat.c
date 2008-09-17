@@ -130,7 +130,7 @@ int hip_nat_on_for_ha(hip_ha_t *entry, void *not_used)
 	if(entry)
 	{
 		hip_hadb_set_xmit_function_set(entry, &nat_xmit_func_set);
-		entry->nat_mode = 1;
+		//entry->nat_mode = 1;
 		HIP_DEBUG("NAT status of host association %p: %d\n",
 			  entry, entry->nat_mode);
 	}
@@ -159,7 +159,7 @@ int hip_nat_off_for_ha(hip_ha_t *entry, void *not_used)
 		entry->nat_mode = 0;
 		hip_hadb_set_xmit_function_set(entry, &default_xmit_func_set);
 	}
- out_err:
+out_err:
 	return err;
 }
 #endif
@@ -180,7 +180,7 @@ int hip_nat_refresh_port()
 	HIP_IFEL(hip_for_each_ha(hip_nat_send_keep_alive, NULL),
 		 -1, "for_each_ha() err.\n");
 	
- out_err:
+out_err:
 	return err;
 }
 
@@ -253,7 +253,7 @@ int hip_nat_send_keep_alive(hip_ha_t *entry, void *not_used)
 			     HIP_NAT_UDP_PORT, HIP_NAT_UDP_PORT, msg,
 			     entry, 0);
 
- out_err:
+out_err:
 	if (msg)
 		free(msg);
 
@@ -315,8 +315,10 @@ int hip_nat_handle_transform_in_client(struct hip_common *msg , hip_ha_t *entry)
     	// in the furtue, we should check all the transform type and pick only one
     	// but now, we have only one choice, which is ICE, so the code is the same as
     	//in the server side.
-    	entry->nat_control = (ntohs(nat_transform->suite_id[0])) & hip_nat_get_control();
+	    entry->nat_control = (ntohs(nat_transform->suite_id[0])) & hip_nat_get_control(entry);
     }
+    else 
+	    entry->nat_control = 0;    
 out_err:
 	return err;
 	  
@@ -336,19 +338,21 @@ int hip_nat_handle_transform_in_server(struct hip_common *msg , hip_ha_t *entry)
 		HIP_DEBUG("handle nat transform failed: entry %d, "\
 			  "nat transform %d\n", entry, nat_transform);
 	}
- out_err:
 	
+out_err:
+
 	return err;
 }
 
-uint16_t hip_nat_get_control(){
+uint16_t hip_nat_get_control(hip_ha_t *entry){
 	
-	HIP_DEBUG("check nat mode for ice: %d, %d\n",hip_get_nat_mode(),HIP_NAT_MODE_ICE_UDP);
+	HIP_DEBUG("check nat mode for ice: %d,%d, %d\n",hip_get_nat_mode(entry),
+			hip_get_nat_mode(NULL),HIP_NAT_MODE_ICE_UDP);
 #ifdef HIP_USE_ICE
 	 if(hip_relay_get_status() == HIP_RELAY_ON)
 		 return 0;
 	 // comment out before the ice mode is added
-	 else if (hip_get_nat_mode()== HIP_NAT_MODE_ICE_UDP)
+	 else if (hip_get_nat_mode(entry)== HIP_NAT_MODE_ICE_UDP)
 		 return 1;
 	 else return 0;
 #else
@@ -454,8 +458,10 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
     hip_list_t *item1 = NULL, *tmp1 = NULL;
 	struct hip_peer_addr_list_item * peer_addr_list_item;
 //	struct hip_spi_out_item* spi_out;
-	uint32_t spi = 0;
+	uint32_t spi_out, spi_in = 0;
 	struct in6_addr peer_addr;
+	
+	
 	
     entry = hip_get_entry_from_ice(ice);
     if(!entry) {
@@ -463,12 +469,14 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
     	HIP_DEBUG("entry not found in ice complete\n");
     	return;
     }
-    spi = hip_hadb_get_outbound_spi(entry);
-    if(!spi) {
+    spi_out = hip_hadb_get_outbound_spi(entry);
+
+    if(!spi_out) {
        	
-       	HIP_DEBUG("spi not found in ice complete\n");
+       	HIP_DEBUG("spi_out not found in ice complete\n");
        	return;
        }
+
 
 	// the verified list 
 	//if(status == PJ_TRUE){
@@ -484,20 +492,30 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 		//	if (valid_list->checks[i].nominated == PJ_TRUE){
 				//set the prefered peer
 				HIP_DEBUG("find a nominated candiate\n");
-				rcand = valid_list->checks[0].rcand;
-				addr = rcand->addr;
+				
+			//	if(valid_list->checks[0].lcand->type = ICE_CAND_TYPE_PRFLX){
+				if(0){
+					HIP_DEBUG("it is peer reflexive\n");
+					addr = valid_list->checks[0].lcand->addr;
+				}
+				else{	
+					HIP_DEBUG("it is not peer reflexive\n");
+					addr = valid_list->checks[0].rcand->addr;
+				}
+				
 				
 			//	hip_print_lsi("set prefered the peer_addr : ", &addr.ipv4.sin_addr.s_addr );
-				HIP_DEBUG("set prefered the peer_addr port: %d\n", addr.ipv4.sin_port );
+		
 				peer_addr.in6_u.u6_addr32[0] = (uint32_t)0;
 				peer_addr.in6_u.u6_addr32[1] = (uint32_t)0;
 				peer_addr.in6_u.u6_addr32[2] = (uint32_t)htonl (0xffff);
 				peer_addr.in6_u.u6_addr32[3] = (uint32_t)addr.ipv4.sin_addr.s_addr;
 				
 				
-				hip_hadb_add_udp_addr_to_spi(entry, spi, &peer_addr, 1, 0, 1,addr.ipv4.sin_port, HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY, NULL);
+				hip_hadb_add_udp_addr_to_spi(entry, spi_out, &peer_addr, 1, 0, 1,addr.ipv4.sin_port, HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY, NULL);
 				memcpy(&entry->preferred_address, &peer_addr, sizeof(struct in6_addr));
-				entry->peer_udp_port = addr.ipv4.sin_port;
+				entry->peer_udp_port = ntohs(addr.ipv4.sin_port);
+				HIP_DEBUG("set prefered the peer_addr port: %d\n",ntohs(addr.ipv4.sin_port ));
 				
 				/*			
 				k= 0;
@@ -555,13 +573,13 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 
 
 
-		uint32_t spi_in, spi_out;
+	/*	uint32_t spi_in, spi_out;*/
 		if (entry->state == HIP_STATE_ESTABLISHED)
 					spi_in = hip_hadb_get_latest_inbound_spi(entry);
 		
 		err =hip_add_sa(&entry->local_address, &entry->preferred_address,
 						 &entry->hit_our, &entry->hit_peer,
-						 &entry->default_spi_out, entry->esp_transform,
+						 spi_out, entry->esp_transform,
 						 &entry->esp_out, &entry->auth_out, 1,
 						 HIP_SPI_DIRECTION_OUT, 0, entry);
 		if (err) {
@@ -573,7 +591,7 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 		
 		err =hip_add_sa(&entry->preferred_address,&entry->local_address, 
 						&entry->hit_peer,&entry->hit_our, 
-						&spi_in,
+						spi_in,
 						entry->esp_transform,
 						 &entry->esp_in, &entry->auth_in, 1,
 						 HIP_SPI_DIRECTION_IN, 0, entry);
@@ -615,6 +633,8 @@ pj_status_t hip_on_tx_pkt(pj_ice_sess *ice, unsigned comp_id, const void *pkt, p
 	hip_ha_t *entry;
 //	int error = 0;
 	
+	hip_dump_pj_stun_msg(pkt,size);
+
 	HIP_IFEL(!(msg = hip_msg_alloc()), -ENOMEM, "Out of memory\n");
 	
 	HIP_DEBUG("send ice: len %d \n", size);
@@ -654,15 +674,19 @@ pj_status_t hip_on_tx_pkt(pj_ice_sess *ice, unsigned comp_id, const void *pkt, p
 
 	HIP_DEBUG("length of the stun package is %d\n", size );
 	
-	dst_port = addr->sin_port;
+	dst_port = ntohs(addr->sin_port);
 	HIP_DEBUG("hip_on_tx_pkt 3: \n");
 	int msg_len ;
 	int retransmit = 0;
 	
-	if(err = hip_send_udp(local_addr, &peer_addr, src_port,dst_port, msg, msg->payload_len,0) )
+	//if(err = hip_send_udp(local_addr, &peer_addr, src_port,dst_port, msg, msg->payload_len,0) )
+	if(err = hip_send_udp_stun(local_addr, &peer_addr, src_port,dst_port, pkt, size) )
 		goto out_err;
 	//TODO check out what should be returned
 	else return PJ_SUCCESS;
+	
+	
+	
 	
 out_err:
 		//	if (host_id_pub)
@@ -698,84 +722,95 @@ void hip_on_rx_data(pj_ice_sess *ice, unsigned comp_id, void *pkt, pj_size_t siz
 void* hip_external_ice_init(pj_ice_sess_role role){
 	pj_ice_sess *  	p_ice;
 	pj_status_t status;
-
-	pj_pool_t *pool ;
+	pj_pool_t *pool, *io_pool ;
+	unsigned   comp_cnt = 1;	
+	const pj_str_t    	 local_ufrag = pj_str("user");
+	const pj_str_t   	local_passwd = pj_str("pass");
+	const char *  name = "hip_ice";
+	pj_stun_config  stun_cfg;
+	pj_ice_sess_role   	 ice_role = role;
+	struct pj_ice_sess_cb cb;
+	pj_ioqueue_t *ioqueue;
+	pj_timer_heap_t *timer_heap;
+	
+		
+	//configure the call back handle
+	cb.on_ice_complete = &hip_on_ice_complete;
+	cb.on_tx_pkt = &hip_on_tx_pkt;
+	cb.on_rx_data= &hip_on_rx_data;
 	
 	//init for PJproject
 	status = pj_init();
 	pjlib_util_init();
 	
-	
-    if (status != PJ_SUCCESS) {
-        HIP_DEBUG("Error initializing PJLIB", status);
-        return 0;
-    }
-    pj_log_set_level(5);
+		
+	if (status != PJ_SUCCESS) {
+		HIP_DEBUG("Error initializing PJLIB", status);
+	        return 0;
+	}
+	pj_log_set_level(5);
 	//init for memery pool factroy
-    // using default pool policy.
-
-    pj_dump_config();
+	// using default pool policy.
+	
+	pj_dump_config();
     
-    if(cpp == 0){
-    	cpp= &cp;
-    	pj_caching_pool_init(cpp, NULL, 6024*2024 );  
-    }
+	if(cpp == 0){
+		cpp= &cp;
+	    	pj_caching_pool_init(cpp, NULL, 6024*2024 );  
+	}
 
-    pjnath_init();
+	pjnath_init();
     
-	
-	pj_stun_config  stun_cfg;
-	
-	const char *  name = "hip_ice";
-	pj_ice_sess_role   	 ice_role = role;
-	
-	
-	struct pj_ice_sess_cb cb;
+		
+		
 	
 	//hip_ice_sess_cb.
 	//DOTO tobe reset
- 	unsigned   	 comp_cnt = 1;
- 	
- 	const pj_str_t    	 local_ufrag = pj_str("user");
- 	const pj_str_t   	local_passwd = pj_str("pass");
 
-    pj_ioqueue_t *ioqueue;
-    pj_timer_heap_t *timer_heap;
-	   //end copy
- 	
- 	//configure the call back handle
- 	cb.on_ice_complete = &hip_on_ice_complete;
- 	cb.on_tx_pkt = &hip_on_tx_pkt;
- 	cb.on_rx_data= &hip_on_rx_data;
-  	   
-   pool = pj_pool_create(&cpp->factory, NULL, 8000, 4000, NULL);
-   pj_ioqueue_create(pool, 12, &ioqueue);
-   pj_timer_heap_create(pool, 100, &timer_heap);
- 	   
-   pj_stun_config_init(&stun_cfg, &cp.factory, 0, ioqueue, timer_heap);
- 	//end copy
- 	     
- 	//check if there is already a session
- 	   
- 	  status =  pj_ice_sess_create( 
- 	 			&stun_cfg,
- 	 			name,
- 	 			ice_role,
- 	 			comp_cnt,
- 	 			&cb,
- 	 			&local_ufrag,
- 	 			&local_passwd,
- 	 			&p_ice	 
- 	 		);
- 	   
- 	   
- 	 if(PJ_SUCCESS ==  status){
- 		 return p_ice;
- 	  }
- 	 else 
- 		 HIP_DEBUG("ice init fail %d \n", status); 
- 	
- 	 return 0;
+	  	   
+	pool = pj_pool_create(&cpp->factory, NULL, 8000, 4000, NULL);
+	io_pool = pj_pool_create(&cpp->factory, NULL, 8000, 4000, NULL);
+	
+	status=pj_ioqueue_create(pool, 12, &ioqueue);
+	if(status != PJ_SUCCESS){
+		HIP_DEBUG("IO create failed\n");
+		goto out_err;
+	}
+	status = pj_timer_heap_create(io_pool, 100, &timer_heap);
+	if(status != PJ_SUCCESS){
+		HIP_DEBUG("timer heap create failed\n");
+	   	goto out_err;
+	}
+	pj_stun_config_init(&stun_cfg, &cp.factory, 0, ioqueue, timer_heap);
+	
+	 	//end copy
+	     
+	//check if there is already a session
+	   
+	status =  pj_ice_sess_create( 
+			&stun_cfg,
+ 			name,
+ 			ice_role,
+ 			comp_cnt,
+ 			&cb,
+ 			&local_ufrag,
+ 			&local_passwd,
+ 			&p_ice	 
+	 		);
+	   
+	   
+	 if(PJ_SUCCESS ==  status){
+		 return p_ice;
+	  }
+	 else {
+		 HIP_DEBUG("pj_ice_sess_create failed\n");
+		 goto out_err;
+	 }
+
+ 	 
+out_err: 
+	HIP_DEBUG("ice init fail %d \n", status);
+ 	return 0;
  	
 }
 
@@ -783,7 +818,8 @@ void* hip_external_ice_init(pj_ice_sess_role role){
  * this function is called to add local candidates for the only component
  *  
  * */
-int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, in6_addr_t * hip_addr_base, in_port_t port,in_port_t port_base, int addr_type){
+int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, in6_addr_t * hip_addr_base, 
+		in_port_t port,in_port_t port_base, int addr_type){
 	
 	 pj_ice_sess *   	 ice ;
 	 unsigned  	comp_id;
@@ -796,30 +832,48 @@ int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, 
 	 pj_sockaddr_in pj_addr;
 	 pj_sockaddr_in pj_addr_base;
 	 pj_status_t pj_status;
-	// pj_pool_t *pool ;
+	 int err= 0; 
+	 
+	 
+	 if (ipv6_addr_is_hit(hip_addr_base)) goto out_err;
 	 
 	 
 	 /***debug area**/
-	 HIP_DEBUG_HIT("coming address ",hip_addr);
+	 _HIP_DEBUG_HIT("coming address ",hip_addr);
 
 	 
 	 
 	 ice = session;
-	// pool = pj_pool_create(&cp.factory, NULL, 4000, 4000, NULL);
 	
 	 
 	 comp_id = PJ_COM_ID;
 	 type = addr_type;
 	 foundation = pj_str("ice");
-
+	 
+	 
+	 switch(type){
+		 case ICE_CAND_TYPE_HOST:
+			 local_pref = ICE_CAND_PRE_HOST;
+			 break;
+		 case ICE_CAND_TYPE_SRFLX:
+			 local_pref = ICE_CAND_PRE_SRFLX;
+			 break;
+		 case ICE_CAND_TYPE_RELAYED:
+			 local_pref = ICE_CAND_PRE_RELAYED;
+			 break;
+		 default: 
+			 HIP_DEBUG("wrong candidate type in add local \n");
+			 break;
+	 }
+	 
 	 
 	 pj_addr.sin_family=PJ_AF_INET;
-	 pj_addr.sin_port = port;
+	 pj_addr.sin_port = htons(port);
 	 pj_addr.sin_addr.s_addr =*((pj_uint32_t*) &hip_addr->s6_addr32[3]);
 	 
 	 
 	 pj_addr_base.sin_family=PJ_AF_INET;
-	 pj_addr_base.sin_port = port_base;
+	 pj_addr_base.sin_port = htons(port_base);
 	 pj_addr_base.sin_addr.s_addr =*((pj_uint32_t*) &hip_addr_base->s6_addr32[3]);
 	 
 	 addr_len = sizeof(pj_sockaddr_in);
@@ -828,7 +882,7 @@ int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, 
 	pj_status =  pj_ice_sess_add_cand  	(   ice,
 			comp_id,
 			type,
-			65535,
+			local_pref,
 			&foundation,
 			&pj_addr,
 			&pj_addr_base,
@@ -841,6 +895,8 @@ int hip_external_ice_add_local_candidates(void* session, in6_addr_t * hip_addr, 
 		return 1;
 	}
 	else return 0;
+out_err:
+	return err;
 }
 
 
@@ -899,18 +955,18 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 		
 			temp_cand->addr.ipv4.sin_family = PJ_AF_INET;
 			if( peer_addr_list_item->port)
-				temp_cand->addr.ipv4.sin_port = peer_addr_list_item->port;
+				temp_cand->addr.ipv4.sin_port = htons(peer_addr_list_item->port);
 			else 
-				temp_cand->addr.ipv4.sin_port = HIP_NAT_UDP_PORT;
+				temp_cand->addr.ipv4.sin_port = htons(HIP_NAT_UDP_PORT);
 			temp_cand->addr.ipv4.sin_addr.s_addr = *((pj_uint32_t *) &peer_addr_list_item->address.s6_addr32[3]) ;
 			
-			HIP_DEBUG("add remote address in integer is : %d \n", temp_cand->addr.ipv4.sin_addr.s_addr);
+		
 			
 			temp_cand->base_addr.ipv4.sin_family = PJ_AF_INET;
 			if( peer_addr_list_item->port)
-				temp_cand->base_addr.ipv4.sin_port = peer_addr_list_item->port;
+				temp_cand->base_addr.ipv4.sin_port = htons(peer_addr_list_item->port);
 			else 
-				temp_cand->base_addr.ipv4.sin_port = HIP_NAT_UDP_PORT;
+				temp_cand->base_addr.ipv4.sin_port = htons(HIP_NAT_UDP_PORT);
 			temp_cand->base_addr.ipv4.sin_addr.s_addr = *((pj_uint32_t*) &peer_addr_list_item->address.s6_addr32[3]);
 						
 			
@@ -938,11 +994,11 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 	pj_status_t t;
 	HIP_DEBUG("add remote number: %d \n", rem_cand_cnt);
 	if(rem_cand_cnt > 0 )
-	t= pj_ice_sess_create_check_list  	(  	session,
-	    &local_ufrag,
-		 &local_passwd,
-		rem_cand_cnt,
-		rem_cand 
+	t= pj_ice_sess_create_check_list(session,
+			&local_ufrag,
+			&local_passwd,
+			rem_cand_cnt,
+			rem_cand 
 	) ;
 	HIP_DEBUG("add remote result: %d \n", t);
 out_err:
@@ -990,7 +1046,7 @@ int hip_ice_start_check(void* ice){
 					
 	pj_status_t result;
 	HIP_DEBUG("Ice: check dump end\n");
-	pj_log_set_level(4);
+	pj_log_set_level(5);
 	result = pj_ice_sess_start_check  	(  session  	 ) ; 
 	HIP_DEBUG("Ice: check  end: check list number: %d \n", session->clist.count);
 	
@@ -1008,7 +1064,7 @@ int hip_external_ice_end(){
     pj_caching_pool_destroy(&cp);
 }
 */
-int hip_external_ice_receive_pkt(struct hip_common * msg, hip_ha_t *entry, in6_addr_t * src_addr,in_port_t port ){
+int hip_external_ice_receive_pkt(void * msg,int len, hip_ha_t *entry, in6_addr_t * src_addr,in_port_t port ){
 
     int i, addr_len;
     pj_sockaddr_in pj_addr;
@@ -1016,9 +1072,12 @@ int hip_external_ice_receive_pkt(struct hip_common * msg, hip_ha_t *entry, in6_a
     
     HIP_DEBUG_HIT("receive a stun  from:  " ,src_addr );
     HIP_DEBUG("receive a stun  port:  %d\n" ,port);
+    hip_dump_pj_stun_msg(msg, len);
+    
+    
     //TODO filter out ipv6
 	 pj_addr.sin_family=PJ_AF_INET;
-	 pj_addr.sin_port = port;
+	 pj_addr.sin_port = htons(port);
 	 pj_addr.sin_addr.s_addr =*((pj_uint32_t*) &src_addr->s6_addr32[3]);
 	 
 	 addr_len = sizeof(pj_sockaddr_in);
@@ -1027,7 +1086,7 @@ int hip_external_ice_receive_pkt(struct hip_common * msg, hip_ha_t *entry, in6_a
      if(entry->ice_session){
     	
     	
-    	pj_ice_sess_on_rx_pkt(entry->ice_session,1,msg+1, msg->payload_len, &pj_addr,addr_len);
+    	pj_ice_sess_on_rx_pkt(entry->ice_session,1,msg, len, &pj_addr,addr_len);
     }
     else{
     	HIP_DEBUG("ice is not init in entry.\n");
@@ -1037,31 +1096,62 @@ int hip_external_ice_receive_pkt(struct hip_common * msg, hip_ha_t *entry, in6_a
 	return 0;
 }
 
+int hip_external_ice_receive_pkt_all(void* msg, int len, in6_addr_t * src_addr,in_port_t port ){
+
+    int i=0, addr_len, err= 0;
+    pj_sockaddr_in pj_addr; 
+    
+	hip_ha_t *ha_n, *entry;
+	hip_list_t *item = NULL, *tmp = NULL;
+
+	if (pj_stun_msg_check(msg,len,PJ_STUN_IS_DATAGRAM) != PJ_SUCCESS){
+		err = 0;
+		goto out_err;
+	}
+	
+	list_for_each_safe(item, tmp, hadb_hit, i) {
+	    ha_n = list_entry(item);
+	    if(ha_n->ice_session){
+	    	entry = ha_n;
+	    	hip_external_ice_receive_pkt(msg,len,entry,src_addr, port);
+	    	err = 1;
+	    }
+	}
+	
+out_err:
+	return err;
+}
+
 int hip_nat_parse_pj_addr(pj_sockaddr_in *pj_addr,in6_addr_t * hip_addr, in_port_t *port, int *priority,int *type ){
 	return 0;
 	
 }
+/*
 
-
-int hip_nat_create_pj_addr(pj_ice_sess_cand *pj_cand,in6_addr_t * hip_addr, in_port_t *port, int *priority, int *type ){
+int hip_nat_create_pj_session_cand(pj_ice_sess_cand *pj_cand,in6_addr_t * hip_addr, in_port_t *port, int *priority, int *type ){
 	
-	
+	int err = 0;
 	//TODO check IPV6
-	if(pj_cand == NULL) return -1;
-	//constant in all the pj_addr
-	pj_cand->comp_id = 1;
-	pj_cand->addr.ipv4.sin_family = PJ_AF_INET;
-	pj_cand->foundation = pj_str("ice");
+	if(pj_cand == NULL) goto out_err;
+	//constant  pj_cand
 	
-	pj_cand->addr.ipv4.sin_port = *port;
-	pj_cand->addr.ipv4.sin_addr.s_addr = *((pj_uint32_t *) &hip_addr->s6_addr32[3]) ;
 	pj_cand->type = *type;
+	pj_cand->status;
+	
+	pj_cand->comp_id = 1;
+	pj_cand->transport_id;
+	pj_cand->local_pref;
+	pj_cand->foundation = pj_str("ice");
 	pj_cand->prio = *priority;
 	
-	return 0;
+	memcpy(&pj_cand->addr, addr, sizeof(pj_sockaddr));
+	memcpy(&pj_cand->base_addr, base_addr, sizeof(pj_sockaddr));
+	
+out_err:	
+	return err;
 	
 }
-
+*/
 
 
 /**
@@ -1112,8 +1202,12 @@ out_err:
 /**
  * Get HIP NAT status.
  */
-int hip_get_nat_mode()
+int hip_get_nat_mode(hip_ha_t *entry)
 {
+	
+	if(entry){
+		return entry->nat_mode;
+	}
 	return hip_nat_status;
 }
 
@@ -1179,7 +1273,7 @@ int hip_nat_start_ice(hip_ha_t *entry, struct hip_esp_info *esp_info, int ice_co
         		    continue;
         		HIP_DEBUG_HIT("add Ice local address", hip_cast_sa_addr(&n->addr));
         		
-        		if (IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(&n->addr))) {
+        		if (hip_sockaddr_is_v6_mapped(&n->addr)) {
         			hip_external_ice_add_local_candidates(ice_session,
         					hip_cast_sa_addr(&n->addr),hip_cast_sa_addr(&n->addr),
         					HIP_NAT_UDP_PORT,HIP_NAT_UDP_PORT,
@@ -1188,7 +1282,7 @@ int hip_nat_start_ice(hip_ha_t *entry, struct hip_esp_info *esp_info, int ice_co
         		
         	}
         	//add reflexive address 
-        	/*
+        	
             i = 0;           
             list_for_each_safe(item, tmp, hadb_hit, i) {
                 ha_n = list_entry(item);
@@ -1197,15 +1291,15 @@ int hip_nat_start_ice(hip_ha_t *entry, struct hip_esp_info *esp_info, int ice_co
                 	if (IN6_IS_ADDR_V4MAPPED(&ha_n->local_reflexive_address)) {
 	        			hip_external_ice_add_local_candidates(ice_session,
 	        					&ha_n->local_reflexive_address,
-	        					&ha_n->preferred_address,
+	        					&ha_n->local_address,
 	        					ha_n->local_reflexive_udp_port,
 	        					HIP_NAT_UDP_PORT,
-	        					ICE_CAND_TYPE_SRFLX);
+	        					ICE_CAND_TYPE_PRFLX);
                 	        		}
 
                 }
             }
-            */
+            
         	//TODO add relay address
         	
         	HIP_DEBUG("ICE add remote IN R2, spi is %d\n", ntohl(esp_info->new_spi));
@@ -1231,3 +1325,32 @@ out_err:
 	
 }
 
+
+int hip_dump_pj_stun_msg(void* pdu, int len){
+	
+	int err = 0;
+	pj_stun_password_attr * stun_password;
+	pj_stun_username_attr * stun_username;
+	pj_stun_msg * msg, *response;
+	pj_pool_t *pool ;
+	pj_size_t parse_len;
+	char buffer[1000];
+	unsigned print_len = 1000;
+	
+	HIP_DEBUG("dump_pj_stun_msg\n");
+ 	pool = pj_pool_create(&cpp->factory, NULL, 4000, 4000, NULL);	
+ 	pj_stun_msg_decode(pool,pdu,len, 0, &msg, &parse_len,&response);
+		
+	HIP_DEBUG("official dump\n %s\n",pj_stun_msg_dump(msg,buffer,1000,&print_len));
+	HIP_HEXDUMP("hex dump for stun",pdu,20);
+	HIP_DEBUG("stun len is %d \n",len);
+	
+	
+out_err:
+ 	if(pool)
+ 			pj_pool_release(pool);
+ 		return err;
+ 		
+	
+ 	
+}

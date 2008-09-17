@@ -1,9 +1,12 @@
 #!/bin/sh
 
-update-rc.d hipd defaults 
+# Note: hipd must be currently started before hipfw (runlevel 21)
+#update-rc.d hipd defaults 
+update-rc.d hipd multiuser 20
+
 # For some weird reason, hipd is killed silently in ubuntu hardy and gutsy
 # without the at kludge when installing the package with apt-get/aptitude
-# from a remote repository. Until the problem is properly solve, this
+# from a remote repository. Until the problem is properly solved, this
 # workaround stays here. --miika
-echo "hipd will start in one minute"
+echo "hip daemon starts in one minute"
 echo "invoke-rc.d --quiet hipd start" | at now + 1 min 2>/dev/null

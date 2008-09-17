@@ -1429,31 +1429,35 @@ int get_peer_endpointinfo(const char *hostsfile,
 /*flukebox--a copy from getendpointinfo.c  of get_peer_endpointinfo(,,,,) function with some 
  * modified changes to make things work for me :-)
  * Now the function below will first look for the 'nodename' that is actually a presentation form
- * of HIT of peer in "/etc/hip/hosts" file and if it found a entry corresponding to that HIT then 
- * it will copy the 'fqdn' string from the file. After that it will search that 'fqdn' string in 
- * "/etc/hosts" and if a suitable match is found for that 'fqdn' then it will return the IPv4/IPv6 
- * address back to the caller in res field.
+ * of HIT or LSI of peer in "/etc/hip/hosts" file and if it found a entry corresponding to nodename then 
+ * it will copy the 'fqdn' string from the file. After that it will search that 'fqdn' string in the same
+ * file, trying to find is there is a second HIP identifier for the same 'fqdn' in the file. 
+ * Secondly, it will find the 'fqdn' in"/etc/hosts" and if a suitable match is found then it will return 
+ * the IPv4/IPv6 address back to the caller in res field.
  * @todo: WTF? this kludge is a copy-paste of the previous function. FIX! -mk
  */
 
-int get_peer_endpointinfo2(const char *nodename, struct in6_addr *res){
-  int err = -1, ret = 0, i=0;
+ int get_peer_endpointinfo2(const char *nodename, struct in6_addr *res_hip, struct in6_addr *res){
+  int err = -1, ret = 0, i = 0, found_hit = 0;
   unsigned int lineno = 0, fqdn_str_len = 0;
-  FILE *hip_hosts,*hosts = NULL;
+  FILE *hip_hosts = NULL,*hosts = NULL;
   char *hi_str, *fqdn_str, *temp_str;
   char line[500];
   struct in6_addr hit, dst_hit, ipv6_dst;
   struct in_addr ipv4_dst;
+  hip_lsi_t dst_lsi, lsi;
   List mylist;
+  int lsi_v = 0;
 
   initlist(&mylist);
   /* check whether  given nodename is actually a HIT */
 
   ret=inet_pton(AF_INET6, nodename, &dst_hit);
-  if (ret < 1) 
-    HIP_ERROR("given nodename is not a HIT");
+  HIP_IFEL(ret < 1, -1, "Given nodename is not a HIT");
+  
+  if (IN6_IS_ADDR_V4MAPPED(&dst_hit))
+    IPV6_TO_IPV4_MAP(&dst_hit, &dst_lsi);
  
-
   /* Open /etc/hip/hosts file in read mode
    * HIPD_HOSTS_FILE='/etc/hip/hosts' defined in libinet6/hipconf.h
    */
@@ -1467,7 +1471,7 @@ int get_peer_endpointinfo2(const char *nodename, struct in6_addr *res){
   }
 
 
-  /* find entry corresponding to given 'nodename' HIT */ 
+  /* find entry corresponding to given 'nodename' HIT or LSI */ 
   while (getwithoutnewline(line, 500, hip_hosts) != NULL){
     lineno++;
     if (strlen(line) <= 1) 
@@ -1475,11 +1479,14 @@ int get_peer_endpointinfo2(const char *nodename, struct in6_addr *res){
     initlist(&mylist);
     extractsubstrings(line, &mylist);
      
-    /* find out the fqdn string amongst the HITS - 
-       it's a non-valid ipv6 addr */
+    /* find out the fqdn string amongst the HITS or LSIS - 
+       it's a non-valid ipv6 and ipv4 addr */
     for (i=0; i<length(&mylist); i++){
       ret = inet_pton(AF_INET6, getitem(&mylist, i), &hit);
-      if (ret < 1) {
+      if (ret == 0) {
+	ret = inet_pton(AF_INET, getitem(&mylist, i), &lsi);
+      }
+      if (ret < 1){
 	fqdn_str = getitem(&mylist, i);
 	fqdn_str_len = strlen(getitem(&mylist, i));
 	break;
@@ -1489,17 +1496,71 @@ int get_peer_endpointinfo2(const char *nodename, struct in6_addr *res){
     for (i=0; i<length(&mylist); i++) {
       temp_str = getitem(&mylist, i);
       ret = inet_pton(AF_INET6, getitem(&mylist, i), &hit);
-      if (ret > 0 && ipv6_addr_cmp(&hit,&dst_hit) == 0)
-	goto find_address;
+      if (ret > 0 && ipv6_addr_cmp(&hit, &dst_hit) == 0){
+	      found_hit = 1;
+              goto find_second_id_and_address;
+      }
+      else{
+	ret = inet_pton(AF_INET, getitem(&mylist, i), &lsi); 
+	if (ret > 0 && ipv4_addr_cmp(&lsi, &dst_lsi) == 0){	  
+	        goto find_second_id_and_address; 
+	}
+      }
     }
   }
- 
+  fclose(hip_hosts);
+  hip_hosts = NULL;
   err = -1;
   goto out_err;
 
+find_second_id_and_address:
+  /* We are looking for a second HIP identifier: lsi or hit associated with the fqdn_str found*/
+  hip_hosts = fopen(HIPD_HOSTS_FILE, "r");
+  memset(&lsi, 0, sizeof(lsi));
+  while (getwithoutnewline(line, 500, hip_hosts) != NULL){
+    lineno++;
+    if (strlen(line) <= 1) 
+      continue;
+    initlist(&mylist);
+    extractsubstrings(line, &mylist);
 
- /* HOSTS_FILE='/etc/hosts' */
-find_address:
+    for (i=0; i<length(&mylist); i++) {
+      ret = inet_pton(AF_INET6, getitem(&mylist, i), &hit);
+      if (ret){
+	// A HIT was read and we are looking for an LSI
+	if (found_hit){
+	  break;
+	}else if ((strlen(fqdn_str) == strlen(temp_str)) &&
+	      strcmp(fqdn_str,temp_str) == 0){
+	   HIP_DEBUG_HIT("hit: ",&hit);
+	   memcpy((void *)res_hip, (void *)&hit, sizeof(struct in6_addr));
+	}
+	  
+      }else{
+	//hostname or LSI was read
+	ret = inet_pton(AF_INET, getitem(&mylist, i), &lsi);	
+	if (ret){
+	  //An LSI was read and we are looking for a HIT
+	  lsi_v = 1;
+	  if (!found_hit){
+	    break;
+	  }else if ((strlen(fqdn_str) == strlen(temp_str)) &&
+	      strcmp(fqdn_str,temp_str) == 0){
+	      IPV4_TO_IPV6_MAP(&lsi, res_hip);
+	      HIP_DEBUG_HIT("LSI: ",&lsi);
+	  }
+        }else{
+	  temp_str = getitem(&mylist, i);
+	}
+      }
+    }//for
+  }//while
+
+  if (!lsi_v)
+    memset((void *)res_hip, 0, sizeof(struct in6_addr)); 
+
+ /* We are looking for the IP@ in HOSTS_FILE='/etc/hosts' */
+
   hosts = fopen(HOSTS_FILE, "r");
   lineno = 0;
   memset(&line, 0, sizeof(line));
@@ -1545,6 +1606,8 @@ find_address:
 
  out_err:
   destroy(&mylist);
+  if (hip_hosts)
+    fclose(hip_hosts);
   if (hosts)
     fclose(hosts);
   return err;

@@ -11,7 +11,6 @@
 #include <netinet/ip_icmp.h>
 #include <linux/icmpv6.h>
 
-
 #include "debug.h"
 #include "hidb.h"
 #include "hashtable.h"

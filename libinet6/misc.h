@@ -29,6 +29,8 @@
 
 #define HIP_OPP_IP_DB_SIZE		16
 
+#define HIP_DEFAULT_EXEC_PATH "/sbin:/usr/sbin:/bin:/usr/bin:/usr/local/sbin:/usr/local/bin"
+
 typedef struct _hip_hosts_entry
 {
         hip_hit_t hit;
@@ -41,6 +43,8 @@ struct hip_rsa_keylen {
 	int e;
 	int n;
 };
+
+int hip_sockaddr_is_v6_mapped(struct sockaddr *sa);
 
 static inline int ipv4_addr_cmp(const struct in_addr *a1,
 				const struct in_addr *a2)
@@ -75,12 +79,21 @@ static inline int ipv6_addr_any(const struct in6_addr *a)
 }
 int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip, 
 				  struct in6_addr *hit, int hit_type);
+
+/* Useless abstraction, goes to the same function anyway -- SAMU
+   
+   True that. Let's make this a static inline function and move it to the header
+   file. It still remains as useless abstraction, but at least we eliminate the
+   need for a call and return sequence. -Lauri 06.08.2008
+*/
+static inline int hip_rsa_host_id_to_hit(const struct hip_host_id *host_id,
+					 struct in6_addr *hit, int hit_type)
+{
+	return hip_dsa_host_id_to_hit(host_id, hit, hit_type);
+}
+
 int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
 			   struct in6_addr *hit, int hit_type);
-
-int hip_rsa_host_id_to_hit(const struct hip_host_id *host_id,
-			   struct in6_addr *hit, int hit_type);
-
 int hip_host_id_to_hit(const struct hip_host_id *host_id,
 		       struct in6_addr *hit, int hit_type);
 int hip_private_host_id_to_hit(const struct hip_host_id *host_id,

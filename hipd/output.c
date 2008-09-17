@@ -6,6 +6,7 @@
  * @author  Miika Komu
  * @author  Mika Kousa
  * @author  Kristian Slavov
+ * @author  Samu Varjonen
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  */
 #include "output.h"
@@ -350,7 +351,7 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	struct in6_addr daddr;
 	uint16_t mask = 0;
 	int err = 0, n=0;
-		
+
 #ifdef CONFIG_HIP_PERFORMANCE
 	HIP_DEBUG("Start PERF_I1_SEND, PERF_BASE\n");
 	hip_perf_start_benchmark(perf_set, PERF_I1_SEND);
@@ -361,7 +362,11 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	HIP_DEBUG_HIT("src_hit", src_hit);
 	HIP_IFEL(hip_init_us(entry, src_hit), -EINVAL,
 		 "Could not assign a local host id\n");
-	
+	_HIP_DEBUG("\n");
+	_HIP_DEBUG("----**********----3--*********-----------------\n");
+	//hip_for_each_ha(hip_print_info_hadb, &n);
+	_HIP_DEBUG("----**********----3--*********-----------------\n");
+
 #ifdef CONFIG_HIP_BLIND
 	struct hip_common *i1_blind = NULL;
         
@@ -493,8 +498,9 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	hip_srv_t service_list[HIP_TOTAL_EXISTING_SERVICES];
 	u8 *dh_data1 = NULL, *dh_data2 = NULL;
 	uint32_t spi = 0;
+	char order[] = "000";
 	int err = 0, dh_size1 = 0, dh_size2 = 0, written1 = 0, written2 = 0;
-	int mask = 0, l = 0, is_add = 0, ii = 0, *list = NULL;
+	int mask = 0, l = 0, is_add = 0, i = 0, ii = 0, *list = NULL;
 	unsigned int service_count = 0;
 
 	/* Supported HIP and ESP transforms. */
@@ -505,64 +511,28 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
         hip_transform_suite_t transform_esp_suite[] = {
 		HIP_ESP_AES_SHA1,
 		HIP_ESP_3DES_SHA1,
-		HIP_ESP_NULL_SHA1
-	};
+		HIP_ESP_NULL_SHA1	};
         /* change order if necessary */
-        if (hip_transform_order == 0) {
-                transform_hip_suite[0] = HIP_HIP_AES_SHA1;
-                transform_hip_suite[1] = HIP_HIP_3DES_SHA1;
-                transform_hip_suite[2] = HIP_HIP_NULL_SHA1;
-
-                transform_esp_suite[0] = HIP_ESP_AES_SHA1;
-                transform_esp_suite[1] = HIP_ESP_3DES_SHA1;
-                transform_esp_suite[2] = HIP_ESP_NULL_SHA1;
-                HIP_DEBUG("Transform order 0\n");
-        } else if (hip_transform_order == 1) {
-                transform_hip_suite[0] = HIP_HIP_3DES_SHA1;
-                transform_hip_suite[1] =  HIP_HIP_AES_SHA1;
-                transform_hip_suite[2] = HIP_HIP_NULL_SHA1;
-
-                transform_esp_suite[0] = HIP_ESP_3DES_SHA1;
-                transform_esp_suite[1] =  HIP_ESP_AES_SHA1;
-                transform_esp_suite[2] = HIP_ESP_NULL_SHA1;
-                HIP_DEBUG("Transform order 1\n");
-        } else if (hip_transform_order == 2) {
-                transform_hip_suite[0] = HIP_HIP_AES_SHA1;
-                transform_hip_suite[1] = HIP_HIP_NULL_SHA1;
-                transform_hip_suite[2] = HIP_HIP_3DES_SHA1;
-
-                transform_esp_suite[0] = HIP_ESP_AES_SHA1;
-                transform_esp_suite[1] = HIP_ESP_NULL_SHA1;
-                transform_esp_suite[2] = HIP_ESP_3DES_SHA1;
-                HIP_DEBUG("Transform order 2\n");
-        } else if (hip_transform_order == 3) {
-                transform_hip_suite[0] = HIP_HIP_3DES_SHA1;
-                transform_hip_suite[1] = HIP_HIP_NULL_SHA1;
-                transform_hip_suite[2] = HIP_HIP_AES_SHA1;
-
-                transform_esp_suite[0] = HIP_ESP_3DES_SHA1;
-                transform_esp_suite[1] = HIP_ESP_NULL_SHA1;
-                transform_esp_suite[2] = HIP_ESP_AES_SHA1;
-                HIP_DEBUG("Transform order 3\n");
-        } else if (hip_transform_order == 4) {
-                transform_hip_suite[0] = HIP_HIP_NULL_SHA1;
-                transform_hip_suite[1] = HIP_HIP_AES_SHA1;
-                transform_hip_suite[2] = HIP_HIP_3DES_SHA1;
-
-                transform_esp_suite[0] = HIP_ESP_NULL_SHA1;
-                transform_esp_suite[1] = HIP_ESP_AES_SHA1;
-                transform_esp_suite[2] = HIP_ESP_3DES_SHA1;
-                HIP_DEBUG("Transform order 4\n");
-        } else if (hip_transform_order == 5) {
-                transform_hip_suite[0] = HIP_HIP_NULL_SHA1;
-                transform_hip_suite[1] = HIP_HIP_3DES_SHA1;
-                transform_hip_suite[2] = HIP_HIP_AES_SHA1;
-
-                transform_esp_suite[0] = HIP_ESP_NULL_SHA1;
-                transform_esp_suite[1] = HIP_ESP_3DES_SHA1;
-                transform_esp_suite[2] = HIP_ESP_AES_SHA1;
-                HIP_DEBUG("Transform order 5\n");
-        }
+	sprintf(&order, "%d", hip_transform_order);
+	for ( i = 0; i < 3; i++) {
+		switch (order[0]) {
+		case 1:
+			transform_hip_suite[i] = HIP_HIP_AES_SHA1;
+			transform_esp_suite[i] = HIP_ESP_AES_SHA1;
+			HIP_DEBUG("Transform order index 0 is AES\n");
+			break;
+		case 2:
+			transform_hip_suite[i] = HIP_HIP_3DES_SHA1;
+			transform_esp_suite[i] = HIP_ESP_3DES_SHA1;
+			HIP_DEBUG("Transform order index 1 is 3DES\n");
+			break;
+		case 3:
+ 			transform_hip_suite[i] = HIP_HIP_NULL_SHA1;
+			transform_esp_suite[i] = HIP_ESP_NULL_SHA1;
+			HIP_DEBUG("Transform order index 2 is NULL_SHA1\n");
+			break;
+		}
+	}
 
  	_HIP_DEBUG("hip_create_r1() invoked.\n");
 	HIP_IFEL(!(msg = hip_msg_alloc()), -ENOMEM, "Out of memory\n");
@@ -603,8 +573,12 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 
 #ifdef HIP_USE_ICE
 	{
-		hip_transform_suite_t suite = hip_nat_get_control();
-		hip_build_param_nat_tranform(msg, suite);
+		hip_transform_suite_t suite = hip_nat_get_control(NULL);
+		/**add the parameter only when ice exist**/
+		if(suite){
+			HIP_DEBUG("build nat transform in R1: %d\n", suite);
+			hip_build_param_nat_transform(msg, suite);
+		}
 	}
 #endif
  	/********** PUZZLE ************/
@@ -641,7 +615,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 		 "Building of HIP transform failed\n");
 
 	/* Parameter HOST_ID */
-	_HIP_DEBUG("This HOST ID belongs to: %s\n", 
+	_HIP_DEBUG("This HOST ID belongs to: %s\n",
 		   hip_get_param_host_id_hostname(host_id_pub));
 	HIP_IFEL(hip_build_param(msg, host_id_pub), -1,
 		 "Building of host id failed\n");
@@ -651,7 +625,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	hip_build_param_reg_info(msg, service_list, service_count);
 
  	/* Parameter ESP-ENC transform. */
- 	HIP_IFEL(hip_build_param_transform(msg, HIP_PARAM_ESP_TRANSFORM,  
+ 	HIP_IFEL(hip_build_param_transform(msg, HIP_PARAM_ESP_TRANSFORM,
 					   transform_esp_suite,
 					   sizeof(transform_esp_suite) /
 					   sizeof(hip_transform_suite_t)), -1,
@@ -659,7 +633,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 
  	/********** ESP-PROT transform (OPTIONAL) **********/
 
- 	HIP_IFEL(add_esp_prot_transform_r1(msg), -1,
+ 	HIP_IFEL(esp_prot_r1_add_transforms(msg), -1,
  			"failed to add optional esp transform parameter\n");
 
 	/********** REG_INFO *********/
@@ -670,13 +644,13 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 
 	//HIP_HEXDUMP("Pubkey:", host_id_pub, hip_get_param_total_len(host_id_pub));
 
- 	/* Parameter Signature 2 */	
+ 	/* Parameter Signature 2 */
 
  	HIP_IFEL(sign(host_id_priv, msg), -1, "Signing of R1 failed.\n");
 	_HIP_HEXDUMP("R1", msg, hip_get_msg_total_len(msg));
-	
+
 	/* Parameter ECHO_REQUEST (OPTIONAL) */
-	
+
 	/* Fill puzzle parameters */
 	{
 		struct hip_puzzle *pz;
@@ -698,7 +672,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	}
 
  	/* Packet ready */
-	
+
         // 	if (host_id_pub)
 	//		HIP_FREE(host_id_pub);
  	if (dh_data1)
@@ -1099,6 +1073,13 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	HIP_DEBUG("Source port=%d, destination port=%d\n", src_port, dst_port);
 	HIP_DUMP_MSG(msg);
 
+	//check msg length
+	if (!hip_check_network_msg_len(msg)) {
+		err = -EMSGSIZE;
+		HIP_ERROR("bad msg len %d\n", hip_get_msg_total_len(msg));
+		goto out_err;
+	}
+
 	dst_is_ipv4 = IN6_IS_ADDR_V4MAPPED(peer_addr);
 	len = hip_get_msg_total_len(msg);
 
@@ -1282,23 +1263,26 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		 struct hip_common* msg, hip_ha_t *entry, int retransmit)
 {
 	int sockfd = 0, err = 0, xmit_count = 0;
-	/* IPv4 Internet socket addresses. */
 	struct sockaddr_in src4, dst4;
-	/* Length of the HIP message. */
 	uint16_t packet_length = 0;
-	/* Number of characters sent. */
 	ssize_t chars_sent = 0;
 	/* If local address is not given, we fetch one in my_addr. my_addr_ptr
 	   points to the final source address (my_addr or local_addr). */
 	struct in6_addr my_addr, *my_addr_ptr = NULL;
 	int memmoved = 0;
+	/* sendmsg() crud */
+	struct msghdr hdr;
+	struct iovec iov;
+	unsigned char cmsgbuf[CMSG_SPACE(sizeof(struct in_pktinfo))];
+	struct cmsghdr *cmsg;
+	struct in_pktinfo *pkt_info;
 
 	_HIP_DEBUG("hip_send_udp() invoked.\n");
 
 	/* There are four zeroed bytes between UDP and HIP headers. We
 	   use shifting later in this function */
 	HIP_ASSERT(hip_get_msg_total_len(msg) <=
-		   HIP_MAX_PACKET - HIP_UDP_ZERO_BYTES_LEN);
+		   HIP_MAX_NETWORK_PACKET - HIP_UDP_ZERO_BYTES_LEN);
 
 	/* Verify the existence of obligatory parameters. */
 	HIP_ASSERT(peer_addr != NULL && msg != NULL);
@@ -1333,6 +1317,9 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		IPV6_TO_IPV4_MAP(&my_addr, &src4.sin_addr);
 	}
 
+	/* This is not really used */
+	src4.sin_port = htons(src_port);
+
         /* Destination address. */
 	HIP_IFEL(!IN6_IS_ADDR_V4MAPPED(peer_addr), -EPFNOSUPPORT,
 		 "Peer address is pure IPv6 address, IPv6 address family is "\
@@ -1340,33 +1327,19 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	IPV6_TO_IPV4_MAP(peer_addr, &dst4.sin_addr);
 	HIP_DEBUG_INADDR("dst4", &dst4.sin_addr);
 
-        /* Source port */
-	if(src_port != 0) {
-		src4.sin_port = htons(src_port);
-	}
-	else {
-		src4.sin_port = 0;
-	}
-
-	/* Destination port. */
 	if(dst_port != 0) {
 		dst4.sin_port = htons(dst_port);
-	}
-	else {
+	} else {
 		dst4.sin_port = htons(HIP_NAT_UDP_PORT);
 	}
 
-	/* Zero message HIP checksum. */
 	hip_zero_msg_checksum(msg);
-
-	/* Get the packet total length for sendto(). */
 	packet_length = hip_get_msg_total_len(msg);
 
 	HIP_DEBUG("Trying to send %u bytes on UDP with source port: %u and "\
 		  "destination port: %u.\n",
 		  packet_length, ntohs(src4.sin_port), ntohs(dst4.sin_port));
 
-	/* If this is a retransmission, the packet is queued before sending. */
 	if (retransmit) {
 		HIP_IFEL(hip_queue_packet(my_addr_ptr, peer_addr, msg,
 					  entry), -1, "Queueing failed.\n");
@@ -1378,28 +1351,33 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	packet_length += HIP_UDP_ZERO_BYTES_LEN;
 	memmoved = 1;
 
-	/*
-	  Currently disabled because I could not make this work -miika
-	HIP_IFEL(bind(hip_nat_sock_udp, (struct sockaddr *) &src4, sizeof(src4)),
-		 -1, "Binding to udp sock failed\n");
+	/* Pass the correct source address to sendmsg() as ancillary data */
+	cmsg = &cmsgbuf;
+	memset(cmsg, 0, sizeof(cmsgbuf));
+	cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
+	cmsg->cmsg_level = IPPROTO_IP;
+	cmsg->cmsg_type = IP_PKTINFO;
+	pkt_info = CMSG_DATA(cmsg);
+	pkt_info->ipi_addr.s_addr = src4.sin_addr.s_addr;
 
-	*/
+	hdr.msg_name = &dst4;
+	hdr.msg_namelen = sizeof(dst4);
+	iov.iov_base = msg;
+	iov.iov_len = packet_length;
+	hdr.msg_iov = &iov;
+	hdr.msg_iovlen = 1;
+	hdr.msg_control = &cmsgbuf;
+	hdr.msg_controllen = sizeof(cmsgbuf);
 
 	/* Try to send the data. */
 	do {
-		chars_sent = sendto(hip_nat_sock_udp, msg, packet_length, 0,
-				    (struct sockaddr *) &dst4, sizeof(dst4));
-		if(chars_sent < 0)
-		{
-			/* Failure. */
+		chars_sent = sendmsg(hip_nat_sock_udp, &hdr, 0);
+		if(chars_sent < 0) {
 			HIP_DEBUG("Problem in sending UDP packet. Sleeping "\
 				  "for %d seconds and trying again.\n",
 				  HIP_NAT_SLEEP_TIME);
 			sleep(HIP_NAT_SLEEP_TIME);
-		}
-		else
-		{
-			/* Success. */
+		} else {
 			break;
 		}
 		xmit_count++;
@@ -1442,6 +1420,7 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	return err;
 }
 
+/** XXTOOO this seems like a useless function skeleton --SAMU **/ 
 int hip_send_r2_response(struct hip_common *r2,
 		struct in6_addr *r2_saddr,
 		struct in6_addr *r2_daddr,
@@ -1451,6 +1430,99 @@ int hip_send_r2_response(struct hip_common *r2,
 
 }
 
+/** 
+ * This function sends ICMPv6 echo with timestamp to dsthit
+ *
+ * @param socket to send with
+ * @param srchit HIT to send from
+ * @param dsthit HIT to send to
+ *
+ * @return 0 on success negative on error
+ */
+int hip_send_icmp(int sockfd, hip_ha_t *entry) {
+	int err = 0, i = 0, identifier = 0;
+	struct icmp6hdr * icmph = NULL;
+	struct sockaddr_in6 * dst6 = NULL;
+	u_char cmsgbuf[CMSG_SPACE(sizeof (struct in6_pktinfo))];
+	u_char * icmp_pkt = NULL;
+	struct msghdr mhdr;
+	struct iovec iov[1];
+	struct cmsghdr * chdr;
+        struct in6_pktinfo * pkti;
+	struct timeval tval;
+
+	_HIP_DEBUG("Starting to send ICMPv6 heartbeat\n");
+
+	/* memset and malloc everything you need */
+	memset(&mhdr, 0, sizeof(struct msghdr));	
+	memset(&tval, 0, sizeof(struct timeval));
+	
+	dst6 = malloc(sizeof(struct sockaddr_in6));
+	HIP_IFEL((!dst6), -1, "Malloc for dst6 failed\n");
+	memset(dst6, 0, sizeof(struct sockaddr_in6));
+
+	icmp_pkt = malloc(HIP_MAX_ICMP_PACKET);
+        HIP_IFEL((!icmp_pkt), -1, "Malloc for icmp_pkt failed\n");
+	memset(icmp_pkt, 0, sizeof(HIP_MAX_ICMP_PACKET));
+
+        chdr = (struct cmsghdr *)cmsgbuf;
+	pkti = (struct in6_pktinfo *)(CMSG_DATA(chdr));
+
+	identifier = getpid() & 0xFFFF;
+
+	/* Build ancillary data */
+	chdr->cmsg_len = CMSG_LEN (sizeof (struct in6_pktinfo));
+	chdr->cmsg_level = IPPROTO_IPV6;
+	chdr->cmsg_type = IPV6_PKTINFO;
+	memcpy(&pkti->ipi6_addr, &entry->hit_our, sizeof(struct in6_addr));
+
+	/* get the destination */
+	memcpy(&dst6->sin6_addr, &entry->hit_peer, sizeof(struct in6_addr));
+	dst6->sin6_family = AF_INET6;
+	dst6->sin6_flowinfo = 0;
+
+	/* build icmp header */
+	icmph = (struct icmp6hdr *)icmp_pkt;
+        icmph->icmp6_type = ICMPV6_ECHO_REQUEST;
+        icmph->icmp6_code = 0;
+	entry->heartbeats_sent++;
+        icmph->icmp6_sequence = htons(entry->heartbeats_sent);
+        icmph->icmp6_identifier = identifier;	
+	
+	gettimeofday(&tval, NULL);
+
+	memset(&icmp_pkt[8], 0xa5, HIP_MAX_ICMP_PACKET - 8);
+ 	/* put timeval into the packet */
+	memcpy(&icmp_pkt[8], &tval, sizeof(struct timeval));
+
+	/* put the icmp packet to the io vector struct for the msghdr */
+	iov[0].iov_base = icmp_pkt;
+	iov[0].iov_len  = sizeof(struct icmp6hdr) + sizeof(struct timeval);
+	
+	/* build the msghdr for the sendmsg, put ancillary data also*/
+	mhdr.msg_name = dst6;
+	mhdr.msg_namelen = sizeof(struct sockaddr_in6);
+	mhdr.msg_iov = &iov;
+	mhdr.msg_iovlen = 1;
+	mhdr.msg_control = &cmsgbuf;
+	mhdr.msg_controllen = sizeof(cmsgbuf);
+
+	i = sendmsg(sockfd, &mhdr, 0);
+	
+	/* Debug information*/
+	_HIP_DEBUG_HIT("src hit", &entry->hit_our);	
+	_HIP_DEBUG_HIT("dst hit", &entry->hit_peer);
+	_HIP_DEBUG("i == %d socket = %d\n", i, sockfd);
+	_HIP_PERROR("SENDMSG ");
+	
+	HIP_IFEL((i < 0), -1, "Failed to send ICMP into ESP tunnel\n");
+	HIP_DEBUG_HIT("Succesfully sent heartbeat to", &entry->hit_peer);
+
+out_err:
+	if (dst6) free(dst6);
+	if (icmp_pkt) free(icmp_pkt);
+	return err;
+}
 
 #ifdef CONFIG_HIP_HI3
 /**
@@ -1488,6 +1560,12 @@ int hip_send_i3(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	int err = 0, msg_len;
 	char *buf;
 
+	//check msg length
+	if (!hip_check_network_msg_len(msg)) {
+		err = -EMSGSIZE;
+		HIP_ERROR("bad msg len %d\n", hip_get_msg_total_len(msg));
+		goto out_err;
+	}
 
 	msg_len = hip_get_msg_total_len(msg);
 
@@ -1522,4 +1600,221 @@ int hip_send_i3(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 }
 #endif
 
+
+/**
+ * Sends a HIP message using User Datagram Protocol (UDP).
+ *
+ * Sends a HIP message to the peer on UDP/IPv4. IPv6 is not supported, because
+ * there are no IPv6 NATs deployed in the Internet yet. If either @c local_addr
+ * or @c peer_addr is pure (not a IPv4-in-IPv6 format IPv4 address) IPv6
+ * address, no message is send. IPv4-in-IPv6 format IPv4 addresses are mapped to
+ * pure IPv4 addresses. In case of transmission error, this function tries to
+ * retransmit the packet @c HIP_NAT_NUM_RETRANSMISSION times. The HIP packet
+ * checksum is set to zero.  
+ * 
+ * Used protocol suite is <code>IPv4(UDP(HIP))</code>.
+ * 
+ * @param local_addr a pointer to our IPv4-in-IPv6 format IPv4 address.
+ * @param peer_addr  a pointer to peer IPv4-in-IPv6 format IPv4 address.
+ * @param src_port   source port number to be used in the UDP packet header
+ *                   (host byte order) 
+ * @param dst_port   destination port number to be used in the UDP packet header.
+ *                   (host byte order).
+ * @param msg        a pointer to a HIP packet common header with source and
+ *                   destination HITs.
+ * @param entry      a pointer to the current host association database state.
+ * @param retransmit a boolean value indicating if this is a retransmission
+ *                   (@b zero if this is @b not a retransmission).
+ * @return           zero on success, or negative error value on error.
+ * @note             This function should never be used directly. Use
+ *                   hip_send_pkt_stateless() or the host association send
+ *                   function pointed by the function pointer
+ *                   hadb_xmit_func->send_pkt instead.
+ * @note             If retransmit is set other than zero, make sure that the
+ *                   entry is not NULL.
+ * @todo             remove the sleep code (queuing is enough?)
+ * @todo             Add support to IPv6 address family.
+ * @see              hip_send_raw
+ */ 
+int hip_send_udp_stun(struct in6_addr *local_addr, struct in6_addr *peer_addr,
+		 in_port_t src_port, in_port_t dst_port,
+		 void* msg , int length)
+{
+	int sockfd = 0, err = 0, xmit_count = 0;
+	/* IPv4 Internet socket addresses. */
+	struct sockaddr_in src4, dst4;
+	/* Length of the HIP message. */
+	uint16_t packet_length = 0;
+	/* Number of characters sent. */
+	ssize_t chars_sent = 0;
+	/* If local address is not given, we fetch one in my_addr. my_addr_ptr
+	   points to the final source address (my_addr or local_addr). */
+	struct in6_addr my_addr, *my_addr_ptr = NULL;
+	int memmoved = 0;
+
+	struct msghdr hdr;
+	struct iovec iov;
+	unsigned char cmsgbuf[CMSG_SPACE(sizeof(struct in_pktinfo))];
+	struct cmsghdr *cmsg;
+	struct in_pktinfo *pkt_info;
+	
+	_HIP_DEBUG("hip_send_udp() invoked.\n");
+
+
+	/* Verify the existence of obligatory parameters. */
+	HIP_ASSERT(peer_addr != NULL && msg != NULL);
+
+	HIP_DEBUG_IN6ADDR("hip_send_udp_stun(): local_addr", local_addr);
+	HIP_DEBUG_IN6ADDR("hip_send_udp_stun(): peer_addr", peer_addr);
+	HIP_DEBUG("Source port: %d, destination port: %d.\n",
+		  src_port, dst_port);
+//	HIP_DUMP_MSG(msg);
+
+	/* Currently only IPv4 is supported, so we set internet address family
+	   accordingly and map IPv6 addresses to IPv4 addresses. */
+	src4.sin_family = dst4.sin_family = AF_INET;
+	
+        /* Source address. */
+        if (local_addr != NULL) {
+		HIP_DEBUG_IN6ADDR("Local address is given", local_addr);
+		HIP_IFEL(!IN6_IS_ADDR_V4MAPPED(local_addr), -EPFNOSUPPORT,
+			 "Local address is a native IPv6 address, IPv6 address"\
+			 "family is currently not supported on UDP/HIP.\n");
+		my_addr_ptr = local_addr;
+		IPV6_TO_IPV4_MAP(local_addr, &src4.sin_addr);
+		//src4.sin_addr.s_addr = htonl(src4.sin_addr.s_addr);
+		HIP_DEBUG_INADDR("src4", &src4.sin_addr);
+	} else {
+		HIP_DEBUG("Local address is NOT given, selecting one.\n");
+		HIP_IFEL(hip_select_source_address(&my_addr, peer_addr),
+			 -EADDRNOTAVAIL,
+			 "Cannot find local address.\n");
+		my_addr_ptr = &my_addr;
+		IPV6_TO_IPV4_MAP(&my_addr, &src4.sin_addr);
+	}
+	
+        /* Destination address. */
+	HIP_IFEL(!IN6_IS_ADDR_V4MAPPED(peer_addr), -EPFNOSUPPORT,
+		 "Peer address is pure IPv6 address, IPv6 address family is "\
+		 "currently not supported on UDP/HIP.\n");
+	IPV6_TO_IPV4_MAP(peer_addr, &dst4.sin_addr);
+	HIP_DEBUG_INADDR("dst4", &dst4.sin_addr);
+	
+        /* Source port */
+	if(src_port != 0) {
+		src4.sin_port = htons(src_port);
+	}
+	else {
+		src4.sin_port = 0;
+	}
+	
+	/* Destination port. */
+	if(dst_port != 0) {
+		dst4.sin_port = htons(dst_port);
+	}
+	else {
+		dst4.sin_port = htons(HIP_NAT_UDP_PORT);
+	}
+
+	/* Zero message HIP checksum. */
+	//hip_zero_msg_checksum(msg);
+	
+	/* Get the packet total length for sendto(). */
+	packet_length = length;
+
+	HIP_DEBUG("Trying to send %u bytes stun on UDP with source port: %u and "\
+		  "destination port: %u.\n",
+		  packet_length, ntohs(src4.sin_port), ntohs(dst4.sin_port));
+	
+
+
+	/* Insert 32 bits of zero bytes between UDP and HIP */
+	/*
+	memmove(((char *)msg) + HIP_UDP_ZERO_BYTES_LEN, msg, packet_length);
+	memset(msg, 0, HIP_UDP_ZERO_BYTES_LEN);
+	packet_length += HIP_UDP_ZERO_BYTES_LEN;
+	memmoved = 1;
+*/
+	/*
+	  Currently disabled because I could not make this work -miika
+	HIP_IFEL(bind(hip_nat_sock_udp, (struct sockaddr *) &src4, sizeof(src4)),
+		 -1, "Binding to udp sock failed\n");
+	
+	*/
+
+	/* Pass the correct source address to sendmsg() as ancillary data */
+	cmsg = &cmsgbuf;
+	memset(cmsg, 0, sizeof(cmsgbuf));
+	cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
+	cmsg->cmsg_level = IPPROTO_IP;
+	cmsg->cmsg_type = IP_PKTINFO;
+	pkt_info = CMSG_DATA(cmsg);
+	pkt_info->ipi_addr.s_addr = src4.sin_addr.s_addr;
+
+	hdr.msg_name = &dst4;
+	hdr.msg_namelen = sizeof(dst4);
+	iov.iov_base = msg;
+	iov.iov_len = packet_length;
+	hdr.msg_iov = &iov;
+	hdr.msg_iovlen = 1;
+	hdr.msg_control = &cmsgbuf;
+	hdr.msg_controllen = sizeof(cmsgbuf);
+
+	/* Try to send the data. */
+	do {
+		//chars_sent = sendto(hip_nat_sock_udp, msg, packet_length, 0,
+				    //(struct sockaddr *) &dst4, sizeof(dst4));
+		chars_sent = sendmsg(hip_nat_sock_udp, &hdr, 0);
+		if(chars_sent < 0)
+		{
+			/* Failure. */
+			HIP_DEBUG("Problem in sending UDP packet. Sleeping "\
+				  "for %d seconds and trying again.\n",
+				  HIP_NAT_SLEEP_TIME);
+			sleep(HIP_NAT_SLEEP_TIME);
+		}
+		else
+		{
+			/* Success. */
+			break;
+		}
+		xmit_count++;
+	} while(xmit_count < HIP_NAT_NUM_RETRANSMISSION);
+
+	/* Verify that the message was sent completely. */
+	HIP_IFEL((chars_sent != packet_length), -ECOMM,
+		 "Error while sending data on UDP_STUN: %d bytes of %d sent.)\n",
+		 chars_sent, packet_length);
+
+	HIP_DEBUG("Packet sent successfully over UDP_STUN, characters sent: %u, "\
+		  "packet length: %u.\n", chars_sent, packet_length);
+
+ out_err:
+
+	/* Reset the interface to wildcard or otherwise receiving
+	   broadcast messages fails from the raw sockets. A better
+	   solution would be to have separate sockets for sending
+	   and receiving because we cannot receive a broadcast while
+	   sending */ 
+
+	/* currently disabled because I could not make this work -miika
+	   src4.sin_addr.s_addr = INADDR_ANY;
+	   src4.sin_family = AF_INET;
+	   bind(hip_nat_sock_udp, (struct sockaddr *) &src4, sizeof(struct sockaddr_in));
+	*/
+
+	if (sockfd)
+		close(sockfd);
+#if 0
+	if (memmoved) {
+		/* Remove 32 bits of zero bytes between UDP and HIP */
+		packet_length -= HIP_UDP_ZERO_BYTES_LEN;
+		memmove(msg, ((char *)msg) + HIP_UDP_ZERO_BYTES_LEN,
+			packet_length);
+		memset(((char *)msg) + packet_length, 0,
+		       HIP_UDP_ZERO_BYTES_LEN);
+	}
+#endif		
+	return err;
+}
 

@@ -50,7 +50,8 @@ if HIP_PERFORMANCE
 endif
 CFLAGS += $(HIPL_XMLL)
 
-LDFLAGS = -lc -lcrypto $(HIP_XMLL) $(OPENWRT)
+# XX FIXME: conntest-client-hip fails to link to libinet6 because of this
+#LDFLAGS = -lc -lcrypto $(HIP_XMLL) $(OPENWRT)
 
 opendhtteststub_LDFLAGS= -lcrypto  $(HIP_XMLL) 
 
