@@ -127,7 +127,7 @@ out_err:
 	return err;
 }
 
-int udp_make_ipv4_socket(in_port_t local_port) {
+int create_udp_ipv4_socket(in_port_t local_port) {
 	int ipv4_sock = -1, err = 0, on = 1, sendnum;
 	struct sockaddr_in inaddr_any;
 
@@ -244,7 +244,7 @@ int udp_send_msg(int sock, uint8_t *data, size_t data_len,
 	}
 	
 	printf("=== Sent string successfully back ===\n");
-	printf("=== Server listening IN6ADDR_ANY ===\n");
+	printf("=== Server listening INADDR_ANY/IN6ADDR_ANY ===\n");
 
 out_err:
 
@@ -407,7 +407,7 @@ int main_server(int type, in_port_t port)
 	   packets even though a single IPv6 socket could be used
 	   for receiving IPv4 packets, but not sending them. */
 	if (type == SOCK_DGRAM) {
-		ipv4_sock = udp_make_ipv4_socket(port);
+		ipv4_sock = create_udp_ipv4_socket(port);
 		if (ipv4_sock < 0) {
 			printf("Could not create ipv4 socket\n");
 			err = -1;
