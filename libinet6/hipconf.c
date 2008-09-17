@@ -76,6 +76,9 @@ const char *hipconf_usage =
 #ifdef CONFIG_HIP_HIPPROXY
 "hipproxy on|off\n"
 #endif
+#ifdef CONFIG_HIP_MIDAUTH
+"manual-update\n"
+#endif
 ;
 
 /** Function pointer array containing pointers to handler functions.
@@ -114,6 +117,7 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc) 
 	hip_conf_handle_tcptimeout, /* added by Tao Wan*/
         hip_conf_handle_hipproxy,
 	hip_conf_handle_heartbeat,
+	hip_conf_handle_manual_update,
 	NULL /* run */
 };
 
@@ -178,6 +182,10 @@ int hip_conf_get_action(char *text)
 	else if (!strcmp("hipproxy", text))
 		ret = ACTION_HIPPROXY;
 #endif
+#ifdef CONFIG_HIP_MIDAUTH
+	else if (!strcmp("manual-update", text))
+		ret = ACTION_MANUAL_UPDATE;
+#endif
 	
         return ret;
 }
@@ -194,6 +202,7 @@ int hip_conf_check_action_argc(int action) {
 	switch (action) {
 	case ACTION_NEW: case ACTION_NAT: case ACTION_DEC: case ACTION_RST:
 	case ACTION_BOS: case ACTION_LOCATOR: case ACTION_OPENDHT: case ACTION_HEARTBEAT:
+	case ACTION_MANUAL_UPDATE:
                 break;
 	case ACTION_DEBUG: case ACTION_RESTART: case ACTION_REINIT:
 	case ACTION_TCPTIMEOUT:
@@ -294,6 +303,10 @@ int hip_conf_get_type(char *text,char *argv[]) {
 	else if (strcmp("hipproxy", argv[1])==0)
 		ret = TYPE_HIPPROXY;
 #endif
+#ifdef CONFIG_HIP_MIDAUTH
+	else if (strcmp("manual-update", argv[1])==0)
+		ret = TYPE_MANUAL_UPDATE;
+#endif
      return ret;
 }
 
@@ -331,6 +344,9 @@ int hip_conf_get_type_arg(int action)
 		type_arg = 2;
 		break;
 	
+#ifdef CONFIG_HIP_MIDAUTH
+	case ACTION_MANUAL_UPDATE:
+#endif
 	case ACTION_DEBUG:
 		type_arg = 1;
 		break;
@@ -1029,6 +1045,28 @@ int hip_conf_handle_bos(hip_common_t *msg, int action,
 
  out:
      return err;
+}
+
+/**
+ * Handles the hipconf commands where the type is @c trigger-update.
+ *
+ * @param msg    a pointer to the buffer where the message for hipd will
+ *               be written.
+ * @param action the numeric action identifier for the action to be performed.
+ * @param opt    an array of pointers to the command line arguments after
+ *               the action and type.
+ * @param optc   the number of elements in the array (@b 0).
+ * @return       zero on success, or negative error value on error.
+ */
+int hip_conf_handle_manual_update(hip_common_t *msg, int action,
+				  const char *opt[], int optc)
+{
+	int err = 0;
+
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_MANUAL_UPDATE_PACKET, 0), -1, "Failed to build user message header.: %s\n", strerror(err));
+
+out_err:
+	return err;
 }
 
 /**

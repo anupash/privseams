@@ -182,6 +182,7 @@
 /** Socket option for hipconf to set handover mode, hard or soft. */
 #define SO_HIP_HANDOVER_HARD			156
 #define SO_HIP_HANDOVER_SOFT			157
+#define SO_HIP_MANUAL_UPDATE_PACKET		158
 
 //#define SO_HIP_ESP_PROT_EXT_TRANSFORM		xx
 //#define SO_HIP_IPSEC_UPDATE_ANCHOR_LIST	xx

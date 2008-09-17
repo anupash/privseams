@@ -644,4 +644,11 @@ int hip_update_handle_stun(void* pkg, int len,
 			   in6_addr_t *src_addr, in6_addr_t * dst_addr,
 			   hip_ha_t *entry,
 			   hip_portpair_t *sinfo);
+
+/**
+ * Triggers sending update packets to all connections. 
+ *
+ * @return 0 on success
+ */
+int hip_manual_update(void);
 #endif /* HIP_UPDATE_H */

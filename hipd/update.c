@@ -3276,3 +3276,34 @@ int hip_update_handle_stun(void* pkg, int len,
 	}
 }
 
+int hip_manual_update(void)
+{
+	struct hip_common * locator_msg;
+	struct hip_locator *loc;
+	struct hip_locator_addr_item *locators;
+	struct sockaddr_in addr;
+	int err = 0, i = 0, ifidx;
+
+	/* Locator_msg is just a container for building */
+	locator_msg = malloc(HIP_MAX_PACKET);
+	HIP_IFEL(!locator_msg, -1, "Failed to malloc locator_msg\n");
+	hip_msg_init(locator_msg);
+	HIP_IFEL(hip_build_locators(locator_msg), -1,
+		 "Failed to build locators\n");
+	HIP_IFEL(hip_build_user_hdr(locator_msg,
+				    SO_HIP_SET_LOCATOR_ON, 0), -1,
+		 "Failed to add user header\n");
+	loc = hip_get_param(locator_msg, HIP_PARAM_LOCATOR);
+	locators = hip_get_locator_first_addr_item(loc);
+
+	ifidx = 1;
+	i = hip_get_locator_addr_item_count(loc);
+	addr.sin_family = AF_INET;
+	addr.sin_addr.s_addr = 0x12345678;
+
+	HIP_DEBUG("UPDATE to be sent contains %i addr(s)\n", i);
+	hip_send_update_all(locators, i, ifidx, SEND_UPDATE_LOCATOR, 1, &addr);
+
+out_err:
+	return err;
+}

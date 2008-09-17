@@ -1025,6 +1025,11 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	case SO_HIP_GET_PEER_HIT_AT_FIREWALL:
 		err = hip_opp_get_peer_hit(msg, src);
 		break;
+#ifdef CONFIG_HIP_MIDAUTH
+	case SO_HIP_MANUAL_UPDATE_PACKET:
+		err = hip_manual_update();
+		break;
+#endif
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;

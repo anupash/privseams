@@ -111,7 +111,8 @@
 #define ACTION_REINIT 25
 #define ACTION_HEARTBEAT 26
 #define ACTION_HANDOVER 27
-#define ACTION_MAX 28 /* exclusive */
+#define ACTION_MANUAL_UPDATE 28
+#define ACTION_MAX 29 /* exclusive */
 
 /* Important! These values are used as array indexes, so keep these in order.
    Add values after the last value and increment TYPE_MAX. */
@@ -144,7 +145,8 @@
 #define TYPE_TCPTIMEOUT	   26 /* add By Tao Wan, on 04.01.2008*/
 #define TYPE_HIPPROXY	   27
 #define TYPE_HEARTBEAT     28
-#define TYPE_MAX           29 /* exclusive */
+#define TYPE_MANUAL_UPDATE 29
+#define TYPE_MAX           30 /* exclusive */
 
 /* #define TYPE_RELAY         22 */
 
@@ -212,6 +214,7 @@ int hip_conf_handle_opptcp(struct hip_common *, int type, const char *opt[], int
 int hip_conf_handle_tcptimeout(struct hip_common *, int type, const char *opt[], int optc); /*added by Tao Wan, 04.Jan.2008*/
 int hip_conf_handle_hipproxy(struct hip_common *msg, int action, const char *opt[], int optc);
 int hip_conf_handle_heartbeat(hip_common_t *msg, int action, const char *opt[], int optc);
+int hip_conf_handle_manual_update(hip_common_t *msg, int action, const char *opt[], int optc);
  
 /**
  * Prints the HIT values in use. Prints either all or the default HIT value to
