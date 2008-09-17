@@ -143,6 +143,8 @@ int udp_make_ipv4_socket(in_port_t local_port) {
 		goto out_err;
 	}
 
+	HIP_DEBUG("my local port %d\n", local_port);
+
 	inaddr_any.sin_family = AF_INET;
 	inaddr_any.sin_port = htons(local_port);
 	inaddr_any.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -164,7 +166,7 @@ out_err:
 int udp_send_msg(int serversock, uint8_t *data, size_t data_len,
 		 struct sockaddr *local_addr,
 		 struct sockaddr *peer_addr) {
-	int ipv4_sock = -1, err = 0, on = 1, sendnum;
+	int err = 0, on = 1, sendnum, ipv4_sock = -1;
 	int is_ipv4 = ((peer_addr->sa_family == AF_INET) ? 1 : 0);
 	uint8_t cmsgbuf[CMSG_SPACE(sizeof(struct in6_pktinfo))];
         struct cmsghdr *cmsg = (struct cmsghdr *) cmsgbuf;
@@ -175,8 +177,12 @@ int udp_send_msg(int serversock, uint8_t *data, size_t data_len,
 		struct in6_pktinfo *in6;
 	} pktinfo;
 
-	//memset(&pktinfo, 0, sizeof(&pktinfo));
-
+	/* We have to create a temporary IPv4 socket for sending packets.
+	   Notice that we cannot use this socket forever; otherwise the
+	   IPv6 socket stops receiving packets. As an alternative, we could
+	   have the IPv6 socket with "no ipv4" socket option, but then
+	   we need to have a select loop for polling the IPv4 and IPv6
+	   sockets for incoming messages. -miika */
 	if (is_ipv4) {
 		struct sockaddr_in *in = (struct sockaddr_in *) local_addr;
 		ipv4_sock = udp_make_ipv4_socket(ntohs(in->sin_port));
@@ -187,9 +193,11 @@ int udp_send_msg(int serversock, uint8_t *data, size_t data_len,
 		}
 	}
 
+	//memset(&pktinfo, 0, sizeof(&pktinfo));
+
 	/* send only the data we received (notice that there is
 	   always a \0 in the end of the string) */
-	msg.msg_name = local_addr;
+	msg.msg_name = peer_addr;
 	if (is_ipv4)
 		msg.msg_namelen = sizeof(struct sockaddr_in);
 	else
@@ -215,10 +223,10 @@ int udp_send_msg(int serversock, uint8_t *data, size_t data_len,
 	pktinfo.in6 = (struct in6_pktinfo *) CMSG_DATA(cmsg);
 	if (is_ipv4)
 		pktinfo.in4->ipi_addr.s_addr =
-			((struct sockaddr_in *) peer_addr)->sin_addr.s_addr;
+			((struct sockaddr_in *) local_addr)->sin_addr.s_addr;
 	else
 		memcpy(&pktinfo.in6->ipi6_addr,
-		       &(((struct sockaddr_in6 *) peer_addr)->sin6_addr),
+		       &(((struct sockaddr_in6 *) local_addr)->sin6_addr),
 		       sizeof(struct in6_addr));
 	
 	/* send reply using the ORIGINAL src/dst address pair
@@ -249,7 +257,7 @@ int main_server_udp(int serversock, in_port_t local_port) {
 	union {
 		struct sockaddr_in in4;
 		struct sockaddr_in6 in6;
-	} local_addr, peer_addr;
+	} peer_addr, local_addr;
 	uint8_t cmsgbuf[CMSG_SPACE(sizeof(struct in6_addr)) +
 			CMSG_SPACE(sizeof(struct in6_pktinfo))];
 	uint8_t mylovemostdata[IP_MAXPACKET];
@@ -261,7 +269,7 @@ int main_server_udp(int serversock, in_port_t local_port) {
 	} pktinfo;
 	struct msghdr msg;
 
-	msg.msg_name = &local_addr.in6;
+	msg.msg_name = &peer_addr.in6;
 	msg.msg_namelen = sizeof(struct sockaddr_in6);
 	msg.msg_iov = &iov;
 	msg.msg_iovlen = 1;
@@ -277,7 +285,7 @@ int main_server_udp(int serversock, in_port_t local_port) {
 	while((recvnum = recvmsg(serversock, &msg, 0)) >= 0) {
 		printf("Received %d bytes\n", recvnum);
 
-		is_ipv4 = IN6_IS_ADDR_V4MAPPED(&local_addr.in6.sin6_addr);
+		is_ipv4 = IN6_IS_ADDR_V4MAPPED(&peer_addr.in6.sin6_addr);
 	
 		cmsg_level = (is_ipv4) ? IPPROTO_IP : IPPROTO_IPV6;
 		cmsg_type = (is_ipv4) ? IP_PKTINFO : IPV6_2292PKTINFO;
@@ -296,23 +304,28 @@ int main_server_udp(int serversock, in_port_t local_port) {
 			}
 		}
 	
-		HIP_DEBUG_IN6ADDR("local addr", &local_addr.in6.sin6_addr);
+		HIP_DEBUG_IN6ADDR("peer addr", &peer_addr.in6.sin6_addr);
+		HIP_DEBUG("peer port %d\n", ntohs(peer_addr.in6.sin6_port));
 		
 		if (is_ipv4) {
-			peer_addr.in4.sin_family = AF_INET;
-			peer_addr.in4.sin_port = htons(local_port);
-			peer_addr.in4.sin_addr.s_addr =
+			local_addr.in4.sin_family = AF_INET;
+			local_addr.in4.sin_port = htons(local_port);
+			//local_addr.in4.sin_port = peer_addr.in6.sin6_port;
+			local_addr.in4.sin_addr.s_addr =
 				pktinfo.in4->ipi_addr.s_addr;
-			HIP_DEBUG_INADDR("peer addr",
-					 &peer_addr.in4.sin_addr);
+			HIP_DEBUG_INADDR("local addr",
+					 &local_addr.in4.sin_addr);
+			HIP_DEBUG("local port %d\n", ntohs(local_addr.in4.sin_port));
 		} else {
-			peer_addr.in6.sin6_family = AF_INET6;
-			memcpy(&peer_addr.in6.sin6_addr,
+			local_addr.in6.sin6_family = AF_INET6;
+			memcpy(&local_addr.in6.sin6_addr,
 			       &pktinfo.in6->ipi6_addr,
 			       sizeof(struct in6_addr));
-			peer_addr.in6.sin6_port = htons(local_port);
-			HIP_DEBUG_IN6ADDR("peer addr",
-					  &peer_addr.in6.sin6_addr);
+			local_addr.in6.sin6_port = htons(local_port);
+			HIP_DEBUG_IN6ADDR("local addr",
+					  &local_addr.in6.sin6_addr);
+			HIP_DEBUG("local port %d\n",
+				  ntohs(local_addr.in6.sin6_port));
 		}
 	
 		/* With IPv6-mapped IPv4 addresses, the peer address is mapped
@@ -321,18 +334,16 @@ int main_server_udp(int serversock, in_port_t local_port) {
 		if (is_ipv4) {
 			struct sockaddr_in sin;
 			sin.sin_family = AF_INET;
-			//sin.sin_port = local_addr.in6.sin6_port;
-			sin.sin_port = htons(local_port);
-			IPV6_TO_IPV4_MAP(&local_addr.in6.sin6_addr,
+			sin.sin_port = peer_addr.in6.sin6_port;
+			//sin.sin_port = htons(local_port);
+			IPV6_TO_IPV4_MAP(&peer_addr.in6.sin6_addr,
 					 &sin.sin_addr);
-			//sin.sin_addr.s_addr = htonl(sin.sin_addr.s_addr);
-			memset(&local_addr, 0, sizeof(local_addr));
-			memcpy(&local_addr, &sin, sizeof(sin));
+			memset(&peer_addr, 0, sizeof(peer_addr));
+			memcpy(&peer_addr, &sin, sizeof(sin));
 			_HIP_DEBUG_INADDR("local addr", &sin.sin_addr);
 		}
 	
-		err = udp_send_msg(serversock, mylovemostdata,
-				   recvnum,
+		err = udp_send_msg(serversock, mylovemostdata, recvnum,
 				   (struct sockaddr *) &local_addr,
 				   (struct sockaddr *) &peer_addr);
 		if (err) {
@@ -341,15 +352,14 @@ int main_server_udp(int serversock, in_port_t local_port) {
 
 		/* reset all fields for the next round */
 		memset(mylovemostdata, 0, sizeof(mylovemostdata));
-		memset(&local_addr, 0, sizeof(local_addr));
-		msg.msg_namelen = sizeof(local_addr);
+		memset(&peer_addr, 0, sizeof(peer_addr));
+		msg.msg_namelen = sizeof(peer_addr);
 		memset(cmsgbuf, 0, sizeof(cmsgbuf));
 		iov.iov_len = sizeof(mylovemostdata) - 1;
-		msg.msg_namelen = sizeof(local_addr);
+		msg.msg_namelen = sizeof(peer_addr);
 	}
 
 out_err:
-
 	return err;
 }
 
