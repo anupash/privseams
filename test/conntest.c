@@ -198,10 +198,6 @@ int udp_send_msg(int sock, uint8_t *data, size_t data_len,
 		struct in6_pktinfo *in6;
 	} pktinfo;
 
-	//memset(&pktinfo, 0, sizeof(&pktinfo));
-
-	/* send only the data we received (notice that there is
-	   always a \0 in the end of the string) */
 	msg.msg_name = peer_addr;
 	if (is_ipv4)
 		msg.msg_namelen = sizeof(struct sockaddr_in);
@@ -217,6 +213,7 @@ int udp_send_msg(int sock, uint8_t *data, size_t data_len,
 	iov.iov_len = data_len;
 
 	/* Set local address */
+
 	memset(cmsg, 0, sizeof(cmsgbuf));
 	if (is_ipv4)
 		cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
@@ -234,8 +231,7 @@ int udp_send_msg(int sock, uint8_t *data, size_t data_len,
 		       &(((struct sockaddr_in6 *) local_addr)->sin6_addr),
 		       sizeof(struct in6_addr));
 	
-	/* send reply using the ORIGINAL src/dst address pair
-	   (preserved in the control field) */
+	/* Send reply using the ORIGINAL src/dst address pair */
 	sendnum = sendmsg(sock, &msg, 0);
 	if (sendnum < 0) {
 		perror("sendmsg");
