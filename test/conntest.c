@@ -124,8 +124,9 @@ int udp_send_msg(int serversock, uint8_t *data, size_t data_len,
 		 struct sockaddr *peer_addr) {
 	int ipv4_sock = -1, err = 0, on = 1, sendnum;
 	int is_ipv4 = ((peer_addr->sa_family == AF_INET) ? 1 : 0);
-	uint8_t cmsgbuf[CMSG_SPACE(sizeof(struct in6_addr)) +
-			CMSG_SPACE(sizeof(struct in6_pktinfo))];
+//	uint8_t cmsgbuf[CMSG_SPACE(sizeof(struct in6_addr)) +
+//			CMSG_SPACE(sizeof(struct in6_pktinfo))];
+	uint8_t cmsgbuf[CMSG_SPACE(sizeof(struct in6_pktinfo))];
         struct cmsghdr *cmsg = (struct cmsghdr *) cmsgbuf;
 	struct msghdr msg;
 	struct iovec iov;
@@ -163,13 +164,8 @@ int udp_send_msg(int serversock, uint8_t *data, size_t data_len,
 		msg.msg_namelen = sizeof(struct sockaddr_in6);
 	msg.msg_iov = &iov;
 	msg.msg_iovlen = 1;
-#if 0   /* disables setting of local address */
 	msg.msg_control =  cmsgbuf;
 	msg.msg_controllen = sizeof(cmsgbuf);
-#else
-	msg.msg_control = 0;
-	msg.msg_controllen = 0;
-#endif
 	msg.msg_flags = 0;
 	
 	iov.iov_base = data;
