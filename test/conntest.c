@@ -190,13 +190,20 @@ int udp_send_msg(int sock, uint8_t *data, size_t data_len,
 	int err = 0, on = 1, sendnum;
 	int is_ipv4 = ((peer_addr->sa_family == AF_INET) ? 1 : 0);
 	uint8_t cmsgbuf[CMSG_SPACE(sizeof(struct in6_pktinfo))];
-        struct cmsghdr *cmsg = (struct cmsghdr *) cmsgbuf;
+        struct cmsghdr *cmsg; // = (struct cmsghdr *) cmsgbuf;
 	struct msghdr msg;
 	struct iovec iov;
 	union {
 		struct in_pktinfo *in4;
 		struct in6_pktinfo *in6;
 	} pktinfo;
+
+	/* The first memset is mandatory. Results in otherwise weird
+	   EMSGSIZE errors. */
+	memset(&msg, 0, sizeof(struct msghdr));	
+	memset(cmsgbuf, 0, sizeof(cmsgbuf));
+
+	/* Fill message header */
 
 	msg.msg_name = peer_addr;
 	if (is_ipv4)
@@ -213,8 +220,7 @@ int udp_send_msg(int sock, uint8_t *data, size_t data_len,
 	iov.iov_len = data_len;
 
 	/* Set local address */
-
-	memset(cmsg, 0, sizeof(cmsgbuf));
+	cmsg = CMSG_FIRSTHDR(&msg);
 	if (is_ipv4)
 		cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
 	else
