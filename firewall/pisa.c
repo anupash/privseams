@@ -423,7 +423,8 @@ static int pisa_check_certificate(hip_fw_context_t *ctx)
 {
 	struct hip_common *hip = ctx->transport_hdr.hip;
 	struct hip_cert *cert;
-	char *buf;
+	struct hip_cert_spki_info ci;
+	char *buf = NULL;
 	int err = 0, len;
 
 	cert = hip_get_param(hip, HIP_PARAM_CERT);
@@ -433,13 +434,17 @@ static int pisa_check_certificate(hip_fw_context_t *ctx)
 	buf = malloc(len);
 	memset(buf, 0, len + 1);
 	memcpy(buf, cert + 1, len);
-	HIP_DEBUG("Found certificate with values %i %i %i %i\n", cert->cert_group, cert->cert_count, cert->cert_id, cert->cert_type);
-	HIP_DEBUG("Certificate length: %i data: \"%s\"\n", len, buf);
 
-	/* @todo: actually check the certificate */
+	HIP_IFEL(hip_cert_spki_char2certinfo(buf, &ci), -1,
+		 "Certificate could not be parsed.\n");
+	HIP_IFEL(hip_cert_spki_lib_verify(&ci), -1,
+		 "Signature could not be verified.\n");
 
-	free(buf);
+	HIP_DEBUG("Verified signature. Seems to be valid.\n");
+
 out_err:
+	if (buf)
+		free(buf);
 	return err;
 }
 
