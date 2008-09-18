@@ -651,7 +651,7 @@ int periodic_maintenance()
 	hip_registration_maintenance();
 
 	/* Sending of NAT Keep-Alives. */
-	if(hip_nat_status && nat_keep_alive_counter < 0){
+	if(hip_nat_status && !hip_icmp_interval && nat_keep_alive_counter < 0){
 		HIP_IFEL(hip_nat_refresh_port(),
 			 -ECOMM, "Failed to refresh NAT port state.\n");
 		nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_INTERVAL;
