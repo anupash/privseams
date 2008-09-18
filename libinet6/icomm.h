@@ -50,7 +50,7 @@
 #define SO_HIP_SET_PEER_HIT			15
 #define SO_HIP_DEFAULT_HIT			16
 #define SO_HIP_GET_PEER_LIST                    17
-#define SO_HIP_CONF_PUZZLE_GET                  18
+/* One free slot here */
 #define SO_HIP_GET_PSEUDO_HIT                   19
 #define SO_HIP_GET_LOCAL_HI                     20
 #define SO_HIP_GET_HITS                         21
@@ -81,10 +81,11 @@
 #define SO_HIP_BOS                              70
 #define SO_HIP_NETLINK_DUMMY                    71
 #define SO_HIP_CONF_PUZZLE_NEW                  72
-#define SO_HIP_CONF_PUZZLE_SET                  73
-#define SO_HIP_CONF_PUZZLE_INC                  74
-#define SO_HIP_CONF_PUZZLE_DEC                  75
-/* Two free slots here */
+#define SO_HIP_CONF_PUZZLE_GET                  73
+#define SO_HIP_CONF_PUZZLE_SET                  74
+#define SO_HIP_CONF_PUZZLE_INC                  75
+#define SO_HIP_CONF_PUZZLE_DEC                  76
+/* One free slot here */
 #define SO_HIP_SET_OPPORTUNISTIC_MODE           78
 #define SO_HIP_SET_BLIND_ON                     79
 #define SO_HIP_SET_BLIND_OFF                    80

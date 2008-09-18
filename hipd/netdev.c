@@ -1377,3 +1377,53 @@ int hip_get_default_lsi(struct in_addr *lsi)
 */
 	return err;
 }
+
+
+//get the puzzle difficulty and return result to hipconf
+int hip_get_puzzle_difficulty_msg(struct hip_common *msg){
+	int err = 0, diff = 0;
+	hip_hit_t *dst_hit = NULL;
+	hip_hit_t all_zero_hit = {0};
+
+	dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
+	
+#ifdef CONFIG_HIP_COOKIE
+	if(ipv6_addr_cmp(&all_zero_hit, dst_hit) != 0)
+		diff = hip_get_cookie_difficulty(dst_hit);
+	else{
+#endif
+		diff = hip_get_cookie_difficulty(NULL);
+#ifdef CONFIG_HIP_COOKIE
+	}
+#endif
+
+	_HIP_DEBUG("Puzzle difficulty is %d\n", diff);
+	hip_build_param_contents(msg, &diff, HIP_PARAM_INT, sizeof(diff));
+	
+ out_err:
+	return err;
+}
+
+
+//set the puzzle difficulty acc to msg sent by hipconf
+int hip_set_puzzle_difficulty_msg(struct hip_common *msg){
+	int err = 0, diff = 0, *newVal = NULL;
+	hip_hit_t *dst_hit = NULL;
+	hip_hit_t all_zero_hit = {0};
+
+	dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
+	newVal = hip_get_param_contents(msg, HIP_PARAM_INT);
+
+#ifdef CONFIG_HIP_COOKIE
+	if(ipv6_addr_cmp(&all_zero_hit, dst_hit) != 0)
+		hip_set_cookie_difficulty(dst_hit, *newVal);
+	else{
+#endif
+		hip_set_cookie_difficulty(NULL, *newVal);
+#ifdef CONFIG_HIP_COOKIE
+	}
+#endif
+
+out_err:
+	return err;
+}

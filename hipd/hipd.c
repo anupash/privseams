@@ -433,14 +433,14 @@ int hipd_main(int argc, char *argv[])
 
                 /* If DHT is on have to use write sets for asynchronic communication */
 		if (hip_opendht_inuse == SO_HIP_DHT_ON) {
-			if(hip_get_hi3_status()){
+			/*if(hip_get_hi3_status()){
 				err = cl_select((highest_descriptor + 1), &read_fdset,
                                                &write_fdset, NULL, &timeout);
 			}
-			else{
+			else{*/
 				err = select((highest_descriptor + 1), &read_fdset,
                                                &write_fdset, NULL, &timeout);
-			}
+			/*}*/
 
                         if(err < 0){
 				HIP_ERROR("select() error: %s.\n", strerror(errno));
@@ -451,14 +451,14 @@ int hipd_main(int argc, char *argv[])
                                 goto to_maintenance;
                         }
                 } else {
-			if(hip_get_hi3_status()){
+			/*if(hip_get_hi3_status()){
 				err = cl_select((highest_descriptor + 1), &read_fdset,
                                                NULL, NULL, &timeout);
 			}
-			else{
+			else{*/
 				err = select((highest_descriptor + 1), &read_fdset,
                                                NULL, NULL, &timeout);
-			}
+			/*}*/
 
                         if (err < 0) {
                                 HIP_ERROR("select() error: %s.\n", strerror(errno));

@@ -173,15 +173,14 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		HIP_IFEL(hip_set_logdebug(LOGDEBUG_NONE), -1,
 			 "Error when setting daemon DEBUG status to NONE\n");
 		break;
-
 	case SO_HIP_CONF_PUZZLE_NEW:
 		err = hip_recreate_all_precreated_r1_packets();
 		break;
 	case SO_HIP_CONF_PUZZLE_GET:
-		err = -ESOCKTNOSUPPORT; /* TBD */
+		err = hip_get_puzzle_difficulty_msg(msg);
 		break;
 	case SO_HIP_CONF_PUZZLE_SET:
-		err = -ESOCKTNOSUPPORT; /* TBD */
+		err = hip_set_puzzle_difficulty_msg(msg);
 		break;
 	case SO_HIP_CONF_PUZZLE_INC:
 		dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT);

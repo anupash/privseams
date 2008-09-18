@@ -34,9 +34,11 @@ const char *hipconf_usage =
 "new|add hi default (HI must be created as root)\n"
 "new hi default rsa_keybits dsa_keybits\n"
 #ifdef CONFIG_HIP_ICOOKIE
-"get|set|inc|dec|new puzzle all|<hit>\n"
+"get|inc|dec|new puzzle all|<hit>\n"
+"set puzzle all|<hit> new_value\n"
 #else
-"get|set|inc|dec|new puzzle all\n"
+"get|inc|dec|new puzzle all\n"
+"set puzzle all new_value\n"
 #endif
 "bos all\n"
 //modify by santtu
@@ -1137,16 +1139,25 @@ int hip_conf_handle_locator(hip_common_t *msg, int action,
  * @return       zero on success, or negative error value on error.
  */
 int hip_conf_handle_puzzle(hip_common_t *msg, int action,
-			   const char *opt[], int optc) 
-{
-     int err = 0, ret, msg_type, all;
-     hip_hit_t hit = {0};
+			   const char *opt[], int optc){
+     int err = 0, ret, msg_type, all, *diff = NULL, newVal = 0;
+     hip_hit_t hit = {0}, all_zero_hit = {0};
+     struct hip_tlv_common *current_param = NULL;
+     hip_tlv_type_t param_type = 0;
+     char hit_s[INET6_ADDRSTRLEN];
+     in6_addr_t *defhit = NULL;
 
-     if (optc != 1)
-     {
+     if(action == ACTION_SET){
+          if(optc != 2){
+	       HIP_ERROR("Missing arguments\n");
+	       err = -EINVAL;
+	       goto out_err;
+          }
+     }
+     else if (optc != 1){
 	  HIP_ERROR("Missing arguments\n");
 	  err = -EINVAL;
-	  goto out;
+	  goto out_err;
      }
 
      switch (action)
@@ -1162,66 +1173,108 @@ int hip_conf_handle_puzzle(hip_common_t *msg, int action,
 	  break;
      case ACTION_SET:
 	  msg_type = SO_HIP_CONF_PUZZLE_SET;
-	  err = -1; /* Not supported yet */
 	  break;
      case ACTION_GET:
 	  msg_type = SO_HIP_CONF_PUZZLE_GET;
-	  err = -1; /* Not supported yet */
 	  break;
      default:
 	  err = -1;
      }
 
-     if (err)
-     {
+     if(err){
 	  HIP_ERROR("Action (%d) not supported yet\n", action);
-	  goto out;
+	  goto out_err;
      }
 
      all = !strcmp("all", opt[0]);
 
-     if (!all)
-     {
+     if(!all){
 	  ret = inet_pton(AF_INET6, opt[0], &hit);
-	  if (ret < 0 && errno == EAFNOSUPPORT)
-	  {
+	  if (ret < 0 && errno == EAFNOSUPPORT){
 	       HIP_PERROR("inet_pton: not a valid address family\n");
 	       err = -EAFNOSUPPORT;
-	       goto out;
-	  } else if (ret == 0)
-	  {
+	       goto out_err;
+	  } else if (ret == 0){
 	       HIP_ERROR("inet_pton: %s: not a valid network address\n", opt[0]);
 	       err = -EINVAL;
-	       goto out;
+	       goto out_err;
 	  }
      }
 
+     //obtain the new value for set
+     if((msg_type == SO_HIP_CONF_PUZZLE_SET) && (optc == 2)){
+          newVal = atoi(opt[1]);
+     }
+
+     //attach the hit into the message
      err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
 				    sizeof(in6_addr_t));
-     if (err)
-     {
+     if(err){
 	  HIP_ERROR("build param hit failed: %s\n", strerror(err));
-	  goto out;
+	  goto out_err;
      }
 
-     err = hip_build_user_hdr(msg, msg_type, 0);
-     if (err)
-     {
+     //attach new val for the set action
+     if(msg_type == SO_HIP_CONF_PUZZLE_SET){
+          err = hip_build_param_contents(msg, (void *) &newVal, HIP_PARAM_INT,
+				    sizeof(int));
+          if(err){
+	       HIP_ERROR("build param int failed: %s\n", strerror(err));
+	       goto out_err;
+          }
+     }
+
+     //obtain the result for the get action
+     if(msg_type == SO_HIP_CONF_PUZZLE_GET){
+          /* Build a HIP message with socket option to get puzzle difficulty. */
+          HIP_IFE(hip_build_user_hdr(msg, msg_type, 0), -1);
+          /* Send the message to the daemon. The daemon fills the message. */
+          HIP_IFE(hip_send_recv_daemon_info(msg), -ECOMM);
+
+          /* Loop through all the parameters in the message just filled. */
+          while((current_param = hip_get_next_param(msg, current_param)) != NULL){
+               param_type = hip_get_param_type(current_param);
+               if(param_type == HIP_PARAM_HIT){
+                    //no need to get the hit from msg
+               }else if(param_type == HIP_PARAM_INT){
+                    diff = (int *)hip_get_param_contents_direct(current_param);
+               }else{
+			HIP_ERROR("Unrelated parameter in user "\
+				  "message.\n");
+               }
+          }
+
+          HIP_INFO("Puzzle difficulty is: %d\n", *diff);
+
+          if(ipv6_addr_cmp(&all_zero_hit, &hit) != 0){
+               inet_ntop(AF_INET6, &hit, hit_s, INET6_ADDRSTRLEN);
+               HIP_INFO("for peer hit: %s\n", hit_s);
+          }
+     }
+     else{
+          err = hip_build_user_hdr(msg, msg_type, 0);
+     }
+
+     if(err){
 	  HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
-	  goto out;
+	  goto out_err;
      }
 
-     if (all)
-     {
+     if((msg_type == SO_HIP_CONF_PUZZLE_GET) || (msg_type == SO_HIP_CONF_PUZZLE_SET)){
+	  goto out_err;
+     }
+
+     if(all){
 	  HIP_INFO("New puzzle difficulty effective immediately\n");
-     } else
-     {
+     }else{
 	  HIP_INFO("New puzzle difficulty is effective in %d seconds\n",
 		 HIP_R1_PRECREATE_INTERVAL);
      }
 
- out:
-     return err;
+out_err:
+	if(msg_type == SO_HIP_CONF_PUZZLE_GET)
+		memset(msg, 0, HIP_MAX_PACKET);
+	return err;
 }
 
 /**

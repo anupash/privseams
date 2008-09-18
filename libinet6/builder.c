@@ -1039,6 +1039,7 @@ char* hip_message_type_name(const uint8_t msg_type){
 	case SO_HIP_BOS: return "SO_HIP_BOS";
 	case SO_HIP_NETLINK_DUMMY: return "SO_HIP_NETLINK_DUMMY";
 	case SO_HIP_CONF_PUZZLE_NEW: return "SO_HIP_CONF_PUZZLE_NEW";
+	case SO_HIP_CONF_PUZZLE_GET: return "SO_HIP_CONF_PUZZLE_GET";
 	case SO_HIP_CONF_PUZZLE_SET: return "SO_HIP_CONF_PUZZLE_SET";
 	case SO_HIP_CONF_PUZZLE_INC: return "SO_HIP_CONF_PUZZLE_INC";
 	case SO_HIP_CONF_PUZZLE_DEC: return "SO_HIP_CONF_PUZZLE_DEC";
