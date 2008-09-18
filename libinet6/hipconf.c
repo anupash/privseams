@@ -1487,7 +1487,6 @@ int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int op
         int err = 0;
         char dht_response[1024];
         struct addrinfo * serving_gateway;
-        hip_common_t *msgdaemon;
         struct hip_opendht_gw_info *gw_info;
         struct in_addr tmp_v4;
         char tmp_ip_str[21];
@@ -1496,10 +1495,10 @@ int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int op
 
         /* ASK THIS INFO FROM DAEMON */
         HIP_INFO("Asking serving gateway info from daemon...\n");
-        HIP_IFEL(hip_build_user_hdr(msgdaemon, SO_HIP_DHT_SERVING_GW,0),-1,
+        HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW,0),-1,
                  "Building daemon header failed\n");
-        HIP_IFEL(hip_send_recv_daemon_info(msgdaemon), -1, "Send recv daemon info failed\n");
-        HIP_IFEL(!(gw_info = hip_get_param(msgdaemon, HIP_PARAM_OPENDHT_GW_INFO)),-1,
+        HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "Send recv daemon info failed\n");
+        HIP_IFEL(!(gw_info = hip_get_param(msg, HIP_PARAM_OPENDHT_GW_INFO)),-1,
                  "No gw struct found\n");
 
         /* Check if DHT was on */
