@@ -30,11 +30,6 @@ endif
 CFLAGS = $(hipl_common_cflags) # -L$(HIPL_LIBINET6_LIB)
 INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
 
-if !HIP_OPENWRT
-  CFLAGS += -L$(HIPL_LIBINET6_LIB)
-  INCLUDES += -I$(HIPL_LIBINET6_INCLUDE)
-endif
-  
 include_HEADERS = hipconftool.h
 
 
@@ -51,15 +46,20 @@ LDADD=
 #  LDADD += ../libopphip/.libs/libopphip.a
 #endif
 
-if HIP_OPENWRT
-LDADD += $(OPENWRT_LIB_STATIC)
-endif
-
 LDADD += ../libinet6/.libs/libinet6.a
 if HIP_CORPORATE
   LDADD += -lhiptool
 else
   LDADD += ../libhiptool/.libs/libhiptool.a
+endif
+
+if HIP_OPENWRT
+LDADD += $(OPENWRT_LIB_STATIC)
+else
+CFLAGS += -L$(HIPL_LIBINET6_LIB)
+LDADD += ../libinet6/.libs/libinet6.a
+LDADD += ../libhiptool/.libs/libhiptool.a
+INCLUDES += -I$(HIPL_LIBINET6_INCLUDE)
 endif
 
 LDADD += ../opendht/.libs/libhipopendht.a
