@@ -133,7 +133,7 @@
 #define TYPE_GW            14
 #define TYPE_GET           15
 #define TYPE_HA            16
-#define TYPE_MODE          17
+#define TYPE_MHADDR        17
 #define TYPE_HANDOVER      18
 #define TYPE_DEBUG         19
 #define TYPE_DAEMON        20

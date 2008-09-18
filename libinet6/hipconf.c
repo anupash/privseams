@@ -265,12 +265,12 @@ int hip_conf_get_type(char *text,char *argv[]) {
 		ret = TYPE_BOS;
 	else if (!strcmp("debug", text))
 		ret = TYPE_DEBUG;
-	else if (!strcmp("mode", text))
-		ret = TYPE_MODE;
+	else if ((!strcmp("mode", text)) && (strcmp("mhaddr", argv[1])==0))
+		ret = TYPE_MHADDR;
 	else if (!strcmp("daemon", text))
 		ret = TYPE_DAEMON;
-	else if (!strcmp("mode", text))
-		ret = TYPE_MODE;
+	else if ((!strcmp("mode", text)) && (strcmp("handover", argv[1])==0))
+		ret = TYPE_HANDOVER;
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	else if (!strcmp("opp", text))
 		ret = TYPE_OPP; 
