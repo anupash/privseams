@@ -16,7 +16,8 @@ int create_serversocket(int type, in_port_t port) {
 	fd = socket(AF_INET6, type, 0);
 	if (fd < 0) {
 		perror("socket");
-		exit(1);
+		err = -1;
+		goto out_err;
 	}
 
 	/* Receive anchillary data with UDP */
@@ -27,43 +28,50 @@ int create_serversocket(int type, in_port_t port) {
 		goto out_err;
 	}
 
-	/* Weird, but we have to set this option to receive
-	   IPv4 addresses for UDP. We don't get them in mapped format. */ 
-        err = setsockopt(fd, IPPROTO_IP,
-			 IP_PKTINFO, &on, sizeof(on));
+	err = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
 	if (err != 0) {
-		perror("setsockopt IP_PKTINFO");
+		perror("setsockopt SO_REUSEADDR,");
 		goto out_err;
 	}
 
-	setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+	/* UDP cannot bind to both IPv4 and IPv6 */
+	if (type == SOCK_DGRAM) {
+		err = setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY,
+				 &on, sizeof(on));
+		if (err != 0) {
+			perror("setsockopt IPV6_V6ONLY");
+			goto out_err;
+		}
+	}
 
  	memset(&addr, 0, sizeof(addr));
 	addr.sin6_family = AF_INET6;
 	addr.sin6_port = htons(port);
 	addr.sin6_addr = in6addr_any;
 	addr.sin6_flowinfo = 0;
-	/* the following gives error "structure has no member named 
-	   sin6_scope_id'" on gaijin:
-	   addr.sin6_scope_id = 0; */
 	
-	if (bind(fd, (struct sockaddr *)&addr, sizeof(struct sockaddr_in6)) < 0) {
+	if (bind(fd, (struct sockaddr *)&addr,
+		 sizeof(struct sockaddr_in6)) < 0) {
 		perror("bind");
-		close(fd);
-		exit(1);
+		err = -1;
+		goto out_err;
 	}
 
 	if (type == SOCK_STREAM) {
 		if (listen(fd, 1) < 0) {
 			perror("listen");
-			close(fd);
-			exit(1);
+			err = -1;
+			goto out_err;
 		}
 	}
 
 out_err:
+	if (err) {
+		close(fd);
+		fd = -1;
+	}
 
-	return(fd);
+	return fd;
 }
 
 int main_server_tcp(int serversock) {
@@ -119,34 +127,26 @@ out_err:
 	return err;
 }
 
-int udp_send_msg(int serversock, uint8_t *data, size_t data_len,
-		 struct sockaddr *local_addr,
-		 struct sockaddr *peer_addr) {
+int create_udp_ipv4_socket(in_port_t local_port) {
 	int ipv4_sock = -1, err = 0, on = 1, sendnum;
-	int is_ipv4 = ((peer_addr->sa_family == AF_INET) ? 1 : 0);
-//	uint8_t cmsgbuf[CMSG_SPACE(sizeof(struct in6_addr)) +
-//			CMSG_SPACE(sizeof(struct in6_pktinfo))];
-	uint8_t cmsgbuf[CMSG_SPACE(sizeof(struct in6_pktinfo))];
-        struct cmsghdr *cmsg = (struct cmsghdr *) cmsgbuf;
-	struct msghdr msg;
-	struct iovec iov;
-	union {
-		struct in_pktinfo *in4;
-		struct in6_pktinfo *in6;
-	} pktinfo;
+	struct sockaddr_in inaddr_any;
 
 	/* IPv6 "server" sockets support incoming IPv4 packets with
 	   IPv4-in-IPv6 format. However, outgoing packets with IPv4-in-IPv6
 	   formatted address stop working in some kernel version. Here
 	   we create a socket for sending IPv4 packets. */
-	ipv4_sock = socket(AF_INET, SOCK_STREAM, 0);
+	ipv4_sock = socket(AF_INET, SOCK_DGRAM, 0);
 	if (ipv4_sock < 0) {
 		printf("ipv4 socket\n");
 		err = -1;
 		goto out_err;
 	}
 
-	//err = bind(ipv4_sock, );
+	err = setsockopt(ipv4_sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+	if (err != 0) {
+		perror("setsockopt SO_REUSEADDR");
+		goto out_err;
+	}
 
         err = setsockopt(ipv4_sock, IPPROTO_IP,
 			 IP_PKTINFO, &on, sizeof(on));
@@ -155,16 +155,64 @@ int udp_send_msg(int serversock, uint8_t *data, size_t data_len,
 		goto out_err;
 	}
 
-	/* send only the data we received (notice that there is
-	   always a \0 in the end of the string) */
-	msg.msg_name = local_addr;
+	/* Weird, but we have to set this option to receive
+	   IPv4 addresses for UDP. We don't get them in mapped format. */ 
+        err = setsockopt(ipv4_sock, IPPROTO_IP,
+			 IP_PKTINFO, &on, sizeof(on));
+	if (err != 0) {
+		perror("setsockopt IP_PKTINFO");
+		goto out_err;
+	}
+
+	_HIP_DEBUG("my local port %d\n", local_port);
+
+	inaddr_any.sin_family = AF_INET;
+	inaddr_any.sin_port = htons(local_port);
+	inaddr_any.sin_addr.s_addr = htonl(INADDR_ANY);
+	err = bind(ipv4_sock, (struct sockaddr *) &inaddr_any,
+		   sizeof(inaddr_any));
+	if (err) {
+		perror("bind\n");
+		goto out_err;
+	}
+
+out_err:
+	if (err == 0)
+		return ipv4_sock;
+	else
+		return -1;
+
+}
+
+int udp_send_msg(int sock, uint8_t *data, size_t data_len,
+		 struct sockaddr *local_addr,
+		 struct sockaddr *peer_addr) {
+	int err = 0, on = 1, sendnum;
+	int is_ipv4 = ((peer_addr->sa_family == AF_INET) ? 1 : 0);
+	uint8_t cmsgbuf[CMSG_SPACE(sizeof(struct in6_pktinfo))];
+        struct cmsghdr *cmsg; // = (struct cmsghdr *) cmsgbuf;
+	struct msghdr msg;
+	struct iovec iov;
+	union {
+		struct in_pktinfo *in4;
+		struct in6_pktinfo *in6;
+	} pktinfo;
+
+	/* The first memset is mandatory. Results in otherwise weird
+	   EMSGSIZE errors. */
+	memset(&msg, 0, sizeof(struct msghdr));	
+	memset(cmsgbuf, 0, sizeof(cmsgbuf));
+
+	/* Fill message header */
+
+	msg.msg_name = peer_addr;
 	if (is_ipv4)
 		msg.msg_namelen = sizeof(struct sockaddr_in);
 	else
 		msg.msg_namelen = sizeof(struct sockaddr_in6);
 	msg.msg_iov = &iov;
 	msg.msg_iovlen = 1;
-	msg.msg_control =  cmsgbuf;
+	msg.msg_control = cmsgbuf;
 	msg.msg_controllen = sizeof(cmsgbuf);
 	msg.msg_flags = 0;
 	
@@ -172,7 +220,7 @@ int udp_send_msg(int serversock, uint8_t *data, size_t data_len,
 	iov.iov_len = data_len;
 
 	/* Set local address */
-	memset(cmsg, 0, sizeof(cmsgbuf));
+	cmsg = CMSG_FIRSTHDR(&msg);
 	if (is_ipv4)
 		cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
 	else
@@ -183,15 +231,14 @@ int udp_send_msg(int serversock, uint8_t *data, size_t data_len,
 	pktinfo.in6 = (struct in6_pktinfo *) CMSG_DATA(cmsg);
 	if (is_ipv4)
 		pktinfo.in4->ipi_addr.s_addr =
-			((struct sockaddr_in *) peer_addr)->sin_addr.s_addr;
+			((struct sockaddr_in *) local_addr)->sin_addr.s_addr;
 	else
 		memcpy(&pktinfo.in6->ipi6_addr,
-		       &(((struct sockaddr_in6 *) peer_addr)->sin6_addr),
+		       &(((struct sockaddr_in6 *) local_addr)->sin6_addr),
 		       sizeof(struct in6_addr));
 	
-	/* send reply using the ORIGINAL src/dst address pair
-	   (preserved in the control field) */
-	sendnum = sendmsg((is_ipv4 ? ipv4_sock : serversock), &msg, 0);
+	/* Send reply using the ORIGINAL src/dst address pair */
+	sendnum = sendmsg(sock, &msg, 0);
 	if (sendnum < 0) {
 		perror("sendmsg");
 		err = -1;
@@ -202,24 +249,22 @@ int udp_send_msg(int serversock, uint8_t *data, size_t data_len,
 	printf("=== Server listening IN6ADDR_ANY ===\n");
 
 out_err:
-	if (ipv4_sock < 0)
-		close(ipv4_sock);
 
 	return err;
 }
 
-int main_server_udp(int serversock, in_port_t port) {
+int main_server_udp(int ipv4_sock, int ipv6_sock, in_port_t local_port) {
 	/* Use recvmsg/sendmsg instead of recvfrom/sendto because
 	   the latter combination may choose a different source
 	   HIT for the server */
 	int err = 0, on = 1, recvnum, sendnum, is_ipv4 = 0;
-	int cmsg_level, cmsg_type;
+	int cmsg_level, cmsg_type, highest_descriptor = -1;
+        fd_set read_fdset;
 	union {
 		struct sockaddr_in in4;
 		struct sockaddr_in6 in6;
-	} local_addr, peer_addr;
-	uint8_t cmsgbuf[CMSG_SPACE(sizeof(struct in6_addr)) +
-			CMSG_SPACE(sizeof(struct in6_pktinfo))];
+	} peer_addr, local_addr;
+	uint8_t cmsgbuf[CMSG_SPACE(sizeof(struct in6_pktinfo))];
 	uint8_t mylovemostdata[IP_MAXPACKET];
 	struct iovec iov;
         struct cmsghdr *cmsg = (struct cmsghdr *) cmsgbuf;
@@ -229,23 +274,52 @@ int main_server_udp(int serversock, in_port_t port) {
 	} pktinfo;
 	struct msghdr msg;
 
-	msg.msg_name = &local_addr.in6;
-	msg.msg_namelen = sizeof(struct sockaddr_in6);
-	msg.msg_iov = &iov;
-	msg.msg_iovlen = 1;
-	msg.msg_control = cmsgbuf;
-	msg.msg_controllen = sizeof(cmsgbuf);
-	msg.msg_flags = 0;
-		
-	iov.iov_base = mylovemostdata;
-	iov.iov_len = sizeof(mylovemostdata) - 1;
-		
-	printf("=== Server listening IN6ADDR_ANY ===\n");
+	FD_ZERO(&read_fdset);
+	FD_SET(ipv4_sock, &read_fdset);
+	FD_SET(ipv6_sock, &read_fdset);
+	highest_descriptor = maxof(2, ipv4_sock, ipv6_sock);
+
+	printf("=== Server listening INADDR_ANY/IN6ADDR_ANY ===\n");
 	
-	while((recvnum = recvmsg(serversock, &msg, 0)) >= 0) {
+	while(select((highest_descriptor + 1), &read_fdset,
+		     NULL, NULL, NULL)) {
+
+		/* XX FIXME: receiving two packets at the same time */
+
+		if (FD_ISSET(ipv4_sock, &read_fdset)) {
+			is_ipv4 = 1;
+			//FD_CLR(ipv4_sock, &read_fdset);
+		} else if (FD_ISSET(ipv6_sock, &read_fdset)) {
+			is_ipv4 = 0;
+			//FD_CLR(ipv6_sock, &read_fdset);
+		} else {
+			printf("Unhandled select event\n");
+			goto reset;
+		}
+
+		msg.msg_name = &peer_addr.in6;
+		msg.msg_namelen = sizeof(struct sockaddr_in6);
+		msg.msg_iov = &iov;
+		msg.msg_iovlen = 1;
+		msg.msg_control = cmsgbuf;
+		msg.msg_controllen = sizeof(cmsgbuf);
+		msg.msg_flags = 0;
+		
+		iov.iov_base = mylovemostdata;
+		iov.iov_len = sizeof(mylovemostdata);
+		
+		memset(mylovemostdata, 0, sizeof(mylovemostdata));
+		memset(&peer_addr, 0, sizeof(peer_addr));
+		memset(cmsgbuf, 0, sizeof(cmsgbuf));
+
+		recvnum = recvmsg((is_ipv4 ? ipv4_sock : ipv6_sock), &msg, 0);
+		if (recvnum < 0) {
+			perror("recvmsg\n");
+			goto reset;
+		}
 		printf("Received %d bytes\n", recvnum);
 
-		is_ipv4 = IN6_IS_ADDR_V4MAPPED(&local_addr.in6.sin6_addr);
+		//is_ipv4 = IN6_IS_ADDR_V4MAPPED(&peer_addr.in6.sin6_addr);
 	
 		cmsg_level = (is_ipv4) ? IPPROTO_IP : IPPROTO_IPV6;
 		cmsg_type = (is_ipv4) ? IP_PKTINFO : IPV6_2292PKTINFO;
@@ -264,59 +338,53 @@ int main_server_udp(int serversock, in_port_t port) {
 			}
 		}
 	
-		HIP_DEBUG_IN6ADDR("local addr", &local_addr.in6.sin6_addr);
-		
 		if (is_ipv4) {
-			peer_addr.in4.sin_family = AF_INET;
-			peer_addr.in4.sin_port = htons(port);
-			peer_addr.in4.sin_addr.s_addr =
+			local_addr.in4.sin_family = AF_INET;
+			local_addr.in4.sin_port = htons(local_port);
+			//local_addr.in4.sin_port = peer_addr.in6.sin6_port;
+			local_addr.in4.sin_addr.s_addr =
 				pktinfo.in4->ipi_addr.s_addr;
+			HIP_DEBUG_INADDR("local addr",
+					 &local_addr.in4.sin_addr);
+			HIP_DEBUG("local port %d\n",
+				  ntohs(local_addr.in4.sin_port));
 			HIP_DEBUG_INADDR("peer addr",
 					 &peer_addr.in4.sin_addr);
+			HIP_DEBUG("peer port %d\n",
+				  ntohs(peer_addr.in4.sin_port));
+			
 		} else {
-			peer_addr.in6.sin6_family = AF_INET6;
-			memcpy(&peer_addr.in6.sin6_addr,
+			local_addr.in6.sin6_family = AF_INET6;
+			memcpy(&local_addr.in6.sin6_addr,
 			       &pktinfo.in6->ipi6_addr,
 			       sizeof(struct in6_addr));
-			peer_addr.in6.sin6_port = htons(port);
+			local_addr.in6.sin6_port = htons(local_port);
+			HIP_DEBUG_IN6ADDR("local addr",
+					  &local_addr.in6.sin6_addr);
+			HIP_DEBUG("local port %d\n",
+				  ntohs(local_addr.in6.sin6_port));
 			HIP_DEBUG_IN6ADDR("peer addr",
 					  &peer_addr.in6.sin6_addr);
+			HIP_DEBUG("peer port %d\n",
+				  ntohs(peer_addr.in6.sin6_port));
 		}
-	
-		/* With IPv6-mapped IPv4 addresses, the peer address is mapped
-		   (and the local isn't in pktinfo). Convert it to IPv4 address
-		   or otherwise sendmsg() rejects it. */
-		if (is_ipv4) {
-			struct sockaddr_in sin;
-			sin.sin_family = AF_INET;
-			sin.sin_port = local_addr.in6.sin6_port;
-			IPV6_TO_IPV4_MAP(&local_addr.in6.sin6_addr,
-					 &sin.sin_addr);
-			//sin.sin_addr.s_addr = htonl(sin.sin_addr.s_addr);
-			memset(&local_addr, 0, sizeof(local_addr));
-			memcpy(&local_addr, &sin, sizeof(sin));
-			_HIP_DEBUG_INADDR("local addr", &sin.sin_addr);
-		}
-	
-		err = udp_send_msg(serversock, mylovemostdata,
-				   recvnum,
+
+		err = udp_send_msg((is_ipv4 ? ipv4_sock : ipv6_sock),
+				   mylovemostdata, recvnum,
 				   (struct sockaddr *) &local_addr,
 				   (struct sockaddr *) &peer_addr);
 		if (err) {
 			printf("Failed to echo data back\n");
 		}
 
-		/* reset all fields for the next round */
-		memset(mylovemostdata, 0, sizeof(mylovemostdata));
-		memset(&local_addr, 0, sizeof(local_addr));
-		msg.msg_namelen = sizeof(local_addr);
-		memset(cmsgbuf, 0, sizeof(cmsgbuf));
-		iov.iov_len = sizeof(mylovemostdata) - 1;
-		msg.msg_namelen = sizeof(local_addr);
+	reset:
+
+		FD_ZERO(&read_fdset);
+		FD_SET(ipv4_sock, &read_fdset);
+		FD_SET(ipv6_sock, &read_fdset);
 	}
 
 out_err:
-
 	return err;
 }
 
@@ -331,22 +399,38 @@ out_err:
  */
 int main_server(int type, in_port_t port)
 {
-	int serversock = 0, err = 0;
+	int ipv6_sock = 0, err = 0, ipv4_sock = -1;
 	
-	serversock = create_serversocket(type, port);
-	if (serversock < 0)
+	ipv6_sock = create_serversocket(type, port);
+	if (ipv6_sock < 0)
 		err = -1;
+
+	/* Create a separate IPv4 socket for receiving and sending UDP
+	   packets even though a single IPv6 socket could be used
+	   for receiving IPv4 packets, but not sending them. */
+	if (type == SOCK_DGRAM) {
+		ipv4_sock = create_udp_ipv4_socket(port);
+		if (ipv4_sock < 0) {
+			printf("Could not create ipv4 socket\n");
+			err = -1;
+			goto out_err;
+		}
+	}
   
 	while(err == 0) {
 		if (type == SOCK_STREAM) {
-			err = main_server_tcp(serversock);
+			err = main_server_tcp(ipv6_sock);
 		} else {
-			err = main_server_udp(serversock, port);
+			err = main_server_udp(ipv4_sock, ipv6_sock, port);
 		}
 	}
 
-	if (serversock)
-		close(serversock);
+out_err:
+
+	if (ipv6_sock)
+		close(ipv6_sock);
+	if (ipv4_sock < 0)
+		close(ipv4_sock);
 	return err;
 }
 

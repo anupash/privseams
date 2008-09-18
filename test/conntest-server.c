@@ -7,7 +7,6 @@
  *
  * Todo:
  * - rewrite/refactor for better modularity
- * - reuse port!
  */
 
 #if HAVE_CONFIG_H
