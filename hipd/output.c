@@ -1346,6 +1346,8 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	pkt_info = CMSG_DATA(cmsg);
 	pkt_info->ipi_addr.s_addr = src4.sin_addr.s_addr;
 
+	memset(&hdr, 0, sizeof(hdr)); /* bug id 621 */
+
 	hdr.msg_name = &dst4;
 	hdr.msg_namelen = sizeof(dst4);
 	iov.iov_base = msg;
