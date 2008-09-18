@@ -29,6 +29,11 @@ endif
 
 CFLAGS = $(hipl_common_cflags) # -L$(HIPL_LIBINET6_LIB)
 INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
+
+if !HIP_OPENWRT
+  CFLAGS += -L$(HIPL_LIBINET6_LIB)
+  INCLUDES += -I$(HIPL_LIBINET6_INCLUDE)
+endif
   
 include_HEADERS = hipconftool.h
 
