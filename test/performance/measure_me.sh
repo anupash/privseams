@@ -496,7 +496,8 @@ then
   read -p "Plot histograms: [ENTER]"
   TMP_DIR=`pwd`
   cd $BASE_DIR
-  gnuplot $STATS_DIR/plot-*
+  gnuplot $STATS_DIR/plot-no_midfw
+  gnuplot $STATS_DIR/plot-with_pcfw
   cd $TMP_DIR
 fi
 
