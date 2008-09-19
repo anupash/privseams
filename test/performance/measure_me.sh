@@ -5,7 +5,7 @@ DST_IPv4=192.168.1.103
 DST_IPv6=0
 DST_HIT=2001:0013:8cee:d7b1:cb71:9ea1:148c:0736
 ROUTE_TOv4=192.168.1.101
-ROUTE_TOv6=
+ROUTE_TOv6=0
 
 MEASUREMENT_COUNT=20
 
@@ -128,7 +128,7 @@ else
   FILE_PREFIX=$FILE_PREFIX"no_midfw-"
 fi
 
-if [ $WITH_WANEM -eg "1" ]
+if [ $WITH_WANEM -eq "1" ]
 then
   FILE_PREFIX=$FILE_PREFIX"with_wanem-"
   if [ $WITH_REORDER -eq "1" ]
