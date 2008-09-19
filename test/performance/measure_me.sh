@@ -33,6 +33,7 @@ RUN_USERIPSEC=0
 RUN_ESPEXT=0
 WITH_REORDER=0
 WITH_MID=0
+WITH_WANEM=0
 MEASURE_RTT=0
 MEASURE_TPUT=0
 VERIFY_PATH=0
@@ -45,7 +46,7 @@ NO_ARGS=0
 
 if [ $# -eq "$NO_ARGS" ]
 then
-  echo "Usage: `basename $0` options: -a <family> -t <type> [-defimMorv] [-p <type>]"
+  echo "Usage: `basename $0` options: -a <family> -t <type> [-defilmMorvw] [-p <type>]"
   echo
   echo "  -a <family>  = address family (4 - IPv4, 6 - IPv6)"
   echo "  -t <type>    = device type (1 - client, 2 - middlebox, 3 - server)"
@@ -55,6 +56,7 @@ then
   echo "  -e           = start hipfw with ESP extension (no conntrack)"
   echo "  -r           = measure RTT"
   echo "  -p <type>    = measure throughput (1 - tcp, 2 - udp, 3 - both)"
+  echo "  -w           = tests are run with WANem on the route"
   echo "  -o           = tests are run with packet reordering using WANem"
   echo "  -m           = tests are run with hipfw on middlebox-PC"
   echo "  -M           = tests are run with hipfw on a router"
@@ -64,7 +66,7 @@ then
   exit 0
 fi
 
-while getopts ":a:defit:lmMop:rv" CMD_OPT
+while getopts ":a:defit:lmMop:rvw" CMD_OPT
 do
   case $CMD_OPT in
     a) ADDR_FAMILY=$OPTARG;;
@@ -81,10 +83,12 @@ do
     l) DO_PLOT=1;;
     m) WITH_MID=1;;
     M) WITH_MID=2;;
-    o) WITH_REORDER=1;;
+    o) WITH_WANEM=1
+       WITH_REORDER=1;;
     p) MEASURE_TPUT=$OPTARG;;
     r) MEASURE_RTT=1;;
     v) VERIFY_PATH=1;;
+    w) WITH_WANEM=1;;
     *) echo "Unknown option specified."
        exit 1;;
   esac
@@ -124,11 +128,17 @@ else
   FILE_PREFIX=$FILE_PREFIX"no_midfw-"
 fi
 
-if [ $WITH_REORDER -eq "1" ]
+if [ $WITH_WANEM -eg "1" ]
 then
-  FILE_PREFIX=$FILE_PREFIX"with_reorder-"
+  FILE_PREFIX=$FILE_PREFIX"with_wanem-"
+  if [ $WITH_REORDER -eq "1" ]
+  then
+    FILE_PREFIX=$FILE_PREFIX"with_reorder-"
+  else
+    FILE_PREFIX=$FILE_PREFIX"no_reorder-"
+  fi
 else
-  FILE_PREFIX=$FILE_PREFIX"no_reorder-"
+  FILE_PREFIX=$FILE_PREFIX"no_wanem-"
 fi
 
 
@@ -319,21 +329,21 @@ then
 
   if [ $RUN_HIPD -eq "1" ]
   then
-    ping6 -c $MEASUREMENT_COUNT $DST_HIT | tee --append $OUTPUT_DIR/$FILE
+    ping6 -c $MEASUREMENT_COUNT $DST_HIT | tee $OUTPUT_DIR/$FILE
   elif [ $ADDR_FAMILY -eq "4" ]
   then
-    ping -c $MEASUREMENT_COUNT $DST_IPv4 | tee --append $OUTPUT_DIR/$FILE
+    ping -c $MEASUREMENT_COUNT $DST_IPv4 | tee $OUTPUT_DIR/$FILE
   elif [ $ADDR_FAMILY -eq "6" ]
   then
-    ping6 -c $MEASUREMENT_COUNT $DST_IPv6 | tee --append $OUTPUT_DIR/$FILE
+    ping6 -c $MEASUREMENT_COUNT $DST_IPv6 | tee $OUTPUT_DIR/$FILE
   else
     echo "ERROR: Neither HIT nor correct address family specified."
     exit 1
   fi
 
   # output post-processing
-  grep 'from' $OUTPUT_DIR/$FILE | tr '=' ' ' | $STATS_DIR/stats.pl 95 type '(time)\s+(\S+)' | tee --append $STAGING_DIR/$FILE
-  grep 'time' $STAGING_DIR/$FILE | awk '{printf("#avg\tstd_dev\n"); printf("%.3f\t%.3f\n", $2, $3)}' | tee --append $RESULTS_DIR/$FILE
+  grep 'from' $OUTPUT_DIR/$FILE | tr '=' ' ' | $STATS_DIR/stats.pl 95 type '(time)\s+(\S+)' | tee $STAGING_DIR/$FILE
+  grep 'time' $STAGING_DIR/$FILE | awk '{printf("#avg\tstd_dev\n"); printf("%.3f\t%.3f\n", $2, $3)}' | tee $RESULTS_DIR/$FILE
   # symlink newest results to plot_data dir
   ln -sf $RESULTS_DIR/$FILE $PLOT_DATA_DIR/$FILE
 fi
@@ -354,7 +364,7 @@ then
     then
       while [ $i -lt $MEASUREMENT_COUNT ]
       do
-        iperf -V --client $DST_HIT | tee --append $OUTPUT_DIR/$FILE
+        iperf -V --client $DST_HIT | tee $OUTPUT_DIR/$FILE
         i=`expr $i + 1`
         # for some reason iperf needs this to reset the timer
         # for throughput calc
@@ -364,7 +374,7 @@ then
     then
       while [ $i -lt $MEASUREMENT_COUNT ]
       do
-        iperf --client $DST_IPv4 | tee --append $OUTPUT_DIR/$FILE
+        iperf --client $DST_IPv4 | tee $OUTPUT_DIR/$FILE
         i=`expr $i + 1`
         sleep 2
       done
@@ -372,7 +382,7 @@ then
     then
       while [ $i -lt $MEASUREMENT_COUNT ]
       do
-        iperf -V --client $DST_IPv6 | tee --append $OUTPUT_DIR/$FILE
+        iperf -V --client $DST_IPv6 | tee $OUTPUT_DIR/$FILE
         i=`expr $i + 1`
         sleep 2
       done
@@ -382,8 +392,8 @@ then
     fi
 
     # client-side output post-processing
-    grep 'MBytes' $OUTPUT_DIR/$FILE | $STATS_DIR/stats.pl 95 type '(MBytes)\s+(\S+)' | tee --append $STAGING_DIR/$FILE
-    grep 'MBytes' $STAGING_DIR/$FILE | awk '{printf("#avg\tstd_dev\n"); printf("%.3f\t%.3f\n", $2, $3)}' | tee --append $RESULTS_DIR/$FILE
+    grep 'MBytes' $OUTPUT_DIR/$FILE | $STATS_DIR/stats.pl 95 type '(MBytes)\s+(\S+)' | tee $STAGING_DIR/$FILE
+    grep 'MBytes' $STAGING_DIR/$FILE | awk '{printf("#avg\tstd_dev\n"); printf("%.3f\t%.3f\n", $2, $3)}' | tee $RESULTS_DIR/$FILE
     # symlink newest results to plot_data dir
     ln -sf $RESULTS_DIR/$FILE $PLOT_DATA_DIR/$FILE
 
@@ -424,7 +434,7 @@ then
     then
       while [ $i -lt $MEASUREMENT_COUNT ]
       do
-        iperf -V --client $DST_HIT --udp --len 1370 --bandwidth 100M | tee --append $OUTPUT_DIR/$FILE
+        iperf -V --client $DST_HIT --udp --len 1370 --bandwidth 100M | tee $OUTPUT_DIR/$FILE
         i=`expr $i + 1`
         sleep 2
       done 
@@ -432,7 +442,7 @@ then
     then
       while [ $i -lt $MEASUREMENT_COUNT ]
       do
-        iperf --client $DST_IPv4 --udp --len 1370 --bandwidth 100M | tee --append $OUTPUT_DIR/$FILE
+        iperf --client $DST_IPv4 --udp --len 1370 --bandwidth 100M | tee $OUTPUT_DIR/$FILE
         i=`expr $i + 1`
         sleep 2
       done
@@ -440,7 +450,7 @@ then
     then
       while [ $i -lt $MEASUREMENT_COUNT ]
       do
-        iperf -V --client $DST_IPv6 --udp --len 1370 --bandwidth 100M | tee --append $OUTPUT_DIR/$FILE
+        iperf -V --client $DST_IPv6 --udp --len 1370 --bandwidth 100M | tee $OUTPUT_DIR/$FILE
         i=`expr $i + 1`
         sleep 2
       done
@@ -450,8 +460,8 @@ then
     fi
 
     # client-side output post-processing
-    grep '%' $OUTPUT_DIR/$FILE | $STATS_DIR/stats.pl 95 type '(MBytes)\s+(\S+)' | tee --append $STAGING_DIR/$FILE
-    grep 'MBytes' $STAGING_DIR/$FILE | awk '{printf("#avg\tstd_dev\n"); printf("%.3f\t%.3f\n", $2, $3)}' | tee --append $RESULTS_DIR/$FILE
+    grep '%' $OUTPUT_DIR/$FILE | $STATS_DIR/stats.pl 95 type '(MBytes)\s+(\S+)' | tee $STAGING_DIR/$FILE
+    grep 'MBytes' $STAGING_DIR/$FILE | awk '{printf("#avg\tstd_dev\n"); printf("%.3f\t%.3f\n", $2, $3)}' | tee $RESULTS_DIR/$FILE
     # symlink newest results to plot_data dir
     ln -sf $RESULTS_DIR/$FILE $PLOT_DATA_DIR/$FILE
 
