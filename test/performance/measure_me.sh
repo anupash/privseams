@@ -142,37 +142,39 @@ else
 fi
 
 
-# create the directories, if they don't exist yet
-if [ ! -e $BASE_DIR ]
+# create the directories for client, if they don't exist yet
+if [ $DEVICE_TYPE -eq "1" ]
 then
-  mkdir $BASE_DIR
-fi
+  if [ ! -e $BASE_DIR ]
+  then
+    mkdir $BASE_DIR
+  fi
 
-if [ ! -e $EXT_BASE_DIR ]
-then
-  mkdir $EXT_BASE_DIR
-fi
+  if [ ! -e $EXT_BASE_DIR ]
+  then
+    mkdir $EXT_BASE_DIR
+  fi
 
-if [ ! -e  $OUTPUT_DIR ]
-then
-  mkdir $OUTPUT_DIR
-fi
+  if [ ! -e  $OUTPUT_DIR ]
+  then
+    mkdir $OUTPUT_DIR
+  fi
 
-if [ ! -e $STAGING_DIR ]
-then
-  mkdir $STAGING_DIR
-fi
+  if [ ! -e $STAGING_DIR ]
+  then
+    mkdir $STAGING_DIR
+  fi
 
-if [ ! -e $RESULTS_DIR ]
-then
-  mkdir $RESULTS_DIR
-fi
+  if [ ! -e $RESULTS_DIR ]
+  then
+    mkdir $RESULTS_DIR
+  fi
 
-if [ ! -e $PLOT_DATA_DIR ]
-then
-  mkdir $PLOT_DATA_DIR
+  if [ ! -e $PLOT_DATA_DIR ]
+  then
+    mkdir $PLOT_DATA_DIR
+  fi
 fi
-
 
 # set hipfw parameters
 if [ $RUN_USERIPSEC -eq "1" ]
@@ -201,7 +203,6 @@ fi
 
 
 # TODO check mandatory options
-# TODO check the necessary files and dirs
 
 
 # disable redirection announcement and accept on all devices
@@ -362,9 +363,15 @@ then
   if [ $DEVICE_TYPE -eq "1" ]
   then
     FILE=$FILE_PREFIX"tcp"$FILE_POSTFIX
-    # remove old measurement 
-    rm $OUTPUT_DIR/$FILE
+    
+    # remove old measurement
+    if [ -e $OUTPUT_DIR/$FILE ]
+    then
+      rm $OUTPUT_DIR/$FILE
+    fi
+    
     i=0
+
     if [ $RUN_HIPD -eq "1" ]
     then
       while [ $i -lt $MEASUREMENT_COUNT ]
@@ -434,9 +441,15 @@ then
   if [ $DEVICE_TYPE -eq "1" ]
   then
     FILE=$FILE_PREFIX"udp"$FILE_POSTFIX
+    
     # remove old measurement
-    rm $OUTPUT_DIR/$FILE
+    if [ -e $OUTPUT_DIR/$FILE ]
+    then
+      rm $OUTPUT_DIR/$FILE
+    fi
+
     i=0
+
     if [ $RUN_HIPD -eq "1" ]
     then
       while [ $i -lt $MEASUREMENT_COUNT ]
