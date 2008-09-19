@@ -362,12 +362,14 @@ then
   if [ $DEVICE_TYPE -eq "1" ]
   then
     FILE=$FILE_PREFIX"tcp"$FILE_POSTFIX
+    # remove old measurement 
+    rm $OUTPUT_DIR/$FILE
     i=0
     if [ $RUN_HIPD -eq "1" ]
     then
       while [ $i -lt $MEASUREMENT_COUNT ]
       do
-        iperf -V --client $DST_HIT | tee $OUTPUT_DIR/$FILE
+        iperf -V --client $DST_HIT | tee --append $OUTPUT_DIR/$FILE
         i=`expr $i + 1`
         # for some reason iperf needs this to reset the timer
         # for throughput calc
@@ -377,7 +379,7 @@ then
     then
       while [ $i -lt $MEASUREMENT_COUNT ]
       do
-        iperf --client $DST_IPv4 | tee $OUTPUT_DIR/$FILE
+        iperf --client $DST_IPv4 | tee --append $OUTPUT_DIR/$FILE
         i=`expr $i + 1`
         sleep 2
       done
@@ -385,7 +387,7 @@ then
     then
       while [ $i -lt $MEASUREMENT_COUNT ]
       do
-        iperf -V --client $DST_IPv6 | tee $OUTPUT_DIR/$FILE
+        iperf -V --client $DST_IPv6 | tee --append $OUTPUT_DIR/$FILE
         i=`expr $i + 1`
         sleep 2
       done
@@ -432,12 +434,14 @@ then
   if [ $DEVICE_TYPE -eq "1" ]
   then
     FILE=$FILE_PREFIX"udp"$FILE_POSTFIX
+    # remove old measurement
+    rm $OUTPUT_DIR/$FILE
     i=0
     if [ $RUN_HIPD -eq "1" ]
     then
       while [ $i -lt $MEASUREMENT_COUNT ]
       do
-        iperf -V --client $DST_HIT --udp --len 1370 --bandwidth 100M | tee $OUTPUT_DIR/$FILE
+        iperf -V --client $DST_HIT --udp --len 1370 --bandwidth 100M | tee --append $OUTPUT_DIR/$FILE
         i=`expr $i + 1`
         sleep 2
       done 
@@ -445,7 +449,7 @@ then
     then
       while [ $i -lt $MEASUREMENT_COUNT ]
       do
-        iperf --client $DST_IPv4 --udp --len 1370 --bandwidth 100M | tee $OUTPUT_DIR/$FILE
+        iperf --client $DST_IPv4 --udp --len 1370 --bandwidth 100M | tee --append $OUTPUT_DIR/$FILE
         i=`expr $i + 1`
         sleep 2
       done
@@ -453,7 +457,7 @@ then
     then
       while [ $i -lt $MEASUREMENT_COUNT ]
       do
-        iperf -V --client $DST_IPv6 --udp --len 1370 --bandwidth 100M | tee $OUTPUT_DIR/$FILE
+        iperf -V --client $DST_IPv6 --udp --len 1370 --bandwidth 100M | tee --append $OUTPUT_DIR/$FILE
         i=`expr $i + 1`
         sleep 2
       done
