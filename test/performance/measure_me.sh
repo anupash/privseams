@@ -251,7 +251,7 @@ then
 fi
 
 # set up routes on all devices where the next hop is specified
-if [ $ROUTE_TOv4 -ne "0" -o $ROUTE_TOv6 -ne "0" ]
+if [ "$ROUTE_TOv4" != "0" -o "$ROUTE_TOv6" != "0" ]
 then
   if [ $ADDR_FAMILY -eq "4" ]
   then
