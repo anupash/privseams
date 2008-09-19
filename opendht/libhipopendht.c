@@ -55,12 +55,18 @@ int init_dht_gateway_socket(int sockfd)
  * @return Returns 0 on success otherwise -1
  */
 int resolve_dht_gateway_info(char * gateway_name, 
-                             struct addrinfo ** gateway)
+                             struct addrinfo ** gateway,
+			     uint32_t ttl,
+			     uint16_t port)
 {
     struct addrinfo hints;
     struct sockaddr_in *sa = NULL;
     int error;
-    
+    /*char *port_to_use = "5851";
+
+    if(port != 0)
+	port_to_use = itoa(port);*/
+
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
@@ -69,7 +75,7 @@ int resolve_dht_gateway_info(char * gateway_name,
     
     error = getaddrinfo(gateway_name, "5851", &hints, gateway);
     if (error != 0)
-        HIP_DEBUG("OpenDHT gateway resolving failed\n");
+        HIP_DEBUG("OpenDHT gateway resolving failed %s\n", gateway_name);
     else
 	{
             sa = (struct sockaddr_in *) (*gateway)->ai_addr;

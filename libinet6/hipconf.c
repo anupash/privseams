@@ -19,7 +19,6 @@
  * @todo    read the output message from send_msg?
  */
 #include "hipconf.h"
-#include "libhipopendht.h"
 
 /** A help string containing the usage of @c hipconf. */
 const char *hipconf_usage =
@@ -1260,7 +1259,8 @@ int hip_conf_handle_puzzle(hip_common_t *msg, int action,
 	  goto out_err;
      }
 
-     if((msg_type == SO_HIP_CONF_PUZZLE_GET) || (msg_type == SO_HIP_CONF_PUZZLE_SET)){
+     if((msg_type == SO_HIP_CONF_PUZZLE_GET)
+	     || (msg_type == SO_HIP_CONF_PUZZLE_SET)){
 	  goto out_err;
      }
 
@@ -1416,12 +1416,12 @@ int hip_conf_handle_set(hip_common_t *msg, int action, const char *opt[], int op
  */
 int hip_conf_handle_gw(hip_common_t *msg, int action, const char *opt[], int optc)
 {
-        int err,out_err;
+        int err, out_err;
         int status = 0;
         int ret;
         struct in_addr ip_gw;
-        in6_addr_t ip_gw_mapped;
-        struct addrinfo new_gateway;
+        struct in6_addr ip_gw_mapped;
+        struct addrinfo *new_gateway = NULL;
         struct hip_opendht_gw_info *gw_info;
 
         HIP_INFO("Resolving new gateway for openDHT %s\n", opt[0]);
@@ -1431,17 +1431,19 @@ int hip_conf_handle_gw(hip_common_t *msg, int action, const char *opt[], int opt
                 err = -EINVAL;
                 goto out_err;
         }
-	
-        memset(&new_gateway, '0', sizeof(new_gateway));
+
+/*new_gateway = malloc(sizeof(struct addrinfo));
+memset(new_gateway, 0, sizeof(struct addrinfo));
+        ////memset(new_gateway, '0', sizeof(struct addrinfo *));
         ret = 0;
-        /* resolve the new gateway */
-        /* warning: passing argument 1 of 'resolve_dht_gateway_info' discards
-	   qualifiers from pointer target type. 04.07.2008 */
-	/* warning: passing argument 2 of 'resolve_dht_gateway_info' from
-	   incompatible pointer type. 04.07.2008 */
+        // resolve the new gateway 
+        // warning: passing argument 1 of 'resolve_dht_gateway_info' discards
+	//   qualifiers from pointer target type. 04.07.2008 
+	// warning: passing argument 2 of 'resolve_dht_gateway_info' from
+	//   incompatible pointer type. 04.07.2008 
         ret = resolve_dht_gateway_info(opt[0], &new_gateway);
         if (ret < 0) goto out_err;
-        struct sockaddr_in *sa = (struct sockaddr_in *)new_gateway.ai_addr;
+        struct sockaddr_in *sa = (struct sockaddr_in *)new_gateway->ai_addr;
 
         HIP_INFO("Gateway addr %s, port %s, TTL %s\n",
 		 inet_ntoa(sa->sin_addr), opt[1], opt[2]);
@@ -1457,17 +1459,23 @@ int hip_conf_handle_gw(hip_common_t *msg, int action, const char *opt[], int opt
                 HIP_ERROR("inet_pton: %s: not a valid network address\n", opt[0]);
                 err = -EINVAL;
                 goto out_err;
-        }
+        }*/
 
+	ret = inet_pton(AF_INET, opt[0], &ip_gw);
+	IPV4_TO_IPV6_MAP(&ip_gw, &ip_gw_mapped);
 
-        err = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped, atoi(opt[2]), atoi(opt[1]));
-        if (err) {
+HIP_DEBUG("*** %s", opt[0]);
+HIP_DEBUG_IN6ADDR("*** ", &ip_gw_mapped);
+
+        err = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped,
+					      atoi(opt[2]), atoi(opt[1]));
+        if(err){
                 HIP_ERROR("build param hit failed: %s\n", strerror(err));
                 goto out_err;
         }
 
         err = hip_build_user_hdr(msg, SO_HIP_DHT_GW, 0);
-        if (err) {
+        if(err){
                 HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
                 goto out_err;
         }
@@ -1482,8 +1490,7 @@ int hip_conf_handle_gw(hip_common_t *msg, int action, const char *opt[], int opt
  *
  * @return       zero on success, or negative error value on error.
  */
-int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int optc)
-{
+int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int optc){
         int err = 0;
         char dht_response[1024];
         struct addrinfo * serving_gateway;
@@ -1491,17 +1498,76 @@ int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int op
         struct in_addr tmp_v4;
         char tmp_ip_str[21];
         int tmp_ttl, tmp_port;
-        int *pret;
+        int *pret, ret;
+	hip_hit_t hit = {0};
 
         /* ASK THIS INFO FROM DAEMON */
         HIP_INFO("Asking serving gateway info from daemon...\n");
-        HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW,0),-1,
+
+	//obtain the hit
+	ret = inet_pton(AF_INET6, opt[0], &hit);
+	if(ret < 0 && errno == EAFNOSUPPORT){
+		HIP_PERROR("inet_pton: not a valid address family\n");
+		err = -EAFNOSUPPORT;
+		goto out_err;
+	}else if(ret == 0){
+		HIP_ERROR("inet_pton: %s: not a valid network address\n", opt[0]);
+		err = -EINVAL;
+		goto out_err;
+	}
+
+	//attach the hit into the message
+	err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
+				    sizeof(in6_addr_t));
+	if(err){
+		HIP_ERROR("build param hit failed: %s\n", strerror(err));
+		goto out_err;
+	}
+
+
+
+
+////HIP_DEBUG("%s\n", opt[0]);
+////HIP_DEBUG_HIT("*** ", &hit);
+
+        /* Build a HIP message with socket option to get puzzle difficulty.*/
+
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW, 0),-1,
+				    "Building daemon header failed\n");
+	/* Send the message to the daemon. The daemon fills the message. */
+	HIP_IFE(hip_send_recv_daemon_info(msg), -ECOMM);
+/*
+          // Loop through all the parameters in the message just filled. 
+          while((current_param = hip_get_next_param(msg, current_param)) != NULL){
+               param_type = hip_get_param_type(current_param);
+               if(param_type == HIP_PARAM_HIT){
+                    //it was successful
+               }else if(param_type == HIP_PARAM_INT){
+                    diff = (int *)hip_get_param_contents_direct(current_param);
+               }else{
+			HIP_ERROR("Unrelated parameter in user "\
+				  "message.\n");
+               }
+          }
+*/
+
+
+
+
+
+
+
+
+
+
+/*
+        HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW, 0),-1,
                  "Building daemon header failed\n");
         HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "Send recv daemon info failed\n");
         HIP_IFEL(!(gw_info = hip_get_param(msg, HIP_PARAM_OPENDHT_GW_INFO)),-1,
                  "No gw struct found\n");
 
-        /* Check if DHT was on */
+        // Check if DHT was on
         if ((gw_info->ttl == 0) && (gw_info->port == 0)) {
                 HIP_INFO("DHT is not in use\n");
                 goto out_err;
@@ -1510,15 +1576,17 @@ int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int op
         tmp_ttl = gw_info->ttl;
         tmp_port = htons(gw_info->port);
         IPV6_TO_IPV4_MAP(&gw_info->addr, &tmp_v4);
-	/* warning: assignment from incompatible pointer type. 04.07.2008. */
+	// warning: assignment from incompatible pointer type. 04.07.2008.
         pret = inet_ntop(AF_INET, &tmp_v4, tmp_ip_str, 20);
         HIP_INFO("Got address %s, port %d, TTL %d from daemon\n",
                   tmp_ip_str, tmp_port, tmp_ttl);
 
-        HIP_IFEL(resolve_dht_gateway_info(tmp_ip_str, &serving_gateway),0,
+        HIP_IFEL(resolve_dht_gateway_info(tmp_ip_str, &serving_gateway, 0, 0),0,
                  "Resolve error!\n");
         HIP_IFEL(opendht_get_key(serving_gateway, opt[0], dht_response), 0,
                  "Get error!\n");
+*/
+
         HIP_INFO("Value received from the DHT %s\n",dht_response);
  out_err:
         return(err);

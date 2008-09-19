@@ -13,6 +13,7 @@
  */
 #include "user.h"
 
+
 int hip_sendto_user(const struct hip_common *msg, const struct sockaddr *dst){
         return sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
 		      0, (struct sockaddr *)dst, hip_sockaddr_len(dst));
@@ -271,10 +272,10 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 
         case SO_HIP_DHT_GW:
 	{
-		char tmp_ip_str[20];
-		int tmp_ttl, tmp_port;
+		char *tmp_ip_str[20];
+		int tmp_ttl = 0, tmp_port = 0;
 		const char *pret;
-		int ret;
+		int ret, s;
 		struct in_addr tmp_v4;
 		struct hip_opendht_gw_info *gw_info;
 
@@ -284,6 +285,12 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		tmp_ttl = gw_info->ttl;
 		tmp_port = htons(gw_info->port);
 
+/*
+char port_to_use[5];
+if(tmp_port != 0)
+    itoa(tmp_port, port_to_use, 10);
+HIP_DEBUG("*** %s\n", port_to_use);
+*/
 
 		IPV6_TO_IPV4_MAP(&gw_info->addr, &tmp_v4);
 		/**
@@ -293,13 +300,21 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		pret = inet_ntop(AF_INET, &tmp_v4, tmp_ip_str, 20);
 		HIP_DEBUG("Got address %s, port %d, TTL %d from hipconf\n",
 			  tmp_ip_str, tmp_port, tmp_ttl);
-		ret = resolve_dht_gateway_info (tmp_ip_str, &opendht_serving_gateway);
+		ret = resolve_dht_gateway_info(tmp_ip_str, &opendht_serving_gateway, tmp_ttl, tmp_port);
 		if (ret == 0)
 		{
 			HIP_DEBUG("Serving gateway changed\n");
 			hip_opendht_fqdn_sent = 0;
 			hip_opendht_hit_sent = 0;
 			hip_opendht_error_count = 0;
+
+			//connect to the new dht gw
+			s = init_dht_gateway_socket(s);
+			err = connect_dht_gateway(s, opendht_serving_gateway, 1);
+
+register_to_dht();
+			//pass the error back to hipconf
+			//TO DO
 		}
 		else
 		{
@@ -309,6 +324,11 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	break;
         case SO_HIP_DHT_SERVING_GW:
         {
+
+		err = hip_get_dht_mapping_for_HIT_msg(msg);
+		break;
+
+/*
 	        struct in_addr ip_gw;
 		struct in6_addr ip_gw_mapped;
 		int rett = 0, errr = 0;
@@ -332,7 +352,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
   		        errr = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped,
 							       opendht_serving_gateway_ttl,
 							       opendht_serving_gateway_port);
-		} else { /* not in use mark port and ttl to 0 so 'client' knows*/
+		} else { // not in use mark port and ttl to 0 so 'client' knows
   		        errr = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped, 0,0);
 		}
 
@@ -345,6 +365,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		        HIP_ERROR("Build hdr failed: %s\n", strerror(errr));
 		}
 		HIP_DEBUG("Building gw_info complete\n");
+*/
         }
         break;
         case SO_HIP_DHT_SET:

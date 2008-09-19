@@ -1385,6 +1385,7 @@ int hip_get_puzzle_difficulty_msg(struct hip_common *msg){
 	hip_hit_t *dst_hit = NULL;
 	hip_hit_t all_zero_hit = {0};
 
+	//obtain the hit
 	dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
 	
 #ifdef CONFIG_HIP_COOKIE
@@ -1425,5 +1426,37 @@ int hip_set_puzzle_difficulty_msg(struct hip_common *msg){
 #endif
 
 out_err:
+	return err;
+}
+
+
+//get the ip mapping from DHT
+int hip_get_dht_mapping_for_HIT_msg(struct hip_common *msg){
+	int err = 0, res = 0;
+	hip_hit_t *dst_hit = NULL;
+	hip_hit_t all_zero_hit = {0};
+	int s;
+unsigned char * key;
+//char val_hit[] = "2001:0018:2eab:f78b:f6c3:558e:7ac8:bebd";
+char val_hit[] = "2001:0012:9848:4114:755e:a798:ff6d:6efb";
+char dht_response[1400];
+
+	//obtain the hit
+	dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
+	
+memset(dht_response, '\0', sizeof(dht_response));
+
+if(hip_opendht_inuse == SO_HIP_DHT_ON){
+	s = init_dht_gateway_socket(s);
+	res = opendht_get_key(opendht_serving_gateway, dht_response, val_hit);
+}else{
+	//TO DO, return sth that indicates lack of dht support 
+}
+
+HIP_DEBUG("*** %s\n", dht_response);
+
+	hip_build_param_contents(msg, &res, HIP_PARAM_INT, sizeof(res));
+	
+ out_err:
 	return err;
 }

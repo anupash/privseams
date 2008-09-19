@@ -12,6 +12,7 @@
 
 #include <stdio.h>
 #include <stdint.h> // For uint8_t
+#include <stdlib.h>
 //#include <asm/byteorder.h>   // use instead #include <endian.h>
 #include "list.h"
 //#include "debug.h"
@@ -25,6 +26,7 @@
 #include "tcptimeout.h"
 #include "registration.h"
 #include "esp_prot_hipd_msg.h"
+
 
 extern struct addrinfo * opendht_serving_gateway;
 extern int opendht_serving_gateway_port;
