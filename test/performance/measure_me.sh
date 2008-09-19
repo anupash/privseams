@@ -22,6 +22,8 @@ FILE_POSTFIX=
 OUTPUT_DIR=$EXT_BASE_DIR/output
 STAGING_DIR=$EXT_BASE_DIR/staging
 RESULTS_DIR=$EXT_BASE_DIR/results
+PLOT_DIR=$BASE_DIR/plot
+PLOT_DATA_DIR=$PLOT_DIR/data
 
 # needed by the script - don't change these variables
 DEVICE_TYPE=0
@@ -152,6 +154,16 @@ fi
 if [ ! -e $RESULTS_DIR ]
 then
   mkdir $RESULTS_DIR
+fi
+
+if [ ! -e $PLOT_DIR ]
+then
+  mkdir $PLOT_DIR
+fi
+
+if [ ! -e $PLOT_DATA_DIR ]
+then
+  mkdir $PLOT_DATA_DIR
 fi
 
 
@@ -323,7 +335,10 @@ then
   fi
 
   # output post-processing
-  grep rtt $OUTPUT_DIR/$FILE | tee --append $STAGING_DIR/$FILE
+  grep 'from' $OUTPUT_DIR/$FILE | tr '=' ' ' | $STATS_DIR/stats.pl 95 type '(time)\s+(\S+)' | tee --append $STAGING_DIR/$FILE
+  grep 'time' $STAGING_DIR/$FILE | awk '{printf("#avg\tstd_dev\n"); printf("%.3f\t%.3f\n", $2, $3)}' | tee --append $RESULTS_DIR/$FILE
+  # symlink newest results to plot_data dir
+  ln -sf $RESULTS_DIR/$FILE $PLOT_DATA_DIR/$FILE
 fi
 
 
@@ -370,7 +385,10 @@ then
     fi
 
     # client-side output post-processing
-    grep MBytes $OUTPUT_DIR/$FILE | $STATS_DIR/stats.pl 95 type '(MBytes)\s+(\S+)' | tee --append $STAGING_DIR/$FILE
+    grep 'MBytes' $OUTPUT_DIR/$FILE | $STATS_DIR/stats.pl 95 type '(MBytes)\s+(\S+)' | tee --append $STAGING_DIR/$FILE
+    grep 'MBytes' $STAGING_DIR/$FILE | awk '{printf("#avg\tstd_dev\n"); printf("%.3f\t%.3f\n", $2, $3)}' | tee --append $RESULTS_DIR/$FILE
+    # symlink newest results to plot_data dir
+    ln -sf $RESULTS_DIR/$FILE $PLOT_DATA_DIR/$FILE
 
   # server side
   elif [ $DEVICE_TYPE -eq "3" ]
@@ -435,7 +453,10 @@ then
     fi
 
     # client-side output post-processing
-    grep % $OUTPUT_DIR/$FILE | $STATS_DIR/stats.pl 95 type '(MBytes)\s+(\S+)' | tee --append $STAGING_DIR/$FILE
+    grep '%' $OUTPUT_DIR/$FILE | $STATS_DIR/stats.pl 95 type '(MBytes)\s+(\S+)' | tee --append $STAGING_DIR/$FILE
+    grep 'MBytes' $STAGING_DIR/$FILE | awk '{printf("#avg\tstd_dev\n"); printf("%.3f\t%.3f\n", $2, $3)}' | tee --append $RESULTS_DIR/$FILE
+    # symlink newest results to plot_data dir
+    ln -sf $RESULTS_DIR/$FILE $PLOT_DATA_DIR/$FILE
 
   # server side
   elif [ $DEVICE_TYPE -eq "3" ]
