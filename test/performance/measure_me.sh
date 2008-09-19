@@ -2,7 +2,7 @@
 # useful for debugging: -xv
 
 DST_IPv4=192.168.1.103
-DST_IPv6=
+DST_IPv6=0
 DST_HIT=2001:0013:8cee:d7b1:cb71:9ea1:148c:0736
 ROUTE_TOv4=192.168.1.101
 ROUTE_TOv6=
@@ -250,17 +250,20 @@ then
   echo "1" >/proc/sys/net/ipv6/conf/all/forwarding
 fi
 
-# set up routes on all devices
-if [ $ADDR_FAMILY -eq "4" ]
+# set up routes on all devices where the next hop is specified
+if [ $ROUTE_TOv4 -ne "0" -o $ROUTE_TOv6 -ne "0" ]
 then
-  route add -host $DST_IPv4 netmask 0.0.0.0 gw $ROUTE_TOv4
-elif [ $ADDR_FAMILY -eq "6" ]
-then
-  echo "TODO route6 add"
-  exit 1
-else
-  echo "ERROR: Unknown address family or none specified."
-  exit 1
+  if [ $ADDR_FAMILY -eq "4" ]
+  then
+    route add -host $DST_IPv4 netmask 0.0.0.0 gw $ROUTE_TOv4
+  elif [ $ADDR_FAMILY -eq "6" ]
+  then
+    echo "TODO route6 add"
+    exit 1
+  else
+    echo "ERROR: Unknown address family or none specified."
+    exit 1
+  fi
 fi
 
 
