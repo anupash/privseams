@@ -22,8 +22,7 @@ FILE_POSTFIX=
 OUTPUT_DIR=$EXT_BASE_DIR/output
 STAGING_DIR=$EXT_BASE_DIR/staging
 RESULTS_DIR=$EXT_BASE_DIR/results
-PLOT_DIR=$BASE_DIR/plot
-PLOT_DATA_DIR=$PLOT_DIR/data
+PLOT_DATA_DIR=$BASE_DIR/current_data
 
 # needed by the script - don't change these variables
 DEVICE_TYPE=0
@@ -37,6 +36,7 @@ WITH_MID=0
 MEASURE_RTT=0
 MEASURE_TPUT=0
 VERIFY_PATH=0
+DO_PLOT=0
 
 FILE=
 
@@ -59,11 +59,12 @@ then
   echo "  -m           = tests are run with hipfw on middlebox-PC"
   echo "  -M           = tests are run with hipfw on a router"
   echo "  -v           = verify path"
+  echo "  -l           = plot histograms"
   echo
   exit 0
 fi
 
-while getopts ":a:defit:mMop:rv" CMD_OPT
+while getopts ":a:defit:lmMop:rv" CMD_OPT
 do
   case $CMD_OPT in
     a) ADDR_FAMILY=$OPTARG;;
@@ -77,6 +78,7 @@ do
        RUN_HIPFW=1
        RUN_USERIPSEC=1;;
     t) DEVICE_TYPE=$OPTARG;;
+    l) DO_PLOT=1;;
     m) WITH_MID=1;;
     M) WITH_MID=2;;
     o) WITH_REORDER=1;;
@@ -154,11 +156,6 @@ fi
 if [ ! -e $RESULTS_DIR ]
 then
   mkdir $RESULTS_DIR
-fi
-
-if [ ! -e $PLOT_DIR ]
-then
-  mkdir $PLOT_DIR
 fi
 
 if [ ! -e $PLOT_DATA_DIR ]
@@ -492,6 +489,17 @@ then
     killall hipfw
   fi
 fi
+
+
+if [ $DO_PLOT -eq "1" ]
+then
+  read -p "Plot histograms: [ENTER]"
+  TMP_DIR=`pwd`
+  cd $BASE_DIR
+  gnuplot $STATS_DIR/plot-*
+  cd $TMP_DIR
+fi
+
 
 exit 0
 
