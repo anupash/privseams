@@ -1295,7 +1295,6 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 	struct ip      *iphdr;
 	struct tcphdr  *tcphdr;
 	char 	       *hdrBytes = NULL;
-
 	int verdict = accept_normal_traffic_by_default;
 
 	HIP_DEBUG("\n");
@@ -1315,12 +1314,12 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 
 	/* LSI HOOKS */
 	if (ctx->ip_version == 4 && hip_lsi_support){
-		IPV6_TO_IPV4_MAP(&(ctx->src),&src_lsi);
-		IPV6_TO_IPV4_MAP(&(ctx->dst),&dst_lsi);
-		if (IS_LSI32(dst_lsi.s_addr)){
-			if (is_packet_reinjection(&dst_lsi))
+		IPV6_TO_IPV4_MAP(&(ctx->src), &src_lsi);
+		IPV6_TO_IPV4_MAP(&(ctx->dst), &dst_lsi);
+		if (IS_LSI32(dst_lsi.s_addr)) {
+			if (hip_is_packet_lsi_reinjection(&dst_lsi)) {
 				verdict = 1;
-		      	else{
+			} else {
 			    	hip_fw_handle_outgoing_lsi(ctx->ipq_packet, &src_lsi, &dst_lsi);
 			    	/*Reject the packet*/
 			    	verdict = 0;
