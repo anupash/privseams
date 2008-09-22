@@ -34,12 +34,12 @@ int hip_get_peerIP_from_LSIs(struct in_addr  *src_lsi,
 	while((current_param=hip_get_next_param(msg, current_param)) != NULL) {
 		ha = hip_get_param_contents_direct(current_param);
 
-		if((ipv4_addr_cmp(dst_lsi, &ha->lsi_our) == 0) &&
+		if ((ipv4_addr_cmp(dst_lsi, &ha->lsi_our) == 0) &&
 		    (ipv4_addr_cmp(src_lsi, &ha->lsi_peer) == 0)) {
 			*dst_ip = ha->ip_our;
 			res = ha->state;
 			break;
-		} else if( (ipv4_addr_cmp(dst_lsi, &ha->lsi_peer) == 0) && 
+		} else if ((ipv4_addr_cmp(dst_lsi, &ha->lsi_peer) == 0) && 
 			   (ipv4_addr_cmp(src_lsi, &ha->lsi_our) == 0)) {
 			*dst_ip = ha->ip_peer;
 			res = ha->state;
@@ -48,7 +48,7 @@ int hip_get_peerIP_from_LSIs(struct in_addr  *src_lsi,
 	}
         
  out_err:
-        if(msg)
+        if (msg)
                 HIP_FREE(msg);  
         return res;
 }
@@ -189,7 +189,8 @@ int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m, struct in6_addr *ip_src, str
  * @param lsi_dst     destination LSI
  * @return	      err during the BEX
  */
-int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src, struct in_addr *lsi_dst)
+int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src,
+			       struct in_addr *lsi_dst)
 {
 	int err, msg_type, state_ha, new_fw_entry_state;
 	struct in6_addr src_lsi, dst_lsi;
@@ -198,6 +199,13 @@ int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src, str
 	firewall_hl_t *entry_peer = NULL;
 
 	HIP_DEBUG("%s\n", inet_ntoa(*lsi_dst));
+
+	memset(&src_lsi, 0, sizeof(struct in6_addr));
+	memset(&dst_lsi, 0, sizeof(struct in6_addr));
+	memset(&src_hit, 0, sizeof(struct in6_addr));
+	memset(&dst_hit, 0, sizeof(struct in6_addr));
+	memset(&src_ip, 0, sizeof(struct in6_addr));
+	memset(&dst_ip, 0, sizeof(struct in6_addr));
 
 	/* get the corresponding ip address for this lsi,
 	   as well as the current ha state */
