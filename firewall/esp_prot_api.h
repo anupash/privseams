@@ -13,7 +13,7 @@
 /* if unused hchain element count of the active_hchain falls below
  * this threshold (% of max count), it will trigger the setup of
  * a new next_hchain */
-#define REMAIN_HASHES_TRESHOLD		0.2
+#define REMAIN_HASHES_TRESHOLD		0.5
 /* as using different hchain lengths for bex is not supported in esp_prot,
  * we can set a default length statically */
 #define DEFAULT_HCHAIN_LENGTH_ID	0
