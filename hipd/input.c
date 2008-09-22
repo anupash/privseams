@@ -507,7 +507,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 						       msg_info);
 		/* If agent is prompting user, let's make sure that
 		   the death counter in maintenance does not expire */
-		if (hip_agent_is_alive())
+		if (hip_agent_is_alive() && entry)
 		    entry->hip_opp_fallback_disable = filter;
 	} else {
 		/* Ugly bug fix for "conntest-client hostname tcp 12345"
