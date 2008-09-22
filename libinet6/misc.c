@@ -2053,55 +2053,6 @@ int hip_get_bex_state_from_IPs(struct in6_addr *src_ip,
 
 
 /**
- * Obtains the peer IP from the peer lsi.
- * @param *src_lsi	the input source lsi
- * @param *dst_lsi	the input destination lsi
- * @param *dst_ip	the output peer ip
-r * 
- * @return		the state of the found entry
- * 			if there is no entry it returns -1
- */
-int hip_get_peerIP_from_LSIs(struct in_addr  *src_lsi,
-			     struct in_addr  *dst_lsi,
-			     struct in6_addr *dst_ip){
-	int err = 0, res = -1;
-	hip_lsi_t src_ip4, dst_ip4;
-	struct hip_tlv_common *current_param = NULL;
-	struct hip_common *msg = NULL;
-	struct hip_hadb_user_info_state *ha;
-  
-	HIP_ASSERT(dst_ip != NULL);
-
-	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
-	hip_msg_init(msg);
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0),
-				-1, "Building of daemon header failed\n");
-	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send recv daemon info\n");
-
-	while((current_param = hip_get_next_param(msg, current_param)) != NULL) {
-		ha = hip_get_param_contents_direct(current_param);
-
-		if((ipv4_addr_cmp(dst_lsi, &ha->lsi_our) == 0) &&
-		    (ipv4_addr_cmp(src_lsi, &ha->lsi_peer) == 0)) {
-			*dst_ip = ha->ip_our;
-			res = ha->state;
-			break;
-		} else if( (ipv4_addr_cmp(dst_lsi, &ha->lsi_peer) == 0) && 
-			   (ipv4_addr_cmp(src_lsi, &ha->lsi_our) == 0)) {
-			*dst_ip = ha->ip_peer;
-			res = ha->state;
-			break;
-		}
-	}
-        
- out_err:
-        if(msg)
-                HIP_FREE(msg);  
-        return res;
-}
-
-
-/**
  * Obtains the ips from the ha entry based on the hits.
 
  * @param *src_hit	the input src hit
