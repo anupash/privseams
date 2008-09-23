@@ -1850,12 +1850,12 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution,
 }
 
 
-hip_lsi_t *hip_get_lsi_peer_by_hits(struct in6_addr *hit_s, struct in6_addr *hit_r){
-	int err;
+int hip_get_lsi_peer_by_hits(struct in6_addr *hit_s, struct in6_addr *hit_r,
+			     hip_lsi_t *lsi_peer){
 	struct hip_common *msg = NULL;
-	hip_lsi_t *lsi = NULL, *lsi_tmp = NULL;
+	hip_lsi_t *lsi_ptr = NULL;
+	int err = 0;
 	
-	HIP_IFE(!(lsi = (hip_lsi_t *)malloc(sizeof(hip_lsi_t))), -1);
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 	
 	if(hit_s)
@@ -1878,31 +1878,30 @@ hip_lsi_t *hip_get_lsi_peer_by_hits(struct in6_addr *hit_s, struct in6_addr *hit
 	/* check error value */
 	HIP_IFEL(hip_get_msg_err(msg), -1, "Got erroneous message!\n");
 	
-	lsi_tmp = (hip_lsi_t *)hip_get_param_contents(msg, HIP_PARAM_LSI);
-	memcpy(lsi, lsi_tmp, sizeof(hip_lsi_t));
+	HIP_IFEL(!(lsi_ptr = (hip_lsi_t *)hip_get_param_contents(msg, HIP_PARAM_LSI)),
+		 -1, "No LSI\n");
+	memcpy(lsi_peer, lsi_ptr, sizeof(hip_lsi_t));
 	
  out_err:
 	if(msg)
 	        HIP_FREE(msg);
-	return lsi;
+	return err;
 }
 
-
-hip_lsi_t *hip_get_lsi_our_by_hits(struct in6_addr *hit_s, struct in6_addr *hit_r){
-	int err;
+int hip_get_lsi_our_by_hits(struct in6_addr *hit_s, struct in6_addr *hit_r,
+			    hip_lsi_t *lsi_our) {
+	int err = 0;
 	struct hip_common *msg = NULL;
-	hip_lsi_t *lsi = NULL, *lsi_tmp = NULL;
-	
-	HIP_IFE(!(lsi = (hip_lsi_t *)malloc(sizeof(hip_lsi_t))), -1);
+	hip_lsi_t *lsi_ptr;
 
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 	
-	if(hit_s)
+	if (hit_s)
 		HIP_IFEL(hip_build_param_contents(msg, (void *) hit_s,
 						  HIP_PARAM_HIT,
 						  sizeof(struct in6_addr)),
 				-1, "build param HIP_PARAM_HIT  failed\n");
-	if(hit_r)
+	if (hit_r)
 		HIP_IFEL(hip_build_param_contents(msg, (void *) hit_r,
 						  HIP_PARAM_HIT,
 						  sizeof(struct in6_addr)),
@@ -1918,13 +1917,14 @@ hip_lsi_t *hip_get_lsi_our_by_hits(struct in6_addr *hit_s, struct in6_addr *hit_
 	/* check error value */
 	HIP_IFEL(hip_get_msg_err(msg), -1, "Got erroneous message!\n");
 	
-	lsi_tmp = (hip_lsi_t *)hip_get_param_contents(msg, HIP_PARAM_LSI);
-	memcpy(lsi, lsi_tmp, sizeof(hip_lsi_t));
+	HIP_IFEL(!(lsi_ptr = (hip_lsi_t *)hip_get_param_contents(msg, HIP_PARAM_LSI)),
+		 -1, "No LSI\n");
+	memcpy(lsi_our, lsi_ptr, sizeof(hip_lsi_t));
 	
  out_err:
-	if(msg)
+	if (msg)
 	        HIP_FREE(msg);
-	return lsi;	
+	return err;
 }
 
 
