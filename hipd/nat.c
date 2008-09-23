@@ -1218,7 +1218,8 @@ int hip_get_nat_mode(hip_ha_t *entry)
 {
 	
 	if(entry){
-		return entry->nat_mode;
+		return entry->nat_control;
+		//return 1;
 	}
 	return hip_nat_status;
 }
