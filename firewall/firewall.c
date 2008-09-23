@@ -1321,7 +1321,7 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 	}
 
 	/* LSI HOOKS */
-	if (ctx->ip_version == 4 && hip_lsi_support){
+	if (ctx->ip_version == 4 && hip_lsi_support) {
 		IPV6_TO_IPV4_MAP(&(ctx->src), &src_lsi);
 		IPV6_TO_IPV4_MAP(&(ctx->dst), &dst_lsi);
 		if (IS_LSI32(dst_lsi.s_addr)) {
@@ -2150,7 +2150,8 @@ int hip_fw_handle_outgoing_ip(hip_fw_context_t *ctx){
 			verdict = accept_normal_traffic_by_default;
 		else if(entry_peer->bex_state == FIREWALL_STATE_BEX_ESTABLISHED){
 			if(hit_is_local_hit(&entry_peer->hit_our)){
-				reinject_packet(entry_peer->hit_our, entry_peer->hit_peer,
+				reinject_packet(&entry_peer->hit_our,
+						&entry_peer->hit_peer,
 						ctx->ipq_packet, 4, 0);
 				verdict = 0;
 			}else
@@ -2183,7 +2184,8 @@ int hip_fw_handle_outgoing_ip(hip_fw_context_t *ctx){
 					HIP_DEBUG("is local hit\n");
 				firewall_update_entry(&src_hit, &dst_hit, &dst_lsi,
 					&ctx->dst, FIREWALL_STATE_BEX_ESTABLISHED);
-				reinject_packet(src_hit, dst_hit, ctx->ipq_packet, 4, 0);
+				reinject_packet(&src_hit, &dst_hit,
+						ctx->ipq_packet, 4, 0);
 				verdict = 0;
 			}else
 				verdict = accept_normal_traffic_by_default;
