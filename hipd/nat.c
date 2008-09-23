@@ -333,7 +333,7 @@ int hip_nat_handle_transform_in_server(struct hip_common *msg , hip_ha_t *entry)
 	if(nat_transform != NULL && entry != NULL){
 		// check if the requested tranform is also supported in the server.
 		entry->nat_control = (ntohs(nat_transform->suite_id[0])) &
-			hip_nat_get_control();
+			hip_nat_get_control(entry);
 	} else {
 		HIP_DEBUG("handle nat transform failed: entry %d, "\
 			  "nat transform %d\n", entry, nat_transform);
@@ -1216,9 +1216,10 @@ out_err:
  */
 int hip_get_nat_mode(hip_ha_t *entry)
 {
-	
+	int result;
 	if(entry){
-		return entry->nat_control;
+		result = entry->nat_mode;
+		return result;
 		//return 1;
 	}
 	return hip_nat_status;
@@ -1265,21 +1266,22 @@ int hip_nat_start_ice(hip_ha_t *entry, struct hip_esp_info *esp_info, int ice_co
 	int err = 0, i= 0;
 	hip_list_t *item, *tmp;
 	struct netdev_address *n;
-    hip_ha_t *ha_n;
-    void* ice_session;
+	hip_ha_t *ha_n;
+	void* ice_session;
 	
 	if(!(entry->nat_control)){
 		// nat_control is not set to "ice on"
+		HIP_DEBUG("nat_control is not set to ice on \n");
 	}
-    else{
+	else{
             //init the session right after the locator receivd
-    	HIP_DEBUG("ICE init \n");
-    	ice_session = hip_external_ice_init(ice_control_roll, &entry->hit_our, &entry->hit_peer);
-        if(ice_session){
-        	entry->ice_session = ice_session;
-        	HIP_DEBUG("ICE add local \n");
-        	//add the type 1 address first
-        	list_for_each_safe(item, tmp, addresses, i) {
+		HIP_DEBUG("ICE init \n");
+		ice_session = hip_external_ice_init(ice_control_roll, &entry->hit_our, &entry->hit_peer);
+		if(ice_session){
+			entry->ice_session = ice_session;
+			HIP_DEBUG("ICE add local \n");
+			//add the type 1 address first
+			list_for_each_safe(item, tmp, addresses, i) {
         		n = list_entry(item);
         		// filt out IPv6 address
         		if (ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr)))
