@@ -25,8 +25,8 @@ int hip_get_lsis_by_hits(struct in6_addr *hit_our, struct in6_addr *hit_peer,
 		    !ipv6_addr_cmp(&ha->hit_peer, hit_peer)) {
 			HIP_DEBUG("Matched HITs\n");
 			err = 0;
-			memcpy(hit_our, &ha->lsi_our, sizeof(hip_lsi_t));
-			memcpy(hit_peer, &ha->lsi_peer, sizeof(hip_lsi_t));
+			memcpy(lsi_our, &ha->lsi_our, sizeof(hip_lsi_t));
+			memcpy(lsi_peer, &ha->lsi_peer, sizeof(hip_lsi_t));
 			break;
 		}
 	}
@@ -207,7 +207,7 @@ int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m,
 		HIP_DEBUG_LSI("lsi_peer: ", &lsi_peer);
 		IPV4_TO_IPV6_MAP(&lsi_our, &src_addr);
 		IPV4_TO_IPV6_MAP(&lsi_peer, &dst_addr);
-		HIP_IFEL(reinject_packet(dst_addr, src_addr, m, 6, 1), -1,
+		HIP_IFEL(reinject_packet(&dst_addr, &src_addr, m, 6, 1), -1,
 			 "Failed to reinject\n");
 	}
 
@@ -277,8 +277,9 @@ int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src,
 
 		/* decide whether to reinject the packet */
 		if (entry_peer->bex_state == FIREWALL_STATE_BEX_ESTABLISHED)
-			HIP_IFEL(reinject_packet(entry_peer->hit_our,
-						 entry_peer->hit_peer, m, 4, 0),
+			HIP_IFEL(reinject_packet(&entry_peer->hit_our,
+						 &entry_peer->hit_peer,
+						 m, 4, 0),
 				 -1, "Failed to reinject\n");
 	} else {
 		/* add default entry in the firewall db */
@@ -313,7 +314,7 @@ int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src,
 						       FIREWALL_STATE_BEX_ESTABLISHED),
 				 -1, "Failed to update fw entry\n");
 
-			HIP_IFEL(reinject_packet(src_hit, dst_hit, m, 4, 0),
+			HIP_IFEL(reinject_packet(&src_hit, &dst_hit, m, 4, 0),
 				 -1, "Reinject failed\n");
 		}
 	}
@@ -392,7 +393,8 @@ int hip_request_peer_hit_from_hipd_at_firewall(
  * @param incoming             packet direction
  * @return	               err during the reinjection
  */
-int reinject_packet(struct in6_addr src_hit, struct in6_addr dst_hit, ipq_packet_msg_t *m, int ipOrigTraffic, int incoming)
+int reinject_packet(struct in6_addr *src_hit, struct in6_addr *dst_hit,
+		    ipq_packet_msg_t *m, int ipOrigTraffic, int incoming)
 {
         int err = 0, ip_hdr_size, packet_length = 0, protocol, ttl;
 	u8 *msg;  
@@ -412,8 +414,8 @@ int reinject_packet(struct in6_addr src_hit, struct in6_addr dst_hit, ipq_packet
 		ttl = ip6_hdr->ip6_hlim;
 		HIP_DEBUG_IN6ADDR("Orig packet src address: ", &(ip6_hdr->ip6_src));
 		HIP_DEBUG_IN6ADDR("Orig packet dst address: ", &(ip6_hdr->ip6_dst));
-		HIP_DEBUG_IN6ADDR("New packet src address:", &src_hit);
-		HIP_DEBUG_IN6ADDR("New packet dst address: ", &dst_hit);
+		HIP_DEBUG_IN6ADDR("New packet src address:", src_hit);
+		HIP_DEBUG_IN6ADDR("New packet dst address: ", dst_hit);
 	}
 	
 	if (m->data_len <= (BUFSIZE - ip_hdr_size)){
@@ -435,22 +437,33 @@ int reinject_packet(struct in6_addr src_hit, struct in6_addr dst_hit, ipq_packet
 	if (protocol == IPPROTO_ICMP && incoming){	          		  
 		  icmp = (struct icmphdr *)msg;
 		  HIP_DEBUG("protocol == IPPROTO_ICMP && incoming && type=%d code=%d\n",icmp->type,icmp->code);
-		  /*Manually built due to kernel messed up with the ECHO_REPLY message.
-		   Kernel was building an answer message with equals @src and @dst*/
+		  /* Manually built due to kernel messed up with the
+		     ECHO_REPLY message. Kernel was building an answer
+		     message with equals @src and @dst*/
 		  if (icmp->type == ICMP_ECHO){
 		  	icmp->type = ICMP_ECHOREPLY;
-		    	err = firewall_send_outgoing_pkt(&dst_hit, &src_hit, msg, packet_length, protocol);
+		    	err = firewall_send_outgoing_pkt(dst_hit, src_hit,
+							 msg, packet_length,
+							 protocol);
 		  }
-		  else{
-		    	err = firewall_send_incoming_pkt(&src_hit, &dst_hit, msg, packet_length, protocol, ttl);
+		  else {
+		    	err = firewall_send_incoming_pkt(src_hit, dst_hit,
+							 msg, packet_length,
+							 protocol, ttl);
 		  }
-	}else{
-		  if (incoming){
+	} else {
+		  if (incoming) {
 			    HIP_DEBUG("Firewall send to the kernel an incoming packet\n");
-			    err = firewall_send_incoming_pkt(&src_hit, &dst_hit, msg, packet_length, protocol, ttl);
-		  }else{
+			    err = firewall_send_incoming_pkt(src_hit,
+							     dst_hit, msg,
+							     packet_length,
+							     protocol, ttl);
+		  } else {
 			    HIP_DEBUG("Firewall send to the kernel an outgoing packet\n");
-			    err = firewall_send_outgoing_pkt(&src_hit, &dst_hit, msg, packet_length, protocol);
+			    err = firewall_send_outgoing_pkt(src_hit,
+							     dst_hit, msg,
+							     packet_length,
+							     protocol);
 		  }
 	}
 
