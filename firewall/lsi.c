@@ -199,9 +199,9 @@ int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m,
 		proto6 = getproto_info(ntohs(portDest), proto);
 
 	if (!proto6){
-	        HIP_IFEL(hip_get_lsis_by_hits(ip_src, ip_dst,
-						 &lsi_our, &lsi_peer),
-			 -1, "Failed to obtain local LSI\n");
+	        HIP_IFEL(hip_get_lsis_by_hits(ip_dst, ip_src,
+					      &lsi_our, &lsi_peer),
+			 -1, "Failed to obtain LSIs\n");
 
 		HIP_DEBUG_LSI("lsi_our: ", &lsi_our);
 		HIP_DEBUG_LSI("lsi_peer: ", &lsi_peer);
