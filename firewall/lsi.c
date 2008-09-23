@@ -94,11 +94,10 @@ int hip_fw_get_default_lsi(hip_lsi_t *lsi) {
 	HIP_ASSERT(lsi);
 
 	/* Use cached LSI if possible */
-	if (local_lsi.s_addr != 0)
-		if (local_lsi.s_addr == lsi->s_addr)
-			return 1;
-	        else
-			return 0;
+	if (local_lsi.s_addr != 0) {
+		memcpy(lsi, &local_lsi, sizeof(*lsi));
+		goto out_err;
+	}
 
 	/* Query hipd for the LSI */
        
@@ -117,8 +116,7 @@ int hip_fw_get_default_lsi(hip_lsi_t *lsi) {
 		 "Did not find LSI\n");
 	memcpy(&local_lsi, hip_get_param_contents_direct(param),
 	       sizeof(local_lsi));
-	memcpy(lsi, hip_get_param_contents_direct(param),
-	       sizeof(*lsi));
+	memcpy(lsi, &local_lsi, sizeof(*lsi));
 
 out_err:
         if(msg)
