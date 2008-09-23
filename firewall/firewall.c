@@ -108,11 +108,9 @@ void hip_fw_uninit_opptcp(){
 	system("ip6tables -D HIPFW-INPUT -p 6 ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
 	system("ip6tables -D HIPFW-OUTPUT -p 6 ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
 }
-
 void hip_fw_init_proxy()
 {
-	system("iptables -I HIPFW-FORWARD -p tcp -j QUEUE");
-	system("iptables -I HIPFW-FORWARD -p udp -j QUEUE");
+	system("iptables -I HIPFW-FORWARD -p tcp -j QUEUE");	system("iptables -I HIPFW-FORWARD -p udp -j QUEUE");
 
 	//system("iptables -I FORWARD -p icmp -j QUEUE");
 	//system("iptables -I FORWARD -p icmpv6 -j QUEUE");
@@ -452,7 +450,6 @@ int firewall_init_rules(){
 
 	HIP_DEBUG("Enabling forwarding for IPv4 and IPv6\n");
 	system("echo 1 >/proc/sys/net/ipv4/conf/all/forwarding");
-	system("echo 1 >/proc/sys/net/ipv6/conf/all/forwarding");
 
 	/* Flush in case previous hipfw process crashed */
 	hip_fw_flush_iptables();
@@ -473,10 +470,15 @@ int firewall_init_rules(){
 
 	if(hip_proxy_status)
 	{
+		/* Note: this block radvd advertisements */
+		system("echo 1 >/proc/sys/net/ipv6/conf/all/forwarding");
 		hip_fw_init_proxy();
 	}
 	else
 	{
+		/* @todo: remove the following line */
+		system("echo 0 >/proc/sys/net/ipv6/conf/all/forwarding");
+
 		// this has to be set up first in order to be the default behavior
 		if (!accept_normal_traffic_by_default)
 		{
