@@ -18,8 +18,8 @@
 #include "ife.h"
  
 int create_socket(int proto);
-int create_serversocket(int proto, int port);
-int main_server(int proto, int port);
+int create_serversocket(int proto, in_port_t port);
+int main_server(int proto, in_port_t port);
 int main_server_native(int socktype, char *port_name);
 
 int hip_connect_func(struct addrinfo *res, int *sock);//, const char* filename);

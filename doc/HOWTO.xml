@@ -1304,11 +1304,12 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
       while if you are using virtual machines). You should replace
       HIT_OF_XXX with the HIT of the host XXX. The hip daemon loads (and
       creates if necessary) the host identities from /etc/hip automatically.
-      If you want to know the HIT of the localhost, run
-      "hipconf get hi default". To avoid routing problems especially with
-      UDP, it is highly recommend to use the default HIT of the machine!
-      You can list all HITs of the machine with "hipconf get hi all", but
-      it is safe to use the optional HITs only with TCP connections!
+      If you want to know the default HIT of the localhost, run
+      "hipconf get hi default".
+      You can list all HITs of the machine with "hipconf get hi all". By
+      default, you'll see only one. If you want to use all four HITs of the
+      host, you have to invoke "hipconf add hi default". The use of multiple
+      local HITs is not currently recommended!
     </para>
     <para>
       Mappings between HITs and IP addresses are usually set up
@@ -3795,12 +3796,13 @@ combo-newgroup=&lt;create new...&gt;
       one, it responds with an AAAA response.
     </para>
     <para>
-      The DNS proxy is meant to be run under DJB's daemontools package
+      For faster DNS look ups, you can optionally run the DNS proxy
+      under DJB's daemontools package
       <ulink url="http://cr.yp.to/daemontools.html" /> which is also
-      used to provide necessary environmanet variables, see comments
-      in dnshipproxy. It is recommended to use a DNS cache, like
-      <ulink url="http://cr.yp.to/djbdns.html" /> in front of
-      dnshipproxy. The use without DNS cache results in longer
+      used to provide some necessary environment variables (see comments
+      in dnshipproxy). It acts as a DNS cache 
+      (see <ulink url="http://cr.yp.to/djbdns.html" />) in front of
+      dnshipproxy. The use of DNS proxy without DNS cache results in longer
       look up latencies.
     </para>
 
