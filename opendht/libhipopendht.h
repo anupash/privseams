@@ -15,7 +15,7 @@
 
 int init_dht_gateway_socket(int);
 
-int resolve_dht_gateway_info(char *, struct addrinfo **, uint32_t, uint16_t);
+int resolve_dht_gateway_info(char *, struct addrinfo **);
 
 int connect_dht_gateway(int, struct addrinfo *, int);
 

@@ -455,7 +455,7 @@ int hip_init_dht()
                 fp = fopen(OPENDHT_SERVERS_FILE, "r");
                 if (fp == NULL) {
                         HIP_DEBUG("No dhtservers file, using %s\n", OPENDHT_GATEWAY);
-                        err = resolve_dht_gateway_info(OPENDHT_GATEWAY, &opendht_serving_gateway, 0, 0);
+                        err = resolve_dht_gateway_info(OPENDHT_GATEWAY, &opendht_serving_gateway);
                         if (err < 0) HIP_DEBUG("Error resolving openDHT gateway!\n");
                         err = 0;
                         memset(&opendht_name_mapping, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
@@ -479,7 +479,7 @@ int hip_init_dht()
                         HIP_DEBUG("DHT gateway from dhtservers: %s (%s)\n",
                                   servername_str, serveraddr_str);
                         /* resolve it */
-                        err = resolve_dht_gateway_info(serveraddr_str, &opendht_serving_gateway, 0, 0);
+                        err = resolve_dht_gateway_info(serveraddr_str, &opendht_serving_gateway);
                         if (err < 0) HIP_DEBUG("Error resolving openDHT gateway!\n");
                         err = 0;
                         memset(&opendht_name_mapping, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);

@@ -55,13 +55,11 @@ int init_dht_gateway_socket(int sockfd)
  * @return Returns 0 on success otherwise -1
  */
 int resolve_dht_gateway_info(char * gateway_name, 
-                             struct addrinfo ** gateway,
-			     uint32_t ttl,
-			     uint16_t port)
-{
+                             struct addrinfo ** gateway){
     struct addrinfo hints;
     struct sockaddr_in *sa = NULL;
     int error;
+
     /*char *port_to_use = "5851";
 
     if(port != 0)
@@ -74,13 +72,13 @@ int resolve_dht_gateway_info(char * gateway_name,
     error = 0;
     
     error = getaddrinfo(gateway_name, "5851", &hints, gateway);
-    if (error != 0)
+    if (error != 0){
         HIP_DEBUG("OpenDHT gateway resolving failed %s\n", gateway_name);
-    else
-	{
-            sa = (struct sockaddr_in *) (*gateway)->ai_addr;
-            HIP_DEBUG("OpenDHT gateway IPv4: %s\n", inet_ntoa(sa->sin_addr));
-	}
+    }
+    else{
+	sa = (struct sockaddr_in *) (*gateway)->ai_addr;
+	HIP_DEBUG("OpenDHT gateway IPv4: %s\n", inet_ntoa(sa->sin_addr));
+    }
     
     return error;
 }
@@ -548,13 +546,15 @@ int opendht_read_response(int sockfd, char * answer)
                 memcpy(&read_buffer[strlen(read_buffer)], tmp_buffer, sizeof(tmp_buffer));
         }
     while (bytes_read > 0);
-    
+
     /* Parse answer */
     memset(answer, '\0', sizeof(answer));
     ret = 0;
-    ret = read_packet_content(read_buffer, answer); 
+    ret = read_packet_content(read_buffer, answer);
+
     /* If answer was IPv4 address mapped to IPv6 revert to IPv4 format*/
     pton_ret = inet_pton(AF_INET6, answer, &ipv6);
+
     if(IN6_IS_ADDR_V4MAPPED(&ipv6) && pton_ret)
         {
             IPV6_TO_IPV4_MAP(&ipv6, &ipv4);

@@ -462,7 +462,7 @@ void publish_hit(char *hostname, char *tmp_hit_str, char *tmp_addr_str)
 			if(opendht_error == EINPROGRESS){
 				hip_opendht_fqdn_sent = STATE_OPENDHT_WAITING_CONNECT; 
 				/* connect not ready */
-				HIP_DEBUG("OpenDHT connect unfinished (fqdn publish)\n");
+				HIP_DEBUG("OpenDHT connect unfinished (fqdn publish) %d\n", opendht_error);
 			}
 		} else if(hip_opendht_fqdn_sent == STATE_OPENDHT_START_SEND){
 		        /* connect finished send the data */
@@ -512,7 +512,8 @@ int publish_addr(char *tmp_hit_str, char *tmp_addr_str)
                         opendht_error = 0;
                         opendht_error = connect_dht_gateway(hip_opendht_sock_hit, 
                                                             opendht_serving_gateway, 0);
-                        if (opendht_error > -1 && opendht_error != EINPROGRESS) {
+
+                        if (opendht_error > -1 /*&& opendht_error != EINPROGRESS*/) {
                                 opendht_error = opendht_put_locator(hip_opendht_sock_hit, 
                                                                     (unsigned char *)tmp_hit_str, 
                                                                     (unsigned char *)tmp_addr_str,
@@ -528,7 +529,7 @@ int publish_addr(char *tmp_hit_str, char *tmp_addr_str)
                                 }
                         } else if (opendht_error == EINPROGRESS) {
                                 hip_opendht_hit_sent = STATE_OPENDHT_WAITING_CONNECT;
-                                HIP_DEBUG("DHT connect unfinished (hit publish)\n");
+                                HIP_DEBUG("DHT connect unfinished (hit publish) %d\n", opendht_error);
                                 goto out_err;
                         } else { 
                                 /* connect error */
