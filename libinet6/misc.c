@@ -9,6 +9,11 @@
  */
 #include "misc.h"
 
+// needed due to missing system inlcude for openWRT
+#ifndef HOST_NAME_MAX
+#define HOST_NAME_MAX		64
+#endif
+
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip,
@@ -21,18 +26,18 @@ int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip,
 
   HIP_IFE(hit_type != HIP_HIT_TYPE_HASH100, -ENOSYS);
   _HIP_HEXDUMP("key", key, key_len);
-  HIP_IFEL((err = hip_build_digest(HIP_DIGEST_SHA1, key, key_len, digest)), err, 
+  HIP_IFEL((err = hip_build_digest(HIP_DIGEST_SHA1, key, key_len, digest)), err,
 	   "Building of digest failed\n");
-  
+
   memcpy(hit, digest + (HIP_AH_SHA_LEN - sizeof(struct in6_addr)),
 	 sizeof(struct in6_addr));
 
   hit->s6_addr32[3] = 0; // this separates phit from normal hit
 
   set_hit_prefix(hit);
-  
+
  out_err:
-  
+
        return err;
 }
 #endif //CONFIG_HIP_OPPORTUNISTIC
@@ -170,7 +175,7 @@ int hip_id_type_match(const struct in6_addr *id, int id_type) {
     ret = (is_lsi ? 1 : 0);
   else
     ret = ((is_hit || is_lsi) ? 0 : 1);
-    
+
   return ret;
 }
 
@@ -242,7 +247,7 @@ int hip_match_spi(const void *ptr1, const void *ptr2){
  */
 unsigned long hip_hash_hit(const void *ptr){
       uint8_t hash[HIP_AH_SHA_LEN];
-      
+
       hip_build_digest(HIP_DIGEST_SHA1, ptr + sizeof(uint16_t),
 	7 * sizeof(uint16_t), hash);
       //hip_build_digest(HIP_DIGEST_SHA1, ptr, sizeof(hip_hit_t), hash);
@@ -364,7 +369,7 @@ int hip_transform_key_length(int tid){
 	case HIP_HIP_3DES_SHA1:
 		ret = 24;
 		break;
-	case HIP_HIP_NULL_SHA1: // XX FIXME: SHOULD BE NULL_SHA1? 
+	case HIP_HIP_NULL_SHA1: // XX FIXME: SHOULD BE NULL_SHA1?
 		ret = 0;
 		break;
 	default:
@@ -440,7 +445,7 @@ hip_transform_suite_t hip_select_hip_transform(struct hip_hip_transform *ht){
 			break;
 
 		default:
-			/* Specs don't say what to do when unknown are found. 
+			/* Specs don't say what to do when unknown are found.
 			 * We ignore.
 			 */
 			HIP_ERROR("Unknown HIP suite id suggestion (%u)\n",
@@ -493,7 +498,7 @@ hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht){
 			goto out;
 			break;
 		default:
-			/* Specs don't say what to do when unknowns are found. 
+			/* Specs don't say what to do when unknowns are found.
 			 * We ignore.
 			 */
 			HIP_ERROR("Unknown ESP suite id suggestion (%u)\n",
@@ -514,12 +519,12 @@ hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht){
 
 int convert_string_to_address_v4(const char *str, struct in_addr *ip){
 	int ret = 0, err = 0;
-	
+
 	ret = inet_pton(AF_INET, str, ip);
 	HIP_IFEL((ret < 0 && errno == EAFNOSUPPORT), -1,
 		 "inet_pton: not a valid address family\n");
 	HIP_IFEL((ret == 0), -1,
-		 "inet_pton: %s: not a valid network address\n", str);		 	
+		 "inet_pton: %s: not a valid network address\n", str);
  out_err:
 	return err;
 }
@@ -548,7 +553,7 @@ int convert_string_to_address(const char *str,
 
 	IPV4_TO_IPV6_MAP(&ip4, ip6);
 	HIP_DEBUG("Mapped v4 to v6.\n");
-	HIP_DEBUG_IN6ADDR("mapped v6", ip6); 	
+	HIP_DEBUG_IN6ADDR("mapped v6", ip6);
 
  out_err:
 	return err;
@@ -586,11 +591,11 @@ int khi_encode(unsigned char *orig, int orig_len,
  * Calculates a Host Identity Tag (HIT) from a Host Identifier (HI) using DSA
  * encryption.
  *
- * @param  host_id  a pointer to a Host Identifier   
+ * @param  host_id  a pointer to a Host Identifier
  * @param  hit      a target buffer where to put the calculated HIT.
  * @param  hit_type type of the HIT (must be HIP_HIT_TYPE_HASH100).
  * @return          zero on success, negative otherwise.
- */ 
+ */
 int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
 			   struct in6_addr *hit,
 			   int hit_type){
@@ -737,7 +742,7 @@ int hip_private_rsa_host_id_to_hit(const struct hip_host_id *host_id,
 	       sizeof(struct hip_tlv_common) + contents_len - rsa_priv_len);
 
 	host_id_pub->hi_length = htons(ntohs(host_id_pub->hi_length) - rsa_priv_len);
-	hip_set_param_contents_len(host_id_pub, contents_len - rsa_priv_len);	
+	hip_set_param_contents_len(host_id_pub, contents_len - rsa_priv_len);
 
 	_HIP_HEXDUMP("extracted pubkey", host_id_pub,
 				 hip_get_param_total_len(host_id_pub));
@@ -748,7 +753,7 @@ int hip_private_rsa_host_id_to_hit(const struct hip_host_id *host_id,
 	}
 
  out_err:
-	
+
 	if (host_id_pub)
 		HIP_FREE(host_id_pub);
 
@@ -846,7 +851,7 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
 {
 	int err = 0, ret = 0, dsa_key_rr_len = 0, rsa_key_rr_len = 0;
 	int dsa_pub_key_rr_len = 0, rsa_pub_key_rr_len = 0;
-	int fmt = HIP_KEYFILE_FMT_HIP_PEM; 
+	int fmt = HIP_KEYFILE_FMT_HIP_PEM;
 	hip_hdr_type_t numeric_action = 0;
 	char addrstr[INET6_ADDRSTRLEN], hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
 	char *dsa_filenamebase = NULL, *rsa_filenamebase = NULL;
@@ -866,12 +871,12 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
 
 	memset(addrstr, '\0', INET6_ADDRSTRLEN);
 	memset(hostname, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX);
-		
+
 	if (err = -gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1)) {
 		HIP_ERROR("Failed to get hostname. Err is (%d).\n", err);
 		goto out_err;
 	}
-		
+
 	HIP_INFO("Using hostname: %s\n", hostname);
 
 	HIP_IFEL((!use_default && strcmp(hi_fmt, "rsa") && strcmp(hi_fmt, "dsa")),
@@ -918,7 +923,7 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
 			HIP_IFE(ret <= 0, -EINVAL);
 
 			dsa_filenamebase_pub = malloc(HOST_ID_FILENAME_MAX_LEN);
-			HIP_IFEL(!dsa_filenamebase_pub, -ENOMEM, 
+			HIP_IFEL(!dsa_filenamebase_pub, -ENOMEM,
 				 "Could not allocate DSA (pub) filename.\n");
 
 			ret = snprintf(dsa_filenamebase_pub,
@@ -933,7 +938,7 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
 			HIP_DEBUG("Using dsa (pub hi) filenamebase: %s\n",
 				  dsa_filenamebase_pub);
 		}
-		
+
 		if (hi_fmt == NULL || !strcmp(hi_fmt, "rsa")) {
 			rsa_filenamebase_len =
 				strlen(DEFAULT_CONFIG_DIR) + strlen("/") +
@@ -944,14 +949,14 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
 					malloc(HOST_ID_FILENAME_MAX_LEN);
 				HIP_IFEL(!rsa_filenamebase, -ENOMEM,
 					 "Could not allocate RSA filename.\n");
-				
+
 				ret = snprintf(
 					rsa_filenamebase,
 					HOST_ID_FILENAME_MAX_LEN, "%s/%s%s",
 					DEFAULT_CONFIG_DIR,
 					DEFAULT_HOST_RSA_KEY_FILE_BASE,
 					DEFAULT_ANON_HI_FILE_NAME_SUFFIX);
-				
+
 				HIP_IFE(ret <= 0, -EINVAL);
 
 				HIP_DEBUG("Using RSA (anon HI) filenamebase: "\
@@ -961,7 +966,7 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
 			if (!anon || hi_fmt == NULL) {
 				rsa_filenamebase_pub =
 					malloc(HOST_ID_FILENAME_MAX_LEN);
-				HIP_IFEL(!rsa_filenamebase_pub, -ENOMEM, 
+				HIP_IFEL(!rsa_filenamebase_pub, -ENOMEM,
 					 "Could not allocate RSA (pub) "\
 					 "filename.\n");
 
@@ -972,7 +977,7 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
 					"%s/%s%s", DEFAULT_CONFIG_DIR,
 					DEFAULT_HOST_RSA_KEY_FILE_BASE,
 					DEFAULT_PUB_HI_FILE_NAME_SUFFIX);
-				
+
 				HIP_IFE(ret <= 0, -EINVAL);
 
 				HIP_DEBUG("Using RSA (pub HI) filenamebase: "\
@@ -996,14 +1001,14 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
 				goto out_err;
 			}
 		} else if (!use_default) {
-			
+
 			if (!strcmp(hi_fmt, "dsa")) {
 				dsa_key = create_dsa_key(dsa_key_bits);
-				HIP_IFEL(!dsa_key, -EINVAL, 
+				HIP_IFEL(!dsa_key, -EINVAL,
 					 "Creation of DSA key failed.\n");
 				if (err = save_dsa_private_key(
 					    dsa_filenamebase, dsa_key)) {
-					
+
 					HIP_ERROR("Saving of DSA key failed.\n");
 					goto out_err;
 				}
@@ -1059,9 +1064,9 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
 			HIP_ERROR("Saving of public RSA key failed.\n");
 			goto out_err;
 		}
-		
+
 		break;
-		
+
 	case ACTION_ADD:
 	  numeric_action = SO_HIP_ADD_LOCAL_HI;
 
@@ -1092,7 +1097,7 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
 	rsa_key_rr_len = rsa_to_dns_key_rr(rsa_key, &rsa_key_rr);
 	HIP_IFEL(rsa_key_rr_len <= 0, -EFAULT, "rsa_key_rr_len <= 0\n");
 
-	if (err = rsa_to_hip_endpoint(rsa_key, &endpoint_rsa_hip, 
+	if (err = rsa_to_hip_endpoint(rsa_key, &endpoint_rsa_hip,
 				  anon ? HIP_ENDPOINT_FLAG_ANON : 0,
 				  hostname)) {
 	    HIP_ERROR("Failed to allocate and build RSA endpoint.\n");
@@ -1120,7 +1125,7 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
 	dsa_key_rr_len = dsa_to_dns_key_rr(dsa_key, &dsa_key_rr);
 	HIP_IFEL(dsa_key_rr_len <= 0, -EFAULT, "dsa_key_rr_len <= 0\n");
 
-	if (err = dsa_to_hip_endpoint(dsa_key, &endpoint_dsa_hip, 
+	if (err = dsa_to_hip_endpoint(dsa_key, &endpoint_dsa_hip,
 			      HIP_ENDPOINT_FLAG_ANON, hostname)) {
 	    HIP_ERROR("Failed to allocate and build DSA endpoint (anon).\n");
 	    goto out_err;
@@ -1149,7 +1154,7 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
 	}
 	HIP_DEBUG_HIT("DSA HIT", &dsa_pub_lhi.hit);
 
-	if (err = dsa_to_hip_endpoint(dsa_pub_key, 
+	if (err = dsa_to_hip_endpoint(dsa_pub_key,
 					&endpoint_dsa_pub_hip, 0, hostname)) {
 	    HIP_ERROR("Failed to allocate and build DSA endpoint (pub).\n");
 	    goto out_err;
@@ -1165,7 +1170,7 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
 	rsa_key_rr_len = rsa_to_dns_key_rr(rsa_key, &rsa_key_rr);
 	HIP_IFEL(rsa_key_rr_len <= 0, -EFAULT, "rsa_key_rr_len <= 0\n");
 
-	if (err = rsa_to_hip_endpoint(rsa_key, &endpoint_rsa_hip, 
+	if (err = rsa_to_hip_endpoint(rsa_key, &endpoint_rsa_hip,
 					HIP_ENDPOINT_FLAG_ANON, hostname)) {
 	    HIP_ERROR("Failed to allocate and build RSA endpoint (anon).\n");
 	    goto out_err;
@@ -1188,7 +1193,7 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
 	rsa_pub_key_rr_len = rsa_to_dns_key_rr(rsa_pub_key, &rsa_pub_key_rr);
 	HIP_IFEL(rsa_pub_key_rr_len <= 0, -EFAULT, "rsa_pub_key_rr_len <= 0\n");
 
-	if (err = rsa_to_hip_endpoint(rsa_pub_key, 
+	if (err = rsa_to_hip_endpoint(rsa_pub_key,
 					&endpoint_rsa_pub_hip, 0, hostname)) {
 	    HIP_ERROR("Failed to allocate and build RSA endpoint (pub).\n");
 	    goto out_err;
@@ -1294,7 +1299,7 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
     free(endpoint_dsa_pub_hip);
   if (endpoint_rsa_pub_hip)
     free(endpoint_rsa_pub_hip);
-  
+
   return err;
 }
 
@@ -1310,7 +1315,7 @@ int hip_any_sa_to_hit_sa(const struct sockaddr *from,
 		to->sin6_port = ((struct sockaddr_in6 *) from)->sin6_port;
 	else
 		return -1;
-	
+
 	return 0;
 }
 
@@ -1431,7 +1436,7 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr){
   memset(p, t, 1); // XX FIX: WTF MEMSET?
   p++;
   _HIP_HEXDUMP("DSA KEY RR after T:", *dsa_key_rr, p - *dsa_key_rr);
-  
+
   /* add given dsa_param to the *dsa_key_rr */
 
   bn2bin_safe(dsa->q, p, DSA_PRIV);
@@ -1468,7 +1473,7 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr){
 
 
 /**
- * rsa_to_dns_key_rr - This is a new version of the function above. This function 
+ * rsa_to_dns_key_rr - This is a new version of the function above. This function
  *                     assumes that RSA given as a parameter is always public (Laura/10.4.2006)
                        Creates DNS KEY RR record from host RSA public key
  * @param rsa the RSA structure from where the KEY RR record is to be created
@@ -1503,17 +1508,17 @@ int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr){
 
   /* let's check if the RSA key is public or private
      private exponent is NULL in public keys */
-  if(rsa->d == NULL) { 
+  if(rsa->d == NULL) {
     public = 1;
     rsa_key_rr_len = e_len_bytes + e_len + key_len;
 
-    /* 
-       See RFC 2537 for flags, protocol and algorithm and check RFC 3110 for 
+    /*
+       See RFC 2537 for flags, protocol and algorithm and check RFC 3110 for
        the RSA public key part ( 1-3 octets defining length of the exponent,
-       exponent is as many octets as the length defines and the modulus is 
+       exponent is as many octets as the length defines and the modulus is
        all the rest of the bytes).
 
-       2 bytes for flags, 1 byte for protocol and 1 byte for algorithm = 4 bytes       
+       2 bytes for flags, 1 byte for protocol and 1 byte for algorithm = 4 bytes
     */
     /* Doesn't the rdata struct hold this? Function doesn't write it. */
     // rsa_key_rr_len += 4;
@@ -1570,15 +1575,15 @@ int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr){
  * address cast is then done based on the value of the sa_family field in the
  * struct sockaddr. If sa_family is neither AF_INET nor AF_INET6, the cast
  * fails.
- * 
- * @param  sockaddr a pointer to a socket address that holds the IP address. 
+ *
+ * @param  sockaddr a pointer to a socket address that holds the IP address.
  * @return          a pointer to an IPv4 or IPv6 address inside @c sockaddr or
  *                  NULL if the cast fails.
- */ 
+ */
 void *hip_cast_sa_addr(void *sockaddr) {
 	struct sockaddr *sa = (struct sockaddr *) sockaddr;
 	void *ret = NULL;
-  
+
 	switch(sa->sa_family) {
 	case AF_INET:
 		ret = &(((struct sockaddr_in *) sockaddr)->sin_addr);
@@ -1589,7 +1594,7 @@ void *hip_cast_sa_addr(void *sockaddr) {
 	default:
 		ret = NULL;
 	}
-	
+
 	return ret;
 }
 
@@ -1599,14 +1604,14 @@ int hip_sockaddr_is_v6_mapped(struct sockaddr *sa) {
   HIP_ASSERT(family == AF_INET || family == AF_INET6);
   if (family != AF_INET6)
     return 0;
-  else 
+  else
     return IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(sa));
 }
 
 int hip_sockaddr_len(const void *sockaddr) {
   struct sockaddr *sa = (struct sockaddr *) sockaddr;
   int len;
-  
+
   switch(sa->sa_family) {
   case AF_INET:
     len = sizeof(struct sockaddr_in);
@@ -1627,7 +1632,7 @@ int hip_sockaddr_len(const void *sockaddr) {
 int hip_sa_addr_len(void *sockaddr){
   struct sockaddr *sa = (struct sockaddr *) sockaddr;
   int len;
-  
+
   switch(sa->sa_family){
   case AF_INET:
     len = 4;
@@ -1643,12 +1648,12 @@ int hip_sa_addr_len(void *sockaddr){
 
 
 /* conversion function from in6_addr to sockaddr_storage
- * 
+ *
  * NOTE: sockaddr too small to store sockaddr_in6 */
 void hip_addr_to_sockaddr(struct in6_addr *addr, struct sockaddr_storage *sa)
 {
 	memset(sa, 0, sizeof(struct sockaddr_storage));
-	
+
 	if (IN6_IS_ADDR_V4MAPPED(addr)) {
 		struct sockaddr_in *in = (struct sockaddr_in *) sa;
 		in->sin_family = AF_INET;
@@ -1667,10 +1672,10 @@ int hip_remove_lock_file(char *filename){
 
 
 int hip_create_lock_file(char *filename, int killold) {
-	
+
 	int err = 0, fd = 0, old_pid = 0, new_pid_str_len = 0;
 	char old_pid_str[64], new_pid_str[64];
-		
+
 	memset(old_pid_str, 0, sizeof(old_pid_str));
 	memset(new_pid_str, 0, sizeof(new_pid_str));
 
@@ -1678,7 +1683,7 @@ int hip_create_lock_file(char *filename, int killold) {
 	snprintf(new_pid_str, sizeof(new_pid_str)-1, "%d\n", getpid());
 	new_pid_str_len = strnlen(new_pid_str, sizeof(new_pid_str) - 1);
 	HIP_IFEL((new_pid_str_len <= 0), -1, "pID length error.\n");
-		
+
 	/* Read old pid */
 
 	fd = HIP_CREATE_FILE(filename);
@@ -1686,13 +1691,13 @@ int hip_create_lock_file(char *filename, int killold) {
 
 	read(fd, old_pid_str, sizeof(old_pid_str) - 1);
 	old_pid = atoi(old_pid_str);
-       
+
 	if (lockf(fd, F_TLOCK, 0) < 0)
-	{ 
+	{
 		HIP_IFEL(!killold, -12,
 			 "\nHIP daemon already running with pID %d\n"
 			 "Give: -k option to kill old daemon.\n", old_pid);
-		
+
 		HIP_INFO("\nDaemon is already running with pID %d\n"
 			 "-k option given, terminating old one...\n", old_pid);
 		/* Erase the old lock file to avoid having multiple pids
@@ -1701,42 +1706,42 @@ int hip_create_lock_file(char *filename, int killold) {
 		close(fd);
 		HIP_IFEL(hip_remove_lock_file(filename), -1,
 			 "Removing lock file failed.\n");
-		
+
                 /* fd = open(filename, O_RDWR | O_CREAT, 0644); */
 		fd = open(filename, O_RDWR | O_CREAT | O_TRUNC, 0644);
-		
+
                 /* Don't close file descriptor because new started process is
 		   running. */
 		HIP_IFEL((fd <= 0), -1, "Opening lock file failed.\n");
-		HIP_IFEL(lockf(fd, F_TLOCK, 0), -1, "Lock attempt failed.\n");  
-		
+		HIP_IFEL(lockf(fd, F_TLOCK, 0), -1, "Lock attempt failed.\n");
+
 		err = kill(old_pid, SIGKILL);
 		if (err != 0) {
 			HIP_ERROR("\nError when trying to send signal SIGKILL "\
 				  "process identified by process identifier "\
 				  "%d.\n", old_pid);
 			HIP_PERROR("errno after kill() is: ");
-		} 
+		}
 	}
 	/* else if (killold)
-	   {	
+	   {
 	   lseek(fd,0,SEEK_SET);
 	   write(fd, new_pid_str, new_pid_str_len);
 	   system("NEW_PID=$(sudo awk NR==1 /var/lock/hipd.lock)");
 	   system("OLD_PID=$(/bin/pidof -o $NEW_PID hipd)");
-	   system("kill -9 $OLD_PID"); 
+	   system("kill -9 $OLD_PID");
 	   } */
-	
+
 	lseek(fd, 0, SEEK_SET);
-	
+
 	HIP_IFEL((write(fd, new_pid_str, new_pid_str_len) != new_pid_str_len),
 		 -1, "Writing new process identifier failed.\n");
-	
+
  out_err:
 	if (err == -12) {
 		exit(0);
 	}
-	
+
 	return err;
 }
 
@@ -1749,7 +1754,7 @@ int hip_create_lock_file(char *filename, int killold) {
  * @param hdr The incoming R1/I2 packet header.
  * @param mode Either HIP_VERIFY_PUZZLE of HIP_SOLVE_PUZZLE
  *
- * The K and I is read from the @c puzzle_or_solution. 
+ * The K and I is read from the @c puzzle_or_solution.
  *
  * The J that solves the puzzle is returned, or 0 to indicate an error.
  * NOTE! I don't see why 0 couldn't solve the puzzle too, but since the
@@ -1777,7 +1782,7 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution,
 	u = puzzle_or_solution;
 
 	_HIP_DEBUG("current hip_cookie_max_k_r1=%d\n", max_k);
-	HIP_IFEL(u->pz.K > HIP_PUZZLE_MAX_K, 0, 
+	HIP_IFEL(u->pz.K > HIP_PUZZLE_MAX_K, 0,
 		 "Cookie K %u is higher than we are willing to calculate"
 		 " (current max K=%d)\n", u->pz.K, HIP_PUZZLE_MAX_K);
 
@@ -1804,12 +1809,12 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution,
 
 	HIP_DEBUG("K=%u, maxtries (with k+2)=%llu\n", u->pz.K, maxtries);
 	/* while loops should work even if the maxtries is unsigned
-	 * if maxtries = 1 ---> while(1 > 0) [maxtries == 0 now]... 
+	 * if maxtries = 1 ---> while(1 > 0) [maxtries == 0 now]...
 	 * the next round while (0 > 0) [maxtries > 0 now]
 	 */
 	while(maxtries-- > 0) {
 	 	u8 sha_digest[HIP_AH_SHA_LEN];
-		
+
 		/* must be 8 */
 		memcpy(cookie + 40, (u8*) &randval, sizeof(uint64_t));
 
@@ -1873,7 +1878,7 @@ int hip_get_bex_state_from_LSIs(hip_lsi_t       *src_lsi,
 	struct hip_tlv_common *current_param = NULL;
 	struct hip_common *msg = NULL;
 	struct hip_hadb_user_info_state *ha;
-  
+
 	HIP_ASSERT(src_ip != NULL && dst_ip != NULL);
 
 	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
@@ -1903,10 +1908,10 @@ int hip_get_bex_state_from_LSIs(hip_lsi_t       *src_lsi,
 			break;
 		}
 	}
-        
+
  out_err:
         if(msg)
-                HIP_FREE(msg);  
+                HIP_FREE(msg);
         return res;
 
 }
@@ -1935,7 +1940,7 @@ int hip_get_bex_state_from_IPs(struct in6_addr *src_ip,
 	struct hip_tlv_common *current_param = NULL;
 	struct hip_common *msg = NULL;
 	struct hip_hadb_user_info_state *ha;
-  
+
 	HIP_ASSERT(src_ip != NULL && dst_ip != NULL);
 
 	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
@@ -1965,10 +1970,10 @@ int hip_get_bex_state_from_IPs(struct in6_addr *src_ip,
 			break;
 		}
 	}
-        
+
  out_err:
         if(msg)
-                HIP_FREE(msg);  
+                HIP_FREE(msg);
         return res;
 
 }
@@ -1980,8 +1985,8 @@ int hip_get_bex_state_from_IPs(struct in6_addr *src_ip,
  * @param *src_hit	the input src hit
  * @param *dst_hit	the input dst hit
  * @param *src_ip	output src ip
- * @param *dst_ip	output dst ip	
- * 
+ * @param *dst_ip	output dst ip
+ *
  * @return		the state of the found entry
  * 			if there is no entry it returns -1
  */
@@ -1994,7 +1999,7 @@ int hip_get_ips_by_hits(struct in6_addr *src_hit,
 	struct hip_tlv_common *current_param = NULL;
 	struct hip_common *msg = NULL;
 	struct hip_hadb_user_info_state *ha;
-  
+
 	HIP_ASSERT(src_hit != NULL && dst_hit != NULL);
 
 	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
@@ -2022,10 +2027,10 @@ int hip_get_ips_by_hits(struct in6_addr *src_hit,
 			break;
 		}
 	}
-        
+
  out_err:
         if(msg)
-                HIP_FREE(msg);  
+                HIP_FREE(msg);
         return res;
 
 }
@@ -2034,9 +2039,9 @@ int hip_get_ips_by_hits(struct in6_addr *src_hit,
 /**
  * Checks whether a particular hit is one of the local ones.
  * Goes through all the local hits and compares with the given hit.
- * 
+ *
  * @param *hit	the input src hit
- * 
+ *
  * @return	1 if *hit is a local hit
  * 		0 otherwise
  */
@@ -2079,10 +2084,10 @@ int hit_is_local_hit(struct in6_addr *hit){
 
 /* This builds a msg which will be sent to the HIPd in order to trigger
  * a BEX there.
- * 
- * TODO move that to useripsec.c? 
+ *
+ * TODO move that to useripsec.c?
  *         No, because this function is called by hip_fw_handle_outgoing_lsi too.
- * 
+ *
  * NOTE: Either destination HIT or IP (for opportunistic BEX) has to be provided */
 int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
 		    struct in6_addr *src_lsi, struct in6_addr *dst_lsi,
@@ -2094,10 +2099,10 @@ int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
         HIP_IFE(!(msg = hip_msg_alloc()), -1);
         HIP_IFEL(!dst_hit && !dst_ip, -1,
 		 "neither destination hit nor ip provided\n");
-        
+
         /* NOTE: we need this sequence in order to process the incoming
 	   message correctly */
-        
+
         // destination HIT is obligatory or opportunistic BEX
         if(dst_hit) {
 		HIP_DEBUG_HIT("dst_hit: ", dst_hit);
@@ -2106,7 +2111,7 @@ int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
 					          sizeof(struct in6_addr)),
 				-1, "build param HIP_PARAM_HIT failed\n");
 	}
-        
+
         // source HIT is optional
         if(src_hit) {
 		HIP_DEBUG_HIT("src_hit: ", src_hit);
@@ -2115,7 +2120,7 @@ int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
 						  sizeof(struct in6_addr)),
 				-1, "build param HIP_PARAM_HIT failed\n");
 	}
-        
+
         // destination LSI is obligatory
         if(dst_lsi) {
 		HIP_DEBUG_IN6ADDR("dst lsi: ", dst_lsi);
@@ -2124,7 +2129,7 @@ int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
                                                   sizeof(struct in6_addr)),
 				-1, "build param HIP_PARAM_LSI failed\n");
 	}
-        
+
         // source LSI is optional
         if(src_lsi) {
 		HIP_DEBUG_IN6ADDR("src lsi: ", src_lsi);
@@ -2133,7 +2138,7 @@ int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
 						  sizeof(struct in6_addr)),
 				-1, "build param HIP_PARAM_LSI failed\n");
 	}
-        
+
         // if no destination HIT is provided this has to be there
         if(dst_ip) {
 		HIP_DEBUG_IN6ADDR("dst_ip: ", dst_ip);
@@ -2142,27 +2147,27 @@ int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
                                                   sizeof(struct in6_addr)),
 				-1, "build param HIP_PARAM_IPV6_ADDR failed\n");
 	}
-        
+
         // this again is optional
         if (src_ip) {
-		HIP_DEBUG_IN6ADDR("src_ip: ", src_ip);        
+		HIP_DEBUG_IN6ADDR("src_ip: ", src_ip);
         	HIP_IFEL(hip_build_param_contents(msg, (void *)(src_ip),
 						  HIP_PARAM_IPV6_ADDR,
 						  sizeof(struct in6_addr)),
 				-1, "build param HIP_PARAM_IPV6_ADDR failed\n");
 	}
-        
+
         /* build the message header */
         HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_TRIGGER_BEX, 0),
 					-1, "build hdr failed\n");
 
         HIP_DUMP_MSG(msg);
-        
+
         /* send msg to hipd and receive corresponding reply */
         HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send_recv msg failed\n");
 
         /* check error value */
-        HIP_IFEL(hip_get_msg_err(msg), -1, "hipd returned error message!\n");        
+        HIP_IFEL(hip_get_msg_err(msg), -1, "hipd returned error message!\n");
         HIP_DEBUG("Send_recv msg succeed \n");
 
  out_err:
@@ -2173,7 +2178,7 @@ int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
 
 #if 0
 int hip_get_hit_peer_by_lsi_pair(hip_lsi_t *src_lsi,
-				 hip_lsi_t *dst_lsi, 
+				 hip_lsi_t *dst_lsi,
 				 struct in6_addr *src_hit,
 				 struct in6_addr *dst_hit){
         struct hip_common *msg = NULL;
@@ -2195,7 +2200,7 @@ int hip_get_hit_peer_by_lsi_pair(hip_lsi_t *src_lsi,
                                                   HIP_PARAM_LSI,
                                                   sizeof(struct in_addr)),
 			-1, "build param HIP_PARAM_LSI failed\n");
-	
+
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT_BY_LSIS, 0),
 			-1, "build hdr failed\n");
 
@@ -2215,7 +2220,7 @@ int hip_get_hit_peer_by_lsi_pair(hip_lsi_t *src_lsi,
 	        *dst_hit = *((struct in6_addr *)hip_get_param_contents_direct(param));
 
  out_err:
-        return err;	
+        return err;
 }
 #endif
 
@@ -2223,10 +2228,10 @@ int hip_get_hit_peer_by_lsi_pair(hip_lsi_t *src_lsi,
  * Checks whether there is a local ipv6 socket that is:
  *   connected to a particular port
  *   connected to an lsi ip address.
- * 
+ *
  * @param port_dest	the port number of the socket
  * @param *proto	protocol type
- * 
+ *
  * @return		1 if it finds the required socket
  * 			0 otherwise
  */
@@ -2244,16 +2249,16 @@ int getproto_info(int port_dest, char *proto){
 	else if(!strcmp(proto,"udp6"))
 	   index_addr_port = 10;
 
-	strcpy(path,"/proc/net/"); 
+	strcpy(path,"/proc/net/");
 	strcat(path, proto);
-        fd = fopen(path, "r");		
-        
-        while(fd && getwithoutnewline(line, 500, fd) != NULL && !exists){		
+        fd = fopen(path, "r");
+
+        while(fd && getwithoutnewline(line, 500, fd) != NULL && !exists){
 	    lineno++;
 	    if (lineno > 1){
 	        if(strlen(line)<=1) continue;
-	        initlist(&list);                                                    
-	        extractsubstrings(line, &list); 
+	        initlist(&list);
+	        extractsubstrings(line, &list);
 	        fqdn_str = getitem(&list, index_addr_port);
 	        if(fqdn_str)
 	            separator = strrchr(fqdn_str, ':');
@@ -2265,13 +2270,13 @@ int getproto_info(int port_dest, char *proto){
 		    HIP_DEBUG("Result %i\n",result);
 		    HIP_DEBUG("port dest %i\n",port_dest);
 		    if(result == port_dest)
-		        exists = 1;	    
+		        exists = 1;
 	        }
 		destroy(&list);
 	    }
 	}//end of while
-        if (fd)                                                               
-                fclose(fd);		
+        if (fd)
+                fclose(fd);
         return exists;
 }
 
@@ -2281,37 +2286,37 @@ int getproto_info(int port_dest, char *proto){
  *   connected to a particular port
  *   connected to an lsi ip address
  *   that this lsi ip address is the same as the param *local.
- * 
+ *
  * @param port_dest	the port number of the socket
  * @param *proto	protocol type
  * @param *local	ip address of the required socket
- * 
+ *
  * @return		1 if it finds the required socket
  * 			0 otherwise
  */
-int getproto_info_lsi(int port_dest, char *proto, struct in_addr *local){	 		List list;		
+int getproto_info_lsi(int port_dest, char *proto, struct in_addr *local){	 		List list;
 	FILE *fd = NULL;
 	char line[500], sub_string_addr_hex[8], path[11+sizeof(proto)];
 	int lineno = 0, index_addr_port, exists = 0, result;
 	char *fqdn_str = NULL, *separator = NULL, *sub_string_port_hex = NULL;
 	uint32_t result_addr;
 	struct in_addr addr;
-        
+
 	if(!strcmp(proto,"tcp"))
 	   index_addr_port = 15;
 	else if(!strcmp(proto,"udp"))
 	   index_addr_port = 10;
 
-	strcpy(path,"/proc/net/"); 
+	strcpy(path,"/proc/net/");
 	strcat(path, proto);
-	fd = fopen(path, "r");		
-        
-	while(fd && getwithoutnewline(line, 500, fd) != NULL && !exists){		
+	fd = fopen(path, "r");
+
+	while(fd && getwithoutnewline(line, 500, fd) != NULL && !exists){
 	    lineno++;
 	    if(lineno > 1){
 	        if(strlen(line)<=1) continue;
-	        initlist(&list);                                                    
-	        extractsubstrings(line, &list); 
+	        initlist(&list);
+	        extractsubstrings(line, &list);
 	        fqdn_str = getitem(&list, index_addr_port);
 	        if(fqdn_str)
 	            separator = strrchr(fqdn_str, ':');
@@ -2331,17 +2336,17 @@ int getproto_info_lsi(int port_dest, char *proto, struct in_addr *local){	 		Lis
 	                   exists = 0;
 	                break;
 	            }
-	        }		
+	        }
 		destroy(&list);
 	    }
-	}//end of while	              							
-        if (fd)                                                               
-                fclose(fd);		
+	}//end of while
+        if (fd)
+                fclose(fd);
         return exists;
 }
 
 
-void hip_get_rsa_keylen(const struct hip_host_id *host_id, 
+void hip_get_rsa_keylen(const struct hip_host_id *host_id,
 			struct hip_rsa_keylen *ret,
 			int is_priv){
 	int bytes;
@@ -2394,9 +2399,9 @@ int hip_string_to_lowercase(char *to, const char *from, const size_t count){
 int hip_string_is_digit(const char *string){
 	if(string == NULL)
 		return -1;
-	
+
 	int i = 0;
-	
+
 	while(string[i] != '\0') {
 		if(!isdigit(string[i])) {
 			return -1;
@@ -2531,11 +2536,11 @@ int hip_for_each_hosts_file_line(char *hosts_file,
     /* Remove whitespace */
     while (*c == ' ' || *c == '\t')
       c++;
-    
+
     /* Line is a comment or empty */
     if (*c =='#' || *c =='\n' || *c == '\0')
       continue;
-    
+
     eofline = strchr(c, '\n');
     if (eofline)
       *eofline = '\0';
@@ -2591,7 +2596,7 @@ int hip_for_each_hosts_file_line(char *hosts_file,
       IPV4_TO_IPV6_MAP(&in_addr, &entry.id);
     }
     err = 0;
-    
+
     entry.hostname = hostname;
     HIP_ASSERT(entry.hostname)
 
@@ -2622,9 +2627,9 @@ int hip_map_lsi_to_hit_from_hosts_files(hip_lsi_t *lsi, hip_hit_t *hit)
   int err = 0;
   uint8_t hostname[HOST_NAME_MAX];
   struct in6_addr mapped_lsi;
-  
+
   HIP_ASSERT(lsi && hit);
-  
+
   IPV4_TO_IPV6_MAP(lsi, &mapped_lsi);
 
   err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
@@ -2645,7 +2650,7 @@ int hip_map_lsi_to_hit_from_hosts_files(hip_lsi_t *lsi, hip_hit_t *hit)
 }
 
 /**
- * 
+ *
  * This function maps a HIT or a LSI (nodename) to an IP address using the two hosts files.
  * The function implements this in two steps. First, it maps the HIT or LSI to an hostname
  * from /etc/hip/hosts. Second, it maps the hostname to a IP address from /etc/hosts. The IP
