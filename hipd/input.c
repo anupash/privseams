@@ -1539,9 +1539,17 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 	err = entry->hadb_xmit_func->hip_send_pkt(i2_daddr, i2_saddr,
 						  (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
 	                                          entry->peer_udp_port, r2, entry, 1);
-	if (err == 1) err = 0;
+	if (err == 1)
+		err = 0;
 
 	HIP_IFEL(err, -ECOMM, "Sending R2 packet failed.\n");
+
+	/* Send the first heartbeat. Notice that error value is ignored because we want to
+	   to complete the base exchange successfully */
+	if (hip_icmp_interval > 0) {
+		_HIP_DEBUG("icmp sock %d\n", hip_icmp_sock);
+		hip_send_icmp(hip_icmp_sock, entry);
+	}
 
  out_err:
 	if (r2 != NULL) {
@@ -2247,13 +2255,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 #endif
 
 //end add
-
-	/* Send the first heartbeat. Notice that error value is ignored because we want to
-	   to complete the base exchange successfully */
-	if (hip_icmp_interval > 0) {
-		_HIP_DEBUG("icmp sock %d\n", hip_icmp_sock);
-		hip_send_icmp(hip_icmp_sock, entry);
-	}
 
 	HIP_DEBUG("Reached %s state\n", hip_state_str(entry->state));
 	if (entry->hip_msg_retrans.buf) {

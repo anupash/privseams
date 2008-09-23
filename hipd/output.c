@@ -1445,6 +1445,7 @@ int hip_send_icmp(int sockfd, hip_ha_t *entry) {
 	memset(&mhdr, 0, sizeof(struct msghdr));	
 	memset(&tval, 0, sizeof(struct timeval));
 	memset(cmsgbuf, 0, sizeof(cmsgbuf));
+	memset(iov, 0, sizeof(struct iovec));
 	
 	icmp_pkt = malloc(HIP_MAX_ICMP_PACKET);
         HIP_IFEL((!icmp_pkt), -1, "Malloc for icmp_pkt failed\n");
@@ -1498,7 +1499,7 @@ int hip_send_icmp(int sockfd, hip_ha_t *entry) {
 	_HIP_DEBUG_HIT("src hit", &entry->hit_our);	
 	_HIP_DEBUG_HIT("dst hit", &entry->hit_peer);
 	_HIP_DEBUG("i == %d socket = %d\n", i, sockfd);
-	_HIP_PERROR("SENDMSG ");
+	HIP_PERROR("SENDMSG ");
 	
 	HIP_IFEL((i < 0), -1, "Failed to send ICMP into ESP tunnel\n");
 	HIP_DEBUG_HIT("Succesfully sent heartbeat to", &entry->hit_peer);
