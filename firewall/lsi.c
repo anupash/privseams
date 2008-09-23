@@ -4,6 +4,39 @@
 
 hip_lsi_t local_lsi = { 0 };
 
+int hip_get_lsis_by_hits(struct in6_addr *hit_our, struct in6_addr *hit_peer,
+			hip_lsi_t *lsi_our, hip_lsi_t *lsi_peer) {
+	int err = 0;
+	struct hip_tlv_common *current_param = NULL;
+	struct hip_common *msg = NULL;
+	struct hip_hadb_user_info_state *ha;
+  
+	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
+	hip_msg_init(msg);
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0),
+				-1, "Building of daemon header failed\n");
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1,
+		 "send recv daemon info\n");
+
+	err = -1;
+	while((current_param=hip_get_next_param(msg, current_param)) != NULL) {
+		ha = hip_get_param_contents_direct(current_param);
+		if (!ipv6_addr_cmp(&ha->hit_our, hit_our) &&
+		    !ipv6_addr_cmp(&ha->hit_peer, hit_peer)) {
+			HIP_DEBUG("Matched HITs\n");
+			err = 0;
+			memcpy(hit_our, &ha->lsi_our, sizeof(hip_lsi_t));
+			memcpy(hit_peer, &ha->lsi_peer, sizeof(hip_lsi_t));
+			break;
+		}
+	}
+        
+ out_err:
+        if (msg)
+                HIP_FREE(msg);  
+        return err;
+}
+
 /**
  * Obtains the peer IP from the peer lsi.
  * @param *src_lsi	the input source lsi
@@ -166,10 +199,9 @@ int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m,
 		proto6 = getproto_info(ntohs(portDest), proto);
 
 	if (!proto6){
-	        HIP_IFEL(hip_get_lsi_our_by_hits(ip_src, ip_dst, &lsi_our),
+	        HIP_IFEL(hip_get_lsis_by_hits(ip_src, ip_dst,
+						 &lsi_our, &lsi_peer),
 			 -1, "Failed to obtain local LSI\n");
-		HIP_IFEL(hip_get_lsi_peer_by_hits(ip_src, ip_dst, &lsi_our),
-			 -1, "Failed to obtain peer LSI\n");
 
 		HIP_DEBUG_LSI("lsi_our: ", &lsi_our);
 		HIP_DEBUG_LSI("lsi_peer: ", &lsi_peer);

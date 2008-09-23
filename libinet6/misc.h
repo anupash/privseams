@@ -156,9 +156,6 @@ int hip_remove_lock_file(char *filename);
 void hip_addr_to_sockaddr(struct in6_addr *addr, struct sockaddr_storage *sa);
 
 uint64_t hip_solve_puzzle(void *puzzle, struct hip_common *hdr, int mode);
-int hip_get_lsi_peer_by_hits(struct in6_addr *hit_s, struct in6_addr *hit_r,
-			     hip_lsi_t *peer_lsi);
-
 int hip_create_lock_file(char *filename, int killold);
 
 /**
