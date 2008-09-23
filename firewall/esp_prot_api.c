@@ -2,7 +2,20 @@
 #include "esp_prot_fw_msg.h"
 #include "firewall_defines.h"
 
+extern const uint8_t preferred_transforms[NUM_TRANSFORMS + 1] =
+		{ESP_PROT_TFM_SHA1_20, ESP_PROT_TFM_UNUSED};
 
+extern const hash_function_t hash_functions[NUM_HASH_FUNCTIONS]
+				   = {SHA1};
+extern const int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS]
+				   = {{20}};
+
+
+static const int bex_hchain_length = 4000000;
+static const int update_hchain_lengths[NUM_UPDATE_HCHAIN_LENGTHS] = {10};
+
+// changed for measurements
+#if 0
 /* preference of the supported transforms in decreasing order
  *
  * @note make sure to always include ESP_PROT_TFM_UNUSED
@@ -19,6 +32,7 @@ extern const int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS]
 
 static const int bex_hchain_length = 100000;
 static const int update_hchain_lengths[NUM_UPDATE_HCHAIN_LENGTHS] = {100000};
+#endif
 
 
 /* stores the mapping transform_id -> (function_id, hash_length_id)
