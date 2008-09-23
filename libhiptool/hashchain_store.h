@@ -34,8 +34,11 @@
 #define MAX_HCHAINS_PER_ITEM	5
 #endif
 
-// determines when to refill a store
-#define ITEM_THRESHOLD 0.4
+/* determines when to refill a store
+ *
+ * @note this is a reverse threshold -> 1 - never refill, 0 - always
+ */
+#define ITEM_THRESHOLD 1
 
 typedef struct hchain_shelf
 {
