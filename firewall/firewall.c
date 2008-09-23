@@ -363,24 +363,6 @@ int hip_fw_uninit_lsi_support(){
   	return err;
 }
 
-#if 0
-/*
- * Adds an LSI rule
- * @ip is a pointer to the first part of the rule, before specifying the LSI
- * @opt is a pointer to the options that can be present after the LSI
-*/
-void firewall_add_lsi_rule(char *ip, char *opt)
-{
-	char result[100];
-
-	memset(result, 0, sizeof(result));
-
-	strcpy(result, ip);
-	strcat(strcat(result, HIP_FULL_LSI_STR),opt);
-	system(result);
-}
-#endif
-
 /*----------------INIT/EXIT FUNCTIONS----------------------*/
 
 /*
@@ -529,11 +511,6 @@ int firewall_init_rules(){
 		system("iptables -I HIPFW-OUTPUT -p 50 -j QUEUE");
 		system("iptables -I HIPFW-OUTPUT -p 17 --dport 50500 -j QUEUE");
 		system("iptables -I HIPFW-OUTPUT -p 17 --sport 50500 -j QUEUE");
-
-#if 0
-		/* LSI support: output packets with LSI value */
-		firewall_add_lsi_rule("iptables -I HIPFW-OUTPUT -d "," -j QUEUE");
-#endif
 
 		system("ip6tables -I HIPFW-FORWARD -p 139 -j QUEUE");
 		system("ip6tables -I HIPFW-FORWARD -p 50 -j QUEUE");
@@ -1326,7 +1303,6 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 	struct ip      *iphdr;
 	struct tcphdr  *tcphdr;
 	char 	       *hdrBytes = NULL;
-
 	int verdict = accept_normal_traffic_by_default;
 
 	HIP_DEBUG("\n");
@@ -1346,13 +1322,14 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 
 	/* LSI HOOKS */
 	if (ctx->ip_version == 4 && hip_lsi_support){
-		IPV6_TO_IPV4_MAP(&(ctx->src),&src_lsi);
-		IPV6_TO_IPV4_MAP(&(ctx->dst),&dst_lsi);
-		if (IS_LSI32(dst_lsi.s_addr)){
-			if (is_packet_reinjection(&dst_lsi))
+		IPV6_TO_IPV4_MAP(&(ctx->src), &src_lsi);
+		IPV6_TO_IPV4_MAP(&(ctx->dst), &dst_lsi);
+		if (IS_LSI32(dst_lsi.s_addr)) {
+			if (hip_is_packet_lsi_reinjection(&dst_lsi)) {
 				verdict = 1;
-		      	else{
-			    	hip_fw_handle_outgoing_lsi(ctx->ipq_packet, &src_lsi, &dst_lsi);
+			} else {
+			    	hip_fw_handle_outgoing_lsi(ctx->ipq_packet,
+							   &src_lsi, &dst_lsi);
 			    	/*Reject the packet*/
 			    	verdict = 0;
 		      	}
@@ -1423,7 +1400,8 @@ int hip_fw_handle_tcp_output(hip_fw_context_t *ctx){
 
 int hip_fw_handle_other_input(hip_fw_context_t *ctx){
 	int verdict = accept_normal_traffic_by_default;
-	int ip_hits = ipv6_addr_is_hit(&ctx->src) && ipv6_addr_is_hit(&ctx->dst);
+	int ip_hits = ipv6_addr_is_hit(&ctx->src) &&
+		ipv6_addr_is_hit(&ctx->dst);
 
 	HIP_DEBUG("\n");
 
@@ -1432,22 +1410,22 @@ int hip_fw_handle_other_input(hip_fw_context_t *ctx){
 			verdict = handle_proxy_inbound_traffic(ctx->ipq_packet,
 					&ctx->src);
 	  	else if (hip_lsi_support) {
-			//LSI check
+			/* LSI check */
 			verdict = hip_fw_handle_incoming_hit(ctx->ipq_packet,
 					&ctx->src, &ctx->dst);
 	  	}
 	} else if (hip_stun && ctx->is_stun == 1) {
-		HIP_DEBUG("Santtu is the king\n");
 		// Santtu FIXME
 		verdict = hip_fw_handle_stun_packet(ctx);
-		// verdict zero drops the original so that you can send a new one
-		// alloc new memory, copy the packet and add some zeroes (and hip header?)
-		// changed ip and udp lengths and checksums accordingly
-		// check handle_proxy_inbound_traffic() for examples
-		// use raw_sock_v4 to send the packets
+		/* - verdict zero drops the original so that you can send a new one
+		   - alloc new memory, copy the packet and add some zeroes (and hip header?)
+		   - change ip and udp lengths and checksums accordingly
+		   - check handle_proxy_inbound_traffic() for examples
+		   - use raw_sock_v4 to send the packets */
 	}
 
-	/* No need to check default rules as it is handled by the iptables rules */
+	/* No need to check default rules as it is handled by the
+	   iptables rules */
  out_err:
 
 	return verdict;

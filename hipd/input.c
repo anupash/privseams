@@ -507,7 +507,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 						       msg_info);
 		/* If agent is prompting user, let's make sure that
 		   the death counter in maintenance does not expire */
-		if (hip_agent_is_alive())
+		if (hip_agent_is_alive() && entry)
 		    entry->hip_opp_fallback_disable = filter;
 	} else {
 		/* Ugly bug fix for "conntest-client hostname tcp 12345"
@@ -3228,10 +3228,10 @@ int hip_handle_firewall_i1_request(struct hip_common *msg,
 		err = 0;
 	}
 	else {
-		err = hip_map_hit_to_addr(dst_hit, &dst_addr);
+		err = hip_map_id_to_addr(dst_hit, NULL, &dst_addr);
 	}
 #else
-	err = hip_map_hit_to_addr(dst_hit, &dst_addr);
+	err = hip_map_id_to_addr(dst_hit, NULL, &dst_addr);
 #endif // CONFIG_HIP_HI3
 
 	if (err) {

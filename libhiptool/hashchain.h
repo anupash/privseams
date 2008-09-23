@@ -20,7 +20,11 @@
 #include <openssl/md5.h>
 
 /* biggest digest in openssl lib */
-#define MAX_HASH_LENGTH SHA512_DIGEST_LENGTH
+#ifdef SHA512_DIGEST_LENGTH
+# define MAX_HASH_LENGTH SHA512_DIGEST_LENGTH
+#else
+# define MAX_HASH_LENGTH 64
+#endif
 
 typedef unsigned char * (*hash_function_t)(const unsigned char *, size_t,
 		unsigned char *);
