@@ -2585,7 +2585,6 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	}
 
 #ifdef HIP_USE_ICE
-	HIP_DEBUG(".......................................................\n");
 	hip_nat_start_ice(entry,esp_info,ICE_ROLE_CONTROLLING);
        
 #endif

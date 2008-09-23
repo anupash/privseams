@@ -1216,11 +1216,9 @@ out_err:
  */
 int hip_get_nat_mode(hip_ha_t *entry)
 {
-	int result;
 	if(entry){
-		result = entry->nat_mode;
-		return result;
-		//return 1;
+		return entry->nat_mode;
+		
 	}
 	return hip_nat_status;
 }
