@@ -466,9 +466,9 @@ int hip_connect_func(struct addrinfo *peer_ai, int *sock)
 	/* Loop through every address in the address info. */
 	for(ai = peer_ai; ai != NULL; ai = ai->ai_next) {
 	        if (ai->ai_family == AF_INET)
-		  HIP_DEBUG("AF_INET\n");
+		  _HIP_DEBUG("AF_INET\n");
 		else
-		  HIP_DEBUG("af_inet6\n");
+		  _HIP_DEBUG("af_inet6\n");
 	}
 	for(ai = peer_ai; ai != NULL; ai = ai->ai_next) {
 	        ipv4 = &((struct sockaddr_in *)ai->ai_addr)->sin_addr;
