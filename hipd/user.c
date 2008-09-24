@@ -153,6 +153,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         case SO_HIP_HEARTBEAT:
 		heartbeat = hip_get_param(msg, HIP_PARAM_HEARTBEAT);
 		hip_icmp_interval = heartbeat->heartbeat;
+		heartbeat_counter = hip_icmp_interval;
 		HIP_DEBUG("Received heartbeat interval (%d seconds)\n",hip_icmp_interval);
 		break;
 	case SO_HIP_SET_DEBUG_ALL:
