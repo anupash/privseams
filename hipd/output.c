@@ -1446,6 +1446,7 @@ int hip_send_icmp(int sockfd, hip_ha_t *entry) {
 	memset(&tval, 0, sizeof(struct timeval));
 	memset(cmsgbuf, 0, sizeof(cmsgbuf));
 	memset(iov, 0, sizeof(struct iovec));
+	memset(&dst6, 0, sizeof(dst6));
 	
 	icmp_pkt = malloc(HIP_MAX_ICMP_PACKET);
         HIP_IFEL((!icmp_pkt), -1, "Malloc for icmp_pkt failed\n");
