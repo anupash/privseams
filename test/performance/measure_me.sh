@@ -4,7 +4,7 @@
 DST_IPv4=192.168.1.103
 DST_IPv6=0
 DST_HIT=2001:0013:8cee:d7b1:cb71:9ea1:148c:0736
-ROUTE_TOv4=192.168.1.101
+ROUTE_TOv4=192.168.1.1
 ROUTE_TOv6=0
 
 MEASUREMENT_COUNT=20
@@ -36,6 +36,7 @@ WITH_MID=0
 WITH_WANEM=0
 MEASURE_RTT=0
 MEASURE_TPUT=0
+BANDWIDTH=100M
 VERIFY_PATH=0
 DO_PLOT=0
 
@@ -46,7 +47,7 @@ NO_ARGS=0
 
 if [ $# -eq "$NO_ARGS" ]
 then
-  echo "Usage: `basename $0` options: -a <family> -t <type> [-defilmMorvw] [-p <type>]"
+  echo "Usage: `basename $0` options: -a <family> -t <type> [-defilmMorvw] [-p <type> [-b <value>]]"
   echo
   echo "  -a <family>  = address family (4 - IPv4, 6 - IPv6)"
   echo "  -t <type>    = device type (1 - client, 2 - middlebox, 3 - server)"
@@ -55,7 +56,8 @@ then
   echo "  -i           = start hipfw with userspace ipsec (no conntrack)"
   echo "  -e           = start hipfw with ESP extension (no conntrack)"
   echo "  -r           = measure RTT"
-  echo "  -p <type>    = measure throughput (1 - tcp, 2 - udp, 3 - both)"
+  echo "  -p <type>    = measure throughput (1 - tcp, 2 - udp)"
+  echo "  -b <value>   = bandwith to be used for udp measurements (include K or M)"
   echo "  -w           = tests are run with WANem on the route"
   echo "  -o           = tests are run with packet reordering using WANem"
   echo "  -m           = tests are run with hipfw on middlebox-PC"
@@ -66,10 +68,11 @@ then
   exit 0
 fi
 
-while getopts ":a:defit:lmMop:rvw" CMD_OPT
+while getopts ":a:b:defit:lmMop:rvw" CMD_OPT
 do
   case $CMD_OPT in
     a) ADDR_FAMILY=$OPTARG;;
+    b) BANDWIDTH=$OPTARG;;
     d) RUN_HIPD=1;;
     e) RUN_HIPD=1
        RUN_HIPFW=1
@@ -454,7 +457,7 @@ then
     then
       while [ $i -lt $MEASUREMENT_COUNT ]
       do
-        iperf -V --client $DST_HIT --udp --len 1370 --bandwidth 100M | tee --append $OUTPUT_DIR/$FILE
+        iperf -V --client $DST_HIT --udp --len 1370 --bandwidth $BANDWIDTH | tee --append $OUTPUT_DIR/$FILE
         i=`expr $i + 1`
         sleep 2
       done 
@@ -462,7 +465,7 @@ then
     then
       while [ $i -lt $MEASUREMENT_COUNT ]
       do
-        iperf --client $DST_IPv4 --udp --len 1370 --bandwidth 100M | tee --append $OUTPUT_DIR/$FILE
+        iperf --client $DST_IPv4 --udp --len 1370 --bandwidth $BANDWIDTH | tee --append $OUTPUT_DIR/$FILE
         i=`expr $i + 1`
         sleep 2
       done
@@ -470,7 +473,7 @@ then
     then
       while [ $i -lt $MEASUREMENT_COUNT ]
       do
-        iperf -V --client $DST_IPv6 --udp --len 1370 --bandwidth 100M | tee --append $OUTPUT_DIR/$FILE
+        iperf -V --client $DST_IPv6 --udp --len 1370 --bandwidth $BANDWIDTH | tee --append $OUTPUT_DIR/$FILE
         i=`expr $i + 1`
         sleep 2
       done
