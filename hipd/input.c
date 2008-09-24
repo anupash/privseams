@@ -2242,18 +2242,18 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	/***** LOCATOR PARAMETER *****/
 	hip_handle_locator_parameter(entry, hip_get_param(i2, HIP_PARAM_LOCATOR), esp_info);
 
-	/** Send the first heartbeat **/
-	if (hip_icmp_interval > 0) {
-		HIP_DEBUG("icmp sock %d\n", hip_icmp_sock);
-		HIP_IFEL(hip_send_icmp(hip_icmp_sock, entry), -1,
-			 "Failed to send heartbeat\n");
-	}
-
 #ifdef HIP_USE_ICE
 	hip_nat_start_ice(entry, esp_info,ICE_ROLE_CONTROLLING);
 #endif
 
 //end add
+
+	/* Send the first heartbeat. Notice that error value is ignored because we want to
+	   to complete the base exchange successfully */
+	if (hip_icmp_interval > 0) {
+		_HIP_DEBUG("icmp sock %d\n", hip_icmp_sock);
+		hip_send_icmp(hip_icmp_sock, entry);
+	}
 
 	HIP_DEBUG("Reached %s state\n", hip_state_str(entry->state));
 	if (entry->hip_msg_retrans.buf) {
@@ -2672,10 +2672,10 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 		entry->hip_msg_retrans.buf = NULL;
 	}
 
-	/** Send the first heartbeat**/
+	/* Send the first heartbeat. Notice that the error is ignored to complete
+	   the base exchange successfully. */
 	if (hip_icmp_interval > 0) {
-		HIP_IFEL(hip_send_icmp(hip_icmp_sock, entry), -1,
-			 "Failed to send heartbeat\n");
+		hip_send_icmp(hip_icmp_sock, entry);
 	}
 
 	//TODO Send the R2 Response to Firewall
