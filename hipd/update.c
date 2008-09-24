@@ -940,6 +940,7 @@ int hip_build_verification_pkt(hip_ha_t *entry, hip_common_t *update_packet,
 	if (msg)
 	{
 		struct hip_echo_request_m *ping;
+		char *midauth_cert = hip_pisa_get_certificate();
 
 		ping = hip_get_param(msg, HIP_PARAM_ECHO_REQUEST_M);
 
@@ -948,6 +949,9 @@ int hip_build_verification_pkt(hip_ha_t *entry, hip_common_t *update_packet,
 		if (ping != NULL)
 			HIP_IFEL(hip_build_param(update_packet, entry->our_pub), -1,
 			         "Building of host id failed\n");
+
+		/* For now we just add some random data to see if it works */
+		HIP_IFEL(hip_build_param_cert(update_packet, 1, 1, 1, 1, midauth_cert, strlen(midauth_cert)), -1, "Building of cert failed\n");
 
 		while (ping) {
 			int ln = hip_get_param_contents_len(ping);

@@ -573,7 +573,8 @@ static int pisa_handler_i2(hip_fw_context_t *ctx)
 }
 
 /**
- * Check for a PISA nonce and a PISA puzzle in the R2 packet.
+ * Check for a PISA nonce, a PISA puzzle, a valid signature and a valid
+ * certificate in the R2 packet.
  *
  * @param ctx context of the packet to check
  * @return verdict, either NF_ACCEPT or NF_DROP
@@ -594,8 +595,8 @@ static int pisa_handler_r2(hip_fw_context_t *ctx)
 	cert = pisa_check_certificate(ctx);
 
 	if (nonce == NULL || solution == NULL || sig != 0 || cert != 0) {
-		/* disallow further communication if either nonce, solution or
-		 * signature were not correct */
+		/* disallow further communication if either nonce, solution,
+		 * signature or certificate were not correct */
 		pisa_reject_connection(ctx, nonce);
 		verdict = NF_DROP;
 	} else {
@@ -631,24 +632,27 @@ static int pisa_handler_u1(hip_fw_context_t *ctx)
 }
 
 /**
- * Check for a PISA nonce and a PISA puzzle in the U2 packet.
+ * Check for a PISA nonce, a PISA puzzle, a valid signature and a valid 
+ * certificate in the U2 packet.
  *
  * @param ctx context of the packet to check
  * @return verdict, either NF_ACCEPT or NF_DROP
  */
 static int pisa_handler_u2(hip_fw_context_t *ctx)
 {
-	int verdict = NF_DROP, sig = 0;
+	int verdict = NF_DROP, sig = 0, cert = 0;
 	struct hip_solution_m *solution = NULL;
 	struct hip_tlv_common *nonce = NULL;
 
 	nonce = pisa_check_nonce(ctx);
 	solution = pisa_check_solution(ctx);
 	sig = pisa_check_signature(ctx);
+	cert = pisa_check_certificate(ctx);
 
-	if (nonce == NULL || solution == NULL || sig != 0) {
+	if (nonce == NULL || solution == NULL || sig != 0 || cert != 0) {
 		HIP_DEBUG("U2 packet did not match criteria: nonce %p, "
-		          "solution %p, signature %i\n", nonce, solution, sig);
+		          "solution %p, signature %i, cert %i\n", nonce,
+			  solution, sig, cert);
 		verdict = NF_DROP;
 	} else {
 		/* packet was ok, forward the first SPI */
@@ -674,7 +678,7 @@ static int pisa_handler_u3(hip_fw_context_t *ctx)
 	sig = pisa_check_signature(ctx);
 
 	if (nonce == NULL || sig != 0) {
-		HIP_DEBUG("U2 packet did not match criteria: nonce %p, "
+		HIP_DEBUG("U3 packet did not match criteria: nonce %p, "
 		          "signature %i\n", nonce, sig);
 		verdict = NF_DROP;
 	} else {
