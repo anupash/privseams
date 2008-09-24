@@ -1493,7 +1493,6 @@ HIP_DEBUG_IN6ADDR("*** ", &ip_gw_mapped);
 int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int optc){
         int err = 0, ret = 0;
 	hip_hit_t hit = {0};
-	struct in6_addr all_zero_ipv6 = {0};
 	struct in_addr  *reply_ipv4;
 	struct in6_addr *reply_ipv6 = {0};
 	hip_tlv_type_t         param_type = 0;
@@ -1535,7 +1534,7 @@ int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int op
 			reply_ipv6 = (struct in6_addr *)
 					hip_get_param_contents_direct(
 						current_param);
-//if(!ipv6_addr_cmp(reply_ipv6, &all_zero_ipv6))
+
 	HIP_DEBUG_IN6ADDR("Result IP ", reply_ipv6);
 		}else if(param_type == HIP_PARAM_INT){
 			//TO DO, get int that indicates error 
@@ -1543,15 +1542,13 @@ int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int op
 		}
 	}
 
-	//do the mapping if necessary, and print
-	/*if(IN6_IS_ADDR_V4MAPPED(reply_ipv6)){
-		IPV6_TO_IPV4_MAP(reply_ipv6, reply_ipv4);
-		HIP_DEBUG_INADDR("Result IPV4 ", reply_ipv4);
-	}else{
-		HIP_DEBUG_IN6ADDR("Result IPV6 ", reply_ipv6);
-	}*/
+	if(err == 1)
+		HIP_INFO("Connection to the dht gateway did not succeed.\n");
+	else if(err == 2)
+		HIP_INFO("Processing the dht gateway response failed.\n");
 
 	err = 0;
+
 out_err:
 	memset(msg, 0, HIP_MAX_PACKET);
         return(err);

@@ -308,14 +308,16 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			opendht_serving_gateway_ttl  = tmp_ttl;
 			opendht_serving_gateway_port = tmp_port;
 
-			/*//connect to the new dht gw
+			/*
+			//code for connecting to the new dht gw
+			//no binding needed for just connecting,
+			//unless we want to receive data from it
 			s = init_dht_gateway_socket(s);
-			err = connect_dht_gateway(s, opendht_serving_gateway, 1);
-			//check err to see if conn successful
+			err = connect_dht_gateway(s, opendht_serving_gateway, 0);
 			*/
 
 
-
+/*
 char val_host[] = "blerta-pc";
 char val_hit[] = "2001:0018:2eab:f78b:f6c3:558e:7ac8:bebd";
 char host_addr[] = "127.0.0.1";
@@ -325,7 +327,7 @@ char val_ip[] = "2001:708:140:220:211:11ff:febb:5d47";
 char dht_response2[1400];
 struct in6_addr addrvalue;
 
-/* #### PUT hit ####!*/
+// #### PUT hit ####
 s = init_dht_gateway_socket(s);
 error = connect_dht_gateway(s, opendht_serving_gateway, 1);
 HIP_DEBUG("### ERROR %d\n", error);
@@ -358,15 +360,9 @@ if(error != -1){
 
 	memcpy(&((&addrvalue)->s6_addr), dht_response2, sizeof(addrvalue.s6_addr));
 	HIP_DEBUG_IN6ADDR("### ", &addrvalue);
-	/*
-	if (!strcmp(dht_response2, val_ip))
-		printf("Did match the sent value.\n");
-	else
-		printf("Did NOT match the sent value!\n");
-	*/
 }
 close(s);
-
+*/
 
 
 		}
@@ -378,10 +374,13 @@ close(s);
 	break;
         case SO_HIP_DHT_SERVING_GW:
         {
-
 		err = hip_get_dht_mapping_for_HIT_msg(msg);
+		if(err){
+			_HIP_DEBUG("Handle the message in the method above.\n");
+			err = 0;
+			goto out_err;
+		}
 		break;
-
 /*
 	        struct in_addr ip_gw;
 		struct in6_addr ip_gw_mapped;
