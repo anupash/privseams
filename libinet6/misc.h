@@ -25,6 +25,10 @@
 #  include "hipconf.h"
 #endif /* CONFIG_HIP_LIBHIPTOOL */
 
+#ifndef HOST_NAME_MAX
+# define HOST_NAME_MAX 64
+#endif
+
 #define HOST_ID_FILENAME_MAX_LEN 256
 
 #define HIP_OPP_IP_DB_SIZE		16
