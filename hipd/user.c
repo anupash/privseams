@@ -315,56 +315,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			s = init_dht_gateway_socket(s);
 			err = connect_dht_gateway(s, opendht_serving_gateway, 0);
 			*/
-
-
-/*
-char val_host[] = "blerta-pc";
-char val_hit[] = "2001:0018:2eab:f78b:f6c3:558e:7ac8:bebd";
-char host_addr[] = "127.0.0.1";
-int ttl = 60, error = 0;
-char dht_response[1400];
-char val_ip[] = "2001:708:140:220:211:11ff:febb:5d47";
-char dht_response2[1400];
-struct in6_addr addrvalue;
-
-// #### PUT hit ####
-s = init_dht_gateway_socket(s);
-error = connect_dht_gateway(s, opendht_serving_gateway, 1);
-HIP_DEBUG("### ERROR %d\n", error);
-if(error != -1){
-	if (error < 0) exit(0);
-	ret = 0;
-	ret = opendht_put(s, 
-		      (unsigned char *)val_hit,
-		      (unsigned char *)val_ip, 
-		      (unsigned char *)host_addr, opendht_serving_gateway_port, opendht_serving_gateway_ttl);
-	ret = opendht_read_response(s, dht_response); 
-	//if (ret == -1) exit(1);
-	printf("Put packet (hit->ip) sent and ...\n");
-	printf("Put was success %s\n", dht_response);
-}
-close(s);
-
-
-////#### GET hit ####
-s = init_dht_gateway_socket(s);
-error = connect_dht_gateway(s, opendht_serving_gateway, 1);
-HIP_DEBUG("### ERROR %d\n", error);
-if(error != -1){
-	ret = 0;
-	ret = opendht_get(s, (unsigned char *)val_hit, (unsigned char *)host_addr, 5851);
-	printf("ret %d\n", ret);
-
-	ret = opendht_read_response(s, dht_response2);
-	printf("Here 3 %s\n", dht_response2);
-
-	memcpy(&((&addrvalue)->s6_addr), dht_response2, sizeof(addrvalue.s6_addr));
-	HIP_DEBUG_IN6ADDR("### ", &addrvalue);
-}
-close(s);
-*/
-
-
 		}
 		else
 		{
@@ -374,51 +324,19 @@ close(s);
 	break;
         case SO_HIP_DHT_SERVING_GW:
         {
-		err = hip_get_dht_mapping_for_HIT_msg(msg);
-		if(err){
-			_HIP_DEBUG("Handle the message in the method above.\n");
-			err = 0;
-			goto out_err;
+		int err_value = 0;
+		if(hip_opendht_inuse != SO_HIP_DHT_ON){
+			err_value = 5;
+			hip_build_param_contents(msg, &err_value,
+					 HIP_PARAM_INT, sizeof(int));
+		}else if((opendht_serving_gateway == NULL) ||
+			 (opendht_serving_gateway->ai_addr == NULL)){
+			err_value = 4;
+			hip_build_param_contents(msg, &err_value,
+					 HIP_PARAM_INT, sizeof(int));
+		}else{
+			err = hip_get_dht_mapping_for_HIT_msg(msg);
 		}
-		break;
-/*
-	        struct in_addr ip_gw;
-		struct in6_addr ip_gw_mapped;
-		int rett = 0, errr = 0;
-		struct sockaddr_in *sa;
-		if (opendht_serving_gateway == NULL) {
-		        opendht_serving_gateway = malloc(sizeof(struct addrinfo));
-			memset(opendht_serving_gateway, 0, sizeof(struct addrinfo));
-		}
-		if (opendht_serving_gateway->ai_addr == NULL) {
-		        opendht_serving_gateway->ai_addr = malloc(sizeof(struct sockaddr_in));
-			memset(opendht_serving_gateway->ai_addr, 0, sizeof(struct sockaddr_in));
-		}
-		sa = (struct sockaddr_in*)opendht_serving_gateway->ai_addr;
-		rett = inet_pton(AF_INET, inet_ntoa(sa->sin_addr), &ip_gw);
-		IPV4_TO_IPV6_MAP(&ip_gw, &ip_gw_mapped);
-		HIP_DEBUG_HIT("dht gateway address (mapped) to be sent", &ip_gw_mapped);
-
-		memset(msg, 0, HIP_MAX_PACKET);
-
-		if (hip_opendht_inuse == SO_HIP_DHT_ON) {
-  		        errr = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped,
-							       opendht_serving_gateway_ttl,
-							       opendht_serving_gateway_port);
-		} else { // not in use mark port and ttl to 0 so 'client' knows
-  		        errr = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped, 0,0);
-		}
-
-		if (errr) {
-		        HIP_ERROR("Build param hit failed: %s\n", strerror(errr));
-			goto out_err;
-		}
-		errr = hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW, 0);
-		if (errr){
-		        HIP_ERROR("Build hdr failed: %s\n", strerror(errr));
-		}
-		HIP_DEBUG("Building gw_info complete\n");
-*/
         }
         break;
         case SO_HIP_DHT_SET:

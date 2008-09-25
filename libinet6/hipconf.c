@@ -1432,40 +1432,8 @@ int hip_conf_handle_gw(hip_common_t *msg, int action, const char *opt[], int opt
                 goto out_err;
         }
 
-/*new_gateway = malloc(sizeof(struct addrinfo));
-memset(new_gateway, 0, sizeof(struct addrinfo));
-        ////memset(new_gateway, '0', sizeof(struct addrinfo *));
-        ret = 0;
-        // resolve the new gateway 
-        // warning: passing argument 1 of 'resolve_dht_gateway_info' discards
-	//   qualifiers from pointer target type. 04.07.2008 
-	// warning: passing argument 2 of 'resolve_dht_gateway_info' from
-	//   incompatible pointer type. 04.07.2008 
-        ret = resolve_dht_gateway_info(opt[0], &new_gateway);
-        if (ret < 0) goto out_err;
-        struct sockaddr_in *sa = (struct sockaddr_in *)new_gateway->ai_addr;
-
-        HIP_INFO("Gateway addr %s, port %s, TTL %s\n",
-		 inet_ntoa(sa->sin_addr), opt[1], opt[2]);
-
-        ret = 0;
-        ret = inet_pton(AF_INET, inet_ntoa(sa->sin_addr), &ip_gw);
-        IPV4_TO_IPV6_MAP(&ip_gw, &ip_gw_mapped);
-        if (ret < 0 && errno == EAFNOSUPPORT) {
-                HIP_PERROR("inet_pton: not a valid address family\n");
-                err = -EAFNOSUPPORT;
-                goto out_err;
-        } else if (ret == 0) {
-                HIP_ERROR("inet_pton: %s: not a valid network address\n", opt[0]);
-                err = -EINVAL;
-                goto out_err;
-        }*/
-
 	ret = inet_pton(AF_INET, opt[0], &ip_gw);
 	IPV4_TO_IPV6_MAP(&ip_gw, &ip_gw_mapped);
-
-HIP_DEBUG("*** %s", opt[0]);
-HIP_DEBUG_IN6ADDR("*** ", &ip_gw_mapped);
 
         err = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped,
 					      atoi(opt[2]), atoi(opt[1]));
@@ -1486,7 +1454,7 @@ HIP_DEBUG_IN6ADDR("*** ", &ip_gw_mapped);
 
 
 /**
- * Function that gets data from DHT
+ * Function that gets data from DHT - hipconf dht get <HIT> - returns IP mappings
  *
  * @return       zero on success, or negative error value on error.
  */
@@ -1495,6 +1463,7 @@ int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int op
 	hip_hit_t hit = {0};
 	struct in_addr  *reply_ipv4;
 	struct in6_addr *reply_ipv6 = {0};
+	
 	hip_tlv_type_t         param_type = 0;
 	struct hip_tlv_common *current_param = NULL;
 
@@ -1543,9 +1512,15 @@ int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int op
 	}
 
 	if(err == 1)
-		HIP_INFO("Connection to the dht gateway did not succeed.\n");
+		HIP_INFO("Connection to the DHT gateway did not succeed.\n");
 	else if(err == 2)
-		HIP_INFO("Processing the dht gateway response failed.\n");
+		HIP_INFO("Getting a response DHT gateway failed.\n");
+	else if(err == 3)
+		HIP_INFO("Entry not found at DHT gateway.\n");
+	else if(err == 4)
+		HIP_INFO("DHT gateway not configured yet.\n");
+	else if(err == 5)
+		HIP_INFO("DHT support not turned on.\n");
 
 	err = 0;
 
