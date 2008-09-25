@@ -33,6 +33,7 @@ RUN_USERIPSEC=0
 RUN_ESPEXT=0
 WITH_REORDER=0
 WITH_MID=0
+WITH_HIPFW=0
 WITH_WANEM=0
 MEASURE_RTT=0
 MEASURE_TPUT=0
@@ -47,7 +48,7 @@ NO_ARGS=0
 
 if [ $# -eq "$NO_ARGS" ]
 then
-  echo "Usage: `basename $0` options: -a <family> -t <type> [-defilmMorvw] [-p <type> [-b <value>]]"
+  echo "Usage: `basename $0` options: -a <family> -t <type> [-defilorvw] [-m|M <value>] [-p <type> [-b <value>]]"
   echo
   echo "  -a <family>  = address family (4 - IPv4, 6 - IPv6)"
   echo "  -t <type>    = device type (1 - client, 2 - middlebox, 3 - server)"
@@ -60,15 +61,15 @@ then
   echo "  -b <value>   = bandwith to be used for udp measurements (include K or M)"
   echo "  -w           = tests are run with WANem on the route"
   echo "  -o           = tests are run with packet reordering using WANem"
-  echo "  -m           = tests are run with hipfw on middlebox-PC"
-  echo "  -M           = tests are run with hipfw on a router"
+  echo "  -m <value>   = tests are run with middlebox-PC (0 - hipfw off, 1 - hipfw on)"
+  echo "  -M <value>   = tests are run with a router (0 - hipfw off, 1 - hipfw on)"
   echo "  -v           = verify path"
   echo "  -l           = plot histograms"
   echo
   exit 0
 fi
 
-while getopts ":a:b:defit:lmMop:rvw" CMD_OPT
+while getopts ":a:b:defit:lm:M:op:rvw" CMD_OPT
 do
   case $CMD_OPT in
     a) ADDR_FAMILY=$OPTARG;;
@@ -84,8 +85,10 @@ do
        RUN_USERIPSEC=1;;
     t) DEVICE_TYPE=$OPTARG;;
     l) DO_PLOT=1;;
-    m) WITH_MID=1;;
-    M) WITH_MID=2;;
+    m) WITH_MID=1
+       WITH_HIPFW=$OPTARG;;
+    M) WITH_MID=2
+       WITH_HIPFW=$OPTARG;;
     o) WITH_WANEM=1
        WITH_REORDER=1;;
     p) MEASURE_TPUT=$OPTARG;;
@@ -123,10 +126,20 @@ fi
 
 if [ $WITH_MID -eq "1" ]
 then
-  FILE_PREFIX=$FILE_PREFIX"with_pcfw-"
+  if [ $WITH_HIPFW -eq "1" ]
+  then
+    FILE_PREFIX=$FILE_PREFIX"actice_pcfw-"
+  else
+    FILE_PREFIX=$FILE_PREFIX"inactive_pcfw-"
+  fi
 elif [ $WITH_MID -eq "2" ]
 then
-  FILE_PREFIX=$FILE_PREFIX"with_routerfw-"
+  if [ $WITH_HIPFW -eq "1" ]
+  then
+    FILE_PREFIX=$FILE_PREFIX"active_routerfw-"
+  else
+    FILE_PREFIX=$FILE_PREFIX"inactive_routerfw-"
+  fi
 else
   FILE_PREFIX=$FILE_PREFIX"no_midfw-"
 fi

@@ -282,9 +282,12 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	HIP_DEBUG("SEQ no. of incoming packet: %u \n", seq_no);
 	//HIP_IFEL(entry->sequence != seq_no, -1, "ESP sequence numbers do not match\n");
 
+// this is not needed at the endhost as there's the HMAC to auth packets
+#if 0
 	// verify the esp extension hash, if in use
 	HIP_IFEL(esp_prot_verify(entry, ((unsigned char *)esp_hdr) + sizeof(struct hip_esp)),
 			-1, "hash could NOT be verified\n");
+#endif
 
 // this is helpful for testing
 #if 0
