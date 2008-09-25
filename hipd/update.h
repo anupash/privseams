@@ -648,7 +648,8 @@ int hip_update_handle_stun(void* pkg, int len,
 /**
  * Triggers sending update packets to all connections. 
  *
+ * @param ifidx the interface that should be updated
  * @return 0 on success
  */
-int hip_manual_update(void);
+int hip_manual_update(struct hip_common *msg);
 #endif /* HIP_UPDATE_H */

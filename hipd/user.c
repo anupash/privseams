@@ -1030,7 +1030,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		break;
 #ifdef CONFIG_HIP_MIDAUTH
 	case SO_HIP_MANUAL_UPDATE_PACKET:
-		err = hip_manual_update();
+		err = hip_manual_update(msg);
 		break;
 #endif
 	default:

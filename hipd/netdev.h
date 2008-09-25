@@ -37,4 +37,6 @@ int hip_get_default_hit(struct in6_addr *hit);
 int hip_get_default_lsi(struct in_addr *lsi);
 
 void add_address_to_list(struct sockaddr *addr, int ifindex);
+
+int count_if_addresses(int ifindex);
 #endif /* NETDEV_H */

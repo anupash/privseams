@@ -77,7 +77,7 @@ const char *hipconf_usage =
 "hipproxy on|off\n"
 #endif
 #ifdef CONFIG_HIP_MIDAUTH
-"manual-update\n"
+"manual-update <interface>\n"
 #endif
 ;
 
@@ -202,10 +202,10 @@ int hip_conf_check_action_argc(int action) {
 	switch (action) {
 	case ACTION_NEW: case ACTION_NAT: case ACTION_DEC: case ACTION_RST:
 	case ACTION_BOS: case ACTION_LOCATOR: case ACTION_OPENDHT: case ACTION_HEARTBEAT:
-	case ACTION_MANUAL_UPDATE:
                 break;
 	case ACTION_DEBUG: case ACTION_RESTART: case ACTION_REINIT:
 	case ACTION_TCPTIMEOUT:
+	case ACTION_MANUAL_UPDATE:
 		count = 1;
 		break;
 	case ACTION_ADD: case ACTION_DEL: case ACTION_SET: case ACTION_INC:
@@ -1061,11 +1061,30 @@ int hip_conf_handle_bos(hip_common_t *msg, int action,
 int hip_conf_handle_manual_update(hip_common_t *msg, int action,
 				  const char *opt[], int optc)
 {
-	int err = 0;
+	int err = 0, s = 0;
+	unsigned int ifidx;
+	struct ifreq ifr;
 
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_MANUAL_UPDATE_PACKET, 0), -1, "Failed to build user message header.: %s\n", strerror(err));
+	HIP_IFEL(optc != 0, -1, "Too many parameters for manual-update.\n");
+
+	bzero(&ifr, sizeof(ifr));
+	strncpy(ifr.ifr_name, opt[0], sizeof(ifr.ifr_name));
+
+	HIP_IFEL((s = socket(AF_INET, SOCK_DGRAM, 0)) == -1, -1,
+		 "Failed to open socket.\n");
+	HIP_IFEL(ioctl(s, SIOCGIFINDEX, &ifr) == -1, -1,
+		 "Failed to find interface %s.\n", opt[0]);
+	ifidx = ifr.ifr_ifindex;
+
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_MANUAL_UPDATE_PACKET, 0), -1,
+		 "Failed to build user message header.: %s\n", strerror(err));
+
+	err = hip_build_param_contents(msg, (void *) &ifidx, HIP_PARAM_UINT,
+				       sizeof(unsigned int));
 
 out_err:
+	if (s != 0)
+		close(s);
 	return err;
 }
 

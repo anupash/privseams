@@ -18,6 +18,9 @@
 #ifdef CONFIG_HIP_PERFORMANCE
 #include "performance.h"
 #endif
+#ifdef CONFIG_HIP_MIDAUTH
+#include "pisa.h"
+#endif
 
 /* All Doxygen function comments are now moved to the header file. Some comments
    are inadequate. */
@@ -26,6 +29,8 @@
 extern hip_xmit_func_set_t nat_xmit_func_set;
 /** A transmission function set for sending raw HIP packets. */
 extern hip_xmit_func_set_t default_xmit_func_set;
+
+static time_t last_update = 0;
 
 int hip_for_each_locator_addr_item(
 	int (*func)
@@ -2887,6 +2892,8 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 		}
 	}
 
+	last_update = time(NULL);
+
  out_err:
 
 	return;
@@ -3280,13 +3287,19 @@ int hip_update_handle_stun(void* pkg, int len,
 	}
 }
 
-int hip_manual_update(void)
+int hip_manual_update(struct hip_common *msg)
 {
-	struct hip_common * locator_msg;
+	struct hip_common *locator_msg;
 	struct hip_locator *loc;
 	struct hip_locator_addr_item *locators;
 	struct sockaddr_in addr;
-	int err = 0, i = 0, ifidx;
+	int err = 0, i = 0;
+	unsigned int *ifidx;
+
+	if (difftime(time(NULL), last_update) < 10.0) {
+		HIP_DEBUG("Won't send manual update, too soon for that.\n");
+		goto out_err;
+	}
 
 	/* Locator_msg is just a container for building */
 	locator_msg = malloc(HIP_MAX_PACKET);
@@ -3300,13 +3313,18 @@ int hip_manual_update(void)
 	loc = hip_get_param(locator_msg, HIP_PARAM_LOCATOR);
 	locators = hip_get_locator_first_addr_item(loc);
 
-	ifidx = 1;
-	i = hip_get_locator_addr_item_count(loc);
+	ifidx = (unsigned int*) hip_get_param_contents(msg, HIP_PARAM_UINT);
+	HIP_IFEL(!ifidx, -1, "Manual update contained no interface\n");
+
+	/* @todo: check that ifidx is valid */
+	i = count_if_addresses(*ifidx);
+	HIP_DEBUG("UPDATE on interface %i contains %i addr(s)\n", *ifidx, i);
+	hip_print_locator_addresses(locator_msg);
 	addr.sin_family = AF_INET;
 	addr.sin_addr.s_addr = 0x12345678;
 
 	HIP_DEBUG("UPDATE to be sent contains %i addr(s)\n", i);
-	hip_send_update_all(locators, i, ifidx, SEND_UPDATE_LOCATOR, 1, &addr);
+	hip_send_update_all(locators, i, *ifidx, SEND_UPDATE_LOCATOR, 1, &addr);
 
 out_err:
 	return err;

@@ -25,7 +25,7 @@ int hip_netdev_match(const void *ptr1, const void *ptr2) {
 	return hip_netdev_hash(ptr1) != hip_netdev_hash(ptr2);
 }
 
-static int count_if_addresses(int ifindex)
+int count_if_addresses(int ifindex)
 {
 	struct netdev_address *na;
 	hip_list_t *n, *t;
