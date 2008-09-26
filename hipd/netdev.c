@@ -1306,6 +1306,12 @@ int hip_get_default_hit(struct in6_addr *hit)
 #if 0
 int hip_get_default_hit(struct in6_addr *hit)
 {
+	return hip_get_any_localhost_hit(hit, HIP_HI_RSA, 0);
+}
+
+#if 0
+int hip_get_default_hit(struct in6_addr *hit)
+{
 	/* Where is rtnl_rtdsfield_init used? Why are rtnl_rtdsfield_tab and
 	   idxmap initialized as arrays although they're pointers? The same
 	   goes for hip_get_default_lsi() also. -Lauri 21.07.2008. */
@@ -1351,6 +1357,7 @@ int hip_get_default_hit_msg(struct hip_common *msg)
  out_err:
 	return err;
 }
+#endif
 
 
 int hip_get_default_lsi(struct in_addr *lsi)

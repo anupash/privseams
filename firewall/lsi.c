@@ -4,6 +4,39 @@
 
 hip_lsi_t local_lsi = { 0 };
 
+int hip_get_lsis_by_hits(struct in6_addr *hit_our, struct in6_addr *hit_peer,
+			hip_lsi_t *lsi_our, hip_lsi_t *lsi_peer) {
+	int err = 0;
+	struct hip_tlv_common *current_param = NULL;
+	struct hip_common *msg = NULL;
+	struct hip_hadb_user_info_state *ha;
+  
+	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
+	hip_msg_init(msg);
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0),
+				-1, "Building of daemon header failed\n");
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1,
+		 "send recv daemon info\n");
+
+	err = -1;
+	while((current_param=hip_get_next_param(msg, current_param)) != NULL) {
+		ha = hip_get_param_contents_direct(current_param);
+		if (!ipv6_addr_cmp(&ha->hit_our, hit_our) &&
+		    !ipv6_addr_cmp(&ha->hit_peer, hit_peer)) {
+			HIP_DEBUG("Matched HITs\n");
+			err = 0;
+			memcpy(lsi_our, &ha->lsi_our, sizeof(hip_lsi_t));
+			memcpy(lsi_peer, &ha->lsi_peer, sizeof(hip_lsi_t));
+			break;
+		}
+	}
+        
+ out_err:
+        if (msg)
+                HIP_FREE(msg);  
+        return err;
+}
+
 /**
  * Obtains the peer IP from the peer lsi.
  * @param *src_lsi	the input source lsi
@@ -61,11 +94,10 @@ int hip_fw_get_default_lsi(hip_lsi_t *lsi) {
 	HIP_ASSERT(lsi);
 
 	/* Use cached LSI if possible */
-	if (local_lsi.s_addr != 0)
-		if (local_lsi.s_addr == lsi->s_addr)
-			return 1;
-	        else
-			return 0;
+	if (local_lsi.s_addr != 0) {
+		memcpy(lsi, &local_lsi, sizeof(*lsi));
+		goto out_err;
+	}
 
 	/* Query hipd for the LSI */
        
@@ -84,8 +116,7 @@ int hip_fw_get_default_lsi(hip_lsi_t *lsi) {
 		 "Did not find LSI\n");
 	memcpy(&local_lsi, hip_get_param_contents_direct(param),
 	       sizeof(local_lsi));
-	memcpy(lsi, hip_get_param_contents_direct(param),
-	       sizeof(*lsi));
+	memcpy(lsi, &local_lsi, sizeof(*lsi));
 
 out_err:
         if(msg)
@@ -166,16 +197,15 @@ int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m,
 		proto6 = getproto_info(ntohs(portDest), proto);
 
 	if (!proto6){
-	        HIP_IFEL(hip_get_lsi_our_by_hits(ip_src, ip_dst, &lsi_our),
-			 -1, "Failed to obtain local LSI\n");
-		HIP_IFEL(hip_get_lsi_peer_by_hits(ip_src, ip_dst, &lsi_our),
-			 -1, "Failed to obtain peer LSI\n");
+	        HIP_IFEL(hip_get_lsis_by_hits(ip_dst, ip_src,
+					      &lsi_our, &lsi_peer),
+			 -1, "Failed to obtain LSIs\n");
 
 		HIP_DEBUG_LSI("lsi_our: ", &lsi_our);
 		HIP_DEBUG_LSI("lsi_peer: ", &lsi_peer);
 		IPV4_TO_IPV6_MAP(&lsi_our, &src_addr);
 		IPV4_TO_IPV6_MAP(&lsi_peer, &dst_addr);
-		HIP_IFEL(reinject_packet(dst_addr, src_addr, m, 6, 1), -1,
+		HIP_IFEL(reinject_packet(&dst_addr, &src_addr, m, 6, 1), -1,
 			 "Failed to reinject\n");
 	}
 
@@ -245,8 +275,9 @@ int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src,
 
 		/* decide whether to reinject the packet */
 		if (entry_peer->bex_state == FIREWALL_STATE_BEX_ESTABLISHED)
-			HIP_IFEL(reinject_packet(entry_peer->hit_our,
-						 entry_peer->hit_peer, m, 4, 0),
+			HIP_IFEL(reinject_packet(&entry_peer->hit_our,
+						 &entry_peer->hit_peer,
+						 m, 4, 0),
 				 -1, "Failed to reinject\n");
 	} else {
 		/* add default entry in the firewall db */
@@ -281,7 +312,7 @@ int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src,
 						       FIREWALL_STATE_BEX_ESTABLISHED),
 				 -1, "Failed to update fw entry\n");
 
-			HIP_IFEL(reinject_packet(src_hit, dst_hit, m, 4, 0),
+			HIP_IFEL(reinject_packet(&src_hit, &dst_hit, m, 4, 0),
 				 -1, "Reinject failed\n");
 		}
 	}
@@ -360,7 +391,8 @@ int hip_request_peer_hit_from_hipd_at_firewall(
  * @param incoming             packet direction
  * @return	               err during the reinjection
  */
-int reinject_packet(struct in6_addr src_hit, struct in6_addr dst_hit, ipq_packet_msg_t *m, int ipOrigTraffic, int incoming)
+int reinject_packet(struct in6_addr *src_hit, struct in6_addr *dst_hit,
+		    ipq_packet_msg_t *m, int ipOrigTraffic, int incoming)
 {
         int err = 0, ip_hdr_size, packet_length = 0, protocol, ttl;
 	u8 *msg;  
@@ -380,8 +412,8 @@ int reinject_packet(struct in6_addr src_hit, struct in6_addr dst_hit, ipq_packet
 		ttl = ip6_hdr->ip6_hlim;
 		HIP_DEBUG_IN6ADDR("Orig packet src address: ", &(ip6_hdr->ip6_src));
 		HIP_DEBUG_IN6ADDR("Orig packet dst address: ", &(ip6_hdr->ip6_dst));
-		HIP_DEBUG_IN6ADDR("New packet src address:", &src_hit);
-		HIP_DEBUG_IN6ADDR("New packet dst address: ", &dst_hit);
+		HIP_DEBUG_IN6ADDR("New packet src address:", src_hit);
+		HIP_DEBUG_IN6ADDR("New packet dst address: ", dst_hit);
 	}
 	
 	if (m->data_len <= (BUFSIZE - ip_hdr_size)){
@@ -403,22 +435,33 @@ int reinject_packet(struct in6_addr src_hit, struct in6_addr dst_hit, ipq_packet
 	if (protocol == IPPROTO_ICMP && incoming){	          		  
 		  icmp = (struct icmphdr *)msg;
 		  HIP_DEBUG("protocol == IPPROTO_ICMP && incoming && type=%d code=%d\n",icmp->type,icmp->code);
-		  /*Manually built due to kernel messed up with the ECHO_REPLY message.
-		   Kernel was building an answer message with equals @src and @dst*/
+		  /* Manually built due to kernel messed up with the
+		     ECHO_REPLY message. Kernel was building an answer
+		     message with equals @src and @dst*/
 		  if (icmp->type == ICMP_ECHO){
 		  	icmp->type = ICMP_ECHOREPLY;
-		    	err = firewall_send_outgoing_pkt(&dst_hit, &src_hit, msg, packet_length, protocol);
+		    	err = firewall_send_outgoing_pkt(dst_hit, src_hit,
+							 msg, packet_length,
+							 protocol);
 		  }
-		  else{
-		    	err = firewall_send_incoming_pkt(&src_hit, &dst_hit, msg, packet_length, protocol, ttl);
+		  else {
+		    	err = firewall_send_incoming_pkt(src_hit, dst_hit,
+							 msg, packet_length,
+							 protocol, ttl);
 		  }
-	}else{
-		  if (incoming){
+	} else {
+		  if (incoming) {
 			    HIP_DEBUG("Firewall send to the kernel an incoming packet\n");
-			    err = firewall_send_incoming_pkt(&src_hit, &dst_hit, msg, packet_length, protocol, ttl);
-		  }else{
+			    err = firewall_send_incoming_pkt(src_hit,
+							     dst_hit, msg,
+							     packet_length,
+							     protocol, ttl);
+		  } else {
 			    HIP_DEBUG("Firewall send to the kernel an outgoing packet\n");
-			    err = firewall_send_outgoing_pkt(&src_hit, &dst_hit, msg, packet_length, protocol);
+			    err = firewall_send_outgoing_pkt(src_hit,
+							     dst_hit, msg,
+							     packet_length,
+							     protocol);
 		  }
 	}
 

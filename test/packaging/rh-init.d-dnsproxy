@@ -19,7 +19,7 @@ DNSPROXY="/usr/sbin/dnshipproxy"
 BASENAME="dnsproxy"
 
 #PID_FILE=/var/run/dnsproxy.pid
-LOCK_FILE=/var/lock/subsys/dnsproxy
+LOCK_FILE=/var/lock/subsys/dnshipproxy
 OPTIONS="-bk"
 
 start()

@@ -73,6 +73,8 @@ struct pseudo_header
 
 void hip_inbound(cl_trigger *t, void *data, void *ctx);
 
+extern int hip_icmp_sock;
+
 /**
  * Gets name for a message type
  * @param type the msg type
