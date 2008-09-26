@@ -516,83 +516,6 @@ int hip_netdev_init_addresses(struct rtnl_handle *nl)
 	return err;
 }
 
-/*flukebox--a copy from getendpointinfo.c  of get_peer_endpointinfo(,,,,) function with some 
- * modified changes to make things work for me :-)
- * Now the function below will first look for the 'nodename' that is actually a presentation form
- * of HIT of peer in "/etc/hip/hosts" file and if it found a entry corresponding to that HIT then 
- * it will copy the 'fqdn' string from the file. After that it will search that 'fqdn' string in 
- * "/etc/hosts" and if a suitable match is found for that 'fqdn' then it will return the IPv4/IPv6 
- * address back to the caller in res field.
- */
-
-int hip_get_peer_endpointinfo(const char *nodename, struct in6_addr *res){
-  int err, ret = 0, i=0;
-  unsigned int lineno = 0, fqdn_str_len = 0;
-  FILE *hip_hosts,*hosts = NULL;
-  char *hi_str, *fqdn_str, *temp_str;
-  
-  char line[500];
-  struct in6_addr hit, dst_hit, ipv6_dst;
-  struct in_addr ipv4_dst;
-  List mylist;
-
-  /* check whether  given nodename is actually a HIT */
-
-  ret=inet_pton(AF_INET6, nodename, &dst_hit);
-  if(ret < 1) HIP_ERROR("given nodename is not a HIT");
- 
-
- /* Open /etc/hip/hosts file in read mode 
- *  *  HIPD_HOSTS_FILE='/etc/hip/hosts' defined in libinet6/hipconf.h
- *   * */
-
- hip_hosts = fopen(HIPD_HOSTS_FILE, "r");
-
-  if (!hip_hosts) {
-    err = -1; 
-    HIP_ERROR("Failed to open %s\n", HIPD_HOSTS_FILE);
-    goto out_err;
-  }
-
-
-  /* find entry corresponding to given 'nodename' HIT */ 
-  while(getwithoutnewline(line, 500, hip_hosts)!= NULL){
-    lineno++;
-    if(strlen(line)<=1) continue; 
-    initlist(&mylist);
-    extractsubstrings(line,&mylist);
-     
-    /* find out the fqdn string amongst the HITS - 
-       it's a non-valid ipv6 addr */
-    for(i=0;i<length(&mylist);i++){
-      ret = inet_pton(AF_INET6, getitem(&mylist,i), &hit);
-      if (ret < 1) {
-	fqdn_str = getitem(&mylist,i);
-	fqdn_str_len = strlen(getitem(&mylist,i));
-	break;
-      }
-    }
-
-    for(i=0;i<length(&mylist);i++){
-     temp_str=getitem(&mylist,i);
-     ret = inet_pton(AF_INET6, getitem(&mylist,i), &hit);  	
-     if(ret >0 && ipv6_addr_cmp(&hit,&dst_hit)==0)  goto find_address;
-    }		
-   }       
- 
-   err = -1;
-   goto out_err;
-
-
- /* HOSTS_FILE='/etc/hosts' */
- find_address:
-        err = hip_find_address(fqdn_str, res);
-   
- out_err:
-	destroy(&mylist);
-   	return err;
-}
-
 /*
  * hip_find_address. Find an IPv4/IPv6 address present in the file /etc/hosts
  * that has as domain name fqdn_str
@@ -684,39 +607,59 @@ int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *res)
         return(err);
 }
 
-int hip_map_hit_to_addr(hip_hit_t *dst_hit, struct in6_addr *dst_addr, struct in6_addr *peer_id) {
-        char peer_hit[INET6_ADDRSTRLEN];	
+int hip_map_id_to_addr(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *addr) {
 	int err = -1; /* Assume that resolving fails */
         extern int hip_opendht_inuse;
-	hip_lsi_t dst_lsi;
+	hip_hit_t hit2;
+	hip_ha_t *ha = NULL;
+
+	HIP_ASSERT(hit || lsi);
+
+	/* Search first from hadb */
+	
+	if (hit)
+		ha = hip_hadb_try_to_find_by_peer_hit(hit);
+	else
+		ha = hip_hadb_try_to_find_by_peer_lsi(lsi);
+
+	if (ha && !ipv6_addr_any(&ha->preferred_address)) {
+		ipv6_addr_copy(addr, &ha->preferred_address);
+		HIP_DEBUG("Found peer address from hadb, skipping hosts and opendht look up\n");
+		err = 0;
+		goto out_err;
+	}
 
 	/* Try to resolve the HIT or LSI to a hostname from /etc/hip/hosts,
-	   then resolve the hostname to an IP, and a HIT or LSI, depending on dst_hit value.
-	   If dst_hit is a HIT -> find LSI and hostname
-	   If dst_hit is an LSI -> find HIT and hostname
+	   then resolve the hostname to an IP, and a HIT or LSI, depending on hit_or_lsi value.
+	   If hit_or_lsi is a HIT -> find LSI and hostname
+	   If hit_or_lsi is an LSI -> find HIT and hostname
 	   The natural place to handle this is either in the getaddrinfo or
 	   getendpointinfo function with AI_NUMERICHOST flag set.
 	   We can fallback to e.g. DHT search if the mapping is not
 	   found from local files.*/
-	
-	hip_in6_ntop(dst_hit, peer_hit);
-
-	/* book keeping stuff */
-	memset(dst_addr, 0, sizeof(dst_addr));
-	memset(peer_id, 0, sizeof(peer_id));
-
 
 	/* try to resolve HIT to IPv4/IPv6 address by '/etc/hip/hosts' 
 	 * and '/etc/hosts' files 	
 	 */
-	HIP_IFEL(!get_peer_endpointinfo2((const char *) peer_hit, peer_id,
-					    dst_addr),
-		 0, "hip_get_peer_endpointinfo succeeded\n");
+	HIP_IFEL(!hip_map_id_to_ip_from_hosts_files(hit, lsi, addr),
+		 0, "hip_map_id_to_ip_from_hosts_files succeeded\n");
+
+	if (hit) {
+		ipv6_addr_copy(&hit2, hit);
+	} else {
+		HIP_IFEL(hip_map_lsi_to_hit_from_hosts_files(lsi, &hit2), -1,
+			 "LSI->HIT conversion failed, skipping opendht look up\n")
+	}
 	
-	/* try to resolve HIT to IPv4/IPv6 address with OpenDHT server */
+	/* Try to resolve HIT to IPv4/IPv6 address with OpenDHT server */
         if (hip_opendht_inuse == SO_HIP_DHT_ON) {
-                err = opendht_get_endpointinfo((const char *) peer_hit, dst_addr);
-                if (err) HIP_DEBUG("Got IP for HIT from DHT err = \n", err);
+		char hit_str[INET6_ADDRSTRLEN];    
+
+		memset(hit_str, 0, sizeof(hit_str));
+		hip_in6_ntop(&hit2, hit_str);
+                err = opendht_get_endpointinfo((const char *) hit_str, addr);
+                if (err)
+			HIP_DEBUG("Got IP for HIT from DHT err = \n", err);
         }
 
 out_err:
@@ -724,8 +667,8 @@ out_err:
 	
 }
 
-int hip_netdev_trigger_bex(hip_hit_t *src_hit, hip_hit_t *dst_hit,
-			   hip_lsi_t *src_lsi, hip_lsi_t *dst_lsi,
+int hip_netdev_trigger_bex(hip_hit_t *src_hit, hip_hit_t *dst_hit_or_null,
+			   hip_lsi_t *src_lsi, hip_lsi_t *dst_lsi_or_null,
 			   struct in6_addr *src_addr_p, struct in6_addr *dst_addr_p) {
 	int err = 0, if_index = 0, is_ipv4_locator,
 		reuse_hadb_local_address = 0, ha_nat_mode = hip_nat_status,
@@ -733,52 +676,59 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit, hip_hit_t *dst_hit,
         in_port_t ha_peer_port;
 	hip_ha_t *entry;
 	int is_loopback = 0;
-	struct in6_addr src_addr, dst6_lsi;
+	hip_lsi_t dst_lsi = { 0 };
+	struct in6_addr dst_hit, src_addr, dst6_lsi;
 	struct in6_addr dst_addr, ha_match;
 	struct sockaddr_storage ss_addr;
 	struct sockaddr *addr;
 	hip_hit_t default_hit;
 	addr = (struct sockaddr*) &ss_addr;
 
+	memset(&dst6_lsi, 0, sizeof(dst6_lsi));
+
+	if (dst_hit_or_null) {
+		ipv6_addr_copy(&dst_hit, dst_hit_or_null);
+		HIP_DEBUG_HIT("dst_hit value ", &dst_hit);
+	}
+
+	if (dst_lsi_or_null)
+		memcpy(&dst_lsi, dst_lsi_or_null, sizeof(dst_lsi));
+
 	if (!src_hit){
 		HIP_IFEL(hip_get_default_hit(&default_hit), -1,
 			 "default hit\n");
 		src_hit = &default_hit;
 	}
-	HIP_DEBUG_HIT("dst_hit value ",dst_hit);
 
-	if (src_lsi && dst_lsi && !dst_hit){
+	if (src_lsi && dst_lsi_or_null && !dst_hit_or_null){
 	        HIP_DEBUG_LSI("Param is an lsi!!", src_lsi);
-		HIP_DEBUG_LSI("Param is an lsi!!", dst_lsi);
-		entry = hip_hadb_try_to_find_by_pair_lsi(src_lsi, dst_lsi);
-		if (entry){
-		  //peer info already mapped because hipconf command
-		  dst_hit = &(entry->hit_peer);
-		  src_hit = &(entry->hit_our);
-		  goto skip_hadb_find;		
-		}else{
-		  //Search in /etc/hip/hosts and /etc/hosts		  
-		  IPV4_TO_IPV6_MAP(dst_lsi, &dst6_lsi);
-		  dst_hit = malloc(sizeof(hip_hit_t));
-		  err = hip_map_hit_to_addr(&dst6_lsi, &dst_addr, dst_hit);
-		  //dst_hit = &dst_hit_t;
-		  goto loopback;
+		HIP_DEBUG_LSI("Param is an lsi!!", &dst_lsi);
+		entry = hip_hadb_try_to_find_by_pair_lsi(src_lsi, &dst_lsi);
+		if (entry) {
+			/* peer info already mapped because of e.g. hipconf command */
+			ipv6_addr_copy(&dst_hit, &entry->hit_peer);
+			src_hit = &entry->hit_our;
+			goto skip_hadb_find;		
+		} else {
+			/* Search in /etc/hip/hosts and /etc/hosts */
+			err = hip_map_id_to_addr(NULL, &dst_lsi, &dst_addr);
+			goto loopback;
 		}
 	}
 
 	/* Sometimes we get deformed HITs from kernel, skip them */
-	HIP_IFEL(!(ipv6_addr_is_hit(src_hit) && ipv6_addr_is_hit(dst_hit) &&
+	HIP_IFEL(!(ipv6_addr_is_hit(src_hit) && ipv6_addr_is_hit(&dst_hit) &&
 		   hip_hidb_hit_is_our(src_hit) &&
-		   hit_is_real_hit(dst_hit)), -1,
+		   hit_is_real_hit(&dst_hit)), -1,
 		 "Received rubbish from netlink, skip\n");
 	
-	entry = hip_hadb_find_byhits(src_hit, dst_hit);
-
+	entry = hip_hadb_find_byhits(src_hit, &dst_hit);
 	if (entry) {
- skip_hadb_find:
 		reuse_hadb_local_address = 1;
 		goto skip_entry_creation;
 	}
+
+ skip_hadb_find:
 
 	/* No entry found; find first IP matching to the HIT and then
 	   create the entry */
@@ -802,20 +752,17 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit, hip_hit_t *dst_hit,
 	}
 	
 	if (err) {
-
+		// XX FIXME: SOMETHING GOES WRONG HERE
+		// XX FIXME: SHOULD WE ENFORCE MAPPING OF PEER LSI HERE?
+	        err = hip_map_id_to_addr(&dst_hit, &dst_lsi, &dst_addr);
 	        HIP_DEBUG_HIT("&dst6_lsi ", &dst6_lsi);
-	        err = hip_map_hit_to_addr(dst_hit, &dst_addr, &dst6_lsi);
-	        HIP_DEBUG_HIT("&dst6_lsi ", &dst6_lsi);
-		if (!dst_lsi){
-		  dst_lsi = malloc(sizeof(hip_lsi_t));
-		}
-		IPV6_TO_IPV4_MAP(&dst6_lsi, dst_lsi);
-		HIP_DEBUG_LSI("dst_lsi: ", dst_lsi);
+		IPV6_TO_IPV4_MAP(&dst6_lsi, &dst_lsi);
+		HIP_DEBUG_LSI("dst_lsi: ", &dst_lsi);
 	}
 
 	if (err) {
 		/* Search HADB for existing entries */
-		entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
+		entry = hip_hadb_try_to_find_by_peer_hit(&dst_hit);
 		if (entry) {
 			HIP_DEBUG_IN6ADDR("reusing HA",
 					  &entry->preferred_address);
@@ -828,7 +775,7 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit, hip_hit_t *dst_hit,
 
  loopback:
 	/* map to loopback if hit is ours  */
-	if (err && hip_hidb_hit_is_our(dst_hit)) {
+	if (err && hip_hidb_hit_is_our(&dst_hit)) {
 		struct in6_addr lpback = IN6ADDR_LOOPBACK_INIT;
 		ipv6_addr_copy(&dst_addr, &lpback);
 		ipv6_addr_copy(&src_addr, &lpback);
@@ -850,12 +797,12 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit, hip_hit_t *dst_hit,
 	/* @fixme: changing global state won't work with threads */
 	hip_nat_status = ha_nat_mode;
 
-	HIP_IFEL(hip_hadb_add_peer_info(dst_hit, &dst_addr, dst_lsi), -1,
+	HIP_IFEL(hip_hadb_add_peer_info(&dst_hit, &dst_addr, &dst_lsi), -1,
 		 "map failed\n");
 
 	hip_nat_status = old_global_nat_mode; /* restore nat status */
 	
-	HIP_IFEL(!(entry = hip_hadb_find_byhits(src_hit, dst_hit)), -1,
+	HIP_IFEL(!(entry = hip_hadb_find_byhits(src_hit, &dst_hit)), -1,
 		 "Internal lookup error\n");
 
 	if (is_loopback)

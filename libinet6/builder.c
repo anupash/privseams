@@ -1103,9 +1103,9 @@ char* hip_message_type_name(const uint8_t msg_type){
 	case SO_HIP_TRIGGER_UPDATE: return "SO_HIP_TRIGGER_UPDATE";
 	case SO_HIP_ANCHOR_CHANGE: return "SO_HIP_ANCHOR_CHANGE";
 	case SO_HIP_TRIGGER_BEX: return "SO_HIP_TRIGGER_BEX";
-	case SO_HIP_IS_OUR_LSI: return "SO_HIP_IS_OUR_LSI";
+	  //case SO_HIP_IS_OUR_LSI: return "SO_HIP_IS_OUR_LSI";
 	case SO_HIP_GET_PEER_HIT: return "SO_HIP_GET_PEER_HIT";
-	case SO_HIP_GET_PEER_HIT_BY_LSIS: return "SO_HIP_GET_PEER_HIT_BY_LSIS";
+	  //case SO_HIP_GET_PEER_HIT_BY_LSIS: return "SO_HIP_GET_PEER_HIT_BY_LSIS";
 	case SO_HIP_GET_PEER_HIT_AT_FIREWALL: return "SO_HIP_GET_PEER_HIT_AT_FIREWALL";
 	case SO_HIP_SET_HI3_ON: return "SO_HIP_SET_HI3_ON";
 	case SO_HIP_SET_HI3_OFF: return "SO_HIP_SET_HI3_OFF";
@@ -2287,15 +2287,14 @@ static inline int hip_reg_param_core(hip_common_t *msg, void *param,
 				       type_list);
 }
 
-/* Hmmm... Because of some weird linker (?) error we cannot use the defined type
-   hip_srv_t here, but have to settle for using struct hip_srv. Not that this
-   would rock the world, but we definately have something fishy in the makefiles
-   or in whatever makes the linker work. -Lauri 11.07.2008. */
+/* gcc gives a weird warning if we use struct srv in the arguments of this function.
+   Using void pointer as a workaround */
 int hip_build_param_reg_info(hip_common_t *msg,
-			     const struct hip_srv *service_list,
+			     const void *srv_list,
 			     const unsigned int service_count)
 {
 	int err = 0, i = 0;
+	const struct hip_srv *service_list = (const struct hip_srv *) srv_list;
 	struct hip_reg_info reg_info;
 	uint8_t reg_type[service_count];
 

@@ -57,11 +57,11 @@
 #define SO_HIP_GET_HA_INFO			22
 #define SO_HIP_TRIGGER_BEX                      23
 #define SO_HIP_DHT_SERVING_GW                   24
-#define SO_HIP_GET_STATE_HA		        25
+//#define SO_HIP_GET_STATE_HA		        25
 #define SO_HIP_GET_LSI_PEER                     26
 #define SO_HIP_GET_LSI_OUR			27
-#define SO_HIP_IS_OUR_LSI                       28
-#define SO_HIP_GET_PEER_HIT_BY_LSIS             29
+//#define SO_HIP_IS_OUR_LSI                       28
+//#define SO_HIP_GET_PEER_HIT_BY_LSIS             29
 #define SO_HIP_GET_PEER_HIT_AT_FIREWALL         30
 #define SO_HIP_HEARTBEAT                        31
 /* inclusive */
@@ -158,7 +158,7 @@
 #define SO_HIP_GET_PROXY_LOCAL_ADDRESS		133
 #define SO_HIP_HIPPROXY_STATUS_REQUEST		134
 #define SO_HIP_OPPTCP_UNBLOCK_AND_BLACKLIST     135
-#define SO_HIP_IPSEC_ADD_SA             	    136
+#define SO_HIP_IPSEC_ADD_SA             	136
 #define SO_HIP_SET_TCPTIMEOUT_ON                137
 #define SO_HIP_SET_TCPTIMEOUT_OFF               138
 #define SO_HIP_SET_NAT_ICE_UDP                  139
