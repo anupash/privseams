@@ -1033,7 +1033,7 @@ int filter_esp(const struct in6_addr * dst_addr,
 		verdict = 1;
 
 	// if key escrow is active we have to handle it here too
-	if (is_escrow_active())
+	if (escrow_active)
 	{
 		// there might be some rules in the rule-set which specify
 		// HITs for which decryption should be done
@@ -1312,7 +1312,7 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 	if (ctx->ip_version == 6 && hip_userspace_ipsec)
 	{
 		HIP_DEBUG_HIT("destination hit: ", &ctx->dst);
-		// XXTODO: hip_fw_get_default_hit() returns an unfreed value
+		// XX TODO: hip_fw_get_default_hit() returns an unfreed value
 		HIP_DEBUG_HIT("default hit: ", hip_fw_get_default_hit());
 		// check if this is a reinjected packet
 		if (IN6_ARE_ADDR_EQUAL(&ctx->dst, hip_fw_get_default_hit()))

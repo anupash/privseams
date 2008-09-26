@@ -85,6 +85,7 @@ int hchain_verify(const unsigned char * current_hash, const unsigned char * last
 	HIP_ASSERT(hash_function != NULL);
 	HIP_ASSERT(hash_length > 0 && tolerance >= 0);
 
+	// TODO make those static allocations
 	HIP_IFEL(!(buffer = (unsigned char *)malloc(hash_length)), -1,
 			"failed to allocate memory\n");
 	HIP_IFEL(!(hash_value = (unsigned char *)malloc(MAX_HASH_LENGTH)), -1,
