@@ -32,6 +32,10 @@ INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
 
 include_HEADERS = hipconftool.h
 
+if !HIP_OPENWRT
+  CFLAGS += -L$(HIPL_LIBINET6_LIB)
+  INCLUDES += -I$(HIPL_LIBINET6_INCLUDE)
+endif
 
 LDFLAGS = @LDFLAGS@ -lc -lcrypto $(HIP_XMLL) $(OPENWRT)
 
