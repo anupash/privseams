@@ -2941,7 +2941,7 @@ int hip_handle_get_ha_info(hip_ha_t *entry, struct hip_common *msg)
 
 	hid.heartbeats_on = hip_icmp_interval;
 	hid.heartbeats_mean = entry->heartbeats_mean;
-	hid.heartbeats_varians = entry->heartbeats_varians;
+	hid.heartbeats_variance = entry->heartbeats_variance;
 	hid.heartbeats_sent = entry->heartbeats_sent;
 	hid.heartbeats_received = entry->heartbeats_received;
 

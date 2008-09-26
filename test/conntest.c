@@ -127,7 +127,7 @@ out_err:
 	return err;
 }
 
-int udp_make_ipv4_socket(in_port_t local_port) {
+int create_udp_ipv4_socket(in_port_t local_port) {
 	int ipv4_sock = -1, err = 0, on = 1, sendnum;
 	struct sockaddr_in inaddr_any;
 
@@ -190,7 +190,7 @@ int udp_send_msg(int sock, uint8_t *data, size_t data_len,
 	int err = 0, on = 1, sendnum;
 	int is_ipv4 = ((peer_addr->sa_family == AF_INET) ? 1 : 0);
 	uint8_t cmsgbuf[CMSG_SPACE(sizeof(struct in6_pktinfo))];
-        struct cmsghdr *cmsg = (struct cmsghdr *) cmsgbuf;
+        struct cmsghdr *cmsg; // = (struct cmsghdr *) cmsgbuf;
 	struct msghdr msg;
 	struct iovec iov;
 	union {
@@ -198,10 +198,13 @@ int udp_send_msg(int sock, uint8_t *data, size_t data_len,
 		struct in6_pktinfo *in6;
 	} pktinfo;
 
-	//memset(&pktinfo, 0, sizeof(&pktinfo));
+	/* The first memset is mandatory. Results in otherwise weird
+	   EMSGSIZE errors. */
+	memset(&msg, 0, sizeof(struct msghdr));	
+	memset(cmsgbuf, 0, sizeof(cmsgbuf));
 
-	/* send only the data we received (notice that there is
-	   always a \0 in the end of the string) */
+	/* Fill message header */
+
 	msg.msg_name = peer_addr;
 	if (is_ipv4)
 		msg.msg_namelen = sizeof(struct sockaddr_in);
@@ -217,7 +220,7 @@ int udp_send_msg(int sock, uint8_t *data, size_t data_len,
 	iov.iov_len = data_len;
 
 	/* Set local address */
-	memset(cmsg, 0, sizeof(cmsgbuf));
+	cmsg = CMSG_FIRSTHDR(&msg);
 	if (is_ipv4)
 		cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
 	else
@@ -234,8 +237,7 @@ int udp_send_msg(int sock, uint8_t *data, size_t data_len,
 		       &(((struct sockaddr_in6 *) local_addr)->sin6_addr),
 		       sizeof(struct in6_addr));
 	
-	/* send reply using the ORIGINAL src/dst address pair
-	   (preserved in the control field) */
+	/* Send reply using the ORIGINAL src/dst address pair */
 	sendnum = sendmsg(sock, &msg, 0);
 	if (sendnum < 0) {
 		perror("sendmsg");
@@ -277,7 +279,7 @@ int main_server_udp(int ipv4_sock, int ipv6_sock, in_port_t local_port) {
 	FD_SET(ipv6_sock, &read_fdset);
 	highest_descriptor = maxof(2, ipv4_sock, ipv6_sock);
 
-	printf("=== Server listening IN6ADDR_ANY ===\n");
+	printf("=== Server listening INADDR_ANY/IN6ADDR_ANY ===\n");
 	
 	while(select((highest_descriptor + 1), &read_fdset,
 		     NULL, NULL, NULL)) {
@@ -407,7 +409,7 @@ int main_server(int type, in_port_t port)
 	   packets even though a single IPv6 socket could be used
 	   for receiving IPv4 packets, but not sending them. */
 	if (type == SOCK_DGRAM) {
-		ipv4_sock = udp_make_ipv4_socket(port);
+		ipv4_sock = create_udp_ipv4_socket(port);
 		if (ipv4_sock < 0) {
 			printf("Could not create ipv4 socket\n");
 			err = -1;

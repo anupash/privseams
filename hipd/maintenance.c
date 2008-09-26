@@ -647,7 +647,7 @@ int periodic_maintenance()
 	hip_registration_maintenance();
 
 	/* Sending of NAT Keep-Alives. */
-	if(hip_nat_status && nat_keep_alive_counter < 0){
+	if(hip_nat_status && !hip_icmp_interval && nat_keep_alive_counter < 0){
 		HIP_IFEL(hip_nat_refresh_port(),
 			 -ECOMM, "Failed to refresh NAT port state.\n");
 		nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_INTERVAL;
@@ -1045,19 +1045,19 @@ int hip_icmp_statistics(struct in6_addr * src, struct in6_addr * dst,
 	if (entry->heartbeats_received > 1)
 		entry->heartbeats_mean = entry->heartbeats_total_rtt / entry->heartbeats_received;
 	
-	/* Calculate varians  */	
+	/* Calculate variance  */	
 	if (entry->heartbeats_received > 1) {
 		sum1 = entry->heartbeats_total_rtt;
 		sum2 = entry->heartbeats_total_rtt2;
 		sum1 /= entry->heartbeats_received;
 		sum2 /= entry->heartbeats_received;
-		entry->heartbeats_varians = llsqrt(sum2 - sum1 * sum1);
+		entry->heartbeats_variance = llsqrt(sum2 - sum1 * sum1);
 	}
 
 	HIP_DEBUG("\nHeartbeat from %s, RTT %.6f ms,\n%.6f ms mean, "
-		  "%.6f ms varians, packets sent %d recv %d lost %d\n", 
+		  "%.6f ms variance, packets sent %d recv %d lost %d\n", 
 		  hit, (rtt / 1000000.0), (entry->heartbeats_mean / 1000000.0),
-		  (entry->heartbeats_varians / 1000000.0),
+		  (entry->heartbeats_variance / 1000000.0),
 		  entry->heartbeats_sent, entry->heartbeats_received,
 		  (entry->heartbeats_sent - entry->heartbeats_received));
 
