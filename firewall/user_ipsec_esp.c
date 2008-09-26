@@ -28,8 +28,6 @@
 /* for some reason the ICV for ESP authentication is truncated to 12 bytes */
 #define ICV_LENGTH 12
 
-// stores the HMAC calculated by the receiver to verify the one in the packet
-unsigned char hmac_md[EVP_MAX_MD_SIZE];
 
 int hip_beet_mode_output(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
 		struct in6_addr *preferred_local_addr, struct in6_addr *preferred_peer_addr,
@@ -276,7 +274,7 @@ int hip_payload_encrypt(unsigned char *in, uint8_t in_type, uint16_t in_len,
 	/* initialization vector */
 	uint16_t iv_len = 0;
 	// TODO make this a static allocation
-	//unsigned char cbc_iv[16];
+	unsigned char cbc_iv[16];
 	/* ESP tail information */
 	uint16_t pad_len = 0;
 	struct hip_esp_tail *esp_tail = NULL;
@@ -352,7 +350,8 @@ int hip_payload_encrypt(unsigned char *in, uint8_t in_type, uint16_t in_len,
 	 *
 	 * NOTE: IV will _NOT_ be encrypted */
 	if (iv_len > 0) {
-		RAND_bytes(&out[esp_data_offset], iv_len);
+		RAND_bytes(cbc_iv, iv_len);
+		memcpy(&out[esp_data_offset], cbc_iv, iv_len);
 		pad_len = iv_len - ((elen + sizeof(struct hip_esp_tail)) % iv_len);
 	} else {
 		/* Padding with NULL encryption is not based on IV length */
@@ -387,12 +386,12 @@ int hip_payload_encrypt(unsigned char *in, uint8_t in_type, uint16_t in_len,
 		case HIP_ESP_3DES_MD5:
 			des_ede3_cbc_encrypt(in, &out[esp_data_offset + iv_len], elen,
 					     entry->ks[0], entry->ks[1], entry->ks[2],
-					     (des_cblock *) &out[esp_data_offset], DES_ENCRYPT);
+					     (des_cblock *) cbc_iv, DES_ENCRYPT);
 
 			break;
 		case HIP_ESP_BLOWFISH_SHA1:
 			BF_cbc_encrypt(in, &out[esp_data_offset + iv_len], elen,
-					entry->bf_key, &out[esp_data_offset], BF_ENCRYPT);
+					entry->bf_key, cbc_iv, BF_ENCRYPT);
 
 			break;
 		case HIP_ESP_NULL_SHA1:
@@ -403,7 +402,7 @@ int hip_payload_encrypt(unsigned char *in, uint8_t in_type, uint16_t in_len,
 			break;
 		case HIP_ESP_AES_SHA1:
 			AES_cbc_encrypt(in, &out[esp_data_offset + iv_len], elen,
-					entry->aes_key, &out[esp_data_offset], AES_ENCRYPT);
+					entry->aes_key, cbc_iv, AES_ENCRYPT);
 
 			break;
 		default:
@@ -486,20 +485,17 @@ int hip_payload_decrypt(unsigned char *in, uint16_t in_len, unsigned char *out,
 	// authentication data
 	unsigned int hmac_md_len;
 	// TODO make this a static allocation
-
+	unsigned char hmac_md[EVP_MAX_MD_SIZE];
 	/* initialization vector */
 	uint16_t iv_len = 0;
 	// TODO directly use the iv in the packet buffer
-	//unsigned char cbc_iv[16];
+	unsigned char cbc_iv[16];
 	/* ESP tail information */
 	uint16_t pad_len = 0;
 	struct hip_esp_tail *esp_tail = NULL;
 	// offset of the payload counting from the beginning of the esp header
 	uint16_t esp_data_offset = 0;
 	int err = 0;
-
-	// reuse the hmac_md
-	memset(hmac_md, 0, EVP_MAX_MD_SIZE);
 
 	// different offset if esp extension used or not
 	esp_data_offset = esp_prot_get_data_offset(entry);
@@ -644,7 +640,7 @@ int hip_payload_decrypt(unsigned char *in, uint16_t in_len, unsigned char *out,
 	}
 
 	/* get the initialisation vector located right behind the ESP header */
-	//memcpy(cbc_iv, in + esp_data_offset, iv_len);
+	memcpy(cbc_iv, in + esp_data_offset, iv_len);
 
 	/* also don't include IV as part of ciphertext */
 	elen -= iv_len;
@@ -654,11 +650,11 @@ int hip_payload_decrypt(unsigned char *in, uint16_t in_len, unsigned char *out,
 		case HIP_ESP_3DES_MD5:
 			des_ede3_cbc_encrypt(&in[esp_data_offset + iv_len], out, elen,
 					     entry->ks[0], entry->ks[1], entry->ks[2],
-					     (des_cblock *) in[esp_data_offset], DES_DECRYPT);
+					     (des_cblock *) cbc_iv, DES_DECRYPT);
 			break;
 		case HIP_ESP_BLOWFISH_SHA1:
 			BF_cbc_encrypt(&in[esp_data_offset + iv_len], out, elen,
-					entry->bf_key, in[esp_data_offset], BF_DECRYPT);
+					entry->bf_key, cbc_iv, BF_DECRYPT);
 			break;
 		case HIP_ESP_NULL_SHA1:
 		case HIP_ESP_NULL_MD5:
@@ -666,7 +662,7 @@ int hip_payload_decrypt(unsigned char *in, uint16_t in_len, unsigned char *out,
 			break;
 		case HIP_ESP_AES_SHA1:
 			AES_cbc_encrypt(&in[esp_data_offset + iv_len], out, elen,
-					entry->aes_key, in[esp_data_offset], AES_DECRYPT);
+					entry->aes_key, cbc_iv, AES_DECRYPT);
 			break;
 		default:
 			HIP_ERROR("Unsupported decryption algorithm: %i\n", entry->ealg);
