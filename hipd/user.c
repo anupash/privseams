@@ -273,14 +273,27 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         case SO_HIP_DHT_GW:
 	{
 		char *tmp_ip_str[20];
+
 		int tmp_ttl = 0, tmp_port = 0;
 		const char *pret;
 		int ret, s;
 		struct in_addr tmp_v4;
+
 		struct hip_opendht_gw_info *gw_info;
 		extern struct addrinfo * opendht_serving_gateway;
 		extern int opendht_serving_gateway_port;
 		extern int opendht_serving_gateway_ttl;
+
+
+char *tmp_ip_str6[90];
+char tmp[41] = "2001:12:9848:4114:755e:a798:ff6d:6efb\0";
+struct in6_addr tmp_v6;
+
+
+ret = inet_pton(AF_INET6, tmp, &tmp_v6);
+HIP_DEBUG("### %s \n", tmp);
+HIP_DEBUG_IN6ADDR("### ", &tmp_v6);
+
 
 		HIP_IFEL(!(gw_info = hip_get_param(msg, HIP_PARAM_OPENDHT_GW_INFO)), -1,
 			 "No gw struct found\n");
@@ -294,9 +307,10 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		 * incompatible pointer type
 		 */
 		pret = inet_ntop(AF_INET, &tmp_v4, tmp_ip_str, 20);
+pret = inet_ntop(AF_INET6, &tmp_v6, tmp_ip_str6, 39);
 		HIP_DEBUG("Got address %s, port %d, TTL %d from hipconf\n",
-			  tmp_ip_str, tmp_port, tmp_ttl);
-		ret = resolve_dht_gateway_info(tmp_ip_str, &opendht_serving_gateway);
+			  tmp_ip_str6, tmp_port, tmp_ttl);
+		ret = resolve_dht_gateway_info_v6(tmp_ip_str6, &opendht_serving_gateway);
 		if (ret == 0)
 		{
 			HIP_DEBUG("Serving gateway changed\n");
@@ -308,18 +322,113 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			opendht_serving_gateway_ttl  = tmp_ttl;
 			opendht_serving_gateway_port = tmp_port;
 
-			/*
+			
 			//code for connecting to the new dht gw
 			//no binding needed for just connecting,
 			//unless we want to receive data from it
-			s = init_dht_gateway_socket(s);
-			err = connect_dht_gateway(s, opendht_serving_gateway, 0);
-			*/
+			s = init_dht_gateway_socket_v6(s);
+			err = connect_dht_gateway_v6(s, opendht_serving_gateway, 1);
+//HIP_DEBUG("ERROR %d \n", err);
+
+
+
+char val_host[] = "blerta-pc";
+char val_hit[] = "2001:0018:2eab:f78b:f6c3:558e:7ac8:bebd";
+char host_addr[] = "127.0.0.1";
+int ttl = 60, error = 0;
+char dht_response[1400];
+char val_ip[] = "2001:708:140:220:211:11ff:febb:5d00";
+char dht_response2[1400];
+struct in6_addr addrvalue;
+
+// #### PUT hit v6 ####
+if(err != -1){
+	ret = 0;
+	ret = opendht_put(s, 
+		      (unsigned char *)val_hit,
+		      (unsigned char *)val_ip, 
+		      (unsigned char *)host_addr,
+		      opendht_serving_gateway_port,
+		      opendht_serving_gateway_ttl);
+	ret = opendht_read_response(s, dht_response); 
+
+	printf("Put packet (hit->ip) sent and ...\n");
+	printf("Put was success %s\n", dht_response);
+}
+close(s);
+
+
+////#### GET hit v6 ####
+s = init_dht_gateway_socket_v6(s);
+error = connect_dht_gateway_v6(s, opendht_serving_gateway, 1);
+HIP_DEBUG("### ERROR %d\n", error);
+if(error != -1){
+	ret = 0;
+	ret = opendht_get(s, (unsigned char *)val_hit, (unsigned char *)host_addr, 5851);
+	printf("ret %d\n", ret);
+
+	ret = opendht_read_response(s, dht_response2);
+	printf("Here 3 %s\n", dht_response2);
+
+	memcpy(&((&addrvalue)->s6_addr), dht_response2, sizeof(addrvalue.s6_addr));
+	HIP_DEBUG_IN6ADDR("### ", &addrvalue);
+}
+close(s);
+
+
 		}
 		else
 		{
 			HIP_DEBUG("Error in changing the serving gateway!");
 		}
+
+/*
+char val_host[] = "blerta-pc";
+char val_hit[] = "2001:0018:2eab:f78b:f6c3:558e:7ac8:bebd";
+char host_addr[] = "127.0.0.1";
+int ttl = 60, error = 0;
+char dht_response[1400];
+char val_ip[] = "2001:708:140:220:211:11ff:febb:5d47";
+char dht_response2[1400];
+struct in6_addr addrvalue;
+
+// #### PUT hit ####
+s = init_dht_gateway_socket(s);
+error = connect_dht_gateway(s, opendht_serving_gateway, 1);
+HIP_DEBUG("### ERROR %d\n", error);
+if(error != -1){
+	if (error < 0) exit(0);
+	ret = 0;
+	ret = opendht_put(s, 
+		      (unsigned char *)val_hit,
+		      (unsigned char *)val_ip, 
+		      (unsigned char *)host_addr, opendht_serving_gateway_port, opendht_serving_gateway_ttl);
+	ret = opendht_read_response(s, dht_response); 
+	//if (ret == -1) exit(1);
+	printf("Put packet (hit->ip) sent and ...\n");
+	printf("Put was success %s\n", dht_response);
+}
+close(s);
+
+
+////#### GET hit ####
+s = init_dht_gateway_socket(s);
+error = connect_dht_gateway(s, opendht_serving_gateway, 1);
+HIP_DEBUG("### ERROR %d\n", error);
+if(error != -1){
+	ret = 0;
+	ret = opendht_get(s, (unsigned char *)val_hit, (unsigned char *)host_addr, 5851);
+	printf("ret %d\n", ret);
+
+	ret = opendht_read_response(s, dht_response2);
+	printf("Here 3 %s\n", dht_response2);
+
+	memcpy(&((&addrvalue)->s6_addr), dht_response2, sizeof(addrvalue.s6_addr));
+	HIP_DEBUG_IN6ADDR("### ", &addrvalue);
+}
+close(s);
+*/
+
 	}
 	break;
         case SO_HIP_DHT_SERVING_GW:

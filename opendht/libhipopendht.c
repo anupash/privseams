@@ -47,6 +47,22 @@ int init_dht_gateway_socket(int sockfd)
     return(sockfd);      
 }
 
+
+
+
+int init_dht_gateway_socket_v6(int sockfd)
+{
+    if ((sockfd = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP)) < 0)
+        HIP_PERROR("OpenDHT socket:");
+    else HIP_DEBUG("\nOpenDHT communication socket created successfully.\n");
+    
+    return(sockfd);      
+}
+
+
+
+
+
 /** 
  * resolve_dht_gateway_info - Resolves the gateway address
  * @param gateway_name FQDN of the gateway
@@ -59,11 +75,6 @@ int resolve_dht_gateway_info(char * gateway_name,
     struct addrinfo hints;
     struct sockaddr_in *sa = NULL;
     int error;
-
-    /*char *port_to_use = "5851";
-
-    if(port != 0)
-	port_to_use = itoa(port);*/
 
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;
@@ -82,6 +93,140 @@ int resolve_dht_gateway_info(char * gateway_name,
     
     return error;
 }
+
+
+
+
+
+
+
+
+/** 
+ * resolve_dht_gateway_info - Resolves the gateway address
+ * @param gateway_name FQDN of the gateway
+ * @param gateway Addrinfo struct where the result will be stored
+ *
+ * @return Returns 0 on success otherwise -1
+ */
+int resolve_dht_gateway_info_v6(char * gateway_name, 
+                             struct addrinfo ** gateway){
+    struct addrinfo hints;
+    struct sockaddr_in6 *sa = NULL;
+    int error;
+
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET6;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = AI_NODHT;
+    error = 0;
+    
+    error = getaddrinfo(gateway_name, "5851", &hints, gateway);
+    if (error != 0){
+        HIP_DEBUG("OpenDHT gateway resolving failed %s\n", gateway_name);
+    }
+    else{
+	sa = (struct sockaddr_in6 *) (*gateway)->ai_addr;
+	//HIP_DEBUG("OpenDHT gateway IPv4: %s\n", inet6_ntoa(sa->sin6_addr));
+	HIP_DEBUG("OpenDHT gateway IPv4: \n");
+	HIP_DEBUG_IN6ADDR(" ", &(sa->sin6_addr));
+    }
+    
+    return error;
+}
+
+
+int connect_dht_gateway_v6(int sockfd, struct addrinfo * gateway, int blocking)
+{
+    int flags = 0, error = 0;
+    struct sockaddr_in6 *sa;
+    
+    struct sigaction act, oact;
+    act.sa_handler = connect_alarm;
+    sigemptyset(&act.sa_mask);
+    act.sa_flags = 0;
+    
+    if (gateway == NULL) 
+        {
+            HIP_ERROR("No OpenDHT Serving Gateway Address.\n");
+            return(-1);
+        }
+    
+    if (blocking == 0)
+        goto unblock;
+    /* blocking connect */
+    if (sigaction(SIGALRM, &act, &oact) <0 ) 
+        {
+            HIP_DEBUG("Signal error before OpenDHT connect, "
+                      "connecting without alarm\n");
+            error = connect(sockfd, gateway->ai_addr, gateway->ai_addrlen);
+        }
+    else 
+        {
+            HIP_DEBUG("Connecting to OpenDHT with alarm\n");
+            if (alarm(4) != 0)
+                HIP_DEBUG("Alarm was already set, connecting without\n");
+            error = connect(sockfd, gateway->ai_addr, gateway->ai_addrlen);
+            alarm(0);
+            if (sigaction(SIGALRM, &oact, &act) <0 ) 
+                HIP_DEBUG("Signal error after OpenDHT connect\n");
+        }
+    
+    if (error < 0) 
+        {
+            HIP_PERROR("OpenDHT connect:");
+            if (errno == EINTR)
+                HIP_DEBUG("Connect to OpenDHT timedout\n");
+            return(-1);
+        }
+    else
+        {
+            sa = (struct sockaddr_in *)gateway->ai_addr;
+            //HIP_DEBUG("Connected to OpenDHT gateway %s.\n", inet_ntoa(sa->sin_addr)); 
+            return(0);
+        }
+        
+ unblock:
+    /* unblocking connect */    
+    flags = fcntl(sockfd, F_GETFL, 0);
+    fcntl(sockfd, F_SETFL, flags | O_NONBLOCK); 
+    
+    sa = (struct sockaddr_in6 *)gateway->ai_addr;
+    HIP_DEBUG("Connecting to OpenDHT gateway "); 
+    HIP_DEBUG_IN6ADDR(" ", &(sa->sin6_addr));
+
+    if (connect(sockfd, gateway->ai_addr, gateway->ai_addrlen) < 0)
+        {
+            if (errno == EINPROGRESS)
+                return(EINPROGRESS);
+            else 
+                {
+                    HIP_PERROR("OpenDHT connect:");
+                    return(-1);
+                }
+        }
+    else
+        {
+            /* connect ok */
+            return(0);
+        }   
+    
+} 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /**
  *  connect_dht_gateway - Connects to given gateway
