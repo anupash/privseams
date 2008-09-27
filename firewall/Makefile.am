@@ -9,6 +9,8 @@ CFLAGS = $(hipl_common_cflags) -I/usr/include/libipq/  -L$(HIPL_LIBINET6_LIB) -L
 #CFLAGS += `pkg-config --cflags --libs glib-2.0` 
 #CFLAGS += `pkg-config --cflags --libs gthread-2.0`
 CFLAGS += `pkg-config --cflags`
+CFLAGS += $(OPTIMIZATIONS_CFLAGS)
+CFLAGS += $(GPROF_CFLAGS)
 
 include_HEADERS =  firewall.h conntrack.h rule_management.h helpers.h firewall_control.h hslist.h common_types.h
 include_HEADERS += esp_decrypt.h firewall_defines.h proxydb.h conndb.h esp_decrypt.h dlist.h

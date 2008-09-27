@@ -1568,8 +1568,11 @@ int hip_fw_handle_packet(char *buf,
 	// assume DROP
 	int verdict = 0;
 
+// @note unset for performance reasons
+#if 0
 	// same buffer memory as for packets before -> re-init
 	memset(buf, 0, BUFSIZE);
+#endif
 
 	/* waits for queue messages to arrive from ip_queue and
 	 * copies them into a supplied buffer */
@@ -1583,13 +1586,13 @@ int hip_fw_handle_packet(char *buf,
 	/* queued messages may be a packet messages or an error messages */
 	switch (ipq_message_type(buf))
 	{
-		case NLMSG_ERROR:
-			HIP_ERROR("Received error message (%d): %s\n", ipq_get_msgerr(buf), ipq_errstr());
-			goto out_err;
-			break;
 		case IPQM_PACKET:
 			HIP_DEBUG("Received ipqm packet\n");
 			// no goto -> go on with processing the message below
+			break;
+		case NLMSG_ERROR:
+			HIP_ERROR("Received error message (%d): %s\n", ipq_get_msgerr(buf), ipq_errstr());
+			goto out_err;
 			break;
 		default:
 			HIP_DEBUG("Unsupported libipq packet\n");
@@ -1981,7 +1984,6 @@ int main(int argc, char **argv){
 				//goto out_err;
 			}
 		}
-
 	}
 
  out_err:
@@ -2073,6 +2075,9 @@ int hip_query_default_local_hit_from_hipd(void)
 	ipv6_addr_copy(&default_hit, hit);
 
 out_err:
+	if (msg)
+		free(msg);
+
 	return err;
 }
 
