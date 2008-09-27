@@ -1605,6 +1605,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	struct hip_solution *solution = NULL;
 	struct esp_prot_anchor *prot_anchor = NULL;
 	struct esp_prot_transform *prot_transform = NULL;
+	struct hip_locator *locator = NULL;
 	/* Data structures. */
 	in6_addr_t dest; // dest for the IP address in RELAY_FROM
 	hip_transform_suite_t esp_tfm, hip_tfm;
@@ -1682,7 +1683,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		 "Cookie solution rejected. Dropping the I2 packet.\n");
 
 #ifdef CONFIG_HIP_HI3
-	struct hip_locator *locator = NULL;
 
 	locator = hip_get_param(i2, HIP_PARAM_LOCATOR);
 	hip_do_i3_stuff_for_i2(locator, i2_info, i2_saddr, i2_daddr);
@@ -1716,19 +1716,19 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
 	HIP_IFEL(hip_produce_keying_material(i2_context.input, &i2_context,
 					     solution->I, solution->J, &dhpv),
-		 -EPROTO, "Unable to produce keying material. Dropping the I2 "\
-		 "packet.\n");
+		 -EPROTO, "Unable to produce keying material. Dropping the I2"\
+		 " packet.\n");
 
 	/* Verify HMAC. */
-	if (hip_hidb_hit_is_our(&i2->hits)) {
+	if (hip_hidb_hit_is_our(&i2->hits) && hip_hidb_hit_is_our(&i2->hitr)) {
 		/* loopback */
 		HIP_IFEL(hip_verify_packet_hmac(i2, &i2_context.hip_hmac_out),
 			 -EPROTO, "HMAC loopback validation on I2 failed. "\
 			 "Dropping the I2 packet.\n");
 	} else {
 		HIP_IFEL(hip_verify_packet_hmac(i2, &i2_context.hip_hmac_in),
-			 -EPROTO, "HMAC validation on I2 failed. Dropping the "\
-			 "I2 packet.\n");
+			 -EPROTO, "HMAC validation on I2 failed. Dropping the"\
+			 " I2 packet.\n");
 	}
 
 	/* Decrypt the HOST_ID and verify it against the sender HIT. */
