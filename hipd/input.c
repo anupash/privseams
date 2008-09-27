@@ -2340,13 +2340,14 @@ int hip_receive_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
 		break;
 	case HIP_STATE_I2_SENT:
-		/* WTF */
-		if (hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer)) {
+		if (entry->is_loopback) {
+			err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry,
+					    i2_info);
+		} else if (hip_hit_is_bigger(&entry->hit_our,
+					     &entry->hit_peer)) {
 			HIP_IFEL(hip_receive_i2(i2, i2_saddr, i2_daddr, entry,
 						i2_info), -ENOSYS,
 				 "Dropping HIP packet.\n");
-		} else if (entry->is_loopback) {
-			hip_handle_i2(i2, i2_saddr, i2_daddr, entry, i2_info);
 		}
 		break;
 	case HIP_STATE_I1_SENT:
@@ -2756,7 +2757,7 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		   struct in6_addr *i1_daddr, hip_ha_t *entry,
 		   hip_portpair_t *i1_info)
 {
-	int err = 0, state, mask = 0,cmphits=0, src_hit_is_our;
+	int err = 0, state, mask = 0, src_hit_is_our;
 
 	_HIP_DEBUG("hip_receive_i1() invoked.\n");
 
@@ -2854,15 +2855,18 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		  ->hip_handle_i1(i1, i1_saddr, i1_daddr, entry, i1_info);
 	     break;
 	case HIP_STATE_I1_SENT:
-	     	cmphits=hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer);
-	     	if (cmphits == 1) {
-		  HIP_IFEL(hip_receive_i1(i1,i1_saddr,i1_daddr,entry,i1_info),
-			   -ENOSYS, "Dropping HIP packet\n");
-
-	     	} else if (cmphits == 0) {
-		  hip_handle_i1(i1,i1_saddr,i1_daddr,entry,i1_info);
-
+	     	if (hip_hidb_hit_is_our(&i1->hitr)) {
+			/* loopback */
+			err = ((hip_handle_func_set_t *)
+			       hip_get_handle_default_func_set())->
+				hip_handle_i1(i1, i1_saddr, i1_daddr, entry,
+					      i1_info);
 	     	}
+	     	else if (hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer)){
+			err = hip_receive_i1(i1, i1_saddr, i1_daddr,entry,
+					     i1_info);
+
+		}
 	     break;
 	case HIP_STATE_UNASSOCIATED:
 	case HIP_STATE_I2_SENT:
