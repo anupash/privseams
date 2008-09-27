@@ -82,9 +82,6 @@ int hchain_verify(const unsigned char * current_hash, const unsigned char * last
 	HIP_ASSERT(hash_function != NULL);
 	HIP_ASSERT(hash_length > 0 && tolerance >= 0);
 
-	// reuse the buffer
-	memset(buffer, 0, MAX_HASH_LENGTH);
-
 	// init buffer with the hash we want to verify
 	memcpy(buffer, current_hash, hash_length);
 
