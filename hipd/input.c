@@ -40,8 +40,8 @@ static int hip_verify_hmac(struct hip_common *buffer, u8 *hmac,
 
 	_HIP_HEXDUMP("HMAC data", buffer, hip_get_msg_total_len(buffer));
 
-	HIP_IFEL(!hip_write_hmac(hmac_type, hmac_key, buffer,
-				 hip_get_msg_total_len(buffer), hmac_res),
+	HIP_IFEL(hip_write_hmac(hmac_type, hmac_key, buffer,
+				hip_get_msg_total_len(buffer), hmac_res),
 		 -EINVAL, "Could not build hmac\n");
 
 	_HIP_HEXDUMP("HMAC", hmac_res, HIP_AH_SHA_LEN);
@@ -66,7 +66,7 @@ int hip_verify_packet_hmac(struct hip_common *msg,
 	HIP_IFEL(!(hmac = hip_get_param(msg, HIP_PARAM_HMAC)),
 		 -ENOMSG, "No HMAC parameter\n");
 
-	/* hmac verification modifies the msg length temporarile, so we have
+	/* hmac verification modifies the msg length temporarily, so we have
 	   to restore the length */
 	orig_len = hip_get_msg_total_len(msg);
 
@@ -1539,9 +1539,17 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 	err = entry->hadb_xmit_func->hip_send_pkt(i2_daddr, i2_saddr,
 						  (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
 	                                          entry->peer_udp_port, r2, entry, 1);
-	if (err == 1) err = 0;
+	if (err == 1)
+		err = 0;
 
 	HIP_IFEL(err, -ECOMM, "Sending R2 packet failed.\n");
+
+	/* Send the first heartbeat. Notice that error value is ignored because we want to
+	   to complete the base exchange successfully */
+	if (hip_icmp_interval > 0) {
+		_HIP_DEBUG("icmp sock %d\n", hip_icmp_sock);
+		hip_send_icmp(hip_icmp_sock, entry);
+	}
 
  out_err:
 	if (r2 != NULL) {
@@ -1580,7 +1588,8 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 {
 	/* Primitive data types. */
 	extern uint8_t hip_esp_prot_ext_transform;
-	int err = 0, retransmission = 0, replay = 0, state = 0, item_length = 0;
+	int err = 0, retransmission = 0, replay = 0, state = 0, item_length = 0,
+		host_id_found = 0, is_loopback = 0;
 	uint8_t transform = 0;
 	uint16_t crypto_len = 0;
 	uint32_t spi_in = 0, spi_out = 0;
@@ -1597,6 +1606,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	struct hip_solution *solution = NULL;
 	struct esp_prot_anchor *prot_anchor = NULL;
 	struct esp_prot_transform *prot_transform = NULL;
+	struct hip_locator *locator = NULL;
 	/* Data structures. */
 	in6_addr_t dest; // dest for the IP address in RELAY_FROM
 	hip_transform_suite_t esp_tfm, hip_tfm;
@@ -1604,16 +1614,13 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	struct hip_context i2_context;
 	extern int hip_icmp_interval;
 	extern int hip_icmp_sock;
-
-#ifdef HIP_USE_ICE
 	void *ice_session = NULL;
 	int i = 0;
-#endif
-#ifdef CONFIG_HIP_BLIND
 	int use_blind = 0;
 	uint16_t nonce = 0;
 	in6_addr_t plain_peer_hit, plain_local_hit;
 
+#ifdef CONFIG_HIP_BLIND
 	memset(&plain_peer_hit, 0, sizeof(plain_peer_hit));
 	memset(&plain_local_hit, 0, sizeof(plain_local_hit));
 
@@ -1648,9 +1655,9 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	   Note that this condition is not satisfied at the HIP relay server */
 	if(!hip_hidb_hit_is_our(&i2->hitr)) {
 		err = -EPROTO;
-		HIP_ERROR("Responder's HIT in the received I2 packet does not "\
-			  "corresponds to one of our own HITs. Dropping the I2 "\
-			  "packet.\n");
+		HIP_ERROR("Responder's HIT in the received I2 packet does not"\
+			  " correspond to one of our own HITs. Dropping I2"\
+			  " packet.\n");
 		goto out_err;
 	}
 
@@ -1674,7 +1681,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		 "Cookie solution rejected. Dropping the I2 packet.\n");
 
 #ifdef CONFIG_HIP_HI3
-	struct hip_locator *locator = NULL;
 
 	locator = hip_get_param(i2, HIP_PARAM_LOCATOR);
 	hip_do_i3_stuff_for_i2(locator, i2_info, i2_saddr, i2_daddr);
@@ -1708,28 +1714,29 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
 	HIP_IFEL(hip_produce_keying_material(i2_context.input, &i2_context,
 					     solution->I, solution->J, &dhpv),
-		 -EPROTO, "Unable to produce keying material. Dropping the I2 "\
-		 "packet.\n");
+		 -EPROTO, "Unable to produce keying material. Dropping the I2"\
+		 " packet.\n");
 
 	/* Verify HMAC. */
-	if (hip_hidb_hit_is_our(&i2->hits)) {
-		/* loopback */
+	if (hip_hidb_hit_is_our(&i2->hits) && hip_hidb_hit_is_our(&i2->hitr)) {
+		is_loopback = 1;
 		HIP_IFEL(hip_verify_packet_hmac(i2, &i2_context.hip_hmac_out),
 			 -EPROTO, "HMAC loopback validation on I2 failed. "\
 			 "Dropping the I2 packet.\n");
 	} else {
 		HIP_IFEL(hip_verify_packet_hmac(i2, &i2_context.hip_hmac_in),
-			 -EPROTO, "HMAC validation on I2 failed. Dropping the "\
-			 "I2 packet.\n");
+			 -EPROTO, "HMAC validation on I2 failed. Dropping the"\
+			 " I2 packet.\n");
 	}
 
 	/* Decrypt the HOST_ID and verify it against the sender HIT. */
+	/* @todo: the HOST_ID can be in the packet in plain text */
 	enc = hip_get_param(i2, HIP_PARAM_ENCRYPTED);
 	if(enc == NULL) {
-		err = -ENODATA;
-		HIP_ERROR("ENCRYPTED parameter missing from I2 packet. "\
-			  "Dropping the I2 packet.\n");
-		goto out_err;
+		HIP_DEBUG("ENCRYPTED parameter missing from I2 packet\n");
+		host_id_in_enc = hip_get_param(i2, HIP_PARAM_HOST_ID);
+		HIP_IFEL(!host_id_in_enc, "No host id in i2", -1);
+		host_id_found = 1;
 	}
 	/* Little workaround...
 	 * We have a function that calculates SHA1 digest and then verifies the
@@ -1748,7 +1755,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	memcpy(tmp_enc, enc, hip_get_param_total_len(enc));
 
 	hip_transform = hip_get_param(i2, HIP_PARAM_HIP_TRANSFORM);
-	if(hip_transform == NULL) {
+	if (hip_transform == NULL) {
 		err = -ENODATA;
 		HIP_ERROR("HIP_TRANSFORM parameter missing from I2 packet. "\
 			  "Dropping the I2 packet.\n");
@@ -1839,21 +1846,23 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	   parameter in the 'host_id_in_enc' buffer.
 
 	   Note, that the original packet has the data still encrypted. */
-	HIP_IFEL(hip_crypto_encrypted(host_id_in_enc, iv, hip_tfm, crypto_len,
-				      &i2_context.hip_enc_in.key,
-				      HIP_DIRECTION_DECRYPT),
+	if (!host_id_found)
+		HIP_IFEL(hip_crypto_encrypted(host_id_in_enc, iv, hip_tfm, crypto_len,
+					      (is_loopback ? &i2_context.hip_enc_out.key :
+					       &i2_context.hip_enc_in.key),
+					      HIP_DIRECTION_DECRYPT),
 #ifdef CONFIG_HIP_OPENWRT
 				      // workaround for non-included errno-base.h in openwrt
-				      -EINVAL,
+			 -EINVAL,
 #else
-				      -EKEYREJECTED,
+			 -EKEYREJECTED,
 #endif
-		 "Failed to decrypt the HOST_ID parameter. Dropping the I2 "\
-		 "packet.\n");
+			 "Failed to decrypt the HOST_ID parameter. Dropping the I2 " \
+			 "packet.\n");
 
 	/* If the decrypted data is not a HOST_ID parameter, the I2 packet is
 	   silently dropped. */
-	if(hip_get_param_type(host_id_in_enc) != HIP_PARAM_HOST_ID) {
+	if (hip_get_param_type(host_id_in_enc) != HIP_PARAM_HOST_ID) {
 		err = -EPROTO;
 		HIP_ERROR("The decrypted data is not a HOST_ID parameter. "\
 			  "Dropping the I2 packet.\n");
@@ -2242,13 +2251,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	/***** LOCATOR PARAMETER *****/
 	hip_handle_locator_parameter(entry, hip_get_param(i2, HIP_PARAM_LOCATOR), esp_info);
 
-	/** Send the first heartbeat **/
-	if (hip_icmp_interval > 0) {
-		HIP_DEBUG("icmp sock %d\n", hip_icmp_sock);
-		HIP_IFEL(hip_send_icmp(hip_icmp_sock, entry), -1,
-			 "Failed to send heartbeat\n");
-	}
-
 #ifdef HIP_USE_ICE
 	hip_nat_start_ice(entry, esp_info,ICE_ROLE_CONTROLLING);
 #endif
@@ -2339,13 +2341,14 @@ int hip_receive_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
 		break;
 	case HIP_STATE_I2_SENT:
-		/* WTF */
-		if (hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer)) {
+		if (entry->is_loopback) {
+			err = hip_handle_i2(i2, i2_saddr, i2_daddr, entry,
+					    i2_info);
+		} else if (hip_hit_is_bigger(&entry->hit_our,
+					     &entry->hit_peer)) {
 			HIP_IFEL(hip_receive_i2(i2, i2_saddr, i2_daddr, entry,
 						i2_info), -ENOSYS,
 				 "Dropping HIP packet.\n");
-		} else if (entry->is_loopback) {
-			hip_handle_i2(i2, i2_saddr, i2_daddr, entry, i2_info);
 		}
 		break;
 	case HIP_STATE_I1_SENT:
@@ -2672,10 +2675,10 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 		entry->hip_msg_retrans.buf = NULL;
 	}
 
-	/** Send the first heartbeat**/
+	/* Send the first heartbeat. Notice that the error is ignored to complete
+	   the base exchange successfully. */
 	if (hip_icmp_interval > 0) {
-		HIP_IFEL(hip_send_icmp(hip_icmp_sock, entry), -1,
-			 "Failed to send heartbeat\n");
+		hip_send_icmp(hip_icmp_sock, entry);
 	}
 
 	//TODO Send the R2 Response to Firewall
@@ -2755,7 +2758,7 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		   struct in6_addr *i1_daddr, hip_ha_t *entry,
 		   hip_portpair_t *i1_info)
 {
-	int err = 0, state, mask = 0,cmphits=0, src_hit_is_our;
+	int err = 0, state, mask = 0, src_hit_is_our;
 
 	_HIP_DEBUG("hip_receive_i1() invoked.\n");
 
@@ -2853,15 +2856,18 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		  ->hip_handle_i1(i1, i1_saddr, i1_daddr, entry, i1_info);
 	     break;
 	case HIP_STATE_I1_SENT:
-	     	cmphits=hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer);
-	     	if (cmphits == 1) {
-		  HIP_IFEL(hip_receive_i1(i1,i1_saddr,i1_daddr,entry,i1_info),
-			   -ENOSYS, "Dropping HIP packet\n");
-
-	     	} else if (cmphits == 0) {
-		  hip_handle_i1(i1,i1_saddr,i1_daddr,entry,i1_info);
-
+	     	if (hip_hidb_hit_is_our(&i1->hitr)) {
+			/* loopback */
+			err = ((hip_handle_func_set_t *)
+			       hip_get_handle_default_func_set())->
+				hip_handle_i1(i1, i1_saddr, i1_daddr, entry,
+					      i1_info);
 	     	}
+	     	else if (hip_hit_is_bigger(&entry->hit_our, &entry->hit_peer)){
+			err = hip_receive_i1(i1, i1_saddr, i1_daddr,entry,
+					     i1_info);
+
+		}
 	     break;
 	case HIP_STATE_UNASSOCIATED:
 	case HIP_STATE_I2_SENT:
