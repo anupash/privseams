@@ -1543,7 +1543,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	struct hip_solution *solution = NULL;
 	struct esp_prot_anchor *prot_anchor = NULL;
 	struct esp_prot_transform *prot_transform = NULL;
-	struct hip_locator *locator = NULL;
 	/* Data structures. */
 	in6_addr_t dest; // dest for the IP address in RELAY_FROM
 	hip_transform_suite_t esp_tfm, hip_tfm;
