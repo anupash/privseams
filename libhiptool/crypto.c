@@ -362,9 +362,9 @@ int hip_crypto_encrypted(void *data, const void *iv_orig, int alg, int len,
 	u8 secret_key1[8], secret_key2[8], secret_key3[8];
 	u8 iv[20]; /* OpenSSL modifies the IV it is passed during the encryption/decryption */
         HIP_IFEL(!(result = malloc(len)), -1, "Out of memory\n");
-	HIP_HEXDUMP("hip_crypto_encrypted encrypt data", data, len);
+	_HIP_HEXDUMP("hip_crypto_encrypted encrypt data", data, len);
         
-	HIP_DEBUG("algo: %d\n", alg);
+	_HIP_DEBUG("algo: %d\n", alg);
 
 	switch(alg) {
         case HIP_HIP_AES_SHA1:
@@ -374,14 +374,14 @@ int hip_crypto_encrypted(void *data, const void *iv_orig, int alg, int len,
 			_HIP_DEBUG("d3\n");
 			HIP_IFEL((err = AES_set_encrypt_key(key, 8 * hip_transform_key_length(alg), &aes_key)) != 0, err, 
 				 "Unable to use calculated DH secret for AES key (%d)\n", err);
-			HIP_HEXDUMP("AES key for OpenSSL: ", &aes_key, sizeof(unsigned long) * 4 * (AES_MAXNR + 1));
-			HIP_HEXDUMP("AES IV: ", iv, 16);
+			_HIP_HEXDUMP("AES key for OpenSSL: ", &aes_key, sizeof(unsigned long) * 4 * (AES_MAXNR + 1));
+			_HIP_HEXDUMP("AES IV: ", iv, 16);
 			AES_cbc_encrypt(data, result, len, &aes_key, (unsigned char *)iv, AES_ENCRYPT);
 		} else {
 			HIP_IFEL((err = AES_set_decrypt_key(key, 8 * hip_transform_key_length(alg), &aes_key)) != 0, err, 
 				 "Unable to use calculated DH secret for AES key (%d)\n", err);
-			HIP_HEXDUMP("AES key for OpenSSL: ", &aes_key, sizeof(unsigned long) * 4 * (AES_MAXNR + 1));
-			HIP_HEXDUMP("AES IV: ", iv, 16);
+			_HIP_HEXDUMP("AES key for OpenSSL: ", &aes_key, sizeof(unsigned long) * 4 * (AES_MAXNR + 1));
+			_HIP_HEXDUMP("AES IV: ", iv, 16);
 			AES_cbc_encrypt(data, result, len, &aes_key, (unsigned char *)iv, AES_DECRYPT);
 		}
  		memcpy(data, result, len);
@@ -418,7 +418,7 @@ int hip_crypto_encrypted(void *data, const void *iv_orig, int alg, int len,
                 HIP_IFEL(1, -EINVAL, "Attempted to use unknown CI (alg = %d)\n", alg);
         }
 	
-	HIP_HEXDUMP("hip_crypto_encrypted decrypt data: ", result, len);	
+	_HIP_HEXDUMP("hip_crypto_encrypted decrypt data: ", result, len);	
 	err = 0;
 
  out_err:
