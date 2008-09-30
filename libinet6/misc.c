@@ -2413,7 +2413,7 @@ int hip_map_first_id_to_hostname_from_hosts(const struct hosts_file_line *entry,
   int err = 1;
 
   if (!ipv6_addr_cmp((struct in6_addr *) arg, &entry->id)) {
-    _HIP_DEBUG("Match on line %d\n", entry->lineno);
+    HIP_DEBUG("Match on line %d\n", entry->lineno);
     memcpy(result, entry->hostname, strnlen(entry->hostname, HOST_NAME_MAX));
     err = 0; /* Stop at the first match */
   }
@@ -2435,7 +2435,7 @@ int hip_map_first_hostname_to_hit_from_hosts(const struct hosts_file_line *entry
 
     HIP_IFE(!is_hit, 1);
 
-    _HIP_DEBUG("Match on line %d\n", entry->lineno);
+    HIP_DEBUG("Match on line %d\n", entry->lineno);
     ipv6_addr_copy(result, &entry->id);
     err = 0; /* Stop at the first match */
   }
@@ -2459,7 +2459,7 @@ int hip_map_first_hostname_to_lsi_from_hosts(const struct hosts_file_line *entry
 
     HIP_IFE(!is_lsi, 1);
 
-    _HIP_DEBUG("Match on line %d\n", entry->lineno);
+    HIP_DEBUG("Match on line %d\n", entry->lineno);
     ipv6_addr_copy(result, &entry->id);
     err = 0; /* Stop at the first match */
   }
@@ -2623,6 +2623,7 @@ int hip_map_lsi_to_hit_from_hosts_files(hip_lsi_t *lsi, hip_hit_t *hit)
   uint8_t hostname[HOST_NAME_MAX];
   struct in6_addr mapped_lsi;
   
+  memset(hostname, 0, sizeof(hostname));
   HIP_ASSERT(lsi && hit);
   
   IPV4_TO_IPV6_MAP(lsi, &mapped_lsi);
