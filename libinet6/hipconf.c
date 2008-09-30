@@ -1411,6 +1411,7 @@ int hip_conf_handle_set(hip_common_t *msg, int action, const char *opt[], int op
 
 /**
  * Function that is used to set the used gateway addr port and ttl with DHT
+    - hipconf dht gw <HIT>/<IP> 5851 600
  *
  * @return       zero on success, or negative error value on error.
  */
@@ -1431,9 +1432,16 @@ int hip_conf_handle_gw(hip_common_t *msg, int action, const char *opt[], int opt
                 err = -EINVAL;
                 goto out_err;
         }
+HIP_DEBUG("### \n");
+	if(strlen(opt[0]) > 19){
+		ret = inet_pton(AF_INET6, opt[0], &ip_gw_mapped);
+	}else{
+		ret = inet_pton(AF_INET, opt[0], &ip_gw);
+		IPV4_TO_IPV6_MAP(&ip_gw, &ip_gw_mapped);
+	}
 
-	ret = inet_pton(AF_INET, opt[0], &ip_gw);
-	IPV4_TO_IPV6_MAP(&ip_gw, &ip_gw_mapped);
+HIP_DEBUG_INADDR("### ", &ip_gw);
+HIP_DEBUG_IN6ADDR("### ", &ip_gw_mapped);
 
         err = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped,
 					      atoi(opt[2]), atoi(opt[1]));

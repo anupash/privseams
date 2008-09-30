@@ -38,8 +38,7 @@ connect_alarm(int signo)
  *
  * @return Returns positive if socket creation was ok negative on error.
  */
-int init_dht_gateway_socket(int sockfd)
-{
+int init_dht_gateway_socket(int sockfd){
     if ((sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
         HIP_PERROR("OpenDHT socket:");
     else HIP_DEBUG("\nOpenDHT communication socket created successfully.\n");
@@ -48,19 +47,13 @@ int init_dht_gateway_socket(int sockfd)
 }
 
 
-
-
-int init_dht_gateway_socket_v6(int sockfd)
-{
+int init_dht_gateway_socket_v6(int sockfd){
     if ((sockfd = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP)) < 0)
         HIP_PERROR("OpenDHT socket:");
     else HIP_DEBUG("\nOpenDHT communication socket created successfully.\n");
     
     return(sockfd);      
 }
-
-
-
 
 
 /** 
@@ -95,21 +88,15 @@ int resolve_dht_gateway_info(char * gateway_name,
 }
 
 
-
-
-
-
-
-
 /** 
- * resolve_dht_gateway_info - Resolves the gateway address
+ * resolve_dht_gateway_info_v6 - Resolves the gateway address
  * @param gateway_name FQDN of the gateway
  * @param gateway Addrinfo struct where the result will be stored
  *
  * @return Returns 0 on success otherwise -1
  */
-int resolve_dht_gateway_info_v6(char * gateway_name, 
-                             struct addrinfo ** gateway){
+int resolve_dht_gateway_info_v6(char *gateway_name, 
+				struct addrinfo ** gateway){
     struct addrinfo hints;
     struct sockaddr_in6 *sa = NULL;
     int error;
@@ -127,41 +114,48 @@ int resolve_dht_gateway_info_v6(char * gateway_name,
     else{
 	sa = (struct sockaddr_in6 *) (*gateway)->ai_addr;
 	//HIP_DEBUG("OpenDHT gateway IPv4: %s\n", inet6_ntoa(sa->sin6_addr));
-	HIP_DEBUG("OpenDHT gateway IPv4: \n");
-	HIP_DEBUG_IN6ADDR(" ", &(sa->sin6_addr));
+	HIP_DEBUG_IN6ADDR("OpenDHT gateway IPv6", &(sa->sin6_addr));
     }
     
     return error;
 }
 
 
-int connect_dht_gateway_v6(int sockfd, struct addrinfo * gateway, int blocking)
-{
+/**
+ *  connect_dht_gateway_v6 - Connects to given v6 gateway
+ *  @param sockfd
+ *  @param addrinfo Address to connect to 
+ *  @param blocking 1 for blocking connect 0 for nonblocking
+ *
+ *  @return Returns 0 on success -1 otherwise, if nonblocking can return EINPRGORESS
+ */
+int connect_dht_gateway_v6(int sockfd,
+			   struct addrinfo * gateway,
+			   int blocking,
+			   int version){
     int flags = 0, error = 0;
-    struct sockaddr_in6 *sa;
-    
+    struct sockaddr_in *sa_v4;
+    struct sockaddr_in6 *sa_v6;
+
     struct sigaction act, oact;
     act.sa_handler = connect_alarm;
     sigemptyset(&act.sa_mask);
     act.sa_flags = 0;
     
-    if (gateway == NULL) 
-        {
+    if(gateway == NULL){
             HIP_ERROR("No OpenDHT Serving Gateway Address.\n");
             return(-1);
-        }
+    }
     
-    if (blocking == 0)
+    if(blocking == 0)
         goto unblock;
-    /* blocking connect */
-    if (sigaction(SIGALRM, &act, &oact) <0 ) 
-        {
+
+    // blocking connect
+    if(sigaction(SIGALRM, &act, &oact) < 0){
             HIP_DEBUG("Signal error before OpenDHT connect, "
                       "connecting without alarm\n");
             error = connect(sockfd, gateway->ai_addr, gateway->ai_addrlen);
-        }
-    else 
-        {
+    }else {
             HIP_DEBUG("Connecting to OpenDHT with alarm\n");
             if (alarm(4) != 0)
                 HIP_DEBUG("Alarm was already set, connecting without\n");
@@ -169,63 +163,53 @@ int connect_dht_gateway_v6(int sockfd, struct addrinfo * gateway, int blocking)
             alarm(0);
             if (sigaction(SIGALRM, &oact, &act) <0 ) 
                 HIP_DEBUG("Signal error after OpenDHT connect\n");
-        }
+    }
     
-    if (error < 0) 
-        {
+    if(error < 0){
             HIP_PERROR("OpenDHT connect:");
             if (errno == EINTR)
                 HIP_DEBUG("Connect to OpenDHT timedout\n");
             return(-1);
-        }
-    else
-        {
-            sa = (struct sockaddr_in *)gateway->ai_addr;
-            //HIP_DEBUG("Connected to OpenDHT gateway %s.\n", inet_ntoa(sa->sin_addr)); 
-            return(0);
-        }
+    }else{
+	if(version == 4){
+	    sa_v4 = (struct sockaddr_in *)gateway->ai_addr;
+	    HIP_DEBUG_INADDR("Connected to OpenDHT v4 gateway", &(sa_v4->sin_addr));
+	}else if(version == 6){
+            sa_v6 = (struct sockaddr_in6 *)gateway->ai_addr;
+            HIP_DEBUG_IN6ADDR("Connected to OpenDHT v6 gateway", &(sa_v6->sin6_addr));
+	}else{
+	    HIP_DEBUG("Wrong version for OPENDHT gateway %d\n", version);
+	}
+	return(0);
+    }
         
  unblock:
-    /* unblocking connect */    
+    // unblocking connect
     flags = fcntl(sockfd, F_GETFL, 0);
     fcntl(sockfd, F_SETFL, flags | O_NONBLOCK); 
     
-    sa = (struct sockaddr_in6 *)gateway->ai_addr;
-    HIP_DEBUG("Connecting to OpenDHT gateway "); 
-    HIP_DEBUG_IN6ADDR(" ", &(sa->sin6_addr));
+    if(version == 4){
+	    sa_v4 = (struct sockaddr_in *)gateway->ai_addr;
+	    HIP_DEBUG_INADDR("Connecting to OpenDHT v4 gateway", &(sa_v4->sin_addr));
+    }else if(version == 6){
+            sa_v6 = (struct sockaddr_in6 *)gateway->ai_addr;
+            HIP_DEBUG_IN6ADDR("Connecting to OpenDHT v6 gateway", &(sa_v6->sin6_addr));
+    }else{
+	    HIP_DEBUG("Wrong version for OPENDHT gateway %d\n", version);
+    }
 
-    if (connect(sockfd, gateway->ai_addr, gateway->ai_addrlen) < 0)
-        {
+    if(connect(sockfd, gateway->ai_addr, gateway->ai_addrlen) < 0){
             if (errno == EINPROGRESS)
                 return(EINPROGRESS);
-            else 
-                {
+            else{
                     HIP_PERROR("OpenDHT connect:");
                     return(-1);
-                }
-        }
-    else
-        {
-            /* connect ok */
+            }
+    }else{
+            // connect ok
             return(0);
-        }   
-    
-} 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    }
+}
 
 
 /**
