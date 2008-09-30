@@ -298,7 +298,13 @@ int send_anchor_change_to_hipd(hip_sa_entry_t *entry)
 
 	} else
 	{
+		err = 1;
+		goto out_err;
+
+// inbound direction is handled separately
+#if 0
 		anchor = entry->active_anchor;
+#endif
 	}
 
 	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1,
