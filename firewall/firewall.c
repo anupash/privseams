@@ -267,23 +267,10 @@ int hip_fw_uninit_esp_prot(){
 }
 
 int hip_fw_init_lsi_support(){
-#if 0
-	char result[100];
-	char str1[] = "iptables -I HIPFW-OUTPUT -d ";
-	char str2[] = " -j QUEUE";
-#endif
 	int err = 0;
 
 	if (hip_lsi_support)
 	{
-#if 0
-		memset(result, 0, sizeof(result));
-		strcpy(result, str1);
-		strcat(strcat(result, HIP_FULL_LSI_STR), str2);
-
-		system(result);
-#endif
-
 		// add the rule
 		system("iptables -I HIPFW-OUTPUT -d " HIP_FULL_LSI_STR " -j QUEUE");
 
@@ -302,25 +289,12 @@ void hip_fw_init_system_base_opp_mode(void) {
 }
 
 int hip_fw_uninit_lsi_support(){
-#if 0
-	char result[100];
-	char str1[] = "iptables -D HIPFW-OUTPUT -d ";
-	char str2[] = " -j QUEUE 2>/dev/null";
-#endif
 	int err = 0;
 
 	if (hip_lsi_support)
 	{
 		// set global variable to off
 		hip_lsi_support = 0;
-
-#if 0
-		memset(result, 0, sizeof(result));
-		strcpy(result, str1);
-		strcat(strcat(result, HIP_FULL_LSI_STR), str2);
-
-		system(result);
-#endif
 
 		// remove the rule
 		system("iptables -D HIPFW-OUTPUT -d " HIP_FULL_LSI_STR " -j QUEUE 2>/dev/null");

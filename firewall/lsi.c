@@ -49,6 +49,10 @@ int hip_query_ha_info(struct in6_addr *hit_our, struct in6_addr *hit_peer,
 				break;
 			}
 		} else {
+			HIP_DEBUG_LSI("ha lsi peer", &ha->lsi_peer.s_addr);
+			HIP_DEBUG_LSI("lsi peer", &lsi_peer->s_addr);
+			HIP_DEBUG_LSI("ha lsi our", &ha->lsi_our.s_addr);
+			HIP_DEBUG_LSI("lsi our", &lsi_our->s_addr);
 			if ((ha->lsi_peer.s_addr == lsi_peer->s_addr) &&
 			    (ha->lsi_our.s_addr == lsi_our->s_addr)) {
 				HIP_DEBUG("Matched LSIs\n");
@@ -336,9 +340,10 @@ int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src,
 
 	/* get the corresponding ip address for this lsi,
 	   as well as the current ha state */
-	HIP_IFEL(hip_query_ha_info(NULL, NULL, lsi_src, lsi_dst,
-				   &src_ip, &dst_ip, &state_ha),
-		 -1, "Did not find HA\n");
+	if (hip_query_ha_info(NULL, NULL, lsi_src, lsi_dst,
+			      &src_ip, &dst_ip, &state_ha)) {
+		HIP_DEBUG("No HA found yet\n");
+	}
 
 	entry_peer = (firewall_hl_t *) firewall_ip_db_match(&dst_ip);	
 	if (entry_peer) {
