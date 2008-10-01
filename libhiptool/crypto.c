@@ -308,7 +308,6 @@ unsigned char dhgen[HIP_MAX_DH_GROUP_ID] = {0,0x02,0x02,0x02,0x02,0x02,0x02};
  * @return       1 if ok, zero otherwise.
  * @warning      This function returns 1 for success which is against the policy
  *               defined in @c /doc/HACKING.
- * @todo         Should this function return zero for success?
  */
 int hip_write_hmac(int type, void *key, void *in, int in_len, void *out)
 {
@@ -330,14 +329,14 @@ int hip_write_hmac(int type, void *key, void *in, int in_len, void *out)
                 break;
         default:
                 HIP_ERROR("Unknown HMAC type 0x%x\n", type);
-                return 0;
+                return 1;
         }
 
 	_HIP_HEXDUMP("HMAC key:", key, hip_hmac_key_length(HIP_ESP_AES_SHA1));
-	_HIP_HEXDUMP("HMAC in:", in, debug_len);
+	_HIP_HEXDUMP("HMAC in:", in, in_len);
 	_HIP_HEXDUMP("HMAC out:", out, HIP_AH_SHA_LEN);
 
-	return 1;
+	return 0;
 }
 
 /**
@@ -370,11 +369,10 @@ int hip_crypto_encrypted(void *data, const void *iv_orig, int alg, int len,
         HIP_IFEL(!(result = malloc(len)), -1, "Out of memory\n");
 	_HIP_HEXDUMP("hip_crypto_encrypted encrypt data", data, len);
         
-	_HIP_DEBUG("d1\n");
+	_HIP_DEBUG("algo: %d\n", alg);
+
 	switch(alg) {
         case HIP_HIP_AES_SHA1:
-	
-     	_HIP_DEBUG("d2\n");
 		/* AES key must be 128, 192, or 256 bits in length */
 		memcpy(iv, iv_orig, 16);
 		if (direction == HIP_DIRECTION_ENCRYPT) {
@@ -387,8 +385,8 @@ int hip_crypto_encrypted(void *data, const void *iv_orig, int alg, int len,
 		} else {
 			HIP_IFEL((err = AES_set_decrypt_key(key, 8 * hip_transform_key_length(alg), &aes_key)) != 0, err, 
 				 "Unable to use calculated DH secret for AES key (%d)\n", err);
-			//HIP_HEXDUMP("AES key for OpenSSL: ", &aes_key, sizeof(unsigned long) * 4 * (AES_MAXNR + 1));
-			//HIP_HEXDUMP("AES IV: ", iv, 16);
+			_HIP_HEXDUMP("AES key for OpenSSL: ", &aes_key, sizeof(unsigned long) * 4 * (AES_MAXNR + 1));
+			_HIP_HEXDUMP("AES IV: ", iv, 16);
 			AES_cbc_encrypt(data, result, len, &aes_key, (unsigned char *)iv, AES_DECRYPT);
 		}
  		memcpy(data, result, len);

@@ -1,5 +1,5 @@
---- kernel-2.6.spec.orig	2008-09-14 14:24:02.000000000 -0400
-+++ kernel-2.6.spec.new	2008-09-14 14:23:16.000000000 -0400
+--- kernel-2.6.spec.orig	2008-09-14 18:39:01.000000000 -0400
++++ kernel-2.6.spec	2008-09-14 18:38:30.000000000 -0400
 @@ -81,6 +81,9 @@
  %define xen_target vmlinuz
  %define xen_image vmlinuz

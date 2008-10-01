@@ -515,7 +515,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
         /* change order if necessary */
 	sprintf(order, "%d", hip_transform_order);
 	for ( i = 0; i < 3; i++) {
-		switch (order[0]) {
+		switch (order[i]) {
 		case 1:
 			transform_hip_suite[i] = HIP_HIP_AES_SHA1;
 			transform_esp_suite[i] = HIP_ESP_AES_SHA1;

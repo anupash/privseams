@@ -783,6 +783,16 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit,
 			err = 0;
 	}
 	
+	/* Map peer address to loopback if hit is ours  */
+	if (err && hip_hidb_hit_is_our(dst_hit)) {
+		struct in6_addr lpback = IN6ADDR_LOOPBACK_INIT;
+		ipv6_addr_copy(dst_addr, &lpback);
+		ipv6_addr_copy(src_addr, &lpback);
+		is_loopback = 1;
+		reuse_hadb_local_address = 1;
+		err = 0;
+	}
+
 	/* Look up peer ip from hadb entries */
 	if (err) {
 		/* Search HADB for existing entries */
@@ -800,16 +810,6 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit,
 	/* Try to look up peer ip from hosts and opendht */
 	if (err) {
 	        err = hip_map_id_to_addr(dst_hit, dst_lsi, dst_addr);
-	}
-
-	/* Map peer address to loopback if hit is ours  */
-	if (err && hip_hidb_hit_is_our(dst_hit)) {
-		struct in6_addr lpback = IN6ADDR_LOOPBACK_INIT;
-		ipv6_addr_copy(dst_addr, &lpback);
-		ipv6_addr_copy(src_addr, &lpback);
-		is_loopback = 1;
-		reuse_hadb_local_address = 1;
-		err = 0;
 	}
 
 	/* No peer address found; set it to broadcast address
@@ -1279,6 +1279,7 @@ int hip_select_source_address(struct in6_addr *src, struct in6_addr *dst)
 //	int rtnl_rtdsfield_init;
 //	char *rtnl_rtdsfield_tab[256] = { 0 };
 	struct idxmap *idxmap[16] = { 0 };
+	struct in6_addr lpback = IN6ADDR_LOOPBACK_INIT;
 		
 	/* rtnl_rtdsfield_initialize() */
 //	rtnl_rtdsfield_init = 1;
@@ -1287,6 +1288,12 @@ int hip_select_source_address(struct in6_addr *src, struct in6_addr *dst)
 
 	_HIP_DEBUG_IN6ADDR("Source", src);
 	HIP_DEBUG_IN6ADDR("dst", dst);
+
+	/* Required for loopback connections */
+	if (!ipv6_addr_cmp(dst, &lpback)) {
+		ipv6_addr_copy(src, dst);
+		goto out_err;
+	}
 
 	HIP_IFEL(!exists_address_family_in_list(dst), -1, "No address of the same family\n");
 

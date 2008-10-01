@@ -2222,6 +2222,7 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 	 * were used before and continue updating address lists and sending HIP
 	 * UPDATE packets. */
 	if (!is_hard_handover) {
+#if 0
 		if (addr_count == spi_in->addresses_n &&
 			addr_list && spi_in->addresses &&
 			memcmp(addr_list, spi_in->addresses,
@@ -2232,6 +2233,7 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 		} else {
 			HIP_DEBUG("Address set has changed, continue\n");
 		}
+#endif
 	}
 
 	/* dont go to out_err but to ... */

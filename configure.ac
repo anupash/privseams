@@ -18,7 +18,7 @@ AC_PROG_LN_S
 AC_PROG_MAKE_SET
 
 # Check for python for tools directory
-AM_PATH_PYTHON([2.5],, [:])
+AM_PATH_PYTHON([2.4.3],, [:])
 AM_CONDITIONAL([HAVE_PYTHON], [test "$PYTHON" != :])
 
 # Checks for libraries.
