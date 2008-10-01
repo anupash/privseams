@@ -1973,7 +1973,7 @@ int hip_get_bex_state_from_IPs(struct in6_addr *src_ip,
 
 }
 
-
+#if 0
 /**
  * Obtains the ips from the ha entry based on the hits.
 
@@ -2029,7 +2029,7 @@ int hip_get_ips_by_hits(struct in6_addr *src_hit,
         return res;
 
 }
-
+#endif
 
 /**
  * Checks whether a particular hit is one of the local ones.

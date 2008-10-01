@@ -3,13 +3,32 @@
 #define BUFSIZE HIP_MAX_PACKET
 
 hip_lsi_t local_lsi = { 0 };
+/* @todo: this should be a hashtable */
+struct hip_hadb_user_info_state ha_cache;
 
-int hip_get_lsis_by_hits(struct in6_addr *hit_our, struct in6_addr *hit_peer,
-			hip_lsi_t *lsi_our, hip_lsi_t *lsi_peer) {
+int hip_query_ha_info(struct in6_addr *hit_our, struct in6_addr *hit_peer,
+		      hip_lsi_t *lsi_our, hip_lsi_t *lsi_peer,
+		      struct in6_addr *loc_our, struct in6_addr *loc_peer,
+		      int *state)
+{
 	int err = 0;
 	struct hip_tlv_common *current_param = NULL;
 	struct hip_common *msg = NULL;
-	struct hip_hadb_user_info_state *ha;
+	struct hip_hadb_user_info_state *ha, *ha_match = NULL;
+
+	HIP_ASSERT((hit_our && hit_peer) || (lsi_our && lsi_peer));
+
+	if (hit_our && hit_peer &&
+	    !ipv6_addr_cmp(hit_peer, &ha_cache.hit_peer) &&
+	    !ipv6_addr_cmp(hit_our, &ha_cache.hit_our)) {
+		ha_match = &ha_cache;
+		goto copy_ha;
+	} else if (lsi_our && lsi_peer &&
+		   lsi_peer->s_addr == ha_cache.lsi_peer.s_addr &&
+		   lsi_our->s_addr == ha_cache.lsi_our.s_addr ) {
+		ha_match = &ha_cache;
+		goto copy_ha;
+	}
   
 	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
 	hip_msg_init(msg);
@@ -18,25 +37,53 @@ int hip_get_lsis_by_hits(struct in6_addr *hit_our, struct in6_addr *hit_peer,
 	HIP_IFEL(hip_send_recv_daemon_info(msg), -1,
 		 "send recv daemon info\n");
 
-	err = -1;
 	while((current_param=hip_get_next_param(msg, current_param)) != NULL) {
 		ha = hip_get_param_contents_direct(current_param);
-		if (!ipv6_addr_cmp(&ha->hit_our, hit_our) &&
-		    !ipv6_addr_cmp(&ha->hit_peer, hit_peer)) {
-			HIP_DEBUG("Matched HITs\n");
-			err = 0;
-			memcpy(lsi_our, &ha->lsi_our, sizeof(hip_lsi_t));
-			memcpy(lsi_peer, &ha->lsi_peer, sizeof(hip_lsi_t));
-			break;
+		if (hit_our && hit_peer) {
+			if (!ipv6_addr_cmp(&ha->hit_peer, hit_peer) &&
+			    !ipv6_addr_cmp(&ha->hit_our, hit_our)) {
+				HIP_DEBUG("Matched HITs\n");
+				ha_match = ha;
+				break;
+			}
+		} else {
+			if ((ha->lsi_peer.s_addr == lsi_peer->s_addr) &&
+			    (ha->lsi_our.s_addr == lsi_our->s_addr)) {
+				HIP_DEBUG("Matched LSIs\n");
+				ha_match = ha;
+				break;
+			}
 		}
 	}
-        
+
+	HIP_IFEL(!ha_match, -1, "No HA match\n");
+	memcpy(&ha_cache, ha_match, sizeof(ha_cache));
+
+copy_ha:
+
+	if (hit_our)
+		ipv6_addr_copy(hit_our, &ha_match->hit_our);
+	if (hit_peer)
+		ipv6_addr_copy(hit_peer, &ha_match->hit_peer);
+	if (lsi_our)
+		memcpy(lsi_our, &ha_match->lsi_our,
+		       sizeof(hip_lsi_t));
+	if (lsi_peer)
+		memcpy(lsi_peer, &ha_match->lsi_peer,
+		       sizeof(hip_lsi_t));
+	if (loc_our)
+		ipv6_addr_copy(loc_our, &ha_match->ip_our);
+	if (loc_peer)
+		ipv6_addr_copy(loc_peer, &ha_match->ip_peer);
+        if (state)
+		*state = ha_match->state;
  out_err:
         if (msg)
                 HIP_FREE(msg);  
         return err;
 }
 
+#if 0
 /**
  * Obtains the peer IP from the peer lsi.
  * @param *src_lsi	the input source lsi
@@ -85,6 +132,7 @@ int hip_get_peerIP_from_LSIs(struct in_addr  *src_lsi,
                 HIP_FREE(msg);  
         return res;
 }
+#endif
 
 int hip_fw_get_default_lsi(hip_lsi_t *lsi) {
         int err = 0;
@@ -213,16 +261,16 @@ int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m,
 	} else if (lsi_support) {
 		process_as_lsi = 1;
 	} else if (sys_opp_support) {
-		process_as_lsi= 0;
+		process_as_lsi = 0;
 	} else {
 		HIP_ASSERT(1);
 	}
 
 	if (process_as_lsi) {
-		HIP_IFEL(hip_get_lsis_by_hits(ip_dst, ip_src,
-					      &lsi_our, &lsi_peer), -1,
+		HIP_IFEL(hip_query_ha_info(ip_dst, ip_src,
+					   &lsi_our, &lsi_peer,
+					   NULL, NULL, NULL), -1,
 			 "Failed to obtain LSIs\n");
-		/* @todo: the LSIs should be cached for performance */
 		HIP_DEBUG_LSI("lsi_our: ", &lsi_our);
 		HIP_DEBUG_LSI("lsi_peer: ", &lsi_peer);
 		IPV4_TO_IPV6_MAP(&lsi_our, &src_addr);
@@ -232,19 +280,19 @@ int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m,
 		HIP_DEBUG("Successful LSI transformation. Drop original\n");
 		verdict = 0;
 	} else {
-		HIP_IFEL((hip_get_ips_by_hits(ip_src, ip_dst,
-					      &src_addr, &dst_addr) < 0), -1,
-			 "System-based opp mode failure\n");
+		HIP_IFEL(hip_query_ha_info(ip_src, ip_dst,
+					   NULL, NULL,
+					   &src_addr, &dst_addr, NULL),
+			 -1, "System-based opp mode failure\n");
 		IPV6_TO_IPV4_MAP(&src_addr, &src_v4);
 		IPV6_TO_IPV4_MAP(&dst_addr, &dst_v4);
-		HIP_DEBUG_IN6ADDR("******ip_src : ", src_addr);
-		HIP_DEBUG_IN6ADDR("******ip_dst : ", dst_addr);
+		HIP_DEBUG_IN6ADDR("ip_src: ", &src_addr);
+		HIP_DEBUG_IN6ADDR("ip_dst: ", &dst_addr);
 		HIP_IFEL(reinject_packet(&src_addr, &dst_addr, m, 6, 1), -1,
 			 "Failed to reinject with IP addrs\n");
 		HIP_DEBUG("Successfull sysopp transformation. Drop orig\n");
 		verdict = 0;
 	}
-
 
 out_err:
 
@@ -284,7 +332,9 @@ int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src,
 
 	/* get the corresponding ip address for this lsi,
 	   as well as the current ha state */
-	state_ha = hip_get_peerIP_from_LSIs(lsi_src, lsi_dst, &dst_ip);
+	HIP_IFEL(hip_query_ha_info(NULL, NULL, lsi_src, lsi_dst,
+				   &src_ip, &dst_ip, &state_ha),
+		 -1, "Did not find HA\n");
 
 	entry_peer = (firewall_hl_t *) firewall_ip_db_match(&dst_ip);	
 	if (entry_peer) {
