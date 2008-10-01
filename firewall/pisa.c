@@ -129,38 +129,41 @@ static void pisa_generate_random()
 /**
  * Appends HMAC/SHA1 to a block of data.
  *
- * @param a first HIT
- * @param b second HIT
+ * @param hit1 first HIT
+ * @param hit2 second HIT
  * @param rnd which random number to use, either 0 or 1
- * @param spi SPI that will be signed
  * @param data pointer to buffer for data and the HMAC
  * @param data_len length of data
+ * @return 0 on success
  */
-static void pisa_append_hmac(struct in6_addr *a, struct in6_addr *b, 
-			     int rnd, u32 spi, void *data, int data_len)
+static int pisa_append_hmac(struct in6_addr *hit1, struct in6_addr *hit2,
+			    int rnd, void *data, int data_len)
 {
-	u8 key[36 + PISA_RANDOM_LEN];
-	int len = HIP_AH_SHA_LEN;
+	u8 key[32 + PISA_RANDOM_LEN];
+	int len = HIP_AH_SHA_LEN, err = 0;
 
-	if (!(data && a && b) || (rnd != 0 && rnd != 1) || data_len == 0)  {
-		HIP_ERROR("failed pisa_create_nonce_hash sanity check.\n");
-		return;
-	}
+	/* sanity checks for arguments */
+	HIP_IFEL(data == NULL, -1, "No data given.\n");
+	HIP_IFEL(hit1 == NULL, -1, "No first HIT given.\n");
+	HIP_IFEL(hit2 == NULL, -1, "No second HIT given.\n");
+	HIP_IFEL(data_len < 1, -1, "Data has invalid length.\n");
+	HIP_IFEL(rnd != 0 && rnd != 1, -1, "Random ID is neither 0 nor 1.\n");
 
 	/* The key for HMAC/SHA1 consists of:
-	 *    4 bytes SPI
-	 *   16 bytes HIT1
-	 *   16 bytes HIT2
-	 *            pisa_random_data
+	 *                16 bytes HIT1
+	 *                16 bytes HIT2
+	 *   PISA_RANDOM_LEN bytes pisa_random_data
 	 */
 
-	memcpy(key, &spi, sizeof(u32));
-	ipv6_addr_copy((struct in6_addr *)(key+ 4), a);
-	ipv6_addr_copy((struct in6_addr *)(key+20), b);
-	memcpy(key+36, &pisa_random_data[rnd][0], PISA_RANDOM_LEN);
+	ipv6_addr_copy((struct in6_addr *)(key+ 0), hit1);
+	ipv6_addr_copy((struct in6_addr *)(key+16), hit2);
+	memcpy(key+32, &pisa_random_data[rnd][0], PISA_RANDOM_LEN);
 
-	HMAC(EVP_sha1(), key, 36 + PISA_RANDOM_LEN, data, data_len,
+	HMAC(EVP_sha1(), key, 32 + PISA_RANDOM_LEN, data, data_len,
 	     data + data_len, &len);
+
+out_err:
+	return err;
 }
 
 /**
@@ -194,7 +197,7 @@ static int pisa_insert_nonce_1spi(hip_fw_context_t *ctx)
 	 */
 
 	memcpy(nonce, &spi, sizeof(u32));
-	pisa_append_hmac(&hip->hits, &hip->hitr, 1, spi, nonce, sizeof(u32));
+	pisa_append_hmac(&hip->hits, &hip->hitr, 1, nonce, sizeof(u32));
 
 #ifdef PISA_INTRODUCE_ERROR_NONCE
 	nonce[0]++;
@@ -241,7 +244,7 @@ static int pisa_insert_nonce_2spi(hip_fw_context_t *ctx,
 
 	memcpy(nonce, &spi[0], sizeof(u32));
 	memcpy(nonce+sizeof(u32), &spi[1], sizeof(u32));
-	pisa_append_hmac(&hip->hits, &hip->hitr, 1, spi[0], nonce, sizeof(u32)*2);
+	pisa_append_hmac(&hip->hits, &hip->hitr, 1, nonce, sizeof(u32)*2);
 
 #ifdef PISA_INTRODUCE_ERROR_NONCE
 	nonce[0]++;
@@ -266,7 +269,7 @@ static int pisa_insert_puzzle(hip_fw_context_t *ctx)
 
 	/* here we switch order of initiator and receiver to obtain a
 	 * different SHA1 hash */
-	pisa_append_hmac(&hip->hitr, &hip->hits, 1, 0, &hash, 4);
+	pisa_append_hmac(&hip->hitr, &hip->hits, 1, &hash, 4);
 
 #ifdef PISA_TEST_MULTIPLE_PARAMETERS
 	midauth_add_puzzle_m(ctx, 3, 4, "puzzle", 0xABCDABCDABCDABCDLL);
@@ -324,14 +327,14 @@ static struct hip_tlv_common *pisa_check_nonce(hip_fw_context_t *ctx)
 			spi = *((u32 *)nonce_data);
 
 			/* ... first check the current random value ... */
-			pisa_append_hmac(&hip->hitr, &hip->hits, 1, spi,
-			                 valid, data_size);
+			pisa_append_hmac(&hip->hitr, &hip->hits, 1, valid,
+					 data_size);
 			if (!memcmp(valid, nonce_data, nonce_len))
 				return nonce;
 
 			/* ... and if that failed the old random value */
-			pisa_append_hmac(&hip->hitr, &hip->hits, 0, spi,
-			                 valid, data_size);
+			pisa_append_hmac(&hip->hitr, &hip->hits, 0, valid,
+					 data_size);
 			if (!memcmp(valid, nonce_data, nonce_len))
 				return nonce;
 		}
@@ -358,8 +361,8 @@ static struct hip_solution_m *pisa_check_solution(hip_fw_context_t *ctx)
 	memcpy(&hash[0], &seed, 4);
 	memcpy(&hash[1], &seed, 4);
 
-	pisa_append_hmac(&hip->hits, &hip->hitr, 0, 0, &hash[0], 4);
-	pisa_append_hmac(&hip->hits, &hip->hitr, 1, 0, &hash[1], 4);
+	pisa_append_hmac(&hip->hits, &hip->hitr, 0, &hash[0], 4);
+	pisa_append_hmac(&hip->hits, &hip->hitr, 1, &hash[1], 4);
 
 	solution = (struct hip_solution_m *)
 	           hip_get_param(hip, HIP_PARAM_SOLUTION_M);
