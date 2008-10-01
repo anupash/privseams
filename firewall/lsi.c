@@ -29,6 +29,8 @@ int hip_query_ha_info(struct in6_addr *hit_our, struct in6_addr *hit_peer,
 		ha_match = &ha_cache;
 		goto copy_ha;
 	}
+
+	HIP_DEBUG("No cache found, querying daemon\n");
   
 	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
 	hip_msg_init(msg);
@@ -267,6 +269,7 @@ int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m,
 	}
 
 	if (process_as_lsi) {
+		HIP_DEBUG("Trying lsi transformation\n");
 		HIP_IFEL(hip_query_ha_info(ip_dst, ip_src,
 					   &lsi_our, &lsi_peer,
 					   NULL, NULL, NULL), -1,
@@ -280,7 +283,8 @@ int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m,
 		HIP_DEBUG("Successful LSI transformation. Drop original\n");
 		verdict = 0;
 	} else {
-		HIP_IFEL(hip_query_ha_info(ip_src, ip_dst,
+		HIP_DEBUG("Trying sys opp transformation\n");
+		HIP_IFEL(hip_query_ha_info(ip_dst, ip_src,
 					   NULL, NULL,
 					   &src_addr, &dst_addr, NULL),
 			 -1, "System-based opp mode failure\n");
