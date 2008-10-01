@@ -273,30 +273,19 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 
         case SO_HIP_DHT_GW:
 	{
-		char *tmp_ip_str[20];
+		char *tmp_ip_str[15];
+		char *tmp_ip_str6[39];
 		const char *pret;
-		int ret, s;
+		int ret;
 		struct in_addr tmp_v4;
 		struct hip_opendht_gw_info *gw_info;
 		extern struct addrinfo * opendht_serving_gateway;
 		extern int opendht_serving_gateway_port;
 		extern int opendht_serving_gateway_ttl;
-/*
-struct sockaddr_in6 *sa6 = NULL;
 
-char tmp[41] = "2001:12:9848:4114:755e:a798:ff6d:6efb\0";
-struct in6_addr tmp_v6;
-ret = inet_pton(AF_INET6, tmp, &tmp_v6);
-HIP_DEBUG("### %s \n", tmp);
-HIP_DEBUG_IN6ADDR("### ", &tmp_v6);
-*/
-char *tmp_ip_str6[90];
 		HIP_IFEL(!(gw_info = hip_get_param(msg, HIP_PARAM_OPENDHT_GW_INFO)), -1,
 			 "No gw struct found\n");
 		memset(&tmp_ip_str,'\0',20);
-		//opendht_serving_gateway_ttl = gw_info->ttl;
-		//opendht_serving_gateway_port = htons(gw_info->port);
-
 
 		/* received ipv4 addr from hipconf */
 		if(IN6_IS_ADDR_V4MAPPED(&gw_info->addr)){
@@ -305,36 +294,20 @@ char *tmp_ip_str6[90];
 			HIP_DEBUG("Got address %s, port %d, TTL %d from hipconf\n",
 				  tmp_ip_str, htons(gw_info->port), gw_info->ttl);
 			ret = resolve_dht_gateway_info(tmp_ip_str,
-						       &opendht_serving_gateway);
-			HIP_DEBUG("#### RET %d \n", ret);
-
-			if(ret != 0){
-				HIP_DEBUG("Error in changing the serving gateway!");
-				break;
-			}
-
-			//connect to the new dht gw
-			s = init_dht_gateway_socket(s);
-			err = connect_dht_gateway(s, opendht_serving_gateway, 1);
-		}
-		else{/* received ipv6 addr from hipconf */
+						       &opendht_serving_gateway,
+						       AF_INET);
+		}/* received ipv6 addr from hipconf */
+		else{
 			pret = inet_ntop(AF_INET6, &gw_info->addr, tmp_ip_str6, 39);
 			//pret = inet_ntop(AF_INET6, &tmp_v6, tmp_ip_str6, 39);
 			HIP_DEBUG("Got address %s, port %d, TTL %d from hipconf\n",
 				  tmp_ip_str6, htons(gw_info->port), gw_info->ttl);
-			ret = resolve_dht_gateway_info_v6(tmp_ip_str6,
-							  &opendht_serving_gateway);
-			HIP_DEBUG("### RET %d \n", ret);
-
-			//code for connecting to the new dht gw
-			s = init_dht_gateway_socket_v6(s);
-			err = connect_dht_gateway_v6(s, opendht_serving_gateway, 1, 6);
+			err = resolve_dht_gateway_info(tmp_ip_str6,
+							&opendht_serving_gateway,
+							AF_INET6);
 		}
-		HIP_DEBUG("#### ERROR %d \n", err);
 
-		/* changing global vars
-		 * if we are here, ret is 0, no need to check*/
-		//if(ret == 0){
+		if(err == 0){
 			HIP_DEBUG("Serving gateway changed\n");
 			hip_opendht_fqdn_sent = 0;
 			hip_opendht_hit_sent = 0;
@@ -343,8 +316,11 @@ char *tmp_ip_str6[90];
 			//update the port and ttl
 			opendht_serving_gateway_ttl = gw_info->ttl;
 			opendht_serving_gateway_port = htons(gw_info->port);
-		//}
-
+		}
+		else{
+			HIP_DEBUG("Error in resolving gateway - %d \n", err);
+			break;
+		}
 	}
 	break;
         case SO_HIP_DHT_SERVING_GW:

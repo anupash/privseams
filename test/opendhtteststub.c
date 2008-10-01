@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
     struct addrinfo * serving_gateway;
 
     /* resolve the gateway address */
-    error = resolve_dht_gateway_info (opendht, &serving_gateway);
+    error = resolve_dht_gateway_info (opendht, &serving_gateway, AF_INET);
     if (error < 0) {
         printf("Resolving error\n");
         exit(0);

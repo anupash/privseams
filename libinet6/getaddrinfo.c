@@ -536,7 +536,7 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 		 tmp_ip_str, tmp_port, tmp_ttl);
 
         error = 0;
-        error = resolve_dht_gateway_info(tmp_ip_str, &serving_gateway);
+        error = resolve_dht_gateway_info(tmp_ip_str, &serving_gateway, AF_INET);
         HIP_IFEL((error < 0), -1,
                  "Error in resolving the DHT gateway address, skipping DHT.\n");
 
