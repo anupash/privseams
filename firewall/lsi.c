@@ -286,7 +286,7 @@ int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m,
 		HIP_DEBUG("Trying sys opp transformation\n");
 		HIP_IFEL(hip_query_ha_info(ip_dst, ip_src,
 					   NULL, NULL,
-					   &src_addr, &dst_addr, NULL),
+					   &dst_addr, &src_addr, NULL),
 			 -1, "System-based opp mode failure\n");
 		IPV6_TO_IPV4_MAP(&src_addr, &src_v4);
 		IPV6_TO_IPV4_MAP(&dst_addr, &dst_v4);
