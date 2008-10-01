@@ -165,56 +165,93 @@ out_err:
 
 int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m,
 			       struct in6_addr *ip_src,
-			       struct in6_addr *ip_dst)
+			       struct in6_addr *ip_dst,
+			       int lsi_support,
+			       int sys_opp_support)
 {
-        int proto6 = 0, proto4_LSI = 0, proto4_IP = 0, err = 0;
-	int ip_hdr_size = 0, portDest = 0;
+        int bind6 = 0, proto4_LSI = 0, proto4_IP = 0, err = 0, verdict = 1;
+	int ip_hdr_size = 0, portDest = 0, process_as_lsi;
 	char *proto;
 	hip_lsi_t lsi_our, lsi_peer;
 	struct in6_addr src_addr, dst_addr;
 	struct in_addr src_v4, dst_v4;
-	
 	struct ip6_hdr* ip6_hdr = (struct ip6_hdr*) m->payload;
+
 	ip_hdr_size = sizeof(struct ip6_hdr);
 
 	switch(ip6_hdr->ip6_nxt){
-		case IPPROTO_UDP:
-			portDest = ((struct udphdr*)((m->payload) + ip_hdr_size))->dest;
-			proto = "udp6";
-			break;
-	       case IPPROTO_TCP:
-			portDest = ((struct tcphdr*)((m->payload) + ip_hdr_size))->dest;
-			proto = "tcp6";
-			break;
-	       case IPPROTO_ICMPV6:
-		        proto6 = 1;
-			break;
-	       default:
-		 	break;
+	case IPPROTO_UDP:
+		portDest = ((struct udphdr*)((m->payload) + ip_hdr_size))->dest;
+		proto = "udp6";
+		break;
+	case IPPROTO_TCP:
+		portDest = ((struct tcphdr*)((m->payload) + ip_hdr_size))->dest;
+		proto = "tcp6";
+		break;
+	case IPPROTO_ICMPV6:
+		goto out_err;
+		break;
+	default:
+		break;
 	}
-    
-	if (portDest)
-		proto6 = getproto_info(ntohs(portDest), proto);
 
-	if (!proto6){
-	        HIP_IFEL(hip_get_lsis_by_hits(ip_dst, ip_src,
-					      &lsi_our, &lsi_peer),
-			 -1, "Failed to obtain LSIs\n");
+	/* @todo: think about caching this (note: how to notice changes?) */
+	bind6 = getproto_info(ntohs(portDest), proto);
 
+	/* If IPv6 app has bind() to the port number, skip LSI and
+	   system-based opportunistic mode (currently IPv4-only)
+	   handling */
+	HIP_IFE((bind6 == 1), 0);
+
+	/* The socket is bound to LSI, cannot use system-based opp mode */
+	HIP_IFE((bind6 == 2 && (sys_opp_support &&
+				!lsi_support)), 0);
+
+	if (sys_opp_support && lsi_support) {
+		/* Currently preferring LSIs over opp. connections */
+		process_as_lsi = 1;
+	} else if (lsi_support) {
+		process_as_lsi = 1;
+	} else if (sys_opp_support) {
+		process_as_lsi= 0;
+	} else {
+		HIP_ASSERT(1);
+	}
+
+	if (process_as_lsi) {
+		HIP_IFEL(hip_get_lsis_by_hits(ip_dst, ip_src,
+					      &lsi_our, &lsi_peer), -1,
+			 "Failed to obtain LSIs\n");
+		/* @todo: the LSIs should be cached for performance */
 		HIP_DEBUG_LSI("lsi_our: ", &lsi_our);
 		HIP_DEBUG_LSI("lsi_peer: ", &lsi_peer);
 		IPV4_TO_IPV6_MAP(&lsi_our, &src_addr);
 		IPV4_TO_IPV6_MAP(&lsi_peer, &dst_addr);
 		HIP_IFEL(reinject_packet(&dst_addr, &src_addr, m, 6, 1), -1,
-			 "Failed to reinject\n");
+			 "Failed to reinject with LSIs\n");
+		HIP_DEBUG("Successful LSI transformation. Drop original\n");
+		verdict = 0;
+	} else {
+		HIP_IFEL((hip_get_ips_by_hits(ip_src, ip_dst,
+					      &src_addr, &dst_addr) < 0), -1,
+			 "System-based opp mode failure\n");
+		IPV6_TO_IPV4_MAP(&src_addr, &src_v4);
+		IPV6_TO_IPV4_MAP(&dst_addr, &dst_v4);
+		HIP_DEBUG_IN6ADDR("******ip_src : ", src_addr);
+		HIP_DEBUG_IN6ADDR("******ip_dst : ", dst_addr);
+		HIP_IFEL(reinject_packet(&src_addr, &dst_addr, m, 6, 1), -1,
+			 "Failed to reinject with IP addrs\n");
+		HIP_DEBUG("Successfull sysopp transformation. Drop orig\n");
+		verdict = 0;
 	}
+
 
 out_err:
 
 	if (err)
-		return 1;
+		return 1; /* Accept original */
 	else
-		return proto6;
+		return verdict;
 }
 
 /**
