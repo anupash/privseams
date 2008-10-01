@@ -296,7 +296,7 @@ int hip_fw_init_lsi_support(){
 }
 
 void hip_fw_init_system_base_opp_mode(void) {
-	system("iptables -I HIPFW-OUTPUT ! 127.0.0.1 -d -j QUEUE");
+	system("iptables -I HIPFW-OUTPUT -d ! 127.0.0.1 -j QUEUE");
 	system("ip6tables -I HIPFW-INPUT -d 2001:0010::/28 -j QUEUE");
 }
 
@@ -500,10 +500,10 @@ int firewall_init_rules(){
 		system("ip6tables -I HIPFW-OUTPUT -p 50 -j QUEUE");
 		system("ip6tables -I HIPFW-OUTPUT -p 17 --dport 50500 -j QUEUE");
 		system("ip6tables -I HIPFW-OUTPUT -p 17 --sport 50500 -j QUEUE");
-
-		if (system_based_opp_mode)
-			hip_fw_init_system_base_opp_mode();
 	}
+
+	if (system_based_opp_mode)
+		hip_fw_init_system_base_opp_mode();
 
 	if (hip_opptcp)
 		hip_fw_init_opptcp();
