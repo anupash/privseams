@@ -69,7 +69,7 @@ void hchain_print(const hash_chain_t * hash_chain)
  * @last_item: the last known hash value
  * @tolerance: The tolerance limit determines how many steps may be missing in the hash chain
  *             0 means that only sequential hash values are considered as valid.
- * @return: returns 1 if the hash authentication was successfull, 0 otherwise
+ * @return: returns hash distance if the hash authentication was successful, 0 otherwise
  */
 int hchain_verify(const unsigned char * current_hash, const unsigned char * last_hash,
 		hash_function_t hash_function, int hash_length, int tolerance)
@@ -91,7 +91,7 @@ int hchain_verify(const unsigned char * current_hash, const unsigned char * last
 
 	for(i = 1; i <= tolerance; i++)
 	{
-		_HIP_DEBUG("Calculating round %i:\n", i + 1);
+		_HIP_DEBUG("Calculating round %i:\n", i);
 
 		hash_function(buffer, hash_length, buffer);
 
@@ -104,7 +104,7 @@ int hchain_verify(const unsigned char * current_hash, const unsigned char * last
 		{
 			HIP_DEBUG("hash verfied\n");
 
-			err = 1;
+			err = i;
 			goto out_err;
 		}
 	}

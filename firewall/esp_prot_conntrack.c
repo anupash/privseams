@@ -663,5 +663,8 @@ int esp_prot_conntrack_verify(struct esp_tuple *esp_tuple, struct hip_esp *esp)
 	}
 
   out_err:
+	if (err)
+		printf("ERROR: hchain element could not be verified!");
+
 	return err;
 }

@@ -11,7 +11,7 @@ extern const int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS]
 				   = {{20}};
 
 
-static const int bex_hchain_length = 4000000;
+static const int bex_hchain_length = 10;
 static const int update_hchain_lengths[NUM_UPDATE_HCHAIN_LENGTHS] = {10};
 
 // changed for measurements
@@ -46,6 +46,9 @@ hchain_store_t bex_store;
 // this stores hchains used during UPDATE
 hchain_store_t update_store;
 
+// needed for measurements
+int hash_distance;
+
 
 int esp_prot_init()
 {
@@ -56,6 +59,8 @@ int esp_prot_init()
 	int activate = 1;
 
 	HIP_DEBUG("Initializing the esp protection extension...\n");
+
+	hash_distance = 0;
 
 	/* activate the extension in hipd
 	 *
@@ -160,6 +165,8 @@ int esp_prot_uninit()
 	// also deactivate the extension in hipd
 	HIP_IFEL(send_esp_prot_to_hipd(activate), -1,
 			"failed to activate the esp protection in hipd\n");
+
+	printf("highest encountered hash distance: %i\n", hash_distance);
 
   out_err:
 	return err;
@@ -371,6 +378,7 @@ int esp_prot_verify_hash(hash_function_t hash_function, int hash_length,
 		unsigned char *active_anchor, unsigned char *next_anchor,
 		unsigned char *hash_value, int tolerance)
 {
+	int tmp_distance = 0;
 	int err = 0;
 
 	HIP_ASSERT(hash_function != NULL);
@@ -386,7 +394,7 @@ int esp_prot_verify_hash(hash_function_t hash_function, int hash_length,
 	HIP_HEXDUMP("-> ", hash_value, hash_length);
 
 	HIP_DEBUG("checking active_anchor...\n");
-	if (hchain_verify(hash_value, active_anchor, hash_function,
+	if (tmp_distance = hchain_verify(hash_value, active_anchor, hash_function,
 			hash_length, tolerance))
 	{
 		// this will allow only increasing elements to be accepted
@@ -403,7 +411,7 @@ int esp_prot_verify_hash(hash_function_t hash_function, int hash_length,
 			HIP_DEBUG("checking next_anchor...\n");
 			HIP_HEXDUMP("next_anchor: ", next_anchor, hash_length);
 
-			if (hchain_verify(hash_value, next_anchor, hash_function,
+			if (tmp_distance = hchain_verify(hash_value, next_anchor, hash_function,
 					hash_length, tolerance))
 			{
 				HIP_DEBUG("hash matches element in next hash-chain\n");
@@ -425,6 +433,9 @@ int esp_prot_verify_hash(hash_function_t hash_function, int hash_length,
 			goto out_err;
 		}
 	}
+
+	if (tmp_distance > hash_distance)
+		hash_distance = tmp_distance;
 
   out_err:
 	if (err == -1)
