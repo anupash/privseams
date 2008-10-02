@@ -159,7 +159,7 @@ int hip_daemon_bind_socket(int socket, struct sockaddr *sa) {
 }
 
 int
-hip_sendto_hipd(int socket, void *msg, size_t len)
+hip_sendto_hipd(int socket, struct hip_common *msg)
 {
 	/* Variables. */
 	struct sockaddr_in6 sock_addr;
@@ -174,7 +174,7 @@ hip_sendto_hipd(int socket, void *msg, size_t len)
 
 	HIP_DEBUG("Sending user message to HIPD on socket %d\n", socket);
 
-	n = sendto(socket, msg, len, MSG_NOSIGNAL,
+	n = sendto(socket, msg, hip_get_msg_total_len(msg), MSG_NOSIGNAL,
 		   (struct sockaddr *)&sock_addr, alen);
 	HIP_DEBUG("Sent %d bytes\n", n);
 	return n;
@@ -205,12 +205,9 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 	addr.sin6_family = AF_INET6;
 	addr.sin6_addr = in6addr_loopback;
 
-
 	HIP_IFEL(hip_daemon_bind_socket(hip_user_sock,
 					(struct sockaddr *) &addr), -1,
 		 "bind failed\n");
-
-
 
 	HIP_IFEL(hip_daemon_connect(hip_user_sock), -1,
 		 "connect failed\n");
@@ -218,7 +215,6 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 	if ((len = hip_get_msg_total_len(msg)) < 0) {
 		err = -EBADMSG;
 		goto out_err;
-
 	}
 
 	//n = hip_sendto_hipd (sock, msg, len);
@@ -325,7 +321,7 @@ int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,
 				    (struct sockaddr *) saddr,
 				    &len)) != total), -1, "recv\n");
 
-	_HIP_DEBUG("received user message from local port %d\n",
+	HIP_DEBUG("received user message from local port %d\n",
 		   ntohs(saddr->sin6_port));
 	_HIP_DEBUG("read_user_control_msg recv len=%d\n", len);
 	_HIP_HEXDUMP("recv saddr ", saddr, sizeof(struct sockaddr_un));

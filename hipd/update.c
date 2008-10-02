@@ -2065,6 +2065,7 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 		HIP_ERROR("SPI listaddr list copy failed\n");
 		goto out_err;
 	}
+#if 0
 	if (addr_count == spi_in->addresses_n &&
 	    addr_list && spi_in->addresses &&
 	    memcmp(addr_list, spi_in->addresses,
@@ -2075,6 +2076,7 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 	} else {
 		HIP_DEBUG("Address set has changed, continue\n");
 	}
+#endif
 
 	/* dont go to out_err but to ... */
 	if(!addr_list) {
