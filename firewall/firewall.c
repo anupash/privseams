@@ -2140,6 +2140,7 @@ int hip_fw_handle_outgoing_system_based_opp(hip_fw_context_t *ctx) {
 				(in_port_t *) &(ctx->transport_hdr.tcp)->dest,
 				&fallback,
 				&reject);
+			verdict = 0;
 		} else if (state_ha == HIP_STATE_ESTABLISHED) {
 			if (hit_is_local_hit(&src_hit)) {
 				HIP_DEBUG("is local hit\n");
