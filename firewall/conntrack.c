@@ -1654,7 +1654,7 @@ int filter_esp_state(const struct in6_addr *dst_addr,
 	//ESP packet cannot start a connection
 	if(!tuple)
 	{
-		HIP_DEBUG("dst addr %s spi %d no connection found\n",
+		HIP_DEBUG("dst addr %s spi %lx no connection found\n",
 				addr_to_numeric(dst_addr), spi);
 
 		err = 0;

@@ -48,6 +48,7 @@ struct in6_addr default_hit;
  */
 hip_fw_handler_t hip_fw_handler[NF_IP_NUMHOOKS][FW_PROTO_NUM];
 
+extern struct hip_hadb_user_info_state ha_cache;
 
 void print_usage(){
 	printf("HIP Firewall\n");
@@ -280,23 +281,10 @@ int hip_fw_uninit_esp_prot(){
 }
 
 int hip_fw_init_lsi_support(){
-#if 0
-	char result[100];
-	char str1[] = "iptables -I HIPFW-OUTPUT -d ";
-	char str2[] = " -j QUEUE";
-#endif
 	int err = 0;
 
 	if (hip_lsi_support)
 	{
-#if 0
-		memset(result, 0, sizeof(result));
-		strcpy(result, str1);
-		strcat(strcat(result, HIP_FULL_LSI_STR), str2);
-
-		system(result);
-#endif
-
 		// add the rule
 		system("iptables -I HIPFW-OUTPUT -d " HIP_FULL_LSI_STR " -j QUEUE");
 
@@ -309,27 +297,18 @@ int hip_fw_init_lsi_support(){
   	return err;
 }
 
+void hip_fw_init_system_base_opp_mode(void) {
+	system("iptables -I HIPFW-OUTPUT -d ! 127.0.0.1 -j QUEUE");
+	system("ip6tables -I HIPFW-INPUT -d 2001:0010::/28 -j QUEUE");
+}
 
 int hip_fw_uninit_lsi_support(){
-#if 0
-	char result[100];
-	char str1[] = "iptables -D HIPFW-OUTPUT -d ";
-	char str2[] = " -j QUEUE 2>/dev/null";
-#endif
 	int err = 0;
 
 	if (hip_lsi_support)
 	{
 		// set global variable to off
 		hip_lsi_support = 0;
-
-#if 0
-		memset(result, 0, sizeof(result));
-		strcpy(result, str1);
-		strcat(strcat(result, HIP_FULL_LSI_STR), str2);
-
-		system(result);
-#endif
 
 		// remove the rule
 		system("iptables -D HIPFW-OUTPUT -d " HIP_FULL_LSI_STR " -j QUEUE 2>/dev/null");
@@ -515,18 +494,10 @@ int firewall_init_rules(){
 		system("ip6tables -I HIPFW-OUTPUT -p 50 -j QUEUE");
 		system("ip6tables -I HIPFW-OUTPUT -p 17 --dport 50500 -j QUEUE");
 		system("ip6tables -I HIPFW-OUTPUT -p 17 --sport 50500 -j QUEUE");
-
-#if 0
-		/* LSI support: incoming HIT packets, captured to decide if
-		   HITs may be mapped to LSIs */
-		system("ip6tables -I HIPFW-INPUT -d 2001:0010::/28 -j QUEUE");
-#endif
 	}
 
-#if 0
-	// Initializing local database for mapping LSI-HIT in the firewall
-	firewall_init_hldb();
-#endif
+	if (system_based_opp_mode)
+		hip_fw_init_system_base_opp_mode();
 
 	if (hip_opptcp)
 		hip_fw_init_opptcp();
@@ -1129,140 +1100,128 @@ int filter_hip(const struct in6_addr * ip6_src,
   		HIP_DEBUG("The list of rules is empty!!!???\n");
   	}
 
-  	while (list != NULL)
-	{
+  	while (list != NULL) {
   		match = 1;
   		rule = (struct rule *) list->data;
 
   		HIP_DEBUG("HIP type number is %d\n", buf->type_hdr);
 
   		//print_rule(rule);
-    	if (buf->type_hdr == HIP_I1)
-    		HIP_DEBUG("packet type: I1\n");
-    	else if (buf->type_hdr == HIP_R1)
-    		HIP_DEBUG("packet type: R1\n");
-    	else if (buf->type_hdr == HIP_I2)
-    		HIP_DEBUG("packet type: I2\n");
-    	else if (buf->type_hdr == HIP_R2)
-    		HIP_DEBUG("packet type: R2\n");
-    	else if (buf->type_hdr == HIP_UPDATE)
-    		HIP_DEBUG("packet type: UPDATE\n");
-    	else if (buf->type_hdr == HIP_NOTIFY)
-    		HIP_DEBUG("packet type: NOTIFY\n");
-    	else
-    		HIP_DEBUG("packet type: UNKNOWN\n");
+		if (buf->type_hdr == HIP_I1)
+			HIP_DEBUG("packet type: I1\n");
+		else if (buf->type_hdr == HIP_R1)
+			HIP_DEBUG("packet type: R1\n");
+		else if (buf->type_hdr == HIP_I2)
+			HIP_DEBUG("packet type: I2\n");
+		else if (buf->type_hdr == HIP_R2)
+			HIP_DEBUG("packet type: R2\n");
+		else if (buf->type_hdr == HIP_UPDATE)
+			HIP_DEBUG("packet type: UPDATE\n");
+		else if (buf->type_hdr == HIP_NOTIFY)
+			HIP_DEBUG("packet type: NOTIFY\n");
+		else
+			HIP_DEBUG("packet type: UNKNOWN\n");
 
 		HIP_DEBUG_HIT("src hit: ", &(buf->hits));
-        HIP_DEBUG_HIT("dst hit: ", &(buf->hitr));
+		HIP_DEBUG_HIT("dst hit: ", &(buf->hitr));
 
-        // check src_hit if defined in rule
-      	if(match && rule->src_hit)
-	  	{
-    		HIP_DEBUG("src_hit\n");
+		// check src_hit if defined in rule
+		if(match && rule->src_hit) {
+			HIP_DEBUG("src_hit\n");
 
-    		if(!match_hit(rule->src_hit->value,
-		  		buf->hits,
-		  		rule->src_hit->boolean))
-    		{
-      			match = 0;
-    		}
+			if(!match_hit(rule->src_hit->value,
+				      buf->hits,
+				      rule->src_hit->boolean)) {
+				match = 0;
+			}
 		}
+		
+		// check dst_hit if defined in rule
+		if(match && rule->dst_hit) {
+			HIP_DEBUG("dst_hit\n");
 
-    	// check dst_hit if defined in rule
-    	if(match && rule->dst_hit)
-		{
-    		HIP_DEBUG("dst_hit\n");
-
-    		if(!match_hit(rule->dst_hit->value,
-		  		buf->hitr,
-		  		rule->dst_hit->boolean))
-    		{
-    			match = 0;
-    		}
+			if(!match_hit(rule->dst_hit->value,
+				      buf->hitr,
+				      rule->dst_hit->boolean)) {
+				match = 0;
+			}
 	  	}
 
-    	// check the HIP packet type (I1, UPDATE, etc.)
-      	if(match && rule->type)
-	  	{
-    		HIP_DEBUG("type\n");
-    		if(!match_int(rule->type->value,
-		  		buf->type_hdr,
-		  		rule->type->boolean))
-    		{
-     			match = 0;
-    		}
+		// check the HIP packet type (I1, UPDATE, etc.)
+		if(match && rule->type) {
+			HIP_DEBUG("type\n");
+			if(!match_int(rule->type->value,
+				      buf->type_hdr,
+				      rule->type->boolean)) {
+				match = 0;
+			}
 
-	    	HIP_DEBUG("type rule: %d, packet: %d, boolean: %d, match: %d\n",
-		    		rule->type->value,
-		    		buf->type_hdr,
-		    		rule->type->boolean,
-		    		match);
+			HIP_DEBUG("type rule: %d, packet: %d, boolean: %d, match: %d\n",
+				  rule->type->value,
+				  buf->type_hdr,
+				  rule->type->boolean,
+				  match);
 	  	}
 
-      	/* this checks, if the the input interface of the packet matches the
+		/* this checks, if the the input interface of the packet
+		   matches the one specified in the rule */
+		if(match && rule->in_if) {
+			if(!match_string(rule->in_if->value, in_if,
+					 rule->in_if->boolean)) {
+				match = 0;
+			}
+
+			HIP_DEBUG("in_if rule: %s, packet: %s, boolean: %d, match: %d \n",
+				  rule->in_if->value,
+				  in_if, rule->in_if->boolean, match);
+	  	}
+
+		/* this checks, if the the output interface of the packet matches the
 		 * one specified in the rule */
-      	if(match && rule->in_if)
-	  	{
-    		if(!match_string(rule->in_if->value, in_if, rule->in_if->boolean))
-    		{
-      			match = 0;
-    		}
-
-    		HIP_DEBUG("in_if rule: %s, packet: %s, boolean: %d, match: %d \n",
-	      			rule->in_if->value,
-	      			in_if, rule->in_if->boolean, match);
+		if(match && rule->out_if) {
+			if(!match_string(rule->out_if->value,
+					 out_if,
+					 rule->out_if->boolean))
+			{
+				match = 0;
+			}
+			
+			HIP_DEBUG("out_if rule: %s, packet: %s, boolean: %d, match: %d \n",
+				  rule->out_if->value, out_if, rule->out_if->boolean, match);
 	  	}
 
-      	/* this checks, if the the output interface of the packet matches the
-      	 * one specified in the rule */
-      	if(match && rule->out_if)
-	  	{
-    		if(!match_string(rule->out_if->value,
-		     		out_if,
-		     		rule->out_if->boolean))
-    		{
-      			match = 0;
-    		}
-
-    		HIP_DEBUG("out_if rule: %s, packet: %s, boolean: %d, match: %d \n",
-	      			rule->out_if->value, out_if, rule->out_if->boolean, match);
-	  	}
-
-      	// if HI defined in rule, verify signature now
-      	// - late as it's an expensive operation
-      	// - checks that the message src is the src defined in the _rule_
-    	if(match && rule->src_hi)
-      	{
+		// if HI defined in rule, verify signature now
+		// - late as it's an expensive operation
+		// - checks that the message src is the src defined in the _rule_
+		if(match && rule->src_hi) {
 			_HIP_DEBUG("src_hi\n");
 
-			if(!match_hi(rule->src_hi, buf))
-			{
+			if(!match_hi(rule->src_hi, buf)) {
 		  		match = 0;
 			}
-	    }
+		}
 
-      	/* check if packet matches state from connection tracking
-      	 *
-		 * must be last, so not called if packet is going to be dropped */
-      	if(match && rule->state)
+		/* check if packet matches state from connection tracking
+		   must be last, so not called if packet is going to be
+		   dropped */
+		if(match && rule->state)
 	  	{
-      		/* we at least had some packet before -> check this packet
-      		 *
-      		 * this will also check the signature of the packet, if we already
-      		 * have a src_HI stored for the _connection_ */
-    		if(!filter_state(ip6_src, ip6_dst, buf, rule->state, rule->accept))
-    		{
-    			match = 0;
-    		} else
-    		{
-    			// if it is a valid packet, this also tracked the packet
-    			conntracked = 1;
-    		}
+			/* we at least had some packet before -> check
+			   this packet this will also check the signature of
+			   the packet, if we already have a src_HI stored
+			   for the _connection_ */
+			if(!filter_state(ip6_src, ip6_dst, buf, rule->state, rule->accept)) {
+				match = 0;
+			} else
+			{
+				// if it is a valid packet, this also tracked the packet
+				conntracked = 1;
+			}
 
-    		HIP_DEBUG("state, rule %d, boolean %d, match %d\n",
-	      			rule->state->int_opt.value,
-	      			rule->state->int_opt.boolean,
-	      			match);
+			HIP_DEBUG("state, rule %d, boolean %d, match %d\n",
+				  rule->state->int_opt.value,
+				  rule->state->int_opt.boolean,
+				  match);
 		}
 
 		// if a match, no need to check further rules
@@ -1274,18 +1233,16 @@ int filter_hip(const struct in6_addr * ip6_src,
 
 		// else proceed with next rule
 		list = list->next;
-    }
+	}
 
   	// if we found a matching rule, use its verdict
   	if(rule && match)
 	{
 		HIP_DEBUG("packet matched rule, target %d\n", rule->accept);
 		verdict = rule->accept;
-	}
- 	else
- 	{
+	} else {
  		HIP_DEBUG("falling back to default HIP/ESP behavior, target %d\n",
- 						accept_hip_esp_traffic_by_default);
+			  accept_hip_esp_traffic_by_default);
 
  		verdict = accept_hip_esp_traffic_by_default;
  	}
@@ -1296,9 +1253,8 @@ int filter_hip(const struct in6_addr * ip6_src,
   	// if packet will be accepted and connection tracking is used
   	// but there is no state for the packet in the conntrack module
   	// yet -> show the packet to conntracking
-  	if(statefulFiltering && verdict && !conntracked)
-  	{
-    	conntrack(ip6_src, ip6_dst, buf);
+  	if (statefulFiltering && verdict && !conntracked) {
+		conntrack(ip6_src, ip6_dst, buf);
   	}
 
   	return verdict;
@@ -1306,7 +1262,6 @@ int filter_hip(const struct in6_addr * ip6_src,
 
 
 int hip_fw_handle_other_output(hip_fw_context_t *ctx){
-        hip_lsi_t src_lsi, dst_lsi;
 	hip_lsi_t src_ip, dst_ip;
 	struct sockaddr_in6 dst_hit;
 	hip_lsi_t defaultLSI;
@@ -1316,6 +1271,13 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 	int verdict = accept_normal_traffic_by_default;
 
 	HIP_DEBUG("\n");
+
+	if (hip_opptcp) {
+		/* For TCP option only */
+		iphdr = (struct ip *)ctx->ip_hdr.ipv4;
+		tcphdr = ((struct tcphdr *) (((char *) iphdr) + ctx->ip_hdr_len));
+		hdrBytes = ((char *) iphdr) + ctx->ip_hdr_len;
+	}
 
 	if (ctx->ip_version == 6 && hip_userspace_ipsec)
 	{
@@ -1328,36 +1290,26 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 			verdict = 1;
 		else
 			verdict = !hip_fw_userspace_ipsec_output(ctx);
-	}
+	} else if(ctx->ip_version == 4) {
+		hip_lsi_t src_lsi, dst_lsi;
 
-
-	if(ctx->ip_version == 4){	  
-	    IPV6_TO_IPV4_MAP(&(ctx->src), &src_lsi);
+		IPV6_TO_IPV4_MAP(&(ctx->src), &src_lsi);
 		IPV6_TO_IPV4_MAP(&(ctx->dst), &dst_lsi);
-		/* LSI HOOKS */
-		if (IS_LSI32(dst_lsi.s_addr)) {
-			if(hip_lsi_support){
-				if (hip_is_packet_lsi_reinjection(&dst_lsi)) {
-					verdict = 1;
-				} else {
-				    	hip_fw_handle_outgoing_lsi(ctx->ipq_packet,
-								   &src_lsi, &dst_lsi);
-				    	//Reject the packet
-				    	verdict = 0;
-			      	}
-			}
-		}
-		/* SYSTEM-BASED OPP MODE HOOKS */
-		else if((ctx->ip_hdr.ipv4)->ip_p == 6){
-			iphdr = (struct ip *)ctx->ip_hdr.ipv4;
-			tcphdr = ((struct tcphdr *) (((char *) iphdr) + ctx->ip_hdr_len));
-			hdrBytes = ((char *) iphdr) + ctx->ip_hdr_len;
 
-			if(tcp_packet_has_i1_option(hdrBytes, 4*tcphdr->doff))
+		/* LSI HOOKS */
+		if (IS_LSI32(dst_lsi.s_addr) && hip_lsi_support) {
+			if (hip_is_packet_lsi_reinjection(&dst_lsi)) {
 				verdict = 1;
-			else{
-				verdict = hip_fw_handle_outgoing_ip(ctx);
+			} else {
+				hip_fw_handle_outgoing_lsi(ctx->ipq_packet,
+							   &src_lsi, &dst_lsi);
+				verdict = 0; /* Reject the packet */
 			}
+		} else if (hip_opptcp && (ctx->ip_hdr.ipv4)->ip_p == 6 && 
+			   tcp_packet_has_i1_option(hdrBytes, 4*tcphdr->doff)){
+				verdict = 1;
+		} else if (system_based_opp_mode) {
+			   verdict = hip_fw_handle_outgoing_system_based_opp(ctx);
 		}
 	}
 
@@ -1453,9 +1405,6 @@ int hip_fw_handle_tcp_output(hip_fw_context_t *ctx){
 
 	HIP_DEBUG("\n");
 
-	/* XX FIXME: opp tcp filtering */
-
-	// this will also check for userspace IPsec
 	return hip_fw_handle_other_output(ctx);
 }
 
@@ -1463,7 +1412,7 @@ int hip_fw_handle_tcp_output(hip_fw_context_t *ctx){
 int hip_fw_handle_other_input(hip_fw_context_t *ctx){
 	int verdict = accept_normal_traffic_by_default;
 	int ip_hits = ipv6_addr_is_hit(&ctx->src) &&
-		ipv6_addr_is_hit(&ctx->dst);
+		      ipv6_addr_is_hit(&ctx->dst);
 
 	HIP_DEBUG("\n");
 
@@ -1471,10 +1420,12 @@ int hip_fw_handle_other_input(hip_fw_context_t *ctx){
 		if (hip_proxy_status)
 			verdict = handle_proxy_inbound_traffic(ctx->ipq_packet,
 					&ctx->src);
-	  	else if (hip_lsi_support) {
-			/* LSI check */
+	  	else if (hip_lsi_support || system_based_opp_mode) {
 			verdict = hip_fw_handle_incoming_hit(ctx->ipq_packet,
-					&ctx->src, &ctx->dst);
+							     &ctx->src,
+							     &ctx->dst,
+							     hip_lsi_support,
+							     system_based_opp_mode);
 	  	}
 	} else if (hip_stun && ctx->is_stun == 1) {
 		// Santtu FIXME
@@ -1769,6 +1720,7 @@ int main(int argc, char **argv){
 	hip_perf_start_benchmark(perf_set, PERF_ALL);
 #endif
 
+	memset(&ha_cache, 0, sizeof(ha_cache));
 	memset(&default_hit, 0, sizeof(default_hit));
 	memset(&proxy_hit, 0, sizeof(default_hit));
 
@@ -2182,6 +2134,27 @@ hip_hit_t *hip_fw_get_default_hit(void)
 	return &default_hit;
 }
 
+int hip_fw_sys_opp_set_peer_hit(struct hip_common *msg) {
+	int err = 0, state;
+	hip_hit_t *local_hit, *peer_hit;
+	struct in6_addr *local_addr, *peer_addr;
+
+	local_hit = hip_get_param_contents(msg, HIP_PARAM_HIT_LOCAL);
+	peer_hit = hip_get_param_contents(msg, HIP_PARAM_HIT_PEER);
+	local_addr = hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR_LOCAL);
+	peer_addr = hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR_PEER);
+
+	if (peer_hit)
+		state = FIREWALL_STATE_BEX_ESTABLISHED;
+	else
+		state = FIREWALL_STATE_BEX_NOT_SUPPORTED;
+
+	firewall_update_entry(local_hit, peer_hit, local_addr,
+			      peer_addr, state);
+
+out_err:
+	return err;
+}
 
 /**
  * Checks if the outgoing packet has already ESTABLISHED
@@ -2193,7 +2166,7 @@ hip_hit_t *hip_fw_get_default_hit(void)
  * @param *ctx	the contect of the packet
  * @return	the verdict for the packet
  */
-int hip_fw_handle_outgoing_ip(hip_fw_context_t *ctx){
+int hip_fw_handle_outgoing_system_based_opp(hip_fw_context_t *ctx) {
 	int err, msg_type, state_ha, fallback, reject, new_fw_entry_state;
 	struct in6_addr src_lsi, dst_lsi;
 	struct in6_addr src_hit, dst_hit;
@@ -2206,28 +2179,32 @@ int hip_fw_handle_outgoing_ip(hip_fw_context_t *ctx){
 
 	//get firewall db entry
 	entry_peer = firewall_ip_db_match(&ctx->dst);
-	if(entry_peer){
+	if (entry_peer) {
 		//if the firewall entry is still undefined
 		//check whether the base exchange has been established
-		if(entry_peer->bex_state == FIREWALL_STATE_BEX_DEFAULT){
+		if (entry_peer->bex_state == FIREWALL_STATE_BEX_DEFAULT) {
 			//get current connection state from hipd
-			state_ha = hip_get_bex_state_from_IPs(&ctx->src, &ctx->dst, &src_hit,
-							 &dst_hit,  &src_lsi,  &dst_lsi);
+			state_ha = hip_get_bex_state_from_IPs(&ctx->src,
+							      &ctx->dst,
+							      &src_hit,
+							      &dst_hit,
+							      &src_lsi,
+							      &dst_lsi);
 
 			//find the correct state for the fw entry state
-			if(state_ha == HIP_STATE_ESTABLISHED)
+			if (state_ha == HIP_STATE_ESTABLISHED)
 				new_fw_entry_state = FIREWALL_STATE_BEX_ESTABLISHED;
-			else if( (state_ha == HIP_STATE_FAILED)  ||
+			else if ((state_ha == HIP_STATE_FAILED)  ||
 				 (state_ha == HIP_STATE_CLOSING) ||
-				 (state_ha == HIP_STATE_CLOSED)     )
+				 (state_ha == HIP_STATE_CLOSED))
 				new_fw_entry_state = FIREWALL_STATE_BEX_NOT_SUPPORTED;
 			else
 				new_fw_entry_state = FIREWALL_STATE_BEX_DEFAULT;
 
-			HIP_DEBUG("New state %d - \n", new_fw_entry_state);
+			HIP_DEBUG("New state %d\n", new_fw_entry_state);
 			//update fw entry state accordingly
 			firewall_update_entry(&src_hit, &dst_hit, &dst_lsi,
-						  &ctx->dst, new_fw_entry_state);
+					      &ctx->dst, new_fw_entry_state);
 
 			//reobtain the entry in case it has been updated
 			entry_peer = firewall_ip_db_match(&ctx->dst);
@@ -2236,55 +2213,56 @@ int hip_fw_handle_outgoing_ip(hip_fw_context_t *ctx){
 		//decide what to do with the packet
 		if(entry_peer->bex_state == FIREWALL_STATE_BEX_DEFAULT)
 			verdict = 0;
-		else if(entry_peer->bex_state == FIREWALL_STATE_BEX_NOT_SUPPORTED)
+		else if (entry_peer->bex_state == FIREWALL_STATE_BEX_NOT_SUPPORTED)
 			verdict = accept_normal_traffic_by_default;
-		else if(entry_peer->bex_state == FIREWALL_STATE_BEX_ESTABLISHED){
-			if(hit_is_local_hit(&entry_peer->hit_our)){
+		else if (entry_peer->bex_state == FIREWALL_STATE_BEX_ESTABLISHED){
+			if (hit_is_local_hit(&entry_peer->hit_our)) {
 				reinject_packet(&entry_peer->hit_our,
 						&entry_peer->hit_peer,
 						ctx->ipq_packet, 4, 0);
 				verdict = 0;
-			}else
+			} else {
 				verdict = accept_normal_traffic_by_default;
+			}
 		}
-	}else{
-		//add default entry in the firewall db
+	} else {
+		/* add default entry in the firewall db */
 		firewall_add_default_entry(&ctx->dst);
 
-		//get current connection state from hipd
-		state_ha = hip_get_bex_state_from_IPs(&ctx->src, &ctx->dst, &src_hit,
-						 &dst_hit, &src_lsi, &dst_lsi);
-
-		if(state_ha == -1){
-			if(system_based_opp_mode){
-				HIP_DEBUG("Initiate bex at firewall\n");
-				memset(&all_zero_hit, 0, sizeof(struct sockaddr_in6));
-				hip_request_peer_hit_from_hipd_at_firewall(
-					&ctx->dst,
-					&all_zero_hit.sin6_addr,
-					(const struct in6_addr *)hip_fw_get_default_hit(),
-					(in_port_t *) &(ctx->transport_hdr.tcp)->source,
-					(in_port_t *) &(ctx->transport_hdr.tcp)->dest,
-					&fallback,
-					&reject);
-				verdict = 0;
-			}
-		}else if(state_ha == HIP_STATE_ESTABLISHED){
-			if(hit_is_local_hit(&src_hit)){
-					HIP_DEBUG("is local hit\n");
-				firewall_update_entry(&src_hit, &dst_hit, &dst_lsi,
-					&ctx->dst, FIREWALL_STATE_BEX_ESTABLISHED);
+		/* get current connection state from hipd */
+		state_ha = hip_get_bex_state_from_IPs(&ctx->src, &ctx->dst,
+						      &src_hit, &dst_hit,
+						      &src_lsi, &dst_lsi);
+		if (state_ha == -1) {
+			HIP_DEBUG("Initiate bex at firewall\n");
+			memset(&all_zero_hit, 0, sizeof(struct sockaddr_in6));
+			hip_request_peer_hit_from_hipd_at_firewall(
+				&ctx->dst,
+				&all_zero_hit.sin6_addr,
+				(const struct in6_addr *)hip_fw_get_default_hit(),
+				(in_port_t *) &(ctx->transport_hdr.tcp)->source,
+				(in_port_t *) &(ctx->transport_hdr.tcp)->dest,
+				&fallback,
+				&reject);
+		} else if (state_ha == HIP_STATE_ESTABLISHED) {
+			if (hit_is_local_hit(&src_hit)) {
+				HIP_DEBUG("is local hit\n");
+				firewall_update_entry(&src_hit, &dst_hit,
+						      &dst_lsi, &ctx->dst,
+						      FIREWALL_STATE_BEX_ESTABLISHED);
 				reinject_packet(&src_hit, &dst_hit,
 						ctx->ipq_packet, 4, 0);
 				verdict = 0;
-			}else
+			} else {
 				verdict = accept_normal_traffic_by_default;
-		}else if( (state_ha == HIP_STATE_FAILED)  ||
+			}
+		} else if ((state_ha == HIP_STATE_FAILED)  ||
 			  (state_ha == HIP_STATE_CLOSING) ||
-			  (state_ha == HIP_STATE_CLOSED)     )
+			   (state_ha == HIP_STATE_CLOSED)) {
 			verdict = accept_normal_traffic_by_default;
-		else
+		} else {
 			verdict = 0;
+		}
 	}
 
 out_err:

@@ -1973,64 +1973,6 @@ int hip_get_bex_state_from_IPs(struct in6_addr *src_ip,
 
 }
 
-
-/**
- * Obtains the ips from the ha entry based on the hits.
-
- * @param *src_hit	the input src hit
- * @param *dst_hit	the input dst hit
- * @param *src_ip	output src ip
- * @param *dst_ip	output dst ip	
- * 
- * @return		the state of the found entry
- * 			if there is no entry it returns -1
- */
-int hip_get_ips_by_hits(struct in6_addr *src_hit,
-			struct in6_addr *dst_hit,
-			struct in6_addr *src_ip,
-			struct in6_addr *dst_ip){
-	int err = 0, res = -1;
-	hip_lsi_t src_ip4, dst_ip4;
-	struct hip_tlv_common *current_param = NULL;
-	struct hip_common *msg = NULL;
-	struct hip_hadb_user_info_state *ha;
-  
-	HIP_ASSERT(src_hit != NULL && dst_hit != NULL);
-
-	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
-	hip_msg_init(msg);
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0),
-				-1, "Building of daemon header failed\n");
-	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send recv daemon info\n");
-
-	while((current_param = hip_get_next_param(msg, current_param)) != NULL) {
-		ha = hip_get_param_contents_direct(current_param);
-
-		if( (ipv6_addr_cmp(dst_hit, &ha->hit_our) == 0)  &&
-		    (ipv6_addr_cmp(src_hit, &ha->hit_peer) == 0) &&
-		    ha->state == HIP_STATE_ESTABLISHED){
-			*src_ip = ha->ip_peer;
-			*dst_ip = ha->ip_our;
-			res = ha->state;
-			break;
-		}else if( (ipv6_addr_cmp(src_hit, &ha->hit_our) == 0)  &&
-		         (ipv6_addr_cmp(dst_hit, &ha->hit_peer) == 0) &&
-			 ha->state == HIP_STATE_ESTABLISHED){
-			*src_ip = ha->ip_our;
-			*dst_ip = ha->ip_peer;
-			res = ha->state;
-			break;
-		}
-	}
-        
- out_err:
-        if(msg)
-                HIP_FREE(msg);  
-        return res;
-
-}
-
-
 /**
  * Checks whether a particular hit is one of the local ones.
  * Goes through all the local hits and compares with the given hit.
@@ -2171,54 +2113,6 @@ int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
         return err;
 }
 
-#if 0
-int hip_get_hit_peer_by_lsi_pair(hip_lsi_t *src_lsi,
-				 hip_lsi_t *dst_lsi, 
-				 struct in6_addr *src_hit,
-				 struct in6_addr *dst_hit){
-        struct hip_common *msg = NULL;
-	struct hip_tlv_common *param;
-	int err = 0, hit_size = sizeof(struct in6_addr);
-
-
-        HIP_IFE(!(msg = hip_msg_alloc()), -1);
-
-	if(src_lsi)
-		HIP_IFEL(hip_build_param_contents(msg, (void *)(src_lsi),
-						  HIP_PARAM_LSI,
-						  sizeof(struct in_addr)),
-			-1, "build param HIP_PARAM_LSI failed\n");
-
-
-	if(dst_lsi)
-	        HIP_IFEL(hip_build_param_contents(msg, (void *) dst_lsi,
-                                                  HIP_PARAM_LSI,
-                                                  sizeof(struct in_addr)),
-			-1, "build param HIP_PARAM_LSI failed\n");
-	
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT_BY_LSIS, 0),
-			-1, "build hdr failed\n");
-
-	/* send msg to hipd and receive corresponding reply */
-        HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send_recv msg failed\n");
-
-        /* check error value */
-        HIP_IFEL(hip_get_msg_err(msg), -1, "hipd returned error message!\n");
-
-	/* get HIT values */
-	param = hip_get_param(msg, HIP_PARAM_HIT);
-	if(param)
-	        *src_hit = *((struct in6_addr *)hip_get_param_contents_direct(param));
-
-	param = hip_get_next_param(msg, param);
-	if(param && hip_get_param_type(param) == HIP_PARAM_HIT)
-	        *dst_hit = *((struct in6_addr *)hip_get_param_contents_direct(param));
-
- out_err:
-        return err;	
-}
-#endif
-
 /**
  * Checks whether there is a local ipv6 socket that is:
  *   connected to a particular port
@@ -2230,116 +2124,73 @@ int hip_get_hit_peer_by_lsi_pair(hip_lsi_t *src_lsi,
  * @return		1 if it finds the required socket
  * 			0 otherwise
  */
-int getproto_info(int port_dest, char *proto){
+int hip_get_proto_info(in_port_t port_dest, char *proto) {
         FILE *fd = NULL;
-        char line[500];
-	int lineno = 0, index_addr_port;
-        int exists = 0, result;
-        List list;
-	char path[11+sizeof(proto)];
+        char line[500], sub_string_addr_hex[8], path[11+sizeof(proto)];
         char *fqdn_str = NULL, *separator = NULL, *sub_string_port_hex = NULL;
+	int lineno = 0, index_addr_port = 0, exists = 0, result;
+        uint32_t result_addr;
+	struct in_addr addr;
+        List list;
 
-	if(!strcmp(proto,"tcp6"))
-           index_addr_port = 15;
-	else if(!strcmp(proto,"udp6"))
-	   index_addr_port = 10;
+	if (!proto)
+		return 0;
+
+	if (!strcmp(proto, "tcp6") || !strcmp(proto, "tcp"))
+		index_addr_port = 15;
+	else if (!strcmp(proto, "udp6") || !strcmp(proto,"udp"))
+		index_addr_port = 10;
+	else
+		return 0;
 
 	strcpy(path,"/proc/net/"); 
 	strcat(path, proto);
         fd = fopen(path, "r");		
         
-        while(fd && getwithoutnewline(line, 500, fd) != NULL && !exists){		
-	    lineno++;
-	    if (lineno > 1){
-	        if(strlen(line)<=1) continue;
-	        initlist(&list);                                                    
-	        extractsubstrings(line, &list); 
-	        fqdn_str = getitem(&list, index_addr_port);
-	        if(fqdn_str)
-	            separator = strrchr(fqdn_str, ':');
-	        if(separator){
-	            sub_string_port_hex = strtok(separator,":");
-		    //sprintf(port_dest_hex, "%x", port_dest);
-		    //HIP_DEBUG("sub_string_port_hex %s\n",sub_string_port_hex);
-		    sscanf(sub_string_port_hex,"%X",&result);
-		    HIP_DEBUG("Result %i\n",result);
-		    HIP_DEBUG("port dest %i\n",port_dest);
-		    if(result == port_dest)
-		        exists = 1;	    
-	        }
+	initlist(&list);
+        while (fd && getwithoutnewline(line, 500, fd) != NULL && !exists) {
+		lineno++;
+
 		destroy(&list);
-	    }
-	}//end of while
-        if (fd)                                                               
-                fclose(fd);		
-        return exists;
-}
+		initlist(&list);
+		
+		if (lineno == 1 || strlen(line) <=1)
+			continue;
 
-
-/**
- * Checks whether there is a local ipv4 socket that is:
- *   connected to a particular port
- *   connected to an lsi ip address
- *   that this lsi ip address is the same as the param *local.
- * 
- * @param port_dest	the port number of the socket
- * @param *proto	protocol type
- * @param *local	ip address of the required socket
- * 
- * @return		1 if it finds the required socket
- * 			0 otherwise
- */
-int getproto_info_lsi(int port_dest, char *proto, struct in_addr *local){	 		List list;		
-	FILE *fd = NULL;
-	char line[500], sub_string_addr_hex[8], path[11+sizeof(proto)];
-	int lineno = 0, index_addr_port, exists = 0, result;
-	char *fqdn_str = NULL, *separator = NULL, *sub_string_port_hex = NULL;
-	uint32_t result_addr;
-	struct in_addr addr;
-        
-	if(!strcmp(proto,"tcp"))
-	   index_addr_port = 15;
-	else if(!strcmp(proto,"udp"))
-	   index_addr_port = 10;
-
-	strcpy(path,"/proc/net/"); 
-	strcat(path, proto);
-	fd = fopen(path, "r");		
-        
-	while(fd && getwithoutnewline(line, 500, fd) != NULL && !exists){		
-	    lineno++;
-	    if(lineno > 1){
-	        if(strlen(line)<=1) continue;
-	        initlist(&list);                                                    
 	        extractsubstrings(line, &list); 
+
 	        fqdn_str = getitem(&list, index_addr_port);
-	        if(fqdn_str)
-	            separator = strrchr(fqdn_str, ':');
-	        if(separator){
-	            sub_string_port_hex = strtok(separator, ":");
-	            sscanf(sub_string_port_hex, "%X", &result);
-	            HIP_DEBUG("Result %i\n", result);
-	            HIP_DEBUG("port dest %i\n", port_dest);
-	            if(result == port_dest){
+	        if (fqdn_str)
+			separator = strrchr(fqdn_str, ':');
+
+	        if (!separator)
+			continue;
+
+		sub_string_port_hex = strtok(separator, ":");
+		//sprintf(port_dest_hex, "%x", port_dest);
+		//HIP_DEBUG("sub_string_port_hex %s\n",sub_string_port_hex);
+		sscanf(sub_string_port_hex,"%X", &result);
+		HIP_DEBUG("Result %i\n", result);
+		HIP_DEBUG("port dest %i\n", port_dest);
+		if (result == port_dest) {
 			strncpy(sub_string_addr_hex, fqdn_str, 8);
 			sscanf(sub_string_addr_hex, "%X", &result_addr);
 			addr.s_addr = result_addr;
-	                if( IS_LSI32(addr.s_addr)              &&
-		            (ipv4_addr_cmp(local, &addr) == 0)    )
-	                    exists = 1;
-		        else
-	                   exists = 0;
-	                break;
-	            }
-	        }		
+			if (IS_LSI32(addr.s_addr)) {
+				exists = 2;
+				break;
+			} else {
+				exists = 1;
+				break;
+			}
+		}
+	} /* end of while */
+		if (fd)
+			fclose(fd);
 		destroy(&list);
-	    }
-	}//end of while	              							
-        if (fd)                                                               
-                fclose(fd);		
+
         return exists;
 }
-
 
 void hip_get_rsa_keylen(const struct hip_host_id *host_id, 
 			struct hip_rsa_keylen *ret,
