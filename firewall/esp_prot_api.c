@@ -421,6 +421,8 @@ int esp_prot_verify_hash(hash_function_t hash_function, int hash_length,
 
 			} else
 			{
+				HIP_DEBUG("neither active nor update hchain could verify hash element\n");
+
 				// handle incorrect elements -> drop packet
 				err = -1;
 				goto out_err;
@@ -428,6 +430,8 @@ int esp_prot_verify_hash(hash_function_t hash_function, int hash_length,
 
 		} else
 		{
+			HIP_DEBUG("active hchain could verify hash element, update hchain not set\n");
+
 			// handle incorrect elements -> drop packet
 			err = -1;
 			goto out_err;
@@ -573,8 +577,8 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 	// first check the extension is used for this connection
 	if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED)
 	{
-		HIP_ASSERT(entry->esp_prot_transform > 0
-				&& entry->esp_prot_transform <= NUM_TRANSFORMS);
+		// entry->esp_prot_transform > 0 due to data type
+		HIP_ASSERT(entry->esp_prot_transform <= NUM_TRANSFORMS);
 
 		/* make sure that the next hash-chain is set up before the active one
 		 * depletes */

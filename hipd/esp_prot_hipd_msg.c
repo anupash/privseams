@@ -748,14 +748,15 @@ uint32_t esp_prot_update_handle_anchor(hip_common_t *recv_update, hip_ha_t *entr
 			HIP_DEBUG("peer_update_anchor set\n");
 		}
 
-// as we don't verify the hashes in the end-host, we don't have to update the SA
-#if 0
-		/* @note like this we do NOT support multihoming
+		/* @note spi is also needed in ACK packet
+		 * @note like this we do NOT support multihoming
 		 *
 		 * XX TODO instead use the SA of the SPI looked up in TODO above
 		 * when merging with UPDATE re-implementation */
 		*spi = hip_hadb_get_latest_inbound_spi(entry);
 
+// as we don't verify the hashes in the end-host, we don't have to update the SA
+#if 0
 		/* notify sadb about next anchor */
 		HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(src_ip, dst_ip,
 				&entry->hit_peer, &entry->hit_our, *spi, entry->esp_transform,

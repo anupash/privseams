@@ -58,6 +58,8 @@ int esp_prot_conntrack_uninit()
 		esp_prot_conntrack_tfms[i].hash_length = 0;
 	}
 
+	// TODO output max hchain verification length here
+
   out_err:
 	return err;
 }
@@ -456,7 +458,7 @@ int esp_prot_conntrack_cache_anchor(struct tuple * tuple, struct hip_seq *seq,
 
 	} else
 	{
-		HIP_DEBUG("setting next_anchor ot NULL\n");
+		HIP_DEBUG("setting next_anchor to NULL\n");
 
 		anchor_item->next_anchor = NULL;
 	}
@@ -664,7 +666,7 @@ int esp_prot_conntrack_verify(struct esp_tuple *esp_tuple, struct hip_esp *esp)
 
   out_err:
 	if (err)
-		printf("ERROR: hchain element could not be verified!");
+		printf("ERROR: hchain element could not be verified!\n");
 
 	return err;
 }
