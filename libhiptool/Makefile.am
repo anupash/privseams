@@ -43,6 +43,8 @@ libhiptool_la_SOURCES += xfrmapi.c
 endif
 
 CFLAGS  = $(hipl_common_cflags) -DCONFIG_HIP_LIBHIPTOOL
+CFLAGS += $(OPTIMIZATIONS_CFLAGS)
+CFLAGS += $(GPROF_CFLAGS)
 
 include_HEADERS =  crypto.h nlink.h pk.h xfrm.h xfrmapi.h esp_prot_common.h
 include_HEADERS  += hashchain_store.h hashchain.h linkedlist.h common_defines.h
