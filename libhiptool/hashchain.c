@@ -69,26 +69,18 @@ void hchain_print(const hash_chain_t * hash_chain)
  * @last_item: the last known hash value
  * @tolerance: The tolerance limit determines how many steps may be missing in the hash chain
  *             0 means that only sequential hash values are considered as valid.
- * @return: returns 1 if the hash authentication was successfull, 0 otherwise
+ * @return: returns hash distance if the hash authentication was successful, 0 otherwise
  */
 int hchain_verify(const unsigned char * current_hash, const unsigned char * last_hash,
 		hash_function_t hash_function, int hash_length, int tolerance)
 {
-	// this will store the intermediate hash calculation results
-	unsigned char *buffer = NULL;
-	/* the hash function output might be longer than needed
-	 * allocate enough memory for the hash function output */
-	unsigned char *hash_value = NULL;
+	/* stores intermediate hash results */
+	unsigned char buffer[MAX_HASH_LENGTH];
 	int err = 0, i;
 
 	HIP_ASSERT(current_hash != NULL && last_hash != NULL);
 	HIP_ASSERT(hash_function != NULL);
 	HIP_ASSERT(hash_length > 0 && tolerance >= 0);
-
-	HIP_IFEL(!(buffer = (unsigned char *)malloc(hash_length)), -1,
-			"failed to allocate memory\n");
-	HIP_IFEL(!(hash_value = (unsigned char *)malloc(MAX_HASH_LENGTH)), -1,
-			"failed to allocate memory\n");
 
 	// init buffer with the hash we want to verify
 	memcpy(buffer, current_hash, hash_length);
@@ -99,10 +91,9 @@ int hchain_verify(const unsigned char * current_hash, const unsigned char * last
 
 	for(i = 1; i <= tolerance; i++)
 	{
-		_HIP_DEBUG("Calculating round %i:\n", i + 1);
+		_HIP_DEBUG("Calculating round %i:\n", i);
 
-		hash_function(buffer, hash_length, hash_value);
-		memcpy(buffer, hash_value, hash_length);
+		hash_function(buffer, hash_length, buffer);
 
 		_HIP_HEXDUMP("comparing buffer: ", buffer, hash_length);
 		_HIP_DEBUG("\t<->\n");
@@ -113,7 +104,7 @@ int hchain_verify(const unsigned char * current_hash, const unsigned char * last
 		{
 			HIP_DEBUG("hash verfied\n");
 
-			err = 1;
+			err = i;
 			goto out_err;
 		}
 	}
@@ -121,11 +112,6 @@ int hchain_verify(const unsigned char * current_hash, const unsigned char * last
 	HIP_DEBUG("no matches found within tolerance: %i!\n", tolerance);
 
   out_err:
-  	if (buffer)
-  		free(buffer);
-  	if (hash_value)
-  		free(hash_value);
-
   	return err;
 }
 

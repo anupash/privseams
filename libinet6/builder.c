@@ -1102,10 +1102,10 @@ char* hip_message_type_name(const uint8_t msg_type){
 	case SO_HIP_TRIGGER_UPDATE: return "SO_HIP_TRIGGER_UPDATE";
 	case SO_HIP_ANCHOR_CHANGE: return "SO_HIP_ANCHOR_CHANGE";
 	case SO_HIP_TRIGGER_BEX: return "SO_HIP_TRIGGER_BEX";
-	case SO_HIP_IS_OUR_LSI: return "SO_HIP_IS_OUR_LSI";
+	  //case SO_HIP_IS_OUR_LSI: return "SO_HIP_IS_OUR_LSI";
 	case SO_HIP_GET_PEER_HIT: return "SO_HIP_GET_PEER_HIT";
-	case SO_HIP_GET_PEER_HIT_BY_LSIS: return "SO_HIP_GET_PEER_HIT_BY_LSIS";
-	case SO_HIP_GET_PEER_HIT_AT_FIREWALL: return "SO_HIP_GET_PEER_HIT_AT_FIREWALL";
+	  //case SO_HIP_GET_PEER_HIT_BY_LSIS: return "SO_HIP_GET_PEER_HIT_BY_LSIS";
+	  //case SO_HIP_GET_PEER_HIT_AT_FIREWALL: return "SO_HIP_GET_PEER_HIT_AT_FIREWALL";
 	default:
 		return "UNDEFINED";
 	}
@@ -1661,9 +1661,9 @@ int hip_build_param_hmac_contents(struct hip_common *msg,
 	hip_set_param_type(&hmac, HIP_PARAM_HMAC);
 	hip_calc_generic_param_len(&hmac, sizeof(struct hip_hmac), 0);
 
-	HIP_IFEL(!hip_write_hmac(HIP_DIGEST_SHA1_HMAC, key->key, msg,
-				 hip_get_msg_total_len(msg),
-				 hmac.hmac_data), -EFAULT,
+	HIP_IFEL(hip_write_hmac(HIP_DIGEST_SHA1_HMAC, key->key, msg,
+				hip_get_msg_total_len(msg),
+				hmac.hmac_data), -EFAULT,
 		 "Error while building HMAC\n");
 
 	err = hip_build_param(msg, &hmac);
@@ -1697,9 +1697,9 @@ int hip_build_param_rvs_hmac_contents(struct hip_common *msg,
 
 	hip_set_param_type(&hmac, HIP_PARAM_RVS_HMAC);
 	hip_calc_generic_param_len(&hmac, sizeof(struct hip_hmac), 0);
-	HIP_IFEL(!hip_write_hmac(HIP_DIGEST_SHA1_HMAC, key->key, msg,
-				 hip_get_msg_total_len(msg),
-				 hmac.hmac_data), -EFAULT,
+	HIP_IFEL(hip_write_hmac(HIP_DIGEST_SHA1_HMAC, key->key, msg,
+				hip_get_msg_total_len(msg),
+				hmac.hmac_data), -EFAULT,
 		 "Error while building HMAC\n");
 	err = hip_build_param(msg, &hmac);
  out_err:
@@ -1761,9 +1761,9 @@ int hip_build_param_hmac2_contents(struct hip_common *msg,
 	_HIP_HEXDUMP("HMAC data", tmp, hip_get_msg_total_len(tmp));
 	_HIP_HEXDUMP("HMAC key\n", key->key, 20);
 
-	if (!hip_write_hmac(HIP_DIGEST_SHA1_HMAC, key->key, tmp,
-			    hip_get_msg_total_len(tmp),
-			    hmac2.hmac_data)) {
+	if (hip_write_hmac(HIP_DIGEST_SHA1_HMAC, key->key, tmp,
+			   hip_get_msg_total_len(tmp),
+			   hmac2.hmac_data)) {
 		HIP_ERROR("Error while building HMAC\n");
 		err = -EFAULT;
 		goto out_err;
@@ -2282,15 +2282,14 @@ static inline int hip_reg_param_core(hip_common_t *msg, void *param,
 				       type_list);
 }
 
-/* Hmmm... Because of some weird linker (?) error we cannot use the defined type
-   hip_srv_t here, but have to settle for using struct hip_srv. Not that this
-   would rock the world, but we definately have something fishy in the makefiles
-   or in whatever makes the linker work. -Lauri 11.07.2008. */
+/* gcc gives a weird warning if we use struct srv in the arguments of this function.
+   Using void pointer as a workaround */
 int hip_build_param_reg_info(hip_common_t *msg,
-			     const struct hip_srv *service_list,
+			     const void *srv_list,
 			     const unsigned int service_count)
 {
 	int err = 0, i = 0;
+	const struct hip_srv *service_list = (const struct hip_srv *) srv_list;
 	struct hip_reg_info reg_info;
 	uint8_t reg_type[service_count];
 
@@ -3442,6 +3441,21 @@ out_err:
 	return err;
 }
 
+int hip_build_param_transform_order(struct hip_common *msg,
+                                int *order)
+{
+    int err = 0;
+    struct hip_transformation_order transorder;
+    hip_set_param_type(&transorder, HIP_PARAM_TRANSFORM_ORDER);
+    hip_calc_param_len(&transorder,
+                       sizeof(struct hip_transformation_order) -
+                       sizeof(struct hip_tlv_common));
+    transorder.transorder = order;
+    err = hip_build_param(msg, &transorder);
+ out_err:
+    return err;
+}
+
 int hip_build_param_opendht_set(struct hip_common *msg,
                                 char *name)
 {
@@ -3768,9 +3782,9 @@ int hip_build_param_full_relay_hmac_contents(struct hip_common *msg,
 
 	hip_set_param_type(&hmac, HIP_PARAM_RELAY_HMAC);
 	hip_calc_generic_param_len(&hmac, sizeof(struct hip_hmac), 0);
-	HIP_IFEL(!hip_write_hmac(HIP_DIGEST_SHA1_HMAC, key->key, msg,
-				 hip_get_msg_total_len(msg),
-				 hmac.hmac_data), -EFAULT,
+	HIP_IFEL(hip_write_hmac(HIP_DIGEST_SHA1_HMAC, key->key, msg,
+				hip_get_msg_total_len(msg),
+				hmac.hmac_data), -EFAULT,
 		 "Error while building HMAC\n");
 	err = hip_build_param(msg, &hmac);
  out_err:

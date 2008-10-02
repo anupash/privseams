@@ -32,15 +32,16 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	hip_lsi_t *lsi, *src_lsi = NULL, *dst_lsi = NULL;
 	in6_addr_t *src_ip = NULL, *dst_ip = NULL;
 	hip_ha_t *entry = NULL, *server_entry = NULL;
-	int err = 0, msg_type = 0, n = 0, len = 0, state = 0, reti = 0, dhterr = 0;
-	int access_ok = 0, send_response = 1, is_root = 0;
+	int err = 0, msg_type = 0, n = 0, len = 0, state = 0, reti = 0;
+	int access_ok = 0, send_response = 1, is_root = 0, dhterr = 0;
 	HIP_KEA * kea = NULL;
 	struct hip_tlv_common *param = NULL;
 	extern int hip_icmp_interval;
 	struct hip_heartbeat * heartbeat;
 	char host[NI_MAXHOST];
 
-	HIP_ASSERT(src->sin6_family == AF_INET6);
+	HIP_ASSERT(src->sin6_family == AF_INET6); 
+	HIP_DEBUG("User message from port %d\n", htons(src->sin6_port));
 
 	err = hip_check_userspace_msg(msg);
 
@@ -153,6 +154,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         case SO_HIP_HEARTBEAT:
 		heartbeat = hip_get_param(msg, HIP_PARAM_HEARTBEAT);
 		hip_icmp_interval = heartbeat->heartbeat;
+		heartbeat_counter = hip_icmp_interval;
 		HIP_DEBUG("Received heartbeat interval (%d seconds)\n",hip_icmp_interval);
 		break;
 	case SO_HIP_SET_DEBUG_ALL:
@@ -197,8 +199,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		break;
 	case SO_HIP_GET_PEER_HIT:
 		err = hip_opp_get_peer_hit(msg, src);
-
-		if(err){
+		if (err){
 			_HIP_ERROR("get pseudo hit failed.\n");
 			send_response = 1;
 			if (err == -11) /* immediate fallback, do not pass */
@@ -393,11 +394,11 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	{
                 extern int hip_transform_order;
                 err = 0;
-                struct hip_opendht_set *name_info;
-                HIP_IFEL(!(name_info = hip_get_param(msg, HIP_PARAM_OPENDHT_SET)), -1,
-                         "no name struct found (should contain transform order)\n");
-                _HIP_DEBUG("Transform order received from hipconf:  %s\n" , name_info->name);
-                hip_transform_order = atoi(name_info->name);
+                struct hip_transformation_order *transorder;
+                HIP_IFEL(!(transorder = hip_get_param(msg, HIP_PARAM_TRANSFORM_ORDER)), -1,
+                         "no transform order struct found (should contain transform order)\n");
+                HIP_DEBUG("Transform order received from hipconf: %d\n" ,transorder->transorder);
+                hip_transform_order = transorder->transorder;
                 hip_recreate_all_precreated_r1_packets();
 	}
 	break;
@@ -899,29 +900,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	case SO_HIP_OPPTCP_UNBLOCK_AND_BLACKLIST:
 		hip_opptcp_unblock_and_blacklist(msg, src);
 		break;
-#if 0
-	case SO_HIP_GET_PEER_HIT_FROM_FIREWALL:
-		err = hip_opp_get_peer_hit(msg, src, 1);
-
-		if(err){
-			_HIP_ERROR("get pseudo hit failed.\n");
-			send_response = 1;
-			if (err == -11) /* immediate fallback, do not pass */
-			 	err = 0;
-			goto out_err;
-		} else {
-			send_response = 0;
-                }
-		/* skip sending of return message; will be sent later in R1 */
-		goto out_err;
-	  break;
-	case SO_HIP_OPPTCP_UNBLOCK_APP:
-		hip_opptcp_unblock(msg, src);
-		break;
-	case SO_HIP_OPPTCP_OPPIPDB_ADD_ENTRY:
-		hip_opptcp_add_entry(msg, src);
-		break;
-#endif
 	case SO_HIP_OPPTCP_SEND_TCP_PACKET:
 		hip_opptcp_send_tcp_packet(msg, src);
 
@@ -994,33 +972,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		        }
 		}
 	        break;
-	case SO_HIP_IS_OUR_LSI:
-		lsi = (hip_lsi_t *)hip_get_param_contents(msg, HIP_PARAM_LSI);
-	  	if (!hip_hidb_exists_lsi(lsi))
-	    		lsi = NULL;
-	  	break;
-	case SO_HIP_GET_STATE_HA:
-	case SO_HIP_GET_PEER_HIT_BY_LSIS:
-		while((param = hip_get_next_param(msg, param))){
-	    		if (hip_get_param_type(param) == HIP_PARAM_LSI){
-	      			if (!src_lsi)
-					src_lsi = (struct in_addr *)hip_get_param_contents_direct(param);
-	      			else
-					dst_lsi = (struct in_addr *)hip_get_param_contents_direct(param);
-	    		}
-	  	}
-
-	  	entry = hip_hadb_try_to_find_by_pair_lsi(src_lsi, dst_lsi);
-          	if (entry && (entry->state == HIP_STATE_ESTABLISHED ||
-		    msg_type == SO_HIP_GET_PEER_HIT_BY_LSIS)){
-	    		HIP_DEBUG("Entry found in the ha database \n\n");
-	      		src_hit = &entry->hit_our;
-	      		dst_hit = &entry->hit_peer;
-	  	}
-	  	break;
-	case SO_HIP_GET_PEER_HIT_AT_FIREWALL:
-		err = hip_opp_get_peer_hit(msg, src);
-		break;
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;
@@ -1032,26 +983,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	        HIP_DEBUG("Send response\n");
 		if (err)
 		        hip_set_msg_err(msg, 1);
-		else{
-		        if ((msg_type == SO_HIP_TRIGGER_BEX && lsi) ||
-		            msg_type == SO_HIP_GET_STATE_HA ||
-			    msg_type == SO_HIP_GET_PEER_HIT_BY_LSIS){
-			        if (src_hit)
-				         HIP_IFEL(hip_build_param_contents(msg, (void *)src_hit,
-									   HIP_PARAM_HIT, sizeof(struct in6_addr)), -1,
-						  "build param HIP_PARAM_HIT  failed\n");
-				if (dst_hit)
-				         HIP_IFEL(hip_build_param_contents(msg, (void *)dst_hit,
-									   HIP_PARAM_HIT, sizeof(struct in6_addr)), -1,
-						  "build param HIP_PARAM_HIT  failed\n");
-		        }
-			if (((msg_type == SO_HIP_GET_LSI_PEER || msg_type == SO_HIP_GET_LSI_OUR)
-			    && lsi) || msg_type == SO_HIP_IS_OUR_LSI)
-		                HIP_IFEL(hip_build_param_contents(msg, (void *)lsi,
-					 HIP_PARAM_LSI, sizeof(hip_lsi_t)), -1,
-				 	 "build param HIP_PARAM_LSI  failed\n");
-		}
-
 		len = hip_get_msg_total_len(msg);
 		n = hip_sendto_user(msg, src);
 		if(n != len)

@@ -121,20 +121,23 @@ int firewall_update_entry(struct in6_addr *hit_our,
 
 	HIP_DEBUG("\n");
 
+	if(!ip){
+		HIP_DEBUG("###ERROR, NULL IP\n");
+		goto out_err;
+	}
 	HIP_ASSERT(ip != NULL &&
 		   (state == FIREWALL_STATE_BEX_DEFAULT        ||
 		    state == FIREWALL_STATE_BEX_NOT_SUPPORTED  ||
-		    state == FIREWALL_STATE_BEX_ESTABLISHED 	 )
-		  );
+		    state == FIREWALL_STATE_BEX_ESTABLISHED 	 ));
 
 	HIP_IFE(!(entry_update = firewall_ip_db_match(ip)), -1);
 
 	//update the fields if new value value is not NULL
-	if(hit_our)
+	if (hit_our)
 		ipv6_addr_copy(&entry_update->hit_our, hit_our);
-	if(hit_peer)
+	if (hit_peer)
 		ipv6_addr_copy(&entry_update->hit_peer, hit_peer);
-	if(lsi)
+	if (lsi)
 		ipv4_addr_copy(&entry_update->lsi, lsi);
 	entry_update->bex_state = state;
 
@@ -183,21 +186,17 @@ void firewall_init_hldb(void){
 int firewall_set_bex_state(struct in6_addr *hit_s,
 			   struct in6_addr *hit_r,
 			   int state){
-	int err = 0;
-	hip_lsi_t *lsi_our = NULL;
-	hip_lsi_t *lsi_peer = NULL;
-	firewall_hl_t *entry_update = NULL;
 	struct in6_addr ip_src, ip_dst;
+	firewall_hl_t *entry_update = NULL;
+	hip_lsi_t lsi_our, lsi_peer;
+	int err = 0;
 
-	lsi_our  = hip_get_lsi_our_by_hits(hit_s, hit_r);
-	lsi_peer = hip_get_lsi_peer_by_hits(hit_s, hit_r);
-	if(lsi_peer){
-		hip_get_peerIP_from_LSIs(lsi_our, lsi_peer, &ip_dst);
-		//update only the state of the entry
-		firewall_update_entry(NULL, NULL, NULL, &ip_dst, state); 
-	}
-	else
-		err = -1;
+	HIP_IFEL(hip_query_ha_info(hit_r, hit_s, &lsi_our, &lsi_peer,
+				   &ip_src, &ip_dst, NULL),
+		 -1, "Failed to query LSIs\n");
+	HIP_IFEL(firewall_update_entry(NULL, NULL, NULL, &ip_dst, state), -1,
+		 "Failed to update firewall entry\n");
+
  out_err:
 	return err;
 }

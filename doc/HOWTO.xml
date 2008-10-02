@@ -1314,11 +1314,12 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
       while if you are using virtual machines). You should replace
       HIT_OF_XXX with the HIT of the host XXX. The hip daemon loads (and
       creates if necessary) the host identities from /etc/hip automatically.
-      If you want to know the HIT of the localhost, run
-      "hipconf get hi default". To avoid routing problems especially with
-      UDP, it is highly recommend to use the default HIT of the machine!
-      You can list all HITs of the machine with "hipconf get hi all", but
-      it is safe to use the optional HITs only with TCP connections!
+      If you want to know the default HIT of the localhost, run
+      "hipconf get hi default".
+      You can list all HITs of the machine with "hipconf get hi all". By
+      default, you'll see only one. If you want to use all four HITs of the
+      host, you have to invoke "hipconf add hi default". The use of multiple
+      local HITs is not currently recommended!
     </para>
     <para>
       Mappings between HITs and IP addresses are usually set up
@@ -1429,11 +1430,9 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
 	<row><entry>Server</entry><entry>HIT</entry><entry>IPv4 address</entry><entry>IPv6 address</entry><entry>HI algo</entry></row>
       </thead>
       <tbody>
-	<row><entry>felwood.infrahip.net</entry><entry>2001:16:7d5a:88d7:51af:cdd1:6bf5:3d15</entry><entry>193.167.187.130</entry><entry>2001:708:140:220::3</entry><entry>DSA</entry></row>
-	<row><entry>crossroads.infrahip.net</entry><entry>2001:0019:b673:8406:e32d:6754:db0b:cde7</entry><entry>193.167.187.134</entry><entry>2001:708:140:220:213:21ff:feb1:2d05</entry><entry>RSA</entry></row>
-	<row><entry>crossroads.infrahip.net</entry><entry>2001:0019:810e:713d:7183:f05f:6063:b82b</entry><entry>193.167.187.134</entry><entry>2001:708:140:220:213:21ff:feb1:2d05</entry><entry>DSA</entry></row>
-	<row><entry>ashenvale.infrahip.net</entry><entry>2001:0012:55f8:25ab:a6de:af77:b617:34ec</entry><entry>193.167.187.133</entry><entry>2001:708:140:220:212:79ff:fed9:15e8</entry><entry>RSA</entry></row>
-	<row><entry>ashenvale.infrahip.net</entry><entry>2001:0015:cf89:0912:d2da:10af:411f:1252</entry><entry>193.167.187.133</entry><entry>2001:708:140:220:212:79ff:fed9:15e8</entry><entry>DSA</entry></row>
+	<row><entry>felwood.infrahip.net</entry><entry>2001:1d:392e:a450:2cd3:75e1:6098:8104</entry><entry>193.167.187.130</entry><entry>2001:708:140:220::3</entry><entry>RSA</entry></row>
+	<row><entry>crossroads.infrahip.net</entry><entry>2001:1b:a9be:c6a6:34e5:8361:c07f:a990</entry><entry>193.167.187.134</entry><entry>2001:708:140:220:213:21ff:feb1:2d05</entry><entry>RSA</entry></row>
+	<row><entry>ashenvale.infrahip.net</entry><entry>2001:1c:cbae:47ae:2871:f9c:eb94:c8e3</entry><entry>193.167.187.133</entry><entry>2001:708:140:220:212:79ff:fed9:15e8</entry><entry>DSA</entry></row>
       </tbody>
     </tgroup>
     </table>
@@ -3805,12 +3804,13 @@ combo-newgroup=&lt;create new...&gt;
       one, it responds with an AAAA response.
     </para>
     <para>
-      The DNS proxy is meant to be run under DJB's daemontools package
+      For faster DNS look ups, you can optionally run the DNS proxy
+      under DJB's daemontools package
       <ulink url="http://cr.yp.to/daemontools.html" /> which is also
-      used to provide necessary environmanet variables, see comments
-      in dnshipproxy. It is recommended to use a DNS cache, like
-      <ulink url="http://cr.yp.to/djbdns.html" /> in front of
-      dnshipproxy. The use without DNS cache results in longer
+      used to provide some necessary environment variables (see comments
+      in dnshipproxy). It acts as a DNS cache 
+      (see <ulink url="http://cr.yp.to/djbdns.html" />) in front of
+      dnshipproxy. The use of DNS proxy without DNS cache results in longer
       look up latencies.
     </para>
 

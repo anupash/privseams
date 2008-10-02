@@ -557,6 +557,27 @@ int publish_addr(char *tmp_hit_str, char *tmp_addr_str)
         return 0;
 }
 
+/** 
+ * This function goes through the HA database and sends an icmp echo to all of them
+ *
+ * @param socket to send with
+ *
+ * @return 0 on success negative on error
+ */
+int hip_send_heartbeat(hip_ha_t *entry, void *opaq) {
+	int err = 0;
+	int *sockfd = (int *) opaq;
+
+	if (entry->state == HIP_STATE_ESTABLISHED) {
+		_HIP_DEBUG("list_for_each_safe\n");
+		HIP_IFEL(hip_send_icmp(*sockfd, entry), 0,
+			 "Error sending heartbeat, ignore\n");
+        }
+
+out_err:
+	return err;
+}
+
 /**
  * Periodic maintenance.
  * 
@@ -623,8 +644,7 @@ int periodic_maintenance()
 		*/
 		/* Check if the heartbeats should be sent */
 		if (heartbeat_counter < 1) {
-			HIP_IFEL(hip_send_all_heartbeats(hip_icmp_sock), -1,
-				 "Failed to send heartbeats\n");
+			hip_for_each_ha(hip_send_heartbeat, &hip_icmp_sock);
 			heartbeat_counter = hip_icmp_interval;
 		} else {
 			heartbeat_counter--;
@@ -651,7 +671,7 @@ int periodic_maintenance()
 	hip_registration_maintenance();
 
 	/* Sending of NAT Keep-Alives. */
-	if(hip_nat_status && nat_keep_alive_counter < 0){
+	if(hip_nat_status && !hip_icmp_interval && nat_keep_alive_counter < 0){
 		HIP_IFEL(hip_nat_refresh_port(),
 			 -ECOMM, "Failed to refresh NAT port state.\n");
 		nat_keep_alive_counter = HIP_NAT_KEEP_ALIVE_INTERVAL;
@@ -1049,19 +1069,19 @@ int hip_icmp_statistics(struct in6_addr * src, struct in6_addr * dst,
 	if (entry->heartbeats_received > 1)
 		entry->heartbeats_mean = entry->heartbeats_total_rtt / entry->heartbeats_received;
 	
-	/* Calculate varians  */	
+	/* Calculate variance  */	
 	if (entry->heartbeats_received > 1) {
 		sum1 = entry->heartbeats_total_rtt;
 		sum2 = entry->heartbeats_total_rtt2;
 		sum1 /= entry->heartbeats_received;
 		sum2 /= entry->heartbeats_received;
-		entry->heartbeats_varians = llsqrt(sum2 - sum1 * sum1);
+		entry->heartbeats_variance = llsqrt(sum2 - sum1 * sum1);
 	}
 
 	HIP_DEBUG("\nHeartbeat from %s, RTT %.6f ms,\n%.6f ms mean, "
-		  "%.6f ms varians, packets sent %d recv %d lost %d\n", 
+		  "%.6f ms variance, packets sent %d recv %d lost %d\n", 
 		  hit, (rtt / 1000000.0), (entry->heartbeats_mean / 1000000.0),
-		  (entry->heartbeats_varians / 1000000.0),
+		  (entry->heartbeats_variance / 1000000.0),
 		  entry->heartbeats_sent, entry->heartbeats_received,
 		  (entry->heartbeats_sent - entry->heartbeats_received));
 
