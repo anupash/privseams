@@ -6,6 +6,9 @@ hip_lsi_t local_lsi = { 0 };
 /* @todo: this should be a hashtable */
 struct hip_hadb_user_info_state ha_cache;
 
+extern int hip_fw_sock;
+extern int hip_opptcp;
+
 int hip_query_ha_info(struct in6_addr *hit_our, struct in6_addr *hit_peer,
 		      hip_lsi_t *lsi_our, hip_lsi_t *lsi_peer,
 		      struct in6_addr *loc_our, struct in6_addr *loc_peer,
@@ -397,15 +400,17 @@ int hip_request_peer_hit_from_hipd_at_firewall(
 					  sizeof(struct in6_addr)),
 			-1, "build param HIP_PARAM_HIT  failed\n");
 
-	HIP_IFEL(hip_build_param_contents(msg, (void *)(src_tcp_port),
-					  HIP_PARAM_SRC_TCP_PORT,
-					  sizeof(in_port_t)),
-			-1, "build param HIP_PARAM_SRC_TCP_PORT failed\n");
-
-	HIP_IFEL(hip_build_param_contents(msg, (void *)(dst_tcp_port),
-					  HIP_PARAM_DST_TCP_PORT,
-					  sizeof(in_port_t)),
-			-1, "build param HIP_PARAM_DST_TCP_PORT failed\n");
+	if (hip_opptcp) {
+		HIP_IFEL(hip_build_param_contents(msg, (void *)(src_tcp_port),
+						  HIP_PARAM_SRC_TCP_PORT,
+						  sizeof(in_port_t)),
+			 -1, "build param HIP_PARAM_SRC_TCP_PORT failed\n");
+		
+		HIP_IFEL(hip_build_param_contents(msg, (void *)(dst_tcp_port),
+						  HIP_PARAM_DST_TCP_PORT,
+						  sizeof(in_port_t)),
+			 -1, "build param HIP_PARAM_DST_TCP_PORT failed\n");
+	}
 
 	HIP_IFEL(hip_build_param_contents(msg, (void *)(peer_ip),
 					  HIP_PARAM_IPV6_ADDR_PEER,
@@ -413,11 +418,12 @@ int hip_request_peer_hit_from_hipd_at_firewall(
 			-1, "build param HIP_PARAM_IPV6_ADDR failed\n");
 
 	/* build the message header */
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT_AT_FIREWALL, 0), -1,
-		 "build hdr failed\n");
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT, 0),
+		 -1, "build hdr failed\n");
 
 	/* send and receive msg to/from hipd */
-	HIP_IFEL(hip_send_daemon_info_wrapper(msg, 1), -1, "send msg failed\n");
+	HIP_IFEL(hip_sendto_hipd(hip_fw_sock, msg, hip_get_msg_total_len(msg)),
+		 -1, "send msg failed\n");
 
 	_HIP_DEBUG("send_recv msg succeed\n");
 

@@ -129,11 +129,11 @@ int firewall_update_entry(struct in6_addr *hit_our,
 	HIP_IFE(!(entry_update = firewall_ip_db_match(ip)), -1);
 
 	//update the fields if new value value is not NULL
-	if(hit_our)
+	if (hit_our)
 		ipv6_addr_copy(&entry_update->hit_our, hit_our);
-	if(hit_peer)
+	if (hit_peer)
 		ipv6_addr_copy(&entry_update->hit_peer, hit_peer);
-	if(lsi)
+	if (lsi)
 		ipv4_addr_copy(&entry_update->lsi, lsi);
 	entry_update->bex_state = state;
 
