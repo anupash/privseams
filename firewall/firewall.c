@@ -58,7 +58,7 @@ void print_usage(){
 	printf("\n");
 	printf("      -H = drop all non-HIP traffic (default: accept non-HIP traffic)\n");
 	printf("      -A = accept all HIP traffic, still do HIP filtering (default: drop all non-authed HIP traffic)\n");
-	printf("      -F = accept all HIP traffic, deactivate HIP traffic filtering\n");
+ 	printf("      -F = accept all HIP traffic, deactivate HIP traffic filtering\n");
 	printf("      -f file_name = is a path to a file containing firewall filtering rules (default %s)\n",
 			HIP_FW_DEFAULT_RULE_FILE);
 	printf("      -d = debugging output\n");

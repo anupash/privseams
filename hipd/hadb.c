@@ -3277,9 +3277,9 @@ int hip_hadb_add_udp_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 			new_addr->address_state = PEER_ADDR_STATE_UNVERIFIED;
 //modify by santtu		
 			if(entry->nat_control == 0 && hip_relay_get_status() != HIP_RELAY_ON){
-			
+				
 				err = entry->hadb_update_func->hip_update_send_echo(entry, spi, new_addr, msg);
- 
+
 				/** @todo: check! If not acctually a problem (during Handover). Andrey. */
 				if( err==-ECOMM ) err = 0;
 			}

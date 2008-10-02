@@ -3204,7 +3204,7 @@ int hip_build_param_encrypted_3des_sha1(struct hip_common *msg,
  * @param msg the message where the parameter will be appended
  * @param param the parameter that will contained in the hip_encrypted
  *           parameter
- * 
+ *
  * Note that this function does not actually encrypt anything, it just builds
  * the parameter. The parameter that will be encapsulated in the hip_encrypted
  * parameter has to be encrypted using a different function call.

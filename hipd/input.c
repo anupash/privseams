@@ -947,7 +947,6 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 		 HIP_MAX_DH_GROUP_ID, NULL, 0), -1,
 		 "Building of DH failed.\n");
 
-
     /********** HIP transform. **********/
 	HIP_IFE(!(param = hip_get_param(ctx->input, HIP_PARAM_HIP_TRANSFORM)), -ENOENT);
 	HIP_IFEL((transform_hip_suite =
