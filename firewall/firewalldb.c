@@ -121,6 +121,10 @@ int firewall_update_entry(struct in6_addr *hit_our,
 
 	HIP_DEBUG("\n");
 
+	if(!ip){
+		HIP_DEBUG("###ERROR, NULL IP\n");
+		goto out_err;
+	}
 	HIP_ASSERT(ip != NULL &&
 		   (state == FIREWALL_STATE_BEX_DEFAULT        ||
 		    state == FIREWALL_STATE_BEX_NOT_SUPPORTED  ||

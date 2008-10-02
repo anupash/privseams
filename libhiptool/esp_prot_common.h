@@ -3,6 +3,17 @@
 
 #include <inttypes.h>
 
+#define ESP_PROT_TFM_UNUSED			0
+#define ESP_PROT_TFM_SHA1_20		1
+/* for transforms array, ESP_PROT_TFM_UNUSED is not counted here */
+#define NUM_TRANSFORMS				1
+/* for first dimension of hash_lengths[][] */
+#define NUM_HASH_FUNCTIONS			1
+/* for second dimension of hash_lengths[][] */
+#define NUM_HASH_LENGTHS			1
+
+// changed for measurements
+#if 0
 /* IDs for all supported transforms
  *
  * @note If you change these, make sure to also change the helper defines
@@ -30,7 +41,7 @@
 #define NUM_HASH_FUNCTIONS			2
 /* for second dimension of hash_lengths[][] */
 #define NUM_HASH_LENGTHS			3
-
+#endif
 
 /** checks if the passed transform is one of our locally preferred transforms
  *
