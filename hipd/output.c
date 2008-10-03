@@ -488,6 +488,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	int err = 0, dh_size1 = 0, dh_size2 = 0, written1 = 0, written2 = 0;
 	int mask = 0, l = 0, is_add = 0, i = 0, ii = 0, *list = NULL;
 	unsigned int service_count = 0;
+	int ordint = 0;
 
 	/* Supported HIP and ESP transforms. */
 	hip_transform_suite_t transform_hip_suite[] = {
@@ -500,19 +501,19 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 		HIP_ESP_NULL_SHA1	};
         /* change order if necessary */
 	sprintf(order, "%d", hip_transform_order);
-	for ( i = 0; i < 3; i++) {
+	for ( i = 0; i < 3; i++) {		
 		switch (order[i]) {
-		case 1:
+		case '1':
 			transform_hip_suite[i] = HIP_HIP_AES_SHA1;
 			transform_esp_suite[i] = HIP_ESP_AES_SHA1;
 			HIP_DEBUG("Transform order index 0 is AES\n");
 			break;
-		case 2:
+		case '2':
 			transform_hip_suite[i] = HIP_HIP_3DES_SHA1;
 			transform_esp_suite[i] = HIP_ESP_3DES_SHA1;
 			HIP_DEBUG("Transform order index 1 is 3DES\n");
 			break;
-		case 3:
+		case '3':
  			transform_hip_suite[i] = HIP_HIP_NULL_SHA1;
 			transform_esp_suite[i] = HIP_ESP_NULL_SHA1;
 			HIP_DEBUG("Transform order index 2 is NULL_SHA1\n");
