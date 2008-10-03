@@ -1069,8 +1069,8 @@ int hip_icmp_statistics(struct in6_addr * src, struct in6_addr * dst,
 
 	HIP_DEBUG("\nHeartbeat from %s, RTT %.6f ms,\n%.6f ms mean, "
 		  "%.6f ms variance, packets sent %d recv %d lost %d\n",
-		  hit, (rtt / 1000000.0), (avg / 1000000.0),
-		  (std_dev / 1000000.0),
+		  hit, (rtt / 1000.0), (avg / 1000.0),
+		  (std_dev / 1000.0),
 		  entry->heartbeats_sent, rcvd_heartbeats,
 		  (entry->heartbeats_sent - rcvd_heartbeats));
 

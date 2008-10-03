@@ -4,7 +4,7 @@ uint32_t timeval_to_uint32(struct timeval *timeval)
 {
 	HIP_ASSERT(timeval != NULL);
 
-	// add tics for seconds and microseconds
+	// convert seconds to microseconds and add
 	return (timeval->tv_sec * 1000000) + timeval->tv_usec;
 }
 
