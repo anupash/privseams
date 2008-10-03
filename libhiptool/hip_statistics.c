@@ -56,26 +56,38 @@ uint32_t calc_std_dev(statistics_data_t *statistics_data)
 	return std_dev;
 }
 
-void add_item(statistics_data_t *statistics_data, uint32_t item_value)
+void add_statistics_item(statistics_data_t *statistics_data, uint32_t item_value)
 {
 	HIP_ASSERT(statistics_data != NULL);
 
 	statistics_data->num_items++;
 	statistics_data->added_values += item_value;
 	statistics_data->added_squared_values += item_value * item_value;
+
+	if (item_value > statistics_data->max_value)
+		statistics_data->max_value = item_value;
+
+	if (item_value < statistics_data->min_value ||
+			statistics_data->min_value == 0)
+		statistics_data->min_value = item_value;
 }
 
+/* only returns values for non-NULL pointers */
 void calc_statistics(statistics_data_t *statistics_data, uint32_t *num_items,
-		uint32_t *avg, uint32_t *std_dev)
+		uint32_t *min, uint32_t *max, uint32_t *avg, uint32_t *std_dev)
 {
 	HIP_ASSERT(statistics_data != NULL);
-	HIP_ASSERT(num_items != NULL);
-	HIP_ASSERT(avg != NULL);
-	HIP_ASSERT(std_dev != NULL);
 
-	*num_items = statistics_data->num_items;
-	*avg = calc_avg(statistics_data);
-	*std_dev = calc_std_dev(statistics_data);
+	if (num_items)
+		*num_items = statistics_data->num_items;
+	if (min)
+		*min = statistics_data->min_value;
+	if (max)
+		*max = statistics_data->max_value;
+	if (avg)
+		*avg = calc_avg(statistics_data);
+	if (std_dev)
+		*std_dev = calc_std_dev(statistics_data);
 }
 
 static long llsqrt(long long a)

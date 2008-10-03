@@ -8,9 +8,18 @@
 #include "esp_prot_api.h"
 #include "linkedlist.h"
 #include "hslist.h"
-//#include "conntrack.h"
+#include "hip_statistics.h"
 
 esp_prot_conntrack_tfm_t esp_prot_conntrack_tfms[NUM_TRANSFORMS];
+
+#ifdef CONFIG_HIP_MEASUREMENTS
+// for measuring the amount of hashes calculated during a connection
+statistics_data_t hash_distance;
+// for measuring the amount of failed hashes (reordering)
+statistics_data_t subsequent_failed_hashes;
+uint32_t subseq_failed_hashes;
+uint32_t total_hashes;
+#endif
 
 
 int esp_prot_conntrack_init()
@@ -21,6 +30,13 @@ int esp_prot_conntrack_init()
 	int err = 0, i, j, g;
 
 	HIP_DEBUG("Initializing conntracking of esp protection extension...\n");
+
+#ifdef CONFIG_HIP_MEASUREMENTS
+	memset(&hash_distance, 0, sizeof(statistics_data_t));
+	memset(&subsequent_failed_hashes, 0, sizeof(statistics_data_t));
+	subseq_failed_hashes = 0;
+	total_hashes = 0;
+#endif
 
 	/* set up mapping of esp protection transforms to hash functions and lengths */
 	for (i = 0; i < NUM_HASH_FUNCTIONS; i++)
@@ -50,6 +66,9 @@ int esp_prot_conntrack_init()
 int esp_prot_conntrack_uninit()
 {
 	int err = 0, i;
+#ifdef CONFIG_HIP_MEASUREMENTS
+	uint32_t num_items = 0, min = 0, max = 0, avg = 0, std_dev = 0;
+#endif
 
 	// set transforms to 0/NULL
 	for (i = 0; i < NUM_TRANSFORMS; i++)
@@ -58,7 +77,29 @@ int esp_prot_conntrack_uninit()
 		esp_prot_conntrack_tfms[i].hash_length = 0;
 	}
 
-	// TODO output max hchain verification length here
+#ifdef CONFIG_HIP_MEASUREMENTS
+	//calculate statistics for distance measurements
+	calc_statistics(&hash_distance, &num_items, &min, &max, &avg, &std_dev);
+	printf("hash distance - num_data_items: %u, min: %u, max: %u, avg: %u, std_dev: %u\n",
+			num_items, min, max, avg, std_dev);
+
+	// calculate failed hashes measurements
+	calc_statistics(&subsequent_failed_hashes, &num_items, &min, &max, &avg, &std_dev);
+	printf("subsequent failed hashes - num_data_items: %u, min: %u, max: %u, avg: %u, std_dev: %u\n",
+			num_items, min, max, avg, std_dev);
+
+	printf("total hashes - failed: %u, seen: %u, ",
+			subsequent_failed_hashes.added_values, total_hashes);
+	if (total_hashes > 0)
+	{
+		printf("failed (in percent): %.3f\n",
+				(subsequent_failed_hashes.added_values / total_hashes) * 100.0);
+	} else
+	{
+		printf("failed (in percent): 0.000\n");
+	}
+
+#endif
 
   out_err:
 	return err;
@@ -564,62 +605,6 @@ int esp_prot_conntrack_update_anchor(struct tuple *tuple, struct hip_ack *ack,
 	return err;
 }
 
-#if 0
-int esp_prot_conntrack_update_esp_info(const hip_common_t *update,
-		struct tuple * other_dir_tuple)
-{
-	struct hip_ack *ack = NULL;
-	struct hip_esp_info *esp_info = NULL;
-	struct anchor_tuple *anchors = NULL;
-	struct esp_tuple *esp_tuple = NULL;
-	// assume no matching anchor
-	int err = 1, i;
-
-	/* the update reply to an anchor in anchor message contains the ESP_INFO
-	 * parameter with the SPI number of the esp_tuple to be update with the
-	 * anchor sent before */
-	// XX TODO check for each ACK in case of aggregated ACKs
-	HIP_IFEL(!(ack = (struct hip_ack *) hip_get_param(update, HIP_PARAM_ACK)), -1,
-			"expecting ACK param, but UPDATE msg does NOT contain it\n");
-	HIP_IFEL(!(esp_info = (struct hip_esp_info *) hip_get_param(update,
-			HIP_PARAM_ESP_INFO)), -1,
-			"expecting ESP_INFO param, but UPDATE msg does NOT contain it\n");
-
-	// search for corresponding anchor in other direction's anchor cache
-	for (i = 0; i < hip_ll_get_size(&other_dir_tuple->anchor_cache); i++)
-	{
-		anchors = (struct anchor_tuple *) hip_ll_get(&other_dir_tuple->anchor_cache, i);
-
-		if (anchors->update_id == ack->peer_update_id)
-		{
-			HIP_DEBUG("matching SEQ and ACK for anchor update found\n");
-
-			// remove from cache
-			anchors = (struct anchor_tuple *) hip_ll_del(&other_dir_tuple->anchor_cache,
-					i, NULL);
-
-			// update corresponding esp_tuple
-			// TODO distinguish the different update cases
-			/* esp_tuple = find_esp_tuple(other_dir_esps, ntohl(esp_info->old_spi));
-			esp_tuple->esp_prot_tfm
-			esp_tuple->active_anchor
-			esp_tuple->next_anchor
-
-			esp_tuple = find_esp_tuple(other_dir_esps, ntohl(esp_info->new_spi));
-			esp_tuple->esp_prot_tfm
-			esp_tuple->active_anchor
-			esp_tuple->next_anchor */
-
-			err = 0;
-			break;
-		}
-	}
-
-  out_err:
-	return err;
-}
-#endif
-
 int esp_prot_conntrack_verify(struct esp_tuple *esp_tuple, struct hip_esp *esp)
 {
 	esp_prot_conntrack_tfm_t * conntrack_tfm = NULL;
@@ -630,6 +615,10 @@ int esp_prot_conntrack_verify(struct esp_tuple *esp_tuple, struct hip_esp *esp)
 
 	if (esp_tuple->esp_prot_tfm > ESP_PROT_TFM_UNUSED)
 	{
+#ifdef CONFIG_HIP_MEASUREMENTS
+		total_hashes++;
+#endif
+
 		conntrack_tfm = esp_prot_conntrack_resolve_transform(
 				esp_tuple->esp_prot_tfm);
 
@@ -665,8 +654,13 @@ int esp_prot_conntrack_verify(struct esp_tuple *esp_tuple, struct hip_esp *esp)
 	}
 
   out_err:
+#ifdef CONFIG_HIP_MEASUREMENTS
+	// count how many subsequent packets could not be verified
 	if (err)
-		printf("ERROR: hchain element could not be verified!\n");
+		subseq_failed_hashes++;
+	else if (subseq_failed_hashes > 0)
+		add_statistics_item(&subsequent_failed_hashes, subseq_failed_hashes);
+#endif
 
 	return err;
 }

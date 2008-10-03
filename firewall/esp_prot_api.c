@@ -46,9 +46,6 @@ hchain_store_t bex_store;
 // this stores hchains used during UPDATE
 hchain_store_t update_store;
 
-// needed for measurements
-int hash_distance;
-
 
 int esp_prot_init()
 {
@@ -59,8 +56,6 @@ int esp_prot_init()
 	int activate = 1;
 
 	HIP_DEBUG("Initializing the esp protection extension...\n");
-
-	hash_distance = 0;
 
 	/* activate the extension in hipd
 	 *
@@ -165,8 +160,6 @@ int esp_prot_uninit()
 	// also deactivate the extension in hipd
 	HIP_IFEL(send_esp_prot_to_hipd(activate), -1,
 			"failed to activate the esp protection in hipd\n");
-
-	printf("highest encountered hash distance: %i\n", hash_distance);
 
   out_err:
 	return err;
@@ -378,8 +371,11 @@ int esp_prot_verify_hash(hash_function_t hash_function, int hash_length,
 		unsigned char *active_anchor, unsigned char *next_anchor,
 		unsigned char *hash_value, int tolerance)
 {
-	int tmp_distance = 0;
+	uint32_t tmp_distance = 0;
 	int err = 0;
+#ifdef CONFIG_HIP_MEASUREMENTS
+	extern statistics_data_t hash_distance;
+#endif
 
 	HIP_ASSERT(hash_function != NULL);
 	HIP_ASSERT(hash_length > 0);
@@ -438,8 +434,9 @@ int esp_prot_verify_hash(hash_function_t hash_function, int hash_length,
 		}
 	}
 
-	if (tmp_distance > hash_distance)
-		hash_distance = tmp_distance;
+#ifdef CONFIG_HIP_MEASUREMENTS
+	add_statistics_item(&hash_distance, tmp_distance);
+#endif
 
   out_err:
 	if (err == -1)

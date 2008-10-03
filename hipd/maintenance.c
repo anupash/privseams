@@ -1016,6 +1016,7 @@ out_err:
 	return err;
 }
 
+#if 0
 static long llsqrt(long long a)
 {
         long long prev = ~((long long)1 << 63);
@@ -1030,6 +1031,7 @@ static long llsqrt(long long a)
 
         return (long)x;
 }
+#endif
 
 /**
  * This function calculates RTT and ... and then stores them to correct entry
@@ -1062,10 +1064,11 @@ int hip_icmp_statistics(struct in6_addr * src, struct in6_addr * dst,
 	rtt = calc_timeval_diff(stval, rtval);
 
 	/* add the heartbeat item to the statistics */
-	add_item(&entry->heartbeats_statistics, rtt);
+	add_statistics_item(&entry->heartbeats_statistics, rtt);
 
 	/* calculate the statistics for immediate output */
-	calc_statistics(&entry->heartbeats_statistics, &rcvd_heartbeats, &avg, &std_dev);
+	calc_statistics(&entry->heartbeats_statistics, &rcvd_heartbeats, NULL, NULL, &avg,
+			&std_dev);
 
 	HIP_DEBUG("\nHeartbeat from %s, RTT %.6f ms,\n%.6f ms mean, "
 		  "%.6f ms variance, packets sent %d recv %d lost %d\n",

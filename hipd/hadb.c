@@ -2891,7 +2891,7 @@ int hip_handle_get_ha_info(hip_ha_t *entry, struct hip_common *msg)
 	_HIP_HEXDUMP("HEXHID ", &hid, sizeof(struct hip_hadb_user_info_state));
 
 	hid.heartbeats_on = hip_icmp_interval;
-	calc_statistics(&entry->heartbeats_statistics, &hid.heartbeats_received,
+	calc_statistics(&entry->heartbeats_statistics, &hid.heartbeats_received, NULL, NULL,
 			&hid.heartbeats_mean, &hid.heartbeats_variance);
 #if 0
 	hid.heartbeats_mean = entry->heartbeats_mean;
