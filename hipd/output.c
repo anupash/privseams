@@ -506,17 +506,17 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 		case '1':
 			transform_hip_suite[i] = HIP_HIP_AES_SHA1;
 			transform_esp_suite[i] = HIP_ESP_AES_SHA1;
-			HIP_DEBUG("Transform order index 0 is AES\n");
+			HIP_DEBUG("Transform order index %d is AES\n", i);
 			break;
 		case '2':
 			transform_hip_suite[i] = HIP_HIP_3DES_SHA1;
 			transform_esp_suite[i] = HIP_ESP_3DES_SHA1;
-			HIP_DEBUG("Transform order index 1 is 3DES\n");
+			HIP_DEBUG("Transform order index %d is 3DES\n", i);
 			break;
 		case '3':
  			transform_hip_suite[i] = HIP_HIP_NULL_SHA1;
 			transform_esp_suite[i] = HIP_ESP_NULL_SHA1;
-			HIP_DEBUG("Transform order index 2 is NULL_SHA1\n");
+			HIP_DEBUG("Transform order index %d is NULL_SHA1\n", i);
 			break;
 		}
 	}
