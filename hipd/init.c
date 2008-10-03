@@ -394,8 +394,8 @@ int hipd_init(int flush_ipsec, int killold)
 
 	hip_load_configuration();
 
-	hip_opendht_sock_fqdn = init_dht_gateway_socket(hip_opendht_sock_fqdn);
-	hip_opendht_sock_hit = init_dht_gateway_socket(hip_opendht_sock_hit);
+	hip_opendht_sock_fqdn = init_dht_gateway_socket(hip_opendht_sock_fqdn/*, opendht_serving_gateway*/);
+	hip_opendht_sock_hit = init_dht_gateway_socket(hip_opendht_sock_hit/*, opendht_serving_gateway*/);
 
 	certerr = 0;
 	certerr = hip_init_certs();
@@ -442,13 +442,13 @@ int hip_init_dht()
                  of something so re-initializing might be needed */
                 if (hip_opendht_sock_fqdn > 0) {
                         close(hip_opendht_sock_fqdn);
-                         hip_opendht_sock_fqdn = init_dht_gateway_socket(hip_opendht_sock_fqdn);
+                         hip_opendht_sock_fqdn = init_dht_gateway_socket(hip_opendht_sock_fqdn/*, opendht_serving_gateway*/);
                          hip_opendht_fqdn_sent = STATE_OPENDHT_IDLE;
                 }
 
                 if (hip_opendht_sock_hit > 0) {
                         close(hip_opendht_sock_hit);
-                         hip_opendht_sock_hit = init_dht_gateway_socket(hip_opendht_sock_hit);
+                         hip_opendht_sock_hit = init_dht_gateway_socket(hip_opendht_sock_hit/*, opendht_serving_gateway*/);
                          hip_opendht_hit_sent = STATE_OPENDHT_IDLE;
                 }
 

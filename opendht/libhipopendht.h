@@ -14,7 +14,7 @@
 #define OPENDHT_ERROR_COUNT_MAX 3
 
 int init_dht_gateway_socket(int);
-int init_dht_gateway_socket_with_version(int, int af);
+int init_dht_gateway_socket_gw(int, struct addrinfo *);
 
 int resolve_dht_gateway_info(char *, struct addrinfo **, int af);
 

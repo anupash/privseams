@@ -1436,9 +1436,10 @@ int hip_get_dht_mapping_for_HIT_msg(struct hip_common *msg){
 		  INET_ADDRSTRLEN);
 
 	/* init the dht gw socket */
-	socket = init_dht_gateway_socket_with_version(socket, opendht_serving_gateway->ai_family);
+	socket = init_dht_gateway_socket_gw(socket, opendht_serving_gateway);
 	//the connection to the gw here should be done using binding
 	err = connect_dht_gateway(socket, opendht_serving_gateway, 1);
+HIP_DEBUG("###ERROR %d\n", err);
 	if(err != 0){
 		err_value = 1;
 		err = 0;

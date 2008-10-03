@@ -32,6 +32,7 @@ connect_alarm(int signo)
     return; 
 }
 
+
 /**
  * init_dht_gateway_socket - Initializes socket for the openDHT communications
  * @param sockfd Socket descriptor to be initialized.
@@ -39,7 +40,7 @@ connect_alarm(int signo)
  * @return Returns positive if socket creation was ok negative on error.
  */
 int init_dht_gateway_socket(int sockfd){
-    if ((sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
+    if ((sockfd = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP)) < 0)
         HIP_PERROR("OpenDHT socket:");
     else HIP_DEBUG("\nOpenDHT communication socket created successfully.\n");
     
@@ -48,22 +49,24 @@ int init_dht_gateway_socket(int sockfd){
 
 
 /**
- * init_dht_gateway_socket_with_version - Initializes socket for the openDHT communications
+ * init_dht_gateway_socket_gw - Initializes socket for the openDHT
+				communications based on gateway address family
  * @param sockfd	Socket descriptor to be initialized.
  * @param af		Address family
  *
  * @return Returns positive if socket creation was ok negative on error.
  */
-int init_dht_gateway_socket_with_version(int sockfd, int af){
+int init_dht_gateway_socket_gw(int sockfd, struct addrinfo *gateway){
+    //default address family
+    int af = AF_INET;
 
-    if((af != AF_INET) && (af != AF_INET6)){
-	HIP_DEBUG("Wrong address family!\n");
-	return -1;
-    }
+    if(gateway)
+	af = gateway->ai_family;
 
     if ((sockfd = socket(af, SOCK_STREAM, IPPROTO_TCP)) < 0)
         HIP_PERROR("OpenDHT socket:");
-    else HIP_DEBUG("\nOpenDHT communication socket created successfully.\n");
+    else
+	HIP_DEBUG("\nOpenDHT communication socket created successfully.\n");
     
     return(sockfd);      
 }
@@ -435,7 +438,7 @@ int opendht_get_key(struct addrinfo * gateway, const unsigned char * key,
                 goto out_err;
         }
         _HIP_DEBUG("Host addresss %s\n", host_addr);
-        sfd = init_dht_gateway_socket_with_version(sfd, hoste->h_addrtype);
+	sfd = init_dht_gateway_socket_gw(sfd, gateway);
         HIP_IFEL((err = connect_dht_gateway(sfd, gateway, 1))
                  ,-1,"OpenDHT connect error\n");  
         memset(dht_response, '\0', sizeof(dht_response));

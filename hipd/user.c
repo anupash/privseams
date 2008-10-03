@@ -282,7 +282,8 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		extern struct addrinfo * opendht_serving_gateway;
 		extern int opendht_serving_gateway_port;
 		extern int opendht_serving_gateway_ttl;
-
+extern int hip_opendht_sock_fqdn;
+extern int hip_opendht_sock_hit;
 		HIP_IFEL(!(gw_info = hip_get_param(msg, HIP_PARAM_OPENDHT_GW_INFO)), -1,
 			 "No gw struct found\n");
 		memset(&tmp_ip_str,'\0',20);
@@ -316,6 +317,12 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			//update the port and ttl
 			opendht_serving_gateway_ttl = gw_info->ttl;
 			opendht_serving_gateway_port = htons(gw_info->port);
+
+			close(hip_opendht_sock_fqdn);
+			hip_opendht_sock_fqdn = init_dht_gateway_socket_gw(hip_opendht_sock_fqdn, opendht_serving_gateway);
+
+			close(hip_opendht_sock_hit);
+			hip_opendht_sock_hit = init_dht_gateway_socket_gw(hip_opendht_sock_hit, opendht_serving_gateway);
 		}
 		else{
 			HIP_DEBUG("Error in resolving gateway - %d \n", err);

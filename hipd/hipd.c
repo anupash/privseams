@@ -631,7 +631,7 @@ int hipd_main(int argc, char *argv[])
 
                                         close(hip_opendht_sock_fqdn);
                                         hip_opendht_sock_fqdn = 0;
-                                        hip_opendht_sock_fqdn = init_dht_gateway_socket(hip_opendht_sock_fqdn);
+                                        hip_opendht_sock_fqdn = init_dht_gateway_socket_gw(hip_opendht_sock_fqdn, opendht_serving_gateway);
                                         hip_opendht_fqdn_sent = STATE_OPENDHT_IDLE;
                                         opendht_error = 0;
                                 }
@@ -661,7 +661,7 @@ int hipd_main(int argc, char *argv[])
                                                 HIP_DEBUG("Put was success (HIT->IP)\n");
                                         close(hip_opendht_sock_hit);
                                         hip_opendht_sock_hit = 0;
-                                        hip_opendht_sock_hit = init_dht_gateway_socket(hip_opendht_sock_hit);
+                                        hip_opendht_sock_hit = init_dht_gateway_socket_gw(hip_opendht_sock_hit, opendht_serving_gateway);
                                         hip_opendht_hit_sent = STATE_OPENDHT_IDLE;
                                         opendht_error= 0;
                                 }

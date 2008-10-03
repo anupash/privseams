@@ -1418,7 +1418,7 @@ int hip_conf_handle_set(hip_common_t *msg, int action, const char *opt[], int op
 int hip_conf_handle_gw(hip_common_t *msg, int action, const char *opt[], int optc){
     int err, out_err;
     int status = 0;
-    int ret;
+    int ret_HIT = 0, ret_IP = 0, ret = 0;
     struct in_addr ip_gw;
     struct in6_addr ip_gw_mapped;
     struct addrinfo *new_gateway = NULL;
@@ -1432,19 +1432,22 @@ int hip_conf_handle_gw(hip_common_t *msg, int action, const char *opt[], int opt
 	goto out_err;
     }
 
-
     if(strlen(opt[0]) > 39){//address longer than size of ipv6 address
 	HIP_ERROR("Address longer than maximum allowed\n");
 	err = -EINVAL;
 	goto out_err;
     }
 
-    if(strlen(opt[0]) > 15){
-	ret = inet_pton(AF_INET6, opt[0], &ip_gw_mapped);
-    }else{
-	ret = inet_pton(AF_INET, opt[0], &ip_gw);
-	IPV4_TO_IPV6_MAP(&ip_gw, &ip_gw_mapped);
+    ret_IP = inet_pton(AF_INET, opt[0], &ip_gw);
+    ret_HIT = inet_pton(AF_INET6, opt[0], &ip_gw_mapped);
+
+    if(!(ret_IP || ret_HIT)){
+	HIP_ERROR("Gateway address not correct\n");
+	goto out_err;
     }
+
+    if(ret_IP)
+	IPV4_TO_IPV6_MAP(&ip_gw, &ip_gw_mapped);
 
     HIP_DEBUG_IN6ADDR("Address ", &ip_gw_mapped);
 
@@ -1493,6 +1496,7 @@ int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int op
 	err = -EINVAL;
 	goto out_err;
     }
+    ret = 0;
 
     //attach the hit into the message
     err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
