@@ -47,6 +47,12 @@ hchain_store_t bex_store;
 hchain_store_t update_store;
 
 
+#ifdef CONFIG_HIP_MEASUREMENTS
+statistics_data_t update_stats;
+update_tracking_info_t update_tracking;
+#endif
+
+
 int esp_prot_init()
 {
 	int bex_function_id = 0, update_function_id = 0;
@@ -56,6 +62,11 @@ int esp_prot_init()
 	int activate = 1;
 
 	HIP_DEBUG("Initializing the esp protection extension...\n");
+
+#ifdef CONFIG_HIP_MEASUREMENTS
+	memset(&update_stats, 0, sizeof(statistics_data_t));
+	memset(&update_tracking, 0, sizeof(update_tracking_info_t));
+#endif
 
 	/* activate the extension in hipd
 	 *
@@ -146,6 +157,9 @@ int esp_prot_uninit()
 {
 	int err = 0, i;
 	int activate = 0;
+#ifdef CONFIG_HIP_MEASUREMENTS
+	uint32_t num_items = 0, min = 0, max = 0, avg = 0, std_dev = 0;
+#endif
 
 	// uninit hcstores
 	hcstore_uninit(&bex_store);
@@ -161,6 +175,13 @@ int esp_prot_uninit()
 	HIP_IFEL(send_esp_prot_to_hipd(activate), -1,
 			"failed to activate the esp protection in hipd\n");
 
+#ifdef CONFIG_HIP_MEASUREMENTS
+	//calculate statistics for distance measurements
+	calc_statistics(&update_stats, &num_items, &min, &max, &avg, &std_dev);
+	printf("update time - num_data_items: %u, min: %.3fms, max: %.3fms, avg: %.3fms, std_dev: %.3fms\n",
+			num_items, min / 1000.0, max / 1000.0, avg / 1000.0, std_dev / 1000.0);
+#endif
+
   out_err:
 	return err;
 }
@@ -169,6 +190,10 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 		unsigned char *esp_prot_anchor, int update)
 {
 	int hash_length = 0, err = 0;
+#ifdef CONFIG_HIP_MEASUREMENTS
+	uint32_t update_time = 0;
+	struct timeval now;
+#endif
 
 	HIP_ASSERT(entry != 0);
 	// esp_prot_transform >= 0 due to datatype
@@ -207,6 +232,16 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 
 			} else
 			{
+#ifdef CONFIG_HIP_MEASUREMENTS
+				if (memcmp(entry->inner_src_addr, &update_tracking.our_hit, sizeof(hip_hit_t)) &&
+						memcmp(entry->inner_dst_addr, &update_tracking.peer_hit, sizeof(hip_hit_t)))
+				{
+					gettimeofday(&now, NULL);
+					update_time = calc_timeval_diff(&update_tracking.time_start, &now);
+					add_statistics_item(&update_stats, update_time);
+				}
+#endif
+
 				HIP_ASSERT(entry->next_hchain != NULL);
 
 				/* esp_prot_sadb_maintenance should have already set up the next_hchain,
@@ -602,6 +637,12 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 			// issue UPDATE message to be sent by hipd
 			HIP_IFEL(send_trigger_update_to_hipd(entry), -1,
 					"unable to trigger update at hipd\n");
+
+#ifdef CONFIG_HIP_MEASUREMENTS
+			memset(&update_tracking.our_hit, entry->inner_src_addr, sizeof(hip_hit_t));
+			memset(&update_tracking.peer_hit, entry->inner_dst_addr, sizeof(hip_hit_t));
+			gettimeofday(&update_tracking.time_start, NULL);
+#endif
 
 			// refill update-store
 			HIP_IFEL((err = hcstore_refill(&update_store)) < 0, -1,

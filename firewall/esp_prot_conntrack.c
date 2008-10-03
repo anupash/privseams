@@ -18,7 +18,6 @@ statistics_data_t hash_distance;
 // for measuring the amount of failed hashes (reordering)
 statistics_data_t subsequent_failed_hashes;
 uint32_t subseq_failed_hashes;
-uint32_t total_hashes;
 #endif
 
 
@@ -35,7 +34,6 @@ int esp_prot_conntrack_init()
 	memset(&hash_distance, 0, sizeof(statistics_data_t));
 	memset(&subsequent_failed_hashes, 0, sizeof(statistics_data_t));
 	subseq_failed_hashes = 0;
-	total_hashes = 0;
 #endif
 
 	/* set up mapping of esp protection transforms to hash functions and lengths */
@@ -89,11 +87,11 @@ int esp_prot_conntrack_uninit()
 			num_items, min, max, avg, std_dev);
 
 	printf("total hashes - failed: %u, seen: %u, ",
-			subsequent_failed_hashes.added_values, total_hashes);
-	if (total_hashes > 0)
+			subsequent_failed_hashes.added_values, hash_distance.num_items);
+	if (hash_distance.num_items > 0)
 	{
 		printf("failed (in percent): %.3f\n",
-				(subsequent_failed_hashes.added_values / total_hashes) * 100.0);
+				(subsequent_failed_hashes.added_values / hash_distance.num_items) * 100.0);
 	} else
 	{
 		printf("failed (in percent): 0.000\n");
@@ -615,10 +613,6 @@ int esp_prot_conntrack_verify(struct esp_tuple *esp_tuple, struct hip_esp *esp)
 
 	if (esp_tuple->esp_prot_tfm > ESP_PROT_TFM_UNUSED)
 	{
-#ifdef CONFIG_HIP_MEASUREMENTS
-		total_hashes++;
-#endif
-
 		conntrack_tfm = esp_prot_conntrack_resolve_transform(
 				esp_tuple->esp_prot_tfm);
 
