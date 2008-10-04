@@ -3,7 +3,11 @@
 
 #include <stdlib.h>
 #include <inttypes.h>
+#include <math.h>
 #include "debug.h"
+
+#define STATS_IN_MSECS	1000.0
+#define SEC_TO_USEC		1000000
 
 typedef struct statistics_data
 {
@@ -15,21 +19,20 @@ typedef struct statistics_data
 } statistics_data_t;
 
 #ifdef CONFIG_HIP_MEASUREMENTS
-typedef struct update_tracking_info
+typedef struct hcupdate_track
 {
-	hip_hit_t our_hit;
-	hip_hit_t peer_hit;
+	unsigned char update_anchor[MAX_HASH_LENGTH];
 	struct timeval time_start;
-} update_tracking_info_t;
+} hcupdate_track_t;
 #endif
 
 uint32_t timeval_to_uint32(struct timeval *timeval);
 uint32_t calc_timeval_diff(struct timeval *timeval_start, struct timeval *timeval_end);
-uint32_t calc_avg(statistics_data_t *statistics_data);
-uint32_t calc_std_dev(statistics_data_t *statistics_data);
+float calc_avg(statistics_data_t *statistics_data, float scaling_factor);
+double calc_std_dev(statistics_data_t *statistics_data, float scaling_factor);
 void add_statistics_item(statistics_data_t *statistics_data, uint32_t item_value);
 void calc_statistics(statistics_data_t *statistics_data, uint32_t *num_items,
-		uint32_t *min, uint32_t *max, uint32_t *avg, uint32_t *std_dev);
-static long llsqrt(long long a);
+		float *min, float *max, float *avg, double *std_dev, float scaling_factor);
+//static long llsqrt(long long a);
 
 #endif /* HIP_STATISTICS_H_ */

@@ -5,6 +5,7 @@
 #include "user_ipsec_sadb.h"
 #include "esp_prot_fw_msg.h"
 #include "esp_prot_common.h"
+#include "hip_statistics.h"
 
 /* defines the default tolerance when verifying hash-chain elements
  *

@@ -2876,7 +2876,7 @@ int hip_handle_get_ha_info(hip_ha_t *entry, struct hip_common *msg)
 {
 
 	int err = 0;
-    	struct hip_hadb_user_info_state hid;
+    struct hip_hadb_user_info_state hid;
 	extern int hip_icmp_interval;
 
 	memset(&hid, 0, sizeof(hid));
@@ -2892,7 +2892,7 @@ int hip_handle_get_ha_info(hip_ha_t *entry, struct hip_common *msg)
 
 	hid.heartbeats_on = hip_icmp_interval;
 	calc_statistics(&entry->heartbeats_statistics, &hid.heartbeats_received, NULL, NULL,
-			&hid.heartbeats_mean, &hid.heartbeats_variance);
+			&hid.heartbeats_mean, &hid.heartbeats_variance, STATS_IN_MSECS);
 #if 0
 	hid.heartbeats_mean = entry->heartbeats_mean;
 	hid.heartbeats_variance = entry->heartbeats_variance;

@@ -5,7 +5,7 @@ uint32_t timeval_to_uint32(struct timeval *timeval)
 	HIP_ASSERT(timeval != NULL);
 
 	// convert seconds to microseconds and add
-	return (timeval->tv_sec * 1000000) + timeval->tv_usec;
+	return (timeval->tv_sec * SEC_TO_USEC) + timeval->tv_usec;
 }
 
 uint32_t calc_timeval_diff(struct timeval *timeval_start, struct timeval *timeval_end)
@@ -23,37 +23,38 @@ uint32_t calc_timeval_diff(struct timeval *timeval_start, struct timeval *timeva
 	return timeval_to_uint32(&rel_timeval);
 }
 
-uint32_t calc_avg(statistics_data_t *statistics_data)
+float calc_avg(statistics_data_t *statistics_data, float scaling_factor)
 {
-	uint32_t avg = 0;
+	float avg = 0.0;
 
 	HIP_ASSERT(statistics_data != NULL);
+	HIP_ASSERT(scaling_factor > 0.0);
 
 	if (statistics_data->num_items >= 1)
 	{
-		avg = statistics_data->added_values / statistics_data->num_items;
+		avg = (statistics_data->added_values / scaling_factor)
+					/ statistics_data->num_items;
 	}
 
 	return avg;
 }
 
-uint32_t calc_std_dev(statistics_data_t *statistics_data)
+double calc_std_dev(statistics_data_t *statistics_data, float scaling_factor)
 {
-	uint32_t std_dev = 0;
-	uint32_t sum1 = 0, sum2 = 0;
+	double std_dev = 0.0;
+	double sum1 = 0.0, sum2 = 0.0;
 
 	HIP_ASSERT(statistics_data != NULL);
 
 	if (statistics_data->num_items >= 1)
 	{
-		sum1 = statistics_data->added_values;
-		sum2 = statistics_data->added_squared_values;
-		sum1 /= statistics_data->num_items;
-		sum2 /= statistics_data->num_items;
-		std_dev = llsqrt(sum2 - sum1 * sum1);
+		sum1 = (double)statistics_data->added_values / statistics_data->num_items;
+		sum2 = (double)statistics_data->added_squared_values
+					/ statistics_data->num_items;
+		std_dev = sqrt(sum2 - (sum1 * sum1));
 	}
 
-	return std_dev;
+	return std_dev / scaling_factor;
 }
 
 void add_statistics_item(statistics_data_t *statistics_data, uint32_t item_value)
@@ -74,22 +75,23 @@ void add_statistics_item(statistics_data_t *statistics_data, uint32_t item_value
 
 /* only returns values for non-NULL pointers */
 void calc_statistics(statistics_data_t *statistics_data, uint32_t *num_items,
-		uint32_t *min, uint32_t *max, uint32_t *avg, uint32_t *std_dev)
+		float *min, float *max, float *avg, double *std_dev, float scaling_factor)
 {
 	HIP_ASSERT(statistics_data != NULL);
 
 	if (num_items)
 		*num_items = statistics_data->num_items;
 	if (min)
-		*min = statistics_data->min_value;
+		*min = statistics_data->min_value / scaling_factor;
 	if (max)
-		*max = statistics_data->max_value;
+		*max = statistics_data->max_value / scaling_factor;
 	if (avg)
-		*avg = calc_avg(statistics_data);
+		*avg = calc_avg(statistics_data, scaling_factor);
 	if (std_dev)
-		*std_dev = calc_std_dev(statistics_data);
+		*std_dev = calc_std_dev(statistics_data, scaling_factor);
 }
 
+#if 0
 static long llsqrt(long long a)
 {
 	long long prev = ~((long long)1 << 63);
@@ -105,3 +107,4 @@ static long llsqrt(long long a)
 
 	return (long)x;
 }
+#endif

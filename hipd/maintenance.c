@@ -1046,7 +1046,9 @@ static long llsqrt(long long a)
 int hip_icmp_statistics(struct in6_addr * src, struct in6_addr * dst,
 			struct timeval *stval, struct timeval *rtval) {
 	int err = 0;
-	u_int32_t rtt = 0, rcvd_heartbeats = 0, avg = 0, std_dev = 0;
+	u_int32_t rtt = 0, rcvd_heartbeats = 0;
+	float avg = 0.0;
+	double std_dev = 0.0;
 #if 0
 	u_int32_t rtt = 0, usecs = 0, secs = 0, square = 0;
 	u_int32_t sum1 = 0, sum2 = 0;
@@ -1068,14 +1070,12 @@ int hip_icmp_statistics(struct in6_addr * src, struct in6_addr * dst,
 
 	/* calculate the statistics for immediate output */
 	calc_statistics(&entry->heartbeats_statistics, &rcvd_heartbeats, NULL, NULL, &avg,
-			&std_dev);
+			&std_dev, STATS_IN_MSECS);
 
 	HIP_DEBUG("\nHeartbeat from %s, RTT %.6f ms,\n%.6f ms mean, "
 		  "%.6f ms variance, packets sent %d recv %d lost %d\n",
-		  hit, (rtt / 1000.0), (avg / 1000.0),
-		  (std_dev / 1000.0),
-		  entry->heartbeats_sent, rcvd_heartbeats,
-		  (entry->heartbeats_sent - rcvd_heartbeats));
+		  hit, (rtt / STATS_IN_MSECS), avg, std_dev, entry->heartbeats_sent,
+		  rcvd_heartbeats, (entry->heartbeats_sent - rcvd_heartbeats));
 
 #if 0
 	secs = (rtval->tv_sec - stval->tv_sec) * 1000000;
