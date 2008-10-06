@@ -1698,7 +1698,9 @@ int hip_conf_handle_ha(hip_common_t *msg, int action,const char *opt[], int optc
      }
 
 out_err:
-        return err;
+     memset(msg, 0, HIP_MAX_PACKET);
+
+     return err;
 }
 
 int hip_conf_print_info_ha(struct hip_hadb_user_info_state *ha)
@@ -1745,6 +1747,8 @@ int hip_conf_handle_handoff(hip_common_t *msg, int action,const char *opt[], int
      HIP_IFEL(hip_send_recv_daemon_info(msg), -1,"send recv daemon info\n");
 
  out_err:
+     memset(msg, 0, HIP_MAX_PACKET);
+
      return err;
 }
 
@@ -1843,6 +1847,7 @@ int hip_get_hits(hip_common_t *msg, char *opt)
 	}
 
  out_err:
+	memset(msg, 0, HIP_MAX_PACKET);
     
 	return err;
 }

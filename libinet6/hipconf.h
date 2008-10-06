@@ -158,6 +158,7 @@
 #define HIPD_CONFIG_FILE     "/etc/hip/hipd_config"
 #define HIPD_CONFIG_FILE_EX \
 "# Format of this file is as with hipconf, but without hipconf prefix.\n\
+# add hi default    # add all four HITs (see bug id 522) \n\
 # add map HIT IP    # preload some HIT-to-IP mappings to hipd \n\
 # add service rvs   # the host acts as HIP rendezvous\n\
 # dht gw host port port TTL # set dht gw hostname|ip port default=5851\n\

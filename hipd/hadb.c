@@ -2,8 +2,6 @@
 // modified, the modifications must be written there too.
 #include "hadb.h"
 
-int test = 0;
-
 HIP_HASHTABLE *hadb_hit;
 struct in_addr peer_lsi_index;
 
@@ -2878,7 +2876,6 @@ int hip_handle_get_ha_info(hip_ha_t *entry, struct hip_common *msg)
     	struct hip_hadb_user_info_state hid;
 	extern int hip_icmp_interval;
 	
-	test++;
 	memset(&hid, 0, sizeof(hid));
 	hid.state = entry->state;
     	ipv6_addr_copy(&hid.hit_our, &entry->hit_our);
@@ -2897,7 +2894,6 @@ int hip_handle_get_ha_info(hip_ha_t *entry, struct hip_common *msg)
 	/* does not print heartbeat info, but I do not think it even should -Samu*/
 	hip_print_debug_info(&hid.ip_our,&hid.ip_peer,&hid.hit_our,&hid.hit_peer,&hid.lsi_peer);
 
-	HIP_DEBUG("test %d\n",test);
 	err = hip_build_param_contents(msg, &hid, HIP_PARAM_HA_INFO,
 				       sizeof(hid));
 	if (err)
