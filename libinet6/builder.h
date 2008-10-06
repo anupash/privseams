@@ -233,7 +233,7 @@ int hip_build_param_hip_hdrr_info(struct hip_common * msg,
  * @return              zero on success, non-zero otherwise.
  */
 int hip_build_param_reg_info(hip_common_t *msg,
-			     const struct hip_srv *service_list,
+			     const void *service_list,
 			     const unsigned int service_count);
 /**
  * Builds a REG_REQUEST parameter.

@@ -3230,10 +3230,10 @@ int hip_handle_firewall_i1_request(struct hip_common *msg,
 		err = 0;
 	}
 	else {
-		err = hip_map_hit_to_addr(dst_hit, &dst_addr);
+		err = hip_map_id_to_addr(dst_hit, NULL, &dst_addr);
 	}
 #else
-	err = hip_map_hit_to_addr(dst_hit, &dst_addr);
+	err = hip_map_id_to_addr(dst_hit, NULL, &dst_addr);
 #endif // CONFIG_HIP_HI3
 
 	if (err) {
