@@ -141,8 +141,11 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	HIP_DEBUG_HIT("src_hit", &ctx->src);
 	HIP_DEBUG_HIT("dst_hit", &ctx->dst);
 
+// unset for slightly higher performance
+#if 0
 	// re-use allocated esp_packet memory space
 	memset(esp_packet, 0, ESP_PACKET_SIZE);
+#endif
 	gettimeofday(&now, NULL);
 
 	// SAs directing outwards are indexed with local and peer HIT
@@ -255,8 +258,11 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	// we should only get ESP packets here
 	HIP_ASSERT(ctx->packet_type == ESP_PACKET);
 
+// unset for slightly higher performance
+#if 0
 	// re-use allocated decrypted_packet memory space
 	memset(decrypted_packet, 0, ESP_PACKET_SIZE);
+#endif
 	gettimeofday(&now, NULL);
 
 	/* get ESP header of input packet
@@ -282,9 +288,12 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	HIP_DEBUG("SEQ no. of incoming packet: %u \n", seq_no);
 	//HIP_IFEL(entry->sequence != seq_no, -1, "ESP sequence numbers do not match\n");
 
+// this is not needed at the endhost as there's the HMAC to auth packets
+#if 0
 	// verify the esp extension hash, if in use
 	HIP_IFEL(esp_prot_verify(entry, ((unsigned char *)esp_hdr) + sizeof(struct hip_esp)),
 			-1, "hash could NOT be verified\n");
+#endif
 
 // this is helpful for testing
 #if 0
