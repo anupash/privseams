@@ -7,7 +7,8 @@
 const hash_function_t hash_functions[2] = {SHA1, MD5};
 
 int count = 100;
-int hash_length = 20;
+// this is supported by both md5 and sha1
+int hash_length = 16;
 int hchain_length = 100000;
 int verify_length = 64;
 hash_function_t hash_function;
@@ -139,7 +140,7 @@ int main(int argc, char ** argv)
 	printf("creation statistics - num_data_items: %u, min: %.3fms, max: %.3fms, avg: %.3fms, std_dev: %.3fms\n",
 				num_items, min, max, avg, std_dev);
 
-	printf("\n\n");
+	printf("\n");
 
 	printf("Verifying %d hash chains of length %d with element length %d\n",
 			count, verify_length, hash_length);
