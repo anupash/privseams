@@ -1303,6 +1303,7 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 	if (ctx->ip_version == 6 && hip_userspace_ipsec)
 	{
 		HIP_DEBUG_HIT("destination hit: ", &ctx->dst);
+		// XXTODO: hip_fw_get_default_hit() returns an unfreed value
 		HIP_DEBUG_HIT("default hit: ", hip_fw_get_default_hit());
 		// check if this is a reinjected packet
 		if (IN6_ARE_ADDR_EQUAL(&ctx->dst, hip_fw_get_default_hit()))
@@ -1316,27 +1317,14 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 	if (ctx->ip_version == 4 && hip_lsi_support){
 		IPV6_TO_IPV4_MAP(&(ctx->src),&src_lsi);
 		IPV6_TO_IPV4_MAP(&(ctx->dst),&dst_lsi);
-		if (IS_LSI32(src_lsi.s_addr)){
-			if (is_packet_reinjection(&dst_lsi)) {
+		if (IS_LSI32(dst_lsi.s_addr)){
+			if (is_packet_reinjection(&dst_lsi))
 				verdict = 1;
-				goto out_err;
-		      	} else {
+		      	else{
 			    	hip_fw_handle_outgoing_lsi(ctx->ipq_packet, &src_lsi, &dst_lsi);
-			    	//Reject the packet
+			    	/*Reject the packet*/
 			    	verdict = 0;
-				goto out_err;
 		      	}
-		}
-		else if((ctx->ip_hdr.ipv4)->ip_p == 6){
-			iphdr = (struct ip *)ctx->ip_hdr.ipv4;
-			tcphdr = ((struct tcphdr *) (((char *) iphdr) + ctx->ip_hdr_len));
-			hdrBytes = ((char *) iphdr) + ctx->ip_hdr_len;
-
-			if(tcp_packet_has_i1_option(hdrBytes, 4*tcphdr->doff))
-				verdict = 1;
-			else{
-				verdict = hip_fw_handle_outgoing_ip(ctx);
-			}
 		}
 	}
 

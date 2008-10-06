@@ -666,10 +666,10 @@ int hip_conf_handle_map(hip_common_t *msg, int action, const char *opt[],
      HIP_IFEL(convert_string_to_address(opt[0], &hit), -1,
 	      "string to address conversion failed\n");
 
-     HIP_IFEL(convert_string_to_address(opt[1], &ip6), -1,
+     HIP_IFEL(err = convert_string_to_address(opt[1], &ip6), -1,
 	      "string to address conversion failed\n");
      
-     if(!convert_string_to_address_v4(opt[1], &aux)){
+     if (err && !convert_string_to_address_v4(opt[1], &aux)){
 	     HIP_IFEL(IS_LSI32(aux.s_addr), -1, "Missing ip address before lsi\n");
      }
 
@@ -1799,7 +1799,12 @@ int hip_get_hits(hip_common_t *msg, char *opt)
 				} else {
 					HIP_INFO(" Unknown algorithm ");	
 				}
-				HIP_INFO("%s\n", hit_s);
+				HIP_INFO("%s", hit_s);
+
+				inet_ntop(AF_INET, &endp->lsi, lsi_s,
+					  INET_ADDRSTRLEN);
+				
+				HIP_INFO("     LSI %s\n", lsi_s);				
 				
 			} else {
 				HIP_ERROR("Unrelated parameter in user "\

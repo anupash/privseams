@@ -3339,7 +3339,8 @@ int hip_host_id_entry_to_endpoint(struct hip_host_id_entry *entry,
 	//endpoint.algo   = entry->lhi.algo;
 	endpoint.algo   = hip_get_host_id_algo(entry->host_id);
 	ipv6_addr_copy(&endpoint.id.hit, &entry->lhi.hit);
-	
+	ipv4_addr_copy(&endpoint.lsi, &entry->lsi);
+
 	HIP_IFEL(hip_build_param_eid_endpoint(msg, &endpoint), -1,
 		 "Error when building parameter HIP_PARAM_EID_ENDPOINT.\n");
 

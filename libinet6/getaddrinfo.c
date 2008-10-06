@@ -1123,7 +1123,7 @@ int gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	/* Is ipv4 address? */
 	if (inet_pton (AF_INET, name, (*at)->addr) > 0)
 	{
-		_HIP_DEBUG("The name to resolve is an IPv4.\n");
+		HIP_DEBUG("The name to resolve is an IPv4.\n");
 		if (req->ai_family == AF_UNSPEC ||
 		    req->ai_family == AF_INET || v4mapped)
 		{
