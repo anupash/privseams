@@ -1660,9 +1660,9 @@ int hip_build_param_hmac_contents(struct hip_common *msg,
 	hip_set_param_type(&hmac, HIP_PARAM_HMAC);
 	hip_calc_generic_param_len(&hmac, sizeof(struct hip_hmac), 0);
 
-	HIP_IFEL(!hip_write_hmac(HIP_DIGEST_SHA1_HMAC, key->key, msg,
-				 hip_get_msg_total_len(msg),
-				 hmac.hmac_data), -EFAULT,
+	HIP_IFEL(hip_write_hmac(HIP_DIGEST_SHA1_HMAC, key->key, msg,
+				hip_get_msg_total_len(msg),
+				hmac.hmac_data), -EFAULT,
 		 "Error while building HMAC\n");
 
 	err = hip_build_param(msg, &hmac);
@@ -1696,9 +1696,9 @@ int hip_build_param_rvs_hmac_contents(struct hip_common *msg,
 
 	hip_set_param_type(&hmac, HIP_PARAM_RVS_HMAC);
 	hip_calc_generic_param_len(&hmac, sizeof(struct hip_hmac), 0);
-	HIP_IFEL(!hip_write_hmac(HIP_DIGEST_SHA1_HMAC, key->key, msg,
-				 hip_get_msg_total_len(msg),
-				 hmac.hmac_data), -EFAULT,
+	HIP_IFEL(hip_write_hmac(HIP_DIGEST_SHA1_HMAC, key->key, msg,
+				hip_get_msg_total_len(msg),
+				hmac.hmac_data), -EFAULT,
 		 "Error while building HMAC\n");
 	err = hip_build_param(msg, &hmac);
  out_err:
@@ -1760,9 +1760,9 @@ int hip_build_param_hmac2_contents(struct hip_common *msg,
 	_HIP_HEXDUMP("HMAC data", tmp, hip_get_msg_total_len(tmp));
 	_HIP_HEXDUMP("HMAC key\n", key->key, 20);
 
-	if (!hip_write_hmac(HIP_DIGEST_SHA1_HMAC, key->key, tmp,
-			    hip_get_msg_total_len(tmp),
-			    hmac2.hmac_data)) {
+	if (hip_write_hmac(HIP_DIGEST_SHA1_HMAC, key->key, tmp,
+			   hip_get_msg_total_len(tmp),
+			   hmac2.hmac_data)) {
 		HIP_ERROR("Error while building HMAC\n");
 		err = -EFAULT;
 		goto out_err;
@@ -3806,9 +3806,9 @@ int hip_build_param_full_relay_hmac_contents(struct hip_common *msg,
 
 	hip_set_param_type(&hmac, HIP_PARAM_RELAY_HMAC);
 	hip_calc_generic_param_len(&hmac, sizeof(struct hip_hmac), 0);
-	HIP_IFEL(!hip_write_hmac(HIP_DIGEST_SHA1_HMAC, key->key, msg,
-				 hip_get_msg_total_len(msg),
-				 hmac.hmac_data), -EFAULT,
+	HIP_IFEL(hip_write_hmac(HIP_DIGEST_SHA1_HMAC, key->key, msg,
+				hip_get_msg_total_len(msg),
+				hmac.hmac_data), -EFAULT,
 		 "Error while building HMAC\n");
 	err = hip_build_param(msg, &hmac);
  out_err:
