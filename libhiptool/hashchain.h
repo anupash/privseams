@@ -18,6 +18,7 @@
 #include <openssl/rand.h>
 #include <openssl/sha.h>
 #include <openssl/md5.h>
+//#include "debug.h"
 
 /* biggest digest in openssl lib */
 #ifdef SHA512_DIGEST_LENGTH
