@@ -32,7 +32,7 @@ int hip_nat_status = 0;
 
 /** ICMPv6 socket and the interval 0 for interval means off **/
 int hip_icmp_sock = 0;
-int hip_icmp_interval = 0;
+int hip_icmp_interval = 20;
 
 /** Specifies the HIP PROXY status of the daemon. This value indicates if the HIP PROXY is running. */
 int hipproxy = 0;

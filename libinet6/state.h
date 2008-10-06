@@ -476,8 +476,8 @@ struct hip_hadb_state
 	u_int32_t                    heartbeats_total_rtt2;
 	/** Heartbeat current mean RTT **/
         u_int32_t                    heartbeats_mean; 
-	/** Heartbeat current varians RTT **/
-	u_int32_t                    heartbeats_varians;
+	/** Heartbeat current variance RTT **/
+	u_int32_t                    heartbeats_variance;
 
 //NAT Branch
 	//pointer for ice engine
@@ -508,7 +508,7 @@ struct hip_hadb_user_info_state
 	int                  heartbeats_sent;
 	int                  heartbeats_received;	
         u_int32_t            heartbeats_mean;
-	int32_t              heartbeats_varians;
+	int32_t              heartbeats_variance;
 };
 
 /** @addtogroup hadb_func
