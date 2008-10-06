@@ -832,30 +832,10 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit,
 	/* @fixme: changing global state won't work with threads */
 	hip_nat_status = ha_nat_mode;
 		
-	locator = hip_get_param((hip_common_t*)msg, HIP_PARAM_LOCATOR);
-	if(locator) {
-		locator_address_item = hip_get_locator_first_addr_item(locator);
-		locator_item_count = hip_get_locator_addr_item_count(locator);
-	}
-
-	/* For every address found in the locator of Peer HDRR
-	 * Add it to the HADB. It stores first to some temp location in entry
-	 * and then copies it to the SPI Out's peer addr list, ater BE */
-	if (locator_item_count > 0) {
-		for (x = 0; x < locator_item_count ; x++) {
-			memcpy(&dst_addr, 
-			       (struct in6_addr*)&locator_address_item[x].address, 
-			       sizeof(struct in6_addr));
-			hip_in6_ntop(&dst_addr, (char*)dht_locator_temp);
-			_HIP_DEBUG("Value: %s\n", (char*)dht_locator_temp);
-			HIP_IFEL(hip_hadb_add_peer_info(dst_hit, &dst_addr, dst_lsi), -1,
-				 "map failed\n");
-		} else {
-			/* To make it follow the same route as it was doing before HDRR/loactors */
-			HIP_IFEL(hip_hadb_add_peer_info(dst_hit, dst_addr,
-							dst_lsi), -1,
-				 "map failed\n");
-		}
+	/* To make it follow the same route as it was doing before HDRR/loactors */
+	HIP_IFEL(hip_hadb_add_peer_info(dst_hit, dst_addr,
+					dst_lsi), -1,
+		 "map failed\n");
 
         /* restore nat status */
 	hip_nat_status = old_global_nat_mode;
@@ -1027,8 +1007,29 @@ int hip_netdev_trigger_bex_msg(struct hip_common *msg) {
         param = hip_get_next_param(msg, param);
         if (param && hip_get_param_type(param) == HIP_PARAM_IPV6_ADDR)
 		our_addr = hip_get_param_contents_direct(param);
-
+	
 	HIP_DEBUG_IN6ADDR("trigger_msg_our_addr:", our_addr);
+	
+	locator = hip_get_param((hip_common_t*)msg, HIP_PARAM_LOCATOR);
+	if (locator) {
+		locator_address_item = hip_get_locator_first_addr_item(locator);
+		locator_item_count = hip_get_locator_addr_item_count(locator);
+	}
+
+	/* For every address found in the locator of Peer HDRR
+	 * Add it to the HADB. It stores first to some temp location in entry
+	 * and then copies it to the SPI Out's peer addr list, ater BE */
+	if (locator_item_count > 0) {
+		for (x = 0; x < locator_item_count ; x++) {
+			memcpy(&dst_addr, 
+			       (struct in6_addr*)&locator_address_item[x].address, 
+			       sizeof(struct in6_addr));
+			hip_in6_ntop(&dst_addr, (char*)dht_locator_temp);
+			_HIP_DEBUG("Value: %s\n", (char*)dht_locator_temp);
+			HIP_IFEL(hip_hadb_add_peer_info(dst_hit, &dst_addr, dst_lsi), -1,
+				 "map failed\n");
+		}
+	}			
 	
 	err = hip_netdev_trigger_bex(our_hit, peer_hit,
 				     &our_lsi, &peer_lsi,
