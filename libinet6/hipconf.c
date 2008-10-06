@@ -1715,8 +1715,8 @@ int hip_conf_print_info_ha(struct hip_hadb_user_info_state *ha)
         HIP_INFO_IN6ADDR(" Local IP", &ha->ip_our);
         HIP_INFO_IN6ADDR(" Peer  IP", &ha->ip_peer);
 	if (ha->heartbeats_on > 0 && ha->state == HIP_STATE_ESTABLISHED) {
-		HIP_DEBUG("Heartbeat %.6f ms mean RTT, "
-			  "%.6f varians,\n"
+		HIP_DEBUG(" Heartbeat %.6f ms mean RTT, "
+			  "%.6f ms varians,\n"
 			  " %d packets sent,"
 			  " %d packets received,"
 			  " %d packet lost\n",
