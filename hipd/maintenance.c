@@ -574,6 +574,27 @@ int send_queue_data(int *socket, int *socket_status)
 	return err;
 }
 
+/** 
+ * This function goes through the HA database and sends an icmp echo to all of them
+ *
+ * @param socket to send with
+ *
+ * @return 0 on success negative on error
+ */
+int hip_send_heartbeat(hip_ha_t *entry, void *opaq) {
+	int err = 0;
+	int *sockfd = (int *) opaq;
+
+	if (entry->state == HIP_STATE_ESTABLISHED) {
+		_HIP_DEBUG("list_for_each_safe\n");
+		HIP_IFEL(hip_send_icmp(*sockfd, entry), 0,
+			 "Error sending heartbeat, ignore\n");
+        }
+
+out_err:
+	return err;
+}
+
 /**
  * Periodic maintenance.
  * 
@@ -640,8 +661,7 @@ int periodic_maintenance()
 		*/
 		/* Check if the heartbeats should be sent */
 		if (heartbeat_counter < 1) {
-			HIP_IFEL(hip_send_all_heartbeats(hip_icmp_sock), -1,
-				 "Failed to send heartbeats\n");
+			hip_for_each_ha(hip_send_heartbeat, &hip_icmp_sock);
 			heartbeat_counter = hip_icmp_interval;
 		} else {
 			heartbeat_counter--;

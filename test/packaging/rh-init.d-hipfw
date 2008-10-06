@@ -1,10 +1,12 @@
 #!/bin/sh
 #
-# chkconfig: 2345 21 79
 # Init file for hip firewall
+#
+# description: HIPL firewall daemon
 #
 # processname: hipfw
 # pidfile: /var/run/hipfw.pid
+# chkconfig: 2345 21 79
 
 # source function library
 . /etc/rc.d/init.d/functions

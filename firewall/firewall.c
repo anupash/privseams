@@ -108,11 +108,9 @@ void hip_fw_uninit_opptcp(){
 	system("ip6tables -D HIPFW-INPUT -p 6 ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
 	system("ip6tables -D HIPFW-OUTPUT -p 6 ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
 }
-
 void hip_fw_init_proxy()
 {
-	system("iptables -I HIPFW-FORWARD -p tcp -j QUEUE");
-	system("iptables -I HIPFW-FORWARD -p udp -j QUEUE");
+	system("iptables -I HIPFW-FORWARD -p tcp -j QUEUE");	system("iptables -I HIPFW-FORWARD -p udp -j QUEUE");
 
 	//system("iptables -I FORWARD -p icmp -j QUEUE");
 	//system("iptables -I FORWARD -p icmpv6 -j QUEUE");
@@ -423,7 +421,6 @@ int firewall_init_rules(){
 
 	HIP_DEBUG("Enabling forwarding for IPv4 and IPv6\n");
 	system("echo 1 >/proc/sys/net/ipv4/conf/all/forwarding");
-	system("echo 1 >/proc/sys/net/ipv6/conf/all/forwarding");
 
 	/* Flush in case previous hipfw process crashed */
 	hip_fw_flush_iptables();
@@ -444,10 +441,15 @@ int firewall_init_rules(){
 
 	if(hip_proxy_status)
 	{
+		/* Note: this block radvd advertisements */
+		system("echo 1 >/proc/sys/net/ipv6/conf/all/forwarding");
 		hip_fw_init_proxy();
 	}
 	else
 	{
+		/* @todo: remove the following line */
+		system("echo 0 >/proc/sys/net/ipv6/conf/all/forwarding");
+
 		// this has to be set up first in order to be the default behavior
 		if (!accept_normal_traffic_by_default)
 		{
@@ -1290,7 +1292,7 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 	}
 
 	/* LSI HOOKS */
-	if (ctx->ip_version == 4 && hip_lsi_support){
+	if (ctx->ip_version == 4 && hip_lsi_support) {
 		IPV6_TO_IPV4_MAP(&(ctx->src), &src_lsi);
 		IPV6_TO_IPV4_MAP(&(ctx->dst), &dst_lsi);
 		if (IS_LSI32(dst_lsi.s_addr)) {
@@ -2119,7 +2121,8 @@ int hip_fw_handle_outgoing_ip(hip_fw_context_t *ctx){
 			verdict = accept_normal_traffic_by_default;
 		else if(entry_peer->bex_state == FIREWALL_STATE_BEX_ESTABLISHED){
 			if(hit_is_local_hit(&entry_peer->hit_our)){
-				reinject_packet(entry_peer->hit_our, entry_peer->hit_peer,
+				reinject_packet(&entry_peer->hit_our,
+						&entry_peer->hit_peer,
 						ctx->ipq_packet, 4, 0);
 				verdict = 0;
 			}else
@@ -2152,7 +2155,8 @@ int hip_fw_handle_outgoing_ip(hip_fw_context_t *ctx){
 					HIP_DEBUG("is local hit\n");
 				firewall_update_entry(&src_hit, &dst_hit, &dst_lsi,
 					&ctx->dst, FIREWALL_STATE_BEX_ESTABLISHED);
-				reinject_packet(src_hit, dst_hit, ctx->ipq_packet, 4, 0);
+				reinject_packet(&src_hit, &dst_hit,
+						ctx->ipq_packet, 4, 0);
 				verdict = 0;
 			}else
 				verdict = accept_normal_traffic_by_default;

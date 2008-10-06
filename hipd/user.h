@@ -1,4 +1,4 @@
-/** @file
+o/** @file
  * A header file for user.c.
  *
  * @author  Miika Komu <miika_iki.fi>
@@ -39,6 +39,7 @@ extern int hip_buddies_inuse;
 extern int hip_opendht_sock_fqdn;  
 extern int hip_opendht_sock_hit;
 extern char opendht_host_name[256];
+extern int heartbeat_counter;
 
 int hip_sendto_user(const struct hip_common *msg, const struct sockaddr *dst);
 int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src);

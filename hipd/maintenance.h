@@ -2,13 +2,14 @@
 #define _HIPD_MAINTENANCE
 
 #include <stdlib.h>
-
 #include "hidb.h"
 #include "hipd.h"
 #include "oppdb.h"
 #include "fcntl.h"
 
 #define FORCE_EXIT_COUNTER_START		5
+
+extern int hip_icmp_interval;
 
 int hip_handle_retransmission(hip_ha_t *entry, void *current_time);
 int hip_scan_retransmissions();

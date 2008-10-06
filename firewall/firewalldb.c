@@ -187,10 +187,8 @@ int firewall_set_bex_state(struct in6_addr *hit_s,
 	hip_lsi_t lsi_our, lsi_peer;
 	int err = 0;
 
-	HIP_IFEL(hip_get_lsi_our_by_hits(hit_s, hit_r, &lsi_our), -1,
-		 "Failed to query our LSI\n");
-	HIP_IFEL(hip_get_lsi_peer_by_hits(hit_s, hit_r, &lsi_our), -1,
-		 "Failed to query peer LSI\n");
+	HIP_IFEL(hip_get_lsis_by_hits(hit_r, hit_s, &lsi_our, &lsi_peer),
+		 -1, "Failed to query LSIs\n");
 	HIP_IFEL(hip_get_peerIP_from_LSIs(&lsi_our, &lsi_peer, &ip_dst), -1,
 		 "Failed to obtain peer IP\n");
 	HIP_IFEL(firewall_update_entry(NULL, NULL, NULL, &ip_dst, state), -1,
