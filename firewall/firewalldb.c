@@ -121,6 +121,10 @@ int firewall_update_entry(struct in6_addr *hit_our,
 
 	HIP_DEBUG("\n");
 
+	if(!ip){
+		HIP_DEBUG("###ERROR, NULL IP\n");
+		goto out_err;
+	}
 	HIP_ASSERT(ip != NULL &&
 		   (state == FIREWALL_STATE_BEX_DEFAULT        ||
 		    state == FIREWALL_STATE_BEX_NOT_SUPPORTED  ||
@@ -129,11 +133,11 @@ int firewall_update_entry(struct in6_addr *hit_our,
 	HIP_IFE(!(entry_update = firewall_ip_db_match(ip)), -1);
 
 	//update the fields if new value value is not NULL
-	if(hit_our)
+	if (hit_our)
 		ipv6_addr_copy(&entry_update->hit_our, hit_our);
-	if(hit_peer)
+	if (hit_peer)
 		ipv6_addr_copy(&entry_update->hit_peer, hit_peer);
-	if(lsi)
+	if (lsi)
 		ipv4_addr_copy(&entry_update->lsi, lsi);
 	entry_update->bex_state = state;
 

@@ -2030,6 +2030,27 @@ hip_hit_t *hip_fw_get_default_hit(void)
 	return &default_hit;
 }
 
+int hip_fw_sys_opp_set_peer_hit(struct hip_common *msg) {
+	int err = 0, state;
+	hip_hit_t *local_hit, *peer_hit;
+	struct in6_addr *local_addr, *peer_addr;
+
+	local_hit = hip_get_param_contents(msg, HIP_PARAM_HIT_LOCAL);
+	peer_hit = hip_get_param_contents(msg, HIP_PARAM_HIT_PEER);
+	local_addr = hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR_LOCAL);
+	peer_addr = hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR_PEER);
+
+	if (peer_hit)
+		state = FIREWALL_STATE_BEX_ESTABLISHED;
+	else
+		state = FIREWALL_STATE_BEX_NOT_SUPPORTED;
+
+	firewall_update_entry(local_hit, peer_hit, local_addr,
+			      peer_addr, state);
+
+out_err:
+	return err;
+}
 
 /**
  * Checks if the outgoing packet has already ESTABLISHED
@@ -2041,7 +2062,7 @@ hip_hit_t *hip_fw_get_default_hit(void)
  * @param *ctx	the contect of the packet
  * @return	the verdict for the packet
  */
-int hip_fw_handle_outgoing_system_based_opp(hip_fw_context_t *ctx){
+int hip_fw_handle_outgoing_system_based_opp(hip_fw_context_t *ctx) {
 	int err, msg_type, state_ha, fallback, reject, new_fw_entry_state;
 	struct in6_addr src_lsi, dst_lsi;
 	struct in6_addr src_hit, dst_hit;
@@ -2054,7 +2075,7 @@ int hip_fw_handle_outgoing_system_based_opp(hip_fw_context_t *ctx){
 
 	//get firewall db entry
 	entry_peer = firewall_ip_db_match(&ctx->dst);
-	if(entry_peer) {
+	if (entry_peer) {
 		//if the firewall entry is still undefined
 		//check whether the base exchange has been established
 		if (entry_peer->bex_state == FIREWALL_STATE_BEX_DEFAULT) {
@@ -2076,7 +2097,7 @@ int hip_fw_handle_outgoing_system_based_opp(hip_fw_context_t *ctx){
 			else
 				new_fw_entry_state = FIREWALL_STATE_BEX_DEFAULT;
 
-			HIP_DEBUG("New state %d - \n", new_fw_entry_state);
+			HIP_DEBUG("New state %d\n", new_fw_entry_state);
 			//update fw entry state accordingly
 			firewall_update_entry(&src_hit, &dst_hit, &dst_lsi,
 					      &ctx->dst, new_fw_entry_state);
