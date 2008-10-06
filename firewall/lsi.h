@@ -3,6 +3,8 @@
 
 #include <libipq.h>
 #include "firewalldb.h"
+#include "debug.h"
+#include "ife.h"
 
 int is_packet_reinjection(struct in_addr *ip_src);
 

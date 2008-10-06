@@ -1851,12 +1851,12 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution,
 }
 
 
-hip_lsi_t *hip_get_lsi_peer_by_hits(struct in6_addr *hit_s, struct in6_addr *hit_r){
-	int err;
+int hip_get_lsi_peer_by_hits(struct in6_addr *hit_s, struct in6_addr *hit_r,
+			     hip_lsi_t *lsi_peer){
 	struct hip_common *msg = NULL;
-	hip_lsi_t *lsi = NULL, *lsi_tmp = NULL;
+	hip_lsi_t *lsi_ptr = NULL;
+	int err = 0;
 	
-	HIP_IFE(!(lsi = (hip_lsi_t *)malloc(sizeof(hip_lsi_t))), -1);
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 	
 	if(hit_s)
@@ -1879,31 +1879,30 @@ hip_lsi_t *hip_get_lsi_peer_by_hits(struct in6_addr *hit_s, struct in6_addr *hit
 	/* check error value */
 	HIP_IFEL(hip_get_msg_err(msg), -1, "Got erroneous message!\n");
 	
-	lsi_tmp = (hip_lsi_t *)hip_get_param_contents(msg, HIP_PARAM_LSI);
-	memcpy(lsi, lsi_tmp, sizeof(hip_lsi_t));
+	HIP_IFEL(!(lsi_ptr = (hip_lsi_t *)hip_get_param_contents(msg, HIP_PARAM_LSI)),
+		 -1, "No LSI\n");
+	memcpy(lsi_peer, lsi_ptr, sizeof(hip_lsi_t));
 	
  out_err:
 	if(msg)
 	        HIP_FREE(msg);
-	return lsi;
+	return err;
 }
 
-
-hip_lsi_t *hip_get_lsi_our_by_hits(struct in6_addr *hit_s, struct in6_addr *hit_r){
-	int err;
+int hip_get_lsi_our_by_hits(struct in6_addr *hit_s, struct in6_addr *hit_r,
+			    hip_lsi_t *lsi_our) {
+	int err = 0;
 	struct hip_common *msg = NULL;
-	hip_lsi_t *lsi = NULL, *lsi_tmp = NULL;
-	
-	HIP_IFE(!(lsi = (hip_lsi_t *)malloc(sizeof(hip_lsi_t))), -1);
+	hip_lsi_t *lsi_ptr;
 
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 	
-	if(hit_s)
+	if (hit_s)
 		HIP_IFEL(hip_build_param_contents(msg, (void *) hit_s,
 						  HIP_PARAM_HIT,
 						  sizeof(struct in6_addr)),
 				-1, "build param HIP_PARAM_HIT  failed\n");
-	if(hit_r)
+	if (hit_r)
 		HIP_IFEL(hip_build_param_contents(msg, (void *) hit_r,
 						  HIP_PARAM_HIT,
 						  sizeof(struct in6_addr)),
@@ -1919,13 +1918,14 @@ hip_lsi_t *hip_get_lsi_our_by_hits(struct in6_addr *hit_s, struct in6_addr *hit_
 	/* check error value */
 	HIP_IFEL(hip_get_msg_err(msg), -1, "Got erroneous message!\n");
 	
-	lsi_tmp = (hip_lsi_t *)hip_get_param_contents(msg, HIP_PARAM_LSI);
-	memcpy(lsi, lsi_tmp, sizeof(hip_lsi_t));
+	HIP_IFEL(!(lsi_ptr = (hip_lsi_t *)hip_get_param_contents(msg, HIP_PARAM_LSI)),
+		 -1, "No LSI\n");
+	memcpy(lsi_our, lsi_ptr, sizeof(hip_lsi_t));
 	
  out_err:
-	if(msg)
+	if (msg)
 	        HIP_FREE(msg);
-	return lsi;	
+	return err;
 }
 
 
@@ -2170,57 +2170,66 @@ int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
         void *param = NULL;
         int err = 0;
 
-        HIP_DEBUG_HIT("src_hit is: ", src_hit);
-        HIP_DEBUG_HIT("dst_hit is: ", dst_hit);
-        HIP_DEBUG_IN6ADDR("src_ip is: ", src_ip);        
-        HIP_DEBUG_IN6ADDR("dst_ip  is: ", dst_ip);
-        
         HIP_IFE(!(msg = hip_msg_alloc()), -1);
-        HIP_IFEL(!dst_hit && !dst_ip, -1, "neither destination hit nor ip provided\n");
+        HIP_IFEL(!dst_hit && !dst_ip, -1,
+		 "neither destination hit nor ip provided\n");
         
-        // NOTE: we need this sequence in order to process the incoming message correctly
+        /* NOTE: we need this sequence in order to process the incoming
+	   message correctly */
         
         // destination HIT is obligatory or opportunistic BEX
-        if(dst_hit)
+        if(dst_hit) {
+		HIP_DEBUG_HIT("dst_hit: ", dst_hit);
 	        HIP_IFEL(hip_build_param_contents(msg, (void *)(dst_hit),
                                                   HIP_PARAM_HIT,
 					          sizeof(struct in6_addr)),
 				-1, "build param HIP_PARAM_HIT failed\n");
+	}
         
         // source HIT is optional
-        if(src_hit)
+        if(src_hit) {
+		HIP_DEBUG_HIT("src_hit: ", src_hit);
 	        HIP_IFEL(hip_build_param_contents(msg, (void *)(src_hit),
 						  HIP_PARAM_HIT,
 						  sizeof(struct in6_addr)),
 				-1, "build param HIP_PARAM_HIT failed\n");
+	}
         
         // destination LSI is obligatory
-        if(dst_lsi)
+        if(dst_lsi) {
+		HIP_DEBUG_IN6ADDR("dst lsi: ", dst_lsi);
                 HIP_IFEL(hip_build_param_contents(msg, (void *)(dst_lsi),
                                                   HIP_PARAM_LSI,
                                                   sizeof(struct in6_addr)),
 				-1, "build param HIP_PARAM_LSI failed\n");
+	}
         
         // source LSI is optional
-        if(src_lsi)
+        if(src_lsi) {
+		HIP_DEBUG_IN6ADDR("src lsi: ", src_lsi);
 		HIP_IFEL(hip_build_param_contents(msg, (void *)(src_lsi),
 						  HIP_PARAM_LSI,
 						  sizeof(struct in6_addr)),
 				-1, "build param HIP_PARAM_LSI failed\n");
+	}
         
         // if no destination HIT is provided this has to be there
-        if(dst_ip)
+        if(dst_ip) {
+		HIP_DEBUG_IN6ADDR("dst_ip: ", dst_ip);
                 HIP_IFEL(hip_build_param_contents(msg, (void *)(dst_ip),
                                                   HIP_PARAM_IPV6_ADDR,
                                                   sizeof(struct in6_addr)),
 				-1, "build param HIP_PARAM_IPV6_ADDR failed\n");
+	}
         
         // this again is optional
-        if (src_ip)
+        if (src_ip) {
+		HIP_DEBUG_IN6ADDR("src_ip: ", src_ip);        
         	HIP_IFEL(hip_build_param_contents(msg, (void *)(src_ip),
 						  HIP_PARAM_IPV6_ADDR,
 						  sizeof(struct in6_addr)),
 				-1, "build param HIP_PARAM_IPV6_ADDR failed\n");
+	}
         
         /* build the message header */
         HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_TRIGGER_BEX, 0),
@@ -2503,9 +2512,7 @@ int hip_map_first_hostname_to_hit_from_hosts(const struct hosts_file_line *entry
     is_hit = hip_id_type_match(&entry->id, 1);
     is_lsi = hip_id_type_match(&entry->id, 2);
 
-    HIP_IFEL(!is_hit, 1,
-	     "Misconfigured hosts file on line %d\n",
-	     entry->lineno);
+    HIP_IFE(!is_hit, 1);
 
     _HIP_DEBUG("Match on line %d\n", entry->lineno);
     ipv6_addr_copy(result, &entry->id);
@@ -2529,9 +2536,7 @@ int hip_map_first_hostname_to_lsi_from_hosts(const struct hosts_file_line *entry
     is_hit = hip_id_type_match(&entry->id, 1);
     is_lsi = hip_id_type_match(&entry->id, 2);
 
-    HIP_IFEL(!is_lsi, 1,
-	     "Misconfigured hosts file on line %d\n",
-	     entry->lineno);
+    HIP_IFE(!is_lsi, 1);
 
     _HIP_DEBUG("Match on line %d\n", entry->lineno);
     ipv6_addr_copy(result, &entry->id);
@@ -2555,9 +2560,7 @@ int hip_map_first_hostname_to_ip_from_hosts(const struct hosts_file_line *entry,
     is_hit = hip_id_type_match(&entry->id, 1);
     is_lsi = hip_id_type_match(&entry->id, 2);
 
-    HIP_IFEL((is_hit || is_lsi), 1,
-	     "Misconfigured hosts file on line %d\n",
-	     entry->lineno);
+    HIP_IFE((is_hit || is_lsi), 1);
 
     HIP_DEBUG("Match on line %d\n", entry->lineno);
     ipv6_addr_copy(result, &entry->id);
@@ -2627,7 +2630,7 @@ int hip_for_each_hosts_file_line(char *hosts_file,
       continue;
     }
 
-    HIP_DEBUG("lineno=%d, str=%s\n", lineno, c);
+    _HIP_DEBUG("lineno=%d, str=%s\n", lineno, c);
 
     /* Split line into list */
     initlist(&mylist);
@@ -2713,6 +2716,7 @@ int hip_map_lsi_to_hit_from_hosts_files(hip_lsi_t *lsi, hip_hit_t *hit)
 				     hostname, hit);
   HIP_IFEL(err, -1, "Failed to map id to hostname\n");
 
+  HIP_DEBUG_HIT("Found hit: ", hit);
 
  out_err:
 
@@ -2756,3 +2760,20 @@ int hip_map_id_to_ip_from_hosts_files(hip_hit_t *hit, hip_lsi_t *lsi, struct in6
  out_err:
   return err;
 }
+
+void hip_copy_in6addr_null_check(struct in6_addr *to, struct in6_addr *from) {
+	HIP_ASSERT(to);
+	if (from)
+		ipv6_addr_copy(to, from);
+	else
+		memset(to, 0, sizeof(*to));
+}
+
+void hip_copy_inaddr_null_check(struct in_addr *to, struct in_addr *from) {
+	HIP_ASSERT(to);
+	if (from)
+		memcpy(to, from, sizeof(*to));
+	else
+		memset(to, 0, sizeof(*to));
+}
+
