@@ -10,7 +10,7 @@
    headers refer to libinet6 headers which in turn require the
    definition of the struct. */
 #ifdef CONFIG_HIP_HI3
-#   include "i3_client_api.h" 
+#   include "i3_client_api.h"
 #endif
 
 #include <netinet/in.h>
@@ -53,7 +53,7 @@
 #define SO_HIP_DEFAULT_HIT			16
 #define SO_HIP_GET_PEER_LIST                    17
 #define SO_HIP_CONF_PUZZLE_GET                  18
-#define SO_HIP_GET_PSEUDO_HIT                   19 
+#define SO_HIP_GET_PSEUDO_HIT                   19
 #define SO_HIP_GET_LOCAL_HI                     20
 #define SO_HIP_GET_HITS                         21
 #define SO_HIP_GET_HA_INFO			22
@@ -63,11 +63,9 @@
 #define SO_HIP_GET_LSI_PEER                     26
 #define SO_HIP_GET_LSI_OUR			27
 #define SO_HIP_IS_OUR_LSI                       28
-#define SO_HIP_FW_BEX_DONE                      29
-#define SO_HIP_GET_PEER_HIT_BY_LSIS             30
-#define SO_HIP_FW_UPDATE_DB                     31
-#define SO_HIP_GET_PEER_HIT_AT_FIREWALL         32
-#define SO_HIP_HEARTBEAT                        33
+#define SO_HIP_GET_PEER_HIT_BY_LSIS             29
+#define SO_HIP_GET_PEER_HIT_AT_FIREWALL         30
+#define SO_HIP_HEARTBEAT                        31
 /* inclusive */
 #define HIP_SO_ANY_MAX 				63
 
@@ -161,7 +159,7 @@
 #define SO_HIP_GET_PROXY_LOCAL_ADDRESS		133
 #define SO_HIP_HIPPROXY_STATUS_REQUEST		134
 #define SO_HIP_OPPTCP_UNBLOCK_AND_BLACKLIST     135
-#define SO_HIP_IPSEC_ADD_SA             	    136 /* addes by Tao Wan, for informing the firewall the BEX is done*/
+#define SO_HIP_IPSEC_ADD_SA             	136
 #define SO_HIP_SET_TCPTIMEOUT_ON                137
 #define SO_HIP_SET_TCPTIMEOUT_OFF               138
 #define SO_HIP_SET_NAT_ICE_UDP                  139
@@ -171,23 +169,22 @@
 #define SO_HIP_CERT_X509V3_SIGN                 143
 #define SO_HIP_CERT_X509V3_VERIFY               144
 #define SO_HIP_USERSPACE_IPSEC			145
-#define SO_HIP_ESP_PROT_EXT_TRANSFORM		146
-#define SO_HIP_IPSEC_UPDATE_ANCHOR_LIST		147
-#define SO_HIP_IPSEC_NEXT_ANCHOR		148
-#define SO_HIP_RESTART_DUMMY_INTERFACE		149
-#define SO_HIP_GET_LSI_PEER                     150
-#define SO_HIP_GET_LSI_OUR			151
-#define SO_HIP_IS_OUR_LSI                       152
-#define SO_HIP_ADD_PEER_MAP_HIT_IP_LSI          153
-#define SO_HIP_FW_BEX_DONE                      154
-#define SO_HIP_GET_PEER_HIT_BY_LSIS             155
-#define SO_HIP_FW_UPDATE_DB                     156
-#define SO_HIP_RESTART_DUMMY_INTERFACE		157
-#define SO_HIP_VERIFY_DHT_HDRR_RESP             158
-#define SO_HIP_ADD_UADB_INFO					159
-#define SO_HIP_BUDDIES_SET						160
-#define SO_HIP_BUDDIES_ON                       161
-#define SO_HIP_BUDDIES_OFF                      162
+#define SO_HIP_ESP_PROT_TFM			146
+#define SO_HIP_BEX_STORE_UPDATE			147
+#define SO_HIP_TRIGGER_UPDATE			148
+#define SO_HIP_FW_UPDATE_DB                     152
+#define SO_HIP_IPSEC_DELETE_SA                  153
+#define SO_HIP_IPSEC_FLUSH_ALL_SA          	154
+#define SO_HIP_ANCHOR_CHANGE			155
+#define SO_HIP_ADD_PEER_MAP_HIT_IP_LSI          156
+#define SO_HIP_FW_BEX_DONE                      157
+#define SO_HIP_RESTART_DUMMY_INTERFACE		158
+#define SO_HIP_VERIFY_DHT_HDRR_RESP             159
+#define SO_HIP_ADD_UADB_INFO			160
+#define SO_HIP_BUDDIES_SET			161
+#define SO_HIP_BUDDIES_ON                       162
+#define SO_HIP_BUDDIES_OFF                      163
+
 /** @} */
 /* inclusive */
 #define HIP_SO_ROOT_MAX 			255

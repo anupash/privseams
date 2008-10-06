@@ -16,7 +16,7 @@ int hip_userspace_ipsec_activate(struct hip_common *msg)
 	/* remove the policies from the kernel-mode IPsec when switching to userspace,
 	 * otherwise app-packets will still be captured and processed by the kernel
 	 *
-	 * wo don't have to to this when we switch back to kernel-mode, as it will
+	 * we don't have to to this when we switch back to kernel-mode, as it will
 	 * only be the case when the firewall is shut down
 	 * -> firewall might already be closed when user-message arrives */
 	if (hip_use_userspace_ipsec)
@@ -37,6 +37,7 @@ int hip_userspace_ipsec_activate(struct hip_common *msg)
 		 HIP_DEBUG("reseting ipsec function set to userspace api\n");
 
 	     default_ipsec_func_set.hip_add_sa = hip_userspace_ipsec_add_sa;
+	     default_ipsec_func_set.hip_delete_sa = hip_userspace_ipsec_delete_sa;
 	     default_ipsec_func_set.hip_setup_hit_sp_pair = hip_userspace_ipsec_setup_hit_sp_pair;
 	     default_ipsec_func_set.hip_delete_hit_sp_pair = hip_userspace_ipsec_delete_hit_sp_pair;
 	     default_ipsec_func_set.hip_flush_all_policy = hip_userspace_ipsec_flush_all_policy;
@@ -49,6 +50,7 @@ int hip_userspace_ipsec_activate(struct hip_common *msg)
     	 HIP_DEBUG("reseting ipsec function set to kernel-mode api\n");
 
 	     default_ipsec_func_set.hip_add_sa = hip_add_sa;
+	     default_ipsec_func_set.hip_delete_sa = hip_delete_sa;
 	     default_ipsec_func_set.hip_setup_hit_sp_pair = hip_setup_hit_sp_pair;
 	     default_ipsec_func_set.hip_delete_hit_sp_pair = hip_delete_hit_sp_pair;
 	     default_ipsec_func_set.hip_flush_all_policy = hip_flush_all_policy;
@@ -56,12 +58,11 @@ int hip_userspace_ipsec_activate(struct hip_common *msg)
 	     default_ipsec_func_set.hip_acquire_spi = hip_acquire_spi;
 	     default_ipsec_func_set.hip_delete_default_prefix_sp_pair = hip_delete_default_prefix_sp_pair;
 	     default_ipsec_func_set.hip_setup_default_sp_prefix_pair = hip_setup_default_sp_prefix_pair;
+
+	     // re-enable triggering of the BEX by the kernel
+	     HIP_IFEL(default_ipsec_func_set.hip_setup_default_sp_prefix_pair(), -1,
+	    		 "failed to set up default sp prefix pair\n");
      }
-	/*
-	HIP_DEBUG("re-initializing the hadb...\n");
-	hip_uninit_hadb();
-	hip_init_hadb();
-	*/
 
   out_err:
 	return err;
@@ -79,14 +80,12 @@ struct hip_common * create_add_sa_msg(struct in6_addr *saddr,
 							    hip_ha_t *entry)
 {
 	struct hip_common *msg = NULL;
-	//socklen_t alen;
 	int err = 0;
 
 	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1,
 			 "alloc memory for adding sa entry\n");
 
 	hip_msg_init(msg);
-
 
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_IPSEC_ADD_SA, 0), -1,
 		 "build hdr failed\n");
@@ -113,37 +112,27 @@ struct hip_common * create_add_sa_msg(struct in6_addr *saddr,
 					  sizeof(struct in6_addr)), -1,
 					  "build param contents failed\n");
 
-#if 0
-	if (!retransmission || *spi == 0) {
-		*spi = hip_userspace_ipsec_acquire_spi((hip_hit_t *) src_hit,
-						       (hip_hit_t *) dst_hit);
-
-		HIP_DEBUG("getting random spi value: %x\n", *spi);
-	}
-#endif
-
 	HIP_DEBUG("the spi value is : %x \n", spi);
 	HIP_IFEL(hip_build_param_contents(msg, (void *)&spi, HIP_PARAM_UINT,
-					  sizeof(unsigned int)), -1,
+					  sizeof(uint32_t)), -1,
 					  "build param contents failed\n");
 
 	HIP_DEBUG("the nat_mode value is %u \n", entry->nat_mode);
 	HIP_IFEL(hip_build_param_contents(msg, (void *)&entry->nat_mode, HIP_PARAM_UINT,
-					  sizeof(unsigned int)), -1,
+					  sizeof(uint8_t)), -1,
 					  "build param contents failed\n");
 
 	HIP_DEBUG("the local_port value is %u \n", entry->peer_udp_port);
-	HIP_IFEL(hip_build_param_contents(msg, (void *)&entry->local_udp_port, HIP_PARAM_UINT,
-					  sizeof(unsigned int)), -1,
-					  "build param contents failed\n");
+	HIP_IFEL(hip_build_param_contents(msg, (void *)&entry->local_udp_port,
+			HIP_PARAM_UINT, sizeof(uint16_t)), -1, "build param contents failed\n");
 
 	HIP_DEBUG("the peer_port value is %u \n", entry->peer_udp_port);
-	HIP_IFEL(hip_build_param_contents(msg, (void *)&entry->peer_udp_port, HIP_PARAM_UINT,
-					  sizeof(unsigned int)), -1,
-					  "build param contents failed\n");
+	HIP_IFEL(hip_build_param_contents(msg, (void *)&entry->peer_udp_port,
+			HIP_PARAM_UINT, sizeof(uint16_t)), -1, "build param contents failed\n");
 
 	// params needed by the esp protection extension
-	HIP_IFEL(esp_prot_add_sa(entry, msg, direction), -1, "failed to add esp prot params\n");
+	HIP_IFEL(esp_prot_sa_add(entry, msg, direction, update), -1,
+			"failed to add esp prot params\n");
 
 	HIP_HEXDUMP("crypto key :", enckey, sizeof(struct hip_crypto_key));
 	HIP_IFEL(hip_build_param_contents(msg,
@@ -189,4 +178,79 @@ struct hip_common * create_add_sa_msg(struct in6_addr *saddr,
   	}
 
   	return msg;
+}
+
+struct hip_common * create_delete_sa_msg(uint32_t spi, struct in6_addr *peer_addr,
+		struct in6_addr *dst_addr, int family, int src_port, int dst_port)
+{
+	struct hip_common *msg = NULL;
+	int err = 0;
+
+	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1,
+			 "alloc memory for adding sa entry\n");
+
+	hip_msg_init(msg);
+
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_IPSEC_DELETE_SA, 0), -1,
+		 "build hdr failed\n");
+
+	HIP_DEBUG("spi value: %u\n", spi);
+	HIP_IFEL(hip_build_param_contents(msg, (void *)&spi, HIP_PARAM_UINT,
+			sizeof(uint32_t)), -1, "build param contents failed\n");
+
+	HIP_DEBUG_IN6ADDR("peer address: ", peer_addr);
+	HIP_IFEL(hip_build_param_contents(msg, (void *)peer_addr, HIP_PARAM_IPV6_ADDR,
+			sizeof(struct in6_addr)), -1, "build param contents failed\n");
+
+	HIP_DEBUG_IN6ADDR("destination address: ", dst_addr);
+	HIP_IFEL(hip_build_param_contents(msg, (void *)dst_addr, HIP_PARAM_IPV6_ADDR,
+			sizeof(struct in6_addr)), -1, "build param contents failed\n");
+
+	HIP_DEBUG("family: %i\n", family);
+	HIP_IFEL(hip_build_param_contents(msg, (void *)&family, HIP_PARAM_INT,
+			sizeof(int)), -1, "build param contents failed\n");
+
+	HIP_DEBUG("src_port: %i\n", src_port);
+	HIP_IFEL(hip_build_param_contents(msg, (void *)&src_port, HIP_PARAM_INT,
+			sizeof(int)), -1, "build param contents failed\n");
+
+	HIP_DEBUG("src_port: %i\n", dst_port);
+	HIP_IFEL(hip_build_param_contents(msg, (void *)&dst_port, HIP_PARAM_INT,
+			sizeof(int)), -1, "build param contents failed\n");
+
+  out_err:
+	if (err)
+	{
+		if (msg)
+			free(msg);
+		msg = NULL;
+	}
+
+	return msg;
+}
+
+struct hip_common * create_flush_all_sa_msg()
+{
+	struct hip_common *msg = NULL;
+	int err = 0;
+
+	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1,
+			 "alloc memory for adding sa entry\n");
+
+	hip_msg_init(msg);
+
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_IPSEC_FLUSH_ALL_SA, 0), -1,
+		 "build hdr failed\n");
+
+	// this triggers the flushing without specifying any parameters
+
+  out_err:
+	if (err)
+	{
+		if (msg)
+			free(msg);
+		msg = NULL;
+	}
+
+	return msg;
 }

@@ -35,11 +35,10 @@
 #include "utils.h"
 #include "misc.h"
 #include "netdev.h"
-#include "lsi.h"5B
-
+#include "lsi.h"
 #include "fw_stun.h"
 #include "pjnath.h"
-// include of "ext_user_ipsec.h" at the bottom due to dependency
+// include of "user_ipsec.h" at the bottom due to dependency
 
 #define HIP_FW_DEFAULT_RULE_FILE "/etc/hip/firewall_conf"
 
@@ -69,7 +68,7 @@
 typedef struct hip_fw_context{
 	// queued packet
 	ipq_packet_msg_t *ipq_packet;
-	
+
 	// IP layer information
 	int ip_version; /* 4, 6 */
 	int ip_hdr_len;
@@ -78,7 +77,7 @@ typedef struct hip_fw_context{
 		struct ip6_hdr *ipv6;
 		struct ip *ipv4;
 	} ip_hdr;
-		
+
 	// transport layer information
 	int packet_type; /* HIP_PACKET, ESP_PACKET, etc  */
 	union {
@@ -101,9 +100,9 @@ struct hip_conn_key{
 
 typedef struct hip_conn_t{
 	struct hip_conn_key key;
-	int    state;
-	struct in6_addr addr_client; // addr_proxy_client	
-	struct in6_addr addr_peer; // addr_proxy_peer	
+	int state;
+	struct in6_addr addr_client; // addr_proxy_client
+	struct in6_addr addr_peer; // addr_proxy_peer
 } hip_conn_t;
 
 typedef int (*hip_fw_handler_t)(hip_fw_context_t *);
@@ -149,10 +148,10 @@ void drop_packet(struct ipq_handle *handle, unsigned long packetId);
 int filter_esp(const struct in6_addr * dst_addr, struct hip_esp * esp,
 	       unsigned int hook);
 int filter_hip(const struct in6_addr * ip6_src,
-               const struct in6_addr * ip6_dst, 
-               struct hip_common *buf, 
-               unsigned int hook, 
-               const char * in_if, 
+               const struct in6_addr * ip6_dst,
+               struct hip_common *buf,
+               unsigned int hook,
+               const char * in_if,
                const char * out_if);
 
 int hip_fw_handle_other_output(hip_fw_context_t *ctx);
@@ -177,8 +176,10 @@ void check_and_write_default_config(void);
 int main(int argc, char **argv);
 void firewall_probe_kernel_modules();
 void firewall_increase_netlink_buffers();
+hip_hit_t *hip_fw_get_default_hit(void);
+int hip_query_default_local_hit_from_hipd(hip_hit_t *hit);
 
-// dependent on typedefs in here
-#include "user_ipsec.h"
+// has been moved here for the following reason: dependent on typedefs above
+#include "user_ipsec_api.h"
 
 #endif

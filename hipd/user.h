@@ -1,6 +1,6 @@
 /** @file
  * A header file for user.c.
- * 
+ *
  * @author  Miika Komu <miika_iki.fi>
  * @author  Kristian Slavov <kslavov_hiit.fi>
  * @author  Bing Zhou <bingzhou_cc.hut.fi>
@@ -24,6 +24,7 @@
 /* added by Tao Wan, 10.Jan.2008*/
 #include "tcptimeout.h"
 #include "registration.h"
+#include "esp_prot_hipd_msg.h"
 
 extern struct addrinfo * opendht_serving_gateway;
 extern int opendht_serving_gateway_port;

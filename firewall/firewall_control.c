@@ -1,13 +1,13 @@
 /*
  * Firewall control
- * 
+ *
  */
- 
+
 #include "firewall_control.h"
 
 int hip_fw_sock = 0;
 int control_thread_started = 0;
-//GThread * control_thread = NULL; 
+//GThread * control_thread = NULL;
 
 void* run_control_thread(void* data)
 {
@@ -25,7 +25,7 @@ void* run_control_thread(void* data)
 	HIP_DEBUG("Executing connection thread\n");
 
 	HIP_DEBUG("Waiting messages...\n\n");
-      
+
 	/* Start handling. */
 
 	control_thread_started = 1;
@@ -38,10 +38,10 @@ void* run_control_thread(void* data)
 		tv.tv_usec = 0;
 
 		/* Wait for incoming packets. */
-		if ((err = HIPD_SELECT((max_fd + 1), &read_fdset, 
+		if ((err = HIPD_SELECT((max_fd + 1), &read_fdset,
 				       NULL, NULL, &tv)) < 0) {
 			HIP_ERROR("select() error: %s.\n", strerror(errno));
-		} 
+		}
 		else if (err == 0) {
 			/* idle cycle - select() timeout */
 			_HIP_DEBUG("Idle\n");
@@ -65,11 +65,11 @@ out_err:
 		HIP_FREE(msg);
 
 	control_thread_started = 0;
-	
+
 	HIP_DEBUG("Connection thread exit.\n");
 
-	return NULL;	
-	
+	return NULL;
+
 }
 
 int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
@@ -79,12 +79,12 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 	socklen_t alen;
 	int type, err = 0, param_type;
 	struct hip_keys *keys = NULL;
-	struct in6_addr *hit_s = NULL, *hit_r = NULL;	
-	
+	struct in6_addr *hit_s = NULL, *hit_r = NULL;
+
 	HIP_DEBUG("Handling message from hipd\n");
-	
+
 	type = hip_get_msg_type(msg);
-	
+
 	switch(type) {
 	case SO_HIP_FW_BEX_DONE:
 	case SO_HIP_FW_UPDATE_DB:
@@ -92,7 +92,18 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 	        break;
 	case SO_HIP_IPSEC_ADD_SA:
 		HIP_DEBUG("Received add sa request from hipd\n");
-		HIP_IFEL(handle_sa_add_request(msg, param), -1, "hip userspace sadb add did NOT succeed\n");
+		HIP_IFEL(handle_sa_add_request(msg), -1,
+				"hip userspace sadb add did NOT succeed\n");
+		break;
+	case SO_HIP_IPSEC_DELETE_SA:
+		HIP_DEBUG("Received delete sa request from hipd\n");
+		HIP_IFEL(handle_sa_delete_request(msg), -1,
+				"hip userspace sadb delete did NOT succeed\n");
+		break;
+	case SO_HIP_IPSEC_FLUSH_ALL_SA:
+		HIP_DEBUG("Received flush all sa request from hipd\n");
+		HIP_IFEL(handle_sa_flush_all_request(msg), -1,
+				"hip userspace sadb flush all did NOT succeed\n");
 		break;
 	case SO_HIP_ADD_ESCROW_DATA:
 		while((param = hip_get_next_param(msg, param)))
@@ -102,19 +113,19 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 				_HIP_DEBUG("Handling HIP_PARAM_HIT\n");
 				if (!hit_s)
 					hit_s = hip_get_param_contents_direct(param);
-				else 
+				else
 					hit_r =hip_get_param_contents_direct(param);
 			}
 			if (hip_get_param_type(param) == HIP_PARAM_KEYS)
 			{
-				_HIP_DEBUG("Handling HIP_PARAM_KEYS\n");	
+				_HIP_DEBUG("Handling HIP_PARAM_KEYS\n");
 				int alg;
 				int auth_len;
 				int key_len;
 				int spi;
-				
+
 				keys = (struct hip_keys *)param;
-				
+
 				// TODO: Check values!!
 				auth_len = 0;
 				//op = ntohs(keys->operation);
@@ -123,31 +134,31 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 		 		//spi_old = ntohl(keys->spi_old);
 		 		key_len = ntohs(keys->key_len);
 		 		alg = ntohs(keys->alg_id);
-				
+
 				if (alg == HIP_ESP_3DES_SHA1)
 					auth_len = 24;
 				else if (alg == HIP_ESP_AES_SHA1)
-					auth_len = 32;	
-				else if (alg == HIP_ESP_NULL_SHA1)	
-					auth_len = 32;	
-				else	
+					auth_len = 32;
+				else if (alg == HIP_ESP_NULL_SHA1)
+					auth_len = 32;
+				else
 					HIP_DEBUG("Authentication algorithm unsupported\n");
-				err = add_esp_decryption_data(hit_s, hit_r, (struct in6_addr *)&keys->address, 
+				err = add_esp_decryption_data(hit_s, hit_r, (struct in6_addr *)&keys->address,
 		     					      spi, alg, auth_len, key_len, &keys->enc);
-		     		
-				HIP_IFEL(err < 0, -1,"Adding esp decryption data failed"); 
-				_HIP_DEBUG("Successfully added esp decryption data\n");	
+
+				HIP_IFEL(err < 0, -1,"Adding esp decryption data failed");
+				_HIP_DEBUG("Successfully added esp decryption data\n");
 			}
 		}
 	case SO_HIP_DELETE_ESCROW_DATA:
 	{
                 struct in6_addr * addr = NULL;
                 uint32_t * spi = NULL;
-                
+
                 HIP_DEBUG("Received delete message from hipd\n\n");
                 while((param = hip_get_next_param(msg, param)))
                 {
-                        
+
                         if (hip_get_param_type(param) == HIP_PARAM_HIT)
                         {
                                 HIP_DEBUG("Handling HIP_PARAM_HIT\n");
@@ -160,7 +171,7 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
                         }
                 }
                 if ((addr != NULL) && (spi != NULL)) {
-                        HIP_IFEL(remove_esp_decryption_data(addr, *spi), -1, 
+                        HIP_IFEL(remove_esp_decryption_data(addr, *spi), -1,
 				 "Error while removing decryption data\n");
                 }
 		break;
@@ -195,7 +206,7 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 		hit_s = hip_get_param_contents_direct(param);
 		}
 		}
-	*/	
+	*/
 	case SO_HIP_SET_OPPTCP_ON:
 		HIP_DEBUG("Opptcp on\n");
 		if (!hip_opptcp)
@@ -216,8 +227,8 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 		err = -1;
 		break;
 	}
- out_err:	
-		
+ out_err:
+
 	return err;
 }
 
@@ -264,28 +275,28 @@ u16 ipv4_checksum(u8 protocol, u8 src[], u8 dst[], u8 data[], u16 len)
 {
 
 	u16 word16;
-	u32 sum;	
+	u32 sum;
 	u16 i;
 
 	//initialize sum to zero
 	sum=0;
 
-	// make 16 bit words out of every two adjacent 8 bit words and 
+	// make 16 bit words out of every two adjacent 8 bit words and
 	// calculate the sum of all 16 vit words
 	for (i=0;i<len;i=i+2){
 		word16 =((((u16)(data[i]<<8)))&0xFF00)+(((u16)data[i+1])&0xFF);
 		sum = sum + (unsigned long)word16;
-	}	
+	}
 	// add the TCP pseudo header which contains:
 	// the IP source and destination addresses,
 	for (i=0;i<4;i=i+2){
 		word16 =((src[i]<<8)&0xFF00)+(src[i+1]&0xFF);
-		sum=sum+word16;	
+		sum=sum+word16;
 	}
 	for (i=0;i<4;i=i+2)
 	{
 		word16 =((dst[i]<<8)&0xFF00)+(dst[i+1]&0xFF);
-		sum=sum+word16; 	
+		sum=sum+word16;
 	}
 	// the protocol number and the length of the TCP packet
 	sum = sum + protocol + len;
@@ -300,7 +311,7 @@ u16 ipv4_checksum(u8 protocol, u8 src[], u8 dst[], u8 data[], u16 len)
 }
 
 u16 ipv6_checksum(u8 protocol, struct in6_addr *src, struct in6_addr *dst, void *data, u16 len)
-{   
+{
 	u32 chksum = 0;
     	pseudo_v6 pseudo;
     	memset(&pseudo, 0, sizeof(pseudo_v6));
@@ -330,15 +341,15 @@ int request_hipproxy_status(void)
         int err = 0;
         int n;
         socklen_t alen;
-        HIP_DEBUG("Sending hipproxy msg to hipd.\n");                        
+        HIP_DEBUG("Sending hipproxy msg to hipd.\n");
         HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
         hip_msg_init(msg);
-        HIP_IFEL(hip_build_user_hdr(msg, 
-                SO_HIP_HIPPROXY_STATUS_REQUEST, 0), 
+        HIP_IFEL(hip_build_user_hdr(msg,
+                SO_HIP_HIPPROXY_STATUS_REQUEST, 0),
                 -1, "Build hdr failed\n");
-                
+
         //n = hip_sendto(msg, &hip_firewall_addr);
-        
+
         //n = sendto(hip_fw_sock, msg, hip_get_msg_total_len(msg),
         //		0,(struct sockaddr *)dst, sizeof(struct sockaddr_in6));
         
@@ -358,14 +369,14 @@ int handle_bex_state_update(struct hip_common * msg)
 	struct in6_addr *src_hit = NULL, *dst_hit = NULL;
 	struct hip_tlv_common *param = NULL;
 	int err = 0, msg_type = 0;
-	
+
 	msg_type = hip_get_msg_type(msg);
 
 	/* src_hit */
         param = (struct hip_tlv_common *)hip_get_param(msg, HIP_PARAM_HIT);
 	src_hit = (struct in6_addr *) hip_get_param_contents_direct(param);
 	HIP_DEBUG_HIT("Source HIT: ", src_hit);
-	
+
 	/* dst_hit */
 	param = hip_get_next_param(msg, param);
 	dst_hit = (struct in6_addr *) hip_get_param_contents_direct(param);
