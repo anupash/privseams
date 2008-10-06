@@ -7,6 +7,12 @@
  */
  
 #include "init.h"
+
+#ifndef OPENWRT
+//#include <sys/capability.h>
+#endif
+#include <sys/prctl.h>
+
 #include <sys/types.h>
 #include "debug.h"
 #include "hi3.h"
@@ -215,10 +221,13 @@ int hipd_init(int flush_ipsec, int killold)
 	hip_init_hostid_db(NULL);
 
 	hip_set_os_dep_variables();
+
+#ifndef CONFIG_HIP_OPENWRT
 #ifdef CONFIG_HIP_DEBUG
 	hip_print_sysinfo();
 #endif
 	hip_probe_kernel_modules();
+#endif
 
 	/* Register signal handlers */
 	signal(SIGINT, hip_close);
@@ -346,7 +355,8 @@ int hipd_init(int flush_ipsec, int killold)
 	bzero(&daemon_addr, sizeof(daemon_addr));
 	daemon_addr.sin6_family = AF_INET6;
 	daemon_addr.sin6_port = htons(HIP_DAEMON_LOCAL_PORT);
-	daemon_addr.sin6_addr = in6addr_loopback;
+	//daemon_addr.sin6_addr = in6addr_loopback;
+	daemon_addr.sin6_addr = in6addr_any;
 	HIP_IFEL(bind(hip_user_sock, (struct sockaddr *)& daemon_addr,
 		      sizeof(daemon_addr)), -1, "Bind on daemon addr failed\n");
 
@@ -644,8 +654,10 @@ int hip_init_nat_sock_udp(int *hip_nat_sock_udp)
 	/* see bug id 212 why RECV_ERR is off */
 	err = setsockopt(*hip_nat_sock_udp, IPPROTO_IP, IP_RECVERR, &off, sizeof(on));
 	HIP_IFEL(err, -1, "setsockopt udp recverr failed\n");
+#ifndef CONFIG_HIP_OPENWRT
 	err = setsockopt(*hip_nat_sock_udp, SOL_UDP, HIP_UDP_ENCAP, &encap_on, sizeof(encap_on));
 	HIP_IFEL(err, -1, "setsockopt udp encap failed\n");
+#endif
 	err = setsockopt(*hip_nat_sock_udp, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
 	HIP_IFEL(err, -1, "setsockopt udp reuseaddr failed\n");
 	err = setsockopt(*hip_nat_sock_udp, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on));
