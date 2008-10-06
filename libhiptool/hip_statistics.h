@@ -6,6 +6,7 @@
 #include <math.h>
 #include "debug.h"
 
+#define STATS_NO_CONV	1
 #define STATS_IN_MSECS	1000
 #define STATS_IN_USECS	1000000
 

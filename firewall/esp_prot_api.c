@@ -159,8 +159,7 @@ int esp_prot_uninit()
 	int activate = 0;
 #ifdef CONFIG_HIP_MEASUREMENTS
 	uint32_t num_items = 0;
-	float min = 0, max = 0, avg = 0.0;
-	double std_dev = 0.0;
+	double min = 0.0, max = 0.0, avg = 0.0, std_dev = 0.0;
 #endif
 
 	// uninit hcstores
@@ -194,7 +193,7 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 {
 	int hash_length = 0, err = 0;
 #ifdef CONFIG_HIP_MEASUREMENTS
-	uint32_t update_time = 0;
+	uint64_t update_time = 0;
 	struct timeval now;
 #endif
 

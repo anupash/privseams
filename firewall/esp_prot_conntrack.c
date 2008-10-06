@@ -17,7 +17,7 @@ esp_prot_conntrack_tfm_t esp_prot_conntrack_tfms[NUM_TRANSFORMS];
 statistics_data_t hash_distance;
 // for measuring the amount of failed hashes (reordering)
 statistics_data_t subsequent_failed_hashes;
-uint32_t subseq_failed_hashes;
+uint64_t subseq_failed_hashes;
 #endif
 
 
@@ -66,8 +66,7 @@ int esp_prot_conntrack_uninit()
 	int err = 0, i;
 #ifdef CONFIG_HIP_MEASUREMENTS
 	uint32_t num_items = 0;
-	float min = 0, max = 0, avg = 0.0;
-	double std_dev = 0.0;
+	double min = 0.0, max = 0.0, avg = 0.0, std_dev = 0.0;
 #endif
 
 	// set transforms to 0/NULL
@@ -80,14 +79,14 @@ int esp_prot_conntrack_uninit()
 #ifdef CONFIG_HIP_MEASUREMENTS
 	//calculate statistics for distance measurements
 	calc_statistics(&hash_distance, &num_items, &min, &max, &avg, &std_dev,
-			STATS_IN_MSECS);
-	printf("hash distance - num_data_items: %u, min: %.3f, max: %.3f, avg: %.3f, std_dev: %.3\n",
+			STATS_NO_CONV);
+	printf("hash distance - num_data_items: %u, min: %.3f, max: %.3f, avg: %.3f, std_dev: %.3f\n",
 			num_items, min, max, avg, std_dev);
 
 	// calculate failed hashes measurements
 	calc_statistics(&subsequent_failed_hashes, &num_items, &min, &max, &avg, &std_dev,
-			STATS_IN_MSECS);
-	printf("subsequent failed hashes - num_data_items: %u, min: %.3f, max: %.3f, avg: %.3f, std_dev: %.3\n",
+			STATS_NO_CONV);
+	printf("subsequent failed hashes - num_data_items: %u, min: %.3f, max: %.3f, avg: %.3f, std_dev: %.3f\n",
 			num_items, min, max, avg, std_dev);
 
 	printf("total hashes - failed: %u, seen: %u, ",
