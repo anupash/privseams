@@ -53,15 +53,7 @@ int hip_agent_status = 0;
 struct sockaddr_in6 hip_firewall_addr;
 int hip_firewall_sock = 0;
 
-/*
-   HIP transform suite order
-   0 = AES_SHA1, 3DES_SHA1, NULL_SHA1
-   1 = 3DES_SHA1, AES_SHA1, NULL_SHA1
-   2 = AES_SHA1, NULL_SHA1, 3DES_SHA1
-   3 = 3DES_SHA1, NULL_SHA1, AES_SHA1
-   4 = NULL_SHA1, AES_SHA1, 3DES_SHA1
-   5 = NULL_SHA1, 3DES_SHA1, AES_SHA1
-*/
+/* used to change the transform order see hipconf usage to see the usage */
 int hip_transform_order = 0;
 
 /* OpenDHT related variables */
@@ -166,9 +158,11 @@ int hip_get_opportunistic_tcp_status()
 }
 
 void usage() {
-	fprintf(stderr, "HIPL Daemon %.2f\n", HIPL_VERSION);
+	//fprintf(stderr, "HIPL Daemon %.2f\n", HIPL_VERSION);
         fprintf(stderr, "Usage: hipd [options]\n\n");
 	fprintf(stderr, "  -b run in background\n");
+	fprintf(stderr, "  -k kill existing hipd\n");
+	fprintf(stderr, "  -N do not flush ipsec rules on exit\n");
 #ifdef CONFIG_HIP_HI3
 	fprintf(stderr, "  -3 <i3 client configuration file>\n");
 #endif
