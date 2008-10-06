@@ -1571,6 +1571,9 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
  * @return         zero on success, or negative error value on error. Success
  *                 indicates that I2 payloads are checked and R2 is created and
  *                 sent.
+ * @see            Section 6.9. "Processing Incoming I2 Packets" of
+ *                 <a href="http://www.rfc-editor.org/rfc/rfc5201.txt">
+ *                 RFC 5201</a>.
  */
 int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		  hip_ha_t *entry, hip_portpair_t *i2_info)
@@ -1626,7 +1629,11 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	memset(&hip_tfm, 0, sizeof(hip_tfm));
 	memset(&spi_in_data, 0, sizeof(spi_in_data));
 	memset(&i2_context, 0, sizeof(i2_context));
-
+	
+	/* The context structure is used to gather the context created from
+	   processing the I2 packet, as well as storing the original packet. 
+	   From the context struct we can then access the I2 in hip_create_r2()
+	   later. */
 	i2_context.input = NULL;
 	i2_context.output = NULL;
 	i2_context.dh_shared_key = NULL;
@@ -1635,15 +1642,25 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	   allocted. From the context struct we can then access the I2 in
 	   hip_create_r2() later. */
 	i2_context.input = i2;
-
+	
+	/* Check that the Responder's HIT is one of ours. According to RFC5201,
+	   this MUST be done. This check was added by Lauri on 01.08.2008.
+	   Note that this condition is not satisfied at the HIP relay server */
+	if(!hip_hidb_hit_is_our(&i2->hitr)) {
+		err = -EPROTO;
+		HIP_ERROR("Responder's HIT in the received I2 packet does not "\
+			  "corresponds to one of our own HITs. Dropping the I2 "\
+			  "packet.\n");
+		goto out_err;
+	}
+	
 	/* Fetch the R1_COUNTER parameter. */
 	r1cntr = hip_get_param(i2, HIP_PARAM_R1_COUNTER);
 
-	/* Here we should that the destination HIT is one of ours. We should
-	   also check the 'system boot counter' using the R1_COUNTER parameter.
-	   However, our precreated R1 packets do not support system boot counter
-	   so we do not check it. */
-
+	/* Here we should check the 'system boot counter' using the R1_COUNTER
+	   parameter. However, our precreated R1 packets do not support system
+	   boot counter so we do not check it. */
+	
 	/* Check solution for cookie */
 	solution = hip_get_param(i2_context.input, HIP_PARAM_SOLUTION);
 	if(solution == NULL) {
@@ -1715,8 +1732,8 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		goto out_err;
 	}
 	/* Little workaround...
-	 * We have a function that calculates sha1 digest and then verifies the
-	 * signature. But since the sha1 digest in I2 must be calculated over
+	 * We have a function that calculates SHA1 digest and then verifies the
+	 * signature. But since the SHA1 digest in I2 must be calculated over
 	 * the encrypted data, and the signature requires that the encrypted
 	 * data to be decrypted (it contains peer's host identity), we are
 	 * forced to do some temporary copying. If ultimate speed is required,
@@ -1819,16 +1836,22 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	   vector (iv) and we know the length of the encrypted HOST_ID
 	   parameter (crypto_len). We are ready to decrypt the actual host
 	   identity. If the decryption succeeds, we have the decrypted HOST_ID
-	   parameter in the 'host_id_in_enc' buffer. */
+	   parameter in the 'host_id_in_enc' buffer.
+
+	   Note, that the original packet has the data still encrypted. */
 	HIP_IFEL(hip_crypto_encrypted(host_id_in_enc, iv, hip_tfm, crypto_len,
 				      &i2_context.hip_enc_in.key,
-				      HIP_DIRECTION_DECRYPT), -EINVAL,
+				      HIP_DIRECTION_DECRYPT), -EKEYREJECTED,
 		 "Failed to decrypt the HOST_ID parameter. Dropping the I2 "\
 		 "packet.\n");
 
-	if (!hip_hidb_hit_is_our(&i2->hits))  {
-		HIP_IFEL(hip_get_param_type(host_id_in_enc) != HIP_PARAM_HOST_ID, -EINVAL,
-			 "The decrypted parameter is not a host id\n");
+	/* If the decrypted data is not a HOST_ID parameter, the I2 packet is
+	   silently dropped. */
+	if(hip_get_param_type(host_id_in_enc) != HIP_PARAM_HOST_ID) {
+		err = -EPROTO;
+		HIP_ERROR("The decrypted data is not a HOST_ID parameter. "\
+			  "Dropping the I2 packet.\n");
+		goto out_err;
 	}
 
 #ifdef CONFIG_HIP_BLIND
@@ -1845,69 +1868,79 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 			 -1, "hip_blind_verify failed\n");
 	}
 #endif
-
-	/* HMAC cannot be validated until we draw key material */
-
-	/* Haven't we already verified the HMAC on line 1675 or so...?
-	   -Lauri 06.05.2008 */
-
-	/* NOTE! The original packet has the data still encrypted. But this is
-	   not a problem, since we have decrypted the data into a temporary
-	   storage and nobody uses the data in the original packet. */
-
-	/* Create host association state (if not previously done). */
+	/* If there is no HIP association, we must create one now. */ 
 	if (entry == NULL) {
-	     int if_index = 0;
-	     struct sockaddr_storage ss_addr;
-	     struct sockaddr *addr = NULL;
-	     addr = (struct sockaddr*) &ss_addr;
-	     /* We have no previous infomation on the peer, create a new HIP
-		HA. */
-	     HIP_DEBUG("No entry, creating new.\n");
-	     HIP_IFEL(!(entry = hip_hadb_create_state(GFP_KERNEL)), -ENOMSG,
-		      "Failed to create or find entry\n");
+		int if_index = 0;
+		struct sockaddr_storage ss_addr;
+		struct sockaddr *addr = NULL;
+		
+		HIP_DEBUG("No HIP association found. Creating a new one.\n");
 
-	     HIP_DEBUG("After creating a new state, entry: %p\n", entry);
-	     /* The rest of the code assume already locked entry, so lock the
-		newly created entry as well. */
-	     HIP_LOCK_HA(entry);
-
+		if((entry = hip_hadb_create_state(GFP_KERNEL)) == NULL) {
+			err = -ENOMEM;
+			HIP_ERROR("Out of memory when allocating memory for a new "\
+				  "HIP association. Dropping the I2 packet.\n");
+			goto out_err;
+		}
+		
 #ifdef CONFIG_HIP_BLIND
-	     if (use_blind) {
-		     ipv6_addr_copy(&entry->hit_peer, &plain_peer_hit);
-		     hip_init_us(entry, &plain_local_hit);
-		     HIP_DEBUG("BLIND is in use.\n");
-	     } else {
-		     ipv6_addr_copy(&entry->hit_peer, &i2->hits);
-		     hip_init_us(entry, &i2->hitr);
-		     HIP_DEBUG("BLIND is not in use.\n");
-	     }
+		if (use_blind) {
+			ipv6_addr_copy(&entry->hit_peer, &plain_peer_hit);
+			hip_init_us(entry, &plain_local_hit);
+			HIP_DEBUG("BLIND is in use.\n");
+		} else {
+			ipv6_addr_copy(&entry->hit_peer, &i2->hits);
+			hip_init_us(entry, &i2->hitr);
+			HIP_DEBUG("BLIND is not in use.\n");
+		}
 #else
-	     ipv6_addr_copy(&entry->hit_peer, &i2->hits);
-	     hip_init_us(entry, &i2->hitr);
+		/* Next, we initialize the new HIP association. Peer HIT is the
+		   source HIT of the received I2 packet. We can have many Host
+		   Identities and using any of those Host Identities we can
+		   calculate diverse HITs depending on the used algorithm. When
+		   we sent one of our pre-created R1 packets, we have used one
+		   of our Host Identities and thus of our HITs as source. We
+		   must dig out the original Host Identity using the destination
+		   HIT of the I2 packet as a key. The initialized HIP
+		   association will not, however, have the I2 destination HIT as
+		   source, but one that is calculated using the Host Identity
+		   that we have dug out. */
+		ipv6_addr_copy(&entry->hit_peer, &i2->hits);
+		HIP_DEBUG("Initializing the HIP association.\n");
+		hip_init_us(entry, &i2->hitr);
 #endif
-	     HIP_DEBUG("Before inserting state entry in hadb\n");
-	     hip_hadb_insert_state(entry);
-	     HIP_DEBUG("After inserting state entry in hadb\n");
-	     hip_hold_ha(entry);
+		HIP_DEBUG("Inserting the new HIP association in the HIP "\
+			  "association database.\n");
+		/* Should we handle the case where the insertion fails? */
+		hip_hadb_insert_state(entry);
+		
+		ipv6_addr_copy(&entry->local_address, i2_daddr);
+		
+		/* Get the interface index of the network device which has our
+		   local IP address. */
+		if((if_index =
+		    hip_devaddr2ifindex(&entry->local_address)) < 0) {
+			err = -ENXIO;
+			HIP_ERROR("Interface index for local IPv6 address "\
+				  "could not be determined. Dropping the I2 "\
+				  "packet.\n");
+			goto out_err;
+		}
 
-	     ipv6_addr_copy(&entry->local_address, i2_daddr);
+		entry->nat_mode = hip_nat_status;
 
-	     HIP_IFEL(((if_index = hip_devaddr2ifindex(&entry->local_address)) <0), -1,
-		      "if_index NOT determined\n");
+		/* We need our local IP address as a sockaddr because
+		   add_address_to_list() eats only sockaddr structures. */
+		memset(&ss_addr, 0, sizeof(struct sockaddr_storage));
+		addr = (struct sockaddr*) &ss_addr;
+		addr->sa_family = AF_INET6;
 
-	     memset(addr, 0, sizeof(struct sockaddr_storage));
-	     addr->sa_family = AF_INET6;
-	     memcpy(hip_cast_sa_addr(addr), &entry->local_address, hip_sa_addr_len(addr));
-	     add_address_to_list(addr, if_index);
-
-	     entry->nat_mode = hip_nat_status;
+		memcpy(hip_cast_sa_addr(addr), &entry->local_address,
+		       hip_sa_addr_len(addr));
+		add_address_to_list(addr, if_index);
 	}
 
-	hip_hadb_insert_state(entry);
-	hip_hold_ha(entry);
-
-	_HIP_DEBUG("HA entry created.");
+	//hip_hadb_insert_state(entry);
 
 	/* If there was already state, these may be uninitialized */
 	entry->hip_transform = hip_tfm;
@@ -2127,7 +2160,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
 	entry->default_spi_out = spi_out;
 	HIP_IFE(hip_store_base_exchange_keys(entry, &i2_context, 0), -1);
-	hip_hadb_insert_state(entry);
+	//hip_hadb_insert_state(entry);
 
 	HIP_DEBUG("\nInserted a new host association state.\n"
 		  "\tHIP state: %s\n"\

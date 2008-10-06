@@ -3,6 +3,7 @@
 
 #include <sys/time.h>
 #include "linkedlist.h"
+#include "common_defines.h"
 
 //int hip_proxy_status;
 
@@ -91,21 +92,5 @@ struct hip_esp_packet
 	int packet_length;
 	struct hip_esp * esp_data;
 };
-
-
-/*********** ESP structures *************/
-
-struct hip_esp
-{
-	uint32_t esp_spi;
-	uint32_t esp_seq;
-} __attribute__ ((packed));
-
-struct hip_esp_tail
-{
-	 uint8_t esp_padlen;
-     uint8_t esp_next;
-};
-
 
 #endif /*FIREWALL_DEFINES_H_*/

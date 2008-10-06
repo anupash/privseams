@@ -4,7 +4,7 @@
 #hipfw="/usr/sbin/hipfw"
 #OPTIONS="-bk"
 
-HIPFW_OPTS="-bk"
+HIPFW_OPTS="-bkl"
 #PIDFILE=/var/run/hipfw.pid
 PID=`pidof -o $$ hipfw`
 

@@ -420,7 +420,7 @@ int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
 	
 	/* Get a socket for sending and receiving data. */
 	if (err = hip_connect_func(peer_ai, &sock)) {
-		printf("connect failed\n");
+		printf("Failed to connect.\n");
 		goto out_err;
 	}
 

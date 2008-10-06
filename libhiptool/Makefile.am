@@ -45,7 +45,7 @@ endif
 CFLAGS  = $(hipl_common_cflags) -DCONFIG_HIP_LIBHIPTOOL
 
 include_HEADERS =  crypto.h nlink.h pk.h xfrm.h xfrmapi.h esp_prot_common.h
-include_HEADERS  += hashchain_store.h hashchain.h linkedlist.h
+include_HEADERS  += hashchain_store.h hashchain.h linkedlist.h common_defines.h
 
 
 INCLUDES = $(hipl_common_include_paths) -I/usr/include/libipq/ -I$(HIPL_LIBINET6_INCLUDE)  -I$(HIPL_PJPROJECT_NATH)/include -I$(HIPL_PJPROJECT_LIB)/include -I$(HIPL_PJPROJECT_LIB_UTIL)/include -I$(HIPL_PJPROJECT_MEDIA)/include

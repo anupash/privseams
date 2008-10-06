@@ -12,7 +12,7 @@
 //#include <sys/capability.h>
 #endif
 #include <sys/prctl.h>
-
+#include "common_defines.h"
 #include <sys/types.h>
 #include "debug.h"
 #include "hi3.h"
@@ -210,10 +210,14 @@ int hipd_init(int flush_ipsec, int killold)
 	hip_hit_t peer_hit;
 	int err = 0, certerr = 0, dhterr = 0, hitdberr = 0;
 	char str[64];
+	char mtu[16];
 	struct sockaddr_in6 daemon_addr;
 	extern int hip_opendht_sock_fqdn;
 	extern int hip_opendht_sock_hit;
 	extern int hip_icmp_sock;
+
+	memset(str, 0, 64);
+	memset(mtu, 0, 16);
 
 	/* Make sure that root path is set up correcly (e.g. on Fedora 9).
 	   Otherwise may get warnings from system() commands.
@@ -327,7 +331,7 @@ int hipd_init(int flush_ipsec, int killold)
 
 	HIP_IFEL(hip_init_raw_sock_v6(&hip_raw_sock_v6), -1, "raw sock v6\n");
 	HIP_IFEL(hip_init_raw_sock_v4(&hip_raw_sock_v4), -1, "raw sock v4\n");
-	HIP_IFEL(hip_init_nat_sock_udp(&hip_nat_sock_udp), -1, "raw sock udp\n");		
+	HIP_IFEL(hip_init_nat_sock_udp(&hip_nat_sock_udp), -1, "raw sock udp\n");
 	HIP_IFEL(hip_init_icmp_v6(&hip_icmp_sock), -1, "icmpv6 sock\n");
 
 	HIP_DEBUG("hip_raw_sock = %d\n", hip_raw_sock_v6);
@@ -348,8 +352,17 @@ int hipd_init(int flush_ipsec, int killold)
 	HIP_DEBUG("Setting iface %s\n", HIP_HIT_DEV);
 	set_up_device(HIP_HIT_DEV, 0);
 	HIP_IFE(set_up_device(HIP_HIT_DEV, 1), 1);
-	HIP_DEBUG("Lowering " HIP_HIT_DEV " MTU\n");
+	HIP_DEBUG("Lowering MTU of dev " HIP_HIT_DEV " to %u\n", HIP_HIT_DEV_MTU);
+	sprintf(mtu, "%u", HIP_HIT_DEV_MTU);
+	strcpy(str, "ifconfig dummy0 mtu ");
+	strcat(str, mtu);
+	/* MTU is set using system call rather than in do_chflags to avoid
+	 * chicken and egg problems in hipd start up. */
+	system(str);
+
+#if 0
 	system("ifconfig dummy0 mtu 1280"); /* see bug id 595 */
+#endif
 
 #ifdef CONFIG_HIP_HI3
 	if( hip_use_i3 ) {
@@ -659,10 +672,10 @@ int hip_init_icmp_v6(int *icmpsockfd)
 
 	*icmpsockfd = socket(AF_INET6, SOCK_RAW, IPPROTO_ICMPV6);
 	HIP_IFEL(*icmpsockfd <= 0, 1, "ICMPv6 socket creation failed\n");
-	
+
 	ICMP6_FILTER_SETBLOCKALL(&filter);
 	ICMP6_FILTER_SETPASS(ICMPV6_ECHO_REPLY, &filter);
-	err = setsockopt(*icmpsockfd, IPPROTO_ICMPV6, ICMPV6_FILTER, &filter, 
+	err = setsockopt(*icmpsockfd, IPPROTO_ICMPV6, ICMPV6_FILTER, &filter,
 			 sizeof(struct icmp6_filter));
 	HIP_IFEL(err, -1, "setsockopt icmp ICMP6_FILTER failed\n");
 
@@ -913,7 +926,7 @@ int hip_init_certs(void) {
 	FILE * conf_file;
 	struct hip_host_id_entry * entry;
 	char hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
-        
+
 	memset(hostname, 0, HIP_HOST_ID_HOSTNAME_LEN_MAX);
 	HIP_IFEL(gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1), -1,
 		 "gethostname failed\n");
@@ -935,7 +948,7 @@ int hip_init_certs(void) {
 		fprintf(conf_file,
 			"# Section containing SPKI related information\n"
 			"#\n"
-			"# issuerhit = what hit is to be used when signing\n"   
+			"# issuerhit = what hit is to be used when signing\n"
 			"# days = how long is this key valid\n"
 			"\n"
 			"[ hip_spki ]\n"
@@ -966,7 +979,7 @@ int hip_init_certs(void) {
                         "# [ hip_x509v3_extensions ]\n",
 			hit, HIP_CERT_INIT_DAYS,
                         hit, HIP_CERT_INIT_DAYS,
-			hit, hostname);		
+			hit, hostname);
 		fclose(conf_file);
 	} else {
 		HIP_DEBUG("Configuration file existed exiting hip_init_certs\n");

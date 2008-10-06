@@ -45,100 +45,95 @@ static int count_if_addresses(int ifindex)
 #define FA_ADD 1
 
 /**
- * @return FA_ADD if the given address @c addr is allowed to be one of the
- * addresses of this host, FA_IGNORE otherwise
+ * Filters addresses that are allowed for this host.
+ * 
+ * @param addr a pointer to a socket address structure.
+ * @return     FA_ADD if the given address @c addr is allowed to be one of the
+ *             addresses of this host, FA_IGNORE otherwise.
  */
-int filter_address(struct sockaddr *addr, int ifindex)
+int filter_address(struct sockaddr *addr)
 {
-	/* used as a buffer for inet_ntop */
-#define sLEN 40
-	char s[sLEN];
-	struct in6_addr *a_in6;
+	char s[INET6_ADDRSTRLEN];
+	struct in6_addr *a_in6 = NULL;
 	in_addr_t a_in;
 	
-	_HIP_DEBUG("ifindex=%d, address family=%d\n",
-		  ifindex, addr->sa_family);
-	_HIP_HEXDUMP("testing address=", hip_cast_sa_addr(addr),
-		    hip_sa_addr_len(addr));
-
 	switch (addr->sa_family) {
 	case AF_INET6:
 	        a_in6 = hip_cast_sa_addr(addr);
 		inet_ntop(AF_INET6, &((struct sockaddr_in6*)addr)->sin6_addr, s,
-			  sLEN);
-		HIP_DEBUG("IPv6 addr: %s\n", s);
-
+			  INET6_ADDRSTRLEN);
+				
+		HIP_DEBUG("IPv6 address to filter is %s.\n", s);
+		
 		if(suppress_af_family == AF_INET) {
-			HIP_DEBUG("Ignore: Address family suppression set to "\
-				  " IPv4 addresses.\n");
+			HIP_DEBUG("Address ignored: address family "\
+				  "suppression set to IPv4 addresses.\n");
 			return FA_IGNORE;
 		} else if (IN6_IS_ADDR_UNSPECIFIED(a_in6)) {
-			HIP_DEBUG("Ignore: UNSPECIFIED\n");
+			HIP_DEBUG("Address ignored: UNSPECIFIED.\n");
 			return FA_IGNORE;
 		} else if (IN6_IS_ADDR_LOOPBACK(a_in6)) {
-			HIP_DEBUG("Ignore: IPV6_LOOPBACK\n");
+			HIP_DEBUG("Address ignored: IPV6_LOOPBACK.\n");
 			return FA_IGNORE;
 		} else if (IN6_IS_ADDR_MULTICAST(a_in6)) {
-			HIP_DEBUG("Ignore: MULTICAST\n");
+			HIP_DEBUG("Address ignored: MULTICAST.\n");
 			return FA_IGNORE;
 		} else if (IN6_IS_ADDR_LINKLOCAL(a_in6)) {
-			HIP_DEBUG("Ignore: LINKLOCAL\n");
+			HIP_DEBUG("Address ignored: LINKLOCAL.\n");
 			return FA_IGNORE;
 #if 0 /* For Juha-Matti's experiments  */
 		} else if (IN6_IS_ADDR_SITELOCAL(a_in6)) {
-			HIP_DEBUG("Ignore: SITELOCAL\n");
+			HIP_DEBUG("Address ignored: SITELOCAL.\n");
 			return FA_IGNORE;
 #endif
 		} else if (IN6_IS_ADDR_V4MAPPED(a_in6)) {
-			HIP_DEBUG("Ignore: V4MAPPED\n");
+			HIP_DEBUG("Address ignored: V4MAPPED.\n");
 			return FA_IGNORE;
 		} else if (IN6_IS_ADDR_V4COMPAT(a_in6)) {
-			HIP_DEBUG("Ignore: V4COMPAT\n");
+			HIP_DEBUG("Address ignored: V4COMPAT.\n");
 			return FA_IGNORE;
 		} else if (ipv6_addr_is_hit(a_in6)) {
-			HIP_DEBUG("Ignore: hit\n");
+			HIP_DEBUG("Address ignored: address is HIT.\n");
 			return FA_IGNORE;
 		} else
 			return FA_ADD;
 		break;
-		/* XX FIXME: DISCARD LSIs with IN6_IS_ADDR_V4MAPPED AND IS_LSI32 */
-
+		
 	case AF_INET:
 		a_in = ((struct sockaddr_in *)addr)->sin_addr.s_addr;
-		/* AG FIXME more IPv4 address checking
-		 * DO we need any more checks here ? -- Abi
-		 */
-		inet_ntop(AF_INET, &((struct sockaddr_in*)addr)->sin_addr, s, sLEN);
+		inet_ntop(AF_INET, &((struct sockaddr_in*)addr)->sin_addr, s,
+			  INET6_ADDRSTRLEN);
 		
-		HIP_DEBUG("IPv4 addr: %s \n", s);
-
+		HIP_DEBUG("IPv4 address to filter is %s.\n", s);
+		
 		if(suppress_af_family == AF_INET6) {
-			HIP_DEBUG("Ignore: Address family suppression set to "\
-				  " IPv6 addresses.\n");
+			HIP_DEBUG("Address ignored: address family "\
+				  "suppression set to IPv6 addresses.\n");
 			return FA_IGNORE;
 		} else if (a_in == INADDR_ANY) {
-			HIP_DEBUG("Ignore: INADDR_ANY\n");
+			HIP_DEBUG("Address ignored: INADDR_ANY.\n");
 			return FA_IGNORE;
 		} else if (a_in == INADDR_BROADCAST) {
-			HIP_DEBUG("Ignore: INADDR_BROADCAST\n");
+			HIP_DEBUG("Address ignored: INADDR_BROADCAST.\n");
 			return FA_IGNORE;
 		} else if (IN_MULTICAST(ntohs(a_in))) {
-			HIP_DEBUG("Ignore: MULTICAST\n");
+			HIP_DEBUG("Address ignored: MULTICAST.\n");
 			return FA_IGNORE;
 		} else if (IS_LSI32(a_in)) {
-			HIP_DEBUG("Ignore: LSI32\n");
+			HIP_DEBUG("Address ignored: LSI32.\n");
 			return FA_IGNORE;
 		} else if (IS_IPV4_LOOPBACK(a_in)) {
-			HIP_DEBUG("Ignore: IPV4_LOOPBACK\n");
+			HIP_DEBUG("Address ignored: IPV4_LOOPBACK.\n");
 			return FA_IGNORE;
 		} else if (IS_LSI((struct sockaddr_in *)addr)) {
+			HIP_DEBUG("Address ignored: address is LSI.\n");
 			return FA_IGNORE;
 		} else 
 			return FA_ADD;
 		break;
 
 	default:
-			
+		HIP_DEBUG("Address ignored: address family is unknown.\n");
 		return FA_IGNORE;
 	}
 }
@@ -188,7 +183,7 @@ int exists_address_in_list(struct sockaddr *addr, int ifindex)
 					     hip_sa_addr_len(&n->addr));
 			family_match = (n->addr.ss_family == addr->sa_family);
 		} else { // addr->sa_family == AF_INET
-			HIP_DEBUG("Addr given was not IPv6 nor IPv4\n");
+			HIP_DEBUG("Addr given was not IPv6 nor IPv4.\n");
 		}
 		
 		HIP_DEBUG("n->addr.ss_family=%d, addr->sa_family=%d, "
@@ -206,73 +201,65 @@ int exists_address_in_list(struct sockaddr *addr, int ifindex)
 	return 0;
 }
 
+/**
+ * Adds an IPv6 address into ifindex2spi map.
+ *
+ * Adds an IPv6 address into ifindex2spi map if the address passes
+ * filter_address() test.
+ *
+ * @param  a pointer to a socket address structure.
+ * @param  network device interface index.
+ */ 
 void add_address_to_list(struct sockaddr *addr, int ifindex)
 {
-	struct netdev_address *n;//, *aux;
+	struct netdev_address *n;
         unsigned char tmp_secret[40];
         int err_rand = 0;
-
-	if (addr->sa_family == AF_INET)
-		HIP_DEBUG_INADDR("filter addr", hip_cast_sa_addr(addr));
-	else if (addr->sa_family == AF_INET6)
-		HIP_DEBUG_IN6ADDR("filter addr", hip_cast_sa_addr(addr));
-	else
-		HIP_DEBUG("Unknown family\n");
 	
-	if (filter_address(addr, ifindex)) {
-		HIP_DEBUG("adadress accepted\n");
+	/* filter_address() prints enough debug info of the address, no need to
+	   print address related debug info here. */
+	if (filter_address(addr)) {
+		HIP_DEBUG("Address passed the address filter test.\n");
 	} else {
-		HIP_DEBUG("filtering this address\n");
+		HIP_DEBUG("Address failed the address filter test.\n");
 		return;
 	}
-
-	n = (struct netdev_address *) malloc(sizeof(struct netdev_address));
-	//aux = (struct netdev_address *) malloc(sizeof(struct netdev_address));
-
-	if (!n)
-	{
-		// FIXME; memory error
-		HIP_ERROR("Could not allocate memory\n");
+	
+	if((n = (struct netdev_address *) malloc(sizeof(struct netdev_address)))
+	   == NULL) {
+		HIP_ERROR("Error when allocating memory to a network device "\
+			  "address.\n");
 		return;
 	}
-
+	
 	memset(n, 0, sizeof(struct netdev_address));
 
 	/* Convert IPv4 address to IPv6 */
-	if (addr->sa_family == AF_INET)
-	{
+	if (addr->sa_family == AF_INET) {
 		struct sockaddr_in6 temp;
 		memset(&temp, 0, sizeof(temp));
 		temp.sin6_family = AF_INET6;
 		IPV4_TO_IPV6_MAP(&(((struct sockaddr_in *)addr)->sin_addr),
 				 &temp.sin6_addr);
 	        memcpy(&n->addr, &temp, hip_sockaddr_len(&temp));
-	}
-
-	else
+	} else {
 		memcpy(&n->addr, addr, hip_sockaddr_len(addr));
+	}
 	
-        /*
-          Add secret to address. Used with openDHT removable puts.
-        */        
-        memset(tmp_secret,0,sizeof(tmp_secret));
+        /* Add secret to address. Used with openDHT removable puts. */        
+        memset(tmp_secret, 0, sizeof(tmp_secret));
         err_rand = RAND_bytes(tmp_secret,40);
-        memcpy(&n->secret, &tmp_secret,sizeof(tmp_secret));
+        memcpy(&n->secret, &tmp_secret, sizeof(tmp_secret));
 
-        /*
-          Clear the timestamp, initially 0 so everything will be sent
-        */
+        /* Clear the timestamp, initially 0 so everything will be sent. */
         memset(&n->timestamp, 0, sizeof(time_t));
 
         n->if_index = ifindex;
-	//INIT_LIST_HEAD(&n->next);
 	list_add(n, addresses);
 	address_count++;
-	HIP_DEBUG("added address, address_count at exit=%d\n", address_count);
-	/* if(n)
-		HIP_FREE(n);
-	if(aux)
-		HIP_FREE(aux); */
+
+	HIP_DEBUG("Added a new IPv6 address to ifindex2spi map. The map has "\
+		  "%d addresses.\n", address_count);
 }
 
 static void delete_address_from_list(struct sockaddr *addr, int ifindex)
@@ -340,42 +327,91 @@ void delete_all_addresses(void)
 		if (address_count != 0) HIP_DEBUG("BUG: address_count != 0\n", address_count);
 	}
 }
-
+/**
+ * Gets the interface index of a socket address.
+ *
+ * @param  addr a pointer to a socket address whose interface index is to be
+ *              searched.
+ * @return      interface index if the network address is bound to one, zero if
+ *              no interface index was found.
+ */
 int hip_netdev_find_if(struct sockaddr *addr)
 {
-	struct netdev_address *n;
-	hip_list_t *item, *tmp;
-	int i;
+	struct netdev_address *n = NULL;
+	hip_list_t *item = NULL, *tmp = NULL;
+	int i = 0;
 
-	HIP_DEBUG_IN6ADDR("Trying to find addr", &(((struct sockaddr_in6 *)addr)->sin6_addr));
-
-	list_for_each_safe(item, tmp, addresses, i)
+#ifdef CONFIG_HIP_DEBUG /* Debug block. */
 	{
-		n = list_entry(item);
-		HIP_DEBUG("n family %d, addr family %d\n", n->addr.ss_family ,addr->sa_family);
-		HIP_DEBUG_IN6ADDR("n addr ", &(((struct sockaddr_in6 *) &(n->addr))->sin6_addr));
-		HIP_DEBUG("index %d\n", n->if_index);
-		if ((n->addr.ss_family == addr->sa_family) &&
-		    ((memcmp(hip_cast_sa_addr(&n->addr), hip_cast_sa_addr(addr),
-			     hip_sa_addr_len(addr))==0)) ||
-			  IPV6_EQ_IPV4( &(((struct sockaddr_in6 *) &(n->addr))->sin6_addr), &((struct sockaddr_in *) addr)->sin_addr))
+		char ipv6_str[INET6_ADDRSTRLEN], *fam_str = NULL;
+		
+		if(addr->sa_family == AF_INET6) {
+			fam_str = "AF_INET6";
+			inet_ntop(AF_INET6,
+				  &(((struct sockaddr_in6 *)addr)->sin6_addr),
+				  ipv6_str, INET6_ADDRSTRLEN);
+		} else if(addr->sa_family == AF_INET) {
+			fam_str = "AF_INET";
+			inet_ntop(AF_INET,
+				  &(((struct sockaddr_in *)addr)->sin_addr),
+				  ipv6_str, INET6_ADDRSTRLEN);
+		} else {
+			fam_str = "not AF_INET or AF_INET6";
+			memset(ipv6_str, 0, INET6_ADDRSTRLEN);
+		}
+		
+		HIP_DEBUG("Trying to find interface index for a network "\
+			  "device with IP address %s of address family %s.\n",
+			  ipv6_str, fam_str);
+	}
+#endif
+	/* Loop through all elements in list "addresses" and break if the loop
+	   address matches the search address. The "addresses" list stores
+	   socket address storages. */
+	list_for_each_safe(item, tmp, addresses, i)
 		{
-			HIP_DEBUG("index %d\n", n->if_index);
-			return n->if_index;
+			n = list_entry(item);
+			
+			_HIP_DEBUG("Search item address family %s, interface "\
+				  "index %d.\n", (n->addr.ss_family == AF_INET)
+				  ? "AF_INET" : "AF_INET6", n->if_index);
+			_HIP_DEBUG_IN6ADDR("Search item IP address",
+					  &(((struct sockaddr_in6 *)
+					     &(n->addr))->sin6_addr));
+			
+			if ((n->addr.ss_family == addr->sa_family) &&
+			    ((memcmp(hip_cast_sa_addr(&n->addr),
+				     hip_cast_sa_addr(addr),
+				     hip_sa_addr_len(addr))==0)) ||
+			    IPV6_EQ_IPV4(&(((struct sockaddr_in6 *)
+					    &(n->addr))->sin6_addr),
+					 &((struct sockaddr_in *)
+					   addr)->sin_addr))
+			{
+				HIP_DEBUG("Matching network device index is "\
+					  "%d.\n", n->if_index);
+				return n->if_index;
+			}
 		}
 
-	}
-
-	/* No matching address found */
+	HIP_DEBUG("No matching network device index found.\n");
 	return 0;
 }
 
-/* base exchange IPv6 addresses need to be put into ifindex2spi map,
- * so a function is needed which gets the ifindex of the network
- * device which has the address @addr
+/**
+ * Gets a interface index of a network address.
+ * 
+ * Base exchange IPv6 addresses need to be put into ifindex2spi map, so we need
+ * a function that gets the ifindex of the network device which has the address
+ * @c addr.
+ *
+ * @param  addr a pointer to an IPv6 address whose interface index is to be
+ *              searched.
+ * @return      interface index if the network address is bound to one, zero if
+ *              no interface index was found and negative in error case.
+ * @todo        The caller of this should be generalized to both IPv4 and IPv6
+ *              so that this function can be removed (tkoponen).
  */
-/* FIXME: The caller of this shoul be generalized to both IPv4 and
-   IPv6 so that this function can be removed (tkoponen) */
 int hip_devaddr2ifindex(struct in6_addr *addr)
 {
 	struct sockaddr_in6 a;
@@ -383,6 +419,7 @@ int hip_devaddr2ifindex(struct in6_addr *addr)
 	ipv6_addr_copy(&a.sin6_addr, addr);
 	return hip_netdev_find_if((struct sockaddr *)&a);
 }
+
 int static add_address(const struct nlmsghdr *h, int len, void *arg)
 {
         struct sockaddr_storage ss_addr;

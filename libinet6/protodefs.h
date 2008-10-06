@@ -383,10 +383,10 @@ struct hip_host_id_key_rdata {
 
 
 struct hip_host_id {
-	hip_tlv_type_t     type;
-	hip_tlv_len_t      length;
-	uint16_t     hi_length;
-	uint16_t     di_type_length;
+	hip_tlv_type_t type;
+	hip_tlv_len_t length;
+	uint16_t hi_length;
+	uint16_t di_type_length;
 	struct hip_host_id_key_rdata rdata;
 	/* fixed part ends */
 } __attribute__ ((packed));
