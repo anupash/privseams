@@ -128,7 +128,6 @@
 #define HIP_PARAM_UADB_INFO		32810
 #define HIP_PARAM_CERT_X509_REQ         32811
 #define HIP_PARAM_CERT_X509_RESP        32812
-
 /* End of HIPL private parameters. */
 
 #define HIP_PARAM_HMAC                 61505
