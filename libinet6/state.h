@@ -507,8 +507,8 @@ struct hip_hadb_user_info_state
 	int                  heartbeats_on;
 	int                  heartbeats_sent;
 	int                  heartbeats_received;
-        u_int32_t            heartbeats_mean;
-	int32_t              heartbeats_variance;
+	double            heartbeats_mean;
+	double              heartbeats_variance;
 };
 
 /** @addtogroup hadb_func

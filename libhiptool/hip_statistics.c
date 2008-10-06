@@ -1,14 +1,15 @@
 #include "hip_statistics.h"
 
-uint32_t timeval_to_uint32(struct timeval *timeval)
+uint64_t timeval_to_uint64(struct timeval *timeval)
 {
 	HIP_ASSERT(timeval != NULL);
 
-	// convert seconds to microseconds and add
-	return (timeval->tv_sec * SEC_TO_USEC) + timeval->tv_usec;
+	/* convert values to microseconds and add */
+	return ((timeval->tv_sec * STATS_IN_USECS) + timeval->tv_usec);
 }
 
-uint32_t calc_timeval_diff(struct timeval *timeval_start, struct timeval *timeval_end)
+uint64_t calc_timeval_diff(struct timeval *timeval_start,
+		struct timeval *timeval_end)
 {
 	struct timeval rel_timeval;
 
@@ -20,15 +21,15 @@ uint32_t calc_timeval_diff(struct timeval *timeval_start, struct timeval *timeva
 	rel_timeval.tv_sec = timeval_end->tv_sec - timeval_start->tv_sec;
 	rel_timeval.tv_usec = timeval_end->tv_usec - timeval_start->tv_usec;
 
-	return timeval_to_uint32(&rel_timeval);
+	return timeval_to_uint64(&rel_timeval);
 }
 
-float calc_avg(statistics_data_t *statistics_data, float scaling_factor)
+double calc_avg(statistics_data_t *statistics_data, double scaling_factor)
 {
-	float avg = 0.0;
+	double avg = 0.0;
 
 	HIP_ASSERT(statistics_data != NULL);
-	HIP_ASSERT(scaling_factor > 0.0);
+	HIP_ASSERT(scaling_factor > 0);
 
 	if (statistics_data->num_items >= 1)
 	{
@@ -39,7 +40,7 @@ float calc_avg(statistics_data_t *statistics_data, float scaling_factor)
 	return avg;
 }
 
-double calc_std_dev(statistics_data_t *statistics_data, float scaling_factor)
+double calc_std_dev(statistics_data_t *statistics_data, double scaling_factor)
 {
 	double std_dev = 0.0;
 	double sum1 = 0.0, sum2 = 0.0;
@@ -52,15 +53,13 @@ double calc_std_dev(statistics_data_t *statistics_data, float scaling_factor)
 		sum2 = (double)statistics_data->added_squared_values
 					/ statistics_data->num_items;
 
-		printf("sum2 - (sum1 * sum1) = %.3f\n", sum2 - (sum1 * sum1));
-
 		std_dev = sqrt(sum2 - (sum1 * sum1));
 	}
 
 	return std_dev / scaling_factor;
 }
 
-void add_statistics_item(statistics_data_t *statistics_data, uint32_t item_value)
+void add_statistics_item(statistics_data_t *statistics_data, uint64_t item_value)
 {
 	HIP_ASSERT(statistics_data != NULL);
 
@@ -72,13 +71,14 @@ void add_statistics_item(statistics_data_t *statistics_data, uint32_t item_value
 		statistics_data->max_value = item_value;
 
 	if (item_value < statistics_data->min_value ||
-			statistics_data->min_value == 0)
+			statistics_data->min_value == 0.0)
 		statistics_data->min_value = item_value;
 }
 
 /* only returns values for non-NULL pointers */
 void calc_statistics(statistics_data_t *statistics_data, uint32_t *num_items,
-		float *min, float *max, float *avg, double *std_dev, float scaling_factor)
+		double *min, double *max, double *avg, double *std_dev,
+		double scaling_factor)
 {
 	HIP_ASSERT(statistics_data != NULL);
 

@@ -64,9 +64,9 @@ int main(int argc, char ** argv)
 	hash_chain_t * hchain = NULL;
 	statistics_data_t creation_stats;
 	statistics_data_t verify_stats;
-	uint32_t timediff = 0;
+	uint64_t timediff = 0;
 	uint32_t num_items = 0;
-	float min = 0.0, max = 0.0, avg = 0.0;
+	double min = 0.0, max = 0.0, avg = 0.0;
 	double std_dev = 0.0;
 
 	hash_function = NULL;

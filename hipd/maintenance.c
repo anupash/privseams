@@ -1046,9 +1046,9 @@ static long llsqrt(long long a)
 int hip_icmp_statistics(struct in6_addr * src, struct in6_addr * dst,
 			struct timeval *stval, struct timeval *rtval) {
 	int err = 0;
-	u_int32_t rtt = 0, rcvd_heartbeats = 0;
-	float avg = 0.0;
-	double std_dev = 0.0;
+	uint32_t rcvd_heartbeats = 0;
+	uint64_t rtt = 0;
+	double avg = 0.0, std_dev = 0.0;
 #if 0
 	u_int32_t rtt = 0, usecs = 0, secs = 0, square = 0;
 	u_int32_t sum1 = 0, sum2 = 0;
