@@ -78,8 +78,18 @@ hipconf_SOURCES = hipconftool.c
 $(HIPL_LIBINET6_LIB_STATIC):
 	$(MAKE) -C $(HIPL_LIBINET6)
 
+# Automake does not build the shell scripts without this
 dnshipproxy:
 	@sh gen-python-starter.sh $(pyexecdir)/dnshipproxy dnsproxy.py dnshipproxy
 
 parsehipkey:
+	@sh gen-python-starter.sh $(pyexecdir)/parsehipkey parse-key-3.py parsehipkey
+
+# This workaround forces automake to generate the scripts on each run. It is
+# necessary because otherwise "make rpm" target has the old $pyexecdir from
+# "make dist" and it refuses to build the scripts again.
+all-local:
+	@rm dnshipproxy
+	@rm parsehipkey
+	@sh gen-python-starter.sh $(pyexecdir)/dnshipproxy dnsproxy.py dnshipproxy
 	@sh gen-python-starter.sh $(pyexecdir)/parsehipkey parse-key-3.py parsehipkey
