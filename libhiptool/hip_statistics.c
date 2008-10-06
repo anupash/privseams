@@ -51,6 +51,9 @@ double calc_std_dev(statistics_data_t *statistics_data, float scaling_factor)
 		sum1 = (double)statistics_data->added_values / statistics_data->num_items;
 		sum2 = (double)statistics_data->added_squared_values
 					/ statistics_data->num_items;
+
+		printf("sum2 - (sum1 * sum1) = %.3f\n", sum2 - (sum1 * sum1));
+
 		std_dev = sqrt(sum2 - (sum1 * sum1));
 	}
 

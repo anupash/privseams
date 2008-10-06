@@ -110,6 +110,8 @@ int main(int argc, char ** argv)
 		exit(1);
 	}
 
+	hip_set_logdebug(LOGDEBUG_NONE);
+
 	memset(&creation_stats, 0, sizeof(statistics_data_t));
 	memset(&verify_stats, 0, sizeof(statistics_data_t));
 
