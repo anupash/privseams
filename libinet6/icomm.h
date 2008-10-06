@@ -13,6 +13,9 @@
 #   include "i3_client_api.h" 
 #endif
 
+#include <netinet/in.h>
+#include "protodefs.h"
+
 //#define HIP_DAEMONADDR_PATH		        "/tmp/hip_daemonaddr_path.tmp"
 #define HIP_DAEMON_LOCAL_PORT                  970
 #define HIP_FIREWALL_PORT                      971
@@ -63,6 +66,8 @@
 #define SO_HIP_FW_BEX_DONE                      29
 #define SO_HIP_GET_PEER_HIT_BY_LSIS             30
 #define SO_HIP_FW_UPDATE_DB                     31
+#define SO_HIP_GET_PEER_HIT_AT_FIREWALL         32
+#define SO_HIP_HEARTBEAT                        33
 /* inclusive */
 #define HIP_SO_ANY_MAX 				63
 
@@ -105,9 +110,9 @@
 #define SO_HIP_DHT_OFF                          93
 #define SO_HIP_SET_OPPTCP_ON			94
 #define SO_HIP_SET_OPPTCP_OFF			95
-/* slot 96 is free */
-#define SO_HIP_OPPTCP_UNBLOCK_APP		97
-#define SO_HIP_OPPTCP_OPPIPDB_ADD_ENTRY		98
+/* slot 96 is FREE */
+/* slot 97 is FREE */
+/* slot 98 is FREE */
 #define SO_HIP_OPPTCP_SEND_TCP_PACKET		99
 #define SO_HIP_TRANSFORM_ORDER                  100
 
@@ -188,6 +193,24 @@
 #define HIP_SO_ROOT_MAX 			255
 
 #define SO_HIP_SET_NAT_ON                     SO_HIP_SET_NAT_PLAIN_UDP
+
+
+/****** FIREWALL ******/
+
+// the states of the connections as kept in the firewall
+#define FIREWALL_STATE_BEX_DEFAULT 		-1  //default entry
+#define FIREWALL_STATE_BEX_NOT_SUPPORTED	 0  //detected lack of HIP support at peer
+#define FIREWALL_STATE_BEX_ESTABLISHED		 1  //detected HIP support at peer
+
+//definition of firewall db records
+struct firewall_hl{
+	struct in6_addr ip_peer;
+	hip_lsi_t lsi;
+	hip_hit_t hit_our;
+        hip_hit_t hit_peer;
+        int       bex_state;
+};
+typedef struct firewall_hl firewall_hl_t;
 
 #endif /* _HIP_ICOMM */
 

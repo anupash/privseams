@@ -29,10 +29,14 @@ CORPORATE=
 PKGROOT=$PWD/test/packaging
 PKGDIR=$PKGROOT/${NAME}${PKG_SUFFIX}-deb
 PKGDIR_SRC=$PKGROOT/${NAME}${PKG_SUFFIX}-deb-src
-
 SRCDIR=${PKGDIR_SRC}/${NAME}${SUFFIX}
 HIPL=$PWD
 POSTFIX="deb"
+
+# The current debian compilation does not use a fresh copy of files,
+# but instead relies on older execution of configure. Therefore $pyexecdir
+# (from configure) points /usr/local/.. and we must remove the "local".
+PYEXECDIR=`echo $PYEXECDIR|sed s/local//`
 
 TMPNAME="${VERSION}-${RELEASE}-${REVISION}-${DEBARCH}"
 if dpkg --print-architecture|grep armel;then TMPNAME="${VERSION}-${RELEASE}-${REVISION}-armel"; fi
@@ -260,7 +264,7 @@ copy_and_package_files ()
     create_sub_package;
 
     TMP="dnsproxy"
-    DEBLIB="$NAME-lib"
+    DEBLIB=""
     init_files;
     
     echo "** Making directory to '$PKGDIR'"
@@ -268,14 +272,14 @@ copy_and_package_files ()
     cd "$PKGDIR"
 
     # mkdir -p usr/sbin
-    mkdir -p usr/sbin usr/bin etc/init.d
+    mkdir -p usr usr/sbin usr/bin etc/init.d
     cd "$HIPL"
 
     echo "** Copying dnsproxy to $PKGDIR"
     mkdir -p $PKGDIR/$PYEXECDIR
     mkdir -p $PKGDIR/$PYEXECDIR/dnshipproxy
-    mkdir -p $PKGDIR/$PYEXECDIR
     mkdir -p $PKGDIR/$PYEXECDIR/parsehipkey
+    mkdir -p $PKGDIR/$PYEXECDIR/DNS
 
     cp tools/dnsproxy.py* $PKGDIR/$PYEXECDIR/dnshipproxy
     cp tools/pyip6.py* $PKGDIR/$PYEXECDIR/dnshipproxy
@@ -284,10 +288,10 @@ copy_and_package_files ()
     cp tools/parse-key-3.py* $PKGDIR/$PYEXECDIR/dnshipproxy
 
     cp tools/myasn.py* $PKGDIR/$PYEXECDIR/parsehipkey
-    cp tools/DNS/*py* $PKGDIR/$PYEXECDIR/parsehipkey
+    cp tools/DNS/*py* $PKGDIR/$PYEXECDIR/DNS
 
-    cp tools/dnshipproxy $PKGDIR/usr/sbin
-    cp tools/parsehipkey $PKGDIR/usr/sbin
+    sh tools/gen-python-starter.sh $PYEXECDIR/dnshipproxy dnsproxy.py $PKGDIR/usr/sbin/dnshipproxy
+    sh tools/gen-python-starter.sh $PYEXECDIR/parsehipkey parse-key-3.py $PKGDIR/usr/sbin/parsehipkey
 
     echo "** Copying init.d script to $PKGDIR"
     cp test/packaging/debian-init.d-dnsproxy $PKGDIR/etc/init.d/dnshipproxy

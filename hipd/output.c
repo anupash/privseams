@@ -6,6 +6,7 @@
  * @author  Miika Komu
  * @author  Mika Kousa
  * @author  Kristian Slavov
+ * @author  Samu Varjonen
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  */
 #include "output.h"
@@ -1161,6 +1162,13 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	HIP_DEBUG("Source port=%d, destination port=%d\n", src_port, dst_port);
 	HIP_DUMP_MSG(msg);
 
+	//check msg length
+	if (!hip_check_network_msg_len(msg)) {
+		err = -EMSGSIZE;
+		HIP_ERROR("bad msg len %d\n", hip_get_msg_total_len(msg));
+		goto out_err;
+	}
+
 	dst_is_ipv4 = IN6_IS_ADDR_V4MAPPED(peer_addr);
 	len = hip_get_msg_total_len(msg);
 
@@ -1360,7 +1368,7 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	/* There are four zeroed bytes between UDP and HIP headers. We
 	   use shifting later in this function */
 	HIP_ASSERT(hip_get_msg_total_len(msg) <=
-		   HIP_MAX_PACKET - HIP_UDP_ZERO_BYTES_LEN);
+		   HIP_MAX_NETWORK_PACKET - HIP_UDP_ZERO_BYTES_LEN);
 
 	/* Verify the existence of obligatory parameters. */
 	HIP_ASSERT(peer_addr != NULL && msg != NULL);
@@ -1504,6 +1512,7 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	return err;
 }
 
+/** XXTOOO this seems like a useless function skeleton --SAMU **/ 
 int hip_send_r2_response(struct hip_common *r2,
 		struct in6_addr *r2_saddr,
 		struct in6_addr *r2_daddr,
@@ -1513,6 +1522,99 @@ int hip_send_r2_response(struct hip_common *r2,
 
 }
 
+/** 
+ * This function sends ICMPv6 echo with timestamp to dsthit
+ *
+ * @param socket to send with
+ * @param srchit HIT to send from
+ * @param dsthit HIT to send to
+ *
+ * @return 0 on success negative on error
+ */
+int hip_send_icmp(int sockfd, hip_ha_t *entry) {
+	int err = 0, i = 0, identifier = 0;
+	struct icmp6hdr * icmph = NULL;
+	struct sockaddr_in6 * dst6 = NULL;
+	u_char cmsgbuf[CMSG_SPACE(sizeof (struct in6_pktinfo))];
+	u_char * icmp_pkt = NULL;
+	struct msghdr mhdr;
+	struct iovec iov[1];
+	struct cmsghdr * chdr;
+        struct in6_pktinfo * pkti;
+	struct timeval tval;
+
+	_HIP_DEBUG("Starting to send ICMPv6 heartbeat\n");
+
+	/* memset and malloc everything you need */
+	memset(&mhdr, 0, sizeof(struct msghdr));	
+	memset(&tval, 0, sizeof(struct timeval));
+	
+	dst6 = malloc(sizeof(struct sockaddr_in6));
+	HIP_IFEL((!dst6), -1, "Malloc for dst6 failed\n");
+	memset(dst6, 0, sizeof(struct sockaddr_in6));
+
+	icmp_pkt = malloc(HIP_MAX_ICMP_PACKET);
+        HIP_IFEL((!icmp_pkt), -1, "Malloc for icmp_pkt failed\n");
+	memset(icmp_pkt, 0, sizeof(HIP_MAX_ICMP_PACKET));
+
+        chdr = (struct cmsghdr *)cmsgbuf;
+	pkti = (struct in6_pktinfo *)(CMSG_DATA(chdr));
+
+	identifier = getpid() & 0xFFFF;
+
+	/* Build ancillary data */
+	chdr->cmsg_len = CMSG_LEN (sizeof (struct in6_pktinfo));
+	chdr->cmsg_level = IPPROTO_IPV6;
+	chdr->cmsg_type = IPV6_PKTINFO;
+	memcpy(&pkti->ipi6_addr, &entry->hit_our, sizeof(struct in6_addr));
+
+	/* get the destination */
+	memcpy(&dst6->sin6_addr, &entry->hit_peer, sizeof(struct in6_addr));
+	dst6->sin6_family = AF_INET6;
+	dst6->sin6_flowinfo = 0;
+
+	/* build icmp header */
+	icmph = (struct icmp6hdr *)icmp_pkt;
+        icmph->icmp6_type = ICMPV6_ECHO_REQUEST;
+        icmph->icmp6_code = 0;
+	entry->heartbeats_sent++;
+        icmph->icmp6_sequence = htons(entry->heartbeats_sent);
+        icmph->icmp6_identifier = identifier;	
+	
+	gettimeofday(&tval, NULL);
+
+	memset(&icmp_pkt[8], 0xa5, HIP_MAX_ICMP_PACKET - 8);
+ 	/* put timeval into the packet */
+	memcpy(&icmp_pkt[8], &tval, sizeof(struct timeval));
+
+	/* put the icmp packet to the io vector struct for the msghdr */
+	iov[0].iov_base = icmp_pkt;
+	iov[0].iov_len  = sizeof(struct icmp6hdr) + sizeof(struct timeval);
+	
+	/* build the msghdr for the sendmsg, put ancillary data also*/
+	mhdr.msg_name = dst6;
+	mhdr.msg_namelen = sizeof(struct sockaddr_in6);
+	mhdr.msg_iov = &iov;
+	mhdr.msg_iovlen = 1;
+	mhdr.msg_control = &cmsgbuf;
+	mhdr.msg_controllen = sizeof(cmsgbuf);
+
+	i = sendmsg(sockfd, &mhdr, 0);
+	
+	/* Debug information*/
+	_HIP_DEBUG_HIT("src hit", &entry->hit_our);	
+	_HIP_DEBUG_HIT("dst hit", &entry->hit_peer);
+	_HIP_DEBUG("i == %d socket = %d\n", i, sockfd);
+	_HIP_PERROR("SENDMSG ");
+	
+	HIP_IFEL((i < 0), -1, "Failed to send ICMP into ESP tunnel\n");
+	HIP_DEBUG_HIT("Succesfully sent heartbeat to", &entry->hit_peer);
+
+out_err:
+	if (dst6) free(dst6);
+	if (icmp_pkt) free(icmp_pkt);
+	return err;
+}
 
 #ifdef CONFIG_HIP_HI3
 /**
@@ -1550,6 +1652,12 @@ int hip_send_i3(struct in6_addr *src_addr, struct in6_addr *peer_addr,
 	int err = 0, msg_len;
 	char *buf;
 
+	//check msg length
+	if (!hip_check_network_msg_len(msg)) {
+		err = -EMSGSIZE;
+		HIP_ERROR("bad msg len %d\n", hip_get_msg_total_len(msg));
+		goto out_err;
+	}
 
 	msg_len = hip_get_msg_total_len(msg);
 

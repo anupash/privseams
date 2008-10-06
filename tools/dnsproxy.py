@@ -1,6 +1,7 @@
 #! /usr/bin/env python
 
 # TBD: stderr/stdout should go via syslog if forked
+# Will fix soon. Basically just redirect fout.write and stderr.writes to syslog
 
 import sys
 import getopt
@@ -28,7 +29,7 @@ if path != None:
 else:
     path = []
 
-# TBD: forking affects this:
+# Done: forking affects this. Fixed in forkme
 myid = '%d-%d' % (time.time(),os.getpid())
 
 def has_resolvconf0():
@@ -186,18 +187,20 @@ class Global:
             return False
         else:
             # we are the child
+            global myid
+            myid = '%d-%d' % (time.time(),os.getpid())
             return True
 
     # TBD: proper error handling
     def killold(gp):
-        f = 0
+        f = None
         try:
-            f = open(gp.pidfile, 'r')
+            f = file(gp.pidfile, 'r')
         except:
             pass # TBD: should ignore only "no such file or dir"
-        if (f):
+        if f:
             try:
-                os.kill(int(f.readline()), signal.SIGTERM)
+                os.kill(int(f.readline().rstrip()), signal.SIGTERM)
             except OSError, (errno, strerror):
                 pass # TBD: should ignore only "no such process"
             # sys.stdout.write('Ignoring kill error (%s) %s\n' % (errno, strerror))
@@ -206,9 +209,9 @@ class Global:
 
     # TBD: error handling
     def savepid(gp):
-        f = open(gp.pidfile, 'w')
-        if (f):
-            f.write(str(os.getpid()))
+        f = file(gp.pidfile, 'w')
+        if f:
+            f.write('%d\n' % (os.getpid(),))
             f.close()
 
     def doit(gp,args):
@@ -241,7 +244,7 @@ class Global:
 
         rc1.write({'nameserver': gp.bind_ip})
 
-        sys.stdout.write('Dns proxy for HIP started\n')
+        fout.write('Dns proxy for HIP started\n')
         while not util.wantdown():
             try:
                 gp.hosts_recheck()
@@ -304,7 +307,6 @@ class Global:
                     lr = gp.getbyaaaa(nam)
                     fout.write('Hosts PTR 1 (%s)\n' % (lr,))
                     if lr:
-                        lr = lr.pop()
                         a2 = {'name': nam,
                               'data': lr,
                               'type': 12,
@@ -318,6 +320,7 @@ class Global:
                         m.addQuestion(nam,qtype,1)
                         fout.write('Hosts PTR 5 (%s)\n' % (lr,))
                     if m:
+                        fout.write('Hosts PTR 6 (%s)\n' % (a2,))
                         m.addPTR(a2['name'],a2['class'],a2['ttl'],a2['data'])
                         s.sendto(m.buf,from_a)
                         sent_answer = 1

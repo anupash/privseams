@@ -452,13 +452,13 @@ int hip_get_lifetime_seconds(uint8_t lifetime, time_t *seconds){
 }
 
 /**
- * hip_check_msg_len - check validity of message length
+ * hip_check_user_msg_len - check validity of user message length
  * @param msg pointer to the message
  *
  * @return 1 if the message length is valid, or 0 if the message length is
  *          invalid
  */
-int hip_check_msg_len(const struct hip_common *msg) {
+int hip_check_user_msg_len(const struct hip_common *msg) {
 	uint16_t len;
 
 	HIP_ASSERT(msg);
@@ -470,6 +470,29 @@ int hip_check_msg_len(const struct hip_common *msg) {
 		return 1;
 	}
 }
+
+
+/**
+ * hip_check_network_msg_len - check validity of network message length
+ * @param msg pointer to the message
+ *
+ * @return 1 if the message length is valid, or 0 if the message length is
+ *          invalid
+ */
+int hip_check_network_msg_len(const struct hip_common *msg) {
+	uint16_t len;
+
+	HIP_ASSERT(msg);
+	len = hip_get_msg_total_len(msg);
+
+	if (len < sizeof(struct hip_common) || len > HIP_MAX_NETWORK_PACKET) {
+		return 0;
+	} else {
+		return 1;
+	}
+}
+
+
 
 /**
  * hip_check_network_msg_type - check the type of the network message
@@ -1037,8 +1060,6 @@ char* hip_message_type_name(const uint8_t msg_type){
 	case SO_HIP_DHT_OFF: return "SO_HIP_DHT_OFF";
 	case SO_HIP_SET_OPPTCP_ON: return "SO_HIP_SET_OPPTCP_ON";
 	case SO_HIP_SET_OPPTCP_OFF: return "SO_HIP_SET_OPPTCP_OFF";
-	case SO_HIP_OPPTCP_UNBLOCK_APP: return "SO_HIP_OPPTCP_UNBLOCK_APP";
-	case SO_HIP_OPPTCP_OPPIPDB_ADD_ENTRY: return "SO_HIP_OPPTCP_OPPIPDB_ADD_ENTRY";
 	case SO_HIP_OPPTCP_SEND_TCP_PACKET: return "SO_HIP_OPPTCP_SEND_TCP_PACKET";
 	case SO_HIP_TRANSFORM_ORDER: return "SO_HIP_TRANSFORM_ORDER";
 	case SO_HIP_OFFER_RVS: return "SO_HIP_OFFER_RVS";
@@ -1074,7 +1095,9 @@ char* hip_message_type_name(const uint8_t msg_type){
 	case SO_HIP_SET_TCPTIMEOUT_OFF: return "SO_HIP_SET_TCPTIMEOUT_OFF";
 	case SO_HIP_SET_NAT_ICE_UDP: return "SO_HIP_SET_NAT_ICE_UDP";
 	case SO_HIP_IS_OUR_LSI: return "SO_HIP_IS_OUR_LSI";
+	case SO_HIP_GET_PEER_HIT: return "SO_HIP_GET_PEER_HIT";
 	case SO_HIP_GET_PEER_HIT_BY_LSIS: return "SO_HIP_GET_PEER_HIT_BY_LSIS";
+	case SO_HIP_GET_PEER_HIT_AT_FIREWALL: return "SO_HIP_GET_PEER_HIT_AT_FIREWALL";
 	case SO_HIP_TRIGGER_BEX: return "SO_HIP_TRIGGER_BEX";  	
 	default:
 		return "UNDEFINED";
@@ -1120,11 +1143,15 @@ char* hip_param_type_name(const hip_tlv_type_t param_type){
 	case HIP_PARAM_HIP_TRANSFORM: return "HIP_PARAM_HIP_TRANSFORM";
 	case HIP_PARAM_HI: return "HIP_PARAM_HI";
 	case HIP_PARAM_HIT: return "HIP_PARAM_HIT";
+	case HIP_PARAM_HIT_LOCAL: return "HIP_PARAM_HIT_LOCAL";
+	case HIP_PARAM_HIT_PEER: return "HIP_PARAM_HIT_PEER";
 	case HIP_PARAM_HMAC2: return "HIP_PARAM_HMAC2";
 	case HIP_PARAM_HMAC: return "HIP_PARAM_HMAC";
 	case HIP_PARAM_HOST_ID: return "HIP_PARAM_HOST_ID";
 	case HIP_PARAM_INT: return "HIP_PARAM_INT";
 	case HIP_PARAM_IPV6_ADDR: return "HIP_PARAM_IPV6_ADDR";
+	case HIP_PARAM_IPV6_ADDR_LOCAL: return "HIP_PARAM_IPV6_ADDR_LOCAL";
+	case HIP_PARAM_IPV6_ADDR_PEER: return "HIP_PARAM_IPV6_ADDR_PEER";
 	case HIP_PARAM_KEYS: return "HIP_PARAM_KEYS";
 	case HIP_PARAM_LOCATOR: return "HIP_PARAM_LOCATOR";
 	case HIP_PARAM_NOTIFICATION: return "HIP_PARAM_NOTIFICATION";
@@ -1154,9 +1181,12 @@ char* hip_param_type_name(const hip_tlv_type_t param_type){
 	case HIP_PARAM_ESP_PROT_ANCHOR: return "HIP_PARAM_ESP_PROT_ANCHOR";
 	//add by santtu
 	case HIP_PARAM_NAT_TRANSFORM: return "HIP_PARAM_NAT_TRANSFORM";	
+	//end add      
+	case HIP_PARAM_LSI: return "HIP_PARAM_LSI";
+	case HIP_PARAM_SRC_TCP_PORT: return "HIP_PARAM_SRC_TCP_PORT";
+	case HIP_PARAM_DST_TCP_PORT: return "HIP_PARAM_DST_TCP_PORT";
 	case HIP_PARAM_STUN: return "HIP_PARAM_STUN";	
 	//end add
-	case HIP_PARAM_LSI: return "HIP_PARAM_LSI";	
 	}
 	return "UNDEFINED";
 }
@@ -1171,7 +1201,7 @@ int hip_check_userspace_msg(const struct hip_common *msg) {
 	struct hip_tlv_common *current_param = NULL;
 	int err = 0;
 
-	if (!hip_check_msg_len(msg)) {
+	if (!hip_check_user_msg_len(msg)) {
 		err = -EMSGSIZE;
 		HIP_ERROR("bad msg len %d\n", hip_get_msg_total_len(msg));
 		goto out;
@@ -1267,7 +1297,8 @@ int hip_check_network_msg(const struct hip_common *msg)
 		goto out;
 	}
 
-	if (!hip_check_msg_len(msg)) {
+	//check msg length
+	if (!hip_check_network_msg_len(msg)) {
 		err = -EMSGSIZE;
 		HIP_ERROR("bad msg len %d\n", hip_get_msg_total_len(msg));
 		goto out;
@@ -1542,7 +1573,7 @@ int hip_build_user_hdr(struct hip_common *msg, hip_hdr_type_t base_type,
 		goto out;
 	}
 
-	if (!hip_check_msg_len(msg)) {
+	if (!hip_check_user_msg_len(msg)) {
 		HIP_ERROR("hipd build hdr: msg len (%d) invalid\n",
 			  hip_get_msg_total_len(msg));
 		err = -EMSGSIZE;
@@ -3340,6 +3371,18 @@ int hip_build_param_blind_nonce(struct hip_common *msg, uint16_t nonce)
 	param.nonce = htons(nonce);
 	err = hip_build_param(msg, &param);
 
+	return err;
+}
+
+int hip_build_param_heartbeat(struct hip_common *msg, int seconds) {
+	int err = 0;
+	struct hip_heartbeat heartbeat;
+	hip_set_param_type(&heartbeat, HIP_PARAM_HEARTBEAT);
+	hip_calc_param_len(&heartbeat, sizeof(struct hip_heartbeat) -
+			   sizeof(struct hip_tlv_common));
+	memcpy(&heartbeat.heartbeat, &seconds, sizeof(seconds));
+	err = hip_build_param(msg, &heartbeat);
+out_err:
 	return err;
 }
 

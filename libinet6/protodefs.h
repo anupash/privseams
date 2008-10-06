@@ -7,8 +7,8 @@
 
 #include "hashchain.h"
 
-#define HIP_MAX_PACKET 2048
-
+#define HIP_MAX_PACKET 4096
+#define HIP_MAX_NETWORK_PACKET 2048
 /** @addtogroup hip_msg
  * @{
  */
@@ -86,8 +86,8 @@
 #define HIP_PARAM_ESP_PROT_TRANSFORM   4120
 #define HIP_PARAM_ESP_PROT_ANCHOR	   4121
 
-/* Range 32768 - 49141 can be used for HIPL private parameters i.e. to
-   parameters passed from hipconf to hipdaemon.
+/* Range 32768 - 49141 for HIPL private network parameters. Please add
+   here only network messages, not internal messages!
    @todo: move these to icomm.h */
 #define HIP_PARAM_HIT                   32768
 #define HIP_PARAM_IPV6_ADDR             32769
@@ -121,15 +121,16 @@
 #define HIP_PARAM_ADD_OPTION		32801
 #define HIP_PARAM_PEER_HIT		32802
 #define HIP_PARAM_HCHAIN_ANCHOR		32803
-#define HIP_PARAM_LSI		        32804  /* xx todo: this should be icomm.h */
+#define HIP_PARAM_LSI		        32804
 #define HIP_PARAM_HIT_LOCAL		32805
 #define HIP_PARAM_HIT_PEER		32806
 #define HIP_PARAM_IPV6_ADDR_LOCAL	32807
 #define HIP_PARAM_IPV6_ADDR_PEER        32808
-#define HIP_PARAM_HDRR_INFO		32809 
-#define HIP_PARAM_UADB_INFO		32810
-#define HIP_PARAM_CERT_X509_REQ         32811
-#define HIP_PARAM_CERT_X509_RESP        32812
+#define HIP_PARAM_HEARTBEAT             32809
+#define HIP_PARAM_CERT_X509_REQ         32810
+#define HIP_PARAM_CERT_X509_RESP        32811
+#define HIP_PARAM_HDRR_INFO		32812
+#define HIP_PARAM_UADB_INFO		32813
 /* End of HIPL private parameters. */
 
 #define HIP_PARAM_HMAC                 61505
@@ -867,6 +868,12 @@ struct hip_uadb_info {
 	struct in6_addr		hitl ;
     char				cert[512] ;
 }__attribute__ ((packed)) ;
+
+struct hip_heartbeat {
+	hip_tlv_type_t 	type;
+	hip_tlv_len_t 	length;
+        int heartbeat;
+} __attribute__ ((packed));
 
 //add by santtu from here
 

@@ -2759,6 +2759,36 @@ int hip_for_each_ha(int (*func)(hip_ha_t *entry, void *opaq), void *opaque)
 	return fail;
 }
 
+/** 
+ * This function goes through the HA database and sends an icmp echo to all of them
+ *
+ * @param socket to send with
+ *
+ * @return 0 on success negative on error
+ */
+int hip_send_all_heartbeats(int sockfd) {
+	int err = 0, i = 0;
+        hip_ha_t *this;
+        hip_list_t *item, *tmp;
+
+	_HIP_DEBUG("Sending heartbeat to all active HAs (in ESTABLISHED state)\n");
+
+        HIP_LOCK_HT(&hadb_hit);
+        list_for_each_safe(item, tmp, hadb_hit, i)
+        {
+                this = list_entry(item);
+		if (this->state == HIP_STATE_ESTABLISHED) {
+			_HIP_DEBUG("list_for_each_safe\n");
+			err = hip_send_icmp(sockfd, this);
+			if (err) goto out_err;
+		}
+        }
+
+out_err:
+       HIP_UNLOCK_HT(&hadb_hit);
+	return err;
+}
+
 /** Enumeration for hip_count_open_connections */
 int hip_count_one_entry(hip_ha_t *entry, void *cntr)
 {
@@ -2788,6 +2818,7 @@ int hip_handle_get_ha_info(hip_ha_t *entry, struct hip_common *msg)
 	
 	int err = 0;
     	struct hip_hadb_user_info_state hid;
+	extern int hip_icmp_interval;
 	
 	test++;
 	memset(&hid, 0, sizeof(hid));
@@ -2799,6 +2830,13 @@ int hip_handle_get_ha_info(hip_ha_t *entry, struct hip_common *msg)
 	ipv4_addr_copy(&hid.lsi_our, &entry->lsi_our);
 	ipv4_addr_copy(&hid.lsi_peer, &entry->lsi_peer);
 
+	hid.heartbeats_on = hip_icmp_interval;
+	hid.heartbeats_mean = entry->heartbeats_mean;
+	hid.heartbeats_mean_varians = entry->heartbeats_mean_varians;
+	hid.heartbeats_sent = entry->heartbeats_sent;
+	hid.heartbeats_received = entry->heartbeats_received;
+
+	/* does not print heartbeat info, but I do not think it even should -Samu*/
 	hip_print_debug_info(&hid.ip_our,&hid.ip_peer,&hid.hit_our,&hid.hit_peer,&hid.lsi_peer);
 
 	HIP_DEBUG("test %d\n",test);

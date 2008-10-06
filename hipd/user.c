@@ -35,7 +35,9 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	int err = 0, msg_type = 0, n = 0, len = 0, state = 0, reti = 0, dhterr = 0;
 	int access_ok = 0, send_response = 1, is_root = 0;
 	HIP_KEA * kea = NULL;
-	struct hip_tlv_common *param = NULL;
+	extern int hip_icmp_interval;
+	struct hip_tlv_common *param = NULL;	
+	struct hip_heartbeat * heartbeat;
 
 	HIP_ASSERT(src->sin6_family == AF_INET6);
 
@@ -144,6 +146,11 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
                           hip_locator_status, SO_HIP_SET_LOCATOR_OFF);
                 hip_recreate_all_precreated_r1_packets();
                 break;
+        case SO_HIP_HEARTBEAT:
+		heartbeat = hip_get_param(msg, HIP_PARAM_HEARTBEAT);
+		hip_icmp_interval = heartbeat->heartbeat;
+		HIP_DEBUG("Received heartbeat interval (%d seconds)\n",hip_icmp_interval);
+		break;
 	case SO_HIP_SET_DEBUG_ALL:
 		/* Displays all debugging messages. */
 		_HIP_DEBUG("Handling DEBUG ALL user message.\n");
@@ -906,29 +913,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	case SO_HIP_OPPTCP_UNBLOCK_AND_BLACKLIST:
 		hip_opptcp_unblock_and_blacklist(msg, src);
 		break;
-#if 0
-	case SO_HIP_GET_PEER_HIT_FROM_FIREWALL:
-		err = hip_opp_get_peer_hit(msg, src, 1);
-		
-		if(err){
-			_HIP_ERROR("get pseudo hit failed.\n");
-			send_response = 1;
-			if (err == -11) /* immediate fallback, do not pass */
-			 	err = 0;
-			goto out_err;
-		} else {
-			send_response = 0;
-                }
-		/* skip sending of return message; will be sent later in R1 */
-		goto out_err;
-	  break;
-	case SO_HIP_OPPTCP_UNBLOCK_APP:
-		hip_opptcp_unblock(msg, src);
-		break;
-	case SO_HIP_OPPTCP_OPPIPDB_ADD_ENTRY:
-		hip_opptcp_add_entry(msg, src);
-		break;
-#endif
 	case SO_HIP_OPPTCP_SEND_TCP_PACKET:
 		hip_opptcp_send_tcp_packet(msg, src); 
 		
@@ -1045,7 +1029,9 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		HIP_DEBUG("hip_buddies_inuse =  %d (should be %d)\n", 
 			hip_buddies_inuse, SO_HIP_BUDDIES_OFF);
 		break;
-
+	case SO_HIP_GET_PEER_HIT_AT_FIREWALL:
+		err = hip_opp_get_peer_hit(msg, src);
+		break;
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;

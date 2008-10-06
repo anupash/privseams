@@ -21,7 +21,7 @@ case "$1" in
 	;;
   stop)
         echo -n "Stopping hip dnsproxy"
-	start-stop-daemon --sop --pidfile $PID_FILE --quiet -- $DNSPROXY_OPTS
+	start-stop-daemon --stop --pidfile $PID_FILE --quiet -- $DNSPROXY_OPTS
         echo "."
 	;;
 

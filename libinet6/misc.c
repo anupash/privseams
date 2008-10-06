@@ -10,9 +10,11 @@
 #include "misc.h"
 #include <string.h>
 
+
 #ifdef CONFIG_HIP_OPPORTUNISTIC
-int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip, struct in6_addr *hit, int hit_type)
-{
+int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip,
+				  struct in6_addr *hit,
+				  int hit_type){
   int err = 0;
   u8 digest[HIP_AH_SHA_LEN];
   char *key = (char *) (ip);
@@ -36,6 +38,7 @@ int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip, struct in6_addr *hi
 }
 #endif //CONFIG_HIP_OPPORTUNISTIC
 
+
 /** hip_timeval_diff - calculate difference between two timevalues
  * @param t1 timevalue 1
  * @param t2 timevalue 2
@@ -48,9 +51,9 @@ int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip, struct in6_addr *hi
  *
  * @return 1 if t1 is equal or later than t2, else 0.
  */
-int hip_timeval_diff(const struct timeval *t1, const struct timeval *t2,
-		     struct timeval *result)
-{
+int hip_timeval_diff(const struct timeval *t1,
+		     const struct timeval *t2,
+		     struct timeval *result){
 	struct timeval _t1, _t2;
 	_t1 = *t1;
 	_t2 = *t2;
@@ -72,8 +75,8 @@ int hip_timeval_diff(const struct timeval *t1, const struct timeval *t2,
 	return _t1.tv_sec >= _t2.tv_sec;
 }
 
-char *hip_convert_hit_to_str(const hip_hit_t *local_hit, const char *prefix)
-{
+
+char *hip_convert_hit_to_str(const hip_hit_t *local_hit, const char *prefix){
 	int err = 0;
 	char *hit_str = NULL;
 	/* aaaa:bbbb:cccc:dddd:eeee:ffff:gggg:eeee/128\0  */
@@ -89,13 +92,13 @@ char *hip_convert_hit_to_str(const hip_hit_t *local_hit, const char *prefix)
 
  out_err:
 
-	if (err && hit_str) {
+	if(err && hit_str){
 		HIP_FREE(hit_str);
 		hit_str = NULL;
 	}
-	
 	return hit_str;
 }
+
 
 /*
  * function maxof()
@@ -105,8 +108,7 @@ char *hip_convert_hit_to_str(const hip_hit_t *local_hit, const char *prefix)
  * out:         Returns the integer with the largest value from the
  *              list provided.
  */
-int maxof(int num_args, ...)
-{
+int maxof(int num_args, ...){
         int max, i, a;
         va_list ap;
 
@@ -122,8 +124,7 @@ int maxof(int num_args, ...)
 
 
 int hip_lsi_are_equal(const hip_lsi_t *lsi1,
-		      const hip_lsi_t *lsi2)
-{
+		      const hip_lsi_t *lsi2){
 	return (ipv4_addr_cmp(lsi1, lsi2) == 0);
 }
 
@@ -136,19 +137,18 @@ int hip_lsi_are_equal(const hip_lsi_t *lsi1,
  * @return 1 if hit1 was bigger than hit2, or else 0
  */
 int hip_hit_is_bigger(const struct in6_addr *hit1,
-		      const struct in6_addr *hit2)
-{
+		      const struct in6_addr *hit2){
 	return (ipv6_addr_cmp(hit1, hit2) > 0);
 }
 
+
 int hip_hit_are_equal(const struct in6_addr *hit1,
-		      const struct in6_addr *hit2)
-{
+		      const struct in6_addr *hit2){
 	return (ipv6_addr_cmp(hit1, hit2) == 0);
 }
 
-char* hip_in6_ntop(const struct in6_addr *in6, char *buf)
-{
+
+char* hip_in6_ntop(const struct in6_addr *in6, char *buf){
         if (!buf)
                 return NULL;
         sprintf(buf,
@@ -160,9 +160,9 @@ char* hip_in6_ntop(const struct in6_addr *in6, char *buf)
         return buf;
 }
 
-int hip_in6_ntop2(const struct in6_addr *in6, char *buf)
-{
-	if (!buf)
+
+int hip_in6_ntop2(const struct in6_addr *in6, char *buf){
+	if(!buf)
 		return 0;
 	return sprintf(buf,
 		       "%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x",
@@ -172,13 +172,14 @@ int hip_in6_ntop2(const struct in6_addr *in6, char *buf)
 		       ntohs(in6->s6_addr16[6]), ntohs(in6->s6_addr16[7]));
 }
 
-void hip_xor_hits(hip_hit_t *res, const hip_hit_t *hit1, const hip_hit_t *hit2)
-{
+
+void hip_xor_hits(hip_hit_t *res, const hip_hit_t *hit1, const hip_hit_t *hit2){
 	res->s6_addr32[0] = hit1->s6_addr32[0] ^ hit2->s6_addr32[0];
 	res->s6_addr32[1] = hit1->s6_addr32[1] ^ hit2->s6_addr32[1];
 	res->s6_addr32[2] = hit1->s6_addr32[2] ^ hit2->s6_addr32[2];
 	res->s6_addr32[3] = hit1->s6_addr32[3] ^ hit2->s6_addr32[3];
 }
+
 
 /**
  * hip_hash_spi - calculate a hash from SPI value
@@ -187,24 +188,24 @@ void hip_xor_hits(hip_hit_t *res, const hip_hit_t *hit1, const hip_hit_t *hit2)
  *
  * Returns value in range: 0 <= x < range
  */
-unsigned long hip_hash_spi(const void *ptr)
-{
+unsigned long hip_hash_spi(const void *ptr){
 	u32 spi = * (u32 *) ptr;
 	unsigned long hash = (unsigned long)(*((uint32_t *)ptr));
 	return (hash % ULONG_MAX);
 }
 
+
 /**
  * Match spis.
  */
-int hip_match_spi(const void *ptr1, const void *ptr2)
-{
+int hip_match_spi(const void *ptr1, const void *ptr2){
 	unsigned long hash1 = (unsigned long)(*((uint32_t *)ptr1));
 	unsigned long hash2 = (unsigned long)(*((uint32_t *)ptr2));
 
 	/* SPIs are random, so simple modulo is enough? */
 	return (hash1 != hash2);
 }
+
 
 /**
  * hip_hash_hit - calculate a hash from a HIT
@@ -213,8 +214,7 @@ int hip_match_spi(const void *ptr1, const void *ptr2)
  *
  * Returns value in range: 0 <= x < range
  */
-unsigned long hip_hash_hit(const void *ptr)
-{
+unsigned long hip_hash_hit(const void *ptr){
       uint8_t hash[HIP_AH_SHA_LEN];
       
       hip_build_digest(HIP_DIGEST_SHA1, ptr + sizeof(uint16_t),
@@ -224,13 +224,14 @@ unsigned long hip_hash_hit(const void *ptr)
       return *((unsigned long *)hash);
 }
 
-int hip_match_hit(const void *ptr1, const void *ptr2)
-{
+
+int hip_match_hit(const void *ptr1, const void *ptr2){
 	return (hip_hash_hit(ptr1) != hip_hash_hit(ptr2));
 }
 
+
 /*
-unsigned long hip_hidb_hash(const void *ptr) {
+unsigned long hip_hidb_hash(const void *ptr){
 	hip_hit_t *hit = &(((struct hip_host_id_entry *) ptr)->lhi.hit);
 	unsigned long hash;
 
@@ -239,13 +240,13 @@ unsigned long hip_hidb_hash(const void *ptr) {
 	return hash;
 }
 
-int hip_hidb_match(const void *ptr1, const void *ptr2) {
+int hip_hidb_match(const void *ptr1, const void *ptr2){
 	return (hip_hidb_hash(ptr1) != hip_hidb_hash(ptr2));
 }
 */
 
-const char *hip_algorithm_to_string(int algo) 
-{
+
+const char *hip_algorithm_to_string(int algo){
 	const char *str = "UNKNOWN";
 	static const char *algos[] = { "DSA", "RSA" };
 	if(algo == HIP_HI_DSA)
@@ -255,6 +256,7 @@ const char *hip_algorithm_to_string(int algo)
 	return str;
 }
 
+
 /**
  * hip_birthday_success - compare two birthday counters
  * @param old_bd birthday counter
@@ -262,8 +264,7 @@ const char *hip_algorithm_to_string(int algo)
  *
  * @return 1 (true) if new_bd is newer than old_bd, 0 (false) otherwise.
  */
-int hip_birthday_success(uint64_t old_bd, uint64_t new_bd)
-{
+int hip_birthday_success(uint64_t old_bd, uint64_t new_bd){
 	return new_bd > old_bd;
 }
 
@@ -275,8 +276,7 @@ int hip_birthday_success(uint64_t old_bd, uint64_t new_bd)
  * @return the encryption key length based on the chosen transform,
  * otherwise < 0 on error.
  */
-int hip_enc_key_length(int tid)
-{
+int hip_enc_key_length(int tid){
 	int ret = -1;
 
 	switch(tid) {
@@ -300,8 +300,7 @@ int hip_enc_key_length(int tid)
 }
 
 
-int hip_hmac_key_length(int tid)
-{
+int hip_hmac_key_length(int tid){
 	int ret = -1;
 	switch(tid) {
        	case HIP_ESP_AES_SHA1:
@@ -321,6 +320,7 @@ int hip_hmac_key_length(int tid)
 	return ret;
 }
 
+
 /**
  * hip_transform_key_length - get transform key length of a transform
  * @param tid transform
@@ -328,8 +328,7 @@ int hip_hmac_key_length(int tid)
  * @return the transform key length based on the chosen transform,
  * otherwise < 0 on error.
  */
-int hip_transform_key_length(int tid)
-{
+int hip_transform_key_length(int tid){
 	int ret = -1;
 
 	switch(tid) {
@@ -359,8 +358,7 @@ int hip_transform_key_length(int tid)
  * @return the authentication key length based on the chosen transform.
  * otherwise < 0 on error.
  */
-int hip_auth_key_length_esp(int tid)
-{
+int hip_auth_key_length_esp(int tid){
 	int ret = -1;
 
 	switch(tid) {
@@ -383,6 +381,7 @@ int hip_auth_key_length_esp(int tid)
 	return ret;
 }
 
+
 /**
  * hip_select_hip_transform - select a HIP transform to use
  * @param ht HIP_TRANSFORM payload where the transform is selected from
@@ -390,8 +389,7 @@ int hip_auth_key_length_esp(int tid)
  * @return the first acceptable Transform-ID, otherwise < 0 if no
  * acceptable transform was found. The return value is in host byte order.
  */
-hip_transform_suite_t hip_select_hip_transform(struct hip_hip_transform *ht)
-{
+hip_transform_suite_t hip_select_hip_transform(struct hip_hip_transform *ht){
 	hip_transform_suite_t tid = 0;
 	int i;
 	int length;
@@ -443,8 +441,7 @@ hip_transform_suite_t hip_select_hip_transform(struct hip_hip_transform *ht)
  * @return the first acceptable Suite-ID. otherwise < 0 if no
  * acceptable Suite-ID was found.
  */
-hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht)
-{
+hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht){
 	hip_transform_suite_t tid = 0;
 	int i;
 	int length;
@@ -489,7 +486,7 @@ hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht)
 	return tid;
 }
 
-int convert_string_to_address_v4(const char *str, struct in_addr *ip) {
+int convert_string_to_address_v4(const char *str, struct in_addr *ip){
 	int ret = 0, err = 0;
 	
 	ret = inet_pton(AF_INET, str, ip);
@@ -504,7 +501,8 @@ int convert_string_to_address_v4(const char *str, struct in_addr *ip) {
 
 #ifndef __KERNEL__
 
-int convert_string_to_address(const char *str, struct in6_addr *ip6) {
+int convert_string_to_address(const char *str,
+			      struct in6_addr *ip6){
 	int ret = 0, err = 0;
 	struct in_addr ip4;
 
@@ -530,9 +528,11 @@ int convert_string_to_address(const char *str, struct in6_addr *ip6) {
 	return err;
 }
 
+
 /* the lengths are in bits */
-int khi_encode(unsigned char *orig, int orig_len, unsigned char *encoded,
-	       int encoded_len) {
+int khi_encode(unsigned char *orig, int orig_len,
+	       unsigned char *encoded,
+	       int encoded_len){
 	BIGNUM *bn = NULL;
 	int err = 0, shift = (orig_len - encoded_len) / 2,
 	  len = encoded_len / 8 + ((encoded_len % 8) ? 1 : 0);
@@ -554,9 +554,10 @@ int khi_encode(unsigned char *orig, int orig_len, unsigned char *encoded,
 	return err;
 }
 
+
 int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
-			   struct in6_addr *hit, int hit_type)
-{
+			   struct in6_addr *hit,
+			   int hit_type){
        int err = 0, index;
        u8 digest[HIP_AH_SHA_LEN];
        u8 *key_rr = (u8 *) (host_id + 1); /* skip the header */
@@ -609,16 +610,18 @@ int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
        return err;
 }
 
+
 /* Useless abstraction, goes to the same function anyway -- SAMU*/
 int hip_rsa_host_id_to_hit(const struct hip_host_id *host_id,
-			   struct in6_addr *hit, int hit_type)
-{
+			   struct in6_addr *hit,
+			   int hit_type){
 	return hip_dsa_host_id_to_hit(host_id, hit, hit_type);
 }
 
+
 int hip_host_id_to_hit(const struct hip_host_id *host_id,
-		       struct in6_addr *hit, int hit_type)
-{
+		       struct in6_addr *hit,
+		       int hit_type){
 	int algo = hip_get_host_id_algo(host_id);
 	int err = 0;
 
@@ -633,9 +636,10 @@ int hip_host_id_to_hit(const struct hip_host_id *host_id,
 	return err;
 }
 
+
 int hip_private_dsa_host_id_to_hit(const struct hip_host_id *host_id,
-				   struct in6_addr *hit, int hit_type)
-{
+				   struct in6_addr *hit,
+				   int hit_type){
 	int err = 0;
 	struct hip_host_id *host_id_pub = NULL;
 	int contents_len;
@@ -676,9 +680,10 @@ int hip_private_dsa_host_id_to_hit(const struct hip_host_id *host_id,
 	return err;
 }
 
+
 int hip_private_rsa_host_id_to_hit(const struct hip_host_id *host_id,
-				   struct in6_addr *hit, int hit_type)
-{
+				   struct in6_addr *hit,
+				   int hit_type){
 	int err = 0;
 	struct hip_host_id *host_id_pub = NULL;
 	int contents_len;
@@ -722,9 +727,10 @@ int hip_private_rsa_host_id_to_hit(const struct hip_host_id *host_id,
 	return err;
 }
 
+
 int hip_private_host_id_to_hit(const struct hip_host_id *host_id,
-			       struct in6_addr *hit, int hit_type)
-{
+			       struct in6_addr *hit,
+			       int hit_type){
 	int algo = hip_get_host_id_algo(host_id);
 	int err = 0;
 
@@ -749,7 +755,7 @@ int hip_private_host_id_to_hit(const struct hip_host_id *host_id,
  *
  * @return 0 if successful, or negative on error.
  */
-int check_and_create_dir(char *dirname, mode_t mode) {
+int check_and_create_dir(char *dirname, mode_t mode){
 	int err = 0;
 	struct stat dir_stat;
 
@@ -769,8 +775,8 @@ int check_and_create_dir(char *dirname, mode_t mode) {
 	return err;
 }
 
-int hip_host_id_contains_private_key(struct hip_host_id *host_id)
-{
+
+int hip_host_id_contains_private_key(struct hip_host_id *host_id){
 	uint16_t len = hip_get_param_contents_len(host_id);
 	u8 *buf = (u8 *)(host_id + 1);
 	u8 t = *buf;
@@ -778,7 +784,8 @@ int hip_host_id_contains_private_key(struct hip_host_id *host_id)
 	return len >= 3 * (64 + 8 * t) + 2 * 20; /* PQGXY 3*(64+8*t) + 2*20 */
 }
 
-void change_key_file_perms(char *filenamebase) {
+
+void change_key_file_perms(char *filenamebase){
   char *pubfilename = NULL;
   int pubfilename_len;
 
@@ -1263,9 +1270,10 @@ int hip_serialize_host_id_action(struct hip_common *msg, int action, int anon,
   return err;
 }
 
+
 int hip_any_sa_to_hit_sa(const struct sockaddr *from,
-		     const hip_hit_t *use_hit,
-		     struct sockaddr_in6 *to) {
+		         const hip_hit_t *use_hit,
+		         struct sockaddr_in6 *to){
 	to->sin6_family = AF_INET6;
 	ipv6_addr_copy(&to->sin6_addr, use_hit);
 	if (from->sa_family == AF_INET)
@@ -1278,10 +1286,12 @@ int hip_any_sa_to_hit_sa(const struct sockaddr *from,
 	return 0;
 }
 
+
 void get_random_bytes(void *buf, int n)
 {
 	RAND_bytes(buf, n);
 }
+
 
 /**
  * hip_build_digest - calculate a digest over given data
@@ -1295,7 +1305,7 @@ void get_random_bytes(void *buf, int n)
  *
  * @return 0 on success, otherwise < 0.
  */
-int hip_build_digest(const int type, const void *in, int in_len, void *out) {
+int hip_build_digest(const int type, const void *in, int in_len, void *out){
 	SHA_CTX sha;
 	MD5_CTX md5;
 
@@ -1332,7 +1342,7 @@ int hip_build_digest(const int type, const void *in, int in_len, void *out) {
  * DNS KEY RR is stored at dsa_key_rr. On error function returns negative
  * and sets dsa_key_rr to NULL.
  */
-int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
+int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr){
   int err = 0;
   int dsa_key_rr_len = -1;
   signed char t; /* in units of 8 bytes */
@@ -1443,7 +1453,7 @@ int dsa_to_dns_key_rr(DSA *dsa, unsigned char **dsa_key_rr) {
  * DNS KEY RR is stored at rsa_key_rr. On error function returns negative
  * and sets rsa_key_rr to NULL.
  */
-int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr) {
+int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr){
   int err = 0;
   int rsa_key_rr_len = -1;
   unsigned char *c;
@@ -1525,7 +1535,8 @@ int rsa_to_dns_key_rr(RSA *rsa, unsigned char **rsa_key_rr) {
   return rsa_key_rr_len;
 }
 
-void *hip_cast_sa_addr(void *sockaddr) {
+
+void *hip_cast_sa_addr(void *sockaddr){
   struct sockaddr *sa = (struct sockaddr *) sockaddr;
   void *ret;
   
@@ -1572,11 +1583,12 @@ int hip_sockaddr_len(const void *sockaddr) {
   return len;
 }
 
-int hip_sa_addr_len(void *sockaddr) {
+
+int hip_sa_addr_len(void *sockaddr){
   struct sockaddr *sa = (struct sockaddr *) sockaddr;
   int len;
   
-  switch(sa->sa_family) {
+  switch(sa->sa_family){
   case AF_INET:
     len = 4;
     break;
@@ -1609,12 +1621,10 @@ void hip_addr_to_sockaddr(struct in6_addr *addr, struct sockaddr_storage *sa)
 }
 
 
-
-
-
-int hip_remove_lock_file(char *filename) {
+int hip_remove_lock_file(char *filename){
 	return unlink(filename);
 }
+
 
 int hip_create_lock_file(char *filename, int killold) {
 	
@@ -1692,6 +1702,7 @@ int hip_create_lock_file(char *filename, int killold) {
 
 #endif /* ! __KERNEL__ */
 
+
 /**
  * hip_solve_puzzle - Solve puzzle.
  * @param puzzle_or_solution Either a pointer to hip_puzzle or hip_solution structure
@@ -1704,9 +1715,9 @@ int hip_create_lock_file(char *filename, int killold) {
  * NOTE! I don't see why 0 couldn't solve the puzzle too, but since the
  * odds are 1/2^64 to try 0, I don't see the point in improving this now.
  */
-uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
-			  int mode)
-{
+uint64_t hip_solve_puzzle(void *puzzle_or_solution,
+			  struct hip_common *hdr,
+			  int mode){
 	uint64_t mask = 0;
 	uint64_t randval = 0;
 	uint64_t maxtries = 0;
@@ -1798,28 +1809,27 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution, struct hip_common *hdr,
 	return err;
 }
 
+
 hip_lsi_t *hip_get_lsi_peer_by_hits(struct in6_addr *hit_s, struct in6_addr *hit_r){
 	int err;
 	struct hip_common *msg = NULL;
 	hip_lsi_t *lsi = NULL;
-	
-	
+
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 	
-	if (hit_s)
+	if(hit_s)
 		HIP_IFEL(hip_build_param_contents(msg, (void *) hit_s,
 						  HIP_PARAM_HIT,
-						  sizeof(struct in6_addr)), -1,
-			 "build param HIP_PARAM_HIT  failed\n");
-	if (hit_r)
+						  sizeof(struct in6_addr)),
+				-1, "build param HIP_PARAM_HIT  failed\n");
+	if(hit_r)
 		HIP_IFEL(hip_build_param_contents(msg, (void *) hit_r,
 						  HIP_PARAM_HIT,
-						  sizeof(struct in6_addr)), -1,
-			 "build param HIP_PARAM_HIT  failed\n");
-	
-	
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_LSI_PEER, 0), -1,
-		 "build hdr failed\n");
+						  sizeof(struct in6_addr)),
+				-1, "build param HIP_PARAM_HIT  failed\n");
+
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_LSI_PEER, 0),
+				-1, "build hdr failed\n");
 	
 	/* send and receive msg to/from hipd */
 	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send_recv msg failed\n");
@@ -1834,6 +1844,7 @@ hip_lsi_t *hip_get_lsi_peer_by_hits(struct in6_addr *hit_s, struct in6_addr *hit
 	//      HIP_FREE(msg);                                                                                                                                                                                 
 	return lsi;
 }
+
 
 hip_lsi_t *hip_get_lsi_our_by_hits(struct in6_addr *hit_s, struct in6_addr *hit_r){
 	int err;
@@ -1842,20 +1853,20 @@ hip_lsi_t *hip_get_lsi_our_by_hits(struct in6_addr *hit_s, struct in6_addr *hit_
 	
 	HIP_IFE(!(msg = hip_msg_alloc()), -1);
 	
-	if (hit_s)
+	if(hit_s)
 		HIP_IFEL(hip_build_param_contents(msg, (void *) hit_s,
 						  HIP_PARAM_HIT,
-						  sizeof(struct in6_addr)), -1,
-			 "build param HIP_PARAM_HIT  failed\n");
-	if (hit_r)
+						  sizeof(struct in6_addr)),
+				-1, "build param HIP_PARAM_HIT  failed\n");
+	if(hit_r)
 		HIP_IFEL(hip_build_param_contents(msg, (void *) hit_r,
 						  HIP_PARAM_HIT,
-						  sizeof(struct in6_addr)), -1,
-			 "build param HIP_PARAM_HIT  failed\n");
+						  sizeof(struct in6_addr)),
+				-1, "build param HIP_PARAM_HIT  failed\n");
 	
 	
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_LSI_OUR, 0), -1,
-		 "build hdr failed\n");
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_LSI_OUR, 0),
+			-1, "build hdr failed\n");
 	
 	/* send and receive msg to/from hipd */
 	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send_recv msg failed\n");
@@ -1872,9 +1883,26 @@ hip_lsi_t *hip_get_lsi_our_by_hits(struct in6_addr *hit_s, struct in6_addr *hit_
 	
 }
 
-int hip_trigger_is_bex_established(struct in6_addr *src_hit, struct in6_addr *dst_hit, struct in_addr *src_ip, struct in_addr *dst_ip){
 
-	int err = 0, res = 0;
+/**
+ * Gets the state of the bex for a pair of ip addresses.
+ * @param *src_ip	input for finding the correct entries
+ * @param *dst_ip	input for finding the correct entries
+ * @param *src_hit	output data of the correct entry
+ * @param *dst_hit	output data of the correct entry
+ * @param *src_lsi	output data of the correct entry
+ * @param *dst_lsi	output data of the correct entry
+ *
+ * @return		the state of the bex if the entry is found
+ *			otherwise returns -1
+ */
+int hip_get_bex_state_from_LSIs(hip_lsi_t       *src_lsi,
+				hip_lsi_t       *dst_lsi,
+				struct in6_addr *src_ip,
+				struct in6_addr *dst_ip,
+				struct in6_addr *src_hit,
+				struct in6_addr *dst_hit){
+	int err = 0, res = -1;
 	hip_lsi_t src_ip4, dst_ip4;
 	struct hip_tlv_common *current_param = NULL;
 	struct hip_common *msg = NULL;
@@ -1883,29 +1911,31 @@ int hip_trigger_is_bex_established(struct in6_addr *src_hit, struct in6_addr *ds
 	HIP_ASSERT(src_ip != NULL && dst_ip != NULL);
 
 	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
-
 	hip_msg_init(msg);
-
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0), -1,
-		 "Building of daemon header failed\n");
-
-	HIP_IFEL(hip_send_recv_daemon_info(msg), -1,
-		 "send recv daemon info\n");
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0),
+			-1, "Building of daemon header failed\n");
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send recv daemon info\n");
 
 	while((current_param = hip_get_next_param(msg, current_param)) != NULL) {
 		ha = hip_get_param_contents_direct(current_param);
 
-		if ( (((ipv4_addr_cmp(src_ip, &ha->lsi_our) == 0) && (ipv4_addr_cmp(dst_ip, &ha->lsi_peer) == 0))
-		      || ((ipv4_addr_cmp(dst_ip, &ha->lsi_our) == 0) &&  (ipv4_addr_cmp(src_ip, &ha->lsi_peer) == 0)))
-		     && ha->state == HIP_STATE_ESTABLISHED){
+		if( (ipv4_addr_cmp(dst_lsi, &ha->lsi_our) == 0)  &&
+		    (ipv4_addr_cmp(src_lsi, &ha->lsi_peer) == 0)    ){
+			*src_hit = ha->hit_peer;
+			*dst_hit = ha->hit_our;
+			*src_ip = ha->ip_peer;
+			*dst_ip = ha->ip_our;
+			res = ha->state;
+			break;
+		}else if( (ipv4_addr_cmp(src_lsi, &ha->lsi_our) == 0)  &&
+		          (ipv4_addr_cmp(dst_lsi, &ha->lsi_peer) == 0)    ){
 			*src_hit = ha->hit_our;
 			*dst_hit = ha->hit_peer;
-			res = 1;
-			HIP_DEBUG_HIT("hip_trigger_ha src_hit",src_hit);
-			HIP_DEBUG_HIT("hip_trigger_ha dst_hit",dst_hit);
+			*src_ip = ha->ip_our;
+			*dst_ip = ha->ip_peer;
+			res = ha->state;
 			break;
 		}
-        
 	}
         
  out_err:
@@ -1914,6 +1944,221 @@ int hip_trigger_is_bex_established(struct in6_addr *src_hit, struct in6_addr *ds
         return res;
 
 }
+
+
+/**
+ * Gets the state of the bex for a pair of ip addresses.
+ * @param *src_ip	input for finding the correct entries
+ * @param *dst_ip	input for finding the correct entries
+ * @param *src_hit	output data of the correct entry
+ * @param *dst_hit	output data of the correct entry
+ * @param *src_lsi	output data of the correct entry
+ * @param *dst_lsi	output data of the correct entry
+ *
+ * @return		the state of the bex if the entry is found
+ *			otherwise returns -1
+ */
+int hip_get_bex_state_from_IPs(struct in6_addr *src_ip,
+		      	       struct in6_addr *dst_ip,
+			       struct in6_addr *src_hit,
+			       struct in6_addr *dst_hit,
+			       hip_lsi_t       *src_lsi,
+			       hip_lsi_t       *dst_lsi){
+	int err = 0, res = -1;
+	hip_lsi_t src_ip4, dst_ip4;
+	struct hip_tlv_common *current_param = NULL;
+	struct hip_common *msg = NULL;
+	struct hip_hadb_user_info_state *ha;
+  
+	HIP_ASSERT(src_ip != NULL && dst_ip != NULL);
+
+	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
+	hip_msg_init(msg);
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0),
+			-1, "Building of daemon header failed\n");
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send recv daemon info\n");
+
+	while((current_param = hip_get_next_param(msg, current_param)) != NULL) {
+		ha = hip_get_param_contents_direct(current_param);
+
+		if( (ipv6_addr_cmp(dst_ip, &ha->ip_our) == 0) &&
+		    (ipv6_addr_cmp(src_ip, &ha->ip_peer) == 0) ){
+			*src_hit = ha->hit_peer;
+			*dst_hit = ha->hit_our;
+			*src_lsi = ha->lsi_peer;
+			*dst_lsi = ha->lsi_our;
+			res = ha->state;
+			break;
+		}else if( (ipv6_addr_cmp(src_ip, &ha->ip_our) == 0) &&
+		         (ipv6_addr_cmp(dst_ip, &ha->ip_peer) == 0) ){
+			*src_hit = ha->hit_our;
+			*dst_hit = ha->hit_peer;
+			*src_lsi = ha->lsi_our;
+			*dst_lsi = ha->lsi_peer;
+			res = ha->state;
+			break;
+		}
+	}
+        
+ out_err:
+        if(msg)
+                HIP_FREE(msg);  
+        return res;
+
+}
+
+
+/**
+ * Obtains the peer IP from the peer lsi.
+ * @param *src_lsi	the input source lsi
+ * @param *dst_lsi	the input destination lsi
+ * @param *dst_ip	the output peer ip
+ * 
+ * @return		the state of the found entry
+ * 			if there is no entry it returns -1
+ */
+int hip_get_peerIP_from_LSIs(struct in_addr  *src_lsi,
+			     struct in_addr  *dst_lsi,
+			     struct in6_addr *dst_ip){
+	int err = 0, res = -1;
+	hip_lsi_t src_ip4, dst_ip4;
+	struct hip_tlv_common *current_param = NULL;
+	struct hip_common *msg = NULL;
+	struct hip_hadb_user_info_state *ha;
+  
+	HIP_ASSERT(dst_ip != NULL);
+
+	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
+	hip_msg_init(msg);
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0),
+				-1, "Building of daemon header failed\n");
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send recv daemon info\n");
+
+	while((current_param = hip_get_next_param(msg, current_param)) != NULL) {
+		ha = hip_get_param_contents_direct(current_param);
+
+		if( (ipv4_addr_cmp(dst_lsi, &ha->lsi_our) == 0) &&
+		    (ipv4_addr_cmp(src_lsi, &ha->lsi_peer) == 0)    ){
+			*dst_ip = ha->ip_our;
+			res = ha->state;
+			break;
+		}else if( (ipv4_addr_cmp(dst_lsi, &ha->lsi_peer) == 0) && 
+			  (ipv4_addr_cmp(src_lsi, &ha->lsi_our) == 0)     ){
+			*dst_ip = ha->ip_peer;
+			res = ha->state;
+			break;
+		}
+	}
+        
+ out_err:
+        if(msg)
+                HIP_FREE(msg);  
+        return res;
+}
+
+
+/**
+ * Obtains the ips from the ha entry based on the hits.
+
+ * @param *src_hit	the input src hit
+ * @param *dst_hit	the input dst hit
+ * @param *src_ip	output src ip
+ * @param *dst_ip	output dst ip	
+ * 
+ * @return		the state of the found entry
+ * 			if there is no entry it returns -1
+ */
+int hip_get_ips_by_hits(struct in6_addr *src_hit,
+			struct in6_addr *dst_hit,
+			struct in6_addr *src_ip,
+			struct in6_addr *dst_ip){
+	int err = 0, res = -1;
+	hip_lsi_t src_ip4, dst_ip4;
+	struct hip_tlv_common *current_param = NULL;
+	struct hip_common *msg = NULL;
+	struct hip_hadb_user_info_state *ha;
+  
+	HIP_ASSERT(src_hit != NULL && dst_hit != NULL);
+
+	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
+	hip_msg_init(msg);
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0),
+				-1, "Building of daemon header failed\n");
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send recv daemon info\n");
+
+	while((current_param = hip_get_next_param(msg, current_param)) != NULL) {
+		ha = hip_get_param_contents_direct(current_param);
+
+		if( (ipv6_addr_cmp(dst_hit, &ha->hit_our) == 0)  &&
+		    (ipv6_addr_cmp(src_hit, &ha->hit_peer) == 0) &&
+		    ha->state == HIP_STATE_ESTABLISHED){
+			*src_ip = ha->ip_peer;
+			*dst_ip = ha->ip_our;
+			res = ha->state;
+			break;
+		}else if( (ipv6_addr_cmp(src_hit, &ha->hit_our) == 0)  &&
+		         (ipv6_addr_cmp(dst_hit, &ha->hit_peer) == 0) &&
+			 ha->state == HIP_STATE_ESTABLISHED){
+			*src_ip = ha->ip_our;
+			*dst_ip = ha->ip_peer;
+			res = ha->state;
+			break;
+		}
+	}
+        
+ out_err:
+        if(msg)
+                HIP_FREE(msg);  
+        return res;
+
+}
+
+
+/**
+ * Checks whether a particular hit is one of the local ones.
+ * Goes through all the local hits and compares with the given hit.
+ * 
+ * @param *hit	the input src hit
+ * 
+ * @return	1 if *hit is a local hit
+ * 		0 otherwise
+ */
+int hit_is_local_hit(struct in6_addr *hit){
+	struct hip_tlv_common *current_param = NULL;
+	struct endpoint_hip   *endp = NULL;
+	struct hip_common     *msg = NULL;
+	hip_tlv_type_t         param_type = 0;
+	int res = 0, err = 0;
+
+	HIP_DEBUG("\n");
+
+	/* Build a HIP message with socket option to get all HITs. */
+	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
+	hip_msg_init(msg);
+	HIP_IFE(hip_build_user_hdr(msg, SO_HIP_GET_HITS, 0), -1);
+
+	/* Send the message to the daemon.
+	The daemon fills the message. */
+	HIP_IFE(hip_send_recv_daemon_info(msg), -ECOMM);
+
+	/* Loop through all the parameters in the message just filled. */
+	while((current_param = hip_get_next_param(msg, current_param)) != NULL){
+
+		param_type = hip_get_param_type(current_param);
+
+		if(param_type == HIP_PARAM_EID_ENDPOINT){
+			endp = (struct endpoint_hip *)
+				hip_get_param_contents_direct(
+					current_param);
+
+			if(ipv6_addr_cmp(hit, &endp->id.hit) == 0)
+				return 1;
+		}
+	}
+ out_err:
+	return res;
+}
+
 
 /* This builds a msg which will be sent to the HIPd in order to trigger
  * a BEX there.
@@ -1924,8 +2169,7 @@ int hip_trigger_is_bex_established(struct in6_addr *src_hit, struct in6_addr *ds
  * NOTE: Either destination HIT or IP (for opportunistic BEX) has to be provided */
 int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
 		    struct in6_addr *src_lsi, struct in6_addr *dst_lsi,
-		    struct in6_addr *src_ip, struct in6_addr *dst_ip)
-{
+		    struct in6_addr *src_ip,  struct in6_addr *dst_ip){
         struct hip_common *msg = NULL;
         void *param = NULL;
         int err = 0;
@@ -1936,56 +2180,55 @@ int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
         HIP_DEBUG_IN6ADDR("dst_ip  is: ", dst_ip);
         
         HIP_IFE(!(msg = hip_msg_alloc()), -1);
-        
         HIP_IFEL(!dst_hit && !dst_ip, -1, "neither destination hit nor ip provided\n");
         
         // NOTE: we need this sequence in order to process the incoming message correctly
         
         // destination HIT is obligatory or opportunistic BEX
-        if (dst_hit)
+        if(dst_hit)
 	        HIP_IFEL(hip_build_param_contents(msg, (void *)(dst_hit),
                                                   HIP_PARAM_HIT,
-					          sizeof(struct in6_addr)), -1,
-			 "build param HIP_PARAM_HIT failed\n");
+					          sizeof(struct in6_addr)),
+				-1, "build param HIP_PARAM_HIT failed\n");
         
         // source HIT is optional
-        if (src_hit)
+        if(src_hit)
 	        HIP_IFEL(hip_build_param_contents(msg, (void *)(src_hit),
 						  HIP_PARAM_HIT,
-						  sizeof(struct in6_addr)), -1,
-			 "build param HIP_PARAM_HIT failed\n");
+						  sizeof(struct in6_addr)),
+				-1, "build param HIP_PARAM_HIT failed\n");
         
         // destination LSI is obligatory
-        if (dst_lsi)
+        if(dst_lsi)
                 HIP_IFEL(hip_build_param_contents(msg, (void *)(dst_lsi),
                                                   HIP_PARAM_LSI,
-                                                  sizeof(struct in6_addr)), -1,
-			 "build param HIP_PARAM_LSI failed\n");
+                                                  sizeof(struct in6_addr)),
+				-1, "build param HIP_PARAM_LSI failed\n");
         
         // source LSI is optional
-        if (src_lsi)
+        if(src_lsi)
 		HIP_IFEL(hip_build_param_contents(msg, (void *)(src_lsi),
 						  HIP_PARAM_LSI,
-						  sizeof(struct in6_addr)), -1,
-			 "build param HIP_PARAM_LSI failed\n");
+						  sizeof(struct in6_addr)),
+				-1, "build param HIP_PARAM_LSI failed\n");
         
         // if no destination HIT is provided this has to be there
-        if (dst_ip)
+        if(dst_ip)
                 HIP_IFEL(hip_build_param_contents(msg, (void *)(dst_ip),
                                                   HIP_PARAM_IPV6_ADDR,
-                                                  sizeof(struct in6_addr)), -1,
-                         "build param HIP_PARAM_IPV6_ADDR failed\n");
+                                                  sizeof(struct in6_addr)),
+				-1, "build param HIP_PARAM_IPV6_ADDR failed\n");
         
         // this again is optional
         if (src_ip)
         	HIP_IFEL(hip_build_param_contents(msg, (void *)(src_ip),
 						  HIP_PARAM_IPV6_ADDR,
-						  sizeof(struct in6_addr)), -1,
-			 "build param HIP_PARAM_IPV6_ADDR failed\n");
+						  sizeof(struct in6_addr)),
+				-1, "build param HIP_PARAM_IPV6_ADDR failed\n");
         
         /* build the message header */
-        HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_TRIGGER_BEX, 0), -1,
-                 "build hdr failed\n");
+        HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_TRIGGER_BEX, 0),
+					-1, "build hdr failed\n");
 
         HIP_DUMP_MSG(msg);
         
@@ -2002,30 +2245,32 @@ int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
         return err;
 }
 
-int hip_get_hit_peer_by_lsi_pair(hip_lsi_t *src_lsi, hip_lsi_t *dst_lsi, 
-				 struct in6_addr *src_hit, struct in6_addr *dst_hit){
+int hip_get_hit_peer_by_lsi_pair(hip_lsi_t 	 *src_lsi,
+				 hip_lsi_t 	 *dst_lsi, 
+				 struct in6_addr *src_hit,
+				 struct in6_addr *dst_hit){
         struct hip_common *msg = NULL;
 	struct hip_tlv_common *param;
-	int hit_size = sizeof(struct in6_addr);
-        int err = 0;
+	int err = 0, hit_size = sizeof(struct in6_addr);
+
 
         HIP_IFE(!(msg = hip_msg_alloc()), -1);
 
-	if (src_lsi)
+	if(src_lsi)
 		HIP_IFEL(hip_build_param_contents(msg, (void *)(src_lsi),
 						  HIP_PARAM_LSI,
-						  sizeof(struct in_addr)), -1,
-			 "build param HIP_PARAM_LSI failed\n");
+						  sizeof(struct in_addr)),
+			-1, "build param HIP_PARAM_LSI failed\n");
 
 
-	if (dst_lsi)
+	if(dst_lsi)
 	        HIP_IFEL(hip_build_param_contents(msg, (void *) dst_lsi,
                                                   HIP_PARAM_LSI,
-                                                  sizeof(struct in_addr)), -1,
-                         "build param HIP_PARAM_LSI failed\n");
+                                                  sizeof(struct in_addr)),
+			-1, "build param HIP_PARAM_LSI failed\n");
 	
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT_BY_LSIS, 0), -1,
-                 "build hdr failed\n");
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT_BY_LSIS, 0),
+			-1, "build hdr failed\n");
 
 	/* send msg to hipd and receive corresponding reply */
         HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send_recv msg failed\n");
@@ -2035,11 +2280,11 @@ int hip_get_hit_peer_by_lsi_pair(hip_lsi_t *src_lsi, hip_lsi_t *dst_lsi,
 
 	/* get HIT values */
 	param = hip_get_param(msg, HIP_PARAM_HIT);
-	if (param)
+	if(param)
 	        *src_hit = *((struct in6_addr *)hip_get_param_contents_direct(param));
 
 	param = hip_get_next_param(msg, param);
-	if (param && hip_get_param_type(param) == HIP_PARAM_HIT)
+	if(param && hip_get_param_type(param) == HIP_PARAM_HIT)
 	        *dst_hit = *((struct in6_addr *)hip_get_param_contents_direct(param));
 
  out_err:
@@ -2049,21 +2294,20 @@ int hip_get_hit_peer_by_lsi_pair(hip_lsi_t *src_lsi, hip_lsi_t *dst_lsi,
 int hip_find_local_lsi(hip_lsi_t * dst_lsi){
         int err = 0, exist = 0;
         hip_lsi_t *aux_lsi = NULL;
-
         struct hip_common *msg = NULL;
         struct hip_tlv_common *current_param = NULL;
         hip_tlv_type_t param_type;
 
         HIP_IFE(!(msg = hip_msg_alloc()), -1);
 
-        if (dst_lsi){
+        if(dst_lsi){
                 HIP_IFEL(hip_build_param_contents(msg, (void *) dst_lsi,
                                                   HIP_PARAM_LSI,
-                                                  sizeof(struct in_addr)), -1,
-                         "build param HIP_PARAM_LSI failed\n");
+                                                  sizeof(struct in_addr)),
+				-1, "build param HIP_PARAM_LSI failed\n");
 
-                HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_IS_OUR_LSI, 0), -1,
-			 "build hdr failed\n");
+                HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_IS_OUR_LSI, 0),
+					-1, "build hdr failed\n");
         
                 /* send and receive msg to/from hipd */
                 HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send_recv msg failed\n");
@@ -2075,9 +2319,9 @@ int hip_find_local_lsi(hip_lsi_t * dst_lsi){
                 {
                         param_type = hip_get_param_type(current_param);
 
-                        if (param_type == HIP_PARAM_LSI){
+                        if(param_type == HIP_PARAM_LSI){
                                 aux_lsi = (struct in_addr *)hip_get_param_contents_direct(current_param);
-                                if (aux_lsi){
+                                if(aux_lsi){
                                         exist = 1;
                                         HIP_DEBUG_LSI("Lsi found is: ", aux_lsi);
                                 }
@@ -2093,8 +2337,19 @@ int hip_find_local_lsi(hip_lsi_t * dst_lsi){
         return exist;
 }
 
-int getproto_info(int port_dest, char *proto)
-{	 								
+
+/**
+ * Checks whether there is a local ipv6 socket that is:
+ *   connected to a particular port
+ *   connected to an lsi ip address.
+ * 
+ * @param port_dest	the port number of the socket
+ * @param *proto	protocol type
+ * 
+ * @return		1 if it finds the required socket
+ * 			0 otherwise
+ */
+int getproto_info(int port_dest, char *proto){
         FILE *fd = NULL;
         char line[500];
 	int lineno = 0, index_addr_port;
@@ -2102,79 +2357,141 @@ int getproto_info(int port_dest, char *proto)
         List list;
 	char path[11+sizeof(proto)];
         char *fqdn_str = NULL, *separator = NULL, *sub_string_port_hex = NULL;
-        
-	if(!strcmp(proto,"tcp6")){
+
+	if(!strcmp(proto,"tcp6"))
            index_addr_port = 15;
-	}
-	else if(!strcmp(proto,"udp6")){
+	else if(!strcmp(proto,"udp6"))
 	   index_addr_port = 10;
-	}
 
 	strcpy(path,"/proc/net/"); 
 	strcat(path, proto);
         fd = fopen(path, "r");		
         
-        while (fd && getwithoutnewline(line, 500, fd) != NULL && !exists) {		
-                lineno++;
-		if (lineno > 1){
-		  if(strlen(line)<=1) continue;
-		  initlist(&list);                                                    
-		  extractsubstrings(line, &list); 
-		  fqdn_str = getitem(&list, index_addr_port);
-		  if (fqdn_str)
-		    separator = strrchr(fqdn_str, ':');
-		  if (separator){
-		    sub_string_port_hex = strtok(separator,":");
+        while(fd && getwithoutnewline(line, 500, fd) != NULL && !exists){		
+	    lineno++;
+	    if (lineno > 1){
+	        if(strlen(line)<=1) continue;
+	        initlist(&list);                                                    
+	        extractsubstrings(line, &list); 
+	        fqdn_str = getitem(&list, index_addr_port);
+	        if(fqdn_str)
+	            separator = strrchr(fqdn_str, ':');
+	        if(separator){
+	            sub_string_port_hex = strtok(separator,":");
 		    //sprintf(port_dest_hex, "%x", port_dest);
 		    //HIP_DEBUG("sub_string_port_hex %s\n",sub_string_port_hex);
 		    sscanf(sub_string_port_hex,"%X",&result);
 		    HIP_DEBUG("Result %i\n",result);
 		    HIP_DEBUG("port dest %i\n",port_dest);
-		    if (result == port_dest)
-		      exists = 1;		    
-		  }
-		}
-        } // end of while	              							
+		    if(result == port_dest)
+		        exists = 1;	    
+	        }
+	    }
+	}//end of while
         if (fd)                                                               
                 fclose(fd);		
-        return exists;	        				
-
+        return exists;
 }
+
+
+/**
+ * Checks whether there is a local ipv4 socket that is:
+ *   connected to a particular port
+ *   connected to an lsi ip address
+ *   that this lsi ip address is the same as the param *local.
+ * 
+ * @param port_dest	the port number of the socket
+ * @param *proto	protocol type
+ * @param *local	ip address of the required socket
+ * 
+ * @return		1 if it finds the required socket
+ * 			0 otherwise
+ */
+int getproto_info_lsi(int port_dest, char *proto, struct in_addr *local){	 		List list;		
+	FILE *fd = NULL;
+	char line[500], sub_string_addr_hex[8], path[11+sizeof(proto)];
+	int lineno = 0, index_addr_port, exists = 0, result;
+	char *fqdn_str = NULL, *separator = NULL, *sub_string_port_hex = NULL;
+	uint32_t result_addr;
+	struct in_addr addr;
+        
+	if(!strcmp(proto,"tcp"))
+	   index_addr_port = 15;
+	else if(!strcmp(proto,"udp"))
+	   index_addr_port = 10;
+
+	strcpy(path,"/proc/net/"); 
+	strcat(path, proto);
+	fd = fopen(path, "r");		
+        
+	while(fd && getwithoutnewline(line, 500, fd) != NULL && !exists){		
+	    lineno++;
+	    if(lineno > 1){
+	        if(strlen(line)<=1) continue;
+	        initlist(&list);                                                    
+	        extractsubstrings(line, &list); 
+	        fqdn_str = getitem(&list, index_addr_port);
+	        if(fqdn_str)
+	            separator = strrchr(fqdn_str, ':');
+	        if(separator){
+	            sub_string_port_hex = strtok(separator, ":");
+	            sscanf(sub_string_port_hex, "%X", &result);
+	            HIP_DEBUG("Result %i\n", result);
+	            HIP_DEBUG("port dest %i\n", port_dest);
+	            if(result == port_dest){
+			strncpy(sub_string_addr_hex, fqdn_str, 8);
+			sscanf(sub_string_addr_hex, "%X", &result_addr);
+			addr.s_addr = result_addr;
+	                if( IS_LSI32(addr.s_addr)              &&
+		            (ipv4_addr_cmp(local, &addr) == 0)    )
+	                    exists = 1;
+		        else
+	                   exists = 0;
+	                break;
+	            }
+	        }
+	    }
+	}//end of while	              							
+        if (fd)                                                               
+                fclose(fd);		
+        return exists;
+}
+
 
 void hip_get_rsa_keylen(const struct hip_host_id *host_id, 
-				       struct hip_rsa_keylen *ret, int is_priv)
-{
-int bytes;
-u8 *tmp = (host_id + 1);
-int offset = 0;
-int e_len = tmp[offset++];
+			struct hip_rsa_keylen *ret,
+			int is_priv){
+	int bytes;
+	u8 *tmp = (host_id + 1);
+	int offset = 0;
+	int e_len = tmp[offset++];
 
-/* Check for public exponent longer than 255 bytes (see RFC 3110) */
-  if (e_len == 0) {
-      e_len = ntohs((u16)tmp[offset]);
-      offset += 2;
-  }
+	/* Check for public exponent longer than 255 bytes (see RFC 3110) */
+	if (e_len == 0) {
+		e_len = ntohs((u16)tmp[offset]);
+		offset += 2;
+	}
 
-/*
- hi_length is the total length of:
- rdata struct (4 bytes), length of e (1 byte for e < 255 bytes, 3 bytes otherwise),
- e (normally 3 bytes), followed by public n, private d, p, q
- n_len == d_len == 2 * p_len == 2 * q_len
-*/
-  if (is_priv)
-    bytes = (ntohs(host_id->hi_length) - sizeof(struct hip_host_id_key_rdata) -
-			offset - e_len) / 3;
-  else
-    bytes = (ntohs(host_id->hi_length) - sizeof(struct hip_host_id_key_rdata) -
-			offset - e_len);
+	/*
+	 hi_length is the total length of:
+	 rdata struct (4 bytes), length of e (1 byte for e < 255 bytes, 3 bytes otherwise),
+	 e (normally 3 bytes), followed by public n, private d, p, q
+	 n_len == d_len == 2 * p_len == 2 * q_len
+	*/
+	if (is_priv)
+		bytes = (ntohs(host_id->hi_length) - sizeof(struct hip_host_id_key_rdata) -
+				offset - e_len) / 3;
+	else
+		bytes = (ntohs(host_id->hi_length) - sizeof(struct hip_host_id_key_rdata) -
+				offset - e_len);
 
-  ret->e_len = offset;
-  ret->e = e_len;
-  ret->n = bytes;
+	ret->e_len = offset;
+	ret->e = e_len;
+	ret->n = bytes;
 }
 
-int hip_string_to_lowercase(char *to, const char *from, const size_t count)
-{
+
+int hip_string_to_lowercase(char *to, const char *from, const size_t count){
 	if(to == NULL || from == NULL || count == 0)
 		return -1;
 
@@ -2187,12 +2504,11 @@ int hip_string_to_lowercase(char *to, const char *from, const size_t count)
 			to[i] = from[i];
 		}
 	}
-
 	return 0;
 }
 
-int hip_string_is_digit(const char *string)
-{
+
+int hip_string_is_digit(const char *string){
 	if(string == NULL)
 		return -1;
 	

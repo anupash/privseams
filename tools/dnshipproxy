@@ -1,3 +1,0 @@
-#! /bin/sh
-
-env PYTHONPATH=/usr/local/lib/python2.5/site-packages python dnsproxy.py $@

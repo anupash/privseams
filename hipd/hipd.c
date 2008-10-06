@@ -24,11 +24,15 @@ int suppress_af_family = 0;
 int hip_raw_sock_v6 = 0;
 int hip_raw_sock_v4 = 0;
 /** File descriptor of the socket used for HIP control packet NAT traversal on
-    UDP/IPv4. */
+    UDP/IPv4 */
 int hip_nat_sock_udp = 0;
 /** Specifies the NAT status of the daemon. This value indicates if the current
     machine is behind a NAT. */
 int hip_nat_status = 0;
+
+/** ICMPv6 socket and the interval 0 for interval means off **/
+int hip_icmp_sock = 0;
+int hip_icmp_interval = 0;
 
 /** Specifies the HIP PROXY status of the daemon. This value indicates if the HIP PROXY is running. */
 int hipproxy = 0;
@@ -336,6 +340,9 @@ int hipd_main(int argc, char *argv[])
 	   disturb further base exchanges. Use -N flag to disable this. */
 	int flush_ipsec = 1;
 
+	int cc = 0, polling = 0;
+	struct msghdr msg;
+
 	/* Parse command-line options */
 	while ((ch = getopt(argc, argv, ":bk3:")) != -1)
 	{		
@@ -392,10 +399,12 @@ int hipd_main(int argc, char *argv[])
 	
 	/* Default initialization function. */
 	HIP_IFEL(hipd_init(flush_ipsec, killold), 1, "hipd_init() failed!\n");
-	highest_descriptor = maxof(8, hip_nl_route.fd, hip_raw_sock_v6,
+
+	highest_descriptor = maxof(9, hip_nl_route.fd, hip_raw_sock_v6,
 				   hip_user_sock, hip_nl_ipsec.fd,
 				   hip_raw_sock_v4, hip_nat_sock_udp,
-				   hip_opendht_sock_fqdn, hip_opendht_sock_hit);
+				   hip_opendht_sock_fqdn, hip_opendht_sock_hit,
+		                   hip_icmp_sock);
 
 	/* Allocate user message. */
 	HIP_IFE(!(hipd_msg = hip_msg_alloc()), 1);
@@ -423,7 +432,8 @@ int hipd_main(int argc, char *argv[])
 		FD_SET(hip_raw_sock_v4, &read_fdset);
 		FD_SET(hip_nat_sock_udp, &read_fdset);
 		FD_SET(hip_user_sock, &read_fdset);
-		FD_SET(hip_nl_ipsec.fd, &read_fdset);
+		FD_SET(hip_nl_ipsec.fd, &read_fdset);	
+		FD_SET(hip_icmp_sock, &read_fdset);
 		/* FD_SET(hip_firewall_sock, &read_fdset); */
 
 		if (hip_opendht_fqdn_sent == STATE_OPENDHT_WAITING_ANSWER)
@@ -533,6 +543,13 @@ int hipd_main(int argc, char *argv[])
                         
                     }
                 }
+
+
+		if (FD_ISSET(hip_icmp_sock, &read_fdset))
+		{
+			HIP_IFEL(hip_icmp_recvmsg(hip_icmp_sock), -1, 
+				 "Failed to recvmsg from ICMPv6\n");
+		}
 
 		if (FD_ISSET(hip_nat_sock_udp, &read_fdset))
 		{

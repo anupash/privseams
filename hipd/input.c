@@ -11,6 +11,7 @@
  * @author  Tobias Heer
  * @author  Laura Takkinen (blind code)
  * @author  Rene Hummen
+ * @author  Samu Varjonen
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
  * @note    Doxygen comments for functions are now in the header file.
  *          Lauri 19.09.2007
@@ -1601,6 +1602,8 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	hip_transform_suite_t esp_tfm, hip_tfm;
 	struct hip_spi_in_item spi_in_data;
 	struct hip_context i2_context;
+	extern int hip_icmp_interval;
+	extern int hip_icmp_sock;
 
 #ifdef HIP_USE_ICE
 	void *ice_session = NULL;
@@ -2192,14 +2195,25 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
         /***** LOCATOR PARAMETER ******/
 	/* Why do we process the LOCATOR parameter only after R2 has been sent?
-	   -Lauri 29.04.2008. */
+	   -Lauri 29.04.2008. 
+	   We do not have valid spi_out to put the addresses into and NAT benefits
+	   from the later handling ...
+	   --samu
+	*/
 
 //add by santtu
-    /***** LOCATOR PARAMETER *****/
+	/***** LOCATOR PARAMETER *****/
 	hip_handle_locator_parameter(entry, hip_get_param(i2, HIP_PARAM_LOCATOR), esp_info);
 
+	/** Send the first heartbeat **/
+	if (hip_icmp_interval > 0) {
+		HIP_DEBUG("icmp sock %d\n", hip_icmp_sock);
+		HIP_IFEL(hip_send_icmp(hip_icmp_sock, entry), -1, 
+			 "Failed to send heartbeat\n");
+	}
+
 #ifdef HIP_USE_ICE
-	hip_nat_start_ice(entry, esp_info,ICE_ROLE_CONTROLLED);
+	hip_nat_start_ice(entry, esp_info,ICE_ROLE_CONTROLLING);
 #endif
 	
 //end add
@@ -2339,6 +2353,8 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	uint32_t spi_recvd = 0, spi_in = 0;
 	int i = 0;
 	void *ice_session = 0;
+	extern int hip_icmp_interval;
+	extern int hip_icmp_sock;
 
 #ifdef CONFIG_HIP_HI3
 	if( r2_info->hi3_in_use ) {
@@ -2624,6 +2640,12 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	if (entry->hip_msg_retrans.buf) {
 		free(entry->hip_msg_retrans.buf);
 		entry->hip_msg_retrans.buf = NULL;
+	}
+
+	/** Send the first heartbeat**/
+	if (hip_icmp_interval > 0) {
+		HIP_IFEL(hip_send_icmp(hip_icmp_sock, entry), -1, 
+			 "Failed to send heartbeat\n");
 	}
 
 	//TODO Send the R2 Response to Firewall
