@@ -15,7 +15,9 @@ if uname -m|grep x86_64; then DEBARCH=amd64; fi
 if dpkg --print-architecture|grep armel;then DEBARCH=armel;fi
 
 REVISION=`/usr/bin/lsb_release -c | /usr/bin/awk '{print $2}'`
-if [ $DEBARCH = "armel" ]; then REVISION=chinook; fi
+# The latest SDK is diablo, the previous one - chinook. One may specify here whatever preferred more.
+# Better, we have to find out how to detect SDK version installed on a PC automatically -- Andrey Khurri
+if [ $DEBARCH = "armel" ]; then REVISION=diablo; fi
 
 SUFFIX="-$VERSION-$RELEASE-$REVISION"
 PKG_SUFFIX="-$VERSION-$RELEASE"

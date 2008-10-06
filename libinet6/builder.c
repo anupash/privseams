@@ -409,7 +409,7 @@ struct hip_locator_info_addr_item *hip_get_locator_first_addr_item(struct hip_lo
 }
 /* remove by santtu, since the item have type2
 int hip_get_locator_addr_item_count(struct hip_locator *locator) {
-	return (hip_get_param_contents_len(locator) -
+	return (hip_get_param_contents_len(locator) - 
 		(sizeof(struct hip_locator) -
 		 sizeof(struct hip_tlv_common))) /
 		sizeof(struct hip_locator_info_addr_item);
@@ -3131,7 +3131,7 @@ void hip_build_endpoint_hdr(struct endpoint_hip *endpoint_hdr,
 			    se_hip_flags_t endpoint_flags,
 			    uint8_t host_id_algo,
 			    unsigned int rr_data_len)
-{
+{ 
 	hip_build_param_host_id_hdr(&endpoint_hdr->id.host_id,
 				    hostname, rr_data_len, host_id_algo);
 	endpoint_hdr->family = PF_HIP;
@@ -3378,11 +3378,64 @@ int hip_build_param_cert_spki_info(struct hip_common * msg,
 				    struct hip_cert_spki_info * cert_info)
 {
 	int err = 0;
-	hip_set_param_type(cert_info, HIP_PARAM_CERT_SPKI_INFO);
-	hip_calc_param_len(cert_info,
+	struct hip_cert_spki_info local;
+	memset(&local, '\0', sizeof(struct hip_cert_spki_info));
+	memcpy(&local, cert_info, sizeof(struct hip_cert_spki_info));
+	hip_set_param_type(&local, HIP_PARAM_CERT_SPKI_INFO);
+	hip_calc_param_len(&local,
 			   sizeof(struct hip_cert_spki_info) -
 			   sizeof(struct hip_tlv_common));
-	err = hip_build_param(msg, cert_info);
+	_HIP_DEBUG("Param len spki_info %d\n", htons(local.length));
+	err = hip_build_param(msg, &local);
+	return err;
+}
+
+int hip_build_param_cert_x509_req(struct hip_common * msg,
+				    struct in6_addr * addr)
+{ 
+	int err = 0;
+        struct hip_cert_x509_req subj;        
+       
+        hip_set_param_type(&subj, HIP_PARAM_CERT_X509_REQ);
+        hip_calc_param_len(&subj,
+                           sizeof(struct hip_cert_x509_req) -
+                           sizeof(struct hip_tlv_common));
+        ipv6_addr_copy(&subj.addr, addr);
+        err = hip_build_param(msg, &subj);
+ out_err:
+	return err;
+}
+
+int hip_build_param_cert_x509_ver(struct hip_common * msg,
+                                  char * der, int len)
+{ 
+	int err = 0;
+        struct hip_cert_x509_resp subj;        
+       
+        hip_set_param_type(&subj, HIP_PARAM_CERT_X509_REQ);
+        hip_calc_param_len(&subj,
+                           sizeof(struct hip_cert_x509_resp) -
+                           sizeof(struct hip_tlv_common));
+        memcpy(&subj.der, der, len);
+        subj.der_len = len;
+        err = hip_build_param(msg, &subj);
+ out_err:
+	return err;
+}
+
+int hip_build_param_cert_x509_resp(struct hip_common * msg,
+				    char * der, int len)
+{
+	int err = 0;
+        struct hip_cert_x509_resp local;        
+	hip_set_param_type(&local, HIP_PARAM_CERT_X509_RESP);
+	hip_calc_param_len(&local,
+			   sizeof(struct hip_cert_x509_resp) -
+			   sizeof(struct hip_tlv_common));
+        memcpy(&local.der, der, len);
+        local.der_len = len;
+	err = hip_build_param(msg, &local);
+ out_err:
 	return err;
 }
 
