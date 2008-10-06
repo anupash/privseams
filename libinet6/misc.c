@@ -1542,6 +1542,16 @@ void *hip_cast_sa_addr(void *sockaddr) {
   return ret;
 }
 
+int hip_sockaddr_is_v6_mapped(struct sockaddr *sa) {
+  int family = sa->sa_family;
+
+  HIP_ASSERT(family == AF_INET || family == AF_INET6);
+  if (family != AF_INET6)
+    return 0;
+  else 
+    return IN6_IS_ADDR_V4MAPPED(hip_cast_sa_addr(sa));
+}
+
 int hip_sockaddr_len(const void *sockaddr) {
   struct sockaddr *sa = (struct sockaddr *) sockaddr;
   int len;

@@ -133,27 +133,32 @@ init_files ()
     fi
 
   
-	if [ $TMP = "firewall" ]; then
-        	for f in preinst postinst prerm postrm;do
-		   cp $DEBIAN-FW/$f "$PKGDIR/DEBIAN" 
-    		done
-	fi
-
-    	for f in control changelog copyright;do
-		cp $DEBIAN/$f "$PKGDIR/DEBIAN" 
+    if [ $TMP = "firewall" ]; then
+        for f in preinst postinst prerm postrm;do
+	    cp $DEBIAN-FW/$f "$PKGDIR/DEBIAN" 
     	done
-	
+    fi
 
-	echo "** Modifying Debian control file for $DEBLIB $TMP and $DEBARCH"
+    if [ $TMP = "dnsproxy" ]; then
+        for f in preinst postinst prerm postrm;do
+	    cp $DEBIAN-dnsproxy/$f "$PKGDIR/DEBIAN" 
+    	done
+    fi
+
+    for f in control changelog copyright;do
+	cp $DEBIAN/$f "$PKGDIR/DEBIAN" 
+    done
+
+    echo "** Modifying Debian control file for $DEBLIB $TMP and $DEBARCH"
     
-    	if [ "$DEBLIB" = "" ]; then
-     		sed -i '/'"$LINE0"'/d' $PKGDIR\/DEBIAN\/control
-    	else
-     		sed -i '/'"$LINE1"'/a\'"$LINE0"' '"$DEBLIB"'' $PKGDIR\/DEBIAN\/control
-    	fi
+    if [ "$DEBLIB" = "" ]; then
+     	sed -i '/'"$LINE0"'/d' $PKGDIR\/DEBIAN\/control
+    else
+     	sed -i '/'"$LINE1"'/a\'"$LINE0"' '"$DEBLIB"'' $PKGDIR\/DEBIAN\/control
+    fi
 
-    	sed -i '/'"$LINE2"'/ s/.*/&\-'"$TMP"'/' $PKGDIR\/DEBIAN\/control
-    	sed -i 's/"$LINE3"/&'" $DEBARCH"'/' $PKGDIR\/DEBIAN\/control
+    sed -i '/'"$LINE2"'/ s/.*/&\-'"$TMP"'/' $PKGDIR\/DEBIAN\/control
+    sed -i 's/"$LINE3"/&'" $DEBARCH"'/' $PKGDIR\/DEBIAN\/control
 
     	# cp $PKGDIR/DEBIAN/postinst $PKGROOT/postinst-$TMP
        
@@ -254,6 +259,42 @@ copy_and_package_files ()
     PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
     create_sub_package;
 
+    TMP="dnsproxy"
+    DEBLIB="$NAME-lib"
+    init_files;
+    
+    echo "** Making directory to '$PKGDIR'"
+    mkdir -p "$PKGDIR/usr"
+    cd "$PKGDIR"
+
+    # mkdir -p usr/sbin
+    mkdir -p usr/sbin usr/bin etc/init.d
+    cd "$HIPL"
+
+    echo "** Copying dnsproxy to $PKGDIR"
+    mkdir -p $PKGDIR/$PYEXECDIR
+    mkdir -p $PKGDIR/$PYEXECDIR/dnshipproxy
+    mkdir -p $PKGDIR/$PYEXECDIR
+    mkdir -p $PKGDIR/$PYEXECDIR/parsehipkey
+
+    cp tools/dnsproxy.py* $PKGDIR/$PYEXECDIR/dnshipproxy
+    cp tools/pyip6.py* $PKGDIR/$PYEXECDIR/dnshipproxy
+    cp tools/hosts.py* $PKGDIR/$PYEXECDIR/dnshipproxy
+    cp tools/util.py* $PKGDIR/$PYEXECDIR/dnshipproxy
+    cp tools/parse-key-3.py* $PKGDIR/$PYEXECDIR/dnshipproxy
+
+    cp tools/myasn.py* $PKGDIR/$PYEXECDIR/parsehipkey
+    cp tools/DNS/*py* $PKGDIR/$PYEXECDIR/parsehipkey
+
+    cp tools/dnshipproxy $PKGDIR/usr/sbin
+    cp tools/parsehipkey $PKGDIR/usr/sbin
+
+    echo "** Copying init.d script to $PKGDIR"
+    cp test/packaging/debian-init.d-dnsproxy $PKGDIR/etc/init.d/dnshipproxy
+
+    PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
+    create_sub_package;
+
     TMP="tools"
     #hipl-tools (depends on hipl-lib and hipl-daemon)
     DEBLIB="$NAME-lib, $NAME-daemon"
@@ -264,22 +305,13 @@ copy_and_package_files ()
     cd "$PKGDIR"
 
     mkdir -p usr/sbin usr/bin
-    mkdir -p usr/share/pyshared/DNS
 
     cd "$HIPL"
 
     cp tools/hipconf $PKGDIR/usr/sbin/
-    cp tools/myasn.py $PKGDIR/usr/bin/
-    cp tools/parse-key-3.py $PKGDIR/usr/bin/
 
-#   XX FIXME: add more stuff from tools dir
-    cp tools/dnsproxy.py $PKGDIR/usr/bin/
-    cp tools/hosts.py $PKGDIR/usr/bin/
-    cp tools/pyip6.py $PKGDIR/usr/bin/
-    cp tools/util.py $PKGDIR/usr/bin/
-    cp tools/DNS/*py $PKGDIR/usr/share/pyshared/DNS
-
-    chmod ugo+rx $PKGDIR/usr/bin/*.py
+    echo "** Copying init.d script to $PKGDIR"
+    cp test/packaging/debian-init.d-dnsproxy $PKGDIR/etc/init.d/dnshipproxy
 
     PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
     create_sub_package;
