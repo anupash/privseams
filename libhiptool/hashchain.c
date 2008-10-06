@@ -187,9 +187,9 @@ hash_chain_t * hchain_create(hash_function_t hash_function, int hash_length,
 	HIP_DEBUG("Hash-chain with %i elements of length %i created!\n", hchain_length,
 			hash_length);
 	//hchain_print(return_hchain, hash_length);
-	HIP_IFEL(!(hchain_verify(return_hchain->source_element->hash, return_hchain->anchor_element->hash,
-			hash_function, hash_length, hchain_length)), -1, "failed to verify the hchain\n");
-	HIP_DEBUG("hchain successfully verfied\n");
+	//HIP_IFEL(!(hchain_verify(return_hchain->source_element->hash, return_hchain->anchor_element->hash,
+	//		hash_function, hash_length, hchain_length)), -1, "failed to verify the hchain\n");
+	//HIP_DEBUG("hchain successfully verfied\n");
 
   out_err:
     if (err)

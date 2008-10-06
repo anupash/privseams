@@ -125,14 +125,20 @@ int main(int argc, char ** argv)
 	printf("Creating %d hash chains of length %d with element length %d\n",
 			count, hchain_length, hash_length);
 
-	for( i = 0; i < count; i++)
+	for(i = 0; i < count; i++)
 	{
 		gettimeofday(&start_time, NULL);
-		hchain = hchain_create(hash_function, hash_length, hchain_length);
-		gettimeofday(&stop_time, NULL);
-		timediff = calc_timeval_diff(&start_time, &stop_time);
-		add_statistics_item(&creation_stats, timediff);
-		hchain_free(hchain);
+		if (hchain = hchain_create(hash_function, hash_length, hchain_length))
+		{
+			gettimeofday(&stop_time, NULL);
+			timediff = calc_timeval_diff(&start_time, &stop_time);
+			add_statistics_item(&creation_stats, timediff);
+			hchain_free(hchain);
+		} else
+		{
+			printf("ERROR creating hchain!\n");
+			exit(1);
+		}
 	}
 
 	calc_statistics(&creation_stats, &num_items, &min, &max, &avg, &std_dev,
@@ -145,16 +151,27 @@ int main(int argc, char ** argv)
 	printf("Verifying %d hash chains of length %d with element length %d\n",
 			count, verify_length, hash_length);
 
-	for( i = 0; i < count; i++)
+	for(i = 0; i < count; i++)
 	{
-		hchain = hchain_create(hash_function, hash_length, verify_length);
+		if (!(hchain = hchain_create(hash_function, hash_length, verify_length)))
+		{
+			printf("ERROR creating hchain!");
+			exit(1);
+		}
+
 		gettimeofday(&start_time, NULL);
-		hchain_verify(hchain->source_element->hash, hchain->anchor_element->hash,
-				hash_function, hash_length, verify_length);
-		gettimeofday(&stop_time, NULL);
-		timediff = calc_timeval_diff(&start_time, &stop_time);
-		add_statistics_item(&verify_stats, timediff);
-		hchain_free(hchain);
+		if(hchain_verify(hchain->source_element->hash, hchain->anchor_element->hash,
+				hash_function, hash_length, verify_length))
+		{
+			gettimeofday(&stop_time, NULL);
+			timediff = calc_timeval_diff(&start_time, &stop_time);
+			add_statistics_item(&verify_stats, timediff);
+			hchain_free(hchain);
+		} else
+		{
+			printf("ERROR verifying hchain!\n");
+			exit(1);
+		}
 	}
 
 	calc_statistics(&verify_stats, &num_items, &min, &max, &avg, &std_dev,
