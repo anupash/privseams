@@ -1,6 +1,8 @@
 AUTOMAKE_OPTIONS = foreign
 
 CFLAGS= $(hipl_common_cflags) $(HIPL_XMLI)
+CFLAGS += $(OPTIMIZATIONS_CFLAGS)
+CFLAGS += $(GPROF_CFLAGS)
 INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
 
 noinst_LIBRARIES = libaes.a

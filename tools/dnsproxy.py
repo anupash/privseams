@@ -16,6 +16,7 @@ import binascii
 import hosts
 import re
 import signal
+import syslog
 
 def usage(utyp, *msg):
     sys.stderr.write('Usage: %s\n' % os.path.split(sys.argv[0])[1])
@@ -45,6 +46,26 @@ has_resolvconf = has_resolvconf0()
 
 class ResolvConfError(Exception):
     pass
+
+class Logger:
+    def __init__(self):
+        self.wrfun = sys.stdout.write
+        self.flfun = sys.stdout.flush
+        return
+    def wrsyslog(self,s):
+        syslog.syslog(s)
+        return
+    def setsyslog(self):
+        syslog.openlog('dnsproxy',syslog.LOG_PID)
+        self.wrfun = self.wrsyslog
+        self.flfun = None
+        return
+    def flush(self):
+        return
+    def write(self,s):
+        self.wrfun(s)
+        if self.flfun: self.flfun()
+        return
 
 class ResolvConf:
     def guess_resolvconf(self):
@@ -121,6 +142,7 @@ class Global:
         gp.fork = False
         gp.pidfile = '/var/run/dnshipproxy.pid'
         gp.kill = False
+        gp.fout = sys.stdout
         return
 
     def read_resolv_conf(gp):
@@ -189,6 +211,9 @@ class Global:
             # we are the child
             global myid
             myid = '%d-%d' % (time.time(),os.getpid())
+            gp.logger = Logger()
+            gp.fout = gp.logger
+            gp.logger.setsyslog()
             return True
 
     # TBD: proper error handling
@@ -226,7 +251,7 @@ class Global:
                 gp.hosts.append(hosts.Hosts(gp.default_hiphosts))
         util.init_wantdown()
         util.init_wantdown_int()        # Keyboard interrupts
-        fout = sys.stdout
+        fout = gp.fout
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.bind((gp.bind_ip,gp.bind_port))
 

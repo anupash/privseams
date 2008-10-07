@@ -4,6 +4,8 @@ AUTOMAKE_OPTIONS = foreign
 # Note: .. is included because libinet6/debug.h is included; otherwise this
 # won't build because there is also the linux/net/ipv6/hip/debug.h include.
 CFLAGS = $(hipl_common_cflags)
+CFLAGS += $(OPTIMIZATIONS_CFLAGS)
+CFLAGS += $(GPROF_CFLAGS)
 
 # Note: libinet6 cannot be included here because it has a bad dependency
 # with netlink headers.

@@ -28,6 +28,8 @@ endif
 #
 
 CFLAGS = $(hipl_common_cflags) # -L$(HIPL_LIBINET6_LIB)
+CFLAGS += $(OPTIMIZATIONS_CFLAGS)
+CFLAGS += $(GPROF_CFLAGS)
 INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
 
 include_HEADERS = hipconftool.h

@@ -211,7 +211,7 @@ AC_ARG_ENABLE(openwrt,
 AC_CACHE_CHECK([whether to use OpenWRT],
                [ac_cv_use_openwrt], [ac_cv_use_openwrt=no])
 if test x"$ac_cv_use_openwrt" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_OPENWRT, AC_PREREQ(2.53))5B
+        AC_DEFINE(CONFIG_HIP_OPENWRT, AC_PREREQ(2.53))
         AC_SUBST(OPENWRT_CFLAGS, "-lc")
         if test x"$TARGET" = x"MIPS_LINUX"; then
                 AC_DEFINE(CONFIG_HIP_OPENWRT_MIPSLINUX, AC_PREREQ(2.53))
@@ -305,6 +305,30 @@ AC_CACHE_CHECK([whether to use BLIND],
 if test x"$ac_cv_use_blind" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_BLIND, AC_PREREQ(2.53))
 fi
+
+AC_ARG_ENABLE(optimizations,
+             AC_HELP_STRING([--enable-optimizations],
+                            [GCC compiler optimizations (default is NO)]),
+             [ac_cv_use_optimizations=$enableval], [ac_cv_use_optimizations=no])
+AC_CACHE_CHECK([whether to use GCC optimizations],
+               [ac_cv_use_optimizations], [ac_cv_use_optimizations=no])
+if test x"$ac_cv_use_optimizations" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_OPTIMIZATIONS, AC_PREREQ(2.53))
+        AC_SUBST(OPTIMIZATIONS_CFLAGS, "-O2")
+fi
+AM_CONDITIONAL(HIP_OPTIMIZATIONS, test x"$ac_cv_use_optimizations" = x"yes")
+
+AC_ARG_ENABLE(profiling,
+             AC_HELP_STRING([--enable-profiling],
+                            [compile in gprof profiling support (default is NO)]),
+             [ac_cv_use_profiling=$enableval], [ac_cv_use_profiling=no])
+AC_CACHE_CHECK([whether to use grof support],
+               [ac_cv_use_profiling], [ac_cv_use_profiling=no])
+if test x"$ac_cv_use_profiling" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_PROFILING, AC_PREREQ(2.53))
+        AC_SUBST(GPROF_CFLAGS, "-pg")
+fi
+AM_CONDITIONAL(HIP_PROFILING, test x"$ac_cv_use_profiling" = x"yes")
 
 AC_ARG_ENABLE(debug,
              AC_HELP_STRING([--enable-debug],
