@@ -2446,7 +2446,6 @@ int hip_for_each_hosts_file_line(char *hosts_file,
       }
       IPV4_TO_IPV6_MAP(&in_addr, &entry.id);
     }
-    err = 0;
 
     entry.hostname = hostname;
     HIP_ASSERT(entry.hostname)
@@ -2458,7 +2457,10 @@ int hip_for_each_hosts_file_line(char *hosts_file,
 
     if (func(&entry, arg, result) == 0) {
       HIP_DEBUG("Match on line %d in %s\n", lineno, hosts_file);
+      err = 0;
       break;
+    } else {
+      err = 1;
     }
 
     memset(line, 0, sizeof(line));

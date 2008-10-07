@@ -1158,7 +1158,7 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
       as IPv6 addresses on-wire.
     </para>
     <para>
-      We will show how to test IPv4 and IPv6 applications. Meanwhile IPv6 applications use the 
+      We show how to test HIP with both IPv4 and IPv6 applications. Meanwhile IPv6 applications use the 
       HIT identifier, IPv4-only applications use the LSI identifier. This is an IPv4 address in the range 1.0.0.0/8.
       Firstly, we explain how to configure HIPL when we want to use IPv4 applications. Secondly, we introduce some
       tests with IPv6 applications. To finalize, we discuss the interoperability between IPv4 and IPv6 applications 
@@ -1201,7 +1201,7 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
 		    </itemizedlist>
 	    <para>Apart from starting the hipd process, the hipfw process must be also 
 		started in both machines, oops and crash. Notice that hipfw must be started always after hipd!
-	    </para>   
+	    </para>
 	    <itemizedlist>
 	      <listitem><para>
 		  cd somewhere/hipl
@@ -1210,7 +1210,7 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
 		  hipd/hipd # (to start as a background daemon process, add -b flag)
 	      </para></listitem>
 	      <listitem><para>
-		  firewall/hipfw -l (to start the firewall with LSI support enabled)
+		  firewall/hipfw -lA (to start the firewall with LSI support enabled and allow HIP/ESP packets)
 	      </para></listitem>
 	    </itemizedlist>
 	    <para>
