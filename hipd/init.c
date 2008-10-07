@@ -496,17 +496,19 @@ int hip_init_dht()
                         /* resolve it */
                         memset(opendht_host_name, '\0', sizeof(opendht_host_name));
                         memcpy(opendht_host_name, servername_str, strlen(servername_str));
-                        err = resolve_dht_gateway_info(serveraddr_str, &opendht_serving_gateway,opendht_serving_gateway_port);  
+                        err = resolve_dht_gateway_info(serveraddr_str,
+						       &opendht_serving_gateway,
+						       opendht_serving_gateway_port);  
                         if (err < 0) 
                         {
                         	hip_opendht_error_count++;
                         	HIP_DEBUG("Error resolving openDHT gateway!\n");
                         }
-                        err = resolve_dht_gateway_info(serveraddr_str, &opendht_serving_gateway);
-                        if (err < 0) HIP_DEBUG("Error resolving openDHT gateway!\n");
-                        err = 0;
-                        memset(&opendht_name_mapping, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
-                        if (gethostname(&opendht_name_mapping, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1))
+			err = 0;
+                        memset(&opendht_name_mapping, '\0',
+			       HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
+                        if (gethostname(&opendht_name_mapping,
+					HIP_HOST_ID_HOSTNAME_LEN_MAX - 1))
                                 HIP_DEBUG("gethostname failed\n");
 						register_to_dht();
 						init_dht_sockets(&hip_opendht_sock_fqdn, &hip_opendht_fqdn_sent); 

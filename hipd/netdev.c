@@ -897,8 +897,7 @@ send_i1:
 		 "Sending of I1 failed\n");
 
 out_err:
-	if(msg)
-		free (msg);
+
 	return err;
 }
 
@@ -950,7 +949,9 @@ int hip_netdev_trigger_bex_msg(struct hip_common *msg) {
 	struct in6_addr *our_addr = NULL, *peer_addr = NULL;
 	struct hip_tlv_common *param;
 	hip_ha_t *entry = NULL;
-	int err = 0;
+	struct hip_locator *locator = NULL;
+	int err = 0, locator_item_count = 0, i;
+	struct hip_locator_info_addr_item *locator_address_item = NULL;
 	
 	HIP_DUMP_MSG(msg);
 	
@@ -1020,13 +1021,13 @@ int hip_netdev_trigger_bex_msg(struct hip_common *msg) {
 	 * Add it to the HADB. It stores first to some temp location in entry
 	 * and then copies it to the SPI Out's peer addr list, ater BE */
 	if (locator_item_count > 0) {
-		for (x = 0; x < locator_item_count ; x++) {
-			memcpy(&dst_addr, 
-			       (struct in6_addr*)&locator_address_item[x].address, 
+		for (i = 0; i < locator_item_count ; i++) {
+			struct in6_addr dht_addr;
+			memcpy(&dht_addr, 
+			       (struct in6_addr*) &locator_address_item[i].address, 
 			       sizeof(struct in6_addr));
-			hip_in6_ntop(&dst_addr, (char*)dht_locator_temp);
-			_HIP_DEBUG("Value: %s\n", (char*)dht_locator_temp);
-			HIP_IFEL(hip_hadb_add_peer_info(dst_hit, &dst_addr, dst_lsi), -1,
+			HIP_IFEL(hip_hadb_add_peer_info(peer_hit, &dht_addr,
+							&peer_lsi), -1,
 				 "map failed\n");
 		}
 	}			

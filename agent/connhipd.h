@@ -48,7 +48,7 @@ extern "C" {
 /******************************************************************************/
 /* FUNCTION DEFINITIONS */
 int connhipd_init(void);
-int connhipd_sendto_hipd(char *);
+int connhipd_sendto_hipd(char *, size_t len);
 int connhipd_handle_msg(struct hip_common *, struct sockaddr_un *);
 void *connhipd_thread(void *);
 void connhipd_quit(void);
