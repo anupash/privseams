@@ -190,6 +190,10 @@
 #define SO_HIP_SET_NAT_ON                     SO_HIP_SET_NAT_PLAIN_UDP
 
 
+#define SO_HIP_REGISTER_SAVAHR                   156
+#define SO_HIP_GET_SAVAHR                        157
+
+
 /****** FIREWALL ******/
 
 // the states of the connections as kept in the firewall

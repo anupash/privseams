@@ -112,6 +112,7 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc) 
 	hip_conf_handle_tcptimeout, /* added by Tao Wan*/
         hip_conf_handle_hipproxy,
 	hip_conf_handle_heartbeat,
+	hip_conf_handle_sava,
 	NULL /* run */
 };
 
@@ -174,6 +175,8 @@ int hip_conf_get_action(char *text)
 	else if (!strcmp("hipproxy", text))
 		ret = ACTION_HIPPROXY;
 #endif
+	else if (!strcmp("register", text))
+	        ret = ACTION_REGISTER;
 	
         return ret;
 }
@@ -277,7 +280,7 @@ int hip_conf_get_type(char *text,char *argv[]) {
 		ret = TYPE_HEARTBEAT;
 	else if (!strcmp("ttl", text))
 		ret = TYPE_TTL;
-	else if (!strcmp("gw", text))
+	else if (!strcmp("gw", text)) 
 		ret = TYPE_GW;
 	else if (!strcmp("get", text))
 		ret = TYPE_GET;
@@ -289,6 +292,10 @@ int hip_conf_get_type(char *text,char *argv[]) {
 	else if (strcmp("hipproxy", argv[1])==0)
 		ret = TYPE_HIPPROXY;
 #endif
+	else if (strcmp("sava", text) == 0)
+	  ret = TYPE_SAVAHR;
+	else 
+	  HIP_DEBUG("ERROR: NO MATCHES FOUND \n");
      return ret;
 }
 
@@ -318,6 +325,7 @@ int hip_conf_get_type_arg(int action)
 	case ACTION_TCPTIMEOUT:
         case ACTION_TRANSORDER:
 	case ACTION_REINIT:
+        case ACTION_REGISTER:
 #ifdef CONFIG_HIP_HIPPROXY
 	case ACTION_HIPPROXY:
 #endif
@@ -1604,7 +1612,7 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
 
 	type = hip_conf_get_type(argv[type_arg],argv);
 	HIP_IFEL((type <= 0 || type >= TYPE_MAX), -1,
-		 "Invalid type argument '%s'\n", argv[type_arg]);
+		 "Invalid type argument '%s' %d\n", argv[type_arg], type);
 
 	/* Get the type argument for the given action. */
 	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed.\n");
@@ -2088,4 +2096,44 @@ int hip_conf_handle_hipproxy(struct hip_common *msg, int action, const char *opt
         
  out_err:
         return(err);
+}
+
+
+int hip_conf_handle_sava (struct hip_common * msg, int action, 
+				   const char * opt[], int optc) {
+  int err = 0;
+
+  struct in_addr lsi, aux;
+  in6_addr_t hit, ip6;
+
+  HIP_DEBUG("action=%d optc=%d\n", action, optc);
+  if (action == ACTION_REGISTER) {
+    //HIP_IFEL((optc != 0 || optc != 2), -1, "Missing arguments\n");
+ 
+    if (optc == 2) {
+      HIP_IFEL(convert_string_to_address(opt[0], &hit), -1,
+	       "string to address conversion failed\n");
+      
+      HIP_IFEL(err = convert_string_to_address(opt[1], &ip6), -1,
+	       "string to address conversion failed\n");
+      
+      HIP_IFEL(hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
+					sizeof(in6_addr_t)), -1,
+	       "build param hit failed\n");
+
+      HIP_IFEL(hip_build_param_contents(msg, (void *) &ip6,
+					HIP_PARAM_IPV6_ADDR,
+					sizeof(in6_addr_t)), -1,
+	       "build param hit failed\n");
+    }
+    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_REGISTER_SAVAHR, 
+				0), -1, "add peer map failed\n");
+  } else if (action == ACTION_GET) {
+    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_SAVAHR,
+				0), -1, "add peer map failed\n");
+  } else {
+    HIP_IFEL(1, -1, "bad args\n");
+  }
+ out_err:
+  return err;
 }

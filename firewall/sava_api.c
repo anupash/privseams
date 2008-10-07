@@ -3,6 +3,8 @@
 /* database storing shortcuts to sa entries for incoming packets */
 HIP_HASHTABLE *sava_ip_db = NULL;
 
+HIP_HASHTABLE *sava_rev_ip_db = NULL;
+
 /* hash functions used for calculating the entries' hashes */
 #define INDEX_HASH_FN		HIP_DIGEST_SHA1
 /* the length of the hash value used for indexing */

@@ -35,6 +35,10 @@ int hip_sava_client = 0;
 /* Default HIT - do not access this directly, call hip_fw_get_default_hit() */
 struct in6_addr default_hit;
 
+/* We need to have SAVAH IP and HIT*/
+struct in6_addr sava_router_hit;
+struct in6_addr sava_router_ip;
+
 /*
  * The firewall handlers do not accept rules directly. They should return
  * zero when they transformed packet and the original should be dropped.
@@ -94,6 +98,29 @@ int is_escrow_active(){
 	return escrow_active;
 }
 
+int hip_fw_init_sava_client() {
+  int err = 0;
+  if (hip_sava_client) {
+   /* IPv4 packets	*/
+   system("iptables -I HIPFW-OUTPUT -p tcp ! -d 127.0.0.1 -j QUEUE 2>/dev/null"); 
+   system("iptables -I HIPFW-OUTPUT -p udp ! -d 127.0.0.1 -j QUEUE 2>/dev/null"); 
+   /* IPv6 packets	*/
+   system("ip6tables -I HIPFW-OUTPUT -p tcp ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
+   system("ip6tables -I HIPFW-OUTPUT -p udp ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
+  }
+  return err;
+}
+
+void hip_fw_uninit_sava_client() {
+  if (hip_sava_client) {
+   /* IPv4 packets	*/
+   system("iptables -D HIPFW-OUTPUT -p tcp ! -d 127.0.0.1 -j QUEUE 2>/dev/null"); 
+   system("iptables -D HIPFW-OUTPUT -p udp ! -d 127.0.0.1 -j QUEUE 2>/dev/null"); 
+   /* IPv6 packets	*/
+   system("ip6tables -D HIPFW-OUTPUT -p tcp ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
+   system("ip6tables -D HIPFW-OUTPUT -p udp ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
+  }
+}
 
 int hip_fw_init_sava_router() {
   int err = 0;
@@ -103,7 +130,7 @@ int hip_fw_init_sava_router() {
 	 * that passes trough the firewall to verify the packets 
 	 * source address
 	 */
-	if (hip_sava) {
+	if (hip_sava_router) {
 	        HIP_IFEL(hip_sava_ip_db_init(), -1, 
 		   "Error inializing SAVA IP DB \n");
 		/* IPv4 packets	*/
@@ -122,7 +149,7 @@ int hip_fw_init_sava_router() {
 
 void hip_fw_uninit_sava_router() {
 	HIP_DEBUG("Uninitializing SAVA mode \n");
-	if (hip_sava) {
+	if (hip_sava_router) {
 		/* IPv4 packets	*/
 		system("iptables -D HIPFW-FORWARD -p tcp ! -d 127.0.0.1 -j QUEUE 2>/dev/null");
 		system("iptables -D HIPFW-FORWARD -p udp ! -d 127.0.0.1 -j QUEUE 2>/dev/null");
@@ -563,12 +590,12 @@ int firewall_init_rules(){
 		hip_fw_init_opptcp();
 
 	HIP_IFEL(hip_fw_init_lsi_support(), -1, "failed to load extension\n");
-
 	HIP_IFEL(hip_fw_init_userspace_ipsec(), -1, "failed to load extension\n");
 	HIP_IFEL(hip_fw_init_esp_prot(), -1, "failed to load extension\n");
-	HIP_IFEL(hip_fw_init_sava_router(), -1, "failed to load SAVA extension \n");
+	HIP_IFEL(hip_fw_init_sava_router(), -1, "failed to load SAVA router extension \n");
+	HIP_IFEL(hip_fw_init_sava_client(), -1, "failed to load SAVA client extension \n");
 	HIP_IFEL(hip_fw_init_esp_prot_conntrack(), -1, "failed to load extension\n");
-
+	
 	// Initializing local database for mapping LSI-HIT in the firewall
 	firewall_init_hldb();
 
@@ -1322,9 +1349,16 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 		tcphdr = ((struct tcphdr *) (((char *) iphdr) + ctx->ip_hdr_len));
 		hdrBytes = ((char *) iphdr) + ctx->ip_hdr_len;
 	}
-
-	if (ctx->ip_version == 6 && hip_userspace_ipsec)
-	{
+	if (hip_sava_client) {
+	  //check if HA exists with the router then 
+	  //encrypt source IP and reinject packet to 
+	  //the network stack
+	  //else register with the sava router 
+	  //to register first try to find if sava router IP present in configuration
+	  //if not try to broadcast SD HIP packets and wait for the response
+	  //upon registration repeat the procedure described above for sending 
+	  //out the packet
+	} else if (ctx->ip_version == 6 && hip_userspace_ipsec) {
 		HIP_DEBUG_HIT("destination hit: ", &ctx->dst);
 		// XX TODO: hip_fw_get_default_hit() returns an unfreed value
 		HIP_DEBUG_HIT("default hit: ", hip_fw_get_default_hit());

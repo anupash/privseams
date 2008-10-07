@@ -549,6 +549,35 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 
 		break;
 #endif /* CONFIG_HIP_ESCROW */
+	case SO_HIP_REGISTER_SAVAHR: 
+	  {
+	  dst_hit = hip_get_param_contents(msg,HIP_PARAM_HIT);
+	  dst_ip  = hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR);
+	  HIP_DEBUG("WE HAVE GOT SAVAH REGISTER MESSAGE \n");
+	  if (dst_hit == NULL && dst_ip == NULL) { //HIT and IP are missing worst case opportunistic mode to register with the SAVAH router
+
+	  } else if (dst_hit == NULL && dst_ip != NULL) { //we have at least SAVAH router IP 
+ 
+	  } else { // Both HIT and IP are present that is the simplest case we can register with the router directly
+	    /* Add HIT to IP address mapping of the server to haDB. */
+	    HIP_IFEL(hip_add_peer_map(msg), -1, "Error on registering sava router " \
+		     "HIT to IP address mapping to the haDB.\n");
+	    		/* Fetch the haDB entry just created. */
+	    entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
+	    
+	    if(entry == NULL) {
+	      HIP_ERROR("Error on fetching routers HIT to IP address "	\
+			"mapping from the haDB.\n");
+	      err = -1;
+	      goto out_err;
+	    }
+
+	    HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry), -1,
+		   "Error on sending I1 packet to the server.\n");
+	    }
+	  }
+	  
+	  break;
 #ifdef CONFIG_HIP_RVS
 	case SO_HIP_ADD_DEL_SERVER:
 	{
