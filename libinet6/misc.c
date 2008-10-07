@@ -2033,31 +2033,26 @@ int hit_is_local_hit(struct in6_addr *hit){
 
 /**
  * Obtains the information needed by the dns proxy, based on the ip addr or the hostname.
-
- * @param *src_hit	the input src hit
- * @param *dst_hit	the input dst hit
- * @param *src_ip	output src ip
- * @param *dst_ip	output dst ip	
+ * 
+ * @param *ip_addr	xxx
+ * @param *hit		xxx
+ * @param *lsi		xxx	
  * 
  * @return		the state of the found entry
  * 			if there is no entry it returns -1
  */
 int hip_get_info_for_proxy(struct in6_addr *ip_addr,
-			   char *hostname,
 			   struct in6_addr *hit,
-			   //old
-			   struct in6_addr *src_hit,
-			   struct in6_addr *dst_hit,
-			   struct in6_addr *src_ip,
-			   struct in6_addr *dst_ip){
+			   hip_lsi_t       *lsi){
 	int err = 0, res = -1;
 	hip_lsi_t src_ip4, dst_ip4;
 	struct hip_tlv_common *current_param = NULL;
 	struct hip_common *msg = NULL;
 	struct hip_hadb_user_info_state *ha;
   
-	HIP_ASSERT( (ip_addr == NULL && hostname != NULL) ||
-		    (ip_addr != NULL && hostname == NULL)    );
+	/*HIP_ASSERT( (ip_addr == NULL && hostname != NULL) ||
+		    (ip_addr != NULL && hostname == NULL)    );*/
+	HIP_ASSERT(ip_addr != NULL);
 
 	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
 	hip_msg_init(msg);
@@ -2069,14 +2064,17 @@ int hip_get_info_for_proxy(struct in6_addr *ip_addr,
 		ha = hip_get_param_contents_direct(current_param);
 
 		if(ipv6_addr_cmp(ip_addr, &ha->ip_our) == 0){
-
-
-
+			*hit = ha->hit_our;
+			*lsi = ha->lsi_our;
+			res = ha->state;
+			break;
 		}
 		else if( (ipv6_addr_cmp(ip_addr, &ha->ip_peer) == 0) &&
-			   (ha->state == HIP_STATE_ESTABLISHED) ){
-
-
+			   (ha->state == HIP_STATE_ESTABLISHED)         ){
+			*hit = ha->hit_peer;
+			*lsi = ha->lsi_peer;
+			res = ha->state;
+			break;
 		}
 
 

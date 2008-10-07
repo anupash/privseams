@@ -360,7 +360,7 @@ int hip_receive_opp_r1(struct hip_common *msg,
 	HIP_DEBUG_IN6ADDR("!!!! local addr=", dst_addr);
 	
 	HIP_IFEL(hip_hadb_add_peer_info_complete(&msg->hitr, &msg->hits,
-						 NULL, dst_addr, src_addr), -1,
+						 NULL, dst_addr, src_addr, NULL), -1,
 		 "Failed to insert peer map\n");
 	
 	HIP_IFEL(!(entry = hip_hadb_find_byhits(&msg->hits, &msg->hitr)), -1,
@@ -518,7 +518,8 @@ int hip_opp_get_peer_hit(struct hip_common *msg,
 	HIP_ASSERT(hit_is_opportunistic_hashed_hit(&phit)); 
 	HIP_DEBUG_HIT("phit", &phit);
 
-	err = hip_hadb_add_peer_info_complete(&hit_our, &phit, NULL, &our_addr, &dst_ip);
+	err = hip_hadb_add_peer_info_complete(&hit_our,  &phit,   NULL,
+					      &our_addr, &dst_ip, NULL);
 	HIP_IFEL(!(ha = hip_hadb_find_byhits(&hit_our, &phit)), -1,
 		 "Did not find entry\n");
 

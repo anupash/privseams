@@ -212,11 +212,15 @@ void hip_hadb_delete_peer_addrlist_one(hip_ha_t *entry, struct in6_addr *addr);
 
 int hip_add_peer_map(const struct hip_common *input);
 
-int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr, hip_lsi_t *peer_lsi);
+int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr, hip_lsi_t *peer_lsi,
+			   const char *peer_hostname);
 
-int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit, hip_hit_t *peer_hit,
-				    hip_lsi_t *peer_lsi, struct in6_addr *local_addr,
-				    struct in6_addr *peer_addr);
+int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
+				hip_hit_t *peer_hit,
+				hip_lsi_t *peer_lsi,
+				struct in6_addr *local_addr,
+				struct in6_addr *peer_addr,
+				const char *peer_hostname);
 
 int hip_del_peer_info(hip_hit_t *, hip_hit_t *);
 
@@ -289,7 +293,8 @@ struct hip_peer_map_info {
 	hip_hit_t peer_hit;
         struct in6_addr peer_addr;
 	hip_lsi_t peer_lsi;
-	struct in6_addr our_addr;	
+	struct in6_addr our_addr;
+	uint8_t peer_hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
 };
 
 void hip_hadb_remove_hs(uint32_t spi);

@@ -115,6 +115,7 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc) 
         hip_conf_handle_hipproxy,
 	hip_conf_handle_heartbeat,
 	hip_conf_handle_hi3,
+	hip_conf_handle_get_dnsproxy,
 	NULL /* run */
 };
 
@@ -179,7 +180,8 @@ int hip_conf_get_action(char *text)
 	else if (!strcmp("hipproxy", text))
 		ret = ACTION_HIPPROXY;
 #endif
-	
+	else if (!strcmp("dnsproxy", text))
+		ret = ACTION_DNS_PROXY;
         return ret;
 }
 
@@ -1569,6 +1571,119 @@ int hip_conf_handle_dht_toggle(hip_common_t *msg, int action, const char *opt[],
         return(err);
 }
 
+
+
+
+
+
+
+
+
+
+
+
+//similar to	hip_conf_handle_get
+
+
+/**
+ * Function that gets data from hipd for the dns proxy - hipconf dht get <HIT> - returns IP mappings
+ *
+ * @return       zero on success, or negative error value on error.
+ */
+int hip_conf_handle_get_dnsproxy(hip_common_t *msg, int action, const char *opt[], int optc){
+    
+
+    /*int err = 0, ret = 0;
+    hip_hit_t hit = {0};
+    struct in_addr  *reply_ipv4;
+    struct in6_addr *reply_ipv6 = {0};
+	
+    hip_tlv_type_t         param_type = 0;
+    struct hip_tlv_common *current_param = NULL;
+
+    HIP_INFO("Asking serving gateway info from daemon...\n");
+
+    //obtain the hit
+    ret = inet_pton(AF_INET6, opt[0], &hit);
+    if(ret < 0 && errno == EAFNOSUPPORT){
+	HIP_PERROR("inet_pton: not a valid address family\n");
+	err = -EAFNOSUPPORT;
+	goto out_err;
+    }else if(ret == 0){
+	HIP_ERROR("inet_pton: %s: not a valid network address\n", opt[0]);
+	err = -EINVAL;
+	goto out_err;
+    }
+    ret = 0;
+
+    //attach the hit into the message
+    err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
+				   sizeof(in6_addr_t));
+    if(err){
+	HIP_ERROR("build param hit failed: %s\n", strerror(err));
+	goto out_err;
+    }
+
+    //Build a HIP message to get ip mapping
+    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW, 0),-1,
+				"Building daemon header failed\n");
+
+    // Send the message to the daemon. Wait for reply
+    HIP_IFE(hip_send_recv_daemon_info(msg), -ECOMM);
+
+    // Loop through all the parameters in the message just filled.
+    while((current_param = hip_get_next_param(msg, current_param)) != NULL){
+	param_type = hip_get_param_type(current_param);
+	if(param_type == HIP_PARAM_SRC_ADDR){
+	    reply_ipv6 = (struct in6_addr *)hip_get_param_contents_direct(
+						current_param);
+
+	    HIP_DEBUG_IN6ADDR("Result IP ", reply_ipv6);
+	}else if(param_type == HIP_PARAM_INT){
+	    //TO DO, get int that indicates error 
+	    ret = *(int *)hip_get_param_contents_direct(current_param);
+	}
+    }
+
+    switch(ret){
+    case 1: HIP_INFO("Connection to the DHT gateway did not succeed.\n");
+    break;
+    case 2: HIP_INFO("Getting a response DHT gateway failed.\n");
+    break;
+    case 3: HIP_INFO("Entry not found at DHT gateway.\n");
+    break;
+    case 4: HIP_INFO("DHT gateway not configured yet.\n");
+    break;
+    case 5: HIP_INFO("DHT support not turned on.\n");
+    break;
+    }
+
+out_err:
+    memset(msg, 0, HIP_MAX_PACKET);
+    return(err);
+*/
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 /**
  * Handles @c service commands received from @c hipconf.
  *  
@@ -1732,7 +1847,7 @@ int hip_conf_handle_ha(hip_common_t *msg, int action,const char *opt[], int optc
      struct hip_tlv_common *current_param = NULL;
      int err = 0, state, ret;
      in6_addr_t arg1, hit1;
-
+HIP_DEBUG("HERE\n");
      HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0), -1,
 	      "Building of daemon header failed\n");
 
@@ -1776,6 +1891,7 @@ int hip_conf_print_info_ha(struct hip_hadb_user_info_state *ha)
         HIP_DEBUG_LSI(" Peer  LSI", &ha->lsi_peer);
         HIP_INFO_IN6ADDR(" Local IP", &ha->ip_our);
         HIP_INFO_IN6ADDR(" Peer  IP", &ha->ip_peer);
+	HIP_INFO(" Peer  hostname: %s\n", &ha->peer_hostname);
 	if (ha->heartbeats_on > 0 && ha->state == HIP_STATE_ESTABLISHED) {
 		HIP_DEBUG(" Heartbeat %.6f ms mean RTT, "
 			  "%.6f ms variance,\n"

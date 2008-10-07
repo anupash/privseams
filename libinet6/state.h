@@ -447,6 +447,8 @@ struct hip_hadb_state
 	    @note Do not modify this value directly. Use
 	    hip_hadb_set_output_filter_function_set() instead. */
 	hip_output_filter_func_set_t *hadb_output_filter_func;
+	/** peer hostname */
+	uint8_t peer_hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
 	/** True when agent is prompting user and fall back is disabled. */
 	int                          hip_opp_fallback_disable;
 	/** If the state for hi3, then this flag is 1, otherwise it is zero. */
@@ -497,6 +499,7 @@ struct hip_hadb_user_info_state
 	struct in6_addr      ip_peer;
         hip_lsi_t            lsi_our;
         hip_lsi_t            lsi_peer;
+	uint8_t 	     peer_hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
 	int                  state;
 	int                  heartbeats_on;
 	int                  heartbeats_sent;

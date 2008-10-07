@@ -282,8 +282,8 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		extern struct addrinfo * opendht_serving_gateway;
 		extern int opendht_serving_gateway_port;
 		extern int opendht_serving_gateway_ttl;
-extern int hip_opendht_sock_fqdn;
-extern int hip_opendht_sock_hit;
+		extern int hip_opendht_sock_fqdn;
+		extern int hip_opendht_sock_hit;
 		HIP_IFEL(!(gw_info = hip_get_param(msg, HIP_PARAM_OPENDHT_GW_INFO)), -1,
 			 "No gw struct found\n");
 		memset(&tmp_ip_str,'\0',20);
@@ -363,48 +363,45 @@ extern int hip_opendht_sock_hit;
 
 
 
+
+//#####################################
         case SO_HIP_INFO_FOR_DNS_PROXY:
         {
+		int ret = 0;
 		char *hostname = NULL;
 		struct in6_addr *ip_addr = NULL;
+		hip_hit_t hit;
+		hip_lsi_t lsi;
 
 		ip_addr  = hip_get_param(msg, HIP_PARAM_IPV6_ADDR);
 		hostname = hip_get_param(msg, HIP_PARAM_HOSTNAME);
 
-		if(!(ip_addr || hostname)){
-			HIP_DEBUG("Neither IP or hostname provided\n");
+		if(! (  (ip_addr == NULL && hostname != NULL) || 
+			(ip_addr != NULL && hostname == NULL)    )  ){
+			HIP_DEBUG("Either IP or hostname should be provided\n");
 			//todo, add sth to indicate this in the message back
 			break;
 		}
 
-		if(ip_addr){
-			//look into hadb with ip
-			//look into the files with hostname
-			
-			hip_get_info_for_proxy(ip_addr);
-		}
-		else{
-			
+		if(hostname){
+			////hip_map_first_hostname_to_ip_from_hosts(hostname, ip_addr);
+
+			err = hip_for_each_hosts_file_line(HOSTS_FILE,
+				     hip_map_first_hostname_to_ip_from_hosts,
+				     hostname, ip_addr);
 		}
 
+		//look into hadb with ip
+		ret = hip_get_info_for_proxy(ip_addr, &hit, &lsi);
 
-/*
-		int err_value = 0;
-		if(hip_opendht_inuse != SO_HIP_DHT_ON){
-			err_value = 5;
-			hip_build_param_contents(msg, &err_value,
-					 HIP_PARAM_INT, sizeof(int));
-		}else if((opendht_serving_gateway == NULL) ||
-			 (opendht_serving_gateway->ai_addr == NULL)){
-			err_value = 4;
-			hip_build_param_contents(msg, &err_value,
-					 HIP_PARAM_INT, sizeof(int));
-		}else{
-			err = hip_get_dht_mapping_for_HIT_msg(msg);
-		}
-*/
+		//pack ip, hip and lsi into the message back
+
+
+		////err = hip_get_info_for_dns_proxy_msg(msg);
         }
         break;
+//#####################################
+
 
 
 

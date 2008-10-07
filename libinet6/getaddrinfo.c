@@ -692,7 +692,7 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 
 /* perform HIT-IPv6 mapping if both are found 
 	     AG: now the loop also takes in IPv4 addresses */
-void send_hipd_addr(struct gaih_addrtuple * orig_at)
+void send_hipd_addr(struct gaih_addrtuple * orig_at, const char *peer_hostname)
 {
 	struct gaih_addrtuple *at_ip, *at_hit, *at_lsi = orig_at;
 	struct hip_common *msg = NULL;
@@ -782,6 +782,12 @@ void send_hipd_addr(struct gaih_addrtuple * orig_at)
 		      		HIP_DEBUG_LSI("LSI", &lsi);
 				hip_build_param_contents(msg, (void *) &lsi, HIP_PARAM_LSI, sizeof(hip_lsi_t));
 		    	}
+			//attach hostname to message
+			if(peer_hostname){
+				HIP_DEBUG("Peer hostname %s\n", peer_hostname);
+				hip_build_param_contents(msg, (void *) peer_hostname, HIP_PARAM_HOSTNAME, HIP_HOST_ID_HOSTNAME_LEN_MAX);
+			}
+				
 		    	hip_build_user_hdr(msg, SO_HIP_ADD_PEER_MAP_HIT_IP, 0);
 		    	hip_send_recv_daemon_info(msg);
 		}//for at_ip
@@ -1267,7 +1273,7 @@ int gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	/* perform HIT-IPv6 mapping if both are found 
 	   AG: now the loop also takes in IPv4 addresses */
 	if (found_hits) 
-		send_hipd_addr(*at);
+		send_hipd_addr(*at, name);
 	
 	/* Check if DNS returned HITs in case hosts file and DHT checks
 	   didn't contain HITs. */
@@ -1278,7 +1284,7 @@ int gaih_inet_get_name(const char *name, const struct addrinfo *req,
 			if (ipv6_addr_is_hit((struct in6_addr *)at_dns->addr)) 
 			{
 				found_hits = 1;
-				send_hipd_addr(*at);
+				send_hipd_addr(*at, name);
 				break;
 			}
 		}

@@ -3216,7 +3216,7 @@ int hip_handle_firewall_i1_request(struct hip_common *msg,
 		lsi = &(entry->lsi_peer);
 	}
 
-	HIP_IFEL(hip_hadb_add_peer_info(dst_hit, &dst_addr, lsi), -1,
+	HIP_IFEL(hip_hadb_add_peer_info(dst_hit, &dst_addr, lsi, NULL), -1,
 		 "map failed\n");
 
 	hip_nat_status = old_global_nat_mode; /* restore nat status */

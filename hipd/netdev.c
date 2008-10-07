@@ -831,7 +831,7 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit,
 	/* @fixme: changing global state won't work with threads */
 	hip_nat_status = ha_nat_mode;
 
-	err = hip_hadb_add_peer_info(dst_hit, dst_addr, dst_lsi);
+	err = hip_hadb_add_peer_info(dst_hit, dst_addr, dst_lsi, NULL);
 	if (err) {
 		HIP_ERROR("map failed ignoring\n");
 		err = 0;
