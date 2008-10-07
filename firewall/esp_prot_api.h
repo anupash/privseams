@@ -23,6 +23,9 @@
 #define DEFAULT_HCHAIN_LENGTH_ID	0
  /* for update_hchain_lengths[] */
 #define NUM_UPDATE_HCHAIN_LENGTHS	1
+/* number of hierarchies used to link hchains */
+#define NUM_BEX_HIERARCHIES			1
+#define NUM_UPDATE_HIERARCHIES		1
 
 
 /* maps from the transform_id defined above to the hash-function id
