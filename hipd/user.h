@@ -1,4 +1,4 @@
-o/** @file
+/** @file
  * A header file for user.c.
  *
  * @author  Miika Komu <miika_iki.fi>
@@ -15,7 +15,7 @@ o/** @file
 //#include <asm/byteorder.h>   // use instead #include <endian.h>
 #include "list.h"
 //#include "debug.h"
-#include "timer.h"
+#include "hiptimer.h"
 #include "bos.h"
 #include "close.h"
 #include "accessor.h"
