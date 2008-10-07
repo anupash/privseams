@@ -771,25 +771,9 @@ void send_hipd_addr(struct gaih_addrtuple * orig_at)
 
 		for(at_ip = orig_at; at_ip != NULL; at_ip = at_ip->next) {
 			if (at_ip->family == AF_INET6){
-				if(ipv6_addr_is_hit((struct in6_addr *) at_ip->addr))
+				if (ipv6_addr_is_hit((struct in6_addr *) at_ip->addr)) {
 					continue;
-				else if(IN6_IS_ADDR_V4MAPPED((struct in6_addr *)at_ip->addr)){
-					IPV6_TO_IPV4_MAP(((struct in6_addr *)at_ip->addr), &lsi);
-			        if (IS_LSI32(lsi.s_addr)) {
-			        	
-						is_lsi = 1;
-						HIP_DEBUG_LSI("lsi\n", &lsi);
-						_HIP_DEBUG("IS_LSI32: %d\n", IS_LSI32(lsi.s_addr));
-						continue;
-			        }
-			        else
-			        { 
-					/*Adding following , so it gets ipv4 address copied to addr*/
-					HIP_DEBUG("IS_LSI32: %d\n", IS_LSI32(lsi.s_addr));
-					addr6 = *(struct in6_addr *) at_ip->addr;
-			        }
-				}
-		   		else{
+				} else {
 			        	addr6 = *(struct in6_addr *) at_ip->addr;
 		   		        _HIP_DEBUG_IN6ADDR("addr6\n", (struct in6_addr *)at_hit->addr);
 		   		}
@@ -833,10 +817,6 @@ void send_hipd_addr(struct gaih_addrtuple * orig_at)
 		      		HIP_DEBUG_LSI("LSI", &lsi);
 				hip_build_param_contents(msg, (void *) &lsi, HIP_PARAM_LSI, sizeof(hip_lsi_t));
 		    	}
-			/*In case of opendht (lookup) this will be called 
-		         * as many times as there are addresses in the locators parameter
-			 * of HDRR for peer's unique hit. And daemon saves all the addresses. But 
-			 * prefered address will be set to the last address sent */
 		    	hip_build_user_hdr(msg, SO_HIP_ADD_PEER_MAP_HIT_IP, 0);
 		    	hip_send_recv_daemon_info(msg);
 		}//for at_ip

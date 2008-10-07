@@ -459,7 +459,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
       			hip_build_user_hdr(msg, SO_HIP_SET_HIPPROXY_ON, 0);
 			/* warning: passing argument 2 of 'hip_sendto' from
 			   incompatible pointer type. 04.07.2008. */
-        		n = hip_sendto_user(msg, &sock_addr);
+        		n = hip_sendto_user(msg, (struct sockaddr *) &sock_addr);
 
         		HIP_IFEL(n < 0, 0, "sendto() failed on agent socket.\n");
 
@@ -486,7 +486,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
       			hip_build_user_hdr(msg, SO_HIP_SET_HIPPROXY_OFF, 0);
         		/* warning: passing argument 2 of 'hip_sendto' from
 			   incompatible pointer type. 04.07.2008. */
-        		n = hip_sendto_user(msg, &sock_addr);
+        		n = hip_sendto_user(msg, (struct sockaddr *) &sock_addr);
 
         		HIP_IFEL(n < 0, 0, "sendto() failed on agent socket.\n");
 
@@ -518,9 +518,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         		if(hip_get_hip_proxy_status() == 1)
         			hip_build_user_hdr(msg, SO_HIP_SET_HIPPROXY_ON, 0);
 
-        		/* warning: passing argument 2 of 'hip_sendto' from
-			   incompatible pointer type. 04.07.2008. */
-        		n = hip_sendto_user(msg, &sock_addr);
+        		n = hip_sendto_user(msg, (struct sockaddr *)  &sock_addr);
 
         		HIP_IFEL(n < 0, 0, "sendto() failed on agent socket.\n");
 
@@ -878,20 +876,12 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		break;
 #endif /* CONFIG_HIP_RVS */
 	case SO_HIP_GET_HITS:
-		/**
-		 * @todo passing argument 1 of 'hip_for_each_hi' from incompatible
-		 * pointer type
-		 */
 		hip_msg_init(msg);
 		err = hip_for_each_hi(hip_host_id_entry_to_endpoint, msg);
 		break;
 	case SO_HIP_GET_HA_INFO:
 		hip_msg_init(msg);
 		hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0);
-		/**
-		 * @todo passing argument 1 of 'hip_for_each_ha' from incompatible
-		 * pointer type
-		 */
 		err = hip_for_each_ha(hip_handle_get_ha_info, msg);
 		break;
 	case SO_HIP_DEFAULT_HIT:
@@ -933,7 +923,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		HIP_DEBUG("GET HIP PROXY LOCAL ADDRESS\n");
 		hip_get_local_addr(msg);
                 //hip_build_user_hdr(msg, HIP_HIPPROXY_LOCAL_ADDRESS, 0);
-		n = hip_sendto_user(msg, &sock_addr);
+		n = hip_sendto_user(msg, (struct sockaddr *) &sock_addr);
 		HIP_IFEL(n < 0, 0, "sendto() failed on fw socket.\n");
 		if (err == 0) {
 			HIP_DEBUG("SEND HIPPROXY LOCAL ADDRESS OK.\n");
@@ -1026,7 +1016,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		if (err)
 		        hip_set_msg_err(msg, 1);
 		len = hip_get_msg_total_len(msg);
-		n = hip_sendto_user(msg, src);
+		n = hip_sendto_user(msg, (struct sockaddr *)  src);
 		if(n != len)
 			err = -1;
 		else

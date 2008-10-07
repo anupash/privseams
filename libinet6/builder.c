@@ -3319,8 +3319,9 @@ int hip_build_param_eid_endpoint(struct hip_common *msg,
 }
 
 int hip_host_id_entry_to_endpoint(struct hip_host_id_entry *entry,
-				  struct hip_common *msg)
+				  void *opaq)
 {
+	struct hip_common *msg = (struct hip_common *) opaq;
 	struct endpoint_hip endpoint;
 	int err = 0;
 
