@@ -358,7 +358,58 @@ extern int hip_opendht_sock_hit;
                 memcpy(&opendht_name_mapping, &name_info->name, HIP_HOST_ID_HOSTNAME_LEN_MAX);
                 HIP_DEBUG("Name received from hipconf %s\n", &opendht_name_mapping);
 	}
-            break;
+	break;
+
+
+
+
+        case SO_HIP_INFO_FOR_DNS_PROXY:
+        {
+		char *hostname = NULL;
+		struct in6_addr *ip_addr = NULL;
+
+		ip_addr  = hip_get_param(msg, HIP_PARAM_IPV6_ADDR);
+		hostname = hip_get_param(msg, HIP_PARAM_HOSTNAME);
+
+		if(!(ip_addr || hostname)){
+			HIP_DEBUG("Neither IP or hostname provided\n");
+			//todo, add sth to indicate this in the message back
+			break;
+		}
+
+		if(ip_addr){
+			//look into hadb with ip
+			//look into the files with hostname
+			
+			hip_get_info_for_proxy(ip_addr);
+		}
+		else{
+			
+		}
+
+
+/*
+		int err_value = 0;
+		if(hip_opendht_inuse != SO_HIP_DHT_ON){
+			err_value = 5;
+			hip_build_param_contents(msg, &err_value,
+					 HIP_PARAM_INT, sizeof(int));
+		}else if((opendht_serving_gateway == NULL) ||
+			 (opendht_serving_gateway->ai_addr == NULL)){
+			err_value = 4;
+			hip_build_param_contents(msg, &err_value,
+					 HIP_PARAM_INT, sizeof(int));
+		}else{
+			err = hip_get_dht_mapping_for_HIT_msg(msg);
+		}
+*/
+        }
+        break;
+
+
+
+
+
         case SO_HIP_CERT_SPKI_VERIFY:
                 {
                         HIP_DEBUG("Got an request to verify SPKI cert\n");

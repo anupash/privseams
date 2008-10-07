@@ -2077,6 +2077,100 @@ int hit_is_local_hit(struct in6_addr *hit){
 }
 
 
+
+
+
+
+
+
+
+/**
+ * Obtains the information needed by the dns proxy, based on the ip addr or the hostname.
+
+ * @param *src_hit	the input src hit
+ * @param *dst_hit	the input dst hit
+ * @param *src_ip	output src ip
+ * @param *dst_ip	output dst ip	
+ * 
+ * @return		the state of the found entry
+ * 			if there is no entry it returns -1
+ */
+int hip_get_info_for_proxy(struct in6_addr *ip_addr,
+			   char *hostname,
+			   struct in6_addr *hit,
+			   //old
+			   struct in6_addr *src_hit,
+			   struct in6_addr *dst_hit,
+			   struct in6_addr *src_ip,
+			   struct in6_addr *dst_ip){
+	int err = 0, res = -1;
+	hip_lsi_t src_ip4, dst_ip4;
+	struct hip_tlv_common *current_param = NULL;
+	struct hip_common *msg = NULL;
+	struct hip_hadb_user_info_state *ha;
+  
+	HIP_ASSERT( (ip_addr == NULL && hostname != NULL) ||
+		    (ip_addr != NULL && hostname == NULL)    );
+
+	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
+	hip_msg_init(msg);
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0),
+				-1, "Building of daemon header failed\n");
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send recv daemon info\n");
+
+	while((current_param = hip_get_next_param(msg, current_param)) != NULL) {
+		ha = hip_get_param_contents_direct(current_param);
+
+		if(ipv6_addr_cmp(ip_addr, &ha->ip_our) == 0){
+
+
+
+		}
+		else if( (ipv6_addr_cmp(ip_addr, &ha->ip_peer) == 0) &&
+			   (ha->state == HIP_STATE_ESTABLISHED) ){
+
+
+		}
+
+
+/*
+		if( (ipv6_addr_cmp(dst_hit, &ha->hit_our) == 0)  &&
+		    (ipv6_addr_cmp(src_hit, &ha->hit_peer) == 0) &&
+		    ha->state == HIP_STATE_ESTABLISHED){
+			*src_ip = ha->ip_peer;
+			*dst_ip = ha->ip_our;
+			res = ha->state;
+			break;
+		}else if( (ipv6_addr_cmp(src_hit, &ha->hit_our) == 0)  &&
+		         (ipv6_addr_cmp(dst_hit, &ha->hit_peer) == 0) &&
+			 ha->state == HIP_STATE_ESTABLISHED){
+			*src_ip = ha->ip_our;
+			*dst_ip = ha->ip_peer;
+			res = ha->state;
+			break;
+		}
+*/
+	}
+        
+ out_err:
+        if(msg)
+                HIP_FREE(msg);  
+        return res;
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 /* This builds a msg which will be sent to the HIPd in order to trigger
  * a BEX there.
  * 

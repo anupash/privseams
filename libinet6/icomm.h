@@ -178,6 +178,7 @@
 #define SO_HIP_IPSEC_DELETE_SA                  153
 #define SO_HIP_IPSEC_FLUSH_ALL_SA          	154
 #define SO_HIP_ANCHOR_CHANGE			155
+#define SO_HIP_INFO_FOR_DNS_PROXY		156
 
 //#define SO_HIP_ESP_PROT_EXT_TRANSFORM		xx
 //#define SO_HIP_IPSEC_UPDATE_ANCHOR_LIST	xx

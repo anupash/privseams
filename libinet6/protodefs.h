@@ -132,23 +132,24 @@
 #define HIP_PARAM_TRANSFORM_ORDER       32813
 /* End of HIPL private parameters. */
 
-#define HIP_PARAM_HMAC                 61505
-#define HIP_PARAM_HMAC2                61569
-#define HIP_PARAM_HIP_SIGNATURE2       61633
-#define HIP_PARAM_HIP_SIGNATURE        61697
-#define HIP_PARAM_ECHO_RESPONSE        63425
-#define HIP_PARAM_ECHO_REQUEST         63661
-#define HIP_PARAM_RELAY_FROM           63998
-#define HIP_PARAM_RELAY_TO             64002
-#define HIP_PARAM_TO_PEER              64006
-#define HIP_PARAM_FROM_PEER            64008
-#define HIP_PARAM_REG_FROM             64010
-#define HIP_PARAM_FROM                 65498
-#define HIP_PARAM_RVS_HMAC             65500
-#define HIP_PARAM_VIA_RVS              65502
-#define HIP_PARAM_RELAY_HMAC           65520
+#define HIP_PARAM_HMAC			61505
+#define HIP_PARAM_HMAC2			61569
+#define HIP_PARAM_HIP_SIGNATURE2	61633
+#define HIP_PARAM_HIP_SIGNATURE		61697
+#define HIP_PARAM_ECHO_RESPONSE		63425
+#define HIP_PARAM_ECHO_REQUEST		63661
+#define HIP_PARAM_RELAY_FROM		63998
+#define HIP_PARAM_RELAY_TO		64002
+#define HIP_PARAM_TO_PEER		64006
+#define HIP_PARAM_FROM_PEER		64008
+#define HIP_PARAM_REG_FROM		64010
+#define HIP_PARAM_FROM			65498
+#define HIP_PARAM_RVS_HMAC		65500
+#define HIP_PARAM_VIA_RVS		65502
+#define HIP_PARAM_RELAY_HMAC		65520
+#define HIP_PARAM_HOSTNAME		65521
 
-#define HIP_PARAM_MAX                  65536
+#define HIP_PARAM_MAX			65536
 /* @} */
 
 /** @addtogroup notification

@@ -297,8 +297,8 @@ class Global:
                             m.addQuestion(a1['name'],qtype,1)
                         else:
                             m = None
-                    if m:
-                        m.addAAAA(a2['name'],a2['class'],a2['ttl'],a2['data'])
+		    if m:
+			m.addAAAA(a2['name'],a2['class'],a2['ttl'],a2['data'])
                         s.sendto(m.buf,from_a)
                         sent_answer = 1
 
@@ -325,16 +325,61 @@ class Global:
                         s.sendto(m.buf,from_a)
                         sent_answer = 1
 
-                if not sent_answer:
-                    s2.send(buf)
-                    r2 = s2.recv(2048)
+                if not sent_answer:	#a, any
 
-                    u = DNS.Lib.Munpacker(r2)
-                    r = DNS.Lib.DnsResult(u,args0)
-                    fout.write('Bypass %s %s %s\n' % (r.header,r.questions,r.answers,))
+                    #s2.send(buf)
+                    #r2 = s2.recv(2048)
 
-                    if r.header.get('status') != 'NXDOMAIN':
-                        s.sendto(r2,from_a)
+                    #u = DNS.Lib.Munpacker(r2)
+                    #r = DNS.Lib.DnsResult(u,args0)
+                    #fout.write('Bypass %s %s %s\n' % (r.header,r.questions,r.answers,))
+
+		    #fout.write('### 1\n')
+                    #if r.header.get('status') != 'NXDOMAIN':
+                    #    s.sendto(r2,from_a)
+
+		    nam = q1['qname']
+                    lr = gp.getbyname(nam)
+                    if lr:
+                        a2 = {'name': nam,
+                              'data': lr,
+                              'type': 28,
+                              'class': 1,
+                              'ttl': 10,
+                              }
+                        fout.write('Hosts A2  %s\n' % (a2,))
+                        m = DNS.Lib.Mpacker()
+                        m.addHeader(r.header['id'],
+                                    0, 0, 0, 0, 1, 0, 0, 0,
+                                    1, 1, 0, 0)
+                        m.addQuestion(nam,qtype,1)
+                    else:
+			fout.write('HERE a any \n')
+                        r1 = d2.req(name=q1['qname'],qtype=55) # 55 is HIP RR
+                        fout.write('r1: %s\n' % (dir(r1),))
+                        fout.write('r1.answers: %s\n' % (r1.answers,))
+                        if r1.answers:
+                            a1 = r1.answers[0]
+                            aa1d = a1['data']
+                            aa1 = aa1d[4:4+16]
+                            a2 = {'name': a1['name'],
+                                  'data': pyip6.inet_ntop(aa1),
+                                  'type': 28,
+                                  'class': 1,
+                                  'ttl': a1['ttl'],
+                                  }
+                            fout.write('DNS A2  %s\n' % (a2,))
+                            m = DNS.Lib.Mpacker()
+                            m.addHeader(r.header['id'],
+                                        0, r1.header['opcode'], 0, 0, r1.header['rd'], 0, 0, 0,
+                                        1, 1, 0, 0)
+                            m.addQuestion(a1['name'],qtype,1)
+                        else:
+                            m = None
+                    if m:
+			m.addA(a2['name'],a2['class'],a2['ttl'],a2['data'])
+                        s.sendto(m.buf,from_a)
+                        sent_answer = 1
 
                 fout.flush()
             except Exception,e:
