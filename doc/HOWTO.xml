@@ -1844,7 +1844,58 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
   </para>
   <para>
   Then run at the server: vlc -vvv &lt;any avi video file&gt; --ipv6 --sout '#std{access=rtp,mux=ts,dst=[&lt;CLIENT's HIT&gt;]:1234}'
-
+  </para>
+  </section>
+  <section id="sec_vnc">
+  <title>VNC applications</title>
+  <para>
+    Vino-server/Vinagre-client and tightVNCserver/xtightVNCviewer
+    applications work just fine with the LSI support of HIPL. LSIs are
+    used because tested applications did not support IPv6. It seems
+    that most of the VNC applications do not support IPv6.
+  </para>
+  <para>
+    VINO/VINAGRE
+  </para>
+  <para>
+  Setup LSIs as the manual instructs and remember the daemons and so
+  on. Then do the following.
+  </para>
+  <para>
+    For server side (Remember Ubuntu was used when testing). Open the
+    settings GUI from Gnome System->Preferences->Remote Desktop then
+    allow other users to view and or control the desktop. You can
+    also set a password for the desktop. 
+  </para>
+  <para>
+    For the client side do the following and everything should work.
+  </para>
+  <programlisting>
+    vinagre &lt;LSI-of-Server&gt;
+  </programlisting>
+  <para>
+    THIGHTVNCSERVER/XTIGHTVNCVIEWER
+  </para>
+  <para>
+  Setup LSIs as the manual instructs and remember the daemons and so
+  on. Then do the following.
+  </para>
+  <para>
+    For the server side install package tightvncsercer. To start the
+    server just write tightvncserver on the terminal and the server
+    will start with default options. Refer to the official
+    documentation or the man pages of tightvnc for more information on
+    the configuration. 
+  </para>
+  <para>
+    On the client side install package xtightvncviewer. Then with the
+    following command you should have an successfull connection.
+  </para>
+  <programlisting>
+    xtightvncviewer &lt;LSI-of-server&gt;:1
+  </programlisting>
+  <para>
+  Longer how-to can be found from <ulink url="http://www.cs.helsinki.fi/u/sklvarjo/vnc.htm" />
   </para>
   </section>
   <section id="sec_openldap">
