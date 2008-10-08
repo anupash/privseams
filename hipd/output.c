@@ -7,7 +7,7 @@
  * @author  Mika Kousa
  * @author  Kristian Slavov
  * @author  Samu Varjonen
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
 #include "output.h"
 

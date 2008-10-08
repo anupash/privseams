@@ -12,7 +12,7 @@
  * @note    Related draft:
  *          <a href="http://www.ietf.org/internet-drafts/draft-ietf-hip-nat-traversal-03.txt">
  *          draft-ietf-hip-nat-traversal-03</a>
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  * @see     hiprelay.h
  */ 
 #include "hiprelay.h"

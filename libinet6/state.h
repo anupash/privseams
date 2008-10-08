@@ -2,7 +2,7 @@
  * This file defines Host Identity Protocol (HIP) header and parameter related
  * constants and structures.
  *
- * @note Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @note Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
 #ifndef _HIP_STATE
 #define _HIP_STATE

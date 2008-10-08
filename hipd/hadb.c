@@ -337,7 +337,7 @@ void hip_hadb_set_lsi_pair(hip_ha_t *entry)
 	if (entry){
 		hip_hidb_get_lsi_by_hit(&entry->hit_our, &entry->lsi_our);
 		//Assign lsi_peer
-		aux = hip_generate_peer_lsi();
+		hip_generate_peer_lsi(&aux);
 		memcpy(&entry->lsi_peer, &aux, sizeof(hip_lsi_t));
 		_HIP_DEBUG_LSI("entry->lsi_peer is ", &entry->lsi_peer);
 	}
@@ -369,7 +369,8 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	hip_ha_t *entry = NULL, *aux = NULL;
 	hip_lsi_t local_lsi, lsi_aux;
 
-	hip_print_debug_info(local_addr, peer_addr,local_hit, peer_hit, peer_lsi);
+	hip_print_debug_info(local_addr, peer_addr,local_hit, peer_hit,
+			     peer_lsi);
 
 	entry = hip_hadb_find_byhits(local_hit, peer_hit);
 
@@ -394,7 +395,8 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	ipv6_addr_copy(&entry->hit_peer, peer_hit);
 	ipv6_addr_copy(&entry->hit_our, local_hit);
 	ipv6_addr_copy(&entry->local_address, local_addr);
-	HIP_IFEL(hip_hidb_get_lsi_by_hit(local_hit, &entry->lsi_our), -1, "Unable to find local hit");
+	HIP_IFEL(hip_hidb_get_lsi_by_hit(local_hit, &entry->lsi_our), -1,
+		 "Unable to find local hit");
 
 	/*Copying peer_lsi*/
 	if (peer_lsi != NULL && peer_lsi->s_addr != 0){
@@ -408,7 +410,7 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 		        ipv4_addr_copy(&entry->lsi_peer, &aux->lsi_peer);
 		}else{
 		  	// No exists: Call to the automatic generation
-		        lsi_aux = hip_generate_peer_lsi();
+		        hip_generate_peer_lsi(&lsi_aux);
 			ipv4_addr_copy(&entry->lsi_peer, &lsi_aux);
 		}
 	}
@@ -3009,7 +3011,7 @@ hip_ha_t *hip_hadb_find_by_blind_hits(hip_hit_t *local_blind_hit,
 }
 #endif
 
-struct in_addr hip_generate_peer_lsi()
+int hip_generate_peer_lsi(hip_lsi_t *lsi)
 {
 	struct in_addr lsi_prefix;
 	int index = 1;
@@ -3020,29 +3022,22 @@ struct in_addr hip_generate_peer_lsi()
 
 	_HIP_DEBUG_LSI("lsi free final value is ", &lsi_prefix);
 
-	return lsi_prefix;
+	*lsi = lsi_prefix;
+	return 0;
 }
 
-int hip_host_file_info_exists_lsi(struct in_addr *add){
-        int err = 0, equal = 0, i = 0;
-	hip_lsi_t lsi_aux;
-	List list;
+int hip_host_file_info_exists_lsi(hip_lsi_t *lsi){
+  int err = 0;
+  uint8_t hostname[HOST_NAME_MAX];
+  struct in6_addr mapped_lsi;
+  
+  memset(hostname, 0, sizeof(hostname));
 
-	initlist(&list);
-	
-	/* Look up /etc/hip/host for lsis */
-        gaih_inet_get_hip_hosts_file_lsis(&list);
+  IPV4_TO_IPV6_MAP(lsi, &mapped_lsi);
 
-	while(i < length(&list) && !equal){
-	        err = inet_pton(AF_INET, getitem(&list,i), &lsi_aux);	 
-		if (err)
-		        equal = hip_lsi_are_equal(&lsi_aux, add);
-		i++;
-	}
-
-	destroy(&list);
-
-	return equal;
+  return !hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+				       hip_map_first_id_to_hostname_from_hosts,
+				       &mapped_lsi, hostname);
 }
 
 /**
