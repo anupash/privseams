@@ -204,7 +204,7 @@ int hip_conf_check_action_argc(int action) {
 	case ACTION_BOS: case ACTION_LOCATOR: case ACTION_OPENDHT: case ACTION_HEARTBEAT:
                 break;
 	case ACTION_DEBUG: case ACTION_RESTART: case ACTION_REINIT:
-	case ACTION_TCPTIMEOUT:
+	case ACTION_TCPTIMEOUT: case ACTION_DNS_PROXY:
 		count = 1;
 		break;
 	case ACTION_ADD: case ACTION_DEL: case ACTION_SET: case ACTION_INC:
@@ -303,6 +303,8 @@ int hip_conf_get_type(char *text,char *argv[]) {
 #endif
         else if (strcmp("hi3", argv[1])==0)
                 ret = TYPE_HI3;
+	else if (strcmp("dnsproxy", argv[1])==0)
+                ret = TYPE_DNS_PROXY;
 	else if (strcmp("buddies", argv[1])==0)
 		ret = TYPE_BUDDIES;
 	return ret;
@@ -339,10 +341,10 @@ int hip_conf_get_type_arg(int action)
 	case ACTION_HIPPROXY:
 #endif
 	case ACTION_HI3:
+	case ACTION_DNS_PROXY:
 	case ACTION_RESTART:
 		type_arg = 2;
 		break;
-	
 	case ACTION_DEBUG:
 		type_arg = 1;
 		break;
@@ -1669,77 +1671,56 @@ int hip_conf_handle_buddies_toggle(hip_common_t *msg, int action, const char *op
  * @return       zero on success, or negative error value on error.
  */
 int hip_conf_handle_get_dnsproxy(hip_common_t *msg, int action, const char *opt[], int optc){
-    
-
-    /*int err = 0, ret = 0;
-    hip_hit_t hit = {0};
-    struct in_addr  *reply_ipv4;
-    struct in6_addr *reply_ipv6 = {0};
-	
+    int err = 0, ret4 = 0, ret6 = 0, ret = 0;
+    struct in_addr  ipv4_addr = {0};
+    struct in6_addr ipv6_addr = {0};
+    char hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
     hip_tlv_type_t         param_type = 0;
     struct hip_tlv_common *current_param = NULL;
 
-    HIP_INFO("Asking serving gateway info from daemon...\n");
+    HIP_INFO("Asking dnsproxy info from daemon...\n");
 
-    //obtain the hit
-    ret = inet_pton(AF_INET6, opt[0], &hit);
-    if(ret < 0 && errno == EAFNOSUPPORT){
-	HIP_PERROR("inet_pton: not a valid address family\n");
-	err = -EAFNOSUPPORT;
-	goto out_err;
-    }else if(ret == 0){
-	HIP_ERROR("inet_pton: %s: not a valid network address\n", opt[0]);
-	err = -EINVAL;
-	goto out_err;
-    }
-    ret = 0;
+    memset(hostname, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX);
 
-    //attach the hit into the message
-    err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
-				   sizeof(in6_addr_t));
-    if(err){
-	HIP_ERROR("build param hit failed: %s\n", strerror(err));
-	goto out_err;
+    //obtain ipv4/ipv6 address
+    ret4 = inet_pton(AF_INET,  opt[0], &ipv4_addr);
+    ret6 = inet_pton(AF_INET6, opt[0], &ipv6_addr);
+    if(ret4)
+	IPV4_TO_IPV6_MAP(&ipv4_addr, &ipv6_addr);
+HIP_DEBUG_IN6ADDR("####", &ipv6_addr);
+
+    //obtain hostname
+    if(!(ret4 || ret6)){
+	memcpy(hostname, opt[0], HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
+HIP_DEBUG("### %s\n", hostname);
+	hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX] = '\0';
     }
 
-    //Build a HIP message to get ip mapping
-    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW, 0),-1,
-				"Building daemon header failed\n");
 
-    // Send the message to the daemon. Wait for reply
-    HIP_IFE(hip_send_recv_daemon_info(msg), -ECOMM);
 
-    // Loop through all the parameters in the message just filled.
-    while((current_param = hip_get_next_param(msg, current_param)) != NULL){
-	param_type = hip_get_param_type(current_param);
-	if(param_type == HIP_PARAM_SRC_ADDR){
-	    reply_ipv6 = (struct in6_addr *)hip_get_param_contents_direct(
-						current_param);
 
-	    HIP_DEBUG_IN6ADDR("Result IP ", reply_ipv6);
-	}else if(param_type == HIP_PARAM_INT){
-	    //TO DO, get int that indicates error 
-	    ret = *(int *)hip_get_param_contents_direct(current_param);
-	}
-    }
 
-    switch(ret){
-    case 1: HIP_INFO("Connection to the DHT gateway did not succeed.\n");
-    break;
-    case 2: HIP_INFO("Getting a response DHT gateway failed.\n");
-    break;
-    case 3: HIP_INFO("Entry not found at DHT gateway.\n");
-    break;
-    case 4: HIP_INFO("DHT gateway not configured yet.\n");
-    break;
-    case 5: HIP_INFO("DHT support not turned on.\n");
-    break;
-    }
+hip_hit_t hit;
+struct in_addr lsi;
+//char new[HIP_HOST_ID_HOSTNAME_LEN_MAX] = "infrahip.hiit.fi\0";
+char new[HIP_HOST_ID_HOSTNAME_LEN_MAX] = "193.167.187.129\0";
+HIP_DEBUG("#### HARD CODED %s\n", new);
+inet_pton(AF_INET, new, &ipv4_addr);
+HIP_DEBUG_INADDR("####", &ipv4_addr);
+
+IPV4_TO_IPV6_MAP(&ipv4_addr, &ipv6_addr);
+
+		//look into hadb with ip
+		ret = hip_get_info_for_proxy(&ipv6_addr, &hit, &lsi);
+
+if(ret){
+	HIP_DEBUG_IN6ADDR("#### HIT", &hit);
+	HIP_DEBUG_INADDR("#### LSI", &lsi);
+}
 
 out_err:
     memset(msg, 0, HIP_MAX_PACKET);
     return(err);
-*/
 }
 
 

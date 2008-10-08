@@ -363,6 +363,9 @@ class Global:
                     #if r.header.get('status') != 'NXDOMAIN':
                     #    s.sendto(r2,from_a)
 
+
+
+
 		    nam = q1['qname']
                     lr = gp.getbyname(nam)
                     if lr:
@@ -372,6 +375,16 @@ class Global:
                               'class': 1,
                               'ttl': 10,
                               }
+
+
+			#cmd for executing hipconf dnsproxy command
+			cmd = 'hipconf dnsproxy ' + lr
+			fout.write('COMMAND  %s\n' % (cmd,))
+			p = os.popen(cmd)
+			for line in p.readlines():
+			     print line
+
+
                         fout.write('Hosts A2  %s\n' % (a2,))
                         m = DNS.Lib.Mpacker()
                         m.addHeader(r.header['id'],

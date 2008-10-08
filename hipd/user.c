@@ -396,12 +396,15 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         {
 		int ret = 0;
 		char *hostname = NULL;
-		struct in6_addr *ip_addr = NULL;
-		hip_hit_t hit;
-		hip_lsi_t lsi;
-
-		ip_addr  = hip_get_param(msg, HIP_PARAM_IPV6_ADDR);
-		hostname = hip_get_param(msg, HIP_PARAM_HOSTNAME);
+		hip_hit_t *ip_addr = NULL;
+		hip_hit_t hit = {0};
+		hip_lsi_t lsi = {0};
+/*
+hip_dump_msg(msg);
+		HIP_IFEL(!(ip_addr  = hip_get_param(msg, HIP_PARAM_HIT)),
+				-1, "no IP\n");
+		//HIP_IFEL(!(hostname = hip_get_param(msg, HIP_PARAM_HOSTNAME)),
+		//		-1, "no IP\n");
 
 		if(! (  (ip_addr == NULL && hostname != NULL) || 
 			(ip_addr != NULL && hostname == NULL)    )  ){
@@ -409,21 +412,42 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			//todo, add sth to indicate this in the message back
 			break;
 		}
-
+HIP_DEBUG_IN6ADDR("####", ip_addr);
+HIP_DEBUG("#### %s\n", hostname);
 		if(hostname){
 			////hip_map_first_hostname_to_ip_from_hosts(hostname, ip_addr);
-
 			err = hip_for_each_hosts_file_line(HOSTS_FILE,
 				     hip_map_first_hostname_to_ip_from_hosts,
 				     hostname, ip_addr);
 		}
+		ret = hip_get_info_for_proxy(ip_addr, &hit, &lsi);
+*/
+
+/*
+struct in_addr  ipv4_addr = {0};
+struct in6_addr ipv6_addr = {0};
+//char new[HIP_HOST_ID_HOSTNAME_LEN_MAX] = "infrahip.hiit.fi\0";
+char new[HIP_HOST_ID_HOSTNAME_LEN_MAX] = "193.167.187.129\0";
+HIP_DEBUG("#### HARD CODED %s\n", new);
+inet_pton(AF_INET, new, &ipv4_addr);
+HIP_DEBUG_INADDR("####", &ipv4_addr);
+
+IPV4_TO_IPV6_MAP(&ipv4_addr, &ipv6_addr);
 
 		//look into hadb with ip
-		ret = hip_get_info_for_proxy(ip_addr, &hit, &lsi);
+		ret = hip_get_info_for_proxy(&ipv6_addr, &hit, &lsi);
+
+HIP_DEBUG_IN6ADDR("#### HIT", &hit);
+HIP_DEBUG_INADDR("#### LSI", &lsi);
+
+hip_build_param_contents(msg, &hit,
+					 HIP_PARAM_HIT, sizeof(hip_hit_t));
+hip_build_param_contents(msg, &lsi,
+					 HIP_PARAM_LSI, sizeof(hip_lsi_t));
+*/
+
 
 		//pack ip, hip and lsi into the message back
-
-
 		////err = hip_get_info_for_dns_proxy_msg(msg);
         }
         break;

@@ -2045,7 +2045,7 @@ int hit_is_local_hit(struct in6_addr *hit){
 int hip_get_info_for_proxy(struct in6_addr *ip_addr,
 			   struct in6_addr *hit,
 			   hip_lsi_t       *lsi){
-	int err = 0, res = -1;
+	int err = 0, res = 0;
 	hip_lsi_t src_ip4, dst_ip4;
 	struct hip_tlv_common *current_param = NULL;
 	struct hip_common *msg = NULL;
@@ -2063,46 +2063,23 @@ int hip_get_info_for_proxy(struct in6_addr *ip_addr,
 
 	while((current_param = hip_get_next_param(msg, current_param)) != NULL) {
 		ha = hip_get_param_contents_direct(current_param);
-
 		if(ipv6_addr_cmp(ip_addr, &ha->ip_our) == 0){
 			*hit = ha->hit_our;
 			*lsi = ha->lsi_our;
-			res = ha->state;
+			res = 1;
 			break;
 		}
-		else if( (ipv6_addr_cmp(ip_addr, &ha->ip_peer) == 0) &&
-			   (ha->state == HIP_STATE_ESTABLISHED)         ){
+		else if(ipv6_addr_cmp(ip_addr, &ha->ip_peer) == 0){
 			*hit = ha->hit_peer;
 			*lsi = ha->lsi_peer;
-			res = ha->state;
+			res = 1;
 			break;
 		}
-
-
-/*
-		if( (ipv6_addr_cmp(dst_hit, &ha->hit_our) == 0)  &&
-		    (ipv6_addr_cmp(src_hit, &ha->hit_peer) == 0) &&
-		    ha->state == HIP_STATE_ESTABLISHED){
-			*src_ip = ha->ip_peer;
-			*dst_ip = ha->ip_our;
-			res = ha->state;
-			break;
-		}else if( (ipv6_addr_cmp(src_hit, &ha->hit_our) == 0)  &&
-		         (ipv6_addr_cmp(dst_hit, &ha->hit_peer) == 0) &&
-			 ha->state == HIP_STATE_ESTABLISHED){
-			*src_ip = ha->ip_our;
-			*dst_ip = ha->ip_peer;
-			res = ha->state;
-			break;
-		}
-*/
 	}
-        
- out_err:
+out_err:
         if(msg)
                 HIP_FREE(msg);  
         return res;
-
 }
 
 

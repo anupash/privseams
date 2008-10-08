@@ -147,8 +147,9 @@
 #define TYPE_HIPPROXY	   26
 #define TYPE_HEARTBEAT     27
 #define TYPE_HI3           28
-#define TYPE_BUDDIES	   29
-#define TYPE_MAX           30 /* exclusive */
+#define TYPE_DNS_PROXY     29
+#define TYPE_BUDDIES	   30
+#define TYPE_MAX           31 /* exclusive */
 
 /* #define TYPE_RELAY         22 */
 
