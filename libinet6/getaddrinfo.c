@@ -1092,7 +1092,7 @@ int gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	/* Is ipv4 address? */
 	if (inet_pton (AF_INET, name, (*at)->addr) > 0)
 	{
-		HIP_DEBUG("The name to resolve is an IPv4.\n");
+		_HIP_DEBUG("The name to resolve is an IPv4.\n");
 		if (req->ai_family == AF_UNSPEC ||
 		    req->ai_family == AF_INET || v4mapped)
 		{
@@ -1234,7 +1234,7 @@ int gaih_inet_get_name(const char *name, const struct addrinfo *req,
 		   to allow the error value to be passed to the caller of this function.
 		   -Lauri 07.05.2008. */
 		err = gethosts_hit(name, &pat, req->ai_flags);
-		if((err) <= 0) {
+		if((err) < 0) {
 			return err;
 		}
 		
@@ -1379,7 +1379,7 @@ int gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	
 	/* Order the link list so HITs/LSIs are first and then IPs. */
 	a = *at, p = NULL, plast = NULL, aux = *at;
-	_HIP_DEBUG("HIP: AI_HIP set: order IP addresses. (*at)->addr: %s (*at)->family: %d\n", (*at)->addr, (*at)->family);  
+	_HIP_DEBUG("Order IP addresses. (*at)->addr: %s (*at)->family: %d\n", (*at)->addr, (*at)->family);  
 	while (a != NULL) {
 		struct gaih_addrtuple *nxt = a->next;
 		
