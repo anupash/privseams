@@ -61,6 +61,8 @@ hash_tree_t* htree_init(int num_data_blocks, int max_data_length, int node_lengt
     tree->node_length = node_length;
     tree->depth = ceil(log2(num_data_blocks));
 
+    tree->root = NULL;
+
   out_err:
 	if (err)
 	{
@@ -98,8 +100,10 @@ int htree_add_data(hash_tree_t *tree, char *data, size_t data_length)
     HIP_ASSERT(tree->is_open > 0);
     HIP_ASSERT(tree->data_position < tree->num_data_blocks);
 
-    // add the leaf the leaf-array
-    // TODO check offset
+    /* add the leaf the leaf-array
+     *
+     * @note data_length < tree->max_data_length will result in 0 bits padding
+     */
     memcpy(&tree->data[tree->data_position * tree->max_data_length], data, data_length);
     // move to next free position
     tree->data_position++;
@@ -124,8 +128,7 @@ int htree_add_random_data(hash_tree_t *tree, int num_random_blocks)
     HIP_ASSERT(tree->data_position + num_random_blocks <= tree->num_data_blocks);
 
     // add num_random_blocks random data to the data-array
-    // TODO check offset
-    RAND_bytes(&tree->data[tree->data_position],
+    RAND_bytes(&tree->data[tree->data_position * tree->max_data_length],
     		num_random_blocks * tree->max_data_length);
     // move to next free position
     tree->data_position += num_random_blocks;
@@ -154,7 +157,7 @@ int htree_add_random_data(hash_tree_t *tree, int num_random_blocks)
  * \param generatorArgs 	Arguments for the generators
  * \return 0
  */
-int htree_compute_nodes(hash_tree_t *tree, htree_leaf_gen_t leaf_gen,
+int htree_calc_nodes(hash_tree_t *tree, htree_leaf_gen_t leaf_gen,
 		htree_node_gen_t node_gen)
 {
 	int level_width = 0, i, err = 0;
@@ -180,13 +183,13 @@ int htree_compute_nodes(hash_tree_t *tree, htree_leaf_gen_t leaf_gen,
     			"failed to calculate leaf hashes\n");
     }
 
-    /* compute hashes on all other levels except the root */
-    HIP_DEBUG("computing intermediate nodes...\n");
+    /* compute hashes on all other levels */
+    HIP_DEBUG("computing intermediate nodes and root...\n");
 
     // the leaf level has got full width
     level_width = tree->num_data_blocks;
 
-    while(level_width > 1)
+    while(level_width > 0)
     {
         /* set the target for the this level directly behind the
          * already calculated nodes of the previous level */
@@ -212,8 +215,73 @@ int htree_compute_nodes(hash_tree_t *tree, htree_leaf_gen_t leaf_gen,
         source_index = target_index;
     }
 
+    // TODO link in root
+
   out_err:
     return err;
+}
+
+/*!
+ * \brief Get the uptree nodes from a computed tree.
+ *
+ *  Get the uptree nodes from a computed tree.
+ *
+ * \author  Tobias Heer
+ *
+ * \param tree 		Pointer to the MT
+ * \param leafIndex	Leaf position for which the uptree is fetched
+ * \param buffer	Destination buffer
+ * \param len		Destination buffer length
+ * \return 0
+ */
+int htree_get_branch(hash_tree_t *tree, int data_index, unsigned char *branch_nodes,
+		int branch_length)
+{
+	int tree_level = 0;
+	int level_width = 0;
+	int source_index = 0;
+    int modifier = 0;
+
+    HIP_ASSERT(tree != NULL);
+    HIP_ASSERT(data_index >= 0);
+    HIP_ASSERT(branch_nodes != NULL);
+	HIP_ASSERT(branch_length > 0 && branch_length <= tree->depth * tree->node_length);
+
+#if 0
+    // Check if buffer is sufficient (size of nodes * tree depth)
+    if(len != tree->depth * tree->nodeSize){
+        printf("ht_getUpTree: Buffer space mismatch (%d != %d)",
+               len,
+               tree->depth * tree->nodeSize);
+    }
+#endif
+
+    // traverse from leaf to root
+    level_width = tree->num_data_blocks;
+
+    while (level_width > 0)
+    {
+    	HIP_DEBUG("level_width: %i\n", level_width);
+
+    	// TODO what does this do?
+        modifier = data_offset & 1 ? -1 : 1;
+
+        // copy branch-node to buffer
+        memcpy(&branch_nodes[tree_level * tree->node_length],
+               tree->nodes[source_index + ((data_offset + modifier) * tree->node_length)],
+               tree->node_length);
+
+        // proceed by one level
+        source_index += level_width * tree->node_length;
+        level_width = level_width >> 1;
+        // TODO what does this do?
+        data_offset = data_offset >> 1;
+        tree_level++;
+    }
+
+    HIP_HEXDUMP("verification branch: ", branch_nodes, branch_length);
+
+    return 0;
 }
 
 /*!
@@ -232,13 +300,10 @@ int htree_compute_nodes(hash_tree_t *tree, htree_leaf_gen_t leaf_gen,
  *
  * \return 0
  */
-int ht_verifyBuffer(ht_root_t* root,
-                    int nodeIndex,
-                    char* data,
-                    int dataLen,
-                    char* nodes,
-                    int nodeLen){
-
+int htree_verify_branch(unsigned char *root, unsigned char *branch_nodes, int num_nodes,
+		int node_length, unsigned char *verify_data, int data_length, int data_index)
+{
+#if 0
     /* Check that buffer length matches tree depth*/
     if(root->treeDepth * root->nodeSize != nodeLen){
         printf("ht_getUpTree: Buffer space mismatch (%d != %d)\n",
@@ -250,43 +315,59 @@ int ht_verifyBuffer(ht_root_t* root,
         printf("Node buffer length is 0\n");
         exit(1);
     }
-    char* nodeBuffer;
-    nodeBuffer = malloc(sizeof(char) * root->nodeSize * 2); /* space for two nodes to be hashed together */
-    int modifier;
-    int i;
-	for(i = 0; i < root-> treeDepth+1; i++){
-        printf("Round %d\n", i);
-        modifier = nodeIndex & 1?1:0;
+#endif
+    /* space for two nodes to be hashed together */
+    unsigned char buffer[2 * node_length];
+    int modifier = 0, err = 0, i;
 
-        /* For the first round use the hashed packet */
+    HIP_ASSERT(root != NULL);
+    HIP_ASSERT(branch_nodes != NULL);
+    HIP_ASSERT(node_length > 0);
+    HIP_ASSERT(verify_data != NULL);
+    HIP_ASSERT(data_length > 0);
+    HIP_ASSERT(data_index >= 0);
 
-        if(i != 0 ){
-            /* Hash previous buffer */
+	for(i = 0; i < num_nodes + 1; i++)
+	{
+        HIP_DEBUG("round %i\n", i);
 
-            SHA( (unsigned char*) nodeBuffer, root->nodeSize * 2,  (unsigned char*) nodeBuffer + modifier*root->nodeSize);
+        // determines where to put the calculated hash in the buffer
+        // TODO what does this do?
+        modifier = num_nodes & 1 ? 1 : 0;
 
-        }else{
-            /* Hash input data */
-            SHA( (unsigned char*) data, dataLen,  (unsigned char*) nodeBuffer + modifier*root->nodeSize);
+        /* in first round we have to calculate the leaf */
+        if (i != 0 )
+        {
+            /* hash previous buffer and overwrite partially */
+            SHA(&buffer[0], 2 * node_length, &buffer[modifier * node_length]);
+
+        } else
+        {
+            /* hash data in order to derive the hash tree leaf */
+            SHA(&data[0], data_length, &buffer[modifier * node_length]);
         }
 
+        // copy i-th branch node to the free slot in the buffer
+        memcpy(buffer[(1 - modifier) * node_length], branch_nodes[i * node_length],
+        		node_length);
 
-        memcpy(nodeBuffer+(1-modifier)*root->nodeSize, nodes+root->nodeSize * i, root->nodeSize);
-        printf("Buffer1: ");
-        hexdump(nodeBuffer, root->nodeSize);
-        printf("\nBuffer2: ");
-        hexdump(nodeBuffer + root->nodeSize, root->nodeSize);
-        printf("\n");
+        HIP_HEXDUMP("buffer slot 1: ", &buffer[0], node_length);
+        HIP_HEXDUMP("buffer slot 2: ", &buffer[node_length], node_length);
     }
-    if(memcmp(nodeBuffer + modifier*root->nodeSize, root->node, root->nodeSize) != 0){
-        printf("Signature invalid\n");
-        printf("Comp: ");
-        hexdump(nodeBuffer + modifier*root->nodeSize, root->nodeSize);
-        printf("\nRoot: ");
-        hexdump(root->node, root->nodeSize);
-        printf("\n");
-        return -1;
+
+    printf("calculated root: ", &buffer[modifier * node_length], node_length);
+    printf("stored root: ", root, node_length);
+
+	// check if the calculated root matches the stored one
+    if(memcmp(&buffer[modifier * node_length], root, node_length))
+    {
+        HIP_DEBUG("signature invalid\n");
+
+        err = -1;
     }
+
+  out_err:
+    return err;
 }
 
 int htree_leaf_generator(unsigned char *data, int data_length,
@@ -314,116 +395,6 @@ int htree_node_generator(unsigned char *left_node, unsigned char *right_node,
 
   out_err:
 	return err;
-}
-
-/*!
- * \brief Create a root element for the tree and the corresponding tree.
- *
- * Create a root element for the tree. This is the first step when VERIFYING data.
- *
- * \author  Tobias Heer
- *
- * \param buffer Root data of the tree.
- * \param nodeSize Size of the MT nodes (size of hash function).
- * \param treeSize Size of the tree (number of leaf elements)
- *
- * \return A pointer to the root.
- *
- * \note The memory must be freed elsewhere.
- */
-ht_root_t* ht_createRoot(char* buffer, size_t nodeSize, size_t treeSize)
-{
-    ht_root_t* root;
-
-    if(treeSize == 0){
-        printf("Root can not belong to 0 tree");
-        exit(1);
-    }
-
-    root =  malloc(sizeof(hash_tree_t));
-    bzero(root, sizeof(hash_tree_t));
-
-
-    root->node = (char*) malloc(nodeSize);
-    bzero(root->node, nodeSize);
-
-    memcpy(root->node, (const void*) buffer, nodeSize);
-
-    root->treeSize  = treeSize;
-    root->treeDepth = ceil(log2(treeSize));
-    root->nodeSize  = nodeSize;
-
-    return root;
-}
-
-/*!
- * \brief Get the root element from a computed tree.
- *
- *  Get the root element from a computed tree.
- *
- * \author  Tobias Heer
- *
- * \param tree 		Pointer to the MT
- * \param buffer	Destination buffer
- * \param len		Destination buffer length
- * \return 0
- */
-int ht_getRoot(hash_tree_t* tree, char* buffer, int len)
-{
-    if(len != tree->nodeSize){
-        printf("getRoot: insufficient buffer space (%d != %d)",
-               len,
-               tree->nodeSize);
-        exit(1);
-    }
-    memcpy(buffer, tree->node + 2 * (tree->size-1) * tree->nodeSize, tree->nodeSize);
-    return 0;
-}
-
-/*!
- * \brief Get the uptree nodes from a computed tree.
- *
- *  Get the uptree nodes from a computed tree.
- *
- * \author  Tobias Heer
- *
- * \param tree 		Pointer to the MT
- * \param leafIndex	Leaf position for which the uptree is fetched
- * \param buffer	Destination buffer
- * \param len		Destination buffer length
- * \return 0
- */
-int ht_getUpTree(hash_tree_t* tree, int leafIndex, char* buffer, size_t len){
-    printf("super\n");
-    // Check if buffer is sufficient (size of nodes * tree depth)
-    if(len != tree->depth * tree->nodeSize){
-        printf("ht_getUpTree: Buffer space mismatch (%d != %d)",
-               len,
-               tree->depth * tree->nodeSize);
-    }
-
-    // Start from bottom to root
-    int j = 0;
-    size_t levelSize  = tree->size;
-    char* sourceBase = tree->node;
-    int modifier     = 0;
-    while (levelSize > 0) {
-        modifier = leafIndex & 1?-1:1;
-        // Fill buffer with node
-        memcpy(buffer + j * tree->nodeSize,
-               sourceBase + (leafIndex + modifier)* tree->nodeSize,
-               tree->nodeSize);
-
-        printf("\nLevelSize: %d\n", levelSize);
-        sourceBase += (levelSize * tree->nodeSize);
-        levelSize = levelSize >> 1;
-        leafIndex = leafIndex  >> 1;
-        j++;
-        hexdump(buffer, len);
-
-    }
-
-    return 0;
 }
 
 /*!
@@ -650,5 +621,73 @@ ht_err ht_sigNodeGenerator(unsigned char* leftNode,
 	if(SHA1(leftNode, nodeSize*2, destinationBuffer))
 		return ht_STht_SUCCESS;
 	return ht_STht_ERR_UNSPECIFIED;
+}
+#endif
+
+#if 0
+/*!
+ * \brief Create a root element for the tree and the corresponding tree.
+ *
+ * Create a root element for the tree. This is the first step when VERIFYING data.
+ *
+ * \author  Tobias Heer
+ *
+ * \param buffer Root data of the tree.
+ * \param nodeSize Size of the MT nodes (size of hash function).
+ * \param treeSize Size of the tree (number of leaf elements)
+ *
+ * \return A pointer to the root.
+ *
+ * \note The memory must be freed elsewhere.
+ */
+ht_root_t* ht_createRoot(char* buffer, size_t nodeSize, size_t treeSize)
+{
+    ht_root_t *root = NULL;
+
+    if(treeSize == 0){
+        printf("Root can not belong to 0 tree");
+        exit(1);
+    }
+
+    root =  malloc(sizeof(hash_tree_t));
+    bzero(root, sizeof(hash_tree_t));
+
+
+    root->node = (char*) malloc(nodeSize);
+    bzero(root->node, nodeSize);
+
+    memcpy(root->node, (const void*) buffer, nodeSize);
+
+    root->treeSize  = treeSize;
+    root->treeDepth = ceil(log2(treeSize));
+    root->nodeSize  = nodeSize;
+
+    return root;
+}
+#endif
+
+#if 0
+/*!
+ * \brief Get the root element from a computed tree.
+ *
+ *  Get the root element from a computed tree.
+ *
+ * \author  Tobias Heer
+ *
+ * \param tree 		Pointer to the MT
+ * \param buffer	Destination buffer
+ * \param len		Destination buffer length
+ * \return 0
+ */
+int ht_getRoot(hash_tree_t* tree, char* buffer, int len)
+{
+    if(len != tree->nodeSize){
+        printf("getRoot: insufficient buffer space (%d != %d)",
+               len,
+               tree->nodeSize);
+        exit(1);
+    }
+    memcpy(buffer, tree->node + 2 * (tree->size-1) * tree->nodeSize, tree->nodeSize);
+    return 0;
 }
 #endif

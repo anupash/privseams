@@ -39,6 +39,7 @@ typedef struct hash_tree
 	// tree elements variables
 	int node_length; /* length of a single node element */
 	unsigned char *nodes; /* array containing the nodes of the tree */
+	unsigned char *root; /* the root of the tree -> points into nodes-array */
 
 	// management variables
 	int depth; /* depth of the tree */
@@ -58,6 +59,25 @@ typedef struct ht_root
 } ht_root_t;
 
 
+hash_tree_t* htree_init(int num_data_blocks, int max_data_length, int node_length);
+int htree_add_data(hash_tree_t *tree, char *data, size_t data_length);
+int htree_add_random_data(hash_tree_t *tree, int num_random_blocks);
+int htree_calc_nodes(hash_tree_t *tree, htree_leaf_gen_t leaf_gen,
+		htree_node_gen_t node_gen);
+int htree_get_branch(hash_tree_t *tree, int data_index, unsigned char *branch_nodes,
+		int branch_length);
+int htree_verify_branch(unsigned char *root, unsigned char *branch_nodes, int num_nodes,
+		int node_length, unsigned char *verify_data, int data_length, int data_index);
+int htree_leaf_generator(unsigned char *data, int data_length,
+		unsigned char *dst_buffer, htree_gen_args_t *gen_args);
+int htree_node_generator(unsigned char *left_node, unsigned char *right_node,
+		   unsigned char *dst_buffer, int node_length, htree_gen_args_t *gen_args);
+void htree_print_data(hash_tree_t *tree);
+void htree_print_nodes(hash_tree_t *tree);
+
+
+
+#if 0
 hash_tree_t* ht_createTree(int treeSize, int packetSize, int hashSize);
 
 hash_tree_t* ht_createAckTree(size_t treeSize, size_t secretSize, size_t nodeSize);
@@ -105,5 +125,6 @@ int ht_verifyBuffer(ht_root_t* root,
 				 int dataLen,
 				 char* nodes,
 				 int nodeLen);
+#endif
 
 #endif /* HASH_TREE_H_ */
