@@ -7,7 +7,7 @@
  * @date    20.05.2008
  * @note    Related RFC: <a href="http://www.rfc-editor.org/rfc/rfc5203.txt">
  *          Host Identity Protocol (HIP) Registration Extension</a>
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  * @see     registration.h
  * @see     hiprelay.h
  * @see     escrow.h
