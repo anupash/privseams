@@ -449,20 +449,20 @@ int esp_prot_verify_hash(hash_function_t hash_function, int hash_length,
 		{
 			/* there might still be a chance that we have to switch to the
 			 * next hchain implicitly */
-			HIP_DEBUG("checking next_anchor...\n");
+			printf("checking next_anchor...\n");
 			HIP_HEXDUMP("next_anchor: ", next_anchor, hash_length);
 
 			if (tmp_distance = hchain_verify(hash_value, next_anchor, hash_function,
 					hash_length, tolerance))
 			{
-				HIP_DEBUG("hash matches element in next hash-chain\n");
+				printf("hash matches element in next hash-chain\n");
 
 				// we have to notify about the change
 				err = 1;
 
 			} else
 			{
-				HIP_DEBUG("neither active nor update hchain could verify hash element\n");
+				printf("neither active nor update hchain could verify hash element\n");
 
 				// handle incorrect elements -> drop packet
 				err = -1;
@@ -471,7 +471,7 @@ int esp_prot_verify_hash(hash_function_t hash_function, int hash_length,
 
 		} else
 		{
-			HIP_DEBUG("active hchain could verify hash element, update hchain not set\n");
+			printf("active hchain could not verify hash element, update hchain not set\n");
 
 			// handle incorrect elements -> drop packet
 			err = -1;
@@ -486,7 +486,7 @@ int esp_prot_verify_hash(hash_function_t hash_function, int hash_length,
   out_err:
 	if (err == -1)
 	{
-		HIP_DEBUG("INVALID hash-chain element!\n");
+		printf("INVALID hash-chain element!\n");
 	}
 
     return err;

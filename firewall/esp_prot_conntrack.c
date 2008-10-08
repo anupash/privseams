@@ -652,7 +652,8 @@ int esp_prot_conntrack_verify(struct esp_tuple *esp_tuple, struct hip_esp *esp)
 		{
 			HIP_DEBUG("anchor change occurred, handled now\n");
 
-			memcpy(esp_tuple->active_anchor, esp_tuple->next_anchor,
+			// don't copy the next anchor, but the already verified hash
+			memcpy(esp_tuple->active_anchor, ((unsigned char *) esp) + sizeof(struct hip_esp),
 					conntrack_tfm->hash_length);
 			memcpy(esp_tuple->first_active_anchor, esp_tuple->next_anchor,
 					conntrack_tfm->hash_length);
