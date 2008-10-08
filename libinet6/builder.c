@@ -1106,7 +1106,6 @@ char* hip_message_type_name(const uint8_t msg_type){
 	  //case SO_HIP_IS_OUR_LSI: return "SO_HIP_IS_OUR_LSI";
 	case SO_HIP_GET_PEER_HIT:	return "SO_HIP_GET_PEER_HIT";
 	  //case SO_HIP_GET_PEER_HIT_BY_LSIS: return "SO_HIP_GET_PEER_HIT_BY_LSIS";
-	case SO_HIP_GET_PEER_HIT_AT_FIREWALL: return "SO_HIP_GET_PEER_HIT_AT_FIREWALL";
 	case SO_HIP_SET_HI3_ON:		return "SO_HIP_SET_HI3_ON";
 	case SO_HIP_SET_HI3_OFF:	return "SO_HIP_SET_HI3_OFF";
 	case SO_HIP_HEARTBEAT: 		return "SO_HIP_HEARTBEAT";
@@ -3328,8 +3327,9 @@ int hip_build_param_eid_endpoint(struct hip_common *msg,
 }
 
 int hip_host_id_entry_to_endpoint(struct hip_host_id_entry *entry,
-				  struct hip_common *msg)
+				  void *opaq)
 {
+	struct hip_common *msg = (struct hip_common *) opaq;
 	struct endpoint_hip endpoint;
 	int err = 0;
 
@@ -3482,7 +3482,7 @@ int hip_build_param_opendht_set(struct hip_common *msg,
 int hip_build_param_opendht_gw_info(struct hip_common *msg,
 				    struct in6_addr *addr,
 				    uint32_t ttl,
-				    uint16_t port)
+				    uint16_t port, char* host_name)
 {
 	int err = 0;
 	struct hip_opendht_gw_info gw_info;
@@ -3493,6 +3493,7 @@ int hip_build_param_opendht_gw_info(struct hip_common *msg,
 			   sizeof(struct hip_tlv_common));
 	gw_info.ttl = ttl;
 	gw_info.port = htons(port);
+	memcpy(&gw_info.host_name,host_name,strlen(host_name));
 	ipv6_addr_copy(&gw_info.addr, addr);
 	err = hip_build_param(msg, &gw_info);
 	return err;
@@ -3562,6 +3563,30 @@ int hip_build_param_cert_x509_resp(struct hip_common * msg,
  out_err:
 	return err;
 }
+
+int hip_build_param_hip_hdrr_info(struct hip_common * msg,
+				    struct hip_hdrr_info * hdrr_info)
+{
+	int err = 0;
+	hip_set_param_type(hdrr_info, HIP_PARAM_HDRR_INFO);
+	hip_calc_param_len(hdrr_info,
+			   sizeof(struct hip_hdrr_info) -
+			   sizeof(struct hip_tlv_common));
+	err = hip_build_param(msg, hdrr_info);
+	return err;
+}
+
+int hip_build_param_hip_uadb_info(struct hip_common *msg, struct hip_uadb_info *uadb_info)
+{
+	int err = 0;
+	hip_set_param_type(uadb_info, HIP_PARAM_UADB_INFO);
+	hip_calc_param_len(uadb_info,
+			   sizeof(struct hip_uadb_info) -
+			   sizeof(struct hip_tlv_common));
+	err = hip_build_param(msg, uadb_info);
+	return err;
+}
+
 
 int dsa_to_hip_endpoint(DSA *dsa, struct endpoint_hip **endpoint,
 			se_hip_flags_t endpoint_flags, const char *hostname)

@@ -5,6 +5,7 @@
 #include <pwd.h>
 #include "debug.h"
 #include "ife.h"
+#include "sqlitedbapi.h"
 
 #define USER_NOBODY "nobody"
 #define USER_HIPD "hipd"
@@ -113,6 +114,12 @@ int hip_set_lowcapability(int run_as_nobody) {
 				 -1, "Failed to chown test file\n");
 		}
 		*/
+		if (hpswd != NULL) {
+			HIP_IFEL(chown(HIP_CERT_DB_PATH_AND_NAME, hpswd->pw_uid, hpswd->pw_gid),
+				 -1, "Failed to chown certdb file\n");
+			HIP_IFEL(chown("/etc/hip", hpswd->pw_uid, hpswd->pw_gid),
+				 -1, "Failed to chown hip dirctory\n");
+		}
 	} else
 		HIP_IFEL(!(name = getenv("SUDO_USER")), -1,
 			 "Failed to determine current username\n");

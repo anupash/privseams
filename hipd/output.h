@@ -91,7 +91,7 @@ int hip_send_r2_response(struct hip_common *r2,
 		hip_portpair_t *r2_info);
 
 int hip_build_locators(struct hip_common *);
-
+int hip_build_host_id_and_signature(struct hip_common *msg,  unsigned char * key);
 int hip_send_i1(hip_hit_t *, hip_hit_t *, hip_ha_t *);
 void hip_send_notify_all(void);
 

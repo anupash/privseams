@@ -26,6 +26,8 @@
 #include "accessor.h"
 #include "message.h"
 #include "esp_prot_common.h"
+#include "sqlitedbapi.h"
+#include "hipqueue.h"
 
 #include "i3_client_api.h"
 
@@ -60,9 +62,15 @@
 #define HIP_R1_PRECREATE_INTERVAL 60*60 /* seconds */
 #define HIP_R1_PRECREATE_INIT \
            (HIP_R1_PRECREATE_INTERVAL / HIP_SELECT_TIMEOUT)
-#define OPENDHT_REFRESH_INTERVAL 60 /* seconds Original 60 using 1 with sockaddrs */
+#define OPENDHT_REFRESH_INTERVAL 30 /* seconds Original 60 using 1 with sockaddrs */
 #define OPENDHT_REFRESH_INIT \
            (OPENDHT_REFRESH_INTERVAL / HIP_SELECT_TIMEOUT)
+
+#define QUEUE_CHECK_INTERVAL 15 /* seconds */
+#define QUEUE_CHECK_INIT \
+           (QUEUE_CHECK_INTERVAL / HIP_SELECT_TIMEOUT)
+
+#define CERTIFICATE_PUBLISH_INTERVAL OPENDHT_TTL /* seconds */
 
 /* How many duplicates to send simultaneously: 1 means no duplicates */
 #define HIP_PACKET_DUPLICATES                1
@@ -90,7 +98,7 @@ extern struct sockaddr_un hip_agent_addr;
 extern int hip_firewall_sock, hip_firewall_status;
 extern struct sockaddr_in6 hip_firewall_addr;
 
-
+extern int hit_db_lock ;
 extern int is_active_handover;
 
 int hip_agent_is_alive();

@@ -415,7 +415,7 @@ gethosts(const char *name, int _family,
 	{
 	  if ((aux = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){
 	    HIP_ERROR("Memory allocation error\n");
-	    exit(-EAI_MEMORY);
+	    return (-EAI_MEMORY);
 	  }
 	  //Placing the node at the beginning of the list
 	  aux->next = (**pat);
@@ -455,7 +455,7 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 	hip_lsi_t lsi;
 	struct in_addr tmp_v4;
 	struct in6_addr lsi_ip6;
-	char dht_response_hit[1024], dht_response_addr[1024], line[500];
+	char dht_response_hit[1024], dht_response_addr[HIP_MAX_PACKET], line[500];
 	char ownaddr[] = "127.0.0.1", tmp_ip_str[INET_ADDRSTRLEN];
         char *fqdn_str = NULL;
 	hip_common_t *msg = NULL;
@@ -464,8 +464,17 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 	struct hip_opendht_gw_info *gw_info = NULL;
 	FILE *fp = NULL;				
 	List list;
-       
-	errno = 0;
+	
+	/* Used for HDRR response */
+   	 struct hip_common *hipcommonmsg;	/* hip common message to be sent to daemon*/
+	    struct hip_locator *locator;		/* To examine DHT response which contains locator in HDRR*/
+	struct in6_addr addrkey;			/* To convert DHT key (HIT) to in6_addr structure for verification*/
+	
+	char dht_response_addresses[HIP_MAX_PACKET] = "";
+	struct hip_locator_info_addr_item *locator_address_item ;	
+	int locator_item_count = 0;
+	int x= 0 ;
+   	errno = 0;
 
 	/* Can't use the IFE macros here, since labe skip_dht is under label
 	   out_err. */
@@ -535,48 +544,72 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
         HIP_INFO("DHT server is located at %s:%d with TTL %d.\n",
 		 tmp_ip_str, tmp_port, tmp_ttl);
 
-        error = 0;
-        error = resolve_dht_gateway_info(tmp_ip_str, &serving_gateway, AF_INET);
+        error = resolve_dht_gateway_info(tmp_ip_str, &serving_gateway, tmp_port, AF_INET);
         HIP_IFEL((error < 0), -1,
                  "Error in resolving the DHT gateway address, skipping DHT.\n");
 
-        ret_hit = opendht_get_key(serving_gateway, name, dht_response_hit);
+        ret_hit = hip_opendht_get_key(&handle_hit_value,serving_gateway, name, dht_response_hit,1);
 	
         if (ret_hit == 0) {
                 HIP_INFO("HIT received from DHT: %s.\n", dht_response_hit);
-	}
-        
+		}
+        /*Getting HDRR from opendeht_get_key lookup so that its 
+         * verification can be done and locators can be manipulated */
         if (ret_hit == 0 && (strlen((char *)dht_response_hit) > 1)) {
-                ret_addr = opendht_get_key(serving_gateway, 
-                                           dht_response_hit, dht_response_addr);
+                ret_addr = hip_opendht_get_key(&handle_hdrr_value, serving_gateway, 
+                                           dht_response_hit, dht_response_addr,0);
                 if (ret_addr == 0)
-                        HIP_INFO("Address received from DHT: %s.\n",dht_response_addr);
-	}
-        if ((ret_hit == 0) && (ret_addr == 0) && 
-            (dht_response_hit[0] != '\0') && (dht_response_addr[0] != '\0')) { 
+                {
+                    HIP_INFO("HDRR received from DHT.\n");
+                    hipcommonmsg = (struct hip_common *)dht_response_addr ;
+					/* get the locator and its item count to chain addresses in gaih_tuple */
+					locator = hip_get_param(hipcommonmsg, HIP_PARAM_LOCATOR);
+					locator_item_count = hip_get_locator_addr_item_count(locator);
+                }
+		}
+	
+	
+	/* commenting some checks, for HDRR locators
+	 *  as now we deal with all locator addresses*/
+	if ((ret_hit == 0) && (ret_addr == 0) && 
+            (dht_response_hit[0] != '\0') ) { 
                 if (inet_pton(AF_INET6, dht_response_hit, &tmp_hit) >0 &&
-                    inet_pton(AF_INET6, dht_response_addr, &tmp_addr) >0) {
-                        if (**pat == NULL) {						
-                                if ((**pat = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){
-                                        HIP_ERROR("Memory allocation error\n");
-                                        return -EAI_MEMORY;
-                                }
-                                (**pat)->scopeid = 0;				
-                        }
-                        (**pat)->family = AF_INET6;					
+                    locator_item_count >0) {
+                        /*locators are there and hit also exists, now creating gaih_addrtuple*/ 
+                       	if (**pat == NULL) {						
+                           	    if ((**pat = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){
+                               	        HIP_ERROR("Memory allocation error\n");
+                                   	    return (-EAI_MEMORY);
+                               	}	  
+                               	(**pat)->scopeid = 0;				
+                       	}
+                       	(**pat)->family = AF_INET6;				
                         memcpy((**pat)->addr, &tmp_hit, sizeof(struct in6_addr));		
-                        *pat = &((**pat)->next);				     	
-                        
-                        if ((**pat = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){
-                                HIP_ERROR("Memory allocation error\n");
-                                return -EAI_MEMORY;
-                        }	  
-                        
-                        (**pat)->scopeid = 0;				
-                        (**pat)->next = NULL;						
-                        (**pat)->family = AF_INET6;					
-                        memcpy((**pat)->addr, &tmp_addr, sizeof(struct in6_addr));	
                         *pat = &((**pat)->next);
+                       	 
+                    	locator_address_item = hip_get_locator_first_addr_item(locator);
+                  		locator_item_count--;
+                       	
+                       	int x= 0 ;
+                     	for ( x = 0; x <= locator_item_count ; x++)
+                       	{
+                       		memcpy(&tmp_addr, 
+                       			(struct in6_addr*)&locator_address_item[x].address, 
+                       				sizeof(struct in6_addr));
+                        					     	
+                        	if ((**pat = (struct gaih_addrtuple *) malloc(sizeof(struct gaih_addrtuple))) == NULL){
+                            	    HIP_ERROR("Memory allocation error\n");
+                                	return (-EAI_MEMORY);
+                        	}	  
+                        	(**pat)->scopeid = 0;				
+                        	//(**pat)->next = NULL;						
+                        	(**pat)->family = AF_INET6;							
+                        	memcpy((**pat)->addr, &tmp_addr, sizeof(struct in6_addr));
+                        	if (x !=locator_item_count)
+                        		*pat = &((**pat)->next);
+                        } /*For loop ends */
+                       (**pat)->next = NULL;
+                       *pat = &((**pat)->next);
                         /* dump_pai(*pat); */
                         return 1;
                 }
@@ -585,7 +618,8 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 								
 	/* Open the file containing HIP hosts for reading. */
 	fp = fopen(_PATH_HIP_HOSTS, "r");
-	if(fp == NULL)
+	if(fp == NULL)   
+     
 	{
 		HIP_ERROR("Error opening file '%s' for reading.\n",
 			  _PATH_HIP_HOSTS);

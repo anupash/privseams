@@ -382,12 +382,15 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	if (entry){
 		hip_hadb_dump_spis_out(entry);
 		HIP_DEBUG_LSI("    Peer lsi   ",&entry->lsi_peer);
-		/*Compare if different lsi's*/
-		if (peer_lsi){
+
+#if 0 /* Required for OpenDHT code of Pardeep?  */
+		/* Check if LSIs are different */
+		if (peer_lsi) {
 			HIP_IFEL(hip_lsi_are_equal(&entry->lsi_peer, peer_lsi) ||
 				 peer_lsi->s_addr == 0 , 0,
 				 "Ignoring new mapping, old one exists\n");
 		}
+#endif
 	}
 
 	if (!entry){
@@ -400,7 +403,8 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	ipv6_addr_copy(&entry->hit_peer, peer_hit);
 	ipv6_addr_copy(&entry->hit_our, local_hit);
 	ipv6_addr_copy(&entry->local_address, local_addr);
-	HIP_IFEL(hip_hidb_get_lsi_by_hit(local_hit, &entry->lsi_our), -1, "Unable to find local hit");
+	HIP_IFEL(hip_hidb_get_lsi_by_hit(local_hit, &entry->lsi_our),
+		 -1, "Unable to find local hit");
 
 	/*Copying peer_lsi*/
 	if (peer_lsi != NULL && peer_lsi->s_addr != 0){
@@ -607,6 +611,16 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
 
 	entry->spis_in = hip_ht_init(hip_hash_spi, hip_match_spi);
 	entry->spis_out = hip_ht_init(hip_hash_spi, hip_match_spi);
+
+	entry->peer_addr_list_to_be_added =
+	  hip_ht_init(hip_hash_peer_addr, hip_match_peer_addr);
+
+#ifdef CONFIG_HIP_HIPPROXY
+	entry->hipproxy = 0;
+#endif
+	//HIP_LOCK_INIT(entry);
+	//atomic_set(&entry->refcnt,0);
+
 	entry->state = HIP_STATE_UNASSOCIATED;
 	entry->hastate = HIP_HASTATE_INVALID;
 
@@ -906,6 +920,23 @@ int hip_hadb_add_peer_udp_addr(hip_ha_t *entry, struct in6_addr *new_addr,in_por
 		}
 		ipv6_addr_copy(&entry->preferred_address, new_addr);
 		HIP_DEBUG_IN6ADDR("entry->preferred_address \n", &entry->preferred_address);
+		
+		/*Adding the peer address to the entry->peer_addr_list_to_be_added
+		 * So that later aftre base exchange it can be transfered to 
+		 * SPI OUT's peer address list*/
+		a_item = (struct hip_peer_addr_list_item *)HIP_MALLOC(sizeof(struct hip_peer_addr_list_item), GFP_KERNEL);
+		if (!a_item)
+		{
+			HIP_ERROR("item HIP_MALLOC failed\n");
+			err = -ENOMEM;
+			goto out_err;
+		}
+		a_item->lifetime = lifetime;
+		ipv6_addr_copy(&a_item->address, new_addr);
+		a_item->address_state = state;
+		do_gettimeofday(&a_item->modified_time);
+
+		list_add(a_item, entry->peer_addr_list_to_be_added);
 		goto out_err;
 	}
 
@@ -2911,12 +2942,12 @@ int hip_count_open_connections(void)
 	return n;
 }
 
-int hip_handle_get_ha_info(hip_ha_t *entry, struct hip_common *msg)
+int hip_handle_get_ha_info(hip_ha_t *entry, void *opaq)
 {
-
 	int err = 0;
     	struct hip_hadb_user_info_state hid;
 	extern int hip_icmp_interval;
+	struct hip_common *msg = (struct hip_common *) opaq;
 	
 	memset(&hid, 0, sizeof(hid));
 	hid.state = entry->state;

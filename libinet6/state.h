@@ -413,6 +413,10 @@ struct hip_hadb_state
 	uint64_t                     puzzle_i;
 	/** For base exchange or CLOSE. @b Not for UPDATE. */
 	char                         echo_data[4];
+	/** Temp storage for peer addresses list until
+ 	SPIs are formed. After SPIs the list is copied to SPI out's
+	Peer address list */
+	HIP_HASHTABLE                *peer_addr_list_to_be_added;
 	/** For storing retransmission related data. */
 	hip_msg_retrans_t            hip_msg_retrans;
 	/** Receive function set.

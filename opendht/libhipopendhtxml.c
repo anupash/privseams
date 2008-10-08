@@ -92,10 +92,10 @@ int build_packet_put_rm(unsigned char * key,
 
     memset(out_buffer, '\0', sizeof(out_buffer));
     sprintf(out_buffer, 
-            "POST /RPC2 HTTP/1.0\r\nUser-Agent: "
-            "hipl\r\nHost: %s:%d\r\nContent-Type: "
+            "POST / HTTP/1.0\r\nHost: %s:%d\r\nUser-Agent: "
+            "hipl\r\nContent-Type: "
             "text/xml\r\nContent-length: %d\r\n\r\n", 
-            host_ip, port, xml_len); 
+            host_ip, port, xml_len);
     memcpy(&out_buffer[strlen(out_buffer)], xml_buffer, xml_len);
     /*
     HIP_DEBUG("\n\n%s\n\n", out_buffer);
@@ -183,10 +183,10 @@ int build_packet_get(unsigned char * key,
 
     memset(out_buffer, '\0', sizeof(out_buffer));
     sprintf(out_buffer, 
-            "POST /RPC2 HTTP/1.0\r\nUser-Agent: "
-            "hipl\r\nHost: %s:%d\r\nContent-Type: "
+            "POST / HTTP/1.0\r\nHost: %s:%d\r\nUser-Agent: "
+            "hipl\r\nContent-Type: "
             "text/xml\r\nContent-length: %d\r\n\r\n", 
-            host_ip, port, xml_len); 
+            host_ip, port, xml_len);
     memcpy(&out_buffer[strlen(out_buffer)], xml_buffer, xml_len);
     /*
     HIP_DEBUG("\n\n%s\n\n", out_buffer);
@@ -265,10 +265,10 @@ int build_packet_rm(unsigned char * key,
 
     memset(out_buffer, '\0', sizeof(out_buffer));
     sprintf(out_buffer, 
-            "POST /RPC2 HTTP/1.0\r\nUser-Agent: "
-            "hipl\r\nHost: %s:%d\r\nContent-Type: "
+            "POST / HTTP/1.0\r\nHost: %s:%d\r\nUser-Agent: "
+            "hipl\r\nContent-Type: "
             "text/xml\r\nContent-length: %d\r\n\r\n", 
-            host_ip, port, xml_len); 
+            host_ip, port, xml_len);
     memcpy(&out_buffer[strlen(out_buffer)], xml_buffer, xml_len);
     /*
     HIP_DEBUG("\n\n%s\n\n", out_buffer);

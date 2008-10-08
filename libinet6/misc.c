@@ -8,6 +8,7 @@
  * @see    misc.h
  */
 #include "misc.h"
+#include <string.h>
 
 // needed due to missing system inlcude for openWRT
 #ifndef HOST_NAME_MAX

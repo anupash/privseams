@@ -171,18 +171,20 @@
 #define SO_HIP_ESP_PROT_TFM			146
 #define SO_HIP_BEX_STORE_UPDATE			147
 #define SO_HIP_TRIGGER_UPDATE			148
-#define SO_HIP_ADD_PEER_MAP_HIT_IP_LSI          149
-#define SO_HIP_RESTART_DUMMY_INTERFACE		150
-#define SO_HIP_FW_BEX_DONE                      151
 #define SO_HIP_FW_UPDATE_DB                     152
 #define SO_HIP_IPSEC_DELETE_SA                  153
 #define SO_HIP_IPSEC_FLUSH_ALL_SA          	154
 #define SO_HIP_ANCHOR_CHANGE			155
-#define SO_HIP_INFO_FOR_DNS_PROXY		156
+#define SO_HIP_ADD_PEER_MAP_HIT_IP_LSI          156
+#define SO_HIP_FW_BEX_DONE                      157
+#define SO_HIP_RESTART_DUMMY_INTERFACE		158
+#define SO_HIP_VERIFY_DHT_HDRR_RESP             159
+#define SO_HIP_ADD_UADB_INFO			160
+#define SO_HIP_BUDDIES_SET			161
+#define SO_HIP_BUDDIES_ON                       162
+#define SO_HIP_BUDDIES_OFF                      163
+#define SO_HIP_INFO_FOR_DNS_PROXY		164
 
-//#define SO_HIP_ESP_PROT_EXT_TRANSFORM		xx
-//#define SO_HIP_IPSEC_UPDATE_ANCHOR_LIST	xx
-//#define SO_HIP_IPSEC_NEXT_ANCHOR		xx
 /** @} */
 /* inclusive */
 #define HIP_SO_ROOT_MAX 			255

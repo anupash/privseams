@@ -77,6 +77,7 @@ const char *hipconf_usage =
 "hipproxy on|off\n"
 #endif
 "hi3 on|off\n"
+"buddies on|off\n"
 ;
 
 /** Function pointer array containing pointers to handler functions.
@@ -116,6 +117,7 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc) 
 	hip_conf_handle_heartbeat,
 	hip_conf_handle_hi3,
 	hip_conf_handle_get_dnsproxy,
+	hip_conf_handle_buddies_toggle,
 	NULL /* run */
 };
 
@@ -182,7 +184,10 @@ int hip_conf_get_action(char *text)
 #endif
 	else if (!strcmp("dnsproxy", text))
 		ret = ACTION_DNS_PROXY;
-        return ret;
+	else if (!strcmp("buddies", text))
+		ret = ACTION_BUDDIES;
+	
+	return ret;
 }
 
 /**
@@ -298,7 +303,9 @@ int hip_conf_get_type(char *text,char *argv[]) {
 #endif
         else if (strcmp("hi3", argv[1])==0)
                 ret = TYPE_HI3;
-     return ret;
+	else if (strcmp("buddies", argv[1])==0)
+		ret = TYPE_BUDDIES;
+	return ret;
 }
 
 /* What does this function do? */
@@ -319,6 +326,7 @@ int hip_conf_get_type_arg(int action)
 	case ACTION_LOAD:
 	case ACTION_DHT:
 	case ACTION_OPENDHT:
+	case ACTION_BUDDIES:
         case ACTION_HEARTBEAT:
 	case ACTION_LOCATOR:
 	case ACTION_RST:
@@ -1546,6 +1554,53 @@ out_err:
     memset(msg, 0, HIP_MAX_PACKET);
     return(err);
 }
+#if 0 /* Original from Pardeep from OpenDHT branch */
+/**
+ * Function that gets data from DHT
+ *
+ * @return       zero on success, or negative error value on error.
+ */
+int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int optc)
+{
+        int err = 0;
+        char dht_response[HIP_MAX_PACKET];
+        struct addrinfo * serving_gateway;
+        struct hip_opendht_gw_info *gw_info;
+        struct in_addr tmp_v4;
+        char tmp_ip_str[21];
+        int tmp_ttl, tmp_port;
+        int *pret;
+		
+		/* ASK THIS INFO FROM DAEMON */
+        HIP_INFO("Asking serving gateway info from daemon...\n");
+        HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW,0),-1,
+                 "Building daemon header failed\n");
+        HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "Send recv daemon info failed\n");
+        HIP_IFEL(!(gw_info = hip_get_param(msg, HIP_PARAM_OPENDHT_GW_INFO)),-1,
+                 "No gw struct found\n");
+
+        /* Check if DHT was on */
+        if ((gw_info->ttl == 0) && (gw_info->port == 0)) {
+                HIP_INFO("DHT is not in use\n");
+                goto out_err;
+        }
+        memset(&tmp_ip_str,'\0',sizeof(tmp_ip_str));
+        tmp_ttl = gw_info->ttl;
+        tmp_port = htons(gw_info->port);
+        IPV6_TO_IPV4_MAP(&gw_info->addr, &tmp_v4);
+        pret = inet_ntop(AF_INET, &tmp_v4, tmp_ip_str, 20);
+        HIP_INFO("Got address %s, port %d, TTL %d from daemon\n",
+                  tmp_ip_str, tmp_port, tmp_ttl);
+
+        HIP_IFEL(resolve_dht_gateway_info(tmp_ip_str, &serving_gateway,tmp_port),0,
+                 "Resolve error!\n");
+        HIP_IFEL(hip_opendht_get_key(&handle_hdrr_value,serving_gateway, opt[0], dht_response,0), 0,
+                 "Get error!\n");
+        HIP_INFO("Value received from the DHT.\n");
+ out_err:
+        return(err);
+}
+#endif /* 0 */
 
 
 /**
@@ -1561,6 +1616,29 @@ int hip_conf_handle_dht_toggle(hip_common_t *msg, int action, const char *opt[],
                 status = SO_HIP_DHT_ON; 
         } else if (!strcmp("off",opt[0])) {
                 status = SO_HIP_DHT_OFF;
+        } else {
+                HIP_IFEL(1, -1, "bad args\n");
+        }
+        HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, 
+                 "Failed to build user message header.: %s\n", strerror(err));        
+        
+ out_err:
+        return(err);
+}
+
+/**
+ * Function that is used to set BUDDIES on or off
+ *
+ * @return       zero on success, or negative error value on error.
+ */
+int hip_conf_handle_buddies_toggle(hip_common_t *msg, int action, const char *opt[], int optc)
+{
+        int err = 0, status = 0;
+        
+        if (!strcmp("on",opt[0])) {
+                status = SO_HIP_BUDDIES_ON; 
+        } else if (!strcmp("off",opt[0])) {
+                status = SO_HIP_BUDDIES_OFF;
         } else {
                 HIP_IFEL(1, -1, "bad args\n");
         }

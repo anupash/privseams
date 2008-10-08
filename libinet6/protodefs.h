@@ -23,8 +23,10 @@
 #define HIP_NOTIFY              17
 #define HIP_CLOSE               18
 #define HIP_CLOSE_ACK           19
-#define HIP_PSIG                20 /* lightweight HIP pre signature */
-#define HIP_TRIG                21 /* lightweight HIP signature trigger*/
+#define HIP_HDRR                20 /* 20 was already occupied by HIP_PSIG so shifting HIP_PSIG and HIP_TRIG plus 1*/
+#define HIP_PSIG                21 /* lightweight HIP pre signature */ 
+#define HIP_TRIG                22 /* lightweight HIP signature trigger*/
+
 #define HIP_PAYLOAD             64
 /* only hip network message types here */
 /* @} */
@@ -85,8 +87,8 @@
 #define HIP_PARAM_ESP_PROT_TRANSFORMS  4120
 #define HIP_PARAM_ESP_PROT_ANCHOR      4121
 
-/* Range 32768 - 49141 can be used for HIPL private parameters i.e. to
-   parameters passed from hipconf to hipdaemon.
+/* Range 32768 - 49141 for HIPL private network parameters. Please add
+   here only network messages, not internal messages!
    @todo: move these to icomm.h */
 #define HIP_PARAM_HIT                   32768
 #define HIP_PARAM_IPV6_ADDR             32769
@@ -129,7 +131,9 @@
 #define HIP_PARAM_CERT_X509_REQ         32810
 #define HIP_PARAM_CERT_X509_RESP        32811
 #define HIP_PARAM_ESP_PROT_TFM		32812
-#define HIP_PARAM_TRANSFORM_ORDER       32813
+#define HIP_PARAM_TRANSFORM_ORDER       32813                                 
+#define HIP_PARAM_HDRR_INFO		32814
+#define HIP_PARAM_UADB_INFO		32815
 /* End of HIPL private parameters. */
 
 #define HIP_PARAM_HMAC			61505
@@ -836,6 +840,7 @@ struct hip_opendht_gw_info {
 	struct in6_addr addr;
 	uint32_t        ttl;
 	uint16_t        port;
+	char 			host_name[256];
 } __attribute__ ((packed));
 
 struct hip_cert_x509_req {
@@ -862,6 +867,23 @@ struct hip_opendht_set {
 	hip_tlv_len_t 	length;
         char name[256];
 } __attribute__ ((packed));
+
+struct hip_hdrr_info {
+	hip_tlv_type_t    type;
+	hip_tlv_len_t     length;
+        struct in6_addr dht_key;
+	    /* 0 if succesfully verified otherwise negative */
+        int sig_verified;
+        int hit_verified;
+}__attribute__ ((packed));
+
+struct hip_uadb_info {
+	hip_tlv_type_t		type;
+	hip_tlv_len_t		length;
+	struct in6_addr		hitr ;
+	struct in6_addr		hitl ;
+    char				cert[512] ;
+}__attribute__ ((packed)) ;
 
 struct hip_heartbeat {
 	hip_tlv_type_t 	type;
