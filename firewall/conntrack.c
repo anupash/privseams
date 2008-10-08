@@ -1649,6 +1649,12 @@ int filter_esp_state(const struct in6_addr *dst_addr,
 	HIP_IFEL(esp_prot_conntrack_verify(esp_tuple, esp), -1,
 			"failed to verify esp hash\n");
 
+	// track ESP SEQ number, if hash token passed verification
+	if (ntohl(esp->esp_seq) > esp_tuple->seq_no)
+	{
+		esp_tuple->seq_no = ntohl(esp->esp_seq);
+	}
+
 	// do some extra work for key escrow
 	if (use_escrow)
 	{

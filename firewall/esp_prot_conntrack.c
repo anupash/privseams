@@ -609,6 +609,7 @@ int esp_prot_conntrack_update_anchor(struct tuple *tuple, struct hip_ack *ack,
 int esp_prot_conntrack_verify(struct esp_tuple *esp_tuple, struct hip_esp *esp)
 {
 	esp_prot_conntrack_tfm_t * conntrack_tfm = NULL;
+	uint32_t num_verify = 0;
 	int err = 0;
 
 	// esp_prot_transform >= 0 due to data-type
@@ -619,12 +620,26 @@ int esp_prot_conntrack_verify(struct esp_tuple *esp_tuple, struct hip_esp *esp)
 		conntrack_tfm = esp_prot_conntrack_resolve_transform(
 				esp_tuple->esp_prot_tfm);
 
+		/* calculate difference of SEQ no in order to determine how many hashes
+		 * we have to calculate */
+		if (ntohl(esp->esp_seq) - esp_tuple->seq_no > 0 &&
+				ntohl(esp->esp_seq) - esp_tuple->seq_no <= DEFAULT_VERIFY_WINDOW)
+		{
+			num_verify = ntohl(esp->esp_seq) - esp_tuple->seq_no;
+		} else
+		{
+			/* either we received a previous packet (-> dropped) or the difference is
+			 * so big that the packet would not be verified */
+			err = -1;
+			goto out_err;
+		}
+
 		/* check ESP protection anchor if extension is in use */
 		HIP_IFEL((err = esp_prot_verify_hash(conntrack_tfm->hash_function,
 				conntrack_tfm->hash_length,
 				esp_tuple->active_anchor, esp_tuple->next_anchor,
 				((unsigned char *) esp) + sizeof(struct hip_esp),
-				DEFAULT_VERIFY_WINDOW)) < 0, -1,
+				num_verify)) < 0, -1,
 				"failed to verify ESP protection hash\n");
 
 		// this means there was a change in the anchors
