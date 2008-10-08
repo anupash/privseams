@@ -1410,6 +1410,7 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
 	if (filter_traffic)
 	{
 	        if (hip_sava_router) {
+		  
 		  if (buf->type_hdr == HIP_I2){
 		    if (hip_sava_ip_entry_find(&ctx->src) != NULL) {
 
@@ -1417,11 +1418,33 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
 		      verdict = 0;
 		      goto out_err;
 		    }
-		    //TODO: check if the source IP belongs to 
-		    //the same network as router's IP address
-		    // Drop the packet IP was not found in the data base
-		    HIP_DEBUG("Packet accepted! Adding source IP address to the DB \n");
-		    hip_sava_ip_entry_add(&ctx->src);
+		    {
+		      hip_sava_ip_entry_t * ip_entry = NULL;
+		      hip_sava_hit_entry_t * hit_entry = NULL;
+		      
+		       //TODO: check if the source IP belongs to 
+		       //the same network as router's IP address
+		       // Drop the packet IP was not found in the data base
+		       HIP_DEBUG("Packet accepted! Adding source IP address to the DB \n");
+		       hip_sava_ip_entry_add(&ctx->src, NULL);
+		       hip_sava_hit_entry_add(&buf->hits, NULL);
+
+		       ip_entry = hip_sava_ip_entry_find(&ctx->src);
+		       if (ip_entry ==  NULL)
+			 HIP_DEBUG_HIT("Error lookup entry for source address %s \n", &ctx->src);
+
+		       hit_entry = hip_sava_ip_entry_find(&buf->hits);
+		       if (ip_entry ==  NULL)
+			 HIP_DEBUG_HIT("Error lookup entry for source HIT %s \n", &buf->hits);
+		       
+		       ip_entry->link = hit_entry;
+		       hit_entry->link = ip_entry;
+		    }
+		  } else if (buf->type_hdr == HIP_R2) {
+		    //this is the case when the R2 packet completes base exchange 
+		    //we can now encrypt the src IP (or dst IP in this case)
+		    //and store it in the db
+		    
 		  }
 		  /*
 		    The simplest way to check is to hold a list of IP addresses that
@@ -1436,10 +1459,13 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
 	          Also we need to check if this address was not
 	          previously used and not present in the data base
 	          */
-	        }
+	        } else if (buf->type_hdr == HIP_UPDATE) {
+		  //TODO: update ip hit mappings for new ip's 
+		}
 
 		//second check is to check HITs
 		//mandatory check for SAVA
+		//rules should present in the ACL otherwise the packets are dropped
 
 		verdict = filter_hip(&ctx->src,
 					&ctx->dst,
