@@ -1653,6 +1653,7 @@ int filter_esp_state(const struct in6_addr *dst_addr,
 	if (ntohl(esp->esp_seq) > esp_tuple->seq_no)
 	{
 		esp_tuple->seq_no = ntohl(esp->esp_seq);
+		printf("updated esp seq no to: %u\n", esp_tuple->seq_no);
 	}
 
 	// do some extra work for key escrow

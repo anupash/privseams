@@ -571,7 +571,9 @@ int hip_sa_entry_set(hip_sa_entry_t *entry, int direction, uint32_t spi,
 			goto out_err;
 	}
 
-	entry->sequence = 1;
+	// only set the seq no in case there is NO update
+	if (!update)
+		entry->sequence = 1;
 	entry->lifetime = lifetime;
 
 	HIP_IFEL(esp_prot_sa_entry_set(entry, esp_prot_transform, esp_prot_anchor, update),

@@ -620,6 +620,9 @@ int esp_prot_conntrack_verify(struct esp_tuple *esp_tuple, struct hip_esp *esp)
 		conntrack_tfm = esp_prot_conntrack_resolve_transform(
 				esp_tuple->esp_prot_tfm);
 
+		printf("stored seq no: %u\n", esp_tuple->seq_no);
+		printf("received seq no: %u\n", ntohl(esp->esp_seq));
+
 		/* calculate difference of SEQ no in order to determine how many hashes
 		 * we have to calculate */
 		if (ntohl(esp->esp_seq) - esp_tuple->seq_no > 0 &&
@@ -630,6 +633,8 @@ int esp_prot_conntrack_verify(struct esp_tuple *esp_tuple, struct hip_esp *esp)
 		{
 			/* either we received a previous packet (-> dropped) or the difference is
 			 * so big that the packet would not be verified */
+			printf("seq no difference < 0 or too high\n");
+
 			err = -1;
 			goto out_err;
 		}
