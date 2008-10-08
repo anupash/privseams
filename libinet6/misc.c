@@ -4,7 +4,7 @@
  * @author Miika Komu
  * @author Mika Kousa
  * @author Bing Zhou
- * @note   Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @note   Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  * @see    misc.h
  */
 #include "misc.h"
