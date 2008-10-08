@@ -4,6 +4,8 @@ AUTOMAKE_OPTIONS = foreign
 # won't build because there is also the linux/net/ipv6/hip/debug.h include.
 #
 CFLAGS = $(hipl_common_cflags) -DHIP_UNITTEST_MODE -L$(HIPL_LIBINET6_LIB)
+CFLAGS += $(OPTIMIZATIONS_CFLAGS)
+CFLAGS += $(GPROF_CFLAGS)
 
 if HIP_AGENT
 CFLAGS += -lsqlite3

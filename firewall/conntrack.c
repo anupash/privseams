@@ -1,7 +1,7 @@
 #include "conntrack.h"
 #include "dlist.h"
 #include "hslist.h"
-#include "esp_prot_api.h"
+#include "esp_prot_conntrack.h"
 
 #ifdef CONFIG_HIP_PERFORMANCE
 #include "performance.h"
@@ -121,7 +121,7 @@ struct tuple * get_tuple_by_hip(struct hip_data * data, uint8_t type_hdr,
 	 IN6_ARE_ADDR_EQUAL(&data->dst_hit, &tuple->data->dst_hit))
 	{
 	  HIP_DEBUG("connection found, \n");
-	  print_data(data);
+	  //print_data(data);
 	  return tuple->tuple;
 	}
       list = list->next;
@@ -373,7 +373,7 @@ void insert_new_connection(struct hip_data * data){
   hipList = (DList *) append_to_list((DList *)hipList,
 					   (void *)connection->reply.hip_tuple);
   HIP_DEBUG("inserting connection \n");
-  print_data(data);
+  //print_data(data);
 }
 
 void insert_esp_tuple(const struct esp_tuple * esp_tuple )

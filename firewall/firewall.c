@@ -280,6 +280,35 @@ int hip_fw_uninit_esp_prot(){
     return err;
 }
 
+
+int hip_fw_init_esp_prot_conntrack(){
+	int err = 0;
+
+	if (filter_traffic)
+	{
+		HIP_IFEL(esp_prot_conntrack_init(), -1,
+				"failed to init esp protection conntracking\n");
+	}
+
+  out_err:
+    return err;
+}
+
+
+int hip_fw_uninit_esp_prot_conntrack(){
+	int err = 0;
+
+	if (filter_traffic)
+	{
+		HIP_IFEL(esp_prot_conntrack_uninit(), -1,
+				"failed to uninit esp protection conntracking\n");
+	}
+
+  out_err:
+    return err;
+}
+
+
 int hip_fw_init_lsi_support(){
 	int err = 0;
 
@@ -506,6 +535,7 @@ int firewall_init_rules(){
 
 	HIP_IFEL(hip_fw_init_userspace_ipsec(), -1, "failed to load extension\n");
 	HIP_IFEL(hip_fw_init_esp_prot(), -1, "failed to load extension\n");
+	HIP_IFEL(hip_fw_init_esp_prot_conntrack(), -1, "failed to load extension\n");
 
 	// Initializing local database for mapping LSI-HIT in the firewall
 	firewall_init_hldb();
@@ -577,6 +607,7 @@ void firewall_exit(){
 	 * at this time any more */
 	hip_fw_uninit_userspace_ipsec();
 	hip_fw_uninit_esp_prot();
+	hip_fw_uninit_esp_prot_conntrack();
 	hip_fw_uninit_lsi_support();
 
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -1012,7 +1043,7 @@ int filter_esp(const struct in6_addr * dst_addr,
 		verdict = 1;
 
 	// if key escrow is active we have to handle it here too
-	if (is_escrow_active())
+	if (escrow_active)
 	{
 		// there might be some rules in the rule-set which specify
 		// HITs for which decryption should be done
@@ -1282,7 +1313,7 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 	if (ctx->ip_version == 6 && hip_userspace_ipsec)
 	{
 		HIP_DEBUG_HIT("destination hit: ", &ctx->dst);
-		// XXTODO: hip_fw_get_default_hit() returns an unfreed value
+		// XX TODO: hip_fw_get_default_hit() returns an unfreed value
 		HIP_DEBUG_HIT("default hit: ", hip_fw_get_default_hit());
 		// check if this is a reinjected packet
 		if (IN6_ARE_ADDR_EQUAL(&ctx->dst, hip_fw_get_default_hit()))
@@ -1553,8 +1584,11 @@ int hip_fw_handle_packet(char *buf,
 	// assume DROP
 	int verdict = 0;
 
+// @note unset for performance reasons
+#if 0
 	// same buffer memory as for packets before -> re-init
 	memset(buf, 0, BUFSIZE);
+#endif
 
 	/* waits for queue messages to arrive from ip_queue and
 	 * copies them into a supplied buffer */
@@ -1568,13 +1602,13 @@ int hip_fw_handle_packet(char *buf,
 	/* queued messages may be a packet messages or an error messages */
 	switch (ipq_message_type(buf))
 	{
-		case NLMSG_ERROR:
-			HIP_ERROR("Received error message (%d): %s\n", ipq_get_msgerr(buf), ipq_errstr());
-			goto out_err;
-			break;
 		case IPQM_PACKET:
 			HIP_DEBUG("Received ipqm packet\n");
 			// no goto -> go on with processing the message below
+			break;
+		case NLMSG_ERROR:
+			HIP_ERROR("Received error message (%d): %s\n", ipq_get_msgerr(buf), ipq_errstr());
+			goto out_err;
 			break;
 		default:
 			HIP_DEBUG("Unsupported libipq packet\n");
@@ -2021,7 +2055,6 @@ int main(int argc, char **argv){
 				//goto out_err;
 			}
 		}
-
 	}
 
  out_err:
@@ -2113,6 +2146,9 @@ int hip_query_default_local_hit_from_hipd(void)
 	ipv6_addr_copy(&default_hit, hit);
 
 out_err:
+	if (msg)
+		free(msg);
+
 	return err;
 }
 
@@ -2244,6 +2280,7 @@ int hip_fw_handle_outgoing_system_based_opp(hip_fw_context_t *ctx) {
 				(in_port_t *) &(ctx->transport_hdr.tcp)->dest,
 				&fallback,
 				&reject);
+			verdict = 0;
 		} else if (state_ha == HIP_STATE_ESTABLISHED) {
 			if (hit_is_local_hit(&src_hit)) {
 				HIP_DEBUG("is local hit\n");
