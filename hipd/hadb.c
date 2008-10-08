@@ -369,7 +369,8 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	hip_ha_t *entry = NULL, *aux = NULL;
 	hip_lsi_t local_lsi, lsi_aux;
 
-	hip_print_debug_info(local_addr, peer_addr,local_hit, peer_hit, peer_lsi);
+	hip_print_debug_info(local_addr, peer_addr,local_hit, peer_hit,
+			     peer_lsi);
 
 	entry = hip_hadb_find_byhits(local_hit, peer_hit);
 
@@ -394,7 +395,8 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	ipv6_addr_copy(&entry->hit_peer, peer_hit);
 	ipv6_addr_copy(&entry->hit_our, local_hit);
 	ipv6_addr_copy(&entry->local_address, local_addr);
-	HIP_IFEL(hip_hidb_get_lsi_by_hit(local_hit, &entry->lsi_our), -1, "Unable to find local hit");
+	HIP_IFEL(hip_hidb_get_lsi_by_hit(local_hit, &entry->lsi_our), -1,
+		 "Unable to find local hit");
 
 	/*Copying peer_lsi*/
 	if (peer_lsi != NULL && peer_lsi->s_addr != 0){
