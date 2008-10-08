@@ -2377,7 +2377,7 @@ int hip_for_each_hosts_file_line(char *hosts_file,
   /* For each line in the given hosts file, convert the line into binary format and
      call the given the handler  */
 
-  while (err == 0 && fgets(line, sizeof(line) - 1, hip_hosts) != NULL) {
+  while (fgets(line, sizeof(line) - 1, hip_hosts) != NULL) {
     uint8_t *eofline, *c, *comment;
     int len;
 
