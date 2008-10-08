@@ -85,6 +85,7 @@ bin_PROGRAMS += listtest
 bin_PROGRAMS += opendhtteststub
 bin_PROGRAMS += certteststub
 bin_PROGRAMS += sqliteteststub
+bin_PROGRAMS += hc_performance
 
 #sbin_SCRIPTS = hipsetup
 
@@ -110,6 +111,7 @@ listtest_SOURCES = listtest.c
 opendhtteststub_SOURCES = opendhtteststub.c
 certteststub_SOURCES = certteststub.c
 sqliteteststub_SOURCES = sqliteteststub.c
+hc_performance_SOURCES = hc_performance.c debug.c
 
 #EXTRA_DIST = $(sbin_SCRIPTS)
 
@@ -121,6 +123,10 @@ hipconftool.h:
 	$(LN_S) -f $(HIPL_TOOLS)/hipconftool.h .
 hipconftool.c: hipconftool.h
 	$(LN_S) -f $(HIPL_TOOLS)/hipconftool.c .
+debug.h:
+	$(LN_S) -f $(HIPL_LIBINET6)/debug.h .
+debug.c: debug.h
+	$(LN_S) -f $(HIPL_LIBINET6)/debug.c .
 $(HIPL_LIBINET6_LIB_STATIC):
 	$(MAKE) -C $(HIPL)/libinet6
 
