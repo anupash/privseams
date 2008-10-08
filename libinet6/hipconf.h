@@ -10,7 +10,7 @@
  * @author  Anu Markkola
  * @author  Lauri Silvennoinen
  * @author  Tao Wan <twan@cc.hut.fi>
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  */
 #ifndef HIPCONF_H
 #define HIPCONF_H

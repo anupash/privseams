@@ -4,7 +4,7 @@
  * @author  Miika Komu <miika_iki.fi>
  * @author  Bing Zhou <bingzhou_cc.hut.fi>
  * @version 1.0
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
 #ifndef HIP_MESSAGE_H
 #define HIP_MESSAGE_H

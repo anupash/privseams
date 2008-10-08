@@ -1132,7 +1132,7 @@ int gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	/* Is ipv4 address? */
 	if (inet_pton (AF_INET, name, (*at)->addr) > 0)
 	{
-		HIP_DEBUG("The name to resolve is an IPv4.\n");
+		_HIP_DEBUG("The name to resolve is an IPv4.\n");
 		if (req->ai_family == AF_UNSPEC ||
 		    req->ai_family == AF_INET || v4mapped)
 		{
@@ -1274,7 +1274,7 @@ int gaih_inet_get_name(const char *name, const struct addrinfo *req,
 		   to allow the error value to be passed to the caller of this function.
 		   -Lauri 07.05.2008. */
 		err = gethosts_hit(name, &pat, req->ai_flags);
-		if((err) <= 0) {
+		if((err) < 0) {
 			return err;
 		}
 		
@@ -1419,7 +1419,7 @@ int gaih_inet_get_name(const char *name, const struct addrinfo *req,
 	
 	/* Order the link list so HITs/LSIs are first and then IPs. */
 	a = *at, p = NULL, plast = NULL, aux = *at;
-	_HIP_DEBUG("HIP: AI_HIP set: order IP addresses. (*at)->addr: %s (*at)->family: %d\n", (*at)->addr, (*at)->family);  
+	_HIP_DEBUG("Order IP addresses. (*at)->addr: %s (*at)->family: %d\n", (*at)->addr, (*at)->family);  
 	while (a != NULL) {
 		struct gaih_addrtuple *nxt = a->next;
 		
@@ -1805,57 +1805,4 @@ void freeaddrinfo (struct addrinfo *ai)
 		ai = ai->ai_next;
 		free (p);
 	}
-}
-
-/*
- * Returns a list with the LSIs present in the file /etc/hip/hosts
-*/
-int gaih_inet_get_hip_hosts_file_lsis(List *list_lsis){
-	int i = 0, err = 0;
-	hip_lsi_t lsi;
-	char line[500];
-	FILE *fp = NULL;				
-	List list;
-
-        fp = fopen(_PATH_HIP_HOSTS, "r");
-	if(fp == NULL)
-	{
-		HIP_ERROR("Error opening file '%s' for reading.\n",
-			  _PATH_HIP_HOSTS);
-        }
-	
-	/* Loop through all lines in the file. */
-        while (fp && getwithoutnewline(line, 500, fp) != NULL) {		
-		
-		/* Skip empty and single character lines. */
-                if(strlen(line) <= 1) 
-			continue;
-
-		/* Init a list for the substrings of the line. Note that this is
-		   done for every line. Break the line into substrings next. */
-                initlist(&list);
-                extractsubstrings(line,&list);
-		
-		/* Loop through the substrings just created. We check if the 
-		   list item is an IPv6 or IPv4 address. If the conversion is NOT
-		   successful, we assume that the substring represents a fully
-		   qualified domain name. Note that this omits the possible
-		   aliases that the hosts has. */
-
-		for (i = 0; i < length(&list); i++) {
-		        err = inet_pton(AF_INET, getitem(&list,i), &lsi);				
-			if (err && IS_LSI32(lsi.s_addr)){
-			        insert(list_lsis, getitem(&list,i));
-				break;
-			}
-		}
-
-		destroy(&list);
-        } // end of while
-
- out_err:		
-	if (fp)                                                               
-                fclose(fp);
-	return err;		
-
 }

@@ -5,7 +5,7 @@
  * @author  Mika Kousa <mkousa_iki.fi>
  * @author  Tobias Heer <heer_tobibox.de>
  * @version 1.0
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
 #ifndef HIP_BUILDER
 #define HIP_BUILDER

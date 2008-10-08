@@ -13,7 +13,7 @@
  * @author  Tao Wan  <twan@cc.hut.fi>
  * @author  Teresa Finez <tfinezmo_cc.hut.fi> Modifications
  * @author  Samu Varjonen
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  * @todo    add/del map
  * @todo    fix the rst kludges
  * @todo    read the output message from send_msg?
