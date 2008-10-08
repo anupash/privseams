@@ -20,11 +20,6 @@
 #include "performance.h"
 #endif
 
-/*#define PISA_TEST_MULTIPLE_PARAMETERS*/
-/*#define PISA_INTRODUCE_ERROR_NONCE*/
-/*#define PISA_INTRODUCE_ERROR_PUZZLE_OPAQUE*/
-/*#define PISA_INTRODUCE_ERROR_PUZZLE_RANDOM*/
-
 struct pisa_conn {
 	uint32_t spi[2];
 	struct in6_addr hit[2];
@@ -183,13 +178,6 @@ static int pisa_insert_nonce_1spi(hip_fw_context_t *ctx)
 	if (esp_info != NULL)
 		spi = esp_info->new_spi;
 
-#ifdef PISA_TEST_MULTIPLE_PARAMETERS
-	{
-		char *nonce1 = "asdf", *nonce2 = "012345678901234567890123";
-		midauth_add_echo_request_m(ctx, nonce1, strlen(nonce1));
-		midauth_add_echo_request_m(ctx, nonce2, strlen(nonce2));
-	}
-#endif
 	/* The nonce looks like this:
 	 *    4 bytes SPI
 	 *   20 bytes HMAC of everything before
@@ -198,10 +186,6 @@ static int pisa_insert_nonce_1spi(hip_fw_context_t *ctx)
 
 	memcpy(nonce, &spi, sizeof(u32));
 	pisa_append_hmac(&hip->hits, &hip->hitr, 1, nonce, sizeof(u32));
-
-#ifdef PISA_INTRODUCE_ERROR_NONCE
-	nonce[0]++;
-#endif
 
 	return midauth_add_echo_request_m(ctx, nonce, PISA_NONCE_LEN_1SPI);
 }
@@ -228,13 +212,6 @@ static int pisa_insert_nonce_2spi(hip_fw_context_t *ctx,
 	if (esp_info != NULL)
 		spi[1] = esp_info->new_spi;
 
-#ifdef PISA_TEST_MULTIPLE_PARAMETERS
-	{
-		char *nonce1 = "asdf", *nonce2 = "0123456789012345678901234567";
-		midauth_add_echo_request_m(ctx, nonce1, strlen(nonce1));
-		midauth_add_echo_request_m(ctx, nonce2, strlen(nonce2));
-	}
-#endif
 	/* The nonce looks like this:
 	 *    4 bytes first SPI
 	 *    4 bytes second SPI
@@ -245,10 +222,6 @@ static int pisa_insert_nonce_2spi(hip_fw_context_t *ctx,
 	memcpy(nonce, &spi[0], sizeof(u32));
 	memcpy(nonce+sizeof(u32), &spi[1], sizeof(u32));
 	pisa_append_hmac(&hip->hits, &hip->hitr, 1, nonce, sizeof(u32)*2);
-
-#ifdef PISA_INTRODUCE_ERROR_NONCE
-	nonce[0]++;
-#endif
 
 	return midauth_add_echo_request_m(ctx, nonce, PISA_NONCE_LEN_2SPI);
 }
@@ -270,19 +243,6 @@ static int pisa_insert_puzzle(hip_fw_context_t *ctx)
 	/* here we switch order of initiator and receiver to obtain a
 	 * different SHA1 hash */
 	pisa_append_hmac(&hip->hitr, &hip->hits, 1, &hash, 4);
-
-#ifdef PISA_TEST_MULTIPLE_PARAMETERS
-	midauth_add_puzzle_m(ctx, 3, 4, "puzzle", 0xABCDABCDABCDABCDLL);
-	midauth_add_puzzle_m(ctx, 3, 4, "abcdef", 0x0123456789ABCDEFLL);
-#endif
-
-#ifdef PISA_INTRODUCE_ERROR_PUZZLE_OPAQUE
-	hash.u.pz.opaque[0]++;
-#endif
-
-#ifdef PISA_INTRODUCE_ERROR_PUZZLE_RANDOM
-	hash.u.pz.random++;
-#endif
 
 	return midauth_add_puzzle_m(ctx, 3, 4, hash.u.pz.opaque,
 	                            hash.u.pz.random);
