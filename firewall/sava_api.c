@@ -412,3 +412,60 @@ int hip_sava_hit_entry_delete(struct in6_addr * src_hit) {
  out_err:
   return err;
 }
+
+
+int hip_sava_init_all() {
+  int err;
+  HIP_IFEL(hip_sava_ip_db_init(), -1, "error init ip db \n");
+  HIP_IFEL(hip_sava_enc_ip_db_init(), -1, "error init enc ip db \n");
+  HIP_IFEL(hip_sava_hit_db_init(), -1, "error init hit db \n"); 
+ out_err:
+  return err;
+}
+
+struct in6_addr * hip_sava_find_hit_by_enc(struct in6_addr * src_enc) {
+  hip_sava_enc_ip_entry_t * entry; 
+  
+  entry = hip_sava_enc_ip_entry_find(src_enc);
+  
+  if (entry)
+    return entry->hit_link->src_hit;
+
+  return NULL;
+}
+
+struct in6_addr * hip_sava_find_ip_by_enc(struct in6_addr * src_enc) {
+  hip_sava_enc_ip_entry_t * entry; 
+  
+  entry = hip_sava_enc_ip_entry_find(src_enc);
+  
+  if (entry)
+    return entry->ip_link->src_addr;
+
+  return NULL;
+}
+
+
+hip_common_t * hip_sava_get_keys_build_msg(const struct in6_addr * hit) {
+
+  int err = 0;
+  hip_common_t * msg = NULL;
+  HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed.\n");
+  memset(msg, 0, HIP_MAX_PACKET);
+  
+  HIP_IFEL(hip_build_param_contents(msg, (void *) hit, HIP_PARAM_HIT,
+				    sizeof(in6_addr_t)), -1,
+	   "build param hit failed\n");
+  
+  HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_SAVAHR,
+			      0), -1, "add peer map failed\n");
+ out_err:
+  return msg;
+
+}
+
+hip_common_t * hip_sava_make_keys_request(hip_common_t *msg) {
+  if(hip_send_recv_daemon_info(msg) > 0)
+    return msg;
+  return NULL;
+}

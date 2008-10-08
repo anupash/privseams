@@ -131,7 +131,8 @@ int hip_fw_init_sava_router() {
 	 * source address
 	 */
 	if (hip_sava_router) {
-	        HIP_IFEL(hip_sava_ip_db_init(), -1, 
+	  
+	        HIP_IFEL(hip_sava_init_all(), -1, 
 		   "Error inializing SAVA IP DB \n");
 		/* IPv4 packets	*/
 		system("iptables -I HIPFW-FORWARD -p tcp ! -d 127.0.0.1 -j QUEUE 2>/dev/null"); 
@@ -1125,6 +1126,7 @@ int filter_esp(const struct in6_addr * dst_addr,
 
 	//the entire rule is passed as argument as hits can only be
 	//filtered with the state information
+
 	if (filter_esp_state(dst_addr, esp, rule, use_escrow) > 0)
 	{
 		verdict = 1;
@@ -1142,10 +1144,10 @@ int filter_esp(const struct in6_addr * dst_addr,
   	return verdict;
 }
 
-
 /* filter hip packet according to rules.
  * return verdict
  */
+
 int filter_hip(const struct in6_addr * ip6_src,
                const struct in6_addr * ip6_dst,
                struct hip_common *buf,
@@ -1410,7 +1412,7 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
 	if (filter_traffic)
 	{
 	        if (hip_sava_router) {
-		  
+		  //add a check for flow direction this should be incomming
 		  if (buf->type_hdr == HIP_I2){
 		    if (hip_sava_ip_entry_find(&ctx->src) != NULL) {
 
@@ -1440,11 +1442,32 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
 		       ip_entry->link = hit_entry;
 		       hit_entry->link = ip_entry;
 		    }
+		    //add check for flow direction this should be outgoing one
 		  } else if (buf->type_hdr == HIP_R2) {
 		    //this is the case when the R2 packet completes base exchange 
 		    //we can now encrypt the src IP (or dst IP in this case)
 		    //and store it in the db
-		    
+		    {
+		      struct in6_addr enc_addr;
+
+		      hip_sava_ip_entry_t * ip_entry = NULL;
+		      hip_sava_hit_entry_t * hit_entry = NULL;
+		      
+		      ip_entry = hip_sava_ip_entry_find(&ctx->dst);
+		      hit_entry = hip_sava_hit_entry_find(&buf->hitr);
+
+		      
+		      if (ip_entry && hit_entry) {
+			
+			if(!hip_sava_enc_ip_entry_add(&enc_addr, 
+						      ip_entry,
+						      hit_entry)) {
+
+			  verdict = 0;
+			  goto out_err;
+			}
+		      }
+		    }
 		  }
 		  /*
 		    The simplest way to check is to hold a list of IP addresses that
@@ -1459,6 +1482,7 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
 	          Also we need to check if this address was not
 	          previously used and not present in the data base
 	          */
+		  //this should be incomming packet
 	        } else if (buf->type_hdr == HIP_UPDATE) {
 		  //TODO: update ip hit mappings for new ip's 
 		}
