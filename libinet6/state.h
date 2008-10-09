@@ -501,19 +501,19 @@ struct hip_hadb_state
     to the userspace */
 struct hip_hadb_user_info_state
 {
-	hip_hit_t            hit_our;
-	hip_hit_t            hit_peer;
-	struct in6_addr      ip_our;
-	struct in6_addr      ip_peer;
-        hip_lsi_t            lsi_our;
-        hip_lsi_t            lsi_peer;
-	uint8_t 	     peer_hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
-	int                  state;
-	int                  heartbeats_on;
-	int                  heartbeats_sent;
-	int                  heartbeats_received;
-	double            heartbeats_mean;
-	double              heartbeats_variance;
+	hip_hit_t	hit_our;
+	hip_hit_t	hit_peer;
+	struct in6_addr	ip_our;
+	struct in6_addr	ip_peer;
+        hip_lsi_t	lsi_our;
+        hip_lsi_t	lsi_peer;
+	uint8_t		peer_hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
+	int		state;
+	int		heartbeats_on;
+	int		heartbeats_sent;
+	int		heartbeats_received;
+	double		heartbeats_mean;
+	double		heartbeats_variance;
 };
 
 /** @addtogroup hadb_func

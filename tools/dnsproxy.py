@@ -17,6 +17,7 @@ import hosts
 import re
 import signal
 import syslog
+import popen2
 
 def usage(utyp, *msg):
     sys.stderr.write('Usage: %s\n' % os.path.split(sys.argv[0])[1])
@@ -365,9 +366,37 @@ class Global:
 
 
 
-
+		    #########################################
+		    ###
+		    #  executing the hipconf command if possible
+		    ###
+		    fout.write('111 - TTHERE a any \n')
+		    #----------------------
 		    nam = q1['qname']
                     lr = gp.getbyname(nam)
+
+		    #cmd for executing hipconf dnsproxy command
+		    cmd = "hipconf dnsproxy " + nam + " 3>&1 2>&1 "
+		    fout.write("COMMAND  %s\n" % (cmd,))
+		    p = os.popen(cmd, "r")
+		    line2 = ""
+		    line1 = p.readline()
+		    #fout.write('*** start *** %s *** end ***\n' % (line1,))
+		    line2 = p.readline()
+		    #fout.write('*** start *** %s *** end ***\n' % (line2,))
+
+		    if line2 != "":
+			cmd = "hipconf add map " + line2
+		    	fout.write('COMMAND  %s\n' % (cmd,))
+		    	p = os.popen(cmd)
+		    else:
+			fout.write('COMMAND  %s\n' % (cmd,))
+		    	#----------------------
+		    	fout.write('222 - TTHERE a any \n')
+		    #########################################
+
+
+
                     if lr:
                         a2 = {'name': nam,
                               'data': lr,
@@ -375,16 +404,6 @@ class Global:
                               'class': 1,
                               'ttl': 10,
                               }
-
-
-			#cmd for executing hipconf dnsproxy command
-			cmd = 'hipconf dnsproxy ' + lr
-			fout.write('COMMAND  %s\n' % (cmd,))
-			p = os.popen(cmd)
-			for line in p.readlines():
-			     print line
-
-
                         fout.write('Hosts A2  %s\n' % (a2,))
                         m = DNS.Lib.Mpacker()
                         m.addHeader(r.header['id'],
