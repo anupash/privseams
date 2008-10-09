@@ -11,7 +11,9 @@
 
 #include <string.h>         // memcpy, size_t
 #include <stdint.h>
-#include "error.h"
+#include <stdlib.h>
+#include <openssl/sha.h>
+#include <openssl/rand.h>
 
 typedef struct htree_gen_args
 {
@@ -49,6 +51,7 @@ typedef struct hash_tree
 					computed yet. */
 } hash_tree_t;
 
+#if 0
 typedef struct ht_root
 {
 	char* node;
@@ -57,17 +60,20 @@ typedef struct ht_root
 	int treeSize;
 	int nodeSize;
 } ht_root_t;
+#endif
 
 
 hash_tree_t* htree_init(int num_data_blocks, int max_data_length, int node_length);
+void htree_free(hash_tree_t *tree);
 int htree_add_data(hash_tree_t *tree, char *data, size_t data_length);
 int htree_add_random_data(hash_tree_t *tree, int num_random_blocks);
 int htree_calc_nodes(hash_tree_t *tree, htree_leaf_gen_t leaf_gen,
-		htree_node_gen_t node_gen);
+		htree_node_gen_t node_gen, htree_gen_args_t *gen_args);
 int htree_get_branch(hash_tree_t *tree, int data_index, unsigned char *branch_nodes,
 		int branch_length);
 int htree_verify_branch(unsigned char *root, unsigned char *branch_nodes, int num_nodes,
-		int node_length, unsigned char *verify_data, int data_length, int data_index);
+		int node_length, unsigned char *verify_data, int data_length, int data_index,
+		htree_leaf_gen_t leaf_gen, htree_node_gen_t node_gen, htree_gen_args_t *gen_args);
 int htree_leaf_generator(unsigned char *data, int data_length,
 		unsigned char *dst_buffer, htree_gen_args_t *gen_args);
 int htree_node_generator(unsigned char *left_node, unsigned char *right_node,

@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include "hip_statistics.h"
 #include "hashchain.h"
+#include "hashtree.h"
 
 const hash_function_t hash_functions[2] = {SHA1, MD5};
 
@@ -12,17 +13,21 @@ int hash_length = 16;
 int hchain_length = 100000;
 int verify_length = 64;
 hash_function_t hash_function;
+int test_hc = 0;
+int test_ht = 0;
 
 
 void print_usage()
 {
-	printf( "Usage: hc_performance -s|m [-lhvc NUM]\n"
+	printf( "Usage: hc_performance -c|t -s|m [-lhvn NUM]\n"
+		"-c = do hash-chain performance tests"
+		"-t = do hash-tree performance tests"
 		"-s = use SHA1 hash-function\n"
 		"-m = use MD5 hash-function\n"
 		"-l [NUM] = create hash-chain with length NUM\n"
 		"-h [NUM] = create hash elements of length NUM\n"
 		"-v [NUM] = verify NUM elements\n"
-		"-c [NUM] = do NUM measurements\n");
+		"-n [NUM] = do NUM measurements\n");
 }
 
 /*!
@@ -62,7 +67,8 @@ int main(int argc, char ** argv)
 	int err = 0;
 	struct timeval start_time;
 	struct timeval stop_time;
-	hash_chain_t * hchain = NULL;
+	hash_chain_t *hchain = NULL;
+	hash_tree_t *htree = NULL;
 	statistics_data_t creation_stats;
 	statistics_data_t verify_stats;
 	uint64_t timediff = 0;
@@ -72,9 +78,16 @@ int main(int argc, char ** argv)
 
 	hash_function = NULL;
 
-	while ((c=getopt(argc, argv, "sml:h:v:c:")) != -1)
+	while ((c=getopt(argc, argv, "ctsml:h:v:n:")) != -1)
 	{
-		switch (c){
+		switch (c)
+		{
+			case 'c':
+				test_hc = 1;
+				break;
+			case 't':
+				test_ht = 1;
+				break;
 			case 's':
 				hash_function = hash_functions[0];
 				break;
@@ -90,7 +103,7 @@ int main(int argc, char ** argv)
 			case 'v':
 				verify_length = atoi(optarg);
 				break;
-			case 'c':
+			case 'n':
 				count = atoi(optarg);
 				break;
 			case ':':
@@ -111,71 +124,104 @@ int main(int argc, char ** argv)
 		exit(1);
 	}
 
-	hip_set_logdebug(LOGDEBUG_NONE);
+	hip_set_logdebug(LOGDEBUG_ALL);
 
 	memset(&creation_stats, 0, sizeof(statistics_data_t));
 	memset(&verify_stats, 0, sizeof(statistics_data_t));
 
 	print_timeres();
 
-	printf(	"-------------------------------\n"
-		"Hash chain performance test\n"
-		"-------------------------------\n\n");
-
-	printf("Creating %d hash chains of length %d with element length %d\n",
-			count, hchain_length, hash_length);
-
-	for(i = 0; i < count; i++)
+	if (test_hc)
 	{
-		gettimeofday(&start_time, NULL);
-		if (hchain = hchain_create(hash_function, hash_length, hchain_length, 0))
+		printf(	"-------------------------------\n"
+			"Hash chain performance test\n"
+			"-------------------------------\n\n");
+
+		printf("Creating %d hash chains of length %d with element length %d\n",
+				count, hchain_length, hash_length);
+
+		for(i = 0; i < count; i++)
 		{
+			gettimeofday(&start_time, NULL);
+			if (hchain = hchain_create(hash_function, hash_length, hchain_length, 0))
+			{
+				gettimeofday(&stop_time, NULL);
+				timediff = calc_timeval_diff(&start_time, &stop_time);
+				add_statistics_item(&creation_stats, timediff);
+				hchain_free(hchain);
+			} else
+			{
+				printf("ERROR creating hchain!\n");
+				exit(1);
+			}
+		}
+
+		calc_statistics(&creation_stats, &num_items, &min, &max, &avg, &std_dev,
+				STATS_IN_MSECS);
+		printf("creation statistics - num_data_items: %u, min: %.3fms, max: %.3fms, avg: %.3fms, std_dev: %.3fms\n",
+					num_items, min, max, avg, std_dev);
+
+		printf("\n");
+
+		printf("Verifying %d hash chains of length %d with element length %d\n",
+				count, verify_length, hash_length);
+
+		for(i = 0; i < count; i++)
+		{
+			if (!(hchain = hchain_create(hash_function, hash_length, verify_length, 0)))
+			{
+				printf("ERROR creating hchain!");
+				exit(1);
+			}
+
+			gettimeofday(&start_time, NULL);
+			if(hchain_verify(hchain->source_element->hash, hchain->anchor_element->hash,
+					hash_function, hash_length, verify_length))
+			{
+				gettimeofday(&stop_time, NULL);
+				timediff = calc_timeval_diff(&start_time, &stop_time);
+				add_statistics_item(&verify_stats, timediff);
+				hchain_free(hchain);
+			} else
+			{
+				printf("ERROR verifying hchain!\n");
+				exit(1);
+			}
+		}
+
+		calc_statistics(&verify_stats, &num_items, &min, &max, &avg, &std_dev,
+				STATS_IN_MSECS);
+		printf("verification statistics - num_data_items: %u, min: %.3fms, max: %.3fms, avg: %.3fms, std_dev: %.3fms\n",
+					num_items, min, max, avg, std_dev);
+	}
+
+	if (test_ht)
+	{
+		printf(	"\n-------------------------------\n"
+			"Hash tree performance test\n"
+			"-------------------------------\n\n");
+
+		memset(&creation_stats, 0, sizeof(statistics_data_t));
+		memset(&verify_stats, 0, sizeof(statistics_data_t));
+
+		printf("Creating %d hash trees of length %d with element length %d\n",
+				count, hchain_length, hash_length);
+
+		for(i = 0; i < count; i++)
+		{
+			gettimeofday(&start_time, NULL);
+			htree = htree_init(hchain_length, hash_length, hash_length);
+			htree_add_random_data(htree, hchain_length);
+			htree_calc_nodes(htree, htree_leaf_generator, htree_node_generator, NULL);
 			gettimeofday(&stop_time, NULL);
 			timediff = calc_timeval_diff(&start_time, &stop_time);
 			add_statistics_item(&creation_stats, timediff);
-			hchain_free(hchain);
-		} else
-		{
-			printf("ERROR creating hchain!\n");
-			exit(1);
+			htree_free(htree);
 		}
+
+		calc_statistics(&creation_stats, &num_items, &min, &max, &avg, &std_dev,
+				STATS_IN_MSECS);
+		printf("creation statistics - num_data_items: %u, min: %.3fms, max: %.3fms, avg: %.3fms, std_dev: %.3fms\n",
+					num_items, min, max, avg, std_dev);
 	}
-
-	calc_statistics(&creation_stats, &num_items, &min, &max, &avg, &std_dev,
-			STATS_IN_MSECS);
-	printf("creation statistics - num_data_items: %u, min: %.3fms, max: %.3fms, avg: %.3fms, std_dev: %.3fms\n",
-				num_items, min, max, avg, std_dev);
-
-	printf("\n");
-
-	printf("Verifying %d hash chains of length %d with element length %d\n",
-			count, verify_length, hash_length);
-
-	for(i = 0; i < count; i++)
-	{
-		if (!(hchain = hchain_create(hash_function, hash_length, verify_length, 0)))
-		{
-			printf("ERROR creating hchain!");
-			exit(1);
-		}
-
-		gettimeofday(&start_time, NULL);
-		if(hchain_verify(hchain->source_element->hash, hchain->anchor_element->hash,
-				hash_function, hash_length, verify_length))
-		{
-			gettimeofday(&stop_time, NULL);
-			timediff = calc_timeval_diff(&start_time, &stop_time);
-			add_statistics_item(&verify_stats, timediff);
-			hchain_free(hchain);
-		} else
-		{
-			printf("ERROR verifying hchain!\n");
-			exit(1);
-		}
-	}
-
-	calc_statistics(&verify_stats, &num_items, &min, &max, &avg, &std_dev,
-			STATS_IN_MSECS);
-	printf("verification statistics - num_data_items: %u, min: %.3fms, max: %.3fms, avg: %.3fms, std_dev: %.3fms\n",
-				num_items, min, max, avg, std_dev);
 }
