@@ -2982,7 +2982,7 @@ out_err:
  */
 int hip_build_locators(struct hip_common *msg)
 {
-	int err = 0, i = 0, ii = 0, addr_count1 = 0, addr_count2 = 0,UDP_relay_count = 0;
+    int err = 0, i = 0, ii = 0, addr_count1 = 0, addr_count2 = 0,UDP_relay_count = 0;
     struct netdev_address *n;
     hip_ha_t *ha_n;
     hip_list_t *item = NULL, *tmp = NULL;

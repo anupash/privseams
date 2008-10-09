@@ -2438,16 +2438,12 @@ int hip_for_each_hosts_file_line(char *hosts_file,
 
   hip_hosts = fopen(hosts_file, "r");
 
-  if (!hip_hosts) {
-    err = -1;
-    HIP_ERROR("Failed to open %s\n", HIPD_HOSTS_FILE);
-    goto out_err;
-  }
+  HIP_IFEL(!hip_hosts, -1, "Failed to open hosts file\n");
 
   /* For each line in the given hosts file, convert the line into binary format and
      call the given the handler  */
 
-  while (err == 0 && fgets(line, sizeof(line) - 1, hip_hosts) != NULL) {
+  while (fgets(line, sizeof(line) - 1, hip_hosts) != NULL) {
     uint8_t *eofline, *c, *comment;
     int len;
 
