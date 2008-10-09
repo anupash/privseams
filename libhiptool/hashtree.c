@@ -7,6 +7,7 @@
  */
 
 #include "hashtree.h"
+#include <stdlib.h>
 #include <math.h>
 #include "ife.h"
 #include "debug.h"
@@ -39,11 +40,13 @@ hash_tree_t* htree_init(int num_data_blocks, int max_data_length, int node_lengt
 
     // allocate the memory for the tree
     HIP_IFEL(!(tree = malloc(sizeof(hash_tree_t))), -1, "failed to allocate memory\n");
-    HIP_IFEL(!(tree->data = (char*) malloc(num_data_blocks * max_data_length)), -1,
+    HIP_IFEL(!(tree->data = (unsigned char *) malloc(num_data_blocks * max_data_length)), -1,
     		"failed to allocate memory\n");
     // a binary tree with n leafs has got 2n-1 total nodes
-    HIP_IFEL(!(tree->nodes = (char*) malloc(node_length * num_data_blocks * 2)), -1,
+    HIP_IFEL(!(tree->nodes = (unsigned char *) malloc(node_length * num_data_blocks * 2)), -1,
     		"failed to allocate memory\n");
+
+    HIP_DEBUG("sizeof(tree->data): %i\n", sizeof(tree->data));
 
     // init ht elements to 0
     bzero(tree, sizeof(hash_tree_t));

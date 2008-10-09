@@ -20,8 +20,8 @@ int test_ht = 0;
 void print_usage()
 {
 	printf( "Usage: hc_performance -c|t -s|m [-lhvn NUM]\n"
-		"-c = do hash-chain performance tests"
-		"-t = do hash-tree performance tests"
+		"-c = do hash-chain performance tests\n"
+		"-t = do hash-tree performance tests\n"
 		"-s = use SHA1 hash-function\n"
 		"-m = use MD5 hash-function\n"
 		"-l [NUM] = create hash-chain with length NUM\n"

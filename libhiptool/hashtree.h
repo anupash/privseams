@@ -9,8 +9,8 @@
 #ifndef HASH_TREE_H_
 #define HASH_TREE_H_
 
-#include <string.h>         // memcpy, size_t
-#include <stdint.h>
+//#include <string.h>         // memcpy, size_t
+//#include <stdint.h>
 #include <stdlib.h>
 #include <openssl/sha.h>
 #include <openssl/rand.h>
