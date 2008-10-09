@@ -436,7 +436,7 @@ int esp_prot_verify_hash(hash_function_t hash_function, int hash_length,
 
 	HIP_DEBUG("checking active_anchor...\n");
 	if (tmp_distance = hchain_verify(hash_value, active_anchor, hash_function,
-			hash_length, tolerance))
+			hash_length, tolerance, NULL, 0))
 	{
 		// this will allow only increasing elements to be accepted
 		memcpy(active_anchor, hash_value, hash_length);
@@ -453,7 +453,7 @@ int esp_prot_verify_hash(hash_function_t hash_function, int hash_length,
 			HIP_HEXDUMP("next_anchor: ", next_anchor, hash_length);
 
 			if (tmp_distance = hchain_verify(hash_value, next_anchor, hash_function,
-					hash_length, tolerance))
+					hash_length, tolerance, NULL, 0))
 			{
 				HIP_DEBUG("hash matches element in next hash-chain\n");
 

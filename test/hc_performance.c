@@ -146,7 +146,8 @@ int main(int argc, char ** argv)
 		for(i = 0; i < count; i++)
 		{
 			gettimeofday(&start_time, NULL);
-			if (hchain = hchain_create(hash_function, hash_length, hchain_length, 0))
+			if (hchain = hchain_create(hash_function, hash_length, hchain_length, 0,
+					NULL))
 			{
 				gettimeofday(&stop_time, NULL);
 				timediff = calc_timeval_diff(&start_time, &stop_time);
@@ -171,7 +172,8 @@ int main(int argc, char ** argv)
 
 		for(i = 0; i < count; i++)
 		{
-			if (!(hchain = hchain_create(hash_function, hash_length, verify_length, 0)))
+			if (!(hchain = hchain_create(hash_function, hash_length, verify_length, 0,
+					NULL)))
 			{
 				printf("ERROR creating hchain!");
 				exit(1);
@@ -179,7 +181,7 @@ int main(int argc, char ** argv)
 
 			gettimeofday(&start_time, NULL);
 			if(hchain_verify(hchain->source_element->hash, hchain->anchor_element->hash,
-					hash_function, hash_length, verify_length))
+					hash_function, hash_length, verify_length, NULL, 0))
 			{
 				gettimeofday(&stop_time, NULL);
 				timediff = calc_timeval_diff(&start_time, &stop_time);

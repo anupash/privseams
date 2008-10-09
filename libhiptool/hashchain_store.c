@@ -304,7 +304,7 @@ int hcstore_refill(hchain_store_t *hcstore)
 						{
 							// create a new hchain
 							HIP_IFEL(!(hchain = hchain_create(hash_function, hash_length,
-									hchain_length, h)), -1,
+									hchain_length, h, NULL)), -1,
 									"failed to create new hchain\n");
 
 							// add it as last element to have some circulation

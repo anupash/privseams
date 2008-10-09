@@ -72,10 +72,12 @@ void hchain_print(const hash_chain_t * hash_chain)
  * @return: returns hash distance if the hash authentication was successful, 0 otherwise
  */
 int hchain_verify(const unsigned char * current_hash, const unsigned char * last_hash,
-		hash_function_t hash_function, int hash_length, int tolerance)
+		hash_function_t hash_function, int hash_length, int tolerance,
+		unsigned char *secret, int secret_length)
 {
-	/* stores intermediate hash results */
-	unsigned char buffer[MAX_HASH_LENGTH];
+	/* stores intermediate hash results and allow to concat
+	 * with a secret at each step */
+	unsigned char buffer[MAX_HASH_LENGTH + secret_length];
 	int err = 0, i;
 
 	HIP_ASSERT(current_hash != NULL && last_hash != NULL);
@@ -93,7 +95,11 @@ int hchain_verify(const unsigned char * current_hash, const unsigned char * last
 	{
 		_HIP_DEBUG("Calculating round %i:\n", i);
 
-		hash_function(buffer, hash_length, buffer);
+		// add the secret
+		if (secret != NULL && secret_length > 0)
+			memcpy(buffer[hash_length], secret, secret_length);
+
+		hash_function(buffer, hash_length + secret_length, buffer);
 
 		_HIP_HEXDUMP("comparing buffer: ", buffer, hash_length);
 		_HIP_DEBUG("\t<->\n");
@@ -121,12 +127,14 @@ int hchain_verify(const unsigned char * current_hash, const unsigned char * last
  * @return: returns a pointer to the newly created hash_chain
  */
 hash_chain_t * hchain_create(hash_function_t hash_function, int hash_length,
-		int hchain_length, int hchain_hierarchy)
+		int hchain_length, int hchain_hierarchy, hash_tree_t *link_tree)
 {
 	hash_chain_t *return_hchain = NULL;
 	hash_chain_element_t *last_element = NULL, *current_element = NULL;
 	unsigned char *hash_value = NULL;
 	int i, err = 0;
+
+	// TODO allow concatenation with root for each hash
 
 	HIP_ASSERT(hash_function != NULL);
 	// make sure that the hash we want to use is smaller than the max output
