@@ -205,6 +205,9 @@ int htree_calc_nodes(hash_tree_t *tree, htree_leaf_gen_t leaf_gen,
         			&tree->nodes[target_index + ((i / 2) * tree->node_length)],
         			tree->node_length, NULL), -1,
         			"failed to calculate hashes of intermediate nodes\n");
+
+        	if (level_width == 1)
+        		root = &tree->nodes[target_index + ((i / 2) * tree->node_length)];
         }
 
         // next level has got half the elements
@@ -214,8 +217,6 @@ int htree_calc_nodes(hash_tree_t *tree, htree_leaf_gen_t leaf_gen,
         /* use target index of this level as new source field */
         source_index = target_index;
     }
-
-    // TODO link in root
 
   out_err:
     return err;
