@@ -2373,6 +2373,7 @@ int hip_for_each_hosts_file_line(char *hosts_file,
   /* For each line in the given hosts file, convert the line into binary format and
      call the given the handler  */
 
+  err = 1;
   while (fgets(line, sizeof(line) - 1, hip_hosts) != NULL) {
     uint8_t *eofline, *c, *comment;
     int len;
@@ -2455,8 +2456,6 @@ int hip_for_each_hosts_file_line(char *hosts_file,
       HIP_DEBUG("Match on line %d in %s\n", lineno, hosts_file);
       err = 0;
       break;
-    } else {
-      err = 1;
     }
 
     memset(line, 0, sizeof(line));
