@@ -31,7 +31,7 @@ struct pisa_conn_query {
 	struct in6_addr *hit[2];
 };
 
-static struct pisa_conn *pisa_find_conn(struct pisa_conn 
+static struct pisa_conn *pisa_find_conn(struct pisa_conn
 					*(*f)(SList *s, void *p),
 					void *data)
 {
@@ -119,6 +119,8 @@ static void pisa_generate_random()
 
 	memcpy(p0, p1, PISA_RANDOM_LEN);
 	get_random_bytes(p1, PISA_RANDOM_LEN);
+
+	HIP_DEBUG("updated pisa_random_data.\n");
 }
 
 /**
@@ -325,7 +327,7 @@ static struct hip_solution_m *pisa_check_solution(hip_fw_context_t *ctx)
 	pisa_append_hmac(&hip->hits, &hip->hitr, 1, &hash[1], 4);
 
 	solution = (struct hip_solution_m *)
-	           hip_get_param(hip, HIP_PARAM_SOLUTION_M);
+		   hip_get_param(hip, HIP_PARAM_SOLUTION_M);
 
 	while (solution) {
 		/* loop over all HIP_PARAM_SOLUTION_M */
@@ -341,7 +343,7 @@ static struct hip_solution_m *pisa_check_solution(hip_fw_context_t *ctx)
 		}
 
 		solution = (struct hip_solution_m *) hip_get_next_param(hip,
-		             (struct hip_tlv_common *) solution);
+				(struct hip_tlv_common *) solution);
 	}
 
 	return NULL;
@@ -498,6 +500,28 @@ static void pisa_accept_connection_u3(hip_fw_context_t *ctx,
 }
 
 /**
+ * Remove a connection from the list of accepted connections based on the hits
+ * of a packet.
+ *
+ * @param ctx context of the packet that contains HITs of the connection
+ */
+static void pisa_remove_connection(hip_fw_context_t *ctx)
+{
+	struct hip_common *hip = ctx->transport_hdr.hip;
+	struct pisa_conn *pcd;
+
+	if ((pcd = pisa_find_conn_by_hits(&hip->hits, &hip->hitr)) == NULL) {
+		HIP_DEBUG("Connection did not exist previously.\n");
+		return;
+	}
+	HIP_DEBUG("Connection existed previously, removing from list.\n");
+	pisa_connections = remove_from_slist(pisa_connections, pcd);
+
+	/* pcd does not have to be freed, as remove_from_slist takes care of
+	 * that when it calls free_slist. */
+}
+
+/**
  * Reject a connection via PISA. Update firewall to allow no further packages
  * to pass through.
  *
@@ -506,8 +530,8 @@ static void pisa_accept_connection_u3(hip_fw_context_t *ctx,
 static void pisa_reject_connection(hip_fw_context_t *ctx,
 				   struct hip_tlv_common *nonce)
 {
-	/* @todo: FIXME - implement this stub */
 	HIP_INFO("PISA rejected the connection.\n");
+	pisa_remove_connection(ctx);
 }
 
 /**
@@ -614,7 +638,7 @@ static int pisa_handler_u2(hip_fw_context_t *ctx)
 
 	if (nonce == NULL || solution == NULL || sig != 0 || cert != 0) {
 		HIP_DEBUG("U2 packet did not match criteria: nonce %p, "
-		          "solution %p, signature %i, cert %i\n", nonce,
+			  "solution %p, signature %i, cert %i\n", nonce,
 			  solution, sig, cert);
 		verdict = NF_DROP;
 	} else {
@@ -642,7 +666,7 @@ static int pisa_handler_u3(hip_fw_context_t *ctx)
 
 	if (nonce == NULL || sig != 0) {
 		HIP_DEBUG("U3 packet did not match criteria: nonce %p, "
-		          "signature %i\n", nonce, sig);
+			  "signature %i\n", nonce, sig);
 		verdict = NF_DROP;
 	} else {
 		/* allow futher communication otherwise */
@@ -652,7 +676,6 @@ static int pisa_handler_u3(hip_fw_context_t *ctx)
 
 	return verdict;
 }
-
 
 /**
  * Handle ESP data that should be forwarded.
@@ -675,7 +698,20 @@ static int pisa_handler_esp(hip_fw_context_t *ctx)
 	err = NF_ACCEPT;
 	HIP_DEBUG("Connection found, forwarding ESP packet.\n");
 out_err:
-	return err;	
+	return err;
+}
+
+/**
+ * Handle CLOSE_ACK packet. Remove the connection from the list of accepted
+ * connections
+ *
+ * @param ctx context of the packet
+ * @return verdict, either NF_ACCEPT or NF_DROP
+ */
+static int pisa_handler_close_ack(hip_fw_context_t *ctx)
+{
+	pisa_remove_connection(ctx);
+	return NF_ACCEPT;
 }
 
 void pisa_init(struct midauth_handlers *h)
@@ -688,6 +724,8 @@ void pisa_init(struct midauth_handlers *h)
 	h->u2 = pisa_handler_u2;
 	h->u3 = pisa_handler_u3;
 	h->esp = pisa_handler_esp;
+	h->close = midauth_handler_accept;
+	h->close_ack = pisa_handler_close_ack;
 
 	pisa_generate_random();
 	pisa_generate_random();

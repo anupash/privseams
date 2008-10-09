@@ -362,6 +362,12 @@ int filter_midauth(hip_fw_context_t *ctx)
 	case HIP_UPDATE:
 		h = filter_midauth_update(ctx);
 		break;
+	case HIP_CLOSE:
+		h = handlers.close;
+		break;
+	case HIP_CLOSE_ACK:
+		h = handlers.close_ack;
+		break;
 	default:
 		HIP_DEBUG("filtering default message type\n");
 		break;
