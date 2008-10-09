@@ -78,7 +78,9 @@ static inline void hip_hadb_rem_state_hit(void *entry)
 	hip_ha_t *ha = (hip_ha_t *)entry;
 	HIP_DEBUG("\n");
 	ha->hastate &= ~HIP_HASTATE_HITOK;
-        if (ha->locator) free(ha->locator);
+        if (ha->locator)
+		free(ha->locator);
+	ha->locator = NULL;
 	hip_ht_delete(hadb_hit, entry);
 }
 
@@ -1003,9 +1005,7 @@ int hip_del_peer_info(hip_hit_t *our_hit, hip_hit_t *peer_hit)
 		return -ENOENT;
 	}
 
-
 	return hip_del_peer_info_entry(ha);
-
 }
 
 /* assume already locked entry */
@@ -2075,6 +2075,7 @@ int hip_store_base_exchange_keys(struct hip_hadb_state *entry,
 	{
 		HIP_DEBUG("HIP_FREEing old dh_shared_key\n");
 		HIP_FREE(entry->dh_shared_key);
+		entry->dh_shared_key = NULL;
 	}
 
 	entry->dh_shared_key_len = 0;
@@ -2094,8 +2095,10 @@ int hip_store_base_exchange_keys(struct hip_hadb_state *entry,
 	return err;
 
 out_err:
-	if (entry->dh_shared_key)
+	if (entry->dh_shared_key) {
 		HIP_FREE(entry->dh_shared_key);
+		entry->dh_shared_key = NULL;
+	}
 
 	return err;
 }
@@ -2219,10 +2222,14 @@ int hip_init_us(hip_ha_t *entry, hip_hit_t *hit_our)
 
  out_err:
 
-	if (err && entry->our_priv)
+	if (err && entry->our_priv) {
 		HIP_FREE(entry->our_priv);
-	if (err && entry->our_pub)
+		entry->our_priv = NULL;
+	}
+	if (err && entry->our_pub) {
 		HIP_FREE(entry->our_pub);
+		entry->our_pub = NULL;
+	}
 
 	return err;
 }
@@ -2731,6 +2738,7 @@ void hip_hadb_delete_inbound_spi(hip_ha_t *entry, uint32_t spi)
  			{
  				HIP_DEBUG("deleting stored addrlist 0x%p\n", spi_item->addresses);
  				HIP_FREE(spi_item->addresses);
+				spi_item->addresses = NULL;
  			}
 			list_del(spi_item, entry->spis_in);
 			HIP_FREE(spi_item);
