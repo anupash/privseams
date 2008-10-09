@@ -75,8 +75,11 @@ int main(int argc, char ** argv)
 	uint32_t num_items = 0;
 	double min = 0.0, max = 0.0, avg = 0.0;
 	double std_dev = 0.0;
+	unsigned char *branch_nodes = NULL;
+	int branch_length = 0;
 
 	hash_function = NULL;
+
 
 	while ((c=getopt(argc, argv, "ctsml:h:v:n:")) != -1)
 	{
@@ -124,7 +127,7 @@ int main(int argc, char ** argv)
 		exit(1);
 	}
 
-	hip_set_logdebug(LOGDEBUG_ALL);
+	hip_set_logdebug(LOGDEBUG_NONE);
 
 	memset(&creation_stats, 0, sizeof(statistics_data_t));
 	memset(&verify_stats, 0, sizeof(statistics_data_t));
@@ -209,6 +212,10 @@ int main(int argc, char ** argv)
 
 		for(i = 0; i < count; i++)
 		{
+			HIP_DEBUG("number of leaves: %i\n", hchain_length);
+			HIP_DEBUG("hash_length: %i\n", hash_length);
+			HIP_DEBUG("data_length: %i\n", hash_length);
+
 			gettimeofday(&start_time, NULL);
 			htree = htree_init(hchain_length, hash_length, hash_length);
 			htree_add_random_data(htree, hchain_length);
@@ -216,12 +223,46 @@ int main(int argc, char ** argv)
 			gettimeofday(&stop_time, NULL);
 			timediff = calc_timeval_diff(&start_time, &stop_time);
 			add_statistics_item(&creation_stats, timediff);
+
+			HIP_HEXDUMP("htree root: ", htree->root, htree->node_length);
+
 			htree_free(htree);
 		}
 
 		calc_statistics(&creation_stats, &num_items, &min, &max, &avg, &std_dev,
 				STATS_IN_MSECS);
 		printf("creation statistics - num_data_items: %u, min: %.3fms, max: %.3fms, avg: %.3fms, std_dev: %.3fms\n",
+					num_items, min, max, avg, std_dev);
+
+		for(i = 0; i < count; i++)
+		{
+			htree = htree_init(hchain_length, hash_length, hash_length);
+			htree_add_random_data(htree, hchain_length);
+			htree_calc_nodes(htree, htree_leaf_generator, htree_node_generator, NULL);
+			branch_nodes = htree_get_branch(htree, i, &branch_length);
+			gettimeofday(&start_time, NULL);
+			if (!htree_verify_branch(htree->root, branch_nodes, branch_length,
+					hash_length, &htree->data[i * hash_length], hash_length, i,
+					htree_leaf_generator, htree_node_generator, NULL))
+			{
+				gettimeofday(&stop_time, NULL);
+				timediff = calc_timeval_diff(&start_time, &stop_time);
+				add_statistics_item(&verify_stats, timediff);
+
+				HIP_DEBUG("branch verified\n");
+
+			} else
+			{
+				printf("ERROR verifying htree!\n");
+				exit(1);
+			}
+
+			htree_free(htree);
+		}
+
+		calc_statistics(&verify_stats, &num_items, &min, &max, &avg, &std_dev,
+				STATS_IN_MSECS);
+		printf("verification statistics - num_data_items: %u, min: %.3fms, max: %.3fms, avg: %.3fms, std_dev: %.3fms\n",
 					num_items, min, max, avg, std_dev);
 	}
 }
