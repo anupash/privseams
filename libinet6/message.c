@@ -234,6 +234,9 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 	}
 
 	n = recv(hip_user_sock, msg, len, 0);
+
+	HIP_DEBUG("%d bytes received from HIP daemon\n", n);
+
 	if (n == 0) {
 		HIP_INFO("The HIP daemon has performed an "\
 			 "orderly shutdown.\n");

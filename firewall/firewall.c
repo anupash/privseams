@@ -141,8 +141,8 @@ int hip_fw_init_sava_router() {
 		system("ip6tables -I HIPFW-FORWARD -p tcp ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
 		system("ip6tables -I HIPFW-FORWARD -p udp ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
 		/*	Queue HIP packets as well */
-		system("iptables -I HIPFW-INPUT -p 139 -j ACCEPT 2>/dev/null");
-		system("ip6tables -I HIPFW-INPUT -p 139 -j ACCEPT 2>/dev/null");
+		system("iptables -I HIPFW-INPUT -p 139 -j QUEUE 2>/dev/null");
+		system("ip6tables -I HIPFW-INPUT -p 139 -j QUEUE 2>/dev/null");
 	}
  out_err:
 	return err;
@@ -1405,101 +1405,112 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
         int err = 0;
 	int verdict = accept_hip_esp_traffic_by_default;
 
-	HIP_DEBUG("\n");
+	HIP_DEBUG("hip_fw_handle_hip_output \n");
 
 	hip_common_t * buf = ctx->transport_hdr.hip;
 
 	if (filter_traffic)
 	{
-	        if (hip_sava_router) {
-		  //add a check for flow direction this should be incomming
-		  if (buf->type_hdr == HIP_I2){
-		    if (hip_sava_ip_entry_find(&ctx->src) != NULL) {
-
-		      HIP_DEBUG("IP already apprears to present in the data base");
-		      verdict = 0;
-		      goto out_err;
-		    }
-		    {
-		      hip_sava_ip_entry_t * ip_entry = NULL;
-		      hip_sava_hit_entry_t * hit_entry = NULL;
+	  HIP_DEBUG("HIP packet type %d \n", buf->type_hdr);
+	  if (hip_sava_router) {
+	    //add a check for flow direction this should be incomming
+	    if (buf->type_hdr == HIP_I2){
+	      HIP_DEBUG("CHECK IP IN THE HIP_I2 STATE \n");
+	      if (hip_sava_ip_entry_find(&ctx->src) != NULL) {
+		HIP_DEBUG("IP already apprears to present in the data base \n");
+		verdict = 0;
+		goto out_err;
+	      } else {
+		HIP_DEBUG("IP  apprears to be new. Adding to DB \n");
+	      }
+	      {
+		hip_sava_ip_entry_t * ip_entry = NULL;
+		hip_sava_hit_entry_t * hit_entry = NULL;
+		
+		//TODO: check if the source IP belongs to 
+		//the same network as router's IP address
+		// Drop the packet IP was not found in the data base
+		HIP_DEBUG("Packet accepted! Adding source IP address to the DB \n");
+		hip_sava_ip_entry_add(&ctx->src, NULL);
+		hip_sava_hit_entry_add(&buf->hits, NULL);
+		
+		HIP_IFEL((ip_entry = hip_sava_ip_entry_find(&ctx->src)) == NULL, DROP,
+			 "No entry was found for given IP address \n");
+		HIP_IFEL((hit_entry = hip_sava_hit_entry_find(&buf->hits)) == NULL, DROP,
+			 "No entry was found for given HIT \n");
+		
+		//Adding cross references
+		ip_entry->link = hit_entry;
+		hit_entry->link = ip_entry; 
+		//End adding cross references
+	      }
+	      //add check for flow direction this should be outgoing one
+	    } else if (buf->type_hdr == HIP_R2) {
+	      //this is the case when the R2 packet completes base exchange 
+	      //we can now encrypt the src IP (or dst IP in this case)
+	      //and store it in the db
+	      {
+		HIP_DEBUG("CHECK IP IN THE HIP_R2 SENT STATE \n");
+		struct in6_addr * enc_addr = NULL;
+		hip_common_t * msg;
+		
+		hip_sava_ip_entry_t  * ip_entry = NULL;
+		hip_sava_hit_entry_t * hit_entry = NULL;
+		hip_sava_peer_info_t * info_entry;
+		
+		ip_entry = hip_sava_ip_entry_find(&ctx->dst);
+		hit_entry = hip_sava_hit_entry_find(&buf->hitr);
+		
 		      
-		       //TODO: check if the source IP belongs to 
-		       //the same network as router's IP address
-		       // Drop the packet IP was not found in the data base
-		       HIP_DEBUG("Packet accepted! Adding source IP address to the DB \n");
-		       hip_sava_ip_entry_add(&ctx->src, NULL);
-		       hip_sava_hit_entry_add(&buf->hits, NULL);
-
-		       ip_entry = hip_sava_ip_entry_find(&ctx->src);
-		       if (ip_entry ==  NULL)
-			 HIP_DEBUG_HIT("Error lookup entry for source address %s \n", &ctx->src);
-
-		       hit_entry = hip_sava_ip_entry_find(&buf->hits);
-		       if (ip_entry ==  NULL)
-			 HIP_DEBUG_HIT("Error lookup entry for source HIT %s \n", &buf->hits);
-		       
-		       ip_entry->link = hit_entry;
-		       hit_entry->link = ip_entry;
-		    }
-		    //add check for flow direction this should be outgoing one
-		  } else if (buf->type_hdr == HIP_R2) {
-		    //this is the case when the R2 packet completes base exchange 
-		    //we can now encrypt the src IP (or dst IP in this case)
-		    //and store it in the db
-		    {
-		      struct in6_addr enc_addr;
-
-		      hip_sava_ip_entry_t * ip_entry = NULL;
-		      hip_sava_hit_entry_t * hit_entry = NULL;
-		      
-		      ip_entry = hip_sava_ip_entry_find(&ctx->dst);
-		      hit_entry = hip_sava_hit_entry_find(&buf->hitr);
-
-		      
-		      if (ip_entry && hit_entry) {
-			
-			if(!hip_sava_enc_ip_entry_add(&enc_addr, 
-						      ip_entry,
-						      hit_entry)) {
-
-			  verdict = 0;
-			  goto out_err;
-			}
-		      }
-		    }
+		if (ip_entry && hit_entry) {
+		  HIP_DEBUG("BOTH ENTRIES ARE FOUND \n");
+		  HIP_IFEL((msg = hip_sava_make_keys_request(&buf->hitr)) == NULL, DROP,
+			   "Key request from daemon failed \n");
+		  HIP_DEBUG("Secret key acquired. Lets encrypt the src IP address \n");
+		  
+		  info_entry = hip_sava_get_key_params(msg);
+		  
+		  enc_addr = hip_sava_auth_ip(&ctx->dst, info_entry);
+		 
+		  if(hip_sava_enc_ip_entry_add(enc_addr,
+						ip_entry,
+						hit_entry, info_entry) != 0) {
+		    verdict = 0;
+		    goto out_err;
 		  }
-		  /*
-		    The simplest way to check is to hold a list of IP addresses that
-		    already were discovered previously and have 2 checks:
-		    1. Check if the IP address is on the same subnet as the router (since we 
-		    deal only with clients that should be on the same subnet as router)
-		    2. Check if current IP does not present in the list previously seen IP addresses
-		    Is there more secure and complecated way to do that???
-		   */
-	          /* 
-	          Add mechanism to verify the source IP 
-	          Also we need to check if this address was not
-	          previously used and not present in the data base
-	          */
-		  //this should be incomming packet
-	        } else if (buf->type_hdr == HIP_UPDATE) {
-		  //TODO: update ip hit mappings for new ip's 
 		}
+	      }
+	    }
+	    /*
+	      The simplest way to check is to hold a list of IP addresses that
+	      already were discovered previously and have 2 checks:
+	      1. Check if the IP address is on the same subnet as the router (since we 
+	      deal only with clients that should be on the same subnet as router)
+	      2. Check if current IP does not present in the list previously seen IP addresses
+	      Is there more secure and complecated way to do that???
+	    */
+	    /* 
+	       Add mechanism to verify the source IP 
+	       Also we need to check if this address was not
+	       previously used and not present in the data base
+	    */
+	    //this should be incomming packet
+	  } else if (buf->type_hdr == HIP_UPDATE) {
+	    //TODO: update ip hit mappings for new ip's 
+	  }
 
-		//second check is to check HITs
-		//mandatory check for SAVA
-		//rules should present in the ACL otherwise the packets are dropped
-
-		verdict = filter_hip(&ctx->src,
-					&ctx->dst,
-				        ctx->transport_hdr.hip,
-					ctx->ipq_packet->hook,
-					ctx->ipq_packet->indev_name,
-					ctx->ipq_packet->outdev_name);
-	} else
-	{
-		verdict = ACCEPT;
+	  //second check is to check HITs
+	  //mandatory check for SAVA
+	  //rules should present in the ACL otherwise the packets are dropped
+	  
+	  verdict = filter_hip(&ctx->src,
+			       &ctx->dst,
+			       ctx->transport_hdr.hip,
+			       ctx->ipq_packet->hook,
+			       ctx->ipq_packet->indev_name,
+			       ctx->ipq_packet->outdev_name);
+	} else {
+	  verdict = ACCEPT;
 	}
 
  out_err:
@@ -1573,7 +1584,7 @@ int hip_fw_handle_other_input(hip_fw_context_t *ctx){
 
 int hip_fw_handle_hip_input(hip_fw_context_t *ctx){
 
-	HIP_DEBUG("\n");
+	HIP_DEBUG("hip_fw_handle_hip_input()\n");
 
 	// for now input and output are handled symmetrically
 	return hip_fw_handle_hip_output(ctx);
@@ -1634,12 +1645,11 @@ int hip_fw_handle_tcp_input(hip_fw_context_t *ctx){
 	return verdict;
 }
 
-
 int hip_fw_handle_other_forward(hip_fw_context_t *ctx){
 	int verdict = accept_normal_traffic_by_default;
 
 	HIP_DEBUG("\n");
-
+	
 	if (hip_proxy_status && !ipv6_addr_is_hit(&ctx->dst))
 	{
 		verdict = handle_proxy_outbound_traffic(ctx->ipq_packet,
@@ -1648,11 +1658,59 @@ int hip_fw_handle_other_forward(hip_fw_context_t *ctx){
 							ctx->ip_hdr_len,
 							ctx->ip_version);
 	} else if (hip_sava_router) {
+	  {
+	    HIP_DEBUG("CHECK IP ON FORWARD\n");
+	    if (hip_sava_conn_entry_find(&ctx->src, &ctx->dst) != NULL) {
+	      HIP_DEBUG("BYPASS THE PACKET THIS IS AN INBOUND TRAFFIC FOR AUTHENTICATED OUTBOUND \n");
+	      verdict = ACCEPT;
+	      goto out_err;
+	    }
+	    HIP_DEBUG("NOT AN INBOUND TRAFFIC OR NOT AUTHENTICATED TRAFFIC \n");
+	    HIP_DEBUG("Authenticating source address \n");
 
+	    if (ctx->ip_version == 6) {
+
+	      HIP_DEBUG("IPv6 flow \n");
+
+	      struct in6_addr * enc_addr = NULL;
+	      hip_sava_ip_entry_t  * ip_entry     = NULL;
+	      hip_sava_enc_ip_entry_t * enc_entry = NULL;
+	    
+	      enc_entry = hip_sava_enc_ip_entry_find(&ctx->src);
+	    
+	      if (enc_entry) {
+		HIP_DEBUG("ENCRYPTED ENTRY FOUND \n");
+		
+		HIP_DEBUG("Secret key acquired. Lets encrypt the src IP address \n");
+		
+		enc_addr = hip_sava_auth_ip(enc_entry->ip_link->src_addr, enc_entry->peer_info);
+
+		if (!memcmp(&ctx->src, enc_addr, sizeof(struct in6_addr))) {
+		  //PLACE ORIGINAL IP, RECALCULATE CHECKSUM AND REINJECT THE PACKET 
+		  //VERDICT DROP PACKET BECAUSE IT CONTAINS ENCRYPTED IP
+		  //ONLY NEW PACKET WILL GO OUT
+		  HIP_DEBUG("Adding <src, dst> tuple to connection db \n");
+		  hip_sava_conn_entry_add(enc_entry->ip_link->src_addr, &ctx->dst);
+		  HIP_DEBUG("Source address is authenticate \n");
+		  HIP_DEBUG("Reinject the traffic to network stack \n");
+		} else {
+		  HIP_DEBUG("Source address authentication failed. Dropping packet \n");
+		  verdict = DROP;
+		  goto out_err;
+		}
+	      } else {
+		HIP_DEBUG("Source address authentication failed \n");
+		verdict = DROP;
+		goto out_err;
+	      }
+	    } else {
+	      //For IPv4 we need to check an option that contains encrypted address
+	      
+	    }
+	  }	  
 	}
 
  out_err:
-
 	return verdict;
 }
 

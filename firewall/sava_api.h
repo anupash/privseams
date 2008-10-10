@@ -8,6 +8,7 @@
 #include "message.h"
 
 #include <openssl/sha.h>
+#include <openssl/md5.h>
 #include <openssl/des.h>
 #include <openssl/aes.h>
 #include <openssl/blowfish.h>
@@ -15,16 +16,12 @@
 
 
 typedef struct hip_sava_peer_info {
-/*struct in6_addr *src_addr; */          /* original IP address     */
   int ealg; 		              /* crypto transform in use */    
   struct hip_crypto_key *ip_enc_key;  /* raw crypto keys         */
-  des_key_schedule ks[3];	      /* 3-DES keys              */
-  AES_KEY *aes_key;		      /* AES key                 */
-  BF_KEY *bf_key;		      /* BLOWFISH key            */
 } hip_sava_peer_info_t;
 
 typedef struct hip_sava_enc_ip_entry {
-  struct in6_addr * src_enc;
+  struct in6_addr           * src_enc;
   struct hip_sava_hit_entry * hit_link;
   struct hip_sava_ip_entry  * ip_link;
   struct hip_sava_peer_info * peer_info;
@@ -36,9 +33,14 @@ typedef struct hip_sava_hit_entry {
 } hip_sava_hit_entry_t;
 
 typedef struct hip_sava_ip_entry {
-  struct in6_addr * src_addr;
+  struct in6_addr           * src_addr;
   struct hip_sava_hit_entry * link;
 } hip_sava_ip_entry_t;
+
+typedef struct hip_sava_conn_entry {
+  struct in6_addr * src;
+  struct in6_addr * dst;
+} hip_sava_conn_entry_t;
 
 int hip_sava_init_all();
 
@@ -51,6 +53,26 @@ static DECLARE_LHASH_COMP_FN(hip_sava_hit_entries_compare, const hip_sava_ip_ent
 static DECLARE_LHASH_HASH_FN(hip_sava_enc_ip_entry_hash, const hip_sava_enc_ip_entry_t *);
 static DECLARE_LHASH_COMP_FN(hip_sava_enc_ip_entries_compare, const hip_sava_enc_ip_entry_t *);
 
+static DECLARE_LHASH_HASH_FN(hip_sava_conn_entry_hash, const hip_sava_conn_entry_t *);
+static DECLARE_LHASH_COMP_FN(hip_sava_conn_entries_compare, const hip_sava_conn_entry_t *);
+
+
+unsigned long hip_sava_conn_entry_hash(const hip_sava_conn_entry_t * entry);
+
+int hip_sava_conn_entries_compare(const hip_sava_conn_entry_t * entry1,
+				  const hip_sava_conn_entry_t * entry2);
+int hip_sava_conn_db_init();
+int hip_sava_conn_db_uninit();
+
+hip_sava_conn_entry_t * hip_sava_conn_entry_find(struct in6_addr * src,
+						   struct in6_addr * dst);
+
+int hip_sava_conn_entry_add(struct in6_addr *src,
+			    struct in6_addr * dst);
+
+int hip_sava_conn_entry_delete(struct in6_addr * src,
+			       struct in6_addr * dst);
+
 unsigned long hip_sava_enc_ip_entry_hash(const hip_sava_enc_ip_entry_t * entry);
 
 int hip_sava_enc_ip_entries_compare(const hip_sava_enc_ip_entry_t * entry1,
@@ -62,8 +84,9 @@ int hip_sava_enc_ip_db_uninit();
 hip_sava_enc_ip_entry_t * hip_sava_enc_ip_entry_find(struct in6_addr * src_enc);
 
 int hip_sava_enc_ip_entry_add(struct in6_addr *src_enc,
-			   hip_sava_ip_entry_t * ip_link,
-			   hip_sava_hit_entry_t * hit_link);
+			      hip_sava_ip_entry_t * ip_link,
+			      hip_sava_hit_entry_t * hit_link,
+			      hip_sava_peer_info_t * info_link);
 
 int hip_sava_enc_ip_entry_delete(struct in6_addr * src_enc);
 
@@ -101,9 +124,14 @@ struct in6_addr * hip_sava_find_hit_by_enc(struct in6_addr * src_enc);
 
 int hip_sava_verify_ip(struct in6_addr * enc_addr);
 
+struct in6_addr * hip_sava_auth_ip(struct in6_addr * orig_addr,
+				      hip_sava_peer_info_t * info_entry);
 
-hip_common_t * hip_sava_get_keys_build_msg(const struct in6_addr * hit);
+hip_common_t * hip_sava_make_keys_request(const struct in6_addr * hit);
 
-hip_common_t * hip_sava_make_key_request(hip_common_t *msg);
+hip_sava_peer_info_t * hip_sava_get_key_params(hip_common_t * msg);
+
+int hip_sava_reinject_ip_packet(u8 *msg, u16 len, int protocol);
+
 
 #endif //HIP_SAVA_API

@@ -582,6 +582,33 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	  }
 	  
 	  break;
+	case SO_HIP_GET_SAVAHR:
+	  {
+	    dst_hit = hip_get_param_contents(msg,HIP_PARAM_HIT);
+	    HIP_DEBUG("WE HAVE GOT SAVAH KEYS REQUEST MESSAGE \n");
+	    entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
+	  
+	    if (entry == NULL) {
+	    
+	    } else {
+	      	HIP_DEBUG_HIT("Destination HIT: ", dst_hit);
+		HIP_IFEL(hip_build_param_contents(msg, (void *)dst_hit, HIP_PARAM_HIT,
+					  sizeof(struct in6_addr)), -1,
+					  "build param contents failed\n");
+		HIP_HEXDUMP("crypto key :", &entry->esp_in, sizeof(struct hip_crypto_key));
+		HIP_IFEL(hip_build_param_contents(msg,
+						  (struct hip_crypto_key *) &entry->auth_in, //HMAC key for incomming direction
+						  HIP_PARAM_KEYS,
+						  sizeof(struct hip_crypto_key)), -1,
+			 "build param contents failed\n");
+		HIP_DEBUG("ealg value is %d \n", entry->esp_transform);
+		HIP_IFEL(hip_build_param_contents(msg, (void *)&entry->esp_transform, HIP_PARAM_INT,
+						  sizeof(int)), -1,
+			 "build param contents failed\n");
+		
+	    }
+	  }
+	  break;
 #ifdef CONFIG_HIP_RVS
 	case SO_HIP_ADD_DEL_SERVER:
 	{
@@ -1017,6 +1044,8 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		if (err)
 		        hip_set_msg_err(msg, 1);
 		len = hip_get_msg_total_len(msg);
+		HIP_DEBUG("Sending message response to port %d \n", ntohs(src->sin6_port));
+		HIP_DEBUG_HIT("To address", src);
 		n = hip_sendto_user(msg, src);
 		if(n != len)
 			err = -1;
