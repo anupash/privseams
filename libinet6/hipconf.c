@@ -1661,9 +1661,11 @@ int hip_conf_handle_get_dnsproxy(hip_common_t *msg, int action, const char *opt[
     int err = 0, ret4 = 0, ret6 = 0, ret = 0;
     struct in_addr  ipv4_addr = {0}, lsi;
     struct in6_addr ipv6_addr = {0};
-    char hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
+    //char hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
+    char hostname[HOST_NAME_MAX];
     char *hit_str = NULL, *lsi_str = NULL, *ip_str = NULL;
     hip_hit_t hit;
+    struct in6_addr mapped_lsi;
 
     /*HIP_INFO("Asking dnsproxy info from daemon...\n");*/
 
@@ -1674,12 +1676,91 @@ int hip_conf_handle_get_dnsproxy(hip_common_t *msg, int action, const char *opt[
     ret6 = inet_pton(AF_INET6, opt[0], &ipv6_addr);
     if(ret4)
 	IPV4_TO_IPV6_MAP(&ipv4_addr, &ipv6_addr);
-
-    //hostname provided
     if(!(ret4 || ret6)){
 	memcpy(hostname, opt[0], HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
 	hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX] = '\0';
+    }
 
+    //hostname provided
+    if(!(ret4 || ret6)){
+	/*map hostname to hit*/
+	err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+		hip_map_first_hostname_to_hit_from_hosts,
+		hostname, &hit);
+	//hit string
+	hit_str =  hip_convert_hit_to_str(&hit, NULL);
+
+	/*map hostname to ip*/
+	err = hip_for_each_hosts_file_line(HOSTS_FILE,
+		hip_map_first_hostname_to_ip_from_hosts,
+		hostname, &ipv6_addr);
+	//ip string
+	HIP_IFE((!(ip_str = HIP_MALLOC(INET_ADDRSTRLEN, 0))), -1);
+	memset(ip_str, 0, INET_ADDRSTRLEN);
+	IPV6_TO_IPV4_MAP(&ipv6_addr, &ipv4_addr);
+	inet_ntop(AF_INET, &ipv4_addr, ip_str, INET_ADDRSTRLEN);
+
+	/*map hostname to lsi*/
+	err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+		hip_map_first_hostname_to_lsi_from_hosts,
+		hostname, &mapped_lsi);
+	//lsi string
+	HIP_IFE((!(lsi_str = HIP_MALLOC(INET_ADDRSTRLEN, 0))), -1);
+	memset(lsi_str, 0, INET_ADDRSTRLEN);
+	IPV6_TO_IPV4_MAP(&mapped_lsi, &lsi);
+	inet_ntop(AF_INET, &lsi, lsi_str, INET_ADDRSTRLEN);
+    }
+    else{
+//if(IS_LSI32((hip_lsi_t *)&ipv4_addr)){}
+//	if(IS_LSI32(ipv4_addr)){/*map lsi to hit*/
+//		err = hip_for_each_hosts_file_line(HOSTS_FILE,
+//			hip_map_lsi_to_hit_from_hosts_files,
+//			&ipv6_addr, hostname);
+//	}
+//	else{/*map ip to hit*/
+		err = hip_for_each_hosts_file_line(HOSTS_FILE,
+			hip_map_first_id_to_hostname_from_hosts,
+			&ipv6_addr, hostname);
+//	}
+
+	if(strlen(hostname) == 0)
+	    goto out_err;
+
+	/*map hostname to hit*/
+	err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+		hip_map_first_hostname_to_hit_from_hosts,
+		hostname, &hit);
+	//hit string
+	hit_str =  hip_convert_hit_to_str(&hit, NULL);
+
+	//ip string
+	HIP_IFE((!(ip_str = HIP_MALLOC(INET_ADDRSTRLEN, 0))), -1);
+	memset(ip_str, 0, INET_ADDRSTRLEN);
+	IPV6_TO_IPV4_MAP(&ipv6_addr, &ipv4_addr);
+	inet_ntop(AF_INET, &ipv4_addr, ip_str, INET_ADDRSTRLEN);
+
+	/*map hostname to lsi*/
+	err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+		hip_map_first_hostname_to_lsi_from_hosts,
+		hostname, &mapped_lsi);
+	//lsi string
+	HIP_IFE((!(lsi_str = HIP_MALLOC(INET_ADDRSTRLEN, 0))), -1);
+	memset(lsi_str, 0, INET_ADDRSTRLEN);
+	IPV6_TO_IPV4_MAP(&mapped_lsi, &lsi);
+	inet_ntop(AF_INET, &lsi, lsi_str, INET_ADDRSTRLEN);
+    }
+    if(hit_str && ip_str)
+	HIP_ERROR("hipconf add map %s %s %s\n", hit_str, ip_str, lsi_str);
+
+	////HIP_DEBUG_HIT("###", &hit);
+	////HIP_DEBUG_IN6ADDR("###", &mapped_ip);
+	////HIP_DEBUG_IN6ADDR("###", &mapped_lsi);
+
+//hip_map_first_id_to_hostname_from_hosts
+
+/*
+    //hostname provided
+    if(!(ret4 || ret6)){
 	ret = hip_get_info_for_dnsproxy_from_hostname(hostname, &ipv6_addr,
 						      &hit,     &lsi);
 	IPV6_TO_IPV4_MAP(&ipv6_addr, &ipv4_addr);
@@ -1704,6 +1785,7 @@ int hip_conf_handle_get_dnsproxy(hip_common_t *msg, int action, const char *opt[
 
 	HIP_DEBUG("%s %s %s\n", hit_str, ip_str, lsi_str);
     }
+*/
 
 out_err:
     memset(msg, 0, HIP_MAX_PACKET);

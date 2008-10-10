@@ -355,56 +355,30 @@ class Global:
 
                     #s2.send(buf)
                     #r2 = s2.recv(2048)
-
                     #u = DNS.Lib.Munpacker(r2)
                     #r = DNS.Lib.DnsResult(u,args0)
                     #fout.write('Bypass %s %s %s\n' % (r.header,r.questions,r.answers,))
-
 		    #fout.write('### 1\n')
                     #if r.header.get('status') != 'NXDOMAIN':
                     #    s.sendto(r2,from_a)
 
-
-
 		    nam = q1['qname']
                     lr = gp.getbyname(nam)
-		    fout.write('**************** \n')
-		    #cmd for executing hipconf dnsproxy command
-		    cmd = "hipconf dnsproxy " + nam + " 3>&1 2>&1 "
-		    fout.write("COMMAND  %s\n" % (cmd,))
-		    p = os.popen(cmd, "r")
-		    line2 = ""
-		    line1 = p.readline()
-		    #fout.write('*** start *** %s *** end ***\n' % (line1,))
-		    line2 = p.readline()
-		    #fout.write('*** start *** %s *** end ***\n' % (line2,))
-
-		    if line2 != "":
-			cmd = "hipconf add map " + line2
-		    	fout.write('COMMAND  %s\n' % (cmd,))
-		    	p = os.popen(cmd)
-		    else:
-			fout.write('COMMAND  %s\n' % (cmd,))
-		    	#----------------------
-		    fout.write('**************** \n')
-
-
-
                     if lr:
+			fout.write('HERE 1 a any \n')
                         a2 = {'name': nam,
                               'data': lr,
                               'type': 28,
                               'class': 1,
-                              'ttl': 10,
-                              }
-                        fout.write('Hosts A2  %s\n' % (a2,))
+                              'ttl': 10,}
+                        fout.write('Hosts A22  %s\n' % (a2,))
                         m = DNS.Lib.Mpacker()
                         m.addHeader(r.header['id'],
                                     0, 0, 0, 0, 1, 0, 0, 0,
                                     1, 1, 0, 0)
                         m.addQuestion(nam,qtype,1)
                     else:
-			fout.write('HERE a any \n')
+			fout.write('HERE 2 a any \n')
                         r1 = d2.req(name=q1['qname'],qtype=55) # 55 is HIP RR
                         fout.write('r1: %s\n' % (dir(r1),))
                         fout.write('r1.answers: %s\n' % (r1.answers,))
@@ -416,8 +390,7 @@ class Global:
                                   'data': pyip6.inet_ntop(aa1),
                                   'type': 28,
                                   'class': 1,
-                                  'ttl': a1['ttl'],
-                                  }
+                                  'ttl': a1['ttl'],}
                             fout.write('DNS A2  %s\n' % (a2,))
                             m = DNS.Lib.Mpacker()
                             m.addHeader(r.header['id'],
@@ -427,9 +400,38 @@ class Global:
                         else:
                             m = None
                     if m:
-			m.addA(a2['name'],a2['class'],a2['ttl'],a2['data'])
-                        s.sendto(m.buf,from_a)
-                        sent_answer = 1
+			try:
+			    ip = socket.inet_pton(socket.AF_INET, a2['data'])
+			    fout.write('try\n')
+			    m.addA(a2['name'], a2['class'], a2['ttl'], a2['data'])
+			    s.sendto(m.buf,from_a)
+			    sent_answer = 1
+			except:
+			    fout.write('except\n')
+			    m.addAAAA(a2['name'], a2['class'], a2['ttl'], a2['data'])
+			    s.sendto(m.buf,from_a)
+			    sent_answer = 1
+
+		    ######### add mapping ########
+
+		    fout.write('**************** \n')
+		    #cmd for executing hipconf dnsproxy command
+		    cmd = "hipconf dnsproxy " + nam + " 3>&1 2>&1 | grep hipconf "
+		    fout.write("COMMAND  %s\n" % (cmd,))
+		    p = os.popen(cmd, "r")
+		    line = p.readline()
+		    #fout.write('*** start *** %s *** end ***\n' % (line2,))
+
+		    if line != "":
+			line = line + " 1>/dev/null 2>/dev/null 3>/dev/null"
+		    	fout.write('COMMAND 1  %s\n' % (line,))
+		    	p = os.popen(line)
+		    else:
+			fout.write('No command - %s\n' % (line,))
+		    	#----------------------
+		    fout.write('**************** \n')
+
+		    ##############################
 
                 fout.flush()
             except Exception,e:
