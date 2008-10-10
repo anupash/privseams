@@ -379,6 +379,8 @@ int hchain_free(hash_chain_t *hash_chain)
 			free(current_element);
 		}
 
+		htree_free(hash_chain->link_tree);
+
 		free(hash_chain);
 	}
 

@@ -74,12 +74,15 @@ hash_tree_t* htree_init(int num_data_blocks, int max_data_length, int node_lengt
 
 void htree_free(hash_tree_t *tree)
 {
-	if (tree->nodes)
-		free(tree->nodes);
-	if (tree->data)
-		free(tree->data);
 	if (tree)
+	{
+		if (tree->nodes)
+			free(tree->nodes);
+		if (tree->data)
+			free(tree->data);
+
 		free(tree);
+	}
 
 	tree = NULL;
 }

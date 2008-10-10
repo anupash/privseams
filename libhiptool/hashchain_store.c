@@ -271,7 +271,8 @@ int hcstore_refill(hchain_store_t *hcstore)
 	int hash_length = 0, hchain_length = 0;
 	int create_hchains = 0;
 	hash_chain_t *hchain = NULL;
-	int err = 0, i, j, g, h, k;
+	hash_tree_t *link_tree = NULL;
+	int err = 0, i, j, g, h, k, l;
 
 	HIP_ASSERT(hcstore != NULL);
 
@@ -300,11 +301,36 @@ int hcstore_refill(hchain_store_t *hcstore)
 						// count the overall amount of created hchains
 						err += create_hchains;
 
+						// hierarchy level 0 does not use any link trees
+						link_tree = NULL;
+
 						for (k = 0; k < create_hchains; k++)
 						{
+							if (h > 0)
+							{
+								// create a link tree for each hchain on level > 0
+								link_tree = htree_init(MAX_HCHAINS_PER_ITEM, hash_length,
+										hash_length);
+								htree_add_random_secrets(link_tree);
+
+								// add the anchors of the next lower level as data
+								for (l = 0; l < hip_ll_get_size(
+										&hcstore->hchain_shelves[i][j].hchains[g][h - 1]);
+										l++)
+								{
+									htree_add_data(link_tree,
+										((hash_chain_t *) hip_ll_get(
+										&hcstore->hchain_shelves[i][j].hchains[g][h - 1],
+										l))->anchor_element->hash, hash_length);
+								}
+
+								htree_calc_nodes(link_tree, htree_leaf_generator,
+										htree_node_generator, NULL);
+							}
+
 							// create a new hchain
 							HIP_IFEL(!(hchain = hchain_create(hash_function, hash_length,
-									hchain_length, h, NULL)), -1,
+									hchain_length, h, link_tree)), -1,
 									"failed to create new hchain\n");
 
 							// add it as last element to have some circulation
@@ -338,6 +364,8 @@ hash_chain_t * hcstore_get_hchain(hchain_store_t *hcstore, int function_id,
 			&& hash_length_id < hcstore->num_hash_lengths[function_id]);
 	HIP_ASSERT(hchain_length > 0);
 	HIP_ASSERT(hierarchy_level >= 0);
+
+	// TODO this should return a hchain from the highest level
 
 	// first find the correct hchain item
 	for (i = 0; i < hcstore->hchain_shelves[function_id][hash_length_id].
@@ -388,6 +416,8 @@ hash_chain_t * hcstore_get_hchain_by_anchor(hchain_store_t *hcstore, int functio
 	HIP_ASSERT(hash_length_id >= 0
 			&& hash_length_id < hcstore->num_hash_lengths[function_id]);
 	HIP_ASSERT(anchor != NULL);
+
+	// TODO this should look for the anchor at the respective hierarchy level
 
 	hash_length = hcstore_get_hash_length(hcstore, function_id, hash_length_id);
 
