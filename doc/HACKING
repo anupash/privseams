@@ -1069,7 +1069,7 @@ Add a proper sentence in the strcmp() series, like that:
 
     ...
     else if (!strcmp("newaction", text))
-        ret = ACTION_NEWONE;
+        ret = ACTION_NEWACT;
     ...
 
 1.3. hip_conf_check_action_argc() in libinet6/hipconf.c

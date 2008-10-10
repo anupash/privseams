@@ -21,7 +21,12 @@
 #include "hipconf.h"
 #include "libhipopendht.h"
 
-/** A help string containing the usage of @c hipconf. */
+/**
+ * A help string containing the usage of @c hipconf.
+ *
+ * @note If you added a new action, do not forget to add a brief usage below
+ *       for the action.
+ */
 const char *hipconf_usage =
 #ifdef CONFIG_HIP_ESCROW
 "add|del escrow <hit>\n"
@@ -77,10 +82,15 @@ const char *hipconf_usage =
 #endif
 ;
 
-/** Function pointer array containing pointers to handler functions.
+/**
+ * Function pointer array containing pointers to handler functions.
+ * Add a handler function for your new action in the action_handler[] array.
+ * If you added a handler function here, do not forget to define that function
+ * somewhere in this source file.
+ *
  *  @note Keep the elements in the same order as the @c TYPE values are defined
  *        in hipconf.h because type values are used as @c action_handler array
- *        index.
+ *        index. Locations and order of these handlers are important.
  */
 int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc) =
 {
@@ -118,6 +128,14 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc) 
 /**
  * Maps symbolic hipconf action (=add/del) names into numeric action
  * identifiers.
+ *
+ * @note If you defined a constant ACTION_NEWACT in hipconf.h,
+ *       you also need to add a proper sentence in the strcmp() series,
+ *       like that:
+ *       ...
+ *       else if (!strcmp("newaction", text))
+ *           ret = ACTION_NEWACT;
+ *       ...
  *
  * @param  text the action as a string.
  * @return the numeric action id correspoding to the symbolic text.
@@ -181,6 +199,9 @@ int hip_conf_get_action(char *text)
 /**
  * Gets the minimum amount of arguments needed to be given to the action.
  *
+ * @note If you defined a constant ACTION_NEWACT in hipconf.h,
+ *       you also need to add a case block for the constant
+ *       here in the switch(action) block.
  * @param  action action type
  * @return how many arguments needs to be given at least
  */
@@ -292,7 +313,16 @@ int hip_conf_get_type(char *text,char *argv[]) {
      return ret;
 }
 
-/* What does this function do? */
+/**
+ * Get a type argument index, in argv[].
+ *
+ * @note If you defined a constant ACTION_NEWACT in hipconf.h,
+ *       you also need to add a case block for the constant
+ *       here in the switch(action) block.
+ * @param  integer value for an action
+ * @return an index for argv[], which indicates the type argument.
+ *         Usually either 1 or 2.
+ */
 int hip_conf_get_type_arg(int action)
 {
 	int type_arg = -1;

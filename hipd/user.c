@@ -21,6 +21,9 @@ int hip_sendto_user(const struct hip_common *msg, const struct sockaddr *dst){
 /**
  * Handles a user message.
  *
+ * @note If you added a SO_HIP_NEWMODE in libinet6/icomm.h, you also need to
+ *       add a case block for your SO_HIP_NEWMODE constant in the
+ *       switch(msg_type) block in this function.
  * @param  msg  a pointer to the received user message HIP packet.
  * @param  src
  * @return zero on success, or negative error value on error.
