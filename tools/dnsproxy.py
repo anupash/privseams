@@ -366,15 +366,9 @@ class Global:
 
 
 
-		    #########################################
-		    ###
-		    #  executing the hipconf command if possible
-		    ###
-		    fout.write('111 - TTHERE a any \n')
-		    #----------------------
 		    nam = q1['qname']
                     lr = gp.getbyname(nam)
-
+		    fout.write('**************** \n')
 		    #cmd for executing hipconf dnsproxy command
 		    cmd = "hipconf dnsproxy " + nam + " 3>&1 2>&1 "
 		    fout.write("COMMAND  %s\n" % (cmd,))
@@ -392,8 +386,7 @@ class Global:
 		    else:
 			fout.write('COMMAND  %s\n' % (cmd,))
 		    	#----------------------
-		    	fout.write('222 - TTHERE a any \n')
-		    #########################################
+		    fout.write('**************** \n')
 
 
 

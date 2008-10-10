@@ -1652,9 +1652,6 @@ int hip_conf_handle_buddies_toggle(hip_common_t *msg, int action, const char *op
 }
 
 
-
-
-
 /**
  * Function that gets data from hipd for the dns proxy - hipconf dnsproxy IP/hostname
  *
@@ -1684,7 +1681,7 @@ int hip_conf_handle_get_dnsproxy(hip_common_t *msg, int action, const char *opt[
 	hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX] = '\0';
 
 	ret = hip_get_info_for_dnsproxy_from_hostname(hostname, &ipv6_addr,
-						      &hit, &lsi);
+						      &hit,     &lsi);
 	IPV6_TO_IPV4_MAP(&ipv6_addr, &ipv4_addr);
     }//ipv4/ipv6 provided
     else{
@@ -1692,21 +1689,18 @@ int hip_conf_handle_get_dnsproxy(hip_common_t *msg, int action, const char *opt[
     }
 
     if(ret){
-	//print hit
+	//hit string
 	hit_str =  hip_convert_hit_to_str(&hit, NULL);
-	//HIP_DEBUG("%s\n", hit_str);
 
-	//print ip
+	//ip string
 	HIP_IFE((!(ip_str = HIP_MALLOC(INET_ADDRSTRLEN, 0))), -1);
 	memset(ip_str, 0, INET_ADDRSTRLEN);
 	inet_ntop(AF_INET, &ipv4_addr, ip_str, INET_ADDRSTRLEN);
-	//HIP_DEBUG("%s\n", ip_str);
 
-	//print lsi
+	//lsi string
 	HIP_IFE((!(lsi_str = HIP_MALLOC(INET_ADDRSTRLEN, 0))), -1);
 	memset(lsi_str, 0, INET_ADDRSTRLEN);
 	inet_ntop(AF_INET, &lsi, lsi_str, INET_ADDRSTRLEN);
-	//HIP_DEBUG("%s\n", lsi_str);
 
 	HIP_DEBUG("%s %s %s\n", hit_str, ip_str, lsi_str);
     }
@@ -1715,9 +1709,6 @@ out_err:
     memset(msg, 0, HIP_MAX_PACKET);
     return(err);
 }
-
-
-
 
 
 /**
