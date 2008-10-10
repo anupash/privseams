@@ -327,7 +327,6 @@ int main(int argc, char ** argv)
 			printf("ERROR verifying anchor!\n");
 			exit(1);
 		}
-		hchain_free(hchain);
 
 		if (!memcmp(data, hchains[0]->anchor_element->hash, hash_length))
 		{
@@ -337,6 +336,7 @@ int main(int argc, char ** argv)
 			printf("ERROR no this is not the anchor we verified!\n");
 			exit(1);
 		}
+		hchain_free(hchain);
 
 		// simulate level 0 hchain verification
 		if(!hchain_verify(hchains[0]->source_element->hash, data,
