@@ -3705,9 +3705,8 @@ combo-newgroup=&lt;create new...&gt;
   	2. hipfw -dAo
   	</para>
 	<para>
-  	3. nc <responder-ip> 1111
+  	3. nc &lt;responder-ip&gt; 1111
 	</para>
-
   </section>
 
   </chapter>
