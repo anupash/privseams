@@ -5,7 +5,7 @@
 #include <linux/spinlock.h>
 
 #include "builder.h"
-#include "hidb.h"
+//#include "hidb.h"
 #include "misc.h"
 #include "timer.h"
 

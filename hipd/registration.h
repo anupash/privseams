@@ -15,11 +15,13 @@
 #define HIP_REGISTRATION_H
 
 #include "misc.h"
-#include "hiprelay.h" // For relrec lifetimes.
-#include "escrow.h" // For escrow lifetimes and other escrow stuff.
 #include "builder.h" // For lifetime conversions.
 #include "protodefs.h" // For service type values and hip_ha_t
+#ifndef __KERNEL__
+#include "hiprelay.h" // For relrec lifetimes.
+#include "escrow.h" // For escrow lifetimes and other escrow stuff.
 #include "linkedlist.h" // For pending service requests.
+#endif
 
 /**
  * Pending request lifetime. Pending requests are created when the requester

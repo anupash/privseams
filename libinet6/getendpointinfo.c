@@ -218,7 +218,7 @@ int setmyeid(struct sockaddr_eid *my_eid,
     }
   }
 
-  HIP_DEBUG_HIT("Calculated HIT from hip_host_id\n", &ep_hip->id.hit);
+  HIP_DEBUG_HIT("Calculated HIT from hip_host_id", &ep_hip->id.hit);
 
   err = hip_build_param_contents(msg, (void *) &ep_hip->id.hit, HIP_PARAM_HIT,
                                       sizeof(struct in6_addr));
@@ -248,15 +248,14 @@ int setmyeid(struct sockaddr_eid *my_eid,
 
   /*Laura*********************/
   //hip_send_daemon_info(msg_HIT); // for app. specified HIs
-  HIP_DEBUG("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n calling socket..\n\n\n");
+  _HIP_DEBUG("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n calling socket..\n\n\n");
   socket_fd = socket(PF_HIP, SOCK_STREAM, 0);
   if(socket_fd == -1){
     HIP_ERROR("Couldn't create socket\n");
     err = -1;
     goto out_err;
   }
-  else
-  HIP_DEBUG("\n\n\n\n\n\n\n\n\n\n great no error..\n\n\n");
+  _HIP_DEBUG("\n\n\n\n\n\n\n\n\n\n great no error..\n\n\n");
 
   len = hip_get_msg_total_len(msg);
   err = getsockopt(socket_fd, IPPROTO_HIP, SO_HIP_SOCKET_OPT, (void *)msg, &len);
@@ -291,7 +290,7 @@ int setmyeid(struct sockaddr_eid *my_eid,
 
   HIP_DEBUG("\n");
   
- out_err:
+out_err:
 
   if (msg)
     hip_msg_free(msg);
@@ -597,12 +596,12 @@ int get_localhost_endpointinfo(const char *basename,
   char first_key_line[30];
   FILE* fp;
   const char *pub_suffix = "_pub";
-  
+
   *res = NULL;
-  
+
   _HIP_DEBUG("glhepi\n");
   HIP_ASSERT(hints);
-  
+
   // XX TODO: check flags?
   memset(hostname, 0, HIP_HOST_ID_HOSTNAME_LEN_MAX);
   err = gethostname(hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
@@ -611,21 +610,20 @@ int get_localhost_endpointinfo(const char *basename,
     err = EEI_NONAME;
     goto out_err;
   }
-  
+
   /* select between anonymous/public HI based on the file name */
   if(!findsubstring(basename, pub_suffix))
     hints->ei_flags |= HIP_ENDPOINT_FLAG_ANON;
-  
+
   /* System specific HIs should be added into the kernel with the
      HIP_HI_REUSE_ANY flag set. We set the flag 
      (specific for setmyeid) 'wrongly' here
      because this way we make the HIs readable by all processes.
      This function calls setmyeid() internally.. */
   hints->ei_flags |= HIP_HI_REUSE_ANY;
-  
+
   /*Support for HITs (14.3.06 Laura)*/
   hints->ei_flags |= HIP_ENDPOINT_FLAG_HIT;
-  
   
   /* check the algorithm from PEM format key */
   fp = fopen(basename, "rb");
@@ -730,8 +728,8 @@ int get_localhost_endpointinfo(const char *basename,
     }
   }
 
-  err = setmyeid(((struct sockaddr_eid *) (*res)->ei_endpoint), servname,
-		 (struct endpoint *) endpoint_hip, ifaces);
+//  err = setmyeid(((struct sockaddr_eid *) (*res)->ei_endpoint), servname,
+//		 (struct endpoint *) endpoint_hip, ifaces);
   if (err) {
     HIP_ERROR("Failed to set up my EID (%d)\n", err);
     err = EEI_SYSTEM;
@@ -863,7 +861,7 @@ int get_kernel_peer_list(const char *nodename, const char *servname,
   }
   
   /* Call the kernel */
-  err = hip_recv_daemon_info(msg, 0);
+  err = hip_send_recv_daemon_info(msg);
   if (err) {
     err = EEI_SYSTEM;
     HIP_ERROR("Failed to recv msg\n");
@@ -1193,11 +1191,11 @@ int get_peer_endpointinfo(const char *hostsfile,
   char line[500];
   struct in6_addr hit;
   List mylist;
-  
+
   *res = NULL; /* The NULL value is used in the loop below. */
-  
+
   HIP_DEBUG("\n");
-  
+
   HIP_ASSERT(nodename);
   HIP_ASSERT(hints);
 
@@ -1207,7 +1205,7 @@ int get_peer_endpointinfo(const char *hostsfile,
     HIP_ERROR("Failed to open %s\n", _PATH_HIP_HOSTS);
     goto out_err;
   }
-  
+
   memset(&ai_hints, 0, sizeof(struct addrinfo));
   ai_hints.ai_flags = hints->ei_flags;
   /* Family should be AF_ANY but currently the HIP module supports only IPv6.
@@ -1393,12 +1391,12 @@ int get_peer_endpointinfo(const char *hostsfile,
   if (!match_found) {
     err = EEI_NONAME;
   }
-  
+
  out_err:
-  
+
   if (ai_res)
     freeaddrinfo(ai_res);
-  
+
   if (hosts)
     fclose(hosts);
 
@@ -1668,7 +1666,7 @@ int getendpointinfo(const char *nodename, const char *servname,
       err = EEI_MEMORY;
       goto err_out;
     }
-    
+
     /*DEFAULT_CONFIG_DIR = /etc/hip/*/
     findkeyfiles(DEFAULT_CONFIG_DIR, &list);
     
@@ -1693,22 +1691,23 @@ int getendpointinfo(const char *nodename, const char *servname,
     }
     err = get_localhost_endpointinfo(filenamebase, servname, 
 				     &modified_hints, &first);
+
     free(filenamebase);
     current = first;
-    
+
     for(i=1; i<length(&list); i++) {
       _HIP_DEBUG ("%s\n", getitem(&list,i));
-      
+
       filenamebase_len = strlen(DEFAULT_CONFIG_DIR) + 1 +
 	strlen(getitem(&list,i)) + 1;
-      
+
       filenamebase = malloc(filenamebase_len);
       if (!filenamebase) {
 	HIP_ERROR("Couldn't allocate file name\n");
 	err = -ENOMEM;
 	goto err_out;
       }
-      
+
       ret = snprintf(filenamebase, filenamebase_len, "%s/%s",
 		     DEFAULT_CONFIG_DIR,
 		     getitem(&list,i));
@@ -1716,15 +1715,19 @@ int getendpointinfo(const char *nodename, const char *servname,
 	err = -EINVAL;
 	goto err_out;
       }
-      
+
       err = get_localhost_endpointinfo(filenamebase, servname, 
 				       &modified_hints, &new);
-      
+      if (err) {
+	HIP_ERROR("get_localhost_endpointinfo() failed\n");
+	goto err_out;
+      }
+
       current->ei_next = new;
       current = new;
       
     }
-    
+
     *res = first;
     
   } else {

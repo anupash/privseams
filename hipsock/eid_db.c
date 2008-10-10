@@ -1,3 +1,4 @@
+#if 0
 /*
 *  HIP socket handler loadable kernel module
 *  for kernel 2.6
@@ -15,8 +16,8 @@
 
 #include "eid_db.h"
 
-HIP_INIT_DB(hip_local_eid_db, "local_eid");
-HIP_INIT_DB(hip_peer_eid_db, "peer_eid");
+//HIP_INIT_DB(hip_local_eid_db, "local_eid");
+//HIP_INIT_DB(hip_peer_eid_db, "peer_eid");
 
 /*
  * The eid db lock (local or peer) must be obtained before accessing these
@@ -76,7 +77,6 @@ int hip_db_set_eid(struct sockaddr_eid *eid,
 {
         struct hip_db_struct *db;
         int err = 0;
-        unsigned long lf;
         struct hip_eid_db_entry *entry = NULL;
 
         HIP_DEBUG("Accessing %s eid db\n", ((is_local) ? "local" : "peer"));
@@ -330,7 +330,6 @@ void hip_db_dec_eid_use_cnt_by_eid_val(struct hip_db_struct *db,
 
         struct hip_eid_db_entry *tmp;
         struct list_head *curr, *iter;
-        unsigned long lf;
 
         HIP_WRITE_LOCK_DB(db);
         
@@ -368,7 +367,6 @@ int hip_db_get_lhi_by_eid(const struct sockaddr_eid *eid,
 {
         struct hip_db_struct *db;
         int err = 0;
-        unsigned long lf;
         struct hip_eid_db_entry *entry = NULL;
 
         HIP_DEBUG("Accessing %s eid db\n", ((is_local) ? "local" : "peer"));
@@ -406,5 +404,4 @@ int hip_db_get_my_lhi_by_eid(const struct sockaddr_eid *eid,
 {
         return hip_db_get_lhi_by_eid(eid, lhi, owner_info, 1);
 }
-
-
+#endif

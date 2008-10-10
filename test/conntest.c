@@ -502,6 +502,7 @@ int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
 int main_client_native(int socktype, char *peer_name, char *peer_port_name)
 {
 	struct endpointinfo hints, *epinfo, *res = NULL;
+	//struct addrinfo hints, *res = NULL;
 	struct timeval stats_before, stats_after;
 	unsigned long stats_diff_sec, stats_diff_usec;
 	char mylovemostdata[IP_MAXPACKET];
@@ -518,16 +519,14 @@ int main_client_native(int socktype, char *peer_name, char *peer_port_name)
 	endpoint_family = PF_HIP;
 
 	sockfd = socket(endpoint_family, socktype, 0);
-	if (sockfd == -1) {
-		HIP_ERROR("creation of socket failed\n");
-		err = 1;
-		goto out;
-	}
-	
+	HIP_IFEL(sockfd < 0, 1, "creation of socket failed\n");
+
 	/* set up host lookup information  */
 	memset(&hints, 0, sizeof(hints));
 	hints.ei_socktype = socktype;
 	hints.ei_family = endpoint_family;
+	//hints.ai_socktype = socktype;
+	//hints.ai_family = endpoint_family;
 	/* Use the following flags to use only the kernel list for name resolution
 	 * hints.ei_flags = AI_HIP | AI_KERNEL_LIST;
 	 */
@@ -535,20 +534,28 @@ int main_client_native(int socktype, char *peer_name, char *peer_port_name)
 	/* lookup host */
 	err = getendpointinfo(peer_name, peer_port_name, &hints, &res);
 	if (err) {
+		HIP_ERROR("getendpointfo failed\n");
+		goto out_err;
+	}
+	//hints.ai_flags |= AI_EXTFLAGS;
+	//hints.ai_eflags |= HIP_PREFER_ORCHID;
+	err = getaddrinfo(peer_name, peer_port_name, &hints, &res);
+	if (err) {
 		HIP_ERROR("getaddrinfo failed (%d): %s\n", err, gepi_strerror(err));
-		goto out;
+		goto out_err;
 	}
 	if (!res) {
 		HIP_ERROR("NULL result, TODO\n");
-		goto out;
+		goto out_err;
 	}
-
+/*
 	HIP_DEBUG("family=%d value=%d\n", res->ei_family,
 		  ntohs(((struct sockaddr_eid *) res->ei_endpoint)->eid_val));
+*/
 
 	// data from stdin to buffer
-	bzero(receiveddata, IP_MAXPACKET);
-	bzero(mylovemostdata, IP_MAXPACKET);
+	memset(receiveddata, 0, IP_MAXPACKET);
+	memset(mylovemostdata, 0, IP_MAXPACKET);
 
 	printf("Input some text, press enter and ctrl+d\n");
 
@@ -562,60 +569,57 @@ int main_client_native(int socktype, char *peer_name, char *peer_port_name)
 
 	epinfo = res;
 	while(epinfo) {
-		err = connect(sockfd, (struct sockaddr *) epinfo->ei_endpoint,
-			      epinfo->ei_endpointlen);
+		err = connect(sockfd, (struct sockaddr *) epinfo->ei_endpoint, epinfo->ei_endpointlen);
+		//err = connect(sockfd, res->ai_addr, res->ai_addrlen);
 		if (err) {
 			HIP_PERROR("connect");
-			goto out;
+			goto out_err;
 		}
 		epinfo = epinfo->ei_next;
 	}
 
-	
 	gettimeofday(&stats_after, NULL);
 	stats_diff_sec  = (stats_after.tv_sec - stats_before.tv_sec) * 1000000;
 	stats_diff_usec = stats_after.tv_usec - stats_before.tv_usec;
-  
+
 	HIP_DEBUG("connect took %.10f sec\n",
 		  (stats_diff_sec + stats_diff_usec) / 1000000.0);
-	
+
 	/* Send the data read from stdin to the server and read the response.
 	   The server should echo all the data received back to here. */
 	while((datasent < datalen) || (datareceived < datalen)) {
-    
+
 		if (datasent < datalen) {
 			sendnum = send(sockfd, mylovemostdata + datasent, datalen - datasent, 0);
       
 			if (sendnum < 0) {
 				HIP_PERROR("send");
 				err = 1;
-				goto out;
+				goto out_err;
 			}
 			datasent += sendnum;
 		}
-    
+
 		if (datareceived < datalen) {
 			recvnum = recv(sockfd, receiveddata + datareceived,
 				       datalen-datareceived, 0);
 			if (recvnum <= 0) {
 				HIP_PERROR("recv");
 				err = 1;
-				goto out;
+				goto out_err;
 			}
 			datareceived += recvnum;
 		}
 	}
 
-	if (memcmp(mylovemostdata, receiveddata, IP_MAXPACKET)) {
-		HIP_ERROR("Sent and received data did not match\n");
-		err = 1;
-		goto out;
-	}
+	HIP_IFEL(memcmp(mylovemostdata, receiveddata, IP_MAXPACKET),
+				1, "Sent and received data did not match\n");
 
-out:
+out_err:
 	if (res)
-		free_endpointinfo(res);
-	if (sockfd != -1)
+		//free_endpointinfo(res);
+		freeaddrinfo(res);
+	if (sockfd > -1)
 		close(sockfd); // discard errors
 
 	HIP_INFO("Result of data transfer: %s.\n", (err ? "FAIL" : "OK"));
@@ -634,16 +638,17 @@ int main_server_native(int socktype, char *port_name)
 {
 	struct endpointinfo hints, *res = NULL;
 	struct sockaddr_eid peer_eid;
+	struct sockaddr_hip our_sockaddr, peer_sock;
 	char mylovemostdata[IP_MAXPACKET];
 	int recvnum, sendnum, serversock = 0, sockfd = 0, err = 0, on = 1;
 	int endpoint_family = PF_HIP;
-	socklen_t peer_eid_len;
-	
+	socklen_t peer_eid_len = sizeof(struct sockaddr_hip);
+
 	serversock = socket(endpoint_family, socktype, 0);
 	if (serversock < 0) {
-		HIP_PERROR("socket");
+		HIP_PERROR("socket: ");
 		err = 1;
-		goto out;
+		goto out_err;
 	}
 
 	setsockopt(serversock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
@@ -653,39 +658,44 @@ int main_server_native(int socktype, char *port_name)
 	hints.ei_socktype = socktype;
 
 	HIP_DEBUG("Native server calls getendpointinfo\n");
-	
+
 	err = getendpointinfo(NULL, port_name, &hints, &res);
-	if (err) {
+	if (err || !res) {
 		HIP_ERROR("Resolving of peer identifiers failed (%d)\n", err);
-		goto out;
+		goto out_err;
 	}
 
 	HIP_DEBUG("Native server calls bind\n");
 
-	if (bind(serversock, res->ei_endpoint, res->ei_endpointlen) < 0) {
-		HIP_PERROR("bind");
+	memset(&our_sockaddr, 0, sizeof(struct sockaddr_hip));
+	our_sockaddr.ship_port = ((struct sockaddr_eid *)res->ei_endpoint)->eid_port;
+HIP_DEBUG("port %d\n", our_sockaddr.ship_port);
+	our_sockaddr.ship_family = endpoint_family;
+//	if (bind(serversock, res->ei_endpoint, res->ei_endpointlen) < 0) {
+	if (bind(serversock, &our_sockaddr, sizeof(struct sockaddr_hip)) < 0) {
+		HIP_PERROR("bind: ");
 		err = 1;
-		goto out;
+		goto out_err;
 	}
 	
 	HIP_DEBUG("Native server calls listen\n");
 
 	if (socktype == SOCK_STREAM && listen(serversock, 1) < 0) {
-		HIP_PERROR("listen");
+		HIP_PERROR("listen: ");
 		err = 1;
-		goto out;
+		goto out_err;
 	}
 
 	HIP_DEBUG("Native server waits connection request\n");
 
 	while(1) {
 		if (socktype == SOCK_STREAM) {
-			sockfd = accept(serversock, (struct sockaddr *) &peer_eid,
+			sockfd = accept(serversock, (struct sockaddr *) &peer_sock,
 					&peer_eid_len);
 			if (sockfd < 0) {
-				HIP_PERROR("accept failed");
+				HIP_PERROR("accept: ");
 				err = 1;
-				goto out;
+				goto out_err;
 			}
 
 			while((recvnum = recv(sockfd, mylovemostdata,
@@ -693,44 +703,42 @@ int main_server_native(int socktype, char *port_name)
 				mylovemostdata[recvnum] = '\0';
 				printf("%s", mylovemostdata);
 				fflush(stdout);
-				if (recvnum == 0) {
-					break;
-				}
 	
 				/* send reply */
 				sendnum = send(sockfd, mylovemostdata, recvnum, 0);
 				if (sendnum < 0) {
-					HIP_PERROR("send");
+					HIP_PERROR("send: ");
 					err = 1;
-					goto out;
+					goto out_err;
 				}
 			}
 		} else { /* UDP */
 			sockfd = serversock;
 			while(recvnum = recvfrom(sockfd, mylovemostdata,
 						 sizeof(mylovemostdata), 0,
-						 (struct sockaddr *)& peer_eid,
+						 (struct sockaddr *) &peer_sock,
 						 &peer_eid_len) > 0) {
 				mylovemostdata[recvnum] = '\0';
 				printf("%s", mylovemostdata);
 				fflush(stdout);
-				if (recvnum == 0) {
-					break;
-				}
-	
+
+HIP_DEBUG("received %d bytes\n", recvnum);
+HIP_DEBUG("received: %s\n", mylovemostdata);
+
 				/* send reply */
 				sendnum = sendto(sockfd, mylovemostdata, recvnum, 0,
-						 (struct sockaddr *) &peer_eid, peer_eid_len);
+						 (struct sockaddr *) &peer_sock, peer_eid_len);
+HIP_PERROR("sendto: ");
 				if (sendnum < 0) {
-					HIP_PERROR("send");
+					HIP_PERROR("sendto: ");
 					err = 1;
-					goto out;
+					goto out_err;
 				}
 			}
 		}
 	}
 
-out:
+out_err:
 
 	if (res)
 		free_endpointinfo(res);
