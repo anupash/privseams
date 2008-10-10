@@ -44,8 +44,8 @@ int hip_i3_init(){
 }
 
 
-int hip_hi3_add_pub_trigger_id(struct hip_host_id_entry *entry, int* count){
-	int i = *count;
+int hip_hi3_add_pub_trigger_id(struct hip_host_id_entry *entry, void* count){
+	int i = *(int*)count;
 	if( i > HI3_TRIGGER_MAX ){
 		HIP_ERROR("Trigger number exceeded");
 		return 0;
@@ -53,7 +53,7 @@ int hip_hi3_add_pub_trigger_id(struct hip_host_id_entry *entry, int* count){
 
 	bzero(&hi3_pub_id[i], ID_LEN);
 	memcpy(&hi3_pub_id[i], &entry->lhi.hit, sizeof(hip_hit_t));
-	(*count) ++;
+	(*((int*)count))++;
 
 	return 0;
 }
@@ -90,7 +90,7 @@ int hip_addr_parse(char *buf, struct sockaddr_in6 *in6, int len, int *res) {
  * This is the i3 callback to process received data.
  */
 void hip_hi3_receive_payload(cl_trigger *t, void* data, void *fun_ctx) 
-{
+{ 
 	struct hip_common *hip_common;
 	//	struct hip_work_order *hwo;
 	//	struct sockaddr_in6 src, dst;
@@ -129,8 +129,8 @@ void hip_hi3_receive_payload(cl_trigger *t, void* data, void *fun_ctx)
 	memset(&msg_info, 0, sizeof(msg_info));
 	msg_info.hi3_in_use = 1;
 
-	struct in6_addr lpback1 = { IN6ADDR_LOOPBACK_INIT };
-	struct in6_addr lpback2 = { IN6ADDR_LOOPBACK_INIT };
+	struct in6_addr lpback1 = IN6ADDR_LOOPBACK_INIT;
+	struct in6_addr lpback2 = IN6ADDR_LOOPBACK_INIT;
 
 	if(hip_receive_control_packet(hip_common, &lpback1 , &lpback2, //hip_cast_sa_addr(&src), hip_cast_sa_addr(&dst),
 				       &msg_info, 0)){
@@ -251,7 +251,7 @@ int hip_do_i3_stuff_for_i2(struct hip_locator *locator, hip_portpair_t *i2_info,
 		
 		if(i2_info->hi3_in_use && n_addrs > 0){
 			
-                        first = (char*)locator + sizeof(struct hip_locator);
+                        first = (struct hip_locator_info_addr_item *)locator + sizeof(struct hip_locator);
                         memcpy(i2_saddr, &first->address,
 			       sizeof(struct in6_addr));
 			
@@ -261,7 +261,7 @@ int hip_do_i3_stuff_for_i2(struct hip_locator *locator, hip_portpair_t *i2_info,
 				if(ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr))){
 					continue;
 				}
-				if(!hip_sockaddr_is_v6_mapped(&n->addr)){
+				if(!hip_sockaddr_is_v6_mapped((struct sockaddr *)&n->addr)){
 					memcpy(i2_daddr, hip_cast_sa_addr(&n->addr),
 					       hip_sa_addr_len(&n->addr));
 					ii = -1;
@@ -276,7 +276,7 @@ int hip_do_i3_stuff_for_i2(struct hip_locator *locator, hip_portpair_t *i2_info,
 					if(ipv6_addr_is_hit(hip_cast_sa_addr(&n->addr))){
 						continue;
 					}
-					if(hip_sockaddr_is_v6_mapped(&n->addr)){
+					if(hip_sockaddr_is_v6_mapped((struct sockaddr *)&n->addr)){
 						memcpy(i2_daddr, hip_cast_sa_addr(&n->addr),
 						       hip_sa_addr_len(&n->addr));
 						ii = -1;
