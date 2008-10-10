@@ -24,7 +24,7 @@ typedef struct htree_gen_args
  *
  * @note if you need more arguments here, add them to the gen_args struct
  */
-typedef int (*htree_leaf_gen_t) (unsigned char *data, int data_length,
+typedef int (*htree_leaf_gen_t) (unsigned char *data, unsigned char *secret, int data_length,
 							   unsigned char *dst_buffer, htree_gen_args_t *gen_args);
 
 typedef int (*htree_node_gen_t) (unsigned char *left_node, unsigned char *right_node,
@@ -37,6 +37,7 @@ typedef struct hash_tree
 	int num_data_blocks; /* number of data blocks to be verified with the tree */
 	int max_data_length; /* max length for a single leaf element */
 	unsigned char *data; /* array containing the data to be validated with the tree */
+	unsigned char *secrets; /* individual secrets to be revealed with each data block */
 
 	// tree elements variables
 	int node_length; /* length of a single node element */
@@ -67,14 +68,18 @@ hash_tree_t* htree_init(int num_data_blocks, int max_data_length, int node_lengt
 void htree_free(hash_tree_t *tree);
 int htree_add_data(hash_tree_t *tree, char *data, size_t data_length);
 int htree_add_random_data(hash_tree_t *tree, int num_random_blocks);
+int htree_add_random_secrets(hash_tree_t *tree);
 int htree_calc_nodes(hash_tree_t *tree, htree_leaf_gen_t leaf_gen,
 		htree_node_gen_t node_gen, htree_gen_args_t *gen_args);
 unsigned char* htree_get_branch(hash_tree_t *tree, int data_index,
 		int *branch_length);
+unsigned char* htree_get_secret(hash_tree_t *tree, int data_index,
+		int *secret_length);
 int htree_verify_branch(unsigned char *root, unsigned char *branch_nodes, int num_nodes,
-		int node_length, unsigned char *verify_data, int data_length, int data_index,
-		htree_leaf_gen_t leaf_gen, htree_node_gen_t node_gen, htree_gen_args_t *gen_args);
-int htree_leaf_generator(unsigned char *data, int data_length,
+		int node_length, unsigned char *verify_data, unsigned char * secret,
+		int data_length, int data_index, htree_leaf_gen_t leaf_gen,
+		htree_node_gen_t node_gen, htree_gen_args_t *gen_args);
+int htree_leaf_generator(unsigned char *data, unsigned char *secret, int data_length,
 		unsigned char *dst_buffer, htree_gen_args_t *gen_args);
 int htree_node_generator(unsigned char *left_node, unsigned char *right_node,
 		   unsigned char *dst_buffer, int node_length, htree_gen_args_t *gen_args);

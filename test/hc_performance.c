@@ -77,6 +77,8 @@ int main(int argc, char ** argv)
 	double std_dev = 0.0;
 	unsigned char *branch_nodes = NULL;
 	int branch_length = 0;
+	unsigned char *secret = NULL;
+	int secret_length = 0;
 
 	hash_function = NULL;
 
@@ -240,11 +242,13 @@ int main(int argc, char ** argv)
 		{
 			htree = htree_init(hchain_length, hash_length, hash_length);
 			htree_add_random_data(htree, hchain_length);
+			htree_add_random_secrets(htree);
 			htree_calc_nodes(htree, htree_leaf_generator, htree_node_generator, NULL);
 			branch_nodes = htree_get_branch(htree, i, &branch_length);
+			secret = htree_get_secret(htree, i, &secret_length);
 			gettimeofday(&start_time, NULL);
 			if (!htree_verify_branch(htree->root, branch_nodes, branch_length,
-					hash_length, &htree->data[i * hash_length], hash_length, i,
+					hash_length, &htree->data[i * hash_length], secret, hash_length, i,
 					htree_leaf_generator, htree_node_generator, NULL))
 			{
 				gettimeofday(&stop_time, NULL);

@@ -51,6 +51,7 @@ typedef struct hash_chain
 	hash_chain_element_t *current_element;
 	hash_chain_element_t *source_element;	/* seed - first element */
 	hash_chain_element_t *anchor_element;	/* anchor - last element */
+	hash_tree_t *link_tree; /* pointer to a hash tree for linking hchains */
 } hash_chain_t;
 
 

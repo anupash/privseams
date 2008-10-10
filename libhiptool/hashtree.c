@@ -61,6 +61,7 @@ hash_tree_t* htree_init(int num_data_blocks, int max_data_length, int node_lengt
     HIP_DEBUG("tree->depth: %i\n", tree->depth);
 
     tree->root = NULL;
+    tree->secrets = NULL;
 
   out_err:
 	if (err)
@@ -149,6 +150,35 @@ int htree_add_random_data(hash_tree_t *tree, int num_random_blocks)
     return 0;
 }
 
+int htree_add_random_secrets(hash_tree_t *tree)
+{
+	int err = 0;
+
+	HIP_ASSERT(tree != NULL);
+
+	if (!tree->secrets)
+	{
+		HIP_IFEL(!(tree->secrets = (unsigned char *)
+				malloc(tree->num_data_blocks * tree->max_data_length)), -1,
+				"failed to allocate memory\n");
+
+		// add num_random_blocks random data to the data-array
+		RAND_bytes(&tree->secrets[0],
+				tree->num_data_blocks * tree->max_data_length);
+
+		HIP_DEBUG("random secrets added\n");
+
+	} else
+	{
+		HIP_DEBUG("secrets already exist\n");
+
+		err = -1;
+	}
+
+  out_err:
+    return err;
+}
+
 /*!
  * \brief Generate the nodes for a tree with filled leaves.
  *
@@ -168,6 +198,7 @@ int htree_calc_nodes(hash_tree_t *tree, htree_leaf_gen_t leaf_gen,
 	// first leaf to be used when calculating next tree level in bytes
     int source_index = 0;
     int target_index = 0;
+    unsigned char *secret = NULL;
 
 	HIP_ASSERT(tree != NULL);
 	// tree has to be full
@@ -181,10 +212,15 @@ int htree_calc_nodes(hash_tree_t *tree, htree_leaf_gen_t leaf_gen,
     {
     	HIP_DEBUG("calling leaf generator function...\n");
 
+    	if (tree->secrets)
+    	{
+    		secret = &tree->secrets[i * tree->max_data_length];
+    	}
+
     	// input: i-th data block -> output as i-th node-array element
-    	HIP_IFEL(leaf_gen(&tree->data[i * tree->max_data_length], tree->max_data_length,
-    			&tree->nodes[i * tree->node_length], gen_args), -1,
-    			"failed to calculate leaf hashes\n");
+    	HIP_IFEL(leaf_gen(&tree->data[i * tree->max_data_length], secret,
+    			tree->max_data_length, &tree->nodes[i * tree->node_length], gen_args),
+    			-1, "failed to calculate leaf hashes\n");
     }
 
     /* compute hashes on all other levels */
@@ -302,6 +338,14 @@ unsigned char* htree_get_branch(hash_tree_t *tree, int data_index,
     return branch_nodes;
 }
 
+unsigned char* htree_get_secret(hash_tree_t *tree, int data_index,
+		int *secret_length)
+{
+	*secret_length = tree->max_data_length;
+
+	return &tree->secrets[data_index * tree->max_data_length];
+}
+
 /*!
  * \brief Check the data and an uptree against the root.
  *
@@ -319,8 +363,9 @@ unsigned char* htree_get_branch(hash_tree_t *tree, int data_index,
  * \return 0
  */
 int htree_verify_branch(unsigned char *root, unsigned char *branch_nodes, int num_nodes,
-		int node_length, unsigned char *verify_data, int data_length, int data_index,
-		htree_leaf_gen_t leaf_gen, htree_node_gen_t node_gen, htree_gen_args_t *gen_args)
+		int node_length, unsigned char *verify_data, unsigned char * secret,
+		int data_length, int data_index, htree_leaf_gen_t leaf_gen,
+		htree_node_gen_t node_gen, htree_gen_args_t *gen_args)
 {
     /* space for two nodes to be hashed together */
     unsigned char buffer[2 * node_length];
@@ -352,7 +397,7 @@ int htree_verify_branch(unsigned char *root, unsigned char *branch_nodes, int nu
         } else
         {
             /* hash data in order to derive the hash tree leaf */
-            HIP_IFEL(leaf_gen(&verify_data[0], data_length,
+            HIP_IFEL(leaf_gen(&verify_data[0], secret, data_length,
             		&buffer[(1 - sibling_offset) * node_length], gen_args), -1,
             		"failed to calculate leaf hash\n");
         }
@@ -391,12 +436,31 @@ int htree_verify_branch(unsigned char *root, unsigned char *branch_nodes, int nu
     return err;
 }
 
-int htree_leaf_generator(unsigned char *data, int data_length,
+int htree_leaf_generator(unsigned char *data, unsigned char *secret, int data_length,
 		unsigned char *dst_buffer, htree_gen_args_t *gen_args)
 {
 	int err = 0;
+	unsigned char buffer[2 * data_length];
+	unsigned char *hash_data = NULL;
+	int hash_data_length = 0;
 
-	HIP_IFEL(!SHA1(data, data_length, dst_buffer), -1, "failed to calculate hash\n");
+	if (secret)
+	{
+		memcpy(&buffer[0], data, data_length);
+		memcpy(&buffer[data_length], secret, data_length);
+
+		hash_data = buffer;
+		hash_data_length = 2 * data_length;
+
+	} else
+	{
+		hash_data = data;
+		hash_data_length = data_length;
+	}
+
+
+	HIP_IFEL(!SHA1(hash_data, hash_data_length, dst_buffer), -1,
+			"failed to calculate hash\n");
 
   out_err:
 	return err;
