@@ -1243,7 +1243,7 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
 	      <itemizedlist>
 		<listitem><para>ping OOPS_LSI</para></listitem>
 		<listitem><para>ssh OOPS_LSI</para></listitem>
-		<listitem><para>nc OOPS_LSI -u 5555 # oops must be running nc -l -u -p 5555</para></listitem>
+		<listitem><para>nc OOPS_LSI -u 5555 # oops must be running nc -l -u 5555</para></listitem>
 	      </itemizedlist>
     </section>
     <section id="ipv6_appl">
@@ -1369,7 +1369,7 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
 	      oops:
 	    </para>
 	      <itemizedlist>
-		<listitem><para>nc -l -u -p 5555</para></listitem>
+		<listitem><para>nc -l -u 5555</para></listitem>
 	      </itemizedlist>
 	    <para>
 	      crash:
@@ -3642,7 +3642,7 @@ combo-newgroup=&lt;create new...&gt;
 	capability with the following command:
 	</para>
   	<para>
-  	3. hipconf run opp advanced
+  	3. hipconf set opp advanced
   	</para>
 	<para>
 	To try the feature, we initiate a TCP connection using the HIP
@@ -3677,35 +3677,23 @@ combo-newgroup=&lt;create new...&gt;
 	firewall. It is enabled with the -o option as shown below:
 	</para>
 	<para>
-	hipfw -o
-	</para>
-	<para>
-	The system-based opportunistic mode uses the efficient detection
-	of peer HIP capability. Therefore, the firewall should be run at both
-	peers. Also, HIP efficient detection should be enabled both at the
-	initiator and at the receiver with the following command:
-	</para>
-	<para>
-	hipconf run opp advanced
+	hipfw -dAo
 	</para>
 	<para>
 	Following is an example of all the steps to be followed at two peers 
 	for using the system-based opportunistic mode between them.
 	</para>
   	<para>
-	At the receiver, one can execute these steps:
+	At the responder, one can execute these steps:
 	</para>
   	<para>
 	1. hipd
 	</para>
   	<para>
-  	2. hipfw -dA
+  	2. hipfw -Aod
   	</para>
   	<para>
-  	3. hipconf run opp advanced
-  	</para>
-  	<para>
-	4. nc -l -p port_no
+	3. nc -l 1111
   	</para>
   	<para>
 	At the initiator, one can execute these steps:
@@ -3716,11 +3704,8 @@ combo-newgroup=&lt;create new...&gt;
   	<para>
   	2. hipfw -dAo
   	</para>
-  	<para>
-  	3. hipconf run opp advanced
-  	</para>
 	<para>
-  	4. nc IP_number port_no
+  	3. nc <responder-ip> 1111
 	</para>
 
   </section>
