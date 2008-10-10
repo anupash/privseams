@@ -1243,7 +1243,7 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
 	      <itemizedlist>
 		<listitem><para>ping OOPS_LSI</para></listitem>
 		<listitem><para>ssh OOPS_LSI</para></listitem>
-		<listitem><para>nc OOPS_LSI -u 5555 # oops must be running nc -l -u -p 5555</para></listitem>
+		<listitem><para>nc OOPS_LSI -u 5555 # oops must be running nc -l -u 5555</para></listitem>
 	      </itemizedlist>
     </section>
     <section id="ipv6_appl">
@@ -1369,7 +1369,7 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
 	      oops:
 	    </para>
 	      <itemizedlist>
-		<listitem><para>nc -l -u -p 5555</para></listitem>
+		<listitem><para>nc -l -u 5555</para></listitem>
 	      </itemizedlist>
 	    <para>
 	      crash:
@@ -1844,7 +1844,58 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
   </para>
   <para>
   Then run at the server: vlc -vvv &lt;any avi video file&gt; --ipv6 --sout '#std{access=rtp,mux=ts,dst=[&lt;CLIENT's HIT&gt;]:1234}'
-
+  </para>
+  </section>
+  <section id="sec_vnc">
+  <title>VNC applications</title>
+  <para>
+    Vino-server/Vinagre-client and tightVNCserver/xtightVNCviewer
+    applications work just fine with the LSI support of HIPL. LSIs are
+    used because tested applications did not support IPv6. It seems
+    that most of the VNC applications do not support IPv6.
+  </para>
+  <para>
+    VINO/VINAGRE
+  </para>
+  <para>
+  Setup LSIs as the manual instructs and remember the daemons and so
+  on. Then do the following.
+  </para>
+  <para>
+    For server side (Remember Ubuntu was used when testing). Open the
+    settings GUI from Gnome System->Preferences->Remote Desktop then
+    allow other users to view and or control the desktop. You can
+    also set a password for the desktop. 
+  </para>
+  <para>
+    For the client side do the following and everything should work.
+  </para>
+  <programlisting>
+    vinagre &lt;LSI-of-Server&gt;
+  </programlisting>
+  <para>
+    THIGHTVNCSERVER/XTIGHTVNCVIEWER
+  </para>
+  <para>
+  Setup LSIs as the manual instructs and remember the daemons and so
+  on. Then do the following.
+  </para>
+  <para>
+    For the server side install package tightvncsercer. To start the
+    server just write tightvncserver on the terminal and the server
+    will start with default options. Refer to the official
+    documentation or the man pages of tightvnc for more information on
+    the configuration. 
+  </para>
+  <para>
+    On the client side install package xtightvncviewer. Then with the
+    following command you should have an successfull connection.
+  </para>
+  <programlisting>
+    xtightvncviewer &lt;LSI-of-server&gt;:1
+  </programlisting>
+  <para>
+  Longer how-to can be found from <ulink url="http://www.cs.helsinki.fi/u/sklvarjo/vnc.htm" />
   </para>
   </section>
   <section id="sec_openldap">
@@ -3591,7 +3642,7 @@ combo-newgroup=&lt;create new...&gt;
 	capability with the following command:
 	</para>
   	<para>
-  	3. hipconf run opp advanced
+  	3. hipconf set opp advanced
   	</para>
 	<para>
 	To try the feature, we initiate a TCP connection using the HIP
@@ -3626,35 +3677,23 @@ combo-newgroup=&lt;create new...&gt;
 	firewall. It is enabled with the -o option as shown below:
 	</para>
 	<para>
-	hipfw -o
-	</para>
-	<para>
-	The system-based opportunistic mode uses the efficient detection
-	of peer HIP capability. Therefore, the firewall should be run at both
-	peers. Also, HIP efficient detection should be enabled both at the
-	initiator and at the receiver with the following command:
-	</para>
-	<para>
-	hipconf run opp advanced
+	hipfw -dAo
 	</para>
 	<para>
 	Following is an example of all the steps to be followed at two peers 
 	for using the system-based opportunistic mode between them.
 	</para>
   	<para>
-	At the receiver, one can execute these steps:
+	At the responder, one can execute these steps:
 	</para>
   	<para>
 	1. hipd
 	</para>
   	<para>
-  	2. hipfw -dA
+  	2. hipfw -Aod
   	</para>
   	<para>
-  	3. hipconf run opp advanced
-  	</para>
-  	<para>
-	4. nc -l -p port_no
+	3. nc -l 1111
   	</para>
   	<para>
 	At the initiator, one can execute these steps:
@@ -3665,11 +3704,8 @@ combo-newgroup=&lt;create new...&gt;
   	<para>
   	2. hipfw -dAo
   	</para>
-  	<para>
-  	3. hipconf run opp advanced
-  	</para>
 	<para>
-  	4. nc IP_number port_no
+  	3. nc <responder-ip> 1111
 	</para>
 
   </section>

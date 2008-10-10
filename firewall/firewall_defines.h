@@ -29,6 +29,8 @@ struct esp_tuple
 	SList * dst_addr_list;
 	struct tuple * tuple;
 	struct decryption_data * dec_data;
+	/* tracking of the ESP SEQ number */
+	uint32_t seq_no;
 	/* members needed for ESP protection extension */
 	uint8_t esp_prot_tfm;
 	unsigned char *active_anchor;
