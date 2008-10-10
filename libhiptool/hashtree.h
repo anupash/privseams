@@ -73,8 +73,11 @@ int htree_calc_nodes(hash_tree_t *tree, htree_leaf_gen_t leaf_gen,
 		htree_node_gen_t node_gen, htree_gen_args_t *gen_args);
 unsigned char* htree_get_branch(hash_tree_t *tree, int data_index,
 		int *branch_length);
+unsigned char* htree_get_data(hash_tree_t *tree, int data_index,
+		int *data_length);
 unsigned char* htree_get_secret(hash_tree_t *tree, int data_index,
 		int *secret_length);
+unsigned char* htree_get_root(hash_tree_t *tree, int *root_length);
 int htree_verify_branch(unsigned char *root, unsigned char *branch_nodes, int num_nodes,
 		int node_length, unsigned char *verify_data, unsigned char * secret,
 		int data_length, int data_index, htree_leaf_gen_t leaf_gen,

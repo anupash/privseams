@@ -97,7 +97,7 @@ int hchain_verify(const unsigned char * current_hash, const unsigned char * last
 
 		// add the secret
 		if (secret != NULL && secret_length > 0)
-			memcpy(buffer[hash_length], secret, secret_length);
+			memcpy(&buffer[hash_length], secret, secret_length);
 
 		hash_function(buffer, hash_length + secret_length, buffer);
 
@@ -138,8 +138,6 @@ hash_chain_t * hchain_create(hash_function_t hash_function, int hash_length,
 	unsigned char *hash_value[2 * MAX_HASH_LENGTH];
 	int hash_data_length = 0;
 	int i, err = 0;
-
-	// TODO allow concatenation with root for each hash
 
 	HIP_ASSERT(hash_function != NULL);
 	// make sure that the hash we want to use is smaller than the max output

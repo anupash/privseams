@@ -79,6 +79,9 @@ int main(int argc, char ** argv)
 	int branch_length = 0;
 	unsigned char *secret = NULL;
 	int secret_length = 0;
+	hash_chain_t *hchains[8];
+	unsigned char *data = NULL;
+	unsigned char *root = NULL;
 
 	hash_function = NULL;
 
@@ -270,5 +273,81 @@ int main(int argc, char ** argv)
 				STATS_IN_MSECS);
 		printf("verification statistics - num_data_items: %u, min: %.3fms, max: %.3fms, avg: %.3fms, std_dev: %.3fms\n",
 					num_items, min, max, avg, std_dev);
+
+
+
+		printf("\n\ntrying out hchain linking...\n");
+
+		// simulate level 0 creation
+		htree = htree_init(8, hash_length, hash_length);
+		htree_add_random_secrets(htree);
+
+		for (i = 0; i < 8; i++)
+		{
+			hchains[i] = hchain_create(hash_function, hash_length, hchain_length, 0,
+								NULL);
+			htree_add_data(htree, hchains[i]->anchor_element->hash, hash_length);
+		}
+
+		htree_calc_nodes(htree, htree_leaf_generator, htree_node_generator, NULL);
+
+		// simulate level 1 creation
+		hchain = hchain_create(hash_function, hash_length, hchain_length, 1,
+				htree);
+
+		// simulate BEX
+		// get hchain anchor
+		root = htree_get_root(htree, &secret_length);
+
+		// simulate level 1 hchain verification
+		if(!hchain_verify(hchain->source_element->hash, hchain->anchor_element->hash,
+				hash_function, hash_length, verify_length, root, secret_length))
+		{
+			printf("hchain level 1 verfied\n");
+
+		} else
+		{
+			printf("ERROR verifying hchain level 1!\n");
+			exit(1);
+		}
+
+		// simulate update
+		branch_nodes = htree_get_branch(htree, 0, &branch_length);
+		secret = htree_get_secret(htree, 0, &secret_length);
+		data = htree_get_data(htree, 0, &secret_length);
+
+		if (!htree_verify_branch(root, branch_nodes, branch_length,
+				hash_length, data, secret, secret_length, 0,
+				htree_leaf_generator, htree_node_generator, NULL))
+		{
+			printf("anchor verified\n");
+
+		} else
+		{
+			printf("ERROR verifying anchor!\n");
+			exit(1);
+		}
+		hchain_free(hchain);
+
+		if (!memcmp(data, hchains[0]->anchor_element->hash, hash_length))
+		{
+			printf("yes, this is the anchor we verified!\n");
+		} else
+		{
+			printf("ERROR no this is not the anchor we verified!\n");
+			exit(1);
+		}
+
+		// simulate level 0 hchain verification
+		if(!hchain_verify(hchains[0]->source_element->hash, data,
+				hash_function, hash_length, verify_length, NULL, 0))
+		{
+			printf("hchain level 0 verfied\n");
+
+		} else
+		{
+			printf("ERROR verifying hchain level 0!\n");
+			exit(1);
+		}
 	}
 }

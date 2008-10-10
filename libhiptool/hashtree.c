@@ -338,12 +338,27 @@ unsigned char* htree_get_branch(hash_tree_t *tree, int data_index,
     return branch_nodes;
 }
 
+unsigned char* htree_get_data(hash_tree_t *tree, int data_index,
+		int *data_length)
+{
+	*data_length = tree->max_data_length;
+
+	return &tree->data[data_index * tree->max_data_length];
+}
+
 unsigned char* htree_get_secret(hash_tree_t *tree, int data_index,
 		int *secret_length)
 {
 	*secret_length = tree->max_data_length;
 
 	return &tree->secrets[data_index * tree->max_data_length];
+}
+
+unsigned char* htree_get_root(hash_tree_t *tree, int *root_length)
+{
+	*root_length = tree->node_length;
+
+	return tree->root;
 }
 
 /*!
