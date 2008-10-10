@@ -1360,6 +1360,7 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 	  //if not try to broadcast SD HIP packets and wait for the response
 	  //upon registration repeat the procedure described above for sending 
 	  //out the packet
+	  
 	} else if (ctx->ip_version == 6 && hip_userspace_ipsec) {
 		HIP_DEBUG_HIT("destination hit: ", &ctx->dst);
 		// XX TODO: hip_fw_get_default_hit() returns an unfreed value
@@ -1457,6 +1458,7 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
 		hip_sava_ip_entry_t  * ip_entry = NULL;
 		hip_sava_hit_entry_t * hit_entry = NULL;
 		hip_sava_peer_info_t * info_entry;
+		hip_sava_enc_ip_entry_t * enc_entry = NULL;
 		
 		ip_entry = hip_sava_ip_entry_find(&ctx->dst);
 		hit_entry = hip_sava_hit_entry_find(&buf->hitr);
@@ -1477,10 +1479,27 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
 						hit_entry, info_entry) != 0) {
 		    verdict = 0;
 		    goto out_err;
+		  } 
+		  
+		  enc_entry = hip_sava_enc_ip_entry_find(enc_addr);
+		  
+		  if (!enc_entry) {
+		    verdict = DROP;
+		    goto out_err;
 		  }
+
+		  ip_entry->enc_link = enc_entry;
+		  hit_entry->enc_link = enc_entry;
 		}
 	      }
+	    } else if (buf->type_hdr == HIP_UPDATE) {
+	      //TODO: update ip hit mappings for new ip's 
+	    } else if (buf->type_hdr == HIP_CLOSE) {
+	      
 	    }
+	  } else if (hip_sava_client) {
+	    
+	  }
 	    /*
 	      The simplest way to check is to hold a list of IP addresses that
 	      already were discovered previously and have 2 checks:
@@ -1495,9 +1514,7 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
 	       previously used and not present in the data base
 	    */
 	    //this should be incomming packet
-	  } else if (buf->type_hdr == HIP_UPDATE) {
-	    //TODO: update ip hit mappings for new ip's 
-	  }
+	  
 
 	  //second check is to check HITs
 	  //mandatory check for SAVA

@@ -30,11 +30,13 @@ typedef struct hip_sava_enc_ip_entry {
 typedef struct hip_sava_hit_entry {
   struct in6_addr          * src_hit;
   struct hip_sava_ip_entry * link;
+  struct hip_sava_enc_ip_entry *enc_link;
 } hip_sava_hit_entry_t;
 
 typedef struct hip_sava_ip_entry {
   struct in6_addr           * src_addr;
   struct hip_sava_hit_entry * link;
+  struct hip_sava_hit_entry * enc_link;
 } hip_sava_ip_entry_t;
 
 typedef struct hip_sava_conn_entry {
