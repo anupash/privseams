@@ -35,7 +35,6 @@ int hip_peek_recv_total_len(int socket, int encap_hdr_size)
 	HIP_IFEL(!msg, -ENOMEM, "Error allocating memory.\n");
 
 	bytes = recv(socket, msg, hdr_size, MSG_PEEK);
-
 	if(bytes < 0) {
 		HIP_ERROR("recv() peek error (is hipd running?)\n");
 		err = -EAGAIN;
@@ -362,17 +361,18 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
         char cbuff[CMSG_SPACE(256)];
         int err = 0, len;
 	int cmsg_level, cmsg_type;
-	char tmp[1];
 
 	HIP_ASSERT(saddr);
 	HIP_ASSERT(daddr);
 
 	HIP_DEBUG("hip_read_control_msg_all() invoked.\n");
 
-	HIP_IFEL((len = hip_peek_recv_total_len(socket, encap_hdr_size))<= 0,
+	HIP_IFEL(((len = hip_peek_recv_total_len(socket, encap_hdr_size))<= 0),
 		 -1, "Bad packet length (%d)\n", len);
 
 	memset(msg_info, 0, sizeof(hip_portpair_t));
+	memset(&msg, 0, sizeof(msg));
+	memset(cbuff, 0, sizeof(cbuff));
 	memset(&addr_to, 0, sizeof(addr_to));
 
         /* setup message header with control and receive buffers */
