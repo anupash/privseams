@@ -500,6 +500,10 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr,
 	int err = 0;
 	hip_ha_t *entry;
 	struct hip_peer_map_info peer_map;
+	struct in_addr bcast = { INADDR_BROADCAST };
+	struct in6_addr bcast_mapped;
+
+	IPV4_TO_IPV6_MAP(&bcast, &bcast_mapped);
 
 	HIP_DEBUG("hip_hadb_add_peer_info() invoked.\n");
 
@@ -513,10 +517,16 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr,
 	if (peer_lsi)
 	        memcpy(&peer_map.peer_lsi, peer_lsi, sizeof(struct in6_addr));
 
-	HIP_IFEL(hip_select_source_address(
-			 &peer_map.our_addr, &peer_map.peer_addr),
-		 -1, "Cannot find source address\n");
-
+	if (peer_addr && !ipv6_addr_cmp(peer_addr, &bcast_mapped)) {
+		/* Broadcast from all interfaces. Select source address
+		   sets always a single IP address */
+		memset(&peer_map.our_addr, 0, sizeof(struct in6_addr));
+	} else {
+		HIP_IFEL(hip_select_source_address(
+				 &peer_map.our_addr, &peer_map.peer_addr),
+			 -1, "Cannot find source address\n");
+	}
+	
 	HIP_IFEL(hip_for_each_hi(hip_hadb_add_peer_info_wrapper, &peer_map), 0,
 	         "for_each_hi err.\n");
 
