@@ -1958,7 +1958,7 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
   </para>
   </section>
     <section id="hip_over_vpn">
-      <title>HIP over openVPN</title>
+      <title>OpenVPN</title>
     <!-- id="hip_over_vpn_how_to" -->
       <para>
 	OpenVPN is an open-source VPN solution. More information on it can
@@ -1982,29 +1982,11 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
       </para>
     <!-- id="hip_over_vpn_performance" -->
       <para>
-	Following are some data to give a general idea about performance
-	degradation caused by OpenVPN, HIP, and when we use HIP over OpenVPN.
-	These data illustrate the TCP throughput between two machines in four cases.
-	The measurements for each case were repeated roughly 20 times and the
-	average was calculated. The following throughput measurements were done at
-	the machine that serves as the HIP client, and as the VPN client.
-	One of the machines acts both as the VPN server and as one of the hosts in
-	HIP-communication.
+	A HIP and OpenVPN tunnel have roughly the same througput. It
+	is even possible run HIP inside the OpenVPN tunnel, even
+	though this seems to halve the throughput without any
+	optimizations.
       </para>
-
-      <para>
-	1. No HIP or VPN. We do not use HIP or VPN for the data traffic - 95.41 Mbits/sec.
-      </para>
-      <para>
-	2. VPN, no HIP. We use VPN for the data traffic - 76.4 Mbits/sec
-      </para>
-      <para>
-	3. HIP, no VPN. We use HIP for the data traffic - 71.45 Mbits/sec
-      </para>
-      <para>
-	4. VPN and HIP. We use HIP over VPN for the data traffic - 36.23 Mbits/sec
-      </para>
-
 
     <!-- id="hip_over_vpn_pitfalls" -->
       <para>
@@ -3070,6 +3052,21 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
 
         <listitem><para>int flush(int hook): Clears all rules.</para></listitem>
 </itemizedlist>
+
+  </chapter>
+
+  <chapter id="hipproxy">
+    <title>HIP Proxy</title>
+
+    <para>
+      It might not be possible to run HIP at all with old legacy
+      client hosts even with the userspace IPsec. In such a case, HIP
+      can be migrated to middlebox (e.g. router) by using the so
+      called HIP Proxy. The HIP proxy "translates" connections from
+      the client host to HIP-based connections to servers. The
+      extension is experimental and needs both hipd and hipfw on the
+      middlebox. You can enable the option using "hipconf hipproxy on".
+    </para>
 
   </chapter>
 
