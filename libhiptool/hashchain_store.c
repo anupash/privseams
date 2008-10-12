@@ -414,7 +414,7 @@ hash_chain_t * hcstore_get_hchain_by_anchor(hchain_store_t *hcstore, int functio
 	HIP_ASSERT(function_id >= 0 && function_id < hcstore->num_functions);
 	HIP_ASSERT(hash_length_id >= 0
 			&& hash_length_id < hcstore->num_hash_lengths[function_id]);
-	HIP_ASSERT(hierarchy_level > 0);
+	HIP_ASSERT(hierarchy_level >= 0);
 	HIP_ASSERT(anchor != NULL);
 
 

@@ -611,7 +611,7 @@ int esp_prot_get_data_offset(hip_sa_entry_t *entry)
 int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 {
 	esp_prot_tfm_t *prot_transform = NULL;
-	int err = 0;
+	int soft_update = 0, err = 0;
 #ifdef CONFIG_HIP_MEASUREMENTS
 	int hash_length = 0;
 #endif
@@ -636,20 +636,33 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 
 			//printf("next_hchain should be set now...\n");
 
-			/* set next hchain with DEFAULT_HCHAIN_LENGTH_ID
-			 *
-			 * @note this needs to be extended when implementing usage of different
-			 *       hchain lengths
-			 */
-			HIP_IFEL(!(entry->next_hchain = hcstore_get_hchain(&update_store,
-					prot_transform->hash_func_id, prot_transform->hash_length_id,
-					update_hchain_lengths[DEFAULT_HCHAIN_LENGTH_ID])),
-					-1, "unable to retrieve hchain from store\n");
+			// TODO soft-update vs. PK-update
+			if (entry->active_hchain->link_tree)
+			{
+				// do a soft-update
 
-			//printf("is set\n");
+				soft_update = 1;
+
+			} else
+			{
+				// do a PK-update
+
+				/* set next hchain with DEFAULT_HCHAIN_LENGTH_ID of highest hierarchy
+				 * level
+				 *
+				 * @note this needs to be extended when implementing usage of different
+				 *       hchain lengths
+				 */
+				HIP_IFEL(!(entry->next_hchain = hcstore_get_hchain(&update_store,
+						prot_transform->hash_func_id, prot_transform->hash_length_id,
+						update_hchain_lengths[DEFAULT_HCHAIN_LENGTH_ID])),
+						-1, "unable to retrieve hchain from store\n");
+
+				soft_update = 0;
+			}
 
 			// issue UPDATE message to be sent by hipd
-			HIP_IFEL(send_trigger_update_to_hipd(entry), -1,
+			HIP_IFEL(send_trigger_update_to_hipd(entry, soft_update), -1,
 					"unable to trigger update at hipd\n");
 
 #ifdef CONFIG_HIP_MEASUREMENTS
