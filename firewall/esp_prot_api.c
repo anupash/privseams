@@ -642,7 +642,7 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 			 */
 			HIP_IFEL(!(entry->next_hchain = hcstore_get_hchain(&update_store,
 					prot_transform->hash_func_id, prot_transform->hash_length_id,
-					update_hchain_lengths[DEFAULT_HCHAIN_LENGTH_ID], 0)),
+					update_hchain_lengths[DEFAULT_HCHAIN_LENGTH_ID])),
 					-1, "unable to retrieve hchain from store\n");
 
 			//printf("is set\n");

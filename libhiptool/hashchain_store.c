@@ -351,11 +351,12 @@ int hcstore_refill(hchain_store_t *hcstore)
 }
 
 hash_chain_t * hcstore_get_hchain(hchain_store_t *hcstore, int function_id,
-		int hash_length_id, int hchain_length, int hierarchy_level)
+		int hash_length_id, int hchain_length)
 {
 	// inited to invalid values
 	int item_offset = -1;
 	hash_chain_t *stored_hchain = NULL;
+	int hierarchy_level = 0;
 	int err = 0, i;
 
 	HIP_ASSERT(hcstore != NULL);
@@ -363,18 +364,13 @@ hash_chain_t * hcstore_get_hchain(hchain_store_t *hcstore, int function_id,
 	HIP_ASSERT(hash_length_id >= 0
 			&& hash_length_id < hcstore->num_hash_lengths[function_id]);
 	HIP_ASSERT(hchain_length > 0);
-	HIP_ASSERT(hierarchy_level >= 0);
-
-	// TODO this should return a hchain from the highest level
 
 	// first find the correct hchain item
 	for (i = 0; i < hcstore->hchain_shelves[function_id][hash_length_id].
 			num_hchain_lengths; i++)
 	{
 		if (hcstore->hchain_shelves[function_id][hash_length_id].hchain_lengths[i]
-				== hchain_length &&
-				hcstore->hchain_shelves[function_id][hash_length_id].num_hierarchies[i]
-				>= hierarchy_level)
+				== hchain_length)
 		{
 			// set item_offset
 			item_offset = i;
@@ -386,6 +382,10 @@ hash_chain_t * hcstore_get_hchain(hchain_store_t *hcstore, int function_id,
 	// handle unregistered hchain length or hierarchy
 	HIP_IFEL(item_offset < 0, -1,
 			"hchain with unregistered hchain length or hierarchy level requested\n");
+
+	// this exclusively returns a hchain from the highest hierarchy level
+	hierarchy_level = hcstore->hchain_shelves[function_id][hash_length_id].
+			num_hierarchies - 1;
 
 	HIP_IFEL(!(stored_hchain = hip_ll_del_first(&hcstore->hchain_shelves[function_id]
 	        [hash_length_id].hchains[item_offset][hierarchy_level], NULL)), -1,
