@@ -268,6 +268,16 @@ int htree_calc_nodes(hash_tree_t *tree, htree_leaf_gen_t leaf_gen,
     return err;
 }
 
+int htree_has_more_data(hash_tree_t *tree)
+{
+	return tree->data_position < tree->num_data_blocks;
+}
+
+int htree_get_next_data_offset(hash_tree_t *tree)
+{
+	return tree->data_position++;
+}
+
 /*!
  * \brief Get the uptree nodes from a computed tree.
  *

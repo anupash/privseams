@@ -612,6 +612,9 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 {
 	esp_prot_tfm_t *prot_transform = NULL;
 	int soft_update = 0, err = 0;
+	int anchor_offset = 0;
+	int anchor_length = 0, secret_length = 0, branch_length = 0;
+	unsigned char *anchor = NULL, *secret = NULL, *branch_nodes = NULL;
 #ifdef CONFIG_HIP_MEASUREMENTS
 	int hash_length = 0;
 #endif
@@ -634,18 +637,56 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 			HIP_IFEL(!(prot_transform = esp_prot_resolve_transform(entry->esp_prot_transform)),
 					1, "tried to resolve UNUSED transform\n");
 
-			//printf("next_hchain should be set now...\n");
-
-			// TODO soft-update vs. PK-update
+			// soft-update vs. PK-update
 			if (entry->active_hchain->link_tree)
 			{
 				// do a soft-update
 
-				soft_update = 1;
+				/* several hash-trees are linking to the same anchors, so it
+				 * might happen that an anchor is already used */
+				while (htree_has_more_data(entry->active_hchain->link_tree))
+				{
+					// get the next hchain from the link_tree
+					anchor_offset = htree_get_next_data_offset(
+							entry->active_hchain->link_tree);
+					anchor = htree_get_data(entry->active_hchain->link_tree,
+							anchor_offset, &anchor_length);
 
-			} else
+					if (entry->next_hchain = hcstore_get_hchain_by_anchor(
+							&update_store,
+							prot_transform->hash_func_id, prot_transform->hash_length_id,
+							entry->active_hchain->hchain_hierarchy - 1, anchor))
+					{
+						break;
+					}
+				}
+
+				if (!entry->next_hchain)
+				{
+					HIP_DEBUG("unable to get linked hchain from store, need PK-UPDATE\n");
+
+					anchor_offset = 0;
+
+					soft_update = 0;
+
+				} else
+				{
+					HIP_DEBUG("linked hchain found in store, soft-update\n");
+
+					secret = htree_get_secret(entry->active_hchain->link_tree,
+							anchor_offset, &secret_length);
+					branch_nodes = htree_get_branch(entry->active_hchain->link_tree,
+							anchor_offset, &branch_length);
+
+					soft_update = 1;
+				}
+
+			}
+
+			if (!soft_update)
 			{
 				// do a PK-update
+				HIP_DEBUG("doing PK-UPDATE\n");
 
 				/* set next hchain with DEFAULT_HCHAIN_LENGTH_ID of highest hierarchy
 				 * level
@@ -662,7 +703,8 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 			}
 
 			// issue UPDATE message to be sent by hipd
-			HIP_IFEL(send_trigger_update_to_hipd(entry, soft_update), -1,
+			HIP_IFEL(send_trigger_update_to_hipd(entry, soft_update, anchor_offset,
+					secret, secret_length, branch_nodes, branch_length), -1,
 					"unable to trigger update at hipd\n");
 
 #ifdef CONFIG_HIP_MEASUREMENTS

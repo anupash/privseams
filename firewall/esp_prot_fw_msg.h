@@ -16,7 +16,9 @@
 int send_esp_prot_to_hipd(int active);
 int send_bex_store_update_to_hipd(hchain_store_t *hcstore);
 hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore);
-int send_trigger_update_to_hipd(hip_sa_entry_t *entry, int soft_update);
+int send_trigger_update_to_hipd(hip_sa_entry_t *entry, int soft_update,
+		int anchor_offset, unsigned char *secret, int secret_length,
+		unsigned char *branch, int branch_length);
 int send_anchor_change_to_hipd(hip_sa_entry_t *entry);
 unsigned char * esp_prot_handle_sa_add_request(struct hip_common *msg,
 		uint8_t *esp_prot_transform);

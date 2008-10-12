@@ -219,7 +219,9 @@ hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore)
  *
  * sends src_hit, dst_hit, transform, hash_length and hash
  */
-int send_trigger_update_to_hipd(hip_sa_entry_t *entry, int soft_update)
+int send_trigger_update_to_hipd(hip_sa_entry_t *entry, int soft_update,
+		int anchor_offset, unsigned char *secret, int secret_length,
+		unsigned char *branch, int branch_length)
 {
 	int err = 0;
 	struct hip_common *msg = NULL;
