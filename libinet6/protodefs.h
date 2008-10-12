@@ -130,6 +130,8 @@
 #define HIP_PARAM_CERT_X509_RESP        32811
 #define HIP_PARAM_ESP_PROT_TFM		32812
 #define HIP_PARAM_TRANSFORM_ORDER       32813
+#define HIP_PARAM_SECRET				32814
+#define HIP_PARAM_BRANCH_NODES			32815
 /* End of HIPL private parameters. */
 
 #define HIP_PARAM_HMAC                 61505
@@ -449,7 +451,7 @@ struct hip_locator_info_addr_item {
 
         /** Removed the state because it is against the nat-draft and mobility rfc
          Same in the type 2 locator below --SAMU**/
-	/* end of fixed part - locator of arbitrary length follows but 
+	/* end of fixed part - locator of arbitrary length follows but
 	   currently support only IPv6 */
 	//int state; /**<State of our addresses, possible states are:
 	//	      WAITING_ECHO_REQUEST, ACTIVE */

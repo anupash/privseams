@@ -632,7 +632,7 @@ int hip_update_finish_rekeying(hip_common_t *msg, hip_ha_t *entry,
 	entry->local_udp_port = entry->nat_mode ? HIP_NAT_UDP_PORT : 0;
 
 	err = entry->hadb_ipsec_func->hip_add_sa(&entry->preferred_address, &entry->local_address, hits,
-			 hitr,  &new_spi_in, esp_transform,
+			 hitr,  new_spi_in, esp_transform,
 			 (we_are_HITg ? &espkey_lg : &espkey_gl),
 			 (we_are_HITg ? &authkey_lg : &authkey_gl),
 			 1, HIP_SPI_DIRECTION_IN, 0, entry);
@@ -642,7 +642,7 @@ int hip_update_finish_rekeying(hip_common_t *msg, hip_ha_t *entry,
 	HIP_DEBUG("Setting up new inbound SA, SPI=0x%x\n", new_spi_in);
 
 	err = entry->hadb_ipsec_func->hip_add_sa(&entry->local_address, &entry->preferred_address, hitr,
-			 hits, &new_spi_out, esp_transform,
+			 hits, new_spi_out, esp_transform,
 			 (we_are_HITg ? &espkey_gl : &espkey_lg),
 			 (we_are_HITg ? &authkey_gl : &authkey_lg),
 			 1, HIP_SPI_DIRECTION_OUT, 0, entry);
@@ -2249,7 +2249,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 	HIP_IFEL(entry->is_loopback, 0, "Skipping loopback\n");
 
 	// used to distinguish anchor-update from other message types
-	anchor_update = flags & SEND_UPDATE_ESP_ANCHOR;
+	anchor_update = flags & SEND_UPDATE_PK_ESP_ANCHOR;
 
 	old_spi = hip_hadb_get_spi(entry, -1);
 

@@ -67,7 +67,8 @@
 
 #define SEND_UPDATE_ESP_INFO             (1 << 0)
 #define SEND_UPDATE_LOCATOR              (1 << 1)
-#define SEND_UPDATE_ESP_ANCHOR           (1 << 2)
+#define SEND_UPDATE_PK_ESP_ANCHOR        (1 << 2)
+#define SEND_UPDATE_SOFT_ESP_ANCHOR      (1 << 2)
 
 #define HIP_SPI_DIRECTION_OUT            1
 #define HIP_SPI_DIRECTION_IN             2

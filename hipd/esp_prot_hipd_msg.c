@@ -50,6 +50,9 @@ int esp_prot_handle_trigger_update_msg(struct hip_common *msg)
 	uint8_t esp_prot_tfm = 0;
 	int hash_length = 0;
 	unsigned char *esp_prot_anchor = NULL;
+	int soft_update = 0, anchor_offset = 0;
+	int anchor_length = 0, secret_length = 0, branch_length = 0;
+	unsigned char *secret = NULL, *branch_nodes = NULL;
 	hip_ha_t *entry = NULL;
 	int err = 0;
 
@@ -68,6 +71,33 @@ int esp_prot_handle_trigger_update_msg(struct hip_common *msg)
 	param = hip_get_param(msg, HIP_PARAM_HCHAIN_ANCHOR);
 	esp_prot_anchor = (unsigned char *) hip_get_param_contents_direct(param);
 	HIP_HEXDUMP("anchor: ", esp_prot_anchor, hash_length);
+
+	param = hip_get_param(msg, HIP_PARAM_INT);
+	soft_update  = *((int *) hip_get_param_contents_direct(param));
+	HIP_DEBUG("soft_update: %i\n", soft_update);
+
+	if (soft_update)
+	{
+		param = hip_get_next_param(msg, param);
+		anchor_offset  = *((int *) hip_get_param_contents_direct(param));
+		HIP_DEBUG("anchor_offset: %i\n", anchor_offset);
+
+		param = hip_get_next_param(msg, param);
+		secret_length  = *((int *) hip_get_param_contents_direct(param));
+		HIP_DEBUG("secret_length: %i\n", secret_length);
+
+		param = hip_get_next_param(msg, param);
+		branch_length  = *((int *) hip_get_param_contents_direct(param));
+		HIP_DEBUG("branch_length: %i\n", branch_length);
+
+		param = hip_get_param(msg, HIP_PARAM_SECRET);
+		secret = (unsigned char *) hip_get_param_contents_direct(param);
+		HIP_HEXDUMP("secret: ", secret, secret_length);
+
+		param = hip_get_param(msg, HIP_PARAM_BRANCH_NODES);
+		branch_nodes = (unsigned char *) hip_get_param_contents_direct(param);
+		HIP_HEXDUMP("branch_nodes: ", branch_nodes, branch_length);
+	}
 
 
 	// get matching entry from hadb for HITs provided above
@@ -90,20 +120,31 @@ int esp_prot_handle_trigger_update_msg(struct hip_common *msg)
 	//memset(entry->esp_local_update_anchor, 0, MAX_HASH_LENGTH);
 	memcpy(entry->esp_local_update_anchor, esp_prot_anchor, hash_length);
 
-	/* this should send an update only containing the mandatory params
-	 * HMAC and HIP_SIGNATURE as well as the ESP_PROT_ANCHOR and the
-	 * SEQ param (to garanty freshness of the ANCHOR) in the signed part
-	 * of the message
-	 *
-	 * params used for this call:
-	 * - hadb entry matching the HITs passed in the trigger msg
-	 * - not sending locators -> list = NULL and count = 0
-	 * - no interface triggers this event -> -1
-	 * - bitwise telling about which params to add to UPDATE -> set 3rd bit to 1
-	 * - UPDATE not due to adding of a new addresses
-	 * - not setting any address, as none is updated */
-	HIP_IFEL(hip_send_update(entry, NULL, 0, -1, SEND_UPDATE_ESP_ANCHOR, 0, NULL),
-			-1, "failed to send anchor update\n");
+	if (soft_update)
+	{
+		// TODO set the branch nodes etc for them to be available for the update
+		// entry->
+
+		HIP_IFEL(hip_send_update(entry, NULL, 0, -1, SEND_UPDATE_SOFT_ESP_ANCHOR, 0,
+				NULL), -1, "failed to send anchor update\n");
+
+	} else
+	{
+		/* this should send an update only containing the mandatory params
+		 * HMAC and HIP_SIGNATURE as well as the ESP_PROT_ANCHOR and the
+		 * SEQ param (to garanty freshness of the ANCHOR) in the signed part
+		 * of the message
+		 *
+		 * params used for this call:
+		 * - hadb entry matching the HITs passed in the trigger msg
+		 * - not sending locators -> list = NULL and count = 0
+		 * - no interface triggers this event -> -1
+		 * - bitwise telling about which params to add to UPDATE -> set 3rd bit to 1
+		 * - UPDATE not due to adding of a new addresses
+		 * - not setting any address, as none is updated */
+		HIP_IFEL(hip_send_update(entry, NULL, 0, -1, SEND_UPDATE_PK_ESP_ANCHOR, 0, NULL),
+				-1, "failed to send anchor update\n");
+	}
 
   out_err:
 	return err;
