@@ -570,7 +570,8 @@ hash_chain_t * esp_prot_get_bex_hchain_by_anchor(unsigned char *hchain_anchor,
 			"tried to resolve UNUSED transform\n");
 
 	HIP_IFEL(!(return_hchain = hcstore_get_hchain_by_anchor(&bex_store,
-			prot_transform->hash_func_id, prot_transform->hash_length_id, hchain_anchor)),
+			prot_transform->hash_func_id, prot_transform->hash_length_id,
+			NUM_BEX_HIERARCHIES - 1, hchain_anchor)),
 			-1, "unable to retrieve hchain from bex store\n");
 
 	// refill bex-store if necessary

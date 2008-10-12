@@ -88,7 +88,7 @@ int hcstore_refill(hchain_store_t *hcstore);
 hash_chain_t * hcstore_get_hchain(hchain_store_t *hcstore, int function_id,
 		int hash_length_id, int hchain_length);
 hash_chain_t * hcstore_get_hchain_by_anchor(hchain_store_t *hcstore, int function_id,
-		int hash_length_id, unsigned char *anchor);
+		int hash_length_id, int hierarchy_level, unsigned char *anchor);
 hash_function_t hcstore_get_hash_function(hchain_store_t *hcstore, int function_id);
 int hcstore_get_hash_length(hchain_store_t *hcstore, int function_id, int hash_length_id);
 

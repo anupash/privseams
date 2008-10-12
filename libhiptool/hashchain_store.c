@@ -385,7 +385,7 @@ hash_chain_t * hcstore_get_hchain(hchain_store_t *hcstore, int function_id,
 
 	// this exclusively returns a hchain from the highest hierarchy level
 	hierarchy_level = hcstore->hchain_shelves[function_id][hash_length_id].
-			num_hierarchies - 1;
+			num_hierarchies[item_offset] - 1;
 
 	HIP_IFEL(!(stored_hchain = hip_ll_del_first(&hcstore->hchain_shelves[function_id]
 	        [hash_length_id].hchains[item_offset][hierarchy_level], NULL)), -1,
@@ -404,20 +404,19 @@ hash_chain_t * hcstore_get_hchain(hchain_store_t *hcstore, int function_id,
 }
 
 hash_chain_t * hcstore_get_hchain_by_anchor(hchain_store_t *hcstore, int function_id,
-		int hash_length_id, unsigned char *anchor)
+		int hash_length_id, int hierarchy_level, unsigned char *anchor)
 {
 	int hash_length = 0;
 	hash_chain_t *stored_hchain = NULL;
-	int hchain_hierarchy = 0;
 	int err = 0, i, j;
 
 	HIP_ASSERT(hcstore != NULL);
 	HIP_ASSERT(function_id >= 0 && function_id < hcstore->num_functions);
 	HIP_ASSERT(hash_length_id >= 0
 			&& hash_length_id < hcstore->num_hash_lengths[function_id]);
+	HIP_ASSERT(hierarchy_level > 0);
 	HIP_ASSERT(anchor != NULL);
 
-	// TODO this should look for the anchor at the respective hierarchy level
 
 	hash_length = hcstore_get_hash_length(hcstore, function_id, hash_length_id);
 
@@ -428,22 +427,22 @@ hash_chain_t * hcstore_get_hchain_by_anchor(hchain_store_t *hcstore, int functio
 	for (i = 0; i < hcstore->hchain_shelves[function_id][hash_length_id].
 			num_hchain_lengths; i++)
 	{
-		// this should only be the case in the highest hierarchy
-		hchain_hierarchy = hcstore->hchain_shelves[function_id][hash_length_id].
-				num_hierarchies[i] - 1;
+		// looks for the anchor at each hchain_length with the respective hierarchy level
+		HIP_ASSERT(hierarchy_level < hcstore->hchain_shelves[function_id][hash_length_id].
+				num_hierarchies[i]);
 
 		for (j = 0; j < hip_ll_get_size(&hcstore->hchain_shelves[function_id]
-		        [hash_length_id].hchains[i][hchain_hierarchy]); j++)
+		        [hash_length_id].hchains[i][hierarchy_level]); j++)
 		{
 			stored_hchain = (hash_chain_t *) hip_ll_get(&hcstore->
 					hchain_shelves[function_id][hash_length_id].
-					hchains[i][hchain_hierarchy], j);
+					hchains[i][hierarchy_level], j);
 
 			if (!memcmp(anchor, stored_hchain->anchor_element->hash, hash_length))
 			{
 				stored_hchain = (hash_chain_t *) hip_ll_del(&hcstore->
 						hchain_shelves[function_id][hash_length_id].
-						hchains[i][hchain_hierarchy], j, NULL);
+						hchains[i][hierarchy_level], j, NULL);
 
 				HIP_DEBUG("hash-chain matching the anchor found\n");
 				//hchain_print(stored_hchain);
