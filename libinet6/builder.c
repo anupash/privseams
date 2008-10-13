@@ -607,7 +607,10 @@ int hip_check_network_param_type(const struct hip_tlv_common *param)
 			HIP_PARAM_REG_FROM,
 			//end add
 			HIP_PARAM_ESP_PROT_TRANSFORMS,
-			HIP_PARAM_ESP_PROT_ANCHOR
+			HIP_PARAM_ESP_PROT_ANCHOR,
+			HIP_PARAM_ESP_PROT_BRANCH,
+			HIP_PARAM_ESP_PROT_SECRET,
+			HIP_PARAM_ESP_PROT_ROOT
 		};
 	hip_tlv_type_t type = hip_get_param_type(param);
 
@@ -1188,6 +1191,9 @@ char* hip_param_type_name(const hip_tlv_type_t param_type){
 	case HIP_PARAM_HCHAIN_ANCHOR: return "HIP_PARAM_HCHAIN_ANCHOR";
 	case HIP_PARAM_ESP_PROT_TRANSFORMS: return "HIP_PARAM_ESP_PROT_TRANSFORMS";
 	case HIP_PARAM_ESP_PROT_ANCHOR: return "HIP_PARAM_ESP_PROT_ANCHOR";
+	case HIP_PARAM_ESP_PROT_BRANCH: return "HIP_PARAM_ESP_PROT_BRANCH";
+	case HIP_PARAM_ESP_PROT_SECRET: return "HIP_PARAM_ESP_PROT_SECRET";
+	case HIP_PARAM_ESP_PROT_ROOT: return "HIP_PARAM_ESP_PROT_ROOT";
 	//add by santtu
 	case HIP_PARAM_NAT_TRANSFORM: return "HIP_PARAM_NAT_TRANSFORM";
 	//end add

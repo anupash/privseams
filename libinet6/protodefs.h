@@ -87,6 +87,7 @@
 #define HIP_PARAM_ESP_PROT_ANCHOR      4121
 #define HIP_PARAM_ESP_PROT_BRANCH      4122
 #define HIP_PARAM_ESP_PROT_SECRET      4123
+#define HIP_PARAM_ESP_PROT_ROOT		   4124
 
 /* Range 32768 - 49141 can be used for HIPL private parameters i.e. to
    parameters passed from hipconf to hipdaemon.
