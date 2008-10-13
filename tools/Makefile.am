@@ -1,23 +1,41 @@
 AUTOMAKE_OPTIONS = foreign
 
-EXTRA_DIST =  DNS/Base.py DNS/Lib.py DNS/Type.py DNS/Class.py 
-EXTRA_DIST += DNS/Opcode.py DNS/win32dns.py DNS/__init__.py
-EXTRA_DIST += DNS/pyip6.py DNS/lazy.py DNS/Status.py
+CLEANFILES = dnshipproxy parsehipkey
 
-dist_sbin_SCRIPTS = dnsproxy.py myasn.py pyip6.py hosts.py parse-key-3.py
-dist_sbin_SCRIPTS  += util.py
+EXTRA_DIST = gen-python-starter.sh
+
+if HAVE_PYTHON
+
+# These two scripts are generated in the end to get the python paths correct.
+# Currently, I don't know a better way to deal with the python code. -miika
+dist_sbin_SCRIPTS = dnshipproxy parsehipkey
+
+dns_PYTHON = DNS/Base.py DNS/Lib.py DNS/Type.py DNS/Class.py
+dns_PYTHON += DNS/Opcode.py DNS/win32dns.py DNS/__init__.py
+dns_PYTHON += DNS/pyip6.py DNS/lazy.py DNS/Status.py
+dnsdir = $(pyexecdir)/DNS
+
+dnshipproxy_PYTHON = dnsproxy.py pyip6.py hosts.py util.py
+dnshipproxydir = $(pyexecdir)/dnshipproxy
+
+parsehipkey_PYTHON = parse-key-3.py myasn.py
+parsehipkeydir = $(pyexecdir)/parsehipkey
+
+endif
 
 # Note: .. is included because libinet6/debug.h is included; otherwise this
 # won't build because there is also the linux/net/ipv6/hip/debug.h include.
 #
 
 CFLAGS = $(hipl_common_cflags) # -L$(HIPL_LIBINET6_LIB)
-
+CFLAGS += $(OPTIMIZATIONS_CFLAGS)
+CFLAGS += $(GPROF_CFLAGS)
 INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
 
 include_HEADERS = hipconftool.h
 
-LDFLAGS = @LDFLAGS@ -lcrypto $(HIP_XMLL)
+
+LDFLAGS = @LDFLAGS@ -lc -lcrypto $(HIP_XMLL) $(OPENWRT)
 
 if HIP_OPENDHT
   INCLUDES += -I../opendht
@@ -39,6 +57,15 @@ else
   LDADD += ../libhiptool/.libs/libhiptool.a
 endif
 
+if HIP_OPENWRT
+LDADD += $(OPENWRT_LIB_STATIC)
+else
+CFLAGS += -L$(HIPL_LIBINET6_LIB)
+LDADD += ../libinet6/.libs/libinet6.a
+LDADD += ../libhiptool/.libs/libhiptool.a
+INCLUDES += -I$(HIPL_LIBINET6_INCLUDE)
+endif
+
 LDADD += ../opendht/.libs/libhipopendht.a
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
@@ -52,3 +79,19 @@ hipconf_SOURCES = hipconftool.c
 #
 $(HIPL_LIBINET6_LIB_STATIC):
 	$(MAKE) -C $(HIPL_LIBINET6)
+
+# Automake does not build the shell scripts without this
+dnshipproxy:
+	@sh gen-python-starter.sh $(pyexecdir)/dnshipproxy dnsproxy.py dnshipproxy
+
+parsehipkey:
+	@sh gen-python-starter.sh $(pyexecdir)/parsehipkey parse-key-3.py parsehipkey
+
+# This workaround forces automake to generate the scripts on each run. It is
+# necessary because otherwise "make rpm" target has the old $pyexecdir from
+# "make dist" and it refuses to build the scripts again.
+all-local:
+	@rm -f dnshipproxy
+	@rm -f parsehipkey
+	@sh gen-python-starter.sh $(pyexecdir)/dnshipproxy dnsproxy.py dnshipproxy
+	@sh gen-python-starter.sh $(pyexecdir)/parsehipkey parse-key-3.py parsehipkey

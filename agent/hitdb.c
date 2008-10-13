@@ -350,7 +350,7 @@ HIT_Remote *hit_db_add(char *name, struct in6_addr *hit, char *url,
 
 	_HIP_DEBUG("%d items in database.\n", remote_db_n);
 
-	err = r;
+	err = !r;
 
 out_err:
 	if (!nolock) HIT_DB_UNLOCK();

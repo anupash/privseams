@@ -48,7 +48,67 @@
  * <li><a href="http://www.docbook.org/tdg/en/html/">DocBook: The Definitive Guide</a>.</li>
  * A guide for the @b docbook tool that is used to create the HIPL user manual.
  * </ul>
- * @date   16.07.2008
+ *
+ * @section sec_faq Frequently asked questions (FAQ)
+ * @subsection subsec_socket The Socket Interface
+ * <p>Since the socket interface issues keep on popping up, we have gathered
+ *     links related to <code>sockaddr</code>, <code>sockaddr_in</code>,
+ *     <code>sockaddr_in6</code> and <code>sockaddr_storage</code> data
+ *     structures here.</p>
+ *     <ul>
+ *     <li><a href="http://www.rfc-editor.org/rfc/rfc2553.txt">
+ *     RFC 2553: Basic Socket Interface Extensions for IPv6</a>.</li>
+ *     <li><a href="http://www.kame.net/newsletter/19980604/">
+ *     Implementing AF-independent application</a>. A document that describes
+ *     how a programmer can handle multiple address families at ease. 
+ *     </li>
+ *     <li>
+ *     <code>sockaddr_in</code> is defined in /usr/include/linux/in.h. See
+ *     <a href="http://linux.die.net/man/7/ip">ip(7) - Linux man page</a>.
+ *     <pre>
+ *     struct sockaddr_in {
+ *            sa_family_t    sin_family;
+ *            __be16         sin_port;
+ *            struct in_addr sin_addr;
+ *            unsigned char  __pad[__SOCK_SIZE__ - sizeof(short int) -
+ *                           sizeof(unsigned short int) - sizeof(struct in_addr)];
+ *     };</pre>
+ *     </li>
+ *     <li>
+ *     <code>sockaddr_in6</code> is defined in /usr/include/linux/in6.h. See
+ *     <a href="http://linux.die.net/man/7/ipv6">ipv6(7) - Linux man page</a>.
+ *     <pre>
+ *     struct sockaddr_in6 {
+ *            unsigned short int sin6_family;
+ *            __be16             sin6_port;
+ *            __be32             sin6_flowinfo;
+ *           struct in6_addr     sin6_addr;
+ *           __u32               sin6_scope_id;
+ *     };</pre>
+ *     </li>
+ *     <li>
+ *     <code>sockaddr</code> is defined in /usr/include/linux/socket.h.
+ *     See <a href="http://linux.die.net/man/7/socket">socket(7) - Linux man
+ *     page</a>.
+ *     <pre>
+ *     struct sockaddr {
+ *            sa_family_t sa_family;
+ *            char        sa_data[14];
+ *     };</pre>
+ *     </li>
+ *     <li>
+ *     <code>sockaddr_storage</code> is defined in /usr/include/linux/socket.h.
+ *     See <a href="http://linux.die.net/man/7/socket">socket(7) - Linux man
+ *     page</a>.
+ *     <pre>
+ *     struct sockaddr_storage {
+ *            unsigned short ss_family;
+ *            char     __data[_K_SS_MAXSIZE - sizeof(unsigned short)];
+ *     } __attribute__ ((aligned(_K_SS_ALIGNSIZE)));</pre>
+ *     </li>
+ *     </ul>
+ *
+ * @date   12.08.2008
  */ 
 
 /**
@@ -620,7 +680,7 @@
  * Bitmask for local controls:
  * <pre>
  * 0000 0000 0000 0000
- * |||| |||| |||| |||+- 0x0001 - free -
+ * |||| |||| |||| |||+- 0x0001 We have requested an unsupported service.
  * |||| |||| |||| ||+-- 0x0002 - free -
  * |||| |||| |||| |+--- 0x0004 - free -
  * |||| |||| |||| +---- 0x0008 - free -
@@ -640,8 +700,8 @@
  * Bitmask for peer controls:
  * <pre>
  * 0000 0000 0000 0000
- * |||| |||| |||| |||+- 0x0001 - free -
- * |||| |||| |||| ||+-- 0x0002 - free -
+ * |||| |||| |||| |||+- 0x0001 Peer granted an unsupported service to us.
+ * |||| |||| |||| ||+-- 0x0002 Peer offers an unsupported service.
  * |||| |||| |||| |+--- 0x0004 - free -
  * |||| |||| |||| +---- 0x0008 - free -
  * |||| |||| |||+------ 0x0010 - free -

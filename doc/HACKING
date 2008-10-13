@@ -620,7 +620,7 @@ This is what I did:
      %patch193 -p1
 
    * copied the patches to /usr/src/redhat/SOURCES
-   * rpmbuild --target i686 -ba /usr/src/redhat/SPECS/kernel-2.6.16.9.spec
+   * rpmbuild --target i686 -ba --without kabichk /usr/src/redhat/SPECS/kernel-2.6.16.9.spec
 
 RETRIEVING HIPL PACKAGES FROM A REPOSITORY
 ==========================================
@@ -650,6 +650,7 @@ $ sudo yum install hipl-lib hipl-daemon hipl-tools
 Updating yum repository
 -----------------------
 
+
 - install repository tool to the web server 
 
 $ yum -y install createrepo
@@ -659,6 +660,10 @@ $ yum -y install createrepo
 $ mkdir -p /var/www/html/fedora/base/8/i386
 
 $ mkdir -p /var/www/html/fedora/base/8/x86_64
+
+- update version number hipl.spec and create-rpm-sh
+
+- make rpm
 
 - copy all hipl packages to the repository depending on the architecture
 
@@ -711,11 +716,15 @@ $ mkdir -p /var/www/html/ubuntu/dists/gutsy/main/binary-armel
 $ mkdir -p /var/www/html/ubuntu/dists/gutsy/main/binary-i386
 $ mkdir -p /var/www/html/ubuntu/dists/gutsy/main/binary-amd64
 
+- update version number in create-deb.sh
+
+- create new packages with "make deb"
+
 - to create overview file of Packages.gz for all hipl packages
 
 $ dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz
 
-- option -m for all -multiversions of hipl packages
+- option -m for all -multiversions of hipl packages (not really needed)
   
 $ dpkg-scanpackages -m . /dev/null | sudo gzip -9c > Packages.gz
 
@@ -1038,3 +1047,77 @@ UPGRADING THE KERNEL - DEPRACATED
     (/id: untagged file/)' </tmp/TLA_DIR_LOG`
 
 Check HUNK messages from PATCH_LOG manually.
+
+
+ADDING HIPCONF ACTIONS AND PARAMETERS
+=====================================
+
+If you want to add some actions and parameters for hipconf, do the following
+things carefully. Otherwise your codes could cause bugs not only for hipconf
+but also for hipd.
+
+Assume that you want to add an action named as 'NEWACT'.
+
+1.1. ACTION_NEWACT in libinet6/hipconf.h
+----------------------------------------
+Define a constant ACTION_NEWACT which has value between 0 and ACTION_MAX.
+Probably you also need to increase the value of ACTION_MAX.
+
+1.2. hip_conf_get_action() in libinet6/hipconf.c
+------------------------------------------------
+Add a proper sentence in the strcmp() series, like that:
+
+    ...
+    else if (!strcmp("newaction", text))
+        ret = ACTION_NEWACT;
+    ...
+
+1.3. hip_conf_check_action_argc() in libinet6/hipconf.c
+-------------------------------------------------------
+Add a case block for your ACTION_NEWACT constant in the switch(action) block.
+
+1.4. hip_conf_get_type_arg() in libinet6/hipconf.c
+--------------------------------------------------
+Add a case block for your ACTION_NEWACT constant in the switch(action) block.
+
+2.1. SO_HIP_NEWMODE in libinet6/icomm.h
+---------------------------------------
+Define a constant SO_HIP_NEWMODE which has value between 0 and
+HIP_SO_ROOT_MAX. Take also care of the value of HIP_SO_ROOT_MAX.
+
+2.2. hip_handle_user_msg() in hipd/user.c
+-----------------------------------------
+Add a case block for your SO_HIP_NEWMODE constant in the switch(msg_type) block.
+
+2.3. hip_message_type_name() in libinet6/builder.c
+--------------------------------------------------
+Add a case block for your SO_HIP_NEWMODE constant in the switch(msg_type) block.
+In this case, you just need to return the same string as the constant.
+
+3.1. action_handler[] in libinet6/hipconf.c
+-------------------------------------------
+Add a handler function for your new action in the action_handler[] array.
+NOTE: the location and the order of these handlers are important, because
+each entry of the handler array is to be accessed via type index.
+
+3.2. TYPE_NEWTYPE in libinet6/hipconf.h
+---------------------------------------
+Define a constant TYPE_NEWTYPE which has value between 0 and TYPE_MAX.
+Probably you also need to increase the value of TYPE_MAX.
+NOTE: the value of TYPE_NEWTYPE must be a correct index for looking up
+each handler function in action_handler[], which you just added above
+at the step 3.1.
+
+3.3. hip_conf_handle_NEWACT() in libinet6/hipconf.c
+---------------------------------------------------
+Define a handler function added above at the step 3.1, somewhere in hipconf.c.
+
+3.4. hip_conf_handle_NEWACT() in libinet6/hipconf.h
+---------------------------------------------------
+Declare a prototype for your new handler function hip_conf_handle_NEWACT
+defined above at the step 3.1.
+
+4. hipconf_usage in libinet6/hipconf.c
+--------------------------------------
+Add a simple usage for your new action in the usage string.
+

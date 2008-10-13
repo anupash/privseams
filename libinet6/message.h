@@ -4,7 +4,7 @@
  * @author  Miika Komu <miika_iki.fi>
  * @author  Bing Zhou <bingzhou_cc.hut.fi>
  * @version 1.0
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
 #ifndef HIP_MESSAGE_H
 #define HIP_MESSAGE_H
@@ -18,6 +18,8 @@
 #include "nlink.h"
 #include "debug.h"
 #include "icomm.h"
+#include "nat.h"
+#include "hipconf.h"
 
 #define HIP_DAEMON_PORT 3030
 
@@ -157,7 +159,6 @@ int hip_read_control_msg_v4(int socket, struct hip_common *hip_msg,
 int hip_sendto(int sock, const struct hip_common *msg,
 	       const struct sockaddr_in6 *dst);
 
-
-
+int hip_read_control_msg_plugin_handler(void* msg, int len, in6_addr_t * src_addr,in_port_t port);
 
 #endif /* HIP_MESSAGE_H */

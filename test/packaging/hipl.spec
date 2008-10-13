@@ -36,10 +36,12 @@ other related tools and test software.
 #end CentOS changes
 
 # Note: in subsequent releases me may want to use --disable-debugging
-# TBD: The pjproject needs to glued in better.
+# TBD: The pjproject needs to glued in better (convert it to automake).
+#      That way we can get rid of the double configure (the second one is
+#      currently required for bug id 524)
 %build
-./autogen.sh --target=`uname -m`-redhat-linux-gnu
-#%configure
+./autogen.sh --target=hipl --prefix=/usr
+%configure
 make -C doc all
 
 # Currently we are not going to install all includes and test software.
@@ -98,6 +100,11 @@ Summary: hip doc files
 Group: System Environment/Kernel
 %description doc
 
+%package dnsproxy
+Summary: dns proxy for hip
+Group: System Environment/Kernel
+%description dnsproxy
+
 %install
 rm -rf %{buildroot}
 
@@ -115,9 +122,21 @@ install -d %{buildroot}/doc
 make DESTDIR=%{buildroot} install
 install -m 700 test/packaging/rh-init.d-hipfw %{buildroot}/etc/rc.d/init.d/hipfw
 install -m 700 test/packaging/rh-init.d-hipd %{buildroot}/etc/rc.d/init.d/hipd
+install -m 700 test/packaging/rh-init.d-dnsproxy %{buildroot}/etc/rc.d/init.d/dnshipproxy
 install -m 644 doc/HOWTO.txt %{buildroot}/doc
 install -d %{buildroot}%{python_sitelib}/DNS
-install -t %{buildroot}%{python_sitelib}/DNS tools/DNS/*py
+install -t %{buildroot}%{python_sitelib}/DNS tools/DNS/*py*
+install -d %{buildroot}%{python_sitelib}/dnshipproxy
+install -t %{buildroot}%{python_sitelib}/dnshipproxy tools/dnsproxy.py*
+install -t %{buildroot}%{python_sitelib}/dnshipproxy tools/pyip6.py*
+install -t %{buildroot}%{python_sitelib}/dnshipproxy tools/hosts.py*
+install -t %{buildroot}%{python_sitelib}/dnshipproxy tools/util.py*
+install -d %{buildroot}%{python_sitelib}/parsehipkey
+install -t %{buildroot}%{python_sitelib}/parsehipkey tools/parse-key-3.py*
+install -t %{buildroot}%{python_sitelib}/parsehipkey tools/myasn.py*
+# required in CentOS release 5.2
+install -m 700 tools/parsehipkey %{buildroot}%{prefix}/sbin/parsehipkey
+install -m 700 tools/dnshipproxy %{buildroot}%{prefix}/sbin/dnshipproxy
 
 %post lib
 /sbin/ldconfig 
@@ -140,6 +159,11 @@ install -t %{buildroot}%{python_sitelib}/DNS tools/DNS/*py
 #/etc/rc.d/init.d/hipfw start
 #/usr/sbin/hipfw -bk`
 
+%post dnsproxy
+/sbin/chkconfig --add dnshipproxy
+/sbin/chkconfig --level 2 dnshipproxy on
+/sbin/service dnshipproxy start
+
 %preun daemon
 /sbin/service hipd stop
 /sbin/chkconfig --del hipd
@@ -148,6 +172,10 @@ install -t %{buildroot}%{python_sitelib}/DNS tools/DNS/*py
 /sbin/service hipfw stop
 /sbin/chkconfig --del hipfw
 #/etc/rc.d/init.d/hipfw stop
+
+%preun dnsproxy
+/sbin/service dnshiproxy stop
+/sbin/chkconfig --del dnshipproxy
 
 %clean
 rm -rf %{buildroot}
@@ -163,31 +191,16 @@ rm -rf %{buildroot}
 %files agent
 %{prefix}/bin/hipagent
 
-#%{prefix}/bin/DNS/Base.py
-#%{prefix}/bin/DNS/Base.pyc
-#%{prefix}/bin/DNS/Class.py
-#%{prefix}/bin/DNS/Class.pyc
-#%{prefix}/bin/DNS/Lib.py
-#%{prefix}/bin/DNS/Status.py
-#%{prefix}/bin/DNS/Status.pyc
-#%{prefix}/bin/DNS/Type.py
-#%{prefix}/bin/DNS/Type.pyc
-#%{prefix}/bin/DNS/__init__.py
-#%{prefix}/bin/DNS/__init__.pyc
-#%{prefix}/bin/DNS/lazy.py
-#%{prefix}/bin/DNS/lazy.pyc
-#%{prefix}/bin/DNS/pyip6.py
-#%{prefix}/bin/DNS/win32dns.py
+%files dnsproxy
+%{prefix}/sbin/dnshipproxy
+%{prefix}/sbin/parsehipkey
+%{python_sitelib}/dnshipproxy
+%{python_sitelib}/parsehipkey
+%{python_sitelib}/DNS
+%defattr(755,root,root)
 
 %files tools
 %{prefix}/sbin/hipconf
-%{prefix}/sbin/myasn.py
-%{prefix}/sbin/parse-key-3.py
-%{prefix}/sbin/dnsproxy.py
-%{prefix}/sbin/hosts.py
-%{prefix}/sbin/pyip6.py
-%{prefix}/sbin/util.py
-%{python_sitelib}/DNS
 %defattr(755,root,root)
 
 %files test
@@ -206,6 +219,8 @@ rm -rf %{buildroot}
 %doc doc/HOWTO.txt doc/howto-html
 
 %changelog
+* Wed Aug 20 2008 Miika Komu <miika@iki.fi>
+- Dnsproxy separated into a separate package. Python packaging improvements.
 * Mon Jul 21 2008 Miika Komu <miika@iki.fi>
 - Rpmbuild fixes for Fedora 8 build
 * Thu Jul 17 2008 Johnny Hughes <johnny@centos.org>

@@ -4,7 +4,7 @@
 #hipfw="/usr/sbin/hipfw"
 #OPTIONS="-bk"
 
-hipfw_OPTS="-bk"
+HIPFW_OPTS="-bkl"
 #PIDFILE=/var/run/hipfw.pid
 PID=`pidof -o $$ hipfw`
 
@@ -30,8 +30,8 @@ stop_hipfw() {
 case "$1" in
   start)
         echo -n "Starting hipfw"
-	#start-stop-hipfw --start --quiet --exec /usr/sbin/hipfw -- $hipfw_OPTS
-	`sudo /usr/sbin/hipfw $hipfw_OPTS`
+	start-stop-daemon --start --quiet --exec /usr/sbin/hipfw -- $HIPFW_OPTS
+	#`sudo /usr/sbin/hipfw $HIPFW_OPTS`
         echo "."
 	;;
   stop)

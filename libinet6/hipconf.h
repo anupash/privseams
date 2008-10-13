@@ -10,7 +10,7 @@
  * @author  Anu Markkola
  * @author  Lauri Silvennoinen
  * @author  Tao Wan <twan@cc.hut.fi>
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  */
 #ifndef HIPCONF_H
 #define HIPCONF_H
@@ -79,9 +79,14 @@
 #define LIB_LENGTH	200
 /** @} addtogroup exec_app_types */
 
-/* hipconf tool actions. These are numerical values for the first commandline
-   argument. For example in "tools/hipconf get hi default" -command "get"
-   is the action. */
+/**
+ * hipconf tool actions. These are numerical values for the first commandline
+ * argument. For example in "tools/hipconf get hi default" -command "get"
+ * is the action. If you want a new action named as 'NEWACT', define a
+ * constant variable which has value between 0 and ACTION_MAX.
+ * Probably you also need to increase the value of ACTION_MAX.
+ * @see hip_conf_get_action()
+ */
 
 /* 0 is reserved */
 #define ACTION_ADD 1
@@ -109,10 +114,18 @@
 #define ACTION_TCPTIMEOUT 23 /* add By Tao Wan, on 04.01.2008 */
 #define ACTION_HIPPROXY 24
 #define ACTION_REINIT 25
-#define ACTION_MAX 26 /* exclusive */
+#define ACTION_HEARTBEAT 26
+#define ACTION_MAX 27 /* exclusive */
 
-/* Important! These values are used as array indexes, so keep these in order.
-   Add values after the last value and increment TYPE_MAX. */
+/**
+ * TYPE_ constant list, as an index for each action_handler function.
+ * 
+ * @note Important! These values are used as array indexes, so keep these
+ *       in order. If you add a constant TYPE_NEWTYPE here, the value of
+ *       TYPE_NEWTYPE must be a correct index for looking up its corresponding
+ *       handler function in action_handler[]. Add values after the last value
+ *       and increment TYPE_MAX.
+ */
 /* 0 is reserved */
 #define TYPE_HI      	   1
 #define TYPE_MAP     	   2
@@ -140,7 +153,8 @@
 #define TYPE_ORDER         24
 #define TYPE_TCPTIMEOUT	   25 /* add By Tao Wan, on 04.01.2008*/
 #define TYPE_HIPPROXY	   26
-#define TYPE_MAX           27 /* exclusive */
+#define TYPE_HEARTBEAT     27
+#define TYPE_MAX           28 /* exclusive */
 
 /* #define TYPE_RELAY         22 */
 
@@ -154,13 +168,14 @@
 #define HIPD_CONFIG_FILE     "/etc/hip/hipd_config"
 #define HIPD_CONFIG_FILE_EX \
 "# Format of this file is as with hipconf, but without hipconf prefix.\n\
+# add hi default    # add all four HITs (see bug id 522) \n\
 # add map HIT IP    # preload some HIT-to-IP mappings to hipd \n\
 # add service rvs   # the host acts as HIP rendezvous\n\
 # dht gw host port port TTL # set dht gw hostname|ip port default=5851\n\
 # locator on        # host sends all of its locators in base exchange \n\
 # opp normal|advanced|none \n\
 opendht off # Jan 2007: OpenDHT infrastructure is flaky -Samu/Miika\n\
-nat on              # the host is behind a NAT\n\
+nat plain-udp       # the host is behind a NAT\n\
 debug medium        # debug verbosity: all, medium or none\n"
 
 #define HIPD_HOSTS_FILE     "/etc/hip/hosts"
@@ -171,6 +186,15 @@ debug medium        # debug verbosity: all, medium or none\n"
 #2001:1e:361f:8a55:6730:6f82:ef36:2fff kyle kyle.com # This is a HIT with alias\n\
 #2001:17:53ab:9ff1:3cba:15f:86d6:ea2e kenny       # This is a HIT without alias\n"
 
+/**
+ * A list of prototypes for handler functions.
+ *
+ * @note If you added a handler function in libinet6/hipconf.c, you also
+ *       need to declare its prototype here.
+ *       If you added a SO_HIP_NEWMODE in libinet6/icomm.h, you also need to
+ *       add a case block for your SO_HIP_NEWMODE constant in the
+ *       switch(msg_type) block in this function.
+ */
 int hip_handle_exec_application(int fork, int type, int argc, char **argv);
 int hip_conf_handle_restart(hip_common_t *, int type, const char *opt[], int optc);
 int hip_append_pathtolib(char **libs, char *lib_all, int lib_all_length);
@@ -205,7 +229,8 @@ int hip_do_hipconf(int argc, char *argv[], int send_only);
 int hip_conf_handle_opptcp(struct hip_common *, int type, const char *opt[], int optc);
 int hip_conf_handle_tcptimeout(struct hip_common *, int type, const char *opt[], int optc); /*added by Tao Wan, 04.Jan.2008*/
 int hip_conf_handle_hipproxy(struct hip_common *msg, int action, const char *opt[], int optc);
-
+int hip_conf_handle_heartbeat(hip_common_t *msg, int action, const char *opt[], int optc);
+ 
 /**
  * Prints the HIT values in use. Prints either all or the default HIT value to
  * stdout.

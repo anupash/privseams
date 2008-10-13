@@ -4,6 +4,8 @@ AUTOMAKE_OPTIONS = foreign
 # won't build because there is also the linux/net/ipv6/hip/debug.h include.
 #
 CFLAGS = $(hipl_common_cflags) -DHIP_UNITTEST_MODE -L$(HIPL_LIBINET6_LIB)
+CFLAGS += $(OPTIMIZATIONS_CFLAGS)
+CFLAGS += $(GPROF_CFLAGS)
 
 if HIP_AGENT
 CFLAGS += -lsqlite3
@@ -12,7 +14,7 @@ endif
 include_HEADERS = checksum.h first_test.h hipsetup.h start-stop-daemon.h
 include_HEADERS += unittest.h conntest.h hipconftool.h misc_install.h unit.h
 
-INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
+INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)  -I$(HIPL_PJPROJECT_NATH)/include -I$(HIPL_PJPROJECT_LIB)/include -I$(HIPL_PJPROJECT_LIB_UTIL)/include -I$(HIPL_PJPROJECT_MEDIA)/include
 
 conntest_client_opp_LDADD = 
 if HIP_OPPORTUNISTIC
@@ -20,14 +22,16 @@ if HIP_OPPORTUNISTIC
   conntest_client_opp_LDADD += ../libopphip/.libs/libopphip.a
 endif
 
+conntest_client_opp_LDADD += $(OPENWRT_LIB_STATIC)
+
 conntest_client_opp_LDADD += ../libinet6/.libs/libinet6.a
-hashtest_LDADD = ../libinet6/.libs/libinet6.a
-listtest_LDADD =
+hashtest_LDADD = $(OPENWRT_LIB_STATIC) ../libinet6/.libs/libinet6.a
+listtest_LDADD = $(OPENWRT_LIB_STATIC)
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
 # Note: libhiptool needs to be the last library in LDADD!!
 #
-LDADD  = ../libinet6/.libs/libinet6.a
+LDADD  = $(OPENWRT_LIB_STATIC) ../libinet6/.libs/libinet6.a
 
 if HIP_CORPORATE
   conntest_client_opp_LDADD += -lhiptool
@@ -43,8 +47,16 @@ conntest_client_opp_LDADD += ../opendht/.libs/libhipopendht.a
 LDADD += ../opendht/.libs/libhipopendht.a
 CFLAGS += $(HIPL_XMLL)
 
-opendhtteststub_LDFLAGS= -lcrypto $(HIP_XMLL) 
-opendhtteststub_LDADD = ../opendht/.libs/libhipopendht.a ../libinet6/.libs/libinet6.a
+# XX FIXME: conntest-client-hip fails to link to libinet6 because of this
+#LDFLAGS = -lc -lcrypto $(HIP_XMLL) $(OPENWRT)
+
+opendhtteststub_LDFLAGS= -lcrypto  $(HIP_XMLL) 
+
+if HIP_OPENWRT
+	opendhtteststub_LDFLAGS+= -lc
+endif
+
+opendhtteststub_LDADD = ../opendht/.libs/libhipopendht.a $(OPENWRT_LIB_STATIC) ../libinet6/.libs/libinet6.a
 if HIP_CORPORATE
   opendhtteststub_LDADD += -lhiptool
 else
@@ -73,6 +85,7 @@ bin_PROGRAMS += listtest
 bin_PROGRAMS += opendhtteststub
 bin_PROGRAMS += certteststub
 bin_PROGRAMS += sqliteteststub
+bin_PROGRAMS += hc_performance
 
 #sbin_SCRIPTS = hipsetup
 
@@ -98,6 +111,7 @@ listtest_SOURCES = listtest.c
 opendhtteststub_SOURCES = opendhtteststub.c
 certteststub_SOURCES = certteststub.c
 sqliteteststub_SOURCES = sqliteteststub.c
+hc_performance_SOURCES = hc_performance.c debug.c
 
 #EXTRA_DIST = $(sbin_SCRIPTS)
 
@@ -109,6 +123,10 @@ hipconftool.h:
 	$(LN_S) -f $(HIPL_TOOLS)/hipconftool.h .
 hipconftool.c: hipconftool.h
 	$(LN_S) -f $(HIPL_TOOLS)/hipconftool.c .
+debug.h:
+	$(LN_S) -f $(HIPL_LIBINET6)/debug.h .
+debug.c: debug.h
+	$(LN_S) -f $(HIPL_LIBINET6)/debug.c .
 $(HIPL_LIBINET6_LIB_STATIC):
 	$(MAKE) -C $(HIPL)/libinet6
 

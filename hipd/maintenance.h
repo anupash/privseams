@@ -2,13 +2,15 @@
 #define _HIPD_MAINTENANCE
 
 #include <stdlib.h>
-
 #include "hidb.h"
 #include "hipd.h"
 #include "oppdb.h"
 #include "fcntl.h"
+#include "hip_statistics.h"
 
 #define FORCE_EXIT_COUNTER_START		5
+
+extern int hip_icmp_interval;
 
 int hip_handle_retransmission(hip_ha_t *entry, void *current_time);
 int hip_scan_retransmissions();
@@ -29,9 +31,12 @@ void hip_set_firewall_status();
 int hip_agent_update_status(int msg_type, void *data, size_t size);
 int hip_agent_update(void);
 int hip_get_firewall_status();
+int hip_icmp_recvmsg(int sockfd);
+int hip_icmp_statistics(struct in6_addr * src, struct in6_addr * dst,
+			struct timeval *stval, struct timeval *rtval);
 
 /*Communication with firewall daemon*/
-int hip_firewall_set_bex_data(int action, hip_ha_t *entry, struct in6_addr *hit_s, 
+int hip_firewall_set_bex_data(int action, hip_ha_t *entry, struct in6_addr *hit_s,
 			      struct in6_addr *hit_r);
 #endif /* _HIPD_MAINTENANCE */
 

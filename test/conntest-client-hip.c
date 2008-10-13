@@ -5,7 +5,7 @@
  * @author  Lauri Silvennoinen
  * @version 1.1
  * @date    30.01.2008
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
 #if HAVE_CONFIG_H
 #include <config.h>
@@ -49,6 +49,8 @@ int main(int argc, char *argv[]) {
 
 	hip_set_logtype(LOGTYPE_STDERR);
 	hip_set_logfmt(LOGFMT_SHORT);
+	hip_set_logdebug(LOGDEBUG_MEDIUM);
+	
 	HIP_IFEL(hip_set_auto_logdebug(cfile), -1,
 		 "Error: Cannot set the debugging parameter.\n");
 	

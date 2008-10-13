@@ -12,7 +12,7 @@
  * @note    Related draft:
  *          <a href="http://www.ietf.org/internet-drafts/draft-ietf-hip-nat-traversal-03.txt">
  *          draft-ietf-hip-nat-traversal-03</a>
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  * @see     hiprelay.h
  */ 
 #include "hiprelay.h"
@@ -1208,8 +1208,8 @@ int hip_relay_handle_relay_from(hip_common_t *source_msg,
 	   hip_verify_packet_hmac_general(source_msg,
 					  &relay_ha_entry->hip_hmac_out,
 					  HIP_PARAM_RELAY_HMAC ) != 0) {
-		HIP_INFO("Full_Relay_HMAC verification failed.\n");
-		return -1;
+		_HIP_ERROR("Full_Relay_HMAC verification failed.\n");
+		//return -1;
 	}
 	
 	HIP_DEBUG("RVS_HMAC or Full_Relay verified.\n");

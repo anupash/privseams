@@ -75,30 +75,34 @@ static enum logfmt_t logfmt = LOGFMT_SHORT;
 static enum logdebug_t logdebug = LOGDEBUG_ALL;
 
 /**
- * hip_set_logtype - set logging to to stderr or syslog
+ * @brief Sets logging to stderr or syslog.
+ * 
+ * Defines where HIP daemon DEBUG, INFO, ERROR etc. messages are printed. 
+ * 
  * @param new_logtype the type of logging output, either LOGTYPE_STDERR or
- *               LOGTYPE_SYSLOG
- *
+ *                    LOGTYPE_SYSLOG
  */
 void hip_set_logtype(int new_logtype) {
   logtype = new_logtype;
 }
 
 /**
- * hip_set_logfmt - set the formatting of log output (short or long)
- * @param new_logfmt the format of the log output, either LOGFMT_SHORT or
- *              LOGFMT_LONG
+ * @brief Sets the formatting of log output.
  *
+ * Defines whether the messages should include file name and line number or not. 
+ * 
+ * @param new_logfmt the format of the log output, either LOGFMT_SHORT or
+ *                    LOGFMT_LONG
  */
 void hip_set_logfmt(int new_logfmt) {
   logfmt = new_logfmt;
 }
 
 /**
- * hip_set_logdebug - selects what logging messages to display
- * @param new_logdebug: either LOGDEBUG_ALL, LOGDEBUG_MEDIUM or LOGDEBUG_NONE
- * @return       zero on success.
- *
+ * @brief Selects what logging messages to display.
+ * 
+ * @param new_logdebug either LOGDEBUG_ALL, LOGDEBUG_MEDIUM or LOGDEBUG_NONE
+ * @return             always zero.
  */
 int hip_set_logdebug(int new_logdebug) {
   logdebug = new_logdebug;
@@ -199,7 +203,7 @@ int hip_set_auto_logdebug(const char *cfile){
  *
  */
 void hip_handle_log_error(int logtype) {
-  fprintf(stderr, "log (type=%d) failed, ignoring", logtype);
+  fprintf(stderr, "log (type=%d) failed, ignoring\n", logtype);
 }
 
 /**
@@ -415,9 +419,9 @@ void hip_hexdump(const char *file, int line, const char *function,
 	HIP_DIE("hexdump msg too long(%d)", hexdump_written);
 	} else {
 	hexdump_count -= hexdump_written;
-	assert(hexdump_count >=0);
+	HIP_ASSERT(hexdump_count >=0);
 	hexdump_index += hexdump_written;
-	assert(hexdump_index + hexdump_count == hexdump_max_size);
+	HIP_ASSERT(hexdump_index + hexdump_count == hexdump_max_size);
 	}
 	char_index++;
 	} while(char_index < len);
@@ -498,9 +502,9 @@ int hip_hexdump_parsed(const char *file, int line, const char *function,
 				HIP_DIE("hexdump msg too long(%d)", hexdump_written);
 			}
 			hexdump_count -= hexdump_written;
-			assert(hexdump_count >=0);
+			HIP_ASSERT(hexdump_count >=0);
 			hexdump_index += hexdump_written;
-			assert(hexdump_index + hexdump_count == hexdump_total_size);
+			HIP_ASSERT(hexdump_index + hexdump_count == hexdump_total_size);
 			
 			// Wite the character in ascii to asciidump line	
 			if (written > 32 && written < 127)
@@ -624,7 +628,7 @@ void hip_print_hit(int debug_level, const char *file, int line, const char *func
 		   const char *str, const struct in6_addr *hit)
 {
 	if(hit == NULL) {
-		HIP_DEBUG("%s: NULL\n", str);
+	        HIP_DEBUG("%s: NULL\n", str);
 		return;
 	}
 	else {

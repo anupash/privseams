@@ -24,6 +24,8 @@
 #include <netinet/in.h>
 #include <openssl/rsa.h>
 #include <openssl/conf.h>
+#include <openssl/x509.h>
+#include <openssl/x509v3.h>
 #include "debug.h"
 #include "ife.h"
 #include "misc.h"
@@ -36,6 +38,8 @@
 /* Needed if the configuration file for certs did not exist  */
 #define HIP_CERT_INIT_DAYS 10
 
+#define HIP_CERT_DAY 86400
+
 /** Struct used to deliver the minimal needed information to build SPKI cert **/
 struct hip_cert_spki_info {
 	hip_tlv_type_t    type;
@@ -45,10 +49,11 @@ struct hip_cert_spki_info {
 	char signature[768];
         struct in6_addr issuer_hit;
         /* 0 if succesfully verified otherwise negative */
-        int success;
+        uint32_t success;
 };
 
 /** SPKI cert related functions **/
+int hip_cert_spki_lib_verify(struct hip_cert_spki_info *);
 int hip_cert_spki_create_cert(struct hip_cert_spki_info *,
                               char *, struct in6_addr *,
                               char *, struct in6_addr *,
@@ -60,12 +65,19 @@ int hip_cert_spki_char2certinfo(char *,struct hip_cert_spki_info *);
 int hip_cert_spki_send_to_verification(struct hip_cert_spki_info *);
 
 /** x509v3 cert related functions **/
-int hip_cert_x509v3_request(STACK_OF(CONF_VALUE) * section);
-
+int hip_cert_x509v3_request_certificate(struct in6_addr *, unsigned char *);
+int hip_cert_x509v3_request_verification(unsigned char *, int);
+ 
 /** Utilitary functions **/
+void hip_cert_display_x509_der_contents(char *, int);
+X509 * hip_cert_der_to_x509(unsigned char *, int);
+void hip_cert_display_x509_pem_contents(char *); 
+X509 * hip_cert_pem_to_x509(char *);
 STACK_OF(CONF_VALUE) * hip_cert_read_conf_section(char *, CONF *);
 CONF * hip_cert_open_conf(void); 
 void hip_cert_free_conf(CONF *);
+void hip_for_each_conf_value(STACK_OF(CONF_VALUE) *, 
+                             int (func)(char *, char *, void *) , void *);
 int hip_cert_regex(char *, char *, int *, int *);
 
 #endif /* HIP_CERTTOOLS_H */

@@ -437,7 +437,7 @@ out_err:
 	return err;
 }
 
-void hip_delete_sa(u32 spi, struct in6_addr *peer_addr,
+void hip_delete_sa(uint32_t spi, struct in6_addr *peer_addr,
                    struct in6_addr *dst_addr,
                    int family, int sport, int dport)
 {
@@ -475,8 +475,18 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 	int err = 0, enckey_len, authkey_len;
 	int aalg = ealg;
 	int cmd = update ? XFRM_MSG_UPDSA : XFRM_MSG_NEWSA;
+	in_port_t port1, port2;
 
 	HIP_ASSERT(spi != 0);
+	HIP_ASSERT(entry);
+
+	if (direction == HIP_SPI_DIRECTION_OUT){
+		port1 = entry->local_udp_port;
+		port2 = entry->peer_udp_port;
+	} else {
+		port1 = entry->peer_udp_port;
+		port2 = entry->local_udp_port;
+	}
 
 	authkey_len = hip_auth_key_length_esp(aalg);
 	enckey_len = hip_enc_key_length(ealg);
@@ -507,13 +517,13 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 	HIP_DEBUG("direction %d\n", direction);
 	HIP_DEBUG("SPI=0x%x\n", spi);
 	HIP_DEBUG("************************************\n");
-
+	
 	HIP_IFE(hip_xfrm_state_modify(hip_xfrmapi_nl_ipsec, cmd,
 				      saddr, daddr,
 				      src_hit, dst_hit, spi,
 				      ealg, enckey, enckey_len, aalg,
 				      authkey, authkey_len, AF_INET6,
-				      entry->local_udp_port, entry->peer_udp_port), 1);
+				      port1, port2), 1);
 
  out_err:
 	return err;

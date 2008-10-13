@@ -179,7 +179,8 @@ int hip_hadb_insert_state_spi_list(hip_hit_t *peer_hit, hip_hit_t *our_hit,
 				   uint32_t spi);
 int hip_init_peer(hip_ha_t *entry, struct hip_common *msg, 
 		     struct hip_host_id *peer);
-int hip_init_us(hip_ha_t *entry, struct in6_addr *our_hit);
+//int hip_init_us(hip_ha_t *entry, struct in6_addr *our_hit);
+int hip_init_us(hip_ha_t *entry, hip_hit_t *hit_our);
 
 /* debugging */
 int hip_print_info_hadb(hip_ha_t *entry, void *cntr);
@@ -198,6 +199,9 @@ int hip_hadb_get_peer_addr_info(hip_ha_t *entry, struct in6_addr *addr,
 int hip_hadb_add_peer_addr(hip_ha_t *entry, struct in6_addr *new_addr,
 			   uint32_t interface_id, uint32_t lifetime,
 			   int state);
+int hip_hadb_add_peer_udp_addr(hip_ha_t *entry, struct in6_addr *new_addr,
+			   in_port_t port,
+			   uint32_t spi, uint32_t lifetime, int state);
 
 void hip_hadb_delete_peer_addrlist_one(hip_ha_t *entry, struct in6_addr *addr);
 
@@ -376,7 +380,7 @@ int hip_hadb_add_udp_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 			     uint32_t priority);
 
 /*lsi support functions*/
-struct in_addr hip_generate_peer_lsi();
+int hip_generate_peer_lsi(hip_lsi_t *lsi);
 void hip_hadb_set_lsi_pair(hip_ha_t *entry);
 int hip_hadb_exists_lsi(hip_lsi_t *lsi);
 int hip_hadb_find_lsi(hip_ha_t *entry, void *lsi);

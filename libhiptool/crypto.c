@@ -303,7 +303,6 @@ unsigned char dhgen[HIP_MAX_DH_GROUP_ID] = {0,0x02,0x02,0x02,0x02,0x02,0x02};
  * @return       1 if ok, zero otherwise.
  * @warning      This function returns 1 for success which is against the policy
  *               defined in @c /doc/HACKING.
- * @todo         Should this function return zero for success?
  */
 int hip_write_hmac(int type, void *key, void *in, int in_len, void *out)
 {
@@ -325,31 +324,33 @@ int hip_write_hmac(int type, void *key, void *in, int in_len, void *out)
                 break;
         default:
                 HIP_ERROR("Unknown HMAC type 0x%x\n", type);
-                return 0;
+                return 1;
         }
 
 	_HIP_HEXDUMP("HMAC key:", key, hip_hmac_key_length(HIP_ESP_AES_SHA1));
-	_HIP_HEXDUMP("HMAC in:", in, debug_len);
+	_HIP_HEXDUMP("HMAC in:", in, in_len);
 	_HIP_HEXDUMP("HMAC out:", out, HIP_AH_SHA_LEN);
 
-	return 1;
+	return 0;
 }
 
 /**
- * hip_crypto_encrypted - encrypt/decrypt data
- * @param data data to be encrypted/decrypted
- * @param iv_orig initialization vector
- * @param alg encryption algorithm to use
- * @param len length of data
- * @param key encryption/decryption key to use
- * @param direction flag for selecting encryption/decryption
+ * @brief Encrypt or decrypts data.
  *
- * @param direction is HIP_DIRECTION_ENCRYPT if data is to be encrypted
- * or HIP_DIRECTION_DECRYPT if data is to be decrypted.
+ * Encrypts/decrypts data in @c data and places the result in the same buffer
+ * @c data thus overwriting the original source data.
  *
- * The result of the encryption/decryption of data is overwritten to data.
+ * @param data      a pointer to a buffer of data to be encrypted/decrypted.
+ *                  This is both a source and a target buffer.
+ * @param iv_orig   a pointer to an initialization vector
+ * @param alg       encryption algorithm to use
+ * @param len       length of @c data
+ * @param key       encryption/decryption key to use
+ * @param direction flag for selecting encryption/decryption. Either
+ *                  HIP_DIRECTION_ENCRYPT or HIP_DIRECTION_DECRYPT
  *
- * @return 0 is encryption/decryption was successful, otherwise < 0.
+ * @return          Zero if the encryption/decryption was successful, negative
+ *                  otherwise.
  */
 int hip_crypto_encrypted(void *data, const void *iv_orig, int alg, int len,
 			 void* key, int direction)
@@ -361,27 +362,26 @@ int hip_crypto_encrypted(void *data, const void *iv_orig, int alg, int len,
 	u8 secret_key1[8], secret_key2[8], secret_key3[8];
 	u8 iv[20]; /* OpenSSL modifies the IV it is passed during the encryption/decryption */
         HIP_IFEL(!(result = malloc(len)), -1, "Out of memory\n");
-	HIP_HEXDUMP("hip_crypto_encrypted encrypt data", data, len);
+	_HIP_HEXDUMP("hip_crypto_encrypted encrypt data", data, len);
         
-	HIP_DEBUG("d1\n");
+	_HIP_DEBUG("algo: %d\n", alg);
+
 	switch(alg) {
         case HIP_HIP_AES_SHA1:
-	
-     	HIP_DEBUG("d2\n");
 		/* AES key must be 128, 192, or 256 bits in length */
 		memcpy(iv, iv_orig, 16);
 		if (direction == HIP_DIRECTION_ENCRYPT) {
- 	HIP_DEBUG("d3\n");
+			_HIP_DEBUG("d3\n");
 			HIP_IFEL((err = AES_set_encrypt_key(key, 8 * hip_transform_key_length(alg), &aes_key)) != 0, err, 
 				 "Unable to use calculated DH secret for AES key (%d)\n", err);
-			HIP_HEXDUMP("AES key for OpenSSL: ", &aes_key, sizeof(unsigned long) * 4 * (AES_MAXNR + 1));
-			HIP_HEXDUMP("AES IV: ", iv, 16);
+			_HIP_HEXDUMP("AES key for OpenSSL: ", &aes_key, sizeof(unsigned long) * 4 * (AES_MAXNR + 1));
+			_HIP_HEXDUMP("AES IV: ", iv, 16);
 			AES_cbc_encrypt(data, result, len, &aes_key, (unsigned char *)iv, AES_ENCRYPT);
 		} else {
 			HIP_IFEL((err = AES_set_decrypt_key(key, 8 * hip_transform_key_length(alg), &aes_key)) != 0, err, 
 				 "Unable to use calculated DH secret for AES key (%d)\n", err);
-			//HIP_HEXDUMP("AES key for OpenSSL: ", &aes_key, sizeof(unsigned long) * 4 * (AES_MAXNR + 1));
-			//HIP_HEXDUMP("AES IV: ", iv, 16);
+			_HIP_HEXDUMP("AES key for OpenSSL: ", &aes_key, sizeof(unsigned long) * 4 * (AES_MAXNR + 1));
+			_HIP_HEXDUMP("AES IV: ", iv, 16);
 			AES_cbc_encrypt(data, result, len, &aes_key, (unsigned char *)iv, AES_DECRYPT);
 		}
  		memcpy(data, result, len);
@@ -415,9 +415,8 @@ int hip_crypto_encrypted(void *data, const void *iv_orig, int alg, int len,
                 break;
 
         default:
-                HIP_IFEL(1, -EFAULT, "Attempted to use unknown CI (alg = %d)\n", alg);
+                HIP_IFEL(1, -EINVAL, "Attempted to use unknown CI (alg = %d)\n", alg);
         }
-
 	
 	_HIP_HEXDUMP("hip_crypto_encrypted decrypt data: ", result, len);	
 	err = 0;
@@ -1060,13 +1059,16 @@ int load_dsa_private_key(const char *filename, DSA **dsa) {
     HIP_ERROR("Error closing file\n");
     goto out_err;
   }
+
+  _HIP_DEBUG("Loaded host DSA q=%s\n", BN_bn2hex((*dsa)->q));
+  _HIP_DEBUG("Loaded host DSA p=%s\n", BN_bn2hex((*dsa)->p));
+  _HIP_DEBUG("Loaded host DSA g=%s\n", BN_bn2hex((*dsa)->g));
+
   HIP_IFEL(!*dsa, -EINVAL, "Read failed for %s\n", filename);
 
   _HIP_DEBUG("Loaded host DSA pubkey=%s\n", BN_bn2hex((*dsa)->pub_key));
   _HIP_DEBUG("Loaded host DSA privkey=%s\n", BN_bn2hex((*dsa)->priv_key));
-  _HIP_DEBUG("Loaded host DSA p=%s\n", BN_bn2hex((*dsa)->p));
-  _HIP_DEBUG("Loaded host DSA q=%s\n", BN_bn2hex((*dsa)->q));
-  _HIP_DEBUG("Loaded host DSA g=%s\n", BN_bn2hex((*dsa)->g));
+
 
  out_err:
 

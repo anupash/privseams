@@ -2,10 +2,46 @@
  * This file defines tools of  blind extension for the Host Identity Protocol
  * 
  * @author  Laura Takkinen
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
 
 #include "blind.h"
+
+int hip_check_whether_to_use_blind(hip_common_t *msg, hip_ha_t *entry,  int *use_blind)
+{
+	/* Check for error conditions. */
+	if(msg == NULL || use_blind == 0) {
+		*use_blind = 0;
+		return -1;
+	}
+	/* If packet controls define that BLIND should not be used, it does not
+	   matter whether our host wishes to use BLIND or not.*/
+	if (((ntohs(msg->control) & HIP_PACKET_CTRL_BLIND)) == 0) {
+		*use_blind = 0;
+		return 0;
+	}
+	/* Packet controls define that we should use BLIND. Let's check if we
+	   have BLIND activated. */
+	
+	/* If the host association state defines that BLIND should be used, we
+	   don't have to take into account the global BLIND status. The global
+	   BLIND bit is set using hipconf, but we may have already created some
+	   HIP associations having BLIND bit on. */
+	if(entry != NULL && entry->blind != 0) {
+		*use_blind = 1;
+		return 0;
+	} else if (entry == NULL) {
+		*use_blind = 0;
+		return 0;
+	} else if(entry->blind == 0) {
+		*use_blind = 0;
+		return 0;
+	} else {
+		*use_blind = 0;
+		return -1;
+	}
+}
+
 
 /* For internal use only */
 int hip_set_blind_on_sa(hip_ha_t *entry, void *not_used)
@@ -62,9 +98,11 @@ int hip_set_blind_off(void)
   return err;
 }
 
-/* This functions is used to query if the blind is in use.
- * returns 0 if blind is off and 1 if blind is on.
-*/
+/**
+ * @brief This functions is used to query if the blind is in use.
+ * 
+ * @return Zero if blind is off and 1 if blind is on.
+ */
 int hip_blind_get_status(void)
 {
   return hip_blind_status;
@@ -88,26 +126,25 @@ int hip_blind_get_nonce(struct hip_common *msg, uint16_t *msg_nonce)
   return err;
 }
 
-/* Forms the plain HIT from the blinded one.
- * @nonce Nonce that is used to calculate the plain HIT
- * @blind_hit Blinded HIT from where the plain HIT is formed
- * @plain_hit Calculated plain HIT
- * Returns 0 in success, otherwise returns -1.
+/**
+ * @brief Forms a plain HIT from a blinded one.
+ * 
+ * @param  nonce     Nonce that is used to calculate the plain HIT.
+ * @param  blind_hit Blinded HIT from where the plain HIT is formed.
+ * @param  plain_hit Calculated plain HIT
+ * @return           Zero in success, otherwise -1.
 */
-int hip_plain_fingerprint(uint16_t *nonce, 
-			  struct in6_addr *blind_hit, 
+int hip_plain_fingerprint(uint16_t *nonce,  struct in6_addr *blind_hit,
 			  struct in6_addr *plain_hit)
 {
-  int err = 0;
+	int err = 0;
     
-  HIP_DEBUG("\n");
-    
-  HIP_IFEL(hip_blind_find_local_hi(nonce, blind_hit, plain_hit), 
-	   -1, "hip_blind_find_local_hit failed\n");
-  HIP_DEBUG_HIT("local hit_found", plain_hit);
+	HIP_IFEL(hip_blind_find_local_hi(nonce, blind_hit, plain_hit), 
+		 -1, "hip_blind_find_local_hit failed\n");
+	_HIP_DEBUG_HIT("local hit_found", plain_hit);
 
  out_err:
-  return err;
+	return err;
 }
 
 /* Forms the blinded HIT from the key (SHA1 hash from the key).
@@ -182,51 +219,52 @@ int hip_blind_fingerprints(hip_ha_t *entry)
   return err;
 }
 /* Tests if @plain_hit blinded with nonce is same as @blind_hit*/
-int hip_blind_verify(uint16_t *nonce, struct in6_addr *plain_hit, struct in6_addr *blind_hit)
+int hip_blind_verify(uint16_t *nonce, struct in6_addr *plain_hit,
+		     struct in6_addr *blind_hit)
 {
-  int ret = 0;
-  char *key = NULL;
-  unsigned int key_len = sizeof(struct in6_addr);
-  struct in6_addr *test_hit = NULL;
+	int ret = 0;
+	char *key = NULL;
+	unsigned int key_len = sizeof(struct in6_addr);
+	struct in6_addr *test_hit = NULL;
 
-  HIP_DEBUG("\n");
+	HIP_DEBUG("\n");
   
-  test_hit = HIP_MALLOC(sizeof(struct in6_addr), 0);
-  if (test_hit == NULL) {
-    HIP_ERROR("Couldn't allocate memory\n");
-    ret = -1;
-    goto out_err;
-  }
+	test_hit = HIP_MALLOC(sizeof(struct in6_addr), 0);
+	if (test_hit == NULL) {
+		HIP_ERROR("Couldn't allocate memory\n");
+		ret = -1;
+		goto out_err;
+	}
 
-  // generate key = nonce|hit_our
-  key = HIP_MALLOC(sizeof(uint16_t)+ sizeof(struct in6_addr), 0); 
-  if (key == NULL) { 
-     HIP_ERROR("Couldn't allocate memory\n");
-     ret = -1;
-     goto out_err;
-  }
+	// generate key = nonce|hit_our
+	key = HIP_MALLOC(sizeof(uint16_t)+ sizeof(struct in6_addr), 0); 
+	if (key == NULL) { 
+		HIP_ERROR("Couldn't allocate memory\n");
+		ret = -1;
+		goto out_err;
+	}
   
-  memcpy(key, plain_hit, sizeof(struct in6_addr));
-  memcpy(key + sizeof(struct in6_addr), nonce, sizeof(uint16_t));
+	memcpy(key, plain_hit, sizeof(struct in6_addr));
+	memcpy(key + sizeof(struct in6_addr), nonce, sizeof(uint16_t));
   
-  // build digests
-  ret = hip_do_blind(key, key_len, test_hit);
-  if (ret == -1) {
-    HIP_ERROR("Building of digest failed\n");
-    goto out_err;
-  } 
-  HIP_DEBUG_HIT("test_hit", test_hit);
-  HIP_DEBUG_HIT("blind_hit", blind_hit);
-  ret = ipv6_addr_cmp(test_hit, blind_hit);//memcmp return 0 if equal
+	// build digests
+	ret = hip_do_blind(key, key_len, test_hit);
+	if (ret == -1) {
+		HIP_ERROR("Building of digest failed\n");
+		goto out_err;
+	} 
+	HIP_DEBUG_HIT("test_hit", test_hit);
+	HIP_DEBUG_HIT("blind_hit", blind_hit);
+	ret = ipv6_addr_cmp(test_hit, blind_hit);//memcmp return 0 if equal
  
  out_err: 
-  if (test_hit)
-    HIP_FREE(test_hit);
-  return (ret == 0) ;
+	if (test_hit)
+		HIP_FREE(test_hit);
+	return (ret == 0) ;
 }
 
 
-struct hip_common *hip_blind_build_i1(hip_ha_t *entry, int *mask)
+struct hip_common *hip_blind_build_i1(hip_ha_t *entry, uint16_t *mask)
 {
   struct hip_common *i1;
   int err = 0;

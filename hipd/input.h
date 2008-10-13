@@ -1,6 +1,6 @@
 /** @file
  * A header file for input.c.
- * 
+ *
  * @author  Janne Lundberg
  * @author  Miika Komu
  * @author  Mika Kousa
@@ -8,13 +8,17 @@
  * @author  Anthony D. Joseph
  * @author  Bing Zhou
  * @author  Tobias Heer
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @author  Samu Varjonen
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
 #ifndef HIP_INPUT_H
 #define HIP_INPUT_H
 
 #ifdef CONFIG_HIP_RVS
 #  include "hiprelay.h"
+#endif
+#ifdef CONFIG_HIP_BLIND
+#  include "hadb.h"
 #endif
 
 #include "oppdb.h"
@@ -34,6 +38,7 @@
 #include "state.h"
 #include "oppdb.h"
 #include "registration.h"
+#include "esp_prot_hipd_msg.h"
 
 #if defined CONFIG_HIP_HI3
 #include "i3_client_api.h"
@@ -73,6 +78,8 @@ struct pseudo_header
 void hip_inbound(cl_trigger *t, void *data, void *ctx);
 #endif // CONFIG_HIP_HI3
 
+extern int hip_icmp_sock;
+
 /**
  * Gets name for a message type
  * @param type the msg type
@@ -80,11 +87,11 @@ void hip_inbound(cl_trigger *t, void *data, void *ctx);
  * @return HIP message type as a string.
  */
 
-static inline const char *hip_msg_type_str(int type) 
+static inline const char *hip_msg_type_str(int type)
 {
         const char *str = "UNKNOWN";
         static const char *types[] =
-		{ "", "I1", "R1", "I2", "R2", "CER", "UPDATE", 
+		{ "", "I1", "R1", "I2", "R2", "CER", "UPDATE",
 		  "NOTIFY", "CLOSE", "CLOSE_ACK", "UNKNOWN", "BOS" };
         if (type >= 1 && type < ARRAY_SIZE(types))
                 str = types[type];
@@ -204,11 +211,11 @@ int hip_receive_control_packet(struct hip_common *, struct in6_addr *,
  * hip_receive_control_packet() after the UDP specific logic.
  * hip_receive_control_packet() is called with different IP source address
  * depending on whether the current machine is a rendezvous server or not:
- * 
+ *
  * <ol>
  * <li>If the current machine is @b NOT a rendezvous server the source address
  * of hip_receive_control_packet() is the @c preferred_address of the matching
- * host association.</li> 
+ * host association.</li>
  * <li>If the current machine @b IS a rendezvous server the source address
  * of hip_receive_control_packet() is the @c saddr of this function.</li>
  * </ol>
@@ -224,10 +231,10 @@ int hip_receive_control_packet(struct hip_common *, struct in6_addr *,
  */
 int hip_receive_udp_control_packet(struct hip_common *, struct in6_addr *,
 				   struct in6_addr *, hip_portpair_t *);
-			  
+
 /**
  * @addtogroup receive_functions
- * @{ 
+ * @{
  */
 /**
  * Determines the action to be executed for an incoming I1 packet.
@@ -236,16 +243,16 @@ int hip_receive_udp_control_packet(struct hip_common *, struct in6_addr *,
  * hip_receive_control_packet()-function and the packet is detected to be
  * an I1 packet. The operation of this function depends on whether the current
  * machine is a rendezvous server or not.
- * 
+ *
  * <ol>
- * <li>If the current machine is @b NOT a rendezvous server:</li> 
+ * <li>If the current machine is @b NOT a rendezvous server:</li>
  * <ul>
  * <li>hip_handle_i1() is invoked.</li>
  * </ul>
  * <li>If the current machine @b IS a rendezvous server:</li>
  * <ul>
  * <li>if a valid rendezvous association is found from the server's rva table,
- * the I1 packet is relayed by invoking hip_rvs_relay_i1().</li> 
+ * the I1 packet is relayed by invoking hip_rvs_relay_i1().</li>
  * <li>If no valid valid rendezvous association is found, hip_handle_i1() is
  * invoked.</li>
  * </ul>
@@ -261,7 +268,7 @@ int hip_receive_udp_control_packet(struct hip_common *, struct in6_addr *,
  * @param i1_info  a pointer to the source and destination ports (when NAT is
  *                 in use).
  * @return         zero on success, or negative error value on error.
- */		   
+ */
 int hip_receive_i1(struct hip_common *, struct in6_addr *, struct in6_addr *,
 		   hip_ha_t *, hip_portpair_t *);
 
@@ -274,7 +281,7 @@ int hip_receive_i1(struct hip_common *, struct in6_addr *, struct in6_addr *,
  * been sent. If yes, then the received R1 packet is handled in
  * hip_handle_r1(). The R1 packet is handled also in @c HIP_STATE_ESTABLISHED.
  * Otherwise the packet is dropped and not handled in any way.
- * 
+ *
  * @param r1       a pointer to the received I1 HIP packet common header with
  *                 source and destination HITs.
  * @param r1_saddr a pointer to the source address from where the R1 packet
@@ -302,7 +309,7 @@ int hip_receive_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
  * @param entry    a pointer to...
  * @param i2_info  a pointer to...
  * @return         always zero
- * @todo   Check if it is correct to return always 0 
+ * @todo   Check if it is correct to return always 0
  */
 int hip_receive_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		   hip_ha_t *entry, hip_portpair_t *i2_info);
@@ -340,10 +347,10 @@ int hip_receive_notify(const struct hip_common *, const struct in6_addr *,
 
 /**
  * Receive BOS packet.
- * 
+ *
  * This function is called when a BOS packet is received. We add the
  * received HIT and HOST_ID to the database.
- * 
+ *
  * @param bos       a pointer to...
  * @param bos_saddr a pointer to...
  * @param bos_daddr a pointer to...
@@ -357,10 +364,10 @@ int hip_receive_bos(struct hip_common *, struct in6_addr *, struct in6_addr *,
 int hip_receive_close(struct hip_common *, hip_ha_t*);
 int hip_receive_close_ack(struct hip_common *, hip_ha_t*);
 /* @} */
-			  	  
+
 /**
  * @addtogroup handle_functions
- * @{ 
+ * @{
  */
 
 /**
@@ -475,7 +482,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
  *
  * Handles an incoming NOTIFY packet and parses @c NOTIFICATION parameters and
  * @c VIA_RVS parameter from the packet.
- * 
+ *
  * @param notify       a pointer to the received NOTIFY HIP packet common header
  *                     with source and destination HITs.
  * @param notify_saddr a pointer to the source address from where the NOTIFY
@@ -487,11 +494,11 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 int hip_handle_notify(const struct hip_common *, const struct in6_addr *,
 		      const struct in6_addr *, hip_ha_t*);
 int hip_handle_close(struct hip_common *, hip_ha_t *);
-int hip_handle_close_ack(struct hip_common *, hip_ha_t *);	  
+int hip_handle_close_ack(struct hip_common *, hip_ha_t *);
 /* @} */
 
 /**
- * Creates shared secret and produce keying material 
+ * Creates shared secret and produce keying material
  * The initial ESP keys are drawn out of the keying material.
  *
  * @param msg the HIP packet received from the peer
@@ -500,12 +507,12 @@ int hip_handle_close_ack(struct hip_common *, hip_ha_t *);
  * @return zero on success, or negative on error.
  */
 int hip_produce_keying_material(struct hip_common *, struct hip_context *,
-				uint64_t, uint64_t, 
+				uint64_t, uint64_t,
 				struct hip_dh_public_value **);
 
 /**
  * @brief Creates an I2 packet and sends it.
- * 
+ *
  * @param ctx           context that includes the incoming R1 packet
  * @param solved_puzzle a value that solves the puzzle
  * @param r1_saddr      a pointer to R1 packet source IP address
