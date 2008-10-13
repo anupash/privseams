@@ -682,12 +682,10 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 
 					soft_update = 1;
 				}
-
 			}
 
 			if (!soft_update)
 			{
-
 				// do a PK-update
 				HIP_DEBUG("doing PK-UPDATE\n");
 

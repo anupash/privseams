@@ -287,7 +287,7 @@ int hcstore_fill_item(hchain_store_t *hcstore, int hash_func_id, int hash_length
 				hchains[hchain_length_id][hierarchy_level]);
 
 	// only update if we reached the threshold or higher level update
-	if (create_hchains >= ITEM_THRESHOLD * MAX_HCHAINS_PER_ITEM ||
+	if ((create_hchains >= ITEM_THRESHOLD * MAX_HCHAINS_PER_ITEM) ||
 			update_higher_level)
 	{
 		// create one hchain at a time
@@ -338,12 +338,11 @@ int hcstore_fill_item(hchain_store_t *hcstore, int hash_func_id, int hash_length
 					hchains[hchain_length_id][hierarchy_level], hchain), -1,
 					"failed to store new hchain\n");
 		}
+
+		err += create_hchains;
 	}
 
-	HIP_DEBUG("created %i hchains on hierarchy level %i\n", create_hchains,
-			hierarchy_level);
-
-	err += create_hchains;
+	HIP_DEBUG("created %i hchains on hierarchy level %i\n", err, hierarchy_level);
 
   out_err:
 	return err;
