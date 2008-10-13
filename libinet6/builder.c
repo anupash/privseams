@@ -3016,6 +3016,35 @@ int hip_build_param_esp_prot_secret(struct hip_common *msg, int secret_length,
 	return err;
 }
 
+int hip_build_param_esp_prot_root(struct hip_common *msg, int root_length,
+		unsigned char *root)
+{
+	int err = 0;
+	struct esp_prot_root esp_root;
+
+	HIP_ASSERT(msg != NULL);
+	HIP_ASSERT(root_length > 0);
+	HIP_ASSERT(root != NULL);
+
+	// set parameter type
+	hip_set_param_type(&esp_root, HIP_PARAM_ESP_PROT_ROOT);
+
+	// set parameter values
+	esp_root.root_length = root_length;
+	memcpy(&esp_root.root[0], root, root_length);
+
+	hip_set_param_contents_len(&esp_root, sizeof(uint8_t) + root_length);
+
+	err = hip_build_generic_param(msg, &esp_root,
+					      sizeof(struct hip_tlv_common),
+					      hip_get_param_contents_direct(&esp_root));
+
+	HIP_DEBUG("added esp root length: %u\n", esp_root.root_length);
+	HIP_HEXDUMP("added esp root: ", &esp_root.root[0], root_length);
+
+	return err;
+}
+
 /**
  * hip_build_param_unit_test - build and insert an unit test parameter
  * @param msg the message where the parameter will be appended

@@ -224,7 +224,8 @@ hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore)
  */
 int send_trigger_update_to_hipd(hip_sa_entry_t *entry, int soft_update,
 		int anchor_offset, unsigned char *secret, int secret_length,
-		unsigned char *branch_nodes, int branch_length)
+		unsigned char *branch_nodes, int branch_length, unsigned char *root,
+		int root_length)
 {
 	int err = 0;
 	struct hip_common *msg = NULL;
@@ -282,6 +283,10 @@ int send_trigger_update_to_hipd(hip_sa_entry_t *entry, int soft_update,
 		HIP_IFEL(hip_build_param_contents(msg, (void *)&branch_length, HIP_PARAM_INT,
 				sizeof(int)), -1, "build param contents failed\n");
 
+		HIP_DEBUG("root_length: %i\n", root_length);
+		HIP_IFEL(hip_build_param_contents(msg, (void *)&root_length, HIP_PARAM_INT,
+				sizeof(int)), -1, "build param contents failed\n");
+
 		HIP_HEXDUMP("secret: ", secret, secret_length);
 		HIP_IFEL(hip_build_param_contents(msg, (void *)secret,
 				HIP_PARAM_SECRET, secret_length), -1,
@@ -290,6 +295,11 @@ int send_trigger_update_to_hipd(hip_sa_entry_t *entry, int soft_update,
 		HIP_HEXDUMP("branch_nodes: ", branch_nodes, branch_length);
 		HIP_IFEL(hip_build_param_contents(msg, (void *)branch_nodes,
 				HIP_PARAM_BRANCH_NODES, branch_length), -1,
+				"build param contents failed\n");
+
+		HIP_HEXDUMP("root: ", root, root_length);
+		HIP_IFEL(hip_build_param_contents(msg, (void *)root,
+				HIP_PARAM_ROOT, root_length), -1,
 				"build param contents failed\n");
 	}
 

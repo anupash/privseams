@@ -613,8 +613,8 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 	esp_prot_tfm_t *prot_transform = NULL;
 	int soft_update = 0, err = 0;
 	int anchor_offset = 0;
-	int anchor_length = 0, secret_length = 0, branch_length = 0;
-	unsigned char *anchor = NULL, *secret = NULL, *branch_nodes = NULL;
+	int anchor_length = 0, secret_length = 0, branch_length = 0, root_length = 0;
+	unsigned char *anchor = NULL, *secret = NULL, *branch_nodes = NULL, *root = NULL;
 #ifdef CONFIG_HIP_MEASUREMENTS
 	int hash_length = 0;
 #endif
@@ -678,6 +678,7 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 							anchor_offset, &secret_length);
 					branch_nodes = htree_get_branch(entry->active_hchain->link_tree,
 							anchor_offset, &branch_length);
+					root = htree_get_root(entry->active_hchain->link_tree, &root_length);
 
 					soft_update = 1;
 				}
@@ -706,8 +707,8 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 
 			// issue UPDATE message to be sent by hipd
 			HIP_IFEL(send_trigger_update_to_hipd(entry, soft_update, anchor_offset,
-					secret, secret_length, branch_nodes, branch_length), -1,
-					"unable to trigger update at hipd\n");
+					secret, secret_length, branch_nodes, branch_length, root,
+					root_length), -1, "unable to trigger update at hipd\n");
 
 #ifdef CONFIG_HIP_MEASUREMENTS
 			hash_length = esp_prot_get_hash_length(entry->esp_prot_transform);

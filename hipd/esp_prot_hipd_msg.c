@@ -52,8 +52,8 @@ int esp_prot_handle_trigger_update_msg(struct hip_common *msg)
 	int hash_length = 0;
 	unsigned char *esp_prot_anchor = NULL;
 	int soft_update = 0, anchor_offset = 0;
-	int anchor_length = 0, secret_length = 0, branch_length = 0;
-	unsigned char *secret = NULL, *branch_nodes = NULL;
+	int anchor_length = 0, secret_length = 0, branch_length = 0, root_length = 0;
+	unsigned char *secret = NULL, *branch_nodes = NULL, *root = NULL;
 	hip_ha_t *entry = NULL;
 	int err = 0;
 
@@ -91,6 +91,10 @@ int esp_prot_handle_trigger_update_msg(struct hip_common *msg)
 		branch_length  = *((int *) hip_get_param_contents_direct(param));
 		HIP_DEBUG("branch_length: %i\n", branch_length);
 
+		param = hip_get_next_param(msg, param);
+		root_length  = *((int *) hip_get_param_contents_direct(param));
+		HIP_DEBUG("root_length: %i\n", root_length);
+
 		param = hip_get_param(msg, HIP_PARAM_SECRET);
 		secret = (unsigned char *) hip_get_param_contents_direct(param);
 		HIP_HEXDUMP("secret: ", secret, secret_length);
@@ -98,6 +102,10 @@ int esp_prot_handle_trigger_update_msg(struct hip_common *msg)
 		param = hip_get_param(msg, HIP_PARAM_BRANCH_NODES);
 		branch_nodes = (unsigned char *) hip_get_param_contents_direct(param);
 		HIP_HEXDUMP("branch_nodes: ", branch_nodes, branch_length);
+
+		param = hip_get_param(msg, HIP_PARAM_ROOT);
+		root = (unsigned char *) hip_get_param_contents_direct(param);
+		HIP_HEXDUMP("root: ", root, root_length);
 	}
 
 
@@ -134,7 +142,8 @@ int esp_prot_handle_trigger_update_msg(struct hip_common *msg)
 #endif
 
 		HIP_IFEL(esp_prot_send_light_update(entry, anchor_offset, secret, secret_length,
-				branch_nodes, branch_length), -1, "failed to send anchor update\n");
+				branch_nodes, branch_length, root, root_length), -1,
+				"failed to send anchor update\n");
 
 	} else
 	{

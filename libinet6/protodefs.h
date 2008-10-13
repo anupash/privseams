@@ -136,6 +136,7 @@
 #define HIP_PARAM_TRANSFORM_ORDER       32813
 #define HIP_PARAM_SECRET				32814
 #define HIP_PARAM_BRANCH_NODES			32815
+#define HIP_PARAM_ROOT					32816
 /* End of HIPL private parameters. */
 
 #define HIP_PARAM_HMAC                 61505
@@ -443,6 +444,13 @@ struct esp_prot_secret {
 	hip_tlv_len_t      length;
 	uint8_t			   secret_length;
 	unsigned char  	   secret[MAX_HASH_LENGTH];
+} __attribute__ ((packed));
+
+struct esp_prot_root {
+	hip_tlv_type_t     type;
+	hip_tlv_len_t      length;
+	uint8_t			   root_length;
+	unsigned char  	   root[MAX_HASH_LENGTH];
 } __attribute__ ((packed));
 
 /**

@@ -30,7 +30,7 @@
  * @note we are using a list here, so we might also use some other
  *       mechanism to stop the hcstore_refill() */
 // TODO move this to esp_prot_api
-#define MAX_HCHAINS_PER_ITEM	2
+#define MAX_HCHAINS_PER_ITEM	8
 
 #if 0
 #define MAX_HCHAINS_PER_ITEM	5
