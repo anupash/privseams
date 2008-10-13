@@ -272,6 +272,7 @@ int hcstore_refill(hchain_store_t *hcstore)
 	int create_hchains = 0;
 	hash_chain_t *hchain = NULL;
 	hash_tree_t *link_tree = NULL;
+	int fill_up = 0;
 	int err = 0, i, j, g, h, k, l;
 
 	HIP_ASSERT(hcstore != NULL);
@@ -298,6 +299,31 @@ int hcstore_refill(hchain_store_t *hcstore)
 
 					if (create_hchains >= ITEM_THRESHOLD * MAX_HCHAINS_PER_ITEM)
 					{
+						/* if we refill a higher level, first make sure the next
+						 * lower level is full */
+						if (h > 0)
+						{
+							// completely fill the item
+							fill_up = MAX_HCHAINS_PER_ITEM
+								- hip_ll_get_size(&hcstore->hchain_shelves[i][j].
+										hchains[g][h - 1]);
+
+							err += fill_up;
+
+							for (k = 0; k < fill_up; k++)
+							{
+								// create a new hchain
+								HIP_IFEL(!(hchain = hchain_create(hash_function,
+										hash_length, hchain_length, h-1, link_tree)), -1,
+										"failed to create new hchain\n");
+
+								// add it as last element to have some circulation
+								HIP_IFEL(hip_ll_add_last(&hcstore->hchain_shelves[i][j].
+										hchains[g][h - 1], hchain), -1,
+										"failed to store new hchain\n");
+							}
+						}
+
 						// count the overall amount of created hchains
 						err += create_hchains;
 
