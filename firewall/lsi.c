@@ -205,7 +205,8 @@ int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m,
 	}
 
 	/* @todo: think about caching this (note: how to notice changes?) */
-	bind6 = hip_get_proto_info(ntohs(portDest), proto);
+	//bind6 = hip_get_proto_info(ntohs(portDest), proto);
+	bind6 = 0;
 
 	/* If IPv6 app has bind() to the port number, skip LSI and
 	   system-based opportunistic mode (currently IPv4-only)
