@@ -25,6 +25,7 @@
 #define HIP_CLOSE_ACK           19
 #define HIP_PSIG                20 /* lightweight HIP pre signature */
 #define HIP_TRIG                21 /* lightweight HIP signature trigger*/
+#define HIP_LUPDATE             22
 #define HIP_PAYLOAD             64
 /* only hip network message types here */
 /* @} */
@@ -84,6 +85,8 @@
 #define HIP_PARAM_ESP_TRANSFORM        4095
 #define HIP_PARAM_ESP_PROT_TRANSFORMS  4120
 #define HIP_PARAM_ESP_PROT_ANCHOR      4121
+#define HIP_PARAM_ESP_PROT_BRANCH      4122
+#define HIP_PARAM_ESP_PROT_SECRET      4123
 
 /* Range 32768 - 49141 can be used for HIPL private parameters i.e. to
    parameters passed from hipconf to hipdaemon.
@@ -424,6 +427,21 @@ struct esp_prot_anchor {
 	uint8_t     	   transform;
 	// contains active and next anchor
 	unsigned char  	   anchors[2 * MAX_HASH_LENGTH];
+} __attribute__ ((packed));
+
+struct esp_prot_branch {
+	hip_tlv_type_t     type;
+	hip_tlv_len_t      length;
+	uint32_t     	   anchor_offset;
+	uint32_t		   branch_length;
+	unsigned char  	   branch_nodes[MAX_TREE_DEPTH * MAX_HASH_LENGTH];
+} __attribute__ ((packed));
+
+struct esp_prot_secret {
+	hip_tlv_type_t     type;
+	hip_tlv_len_t      length;
+	uint8_t			   secret_length;
+	unsigned char  	   secret[MAX_HASH_LENGTH];
 } __attribute__ ((packed));
 
 /**

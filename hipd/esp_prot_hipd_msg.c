@@ -1,5 +1,6 @@
 #include "esp_prot_hipd_msg.h"
 #include "esp_prot_anchordb.h"
+#include "esp_prot_light_update.h"
 #include "esp_prot_common.h"
 
 int esp_prot_set_preferred_transforms(struct hip_common *msg)
@@ -122,11 +123,18 @@ int esp_prot_handle_trigger_update_msg(struct hip_common *msg)
 
 	if (soft_update)
 	{
-		// TODO set the branch nodes etc for them to be available for the update
-		// entry->
+#if 0
+		// set the branch nodes etc for them to be available for the update
+		entry->anchor_offset = anchor_offset;
+		entry->secret_length = secret_length;
+		entry->branch_length = branch_length;
 
-		HIP_IFEL(hip_send_update(entry, NULL, 0, -1, SEND_UPDATE_SOFT_ESP_ANCHOR, 0,
-				NULL), -1, "failed to send anchor update\n");
+		memcpy(entry->secret, secret, secret_length);
+		memcpy(entry->branch_nodes, branch_nodes, branch_length);
+#endif
+
+		HIP_IFEL(esp_prot_send_light_update(entry, anchor_offset, secret, secret_length,
+				branch_nodes, branch_length), -1, "failed to send anchor update\n");
 
 	} else
 	{
@@ -142,7 +150,7 @@ int esp_prot_handle_trigger_update_msg(struct hip_common *msg)
 		 * - bitwise telling about which params to add to UPDATE -> set 3rd bit to 1
 		 * - UPDATE not due to adding of a new addresses
 		 * - not setting any address, as none is updated */
-		HIP_IFEL(hip_send_update(entry, NULL, 0, -1, SEND_UPDATE_PK_ESP_ANCHOR, 0, NULL),
+		HIP_IFEL(hip_send_update(entry, NULL, 0, -1, SEND_UPDATE_ESP_ANCHOR, 0, NULL),
 				-1, "failed to send anchor update\n");
 	}
 
@@ -727,7 +735,7 @@ int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry)
 	return err;
 }
 
-uint32_t esp_prot_update_handle_anchor(hip_common_t *recv_update, hip_ha_t *entry,
+int esp_prot_update_handle_anchor(hip_common_t *recv_update, hip_ha_t *entry,
 		in6_addr_t *src_ip, in6_addr_t *dst_ip, uint32_t *spi)
 {
 	struct esp_prot_anchor *prot_anchor = NULL;
