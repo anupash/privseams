@@ -11,6 +11,9 @@ HIP_HASHTABLE *sava_enc_ip_db = NULL;
 
 HIP_HASHTABLE *sava_conn_db = NULL;
 
+int ipv6_raw_sock = 0;
+int ipv4_raw_sock = 0;
+
 /* hash functions used for calculating the entries' hashes */
 #define INDEX_HASH_FN		HIP_DIGEST_SHA1
 /* the length of the hash value used for indexing */
@@ -576,6 +579,9 @@ int hip_sava_init_all() {
   HIP_IFEL(hip_sava_enc_ip_db_init(), -1, "error init enc ip db \n");
   HIP_IFEL(hip_sava_hit_db_init(), -1, "error init hit db \n"); 
   HIP_IFEL(hip_sava_conn_db_init(), -1, "error init sava conn db \n");
+  HIP_IFEL(hip_sava_init_ip6_raw_socket(&ipv6_raw_sock), -1, "error creating raw IPv6 socket \n");
+  HIP_IFEL(hip_sava_init_ip4_raw_socket(&ipv4_raw_sock), -1, "error creating raw IPv4 socket \n");
+
  out_err:
   return err;
 }
@@ -741,3 +747,173 @@ struct in6_addr * hip_sava_auth_ip(struct in6_addr * orig_addr,
   return NULL;
 }
 
+int hip_sava_handle_output (struct hip_fw_context *ctx) {
+  int verdict = DROP;
+  int err = 0, sent = 0;
+  struct hip_common * msg = NULL;
+  struct in6_addr * sava_hit;
+  struct hip_sava_peer_info * info_entry;
+  
+  struct ip6_hdr * ip6hdr= NULL;	
+  struct ip * iphdr= NULL;
+
+  struct in6_addr * enc_addr = NULL;
+
+  struct sockaddr_storage dst;
+
+  struct sockaddr_in *dst4 = (struct sockaddr_in *)&dst;
+
+  struct sockaddr_in6 *dst6 = (struct sockaddr_in6 *)&dst;
+
+
+  memset(&dst, 0, sizeof(struct sockaddr_storage));
+
+  HIP_IFEL((msg = hip_sava_make_hit_request()) == NULL, DROP,
+	   "HIT request from daemon failed \n");
+  
+  HIP_IFEL((sava_hit = hip_get_param_contents(msg,HIP_PARAM_HIT)) == NULL, DROP,
+	   "Failed to get SAVA HIT from the daemon \n");
+  
+  HIP_IFEL((msg = hip_sava_make_keys_request(sava_hit, SAVA_OUTBOUND_KEY)) == NULL, DROP,
+	   "Key request from daemon failed \n");
+  
+  HIP_DEBUG("Secret key acquired. Lets encrypt the src IP address \n");
+  
+  HIP_IFEL((info_entry = hip_sava_get_key_params(msg)) == NULL, DROP,
+	   "Error parsing user message");
+
+  enc_addr = hip_sava_auth_ip(&ctx->src, info_entry);
+
+  if (ctx->ip_version == 6) { //IPv6
+    
+    ip6hdr = (struct ip6_hdr*) ctx->ipq_packet->payload;
+
+    memcpy(&ip6hdr->ip6_src, (void *)enc_addr, sizeof(struct in6_addr));
+
+    dst6->sin6_family = AF_INET6;
+
+    memcpy(&dst6->sin6_addr, &ctx->src, sizeof(struct in6_addr));
+
+    sent = sendto(ipv6_raw_sock, ip6hdr, ctx->ipq_packet->data_len, 0,
+		  (struct sockaddr *) &dst, sizeof(struct sockaddr_in6));
+
+  }else { //IPv4
+    iphdr = (struct ip *) ctx->ipq_packet->payload;
+
+    memcpy(&iphdr->ip_src, (void *)enc_addr, sizeof(struct in_addr));
+
+    iphdr->ip_sum = 0;
+
+    IPV6_TO_IPV4_MAP(&ctx->dst, &dst4->sin_addr);
+
+    dst4->sin_family = AF_INET;
+
+    HIP_DEBUG_INADDR("dst4", &dst4->sin_addr);
+
+    sent = sendto(ipv4_raw_sock, iphdr, ctx->ipq_packet->data_len, 0,
+		  (struct sockaddr *) &dst, sizeof(struct sockaddr_in));
+  }
+
+  if (sent != ctx->ipq_packet->data_len) {
+    HIP_ERROR("Could not send the all requested"			\
+	      " data (%d/%d)\n", sent, ctx->ipq_packet->data_len);
+    HIP_DEBUG("ERROR NUMBER: %d\n", errno);
+  } else {
+    HIP_DEBUG("sent=%d/%d \n",
+	      sent, ctx->ipq_packet->data_len);
+    HIP_DEBUG("Packet sent ok\n");
+  }
+
+ out_err:
+  return verdict; 
+}
+
+int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
+  int err = 0, verdict = 0, auth_len = 0;
+  struct in6_addr * enc_addr = NULL;
+  hip_sava_ip_entry_t  * ip_entry     = NULL;
+  hip_sava_enc_ip_entry_t * enc_entry = NULL;
+
+  HIP_DEBUG("CHECK IP ON FORWARD\n");
+  if (hip_sava_conn_entry_find(&ctx->src, &ctx->dst) != NULL) {
+    HIP_DEBUG("BYPASS THE PACKET THIS IS AN INBOUND TRAFFIC FOR AUTHENTICATED OUTBOUND \n");
+    verdict = ACCEPT;
+    goto out_err;
+  }
+  HIP_DEBUG("NOT AN INBOUND TRAFFIC OR NOT AUTHENTICATED TRAFFIC \n");
+  HIP_DEBUG("Authenticating source address \n");
+  
+  enc_entry = hip_sava_enc_ip_entry_find(&ctx->src);
+
+  auth_len = (ctx->ip_version == 6) ? sizeof(struct in6_addr): sizeof(struct in_addr);
+  
+  if (enc_entry) {
+    HIP_DEBUG("ENCRYPTED ENTRY FOUND \n");
+    HIP_DEBUG("Secret key acquired. Lets encrypt the src IP address \n");
+    
+    enc_addr = hip_sava_auth_ip(enc_entry->ip_link->src_addr, enc_entry->peer_info);
+    
+    if (!memcmp(&ctx->src, enc_addr, auth_len)) {
+      //PLACE ORIGINAL IP, RECALCULATE CHECKSUM AND REINJECT THE PACKET 
+      //VERDICT DROP PACKET BECAUSE IT CONTAINS ENCRYPTED IP
+      //ONLY NEW PACKET WILL GO OUT
+      HIP_DEBUG("Adding <src, dst> tuple to connection db \n");
+
+      hip_sava_conn_entry_add(enc_entry->ip_link->src_addr, &ctx->dst);
+      
+      HIP_DEBUG("Source address is authenticate \n");
+      HIP_DEBUG("Reinject the traffic to network stack \n");
+    } else {
+      HIP_DEBUG("Source address authentication failed. Dropping packet \n");
+      verdict = DROP;
+      goto out_err;
+    }
+  } else {
+    HIP_DEBUG("Source address authentication failed \n");
+    verdict = DROP;
+    goto out_err;
+  }
+    //  } 
+ out_err:
+  return verdict;
+}
+
+int hip_sava_init_ip4_raw_socket(int * ip4_raw_socket) {
+  int on = 1, err = 0;
+  int off = 0;
+  
+  *ip4_raw_socket = socket(AF_INET, SOCK_RAW, 0);
+  HIP_IFEL(*ip4_raw_socket <= 0, 1, "Raw socket v4 creation failed. Not root?\n");
+
+  /* see bug id 212 why RECV_ERR is off */
+  err = setsockopt(*ip4_raw_socket, IPPROTO_IP, IP_RECVERR, &off, sizeof(on));
+  HIP_IFEL(err, -1, "setsockopt v4 recverr failed\n");
+  err = setsockopt(*ip4_raw_socket, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on));
+  HIP_IFEL(err, -1, "setsockopt v4 failed to set broadcast \n");
+  err = setsockopt(*ip4_raw_socket, IPPROTO_IP, IP_PKTINFO, &on, sizeof(on));
+  HIP_IFEL(err, -1, "setsockopt v4 pktinfo failed\n");
+  err = setsockopt(*ip4_raw_socket, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+  HIP_IFEL(err, -1, "setsockopt v4 reuseaddr failed\n");
+  
+ out_err:
+  return err;
+}
+
+int hip_sava_init_ip6_raw_socket(int * ip6_raw_socket) {
+  int on = 1, err = 0;
+  int off = 0;
+  
+  *ip6_raw_socket = socket(AF_INET6, SOCK_RAW, 0);
+  HIP_IFEL(*ip6_raw_socket <= 0, 1, "Raw socket v4 creation failed. Not root?\n");
+
+  /* see bug id 212 why RECV_ERR is off */
+  err = setsockopt(*ip6_raw_socket, IPPROTO_IPV6, IPV6_RECVERR, &off, sizeof(on));
+  HIP_IFEL(err, -1, "setsockopt v6 recverr failed\n");
+  err = setsockopt(*ip6_raw_socket, IPPROTO_IPV6, IPV6_2292PKTINFO, &on, sizeof(on));
+  HIP_IFEL(err, -1, "setsockopt v6 pktinfo failed\n");
+  err = setsockopt(*ip6_raw_socket, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+  HIP_IFEL(err, -1, "setsockopt v6 reuseaddr failed\n");
+  
+ out_err:
+  return err;
+}

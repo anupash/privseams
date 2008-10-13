@@ -6,12 +6,15 @@
 
 #include "builder.h"
 #include "message.h"
+#include "firewall.h"
 
 #include <openssl/sha.h>
 #include <openssl/md5.h>
 #include <openssl/des.h>
 #include <openssl/aes.h>
 #include <openssl/blowfish.h>
+
+#include <netinet/ip.h>
 
 #define SAVA_INBOUND_KEY 0
 #define SAVA_OUTBOUND_KEY 1
@@ -142,6 +145,12 @@ hip_common_t * hip_sava_make_keys_request(const struct in6_addr * hit,
 hip_sava_peer_info_t * hip_sava_get_key_params(hip_common_t * msg);
 
 int hip_sava_reinject_ip_packet(u8 *msg, u16 len, int protocol);
+
+int hip_sava_handle_output(struct hip_fw_context * ctx);
+
+int hip_sava_init_ip4_raw_socket(int * ip4_raw_socket);
+
+int hip_sava_init_ip6_raw_socket(int * ip6_raw_socket);
 
 
 #endif //HIP_SAVA_API

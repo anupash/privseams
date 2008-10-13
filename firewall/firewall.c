@@ -1339,9 +1339,6 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 	struct sockaddr_in6 dst_hit;
 	hip_lsi_t defaultLSI;
 
-	struct in6_addr * sava_hit;
-	struct hip_sava_peer_info * info_entry;
-
 	struct hip_common * msg;
 	struct ip      *iphdr;
 	struct tcphdr  *tcphdr;
@@ -1367,24 +1364,8 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 	  //upon registration repeat the procedure described above for sending 
 	  //out the packet
 
-	  //Get HIT of SAVA router first
+	  verdict = hip_sava_handle_output(ctx);
 
-	  HIP_IFEL((msg = hip_sava_make_hit_request()) == NULL, DROP,
-			   "HIT request from daemon failed \n");
-	  
-	  HIP_IFEL((sava_hit = hip_get_param_contents(msg,HIP_PARAM_HIT)) == NULL, DROP,
-		   "Failed to get SAVA HIT from the daemon \n");
-	  
-	  HIP_IFEL((msg = hip_sava_make_keys_request(sava_hit, SAVA_OUTBOUND_KEY)) == NULL, DROP,
-		   "Key request from daemon failed \n");
-
-	  HIP_DEBUG("Secret key acquired. Lets encrypt the src IP address \n");
-		  
-	  HIP_IFEL((info_entry = hip_sava_get_key_params(msg)) == NULL, DROP,
-		   "Error parsing user message");
-	  
-	  
-	  
 	} else if (ctx->ip_version == 6 && hip_userspace_ipsec) {
 		HIP_DEBUG_HIT("destination hit: ", &ctx->dst);
 		// XX TODO: hip_fw_get_default_hit() returns an unfreed value
@@ -1699,56 +1680,7 @@ int hip_fw_handle_other_forward(hip_fw_context_t *ctx){
 							ctx->ip_hdr_len,
 							ctx->ip_version);
 	} else if (hip_sava_router) {
-	  {
-	    HIP_DEBUG("CHECK IP ON FORWARD\n");
-	    if (hip_sava_conn_entry_find(&ctx->src, &ctx->dst) != NULL) {
-	      HIP_DEBUG("BYPASS THE PACKET THIS IS AN INBOUND TRAFFIC FOR AUTHENTICATED OUTBOUND \n");
-	      verdict = ACCEPT;
-	      goto out_err;
-	    }
-	    HIP_DEBUG("NOT AN INBOUND TRAFFIC OR NOT AUTHENTICATED TRAFFIC \n");
-	    HIP_DEBUG("Authenticating source address \n");
-
-	    if (ctx->ip_version == 6) {
-
-	      HIP_DEBUG("IPv6 flow \n");
-
-	      struct in6_addr * enc_addr = NULL;
-	      hip_sava_ip_entry_t  * ip_entry     = NULL;
-	      hip_sava_enc_ip_entry_t * enc_entry = NULL;
-	    
-	      enc_entry = hip_sava_enc_ip_entry_find(&ctx->src);
-	    
-	      if (enc_entry) {
-		HIP_DEBUG("ENCRYPTED ENTRY FOUND \n");
-		
-		HIP_DEBUG("Secret key acquired. Lets encrypt the src IP address \n");
-		
-		enc_addr = hip_sava_auth_ip(enc_entry->ip_link->src_addr, enc_entry->peer_info);
-
-		if (!memcmp(&ctx->src, enc_addr, sizeof(struct in6_addr))) {
-		  //PLACE ORIGINAL IP, RECALCULATE CHECKSUM AND REINJECT THE PACKET 
-		  //VERDICT DROP PACKET BECAUSE IT CONTAINS ENCRYPTED IP
-		  //ONLY NEW PACKET WILL GO OUT
-		  HIP_DEBUG("Adding <src, dst> tuple to connection db \n");
-		  hip_sava_conn_entry_add(enc_entry->ip_link->src_addr, &ctx->dst);
-		  HIP_DEBUG("Source address is authenticate \n");
-		  HIP_DEBUG("Reinject the traffic to network stack \n");
-		} else {
-		  HIP_DEBUG("Source address authentication failed. Dropping packet \n");
-		  verdict = DROP;
-		  goto out_err;
-		}
-	      } else {
-		HIP_DEBUG("Source address authentication failed \n");
-		verdict = DROP;
-		goto out_err;
-	      }
-	    } else {
-	      //For IPv4 we need to check an option that contains encrypted address
-	      
-	    }
-	  }	  
+	  verdict = hip_sava_handle_router_forward(ctx);
 	}
 
  out_err:
