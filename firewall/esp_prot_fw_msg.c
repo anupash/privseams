@@ -265,21 +265,21 @@ int send_trigger_update_to_hipd(hip_sa_entry_t *entry, int soft_update,
 			"build param contents failed\n");
 
 	HIP_DEBUG("soft_update: %i\n", soft_update);
-	HIP_IFEL(hip_build_param_contents(msg, (void *)soft_update, HIP_PARAM_INT,
+	HIP_IFEL(hip_build_param_contents(msg, (void *)&soft_update, HIP_PARAM_INT,
 			sizeof(int)), -1, "build param contents failed\n");
 
 	if (soft_update)
 	{
 		HIP_DEBUG("anchor_offset: %i\n", anchor_offset);
-		HIP_IFEL(hip_build_param_contents(msg, (void *)anchor_offset, HIP_PARAM_INT,
+		HIP_IFEL(hip_build_param_contents(msg, (void *)&anchor_offset, HIP_PARAM_INT,
 				sizeof(int)), -1, "build param contents failed\n");
 
 		HIP_DEBUG("secret_length: %i\n", secret_length);
-		HIP_IFEL(hip_build_param_contents(msg, (void *)secret_length, HIP_PARAM_INT,
+		HIP_IFEL(hip_build_param_contents(msg, (void *)&secret_length, HIP_PARAM_INT,
 				sizeof(int)), -1, "build param contents failed\n");
 
 		HIP_DEBUG("branch_length: %i\n", branch_length);
-		HIP_IFEL(hip_build_param_contents(msg, (void *)branch_length, HIP_PARAM_INT,
+		HIP_IFEL(hip_build_param_contents(msg, (void *)&branch_length, HIP_PARAM_INT,
 				sizeof(int)), -1, "build param contents failed\n");
 
 		HIP_HEXDUMP("secret: ", secret, secret_length);

@@ -387,6 +387,8 @@ hash_chain_t * hcstore_get_hchain(hchain_store_t *hcstore, int function_id,
 	hierarchy_level = hcstore->hchain_shelves[function_id][hash_length_id].
 			num_hierarchies[item_offset] - 1;
 
+	HIP_DEBUG("hierarchy_level: %i\n", hierarchy_level);
+
 	HIP_IFEL(!(stored_hchain = hip_ll_del_first(&hcstore->hchain_shelves[function_id]
 	        [hash_length_id].hchains[item_offset][hierarchy_level], NULL)), -1,
 			"no hchain available\n");

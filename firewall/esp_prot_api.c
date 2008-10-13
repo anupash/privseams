@@ -641,6 +641,7 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 			if (entry->active_hchain->link_tree)
 			{
 				// do a soft-update
+				HIP_DEBUG("found link_tree, looking for soft-update anchor...\n");
 
 				/* several hash-trees are linking to the same anchors, so it
 				 * might happen that an anchor is already used */
@@ -685,6 +686,7 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 
 			if (!soft_update)
 			{
+
 				// do a PK-update
 				HIP_DEBUG("doing PK-UPDATE\n");
 
