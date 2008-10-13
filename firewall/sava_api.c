@@ -1,5 +1,7 @@
 #include "sava_api.h"
 
+
+
 /* database storing shortcuts to sa entries for incoming packets */
 HIP_HASHTABLE *sava_ip_db = NULL;
 
@@ -607,7 +609,8 @@ hip_common_t * hip_sava_get_keys_build_msg(const struct in6_addr * hit) {
 
 }
 
-hip_common_t * hip_sava_make_keys_request(const struct in6_addr * hit) {
+hip_common_t * hip_sava_make_keys_request(const struct in6_addr * hit, 
+					  int direction) {
   int err = 0;
   hip_common_t * msg = NULL;
   HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed.\n");
@@ -616,8 +619,28 @@ hip_common_t * hip_sava_make_keys_request(const struct in6_addr * hit) {
   HIP_IFEL(hip_build_param_contents(msg, (void *) hit, HIP_PARAM_HIT,
 				    sizeof(in6_addr_t)), -1,
 	   "build param hit failed\n");
+  if (direction == SAVA_INBOUND_KEY) {
+    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_SAVAHR_IN_KEYS,
+				0), -1, "Failed to buid user header\n");
+  }else {
+    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_SAVAHR_OUT_KEYS,
+				0), -1, "Failed to buid user header\n");
+  }
+
+  if(hip_send_recv_daemon_info(msg) == 0)
+    return msg;
+
+ out_err:
+  return NULL;
+}
+
+hip_common_t * hip_sava_make_hit_request() {
+  int err = 0;
+  hip_common_t * msg = NULL;
+  HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed.\n");
+  memset(msg, 0, HIP_MAX_PACKET);
   
-  HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_SAVAHR,
+  HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_SAVAHR_HIT,
 			      0), -1, "Failed to buid user header\n");
 
   if(hip_send_recv_daemon_info(msg) == 0)
@@ -626,6 +649,7 @@ hip_common_t * hip_sava_make_keys_request(const struct in6_addr * hit) {
  out_err:
   return NULL;
 }
+
 
 
 hip_sava_peer_info_t * hip_sava_get_key_params(hip_common_t * msg) {

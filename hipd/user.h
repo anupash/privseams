@@ -26,6 +26,9 @@
 #include "registration.h"
 #include "esp_prot_hipd_msg.h"
 
+
+
+extern struct in6_addr * sava_serving_gateway;
 extern struct addrinfo * opendht_serving_gateway;
 extern int opendht_serving_gateway_port;
 extern int opendht_serving_gateway_ttl;

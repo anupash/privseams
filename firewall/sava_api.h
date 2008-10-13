@@ -13,7 +13,14 @@
 #include <openssl/aes.h>
 #include <openssl/blowfish.h>
 
+#define SAVA_INBOUND_KEY 0
+#define SAVA_OUTBOUND_KEY 1
 
+typedef struct sava_addrinfo {
+  struct in6_addr * sava_hit;
+  struct in6_addr * sava_ip;
+  //  struct sava_addrinfo * next;
+} sava_addrinfo_t;
 
 typedef struct hip_sava_peer_info {
   int ealg; 		              /* crypto transform in use */    
@@ -129,7 +136,8 @@ int hip_sava_verify_ip(struct in6_addr * enc_addr);
 struct in6_addr * hip_sava_auth_ip(struct in6_addr * orig_addr,
 				      hip_sava_peer_info_t * info_entry);
 
-hip_common_t * hip_sava_make_keys_request(const struct in6_addr * hit);
+hip_common_t * hip_sava_make_keys_request(const struct in6_addr * hit,
+					  int direction);
 
 hip_sava_peer_info_t * hip_sava_get_key_params(hip_common_t * msg);
 

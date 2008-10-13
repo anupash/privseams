@@ -1338,9 +1338,15 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 	hip_lsi_t src_ip, dst_ip;
 	struct sockaddr_in6 dst_hit;
 	hip_lsi_t defaultLSI;
+
+	struct in6_addr * sava_hit;
+	struct hip_sava_peer_info * info_entry;
+
+	struct hip_common * msg;
 	struct ip      *iphdr;
 	struct tcphdr  *tcphdr;
 	char 	       *hdrBytes = NULL;
+	int             err = 0;
 	int verdict = accept_normal_traffic_by_default;
 
 	HIP_DEBUG("\n");
@@ -1360,6 +1366,24 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 	  //if not try to broadcast SD HIP packets and wait for the response
 	  //upon registration repeat the procedure described above for sending 
 	  //out the packet
+
+	  //Get HIT of SAVA router first
+
+	  HIP_IFEL((msg = hip_sava_make_hit_request()) == NULL, DROP,
+			   "HIT request from daemon failed \n");
+	  
+	  HIP_IFEL((sava_hit = hip_get_param_contents(msg,HIP_PARAM_HIT)) == NULL, DROP,
+		   "Failed to get SAVA HIT from the daemon \n");
+	  
+	  HIP_IFEL((msg = hip_sava_make_keys_request(sava_hit, SAVA_OUTBOUND_KEY)) == NULL, DROP,
+		   "Key request from daemon failed \n");
+
+	  HIP_DEBUG("Secret key acquired. Lets encrypt the src IP address \n");
+		  
+	  HIP_IFEL((info_entry = hip_sava_get_key_params(msg)) == NULL, DROP,
+		   "Error parsing user message");
+	  
+	  
 	  
 	} else if (ctx->ip_version == 6 && hip_userspace_ipsec) {
 		HIP_DEBUG_HIT("destination hit: ", &ctx->dst);
@@ -1466,7 +1490,7 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
 		      
 		if (ip_entry && hit_entry) {
 		  HIP_DEBUG("BOTH ENTRIES ARE FOUND \n");
-		  HIP_IFEL((msg = hip_sava_make_keys_request(&buf->hitr)) == NULL, DROP,
+		  HIP_IFEL((msg = hip_sava_make_keys_request(&buf->hitr, SAVA_INBOUND_KEY)) == NULL, DROP,
 			   "Key request from daemon failed \n");
 		  HIP_DEBUG("Secret key acquired. Lets encrypt the src IP address \n");
 		  

@@ -56,7 +56,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	if (is_root) {
 		access_ok = 1;
 	} else if (!is_root &&
-		   (msg_type >= HIP_SO_ANY_MIN && msg_type <= HIP_SO_ANY_MAX)) {
+ 		   (msg_type >= HIP_SO_ANY_MIN && msg_type <= HIP_SO_ANY_MAX)) {
 		access_ok = 1;
 	}
 
@@ -574,7 +574,13 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	      goto out_err;
 	    }
 	    
+	    if (!sava_serving_gateway) {
+	      sava_serving_gateway = 
+		(struct in6_addr *)malloc(sizeof(struct in6_addr));
+	      memset(sava_serving_gateway, 0, sizeof(struct in6_addr));
+	    }
 	    
+	    memcpy(sava_serving_gateway, dst_hit, sizeof(struct in6_addr));
 
 	    HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry), -1,
 		   "Error on sending I1 packet to the server.\n");
@@ -582,7 +588,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	  }
 	  
 	  break;
-	case SO_HIP_GET_SAVAHR:
+	case SO_HIP_GET_SAVAHR_IN_KEYS:
 	  {
 	    dst_hit = hip_get_param_contents(msg,HIP_PARAM_HIT);
 	    HIP_DEBUG("WE HAVE GOT SAVAH KEYS REQUEST MESSAGE \n");
@@ -595,7 +601,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		HIP_IFEL(hip_build_param_contents(msg, (void *)dst_hit, HIP_PARAM_HIT,
 					  sizeof(struct in6_addr)), -1,
 					  "build param contents failed\n");
-		HIP_HEXDUMP("crypto key :", &entry->esp_in, sizeof(struct hip_crypto_key));
+		HIP_HEXDUMP("crypto key :", &entry->auth_in, sizeof(struct hip_crypto_key));
 		HIP_IFEL(hip_build_param_contents(msg,
 						  (struct hip_crypto_key *) &entry->auth_in, //HMAC key for incomming direction
 						  HIP_PARAM_KEYS,
@@ -606,6 +612,46 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 						  sizeof(int)), -1,
 			 "build param contents failed\n");
 		
+	    }
+	  }
+	  break;
+	 case SO_HIP_GET_SAVAHR_OUT_KEYS:
+	  {
+	    dst_hit = hip_get_param_contents(msg,HIP_PARAM_HIT);
+	    HIP_DEBUG("WE HAVE GOT SAVAH KEYS REQUEST MESSAGE \n");
+	    entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
+	  
+	    if (entry == NULL) {
+	    
+	    } else {
+	      	HIP_DEBUG_HIT("Destination HIT: ", dst_hit);
+		HIP_IFEL(hip_build_param_contents(msg, (void *)dst_hit, HIP_PARAM_HIT,
+					  sizeof(struct in6_addr)), -1,
+					  "build param contents failed\n");
+		HIP_HEXDUMP("crypto key :", &entry->auth_out, sizeof(struct hip_crypto_key));
+		HIP_IFEL(hip_build_param_contents(msg,
+						  (struct hip_crypto_key *) &entry->auth_out, //HMAC key for incomming direction
+						  HIP_PARAM_KEYS,
+						  sizeof(struct hip_crypto_key)), -1,
+			 "build param contents failed\n");
+		HIP_DEBUG("ealg value is %d \n", entry->esp_transform);
+		HIP_IFEL(hip_build_param_contents(msg, (void *)&entry->esp_transform, HIP_PARAM_INT,
+						  sizeof(int)), -1,
+			 "build param contents failed\n");
+		
+	    }
+	  }
+	  break; 
+	case SO_HIP_GET_SAVAHR_HIT:
+	  {
+	    HIP_DEBUG("WE HAVE GOT SAVAH HIT REQUEST MESSAGE \n");
+	    //entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
+	    if (sava_serving_gateway) {
+	      HIP_DEBUG_HIT("SAVAH HIT: ", sava_serving_gateway);
+	      HIP_IFEL(hip_build_param_contents(msg, (void *)sava_serving_gateway,
+						HIP_PARAM_HIT,
+						sizeof(struct in6_addr)), -1,
+						"build param contents failed\n");
 	    }
 	  }
 	  break;

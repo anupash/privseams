@@ -2129,7 +2129,7 @@ int hip_conf_handle_sava (struct hip_common * msg, int action,
     HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_REGISTER_SAVAHR, 
 				0), -1, "add peer map failed\n");
   } else if (action == ACTION_GET) {
-    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_SAVAHR,
+    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_SAVAHR_HIT,
 				0), -1, "add peer map failed\n");
   } else {
     HIP_IFEL(1, -1, "bad args\n");
