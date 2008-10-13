@@ -99,7 +99,7 @@
 #define SO_HIP_SET_DEBUG_MEDIUM			83
 #define SO_HIP_SET_DEBUG_NONE			84
 /** Socket option for hipconf to ask about the used gateway with OpenDHT */
-/* 85 is free slot */
+#define SO_HIP_LOCATOR_GET                      85
 #define SO_HIP_HANDOFF_ACTIVE			86
 #define SO_HIP_HANDOFF_LAZY			87
 /** Socket option for hipconf to restart daemon. */

@@ -2966,6 +2966,23 @@ out_err:
 	return err;
 }
 
+
+
+int hip_update_handle_stun(void* pkg, int len,
+	 in6_addr_t *src_addr, in6_addr_t * dst_addr,
+	 hip_ha_t *entry,
+	 hip_portpair_t *sinfo)
+{
+	if(entry){
+		HIP_DEBUG_HIT("receive a stun  from 2:  " ,src_addr );
+		hip_external_ice_receive_pkt(pkg, len, entry, src_addr, sinfo->src_port);
+	}
+	else{
+		HIP_DEBUG_HIT("receive a stun  from 1:   " ,src_addr );
+		hip_external_ice_receive_pkt_all(pkg, len, src_addr, sinfo->src_port);
+	}
+}
+
 /**
  * Builds udp and raw locator items into locator list to msg
  * this is the extension of hip_build_locators in output.c
@@ -3101,19 +3118,3 @@ int hip_build_locators(struct hip_common *msg)
     if (locs2) free(locs2);
     return err;
 }
-
-int hip_update_handle_stun(void* pkg, int len,
-	 in6_addr_t *src_addr, in6_addr_t * dst_addr,
-	 hip_ha_t *entry,
-	 hip_portpair_t *sinfo)
-{
-	if(entry){
-		HIP_DEBUG_HIT("receive a stun  from 2:  " ,src_addr );
-		hip_external_ice_receive_pkt(pkg, len, entry, src_addr, sinfo->src_port);
-	}
-	else{
-		HIP_DEBUG_HIT("receive a stun  from 1:   " ,src_addr );
-		hip_external_ice_receive_pkt_all(pkg, len, src_addr, sinfo->src_port);
-	}
-}
-

@@ -138,7 +138,15 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		hip_recreate_all_precreated_r1_packets();
 		break;
 //end modify
-
+        case SO_HIP_LOCATOR_GET:
+		HIP_DEBUG("Got a request for locators\n");
+		hip_msg_init(msg);
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_LOCATOR_GET, 0), -1, 
+			 "Failed to build user message header.: %s\n", 
+			 strerror(err));
+		if ((err = hip_build_locators(msg)) < 0)
+			HIP_DEBUG("LOCATOR parameter building failed\n");
+		break;
         case SO_HIP_SET_LOCATOR_ON:
                 HIP_DEBUG("Setting LOCATOR ON\n");
                 hip_locator_status = SO_HIP_SET_LOCATOR_ON;
