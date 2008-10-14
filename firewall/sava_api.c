@@ -799,17 +799,12 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
 
   }else { //IPv4
     iphdr = (struct ip *) ctx->ipq_packet->payload;
-
-    memcpy(&iphdr->ip_src, (void *)enc_addr, sizeof(struct in_addr));
-
+    //    memcpy(&iphdr->ip_src, (void *)enc_addr, sizeof(struct in_addr));
+    IPV6_TO_IPV4_MAP(enc_addr, &iphdr->ip_src);
     iphdr->ip_sum = 0;
-
     IPV6_TO_IPV4_MAP(&ctx->dst, &dst4->sin_addr);
-
     dst4->sin_family = AF_INET;
-
     HIP_DEBUG_INADDR("dst4", &dst4->sin_addr);
-
     sent = sendto(ipv4_raw_sock, iphdr, ctx->ipq_packet->data_len, 0,
 		  (struct sockaddr *) &dst, sizeof(struct sockaddr_in));
   }
@@ -829,10 +824,18 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
 }
 
 int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
-  int err = 0, verdict = 0, auth_len = 0;
+  int err = 0, verdict = 0, auth_len = 0, sent = 0;
   struct in6_addr * enc_addr = NULL;
   hip_sava_ip_entry_t  * ip_entry     = NULL;
   hip_sava_enc_ip_entry_t * enc_entry = NULL;
+  struct sockaddr_storage dst;
+  struct sockaddr_in *dst4 = (struct sockaddr_in *)&dst;
+  struct sockaddr_in6 *dst6 = (struct sockaddr_in6 *)&dst;
+
+  struct ip6_hdr * ip6hdr= NULL;	
+  struct ip * iphdr= NULL;
+
+  memset(&dst, 0, sizeof(struct sockaddr_storage));
 
   HIP_DEBUG("CHECK IP ON FORWARD\n");
   if (hip_sava_conn_entry_find(&ctx->src, &ctx->dst) != NULL) {
@@ -858,25 +861,42 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
       //VERDICT DROP PACKET BECAUSE IT CONTAINS ENCRYPTED IP
       //ONLY NEW PACKET WILL GO OUT
       HIP_DEBUG("Adding <src, dst> tuple to connection db \n");
-
       hip_sava_conn_entry_add(enc_entry->ip_link->src_addr, &ctx->dst);
-      
-      HIP_DEBUG("Source address is authenticate \n");
+      HIP_DEBUG("Source address is authenticated \n");
       HIP_DEBUG("Reinject the traffic to network stack \n");
+      if (ctx->ip_version == 6) { //IPv6
+    	ip6hdr = (struct ip6_hdr*) ctx->ipq_packet->payload;
+	memcpy(&ip6hdr->ip6_src, (void *)enc_entry->ip_link->src_addr, sizeof(struct in6_addr));
+	dst6->sin6_family = AF_INET6;
+	memcpy(&dst6->sin6_addr, &ctx->src, sizeof(struct in6_addr));
+	sent = sendto(ipv6_raw_sock, ip6hdr, ctx->ipq_packet->data_len, 0,
+		      (struct sockaddr *) &dst, sizeof(struct sockaddr_in6));
+      }else { //IPv4
+	iphdr = (struct ip *) ctx->ipq_packet->payload;
+	IPV6_TO_IPV4_MAP(enc_entry->ip_link->src_addr, &iphdr->ip_src);
+	iphdr->ip_sum = 0;
+	IPV6_TO_IPV4_MAP(&ctx->dst, &dst4->sin_addr);
+	dst4->sin_family = AF_INET;
+	HIP_DEBUG_INADDR("dst4", &dst4->sin_addr);
+	sent = sendto(ipv4_raw_sock, iphdr, ctx->ipq_packet->data_len, 0,
+		      (struct sockaddr *) &dst, sizeof(struct sockaddr_in));
+      }
     } else {
       HIP_DEBUG("Source address authentication failed. Dropping packet \n");
       verdict = DROP;
       goto out_err;
     }
+
+    
   } else {
     HIP_DEBUG("Source address authentication failed \n");
     verdict = DROP;
     goto out_err;
   }
-    //  } 
  out_err:
   return verdict;
 }
+
 
 int hip_sava_init_ip4_raw_socket(int * ip4_raw_socket) {
   int on = 1, err = 0;
