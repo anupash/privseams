@@ -96,6 +96,7 @@ class Hosts:
             aaaa[self.sani_aaaa(addr)] = aa2
         self.d = d
         self.aaaa = aaaa
+	print d
         return
 
     def getbyname(self,n):

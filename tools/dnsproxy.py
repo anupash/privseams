@@ -285,7 +285,7 @@ class Global:
                 qtype = q1['qtype']
                 sent_answer = 0
                 m = None
-                if qtype == 28:     # AAAA
+                if qtype == 28 or qtype == 1:     # AAAA or A
                     nam = q1['qname']
                     lr = gp.getbyname(nam)
                     if lr:
@@ -324,10 +324,21 @@ class Global:
                         else:
                             m = None
 		    if m:
-			m.addAAAA(a2['name'],a2['class'],a2['ttl'],a2['data'])
-                        s.sendto(m.buf,from_a)
-                        sent_answer = 1
+			if qtype == 1:	#a
+			    try:
+			    	m.addA(a2['name'],a2['class'],a2['ttl'],a2['data'])
+                            	s.sendto(m.buf,from_a)
+                            	sent_answer = 1
+			    except:
+			    	fout.write('except a\n')
 
+			elif qtype == 28:	#aaaa
+			    try:
+			    	m.addAAAA(a2['name'],a2['class'],a2['ttl'],a2['data'])
+                            	s.sendto(m.buf,from_a)
+                            	sent_answer = 1
+			    except:
+			    	fout.write('except aaaa\n')
                 elif qtype == 12:     # PTR
                     nam = q1['qname']
                     lr = gp.getbyaaaa(nam)
@@ -351,16 +362,7 @@ class Global:
                         s.sendto(m.buf,from_a)
                         sent_answer = 1
 
-                if not sent_answer:	#a, any
-
-                    #s2.send(buf)
-                    #r2 = s2.recv(2048)
-                    #u = DNS.Lib.Munpacker(r2)
-                    #r = DNS.Lib.DnsResult(u,args0)
-                    #fout.write('Bypass %s %s %s\n' % (r.header,r.questions,r.answers,))
-		    #fout.write('### 1\n')
-                    #if r.header.get('status') != 'NXDOMAIN':
-                    #    s.sendto(r2,from_a)
+		elif qtype == 255:#any
 
 		    nam = q1['qname']
                     lr = gp.getbyname(nam)
@@ -400,6 +402,16 @@ class Global:
                         else:
                             m = None
                     if m:
+			#if qtype == 1:
+			 #   try:
+			  #  	m.add(a2['name'],a2['class'],a2['ttl'],a2['data'])
+                           # 	s.sendto(m.buf,from_a)
+                            #	sent_answer = 1
+			    #except:
+			    #	fout.write('except a\n')
+
+			#else:
+
 			try:
 			    ip = socket.inet_pton(socket.AF_INET, a2['data'])
 			    fout.write('try\n')
@@ -412,9 +424,7 @@ class Global:
 			    s.sendto(m.buf,from_a)
 			    sent_answer = 1
 
-		    ######### add mapping ########
-
-		    fout.write('**************** \n')
+		    ######### add mapping using hipconf ########
 		    #cmd for executing hipconf dnsproxy command
 		    cmd = "hipconf dnsproxy " + nam + " 3>&1 2>&1 | grep hipconf "
 		    fout.write("COMMAND  %s\n" % (cmd,))
@@ -428,10 +438,17 @@ class Global:
 		    	p = os.popen(line)
 		    else:
 			fout.write('No command - %s\n' % (line,))
-		    	#----------------------
-		    fout.write('**************** \n')
+		    ###########################################
+		if not sent_answer:
+                    s2.send(buf)
+                    r2 = s2.recv(2048)
+                    u = DNS.Lib.Munpacker(r2)
+                    r = DNS.Lib.DnsResult(u,args0)
+                    fout.write('Bypass %s %s %s\n' % (r.header,r.questions,r.answers,))
+		    fout.write('### 1\n')
+                    if r.header.get('status') != 'NXDOMAIN':
+                        s.sendto(r2,from_a)
 
-		    ##############################
 
                 fout.flush()
             except Exception,e:

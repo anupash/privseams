@@ -2025,6 +2025,12 @@ int hit_is_local_hit(struct in6_addr *hit){
 }
 
 
+
+
+
+
+
+
 /**
  * Obtains the information needed by the dns proxy, based on the ip addr
  * 
@@ -2035,7 +2041,7 @@ int hit_is_local_hit(struct in6_addr *hit){
  * @return		1 - if a corresponding entry is found
  * 			0 - is returned if there is no entry
  */
-int hip_get_info_for_dnsproxy_from_ip(
+/*int hip_get_info_for_dnsproxy_from_ip(
 				struct in6_addr *ip_addr,
 				struct in6_addr *hit,
 				hip_lsi_t       *lsi){
@@ -2073,7 +2079,7 @@ out_err:
                 HIP_FREE(msg);  
         return res;
 }
-
+*/
 
 /**
  * Obtains the information needed by the dns proxy, based on the hostname
@@ -2085,7 +2091,7 @@ out_err:
  * @return		1 - if a corresponding entry is found
  * 			0 - is returned if there is no entry
  */
-int hip_get_info_for_dnsproxy_from_hostname(
+/*int hip_get_info_for_dnsproxy_from_hostname(
 				const char      *hostname,
 				struct in6_addr *ip,
 				struct in6_addr *hit,
@@ -2121,6 +2127,16 @@ out_err:
                 HIP_FREE(msg);  
         return res;
 }
+*/
+
+
+
+
+
+
+
+
+
 
 
 /* This builds a msg which will be sent to the HIPd in order to trigger
