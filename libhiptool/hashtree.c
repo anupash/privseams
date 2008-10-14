@@ -369,6 +369,8 @@ unsigned char* htree_get_secret(hash_tree_t *tree, int data_index,
 
 unsigned char* htree_get_root(hash_tree_t *tree, int *root_length)
 {
+	HIP_ASSERT(tree != NULL);
+
 	*root_length = tree->node_length;
 
 	return tree->root;

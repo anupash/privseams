@@ -3016,7 +3016,7 @@ int hip_build_param_esp_prot_secret(struct hip_common *msg, int secret_length,
 	return err;
 }
 
-int hip_build_param_esp_prot_root(struct hip_common *msg, int root_length,
+int hip_build_param_esp_prot_root(struct hip_common *msg, uint8_t root_length,
 		unsigned char *root)
 {
 	int err = 0;

@@ -11,8 +11,7 @@
 #include "builder.h"
 
 int esp_prot_send_light_update(hip_ha_t *entry, int anchor_offset, unsigned char *secret,
-		int secret_length, unsigned char *branch_nodes, int branch_length,
-		unsigned char *root, int root_length);
+		int secret_length, unsigned char *branch_nodes, int branch_length);
 int esp_prot_receive_light_update(hip_common_t *msg, in6_addr_t *src_addr,
 	       in6_addr_t *dst_addr, hip_ha_t *entry);
 int esp_prot_send_light_ack(hip_ha_t *entry, in6_addr_t *src_addr, in6_addr_t *dst_addr,

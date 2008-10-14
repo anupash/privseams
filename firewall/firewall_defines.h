@@ -37,6 +37,10 @@ struct esp_tuple
 	// need for verification of anchor updates
 	unsigned char *first_active_anchor;
 	unsigned char *next_anchor;
+	int active_root_length;
+	unsigned char *active_root;
+	int next_root_length;
+	unsigned char *next_root;
 	/* list temporarily storing anchor elements until the consecutive update
 	 * msg reveals that all on-path devices know the new anchor */
 	hip_ll_t anchor_cache;

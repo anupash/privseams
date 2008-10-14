@@ -74,6 +74,17 @@ int esp_prot_handle_trigger_update_msg(struct hip_common *msg)
 	HIP_HEXDUMP("anchor: ", esp_prot_anchor, hash_length);
 
 	param = hip_get_param(msg, HIP_PARAM_INT);
+	root_length  = *((int *) hip_get_param_contents_direct(param));
+	HIP_DEBUG("root_length: %i\n", root_length);
+
+	if (root_length > 0)
+	{
+		param = hip_get_param(msg, HIP_PARAM_ROOT);
+		root = (unsigned char *) hip_get_param_contents_direct(param);
+		HIP_HEXDUMP("root: ", root, root_length);
+	}
+
+	param = hip_get_next_param(msg, param);
 	soft_update  = *((int *) hip_get_param_contents_direct(param));
 	HIP_DEBUG("soft_update: %i\n", soft_update);
 
@@ -91,10 +102,6 @@ int esp_prot_handle_trigger_update_msg(struct hip_common *msg)
 		branch_length  = *((int *) hip_get_param_contents_direct(param));
 		HIP_DEBUG("branch_length: %i\n", branch_length);
 
-		param = hip_get_next_param(msg, param);
-		root_length  = *((int *) hip_get_param_contents_direct(param));
-		HIP_DEBUG("root_length: %i\n", root_length);
-
 		param = hip_get_param(msg, HIP_PARAM_SECRET);
 		secret = (unsigned char *) hip_get_param_contents_direct(param);
 		HIP_HEXDUMP("secret: ", secret, secret_length);
@@ -102,10 +109,6 @@ int esp_prot_handle_trigger_update_msg(struct hip_common *msg)
 		param = hip_get_param(msg, HIP_PARAM_BRANCH_NODES);
 		branch_nodes = (unsigned char *) hip_get_param_contents_direct(param);
 		HIP_HEXDUMP("branch_nodes: ", branch_nodes, branch_length);
-
-		param = hip_get_param(msg, HIP_PARAM_ROOT);
-		root = (unsigned char *) hip_get_param_contents_direct(param);
-		HIP_HEXDUMP("root: ", root, root_length);
 	}
 
 
@@ -129,20 +132,17 @@ int esp_prot_handle_trigger_update_msg(struct hip_common *msg)
 	//memset(entry->esp_local_update_anchor, 0, MAX_HASH_LENGTH);
 	memcpy(entry->esp_local_update_anchor, esp_prot_anchor, hash_length);
 
+	if (root)
+	{
+		// store the root for usage in update msgs
+		entry->esp_root_length = root_length;
+		memcpy(entry->esp_root, root, root_length);
+	}
+
 	if (soft_update)
 	{
-#if 0
-		// set the branch nodes etc for them to be available for the update
-		entry->anchor_offset = anchor_offset;
-		entry->secret_length = secret_length;
-		entry->branch_length = branch_length;
-
-		memcpy(entry->secret, secret, secret_length);
-		memcpy(entry->branch_nodes, branch_nodes, branch_length);
-#endif
-
 		HIP_IFEL(esp_prot_send_light_update(entry, anchor_offset, secret, secret_length,
-				branch_nodes, branch_length, root, root_length), -1,
+				branch_nodes, branch_length), -1,
 				"failed to send anchor update\n");
 
 	} else
@@ -737,6 +737,13 @@ int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry)
 					entry->esp_prot_transform, entry->esp_local_anchor,
 					entry->esp_local_update_anchor, hash_length), -1,
 					"building of ESP protection ANCHOR failed\n");
+
+			if (entry->esp_root && entry->esp_root_length > 0)
+			{
+				HIP_IFEL(hip_build_param_esp_prot_root(update,
+						entry->esp_root_length, entry->esp_root), -1,
+						"building of ESP ROOT failed\n");
+			}
 		}
 	}
 

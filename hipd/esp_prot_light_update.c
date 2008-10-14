@@ -10,8 +10,7 @@
 #include "esp_prot_hipd_msg.h"
 
 int esp_prot_send_light_update(hip_ha_t *entry, int anchor_offset, unsigned char *secret,
-		int secret_length, unsigned char *branch_nodes, int branch_length,
-		unsigned char *root, int root_length)
+		int secret_length, unsigned char *branch_nodes, int branch_length)
 {
 	hip_common_t *light_update = NULL;
 	int hash_length = 0;
@@ -48,8 +47,8 @@ int esp_prot_send_light_update(hip_ha_t *entry, int anchor_offset, unsigned char
 	 HIP_IFEL(hip_build_param_esp_prot_secret(light_update, secret_length, secret), -1,
 			"building of ESP SECRET failed\n");
 
-	 HIP_IFEL(hip_build_param_esp_prot_root(light_update, root_length, root), -1,
-	 			"building of ESP ROOT failed\n");
+	 HIP_IFEL(hip_build_param_esp_prot_root(light_update, entry->esp_root_length,
+			 entry->esp_root), -1, "building of ESP ROOT failed\n");
 
 	 /******************** add HMAC **********************/
 	 HIP_IFEL(hip_build_param_hmac_contents(light_update, &entry->hip_hmac_out), -1,

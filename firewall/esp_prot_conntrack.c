@@ -393,6 +393,7 @@ int esp_prot_conntrack_update(const hip_common_t *update, struct tuple * tuple)
 	struct hip_ack *ack = NULL;
 	struct hip_esp_info *esp_info = NULL;
 	struct esp_prot_anchor *esp_anchor = NULL;
+	struct esp_prot_root *esp_root = NULL;
 	int err = 0;
 
 	HIP_ASSERT(update != NULL);
@@ -409,8 +410,11 @@ int esp_prot_conntrack_update(const hip_common_t *update, struct tuple * tuple)
 	{
 		HIP_DEBUG("received 1. UPDATE packet of ANCHOR UPDATE\n");
 
+		esp_root = (struct esp_prot_root *) hip_get_param(update,
+				HIP_PARAM_ESP_PROT_ROOT);
+
 		// cache ANCHOR
-		HIP_IFEL(esp_prot_conntrack_cache_anchor(tuple, seq, esp_anchor), -1,
+		HIP_IFEL(esp_prot_conntrack_cache_anchor(tuple, seq, esp_anchor, esp_root), -1,
 				"failed to cache ANCHOR parameter\n");
 
 	} else if (seq && ack && esp_info && esp_anchor)
@@ -450,7 +454,7 @@ int esp_prot_conntrack_update(const hip_common_t *update, struct tuple * tuple)
  * tuple indexed with the SEQ number for reference reasons with consecutive
  * update replies */
 int esp_prot_conntrack_cache_anchor(struct tuple * tuple, struct hip_seq *seq,
-		struct esp_prot_anchor *esp_anchor)
+		struct esp_prot_anchor *esp_anchor, struct esp_prot_root *esp_root)
 {
 	struct esp_anchor_item *anchor_item = NULL;
 	unsigned char *cmp_value = NULL;
@@ -495,7 +499,8 @@ int esp_prot_conntrack_cache_anchor(struct tuple * tuple, struct hip_seq *seq,
 	// check if next_anchor is set
 	if (memcmp(&esp_anchor->anchors[hash_length], cmp_value, hash_length))
 	{
-		HIP_DEBUG("setting next_anchor\n");
+		HIP_HEXDUMP("setting cache->next_anchor: ", &esp_anchor->anchors[hash_length],
+				hash_length);
 
 		// also copy this anchor as it is set
 		HIP_IFEL(!(anchor_item->next_anchor = (unsigned char *)
@@ -509,6 +514,15 @@ int esp_prot_conntrack_cache_anchor(struct tuple * tuple, struct hip_seq *seq,
 		HIP_DEBUG("setting next_anchor to NULL\n");
 
 		anchor_item->next_anchor = NULL;
+	}
+
+	// also set the root for the link_tree of the next hchain, if provided
+	if (esp_root)
+	{
+		HIP_HEXDUMP("setting cache->root: ", esp_root->root, esp_root->root_length);
+
+		anchor_item->root_length = esp_root->root_length;
+		memset(anchor_item->root, esp_root->root, esp_root->root_length);
 	}
 
 	// add this anchor to the list for this direction's tuple
@@ -581,8 +595,10 @@ int esp_prot_conntrack_update_anchor(struct tuple *tuple, struct hip_ack *ack,
 
 			// update the esp_tuple
 			esp_tuple->next_anchor = anchor_item->next_anchor;
+			esp_tuple->next_root_length = anchor_item->root_length;
+			esp_tuple->next_root = anchor_item->root;
 
-			// free the cached item, but NOT next_anchor as in use now
+			// free the cached item, but NOT next_anchor and root as in use now
 			free(anchor_item->active_anchor);
 			free(anchor_item);
 
@@ -638,7 +654,8 @@ int esp_prot_conntrack_verify(struct esp_tuple *esp_tuple, struct hip_esp *esp)
 				conntrack_tfm->hash_length,
 				esp_tuple->active_anchor, esp_tuple->next_anchor,
 				((unsigned char *) esp) + sizeof(struct hip_esp),
-				num_verify)) < 0, -1,
+				num_verify, esp_tuple->active_root, esp_tuple->active_root_length,
+				esp_tuple->next_root, esp_tuple->next_root_length)) < 0, -1,
 				"failed to verify ESP protection hash\n");
 
 		// this means there was a change in the anchors
@@ -651,6 +668,14 @@ int esp_prot_conntrack_verify(struct esp_tuple *esp_tuple, struct hip_esp *esp)
 					conntrack_tfm->hash_length);
 			memcpy(esp_tuple->first_active_anchor, esp_tuple->next_anchor,
 					conntrack_tfm->hash_length);
+
+			// change roots
+			free(esp_tuple->active_root);
+			esp_tuple->active_root = esp_tuple->next_root;
+			esp_tuple->next_root = NULL;
+			esp_tuple->active_root_length = esp_tuple->next_root_length;
+			esp_tuple->next_root_length = 0;
+
 			free(esp_tuple->next_anchor);
 			esp_tuple->next_anchor = NULL;
 
@@ -687,6 +712,8 @@ struct esp_tuple * esp_prot_conntrack_find_esp_tuple(struct tuple * tuple,
 
 	HIP_ASSERT(tuple != NULL);
 
+	HIP_HEXDUMP("received active anchor: ", active_anchor, hash_length);
+
 	list = tuple->esp_tuples;
 
 	while(list)
@@ -697,6 +724,9 @@ struct esp_tuple * esp_prot_conntrack_find_esp_tuple(struct tuple * tuple,
 		if (!memcmp(esp_tuple->first_active_anchor, active_anchor, hash_length))
 		{
 			HIP_DEBUG("found matching active anchor in esp_tuples\n");
+
+			HIP_HEXDUMP("stored active anchor: ", esp_tuple->first_active_anchor,
+					hash_length);
 
 			goto out_err;
 		}

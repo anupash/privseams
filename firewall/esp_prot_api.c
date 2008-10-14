@@ -384,7 +384,8 @@ int esp_prot_verify(hip_sa_entry_t *entry, unsigned char *hash_value)
 
 		HIP_IFEL((err = esp_prot_verify_hash(hash_function, hash_length,
 				entry->active_anchor, entry->next_anchor, hash_value,
-				entry->esp_prot_tolerance)) < 0, -1, "failed to verify hash\n");
+				entry->esp_prot_tolerance, NULL, 0, NULL, 0)) < 0, -1,
+				"failed to verify hash\n");
 
 		// anchors have changed, tell hipd about it
 		if (err > 0)
@@ -414,7 +415,8 @@ int esp_prot_verify(hip_sa_entry_t *entry, unsigned char *hash_value)
  * returns 0 - ok or UNUSED, < 0 err, > 0 anchor change */
 int esp_prot_verify_hash(hash_function_t hash_function, int hash_length,
 		unsigned char *active_anchor, unsigned char *next_anchor,
-		unsigned char *hash_value, int tolerance)
+		unsigned char *hash_value, int tolerance, unsigned char *active_root,
+		int active_root_length, unsigned char *next_root, int next_root_length)
 {
 	uint32_t tmp_distance = 0;
 	int err = 0;
@@ -436,7 +438,7 @@ int esp_prot_verify_hash(hash_function_t hash_function, int hash_length,
 
 	HIP_DEBUG("checking active_anchor...\n");
 	if (tmp_distance = hchain_verify(hash_value, active_anchor, hash_function,
-			hash_length, tolerance, NULL, 0))
+			hash_length, tolerance, active_root, active_root_length))
 	{
 		// this will allow only increasing elements to be accepted
 		memcpy(active_anchor, hash_value, hash_length);
@@ -453,7 +455,7 @@ int esp_prot_verify_hash(hash_function_t hash_function, int hash_length,
 			HIP_HEXDUMP("next_anchor: ", next_anchor, hash_length);
 
 			if (tmp_distance = hchain_verify(hash_value, next_anchor, hash_function,
-					hash_length, tolerance, NULL, 0))
+					hash_length, tolerance, next_root, next_root_length))
 			{
 				HIP_DEBUG("hash matches element in next hash-chain\n");
 
@@ -678,7 +680,6 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 							anchor_offset, &secret_length);
 					branch_nodes = htree_get_branch(entry->active_hchain->link_tree,
 							anchor_offset, &branch_length);
-					root = htree_get_root(entry->active_hchain->link_tree, &root_length);
 
 					soft_update = 1;
 				}
@@ -701,6 +702,13 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 						-1, "unable to retrieve hchain from store\n");
 
 				soft_update = 0;
+			}
+
+			if (entry->next_hchain->link_tree)
+			{
+				/* if the next_hchain has got a link_tree, we need its root for
+				 * the verification of the next_hchain's elements */
+				root = htree_get_root(entry->next_hchain->link_tree, &root_length);
 			}
 
 			// issue UPDATE message to be sent by hipd

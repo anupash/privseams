@@ -265,6 +265,18 @@ int send_trigger_update_to_hipd(hip_sa_entry_t *entry, int soft_update,
 			HIP_PARAM_HCHAIN_ANCHOR, hash_length), -1,
 			"build param contents failed\n");
 
+	HIP_DEBUG("root_length: %i\n", root_length);
+	HIP_IFEL(hip_build_param_contents(msg, (void *)&root_length, HIP_PARAM_INT,
+			sizeof(int)), -1, "build param contents failed\n");
+
+	if (root && root_length > 0)
+	{
+		HIP_HEXDUMP("root: ", root, root_length);
+		HIP_IFEL(hip_build_param_contents(msg, (void *)root,
+				HIP_PARAM_ROOT, root_length), -1,
+				"build param contents failed\n");
+	}
+
 	HIP_DEBUG("soft_update: %i\n", soft_update);
 	HIP_IFEL(hip_build_param_contents(msg, (void *)&soft_update, HIP_PARAM_INT,
 			sizeof(int)), -1, "build param contents failed\n");
@@ -283,10 +295,6 @@ int send_trigger_update_to_hipd(hip_sa_entry_t *entry, int soft_update,
 		HIP_IFEL(hip_build_param_contents(msg, (void *)&branch_length, HIP_PARAM_INT,
 				sizeof(int)), -1, "build param contents failed\n");
 
-		HIP_DEBUG("root_length: %i\n", root_length);
-		HIP_IFEL(hip_build_param_contents(msg, (void *)&root_length, HIP_PARAM_INT,
-				sizeof(int)), -1, "build param contents failed\n");
-
 		HIP_HEXDUMP("secret: ", secret, secret_length);
 		HIP_IFEL(hip_build_param_contents(msg, (void *)secret,
 				HIP_PARAM_SECRET, secret_length), -1,
@@ -295,11 +303,6 @@ int send_trigger_update_to_hipd(hip_sa_entry_t *entry, int soft_update,
 		HIP_HEXDUMP("branch_nodes: ", branch_nodes, branch_length);
 		HIP_IFEL(hip_build_param_contents(msg, (void *)branch_nodes,
 				HIP_PARAM_BRANCH_NODES, branch_length), -1,
-				"build param contents failed\n");
-
-		HIP_HEXDUMP("root: ", root, root_length);
-		HIP_IFEL(hip_build_param_contents(msg, (void *)root,
-				HIP_PARAM_ROOT, root_length), -1,
 				"build param contents failed\n");
 	}
 
