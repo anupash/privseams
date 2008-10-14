@@ -37,6 +37,9 @@ struct esp_tuple
 	// need for verification of anchor updates
 	unsigned char *first_active_anchor;
 	unsigned char *next_anchor;
+	/* list temporarily storing anchor elements until the consecutive update
+	 * msg reveals that all on-path devices know the new anchor */
+	hip_ll_t anchor_cache;
 };
 
 struct decryption_data
@@ -71,9 +74,6 @@ struct tuple
 #ifdef CONFIG_HIP_HIPPROXY
 	int hipproxy;
 #endif
-	/* list temporarily storing anchor elements until the consecutive update
-	 * msg reveals which esp_tuple we have to update */
-	hip_ll_t anchor_cache;
 };
 
 struct connection

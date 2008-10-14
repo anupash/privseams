@@ -32,6 +32,8 @@ int esp_prot_conntrack_cache_anchor(struct tuple * tuple, struct hip_seq *seq,
 int esp_prot_conntrack_update_anchor(struct tuple *tuple, struct hip_ack *ack,
 		struct hip_esp_info *esp_info);
 int esp_prot_conntrack_verify(struct esp_tuple *esp_tuple, struct hip_esp *esp);
+struct esp_tuple * esp_prot_conntrack_find_esp_tuple(struct tuple * tuple,
+		unsigned char *active_anchor, int hash_length);
 
 
 
