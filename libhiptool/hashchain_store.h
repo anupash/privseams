@@ -32,15 +32,11 @@
 // TODO move this to esp_prot_api
 #define MAX_HCHAINS_PER_ITEM	8
 
-#if 0
-#define MAX_HCHAINS_PER_ITEM	5
-#endif
-
 /* determines when to refill a store
  *
  * @note this is a reverse threshold -> 1 - never refill, 0 - always
  */
-#define ITEM_THRESHOLD 1
+#define ITEM_THRESHOLD			0.5
 
 
 typedef struct hchain_shelf

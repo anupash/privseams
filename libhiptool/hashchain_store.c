@@ -249,7 +249,7 @@ int hcstore_register_hchain_hierarchy(hchain_store_t *hcstore, int function_id,
 
 	// first check that there's still enough space left
 	HIP_IFEL(hcstore->hchain_shelves[function_id][hash_length_id].
-			num_hierarchies[item_offset] + addtional_hierarchies >=
+			num_hierarchies[item_offset] + addtional_hierarchies >
 			MAX_NUM_HIERARCHIES, -1,
 			"insufficient space in hchain_hierarchies-storage\n");
 
