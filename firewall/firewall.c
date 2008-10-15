@@ -1354,7 +1354,9 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 		tcphdr = ((struct tcphdr *) (((char *) iphdr) + ctx->ip_hdr_len));
 		hdrBytes = ((char *) iphdr) + ctx->ip_hdr_len;
 	}
-	if (hip_sava_client) {
+	if (hip_sava_client && 
+	    !hip_lsi_support && 
+	    !hip_userspace_ipsec) {
 	  //check if HA exists with the router then 
 	  //encrypt source IP and reinject packet to 
 	  //the network stack
@@ -1364,39 +1366,41 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 	  //upon registration repeat the procedure described above for sending 
 	  //out the packet
 
+	  HIP_DEBUG("Handling normal traffic in SAVA mode \n ");
+
 	  verdict = hip_sava_handle_output(ctx);
 
 	} else if (ctx->ip_version == 6 && hip_userspace_ipsec) {
-		HIP_DEBUG_HIT("destination hit: ", &ctx->dst);
-		// XX TODO: hip_fw_get_default_hit() returns an unfreed value
-		HIP_DEBUG_HIT("default hit: ", hip_fw_get_default_hit());
-		// check if this is a reinjected packet
-		if (IN6_ARE_ADDR_EQUAL(&ctx->dst, hip_fw_get_default_hit()))
-			// let the packet pass through directly
-			verdict = 1;
-		else
-			verdict = !hip_fw_userspace_ipsec_output(ctx);
+	  HIP_DEBUG_HIT("destination hit: ", &ctx->dst);
+	  // XX TODO: hip_fw_get_default_hit() returns an unfreed value
+	  HIP_DEBUG_HIT("default hit: ", hip_fw_get_default_hit());
+	  // check if this is a reinjected packet
+	  if (IN6_ARE_ADDR_EQUAL(&ctx->dst, hip_fw_get_default_hit()))
+	    // let the packet pass through directly
+	    verdict = 1;
+	  else
+	    verdict = !hip_fw_userspace_ipsec_output(ctx);
 	} else if(ctx->ip_version == 4) {
-		hip_lsi_t src_lsi, dst_lsi;
-
-		IPV6_TO_IPV4_MAP(&(ctx->src), &src_lsi);
-		IPV6_TO_IPV4_MAP(&(ctx->dst), &dst_lsi);
-
-		/* LSI HOOKS */
-		if (IS_LSI32(dst_lsi.s_addr) && hip_lsi_support) {
-			if (hip_is_packet_lsi_reinjection(&dst_lsi)) {
-				verdict = 1;
-			} else {
-				hip_fw_handle_outgoing_lsi(ctx->ipq_packet,
-							   &src_lsi, &dst_lsi);
-				verdict = 0; /* Reject the packet */
-			}
-		} else if (hip_opptcp && (ctx->ip_hdr.ipv4)->ip_p == 6 && 
-			   tcp_packet_has_i1_option(hdrBytes, 4*tcphdr->doff)){
-				verdict = 1;
-		} else if (system_based_opp_mode) {
-			   verdict = hip_fw_handle_outgoing_system_based_opp(ctx);
-		}
+	  hip_lsi_t src_lsi, dst_lsi;
+	  
+	  IPV6_TO_IPV4_MAP(&(ctx->src), &src_lsi);
+	  IPV6_TO_IPV4_MAP(&(ctx->dst), &dst_lsi);
+	  
+	  /* LSI HOOKS */
+	  if (IS_LSI32(dst_lsi.s_addr) && hip_lsi_support) {
+	    if (hip_is_packet_lsi_reinjection(&dst_lsi)) {
+	      verdict = 1;
+	    } else {
+	      hip_fw_handle_outgoing_lsi(ctx->ipq_packet,
+					 &src_lsi, &dst_lsi);
+	      verdict = 0; /* Reject the packet */
+	    }
+	  } else if (hip_opptcp && (ctx->ip_hdr.ipv4)->ip_p == 6 && 
+		     tcp_packet_has_i1_option(hdrBytes, 4*tcphdr->doff)){
+	    verdict = 1;
+	  } else if (system_based_opp_mode) {
+	    verdict = hip_fw_handle_outgoing_system_based_opp(ctx);
+	  }
 	}
 
 	/* No need to check default rules as it is handled by the

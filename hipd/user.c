@@ -559,7 +559,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	  if (dst_hit == NULL && dst_ip == NULL) { //HIT and IP are missing worst case opportunistic mode to register with the SAVAH router
 
 	  } else if (dst_hit == NULL && dst_ip != NULL) { //we have at least SAVAH router IP 
- 
+	    
 	  } else { // Both HIT and IP are present that is the simplest case we can register with the router directly
 	    /* Add HIT to IP address mapping of the server to haDB. */
 	    HIP_IFEL(hip_add_peer_map(msg), -1, "Error on registering sava router " \

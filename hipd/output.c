@@ -390,6 +390,7 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 			hip_build_network_hdr(i1, HIP_I1,
 					      mask, &entry->hit_our, dst_hit);
 	}
+
 	/* Calculate the HIP header length */
 	hip_calc_hdr_len(i1);
 
