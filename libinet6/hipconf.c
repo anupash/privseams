@@ -1462,7 +1462,6 @@ int hip_conf_handle_gw(hip_common_t *msg, int action, const char *opt[], int opt
 	memcpy(hostname, opt[0], HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
 	hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX] = '\0';
 	ret_HOSTNAME = 1;
-HIP_DEBUG("### %s-\n", hostname);
     }
 
     if(ret_IP)

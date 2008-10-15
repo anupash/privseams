@@ -280,13 +280,12 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		struct in_addr tmp_v4;
 		struct hip_opendht_gw_info *gw_info;
 		  
-		HIP_IFEL(!(gw_info = hip_get_param(msg, HIP_PARAM_OPENDHT_GW_INFO)), -1,
-			 "No gw struct found\n");
-		memset(&tmp_ip_str,'\0',20);
+		HIP_IFEL(!(gw_info = hip_get_param(msg, HIP_PARAM_OPENDHT_GW_INFO)),
+				-1, "No gw struct found\n");
+		memset(&tmp_ip_str, '\0', 20);
 		tmp_ttl = gw_info->ttl;
 		tmp_port = htons(gw_info->port);
-		memcpy(tmp_host_name, gw_info->host_name, strlen(gw_info->host_name));           
-HIP_DEBUG("### %s-\n", tmp_host_name);
+		memcpy(tmp_host_name, gw_info->host_name, strlen(gw_info->host_name));
 
 		//hostname
 		if (strlen(tmp_host_name) > 0) {
