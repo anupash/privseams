@@ -171,7 +171,8 @@
 # opp normal|advanced|none \n\
 opendht off # Jan 2007: OpenDHT infrastructure is flaky -Samu/Miika\n\
 nat plain-udp       # the host is behind a NAT\n\
-debug medium        # debug verbosity: all, medium or none\n"
+debug medium        # debug verbosity: all, medium or none\n\
+dht gw hipdht2 5851 6000000\n"
 
 #define HIPD_HOSTS_FILE     "/etc/hip/hosts"
 #define HOSTS_FILE "/etc/hosts"
