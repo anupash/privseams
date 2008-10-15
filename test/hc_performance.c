@@ -81,7 +81,9 @@ int main(int argc, char ** argv)
 	int secret_length = 0;
 	hash_chain_t *hchains[8];
 	unsigned char *data = NULL;
+	int data_length = 0;
 	unsigned char *root = NULL;
+	int root_length = 0;
 
 	hash_function = NULL;
 
@@ -224,14 +226,12 @@ int main(int argc, char ** argv)
 			HIP_DEBUG("data_length: %i\n", hash_length);
 
 			gettimeofday(&start_time, NULL);
-			htree = htree_init(hchain_length, hash_length, hash_length);
+			htree = htree_init(hchain_length, hash_length, hash_length, 0);
 			htree_add_random_data(htree, hchain_length);
 			htree_calc_nodes(htree, htree_leaf_generator, htree_node_generator, NULL);
 			gettimeofday(&stop_time, NULL);
 			timediff = calc_timeval_diff(&start_time, &stop_time);
 			add_statistics_item(&creation_stats, timediff);
-
-			HIP_HEXDUMP("htree root: ", htree->root, htree->node_length);
 
 			htree_free(htree);
 		}
@@ -243,15 +243,21 @@ int main(int argc, char ** argv)
 
 		for(i = 0; i < count; i++)
 		{
-			htree = htree_init(hchain_length, hash_length, hash_length);
+			htree = htree_init(hchain_length, hash_length, hash_length, hash_length);
 			htree_add_random_data(htree, hchain_length);
 			htree_add_random_secrets(htree);
 			htree_calc_nodes(htree, htree_leaf_generator, htree_node_generator, NULL);
+
+			root = htree_get_root(htree, &root_length);
 			branch_nodes = htree_get_branch(htree, i, &branch_length);
+			data = htree_get_data(htree, i, &data_length);
 			secret = htree_get_secret(htree, i, &secret_length);
+
 			gettimeofday(&start_time, NULL);
-			if (!htree_verify_branch(htree->root, branch_nodes, branch_length,
-					hash_length, &htree->data[i * hash_length], secret, hash_length, i,
+			if (!htree_verify_branch(root, root_length,
+					branch_nodes, branch_length,
+					data, data_length, i,
+					secret, secret_length,
 					htree_leaf_generator, htree_node_generator, NULL))
 			{
 				gettimeofday(&stop_time, NULL);
@@ -279,7 +285,7 @@ int main(int argc, char ** argv)
 		printf("\n\ntrying out hchain linking...\n");
 
 		// simulate level 0 creation
-		htree = htree_init(8, hash_length, hash_length);
+		htree = htree_init(8, hash_length, hash_length, hash_length);
 		htree_add_random_secrets(htree);
 
 		for (i = 0; i < 8; i++)
@@ -297,11 +303,11 @@ int main(int argc, char ** argv)
 
 		// simulate BEX
 		// get hchain anchor
-		root = htree_get_root(htree, &secret_length);
+		root = htree_get_root(htree, &root_length);
 
 		// simulate level 1 hchain verification
 		if(!hchain_verify(hchain->source_element->hash, hchain->anchor_element->hash,
-				hash_function, hash_length, verify_length, root, secret_length))
+				hash_function, hash_length, verify_length, root, root_length))
 		{
 			printf("hchain level 1 verfied\n");
 
@@ -314,10 +320,12 @@ int main(int argc, char ** argv)
 		// simulate update
 		branch_nodes = htree_get_branch(htree, 0, &branch_length);
 		secret = htree_get_secret(htree, 0, &secret_length);
-		data = htree_get_data(htree, 0, &secret_length);
+		data = htree_get_data(htree, 0, &data_length);
 
-		if (!htree_verify_branch(root, branch_nodes, branch_length,
-				hash_length, data, secret, secret_length, 0,
+		if (!htree_verify_branch(root, root_length,
+				branch_nodes, branch_length,
+				data, data_length, i,
+				secret, secret_length,
 				htree_leaf_generator, htree_node_generator, NULL))
 		{
 			printf("anchor verified\n");

@@ -317,7 +317,7 @@ int hcstore_fill_item(hchain_store_t *hcstore, int hash_func_id, int hash_length
 
 				// create a link tree for each hchain on level > 0
 				link_tree = htree_init(MAX_HCHAINS_PER_ITEM, hash_length,
-						hash_length);
+						hash_length, hash_length);
 				htree_add_random_secrets(link_tree);
 
 				// lower hchain items should be full by now

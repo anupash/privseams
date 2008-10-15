@@ -835,10 +835,6 @@ int esp_prot_conntrack_verify_branch(struct tuple * tuple,
 			&esp_anchor->anchors[0], hash_length)), -1,
 			"failed to look up matching esp_tuple\n");
 
-	return 0;
-
-// TODO get verification fixed
-#if 0
 	// verify the branch
 	if (!htree_verify_branch(esp_tuple->active_root, esp_tuple->active_root_length,
 			esp_branch->branch_nodes, esp_branch->branch_length,
@@ -854,7 +850,6 @@ int esp_prot_conntrack_verify_branch(struct tuple * tuple,
 
 		err = -1;
 	}
-#endif
 
   out_err:
 	return err;

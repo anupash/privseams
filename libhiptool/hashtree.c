@@ -26,7 +26,8 @@
  *
  * \note The memory must be freed elsewhere.
  */
-hash_tree_t* htree_init(int num_data_blocks, int max_data_length, int node_length)
+hash_tree_t* htree_init(int num_data_blocks, int max_data_length, int node_length,
+		int secret_length)
 {
     hash_tree_t *tree = NULL;
     int err = 0;
@@ -47,6 +48,14 @@ hash_tree_t* htree_init(int num_data_blocks, int max_data_length, int node_lengt
     HIP_IFEL(!(tree->nodes = (unsigned char *) malloc(node_length * num_data_blocks * 2)), -1,
     		"failed to allocate memory\n");
 
+    if (secret_length > 0)
+    {
+    	HIP_IFEL(!(tree->secrets = (unsigned char *) malloc(secret_length * num_data_blocks)), -1,
+    			"failed to allocate memory\n");
+
+    	bzero(tree->secrets, secret_length * num_data_blocks);
+    }
+
     // init array elements to 0
     bzero(tree->data, num_data_blocks * max_data_length);
     bzero(tree->nodes, node_length * num_data_blocks * 2);
@@ -56,12 +65,12 @@ hash_tree_t* htree_init(int num_data_blocks, int max_data_length, int node_lengt
     tree->num_data_blocks = num_data_blocks;
     tree->max_data_length = max_data_length;
     tree->node_length = node_length;
+    tree->secret_length = secret_length;
     tree->depth = ceil(log2(num_data_blocks));
 
     HIP_DEBUG("tree->depth: %i\n", tree->depth);
 
     tree->root = NULL;
-    tree->secrets = NULL;
 
   out_err:
 	if (err)
@@ -80,6 +89,8 @@ void htree_free(hash_tree_t *tree)
 			free(tree->nodes);
 		if (tree->data)
 			free(tree->data);
+		if (tree->secrets)
+			free(tree->secrets);
 
 		free(tree);
 	}
@@ -158,25 +169,14 @@ int htree_add_random_secrets(hash_tree_t *tree)
 	int err = 0;
 
 	HIP_ASSERT(tree != NULL);
+	HIP_ASSERT(tree->secrets != NULL);
+	HIP_ASSERT(tree->secret_length > 0);
 
-	if (!tree->secrets)
-	{
-		HIP_IFEL(!(tree->secrets = (unsigned char *)
-				malloc(tree->num_data_blocks * tree->max_data_length)), -1,
-				"failed to allocate memory\n");
+	// add num_random_blocks random data to the data-array
+	RAND_bytes(&tree->secrets[0],
+			tree->num_data_blocks * tree->secret_length);
 
-		// add num_random_blocks random data to the data-array
-		RAND_bytes(&tree->secrets[0],
-				tree->num_data_blocks * tree->max_data_length);
-
-		HIP_DEBUG("random secrets added\n");
-
-	} else
-	{
-		HIP_DEBUG("secrets already exist\n");
-
-		err = -1;
-	}
+	HIP_DEBUG("random secrets added\n");
 
   out_err:
     return err;
@@ -215,14 +215,14 @@ int htree_calc_nodes(hash_tree_t *tree, htree_leaf_gen_t leaf_gen,
     {
     	HIP_DEBUG("calling leaf generator function...\n");
 
-    	if (tree->secrets)
-    	{
-    		secret = &tree->secrets[i * tree->max_data_length];
-    	}
+    	// only use secrets if they are defined
+		if (tree->secret_length > 0)
+			secret = &tree->secrets[i * tree->secret_length];
 
     	// input: i-th data block -> output as i-th node-array element
-    	HIP_IFEL(leaf_gen(&tree->data[i * tree->max_data_length], secret,
-    			tree->max_data_length, &tree->nodes[i * tree->node_length], gen_args),
+    	HIP_IFEL(leaf_gen(&tree->data[i * tree->max_data_length], tree->max_data_length,
+				secret, tree->secret_length,
+    			&tree->nodes[i * tree->node_length], gen_args),
     			-1, "failed to calculate leaf hashes\n");
     }
 
@@ -248,8 +248,9 @@ int htree_calc_nodes(hash_tree_t *tree, htree_leaf_gen_t leaf_gen,
 
         	HIP_IFEL(node_gen(&tree->nodes[source_index + (i * tree->node_length)],
         			&tree->nodes[source_index + ((i + 1) * tree->node_length)],
+        			tree->node_length,
         			&tree->nodes[target_index + ((i / 2) * tree->node_length)],
-        			tree->node_length, gen_args), -1,
+        			gen_args), -1,
         			"failed to calculate hashes of intermediate nodes\n");
 
         	// this means we're calculating the root node
@@ -305,7 +306,7 @@ unsigned char* htree_get_branch(hash_tree_t *tree, int data_index,
     HIP_ASSERT(data_index >= 0);
 
     // branch includes all elements excluding the root
-    *branch_length = tree->depth;
+    *branch_length = tree->depth * tree->node_length;
 
     HIP_DEBUG("tree->depth: %i\n", tree->depth);
 
@@ -362,9 +363,12 @@ unsigned char* htree_get_data(hash_tree_t *tree, int data_index,
 unsigned char* htree_get_secret(hash_tree_t *tree, int data_index,
 		int *secret_length)
 {
-	*secret_length = tree->max_data_length;
+	*secret_length = tree->secret_length;
 
-	return &tree->secrets[data_index * tree->max_data_length];
+	if (tree->secret_length > 0)
+		return &tree->secrets[data_index * tree->secret_length];
+	else
+		return NULL;
 }
 
 unsigned char* htree_get_root(hash_tree_t *tree, int *root_length)
@@ -392,23 +396,35 @@ unsigned char* htree_get_root(hash_tree_t *tree, int *root_length)
  *
  * \return 0
  */
-int htree_verify_branch(unsigned char *root, unsigned char *branch_nodes, int num_nodes,
-		int node_length, unsigned char *verify_data, unsigned char * secret,
-		int data_length, int data_index, htree_leaf_gen_t leaf_gen,
-		htree_node_gen_t node_gen, htree_gen_args_t *gen_args)
+int htree_verify_branch(unsigned char *root, int root_length,
+		unsigned char *branch_nodes, int branch_length,
+		unsigned char *verify_data, int data_length, int data_index,
+		unsigned char *secret, int secret_length,
+		htree_leaf_gen_t leaf_gen, htree_node_gen_t node_gen,
+		htree_gen_args_t *gen_args)
 {
     /* space for two nodes to be hashed together */
-    unsigned char buffer[2 * node_length];
+    unsigned char buffer[2 * root_length];
+    int num_nodes = 0;
     int sibling_offset = 0;
     int err = 0, i;
 
     HIP_ASSERT(root != NULL);
+    HIP_ASSERT(root_length > 0);
     HIP_ASSERT(branch_nodes != NULL);
-    HIP_ASSERT(node_length > 0);
+    HIP_ASSERT(branch_length > 0);
     HIP_ASSERT(verify_data != NULL);
     HIP_ASSERT(data_length > 0);
     HIP_ASSERT(data_index >= 0);
 
+    if (secret_length > 0)
+    	HIP_ASSERT(secret != NULL);
+
+    num_nodes = branch_length / root_length;
+
+    HIP_DEBUG("num_nodes: %i\n", num_nodes);
+
+    // +1 as we have to calculate the leaf too
 	for(i = 0; i < num_nodes + 1; i++)
 	{
         HIP_DEBUG("round %i\n", i);
@@ -420,44 +436,44 @@ int htree_verify_branch(unsigned char *root, unsigned char *branch_nodes, int nu
         if (i > 0)
         {
             /* hash previous buffer and overwrite partially */
-            HIP_IFEL(node_gen(&buffer[0], &buffer[node_length],
-            		&buffer[(1 - sibling_offset) * node_length], node_length, gen_args),
+            HIP_IFEL(node_gen(&buffer[0], &buffer[root_length], root_length,
+            		&buffer[(1 - sibling_offset) * root_length], gen_args),
             		-1, "failed to calculate node hash\n");
 
         } else
         {
             /* hash data in order to derive the hash tree leaf */
-            HIP_IFEL(leaf_gen(&verify_data[0], secret, data_length,
-            		&buffer[(1 - sibling_offset) * node_length], gen_args), -1,
+            HIP_IFEL(leaf_gen(verify_data, data_length, secret, secret_length,
+            		&buffer[(1 - sibling_offset) * root_length], gen_args), -1,
             		"failed to calculate leaf hash\n");
         }
 
         if (i < num_nodes)
         {
 			// copy i-th branch node to the free slot in the buffer
-			memcpy(&buffer[sibling_offset * node_length], &branch_nodes[i * node_length],
-					node_length);
+			memcpy(&buffer[sibling_offset * root_length], &branch_nodes[i * root_length],
+					root_length);
 
 			// proceed to next level
 			data_index = data_index >> 1;
         }
 
-        HIP_HEXDUMP("buffer slot 1: ", &buffer[0], node_length);
-		HIP_HEXDUMP("buffer slot 2: ", &buffer[node_length], node_length);
+        HIP_HEXDUMP("buffer slot 1: ", &buffer[0], root_length);
+		HIP_HEXDUMP("buffer slot 2: ", &buffer[root_length], root_length);
     }
 
-    HIP_HEXDUMP("calculated root: ", &buffer[(1 - sibling_offset) * node_length],
-    		node_length);
-    HIP_HEXDUMP("stored root: ", root, node_length);
+    HIP_HEXDUMP("calculated root: ", &buffer[(1 - sibling_offset) * root_length],
+    		root_length);
+    HIP_HEXDUMP("stored root: ", root, root_length);
 
 	// check if the calculated root matches the stored one
-    if(!memcmp(&buffer[(1 - sibling_offset) * node_length], root, node_length))
+    if(!memcmp(&buffer[(1 - sibling_offset) * root_length], root, root_length))
     {
-        HIP_DEBUG("signature successfully verified\n");
+        HIP_DEBUG("branch successfully verified\n");
 
     } else
     {
-    	HIP_DEBUG("signature invalid\n");
+    	HIP_DEBUG("branch invalid\n");
 
 		err = -1;
     }
@@ -466,28 +482,28 @@ int htree_verify_branch(unsigned char *root, unsigned char *branch_nodes, int nu
     return err;
 }
 
-int htree_leaf_generator(unsigned char *data, unsigned char *secret, int data_length,
+int htree_leaf_generator(unsigned char *data, int data_length,
+		unsigned char *secret, int secret_length,
 		unsigned char *dst_buffer, htree_gen_args_t *gen_args)
 {
 	int err = 0;
-	unsigned char buffer[2 * data_length];
+	unsigned char buffer[data_length + secret_length];
 	unsigned char *hash_data = NULL;
 	int hash_data_length = 0;
 
-	if (secret)
+	if (secret && secret_length > 0)
 	{
 		memcpy(&buffer[0], data, data_length);
-		memcpy(&buffer[data_length], secret, data_length);
+		memcpy(&buffer[data_length], secret, secret_length);
 
 		hash_data = buffer;
-		hash_data_length = 2 * data_length;
+		hash_data_length = data_length + secret_length;
 
 	} else
 	{
 		hash_data = data;
 		hash_data_length = data_length;
 	}
-
 
 	HIP_IFEL(!SHA1(hash_data, hash_data_length, dst_buffer), -1,
 			"failed to calculate hash\n");
@@ -497,7 +513,7 @@ int htree_leaf_generator(unsigned char *data, unsigned char *secret, int data_le
 }
 
 int htree_node_generator(unsigned char *left_node, unsigned char *right_node,
-		   unsigned char *dst_buffer, int node_length, htree_gen_args_t *gen_args)
+		int node_length, unsigned char *dst_buffer, htree_gen_args_t *gen_args)
 {
 	int err = 0;
 

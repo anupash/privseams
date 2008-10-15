@@ -148,6 +148,7 @@ hash_chain_t * hchain_create(hash_function_t hash_function, int hash_length,
 	// make sure that the hash we want to use is smaller than the max output
 	HIP_ASSERT(hash_length > 0 && hash_length <= MAX_HASH_LENGTH);
 	HIP_ASSERT(hchain_length > 0);
+	HIP_ASSERT(!(hchain_hierarchy == 0 && link_tree));
 
 	// allocate memory for a new hash chain and set members to 0/NULL
 	HIP_IFEL(!(return_hchain = (hash_chain_t *)malloc(sizeof(hash_chain_t))), -1,

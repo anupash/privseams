@@ -682,6 +682,7 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 				{
 					HIP_DEBUG("unable to get linked hchain from store, need PK-UPDATE\n");
 
+					anchor = NULL;
 					anchor_offset = 0;
 
 					soft_update = 0;
