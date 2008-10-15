@@ -97,6 +97,8 @@ bin_PROGRAMS += sqliteteststub
 if HIP_PERFORMANCE
 bin_PROGRAMS += dh_performance
 endif
+bin_PROGRAMS += hc_performance
+
 #sbin_SCRIPTS = hipsetup
 
 #ttcp_SOURCES = ttcp.c
@@ -124,6 +126,8 @@ sqliteteststub_SOURCES = sqliteteststub.c
 if HIP_PERFORMANCE
 dh_performance_SOURCES = dh_performance.c
 endif
+hc_performance_SOURCES = hc_performance.c debug.c
+
 #EXTRA_DIST = $(sbin_SCRIPTS)
 
 # The sources depend on FILE.c, but it is located elsewhere. Linking is
@@ -134,6 +138,10 @@ hipconftool.h:
 	$(LN_S) -f $(HIPL_TOOLS)/hipconftool.h .
 hipconftool.c: hipconftool.h
 	$(LN_S) -f $(HIPL_TOOLS)/hipconftool.c .
+debug.h:
+	$(LN_S) -f $(HIPL_LIBINET6)/debug.h .
+debug.c: debug.h
+	$(LN_S) -f $(HIPL_LIBINET6)/debug.c .
 $(HIPL_LIBINET6_LIB_STATIC):
 	$(MAKE) -C $(HIPL)/libinet6
 

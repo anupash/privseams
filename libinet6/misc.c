@@ -4,7 +4,7 @@
  * @author Miika Komu
  * @author Mika Kousa
  * @author Bing Zhou
- * @note   Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @note   Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  * @see    misc.h
  */
 #include "misc.h"
@@ -2368,16 +2368,13 @@ int hip_for_each_hosts_file_line(char *hosts_file,
 
   hip_hosts = fopen(hosts_file, "r");
 
-  if (!hip_hosts) {
-    err = -1;
-    HIP_ERROR("Failed to open %s\n", HIPD_HOSTS_FILE);
-    goto out_err;
-  }
+  HIP_IFEL(!hip_hosts, -1, "Failed to open hosts file\n");
 
   /* For each line in the given hosts file, convert the line into binary format and
      call the given the handler  */
 
-  while (err == 0 && fgets(line, sizeof(line) - 1, hip_hosts) != NULL) {
+  err = 1;
+  while (fgets(line, sizeof(line) - 1, hip_hosts) != NULL) {
     uint8_t *eofline, *c, *comment;
     int len;
 
@@ -2459,8 +2456,6 @@ int hip_for_each_hosts_file_line(char *hosts_file,
       HIP_DEBUG("Match on line %d in %s\n", lineno, hosts_file);
       err = 0;
       break;
-    } else {
-      err = 1;
     }
 
     memset(line, 0, sizeof(line));

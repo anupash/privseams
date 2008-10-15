@@ -9,7 +9,7 @@
  * @author  Kristian Slavov <kslavov_hiit.fi>
  * @author  Bing Zhou <bingzhou_cc.hut.fi>
  * @author  Tao Wan  <twan_cc.hut.fi>
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
 #include "user.h"
 
@@ -21,6 +21,9 @@ int hip_sendto_user(const struct hip_common *msg, const struct sockaddr *dst){
 /**
  * Handles a user message.
  *
+ * @note If you added a SO_HIP_NEWMODE in libinet6/icomm.h, you also need to
+ *       add a case block for your SO_HIP_NEWMODE constant in the
+ *       switch(msg_type) block in this function.
  * @param  msg  a pointer to the received user message HIP packet.
  * @param  src
  * @return zero on success, or negative error value on error.
@@ -135,7 +138,15 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		hip_recreate_all_precreated_r1_packets();
 		break;
 //end modify
-
+        case SO_HIP_LOCATOR_GET:
+		HIP_DEBUG("Got a request for locators\n");
+		hip_msg_init(msg);
+		HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_LOCATOR_GET, 0), -1, 
+			 "Failed to build user message header.: %s\n", 
+			 strerror(err));
+		if ((err = hip_build_locators(msg)) < 0)
+			HIP_DEBUG("LOCATOR parameter building failed\n");
+		break;
         case SO_HIP_SET_LOCATOR_ON:
                 HIP_DEBUG("Setting LOCATOR ON\n");
                 hip_locator_status = SO_HIP_SET_LOCATOR_ON;

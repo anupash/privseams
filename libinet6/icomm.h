@@ -29,7 +29,10 @@
 #define SO_HIP_GET_HIT_LIST 3
 
 /** @addtogroup hip_so
- * HIP socket options.
+ * HIP socket options. Define a constant SO_HIP_NEWMODE which has value
+ * between 0 and HIP_SO_ROOT_MAX. You may also need to increase the value of
+ * HIP_SO_ROOT_MAX.
+ *
  * @note Values 1 - 64 overlap the message values and thus cannot be used in
  *       hip_message_type_name().
  * @todo Should socket option values 1 - 64 be renumbered starting from 65?
@@ -96,7 +99,7 @@
 #define SO_HIP_SET_DEBUG_MEDIUM			83
 #define SO_HIP_SET_DEBUG_NONE			84
 /** Socket option for hipconf to ask about the used gateway with OpenDHT */
-/* 85 is free slot */
+#define SO_HIP_LOCATOR_GET                      85
 #define SO_HIP_MHADDR_ACTIVE			86
 #define SO_HIP_MHADDR_LAZY			87
 /** Socket option for hipconf to restart daemon. */

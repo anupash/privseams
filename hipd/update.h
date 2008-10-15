@@ -7,7 +7,7 @@
  * @author  Miika Komu <miika#iki.fi>
  * @version 1.0
  * @date    08.01.2008
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  * @note    Based on
  *          <a href="http://www1.ietf.org/mail-archive/web/hipsec/current/msg01745.html">Simplified state machine</a>
  */
@@ -637,13 +637,12 @@ int hip_update_send_ack(hip_ha_t *entry, hip_common_t *msg,
  */
 int hip_peer_learning(struct hip_esp_info * esp_info, hip_ha_t *entry, in6_addr_t * src_ip);
 
-
-
-
 int hip_update_handle_stun(void* pkg, int len, 
 			   in6_addr_t *src_addr, in6_addr_t * dst_addr,
 			   hip_ha_t *entry,
 			   hip_portpair_t *sinfo);
+
+int hip_build_locators(struct hip_common *);
 
 /**
  * Triggers sending update packets to all connections. 

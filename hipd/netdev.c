@@ -171,7 +171,7 @@ int exists_address_in_list(struct sockaddr *addr, int ifindex)
 		mapped = hip_sockaddr_is_v6_mapped(&n->addr);
 		HIP_DEBUG("mapped=%d\n", mapped);
 		
-		if (mapped) { //|| addr->sa_family == AF_INET
+		if (mapped) {
 			in6 = (struct in6_addr * )hip_cast_sa_addr(&n->addr);
 			in = (struct in_addr *) hip_cast_sa_addr(addr);
 			addr_match = IPV6_EQ_IPV4(in6, in);
@@ -193,10 +193,13 @@ int exists_address_in_list(struct sockaddr *addr, int ifindex)
 		} else if (n->addr.ss_family == AF_INET) {
 			HIP_DEBUG_INADDR("addr4", hip_cast_sa_addr(&n->addr));
 		}
-		if (n->if_index == ifindex && family_match && addr_match)
+		if (n->if_index == ifindex && family_match && addr_match) {
+			HIP_DEBUG("Address does not exist in the list\n");
 			return 1;
+		}
 	}
 	
+	HIP_DEBUG("Address exists in the list\n");
 	return 0;
 }
 
@@ -268,13 +271,12 @@ static void delete_address_from_list(struct sockaddr *addr, int ifindex)
 	int i, deleted = 0;
         struct sockaddr_in6 addr_sin6;
 
-        if (addr->sa_family == AF_INET) {
+        if (addr && addr->sa_family == AF_INET) {
             memset(&addr_sin6, 0, sizeof(addr_sin6));
             addr_sin6.sin6_family = AF_INET6;
             IPV4_TO_IPV6_MAP(((struct in_addr *) hip_cast_sa_addr(addr)),
                              ((struct in6_addr *) hip_cast_sa_addr(&addr_sin6)));
-	} 
-        if (addr->sa_family == AF_INET6) {
+	} else if (addr && addr->sa_family == AF_INET6) {
             memcpy(&addr_sin6, addr, sizeof(addr_sin6));
 	}       
 
@@ -286,16 +288,18 @@ static void delete_address_from_list(struct sockaddr *addr, int ifindex)
             /* remove from list if if_index matches */
             if (!addr) {
                 if (n->if_index == ifindex) {
+			HIP_DEBUG_IN6ADDR("deleting address",
+					  hip_cast_sa_addr(&n->addr)); 
                     list_del(n, addresses);
                     deleted = 1;
                 }
             } else {
                 /* remove from list if address matches */
-                HIP_DEBUG_HIT("interface address",
-                              hip_cast_sa_addr(&n->addr)); 
+		    HIP_DEBUG_IN6ADDR("deleting address",
+				      hip_cast_sa_addr(&n->addr)); 
             
-                if(ipv6_addr_cmp(hip_cast_sa_addr(&n->addr), 
-                                 hip_cast_sa_addr(&addr_sin6))==0) {
+                if (ipv6_addr_cmp(hip_cast_sa_addr(&n->addr), 
+				  hip_cast_sa_addr(&addr_sin6)) == 0) {
                     list_del(n, addresses);
                     deleted = 1;
                 }
@@ -304,7 +308,8 @@ static void delete_address_from_list(struct sockaddr *addr, int ifindex)
                 address_count--;
 	}
 
-	if (address_count < 0) HIP_ERROR("BUG: address_count < 0\n", address_count);
+	if (address_count < 0)
+		HIP_ERROR("BUG: address_count < 0\n", address_count);
 }
 
 void delete_all_addresses(void)
@@ -1137,7 +1142,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 			    msg->nlmsg_type == RTM_DELADDR) {
 				/* send 0-address REA if this was deletion of
 				   the last address */
-				HIP_DEBUG("sending 0-addr REA\n");
+				HIP_DEBUG("sending 0-addr UPDATE\n");
 				hip_send_update_all(NULL, 0, ifa->ifa_index,
 						    SEND_UPDATE_LOCATOR, is_add, addr);
 				
@@ -1167,7 +1172,8 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
                                             SEND_UPDATE_LOCATOR, is_add, addr);
                         if (hip_locator_status == SO_HIP_SET_LOCATOR_ON)
                                 hip_recreate_all_precreated_r1_packets();    
-                        if (locator_msg) free(locator_msg);
+                        if (locator_msg)
+				free(locator_msg);
                         break;
 		case XFRMGRP_ACQUIRE:
 			/* XX TODO  does this ever happen? */

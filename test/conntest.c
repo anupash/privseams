@@ -545,8 +545,8 @@ int hip_connect_func(struct addrinfo *peer_ai, int *sock)
 			((stats_after.tv_sec - stats_before.tv_sec) * 1000000)
 			+ (stats_after.tv_usec - stats_before.tv_usec);
 		
-		HIP_INFO("Connecting socket to remote socket address took "\
-			 "%.5f seconds.\n", microseconds / 1000000.0 );
+		printf("Connecting socket to remote socket address took "\
+		       "%.5f seconds.\n", microseconds / 1000000.0 );
 		
 		if (connect_err != 0) {
 			if(close(*sock) != 0) {

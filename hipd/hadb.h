@@ -381,7 +381,7 @@ int hip_hadb_add_udp_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 			     struct hip_common *msg);
 
 /*lsi support functions*/
-struct in_addr hip_generate_peer_lsi();
+int hip_generate_peer_lsi(hip_lsi_t *lsi);
 void hip_hadb_set_lsi_pair(hip_ha_t *entry);
 int hip_hadb_exists_lsi(hip_lsi_t *lsi);
 int hip_hadb_find_lsi(hip_ha_t *entry, void *lsi);
