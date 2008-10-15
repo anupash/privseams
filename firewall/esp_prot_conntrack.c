@@ -521,8 +521,11 @@ int esp_prot_conntrack_cache_anchor(struct tuple * tuple, struct hip_seq *seq,
 	{
 		HIP_HEXDUMP("setting cache->root: ", esp_root->root, esp_root->root_length);
 
+		HIP_IFEL(!(anchor_item->root = (unsigned char *)
+				malloc(esp_root->root_length)), -1, "failed to allocate memory\n");
+
 		anchor_item->root_length = esp_root->root_length;
-		memset(anchor_item->root, esp_root->root, esp_root->root_length);
+		memcpy(anchor_item->root, esp_root->root, esp_root->root_length);
 	}
 
 	// add this anchor to the list for this direction's tuple
