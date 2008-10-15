@@ -535,10 +535,55 @@ static void pisa_reject_connection(hip_fw_context_t *ctx,
 }
 
 /**
+ * Dummy function, necessary only for performance measurements.
+ *
+ * @param ctx context of the packet containing the I1
+ * @return NF_ACCEPT verdict
+ */
+static int pisa_handler_i1(hip_fw_context_t *ctx)
+{
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Start PERF_BASE, PERF_I1\n");
+	hip_perf_start_benchmark(perf_set, PERF_BASE);
+	hip_perf_start_benchmark(perf_set, PERF_I1);
+#endif
+
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Stop and write PERF_I1\n");
+	hip_perf_stop_benchmark(perf_set, PERF_I1);
+	hip_perf_write_benchmark(perf_set, PERF_I1);
+#endif
+
+	return NF_ACCEPT;
+}
+
+/**
+ * Dummy function, necessary only for performance measurements.
+ *
+ * @param ctx context of the packet containing the R1
+ * @return NF_ACCEPT verdict
+ */
+static int pisa_handler_r1(hip_fw_context_t *ctx)
+{
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Start PERF_R1\n");
+	hip_perf_start_benchmark(perf_set, PERF_R1);
+#endif
+
+#ifdef CONFIG_HIP_PERFORMANCE
+	HIP_DEBUG("Stop and write PERF_R1\n");
+	hip_perf_stop_benchmark(perf_set, PERF_R1);
+	hip_perf_write_benchmark(perf_set, PERF_R1);
+#endif
+
+	return NF_ACCEPT;
+}
+
+/**
  * Insert a PISA nonce and a PISA puzzle into the I2 packet.
  *
  * @param ctx context of the packet to modify
- * @return verdict, either NF_ACCEPT or NF_DROP
+ * @return NF_ACCEPT verdict
  */
 static int pisa_handler_i2(hip_fw_context_t *ctx)
 {
@@ -546,7 +591,6 @@ static int pisa_handler_i2(hip_fw_context_t *ctx)
 	HIP_DEBUG("Start PERF_I2\n");
 	hip_perf_start_benchmark(perf_set, PERF_I2);
 #endif
-	int verdict = NF_ACCEPT;
 
 	pisa_insert_nonce_1spi(ctx);
 	pisa_insert_puzzle(ctx);
@@ -556,7 +600,8 @@ static int pisa_handler_i2(hip_fw_context_t *ctx)
 	hip_perf_stop_benchmark(perf_set, PERF_I2);
 	hip_perf_write_benchmark(perf_set, PERF_I2);
 #endif
-	return verdict;
+
+	return NF_ACCEPT;
 }
 
 /**
@@ -568,13 +613,14 @@ static int pisa_handler_i2(hip_fw_context_t *ctx)
  */
 static int pisa_handler_r2(hip_fw_context_t *ctx)
 {
+	int verdict = NF_DROP, sig = 0, cert = 0;
+	struct hip_solution_m *solution = NULL;
+	struct hip_tlv_common *nonce = NULL;
+
 #ifdef CONFIG_HIP_PERFORMANCE
 	HIP_DEBUG("Start PERF_R2\n");
 	hip_perf_start_benchmark(perf_set, PERF_R2);
 #endif
-	int verdict = NF_DROP, sig = 0, cert = 0;
-	struct hip_solution_m *solution = NULL;
-	struct hip_tlv_common *nonce = NULL;
 
 	nonce = pisa_check_nonce(ctx);
 	solution = pisa_check_solution(ctx);
@@ -599,6 +645,7 @@ static int pisa_handler_r2(hip_fw_context_t *ctx)
 	hip_perf_write_benchmark(perf_set, PERF_R2);
 	hip_perf_write_benchmark(perf_set, PERF_BASE);
 #endif
+
 	return verdict;
 }
 
@@ -606,16 +653,14 @@ static int pisa_handler_r2(hip_fw_context_t *ctx)
  * Insert a PISA nonce and a PISA puzzle into the U1 packet.
  *
  * @param ctx context of the packet to modify
- * @return verdict, either NF_ACCEPT or NF_DROP
+ * @return NF_ACCEPT verdict
  */
 static int pisa_handler_u1(hip_fw_context_t *ctx)
 {
-	int verdict = NF_ACCEPT;
-
 	pisa_insert_nonce_1spi(ctx);
 	pisa_insert_puzzle(ctx);
 
-	return verdict;
+	return NF_ACCEPT;
 }
 
 /**
@@ -716,8 +761,8 @@ static int pisa_handler_close_ack(hip_fw_context_t *ctx)
 
 void pisa_init(struct midauth_handlers *h)
 {
-	h->i1 = midauth_handler_accept;
-	h->r1 = midauth_handler_accept;
+	h->i1 = pisa_handler_i1;
+	h->r1 = pisa_handler_r1;
 	h->i2 = pisa_handler_i2;
 	h->r2 = pisa_handler_r2;
 	h->u1 = pisa_handler_u1;
