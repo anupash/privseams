@@ -437,6 +437,12 @@ int esp_prot_verify_hash(hash_function_t hash_function, int hash_length,
 	HIP_HEXDUMP("-> ", hash_value, hash_length);
 
 	HIP_DEBUG("checking active_anchor...\n");
+
+	if (active_root)
+	{
+		HIP_HEXDUMP("active_root: ", active_root, active_root_length);
+	}
+
 	if (tmp_distance = hchain_verify(hash_value, active_anchor, hash_function,
 			hash_length, tolerance, active_root, active_root_length))
 	{
@@ -453,6 +459,11 @@ int esp_prot_verify_hash(hash_function_t hash_function, int hash_length,
 			 * next hchain implicitly */
 			HIP_DEBUG("checking next_anchor...\n");
 			HIP_HEXDUMP("next_anchor: ", next_anchor, hash_length);
+
+			if (next_root)
+			{
+				HIP_HEXDUMP("next_root: ", next_root, next_root_length);
+			}
 
 			if (tmp_distance = hchain_verify(hash_value, next_anchor, hash_function,
 					hash_length, tolerance, next_root, next_root_length))
@@ -489,6 +500,7 @@ int esp_prot_verify_hash(hash_function_t hash_function, int hash_length,
 	if (err == -1)
 	{
 		HIP_DEBUG("INVALID hash-chain element!\n");
+		HIP_ASSERT(0);
 	}
 
     return err;
@@ -620,6 +632,9 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 #ifdef CONFIG_HIP_MEASUREMENTS
 	int hash_length = 0;
 #endif
+	hash_function_t hash_function = NULL;
+	int hash_length = 0;
+
 
 	HIP_ASSERT(entry != NULL);
 	// esp_prot_transform >= 0 due to data-type
@@ -710,6 +725,20 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 				 * the verification of the next_hchain's elements */
 				root = htree_get_root(entry->next_hchain->link_tree, &root_length);
 			}
+
+			hash_function = esp_prot_get_hash_function(entry->esp_prot_transform);
+			hash_length = esp_prot_get_hash_length(entry->esp_prot_transform);
+
+			if (!hchain_verify(entry->next_hchain->source_element->hash,
+					entry->next_hchain->anchor_element->hash, hash_function,
+					hash_length, entry->next_hchain->hchain_length + 1,
+					root, root_length))
+			{
+				HIP_DEBUG("failed to verify next_hchain\n");
+
+				HIP_ASSERT(0);
+			}
+
 
 			// issue UPDATE message to be sent by hipd
 			HIP_IFEL(send_trigger_update_to_hipd(entry, soft_update, anchor_offset,

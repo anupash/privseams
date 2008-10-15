@@ -601,6 +601,11 @@ int esp_prot_conntrack_update_anchor(struct tuple *tuple, struct hip_ack *ack,
 			esp_tuple->next_root_length = anchor_item->root_length;
 			esp_tuple->next_root = anchor_item->root;
 
+			HIP_HEXDUMP("anchor_item->next_anchor: ", anchor_item->next_anchor,
+					hash_length);
+			HIP_HEXDUMP("anchor_item->root: ", anchor_item->root,
+					anchor_item->root_length);
+
 			// free the cached item, but NOT next_anchor and root as in use now
 			free(anchor_item->active_anchor);
 			free(anchor_item);
@@ -673,7 +678,14 @@ int esp_prot_conntrack_verify(struct esp_tuple *esp_tuple, struct hip_esp *esp)
 					conntrack_tfm->hash_length);
 
 			// change roots
-			free(esp_tuple->active_root);
+			/* the BEX-store does not have hierarchies, so no root is used for
+			 * the first hchain */
+			if (esp_tuple->active_root)
+			{
+				HIP_ASSERT(0);
+				free(esp_tuple->active_root);
+			}
+			HIP_ASSERT(0);
 			esp_tuple->active_root = esp_tuple->next_root;
 			esp_tuple->next_root = NULL;
 			esp_tuple->active_root_length = esp_tuple->next_root_length;
