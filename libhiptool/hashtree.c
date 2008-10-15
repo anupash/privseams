@@ -355,6 +355,10 @@ unsigned char* htree_get_branch(hash_tree_t *tree, int data_index,
 unsigned char* htree_get_data(hash_tree_t *tree, int data_index,
 		int *data_length)
 {
+	HIP_ASSERT(tree != NULL);
+	HIP_ASSERT(data_index >= 0 && data_index < tree->num_data_blocks);
+	HIP_ASSERT(data_length != NULL);
+
 	*data_length = tree->max_data_length;
 
 	return &tree->data[data_index * tree->max_data_length];
@@ -363,6 +367,10 @@ unsigned char* htree_get_data(hash_tree_t *tree, int data_index,
 unsigned char* htree_get_secret(hash_tree_t *tree, int data_index,
 		int *secret_length)
 {
+	HIP_ASSERT(tree != NULL);
+	HIP_ASSERT(data_index >= 0 && data_index < tree->num_data_blocks);
+	HIP_ASSERT(secret_length != NULL);
+
 	*secret_length = tree->secret_length;
 
 	if (tree->secret_length > 0)
@@ -375,7 +383,10 @@ unsigned char* htree_get_root(hash_tree_t *tree, int *root_length)
 {
 	HIP_ASSERT(tree != NULL);
 
-	*root_length = tree->node_length;
+	if (tree->root)
+		*root_length = tree->node_length;
+	else
+		*root_length = 0;
 
 	return tree->root;
 }

@@ -137,6 +137,12 @@ int esp_prot_handle_trigger_update_msg(struct hip_common *msg)
 		// store the root for usage in update msgs
 		entry->esp_root_length = root_length;
 		memcpy(entry->esp_root, root, root_length);
+
+	} else
+	{
+		// reset to unused
+		entry->esp_root_length = 0;
+		memset(entry->esp_root, 0, root_length);
 	}
 
 	if (soft_update)
@@ -738,7 +744,8 @@ int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry)
 					entry->esp_local_update_anchor, hash_length), -1,
 					"building of ESP protection ANCHOR failed\n");
 
-			if (entry->esp_root && entry->esp_root_length > 0)
+			// only add the root if it is specified
+			if (entry->esp_root_length > 0)
 			{
 				HIP_IFEL(hip_build_param_esp_prot_root(update,
 						entry->esp_root_length, entry->esp_root), -1,
