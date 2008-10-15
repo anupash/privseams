@@ -87,6 +87,11 @@ int hchain_verify(const unsigned char * current_hash, const unsigned char * last
 	// init buffer with the hash we want to verify
 	memcpy(buffer, current_hash, hash_length);
 
+	if (secret && secret_length > 0)
+	{
+		HIP_HEXDUMP("secret: ", secret, secret_length);
+	}
+
 	_HIP_HEXDUMP("comparing given hash: ", buffer, hash_length);
 	_HIP_DEBUG("\t<->\n");
 	_HIP_HEXDUMP("last known hash: ", last_hash, hash_length);
@@ -135,7 +140,7 @@ hash_chain_t * hchain_create(hash_function_t hash_function, int hash_length,
 	 * allocate enough memory for the hash function output
 	 *
 	 * @note we also allow a concatenation with the link tree root here */
-	unsigned char *hash_value[2 * MAX_HASH_LENGTH];
+	unsigned char hash_value[2 * MAX_HASH_LENGTH];
 	int hash_data_length = 0;
 	int i, err = 0;
 
@@ -193,7 +198,7 @@ hash_chain_t * hchain_create(hash_function_t hash_function, int hash_length,
 		 * than what we need */
 		if (link_tree)
 		{
-			memcpy(&hash_value[hash_length], link_tree->root, link_tree->max_data_length);
+			memcpy(&hash_value[hash_length], link_tree->root, link_tree->node_length);
 		}
 
 		_HIP_HEXDUMP("element created: ", current_element->hash, hash_length);
