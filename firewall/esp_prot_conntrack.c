@@ -482,6 +482,8 @@ int esp_prot_conntrack_cache_anchor(struct tuple * tuple, struct hip_seq *seq,
 			malloc(sizeof(struct esp_anchor_item))), -1,
 			"failed to allocate memory\n");
 
+	memset(anchor_item, 0, sizeof(struct esp_anchor_item));
+
 	// active_anchor has to be present at least
 	HIP_IFEL(!(anchor_item->active_anchor = (unsigned char *)
 			malloc(hash_length)), -1, "failed to allocate memory\n");
@@ -610,8 +612,12 @@ int esp_prot_conntrack_update_anchor(struct tuple *tuple, struct hip_ack *ack,
 
 			HIP_HEXDUMP("anchor_item->next_anchor: ", anchor_item->next_anchor,
 					hash_length);
-			HIP_HEXDUMP("anchor_item->root: ", anchor_item->root,
-					anchor_item->root_length);
+
+			if (anchor_item->root)
+			{
+				HIP_HEXDUMP("anchor_item->root: ", anchor_item->root,
+						anchor_item->root_length);
+			}
 
 			// free the cached item, but NOT next_anchor and root as in use now
 			free(anchor_item->active_anchor);
