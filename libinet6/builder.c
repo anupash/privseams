@@ -3481,7 +3481,8 @@ int hip_build_param_opendht_set(struct hip_common *msg,
 int hip_build_param_opendht_gw_info(struct hip_common *msg,
 				    struct in6_addr *addr,
 				    uint32_t ttl,
-				    uint16_t port, char* host_name)
+				    uint16_t port,
+				    char* host_name)
 {
 	int err = 0;
 	struct hip_opendht_gw_info gw_info;
@@ -3492,7 +3493,8 @@ int hip_build_param_opendht_gw_info(struct hip_common *msg,
 			   sizeof(struct hip_tlv_common));
 	gw_info.ttl = ttl;
 	gw_info.port = htons(port);
-	memcpy(&gw_info.host_name,host_name,strlen(host_name));
+	//added +1 because the \0 was not being copied at the end of the string
+	memcpy(&gw_info.host_name, host_name, strlen(host_name) + 1);
 	ipv6_addr_copy(&gw_info.addr, addr);
 	err = hip_build_param(msg, &gw_info);
 	return err;

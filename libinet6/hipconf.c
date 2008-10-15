@@ -1430,13 +1430,16 @@ int hip_conf_handle_set(hip_common_t *msg, int action, const char *opt[], int op
 int hip_conf_handle_gw(hip_common_t *msg, int action, const char *opt[], int optc){
     int err, out_err;
     int status = 0;
-    int ret_HIT = 0, ret_IP = 0, ret = 0;
+    int ret_HIT = 0, ret_IP = 0, ret_HOSTNAME = 0, ret = 0;
     struct in_addr ip_gw;
     struct in6_addr ip_gw_mapped;
     struct addrinfo *new_gateway = NULL;
     struct hip_opendht_gw_info *gw_info;
+    char hostname[HOST_NAME_MAX];
 
     HIP_INFO("Resolving new gateway for openDHT %s\n", opt[0]);
+
+    memset(hostname, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX);
 
     if(optc != 3){
 	HIP_ERROR("Missing arguments\n");
@@ -1454,8 +1457,12 @@ int hip_conf_handle_gw(hip_common_t *msg, int action, const char *opt[], int opt
     ret_HIT = inet_pton(AF_INET6, opt[0], &ip_gw_mapped);
 
     if(!(ret_IP || ret_HIT)){
-	HIP_ERROR("Gateway address not correct\n");
-	goto out_err;
+	//HIP_ERROR("Gateway address not correct\n");
+	//goto out_err;
+	memcpy(hostname, opt[0], HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
+	hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX] = '\0';
+	ret_HOSTNAME = 1;
+HIP_DEBUG("### %s-\n", hostname);
     }
 
     if(ret_IP)
@@ -1464,7 +1471,7 @@ int hip_conf_handle_gw(hip_common_t *msg, int action, const char *opt[], int opt
     HIP_DEBUG_IN6ADDR("Address ", &ip_gw_mapped);
 
     err = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped,
-					  atoi(opt[2]), atoi(opt[1]));
+					  atoi(opt[2]), atoi(opt[1]), hostname);
     if(err){
 	HIP_ERROR("build param hit failed: %s\n", strerror(err));
 	goto out_err;
