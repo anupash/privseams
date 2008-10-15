@@ -130,8 +130,6 @@ int esp_prot_receive_light_update(hip_common_t *msg, in6_addr_t *src_addr,
 		HIP_IFEL(ack_no != entry->light_update_id_out, -1,
 				"received non-matching ACK\n");
 
-		// TODO check hash token for message verification
-
 		// stop retransmission
 		entry->light_update_retrans = 0;
 
@@ -166,8 +164,6 @@ int esp_prot_send_light_ack(hip_ha_t *entry, in6_addr_t *src_addr, in6_addr_t *d
 	entry->hadb_misc_func->hip_build_network_hdr(light_ack, HIP_LUPDATE,
 							 mask, &entry->hit_our,
 							 &entry->hit_peer);
-
-	// TODO add hash token for message verification
 
 	/* Add ESP_INFO */
 	HIP_IFEL(hip_build_param_esp_info(light_ack, entry->current_keymat_index,

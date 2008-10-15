@@ -322,8 +322,11 @@ struct esp_tuple * find_esp_tuple(const SList * esp_list, uint32_t spi)
 /* initialize and insert connection*/
 void insert_new_connection(struct hip_data * data){
   HIP_DEBUG("insert_new_connection\n");
-  struct connection * connection = (struct connection *) malloc(sizeof(struct connection));
+  struct connection * connection = NULL;
   DList * list = (DList *) hipList;
+
+  connection = (struct connection *) malloc(sizeof(struct connection));
+  memset(connection, 0, sizeof(struct connection));
 
   connection->state = STATE_ESTABLISHED;
   //set time stamp
@@ -340,8 +343,10 @@ void insert_new_connection(struct hip_data * data){
   //connection->original.esp_tuple->tuple = &connection->original;
   connection->original.connection = connection;
   connection->original.hip_tuple = (struct hip_tuple *) malloc(sizeof(struct hip_tuple));
+  memset(connection->original.hip_tuple, 0, sizeof(struct hip_tuple));
   connection->original.hip_tuple->tuple = &connection->original;
   connection->original.hip_tuple->data = (struct hip_data *) malloc(sizeof(struct hip_data));
+  memset(connection->original.hip_tuple->data, 0, sizeof(struct hip_data));
   connection->original.hip_tuple->data->src_hit = data->src_hit;
   connection->original.hip_tuple->data->dst_hit = data->dst_hit;
   connection->original.hip_tuple->data->src_hi = NULL;
@@ -356,8 +361,10 @@ void insert_new_connection(struct hip_data * data){
 #endif /* CONFIG_HIP_HIPPROXY */
   connection->reply.connection = connection;
   connection->reply.hip_tuple = (struct hip_tuple *) malloc(sizeof(struct hip_tuple));
+  memset(connection->reply.hip_tuple, 0, sizeof(struct hip_tuple));
   connection->reply.hip_tuple->tuple = &connection->reply;
   connection->reply.hip_tuple->data = (struct hip_data *) malloc(sizeof(struct hip_data));
+  memset(connection->reply.hip_tuple->data, 0, sizeof(struct hip_data));
   connection->reply.hip_tuple->data->src_hit = data->dst_hit;
   connection->reply.hip_tuple->data->dst_hit = data->src_hit;
   connection->reply.hip_tuple->data->src_hi = NULL;

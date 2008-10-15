@@ -535,6 +535,9 @@ int esp_prot_conntrack_cache_anchor(struct tuple * tuple, struct hip_seq *seq,
 			"failed to add anchor_item to anchor_cache\n");
 
   out_err:
+	if (err)
+		HIP_ASSERT(0);
+
 	return err;
 }
 
@@ -554,7 +557,7 @@ int esp_prot_conntrack_update_anchor(struct tuple *tuple, struct hip_ack *ack,
 	HIP_ASSERT(ack != NULL);
 	HIP_ASSERT(esp_info != NULL);
 
-	HIP_DEBUG("checking anchor cache for this direction...\n");
+	HIP_DEBUG("checking anchor cache for other direction...\n");
 
 	if(tuple->direction == ORIGINAL_DIR)
 	{
@@ -571,11 +574,15 @@ int esp_prot_conntrack_update_anchor(struct tuple *tuple, struct hip_ack *ack,
 			"failed to look up esp_tuple\n");
 	HIP_DEBUG("found esp_tuple for received ESP_INFO\n");
 
+	HIP_DEBUG("received ack: %u\n", ntohl(ack->peer_update_id));
+
 	for (i = 0; i < hip_ll_get_size(&esp_tuple->anchor_cache); i++)
 	{
 		HIP_IFEL(!(anchor_item = (struct esp_anchor_item *)
 				hip_ll_get(&esp_tuple->anchor_cache, i)), -1,
 				"failed to look up anchor_item\n");
+
+		HIP_DEBUG("cached seq: %u\n", ntohl(anchor_item->seq));
 
 		if (anchor_item->seq == ack->peer_update_id)
 		{
@@ -621,6 +628,9 @@ int esp_prot_conntrack_update_anchor(struct tuple *tuple, struct hip_ack *ack,
 	err = -1;
 
   out_err:
+	if (err)
+		HIP_ASSERT(0);
+
 	return err;
 }
 
@@ -637,6 +647,11 @@ int esp_prot_conntrack_lupdate(const struct in6_addr * ip6_src,
 	struct hip_esp_info *esp_info = NULL;
 	struct tuple *other_dir_tuple = NULL;
 	int err = 0;
+
+	HIP_ASSERT(ip6_src != NULL);
+	HIP_ASSERT(ip6_dst != NULL);
+	HIP_ASSERT(common != NULL);
+	HIP_ASSERT(tuple != NULL);
 
 	HIP_DEBUG("handling light update...\n");
 
@@ -657,8 +672,11 @@ int esp_prot_conntrack_lupdate(const struct in6_addr * ip6_src,
 		esp_root = (struct esp_prot_root *) hip_get_param(common,
 				HIP_PARAM_ESP_PROT_ROOT);
 
+		HIP_DEBUG("seq->update_id: %u\n", ntohl(seq->update_id));
+		HIP_DEBUG("tuple->lupdate_seq: %u\n", tuple->lupdate_seq);
+
 		// track SEQ
-		if (seq->update_id < tuple->lupdate_seq)
+		if (ntohl(seq->update_id) < tuple->lupdate_seq)
 		{
 			HIP_DEBUG("old light update\n");
 
@@ -669,7 +687,7 @@ int esp_prot_conntrack_lupdate(const struct in6_addr * ip6_src,
 		{
 			HIP_DEBUG("new light update\n");
 
-			tuple->lupdate_seq = seq->update_id;
+			tuple->lupdate_seq = ntohl(seq->update_id);
 		}
 
 		// verify tree
@@ -698,8 +716,6 @@ int esp_prot_conntrack_lupdate(const struct in6_addr * ip6_src,
 
 		err = -1;
 	}
-
-	HIP_ASSERT(0);
 
   out_err:
 	return err;
@@ -804,6 +820,11 @@ int esp_prot_conntrack_verify_branch(struct tuple * tuple,
 	int hash_length = 0;
 	struct esp_tuple *esp_tuple = NULL;
 	int err = 0;
+
+	HIP_ASSERT(tuple != NULL);
+	HIP_ASSERT(esp_anchor != NULL);
+	HIP_ASSERT(esp_branch != NULL);
+	HIP_ASSERT(esp_secret != NULL);
 
 	// needed for allocating and copying the anchors
 	conntrack_tfm = esp_prot_conntrack_resolve_transform(

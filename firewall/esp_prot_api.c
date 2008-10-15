@@ -500,7 +500,6 @@ int esp_prot_verify_hash(hash_function_t hash_function, int hash_length,
 	if (err == -1)
 	{
 		HIP_DEBUG("INVALID hash-chain element!\n");
-		HIP_ASSERT(0);
 	}
 
     return err;
