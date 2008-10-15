@@ -354,15 +354,16 @@ int hcstore_fill_item(hchain_store_t *hcstore, int hash_func_id, int hash_length
 				root = htree_get_root(hchain->link_tree, &root_length);
 			}
 
+// useful for testing
+#if 0
 			if (!hchain_verify(hchain->source_element->hash,
 					hchain->anchor_element->hash, hash_function,
-					hash_length, hchain->hchain_length + 1,
+					hash_length, hchain->hchain_length,
 					root, root_length))
 			{
 				HIP_DEBUG("failed to verify next_hchain\n");
-
-				HIP_ASSERT(0);
 			}
+#endif
 
 			// add it as last element to have some circulation
 			HIP_IFEL(hip_ll_add_last(

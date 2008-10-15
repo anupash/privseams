@@ -682,10 +682,8 @@ int esp_prot_conntrack_verify(struct esp_tuple *esp_tuple, struct hip_esp *esp)
 			 * the first hchain */
 			if (esp_tuple->active_root)
 			{
-				HIP_ASSERT(0);
 				free(esp_tuple->active_root);
 			}
-			HIP_ASSERT(0);
 			esp_tuple->active_root = esp_tuple->next_root;
 			esp_tuple->next_root = NULL;
 			esp_tuple->active_root_length = esp_tuple->next_root_length;

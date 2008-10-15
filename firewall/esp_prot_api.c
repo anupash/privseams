@@ -726,6 +726,8 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 				root = htree_get_root(entry->next_hchain->link_tree, &root_length);
 			}
 
+// useful for testing
+#if 0
 			hash_function = esp_prot_get_hash_function(entry->esp_prot_transform);
 			hash_length = esp_prot_get_hash_length(entry->esp_prot_transform);
 
@@ -735,9 +737,8 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 					root, root_length))
 			{
 				HIP_DEBUG("failed to verify next_hchain\n");
-
-				HIP_ASSERT(0);
 			}
+#endif
 
 
 			// issue UPDATE message to be sent by hipd
