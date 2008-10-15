@@ -624,6 +624,87 @@ int esp_prot_conntrack_update_anchor(struct tuple *tuple, struct hip_ack *ack,
 	return err;
 }
 
+int esp_prot_conntrack_lupdate(const struct in6_addr * ip6_src,
+		const struct in6_addr * ip6_dst, const struct hip_common * common,
+		struct tuple * tuple)
+{
+	struct hip_seq *seq = NULL;
+	struct esp_prot_anchor *esp_anchor;
+	struct esp_prot_branch *esp_branch;
+	struct esp_prot_secret *esp_secret;
+	struct esp_prot_root *esp_root;
+	struct hip_ack *ack = NULL;
+	struct hip_esp_info *esp_info = NULL;
+	struct tuple *other_dir_tuple = NULL;
+	int err = 0;
+
+	HIP_DEBUG("handling light update...\n");
+
+	// get params from UPDATE message
+	seq = (struct hip_seq *) hip_get_param(common, HIP_PARAM_SEQ);
+	ack = (struct hip_ack *) hip_get_param(common, HIP_PARAM_ACK);
+
+	if (seq)
+	{
+		HIP_DEBUG("received ANCHOR packet of LIGHT UPDATE\n");
+
+		esp_anchor = (struct esp_prot_anchor *) hip_get_param(common,
+				HIP_PARAM_ESP_PROT_ANCHOR);
+		esp_branch = (struct esp_prot_branch *) hip_get_param(common,
+				HIP_PARAM_ESP_PROT_BRANCH);
+		esp_secret = (struct esp_prot_secret *) hip_get_param(common,
+				HIP_PARAM_ESP_PROT_SECRET);
+		esp_root = (struct esp_prot_root *) hip_get_param(common,
+				HIP_PARAM_ESP_PROT_ROOT);
+
+		// track SEQ
+		if (seq->update_id < tuple->lupdate_seq)
+		{
+			HIP_DEBUG("old light update\n");
+
+			err = -1;
+			goto out_err;
+
+		} else
+		{
+			HIP_DEBUG("new light update\n");
+
+			tuple->lupdate_seq = seq->update_id;
+		}
+
+		// verify tree
+		HIP_IFEL(esp_prot_conntrack_verify_branch(tuple, esp_anchor, esp_branch,
+				esp_secret), -1, "failed to verify branch\n");
+
+		// cache update_anchor and root
+		// TODO check if this is doing the right thing
+		HIP_IFEL(esp_prot_conntrack_cache_anchor(tuple, seq, esp_anchor, esp_root), -1,
+				"failed to cache the anchor\n");
+
+	} else if (ack)
+	{
+		HIP_DEBUG("received ACK packet of LIGHT UPDATE\n");
+
+		esp_info = (struct hip_esp_info *) hip_get_param(common, HIP_PARAM_ESP_INFO);
+
+		// lookup cached ANCHOR and update corresponding esp_tuple
+		// TODO check if this is doing the right thing
+		HIP_IFEL(esp_prot_conntrack_update_anchor(tuple, ack, esp_info), -1,
+				"failed to update anchor\n");
+
+	} else
+	{
+		HIP_DEBUG("unknown HIP-parameter combination, unhandled\n");
+
+		err = -1;
+	}
+
+	HIP_ASSERT(0);
+
+  out_err:
+	return err;
+}
+
 int esp_prot_conntrack_verify(struct esp_tuple *esp_tuple, struct hip_esp *esp)
 {
 	esp_prot_conntrack_tfm_t * conntrack_tfm = NULL;
@@ -712,6 +793,49 @@ int esp_prot_conntrack_verify(struct esp_tuple *esp_tuple, struct hip_esp *esp)
 		add_statistics_item(&subsequent_failed_hashes, subseq_failed_hashes);
 #endif
 
+	return err;
+}
+
+int esp_prot_conntrack_verify_branch(struct tuple * tuple,
+		struct esp_prot_anchor *esp_anchor, struct esp_prot_branch *esp_branch,
+		struct esp_prot_secret *esp_secret)
+{
+	esp_prot_conntrack_tfm_t * conntrack_tfm = NULL;
+	int hash_length = 0;
+	struct esp_tuple *esp_tuple = NULL;
+	int err = 0;
+
+	// needed for allocating and copying the anchors
+	conntrack_tfm = esp_prot_conntrack_resolve_transform(
+			esp_anchor->transform);
+	hash_length = conntrack_tfm->hash_length;
+
+	HIP_IFEL(!(esp_tuple = esp_prot_conntrack_find_esp_tuple(tuple,
+			&esp_anchor->anchors[0], hash_length)), -1,
+			"failed to look up matching esp_tuple\n");
+
+	return 0;
+
+// TODO get verification fixed
+#if 0
+	// verify the branch
+	if (!htree_verify_branch(esp_tuple->active_root, esp_tuple->active_root_length,
+			esp_branch->branch_nodes, esp_branch->branch_length,
+			&esp_anchor->anchors[hash_length], hash_length, esp_branch->anchor_offset,
+			esp_secret->secret, esp_secret->secret_length,
+			htree_leaf_generator, htree_node_generator, NULL))
+	{
+		HIP_DEBUG("anchor verified\n");
+
+	} else
+	{
+		HIP_DEBUG("failed to verify branch!\n");
+
+		err = -1;
+	}
+#endif
+
+  out_err:
 	return err;
 }
 

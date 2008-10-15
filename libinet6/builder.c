@@ -2906,8 +2906,8 @@ int hip_build_param_esp_prot_anchor(struct hip_common *msg, uint8_t transform,
 		unsigned char *active_anchor, unsigned char *next_anchor, int hash_length)
 {
 	int err = 0;
-	unsigned char			*anchors = NULL;
-	struct esp_prot_anchor	esp_anchor;
+	//unsigned char *anchors = NULL;
+	struct esp_prot_anchor esp_anchor;
 
 	HIP_ASSERT(msg != NULL);
 	// NULL-active_anchor only allowed for UNUSED-transform

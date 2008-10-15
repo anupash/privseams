@@ -75,6 +75,7 @@ struct tuple
 	int direction;
 	struct connection * connection;
 	int state;
+	uint32_t lupdate_seq;
 #ifdef CONFIG_HIP_HIPPROXY
 	int hipproxy;
 #endif

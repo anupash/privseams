@@ -1582,6 +1582,9 @@ int check_packet(const struct in6_addr * ip6_src,
 	{
 		return_value = handle_close_ack(ip6_src, ip6_dst, common, tuple);
 
+	} else if (common->type_hdr == HIP_LUPDATE)
+	{
+		return_value = esp_prot_conntrack_lupdate(ip6_src, ip6_dst, common, tuple);
 	} else
 	{
 		HIP_ERROR("unknown packet type\n");
