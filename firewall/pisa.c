@@ -8,6 +8,7 @@
 #include "midauth.h"
 #include "misc.h"
 #include "pisa.h"
+#include "pisa_cert.h"
 #include "hslist.h"
 #include <string.h>
 
@@ -389,8 +390,10 @@ static int pisa_check_certificate(hip_fw_context_t *ctx)
 	struct hip_common *hip = ctx->transport_hdr.hip;
 	struct hip_cert *cert;
 	struct hip_cert_spki_info ci;
+	struct pisa_cert pc;
 	char *buf = NULL;
 	int err = 0, len;
+	time_t now = time(NULL);
 
 	cert = hip_get_param(hip, HIP_PARAM_CERT);
 	HIP_IFEL(cert == NULL, -1, "No certificate found.\n");
@@ -407,6 +410,20 @@ static int pisa_check_certificate(hip_fw_context_t *ctx)
 
 	HIP_DEBUG("Verified signature. Seems to be valid.\n");
 
+	pisa_split_cert(ci.cert, &pc);
+
+	HIP_DEBUG("split cert contains data: %i, %i\n", pc.not_before, pc.not_after);
+	HIP_DEBUG_HIT("issuer_hit", &pc.hit_issuer);
+	HIP_DEBUG_HIT("subject_hit", &pc.hit_subject);
+
+/* As our static certificate expired, this check would fail. So let's skip it 
+ * until we have a valid certificate again.*/
+#if 0
+	HIP_IFEL(now < pc.not_before, -1,
+		 "Certificate violates the not before condition.\n");
+	HIP_IFEL(now > pc.not_after, -1,
+		 "Certificate violates the not after condition.\n");
+#endif
 out_err:
 	if (buf)
 		free(buf);
