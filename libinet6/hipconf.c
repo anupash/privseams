@@ -21,7 +21,12 @@
 #include "hipconf.h"
 #include "libhipopendht.h"
 
-/** A help string containing the usage of @c hipconf. */
+/**
+ * A help string containing the usage of @c hipconf.
+ *
+ * @note If you added a new action, do not forget to add a brief usage below
+ *       for the action.
+ */
 const char *hipconf_usage =
 #ifdef CONFIG_HIP_ESCROW
 "add|del escrow <hit>\n"
@@ -65,7 +70,7 @@ const char *hipconf_usage =
 "dht gw <IPv4|hostname> <port (OpenDHT default = 5851)> <TTL>\n"
 "dht get <fqdn/hit>\n"
 "dht set <name>\n"
-"locator on|off\n"
+"locator on|off|get\n"
 "debug all|medium|none\n"
 "restart daemon\n"
 "set tcptimeout on|off\n" /*added by Tao Wan*/
@@ -77,10 +82,15 @@ const char *hipconf_usage =
 #endif
 ;
 
-/** Function pointer array containing pointers to handler functions.
+/**
+ * Function pointer array containing pointers to handler functions.
+ * Add a handler function for your new action in the action_handler[] array.
+ * If you added a handler function here, do not forget to define that function
+ * somewhere in this source file.
+ *
  *  @note Keep the elements in the same order as the @c TYPE values are defined
  *        in hipconf.h because type values are used as @c action_handler array
- *        index.
+ *        index. Locations and order of these handlers are important.
  */
 int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc) =
 {
@@ -118,6 +128,14 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc) 
 /**
  * Maps symbolic hipconf action (=add/del) names into numeric action
  * identifiers.
+ *
+ * @note If you defined a constant ACTION_NEWACT in hipconf.h,
+ *       you also need to add a proper sentence in the strcmp() series,
+ *       like that:
+ *       ...
+ *       else if (!strcmp("newaction", text))
+ *           ret = ACTION_NEWACT;
+ *       ...
  *
  * @param  text the action as a string.
  * @return the numeric action id correspoding to the symbolic text.
@@ -181,6 +199,9 @@ int hip_conf_get_action(char *text)
 /**
  * Gets the minimum amount of arguments needed to be given to the action.
  *
+ * @note If you defined a constant ACTION_NEWACT in hipconf.h,
+ *       you also need to add a case block for the constant
+ *       here in the switch(action) block.
  * @param  action action type
  * @return how many arguments needs to be given at least
  */
@@ -292,7 +313,16 @@ int hip_conf_get_type(char *text,char *argv[]) {
      return ret;
 }
 
-/* What does this function do? */
+/**
+ * Get a type argument index, in argv[].
+ *
+ * @note If you defined a constant ACTION_NEWACT in hipconf.h,
+ *       you also need to add a case block for the constant
+ *       here in the switch(action) block.
+ * @param  integer value for an action
+ * @return an index for argv[], which indicates the type argument.
+ *         Usually either 1 or 2.
+ */
 int hip_conf_get_type_arg(int action)
 {
 	int type_arg = -1;
@@ -1083,7 +1113,8 @@ int hip_conf_handle_nat(hip_common_t *msg, int action,
 	      "build param hit failed: %s\n", strerror(err));
 #endif
 
-     HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, "Failed to build user message header.: %s\n", strerror(err));
+     HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, 
+	      "Failed to build user message header.: %s\n", strerror(err));
 
  out_err:
      return err;
@@ -1091,7 +1122,9 @@ int hip_conf_handle_nat(hip_common_t *msg, int action,
 }
 
 /**
- * Handles the hipconf commands where the type is @c locator.
+ * Handles the hipconf commands where the type is @c locator. You can turn 
+ * locator sending in BEX on or query the set of local locators with this 
+ * function. 
  *
  * @param msg    a pointer to the buffer where the message for hipd will
  *               be written.
@@ -1102,19 +1135,31 @@ int hip_conf_handle_nat(hip_common_t *msg, int action,
  * @return       zero on success, or negative error value on error.
  */
 int hip_conf_handle_locator(hip_common_t *msg, int action,
-		   const char *opt[], int optc)
-{
+		   const char *opt[], int optc) {
     int err = 0, status = 0;
+    struct hip_locator *locator = NULL;
 
-    if (!strcmp("on",opt[0])) {
-        status = SO_HIP_SET_LOCATOR_ON;
-    } else if (!strcmp("off",opt[0])) {
-        status = SO_HIP_SET_LOCATOR_OFF;
+    if (!strcmp("on", opt[0])) {
+	    status = SO_HIP_SET_LOCATOR_ON;
+    } else if (!strcmp("off", opt[0])) {
+	    status = SO_HIP_SET_LOCATOR_OFF;
+    } else if (!strcmp("get", opt[0])) {
+	    status = SO_HIP_LOCATOR_GET;
     } else {
         HIP_IFEL(1, -1, "bad args\n");
     }
-    HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, "Failed to build user message header.: %s\n", strerror(err));
-
+    HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, 
+	     "Failed to build user message header.: %s\n", strerror(err));
+    if (status == SO_HIP_LOCATOR_GET) {
+	    HIP_IFEL(hip_send_recv_daemon_info(msg), -1, 
+		     "Send recv daemon info failed\n");
+	    locator = hip_get_param(msg, HIP_PARAM_LOCATOR);
+	    if (locator) {
+		    hip_print_locator_addresses(msg);
+	    } else {
+		    HIP_DEBUG("No LOCATOR found from daemon msg\n");
+	    }
+    }
  out_err:
     return err;
 }
@@ -1698,7 +1743,7 @@ int hip_conf_print_info_ha(struct hip_hadb_user_info_state *ha)
         HIP_INFO_IN6ADDR(" Peer  IP", &ha->ip_peer);
 	if (ha->heartbeats_on > 0 && ha->state == HIP_STATE_ESTABLISHED) {
 		HIP_DEBUG(" Heartbeat %.3f ms mean RTT, "
-			  "%.3f ms variance,\n"
+			  "%.3f ms std dev,\n"
 			  " %d packets sent,"
 			  " %d packets received,"
 			  " %d packet lost\n",
