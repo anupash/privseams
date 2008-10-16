@@ -211,6 +211,9 @@ int hip_sava_enc_ip_entries_compare(const hip_sava_enc_ip_entry_t * entry1,
   HIP_ASSERT(entry1 != NULL && entry1->src_enc != NULL);
   HIP_ASSERT(entry2 != NULL && entry2->src_enc != NULL);
 
+  _HIP_DEBUG_HIT("Entry1 addr ", entry1->src_enc);
+  _HIP_DEBUG_HIT("Entry2 addr ", entry2->src_enc);
+
   HIP_IFEL(!(hash1 = hip_sava_ip_entry_hash(entry1)), 
 	   -1, "failed to hash sa entry\n");
 
@@ -220,8 +223,7 @@ int hip_sava_enc_ip_entries_compare(const hip_sava_enc_ip_entry_t * entry1,
   err = (hash1 != hash2);
 
   out_err:
-    return err;
-  return 0;
+  return err;
 }
 
 int hip_sava_enc_ip_db_init() {
@@ -281,8 +283,12 @@ int hip_sava_enc_ip_entry_add(struct in6_addr *src_enc,
 
   entry->src_enc =  (struct in6_addr *) malloc(sizeof(struct in6_addr));
 
+  memset(entry->src_enc, 0, sizeof(struct in6_addr));
+
   memcpy(entry->src_enc, src_enc,
 	 sizeof(struct in6_addr));
+
+  HIP_DEBUG_HIT("Adding enc IP ", entry->src_enc);
 
   entry->hit_link = hit_link;
 
@@ -593,6 +599,20 @@ int hip_sava_init_all() {
   return err;
 }
 
+int hip_sava_client_init_all() {
+  int err = 0;
+  HIP_IFEL(hip_sava_init_ip6_raw_socket(&ipv6_raw_tcp_sock, IPPROTO_TCP), 
+	   -1, "error creating raw IPv6 socket \n");
+  HIP_IFEL(hip_sava_init_ip4_raw_socket(&ipv4_raw_tcp_sock, IPPROTO_TCP), 
+	   -1, "error creating raw IPv4 socket \n");
+  HIP_IFEL(hip_sava_init_ip6_raw_socket(&ipv6_raw_udp_sock, IPPROTO_TCP), 
+	   -1, "error creating raw IPv6 socket \n");
+  HIP_IFEL(hip_sava_init_ip4_raw_socket(&ipv4_raw_udp_sock, IPPROTO_TCP), 
+	   -1, "error creating raw IPv4 socket \n");
+ out_err:
+  return err;
+}
+
 struct in6_addr * hip_sava_find_hit_by_enc(struct in6_addr * src_enc) {
   hip_sava_enc_ip_entry_t * entry; 
   
@@ -700,12 +720,14 @@ struct in6_addr * hip_sava_auth_ip(struct in6_addr * orig_addr,
 				      hip_sava_peer_info_t * info_entry) {
 
   int err = 0;
-  struct in6_addr enc_addr;
+  struct in6_addr * enc_addr = (struct in6_addr *)malloc(sizeof(struct in6_addr));
   char out[EVP_MAX_MD_SIZE];
   int out_len;
   char in_len = sizeof(struct in6_addr);
 
-  memset(&enc_addr, 0, sizeof(struct in6_addr));
+  HIP_DEBUG_HIT("Authenticating address ", orig_addr);
+
+  memset(enc_addr, 0, sizeof(struct in6_addr));
   
   switch(info_entry->ealg) {
   case HIP_ESP_3DES_MD5:
@@ -744,12 +766,13 @@ struct in6_addr * hip_sava_auth_ip(struct in6_addr * orig_addr,
     goto out_err;
   }
   if (out_len > 0) {
-    memset (&enc_addr, 0, in_len);
-    memcpy(&enc_addr, out, (out_len < in_len ? out_len : in_len));
-    return &enc_addr;
+    memcpy(enc_addr, out, (out_len < in_len ? out_len : in_len));
+    HIP_DEBUG_HIT("Encrypted address ", enc_addr);
+    return enc_addr;
   } else {
     goto out_err;
   }
+  
  out_err:
   return NULL;
 }
@@ -772,6 +795,20 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
 
   struct sockaddr_in6 *dst6 = (struct sockaddr_in6 *)&dst;
 
+  struct tcphdr* tcp = NULL;
+  struct udphdr* udp = NULL;
+
+
+  int protocol = 0;
+
+  int ip_raw_sock = 0;
+
+  int on = 1, off = 0;
+
+  char * buff = ctx->ipq_packet->payload;
+  int buff_len = ctx->ipq_packet->data_len;
+
+  int dst_len = 0;
 
   memset(&dst, 0, sizeof(struct sockaddr_storage));
 
@@ -790,32 +827,106 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
 	   "Error parsing user message");
 
   enc_addr = hip_sava_auth_ip(&ctx->src, info_entry);
-
+  
   if (ctx->ip_version == 6) { //IPv6
-    
-    ip6hdr = (struct ip6_hdr*) ctx->ipq_packet->payload;
-
+    ip6hdr = (struct ip6_hdr*) buff;
     memcpy(&ip6hdr->ip6_src, (void *)enc_addr, sizeof(struct in6_addr));
-
-    dst6->sin6_family = AF_INET6;
-
-    memcpy(&dst6->sin6_addr, &ctx->src, sizeof(struct in6_addr));
-
-    sent = sendto(ipv6_raw_tcp_sock, ip6hdr, ctx->ipq_packet->data_len, 0,
-		  (struct sockaddr *) &dst, sizeof(struct sockaddr_in6));
-
+    dst6->sin6_family = AF_INET6;    
+    tcp = (struct tcphdr *) (buff + 40); //sizeof ip6_hdr is 40
+    udp = (struct udphdr *) (buff + 40); //sizeof ip6_hdr is 40
+    
+    protocol = ip6hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt;
+    
+    memcpy(&dst6->sin6_addr, &ctx->dst, sizeof(struct in6_addr));
+    
+    dst_len = sizeof(struct sockaddr_in6);
+    
+    HIP_DEBUG_INADDR("ipv6 src: ", &ip6hdr->ip6_src);
+    HIP_DEBUG_INADDR("ipv6 dst: ", &ip6hdr->ip6_dst);
+    
+    if (protocol == IPPROTO_TCP) {
+      
+      HIP_DEBUG("Checksumming TCP packet \n");
+      ip_raw_sock = ipv6_raw_tcp_sock;
+      
+	  tcp->check  = 0;
+	  tcp->check  = ipv6_checksum(IPPROTO_TCP, &(ip6hdr->ip6_src), &(ip6hdr->ip6_dst), tcp, (buff_len - sizeof(struct ip))); //checksum is ok for ipv4
+	  HIP_HEXDUMP("tcp dump: ", tcp, (buff_len - sizeof(struct ip6_hdr)));
+	  
+    } else if (protocol == IPPROTO_UDP) {
+      
+      HIP_DEBUG("Checksumming UDP packet \n");
+      ip_raw_sock = ipv4_raw_udp_sock;
+      
+      udp->check =  0;
+      udp->check = ipv4_checksum(IPPROTO_UDP, &(iphdr->ip_src), &(iphdr->ip_dst), udp, (buff_len - sizeof(struct ip))); //checksum is ok for ipv4
+      HIP_HEXDUMP("udp dump: ", udp, (buff_len - sizeof(struct ip6_hdr)));
+      
+    }
+    if(setsockopt(ip_raw_sock, IPPROTO_IPV6, IP_HDRINCL, &on, sizeof(on)) < 0) { 
+      HIP_DEBUG("setsockopt IP_HDRINCL ERROR！ \n");
+    } else {
+      HIP_DEBUG("setsockopt IP_HDRINCL for ipv4 OK！ \n");
+    }
   }else { //IPv4
-    iphdr = (struct ip *) ctx->ipq_packet->payload;
-    //    memcpy(&iphdr->ip_src, (void *)enc_addr, sizeof(struct in_addr));
+    
+    iphdr = (struct ip *) buff;
+    
     IPV6_TO_IPV4_MAP(enc_addr, &iphdr->ip_src);
     iphdr->ip_sum = 0;
+    
+    tcp = (struct tcphdr *) (buff + 20); //sizeof iphdr is 20
+    udp = (struct udphdr *) (buff + 20); //sizeof iphdr is 20
+    
+    protocol = iphdr->ip_p;
+    
+    dst_len = sizeof(struct sockaddr_in);
+    
     IPV6_TO_IPV4_MAP(&ctx->dst, &dst4->sin_addr);
+    
     dst4->sin_family = AF_INET;
-    HIP_DEBUG_INADDR("dst4", &dst4->sin_addr);
-    sent = sendto(ipv4_raw_tcp_sock, iphdr, ctx->ipq_packet->data_len, 0,
-		  (struct sockaddr *) &dst, sizeof(struct sockaddr_in));
+    
+    HIP_DEBUG_INADDR("ipv4 src: ", &iphdr->ip_src);
+    HIP_DEBUG_INADDR("ipv4 dst: ", &iphdr->ip_dst);
+    
+    if (protocol == IPPROTO_TCP) {
+      
+      HIP_DEBUG("Checksumming TCP packet \n");
+      ip_raw_sock = ipv4_raw_tcp_sock;
+      
+      tcp->check  = htons(0);
+      tcp->check  = ipv4_checksum(IPPROTO_TCP, &(iphdr->ip_src), &(iphdr->ip_dst), tcp, (buff_len - sizeof(struct ip))); //checksum is ok for ipv4
+      HIP_HEXDUMP("tcp dump: ", tcp, (buff_len - sizeof(struct ip)));
+      
+    } else if (protocol == IPPROTO_UDP) {
+      
+      HIP_DEBUG("Checksumming UDP packet \n");
+      ip_raw_sock = ipv4_raw_udp_sock;
+      
+      udp->check =  htons(0);
+      udp->check = ipv4_checksum(IPPROTO_UDP, &(iphdr->ip_src), &(iphdr->ip_dst), udp, (buff_len - sizeof(struct ip))); //checksum is ok for ipv4
+      HIP_HEXDUMP("udp dump: ", udp, (buff_len - sizeof(struct ip)));
+      
+    }
+    if(setsockopt(ip_raw_sock, IPPROTO_IP, IP_HDRINCL, &on, sizeof(on)) < 0) { 
+      HIP_DEBUG("setsockopt IP_HDRINCL ERROR！ \n");
+    } else {
+      HIP_DEBUG("setsockopt IP_HDRINCL for ipv4 OK！ \n");
+    }
   }
-
+  
+  sent = sendto(ip_raw_sock, buff, buff_len, 0,
+		(struct sockaddr *) &dst, dst_len);
+  if (ctx->ip_version == 4) {
+    if(setsockopt(ip_raw_sock, IPPROTO_IP, IP_HDRINCL, &off, sizeof(off)) < 0) { 
+      HIP_DEBUG("setsockopt IP_HDRINCL ERROR！ \n");
+    }
+  }	else {
+    if(setsockopt(ip_raw_sock, IPPROTO_IPV6, IP_HDRINCL, &off, sizeof(off)) < 0) { 
+      HIP_DEBUG("setsockopt IP_HDRINCL ERROR！ \n");
+    }	
+  }
+  
   if (sent != ctx->ipq_packet->data_len) {
     HIP_ERROR("Could not send the all requested"			\
 	      " data (%d/%d)\n", sent, ctx->ipq_packet->data_len);
@@ -1083,7 +1194,7 @@ int hip_sava_handle_bex_completed (struct in6_addr * src, struct in6_addr * hitr
 				       hit_entry, info_entry), 
 	     -1, "error adding enc ip entry");    
 
-    HIP_IFEL((enc_entry = hip_sava_enc_ip_entry_find(enc_addr)), 
+    HIP_IFEL((enc_entry = hip_sava_enc_ip_entry_find(enc_addr)) == NULL, 
 	     -1, "Could not retrieve enc ip entry \n");
     		  
     ip_entry->enc_link = enc_entry;

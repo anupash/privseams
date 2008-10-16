@@ -159,7 +159,7 @@ int hip_daemon_bind_socket(int socket, struct sockaddr *sa) {
 }
 
 int
-hip_sendto_hipd(int socket, struct hip_common *msg)
+hip_sendto_hipd(int socket, struct hip_common *msg, int len)
 {
 	/* Variables. */
 	struct sockaddr_in6 sock_addr;
@@ -174,7 +174,7 @@ hip_sendto_hipd(int socket, struct hip_common *msg)
 
 	HIP_DEBUG("Sending user message to HIPD on socket %d\n", socket);
 
-	n = sendto(socket, msg, hip_get_msg_total_len(msg), MSG_NOSIGNAL,
+	n = sendto(socket, msg, /*hip_get_msg_total_len(msg)*/ len, MSG_NOSIGNAL,
 		   (struct sockaddr *)&sock_addr, alen);
 	HIP_DEBUG("Sent %d bytes\n", n);
 	return n;
@@ -208,17 +208,17 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 	HIP_IFEL(hip_daemon_bind_socket(hip_user_sock,
 					(struct sockaddr *) &addr), -1,
 		 "bind failed\n");
-
+	/*
 	HIP_IFEL(hip_daemon_connect(hip_user_sock), -1,
 		 "connect failed\n");
-
+	*/
 	if ((len = hip_get_msg_total_len(msg)) < 0) {
 		err = -EBADMSG;
 		goto out_err;
 	}
 
-	//n = hip_sendto_hipd (sock, msg, len);
-	n = send(hip_user_sock, msg, len, 0);
+	n = hip_sendto_hipd (hip_user_sock, msg, len);
+	//n = send(hip_user_sock, msg, len, 0);
 
 	if (n < len) {
 		HIP_ERROR("Could not send message to daemon.\n");
@@ -247,7 +247,7 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 		goto out_err;
 	}
 
-	if (hip_get_msg_err(msg)) {
+if (hip_get_msg_err(msg)) {
 		HIP_ERROR("HIP message contained an error.\n");
 		err = -EHIP;
 	}

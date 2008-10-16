@@ -101,25 +101,31 @@ int is_escrow_active(){
 int hip_fw_init_sava_client() {
   int err = 0;
   if (hip_sava_client) {
+       HIP_IFEL(hip_sava_client_init_all(), -1,
+	     "Error initializing SAVA client \n");
    /* IPv4 packets	*/
    system("iptables -I HIPFW-OUTPUT -p tcp ! -d 127.0.0.1 -j QUEUE 2>/dev/null"); 
    system("iptables -I HIPFW-OUTPUT -p udp ! -d 127.0.0.1 -j QUEUE 2>/dev/null"); 
    /* IPv6 packets	*/
    system("ip6tables -I HIPFW-OUTPUT -p tcp ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
-   system("ip6tables -I HIPFW-OUTPUT -p udp ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
+   //system("ip6tables -I HIPFW-OUTPUT -p udp ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
   }
+out_err:
   return err;
 }
 
 void hip_fw_uninit_sava_client() {
+  int err = 0;
   if (hip_sava_client) {
+ 
    /* IPv4 packets	*/
    system("iptables -D HIPFW-OUTPUT -p tcp ! -d 127.0.0.1 -j QUEUE 2>/dev/null"); 
    system("iptables -D HIPFW-OUTPUT -p udp ! -d 127.0.0.1 -j QUEUE 2>/dev/null"); 
    /* IPv6 packets	*/
    system("ip6tables -D HIPFW-OUTPUT -p tcp ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
-   system("ip6tables -D HIPFW-OUTPUT -p udp ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
+   //system("ip6tables -D HIPFW-OUTPUT -p udp ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
   }
+ 
 }
 
 int hip_fw_init_sava_router() {
@@ -139,7 +145,7 @@ int hip_fw_init_sava_router() {
 		system("iptables -I HIPFW-FORWARD -p udp ! -d 127.0.0.1 -j QUEUE 2>/dev/null"); 
 		/* IPv6 packets	*/
 		system("ip6tables -I HIPFW-FORWARD -p tcp ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
-		system("ip6tables -I HIPFW-FORWARD -p udp ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
+		system("ip6tables -I HIPFW-FORWARD -p udp ! -d 2001:0010::/28 ! -o lo -j QUEUE 2>/dev/null");
 		/*	Queue HIP packets as well */
 		system("iptables -I HIPFW-INPUT -p 139 -j QUEUE 2>/dev/null");
 		system("ip6tables -I HIPFW-INPUT -p 139 -j QUEUE 2>/dev/null");
