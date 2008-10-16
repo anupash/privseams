@@ -9,6 +9,8 @@ int hip_fw_sock = 0;
 int control_thread_started = 0;
 //GThread * control_thread = NULL;
 
+extern int system_based_opp_mode;
+
 void* run_control_thread(void* data)
 {
 	/* Variables. */
@@ -222,7 +224,10 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 		hip_opptcp = 0;
 		break;
 	case SO_HIP_SET_PEER_HIT:
-		err = hip_fw_proxy_set_peer_hit(msg);
+		if (hip_proxy_status)
+			err = hip_fw_proxy_set_peer_hit(msg);
+		else if (system_based_opp_mode)
+			err = hip_fw_sys_opp_set_peer_hit(msg);
 		break;
 	default:
 		HIP_ERROR("Unhandled message type %d\n", type);
@@ -388,10 +393,9 @@ int handle_bex_state_update(struct hip_common * msg)
 	switch(msg_type)
 	{
 	        case SO_HIP_FW_BEX_DONE:
-		        if (dst_hit)
-		                err = firewall_set_bex_state(src_hit, dst_hit, 1);
-			else
-			        err = firewall_set_bex_state(src_hit, dst_hit, -1);
+		        err = firewall_set_bex_state(src_hit,
+						     dst_hit,
+						     (dst_hit ? 1 : -1));
 			break;
                 case SO_HIP_FW_UPDATE_DB:
 		        err = firewall_set_bex_state(src_hit, dst_hit, 0);

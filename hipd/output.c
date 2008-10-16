@@ -7,7 +7,7 @@
  * @author  Mika Kousa
  * @author  Kristian Slavov
  * @author  Samu Varjonen
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
 #include "output.h"
 
@@ -484,9 +484,11 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	hip_srv_t service_list[HIP_TOTAL_EXISTING_SERVICES];
 	u8 *dh_data1 = NULL, *dh_data2 = NULL;
 	uint32_t spi = 0;
+	char order[] = "000";
 	int err = 0, dh_size1 = 0, dh_size2 = 0, written1 = 0, written2 = 0;
-	int mask = 0, l = 0, is_add = 0, ii = 0, *list = NULL;
+	int mask = 0, l = 0, is_add = 0, i = 0, ii = 0, *list = NULL;
 	unsigned int service_count = 0;
+	int ordint = 0;
 
 	/* Supported HIP and ESP transforms. */
 	hip_transform_suite_t transform_hip_suite[] = {
@@ -496,64 +498,28 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
         hip_transform_suite_t transform_esp_suite[] = {
 		HIP_ESP_AES_SHA1,
 		HIP_ESP_3DES_SHA1,
-		HIP_ESP_NULL_SHA1
-	};
+		HIP_ESP_NULL_SHA1	};
         /* change order if necessary */
-        if (hip_transform_order == 0) {
-                transform_hip_suite[0] = HIP_HIP_AES_SHA1;
-                transform_hip_suite[1] = HIP_HIP_3DES_SHA1;
-                transform_hip_suite[2] = HIP_HIP_NULL_SHA1;
-
-                transform_esp_suite[0] = HIP_ESP_AES_SHA1;
-                transform_esp_suite[1] = HIP_ESP_3DES_SHA1;
-                transform_esp_suite[2] = HIP_ESP_NULL_SHA1;
-                HIP_DEBUG("Transform order 0\n");
-        } else if (hip_transform_order == 1) {
-                transform_hip_suite[0] = HIP_HIP_3DES_SHA1;
-                transform_hip_suite[1] =  HIP_HIP_AES_SHA1;
-                transform_hip_suite[2] = HIP_HIP_NULL_SHA1;
-
-                transform_esp_suite[0] = HIP_ESP_3DES_SHA1;
-                transform_esp_suite[1] =  HIP_ESP_AES_SHA1;
-                transform_esp_suite[2] = HIP_ESP_NULL_SHA1;
-                HIP_DEBUG("Transform order 1\n");
-        } else if (hip_transform_order == 2) {
-                transform_hip_suite[0] = HIP_HIP_AES_SHA1;
-                transform_hip_suite[1] = HIP_HIP_NULL_SHA1;
-                transform_hip_suite[2] = HIP_HIP_3DES_SHA1;
-
-                transform_esp_suite[0] = HIP_ESP_AES_SHA1;
-                transform_esp_suite[1] = HIP_ESP_NULL_SHA1;
-                transform_esp_suite[2] = HIP_ESP_3DES_SHA1;
-                HIP_DEBUG("Transform order 2\n");
-        } else if (hip_transform_order == 3) {
-                transform_hip_suite[0] = HIP_HIP_3DES_SHA1;
-                transform_hip_suite[1] = HIP_HIP_NULL_SHA1;
-                transform_hip_suite[2] = HIP_HIP_AES_SHA1;
-
-                transform_esp_suite[0] = HIP_ESP_3DES_SHA1;
-                transform_esp_suite[1] = HIP_ESP_NULL_SHA1;
-                transform_esp_suite[2] = HIP_ESP_AES_SHA1;
-                HIP_DEBUG("Transform order 3\n");
-        } else if (hip_transform_order == 4) {
-                transform_hip_suite[0] = HIP_HIP_NULL_SHA1;
-                transform_hip_suite[1] = HIP_HIP_AES_SHA1;
-                transform_hip_suite[2] = HIP_HIP_3DES_SHA1;
-
-                transform_esp_suite[0] = HIP_ESP_NULL_SHA1;
-                transform_esp_suite[1] = HIP_ESP_AES_SHA1;
-                transform_esp_suite[2] = HIP_ESP_3DES_SHA1;
-                HIP_DEBUG("Transform order 4\n");
-        } else if (hip_transform_order == 5) {
-                transform_hip_suite[0] = HIP_HIP_NULL_SHA1;
-                transform_hip_suite[1] = HIP_HIP_3DES_SHA1;
-                transform_hip_suite[2] = HIP_HIP_AES_SHA1;
-
-                transform_esp_suite[0] = HIP_ESP_NULL_SHA1;
-                transform_esp_suite[1] = HIP_ESP_3DES_SHA1;
-                transform_esp_suite[2] = HIP_ESP_AES_SHA1;
-                HIP_DEBUG("Transform order 5\n");
-        }
+	sprintf(order, "%d", hip_transform_order);
+	for ( i = 0; i < 3; i++) {		
+		switch (order[i]) {
+		case '1':
+			transform_hip_suite[i] = HIP_HIP_AES_SHA1;
+			transform_esp_suite[i] = HIP_ESP_AES_SHA1;
+			HIP_DEBUG("Transform order index %d is AES\n", i);
+			break;
+		case '2':
+			transform_hip_suite[i] = HIP_HIP_3DES_SHA1;
+			transform_esp_suite[i] = HIP_ESP_3DES_SHA1;
+			HIP_DEBUG("Transform order index %d is 3DES\n", i);
+			break;
+		case '3':
+ 			transform_hip_suite[i] = HIP_HIP_NULL_SHA1;
+			transform_esp_suite[i] = HIP_ESP_NULL_SHA1;
+			HIP_DEBUG("Transform order index %d is NULL_SHA1\n", i);
+			break;
+		}
+	}
 
  	_HIP_DEBUG("hip_create_r1() invoked.\n");
 	HIP_IFEL(!(msg = hip_msg_alloc()), -ENOMEM, "Out of memory\n");
@@ -1291,7 +1257,6 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	   points to the final source address (my_addr or local_addr). */
 	struct in6_addr my_addr, *my_addr_ptr = NULL;
 	int memmoved = 0;
-
 	/* sendmsg() crud */
 	struct msghdr hdr;
 	struct iovec iov;
@@ -1339,16 +1304,15 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		IPV6_TO_IPV4_MAP(&my_addr, &src4.sin_addr);
 	}
 
+	/* This is not really used */
+	src4.sin_port = htons(src_port);
+
         /* Destination address. */
 	HIP_IFEL(!IN6_IS_ADDR_V4MAPPED(peer_addr), -EPFNOSUPPORT,
 		 "Peer address is pure IPv6 address, IPv6 address family is "\
 		 "currently not supported on UDP/HIP.\n");
 	IPV6_TO_IPV4_MAP(peer_addr, &dst4.sin_addr);
 	HIP_DEBUG_INADDR("dst4", &dst4.sin_addr);
-
-	/* The socket is bound to port 50500.
-	src4.sin_port = htons(src_port);
-	*/
 
 	if(dst_port != 0) {
 		dst4.sin_port = htons(dst_port);
@@ -1374,21 +1338,16 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	packet_length += HIP_UDP_ZERO_BYTES_LEN;
 	memmoved = 1;
 
-	/*
-	  Currently disabled because I could not make this work -miika
-	HIP_IFEL(bind(hip_nat_sock_udp, (struct sockaddr *) &src4, sizeof(src4)),
-		 -1, "Binding to udp sock failed\n");
-
-	*/
-
 	/* Pass the correct source address to sendmsg() as ancillary data */
-	cmsg = &cmsgbuf;
+	cmsg = (struct cmsghdr *) &cmsgbuf;
 	memset(cmsg, 0, sizeof(cmsgbuf));
 	cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
 	cmsg->cmsg_level = IPPROTO_IP;
 	cmsg->cmsg_type = IP_PKTINFO;
-	pkt_info = CMSG_DATA(cmsg);
+	pkt_info = (struct in_pktinfo *) CMSG_DATA(cmsg);
 	pkt_info->ipi_addr.s_addr = src4.sin_addr.s_addr;
+
+	memset(&hdr, 0, sizeof(hdr)); /* fixes bug id 621 */
 
 	hdr.msg_name = &dst4;
 	hdr.msg_namelen = sizeof(dst4);
@@ -1401,8 +1360,6 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 
 	/* Try to send the data. */
 	do {
-		//chars_sent = sendto(hip_nat_sock_udp, msg, packet_length, 0,
-				    //(struct sockaddr *) &dst4, sizeof(dst4));
 		chars_sent = sendmsg(hip_nat_sock_udp, &hdr, 0);
 		if(chars_sent < 0) {
 			HIP_DEBUG("Problem in sending UDP packet. Sleeping "\
@@ -1474,7 +1431,7 @@ int hip_send_r2_response(struct hip_common *r2,
 int hip_send_icmp(int sockfd, hip_ha_t *entry) {
 	int err = 0, i = 0, identifier = 0;
 	struct icmp6hdr * icmph = NULL;
-	struct sockaddr_in6 * dst6 = NULL;
+	struct sockaddr_in6 dst6;
 	u_char cmsgbuf[CMSG_SPACE(sizeof (struct in6_pktinfo))];
 	u_char * icmp_pkt = NULL;
 	struct msghdr mhdr;
@@ -1488,11 +1445,10 @@ int hip_send_icmp(int sockfd, hip_ha_t *entry) {
 	/* memset and malloc everything you need */
 	memset(&mhdr, 0, sizeof(struct msghdr));	
 	memset(&tval, 0, sizeof(struct timeval));
+	memset(cmsgbuf, 0, sizeof(cmsgbuf));
+	memset(iov, 0, sizeof(struct iovec));
+	memset(&dst6, 0, sizeof(dst6));
 	
-	dst6 = malloc(sizeof(struct sockaddr_in6));
-	HIP_IFEL((!dst6), -1, "Malloc for dst6 failed\n");
-	memset(dst6, 0, sizeof(struct sockaddr_in6));
-
 	icmp_pkt = malloc(HIP_MAX_ICMP_PACKET);
         HIP_IFEL((!icmp_pkt), -1, "Malloc for icmp_pkt failed\n");
 	memset(icmp_pkt, 0, sizeof(HIP_MAX_ICMP_PACKET));
@@ -1509,9 +1465,9 @@ int hip_send_icmp(int sockfd, hip_ha_t *entry) {
 	memcpy(&pkti->ipi6_addr, &entry->hit_our, sizeof(struct in6_addr));
 
 	/* get the destination */
-	memcpy(&dst6->sin6_addr, &entry->hit_peer, sizeof(struct in6_addr));
-	dst6->sin6_family = AF_INET6;
-	dst6->sin6_flowinfo = 0;
+	memcpy(&dst6.sin6_addr, &entry->hit_peer, sizeof(struct in6_addr));
+	dst6.sin6_family = AF_INET6;
+	dst6.sin6_flowinfo = 0;
 
 	/* build icmp header */
 	icmph = (struct icmp6hdr *)icmp_pkt;
@@ -1532,9 +1488,9 @@ int hip_send_icmp(int sockfd, hip_ha_t *entry) {
 	iov[0].iov_len  = sizeof(struct icmp6hdr) + sizeof(struct timeval);
 	
 	/* build the msghdr for the sendmsg, put ancillary data also*/
-	mhdr.msg_name = dst6;
+	mhdr.msg_name = &dst6;
 	mhdr.msg_namelen = sizeof(struct sockaddr_in6);
-	mhdr.msg_iov = &iov;
+	mhdr.msg_iov = iov;
 	mhdr.msg_iovlen = 1;
 	mhdr.msg_control = &cmsgbuf;
 	mhdr.msg_controllen = sizeof(cmsgbuf);
@@ -1545,14 +1501,14 @@ int hip_send_icmp(int sockfd, hip_ha_t *entry) {
 	_HIP_DEBUG_HIT("src hit", &entry->hit_our);	
 	_HIP_DEBUG_HIT("dst hit", &entry->hit_peer);
 	_HIP_DEBUG("i == %d socket = %d\n", i, sockfd);
-	_HIP_PERROR("SENDMSG ");
+	HIP_PERROR("SENDMSG ");
 	
 	HIP_IFEL((i < 0), -1, "Failed to send ICMP into ESP tunnel\n");
 	HIP_DEBUG_HIT("Succesfully sent heartbeat to", &entry->hit_peer);
 
 out_err:
-	if (dst6) free(dst6);
-	if (icmp_pkt) free(icmp_pkt);
+	if (icmp_pkt)
+		free(icmp_pkt);
 	return err;
 }
 
@@ -1775,7 +1731,7 @@ int hip_send_udp_stun(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	*/
 
 	/* Pass the correct source address to sendmsg() as ancillary data */
-	cmsg = &cmsgbuf;
+	cmsg = (struct cmsghdr *) &cmsgbuf;
 	memset(cmsg, 0, sizeof(cmsgbuf));
 	cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
 	cmsg->cmsg_level = IPPROTO_IP;

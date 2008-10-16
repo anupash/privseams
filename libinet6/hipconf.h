@@ -10,7 +10,7 @@
  * @author  Anu Markkola
  * @author  Lauri Silvennoinen
  * @author  Tao Wan <twan@cc.hut.fi>
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  */
 #ifndef HIPCONF_H
 #define HIPCONF_H
@@ -79,9 +79,14 @@
 #define LIB_LENGTH	200
 /** @} addtogroup exec_app_types */
 
-/* hipconf tool actions. These are numerical values for the first commandline
-   argument. For example in "tools/hipconf get hi default" -command "get"
-   is the action. */
+/**
+ * hipconf tool actions. These are numerical values for the first commandline
+ * argument. For example in "tools/hipconf get hi default" -command "get"
+ * is the action. If you want a new action named as 'NEWACT', define a
+ * constant variable which has value between 0 and ACTION_MAX.
+ * Probably you also need to increase the value of ACTION_MAX.
+ * @see hip_conf_get_action()
+ */
 
 /* 0 is reserved */
 #define ACTION_ADD 1
@@ -112,8 +117,15 @@
 #define ACTION_HEARTBEAT 26
 #define ACTION_MAX 27 /* exclusive */
 
-/* Important! These values are used as array indexes, so keep these in order.
-   Add values after the last value and increment TYPE_MAX. */
+/**
+ * TYPE_ constant list, as an index for each action_handler function.
+ * 
+ * @note Important! These values are used as array indexes, so keep these
+ *       in order. If you add a constant TYPE_NEWTYPE here, the value of
+ *       TYPE_NEWTYPE must be a correct index for looking up its corresponding
+ *       handler function in action_handler[]. Add values after the last value
+ *       and increment TYPE_MAX.
+ */
 /* 0 is reserved */
 #define TYPE_HI      	   1
 #define TYPE_MAP     	   2
@@ -174,6 +186,15 @@ debug medium        # debug verbosity: all, medium or none\n"
 #2001:1e:361f:8a55:6730:6f82:ef36:2fff kyle kyle.com # This is a HIT with alias\n\
 #2001:17:53ab:9ff1:3cba:15f:86d6:ea2e kenny       # This is a HIT without alias\n"
 
+/**
+ * A list of prototypes for handler functions.
+ *
+ * @note If you added a handler function in libinet6/hipconf.c, you also
+ *       need to declare its prototype here.
+ *       If you added a SO_HIP_NEWMODE in libinet6/icomm.h, you also need to
+ *       add a case block for your SO_HIP_NEWMODE constant in the
+ *       switch(msg_type) block in this function.
+ */
 int hip_handle_exec_application(int fork, int type, int argc, char **argv);
 int hip_conf_handle_restart(hip_common_t *, int type, const char *opt[], int optc);
 int hip_append_pathtolib(char **libs, char *lib_all, int lib_all_length);

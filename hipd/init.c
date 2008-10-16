@@ -2,7 +2,7 @@
  * This file defines initialization functions for the HIP daemon.
  *
  * @date    1.1.2007
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  * @note    HIPU: BSD platform needs to be autodetected in hip_set_lowcapability
  */
 
@@ -642,6 +642,9 @@ int hip_init_icmp_v6(int *icmpsockfd)
 	int err = 0, on = 1;
 	struct sockaddr_in6 addr6;
 	struct icmp6_filter filter;
+
+	/* Make sure that hipd does not send icmpv6 immediately after base exchange */
+	heartbeat_counter = hip_icmp_interval;
 
 	*icmpsockfd = socket(AF_INET6, SOCK_RAW, IPPROTO_ICMPV6);
 	HIP_IFEL(*icmpsockfd <= 0, 1, "ICMPv6 socket creation failed\n");

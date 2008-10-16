@@ -360,8 +360,11 @@
     <title>Loading HIPL on OpenWRT</title>
     <para>
     </para>
-    <section id="build_openwrt">
-      <title>Building OpenWRT</title>
+    <section id="build_preparation">
+      <title>Preparation</title>
+      <para>
+        This is a common part for both La Fonera and Netgear WGT634U.
+      </para>
       <orderedlist>
         <listitem>
           <para>
@@ -400,6 +403,14 @@ SHELLOPTS=braceexpand:emacs:hashall:histexpand:interactive-comments:monitor:nocl
         Checkout and build the openWRT sources following this manual: <ulink url="http://wiki.openwrt.org/OpenWrtDocs/BuildingKamikazeHowTo" /> It is not much different for each version, no matter the 7.09 release or the svn devel tree.
           </para>
         </listitem>
+      </orderedlist>
+    </section>
+    <section id="build_openwrt_fonera">
+      <title>Building OpenWRT on La Fonera</title>
+      <para>
+        This part is just for La Fonera. For WGT634U, please refer to <xref linkend="build_openwrt_wgt" />.
+      </para>
+      <orderedlist>
         <listitem>
           <para>
         Your configuration should include these options:
@@ -407,39 +418,45 @@ SHELLOPTS=braceexpand:emacs:hashall:histexpand:interactive-comments:monitor:nocl
 Target System (Atheros [2.6])
 Target Images (jffs2, squashfs)
 Image configuration --->
-(static) LAN Protocol (NEW)
-(192.168.5.30) LAN IP Address (NEW)
-(255.255.255.0) LAN Network Mask (NEW)
+ (static) LAN Protocol (NEW)
+ (192.168.5.30) LAN IP Address (NEW)
+ (255.255.255.0) LAN Network Mask (NEW)
+Base System  ---> 
+ Configuration  ---> 
+  Linux Module Utilities  ---> 
+   [*] modprobe 
+Libraries  --->
+ &lt;*&gt; libuuid
 Network  --->
-&lt;*&gt; ipsec-tools (for PISA development)
-&lt;*&gt; isakmpd (for PISA development)
-&lt;*&gt; ip6tables (for PISA development)
-&lt;*&gt; hostapd (for PISA development)
+ &lt;*&gt; ipsec-tools
+ &lt;*&gt; isakmpd
+ &lt;*&gt; ip6tables
+ &lt;*&gt; hostapd
 Kernel modules  ---> 
  Netfilter Extensions  ---> 
- &lt;*&gt; kmod-ip6tables 
- &lt;*&gt; kmod-ipt-filter 
- &lt;*&gt; kmod-ipt-ipsec 
- &lt;*&gt; kmod-ipt-nat 
- &lt;*&gt; kmod-ipt-queue 
-Network Support  ---> 
- &lt;*&gt; kmod-ipsec 
- &lt;*&gt;  kmod-ipsec4 
- &lt;*&gt;  kmod-ipsec6 
- &lt;*&gt; kmod-iptunnel4 
- &lt;*&gt; kmod-ipv6 
- &lt;*&gt; kmod-tun 
-Other modules  ---> 
- &lt;*&gt; kmod-crypto 
-Wireless Drivers  ---> 
- &lt;*&gt; kmod-madwifi 
+  &lt;*&gt; kmod-ip6tables 
+  &lt;*&gt; kmod-ipt-filter 
+  &lt;*&gt; kmod-ipt-ipsec 
+  &lt;*&gt; kmod-ipt-nat 
+  &lt;*&gt; kmod-ipt-queue 
+ Network Support  ---> 
+  &lt;*&gt; kmod-ipsec 
+  &lt;*&gt;  kmod-ipsec4 
+  &lt;*&gt;  kmod-ipsec6 
+  &lt;*&gt; kmod-iptunnel4 
+  &lt;*&gt; kmod-ipv6 
+  &lt;*&gt; kmod-tun 
+ Other modules  ---> 
+  &lt;*&gt; kmod-crypto 
+ Wireless Drivers  ---> 
+  &lt;*&gt; kmod-madwifi 
 Advanced configuration options (for developers)  --->
-Build Options  --->
-(8)   Number of jobs to run simultaneously (for PISA development. Speeds up compilation dramatically on multicore systems)
+ Build Options  --->
+  (8)   Number of jobs to run simultaneously (for PISA development. Speeds up compilation dramatically on multicore systems)
 </programlisting>
           </para>
           <para>
-		  NOTE: Don't use hostapd-mini, because it causes build errors. Use hostapd instead.
+            You could also download a pre-configured configuration file for your device from <ulink url="http://hipl.hiit.fi/hipl/contrib/openwrt/7.09/config/dot_config_fonera" />, and place it as kamikaze_7.09/.config, and <ulink url="http://hipl.hiit.fi/hipl/contrib/openwrt/7.09/config/target/linux/atheros-2.6/config/default" /> as kamikaze_7.09/target/linux/atheros-2.6/config/default.
           </para>
         </listitem>
         <listitem>
@@ -454,12 +471,7 @@ $ make
         </listitem>
         <listitem>
           <para>
-		  If you cannot make jffs2 images without root privilege, try building with root privilege to get around it. In Debian Linux 4.0, you need to add FORCE=1 to ignore a weird make error, which complains make version has to be greater than 3.81 even though it actually is.
-          </para>
-          <para>
-<programlisting>
-$ make FORCE=1
-</programlisting>
+		  If you cannot make jffs2 images without root privilege, try building with root privilege to get around it.
           </para>
         </listitem>
         <listitem>
@@ -497,7 +509,7 @@ $ ls -l bin/
         </listitem>
       </orderedlist>
     </section>
-    <section id="load_on_openwrt">
+    <section id="load_on_openwrt_fonera">
       <title>Loading HIPL on OpenWRT</title>
       <formalpara><title>For building HIPL on the kamikaze release 7.09</title><para></para></formalpara>
       <orderedlist>
@@ -511,7 +523,7 @@ $ ls -l bin/
         </listitem>
         <listitem>
           <para>
-		  Get all patches for HIPL on OpenWRT from <ulink url="http://dongsupark.de/hipl/openwrt/7.09/patches/" />, which produce Makefiles and configuration files for necessary packages. And apply them into the kamikaze_7.09 source tree. NOTE: this patch is originally made by Dmitriy Kuptsov. Thanks.
+		  Get all patches for HIPL on OpenWRT from <ulink url="http://hipl.hiit.fi/hipl/contrib/openwrt/7.09/patches/" />, which produce Makefiles and configuration files for necessary packages. And apply them into the kamikaze_7.09 source tree.
           </para>
           <para>
   <programlisting>
@@ -537,10 +549,10 @@ $ ls -l bin/
         </listitem>
         <listitem>
           <para>
-          Get a hipl tarball from <ulink url="http://dongsupark.de/hipl/" />, and place it in the directory kamikaze_7.09/dl/
+          Get a hipl tarball from <ulink url="http://hipl.hiit.fi/hipl/contrib/openwrt/" />, and place it in the directory kamikaze_7.09/dl/
           </para>
           <para>
-          $ wget http://dongsupark.de/hipl/hipl--openwrt--2.6.tar.gz -O kamikaze_7.09/dl/hipl--openwrt--2.6.tar.gz
+          $ wget http://hipl.hiit.fi/hipl/contrib/openwrt/hipl--openwrt--2.6.tar.gz -O kamikaze_7.09/dl/hipl--openwrt--2.6.tar.gz
           </para>
           <para>
           Or you can get the newest hipl source tree from the hipl repository, pack them as a tarball and place it under the dl directory.
@@ -548,9 +560,14 @@ $ ls -l bin/
           <para>
   <programlisting>
   $ tla get hipl--openwrt--2.6 hipl--openwrt--2.6
-  $ rm -rf hipl--openwrt--2.6/{arch}
-  $ tar czf kamikaze_7.09/dl/hipl--openwrt--2.6.tar.gz hipl--openwrt--2.6
+  $ mkdir path/to/kamikaze/dl
+  $ tar czf path/to/kamikaze/dl/hipl--openwrt--2.6.tar.gz --exclude=\{arch\} hipl--openwrt--2.6
   </programlisting>
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+          Copy our own kernel configuration file for atheros from <ulink url="http://hipl.hiit.fi/hipl/contrib/openwrt/7.09/config/target/linux/atheros-2.6/config/default" /> and place it as kamikaze_7.09/target/linux/atheros-2.6/config/default.
           </para>
         </listitem>
         <listitem>
@@ -563,6 +580,9 @@ $ ls -l bin/
   &lt;*&gt; hipl
   </programlisting>
           </para>
+          <para>
+          Select the kernel modules kmod-ipsec, kmod-ipsec4 and kmod-ipsec6.
+          </para>
         </listitem>
         <listitem>
           <para>
@@ -574,7 +594,7 @@ $ ls -l bin/
   </programlisting>
           </para>
           <para>
-          Or you can also build just a hipl package.
+          Or you can also build just the hipl packages.
           </para>
           <para>
   <programlisting>
@@ -645,6 +665,9 @@ $ ls -l bin/
   # insmod xfrm6_tunnel.ko
   </programlisting>
           </para>
+          <para>
+            Don't panic even though some of those modules do not exist. Chances are, the missing modules are already embedded in your kernel image. To know whether a certain object is configured as a module or not, refer to the configuration file kamikaze_7.09/target/linux/atheros-2.6/config/default.
+          </para>
         </listitem>
       </orderedlist>
       <formalpara><title>For building HIPL on the kamikaze development version</title><para></para></formalpara>
@@ -661,17 +684,20 @@ $ svn checkout https://svn.openwrt.org/openwrt/trunk
         </listitem>
         <listitem>
           <para>
-          Get all patches for hipl packages in OpenWRT <ulink url="http://dongsupark.de/hipl/openwrt/devel/patches/" />, and apply them into the kamikaze_7.09 source tree.
+          Get all patches for hipl packages in OpenWRT <ulink url="http://hipl.hiit.fi/hipl/contrib/openwrt/devel/patches/" />, and apply them into the kamikaze source tree.
           </para>
           <para>
 <programlisting>
 $ ls
 64 hipl_openwrt_kernel-svn.diff  64 hipl_openwrt_packages-svn.diff
-64 kamikaze_7.09/
-$ cd kamikaze_7.09
+64 kamikaze/
+$ cd kamikaze
 $ patch -p1 &lt; ../hipl_openwrt_packages-svn.diff
 $ patch -p1 &lt; ../hipl_openwrt_kernel-svn.diff
 </programlisting>
+          </para>
+          <para>
+            Copy our own kernel configuration file for atheros from <ulink url="http://hipl.hiit.fi/hipl/contrib/openwrt/devel/config/target/linux/atheros/" /> and place it in kamikaze/target/linux/atheros/.
           </para>
         </listitem>
         <listitem>
@@ -687,11 +713,11 @@ Network  --->
         </listitem>
         <listitem>
           <para>
-          Get a hipl tarball from <ulink url="http://dongsupark.de/hipl/hipl--openwrt--2.6.tar.gz" />, and place it in the directory kamikaze_7.09/dl/.
+          Get a hipl tarball from <ulink url="http://hipl.hiit.fi/hipl/contrib/openwrt/hipl--openwrt--2.6.tar.gz" />, and place it in the directory kamikaze/dl/.
           </para>
           <para>
 <programlisting>
-$ wget http://dongsupark.de/hipl/hipl--openwrt--2.6.tar.gz -O kamikaze_7.09/dl/hipl--openwrt--2.6.tar.gz
+$ wget http://hipl.hiit.fi/hipl/contrib/openwrt/hipl--openwrt--2.6.tar.gz -O kamikaze/dl/hipl--openwrt--2.6.tar.gz
 </programlisting>
           </para>
           <para>
@@ -701,7 +727,7 @@ $ wget http://dongsupark.de/hipl/hipl--openwrt--2.6.tar.gz -O kamikaze_7.09/dl/h
 <programlisting>
 $ tla get hipl--openwrt--2.6 hipl--openwrt--2.6
 $ rm -rf hipl--openwrt--2.6/{arch}
-$ tar czf kamikaze_7.09/dl/hipl--openwrt--2.6.tar.gz hipl--openwrt--2.6
+$ tar czf kamikaze/dl/hipl--openwrt--2.6.tar.gz hipl--openwrt--2.6
 </programlisting>
           </para>
         </listitem>
@@ -786,12 +812,14 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
 # insmod xfrm6_tunnel.ko
 </programlisting>
           </para>
+          <para>
+            Don't panic even though some of those modules do not exist. Chances are, the missing modules are already embedded in your kernel image. To know whether a certain object is configured as a module or not, refer to the configuration file kamikaze_7.09/target/linux/atheros-2.6/config/default.
+          </para>
         </listitem>
       </orderedlist>
     </section>
     <section id="notes_lafonera">
       <title>Some notes about HIPL on La Fonera</title>
-      <formalpara><title>Some notes about HIPL on La Fonera</title><para></para></formalpara>
         <para>
         Note that size of a kernel image for La Fonera must not exceed 720 KB. So you should not add various kernel options as you need to keep size being smaller than 720 KB.
         </para>
@@ -839,6 +867,283 @@ endif
         Building hipl under the kamikaze devel tree does not go well always. It could cause you to correct numerous errors while building it. You are warned!
         </para>
     </section>
+    <section id="build_openwrt_wgt">
+      <title>Building OpenWRT on Netgear WGT634U</title>
+      <para>
+        This part is just for Netgear WGT634U. For La Fonera, please refer to <xref linkend="build_openwrt_fonera" />.
+      </para>
+      <para>
+        For preparation, refer to <xref linkend="build_preparation" />.
+      </para>
+      <orderedlist>
+        <listitem>
+          <para>
+        Your configuration should include these options:
+<programlisting>
+Target System (Broadcom BCM947xx/953xx [2.6])
+Target Images (jffs2, squashfs)
+Image configuration --->
+ (static) LAN Protocol (NEW)
+ (192.168.5.30) LAN IP Address (NEW)
+ (255.255.255.0) LAN Network Mask (NEW)
+Base System  ---> 
+ Configuration  ---> 
+  Linux Module Utilities  ---> 
+   [*] modprobe 
+Libraries  --->
+ &lt;*&gt; libuuid
+Network  --->
+ &lt;*&gt; ipsec-tools
+ &lt;*&gt; isakmpd
+ &lt;*&gt; ip6tables
+ &lt;*&gt; hostapd
+Kernel modules  ---> 
+ Netfilter Extensions  ---> 
+  &lt;*&gt; kmod-ip6tables 
+  &lt;*&gt; kmod-ipt-filter 
+  &lt;*&gt; kmod-ipt-ipsec 
+  &lt;*&gt; kmod-ipt-nat 
+  &lt;*&gt; kmod-ipt-queue 
+Network Support  ---> 
+  &lt;*&gt; kmod-ipsec 
+  &lt;*&gt;  kmod-ipsec4 
+  &lt;*&gt;  kmod-ipsec6 
+  &lt;*&gt; kmod-iptunnel4 
+  &lt;*&gt; kmod-ipv6 
+  &lt;*&gt; kmod-tun 
+Other modules  ---> 
+  &lt;*&gt; kmod-crypto 
+Wireless Drivers  ---> 
+  &lt;*&gt; kmod-madwifi 
+Advanced configuration options (for developers)  --->
+ Build Options  --->
+  (8)   Number of jobs to run simultaneously (for PISA development. Speeds up compilation dramatically on multicore systems)
+</programlisting>
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            You could also download a pre-configured configuration file for your device from <ulink url="http://hipl.hiit.fi/hipl/contrib/openwrt/7.09/config/dot_config_wgt" />, and place it as kamikaze_7.09/.config, and <ulink url="http://hipl.hiit.fi/hipl/contrib/openwrt/7.09/config/target/linux/brcm47xx-2.6/config/default" /> as kamikaze_7.09/target/linux/brcm47xx-2.6/config/default.
+            Make sure that you have the following kernel configurations in your target/linux/brcm47xx-2.6/config/default. Those are not available in the default configuration file provided by OpenWRT kamikaze 7.09.
+<programlisting>
+CONFIG_DUMMY=y
+CONFIG_PACKET=y
+CONFIG_UNIX=y
+</programlisting>
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+		  Now build it.
+          </para>
+          <para>
+<programlisting>
+$ make
+</programlisting>
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+		  If you cannot make jffs2 images without root privilege, try building with root privilege to get around it.
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+		  If you get any error during the build, try using the verbose mode to figure out what's going on.
+          </para>
+          <para>
+<programlisting>
+$ make V=99
+</programlisting>
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+		  If the build has succeeded, you can see firmware images in your bin directory. 
+          </para>
+          <para>
+<programlisting>
+$ bin/openwrt-wgt*
+5136 -rw-rw-r-- 1 pisa src-pisa 5246976 Sep  3 16:58 bin/openwrt-wgt634u-2.6-jffs2.bin
+3528 -rw-rw-r-- 1 pisa src-pisa 3608576 Sep  3 16:58 bin/openwrt-wgt634u-2.6-squashfs.bin
+</programlisting>
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+		  Install them on /tftpboot and write them on your device.
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+          Note that for Broadcom BCM the target name becomes 'mipsel' instead of 'mips'. So the name of cross compiler is 'mipsel-linux-uclibc-gcc'.
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+          Unlike La Fonera, to build OpenWRT for WGT634U, you need to take care of the maximum final image size 4MB. If you add lots of packages in the image, its size is really likely to exceed 4MB. If you cannot reduce the size with your own effort, try unselecting jffs2 in your OpenWRT configuration and selecting only squashfs, because squashfs images are slimmer than jffs2 images.
+          </para>
+        </listitem>
+      </orderedlist>
+    </section>
+    <section id="load_on_openwrt_wgt">
+      <title>Loading HIPL on Netgear WGT634U</title>
+      <formalpara><title>For building HIPL on the kamikaze release 7.09</title><para></para></formalpara>
+      <orderedlist>
+        <listitem>
+          <para>
+          Get and extract OpenWRT kamikaze 7.09 source.
+          </para>
+  <programlisting>
+  $ tar xzf kamikaze_7.09.tar.gz
+  </programlisting>
+        </listitem>
+        <listitem>
+          <para>
+		  Get all patches for HIPL on OpenWRT from <ulink url="http://hipl.hiit.fi/hipl/contrib/openwrt/7.09/patches/" />, which produce Makefiles and configuration files for necessary packages. And apply them into the kamikaze_7.09 source tree.
+          </para>
+          <para>
+  <programlisting>
+  $ ls
+  64 etc_config_dhcp.diff      64 etc_firewall_user.diff
+  64 etc_config_network.diff   64 etc_hostapd.diff
+  64 etc_config_wireless.diff  64 hipl_openwrt-7.09.diff
+  64 kamikaze_7.09
+  $ cd kamikaze_7.09
+  $ patch -p1 &lt; ../hipl_openwrt-7.09.diff
+  $ patch -p1 &lt; ../etc_config_dhcp.diff
+  $ patch -p1 &lt; ../etc_config_network.diff
+  $ patch -p1 &lt; ../etc_config_wireless.diff
+  $ patch -p1 &lt; ../etc_firewall_user.diff
+  $ patch -p1 &lt; ../etc_hostapd.diff
+  $ ls package/hipl/Makefile
+  Makefile
+  </programlisting>
+          </para>
+          <para>
+          Note that you might also change the kernel version in &lt;path_to_kamikaze&gt;/target/linux/brcm47xx-2.6/Makefile into 2.6.23 or a similar version number, especially if you are using vanilla kamikaze sources.
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+          Get a hipl tarball from <ulink url="http://hipl.hiit.fi/hipl/contrib/openwrt/" />, and place it in the directory kamikaze_7.09/dl/
+          </para>
+          <para>
+          $ wget http://hipl.hiit.fi/hipl/contrib/openwrt/hipl--openwrt--2.6.tar.gz -O kamikaze_7.09/dl/hipl--openwrt--2.6.tar.gz
+          </para>
+          <para>
+          Or you can get the newest hipl source tree from the hipl repository, pack them as a tarball and place it under the dl directory.
+          </para>
+          <para>
+  <programlisting>
+  $ tla get hipl--openwrt--2.6 hipl--openwrt--2.6
+  $ rm -rf hipl--openwrt--2.6/{arch}
+  $ tar czf kamikaze_7.09/dl/hipl--openwrt--2.6.tar.gz hipl--openwrt--2.6
+  </programlisting>
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+          Copy our own kernel configuration file for brcm47xx from <ulink url="http://hipl.hiit.fi/hipl/contrib/openwrt/7.09/config/target/linux/brcm47xx-2.6/config/default" /> and place it as kamikaze_7.09/target/linux/brcm47xx-2.6/config/default.
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+          Enable hipl in the Networking menu by executing "make menuconfig".
+          </para>
+          <para>
+  <programlisting>
+  Network  --->
+  &lt;*&gt; hipl
+  </programlisting>
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+          Build OpenWRT, make a vmlinuz and a rootfs image.
+          </para>
+          <para>
+  <programlisting>
+  $ make V=99
+  </programlisting>
+          </para>
+          <para>
+          Or you can also build just a hipl package.
+          </para>
+          <para>
+  <programlisting>
+  $ make package/hipl-install V=99
+  </programlisting>
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+          Load the images on WGT634U and reboot.
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+          If you are able to reboot your device with your image, the next thing to do is to install kernel module packages needed for running hipl. Make sure first that the following packages are available in your kamikaze tree.
+          </para>
+          <para>
+  <programlisting>
+  $ cd bin/packages/
+  $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
+$ cd bin/packages/
+$ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
+ 28 -rw-rw-r-- 1 pisa src-pisa  26423 Sep  3 16:57 kmod-crypto_2.6.22-brcm47xx-1_mipsel.ipk
+ 12 -rw-rw-r-- 1 pisa src-pisa  11297 Sep  3 16:57 kmod-ipsec4_2.6.22-brcm47xx-1_mipsel.ipk
+ 16 -rw-rw-r-- 1 pisa src-pisa  14299 Sep  3 16:57 kmod-ipsec6_2.6.22-brcm47xx-1_mipsel.ipk
+ 36 -rw-rw-r-- 1 pisa src-pisa  33031 Sep  3 16:57 kmod-ipsec_2.6.22-brcm47xx-1_mipsel.ipk
+168 -rw-rw-r-- 1 pisa src-pisa 165355 Sep  3 16:57 kmod-ipv6_2.6.22-brcm47xx-1_mipsel.ipk
+  8 -rw-rw-r-- 1 pisa src-pisa   6820 Sep  3 16:57 kmod-tun_2.6.22-brcm47xx-1_mipsel.ipk
+  </programlisting>
+          </para>
+          <para>
+          If they are not available, configure your OpenWRT again to add them as packages.("&lt;M&gt;")
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+          Install the packages in your WGT634U device. On your device console:
+          </para>
+          <para>
+  <programlisting>
+  # scp user@srv:path/to/kamikaze_7.09/bin/packages/kmod-{crypto,ipsec,ipv6,tun}* .
+  # ipkg install kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
+  </programlisting>
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+          Load the installed modules, unless you already have /etc/modules.d/35-hipl.
+          </para>
+          <para>
+  <programlisting>
+  # cd /lib/modules/2.6.21.3
+  # insmod sha1.ko
+  # insmod aes.ko
+  # insmod tun.ko
+  # insmod ipv6.ko
+  # insmod af_key.ko
+  # insmod xfrm_user.ko
+  # insmod ah4.ko
+  # insmod esp4.ko
+  # insmod ipcomp.ko
+  # insmod xfrm_tunnel.ko
+  # insmod ah6.ko
+  # insmod esp6.ko
+  # insmod ipcomp6.ko
+  # insmod tunnel6.ko
+  # insmod xfrm6_tunnel.ko
+  </programlisting>
+          </para>
+          <para>
+            Don't panic even though some of those modules do not exist. Chances are, the missing modules are already embedded in your kernel image. To know whether a certain object is configured as a module or not, refer to the configuration file kamikaze_7.09/target/linux/brcm47xx-2.6/config/default.
+          </para>
+        </listitem>
+      </orderedlist>
+    </section>
   </chapter>
   <chapter id="ch_basictest">
     <title>Testing a HIP connection between two locally connected hosts</title>
@@ -853,7 +1158,7 @@ endif
       as IPv6 addresses on-wire.
     </para>
     <para>
-      We will show how to test IPv4 and IPv6 applications. Meanwhile IPv6 applications use the 
+      We show how to test HIP with both IPv4 and IPv6 applications. Meanwhile IPv6 applications use the 
       HIT identifier, IPv4-only applications use the LSI identifier. This is an IPv4 address in the range 1.0.0.0/8.
       Firstly, we explain how to configure HIPL when we want to use IPv4 applications. Secondly, we introduce some
       tests with IPv6 applications. To finalize, we discuss the interoperability between IPv4 and IPv6 applications 
@@ -895,8 +1200,8 @@ endif
 		    <listitem><para>OOPS_IP oops</para></listitem>		    
 		    </itemizedlist>
 	    <para>Apart from starting the hipd process, the hipfw process must be also 
-		started in both machines, oops and crash.
-	    </para>   
+		started in both machines, oops and crash. Notice that hipfw must be started always after hipd!
+	    </para>
 	    <itemizedlist>
 	      <listitem><para>
 		  cd somewhere/hipl
@@ -905,7 +1210,7 @@ endif
 		  hipd/hipd # (to start as a background daemon process, add -b flag)
 	      </para></listitem>
 	      <listitem><para>
-		  firewall/hipfw -l (to start the firewall with LSI support enabled)
+		  firewall/hipfw -lA (to start the firewall with LSI support enabled and allow HIP/ESP packets)
 	      </para></listitem>
 	    </itemizedlist>
 	    <para>
@@ -938,7 +1243,7 @@ endif
 	      <itemizedlist>
 		<listitem><para>ping OOPS_LSI</para></listitem>
 		<listitem><para>ssh OOPS_LSI</para></listitem>
-		<listitem><para>nc OOPS_LSI -u 5555 # oops must be running nc -l -u -p 5555</para></listitem>
+		<listitem><para>nc OOPS_LSI -u 5555 # oops must be running nc -l -u 5555</para></listitem>
 	      </itemizedlist>
     </section>
     <section id="ipv6_appl">
@@ -1009,11 +1314,12 @@ endif
       while if you are using virtual machines). You should replace
       HIT_OF_XXX with the HIT of the host XXX. The hip daemon loads (and
       creates if necessary) the host identities from /etc/hip automatically.
-      If you want to know the HIT of the localhost, run
-      "hipconf get hi default". To avoid routing problems especially with
-      UDP, it is highly recommend to use the default HIT of the machine!
-      You can list all HITs of the machine with "hipconf get hi all", but
-      it is safe to use the optional HITs only with TCP connections!
+      If you want to know the default HIT of the localhost, run
+      "hipconf get hi default".
+      You can list all HITs of the machine with "hipconf get hi all". By
+      default, you'll see only one. If you want to use all four HITs of the
+      host, you have to invoke "hipconf add hi default". The use of multiple
+      local HITs is not currently recommended!
     </para>
     <para>
       Mappings between HITs and IP addresses are usually set up
@@ -1063,7 +1369,7 @@ endif
 	      oops:
 	    </para>
 	      <itemizedlist>
-		<listitem><para>nc -l -u -p 5555</para></listitem>
+		<listitem><para>nc -l -u 5555</para></listitem>
 	      </itemizedlist>
 	    <para>
 	      crash:
@@ -1124,11 +1430,9 @@ endif
 	<row><entry>Server</entry><entry>HIT</entry><entry>IPv4 address</entry><entry>IPv6 address</entry><entry>HI algo</entry></row>
       </thead>
       <tbody>
-	<row><entry>felwood.infrahip.net</entry><entry>2001:16:7d5a:88d7:51af:cdd1:6bf5:3d15</entry><entry>193.167.187.130</entry><entry>2001:708:140:220::3</entry><entry>DSA</entry></row>
-	<row><entry>crossroads.infrahip.net</entry><entry>2001:0019:b673:8406:e32d:6754:db0b:cde7</entry><entry>193.167.187.134</entry><entry>2001:708:140:220:213:21ff:feb1:2d05</entry><entry>RSA</entry></row>
-	<row><entry>crossroads.infrahip.net</entry><entry>2001:0019:810e:713d:7183:f05f:6063:b82b</entry><entry>193.167.187.134</entry><entry>2001:708:140:220:213:21ff:feb1:2d05</entry><entry>DSA</entry></row>
-	<row><entry>ashenvale.infrahip.net</entry><entry>2001:0012:55f8:25ab:a6de:af77:b617:34ec</entry><entry>193.167.187.133</entry><entry>2001:708:140:220:212:79ff:fed9:15e8</entry><entry>RSA</entry></row>
-	<row><entry>ashenvale.infrahip.net</entry><entry>2001:0015:cf89:0912:d2da:10af:411f:1252</entry><entry>193.167.187.133</entry><entry>2001:708:140:220:212:79ff:fed9:15e8</entry><entry>DSA</entry></row>
+	<row><entry>felwood.infrahip.net</entry><entry>2001:1d:392e:a450:2cd3:75e1:6098:8104</entry><entry>193.167.187.130</entry><entry>2001:708:140:220::3</entry><entry>RSA</entry></row>
+	<row><entry>crossroads.infrahip.net</entry><entry>2001:1b:a9be:c6a6:34e5:8361:c07f:a990</entry><entry>193.167.187.134</entry><entry>2001:708:140:220:213:21ff:feb1:2d05</entry><entry>RSA</entry></row>
+	<row><entry>ashenvale.infrahip.net</entry><entry>2001:1c:cbae:47ae:2871:f9c:eb94:c8e3</entry><entry>193.167.187.133</entry><entry>2001:708:140:220:212:79ff:fed9:15e8</entry><entry>DSA</entry></row>
       </tbody>
     </tgroup>
     </table>
@@ -1540,7 +1844,58 @@ endif
   </para>
   <para>
   Then run at the server: vlc -vvv &lt;any avi video file&gt; --ipv6 --sout '#std{access=rtp,mux=ts,dst=[&lt;CLIENT's HIT&gt;]:1234}'
-
+  </para>
+  </section>
+  <section id="sec_vnc">
+  <title>VNC applications</title>
+  <para>
+    Vino-server/Vinagre-client and tightVNCserver/xtightVNCviewer
+    applications work just fine with the LSI support of HIPL. LSIs are
+    used because tested applications did not support IPv6. It seems
+    that most of the VNC applications do not support IPv6.
+  </para>
+  <para>
+    VINO/VINAGRE
+  </para>
+  <para>
+  Setup LSIs as the manual instructs and remember the daemons and so
+  on. Then do the following.
+  </para>
+  <para>
+    For server side (Remember Ubuntu was used when testing). Open the
+    settings GUI from Gnome System->Preferences->Remote Desktop then
+    allow other users to view and or control the desktop. You can
+    also set a password for the desktop. 
+  </para>
+  <para>
+    For the client side do the following and everything should work.
+  </para>
+  <programlisting>
+    vinagre &lt;LSI-of-Server&gt;
+  </programlisting>
+  <para>
+    THIGHTVNCSERVER/XTIGHTVNCVIEWER
+  </para>
+  <para>
+  Setup LSIs as the manual instructs and remember the daemons and so
+  on. Then do the following.
+  </para>
+  <para>
+    For the server side install package tightvncsercer. To start the
+    server just write tightvncserver on the terminal and the server
+    will start with default options. Refer to the official
+    documentation or the man pages of tightvnc for more information on
+    the configuration. 
+  </para>
+  <para>
+    On the client side install package xtightvncviewer. Then with the
+    following command you should have an successfull connection.
+  </para>
+  <programlisting>
+    xtightvncviewer &lt;LSI-of-server&gt;:1
+  </programlisting>
+  <para>
+  Longer how-to can be found from <ulink url="http://www.cs.helsinki.fi/u/sklvarjo/vnc.htm" />
   </para>
   </section>
   <section id="sec_openldap">
@@ -1603,7 +1958,7 @@ endif
   </para>
   </section>
     <section id="hip_over_vpn">
-      <title>HIP over openVPN</title>
+      <title>OpenVPN</title>
     <!-- id="hip_over_vpn_how_to" -->
       <para>
 	OpenVPN is an open-source VPN solution. More information on it can
@@ -1627,29 +1982,11 @@ endif
       </para>
     <!-- id="hip_over_vpn_performance" -->
       <para>
-	Following are some data to give a general idea about performance
-	degradation caused by OpenVPN, HIP, and when we use HIP over OpenVPN.
-	These data illustrate the TCP throughput between two machines in four cases.
-	The measurements for each case were repeated roughly 20 times and the
-	average was calculated. The following throughput measurements were done at
-	the machine that serves as the HIP client, and as the VPN client.
-	One of the machines acts both as the VPN server and as one of the hosts in
-	HIP-communication.
+	A HIP and OpenVPN tunnel have roughly the same througput. It
+	is even possible run HIP inside the OpenVPN tunnel, even
+	though this seems to halve the throughput without any
+	optimizations.
       </para>
-
-      <para>
-	1. No HIP or VPN. We do not use HIP or VPN for the data traffic - 95.41 Mbits/sec.
-      </para>
-      <para>
-	2. VPN, no HIP. We use VPN for the data traffic - 76.4 Mbits/sec
-      </para>
-      <para>
-	3. HIP, no VPN. We use HIP for the data traffic - 71.45 Mbits/sec
-      </para>
-      <para>
-	4. VPN and HIP. We use HIP over VPN for the data traffic - 36.23 Mbits/sec
-      </para>
-
 
     <!-- id="hip_over_vpn_pitfalls" -->
       <para>
@@ -2718,6 +3055,21 @@ endif
 
   </chapter>
 
+  <chapter id="hipproxy">
+    <title>HIP Proxy</title>
+
+    <para>
+      It might not be possible to run HIP at all with old legacy
+      client hosts even with the userspace IPsec. In such a case, HIP
+      can be migrated to middlebox (e.g. router) by using the so
+      called HIP Proxy. The HIP proxy "translates" connections from
+      the client host to HIP-based connections to servers. The
+      extension is experimental and needs both hipd and hipfw on the
+      middlebox. You can enable the option using "hipconf hipproxy on".
+    </para>
+
+  </chapter>
+
   <chapter id="ch_hip_nat">
     <title>HIP NAT Extensions</title>
     <para>HIPL supports also initiating connections from behind a NAT. The
@@ -3287,7 +3639,7 @@ combo-newgroup=&lt;create new...&gt;
 	capability with the following command:
 	</para>
   	<para>
-  	3. hipconf run opp advanced
+  	3. hipconf set opp advanced
   	</para>
 	<para>
 	To try the feature, we initiate a TCP connection using the HIP
@@ -3322,35 +3674,23 @@ combo-newgroup=&lt;create new...&gt;
 	firewall. It is enabled with the -o option as shown below:
 	</para>
 	<para>
-	hipfw -o
-	</para>
-	<para>
-	The system-based opportunistic mode uses the efficient detection
-	of peer HIP capability. Therefore, the firewall should be run at both
-	peers. Also, HIP efficient detection should be enabled both at the
-	initiator and at the receiver with the following command:
-	</para>
-	<para>
-	hipconf run opp advanced
+	hipfw -dAo
 	</para>
 	<para>
 	Following is an example of all the steps to be followed at two peers 
 	for using the system-based opportunistic mode between them.
 	</para>
   	<para>
-	At the receiver, one can execute these steps:
+	At the responder, one can execute these steps:
 	</para>
   	<para>
 	1. hipd
 	</para>
   	<para>
-  	2. hipfw -dA
+  	2. hipfw -Aod
   	</para>
   	<para>
-  	3. hipconf run opp advanced
-  	</para>
-  	<para>
-	4. nc -l -p port_no
+	3. nc -l 1111
   	</para>
   	<para>
 	At the initiator, one can execute these steps:
@@ -3361,13 +3701,9 @@ combo-newgroup=&lt;create new...&gt;
   	<para>
   	2. hipfw -dAo
   	</para>
-  	<para>
-  	3. hipconf run opp advanced
-  	</para>
 	<para>
-  	4. nc IP_number port_no
+  	3. nc &lt;responder-ip&gt; 1111
 	</para>
-
   </section>
 
   </chapter>
@@ -3500,12 +3836,13 @@ combo-newgroup=&lt;create new...&gt;
       one, it responds with an AAAA response.
     </para>
     <para>
-      The DNS proxy is meant to be run under DJB's daemontools package
+      For faster DNS look ups, you can optionally run the DNS proxy
+      under DJB's daemontools package
       <ulink url="http://cr.yp.to/daemontools.html" /> which is also
-      used to provide necessary environmanet variables, see comments
-      in dnshipproxy. It is recommended to use a DNS cache, like
-      <ulink url="http://cr.yp.to/djbdns.html" /> in front of
-      dnshipproxy. The use without DNS cache results in longer
+      used to provide some necessary environment variables (see comments
+      in dnshipproxy). It acts as a DNS cache 
+      (see <ulink url="http://cr.yp.to/djbdns.html" />) in front of
+      dnshipproxy. The use of DNS proxy without DNS cache results in longer
       look up latencies.
     </para>
 

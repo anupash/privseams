@@ -20,6 +20,12 @@
 #define HIP_TMP_FNAME_TEMPLATE "/tmp/hip_XXXXXX"
 #define HIP_TMP_FNAME_LEN strlen(HIP_TMP_FNAME_TEMPLATE)
 
+struct hosts_file_line {
+  char *hostname, *alias;
+  struct in6_addr id;
+  int lineno;
+};
+
 /* mktemp results to a compiler warning - or actually in a host of warnings
  * since this function is called from tens of places.
  * 

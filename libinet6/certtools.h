@@ -53,6 +53,7 @@ struct hip_cert_spki_info {
 };
 
 /** SPKI cert related functions **/
+int hip_cert_spki_lib_verify(struct hip_cert_spki_info *);
 int hip_cert_spki_create_cert(struct hip_cert_spki_info *,
                               char *, struct in6_addr *,
                               char *, struct in6_addr *,

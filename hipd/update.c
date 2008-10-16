@@ -10,7 +10,7 @@
  * @author  Samu Varjonen <samu.varjonen#hiit.fi>
  * @version 1.0
  * @date    08.01.2008
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  * @note    Based on
  *          <a href="http://www1.ietf.org/mail-archive/web/hipsec/current/msg01745.html">Simplified state machine</a>
  */
@@ -2065,6 +2065,7 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 		HIP_ERROR("SPI listaddr list copy failed\n");
 		goto out_err;
 	}
+#if 0
 	if (addr_count == spi_in->addresses_n &&
 	    addr_list && spi_in->addresses &&
 	    memcmp(addr_list, spi_in->addresses,
@@ -2075,6 +2076,7 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 	} else {
 		HIP_DEBUG("Address set has changed, continue\n");
 	}
+#endif
 
 	/* dont go to out_err but to ... */
 	if(!addr_list) {
@@ -2964,6 +2966,23 @@ out_err:
 	return err;
 }
 
+
+
+int hip_update_handle_stun(void* pkg, int len,
+	 in6_addr_t *src_addr, in6_addr_t * dst_addr,
+	 hip_ha_t *entry,
+	 hip_portpair_t *sinfo)
+{
+	if(entry){
+		HIP_DEBUG_HIT("receive a stun  from 2:  " ,src_addr );
+		hip_external_ice_receive_pkt(pkg, len, entry, src_addr, sinfo->src_port);
+	}
+	else{
+		HIP_DEBUG_HIT("receive a stun  from 1:   " ,src_addr );
+		hip_external_ice_receive_pkt_all(pkg, len, src_addr, sinfo->src_port);
+	}
+}
+
 /**
  * Builds udp and raw locator items into locator list to msg
  * this is the extension of hip_build_locators in output.c
@@ -2974,7 +2993,7 @@ out_err:
  */
 int hip_build_locators(struct hip_common *msg)
 {
-	int err = 0, i = 0, ii = 0, addr_count1 = 0, addr_count2 = 0,UDP_relay_count = 0;
+    int err = 0, i = 0, ii = 0, addr_count1 = 0, addr_count2 = 0,UDP_relay_count = 0;
     struct netdev_address *n;
     hip_ha_t *ha_n;
     hip_list_t *item = NULL, *tmp = NULL;
@@ -3099,19 +3118,3 @@ int hip_build_locators(struct hip_common *msg)
     if (locs2) free(locs2);
     return err;
 }
-
-int hip_update_handle_stun(void* pkg, int len,
-	 in6_addr_t *src_addr, in6_addr_t * dst_addr,
-	 hip_ha_t *entry,
-	 hip_portpair_t *sinfo)
-{
-	if(entry){
-		HIP_DEBUG_HIT("receive a stun  from 2:  " ,src_addr );
-		hip_external_ice_receive_pkt(pkg, len, entry, src_addr, sinfo->src_port);
-	}
-	else{
-		HIP_DEBUG_HIT("receive a stun  from 1:   " ,src_addr );
-		hip_external_ice_receive_pkt_all(pkg, len, src_addr, sinfo->src_port);
-	}
-}
-

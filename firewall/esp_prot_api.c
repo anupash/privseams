@@ -2,7 +2,20 @@
 #include "esp_prot_fw_msg.h"
 #include "firewall_defines.h"
 
+extern const uint8_t preferred_transforms[NUM_TRANSFORMS + 1] =
+		{ESP_PROT_TFM_SHA1_20, ESP_PROT_TFM_UNUSED};
 
+extern const hash_function_t hash_functions[NUM_HASH_FUNCTIONS]
+				   = {SHA1};
+extern const int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS]
+				   = {{20}};
+
+
+static const int bex_hchain_length = 100;
+static const int update_hchain_lengths[NUM_UPDATE_HCHAIN_LENGTHS] = {100};
+
+// changed for measurements
+#if 0
 /* preference of the supported transforms in decreasing order
  *
  * @note make sure to always include ESP_PROT_TFM_UNUSED
@@ -11,14 +24,15 @@ extern const uint8_t preferred_transforms[NUM_TRANSFORMS + 1] =
 		{ESP_PROT_TFM_SHA1_20, ESP_PROT_TFM_SHA1_16, ESP_PROT_TFM_MD5_16,
 				ESP_PROT_TFM_SHA1_8, ESP_PROT_TFM_MD5_8, ESP_PROT_TFM_UNUSED};
 
-static const hash_function_t hash_functions[NUM_HASH_FUNCTIONS]
+extern const hash_function_t hash_functions[NUM_HASH_FUNCTIONS]
 				   = {SHA1, MD5};
-static const int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS]
+extern const int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS]
 				   = {{8, 16, 20}, {8, 16, 0}};
 
 
-static const int bex_hchain_length = 500000;
-static const int update_hchain_lengths[NUM_UPDATE_HCHAIN_LENGTHS] = {1000};
+static const int bex_hchain_length = 100000;
+static const int update_hchain_lengths[NUM_UPDATE_HCHAIN_LENGTHS] = {100000};
+#endif
 
 
 /* stores the mapping transform_id -> (function_id, hash_length_id)
@@ -27,12 +41,16 @@ static const int update_hchain_lengths[NUM_UPDATE_HCHAIN_LENGTHS] = {1000};
 esp_prot_tfm_t esp_prot_transforms[NUM_TRANSFORMS];
 
 
-
-
 // this store only contains hchains used when negotiating esp protection in BEX
 hchain_store_t bex_store;
 // this stores hchains used during UPDATE
 hchain_store_t update_store;
+
+
+#ifdef CONFIG_HIP_MEASUREMENTS
+statistics_data_t update_stats;
+hcupdate_track_t hcupdate_tracking;
+#endif
 
 
 int esp_prot_init()
@@ -44,6 +62,11 @@ int esp_prot_init()
 	int activate = 1;
 
 	HIP_DEBUG("Initializing the esp protection extension...\n");
+
+#ifdef CONFIG_HIP_MEASUREMENTS
+	memset(&update_stats, 0, sizeof(statistics_data_t));
+	memset(&hcupdate_tracking, 0, sizeof(hcupdate_track_t));
+#endif
 
 	/* activate the extension in hipd
 	 *
@@ -91,8 +114,10 @@ int esp_prot_init()
 
 				// store these IDs in the transforms array
 				HIP_DEBUG("adding transform: %i\n", transform_id + 1);
+
 				esp_prot_transforms[transform_id].hash_func_id = bex_function_id;
 				esp_prot_transforms[transform_id].hash_length_id = bex_hash_length_id;
+
 				transform_id++;
 
 				/* also register the the hchain lengths for this function and this
@@ -100,6 +125,10 @@ int esp_prot_init()
 				HIP_IFEL(hcstore_register_hchain_length(&bex_store, bex_function_id,
 						bex_hash_length_id, bex_hchain_length) < 0, -1,
 						"failed to register hchain-length in bex-store\n");
+				/* register number of hierarchies in BEX-store */
+				HIP_IFEL(hcstore_register_hchain_hierarchy(&bex_store, bex_function_id,
+						bex_hash_length_id, bex_hchain_length, NUM_BEX_HIERARCHIES) < 0,
+						-1, "failed to register hchain-hierarchy in bex-store\n");
 
 				for (g = 0; g < NUM_UPDATE_HCHAIN_LENGTHS; g++)
 				{
@@ -107,6 +136,10 @@ int esp_prot_init()
 							update_function_id, update_hash_length_id,
 							update_hchain_lengths[g]) < 0, -1,
 							"failed to register hchain-length in update-store\n");
+					HIP_IFEL(hcstore_register_hchain_hierarchy(&update_store,
+							update_function_id, update_hash_length_id,
+							update_hchain_lengths[g], NUM_UPDATE_HIERARCHIES) < 0,
+							-1, "failed to register hchain-hierarchy in update-store\n");
 				}
 			} else
 			{
@@ -132,6 +165,10 @@ int esp_prot_uninit()
 {
 	int err = 0, i;
 	int activate = 0;
+#ifdef CONFIG_HIP_MEASUREMENTS
+	uint32_t num_items = 0;
+	double min = 0.0, max = 0.0, avg = 0.0, std_dev = 0.0;
+#endif
 
 	// uninit hcstores
 	hcstore_uninit(&bex_store);
@@ -147,6 +184,14 @@ int esp_prot_uninit()
 	HIP_IFEL(send_esp_prot_to_hipd(activate), -1,
 			"failed to activate the esp protection in hipd\n");
 
+#ifdef CONFIG_HIP_MEASUREMENTS
+	//calculate statistics for distance measurements
+	calc_statistics(&update_stats, &num_items, &min, &max, &avg, &std_dev,
+			STATS_IN_MSECS);
+	printf("update time - num_data_items: %u, min: %.3fms, max: %.3fms, avg: %.3fms, std_dev: %.3fms\n",
+			num_items, min, max, avg, std_dev);
+#endif
+
   out_err:
 	return err;
 }
@@ -155,6 +200,10 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 		unsigned char *esp_prot_anchor, int update)
 {
 	int hash_length = 0, err = 0;
+#ifdef CONFIG_HIP_MEASUREMENTS
+	uint64_t update_time = 0;
+	struct timeval now;
+#endif
 
 	HIP_ASSERT(entry != 0);
 	// esp_prot_transform >= 0 due to datatype
@@ -193,6 +242,16 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 
 			} else
 			{
+#ifdef CONFIG_HIP_MEASUREMENTS
+				if (memcmp(esp_prot_anchor, &hcupdate_tracking.update_anchor,
+						hash_length))
+				{
+					gettimeofday(&now, NULL);
+					update_time = calc_timeval_diff(&hcupdate_tracking.time_start, &now);
+					add_statistics_item(&update_stats, update_time);
+				}
+#endif
+
 				HIP_ASSERT(entry->next_hchain != NULL);
 
 				/* esp_prot_sadb_maintenance should have already set up the next_hchain,
@@ -309,148 +368,120 @@ int esp_prot_add_hash(unsigned char *out_hash, int *out_length,
 
 int esp_prot_verify(hip_sa_entry_t *entry, unsigned char *hash_value)
 {
+	hash_function_t hash_function = NULL;
 	int hash_length = 0;
 	int err = 0;
 
 	HIP_ASSERT(entry != NULL);
 	HIP_ASSERT(hash_value != NULL);
+	// esp_prot_transform >= 0 due to data-type
+	HIP_ASSERT(entry->esp_prot_transform <= NUM_TRANSFORMS);
 
-	HIP_IFEL((err = esp_prot_verify_hash(entry->esp_prot_transform,
-			entry->active_anchor, entry->next_anchor, hash_value,
-			entry->esp_prot_tolerance)) < 0, -1, "failed to verify hash\n");
-
-	// anchors have changed, tell hipd about it
-	if (err > 0)
+	if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED)
 	{
-		HIP_DEBUG("anchor change occurred, handled now\n");
-
+		hash_function = esp_prot_get_hash_function(entry->esp_prot_transform);
 		hash_length = esp_prot_get_hash_length(entry->esp_prot_transform);
 
-		memcpy(entry->active_anchor, entry->next_anchor, hash_length);
-		free(entry->next_anchor);
-		entry->next_anchor = NULL;
+		HIP_IFEL((err = esp_prot_verify_hash(hash_function, hash_length,
+				entry->active_anchor, entry->next_anchor, hash_value,
+				entry->esp_prot_tolerance)) < 0, -1, "failed to verify hash\n");
 
-		/* notify hipd about the switch to the next hash-chain for
-		 * consistency reasons */
-		HIP_IFEL(send_anchor_change_to_hipd(entry), -1,
-				"unable to notify hipd about hchain change\n");
+		// anchors have changed, tell hipd about it
+		if (err > 0)
+		{
+			HIP_DEBUG("anchor change occurred, handled now\n");
 
-		err = 0;
+			memcpy(entry->active_anchor, entry->next_anchor, hash_length);
+			free(entry->next_anchor);
+			entry->next_anchor = NULL;
+
+			/* notify hipd about the switch to the next hash-chain for
+			 * consistency reasons */
+			HIP_IFEL(send_anchor_change_to_hipd(entry), -1,
+					"unable to notify hipd about hchain change\n");
+
+			err = 0;
+		}
 	}
 
   out_err:
 	return err;
 }
 
-int esp_prot_conntrack_verify(struct esp_tuple *esp_tuple, struct hip_esp *esp)
-{
-	int hash_length = 0;
-	int err = 0;
-
-	/* check ESP protection anchor if extension is in use */
-	HIP_IFEL((err = esp_prot_verify_hash(esp_tuple->esp_prot_tfm,
-			esp_tuple->active_anchor, esp_tuple->next_anchor,
-			((unsigned char *) esp) + sizeof(struct hip_esp),
-			DEFAULT_VERIFY_WINDOW)) < 0, -1,
-			"failed to verify ESP protection hash\n");
-
-	// this means there was a change in the anchors
-	if (err > 0)
-	{
-		HIP_DEBUG("anchor change occurred, handled now\n");
-
-		hash_length = esp_prot_get_hash_length(esp_tuple->esp_prot_tfm);
-
-		memcpy(esp_tuple->active_anchor, esp_tuple->next_anchor, hash_length);
-		memcpy(esp_tuple->first_active_anchor, esp_tuple->next_anchor,
-				hash_length);
-		free(esp_tuple->next_anchor);
-		esp_tuple->next_anchor = NULL;
-
-		// no error case
-		err = 0;
-
-	}
-
-  out_err:
-	return err;
-}
-
-/* verifies received hchain-elements
+/* verifies received hchain-elements - should only be called with ESP
+ * extension in use
  *
  * returns 0 - ok or UNUSED, < 0 err, > 0 anchor change */
-int esp_prot_verify_hash(uint8_t transform, unsigned char *active_anchor,
-		unsigned char *next_anchor, unsigned char *hash_value, int tolerance)
+int esp_prot_verify_hash(hash_function_t hash_function, int hash_length,
+		unsigned char *active_anchor, unsigned char *next_anchor,
+		unsigned char *hash_value, int tolerance)
 {
-	hash_function_t hash_function = NULL;
-	int hash_length = 0;
+	uint32_t tmp_distance = 0;
 	int err = 0;
+#ifdef CONFIG_HIP_MEASUREMENTS
+	extern statistics_data_t hash_distance;
+#endif
 
-	// esp_prot_transform >= 0 due to data-type
-	HIP_ASSERT(transform <= NUM_TRANSFORMS);
+	HIP_ASSERT(hash_function != NULL);
+	HIP_ASSERT(hash_length > 0);
+	HIP_ASSERT(active_anchor != NULL);
 	// next_anchor may be NULL
 	HIP_ASSERT(hash_value != NULL);
 	HIP_ASSERT(tolerance >= 0);
 
-	if (transform > ESP_PROT_TFM_UNUSED)
+	HIP_DEBUG("hash length is %i\n", hash_length);
+	HIP_HEXDUMP("active_anchor: ", active_anchor, hash_length);
+	HIP_DEBUG("hchain element of incoming packet to be verified:\n");
+	HIP_HEXDUMP("-> ", hash_value, hash_length);
+
+	HIP_DEBUG("checking active_anchor...\n");
+	if (tmp_distance = hchain_verify(hash_value, active_anchor, hash_function,
+			hash_length, tolerance))
 	{
-		HIP_ASSERT(active_anchor != NULL);
+		// this will allow only increasing elements to be accepted
+		memcpy(active_anchor, hash_value, hash_length);
 
-		hash_function = esp_prot_get_hash_function(transform);
-		hash_length = esp_prot_get_hash_length(transform);
-		HIP_DEBUG("hash length is %i\n", hash_length);
+		HIP_DEBUG("hash matches element in active hash-chain\n");
 
-		HIP_HEXDUMP("active_anchor: ", active_anchor, hash_length);
-		HIP_DEBUG("hchain element of incoming packet to be verified:\n");
-		HIP_HEXDUMP("-> ", hash_value, hash_length);
-
-		HIP_DEBUG("checking active_anchor...\n");
-		if (hchain_verify(hash_value, active_anchor, hash_function,
-				hash_length, tolerance))
+	} else
+	{
+		if (next_anchor != NULL)
 		{
-			// this will allow only increasing elements to be accepted
-			memcpy(active_anchor, hash_value, hash_length);
+			/* there might still be a chance that we have to switch to the
+			 * next hchain implicitly */
+			HIP_DEBUG("checking next_anchor...\n");
+			HIP_HEXDUMP("next_anchor: ", next_anchor, hash_length);
 
-			HIP_DEBUG("hash matches element in active hash-chain\n");
-
-		} else
-		{
-			if (next_anchor != NULL)
+			if (tmp_distance = hchain_verify(hash_value, next_anchor, hash_function,
+					hash_length, tolerance))
 			{
-				/* there might still be a chance that we have to switch to the
-				 * next hchain implicitly */
-				HIP_DEBUG("checking next_anchor...\n");
-				HIP_HEXDUMP("next_anchor: ", next_anchor, hash_length);
+				HIP_DEBUG("hash matches element in next hash-chain\n");
 
-				if (hchain_verify(hash_value, next_anchor, hash_function,
-						hash_length, tolerance))
-				{
-					HIP_DEBUG("hash matches element in next hash-chain\n");
-
-					// we have to notify about the change
-					err = 1;
-
-				} else
-				{
-					// handle incorrect elements -> drop packet
-					err = -1;
-					goto out_err;
-				}
+				// we have to notify about the change
+				err = 1;
 
 			} else
 			{
+				HIP_DEBUG("neither active nor update hchain could verify hash element\n");
+
 				// handle incorrect elements -> drop packet
 				err = -1;
 				goto out_err;
 			}
-		}
-	} else
-	{
-		HIP_DEBUG("esp protection extension UNUSED\n");
 
-		// this explicitly is no error condition
-		err = 0;
+		} else
+		{
+			HIP_DEBUG("active hchain could not verify hash element, update hchain not set\n");
+
+			// handle incorrect elements -> drop packet
+			err = -1;
+			goto out_err;
+		}
 	}
+
+#ifdef CONFIG_HIP_MEASUREMENTS
+	add_statistics_item(&hash_distance, tmp_distance);
+#endif
 
   out_err:
 	if (err == -1)
@@ -474,6 +505,8 @@ esp_prot_tfm_t * esp_prot_resolve_transform(uint8_t transform)
 	else
 		return NULL;
 }
+
+
 
 /* returns NULL for UNUSED transform */
 hash_function_t esp_prot_get_hash_function(uint8_t transform)
@@ -578,6 +611,9 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 {
 	esp_prot_tfm_t *prot_transform = NULL;
 	int err = 0;
+#ifdef CONFIG_HIP_MEASUREMENTS
+	int hash_length = 0;
+#endif
 
 	HIP_ASSERT(entry != NULL);
 	// esp_prot_transform >= 0 due to data-type
@@ -586,8 +622,8 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 	// first check the extension is used for this connection
 	if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED)
 	{
-		HIP_ASSERT(entry->esp_prot_transform > 0
-				&& entry->esp_prot_transform <= NUM_TRANSFORMS);
+		// entry->esp_prot_transform > 0 due to data type
+		HIP_ASSERT(entry->esp_prot_transform <= NUM_TRANSFORMS);
 
 		/* make sure that the next hash-chain is set up before the active one
 		 * depletes */
@@ -606,7 +642,7 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 			 */
 			HIP_IFEL(!(entry->next_hchain = hcstore_get_hchain(&update_store,
 					prot_transform->hash_func_id, prot_transform->hash_length_id,
-					update_hchain_lengths[DEFAULT_HCHAIN_LENGTH_ID])),
+					update_hchain_lengths[DEFAULT_HCHAIN_LENGTH_ID], 0)),
 					-1, "unable to retrieve hchain from store\n");
 
 			//printf("is set\n");
@@ -614,6 +650,14 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 			// issue UPDATE message to be sent by hipd
 			HIP_IFEL(send_trigger_update_to_hipd(entry), -1,
 					"unable to trigger update at hipd\n");
+
+#ifdef CONFIG_HIP_MEASUREMENTS
+			hash_length = esp_prot_get_hash_length(entry->esp_prot_transform);
+
+			memset(&hcupdate_tracking.update_anchor,
+					entry->next_hchain->anchor_element->hash, hash_length);
+			gettimeofday(&hcupdate_tracking.time_start, NULL);
+#endif
 
 			// refill update-store
 			HIP_IFEL((err = hcstore_refill(&update_store)) < 0, -1,

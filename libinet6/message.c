@@ -5,7 +5,7 @@
  * @author  Miika Komu <miika_iki.fi>
  * @author  Bing Zhou <bingzhou_cc.hut.fi>
  * @version 1.0
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  * @see     message.h
  * @todo    Asynchronous term should be replaced with a better one.
  * @todo    Asynchronous messages should also have a counterpart that receives
@@ -35,7 +35,6 @@ int hip_peek_recv_total_len(int socket, int encap_hdr_size)
 	HIP_IFEL(!msg, -ENOMEM, "Error allocating memory.\n");
 
 	bytes = recv(socket, msg, hdr_size, MSG_PEEK);
-
 	if(bytes < 0) {
 		HIP_ERROR("recv() peek error (is hipd running?)\n");
 		err = -EAGAIN;
@@ -116,15 +115,17 @@ int hip_daemon_bind_socket(int socket, struct sockaddr *sa) {
 	}
 
 	if (addr->sin6_port) {
-		_HIP_DEBUG("Bind to fixed port %d\n", addr->sin6_port);
+		HIP_DEBUG("Bind to fixed port %d\n", addr->sin6_port);
 		err = bind(socket,(struct sockaddr *)addr,
 			   sizeof(struct sockaddr_in6));
 		err = -errno;
 		goto out_err;
 	}
 
-	for(port = 1023; port > 25; port--) {
-        _HIP_DEBUG("trying bind() to port %d\n", port);
+	/* try to bind first to a priviledged port and then to ephemeral */
+	port = 1000;
+	while (port++ < 61000) {
+		_HIP_DEBUG("trying bind() to port %d\n", port);
 		addr->sin6_port = htons(port);
 		err = bind(socket,(struct sockaddr *)addr,
 			   hip_sockaddr_len(addr));
@@ -132,9 +133,14 @@ int hip_daemon_bind_socket(int socket, struct sockaddr *sa) {
 			if (errno == EACCES) {
 				/* Ephemeral ports:
 				   /proc/sys/net/ipv4/ip_local_port_range */
-				HIP_DEBUG("Use ephemeral port number in connect\n");
+				_HIP_DEBUG("Skipping to ephemeral range\n");
+				port = 32768;
+				errno = 0;
 				err = 0;
-				break;
+			} else if (errno == EADDRINUSE) {
+				_HIP_DEBUG("Port %d in use, skip\n", port);
+				errno = 0;
+				err = 0;
 			} else {
 				HIP_ERROR("Error %d bind() wasn't succesful\n",
 					  errno);
@@ -148,18 +154,17 @@ int hip_daemon_bind_socket(int socket, struct sockaddr *sa) {
 		}
 	}
 
-	if (port == 26) {
+	if (port == 61000) {
 		HIP_ERROR("All privileged ports were occupied\n");
 		err = -1;
 	}
 
  out_err:
-	errno = 0;
 	return err;
 }
 
 int
-hip_sendto_hipd(int socket, void *msg, size_t len)
+hip_sendto_hipd(int socket, struct hip_common *msg)
 {
 	/* Variables. */
 	struct sockaddr_in6 sock_addr;
@@ -174,7 +179,7 @@ hip_sendto_hipd(int socket, void *msg, size_t len)
 
 	HIP_DEBUG("Sending user message to HIPD on socket %d\n", socket);
 
-	n = sendto(socket, msg, len, MSG_NOSIGNAL,
+	n = sendto(socket, msg, hip_get_msg_total_len(msg), MSG_NOSIGNAL,
 		   (struct sockaddr *)&sock_addr, alen);
 	HIP_DEBUG("Sent %d bytes\n", n);
 	return n;
@@ -205,12 +210,9 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 	addr.sin6_family = AF_INET6;
 	addr.sin6_addr = in6addr_loopback;
 
-
 	HIP_IFEL(hip_daemon_bind_socket(hip_user_sock,
 					(struct sockaddr *) &addr), -1,
 		 "bind failed\n");
-
-
 
 	HIP_IFEL(hip_daemon_connect(hip_user_sock), -1,
 		 "connect failed\n");
@@ -218,7 +220,6 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 	if ((len = hip_get_msg_total_len(msg)) < 0) {
 		err = -EBADMSG;
 		goto out_err;
-
 	}
 
 	//n = hip_sendto_hipd (sock, msg, len);
@@ -252,6 +253,8 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 		HIP_ERROR("HIP message contained an error.\n");
 		err = -EHIP;
 	}
+
+	_HIP_DEBUG("Message received successfully\n");
 
  out_err:
 
@@ -325,7 +328,7 @@ int hip_read_user_control_msg(int socket, struct hip_common *hip_msg,
 				    (struct sockaddr *) saddr,
 				    &len)) != total), -1, "recv\n");
 
-	_HIP_DEBUG("received user message from local port %d\n",
+	HIP_DEBUG("received user message from local port %d\n",
 		   ntohs(saddr->sin6_port));
 	_HIP_DEBUG("read_user_control_msg recv len=%d\n", len);
 	_HIP_HEXDUMP("recv saddr ", saddr, sizeof(struct sockaddr_un));
@@ -358,17 +361,18 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
         char cbuff[CMSG_SPACE(256)];
         int err = 0, len;
 	int cmsg_level, cmsg_type;
-	char tmp[1];
 
 	HIP_ASSERT(saddr);
 	HIP_ASSERT(daddr);
 
 	HIP_DEBUG("hip_read_control_msg_all() invoked.\n");
 
-	HIP_IFEL((len = hip_peek_recv_total_len(socket, encap_hdr_size))<= 0,
+	HIP_IFEL(((len = hip_peek_recv_total_len(socket, encap_hdr_size))<= 0),
 		 -1, "Bad packet length (%d)\n", len);
 
 	memset(msg_info, 0, sizeof(hip_portpair_t));
+	memset(&msg, 0, sizeof(msg));
+	memset(cbuff, 0, sizeof(cbuff));
 	memset(&addr_to, 0, sizeof(addr_to));
 
         /* setup message header with control and receive buffers */

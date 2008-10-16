@@ -2,7 +2,7 @@
  * The HIPL main file containing the daemon main loop.
  *
  * @date 28.01.2008
- * @note Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @note Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  * @note HIPU: libm.a is not availble on OS X. The functions are present in libSystem.dyld, though
  * @note HIPU: lcap is used by HIPD. It needs to be changed to generic posix functions.
  */
@@ -33,7 +33,7 @@ int hip_nat_status = 0;
 
 /** ICMPv6 socket and the interval 0 for interval means off **/
 int hip_icmp_sock = 0;
-int hip_icmp_interval = 0;
+int hip_icmp_interval = 20;
 
 /** Specifies the HIP PROXY status of the daemon. This value indicates if the HIP PROXY is running. */
 int hipproxy = 0;
@@ -54,16 +54,11 @@ int hip_agent_status = 0;
 struct sockaddr_in6 hip_firewall_addr;
 int hip_firewall_sock = 0;
 
-/*
-   HIP transform suite order
-   0 = AES_SHA1, 3DES_SHA1, NULL_SHA1
-   1 = 3DES_SHA1, AES_SHA1, NULL_SHA1
-   2 = AES_SHA1, NULL_SHA1, 3DES_SHA1
-   3 = 3DES_SHA1, NULL_SHA1, AES_SHA1
-   4 = NULL_SHA1, AES_SHA1, 3DES_SHA1
-   5 = NULL_SHA1, 3DES_SHA1, AES_SHA1
+/* used to change the transform order see hipconf usage to see the usage 
+   This is set to AES, 3DES, NULL by default see hipconf trasform order for
+   more information.
 */
-int hip_transform_order = 0;
+int hip_transform_order = 123;
 
 /* OpenDHT related variables */
 int hip_opendht_sock_fqdn = -1; /* FQDN->HIT mapping */
@@ -162,9 +157,11 @@ int hip_get_opportunistic_tcp_status()
 }
 
 void usage() {
-	fprintf(stderr, "HIPL Daemon %.2f\n", HIPL_VERSION);
+	//fprintf(stderr, "HIPL Daemon %.2f\n", HIPL_VERSION);
         fprintf(stderr, "Usage: hipd [options]\n\n");
 	fprintf(stderr, "  -b run in background\n");
+	fprintf(stderr, "  -k kill existing hipd\n");
+	fprintf(stderr, "  -N do not flush ipsec rules on exit\n");
 #ifdef CONFIG_HIP_HI3
 	fprintf(stderr, "  -3 <i3 client configuration file>\n");
 #endif
@@ -408,11 +405,11 @@ int hipd_main(int argc, char *argv[])
 		/* wait for socket activity */
 
                 /* If DHT is on have to use write sets for asynchronic communication */
-		              if (hip_opendht_inuse == SO_HIP_DHT_ON) {
+		if (hip_opendht_inuse == SO_HIP_DHT_ON) {
                         if ((err = HIPD_SELECT((highest_descriptor + 1), &read_fdset,
                                                &write_fdset, NULL, &timeout)) < 0) {
-			HIP_ERROR("select() error: %s.\n", strerror(errno));
-			goto to_maintenance;
+				HIP_ERROR("select() error: %s.\n", strerror(errno));
+				goto to_maintenance;
                         } else if (err == 0) {
                                 /* idle cycle - select() timeout */
                                 _HIP_DEBUG("Idle.\n");
