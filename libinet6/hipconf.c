@@ -1743,7 +1743,7 @@ int hip_conf_print_info_ha(struct hip_hadb_user_info_state *ha)
         HIP_INFO_IN6ADDR(" Peer  IP", &ha->ip_peer);
 	if (ha->heartbeats_on > 0 && ha->state == HIP_STATE_ESTABLISHED) {
 		HIP_DEBUG(" Heartbeat %.3f ms mean RTT, "
-			  "%.3f ms variance,\n"
+			  "%.3f ms std dev,\n"
 			  " %d packets sent,"
 			  " %d packets received,"
 			  " %d packet lost\n",
