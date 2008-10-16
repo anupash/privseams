@@ -191,7 +191,7 @@ int hip_create_socket(struct net *net, struct socket *sock, int protocol)
 
 
 int hip_socket_release(struct socket *sock)
-{	
+{
 	int err = 0;
 	struct proto_ops *socket_handler;
 
@@ -464,12 +464,11 @@ int hip_socket_getname(struct socket *sock,
 			  (peer ? "peer" : "local"));
 		goto out_err;
 	}
+#endif
 
 	sockaddr_eid->eid_port = (peer) ? inet->dport : inet->sport;
-
 	*usockaddr_len = sizeof(struct sockaddr_eid);
 
-#endif
 
  out_err:
 

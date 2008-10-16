@@ -501,8 +501,9 @@ int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
  */
 int main_client_native(int socktype, char *peer_name, char *peer_port_name)
 {
-	struct endpointinfo hints, *epinfo, *res = NULL;
-	//struct addrinfo hints, *res = NULL;
+	//struct endpointinfo hints, *epinfo, *res = NULL;
+	struct endpointinfo *epinfo;
+	struct addrinfo hints, *res = NULL;
 	struct timeval stats_before, stats_after;
 	unsigned long stats_diff_sec, stats_diff_usec;
 	char mylovemostdata[IP_MAXPACKET];
@@ -523,22 +524,23 @@ int main_client_native(int socktype, char *peer_name, char *peer_port_name)
 
 	/* set up host lookup information  */
 	memset(&hints, 0, sizeof(hints));
-	hints.ei_socktype = socktype;
-	hints.ei_family = endpoint_family;
-	//hints.ai_socktype = socktype;
-	//hints.ai_family = endpoint_family;
+	//hints.ei_socktype = socktype;
+	//hints.ei_family = endpoint_family;
+	hints.ai_socktype = socktype;
+	hints.ai_family = endpoint_family;
 	/* Use the following flags to use only the kernel list for name resolution
 	 * hints.ei_flags = AI_HIP | AI_KERNEL_LIST;
 	 */
 
 	/* lookup host */
-	err = getendpointinfo(peer_name, peer_port_name, &hints, &res);
+	//err = getendpointinfo(peer_name, peer_port_name, &hints, &res);
 	if (err) {
 		HIP_ERROR("getendpointfo failed\n");
 		goto out_err;
 	}
 	//hints.ai_flags |= AI_EXTFLAGS;
 	//hints.ai_eflags |= HIP_PREFER_ORCHID;
+hints.ai_flags = AI_HIP_NATIVE;
 	err = getaddrinfo(peer_name, peer_port_name, &hints, &res);
 	if (err) {
 		HIP_ERROR("getaddrinfo failed (%d): %s\n", err, gepi_strerror(err));
@@ -703,7 +705,7 @@ HIP_DEBUG("port %d\n", our_sockaddr.ship_port);
 				mylovemostdata[recvnum] = '\0';
 				printf("%s", mylovemostdata);
 				fflush(stdout);
-	
+
 				/* send reply */
 				sendnum = send(sockfd, mylovemostdata, recvnum, 0);
 				if (sendnum < 0) {
@@ -714,21 +716,20 @@ HIP_DEBUG("port %d\n", our_sockaddr.ship_port);
 			}
 		} else { /* UDP */
 			sockfd = serversock;
-			while(recvnum = recvfrom(sockfd, mylovemostdata,
+			serversock = 0;
+
+			while((recvnum = recvfrom(sockfd, mylovemostdata,
 						 sizeof(mylovemostdata), 0,
 						 (struct sockaddr *) &peer_sock,
-						 &peer_eid_len) > 0) {
+						 &peer_eid_len)) > 0) {
 				mylovemostdata[recvnum] = '\0';
 				printf("%s", mylovemostdata);
 				fflush(stdout);
 
-HIP_DEBUG("received %d bytes\n", recvnum);
-HIP_DEBUG("received: %s\n", mylovemostdata);
-
 				/* send reply */
 				sendnum = sendto(sockfd, mylovemostdata, recvnum, 0,
 						 (struct sockaddr *) &peer_sock, peer_eid_len);
-HIP_PERROR("sendto: ");
+
 				if (sendnum < 0) {
 					HIP_PERROR("sendto: ");
 					err = 1;
