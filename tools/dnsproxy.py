@@ -285,7 +285,9 @@ class Global:
                 qtype = q1['qtype']
                 sent_answer = 0
                 m = None
-                if qtype == 28 or qtype == 1:     # AAAA or A
+
+		# a
+                if qtype == 1:
                     nam = q1['qname']
                     lr = gp.getbyname(nam)
                     if lr:
@@ -295,7 +297,7 @@ class Global:
                               'class': 1,
                               'ttl': 10,
                               }
-                        fout.write('Hosts A2  %s\n' % (a2,))
+                        fout.write('Hosts A  %s\n' % (a2,))
                         m = DNS.Lib.Mpacker()
                         m.addHeader(r.header['id'],
                                     0, 0, 0, 0, 1, 0, 0, 0,
@@ -315,7 +317,7 @@ class Global:
                                   'class': 1,
                                   'ttl': a1['ttl'],
                                   }
-                            fout.write('DNS A2  %s\n' % (a2,))
+                            fout.write('DNS A  %s\n' % (a2,))
                             m = DNS.Lib.Mpacker()
                             m.addHeader(r.header['id'],
                                         0, r1.header['opcode'], 0, 0, r1.header['rd'], 0, 0, 0,
@@ -324,22 +326,63 @@ class Global:
                         else:
                             m = None
 		    if m:
-			if qtype == 1:	#a
-			    try:
-			    	m.addA(a2['name'],a2['class'],a2['ttl'],a2['data'])
-                            	s.sendto(m.buf,from_a)
-                            	sent_answer = 1
-			    except:
-			    	fout.write('except a\n')
+			try:
+			    m.addA(a2['name'],a2['class'],a2['ttl'],a2['data'])
+                            s.sendto(m.buf,from_a)
+                            sent_answer = 1
+			except:
+			    fout.write('except a\n')
 
-			elif qtype == 28:	#aaaa
-			    try:
-			    	m.addAAAA(a2['name'],a2['class'],a2['ttl'],a2['data'])
-                            	s.sendto(m.buf,from_a)
-                            	sent_answer = 1
-			    except:
-			    	fout.write('except aaaa\n')
-                elif qtype == 12:     # PTR
+		# aaaa
+		if qtype == 28:
+                    nam = q1['qname']
+                    lr = gp.getbyaaaa(nam)
+		    print lr
+                    if lr:
+                        a2 = {'name': nam,
+                              'data': lr,
+                              'type': 28,
+                              'class': 1,
+                              'ttl': 10,
+                              }
+                        fout.write('Hosts AAAA  %s\n' % (a2,))
+                        m = DNS.Lib.Mpacker()
+                        m.addHeader(r.header['id'],
+                                    0, 0, 0, 0, 1, 0, 0, 0,
+                                    1, 1, 0, 0)
+                        m.addQuestion(nam,qtype,1)
+                    else:
+                        r1 = d2.req(name=q1['qname'],qtype=55) # 55 is HIP RR
+                        fout.write('r1: %s\n' % (dir(r1),))
+                        fout.write('r1.answers: %s\n' % (r1.answers,))
+                        if r1.answers:
+                            a1 = r1.answers[0]
+                            aa1d = a1['data']
+                            aa1 = aa1d[4:4+16]
+                            a2 = {'name': a1['name'],
+                                  'data': pyip6.inet_ntop(aa1),
+                                  'type': 28,
+                                  'class': 1,
+                                  'ttl': a1['ttl'],
+                                  }
+                            fout.write('DNS AAAA  %s\n' % (a2,))
+                            m = DNS.Lib.Mpacker()
+                            m.addHeader(r.header['id'],
+                                        0, r1.header['opcode'], 0, 0, r1.header['rd'], 0, 0, 0,
+                                        1, 1, 0, 0)
+                            m.addQuestion(a1['name'],qtype,1)
+                        else:
+                            m = None
+		    if m:
+			try:
+			    m.addAAAA(a2['name'],a2['class'],a2['ttl'],a2['data'])
+                            s.sendto(m.buf,from_a)
+                            sent_answer = 1
+			except:
+			    fout.write('except aaaa\n')
+
+		# PTR
+                elif qtype == 12:
                     nam = q1['qname']
                     lr = gp.getbyaaaa(nam)
                     fout.write('Hosts PTR 1 (%s)\n' % (lr,))
@@ -363,7 +406,6 @@ class Global:
                         sent_answer = 1
 
 		elif qtype == 255:#any
-
 		    nam = q1['qname']
                     lr = gp.getbyname(nam)
                     if lr:
@@ -373,7 +415,7 @@ class Global:
                               'type': 28,
                               'class': 1,
                               'ttl': 10,}
-                        fout.write('Hosts A22  %s\n' % (a2,))
+                        fout.write('Hosts A or AAAA  %s\n' % (a2,))
                         m = DNS.Lib.Mpacker()
                         m.addHeader(r.header['id'],
                                     0, 0, 0, 0, 1, 0, 0, 0,
@@ -393,7 +435,7 @@ class Global:
                                   'type': 28,
                                   'class': 1,
                                   'ttl': a1['ttl'],}
-                            fout.write('DNS A2  %s\n' % (a2,))
+                            fout.write('DNS A or AAAA  %s\n' % (a2,))
                             m = DNS.Lib.Mpacker()
                             m.addHeader(r.header['id'],
                                         0, r1.header['opcode'], 0, 0, r1.header['rd'], 0, 0, 0,
@@ -402,16 +444,7 @@ class Global:
                         else:
                             m = None
                     if m:
-			#if qtype == 1:
-			 #   try:
-			  #  	m.add(a2['name'],a2['class'],a2['ttl'],a2['data'])
-                           # 	s.sendto(m.buf,from_a)
-                            #	sent_answer = 1
-			    #except:
-			    #	fout.write('except a\n')
-
-			#else:
-
+			#try ipv4 address by default
 			try:
 			    ip = socket.inet_pton(socket.AF_INET, a2['data'])
 			    fout.write('try\n')
@@ -424,21 +457,21 @@ class Global:
 			    s.sendto(m.buf,from_a)
 			    sent_answer = 1
 
-		    ######### add mapping using hipconf ########
-		    #cmd for executing hipconf dnsproxy command
-		    cmd = "hipconf dnsproxy " + nam + " 3>&1 2>&1 | grep hipconf "
-		    fout.write("COMMAND  %s\n" % (cmd,))
-		    p = os.popen(cmd, "r")
-		    line = p.readline()
-		    #fout.write('*** start *** %s *** end ***\n' % (line2,))
+		########### add mapping using hipconf #####
+		#cmd for executing hipconf dnsproxy command
+		cmd = "hipconf dnsproxy " + nam + " 3>&1 2>&1 | grep hipconf "
+		#fout.write("COMMAND  %s\n" % (cmd,))
+		p = os.popen(cmd, "r")
+		line = p.readline()
 
-		    if line != "":
-			line = line + " 1>/dev/null 2>/dev/null 3>/dev/null"
-		    	fout.write('COMMAND 1  %s\n' % (line,))
-		    	p = os.popen(line)
-		    else:
-			fout.write('No command - %s\n' % (line,))
-		    ###########################################
+		if line != "":
+		    line = line + " 1>/dev/null 2>/dev/null 3>/dev/null"
+		    #fout.write('COMMAND 1  %s\n' % (line,))
+		    p = os.popen(line)
+		else:
+		    fout.write('No command - %s\n' % (line,))
+		## end of - add mapping using hipconf #####
+
 		if not sent_answer:
                     s2.send(buf)
                     r2 = s2.recv(2048)
@@ -448,7 +481,6 @@ class Global:
 		    fout.write('### 1\n')
                     if r.header.get('status') != 'NXDOMAIN':
                         s.sendto(r2,from_a)
-
 
                 fout.flush()
             except Exception,e:

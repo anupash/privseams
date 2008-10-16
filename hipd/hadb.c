@@ -520,13 +520,14 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr,
 
 	memcpy(&peer_map.peer_hit, peer_hit, sizeof(hip_hit_t));
 	memcpy(&peer_map.peer_addr, peer_addr, sizeof(struct in6_addr));
-	memset(&peer_map.peer_hostname, '\n', HIP_HOST_ID_HOSTNAME_LEN_MAX);
+	memset(peer_map.peer_hostname, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX);
 
 	if(peer_lsi)
 	        memcpy(&peer_map.peer_lsi, peer_lsi, sizeof(struct in6_addr));
 
 	if(peer_hostname)
-	        memcpy(&peer_map.peer_hostname, peer_hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX);
+	        memcpy(peer_map.peer_hostname, peer_hostname,
+		       HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
 
 	HIP_IFEL(hip_select_source_address(
 			 &peer_map.our_addr, &peer_map.peer_addr),
