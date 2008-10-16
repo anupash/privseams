@@ -3802,11 +3802,11 @@ combo-newgroup=&lt;create new...&gt;
   <chapter id="ch_dns_data">
     <title>DNS data manipulation</title>
     <para>
-      Tools contains the script parsehipkey which converts public
+      Tools directory contains parsehipkey a script (after running ./autogens.h) which converts public
       key file contents to different DNS zone file formats. To convert
-      to unpatched BIND9 format, use command:
+      to unpatched BIND9 format, run the following:
       <programlisting>
-# ./parsehipkey &lt; felwood/hip_host_dsa_key_pub.pub felwood2.hip-test1.infrahip.net felwood.infrahip.net crossroads.infrahip.net | sed -n -e '/^9BIND */s///p'
+parsehipkey &lt; felwood/hip_host_dsa_key_pub.pub felwood2.hip-test1.infrahip.net felwood.infrahip.net crossroads.infrahip.net | sed -n -e '/^9BIND */s///p'
       </programlisting>
       This outputs a line which can be inserted to a zone
       file. Similarly, with sed command:
