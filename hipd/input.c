@@ -2239,6 +2239,10 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
 	entry->state = HIP_STATE_ESTABLISHED;
 
+	/*For SAVA this lets to register the client on firewall once the keys are established*/
+	hip_firewall_set_i2_data(SO_HIP_FW_I2_DONE, entry, &entry->hit_our, 
+				 &entry->hit_peer, i2_saddr, i2_daddr);
+
         /***** LOCATOR PARAMETER ******/
 	/* Why do we process the LOCATOR parameter only after R2 has been sent?
 	   -Lauri 29.04.2008.
