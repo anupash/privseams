@@ -1968,7 +1968,7 @@ int hip_conf_handle_load(struct hip_common *msg, int action,
 
 	List list;
 	char *c, line[128], *hip_arg, ch, str[128], *fname, *args[64],
-	  *comment;
+		*comment, *nl;
 
 	HIP_IFEL((optc != 1), -1, "Missing arguments\n");
 
@@ -1982,6 +1982,8 @@ int hip_conf_handle_load(struct hip_common *msg, int action,
 		 "Error: can't open config file %s.\n", fname);
 
 	while(err == 0 && fgets(line, sizeof(line), hip_config) != NULL) {
+
+		HIP_DEBUG("line %s\n", line);
 
 		/* Remove whitespace */
 		c = line;
@@ -2003,7 +2005,9 @@ int hip_conf_handle_load(struct hip_common *msg, int action,
 		str[strlen(str)] = ' ';
 		hip_arg = strcat(str, c);
 		/* replace \n with \0  */
-		hip_arg[strlen(hip_arg) - 1] = '\0';
+		nl = strchr(hip_arg, '\n');
+		if (nl)
+			*nl = '\0';
 
 		/* split the line into an array of strings and feed it
 		   recursively to hipconf */
