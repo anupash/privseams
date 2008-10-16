@@ -95,33 +95,12 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			goto out_err;
 		}
 		break;
-#if 0
-	case SO_HIP_DEL_PEER_MAP_HIT_IP:
-		err = hip_del_peer_map(msg);
-		break;
-#endif
 	case SO_HIP_RST:
 		err = hip_send_close(msg);
 		break;
 	case SO_HIP_BOS:
 		err = hip_send_bos(msg);
 		break;
-//modify by santtu
-#if 0
-	case SO_HIP_SET_NAT_ON:
-		/* Sets a flag for each host association that the current
-		   machine is behind a NAT. */
-		HIP_DEBUG("Handling NAT ON user message.\n");
-		HIP_IFEL(hip_nat_on(), -1, "Error when setting daemon NAT status to \"on\"\n");
-		hip_agent_update_status(SO_HIP_SET_NAT_ON, NULL, 0);
-		break;
-	case SO_HIP_SET_NAT_OFF:
-		/* Removes the NAT flag from each host association. */
-		HIP_DEBUG("Handling NAT OFF user message.\n");
-		HIP_IFEL(hip_nat_off(), -1, "Error when setting daemon NAT status to \"off\"\n");
-		hip_agent_update_status(SO_HIP_SET_NAT_OFF, NULL, 0);
-		break;
-#endif
 	case SO_HIP_SET_NAT_ICE_UDP:
 		HIP_DEBUG("Setting LOCATOR ON, when ice is on\n");
         hip_locator_status = SO_HIP_SET_LOCATOR_ON;
@@ -137,7 +116,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		HIP_DEBUG("Recreate all R1s\n");
 		hip_recreate_all_precreated_r1_packets();
 		break;
-//end modify
         case SO_HIP_LOCATOR_GET:
 		HIP_DEBUG("Got a request for locators\n");
 		hip_msg_init(msg);
@@ -742,77 +720,6 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 
 		err = hip_recreate_all_precreated_r1_packets();
 		break;
-#if 0
-	case SO_HIP_ADD_RELAY:
-	{
-		hip_pending_request_t *pending_req = NULL;
-
-		/* draft-ietf-hip-registration-02 HIPRELAY registration.
-		   Responder (of I,Relay,R hierarchy) handles this message. Message
-		   indicates that the current machine wants to register to a HIP
-		   relay server. This message is received from hipconf. */
-		HIP_DEBUG("Handling ADD HIPRELAY user message.\n");
-
-		/* Get HIP relay IP address and HIT that were given as commandline
-		   parameters to hipconf. */
-		HIP_IFEL(!(dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT)),
-			 -1, "Relay server HIT was not found from the message.\n");
-		HIP_IFEL(!(dst_ip = hip_get_param_contents(
-				   msg, HIP_PARAM_IPV6_ADDR)), -1, "Relay server "\
-			 "IP address was not found from the message.\n");
-		/* Create a new host association database entry from the message
-		   received from the hipconf. This creates a HIT to IP mapping
-		   of the relay server. */
-		HIP_IFEL(hip_add_peer_map(msg), -1, "Failed to create a new host "
-			 "association database entry for the relay server.\n");
-		/* Fetch the host association database entry just created. */
-		HIP_IFEL(!(entry = hip_hadb_try_to_find_by_peer_hit(dst_hit)),
-			 -1, "Unable to find host association database entry "\
-			 "matching relay server's HIT.\n");
-
-		/* Set a hiprelay request flag. */
-		hip_hadb_set_local_controls(entry, HIP_HA_CTRL_LOCAL_REQ_RELAY);
-
-		pending_req = (hip_pending_request_t *)
-			malloc(sizeof(hip_pending_request_t));
-		if(pending_req == NULL) {
-			HIP_ERROR("Error on allocating memory for a "\
-				  "pending registration request.\n");
-			err = -1;
-			goto out_err;
-		}
-
-		pending_req->entry    = entry;
-		pending_req->reg_type = HIP_SERVICE_RELAY;
-		/* Use a hard coded value for now. */
-		pending_req->lifetime = 200;
-
-		HIP_DEBUG("Adding pending request.\n");
-		hip_add_pending_request(pending_req);
-#if 0
-		//removed by santtu here
-		/*
-		 * nat mode is more complex now, we must set nat mode
-		 * seperated, not alway assume that if relay is on, nat
-		 * is plain UDP mode.
-		 * */
-		/* Since we are requesting UDP relay, we assume that we are behind
-		   a NAT. Therefore we set the NAT status on. This is needed only
-		   for the current host association, but since keep-alives are sent
-		   currently only if the global NAT status is on, we must call
-		   hip_nat_on() (which in turn sets the NAT status on for all host
-		   associations). */
-		HIP_IFEL(hip_nat_on(), -1, "Error when setting daemon NAT status"\
-			 "to \"on\"\n");
-		hip_agent_update_status(SO_HIP_SET_NAT_ON, NULL, 0);
-		//end remove
-#endif
-		/* Send a I1 packet to relay. */
-		HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry),
-			 -1, "sending i1 failed\n");
-		break;
-	}
-#endif /* 0 */
 	case SO_HIP_OFFER_HIPRELAY:
 		/* draft-ietf-hip-registration-02 HIPRELAY registration. Relay
 		   server handles this message. Message indicates that the
