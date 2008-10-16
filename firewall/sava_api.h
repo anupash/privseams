@@ -148,9 +148,10 @@ int hip_sava_reinject_ip_packet(u8 *msg, u16 len, int protocol);
 
 int hip_sava_handle_output(struct hip_fw_context * ctx);
 
-int hip_sava_init_ip4_raw_socket(int * ip4_raw_socket);
+int hip_sava_init_ip4_raw_socket(int * ip4_raw_socket, int proto);
 
-int hip_sava_init_ip6_raw_socket(int * ip6_raw_socket);
+int hip_sava_init_ip6_raw_socket(int * ip6_raw_socket, int proto);
 
+int hip_sava_reinject_packet(char * buf, int proto);
 
 #endif //HIP_SAVA_API

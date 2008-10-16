@@ -89,10 +89,13 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 	type = hip_get_msg_type(msg);
 
 	switch(type) {
+	case SO_HIP_FW_I2_DONE:
+	        handle_sava_i2_state_update(msg);
+		break;
 	case SO_HIP_FW_BEX_DONE:
 	case SO_HIP_FW_UPDATE_DB:
-		if (hip_lsi_support)
-			handle_bex_state_update(msg);
+	        if(hip_lsi_support)
+	          handle_bex_state_update(msg);
 		break;
 	case SO_HIP_IPSEC_ADD_SA:
 		HIP_DEBUG("Received add sa request from hipd\n");
@@ -400,6 +403,35 @@ int handle_bex_state_update(struct hip_common * msg)
                 case SO_HIP_FW_UPDATE_DB:
 		        err = firewall_set_bex_state(src_hit, dst_hit, 0);
 			break;
+                default:
+		        break;
+	}
+	return err;
+}
+
+int handle_sava_i2_state_update(struct hip_common * msg, int hip_lsi_support)
+{
+	struct in6_addr *src_ip = NULL, *src_hit = NULL;
+	struct hip_tlv_common *param = NULL;
+	int err = 0, msg_type = 0;
+
+	msg_type = hip_get_msg_type(msg);
+
+	/* src_hit */
+        param = (struct hip_tlv_common *)hip_get_param(msg, HIP_PARAM_HIT);
+	src_hit = (struct in6_addr *) hip_get_param_contents_direct(param);
+	HIP_DEBUG_HIT("Source HIT: ", src_hit);
+
+	param = hip_get_next_param(msg, param);
+	src_ip = (struct in6_addr *) hip_get_param_contents_direct(param);
+	HIP_DEBUG_HIT("Source IP: ", src_hit);
+
+	/* update bex_state in firewalldb */
+	switch(msg_type)
+	{
+	        case SO_HIP_FW_I2_DONE:
+		        err = hip_sava_handle_bex_completed (src_ip, src_hit);
+         	        break;
                 default:
 		        break;
 	}

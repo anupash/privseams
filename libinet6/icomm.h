@@ -194,6 +194,8 @@
 #define SO_HIP_GET_SAVAHR_HIT                    157
 #define SO_HIP_GET_SAVAHR_IN_KEYS                158
 #define SO_HIP_GET_SAVAHR_OUT_KEYS                159
+#define SO_HIP_FW_I2_DONE                        160
+
 
 
 /****** FIREWALL ******/

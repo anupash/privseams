@@ -1427,9 +1427,9 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
 	    if (buf->type_hdr == HIP_I2){
 	      HIP_DEBUG("CHECK IP IN THE HIP_I2 STATE \n");
 	      if (hip_sava_ip_entry_find(&ctx->src) != NULL) {
-		HIP_DEBUG("IP already apprears to present in the data base \n");
-		verdict = 0;
-		goto out_err;
+		HIP_DEBUG("IP already apprears to present in the data base. Most likely retransmitting the I2 \n");
+		verdict = ACCEPT;
+		goto filter;
 	      } else {
 		HIP_DEBUG("IP  apprears to be new. Adding to DB \n");
 	      }
@@ -1454,57 +1454,6 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
 		hit_entry->link = ip_entry; 
 		//End adding cross references
 	      }
-	      //add check for flow direction this should be outgoing one
-	    } else if (buf->type_hdr == HIP_R2) {
-	      //this is the case when the R2 packet completes base exchange 
-	      //we can now encrypt the src IP (or dst IP in this case)
-	      //and store it in the db
-	      {
-		HIP_DEBUG("CHECK IP IN THE HIP_R2 SENT STATE \n");
-		struct in6_addr * enc_addr = NULL;
-		hip_common_t * msg;
-		
-		hip_sava_ip_entry_t  * ip_entry = NULL;
-		hip_sava_hit_entry_t * hit_entry = NULL;
-		hip_sava_peer_info_t * info_entry;
-		hip_sava_enc_ip_entry_t * enc_entry = NULL;
-		
-		ip_entry = hip_sava_ip_entry_find(&ctx->dst);
-		hit_entry = hip_sava_hit_entry_find(&buf->hitr);
-		
-		      
-		if (ip_entry && hit_entry) {
-		  HIP_DEBUG("BOTH ENTRIES ARE FOUND \n");
-		  HIP_IFEL((msg = hip_sava_make_keys_request(&buf->hitr, SAVA_INBOUND_KEY)) == NULL, DROP,
-			   "Key request from daemon failed \n");
-		  HIP_DEBUG("Secret key acquired. Lets encrypt the src IP address \n");
-		  
-		  info_entry = hip_sava_get_key_params(msg);
-		  
-		  enc_addr = hip_sava_auth_ip(&ctx->dst, info_entry);
-		 
-		  if(hip_sava_enc_ip_entry_add(enc_addr,
-						ip_entry,
-						hit_entry, info_entry) != 0) {
-		    verdict = 0;
-		    goto out_err;
-		  } 
-		  
-		  enc_entry = hip_sava_enc_ip_entry_find(enc_addr);
-		  
-		  if (!enc_entry) {
-		    verdict = DROP;
-		    goto out_err;
-		  }
-
-		  ip_entry->enc_link = enc_entry;
-		  hit_entry->enc_link = enc_entry;
-		}
-	      }
-	    } else if (buf->type_hdr == HIP_UPDATE) {
-	      //TODO: update ip hit mappings for new ip's 
-	    } else if (buf->type_hdr == HIP_CLOSE) {
-	      
 	    }
 	  } else if (hip_sava_client) {
 	    
@@ -1528,7 +1477,7 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
 	  //second check is to check HITs
 	  //mandatory check for SAVA
 	  //rules should present in the ACL otherwise the packets are dropped
-	  
+	filter:
 	  verdict = filter_hip(&ctx->src,
 			       &ctx->dst,
 			       ctx->transport_hdr.hip,
@@ -1884,7 +1833,7 @@ int main(int argc, char **argv){
 
 	check_and_write_default_config();
 
-	while ((ch = getopt(argc, argv, "f:t:vdFHAbkiIpehsolFa")) != -1)
+	while ((ch = getopt(argc, argv, "f:t:vdFHAbkiIpehsolFac")) != -1)
 	{
 		switch (ch)
 		{

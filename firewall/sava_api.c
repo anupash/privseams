@@ -11,8 +11,10 @@ HIP_HASHTABLE *sava_enc_ip_db = NULL;
 
 HIP_HASHTABLE *sava_conn_db = NULL;
 
-int ipv6_raw_sock = 0;
-int ipv4_raw_sock = 0;
+int ipv6_raw_tcp_sock = 0;
+int ipv6_raw_udp_sock = 0;
+int ipv4_raw_tcp_sock = 0;
+int ipv4_raw_udp_sock = 0;
 
 /* hash functions used for calculating the entries' hashes */
 #define INDEX_HASH_FN		HIP_DIGEST_SHA1
@@ -579,9 +581,14 @@ int hip_sava_init_all() {
   HIP_IFEL(hip_sava_enc_ip_db_init(), -1, "error init enc ip db \n");
   HIP_IFEL(hip_sava_hit_db_init(), -1, "error init hit db \n"); 
   HIP_IFEL(hip_sava_conn_db_init(), -1, "error init sava conn db \n");
-  HIP_IFEL(hip_sava_init_ip6_raw_socket(&ipv6_raw_sock), -1, "error creating raw IPv6 socket \n");
-  HIP_IFEL(hip_sava_init_ip4_raw_socket(&ipv4_raw_sock), -1, "error creating raw IPv4 socket \n");
-
+  HIP_IFEL(hip_sava_init_ip6_raw_socket(&ipv6_raw_tcp_sock, IPPROTO_TCP), 
+	   -1, "error creating raw IPv6 socket \n");
+  HIP_IFEL(hip_sava_init_ip4_raw_socket(&ipv4_raw_tcp_sock, IPPROTO_TCP), 
+	   -1, "error creating raw IPv4 socket \n");
+  HIP_IFEL(hip_sava_init_ip6_raw_socket(&ipv6_raw_udp_sock, IPPROTO_TCP), 
+	   -1, "error creating raw IPv6 socket \n");
+  HIP_IFEL(hip_sava_init_ip4_raw_socket(&ipv4_raw_udp_sock, IPPROTO_TCP), 
+	   -1, "error creating raw IPv4 socket \n");
  out_err:
   return err;
 }
@@ -610,7 +617,9 @@ struct in6_addr * hip_sava_find_ip_by_enc(struct in6_addr * src_enc) {
 
 
 hip_common_t * hip_sava_get_keys_build_msg(const struct in6_addr * hit) {
-  return NULL;
+
+
+
 }
 
 hip_common_t * hip_sava_make_keys_request(const struct in6_addr * hit, 
@@ -792,7 +801,7 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
 
     memcpy(&dst6->sin6_addr, &ctx->src, sizeof(struct in6_addr));
 
-    sent = sendto(ipv6_raw_sock, ip6hdr, ctx->ipq_packet->data_len, 0,
+    sent = sendto(ipv6_raw_tcp_sock, ip6hdr, ctx->ipq_packet->data_len, 0,
 		  (struct sockaddr *) &dst, sizeof(struct sockaddr_in6));
 
   }else { //IPv4
@@ -803,7 +812,7 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
     IPV6_TO_IPV4_MAP(&ctx->dst, &dst4->sin_addr);
     dst4->sin_family = AF_INET;
     HIP_DEBUG_INADDR("dst4", &dst4->sin_addr);
-    sent = sendto(ipv4_raw_sock, iphdr, ctx->ipq_packet->data_len, 0,
+    sent = sendto(ipv4_raw_tcp_sock, iphdr, ctx->ipq_packet->data_len, 0,
 		  (struct sockaddr *) &dst, sizeof(struct sockaddr_in));
   }
 
@@ -829,9 +838,22 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
   struct sockaddr_storage dst;
   struct sockaddr_in *dst4 = (struct sockaddr_in *)&dst;
   struct sockaddr_in6 *dst6 = (struct sockaddr_in6 *)&dst;
+  int dst_len = 0;
 
   struct ip6_hdr * ip6hdr= NULL;	
   struct ip * iphdr= NULL;
+
+  struct tcphdr* tcp = NULL;
+  struct udphdr* udp = NULL;
+
+  char * buff = ctx->ipq_packet->payload;
+  int buff_len = ctx->ipq_packet->data_len;
+
+  int protocol = 0;
+
+  int ip_raw_sock = 0;
+
+  int on = 1, off = 0;
 
   memset(&dst, 0, sizeof(struct sockaddr_storage));
 
@@ -841,6 +863,7 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
     verdict = ACCEPT;
     goto out_err;
   }
+
   HIP_DEBUG("NOT AN INBOUND TRAFFIC OR NOT AUTHENTICATED TRAFFIC \n");
   HIP_DEBUG("Authenticating source address \n");
   
@@ -849,6 +872,7 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
   auth_len = (ctx->ip_version == 6) ? sizeof(struct in6_addr): sizeof(struct in_addr);
   
   if (enc_entry) {
+
     HIP_DEBUG("ENCRYPTED ENTRY FOUND \n");
     HIP_DEBUG("Secret key acquired. Lets encrypt the src IP address \n");
     
@@ -863,21 +887,103 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
       HIP_DEBUG("Source address is authenticated \n");
       HIP_DEBUG("Reinject the traffic to network stack \n");
       if (ctx->ip_version == 6) { //IPv6
-    	ip6hdr = (struct ip6_hdr*) ctx->ipq_packet->payload;
+    	ip6hdr = (struct ip6_hdr*) buff;
 	memcpy(&ip6hdr->ip6_src, (void *)enc_entry->ip_link->src_addr, sizeof(struct in6_addr));
 	dst6->sin6_family = AF_INET6;
-	memcpy(&dst6->sin6_addr, &ctx->src, sizeof(struct in6_addr));
-	sent = sendto(ipv6_raw_sock, ip6hdr, ctx->ipq_packet->data_len, 0,
-		      (struct sockaddr *) &dst, sizeof(struct sockaddr_in6));
+
+	tcp = (struct tcphdr *) (buff + 40); //sizeof ip6_hdr is 40
+	udp = (struct udphdr *) (buff + 40); //sizeof ip6_hdr is 40
+
+	protocol = ip6hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt;
+
+	memcpy(&dst6->sin6_addr, &ctx->dst, sizeof(struct in6_addr));
+
+	dst_len = sizeof(struct sockaddr_in6);
+
+	HIP_DEBUG_INADDR("ipv6 src: ", &ip6hdr->ip6_src);
+	HIP_DEBUG_INADDR("ipv6 dst: ", &ip6hdr->ip6_dst);
+	
+	if (protocol == IPPROTO_TCP) {
+
+	  HIP_DEBUG("Checksumming TCP packet \n");
+	  ip_raw_sock = ipv6_raw_tcp_sock;
+	  
+	  tcp->check  = 0;
+	  tcp->check  = ipv6_checksum(IPPROTO_TCP, &(ip6hdr->ip6_src), &(ip6hdr->ip6_dst), tcp, (buff_len - sizeof(struct ip))); //checksum is ok for ipv4
+	  HIP_HEXDUMP("tcp dump: ", tcp, (buff_len - sizeof(struct ip6_hdr)));
+
+      	} else if (protocol == IPPROTO_UDP) {
+
+	  HIP_DEBUG("Checksumming UDP packet \n");
+	  ip_raw_sock = ipv4_raw_udp_sock;
+	  		
+	  udp->check =  0;
+	  udp->check = ipv4_checksum(IPPROTO_UDP, &(iphdr->ip_src), &(iphdr->ip_dst), udp, (buff_len - sizeof(struct ip))); //checksum is ok for ipv4
+	  HIP_HEXDUMP("udp dump: ", udp, (buff_len - sizeof(struct ip6_hdr)));
+
+	}
+	if(setsockopt(ip_raw_sock, IPPROTO_IPV6, IP_HDRINCL, &on, sizeof(on)) < 0) { 
+	  HIP_DEBUG("setsockopt IP_HDRINCL ERROR！ \n");
+	} else {
+	  HIP_DEBUG("setsockopt IP_HDRINCL for ipv4 OK！ \n");
+	}
       }else { //IPv4
-	iphdr = (struct ip *) ctx->ipq_packet->payload;
+
+	iphdr = (struct ip *) buff;
+
 	IPV6_TO_IPV4_MAP(enc_entry->ip_link->src_addr, &iphdr->ip_src);
 	iphdr->ip_sum = 0;
+
+	tcp = (struct tcphdr *) (buff + 20); //sizeof iphdr is 20
+	udp = (struct udphdr *) (buff + 20); //sizeof iphdr is 20
+	
+	protocol = iphdr->ip_p;
+
+	dst_len = sizeof(struct sockaddr_in);
+
 	IPV6_TO_IPV4_MAP(&ctx->dst, &dst4->sin_addr);
+
 	dst4->sin_family = AF_INET;
-	HIP_DEBUG_INADDR("dst4", &dst4->sin_addr);
-	sent = sendto(ipv4_raw_sock, iphdr, ctx->ipq_packet->data_len, 0,
-		      (struct sockaddr *) &dst, sizeof(struct sockaddr_in));
+
+	HIP_DEBUG_INADDR("ipv4 src: ", &iphdr->ip_src);
+	HIP_DEBUG_INADDR("ipv4 dst: ", &iphdr->ip_dst);
+	
+	if (protocol == IPPROTO_TCP) {
+
+	  HIP_DEBUG("Checksumming TCP packet \n");
+	  ip_raw_sock = ipv4_raw_tcp_sock;
+	  
+	  tcp->check  = htons(0);
+	  tcp->check  = ipv4_checksum(IPPROTO_TCP, &(iphdr->ip_src), &(iphdr->ip_dst), tcp, (buff_len - sizeof(struct ip))); //checksum is ok for ipv4
+	  HIP_HEXDUMP("tcp dump: ", tcp, (buff_len - sizeof(struct ip)));
+
+      	} else if (protocol == IPPROTO_UDP) {
+
+	  HIP_DEBUG("Checksumming UDP packet \n");
+	  ip_raw_sock = ipv4_raw_udp_sock;
+	  		
+	  udp->check =  htons(0);
+	  udp->check = ipv4_checksum(IPPROTO_UDP, &(iphdr->ip_src), &(iphdr->ip_dst), udp, (buff_len - sizeof(struct ip))); //checksum is ok for ipv4
+	  HIP_HEXDUMP("udp dump: ", udp, (buff_len - sizeof(struct ip)));
+
+	}
+	if(setsockopt(ip_raw_sock, IPPROTO_IP, IP_HDRINCL, &on, sizeof(on)) < 0) { 
+	  HIP_DEBUG("setsockopt IP_HDRINCL ERROR！ \n");
+	} else {
+	  HIP_DEBUG("setsockopt IP_HDRINCL for ipv4 OK！ \n");
+	}
+      }
+      
+      sent = sendto(ip_raw_sock, buff, buff_len, 0,
+		    (struct sockaddr *) &dst, dst_len);
+      if (ctx->ip_version == 4) {
+	if(setsockopt(ip_raw_sock, IPPROTO_IP, IP_HDRINCL, &off, sizeof(off)) < 0) { 
+	  HIP_DEBUG("setsockopt IP_HDRINCL ERROR！ \n");
+	}
+      }	else {
+	if(setsockopt(ip_raw_sock, IPPROTO_IPV6, IP_HDRINCL, &off, sizeof(off)) < 0) { 
+	  HIP_DEBUG("setsockopt IP_HDRINCL ERROR！ \n");
+	}	
       }
     } else {
       HIP_DEBUG("Source address authentication failed. Dropping packet \n");
@@ -896,11 +1002,11 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
 }
 
 
-int hip_sava_init_ip4_raw_socket(int * ip4_raw_socket) {
+int hip_sava_init_ip4_raw_socket(int * ip4_raw_socket, int proto) {
   int on = 1, err = 0;
   int off = 0;
   
-  *ip4_raw_socket = socket(AF_INET, SOCK_RAW, 0);
+  *ip4_raw_socket = socket(AF_INET, SOCK_RAW, proto);
   HIP_IFEL(*ip4_raw_socket <= 0, 1, "Raw socket v4 creation failed. Not root?\n");
 
   /* see bug id 212 why RECV_ERR is off */
@@ -917,11 +1023,11 @@ int hip_sava_init_ip4_raw_socket(int * ip4_raw_socket) {
   return err;
 }
 
-int hip_sava_init_ip6_raw_socket(int * ip6_raw_socket) {
+int hip_sava_init_ip6_raw_socket(int * ip6_raw_socket, int proto) {
   int on = 1, err = 0;
   int off = 0;
   
-  *ip6_raw_socket = socket(AF_INET6, SOCK_RAW, 0);
+  *ip6_raw_socket = socket(AF_INET6, SOCK_RAW, proto);
   HIP_IFEL(*ip6_raw_socket <= 0, 1, "Raw socket v4 creation failed. Not root?\n");
 
   /* see bug id 212 why RECV_ERR is off */
@@ -934,4 +1040,57 @@ int hip_sava_init_ip6_raw_socket(int * ip6_raw_socket) {
   
  out_err:
   return err;
+}
+
+
+int hip_sava_reinject_packet(char * buf, int proto) {
+  return 0;
+}
+
+
+int hip_sava_handle_bex_completed (struct in6_addr * src, struct in6_addr * hitr) {
+  HIP_DEBUG("CHECK IP IN THE HIP_R2 SENT STATE \n");
+  struct in6_addr * enc_addr = NULL;
+  hip_common_t * msg;
+  
+  
+  hip_sava_ip_entry_t  * ip_entry = NULL;
+  hip_sava_hit_entry_t * hit_entry = NULL;
+  hip_sava_peer_info_t * info_entry;
+  hip_sava_enc_ip_entry_t * enc_entry = NULL;
+  
+  int err = 0;
+
+  ip_entry = hip_sava_ip_entry_find(src);
+  hit_entry = hip_sava_hit_entry_find(hitr);
+  
+  
+  if (ip_entry && hit_entry) {
+    HIP_DEBUG("BOTH ENTRIES ARE FOUND \n");
+    
+    //	  hip_sava_make_hit_request();
+    
+    HIP_IFEL((msg = hip_sava_make_keys_request(hitr, SAVA_INBOUND_KEY)) == NULL, DROP,
+	     "Key request from daemon failed \n");
+    HIP_DEBUG("Secret key acquired. Lets encrypt the src IP address \n");
+		  
+    info_entry = hip_sava_get_key_params(msg);
+    
+    enc_addr = hip_sava_auth_ip(src, info_entry);
+    
+    HIP_IFEL(hip_sava_enc_ip_entry_add(enc_addr,
+				       ip_entry,
+				       hit_entry, info_entry), 
+	     -1, "error adding enc ip entry");    
+
+    HIP_IFEL((enc_entry = hip_sava_enc_ip_entry_find(enc_addr)), 
+	     -1, "Could not retrieve enc ip entry \n");
+    		  
+    ip_entry->enc_link = enc_entry;
+    hit_entry->enc_link = enc_entry;
+  } else {
+    return -1;
+  }
+ out_err:
+  return (err);
 }
