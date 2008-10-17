@@ -941,9 +941,11 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
   return verdict; 
 }
 
+
 int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
   int err = 0, verdict = 0, auth_len = 0, sent = 0;
   struct in6_addr * enc_addr = NULL;
+  struct in6_addr * enc_addr_no = NULL;
   hip_sava_ip_entry_t  * ip_entry     = NULL;
   hip_sava_enc_ip_entry_t * enc_entry = NULL;
   struct sockaddr_storage dst;
@@ -988,8 +990,14 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
     HIP_DEBUG("Secret key acquired. Lets encrypt the src IP address \n");
     
     enc_addr = hip_sava_auth_ip(enc_entry->ip_link->src_addr, enc_entry->peer_info);
+    //FIX IP version 
+    enc_addr_no = map_enc_ip_addr_to_network_order(enc_addr, 4);
+    free(enc_addr);
+    enc_addr = enc_addr_no;
     
-    if (!memcmp(&ctx->src, enc_addr, auth_len)) {
+    HIP_DEBUG_HIT("Found encrypted address ", enc_addr);
+    
+    if (!memcmp(&ctx->src, enc_addr, sizeof(struct in6_addr))) {
       //PLACE ORIGINAL IP, RECALCULATE CHECKSUM AND REINJECT THE PACKET 
       //VERDICT DROP PACKET BECAUSE IT CONTAINS ENCRYPTED IP
       //ONLY NEW PACKET WILL GO OUT
@@ -1076,7 +1084,6 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
 	  udp->check =  htons(0);
 	  udp->check = ipv4_checksum(IPPROTO_UDP, &(iphdr->ip_src), &(iphdr->ip_dst), udp, (buff_len - sizeof(struct ip))); //checksum is ok for ipv4
 	  HIP_HEXDUMP("udp dump: ", udp, (buff_len - sizeof(struct ip)));
-
 	}
 	if(setsockopt(ip_raw_sock, IPPROTO_IP, IP_HDRINCL, &on, sizeof(on)) < 0) { 
 	  HIP_DEBUG("setsockopt IP_HDRINCL ERROR！ \n");
@@ -1162,6 +1169,8 @@ int hip_sava_reinject_packet(char * buf, int proto) {
 int hip_sava_handle_bex_completed (struct in6_addr * src, struct in6_addr * hitr) {
   HIP_DEBUG("CHECK IP IN THE HIP_R2 SENT STATE \n");
   struct in6_addr * enc_addr = NULL;
+  struct in6_addr * enc_addr_no = NULL;
+
   hip_common_t * msg;
   
   
@@ -1188,20 +1197,46 @@ int hip_sava_handle_bex_completed (struct in6_addr * src, struct in6_addr * hitr
     info_entry = hip_sava_get_key_params(msg);
     
     enc_addr = hip_sava_auth_ip(src, info_entry);
+
+    /*TODO: FIX ME Check if the original src address is IPv4 or IPv6*/
+    enc_addr_no = map_enc_ip_addr_to_network_order(enc_addr, 4);
     
-    HIP_IFEL(hip_sava_enc_ip_entry_add(enc_addr,
+    HIP_IFEL(hip_sava_enc_ip_entry_add(enc_addr_no,
 				       ip_entry,
 				       hit_entry, info_entry), 
 	     -1, "error adding enc ip entry");    
 
-    HIP_IFEL((enc_entry = hip_sava_enc_ip_entry_find(enc_addr)) == NULL, 
+    HIP_IFEL((enc_entry = hip_sava_enc_ip_entry_find(enc_addr_no)) == NULL, 
 	     -1, "Could not retrieve enc ip entry \n");
     		  
     ip_entry->enc_link = enc_entry;
     hit_entry->enc_link = enc_entry;
+
+    free(enc_addr);
+    
   } else {
     return -1;
   }
  out_err:
   return (err);
+}
+
+struct in6_addr * map_enc_ip_addr_to_network_order(struct in6_addr * enc_addr, int ip_version) {
+  struct in6_addr * no_addr = 
+    (struct in6_addr *)malloc(sizeof(struct in6_addr));
+  memset(no_addr, 0, sizeof(struct in6_addr));
+  
+  HIP_DEBUG_HIT("Encrypted address in original ", enc_addr);
+  
+  if (ip_version == 4) {
+    no_addr->s6_addr32[2] = htonl (0xffff);
+    no_addr->s6_addr32[3] = htonl(enc_addr->s6_addr32[3]);
+  } else {
+    no_addr->s6_addr[0] = htonl(enc_addr->s6_addr32[0]);
+    no_addr->s6_addr[1] = htonl(enc_addr->s6_addr32[1]);
+    no_addr->s6_addr[2] = htonl(enc_addr->s6_addr32[2]);
+    no_addr->s6_addr[3] = htonl(enc_addr->s6_addr32[3]);
+  }
+  HIP_DEBUG_HIT("Encrypted address in network byte order ", no_addr);
+  return no_addr;
 }

@@ -154,4 +154,6 @@ int hip_sava_init_ip6_raw_socket(int * ip6_raw_socket, int proto);
 
 int hip_sava_reinject_packet(char * buf, int proto);
 
+struct in6_addr * map_enc_ip_addr_to_network_order(struct in6_addr * enc_addr, int ip_version);
+
 #endif //HIP_SAVA_API

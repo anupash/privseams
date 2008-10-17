@@ -104,8 +104,8 @@ int hip_fw_init_sava_client() {
        HIP_IFEL(hip_sava_client_init_all(), -1,
 	     "Error initializing SAVA client \n");
    /* IPv4 packets	*/
-   system("iptables -I HIPFW-OUTPUT -p tcp ! -d 127.0.0.1 -j QUEUE 2>/dev/null"); 
-   system("iptables -I HIPFW-OUTPUT -p udp ! -d 127.0.0.1 -j QUEUE 2>/dev/null"); 
+   //system("iptables -I HIPFW-OUTPUT -p tcp ! -d 127.0.0.1 -j QUEUE 2>/dev/null"); 
+   system("iptables -I HIPFW-OUTPUT -p udp -s 192.168.4.0/24 -j QUEUE 2>/dev/null"); 
    /* IPv6 packets	*/
    system("ip6tables -I HIPFW-OUTPUT -p tcp ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
    //system("ip6tables -I HIPFW-OUTPUT -p udp ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
@@ -119,10 +119,10 @@ void hip_fw_uninit_sava_client() {
   if (hip_sava_client) {
  
    /* IPv4 packets	*/
-   system("iptables -D HIPFW-OUTPUT -p tcp ! -d 127.0.0.1 -j QUEUE 2>/dev/null"); 
-   system("iptables -D HIPFW-OUTPUT -p udp ! -d 127.0.0.1 -j QUEUE 2>/dev/null"); 
+   //system("iptables -D HIPFW-OUTPUT -p tcp -s 192.168.4.0/24 -j QUEUE 2>/dev/null"); 
+   system("iptables -D HIPFW-OUTPUT -p udp -s 192.168.4.0/24 --dport 40300 -j QUEUE 2>/dev/null"); 
    /* IPv6 packets	*/
-   system("ip6tables -D HIPFW-OUTPUT -p tcp ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
+   //system("ip6tables -D HIPFW-OUTPUT -p tcp ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
    //system("ip6tables -D HIPFW-OUTPUT -p udp ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
   }
  
@@ -137,12 +137,11 @@ int hip_fw_init_sava_router() {
 	 * source address
 	 */
 	if (hip_sava_router) {
-	  
 	        HIP_IFEL(hip_sava_init_all(), -1, 
 		   "Error inializing SAVA IP DB \n");
 		/* IPv4 packets	*/
-		system("iptables -I HIPFW-FORWARD -p tcp ! -d 127.0.0.1 -j QUEUE 2>/dev/null"); 
-		system("iptables -I HIPFW-FORWARD -p udp ! -d 127.0.0.1 -j QUEUE 2>/dev/null"); 
+		system("iptables -I HIPFW-FORWARD -p tcp -j QUEUE 2>/dev/null"); 
+		system("iptables -I HIPFW-FORWARD -p udp  -j QUEUE 2>/dev/null"); 
 		/* IPv6 packets	*/
 		system("ip6tables -I HIPFW-FORWARD -p tcp ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
 		system("ip6tables -I HIPFW-FORWARD -p udp ! -d 2001:0010::/28 ! -o lo -j QUEUE 2>/dev/null");
@@ -158,8 +157,8 @@ void hip_fw_uninit_sava_router() {
 	HIP_DEBUG("Uninitializing SAVA mode \n");
 	if (hip_sava_router) {
 		/* IPv4 packets	*/
-		system("iptables -D HIPFW-FORWARD -p tcp ! -d 127.0.0.1 -j QUEUE 2>/dev/null");
-		system("iptables -D HIPFW-FORWARD -p udp ! -d 127.0.0.1 -j QUEUE 2>/dev/null");
+		system("iptables -D HIPFW-FORWARD -p tcp -j QUEUE 2>/dev/null");
+		system("iptables -D HIPFW-FORWARD -p udp -j QUEUE 2>/dev/null");
 		/* IPv6 packets	*/ 
 		system("ip6tables -D HIPFW-FORWARD -p tcp ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
 		system("ip6tables -D HIPFW-FORWARD -p udp ! -d 2001:0010::/28 -j QUEUE 2>/dev/null"); 
@@ -1627,9 +1626,10 @@ int hip_fw_handle_tcp_input(hip_fw_context_t *ctx){
 }
 
 int hip_fw_handle_other_forward(hip_fw_context_t *ctx){
+
 	int verdict = accept_normal_traffic_by_default;
 
-	HIP_DEBUG("\n");
+	HIP_DEBUG("hip_fw_handle_other_forward()\n");
 	
 	if (hip_proxy_status && !ipv6_addr_is_hit(&ctx->dst))
 	{
@@ -1639,6 +1639,7 @@ int hip_fw_handle_other_forward(hip_fw_context_t *ctx){
 							ctx->ip_hdr_len,
 							ctx->ip_version);
 	} else if (hip_sava_router) {
+	  HIP_DEBUG("hip_sava_router \n");
 	  verdict = hip_sava_handle_router_forward(ctx);
 	}
 
