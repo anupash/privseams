@@ -457,20 +457,45 @@ class Global:
 			    s.sendto(m.buf,from_a)
 			    sent_answer = 1
 
-		########### add mapping using hipconf #####
-		#cmd for executing hipconf dnsproxy command
-		cmd = "hipconf dnsproxy " + nam + " 3>&1 2>&1 | grep hipconf "
-		#fout.write("COMMAND  %s\n" % (cmd,))
+		#-----------------------------------------------
+		# hipconf command execution
+		#-----------------------------------------------
+		#get the PATH env variable
+		cmd = "echo $PATH"
 		p = os.popen(cmd, "r")
 		line = p.readline()
 
-		if line != "":
-		    line = line + " 1>/dev/null 2>/dev/null 3>/dev/null"
-		    #fout.write('COMMAND 1  %s\n' % (line,))
-		    p = os.popen(line)
-		else:
-		    fout.write('No command - %s\n' % (line,))
-		## end of - add mapping using hipconf #####
+		#append the PATH env variable
+		line = "/sbin:/usr/sbin/:/usr/local/sbin:" + line[0:len(line) - 1]
+
+		#obtain the commands
+		commands = line.split(':')
+		cmd_worked = 0
+		#fout.write("cmds   %s\n" % (commands,))
+		for c in commands:
+			cmd = c + "/hipconf dnsproxy " + nam + " 3>&1 2>&1 | grep hipconf "
+			#fout.write("cmd - %s\n" % (cmd,))
+			p = os.popen(cmd, "r")
+			result = p.readline()
+			#fout.write("RES   %s\n" % (result,))
+			#fout.write("res   %s\n" % (result[len(result)-10:len(result)],))
+			if result[0:3] == "sh:" and result[len(result)-10:len(result)-1] == "not found":
+				#fout.write("not found   %s\n" % (result,))
+				continue;	#try the next command
+			else:
+				#fout.write(" -  found   %s\n" % (result,))
+				cmd_worked = 1
+				break;		#this cmd worked
+
+		#add mapping using the hipconf cmd
+		if cmd_worked == 1:
+		    result = result + " 1>/dev/null 2>/dev/null 3>/dev/null"
+		    fout.write('CMD - %s\n' % (result,))
+		    p = os.popen(result)
+		#else:
+		#    fout.write('No command - %s\n' % (result,))
+
+		#-----------------------------------------------
 
 		if not sent_answer:
                     s2.send(buf)
@@ -478,7 +503,6 @@ class Global:
                     u = DNS.Lib.Munpacker(r2)
                     r = DNS.Lib.DnsResult(u,args0)
                     fout.write('Bypass %s %s %s\n' % (r.header,r.questions,r.answers,))
-		    fout.write('### 1\n')
                     if r.header.get('status') != 'NXDOMAIN':
                         s.sendto(r2,from_a)
 
