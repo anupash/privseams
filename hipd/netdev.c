@@ -64,6 +64,9 @@ int filter_address(struct sockaddr *addr)
 				
 		HIP_DEBUG("IPv6 address to filter is %s.\n", s);
 		
+		_HIP_DEBUG("Address is%san Teredo address\n", 
+			  ipv6_addr_is_teredo(a_in6)==1?" ":" not ");
+		
 		if(suppress_af_family == AF_INET) {
 			HIP_DEBUG("Address ignored: address family "\
 				  "suppression set to IPv4 addresses.\n");

@@ -90,6 +90,15 @@ static int ipv6_addr_is_hit(const struct in6_addr *hit)
 	return (hit_begin == HIP_HIT_PREFIX);
 }
 
+static int ipv6_addr_is_teredo(const struct in6_addr *teredo)
+{
+	hip_closest_prefix_type_t teredo_begin;
+	memcpy(&teredo_begin, teredo, sizeof(hip_closest_prefix_type_t));
+	teredo_begin = ntohl(teredo_begin);
+	teredo_begin &= HIP_TEREDO_TYPE_MASK_INV;
+	return (teredo_begin == HIP_TEREDO_PREFIX);
+}
+
 struct hip_opp_blocking_request_entry
 {
 	hip_hit_t             peer_phit;
