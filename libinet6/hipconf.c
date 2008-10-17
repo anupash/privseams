@@ -1689,6 +1689,8 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
 		free(msg);
 	}
 
+	if (err)
+		HIP_ERROR("(Hipd is not running or super user needed?)\n");
 	return err;
 }
 
