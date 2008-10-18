@@ -59,7 +59,7 @@ unsigned long hip_sava_conn_entry_hash(const hip_sava_conn_entry_t * entry) {
   memset(hash, 0, INDEX_HASH_LENGTH);
 
   HIP_IFEL(hip_build_digest(INDEX_HASH_FN, (void *)addrs, 
-			    sizeof(addrs), hash),
+			    2*sizeof(struct in6_addr), hash),
 	   -1, "failed to hash addresses\n");
   
  out_err:
@@ -141,6 +141,9 @@ hip_sava_conn_entry_t * hip_sava_conn_entry_find(struct in6_addr * src,
 int hip_sava_conn_entry_add(struct in6_addr *src,
 			    struct in6_addr * dst) {
   hip_sava_conn_entry_t *  entry = malloc(sizeof(hip_sava_conn_entry_t));
+  
+  HIP_DEBUG_HIT("Adding connection entry for src ", src);
+  HIP_DEBUG_HIT("Adding connection entry for dst ", dst);
 
   HIP_ASSERT(src != NULL && dst != NULL);
   
@@ -971,14 +974,15 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
   memset(&dst, 0, sizeof(struct sockaddr_storage));
 
   HIP_DEBUG("CHECK IP ON FORWARD\n");
-  if (hip_sava_conn_entry_find(&ctx->src, &ctx->dst) != NULL) {
+
+  if (hip_sava_conn_entry_find(&ctx->dst, &ctx->src) != NULL) {
     HIP_DEBUG("BYPASS THE PACKET THIS IS AN INBOUND TRAFFIC FOR AUTHENTICATED OUTBOUND \n");
     verdict = ACCEPT;
     goto out_err;
   }
 
-  HIP_DEBUG("NOT AN INBOUND TRAFFIC OR NOT AUTHENTICATED TRAFFIC \n");
-  HIP_DEBUG("Authenticating source address \n");
+  _HIP_DEBUG("NOT AN INBOUND TRAFFIC OR NOT AUTHENTICATED TRAFFIC \n");
+  HIP_DEBUG_HIT("Authenticating source address ", &ctx->src);
   
   enc_entry = hip_sava_enc_ip_entry_find(&ctx->src);
 
@@ -987,7 +991,8 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
   if (enc_entry) {
 
     HIP_DEBUG("ENCRYPTED ENTRY FOUND \n");
-    HIP_DEBUG("Secret key acquired. Lets encrypt the src IP address \n");
+
+    _HIP_DEBUG("Secret key acquired. Lets encrypt the src IP address \n");
     
     enc_addr = hip_sava_auth_ip(enc_entry->ip_link->src_addr, enc_entry->peer_info);
     //FIX IP version 
@@ -1001,10 +1006,10 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
       //PLACE ORIGINAL IP, RECALCULATE CHECKSUM AND REINJECT THE PACKET 
       //VERDICT DROP PACKET BECAUSE IT CONTAINS ENCRYPTED IP
       //ONLY NEW PACKET WILL GO OUT
-      HIP_DEBUG("Adding <src, dst> tuple to connection db \n");
+      _HIP_DEBUG("Adding <src, dst> tuple to connection db \n");
       hip_sava_conn_entry_add(enc_entry->ip_link->src_addr, &ctx->dst);
       HIP_DEBUG("Source address is authenticated \n");
-      HIP_DEBUG("Reinject the traffic to network stack \n");
+      _HIP_DEBUG("Reinject the traffic to network stack \n");
       if (ctx->ip_version == 6) { //IPv6
     	ip6hdr = (struct ip6_hdr*) buff;
 	memcpy(&ip6hdr->ip6_src, (void *)enc_entry->ip_link->src_addr, sizeof(struct in6_addr));
@@ -1038,7 +1043,7 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
 	  		
 	  udp->check =  0;
 	  udp->check = ipv4_checksum(IPPROTO_UDP, &(iphdr->ip_src), &(iphdr->ip_dst), udp, (buff_len - sizeof(struct ip))); //checksum is ok for ipv4
-	  HIP_HEXDUMP("udp dump: ", udp, (buff_len - sizeof(struct ip6_hdr)));
+	  _HIP_HEXDUMP("udp dump: ", udp, (buff_len - sizeof(struct ip6_hdr)));
 
 	}
 	if(setsockopt(ip_raw_sock, IPPROTO_IPV6, IP_HDRINCL, &on, sizeof(on)) < 0) { 
@@ -1083,7 +1088,7 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
 	  		
 	  udp->check =  htons(0);
 	  udp->check = ipv4_checksum(IPPROTO_UDP, &(iphdr->ip_src), &(iphdr->ip_dst), udp, (buff_len - sizeof(struct ip))); //checksum is ok for ipv4
-	  HIP_HEXDUMP("udp dump: ", udp, (buff_len - sizeof(struct ip)));
+	  _HIP_HEXDUMP("udp dump: ", udp, (buff_len - sizeof(struct ip)));
 	}
 	if(setsockopt(ip_raw_sock, IPPROTO_IP, IP_HDRINCL, &on, sizeof(on)) < 0) { 
 	  HIP_DEBUG("setsockopt IP_HDRINCL ERROR！ \n");
@@ -1215,6 +1220,7 @@ int hip_sava_handle_bex_completed (struct in6_addr * src, struct in6_addr * hitr
     free(enc_addr);
     
   } else {
+    HIP_DEBUG("<HIT, IP> NOT FOUND ERROR!! \n");
     return -1;
   }
  out_err:

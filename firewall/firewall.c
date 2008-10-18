@@ -103,12 +103,12 @@ int hip_fw_init_sava_client() {
   if (hip_sava_client) {
        HIP_IFEL(hip_sava_client_init_all(), -1,
 	     "Error initializing SAVA client \n");
-   /* IPv4 packets	*/
-   //system("iptables -I HIPFW-OUTPUT -p tcp ! -d 127.0.0.1 -j QUEUE 2>/dev/null"); 
-   system("iptables -I HIPFW-OUTPUT -p udp -s 192.168.4.0/24 -j QUEUE 2>/dev/null"); 
-   /* IPv6 packets	*/
-   system("ip6tables -I HIPFW-OUTPUT -p tcp ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
-   //system("ip6tables -I HIPFW-OUTPUT -p udp ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
+       /* IPv4 packets	*/
+       system("iptables -I HIPFW-OUTPUT -p tcp ! -d 127.0.0.1 -j QUEUE 2>/dev/null"); 
+       system("iptables -I HIPFW-OUTPUT -p udp -s 192.168.4.0/24 -j QUEUE 2>/dev/null"); 
+       /* IPv6 packets	*/
+       system("ip6tables -I HIPFW-OUTPUT -p tcp ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
+       //system("ip6tables -I HIPFW-OUTPUT -p udp ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
   }
 out_err:
   return err;
@@ -119,8 +119,8 @@ void hip_fw_uninit_sava_client() {
   if (hip_sava_client) {
  
    /* IPv4 packets	*/
-   //system("iptables -D HIPFW-OUTPUT -p tcp -s 192.168.4.0/24 -j QUEUE 2>/dev/null"); 
-   system("iptables -D HIPFW-OUTPUT -p udp -s 192.168.4.0/24 --dport 40300 -j QUEUE 2>/dev/null"); 
+   system("iptables -D HIPFW-OUTPUT -p tcp -s 192.168.4.0/24 -j QUEUE 2>/dev/null"); 
+   system("iptables -D HIPFW-OUTPUT -p udp -s 192.168.4.0/24 -j QUEUE 2>/dev/null"); 
    /* IPv6 packets	*/
    //system("ip6tables -D HIPFW-OUTPUT -p tcp ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
    //system("ip6tables -D HIPFW-OUTPUT -p udp ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
