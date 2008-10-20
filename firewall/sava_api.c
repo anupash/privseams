@@ -789,6 +789,7 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
   
   struct ip6_hdr * ip6hdr= NULL;	
   struct ip * iphdr= NULL;
+  unsigned char * buff_ip_opt = NULL;
 
   struct in6_addr * enc_addr = NULL;
 
@@ -801,6 +802,7 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
   struct tcphdr* tcp = NULL;
   struct udphdr* udp = NULL;
 
+  struct sava_ip_option * opt = NULL;
 
   int protocol = 0;
 
@@ -872,11 +874,28 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
       HIP_DEBUG("setsockopt IP_HDRINCL for ipv4 OK！ \n");
     }
   }else { //IPv4
-    
     iphdr = (struct ip *) buff;
-    
-    IPV6_TO_IPV4_MAP(enc_addr, &iphdr->ip_src);
+
     iphdr->ip_sum = 0;
+
+#ifdef SAVAH_IP_OPTION
+    opt = hip_sava_build_enc_addr_ipv4_option(enc_addr);
+
+    iphdr->ip_hl = 10;
+
+    buff_ip_opt = (unsigned char *) malloc(buff_len + opt->length);
+
+    memcpy(buff_ip_opt, iphdr, sizeof(struct ip));
+    
+    memcpy(buff_ip_opt + sizeof(struct ip), opt, opt->length);
+
+    memcpy(buff_ip_opt + sizeof(struct ip) + opt->length, 
+	   buff + sizeof(struct ip), buff_len - sizeof(struct ip));
+
+    buff_len += 20;
+
+#else
+    IPV6_TO_IPV4_MAP(enc_addr, &iphdr->ip_src);
     
     tcp = (struct tcphdr *) (buff + 20); //sizeof iphdr is 20
     udp = (struct udphdr *) (buff + 20); //sizeof iphdr is 20
@@ -911,15 +930,20 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
       HIP_HEXDUMP("udp dump: ", udp, (buff_len - sizeof(struct ip)));
       
     }
+#endif
     if(setsockopt(ip_raw_sock, IPPROTO_IP, IP_HDRINCL, &on, sizeof(on)) < 0) { 
       HIP_DEBUG("setsockopt IP_HDRINCL ERROR！ \n");
     } else {
       HIP_DEBUG("setsockopt IP_HDRINCL for ipv4 OK！ \n");
     }
   }
-  
+#ifdef SAVAH_IP_OPTION
+  sent = sendto(ip_raw_sock, buff_ip_opt, buff_len, 0,
+		(struct sockaddr *) &dst, dst_len);
+#else
   sent = sendto(ip_raw_sock, buff, buff_len, 0,
 		(struct sockaddr *) &dst, dst_len);
+#endif
   if (ctx->ip_version == 4) {
     if(setsockopt(ip_raw_sock, IPPROTO_IP, IP_HDRINCL, &off, sizeof(off)) < 0) { 
       HIP_DEBUG("setsockopt IP_HDRINCL ERROR！ \n");
@@ -971,6 +995,8 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
 
   int on = 1, off = 0;
 
+  struct sava_ip_option * opt = NULL;
+
   memset(&dst, 0, sizeof(struct sockaddr_storage));
 
   HIP_DEBUG("CHECK IP ON FORWARD\n");
@@ -983,8 +1009,21 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
 
   _HIP_DEBUG("NOT AN INBOUND TRAFFIC OR NOT AUTHENTICATED TRAFFIC \n");
   HIP_DEBUG_HIT("Authenticating source address ", &ctx->src);
-  
+#ifdef SAVAH_IP_OPTION
+  if (ctx->ip_version == 4) {
+    memcpy(opt,
+	   buff + 20, //first 20 bytes are original IPv4 header
+	   20);       //20 bytes of sava_ip_option including 2 bytes of padding
+  } else {
+    memcpy(opt,
+	   buff + 40, //first 40 bytes are original IPv6 header
+	   20);       //20 bytes of sava_ip_option including 2 bytes of padding
+  }
+  enc_addr = (struct in6_addr *) opt->data;
+  enc_entry = hip_sava_enc_ip_entry_find(enc_addr);
+#else 
   enc_entry = hip_sava_enc_ip_entry_find(&ctx->src);
+#endif
 
   auth_len = (ctx->ip_version == 6) ? sizeof(struct in6_addr): sizeof(struct in_addr);
   
@@ -1054,7 +1093,7 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
       }else { //IPv4
 
 	iphdr = (struct ip *) buff;
-
+	
 	IPV6_TO_IPV4_MAP(enc_entry->ip_link->src_addr, &iphdr->ip_src);
 	iphdr->ip_sum = 0;
 
@@ -1245,4 +1284,25 @@ struct in6_addr * map_enc_ip_addr_to_network_order(struct in6_addr * enc_addr, i
   }
   HIP_DEBUG_HIT("Encrypted address in network byte order ", no_addr);
   return no_addr;
+}
+
+
+struct sava_ip_option * hip_sava_build_enc_addr_ipv4_option(struct in6_addr * enc_addr){
+
+  HIP_ASSERT(enc_addr != NULL);
+  
+  struct sava_ip_option * opt = (struct sava_ip_option *) malloc(sizeof(sava_ip_option_t) + 
+							       sizeof(struct in6_addr) +
+							       2); //padding we need total 160 bits to be a multiplicative of 32
+  memset(opt, 0, 160);
+  opt->type = 1;
+  opt->class = 0;
+  opt->number = 31;
+  opt->length = 160;
+  
+  memcpy(opt + sizeof(sava_ip_option_t),
+	 enc_addr,
+	 sizeof(struct in6_addr));
+
+  return opt;
 }

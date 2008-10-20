@@ -19,6 +19,14 @@
 #define SAVA_INBOUND_KEY 0
 #define SAVA_OUTBOUND_KEY 1
 
+typedef struct sava_ip_option {
+  unsigned char type:1;
+  unsigned char class:2; 
+  unsigned char number:5;
+  unsigned char length;
+  unsigned char * data;
+} sava_ip_option_t;
+
 typedef struct sava_addrinfo {
   struct in6_addr * sava_hit;
   struct in6_addr * sava_ip;
@@ -155,5 +163,7 @@ int hip_sava_init_ip6_raw_socket(int * ip6_raw_socket, int proto);
 int hip_sava_reinject_packet(char * buf, int proto);
 
 struct in6_addr * map_enc_ip_addr_to_network_order(struct in6_addr * enc_addr, int ip_version);
+
+struct sava_ip_option * hip_sava_build_enc_addr_ipv4_option(struct in6_addr * enc_addr);
 
 #endif //HIP_SAVA_API
