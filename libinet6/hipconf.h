@@ -242,6 +242,6 @@ int hip_conf_handle_heartbeat(hip_common_t *msg, int action, const char *opt[], 
  * @param  a pointer to a commman line option. Either "default" or "all".
  * @return zero if the HITs were printed successfully, negative otherwise.
  */ 
-int hip_get_hits(hip_common_t *msg, char *opt);
+int hip_get_hits(hip_common_t *msg, char *opt, int optc, int send_only);
 
 #endif /* HIPCONF */

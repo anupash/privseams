@@ -581,7 +581,7 @@ int hip_conf_handle_hi(hip_common_t *msg, int action, const char *opt[],
 		HIP_IFEL((optc < 1), -1, "Missing arguments.\n");
 		HIP_IFEL((optc > 1), -1, "Too many arguments.\n");
 
-		return hip_get_hits(msg, opt[0]);
+		return hip_get_hits(msg, opt[0], 1, send_only);
 	} else if (action != ACTION_ADD && action != ACTION_NEW) {
 		HIP_ERROR("Only actions \"add\", \"new\", \"del\" and \"get\" "\
 			  "are supported for \"hi\".\n");
@@ -1775,7 +1775,8 @@ int hip_conf_handle_handoff(hip_common_t *msg, int action,const char *opt[], int
 	  HIP_INFO("handoff mode set to lazy successfully\n");
      }
 
-     HIP_IFEL(hip_send_recv_daemon_info(msg), -1,"send recv daemon info\n");
+     HIP_IFEL(hip_send_daemon_info_wrapper(msg, send_only), -1,
+	      "send recv daemon info\n");
 
  out_err:
      memset(msg, 0, HIP_MAX_PACKET);
@@ -1783,7 +1784,7 @@ int hip_conf_handle_handoff(hip_common_t *msg, int action,const char *opt[], int
      return err;
 }
 
-int hip_get_hits(hip_common_t *msg, char *opt)
+int hip_get_hits(hip_common_t *msg, char *opt, int optc, int send_only)
 {
 	int err = 0;
 	struct hip_tlv_common *current_param = NULL;
@@ -1798,7 +1799,7 @@ int hip_get_hits(hip_common_t *msg, char *opt)
 		HIP_IFE(hip_build_user_hdr(msg, SO_HIP_GET_HITS, 0), -1);
 		/* Send the message to the daemon. The daemon fills the
 		   message. */
-		HIP_IFE(hip_send_recv_daemon_info(msg), -ECOMM);
+		HIP_IFE(hip_send_daemon_info_wrapper(msg, send_only), -ECOMM);
 
 		/* Loop through all the parameters in the message just filled. */
 		while((current_param =
@@ -1848,7 +1849,7 @@ int hip_get_hits(hip_common_t *msg, char *opt)
 		HIP_IFE(hip_build_user_hdr(msg, SO_HIP_DEFAULT_HIT, 0), -1);
 		/* Send the message to the daemon. The daemon fills the
 		   message. */
-		HIP_IFE(hip_send_recv_daemon_info(msg), -ECOMM);
+		HIP_IFE(hip_send_daemon_info_wrapper(msg, send_only), -ECOMM);
 
 		/* Loop through all the parameters in the message just filled. */
 		while((current_param =
