@@ -940,6 +940,7 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
 #ifdef SAVAH_IP_OPTION
   sent = sendto(ip_raw_sock, buff_ip_opt, buff_len, 0,
 		(struct sockaddr *) &dst, dst_len);
+  free(buff_ip_opt);
 #else
   sent = sendto(ip_raw_sock, buff, buff_len, 0,
 		(struct sockaddr *) &dst, dst_len);
@@ -972,6 +973,7 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
 int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
   int err = 0, verdict = 0, auth_len = 0, sent = 0;
   struct in6_addr * enc_addr = NULL;
+  struct in6_addr * opt_addr = NULL;
   struct in6_addr * enc_addr_no = NULL;
   hip_sava_ip_entry_t  * ip_entry     = NULL;
   hip_sava_enc_ip_entry_t * enc_entry = NULL;
@@ -987,6 +989,7 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
   struct udphdr* udp = NULL;
 
   char * buff = ctx->ipq_packet->payload;
+  char * buff_no_opt = NULL;
   int buff_len = ctx->ipq_packet->data_len;
 
   int protocol = 0;
@@ -1011,20 +1014,19 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
   HIP_DEBUG_HIT("Authenticating source address ", &ctx->src);
 #ifdef SAVAH_IP_OPTION
   if (ctx->ip_version == 4) {
-    memcpy(opt,
-	   buff + 20, //first 20 bytes are original IPv4 header
-	   20);       //20 bytes of sava_ip_option including 2 bytes of padding
+    opt = (struct sava_ip_option *) (buff + 20); //first 20 bytes are original IPv4 header
   } else {
-    memcpy(opt,
-	   buff + 40, //first 40 bytes are original IPv6 header
-	   20);       //20 bytes of sava_ip_option including 2 bytes of padding
+    opt = NULL;
   }
-  enc_addr = (struct in6_addr *) opt->data;
-  enc_entry = hip_sava_enc_ip_entry_find(enc_addr);
+
+  HIP_ASSERT(opt != NULL);
+
+  opt_addr = (struct in6_addr *) opt->data;
+  enc_entry = hip_sava_enc_ip_entry_find(opt_addr);
+
 #else 
   enc_entry = hip_sava_enc_ip_entry_find(&ctx->src);
 #endif
-
   auth_len = (ctx->ip_version == 6) ? sizeof(struct in6_addr): sizeof(struct in_addr);
   
   if (enc_entry) {
@@ -1032,20 +1034,27 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
     HIP_DEBUG("ENCRYPTED ENTRY FOUND \n");
 
     _HIP_DEBUG("Secret key acquired. Lets encrypt the src IP address \n");
-    
+
+#ifndef SAVAH_IP_OPTION    
     enc_addr = hip_sava_auth_ip(enc_entry->ip_link->src_addr, enc_entry->peer_info);
     //FIX IP version 
     enc_addr_no = map_enc_ip_addr_to_network_order(enc_addr, 4);
     free(enc_addr);
     enc_addr = enc_addr_no;
-    
     HIP_DEBUG_HIT("Found encrypted address ", enc_addr);
-    
-    if (!memcmp(&ctx->src, enc_addr, sizeof(struct in6_addr))) {
+#endif
+
+#ifdef SAVAH_IP_OPTION    
+    if (!memcmp(&ct, enc_addr, sizeof(struct in6_addr))) {
+#else
+    if (!memcmp(&ctx->src, enc_addr, sizeof(struct in6_addr))) {  
+#endif
+
       //PLACE ORIGINAL IP, RECALCULATE CHECKSUM AND REINJECT THE PACKET 
       //VERDICT DROP PACKET BECAUSE IT CONTAINS ENCRYPTED IP
       //ONLY NEW PACKET WILL GO OUT
       _HIP_DEBUG("Adding <src, dst> tuple to connection db \n");
+
       hip_sava_conn_entry_add(enc_entry->ip_link->src_addr, &ctx->dst);
       HIP_DEBUG("Source address is authenticated \n");
       _HIP_DEBUG("Reinject the traffic to network stack \n");
@@ -1092,11 +1101,19 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
 	}
       }else { //IPv4
 
-	iphdr = (struct ip *) buff;
+	iphdr = (struct ip *) buff; 
 	
 	IPV6_TO_IPV4_MAP(enc_entry->ip_link->src_addr, &iphdr->ip_src);
 	iphdr->ip_sum = 0;
-
+#ifdef SAVAH_IP_OPTION
+	buff_no_opt = (char *) malloc(buff_len - opt->length);
+	//Copy IPv4 header
+	memcpy(buff_no_opt, iphdr, sizeof(struct ip));
+	//Copy transmission protocol header + payload data omitting the sava_ip_option
+	memcpy(buff_no_opt, buff + sizeof(struct ip) + opt->length,
+	       buff_len - sizeof(struct ip) - opt->length);
+	
+#else
 	tcp = (struct tcphdr *) (buff + 20); //sizeof iphdr is 20
 	udp = (struct udphdr *) (buff + 20); //sizeof iphdr is 20
 	
@@ -1129,15 +1146,21 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
 	  udp->check = ipv4_checksum(IPPROTO_UDP, &(iphdr->ip_src), &(iphdr->ip_dst), udp, (buff_len - sizeof(struct ip))); //checksum is ok for ipv4
 	  _HIP_HEXDUMP("udp dump: ", udp, (buff_len - sizeof(struct ip)));
 	}
+#endif
 	if(setsockopt(ip_raw_sock, IPPROTO_IP, IP_HDRINCL, &on, sizeof(on)) < 0) { 
 	  HIP_DEBUG("setsockopt IP_HDRINCL ERROR！ \n");
 	} else {
 	  HIP_DEBUG("setsockopt IP_HDRINCL for ipv4 OK！ \n");
 	}
       }
-      
+#ifdef SAVAH_IP_OPTION
+      sent = sendto(ip_raw_sock, buff_no_opt, buff_len, 0,
+		    (struct sockaddr *) &dst, dst_len);
+      free(buff_no_opt);
+#else
       sent = sendto(ip_raw_sock, buff, buff_len, 0,
 		    (struct sockaddr *) &dst, dst_len);
+#endif
       if (ctx->ip_version == 4) {
 	if(setsockopt(ip_raw_sock, IPPROTO_IP, IP_HDRINCL, &off, sizeof(off)) < 0) { 
 	  HIP_DEBUG("setsockopt IP_HDRINCL ERROR！ \n");
