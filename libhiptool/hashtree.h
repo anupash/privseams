@@ -95,7 +95,7 @@ int htree_node_generator(unsigned char *left_node, unsigned char *right_node,
 		int node_length, unsigned char *dst_buffer, htree_gen_args_t *gen_args);
 void htree_print_data(hash_tree_t *tree);
 void htree_print_nodes(hash_tree_t *tree);
-
+double log_x(int base, double value);
 
 
 #if 0

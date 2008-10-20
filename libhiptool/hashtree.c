@@ -34,7 +34,7 @@ hash_tree_t* htree_init(int num_data_blocks, int max_data_length, int node_lengt
 
     // check here that it's a power of 2
     HIP_ASSERT(num_data_blocks > 0 &&
-    		floor(log2(num_data_blocks)) == ceil(log2(num_data_blocks)));
+    		floor(log_x(2, num_data_blocks)) == ceil(log_x(2, num_data_blocks)));
     HIP_ASSERT(max_data_length > 0);
     HIP_ASSERT(node_length > 0);
 
@@ -66,7 +66,7 @@ hash_tree_t* htree_init(int num_data_blocks, int max_data_length, int node_lengt
     tree->max_data_length = max_data_length;
     tree->node_length = node_length;
     tree->secret_length = secret_length;
-    tree->depth = ceil(log2(num_data_blocks));
+    tree->depth = ceil(log_x(2, num_data_blocks));
 
     HIP_DEBUG("tree->depth: %i\n", tree->depth);
 
@@ -600,6 +600,11 @@ void htree_print_nodes(hash_tree_t *tree)
         source_index = target_index;
         level_width = level_width >> 1;
     }
+}
+
+double log_x(int base, double value)
+{
+	return log(value) / log(base);
 }
 
 #if 0
