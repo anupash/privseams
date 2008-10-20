@@ -2873,6 +2873,17 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
       </section>
     </section>
   </chapter>
+  <chapter id="teredo">
+    <title>Teredo and HIP</title>
+    <para>
+    Teredo is one traversal solution for HIP. You can expirement with Teredo
+    by installing the miredo client software. Then, establish HIP connections
+    to Teredo addresses (check ifconfig teredo) at the client side as
+    instructed in <xref linkend="ch_basictest" />. See
+    <ulink url="http://www.cs.helsinki.fi/u/sklvarjo/miredo.htm" />
+    for further information.
+    </para>    
+  </chapter>
   <chapter id="ch_hip_bos">
     <title> Using HIP BOS support</title>
     <para>
