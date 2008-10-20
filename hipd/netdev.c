@@ -1140,7 +1140,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 			/* Should be counted globally over all interfaces 
 			   because they might have addresses too --Samu BUGID 663 */
 			//i = count_if_addresses(ifa->ifa_index);
-			i = address_count
+			i = address_count;
 			HIP_DEBUG("%d addr(s) in ifindex %d\n", i, ifa->ifa_index);
 
 			/* handle HIP readdressing */
