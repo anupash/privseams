@@ -167,15 +167,18 @@
 
 #define HIPD_CONFIG_FILE     "/etc/hip/hipd_config"
 #define HIPD_CONFIG_FILE_EX \
-"# Format of this file is as with hipconf, but without hipconf prefix.\n\
-# add hi default    # add all four HITs (see bug id 522) \n\
-# add map HIT IP    # preload some HIT-to-IP mappings to hipd \n\
-# add service rvs   # the host acts as HIP rendezvous\n\
+"# Format of this file is as with hipconf, but without hipconf prefix\n\
+# add hi default    # add all four HITs (see bug id 522)\n\
+# add map HIT IP    # preload some HIT-to-IP mappings to hipd\n\
+# add service rvs   # the host acts as HIP rendezvous (see also /etc/hip/relay_config)\n\
+# add server rvs <RVS-HIT> <RVS-IP> <lifetime-secs> # register to rendezvous server\n\
 # dht gw host port port TTL # set dht gw hostname|ip port default=5851\n\
-# locator on        # host sends all of its locators in base exchange \n\
-# opp normal|advanced|none \n\
+# locator on        # host sends all of its locators in base exchange\n\
+# opp normal|advanced|none\n\
+# transform order 213 # crypto preference order (1=AES, 2=3DES, 3=NULL)\n\
+\n\
 opendht off # Jan 2007: OpenDHT infrastructure is flaky -Samu/Miika\n\
-nat plain-udp       # the host is behind a NAT\n\
+nat plain-udp       # use UDP capsulation (for NATted environments)\n\
 debug medium        # debug verbosity: all, medium or none\n"
 
 #define HIPD_HOSTS_FILE     "/etc/hip/hosts"
