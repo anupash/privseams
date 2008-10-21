@@ -229,7 +229,7 @@ int hip_nat_send_keep_alive(hip_ha_t *entry, void *not_used)
 		goto out_err;
 	}
 
-	if (!IN6_IS_ADDR_V4MAPPED(&entry->local_address)) {
+	if (!IN6_IS_ADDR_V4MAPPED(&entry->our_addr)) {
 		HIP_DEBUG("Not IPv4 address, skip NAT keepalive\n");
 		goto out_err;
 	}
@@ -249,7 +249,7 @@ int hip_nat_send_keep_alive(hip_ha_t *entry, void *not_used)
 	   as destination port. However, because it is recommended to use
 	   HIP_NAT_UDP_PORT as source port also, we choose to do so here. */
 	entry->hadb_xmit_func->
-		hip_send_pkt(&entry->local_address, &entry->preferred_address,
+		hip_send_pkt(&entry->our_addr, &entry->peer_addr,
 			     HIP_NAT_UDP_PORT, HIP_NAT_UDP_PORT, msg,
 			     entry, 0);
 
@@ -513,7 +513,7 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 				
 				
 				hip_hadb_add_udp_addr_to_spi(entry, spi_out, &peer_addr, 1, 0, 1,addr.ipv4.sin_port, HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY);
-				memcpy(&entry->preferred_address, &peer_addr, sizeof(struct in6_addr));
+				memcpy(&entry->peer_addr, &peer_addr, sizeof(struct in6_addr));
 				entry->peer_udp_port = ntohs(addr.ipv4.sin_port);
 				HIP_DEBUG("set prefered the peer_addr port: %d\n",ntohs(addr.ipv4.sin_port ));
 				
@@ -535,7 +535,7 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 							peer_addr_list_item->address_state = PEER_ADDR_STATE_ACTIVE;
 							peer_addr_list_item->is_preferred = 1;
 							
-							memcpy(&entry->preferred_address, &peer_addr_list_item->address, sizeof(struct in6_addr));
+							memcpy(&entry->peer_addr, &peer_addr_list_item->address, sizeof(struct in6_addr));
 							entry->peer_udp_port = peer_addr_list_item->port;
 						}
 						
@@ -577,7 +577,7 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 		if (entry->state == HIP_STATE_ESTABLISHED)
 					spi_in = hip_hadb_get_latest_inbound_spi(entry);
 		
-		err =hip_add_sa(&entry->local_address, &entry->preferred_address,
+		err =hip_add_sa(&entry->our_addr, &entry->peer_addr,
 						 &entry->hit_our, &entry->hit_peer,
 						 spi_out, entry->esp_transform,
 						 &entry->esp_out, &entry->auth_out, 1,
@@ -589,7 +589,7 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 			hip_hadb_delete_outbound_spi(entry, 0);
 			}
 		
-		err =hip_add_sa(&entry->preferred_address,&entry->local_address, 
+		err =hip_add_sa(&entry->peer_addr,&entry->our_addr, 
 						&entry->hit_peer,&entry->hit_our, 
 						spi_in,
 						entry->esp_transform,
@@ -609,8 +609,8 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 		
 	
 		err = hip_setup_hit_sp_pair(&entry->hit_peer, &entry->hit_our,
-						&entry->preferred_address,
-						 &entry->local_address,  IPPROTO_ESP, 1, 1);
+						&entry->peer_addr,
+						 &entry->our_addr,  IPPROTO_ESP, 1, 1);
 		if(err) 
 			HIP_DEBUG("Setting up SP pair failed\n");
 		
@@ -1291,7 +1291,7 @@ int hip_nat_start_ice(hip_ha_t *entry, struct hip_esp_info *esp_info, int ice_co
                 	if (IN6_IS_ADDR_V4MAPPED(&ha_n->local_reflexive_address)) {
 	        			hip_external_ice_add_local_candidates(ice_session,
 	        					&ha_n->local_reflexive_address,
-	        					&ha_n->local_address,
+	        					&ha_n->our_addr,
 	        					ha_n->local_reflexive_udp_port,
 	        					HIP_NAT_UDP_PORT,
 	        					ICE_CAND_TYPE_PRFLX);

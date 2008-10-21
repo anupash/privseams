@@ -653,7 +653,7 @@ int hip_send_escrow_update(hip_ha_t *entry, int operation,
 	
 	/*** Send UPDATE ***/
 
-	memcpy(&saddr, &entry->local_address, sizeof(saddr));
+	memcpy(&saddr, &entry->our_addr, sizeof(saddr));
 
 	/** @todo Functionality on UDP has not been tested. */
 	HIP_IFEL(entry->hadb_xmit_func->
@@ -805,7 +805,7 @@ int hip_cancel_escrow_service(void)
 				-1, "Could not find client entry\n");
 		HIP_IFEL(hip_hadb_get_peer_addr(entry, &daddr), -1, 
 				"Failed to get peer address");
-		memcpy(&saddr, &entry->local_address, sizeof(saddr));
+		memcpy(&saddr, &entry->our_addr, sizeof(saddr));
 		
 		/* Here we should send an UPDATE with REG_RESPONSE to current
 		   peer. The sending of the UPDATE was removed when the update.c

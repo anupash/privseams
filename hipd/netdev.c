@@ -197,7 +197,7 @@ int exists_address_in_list(struct sockaddr *addr, int ifindex)
 			HIP_DEBUG_INADDR("addr4", hip_cast_sa_addr(&n->addr));
 		}
 		if (n->if_index == ifindex && family_match && addr_match) {
-			HIP_DEBUG("Address does not exist in the list\n");
+			HIP_DEBUG("Address exist in the list\n");
 			return 1;
 		}
 	}
@@ -631,8 +631,8 @@ int hip_map_id_to_addr(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *addr) {
 	else
 		ha = hip_hadb_try_to_find_by_peer_lsi(lsi);
 
-	if (ha && !ipv6_addr_any(&ha->preferred_address)) {
-		ipv6_addr_copy(addr, &ha->preferred_address);
+	if (ha && !ipv6_addr_any(&ha->peer_addr)) {
+		ipv6_addr_copy(addr, &ha->peer_addr);
 		HIP_DEBUG("Found peer address from hadb, skipping hosts and opendht look up\n");
 		err = 0;
 		goto out_err;
@@ -769,7 +769,7 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit,
 
 	/* Existing entry found. No need for peer IP checks */
 	entry = hip_hadb_find_byhits(src_hit, dst_hit);
-	if (entry && !ipv6_addr_any(&entry->local_address)) {
+	if (entry && !ipv6_addr_any(&entry->our_addr)) {
 		reuse_hadb_local_address = 1;
 		goto send_i1;
 	}
@@ -808,8 +808,8 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit,
 		entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
 		if (entry) {
 			HIP_DEBUG_IN6ADDR("reusing HA",
-					  &entry->preferred_address);
-			ipv6_addr_copy(dst_addr, &entry->preferred_address);
+					  &entry->peer_addr);
+			ipv6_addr_copy(dst_addr, &entry->peer_addr);
 			ha_peer_port = entry->peer_udp_port;
 			ha_nat_mode = entry->nat_mode;
 			err = 0;
@@ -853,7 +853,7 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit,
 		 "Internal lookup error\n");
 
 	if (is_loopback)
-		ipv6_addr_copy(&entry->local_address, src_addr);
+		ipv6_addr_copy(&entry->our_addr, src_addr);
 	
 	/* Preserve NAT status with peer */
 	entry->peer_udp_port = ha_peer_port;
@@ -870,24 +870,24 @@ send_i1:
 		goto out_err;
 	}
 
-	is_ipv4_locator = IN6_IS_ADDR_V4MAPPED(&entry->preferred_address);
+	is_ipv4_locator = IN6_IS_ADDR_V4MAPPED(&entry->peer_addr);
 
 	memset(addr, 0, sizeof(struct sockaddr_storage));
 	addr->sa_family = (is_ipv4_locator ? AF_INET : AF_INET6);
 
 	if (!reuse_hadb_local_address && src_addr) {
-		ipv6_addr_copy(&entry->local_address, src_addr);
+		ipv6_addr_copy(&entry->our_addr, src_addr);
 	}
 
-	memcpy(hip_cast_sa_addr(addr), &entry->local_address,
+	memcpy(hip_cast_sa_addr(addr), &entry->our_addr,
 	       hip_sa_addr_len(addr));
 
 	HIP_DEBUG_HIT("our hit", &entry->hit_our);
         HIP_DEBUG_HIT("peer hit", &entry->hit_peer);
-	HIP_DEBUG_IN6ADDR("peer locator", &entry->preferred_address);
-	HIP_DEBUG_IN6ADDR("our locator", &entry->local_address);
+	HIP_DEBUG_IN6ADDR("peer locator", &entry->peer_addr);
+	HIP_DEBUG_IN6ADDR("our locator", &entry->our_addr);
 
-	if_index = hip_devaddr2ifindex(&entry->local_address);
+	if_index = hip_devaddr2ifindex(&entry->our_addr);
 	HIP_IFEL((if_index < 0), -1, "if_index NOT determined\n");
         /* we could try also hip_select_source_address() here on failure,
 	   but it seems to fail too */
@@ -1125,15 +1125,19 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 				// hip_for_each_ha();
 			}
 
-			/* Should be counted globally over all interfaces 
-			   because they might have addresses too --Samu BUGID 663 */
-			//i = count_if_addresses(ifa->ifa_index);
-			i = address_count;
+			i = count_if_addresses(ifa->ifa_index);
+       
 			HIP_DEBUG("%d addr(s) in ifindex %d\n", i, ifa->ifa_index);
 
 			/* handle HIP readdressing */
 
-			if (i == 0 && pre_if_address_count > 0 &&
+			/* Should be counted globally over all interfaces 
+			   because they might have addresses too --Samu BUGID 663 */
+			/*
+			  if (i == 0 && pre_if_address_count > 0 &&
+			    msg->nlmsg_type == RTM_DELADDR) {
+			*/
+			if (address_count == 0 && pre_if_address_count > 0 &&
 			    msg->nlmsg_type == RTM_DELADDR) {
 				/* send 0-address REA if this was deletion of
 				   the last address */
@@ -1142,13 +1146,15 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 						    SEND_UPDATE_LOCATOR, is_add, addr);
 				
 				goto out_err;
-			}
+			} 
+			/* Looks like this is not needed or can anyone 
+			   tell me how to get to this situation --Samu
 			else if (i == 0)
 			{
 				HIP_DEBUG("no need to readdress\n");
 				goto skip_readdr;
-			}
-
+		}
+			*/
                         /* Locator_msg is just a container for building */
                         locator_msg = malloc(HIP_MAX_PACKET);
                         HIP_IFEL(!locator_msg, -1, "Failed to malloc locator_msg\n");
@@ -1161,8 +1167,11 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
                         loc = hip_get_param(locator_msg, HIP_PARAM_LOCATOR);
 			hip_print_locator_addresses(locator_msg);
 			locators = hip_get_locator_first_addr_item(loc);
-                        HIP_DEBUG("UPDATE to be sent contains %i addr(s)\n", i);
-                        hip_send_update_all(locators, i,
+			/* this is changed to address count because the i contains
+			   only one interface we can have multiple and global count
+			   is zero if last is deleted */
+                        HIP_DEBUG("UPDATE to be sent contains %i addr(s)\n", address_count);
+                        hip_send_update_all(locators, address_count,
                                             ifa->ifa_index, 
                                             SEND_UPDATE_LOCATOR, is_add, addr);
                         if (hip_locator_status == SO_HIP_SET_LOCATOR_ON)

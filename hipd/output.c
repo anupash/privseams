@@ -257,7 +257,7 @@ out_err:
  * @return        	nothing
  */
 void hip_send_opp_tcp_i1(hip_ha_t *entry){
-	int    ipType = ! IN6_IS_ADDR_V4MAPPED(&entry->preferred_address);
+	int    ipType = ! IN6_IS_ADDR_V4MAPPED(&entry->peer_addr);
 	struct ip * iphdr;
 	struct ip6_hdr * ip6_hdr;
 	struct tcphdr *tcphdr;
@@ -291,8 +291,8 @@ void hip_send_opp_tcp_i1(hip_ha_t *entry){
 		iphdr->ip_ttl = 64;
 		iphdr->ip_p = 6;
 		iphdr->ip_sum = in_cksum((unsigned short *)iphdr, sizeof(struct ip));
-		IPV6_TO_IPV4_MAP(&entry->local_address, &iphdr->ip_src);
-		IPV6_TO_IPV4_MAP(&entry->preferred_address, &iphdr->ip_dst);
+		IPV6_TO_IPV4_MAP(&entry->our_addr, &iphdr->ip_src);
+		IPV6_TO_IPV4_MAP(&entry->peer_addr, &iphdr->ip_dst);
 	}
 	else if(ipType == 1){//ipv6
 		//get the ip header
@@ -304,8 +304,8 @@ void hip_send_opp_tcp_i1(hip_ha_t *entry){
 		ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen = 20;
 		ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt = 6;
 		ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_hlim = 64;
-		memcpy(&ip6_hdr->ip6_src, &entry->local_address, sizeof(struct in6_addr));
-		memcpy(&ip6_hdr->ip6_dst, &entry->preferred_address, sizeof(struct in6_addr));
+		memcpy(&ip6_hdr->ip6_src, &entry->our_addr, sizeof(struct in6_addr));
+		memcpy(&ip6_hdr->ip6_dst, &entry->peer_addr, sizeof(struct in6_addr));
 	}
 
 	//randomize the source port to one of 1024-65535
@@ -413,7 +413,7 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 #ifdef CONFIG_HIP_BLIND
 	// Send blinded i1
 	if (hip_blind_get_status()) {
-	  err = entry->hadb_xmit_func->hip_send_pkt(&entry->local_address,
+	  err = entry->hadb_xmit_func->hip_send_pkt(&entry->our_addr,
 						    &daddr,
 						    (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
 						    HIP_NAT_UDP_PORT,
@@ -424,7 +424,7 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	HIP_DEBUG_HIT("BEFORE sending\n",&daddr);
 	if (!hip_blind_get_status()) {
 		err = entry->hadb_xmit_func->
-			hip_send_pkt(&entry->local_address, &daddr,
+			hip_send_pkt(&entry->our_addr, &daddr,
 				     (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
 				     HIP_NAT_UDP_PORT,
 				     i1, entry, 1);

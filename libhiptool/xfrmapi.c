@@ -430,7 +430,7 @@ int hip_xfrm_state_delete(struct rtnl_handle *rth,
 	if (spi) req.xsid.proto = IPPROTO_ESP;
 
 	HIP_DEBUG("deleting xfrm state with spi 0x%x\n", spi);
-	HIP_HEXDUMP("peer addr: ", &req.xsid.daddr, sizeof(req.xsid.daddr));
+	HIP_HEXDUMP("SA peer addr: ", &req.xsid.daddr, sizeof(req.xsid.daddr));
 	HIP_IFEL((netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0), -1, "netlink_talk() failed!\n");
 
 out_err:
@@ -443,8 +443,8 @@ void hip_delete_sa(uint32_t spi, struct in6_addr *peer_addr,
 {
 	// Ignore the dst_addr, because xfrm accepts only one address.
 	// dst_addr is used only in pfkeyapi.c
-	HIP_DEBUG("spi=0x%x\n", spi);
-	HIP_DEBUG_IN6ADDR("daddr", peer_addr);
+	_HIP_DEBUG("spi=0x%x\n", spi);
+	_HIP_DEBUG_IN6ADDR("SA daddr", peer_addr);
 
 	hip_xfrm_state_delete(hip_xfrmapi_nl_ipsec, peer_addr, spi, family,
 	                      sport, dport);

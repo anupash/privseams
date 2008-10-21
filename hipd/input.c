@@ -627,7 +627,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 		break;
 
 	case HIP_UPDATE:
-		HIP_DEBUG_HIT("receive a stun  from:  " ,src_addr );
+		HIP_DEBUG_HIT("received an UPDATE:  " ,src_addr );
 		if(entry){
 			HIP_IFCS(entry, err = entry->hadb_rcv_func->
 				 hip_receive_update(msg, src_addr, dst_addr, entry,
@@ -714,7 +714,7 @@ int hip_receive_udp_control_packet(struct hip_common *msg,
 		   used for setting up the SAs: handle_r1 creates one-way SA and
 		   handle_i2 the other way; let's make sure that they are the
 		   same. */
-		saddr_public = &entry->preferred_address;
+		saddr_public = &entry->peer_addr;
 	}
 #endif
 	HIP_IFEL(hip_receive_control_packet(msg, saddr_public, daddr,info,1), -1,
@@ -1180,7 +1180,7 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 
 			struct in6_addr daddr;
 
-			memcpy(&entry->local_address, r1_daddr, sizeof(struct in6_addr));
+			memcpy(&entry->our_addr, r1_daddr, sizeof(struct in6_addr));
 
 			hip_hadb_get_peer_addr(entry, &daddr);
 			hip_hadb_delete_peer_addrlist_one(entry, &daddr);
@@ -1288,7 +1288,7 @@ int hip_receive_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	/* Check and remove the IP of the peer from the opp non-HIP database */
-	hip_oppipdb_delentry(&(entry->preferred_address));
+	hip_oppipdb_delentry(&(entry->peer_addr));
 #endif
 
 #ifdef CONFIG_HIP_BLIND
@@ -1908,12 +1908,12 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		/* Should we handle the case where the insertion fails? */
 		hip_hadb_insert_state(entry);
 
-		ipv6_addr_copy(&entry->local_address, i2_daddr);
+		ipv6_addr_copy(&entry->our_addr, i2_daddr);
 
 		/* Get the interface index of the network device which has our
 		   local IP address. */
 		if((if_index =
-		    hip_devaddr2ifindex(&entry->local_address)) < 0) {
+		    hip_devaddr2ifindex(&entry->our_addr)) < 0) {
 			err = -ENXIO;
 			HIP_ERROR("Interface index for local IPv6 address "\
 				  "could not be determined. Dropping the I2 "\
@@ -1929,7 +1929,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		addr = (struct sockaddr*) &ss_addr;
 		addr->sa_family = AF_INET6;
 
-		memcpy(hip_cast_sa_addr(addr), &entry->local_address,
+		memcpy(hip_cast_sa_addr(addr), &entry->our_addr,
 		       hip_sa_addr_len(addr));
 		add_address_to_list(addr, if_index);
 	}
@@ -2379,8 +2379,8 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	if( r2_info->hi3_in_use ) {
 		/* In hi3 real addresses should already be in entry, received on
 		   r1 phase. */
-		memcpy(r2_saddr, &entry->preferred_address, sizeof(struct in6_addr));
-		memcpy(r2_daddr, &entry->local_address, sizeof(struct in6_addr));
+		memcpy(r2_saddr, &entry->peer_addr, sizeof(struct in6_addr));
+		memcpy(r2_daddr, &entry->our_addr, sizeof(struct in6_addr));
 	}
 #endif
 	if (entry->state == HIP_STATE_ESTABLISHED) {
@@ -2646,7 +2646,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	/* Check and remove the IP of the peer from the opp non-HIP database */
-	hip_oppipdb_delentry(&(entry->preferred_address));
+	hip_oppipdb_delentry(&(entry->peer_addr));
 #endif
 	HIP_DEBUG("Reached ESTABLISHED state\n");
 	if (entry->hip_msg_retrans.buf) {
@@ -3094,7 +3094,7 @@ int hip_handle_notify(const struct hip_common *notify,
 				/* This I1 packet must be send only once, which
 				   is why we use NULL entry for sending. */
 				err = entry->hadb_xmit_func->
-					hip_send_pkt(&entry->local_address, &responder_ip,
+					hip_send_pkt(&entry->our_addr, &responder_ip,
 						     (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
 						     port,
 						     &i1, NULL, 0);
@@ -3224,8 +3224,8 @@ int hip_handle_firewall_i1_request(struct hip_common *msg,
 		entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
 		if (entry) {
 			HIP_DEBUG_IN6ADDR("reusing HA",
-					  &entry->preferred_address);
-			ipv6_addr_copy(&dst_addr, &entry->preferred_address);
+					  &entry->peer_addr);
+			ipv6_addr_copy(&dst_addr, &entry->peer_addr);
 			ha_local_port = entry->local_udp_port;
 			ha_peer_port = entry->peer_udp_port;
 			ha_nat_mode = entry->nat_mode;
@@ -3271,7 +3271,7 @@ int hip_handle_firewall_i1_request(struct hip_common *msg,
 		 "Internal lookup error\n");
 
 	if (is_loopback)
-		ipv6_addr_copy(&(entry->local_address), &src_addr);
+		ipv6_addr_copy(&(entry->our_addr), &src_addr);
 
 	/* Preserve NAT status with peer */
 	entry->local_udp_port = ha_local_port;
@@ -3295,7 +3295,7 @@ skip_entry_creation:
 		goto out_err;
 	}
 
-	is_ipv4_locator = IN6_IS_ADDR_V4MAPPED(&entry->preferred_address);
+	is_ipv4_locator = IN6_IS_ADDR_V4MAPPED(&entry->peer_addr);
 
 	memset(addr, 0, sizeof(struct sockaddr_storage));
 	addr->sa_family = (is_ipv4_locator ? AF_INET : AF_INET6);
@@ -3303,26 +3303,26 @@ skip_entry_creation:
 	if (!reuse_hadb_local_address)
 		if (is_ipv4_locator) {
 			IPV4_TO_IPV6_MAP((struct in_addr*) i1_saddr,
-					&entry->local_address);
+					&entry->our_addr);
 //			IPV4_TO_IPV6_MAP(((struct in_addr *)&acq->id.daddr),
-//					 &entry->local_address);
+//					 &entry->our_addr);
 		} else {
-			ipv6_addr_copy(&entry->local_address,
+			ipv6_addr_copy(&entry->our_addr,
 					(struct in6_addr*) i1_saddr);
-//			ipv6_addr_copy(&entry->local_address,
+//			ipv6_addr_copy(&entry->our_addr,
 //				       ((struct in6_addr*)&acq->id.daddr));
 
 		}
 
-	memcpy(hip_cast_sa_addr(addr), &entry->local_address,
+	memcpy(hip_cast_sa_addr(addr), &entry->our_addr,
 	       hip_sa_addr_len(addr));
 
 	HIP_DEBUG_HIT("our hit", &entry->hit_our);
         HIP_DEBUG_HIT("peer hit", &entry->hit_peer);
-	HIP_DEBUG_IN6ADDR("peer locator", &entry->preferred_address);
-	HIP_DEBUG_IN6ADDR("our locator", &entry->local_address);
+	HIP_DEBUG_IN6ADDR("peer locator", &entry->peer_addr);
+	HIP_DEBUG_IN6ADDR("our locator", &entry->our_addr);
 
-	if_index = hip_devaddr2ifindex(&entry->local_address);
+	if_index = hip_devaddr2ifindex(&entry->our_addr);
 	HIP_IFEL((if_index < 0), -1, "if_index NOT determined\n");
         /* we could try also hip_select_source_address() here on failure,
 	   but it seems to fail too */

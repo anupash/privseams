@@ -729,7 +729,7 @@ int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
 				/* Allocate a new relay record. */
 				new_record = hip_relrec_alloc(
 					type,granted_lifetime, &(entry->hit_peer),
-					&(entry->preferred_address),
+					&(entry->peer_addr),
 					entry->peer_udp_port,
 					&(entry->hip_hmac_in),
 					entry->hadb_xmit_func->hip_send_pkt);
@@ -1138,9 +1138,9 @@ int hip_handle_reg_from(hip_ha_t *entry, struct hip_common *msg){
 	if(rfrom != NULL) {
 		_HIP_DEBUG("received a for REG_FROM parameter \n");
 		_HIP_DEBUG_IN6ADDR("the received reg_from address is ", &rfrom->address);
-		_HIP_DEBUG_IN6ADDR("the local address is ", &entry->local_address);
+		_HIP_DEBUG_IN6ADDR("the local address is ", &entry->our_addr);
 		//check if it is a local address
-		if(!ipv6_addr_cmp(&rfrom->address,&entry->local_address) ) {
+		if(!ipv6_addr_cmp(&rfrom->address,&entry->our_addr) ) {
 			HIP_DEBUG("the host is not behind nat \n");
 		} else {
 			_HIP_DEBUG("found a nat @port %d \n ", ntohs(rfrom->port));

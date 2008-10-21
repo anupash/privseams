@@ -3896,41 +3896,44 @@ struct hip_locator_info_addr_item * hip_get_locator_item_as_one(
 
     address_pointer = (char *)item_list;
 
-    if (index != 0) {
-	    for(i = 0; i <= index; i++) {
-		    if (((struct hip_locator_info_addr_item *)address_pointer)->locator_type
-			== HIP_LOCATOR_LOCATOR_TYPE_UDP) {
-			    address_pointer += sizeof(struct hip_locator_info_addr_item2);
-		    }
-		    else if(((struct hip_locator_info_addr_item *)address_pointer)->locator_type
-			    == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI) {
-			    address_pointer += sizeof(struct hip_locator_info_addr_item);
-		    }
-		    else if(((struct hip_locator_info_addr_item *)address_pointer)->locator_type
-			    == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
-			    address_pointer += sizeof(struct hip_locator_info_addr_item);
-		    }
-		    else
-			    address_pointer += sizeof(struct hip_locator_info_addr_item);
+    HIP_DEBUG("LOCATOR TYPE %d\n",
+		      ((struct hip_locator_info_addr_item *)address_pointer)->locator_type);
+    if (index ==  0) {
+	    if (((struct hip_locator_info_addr_item *)address_pointer)->locator_type
+		== HIP_LOCATOR_LOCATOR_TYPE_UDP) {
+		    item2 = (struct hip_locator_info_addr_item2 *)address_pointer;
+		    HIP_DEBUG_IN6ADDR("LOCATOR", (struct in6_addr *)&item2->address);
+	    } else {
+		    item = (struct hip_locator_info_addr_item *)address_pointer;
+		    HIP_DEBUG_IN6ADDR("LOCATOR", (struct in6_addr *)&item->address);
 	    }
+	    return address_pointer;
     }
-    if (((struct hip_locator_info_addr_item *)address_pointer)->locator_type
-	== HIP_LOCATOR_LOCATOR_TYPE_UDP) {
-	    item2 = (struct hip_locator_info_addr_item2 *)address_pointer;
-	    HIP_DEBUG_IN6ADDR("LOCATOR", (struct in6_addr *)&item2->address);
-    }
-    else if(((struct hip_locator_info_addr_item *)address_pointer)->locator_type
-	    == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI) {
-	    item = (struct hip_locator_info_addr_item *)address_pointer;
-	    HIP_DEBUG_IN6ADDR("LOCATOR", (struct in6_addr *)&item->address);
-    }
-    else if(((struct hip_locator_info_addr_item *)address_pointer)->locator_type
-	    == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
-	    item = (struct hip_locator_info_addr_item *)address_pointer;
-	    HIP_DEBUG_IN6ADDR("LOCATOR", (struct in6_addr *)&item->address);
-    }
-    return (struct hip_locator_info_addr_item *)address_pointer;
-}
+
+    for(i = 0; i < index; i++) {
+	    if (((struct hip_locator_info_addr_item *)address_pointer)->locator_type
+		== HIP_LOCATOR_LOCATOR_TYPE_UDP) {
+		    address_pointer += sizeof(struct hip_locator_info_addr_item2);
+		    item2 = (struct hip_locator_info_addr_item2 *)address_pointer;
+		    HIP_DEBUG_IN6ADDR("LOCATOR", (struct in6_addr *)&item2->address);
+	    }
+	    else if(((struct hip_locator_info_addr_item *)address_pointer)->locator_type
+		    == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI) {
+		    address_pointer += sizeof(struct hip_locator_info_addr_item);
+		    item = (struct hip_locator_info_addr_item *)address_pointer;
+		    HIP_DEBUG_IN6ADDR("LOCATOR", (struct in6_addr *)&item->address);
+	    }
+	    else if(((struct hip_locator_info_addr_item *)address_pointer)->locator_type
+		    == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
+		    address_pointer += sizeof(struct hip_locator_info_addr_item);
+		    item = (struct hip_locator_info_addr_item *)address_pointer;
+		    HIP_DEBUG_IN6ADDR("LOCATOR", (struct in6_addr *)&item->address);
+	    }
+	    else
+		    address_pointer += sizeof(struct hip_locator_info_addr_item);
+    }  
+    return address_pointer;
+} 
 
 /**
  * retreive a IP address  from a locator item structure
@@ -3946,8 +3949,9 @@ struct in6_addr * hip_get_locator_item_address(void* item){
 	temp = (struct hip_locator_info_addr_item*) item;
 	if (temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI){
 		return &temp->address;
-	}
-	else {
+	} else 	if (temp->locator_type == HIP_LOCATOR_LOCATOR_TYPE_IPV6){
+		return &temp->address;
+	} else {
 		return &((struct hip_locator_info_addr_item2 *)temp)->address;
 	}
 

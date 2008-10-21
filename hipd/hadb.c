@@ -396,7 +396,7 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 
 	ipv6_addr_copy(&entry->hit_peer, peer_hit);
 	ipv6_addr_copy(&entry->hit_our, local_hit);
-	ipv6_addr_copy(&entry->local_address, local_addr);
+	ipv6_addr_copy(&entry->our_addr, local_addr);
 	HIP_IFEL(hip_hidb_get_lsi_by_hit(local_hit, &entry->lsi_our), -1,
 		 "Unable to find local hit");
 
@@ -708,8 +708,8 @@ int hip_hadb_get_peer_addr(hip_ha_t *entry, struct in6_addr *addr)
 
 	/* assume already locked entry */
 
-	HIP_DEBUG_HIT("entry def addr", &entry->preferred_address);
-	ipv6_addr_copy(addr, &entry->preferred_address);
+	HIP_DEBUG_HIT("entry def addr", &entry->peer_addr);
+	ipv6_addr_copy(addr, &entry->peer_addr);
         return err;
 }
 
@@ -814,13 +814,13 @@ int hip_hadb_add_peer_addr(hip_ha_t *entry, struct in6_addr *new_addr,
 	 * exchange */
 	if (spi == 0) {
 		HIP_DEBUG("SPI is 0, set address as the bex address\n");
-		if (!ipv6_addr_any(&entry->preferred_address)) {
-			hip_in6_ntop(&entry->preferred_address, addrstr);
+		if (!ipv6_addr_any(&entry->peer_addr)) {
+			hip_in6_ntop(&entry->peer_addr, addrstr);
 			HIP_DEBUG("warning, overwriting existing preferred address %s\n",
 				  addrstr);
 		}
-		ipv6_addr_copy(&entry->preferred_address, new_addr);
-		HIP_DEBUG_IN6ADDR("entry->preferred_address \n", &entry->preferred_address);
+		ipv6_addr_copy(&entry->peer_addr, new_addr);
+		HIP_DEBUG_IN6ADDR("entry->peer_addr \n", &entry->peer_addr);
 		goto out_err;
 	}
 
@@ -884,13 +884,13 @@ int hip_hadb_add_peer_udp_addr(hip_ha_t *entry, struct in6_addr *new_addr,in_por
 	 * exchange */
 	if (spi == 0) {
 		HIP_DEBUG("SPI is 0, set address as the bex address\n");
-		if (!ipv6_addr_any(&entry->preferred_address)) {
-			hip_in6_ntop(&entry->preferred_address, addrstr);
+		if (!ipv6_addr_any(&entry->peer_addr)) {
+			hip_in6_ntop(&entry->peer_addr, addrstr);
 			HIP_DEBUG("warning, overwriting existing preferred address %s\n",
 				  addrstr);
 		}
-		ipv6_addr_copy(&entry->preferred_address, new_addr);
-		HIP_DEBUG_IN6ADDR("entry->preferred_address \n", &entry->preferred_address);
+		ipv6_addr_copy(&entry->peer_addr, new_addr);
+		HIP_DEBUG_IN6ADDR("entry->peer_addr \n", &entry->peer_addr);
 		goto out_err;
 	}
 
@@ -1557,7 +1557,7 @@ void hip_hadb_set_default_out_addr(hip_ha_t *entry, struct hip_spi_out_item *spi
 	{
 		HIP_DEBUG("testing, setting given address as default out addr\n");
 		ipv6_addr_copy(&spi_out->preferred_address, addr);
-		ipv6_addr_copy(&entry->preferred_address, addr);
+		ipv6_addr_copy(&entry->peer_addr, addr);
 	}
 	else
 	{
@@ -1568,9 +1568,9 @@ void hip_hadb_set_default_out_addr(hip_ha_t *entry, struct hip_spi_out_item *spi
 		if (!err)
 		{
 			ipv6_addr_copy(&spi_out->preferred_address, &a);
-			ipv6_addr_copy(&entry->preferred_address, &a);
+			ipv6_addr_copy(&entry->peer_addr, &a);
 			HIP_DEBUG("default out addr\n",
-				  &entry->preferred_address);
+				  &entry->peer_addr);
 		}
 		else HIP_ERROR("couldn't select and set preferred address\n");
 	}
@@ -1700,9 +1700,9 @@ int hip_update_send_echo(hip_ha_t *entry,
 
         /* Have to take care of UPDATE echos to opposite family */
         if (IN6_IS_ADDR_V4MAPPED((struct in6_addr *)&addr->address)
-            == IN6_IS_ADDR_V4MAPPED(&entry->local_address)) {
+            == IN6_IS_ADDR_V4MAPPED(&entry->our_addr)) {
             HIP_IFEL(entry->hadb_xmit_func->
-                     hip_send_pkt(&entry->local_address, &addr->address,
+                     hip_send_pkt(&entry->our_addr, &addr->address,
                                   (entry->nat_mode ? HIP_NAT_UDP_PORT : 0), entry->peer_udp_port,
                                   update_packet, entry, 1),
                      -ECOMM, "Sending UPDATE packet with echo data failed.\n");
@@ -1712,7 +1712,7 @@ int hip_update_send_echo(hip_ha_t *entry,
             list_for_each_safe(item, tmp, addresses, i) {
                 n = list_entry(item);
                 if (hip_sockaddr_is_v6_mapped(&n->addr)
-                    != IN6_IS_ADDR_V4MAPPED(&entry->local_address)) {
+                    != IN6_IS_ADDR_V4MAPPED(&entry->our_addr)) {
                     HIP_IFEL(entry->hadb_xmit_func->
                              hip_send_pkt(hip_cast_sa_addr(&n->addr),
                                           (struct in6_addr*)&addr->address,
@@ -1921,7 +1921,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
  			HIP_DEBUG("address is base exchange address, setting state to ACTIVE\n");
 			new_addr->address_state = PEER_ADDR_STATE_ACTIVE;
 			HIP_DEBUG("setting bex addr as preferred address\n");
-			ipv6_addr_copy(&entry->preferred_address, addr);
+			ipv6_addr_copy(&entry->peer_addr, addr);
 			new_addr->seq_update_id = 0;
 		} else {
 			HIP_DEBUG("address's state is set in state UNVERIFIED\n");
@@ -1937,7 +1937,7 @@ int hip_hadb_add_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 	new_addr->is_preferred = is_preferred_addr;
 	if(is_preferred_addr){
             //HIP_DEBUG("Since the address is preferred, we set the entry preferred_address as such\n");
-              ipv6_addr_copy(&entry->preferred_address, &new_addr->address);
+              ipv6_addr_copy(&entry->peer_addr, &new_addr->address);
 	}
 	if (new) {
 		HIP_DEBUG("adding new addr to SPI list\n");
@@ -2725,8 +2725,8 @@ void hip_hadb_delete_inbound_spi(hip_ha_t *entry, uint32_t spi)
 				  spi_item->spi, spi_item->new_spi, item, spi_item->addresses);
 		  	HIP_ERROR("remove SPI from HIT-SPI HT\n");
 			//hip_hadb_remove_hs(spi_item->spi);
-			HIP_DEBUG_IN6ADDR("delete", &entry->local_address);
-			default_ipsec_func_set.hip_delete_sa(spi_item->spi, &entry->local_address,
+			HIP_DEBUG_IN6ADDR("delete", &entry->our_addr);
+			default_ipsec_func_set.hip_delete_sa(spi_item->spi, &entry->our_addr,
 					&entry->hit_our, AF_INET6, entry->peer_udp_port, 0);
 				      //AF_INET6, 0, 0);
 			// XX FIX: should be deleted like this?
@@ -2735,7 +2735,7 @@ void hip_hadb_delete_inbound_spi(hip_ha_t *entry, uint32_t spi)
 			//    &spi_item->addresses->address + i, AF_INET6);
  			if (spi_item->spi != spi_item->new_spi)
  				default_ipsec_func_set.hip_delete_sa(spi_item->new_spi, &entry->hit_our,
- 						&entry->local_address, AF_INET6, entry->peer_udp_port, 0);
+ 						&entry->our_addr, AF_INET6, entry->peer_udp_port, 0);
  			if (spi_item->addresses)
  			{
  				HIP_DEBUG("deleting stored addrlist 0x%p\n", spi_item->addresses);
@@ -2769,9 +2769,9 @@ void hip_hadb_delete_outbound_spi(hip_ha_t *entry, uint32_t spi)
 
 			HIP_DEBUG("deleting SPI_out=0x%x SPI_out_new=0x%x from outbound list, item=0x%p\n",
 				  spi_item->spi, spi_item->new_spi, item);
-			default_ipsec_func_set.hip_delete_sa(spi_item->spi, &entry->preferred_address, &entry->preferred_address,
+			default_ipsec_func_set.hip_delete_sa(spi_item->spi, &entry->peer_addr, &entry->peer_addr,
 				      AF_INET6, 0, entry->peer_udp_port);
-			default_ipsec_func_set.hip_delete_sa(spi_item->new_spi, &entry->preferred_address,&entry->preferred_address,
+			default_ipsec_func_set.hip_delete_sa(spi_item->new_spi, &entry->peer_addr,&entry->peer_addr,
 				      AF_INET6, 0, entry->peer_udp_port);
 			/* delete peer's addresses */
 			list_for_each_safe(a_item, a_tmp, spi_item->peer_addr_list, ii)
@@ -2895,8 +2895,8 @@ int hip_handle_get_ha_info(hip_ha_t *entry, struct hip_common *msg)
 	hid.state = entry->state;
     	ipv6_addr_copy(&hid.hit_our, &entry->hit_our);
 	ipv6_addr_copy(&hid.hit_peer, &entry->hit_peer);
-	ipv6_addr_copy(&hid.ip_our, &entry->local_address);
-	ipv6_addr_copy(&hid.ip_peer, &entry->preferred_address);
+	ipv6_addr_copy(&hid.ip_our, &entry->our_addr);
+	ipv6_addr_copy(&hid.ip_peer, &entry->peer_addr);
 	ipv4_addr_copy(&hid.lsi_our, &entry->lsi_our);
 	ipv4_addr_copy(&hid.lsi_peer, &entry->lsi_peer);
 
@@ -2935,12 +2935,12 @@ int hip_hadb_map_ip_to_hit(hip_ha_t *entry, void *id2)
 	struct in6_addr *id = id2;
 	int err = 0;
 
-	if (ipv6_addr_cmp(&entry->preferred_address, id) == 0 &&
+	if (ipv6_addr_cmp(&entry->peer_addr, id) == 0 &&
 		!ipv6_addr_any(&entry->hit_peer) &&
 		!hit_is_opportunistic_hashed_hit(&entry->hit_peer)) {
 		ipv6_addr_copy(id, &entry->hit_peer);
 		HIP_DEBUG_HIT("hit", &entry->hit_peer);
-		HIP_DEBUG_HIT("pref", &entry->preferred_address);
+		HIP_DEBUG_HIT("pref", &entry->peer_addr);
 		HIP_DEBUG_HIT("id", id);
 		err = -1; /* break iteration */
 	}
@@ -2964,7 +2964,7 @@ hip_ha_t *hip_hadb_find_rvs_candidate_entry(hip_hit_t *local_hit,
 		_HIP_DEBUG("List_for_each_entry_safe\n");
 		hip_hold_ha(this);
 		if ((ipv6_addr_cmp(local_hit, &this->hit_our) == 0) &&
-			(ipv6_addr_cmp(rvs_ip, &this->preferred_address) == 0)) {
+			(ipv6_addr_cmp(rvs_ip, &this->peer_addr) == 0)) {
 			result = this;
 			break;
 		}
@@ -3155,12 +3155,12 @@ int hip_get_local_addr(struct hip_common *msg)
 	entry = hip_hadb_find_byhits(src_hit, dst_hit);
 
 	hip_msg_init(msg);
-	//HIP_DEBUG_IN6ADDR(" local address: ", &entry->local_address);
+	//HIP_DEBUG_IN6ADDR(" local address: ", &entry->our_addr);
 
 	if(!entry)
 		HIP_DEBUG("Can't find local address because of no entry in hadb!\n");
 
-    	ipv6_addr_copy(&local_address, &entry->local_address);
+    	ipv6_addr_copy(&local_address, &entry->our_addr);
 
     	//hip_build_user_hdr(msg, HIP_HIPPROXY_LOCAL_ADDRESS, 0);
 	err = hip_build_param_contents(msg, &local_address, HIP_PARAM_IPV6_ADDR,
@@ -3276,7 +3276,7 @@ int hip_hadb_add_udp_addr_to_spi(hip_ha_t *entry, uint32_t spi,
  			HIP_DEBUG("address is base exchange address, setting state to ACTIVE\n");
 			new_addr->address_state = PEER_ADDR_STATE_ACTIVE;
 			HIP_DEBUG("setting bex addr as preferred address\n");
-			ipv6_addr_copy(&entry->preferred_address, addr);
+			ipv6_addr_copy(&entry->peer_addr, addr);
 			new_addr->seq_update_id = 0;
 		} else {
 			HIP_DEBUG("address's state is set in state UNVERIFIED\n");
@@ -3297,7 +3297,7 @@ int hip_hadb_add_udp_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 	new_addr->is_preferred = is_preferred_addr;
 	if(is_preferred_addr){
             //HIP_DEBUG("Since the address is preferred, we set the entry preferred_address as such\n");
-              ipv6_addr_copy(&entry->preferred_address, &new_addr->address);
+              ipv6_addr_copy(&entry->peer_addr, &new_addr->address);
               entry->peer_udp_port = new_addr->port;
 	}
 	if (new) {

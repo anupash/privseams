@@ -315,9 +315,9 @@ struct hip_hadb_state
 	/** Default SPI for outbound SAs. */
 	uint32_t                     default_spi_out;
 	/** Preferred peer IP address to use when sending data to peer. */
-	struct in6_addr              preferred_address;
+	struct in6_addr              peer_addr;
 	/** Our IP address. */
-	struct in6_addr              local_address;
+	struct in6_addr              our_addr;
 	/** Peer's Local Scope Identifier (LSI). A Local Scope Identifier is a
 	    32-bit localized representation for a Host Identity.*/
 	hip_lsi_t                    lsi_peer;
