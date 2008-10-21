@@ -19,8 +19,13 @@
 #define SAVA_INBOUND_KEY 0
 #define SAVA_OUTBOUND_KEY 1
 
+#define SAVA_IPV6_OPTION_TYPE 193
+
+
 typedef struct sava_tlv_option {
-  unsigned char type;
+  unsigned char action:2;
+  unsigned char change:1;
+  usnigned char type:5;
   unsigned char length;
   char * data;
 } sava_tlv_option_t;

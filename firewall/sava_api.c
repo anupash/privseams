@@ -11,6 +11,7 @@ HIP_HASHTABLE *sava_enc_ip_db = NULL;
 
 HIP_HASHTABLE *sava_conn_db = NULL;
 
+
 int ipv6_raw_tcp_sock = 0;
 int ipv6_raw_udp_sock = 0;
 int ipv4_raw_tcp_sock = 0;
@@ -804,6 +805,10 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
 
   struct sava_ip_option * opt = NULL;
 
+  struct sava_ip6_option * sava_hdr = NULL;
+
+  struct sava_tlv_option * sava_enc_opt = NULL;
+
   int protocol = 0;
 
   int ip_raw_sock = 0;
@@ -837,6 +842,28 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
     ip6hdr = (struct ip6_hdr*) buff;
     memcpy(&ip6hdr->ip6_src, (void *)enc_addr, sizeof(struct in6_addr));
     dst6->sin6_family = AF_INET6;    
+
+#ifdef SAVAH_IP_OPTION
+    sava_hdr = (struct sava_ip6_option *)malloc(sizeof(struct sava_ip6_option));
+    sava_enc_opt = (struct sava_tlv_option *)malloc(sizeof(struct sava_tlv_option));
+    memset (sava_enc_opt, 0, sizeof(struct sava_ip6_option));
+    sava_enc_opt->type = SAVA_IPV6_OPTION_TYPE;
+    sava_enc_opt->length = 16; //size of IPv6 address in octets
+    sava_enc_opt->data = enc_addr;
+
+    sava_hdr->ext_hdr_len = 24; //16 IPv6 address + 2 bytes for  sava_tlv_option fields + 4 octets padding  :(
+                                //not including ext_hdr_len and nxt_hdr fields from 
+    sava_hdr->data = (char *) malloc(24);
+
+    memset(sava_hdr->data, 0, 24);
+
+    memcpy(sava_hdr->data, sava_enc_opt, sizeof(struct sava_tlv_option));
+
+    sava_hdr->nxt_hdr = 0;
+
+    
+    
+#else
     tcp = (struct tcphdr *) (buff + 40); //sizeof ip6_hdr is 40
     udp = (struct udphdr *) (buff + 40); //sizeof ip6_hdr is 40
     
@@ -868,6 +895,7 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
       HIP_HEXDUMP("udp dump: ", udp, (buff_len - sizeof(struct ip6_hdr)));
       
     }
+#endif
     if(setsockopt(ip_raw_sock, IPPROTO_IPV6, IP_HDRINCL, &on, sizeof(on)) < 0) { 
       HIP_DEBUG("setsockopt IP_HDRINCL ERROR！ \n");
     } else {
