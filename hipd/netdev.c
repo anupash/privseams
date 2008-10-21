@@ -931,8 +931,11 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	        dst_lsi = &(entry->lsi_peer);
 	}
 
+	err = hip_netdev_trigger_bex(src_hit, dst_hit, src_lsi, dst_lsi, src_addr, dst_addr);
+
  out_err:
-	return hip_netdev_trigger_bex(src_hit, dst_hit, src_lsi, dst_lsi, src_addr, dst_addr);
+
+	return err;
 }
 
 int hip_netdev_trigger_bex_msg(struct hip_common *msg) {
