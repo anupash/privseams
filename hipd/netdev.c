@@ -863,13 +863,7 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit,
 
 send_i1:
 
-	if (entry->state == HIP_STATE_ESTABLISHED) {
-		HIP_DEBUG("Acquire in established state (hard handover?), skip\n");
-		goto out_err;
-	} else if (entry->state == HIP_STATE_NONE ||
-	    entry->state == HIP_STATE_UNASSOCIATED) {
-		HIP_DEBUG("State is %d, sending i1\n", entry->state);
-	} else if (entry->hip_msg_retrans.buf == NULL) {
+	if (entry->hip_msg_retrans.buf == NULL) {
 		HIP_DEBUG("Expired retransmissions, sending i1\n");
 	} else {
 		HIP_DEBUG("I1 was already sent, ignoring\n");
@@ -915,6 +909,7 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	struct in6_addr saddr, *src_addr = NULL, *dst_addr = NULL;
 	struct xfrm_user_acquire *acq;
 	hip_ha_t *entry;
+	int err = 0;
 
 	HIP_DEBUG("Acquire (pid: %d) \n", msg->nlmsg_pid);
 
@@ -936,20 +931,7 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	        dst_lsi = &(entry->lsi_peer);
 	}
 
-	/* Is this still necessary? -Miika */
-#if 0
-	if (!entry) {
-		if (is_ipv4_locator) {
-			IPV4_TO_IPV6_MAP(((struct in_addr *)&acq->id.daddr),
-					 &saddr);
-		} else {
-			ipv6_addr_copy(&saddr,
-				       ((struct in6_addr*)&acq->id.daddr));
-		}
-		src_addr = &saddr;
-	}
-#endif
-
+ out_err:
 	return hip_netdev_trigger_bex(src_hit, dst_hit, src_lsi, dst_lsi, src_addr, dst_addr);
 }
 
@@ -1315,13 +1297,15 @@ int hip_select_source_address(struct in6_addr *src, struct in6_addr *dst)
 
 	if (ipv6_addr_is_teredo(dst)) {
 		struct netdev_address *na;
+		struct in6_addr *in6;
 		hip_list_t *n, *t;
 		int c, match = 0;
 
 		list_for_each_safe(n, t, addresses, c) {
 			na = list_entry(n);
-			if (ipv6_addr_is_teredo(&na->addr)) {
-				ipv6_addr_copy(src, &na->addr);
+			in6 = hip_cast_sa_addr(&na->addr);
+			if (ipv6_addr_is_teredo(in6)) {
+				ipv6_addr_copy(src, in6);
 				match = 1;
 			}
 		}
