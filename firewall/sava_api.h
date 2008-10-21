@@ -25,7 +25,7 @@
 typedef struct sava_tlv_option {
   unsigned char action:2;
   unsigned char change:1;
-  usnigned char type:5;
+  unsigned char type:5;
   unsigned char length;
   char * data;
 } sava_tlv_option_t;
