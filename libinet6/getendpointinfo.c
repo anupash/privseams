@@ -1961,7 +1961,7 @@ int get_local_hits(const char *servname, struct gaih_addrtuple **adr) {
  * @return       zero on success, or negative error value on error.
  */
 int hip_conf_handle_load(struct hip_common *msg, int action,
-		    const char *opt[], int optc)
+		    const char *opt[], int optc, int send_only)
 {
   	int arg_len, err = 0, i, len;
 	FILE *hip_config = NULL;

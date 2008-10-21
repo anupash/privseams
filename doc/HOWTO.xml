@@ -128,10 +128,10 @@
       Gibbon for compiling the kernel and userspace software:
     </para>
     <para>
-      apt-get install bazaar libncurses5-dev kernel-package autoreconf automake autoconf libtool g++ libgtk2.0-dev libssl-dev libxml2-dev xmlto doxygen iproute netcat6 iptables-dev libcap-dev libsqlite3-dev uuid-dev
+      apt-get install tla libncurses5-dev kernel-package autoreconf automake autoconf libtool g++ libgtk2.0-dev libssl-dev libxml2-dev xmlto doxygen iproute netcat6 iptables-dev libcap-dev libsqlite3-dev uuid-dev
     </para>
     <para>
-      On Fedora 8: yum install bazaar openssl-devel libxml2-devel autoconf automake libtool iproute gtk2-devel xmlto doxygen iptables-devel libcap-devel sqlite-devel uuid-devel
+      On Fedora: yum install tla openssl-devel libxml2-devel autoconf automake libtool iproute gtk2-devel xmlto doxygen iptables-devel libcap-devel sqlite-devel uuid-devel rpm-build
     </para>
     <para>On 64-bit Fedora 8, ln -s /usr/lib64/libipq.a /usr/lib/libipq.a was necessary. This has not been fixed in the HIPL build properly yet.
     </para>
@@ -1158,94 +1158,11 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
       as IPv6 addresses on-wire.
     </para>
     <para>
-      We show how to test HIP with both IPv4 and IPv6 applications. Meanwhile IPv6 applications use the 
-      HIT identifier, IPv4-only applications use the LSI identifier. This is an IPv4 address in the range 1.0.0.0/8.
-      Firstly, we explain how to configure HIPL when we want to use IPv4 applications. Secondly, we introduce some
-      tests with IPv6 applications. To finalize, we discuss the interoperability between IPv4 and IPv6 applications 
-      using HIP.
+      This section show to developers and maintainers how to test your
+      HIPL installation. The section starts with a IPv6 test applications
+      applications, continues with IPv4-IPv6 interoperability and concludes
+      with IPv4 test applications.
     </para>
-    <section id="ipv4_appl">
-      <title>Testing a HIP connection with an IPv4-only application</title>
-      <formalpara><title>Initial configuration</title><para></para></formalpara>
-	    <para>We have different mechanism for mapping the HIT-LSI information. 
-		We can choose whatever of the next possibilities. The user can introduce manually 
-	        the LSI or this can be created automatically by the hip daemon. It should be noticed
-	        that the address interval between <emphasis>1.0.0.1 - 1.0.0.4</emphasis> is already 
-	        in use by the hipd, so the user must choose a free LSI. These four LSIs are the local LSIs assigned with
-	        the four local HITs.
-	    </para>
-	    <para>crash:</para>
-	    <itemizedlist>
-	      <listitem>
-	      <para>
-		    Add the information in /etc/hip/hosts
-		    <itemizedlist>
-		    <listitem><para>OOPS_HIT oops</para></listitem>
-		    <listitem><para>OOPS_LSI oops <emphasis>Optional!</emphasis> If it's not defined, 
-			it would be created by the daemon</para></listitem>
-		    </itemizedlist>
-	      </para>
-	      </listitem>
-	      <listitem>
-	        <para>Add the information with tools/hipconf add map
-		  <itemizedlist>
-		    <listitem><para>hipconf add map OOPS_HIT OOPS_IP [OOPS_LSI] </para></listitem>
-		  </itemizedlist>
-		</para>
-	      </listitem>
-	    </itemizedlist>
-	    <para>If the command hipconf add map is not executed, we must add the peer IP in
-	    the file /etc/hosts</para>
-	     <itemizedlist>
-		    <listitem><para>OOPS_IP oops</para></listitem>		    
-		    </itemizedlist>
-	    <para>Apart from starting the hipd process, the hipfw process must be also 
-		started in both machines, oops and crash. Notice that hipfw must be started always after hipd!
-	    </para>
-	    <itemizedlist>
-	      <listitem><para>
-		  cd somewhere/hipl
-	      </para></listitem>
-	      <listitem><para>
-		  hipd/hipd # (to start as a background daemon process, add -b flag)
-	      </para></listitem>
-	      <listitem><para>
-		  firewall/hipfw -lA (to start the firewall with LSI support enabled and allow HIP/ESP packets)
-	      </para></listitem>
-	    </itemizedlist>
-	    <para>
-	      Beforehand the following rules must be added in the file /etc/hip/firewall.conf
-	    </para> 
-	    <para>crash:</para>
-	      <itemizedlist>
-		<listitem>
-		  <para>INPUT -src_hit OOPS_HIT ACCEPT</para>
-		</listitem>
-		<listitem>
-		  <para>OUTPUT -dst_hit OOPS_HIT ACCEPT</para>
-		</listitem>
-	      </itemizedlist>
-	      <para>oops:</para>
-	      <itemizedlist>
-		<listitem>
-		  <para>INPUT -dst_hit OOPS_HIT ACCEPT</para>
-		</listitem>
-		<listitem>
-		  <para>OUTPUT -src_hit OOPS_HIT ACCEPT</para>
-		</listitem>
-	      </itemizedlist>
-	      <formalpara><title>Running the application</title><para></para></formalpara>
-	      <para>Once we have finished the step before and started running hipd and hipfw, we can 
-	      run the application. If the LSI has been generated automatically, we can check its
-	      value with tools/hipconf get ha OOPS_HIT or tools/hipconf get ha all. 
-	      Afterwards, we start running the application, e.g.:		
-	      </para>
-	      <itemizedlist>
-		<listitem><para>ping OOPS_LSI</para></listitem>
-		<listitem><para>ssh OOPS_LSI</para></listitem>
-		<listitem><para>nc OOPS_LSI -u 5555 # oops must be running nc -l -u 5555</para></listitem>
-	      </itemizedlist>
-    </section>
     <section id="ipv6_appl">
             <title>Testing a HIP connection with an IPv6 application</title>
 	    <para> You can test HIP with any networking application, but in this
@@ -1417,6 +1334,88 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
 	      kills the previous one.
 	    </para>
 
+    </section>
+    <section id="ipv4_appl">
+      <title>Testing a HIP connection with an IPv4-only application</title>
+      <formalpara><title>Initial configuration</title><para></para></formalpara>
+	    <para>We have different mechanism for mapping the HIT-LSI information. 
+		We can choose whatever of the next possibilities. The user can introduce manually 
+	        the LSI or this can be created automatically by the hip daemon. It should be noticed
+	        that the address interval between <emphasis>1.0.0.1 - 1.0.0.4</emphasis> is already 
+	        in use by the hipd, so the user must choose a free LSI. These four LSIs are the local LSIs assigned with
+	        the four local HITs.
+	    </para>
+	    <para>crash:</para>
+	    <itemizedlist>
+	      <listitem>
+	      <para>
+		    Add the information in /etc/hip/hosts
+		    <itemizedlist>
+		    <listitem><para>OOPS_HIT oops</para></listitem>
+		    <listitem><para>OOPS_LSI oops <emphasis>Optional!</emphasis> If it's not defined, 
+			it would be created by the daemon</para></listitem>
+		    </itemizedlist>
+	      </para>
+	      </listitem>
+	      <listitem>
+	        <para>Add the information with tools/hipconf add map
+		  <itemizedlist>
+		    <listitem><para>hipconf add map OOPS_HIT OOPS_IP [OOPS_LSI] </para></listitem>
+		  </itemizedlist>
+		</para>
+	      </listitem>
+	    </itemizedlist>
+	    <para>If the command hipconf add map is not executed, we must add the peer IP in
+	    the file /etc/hosts</para>
+	     <itemizedlist>
+		    <listitem><para>OOPS_IP oops</para></listitem>		    
+		    </itemizedlist>
+	    <para>Apart from starting the hipd process, the hipfw process must be also 
+		started in both machines, oops and crash. Notice that hipfw must be started always after hipd!
+	    </para>
+	    <itemizedlist>
+	      <listitem><para>
+		  cd somewhere/hipl
+	      </para></listitem>
+	      <listitem><para>
+		  hipd/hipd # (to start as a background daemon process, add -b flag)
+	      </para></listitem>
+	      <listitem><para>
+		  firewall/hipfw -lA (to start the firewall with LSI support enabled and allow HIP/ESP packets)
+	      </para></listitem>
+	    </itemizedlist>
+	    <para>
+	      Beforehand the following rules must be added in the file /etc/hip/firewall.conf
+	    </para> 
+	    <para>crash:</para>
+	      <itemizedlist>
+		<listitem>
+		  <para>INPUT -src_hit OOPS_HIT ACCEPT</para>
+		</listitem>
+		<listitem>
+		  <para>OUTPUT -dst_hit OOPS_HIT ACCEPT</para>
+		</listitem>
+	      </itemizedlist>
+	      <para>oops:</para>
+	      <itemizedlist>
+		<listitem>
+		  <para>INPUT -dst_hit OOPS_HIT ACCEPT</para>
+		</listitem>
+		<listitem>
+		  <para>OUTPUT -src_hit OOPS_HIT ACCEPT</para>
+		</listitem>
+	      </itemizedlist>
+	      <formalpara><title>Running the application</title><para></para></formalpara>
+	      <para>Once we have finished the step before and started running hipd and hipfw, we can 
+	      run the application. If the LSI has been generated automatically, we can check its
+	      value with tools/hipconf get ha OOPS_HIT or tools/hipconf get ha all. 
+	      Afterwards, we start running the application, e.g.:		
+	      </para>
+	      <itemizedlist>
+		<listitem><para>ping OOPS_LSI</para></listitem>
+		<listitem><para>ssh OOPS_LSI</para></listitem>
+		<listitem><para>nc OOPS_LSI -u 5555 # oops must be running nc -l -u 5555</para></listitem>
+	      </itemizedlist>
     </section>
   </chapter>
   <chapter id="ch_test_servers">
@@ -2872,6 +2871,17 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
 	<para>17th of July 2008</para>
       </section>
     </section>
+  </chapter>
+  <chapter id="teredo">
+    <title>Teredo and HIP</title>
+    <para>
+    Teredo is a traversal solution for HIP. You can expirement with Teredo
+    by installing the Miredo client software. Then, establish HIP connections
+    to Teredo addresses (check ifconfig teredo) at the client side as
+    instructed in <xref linkend="ch_basictest" />. See
+    <ulink url="http://www.cs.helsinki.fi/u/sklvarjo/miredo.htm" />
+    for further information.
+    </para>    
   </chapter>
   <chapter id="ch_hip_bos">
     <title> Using HIP BOS support</title>
