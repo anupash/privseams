@@ -1982,9 +1982,7 @@ int hip_conf_handle_load(struct hip_common *msg, int action,
 		 "Error: can't open config file %s.\n", fname);
 
 	while(err == 0 && fgets(line, sizeof(line), hip_config) != NULL) {
-
-		HIP_DEBUG("line %s\n", line);
-
+		_HIP_DEBUG("line %s\n", line);
 		/* Remove whitespace */
 		c = line;
 		while (*c == ' ' || *c == '\t')
