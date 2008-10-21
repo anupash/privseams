@@ -424,7 +424,7 @@ int handle_sava_i2_state_update(struct hip_common * msg, int hip_lsi_support)
 
 	param = hip_get_next_param(msg, param);
 	src_ip = (struct in6_addr *) hip_get_param_contents_direct(param);
-	HIP_DEBUG_HIT("Source IP: ", src_hit);
+	HIP_DEBUG_HIT("Source IP: ", src_ip);
 
 	/* update bex_state in firewalldb */
 	switch(msg_type)
