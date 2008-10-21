@@ -923,8 +923,8 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	
 	entry = hip_hadb_find_byhits(src_hit, dst_hit);
 
-	if (entry){
-		HIP_IFEL((entry->state == HIP_STATE_ESTABLISHED), -1,
+	if (entry) {
+		HIP_IFEL((entry->state == HIP_STATE_ESTABLISHED), 0,
 			"State established, not triggering bex\n");
 
 	        src_lsi = &(entry->lsi_our);

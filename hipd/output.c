@@ -349,6 +349,9 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	uint16_t mask = 0;
 	int err = 0, n=0;
 
+	HIP_IFEL((entry->state == HIP_STATE_ESTABLISHED), 0,
+		 "State established, not triggering bex\n");
+
 	/* Assign a local private key, public key and HIT to HA */
 	HIP_DEBUG_HIT("src_hit", src_hit);
 	HIP_IFEL(hip_init_us(entry, src_hit), -EINVAL,
