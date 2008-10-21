@@ -916,7 +916,7 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	struct xfrm_user_acquire *acq;
 	hip_ha_t *entry;
 
-	HIP_DEBUG("Acquire: sending I1 (pid: %d) \n", msg->nlmsg_pid);
+	HIP_DEBUG("Acquire (pid: %d) \n", msg->nlmsg_pid);
 
 	acq = (struct xfrm_user_acquire *)NLMSG_DATA(msg);
 	src_hit = (hip_hit_t *) &acq->sel.saddr;
@@ -929,6 +929,9 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	entry = hip_hadb_find_byhits(src_hit, dst_hit);
 
 	if (entry){
+		HIP_IFEL((entry->state == HIP_STATE_ESTABLISHED), -1,
+			"State established, not triggering bex\n");
+
 	        src_lsi = &(entry->lsi_our);
 	        dst_lsi = &(entry->lsi_peer);
 	}
