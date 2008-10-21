@@ -893,7 +893,6 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
 	   buff + sizeof(struct ip), buff_len - sizeof(struct ip));
 
     buff_len += 20;
-
 #else
     IPV6_TO_IPV4_MAP(enc_addr, &iphdr->ip_src);
     
@@ -1060,18 +1059,20 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
       _HIP_DEBUG("Reinject the traffic to network stack \n");
       if (ctx->ip_version == 6) { //IPv6
     	ip6hdr = (struct ip6_hdr*) buff;
-	memcpy(&ip6hdr->ip6_src, (void *)enc_entry->ip_link->src_addr, sizeof(struct in6_addr));
+	dst_len = sizeof(struct sockaddr_in6);
 	dst6->sin6_family = AF_INET6;
-
+#ifdef SAVAH_IP_OPTION
+	
+#else    
+	memcpy(&ip6hdr->ip6_src, (void *)enc_entry->ip_link->src_addr, sizeof(struct in6_addr));
+	
 	tcp = (struct tcphdr *) (buff + 40); //sizeof ip6_hdr is 40
 	udp = (struct udphdr *) (buff + 40); //sizeof ip6_hdr is 40
 
 	protocol = ip6hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt;
 
 	memcpy(&dst6->sin6_addr, &ctx->dst, sizeof(struct in6_addr));
-
-	dst_len = sizeof(struct sockaddr_in6);
-
+       
 	HIP_DEBUG_INADDR("ipv6 src: ", &ip6hdr->ip6_src);
 	HIP_DEBUG_INADDR("ipv6 dst: ", &ip6hdr->ip6_dst);
 	
@@ -1094,17 +1095,20 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
 	  _HIP_HEXDUMP("udp dump: ", udp, (buff_len - sizeof(struct ip6_hdr)));
 
 	}
+#endif
+
 	if(setsockopt(ip_raw_sock, IPPROTO_IPV6, IP_HDRINCL, &on, sizeof(on)) < 0) { 
 	  HIP_DEBUG("setsockopt IP_HDRINCL ERROR！ \n");
 	} else {
 	  HIP_DEBUG("setsockopt IP_HDRINCL for ipv4 OK！ \n");
 	}
+
       }else { //IPv4
 
-	iphdr = (struct ip *) buff; 
-	
-	IPV6_TO_IPV4_MAP(enc_entry->ip_link->src_addr, &iphdr->ip_src);
+	dst4->sin_family = AF_INET;
+	iphdr = (struct ip *) buff; 		
 	iphdr->ip_sum = 0;
+
 #ifdef SAVAH_IP_OPTION
 	buff_no_opt = (char *) malloc(buff_len - opt->length);
 	//Copy IPv4 header
@@ -1114,6 +1118,9 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
 	       buff_len - sizeof(struct ip) - opt->length);
 	
 #else
+
+	IPV6_TO_IPV4_MAP(enc_entry->ip_link->src_addr, &iphdr->ip_src);
+
 	tcp = (struct tcphdr *) (buff + 20); //sizeof iphdr is 20
 	udp = (struct udphdr *) (buff + 20); //sizeof iphdr is 20
 	
@@ -1122,8 +1129,6 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
 	dst_len = sizeof(struct sockaddr_in);
 
 	IPV6_TO_IPV4_MAP(&ctx->dst, &dst4->sin_addr);
-
-	dst4->sin_family = AF_INET;
 
 	HIP_DEBUG_INADDR("ipv4 src: ", &iphdr->ip_src);
 	HIP_DEBUG_INADDR("ipv4 dst: ", &iphdr->ip_dst);
@@ -1265,8 +1270,15 @@ int hip_sava_handle_bex_completed (struct in6_addr * src, struct in6_addr * hitr
     
     enc_addr = hip_sava_auth_ip(src, info_entry);
 
-    /*TODO: FIX ME Check if the original src address is IPv4 or IPv6*/
-    enc_addr_no = map_enc_ip_addr_to_network_order(enc_addr, 4);
+#ifdef SAVAH_IP_OPTION
+    //Since the IP option have space for 128 bits we can store the whole IPv6 address
+    enc_addr_no = map_enc_ip_addr_to_network_order(enc_addr, 6);
+#else
+    if(IN6_IS_ADDR_V4MAPPED(src))
+      enc_addr_no = map_enc_ip_addr_to_network_order(enc_addr, 4);
+    else 
+      enc_addr_no = map_enc_ip_addr_to_network_order(enc_addr, 6);
+#endif
     
     HIP_IFEL(hip_sava_enc_ip_entry_add(enc_addr_no,
 				       ip_entry,

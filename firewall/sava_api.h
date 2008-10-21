@@ -19,12 +19,24 @@
 #define SAVA_INBOUND_KEY 0
 #define SAVA_OUTBOUND_KEY 1
 
-typedef struct sava_ip_option {
-  unsigned char type:1;
-  unsigned char class:2; 
-  unsigned char number:5;
+typedef struct sava_tlv_option {
+  unsigned char type;
   unsigned char length;
-  unsigned char * data;
+  char * data;
+} sava_tlv_option_t;
+
+typedef struct sava_ip6_option {
+  unsigned char   next_hdr;
+  unsigned char   ext_hdr_len;
+  char * data;
+} sava_ip6_option_t;
+
+typedef struct sava_ip_option {
+  unsigned char   type:1;
+  unsigned char   class:2; 
+  unsigned char   number:5;
+  unsigned char   length;
+  char * data;
 } sava_ip_option_t;
 
 typedef struct sava_addrinfo {
