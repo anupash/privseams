@@ -121,8 +121,8 @@ void hip_fw_uninit_sava_client() {
    system("iptables -D HIPFW-OUTPUT -p tcp ! -d 127.0.0.1 -j QUEUE 2>/dev/null"); 
    system("iptables -D HIPFW-OUTPUT -p udp ! -d 127.0.0.1 -j QUEUE 2>/dev/null"); 
    /* IPv6 packets	*/
-   system("ip6tables -D HIPFW-OUTPUT -p tcp ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
-   system("ip6tables -D HIPFW-OUTPUT -p udp ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
+   //system("ip6tables -D HIPFW-OUTPUT -p tcp ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
+   //system("ip6tables -D HIPFW-OUTPUT -p udp ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
   }
 }
 
@@ -141,8 +141,8 @@ int hip_fw_init_sava_router() {
 		system("iptables -I HIPFW-FORWARD -p tcp -j QUEUE 2>/dev/null"); 
 		system("iptables -I HIPFW-FORWARD -p udp -j QUEUE 2>/dev/null"); 
 		/* IPv6 packets	*/
-		system("ip6tables -I HIPFW-FORWARD -p tcp ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
-		system("ip6tables -I HIPFW-FORWARD -p udp ! -d 2001:0010::/28 ! -o lo -j QUEUE 2>/dev/null");
+		//system("ip6tables -I HIPFW-FORWARD -p tcp ! -d 2001:0010::/28 -j QUEUE 2>/dev/null");
+		//system("ip6tables -I HIPFW-FORWARD -p udp ! -d 2001:0010::/28 ! -o lo -j QUEUE 2>/dev/null");
 		/*	Queue HIP packets as well */
 		system("iptables -I HIPFW-INPUT -p 139 -j QUEUE 2>/dev/null");
 		system("ip6tables -I HIPFW-INPUT -p 139 -j QUEUE 2>/dev/null");

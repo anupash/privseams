@@ -1148,7 +1148,11 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
     /*TODO: Check if this is the roght option */
     HIP_DEBUG("IPv4 \n");
     iphdr = (struct ip *)buff;
-    if (iphdr->ip_hl == 10) {
+    if (iphdr->ip_hl == 5) {
+      HIP_DEBUG("The packet does not have any options dropping \n");
+      verdict = DROP;
+      goto out_err;
+    }else if (iphdr->ip_hl == 10) {
       HIP_DEBUG("We have the only IPv4 option \n");
       opt = (struct sava_ip_option *) (buff + 20); //first 20 bytes are original IPv4 header
       opt_addr = (struct in6_addr *) opt->data;
@@ -1191,16 +1195,17 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
 
     _HIP_DEBUG("Secret key acquired. Lets encrypt the src IP address \n");
 
-#ifndef CONFIG_SAVAH_IP_OPTION    
+    //#ifndef CONFIG_SAVAH_IP_OPTION    
     enc_addr = hip_sava_auth_ip(enc_entry->ip_link->src_addr, enc_entry->peer_info);
     //FIX IP version 
-    enc_addr_no = map_enc_ip_addr_to_network_order(enc_addr, 4);
-    free(enc_addr);
-    enc_addr = enc_addr_no;
+    //enc_addr_no = map_enc_ip_addr_to_network_order(enc_addr, 4);
+    //free(enc_addr);
+    //enc_addr = enc_addr_no;
     HIP_DEBUG_HIT("Found encrypted address ", enc_addr);
-#endif
+    //#endif
 
 #ifdef CONFIG_SAVAH_IP_OPTION    
+    HIP_DEBUG("Compare authentication values \n");
     if (!memcmp(opt_addr, enc_addr, sizeof(struct in6_addr))) {
 #else
     if (!memcmp(&ctx->src, enc_addr, sizeof(struct in6_addr))) {  
@@ -1425,7 +1430,7 @@ int hip_sava_handle_bex_completed (struct in6_addr * src, struct in6_addr * hitr
 
 #ifdef CONFIG_SAVAH_IP_OPTION
     //Since the IP option have space for 128 bits we can store the whole IPv6 address
-    enc_addr_no = map_enc_ip_addr_to_network_order(enc_addr, 6);
+    //enc_addr_no = map_enc_ip_addr_to_network_order(enc_addr, 6);
 #else
     if(IN6_IS_ADDR_V4MAPPED(src))
       enc_addr_no = map_enc_ip_addr_to_network_order(enc_addr, 4);
@@ -1433,6 +1438,8 @@ int hip_sava_handle_bex_completed (struct in6_addr * src, struct in6_addr * hitr
       enc_addr_no = map_enc_ip_addr_to_network_order(enc_addr, 6);
 #endif
     
+
+#ifdef CONFIG_SAVAH_IP_OPTION
     HIP_IFEL(hip_sava_enc_ip_entry_add(enc_addr_no,
 				       ip_entry,
 				       hit_entry, info_entry), 
@@ -1440,7 +1447,15 @@ int hip_sava_handle_bex_completed (struct in6_addr * src, struct in6_addr * hitr
 
     HIP_IFEL((enc_entry = hip_sava_enc_ip_entry_find(enc_addr_no)) == NULL, 
 	     -1, "Could not retrieve enc ip entry \n");
-    		  
+#else
+     HIP_IFEL(hip_sava_enc_ip_entry_add(enc_addr,
+				       ip_entry,
+				       hit_entry, info_entry), 
+	     -1, "error adding enc ip entry");    
+
+    HIP_IFEL((enc_entry = hip_sava_enc_ip_entry_find(enc_addr)) == NULL, 
+	     -1, "Could not retrieve enc ip entry \n");
+#endif
     ip_entry->enc_link = enc_entry;
     hit_entry->enc_link = enc_entry;
 
@@ -1466,12 +1481,12 @@ struct in6_addr * map_enc_ip_addr_to_network_order(struct in6_addr * enc_addr, i
     no_addr->s6_addr32[2] = htonl (0xffff);
     no_addr->s6_addr32[3] = htonl(enc_addr->s6_addr32[3]);
   } else {
-    no_addr->s6_addr[0] = htonl(enc_addr->s6_addr32[0]);
-    no_addr->s6_addr[1] = htonl(enc_addr->s6_addr32[1]);
-    no_addr->s6_addr[2] = htonl(enc_addr->s6_addr32[2]);
-    no_addr->s6_addr[3] = htonl(enc_addr->s6_addr32[3]);
+    no_addr->s6_addr32[0] = htonl(enc_addr->s6_addr32[0]);
+    no_addr->s6_addr32[1] = htonl(enc_addr->s6_addr32[1]);
+    no_addr->s6_addr32[2] = htonl(enc_addr->s6_addr32[2]);
+    no_addr->s6_addr32[3] = htonl(enc_addr->s6_addr32[3]);
   }
-  HIP_DEBUG_HIT("Encrypted address in network byte order ", no_addr);
+  HIP_DEBUG_IN6ADDR("Encrypted address in network byte order ", no_addr);
   return no_addr;
 }
 
