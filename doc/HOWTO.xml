@@ -2879,9 +2879,16 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
     Teredo is a traversal solution for HIP. You can expirement with Teredo
     by installing the Miredo client software. Then, establish HIP connections
     to Teredo addresses (check ifconfig teredo) at the client side as
-    instructed in <xref linkend="ch_basictest" />. See
+    instructed in <xref linkend="ch_basictest" />. As Teredo is a NAT traversal
+    solution by itself, you don't have use UDP encapsulation for HIP (hipconf nnat none).
+    </para>
+    <para>
+    See
     <ulink url="http://www.cs.helsinki.fi/u/sklvarjo/miredo.htm" />
-    for further information.
+    for further information on Teredo configuration with HIP.
+    <xref linkend="table_servers" /> lists addresses
+    of the public InfraHIP test servers with Teredo addresses. The servers
+    provide also free rendezvous service that can be combined with Teredo.
     </para>    
   </chapter>
   <chapter id="ch_hip_bos">
