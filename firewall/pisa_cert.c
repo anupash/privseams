@@ -6,7 +6,17 @@
 #include <string.h>
 #include <stdio.h>
 
-static int pisa_cert_get_part(char *cert, char *part, char *result, size_t len, int just_content)
+/**
+ * Extract parts of a SPKI certificate.
+ *
+ * @param cert pointer to the certificate text or part of a certificate text
+ * @param part pointer to the pattern we are looking for
+ * @param result pointer to a buffer that the search result will be copied to
+ * @param len size of the buffer result
+ * @param just_content copy just the content without (<part> ...) if true
+ */
+static int pisa_cert_get_part(char *cert, char *part, char *result, size_t len,
+			      int just_content)
 {
 	char *start, *end;
 	int parentheses = 1; /* the initial parenthesis */
