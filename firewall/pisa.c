@@ -253,8 +253,8 @@ static int pisa_insert_puzzle(hip_fw_context_t *ctx)
 
 /**
  * Check the validity of a PISA nonce. Check against current random value
- * first. If that fails, check against old random value. If that fails too, 
- * consider the nonce to be invalid (either too old or not correct at any 
+ * first. If that fails, check against old random value. If that fails too,
+ * consider the nonce to be invalid (either too old or not correct at any
  * previous point in time).
  *
  * @param ctx context of the packet with the nonce to check
@@ -309,7 +309,7 @@ static struct hip_tlv_common *pisa_check_nonce(hip_fw_context_t *ctx)
 }
 
 /**
- * Check the validity of a PISA puzzle. 
+ * Check the validity of a PISA puzzle.
  *
  * @param ctx context of the packet with the puzzle to check
  * @return pointer to the puzzle we accepted or NULL at failure
@@ -416,7 +416,7 @@ static int pisa_check_certificate(hip_fw_context_t *ctx)
 	HIP_DEBUG_HIT("issuer_hit", &pc.hit_issuer);
 	HIP_DEBUG_HIT("subject_hit", &pc.hit_subject);
 
-/* As our static certificate expired, this check would fail. So let's skip it 
+/* As our static certificate expired, this check would fail. So let's skip it
  * until we have a valid certificate again.*/
 #if 0
 	HIP_IFEL(now < pc.not_before, -1,
@@ -681,7 +681,7 @@ static int pisa_handler_u1(hip_fw_context_t *ctx)
 }
 
 /**
- * Check for a PISA nonce, a PISA puzzle, a valid signature and a valid 
+ * Check for a PISA nonce, a PISA puzzle, a valid signature and a valid
  * certificate in the U2 packet.
  *
  * @param ctx context of the packet to check

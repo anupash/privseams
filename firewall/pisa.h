@@ -11,4 +11,3 @@
 void pisa_init(struct midauth_handlers *h);
 
 #endif
-

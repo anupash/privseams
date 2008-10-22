@@ -1,7 +1,7 @@
 /*
  * This code is GNU/GPL.
  *
- * According to draft-heer-hip-middle-auth-00 we SHOULD support IP-level 
+ * According to draft-heer-hip-middle-auth-00 we SHOULD support IP-level
  * fragmentation for IPv6 and MUST support IP-level fragmentation for IPv4.
  * Currently we do neither.
  */
@@ -55,7 +55,7 @@ static void update_ipv4_header (struct iphdr *ip, int len)
  */
 static void update_ipv6_header (struct ip6_hdr *ip, int len)
 {
-	ip->ip6_ctlun.ip6_un1.ip6_un1_plen = htons(len - sizeof(struct ip6_hdr));
+	ip->ip6_ctlun.ip6_un1.ip6_un1_plen = htons(len-sizeof(struct ip6_hdr));
 }
 
 #define CHECKSUM_CARRY(x) \
@@ -181,7 +181,7 @@ static void midauth_update_all_headers(hip_fw_context_t *ctx)
 		} else {
 			update_hip_checksum_ipv4(ipv4);
 		}
-		update_ipv4_header(ipv4, len);    
+		update_ipv4_header(ipv4, len);
 		break;
 	case 6:
 		ipv6 = (struct ip6_hdr *) ctx->ipq_packet->payload;
@@ -190,7 +190,7 @@ static void midauth_update_all_headers(hip_fw_context_t *ctx)
 		update_ipv6_header(ipv6, len);
 		break;
 	default:
-		HIP_ERROR("Unknown IP version. %i, expected 4 or 6.\n", 
+		HIP_ERROR("Unknown IP version. %i, expected 4 or 6.\n",
 		          ctx->ip_version);
 		break;
 	}
@@ -198,8 +198,7 @@ static void midauth_update_all_headers(hip_fw_context_t *ctx)
 	ctx->ipq_packet->data_len = len;
 }
 
-int midauth_verify_solution_m(struct hip_common *hip,
-                              struct hip_solution_m *s)
+int midauth_verify_solution_m(struct hip_common *hip, struct hip_solution_m *s)
 {
 	int err = 0;
 	struct hip_solution solution;
@@ -252,7 +251,8 @@ static int midauth_relocate_last_hip_parameter(struct hip_common *hip)
 		if (hip_get_param_type(i) > type) {
 			offset = (char *)i - (char *)hip;
 
-			memmove(ptr+offset+len, ptr+offset, total_len-offset-len);
+			memmove(ptr+offset+len, ptr+offset,
+				total_len-offset-len);
 			memcpy(ptr+offset, buffer, len);
 			break;
 		}
@@ -276,17 +276,17 @@ int midauth_add_echo_request_m(hip_fw_context_t *ctx, void *nonce, int len)
 
 out_err:
 	return err;
-} 
+}
 
-int midauth_add_puzzle_m(hip_fw_context_t *ctx, uint8_t val_K, uint8_t lifetime,
-                         uint8_t *opaque, uint64_t random_i)
+int midauth_add_puzzle_m(hip_fw_context_t *ctx, uint8_t val_K, uint8_t ltime,
+			 uint8_t *opaque, uint64_t random_i)
 {
 	struct hip_common *hip = ctx->transport_hdr.hip;
 	int err = 0;
 
 	ctx->modified = 1;
 
-	HIP_IFEL(hip_build_param_puzzle_m(hip, val_K, lifetime, opaque, random_i),
+	HIP_IFEL(hip_build_param_puzzle_m(hip, val_K, ltime, opaque, random_i),
 	         -1, "Failed to build puzzle_m parameter\n");
 	HIP_IFEL(midauth_relocate_last_hip_parameter(hip), -1,
 	         "Failed to relocate new puzzle_m parameter\n");
@@ -329,7 +329,7 @@ int filter_midauth(hip_fw_context_t *ctx)
 	int verdict = NF_ACCEPT;
 	midauth_handler h = NULL;
 	midauth_handler h_default = midauth_handler_accept;
-	/* @todo change this default value to midauth_handler_drop to 
+	/* @todo change this default value to midauth_handler_drop to
 	 * disallow unknown message types */
 
 	switch (ctx->transport_hdr.hip->type_hdr) {

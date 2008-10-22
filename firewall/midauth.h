@@ -58,8 +58,7 @@ int midauth_handler_drop(hip_fw_context_t *ctx);
  * @param s the solution to be checked
  * @return 0 if correct, nonzero otherwise
  */
-int midauth_verify_solution_m(struct hip_common *hip,
-                              struct hip_solution_m *s);
+int midauth_verify_solution_m(struct hip_common *hip, struct hip_solution_m *s);
 
 /**
  * Insert an ECHO_REQUEST_M parameter into a HIP packet.
@@ -67,7 +66,7 @@ int midauth_verify_solution_m(struct hip_common *hip,
  * @param ctx context of the packet to be modified
  * @param nonce data to add
  * @param len length of data to add
- * @return 
+ * @return 0 on success
  */
 int midauth_add_echo_request_m(hip_fw_context_t *ctx, void *nonce, int len);
 
@@ -76,12 +75,12 @@ int midauth_add_echo_request_m(hip_fw_context_t *ctx, void *nonce, int len);
  *
  * @param ctx context of the packet to be modified
  * @param val_K puzzle parameter val_K
- * @param lifetime puzzle parameter lifetime
+ * @param ltime puzzle parameter lifetime
  * @param opaque puzzle parameter opaque
  * @param random_i puzzle parameter random_i
- * @return 
+ * @return 0 on success
  */
-int midauth_add_puzzle_m(hip_fw_context_t *ctx, uint8_t val_K, uint8_t lifetime,
+int midauth_add_puzzle_m(hip_fw_context_t *ctx, uint8_t val_K, uint8_t ltime,
                          uint8_t *opaque, uint64_t random_i);
 
 /**
@@ -90,4 +89,3 @@ int midauth_add_puzzle_m(hip_fw_context_t *ctx, uint8_t val_K, uint8_t lifetime,
 void midauth_init(void);
 
 #endif
-

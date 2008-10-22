@@ -14,6 +14,7 @@
  * @param result pointer to a buffer that the search result will be copied to
  * @param len size of the buffer result
  * @param just_content copy just the content without (<part> ...) if true
+ * @return 0 on success
  */
 static int pisa_cert_get_part(char *cert, char *part, char *result, size_t len,
 			      int just_content)
@@ -28,6 +29,8 @@ static int pisa_cert_get_part(char *cert, char *part, char *result, size_t len,
 		return -2;
 	}
 	end = start;
+
+	/* @todo: check if the assumed initial parenthesis is really there */
 
 	while (parentheses > 0 && *end) {
 		if (*end == '(')
