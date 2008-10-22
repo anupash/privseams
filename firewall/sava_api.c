@@ -1226,7 +1226,7 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
 #ifdef CONFIG_SAVAH_IP_OPTION
 	buff_no_opt = (char *) malloc(buff_len - hdr_len);
 	memcpy(buff_no_opt, buff, hdr_offset);
-	memcpy(buff_no_opt, buff + hdr_offset + hdr_len, buff_len - hdr_len - hdr_offset);
+	memcpy(buff_no_opt, ((char *)iphdr) + (hdr_offset + hdr_len), buff_len - hdr_len - hdr_offset);
 	buff_len -= hdr_len;
 	if (protocol == IPPROTO_TCP) {
 	  ip_raw_sock = ipv6_raw_tcp_sock;
@@ -1337,6 +1337,19 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
       sent = sendto(ip_raw_sock, buff, buff_len, 0,
 		    (struct sockaddr *) &dst, dst_len);
 #endif
+#ifdef CONFIG_SAVAH_IP_OPTION
+      if (sent != buff_len) {
+#else
+      if (sent != ctx->ipq_packet->data_len) {  
+#endif
+	HIP_ERROR("Could not send the all requested"			\
+		  " data (%d/%d)\n", sent, ctx->ipq_packet->data_len);
+	HIP_DEBUG("ERROR NUMBER: %d\n", errno);
+      } else {
+	HIP_DEBUG("sent=%d/%d \n",
+		  sent, ctx->ipq_packet->data_len);
+	HIP_DEBUG("Packet sent ok\n");
+      }
       if (ctx->ip_version == 4) {
 	if(setsockopt(ip_raw_sock, IPPROTO_IP, IP_HDRINCL, &off, sizeof(off)) < 0) { 
 	  HIP_DEBUG("setsockopt IP_HDRINCL ERROR！ \n");
