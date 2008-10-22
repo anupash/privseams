@@ -21,27 +21,24 @@
 
 #define SAVA_IPV6_OPTION_TYPE 193
 
+typedef struct sava_tlv_padding {
+  unsigned char type;
+  unsigned char length;
+} sava_tvl_padding_t;
 
 typedef struct sava_tlv_option {
   unsigned char action:2;
   unsigned char change:1;
   unsigned char type:5;
   unsigned char length;
-  char * data;
 } sava_tlv_option_t;
-
-typedef struct sava_ip6_option {
-  unsigned char   next_hdr;
-  unsigned char   ext_hdr_len;
-  char * data;
-} sava_ip6_option_t;
 
 typedef struct sava_ip_option {
   unsigned char   type:1;
-  unsigned char   class:2; 
+  unsigned char   class:2;
   unsigned char   number:5;
   unsigned char   length;
-  char * data;
+  char data[18];
 } sava_ip_option_t;
 
 typedef struct sava_addrinfo {
