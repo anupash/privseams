@@ -28,14 +28,6 @@ struct midauth_handlers {
 /* public functions for midauth */
 
 /**
- * Filters accepted packets for middlebox authentication.
- *
- * @param ctx context of the packet ready for modification
- * @return verdict, either NF_ACCEPT or NF_DROP
- */
-int filter_midauth(hip_fw_context_t *ctx);
-
-/**
  * Accepts a packet. Used in midauth_handlers as a default handler.
  *
  * @param ctx context of the packet

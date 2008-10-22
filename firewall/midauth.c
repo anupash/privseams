@@ -324,7 +324,7 @@ static midauth_handler filter_midauth_update(hip_fw_context_t *ctx)
 	return midauth_handler_drop;
 }
 
-int filter_midauth(hip_fw_context_t *ctx)
+int midauth_filter_hip(hip_fw_context_t *ctx)
 {
 	int verdict = NF_ACCEPT;
 	midauth_handler h = NULL;
@@ -373,12 +373,6 @@ int filter_midauth(hip_fw_context_t *ctx)
 		midauth_update_all_headers(ctx);
 
 	return verdict;
-}
-
-int midauth_filter_hip(hip_fw_context_t *ctx)
-{
-	/* let everything pass for now */
-	return filter_midauth(ctx);
 }
 
 int midauth_filter_esp(hip_fw_context_t *ctx)
