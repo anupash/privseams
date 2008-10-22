@@ -1422,17 +1422,17 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
     <title>HIPL Internet Test Servers</title>
     <para>
     Below is a list of public InfraHIP test servers. The servers are also running
-    a free rendezvous service (<xref linkend="ch_rvs_relay" />) which can be used also behind NAT devices using the Teredo addresses.
+    a free rendezvous service which you can use according to the instructions in <xref linkend="ch_rvs_relay" />.
     </para>
     <table id="table_servers" frame="all"><title>Test Servers</title>
     <tgroup cols="1">
       <thead>
-	<row><entry>Server</entry><entry>HIT</entry><entry>HI algo</entry><entry>IPv4 address</entry><entry>IPv6 address</entry><entry>Teredo address</entry></row>
+	<row><entry>Server</entry><entry>HIT</entry><entry>HI algo</entry><entry>IPv4 address</entry><entry>IPv6 address</entry></row>
       </thead>
       <tbody>
-	<row><entry>felwood.infrahip.net</entry><entry>2001:1d:392e:a450:2cd3:75e1:6098:8104</entry><entry>RSA</entry><entry>193.167.187.130</entry><entry>2001:708:140:220::3</entry><entry>2001:0:53aa:64c:0:68db:3e58:447d</entry></row>
-	<row><entry>crossroads.infrahip.net</entry><entry>2001:1b:a9be:c6a6:34e5:8361:c07f:a990</entry><entry>RSA</entry><entry>193.167.187.134</entry><entry>2001:708:140:220::7</entry><entry>2001:0:53aa:64c:0:79c9:3e58:4479</entry></row>
-	<row><entry>ashenvale.infrahip.net</entry><entry>2001:1c:cbae:47ae:2871:f9c:eb94:c8e3</entry><entry>RSA</entry><entry>193.167.187.133</entry><entry>2001:708:140:220::6</entry><entry>2001:0:53aa:64c:0:5426:3e58:447a</entry></row>
+	<row><entry>felwood.infrahip.net</entry><entry>2001:1d:392e:a450:2cd3:75e1:6098:8104</entry><entry>RSA</entry><entry>193.167.187.130</entry><entry>2001:708:140:220::3</entry></row>
+	<row><entry>crossroads.infrahip.net</entry><entry>2001:1b:a9be:c6a6:34e5:8361:c07f:a990</entry><entry>RSA</entry><entry>193.167.187.134</entry><entry>2001:708:140:220::7</entry></row>
+	<row><entry>ashenvale.infrahip.net</entry><entry>2001:1c:cbae:47ae:2871:f9c:eb94:c8e3</entry><entry>RSA</entry><entry>193.167.187.133</entry><entry>2001:708:140:220::6</entry></row>
       </tbody>
     </tgroup>
     </table>
@@ -1440,6 +1440,18 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
     <para>
       The servers are running ssh and http. They are not running "conntest-server" software as described elsewhere in this document.
     </para>
+
+    <para>To use access the servers using HIP behind a NAT box, you
+          have two alternatives. Firstly, you enable the UDP
+          encapsulation using "hipconf nat plain-udp". See <xref
+          linkend="ch_hip_nat" /> for more information. Secondly,
+	  you can install miredo on your machine and make sure that HIP
+	  uses the IPv6 address of the server.</para>
+	  
+
+    <para>To register to the rendezvous servers behind a NAT box,
+          you need to install "miredo" on your machine. Then you register to
+          one of the test servers using its IPv6 address.</para>
 
   </chapter>
 
@@ -3112,7 +3124,7 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
     </para>
     <itemizedlist>
     <listitem><para>
-      &nbsp;tools/hipconf nat on
+      &nbsp;tools/hipconf nat plain-udp
     </para>    </listitem>
     <listitem><para>
       &nbsp;tools/hipconf add map peer_hit peer_ipv4_addr
