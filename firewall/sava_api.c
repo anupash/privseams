@@ -1097,10 +1097,11 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
   _HIP_DEBUG("NOT AN INBOUND TRAFFIC OR NOT AUTHENTICATED TRAFFIC \n");
   HIP_DEBUG_HIT("Authenticating source address ", &ctx->src);
 #ifdef SAVAH_IP_OPTION 
+  HIP_DEBUG("Checking IP option \n");
   if (ctx->ip_version == 4) {
+    HIP_DEBUG("IPv4 \n");
     opt = (struct sava_ip_option *) (buff + 20); //first 20 bytes are original IPv4 header
     HIP_ASSERT(opt != NULL);
-
     opt_addr = (struct in6_addr *) opt->data;
     enc_entry = hip_sava_enc_ip_entry_find(opt_addr);
   } else { //IPv6
