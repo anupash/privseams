@@ -1228,6 +1228,11 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
 	memcpy(buff_no_opt, buff, hdr_offset);
 	memcpy(buff_no_opt, buff + hdr_offset + hdr_len, buff_len - hdr_len - hdr_offset);
 	buff_len -= hdr_len;
+	if (protocol == IPPROTO_TCP) {
+	  ip_raw_sock = ipv6_raw_tcp_sock;
+      	} else if (protocol == IPPROTO_UDP) {
+	  ip_raw_sock = ipv6_raw_udp_sock;
+	}
 #else    
 	memcpy(&ip6hdr->ip6_src, (void *)enc_entry->ip_link->src_addr, sizeof(struct in6_addr));
 	
@@ -1278,6 +1283,12 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
 	memcpy(buff_no_opt, buff + hdr_offset,
 	       buff_len - hdr_offset - hdr_len);
 	buff_len -= hdr_len; //original length - option length
+
+	if (protocol == IPPROTO_TCP) {
+	  ip_raw_sock = ipv4_raw_tcp_sock;
+      	} else if (protocol == IPPROTO_UDP) {
+	  ip_raw_sock = ipv4_raw_udp_sock;
+	}
 #else
 	IPV6_TO_IPV4_MAP(enc_entry->ip_link->src_addr, &iphdr->ip_src);
 
@@ -1439,7 +1450,7 @@ int hip_sava_handle_bex_completed (struct in6_addr * src, struct in6_addr * hitr
 #endif
     
 
-#ifdef CONFIG_SAVAH_IP_OPTION
+#ifndef CONFIG_SAVAH_IP_OPTION
     HIP_IFEL(hip_sava_enc_ip_entry_add(enc_addr_no,
 				       ip_entry,
 				       hit_entry, info_entry), 
