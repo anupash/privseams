@@ -20,25 +20,28 @@
 #define SAVA_OUTBOUND_KEY 1
 
 #define SAVA_IPV6_OPTION_TYPE 193
+#define SAVA_IPV4_OPTION_TYPE 159
 
 typedef struct sava_tlv_padding {
-  unsigned char type;
-  unsigned char length;
+  char type;
+  char length;
 } sava_tvl_padding_t;
 
 typedef struct sava_tlv_option {
-  unsigned char action:2;
-  unsigned char change:1;
-  unsigned char type:5;
-  unsigned char length;
+  char action:2;
+  char change:1;
+  char type:5;
+  char length;
 } sava_tlv_option_t;
 
 typedef struct sava_ip_option {
-  unsigned char   type:1;
-  unsigned char   class:2;
-  unsigned char   number:5;
-  unsigned char   length;
-  char data[18];
+  u_int8_t   type;
+  //  unsigned char   type:1;
+  //  unsigned char   class:2;
+  //  unsigned char   number:5;
+  u_int8_t   length;
+  char data[16];
+  char padding[2];
 } sava_ip_option_t;
 
 typedef struct sava_addrinfo {

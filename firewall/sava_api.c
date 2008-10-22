@@ -824,6 +824,21 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
 
   int dst_len = 0;
 
+
+  if (ctx->ip_version == 6) { //IPv6
+    
+  } else {
+    iphdr = (struct ip *)buff;
+    if (iphdr->ip_hl == 10) {
+      opt = (struct sava_ip_option *) (((char *)iphdr) + 20);
+      if (opt->type ==  SAVA_IPV4_OPTION_TYPE) {
+	HIP_DEBUG("Packet contains SAVA option. Allow packet \n");
+	verdict = ACCEPT;
+	goto out_err;
+      }
+    }
+  }
+
   memset(&dst, 0, sizeof(struct sockaddr_storage));
 
   //remove this as it is decreases performance 
@@ -849,6 +864,10 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
     dst6->sin6_family = AF_INET6;    
     
     protocol = ip6hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt; //get next header protocol type
+
+    memcpy(&dst6->sin6_addr, &ctx->dst, sizeof(struct in6_addr));
+    
+    dst_len = sizeof(struct sockaddr_in6);
 
 #ifdef CONFIG_SAVAH_IP_OPTION
 
@@ -930,10 +949,6 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
     tcp = (struct tcphdr *) (buff + 40); //sizeof ip6_hdr is 40
     udp = (struct udphdr *) (buff + 40); //sizeof ip6_hdr is 40
     
-    memcpy(&dst6->sin6_addr, &ctx->dst, sizeof(struct in6_addr));
-    
-    dst_len = sizeof(struct sockaddr_in6);
-    
     HIP_DEBUG_INADDR("ipv6 src: ", &ip6hdr->ip6_src);
     HIP_DEBUG_INADDR("ipv6 dst: ", &ip6hdr->ip6_dst);
     
@@ -970,11 +985,29 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
 
     protocol = iphdr->ip_p;
 
+    dst_len = sizeof(struct sockaddr_in);
+    
+    IPV6_TO_IPV4_MAP(&ctx->dst, &dst4->sin_addr);
+    
+    dst4->sin_family = AF_INET;
+
 #ifdef CONFIG_SAVAH_IP_OPTION
+    //FIX ME
+    if (protocol == IPPROTO_TCP) {
+      HIP_DEBUG("Using tcp raw socket \n");
+      ip_raw_sock = ipv4_raw_tcp_sock;
+    } else if (protocol == IPPROTO_UDP) {
+      HIP_DEBUG("Using udp raw socket \n");
+      ip_raw_sock = ipv4_raw_udp_sock;
+    }
 
     opt = hip_sava_build_enc_addr_ipv4_option(enc_addr);
 
     iphdr->ip_hl += 5;
+
+    HIP_DEBUG_INADDR("Source address ", &iphdr->ip_src);
+    HIP_DEBUG_INADDR("Destination address ", &iphdr->ip_dst);
+    HIP_DEBUG_INADDR("Sock dst addr ", &dst);
     
     buff_ip_opt = (char *) malloc(buff_len + opt->length);
 
@@ -991,13 +1024,7 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
     
     tcp = (struct tcphdr *) (buff + 20); //sizeof iphdr is 20
     udp = (struct udphdr *) (buff + 20); //sizeof iphdr is 20
-            
-    dst_len = sizeof(struct sockaddr_in);
-    
-    IPV6_TO_IPV4_MAP(&ctx->dst, &dst4->sin_addr);
-    
-    dst4->sin_family = AF_INET;
-    
+        
     HIP_DEBUG_INADDR("ipv4 src: ", &iphdr->ip_src);
     HIP_DEBUG_INADDR("ipv4 dst: ", &iphdr->ip_dst);
     
@@ -1044,8 +1071,11 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
       HIP_DEBUG("setsockopt IP_HDRINCL ERROR！ \n");
     }	
   }
-  
-  if (sent != ctx->ipq_packet->data_len) {
+#ifdef CONFIG_SAVAH_IP_OPTION
+  if (sent != buff_len) {
+#else
+  if (sent != ctx->ipq_packet->data_len) {  
+#endif
     HIP_ERROR("Could not send the all requested"			\
 	      " data (%d/%d)\n", sent, ctx->ipq_packet->data_len);
     HIP_DEBUG("ERROR NUMBER: %d\n", errno);
@@ -1452,9 +1482,7 @@ struct sava_ip_option * hip_sava_build_enc_addr_ipv4_option(struct in6_addr * en
   
   struct sava_ip_option * opt = (struct sava_ip_option *) malloc(sizeof(struct sava_ip_option));
   memset(opt, 0, 20);
-  opt->type = 1;
-  opt->class = 0;
-  opt->number = 31;
+  opt->type = SAVA_IPV4_OPTION_TYPE;
   opt->length = 20;
   
   memcpy(opt->data,

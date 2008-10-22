@@ -296,7 +296,7 @@ AM_CONDITIONAL(HIP_OPPORTUNISTIC, test x"$ac_cv_use_opportunistic" = x"yes")
 
 AC_ARG_ENABLE(savaipopt,
              AC_HELP_STRING([--enable-savaipoption],
-                            [HIP SAVA IP option extensions (default is YES)]),
+                            [HIP SAVA IP option extensions, if no encrypt IP address (default is YES)]),
              [ac_cv_use_savaipopt=$enableval], [ac_cv_use_savaipopt=yes])
 AC_CACHE_CHECK([whether to use sava ip option],
                [ac_cv_use_savaipopt], [ac_cv_use_savaipopt=yes])
