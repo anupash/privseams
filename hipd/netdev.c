@@ -64,6 +64,9 @@ int filter_address(struct sockaddr *addr)
 				
 		HIP_DEBUG("IPv6 address to filter is %s.\n", s);
 		
+		_HIP_DEBUG("Address is%san Teredo address\n", 
+			  ipv6_addr_is_teredo(a_in6)==1?" ":" not ");
+		
 		if(suppress_af_family == AF_INET) {
 			HIP_DEBUG("Address ignored: address family "\
 				  "suppression set to IPv4 addresses.\n");
@@ -280,29 +283,30 @@ static void delete_address_from_list(struct sockaddr *addr, int ifindex)
             memcpy(&addr_sin6, addr, sizeof(addr_sin6));
 	}       
 
-        HIP_DEBUG_HIT("deleting_address=",hip_cast_sa_addr(&addr_sin6));
+        HIP_DEBUG_HIT("Address to delete = ",hip_cast_sa_addr(&addr_sin6));
 
 	list_for_each_safe(item, tmp, addresses, i) {
             n = list_entry(item);
             deleted = 0;
             /* remove from list if if_index matches */
             if (!addr) {
-                if (n->if_index == ifindex) {
-			HIP_DEBUG_IN6ADDR("deleting address",
+		    if (n->if_index == ifindex) {
+			    HIP_DEBUG_IN6ADDR("Deleting address",
 					  hip_cast_sa_addr(&n->addr)); 
-                    list_del(n, addresses);
-                    deleted = 1;
-                }
+			    list_del(n, addresses);
+			    deleted = 1;
+		    }
             } else {
-                /* remove from list if address matches */
-		    HIP_DEBUG_IN6ADDR("deleting address",
+		    /* remove from list if address matches */            
+		    _HIP_DEBUG_IN6ADDR("Address to compare",
 				      hip_cast_sa_addr(&n->addr)); 
-            
-                if (ipv6_addr_cmp(hip_cast_sa_addr(&n->addr), 
-				  hip_cast_sa_addr(&addr_sin6)) == 0) {
-                    list_del(n, addresses);
-                    deleted = 1;
-                }
+		    if (ipv6_addr_cmp(hip_cast_sa_addr(&n->addr), 
+				      hip_cast_sa_addr(&addr_sin6)) == 0) {
+			HIP_DEBUG_IN6ADDR("Deleting address",
+					  hip_cast_sa_addr(&n->addr)); 
+			list_del(n, addresses);
+			deleted = 1;
+		    }
             }
             if (deleted)
                 address_count--;
@@ -859,13 +863,7 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit,
 
 send_i1:
 
-	if (entry->state == HIP_STATE_ESTABLISHED) {
-		HIP_DEBUG("Acquire in established state (hard handover?), skip\n");
-		goto out_err;
-	} else if (entry->state == HIP_STATE_NONE ||
-	    entry->state == HIP_STATE_UNASSOCIATED) {
-		HIP_DEBUG("State is %d, sending i1\n", entry->state);
-	} else if (entry->hip_msg_retrans.buf == NULL) {
+	if (entry->hip_msg_retrans.buf == NULL) {
 		HIP_DEBUG("Expired retransmissions, sending i1\n");
 	} else {
 		HIP_DEBUG("I1 was already sent, ignoring\n");
@@ -911,8 +909,9 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	struct in6_addr saddr, *src_addr = NULL, *dst_addr = NULL;
 	struct xfrm_user_acquire *acq;
 	hip_ha_t *entry;
+	int err = 0;
 
-	HIP_DEBUG("Acquire: sending I1 (pid: %d) \n", msg->nlmsg_pid);
+	HIP_DEBUG("Acquire (pid: %d) \n", msg->nlmsg_pid);
 
 	acq = (struct xfrm_user_acquire *)NLMSG_DATA(msg);
 	src_hit = (hip_hit_t *) &acq->sel.saddr;
@@ -924,26 +923,19 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	
 	entry = hip_hadb_find_byhits(src_hit, dst_hit);
 
-	if (entry){
+	if (entry) {
+		HIP_IFEL((entry->state == HIP_STATE_ESTABLISHED), 0,
+			"State established, not triggering bex\n");
+
 	        src_lsi = &(entry->lsi_our);
 	        dst_lsi = &(entry->lsi_peer);
 	}
 
-	/* Is this still necessary? -Miika */
-#if 0
-	if (!entry) {
-		if (is_ipv4_locator) {
-			IPV4_TO_IPV6_MAP(((struct in_addr *)&acq->id.daddr),
-					 &saddr);
-		} else {
-			ipv6_addr_copy(&saddr,
-				       ((struct in6_addr*)&acq->id.daddr));
-		}
-		src_addr = &saddr;
-	}
-#endif
+	err = hip_netdev_trigger_bex(src_hit, dst_hit, src_lsi, dst_lsi, src_addr, dst_addr);
 
-	return hip_netdev_trigger_bex(src_hit, dst_hit, src_lsi, dst_lsi, src_addr, dst_addr);
+ out_err:
+
+	return err;
 }
 
 int hip_netdev_trigger_bex_msg(struct hip_common *msg) {
@@ -1133,7 +1125,10 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 				// hip_for_each_ha();
 			}
 
-			i = count_if_addresses(ifa->ifa_index);
+			/* Should be counted globally over all interfaces 
+			   because they might have addresses too --Samu BUGID 663 */
+			//i = count_if_addresses(ifa->ifa_index);
+			i = address_count;
 			HIP_DEBUG("%d addr(s) in ifindex %d\n", i, ifa->ifa_index);
 
 			/* handle HIP readdressing */
@@ -1303,7 +1298,24 @@ int hip_select_source_address(struct in6_addr *src, struct in6_addr *dst)
 
 	HIP_IFEL(!exists_address_family_in_list(dst), -1, "No address of the same family\n");
 
-	HIP_IFEL(hip_iproute_get(&hip_nl_route, src, dst, NULL, NULL, family, idxmap), -1, "Finding ip route failed\n");
+	if (ipv6_addr_is_teredo(dst)) {
+		struct netdev_address *na;
+		struct in6_addr *in6;
+		hip_list_t *n, *t;
+		int c, match = 0;
+
+		list_for_each_safe(n, t, addresses, c) {
+			na = list_entry(n);
+			in6 = hip_cast_sa_addr(&na->addr);
+			if (ipv6_addr_is_teredo(in6)) {
+				ipv6_addr_copy(src, in6);
+				match = 1;
+			}
+		}
+		HIP_IFEL(!match, -1, "No src addr found for Teredo\n");
+	} else  {
+		HIP_IFEL(hip_iproute_get(&hip_nl_route, src, dst, NULL, NULL, family, idxmap), -1, "Finding ip route failed\n");
+	}
 
 	HIP_DEBUG_IN6ADDR("src", src);
 
