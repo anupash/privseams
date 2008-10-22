@@ -1226,7 +1226,7 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
 #ifdef CONFIG_SAVAH_IP_OPTION
 	buff_no_opt = (char *) malloc(buff_len - hdr_len);
 	memcpy(buff_no_opt, buff, hdr_offset);
-	memcpy(buff_no_opt, ((char *)iphdr) + (hdr_offset + hdr_len), buff_len - hdr_len - hdr_offset);
+	memcpy(buff_no_opt, (char *)(ip6hdr + hdr_offset + hdr_len), buff_len - hdr_len - hdr_offset);
 	buff_len -= hdr_len;
 	if (protocol == IPPROTO_TCP) {
 	  ip_raw_sock = ipv6_raw_tcp_sock;
@@ -1280,7 +1280,7 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
 	//Copy IPv4 header
 	memcpy(buff_no_opt, buff, hdr_offset);
 	//Copy transmission protocol header + payload data omitting the sava_ip_option
-	memcpy(buff_no_opt, buff + hdr_offset,
+	memcpy(buff_no_opt, (char *)(buff + hdr_offset + hdr_len),
 	       buff_len - hdr_offset - hdr_len);
 	buff_len -= hdr_len; //original length - option length
 
