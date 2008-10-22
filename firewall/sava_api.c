@@ -850,7 +850,7 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
     
     protocol = ip6hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt; //get next header protocol type
 
-#ifdef SAVAH_IP_OPTION
+#ifdef CONFIG_SAVAH_IP_OPTION
 
     if (protocol = 0) { //HOP-BY-HOP Options
 #if 0
@@ -970,7 +970,7 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
 
     protocol = iphdr->ip_p;
 
-#ifdef SAVAH_IP_OPTION
+#ifdef CONFIG_SAVAH_IP_OPTION
 
     opt = hip_sava_build_enc_addr_ipv4_option(enc_addr);
 
@@ -1027,7 +1027,7 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
       HIP_DEBUG("setsockopt IP_HDRINCL for ipv4 OK！ \n");
     }
   }
-#ifdef SAVAH_IP_OPTION
+#ifdef CONFIG_SAVAH_IP_OPTION
   sent = sendto(ip_raw_sock, buff_ip_opt, buff_len, 0,
 		(struct sockaddr *) &dst, dst_len);
   free(buff_ip_opt);
@@ -1112,7 +1112,7 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
 
   _HIP_DEBUG("NOT AN INBOUND TRAFFIC OR NOT AUTHENTICATED TRAFFIC \n");
   HIP_DEBUG_HIT("Authenticating source address ", &ctx->src);
-#ifdef SAVAH_IP_OPTION 
+#ifdef CONFIG_SAVAH_IP_OPTION 
   HIP_DEBUG("Checking IP option \n");
   if (ctx->ip_version == 4) {
     /*TODO: Check if this is the roght option */
@@ -1150,7 +1150,7 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
   enc_entry = hip_sava_enc_ip_entry_find(&ctx->src);
 #endif
 
-#ifdef SAVAH_IP_OPTION
+#ifdef CONFIG_SAVAH_IP_OPTION
   auth_len = sizeof(struct in6_addr);
 #else 
   auth_len = (ctx->ip_version == 6) ? sizeof(struct in6_addr): sizeof(struct in_addr);
@@ -1161,7 +1161,7 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
 
     _HIP_DEBUG("Secret key acquired. Lets encrypt the src IP address \n");
 
-#ifndef SAVAH_IP_OPTION    
+#ifndef CONFIG_SAVAH_IP_OPTION    
     enc_addr = hip_sava_auth_ip(enc_entry->ip_link->src_addr, enc_entry->peer_info);
     //FIX IP version 
     enc_addr_no = map_enc_ip_addr_to_network_order(enc_addr, 4);
@@ -1170,7 +1170,7 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
     HIP_DEBUG_HIT("Found encrypted address ", enc_addr);
 #endif
 
-#ifdef SAVAH_IP_OPTION    
+#ifdef CONFIG_SAVAH_IP_OPTION    
     if (!memcmp(opt_addr, enc_addr, sizeof(struct in6_addr))) {
 #else
     if (!memcmp(&ctx->src, enc_addr, sizeof(struct in6_addr))) {  
@@ -1188,7 +1188,7 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
     	ip6hdr = (struct ip6_hdr*) buff;
 	dst_len = sizeof(struct sockaddr_in6);
 	dst6->sin6_family = AF_INET6;
-#ifdef SAVAH_IP_OPTION
+#ifdef CONFIG_SAVAH_IP_OPTION
 	buff_no_opt = (char *) malloc(buff_len - hdr_len);
 	memcpy(buff_no_opt, buff, hdr_offset);
 	memcpy(buff_no_opt, buff + hdr_offset + hdr_len, buff_len - hdr_len - hdr_offset);
@@ -1235,7 +1235,7 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
 	dst4->sin_family = AF_INET;
 	iphdr->ip_sum = 0;
 
-#ifdef SAVAH_IP_OPTION
+#ifdef CONFIG_SAVAH_IP_OPTION
 	buff_no_opt = (char *) malloc(buff_len - hdr_len);
 	//Copy IPv4 header
 	memcpy(buff_no_opt, buff, hdr_offset);
@@ -1283,7 +1283,7 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
 	  HIP_DEBUG("setsockopt IP_HDRINCL for ipv4 OK！ \n");
 	}
       }
-#ifdef SAVAH_IP_OPTION
+#ifdef CONFIG_SAVAH_IP_OPTION
       sent = sendto(ip_raw_sock, buff_no_opt, buff_len, 0,
 		    (struct sockaddr *) &dst, dst_len);
       free(buff_no_opt);
@@ -1393,7 +1393,7 @@ int hip_sava_handle_bex_completed (struct in6_addr * src, struct in6_addr * hitr
     
     enc_addr = hip_sava_auth_ip(src, info_entry);
 
-#ifdef SAVAH_IP_OPTION
+#ifdef CONFIG_SAVAH_IP_OPTION
     //Since the IP option have space for 128 bits we can store the whole IPv6 address
     enc_addr_no = map_enc_ip_addr_to_network_order(enc_addr, 6);
 #else
