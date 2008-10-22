@@ -805,6 +805,8 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
 
   struct sava_ip_option * opt = NULL;
 
+  struct sava_tlv_option * sava_ip6_padding = NULL;
+
   struct sava_ip6_option * sava_hdr = NULL;
 
   struct sava_tlv_option * sava_ip6_opt = NULL;
@@ -881,16 +883,16 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
 
       buff_len += 24; //add 24 bytes of sava option
 
-    } else {
+    } else { //No HBH option found in the packet
       
-      buff_ip_opt = (char *) malloc(buff_len + 24); //24 extra bytes 
+      buff_ip_opt = (char *) malloc(buff_len + 24); //24 extra bytes for our HBH option
       
       ip6hbh_hdr = (struct ip6_hbh *) malloc(sizeof(struct ip6_hbh));
 
       memset(ip6hbh_hdr, 0, sizeof(struct ip6_hbh));
 
       //ip6hbh_hdr->ip6h_nxt = 0;
-      ip6hbh_hdr->ip6h_len = 3; //IPv6 address length + option struct + padding 48 bits
+      ip6hbh_hdr->ip6h_len = 2; //96 bits of IPv6 address length + padding 32 bits (not including first 8 octets)
 
       sava_ip6_opt = (struct sava_tlv_option *)malloc(sizeof(struct sava_tlv_option)); 
       memset (sava_ip6_opt, 0, sizeof(struct sava_ip6_option)); 
@@ -898,15 +900,24 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
 
       sava_ip6_opt->action = 0;
       sava_ip6_opt->change = 0;
-      sava_ip6_opt->length = 22; //size of IPv6 address in octets + 6 padding
-      sava_ip6_opt->data = (char *)malloc (22);
-      memcpy(sava_ip6_opt->data, enc_addr, sizeof(struct in6_addr));      
+      sava_ip6_opt->length = sizeof(struct in6_addr); //size of IPv6 address in octets (16 bytes)
+      sava_ip6_opt->data = (char *)malloc (sizeof(struct in6_addr));
+      memcpy(sava_ip6_opt->data, enc_addr, sizeof(struct in6_addr));  
+
+      sava_ip6_padding = (struct sava_tlv_option *)malloc(sizeof(struct sava_tlv_option));
+      memset(sava_ip6_padding, 0, sizeof(struct sava_ip6_option));
+      sava_ip6_padding->type = 1;
+      sava_ip6_padding->length = 2;
+      sava_ip6_padding->data = (char *)malloc(2);
+      memset(sava_ip6_padding->data, 0, 2);
 
       memcpy(buff_ip_opt, buff, 40); //copy main IPv6 header
       memcpy(buff_ip_opt + 40, ip6hbh_hdr, sizeof(ip6hbh_hdr)); //copy HBH header 
       memcpy(buff_ip_opt + 40 + sizeof(ip6hbh_hdr), 
 	     sava_ip6_opt, sizeof(sava_ip6_opt));
       memcpy(buff_ip_opt + 40 + sizeof(ip6hbh_hdr) + sizeof(sava_ip6_opt),
+	     sava_ip6_padding, sizeof(sava_ip6_padding)); //As required in IPv6 RFC
+      memcpy(buff_ip_opt + 40 + sizeof(ip6hbh_hdr) + sizeof(sava_ip6_opt) + sizeof(sava_ip6_padding),
 	     buff + 40, buff_len - 40); 
       buff_len += 24; // add 24 bytes of sava option
     }
@@ -1099,21 +1110,29 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
 #ifdef SAVAH_IP_OPTION 
   HIP_DEBUG("Checking IP option \n");
   if (ctx->ip_version == 4) {
+    /*TODO: Check if this is the roght option */
     HIP_DEBUG("IPv4 \n");
-    opt = (struct sava_ip_option *) (buff + 20); //first 20 bytes are original IPv4 header
-    HIP_ASSERT(opt != NULL);
-    opt_addr = (struct in6_addr *) opt->data;
-    enc_entry = hip_sava_enc_ip_entry_find(opt_addr);
+    iphdr = (struct ip *)buff;
+    if (iphdr->ip_hl == 10) {
+      HIP_DEBUG("We have the only IPv4 option \n");
+      opt = (struct sava_ip_option *) (buff + 20); //first 20 bytes are original IPv4 header
+      opt_addr = (struct in6_addr *) opt->data;
+      enc_entry = hip_sava_enc_ip_entry_find(opt_addr);
+      hdr_offset = 20;
+      hdr_len = 20;
+    } else {
+      HIP_DEBUG("Some other IPv4 options present \n");
+    }
   } else { //IPv6
     ip6hdr = (struct ip6_hdr*) buff;
     HIP_ASSERT(ip6hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt != 0);
     ip6hbh_hdr = (struct ip6_hbh *)buff + 40; //get the HBH header
-    if (ip6hbh_hdr->ip6h_len == 3) { //we have exactly one SAVAH option that needs to be parsed and removed
+    if (ip6hbh_hdr->ip6h_len == 2) { //we have exactly one SAVAH option that needs to be parsed and removed
       sava_ip6_opt = (struct sava_tlv_option *)buff + 42;
       opt_addr = (struct in6_addr *)sava_ip6_opt->data;
       enc_entry = hip_sava_enc_ip_entry_find(opt_addr);
       hdr_offset = 40;
-      hdr_len = 
+      hdr_len = 24;
     } else {
       //More than one option detected
       tmp_buff = buff + (40 + sizeof(ip6hbh_hdr));
@@ -1165,8 +1184,10 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
 	dst_len = sizeof(struct sockaddr_in6);
 	dst6->sin6_family = AF_INET6;
 #ifdef SAVAH_IP_OPTION
-	
-	buff_no_opt = (char *) malloc(buff_len - opt->length);
+	buff_no_opt = (char *) malloc(buff_len - hdr_len);
+	memcpy(buff_no_opt, buff, hdr_offset);
+	memcpy(buff_no_opt, buff + hdr_offset + hdr_len, buff_len - hdr_len - hdr_offset);
+	buff_len -= hdr_len;
 #else    
 	memcpy(&ip6hdr->ip6_src, (void *)enc_entry->ip_link->src_addr, sizeof(struct in6_addr));
 	
@@ -1207,16 +1228,16 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
 	}
       }else { //IPv4
 	dst4->sin_family = AF_INET;
-	iphdr = (struct ip *) buff; 		
 	iphdr->ip_sum = 0;
 
 #ifdef SAVAH_IP_OPTION
-	buff_no_opt = (char *) malloc(buff_len - opt->length);
+	buff_no_opt = (char *) malloc(buff_len - hdr_len);
 	//Copy IPv4 header
-	memcpy(buff_no_opt, iphdr, sizeof(struct ip));
+	memcpy(buff_no_opt, buff, hdr_offset);
 	//Copy transmission protocol header + payload data omitting the sava_ip_option
-	memcpy(buff_no_opt, buff + sizeof(struct ip) + opt->length,
-	       buff_len - sizeof(struct ip) - opt->length);
+	memcpy(buff_no_opt, buff + hdr_offset,
+	       buff_len - hdr_offset - hdr_len);
+	buff_len -= hdr_len; //original length - option length
 #else
 	IPV6_TO_IPV4_MAP(enc_entry->ip_link->src_addr, &iphdr->ip_src);
 
@@ -1424,16 +1445,14 @@ struct sava_ip_option * hip_sava_build_enc_addr_ipv4_option(struct in6_addr * en
 
   HIP_ASSERT(enc_addr != NULL);
   
-  struct sava_ip_option * opt = (struct sava_ip_option *) malloc(sizeof(sava_ip_option_t) + 
-							       sizeof(struct in6_addr) +
-							       2); //padding we need total 160 bits to be a multiplicative of 32
-  memset(opt, 0, 160);
+  struct sava_ip_option * opt = (struct sava_ip_option *) malloc(20); //padding we need total 160 bits to be a multiplicative of 32
+  memset(opt, 0, 20);
   opt->type = 1;
   opt->class = 0;
   opt->number = 31;
-  opt->length = 160;
+  opt->length = 20;
   
-  memcpy(opt + sizeof(sava_ip_option_t),
+  memcpy(opt + 2, //2 bytes offset
 	 enc_addr,
 	 sizeof(struct in6_addr));
 
