@@ -480,9 +480,11 @@ int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[],
 			reg_types[i] = HIP_SERVICE_RELAY;
 		} else if(strcmp("escrow", lowercase) == 0) {
 			reg_types[i] = HIP_SERVICE_ESCROW;
+		} else if(strcmp("savah", lowercase) == 0) {
+		        reg_types[i] = HIP_SERVICE_SAVAH;
 		} /* To cope with the atoi() error value we handle the 'zero'
 		     case here. */
-		else if(strcmp("0", lowercase) == 0) {
+		 else if(strcmp("0", lowercase) == 0) {
 			reg_types[i] = 0;
 		} else {
 			reg_type = atoi(lowercase);
@@ -1538,9 +1540,13 @@ int hip_conf_handle_service(hip_common_t *msg, int action, const char *opt[],
 			HIP_INFO("Adding HIP UDP relay service.\n");
 			HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OFFER_HIPRELAY, 0), -1,
 				 "Failed to build user message header.\n");
+		} else if(strcmp(opt[0], "savah") == 0) { 
+		        HIP_INFO("Adding HIP SAVA service.\n");
+			HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OFFER_SAVAH, 0), -1,
+				 "Failed to build user message header.\n");
 		} else {
 			HIP_ERROR("Unknown service \"%s\".\n", opt[0]);
-		}     
+		}
 	} else if(action == ACTION_REINIT){
 		if (strcmp(opt[0], "rvs") == 0) {
 			HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_REINIT_RVS, 0), -1,
@@ -1566,6 +1572,11 @@ int hip_conf_handle_service(hip_common_t *msg, int action, const char *opt[],
 			HIP_INFO("Deleting HIP UDP relay service.\n");
 			HIP_IFEL(hip_build_user_hdr(
 					 msg, SO_HIP_CANCEL_HIPRELAY, 0), -1,
+				 "Failed to build user message header.\n");
+		} else if (strcmp(opt[0], "sava") == 0) {
+			HIP_INFO("Deleting SAVAH service.\n");
+			HIP_IFEL(hip_build_user_hdr(
+					 msg, SO_HIP_CANCEL_SAVAH, 0), -1,
 				 "Failed to build user message header.\n");
 		} else {
 			HIP_ERROR("Unknown service \"%s\".\n", opt[0]);

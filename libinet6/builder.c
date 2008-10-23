@@ -1108,6 +1108,8 @@ char* hip_message_type_name(const uint8_t msg_type){
 	case SO_HIP_GET_SAVAHR_IN_KEYS: return "SO_HIP_GET_SAVAHR_IN_KEYS";
 	case SO_HIP_GET_SAVAHR_OUT_KEYS: return "SO_HIP_GET_SAVAHR_OUT_KEYS"; 
 	case SO_HIP_GET_SAVAHR_HIT: return "SO_HIP_GET_SAVAHR_HIT";
+
+	case SO_HIP_OFFER_SAVAH: return "SO_HIP_OFFER_SAVAH";
 	  //case SO_HIP_GET_PEER_HIT_BY_LSIS: return "SO_HIP_GET_PEER_HIT_BY_LSIS";
 	  //case SO_HIP_GET_PEER_HIT_AT_FIREWALL: return "SO_HIP_GET_PEER_HIT_AT_FIREWALL";
 	default:

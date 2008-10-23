@@ -740,7 +740,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	int err = 0, host_id_in_enc_len = 0, written = 0;
 	uint16_t mask = 0;
 	int type_count = 0, request_rvs = 0, request_escrow = 0;
-    int *reg_type = NULL;
+        int *reg_type = NULL;
 	uint32_t spi_in = 0;
 
 	_HIP_DEBUG("hip_create_i2() invoked.\n");

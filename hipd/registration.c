@@ -35,6 +35,10 @@ void hip_init_services()
 	hip_services[2].status       = HIP_SERVICE_OFF;
 	hip_services[2].min_lifetime = HIP_RELREC_MIN_LIFETIME;
 	hip_services[2].max_lifetime = HIP_RELREC_MAX_LIFETIME;
+	hip_services[3].reg_type     = HIP_SERVICE_SAVAH;
+	hip_services[3].status       = HIP_SERVICE_OFF;
+	hip_services[3].min_lifetime = HIP_RELREC_MIN_LIFETIME;
+	hip_services[3].max_lifetime = HIP_RELREC_MAX_LIFETIME;
 
 	hip_ll_init(&pending_requests);
 }
@@ -138,7 +142,9 @@ void hip_get_srv_info(const hip_srv_t *srv, char *information)
 		cursor += sprintf(cursor, "escrow\n");
 	} else if(srv->reg_type == HIP_SERVICE_RELAY) {
 		cursor += sprintf(cursor, "relay\n");
-	} else {
+	} else if(srv->reg_type == HIP_SERVICE_SAVAH) {
+	        cursor += sprintf(cursor, "sava\n");
+        } else {
 		cursor += sprintf(cursor, "unknown\n");
 	}
 
@@ -359,7 +365,12 @@ int hip_handle_param_reg_info(hip_ha_t *entry, hip_common_t *source_msg,
 			
 			break;
 #endif /* CONFIG_HIP_ESCROW */
+		case HIP_SERVICE_SAVAH:
+		        HIP_INFO("Responder offers savah service.\n");
 			
+			hip_hadb_set_peer_controls(
+				entry, HIP_HA_CTRL_PEER_SAVAH_CAPABLE);
+		        break;
 		default:
 			HIP_INFO("Responder offers unsupported service.\n");
 			hip_hadb_set_peer_controls(
@@ -643,6 +654,16 @@ int hip_handle_param_reg_failed(hip_ha_t *entry, hip_common_t *msg)
 			
 				break;
 			}
+			case HIP_SERVICE_SAVAH:
+		        {
+			        HIP_DEBUG("The server has refused to grant us "\
+					  "savah service.\n%s\n", reason);
+				hip_hadb_cancel_local_controls(
+					entry, HIP_HA_CTRL_LOCAL_REQ_SAVAH); 
+				hip_del_pending_request_by_type(
+					entry, HIP_SERVICE_SAVAH);
+				break;
+			}
 			default:
 				HIP_DEBUG("The server has refused to grant us "\
 					  "an unknown service (%u).\n%s\n",
@@ -787,6 +808,16 @@ int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
 			}
 
 			break;
+		case HIP_SERVICE_SAVAH:
+		        HIP_DEBUG("Client is registering to savah service.\n");
+			accepted_requests[*accepted_count] =
+			  reg_types[i];
+			accepted_lifetimes[*accepted_count] =
+			  granted_lifetime;
+			(*accepted_count)++;
+				
+			HIP_DEBUG("Registration accepted.\n");
+		        break;
 		default:
 			HIP_DEBUG("Client is trying to register to an "
 				  "unsupported service.\nRegistration "\

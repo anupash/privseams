@@ -741,6 +741,10 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 				hip_hadb_set_local_controls(
 					entry, HIP_HA_CTRL_LOCAL_REQ_RELAY);
 				break;
+			case HIP_SERVICE_SAVAH:
+			        hip_hadb_set_local_controls(
+					entry, HIP_HA_CTRL_LOCAL_REQ_SAVAH);
+			        break;
 #ifdef CONFIG_HIP_ESCROW
 			case HIP_SERVICE_ESCROW:
 				HIP_KEA * kea = NULL;
@@ -837,6 +841,9 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 
 		err = hip_recreate_all_precreated_r1_packets();
 		break;
+	case SO_HIP_OFFER_SAVAH:
+	        HIP_DEBUG("Handling SO_HIP_OFFER_SAVAH \n");
+	        break;
 #if 0
 	case SO_HIP_ADD_RELAY:
 	{
