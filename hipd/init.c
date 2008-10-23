@@ -1,7 +1,6 @@
 /** @file
  * This file defines initialization functions for the HIP daemon.
  *
- * @date    1.1.2007
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  * @note    HIPU: BSD platform needs to be autodetected in hip_set_lowcapability
  */
@@ -397,7 +396,7 @@ int hipd_init(int flush_ipsec, int killold)
 #endif
 
 
-	HIP_IFEL(hip_set_lowcapability(1), -1, "Failed to set capabilities\n");
+	HIP_IFEL(hip_set_lowcapability(0), -1, "Failed to set capabilities\n");
 
 #ifdef CONFIG_HIP_HI3
 	if( hip_use_i3 )
