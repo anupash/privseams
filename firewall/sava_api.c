@@ -1223,6 +1223,12 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
     	ip6hdr = (struct ip6_hdr*) buff;
 	dst_len = sizeof(struct sockaddr_in6);
 	dst6->sin6_family = AF_INET6;
+	protocol = ip6hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt;
+
+	memcpy(&dst6->sin6_addr, &ctx->dst, sizeof(struct in6_addr));
+       
+	HIP_DEBUG_INADDR("ipv6 src: ", &ip6hdr->ip6_src);
+	HIP_DEBUG_INADDR("ipv6 dst: ", &ip6hdr->ip6_dst);
 #ifdef CONFIG_SAVAH_IP_OPTION
 	buff_no_opt = (char *) malloc(buff_len - hdr_len);
 	memcpy(buff_no_opt, buff, hdr_offset);
@@ -1239,12 +1245,7 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
 	tcp = (struct tcphdr *) (buff + 40); //sizeof ip6_hdr is 40
 	udp = (struct udphdr *) (buff + 40); //sizeof ip6_hdr is 40
 
-	protocol = ip6hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt;
 
-	memcpy(&dst6->sin6_addr, &ctx->dst, sizeof(struct in6_addr));
-       
-	HIP_DEBUG_INADDR("ipv6 src: ", &ip6hdr->ip6_src);
-	HIP_DEBUG_INADDR("ipv6 dst: ", &ip6hdr->ip6_dst);
 	
 	if (protocol == IPPROTO_TCP) {
 
@@ -1274,36 +1275,34 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
       }else { //IPv4
 	dst4->sin_family = AF_INET;
 	iphdr->ip_sum = 0;
+	protocol = iphdr->ip_p;
+	dst_len = sizeof(struct sockaddr_in);
+	IPV6_TO_IPV4_MAP(&ctx->dst, &dst4->sin_addr);
+	_HIP_DEBUG_INADDR("ipv4 src: ", &iphdr->ip_src);
+	_HIP_DEBUG_INADDR("ipv4 dst: ", &iphdr->ip_dst);
 
 #ifdef CONFIG_SAVAH_IP_OPTION
 	buff_no_opt = (char *) malloc(buff_len - hdr_len);
-	//Copy IPv4 header
+	iphdr->ip_len = (buff_len - hdr_len);
+	iphdr->ip_hl -= (hdr_len / 4);
 	memcpy(buff_no_opt, buff, hdr_offset);
-	//Copy transmission protocol header + payload data omitting the sava_ip_option
-	memcpy(buff_no_opt, (char *)(buff + hdr_offset + hdr_len),
-	       buff_len - hdr_offset - hdr_len);
-	buff_len -= hdr_len; //original length - option length
+	memcpy((buff_no_opt + hdr_offset), buff + hdr_offset + hdr_len,
+	       (buff_len - hdr_offset - hdr_len));
+	buff_len -= hdr_len;
 
-	if (protocol == IPPROTO_TCP) {
+	if (protocol == IPPROTO_TCP) {	  
 	  ip_raw_sock = ipv4_raw_tcp_sock;
+	  HIP_HEXDUMP("tcp dump: ", buff_no_opt, buff_len - hdr_offset - hdr_len);
       	} else if (protocol == IPPROTO_UDP) {
 	  ip_raw_sock = ipv4_raw_udp_sock;
+	  HIP_HEXDUMP("udp dump: ", buff_no_opt, (buff_len - hdr_offset - hdr_len));
 	}
 #else
 	IPV6_TO_IPV4_MAP(enc_entry->ip_link->src_addr, &iphdr->ip_src);
 
 	tcp = (struct tcphdr *) (buff + 20); //sizeof iphdr is 20
 	udp = (struct udphdr *) (buff + 20); //sizeof iphdr is 20
-	
-	protocol = iphdr->ip_p;
-
-	dst_len = sizeof(struct sockaddr_in);
-
-	IPV6_TO_IPV4_MAP(&ctx->dst, &dst4->sin_addr);
-
-	HIP_DEBUG_INADDR("ipv4 src: ", &iphdr->ip_src);
-	HIP_DEBUG_INADDR("ipv4 dst: ", &iphdr->ip_dst);
-	
+		
 	if (protocol == IPPROTO_TCP) {
 
 	  HIP_DEBUG("Checksumming TCP packet \n");
@@ -1343,11 +1342,11 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
       if (sent != ctx->ipq_packet->data_len) {  
 #endif
 	HIP_ERROR("Could not send the all requested"			\
-		  " data (%d/%d)\n", sent, ctx->ipq_packet->data_len);
+		  " data (%d/%d)\n", sent, buff_len);
 	HIP_DEBUG("ERROR NUMBER: %d\n", errno);
       } else {
 	HIP_DEBUG("sent=%d/%d \n",
-		  sent, ctx->ipq_packet->data_len);
+		  sent, buff_len);
 	HIP_DEBUG("Packet sent ok\n");
       }
       if (ctx->ip_version == 4) {
