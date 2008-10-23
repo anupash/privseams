@@ -98,24 +98,18 @@ int hip_set_lowcapability(int run_as_nobody) {
 	char *cap_s;
 	char *name;
 	struct passwd *pswd = NULL;
-	struct passwd *hpswd = NULL;
 
 	/* @todo: does this work when you start hipd as root (without sudo) */
          
 	if (run_as_nobody) {
+		struct passwd *hpswd = NULL;
 		/* Check if user "hipd" exists if it does use it otherwise use "nobody" */
 		hpswd = getpwnam(USER_HIPD);
 		name = ((hpswd == NULL) ? USER_NOBODY : USER_HIPD);
-		/* Chown files that daemon needs to write */
-		/*
-		if (hpswd != NULL) {
-			HIP_IFEL(chown("/etc/hip/test.txt", hpswd->pw_uid, hpswd->pw_gid),
-				 -1, "Failed to chown test file\n");
-		}
-		*/
-	} else
+	} else {
 		HIP_IFEL(!(name = getenv("SUDO_USER")), -1,
 			 "Failed to determine current username\n");
+	}
 
 	HIP_IFEL(prctl(PR_SET_KEEPCAPS, 1), -1, "prctl err\n");
 
