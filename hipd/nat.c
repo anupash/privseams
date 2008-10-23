@@ -13,8 +13,6 @@
  * 
  * @author  (version 1.0) Abhinav Pathak
  * @author  (version 1.1) Lauri Silvennoinen
- * @version 1.1
- * @date    27.10.2006
  * @note    Related drafts:
  *          <ul>
  *          <li><a href="http://www.ietf.org/internet-drafts/draft-schmitt-hip-nat-traversal-02.txt">

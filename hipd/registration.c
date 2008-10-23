@@ -3,8 +3,6 @@
  * (HIP) that allows hosts to register with services.
  * 
  * @author  Lauri Silvennoinen
- * @version 1.0
- * @date    20.05.2008
  * @note    Related RFC: <a href="http://www.rfc-editor.org/rfc/rfc5203.txt">
  *          Host Identity Protocol (HIP) Registration Extension</a>
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.

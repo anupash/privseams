@@ -1690,7 +1690,8 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
 	}
 
 	if (err)
-		HIP_ERROR("(Hipd is not running or super user needed?)\n");
+		HIP_ERROR("(Check syntax for hipconf. Is hipd running or root privilege needed?)\n");
+
 	return err;
 }
 
