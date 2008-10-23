@@ -16,7 +16,7 @@
 /*
  * Note: this function does not go well with valgrind
  */
-int hip_set_lowcapability(int run_as_nobody) {
+int hip_set_lowcapability(int run_as_sudo) {
   int err = 0;
 #ifdef CONFIG_HIP_PRIVSEP
   struct passwd *nobody_pswd;
@@ -88,7 +88,7 @@ int hip_set_lowcapability(int run_as_nobody) {
 /*
  * Note: this function does not go well with valgrind
  */
-int hip_set_lowcapability(int run_as_nobody) {
+int hip_set_lowcapability(int run_as_sudo) {
 	int err = 0;
 #ifdef CONFIG_HIP_PRIVSEP
 	cap_value_t cap_list[] = {CAP_NET_RAW, CAP_NET_ADMIN };
@@ -101,14 +101,14 @@ int hip_set_lowcapability(int run_as_nobody) {
 
 	/* @todo: does this work when you start hipd as root (without sudo) */
          
-	if (run_as_nobody) {
+	if (run_as_sudo) {
+		HIP_IFEL(!(name = getenv("SUDO_USER")), -1,
+			 "Failed to determine current username\n");
+	} else {
 		struct passwd *hpswd = NULL;
 		/* Check if user "hipd" exists if it does use it otherwise use "nobody" */
 		hpswd = getpwnam(USER_HIPD);
 		name = ((hpswd == NULL) ? USER_NOBODY : USER_HIPD);
-	} else {
-		HIP_IFEL(!(name = getenv("SUDO_USER")), -1,
-			 "Failed to determine current username\n");
 	}
 
 	HIP_IFEL(prctl(PR_SET_KEEPCAPS, 1), -1, "prctl err\n");

@@ -395,7 +395,7 @@ int hipd_init(int flush_ipsec, int killold)
 #endif
 
 
-	HIP_IFEL(hip_set_lowcapability(1), -1, "Failed to set capabilities\n");
+	HIP_IFEL(hip_set_lowcapability(0), -1, "Failed to set capabilities\n");
 
 #ifdef CONFIG_HIP_HI3
 	if( hip_use_i3 )
