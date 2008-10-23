@@ -1,7 +1,6 @@
 /** @file
  * This file defines initialization functions for the HIP daemon.
  *
- * @date    1.1.2007
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  * @note    HIPU: BSD platform needs to be autodetected in hip_set_lowcapability
  */
