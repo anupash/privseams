@@ -85,7 +85,7 @@ int hip_socket_get_eid_info(struct socket *sock,
                             int eid_is_local,
                             struct hip_lhi *lhi)
 {
-        struct hip_eid_owner_info owner_info;
+	struct hip_eid_owner_info owner_info;
         int err = 0;
 
         err = hip_select_socket_handler(sock, socket_handler);
@@ -93,7 +93,7 @@ int hip_socket_get_eid_info(struct socket *sock,
                 HIP_ERROR("Failed to select a socket handler\n");
                 goto out_err;
         }
-#if 0
+
         HIP_DEBUG("Querying for eid value %d\n", ntohs(eid->eid_val));
 
         err = hip_db_get_lhi_by_eid(eid, lhi, &owner_info, eid_is_local);
@@ -136,7 +136,7 @@ int hip_socket_get_eid_info(struct socket *sock,
                         goto out_err;
                 }
         }
-#endif
+
  out_err:
 
         return err;
@@ -225,22 +225,25 @@ int hip_socket_bind(struct socket *sock,
 	int err = 0;
 	struct sockaddr_in6 sockaddr_in6;
 	struct proto_ops *socket_handler;
-	//struct sock *sk = sock->sk;
-	//struct ipv6_pinfo *pinfo = inet6_sk(sk); TH: removed because unused
 	struct hip_lhi lhi;
 	struct sockaddr_hip *sockaddr_hip = (struct sockaddr_hip *) umyaddr;
 	//struct sockaddr_eid *sockaddr_eid = (struct sockaddr_eid *) umyaddr;
 
 	HIP_DEBUG("hip_socket_bind called\n");
 
-	err = hip_socket_get_eid_info(sock, &socket_handler, umyaddr,
+	/*err = hip_socket_get_eid_info(sock, &socket_handler, umyaddr,
 				      1, &lhi);
+
 	if (err) {
 		HIP_ERROR("Failed to get socket eid info.\n");
 		goto out_err;
-	}
-	/*HIP_DEBUG("binding to eid with value %d\n",
-		  ntohs(sockaddr_eid->eid_val));*/
+	}*/
+
+        err = hip_select_socket_handler(sock, &socket_handler);
+        if (err) {
+                HIP_ERROR("Failed to select a socket handler\n");
+                goto out_err;
+        }
 
 	/* XX FIXME: select the IP address based on the mappings or interfaces
 	   from db and do not use in6_addr_any. */
@@ -250,9 +253,9 @@ int hip_socket_bind(struct socket *sock,
 	   bind_v6 returns an error when it does address type checks. */
 	memset(&sockaddr_in6, 0, sizeof(struct sockaddr_in6));
 	sockaddr_in6.sin6_family = PF_INET6;
+
 	/*sockaddr_in6.sin6_port = sockaddr_eid->eid_port;
 	memcpy(&sockaddr_in6.sin6_addr, &lhi.hit, sizeof(struct in6_addr));*/
-
 	sockaddr_in6.sin6_port = sockaddr_hip->ship_port;
 	memcpy(&sockaddr_in6.sin6_addr, &sockaddr_hip->ship_hit, sizeof(struct in6_addr));
 	
@@ -265,12 +268,6 @@ int hip_socket_bind(struct socket *sock,
 		HIP_ERROR("Socket handler failed (%d).\n", err);
 		goto out_err;
 	}
-
-	/*
-	memcpy(&pinfo->rcv_saddr, &lhi.hit,
-	       sizeof(struct in6_addr));
-	memcpy(&pinfo->saddr, &lhi.hit,
-	sizeof(struct in6_addr));*/
 	
  out_err:
 	
@@ -315,25 +312,21 @@ int hip_socket_connect(struct socket *sock,
 	//struct sockaddr_eid *sockaddr_eid = (struct sockaddr_eid *) uservaddr;
 
 	HIP_DEBUG("hip_socket_connect called\n");
-
+/*
 	err = hip_socket_get_eid_info(sock, &socket_handler, uservaddr,
 				      0, &lhi);
 	if (err) {
 		HIP_ERROR("Failed to get socket eid info.\n");
 		goto out_err;
-	}
+	}*/
 
-	/*HIP_DEBUG("connecting to eid with value %d\n",
-		  ntohs(sockaddr_eid->eid_val));*/
-	//sock->peer_ed = ntohs(sockaddr_eid->eid_val);
-	//HIP_DEBUG("socket.local_ed: %d, socket.peer_ed: %d\n",sock->local_ed,
-	//	  sock->peer_ed);
+	err = hip_select_socket_handler(sock, &socket_handler);
 
 	memset(&sockaddr_in6, 0, sizeof(struct sockaddr_in6));
 	sockaddr_in6.sin6_family = PF_INET6;
+
 	//memcpy(&sockaddr_in6.sin6_addr, &lhi.hit, sizeof(struct in6_addr));
 	//sockaddr_in6.sin6_port = sockaddr_eid->eid_port;
-
 	sockaddr_in6.sin6_port = sockaddr_hip->ship_port;
 	memcpy(&sockaddr_in6.sin6_addr, &sockaddr_hip->ship_hit, sizeof(struct in6_addr));
 
@@ -457,14 +450,14 @@ int hip_socket_getname(struct socket *sock,
 	memcpy(&lhi.hit, &pinfo->daddr,
 	       sizeof(struct in6_addr));
 	lhi.anonymous = 0; /* XX FIXME: should be really set to -1 */
-#if 0
+/*
 	err = hip_db_set_eid(sockaddr_eid, &lhi, &owner_info, !peer);
 	if (err) {
 		HIP_ERROR("Setting of %s eid failed\n",
 			  (peer ? "peer" : "local"));
 		goto out_err;
 	}
-#endif
+*/
 
 	sockaddr_eid->eid_port = (peer) ? inet->dport : inet->sport;
 	*usockaddr_len = sizeof(struct sockaddr_eid);
@@ -601,7 +594,6 @@ int hip_socket_setsockopt(struct socket *sock,
 		goto out_err;
 	}
 
-#if 0
 	if (!(optname == SO_HIP_GLOBAL_OPT || optname == SO_HIP_SOCKET_OPT)) {
 		err = -ESOCKTNOSUPPORT;
 		HIP_ERROR("optname (%d) was incorrect\n", optname);
@@ -616,6 +608,7 @@ int hip_socket_setsockopt(struct socket *sock,
 
 	msg_type = hip_get_msg_type(msg);
 	switch(msg_type) {
+#if 0
 	case SO_HIP_ADD_LOCAL_HI:
 		err = hip_wrap_handle_add_local_hi(msg);
 		break;
@@ -641,11 +634,11 @@ int hip_socket_setsockopt(struct socket *sock,
 		err = hip_socket_bos_wo(msg);
 		//err = hip_socket_send_bos(msg);
 		break;
+#endif
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;
 	}
-#endif
 
  out_err:
 	return err;

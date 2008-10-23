@@ -1492,7 +1492,7 @@ gaih_inet (const char *name, const struct gaih_service *service,
       } 
       /* Transparent mode and !AI_HIP -> hits before ipv6 addresses? */
       if (hip_transparent_mode && !(req->ai_flags & AI_HIP)) {
-	HIP_DEBUG("HIP_TRANSPARENT_MODE, AI_HIP not set:"); 
+	HIP_DEBUG("HIP_TRANSPARENT_MODE, AI_HIP not set:\n"); 
 	HIP_DEBUG("get HITs before IPv6 address\n");
 	get_local_hits(service->name, pat); 
 	attr = at;

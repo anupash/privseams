@@ -1,4 +1,4 @@
-#if 0
+
 /*
 *  HIP socket handler loadable kernel module
 *  for kernel 2.6
@@ -18,6 +18,8 @@
 
 //HIP_INIT_DB(hip_local_eid_db, "local_eid");
 //HIP_INIT_DB(hip_peer_eid_db, "peer_eid");
+struct hip_db_struct hip_local_eid_db;
+struct hip_db_struct hip_peer_eid_db;
 
 /*
  * The eid db lock (local or peer) must be obtained before accessing these
@@ -404,4 +406,4 @@ int hip_db_get_my_lhi_by_eid(const struct sockaddr_eid *eid,
 {
         return hip_db_get_lhi_by_eid(eid, lhi, owner_info, 1);
 }
-#endif
+

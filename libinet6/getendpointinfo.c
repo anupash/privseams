@@ -1276,23 +1276,14 @@ int get_peer_endpointinfo(const char *hostsfile,
       unsigned int hi_str_len = strlen(getitem(&mylist,i));
 
       einfo = calloc(1, sizeof(struct endpointinfo));
-      if (!einfo) {
-	err = EEI_MEMORY;
-	goto out_err;
-      }
+      HIP_IFE(!einfo, EEI_MEMORY);
       
       einfo->ei_endpoint = calloc(1, sizeof(struct sockaddr_eid));
-      if (!einfo->ei_endpoint) {
-	err = EEI_MEMORY;
-	goto out_err;
-      }
+      HIP_IFE(!einfo->ei_endpoint, EEI_MEMORY);
       
       if (hints->ei_flags & EI_CANONNAME) {
 	einfo->ei_canonname = malloc(fqdn_str_len + 1);
-	if (!(einfo->ei_canonname)) {
-	  err = EEI_MEMORY;
-	  goto out_err;
-	}
+	HIP_IFE(!einfo->ei_canonname, EEI_MEMORY);
 	HIP_ASSERT(strlen(fqdn_str) == fqdn_str_len);
 	strcpy(einfo->ei_canonname, fqdn_str);
 	/* XX FIX: we should append the domain name if it does not exist */

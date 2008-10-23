@@ -501,10 +501,11 @@ int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
  */
 int main_client_native(int socktype, char *peer_name, char *peer_port_name)
 {
-	//struct endpointinfo hints, *epinfo, *res = NULL;
-	struct endpointinfo *epinfo;
-	struct addrinfo hints, *res = NULL;
+	struct endpointinfo hints, *epinfo = NULL, *res = NULL;
+	//struct endpointinfo *epinfo;
+	//struct addrinfo hints, *res = NULL;
 	struct timeval stats_before, stats_after;
+	struct sockaddr_hip peer_sock;
 	unsigned long stats_diff_sec, stats_diff_usec;
 	char mylovemostdata[IP_MAXPACKET];
 	char receiveddata[IP_MAXPACKET];
@@ -522,26 +523,27 @@ int main_client_native(int socktype, char *peer_name, char *peer_port_name)
 	sockfd = socket(endpoint_family, socktype, 0);
 	HIP_IFEL(sockfd < 0, 1, "creation of socket failed\n");
 
+#if 0
 	/* set up host lookup information  */
 	memset(&hints, 0, sizeof(hints));
-	//hints.ei_socktype = socktype;
-	//hints.ei_family = endpoint_family;
-	hints.ai_socktype = socktype;
-	hints.ai_family = endpoint_family;
+	hints.ei_socktype = socktype;
+	hints.ei_family = endpoint_family;
+	//hints.ai_socktype = socktype;
+	//hints.ai_family = endpoint_family;
 	/* Use the following flags to use only the kernel list for name resolution
 	 * hints.ei_flags = AI_HIP | AI_KERNEL_LIST;
 	 */
 
 	/* lookup host */
-	//err = getendpointinfo(peer_name, peer_port_name, &hints, &res);
+	err = getendpointinfo(peer_name, peer_port_name, &hints, &res);
 	if (err) {
 		HIP_ERROR("getendpointfo failed\n");
 		goto out_err;
 	}
 	//hints.ai_flags |= AI_EXTFLAGS;
 	//hints.ai_eflags |= HIP_PREFER_ORCHID;
-hints.ai_flags = AI_HIP_NATIVE;
-	err = getaddrinfo(peer_name, peer_port_name, &hints, &res);
+
+	//err = getaddrinfo(peer_name, peer_port_name, &hints, &res);
 	if (err) {
 		HIP_ERROR("getaddrinfo failed (%d): %s\n", err, gepi_strerror(err));
 		goto out_err;
@@ -554,6 +556,13 @@ hints.ai_flags = AI_HIP_NATIVE;
 	HIP_DEBUG("family=%d value=%d\n", res->ei_family,
 		  ntohs(((struct sockaddr_eid *) res->ei_endpoint)->eid_val));
 */
+#endif
+
+memset(&peer_sock, 0, sizeof(peer_sock));
+peer_sock.ship_family = PF_HIP;
+HIP_IFEL(inet_pton(AF_INET6, peer_name, &peer_sock.ship_hit) != 1, 1, "Failed to parse HIT\n");
+peer_sock.ship_port = atoi(peer_port_name);
+HIP_DEBUG("Connecting to %s port %d\n", peer_name, peer_sock.ship_port);
 
 	// data from stdin to buffer
 	memset(receiveddata, 0, IP_MAXPACKET);
@@ -569,6 +578,7 @@ hints.ai_flags = AI_HIP_NATIVE;
 
 	gettimeofday(&stats_before, NULL);
 
+#if 0
 	epinfo = res;
 	while(epinfo) {
 		err = connect(sockfd, (struct sockaddr *) epinfo->ei_endpoint, epinfo->ei_endpointlen);
@@ -578,6 +588,13 @@ hints.ai_flags = AI_HIP_NATIVE;
 			goto out_err;
 		}
 		epinfo = epinfo->ei_next;
+	}
+#endif
+
+	err = connect(sockfd, &peer_sock, sizeof(peer_sock));
+	if (err) {
+		HIP_PERROR("connect: ");
+		goto out_err;
 	}
 
 	gettimeofday(&stats_after, NULL);
@@ -670,8 +687,8 @@ int main_server_native(int socktype, char *port_name)
 	HIP_DEBUG("Native server calls bind\n");
 
 	memset(&our_sockaddr, 0, sizeof(struct sockaddr_hip));
-	our_sockaddr.ship_port = ((struct sockaddr_eid *)res->ei_endpoint)->eid_port;
-HIP_DEBUG("port %d\n", our_sockaddr.ship_port);
+	our_sockaddr.ship_port = atoi(port_name);//((struct sockaddr_eid *)res->ei_endpoint)->eid_port;
+	HIP_DEBUG("Binding to port %d\n", our_sockaddr.ship_port);
 	our_sockaddr.ship_family = endpoint_family;
 //	if (bind(serversock, res->ei_endpoint, res->ei_endpointlen) < 0) {
 	if (bind(serversock, &our_sockaddr, sizeof(struct sockaddr_hip)) < 0) {
