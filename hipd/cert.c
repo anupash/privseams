@@ -7,8 +7,6 @@
  *   VV is what the function really does like sign etc.
  *
  * @author Samu Varjonen
- * @version 0.1
- * @date 12.5.2008
  *
  */
 #include "cert.h"
