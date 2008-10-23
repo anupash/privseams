@@ -112,7 +112,6 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc) 
 	hip_conf_handle_tcptimeout, /* added by Tao Wan*/
         hip_conf_handle_hipproxy,
 	hip_conf_handle_heartbeat,
-	hip_conf_handle_sava,
 	NULL /* run */
 };
 
@@ -292,8 +291,6 @@ int hip_conf_get_type(char *text,char *argv[]) {
 	else if (strcmp("hipproxy", argv[1])==0)
 		ret = TYPE_HIPPROXY;
 #endif
-	else if (strcmp("sava", text) == 0)
-	  ret = TYPE_SAVAHR;
 	else 
 	  HIP_DEBUG("ERROR: NO MATCHES FOUND \n");
      return ret;
@@ -2109,7 +2106,7 @@ int hip_conf_handle_hipproxy(struct hip_common *msg, int action, const char *opt
         return(err);
 }
 
-
+#if 0
 int hip_conf_handle_sava (struct hip_common * msg, int action, 
 				   const char * opt[], int optc) {
   int err = 0;
@@ -2148,3 +2145,4 @@ int hip_conf_handle_sava (struct hip_common * msg, int action,
  out_err:
   return err;
 }
+#endif

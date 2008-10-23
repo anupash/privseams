@@ -551,6 +551,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 
 		break;
 #endif /* CONFIG_HIP_ESCROW */
+#if 0
 	case SO_HIP_REGISTER_SAVAHR: 
 	  {
 	  dst_hit = hip_get_param_contents(msg,HIP_PARAM_HIT);
@@ -586,7 +587,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		   "Error on sending I1 packet to the server.\n");
 	    }
 	  }
-	  
+#endif	  
 	  break;
 	case SO_HIP_GET_SAVAHR_IN_KEYS:
 	  {
@@ -742,7 +743,15 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 					entry, HIP_HA_CTRL_LOCAL_REQ_RELAY);
 				break;
 			case HIP_SERVICE_SAVAH:
-			        hip_hadb_set_local_controls(
+			        if (!sava_serving_gateway) {
+				  sava_serving_gateway = 
+				    (struct in6_addr *)malloc(sizeof(struct in6_addr));
+				  memset(sava_serving_gateway, 0, sizeof(struct in6_addr));
+				}
+				
+				memcpy(sava_serving_gateway, dst_hit, sizeof(struct in6_addr));
+
+				hip_hadb_set_local_controls(
 					entry, HIP_HA_CTRL_LOCAL_REQ_SAVAH);
 			        break;
 #ifdef CONFIG_HIP_ESCROW
