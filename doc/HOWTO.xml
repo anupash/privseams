@@ -128,10 +128,10 @@
       Gibbon for compiling the kernel and userspace software:
     </para>
     <para>
-      apt-get install bazaar libncurses5-dev kernel-package autoreconf automake autoconf libtool g++ libgtk2.0-dev libssl-dev libxml2-dev xmlto doxygen iproute netcat6 iptables-dev libcap-dev libsqlite3-dev uuid-dev
+      apt-get install tla libncurses5-dev kernel-package autoreconf automake autoconf libtool g++ libgtk2.0-dev libssl-dev libxml2-dev xmlto doxygen iproute netcat6 iptables-dev libcap-dev libsqlite3-dev uuid-dev
     </para>
     <para>
-      On Fedora 8: yum install bazaar openssl-devel libxml2-devel autoconf automake libtool iproute gtk2-devel xmlto doxygen iptables-devel libcap-devel sqlite-devel uuid-devel
+      On Fedora: yum install tla openssl-devel libxml2-devel autoconf automake libtool iproute gtk2-devel xmlto doxygen iptables-devel libcap-devel sqlite-devel uuid-devel rpm-build
     </para>
     <para>On 64-bit Fedora 8, ln -s /usr/lib64/libipq.a /usr/lib/libipq.a was necessary. This has not been fixed in the HIPL build properly yet.
     </para>
@@ -1158,94 +1158,11 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
       as IPv6 addresses on-wire.
     </para>
     <para>
-      We show how to test HIP with both IPv4 and IPv6 applications. Meanwhile IPv6 applications use the 
-      HIT identifier, IPv4-only applications use the LSI identifier. This is an IPv4 address in the range 1.0.0.0/8.
-      Firstly, we explain how to configure HIPL when we want to use IPv4 applications. Secondly, we introduce some
-      tests with IPv6 applications. To finalize, we discuss the interoperability between IPv4 and IPv6 applications 
-      using HIP.
+      This section show to developers and maintainers how to test your
+      HIPL installation. The section starts with a IPv6 test applications
+      applications, continues with IPv4-IPv6 interoperability and concludes
+      with IPv4 test applications.
     </para>
-    <section id="ipv4_appl">
-      <title>Testing a HIP connection with an IPv4-only application</title>
-      <formalpara><title>Initial configuration</title><para></para></formalpara>
-	    <para>We have different mechanism for mapping the HIT-LSI information. 
-		We can choose whatever of the next possibilities. The user can introduce manually 
-	        the LSI or this can be created automatically by the hip daemon. It should be noticed
-	        that the address interval between <emphasis>1.0.0.1 - 1.0.0.4</emphasis> is already 
-	        in use by the hipd, so the user must choose a free LSI. These four LSIs are the local LSIs assigned with
-	        the four local HITs.
-	    </para>
-	    <para>crash:</para>
-	    <itemizedlist>
-	      <listitem>
-	      <para>
-		    Add the information in /etc/hip/hosts
-		    <itemizedlist>
-		    <listitem><para>OOPS_HIT oops</para></listitem>
-		    <listitem><para>OOPS_LSI oops <emphasis>Optional!</emphasis> If it's not defined, 
-			it would be created by the daemon</para></listitem>
-		    </itemizedlist>
-	      </para>
-	      </listitem>
-	      <listitem>
-	        <para>Add the information with tools/hipconf add map
-		  <itemizedlist>
-		    <listitem><para>hipconf add map OOPS_HIT OOPS_IP [OOPS_LSI] </para></listitem>
-		  </itemizedlist>
-		</para>
-	      </listitem>
-	    </itemizedlist>
-	    <para>If the command hipconf add map is not executed, we must add the peer IP in
-	    the file /etc/hosts</para>
-	     <itemizedlist>
-		    <listitem><para>OOPS_IP oops</para></listitem>		    
-		    </itemizedlist>
-	    <para>Apart from starting the hipd process, the hipfw process must be also 
-		started in both machines, oops and crash. Notice that hipfw must be started always after hipd!
-	    </para>
-	    <itemizedlist>
-	      <listitem><para>
-		  cd somewhere/hipl
-	      </para></listitem>
-	      <listitem><para>
-		  hipd/hipd # (to start as a background daemon process, add -b flag)
-	      </para></listitem>
-	      <listitem><para>
-		  firewall/hipfw -lA (to start the firewall with LSI support enabled and allow HIP/ESP packets)
-	      </para></listitem>
-	    </itemizedlist>
-	    <para>
-	      Beforehand the following rules must be added in the file /etc/hip/firewall.conf
-	    </para> 
-	    <para>crash:</para>
-	      <itemizedlist>
-		<listitem>
-		  <para>INPUT -src_hit OOPS_HIT ACCEPT</para>
-		</listitem>
-		<listitem>
-		  <para>OUTPUT -dst_hit OOPS_HIT ACCEPT</para>
-		</listitem>
-	      </itemizedlist>
-	      <para>oops:</para>
-	      <itemizedlist>
-		<listitem>
-		  <para>INPUT -dst_hit OOPS_HIT ACCEPT</para>
-		</listitem>
-		<listitem>
-		  <para>OUTPUT -src_hit OOPS_HIT ACCEPT</para>
-		</listitem>
-	      </itemizedlist>
-	      <formalpara><title>Running the application</title><para></para></formalpara>
-	      <para>Once we have finished the step before and started running hipd and hipfw, we can 
-	      run the application. If the LSI has been generated automatically, we can check its
-	      value with tools/hipconf get ha OOPS_HIT or tools/hipconf get ha all. 
-	      Afterwards, we start running the application, e.g.:		
-	      </para>
-	      <itemizedlist>
-		<listitem><para>ping OOPS_LSI</para></listitem>
-		<listitem><para>ssh OOPS_LSI</para></listitem>
-		<listitem><para>nc OOPS_LSI -u 5555 # oops must be running nc -l -u -p 5555</para></listitem>
-	      </itemizedlist>
-    </section>
     <section id="ipv6_appl">
             <title>Testing a HIP connection with an IPv6 application</title>
 	    <para> You can test HIP with any networking application, but in this
@@ -1369,7 +1286,7 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
 	      oops:
 	    </para>
 	      <itemizedlist>
-		<listitem><para>nc -l -u -p 5555</para></listitem>
+		<listitem><para>nc -l -u 5555</para></listitem>
 	      </itemizedlist>
 	    <para>
 	      crash:
@@ -1418,21 +1335,104 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
 	    </para>
 
     </section>
+    <section id="ipv4_appl">
+      <title>Testing a HIP connection with an IPv4-only application</title>
+      <formalpara><title>Initial configuration</title><para></para></formalpara>
+	    <para>We have different mechanism for mapping the HIT-LSI information. 
+		We can choose whatever of the next possibilities. The user can introduce manually 
+	        the LSI or this can be created automatically by the hip daemon. It should be noticed
+	        that the address interval between <emphasis>1.0.0.1 - 1.0.0.4</emphasis> is already 
+	        in use by the hipd, so the user must choose a free LSI. These four LSIs are the local LSIs assigned with
+	        the four local HITs.
+	    </para>
+	    <para>crash:</para>
+	    <itemizedlist>
+	      <listitem>
+	      <para>
+		    Add the information in /etc/hip/hosts
+		    <itemizedlist>
+		    <listitem><para>OOPS_HIT oops</para></listitem>
+		    <listitem><para>OOPS_LSI oops <emphasis>Optional!</emphasis> If it's not defined, 
+			it would be created by the daemon</para></listitem>
+		    </itemizedlist>
+	      </para>
+	      </listitem>
+	      <listitem>
+	        <para>Add the information with tools/hipconf add map
+		  <itemizedlist>
+		    <listitem><para>hipconf add map OOPS_HIT OOPS_IP [OOPS_LSI] </para></listitem>
+		  </itemizedlist>
+		</para>
+	      </listitem>
+	    </itemizedlist>
+	    <para>If the command hipconf add map is not executed, we must add the peer IP in
+	    the file /etc/hosts</para>
+	     <itemizedlist>
+		    <listitem><para>OOPS_IP oops</para></listitem>		    
+		    </itemizedlist>
+	    <para>Apart from starting the hipd process, the hipfw process must be also 
+		started in both machines, oops and crash. Notice that hipfw must be started always after hipd!
+	    </para>
+	    <itemizedlist>
+	      <listitem><para>
+		  cd somewhere/hipl
+	      </para></listitem>
+	      <listitem><para>
+		  hipd/hipd # (to start as a background daemon process, add -b flag)
+	      </para></listitem>
+	      <listitem><para>
+		  firewall/hipfw -lA (to start the firewall with LSI support enabled and allow HIP/ESP packets)
+	      </para></listitem>
+	    </itemizedlist>
+	    <para>
+	      Beforehand the following rules must be added in the file /etc/hip/firewall.conf
+	    </para> 
+	    <para>crash:</para>
+	      <itemizedlist>
+		<listitem>
+		  <para>INPUT -src_hit OOPS_HIT ACCEPT</para>
+		</listitem>
+		<listitem>
+		  <para>OUTPUT -dst_hit OOPS_HIT ACCEPT</para>
+		</listitem>
+	      </itemizedlist>
+	      <para>oops:</para>
+	      <itemizedlist>
+		<listitem>
+		  <para>INPUT -dst_hit OOPS_HIT ACCEPT</para>
+		</listitem>
+		<listitem>
+		  <para>OUTPUT -src_hit OOPS_HIT ACCEPT</para>
+		</listitem>
+	      </itemizedlist>
+	      <formalpara><title>Running the application</title><para></para></formalpara>
+	      <para>Once we have finished the step before and started running hipd and hipfw, we can 
+	      run the application. If the LSI has been generated automatically, we can check its
+	      value with tools/hipconf get ha OOPS_HIT or tools/hipconf get ha all. 
+	      Afterwards, we start running the application, e.g.:		
+	      </para>
+	      <itemizedlist>
+		<listitem><para>ping OOPS_LSI</para></listitem>
+		<listitem><para>ssh OOPS_LSI</para></listitem>
+		<listitem><para>nc OOPS_LSI -u 5555 # oops must be running nc -l -u 5555</para></listitem>
+	      </itemizedlist>
+    </section>
   </chapter>
   <chapter id="ch_test_servers">
     <title>HIPL Internet Test Servers</title>
     <para>
-      Below is a list of HIPL test servers if you want to test HIP over Internet:
+    Below is a list of public InfraHIP test servers. The servers are also running
+    a free rendezvous service which you can use according to the instructions in <xref linkend="ch_rvs_relay" />.
     </para>
     <table id="table_servers" frame="all"><title>Test Servers</title>
     <tgroup cols="1">
       <thead>
-	<row><entry>Server</entry><entry>HIT</entry><entry>IPv4 address</entry><entry>IPv6 address</entry><entry>HI algo</entry></row>
+	<row><entry>Server</entry><entry>HIT</entry><entry>HI algo</entry><entry>IPv4 address</entry><entry>IPv6 address</entry></row>
       </thead>
       <tbody>
-	<row><entry>felwood.infrahip.net</entry><entry>2001:1d:392e:a450:2cd3:75e1:6098:8104</entry><entry>193.167.187.130</entry><entry>2001:708:140:220::3</entry><entry>RSA</entry></row>
-	<row><entry>crossroads.infrahip.net</entry><entry>2001:1b:a9be:c6a6:34e5:8361:c07f:a990</entry><entry>193.167.187.134</entry><entry>2001:708:140:220:213:21ff:feb1:2d05</entry><entry>RSA</entry></row>
-	<row><entry>ashenvale.infrahip.net</entry><entry>2001:1c:cbae:47ae:2871:f9c:eb94:c8e3</entry><entry>193.167.187.133</entry><entry>2001:708:140:220:212:79ff:fed9:15e8</entry><entry>DSA</entry></row>
+	<row><entry>felwood.infrahip.net</entry><entry>2001:1d:392e:a450:2cd3:75e1:6098:8104</entry><entry>RSA</entry><entry>193.167.187.130</entry><entry>2001:708:140:220::3</entry></row>
+	<row><entry>crossroads.infrahip.net</entry><entry>2001:1b:a9be:c6a6:34e5:8361:c07f:a990</entry><entry>RSA</entry><entry>193.167.187.134</entry><entry>2001:708:140:220::7</entry></row>
+	<row><entry>ashenvale.infrahip.net</entry><entry>2001:1c:cbae:47ae:2871:f9c:eb94:c8e3</entry><entry>RSA</entry><entry>193.167.187.133</entry><entry>2001:708:140:220::6</entry></row>
       </tbody>
     </tgroup>
     </table>
@@ -1440,6 +1440,18 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
     <para>
       The servers are running ssh and http. They are not running "conntest-server" software as described elsewhere in this document.
     </para>
+
+    <para>To use access the servers using HIP behind a NAT box, you
+          have two alternatives. Firstly, you enable the UDP
+          encapsulation using "hipconf nat plain-udp". See <xref
+          linkend="ch_hip_nat" /> for more information. Secondly,
+	  you can install miredo on your machine and make sure that HIP
+	  uses the IPv6 address of the server.</para>
+	  
+
+    <para>To register to the rendezvous servers behind a NAT box,
+          you need to install "miredo" on your machine. Then you register to
+          one of the test servers using its IPv6 address.</para>
 
   </chapter>
 
@@ -1995,7 +2007,7 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
   </para>
   </section>
     <section id="hip_over_vpn">
-      <title>HIP over openVPN</title>
+      <title>OpenVPN</title>
     <!-- id="hip_over_vpn_how_to" -->
       <para>
 	OpenVPN is an open-source VPN solution. More information on it can
@@ -2019,29 +2031,11 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
       </para>
     <!-- id="hip_over_vpn_performance" -->
       <para>
-	Following are some data to give a general idea about performance
-	degradation caused by OpenVPN, HIP, and when we use HIP over OpenVPN.
-	These data illustrate the TCP throughput between two machines in four cases.
-	The measurements for each case were repeated roughly 20 times and the
-	average was calculated. The following throughput measurements were done at
-	the machine that serves as the HIP client, and as the VPN client.
-	One of the machines acts both as the VPN server and as one of the hosts in
-	HIP-communication.
+	A HIP and OpenVPN tunnel have roughly the same througput. It
+	is even possible run HIP inside the OpenVPN tunnel, even
+	though this seems to halve the throughput without any
+	optimizations.
       </para>
-
-      <para>
-	1. No HIP or VPN. We do not use HIP or VPN for the data traffic - 95.41 Mbits/sec.
-      </para>
-      <para>
-	2. VPN, no HIP. We use VPN for the data traffic - 76.4 Mbits/sec
-      </para>
-      <para>
-	3. HIP, no VPN. We use HIP for the data traffic - 71.45 Mbits/sec
-      </para>
-      <para>
-	4. VPN and HIP. We use HIP over VPN for the data traffic - 36.23 Mbits/sec
-      </para>
-
 
     <!-- id="hip_over_vpn_pitfalls" -->
       <para>
@@ -2928,6 +2922,24 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
       </section>
     </section>
   </chapter>
+  <chapter id="teredo">
+    <title>Teredo and HIP</title>
+    <para>
+    Teredo is a traversal solution for HIP. You can expirement with Teredo
+    by installing the Miredo client software. Then, establish HIP connections
+    to Teredo addresses (check ifconfig teredo) at the client side as
+    instructed in <xref linkend="ch_basictest" />. As Teredo is a NAT traversal
+    solution by itself, you don't have use UDP encapsulation for HIP (hipconf nnat none).
+    </para>
+    <para>
+    See
+    <ulink url="http://www.cs.helsinki.fi/u/sklvarjo/miredo.htm" />
+    for further information on Teredo configuration with HIP.
+    <xref linkend="table_servers" /> lists addresses
+    of the public InfraHIP test servers with Teredo addresses. The servers
+    provide also free rendezvous service that can be combined with Teredo.
+    </para>    
+  </chapter>
   <chapter id="ch_hip_bos">
     <title> Using HIP BOS support</title>
     <para>
@@ -3110,6 +3122,21 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
 
   </chapter>
 
+  <chapter id="hipproxy">
+    <title>HIP Proxy</title>
+
+    <para>
+      It might not be possible to run HIP at all with old legacy
+      client hosts even with the userspace IPsec. In such a case, HIP
+      can be migrated to middlebox (e.g. router) by using the so
+      called HIP Proxy. The HIP proxy "translates" connections from
+      the client host to HIP-based connections to servers. The
+      extension is experimental and needs both hipd and hipfw on the
+      middlebox. You can enable the option using "hipconf hipproxy on".
+    </para>
+
+  </chapter>
+
   <chapter id="ch_hip_nat">
     <title>HIP NAT Extensions</title>
     <para>HIPL supports also initiating connections from behind a NAT. The
@@ -3134,7 +3161,7 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
     </para>
     <itemizedlist>
     <listitem><para>
-      &nbsp;tools/hipconf nat on
+      &nbsp;tools/hipconf nat plain-udp
     </para>    </listitem>
     <listitem><para>
       &nbsp;tools/hipconf add map peer_hit peer_ipv4_addr
@@ -3679,7 +3706,7 @@ combo-newgroup=&lt;create new...&gt;
 	capability with the following command:
 	</para>
   	<para>
-  	3. hipconf run opp advanced
+  	3. hipconf set opp advanced
   	</para>
 	<para>
 	To try the feature, we initiate a TCP connection using the HIP
@@ -3714,35 +3741,23 @@ combo-newgroup=&lt;create new...&gt;
 	firewall. It is enabled with the -o option as shown below:
 	</para>
 	<para>
-	hipfw -o
-	</para>
-	<para>
-	The system-based opportunistic mode uses the efficient detection
-	of peer HIP capability. Therefore, the firewall should be run at both
-	peers. Also, HIP efficient detection should be enabled both at the
-	initiator and at the receiver with the following command:
-	</para>
-	<para>
-	hipconf run opp advanced
+	hipfw -dAo
 	</para>
 	<para>
 	Following is an example of all the steps to be followed at two peers 
 	for using the system-based opportunistic mode between them.
 	</para>
   	<para>
-	At the receiver, one can execute these steps:
+	At the responder, one can execute these steps:
 	</para>
   	<para>
 	1. hipd
 	</para>
   	<para>
-  	2. hipfw -dA
+  	2. hipfw -Aod
   	</para>
   	<para>
-  	3. hipconf run opp advanced
-  	</para>
-  	<para>
-	4. nc -l -p port_no
+	3. nc -l 1111
   	</para>
   	<para>
 	At the initiator, one can execute these steps:
@@ -3753,13 +3768,9 @@ combo-newgroup=&lt;create new...&gt;
   	<para>
   	2. hipfw -dAo
   	</para>
-  	<para>
-  	3. hipconf run opp advanced
-  	</para>
 	<para>
-  	4. nc IP_number port_no
+  	3. nc &lt;responder-ip&gt; 1111
 	</para>
-
   </section>
 
   </chapter>
@@ -3858,11 +3869,11 @@ combo-newgroup=&lt;create new...&gt;
   <chapter id="ch_dns_data">
     <title>DNS data manipulation</title>
     <para>
-      Tools contains the script parsehipkey which converts public
+      Tools directory contains parsehipkey a script (after running ./autogens.h) which converts public
       key file contents to different DNS zone file formats. To convert
-      to unpatched BIND9 format, use command:
+      to unpatched BIND9 format, run the following:
       <programlisting>
-# ./parsehipkey &lt; felwood/hip_host_dsa_key_pub.pub felwood2.hip-test1.infrahip.net felwood.infrahip.net crossroads.infrahip.net | sed -n -e '/^9BIND */s///p'
+parsehipkey &lt; felwood/hip_host_dsa_key_pub.pub felwood2.hip-test1.infrahip.net felwood.infrahip.net crossroads.infrahip.net | sed -n -e '/^9BIND */s///p'
       </programlisting>
       This outputs a line which can be inserted to a zone
       file. Similarly, with sed command:
@@ -3901,7 +3912,15 @@ combo-newgroup=&lt;create new...&gt;
       dnshipproxy. The use of DNS proxy without DNS cache results in longer
       look up latencies.
     </para>
-
+    <para>
+      If you are running already an existing dnsproxy on the host, you
+      need to "chain" them together. For example, you have to do the
+      following with dnsmasq:
+    </para>
+    <itemizedlist>
+      <listitem><para>Start the dnsmasq with --no-resolv --port 5050 --server 127.0.0.1</para></listitem>
+      <listitem><para>Start dnsmasq with --background</para></listitem>
+    </itemizedlist>
   </chapter>
-</book>    
+</book>
 

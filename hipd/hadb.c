@@ -516,6 +516,8 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr,
 
  	hip_print_debug_info(NULL, peer_addr, NULL, peer_hit, peer_lsi, peer_hostname);
 
+	HIP_IFEL(!ipv6_addr_is_hit(peer_hit), -1, "Not a HIT\n");
+
 	memset(&peer_map, 0, sizeof(peer_map));
 
 	memcpy(&peer_map.peer_hit, peer_hit, sizeof(hip_hit_t));
@@ -532,7 +534,7 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr,
 	HIP_IFEL(hip_select_source_address(
 			 &peer_map.our_addr, &peer_map.peer_addr),
 		 -1, "Cannot find source address\n");
-
+	
 	HIP_IFEL(hip_for_each_hi(hip_hadb_add_peer_info_wrapper, &peer_map), 0,
 	         "for_each_hi err.\n");
 

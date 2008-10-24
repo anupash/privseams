@@ -8,8 +8,6 @@
  * @author  Abhijit Bagri <abagri#gmail.com>
  * @author  Miika Komu <miika#iki.fi>
  * @author  Samu Varjonen <samu.varjonen#hiit.fi>
- * @version 1.0
- * @date    08.01.2008
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  * @note    Based on
  *          <a href="http://www1.ietf.org/mail-archive/web/hipsec/current/msg01745.html">Simplified state machine</a>
@@ -2972,6 +2970,8 @@ out_err:
 	return err;
 }
 
+
+
 /**
  * Builds udp and raw locator items into locator list to msg
  * this is the extension of hip_build_locators in output.c
@@ -3126,4 +3126,3 @@ int hip_update_handle_stun(void* pkg, int len,
 void empty_oppipdb(){
 	hip_for_each_oppip(hip_oppipdb_del_entry_by_entry, NULL);
 }
-
