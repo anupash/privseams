@@ -501,7 +501,7 @@ int main_client_gai(int socktype, char *peer_name, char *port_name, int flags)
  */
 int main_client_native(int socktype, char *peer_name, char *peer_port_name)
 {
-	struct endpointinfo hints, *epinfo = NULL, *res = NULL;
+	//struct endpointinfo hints, *epinfo = NULL, *res = NULL;
 	//struct endpointinfo *epinfo;
 	//struct addrinfo hints, *res = NULL;
 	struct timeval stats_before, stats_after;
@@ -540,8 +540,8 @@ int main_client_native(int socktype, char *peer_name, char *peer_port_name)
 		HIP_ERROR("getendpointfo failed\n");
 		goto out_err;
 	}
-	//hints.ai_flags |= AI_EXTFLAGS;
-	//hints.ai_eflags |= HIP_PREFER_ORCHID;
+	hints.ai_flags |= AI_EXTFLAGS;
+	hints.ai_eflags |= HIP_PREFER_ORCHID;
 
 	//err = getaddrinfo(peer_name, peer_port_name, &hints, &res);
 	if (err) {
@@ -558,11 +558,12 @@ int main_client_native(int socktype, char *peer_name, char *peer_port_name)
 */
 #endif
 
-memset(&peer_sock, 0, sizeof(peer_sock));
-peer_sock.ship_family = PF_HIP;
-HIP_IFEL(inet_pton(AF_INET6, peer_name, &peer_sock.ship_hit) != 1, 1, "Failed to parse HIT\n");
-peer_sock.ship_port = atoi(peer_port_name);
-HIP_DEBUG("Connecting to %s port %d\n", peer_name, peer_sock.ship_port);
+	/* XX TODO: Do a proper getaddrinfo() */
+	memset(&peer_sock, 0, sizeof(peer_sock));
+	peer_sock.ship_family = PF_HIP;
+	HIP_IFEL(inet_pton(AF_INET6, peer_name, &peer_sock.ship_hit) != 1, 1, "Failed to parse HIT\n");
+	peer_sock.ship_port = htons(atoi(peer_port_name));
+	HIP_DEBUG("Connecting to %s port %d\n", peer_name, peer_sock.ship_port);
 
 	// data from stdin to buffer
 	memset(receiveddata, 0, IP_MAXPACKET);
@@ -635,9 +636,9 @@ HIP_DEBUG("Connecting to %s port %d\n", peer_name, peer_sock.ship_port);
 				1, "Sent and received data did not match\n");
 
 out_err:
-	if (res)
+	/*if (res)
 		//free_endpointinfo(res);
-		freeaddrinfo(res);
+		freeaddrinfo(res);*/
 	if (sockfd > -1)
 		close(sockfd); // discard errors
 
@@ -653,7 +654,7 @@ out_err:
  *
  * @return 1 with success, 0 otherwise.
  */
-int main_server_native(int socktype, char *port_name)
+int main_server_native(int socktype, char *port_name, char *name)
 {
 	struct endpointinfo hints, *res = NULL;
 	struct sockaddr_eid peer_eid;
@@ -663,6 +664,14 @@ int main_server_native(int socktype, char *port_name)
 	int endpoint_family = PF_HIP;
 	socklen_t peer_eid_len = sizeof(struct sockaddr_hip);
 
+	/* recvmsg() stuff for UDP multihoming */
+	char control[CMSG_SPACE(40)];
+	struct cmsghdr *cmsg;
+	struct in6_pktinfo *pktinfo;
+	struct iovec iov = { &mylovemostdata, sizeof(mylovemostdata) - 1 };
+	struct msghdr msg = { &peer_sock, sizeof(peer_sock), &iov, 1,
+						&control, sizeof(control), 0 };
+
 	serversock = socket(endpoint_family, socktype, 0);
 	if (serversock < 0) {
 		HIP_PERROR("socket: ");
@@ -671,6 +680,8 @@ int main_server_native(int socktype, char *port_name)
 	}
 
 	setsockopt(serversock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+	if (socktype == SOCK_DGRAM)
+		setsockopt(serversock, IPPROTO_IPV6, IPV6_2292PKTINFO, &on, sizeof(on));
 
 	memset(&hints, 0, sizeof(struct endpointinfo));
 	hints.ei_family = endpoint_family;
@@ -684,13 +695,15 @@ int main_server_native(int socktype, char *port_name)
 		goto out_err;
 	}
 
-	HIP_DEBUG("Native server calls bind\n");
-
 	memset(&our_sockaddr, 0, sizeof(struct sockaddr_hip));
-	our_sockaddr.ship_port = atoi(port_name);//((struct sockaddr_eid *)res->ei_endpoint)->eid_port;
-	HIP_DEBUG("Binding to port %d\n", our_sockaddr.ship_port);
+	if (name) {
+		HIP_IFEL(inet_pton(AF_INET6, name, &our_sockaddr.ship_hit) != 1,
+						    1, "Failed to parse HIT\n");
+	}
+	our_sockaddr.ship_port = htons(atoi(port_name));
+	HIP_DEBUG("Binding to port %d\n", ntohs(our_sockaddr.ship_port));
 	our_sockaddr.ship_family = endpoint_family;
-//	if (bind(serversock, res->ei_endpoint, res->ei_endpointlen) < 0) {
+
 	if (bind(serversock, &our_sockaddr, sizeof(struct sockaddr_hip)) < 0) {
 		HIP_PERROR("bind: ");
 		err = 1;
@@ -723,7 +736,6 @@ int main_server_native(int socktype, char *port_name)
 				printf("%s", mylovemostdata);
 				fflush(stdout);
 
-				/* send reply */
 				sendnum = send(sockfd, mylovemostdata, recvnum, 0);
 				if (sendnum < 0) {
 					HIP_PERROR("send: ");
@@ -734,19 +746,21 @@ int main_server_native(int socktype, char *port_name)
 		} else { /* UDP */
 			sockfd = serversock;
 			serversock = 0;
+			while((recvnum = recvmsg(sockfd, &msg, 0)) > 0) {
+				for (cmsg = CMSG_FIRSTHDR(&msg); cmsg; cmsg = CMSG_NXTHDR(&msg, cmsg)) {
+					if (cmsg->cmsg_level == IPPROTO_IPV6 &&
+					    cmsg->cmsg_type == IPV6_2292PKTINFO) {
+						pktinfo = CMSG_DATA(cmsg);
+						
+						break;
+					}
+				}
+				HIP_DEBUG_HIT("localaddr", &pktinfo->ipi6_addr);
+				iov.iov_len = strlen(mylovemostdata);
 
-			while((recvnum = recvfrom(sockfd, mylovemostdata,
-						 sizeof(mylovemostdata), 0,
-						 (struct sockaddr *) &peer_sock,
-						 &peer_eid_len)) > 0) {
-				mylovemostdata[recvnum] = '\0';
-				printf("%s", mylovemostdata);
-				fflush(stdout);
-
-				/* send reply */
-				sendnum = sendto(sockfd, mylovemostdata, recvnum, 0,
-						 (struct sockaddr *) &peer_sock, peer_eid_len);
-
+				/* ancillary data contains the src
+				 * and dst addresses */
+				sendnum = sendmsg(sockfd, &msg, 0);
 				if (sendnum < 0) {
 					HIP_PERROR("sendto: ");
 					err = 1;

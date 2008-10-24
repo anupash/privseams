@@ -78,7 +78,7 @@ int hip_select_socket_handler(struct socket *sock,
 
         return err;
 }
-
+#if 0
 int hip_socket_get_eid_info(struct socket *sock,
                             struct proto_ops **socket_handler,
                             const struct sockaddr_eid *eid,
@@ -141,7 +141,7 @@ int hip_socket_get_eid_info(struct socket *sock,
 
         return err;
 }
-
+#endif
 /** hip_init_socket_handler - initialize socket handler
  *  @return 	returns -1 in case of an error, 0 otherwise
  */ 
@@ -227,17 +227,8 @@ int hip_socket_bind(struct socket *sock,
 	struct proto_ops *socket_handler;
 	struct hip_lhi lhi;
 	struct sockaddr_hip *sockaddr_hip = (struct sockaddr_hip *) umyaddr;
-	//struct sockaddr_eid *sockaddr_eid = (struct sockaddr_eid *) umyaddr;
 
 	HIP_DEBUG("hip_socket_bind called\n");
-
-	/*err = hip_socket_get_eid_info(sock, &socket_handler, umyaddr,
-				      1, &lhi);
-
-	if (err) {
-		HIP_ERROR("Failed to get socket eid info.\n");
-		goto out_err;
-	}*/
 
         err = hip_select_socket_handler(sock, &socket_handler);
         if (err) {
@@ -245,21 +236,10 @@ int hip_socket_bind(struct socket *sock,
                 goto out_err;
         }
 
-	/* XX FIXME: select the IP address based on the mappings or interfaces
-	   from db and do not use in6_addr_any. */
-
-	/* Use in6_addr_any (= all zeroes) for bind. Offering a HIT to bind
-	   does not work without modifications into the bind code because
-	   bind_v6 returns an error when it does address type checks. */
 	memset(&sockaddr_in6, 0, sizeof(struct sockaddr_in6));
 	sockaddr_in6.sin6_family = PF_INET6;
-
-	/*sockaddr_in6.sin6_port = sockaddr_eid->eid_port;
-	memcpy(&sockaddr_in6.sin6_addr, &lhi.hit, sizeof(struct in6_addr));*/
 	sockaddr_in6.sin6_port = sockaddr_hip->ship_port;
 	memcpy(&sockaddr_in6.sin6_addr, &sockaddr_hip->ship_hit, sizeof(struct in6_addr));
-	
-	/* XX FIX: check access permissions from eid_owner_info */
 
 	HIP_DEBUG_HIT("hip_socket_bind(): HIT", &sockaddr_in6.sin6_addr);
 	err = socket_handler->bind(sock, (struct sockaddr *) &sockaddr_in6,
@@ -309,32 +289,19 @@ int hip_socket_connect(struct socket *sock,
 	struct proto_ops *socket_handler;
 	struct hip_lhi lhi;
 	struct sockaddr_hip *sockaddr_hip = (struct sockaddr_hip *) uservaddr;
-	//struct sockaddr_eid *sockaddr_eid = (struct sockaddr_eid *) uservaddr;
 
 	HIP_DEBUG("hip_socket_connect called\n");
-/*
-	err = hip_socket_get_eid_info(sock, &socket_handler, uservaddr,
-				      0, &lhi);
-	if (err) {
-		HIP_ERROR("Failed to get socket eid info.\n");
-		goto out_err;
-	}*/
 
 	err = hip_select_socket_handler(sock, &socket_handler);
 
 	memset(&sockaddr_in6, 0, sizeof(struct sockaddr_in6));
 	sockaddr_in6.sin6_family = PF_INET6;
-
-	//memcpy(&sockaddr_in6.sin6_addr, &lhi.hit, sizeof(struct in6_addr));
-	//sockaddr_in6.sin6_port = sockaddr_eid->eid_port;
 	sockaddr_in6.sin6_port = sockaddr_hip->ship_port;
 	memcpy(&sockaddr_in6.sin6_addr, &sockaddr_hip->ship_hit, sizeof(struct in6_addr));
 
 	HIP_DEBUG_HIT("connecting to the source HIT\n", &sockaddr_in6.sin6_addr);
 	/* Note: connect calls autobind if the application has not already
 	   called bind manually. */
-
-	/* XX CHECK: what about autobind src eid ? */
 
 	/* XX CHECK: check does the autobind actually bind to an IPv6 address
 	   or HIT? Or inaddr_any? Should we do the autobind manually here? */
@@ -402,13 +369,14 @@ int hip_socket_getname(struct socket *sock,
 	int err = 0;
 
 	struct proto_ops *socket_handler;
-	struct hip_lhi lhi;
-	struct hip_eid_owner_info owner_info;
+	//struct hip_lhi lhi;
+	//struct hip_eid_owner_info owner_info;
 	struct sock *sk = sock->sk;
 	struct ipv6_pinfo *pinfo = inet6_sk(sk);
 	struct inet_sock *inet = inet_sk(sk);
 	struct sockaddr_in6 sockaddr_in6_tmp;
-	struct sockaddr_eid *sockaddr_eid = (struct sockaddr_eid *) uaddr;
+	//struct sockaddr_eid *sockaddr_eid = (struct sockaddr_eid *) uaddr;
+	struct sockaddr_hip *sockaddr_hip = (struct sockaddr_hip *) uaddr;
 	int sockaddr_in6_tmp_len;
 
 	HIP_DEBUG("\n");
@@ -441,7 +409,7 @@ int hip_socket_getname(struct socket *sock,
 	HIP_ASSERT(sockaddr_in6_tmp_len == sizeof(struct sockaddr_in6));
 	HIP_DEBUG_IN6ADDR("inet6 getname returned addr",
 			  &sockaddr_in6_tmp.sin6_addr);
-
+#if 0
 	owner_info.uid = current->uid;
 	owner_info.gid = current->gid;
 	owner_info.pid = current->pid;
@@ -450,18 +418,23 @@ int hip_socket_getname(struct socket *sock,
 	memcpy(&lhi.hit, &pinfo->daddr,
 	       sizeof(struct in6_addr));
 	lhi.anonymous = 0; /* XX FIXME: should be really set to -1 */
-/*
+
 	err = hip_db_set_eid(sockaddr_eid, &lhi, &owner_info, !peer);
 	if (err) {
 		HIP_ERROR("Setting of %s eid failed\n",
 			  (peer ? "peer" : "local"));
 		goto out_err;
 	}
-*/
 
 	sockaddr_eid->eid_port = (peer) ? inet->dport : inet->sport;
 	*usockaddr_len = sizeof(struct sockaddr_eid);
+#endif
 
+	memcpy(&sockaddr_hip->ship_hit, &sockaddr_in6_tmp.sin6_addr,
+						sizeof(struct in6_addr));
+	sockaddr_hip->ship_port = sockaddr_in6_tmp.sin6_port;
+	HIP_DEBUG("port %d\n", sockaddr_hip->ship_port);
+	*usockaddr_len = sizeof(struct sockaddr_hip);
 
  out_err:
 
@@ -767,13 +740,9 @@ int hip_socket_sendmsg(struct kiocb *iocb, struct socket *sock,
 	HIP_HEXDUMP("rcv_saddr", &pinfo->rcv_saddr,
 		    sizeof(struct in6_addr));
 
+	/* Returns the number of bytes sent on success */
 	err = socket_handler->sendmsg(iocb, sock, m, total_len);
-	if (err) {
-		/* The socket handler can return EIO or EINTR which are not
-		   "real" errors. */
-		HIP_DEBUG("Socket handler returned (%d)\n", err);
-		goto out_err;
-	}
+	HIP_DEBUG("Socket handler returned (%d)\n", err);
 
  out_err:
 
@@ -806,13 +775,10 @@ int hip_socket_recvmsg(struct kiocb *iocb, struct socket *sock,
 	HIP_HEXDUMP("rcv_saddr", &pinfo->rcv_saddr,
 		    sizeof(struct in6_addr));
 
+	/* Returns the number of bytes received on success */
 	err = socket_handler->recvmsg(iocb, sock, m, total_len, flags);
-	if (err) {
-		/* The socket handler can return EIO or EINTR which are not
-		   "real" errors. */
-		HIP_DEBUG("Socket handler returned (%d)\n", err);
-		goto out_err;
-	}
+	HIP_DEBUG("Socket handler returned (%d)\n", err);
+
 
  out_err:
 
