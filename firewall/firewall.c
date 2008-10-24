@@ -1428,9 +1428,11 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
 	if (filter_traffic)
 	{
 	  HIP_DEBUG("HIP packet type %d \n", buf->type_hdr);
+#if 0
 	  if (hip_sava_router) {
 	    //add a check for flow direction this should be incomming
 	    if (buf->type_hdr == HIP_I2){
+	      
 	      HIP_DEBUG("CHECK IP IN THE HIP_I2 STATE \n");
 	      if (hip_sava_ip_entry_find(&ctx->src) != NULL) {
 		HIP_DEBUG("IP already apprears to present in the data base. Most likely retransmitting the I2 \n");
@@ -1464,6 +1466,7 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
 	  } else if (hip_sava_client) {
 	    
 	  }
+#endif
 	    /*
 	      The simplest way to check is to hold a list of IP addresses that
 	      already were discovered previously and have 2 checks:
@@ -1483,7 +1486,6 @@ int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
 	  //second check is to check HITs
 	  //mandatory check for SAVA
 	  //rules should present in the ACL otherwise the packets are dropped
-	filter:
 	  verdict = filter_hip(&ctx->src,
 			       &ctx->dst,
 			       ctx->transport_hdr.hip,

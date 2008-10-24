@@ -1436,6 +1436,33 @@ int hip_sava_handle_bex_completed (struct in6_addr * src, struct in6_addr * hitr
   
   int err = 0;
 
+  if (hip_sava_ip_entry_find(src) != NULL) {
+    HIP_DEBUG("IP already apprears to present in the data base. Most likely retransmitting the I2 \n");
+
+  } else {
+    HIP_DEBUG("IP  apprears to be new. Adding to DB \n");
+
+    //TODO: check if the source IP belongs to 
+    //the same network as router's IP address
+    // Drop the packet IP was not found in the data base
+    HIP_DEBUG("Packet accepted! Adding source IP address to the DB \n");
+    hip_sava_ip_entry_add(src, NULL);
+    hip_sava_hit_entry_add(hitr, NULL);
+    
+    HIP_IFEL((ip_entry = hip_sava_ip_entry_find(src)) == NULL, -1,
+	     "No entry was found for given IP address \n");
+    HIP_IFEL((hit_entry = hip_sava_hit_entry_find(hitr)) == NULL, -1,
+	     "No entry was found for given HIT \n");
+    
+    //Adding cross references
+    ip_entry->link = hit_entry;
+    hit_entry->link = ip_entry; 
+
+    ip_entry = NULL;
+    hit_entry = NULL;
+    //End adding cross references
+  }
+
   ip_entry = hip_sava_ip_entry_find(src);
   hit_entry = hip_sava_hit_entry_find(hitr);
   
@@ -1443,7 +1470,7 @@ int hip_sava_handle_bex_completed (struct in6_addr * src, struct in6_addr * hitr
   if (ip_entry && hit_entry) {
     HIP_DEBUG("BOTH ENTRIES ARE FOUND \n");
     
-    HIP_IFEL((msg = hip_sava_make_keys_request(hitr, SAVA_INBOUND_KEY)) == NULL, DROP,
+    HIP_IFEL((msg = hip_sava_make_keys_request(hitr, SAVA_INBOUND_KEY)) == NULL, -1,
 	     "Key request from daemon failed \n");
     HIP_DEBUG("Secret key acquired. Lets encrypt the src IP address \n");
 		  
