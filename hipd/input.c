@@ -2688,10 +2688,17 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	//TODO Send the R2 Response to Firewall
 
  out_err:
-	if (entry->state == HIP_STATE_ESTABLISHED)
+	if (entry->state == HIP_STATE_ESTABLISHED) {
+
 	        hip_firewall_set_bex_data(SO_HIP_FW_BEX_DONE, entry, &entry->hit_our, &entry->hit_peer);
-	else
+		if (entry->local_controls & HIP_HA_CTRL_PEER_GRANTED_SAVAH) {
+		  //Enable savah client mode on the firewall
+		  hip_set_sava_client_on();
+		  hip_firewall_set_savah_status(SO_HIP_SET_SAVAH_CLIENT_ON);
+		}
+	} else {
 		hip_firewall_set_bex_data(SO_HIP_FW_BEX_DONE, entry, NULL, NULL);
+	}
 
 	if (ctx) {
 		HIP_FREE(ctx);

@@ -1016,6 +1016,19 @@ int hip_add_registration_client(hip_ha_t *entry, uint8_t lifetime,
 			}
 
 			break;
+		} 
+                case HIP_SERVICE_SAVAH:
+		{
+		        HIP_DEBUG("The server has granted us escrow "\
+				  "service for %u seconds (lifetime 0x%x.)\n",
+				  seconds, lifetime);
+			hip_hadb_cancel_local_controls(
+				entry, HIP_HA_CTRL_LOCAL_REQ_SAVAH); 
+			hip_hadb_set_peer_controls(
+				entry, HIP_HA_CTRL_PEER_GRANTED_SAVAH); 
+			hip_del_pending_request_by_type(
+				entry, HIP_SERVICE_SAVAH);
+		        break;
 		}
 		default:
 		{
@@ -1078,6 +1091,17 @@ int hip_del_registration_client(hip_ha_t *entry, uint8_t *reg_types,
 				entry, HIP_HA_CTRL_LOCAL_REQ_ESCROW); 
 			hip_del_pending_request_by_type(
 				entry, HIP_SERVICE_ESCROW);
+			
+			break;
+		}
+		case HIP_SERVICE_SAVAH:
+		{
+			HIP_DEBUG("The server has cancelled our savah "\
+				  "service.\n");
+			hip_hadb_cancel_local_controls(
+				entry, HIP_HA_CTRL_LOCAL_REQ_SAVAH); 
+			hip_del_pending_request_by_type(
+				entry, HIP_SERVICE_SAVAH);
 			
 			break;
 		}

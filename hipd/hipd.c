@@ -38,6 +38,10 @@ int hip_icmp_interval = 20;
 /** Specifies the HIP PROXY status of the daemon. This value indicates if the HIP PROXY is running. */
 int hipproxy = 0;
 
+/*SAVAH modes*/
+int hipsava_client = 0;
+int hipsava_server = 0;
+
 /* Communication interface to userspace apps (hipconf etc) */
 int hip_user_sock = 0;
 struct sockaddr_un hip_user_addr;

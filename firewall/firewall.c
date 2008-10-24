@@ -68,8 +68,10 @@ void print_usage(){
  	printf("      -i = switch on userspace ipsec\n");
  	printf("      -I = as -i, also allow fallback to kernel ipsec when exiting hipfw\n");
  	printf("      -e = use esp protection extension (also sets -i)\n");
+#if 0
  	printf("      -a = use SAVA HIP (SAVAH) router extension \n");
 	printf("      -c = use SAVA HIP (SAVAH) client extention \n");
+#endif
  	printf("      -s = stun/ice message support\n");
 	printf("      -h = print this help\n");
 	printf("      -o = system-based opportunistic mode\n\n");
@@ -127,14 +129,15 @@ void hip_fw_uninit_sava_client() {
 }
 
 int hip_fw_init_sava_router() {
-  int err = 0;
-	HIP_DEBUG("Initializing SAVA mode \n");
+        int err = 0;
+ 
 	/* 
 	 * We need to capture each and every packet 
 	 * that passes trough the firewall to verify the packets 
 	 * source address
 	 */
 	if (hip_sava_router) {
+	        HIP_DEBUG("Initializing SAVA client mode \n");
 	        HIP_IFEL(hip_sava_init_all(), -1, 
 		   "Error inializing SAVA IP DB \n");
 		/* IPv4 packets	*/
@@ -152,8 +155,8 @@ int hip_fw_init_sava_router() {
 }
 
 void hip_fw_uninit_sava_router() {
-	HIP_DEBUG("Uninitializing SAVA mode \n");
 	if (hip_sava_router) {
+ 	        HIP_DEBUG("Uninitializing SAVA server mode \n");
 		/* IPv4 packets	*/
 		system("iptables -D HIPFW-FORWARD -p tcp -j QUEUE 2>/dev/null");
 		system("iptables -D HIPFW-FORWARD -p udp -j QUEUE 2>/dev/null");
@@ -1838,7 +1841,7 @@ int main(int argc, char **argv){
 
 	check_and_write_default_config();
 
-	while ((ch = getopt(argc, argv, "f:t:vdFHAbkiIpehsolFac")) != -1)
+	while ((ch = getopt(argc, argv, "f:t:vdFHAbkiIpehsolF")) != -1)
 	{
 		switch (ch)
 		{
@@ -1888,10 +1891,10 @@ int main(int argc, char **argv){
 			hip_kernel_ipsec_fallback = 1;
 			break;
 		case 'a':
-			hip_sava_router = 1;
+		  //hip_sava_router = 1;
 			break;
 		case 'c':
-		        hip_sava_client = 1;
+		  //hip_sava_client = 1;
 		        break;
 		case 'e':
 			hip_userspace_ipsec = 1;
@@ -2011,6 +2014,10 @@ int main(int argc, char **argv){
 #ifdef CONFIG_HIP_HIPPROXY
 	request_hipproxy_status(); //send hipproxy status request before the control thread running.
 #endif /* CONFIG_HIP_HIPPROXY */
+	if (!hip_sava_client)
+	  request_savah_status(SO_HIP_SAVAH_SERVER_STATUS_REQUEST);
+	if(!hip_sava_router)
+	  request_savah_status(SO_HIP_SAVAH_CLIENT_STATUS_REQUEST); 
 
 	highest_descriptor = maxof(3, hip_fw_sock, h4->fd, h6->fd);
 

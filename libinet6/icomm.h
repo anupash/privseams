@@ -180,6 +180,7 @@
 #define SO_HIP_IPSEC_FLUSH_ALL_SA          	154
 #define SO_HIP_ANCHOR_CHANGE			155
 
+
 //#define SO_HIP_ESP_PROT_EXT_TRANSFORM		xx
 //#define SO_HIP_IPSEC_UPDATE_ANCHOR_LIST	xx
 //#define SO_HIP_IPSEC_NEXT_ANCHOR		xx
@@ -197,7 +198,12 @@
 #define SO_HIP_OFFER_SAVAH                       160
 #define SO_HIP_CANCEL_SAVAH                      161
 #define SO_HIP_FW_I2_DONE                        162
-
+#define SO_HIP_SAVAH_CLIENT_STATUS_REQUEST       163
+#define SO_HIP_SAVAH_SERVER_STATUS_REQUEST       164
+#define SO_HIP_SET_SAVAH_CLIENT_OFF              165
+#define SO_HIP_SET_SAVAH_CLIENT_ON               166
+#define SO_HIP_SET_SAVAH_SERVER_OFF              167
+#define SO_HIP_SET_SAVAH_SERVER_ON               168
 
 
 /****** FIREWALL ******/

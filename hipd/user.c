@@ -515,7 +515,66 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         		//SEND RESPONSE();
         	}
         	break;
+	case SO_HIP_SAVAH_CLIENT_STATUS_REQUEST:
+	        {
+        		int n, err;
 
+        		//firewall socket address
+        		struct sockaddr_in6 sock_addr;
+        		bzero(&sock_addr, sizeof(sock_addr));
+        		sock_addr.sin6_family = AF_INET6;
+        		sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
+        		sock_addr.sin6_addr = in6addr_loopback;
+
+        		HIP_DEBUG("Received HIPPROXY Status Request from firewall\n");
+
+        		memset(msg, 0, sizeof(struct hip_common));
+
+        		if(hip_get_hip_proxy_status() == 0)
+        			hip_build_user_hdr(msg, SO_HIP_SET_SAVAH_CLIENT_OFF, 0);
+
+        		if(hip_get_hip_proxy_status() == 1)
+ 			        hip_build_user_hdr(msg, SO_HIP_SET_SAVAH_CLIENT_ON, 0);
+
+        		n = hip_sendto_user(msg, &sock_addr);
+
+        		HIP_IFEL(n < 0, 0, "sendto() failed\n");
+
+        		if (err == 0)
+        		{
+        			HIP_DEBUG("SEND SAVAH CLIENT STATUS OK.\n");
+        		}
+        	}
+ 	        break;
+        case SO_HIP_SAVAH_SERVER_STATUS_REQUEST:
+	        {
+        		int n, err;
+        		struct sockaddr_in6 sock_addr;
+        		bzero(&sock_addr, sizeof(sock_addr));
+        		sock_addr.sin6_family = AF_INET6;
+        		sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
+        		sock_addr.sin6_addr = in6addr_loopback;
+
+        		HIP_DEBUG("Received SAVAH SERVER Status Request from firewall\n");
+
+        		memset(msg, 0, sizeof(struct hip_common));
+
+        		if(hip_get_hip_proxy_status() == 0)
+        			hip_build_user_hdr(msg, SO_HIP_SET_SAVAH_SERVER_OFF, 0);
+
+        		if(hip_get_hip_proxy_status() == 1)
+ 			        hip_build_user_hdr(msg, SO_HIP_SET_SAVAH_SERVER_ON, 0);
+
+        		n = hip_sendto_user(msg, &sock_addr);
+
+        		HIP_IFEL(n < 0, 0, "sendto() failed\n");
+
+        		if (err == 0)
+        		{
+        			HIP_DEBUG("SEND SAVAH SERVER STATUS OK.\n");
+        		}
+        	}
+	        break;
 #ifdef CONFIG_HIP_ESCROW
 	case SO_HIP_OFFER_ESCROW:
 		HIP_DEBUG("Handling add escrow service -user message.\n");
@@ -743,6 +802,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 					entry, HIP_HA_CTRL_LOCAL_REQ_RELAY);
 				break;
 			case HIP_SERVICE_SAVAH:
+			        HIP_DEBUG("HIP_SERVICE_SAVAH \n");
 			        if (!sava_serving_gateway) {
 				  sava_serving_gateway = 
 				    (struct in6_addr *)malloc(sizeof(struct in6_addr));
@@ -750,6 +810,8 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 				}
 				
 				memcpy(sava_serving_gateway, dst_hit, sizeof(struct in6_addr));
+
+				hip_set_sava_client_off();
 
 				hip_hadb_set_local_controls(
 					entry, HIP_HA_CTRL_LOCAL_REQ_SAVAH);
@@ -851,6 +913,8 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		err = hip_recreate_all_precreated_r1_packets();
 		break;
 	case SO_HIP_OFFER_SAVAH:
+	        hip_set_srv_status(HIP_SERVICE_SAVAH, HIP_SERVICE_ON);
+	        hip_set_sava_server_on();
 	        HIP_DEBUG("Handling SO_HIP_OFFER_SAVAH \n");
 	        break;
 #if 0
@@ -945,6 +1009,11 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 
 		break;
 
+	case SO_HIP_CANCEL_SAVAH:
+	        hip_set_srv_status(HIP_SERVICE_SAVAH, HIP_SERVICE_OFF);
+ 	        hip_set_sava_server_off();
+		HIP_DEBUG("Handling CANCEL SAVAH user message.\n");
+		break;
 	case SO_HIP_CANCEL_RVS:
 		HIP_DEBUG("Handling CANCEL RVS user message.\n");
 
