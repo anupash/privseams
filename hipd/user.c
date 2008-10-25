@@ -530,10 +530,10 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 
         		memset(msg, 0, sizeof(struct hip_common));
 
-        		if(hip_get_hip_proxy_status() == 0)
+        		if(hip_get_sava_client_status() == 0)
         			hip_build_user_hdr(msg, SO_HIP_SET_SAVAH_CLIENT_OFF, 0);
 
-        		if(hip_get_hip_proxy_status() == 1)
+        		if(hip_get_sava_client_status() == 1)
  			        hip_build_user_hdr(msg, SO_HIP_SET_SAVAH_CLIENT_ON, 0);
 
         		n = hip_sendto_user(msg, &sock_addr);
@@ -559,10 +559,10 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 
         		memset(msg, 0, sizeof(struct hip_common));
 
-        		if(hip_get_hip_proxy_status() == 0)
+        		if(hip_get_sava_server_status() == 0)
         			hip_build_user_hdr(msg, SO_HIP_SET_SAVAH_SERVER_OFF, 0);
 
-        		if(hip_get_hip_proxy_status() == 1)
+        		if(hip_get_sava_server_status() == 1)
  			        hip_build_user_hdr(msg, SO_HIP_SET_SAVAH_SERVER_ON, 0);
 
         		n = hip_sendto_user(msg, &sock_addr);
@@ -915,7 +915,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	case SO_HIP_OFFER_SAVAH:
 	        hip_set_srv_status(HIP_SERVICE_SAVAH, HIP_SERVICE_ON);
 	        hip_set_sava_server_on();
-	        HIP_DEBUG("Handling SO_HIP_OFFER_SAVAH \n");
+	        HIP_DEBUG("Handling SO_HIP_OFFER_SAVAH: STATUS ON\n");
 	        break;
 #if 0
 	case SO_HIP_ADD_RELAY:

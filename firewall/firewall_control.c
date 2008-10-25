@@ -206,6 +206,7 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 		hip_proxy_status = 0;
 		break;
 	case SO_HIP_SET_SAVAH_CLIENT_ON:
+	        HIP_DEBUG("Received HIP_SAVAH_CLIENT_STATUS: ON message from hipd \n");
 	        if (!hip_sava_client && !hip_sava_router) {
 		  hip_sava_client = 1;
 		  filter_traffic = 0;
@@ -213,6 +214,7 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 		} 
 	        break;
 	case SO_HIP_SET_SAVAH_CLIENT_OFF:
+	        HIP_DEBUG("Received HIP_SAVAH_CLIENT_STATUS: OFF message from hipd \n");
                 if (hip_sava_client) {
 		  hip_sava_client = 0;
 		  filter_traffic = 0;
@@ -220,15 +222,17 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 		} 
 	        break;
 	case SO_HIP_SET_SAVAH_SERVER_OFF:
+	        HIP_DEBUG("Received HIP_SAVAH_SERVER_STATUS: OFF message from hipd \n");
                 if (!hip_sava_client && !hip_sava_router) {
-		  hip_sava_router = 1;
+		  hip_sava_router = 0;
 		  accept_hip_esp_traffic_by_default = 0;
 		  hip_fw_init_sava_router();
 		}
 	        break;
         case SO_HIP_SET_SAVAH_SERVER_ON: 
+	        HIP_DEBUG("Received HIP_SAVAH_SERVER_STATUS: ON message from hipd \n");
                 if (hip_sava_router) {
-		  hip_sava_router = 0;
+		  hip_sava_router = 1;
 		  accept_hip_esp_traffic_by_default = 0;
 		  hip_fw_uninit_sava_router();
 		}
@@ -382,11 +386,13 @@ int request_savah_status(int mode)
         HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
         hip_msg_init(msg);
 	if (mode == SO_HIP_SAVAH_CLIENT_STATUS_REQUEST) {
+	  HIP_DEBUG("SO_HIP_SAVAH_CLIENT_STATUS_REQUEST \n");
 	  HIP_IFEL(hip_build_user_hdr(msg,
 				      SO_HIP_SAVAH_CLIENT_STATUS_REQUEST, 0),
 		   -1, "Build hdr failed\n");
 	}
 	else if (mode == SO_HIP_SAVAH_SERVER_STATUS_REQUEST) {
+	  HIP_DEBUG("SO_HIP_SAVAH_SERVER_STATUS_REQUEST \n");
 	  HIP_IFEL(hip_build_user_hdr(msg,
 				      SO_HIP_SAVAH_SERVER_STATUS_REQUEST, 0),
 		   -1, "Build hdr failed\n");
@@ -397,8 +403,8 @@ int request_savah_status(int mode)
 	}
 
         HIP_IFEL(hip_fw_sendto_hipd(msg), -1,
-		 "HIP_HIPPROXY_STATUS_REQUEST: Sendto HIPD failed.\n");
-	HIP_DEBUG("HIP_HIPPROXY_STATUS_REQUEST: Sendto firewall OK.\n");
+		 " Sendto HIPD failed.\n");
+	HIP_DEBUG("Sendto firewall OK.\n");
 
 out_err:
 	if(msg)

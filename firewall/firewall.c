@@ -103,6 +103,7 @@ int is_escrow_active(){
 int hip_fw_init_sava_client() {
   int err = 0;
   if (hip_sava_client) {
+    HIP_DEBUG(" hip_fw_init_sava_client() \n");
        HIP_IFEL(hip_sava_client_init_all(), -1,
 	     "Error initializing SAVA client \n");
        /* IPv4 packets	*/

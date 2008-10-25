@@ -1019,7 +1019,7 @@ int hip_add_registration_client(hip_ha_t *entry, uint8_t lifetime,
 		} 
                 case HIP_SERVICE_SAVAH:
 		{
-		        HIP_DEBUG("The server has granted us escrow "\
+		        HIP_DEBUG("The server has granted us savah "\
 				  "service for %u seconds (lifetime 0x%x.)\n",
 				  seconds, lifetime);
 			hip_hadb_cancel_local_controls(
