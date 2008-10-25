@@ -308,6 +308,9 @@ int hip_handle_param_reg_info(hip_ha_t *entry, hip_common_t *source_msg,
 	}
 	
 	HIP_DEBUG("REG_INFO parameter found.\n");
+
+	HIP_DEBUG("REG INFO MIN LIFETIME %d\n", reg_info->min_lifetime);
+	HIP_DEBUG("REG INFO MAX LIFETIME %d\n", reg_info->max_lifetime);
 	
 	/* Get a pointer registration types and the type count. */
 	reg_types  = reg_info->reg_type;
@@ -399,6 +402,7 @@ int hip_handle_param_reg_info(hip_ha_t *entry, hip_common_t *source_msg,
 			   that the requested lifetime falls between the offered
 			   lifetime boundaries. */
 			if(requests[0]->lifetime == 0) {
+			        HIP_DEBUG("SERVICE CANCELATION \n");
 				valid_lifetime = 0;
 			} else {
 				valid_lifetime = MIN(requests[0]->lifetime,
@@ -421,7 +425,7 @@ int hip_handle_param_reg_info(hip_ha_t *entry, hip_common_t *source_msg,
 					}
 				}
 			}
-			
+			HIP_DEBUG("VALID SERVICE LIFETIME %d\n", valid_lifetime);
 			if (types_to_request > 0) {
 				HIP_IFEL(hip_build_param_reg_request(
 						 target_msg, valid_lifetime,
@@ -573,6 +577,7 @@ int hip_handle_param_reg_response(hip_ha_t *entry, hip_common_t *msg)
 	}
 	
 	HIP_DEBUG("REG_RESPONSE parameter found.\n");
+	HIP_DEBUG("Lifetime %d \n", reg_response->lifetime);
 
 	type_count = hip_get_param_contents_len(reg_response) -
 		sizeof(reg_response->lifetime);

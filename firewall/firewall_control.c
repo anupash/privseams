@@ -207,17 +207,17 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 		break;
 	case SO_HIP_SET_SAVAH_CLIENT_ON:
 	        HIP_DEBUG("Received HIP_SAVAH_CLIENT_STATUS: ON message from hipd \n");
+		filter_traffic = 0;
 	        if (!hip_sava_client && !hip_sava_router) {
 		  hip_sava_client = 1;
-		  filter_traffic = 0;
 		  hip_fw_init_sava_client();
 		} 
 	        break;
 	case SO_HIP_SET_SAVAH_CLIENT_OFF:
 	        HIP_DEBUG("Received HIP_SAVAH_CLIENT_STATUS: OFF message from hipd \n");
+		filter_traffic = 0;
                 if (hip_sava_client) {
 		  hip_sava_client = 0;
-		  filter_traffic = 0;
 		  hip_fw_uninit_sava_client();
 		} 
 	        break;
