@@ -915,6 +915,8 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	case SO_HIP_OFFER_SAVAH:
 	        hip_set_srv_status(HIP_SERVICE_SAVAH, HIP_SERVICE_ON);
 	        hip_set_sava_server_on();
+		//we need to add new REG_INFO parameters
+		err = hip_recreate_all_precreated_r1_packets();
 	        HIP_DEBUG("Handling SO_HIP_OFFER_SAVAH: STATUS ON\n");
 	        break;
 #if 0
