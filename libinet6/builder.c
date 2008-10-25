@@ -2302,6 +2302,7 @@ int hip_build_param_reg_info(hip_common_t *msg,
 	if(service_count == 0) {
 		return 0;
 	}
+	HIP_DEBUG("Building REG_INFO parameter(s) \n");
 
 	for( ;i < service_count; i++) {
 		if(service_list[0].min_lifetime !=

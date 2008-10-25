@@ -143,7 +143,7 @@ void hip_get_srv_info(const hip_srv_t *srv, char *information)
 	} else if(srv->reg_type == HIP_SERVICE_RELAY) {
 		cursor += sprintf(cursor, "relay\n");
 	} else if(srv->reg_type == HIP_SERVICE_SAVAH) {
-	        cursor += sprintf(cursor, "sava\n");
+	        cursor += sprintf(cursor, "savah\n");
         } else {
 		cursor += sprintf(cursor, "unknown\n");
 	}

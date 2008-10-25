@@ -609,6 +609,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 
 	/* Parameter REG_INFO */
 	hip_get_active_services(service_list, &service_count);
+	HIP_DEBUG("Found %d active service(s) \n", service_count);
 	hip_build_param_reg_info(msg, service_list, service_count);
 
  	/* Parameter ESP-ENC transform. */
