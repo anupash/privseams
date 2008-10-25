@@ -226,15 +226,15 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
                 if (!hip_sava_client && !hip_sava_router) {
 		  hip_sava_router = 0;
 		  accept_hip_esp_traffic_by_default = 0;
-		  hip_fw_init_sava_router();
+		  hip_fw_uninit_sava_router();
 		}
 	        break;
         case SO_HIP_SET_SAVAH_SERVER_ON: 
 	        HIP_DEBUG("Received HIP_SAVAH_SERVER_STATUS: ON message from hipd \n");
-                if (hip_sava_router) {
+                if (!hip_sava_client && !hip_sava_router) {
 		  hip_sava_router = 1;
 		  accept_hip_esp_traffic_by_default = 0;
-		  hip_fw_uninit_sava_router();
+		  hip_fw_init_sava_router();
 		}
 	        break;
 	/*   else if(type == HIP_HIPPROXY_LOCAL_ADDRESS){

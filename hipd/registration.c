@@ -818,7 +818,7 @@ int hip_add_registration_server(hip_ha_t *entry, uint8_t lifetime,
 			accepted_requests[*accepted_count] =
 			  reg_types[i];
 			accepted_lifetimes[*accepted_count] =
-			  granted_lifetime;
+			  lifetime;
 			(*accepted_count)++;
 				
 			HIP_DEBUG("Registration accepted.\n");
