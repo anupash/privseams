@@ -38,6 +38,8 @@ stop() {
         kill -9 $process_no 2>/dev/null
         RETVAL=$?
 
+	echo "" > /var/run/bamboo_v6.pid
+
         echo
         return $RETVAL
 }
