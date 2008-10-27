@@ -725,8 +725,10 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		   Cancellation is identified with a zero lifetime. */
 		struct hip_reg_request *reg_req = NULL;
 		hip_pending_request_t *pending_req = NULL;
+		struct in6_addr hit_local;
 		uint8_t *reg_types = NULL;
 		int i = 0, type_count = 0;
+		int opp_mode = 0;
 		
 		_HIP_DEBUG("Handling ADD DEL SERVER user message.\n");
 
@@ -738,10 +740,15 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		reg_req = hip_get_param(msg, HIP_PARAM_REG_REQUEST);
 
 		if(dst_hit == NULL) {
+#if 0
 			HIP_ERROR("No HIT parameter found from the user "\
 				  "message.\n");
 			err = -1;
 			goto out_err;
+#endif
+			HIP_DEBUG("No HIT parameter found from the user " \
+				  "message. Trying opportunistic mode \n");
+			opp_mode = 1;
 		}else if(dst_ip == NULL) {
 			HIP_ERROR("No IPV6 parameter found from the user "\
 				  "message.\n");
@@ -754,18 +761,24 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			goto out_err;
 		}
 
-		/* Add HIT to IP address mapping of the server to haDB. */
-		HIP_IFEL(hip_add_peer_map(msg), -1, "Error on adding server "\
-			 "HIT to IP address mapping to the haDB.\n");
+		if (!opp_mode) {
+		  /* Add HIT to IP address mapping of the server to haDB. */
+		  HIP_IFEL(hip_add_peer_map(msg), -1, "Error on adding server "	\
+			   "HIT to IP address mapping to the haDB.\n");
 
-		/* Fetch the haDB entry just created. */
-		entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
-
-		if(entry == NULL) {
-			HIP_ERROR("Error on fetching server HIT to IP address "\
-				  "mapping from the haDB.\n");
-			err = -1;
-			goto out_err;
+		  /* Fetch the haDB entry just created. */
+		  entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
+		  
+		  if(entry == NULL) {
+		    HIP_ERROR("Error on fetching server HIT to IP address " \
+			      "mapping from the haDB.\n");
+		    err = -1;
+		    goto out_err;
+		  }
+		} else {
+		  HIP_IFEL(hip_get_default_hit(&hit_local), -1, 
+			   "Error retrieving default HIT \n");
+		  entry = hip_opp_add_map(src, dst_ip, &hit_local);
 		}
 
 		reg_types  = reg_req->reg_type;

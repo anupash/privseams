@@ -634,7 +634,7 @@ int hip_relay_handle_from(hip_common_t *source_msg,
 	} else if(from != NULL) {
 		HIP_DEBUG("Found FROM parameter in I1.\n");
 		memcpy(dest_ip, &from->address, sizeof(from->address));
-	} 
+	}
 	/*
 	 * 
 	 * 

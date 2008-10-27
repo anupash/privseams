@@ -380,6 +380,7 @@ int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[],
 	uint8_t lifetime = 0, *reg_types = NULL;
 	time_t seconds_from_lifetime = 0;
 	char lowercase[30];
+	int opp_mode = 0;
 		
 	_HIP_DEBUG("hip_conf_handle_server() invoked.\n");
 
@@ -390,29 +391,39 @@ int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[],
 		goto out_err;
 	} else if (action == ACTION_ADD) {
 		if(optc < 4) {
+		  if (optc < 3) { 
 			HIP_ERROR("Missing arguments.\n");
 			err = -1;
 			goto out_err;
+		  } else {
+		    HIP_DEBUG("Opportunistic mode for server registration \n");
+		    opp_mode = 1;
+		  }
 		}
-		number_of_regtypes = optc - 3;
-		index_of_hit = optc - 3;
-		index_of_ip  = optc - 2;
-		
+		if (!opp_mode) {
+		  number_of_regtypes = optc - 3;
+		  index_of_hit = optc - 3;
+		  index_of_ip  = optc - 2;		 
+		} else {
+		  number_of_regtypes = optc - 3;
+		  index_of_ip = optc - 2;
+		}
+
 		/* The last commandline argument has the lifetime. */
 		HIP_IFEL(hip_string_is_digit(opt[optc - 1]), -1,
-			 "Invalid lifetime value \"%s\" given.\n"\
-			 "Please give a lifetime value between 1 and "\
+			 "Invalid lifetime value \"%s\" given.\n"	\
+			 "Please give a lifetime value between 1 and "	\
 			 "15384774 seconds.\n", opt[optc - 1]);
-
+		
 		seconds = atoi(opt[optc - 1]);
 		
 		if(seconds <= 0 || seconds > 15384774) {
-			HIP_ERROR("Invalid lifetime value \"%s\" given.\n"\
-				  "Please give a lifetime value between 1 and "\
-				  "15384774 seconds.\n", opt[optc - 1]);
-			goto out_err;
+		  HIP_ERROR("Invalid lifetime value \"%s\" given.\n"	\
+			    "Please give a lifetime value between 1 and " \
+			    "15384774 seconds.\n", opt[optc - 1]);
+		  goto out_err;
 		}
-		
+		 
 		HIP_IFEL(hip_get_lifetime_value(seconds, &lifetime), -1,
 			 "Unable to convert seconds to a lifetime value.\n");
 		
@@ -428,13 +439,18 @@ int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[],
 		index_of_hit = optc - 2;
 		index_of_ip  = optc - 1;
 	}
-	/* Check the HIT value. */
- 	if(inet_pton(AF_INET6, opt[index_of_hit], &hit) <= 0) {
-		HIP_ERROR("'%s' is not a valid HIT.\n", opt[index_of_hit]);
-		err = -1;
-		goto out_err;
-	} /* Check the IPv4 or IPV6 value. */
-	else if(inet_pton(AF_INET6, opt[index_of_ip], &ipv6) <= 0) {
+
+	if (!opp_mode) {
+	  /* Check the HIT value. */
+	  if(inet_pton(AF_INET6, opt[index_of_hit], &hit) <= 0) {
+	    HIP_ERROR("'%s' is not a valid HIT.\n", opt[index_of_hit]);
+	    err = -1;
+	    goto out_err;
+	  }
+	}
+	/* Check the IPv4 or IPV6 value. */
+
+	if(inet_pton(AF_INET6, opt[index_of_ip], &ipv6) <= 0) {
 		struct in_addr ipv4;
 		if(inet_pton(AF_INET, opt[index_of_ip], &ipv4) <= 0) {
 			HIP_ERROR("'%s' is not a valid IPv4 or IPv6 address.\n",
@@ -447,6 +463,7 @@ int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[],
 	} 
 
 	reg_types = malloc(number_of_regtypes * sizeof(uint8_t));
+
 	if(reg_types == NULL) {
 		err = -1;
 		HIP_ERROR("Unable to allocate memory for registration "\
@@ -496,9 +513,10 @@ int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[],
 		}
 	}
 		
-	HIP_IFEL(hip_build_param_contents(msg, &hit, HIP_PARAM_HIT,
-					  sizeof(in6_addr_t)), -1, 
-		 "Failed to build HIT parameter to hipconf user message.\n");
+	if (!opp_mode) 
+	  HIP_IFEL(hip_build_param_contents(msg, &hit, HIP_PARAM_HIT,
+					    sizeof(in6_addr_t)), -1, 
+		   "Failed to build HIT parameter to hipconf user message.\n");
 	
 	HIP_IFEL(hip_build_param_contents(msg, &ipv6, HIP_PARAM_IPV6_ADDR,
 					  sizeof(in6_addr_t)), -1,
