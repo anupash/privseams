@@ -282,6 +282,21 @@ int hip_get_pending_request_count(hip_ha_t *entry)
 	return request_count;
 }
 
+int hip_replace_pending_requests(hip_ha_t * entry_old, 
+				hip_ha_t * entry_new) {
+        hip_ll_node_t *iter = 0;
+	
+	while((iter = hip_ll_iterate(&pending_requests, iter)) != NULL) {
+		if(((hip_pending_request_t *)(iter->ptr))->entry
+		   == entry_old) {
+		  ((hip_pending_request_t *)(iter->ptr))->entry	= entry_new;
+		  return 0;
+		}
+	}
+
+	return -1;
+}
+
 int hip_handle_param_reg_info(hip_ha_t *entry, hip_common_t *source_msg,
 			      hip_common_t *target_msg)
 {
@@ -370,7 +385,7 @@ int hip_handle_param_reg_info(hip_ha_t *entry, hip_common_t *source_msg,
 #endif /* CONFIG_HIP_ESCROW */
 		case HIP_SERVICE_SAVAH:
 		        HIP_INFO("Responder offers savah service.\n");
-			
+			memcpy(sava_serving_gateway, &entry->hit_peer, sizeof(struct in6_addr));
 			hip_hadb_set_peer_controls(
 				entry, HIP_HA_CTRL_PEER_SAVAH_CAPABLE);
 		        break;

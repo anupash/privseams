@@ -370,7 +370,15 @@ int hip_receive_opp_r1(struct hip_common *msg,
 		 "hip_init_us failed\n");
 	/* old HA has state 2, new HA has state 1, so copy it */
 	entry->state = opp_entry->state;
+	/* For service registration routines */
+	entry->local_controls = opp_entry->local_controls;
+	entry->peer_controls = opp_entry->peer_controls;
 
+	HIP_IFEL(hip_replace_pending_requests(opp_entry, entry), -1, 
+		 "Error moving the pending requests to a new HA");
+
+	//memcpy(sava_serving_gateway, &msg->hits, sizeof(struct in6_addr));
+	
 	HIP_DEBUG_HIT("!!!! peer hit=", &msg->hits);
 	HIP_DEBUG_HIT("!!!! local hit=", &msg->hitr);
 	HIP_DEBUG_HIT("!!!! peer addr=", src_addr);
@@ -404,42 +412,47 @@ int hip_receive_opp_r1(struct hip_common *msg,
 	return err;
 }
 
-hip_ha_t * hip_opp_add_map(const struct in6_addr *src_ip,
-			   const struct in6_addr *dst_ip,
+hip_ha_t * hip_opp_add_map(const struct in6_addr *dst_ip,
 			   const struct in6_addr *hit_our) {
   int err = 0;
-  struct in6_addr opp_hit;
+  struct in6_addr opp_hit, src_ip;
   hip_ha_t *ha = NULL;
 
-  HIP_IFEL(hip_opportunistic_ipv6_to_hit(&dst_ip, &opp_hit,
+  HIP_DEBUG_INADDR("Peer's IP ", dst_ip);
+
+  HIP_IFEL(hip_select_source_address(&src_ip,
+				     dst_ip), -1,
+	   "Cannot find source address\n");
+
+  HIP_IFEL(hip_opportunistic_ipv6_to_hit(dst_ip, &opp_hit,
 					 HIP_HIT_TYPE_HASH100),
 	   -1, "Opp HIT conversion failed\n");
   
   HIP_ASSERT(hit_is_opportunistic_hashed_hit(&opp_hit)); 
   
   HIP_DEBUG_HIT("opportunistic hashed hit", &opp_hit);
-
-  if (hip_oppipdb_find_byip((struct in6_addr *)&dst_ip))
+  
+  if (hip_oppipdb_find_byip((struct in6_addr *)dst_ip))
     {      
       HIP_DEBUG("Old mapping exist \n");
 
-      HIP_IFEL(!(ha = hip_hadb_find_byhits(&hit_our, &opp_hit)), NULL,
+      HIP_IFEL(!(ha = hip_hadb_find_byhits(hit_our, &opp_hit)), NULL,
 	       "Did not find entry\n");
       goto out_err;
     }
   
   /* No previous contact, new host. Let's do the opportunistic magic */
+
+  err = hip_hadb_add_peer_info_complete(hit_our, &opp_hit, NULL, &src_ip, dst_ip);
   
-  err = hip_hadb_add_peer_info_complete(&hit_our, &opp_hit, NULL, &src_ip, &dst_ip);
-  
-  HIP_IFEL(!(ha = hip_hadb_find_byhits(&hit_our, &opp_hit)), NULL,
+  HIP_IFEL(!(ha = hip_hadb_find_byhits(hit_our, &opp_hit)), NULL,
 	   "Did not find entry\n");
   
   /* Override the receiving function */
   ha->hadb_rcv_func->hip_receive_r1 = hip_receive_opp_r1;
   
-  HIP_IFEL(hip_oppdb_add_entry(&opp_hit, &hit_our, &dst_ip, NULL,
-			       src_ip), NULL, "Add db failed\n");
+  HIP_IFEL(hip_oppdb_add_entry(&opp_hit, hit_our, dst_ip, NULL,
+			       &src_ip), NULL, "Add db failed\n");
   
   ha->tcp_opptcp_src_port = 0;
   ha->tcp_opptcp_dst_port = 0;
@@ -447,39 +460,6 @@ hip_ha_t * hip_opp_add_map(const struct in6_addr *src_ip,
  out_err:
 
   return ha;
-}
-
-int hip_send_opp_i1(const struct in6_addr *src_ip,
-		    const struct in6_addr *peer_ip,
-		    const struct in6_addr *local_hit){
-
-	struct hip_common *msg = NULL;
-	struct in6_addr *hit_recv = NULL;
-	hip_hit_t *ptr = NULL;
-	int err = 0;
-	int ret = 0;
-
-	HIP_IFE(!(msg = hip_msg_alloc()), -1);
-
-	HIP_IFEL(hip_build_param_contents(msg, (void *)(local_hit),
-					  HIP_PARAM_HIT_LOCAL,
-					  sizeof(struct in6_addr)),
-			-1, "build param HIP_PARAM_HIT  failed\n");
-
-	HIP_IFEL(hip_build_param_contents(msg, (void *)(peer_ip),
-					  HIP_PARAM_IPV6_ADDR_PEER,
-					  sizeof(struct in6_addr)),
-			-1, "build param HIP_PARAM_IPV6_ADDR failed\n");
-
-	/* build the message header */
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT, 0),
-		 -1, "build hdr failed\n");
-
-	err = hip_opp_get_peer_hit(msg, src_ip);
- out_err:
-	if(msg)
-		free(msg);
-	return err;
 }
 
 /**

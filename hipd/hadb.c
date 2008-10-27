@@ -368,7 +368,7 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	int err = 0, n=0;
 	hip_ha_t *entry = NULL, *aux = NULL;
 	hip_lsi_t local_lsi, lsi_aux;
-
+	HIP_DEBUG_INADDR("Local IP address ", local_addr);
 	hip_print_debug_info(local_addr, peer_addr,local_hit, peer_hit, peer_lsi);
 
 	entry = hip_hadb_find_byhits(local_hit, peer_hit);

@@ -650,6 +650,7 @@ hip_common_t * hip_sava_make_keys_request(const struct in6_addr * hit,
 					  int direction) {
   int err = 0;
   hip_common_t * msg = NULL;
+  HIP_DEBUG_HIT("SAVAH HIT ", hit);
   HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed.\n");
   memset(msg, 0, HIP_MAX_PACKET);
   
@@ -698,11 +699,14 @@ hip_sava_peer_info_t * hip_sava_get_key_params(hip_common_t * msg) {
 
   struct hip_crypto_key *auth_key = NULL;
   
-  peer_info = (hip_sava_peer_info_t *)malloc(sizeof(hip_sava_peer_info_t));
+  //peer_info = (hip_sava_peer_info_t *)malloc(sizeof(hip_sava_peer_info_t));
   
-  memset (peer_info, 0, sizeof(hip_sava_peer_info_t));
+  //memset (peer_info, 0, sizeof(hip_sava_peer_info_t));
   
   param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_KEYS);
+
+  if (param == NULL) 
+    return NULL;
 
   auth_key = (struct hip_crypto_key *) hip_get_param_contents_direct(param);
 
@@ -847,6 +851,8 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
   
   HIP_IFEL((sava_hit = hip_get_param_contents(msg,HIP_PARAM_HIT)) == NULL, DROP,
 	   "Failed to get SAVA HIT from the daemon \n");
+  
+  HIP_DEBUG_HIT("SAVAH HIT ", sava_hit);
   
   HIP_IFEL((msg = hip_sava_make_keys_request(sava_hit, SAVA_OUTBOUND_KEY)) == NULL, DROP,
 	   "Key request from daemon failed \n");

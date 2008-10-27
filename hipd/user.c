@@ -725,7 +725,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		   Cancellation is identified with a zero lifetime. */
 		struct hip_reg_request *reg_req = NULL;
 		hip_pending_request_t *pending_req = NULL;
-		struct in6_addr hit_local;
+		struct in6_addr * hit_local;
 		uint8_t *reg_types = NULL;
 		int i = 0, type_count = 0;
 		int opp_mode = 0;
@@ -776,9 +776,10 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		    goto out_err;
 		  }
 		} else {
-		  HIP_IFEL(hip_get_default_hit(&hit_local), -1, 
+		  hit_local = (struct in6_addr *)malloc(sizeof(struct in6_addr));
+		  HIP_IFEL(hip_get_default_hit(hit_local), -1, 
 			   "Error retrieving default HIT \n");
-		  entry = hip_opp_add_map(src, dst_ip, &hit_local);
+		  entry = hip_opp_add_map(dst_ip, hit_local);
 		}
 
 		reg_types  = reg_req->reg_type;
@@ -821,8 +822,8 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 				    (struct in6_addr *)malloc(sizeof(struct in6_addr));
 				  memset(sava_serving_gateway, 0, sizeof(struct in6_addr));
 				}
-				
-				memcpy(sava_serving_gateway, dst_hit, sizeof(struct in6_addr));
+				if (!opp_mode)
+				  memcpy(sava_serving_gateway, dst_hit, sizeof(struct in6_addr));
 
 				hip_set_sava_client_off();
 

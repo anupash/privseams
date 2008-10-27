@@ -405,7 +405,7 @@ int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[],
 		  index_of_hit = optc - 3;
 		  index_of_ip  = optc - 2;		 
 		} else {
-		  number_of_regtypes = optc - 3;
+		  number_of_regtypes = optc - 2;
 		  index_of_ip = optc - 2;
 		}
 
