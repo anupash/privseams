@@ -583,10 +583,14 @@ int opendht_read_response(int sockfd, char * answer)
  * @param dont_verify_hdrr if passed 0 HDRR sig and hostid verification is done, otherwise skipped 
  * @return integer -1 on error, on success 0
  */
-int hip_opendht_get_key(int (*value_handler)(unsigned char * packet,
-             void * answer),struct addrinfo * gateway, 
-            	  	const unsigned char * key, void * opaque_answer, int dont_verify_hdrr)
-{
+int hip_opendht_get_key(
+	int (*value_handler)(unsigned char * packet,
+			     void * answer),
+	struct addrinfo * gateway,
+	const unsigned char * key,
+	void * opaque_answer,
+	int dont_verify_hdrr){
+
 	int err = 0, sfd = -1;
 	char dht_response[HIP_MAX_PACKET];
 	char hostname[256];
@@ -614,7 +618,7 @@ int hip_opendht_get_key(int (*value_handler)(unsigned char * packet,
 	 */
 	host_addr = OPENDHT_GATEWAY;
 	_HIP_DEBUG("Host addresss %s\n", host_addr);
-	sfd = init_dht_gateway_socket(sfd);
+	sfd = init_dht_gateway_socket_gw(sfd, gateway);
  	HIP_IFEL((err = connect_dht_gateway(sfd, gateway, 1))
 			,-1,"OpenDHT connect error\n");  
 	memset(dht_response, '\0', sizeof(dht_response));
