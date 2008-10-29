@@ -588,7 +588,7 @@ int hip_find_address(char *fqdn_str, struct in6_addr *res){
 }
 
 /*this function returns the locator for the given HIT from opendht(lookup)*/
-int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *addr)
+int opendht_get_endpointinfo1(const char *node_hit, void *msg)
 {
 	int err = -1;
 	char dht_locator_last[1024];
@@ -596,11 +596,37 @@ int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *addr)
 	int locator_item_count = 0;
 	struct hip_locator_info_addr_item *locator_address_item = NULL;
 	struct in6_addr addr6;
-	struct hip_locator *locator;
-	char *dht_response = NULL;
+	struct hip_locator *locator ;
+	         
+	if (hip_opendht_inuse == SO_HIP_DHT_ON) {
+    	memset(dht_locator_last, '\0', sizeof(dht_locator_last));
+		HIP_IFEL(hip_opendht_get_key(&handle_hdrr_value, opendht_serving_gateway, node_hit, msg,1), -1, 
+			"DHT get in opendht_get_endpoint failed!\n"); 
+		inet_pton(AF_INET6, node_hit, &addr6.s6_addr) ; 
+		//HDRR verification 
+		HIP_IFEL(verify_hdrr((hip_common_t*)msg, &addr6), -1, "HDRR Signature and/or host id verification failed!\n");
+               
+		locator = hip_get_param((hip_common_t*)msg, HIP_PARAM_LOCATOR);
+		locator_item_count = hip_get_locator_addr_item_count(locator);
+		if (locator_item_count > 0)
+			err = 0;
+		}
+out_err:
+	return(err);
+}
 
-	HIP_IFE((!(dht_response = HIP_MALLOC(1000, 0))), -1);
-	memset(dht_response, 0, 1000);
+
+/*this function returns the locator for the given HIT from opendht(lookup)*/
+int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *addr)
+{
+	int err = -1;
+	char dht_locator_last[1024];
+	extern int hip_opendht_inuse;
+	int locator_item_count = 0;
+	struct hip_locator_info_addr_item *locator_address_item = NULL;
+	struct in6_addr addr6, result = {0};
+	struct hip_locator *locator;
+	char dht_response[1400] = {0};
 
 	if (hip_opendht_inuse == SO_HIP_DHT_ON) {
     		memset(dht_locator_last, '\0', sizeof(dht_locator_last));
@@ -609,9 +635,10 @@ int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *addr)
 					node_hit,
 					dht_response,
 					1),
-			 -1, "DHT get in opendht_get_endpoint failed!\n"); 
-		inet_pton(AF_INET6, node_hit, &addr6.s6_addr) ; 
-		/*HDRR verification */
+			 -1, "DHT get in opendht_get_endpoint failed!\n");
+		inet_pton(AF_INET6, node_hit, &addr6.s6_addr);
+/*
+		//HDRR verification 
 		HIP_IFEL(verify_hdrr((struct hip_common_t*)dht_response, &addr6),
 			 -1, "HDRR Signature and/or host id verification failed!\n");
                
@@ -619,8 +646,13 @@ int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *addr)
 		locator_item_count = hip_get_locator_addr_item_count(locator);
 		if (locator_item_count > 0)
 			err = 0;
-			hip_get_suitable_locator_address((struct hip_common *)dht_response, addr);
-		}
+HIP_DEBUG_IN6ADDR("RESULT 1", addr);
+//			hip_get_suitable_locator_address((struct hip_common *)dht_response, addr);
+HIP_DEBUG_IN6ADDR("RESULT 2", addr);
+*/
+hip_get_suitable_locator_address((struct hip_common *)dht_response, addr);
+	}
+
 out_err:
 	//if(dht_response)
 	//	free(dht_response);
@@ -676,16 +708,27 @@ int hip_map_id_to_addr(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *addr) {
 	}
 	
 	/* Try to resolve HIT to IPv4/IPv6 address with OpenDHT server */
-        if (hip_opendht_inuse == SO_HIP_DHT_ON) {   
+        if (hip_opendht_inuse == SO_HIP_DHT_ON) {
+		char hit_str[INET6_ADDRSTRLEN];    
+
+		memset(hit_str, 0, sizeof(hit_str));
+		hip_in6_ntop(&hit2, hit_str);
+HIP_DEBUG("### HIT STRING ### %s\n", (const char *)hit_str);
+                err = opendht_get_endpointinfo((const char *) hit_str, addr);
+HIP_DEBUG_IN6ADDR("### ADDR ###", addr);
+/*
 		char *hit_str = NULL;
-		HIP_IFE((!(hit_str = HIP_MALLOC(INET_ADDRSTRLEN, 0))), -1);
-		memset(hit_str, 0, INET_ADDRSTRLEN);
-		////memset(hit_str, 0, sizeof(hit_str));
-		////hip_in6_ntop(&hit2, hit_str);
-		hit_str =  hip_convert_hit_to_str(hit, NULL);
-		HIP_DEBUG("### HIT STRING ###\n", (const char *)hit_str);
+		//HIP_IFE((!(hit_str = HIP_MALLOC(INET6_ADDRSTRLEN, 0))), -1);
+		//memset(hit_str, 0, INET6_ADDRSTRLEN);
+
+		memset(hit_str, 0, sizeof(hit_str));
+		hip_in6_ntop(&hit2, hit_str);
+
+		//hit_str =  hip_convert_hit_to_str(hit, NULL);
+		HIP_DEBUG("### HIT STRING ### %s\n", (const char *)hit_str);
 
                 err = opendht_get_endpointinfo((const char *) hit_str, addr);
+*/
                 if (err)
 			HIP_DEBUG("Got IP for HIT from DHT err = \n", err);
         }

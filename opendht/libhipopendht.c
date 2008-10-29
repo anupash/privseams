@@ -542,7 +542,7 @@ int opendht_read_response(int sockfd, char * answer)
     char read_buffer[HIP_MAX_PACKET];
     char tmp_buffer[HIP_MAX_PACKET];
     struct in_addr ipv4;
-    struct in6_addr ipv6;
+    struct in6_addr ipv6 = {0};
 
     memset(read_buffer, '\0', sizeof(read_buffer));
     do
@@ -583,6 +583,11 @@ int opendht_read_response(int sockfd, char * answer)
  * @param dont_verify_hdrr if passed 0 HDRR sig and hostid verification is done, otherwise skipped 
  * @return integer -1 on error, on success 0
  */
+int hip_opendht_get_key(int (*value_handler)(unsigned char * packet,
+             void * answer),struct addrinfo * gateway, 
+                       const unsigned char * key, void * opaque_answer, int dont_verify_hdrr)
+{
+/*
 int hip_opendht_get_key(
 	int (*value_handler)(unsigned char * packet,
 			     void * answer),
@@ -590,15 +595,18 @@ int hip_opendht_get_key(
 	const unsigned char * key,
 	void * opaque_answer,
 	int dont_verify_hdrr){
-
+*/
 	int err = 0, sfd = -1;
-	char dht_response[HIP_MAX_PACKET];
+	//char dht_response[HIP_MAX_PACKET];
+	char dht_response[500];// = {'\0'};
+	//char dht_response[100];
 	char hostname[256];
 	char *host_addr = NULL;
 	struct hostent *hoste = NULL;
 	struct in6_addr hit_key; /* To convert DHT key (HIT) to in6_addr structure */
         
 	memset(hostname,'\0',sizeof(hostname));
+	memset(dht_response,'\0',sizeof(dht_response));
 	HIP_IFEL((gethostname(hostname, sizeof(hostname))),-1,"Error getting hostname\n");
 	HIP_IFEL(!(hoste = gethostbyname(hostname)),-1,
 		"Encountered an error when getting host address\n");
@@ -626,10 +634,10 @@ int hip_opendht_get_key(
 		-1, "Opendht_get error");
 	HIP_IFEL(opendht_read_response(sfd, dht_response), -1,"Opendht_read_response error\n"); 
 	_HIP_DUMP_MSG((struct hip_common *)dht_response);
-        
+
 	//Call the handler function , passed as a fuunction pointer
-	err = value_handler(dht_response, opaque_answer);
-       
+////	err = value_handler(dht_response, opaque_answer);
+
 	/*Check if we found the key from lokup service or not*/
 	HIP_IFEL((((struct hip_common *)dht_response)->payload_len == NULL),
 		 -1, "NULL response\n");
