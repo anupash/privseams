@@ -1485,7 +1485,7 @@ int hip_conf_handle_gw(hip_common_t *msg, int action, const char *opt[], int opt
     struct in6_addr ip_gw_mapped;
     struct addrinfo *new_gateway = NULL;
     struct hip_opendht_gw_info *gw_info;
-    char hostname[HOST_NAME_MAX];
+    char hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
 
     HIP_INFO("Resolving new gateway for openDHT %s\n", opt[0]);
 
@@ -1543,35 +1543,53 @@ out_err:
  * @return       zero on success, or negative error value on error.
  */
 int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int optc, int send_only){
-    int err = 0, ret = 0;
+    int err = 0, ret = 0, ret_HIT = 0, ret_HOSTNAME = 0;
     hip_hit_t hit = {0};
     struct in_addr  *reply_ipv4;
     struct in6_addr *reply_ipv6 = {0};
 	
     hip_tlv_type_t         param_type = 0;
     struct hip_tlv_common *current_param = NULL;
+    char hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
 
     HIP_INFO("Asking serving gateway info from daemon...\n");
 
+    memset(hostname, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX);
+
     //obtain the hit
     ret = inet_pton(AF_INET6, opt[0], &hit);
+    ret_HIT = 1;
     if(ret < 0 && errno == EAFNOSUPPORT){
 	HIP_PERROR("inet_pton: not a valid address family\n");
 	err = -EAFNOSUPPORT;
 	goto out_err;
     }else if(ret == 0){
-	HIP_ERROR("inet_pton: %s: not a valid network address\n", opt[0]);
-	err = -EINVAL;
-	goto out_err;
+	memcpy(hostname, opt[0], HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
+	hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX] = '\0';
+	ret_HIT = 0;
+	ret_HOSTNAME = 1;
     }
     ret = 0;
 
     //attach the hit into the message
-    err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
-				   sizeof(in6_addr_t));
-    if(err){
-	HIP_ERROR("build param hit failed: %s\n", strerror(err));
-	goto out_err;
+    if(ret_HIT){
+	err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
+					sizeof(in6_addr_t));
+	if(err){
+	    HIP_ERROR("build param hit failed: %s\n", strerror(err));
+	    goto out_err;
+	}
+    }
+
+    //attach the hostname into the message
+    if(ret_HOSTNAME){
+	err = hip_build_param_contents(msg, (void *) hostname,
+					HIP_PARAM_HOSTNAME,
+					HIP_HOST_ID_HOSTNAME_LEN_MAX);
+	if(err){
+	    HIP_ERROR("build param hostname failed: %s\n", strerror(err));
+	    goto out_err;
+	}
     }
 
     //Build a HIP message to get ip mapping

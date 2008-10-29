@@ -1472,20 +1472,30 @@ out_err:
  * hipconf dht get <HIT>
  */
 int hip_get_dht_mapping_for_HIT_msg(struct hip_common *msg){
-	int err = 0, socket, err_value = 0;
-	char ip_str[INET_ADDRSTRLEN], *hit_str = NULL;
-	hip_hit_t       *dst_hit = NULL;
+	int err = 0, socket, err_value = 0, ret_HIT = 0, ret_HOSTNAME = 0;
+	char ip_str[INET_ADDRSTRLEN], *hit_str = NULL, *hostname = NULL;
+	hip_hit_t *dst_hit = NULL;
+	char dht_response[1400] = {0};
+	hip_tlv_type_t param_type = 0;
+	struct hip_tlv_common *current_param = NULL;
 	extern struct addrinfo *opendht_serving_gateway;
 	extern struct addrinfo *opendht_serving_port;
-	char dht_response[1400] = {0};
 
 	HIP_DEBUG("\n");
-hip_dump_msg(msg);
-	//obtain the hit from the msg
-	dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
 
-	//convert hit to str
-	hit_str =  hip_convert_hit_to_str(dst_hit, NULL);
+	current_param = hip_get_next_param(msg, current_param);
+	param_type = hip_get_param_type(current_param);
+	if(param_type == HIP_PARAM_HOSTNAME){
+		ret_HOSTNAME = 1;
+		//get hostname
+		hostname = hip_get_param_contents(msg, HIP_PARAM_HOSTNAME);
+	}else if(param_type == HIP_PARAM_HIT){
+		ret_HIT = 1;
+    		//obtain the hit from the msg
+    		dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
+		//convert hit to str
+		hit_str =  hip_convert_hit_to_str(dst_hit, NULL);
+	}
 
 	//convert hw addr to str
 	inet_ntop(AF_INET,
@@ -1508,9 +1518,18 @@ hip_dump_msg(msg);
 
 	/* obtain value from dht gateway */
 	err = 0;
-	err = opendht_get(socket, (unsigned char *)hit_str,
+
+	if(ret_HIT){
+		err = opendht_get(socket, (unsigned char *)hit_str,
 			  (unsigned char *)ip_str, opendht_serving_gateway_port);
+	}
+	else if(ret_HOSTNAME){
+		err = opendht_get(socket, (unsigned char *)hostname,
+			  (unsigned char *)ip_str, opendht_serving_gateway_port);
+	}
+	//get response from dht server
 	err = opendht_read_response(socket, dht_response);
+
 	if(err != 0){
 		err_value = 2;
 		err = 0;
@@ -1518,7 +1537,7 @@ hip_dump_msg(msg);
 					 HIP_PARAM_INT, sizeof(int));
 		goto out_err;
 	}
-hip_dump_msg(msg);
+
 	//attach output to the msg back to hipconf
 	hip_attach_locator_addresses((struct hip_common *)dht_response, msg);
 
