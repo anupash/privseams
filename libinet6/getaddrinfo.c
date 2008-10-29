@@ -107,6 +107,7 @@ struct gaih_servtuple
   };
 
 static const struct gaih_servtuple nullserv;
+static int enable_hit_lookup = 1;
 
 /* Moved to util.h, used in getendpointinfo.c
 struct gaih_addrtuple
@@ -155,6 +156,14 @@ static const struct addrinfo default_hints =
 #endif
 
 int max_line_etc_hip = 500;
+
+void getaddrinfo_disable_hit_lookup(void) {
+  enable_hit_lookup = 0;
+}
+
+void getaddrinfo_enable_hit_lookup(void) {
+  enable_hit_lookup = 1;
+}
 
 static int addrconfig (sa_family_t af)
 {
@@ -465,6 +474,10 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 	FILE *fp = NULL;				
 	List list;
        
+	/* Fix to bug id 668 */
+	if (!enable_hit_lookup)
+	  goto out_err;
+
 	errno = 0;
 
 	/* Can't use the IFE macros here, since labe skip_dht is under label

@@ -283,30 +283,29 @@ static void delete_address_from_list(struct sockaddr *addr, int ifindex)
             memcpy(&addr_sin6, addr, sizeof(addr_sin6));
 	}       
 
-        HIP_DEBUG_HIT("Address to delete = ",hip_cast_sa_addr(&addr_sin6));
+        HIP_DEBUG_HIT("deleting_address=",hip_cast_sa_addr(&addr_sin6));
 
 	list_for_each_safe(item, tmp, addresses, i) {
             n = list_entry(item);
             deleted = 0;
             /* remove from list if if_index matches */
             if (!addr) {
-		    if (n->if_index == ifindex) {
-			    HIP_DEBUG_IN6ADDR("Deleting address",
+                if (n->if_index == ifindex) {
+			HIP_DEBUG_IN6ADDR("deleting address",
 					  hip_cast_sa_addr(&n->addr)); 
-			    list_del(n, addresses);
-			    deleted = 1;
-		    }
+                    list_del(n, addresses);
+                    deleted = 1;
+                }
             } else {
-		    /* remove from list if address matches */            
-		    _HIP_DEBUG_IN6ADDR("Address to compare",
+                /* remove from list if address matches */
+		    HIP_DEBUG_IN6ADDR("deleting address",
 				      hip_cast_sa_addr(&n->addr)); 
-		    if (ipv6_addr_cmp(hip_cast_sa_addr(&n->addr), 
-				      hip_cast_sa_addr(&addr_sin6)) == 0) {
-			HIP_DEBUG_IN6ADDR("Deleting address",
-					  hip_cast_sa_addr(&n->addr)); 
-			list_del(n, addresses);
-			deleted = 1;
-		    }
+            
+                if (ipv6_addr_cmp(hip_cast_sa_addr(&n->addr), 
+				  hip_cast_sa_addr(&addr_sin6)) == 0) {
+                    list_del(n, addresses);
+                    deleted = 1;
+                }
             }
             if (deleted)
                 address_count--;
@@ -1127,8 +1126,8 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 
 			/* Should be counted globally over all interfaces 
 			   because they might have addresses too --Samu BUGID 663 */
-			//i = count_if_addresses(ifa->ifa_index);
-			i = address_count;
+			i = count_if_addresses(ifa->ifa_index);
+			//i = address_count;
 			HIP_DEBUG("%d addr(s) in ifindex %d\n", i, ifa->ifa_index);
 
 			/* handle HIP readdressing */
