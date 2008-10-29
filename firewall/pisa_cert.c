@@ -10,56 +10,115 @@
  * Extract parts of a SPKI certificate.
  *
  * @param cert pointer to the certificate text or part of a certificate text
- * @param part pointer to the pattern we are looking for
- * @param result pointer to a buffer that the search result will be copied to
- * @param len size of the buffer result
- * @param just_content copy just the content without (<part> ...) if true
+ * @param name pointer to the pattern we are looking for
+ * @param r pointer to a buffer that the search result will be copied to
+ * @param size size of the buffer result
  * @return 0 on success
  */
-static int pisa_cert_get_part(char *cert, char *part, char *result, size_t len,
-			      int just_content)
+static char* pisa_cert_get_part(char *cert, char *name, char *r, size_t size)
 {
-	char *start, *end;
-	int parentheses = 1; /* the initial parenthesis */
+	int level = 0, len = 0;
+	char *p = cert, *start = NULL;
 
-	start = strstr(cert, part);
+	if (!r)
+		return NULL;
 
-	if (start == NULL || (!just_content && start == cert)) {
-		result[0] = '\0';
-		return -2;
-	}
-	end = start;
+	if (!cert)
+		goto out_err;
 
-	/* @todo: check if the assumed initial parenthesis is really there */
+	if (!name)
+		goto out_err;
 
-	while (parentheses > 0 && *end) {
-		if (*end == '(')
-			parentheses++;
-		else if (*end == ')')
-			parentheses--;
-		end++;
-	}
+	len = strlen(name);
+	if (len == 0)
+		goto out_err;
 
-	if (parentheses != 0) {
-		result[0] = '\0';
-		return -3;
-	}
-
-	if (just_content) {
-		start += strlen(part) + 2;
-		end--; /* skip closing ')' */
-	}
-
-	if (len < end - start + 1) {
-		strncpy(result, start - 1, len);
-		result[len-1] = '\0';
-		return -1;
+	while (*p) {
+		if (*p == '(') {
+			level++;
+			if (level == 2 && !strncmp(p+1, name, len)) {
+				if (*(p+len+1) == ' ') {
+					start = p++;
+					break;
+				}
+			}
+		}
+		if (*p == ')')
+			level--;
+		if (level == 0)
+			break;
+		p++;
 	}
 
-	strncpy(result, start - 1, end - start + 1);
-	result[end - start + 1] = '\0';
-	return 0;
-}	
+	if (!start)
+		goto out_err;
+
+	len = 0;
+
+	while (*p) {
+		if (*p == '(') 
+			level++;
+		if (*p == ')') {
+			level--;
+			if (level == 1) {
+				len = p - start + 1;
+				break;
+			}
+		}
+		if (level == 0)
+			break;
+		p++;
+	}
+
+	strncpy(r, start, len);
+	r[len] = '\0';
+	
+	return r;
+
+out_err:
+	r[0] = '\0';
+	return NULL;
+}
+
+/**
+ * Get the content from a SPKI certificate part.
+ *
+ * @param cert pointer to the certificate text or part of a certificate text
+ * @param name pointer to the pattern we are looking for
+ * @param r pointer to a buffer that the search result will be copied to
+ * @param size size of the buffer result
+ * @return 0 on success
+ */
+static void pisa_cert_get_content(char *cert, char *name, char *r, size_t size)
+{
+	char *start = cert;
+	int len = 0;
+
+	if (!r)
+		return;
+
+	if (!cert || !name || !*name == '(')
+		goto out_err;
+
+	if (strlen(name) + 3 > strlen(cert))
+		goto out_err;
+
+	if (strncmp(name, cert+1, strlen(name)))
+		goto out_err;
+	start = cert + strlen(name) + 2;
+
+	if (*start == '\0')
+		goto out_err;
+
+	len = strlen(start) - 1; 
+	if (*(start + len) != ')')
+		goto out_err;
+	strncpy(r, start, len);
+
+out_err:
+	r[len] = '\0';
+	return;
+}
 
 void pisa_split_cert(char *cert, struct pisa_cert *pc)
 {
@@ -67,21 +126,25 @@ void pisa_split_cert(char *cert, struct pisa_cert *pc)
 	char buffer1[224], buffer2[224];
 	struct in6_addr addr;
 
-	pisa_cert_get_part(cert, "not-before", buffer1, sizeof(buffer1), 1);
-	strptime(buffer1, "\"%Y-%m-%d_%H:%M:%S\"", &t);
+	pisa_cert_get_part(cert, "not-before", buffer1, sizeof(buffer1));
+	pisa_cert_get_content(buffer1, "not-before", buffer2, sizeof(buffer2));
+	strptime(buffer2, "\"%Y-%m-%d_%H:%M:%S\"", &t);
 	pc->not_before = mktime(&t);
 	
-	pisa_cert_get_part(cert, "not-after", buffer1, sizeof(buffer1), 1);
-	strptime(buffer1, "\"%Y-%m-%d_%H:%M:%S\"", &t);
+	pisa_cert_get_part(cert, "not-after", buffer1, sizeof(buffer1));
+	pisa_cert_get_content(buffer1, "not-after", buffer2, sizeof(buffer2));
+	strptime(buffer2, "\"%Y-%m-%d_%H:%M:%S\"", &t);
 	pc->not_after = mktime(&t);
 
-	pisa_cert_get_part(cert, "issuer", buffer1, sizeof(buffer1), 0);
-	pisa_cert_get_part(buffer1, "hash hit", buffer2, sizeof(buffer2), 1);
-	inet_pton(AF_INET6, buffer2, &addr);
+	pisa_cert_get_part(cert, "issuer", buffer1, sizeof(buffer1));
+	pisa_cert_get_part(buffer1, "hash hit", buffer2, sizeof(buffer2));
+	pisa_cert_get_content(buffer2, "hash hit", buffer1, sizeof(buffer1));
+	inet_pton(AF_INET6, buffer1, &addr);
 	memcpy(&pc->hit_issuer, &addr, sizeof(struct in6_addr));
 
-	pisa_cert_get_part(cert, "subject", buffer1, sizeof(buffer1), 0);
-	pisa_cert_get_part(buffer1, "hash hit", buffer2, sizeof(buffer2), 1);
-	inet_pton(AF_INET6, buffer2, &addr);
+	pisa_cert_get_part(cert, "subject", buffer1, sizeof(buffer1));
+	pisa_cert_get_part(buffer1, "hash hit", buffer2, sizeof(buffer2));
+	pisa_cert_get_content(buffer2, "hash hit", buffer1, sizeof(buffer1));
+	inet_pton(AF_INET6, buffer1, &addr);
 	memcpy(&pc->hit_subject, &addr, sizeof(struct in6_addr));
 }
