@@ -416,14 +416,11 @@ static int pisa_check_certificate(hip_fw_context_t *ctx)
 	HIP_DEBUG_HIT("issuer_hit", &pc.hit_issuer);
 	HIP_DEBUG_HIT("subject_hit", &pc.hit_subject);
 
-/* As our static certificate expired, this check would fail. So let's skip it
- * until we have a valid certificate again.*/
-#if 0
 	HIP_IFEL(now < pc.not_before, -1,
 		 "Certificate violates the not before condition.\n");
 	HIP_IFEL(now > pc.not_after, -1,
 		 "Certificate violates the not after condition.\n");
-#endif
+
 out_err:
 	if (buf)
 		free(buf);
