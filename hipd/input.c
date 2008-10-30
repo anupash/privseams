@@ -1600,7 +1600,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	HIP_IFEL(hip_verify_cookie(i2_saddr, i2_daddr, i2, solution), -EPROTO,
 		 "Cookie solution rejected. Dropping the I2 packet.\n");
 
-	if(entry->hip_is_hi3_on){
+	if(entry && entry->hip_is_hi3_on){
 		locator = hip_get_param(i2, HIP_PARAM_LOCATOR);
 		hip_do_i3_stuff_for_i2(locator, i2_info, i2_saddr, i2_daddr);
 	}
@@ -2320,7 +2320,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	extern int hip_icmp_interval;
 	extern int hip_icmp_sock;
 
-	if(entry->hip_is_hi3_on){
+	if(entry && entry->hip_is_hi3_on){
 		if(r2_info->hi3_in_use){
 			/* In hi3 real addresses should already be in entry, received on
 			   r1 phase. */
@@ -3303,7 +3303,7 @@ int handle_locator(struct hip_locator *locator,
                -1, "Malloc for entry->locators failed\n");
         memcpy(entry->locator, locator, loc_size);
 
-	if(entry->hip_is_hi3_on){
+	if(entry && entry->hip_is_hi3_on){
 		if( r1_info->hi3_in_use && n_addrs > 0 ){
 			first = (char*)locator+sizeof(struct hip_locator);
 			memcpy(r1_saddr, &first->address, sizeof(struct in6_addr));

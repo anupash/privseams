@@ -637,25 +637,21 @@ int opendht_get_endpointinfo(const char *node_hit, struct in6_addr *addr)
 					1),
 			 -1, "DHT get in opendht_get_endpoint failed!\n");
 		inet_pton(AF_INET6, node_hit, &addr6.s6_addr);
-/*
+
 		//HDRR verification 
 		HIP_IFEL(verify_hdrr((struct hip_common_t*)dht_response, &addr6),
 			 -1, "HDRR Signature and/or host id verification failed!\n");
-               
-		locator = hip_get_param((struct hip_common_t*)dht_response, HIP_PARAM_LOCATOR);
+
+		locator = hip_get_param((struct hip_common_t*)dht_response,
+					HIP_PARAM_LOCATOR);
 		locator_item_count = hip_get_locator_addr_item_count(locator);
 		if (locator_item_count > 0)
 			err = 0;
-HIP_DEBUG_IN6ADDR("RESULT 1", addr);
-//			hip_get_suitable_locator_address((struct hip_common *)dht_response, addr);
-HIP_DEBUG_IN6ADDR("RESULT 2", addr);
-*/
-hip_get_suitable_locator_address((struct hip_common *)dht_response, addr);
+			hip_get_suitable_locator_address(
+				(struct hip_common *)dht_response, addr);
 	}
 
 out_err:
-	//if(dht_response)
-	//	free(dht_response);
 	return(err);
 }
 
@@ -1527,7 +1523,8 @@ int hip_get_dht_mapping_for_HIT_msg(struct hip_common *msg){
 	HIP_DEBUG("\n");
 
 	current_param = hip_get_next_param(msg, current_param);
-	param_type = hip_get_param_type(current_param);
+	if(current_param)
+		param_type = hip_get_param_type(current_param);
 	if(param_type == HIP_PARAM_HOSTNAME){
 		ret_HOSTNAME = 1;
 		//get hostname

@@ -587,26 +587,13 @@ int hip_opendht_get_key(int (*value_handler)(unsigned char * packet,
              void * answer),struct addrinfo * gateway, 
                        const unsigned char * key, void * opaque_answer, int dont_verify_hdrr)
 {
-/*
-int hip_opendht_get_key(
-	int (*value_handler)(unsigned char * packet,
-			     void * answer),
-	struct addrinfo * gateway,
-	const unsigned char * key,
-	void * opaque_answer,
-	int dont_verify_hdrr){
-*/
 	int err = 0, sfd = -1;
-	//char dht_response[HIP_MAX_PACKET];
-	char dht_response[500];// = {'\0'};
-	//char dht_response[100];
 	char hostname[256];
 	char *host_addr = NULL;
 	struct hostent *hoste = NULL;
 	struct in6_addr hit_key; /* To convert DHT key (HIT) to in6_addr structure */
         
 	memset(hostname,'\0',sizeof(hostname));
-	memset(dht_response,'\0',sizeof(dht_response));
 	HIP_IFEL((gethostname(hostname, sizeof(hostname))),-1,"Error getting hostname\n");
 	HIP_IFEL(!(hoste = gethostbyname(hostname)),-1,
 		"Encountered an error when getting host address\n");
@@ -628,18 +615,17 @@ int hip_opendht_get_key(
 	_HIP_DEBUG("Host addresss %s\n", host_addr);
 	sfd = init_dht_gateway_socket_gw(sfd, gateway);
  	HIP_IFEL((err = connect_dht_gateway(sfd, gateway, 1))
-			,-1,"OpenDHT connect error\n");  
-	memset(dht_response, '\0', sizeof(dht_response));
+			,-1,"OpenDHT connect error\n");
 	HIP_IFEL((err = opendht_get(sfd, (unsigned char *)key, (unsigned char *)host_addr, OPENDHT_PORT)),
 		-1, "Opendht_get error");
-	HIP_IFEL(opendht_read_response(sfd, dht_response), -1,"Opendht_read_response error\n"); 
-	_HIP_DUMP_MSG((struct hip_common *)dht_response);
+	HIP_IFEL(opendht_read_response(sfd, opaque_answer), -1,"Opendht_read_response error\n"); 
+	_HIP_DUMP_MSG((struct hip_common *)opaque_answer);
 
 	//Call the handler function , passed as a fuunction pointer
 ////	err = value_handler(dht_response, opaque_answer);
 
 	/*Check if we found the key from lokup service or not*/
-	HIP_IFEL((((struct hip_common *)dht_response)->payload_len == NULL),
+	HIP_IFEL((((struct hip_common *)opaque_answer)->payload_len == NULL),
 		 -1, "NULL response\n");
 
 	/* Call the hdrr verification function, in case of hdrr
@@ -649,7 +635,7 @@ int hip_opendht_get_key(
 		_HIP_DEBUG("lookup is not for HDRR or " 
 			   "HDRR verification flag not set so skipping verification \n");
 	} else {
-		err = verify_hddr_lib ((struct hip_common *)dht_response,&hit_key);
+		err = verify_hddr_lib ((struct hip_common *)opaque_answer,&hit_key);
 		if (err != 0) {
 			/*HDRR verification failed*/
 			opaque_answer = NULL ;
