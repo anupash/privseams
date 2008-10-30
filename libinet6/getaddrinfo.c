@@ -464,7 +464,12 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 	struct hip_opendht_gw_info *gw_info = NULL;
 	FILE *fp = NULL;				
 	List list;
-	
+
+	hip_tlv_type_t         param_type = 0;
+	struct hip_tlv_common *current_param = NULL;
+	struct in6_addr *reply_ipv6 = {0};
+
+
 	/* Used for HDRR response */
    	 struct hip_common *hipcommonmsg;	/* hip common message to be sent to daemon*/
 	    struct hip_locator *locator;		/* To examine DHT response which contains locator in HDRR*/
@@ -493,22 +498,51 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
         ret_hit = -1;  
         ret_addr = -1;
         	
-	msg = (hip_common_t *) malloc(HIP_MAX_PACKET);
-	if(msg == NULL) {
-		HIP_ERROR("Error when allocating memory to a HIP message.\n");
-		err = -ENOMEM;
-		return err;
+	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed.\n");
+	memset(msg, 0, HIP_MAX_PACKET);
+
+//******************
+	err = hip_build_param_contents(msg, (void *) name,
+					HIP_PARAM_HOSTNAME,
+					HIP_HOST_ID_HOSTNAME_LEN_MAX);
+	if(err){
+	    HIP_ERROR("build param hostname failed: %s\n", strerror(err));
+	    goto out_err;
 	}
+//******************
+
         if(hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW, 0) != 0) {
 		HIP_ERROR("Error when building HIP daemon message header.\n");
 		return -EHIP;
 	}
-	
+
 	HIP_INFO("Asking serving Distributed Hash Table (DHT) gateway "\
-		 "information\nfrom the HIP daemon...\n"); 
+		 "information\nfrom the HIP daemon...\n");
+
+
+//******************
+    // Send the message to the daemon. Wait for reply
+////    HIP_IFE(hip_send_recv_daemon_info(msg), -ECOMM);
+hip_send_recv_daemon_info(msg);
+hip_dump_msg(msg);
+    // Loop through all the parameters in the message just filled.
+    while((current_param = hip_get_next_param(msg, current_param)) != NULL){
+	param_type = hip_get_param_type(current_param);
+	if(param_type == HIP_PARAM_SRC_ADDR){
+	    reply_ipv6 = (struct in6_addr *)hip_get_param_contents_direct(
+						current_param);
+
+	    HIP_DEBUG_IN6ADDR("Result IP ", reply_ipv6);
+	}else if(param_type == HIP_PARAM_INT){
+	    //TO DO, get int that indicates error 
+	    ret = *(int *)hip_get_param_contents_direct(current_param);
+	}
+    }
+//****************** 
 
 	/* Send a user message to the HIP daemon to receive OpenDHT server
 	   gateway whereabouts. */
+/*
         HIP_IFEL(((err = hip_send_recv_daemon_info(msg)) < 0), -1,
 		"Unable to receive DHT gateway information from the "\
 			  "HIP daemon.\nDo you have a local HIP daemon up and "\
@@ -521,8 +555,9 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 		errno = EPROTO;
 		return -EHIP;
 	}
-	
+/*	
         /* Check if DHT was on */
+/*
         if ((gw_info->ttl == 0) && (gw_info->port == 0)) {
                 HIP_INFO("Distributed hash table (DHT) is not in use.\n");
                 goto out_err;
@@ -535,10 +570,10 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
         HIP_IFEL((inet_ntop(AF_INET, &tmp_v4, tmp_ip_str,
                             sizeof(tmp_ip_str)) == NULL), 1, 
                  "Failed to convert gw addr to presentation format\n");		
-	
+*/
 	/* Check for IN_ADDR_ANY gateway. This happens for example on virtual
 	   machines. */	
-	HIP_IFEL(((tmp_v4.s_addr | INADDR_ANY) == 0), -1, 
+/*	HIP_IFEL(((tmp_v4.s_addr | INADDR_ANY) == 0), -1, 
                  "DHT gateway is 0.0.0.0. Skipping.\n");
 	
         HIP_INFO("DHT server is located at %s:%d with TTL %d.\n",
@@ -552,7 +587,14 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 	
         if (ret_hit == 0) {
                 HIP_INFO("HIT received from DHT: %s.\n", dht_response_hit);
-		}
+	}
+*/
+
+
+
+
+
+
         /*Getting HDRR from opendeht_get_key lookup so that its 
          * verification can be done and locators can be manipulated */
         if (ret_hit == 0 && (strlen((char *)dht_response_hit) > 1)) {
@@ -566,7 +608,7 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 					locator = hip_get_param(hipcommonmsg, HIP_PARAM_LOCATOR);
 					locator_item_count = hip_get_locator_addr_item_count(locator);
                 }
-		}
+	}
 	
 	
 	/* commenting some checks, for HDRR locators
@@ -614,6 +656,8 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
                         return 1;
                 }
         }
+
+
  out_err: 
 								
 	/* Open the file containing HIP hosts for reading. */
