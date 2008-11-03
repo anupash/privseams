@@ -12,6 +12,7 @@ HIP_HASHTABLE *sava_enc_ip_db = NULL;
 HIP_HASHTABLE *sava_conn_db = NULL;
 
 
+int ipv6_raw_raw_sock = 0;
 int ipv6_raw_tcp_sock = 0;
 int ipv6_raw_udp_sock = 0;
 int ipv4_raw_tcp_sock = 0;
@@ -613,6 +614,8 @@ int hip_sava_client_init_all() {
 	   -1, "error creating raw IPv6 socket \n");
   HIP_IFEL(hip_sava_init_ip4_raw_socket(&ipv4_raw_udp_sock, IPPROTO_TCP), 
 	   -1, "error creating raw IPv4 socket \n");
+  HIP_IFEL(hip_sava_init_ip6_raw_socket(&ipv6_raw_raw_sock, IPPROTO_RAW), 
+	   -1, "error creating raw IPv6 socket  IPPROTO_RAW \n");
  out_err:
   return err;
 }
@@ -920,7 +923,9 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
       if (protocol == IPPROTO_TCP) {
 	ip_raw_sock = ipv6_raw_tcp_sock;	  
       } else if (protocol == IPPROTO_UDP) {
-	ip_raw_sock = ipv4_raw_udp_sock;
+	ip_raw_sock = ipv6_raw_udp_sock;
+      } else {
+	ip_raw_sock = ipv6_raw_raw_sock;
       }
 
       buff_ip_opt = (char *) malloc(buff_len + 24); //24 extra bytes for our HBH option
