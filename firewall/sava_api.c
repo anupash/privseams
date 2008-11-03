@@ -875,8 +875,6 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
   
   if (ctx->ip_version == 6) { //IPv6
     
-    memcpy(&ip6hdr->ip6_src, (void *)enc_addr, sizeof(struct in6_addr));
-
     dst6->sin6_family = AF_INET6;    
     
     memcpy(&dst6->sin6_addr, &ctx->dst, sizeof(struct in6_addr));
@@ -973,6 +971,9 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
       buff_len += 24; // add 24 bytes of sava option
     }
 #else
+
+    memcpy(&ip6hdr->ip6_src, (void *)enc_addr, sizeof(struct in6_addr));
+
     //what about IPv6 Options
     tcp = (struct tcphdr *) (buff + 40); //sizeof ip6_hdr is 40
     udp = (struct udphdr *) (buff + 40); //sizeof ip6_hdr is 40
