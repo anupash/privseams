@@ -1305,6 +1305,14 @@ out_err:
 	return err;
 }
 
+int hip_select_default_router_address(struct in6_addr * addr) {
+  int err = 0;
+  HIP_DEBUG("Default router");
+  
+ out_err:
+  return err;
+}
+
 int hip_get_default_hit(struct in6_addr *hit)
 {
 	return hip_get_any_localhost_hit(hit, HIP_HI_RSA, 0);
