@@ -919,8 +919,10 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
     } else { //No HBH option found in the packet
 
       if (protocol == IPPROTO_TCP) {
+	HIP_DEBUG("Next protocol header is TCP \n");
 	ip_raw_sock = ipv6_raw_tcp_sock;	  
       } else if (protocol == IPPROTO_UDP) {
+	HIP_DEBUG("Next protocol header is UDP \n");
 	ip_raw_sock = ipv6_raw_udp_sock;
       } else {
 	ip_raw_sock = ipv6_raw_raw_sock;
