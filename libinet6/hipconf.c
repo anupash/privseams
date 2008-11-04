@@ -1754,7 +1754,7 @@ int hip_conf_handle_get_dnsproxy(hip_common_t *msg, int action, const char *opt[
     HIP_IFE((!(lsi_str = HIP_MALLOC(INET_ADDRSTRLEN, 0))), -1);
     memset(lsi_str, 0, INET_ADDRSTRLEN);
 
-    //initialize lsi string
+    //initialize hit string
     HIP_IFE((!(hit_str = HIP_MALLOC(INET6_ADDRSTRLEN, 0))), -1);
     memset(hit_str, 0, INET6_ADDRSTRLEN);
 
