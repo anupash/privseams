@@ -4,7 +4,7 @@
  * @author Miika Komu
  * @author Mika Kousa
  * @author Bing Zhou
- * @note   Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @note   Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  * @see    misc.h
  */
 #ifndef HIP_MISC_H
@@ -25,11 +25,19 @@
 #  include "hipconf.h"
 #endif /* CONFIG_HIP_LIBHIPTOOL */
 
+#ifndef HOST_NAME_MAX
+# define HOST_NAME_MAX 64
+#endif
+
 #define HOST_ID_FILENAME_MAX_LEN 256
 
 #define HIP_OPP_IP_DB_SIZE		16
 
 #define HIP_DEFAULT_EXEC_PATH "/sbin:/usr/sbin:/bin:/usr/bin:/usr/local/sbin:/usr/local/bin"
+
+#define HIP_ID_TYPE_HIT     1
+#define HIP_ID_TYPE_LSI     2
+#define HIP_ID_TYPE_LOCATOR 3
 
 typedef struct _hip_hosts_entry
 {
@@ -152,8 +160,6 @@ int hip_remove_lock_file(char *filename);
 void hip_addr_to_sockaddr(struct in6_addr *addr, struct sockaddr_storage *sa);
 
 uint64_t hip_solve_puzzle(void *puzzle, struct hip_common *hdr, int mode);
-hip_lsi_t *hip_get_lsi_peer_by_hits(struct in6_addr *hit_s, struct in6_addr *hit_r);
-
 int hip_create_lock_file(char *filename, int killold);
 
 /**
@@ -185,5 +191,24 @@ void hip_get_rsa_keylen(const struct hip_host_id *host_id, struct hip_rsa_keylen
 int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
                     struct in6_addr *src_lsi, struct in6_addr *dst_lsi,
                     struct in6_addr *src_ip, struct in6_addr *dst_ip);
+int hip_map_first_id_to_hostname_from_hosts(const struct hosts_file_line *entry,
+					    const void *arg,
+					    void *result);
+int hip_map_first_hostname_to_hit_from_hosts(const struct hosts_file_line *entry,
+					     const void *arg,
+					     void *result);
+int hip_map_first_hostname_to_lsi_from_hosts(const struct hosts_file_line *entry,
+					     const void *arg,
+					     void *result);
+int hip_map_first_hostname_to_ip_from_hosts(const struct hosts_file_line *entry,
+					    const void *arg,
+					    void *result);
+int hip_for_each_hosts_file_line(char *hosts_file,
+				 int (*func)(const struct hosts_file_line *line,
+					     const void *arg,
+					     void *result),
+				 void *arg, void *result);
+int hip_map_lsi_to_hit_from_hosts_files(hip_lsi_t *lsi, hip_hit_t *hit);
+int hip_map_id_to_ip_from_hosts_files(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *ip);
 
 #endif /* HIP_MISC_H */

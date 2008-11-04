@@ -28,8 +28,10 @@ endif
 #
 
 CFLAGS = $(hipl_common_cflags) # -L$(HIPL_LIBINET6_LIB)
+CFLAGS += $(OPTIMIZATIONS_CFLAGS)
+CFLAGS += $(GPROF_CFLAGS)
 INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
-  
+
 include_HEADERS = hipconftool.h
 
 
@@ -48,15 +50,20 @@ LDADD=
 #  LDADD += ../libopphip/.libs/libopphip.a
 #endif
 
-if HIP_OPENWRT
-LDADD += $(OPENWRT_LIB_STATIC)
-endif
-
 LDADD += ../libinet6/.libs/libinet6.a
 if HIP_CORPORATE
   LDADD += -lhiptool
 else
   LDADD += ../libhiptool/.libs/libhiptool.a
+endif
+
+if HIP_OPENWRT
+LDADD += $(OPENWRT_LIB_STATIC)
+else
+CFLAGS += -L$(HIPL_LIBINET6_LIB)
+LDADD += ../libinet6/.libs/libinet6.a
+LDADD += ../libhiptool/.libs/libhiptool.a
+INCLUDES += -I$(HIPL_LIBINET6_INCLUDE)
 endif
 
 LDADD += ../opendht/.libs/libhipopendht.a
@@ -73,8 +80,18 @@ hipconf_SOURCES = hipconftool.c
 $(HIPL_LIBINET6_LIB_STATIC):
 	$(MAKE) -C $(HIPL_LIBINET6)
 
+# Automake does not build the shell scripts without this
 dnshipproxy:
 	@sh gen-python-starter.sh $(pyexecdir)/dnshipproxy dnsproxy.py dnshipproxy
 
 parsehipkey:
+	@sh gen-python-starter.sh $(pyexecdir)/parsehipkey parse-key-3.py parsehipkey
+
+# This workaround forces automake to generate the scripts on each run. It is
+# necessary because otherwise "make rpm" target has the old $pyexecdir from
+# "make dist" and it refuses to build the scripts again.
+all-local:
+	@rm -f dnshipproxy
+	@rm -f parsehipkey
+	@sh gen-python-starter.sh $(pyexecdir)/dnshipproxy dnsproxy.py dnshipproxy
 	@sh gen-python-starter.sh $(pyexecdir)/parsehipkey parse-key-3.py parsehipkey

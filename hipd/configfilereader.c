@@ -2,9 +2,7 @@
  * This file defines an all-round configurationfilereader.
  * 
  * @author  Lauri Silvennoinen
- * @version 1.0
- * @date    14.02.2008
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  * @see     configfilereader.h for usage instructions.
  */
 #include "configfilereader.h"

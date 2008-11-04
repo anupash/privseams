@@ -7,8 +7,6 @@
  * Then it tries to verify it. If it succeeds everything should be OK :)
  *
  * @author Samu Varjonen
- * @version 0.1
- * @date 31.3.2008
  *
  */
 #include <sys/time.h>
@@ -174,7 +172,10 @@ int main(int argc, char *argv[])
 
         /* 
            Send the cert to the daemon for verification 
+           See also below about the verification function in libinet6
+           XXTODO convert this to use the library also, if this is really needed
         */
+        /*
         HIP_DEBUG("Sending the certificate to daemon for verification\n");
 
         HIP_IFEL(hip_cert_spki_send_to_verification(to_verification), -1,
@@ -183,6 +184,13 @@ int main(int argc, char *argv[])
                  "Verification was not successfull\n");
         HIP_DEBUG("Verification was successfull (return value %d)\n", 
                   to_verification->success);
+        */
+        /* Lets do the verification in library */
+        HIP_IFEL(hip_cert_spki_lib_verify(to_verification), -1,
+                 "Verification was not succesfull\n");
+        HIP_DEBUG("Verification was successfull (return value %d)\n", 
+                  to_verification->success);
+
 	goto out_err;
 	
 skip_spki:

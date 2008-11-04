@@ -7,8 +7,6 @@
  *   VV is what the function really does like sign etc.
  *
  * @author Samu Varjonen
- * @version 0.1
- * @date 12.5.2008
  *
  */
 #include "cert.h"
@@ -323,9 +321,14 @@ int hip_cert_spki_verify(struct hip_common * msg) {
         /* rules for regular expressions */
 
         /* 
-           Rule to get the info if we are using DSA or RSA
+           Rule to get the info if we are using DSA
         */
-        char algo_rule[] = "[d][s][a][-][p][k][c][s][1][-][s][h][a][1]";
+        char dsa_rule[] = "[d][s][a][-][p][k][c][s][1][-][s][h][a][1]";
+
+        /* 
+           Rule to get the info if we are using RSA
+        */
+        char rsa_rule[] = "[r][s][a][-][p][k][c][s][1][-][s][h][a][1]";
 
         /* 
            Rule to get DSA p
@@ -393,13 +396,24 @@ int hip_cert_spki_verify(struct hip_common * msg) {
                    "%s\n\n",cert->public_key); 
 
         /* check the algo DSA or RSA  */
+        HIP_DEBUG("Verifying\nRunning regexps to identify algo\n");
         start = stop = 0;
-        algo = hip_cert_regex(algo_rule, cert->public_key, &start, &stop);
-        if (algo == -1) 
-                algo = HIP_HI_RSA;
-        else 
+        algo = hip_cert_regex(dsa_rule, cert->public_key, &start, &stop);
+        if (algo != -1) {
+                HIP_DEBUG("Public-key is DSA\n");
                 algo = HIP_HI_DSA;
+                goto algo_check_done;
+        }
+        start = stop = 0;
+        algo = hip_cert_regex(rsa_rule, cert->public_key, &start, &stop);
+        if (algo != -1) { 
+                HIP_DEBUG("Public-key is RSA\n");
+                algo = HIP_HI_RSA;
+                goto algo_check_done;
+        }
+        HIP_DEBUG((1!=1), -1,"Unknown algorithm\n");
                
+ algo_check_done:               
         if (algo == HIP_HI_RSA) {
 
                 /* malloc space for new rsa */
@@ -584,7 +598,7 @@ int hip_cert_spki_verify(struct hip_common * msg) {
                 cert->success = err == 1 ? 0 : -1;
                 HIP_IFEL((err = err == 1 ? 0 : -1), -1, "RSA_verify error\n");
 
-        } else if (algo == HIP_HI_RSA) {
+        } else if (algo == HIP_HI_DSA) {
 
                 /* build the signature structure */
                 dsa_sig = DSA_SIG_new();
@@ -610,7 +624,7 @@ int hip_cert_spki_verify(struct hip_common * msg) {
                  "Failed to build cert_info\n");                 
 
         _HIP_DUMP_MSG(msg);
-        
+         
 out_err:
         if (signature_hash_b64) free(signature_hash_b64);
         if (signature_hash) free(signature_hash);

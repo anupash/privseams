@@ -3,6 +3,8 @@ AUTOMAKE_OPTIONS = foreign
 # Note: .. is included because libinet6/debug.h is included; otherwise this
 # won't build because there is also the linux/net/ipv6/hip/debug.h include.
 CFLAGS = $(hipl_common_cflags)
+CFLAGS += $(OPTIMIZATIONS_CFLAGS)
+CFLAGS += $(GPROF_CFLAGS)
 
 GTKLDADD   = `pkg-config gtk+-2.0 --libs`
 GTHREADLDADD  = `pkg-config --cflags --libs gthread-2.0`

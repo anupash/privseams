@@ -690,10 +690,15 @@ int hip_handle_opp_fallback(hip_opp_block_t *entry,
         }
 #endif
         if(!disable_fallback && (*now - HIP_OPP_WAIT > entry->creation_time)) {
+		hip_opp_info_t info;
+
+		memset(&info, 0, sizeof(info));
+		ipv6_addr_copy(&info.peer_addr, &entry->peer_ip);
+
                 addr = (struct in6_addr *) &entry->peer_ip;
                 hip_oppipdb_add_entry(addr);
                 HIP_DEBUG("Timeout for opp entry, falling back to\n");
-                err = hip_opp_unblock_app(&entry->caller, NULL, 0);
+                err = hip_opp_unblock_app(&entry->caller, &info, 0);
                 HIP_DEBUG("Fallback returned %d\n", err);
                 err = hip_oppdb_entry_clean_up(entry);
                 memset(&now,0,sizeof(now));

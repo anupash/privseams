@@ -273,6 +273,7 @@ int hip_payload_encrypt(unsigned char *in, uint8_t in_type, uint16_t in_len,
 	uint16_t alen = 0;
 	/* initialization vector */
 	uint16_t iv_len = 0;
+	// TODO make this a static allocation
 	unsigned char cbc_iv[16];
 	/* ESP tail information */
 	uint16_t pad_len = 0;
@@ -483,9 +484,11 @@ int hip_payload_decrypt(unsigned char *in, uint16_t in_len, unsigned char *out,
 	uint16_t alen = 0;
 	// authentication data
 	unsigned int hmac_md_len;
+	// TODO make this a static allocation
 	unsigned char hmac_md[EVP_MAX_MD_SIZE];
 	/* initialization vector */
 	uint16_t iv_len = 0;
+	// TODO directly use the iv in the packet buffer
 	unsigned char cbc_iv[16];
 	/* ESP tail information */
 	uint16_t pad_len = 0;
