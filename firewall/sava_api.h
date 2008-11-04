@@ -22,6 +22,8 @@
 #define SAVA_IPV6_OPTION_TYPE 193
 #define SAVA_IPV4_OPTION_TYPE 159
 
+#define IPPROTO_SAVAH         140
+
 typedef struct sava_tlv_padding {
   char type;
   char length;

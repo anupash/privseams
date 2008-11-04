@@ -835,10 +835,12 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
   if (ctx->ip_version == 6) { //IPv6
     ip6hdr = (struct ip6_hdr*) buff;
     protocol = ip6hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt; //get next header protocol type
-    if (protocol == 0) {
+    if (protocol == IPPROTO_SAVAH) {
       HIP_DEBUG("Packet contains IPv6 SAVA option. Allow packet \n");
       verdict = ACCEPT;
       goto out_err;
+    } else {
+      ip6hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt = IPPROTO_SAVAH;
     }
   } else {
     iphdr = (struct ip *)buff;
@@ -933,10 +935,10 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
       memset(buff_ip_opt, 0, buff_len + 24);
       
       ip6hbh_hdr = (struct ip6_hbh *) malloc(sizeof(struct ip6_hbh));
-      ip6hbh_hdr->ip6h_nxt = 0; // This next header type should be changed to something else, for instance, HIP_SAVAH 140 (if not reserved)
+      ip6hbh_hdr->ip6h_nxt = protocol; //we should have the same next header as it was previously
       ip6hbh_hdr->ip6h_len = 2; //96 bits of IPv6 address length + padding 32 bits (not including first 8 octets)
 
-      sava_ip6_opt = (struct sava_tlv_option *)malloc(sizeof(struct sava_tlv_option)); 
+      sava_ip6_opt = (struct sava_tlv_option *)malloc(sizeof(struct sava_tlv_option));
 
       sava_ip6_opt->type = SAVA_IPV6_OPTION_TYPE;
       sava_ip6_opt->action = 0;
@@ -1195,7 +1197,8 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
     }
   } else { //IPv6
     ip6hdr = (struct ip6_hdr*) buff;
-    HIP_ASSERT(ip6hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt != 0);
+    //HIP_ASSERT(ip6hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt != IPPROTO);
+    protocol = ip6hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt; 
     ip6hbh_hdr = (struct ip6_hbh *)buff + 40; //get the HBH header
     if (ip6hbh_hdr->ip6h_len == 2) { //we have exactly one SAVAH option that needs to be parsed and removed
       //sava_ip6_opt = (struct sava_tlv_option *)buff + 42;
@@ -1203,12 +1206,6 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
       enc_entry = hip_sava_enc_ip_entry_find(opt_addr);
       hdr_offset = 40;
       hdr_len = 24;
-    } else {
-      //More than one option detected
-      tmp_buff = buff + (40 + sizeof(ip6hbh_hdr));
-      for (;hdr_offset < ip6hbh_hdr->ip6h_len * 8;) {
-	
-      }
     }
   }
 #else 
