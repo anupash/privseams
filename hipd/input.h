@@ -9,7 +9,7 @@
  * @author  Bing Zhou
  * @author  Tobias Heer
  * @author  Samu Varjonen
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
 #ifndef HIP_INPUT_H
 #define HIP_INPUT_H
@@ -77,6 +77,8 @@ struct pseudo_header
 #ifdef CONFIG_HIP_HI3
 void hip_inbound(cl_trigger *t, void *data, void *ctx);
 #endif // CONFIG_HIP_HI3
+
+extern int hip_icmp_sock;
 
 /**
  * Gets name for a message type

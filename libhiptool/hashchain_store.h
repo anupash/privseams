@@ -23,15 +23,25 @@
 #define MAX_NUM_HASH_LENGTH		5
 // this includes the BEX-item
 #define MAX_NUM_HCHAIN_LENGTH	5
+// max number of hierarchies for which hchains can be linked
+#define MAX_NUM_HIERARCHIES		5
 /* max amount of hchains that can be stored per hchain_item
  *
  * @note we are using a list here, so we might also use some other
  *       mechanism to stop the hcstore_refill() */
 // TODO move this to esp_prot_api
-#define MAX_HCHAINS_PER_ITEM	5
+#define MAX_HCHAINS_PER_ITEM	2
 
-// determines when to refill a store
-#define ITEM_THRESHOLD 0.5
+#if 0
+#define MAX_HCHAINS_PER_ITEM	5
+#endif
+
+/* determines when to refill a store
+ *
+ * @note this is a reverse threshold -> 1 - never refill, 0 - always
+ */
+#define ITEM_THRESHOLD 1
+
 
 typedef struct hchain_shelf
 {
@@ -40,8 +50,10 @@ typedef struct hchain_shelf
 	int num_hchain_lengths;
 	/* the different hchain lengths */
 	int hchain_lengths[MAX_NUM_HCHAIN_LENGTH];
+	/* number of hierarchies in this shelf */
+	int num_hierarchies[MAX_NUM_HCHAIN_LENGTH];
 	/* hchains with the respective hchain length */
-	hip_ll_t hchains[MAX_NUM_HCHAIN_LENGTH];
+	hip_ll_t hchains[MAX_NUM_HCHAIN_LENGTH][MAX_NUM_HIERARCHIES];
 } hchain_shelf_t;
 
 typedef struct hchain_store
@@ -70,9 +82,11 @@ int hcstore_register_hash_length(hchain_store_t *hcstore, int function_id,
 		int hash_length);
 int hcstore_register_hchain_length(hchain_store_t *hcstore, int function_id,
 		int hash_length_id, int hchain_length);
+int hcstore_register_hchain_hierarchy(hchain_store_t *hcstore, int function_id,
+		int hash_length_id, int hchain_length, int addtional_hierarchies);
 int hcstore_refill(hchain_store_t *hcstore);
 hash_chain_t * hcstore_get_hchain(hchain_store_t *hcstore, int function_id,
-		int hash_length_id, int hchain_length);
+		int hash_length_id, int hchain_length, int hierarchy_level);
 hash_chain_t * hcstore_get_hchain_by_anchor(hchain_store_t *hcstore, int function_id,
 		int hash_length_id, unsigned char *anchor);
 hash_function_t hcstore_get_hash_function(hchain_store_t *hcstore, int function_id);

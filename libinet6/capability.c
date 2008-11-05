@@ -11,16 +11,38 @@
 
 #endif /* CONFIG_HIP_PRIVSEP */
 
+int hip_user_to_uid(char *name) {
+	int uid = -1, i;
+	struct passwd *pwp, pw;
+	char buf[4096];
+
+	setpwent();
+	while (1) {
+		i = getpwent_r(&pw, buf, sizeof(buf), &pwp);
+		if (i)
+			break;
+		_HIP_DEBUG("%s (%d)\tHOME %s\tSHELL %s\n", pwp->pw_name,
+			  pwp->pw_uid, pwp->pw_dir, pwp->pw_shell);
+		if (!strcmp(pwp->pw_name, name)) {
+			uid = pwp->pw_uid;
+			break;
+		}
+	}
+	endpwent();
+	return uid;
+}
+
 #ifdef CONFIG_HIP_OPENWRT
 
 /*
  * Note: this function does not go well with valgrind
  */
-int hip_set_lowcapability(int run_as_nobody) {
+int hip_set_lowcapability(int run_as_sudo) {
   int err = 0;
+  uid_t uid;
 #ifdef CONFIG_HIP_PRIVSEP
-  struct passwd *nobody_pswd;
-  uid_t ruid,euid;
+  //struct passwd *nobody_pswd;
+  //uid_t ruid,euid;
   capheader_t header;
   capdata_t data; 
 
@@ -34,7 +56,8 @@ int hip_set_lowcapability(int run_as_nobody) {
 
   HIP_DEBUG("Now PR_SET_KEEPCAPS=%d\n", prctl(PR_GET_KEEPCAPS));
 
-  HIP_IFEL(!(nobody_pswd = getpwnam(USER_NOBODY)), -1,
+  uid = hip_user_to_uid(USER_NOBODY);
+  HIP_IFEL((uid < 0), -1,
 	   "Error while retrieving USER 'nobody' uid\n"); 
 
   HIP_IFEL(capget(&header, &data), -1,
@@ -43,14 +66,15 @@ int hip_set_lowcapability(int run_as_nobody) {
   HIP_DEBUG("effective=%u, permitted = %u, inheritable=%u\n",
 	    data.effective, data.permitted, data.inheritable);
 
-  ruid=nobody_pswd->pw_uid; 
-  euid=nobody_pswd->pw_uid; 
+  //ruid=nobody_pswd->pw_uid; 
+  //euid=nobody_pswd->pw_uid;
+
   HIP_DEBUG("Before setreuid(,) UID=%d and EFF_UID=%d\n",
 	    getuid(), geteuid());
 
   /* openwrt code */
 
-  HIP_IFEL(setreuid(ruid,euid), -1, "setruid failed\n");
+  HIP_IFEL(setreuid(uid, uid), -1, "setruid failed\n");
 
   HIP_DEBUG("After setreuid(,) UID=%d and EFF_UID=%d\n",
 	    getuid(), geteuid());
@@ -88,53 +112,55 @@ int hip_set_lowcapability(int run_as_nobody) {
 /*
  * Note: this function does not go well with valgrind
  */
-int hip_set_lowcapability(int run_as_nobody) {
+int hip_set_lowcapability(int run_as_sudo) {
 	int err = 0;
+	uid_t uid;
 #ifdef CONFIG_HIP_PRIVSEP
 	cap_value_t cap_list[] = {CAP_NET_RAW, CAP_NET_ADMIN };
 	int ncap_list = 2; 
-	uid_t ruid,euid;
+	//uid_t ruid,euid;
 	cap_t cap_p;
 	char *cap_s;
 	char *name;
-	struct passwd *pswd = NULL;
-	struct passwd *hpswd = NULL;
+	//struct passwd *pswd = NULL;
+	//struct passwd *hpswd = NULL;
 
 	/* @todo: does this work when you start hipd as root (without sudo) */
          
-	if (run_as_nobody) {
-		/* Check if user "hipd" exists if it does use it otherwise use "nobody" */
-		hpswd = getpwnam(USER_HIPD);
-		name = ((hpswd == NULL) ? USER_NOBODY : USER_HIPD);
-		/* Chown files that daemon needs to write */
-		/*
-		if (hpswd != NULL) {
-			HIP_IFEL(chown("/etc/hip/test.txt", hpswd->pw_uid, hpswd->pw_gid),
-				 -1, "Failed to chown test file\n");
-		}
-		*/
-	} else
-		HIP_IFEL(!(name = getenv("SUDO_USER")), -1,
+	if (run_as_sudo) {
+ 		HIP_IFEL(!(name = getenv("SUDO_USER")), -1,
 			 "Failed to determine current username\n");
+	} else {
+		/* Check if user "hipd" exists if it does use it
+		   otherwise use "nobody" */
+		if (hip_user_to_uid(USER_HIPD) >= 0)
+			name = USER_HIPD;
+		else if (hip_user_to_uid(USER_NOBODY) >= 0)
+			name = USER_NOBODY;
+		else
+			HIP_IFEL(1, -1, "System does not have nobody account\n");
+	}
 
 	HIP_IFEL(prctl(PR_SET_KEEPCAPS, 1), -1, "prctl err\n");
 
 	HIP_DEBUG("Now PR_SET_KEEPCAPS=%d\n", prctl(PR_GET_KEEPCAPS));
 
-        HIP_IFEL(!(pswd = getpwnam(name)), -1,
+	uid = hip_user_to_uid(name);
+        HIP_IFEL((uid < 0), -1,
                  "Error while retrieving USER '%s' uid\n", name);
 
-	HIP_IFEL(!(cap_p = cap_get_proc()), -1, "Error getting capabilities\n");
+	HIP_IFEL(!(cap_p = cap_get_proc()), -1,
+		 "Error getting capabilities\n");
 	HIP_DEBUG("cap_p %s\n", cap_s = cap_to_text(cap_p, NULL));
 	cap_free(cap_s);
 
-	ruid=pswd->pw_uid;
-	euid=pswd->pw_uid;
+	//ruid = uid;
+	//euid = uid;
 
 	HIP_DEBUG("Before setreuid UID=%d and EFF_UID=%d\n",
 		  getuid(), geteuid());
 
-	HIP_IFEL(setreuid(ruid,euid), -1, "setruid failed\n");
+	HIP_IFEL(setreuid(uid,uid), -1, "setruid failed\n");
 
 	HIP_DEBUG("After setreuid UID=%d and EFF_UID=%d\n",
 		  getuid(), geteuid());

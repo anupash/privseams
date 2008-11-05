@@ -20,6 +20,12 @@
 #define HIP_TMP_FNAME_TEMPLATE "/tmp/hip_XXXXXX"
 #define HIP_TMP_FNAME_LEN strlen(HIP_TMP_FNAME_TEMPLATE)
 
+struct hosts_file_line {
+  char *hostname, *alias;
+  struct in6_addr id;
+  int lineno;
+};
+
 /* mktemp results to a compiler warning - or actually in a host of warnings
  * since this function is called from tens of places.
  * 
@@ -82,6 +88,15 @@ static int ipv6_addr_is_hit(const struct in6_addr *hit)
 	hit_begin = ntohl(hit_begin);
 	hit_begin &= HIP_HIT_TYPE_MASK_INV;
 	return (hit_begin == HIP_HIT_PREFIX);
+}
+
+static int ipv6_addr_is_teredo(const struct in6_addr *teredo)
+{
+	hip_closest_prefix_type_t teredo_begin;
+	memcpy(&teredo_begin, teredo, sizeof(hip_closest_prefix_type_t));
+	teredo_begin = ntohl(teredo_begin);
+	teredo_begin &= HIP_TEREDO_TYPE_MASK_INV;
+	return (teredo_begin == HIP_TEREDO_PREFIX);
 }
 
 struct hip_opp_blocking_request_entry

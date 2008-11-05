@@ -3,9 +3,7 @@
  * This file defines key escrow functionality for HIP.
  * 
  * @author  Anu Markkola
- * @version 1.0
- * @date    2006
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  * @note    Since the creation of this file, implementations of both the
  *          registration extension and UPDATE packet support have changed quite
  *          a lot. This extension has not been tested since 2006 and therefore

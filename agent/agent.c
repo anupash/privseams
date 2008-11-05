@@ -2,7 +2,7 @@
  *  HIP Agent
  *  
  * @author: Antti Partanen <aehparta@cc.hut.fi>
- * @note:   Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @note:   Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  * @note:   HIPU: use --disable-agent to get rid of the gtk and gthread dependencies
  */
 
@@ -91,7 +91,7 @@ int main(int argc, char *argv[])
 
 	/* Open socket to communicate with daemon, then drop from root to user */
 	HIP_IFE(connhipd_init_sock(), -1);
-	HIP_IFEL(hip_set_lowcapability(0), -1, "Failed to reduce priviledges\n");
+	HIP_IFEL(hip_set_lowcapability(1), -1, "Failed to reduce priviledges\n");
 
 	HIP_IFEL(str_var_init(), -1, "str_var_init() failed!\n");
 	/* Create config path. */
