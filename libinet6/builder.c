@@ -1016,7 +1016,11 @@ void hip_dump_msg(const struct hip_common *msg)
 
 /**
  * Returns a string for a given parameter type number.
+ * The returned string should be just the same as its type constant name.
  *
+ * @note If you added a SO_HIP_NEWMODE in libinet6/icomm.h, you also need to
+ *       add a case block for your SO_HIP_NEWMODE constant in the
+ *       switch(msg_type) block in this function.
  * @param msg_type message type number
  * @return         name of the message type
  **/
@@ -4192,4 +4196,5 @@ int hip_build_param_reg_from(struct hip_common *msg,
      return err;
 
 }
+
 

@@ -21,7 +21,12 @@
 #include "hipconf.h"
 #include "libhipopendht.h"
 
-/** A help string containing the usage of @c hipconf. */
+/**
+ * A help string containing the usage of @c hipconf.
+ *
+ * @note If you added a new action, do not forget to add a brief usage below
+ *       for the action.
+ */
 const char *hipconf_usage =
 #ifdef CONFIG_HIP_ESCROW
 "add|del escrow <hit>\n"
@@ -65,7 +70,7 @@ const char *hipconf_usage =
 "dht gw <IPv4|hostname> <port (OpenDHT default = 5851)> <TTL>\n"
 "dht get <fqdn/hit>\n"
 "dht set <name>\n"
-"locator on|off\n"
+"locator on|off|get\n"
 "debug all|medium|none\n"
 "restart daemon\n"
 "set tcptimeout on|off\n" /*added by Tao Wan*/
@@ -77,12 +82,17 @@ const char *hipconf_usage =
 #endif
 ;
 
-/** Function pointer array containing pointers to handler functions.
+/**
+ * Function pointer array containing pointers to handler functions.
+ * Add a handler function for your new action in the action_handler[] array.
+ * If you added a handler function here, do not forget to define that function
+ * somewhere in this source file.
+ *
  *  @note Keep the elements in the same order as the @c TYPE values are defined
  *        in hipconf.h because type values are used as @c action_handler array
- *        index.
+ *        index. Locations and order of these handlers are important.
  */
-int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc) =
+int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc, int send_only) =
 {
 	NULL, /* reserved */
 	hip_conf_handle_hi,
@@ -118,6 +128,14 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc) 
 /**
  * Maps symbolic hipconf action (=add/del) names into numeric action
  * identifiers.
+ *
+ * @note If you defined a constant ACTION_NEWACT in hipconf.h,
+ *       you also need to add a proper sentence in the strcmp() series,
+ *       like that:
+ *       ...
+ *       else if (!strcmp("newaction", text))
+ *           ret = ACTION_NEWACT;
+ *       ...
  *
  * @param  text the action as a string.
  * @return the numeric action id correspoding to the symbolic text.
@@ -181,6 +199,9 @@ int hip_conf_get_action(char *text)
 /**
  * Gets the minimum amount of arguments needed to be given to the action.
  *
+ * @note If you defined a constant ACTION_NEWACT in hipconf.h,
+ *       you also need to add a case block for the constant
+ *       here in the switch(action) block.
  * @param  action action type
  * @return how many arguments needs to be given at least
  */
@@ -292,7 +313,16 @@ int hip_conf_get_type(char *text,char *argv[]) {
      return ret;
 }
 
-/* What does this function do? */
+/**
+ * Get a type argument index, in argv[].
+ *
+ * @note If you defined a constant ACTION_NEWACT in hipconf.h,
+ *       you also need to add a case block for the constant
+ *       here in the switch(action) block.
+ * @param  integer value for an action
+ * @return an index for argv[], which indicates the type argument.
+ *         Usually either 1 or 2.
+ */
 int hip_conf_get_type_arg(int action)
 {
 	int type_arg = -1;
@@ -366,7 +396,7 @@ int hip_conf_get_type_arg(int action)
  *               to register to the server.
  */
 int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[],
-			   int optc)
+			   int optc, int send_only)
 {
 	hip_hit_t hit;
 	in6_addr_t ipv6;
@@ -539,7 +569,7 @@ int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[],
  * @return       zero on success, or negative error value on error.
  */
 int hip_conf_handle_hi(hip_common_t *msg, int action, const char *opt[],
-		       int optc)
+		       int optc, int send_only)
 {
 	int err = 0, anon = 0, use_default = 0, rsa_key_bits = 0;
 	int dsa_key_bits = 0;
@@ -551,7 +581,7 @@ int hip_conf_handle_hi(hip_common_t *msg, int action, const char *opt[],
 		HIP_IFEL((optc < 1), -1, "Missing arguments.\n");
 		HIP_IFEL((optc > 1), -1, "Too many arguments.\n");
 
-		return hip_get_hits(msg, opt[0]);
+		return hip_get_hits(msg, opt[0], 1, send_only);
 	} else if (action != ACTION_ADD && action != ACTION_NEW) {
 		HIP_ERROR("Only actions \"add\", \"new\", \"del\" and \"get\" "\
 			  "are supported for \"hi\".\n");
@@ -582,13 +612,15 @@ int hip_conf_handle_hi(hip_common_t *msg, int action, const char *opt[],
 		if (err = hip_serialize_host_id_action(msg, ACTION_ADD, 0, 1,
 						       "dsa", NULL, 0, 0))
 			goto out_err;
-		HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "Sending msg failed.\n");
+		HIP_IFEL(hip_send_daemon_info_wrapper(msg, send_only), -1,
+			 "Sending msg failed.\n");
 
 		hip_msg_init(msg);
 		if (err = hip_serialize_host_id_action(msg, ACTION_ADD, 1, 1,
 						       "rsa", NULL, 0, 0))
 			goto out_err;
-		HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "Sending msg failed.\n");
+		HIP_IFEL(hip_send_daemon_info_wrapper(msg, send_only), -1,
+			 "Sending msg failed.\n");
 
 		hip_msg_init(msg);
 		err = hip_serialize_host_id_action(msg, ACTION_ADD, 0, 1,
@@ -648,7 +680,7 @@ out_err:
  * @note         Does not support @c del action.
  */
 int hip_conf_handle_map(hip_common_t *msg, int action, const char *opt[],
-			int optc)
+			int optc, int send_only)
 {
      int err = 0;
      int ret;
@@ -719,7 +751,7 @@ int hip_conf_handle_map(hip_common_t *msg, int action, const char *opt[],
  * @return       zero on success, or negative error value on error.
  */
 int hip_conf_handle_hi_del(hip_common_t *msg, int action,
-			   const char *opt[], int optc)
+			   const char *opt[], int optc, int send_only)
 {
      int err = 0;
      int ret;
@@ -765,7 +797,7 @@ int hip_conf_handle_hi_del(hip_common_t *msg, int action,
  * @return       zero on success, or negative error value on error.
  */
 int hip_conf_handle_heartbeat(hip_common_t *msg, int action,
-			   const char *opt[], int optc)
+			   const char *opt[], int optc, int send_only)
 {
 	int err = 0, seconds = 0;
 	struct hip_heartbeat heartbeat;
@@ -788,7 +820,8 @@ int hip_conf_handle_heartbeat(hip_common_t *msg, int action,
      return err;
 }
 
-int hip_conf_handle_hi_del_all(hip_common_t *msg)
+int hip_conf_handle_hi_del_all(hip_common_t *msg, int action,
+			       const char *opt[], int optc, int send_only)
 {
     int err = 0;
     struct hip_tlv_common *param = NULL;
@@ -800,7 +833,8 @@ int hip_conf_handle_hi_del_all(hip_common_t *msg)
 
     HIP_IFEL(hip_build_user_hdr(msg_tmp, SO_HIP_GET_HITS, 0),
 				  -1, "Failed to build user message header\n");
-    HIP_IFEL(hip_send_recv_daemon_info(msg_tmp), -1, "Sending msg failed.\n");
+    HIP_IFEL(hip_send_daemon_info_wrapper(msg_tmp, send_only), -1,
+	     "Sending msg failed.\n");
 
     while((param = hip_get_next_param(msg_tmp, param)) != NULL) {
 
@@ -811,7 +845,8 @@ int hip_conf_handle_hi_del_all(hip_common_t *msg)
 
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DEL_LOCAL_HI, 0),
 		 -1, "Failed to build user message header\n");
-	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "Sending msg failed.\n");
+	HIP_IFEL(hip_send_daemon_info_wrapper(msg, send_only), -1,
+		 "Sending msg failed.\n");
 
 	hip_msg_init(msg);
 
@@ -841,7 +876,7 @@ int hip_conf_handle_hi_del_all(hip_common_t *msg)
  * @return       zero on success, or negative error value on error.
  */
 int hip_conf_handle_trans_order(hip_common_t *msg, int action,
-                                const char *opt[], int optc)
+                                const char *opt[], int optc, int send_only)
 {
 	int err = 0, ret = 0, transorder = 0, i = 0, k = 0;
 
@@ -899,7 +934,7 @@ int hip_conf_handle_trans_order(hip_common_t *msg, int action,
  * @return       zero on success, or negative error value on error.
  */
 int hip_conf_handle_rst(hip_common_t *msg, int action,
-			const char *opt[], int optc)
+			const char *opt[], int optc, int send_only)
 {
      int err;
      int ret;
@@ -955,7 +990,7 @@ int hip_conf_handle_rst(hip_common_t *msg, int action,
  * @return       zero on success, or negative error value on error.
  */
 int hip_conf_handle_debug(hip_common_t *msg, int action,
-			  const char *opt[], int optc)
+			  const char *opt[], int optc, int send_only)
 {
 
      int err = 0;
@@ -1001,7 +1036,7 @@ int hip_conf_handle_debug(hip_common_t *msg, int action,
  * @return       zero on success, or negative error value on error.
  */
 int hip_conf_handle_bos(hip_common_t *msg, int action,
-			const char *opt[], int optc)
+			const char *opt[], int optc, int send_only)
 {
      int err;
 
@@ -1037,7 +1072,7 @@ int hip_conf_handle_bos(hip_common_t *msg, int action,
  * @return       zero on success, or negative error value on error.
  */
 int hip_conf_handle_nat(hip_common_t *msg, int action,
-			const char *opt[], int optc)
+			const char *opt[], int optc, int send_only)
 {
      int err = 0;
      int status = 0;
@@ -1083,7 +1118,8 @@ int hip_conf_handle_nat(hip_common_t *msg, int action,
 	      "build param hit failed: %s\n", strerror(err));
 #endif
 
-     HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, "Failed to build user message header.: %s\n", strerror(err));
+     HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, 
+	      "Failed to build user message header.: %s\n", strerror(err));
 
  out_err:
      return err;
@@ -1091,7 +1127,9 @@ int hip_conf_handle_nat(hip_common_t *msg, int action,
 }
 
 /**
- * Handles the hipconf commands where the type is @c locator.
+ * Handles the hipconf commands where the type is @c locator. You can turn 
+ * locator sending in BEX on or query the set of local locators with this 
+ * function. 
  *
  * @param msg    a pointer to the buffer where the message for hipd will
  *               be written.
@@ -1102,19 +1140,31 @@ int hip_conf_handle_nat(hip_common_t *msg, int action,
  * @return       zero on success, or negative error value on error.
  */
 int hip_conf_handle_locator(hip_common_t *msg, int action,
-		   const char *opt[], int optc)
-{
+		   const char *opt[], int optc, int send_only) {
     int err = 0, status = 0;
+    struct hip_locator *locator = NULL;
 
-    if (!strcmp("on",opt[0])) {
-        status = SO_HIP_SET_LOCATOR_ON;
-    } else if (!strcmp("off",opt[0])) {
-        status = SO_HIP_SET_LOCATOR_OFF;
+    if (!strcmp("on", opt[0])) {
+	    status = SO_HIP_SET_LOCATOR_ON;
+    } else if (!strcmp("off", opt[0])) {
+	    status = SO_HIP_SET_LOCATOR_OFF;
+    } else if (!strcmp("get", opt[0])) {
+	    status = SO_HIP_LOCATOR_GET;
     } else {
         HIP_IFEL(1, -1, "bad args\n");
     }
-    HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, "Failed to build user message header.: %s\n", strerror(err));
-
+    HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, 
+	     "Failed to build user message header.: %s\n", strerror(err));
+    if (status == SO_HIP_LOCATOR_GET) {
+	    HIP_IFEL(hip_send_daemon_info_wrapper(msg, send_only), -1, 
+		     "Send recv daemon info failed\n");
+	    locator = hip_get_param(msg, HIP_PARAM_LOCATOR);
+	    if (locator) {
+		    hip_print_locator_addresses(msg);
+	    } else {
+		    HIP_DEBUG("No LOCATOR found from daemon msg\n");
+	    }
+    }
  out_err:
     return err;
 }
@@ -1131,7 +1181,7 @@ int hip_conf_handle_locator(hip_common_t *msg, int action,
  * @return       zero on success, or negative error value on error.
  */
 int hip_conf_handle_puzzle(hip_common_t *msg, int action,
-			   const char *opt[], int optc)
+			   const char *opt[], int optc, int send_only)
 {
      int err = 0, ret, msg_type, all;
      hip_hit_t hit = {0};
@@ -1230,7 +1280,7 @@ int hip_conf_handle_puzzle(hip_common_t *msg, int action,
  * @return       zero on success, or negative error value on error.
  */
 int hip_conf_handle_opp(hip_common_t *msg, int action,
-			const char *opt[], int optc)
+			const char *opt[], int optc, int send_only)
 {
      unsigned int oppmode = 0;
      int err = 0;
@@ -1274,7 +1324,7 @@ int hip_conf_handle_opp(hip_common_t *msg, int action,
 }
 
 int hip_conf_handle_blind(hip_common_t *msg, int action,
-			  const char *opt[], int optc)
+			  const char *opt[], int optc, int send_only)
 {
      int err = 0;
      int status = 0;
@@ -1312,7 +1362,7 @@ int hip_conf_handle_blind(hip_common_t *msg, int action,
      return err;
 }
 
-int hip_conf_handle_ttl(hip_common_t *msg, int action, const char *opt[], int optc)
+int hip_conf_handle_ttl(hip_common_t *msg, int action, const char *opt[], int optc, int send_only)
 {
 	int ret = 0;
 	HIP_INFO("Got to the DHT ttl handle for hipconf, NO FUNCTIONALITY YET\n");
@@ -1326,7 +1376,7 @@ int hip_conf_handle_ttl(hip_common_t *msg, int action, const char *opt[], int op
  *
  * @return       zero on success, or negative error value on error.
  */
-int hip_conf_handle_set(hip_common_t *msg, int action, const char *opt[], int optc)
+int hip_conf_handle_set(hip_common_t *msg, int action, const char *opt[], int optc, int send_only)
 {
     int err = 0;
     int len_name = 0;
@@ -1355,7 +1405,7 @@ int hip_conf_handle_set(hip_common_t *msg, int action, const char *opt[], int op
  *
  * @return       zero on success, or negative error value on error.
  */
-int hip_conf_handle_gw(hip_common_t *msg, int action, const char *opt[], int optc)
+int hip_conf_handle_gw(hip_common_t *msg, int action, const char *opt[], int optc, int send_only)
 {
         int err,out_err;
         int status = 0;
@@ -1423,7 +1473,7 @@ int hip_conf_handle_gw(hip_common_t *msg, int action, const char *opt[], int opt
  *
  * @return       zero on success, or negative error value on error.
  */
-int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int optc)
+int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int optc, int send_only)
 {
         int err = 0;
         char dht_response[1024];
@@ -1438,7 +1488,8 @@ int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int op
         HIP_INFO("Asking serving gateway info from daemon...\n");
         HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW,0),-1,
                  "Building daemon header failed\n");
-        HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "Send recv daemon info failed\n");
+        HIP_IFEL(hip_send_daemon_info_wrapper(msg, send_only), -1,
+		 "Send recv daemon info failed\n");
         HIP_IFEL(!(gw_info = hip_get_param(msg, HIP_PARAM_OPENDHT_GW_INFO)),-1,
                  "No gw struct found\n");
 
@@ -1471,7 +1522,7 @@ int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int op
  *
  * @return       zero on success, or negative error value on error.
  */
-int hip_conf_handle_dht_toggle(hip_common_t *msg, int action, const char *opt[], int optc)
+int hip_conf_handle_dht_toggle(hip_common_t *msg, int action, const char *opt[], int optc, int send_only)
 {
         int err = 0, status = 0;
 
@@ -1505,7 +1556,7 @@ int hip_conf_handle_dht_toggle(hip_common_t *msg, int action, const char *opt[],
  * @return       zero on success, or negative error value on error.
  */
 int hip_conf_handle_service(hip_common_t *msg, int action, const char *opt[],
-			    int optc)
+			    int optc, int send_only)
 {
 	int err = 0;
 
@@ -1570,7 +1621,7 @@ int hip_conf_handle_service(hip_common_t *msg, int action, const char *opt[],
 }
 
 int hip_conf_handle_run_normal(hip_common_t *msg, int action,
-			       const char *opt[], int optc)
+			       const char *opt[], int optc, int send_only)
 {
 	return hip_handle_exec_application(0, EXEC_LOADLIB_HIP, optc,
 					   (char **) &opt[0]);
@@ -1614,9 +1665,9 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
 	   array at index "type" with given commandline arguments.
 	   The functions build a hip_common message. */
 	if (argc == 3)
-		err = (*action_handler[type])(msg, action, (const char **)&argv[2], argc - 3);
+		err = (*action_handler[type])(msg, action, (const char **)&argv[2], argc - 3, send_only);
 	else
-		err = (*action_handler[type])(msg, action, (const char **)&argv[3], argc - 3);
+		err = (*action_handler[type])(msg, action, (const char **)&argv[3], argc - 3, send_only);
 
 	if(err != 0) {
 		HIP_ERROR("Failed to send a message to the HIP daemon.\n");
@@ -1626,12 +1677,6 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
 	/* hipconf new hi does not involve any messages to hipd */
 	if (hip_get_msg_type(msg) == 0)
 		goto out_err;
-	/* Tell hip daemon that this message is from agent. */
-	/* if (from_agent)
-	   {
-	   err = hip_build_param_contents(msg, NULL, HIP_PARAM_AGENT_SEND_THIS, 0);
-	   HIP_IFEL(err, -1, "Failed to add parameter to message!\n");
-	   }*/
 
 	/* Send message to hipd */
 	HIP_IFEL(hip_send_daemon_info_wrapper(msg, send_only), -1,
@@ -1644,10 +1689,13 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
 		free(msg);
 	}
 
+	if (err)
+		HIP_ERROR("(Check syntax for hipconf. Is hipd running or root privilege needed?)\n");
+
 	return err;
 }
 
-int hip_conf_handle_ha(hip_common_t *msg, int action,const char *opt[], int optc)
+int hip_conf_handle_ha(hip_common_t *msg, int action,const char *opt[], int optc, int send_only)
 {
      struct hip_tlv_common *current_param = NULL;
      int err = 0, state, ret;
@@ -1656,7 +1704,7 @@ int hip_conf_handle_ha(hip_common_t *msg, int action,const char *opt[], int optc
      HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0), -1,
 	      "Building of daemon header failed\n");
 
-     HIP_IFEL(hip_send_recv_daemon_info(msg), -1,
+     HIP_IFEL(hip_send_daemon_info_wrapper(msg, send_only), -1,
 	      "send recv daemon info\n");
 
      while((current_param = hip_get_next_param(msg, current_param)) != NULL) {
@@ -1698,7 +1746,7 @@ int hip_conf_print_info_ha(struct hip_hadb_user_info_state *ha)
         HIP_INFO_IN6ADDR(" Peer  IP", &ha->ip_peer);
 	if (ha->heartbeats_on > 0 && ha->state == HIP_STATE_ESTABLISHED) {
 		HIP_DEBUG(" Heartbeat %.3f ms mean RTT, "
-			  "%.3f ms variance,\n"
+			  "%.3f ms std dev,\n"
 			  " %d packets sent,"
 			  " %d packets received,"
 			  " %d packet lost\n",
@@ -1712,7 +1760,7 @@ int hip_conf_print_info_ha(struct hip_hadb_user_info_state *ha)
 
 }
 
-int hip_conf_handle_handoff(hip_common_t *msg, int action,const char *opt[], int optc)
+int hip_conf_handle_handoff(hip_common_t *msg, int action,const char *opt[], int optc, int send_only)
 {
      int err=0;
 
@@ -1728,7 +1776,8 @@ int hip_conf_handle_handoff(hip_common_t *msg, int action,const char *opt[], int
 	  HIP_INFO("handoff mode set to lazy successfully\n");
      }
 
-     HIP_IFEL(hip_send_recv_daemon_info(msg), -1,"send recv daemon info\n");
+     HIP_IFEL(hip_send_daemon_info_wrapper(msg, send_only), -1,
+	      "send recv daemon info\n");
 
  out_err:
      memset(msg, 0, HIP_MAX_PACKET);
@@ -1736,7 +1785,7 @@ int hip_conf_handle_handoff(hip_common_t *msg, int action,const char *opt[], int
      return err;
 }
 
-int hip_get_hits(hip_common_t *msg, char *opt)
+int hip_get_hits(hip_common_t *msg, char *opt, int optc, int send_only)
 {
 	int err = 0;
 	struct hip_tlv_common *current_param = NULL;
@@ -1751,7 +1800,7 @@ int hip_get_hits(hip_common_t *msg, char *opt)
 		HIP_IFE(hip_build_user_hdr(msg, SO_HIP_GET_HITS, 0), -1);
 		/* Send the message to the daemon. The daemon fills the
 		   message. */
-		HIP_IFE(hip_send_recv_daemon_info(msg), -ECOMM);
+		HIP_IFE(hip_send_daemon_info_wrapper(msg, send_only), -ECOMM);
 
 		/* Loop through all the parameters in the message just filled. */
 		while((current_param =
@@ -1801,7 +1850,7 @@ int hip_get_hits(hip_common_t *msg, char *opt)
 		HIP_IFE(hip_build_user_hdr(msg, SO_HIP_DEFAULT_HIT, 0), -1);
 		/* Send the message to the daemon. The daemon fills the
 		   message. */
-		HIP_IFE(hip_send_recv_daemon_info(msg), -ECOMM);
+		HIP_IFE(hip_send_daemon_info_wrapper(msg, send_only), -ECOMM);
 
 		/* Loop through all the parameters in the message just filled. */
 		while((current_param =
@@ -1995,7 +2044,7 @@ out_err:
  * Send restart request to HIP daemon.
  */
 int hip_conf_handle_restart(hip_common_t *msg, int type, const char *opt[],
-			    int optc)
+			    int optc, int send_only)
 {
 	int err = 0;
 
@@ -2007,7 +2056,7 @@ int hip_conf_handle_restart(hip_common_t *msg, int type, const char *opt[],
 }
 
 int hip_conf_handle_opptcp(hip_common_t *msg, int action, const char *opt[],
-			   int optc)
+			   int optc, int send_only)
 {
     int err = 0, status = 0;
 
@@ -2041,7 +2090,7 @@ int hip_conf_handle_opptcp(hip_common_t *msg, int action, const char *opt[],
  * */
 
 int hip_conf_handle_tcptimeout(struct hip_common *msg, int action,
-                   const char *opt[], int optc)
+                   const char *opt[], int optc, int send_only)
 {
 
    int err = 0, status = 0;
@@ -2069,7 +2118,7 @@ int hip_conf_handle_tcptimeout(struct hip_common *msg, int action,
  *
  * @return       zero on success, or negative error value on error.
  */
-int hip_conf_handle_hipproxy(struct hip_common *msg, int action, const char *opt[], int optc)
+int hip_conf_handle_hipproxy(struct hip_common *msg, int action, const char *opt[], int optc, int send_only)
 {
         int err = 0, status = 0;
  		HIP_DEBUG("hip_conf_handle_hipproxy()\n");
