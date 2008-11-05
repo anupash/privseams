@@ -671,6 +671,10 @@ int hip_receive_control_packet(struct hip_common *msg,
 		HIP_IFCS(entry, err = entry->hadb_rcv_func->
 			 hip_receive_close_ack(msg, entry));
 		break;
+	case HIP_LUPDATE:
+		HIP_IFCS(entry, err = esp_prot_receive_light_update(msg, src_addr, dst_addr,
+				entry));
+		break;
 
 	default:
 		HIP_ERROR("Unknown packet %d\n", type);

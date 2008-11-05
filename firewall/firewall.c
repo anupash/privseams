@@ -1203,6 +1203,8 @@ int filter_hip(const struct in6_addr * ip6_src,
 			HIP_DEBUG("packet type: UPDATE\n");
 		else if (buf->type_hdr == HIP_NOTIFY)
 			HIP_DEBUG("packet type: NOTIFY\n");
+		else if (buf->type_hdr == HIP_LUPDATE)
+			HIP_DEBUG("packet type: LIGHT UPDATE\n");
 		else
 			HIP_DEBUG("packet type: UNKNOWN\n");
 
@@ -1219,7 +1221,7 @@ int filter_hip(const struct in6_addr * ip6_src,
 				match = 0;
 			}
 		}
-		
+
 		// check dst_hit if defined in rule
 		if(match && rule->dst_hit) {
 			HIP_DEBUG("dst_hit\n");
@@ -1269,7 +1271,7 @@ int filter_hip(const struct in6_addr * ip6_src,
 			{
 				match = 0;
 			}
-			
+
 			HIP_DEBUG("out_if rule: %s, packet: %s, boolean: %d, match: %d \n",
 				  rule->out_if->value, out_if, rule->out_if->boolean, match);
 	  	}
@@ -1392,26 +1394,26 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 	  else
 	    verdict = !hip_fw_userspace_ipsec_output(ctx);
 	} else if(ctx->ip_version == 4) {
-	  hip_lsi_t src_lsi, dst_lsi;
-	  
-	  IPV6_TO_IPV4_MAP(&(ctx->src), &src_lsi);
-	  IPV6_TO_IPV4_MAP(&(ctx->dst), &dst_lsi);
-	  
-	  /* LSI HOOKS */
-	  if (IS_LSI32(dst_lsi.s_addr) && hip_lsi_support) {
-	    if (hip_is_packet_lsi_reinjection(&dst_lsi)) {
-	      verdict = 1;
-	    } else {
-	      hip_fw_handle_outgoing_lsi(ctx->ipq_packet,
-					 &src_lsi, &dst_lsi);
-	      verdict = 0; /* Reject the packet */
-	    }
-	  } else if (hip_opptcp && (ctx->ip_hdr.ipv4)->ip_p == 6 && 
-		     tcp_packet_has_i1_option(hdrBytes, 4*tcphdr->doff)){
-	    verdict = 1;
-	  } else if (system_based_opp_mode) {
-	    verdict = hip_fw_handle_outgoing_system_based_opp(ctx);
-	  }
+		hip_lsi_t src_lsi, dst_lsi;
+
+		IPV6_TO_IPV4_MAP(&(ctx->src), &src_lsi);
+		IPV6_TO_IPV4_MAP(&(ctx->dst), &dst_lsi);
+
+		/* LSI HOOKS */
+		if (IS_LSI32(dst_lsi.s_addr) && hip_lsi_support) {
+			if (hip_is_packet_lsi_reinjection(&dst_lsi)) {
+				verdict = 1;
+			} else {
+				hip_fw_handle_outgoing_lsi(ctx->ipq_packet,
+							   &src_lsi, &dst_lsi);
+				verdict = 0; /* Reject the packet */
+			}
+		} else if (hip_opptcp && (ctx->ip_hdr.ipv4)->ip_p == 6 &&
+			   tcp_packet_has_i1_option(hdrBytes, 4*tcphdr->doff)){
+				verdict = 1;
+		} else if (system_based_opp_mode) {
+			   verdict = hip_fw_handle_outgoing_system_based_opp(ctx);
+		}
 	}
 
 	/* No need to check default rules as it is handled by the
