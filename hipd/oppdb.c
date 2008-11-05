@@ -223,6 +223,8 @@ int hip_opp_unblock_app(const struct sockaddr_in6 *app_id, hip_opp_info_t *opp_i
 	struct hip_common *message = NULL;
 	int err = 0, n;
 
+	HIP_IFEL((app_id->sin6_port == 0), 0, "Zero port, ignore\n");
+
 	HIP_IFE(!(message = hip_msg_alloc()), -1);
 	HIP_IFEL(hip_build_user_hdr(message, SO_HIP_SET_PEER_HIT, 0), -1,
 		 "build user header failed\n");

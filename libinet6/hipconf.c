@@ -56,8 +56,8 @@ const char *hipconf_usage =
 "\tadd|del service escrow|rvs|relay\n"
 "\treinit service rvs|relay\n"
 "Client side:\n"
-"\tadd server rvs|relay|escrow <HIT> <IP address> <lifetime in seconds>\n"
-"\tdel server rvs|relay|escrow <HIT> <IP address>\n"
+"\tadd server rvs|relay|escrow [HIT] <IP address> <lifetime in seconds>\n"
+"\tdel server rvs|relay|escrow [HIT] <IP address>\n"
 #ifdef CONFIG_HIP_BLIND
 "set blind on|off\n"
 #endif
