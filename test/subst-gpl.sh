@@ -1,8 +1,8 @@
 #!/bin/sh
 
 TMPDIR=/tmp/subst-gpl
-FROM='GNU\/GPL'
-TO="MIT for InfraHIP industrial partners, for others GPL"
+FROM='http:\/\/www\.gnu\.org\/licenses\/gpl\.txt'
+TO='http:\/\/www\.gnu\.org\/licenses\/gpl2\.txt'
 DIR=..
 TMPFILE=temp
 

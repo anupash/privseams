@@ -2013,7 +2013,7 @@ int main(int argc, char **argv){
 		      sizeof(sock_addr)), -1, "Bind on firewall socket addr failed\n");
 
 	if (limit_capabilities) {
-		HIP_IFEL(hip_set_lowcapability(1), -1, "Failed to reduce priviledges");
+		HIP_IFEL(hip_set_lowcapability(0), -1, "Failed to reduce priviledges");
 	}
 
 	//init_timeout_checking(timeout);

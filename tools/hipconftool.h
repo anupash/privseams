@@ -9,7 +9,7 @@
  * @author  Bing Zhou <bingzhou_cc.hut.fi>
  * @author  Anu Markkola
  * @author  Lauri Silvennoinen
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  */
 #ifndef HIPCONFTOOL_H
 #define HIPCONFTOOL_H

@@ -5,14 +5,12 @@
  * file.
  * 
  * @author  Lauri Silvennoinen
- * @version 1.1
- * @date    31.03.2008
  * @note    Related RFC: <a href="http://www.rfc-editor.org/rfc/rfc5204.txt">
  *          Host Identity Protocol (HIP) Rendezvous Extension</a>
  * @note    Related draft:
  *          <a href="http://www.ietf.org/internet-drafts/draft-ietf-hip-nat-traversal-03.txt">
  *          draft-ietf-hip-nat-traversal-03</a>
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  * @see     hiprelay.h
  */ 
 #include "hiprelay.h"

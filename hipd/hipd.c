@@ -2,7 +2,7 @@
  * The HIPL main file containing the daemon main loop.
  *
  * @date 28.01.2008
- * @note Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @note Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  * @note HIPU: libm.a is not availble on OS X. The functions are present in libSystem.dyld, though
  * @note HIPU: lcap is used by HIPD. It needs to be changed to generic posix functions.
  */
@@ -58,8 +58,11 @@ int hip_agent_status = 0;
 struct sockaddr_in6 hip_firewall_addr;
 int hip_firewall_sock = 0;
 
-/* used to change the transform order see hipconf usage to see the usage */
-int hip_transform_order = 0;
+/* used to change the transform order see hipconf usage to see the usage 
+   This is set to AES, 3DES, NULL by default see hipconf trasform order for
+   more information.
+*/
+int hip_transform_order = 123;
 
 /* OpenDHT related variables */
 int hip_opendht_sock_fqdn = -1; /* FQDN->HIT mapping */
