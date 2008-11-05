@@ -739,6 +739,78 @@ out_err:
 
 }
 
+int hip_firewall_set_i2_data(int action,  hip_ha_t *entry, 
+			     struct in6_addr *hit_s, 
+			     struct in6_addr *hit_r,
+			     struct in6_addr *src,
+			     struct in6_addr *dst) {
+
+        struct hip_common *msg = NULL;
+	struct sockaddr_in6 hip_firewall_addr;
+	int err = 0, n = 0;
+	HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
+	hip_msg_init(msg);
+	HIP_IFEL(hip_build_user_hdr(msg, action, 0), -1, 
+                 "Build hdr failed\n");
+	            
+        HIP_IFEL(hip_build_param_contents(msg, (void *)hit_r, HIP_PARAM_HIT,
+                 sizeof(struct in6_addr)), -1, "build param contents failed\n");
+	HIP_IFEL(hip_build_param_contents(msg, (void *)src, HIP_PARAM_HIT,
+                 sizeof(struct in6_addr)), -1, "build param contents failed\n");
+	
+	socklen_t alen = sizeof(hip_firewall_addr);
+
+	bzero(&hip_firewall_addr, alen);
+	hip_firewall_addr.sin6_family = AF_INET6;
+	hip_firewall_addr.sin6_port = htons(HIP_FIREWALL_PORT);
+	hip_firewall_addr.sin6_addr = in6addr_loopback;
+
+	//	if (hip_get_firewall_status()) {
+	n = sendto(hip_firewall_sock_lsi_fd, msg, hip_get_msg_total_len(msg),
+		   0, &hip_firewall_addr, alen);
+		//}
+
+	if (n < 0)
+	  HIP_DEBUG("Send to firewall failed str errno %s\n",strerror(errno));
+	HIP_IFEL( n < 0, -1, "Sendto firewall failed.\n");   
+
+	HIP_DEBUG("Sendto firewall OK.\n");
+
+out_err:
+	if (msg)
+		free(msg);
+
+	return err;
+}
+
+int hip_firewall_set_savah_status(int status) {
+  int n, err;
+  struct sockaddr_in6 sock_addr;
+  struct hip_common *msg = NULL;
+  bzero(&sock_addr, sizeof(sock_addr));
+  sock_addr.sin6_family = AF_INET6;
+  sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
+  sock_addr.sin6_addr = in6addr_loopback;
+
+  HIP_IFEL(!(msg = HIP_MALLOC(HIP_MAX_PACKET, 0)), -1, "alloc\n");
+  hip_msg_init(msg);
+    
+  memset(msg, 0, sizeof(struct hip_common));
+    
+  hip_build_user_hdr(msg, status, 0);
+  
+  n = hip_sendto_user(msg, &sock_addr);
+  
+  HIP_IFEL(n < 0, 0, "sendto() failed\n");
+  
+  if (err == 0)
+    {
+      HIP_DEBUG("SEND SAVAH SERVER STATUS OK.\n");
+    }
+ out_err:
+  return err;
+}
+
 int hip_firewall_set_bex_data(int action, hip_ha_t *entry, struct in6_addr *hit_s, struct in6_addr *hit_r)
 {
         struct hip_common *msg = NULL;
@@ -753,7 +825,6 @@ int hip_firewall_set_bex_data(int action, hip_ha_t *entry, struct in6_addr *hit_
                  sizeof(struct in6_addr)), -1, "build param contents failed\n");
 	HIP_IFEL(hip_build_param_contents(msg, (void *)hit_r, HIP_PARAM_HIT,
                  sizeof(struct in6_addr)), -1, "build param contents failed\n");
-
 
 	socklen_t alen = sizeof(hip_firewall_addr);
 

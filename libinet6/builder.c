@@ -1108,6 +1108,12 @@ char* hip_message_type_name(const uint8_t msg_type){
 	case SO_HIP_TRIGGER_BEX: return "SO_HIP_TRIGGER_BEX";
 	  //case SO_HIP_IS_OUR_LSI: return "SO_HIP_IS_OUR_LSI";
 	case SO_HIP_GET_PEER_HIT: return "SO_HIP_GET_PEER_HIT";
+	case SO_HIP_REGISTER_SAVAHR: return "SO_HIP_REGISTER_SAVAHR";
+	case SO_HIP_GET_SAVAHR_IN_KEYS: return "SO_HIP_GET_SAVAHR_IN_KEYS";
+	case SO_HIP_GET_SAVAHR_OUT_KEYS: return "SO_HIP_GET_SAVAHR_OUT_KEYS"; 
+	case SO_HIP_GET_SAVAHR_HIT: return "SO_HIP_GET_SAVAHR_HIT";
+
+	case SO_HIP_OFFER_SAVAH: return "SO_HIP_OFFER_SAVAH";
 	  //case SO_HIP_GET_PEER_HIT_BY_LSIS: return "SO_HIP_GET_PEER_HIT_BY_LSIS";
 	  //case SO_HIP_GET_PEER_HIT_AT_FIREWALL: return "SO_HIP_GET_PEER_HIT_AT_FIREWALL";
 	default:
@@ -2300,6 +2306,7 @@ int hip_build_param_reg_info(hip_common_t *msg,
 	if(service_count == 0) {
 		return 0;
 	}
+	HIP_DEBUG("Building REG_INFO parameter(s) \n");
 
 	for( ;i < service_count; i++) {
 		if(service_list[0].min_lifetime !=
