@@ -154,7 +154,8 @@
 #define TYPE_TCPTIMEOUT	   25 /* add By Tao Wan, on 04.01.2008*/
 #define TYPE_HIPPROXY	   26
 #define TYPE_HEARTBEAT     27
-#define TYPE_MAX           28 /* exclusive */
+#define TYPE_MAX           29 /* exclusive */
+#define TYPE_SAVAHR        28 /* SAVA router HIT IP pair */
 
 /* #define TYPE_RELAY         22 */
 
@@ -171,7 +172,7 @@
 # add hi default    # add all four HITs (see bug id 522)\n\
 # add map HIT IP    # preload some HIT-to-IP mappings to hipd\n\
 # add service rvs   # the host acts as HIP rendezvous (see also /etc/hip/relay_config)\n\
-# add server rvs <RVS-HIT> <RVS-IP> <lifetime-secs> # register to rendezvous server\n\
+# add server rvs [RVS-HIT] <RVS-IP> <lifetime-secs> # register to rendezvous server\n\
 # dht gw host port port TTL # set dht gw hostname|ip port default=5851\n\
 # locator on        # host sends all of its locators in base exchange\n\
 # opp normal|advanced|none\n\
@@ -233,7 +234,8 @@ int hip_conf_handle_opptcp(struct hip_common *, int type, const char *opt[], int
 int hip_conf_handle_tcptimeout(struct hip_common *, int type, const char *opt[], int optc, int send_only); /*added by Tao Wan, 04.Jan.2008*/
 int hip_conf_handle_hipproxy(struct hip_common *msg, int action, const char *opt[], int optc, int send_only);
 int hip_conf_handle_heartbeat(hip_common_t *msg, int action, const char *opt[], int optc, int send_only);
- 
+int hip_conf_handle_sava (struct hip_common * msg, int action, 
+			  const char * opt[], int optc, int send_only); 
 /**
  * Prints the HIT values in use. Prints either all or the default HIT value to
  * stdout.
