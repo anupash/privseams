@@ -172,7 +172,7 @@
 # add hi default    # add all four HITs (see bug id 522)\n\
 # add map HIT IP    # preload some HIT-to-IP mappings to hipd\n\
 # add service rvs   # the host acts as HIP rendezvous (see also /etc/hip/relay_config)\n\
-# add server rvs [RVS-HIT] <RVS-IP> [lifetime-secs] # register to rendezvous server\n\
+# add server rvs [RVS-HIT] <RVS-IP> <lifetime-secs> # register to rendezvous server\n\
 # dht gw host port port TTL # set dht gw hostname|ip port default=5851\n\
 # locator on        # host sends all of its locators in base exchange\n\
 # opp normal|advanced|none\n\
