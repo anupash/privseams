@@ -928,43 +928,54 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
       } else {
 	ip_raw_sock = ipv6_raw_raw_sock;
       }
+      {
+	char hbh_buff[24];
 
-      buff_ip_opt = (char *) malloc(buff_len + 24); //24 extra bytes for our HBH option
+	buff_ip_opt = (char *) malloc(buff_len + 24); //24 extra bytes for our HBH option
 
-      memset(buff_ip_opt, 0, buff_len + 24);
-      
-      ip6hbh_hdr = (struct ip6_hbh *) malloc(sizeof(struct ip6_hbh));
-      ip6hbh_hdr->ip6h_nxt = protocol; //we should have the same next header as it was previously
-      ip6hbh_hdr->ip6h_len = 2; //96 bits of IPv6 address length + padding 32 bits (not including first 8 octets)
+	memset(buff_ip_opt, 0, buff_len + 24);
+	memset(hbh_buff, 0, sizeof(hbh_buff));
+	
+	ip6hbh_hdr = hbh_buff;//(struct ip6_hbh *) malloc(sizeof(struct ip6_hbh));
+	ip6hbh_hdr->ip6h_nxt = protocol; //we should have the same next header as it was previously
+	ip6hbh_hdr->ip6h_len = 2; //96 bits of IPv6 address length + padding 32 bits (not including first 8 octets)
+	
+	sava_ip6_opt = hbh_buff + 2;//(struct sava_tlv_option *)malloc(sizeof(struct sava_tlv_option));
+	sava_ip6_opt->type = SAVA_IPV6_OPTION_TYPE;
+	sava_ip6_opt->action = 0;
+	sava_ip6_opt->change = 0;
+	sava_ip6_opt->length = sizeof(struct in6_addr); //size of IPv6 address in octets (16 bytes)
 
-      sava_ip6_opt = (struct sava_tlv_option *)malloc(sizeof(struct sava_tlv_option));
-      sava_ip6_opt->type = SAVA_IPV6_OPTION_TYPE;
-      sava_ip6_opt->action = 0;
-      sava_ip6_opt->change = 0;
-      sava_ip6_opt->length = sizeof(struct in6_addr); //size of IPv6 address in octets (16 bytes)
+	memcpy(hbh_buff + 4, enc_addr, sizeof(struct in6_addr));
+	
+	sava_ip6_padding = hbh_buff + 20; //(struct sava_tlv_padding *)malloc(sizeof(struct sava_tlv_padding));
+	memset(sava_ip6_padding, 0, sizeof(sava_tvl_padding_t));
+	sava_ip6_padding->type = 1;
+	sava_ip6_padding->length = 2;
+	
+	memcpy(buff_ip_opt, buff, 40); //copy main IPv6 header
+	memcpy(buff_ip_opt + 40, hbh_buff, 24);
+	memcpy(buff_ip_opt + 64, buff + 40, buff_len - 40);
 
-      sava_ip6_padding = (struct sava_tlv_padding *)malloc(sizeof(struct sava_tlv_padding));
-      memset(sava_ip6_padding, 0, sizeof(sava_tvl_padding_t));
-      sava_ip6_padding->type = 1;
-      sava_ip6_padding->length = 2;
-
-
-      memcpy(buff_ip_opt, buff, 40); //copy main IPv6 header
-      memcpy(buff_ip_opt + 40, ip6hbh_hdr, sizeof(ip6hbh_hdr)); //copy HBH header 
-      memcpy(buff_ip_opt + 40 + sizeof(ip6hbh_hdr), 
+        /*
+	memcpy(buff_ip_opt + 40, ip6hbh_hdr, sizeof(ip6hbh_hdr)); //copy HBH header 
+	memcpy(buff_ip_opt + 40 + sizeof(ip6hbh_hdr), 
 	     sava_ip6_opt, sizeof(sava_ip6_opt));
-      memcpy(buff_ip_opt + 40 + sizeof(ip6hbh_hdr) + sizeof(sava_ip6_opt),
-	     enc_addr, sizeof(struct in6_addr));
-      memcpy(buff_ip_opt + 40 + sizeof(ip6hbh_hdr) + sizeof(sava_ip6_opt) + sizeof(struct in6_addr),
-	     sava_ip6_padding, sizeof(sava_ip6_padding)); //As required in IPv6 RFC
-      memcpy(buff_ip_opt + 40 + sizeof(ip6hbh_hdr) + 
-	     sizeof(sava_ip6_opt) + sizeof(enc_addr) + 
-	     sizeof(sava_ip6_padding) + 2, // 2 bytes are the actual padding we just skip this 2 bytes unchanged as they already 0's
-	     buff + 40, buff_len - 40);  //this is the rest of the stuff
-
-      free(sava_ip6_opt);
-      free(ip6hbh_hdr);
-      free(sava_ip6_padding)
+	memcpy(buff_ip_opt + 40 + sizeof(ip6hbh_hdr) + sizeof(sava_ip6_opt),
+	       enc_addr, sizeof(struct in6_addr));
+	memcpy(buff_ip_opt + 40 + sizeof(ip6hbh_hdr) + sizeof(sava_ip6_opt) + sizeof(struct in6_addr),
+	       sava_ip6_padding, sizeof(sava_ip6_padding)); //As required in IPv6 RFC
+	memcpy(buff_ip_opt + 40 + sizeof(ip6hbh_hdr) + 
+	       sizeof(sava_ip6_opt) + sizeof(enc_addr) + 
+	       sizeof(sava_ip6_padding) + 2, // 2 bytes are the actual padding we just skip this 2 bytes unchanged as they already 0's
+	       buff + 40, buff_len - 40);  //this is the rest of the stuff
+	
+	free(sava_ip6_opt);
+	free(ip6hbh_hdr);
+	free(sava_ip6_padding);
+	*/
+	free(hbh_buff);
+      }
 
       ip6hdr = (struct ip6_hdr*) buff_ip_opt;
 
