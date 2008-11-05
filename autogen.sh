@@ -1,23 +1,79 @@
 #!/bin/sh
 
-echo "Generating configure files... may take a while."
+### Functions ###
 
-echo "Configuring pjproject"
-cd pjproject && ./configure $@ || (echo "Failed to configure pjproject" && exit 1)
-make dep
-cd ..
+display_dependencies() {
+    echo "Missing packages?"
+    if test -e /etc/debian_version
+	then
+	echo "apt-get install tla libncurses5-dev kernel-package autoreconf automake autoconf libtool g++ libgtk2.0-dev libssl-dev libxml2-dev xmlto doxygen iproute netcat6 iptables-dev libcap-dev libsqlite3-dev uuid-dev miredo"
+    elif test -e /etc/redhat-release
+	then
+	echo "yum install tla openssl-devel libxml2-devel autoconf automake libtool iproute gtk2-devel xmlto doxygen iptables-devel libcap-devel sqlite-devel uuid-devel rpm-build miredo"
+    else
+	echo -n "Unknown linux system:"
+	cat /etc/lsb-release
+	echo "You should install the following software:"
+	echo "tla, autoreconf, automake, autoconf, libtool, g++, xmlto, doxygen, iproute, netcat6, miredo"
+	echo "And the following packages with their development headers:"
+	echo "libncurses5,libgtk2.0, openssl, libxml2, iptables, libcap, libsqlite3, uuid"
+    fi
+}
 
-# Note: autogen options are also passed to HIPL configure.
-# See bug id 524)
-echo "Pjproject was configured successfully"
+display_kernel_info() {
+    release=`uname -r`
+    major=`echo $release|cut -d. -f 1`
+    middle=`echo $release|cut -d. -f 2`
+    minor=`echo $release|cut -d. -f 3`
+    echo "Current kernel version is $release"
+    if test $major -ge 2 && test $middle -ge 6 && test $minor -ge 27
+	then
+	echo "Your kernel version does not require patching"
+    elif echo $release|grep -q hipl
+	then
+	echo "Seems like your current kernel does not require patching"
+    else
+	echo "You have to patch your kernel (see patches/kernel directory) or use userspace ipsec provided by hipfw"
+    fi
+    echo "(Note: if you want to use the optional native programming interface, you need to patch your kernel anyway, see patches/kernel directory)"
+}
 
-echo "Now configuring hipl with default configure options"
-autoreconf --install --force && ./configure $@ && make  && \
-
+display_post_info() {
   echo "" && \
-  echo "NOTE: The commands above only build the userspace apps." && \
-  echo "NOTE: You have to build and install the linux kernel separately." && \
-  echo "NOTE: You cannot use HIP without applying the interfamily and beet from the patches directory to your kernel!"
-  echo "NOTE: Some features (e.g. firewall ) require './configure --enable-FEATURE'"
+  echo "NOTE: The commands above only build the userspace software." && \
+  display_kernel_info && \
   echo "NOTE: Run './configure --help' for more information"
   echo "NOTE: libjip and hipsock need to be compiled separately with make"
+}
+
+display_pre_info() {
+    echo "Generating configure files... may take a while."
+    echo "Configuring pjproject"
+}
+
+setup_pjproject() {
+    cd pjproject && ./configure $@ || \
+       (echo "Failed to configure pjproject" && display_dependencies && exit 1)
+    make dep
+    cd ..
+    # Note: autogen options are also passed to HIPL configure.
+    # See bug id 524)
+   echo "Pjproject was configured successfully"
+}
+
+setup_hipl() {
+    echo "Now configuring hipl with default configure options"
+    autoreconf --install --force || \
+	(echo "Missing libtool, automake, autoconf or autoreconf?" && exit 1)
+    ./configure $@ || \
+	(echo "Failed to configure hipl" && display_dependencies && exit 1)
+    make
+}
+
+### Main program ###
+
+display_pre_info
+setup_pjproject $@
+
+setup_hipl $@ && display_post_info
+display_kernel_info
