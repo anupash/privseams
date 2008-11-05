@@ -56,8 +56,8 @@ const char *hipconf_usage =
 "\tadd|del service escrow|rvs|relay\n"
 "\treinit service rvs|relay\n"
 "Client side:\n"
-"\tadd server rvs|relay|escrow [HIT] <IP address> <lifetime in seconds>\n"
-"\tdel server rvs|relay|escrow [HIT] <IP address>\n"
+"\tadd server rvs|relay|escrow [HIT] <IP|hostname> <lifetime in seconds>\n"
+"\tdel server rvs|relay|escrow [HIT] <IP|hostname>\n"
 #ifdef CONFIG_HIP_BLIND
 "set blind on|off\n"
 #endif
@@ -368,6 +368,48 @@ int hip_conf_get_type_arg(int action)
 }
 
 /**
+ * Resolves a given hostname to a HIT/LSI or IP address depending on match_hip flag
+ */
+int resolve_hostname_to_id(const char *hostname, struct in6_addr *id,
+	                   int match_hip) {
+	int err = 1;
+	struct addrinfo *res = NULL, *rp;
+	struct in_addr *in4;
+	struct in6_addr *in6;
+
+	HIP_IFEL(getaddrinfo(hostname, NULL, NULL, &res), -1,
+		 "getaddrinfo failed\n");
+	for (rp = res; rp != NULL; rp = rp->ai_next) {
+			in4 = &((struct sockaddr_in *) rp->ai_addr)->sin_addr;
+			in6 = &((struct sockaddr_in6 *) rp->ai_addr)->sin6_addr;
+		if (rp->ai_family == AF_INET6)
+			HIP_DEBUG_IN6ADDR("addr", in6);
+		if (rp->ai_family == AF_INET)
+			HIP_DEBUG_INADDR("addr", in4);
+		if (rp->ai_family == AF_INET6 &&
+		    (ipv6_addr_is_hit(in6) ? match_hip : !match_hip)) {
+			ipv6_addr_copy(id, in6);
+			err = 0;
+			HIP_DEBUG("Match\n");
+			break;
+		} else if (rp->ai_family == AF_INET &&
+			   (IS_LSI32(in4->s_addr) ? match_hip : !match_hip)) {
+			IPV4_TO_IPV6_MAP(in4, id);
+			err = 0;
+			break;
+			HIP_DEBUG("Match\n");
+		}
+			
+	}
+
+out_err:
+	if (res)
+		freeaddrinfo(res);
+
+	return err;
+}
+
+/**
  * Handles the hipconf commands where the type is @c server. Creates a user
  * message from the function parameters @c msg, @c action and @c opt[]. The
  * command line that this function parses is of type:
@@ -469,9 +511,11 @@ int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[],
 	if (!opp_mode) {
 	  /* Check the HIT value. */
 	  if(inet_pton(AF_INET6, opt[index_of_hit], &hit) <= 0) {
-	    HIP_ERROR("'%s' is not a valid HIT.\n", opt[index_of_hit]);
-	    err = -1;
-	    goto out_err;
+		  if (resolve_hostname_to_id(opt[index_of_hit], &hit, 1)) {
+			  HIP_ERROR("'%s' is not a valid HIT.\n", opt[index_of_hit]);
+			  err = -1;
+			  goto out_err;
+		  }
 	  }
 	}
 	/* Check the IPv4 or IPV6 value. */
@@ -479,10 +523,13 @@ int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[],
 	if(inet_pton(AF_INET6, opt[index_of_ip], &ipv6) <= 0) {
 		struct in_addr ipv4;
 		if(inet_pton(AF_INET, opt[index_of_ip], &ipv4) <= 0) {
-			HIP_ERROR("'%s' is not a valid IPv4 or IPv6 address.\n",
-				  opt[index_of_ip]);
-			err = -1;
-			goto out_err;
+			if (resolve_hostname_to_id(opt[index_of_ip], &ipv6, 0)) {
+					HIP_ERROR("'%s' is not a valid IPv4 or IPv6 address.\n",
+						  opt[index_of_ip]);
+					err = -1;
+
+					goto out_err;
+				}
 		} else {
 			IPV4_TO_IPV6_MAP(&ipv4, &ipv6);
 		}
