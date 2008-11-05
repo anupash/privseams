@@ -25,6 +25,7 @@ display_kernel_info() {
     major=`echo $release|cut -d. -f 1`
     middle=`echo $release|cut -d. -f 2`
     minor=`echo $release|cut -d. -f 3`
+    minor=`echo $minor|cut -d- -f 1` # e.g. 2.6.27-7-generic
     echo "Current kernel version is $release"
     if test $major -ge 2 && test $middle -ge 6 && test $minor -ge 27
 	then
