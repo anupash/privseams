@@ -1,3 +1,8 @@
+/** @file
+ * A header file for pisa_cert.c.
+ *
+ * @author Thomas Jansen
+ */
 #ifndef HIP_PISA_CERT_H
 #define HIP_PISA_CERT_H
 

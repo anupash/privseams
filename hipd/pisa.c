@@ -1,3 +1,10 @@
+/** @file
+ * This file contains functions that are specific to PISA. They deal with the
+ * certificate loading.
+ *
+ * @author Thomas Jansen
+ */
+
 #ifdef CONFIG_HIP_MIDAUTH
 
 #include "hipd.h"
@@ -6,6 +13,11 @@
 
 static char *midauth_cert = NULL;
 
+/**
+ * Load a certificate from the file /etc/hip/cert and store it in memory
+ *
+ * @return 0 on success
+ */
 int hip_pisa_load_certificate(void)
 {
 	int err = 0;

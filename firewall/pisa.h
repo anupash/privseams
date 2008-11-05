@@ -1,3 +1,8 @@
+/** @file
+ * A header file for pisa.c.
+ *
+ * @author Thomas Jansen
+ */
 #ifndef HIP_PISA_H
 #define HIP_PISA_H
 

@@ -1,3 +1,9 @@
+/** @file
+ * This file deals with the PISA specific handling of SPKI certificates. The
+ * certificate is parsed and split into small chunks.
+ *
+ * @author Thomas Jansen
+ */
 #include "pisa_cert.h"
 
 #include <sys/types.h>

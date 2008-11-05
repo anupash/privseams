@@ -1,4 +1,10 @@
-/*
+/** @file
+ * This file provides a framework for modifying HIP packets. It includes
+ * adding new parameters in the correct order and adapting the various
+ * headers.
+ *
+ * @author Thomas Jansen
+ *
  * This code is GNU/GPL.
  *
  * According to draft-heer-hip-middle-auth-00 we SHOULD support IP-level

@@ -1,3 +1,8 @@
+/** @file
+ * A header file for midauth.c.
+ *
+ * @author Thomas Jansen
+ */
 #ifndef HIP_MIDAUTH_H
 #define HIP_MIDAUTH_H
 
@@ -24,8 +29,6 @@ struct midauth_handlers {
 	midauth_handler close;
 	midauth_handler close_ack;
 };
-
-/* public functions for midauth */
 
 /**
  * Accepts a packet. Used in midauth_handlers as a default handler.

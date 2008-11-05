@@ -1,4 +1,10 @@
-/*
+/** @file
+ * This file contains PISA specific functions for the firewall. The basic idea
+ * is to modify the HIP messages and manage state for allowed connections to
+ * allow or reject associated ESP traffic.
+ *
+ * @author Thomas Jansen
+ *
  * This code is GNU/GPL.
  */
 
