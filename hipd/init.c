@@ -394,6 +394,10 @@ int hipd_init(int flush_ipsec, int killold)
 			"set new tcptimeout parameters error\n");
 #endif
 
+#ifdef CONFIG_HIP_PRIVSEP
+	/* Fix to bug id 668 */
+	getaddrinfo_disable_hit_lookup();
+#endif /* CONFIG_HIP_PRIVSEP */
 
 	HIP_IFEL(hip_set_lowcapability(0), -1, "Failed to set capabilities\n");
 
