@@ -134,7 +134,7 @@ int hip_fw_init_sava_router() {
  
 	/* 
 	 * We need to capture each and every packet 
-	 * that passes trough the firewall to verify the packets 
+	 * that passes trough the firewall to verify the packet's 
 	 * source address
 	 */
 	if (hip_sava_router) {
@@ -142,15 +142,17 @@ int hip_fw_init_sava_router() {
 	        HIP_IFEL(hip_sava_init_all(), -1, 
 		   "Error inializing SAVA IP DB \n");
 
-		//system("iptables -P HIPFW-FORWARD -j DROP 2>/dev/null");
-		system("ip6tables -P HIPFW-FORWARD -j DROP 2>/dev/null");
+		system("echo 1 >/proc/sys/net/ipv4/conf/all/forwarding");
+		system("echo 1 >/proc/sys/net/ipv6/conf/all/forwarding");
 		
 		system("iptables -I HIPFW-FORWARD -p tcp -j QUEUE 2>/dev/null"); 
 		system("iptables -I HIPFW-FORWARD -p udp -j QUEUE 2>/dev/null"); 
+
 		/* IPv6 packets	*/
+		
 		system("ip6tables -I HIPFW-FORWARD -p tcp -j QUEUE 2>/dev/null");
 		system("ip6tables -I HIPFW-FORWARD -p udp -j QUEUE 2>/dev/null");
-		system("ip6tables -I HIPFW-FORWARD -p 0 -j QUEUE 2>/dev/null");
+		
 		/*	Queue HIP packets as well */
 		system("iptables -I HIPFW-INPUT -p 139 -j QUEUE 2>/dev/null");
 		system("ip6tables -I HIPFW-INPUT -p 139 -j QUEUE 2>/dev/null");

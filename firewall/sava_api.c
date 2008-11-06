@@ -299,7 +299,9 @@ int hip_sava_enc_ip_entry_add(struct in6_addr *src_enc,
 
   entry->ip_link = ip_link;
 
-  entry->peer_info = info_link;
+  entry->peer_info = (hip_sava_peer_info_t *)
+    malloc(sizeof(hip_sava_peer_info_t));
+  memcpy(entry->peer_info, info_link, sizeof(hip_sava_peer_info_t));
 
   hip_ht_add(sava_enc_ip_db, entry);
 
@@ -596,10 +598,12 @@ int hip_sava_init_all() {
 	   -1, "error creating raw IPv6 socket \n");
   HIP_IFEL(hip_sava_init_ip4_raw_socket(&ipv4_raw_tcp_sock, IPPROTO_TCP), 
 	   -1, "error creating raw IPv4 socket \n");
-  HIP_IFEL(hip_sava_init_ip6_raw_socket(&ipv6_raw_udp_sock, IPPROTO_TCP), 
+  HIP_IFEL(hip_sava_init_ip6_raw_socket(&ipv6_raw_udp_sock, IPPROTO_UDP), 
 	   -1, "error creating raw IPv6 socket \n");
-  HIP_IFEL(hip_sava_init_ip4_raw_socket(&ipv4_raw_udp_sock, IPPROTO_TCP), 
+  HIP_IFEL(hip_sava_init_ip4_raw_socket(&ipv4_raw_udp_sock, IPPROTO_UDP), 
 	   -1, "error creating raw IPv4 socket \n");
+  HIP_IFEL(hip_sava_init_ip6_raw_socket(&ipv6_raw_raw_sock, IPPROTO_RAW), 
+	   -1, "error creating raw IPv6 socket \n");
  out_err:
   return err;
 }
@@ -610,9 +614,9 @@ int hip_sava_client_init_all() {
 	   -1, "error creating raw IPv6 socket \n");
   HIP_IFEL(hip_sava_init_ip4_raw_socket(&ipv4_raw_tcp_sock, IPPROTO_TCP), 
 	   -1, "error creating raw IPv4 socket \n");
-  HIP_IFEL(hip_sava_init_ip6_raw_socket(&ipv6_raw_udp_sock, IPPROTO_TCP), 
+  HIP_IFEL(hip_sava_init_ip6_raw_socket(&ipv6_raw_udp_sock, IPPROTO_UDP), 
 	   -1, "error creating raw IPv6 socket \n");
-  HIP_IFEL(hip_sava_init_ip4_raw_socket(&ipv4_raw_udp_sock, IPPROTO_TCP), 
+  HIP_IFEL(hip_sava_init_ip4_raw_socket(&ipv4_raw_udp_sock, IPPROTO_UDP), 
 	   -1, "error creating raw IPv4 socket \n");
   HIP_IFEL(hip_sava_init_ip6_raw_socket(&ipv6_raw_raw_sock, IPPROTO_RAW), 
 	   -1, "error creating raw IPv6 socket  IPPROTO_RAW \n");
@@ -831,6 +835,8 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
 
   int dst_len = 0;
 
+  unsigned int plen = 0;
+
 
   if (ctx->ip_version == 6) { //IPv6
     ip6hdr = (struct ip6_hdr*) buff;
@@ -841,6 +847,14 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
       goto out_err;
     } else {
       ip6hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt = IPPROTO_SAVAH;
+      HIP_DEBUG("IPv6 payload length %d \n", 
+		ntohs(ip6hdr->ip6_ctlun.ip6_un1.ip6_un1_plen));
+      
+      plen = ntohs(ip6hdr->ip6_ctlun.ip6_un1.ip6_un1_plen) + 24;
+      ip6hdr->ip6_ctlun.ip6_un1.ip6_un1_plen = htons(plen);
+
+      HIP_DEBUG("New IPv6 payload length %d \n", 
+		ntohs(ip6hdr->ip6_ctlun.ip6_un1.ip6_un1_plen));
     }
   } else {
     iphdr = (struct ip *)buff;
@@ -919,6 +933,8 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
 #endif
 
     } else { //No HBH option found in the packet
+
+#if 0
       if (protocol == IPPROTO_TCP) {
 	HIP_DEBUG("Next protocol header is TCP \n");
 	ip_raw_sock = ipv6_raw_tcp_sock;	  
@@ -928,9 +944,11 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
       } else {
 	ip_raw_sock = ipv6_raw_raw_sock;
       }
+#endif
+     
+      ip_raw_sock = ipv6_raw_raw_sock;
       {
 	char hbh_buff[24];
-
 	buff_ip_opt = (char *) malloc(buff_len + 24); //24 extra bytes for our HBH option
 
 	memset(buff_ip_opt, 0, buff_len + 24);
@@ -956,31 +974,7 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
 	memcpy(buff_ip_opt, buff, 40); //copy main IPv6 header
 	memcpy(buff_ip_opt + 40, hbh_buff, 24);
 	memcpy(buff_ip_opt + 64, buff + 40, buff_len - 40);
-
-        /*
-	memcpy(buff_ip_opt + 40, ip6hbh_hdr, sizeof(ip6hbh_hdr)); //copy HBH header 
-	memcpy(buff_ip_opt + 40 + sizeof(ip6hbh_hdr), 
-	     sava_ip6_opt, sizeof(sava_ip6_opt));
-	memcpy(buff_ip_opt + 40 + sizeof(ip6hbh_hdr) + sizeof(sava_ip6_opt),
-	       enc_addr, sizeof(struct in6_addr));
-	memcpy(buff_ip_opt + 40 + sizeof(ip6hbh_hdr) + sizeof(sava_ip6_opt) + sizeof(struct in6_addr),
-	       sava_ip6_padding, sizeof(sava_ip6_padding)); //As required in IPv6 RFC
-	memcpy(buff_ip_opt + 40 + sizeof(ip6hbh_hdr) + 
-	       sizeof(sava_ip6_opt) + sizeof(enc_addr) + 
-	       sizeof(sava_ip6_padding) + 2, // 2 bytes are the actual padding we just skip this 2 bytes unchanged as they already 0's
-	       buff + 40, buff_len - 40);  //this is the rest of the stuff
-	
-	free(sava_ip6_opt);
-	free(ip6hbh_hdr);
-	free(sava_ip6_padding);
-	*/
-	free(hbh_buff);
       }
-
-      ip6hdr = (struct ip6_hdr*) buff_ip_opt;
-
-      ip6hbh_hdr = (struct ip6_hbh *) buff_ip_opt;
-
       buff_len += 24; // add 24 bytes of sava option
     }
 #else
@@ -1208,14 +1202,37 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
     //HIP_ASSERT(ip6hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt != IPPROTO);
     protocol = ip6hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt; // protocol should be only IPPROTO_SAVAH 140
     HIP_DEBUG("We have next header type %d \n", protocol);
-    ip6hbh_hdr = (struct ip6_hbh *)buff + 40; //get the SAVAH encapsulated payload
-    protocol = ip6hbh_hdr->ip6h_nxt;
-    if (ip6hbh_hdr->ip6h_len == 2) { //we have exactly one SAVAH option that needs to be parsed and removed
+    
+    
+    if (protocol == IPPROTO_SAVAH) { //we have exactly one SAVAH option that needs to be parsed and removed
       //sava_ip6_opt = (struct sava_tlv_option *)buff + 42;
-      opt_addr = (struct in6_addr *)buff + 44; //the ipv6 starts after 44 bytes from the IPv6 header start
+
+      opt_addr = (struct in6_addr *)malloc(sizeof(struct in6_addr));
+
+      memcpy(opt_addr, buff + 44, sizeof(struct in6_addr));
+
+      //opt_addr = (struct in6_addr *)buff + 44; //the ipv6 starts after 44 bytes from the IPv6 header start
+      
+      HIP_DEBUG_IN6ADDR("Encrypted address ", opt_addr);
+      
       enc_entry = hip_sava_enc_ip_entry_find(opt_addr);
       hdr_offset = 40;
       hdr_len = 24;
+      ip6hbh_hdr = (struct ip6_hbh *)buff + hdr_offset; //get the SAVAH encapsulated payload
+      /* FIX ME: this ugly stuff should 
+	 be removed instead this should 
+	 be done as 
+	 protcol = ip6hbh_hdr->ip6h_nxt;
+       */
+      protocol = buff[40]; 
+      /*
+	End of ugly stuff
+       */
+      ip6hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt = protocol;
+      ip6hdr->ip6_ctlun.ip6_un1.ip6_un1_plen = 
+	htons(ntohs(ip6hdr->ip6_ctlun.ip6_un1.ip6_un1_plen) - 24);
+      HIP_DEBUG("Next protocol number is %d \n", protocol);
+      HIP_DEBUG("IP payload length %d \n", ntohs(ip6hdr->ip6_ctlun.ip6_un1.ip6_un1_plen));
     }
   }
 #else 
@@ -1233,14 +1250,18 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
 
     _HIP_DEBUG("Secret key acquired. Lets encrypt the src IP address \n");
 
-    //#ifndef CONFIG_SAVAH_IP_OPTION    
+#ifndef CONFIG_SAVAH_IP_OPTION    
     enc_addr = hip_sava_auth_ip(enc_entry->ip_link->src_addr, enc_entry->peer_info);
-    //FIX IP version 
-    //enc_addr_no = map_enc_ip_addr_to_network_order(enc_addr, 4);
-    //free(enc_addr);
-    //enc_addr = enc_addr_no;
     HIP_DEBUG_HIT("Found encrypted address ", enc_addr);
-    //#endif
+#else 
+    enc_addr = hip_sava_auth_ip(enc_entry->ip_link->src_addr, 
+				enc_entry->peer_info);
+    enc_addr_no = map_enc_ip_addr_to_network_order(enc_addr, 
+						   ctx->ip_version);
+    free(enc_addr);
+    enc_addr = enc_addr_no;
+    HIP_DEBUG_HIT("Found encrypted address ", enc_addr);   
+#endif
 
 #ifdef CONFIG_SAVAH_IP_OPTION    
     HIP_DEBUG("Compare authentication values \n");
@@ -1265,18 +1286,27 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
 
 	memcpy(&dst6->sin6_addr, &ctx->dst, sizeof(struct in6_addr));
        
-	HIP_DEBUG_INADDR("ipv6 src: ", &ip6hdr->ip6_src);
-	HIP_DEBUG_INADDR("ipv6 dst: ", &ip6hdr->ip6_dst);
+	HIP_DEBUG_IN6ADDR("ipv6 src: ", &ip6hdr->ip6_src);
+	HIP_DEBUG_IN6ADDR("ipv6 dst: ", &ip6hdr->ip6_dst);
 #ifdef CONFIG_SAVAH_IP_OPTION
+
 	buff_no_opt = (char *) malloc(buff_len - hdr_len);
+	
+	memset(buff_no_opt, 0, buff_len - hdr_len);
+	
 	memcpy(buff_no_opt, buff, hdr_offset);
-	memcpy(buff_no_opt, (char *)(ip6hdr + hdr_offset + hdr_len), buff_len - hdr_len - hdr_offset);
+
+	memcpy(buff_no_opt + hdr_offset, buff + hdr_offset + hdr_len, buff_len - hdr_len - hdr_offset);
+
 	buff_len -= hdr_len;
+#if 0
 	if (protocol == IPPROTO_TCP) {
 	  ip_raw_sock = ipv6_raw_tcp_sock;
       	} else if (protocol == IPPROTO_UDP) {
 	  ip_raw_sock = ipv6_raw_udp_sock;
 	}
+#endif
+	ip_raw_sock = ipv6_raw_raw_sock;
 #else    
 	memcpy(&ip6hdr->ip6_src, (void *)enc_entry->ip_link->src_addr, sizeof(struct in6_addr));
 	
@@ -1536,7 +1566,7 @@ int hip_sava_handle_bex_completed (struct in6_addr * src, struct in6_addr * hitr
     HIP_IFEL((enc_entry = hip_sava_enc_ip_entry_find(enc_addr_no)) == NULL, 
 	     -1, "Could not retrieve enc ip entry \n");
 #else
-     HIP_IFEL(hip_sava_enc_ip_entry_add(enc_addr,
+    HIP_IFEL(hip_sava_enc_ip_entry_add(enc_addr,
 				       ip_entry,
 				       hit_entry, info_entry), 
 	     -1, "error adding enc ip entry");    
@@ -1546,6 +1576,8 @@ int hip_sava_handle_bex_completed (struct in6_addr * src, struct in6_addr * hitr
 #endif
     ip_entry->enc_link = enc_entry;
     hit_entry->enc_link = enc_entry;
+
+    enc_entry = hip_sava_enc_ip_entry_find(enc_addr);
 
     free(enc_addr);
     
