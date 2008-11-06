@@ -173,7 +173,7 @@
 # add map HIT IP    # preload some HIT-to-IP mappings to hipd\n\
 # add service rvs   # the host acts as HIP rendezvous (see also /etc/hip/relay_config)\n\
 # add server rvs [RVS-HIT] <RVS-IP-OR-HOSTNAME> <lifetime-secs> # register to rendezvous server\n\
-# add server rvs rvs.infrahip.net 50000 # Register to free RVS at infrahip\n\
+# add server rvs hiprvs.infrahip.net 50000 # Register to free RVS at infrahip\n\
 # dht gw host port port TTL # set dht gw hostname|ip port default=5851\n\
 # locator on        # host sends all of its locators in base exchange\n\
 # opp normal|advanced|none\n\
