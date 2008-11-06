@@ -323,6 +323,17 @@ if test x"$ac_cv_use_opportunistic" = x"yes"; then
 fi
 AM_CONDITIONAL(HIP_OPPORTUNISTIC, test x"$ac_cv_use_opportunistic" = x"yes")
 
+AC_ARG_ENABLE(savaipopt,
+             AC_HELP_STRING([--enable-savaipoption],
+                            [HIP SAVA IP option extensions, if no encrypt IP address (default is YES)]),
+             [ac_cv_use_savaipopt=$enableval], [ac_cv_use_savaipopt=yes])
+AC_CACHE_CHECK([whether to use sava ip option],
+               [ac_cv_use_savaipopt], [ac_cv_use_savaipopt=yes])
+if test x"$ac_cv_use_savaipopt" = x"yes"; then
+        AC_DEFINE(CONFIG_SAVAH_IP_OPTION, AC_PREREQ(2.53))
+fi
+AM_CONDITIONAL(SAVAH_IP_OPTION, test x"$ac_cv_use_savaipopt" = x"yes")
+
 AC_ARG_ENABLE(opendht,
              AC_HELP_STRING([--enable-opendht],
                             [OpenDHT support (default is YES)]),

@@ -40,6 +40,7 @@
 #include "pjnath.h"
 #include "esp_prot_api.h"
 #include "esp_prot_conntrack.h"
+#include "sava_api.h"
 // include of "user_ipsec.h" at the bottom due to dependency
 
 #define HIP_FW_DEFAULT_RULE_FILE "/etc/hip/firewall_conf"
