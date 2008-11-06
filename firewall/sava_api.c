@@ -1250,7 +1250,7 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
 
     _HIP_DEBUG("Secret key acquired. Lets encrypt the src IP address \n");
 
-#ifndef CONFIG_SAVAH_IP_OPTION    
+#ifdef CONFIG_SAVAH_IP_OPTION    
     enc_addr = hip_sava_auth_ip(enc_entry->ip_link->src_addr, enc_entry->peer_info);
     HIP_DEBUG_HIT("Found encrypted address ", enc_addr);
 #else 
