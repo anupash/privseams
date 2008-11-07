@@ -1378,9 +1378,7 @@ int hip_fw_handle_other_input(hip_fw_context_t *ctx){
 	  	else if (hip_lsi_support || system_based_opp_mode) {
 			verdict = hip_fw_handle_incoming_hit(ctx->ipq_packet,
 							     &ctx->src,
-							     &ctx->dst,
-							     hip_lsi_support,
-							     system_based_opp_mode);
+							     &ctx->dst);
 	  	}
 	} else if (hip_stun && ctx->is_stun == 1) {
 		// Santtu FIXME
