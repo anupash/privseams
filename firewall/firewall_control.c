@@ -229,6 +229,9 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 		else if (system_based_opp_mode)
 			err = hip_fw_sys_opp_set_peer_hit(msg);
 		break;
+	case SO_HIP_RESET_FIREWALL_DB:
+		hip_firewall_delete_hldb();
+		break;
 	default:
 		HIP_ERROR("Unhandled message type %d\n", type);
 		err = -1;
