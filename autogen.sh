@@ -3,7 +3,7 @@
 ### Functions ###
 
 display_dependencies() {
-    echo "Missing packages?"
+    echo "The following packages are needed for building HIPL software bundle:"
     if test -e /etc/debian_version
 	then
 	echo "apt-get install tla libncurses5-dev kernel-package autoreconf automake autoconf libtool g++ libgtk2.0-dev libssl-dev libxml2-dev xmlto doxygen iproute netcat6 iptables-dev libcap-dev libsqlite3-dev uuid-dev miredo"
@@ -26,6 +26,7 @@ display_kernel_info() {
     middle=`echo $release|cut -d. -f 2`
     minor=`echo $release|cut -d. -f 3`
     minor=`echo $minor|cut -d- -f 1` # e.g. 2.6.27-7-generic
+    echo "HIPL kernel dependencies:"
     echo "Current kernel version is $release"
     if test $major -ge 2 && test $middle -ge 6 && test $minor -ge 27
 	then
@@ -71,7 +72,20 @@ setup_hipl() {
     make
 }
 
+help() {
+    echo "HIPL software dependencies:"
+    display_dependencies
+    display_kernel_info
+    echo "When you have installed the software mentioned above, please run ./autogen.sh"
+}
+
 ### Main program ###
+
+if test $1 = '--help'
+then
+    help
+    exit
+fi
 
 display_pre_info
 setup_pjproject $@
