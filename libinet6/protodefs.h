@@ -25,6 +25,7 @@
 #define HIP_CLOSE_ACK           19
 #define HIP_PSIG                20 /* lightweight HIP pre signature */
 #define HIP_TRIG                21 /* lightweight HIP signature trigger*/
+#define HIP_LUPDATE             22
 #define HIP_PAYLOAD             64
 /* only hip network message types here */
 /* @} */
@@ -87,6 +88,9 @@
 #define HIP_PARAM_ESP_TRANSFORM        4095
 #define HIP_PARAM_ESP_PROT_TRANSFORMS  4120
 #define HIP_PARAM_ESP_PROT_ANCHOR      4121
+#define HIP_PARAM_ESP_PROT_BRANCH      4122
+#define HIP_PARAM_ESP_PROT_SECRET      4123
+#define HIP_PARAM_ESP_PROT_ROOT		   4124
 
 /* Range 32768 - 49141 can be used for HIPL private parameters i.e. to
    parameters passed from hipconf to hipdaemon.
@@ -133,6 +137,10 @@
 #define HIP_PARAM_CERT_X509_RESP        32811
 #define HIP_PARAM_ESP_PROT_TFM		32812
 #define HIP_PARAM_TRANSFORM_ORDER       32813
+#define HIP_PARAM_SECRET				32814
+#define HIP_PARAM_BRANCH_NODES			32815
+#define HIP_PARAM_ROOT					32816
+#define HIP_PARAM_SAVA_CRYPTO_INFO      32817
 /* End of HIPL private parameters. */
 
 #define HIP_PARAM_HMAC                 61505
@@ -269,22 +277,27 @@
 #define HIP_HA_CTRL_LOCAL_REQ_ESCROW     0x2000
 #define HIP_HA_CTRL_LOCAL_REQ_RELAY      0x4000
 #define HIP_HA_CTRL_LOCAL_REQ_RVS        0x8000
+#define HIP_HA_CTRL_LOCAL_REQ_SAVAH      0x0010
 /* Keep inside parentheses. */
 #define HIP_HA_CTRL_LOCAL_REQ_ANY        (\
                                          HIP_HA_CTRL_LOCAL_REQ_UNSUP |\
                                          HIP_HA_CTRL_LOCAL_REQ_ESCROW |\
                                          HIP_HA_CTRL_LOCAL_REQ_RELAY |\
-                                         HIP_HA_CTRL_LOCAL_REQ_RVS\
+                                         HIP_HA_CTRL_LOCAL_REQ_RVS |\
+					 HIP_HA_CTRL_LOCAL_REQ_SAVAH \
                                          )
 
 #define HIP_HA_CTRL_PEER_GRANTED_UNSUP   0x0001
 #define HIP_HA_CTRL_PEER_GRANTED_ESCROW  0x0400
 #define HIP_HA_CTRL_PEER_GRANTED_RELAY   0x0800
 #define HIP_HA_CTRL_PEER_GRANTED_RVS     0x1000
+#define HIP_HA_CTRL_PEER_GRANTED_SAVAH   0x0200
+
 #define HIP_HA_CTRL_PEER_UNSUP_CAPABLE   0x0002
 #define HIP_HA_CTRL_PEER_ESCROW_CAPABLE  0x2000
 #define HIP_HA_CTRL_PEER_RELAY_CAPABLE   0x4000
 #define HIP_HA_CTRL_PEER_RVS_CAPABLE     0x8000
+#define HIP_HA_CTRL_PEER_SAVAH_CAPABLE   0x0010
 /* @} */
 
 /** @addtogroup hip_packet_controls
@@ -300,8 +313,9 @@
 #define HIP_SERVICE_RENDEZVOUS	         1
 #define HIP_SERVICE_ESCROW	         201
 #define HIP_SERVICE_RELAY            	 202
+#define HIP_SERVICE_SAVAH                 203
 /* IMPORTANT! This must be the sum of above services. */
-#define HIP_TOTAL_EXISTING_SERVICES      3
+#define HIP_TOTAL_EXISTING_SERVICES      4
 /* @} */
 
 /** @addtogroup hip_proxy
@@ -427,6 +441,28 @@ struct esp_prot_anchor {
 	unsigned char  	   anchors[2 * MAX_HASH_LENGTH];
 } __attribute__ ((packed));
 
+struct esp_prot_branch {
+	hip_tlv_type_t     type;
+	hip_tlv_len_t      length;
+	uint32_t     	   anchor_offset;
+	uint32_t		   branch_length;
+	unsigned char  	   branch_nodes[MAX_TREE_DEPTH * MAX_HASH_LENGTH];
+} __attribute__ ((packed));
+
+struct esp_prot_secret {
+	hip_tlv_type_t     type;
+	hip_tlv_len_t      length;
+	uint8_t			   secret_length;
+	unsigned char  	   secret[MAX_HASH_LENGTH];
+} __attribute__ ((packed));
+
+struct esp_prot_root {
+	hip_tlv_type_t     type;
+	hip_tlv_len_t      length;
+	uint8_t			   root_length;
+	unsigned char  	   root[MAX_HASH_LENGTH];
+} __attribute__ ((packed));
+
 /**
  * Used in executing a unit test case in a test suite in the kernel module.
  */
@@ -452,7 +488,7 @@ struct hip_locator_info_addr_item {
 
         /** Removed the state because it is against the nat-draft and mobility rfc
          Same in the type 2 locator below --SAMU**/
-	/* end of fixed part - locator of arbitrary length follows but 
+	/* end of fixed part - locator of arbitrary length follows but
 	   currently support only IPv6 */
 	//int state; /**<State of our addresses, possible states are:
 	//	      WAITING_ECHO_REQUEST, ACTIVE */

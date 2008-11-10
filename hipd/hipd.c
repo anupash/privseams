@@ -38,6 +38,10 @@ int hip_icmp_interval = 20;
 /** Specifies the HIP PROXY status of the daemon. This value indicates if the HIP PROXY is running. */
 int hipproxy = 0;
 
+/*SAVAH modes*/
+int hipsava_client = 0;
+int hipsava_server = 0;
+
 /* Communication interface to userspace apps (hipconf etc) */
 int hip_user_sock = 0;
 struct sockaddr_un hip_user_addr;
@@ -70,6 +74,9 @@ char opendht_response[1024];
 struct addrinfo * opendht_serving_gateway = NULL;
 int opendht_serving_gateway_port = OPENDHT_PORT;
 int opendht_serving_gateway_ttl = OPENDHT_TTL;
+
+struct in6_addr * sava_serving_gateway = NULL;
+
 char opendht_name_mapping[HIP_HOST_ID_HOSTNAME_LEN_MAX]; /* what name should be used as key */
 
 /* now DHT is always off, so you have to set it on if you want to use it */

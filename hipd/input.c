@@ -671,6 +671,10 @@ int hip_receive_control_packet(struct hip_common *msg,
 		HIP_IFCS(entry, err = entry->hadb_rcv_func->
 			 hip_receive_close_ack(msg, entry));
 		break;
+	case HIP_LUPDATE:
+		HIP_IFCS(entry, err = esp_prot_receive_light_update(msg, src_addr, dst_addr,
+				entry));
+		break;
 
 	default:
 		HIP_ERROR("Unknown packet %d\n", type);
@@ -740,7 +744,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	int err = 0, host_id_in_enc_len = 0, written = 0;
 	uint16_t mask = 0;
 	int type_count = 0, request_rvs = 0, request_escrow = 0;
-    int *reg_type = NULL;
+        int *reg_type = NULL;
 	uint32_t spi_in = 0;
 
 	_HIP_DEBUG("hip_create_i2() invoked.\n");
@@ -2218,6 +2222,10 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
 	entry->state = HIP_STATE_ESTABLISHED;
 
+	/*For SAVA this lets to register the client on firewall once the keys are established*/
+	hip_firewall_set_i2_data(SO_HIP_FW_I2_DONE, entry, &entry->hit_our, 
+				 &entry->hit_peer, i2_saddr, i2_daddr);
+
         /***** LOCATOR PARAMETER ******/
 	/* Why do we process the LOCATOR parameter only after R2 has been sent?
 	   -Lauri 29.04.2008.
@@ -2663,10 +2671,19 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	//TODO Send the R2 Response to Firewall
 
  out_err:
-	if (entry->state == HIP_STATE_ESTABLISHED)
+	if (entry->state == HIP_STATE_ESTABLISHED) {
+	        HIP_DEBUG("Send response to firewall \n");
 	        hip_firewall_set_bex_data(SO_HIP_FW_BEX_DONE, entry, &entry->hit_our, &entry->hit_peer);
-	else
+		if (entry->peer_controls & HIP_HA_CTRL_PEER_GRANTED_SAVAH) {
+		  //Enable savah client mode on the firewall
+		  hip_set_sava_client_on();
+		  hip_firewall_set_savah_status(SO_HIP_SET_SAVAH_CLIENT_ON);
+		} else {
+		  HIP_DEBUG("Entry control flag is not HIP_HA_CTRL_PEER_GRANTED_SAVAH. Value is %d \n", entry->local_controls);
+		}
+	} else {
 		hip_firewall_set_bex_data(SO_HIP_FW_BEX_DONE, entry, NULL, NULL);
+	}
 
 	if (ctx) {
 		HIP_FREE(ctx);

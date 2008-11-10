@@ -223,6 +223,8 @@ int hip_opp_unblock_app(const struct sockaddr_in6 *app_id, hip_opp_info_t *opp_i
 	struct hip_common *message = NULL;
 	int err = 0, n;
 
+	HIP_IFEL((app_id->sin6_port == 0), 0, "Zero port, ignore\n");
+
 	HIP_IFE(!(message = hip_msg_alloc()), -1);
 	HIP_IFEL(hip_build_user_hdr(message, SO_HIP_SET_PEER_HIT, 0), -1,
 		 "build user header failed\n");
@@ -370,7 +372,15 @@ int hip_receive_opp_r1(struct hip_common *msg,
 		 "hip_init_us failed\n");
 	/* old HA has state 2, new HA has state 1, so copy it */
 	entry->state = opp_entry->state;
+	/* For service registration routines */
+	entry->local_controls = opp_entry->local_controls;
+	entry->peer_controls = opp_entry->peer_controls;
 
+	HIP_IFEL(hip_replace_pending_requests(opp_entry, entry), -1, 
+		 "Error moving the pending requests to a new HA");
+
+	//memcpy(sava_serving_gateway, &msg->hits, sizeof(struct in6_addr));
+	
 	HIP_DEBUG_HIT("!!!! peer hit=", &msg->hits);
 	HIP_DEBUG_HIT("!!!! local hit=", &msg->hitr);
 	HIP_DEBUG_HIT("!!!! peer addr=", src_addr);
@@ -404,6 +414,55 @@ int hip_receive_opp_r1(struct hip_common *msg,
 	return err;
 }
 
+hip_ha_t * hip_opp_add_map(const struct in6_addr *dst_ip,
+			   const struct in6_addr *hit_our) {
+  int err = 0;
+  struct in6_addr opp_hit, src_ip;
+  hip_ha_t *ha = NULL;
+
+  HIP_DEBUG_INADDR("Peer's IP ", dst_ip);
+
+  HIP_IFEL(hip_select_source_address(&src_ip,
+				     dst_ip), -1,
+	   "Cannot find source address\n");
+
+  HIP_IFEL(hip_opportunistic_ipv6_to_hit(dst_ip, &opp_hit,
+					 HIP_HIT_TYPE_HASH100),
+	   -1, "Opp HIT conversion failed\n");
+  
+  HIP_ASSERT(hit_is_opportunistic_hashed_hit(&opp_hit)); 
+  
+  HIP_DEBUG_HIT("opportunistic hashed hit", &opp_hit);
+  
+  if (hip_oppipdb_find_byip((struct in6_addr *)dst_ip))
+    {      
+      HIP_DEBUG("Old mapping exist \n");
+
+      HIP_IFEL(!(ha = hip_hadb_find_byhits(hit_our, &opp_hit)), NULL,
+	       "Did not find entry\n");
+      goto out_err;
+    }
+  
+  /* No previous contact, new host. Let's do the opportunistic magic */
+
+  err = hip_hadb_add_peer_info_complete(hit_our, &opp_hit, NULL, &src_ip, dst_ip);
+  
+  HIP_IFEL(!(ha = hip_hadb_find_byhits(hit_our, &opp_hit)), NULL,
+	   "Did not find entry\n");
+  
+  /* Override the receiving function */
+  ha->hadb_rcv_func->hip_receive_r1 = hip_receive_opp_r1;
+  
+  HIP_IFEL(hip_oppdb_add_entry(&opp_hit, hit_our, dst_ip, NULL,
+			       &src_ip), NULL, "Add db failed\n");
+  
+  ha->tcp_opptcp_src_port = 0;
+  ha->tcp_opptcp_dst_port = 0;
+  
+ out_err:
+
+  return ha;
+}
 
 /**
  * No description.
@@ -515,10 +574,13 @@ int hip_opp_get_peer_hit(struct hip_common *msg,
 	HIP_IFEL(hip_opportunistic_ipv6_to_hit(&dst_ip, &phit,
 					       HIP_HIT_TYPE_HASH100),
 		 -1, "Opp HIT conversion failed\n");
+
 	HIP_ASSERT(hit_is_opportunistic_hashed_hit(&phit)); 
+
 	HIP_DEBUG_HIT("phit", &phit);
 
 	err = hip_hadb_add_peer_info_complete(&hit_our, &phit, NULL, &our_addr, &dst_ip);
+
 	HIP_IFEL(!(ha = hip_hadb_find_byhits(&hit_our, &phit)), -1,
 		 "Did not find entry\n");
 
