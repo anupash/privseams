@@ -243,6 +243,7 @@ int hip_conf_handle_heartbeat(hip_common_t *msg, int action, const char *opt[], 
 int hip_conf_handle_get_dnsproxy(hip_common_t *, int action, const char *opt[], int optc, int);
 int hip_conf_handle_buddies_toggle(hip_common_t *msg, int action, const char *opt[], int optc, int);
 int hip_conf_handle_hi3(hip_common_t *, int type, const char *opt[], int optc, int);
+
 /**
  * Prints the HIT values in use. Prints either all or the default HIT value to
  * stdout.
