@@ -407,7 +407,11 @@ int hipd_init(int flush_ipsec, int killold)
 	hitdberr = 0;
 	hitdberr = hip_init_daemon_hitdb();
 	if (hitdberr < 0) HIP_DEBUG("Initializing daemon hit database returned error\n");
-	/*TODO uncheck the below comment anyhow !*/
+
+#ifdef CONFIG_HIP_PRIVSEP
+	/* Fix to bug id 668 */
+	getaddrinfo_disable_hit_lookup();
+#endif /* CONFIG_HIP_PRIVSEP */
 
 	HIP_IFEL(hip_set_lowcapability(0), -1, "Failed to set capabilities\n");
 
