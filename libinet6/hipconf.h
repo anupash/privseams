@@ -161,7 +161,8 @@
 #define TYPE_HI3           28
 #define TYPE_DNS_PROXY     29
 #define TYPE_BUDDIES	   30
-#define TYPE_MAX           31 /* exclusive */
+#define TYPE_SAVAHR        31 /* SAVA router HIT IP pair */
+#define TYPE_MAX           32 /* exclusive */
 
 /* #define TYPE_RELAY         22 */
 
@@ -178,7 +179,7 @@
 # add hi default    # add all four HITs (see bug id 522)\n\
 # add map HIT IP    # preload some HIT-to-IP mappings to hipd\n\
 # add service rvs   # the host acts as HIP rendezvous (see also /etc/hip/relay_config)\n\
-# add server rvs <RVS-HIT> <RVS-IP> <lifetime-secs> # register to rendezvous server\n\
+# add server rvs [RVS-HIT] <RVS-IP> [lifetime-secs] # register to rendezvous server\n\
 # dht gw host port port TTL # set dht gw hostname|ip port default=5851\n\
 # locator on        # host sends all of its locators in base exchange\n\
 # opp normal|advanced|none\n\
@@ -243,6 +244,8 @@ int hip_conf_handle_heartbeat(hip_common_t *msg, int action, const char *opt[], 
 int hip_conf_handle_get_dnsproxy(hip_common_t *, int action, const char *opt[], int optc, int);
 int hip_conf_handle_buddies_toggle(hip_common_t *msg, int action, const char *opt[], int optc, int);
 int hip_conf_handle_hi3(hip_common_t *, int type, const char *opt[], int optc, int);
+int hip_conf_handle_sava (struct hip_common * msg, int action, 
+			  const char * opt[], int optc, int send_only); 
 
 /**
  * Prints the HIT values in use. Prints either all or the default HIT value to

@@ -137,6 +137,7 @@
 #define HIP_PARAM_TRANSFORM_ORDER       32813                                 
 #define HIP_PARAM_HDRR_INFO		32814
 #define HIP_PARAM_UADB_INFO		32815
+#define HIP_PARAM_SAVA_CRYPTO_INFO      32816
 /* End of HIPL private parameters. */
 
 #define HIP_PARAM_HMAC			61505
@@ -274,22 +275,27 @@
 #define HIP_HA_CTRL_LOCAL_REQ_ESCROW     0x2000
 #define HIP_HA_CTRL_LOCAL_REQ_RELAY      0x4000
 #define HIP_HA_CTRL_LOCAL_REQ_RVS        0x8000
+#define HIP_HA_CTRL_LOCAL_REQ_SAVAH      0x0010
 /* Keep inside parentheses. */
 #define HIP_HA_CTRL_LOCAL_REQ_ANY        (\
                                          HIP_HA_CTRL_LOCAL_REQ_UNSUP |\
                                          HIP_HA_CTRL_LOCAL_REQ_ESCROW |\
                                          HIP_HA_CTRL_LOCAL_REQ_RELAY |\
-                                         HIP_HA_CTRL_LOCAL_REQ_RVS\
+                                         HIP_HA_CTRL_LOCAL_REQ_RVS |\
+					 HIP_HA_CTRL_LOCAL_REQ_SAVAH \
                                          )
 
 #define HIP_HA_CTRL_PEER_GRANTED_UNSUP   0x0001
 #define HIP_HA_CTRL_PEER_GRANTED_ESCROW  0x0400
 #define HIP_HA_CTRL_PEER_GRANTED_RELAY   0x0800
 #define HIP_HA_CTRL_PEER_GRANTED_RVS     0x1000
+#define HIP_HA_CTRL_PEER_GRANTED_SAVAH   0x0200
+
 #define HIP_HA_CTRL_PEER_UNSUP_CAPABLE   0x0002
 #define HIP_HA_CTRL_PEER_ESCROW_CAPABLE  0x2000
 #define HIP_HA_CTRL_PEER_RELAY_CAPABLE   0x4000
 #define HIP_HA_CTRL_PEER_RVS_CAPABLE     0x8000
+#define HIP_HA_CTRL_PEER_SAVAH_CAPABLE   0x0010
 /* @} */
 
 /** @addtogroup hip_packet_controls
@@ -305,8 +311,9 @@
 #define HIP_SERVICE_RENDEZVOUS	         1
 #define HIP_SERVICE_ESCROW	         201
 #define HIP_SERVICE_RELAY            	 202
+#define HIP_SERVICE_SAVAH                 203
 /* IMPORTANT! This must be the sum of above services. */
-#define HIP_TOTAL_EXISTING_SERVICES      3
+#define HIP_TOTAL_EXISTING_SERVICES      4
 /* @} */
 
 /** @addtogroup hip_proxy

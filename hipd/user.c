@@ -60,7 +60,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	if (is_root) {
 		access_ok = 1;
 	} else if (!is_root &&
-		   (msg_type >= HIP_SO_ANY_MIN && msg_type <= HIP_SO_ANY_MAX)) {
+ 		   (msg_type >= HIP_SO_ANY_MIN && msg_type <= HIP_SO_ANY_MAX)) {
 		access_ok = 1;
 	}
 
@@ -351,7 +351,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		}else{
 			err = hip_get_dht_mapping_for_HIT_msg(msg);
 		}
-        }
+	}
         break;
         case SO_HIP_DHT_SET:
 	{
@@ -521,7 +521,66 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         		//SEND RESPONSE();
         	}
         	break;
+	case SO_HIP_SAVAH_CLIENT_STATUS_REQUEST:
+	        {
+        		int n, err;
 
+        		//firewall socket address
+        		struct sockaddr_in6 sock_addr;
+        		bzero(&sock_addr, sizeof(sock_addr));
+        		sock_addr.sin6_family = AF_INET6;
+        		sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
+        		sock_addr.sin6_addr = in6addr_loopback;
+
+        		HIP_DEBUG("Received HIPPROXY Status Request from firewall\n");
+
+        		memset(msg, 0, sizeof(struct hip_common));
+
+        		if(hip_get_sava_client_status() == 0)
+        			hip_build_user_hdr(msg, SO_HIP_SET_SAVAH_CLIENT_OFF, 0);
+
+        		if(hip_get_sava_client_status() == 1)
+ 			        hip_build_user_hdr(msg, SO_HIP_SET_SAVAH_CLIENT_ON, 0);
+
+        		n = hip_sendto_user(msg, &sock_addr);
+
+        		HIP_IFEL(n < 0, 0, "sendto() failed\n");
+
+        		if (err == 0)
+        		{
+        			HIP_DEBUG("SEND SAVAH CLIENT STATUS OK.\n");
+        		}
+        	}
+ 	        break;
+        case SO_HIP_SAVAH_SERVER_STATUS_REQUEST:
+	        {
+        		int n, err;
+        		struct sockaddr_in6 sock_addr;
+        		bzero(&sock_addr, sizeof(sock_addr));
+        		sock_addr.sin6_family = AF_INET6;
+        		sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
+        		sock_addr.sin6_addr = in6addr_loopback;
+
+        		HIP_DEBUG("Received SAVAH SERVER Status Request from firewall\n");
+
+        		memset(msg, 0, sizeof(struct hip_common));
+
+        		if(hip_get_sava_server_status() == 0)
+        			hip_build_user_hdr(msg, SO_HIP_SET_SAVAH_SERVER_OFF, 0);
+
+        		if(hip_get_sava_server_status() == 1)
+ 			        hip_build_user_hdr(msg, SO_HIP_SET_SAVAH_SERVER_ON, 0);
+
+        		n = hip_sendto_user(msg, &sock_addr);
+
+        		HIP_IFEL(n < 0, 0, "sendto() failed\n");
+
+        		if (err == 0)
+        		{
+        			HIP_DEBUG("SEND SAVAH SERVER STATUS OK.\n");
+        		}
+        	}
+	        break;
 #ifdef CONFIG_HIP_ESCROW
 	case SO_HIP_OFFER_ESCROW:
 		HIP_DEBUG("Handling add escrow service -user message.\n");
@@ -557,6 +616,111 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 
 		break;
 #endif /* CONFIG_HIP_ESCROW */
+#if 0
+	case SO_HIP_REGISTER_SAVAHR: 
+	  {
+	  dst_hit = hip_get_param_contents(msg,HIP_PARAM_HIT);
+	  dst_ip  = hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR);
+	  HIP_DEBUG("WE HAVE GOT SAVAH REGISTER MESSAGE \n");
+	  if (dst_hit == NULL && dst_ip == NULL) { //HIT and IP are missing worst case opportunistic mode to register with the SAVAH router
+
+	  } else if (dst_hit == NULL && dst_ip != NULL) { //we have at least SAVAH router IP 
+	    
+	  } else { // Both HIT and IP are present that is the simplest case we can register with the router directly
+	    /* Add HIT to IP address mapping of the server to haDB. */
+	    HIP_IFEL(hip_add_peer_map(msg), -1, "Error on registering sava router " \
+		     "HIT to IP address mapping to the haDB.\n");
+	    		/* Fetch the haDB entry just created. */
+	    entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
+	    
+	    if(entry == NULL) {
+	      HIP_ERROR("Error on fetching routers HIT to IP address "	\
+			"mapping from the haDB.\n");
+	      err = -1;
+	      goto out_err;
+	    }
+	    
+	    if (!sava_serving_gateway) {
+	      sava_serving_gateway = 
+		(struct in6_addr *)malloc(sizeof(struct in6_addr));
+	      memset(sava_serving_gateway, 0, sizeof(struct in6_addr));
+	    }
+	    
+	    memcpy(sava_serving_gateway, dst_hit, sizeof(struct in6_addr));
+
+	    HIP_IFEL(hip_send_i1(&entry->hit_our, dst_hit, entry), -1,
+		   "Error on sending I1 packet to the server.\n");
+	    }
+	  }
+#endif	  
+	  break;
+	case SO_HIP_GET_SAVAHR_IN_KEYS:
+	  {
+	    dst_hit = hip_get_param_contents(msg,HIP_PARAM_HIT);
+	    HIP_DEBUG("WE HAVE GOT SAVAH KEYS REQUEST MESSAGE \n");
+	    entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
+	  
+	    if (entry == NULL) {
+	    
+	    } else {
+	      	HIP_DEBUG_HIT("Destination HIT: ", dst_hit);
+		HIP_IFEL(hip_build_param_contents(msg, (void *)dst_hit, HIP_PARAM_HIT,
+					  sizeof(struct in6_addr)), -1,
+					  "build param contents failed\n");
+		HIP_HEXDUMP("crypto key :", &entry->auth_in, sizeof(struct hip_crypto_key));
+		HIP_IFEL(hip_build_param_contents(msg,
+						  (struct hip_crypto_key *) &entry->auth_in, //HMAC key for incomming direction
+						  HIP_PARAM_KEYS,
+						  sizeof(struct hip_crypto_key)), -1,
+			 "build param contents failed\n");
+		HIP_DEBUG("ealg value is %d \n", entry->esp_transform);
+		HIP_IFEL(hip_build_param_contents(msg, (void *)&entry->esp_transform, HIP_PARAM_INT,
+						  sizeof(int)), -1,
+			 "build param contents failed\n");
+		
+	    }
+	  }
+	  break;
+	 case SO_HIP_GET_SAVAHR_OUT_KEYS:
+	  {
+	    dst_hit = hip_get_param_contents(msg,HIP_PARAM_HIT);
+	    HIP_DEBUG("WE HAVE GOT SAVAH KEYS REQUEST MESSAGE \n");
+	    entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
+	  
+	    if (entry == NULL) {
+	    
+	    } else {
+	      	HIP_DEBUG_HIT("Destination HIT: ", dst_hit);
+		HIP_IFEL(hip_build_param_contents(msg, (void *)dst_hit, HIP_PARAM_HIT,
+					  sizeof(struct in6_addr)), -1,
+					  "build param contents failed\n");
+		HIP_HEXDUMP("crypto key :", &entry->auth_out, sizeof(struct hip_crypto_key));
+		HIP_IFEL(hip_build_param_contents(msg,
+						  (struct hip_crypto_key *) &entry->auth_out, //HMAC key for incomming direction
+						  HIP_PARAM_KEYS,
+						  sizeof(struct hip_crypto_key)), -1,
+			 "build param contents failed\n");
+		HIP_DEBUG("ealg value is %d \n", entry->esp_transform);
+		HIP_IFEL(hip_build_param_contents(msg, (void *)&entry->esp_transform, HIP_PARAM_INT,
+						  sizeof(int)), -1,
+			 "build param contents failed\n");
+		
+	    }
+	  }
+	  break; 
+	case SO_HIP_GET_SAVAHR_HIT:
+	  {
+	    HIP_DEBUG("WE HAVE GOT SAVAH HIT REQUEST MESSAGE \n");
+	    //entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
+	    if (sava_serving_gateway) {
+	      HIP_DEBUG_HIT("SAVAH HIT: ", sava_serving_gateway);
+	      HIP_IFEL(hip_build_param_contents(msg, (void *)sava_serving_gateway,
+						HIP_PARAM_HIT,
+						sizeof(struct in6_addr)), -1,
+						"build param contents failed\n");
+	    }
+	  }
+	  break;
 #ifdef CONFIG_HIP_RVS
 	case SO_HIP_ADD_DEL_SERVER:
 	{
@@ -567,8 +731,10 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		   Cancellation is identified with a zero lifetime. */
 		struct hip_reg_request *reg_req = NULL;
 		hip_pending_request_t *pending_req = NULL;
+		struct in6_addr * hit_local;
 		uint8_t *reg_types = NULL;
 		int i = 0, type_count = 0;
+		int opp_mode = 0;
 		
 		_HIP_DEBUG("Handling ADD DEL SERVER user message.\n");
 
@@ -580,10 +746,15 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		reg_req = hip_get_param(msg, HIP_PARAM_REG_REQUEST);
 
 		if(dst_hit == NULL) {
+#if 0
 			HIP_ERROR("No HIT parameter found from the user "\
 				  "message.\n");
 			err = -1;
 			goto out_err;
+#endif
+			HIP_DEBUG("No HIT parameter found from the user " \
+				  "message. Trying opportunistic mode \n");
+			opp_mode = 1;
 		}else if(dst_ip == NULL) {
 			HIP_ERROR("No IPV6 parameter found from the user "\
 				  "message.\n");
@@ -596,18 +767,25 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 			goto out_err;
 		}
 
-		/* Add HIT to IP address mapping of the server to haDB. */
-		HIP_IFEL(hip_add_peer_map(msg), -1, "Error on adding server "\
-			 "HIT to IP address mapping to the haDB.\n");
+		if (!opp_mode) {
+		  /* Add HIT to IP address mapping of the server to haDB. */
+		  HIP_IFEL(hip_add_peer_map(msg), -1, "Error on adding server "	\
+			   "HIT to IP address mapping to the haDB.\n");
 
-		/* Fetch the haDB entry just created. */
-		entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
-
-		if(entry == NULL) {
-			HIP_ERROR("Error on fetching server HIT to IP address "\
-				  "mapping from the haDB.\n");
-			err = -1;
-			goto out_err;
+		  /* Fetch the haDB entry just created. */
+		  entry = hip_hadb_try_to_find_by_peer_hit(dst_hit);
+		  
+		  if(entry == NULL) {
+		    HIP_ERROR("Error on fetching server HIT to IP address " \
+			      "mapping from the haDB.\n");
+		    err = -1;
+		    goto out_err;
+		  }
+		} else {
+		  hit_local = (struct in6_addr *)malloc(sizeof(struct in6_addr));
+		  HIP_IFEL(hip_get_default_hit(hit_local), -1, 
+			   "Error retrieving default HIT \n");
+		  entry = hip_opp_add_map(dst_ip, hit_local);
 		}
 
 		reg_types  = reg_req->reg_type;
@@ -643,6 +821,21 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 				hip_hadb_set_local_controls(
 					entry, HIP_HA_CTRL_LOCAL_REQ_RELAY);
 				break;
+			case HIP_SERVICE_SAVAH:
+			        HIP_DEBUG("HIP_SERVICE_SAVAH \n");
+			        if (!sava_serving_gateway) {
+				  sava_serving_gateway = 
+				    (struct in6_addr *)malloc(sizeof(struct in6_addr));
+				  memset(sava_serving_gateway, 0, sizeof(struct in6_addr));
+				}
+				if (!opp_mode)
+				  memcpy(sava_serving_gateway, dst_hit, sizeof(struct in6_addr));
+
+				hip_set_sava_client_off();
+
+				hip_hadb_set_local_controls(
+					entry, HIP_HA_CTRL_LOCAL_REQ_SAVAH);
+			        break;
 #ifdef CONFIG_HIP_ESCROW
 			case HIP_SERVICE_ESCROW:
 				HIP_KEA * kea = NULL;
@@ -739,6 +932,13 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 
 		err = hip_recreate_all_precreated_r1_packets();
 		break;
+	case SO_HIP_OFFER_SAVAH:
+	        hip_set_srv_status(HIP_SERVICE_SAVAH, HIP_SERVICE_ON);
+	        hip_set_sava_server_on();
+		//we need to add new REG_INFO parameters
+		err = hip_recreate_all_precreated_r1_packets();
+	        HIP_DEBUG("Handling SO_HIP_OFFER_SAVAH: STATUS ON\n");
+	        break;
 	case SO_HIP_OFFER_HIPRELAY:
 		/* draft-ietf-hip-registration-02 HIPRELAY registration. Relay
 		   server handles this message. Message indicates that the
@@ -760,6 +960,11 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 
 		break;
 
+	case SO_HIP_CANCEL_SAVAH:
+	        hip_set_srv_status(HIP_SERVICE_SAVAH, HIP_SERVICE_OFF);
+ 	        hip_set_sava_server_off();
+		HIP_DEBUG("Handling CANCEL SAVAH user message.\n");
+		break;
 	case SO_HIP_CANCEL_RVS:
 		HIP_DEBUG("Handling CANCEL RVS user message.\n");
 
@@ -934,6 +1139,8 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		if (err)
 		        hip_set_msg_err(msg, 1);
 		len = hip_get_msg_total_len(msg);
+		HIP_DEBUG("Sending message response to port %d \n", ntohs(src->sin6_port));
+		HIP_DEBUG_HIT("To address", src);
 		n = hip_sendto_user(msg, (struct sockaddr *)  src);
 		if(n != len)
 			err = -1;
