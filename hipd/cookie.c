@@ -94,7 +94,7 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r,
 	/* Find the proper R1 table and copy the R1 message from the table */
 	HIP_READ_LOCK_DB(HIP_DB_LOCAL_HID);	
 	HIP_IFEL(!(hid = hip_get_hostid_entry_by_lhi_and_algo(HIP_DB_LOCAL_HID, our_hit, HIP_ANY_ALGO, -1)), 
-		 NULL, "Requested source HIT no more available.\n");
+		 NULL, "Unknown HIT\n");
 
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status()) {
