@@ -63,7 +63,8 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 			  entry->state, entry->retrans_state);
 		if ((entry->hip_msg_retrans.count > 0) && entry->hip_msg_retrans.buf &&
 		    ((entry->state != HIP_STATE_ESTABLISHED && entry->retrans_state != entry->state) ||
-		     (entry->update_state != 0 && entry->retrans_state != entry->update_state))) {
+		     (entry->update_state != 0 && entry->retrans_state != entry->update_state) ||
+		     entry->light_update_retrans == 1)) {
 			HIP_DEBUG("state=%d, retrans_state=%d, update_state=%d\n",
 				  entry->state, entry->retrans_state, entry->update_state, entry->retrans_state);
 

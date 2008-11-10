@@ -336,6 +336,28 @@ struct hip_hadb_state
 	unsigned char				 esp_peer_anchor[MAX_HASH_LENGTH];
 	/** another peer anchor used for UPDATE messages */
 	unsigned char				 esp_peer_update_anchor[MAX_HASH_LENGTH];
+	/** root needed in case of hierarchical hchain linking */
+	uint8_t						 esp_root_length;
+	unsigned char				 esp_root[MAX_HASH_LENGTH];
+	/** parameters needed for soft-updates of hchains */
+	/** Stored outgoing UPDATE ID counter. */
+	uint32_t                     light_update_id_out;
+	/** Stored incoming UPDATE ID counter. */
+	uint32_t                     light_update_id_in;
+	/** retranmission */
+	uint8_t						 light_update_retrans;
+#if 0
+	/** the offset of the anchor in the link tree */
+	int							 anchor_offset;
+	/* length of the secret hashed concatenated with this update_anchor */
+	int							 secret_length;
+	/** the secret itself */
+	unsigned char				 secret[MAX_HASH_LENGTH];
+	/** length of the branch for verifying the new anchor */
+	int							 branch_length;
+	/** the branch itself */
+	unsigned char				 branch_nodes[MAX_TREE_DEPTH * MAX_HASH_LENGTH];
+#endif
 	/** Something to do with the birthday paradox.
 	    @todo Please clarify what this field is. */
 	uint64_t                     birthday;
