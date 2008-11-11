@@ -138,7 +138,6 @@ copy_ha:
         return err;
 }
 
-
 int hip_fw_get_default_lsi(hip_lsi_t *lsi) {
         int err = 0;
         struct hip_common *msg = NULL;
@@ -215,18 +214,18 @@ out_err:
  * @return	      1 if translation not done
  * 		      0 if packet reinjected with lsis as addresses
  */
+
 int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m,
 			       struct in6_addr *ip_src,
 			       struct in6_addr *ip_dst)
 {
-	int lsi_query_result = -1, sysOpp_query_result = -1, ha_query_result = -1;
-
+	int lsi_query_result = -1, sys_opp_query_result = -1;
 	int err = 0, verdict = 1;
 	hip_lsi_t lsi_our, lsi_peer, lsi_all_zero = {0};
 	struct in6_addr src_addr, dst_addr, all_zero_addr = {0};
 	struct in_addr src_v4, dst_v4;
 	struct ip6_hdr* ip6_hdr = (struct ip6_hdr*) m->payload;
-int ret = 0;
+int ret = 1;
 
 	//???? strange, why does it not execute ok if the following is commented
         int bind6 = 0, proto4_LSI = 0, proto4_IP = 0;
@@ -235,7 +234,14 @@ int ret = 0;
 	ip_hdr_size = sizeof(struct ip6_hdr);
 
 	switch (ip6_hdr->ip6_nxt) {
-
+	case IPPROTO_UDP:
+		portDest = ((struct udphdr*)((m->payload) + ip_hdr_size))->dest;
+		proto = "udp6";
+		break;
+	case IPPROTO_TCP:
+		portDest = ((struct tcphdr*)((m->payload) + ip_hdr_size))->dest;
+		proto = "tcp6";
+		break;
 	case IPPROTO_ICMPV6:
 		HIP_DEBUG("ICMPv6 packet\n");
 		goto out_err;
@@ -246,11 +252,11 @@ int ret = 0;
 		break;
 	}
 
-
-
-	ha_query_result = hip_query_ha_info(ip_dst, ip_src,
-				&lsi_our, &lsi_peer,
-				&dst_addr, &src_addr, NULL);
+	if (hip_lsi_support)
+		lsi_query_result = hip_query_ha_info(ip_dst, ip_src,
+						     &lsi_our, &lsi_peer,
+						     &dst_addr, &src_addr,
+						     NULL);
 
 HIP_DEBUG_LSI("lsi_our: ", &lsi_our);
 HIP_DEBUG_LSI("lsi_peer: ", &lsi_peer);
@@ -258,13 +264,13 @@ HIP_DEBUG_IN6ADDR("ip_src: ", &src_addr);
 HIP_DEBUG_IN6ADDR("ip_dst: ", &dst_addr);
 
 
-	HIP_DEBUG("Trying lsi transformation\n");
 /* this can be safely deleted********
 	lsi_query_result = hip_query_ha_info(ip_dst, ip_src,
 					     &lsi_our, &lsi_peer,
 					     NULL, NULL, NULL);
 */
-	if(ha_query_result != -1){
+	if (!lsi_query_result) {
+		HIP_DEBUG("LSI transformation\n");
 		HIP_DEBUG_LSI("lsi_our: ", &lsi_our);
 		HIP_DEBUG_LSI("lsi_peer: ", &lsi_peer);
 		IPV4_TO_IPV6_MAP(&lsi_our, &src_addr);
@@ -278,13 +284,14 @@ HIP_DEBUG_IN6ADDR("ip_dst: ", &dst_addr);
 		}
 	}
 
-	HIP_DEBUG("Trying sys opp transformation\n");
+	if (system_based_opp_mode)
+		sys_opp_query_result = hip_query_ha_info(ip_dst, ip_src,
+							NULL, NULL,
+							&dst_addr, &src_addr,
+							NULL);
+	if (!sys_opp_query_result) {
+		HIP_DEBUG("Sys opp transformation\n");
 
-	sysOpp_query_result = hip_query_ha_info(ip_dst, ip_src,
-				   NULL, NULL,
-				   &dst_addr, &src_addr, NULL);
-
-	if(ha_query_result != -1){
 		IPV6_TO_IPV4_MAP(&src_addr, &src_v4);
 		IPV6_TO_IPV4_MAP(&dst_addr, &dst_v4);
 
@@ -306,10 +313,6 @@ err = 0;
 	else
 		return ret;//verdict;
 }
-
-
-
-
 
 /**
  * Checks if the outgoing packet with lsis has already ESTABLISHED the Base Exchange
