@@ -18,33 +18,21 @@ int hip_query_ha_info(struct in6_addr *hit_our, struct in6_addr *hit_peer,
 	struct hip_tlv_common *current_param = NULL;
 	struct hip_common *msg = NULL;
 	struct hip_hadb_user_info_state *ha, *ha_match = NULL;
-	/*
-	hip_lsi_t       lsi_all_zero   = {0};
-	struct in6_addr addr6_all_zero = {0};
-	*/
 
-	HIP_ASSERT( (hit_our && hit_peer) ||
-		    (lsi_our && lsi_peer)/* ||
-		    (loc_our && loc_peer)*/);//????
+	HIP_ASSERT((hit_our && hit_peer) ||
+		   (lsi_our && lsi_peer));
 
 	if (hit_our && hit_peer &&
 	    !ipv6_addr_cmp(hit_peer, &ha_cache.hit_peer) &&
 	    !ipv6_addr_cmp(hit_our,  &ha_cache.hit_our)) {
 		ha_match = &ha_cache;
 		goto copy_ha;
-	} else if (lsi_our && lsi_peer &&/*
-		(ipv4_addr_cmp(&lsi_all_zero, &lsi_our)   != 0) &&
-		(ipv4_addr_cmp(&lsi_all_zero, &lsi_peer)  != 0) &&*/
+	} else if (lsi_our && lsi_peer &&
 		   lsi_peer->s_addr == ha_cache.lsi_peer.s_addr &&
 		   lsi_our->s_addr == ha_cache.lsi_our.s_addr ) {
 		ha_match = &ha_cache;
 		goto copy_ha;
-	} /*else if (loc_our && loc_peer &&
-		   loc_peer->s6_addr == ha_cache.ip_peer.s6_addr &&
-		   loc_our->s6_addr == ha_cache.ip_our.s6_addr ) {
-		ha_match = &ha_cache;
-		goto copy_ha;
-	}*/
+	}
 
 	HIP_DEBUG("No cache found, querying daemon\n");
   
@@ -210,7 +198,14 @@ int ret = 1;
 	ip_hdr_size = sizeof(struct ip6_hdr);
 
 	switch (ip6_hdr->ip6_nxt) {
-
+	case IPPROTO_UDP:
+		portDest = ((struct udphdr*)((m->payload) + ip_hdr_size))->dest;
+		proto = "udp6";
+		break;
+	case IPPROTO_TCP:
+		portDest = ((struct tcphdr*)((m->payload) + ip_hdr_size))->dest;
+		proto = "tcp6";
+		break;
 	case IPPROTO_ICMPV6:
 		HIP_DEBUG("ICMPv6 packet\n");
 		goto out_err;
