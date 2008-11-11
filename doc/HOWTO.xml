@@ -24,9 +24,8 @@
       not include any proprietary drivers or firmware images. As a result,
     you may have to install software for your WLAN interface manually.</para>
     <para>
-    The software dependencies are not listed here because the
-    autogen.sh script in the top directory displays automatically missing
-    software dependencies.
+    The software dependencies are not listed here. Type "./autogen.sh --help"
+    to see what software you need to install before compilation of HIPL.
     </para>
     <para> Network Requirements</para>
     <itemizedlist>
