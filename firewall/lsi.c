@@ -183,7 +183,7 @@ int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m,
 			       struct in6_addr *ip_src,
 			       struct in6_addr *ip_dst)
 {
-	int lsi_query_result = 0, sys_opp_query_result = 0;
+	int lsi_query_result = -1, sys_opp_query_result = -1;
 	int err = 0, verdict = 1;
 	hip_lsi_t lsi_our, lsi_peer, lsi_all_zero = {0};
 	struct in6_addr src_addr, dst_addr, all_zero_addr = {0};
@@ -228,13 +228,13 @@ HIP_DEBUG_IN6ADDR("ip_src: ", &src_addr);
 HIP_DEBUG_IN6ADDR("ip_dst: ", &dst_addr);
 
 
-	HIP_DEBUG("Trying lsi transformation\n");
 /* this can be safely deleted********
 	lsi_query_result = hip_query_ha_info(ip_dst, ip_src,
 					     &lsi_our, &lsi_peer,
 					     NULL, NULL, NULL);
 */
-	if (lsi_query_result) {
+	if (!lsi_query_result) {
+		HIP_DEBUG("LSI transformation\n");
 		HIP_DEBUG_LSI("lsi_our: ", &lsi_our);
 		HIP_DEBUG_LSI("lsi_peer: ", &lsi_peer);
 		IPV4_TO_IPV6_MAP(&lsi_our, &src_addr);
@@ -248,14 +248,14 @@ HIP_DEBUG_IN6ADDR("ip_dst: ", &dst_addr);
 		}
 	}
 
-	HIP_DEBUG("Trying sys opp transformation\n");
-
 	if (system_based_opp_mode)
 		sys_opp_query_result = hip_query_ha_info(ip_dst, ip_src,
 							NULL, NULL,
 							&dst_addr, &src_addr,
 							NULL);
-	if (sys_opp_query_result) {
+	if (!sys_opp_query_result) {
+		HIP_DEBUG("Sys opp transformation\n");
+
 		IPV6_TO_IPV4_MAP(&src_addr, &src_v4);
 		IPV6_TO_IPV4_MAP(&dst_addr, &dst_v4);
 
