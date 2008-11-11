@@ -57,27 +57,7 @@ int hip_query_ha_info(struct in6_addr *hit_our, struct in6_addr *hit_peer,
 
 	while((current_param=hip_get_next_param(msg, current_param)) != NULL) {
 		ha = hip_get_param_contents_direct(current_param);
-		/*if(hit_our && hit_peer){
-			if (!ipv6_addr_cmp(&ha->hit_peer, hit_peer) &&
-			    !ipv6_addr_cmp(&ha->hit_our, hit_our)) {
-				HIP_DEBUG("Matched HITs\n");
-				ha_match = ha;
-				break;
-			}
-		}
-		if(lsi_our && lsi_peer){
-			//HIP_DEBUG_LSI("ha lsi peer", &ha->lsi_peer.s_addr);
-			//HIP_DEBUG_LSI("lsi peer", &lsi_peer->s_addr);
-			//HIP_DEBUG_LSI("ha lsi our", &ha->lsi_our.s_addr);
-			//HIP_DEBUG_LSI("lsi our", &lsi_our->s_addr);
-			if( (ha->lsi_peer.s_addr == lsi_peer->s_addr) &&
-			    (ha->lsi_our.s_addr  == lsi_our->s_addr)     ) {
-				HIP_DEBUG("Matched LSIs\n");
-				ha_match = ha;
-				break;
-			}
-		}
-		*/
+
 		if ( hit_our && hit_peer &&
 		    (ipv6_addr_cmp(&ha->hit_peer, hit_peer) == 0) &&
 		    (ipv6_addr_cmp(&ha->hit_our, hit_our) == 0)      ){
@@ -85,22 +65,18 @@ int hip_query_ha_info(struct in6_addr *hit_our, struct in6_addr *hit_peer,
 			ha_match = ha;
 			break;
 		}
-		if ( lsi_our && lsi_peer &&/*
-		    (ipv4_addr_cmp(&lsi_all_zero, &lsi_our)   != 0) &&
-		    (ipv4_addr_cmp(&lsi_all_zero, &lsi_peer)  != 0) &&*/
-		    (ha->lsi_peer.s_addr == lsi_peer->s_addr)       &&
-		    (ha->lsi_our.s_addr  == lsi_our->s_addr)            ) {
+		if (lsi_our && lsi_peer &&
+		    (ha->lsi_peer.s_addr == lsi_peer->s_addr) &&
+		    (ha->lsi_our.s_addr  == lsi_our->s_addr)) {
 			HIP_DEBUG_LSI("lsi peer", &lsi_peer->s_addr);
 			HIP_DEBUG_LSI("lsi our",  &lsi_our->s_addr);
 			HIP_DEBUG("Matched LSIs\n");
 			ha_match = ha;
 			break;
 		}
-		if ( loc_our && loc_peer &&/*
-		    (ipv6_addr_cmp(&addr6_all_zero, &loc_our)  != 0) &&
-		    (ipv6_addr_cmp(&addr6_all_zero, &loc_peer) != 0) &&*/
-		    (ha->ip_peer.s6_addr == loc_peer->s6_addr)       &&
-		    (ha->ip_our.s6_addr  == loc_our->s6_addr)           ) {
+		if (loc_our && loc_peer &&
+		    (ha->ip_peer.s6_addr == loc_peer->s6_addr) &&
+		    (ha->ip_our.s6_addr  == loc_our->s6_addr)) {
 			HIP_DEBUG_IN6ADDR("ip peer", &loc_peer->s6_addr);
 			HIP_DEBUG_IN6ADDR("ip our",  &loc_our->s6_addr);
 			HIP_DEBUG("Matched LSIs\n");
@@ -244,8 +220,6 @@ int ret = 1;
 		//goto out_err;
 		break;
 	}
-
-
 
 	if (hip_lsi_support)
 		lsi_query_result = hip_query_ha_info(ip_dst, ip_src,
@@ -393,7 +367,7 @@ int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src,
 			IPV4_TO_IPV6_MAP(lsi_dst, &dst_lsi);
 			HIP_IFEL(hip_trigger_bex(&src_hit, &dst_hit, &src_lsi,
 						 &dst_lsi, NULL, NULL),
-				 	-1, "Base Exchange Trigger failed\n");
+				 	-1, "Base exchange triggering failed\n");
 			/* update fw db entry */
 			HIP_IFEL(firewall_update_entry(&src_hit, &dst_hit,
 						       lsi_dst, &dst_ip,
