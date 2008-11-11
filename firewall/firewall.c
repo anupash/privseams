@@ -1369,7 +1369,8 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 	}
 	if (hip_sava_client && 
 	    !hip_lsi_support && 
-	    !hip_userspace_ipsec) {
+	    !hip_userspace_ipsec &&
+	    !system_based_opp_mode) {
 		/* check if HA exists with the router then 
 		 *  encrypt source IP and reinject packet to 
 		 *  the network stack
