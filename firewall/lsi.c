@@ -296,7 +296,7 @@ err = 0;
 int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *lsi_src,
 			       struct in_addr *lsi_dst)
 {
-	int err, msg_type, state_ha, new_fw_entry_state;
+	int err = 0, msg_type, state_ha, new_fw_entry_state;
 	struct in6_addr src_lsi, dst_lsi;
 	struct in6_addr src_hit, dst_hit;
 	struct in6_addr src_ip, dst_ip;
