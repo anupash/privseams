@@ -1405,9 +1405,8 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 			if (hip_is_packet_lsi_reinjection(&dst_lsi)) {
 				verdict = 1;
 			} else {
-				hip_fw_handle_outgoing_lsi(ctx->ipq_packet,
+				verdict = hip_fw_handle_outgoing_lsi(ctx->ipq_packet,
 							   &src_lsi, &dst_lsi);
-				verdict = 0; /* Reject the packet */
 			}
 		} else if (hip_opptcp && (ctx->ip_hdr.ipv4)->ip_p == 6 &&
 			   tcp_packet_has_i1_option(hdrBytes, 4*tcphdr->doff)){
