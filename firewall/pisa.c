@@ -15,7 +15,6 @@
 #include "misc.h"
 #include "pisa.h"
 #include "pisa_cert.h"
-#include "hslist.h"
 #include <string.h>
 
 #define PISA_RANDOM_LEN 16
@@ -27,79 +26,8 @@
 #include "performance.h"
 #endif
 
-struct pisa_conn {
-	uint32_t spi[2];
-	struct in6_addr hit[2];
-};
-
-static SList *pisa_connections = NULL;
-
-struct pisa_conn_query {
-	struct in6_addr *hit[2];
-};
-
-static struct pisa_conn *pisa_find_conn(struct pisa_conn
-					*(*f)(SList *s, void *p),
-					void *data)
-{
-	SList *l = pisa_connections;
-	struct pisa_conn *pcd;
-
-	while (l) {
-		pcd = f(l, data);
-		if (pcd != NULL)
-			return pcd;
-		l = l->next;
-	}
-
-	return NULL;
-}
-
-static struct pisa_conn *pisa_find_conn_by_hits2(SList *s, void *p)
-{
-	struct pisa_conn_query *query = (struct pisa_conn_query *) p;
-	struct pisa_conn *data;
-
-	if (s && s->data) {
-		data = (struct pisa_conn *) s->data;
-		if ((!ipv6_addr_cmp(&data->hit[0], query->hit[0]) &&
-		     !ipv6_addr_cmp(&data->hit[1], query->hit[1])) ||
-		    (!ipv6_addr_cmp(&data->hit[0], query->hit[1]) &&
-		     !ipv6_addr_cmp(&data->hit[1], query->hit[0])))
-			return data;
-	}
-	return NULL;
-}
-
-static struct pisa_conn *pisa_find_conn_by_hits(struct in6_addr *hit1,
-						struct in6_addr *hit2)
-{
-	struct pisa_conn_query data;
-
-	data.hit[0] = hit1;
-	data.hit[1] = hit2;
-
-	return pisa_find_conn(pisa_find_conn_by_hits2, &data);
-}
-
-static struct pisa_conn *pisa_find_conn_by_spi2(SList *s, void *p)
-{
-	uint32_t *spi = (uint32_t *) p;
-	struct pisa_conn *data;
-
-	if (s && s->data) {
-		data = (struct pisa_conn *) s->data;
-		if (data->spi[0] == *spi || data->spi[1] == *spi)
-			return data;
-	}
-
-	return NULL;
-}
-
-static struct pisa_conn *pisa_find_conn_by_spi(uint32_t spi)
-{
-	return pisa_find_conn(pisa_find_conn_by_spi2, &spi);
-}
+struct tuple * get_tuple_by_hits(const struct in6_addr *src_hit,
+				 const struct in6_addr *dst_hit);
 
 struct pisa_puzzle_hash {
 	u8 data[4];
@@ -727,30 +655,6 @@ static int pisa_handler_u3(hip_fw_context_t *ctx)
 }
 
 /**
- * Handle ESP data that should be forwarded.
- *
- * @param ctx context of the packet to check
- * @return verdict, either NF_ACCEPT or NF_DROP
- */
-static int pisa_handler_esp(hip_fw_context_t *ctx)
-{
-	int err = NF_DROP;
-	struct hip_esp *esp;
-	struct pisa_conn *pcd;
-
-	esp = ctx->transport_hdr.esp;
-	HIP_IFEL(esp == NULL, NF_DROP, "No ESP Header found.\n");
-	
-	pcd = pisa_find_conn_by_spi(esp->esp_spi);
-	HIP_IFEL(pcd == NULL, NF_DROP, "Connection not found.\n");
-
-	err = NF_ACCEPT;
-	HIP_DEBUG("Connection found, forwarding ESP packet.\n");
-out_err:
-	return err;
-}
-
-/**
  * Handle CLOSE_ACK packet. Remove the connection from the list of accepted
  * connections
  *
@@ -772,14 +676,12 @@ void pisa_init(struct midauth_handlers *h)
 	h->u1 = pisa_handler_u1;
 	h->u2 = pisa_handler_u2;
 	h->u3 = pisa_handler_u3;
-	h->esp = pisa_handler_esp;
+	h->esp = midauth_handler_drop; /* no longer handled in pisa.c */
 	h->close = midauth_handler_accept;
 	h->close_ack = pisa_handler_close_ack;
 
 	pisa_generate_random();
 	pisa_generate_random();
-
-	pisa_connections = alloc_slist();
 }
 
 #endif
