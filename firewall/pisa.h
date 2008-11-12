@@ -8,6 +8,9 @@
 
 #include "midauth.h"
 
+#define PISA_STATE_DISALLOW 	0
+#define PISA_STATE_ALLOW 	1
+
 /**
  * Register PISA handlers with midauth and initialize data structures.
  *

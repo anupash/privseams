@@ -445,24 +445,14 @@ out_err:
 static void pisa_accept_connection(struct in6_addr *hits, uint32_t spi_s,
 				   struct in6_addr *hitr, uint32_t spi_r)
 {
-	struct pisa_conn *pcd;
+	struct tuple *t = get_tuple_by_hits(hits, hitr);
 
-	/* add a new connection or update an old one */
-	if ((pcd = pisa_find_conn_by_hits(hits, hitr)) == NULL) {
-		pcd = malloc(sizeof(struct pisa_conn));
-		append_to_slist(pisa_connections, pcd);
+	if (t) {
+		t->connection->pisa_state = PISA_STATE_ALLOW;
+		HIP_INFO("PISA accepted the connection.\n");
+	} else {
+		HIP_ERROR("Connection not found.\n");
 	}
-
-	ipv6_addr_copy(&pcd->hit[0], hits);
-	ipv6_addr_copy(&pcd->hit[1], hitr);
-	pcd->spi[0] = spi_s;
-	pcd->spi[1] = spi_r;
-
-	HIP_DEBUG_HIT("pcd->hit[0]: ", &pcd->hit[0]);
-	HIP_DEBUG_HIT("pcd->hit[1]: ", &pcd->hit[1]);
-	HIP_DEBUG("spi[0]: 0x%x, spi[1]: 0x%x\n", pcd->spi[0], pcd->spi[1]);
-
-	HIP_INFO("PISA accepted the connection.\n");
 }
 
 /**
@@ -528,17 +518,11 @@ static void pisa_accept_connection_u3(hip_fw_context_t *ctx,
 static void pisa_remove_connection(hip_fw_context_t *ctx)
 {
 	struct hip_common *hip = ctx->transport_hdr.hip;
-	struct pisa_conn *pcd;
+	struct tuple *t = get_tuple_by_hits(&hip->hits, &hip->hitr);
 
-	if ((pcd = pisa_find_conn_by_hits(&hip->hits, &hip->hitr)) == NULL) {
-		HIP_DEBUG("Connection did not exist previously.\n");
-		return;
+	if (t) {
+		t->connection->pisa_state = PISA_STATE_DISALLOW;
 	}
-	HIP_DEBUG("Connection existed previously, removing from list.\n");
-	pisa_connections = remove_from_slist(pisa_connections, pcd);
-
-	/* pcd does not have to be freed, as remove_from_slist takes care of
-	 * that when it calls free_slist. */
 }
 
 /**

@@ -92,6 +92,9 @@ struct connection
 	int num_esp_prot_tfms;
 	// transforms + UNUSED
 	uint8_t esp_prot_tfms[NUM_TRANSFORMS + 1];
+#ifdef CONFIG_HIP_MIDAUTH
+	int pisa_state;
+#endif
 };
 
 struct hip_esp_packet

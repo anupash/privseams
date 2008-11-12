@@ -1469,7 +1469,8 @@ int hip_fw_handle_hip_forward(hip_fw_context_t *ctx){
 
 #ifdef CONFIG_HIP_MIDAUTH
 	if (use_midauth)
-		return midauth_filter_hip(ctx);
+		if (midauth_filter_hip(ctx) == NF_DROP)
+			return NF_DROP;
 #endif
 	// for now forward and output are handled symmetrically
 	return hip_fw_handle_hip_output(ctx);
@@ -1480,11 +1481,6 @@ int hip_fw_handle_esp_forward(hip_fw_context_t *ctx){
 	int verdict = accept_hip_esp_traffic_by_default;
 
 	HIP_DEBUG("\n");
-
-#ifdef CONFIG_HIP_MIDAUTH
-	if (use_midauth)
-		verdict = midauth_filter_esp(ctx);
-#else
 	if (filter_traffic)
 	{
 		// check if this belongs to one of the connections pass through
@@ -1493,7 +1489,6 @@ int hip_fw_handle_esp_forward(hip_fw_context_t *ctx){
  	{
 		verdict = ACCEPT;
 	}
-#endif
  
  out_err:
 	return verdict;

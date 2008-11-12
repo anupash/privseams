@@ -3,6 +3,10 @@
 #include "hslist.h"
 #include "esp_prot_conntrack.h"
 
+#ifdef CONFIG_HIP_MIDAUTH
+#include "pisa.h"
+#endif
+
 #ifdef CONFIG_HIP_PERFORMANCE
 #include "performance.h"
 #endif
@@ -336,6 +340,9 @@ void insert_new_connection(struct hip_data * data){
   //set time stamp
   //g_get_current_time(&connection->time_stamp);
   gettimeofday (&connection->time_stamp, NULL);
+#ifdef HIP_CONFIG_MIDAUTH
+  connection->pisa_state = PISA_STATE_DISALLOW;
+#endif
 
   //original direction tuple
   connection->original.state = HIP_STATE_UNASSOCIATED;
@@ -523,6 +530,7 @@ struct esp_tuple *esp_tuple_from_esp_info_locator(const struct hip_esp_info * es
       new_esp->tuple = tuple;
       new_esp->dst_addr_list = NULL;
       new_esp->dec_data = NULL;
+      new_esp->esp_prot_tfm = 0;
 
       n = (hip_get_param_total_len(locator) - sizeof(struct hip_locator))/
 	sizeof(struct hip_locator_info_addr_item);
@@ -618,6 +626,9 @@ int insert_connection_from_update(struct hip_data * data,
       return 0;
     }
   connection->state = STATE_ESTABLISHING_FROM_UPDATE;
+#ifdef HIP_CONFIG_MIDAUTH
+  connection->pisa_state = PISA_STATE_DISALLOW;
+#endif
 
   //original direction tuple
   connection->original.state = HIP_STATE_UNASSOCIATED;
@@ -1135,6 +1146,7 @@ int handle_update(const struct in6_addr * ip6_src,
 
 			// insertion successful -> go on
 			HIP_DEBUG("connection insertion successful\n");
+			tuple = get_tuple_by_hits(&common->hits, &common->hitr);
 
 			free(data);
 
@@ -1676,6 +1688,13 @@ int filter_esp_state(const struct in6_addr *dst_addr,
 
 		err = 1;
 	}
+
+#ifdef CONFIG_HIP_MIDAUTH
+	if (tuple->connection->pisa_state == PISA_STATE_DISALLOW) {
+		HIP_DEBUG("PISA: ESP unauthorized -> dropped\n");
+		err = 0;
+	}
+#endif
 
 	// move here from escrow processing
 	HIP_IFEL(!(esp_tuple = find_esp_tuple(tuple->esp_tuples, spi)), -1,
