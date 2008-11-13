@@ -28,10 +28,12 @@ int esp_prot_conntrack_R2_anchor(const struct hip_common *common,
 		struct tuple *tuple);
 int esp_prot_conntrack_update(const hip_common_t *update, struct tuple * tuple);
 int esp_prot_conntrack_cache_anchor(struct tuple * tuple, struct hip_seq *seq,
-		struct esp_prot_anchor *esp_anchor);
+		struct esp_prot_anchor *esp_anchor, struct esp_prot_root *esp_root);
 int esp_prot_conntrack_update_anchor(struct tuple *tuple, struct hip_ack *ack,
 		struct hip_esp_info *esp_info);
 int esp_prot_conntrack_verify(struct esp_tuple *esp_tuple, struct hip_esp *esp);
+struct esp_tuple * esp_prot_conntrack_find_esp_tuple(struct tuple * tuple,
+		unsigned char *active_anchor, int hash_length);
 
 
 

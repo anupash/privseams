@@ -2499,9 +2499,10 @@ int hip_send_update(struct hip_hadb_state *entry,
 					    &entry->hip_hmac_out), -1,
 	      "Building of HMAC failed\n");
 
-     /* Add SIGNATURE */
-     HIP_IFEL(entry->sign(entry->our_priv, update_packet), -EINVAL,
-	      "Could not sign UPDATE. Failing\n");
+
+	 /* Add SIGNATURE */
+	 HIP_IFEL(entry->sign(entry->our_priv, update_packet), -EINVAL,
+		  "Could not sign UPDATE. Failing\n");
 
      /* Send UPDATE */
      hip_set_spi_update_status(entry, esp_info_old_spi, 1);

@@ -371,12 +371,15 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	hip_ha_t *entry = NULL, *aux = NULL;
 	hip_lsi_t local_lsi, lsi_aux;
 
+	HIP_DEBUG_INADDR("Local IP address ", local_addr);
+	hip_print_debug_info(local_addr, peer_addr,local_hit, peer_hit, peer_lsi);
+
 	hip_print_debug_info(local_addr, peer_addr,local_hit, peer_hit,
 			     peer_lsi);
 
 	entry = hip_hadb_find_byhits(local_hit, peer_hit);
 
-	if (entry){
+	if (entry) {
 		hip_hadb_dump_spis_out(entry);
 		HIP_DEBUG_LSI("    Peer lsi   ",&entry->lsi_peer);
 		/*Compare if different lsi's*/
@@ -2558,6 +2561,7 @@ void hip_hadb_set_local_controls(hip_ha_t *entry, hip_controls_t mask)
 		case HIP_HA_CTRL_LOCAL_REQ_ESCROW:
 		case HIP_HA_CTRL_LOCAL_REQ_RELAY:
 		case HIP_HA_CTRL_LOCAL_REQ_RVS:
+		case HIP_HA_CTRL_LOCAL_REQ_SAVAH:
 			entry->local_controls |= mask;
 			break;
 		default:
@@ -2580,6 +2584,8 @@ void hip_hadb_set_peer_controls(hip_ha_t *entry, hip_controls_t mask)
 		case HIP_HA_CTRL_PEER_ESCROW_CAPABLE:
 		case HIP_HA_CTRL_PEER_RVS_CAPABLE:
 		case HIP_HA_CTRL_PEER_RELAY_CAPABLE:
+		case HIP_HA_CTRL_PEER_SAVAH_CAPABLE:
+		case HIP_HA_CTRL_PEER_GRANTED_SAVAH:
 		case HIP_HA_CTRL_PEER_GRANTED_UNSUP:
 		case HIP_HA_CTRL_PEER_GRANTED_ESCROW:
 		case HIP_HA_CTRL_PEER_GRANTED_RVS:

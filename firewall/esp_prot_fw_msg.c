@@ -155,7 +155,8 @@ hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore)
 				"hash_length <= 0, expecting something bigger\n");
 
 		HIP_IFEL((num_hchains = hip_ll_get_size(&hcstore->hchain_shelves[transform->hash_func_id]
-		        [transform->hash_length_id].hchains[DEFAULT_HCHAIN_LENGTH_ID])) <= 0, -1,
+		        [transform->hash_length_id].
+		        hchains[DEFAULT_HCHAIN_LENGTH_ID][NUM_BEX_HIERARCHIES - 1])) <= 0, -1,
 				"num_hchains <= 0, expecting something bigger\n");
 
 		// add num_hchains for this transform, needed on receiver side
@@ -190,10 +191,12 @@ hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore)
 
 		// add anchor with this transform
 		for (j = 0; j <  hip_ll_get_size(&hcstore->hchain_shelves[transform->hash_func_id]
-				[transform->hash_length_id].hchains[DEFAULT_HCHAIN_LENGTH_ID]); j++)
+				[transform->hash_length_id].
+				hchains[DEFAULT_HCHAIN_LENGTH_ID][NUM_BEX_HIERARCHIES - 1]); j++)
 		{
 			HIP_IFEL(!(hchain = hip_ll_get(&hcstore->hchain_shelves[transform->hash_func_id]
-				[transform->hash_length_id].hchains[DEFAULT_HCHAIN_LENGTH_ID], j)), -1,
+				[transform->hash_length_id].
+				hchains[DEFAULT_HCHAIN_LENGTH_ID][NUM_BEX_HIERARCHIES - 1], j)), -1,
 				"failed to retrieve hchain\n");
 
 			anchor = hchain->anchor_element->hash;
@@ -219,7 +222,10 @@ hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore)
  *
  * sends src_hit, dst_hit, transform, hash_length and hash
  */
-int send_trigger_update_to_hipd(hip_sa_entry_t *entry)
+int send_trigger_update_to_hipd(hip_sa_entry_t *entry, int soft_update,
+		int anchor_offset, unsigned char *secret, int secret_length,
+		unsigned char *branch_nodes, int branch_length, unsigned char *root,
+		int root_length)
 {
 	int err = 0;
 	struct hip_common *msg = NULL;
@@ -258,6 +264,47 @@ int send_trigger_update_to_hipd(hip_sa_entry_t *entry)
 	HIP_IFEL(hip_build_param_contents(msg, (void *)entry->next_hchain->anchor_element->hash,
 			HIP_PARAM_HCHAIN_ANCHOR, hash_length), -1,
 			"build param contents failed\n");
+
+	HIP_DEBUG("root_length: %i\n", root_length);
+	HIP_IFEL(hip_build_param_contents(msg, (void *)&root_length, HIP_PARAM_INT,
+			sizeof(int)), -1, "build param contents failed\n");
+
+	if (root && root_length > 0)
+	{
+		HIP_HEXDUMP("root: ", root, root_length);
+		HIP_IFEL(hip_build_param_contents(msg, (void *)root,
+				HIP_PARAM_ROOT, root_length), -1,
+				"build param contents failed\n");
+	}
+
+	HIP_DEBUG("soft_update: %i\n", soft_update);
+	HIP_IFEL(hip_build_param_contents(msg, (void *)&soft_update, HIP_PARAM_INT,
+			sizeof(int)), -1, "build param contents failed\n");
+
+	if (soft_update)
+	{
+		HIP_DEBUG("anchor_offset: %i\n", anchor_offset);
+		HIP_IFEL(hip_build_param_contents(msg, (void *)&anchor_offset, HIP_PARAM_INT,
+				sizeof(int)), -1, "build param contents failed\n");
+
+		HIP_DEBUG("secret_length: %i\n", secret_length);
+		HIP_IFEL(hip_build_param_contents(msg, (void *)&secret_length, HIP_PARAM_INT,
+				sizeof(int)), -1, "build param contents failed\n");
+
+		HIP_DEBUG("branch_length: %i\n", branch_length);
+		HIP_IFEL(hip_build_param_contents(msg, (void *)&branch_length, HIP_PARAM_INT,
+				sizeof(int)), -1, "build param contents failed\n");
+
+		HIP_HEXDUMP("secret: ", secret, secret_length);
+		HIP_IFEL(hip_build_param_contents(msg, (void *)secret,
+				HIP_PARAM_SECRET, secret_length), -1,
+				"build param contents failed\n");
+
+		HIP_HEXDUMP("branch_nodes: ", branch_nodes, branch_length);
+		HIP_IFEL(hip_build_param_contents(msg, (void *)branch_nodes,
+				HIP_PARAM_BRANCH_NODES, branch_length), -1,
+				"build param contents failed\n");
+	}
 
 	HIP_DUMP_MSG(msg);
 
