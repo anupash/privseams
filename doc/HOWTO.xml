@@ -418,39 +418,45 @@ SHELLOPTS=braceexpand:emacs:hashall:histexpand:interactive-comments:monitor:nocl
 Target System (Atheros [2.6])
 Target Images (jffs2, squashfs)
 Image configuration --->
-(static) LAN Protocol (NEW)
-(192.168.5.30) LAN IP Address (NEW)
-(255.255.255.0) LAN Network Mask (NEW)
+ (static) LAN Protocol (NEW)
+ (192.168.5.30) LAN IP Address (NEW)
+ (255.255.255.0) LAN Network Mask (NEW)
+Base System  ---> 
+ Configuration  ---> 
+  Linux Module Utilities  ---> 
+   [*] modprobe 
+Libraries  --->
+ &lt;*&gt; libuuid
 Network  --->
-&lt;*&gt; ipsec-tools (for PISA development)
-&lt;*&gt; isakmpd (for PISA development)
-&lt;*&gt; ip6tables (for PISA development)
-&lt;*&gt; hostapd (for PISA development)
+ &lt;*&gt; ipsec-tools
+ &lt;*&gt; isakmpd
+ &lt;*&gt; ip6tables
+ &lt;*&gt; hostapd
 Kernel modules  ---> 
  Netfilter Extensions  ---> 
- &lt;*&gt; kmod-ip6tables 
- &lt;*&gt; kmod-ipt-filter 
- &lt;*&gt; kmod-ipt-ipsec 
- &lt;*&gt; kmod-ipt-nat 
- &lt;*&gt; kmod-ipt-queue 
-Network Support  ---> 
- &lt;*&gt; kmod-ipsec 
- &lt;*&gt;  kmod-ipsec4 
- &lt;*&gt;  kmod-ipsec6 
- &lt;*&gt; kmod-iptunnel4 
- &lt;*&gt; kmod-ipv6 
- &lt;*&gt; kmod-tun 
-Other modules  ---> 
- &lt;*&gt; kmod-crypto 
-Wireless Drivers  ---> 
- &lt;*&gt; kmod-madwifi 
+  &lt;*&gt; kmod-ip6tables 
+  &lt;*&gt; kmod-ipt-filter 
+  &lt;*&gt; kmod-ipt-ipsec 
+  &lt;*&gt; kmod-ipt-nat 
+  &lt;*&gt; kmod-ipt-queue 
+ Network Support  ---> 
+  &lt;*&gt; kmod-ipsec 
+  &lt;*&gt;  kmod-ipsec4 
+  &lt;*&gt;  kmod-ipsec6 
+  &lt;*&gt; kmod-iptunnel4 
+  &lt;*&gt; kmod-ipv6 
+  &lt;*&gt; kmod-tun 
+ Other modules  ---> 
+  &lt;*&gt; kmod-crypto 
+ Wireless Drivers  ---> 
+  &lt;*&gt; kmod-madwifi 
 Advanced configuration options (for developers)  --->
-Build Options  --->
-(8)   Number of jobs to run simultaneously (for PISA development. Speeds up compilation dramatically on multicore systems)
+ Build Options  --->
+  (8)   Number of jobs to run simultaneously (for PISA development. Speeds up compilation dramatically on multicore systems)
 </programlisting>
           </para>
           <para>
-		  NOTE: Don't use hostapd-mini, because it causes build errors. Use hostapd instead.
+            You could also download a pre-configured configuration file for your device from <ulink url="http://hipl.hiit.fi/hipl/contrib/openwrt/7.09/config/dot_config_fonera" />, and place it as kamikaze_7.09/.config, and <ulink url="http://hipl.hiit.fi/hipl/contrib/openwrt/7.09/config/target/linux/atheros-2.6/config/default" /> as kamikaze_7.09/target/linux/atheros-2.6/config/default.
           </para>
         </listitem>
         <listitem>
@@ -517,7 +523,7 @@ $ ls -l bin/
         </listitem>
         <listitem>
           <para>
-		  Get all patches for HIPL on OpenWRT from <ulink url="http://hipl.hiit.fi/hipl/contrib/openwrt/7.09/patches/" />, which produce Makefiles and configuration files for necessary packages. And apply them into the kamikaze_7.09 source tree. NOTE: this patch is originally made by Dmitriy Kuptsov. Thanks.
+		  Get all patches for HIPL on OpenWRT from <ulink url="http://hipl.hiit.fi/hipl/contrib/openwrt/7.09/patches/" />, which produce Makefiles and configuration files for necessary packages. And apply them into the kamikaze_7.09 source tree.
           </para>
           <para>
   <programlisting>
@@ -877,49 +883,53 @@ endif
 Target System (Broadcom BCM947xx/953xx [2.6])
 Target Images (jffs2, squashfs)
 Image configuration --->
-(static) LAN Protocol (NEW)
-(192.168.5.30) LAN IP Address (NEW)
-(255.255.255.0) LAN Network Mask (NEW)
+ (static) LAN Protocol (NEW)
+ (192.168.5.30) LAN IP Address (NEW)
+ (255.255.255.0) LAN Network Mask (NEW)
+Base System  ---> 
+ Configuration  ---> 
+  Linux Module Utilities  ---> 
+   [*] modprobe 
+Libraries  --->
+ &lt;*&gt; libuuid
 Network  --->
-&lt;*&gt; ipsec-tools (for PISA development)
-&lt;*&gt; isakmpd (for PISA development)
-&lt;*&gt; ip6tables (for PISA development)
-&lt;*&gt; hostapd (for PISA development)
+ &lt;*&gt; ipsec-tools
+ &lt;*&gt; isakmpd
+ &lt;*&gt; ip6tables
+ &lt;*&gt; hostapd
 Kernel modules  ---> 
  Netfilter Extensions  ---> 
- &lt;*&gt; kmod-ip6tables 
- &lt;*&gt; kmod-ipt-filter 
- &lt;*&gt; kmod-ipt-ipsec 
- &lt;*&gt; kmod-ipt-nat 
- &lt;*&gt; kmod-ipt-queue 
+  &lt;*&gt; kmod-ip6tables 
+  &lt;*&gt; kmod-ipt-filter 
+  &lt;*&gt; kmod-ipt-ipsec 
+  &lt;*&gt; kmod-ipt-nat 
+  &lt;*&gt; kmod-ipt-queue 
 Network Support  ---> 
- &lt;*&gt; kmod-ipsec 
- &lt;*&gt;  kmod-ipsec4 
- &lt;*&gt;  kmod-ipsec6 
- &lt;*&gt; kmod-iptunnel4 
- &lt;*&gt; kmod-ipv6 
- &lt;*&gt; kmod-tun 
+  &lt;*&gt; kmod-ipsec 
+  &lt;*&gt;  kmod-ipsec4 
+  &lt;*&gt;  kmod-ipsec6 
+  &lt;*&gt; kmod-iptunnel4 
+  &lt;*&gt; kmod-ipv6 
+  &lt;*&gt; kmod-tun 
 Other modules  ---> 
- &lt;*&gt; kmod-crypto 
+  &lt;*&gt; kmod-crypto 
 Wireless Drivers  ---> 
- &lt;*&gt; kmod-madwifi 
+  &lt;*&gt; kmod-madwifi 
 Advanced configuration options (for developers)  --->
-Build Options  --->
-(8)   Number of jobs to run simultaneously (for PISA development. Speeds up compilation dramatically on multicore systems)
+ Build Options  --->
+  (8)   Number of jobs to run simultaneously (for PISA development. Speeds up compilation dramatically on multicore systems)
 </programlisting>
           </para>
         </listitem>
         <listitem>
           <para>
-            Make also sure that you have the following kernel configurations in your target/linux/brcm47xx-2.6/config/default. Those are not available in the default configuration file provided by OpenWRT kamikaze 7.09.
+            You could also download a pre-configured configuration file for your device from <ulink url="http://hipl.hiit.fi/hipl/contrib/openwrt/7.09/config/dot_config_wgt" />, and place it as kamikaze_7.09/.config, and <ulink url="http://hipl.hiit.fi/hipl/contrib/openwrt/7.09/config/target/linux/brcm47xx-2.6/config/default" /> as kamikaze_7.09/target/linux/brcm47xx-2.6/config/default.
+            Make sure that you have the following kernel configurations in your target/linux/brcm47xx-2.6/config/default. Those are not available in the default configuration file provided by OpenWRT kamikaze 7.09.
 <programlisting>
 CONFIG_DUMMY=y
 CONFIG_PACKET=y
 CONFIG_UNIX=y
 </programlisting>
-          </para>
-          <para>
-            The configuration file is also available at <ulink url="http://hipl.hiit.fi/hipl/contrib/openwrt/7.09/config/target/linux/brcm47xx-2.6/config/" />
           </para>
         </listitem>
         <listitem>
@@ -1148,7 +1158,7 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
       as IPv6 addresses on-wire.
     </para>
     <para>
-      We will show how to test IPv4 and IPv6 applications. Meanwhile IPv6 applications use the 
+      We show how to test HIP with both IPv4 and IPv6 applications. Meanwhile IPv6 applications use the 
       HIT identifier, IPv4-only applications use the LSI identifier. This is an IPv4 address in the range 1.0.0.0/8.
       Firstly, we explain how to configure HIPL when we want to use IPv4 applications. Secondly, we introduce some
       tests with IPv6 applications. To finalize, we discuss the interoperability between IPv4 and IPv6 applications 
@@ -1191,7 +1201,7 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
 		    </itemizedlist>
 	    <para>Apart from starting the hipd process, the hipfw process must be also 
 		started in both machines, oops and crash. Notice that hipfw must be started always after hipd!
-	    </para>   
+	    </para>
 	    <itemizedlist>
 	      <listitem><para>
 		  cd somewhere/hipl
@@ -1200,7 +1210,7 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
 		  hipd/hipd # (to start as a background daemon process, add -b flag)
 	      </para></listitem>
 	      <listitem><para>
-		  firewall/hipfw -l (to start the firewall with LSI support enabled)
+		  firewall/hipfw -lA (to start the firewall with LSI support enabled and allow HIP/ESP packets)
 	      </para></listitem>
 	    </itemizedlist>
 	    <para>
@@ -1834,7 +1844,58 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
   </para>
   <para>
   Then run at the server: vlc -vvv &lt;any avi video file&gt; --ipv6 --sout '#std{access=rtp,mux=ts,dst=[&lt;CLIENT's HIT&gt;]:1234}'
-
+  </para>
+  </section>
+  <section id="sec_vnc">
+  <title>VNC applications</title>
+  <para>
+    Vino-server/Vinagre-client and tightVNCserver/xtightVNCviewer
+    applications work just fine with the LSI support of HIPL. LSIs are
+    used because tested applications did not support IPv6. It seems
+    that most of the VNC applications do not support IPv6.
+  </para>
+  <para>
+    VINO/VINAGRE
+  </para>
+  <para>
+  Setup LSIs as the manual instructs and remember the daemons and so
+  on. Then do the following.
+  </para>
+  <para>
+    For server side (Remember Ubuntu was used when testing). Open the
+    settings GUI from Gnome System->Preferences->Remote Desktop then
+    allow other users to view and or control the desktop. You can
+    also set a password for the desktop. 
+  </para>
+  <para>
+    For the client side do the following and everything should work.
+  </para>
+  <programlisting>
+    vinagre &lt;LSI-of-Server&gt;
+  </programlisting>
+  <para>
+    THIGHTVNCSERVER/XTIGHTVNCVIEWER
+  </para>
+  <para>
+  Setup LSIs as the manual instructs and remember the daemons and so
+  on. Then do the following.
+  </para>
+  <para>
+    For the server side install package tightvncsercer. To start the
+    server just write tightvncserver on the terminal and the server
+    will start with default options. Refer to the official
+    documentation or the man pages of tightvnc for more information on
+    the configuration. 
+  </para>
+  <para>
+    On the client side install package xtightvncviewer. Then with the
+    following command you should have an successfull connection.
+  </para>
+  <programlisting>
+    xtightvncviewer &lt;LSI-of-server&gt;:1
+  </programlisting>
+  <para>
+  Longer how-to can be found from <ulink url="http://www.cs.helsinki.fi/u/sklvarjo/vnc.htm" />
   </para>
   </section>
   <section id="sec_openldap">

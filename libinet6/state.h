@@ -2,7 +2,7 @@
  * This file defines Host Identity Protocol (HIP) header and parameter related
  * constants and structures.
  *
- * @note Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @note Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
 #ifndef _HIP_STATE
 #define _HIP_STATE
@@ -470,21 +470,24 @@ struct hip_hadb_state
 #endif
         /** Counters of heartbeats (ICMPv6s) **/
 	int                          heartbeats_sent;
+	statistics_data_t			 heartbeats_statistics;
+#if 0
 	int                          heartbeats_received;
 	/* sum of all RTTs to calculate the two following */
 	u_int32_t                    heartbeats_total_rtt;
 	u_int32_t                    heartbeats_total_rtt2;
 	/** Heartbeat current mean RTT **/
-        u_int32_t                    heartbeats_mean; 
+        u_int32_t                    heartbeats_mean;
 	/** Heartbeat current variance RTT **/
 	u_int32_t                    heartbeats_variance;
+#endif
 
 //NAT Branch
 	//pointer for ice engine
 	void* ice_session;
 	/** a 16 bits flag for nat connectiviy checking engine control*/
 	uint16_t nat_control;
-	
+
 	/**reflexive address(NAT box out bound) when register to relay or RVS */
 	struct in6_addr              local_reflexive_address;
 	/**reflexive address port (NAT box out bound) when register to relay or RVS */
@@ -507,9 +510,9 @@ struct hip_hadb_user_info_state
 	int                  state;
 	int                  heartbeats_on;
 	int                  heartbeats_sent;
-	int                  heartbeats_received;	
-        u_int32_t            heartbeats_mean;
-	int32_t              heartbeats_variance;
+	int                  heartbeats_received;
+	double            heartbeats_mean;
+	double              heartbeats_variance;
 };
 
 /** @addtogroup hadb_func

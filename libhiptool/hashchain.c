@@ -121,7 +121,7 @@ int hchain_verify(const unsigned char * current_hash, const unsigned char * last
  * @return: returns a pointer to the newly created hash_chain
  */
 hash_chain_t * hchain_create(hash_function_t hash_function, int hash_length,
-		int hchain_length)
+		int hchain_length, int hchain_hierarchy)
 {
 	hash_chain_t *return_hchain = NULL;
 	hash_chain_element_t *last_element = NULL, *current_element = NULL;
@@ -180,6 +180,7 @@ hash_chain_t * hchain_create(hash_function_t hash_function, int hash_length,
 	return_hchain->hash_length = hash_length;
 	return_hchain->hchain_length = hchain_length;
 	return_hchain->remaining = hchain_length;
+	return_hchain->hchain_hierarchy = hchain_hierarchy;
 	// hash_chain->source_element set above
 	return_hchain->anchor_element  = current_element;
 	return_hchain->current_element = NULL;
@@ -187,9 +188,9 @@ hash_chain_t * hchain_create(hash_function_t hash_function, int hash_length,
 	HIP_DEBUG("Hash-chain with %i elements of length %i created!\n", hchain_length,
 			hash_length);
 	//hchain_print(return_hchain, hash_length);
-	HIP_IFEL(!(hchain_verify(return_hchain->source_element->hash, return_hchain->anchor_element->hash,
-			hash_function, hash_length, hchain_length)), -1, "failed to verify the hchain\n");
-	HIP_DEBUG("hchain successfully verfied\n");
+	//HIP_IFEL(!(hchain_verify(return_hchain->source_element->hash, return_hchain->anchor_element->hash,
+	//		hash_function, hash_length, hchain_length)), -1, "failed to verify the hchain\n");
+	//HIP_DEBUG("hchain successfully verfied\n");
 
   out_err:
     if (err)

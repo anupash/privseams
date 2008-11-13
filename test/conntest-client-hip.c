@@ -5,7 +5,7 @@
  * @author  Lauri Silvennoinen
  * @version 1.1
  * @date    30.01.2008
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
 #if HAVE_CONFIG_H
 #include <config.h>
