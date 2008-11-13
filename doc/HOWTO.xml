@@ -1431,10 +1431,15 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
     </para>
   </chapter>
   <chapter id="ch_compiling_java">
-    <title> Compiling Java Applications</title>
+    <title>Java API</title>
     <para>
+      HIP works also with java applications. If you are using the DNS proxy
+      for HIP, no changes to the (HIP-unaware) application are needed.
+      This  section decribes how you can make a java application aware of HIP.
+   </para>
+   <para>   
       HIPL software bundle includes also a java wrapper library to the HIP
-      enabled libinet6 resolver library. The library is called "jip" and it
+      native API.  The library is called "jip" and it
       is located in "path-to-hipl/jip". The use of the java library requires
       the HIP socket handler defined elsewhere in this document.
     </para>
