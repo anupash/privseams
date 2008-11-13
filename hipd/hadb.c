@@ -215,7 +215,7 @@ hip_ha_t *hip_hadb_try_to_find_by_peer_hit(hip_hit_t *hit)
  */
 int hip_hadb_insert_state(hip_ha_t *ha)
 {
-	hip_hastate_t st;
+	hip_hastate_t st = 0;
 	hip_ha_t *tmp = NULL;
 
 	HIP_DEBUG("hip_hadb_insert_state() invoked.\n");
@@ -239,22 +239,42 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 	}
 		
 	st = ha->hastate;
-	
-	if (!ipv6_addr_any(&ha->hit_peer) && !(st & HIP_HASTATE_HITOK)) {
-		HIP_HEXDUMP("ha->hit_our is: ", &ha->hit_our, 16);
-		HIP_HEXDUMP("ha->hit_peer is: ", &ha->hit_peer, 16);
-		tmp = hip_ht_find(hadb_hit, ha);
 
+#ifdef CONFIG_HIP_DEBUG /* Debug block. */
+	{
+		char hito[INET6_ADDRSTRLEN], hitp[INET6_ADDRSTRLEN];
+		inet_ntop(AF_INET6, &ha->hit_our, hito, INET6_ADDRSTRLEN);
+		inet_ntop(AF_INET6, &ha->hit_peer, hitp, INET6_ADDRSTRLEN);
+		HIP_DEBUG("\nTrying to insert a new state to the HIP "\
+			  "association database.\n\tOur HIT: %s\n"\
+			  "\tPeer HIT: %s\n\tHIP association state: %d\n",
+			  hito, hitp, ha->hastate);
+	}
+#endif
+
+	/* We're using hastate here as if it was a binary mask. hastate,
+	   however, is of signed type and all of the predefined values are not
+	   in the power of two. -Lauri 07.08.2008 */
+	if (!(st & HIP_HASTATE_HITOK)) {
+		tmp = hip_ht_find(hadb_hit, ha);
+		
 		if (tmp == NULL) {
-		        if ((ha->lsi_peer).s_addr == 0)
+		        if ((ha->lsi_peer).s_addr == 0) {
 		                hip_hadb_set_lsi_pair(ha);
+			}
 			hip_ht_add(hadb_hit, ha);
 			st |= HIP_HASTATE_HITOK;
-			HIP_DEBUG("New state added\n");
+			HIP_DEBUG("HIP association was inserted "\
+				  "successfully.\n");
 		} else {
 			hip_db_put_ha(tmp, hip_hadb_delete_state);
-			HIP_DEBUG("HIT already taken\n");
+			HIP_DEBUG("HIP association was NOT inserted because "\
+				  "a HIP association with matching HITs was "\
+				  "already present in the database.\n");
 		}
+	} else {
+		HIP_DEBUG("HIP association was NOT inserted because the "\
+			  "HIP association state is not OK.\n");
 	}
 
 #ifdef CONFIG_HIP_ESCROW
@@ -319,7 +339,7 @@ void hip_hadb_set_lsi_pair(hip_ha_t *entry)
 		//Assign lsi_peer
 		aux = hip_generate_peer_lsi();
 		memcpy(&entry->lsi_peer, &aux, sizeof(hip_lsi_t));
-		HIP_DEBUG_LSI("entry->lsi_peer is ", &entry->lsi_peer);
+		_HIP_DEBUG_LSI("entry->lsi_peer is ", &entry->lsi_peer);
 	}
 }
 
@@ -421,8 +441,8 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
      	entry->hipproxy = hip_get_hip_proxy_status();
 #endif
 
-	HIP_DEBUG_LSI("               entry->lsi_peer \n", &entry->lsi_peer);
-	int value = hip_hadb_insert_state(entry);
+	HIP_DEBUG_LSI("entry->lsi_peer \n", &entry->lsi_peer);
+	hip_hadb_insert_state(entry);
 
 	/* Released at the end */
 	hip_hold_ha(entry);
@@ -551,56 +571,50 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
 {
 	hip_ha_t *entry = NULL;
 	int err = 0;
-
-	entry = (hip_ha_t *)HIP_MALLOC(sizeof(struct hip_hadb_state), gfpmask);
-	if (!entry)
+	
+	entry = (hip_ha_t *) malloc(sizeof(struct hip_hadb_state));
+	if (entry == NULL) {
 		return NULL;
-
+	}
+	
 	memset(entry, 0, sizeof(*entry));
 
-/*	INIT_LIST_HEAD(&entry->next_hit);
+
+#if 0
+	INIT_LIST_HEAD(&entry->next_hit);
 	INIT_LIST_HEAD(&entry->spis_in);
-	INIT_LIST_HEAD(&entry->spis_out);*/
+	INIT_LIST_HEAD(&entry->spis_out);
+#endif
 
 	entry->spis_in = hip_ht_init(hip_hash_spi, hip_match_spi);
 	entry->spis_out = hip_ht_init(hip_hash_spi, hip_match_spi);
-
-#ifdef CONFIG_HIP_HIPPROXY
-	entry->hipproxy = 0;
-#endif
-	HIP_LOCK_INIT(entry);
-	//atomic_set(&entry->refcnt,0);
-
 	entry->state = HIP_STATE_UNASSOCIATED;
 	entry->hastate = HIP_HASTATE_INVALID;
-
-        /* SYNCH: does it really need to be syncronized to beet-xfrm? -miika
-	   No dst hit. */
 
 	/* Function pointer sets which define HIP behavior in respect to the
 	   hadb_entry. */
 	HIP_IFEL(hip_hadb_set_rcv_function_set(entry, &default_rcv_func_set),
-		 -1, "Can't set new function pointer set\n");
+		 -1, "Can't set new function pointer set.\n");
 	HIP_IFEL(hip_hadb_set_handle_function_set(entry,
 						  &default_handle_func_set),
-		 -1, "Can't set new function pointer set\n");
+		 -1, "Can't set new function pointer set.\n");
 	HIP_IFEL(hip_hadb_set_update_function_set(entry,
 						  &default_update_func_set),
 		 -1, "Can't set new function pointer set\n");
-
+		    
 	HIP_IFEL(hip_hadb_set_misc_function_set(entry, &default_misc_func_set),
-		 -1, "Can't set new function pointer set\n");
+		 -1, "Can't set new function pointer set.\n");
+
 	/* Set the xmit function set as function set for sending raw HIP. */
 	HIP_IFEL(hip_hadb_set_xmit_function_set(entry, &default_xmit_func_set),
-		 -1, "Can't set new function pointer set\n");
+		 -1, "Can't set new function pointer set.\n");
 
 	HIP_IFEL(hip_hadb_set_input_filter_function_set(
-			 entry, &default_input_filter_func_set),
-		 -1, "Can't set new function pointer set\n");
-
+			 entry, &default_input_filter_func_set), -1,
+		 "Can't set new input filter function pointer set.\n");
 	HIP_IFEL(hip_hadb_set_output_filter_function_set(
-			 entry,& default_output_filter_func_set),
-		 -1, "Can't set new function pointer set\n");
+			 entry, &default_output_filter_func_set), -1,
+		 "Can't set new output filter function pointer set.\n");
 
 	/* added by Tao Wan, on 24, Jan, 2008 */
 	entry->hadb_ipsec_func = &default_ipsec_func_set;
@@ -2126,42 +2140,83 @@ int hip_init_peer(hip_ha_t *entry, struct hip_common *msg,
 	return err;
 }
 
-int hip_init_us(hip_ha_t *entry, struct in6_addr *hit_our)
+
+/**
+ * Initializes a HIP association.
+ *
+ * Initializes a new allocated HIP association @c entry. 
+ * 
+ * @param  a pointer to a HIP association to be initialized.
+ * @param  a pointer to a HIT value that is to be bound with the HIP association
+ *         @c entry
+ * @return zero if success, negative otherwise.
+ */ 
+int hip_init_us(hip_ha_t *entry, hip_hit_t *hit_our)
 {
-        int err = 0, len, alg;
+        int err = 0, len = 0, alg = 0;
 
 	if (entry->our_priv) {
-		HIP_FREE(entry->our_priv);
+		free(entry->our_priv);
 		entry->our_priv = NULL;
 	}
-	if (!(entry->our_priv = hip_get_host_id(HIP_DB_LOCAL_HID, hit_our,
-						HIP_HI_RSA))) {
-		HIP_DEBUG("Could not acquire a local host id with RSA, trying with DSA\n");
-		HIP_IFEL(!(entry->our_priv = hip_get_host_id(HIP_DB_LOCAL_HID,
-							     hit_our,
-						     HIP_HI_DSA)),
-		 -1, "Could not acquire a local host id with DSA\n");
+	
+	/* Try to fetch our private host identity first using RSA then using DSA.
+	   Note, that hip_get_host_id() allocates a new buffer and this buffer
+	   must be freed in out_err if an error occurs. */
+	entry->our_priv =
+		hip_get_host_id(HIP_DB_LOCAL_HID, hit_our, HIP_HI_RSA);
+	    
+	if (entry->our_priv == NULL) {
+		entry->our_priv =
+			hip_get_host_id(HIP_DB_LOCAL_HID, hit_our, HIP_HI_DSA);
+		
+		if (entry->our_priv == NULL) {
+			err = -ENOMEDIUM;
+			HIP_ERROR("Could not acquire a local host identity. "\
+				  "Tried with RSA and DSA.\n");
+			goto out_err;
+		}
 	}
+	/* Get RFC2535 3.1 KEY RDATA format algorithm (Integer value). */
 	alg = hip_get_host_id_algo(entry->our_priv);
-	entry->sign = alg == HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign;
+	/* Using this integer we get a function pointer to a function that
+	   signs our host identity. */
+	entry->sign = (alg == HIP_HI_RSA ? hip_rsa_sign : hip_dsa_sign);
 
-	len = hip_get_param_total_len(entry->our_priv);
-	if (entry->our_pub) {
-		HIP_FREE(entry->our_pub);
+	if (entry->our_pub != NULL) {
+		free(entry->our_pub);
 		entry->our_pub = NULL;
 	}
-	HIP_IFEL(!(entry->our_pub = HIP_MALLOC(len, GFP_KERNEL)), -1, "Could not allocate a public key\n");
+	
+	len = hip_get_param_total_len(entry->our_priv);
+	
+	if((entry->our_pub = (struct hip_host_id *)malloc(len)) == NULL) {
+		err = -ENOMEM;
+		HIP_ERROR("Out of memory when allocating memory for a public "\
+			  "key.\n");
+		goto out_err;
+	}
+	
+	/* Transform the private/public key pair to a public key. */
 	memcpy(entry->our_pub, entry->our_priv, len);
 	entry->our_pub = hip_get_public_key(entry->our_pub);
-
 	//hip_hidb_get_lsi_by_hit(hit_our, &entry->lsi_our);
 
+	/* Calculate our HIT from our public Host Identifier (HI).
+	   Note, that currently (06.08.2008) both of these functions use DSA */
 	err = alg == HIP_HI_DSA ?
-		hip_dsa_host_id_to_hit(entry->our_pub, &entry->hit_our, HIP_HIT_TYPE_HASH100) :
-		hip_rsa_host_id_to_hit(entry->our_pub, &entry->hit_our, HIP_HIT_TYPE_HASH100);
+		hip_dsa_host_id_to_hit(entry->our_pub, &entry->hit_our,
+				       HIP_HIT_TYPE_HASH100) :
+		hip_rsa_host_id_to_hit(entry->our_pub, &entry->hit_our,
+				       HIP_HIT_TYPE_HASH100);
 	HIP_IFEL(err, err, "Unable to digest the HIT out of public key.");
-
+	if(err != 0) {
+		HIP_ERROR("Unable to digest the HIT out of public key.");
+		goto out_err;
+	}
+	
  out_err:
+
 	if (err && entry->our_priv)
 		HIP_FREE(entry->our_priv);
 	if (err && entry->our_pub)
@@ -2174,22 +2229,24 @@ int hip_init_us(hip_ha_t *entry, struct in6_addr *hit_our)
 
 unsigned long hip_hash_ha(const hip_ha_t *ha)
 {
-     if(ha == NULL || &(ha->hit_our) == NULL || &(ha->hit_peer) == NULL)
-     {
-	  return 0;
-     }
+	hip_hit_t hitpair[2];
+	uint8_t hash[HIP_AH_SHA_LEN];
+	
+	if(ha == NULL || &(ha->hit_our) == NULL || &(ha->hit_peer) == NULL)
+	{
+		return 0;
+	}
+	
+	/* The HIT fields of an host association struct cannot be assumed to be
+	   alligned consecutively. Therefore, we must copy them to a temporary
+	   array. */
+	memcpy(&hitpair[0], &(ha->hit_our), sizeof(ha->hit_our));
+	memcpy(&hitpair[1], &(ha->hit_peer), sizeof(ha->hit_peer));
+	
+	hip_build_digest(HIP_DIGEST_SHA1, (void *)hitpair, sizeof(hitpair),
+			 hash);
 
-     /* The HIT fields of an host association struct cannot be assumed to be
-	alligned consecutively. Therefore, we must copy them to a temporary
-	array. */
-     hip_hit_t hitpair[2];
-     memcpy(&hitpair[0], &(ha->hit_our), sizeof(ha->hit_our));
-     memcpy(&hitpair[1], &(ha->hit_peer), sizeof(ha->hit_peer));
-
-     uint8_t hash[HIP_AH_SHA_LEN];
-     hip_build_digest(HIP_DIGEST_SHA1, (void *)hitpair, sizeof(hitpair), hash);
-
-     return *((unsigned long *)hash);
+	return *((unsigned long *)hash);
 }
 
 int hip_compare_ha(const hip_ha_t *ha1, const hip_ha_t *ha2)
@@ -2861,11 +2918,15 @@ int hip_handle_get_ha_info(hip_ha_t *entry, struct hip_common *msg)
 	ipv4_addr_copy(&hid.lsi_our, &entry->lsi_our);
 	ipv4_addr_copy(&hid.lsi_peer, &entry->lsi_peer);
 
+	_HIP_HEXDUMP("HEXHID ", &hid, sizeof(struct hip_hadb_user_info_state));
+
 	hid.heartbeats_on = hip_icmp_interval;
 	hid.heartbeats_mean = entry->heartbeats_mean;
-	hid.heartbeats_mean_varians = entry->heartbeats_mean_varians;
+	hid.heartbeats_varians = entry->heartbeats_varians;
 	hid.heartbeats_sent = entry->heartbeats_sent;
 	hid.heartbeats_received = entry->heartbeats_received;
+
+	_HIP_HEXDUMP("HEXHID ", &hid, sizeof(struct hip_hadb_user_info_state));
 
 	/* does not print heartbeat info, but I do not think it even should -Samu*/
 	hip_print_debug_info(&hid.ip_our,&hid.ip_peer,&hid.hit_our,&hid.hit_peer,&hid.lsi_peer);
@@ -2982,11 +3043,13 @@ struct in_addr hip_generate_peer_lsi()
 {
 	struct in_addr lsi_prefix;
 	int index = 1;
-	do{
-		lsi_prefix.s_addr = htonl(HIP_LSI_PREFIX|index++);
-	}while(lsi_assigned(lsi_prefix));
 
-	HIP_DEBUG_LSI("lsi free final value is ", &lsi_prefix);
+	do {	
+		lsi_prefix.s_addr = htonl(HIP_LSI_PREFIX|index++);
+	} while (lsi_assigned(lsi_prefix));
+
+	_HIP_DEBUG_LSI("lsi free final value is ", &lsi_prefix);
+
 	return lsi_prefix;
 }
 

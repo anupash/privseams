@@ -470,11 +470,14 @@ struct hip_hadb_state
 #endif
         /** Counters of heartbeats (ICMPv6s) **/
 	int                          heartbeats_sent;
-	int                          heartbeats_received;	
+	int                          heartbeats_received;
+	/* sum of all RTTs to calculate the two following */
+	u_int32_t                    heartbeats_total_rtt;
+	u_int32_t                    heartbeats_total_rtt2;
 	/** Heartbeat current mean RTT **/
-        u_int32_t                    heartbeats_mean;
-	/** Heartbeat current mean varians RTT **/
-	int32_t                      heartbeats_mean_varians;
+        u_int32_t                    heartbeats_mean; 
+	/** Heartbeat current varians RTT **/
+	u_int32_t                    heartbeats_varians;
 
 //NAT Branch
 	//pointer for ice engine
@@ -506,7 +509,7 @@ struct hip_hadb_user_info_state
 	int                  heartbeats_sent;
 	int                  heartbeats_received;	
         u_int32_t            heartbeats_mean;
-	int32_t              heartbeats_mean_varians;
+	int32_t              heartbeats_varians;
 };
 
 /** @addtogroup hadb_func
