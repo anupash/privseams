@@ -189,7 +189,7 @@ int firewall_set_bex_state(struct in6_addr *hit_s,
 	hip_lsi_t lsi_our, lsi_peer;
 	int err = 0;
 
-	HIP_IFEL(hip_query_ha_info(hit_r, hit_s, &lsi_our, &lsi_peer,
+	HIP_IFEL(firewall_cache_db_match(hit_r, hit_s, &lsi_our, &lsi_peer,
 				   &ip_src, &ip_dst, NULL),
 		 -1, "Failed to query LSIs\n");
 	HIP_IFEL(firewall_update_entry(NULL, NULL, NULL, &ip_dst, state), -1,

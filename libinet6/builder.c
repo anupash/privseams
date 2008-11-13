@@ -54,8 +54,8 @@
  * @todo <span style="color:#f00">Update the comments of this file.</span>
  */
 #include "builder.h"
-#include "registration.h"
-#include "esp_prot_common.h"
+//#include "registration.h"
+//#include "esp_prot_common.h"
 
 static enum select_dh_key_t select_dh_key = STRONGER_KEY;
 
@@ -415,6 +415,7 @@ int hip_get_locator_addr_item_count(struct hip_locator *locator) {
 		sizeof(struct hip_locator_info_addr_item);
 }
 */
+#ifndef __KERNEL__
 int hip_get_lifetime_value(time_t seconds, uint8_t *lifetime)
 {
 	/* Check that we get a lifetime value between 1 and 255. The minimum
@@ -450,7 +451,7 @@ int hip_get_lifetime_seconds(uint8_t lifetime, time_t *seconds){
 		return 0;
 	}
 }
-
+#endif
 /**
  * hip_check_user_msg_len - check validity of user message length
  * @param msg pointer to the message
@@ -2347,7 +2348,6 @@ int hip_build_param_reg_info(hip_common_t *msg,
 	_HIP_DEBUG("Added REG_INFO parameter with %u service%s.\n", service_count,
 		   (service_count > 1) ? "s" : "");
 
- out_err:
 	return err;
 }
 
@@ -2360,7 +2360,6 @@ int hip_build_param_reg_request(hip_common_t *msg, const uint8_t lifetime,
 	hip_set_param_type(&rreq, HIP_PARAM_REG_REQUEST);
 	err = hip_reg_param_core(msg, &rreq, lifetime, type_list, type_count);
 
- out_err:
 	return err;
 }
 
@@ -2373,7 +2372,6 @@ int hip_build_param_reg_response(hip_common_t *msg, const uint8_t lifetime,
 	hip_set_param_type(&rres, HIP_PARAM_REG_RESPONSE);
 	err = hip_reg_param_core(msg, &rres, lifetime, type_list, type_count);
 
- out_err:
 	return err;
 }
 
@@ -2408,7 +2406,6 @@ int hip_build_param_reg_failed(struct hip_common *msg, uint8_t failure_type,
 	HIP_DEBUG("Added REG_FAILED parameter with %u service%s.\n", type_count,
 		  (type_count > 1) ? "s" : "");
 
- out_err:
 	return err;
 
 }
@@ -2491,7 +2488,7 @@ int hip_build_param_solution(struct hip_common *msg, struct hip_puzzle *pz,
 				      hip_get_param_contents_direct(&cookie));
 	return err;
 }
-
+#ifndef __KERNEL__
 /**
  * hip_build_param_diffie_hellman_contents - build HIP DH contents,
  *        with one or two public values.
@@ -2566,7 +2563,7 @@ int hip_build_param_diffie_hellman_contents(struct hip_common *msg,
 
 	return err;
 }
-
+#endif
 /**
  * hip_get_transform_max - find out the maximum number of transform suite ids
  * @param transform_type the type of the transform
@@ -2868,7 +2865,7 @@ int hip_build_param_ack(struct hip_common *msg, uint32_t peer_update_id)
         err = hip_build_param(msg, &ack);
         return err;
 }
-
+#ifndef __KERNEL__
 /**
  * hip_build_param_esp_prot_mode - build and append ESP PROT transform parameter
  * @param msg the message where the parameter will be appended
@@ -2965,6 +2962,32 @@ int hip_build_param_esp_prot_anchor(struct hip_common *msg, uint8_t transform,
 
 	return err;
 }
+#endif
+/**
+ * hip_build_param_unit_test - build and insert an unit test parameter
+ * @param msg the message where the parameter will be appended
+ * @param suiteid the id of the test suite
+ * @param caseid the id of the test case
+ *
+ * This parameter is used for triggering the unit test suite in the kernel.
+ * It is only for implementation internal purposes only.
+ *
+ * @return 0 on success, otherwise < 0.
+ */
+int hip_build_param_unit_test(struct hip_common *msg, uint16_t suiteid,
+			      uint16_t caseid)
+{
+	int err = 0;
+	struct hip_unit_test ut;
+
+	hip_set_param_type(&ut, HIP_PARAM_UNIT_TEST);
+	hip_calc_generic_param_len(&ut, sizeof(struct hip_unit_test), 0);
+	ut.suiteid = htons(suiteid);
+	ut.caseid = htons(caseid);
+
+	err = hip_build_param(msg, &ut);
+	return err;
+}
 
 int hip_build_param_esp_prot_branch(struct hip_common *msg, int anchor_offset,
 		int branch_length, unsigned char *branch_nodes)
@@ -3053,32 +3076,6 @@ int hip_build_param_esp_prot_root(struct hip_common *msg, uint8_t root_length,
 	HIP_DEBUG("added esp root length: %u\n", esp_root.root_length);
 	HIP_HEXDUMP("added esp root: ", &esp_root.root[0], root_length);
 
-	return err;
-}
-
-/**
- * hip_build_param_unit_test - build and insert an unit test parameter
- * @param msg the message where the parameter will be appended
- * @param suiteid the id of the test suite
- * @param caseid the id of the test case
- *
- * This parameter is used for triggering the unit test suite in the kernel.
- * It is only for implementation internal purposes only.
- *
- * @return 0 on success, otherwise < 0.
- */
-int hip_build_param_unit_test(struct hip_common *msg, uint16_t suiteid,
-			      uint16_t caseid)
-{
-	int err = 0;
-	struct hip_unit_test ut;
-
-	hip_set_param_type(&ut, HIP_PARAM_UNIT_TEST);
-	hip_calc_generic_param_len(&ut, sizeof(struct hip_unit_test), 0);
-	ut.suiteid = htons(suiteid);
-	ut.caseid = htons(caseid);
-
-	err = hip_build_param(msg, &ut);
 	return err;
 }
 
@@ -3545,7 +3542,7 @@ int hip_build_param_heartbeat(struct hip_common *msg, int seconds) {
 			   sizeof(struct hip_tlv_common));
 	memcpy(&heartbeat.heartbeat, &seconds, sizeof(seconds));
 	err = hip_build_param(msg, &heartbeat);
-out_err:
+
 	return err;
 }
 
@@ -3575,7 +3572,7 @@ int hip_build_param_opendht_set(struct hip_common *msg,
                        sizeof(struct hip_tlv_common));
     strcpy(&name_info.name, name);
     err = hip_build_param(msg, &name_info);
- out_err:
+
     return err;
 }
 
@@ -3597,7 +3594,7 @@ int hip_build_param_opendht_gw_info(struct hip_common *msg,
 	err = hip_build_param(msg, &gw_info);
 	return err;
 }
-
+#ifndef __KERNEL__
 int hip_build_param_cert_spki_info(struct hip_common * msg,
 				    struct hip_cert_spki_info * cert_info)
 {
@@ -3748,7 +3745,7 @@ int rsa_to_hip_endpoint(RSA *rsa, struct endpoint_hip **endpoint,
 
   return err;
 }
-
+#endif
 int alloc_and_set_host_id_param_hdr(struct hip_host_id **host_id,
 				    unsigned int key_rr_len,
 				    uint8_t algo,
@@ -3759,7 +3756,7 @@ int alloc_and_set_host_id_param_hdr(struct hip_host_id **host_id,
   hip_build_param_host_id_hdr(&host_id_hdr, hostname,
 			      key_rr_len, algo);
 
-  *host_id = malloc(hip_get_param_total_len(&host_id_hdr));
+  *host_id = HIP_MALLOC(hip_get_param_total_len(&host_id_hdr), GFP_ATOMIC);
   if (!host_id) {
     err = -ENOMEM;
   }
@@ -3785,6 +3782,7 @@ int alloc_and_build_param_host_id_only(struct hip_host_id **host_id,
   return err;
 }
 
+#ifndef __KERNEL__
 /* Note: public here means that you only have the public key,
    not the private */
 int hip_any_key_to_hit(void *any_key, unsigned char *any_key_rr, int hit_type,
@@ -3863,6 +3861,7 @@ int hip_private_dsa_to_hit(DSA *dsa_key, unsigned char *dsa, int type,
 			   struct in6_addr *hit) {
   return hip_any_key_to_hit(dsa_key, dsa, type, hit, 0, 1);
 }
+#endif
 
 /**
  * Builds a @c FULLRELAY_HMAC parameter.
@@ -4149,7 +4148,7 @@ int hip_build_param_locator2(struct hip_common *msg,
 		(sizeof(struct hip_locator_info_addr_item2));
 
 	HIP_IFE(!(locator_info =
-		  malloc(sizeof(struct hip_locator) + addrs_len1 + addrs_len2 )), -1);
+		  HIP_MALLOC(sizeof(struct hip_locator) + addrs_len1 + addrs_len2, GFP_ATOMIC)), -1);
 
 	hip_set_param_type(locator_info, HIP_PARAM_LOCATOR);
 	hip_calc_generic_param_len(locator_info,
@@ -4167,7 +4166,7 @@ int hip_build_param_locator2(struct hip_common *msg,
 		   addrs_len);
  out_err:
 	if (locator_info)
-		free(locator_info);
+		HIP_FREE(locator_info);
 	return err;
 }
 

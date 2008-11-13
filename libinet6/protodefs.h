@@ -5,8 +5,13 @@
 #ifndef _HIP_PROTODEFS
 #define _HIP_PROTODEFS
 
-#include "hashchain.h"
-#include "esp_prot_common.h"
+#ifdef __KERNEL__
+#  include "usercompat.h"
+   typedef uint16_t in_port_t;
+#else
+#  include "hashchain.h"
+#  include "esp_prot_common.h"
+#endif
 
 #define HIP_MAX_PACKET 4096
 #define HIP_MAX_NETWORK_PACKET 2048
@@ -425,6 +430,7 @@ struct hip_keymat_keymat
 	void *keymatdst;  /**< Pointer to beginning of key material */
 };
 
+#ifndef __KERNEL__
 struct esp_prot_preferred_tfms {
 	hip_tlv_type_t     type;
 	hip_tlv_len_t      length;
@@ -440,6 +446,7 @@ struct esp_prot_anchor {
 	// contains active and next anchor
 	unsigned char  	   anchors[2 * MAX_HASH_LENGTH];
 } __attribute__ ((packed));
+#endif
 
 struct esp_prot_branch {
 	hip_tlv_type_t     type;
@@ -928,6 +935,15 @@ struct hip_reg_from {
 struct hip_stun {
      hip_tlv_type_t type; /**< Type code for the parameter. */
      hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
+} __attribute__ ((packed));
+
+struct sockaddr_hip {
+	sa_family_t    ship_family;
+	in_port_t      ship_port;
+	uint32_t       ship_pad;
+	uint64_t       ship_flags;
+	hip_hit_t      ship_hit;
+	uint8_t        ship_reserved[16];
 } __attribute__ ((packed));
 
 #endif /* _HIP_PROTODEFS */

@@ -6,13 +6,10 @@
 #include "debug.h"
 #include "ife.h"
 
-extern int hip_lsi_support;
-extern int system_based_opp_mode;
-
 int is_packet_reinjection(struct in_addr *ip_src);
 
 int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m, struct in6_addr *ip_src,
-			       struct in6_addr *ip_dst);
+			       struct in6_addr *ip_dst, int, int);
 
 int hip_fw_handle_outgoing_lsi(ipq_packet_msg_t *m, struct in_addr *ip_src,
 			       struct in_addr *ip_dst);
