@@ -188,27 +188,27 @@
 #define SO_HIP_BUDDIES_ON                       162
 #define SO_HIP_BUDDIES_OFF                      163
 #define SO_HIP_INFO_FOR_DNS_PROXY		164
+#define SO_HIP_REGISTER_SAVAHR                   165
+#define SO_HIP_GET_SAVAHR_HIT                    166
+#define SO_HIP_GET_SAVAHR_IN_KEYS                167
+#define SO_HIP_GET_SAVAHR_OUT_KEYS               168
+#define SO_HIP_OFFER_SAVAH                       169
+#define SO_HIP_CANCEL_SAVAH                      170
+#define SO_HIP_FW_I2_DONE                        171
+#define SO_HIP_SAVAH_CLIENT_STATUS_REQUEST       172
+#define SO_HIP_SAVAH_SERVER_STATUS_REQUEST       173
+#define SO_HIP_SET_SAVAH_CLIENT_OFF              174
+#define SO_HIP_SET_SAVAH_CLIENT_ON               175
+#define SO_HIP_SET_SAVAH_SERVER_OFF              176
+#define SO_HIP_SET_SAVAH_SERVER_ON               178
+
+
 
 /** @} */
 /* inclusive */
 #define HIP_SO_ROOT_MAX 			255
 
 #define SO_HIP_SET_NAT_ON                     SO_HIP_SET_NAT_PLAIN_UDP
-
-
-#define SO_HIP_REGISTER_SAVAHR                   156
-#define SO_HIP_GET_SAVAHR_HIT                    157
-#define SO_HIP_GET_SAVAHR_IN_KEYS                158
-#define SO_HIP_GET_SAVAHR_OUT_KEYS               159
-#define SO_HIP_OFFER_SAVAH                       160
-#define SO_HIP_CANCEL_SAVAH                      161
-#define SO_HIP_FW_I2_DONE                        162
-#define SO_HIP_SAVAH_CLIENT_STATUS_REQUEST       163
-#define SO_HIP_SAVAH_SERVER_STATUS_REQUEST       164
-#define SO_HIP_SET_SAVAH_CLIENT_OFF              165
-#define SO_HIP_SET_SAVAH_CLIENT_ON               166
-#define SO_HIP_SET_SAVAH_SERVER_OFF              167
-#define SO_HIP_SET_SAVAH_SERVER_ON               168
 
 
 /****** FIREWALL ******/

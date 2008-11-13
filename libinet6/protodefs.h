@@ -144,7 +144,6 @@
 #define HIP_PARAM_SECRET		32817
 #define HIP_PARAM_BRANCH_NODES		32818
 #define HIP_PARAM_ROOT		        32819
-#define HIP_PARAM_SAVA_CRYPTO_INFO      32820
 /* End of HIPL private parameters. */
 
 #define HIP_PARAM_HMAC			61505

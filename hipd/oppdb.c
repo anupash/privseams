@@ -445,7 +445,7 @@ hip_ha_t * hip_opp_add_map(const struct in6_addr *dst_ip,
   
   /* No previous contact, new host. Let's do the opportunistic magic */
 
-  err = hip_hadb_add_peer_info_complete(hit_our, &opp_hit, NULL, &src_ip, dst_ip);
+  err = hip_hadb_add_peer_info_complete(hit_our, &opp_hit, NULL, &src_ip, dst_ip, NULL);
   
   HIP_IFEL(!(ha = hip_hadb_find_byhits(hit_our, &opp_hit)), NULL,
 	   "Did not find entry\n");
