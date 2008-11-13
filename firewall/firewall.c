@@ -289,15 +289,16 @@ int hip_fw_init_lsi_support(){
 		/* LSI support: incoming HIT packets, captured to decide if
 		   HITs may be mapped to LSIs */
 		system("ip6tables -I HIPFW-INPUT -d 2001:0010::/28 -j QUEUE");
-
-		// Initializing local database for mapping LSI-HIT in the firewall
-		firewall_init_hldb();
 	}
 
   out_err:
   	return err;
 }
 
+void hip_fw_init_system_base_opp_mode(void) {
+	system("iptables -I HIPFW-OUTPUT -d ! 127.0.0.1 -j QUEUE");
+	system("ip6tables -I HIPFW-INPUT -d 2001:0010::/28 -j QUEUE");
+}
 
 int hip_fw_uninit_lsi_support(){
 #if 0
@@ -499,18 +500,10 @@ int firewall_init_rules(){
 		system("ip6tables -I HIPFW-OUTPUT -p 50 -j QUEUE");
 		system("ip6tables -I HIPFW-OUTPUT -p 17 --dport 50500 -j QUEUE");
 		system("ip6tables -I HIPFW-OUTPUT -p 17 --sport 50500 -j QUEUE");
-
-#if 0
-		/* LSI support: incoming HIT packets, captured to decide if
-		   HITs may be mapped to LSIs */
-		system("ip6tables -I HIPFW-INPUT -d 2001:0010::/28 -j QUEUE");
-#endif
 	}
 
-#if 0
-	// Initializing local database for mapping LSI-HIT in the firewall
-	firewall_init_hldb();
-#endif
+	if (system_based_opp_mode)
+		hip_fw_init_system_base_opp_mode();
 
 	if (hip_opptcp)
 		hip_fw_init_opptcp();
@@ -519,6 +512,9 @@ int firewall_init_rules(){
 
 	HIP_IFEL(hip_fw_init_userspace_ipsec(), -1, "failed to load extension\n");
 	HIP_IFEL(hip_fw_init_esp_prot(), -1, "failed to load extension\n");
+
+	// Initializing local database for mapping LSI-HIT in the firewall
+	firewall_init_hldb();
 
 	system("iptables -I INPUT -j HIPFW-INPUT");
 	system("iptables -I OUTPUT -j HIPFW-OUTPUT");
@@ -1267,7 +1263,6 @@ int filter_hip(const struct in6_addr * ip6_src,
 
 
 int hip_fw_handle_other_output(hip_fw_context_t *ctx){
-        hip_lsi_t src_lsi, dst_lsi;
 	hip_lsi_t src_ip, dst_ip;
 	struct sockaddr_in6 dst_hit;
 	hip_lsi_t defaultLSI;
@@ -1277,6 +1272,13 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 	int verdict = accept_normal_traffic_by_default;
 
 	HIP_DEBUG("\n");
+
+	if (hip_opptcp) {
+		/* For TCP option only */
+		iphdr = (struct ip *)ctx->ip_hdr.ipv4;
+		tcphdr = ((struct tcphdr *) (((char *) iphdr) + ctx->ip_hdr_len));
+		hdrBytes = ((char *) iphdr) + ctx->ip_hdr_len;
+	}
 
 	if (ctx->ip_version == 6 && hip_userspace_ipsec)
 	{
@@ -1289,21 +1291,26 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 			verdict = 1;
 		else
 			verdict = !hip_fw_userspace_ipsec_output(ctx);
-	}
+	} else if(ctx->ip_version == 4) {
+		hip_lsi_t src_lsi, dst_lsi;
 
-	/* LSI HOOKS */
-	if (ctx->ip_version == 4 && hip_lsi_support) {
 		IPV6_TO_IPV4_MAP(&(ctx->src), &src_lsi);
 		IPV6_TO_IPV4_MAP(&(ctx->dst), &dst_lsi);
-		if (IS_LSI32(dst_lsi.s_addr)) {
+
+		/* LSI HOOKS */
+		if (IS_LSI32(dst_lsi.s_addr) && hip_lsi_support) {
 			if (hip_is_packet_lsi_reinjection(&dst_lsi)) {
 				verdict = 1;
 			} else {
-			    	hip_fw_handle_outgoing_lsi(ctx->ipq_packet,
+				hip_fw_handle_outgoing_lsi(ctx->ipq_packet,
 							   &src_lsi, &dst_lsi);
-			    	/*Reject the packet*/
-			    	verdict = 0;
-		      	}
+				verdict = 0; /* Reject the packet */
+			}
+		} else if (hip_opptcp && (ctx->ip_hdr.ipv4)->ip_p == 6 && 
+			   tcp_packet_has_i1_option(hdrBytes, 4*tcphdr->doff)){
+				verdict = 1;
+		} else if (system_based_opp_mode) {
+			   verdict = hip_fw_handle_outgoing_ip(ctx);
 		}
 	}
 
