@@ -1482,7 +1482,6 @@ static int gaih_inet (const char *name, const struct gaih_service *service,
 	memset (attr->next, '\0', sizeof (struct gaih_addrtuple));
 	attr->next->family = AF_INET6;
       }
-    }
 
     if(req->ai_family == 0){
       at->next = malloc(sizeof (struct gaih_addrtuple));
