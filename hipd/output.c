@@ -1496,6 +1496,8 @@ int hip_send_icmp(int sockfd, hip_ha_t *entry) {
 	mhdr.msg_controllen = sizeof(cmsgbuf);
 
 	i = sendmsg(sockfd, &mhdr, 0);
+	if (i <= 0)
+		HIP_PERROR("sendmsg");
 	
 	/* Debug information*/
 	_HIP_DEBUG_HIT("src hit", &entry->hit_our);	
