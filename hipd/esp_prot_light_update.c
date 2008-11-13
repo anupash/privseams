@@ -62,7 +62,7 @@ int esp_prot_send_light_update(hip_ha_t *entry, int anchor_offset, unsigned char
 	 entry->light_update_retrans = 1;
 
 	 HIP_IFEL(entry->hadb_xmit_func->
-			 hip_send_pkt(&entry->local_address, &entry->preferred_address,
+			 hip_send_pkt(&entry->our_addr, &entry->peer_addr,
 			 (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
 			 entry->peer_udp_port, light_update, entry, entry->light_update_retrans),
 			 -1, "failed to send light anchor update\n");
