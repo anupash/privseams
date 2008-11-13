@@ -13,7 +13,10 @@
 /* if unused hchain element count of the active_hchain falls below
  * this threshold (% of max count), it will trigger the setup of
  * a new next_hchain */
-#define REMAIN_HASHES_TRESHOLD		0.2
+#define REMAIN_HASHES_TRESHOLD		0.5
+#if 0
+#define REMAIN_HASHES_TRESHOLD		0.5
+#endif
 /* as using different hchain lengths for bex is not supported in esp_prot,
  * we can set a default length statically */
 #define DEFAULT_HCHAIN_LENGTH_ID	0
@@ -25,7 +28,7 @@
  * and hash length id
  *
  * NOTE: this ensures, we don't use uninitialized
- *       (hash_function, hash_length)-combinations
+ *       (hash_function, hash_length)-combinations in the array
  */
 typedef struct esp_prot_tfm
 {
@@ -50,9 +53,9 @@ void esp_prot_sa_entry_free(hip_sa_entry_t *entry);
 int esp_prot_add_hash(unsigned char *out_hash, int *out_length,
 		hip_sa_entry_t *entry);
 int esp_prot_verify(hip_sa_entry_t *entry, unsigned char *hash_value);
-int esp_prot_conntrack_verify(struct esp_tuple *esp_tuple, struct hip_esp *esp);
-int esp_prot_verify_hash(uint8_t transform, unsigned char *active_anchor,
-		unsigned char *next_anchor, unsigned char *hash_value, int tolerance);
+int esp_prot_verify_hash(hash_function_t hash_function, int hash_length,
+		unsigned char *active_anchor, unsigned char *next_anchor,
+		unsigned char *hash_value, int tolerance);
 esp_prot_tfm_t * esp_prot_resolve_transform(uint8_t transform);
 hash_function_t esp_prot_get_hash_function(uint8_t transform);
 int esp_prot_get_hash_length(uint8_t transform);

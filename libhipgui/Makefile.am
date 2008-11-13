@@ -2,6 +2,8 @@
 AUTOMAKE_OPTIONS = foreign
 
 CFLAGS = $(hipl_common_cflags)
+CFLAGS += $(OPTIMIZATIONS_CFLAGS)
+CFLAGS += $(GPROF_CFLAGS)
 
 GTKLDADD = `pkg-config gtk+-2.0 --libs`
 
