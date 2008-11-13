@@ -1463,24 +1463,25 @@ static int gaih_inet (const char *name, const struct gaih_service *service,
     atr = at = malloc (sizeof (struct gaih_addrtuple));
     memset (at, '\0', sizeof (struct gaih_addrtuple));
       
-    _HIP_DEBUG(">> name == NULL\n");
-    /* Find the local HIs here and add the HITs to atr */
-    if(req->ai_flags & AI_HIP){
-      _HIP_DEBUG("AI_HIP set: get only local hits.\n");     
-      get_local_hits(service->name, pat);
-    } 
-    /* Transparent mode and !AI_HIP -> hits before ipv6 addresses? */
-    if(hip_transparent_mode && !(req->ai_flags & AI_HIP)){
-      HIP_DEBUG("HIP_TRANSPARENT_MODE, AI_HIP not set:"); 
-      HIP_DEBUG("get HITs before IPv6 address\n");
-      get_local_hits(service->name, pat); 
-      attr = at;
-      while(attr->next != NULL){
-        attr = attr->next;
+      _HIP_DEBUG(">> name == NULL\n");
+      /* Find the local HIs here and add the HITs to atr */
+      if (req->ai_flags & AI_HIP) {
+	_HIP_DEBUG("AI_HIP set: get only local hits.\n");     
+	get_local_hits(service->name, pat);
+      } 
+      /* Transparent mode and !AI_HIP -> hits before ipv6 addresses? */
+      if (hip_transparent_mode && !(req->ai_flags & AI_HIP)) {
+	HIP_DEBUG("HIP_TRANSPARENT_MODE, AI_HIP not set:\n"); 
+	HIP_DEBUG("get HITs before IPv6 address\n");
+	get_local_hits(service->name, pat); 
+	attr = at;
+	while(attr->next != NULL) {
+	  attr = attr->next;
+	}
+	attr->next = malloc(sizeof (struct gaih_addrtuple));
+	memset (attr->next, '\0', sizeof (struct gaih_addrtuple));
+	attr->next->family = AF_INET6;
       }
-      attr->next = malloc(sizeof (struct gaih_addrtuple));
-      memset (attr->next, '\0', sizeof (struct gaih_addrtuple));
-      attr->next->family = AF_INET6;
     }
 
     if(req->ai_family == 0){

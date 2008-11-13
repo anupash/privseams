@@ -10,8 +10,10 @@
 #ifndef HIP_BUILDER
 #define HIP_BUILDER
 
+#ifndef __KERNEL__
 #include <openssl/rsa.h>
 #include <openssl/dsa.h>
+#endif
 
 #ifdef __KERNEL__
 #  include "usercompat.h"
@@ -21,9 +23,10 @@
 #  include "debug.h"
 #  include "misc.h"
 #  include "icomm.h"
-#  include "state.h"
+#  include "certtools.h"
 #endif
-#include "certtools.h"
+#include "registration.h"
+#include "state.h"
 
 //typedef struct hip_srv hip_srv_t;
 
@@ -218,13 +221,15 @@ void hip_set_param_spi_value(struct hip_esp_info *, uint32_t);
 void hip_set_param_type(void *, hip_tlv_type_t);
 int hip_write_hmac(int, void *, void *, int, void *);
 void hip_zero_msg_checksum(struct hip_common *);
+#ifndef __KERNEL__
 int rsa_to_hip_endpoint(RSA *rsa, struct endpoint_hip **endpoint,
 			se_hip_flags_t endpoint_flags, const char *hostname);
 int dsa_to_hip_endpoint(DSA *dsa, struct endpoint_hip **endpoint,
 			se_hip_flags_t endpoint_flags, const char *hostname);
 int hip_build_param_hip_hdrr_info(struct hip_common * msg,
 				    struct hip_hdrr_info * hdrr_info);
-//int hip_build_param_hip_uadb_info(struct hip_common *msg, struct hip_uadb_info *uadb_info);
+#endif
+
 /**
  * Builds a REG_INFO parameter.
  *

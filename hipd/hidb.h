@@ -1,18 +1,14 @@
 #ifndef _HIP_DB
 #define _HIP_DB
 
-#ifdef __KERNEL__
-#  include "usercompat.h"
-#else
-#  include <asm/types.h>
-#  include <sys/errno.h>
-#  include <sys/socket.h>
-#  include "kerncompat.h"
-#  include "list.h"
-#  include "debug.h"
-#  include "cookie.h"
-#  include "blind.h"
-#endif
+#include <asm/types.h>
+#include <sys/errno.h>
+#include <sys/socket.h>
+#include "kerncompat.h"
+#include "list.h"
+#include "debug.h"
+#include "cookie.h"
+#include "blind.h"
 
 #if 0
 #define HIP_INIT_DB(name,id) \

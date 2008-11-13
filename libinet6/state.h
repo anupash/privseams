@@ -7,9 +7,12 @@
 #ifndef _HIP_STATE
 #define _HIP_STATE
 
+#ifndef __KERNEL__
 #include "hashtable.h"
 #include "esp_prot_common.h"
 #include "hip_statistics.h"
+
+#endif
 
 #define HIP_HIT_KNOWN 1
 #define HIP_HIT_ANON  2
@@ -234,6 +237,7 @@ struct hip_spi_in_item
 	int addresses_n; /* number of addresses */
 };
 
+#ifndef __KERNEL__
 struct hip_spi_out_item
 {
 //	hip_list_t list;
@@ -245,6 +249,7 @@ struct hip_spi_out_item
 	HIP_HASHTABLE *peer_addr_list; /* Peer's IPv6 addresses */
 	struct in6_addr  preferred_address; /* check */
 };
+#endif
 
 /* this struct is here instead of hidb.h to avoid some weird compilation
    warnings */
@@ -264,7 +269,7 @@ struct hip_host_id_entry {
 	int (*remove)(struct hip_host_id_entry *, void **arg);
 	void *arg;
 };
-
+#ifndef __KERNEL__
 /* If you need to add a new boolean type variable to this structure, consider
    adding a control value to the local_controls and/or peer_controls bitmask
    field(s) instead of adding yet another integer. Lauri 24.01.2008. */
@@ -518,6 +523,7 @@ struct hip_hadb_state
 //end NAT Branch
 
 };
+#endif /* ndef __KERNEL__ */
 
 /** A data structure defining host association information that is sent
     to the userspace */

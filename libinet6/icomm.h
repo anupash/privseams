@@ -11,7 +11,9 @@
    definition of the struct. */
 #   include "i3_client_api.h"
 
+#ifndef __KERNEL__
 #include <netinet/in.h>
+#endif
 #include "protodefs.h"
 
 //#define HIP_DAEMONADDR_PATH		        "/tmp/hip_daemonaddr_path.tmp"
