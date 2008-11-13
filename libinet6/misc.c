@@ -1848,7 +1848,6 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution,
  out_err:
 	return err;
 }
-#endif /* __KERNEL__ */
 
 /**
  * Gets the state of the bex for a pair of ip addresses.
