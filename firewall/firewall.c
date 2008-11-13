@@ -1255,7 +1255,7 @@ int filter_hip(const struct in6_addr * ip6_src,
   	// yet -> show the packet to conntracking
   	if(statefulFiltering && verdict && !conntracked)
   	{
-    	conntrack(ip6_src, ip6_dst, buf);
+		conntrack(ip6_src, ip6_dst, buf);
   	}
 
   	return verdict;
@@ -1310,7 +1310,7 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 			   tcp_packet_has_i1_option(hdrBytes, 4*tcphdr->doff)){
 				verdict = 1;
 		} else if (system_based_opp_mode) {
-			   verdict = hip_fw_handle_outgoing_ip(ctx);
+			   verdict = hip_fw_handle_outgoing_system_based_opp(ctx);
 		}
 	}
 
@@ -1369,9 +1369,6 @@ int hip_fw_handle_tcp_output(hip_fw_context_t *ctx){
 
 	HIP_DEBUG("\n");
 
-	/* XX FIXME: opp tcp filtering */
-
-	// this will also check for userspace IPsec
 	return hip_fw_handle_other_output(ctx);
 }
 
@@ -1387,10 +1384,12 @@ int hip_fw_handle_other_input(hip_fw_context_t *ctx){
 		if (hip_proxy_status)
 			verdict = handle_proxy_inbound_traffic(ctx->ipq_packet,
 					&ctx->src);
-	  	else if (hip_lsi_support) {
-			/* LSI check */
+	  	else if (hip_lsi_support || system_based_opp_mode) {
 			verdict = hip_fw_handle_incoming_hit(ctx->ipq_packet,
-					&ctx->src, &ctx->dst);
+							     &ctx->src,
+							     &ctx->dst,
+							     hip_lsi_support,
+							     system_based_opp_mode);
 	  	}
 	} else if (hip_stun && ctx->is_stun == 1) {
 		// Santtu FIXME
@@ -2081,7 +2080,7 @@ hip_hit_t *hip_fw_get_default_hit(void)
  * @param *ctx	the contect of the packet
  * @return	the verdict for the packet
  */
-int hip_fw_handle_outgoing_ip(hip_fw_context_t *ctx){
+int hip_fw_handle_outgoing_system_based_opp(hip_fw_context_t *ctx){
 	int err, msg_type, state_ha, fallback, reject, new_fw_entry_state;
 	struct in6_addr src_lsi, dst_lsi;
 	struct in6_addr src_hit, dst_hit;
@@ -2094,20 +2093,24 @@ int hip_fw_handle_outgoing_ip(hip_fw_context_t *ctx){
 
 	//get firewall db entry
 	entry_peer = firewall_ip_db_match(&ctx->dst);
-	if(entry_peer){
+	if(entry_peer) {
 		//if the firewall entry is still undefined
 		//check whether the base exchange has been established
-		if(entry_peer->bex_state == FIREWALL_STATE_BEX_DEFAULT){
+		if (entry_peer->bex_state == FIREWALL_STATE_BEX_DEFAULT) {
 			//get current connection state from hipd
-			state_ha = hip_get_bex_state_from_IPs(&ctx->src, &ctx->dst, &src_hit,
-							 &dst_hit,  &src_lsi,  &dst_lsi);
+			state_ha = hip_get_bex_state_from_IPs(&ctx->src,
+							      &ctx->dst,
+							      &src_hit,
+							      &dst_hit,
+							      &src_lsi,
+							      &dst_lsi);
 
 			//find the correct state for the fw entry state
-			if(state_ha == HIP_STATE_ESTABLISHED)
+			if (state_ha == HIP_STATE_ESTABLISHED)
 				new_fw_entry_state = FIREWALL_STATE_BEX_ESTABLISHED;
-			else if( (state_ha == HIP_STATE_FAILED)  ||
+			else if ((state_ha == HIP_STATE_FAILED)  ||
 				 (state_ha == HIP_STATE_CLOSING) ||
-				 (state_ha == HIP_STATE_CLOSED)     )
+				 (state_ha == HIP_STATE_CLOSED))
 				new_fw_entry_state = FIREWALL_STATE_BEX_NOT_SUPPORTED;
 			else
 				new_fw_entry_state = FIREWALL_STATE_BEX_DEFAULT;
@@ -2115,7 +2118,7 @@ int hip_fw_handle_outgoing_ip(hip_fw_context_t *ctx){
 			HIP_DEBUG("New state %d - \n", new_fw_entry_state);
 			//update fw entry state accordingly
 			firewall_update_entry(&src_hit, &dst_hit, &dst_lsi,
-						  &ctx->dst, new_fw_entry_state);
+					      &ctx->dst, new_fw_entry_state);
 
 			//reobtain the entry in case it has been updated
 			entry_peer = firewall_ip_db_match(&ctx->dst);
@@ -2124,55 +2127,57 @@ int hip_fw_handle_outgoing_ip(hip_fw_context_t *ctx){
 		//decide what to do with the packet
 		if(entry_peer->bex_state == FIREWALL_STATE_BEX_DEFAULT)
 			verdict = 0;
-		else if(entry_peer->bex_state == FIREWALL_STATE_BEX_NOT_SUPPORTED)
+		else if (entry_peer->bex_state == FIREWALL_STATE_BEX_NOT_SUPPORTED)
 			verdict = accept_normal_traffic_by_default;
-		else if(entry_peer->bex_state == FIREWALL_STATE_BEX_ESTABLISHED){
-			if(hit_is_local_hit(&entry_peer->hit_our)){
+		else if (entry_peer->bex_state == FIREWALL_STATE_BEX_ESTABLISHED){
+			if (hit_is_local_hit(&entry_peer->hit_our)) {
 				reinject_packet(&entry_peer->hit_our,
 						&entry_peer->hit_peer,
 						ctx->ipq_packet, 4, 0);
 				verdict = 0;
-			}else
+			} else {
 				verdict = accept_normal_traffic_by_default;
+			}
 		}
-	}else{
-		//add default entry in the firewall db
+	} else {
+		/* add default entry in the firewall db */
 		firewall_add_default_entry(&ctx->dst);
 
-		//get current connection state from hipd
-		state_ha = hip_get_bex_state_from_IPs(&ctx->src, &ctx->dst, &src_hit,
-						 &dst_hit, &src_lsi, &dst_lsi);
-
-		if(state_ha == -1){
-			if(system_based_opp_mode){
-				HIP_DEBUG("Initiate bex at firewall\n");
-				memset(&all_zero_hit, 0, sizeof(struct sockaddr_in6));
-				hip_request_peer_hit_from_hipd_at_firewall(
-					&ctx->dst,
-					&all_zero_hit.sin6_addr,
-					(const struct in6_addr *)hip_fw_get_default_hit(),
-					(in_port_t *) &(ctx->transport_hdr.tcp)->source,
-					(in_port_t *) &(ctx->transport_hdr.tcp)->dest,
-					&fallback,
-					&reject);
-				verdict = 0;
-			}
-		}else if(state_ha == HIP_STATE_ESTABLISHED){
-			if(hit_is_local_hit(&src_hit)){
-					HIP_DEBUG("is local hit\n");
-				firewall_update_entry(&src_hit, &dst_hit, &dst_lsi,
-					&ctx->dst, FIREWALL_STATE_BEX_ESTABLISHED);
+		/* get current connection state from hipd */
+		state_ha = hip_get_bex_state_from_IPs(&ctx->src, &ctx->dst,
+						      &src_hit, &dst_hit,
+						      &src_lsi, &dst_lsi);
+		if (state_ha == -1) {
+			HIP_DEBUG("Initiate bex at firewall\n");
+			memset(&all_zero_hit, 0, sizeof(struct sockaddr_in6));
+			hip_request_peer_hit_from_hipd_at_firewall(
+				&ctx->dst,
+				&all_zero_hit.sin6_addr,
+				(const struct in6_addr *)hip_fw_get_default_hit(),
+				(in_port_t *) &(ctx->transport_hdr.tcp)->source,
+				(in_port_t *) &(ctx->transport_hdr.tcp)->dest,
+				&fallback,
+				&reject);
+			verdict = 0;
+		} else if (state_ha == HIP_STATE_ESTABLISHED) {
+			if (hit_is_local_hit(&src_hit)) {
+				HIP_DEBUG("is local hit\n");
+				firewall_update_entry(&src_hit, &dst_hit,
+						      &dst_lsi, &ctx->dst,
+						      FIREWALL_STATE_BEX_ESTABLISHED);
 				reinject_packet(&src_hit, &dst_hit,
 						ctx->ipq_packet, 4, 0);
 				verdict = 0;
-			}else
+			} else {
 				verdict = accept_normal_traffic_by_default;
-		}else if( (state_ha == HIP_STATE_FAILED)  ||
+			}
+		} else if ((state_ha == HIP_STATE_FAILED)  ||
 			  (state_ha == HIP_STATE_CLOSING) ||
-			  (state_ha == HIP_STATE_CLOSED)     )
+			   (state_ha == HIP_STATE_CLOSED)) {
 			verdict = accept_normal_traffic_by_default;
-		else
+		} else {
 			verdict = 0;
+		}
 	}
 
 out_err:
