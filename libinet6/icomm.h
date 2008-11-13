@@ -88,7 +88,7 @@
 #define SO_HIP_CONF_PUZZLE_SET                  74
 #define SO_HIP_CONF_PUZZLE_INC                  75
 #define SO_HIP_CONF_PUZZLE_DEC                  76
-/* One free slot here */
+/* slot 77 is FREE */
 #define SO_HIP_SET_OPPORTUNISTIC_MODE           78
 #define SO_HIP_SET_BLIND_ON                     79
 #define SO_HIP_SET_BLIND_OFF                    80
@@ -112,7 +112,8 @@
 #define SO_HIP_SET_OPPTCP_OFF			95
 #define SO_HIP_SET_HI3_ON			96
 #define SO_HIP_SET_HI3_OFF			97
-/* slot 98 is FREE */
+#define SO_HIP_RESET_FIREWALL_DB		98
+
 #define SO_HIP_OPPTCP_SEND_TCP_PACKET		99
 #define SO_HIP_TRANSFORM_ORDER                  100
 
