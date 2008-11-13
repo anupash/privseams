@@ -425,7 +425,7 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	   function set is set to "nat_xmit_func_set". */
 	if(hip_nat_status && IN6_IS_ADDR_V4MAPPED(peer_addr)) {
 		entry->nat_mode = hip_nat_status;
-		entry->peer_udp_port = HIP_NAT_UDP_PORT;
+		entry->peer_udp_port = hip_get_nat_udp_port();
 		entry->hadb_xmit_func = &nat_xmit_func_set;
 	}
 	else {
@@ -1706,7 +1706,7 @@ int hip_update_send_echo(hip_ha_t *entry,
             == IN6_IS_ADDR_V4MAPPED(&entry->our_addr)) {
             HIP_IFEL(entry->hadb_xmit_func->
                      hip_send_pkt(&entry->our_addr, &addr->address,
-                                  (entry->nat_mode ? HIP_NAT_UDP_PORT : 0), entry->peer_udp_port,
+                                  (entry->nat_mode ? hip_get_nat_udp_port() : 0), entry->peer_udp_port,
                                   update_packet, entry, 1),
                      -ECOMM, "Sending UPDATE packet with echo data failed.\n");
 	} else {
@@ -1719,7 +1719,7 @@ int hip_update_send_echo(hip_ha_t *entry,
                     HIP_IFEL(entry->hadb_xmit_func->
                              hip_send_pkt(hip_cast_sa_addr(&n->addr),
                                           (struct in6_addr*)&addr->address,
-                                          (entry->nat_mode ? HIP_NAT_UDP_PORT : 0), entry->peer_udp_port,
+                                          (entry->nat_mode ? hip_get_nat_udp_port() : 0), entry->peer_udp_port,
                                           update_packet, entry, 1),
                              -ECOMM, "Sending UPDATE packet with echo data failed.\n");
                 }

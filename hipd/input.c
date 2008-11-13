@@ -1056,7 +1056,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	/* R1 packet source port becomes the I2 packet destination port. */
 	err = entry->hadb_xmit_func->
 	     hip_send_pkt(r1_daddr, &daddr,
-			  (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+			  (entry->nat_mode ? hip_get_nat_udp_port() : 0),
 			  r1_info->src_port, i2, entry, 1);
 	HIP_IFEL(err < 0, -ECOMM, "Sending I2 packet failed.\n");
 
@@ -1118,7 +1118,7 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 	   behind NAT. We set NAT mode "on" and set the send funtion to
 	   "hip_send_udp". The client UDP port is not stored until the handling
 	   of R2 packet. Don't know if the entry is already locked... */
-	if(r1_info->dst_port == HIP_NAT_UDP_PORT) {
+	if(r1_info->dst_port == hip_get_nat_udp_port()) {
 		HIP_LOCK_HA(entry);
 		if(!entry->nat_mode)
 			entry->nat_mode = HIP_NAT_MODE_PLAIN_UDP;
@@ -1520,7 +1520,7 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 // end move
 
 	err = entry->hadb_xmit_func->hip_send_pkt(i2_daddr, i2_saddr,
-						  (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+						  (entry->nat_mode ? hip_get_nat_udp_port() : 0),
 	                                          entry->peer_udp_port, r2, entry, 1);
 	if (err == 1)
 		err = 0;
@@ -1958,7 +1958,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	   stored as the peer UDP port and send function is set to
 	   "hip_send_udp()". Note that we must store the port not until
 	   here, since the source port can be different for I1 and I2. */
-	if(i2_info->dst_port == HIP_NAT_UDP_PORT)
+	if(i2_info->dst_port == hip_get_nat_udp_port())
 	{
 		if (entry->nat_mode == 0) entry->nat_mode = HIP_NAT_MODE_PLAIN_UDP;
 		entry->local_udp_port = i2_info->dst_port;
@@ -3088,7 +3088,7 @@ int hip_handle_notify(const struct hip_common *notify,
 				   a NAT) we use 50500 as the destination
 				   port. */
 				if(port == 0) {
-					port = HIP_NAT_UDP_PORT;
+					port = hip_get_nat_udp_port();
 				}
 
 				/* We don't need to use hip_msg_alloc(), since
@@ -3112,7 +3112,7 @@ int hip_handle_notify(const struct hip_common *notify,
 				   is why we use NULL entry for sending. */
 				err = entry->hadb_xmit_func->
 					hip_send_pkt(&entry->our_addr, &responder_ip,
-						     (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+						     (entry->nat_mode ? hip_get_nat_udp_port() : 0),
 						     port,
 						     &i1, NULL, 0);
 

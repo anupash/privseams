@@ -30,22 +30,24 @@
  *  since there is only one RVS server, we use 1 here */
 //end add
 
-
-
 /** A transmission function set for NAT traversal. */
 extern hip_xmit_func_set_t nat_xmit_func_set;
 /** A transmission function set for sending raw HIP packets. */
 extern hip_xmit_func_set_t default_xmit_func_set;
+
+#if 0
 /** Port used for NAT travelsal random port simulation.
-    If random port simulation is of, HIP_NAT_UDP_PORT is used.
+    If random port simulation is of, hip_nat_udp_port is used.
     @note This is needed only for simulation purposes and can be removed from
     released versions of HIPL. */
-in_port_t hip_nat_rand_port1 = HIP_NAT_UDP_PORT;
+in_port_t hip_nat_rand_port1 = hip_nat_udp_port;
 /** Port used for NAT travelsal random port simulation.
-    If random port simulation is of, HIP_NAT_UDP_PORT is used.
+    If random port simulation is of, hip_nat_udp_port is used.
     @note This is needed only for simulation purposes and can be removed from
     released versions of HIPL. */
-in_port_t hip_nat_rand_port2 = HIP_NAT_UDP_PORT;
+in_port_t hip_nat_rand_port2 = hip_nat_udp_port;
+#endif 
+
 #if 0
 /**
  * Sets NAT status "on".
@@ -189,7 +191,7 @@ out_err:
  * preferred address. If the @c entry is @b not in state ESTABLISHED or if there
  * is no NAT between this host and the peer (@c entry->nat_mode = 0), then no
  * packet is sent. The packet is send on UDP with source and destination ports
- * set as @c HIP_NAT_UDP_PORT.
+ * set as @c hip_nat_udp_port.
  * 
  * @param entry    a pointer to a host association which links current host and
  *                 the peer.
@@ -241,14 +243,14 @@ int hip_nat_send_keep_alive(hip_ha_t *entry, void *not_used)
 	/* Calculate the HIP header length */
 	hip_calc_hdr_len(msg);
 
-	/* Send the UPDATE packet using HIP_NAT_UDP_PORT as source and destination ports.
+	/* Send the UPDATE packet using hip_get_nat_udp_port() as source and destination ports.
 	   Only outgoing traffic acts refresh the NAT port state. We could
-	   choose to use other than HIP_NAT_UDP_PORT as source port, but we must use HIP_NAT_UDP_PORT
+	   choose to use other than hip_get_nat_udp_port() as source port, but we must use hip_get_nat_udp_port()
 	   as destination port. However, because it is recommended to use
-	   HIP_NAT_UDP_PORT as source port also, we choose to do so here. */
+	   hip_get_nat_udp_port() as source port also, we choose to do so here. */
 	entry->hadb_xmit_func->
 		hip_send_pkt(&entry->our_addr, &entry->peer_addr,
-			     HIP_NAT_UDP_PORT, HIP_NAT_UDP_PORT, msg,
+			     hip_get_nat_udp_port(), hip_get_nat_udp_port(), msg,
 			     entry, 0);
 
 out_err:
@@ -654,7 +656,7 @@ pj_status_t hip_on_tx_pkt(pj_ice_sess *ice, unsigned comp_id, const void *pkt, p
 	
 	struct in6_addr *local_addr = 0;
 	struct in6_addr peer_addr;
-	in_port_t src_port = HIP_NAT_UDP_PORT; 
+	in_port_t src_port = hip_get_nat_udp_port(); 
 	in_port_t dst_port ;
 	pj_sockaddr_in *addr;
 	
@@ -955,7 +957,7 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 			if( peer_addr_list_item->port)
 				temp_cand->addr.ipv4.sin_port = htons(peer_addr_list_item->port);
 			else 
-				temp_cand->addr.ipv4.sin_port = htons(HIP_NAT_UDP_PORT);
+				temp_cand->addr.ipv4.sin_port = htons(hip_get_nat_udp_port());
 			temp_cand->addr.ipv4.sin_addr.s_addr = *((pj_uint32_t *) &peer_addr_list_item->address.s6_addr32[3]) ;
 			
 		
@@ -964,13 +966,13 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 			if( peer_addr_list_item->port)
 				temp_cand->base_addr.ipv4.sin_port = htons(peer_addr_list_item->port);
 			else 
-				temp_cand->base_addr.ipv4.sin_port = htons(HIP_NAT_UDP_PORT);
+				temp_cand->base_addr.ipv4.sin_port = htons(hip_get_nat_udp_port());
 			temp_cand->base_addr.ipv4.sin_addr.s_addr = *((pj_uint32_t*) &peer_addr_list_item->address.s6_addr32[3]);
 						
 			
 			
 			temp_cand->comp_id = 1;
-			if(peer_addr_list_item->port== 0 || peer_addr_list_item->port == HIP_NAT_UDP_PORT){
+			if(peer_addr_list_item->port== 0 || peer_addr_list_item->port == hip_get_nat_udp_port()){
 				temp_cand->type = ICE_CAND_TYPE_HOST;
 			}
 			else{			
@@ -1171,7 +1173,7 @@ int hip_user_nat_mode(int nat_mode)
 	hip_nat_randomize_nat_ports();
 #endif
 	
-	nat = nat_mode;
+        nat = nat_mode;
 	switch (nat) {
 	case SO_HIP_SET_NAT_PLAIN_UDP:
 		nat = HIP_NAT_MODE_PLAIN_UDP;
@@ -1210,7 +1212,7 @@ int hip_get_nat_mode(hip_ha_t *entry)
 }
 
 /**
- * Get HIP NAT status.
+ * Set HIP NAT status.
  */
 void hip_set_nat_mode(int mode)
 {
@@ -1274,7 +1276,7 @@ int hip_nat_start_ice(hip_ha_t *entry, struct hip_esp_info *esp_info, int ice_co
         		if (hip_sockaddr_is_v6_mapped(&n->addr)) {
         			hip_external_ice_add_local_candidates(ice_session,
         					hip_cast_sa_addr(&n->addr),hip_cast_sa_addr(&n->addr),
-        					HIP_NAT_UDP_PORT,HIP_NAT_UDP_PORT,
+        					hip_get_nat_udp_port(),hip_get_nat_udp_port(),
         					ICE_CAND_TYPE_HOST);
         		}		
         		
@@ -1291,7 +1293,7 @@ int hip_nat_start_ice(hip_ha_t *entry, struct hip_esp_info *esp_info, int ice_co
 	        					&ha_n->local_reflexive_address,
 	        					&ha_n->our_addr,
 	        					ha_n->local_reflexive_udp_port,
-	        					HIP_NAT_UDP_PORT,
+	        					hip_get_nat_udp_port(),
 	        					ICE_CAND_TYPE_PRFLX);
                 	        		}
 
@@ -1335,7 +1337,7 @@ int hip_dump_pj_stun_msg(void* pdu, int len){
 	char buffer[1000];
 	unsigned print_len = 1000;
 	
-	HIP_DEBUG("dump_pj_stun_msg\n");
+        HIP_DEBUG("dump_pj_stun_msg\n");
  	pool = pj_pool_create(&cpp->factory, NULL, 4000, 4000, NULL);	
  	pj_stun_msg_decode(pool,pdu,len, 0, &msg, &parse_len,&response);
 		
@@ -1352,3 +1354,4 @@ out_err:
 	
  	
 }
+

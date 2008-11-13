@@ -211,4 +211,7 @@ int hip_for_each_hosts_file_line(char *hosts_file,
 int hip_map_lsi_to_hit_from_hosts_files(hip_lsi_t *lsi, hip_hit_t *hit);
 int hip_map_id_to_ip_from_hosts_files(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *ip);
 
+in_port_t hip_get_nat_udp_port();
+int hip_set_nat_udp_port(in_port_t port);
+
 #endif /* HIP_MISC_H */

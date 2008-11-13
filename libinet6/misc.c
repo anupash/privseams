@@ -14,6 +14,8 @@
 #define HOST_NAME_MAX		64
 #endif
 
+/** Port number for NAT traversal of hip control packets. */
+in_port_t hip_nat_udp_port = 50500;
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip,
@@ -2550,5 +2552,34 @@ void hip_copy_inaddr_null_check(struct in_addr *to, struct in_addr *from) {
 		memcpy(to, from, sizeof(*to));
 	else
 		memset(to, 0, sizeof(*to));
+}
+
+/**
+ * Get HIP NAT UDP port.
+ */
+in_port_t hip_get_nat_udp_port()
+{
+	return hip_nat_udp_port;
+}
+
+/**
+ * Set HIP NAT UDP port.
+ */
+int hip_set_nat_udp_port(in_port_t port)
+{
+	int err = 0;
+
+	if (port < 0 || port > 65535)
+	{
+		HIP_ERROR("Invalid port number %d. The port should be between 1 to 65535", port);
+		err = -EINVAL;
+		goto out_err;
+	}
+
+	HIP_DEBUG("set nat udp port %d\n", port);
+	hip_nat_udp_port = port;
+
+out_err:
+	return err;
 }
 

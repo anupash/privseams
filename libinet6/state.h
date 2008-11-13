@@ -370,7 +370,7 @@ struct hip_hadb_state
 	/** A boolean value indicating whether there is a NAT between this host
 	    and the peer. */
 	uint8_t	                     nat_mode;
-	/* this might seem redundant as dst_port == HIP_NAT_UDP_PORT, but it makes
+	/* this might seem redundant as dst_port == hip_get_nat_udp_port(), but it makes
 	 * port handling easier in other functions */
 	in_port_t		     local_udp_port;
 	 /** NAT mangled port (source port of I2 packet). */

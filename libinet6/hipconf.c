@@ -47,6 +47,7 @@ const char *hipconf_usage =
 //modify by santtu
 //"nat on|off|<peer_hit>\n"
 "nat none|plain-udp|ice-udp\n"
+"nat port <port>\n"
 //end modify
 "rst all|<peer_hit>\n"
 "load config default\n"
@@ -1142,28 +1143,42 @@ int hip_conf_handle_bos(hip_common_t *msg, int action,
 int hip_conf_handle_nat(hip_common_t *msg, int action,
 			const char *opt[], int optc, int send_only)
 {
-     int err = 0;
-     int status = 0;
-     in6_addr_t hit;
+	int err = 0;
+	int status = 0;
+	in6_addr_t hit;
 
  //    if (!strcmp("on",opt[0]))
-     if (!strcmp("plain-udp",opt[0]))
-     {
-    	 memset(&hit,0,sizeof(in6_addr_t));
-	//  status = SO_HIP_SET_NAT_ON;
-    	 status = SO_HIP_SET_NAT_PLAIN_UDP;
-	  } else if (!strcmp("none",opt[0]))
-	  {
-		  memset(&hit,0,sizeof(struct in6_addr));
-	  status = SO_HIP_SET_NAT_NONE;
-	  } else if (!strcmp("ice-udp",opt[0]))
-	  {
-	   	  memset(&hit,0,sizeof(struct in6_addr));
-	  	  status = SO_HIP_SET_NAT_ICE_UDP;
-	  } else
-	  {
-		  HIP_IFEL(1, -1, "bad args\n");
-	  }
+	if (!strcmp("plain-udp",opt[0]))
+	{
+		memset(&hit,0,sizeof(in6_addr_t));
+		//  status = SO_HIP_SET_NAT_ON;
+		status = SO_HIP_SET_NAT_PLAIN_UDP;
+	} else if (!strcmp("none",opt[0]))
+	{
+		memset(&hit,0,sizeof(struct in6_addr));
+		status = SO_HIP_SET_NAT_NONE;
+	} else if (!strcmp("ice-udp",opt[0]))
+	{
+		memset(&hit,0,sizeof(struct in6_addr));
+		status = SO_HIP_SET_NAT_ICE_UDP;
+	} else if (!strcmp("port",opt[0]))
+	{
+		if (opt[1] == '\0')
+		{
+			HIP_ERROR("Invalid argument\n");
+			err = -EINVAL;
+			goto out_err;
+		}
+	
+		in_port_t port = (in_port_t)atoi(opt[1]);
+		if (port < 0 || port > 65535) {
+			HIP_ERROR("Invalid argument\n");
+			err = -EINVAL;
+			goto out_err;
+		}
+
+		hip_set_nat_udp_port(port);
+	}
 #if 0 /* Not used currently */
      else {
 	  ret = inet_pton(AF_INET6, opt[0], &hit);

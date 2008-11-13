@@ -94,7 +94,7 @@ int hip_xmit_close(hip_ha_t *entry, void *opaque)
 
 	HIP_IFEL(entry->hadb_xmit_func->
 		 hip_send_pkt(NULL, &entry->peer_addr,
-			      (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
+			      (entry->nat_mode ? hip_get_nat_udp_port() : 0),
 			      entry->peer_udp_port, close, entry, 0),
 		 -ECOMM, "Sending CLOSE message failed.\n");
 	
@@ -152,7 +152,7 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 		 "Could not create signature.\n");
 	
 	HIP_IFEL(entry->hadb_xmit_func->
-		 hip_send_pkt(NULL, &entry->peer_addr, HIP_NAT_UDP_PORT,
+		 hip_send_pkt(NULL, &entry->peer_addr, hip_get_nat_udp_port(),
 			      entry->peer_udp_port,
 			      close_ack, entry, 0),
 		 -ECOMM, "Sending CLOSE ACK message failed.\n");
