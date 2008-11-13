@@ -62,8 +62,8 @@ void hip_firewall_hldb_dump(void){
  * @return	error if any
  */
 int firewall_add_default_entry(struct in6_addr *ip){
-	struct in6_addr all_zero_default_v6;
-	struct in_addr  all_zero_default_v4;
+	struct in6_addr all_zero_default_v6 = {0};
+	struct in_addr  all_zero_default_v4 = {0};
 	firewall_hl_t *new_entry  = NULL;
 	firewall_hl_t *entry_peer = NULL;
 	int err = 0;
@@ -75,8 +75,6 @@ int firewall_add_default_entry(struct in6_addr *ip){
 	entry_peer = firewall_ip_db_match(ip);
 
 	if(!entry_peer){
-		memset(&all_zero_default_v6, 0, sizeof(struct in6_addr));
-		memset(&all_zero_default_v4, 0, sizeof(struct in_addr));
 		HIP_DEBUG_IN6ADDR("ip ", ip);
 
 		new_entry = hip_create_hl_entry();
