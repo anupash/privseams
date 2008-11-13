@@ -419,7 +419,11 @@ int hip_fw_uninit_lsi_support(){
 
 		system("ip6tables -D HIPFW-INPUT -d 2001:0010::/28 -j QUEUE 2>/dev/null");
 
+		//empty the firewall db
 		hip_firewall_delete_hldb();
+
+		//empty tha firewall cache
+		hip_firewall_cache_delete_hldb();
 	}
 
   out_err:
@@ -610,6 +614,9 @@ int firewall_init_rules(){
 	
 	// Initializing local database for mapping LSI-HIT in the firewall
 	firewall_init_hldb();
+
+	// Initializing local cache database
+	firewall_cache_init_hldb();
 
 	system("iptables -I INPUT -j HIPFW-INPUT");
 	system("iptables -I OUTPUT -j HIPFW-OUTPUT");

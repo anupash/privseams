@@ -229,5 +229,22 @@ struct firewall_hl{
 };
 typedef struct firewall_hl firewall_hl_t;
 
+struct firewall_cache_hl
+{
+	hip_hit_t            hit_our;
+	hip_hit_t            hit_peer;
+	struct in6_addr      ip_our;
+	struct in6_addr      ip_peer;
+        hip_lsi_t            lsi_our;
+        hip_lsi_t            lsi_peer;
+	int                  state;
+	int                  heartbeats_on;
+	int                  heartbeats_sent;
+	int                  heartbeats_received;
+	double            heartbeats_mean;
+	double              heartbeats_variance;
+};
+typedef struct firewall_cache_hl firewall_cache_hl_t;
+
 #endif /* _HIP_ICOMM */
 
