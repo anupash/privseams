@@ -2,7 +2,7 @@
  * This file defines the main function of the command line tool 'hipconf'.
  *
  * @author  Miika Komu <miika_iki.fi>
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  * @bug     makefile compiles prefix of debug messages wrong for hipconf in
  *          "make all"
  */

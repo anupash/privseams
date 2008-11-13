@@ -7,8 +7,6 @@
  * Then it tries to verify it. If it succeeds everything should be OK :)
  *
  * @author Samu Varjonen
- * @version 0.1
- * @date 31.3.2008
  *
  */
 

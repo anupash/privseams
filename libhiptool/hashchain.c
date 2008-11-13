@@ -72,10 +72,12 @@ void hchain_print(const hash_chain_t * hash_chain)
  * @return: returns hash distance if the hash authentication was successful, 0 otherwise
  */
 int hchain_verify(const unsigned char * current_hash, const unsigned char * last_hash,
-		hash_function_t hash_function, int hash_length, int tolerance)
+		hash_function_t hash_function, int hash_length, int tolerance,
+		unsigned char *secret, int secret_length)
 {
-	/* stores intermediate hash results */
-	unsigned char buffer[MAX_HASH_LENGTH];
+	/* stores intermediate hash results and allow to concat
+	 * with a secret at each step */
+	unsigned char buffer[MAX_HASH_LENGTH + secret_length];
 	int err = 0, i;
 
 	HIP_ASSERT(current_hash != NULL && last_hash != NULL);
@@ -85,6 +87,11 @@ int hchain_verify(const unsigned char * current_hash, const unsigned char * last
 	// init buffer with the hash we want to verify
 	memcpy(buffer, current_hash, hash_length);
 
+	if (secret && secret_length > 0)
+	{
+		HIP_HEXDUMP("secret: ", secret, secret_length);
+	}
+
 	_HIP_HEXDUMP("comparing given hash: ", buffer, hash_length);
 	_HIP_DEBUG("\t<->\n");
 	_HIP_HEXDUMP("last known hash: ", last_hash, hash_length);
@@ -93,7 +100,11 @@ int hchain_verify(const unsigned char * current_hash, const unsigned char * last
 	{
 		_HIP_DEBUG("Calculating round %i:\n", i);
 
-		hash_function(buffer, hash_length, buffer);
+		// add the secret
+		if (secret != NULL && secret_length > 0)
+			memcpy(&buffer[hash_length], secret, secret_length);
+
+		hash_function(buffer, hash_length + secret_length, buffer);
 
 		_HIP_HEXDUMP("comparing buffer: ", buffer, hash_length);
 		_HIP_DEBUG("\t<->\n");
@@ -121,32 +132,44 @@ int hchain_verify(const unsigned char * current_hash, const unsigned char * last
  * @return: returns a pointer to the newly created hash_chain
  */
 hash_chain_t * hchain_create(hash_function_t hash_function, int hash_length,
-		int hchain_length)
+		int hchain_length, int hchain_hierarchy, hash_tree_t *link_tree)
 {
 	hash_chain_t *return_hchain = NULL;
 	hash_chain_element_t *last_element = NULL, *current_element = NULL;
-	unsigned char *hash_value = NULL;
+	/* the hash function output might be longer than needed
+	 * allocate enough memory for the hash function output
+	 *
+	 * @note we also allow a concatenation with the link tree root here */
+	unsigned char hash_value[2 * MAX_HASH_LENGTH];
+	int hash_data_length = 0;
 	int i, err = 0;
 
 	HIP_ASSERT(hash_function != NULL);
 	// make sure that the hash we want to use is smaller than the max output
 	HIP_ASSERT(hash_length > 0 && hash_length <= MAX_HASH_LENGTH);
 	HIP_ASSERT(hchain_length > 0);
-
-	/* the hash function output might be longer than needed
-	 * allocate enough memory for the hash function output */
-	HIP_IFEL(!(hash_value = (unsigned char *)malloc(MAX_HASH_LENGTH)), -1,
-			"failed to allocate memory\n");
+	HIP_ASSERT(!(hchain_hierarchy == 0 && link_tree));
 
 	// allocate memory for a new hash chain and set members to 0/NULL
 	HIP_IFEL(!(return_hchain = (hash_chain_t *)malloc(sizeof(hash_chain_t))), -1,
 			"failed to allocate memory\n");
 	memset(return_hchain, 0, sizeof(hash_chain_t));
 
+	// set the link tree if we are using different hierarchies
+	if (link_tree)
+	{
+		return_hchain->link_tree = link_tree;
+		hash_data_length = 2 * hash_length;
+
+	} else
+	{
+		hash_data_length = hash_length;
+	}
+
 	for(i = 0; i < hchain_length; i++)
 	{
 		// reuse memory for hash-value buffer
-		memset(hash_value, 0, MAX_HASH_LENGTH);
+		//memset(hash_value, 0, MAX_HASH_LENGTH);
 
 		// allocate memory for a new element
 		HIP_IFEL(!(current_element = (hash_chain_element_t *)
@@ -157,16 +180,26 @@ hash_chain_t * hchain_create(hash_function_t hash_function, int hash_length,
 		if (last_element != NULL)
 		{
 			// (input, input_length, output) -> output_length == 20
-			HIP_IFEL(!(hash_function(last_element->hash, hash_length, hash_value)), -1,
+			HIP_IFEL(!(hash_function(hash_value, hash_data_length, hash_value)), -1,
 					"failed to calculate hash\n");
 			// only consider DEFAULT_HASH_LENGTH highest bytes
 			memcpy(current_element->hash, hash_value, hash_length);
 		} else
 		{
 			// random bytes as seed
-			HIP_IFEL(RAND_bytes(current_element->hash, hash_length) <= 0, -1,
+			HIP_IFEL(RAND_bytes(hash_value, hash_length) <= 0, -1,
 					"failed to get random bytes for source element\n");
+
+			memcpy(current_element->hash, hash_value, hash_length);
+
 			return_hchain->source_element = current_element;
+		}
+
+		/* overwrite parts of the calculated hash with the root in case hash is longer
+		 * than what we need */
+		if (link_tree)
+		{
+			memcpy(&hash_value[hash_length], link_tree->root, link_tree->node_length);
 		}
 
 		_HIP_HEXDUMP("element created: ", current_element->hash, hash_length);
@@ -180,6 +213,7 @@ hash_chain_t * hchain_create(hash_function_t hash_function, int hash_length,
 	return_hchain->hash_length = hash_length;
 	return_hchain->hchain_length = hchain_length;
 	return_hchain->remaining = hchain_length;
+	return_hchain->hchain_hierarchy = hchain_hierarchy;
 	// hash_chain->source_element set above
 	return_hchain->anchor_element  = current_element;
 	return_hchain->current_element = NULL;
@@ -187,9 +221,9 @@ hash_chain_t * hchain_create(hash_function_t hash_function, int hash_length,
 	HIP_DEBUG("Hash-chain with %i elements of length %i created!\n", hchain_length,
 			hash_length);
 	//hchain_print(return_hchain, hash_length);
-	HIP_IFEL(!(hchain_verify(return_hchain->source_element->hash, return_hchain->anchor_element->hash,
-			hash_function, hash_length, hchain_length)), -1, "failed to verify the hchain\n");
-	HIP_DEBUG("hchain successfully verfied\n");
+	//HIP_IFEL(!(hchain_verify(return_hchain->source_element->hash, return_hchain->anchor_element->hash,
+	//		hash_function, hash_length, hchain_length)), -1, "failed to verify the hchain\n");
+	//HIP_DEBUG("hchain successfully verfied\n");
 
   out_err:
     if (err)
@@ -215,10 +249,6 @@ hash_chain_t * hchain_create(hash_function_t hash_function, int hash_length,
     		free(return_hchain);
     	return_hchain = NULL;
     }
-
-    // normal clean-up
-    if (hash_value)
-    	free(hash_value);
 
 	return return_hchain;
 }
@@ -354,6 +384,8 @@ int hchain_free(hash_chain_t *hash_chain)
 			free(current_element->hash);
 			free(current_element);
 		}
+
+		htree_free(hash_chain->link_tree);
 
 		free(hash_chain);
 	}

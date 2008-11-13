@@ -294,6 +294,17 @@ if test x"$ac_cv_use_opportunistic" = x"yes"; then
 fi
 AM_CONDITIONAL(HIP_OPPORTUNISTIC, test x"$ac_cv_use_opportunistic" = x"yes")
 
+AC_ARG_ENABLE(savaipopt,
+             AC_HELP_STRING([--enable-savaipoption],
+                            [HIP SAVA IP option extensions, if no encrypt IP address (default is YES)]),
+             [ac_cv_use_savaipopt=$enableval], [ac_cv_use_savaipopt=yes])
+AC_CACHE_CHECK([whether to use sava ip option],
+               [ac_cv_use_savaipopt], [ac_cv_use_savaipopt=yes])
+if test x"$ac_cv_use_savaipopt" = x"yes"; then
+        AC_DEFINE(CONFIG_SAVAH_IP_OPTION, AC_PREREQ(2.53))
+fi
+AM_CONDITIONAL(SAVAH_IP_OPTION, test x"$ac_cv_use_savaipopt" = x"yes")
+
 AC_ARG_ENABLE(opendht,
              AC_HELP_STRING([--enable-opendht],
                             [OpenDHT support (default is YES)]),
@@ -340,6 +351,17 @@ if test x"$ac_cv_use_profiling" = x"yes"; then
         AC_SUBST(GPROF_CFLAGS, "-pg")
 fi
 AM_CONDITIONAL(HIP_PROFILING, test x"$ac_cv_use_profiling" = x"yes")
+
+AC_ARG_ENABLE(measurements,
+             AC_HELP_STRING([--enable-measurements],
+                            [activate internal performance measurements (default is NO)]),
+             [ac_cv_use_measurements=$enableval], [ac_cv_use_measurements=no])
+AC_CACHE_CHECK([whether to do internal measurements],
+               [ac_cv_use_measurements], [ac_cv_use_measurements=no])
+if test x"$ac_cv_use_measurements" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_MEASUREMENTS, AC_PREREQ(2.53))
+fi
+AM_CONDITIONAL(HIP_MEASUREMENTS, test x"$ac_cv_use_measurements" = x"yes")
 
 AC_ARG_ENABLE(debug,
              AC_HELP_STRING([--enable-debug],

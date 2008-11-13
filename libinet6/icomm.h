@@ -29,7 +29,10 @@
 #define SO_HIP_GET_HIT_LIST 3
 
 /** @addtogroup hip_so
- * HIP socket options.
+ * HIP socket options. Define a constant SO_HIP_NEWMODE which has value
+ * between 0 and HIP_SO_ROOT_MAX. You may also need to increase the value of
+ * HIP_SO_ROOT_MAX.
+ *
  * @note Values 1 - 64 overlap the message values and thus cannot be used in
  *       hip_message_type_name().
  * @todo Should socket option values 1 - 64 be renumbered starting from 65?
@@ -96,7 +99,7 @@
 #define SO_HIP_SET_DEBUG_MEDIUM			83
 #define SO_HIP_SET_DEBUG_NONE			84
 /** Socket option for hipconf to ask about the used gateway with OpenDHT */
-/* 85 is free slot */
+#define SO_HIP_LOCATOR_GET                      85
 #define SO_HIP_HANDOFF_ACTIVE			86
 #define SO_HIP_HANDOFF_LAZY			87
 /** Socket option for hipconf to restart daemon. */
@@ -180,6 +183,7 @@
 #define SO_HIP_IPSEC_FLUSH_ALL_SA          	154
 #define SO_HIP_ANCHOR_CHANGE			155
 
+
 //#define SO_HIP_ESP_PROT_EXT_TRANSFORM		xx
 //#define SO_HIP_IPSEC_UPDATE_ANCHOR_LIST	xx
 //#define SO_HIP_IPSEC_NEXT_ANCHOR		xx
@@ -188,6 +192,21 @@
 #define HIP_SO_ROOT_MAX 			255
 
 #define SO_HIP_SET_NAT_ON                     SO_HIP_SET_NAT_PLAIN_UDP
+
+
+#define SO_HIP_REGISTER_SAVAHR                   156
+#define SO_HIP_GET_SAVAHR_HIT                    157
+#define SO_HIP_GET_SAVAHR_IN_KEYS                158
+#define SO_HIP_GET_SAVAHR_OUT_KEYS               159
+#define SO_HIP_OFFER_SAVAH                       160
+#define SO_HIP_CANCEL_SAVAH                      161
+#define SO_HIP_FW_I2_DONE                        162
+#define SO_HIP_SAVAH_CLIENT_STATUS_REQUEST       163
+#define SO_HIP_SAVAH_SERVER_STATUS_REQUEST       164
+#define SO_HIP_SET_SAVAH_CLIENT_OFF              165
+#define SO_HIP_SET_SAVAH_CLIENT_ON               166
+#define SO_HIP_SET_SAVAH_SERVER_OFF              167
+#define SO_HIP_SET_SAVAH_SERVER_ON               168
 
 
 /****** FIREWALL ******/

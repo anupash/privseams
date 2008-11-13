@@ -2,8 +2,6 @@
  * This file defines the api for sqlite to use with HIPL
  *
  * @author Samu Varjonen
- * @version 0.1
- * @date 21.5.2008
  *
  */
 

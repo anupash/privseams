@@ -322,8 +322,11 @@ struct esp_tuple * find_esp_tuple(const SList * esp_list, uint32_t spi)
 /* initialize and insert connection*/
 void insert_new_connection(struct hip_data * data){
   HIP_DEBUG("insert_new_connection\n");
-  struct connection * connection = (struct connection *) malloc(sizeof(struct connection));
+  struct connection * connection = NULL;
   DList * list = (DList *) hipList;
+
+  connection = (struct connection *) malloc(sizeof(struct connection));
+  memset(connection, 0, sizeof(struct connection));
 
   connection->state = STATE_ESTABLISHED;
   //set time stamp
@@ -340,8 +343,10 @@ void insert_new_connection(struct hip_data * data){
   //connection->original.esp_tuple->tuple = &connection->original;
   connection->original.connection = connection;
   connection->original.hip_tuple = (struct hip_tuple *) malloc(sizeof(struct hip_tuple));
+  memset(connection->original.hip_tuple, 0, sizeof(struct hip_tuple));
   connection->original.hip_tuple->tuple = &connection->original;
   connection->original.hip_tuple->data = (struct hip_data *) malloc(sizeof(struct hip_data));
+  memset(connection->original.hip_tuple->data, 0, sizeof(struct hip_data));
   connection->original.hip_tuple->data->src_hit = data->src_hit;
   connection->original.hip_tuple->data->dst_hit = data->dst_hit;
   connection->original.hip_tuple->data->src_hi = NULL;
@@ -356,8 +361,10 @@ void insert_new_connection(struct hip_data * data){
 #endif /* CONFIG_HIP_HIPPROXY */
   connection->reply.connection = connection;
   connection->reply.hip_tuple = (struct hip_tuple *) malloc(sizeof(struct hip_tuple));
+  memset(connection->reply.hip_tuple, 0, sizeof(struct hip_tuple));
   connection->reply.hip_tuple->tuple = &connection->reply;
   connection->reply.hip_tuple->data = (struct hip_data *) malloc(sizeof(struct hip_data));
+  memset(connection->reply.hip_tuple->data, 0, sizeof(struct hip_data));
   connection->reply.hip_tuple->data->src_hit = data->dst_hit;
   connection->reply.hip_tuple->data->dst_hit = data->src_hit;
   connection->reply.hip_tuple->data->src_hi = NULL;
@@ -506,12 +513,9 @@ struct esp_tuple *esp_tuple_from_esp_info_locator(const struct hip_esp_info * es
       HIP_DEBUG("esp_tuple_from_esp_info_locator: new spi %d\n", esp_info->new_spi);
       //check that old spi is found
       new_esp = (struct esp_tuple *) malloc(sizeof(struct esp_tuple));
+      memset(new_esp, 0, sizeof(struct esp_tuple));
       new_esp->spi = ntohl(esp_info->new_spi);
-      new_esp->new_spi = 0;
-      new_esp->spi_update_id = 0;
       new_esp->tuple = tuple;
-      new_esp->dst_addr_list = NULL;
-      new_esp->dec_data = NULL;
 
       n = (hip_get_param_total_len(locator) - sizeof(struct hip_locator))/
 	sizeof(struct hip_locator_info_addr_item);
@@ -558,18 +562,15 @@ struct esp_tuple * esp_tuple_from_esp_info(const struct hip_esp_info * esp_info,
   if(esp_info)
     {
       new_esp = (struct esp_tuple *) malloc(sizeof(struct esp_tuple));
+      memset(new_esp, 0, sizeof(struct esp_tuple));
       new_esp->spi = ntohl(esp_info->new_spi);
-      new_esp->new_spi = 0;
-      new_esp->spi_update_id = 0;
       new_esp->tuple = tuple;
-      new_esp->dec_data = NULL;
 
       struct esp_address * esp_address = malloc(sizeof(struct esp_address));
 
       memcpy(&esp_address->dst_addr, addr, sizeof(struct in6_addr));
 
       esp_address->update_id = NULL;
-      new_esp->dst_addr_list = NULL;
       new_esp->dst_addr_list = (SList *)append_to_slist((SList *)new_esp->dst_addr_list,
 							       (void *) esp_address);
 	  HIP_DEBUG("esp_tuple_from_esp_info: \n");
@@ -1119,6 +1120,7 @@ int handle_update(const struct in6_addr * ip6_src,
 			}
 
 			// insertion successful -> go on
+			tuple = get_tuple_by_hits(&common->hits, &common->hitr);
 			HIP_DEBUG("connection insertion successful\n");
 
 			free(data);
@@ -1207,7 +1209,7 @@ int handle_update(const struct in6_addr * ip6_src,
 					goto out_err;
 				}
 
-				other_dir_esps = (SList *) append_to_slist((SList *)
+				other_dir_tuple->esp_tuples = (SList *) append_to_slist((SList *)
 						other_dir_esps, (void *) new_esp);
 
 				insert_esp_tuple(new_esp);
@@ -1260,7 +1262,7 @@ int handle_update(const struct in6_addr * ip6_src,
 						struct esp_tuple * new_esp = esp_tuple_from_esp_info(
 								esp_info, ip6_src, other_dir_tuple);
 
-						other_dir_esps = (SList *)
+						other_dir_tuple->esp_tuples = (SList *)
 						append_to_slist((SList *) other_dir_esps,
 								(void *) new_esp);
 						insert_esp_tuple(new_esp);
@@ -1278,7 +1280,7 @@ int handle_update(const struct in6_addr * ip6_src,
 				struct esp_tuple * new_esp = esp_tuple_from_esp_info(esp_info,
 						ip6_src, other_dir_tuple);
 
-				other_dir_esps = (SList *) append_to_slist((SList *)
+				other_dir_tuple->esp_tuples = (SList *) append_to_slist((SList *)
 						other_dir_esps, (void *) new_esp);
 				insert_esp_tuple(new_esp);
 			}
@@ -1582,6 +1584,9 @@ int check_packet(const struct in6_addr * ip6_src,
 	{
 		return_value = handle_close_ack(ip6_src, ip6_dst, common, tuple);
 
+	} else if (common->type_hdr == HIP_LUPDATE)
+	{
+		return_value = esp_prot_conntrack_lupdate(ip6_src, ip6_dst, common, tuple);
 	} else
 	{
 		HIP_ERROR("unknown packet type\n");
@@ -1648,6 +1653,13 @@ int filter_esp_state(const struct in6_addr *dst_addr,
 	// validate hashes of ESP packets if extension is in use
 	HIP_IFEL(esp_prot_conntrack_verify(esp_tuple, esp), -1,
 			"failed to verify esp hash\n");
+
+	// track ESP SEQ number, if hash token passed verification
+	if (ntohl(esp->esp_seq) > esp_tuple->seq_no)
+	{
+		esp_tuple->seq_no = ntohl(esp->esp_seq);
+		//printf("updated esp seq no to: %u\n", esp_tuple->seq_no);
+	}
 
 	// do some extra work for key escrow
 	if (use_escrow)

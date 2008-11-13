@@ -2,9 +2,7 @@
  * This file defines a linked list for storing pointers.
  * 
  * @author  Lauri Silvennoinen
- * @version 1.0
- * @date    21.04.2008
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  * @see     linkedlist.h for usage instructions.
  */
 #include "linkedlist.h"

@@ -13,8 +13,6 @@
  * 
  * @author  (version 1.0) Abhinav Pathak
  * @author  (version 1.1) Lauri Silvennoinen
- * @version 1.1
- * @date    27.10.2006
  * @note    Related drafts:
  *          <ul>
  *          <li><a href="http://www.ietf.org/internet-drafts/draft-schmitt-hip-nat-traversal-02.txt">
@@ -22,7 +20,7 @@
  *          <li><a href="http://www.ietf.org/internet-drafts/draft-irtf-hiprg-nat-03.txt">
  *          draft-irtf-hiprg-nat-03</a></li>
  *          </ul>
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  * @note    All Doxygen comments have been added in version 1.1.
  */ 
 #include "nat.h"

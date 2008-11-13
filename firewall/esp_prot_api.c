@@ -46,8 +46,11 @@ hchain_store_t bex_store;
 // this stores hchains used during UPDATE
 hchain_store_t update_store;
 
-// needed for measurements
-int hash_distance;
+
+#ifdef CONFIG_HIP_MEASUREMENTS
+statistics_data_t update_stats;
+hcupdate_track_t hcupdate_tracking;
+#endif
 
 
 int esp_prot_init()
@@ -60,7 +63,10 @@ int esp_prot_init()
 
 	HIP_DEBUG("Initializing the esp protection extension...\n");
 
-	hash_distance = 0;
+#ifdef CONFIG_HIP_MEASUREMENTS
+	memset(&update_stats, 0, sizeof(statistics_data_t));
+	memset(&hcupdate_tracking, 0, sizeof(hcupdate_track_t));
+#endif
 
 	/* activate the extension in hipd
 	 *
@@ -119,6 +125,10 @@ int esp_prot_init()
 				HIP_IFEL(hcstore_register_hchain_length(&bex_store, bex_function_id,
 						bex_hash_length_id, bex_hchain_length) < 0, -1,
 						"failed to register hchain-length in bex-store\n");
+				/* register number of hierarchies in BEX-store */
+				HIP_IFEL(hcstore_register_hchain_hierarchy(&bex_store, bex_function_id,
+						bex_hash_length_id, bex_hchain_length, NUM_BEX_HIERARCHIES) < 0,
+						-1, "failed to register hchain-hierarchy in bex-store\n");
 
 				for (g = 0; g < NUM_UPDATE_HCHAIN_LENGTHS; g++)
 				{
@@ -126,6 +136,10 @@ int esp_prot_init()
 							update_function_id, update_hash_length_id,
 							update_hchain_lengths[g]) < 0, -1,
 							"failed to register hchain-length in update-store\n");
+					HIP_IFEL(hcstore_register_hchain_hierarchy(&update_store,
+							update_function_id, update_hash_length_id,
+							update_hchain_lengths[g], NUM_UPDATE_HIERARCHIES) < 0,
+							-1, "failed to register hchain-hierarchy in update-store\n");
 				}
 			} else
 			{
@@ -151,6 +165,10 @@ int esp_prot_uninit()
 {
 	int err = 0, i;
 	int activate = 0;
+#ifdef CONFIG_HIP_MEASUREMENTS
+	uint32_t num_items = 0;
+	double min = 0.0, max = 0.0, avg = 0.0, std_dev = 0.0;
+#endif
 
 	// uninit hcstores
 	hcstore_uninit(&bex_store);
@@ -166,7 +184,13 @@ int esp_prot_uninit()
 	HIP_IFEL(send_esp_prot_to_hipd(activate), -1,
 			"failed to activate the esp protection in hipd\n");
 
-	printf("highest encountered hash distance: %i\n", hash_distance);
+#ifdef CONFIG_HIP_MEASUREMENTS
+	//calculate statistics for distance measurements
+	calc_statistics(&update_stats, &num_items, &min, &max, &avg, &std_dev,
+			STATS_IN_MSECS);
+	printf("update time - num_data_items: %u, min: %.3fms, max: %.3fms, avg: %.3fms, std_dev: %.3fms\n",
+			num_items, min, max, avg, std_dev);
+#endif
 
   out_err:
 	return err;
@@ -176,6 +200,10 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 		unsigned char *esp_prot_anchor, int update)
 {
 	int hash_length = 0, err = 0;
+#ifdef CONFIG_HIP_MEASUREMENTS
+	uint64_t update_time = 0;
+	struct timeval now;
+#endif
 
 	HIP_ASSERT(entry != 0);
 	// esp_prot_transform >= 0 due to datatype
@@ -214,6 +242,16 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 
 			} else
 			{
+#ifdef CONFIG_HIP_MEASUREMENTS
+				if (memcmp(esp_prot_anchor, &hcupdate_tracking.update_anchor,
+						hash_length))
+				{
+					gettimeofday(&now, NULL);
+					update_time = calc_timeval_diff(&hcupdate_tracking.time_start, &now);
+					add_statistics_item(&update_stats, update_time);
+				}
+#endif
+
 				HIP_ASSERT(entry->next_hchain != NULL);
 
 				/* esp_prot_sadb_maintenance should have already set up the next_hchain,
@@ -346,7 +384,8 @@ int esp_prot_verify(hip_sa_entry_t *entry, unsigned char *hash_value)
 
 		HIP_IFEL((err = esp_prot_verify_hash(hash_function, hash_length,
 				entry->active_anchor, entry->next_anchor, hash_value,
-				entry->esp_prot_tolerance)) < 0, -1, "failed to verify hash\n");
+				entry->esp_prot_tolerance, NULL, 0, NULL, 0)) < 0, -1,
+				"failed to verify hash\n");
 
 		// anchors have changed, tell hipd about it
 		if (err > 0)
@@ -376,10 +415,14 @@ int esp_prot_verify(hip_sa_entry_t *entry, unsigned char *hash_value)
  * returns 0 - ok or UNUSED, < 0 err, > 0 anchor change */
 int esp_prot_verify_hash(hash_function_t hash_function, int hash_length,
 		unsigned char *active_anchor, unsigned char *next_anchor,
-		unsigned char *hash_value, int tolerance)
+		unsigned char *hash_value, int tolerance, unsigned char *active_root,
+		int active_root_length, unsigned char *next_root, int next_root_length)
 {
-	int tmp_distance = 0;
+	uint32_t tmp_distance = 0;
 	int err = 0;
+#ifdef CONFIG_HIP_MEASUREMENTS
+	extern statistics_data_t hash_distance;
+#endif
 
 	HIP_ASSERT(hash_function != NULL);
 	HIP_ASSERT(hash_length > 0);
@@ -394,8 +437,14 @@ int esp_prot_verify_hash(hash_function_t hash_function, int hash_length,
 	HIP_HEXDUMP("-> ", hash_value, hash_length);
 
 	HIP_DEBUG("checking active_anchor...\n");
+
+	if (active_root)
+	{
+		HIP_HEXDUMP("active_root: ", active_root, active_root_length);
+	}
+
 	if (tmp_distance = hchain_verify(hash_value, active_anchor, hash_function,
-			hash_length, tolerance))
+			hash_length, tolerance, active_root, active_root_length))
 	{
 		// this will allow only increasing elements to be accepted
 		memcpy(active_anchor, hash_value, hash_length);
@@ -411,8 +460,13 @@ int esp_prot_verify_hash(hash_function_t hash_function, int hash_length,
 			HIP_DEBUG("checking next_anchor...\n");
 			HIP_HEXDUMP("next_anchor: ", next_anchor, hash_length);
 
+			if (next_root)
+			{
+				HIP_HEXDUMP("next_root: ", next_root, next_root_length);
+			}
+
 			if (tmp_distance = hchain_verify(hash_value, next_anchor, hash_function,
-					hash_length, tolerance))
+					hash_length, tolerance, next_root, next_root_length))
 			{
 				HIP_DEBUG("hash matches element in next hash-chain\n");
 
@@ -430,7 +484,7 @@ int esp_prot_verify_hash(hash_function_t hash_function, int hash_length,
 
 		} else
 		{
-			HIP_DEBUG("active hchain could verify hash element, update hchain not set\n");
+			HIP_DEBUG("active hchain could not verify hash element, update hchain not set\n");
 
 			// handle incorrect elements -> drop packet
 			err = -1;
@@ -438,8 +492,9 @@ int esp_prot_verify_hash(hash_function_t hash_function, int hash_length,
 		}
 	}
 
-	if (tmp_distance > hash_distance)
-		hash_distance = tmp_distance;
+#ifdef CONFIG_HIP_MEASUREMENTS
+	add_statistics_item(&hash_distance, tmp_distance);
+#endif
 
   out_err:
 	if (err == -1)
@@ -528,7 +583,8 @@ hash_chain_t * esp_prot_get_bex_hchain_by_anchor(unsigned char *hchain_anchor,
 			"tried to resolve UNUSED transform\n");
 
 	HIP_IFEL(!(return_hchain = hcstore_get_hchain_by_anchor(&bex_store,
-			prot_transform->hash_func_id, prot_transform->hash_length_id, hchain_anchor)),
+			prot_transform->hash_func_id, prot_transform->hash_length_id,
+			NUM_BEX_HIERARCHIES - 1, hchain_anchor)),
 			-1, "unable to retrieve hchain from bex store\n");
 
 	// refill bex-store if necessary
@@ -568,7 +624,16 @@ int esp_prot_get_data_offset(hip_sa_entry_t *entry)
 int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 {
 	esp_prot_tfm_t *prot_transform = NULL;
-	int err = 0;
+	int soft_update = 0, err = 0;
+	int anchor_offset = 0;
+	int anchor_length = 0, secret_length = 0, branch_length = 0, root_length = 0;
+	unsigned char *anchor = NULL, *secret = NULL, *branch_nodes = NULL, *root = NULL;
+#ifdef CONFIG_HIP_MEASUREMENTS
+	int hash_length = 0;
+#endif
+	hash_function_t hash_function = NULL;
+	int hash_length = 0;
+
 
 	HIP_ASSERT(entry != NULL);
 	// esp_prot_transform >= 0 due to data-type
@@ -588,23 +653,106 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 			HIP_IFEL(!(prot_transform = esp_prot_resolve_transform(entry->esp_prot_transform)),
 					1, "tried to resolve UNUSED transform\n");
 
-			//printf("next_hchain should be set now...\n");
+			// soft-update vs. PK-update
+			if (entry->active_hchain->link_tree)
+			{
+				// do a soft-update
+				HIP_DEBUG("found link_tree, looking for soft-update anchor...\n");
 
-			/* set next hchain with DEFAULT_HCHAIN_LENGTH_ID
-			 *
-			 * @note this needs to be extended when implementing usage of different
-			 *       hchain lengths
-			 */
-			HIP_IFEL(!(entry->next_hchain = hcstore_get_hchain(&update_store,
-					prot_transform->hash_func_id, prot_transform->hash_length_id,
-					update_hchain_lengths[DEFAULT_HCHAIN_LENGTH_ID])),
-					-1, "unable to retrieve hchain from store\n");
+				/* several hash-trees are linking to the same anchors, so it
+				 * might happen that an anchor is already used */
+				while (htree_has_more_data(entry->active_hchain->link_tree))
+				{
+					// get the next hchain from the link_tree
+					anchor_offset = htree_get_next_data_offset(
+							entry->active_hchain->link_tree);
+					anchor = htree_get_data(entry->active_hchain->link_tree,
+							anchor_offset, &anchor_length);
 
-			//printf("is set\n");
+					if (entry->next_hchain = hcstore_get_hchain_by_anchor(
+							&update_store,
+							prot_transform->hash_func_id, prot_transform->hash_length_id,
+							entry->active_hchain->hchain_hierarchy - 1, anchor))
+					{
+						break;
+					}
+				}
+
+				if (!entry->next_hchain)
+				{
+					HIP_DEBUG("unable to get linked hchain from store, need PK-UPDATE\n");
+
+					anchor = NULL;
+					anchor_offset = 0;
+
+					soft_update = 0;
+
+				} else
+				{
+					HIP_DEBUG("linked hchain found in store, soft-update\n");
+
+					secret = htree_get_secret(entry->active_hchain->link_tree,
+							anchor_offset, &secret_length);
+					branch_nodes = htree_get_branch(entry->active_hchain->link_tree,
+							anchor_offset, &branch_length);
+
+					soft_update = 1;
+				}
+			}
+
+			if (!soft_update)
+			{
+				// do a PK-update
+				HIP_DEBUG("doing PK-UPDATE\n");
+
+				/* set next hchain with DEFAULT_HCHAIN_LENGTH_ID of highest hierarchy
+				 * level
+				 *
+				 * @note this needs to be extended when implementing usage of different
+				 *       hchain lengths
+				 */
+				HIP_IFEL(!(entry->next_hchain = hcstore_get_hchain(&update_store,
+						prot_transform->hash_func_id, prot_transform->hash_length_id,
+						update_hchain_lengths[DEFAULT_HCHAIN_LENGTH_ID])),
+						-1, "unable to retrieve hchain from store\n");
+
+				soft_update = 0;
+			}
+
+			if (entry->next_hchain->link_tree)
+			{
+				/* if the next_hchain has got a link_tree, we need its root for
+				 * the verification of the next_hchain's elements */
+				root = htree_get_root(entry->next_hchain->link_tree, &root_length);
+			}
+
+// useful for testing
+#if 0
+			hash_function = esp_prot_get_hash_function(entry->esp_prot_transform);
+			hash_length = esp_prot_get_hash_length(entry->esp_prot_transform);
+
+			if (!hchain_verify(entry->next_hchain->source_element->hash,
+					entry->next_hchain->anchor_element->hash, hash_function,
+					hash_length, entry->next_hchain->hchain_length + 1,
+					root, root_length))
+			{
+				HIP_DEBUG("failed to verify next_hchain\n");
+			}
+#endif
+
 
 			// issue UPDATE message to be sent by hipd
-			HIP_IFEL(send_trigger_update_to_hipd(entry), -1,
-					"unable to trigger update at hipd\n");
+			HIP_IFEL(send_trigger_update_to_hipd(entry, soft_update, anchor_offset,
+					secret, secret_length, branch_nodes, branch_length, root,
+					root_length), -1, "unable to trigger update at hipd\n");
+
+#ifdef CONFIG_HIP_MEASUREMENTS
+			hash_length = esp_prot_get_hash_length(entry->esp_prot_transform);
+
+			memset(&hcupdate_tracking.update_anchor,
+					entry->next_hchain->anchor_element->hash, hash_length);
+			gettimeofday(&hcupdate_tracking.time_start, NULL);
+#endif
 
 			// refill update-store
 			HIP_IFEL((err = hcstore_refill(&update_store)) < 0, -1,

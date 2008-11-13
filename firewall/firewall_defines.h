@@ -29,12 +29,21 @@ struct esp_tuple
 	SList * dst_addr_list;
 	struct tuple * tuple;
 	struct decryption_data * dec_data;
+	/* tracking of the ESP SEQ number */
+	uint32_t seq_no;
 	/* members needed for ESP protection extension */
 	uint8_t esp_prot_tfm;
 	unsigned char *active_anchor;
 	// need for verification of anchor updates
 	unsigned char *first_active_anchor;
 	unsigned char *next_anchor;
+	int active_root_length;
+	unsigned char *active_root;
+	int next_root_length;
+	unsigned char *next_root;
+	/* list temporarily storing anchor elements until the consecutive update
+	 * msg reveals that all on-path devices know the new anchor */
+	hip_ll_t anchor_cache;
 };
 
 struct decryption_data
@@ -66,12 +75,10 @@ struct tuple
 	int direction;
 	struct connection * connection;
 	int state;
+	uint32_t lupdate_seq;
 #ifdef CONFIG_HIP_HIPPROXY
 	int hipproxy;
 #endif
-	/* list temporarily storing anchor elements until the consecutive update
-	 * msg reveals which esp_tuple we have to update */
-	hip_ll_t anchor_cache;
 };
 
 struct connection

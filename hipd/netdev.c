@@ -64,6 +64,9 @@ int filter_address(struct sockaddr *addr)
 				
 		HIP_DEBUG("IPv6 address to filter is %s.\n", s);
 		
+		_HIP_DEBUG("Address is%san Teredo address\n", 
+			  ipv6_addr_is_teredo(a_in6)==1?" ":" not ");
+		
 		if(suppress_af_family == AF_INET) {
 			HIP_DEBUG("Address ignored: address family "\
 				  "suppression set to IPv4 addresses.\n");
@@ -171,7 +174,7 @@ int exists_address_in_list(struct sockaddr *addr, int ifindex)
 		mapped = hip_sockaddr_is_v6_mapped(&n->addr);
 		HIP_DEBUG("mapped=%d\n", mapped);
 		
-		if (mapped) { //|| addr->sa_family == AF_INET
+		if (mapped) {
 			in6 = (struct in6_addr * )hip_cast_sa_addr(&n->addr);
 			in = (struct in_addr *) hip_cast_sa_addr(addr);
 			addr_match = IPV6_EQ_IPV4(in6, in);
@@ -193,10 +196,13 @@ int exists_address_in_list(struct sockaddr *addr, int ifindex)
 		} else if (n->addr.ss_family == AF_INET) {
 			HIP_DEBUG_INADDR("addr4", hip_cast_sa_addr(&n->addr));
 		}
-		if (n->if_index == ifindex && family_match && addr_match)
+		if (n->if_index == ifindex && family_match && addr_match) {
+			HIP_DEBUG("Address does not exist in the list\n");
 			return 1;
+		}
 	}
 	
+	HIP_DEBUG("Address exists in the list\n");
 	return 0;
 }
 
@@ -268,13 +274,12 @@ static void delete_address_from_list(struct sockaddr *addr, int ifindex)
 	int i, deleted = 0;
         struct sockaddr_in6 addr_sin6;
 
-        if (addr->sa_family == AF_INET) {
+        if (addr && addr->sa_family == AF_INET) {
             memset(&addr_sin6, 0, sizeof(addr_sin6));
             addr_sin6.sin6_family = AF_INET6;
             IPV4_TO_IPV6_MAP(((struct in_addr *) hip_cast_sa_addr(addr)),
                              ((struct in6_addr *) hip_cast_sa_addr(&addr_sin6)));
-	} 
-        if (addr->sa_family == AF_INET6) {
+	} else if (addr && addr->sa_family == AF_INET6) {
             memcpy(&addr_sin6, addr, sizeof(addr_sin6));
 	}       
 
@@ -286,16 +291,18 @@ static void delete_address_from_list(struct sockaddr *addr, int ifindex)
             /* remove from list if if_index matches */
             if (!addr) {
                 if (n->if_index == ifindex) {
+			HIP_DEBUG_IN6ADDR("deleting address",
+					  hip_cast_sa_addr(&n->addr)); 
                     list_del(n, addresses);
                     deleted = 1;
                 }
             } else {
                 /* remove from list if address matches */
-                HIP_DEBUG_HIT("interface address",
-                              hip_cast_sa_addr(&n->addr)); 
+		    HIP_DEBUG_IN6ADDR("deleting address",
+				      hip_cast_sa_addr(&n->addr)); 
             
-                if(ipv6_addr_cmp(hip_cast_sa_addr(&n->addr), 
-                                 hip_cast_sa_addr(&addr_sin6))==0) {
+                if (ipv6_addr_cmp(hip_cast_sa_addr(&n->addr), 
+				  hip_cast_sa_addr(&addr_sin6)) == 0) {
                     list_del(n, addresses);
                     deleted = 1;
                 }
@@ -304,7 +311,8 @@ static void delete_address_from_list(struct sockaddr *addr, int ifindex)
                 address_count--;
 	}
 
-	if (address_count < 0) HIP_ERROR("BUG: address_count < 0\n", address_count);
+	if (address_count < 0)
+		HIP_ERROR("BUG: address_count < 0\n", address_count);
 }
 
 void delete_all_addresses(void)
@@ -854,13 +862,7 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit,
 
 send_i1:
 
-	if (entry->state == HIP_STATE_ESTABLISHED) {
-		HIP_DEBUG("Acquire in established state (hard handover?), skip\n");
-		goto out_err;
-	} else if (entry->state == HIP_STATE_NONE ||
-	    entry->state == HIP_STATE_UNASSOCIATED) {
-		HIP_DEBUG("State is %d, sending i1\n", entry->state);
-	} else if (entry->hip_msg_retrans.buf == NULL) {
+	if (entry->hip_msg_retrans.buf == NULL) {
 		HIP_DEBUG("Expired retransmissions, sending i1\n");
 	} else {
 		HIP_DEBUG("I1 was already sent, ignoring\n");
@@ -906,8 +908,9 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	struct in6_addr saddr, *src_addr = NULL, *dst_addr = NULL;
 	struct xfrm_user_acquire *acq;
 	hip_ha_t *entry;
+	int err = 0;
 
-	HIP_DEBUG("Acquire: sending I1 (pid: %d) \n", msg->nlmsg_pid);
+	HIP_DEBUG("Acquire (pid: %d) \n", msg->nlmsg_pid);
 
 	acq = (struct xfrm_user_acquire *)NLMSG_DATA(msg);
 	src_hit = (hip_hit_t *) &acq->sel.saddr;
@@ -919,26 +922,19 @@ int hip_netdev_handle_acquire(const struct nlmsghdr *msg) {
 	
 	entry = hip_hadb_find_byhits(src_hit, dst_hit);
 
-	if (entry){
+	if (entry) {
+		HIP_IFEL((entry->state == HIP_STATE_ESTABLISHED), 0,
+			"State established, not triggering bex\n");
+
 	        src_lsi = &(entry->lsi_our);
 	        dst_lsi = &(entry->lsi_peer);
 	}
 
-	/* Is this still necessary? -Miika */
-#if 0
-	if (!entry) {
-		if (is_ipv4_locator) {
-			IPV4_TO_IPV6_MAP(((struct in_addr *)&acq->id.daddr),
-					 &saddr);
-		} else {
-			ipv6_addr_copy(&saddr,
-				       ((struct in6_addr*)&acq->id.daddr));
-		}
-		src_addr = &saddr;
-	}
-#endif
+	err = hip_netdev_trigger_bex(src_hit, dst_hit, src_lsi, dst_lsi, src_addr, dst_addr);
 
-	return hip_netdev_trigger_bex(src_hit, dst_hit, src_lsi, dst_lsi, src_addr, dst_addr);
+ out_err:
+
+	return err;
 }
 
 int hip_netdev_trigger_bex_msg(struct hip_common *msg) {
@@ -1128,7 +1124,10 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 				// hip_for_each_ha();
 			}
 
+			/* Should be counted globally over all interfaces 
+			   because they might have addresses too --Samu BUGID 663 */
 			i = count_if_addresses(ifa->ifa_index);
+			//i = address_count;
 			HIP_DEBUG("%d addr(s) in ifindex %d\n", i, ifa->ifa_index);
 
 			/* handle HIP readdressing */
@@ -1137,7 +1136,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 			    msg->nlmsg_type == RTM_DELADDR) {
 				/* send 0-address REA if this was deletion of
 				   the last address */
-				HIP_DEBUG("sending 0-addr REA\n");
+				HIP_DEBUG("sending 0-addr UPDATE\n");
 				hip_send_update_all(NULL, 0, ifa->ifa_index,
 						    SEND_UPDATE_LOCATOR, is_add, addr);
 				
@@ -1167,7 +1166,8 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
                                             SEND_UPDATE_LOCATOR, is_add, addr);
                         if (hip_locator_status == SO_HIP_SET_LOCATOR_ON)
                                 hip_recreate_all_precreated_r1_packets();    
-                        if (locator_msg) free(locator_msg);
+                        if (locator_msg)
+				free(locator_msg);
                         break;
 		case XFRMGRP_ACQUIRE:
 			/* XX TODO  does this ever happen? */
@@ -1297,12 +1297,37 @@ int hip_select_source_address(struct in6_addr *src, struct in6_addr *dst)
 
 	HIP_IFEL(!exists_address_family_in_list(dst), -1, "No address of the same family\n");
 
-	HIP_IFEL(hip_iproute_get(&hip_nl_route, src, dst, NULL, NULL, family, idxmap), -1, "Finding ip route failed\n");
+	if (ipv6_addr_is_teredo(dst)) {
+		struct netdev_address *na;
+		struct in6_addr *in6;
+		hip_list_t *n, *t;
+		int c, match = 0;
+
+		list_for_each_safe(n, t, addresses, c) {
+			na = list_entry(n);
+			in6 = hip_cast_sa_addr(&na->addr);
+			if (ipv6_addr_is_teredo(in6)) {
+				ipv6_addr_copy(src, in6);
+				match = 1;
+			}
+		}
+		HIP_IFEL(!match, -1, "No src addr found for Teredo\n");
+	} else  {
+		HIP_IFEL(hip_iproute_get(&hip_nl_route, src, dst, NULL, NULL, family, idxmap), -1, "Finding ip route failed\n");
+	}
 
 	HIP_DEBUG_IN6ADDR("src", src);
 
 out_err:
 	return err;
+}
+
+int hip_select_default_router_address(struct in6_addr * addr) {
+  int err = 0;
+  HIP_DEBUG("Default router");
+  
+ out_err:
+  return err;
 }
 
 int hip_get_default_hit(struct in6_addr *hit)

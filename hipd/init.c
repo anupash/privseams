@@ -1,8 +1,7 @@
 /** @file
  * This file defines initialization functions for the HIP daemon.
  *
- * @date    1.1.2007
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  * @note    HIPU: BSD platform needs to be autodetected in hip_set_lowcapability
  */
 
@@ -161,7 +160,7 @@ void hip_load_configuration()
 	   of hipd system calls. Assumably the user socket buffer is large
 	   enough to buffer all of the hipconf commands.. */
 
-	hip_conf_handle_load(NULL, ACTION_LOAD, &cfile, 1);
+	hip_conf_handle_load(NULL, ACTION_LOAD, &cfile, 1, 1);
 }
 
 void hip_set_os_dep_variables()
@@ -360,16 +359,6 @@ int hipd_init(int flush_ipsec, int killold)
 	 * chicken and egg problems in hipd start up. */
 	system(str);
 
-#if 0
-	system("ifconfig dummy0 mtu 1280"); /* see bug id 595 */
-#endif
-
-#ifdef CONFIG_HIP_HI3
-	if( hip_use_i3 ) {
-		hip_locator_status = SO_HIP_SET_LOCATOR_ON;
-	}
-#endif
-
 	HIP_IFE(hip_init_host_ids(), 1);
 
 	hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0);
@@ -380,9 +369,16 @@ int hipd_init(int flush_ipsec, int killold)
 	daemon_addr.sin6_addr = in6addr_loopback;
 
 	HIP_IFEL(bind(hip_user_sock, (struct sockaddr *)& daemon_addr,
-		      sizeof(daemon_addr)), -1, "Bind on daemon addr failed\n");
+		      sizeof(daemon_addr)), -1,
+		 "Bind on daemon addr failed\n");
 
 	hip_load_configuration();
+
+#ifdef CONFIG_HIP_HI3
+	if( hip_use_i3 ) {
+		hip_locator_status = SO_HIP_SET_LOCATOR_ON;
+	}
+#endif
 
 	hip_opendht_sock_fqdn = init_dht_gateway_socket(hip_opendht_sock_fqdn);
 	hip_opendht_sock_hit = init_dht_gateway_socket(hip_opendht_sock_hit);
@@ -398,8 +394,12 @@ int hipd_init(int flush_ipsec, int killold)
 			"set new tcptimeout parameters error\n");
 #endif
 
+#ifdef CONFIG_HIP_PRIVSEP
+	/* Fix to bug id 668 */
+	getaddrinfo_disable_hit_lookup();
+#endif /* CONFIG_HIP_PRIVSEP */
 
-	HIP_IFEL(hip_set_lowcapability(1), -1, "Failed to set capabilities\n");
+	HIP_IFEL(hip_set_lowcapability(0), -1, "Failed to set capabilities\n");
 
 #ifdef CONFIG_HIP_HI3
 	if( hip_use_i3 )

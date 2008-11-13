@@ -7,7 +7,7 @@
  * @author  Mika Kousa
  * @author  Kristian Slavov
  * @author  Samu Varjonen
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
 #include "output.h"
 
@@ -349,6 +349,9 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	uint16_t mask = 0;
 	int err = 0, n=0;
 
+	HIP_IFEL((entry->state == HIP_STATE_ESTABLISHED), 0,
+		 "State established, not triggering bex\n");
+
 	/* Assign a local private key, public key and HIT to HA */
 	HIP_DEBUG_HIT("src_hit", src_hit);
 	HIP_IFEL(hip_init_us(entry, src_hit), -EINVAL,
@@ -390,6 +393,7 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 			hip_build_network_hdr(i1, HIP_I1,
 					      mask, &entry->hit_our, dst_hit);
 	}
+
 	/* Calculate the HIP header length */
 	hip_calc_hdr_len(i1);
 
@@ -488,6 +492,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 	int err = 0, dh_size1 = 0, dh_size2 = 0, written1 = 0, written2 = 0;
 	int mask = 0, l = 0, is_add = 0, i = 0, ii = 0, *list = NULL;
 	unsigned int service_count = 0;
+	int ordint = 0;
 
 	/* Supported HIP and ESP transforms. */
 	hip_transform_suite_t transform_hip_suite[] = {
@@ -500,22 +505,22 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 		HIP_ESP_NULL_SHA1	};
         /* change order if necessary */
 	sprintf(order, "%d", hip_transform_order);
-	for ( i = 0; i < 3; i++) {
+	for ( i = 0; i < 3; i++) {		
 		switch (order[i]) {
-		case 1:
+		case '1':
 			transform_hip_suite[i] = HIP_HIP_AES_SHA1;
 			transform_esp_suite[i] = HIP_ESP_AES_SHA1;
-			HIP_DEBUG("Transform order index 0 is AES\n");
+			HIP_DEBUG("Transform order index %d is AES\n", i);
 			break;
-		case 2:
+		case '2':
 			transform_hip_suite[i] = HIP_HIP_3DES_SHA1;
 			transform_esp_suite[i] = HIP_ESP_3DES_SHA1;
-			HIP_DEBUG("Transform order index 1 is 3DES\n");
+			HIP_DEBUG("Transform order index %d is 3DES\n", i);
 			break;
-		case 3:
+		case '3':
  			transform_hip_suite[i] = HIP_HIP_NULL_SHA1;
 			transform_esp_suite[i] = HIP_ESP_NULL_SHA1;
-			HIP_DEBUG("Transform order index 2 is NULL_SHA1\n");
+			HIP_DEBUG("Transform order index %d is NULL_SHA1\n", i);
 			break;
 		}
 	}
@@ -608,6 +613,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 
 	/* Parameter REG_INFO */
 	hip_get_active_services(service_list, &service_count);
+	HIP_DEBUG("Found %d active service(s) \n", service_count);
 	hip_build_param_reg_info(msg, service_list, service_count);
 
  	/* Parameter ESP-ENC transform. */
@@ -1495,6 +1501,8 @@ int hip_send_icmp(int sockfd, hip_ha_t *entry) {
 	mhdr.msg_controllen = sizeof(cmsgbuf);
 
 	i = sendmsg(sockfd, &mhdr, 0);
+	if (i <= 0)
+		HIP_PERROR("sendmsg");
 	
 	/* Debug information*/
 	_HIP_DEBUG_HIT("src hit", &entry->hit_our);	

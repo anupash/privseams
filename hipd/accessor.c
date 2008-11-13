@@ -204,3 +204,29 @@ int hip_set_hip_proxy_off(void)
  out_err:
 	return err;
 }
+
+int hip_get_sava_client_status(void) {
+  return hipsava_client;
+}
+int hip_get_sava_server_status(void) {
+  return hipsava_server;
+}
+void hip_set_sava_client_on(void) {
+  HIP_DEBUG("SAVA client on invoked.\n");
+  hipsava_client = 1;
+}
+
+void hip_set_sava_server_on(void) {
+  HIP_DEBUG("SAVA server on invoked.\n");
+  hipsava_server = 1;
+}
+
+void hip_set_sava_client_off(void) {
+  HIP_DEBUG("SAVA client off invoked.\n");
+  hipsava_client = 0;
+}
+
+void hip_set_sava_server_off(void) {
+  HIP_DEBUG("SAVA server off invoked.\n");
+  hipsava_server = 0;
+}
