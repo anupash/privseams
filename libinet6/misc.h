@@ -31,6 +31,10 @@
 
 #define HIP_DEFAULT_EXEC_PATH "/sbin:/usr/sbin:/bin:/usr/bin:/usr/local/sbin:/usr/local/bin"
 
+#define HIP_ID_TYPE_HIT     1
+#define HIP_ID_TYPE_LSI     2
+#define HIP_ID_TYPE_LOCATOR 3
+
 typedef struct _hip_hosts_entry
 {
         hip_hit_t hit;
@@ -187,5 +191,24 @@ void hip_get_rsa_keylen(const struct hip_host_id *host_id, struct hip_rsa_keylen
 int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
                     struct in6_addr *src_lsi, struct in6_addr *dst_lsi,
                     struct in6_addr *src_ip, struct in6_addr *dst_ip);
+int hip_map_first_id_to_hostname_from_hosts(const struct hosts_file_line *entry,
+					    const void *arg,
+					    void *result);
+int hip_map_first_hostname_to_hit_from_hosts(const struct hosts_file_line *entry,
+					     const void *arg,
+					     void *result);
+int hip_map_first_hostname_to_lsi_from_hosts(const struct hosts_file_line *entry,
+					     const void *arg,
+					     void *result);
+int hip_map_first_hostname_to_ip_from_hosts(const struct hosts_file_line *entry,
+					    const void *arg,
+					    void *result);
+int hip_for_each_hosts_file_line(char *hosts_file,
+				 int (*func)(const struct hosts_file_line *line,
+					     const void *arg,
+					     void *result),
+				 void *arg, void *result);
+int hip_map_lsi_to_hit_from_hosts_files(hip_lsi_t *lsi, hip_hit_t *hit);
+int hip_map_id_to_ip_from_hosts_files(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *ip);
 
 #endif /* HIP_MISC_H */

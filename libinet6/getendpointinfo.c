@@ -4,12 +4,12 @@
  * Authors:
  * - Miika Komu <miika@iki.fi>
  * - Anthony D. Joseph <adj@hiit.fi>
- * Copyright: Miika Komu 2004, The Inner Net License v2.00.
+ * Copyright: The Inner Net License v2.00.
  * Notes:     This file uses the code in this directory from Craig Metz.
  *
  * Todo:
- * - Move the association functions to their own files when you find better
- *   names for them.
+ * - there is a lot of redundant code in this file to scan hosts files;
+ *   reimplement with for_each() and function pointers
  * Bugs:
  * - xx
  */
@@ -785,7 +785,7 @@ int get_localhost_endpointinfo(const char *basename,
 }
 
 /**
- * get_kernel_peer_list - query kernel for list of known peers
+ * get_hipd_peer_list - query hipd for list of known peers
  * @param nodename the name of the peer to be resolved
  * @param servname the service port name (e.g. "http" or "12345")
  * @param hints selects which type of endpoints is going to be resolved
@@ -796,9 +796,10 @@ int get_localhost_endpointinfo(const char *basename,
  * This function is for libinet6 internal purposes only.
  *
  * @return zero on success, or negative error value on failure
+ * @todo: this function is outdated; query for SO_HIP_GET_HA_INFO instead
  *
  */
-int get_kernel_peer_list(const char *nodename, const char *servname,
+int get_hipd_peer_list(const char *nodename, const char *servname,
 			 const struct endpointinfo *hints, 
 			 struct endpointinfo **res, int alt_flag)
 {
@@ -1103,64 +1104,6 @@ int get_kernel_peer_list(const char *nodename, const char *servname,
 }
 
 /**
- * search_hostsfile - search query endpoint info about a peer
- * @param hostsfile the filename where the endpoint information is stored
- * @param nodename the name of the peer to be resolved
- * @param servname the service port name (e.g. "http" or "12345")
- * @param hints selects which type of endpoints is going to be resolved
- * @param res the result of the query
- *
- * This function is for libinet6 internal purposes only.
- *
- * @return zero on success, or negative error value on failure
- *
- */
-/*
-int search_hostsfile(const char *hostsfile,
-			  const char *nodename,
-			  const char *servname,
-			  const struct endpointinfo *hints,
-			  struct endpointinfo **res)
-{
-  int err = 0, match_found = 0, ret = 0, i=0;
-  unsigned int lineno = 0, fqdn_str_len = 0;
-  FILE *hosts = NULL;
-  char *hi_str, *fqdn_str;
-  struct endpointinfo *einfo = NULL, *current = NULL, *new = NULL;
-  struct addrinfo ai_hints, *ai_res = NULL;
-  struct endpointinfo *previous_einfo = NULL;
-  /* Only HITs are supported, so endpoint_hip is statically allocated */
-/*  struct endpoint_hip endpoint_hip;
-  char line[500];
-  struct in6_addr hit;
-  List mylist;
-
-  hosts = fopen(hostsfile, "r");
-  if (!hosts) {
-    err = EEI_SYSTEM;
-    HIP_ERROR("Failed to open %s\n", _PATH_HIP_HOSTS);
-    goto out_err;
-  }
-
-  while( getwithoutnewline(line, 500, hosts) != NULL ) {
-    lineno++;
-    if(strlen(line)<=1) continue; 
-    initlist(&mylist);
-    extractsubstrings(line,&mylist);
-     
-    /* find out the fqdn string amongst the HITS - 
-       it's a non-valid ipv6 addr */
-/*    for(i=0;i<length(&mylist);i++) {
-      ret = inet_pton(AF_INET6, getitem(&mylist, i), &hit);
-      if (ret < 1) {
-	fqdn_str = getitem(&mylist,i);
-	fqdn_str_len = strlen(getitem(&mylist,i));
-	break;
-      }
-    }
-*/
-
-/**
  * get_peer_endpointinfo - query endpoint info about a peer
  * @param hostsfile the filename where the endpoint information is stored
  * @param nodename the name of the peer to be resolved
@@ -1182,7 +1125,7 @@ int get_peer_endpointinfo(const char *hostsfile,
   int err = 0, match_found = 0, ret = 0, i=0;
   unsigned int lineno = 0, fqdn_str_len = 0;
   FILE *hosts = NULL;
-  char *hi_str, *fqdn_str;
+  char fqdn_str[HOST_NAME_MAX];
   struct endpointinfo *einfo = NULL, *current = NULL, *new = NULL;
   struct addrinfo ai_hints, *ai_res = NULL;
   struct endpointinfo *previous_einfo = NULL;
@@ -1227,54 +1170,24 @@ int get_peer_endpointinfo(const char *hostsfile,
   
   HIP_ASSERT(!*res); /* Pre-loop invariable */
 
-  /*! \todo reverse the order of hi_str and fqdn_str in the
-     /etc/hosts file? */
-  
-  while( getwithoutnewline(line, 500, hosts) != NULL ) {
-    lineno++;
-    if(strlen(line)<=1) continue; 
-    initlist(&mylist);
-    extractsubstrings(line,&mylist);
-     
-    /* find out the fqdn string amongst the HITS - 
-       it's a non-valid ipv6 addr */
-    for(i=0;i<length(&mylist);i++) {
-      ret = inet_pton(AF_INET6, getitem(&mylist, i), &hit);
-      if (ret < 1) {
-	fqdn_str = getitem(&mylist,i);
-	fqdn_str_len = strlen(getitem(&mylist,i));
-	break;
-      }
-    }
-    
-    /* Check if the nodename or the endpoint in the hints matches to the
-       scanned entries. */
-    if (fqdn_str_len == strlen(nodename) &&
-	strcmp(fqdn_str, nodename) == 0) {
-      /* XX FIX: foobar should match to foobar.org, depending on resolv.conf */
-      _HIP_DEBUG("Nodename match on line %d\n", lineno);
-      match_found = 1;
-    } /* what is endpoint match? */
-    //else if(hints->ei_endpointlen && hints->ei_endpoint &&
-    //      hi_str_len == hints->ei_endpointlen &&
-    //      (strcmp(hi_str, (char *) hints->ei_endpoint) == 0)) {
-    // HIP_DEBUG("Endpoint match on line %d\n", lineno);
-    //match_found = 1;
-    //} 
-    else {
-      _HIP_DEBUG("No match on line %d, skipping\n", lineno);
-      continue;
-    }
-    
+  //HIP_IFEL(err, -1, "Failed to map id to hostname\n");
+
+  memset(fqdn_str, 0, sizeof(fqdn_str));
+  if (inet_pton(AF_INET6, nodename, &hit) > 0) {
+    _HIP_DEBUG("Nodename is numerical address\n");
+    err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+				       hip_map_first_id_to_hostname_from_hosts,
+				       &hit, fqdn_str);
+  } else {
+    strncpy(fqdn_str, nodename, HOST_NAME_MAX);
+  }
+  fqdn_str_len = strlen(fqdn_str);
+
+  if (!err && hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+				   hip_map_first_hostname_to_hit_from_hosts,
+				   fqdn_str, &hit) == 0)
     /* create endpointinfo structure for every HIT */
-    for(i=0;i<length(&mylist);i++) {
-      
-      ret = inet_pton(AF_INET6, getitem(&mylist,i), &hit);
-      if (ret < 1) continue; // not a HIT/ipv6 address
-
-      hi_str = getitem(&mylist,i);
-      unsigned int hi_str_len = strlen(getitem(&mylist,i));
-
+    {
       einfo = calloc(1, sizeof(struct endpointinfo));
       HIP_IFE(!einfo, EEI_MEMORY);
       
@@ -1307,14 +1220,7 @@ int get_peer_endpointinfo(const char *hostsfile,
       endpoint_hip.length = sizeof(struct endpoint_hip);
       endpoint_hip.flags = HIP_ENDPOINT_FLAG_HIT;
       
-      if (inet_pton(AF_INET6, hi_str, &endpoint_hip.id.hit) <= 0) {
-	HIP_ERROR("Failed to convert string %s to HIT\n", hi_str);
-	err = EEI_FAIL;
-	goto out_err;
-      }
-      
-      _HIP_DEBUG("hi str: %s\n", hi_str);
-      _HIP_HEXDUMP("peer HIT:", &endpoint_hip.id.hit, sizeof(struct in6_addr));
+      ipv6_addr_copy(&endpoint_hip.id.hit, &hit);
       
       HIP_ASSERT(einfo && einfo->ei_endpoint); /* Assertion 2 */
       
@@ -1355,27 +1261,29 @@ int get_peer_endpointinfo(const char *hostsfile,
       
       HIP_ASSERT(einfo && einfo->ei_endpoint && *res &&
 		 previous_einfo == einfo); /* 4 */
-    }
-    destroy(&mylist);
+      destroy(&mylist);
   }
   
   _HIP_DEBUG("Scanning ended\n");
   
   
  fallback:
+
+#if 0 /* XX FIXME: the function below does not work */
   /* If no entries are found, fallback on the kernel's list */
   if (!*res) {
-    HIP_DEBUG("No entries found, calling kernel for entries\n");
-    err = get_kernel_peer_list(nodename, servname, hints, res, 1);
+    HIP_DEBUG("No entries found, querying hipd for entries\n");
+    err = get_hipd_peer_list(nodename, servname, hints, res, 1);
     if (err) {
       HIP_ERROR("Failed to get kernel peer list (%d)\n", err);
       goto out_err;
     }
-    HIP_DEBUG("Done with kernel entries\n");
+    HIP_DEBUG("Done with hipd entries\n");
     if (*res) {
       match_found = 1;
     }
   }
+#endif
 
   HIP_ASSERT(err == 0);
 
@@ -1413,194 +1321,6 @@ int get_peer_endpointinfo(const char *hostsfile,
     }
   }
   return err;
-}
-
-/*flukebox--a copy from getendpointinfo.c  of get_peer_endpointinfo(,,,,) function with some 
- * modified changes to make things work for me :-)
- * Now the function below will first look for the 'nodename' that is actually a presentation form
- * of HIT or LSI of peer in "/etc/hip/hosts" file and if it found a entry corresponding to nodename then 
- * it will copy the 'fqdn' string from the file. After that it will search that 'fqdn' string in the same
- * file, trying to find is there is a second HIP identifier for the same 'fqdn' in the file. 
- * Secondly, it will find the 'fqdn' in"/etc/hosts" and if a suitable match is found then it will return 
- * the IPv4/IPv6 address back to the caller in res field.
- * @todo: WTF? this kludge is a copy-paste of the previous function. FIX! -mk
- */
-
- int get_peer_endpointinfo2(const char *nodename, struct in6_addr *res_hip, struct in6_addr *res){
-  int err = -1, ret = 0, i = 0, found_hit = 0;
-  unsigned int lineno = 0, fqdn_str_len = 0;
-  FILE *hip_hosts = NULL,*hosts = NULL;
-  char *hi_str, *fqdn_str, *temp_str;
-  char line[500];
-  struct in6_addr hit, dst_hit, ipv6_dst;
-  struct in_addr ipv4_dst;
-  hip_lsi_t dst_lsi, lsi;
-  List mylist;
-  int lsi_v = 0;
-
-  initlist(&mylist);
-  /* check whether  given nodename is actually a HIT */
-
-  ret=inet_pton(AF_INET6, nodename, &dst_hit);
-  HIP_IFEL(ret < 1, -1, "Given nodename is not a HIT");
-  
-  if (IN6_IS_ADDR_V4MAPPED(&dst_hit))
-    IPV6_TO_IPV4_MAP(&dst_hit, &dst_lsi);
- 
-  /* Open /etc/hip/hosts file in read mode
-   * HIPD_HOSTS_FILE='/etc/hip/hosts' defined in libinet6/hipconf.h
-   */
-
-  hip_hosts = fopen(HIPD_HOSTS_FILE, "r");
-
-  if (!hip_hosts) {
-    err = -1;
-    HIP_ERROR("Failed to open %s\n", HIPD_HOSTS_FILE);
-    goto out_err;
-  }
-
-
-  /* find entry corresponding to given 'nodename' HIT or LSI */ 
-  while (getwithoutnewline(line, 500, hip_hosts) != NULL){
-    lineno++;
-    if (strlen(line) <= 1) 
-      continue;
-    initlist(&mylist);
-    extractsubstrings(line, &mylist);
-     
-    /* find out the fqdn string amongst the HITS or LSIS - 
-       it's a non-valid ipv6 and ipv4 addr */
-    for (i=0; i<length(&mylist); i++){
-      ret = inet_pton(AF_INET6, getitem(&mylist, i), &hit);
-      if (ret == 0) {
-	ret = inet_pton(AF_INET, getitem(&mylist, i), &lsi);
-      }
-      if (ret < 1){
-	fqdn_str = getitem(&mylist, i);
-	fqdn_str_len = strlen(getitem(&mylist, i));
-	break;
-      }
-    }
-
-    for (i=0; i<length(&mylist); i++) {
-      temp_str = getitem(&mylist, i);
-      ret = inet_pton(AF_INET6, getitem(&mylist, i), &hit);
-      if (ret > 0 && ipv6_addr_cmp(&hit, &dst_hit) == 0){
-	      found_hit = 1;
-              goto find_second_id_and_address;
-      }
-      else{
-	ret = inet_pton(AF_INET, getitem(&mylist, i), &lsi); 
-	if (ret > 0 && ipv4_addr_cmp(&lsi, &dst_lsi) == 0){	  
-	        goto find_second_id_and_address; 
-	}
-      }
-    }
-  }
-  fclose(hip_hosts);
-  hip_hosts = NULL;
-  err = -1;
-  goto out_err;
-
-find_second_id_and_address:
-  /* We are looking for a second HIP identifier: lsi or hit associated with the fqdn_str found*/
-  hip_hosts = fopen(HIPD_HOSTS_FILE, "r");
-  memset(&lsi, 0, sizeof(lsi));
-  while (getwithoutnewline(line, 500, hip_hosts) != NULL){
-    lineno++;
-    if (strlen(line) <= 1) 
-      continue;
-    initlist(&mylist);
-    extractsubstrings(line, &mylist);
-
-    for (i=0; i<length(&mylist); i++) {
-      ret = inet_pton(AF_INET6, getitem(&mylist, i), &hit);
-      if (ret){
-	// A HIT was read and we are looking for an LSI
-	if (found_hit){
-	  break;
-	}else if ((strlen(fqdn_str) == strlen(temp_str)) &&
-	      strcmp(fqdn_str,temp_str) == 0){
-	   HIP_DEBUG_HIT("hit: ",&hit);
-	   memcpy((void *)res_hip, (void *)&hit, sizeof(struct in6_addr));
-	}
-	  
-      }else{
-	//hostname or LSI was read
-	ret = inet_pton(AF_INET, getitem(&mylist, i), &lsi);	
-	if (ret){
-	  //An LSI was read and we are looking for a HIT
-	  lsi_v = 1;
-	  if (!found_hit){
-	    break;
-	  }else if ((strlen(fqdn_str) == strlen(temp_str)) &&
-	      strcmp(fqdn_str,temp_str) == 0){
-	      IPV4_TO_IPV6_MAP(&lsi, res_hip);
-	      HIP_DEBUG_HIT("LSI: ",&lsi);
-	  }
-        }else{
-	  temp_str = getitem(&mylist, i);
-	}
-      }
-    }//for
-  }//while
-
-  if (!lsi_v)
-    memset((void *)res_hip, 0, sizeof(struct in6_addr)); 
-
- /* We are looking for the IP@ in HOSTS_FILE='/etc/hosts' */
-
-  hosts = fopen(HOSTS_FILE, "r");
-  lineno = 0;
-  memset(&line, 0, sizeof(line));
-
-  if (!hosts) {
-    err = -1;
-    HIP_ERROR("Failed to open %s \n", HOSTS_FILE);
-    goto out_err;
-  }
-
-  
-  while(getwithoutnewline(line, 500, hosts) != NULL) {
-    lineno++;
-    if (strlen(line) <= 1) 
-      continue;
-    initlist(&mylist);
-    extractsubstrings(line, &mylist);
-     
-    /* find out the fqdn string amongst the Ipv4/Ipv6 addresses - 
-       it's a non-valid ipv6 addr */
-    for (i=0; i<length(&mylist); i++) {
-      temp_str = getitem(&mylist, i);
-      if ( (inet_pton(AF_INET6, temp_str, &ipv6_dst) < 1 ||
-	  inet_pton(AF_INET, temp_str, &ipv4_dst) < 1) &&
-	  strlen(temp_str)==strlen(fqdn_str) && strcmp(temp_str, fqdn_str)==0 ) {
-	int j;
-	for (j=0; j<length(&mylist); j++) {
-	  if (inet_pton(AF_INET6, getitem(&mylist, j), &ipv6_dst) > 0) {
-	    HIP_DEBUG("Peer Address found from '/etc/hosts' is %s\n", getitem(&mylist, j));
-	    memcpy((void *)res, (void *)&ipv6_dst, sizeof(struct in6_addr));
-	    err = 0;
-	    goto out_err;
-	  } else if (inet_pton(AF_INET, getitem(&mylist, j), &ipv4_dst) > 0) {
-	    HIP_DEBUG("Peer Address found from '/etc/hosts' is %s\n", getitem(&mylist, j));
-	    IPV4_TO_IPV6_MAP(&ipv4_dst, res);
-	    err = 0;
-	    goto out_err;
-	  }
-	}
-      }
-    }
-  }
-
- out_err:
-  destroy(&mylist);
-  if (hip_hosts)
-    fclose(hip_hosts);
-  if (hosts)
-    fclose(hosts);
-  return err;
-
 }
 
 int getendpointinfo(const char *nodename, const char *servname,
@@ -1646,11 +1366,13 @@ int getendpointinfo(const char *nodename, const char *servname,
      can survive the overloaded flags. The AI_XX and EI_XX in netdb.h have
      distinct values, so this should be ok. */
 
+#if 0 /* the function below should be reimplemented */
   /* Check for kernel list request */
   if (modified_hints.ei_flags & AI_KERNEL_LIST) {
-    err = get_kernel_peer_list(nodename, servname, &modified_hints, res, 0);
+    err = get_hipd_peer_list(nodename, servname, &modified_hints, res, 0);
     goto err_out;
   }
+#endif
 
   if (nodename == NULL) {
     *res = calloc(1, sizeof(struct endpointinfo));
@@ -1797,29 +1519,6 @@ int get_localhost_endpoint_no_setmyeid(const char *basename,
 	  HIP_DEBUG("Published HI\n");
   }
   
-  /* check the algorithm from PEM format key */
-  /* Bing, replace the following code:
-     fp = fopen(basename, "rb");
-     if (!fp) {
-     HIP_ERROR("Couldn't open key file %s for reading\n", basename);
-     err = -ENOMEM;
-     goto out_err;
-     }
-     fgets(first_key_line,30,fp);  //read first line.
-     _HIP_DEBUG("1st key line: %s",first_key_line);
-     fclose(fp);
-     
-     if(findsubstring(first_key_line, "RSA"))
-    algo = HIP_HI_RSA;
-    else if(findsubstring(first_key_line, "DSA"))
-    algo = HIP_HI_DSA;
-    else {
-    HIP_ERROR("Wrong kind of key file: %s\n",basename);
-    err = -ENOMEM;
-    goto out_err;
-    }
-  */
-  /*Bing, the following code is used instead of the above code*/
   if(findsubstring(basename, "rsa"))
     algo = HIP_HI_RSA;
   else if(findsubstring(basename, "dsa"))
@@ -2017,9 +1716,6 @@ int get_localhost_endpoint(const char *basename,
     err = -ENOMEM;
     goto out_err;
   }
-
-  
-
 
   if(algo == HIP_HI_RSA)
     //modified according Laura's suggestion
@@ -2261,7 +1957,7 @@ int hip_conf_handle_load(struct hip_common *msg, int action,
 	
 	List list;
 	char *c, line[128], *hip_arg, ch, str[128], *fname, *args[64],
-		*comment;
+	  *comment;
 
 	HIP_IFEL((optc != 1), -1, "Missing arguments\n");
 

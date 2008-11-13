@@ -3076,8 +3076,8 @@ int hip_host_file_info_exists_lsi(struct in_addr *add){
 }
 
 /**
-* Checks if exists a local or peer lsi that matches with this prefix
-*/
+ * Checks if exists a local or peer lsi that matches with this prefix
+ */
 int lsi_assigned(struct in_addr add)
 {
 	int exist = 0;
@@ -3136,6 +3136,20 @@ hip_ha_t *hip_hadb_try_to_find_by_pair_lsi(hip_lsi_t *lsi_src, hip_lsi_t *lsi_ds
 			return tmp;
 		else
 		        continue;
+	}
+	return NULL;
+}
+
+hip_ha_t *hip_hadb_try_to_find_by_peer_lsi(hip_lsi_t *lsi_dst) {
+        hip_list_t *item, *aux;
+	hip_ha_t *tmp;
+	int i;
+
+	list_for_each_safe(item, aux, hadb_hit, i)
+	{
+		tmp = list_entry(item);
+		if(hip_lsi_are_equal(&tmp->lsi_peer, lsi_dst))
+			return tmp;
 	}
 	return NULL;
 }

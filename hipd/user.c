@@ -994,6 +994,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		        }
 		}
 	        break;
+#if 0
 	case SO_HIP_IS_OUR_LSI:
 		lsi = (hip_lsi_t *)hip_get_param_contents(msg, HIP_PARAM_LSI);
 	  	if (!hip_hidb_exists_lsi(lsi))
@@ -1018,6 +1019,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	      		dst_hit = &entry->hit_peer;
 	  	}
 	  	break;
+#endif
 	case SO_HIP_GET_PEER_HIT_AT_FIREWALL:
 		err = hip_opp_get_peer_hit(msg, src);
 		break;
@@ -1032,7 +1034,8 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	        HIP_DEBUG("Send response\n");
 		if (err)
 		        hip_set_msg_err(msg, 1);
-		else{
+#if 0
+		else {
 		        if ((msg_type == SO_HIP_TRIGGER_BEX && lsi) ||
 		            msg_type == SO_HIP_GET_STATE_HA ||
 			    msg_type == SO_HIP_GET_PEER_HIT_BY_LSIS){
@@ -1051,7 +1054,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 					 HIP_PARAM_LSI, sizeof(hip_lsi_t)), -1,
 				 	 "build param HIP_PARAM_LSI  failed\n");
 		}
-
+#endif
 		len = hip_get_msg_total_len(msg);
 		n = hip_sendto_user(msg, src);
 		if(n != len)

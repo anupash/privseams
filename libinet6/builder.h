@@ -235,7 +235,7 @@ int dsa_to_hip_endpoint(DSA *dsa, struct endpoint_hip **endpoint,
  * @return              zero on success, non-zero otherwise.
  */
 int hip_build_param_reg_info(hip_common_t *msg,
-			     const struct hip_srv *service_list,
+			     const void *service_list,
 			     const unsigned int service_count);
 /**
  * Builds a REG_REQUEST parameter.
