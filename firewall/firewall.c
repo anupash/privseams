@@ -41,6 +41,7 @@ struct in6_addr default_hit;
  */
 hip_fw_handler_t hip_fw_handler[NF_IP_NUMHOOKS][FW_PROTO_NUM];
 
+extern struct hip_hadb_user_info_state ha_cache;
 
 void print_usage(){
 	printf("HIP Firewall\n");
@@ -266,23 +267,10 @@ int hip_fw_uninit_esp_prot(){
 }
 
 int hip_fw_init_lsi_support(){
-#if 0
-	char result[100];
-	char str1[] = "iptables -I HIPFW-OUTPUT -d ";
-	char str2[] = " -j QUEUE";
-#endif
 	int err = 0;
 
 	if (hip_lsi_support)
 	{
-#if 0
-		memset(result, 0, sizeof(result));
-		strcpy(result, str1);
-		strcat(strcat(result, HIP_FULL_LSI_STR), str2);
-
-		system(result);
-#endif
-
 		// add the rule
 		system("iptables -I HIPFW-OUTPUT -d " HIP_FULL_LSI_STR " -j QUEUE");
 
@@ -301,25 +289,12 @@ void hip_fw_init_system_base_opp_mode(void) {
 }
 
 int hip_fw_uninit_lsi_support(){
-#if 0
-	char result[100];
-	char str1[] = "iptables -D HIPFW-OUTPUT -d ";
-	char str2[] = " -j QUEUE 2>/dev/null";
-#endif
 	int err = 0;
 
 	if (hip_lsi_support)
 	{
 		// set global variable to off
 		hip_lsi_support = 0;
-
-#if 0
-		memset(result, 0, sizeof(result));
-		strcpy(result, str1);
-		strcat(strcat(result, HIP_FULL_LSI_STR), str2);
-
-		system(result);
-#endif
 
 		// remove the rule
 		system("iptables -D HIPFW-OUTPUT -d " HIP_FULL_LSI_STR " -j QUEUE 2>/dev/null");
@@ -1376,7 +1351,7 @@ int hip_fw_handle_tcp_output(hip_fw_context_t *ctx){
 int hip_fw_handle_other_input(hip_fw_context_t *ctx){
 	int verdict = accept_normal_traffic_by_default;
 	int ip_hits = ipv6_addr_is_hit(&ctx->src) &&
-		ipv6_addr_is_hit(&ctx->dst);
+		      ipv6_addr_is_hit(&ctx->dst);
 
 	HIP_DEBUG("\n");
 
@@ -1665,6 +1640,7 @@ int main(int argc, char **argv){
 		exit(-1);
 	}
 
+	memset(&ha_cache, 0, sizeof(ha_cache));
 	memset(&default_hit, 0, sizeof(default_hit));
 	memset(&proxy_hit, 0, sizeof(default_hit));
 
