@@ -6,6 +6,9 @@ hip_lsi_t local_lsi = { 0 };
 /* @todo: this should be a hashtable */
 struct hip_hadb_user_info_state ha_cache;
 
+extern int hip_fw_sock;
+extern int hip_opptcp;
+
 int hip_query_ha_info(struct in6_addr *hit_our, struct in6_addr *hit_peer,
 		      hip_lsi_t *lsi_our, hip_lsi_t *lsi_peer,
 		      struct in6_addr *loc_our, struct in6_addr *loc_peer,
@@ -174,7 +177,7 @@ int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m,
 {
         int bind6 = 0, proto4_LSI = 0, proto4_IP = 0, err = 0, verdict = 1;
 	int ip_hdr_size = 0, portDest = 0, process_as_lsi;
-	char *proto;
+	char *proto = NULL;
 	hip_lsi_t lsi_our, lsi_peer;
 	struct in6_addr src_addr, dst_addr;
 	struct in_addr src_v4, dst_v4;
@@ -197,7 +200,7 @@ int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m,
 		break;
 	default:
 		HIP_DEBUG("Unhandled packet %d\n", ip6_hdr->ip6_nxt);
-		goto out_err;
+		//goto out_err;
 		break;
 	}
 
@@ -397,15 +400,17 @@ int hip_request_peer_hit_from_hipd_at_firewall(
 					  sizeof(struct in6_addr)),
 			-1, "build param HIP_PARAM_HIT  failed\n");
 
-	HIP_IFEL(hip_build_param_contents(msg, (void *)(src_tcp_port),
-					  HIP_PARAM_SRC_TCP_PORT,
-					  sizeof(in_port_t)),
-			-1, "build param HIP_PARAM_SRC_TCP_PORT failed\n");
-
-	HIP_IFEL(hip_build_param_contents(msg, (void *)(dst_tcp_port),
-					  HIP_PARAM_DST_TCP_PORT,
-					  sizeof(in_port_t)),
-			-1, "build param HIP_PARAM_DST_TCP_PORT failed\n");
+	if (hip_opptcp) {
+		HIP_IFEL(hip_build_param_contents(msg, (void *)(src_tcp_port),
+						  HIP_PARAM_SRC_TCP_PORT,
+						  sizeof(in_port_t)),
+			 -1, "build param HIP_PARAM_SRC_TCP_PORT failed\n");
+		
+		HIP_IFEL(hip_build_param_contents(msg, (void *)(dst_tcp_port),
+						  HIP_PARAM_DST_TCP_PORT,
+						  sizeof(in_port_t)),
+			 -1, "build param HIP_PARAM_DST_TCP_PORT failed\n");
+	}
 
 	HIP_IFEL(hip_build_param_contents(msg, (void *)(peer_ip),
 					  HIP_PARAM_IPV6_ADDR_PEER,
@@ -413,11 +418,12 @@ int hip_request_peer_hit_from_hipd_at_firewall(
 			-1, "build param HIP_PARAM_IPV6_ADDR failed\n");
 
 	/* build the message header */
-	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT_AT_FIREWALL, 0), -1,
-		 "build hdr failed\n");
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_PEER_HIT, 0),
+		 -1, "build hdr failed\n");
 
 	/* send and receive msg to/from hipd */
-	HIP_IFEL(hip_send_daemon_info_wrapper(msg, 1), -1, "send msg failed\n");
+	HIP_IFEL(hip_sendto_hipd(hip_fw_sock, msg, hip_get_msg_total_len(msg)),
+		 -1, "send msg failed\n");
 
 	_HIP_DEBUG("send_recv msg succeed\n");
 
@@ -446,14 +452,14 @@ int reinject_packet(struct in6_addr *src_hit, struct in6_addr *dst_hit,
 	u8 *msg;  
 	struct icmphdr *icmp = NULL;
 
-	if (ipOrigTraffic == 4){
+	if (ipOrigTraffic == 4) {
 		struct ip *iphdr = (struct ip*) m->payload;
 		ip_hdr_size = (iphdr->ip_hl * 4);  
 		protocol = iphdr->ip_p;
 		ttl = iphdr->ip_ttl;
         	HIP_DEBUG_LSI("Ipv4 address src ", &(iphdr->ip_src));
 	        HIP_DEBUG_LSI("Ipv4 address dst ", &(iphdr->ip_dst));
-	}else{
+	} else {
 	        struct ip6_hdr* ip6_hdr = (struct ip6_hdr*) m->payload;
 		ip_hdr_size = sizeof(struct ip6_hdr); //Fixed size
 		protocol = ip6_hdr->ip6_nxt;
@@ -464,11 +470,10 @@ int reinject_packet(struct in6_addr *src_hit, struct in6_addr *dst_hit,
 		HIP_DEBUG_IN6ADDR("New packet dst address: ", dst_hit);
 	}
 	
-	if (m->data_len <= (BUFSIZE - ip_hdr_size)){
+	if (m->data_len <= (BUFSIZE - ip_hdr_size)) {
 		packet_length = m->data_len - ip_hdr_size; 	
 	  	HIP_DEBUG("packet size smaller than buffer size\n");
-	}
-	else { 
+	} else { 
 	  	packet_length = BUFSIZE - ip_hdr_size;
 		HIP_DEBUG("HIP packet size greater than buffer size\n");
 	}
@@ -480,19 +485,19 @@ int reinject_packet(struct in6_addr *src_hit, struct in6_addr *dst_hit,
 	msg = (u8 *)HIP_MALLOC(packet_length, 0);
 	memcpy(msg, (m->payload)+ip_hdr_size, packet_length);
 
-	if (protocol == IPPROTO_ICMP && incoming){	          		  
+	if (protocol == IPPROTO_ICMP && incoming) {
 		  icmp = (struct icmphdr *)msg;
-		  HIP_DEBUG("protocol == IPPROTO_ICMP && incoming && type=%d code=%d\n",icmp->type,icmp->code);
+		  HIP_DEBUG("incoming ICMP type=%d code=%d\n",
+			    icmp->type,icmp->code);
 		  /* Manually built due to kernel messed up with the
 		     ECHO_REPLY message. Kernel was building an answer
 		     message with equals @src and @dst*/
-		  if (icmp->type == ICMP_ECHO){
+		  if (icmp->type == ICMP_ECHO) {
 		  	icmp->type = ICMP_ECHOREPLY;
 		    	err = firewall_send_outgoing_pkt(dst_hit, src_hit,
 							 msg, packet_length,
 							 protocol);
-		  }
-		  else {
+		  } else {
 		    	err = firewall_send_incoming_pkt(src_hit, dst_hit,
 							 msg, packet_length,
 							 protocol, ttl);

@@ -2125,12 +2125,15 @@ int hip_get_proto_info(in_port_t port_dest, char *proto) {
 	struct in_addr addr;
         List list;
 
+	if (!proto)
+		return 0;
+
 	if (!strcmp(proto, "tcp6") || !strcmp(proto, "tcp"))
 		index_addr_port = 15;
 	else if (!strcmp(proto, "udp6") || !strcmp(proto,"udp"))
 		index_addr_port = 10;
 	else
-		return -1;
+		return 0;
 
 	strcpy(path,"/proc/net/"); 
 	strcat(path, proto);
