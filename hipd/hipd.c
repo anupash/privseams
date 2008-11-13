@@ -33,7 +33,7 @@ int hip_nat_status = 0;
 
 /** ICMPv6 socket and the interval 0 for interval means off **/
 int hip_icmp_sock = 0;
-int hip_icmp_interval = 0;
+int hip_icmp_interval = 20;
 
 /** Specifies the HIP PROXY status of the daemon. This value indicates if the HIP PROXY is running. */
 int hipproxy = 0;
@@ -402,11 +402,11 @@ int hipd_main(int argc, char *argv[])
 		/* wait for socket activity */
 
                 /* If DHT is on have to use write sets for asynchronic communication */
-		              if (hip_opendht_inuse == SO_HIP_DHT_ON) {
+		if (hip_opendht_inuse == SO_HIP_DHT_ON) {
                         if ((err = HIPD_SELECT((highest_descriptor + 1), &read_fdset,
                                                &write_fdset, NULL, &timeout)) < 0) {
-			HIP_ERROR("select() error: %s.\n", strerror(errno));
-			goto to_maintenance;
+				HIP_ERROR("select() error: %s.\n", strerror(errno));
+				goto to_maintenance;
                         } else if (err == 0) {
                                 /* idle cycle - select() timeout */
                                 _HIP_DEBUG("Idle.\n");
