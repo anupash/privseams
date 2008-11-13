@@ -1518,6 +1518,7 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 	err = entry->hadb_xmit_func->hip_send_pkt(i2_daddr, i2_saddr,
 						  (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
 	                                          entry->peer_udp_port, r2, entry, 1);
+
 	if (err == 1)
 		err = 0;
 
@@ -1525,7 +1526,8 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 
 	/* Send the first heartbeat. Notice that error value is ignored
 	   because we want to to complete the base exchange successfully */
-	if (hip_icmp_interval > 0) {
+	/* for ICE , we do not need it*/
+	if (hip_icmp_interval > 0 & entry->nat_control == 0) {
 		_HIP_DEBUG("icmp sock %d\n", hip_icmp_sock);
 		hip_send_icmp(hip_icmp_sock, entry);
 	}
@@ -2190,9 +2192,11 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	   -Lauri 06.05.2008 */
 
 	/* Create an R2 packet in response. */
+	HIP_DEBUG("**************************");
 	HIP_IFEL(entry->hadb_misc_func->hip_create_r2(
 			 &i2_context, i2_saddr, i2_daddr, entry, i2_info, &dest, dest_port), -1,
 		 "Creation of R2 failed\n");
+	HIP_DEBUG("**************************");
 
 #ifdef CONFIG_HIP_ESCROW
 	if (hip_deliver_escrow_data(
@@ -2231,7 +2235,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	hip_handle_locator_parameter(entry, hip_get_param(i2, HIP_PARAM_LOCATOR), esp_info);
 
 #ifdef HIP_USE_ICE
-	hip_nat_start_ice(entry, esp_info,ICE_ROLE_CONTROLLING);
+	hip_nat_start_ice(entry, esp_info,ICE_ROLE_CONTROLLED);
 #endif
 
 //end add
@@ -2605,7 +2609,8 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 
 	/* Send the first heartbeat. Notice that the error is ignored to complete
 	   the base exchange successfully. */
-	if (hip_icmp_interval > 0) {
+	
+	if (hip_icmp_interval > 0 & entry->nat_control == 0) {
 		hip_send_icmp(hip_icmp_sock, entry);
 	}
 
