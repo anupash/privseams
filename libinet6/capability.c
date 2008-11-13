@@ -13,6 +13,9 @@
 
 int hip_user_to_uid(char *name) {
 	int uid = -1, i;
+
+	//Added by Dmitriy
+#ifndef CONFIG_HIP_OPENWRT
 	struct passwd *pwp, pw;
 	char buf[4096];
 
@@ -29,6 +32,7 @@ int hip_user_to_uid(char *name) {
 		}
 	}
 	endpwent();
+#endif
 	return uid;
 }
 
@@ -39,8 +43,9 @@ int hip_user_to_uid(char *name) {
  */
 int hip_set_lowcapability(int run_as_sudo) {
   int err = 0;
-  uid_t uid;
+
 #ifdef CONFIG_HIP_PRIVSEP
+  uid_t uid;
   //struct passwd *nobody_pswd;
   //uid_t ruid,euid;
   capheader_t header;
