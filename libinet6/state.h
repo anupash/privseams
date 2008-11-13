@@ -10,6 +10,8 @@
 #ifndef __KERNEL__
 #include "hashtable.h"
 #include "esp_prot_common.h"
+#include "hip_statistics.h"
+
 #endif
 
 #define HIP_HIT_KNOWN 1
