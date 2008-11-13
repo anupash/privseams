@@ -863,6 +863,8 @@ int hip_build_verification_pkt(hip_ha_t *entry, hip_common_t *update_packet,
 	/* Reply with UPDATE(ESP_INFO, SEQ, ACK, ECHO_REQUEST) */
 
 	/* ESP_INFO */
+	esp_info_old_spi = hip_hadb_get_latest_inbound_spi(entry);
+	esp_info_new_spi = esp_info_old_spi;
 	HIP_IFEL(hip_build_param_esp_info(update_packet,
 					  entry->current_keymat_index,
 					  esp_info_old_spi,

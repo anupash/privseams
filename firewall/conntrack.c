@@ -513,12 +513,9 @@ struct esp_tuple *esp_tuple_from_esp_info_locator(const struct hip_esp_info * es
       HIP_DEBUG("esp_tuple_from_esp_info_locator: new spi %d\n", esp_info->new_spi);
       //check that old spi is found
       new_esp = (struct esp_tuple *) malloc(sizeof(struct esp_tuple));
+      memset(new_esp, 0, sizeof(struct esp_tuple));
       new_esp->spi = ntohl(esp_info->new_spi);
-      new_esp->new_spi = 0;
-      new_esp->spi_update_id = 0;
       new_esp->tuple = tuple;
-      new_esp->dst_addr_list = NULL;
-      new_esp->dec_data = NULL;
 
       n = (hip_get_param_total_len(locator) - sizeof(struct hip_locator))/
 	sizeof(struct hip_locator_info_addr_item);
@@ -565,18 +562,15 @@ struct esp_tuple * esp_tuple_from_esp_info(const struct hip_esp_info * esp_info,
   if(esp_info)
     {
       new_esp = (struct esp_tuple *) malloc(sizeof(struct esp_tuple));
+      memset(new_esp, 0, sizeof(struct esp_tuple));
       new_esp->spi = ntohl(esp_info->new_spi);
-      new_esp->new_spi = 0;
-      new_esp->spi_update_id = 0;
       new_esp->tuple = tuple;
-      new_esp->dec_data = NULL;
 
       struct esp_address * esp_address = malloc(sizeof(struct esp_address));
 
       memcpy(&esp_address->dst_addr, addr, sizeof(struct in6_addr));
 
       esp_address->update_id = NULL;
-      new_esp->dst_addr_list = NULL;
       new_esp->dst_addr_list = (SList *)append_to_slist((SList *)new_esp->dst_addr_list,
 							       (void *) esp_address);
 	  HIP_DEBUG("esp_tuple_from_esp_info: \n");
@@ -1126,6 +1120,7 @@ int handle_update(const struct in6_addr * ip6_src,
 			}
 
 			// insertion successful -> go on
+			tuple = get_tuple_by_hits(&common->hits, &common->hitr);
 			HIP_DEBUG("connection insertion successful\n");
 
 			free(data);
@@ -1214,7 +1209,7 @@ int handle_update(const struct in6_addr * ip6_src,
 					goto out_err;
 				}
 
-				other_dir_esps = (SList *) append_to_slist((SList *)
+				other_dir_tuple->esp_tuples = (SList *) append_to_slist((SList *)
 						other_dir_esps, (void *) new_esp);
 
 				insert_esp_tuple(new_esp);
@@ -1267,7 +1262,7 @@ int handle_update(const struct in6_addr * ip6_src,
 						struct esp_tuple * new_esp = esp_tuple_from_esp_info(
 								esp_info, ip6_src, other_dir_tuple);
 
-						other_dir_esps = (SList *)
+						other_dir_tuple->esp_tuples = (SList *)
 						append_to_slist((SList *) other_dir_esps,
 								(void *) new_esp);
 						insert_esp_tuple(new_esp);
@@ -1285,7 +1280,7 @@ int handle_update(const struct in6_addr * ip6_src,
 				struct esp_tuple * new_esp = esp_tuple_from_esp_info(esp_info,
 						ip6_src, other_dir_tuple);
 
-				other_dir_esps = (SList *) append_to_slist((SList *)
+				other_dir_tuple->esp_tuples = (SList *) append_to_slist((SList *)
 						other_dir_esps, (void *) new_esp);
 				insert_esp_tuple(new_esp);
 			}
