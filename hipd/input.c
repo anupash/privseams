@@ -671,6 +671,10 @@ int hip_receive_control_packet(struct hip_common *msg,
 		HIP_IFCS(entry, err = entry->hadb_rcv_func->
 			 hip_receive_close_ack(msg, entry));
 		break;
+	case HIP_LUPDATE:
+		HIP_IFCS(entry, err = esp_prot_receive_light_update(msg, src_addr, dst_addr,
+				entry));
+		break;
 
 	default:
 		HIP_ERROR("Unknown packet %d\n", type);
@@ -740,7 +744,7 @@ int hip_create_i2(struct hip_context *ctx, uint64_t solved_puzzle,
 	int err = 0, host_id_in_enc_len = 0, written = 0;
 	uint16_t mask = 0;
 	int type_count = 0, request_rvs = 0, request_escrow = 0;
-    int *reg_type = NULL;
+        int *reg_type = NULL;
 	uint32_t spi_in = 0;
 
 	_HIP_DEBUG("hip_create_i2() invoked.\n");
@@ -1459,14 +1463,7 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 	memcpy(&hmac, &entry->hip_hmac_out, sizeof(hmac));
 	HIP_IFEL(hip_build_param_hmac2_contents(r2, &hmac, entry->our_pub), -1,
 		 "Failed to build parameter HMAC2 contents.\n");
-/*
-	HIP_IFEL(entry->sign(entry->our_priv, r2), -EINVAL,
-		 "Failed to sign R2 packet.\n");
 
-	err = entry->hadb_xmit_func->hip_send_pkt(
-		i2_daddr, i2_saddr, (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
-		entry->peer_udp_port, r2, entry, 1);
-	*/
 	/* Why is err reset to zero? -Lauri 11.06.2008 */
 	if (err == 1) {
 		err = 0;
@@ -1474,7 +1471,6 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 
 	HIP_IFEL(entry->sign(entry->our_priv, r2), -EINVAL, "Could not sign R2. Failing\n");
 
-//add by santtu
 #ifdef CONFIG_HIP_RVS
 	if(!ipv6_addr_any(dest))
 	 {
@@ -1486,20 +1482,7 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 	 		hip_build_param_reg_from(r2,i2_saddr, i2_info->src_port);
 	  }
 #endif
-//end add
 
-//moved from hip_handle_i2
-/* For the above comment. When doing fixes like the above move, please check that
-   the code compiles with the affected flags. With CONFIG_HIP_BLIND we get
-   'spi_out' undeclared (first use in this function)
-   'esp_tfm' undeclared (first use in this function)
-
-   Fixed:
-   spi_out --> entry->default_spi_out
-   esp_tfm --> entry->esp_transform
-
-   Lauri 22.07.2008
-*/
 #ifdef CONFIG_HIP_BLIND
 	if (hip_blind_get_status()) {
 	   err = entry->hadb_ipsec_func->hip_add_sa(
@@ -1544,8 +1527,8 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 
 	HIP_IFEL(err, -ECOMM, "Sending R2 packet failed.\n");
 
-	/* Send the first heartbeat. Notice that error value is ignored because we want to
-	   to complete the base exchange successfully */
+	/* Send the first heartbeat. Notice that error value is ignored
+	   because we want to to complete the base exchange successfully */
 	if (hip_icmp_interval > 0) {
 		_HIP_DEBUG("icmp sock %d\n", hip_icmp_sock);
 		hip_send_icmp(hip_icmp_sock, entry);
@@ -2239,6 +2222,10 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
 	entry->state = HIP_STATE_ESTABLISHED;
 
+	/*For SAVA this lets to register the client on firewall once the keys are established*/
+	hip_firewall_set_i2_data(SO_HIP_FW_I2_DONE, entry, &entry->hit_our, 
+				 &entry->hit_peer, i2_saddr, i2_daddr);
+
         /***** LOCATOR PARAMETER ******/
 	/* Why do we process the LOCATOR parameter only after R2 has been sent?
 	   -Lauri 29.04.2008.
@@ -2684,10 +2671,19 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	//TODO Send the R2 Response to Firewall
 
  out_err:
-	if (entry->state == HIP_STATE_ESTABLISHED)
+	if (entry->state == HIP_STATE_ESTABLISHED) {
+	        HIP_DEBUG("Send response to firewall \n");
 	        hip_firewall_set_bex_data(SO_HIP_FW_BEX_DONE, entry, &entry->hit_our, &entry->hit_peer);
-	else
+		if (entry->peer_controls & HIP_HA_CTRL_PEER_GRANTED_SAVAH) {
+		  //Enable savah client mode on the firewall
+		  hip_set_sava_client_on();
+		  hip_firewall_set_savah_status(SO_HIP_SET_SAVAH_CLIENT_ON);
+		} else {
+		  HIP_DEBUG("Entry control flag is not HIP_HA_CTRL_PEER_GRANTED_SAVAH. Value is %d \n", entry->local_controls);
+		}
+	} else {
 		hip_firewall_set_bex_data(SO_HIP_FW_BEX_DONE, entry, NULL, NULL);
+	}
 
 	if (ctx) {
 		HIP_FREE(ctx);

@@ -195,7 +195,7 @@ inline int hip_sockaddr_wrapping_is_applicable(const struct sockaddr *sa)
 
 	if (sa->sa_family == AF_INET) {
 		struct in_addr *oip = hip_cast_sa_addr(sa);
-		if (oip->s_addr == htonl(INADDR_LOOPBACK) || oip->s_addr == htonl(INADDR_ANY))
+		if (oip->s_addr == htonl(INADDR_LOOPBACK) /*|| oip->s_addr == htonl(INADDR_ANY)*/)
 			return 0;
 	}
 

@@ -8,8 +8,6 @@
  * @author  Abhijit Bagri <abagri#gmail.com>
  * @author  Miika Komu <miika#iki.fi>
  * @author  Samu Varjonen <samu.varjonen#hiit.fi>
- * @version 1.0
- * @date    08.01.2008
  * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  * @note    Based on
  *          <a href="http://www1.ietf.org/mail-archive/web/hipsec/current/msg01745.html">Simplified state machine</a>
@@ -632,7 +630,7 @@ int hip_update_finish_rekeying(hip_common_t *msg, hip_ha_t *entry,
 	entry->local_udp_port = entry->nat_mode ? HIP_NAT_UDP_PORT : 0;
 
 	err = entry->hadb_ipsec_func->hip_add_sa(&entry->preferred_address, &entry->local_address, hits,
-			 hitr,  &new_spi_in, esp_transform,
+			 hitr,  new_spi_in, esp_transform,
 			 (we_are_HITg ? &espkey_lg : &espkey_gl),
 			 (we_are_HITg ? &authkey_lg : &authkey_gl),
 			 1, HIP_SPI_DIRECTION_IN, 0, entry);
@@ -642,7 +640,7 @@ int hip_update_finish_rekeying(hip_common_t *msg, hip_ha_t *entry,
 	HIP_DEBUG("Setting up new inbound SA, SPI=0x%x\n", new_spi_in);
 
 	err = entry->hadb_ipsec_func->hip_add_sa(&entry->local_address, &entry->preferred_address, hitr,
-			 hits, &new_spi_out, esp_transform,
+			 hits, new_spi_out, esp_transform,
 			 (we_are_HITg ? &espkey_gl : &espkey_lg),
 			 (we_are_HITg ? &authkey_gl : &authkey_lg),
 			 1, HIP_SPI_DIRECTION_OUT, 0, entry);
@@ -865,6 +863,8 @@ int hip_build_verification_pkt(hip_ha_t *entry, hip_common_t *update_packet,
 	/* Reply with UPDATE(ESP_INFO, SEQ, ACK, ECHO_REQUEST) */
 
 	/* ESP_INFO */
+	esp_info_old_spi = hip_hadb_get_latest_inbound_spi(entry);
+	esp_info_new_spi = esp_info_old_spi;
 	HIP_IFEL(hip_build_param_esp_info(update_packet,
 					  entry->current_keymat_index,
 					  esp_info_old_spi,
@@ -2478,9 +2478,10 @@ int hip_send_update(struct hip_hadb_state *entry,
 					    &entry->hip_hmac_out), -1,
 	      "Building of HMAC failed\n");
 
-     /* Add SIGNATURE */
-     HIP_IFEL(entry->sign(entry->our_priv, update_packet), -EINVAL,
-	      "Could not sign UPDATE. Failing\n");
+
+	 /* Add SIGNATURE */
+	 HIP_IFEL(entry->sign(entry->our_priv, update_packet), -EINVAL,
+		  "Could not sign UPDATE. Failing\n");
 
      /* Send UPDATE */
      hip_set_spi_update_status(entry, esp_info_old_spi, 1);
@@ -2966,6 +2967,23 @@ out_err:
 	return err;
 }
 
+
+
+int hip_update_handle_stun(void* pkg, int len,
+	 in6_addr_t *src_addr, in6_addr_t * dst_addr,
+	 hip_ha_t *entry,
+	 hip_portpair_t *sinfo)
+{
+	if(entry){
+		HIP_DEBUG_HIT("receive a stun  from 2:  " ,src_addr );
+		hip_external_ice_receive_pkt(pkg, len, entry, src_addr, sinfo->src_port);
+	}
+	else{
+		HIP_DEBUG_HIT("receive a stun  from 1:   " ,src_addr );
+		hip_external_ice_receive_pkt_all(pkg, len, src_addr, sinfo->src_port);
+	}
+}
+
 /**
  * Builds udp and raw locator items into locator list to msg
  * this is the extension of hip_build_locators in output.c
@@ -2976,7 +2994,7 @@ out_err:
  */
 int hip_build_locators(struct hip_common *msg)
 {
-	int err = 0, i = 0, ii = 0, addr_count1 = 0, addr_count2 = 0,UDP_relay_count = 0;
+    int err = 0, i = 0, ii = 0, addr_count1 = 0, addr_count2 = 0,UDP_relay_count = 0;
     struct netdev_address *n;
     hip_ha_t *ha_n;
     hip_list_t *item = NULL, *tmp = NULL;
@@ -3101,19 +3119,3 @@ int hip_build_locators(struct hip_common *msg)
     if (locs2) free(locs2);
     return err;
 }
-
-int hip_update_handle_stun(void* pkg, int len,
-	 in6_addr_t *src_addr, in6_addr_t * dst_addr,
-	 hip_ha_t *entry,
-	 hip_portpair_t *sinfo)
-{
-	if(entry){
-		HIP_DEBUG_HIT("receive a stun  from 2:  " ,src_addr );
-		hip_external_ice_receive_pkt(pkg, len, entry, src_addr, sinfo->src_port);
-	}
-	else{
-		HIP_DEBUG_HIT("receive a stun  from 1:   " ,src_addr );
-		hip_external_ice_receive_pkt_all(pkg, len, src_addr, sinfo->src_port);
-	}
-}
-

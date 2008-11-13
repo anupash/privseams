@@ -169,6 +169,19 @@ int hip_add_pending_request(hip_pending_request_t *request);
 int hip_del_pending_request(hip_ha_t *entry);
 
 /**
+ * Moves a pending request to a new entry. This is handy for opportunistic mode
+ *
+ * @param  entry_old a pointer to the old  host association from which the pending request
+ *                   to be moved is bound.
+ * @param  entry_new a pointer to the new  host association to which the pending request
+                     to be moved
+ * @return       zero if the pending request was succesfully moved, -1
+ *               otherwise.
+ */ 
+int hip_replace_pending_requests(hip_ha_t * entry_old, 
+				 hip_ha_t * entry_new);
+
+/**
  * Deletes a pending request of given type. Deletes a pending request identified
  * by the host association @c entry and matching the given type @c reg_type from
  * the linked list @c pending_requests.

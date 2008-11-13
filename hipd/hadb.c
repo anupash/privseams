@@ -78,7 +78,9 @@ static inline void hip_hadb_rem_state_hit(void *entry)
 	hip_ha_t *ha = (hip_ha_t *)entry;
 	HIP_DEBUG("\n");
 	ha->hastate &= ~HIP_HASTATE_HITOK;
-        if (ha->locator) free(ha->locator);
+        if (ha->locator)
+		free(ha->locator);
+	ha->locator = NULL;
 	hip_ht_delete(hadb_hit, entry);
 }
 
@@ -369,12 +371,15 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	hip_ha_t *entry = NULL, *aux = NULL;
 	hip_lsi_t local_lsi, lsi_aux;
 
+	HIP_DEBUG_INADDR("Local IP address ", local_addr);
+	hip_print_debug_info(local_addr, peer_addr,local_hit, peer_hit, peer_lsi);
+
 	hip_print_debug_info(local_addr, peer_addr,local_hit, peer_hit,
 			     peer_lsi);
 
 	entry = hip_hadb_find_byhits(local_hit, peer_hit);
 
-	if (entry){
+	if (entry) {
 		hip_hadb_dump_spis_out(entry);
 		HIP_DEBUG_LSI("    Peer lsi   ",&entry->lsi_peer);
 		/*Compare if different lsi's*/
@@ -503,6 +508,8 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr,
 
  	hip_print_debug_info(NULL, peer_addr, NULL, peer_hit, peer_lsi);
 
+	HIP_IFEL(!ipv6_addr_is_hit(peer_hit), -1, "Not a HIT\n");
+
 	memset(&peer_map, 0, sizeof(peer_map));
 
 	memcpy(&peer_map.peer_hit, peer_hit, sizeof(hip_hit_t));
@@ -514,7 +521,7 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr,
 	HIP_IFEL(hip_select_source_address(
 			 &peer_map.our_addr, &peer_map.peer_addr),
 		 -1, "Cannot find source address\n");
-
+	
 	HIP_IFEL(hip_for_each_hi(hip_hadb_add_peer_info_wrapper, &peer_map), 0,
 	         "for_each_hi err.\n");
 
@@ -1003,9 +1010,7 @@ int hip_del_peer_info(hip_hit_t *our_hit, hip_hit_t *peer_hit)
 		return -ENOENT;
 	}
 
-
 	return hip_del_peer_info_entry(ha);
-
 }
 
 /* assume already locked entry */
@@ -2075,6 +2080,7 @@ int hip_store_base_exchange_keys(struct hip_hadb_state *entry,
 	{
 		HIP_DEBUG("HIP_FREEing old dh_shared_key\n");
 		HIP_FREE(entry->dh_shared_key);
+		entry->dh_shared_key = NULL;
 	}
 
 	entry->dh_shared_key_len = 0;
@@ -2094,8 +2100,10 @@ int hip_store_base_exchange_keys(struct hip_hadb_state *entry,
 	return err;
 
 out_err:
-	if (entry->dh_shared_key)
+	if (entry->dh_shared_key) {
 		HIP_FREE(entry->dh_shared_key);
+		entry->dh_shared_key = NULL;
+	}
 
 	return err;
 }
@@ -2219,10 +2227,14 @@ int hip_init_us(hip_ha_t *entry, hip_hit_t *hit_our)
 
  out_err:
 
-	if (err && entry->our_priv)
+	if (err && entry->our_priv) {
 		HIP_FREE(entry->our_priv);
-	if (err && entry->our_pub)
+		entry->our_priv = NULL;
+	}
+	if (err && entry->our_pub) {
 		HIP_FREE(entry->our_pub);
+		entry->our_pub = NULL;
+	}
 
 	return err;
 }
@@ -2549,6 +2561,7 @@ void hip_hadb_set_local_controls(hip_ha_t *entry, hip_controls_t mask)
 		case HIP_HA_CTRL_LOCAL_REQ_ESCROW:
 		case HIP_HA_CTRL_LOCAL_REQ_RELAY:
 		case HIP_HA_CTRL_LOCAL_REQ_RVS:
+		case HIP_HA_CTRL_LOCAL_REQ_SAVAH:
 			entry->local_controls |= mask;
 			break;
 		default:
@@ -2571,6 +2584,8 @@ void hip_hadb_set_peer_controls(hip_ha_t *entry, hip_controls_t mask)
 		case HIP_HA_CTRL_PEER_ESCROW_CAPABLE:
 		case HIP_HA_CTRL_PEER_RVS_CAPABLE:
 		case HIP_HA_CTRL_PEER_RELAY_CAPABLE:
+		case HIP_HA_CTRL_PEER_SAVAH_CAPABLE:
+		case HIP_HA_CTRL_PEER_GRANTED_SAVAH:
 		case HIP_HA_CTRL_PEER_GRANTED_UNSUP:
 		case HIP_HA_CTRL_PEER_GRANTED_ESCROW:
 		case HIP_HA_CTRL_PEER_GRANTED_RVS:
@@ -2731,6 +2746,7 @@ void hip_hadb_delete_inbound_spi(hip_ha_t *entry, uint32_t spi)
  			{
  				HIP_DEBUG("deleting stored addrlist 0x%p\n", spi_item->addresses);
  				HIP_FREE(spi_item->addresses);
+				spi_item->addresses = NULL;
  			}
 			list_del(spi_item, entry->spis_in);
 			HIP_FREE(spi_item);

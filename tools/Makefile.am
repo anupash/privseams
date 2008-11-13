@@ -91,7 +91,7 @@ parsehipkey:
 # necessary because otherwise "make rpm" target has the old $pyexecdir from
 # "make dist" and it refuses to build the scripts again.
 all-local:
-	@rm dnshipproxy
-	@rm parsehipkey
+	@rm -f dnshipproxy
+	@rm -f parsehipkey
 	@sh gen-python-starter.sh $(pyexecdir)/dnshipproxy dnsproxy.py dnshipproxy
 	@sh gen-python-starter.sh $(pyexecdir)/parsehipkey parse-key-3.py parsehipkey

@@ -349,6 +349,9 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	uint16_t mask = 0;
 	int err = 0, n=0;
 
+	HIP_IFEL((entry->state == HIP_STATE_ESTABLISHED), 0,
+		 "State established, not triggering bex\n");
+
 	/* Assign a local private key, public key and HIT to HA */
 	HIP_DEBUG_HIT("src_hit", src_hit);
 	HIP_IFEL(hip_init_us(entry, src_hit), -EINVAL,
@@ -390,6 +393,7 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 			hip_build_network_hdr(i1, HIP_I1,
 					      mask, &entry->hit_our, dst_hit);
 	}
+
 	/* Calculate the HIP header length */
 	hip_calc_hdr_len(i1);
 
@@ -609,6 +613,7 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 
 	/* Parameter REG_INFO */
 	hip_get_active_services(service_list, &service_count);
+	HIP_DEBUG("Found %d active service(s) \n", service_count);
 	hip_build_param_reg_info(msg, service_list, service_count);
 
  	/* Parameter ESP-ENC transform. */
@@ -1496,6 +1501,8 @@ int hip_send_icmp(int sockfd, hip_ha_t *entry) {
 	mhdr.msg_controllen = sizeof(cmsgbuf);
 
 	i = sendmsg(sockfd, &mhdr, 0);
+	if (i <= 0)
+		HIP_PERROR("sendmsg");
 	
 	/* Debug information*/
 	_HIP_DEBUG_HIT("src hit", &entry->hit_our);	
