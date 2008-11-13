@@ -1690,7 +1690,7 @@ int hip_create_lock_file(char *filename, int killold) {
 	if (lockf(fd, F_TLOCK, 0) < 0)
 	{
 		HIP_IFEL(!killold, -12,
-			 "\nHIP daemon already running with pID %d\n"
+			 "\nHIP daemon already running with pid %d\n"
 			 "Give: -k option to kill old daemon.\n", old_pid);
 
 		HIP_INFO("\nDaemon is already running with pID %d\n"
