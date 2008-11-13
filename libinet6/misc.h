@@ -25,6 +25,10 @@
 #  include "hipconf.h"
 #endif /* CONFIG_HIP_LIBHIPTOOL */
 
+#ifndef HOST_NAME_MAX
+# define HOST_NAME_MAX 64
+#endif
+
 #define HOST_ID_FILENAME_MAX_LEN 256
 
 #define HIP_OPP_IP_DB_SIZE		16
@@ -158,8 +162,6 @@ int hip_remove_lock_file(char *filename);
 void hip_addr_to_sockaddr(struct in6_addr *addr, struct sockaddr_storage *sa);
 
 uint64_t hip_solve_puzzle(void *puzzle, struct hip_common *hdr, int mode);
-hip_lsi_t *hip_get_lsi_peer_by_hits(struct in6_addr *hit_s, struct in6_addr *hit_r);
-
 int hip_create_lock_file(char *filename, int killold);
 
 /**

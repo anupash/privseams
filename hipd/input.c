@@ -507,7 +507,7 @@ int hip_receive_control_packet(struct hip_common *msg,
 						       msg_info);
 		/* If agent is prompting user, let's make sure that
 		   the death counter in maintenance does not expire */
-		if (hip_agent_is_alive())
+		if (hip_agent_is_alive() && entry)
 		    entry->hip_opp_fallback_disable = filter;
 	} else {
 		/* Ugly bug fix for "conntest-client hostname tcp 12345"
@@ -1539,9 +1539,17 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 	err = entry->hadb_xmit_func->hip_send_pkt(i2_daddr, i2_saddr,
 						  (entry->nat_mode ? HIP_NAT_UDP_PORT : 0),
 	                                          entry->peer_udp_port, r2, entry, 1);
-	if (err == 1) err = 0;
+	if (err == 1)
+		err = 0;
 
 	HIP_IFEL(err, -ECOMM, "Sending R2 packet failed.\n");
+
+	/* Send the first heartbeat. Notice that error value is ignored because we want to
+	   to complete the base exchange successfully */
+	if (hip_icmp_interval > 0) {
+		_HIP_DEBUG("icmp sock %d\n", hip_icmp_sock);
+		hip_send_icmp(hip_icmp_sock, entry);
+	}
 
  out_err:
 	if (r2 != NULL) {
@@ -2242,13 +2250,6 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	/***** LOCATOR PARAMETER *****/
 	hip_handle_locator_parameter(entry, hip_get_param(i2, HIP_PARAM_LOCATOR), esp_info);
 
-	/** Send the first heartbeat **/
-	if (hip_icmp_interval > 0) {
-		HIP_DEBUG("icmp sock %d\n", hip_icmp_sock);
-		HIP_IFEL(hip_send_icmp(hip_icmp_sock, entry), -1,
-			 "Failed to send heartbeat\n");
-	}
-
 #ifdef HIP_USE_ICE
 	hip_nat_start_ice(entry, esp_info,ICE_ROLE_CONTROLLING);
 #endif
@@ -2672,10 +2673,10 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 		entry->hip_msg_retrans.buf = NULL;
 	}
 
-	/** Send the first heartbeat**/
+	/* Send the first heartbeat. Notice that the error is ignored to complete
+	   the base exchange successfully. */
 	if (hip_icmp_interval > 0) {
-		HIP_IFEL(hip_send_icmp(hip_icmp_sock, entry), -1,
-			 "Failed to send heartbeat\n");
+		hip_send_icmp(hip_icmp_sock, entry);
 	}
 
 	//TODO Send the R2 Response to Firewall

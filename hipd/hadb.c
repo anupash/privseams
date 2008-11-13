@@ -2848,36 +2848,6 @@ int hip_for_each_ha(int (*func)(hip_ha_t *entry, void *opaq), void *opaque)
 	return fail;
 }
 
-/** 
- * This function goes through the HA database and sends an icmp echo to all of them
- *
- * @param socket to send with
- *
- * @return 0 on success negative on error
- */
-int hip_send_all_heartbeats(int sockfd) {
-	int err = 0, i = 0;
-        hip_ha_t *this;
-        hip_list_t *item, *tmp;
-
-	_HIP_DEBUG("Sending heartbeat to all active HAs (in ESTABLISHED state)\n");
-
-        HIP_LOCK_HT(&hadb_hit);
-        list_for_each_safe(item, tmp, hadb_hit, i)
-        {
-                this = list_entry(item);
-		if (this->state == HIP_STATE_ESTABLISHED) {
-			_HIP_DEBUG("list_for_each_safe\n");
-			err = hip_send_icmp(sockfd, this);
-			if (err) goto out_err;
-		}
-        }
-
-out_err:
-       HIP_UNLOCK_HT(&hadb_hit);
-	return err;
-}
-
 /** Enumeration for hip_count_open_connections */
 int hip_count_one_entry(hip_ha_t *entry, void *cntr)
 {
