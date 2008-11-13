@@ -13,15 +13,18 @@
 #include "misc.h"
 #include "builder.h"
 
-typedef uint16_t in_port_t;
-
 #define HIP_MALLOC(a,b) kmalloc(a,b)
 #define HIP_FREE(a) kfree(a)
 
 #define PF_HIP 32
 
+/* hipsock won't compile unless this is done in protodefs.h */
+//typedef uint16_t in_port_t;
+
 extern uint64_t hton64(uint64_t i);
 extern uint64_t ntoh64(uint64_t i);
 extern int is_big_endian(void);
+
+int hip_send_recv_daemon_info(struct hip_common *msg);
 
 #endif /* HIP_USER_COMPAT_H  */
