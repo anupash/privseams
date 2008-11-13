@@ -81,7 +81,7 @@ help() {
 
 ### Main program ###
 
-if test $1 = '--help'
+if echo $1|grep -q help
 then
     help
     exit
