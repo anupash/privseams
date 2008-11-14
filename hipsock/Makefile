@@ -1,5 +1,5 @@
 obj-m += hipsock.o
-hipsock-objs := debug.o builder.o misc.o af_hip.o usercompat.o
+hipsock-objs := debug.o builder.o misc.o af_hip.o
 
 
 # Default assumption of the linux sources. Do not change! Use the
