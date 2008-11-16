@@ -1,10 +1,11 @@
-#ifdef CONFIG_HIP_PRIVSEP
 #include <sys/capability.h>
 #include <sys/prctl.h>
 #include <sys/types.h>
 #include <pwd.h>
 #include "debug.h"
 #include "ife.h"
+
+#ifdef CONFIG_HIP_PRIVSEP
 
 #define USER_NOBODY "nobody"
 #define USER_HIPD "hipd"
