@@ -222,27 +222,27 @@
 //definition of firewall db records
 struct firewall_hl{
 	struct in6_addr ip_peer;
-	hip_lsi_t lsi;
-	hip_hit_t hit_our;
-        hip_hit_t hit_peer;
-        int       bex_state;
+	hip_lsi_t 	lsi;
+	hip_hit_t 	hit_our;
+        hip_hit_t 	hit_peer;
+        int       	bex_state;
 };
 typedef struct firewall_hl firewall_hl_t;
 
 struct firewall_cache_hl
 {
-	hip_hit_t            hit_our;
-	hip_hit_t            hit_peer;
-	struct in6_addr      ip_our;
-	struct in6_addr      ip_peer;
-        hip_lsi_t            lsi_our;
-        hip_lsi_t            lsi_peer;
-	int                  state;
-	int                  heartbeats_on;
-	int                  heartbeats_sent;
-	int                  heartbeats_received;
-	double            heartbeats_mean;
-	double              heartbeats_variance;
+	hip_hit_t	hit_peer;
+	hip_hit_t	hit_our;
+	struct in6_addr	ip_our;
+	struct in6_addr	ip_peer;
+        hip_lsi_t	lsi_our;
+        hip_lsi_t	lsi_peer;
+	int		state;
+	int		heartbeats_on;
+	int		heartbeats_sent;
+	int		heartbeats_received;
+	double		heartbeats_mean;
+	double		heartbeats_variance;
 };
 typedef struct firewall_cache_hl firewall_cache_hl_t;
 
