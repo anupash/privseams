@@ -15,7 +15,7 @@ include_HEADERS += close.h hi3.h keymat.h timer.h configfilereader.h
 include_HEADERS += cookie.h hidb.h nat.h update.h dh.h registration.h
 include_HEADERS += escrow.h init.h maintenance.h accessor.h oppipdb.h
 include_HEADERS += tcptimeout.h cert.h user_ipsec_sadb_api.h user_ipsec_hipd_msg.h
-include_HEADERS += esp_prot_hipd_msg.h esp_prot_anchordb.h
+include_HEADERS += esp_prot_hipd_msg.h esp_prot_anchordb.h turn_client.h
 
 INCLUDES = $(hipl_common_include_paths)  -I$(HIPL_PJPROJECT_NATH)/include -I$(HIPL_PJPROJECT_LIB)/include -I$(HIPL_PJPROJECT_LIB_UTIL)/include -I$(HIPL_PJPROJECT_MEDIA)/include
 
@@ -25,7 +25,7 @@ hipd_SOURCES += user.c hadb.c oppdb.c close.c configfilereader.c
 hipd_SOURCES += input.c output.c hidb.c cookie.c netdev.c bos.c nat.c icookie.c
 hipd_SOURCES += escrow.c init.c maintenance.c accessor.c oppipdb.c dh.c
 hipd_SOURCES += tcptimeout.c cert.c user_ipsec_sadb_api.c user_ipsec_hipd_msg.c
-hipd_SOURCES += esp_prot_hipd_msg.c esp_prot_anchordb.c
+hipd_SOURCES += esp_prot_hipd_msg.c esp_prot_anchordb.c turn_client.c
 
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
@@ -108,3 +108,4 @@ hiprelay.c: hiprelay.h
 configfilereader.c: configfilereader.h
 registration.c: registration.h
 linkedlist.c: linkedlist.h
+turn_client.c: turn_client.h
