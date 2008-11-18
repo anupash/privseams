@@ -511,6 +511,13 @@ struct hip_hadb_user_info_state
 	double              heartbeats_variance;
 };
 
+struct hip_turn_info
+{
+	uint32_t spi;
+	struct in6_addr peer_address;
+	in_port_t peer_port;
+}
+
 /** @addtogroup hadb_func
  * @{
  */

@@ -229,6 +229,10 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 		else if (system_based_opp_mode)
 			err = hip_fw_sys_opp_set_peer_hit(msg);
 		break;
+	case SO_HIP_TURN_INFO:
+		// struct hip_turn_info *turn = hip_get_param_contents(HIP_PARAM_TURN_INFO);
+		// save to database
+		break;
 	default:
 		HIP_ERROR("Unhandled message type %d\n", type);
 		err = -1;

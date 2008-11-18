@@ -578,6 +578,16 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 		if (entry->state == HIP_STATE_ESTABLISHED)
 					spi_in = hip_hadb_get_latest_inbound_spi(entry);
 		
+		/* XX FIXME */
+		/* Use hip_sendto_firewall() to notify the firewall if the chosen address/port is
+		   for TURN */
+
+		//HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "out of mem\n");
+		//hip_build_user_hdr(msg, SO_HIP_TURN_INFO, 0);
+		//hip_build_param_contents(msg, HIP_PARAM_TURN_INFO, turn_info);
+
+		/* If TURN is used, change entry->port HIP_TURN_PORT */
+
 		err =hip_add_sa(&entry->local_address, &entry->preferred_address,
 						&entry->hit_our, 
 						&entry->hit_peer,

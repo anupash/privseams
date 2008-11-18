@@ -518,6 +518,11 @@ int firewall_init_rules(){
 	HIP_IFEL(hip_fw_init_esp_prot(), -1, "failed to load extension\n");
 	HIP_IFEL(hip_fw_init_esp_prot_conntrack(), -1, "failed to load extension\n");
 
+	/* TURN translation */
+	if (hip_stun) {
+		system("iptables -I HIPFW-OUTPUT -p 17 --sport 40400 -j QUEUE");
+	}
+
 	// Initializing local database for mapping LSI-HIT in the firewall
 	firewall_init_hldb();
 
@@ -928,8 +933,8 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version)
 	// ESP does not have zero bytes (IPv4 only right now)
 	else if (ctx->ip_version == 4 && udphdr
 		   && ((udphdr->source == ntohs(HIP_NAT_UDP_PORT)) ||
-		       (udphdr->dest == ntohs(HIP_NAT_UDP_PORT)))
-		   && !udp_encap_zero_bytes)
+		       (udphdr->dest == ntohs(HIP_NAT_UDP_ PORT)))
+		 && !udp_encap_zero_bytes)
 	{
 
 		HIP_HEXDUMP("stun check failed in UDP",udphdr+1, 20);
@@ -946,8 +951,13 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version)
 							     + sizeof(struct udphdr));
 
 		goto end_init;
-	}
-
+	} else if (is_stun && ctx->ip_version == 4 && udphdr &&
+		   udphdr->dest == ntohs(HIP_NAT_TURN_PORT && !udp_encap_zero_bytes) {
+		ctx->packet_type = ESP_PACKET;
+		ctx->transport_hdr.esp = (struct hip_esp *) (((char *)udphdr)
+							     + sizeof(struct udphdr));
+		ctx->is_turn = 1;
+	}	      
 	// normal UDP packet or UDP encapsulated IPv6
 	else {
 		HIP_DEBUG("normal UDP packet\n");
@@ -1351,6 +1361,9 @@ int hip_fw_handle_esp_output(hip_fw_context_t *ctx){
 	{
 		verdict = ACCEPT;
 	}
+
+	if (ctx->is_turn)
+		verdict = hip_fw_handle_turn_esp_output(ctx);
 
 	return verdict;
 }
@@ -1767,6 +1780,10 @@ int main(int argc, char **argv){
 
 	//use by default both ipv4 and ipv6
 	HIP_DEBUG("Using ipv4 and ipv6\n");
+
+	if (hip_stun) {
+		// initialize TURN database
+	}
 
 	read_file(rule_file);
 	HIP_DEBUG("Firewall rule table: \n");

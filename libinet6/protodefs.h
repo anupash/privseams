@@ -130,6 +130,7 @@
 #define HIP_PARAM_CERT_X509_RESP        32811
 #define HIP_PARAM_ESP_PROT_TFM		32812
 #define HIP_PARAM_TRANSFORM_ORDER       32813
+#define HIP_PARAM_TURN_INFO             32814
 /* End of HIPL private parameters. */
 
 #define HIP_PARAM_HMAC                 61505
