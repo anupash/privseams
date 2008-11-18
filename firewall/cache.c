@@ -16,16 +16,26 @@ int firewall_cache_db_match(    struct in6_addr *hit_our,
 	hip_list_t *item, *tmp;
 	struct in6_addr all_zero_v6 = {0};
 	struct in_addr  all_zero_v4 = {0};
+	struct hip_common *msg = NULL;
 	firewall_cache_hl_t *ha_curr = NULL;
 	firewall_cache_hl_t *ha_match = NULL;
 	struct hip_tlv_common *current_param = NULL;
-	struct hip_common *msg = NULL;
-
-	HIP_DEBUG("---------   Check firewall cache db   ---------\n");
 
 	HIP_ASSERT( (hit_our && hit_peer) ||
-		    (lsi_our && lsi_peer) ||
-		    (ip_our && ip_peer)    );
+		    (lsi_our && lsi_peer)    );
+
+	if(hit_peer){
+		ha_match = (firewall_cache_hl_t *)hip_ht_find(
+						firewall_cache_db,
+						(void *)hit_peer);
+		if(ha_match){
+			HIP_DEBUG("Matched using hash\n");
+			entry_in_cache = 1;
+			goto out_err;
+		}
+	}
+
+	HIP_DEBUG("---------   Check firewall cache db   ---------\n");
 
 	HIP_LOCK_HT(&firewall_cache_db);
 
@@ -33,26 +43,20 @@ int firewall_cache_db_match(    struct in6_addr *hit_our,
 		this = list_entry(item);
 
 		if( hit_our && hit_peer &&
-		    (ipv6_addr_cmp(&all_zero_v6, hit_our)  != 0)     &&
-		    (ipv6_addr_cmp(&all_zero_v6, hit_peer) != 0)     &&
 		    (ipv6_addr_cmp(hit_peer, &this->hit_peer) == 0 ) &&
 		    (ipv6_addr_cmp(hit_our,  &this->hit_our)  == 0 )    ){
 			ha_match = this;
 			break;
 		}
-		else if( lsi_our && lsi_peer &&
-			 (ipv4_addr_cmp(&all_zero_v4, lsi_our)  != 0) &&
-			 (ipv4_addr_cmp(&all_zero_v4, lsi_peer) != 0) &&
-			 lsi_peer->s_addr == this->lsi_peer.s_addr    &&
-			 lsi_our->s_addr  == this->lsi_our.s_addr        ){
+		if( lsi_our && lsi_peer &&
+		    lsi_peer->s_addr == this->lsi_peer.s_addr &&
+		    lsi_our->s_addr  == this->lsi_our.s_addr     ){
 			ha_match = this;
 			break;
 		}
-		else if( ip_our && ip_peer &&
-		         (ipv6_addr_cmp(&all_zero_v6, ip_our) != 0) &&
-		         (ipv6_addr_cmp(&all_zero_v6, ip_peer) != 0) &&
-			 ip_peer->s6_addr == this->ip_peer.s6_addr &&
-			 ip_our->s6_addr  == this->ip_our.s6_addr     ) {
+		if( ip_our && ip_peer &&
+		    ip_peer->s6_addr == this->ip_peer.s6_addr &&
+		    ip_our->s6_addr  == this->ip_our.s6_addr     ) {
 			ha_match = this;
 			break;
 		}
@@ -77,8 +81,6 @@ int firewall_cache_db_match(    struct in6_addr *hit_our,
 		ha_curr = hip_get_param_contents_direct(current_param);
 
 		if( hit_our && hit_peer &&
-		    (ipv6_addr_cmp(&all_zero_v6, hit_our) != 0)    &&
-		    (ipv6_addr_cmp(&all_zero_v6, hit_our) != 0)    &&
 		    (ipv6_addr_cmp(hit_peer, &ha_curr->hit_peer) == 0 ) &&
 		    (ipv6_addr_cmp(hit_our,  &ha_curr->hit_our)  == 0 )    ){
 			HIP_DEBUG("Matched HITs\n");
@@ -86,21 +88,15 @@ int firewall_cache_db_match(    struct in6_addr *hit_our,
 			break;
 		}
 		if( lsi_our && lsi_peer &&
-			 (ipv4_addr_cmp(&all_zero_v4, lsi_our)  != 0) &&
-			 (ipv4_addr_cmp(&all_zero_v4, lsi_peer) != 0) &&
-			 lsi_peer->s_addr == ha_curr->lsi_peer.s_addr    &&
-			 lsi_our->s_addr  == ha_curr->lsi_our.s_addr        ){
+		    lsi_peer->s_addr == ha_curr->lsi_peer.s_addr &&
+		    lsi_our->s_addr  == ha_curr->lsi_our.s_addr     ){
 			HIP_DEBUG("Matched LSIs\n");
 			ha_match = ha_curr;
 			break;
 		}
 		if( ip_our && ip_peer &&
-		         (ipv6_addr_cmp(&all_zero_v6, ip_our) != 0)  &&
-		         (ipv6_addr_cmp(&all_zero_v6, ip_peer) != 0) &&
-			 ip_peer->s6_addr == ha_curr->ip_peer.s6_addr     &&
-			 ip_our->s6_addr  == ha_curr->ip_our.s6_addr         ) {
-			HIP_DEBUG_IN6ADDR("ip peer", &ip_peer->s6_addr);
-			HIP_DEBUG_IN6ADDR("ip our",  &ip_our->s6_addr);
+		    ip_peer->s6_addr == ha_curr->ip_peer.s6_addr &&
+		    ip_our->s6_addr  == ha_curr->ip_our.s6_addr     ) {
 			HIP_DEBUG("Matched IPs\n");
 			ha_match = ha_curr;
 			break;
@@ -112,28 +108,22 @@ out_err:
 	if(!entry_in_cache)
 		firewall_add_new_entry(ha_match);
 
-	if( hit_our  &&  &ha_match->hit_our  &&
-	    ipv6_addr_cmp(&all_zero_v6, &ha_match->hit_our) != 0)
+	if(hit_our)
 		ipv6_addr_copy(hit_our, &ha_match->hit_our);
 
-	if( hit_peer  &&  &(ha_match->hit_peer)  &&
-	    ipv6_addr_cmp(&all_zero_v6, &ha_match->hit_peer) != 0)
+	if(hit_peer)
 		ipv6_addr_copy(hit_peer, &ha_match->hit_peer);
 
-	if( lsi_our  &&  &ha_match->lsi_our  &&
-            ipv4_addr_cmp(&all_zero_v4, &ha_match->lsi_our) != 0)
+	if(lsi_our)
 	    ipv4_addr_copy(lsi_our, &ha_match->lsi_our);
 
-	if( lsi_peer  &&  &(ha_match->lsi_peer)  &&
-	    ipv4_addr_cmp(&all_zero_v4, &ha_match->lsi_peer) != 0)
+	if(lsi_peer)
 	    ipv4_addr_copy(lsi_peer, &ha_match->lsi_peer);
 
-	if( ip_our  &&  &ha_match->ip_our  &&
-            ipv6_addr_cmp(&all_zero_v6, &ha_match->ip_our) != 0)
+	if(ip_our)
 	    ipv6_addr_copy(ip_our, &ha_match->ip_our);
 
-	if( ip_peer  &&  &(ha_match->ip_peer)   &&
-	    ipv6_addr_cmp(&all_zero_v6, &ha_match->ip_peer) != 0)
+	if(ip_peer)
 	    ipv6_addr_copy(ip_peer, &ha_match->ip_peer);
 
         if(state)
@@ -147,7 +137,7 @@ firewall_cache_hl_t *hip_cache_create_hl_entry(void){
 	firewall_cache_hl_t *entry = NULL;
 	int err = 0;
 	HIP_IFEL(!(entry = (firewall_cache_hl_t *) HIP_MALLOC(sizeof(firewall_cache_hl_t),0)),
-		 -ENOMEM, "No memory available for firewall database entry\n");
+		-ENOMEM, "No memory available for firewall database entry\n");
   	memset(entry, 0, sizeof(*entry));
 out_err:
 	return entry;
@@ -181,7 +171,7 @@ int firewall_add_new_entry(firewall_cache_hl_t *ha_entry){
 	ipv6_addr_copy(&new_entry->ip_our,  &ha_entry->ip_our);
 	ipv6_addr_copy(&new_entry->ip_peer, &ha_entry->ip_peer);
 
-	//new_entry->state = ha_entry->state;
+	new_entry->state = ha_entry->state;
 
 	hip_ht_add(firewall_cache_db, new_entry);
 
@@ -191,39 +181,39 @@ out_err:
 
 
 /**
- * hip_firewall_cache_hash_ip_peer:
+ * hip_firewall_hash_hit_peer:
  * Generates the hash information that is used to index the table
  *
- * @param ptr: pointer to the lsi used to make the hash
+ * @param ptr: pointer to the hit used to make the hash
  *
  * @return hash information
  */
-unsigned long hip_firewall_cache_hash_ip_peer(const void *ptr){
-        struct in6_addr *ip_peer = &((firewall_hl_t *)ptr)->ip_peer;
+unsigned long hip_firewall_hash_hit_peer(const void *ptr){
+        struct in6_addr *hit_peer = &((firewall_cache_hl_t *)ptr)->hit_peer;
 	uint8_t hash[HIP_AH_SHA_LEN];     
 	     
-	hip_build_digest(HIP_DIGEST_SHA1, ip_peer, sizeof(*ip_peer), hash);     
+	hip_build_digest(HIP_DIGEST_SHA1, hit_peer, sizeof(*hit_peer), hash);     
 	return *((unsigned long *)hash);
 }
 
 
 /**
- * hip_firewall_match_ip_peer:
- * Compares two IPs
+ * hip_firewall_match_hit_peer:
+ * Compares two HITs
  *
- * @param ptr1: pointer to ip
- * @param ptr2: pointer to ip
+ * @param ptr1: pointer to hit
+ * @param ptr2: pointer to hit
  *
  * @return 0 if hashes identical, otherwise 1
  */
-int hip_firewall_cache_match_ip_peer(const void *ptr1, const void *ptr2){
-	return (hip_firewall_hash_ip_peer(ptr1) != hip_firewall_hash_ip_peer(ptr2));
+int hip_firewall_match_hit_peer(const void *ptr1, const void *ptr2){
+	return (hip_firewall_hash_hit_peer(ptr1) != hip_firewall_hash_hit_peer(ptr2));
 }
 
 
 void firewall_cache_init_hldb(void){
-	firewall_cache_db = hip_ht_init(hip_firewall_cache_hash_ip_peer,
-					     hip_firewall_cache_match_ip_peer);
+	firewall_cache_db = hip_ht_init(hip_firewall_hash_hit_peer,
+					hip_firewall_match_hit_peer);
 }
 
 
@@ -248,3 +238,22 @@ void hip_firewall_cache_delete_hldb(void){
 }
 
 
+void hip_firewall_cache_hldb_dump(void){
+	int i;
+	firewall_cache_hl_t *this;
+	hip_list_t *item, *tmp;
+	HIP_DEBUG("---------   Firewall db   ---------\n");
+	HIP_LOCK_HT(&firewall_cache_db);
+
+	list_for_each_safe(item, tmp, firewall_cache_db, i){
+		this = list_entry(item);
+		HIP_DEBUG_HIT("hit_our",     &this->hit_our);
+		HIP_DEBUG_HIT("hit_peer",    &this->hit_peer);
+		HIP_DEBUG_LSI("lsi our",     &this->lsi_our);
+		HIP_DEBUG_LSI("lsi peer",    &this->lsi_peer);
+		HIP_DEBUG_IN6ADDR("ip our",  &this->ip_our);
+		HIP_DEBUG_IN6ADDR("ip peer", &this->ip_peer);
+		//HIP_DEBUG("bex_state %d \n", this->bex_state);
+	}
+	HIP_UNLOCK_HT(&firewall_cache_db);
+}

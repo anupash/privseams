@@ -96,7 +96,7 @@ int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m,
         int bind6 = 0, proto4_LSI = 0, proto4_IP = 0, err = 0, verdict = 1;
 	int ip_hdr_size = 0, portDest = 0, process_as_lsi;
 	char *proto = NULL;
-	hip_lsi_t lsi_our, lsi_peer;
+	hip_lsi_t lsi_our = {0}, lsi_peer = {0};
 	struct in6_addr src_addr, dst_addr;
 	struct in_addr src_v4, dst_v4;
 	struct ip6_hdr* ip6_hdr = (struct ip6_hdr*) m->payload;
@@ -145,7 +145,7 @@ int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m,
 		HIP_ASSERT(1);
 	}
 
-	HIP_IFEL(firewall_cache_db_match(ip_dst, ip_src,
+	HIP_IFEL(firewall_cache_db_match(ip_src, ip_dst,
 				&lsi_our, &lsi_peer,
 				&dst_addr, &src_addr,
 				NULL),
