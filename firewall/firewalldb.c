@@ -437,7 +437,6 @@ int firewall_send_incoming_pkt(struct in6_addr *src_hit,
 			  	udp = (struct udphdr *)msg;
 
 				sa_size = sizeof(struct sockaddr_in);
-				memset(msg, 0, (len + sizeof(struct ip)));
 
 		   		udp->check = htons(0);
 				udp->check = ipv4_checksum(IPPROTO_UDP, &(sock_src4->sin_addr), 
@@ -459,8 +458,6 @@ int firewall_send_incoming_pkt(struct in6_addr *src_hit,
 				HIP_DEBUG(" IPPROTO_TCP v4\n");
 			  	firewall_raw_sock = firewall_raw_sock_tcp_v4;
 			  	
-				memset(msg, 0, (len + sizeof(struct ip)));
-
 				tcp->check = ipv4_checksum(IPPROTO_TCP, &(sock_src4->sin_addr), 
 							   &(sock_dst4->sin_addr), tcp, len);		
 				memmove((msg+sizeof(struct ip)), (u8*)tcp, len);
@@ -469,7 +466,6 @@ int firewall_send_incoming_pkt(struct in6_addr *src_hit,
 		case IPPROTO_ICMP:
 		        firewall_raw_sock = firewall_raw_sock_icmp_v4;
 			icmp = (struct icmphdr *) msg;
-			memset(msg, 0, (len + sizeof(struct ip)));
 			icmp->checksum = htons(0);
 			icmp->checksum = inchksum(icmp, len);
 			memmove((msg+sizeof(struct ip)), (u8*)icmp, len);
