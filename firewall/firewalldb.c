@@ -388,7 +388,6 @@ int firewall_send_incoming_pkt(struct in6_addr *src_hit,
 	struct icmphdr *icmp = NULL;
 	struct icmp6hdr *icmpv6 = NULL;
 
-
 	struct sockaddr_storage src, dst;
 	struct sockaddr_in6 *sock_src6, *sock_dst6;
 
@@ -444,7 +443,7 @@ int firewall_send_incoming_pkt(struct in6_addr *src_hit,
 		   		udp->check = htons(0);
 				udp->check = ipv4_checksum(IPPROTO_UDP, &(sock_src4->sin_addr), 
 							   &(sock_dst4->sin_addr), udp, len);		
-				memcpy((msg+sizeof(struct ip)), (u8*)udp, len);
+				memmove((msg+sizeof(struct ip)), (u8*)udp, len);
 			}
 			break;
 		case IPPROTO_TCP:
@@ -466,17 +465,17 @@ int firewall_send_incoming_pkt(struct in6_addr *src_hit,
 
 				tcp->check = ipv4_checksum(IPPROTO_TCP, &(sock_src4->sin_addr), 
 							   &(sock_dst4->sin_addr), tcp, len);		
-				memcpy((msg+sizeof(struct ip)), (u8*)tcp, len);
+				memmove((msg+sizeof(struct ip)), (u8*)tcp, len);
 			}	
 			break;
 		case IPPROTO_ICMP:
 		        firewall_raw_sock = firewall_raw_sock_icmp_v4;
-			icmp = (struct icmphdr *)msg;
+			icmp = (struct icmphdr *) msg;
 			msg = (u8 *) HIP_MALLOC((len + sizeof(struct ip)), 0);
 			memset(msg, 0, (len + sizeof(struct ip)));
 			icmp->checksum = htons(0);
 			icmp->checksum = inchksum(icmp, len);
-			memcpy((msg+sizeof(struct ip)), (u8*)icmp, len);
+			memmove((msg+sizeof(struct ip)), (u8*)icmp, len);
 			_HIP_DEBUG("icmp->type = %d\n",icmp->type);
 			_HIP_DEBUG("icmp->code = %d\n",icmp->code);
 			break;
@@ -490,6 +489,8 @@ int firewall_send_incoming_pkt(struct in6_addr *src_hit,
 
 	if (!is_ipv6){
 		iphdr = (struct ip *) msg;	
+
+		/* @todo: move the socket option to fw initialization */
 		if (setsockopt(firewall_raw_sock, IPPROTO_IP, IP_HDRINCL, &on, sizeof(on)))
 		        HIP_IFEL(err, -1, "setsockopt IP_HDRINCL ERROR\n");  
 		iphdr->ip_v = 4;
@@ -505,23 +506,17 @@ int firewall_send_incoming_pkt(struct in6_addr *src_hit,
 		iphdr->ip_sum = htons(0);
 			
 		_HIP_HEXDUMP("hex", iphdr, (len + sizeof(struct ip)));
-		for (dupl = 0; dupl < HIP_PACKET_DUPLICATES; dupl++) {
-			for (try_again = 0; try_again < 2; try_again++) {
-		    		sent = sendto(firewall_raw_sock, iphdr, 
-					      iphdr->ip_len, 0,
-					      (struct sockaddr *) &dst, sa_size);
-			   	if (sent !=(len + sizeof(struct ip))) {
-			     		HIP_ERROR("Could not send the all requested" \
-				       		  " data (%d/%d)\n", sent, 
-						  iphdr->ip_len);
-			     		sleep(2);
-			    	} else {
-			     		HIP_DEBUG("sent=%d/%d \n",
-						  sent, (len + sizeof(struct ip)));
-			     		HIP_DEBUG("Packet sent ok\n");
-			     		break;
-			    	}
-			}
+		sent = sendto(firewall_raw_sock, iphdr, 
+			      iphdr->ip_len, 0,
+			      (struct sockaddr *) &dst, sa_size);
+		if (sent != (len + sizeof(struct ip))) {
+			HIP_ERROR("Could not send the all requested" \
+				  " data (%d/%d)\n", sent, 
+				  iphdr->ip_len);
+		} else {
+			HIP_DEBUG("sent=%d/%d \n",
+				  sent, (len + sizeof(struct ip)));
+			HIP_DEBUG("Packet sent ok\n");
 		}
 	}//if !is_ipv6
 
@@ -535,8 +530,6 @@ int firewall_send_incoming_pkt(struct in6_addr *src_hit,
 
 	bind(firewall_raw_sock, (struct sockaddr *) &src, sa_size);
  not_sending:
-	if(msg)
-	        HIP_FREE(msg);
 	if (err)
 		HIP_DEBUG("sterror %s\n",strerror(errno));
 	return err;
@@ -642,25 +635,14 @@ int firewall_send_outgoing_pkt(struct in6_addr *src_hit,
 	
 	HIP_IFEL(bind(firewall_raw_sock, (struct sockaddr *) &src, sa_size),
 		 -1, "Binding to raw sock failed\n");
-	for (dupl = 0; dupl < HIP_PACKET_DUPLICATES; dupl++) {
-		for (try_again = 0; try_again < 2; try_again++) {
-		        sent = sendto(firewall_raw_sock, msg, len, 0,
-			              (struct sockaddr *) &dst, sa_size);
-			if (sent == 104)
-			  HIP_DEBUG("AAAAAAAAAAAAAAAAAAAAAA\n");
-			if (sent > 1400)
-			  HIP_DEBUG("Number of sent bytes \n",sent);
-			if (sent != len) {
-                		HIP_ERROR("Could not send the all requested"\
-                        	" data (%d/%d)\n", sent, len);
-                	sleep(2);
-            		} else {
-                		HIP_DEBUG("sent=%d/%d\n", sent, len);
-                		HIP_DEBUG("Packet sent ok\n");
-                		break;
-            		}
-        	}
-		HIP_DEBUG(" dupl are %d\n",dupl);
+	sent = sendto(firewall_raw_sock, msg, len, 0,
+		      (struct sockaddr *) &dst, sa_size);
+	if (sent != len) {
+		HIP_ERROR("Could not send the all requested"\
+			  " data (%d/%d)\n", sent, len);
+	} else {
+		HIP_DEBUG("sent=%d/%d \n",
+			  sent, len);
 	}
 
  out_err:

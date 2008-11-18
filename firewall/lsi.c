@@ -403,7 +403,7 @@ int reinject_packet(struct in6_addr *src_hit, struct in6_addr *dst_hit,
 	_HIP_DEBUG("      Protocol %d\n", protocol);
 	_HIP_DEBUG("      ipOrigTraffic %d \n", ipOrigTraffic);
 
-	msg = (u8 *)HIP_MALLOC(packet_length, 0);
+	msg = (u8 *)HIP_MALLOC((packet_length + sizeof(struct ip)), 0);
 	memcpy(msg, (m->payload)+ip_hdr_size, packet_length);
 
 	if (protocol == IPPROTO_ICMP && incoming) {
