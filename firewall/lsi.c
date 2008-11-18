@@ -114,7 +114,7 @@ int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m,
 		break;
 	case IPPROTO_ICMPV6:
 		HIP_DEBUG("ICMPv6 packet\n");
-		goto out_err;
+		//goto out_err;
 		break;
 	default:
 		HIP_DEBUG("Unhandled packet %d\n", ip6_hdr->ip6_nxt);
@@ -123,7 +123,8 @@ int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m,
 	}
 
 	/* @todo: think about caching this (note: how to notice changes?) */
-	bind6 = hip_get_proto_info(ntohs(portDest), proto);
+	if (proto)
+		bind6 = hip_get_proto_info(ntohs(portDest), proto);
 
 	/* If IPv6 app has bind() to the port number, skip LSI and
 	   system-based opportunistic mode (currently IPv4-only)
@@ -160,7 +161,11 @@ int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m,
 		HIP_IFEL(reinject_packet(&dst_addr, &src_addr, m, 6, 1), -1,
 			 "Failed to reinject with LSIs\n");
 		HIP_DEBUG("Successful LSI transformation. Drop original\n");
-		verdict = 0;
+
+		if (ip6_hdr->ip6_nxt == IPPROTO_ICMPV6)
+			verdict = 1; /* broadcast: dst may be ipv4 or ipv6 */
+		else
+			verdict = 0; /* drop original */
 	} else {
 		HIP_DEBUG("Trying sys opp transformation\n");
 		IPV6_TO_IPV4_MAP(&src_addr, &src_v4);
