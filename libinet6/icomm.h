@@ -13,7 +13,9 @@
 #   include "i3_client_api.h"
 #endif
 
+#ifndef __KERNEL__
 #include <netinet/in.h>
+#endif
 #include "protodefs.h"
 
 //#define HIP_DAEMONADDR_PATH		        "/tmp/hip_daemonaddr_path.tmp"
@@ -89,7 +91,8 @@
 #define SO_HIP_CONF_PUZZLE_SET                  73
 #define SO_HIP_CONF_PUZZLE_INC                  74
 #define SO_HIP_CONF_PUZZLE_DEC                  75
-/* Three free slots here */
+/* slot 76 is FREE */
+/* slot 77 is FREE */
 #define SO_HIP_SET_OPPORTUNISTIC_MODE           78
 #define SO_HIP_SET_BLIND_ON                     79
 #define SO_HIP_SET_BLIND_OFF                    80
@@ -111,7 +114,7 @@
 #define SO_HIP_DHT_OFF                          93
 #define SO_HIP_SET_OPPTCP_ON			94
 #define SO_HIP_SET_OPPTCP_OFF			95
-/* slot 96 is FREE */
+#define SO_HIP_RESET_FIREWALL_DB		96
 /* slot 97 is FREE */
 /* slot 98 is FREE */
 #define SO_HIP_OPPTCP_SEND_TCP_PACKET		99
@@ -219,12 +222,29 @@
 //definition of firewall db records
 struct firewall_hl{
 	struct in6_addr ip_peer;
-	hip_lsi_t lsi;
-	hip_hit_t hit_our;
-        hip_hit_t hit_peer;
-        int       bex_state;
+	hip_lsi_t 	lsi;
+	hip_hit_t 	hit_our;
+        hip_hit_t 	hit_peer;
+        int       	bex_state;
 };
 typedef struct firewall_hl firewall_hl_t;
+
+struct firewall_cache_hl
+{
+	hip_hit_t	hit_peer;
+	hip_hit_t	hit_our;
+	struct in6_addr	ip_our;
+	struct in6_addr	ip_peer;
+        hip_lsi_t	lsi_our;
+        hip_lsi_t	lsi_peer;
+	int		state;
+	int		heartbeats_on;
+	int		heartbeats_sent;
+	int		heartbeats_received;
+	double		heartbeats_mean;
+	double		heartbeats_variance;
+};
+typedef struct firewall_cache_hl firewall_cache_hl_t;
 
 #endif /* _HIP_ICOMM */
 

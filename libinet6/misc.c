@@ -14,7 +14,6 @@
 #define HOST_NAME_MAX		64
 #endif
 
-
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip,
 				  struct in6_addr *hit,
@@ -220,7 +219,6 @@ void hip_xor_hits(hip_hit_t *res, const hip_hit_t *hit1, const hip_hit_t *hit2){
  * Returns value in range: 0 <= x < range
  */
 unsigned long hip_hash_spi(const void *ptr){
-	u32 spi = * (u32 *) ptr;
 	unsigned long hash = (unsigned long)(*((uint32_t *)ptr));
 	return (hash % ULONG_MAX);
 }
@@ -516,7 +514,7 @@ hip_transform_suite_t hip_select_esp_transform(struct hip_esp_transform *ht){
 
 	return tid;
 }
-
+#ifndef __KERNEL__
 int convert_string_to_address_v4(const char *str, struct in_addr *ip){
 	int ret = 0, err = 0;
 
@@ -528,9 +526,6 @@ int convert_string_to_address_v4(const char *str, struct in_addr *ip){
  out_err:
 	return err;
 }
-
-
-#ifndef __KERNEL__
 
 int convert_string_to_address(const char *str,
 			      struct in6_addr *ip6){
@@ -1695,7 +1690,7 @@ int hip_create_lock_file(char *filename, int killold) {
 	if (lockf(fd, F_TLOCK, 0) < 0)
 	{
 		HIP_IFEL(!killold, -12,
-			 "\nHIP daemon already running with pID %d\n"
+			 "\nHIP daemon already running with pid %d\n"
 			 "Give: -k option to kill old daemon.\n", old_pid);
 
 		HIP_INFO("\nDaemon is already running with pID %d\n"
@@ -1747,7 +1742,7 @@ int hip_create_lock_file(char *filename, int killold) {
 
 #endif /* ! __KERNEL__ */
 
-
+#ifndef __KERNEL__
 /**
  * hip_solve_puzzle - Solve puzzle.
  * @param puzzle_or_solution Either a pointer to hip_puzzle or hip_solution structure
@@ -1854,7 +1849,6 @@ uint64_t hip_solve_puzzle(void *puzzle_or_solution,
 	return err;
 }
 
-
 /**
  * Gets the state of the bex for a pair of ip addresses.
  * @param *src_ip	input for finding the correct entries
@@ -1874,14 +1868,13 @@ int hip_get_bex_state_from_LSIs(hip_lsi_t       *src_lsi,
 				struct in6_addr *src_hit,
 				struct in6_addr *dst_hit){
 	int err = 0, res = -1;
-	hip_lsi_t src_ip4, dst_ip4;
 	struct hip_tlv_common *current_param = NULL;
 	struct hip_common *msg = NULL;
 	struct hip_hadb_user_info_state *ha;
 
 	HIP_ASSERT(src_ip != NULL && dst_ip != NULL);
 
-	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
+	HIP_IFEL(!(msg = hip_msg_alloc()), -1, "malloc failed\n");
 	hip_msg_init(msg);
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0),
 			-1, "Building of daemon header failed\n");
@@ -1936,14 +1929,13 @@ int hip_get_bex_state_from_IPs(struct in6_addr *src_ip,
 			       hip_lsi_t       *src_lsi,
 			       hip_lsi_t       *dst_lsi){
 	int err = 0, res = -1;
-	hip_lsi_t src_ip4, dst_ip4;
 	struct hip_tlv_common *current_param = NULL;
 	struct hip_common *msg = NULL;
 	struct hip_hadb_user_info_state *ha;
 
 	HIP_ASSERT(src_ip != NULL && dst_ip != NULL);
 
-	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
+	HIP_IFEL(!(msg = hip_msg_alloc()), -1, "malloc failed\n");
 	hip_msg_init(msg);
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0),
 			-1, "Building of daemon header failed\n");
@@ -1997,7 +1989,7 @@ int hit_is_local_hit(struct in6_addr *hit){
 	HIP_DEBUG("\n");
 
 	/* Build a HIP message with socket option to get all HITs. */
-	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
+	HIP_IFEL(!(msg = hip_msg_alloc()), -1, "malloc failed\n");
 	hip_msg_init(msg);
 	HIP_IFE(hip_build_user_hdr(msg, SO_HIP_GET_HITS, 0), -1);
 
@@ -2035,7 +2027,6 @@ int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
 		    struct in6_addr *src_lsi, struct in6_addr *dst_lsi,
 		    struct in6_addr *src_ip,  struct in6_addr *dst_ip){
         struct hip_common *msg = NULL;
-        void *param = NULL;
         int err = 0;
 
         HIP_IFE(!(msg = hip_msg_alloc()), -1);
@@ -2114,7 +2105,7 @@ int hip_trigger_bex(struct in6_addr *src_hit, struct in6_addr *dst_hit,
 
  out_err:
         if (msg)
-                free(msg);
+                HIP_FREE(msg);
         return err;
 }
 
@@ -2229,7 +2220,6 @@ void hip_get_rsa_keylen(const struct hip_host_id *host_id,
 	ret->n = bytes;
 }
 
-
 int hip_string_to_lowercase(char *to, const char *from, const size_t count){
 	if(to == NULL || from == NULL || count == 0)
 		return -1;
@@ -2261,7 +2251,7 @@ int hip_string_is_digit(const char *string){
 	}
 	return 0;
 }
-
+#endif
 
 int hip_map_first_id_to_hostname_from_hosts(const struct hosts_file_line *entry,
 					    const void *arg,
@@ -2551,4 +2541,3 @@ void hip_copy_inaddr_null_check(struct in_addr *to, struct in_addr *from) {
 	else
 		memset(to, 0, sizeof(*to));
 }
-
