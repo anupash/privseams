@@ -61,7 +61,7 @@
     The last two rules basically allow the whole orchid namespace. You can set up more specific rules for HITs or use the hipfw to filter traffic (as explained in a later section).
     </para>
     <para>
-    SElinux should be disabled with HIPL. We don't have yet instructions on
+    SElinux should be disabled with HIPL in /etc/selinux/config (you have to reboot the machine after this). We don't have yet instructions on
     configuring SElinux yet. Contributions are welcome.
     </para>
   </chapter>
