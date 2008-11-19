@@ -16,11 +16,17 @@
 #include "pisa.h"
 #include "pisa_cert.h"
 #include <string.h>
+#include <time.h>
 
 #define PISA_RANDOM_LEN 16
 #define PISA_PUZZLE_SEED 0xDEADC0DE
 #define PISA_NONCE_LEN_1SPI (4 + HIP_AH_SHA_LEN)
 #define PISA_NONCE_LEN_2SPI (8 + HIP_AH_SHA_LEN)
+
+/* pisa_check_for_random_update is called at least every PISA_RANDOM_TTL
+ * seconds. Worst case timer resolution depends on the timeout in the select
+ * call */
+#define PISA_RANDOM_TTL 2.0
 
 #ifdef CONFIG_HIP_PERFORMANCE
 #include "performance.h"
@@ -56,6 +62,18 @@ static void pisa_generate_random()
 	get_random_bytes(p1, PISA_RANDOM_LEN);
 
 	HIP_DEBUG("updated pisa_random_data.\n");
+}
+
+void pisa_check_for_random_update()
+{
+	static time_t lastupdate = 0;
+	time_t now;
+
+	time(&now);
+	if (difftime(now, lastupdate) > PISA_RANDOM_TTL) {
+		pisa_generate_random();
+		lastupdate = now;
+	}
 }
 
 /**

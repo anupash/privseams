@@ -18,4 +18,9 @@
  */
 void pisa_init(struct midauth_handlers *h);
 
+/**
+ * Check if a new random number is necessary.
+ */
+void pisa_check_for_random_update();
+
 #endif

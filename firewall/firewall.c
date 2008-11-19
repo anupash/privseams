@@ -2163,6 +2163,11 @@ int main(int argc, char **argv){
 			continue;
 		}
 
+#ifdef CONFIG_HIP_MIDAUTH
+		if (use_midauth)
+			pisa_check_for_random_update();
+#endif
+
 		if (FD_ISSET(h4->fd, &read_fdset)) {
 			HIP_DEBUG("received IPv4 packet from iptables queue\n");
 			err = hip_fw_handle_packet(buf, h4, 4, &ctx);
