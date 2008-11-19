@@ -411,9 +411,9 @@ int hipd_init(int flush_ipsec, int killold)
 #ifdef CONFIG_HIP_PRIVSEP
 	/* Fix to bug id 668 */
 	getaddrinfo_disable_hit_lookup();
+	HIP_IFEL(hip_set_lowcapability(0), -1, "Failed to set capabilities\n");
 #endif /* CONFIG_HIP_PRIVSEP */
 
-	HIP_IFEL(hip_set_lowcapability(0), -1, "Failed to set capabilities\n");
 
 #ifdef CONFIG_HIP_HI3
 	if( hip_use_i3 )

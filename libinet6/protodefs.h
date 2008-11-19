@@ -8,6 +8,8 @@
 #ifdef __KERNEL__
 #  include "usercompat.h"
    typedef uint16_t in_port_t;
+  #define MAX_HASH_LENGTH 0
+  #define MAX_TREE_DEPTH 0
 #else
 #  include "hashchain.h"
 #  include "esp_prot_common.h"
