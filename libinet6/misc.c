@@ -8,6 +8,7 @@
  * @see    misc.h
  */
 #include "misc.h"
+#include <string.h>
 
 // needed due to missing system inlcude for openWRT
 #ifndef HOST_NAME_MAX
@@ -2014,6 +2015,120 @@ int hit_is_local_hit(struct in6_addr *hit){
  out_err:
 	return res;
 }
+
+
+
+
+
+
+
+
+/**
+ * Obtains the information needed by the dns proxy, based on the ip addr
+ * 
+ * @param *ip_addr	input, the ip address to look for
+ * @param *hit		output, the corresponding hit
+ * @param *lsi		output, the corresponding lsi	
+ * 
+ * @return		1 - if a corresponding entry is found
+ * 			0 - is returned if there is no entry
+ */
+/*int hip_get_info_for_dnsproxy_from_ip(
+				struct in6_addr *ip_addr,
+				struct in6_addr *hit,
+				hip_lsi_t       *lsi){
+	int err = 0, res = 0;
+	hip_lsi_t src_ip4, dst_ip4;
+	struct hip_tlv_common *current_param = NULL;
+	struct hip_common *msg = NULL;
+	struct hip_hadb_user_info_state *ha;
+  
+	HIP_ASSERT(ip_addr != NULL);
+
+	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
+	hip_msg_init(msg);
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0),
+				-1, "Building of daemon header failed\n");
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send recv daemon info\n");
+
+	while((current_param = hip_get_next_param(msg, current_param)) != NULL){
+		ha = hip_get_param_contents_direct(current_param);
+		if(ipv6_addr_cmp(ip_addr, &ha->ip_our) == 0){
+			*hit = ha->hit_our;
+			*lsi = ha->lsi_our;
+			res = 1;
+			break;
+		}
+		else if(ipv6_addr_cmp(ip_addr, &ha->ip_peer) == 0){
+			*hit = ha->hit_peer;
+			*lsi = ha->lsi_peer;
+			res = 1;
+			break;
+		}
+	}
+out_err:
+        if(msg)
+                HIP_FREE(msg);  
+        return res;
+}
+*/
+
+/**
+ * Obtains the information needed by the dns proxy, based on the hostname
+ * 
+ * @param *hostname	input, the ip address to look for
+ * @param *hit		output, the corresponding hit
+ * @param *lsi		output, the corresponding lsi	
+ * 
+ * @return		1 - if a corresponding entry is found
+ * 			0 - is returned if there is no entry
+ */
+/*int hip_get_info_for_dnsproxy_from_hostname(
+				const char      *hostname,
+				struct in6_addr *ip,
+				struct in6_addr *hit,
+				hip_lsi_t       *lsi){
+	int err = 0, res = 0;
+	hip_lsi_t src_ip4, dst_ip4;
+	struct hip_tlv_common *current_param = NULL;
+	struct hip_common *msg = NULL;
+	struct hip_hadb_user_info_state *ha;
+  
+	HIP_ASSERT(hostname != NULL);
+
+	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed\n");
+	hip_msg_init(msg);
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0),
+				-1, "Building of daemon header failed\n");
+	HIP_IFEL(hip_send_recv_daemon_info(msg), -1, "send recv daemon info\n");
+
+	while((current_param = hip_get_next_param(msg, current_param)) != NULL){
+		ha = hip_get_param_contents_direct(current_param);
+
+		if(strcmp(hostname, &ha->peer_hostname) == 0){
+			*ip =  ha->ip_peer;
+			*hit = ha->hit_peer;
+			*lsi = ha->lsi_peer;
+			res = 1;
+			break;
+		}
+	}
+
+out_err:
+        if(msg)
+                HIP_FREE(msg);  
+        return res;
+}
+*/
+
+
+
+
+
+
+
+
+
 
 
 /* This builds a msg which will be sent to the HIPd in order to trigger

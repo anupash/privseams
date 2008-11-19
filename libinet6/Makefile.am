@@ -76,9 +76,7 @@ EXTRA_DIST = include_glibc21 include_glibc22 include_glibc23 include_glibc
 INCLUDES += -I../opendht
 LDADD += ../opendht/.libs/libhipopendht.a 
 
-if HIP_HI3
- INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
-endif
+INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
 
 getendpointinfo.c: include/netdb.h
 

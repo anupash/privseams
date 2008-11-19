@@ -59,7 +59,8 @@ int hip_build_netlink_dummy_header(struct hip_common *);
 void hip_build_network_hdr(struct hip_common *, uint8_t, uint16_t,
                            const struct in6_addr *, const struct in6_addr *);
 
-int hip_host_id_entry_to_endpoint(struct hip_host_id_entry *entry, struct hip_common *msg);
+int hip_host_id_entry_to_endpoint(struct hip_host_id_entry *entry,
+				  void *);
 
 int hip_host_id_hits(hip_ha_t *entry,struct hip_common *msg);
 
@@ -225,7 +226,10 @@ int rsa_to_hip_endpoint(RSA *rsa, struct endpoint_hip **endpoint,
 			se_hip_flags_t endpoint_flags, const char *hostname);
 int dsa_to_hip_endpoint(DSA *dsa, struct endpoint_hip **endpoint,
 			se_hip_flags_t endpoint_flags, const char *hostname);
+int hip_build_param_hip_hdrr_info(struct hip_common * msg,
+				    struct hip_hdrr_info * hdrr_info);
 #endif
+
 /**
  * Builds a REG_INFO parameter.
  *

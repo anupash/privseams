@@ -690,6 +690,78 @@ struct hip_common *hip_create_r1(const struct in6_addr *src_hit,
 }
 
 /**
+ * Builds HOST ID and signature and append it to msg after locator
+ *
+ * @param msg          a pointer to hip_common to append the HOST_ID param and sig param
+ * @param key          a pointer to HIT used as a key for hash table to retrieve host id
+ * @return             zero on success, or negative error value on error
+ */
+int hip_build_host_id_and_signature(struct hip_common *msg,  unsigned char * key) 
+{
+	struct in6_addr addrkey;
+	struct hip_host_id *hi_private = NULL;
+	struct hip_host_id *hi_public = NULL;
+	int err = 0;
+	int alg = -1;
+    
+	if (inet_pton(AF_INET6, (char *)key, &addrkey.s6_addr) == 0)
+    { 
+    	_HIP_DEBUG("Lookup for HOST ID structure from HI DB failed as key provided is not a HIT ");
+    	goto out_err;
+    }
+    else 
+    {
+    	/*
+    	 * Setting two message parameters as stated in RFC for HDRR
+    	 * First one is sender's HIT
+    	 * Second one is message type, which is draft is assumed to be 20 but it is already used so using 22
+    	 */
+    	msg->hits = addrkey;
+    	hip_set_msg_type(msg,HIP_HDRR);
+    	
+    	/*
+    	 * Below is the code for getting host id and appending it to the message (after removing private 
+    	 * key from it hi_public
+    	 * Where as hi_private is used to create signature on message
+    	 * Both of these are appended to the message sequally
+    	 */
+    	hi_private = hip_get_host_id (HIP_DB_LOCAL_HID, &addrkey, HIP_ANY_ALGO); 
+    	hi_public = hip_get_host_id (HIP_DB_LOCAL_HID, &addrkey, HIP_ANY_ALGO); 
+    	if (hi_private == NULL || hi_public == NULL)
+    	{
+    		HIP_ERROR("Unable to locate HI from HID with HIT as key");
+    		err = -1;
+    		goto out_err;
+    	}
+    	HIP_IFEL((hip_get_public_key(hi_public)== NULL),-1, "Removal of private key from Host ID before sending it to openDHT failed \n");
+    	err = hip_build_param(msg, hi_public);
+    	_HIP_DUMP_MSG(msg);
+    	if (err != 0)
+    	{
+    		goto out_err;
+    	}
+    	
+    	alg = hip_get_host_id_algo(hi_private);
+  		switch (alg) {
+			case HIP_HI_RSA:
+				hip_rsa_sign(hi_private, msg);
+				break;
+			case HIP_HI_DSA:
+				hip_dsa_sign(hi_private, msg);
+				break;
+			default:
+				HIP_ERROR("Unsupported HI algorithm (%d)\n", alg);
+				break;
+		}
+		_HIP_DUMP_MSG(msg);
+    }
+    out_err:
+     free (hi_private);
+   	 free (hi_public);
+     return err;
+}
+
+/**
  * Transmits an R1 packet to the network.
  *
  * Sends an R1 packet to the peer and stores the cookie information that was
@@ -846,15 +918,14 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 	/* Else R1 is send on raw HIP. */
 	else
 	{
-#ifdef CONFIG_HIP_HI3
-		if( i1_info->hi3_in_use ) {
+		if(i1_info->hi3_in_use){
 			HIP_IFEL(hip_send_i3(i1_daddr,
 					     r1_dst_addr, 0, 0,
 					     r1pkt, NULL, 0),
 				 -ECOMM,
 				 "Sending R1 packet through i3 failed.\n");
 		}
-		else {
+		else{
 			HIP_IFEL(hip_send_raw(
 					 i1_daddr,
 					 r1_dst_addr, 0, 0,
@@ -862,11 +933,6 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 				 -ECOMM,
 				 "Sending R1 packet on raw HIP failed.\n");
 		}
-#else
-	     HIP_IFEL(hip_send_raw(
-			   i1_daddr, r1_dst_addr, 0, 0, r1pkt, NULL, 0),
-		      -ECOMM, "Sending R1 packet on raw HIP failed.\n");
-#endif
 	}
 
  out_err:
@@ -1519,7 +1585,7 @@ out_err:
 	return err;
 }
 
-#ifdef CONFIG_HIP_HI3
+
 /**
  * Hi3 outbound traffic processing.
  *
@@ -1593,7 +1659,6 @@ int hip_send_i3(struct in6_addr *src_addr, struct in6_addr *peer_addr,
  out_err:
 	return err;
 }
-#endif
 
 
 /**
