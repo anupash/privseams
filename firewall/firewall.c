@@ -596,11 +596,6 @@ int firewall_init_rules(){
 		system("iptables -I HIPFW-OUTPUT -p 50 -j QUEUE");
 		system("iptables -I HIPFW-OUTPUT -p 17 --dport 50500 -j QUEUE");
 		system("iptables -I HIPFW-OUTPUT -p 17 --sport 50500 -j QUEUE");
- 
-		system("ip6tables -I HIPFW-FORWARD -p 139 -j QUEUE");
-		system("ip6tables -I HIPFW-FORWARD -p 50 -j QUEUE");
-		system("ip6tables -I HIPFW-FORWARD -p 17 --dport 50500 -j QUEUE");
-		system("ip6tables -I HIPFW-FORWARD -p 17 --sport 50500 -j QUEUE");
 
 		system("ip6tables -I HIPFW-FORWARD -p 139 -j QUEUE");
 		system("ip6tables -I HIPFW-FORWARD -p 50 -j QUEUE");

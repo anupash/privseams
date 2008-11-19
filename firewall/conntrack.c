@@ -1141,7 +1141,6 @@ int handle_update(const struct in6_addr * ip6_src,
 			// insertion successful -> go on
 			tuple = get_tuple_by_hits(&common->hits, &common->hitr);
 			HIP_DEBUG("connection insertion successful\n");
-			tuple = get_tuple_by_hits(&common->hits, &common->hitr);
 
 			free(data);
 
