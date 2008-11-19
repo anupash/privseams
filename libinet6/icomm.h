@@ -222,12 +222,44 @@
 //definition of firewall db records
 struct firewall_hl{
 	struct in6_addr ip_peer;
-	hip_lsi_t lsi;
-	hip_hit_t hit_our;
-        hip_hit_t hit_peer;
-        int       bex_state;
+	hip_lsi_t 	lsi;
+	hip_hit_t 	hit_our;
+        hip_hit_t 	hit_peer;
+        int       	bex_state;
 };
 typedef struct firewall_hl firewall_hl_t;
+
+struct firewall_cache_hl
+{
+	hip_hit_t	hit_peer;
+	hip_hit_t	hit_our;
+	struct in6_addr	ip_our;
+	struct in6_addr	ip_peer;
+        hip_lsi_t	lsi_our;
+        hip_lsi_t	lsi_peer;
+	int		state;
+	int		heartbeats_on;
+	int		heartbeats_sent;
+	int		heartbeats_received;
+	double		heartbeats_mean;
+	double		heartbeats_variance;
+};
+typedef struct firewall_cache_hl firewall_cache_hl_t;
+
+
+/*----Firewall cache----*/
+/*Values for the port cache of the firewall*/
+#define FIREWALL_PORT_CACHE_IPV6_TRAFFIC	1
+#define FIREWALL_PORT_CACHE_LSI_TRAFFIC		2
+#define FIREWALL_PORT_CACHE_IPV4_TRAFFIC	3
+#define FIREWALL_PORT_CACHE_KEY_LENGTH		20
+
+struct firewall_port_cache_hl
+{
+	char port_and_protocol[FIREWALL_PORT_CACHE_KEY_LENGTH];	//key
+	int  traffic_type;					//value
+};
+typedef struct firewall_port_cache_hl firewall_port_cache_hl_t;
 
 #endif /* _HIP_ICOMM */
 
