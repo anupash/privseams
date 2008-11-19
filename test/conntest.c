@@ -973,7 +973,6 @@ int main_server_native(int socktype, char *port_name, char *name)
 					if (cmsg->cmsg_level == IPPROTO_IPV6 &&
 					    cmsg->cmsg_type == IPV6_2292PKTINFO) {
 						pktinfo = CMSG_DATA(cmsg);
-						
 						break;
 					}
 				}
