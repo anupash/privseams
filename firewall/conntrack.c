@@ -5,6 +5,7 @@
 
 #ifdef CONFIG_HIP_MIDAUTH
 #include "pisa.h"
+extern int use_midauth;
 #endif
 
 #ifdef CONFIG_HIP_PERFORMANCE
@@ -1684,7 +1685,7 @@ int filter_esp_state(const struct in6_addr *dst_addr,
 	}
 
 #ifdef CONFIG_HIP_MIDAUTH
-	if (tuple->connection->pisa_state == PISA_STATE_DISALLOW) {
+	if (use_midauth && tuple->connection->pisa_state == PISA_STATE_DISALLOW) {
 		HIP_DEBUG("PISA: ESP unauthorized -> dropped\n");
 		err = 0;
 	}
