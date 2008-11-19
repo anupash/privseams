@@ -17,7 +17,7 @@ include_HEADERS += esp_decrypt.h firewall_defines.h proxydb.h conndb.h esp_decry
 include_HEADERS += user_ipsec_api.h  user_ipsec_esp.h user_ipsec_sadb.h
 include_HEADERS += proxy.h opptcp.h firewalldb.h lsi.h fw_stun.h esp_prot_api.h esp_prot_fw_msg.h
 include_HEADERS += esp_prot_conntrack.h user_ipsec_fw_msg.h 
-include_HEADERS += sava_api.h cache.h
+include_HEADERS += sava_api.h cache.h cache_port.h
 
 INCLUDES = $(hipl_common_include_paths)  -I$(HIPL_PJPROJECT_NATH)/include -I$(HIPL_PJPROJECT_LIB)/include -I$(HIPL_PJPROJECT_LIB_UTIL)/include -I$(HIPL_PJPROJECT_MEDIA)/include
 
@@ -29,7 +29,7 @@ hipfw_SOURCES = firewall.c conntrack.c rule_management.c helpers.c firewall_cont
 hipfw_SOURCES += user_ipsec_api.c user_ipsec_esp.c user_ipsec_sadb.c user_ipsec_fw_msg.c
 hipfw_SOURCES += esp_prot_api.c esp_prot_fw_msg.c esp_prot_conntrack.c
 hipfw_SOURCES += proxy.c opptcp.c firewalldb.c lsi.c fw_stun.c
-hipfw_SOURCES += sava_api.c cache.c
+hipfw_SOURCES += sava_api.c cache.c cache_port.c
 
 hipfw_LDADD = -lipq ../libinet6/.libs/libinet6.a
 hipfw_LDADD += -lpthread -luuid

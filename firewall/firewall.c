@@ -618,6 +618,9 @@ int firewall_init_rules(){
 	// Initializing local cache database
 	firewall_cache_init_hldb();
 
+	// Initializing local port cache database
+	firewall_port_cache_init_hldb();
+
 	system("iptables -I INPUT -j HIPFW-INPUT");
 	system("iptables -I OUTPUT -j HIPFW-OUTPUT");
 	system("iptables -I FORWARD -j HIPFW-FORWARD");
