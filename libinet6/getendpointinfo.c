@@ -223,7 +223,7 @@ int setmyeid(struct sockaddr_eid *my_eid,
     }
   }
 
-  HIP_DEBUG_HIT("Calculated HIT from hip_host_id\n", &ep_hip->id.hit);
+  HIP_DEBUG_HIT("Calculated HIT from hip_host_id", &ep_hip->id.hit);
 
   err = hip_build_param_contents(msg, (void *) &ep_hip->id.hit, HIP_PARAM_HIT,
                                       sizeof(struct in6_addr));
@@ -253,15 +253,14 @@ int setmyeid(struct sockaddr_eid *my_eid,
 
   /*Laura*********************/
   //hip_send_daemon_info(msg_HIT); // for app. specified HIs
-  HIP_DEBUG("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n calling socket..\n\n\n");
+  _HIP_DEBUG("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n calling socket..\n\n\n");
   socket_fd = socket(PF_HIP, SOCK_STREAM, 0);
   if(socket_fd == -1){
     HIP_ERROR("Couldn't create socket\n");
     err = -1;
     goto out_err;
   }
-  else
-  HIP_DEBUG("\n\n\n\n\n\n\n\n\n\n great no error..\n\n\n");
+  _HIP_DEBUG("\n\n\n\n\n\n\n\n\n\n great no error..\n\n\n");
 
   len = hip_get_msg_total_len(msg);
   err = getsockopt(socket_fd, IPPROTO_HIP, SO_HIP_SOCKET_OPT, (void *)msg, &len);
@@ -631,7 +630,6 @@ int get_localhost_endpointinfo(const char *basename,
   /*Support for HITs (14.3.06 Laura)*/
   hints->ei_flags |= HIP_ENDPOINT_FLAG_HIT;
 
-
   /* check the algorithm from PEM format key */
   fp = fopen(basename, "rb");
   if (!fp) {
@@ -735,8 +733,8 @@ int get_localhost_endpointinfo(const char *basename,
     }
   }
 
-  err = setmyeid(((struct sockaddr_eid *) (*res)->ei_endpoint), servname,
-		 (struct endpoint *) endpoint_hip, ifaces);
+//  err = setmyeid(((struct sockaddr_eid *) (*res)->ei_endpoint), servname,
+//		 (struct endpoint *) endpoint_hip, ifaces);
   if (err) {
     HIP_ERROR("Failed to set up my EID (%d)\n", err);
     err = EEI_SYSTEM;
@@ -869,7 +867,7 @@ int get_hipd_peer_list(const char *nodename, const char *servname,
   }
 
   /* Call the kernel */
-  err = hip_recv_daemon_info(msg, 0);
+  err = hip_send_recv_daemon_info(msg);
   if (err) {
     err = EEI_SYSTEM;
     HIP_ERROR("Failed to recv msg\n");
@@ -1196,23 +1194,15 @@ int get_peer_endpointinfo(const char *hostsfile,
     /* create endpointinfo structure for every HIT */
     {
       einfo = calloc(1, sizeof(struct endpointinfo));
-      if (!einfo) {
-	err = EEI_MEMORY;
-	goto out_err;
-      }
 
+      HIP_IFE(!einfo, EEI_MEMORY);
+      
       einfo->ei_endpoint = calloc(1, sizeof(struct sockaddr_eid));
-      if (!einfo->ei_endpoint) {
-	err = EEI_MEMORY;
-	goto out_err;
-      }
+      HIP_IFE(!einfo->ei_endpoint, EEI_MEMORY);
 
       if (hints->ei_flags & EI_CANONNAME) {
 	einfo->ei_canonname = malloc(fqdn_str_len + 1);
-	if (!(einfo->ei_canonname)) {
-	  err = EEI_MEMORY;
-	  goto out_err;
-	}
+	HIP_IFE(!einfo->ei_canonname, EEI_MEMORY);
 	HIP_ASSERT(strlen(fqdn_str) == fqdn_str_len);
 	strcpy(einfo->ei_canonname, fqdn_str);
 	/* XX FIX: we should append the domain name if it does not exist */
@@ -1421,6 +1411,7 @@ int getendpointinfo(const char *nodename, const char *servname,
     }
     err = get_localhost_endpointinfo(filenamebase, servname,
 				     &modified_hints, &first);
+
     free(filenamebase);
     current = first;
 
@@ -1447,6 +1438,10 @@ int getendpointinfo(const char *nodename, const char *servname,
 
       err = get_localhost_endpointinfo(filenamebase, servname,
 				       &modified_hints, &new);
+      if (err) {
+	HIP_ERROR("get_localhost_endpointinfo() failed\n");
+	goto err_out;
+      }
 
       current->ei_next = new;
       current = new;

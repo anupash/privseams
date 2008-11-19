@@ -1,4 +1,8 @@
-#include <sys/capability.h>
+#ifdef CONFIG_HIP_OPENWRT
+# include <linux/capability.h>
+#else
+# include <sys/capability.h>
+#endif
 #include <sys/prctl.h>
 #include <sys/types.h>
 #include <pwd.h>
@@ -14,6 +18,9 @@
 
 int hip_user_to_uid(char *name) {
 	int uid = -1, i;
+
+	//Added by Dmitriy
+#ifndef CONFIG_HIP_OPENWRT
 	struct passwd *pwp, pw;
 	char buf[4096];
 
@@ -30,22 +37,26 @@ int hip_user_to_uid(char *name) {
 		}
 	}
 	endpwent();
+#endif
 	return uid;
 }
 
 #ifdef CONFIG_HIP_OPENWRT
+
+#define _LINUX_CAPABILITY_VERSION_HIPL	0x19980330
 
 /*
  * Note: this function does not go well with valgrind
  */
 int hip_set_lowcapability(int run_as_sudo) {
   int err = 0;
-  uid_t uid;
+
 #ifdef CONFIG_HIP_PRIVSEP
+  uid_t uid;
   //struct passwd *nobody_pswd;
   //uid_t ruid,euid;
-  capheader_t header;
-  capdata_t data; 
+  struct __user_cap_header_struct header;
+  struct __user_cap_data_struct data; 
 
   header.pid=0;
   header.version = _LINUX_CAPABILITY_VERSION_HIPL;

@@ -14,11 +14,11 @@
 #  include "usercompat.h"
 #else
 #  include "kerncompat.h"
+#  include "hidb.h"
 #endif
 
 #include "registration.h"
 #include "utils.h"
-#include "hidb.h"
 #include "icomm.h"
 
 #ifdef CONFIG_HIP_LIBHIPTOOL
@@ -153,7 +153,9 @@ int addr2ifindx(struct in6_addr *local_address);
 void get_random_bytes(void *buf, int n);
 
 int hip_build_digest(const int type, const void *in, int in_len, void *out);
+#ifndef __KERNEL__
 int dsa_to_dns_key_rr(DSA *dsa, unsigned char **buf);
+#endif
 
 void *hip_cast_sa_addr(void *sockaddr);
 int hip_sockaddr_len(const void *sockaddr);
