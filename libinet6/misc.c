@@ -2338,7 +2338,7 @@ int hip_map_first_hostname_to_ip_from_hosts(const struct hosts_file_line *entry,
 
   return err;
 }
-
+#ifndef __KERNEL__
 int hip_for_each_hosts_file_line(char *hosts_file,
 				 int (*func)(const struct hosts_file_line *line,
 					     const void *arg,
@@ -2525,6 +2525,7 @@ int hip_map_id_to_ip_from_hosts_files(hip_hit_t *hit, hip_lsi_t *lsi, struct in6
  out_err:
   return err;
 }
+#endif /* !__KERNEL__ */
 
 void hip_copy_in6addr_null_check(struct in6_addr *to, struct in6_addr *from) {
 	HIP_ASSERT(to);

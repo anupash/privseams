@@ -100,6 +100,7 @@ int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m,
 	struct in6_addr src_addr, dst_addr;
 	struct in_addr src_v4, dst_v4;
 	struct ip6_hdr* ip6_hdr = (struct ip6_hdr*) m->payload;
+	firewall_port_cache_hl_t *port_cache_entry = NULL;
 
 	ip_hdr_size = sizeof(struct ip6_hdr);
 
@@ -114,7 +115,7 @@ int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m,
 		break;
 	case IPPROTO_ICMPV6:
 		HIP_DEBUG("ICMPv6 packet\n");
-		goto out_err;
+		//goto out_err;
 		break;
 	default:
 		HIP_DEBUG("Unhandled packet %d\n", ip6_hdr->ip6_nxt);
@@ -122,17 +123,10 @@ int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m,
 		break;
 	}
 
-	/* @todo: think about caching this (note: how to notice changes?) */
-	bind6 = hip_get_proto_info(ntohs(portDest), proto);
-
-	/* If IPv6 app has bind() to the port number, skip LSI and
-	   system-based opportunistic mode (currently IPv4-only)
-	   handling */
-	HIP_IFE((bind6 == 1), 0);
-
-	/* The socket is bound to LSI, cannot use system-based opp mode */
-	HIP_IFE((bind6 == 2 && (sys_opp_support &&
-				!lsi_support)), 0);
+	/* port caching */
+	port_cache_entry = firewall_port_cache_db_match(
+				((struct tcphdr*)((m->payload) + ip_hdr_size))->dest,
+				ip6_hdr->ip6_nxt);
 
 	if (sys_opp_support && lsi_support) {
 		/* Currently preferring LSIs over opp. connections */
@@ -160,7 +154,11 @@ int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m,
 		HIP_IFEL(reinject_packet(&dst_addr, &src_addr, m, 6, 1), -1,
 			 "Failed to reinject with LSIs\n");
 		HIP_DEBUG("Successful LSI transformation. Drop original\n");
-		verdict = 0;
+
+		if (ip6_hdr->ip6_nxt == IPPROTO_ICMPV6)
+			verdict = 1; /* broadcast: dst may be ipv4 or ipv6 */
+		else
+			verdict = 0; /* drop original */
 	} else {
 		HIP_DEBUG("Trying sys opp transformation\n");
 		IPV6_TO_IPV4_MAP(&src_addr, &src_v4);
@@ -398,7 +396,7 @@ int reinject_packet(struct in6_addr *src_hit, struct in6_addr *dst_hit,
 	_HIP_DEBUG("      Protocol %d\n", protocol);
 	_HIP_DEBUG("      ipOrigTraffic %d \n", ipOrigTraffic);
 
-	msg = (u8 *)HIP_MALLOC(packet_length, 0);
+	msg = (u8 *)HIP_MALLOC((packet_length + sizeof(struct ip)), 0);
 	memcpy(msg, (m->payload)+ip_hdr_size, packet_length);
 
 	if (protocol == IPPROTO_ICMP && incoming) {

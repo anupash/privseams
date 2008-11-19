@@ -618,6 +618,9 @@ int firewall_init_rules(){
 	// Initializing local cache database
 	firewall_cache_init_hldb();
 
+	// Initializing local port cache database
+	firewall_port_cache_init_hldb();
+
 	system("iptables -I INPUT -j HIPFW-INPUT");
 	system("iptables -I OUTPUT -j HIPFW-OUTPUT");
 	system("iptables -I FORWARD -j HIPFW-FORWARD");
@@ -2021,10 +2024,11 @@ int main(int argc, char **argv){
 	HIP_IFEL(bind(hip_fw_sock, (struct sockaddr *)& sock_addr,
 		      sizeof(sock_addr)), -1, "Bind on firewall socket addr failed\n");
 
+#ifdef CONFIG_HIP_PRIVSEP
 	if (limit_capabilities) {
 		HIP_IFEL(hip_set_lowcapability(0), -1, "Failed to reduce priviledges");
 	}
-
+#endif
 	//init_timeout_checking(timeout);
 
 #ifdef CONFIG_HIP_HIPPROXY

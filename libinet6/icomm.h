@@ -246,5 +246,20 @@ struct firewall_cache_hl
 };
 typedef struct firewall_cache_hl firewall_cache_hl_t;
 
+
+/*----Firewall cache----*/
+/*Values for the port cache of the firewall*/
+#define FIREWALL_PORT_CACHE_IPV6_TRAFFIC	1
+#define FIREWALL_PORT_CACHE_LSI_TRAFFIC		2
+#define FIREWALL_PORT_CACHE_IPV4_TRAFFIC	3
+#define FIREWALL_PORT_CACHE_KEY_LENGTH		20
+
+struct firewall_port_cache_hl
+{
+	char port_and_protocol[FIREWALL_PORT_CACHE_KEY_LENGTH];	//key
+	int  traffic_type;					//value
+};
+typedef struct firewall_port_cache_hl firewall_port_cache_hl_t;
+
 #endif /* _HIP_ICOMM */
 
