@@ -13,6 +13,7 @@
  */
 #include "user.h"
 
+
 int hip_sendto_user(const struct hip_common *msg, const struct sockaddr *dst){
         return sendto(hip_user_sock, msg, hip_get_msg_total_len(msg),
 		      0, (struct sockaddr *)dst, hip_sockaddr_len(dst));
@@ -164,15 +165,14 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		HIP_IFEL(hip_set_logdebug(LOGDEBUG_NONE), -1,
 			 "Error when setting daemon DEBUG status to NONE\n");
 		break;
-
 	case SO_HIP_CONF_PUZZLE_NEW:
 		err = hip_recreate_all_precreated_r1_packets();
 		break;
 	case SO_HIP_CONF_PUZZLE_GET:
-		err = -ESOCKTNOSUPPORT; /* TBD */
+		err = hip_get_puzzle_difficulty_msg(msg);
 		break;
 	case SO_HIP_CONF_PUZZLE_SET:
-		err = -ESOCKTNOSUPPORT; /* TBD */
+		err = hip_set_puzzle_difficulty_msg(msg);
 		break;
 	case SO_HIP_CONF_PUZZLE_INC:
 		dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
@@ -182,6 +182,12 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
 		hip_dec_cookie_difficulty(dst_hit);
 		break;
+	case SO_HIP_SET_HI3_ON:
+		err = hip_set_hi3_status(msg);
+	break;
+	case SO_HIP_SET_HI3_OFF:
+		err = hip_set_hi3_status(msg);
+	break;
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	case SO_HIP_SET_OPPORTUNISTIC_MODE:
 	  	err = hip_set_opportunistic_mode(msg);
@@ -256,83 +262,96 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 
         case SO_HIP_DHT_GW:
 	{
-		char tmp_ip_str[20];
-		int tmp_ttl, tmp_port;
+		char tmp_ip_str[20], tmp_ip_str6[39], tmp_host_name[256];
+		int tmp_ttl, tmp_port, is_hostname = 0, is_ipv4 = 0, is_ipv6 = 0;
 		const char *pret;
 		int ret;
 		struct in_addr tmp_v4;
 		struct hip_opendht_gw_info *gw_info;
-
-		HIP_IFEL(!(gw_info = hip_get_param(msg, HIP_PARAM_OPENDHT_GW_INFO)), -1,
-			 "No gw struct found\n");
-		memset(&tmp_ip_str,'\0',20);
+		  
+		HIP_IFEL(!(gw_info = hip_get_param(msg, HIP_PARAM_OPENDHT_GW_INFO)),
+				-1, "No gw struct found\n");
+		memset(&tmp_ip_str, '\0', 20);
 		tmp_ttl = gw_info->ttl;
 		tmp_port = htons(gw_info->port);
+		memcpy(tmp_host_name, gw_info->host_name, strlen(gw_info->host_name));
 
-
-		IPV6_TO_IPV4_MAP(&gw_info->addr, &tmp_v4);
-		/**
-		 * @todo this gives a compiler warning! warning: assignment from
-		 * incompatible pointer type
-		 */
-		pret = inet_ntop(AF_INET, &tmp_v4, tmp_ip_str, 20);
-		HIP_DEBUG("Got address %s, port %d, TTL %d from hipconf\n",
-			  tmp_ip_str, tmp_port, tmp_ttl);
-		ret = resolve_dht_gateway_info (tmp_ip_str, &opendht_serving_gateway);
-		if (ret == 0)
-		{
-			HIP_DEBUG("Serving gateway changed\n");
-			hip_opendht_fqdn_sent = 0;
-			hip_opendht_hit_sent = 0;
-			hip_opendht_error_count = 0;
+		//hostname
+		if (strlen(tmp_host_name) > 0) {
+		    is_hostname = 1;
+		}//ipv4 address
+		else if (IN6_IS_ADDR_V4MAPPED(&gw_info->addr)) {
+		    is_ipv4 = 1;
+		}//ipv6 address
+		else {
+		    is_ipv6 = 1;
 		}
-		else
-		{
-			HIP_DEBUG("Error in changing the serving gateway!");
+
+		if (is_hostname) {
+		    ret = resolve_dht_gateway_info(tmp_host_name,
+					&opendht_serving_gateway,
+					tmp_port, AF_INET);
+		} else if (is_ipv4) {
+		    IPV6_TO_IPV4_MAP(&gw_info->addr, &tmp_v4);
+		    pret = inet_ntop(AF_INET, &tmp_v4, tmp_ip_str, 20);
+		    HIP_DEBUG("Got address %s, port %d, TTL %d from hipconf\n",
+					  tmp_ip_str, htons(gw_info->port), gw_info->ttl);
+		    ret = resolve_dht_gateway_info(tmp_ip_str,
+						   &opendht_serving_gateway,
+						   tmp_port, AF_INET);
+		} else if (is_ipv6) {
+		    pret = inet_ntop(AF_INET6, &gw_info->addr, tmp_ip_str6, 39);
+		    HIP_DEBUG("Got address %s, port %d, TTL %d from hipconf\n",
+					  tmp_ip_str6, htons(gw_info->port), gw_info->ttl);
+		    ret = resolve_dht_gateway_info(tmp_ip_str6,
+						   &opendht_serving_gateway,
+						   tmp_port, AF_INET6);
+		}
+
+		
+		if (ret == 0) {
+		    HIP_DEBUG("Serving gateway changed\n");
+		    opendht_serving_gateway_ttl = tmp_ttl;
+		    opendht_serving_gateway_port = tmp_port;
+		    if (strlen(tmp_host_name) > 0) {
+				memset(opendht_host_name, '\0', sizeof(opendht_host_name));
+				memcpy(opendht_host_name, tmp_host_name, strlen(tmp_host_name));
+		    }
+		    hip_opendht_error_count = 0;
+		    if (hip_opendht_sock_fqdn > 0) {
+			close(hip_opendht_sock_fqdn);
+			hip_opendht_sock_fqdn = init_dht_gateway_socket_gw(hip_opendht_sock_fqdn, opendht_serving_gateway);
+				hip_opendht_fqdn_sent = STATE_OPENDHT_IDLE;
+		    }
+		    if (hip_opendht_sock_hit > 0) {
+			close(hip_opendht_sock_hit);
+			hip_opendht_sock_hit = init_dht_gateway_socket_gw(hip_opendht_sock_hit, opendht_serving_gateway);
+			hip_opendht_hit_sent = STATE_OPENDHT_IDLE;
+		    }
+		    init_dht_sockets(&hip_opendht_sock_fqdn, &hip_opendht_fqdn_sent); 
+		    init_dht_sockets(&hip_opendht_sock_hit, &hip_opendht_hit_sent);
+		}
+		else{
+		    HIP_DEBUG("Error in changing the serving gateway!");
 		}
 	}
-	break;
+	break; 
         case SO_HIP_DHT_SERVING_GW:
         {
-	        struct in_addr ip_gw;
-		struct in6_addr ip_gw_mapped;
-		int rett = 0, errr = 0;
-		struct sockaddr_in *sa;
-		if (opendht_serving_gateway == NULL) {
-		        opendht_serving_gateway = malloc(sizeof(struct addrinfo));
-			memset(opendht_serving_gateway, 0, sizeof(struct addrinfo));
+		int err_value = 0;
+		if(hip_opendht_inuse != SO_HIP_DHT_ON){
+			err_value = 5;
+			hip_build_param_contents(msg, &err_value,
+					 HIP_PARAM_INT, sizeof(int));
+		}else if((opendht_serving_gateway == NULL) ||
+			 (opendht_serving_gateway->ai_addr == NULL)){
+			err_value = 4;
+			hip_build_param_contents(msg, &err_value,
+					 HIP_PARAM_INT, sizeof(int));
+		}else{
+			err = hip_get_dht_mapping_for_HIT_msg(msg);
 		}
-
-		if (opendht_serving_gateway->ai_addr == NULL) {
-		        opendht_serving_gateway->ai_addr = malloc(sizeof(struct sockaddr_in));
-			memset(opendht_serving_gateway->ai_addr, 0, sizeof(struct sockaddr_in));
-		}
-
-		sa = (struct sockaddr_in*)opendht_serving_gateway->ai_addr;
-		rett = inet_pton(AF_INET, inet_ntoa(sa->sin_addr), &ip_gw);
-		IPV4_TO_IPV6_MAP(&ip_gw, &ip_gw_mapped);
-		HIP_DEBUG_HIT("dht gateway address (mapped) to be sent", &ip_gw_mapped);
-
-		memset(msg, 0, HIP_MAX_PACKET);
-
-		if (hip_opendht_inuse == SO_HIP_DHT_ON) {
-  		        errr = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped,
-							       opendht_serving_gateway_ttl,
-							       opendht_serving_gateway_port);
-		} else { /* not in use mark port and ttl to 0 so 'client' knows*/
-  		        errr = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped, 0,0);
-		}
-
-		if (errr) {
-		        HIP_ERROR("Build param hit failed: %s\n", strerror(errr));
-			goto out_err;
-		}
-		errr = hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW, 0);
-		if (errr){
-		        HIP_ERROR("Build hdr failed: %s\n", strerror(errr));
-		}
-		HIP_DEBUG("Building gw_info complete\n");
-        }
+	}
         break;
         case SO_HIP_DHT_SET:
 	{
@@ -345,7 +364,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
                 memcpy(&opendht_name_mapping, &name_info->name, HIP_HOST_ID_HOSTNAME_LEN_MAX);
                 HIP_DEBUG("Name received from hipconf %s\n", &opendht_name_mapping);
 	}
-            break;
+	break;
         case SO_HIP_CERT_SPKI_VERIFY:
                 {
                         HIP_DEBUG("Got an request to verify SPKI cert\n");
@@ -432,7 +451,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
       			hip_build_user_hdr(msg, SO_HIP_SET_HIPPROXY_ON, 0);
 			/* warning: passing argument 2 of 'hip_sendto' from
 			   incompatible pointer type. 04.07.2008. */
-        		n = hip_sendto_user(msg, &sock_addr);
+        		n = hip_sendto_user(msg, (struct sockaddr *) &sock_addr);
 
         		HIP_IFEL(n < 0, 0, "sendto() failed on agent socket.\n");
 
@@ -459,7 +478,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
       			hip_build_user_hdr(msg, SO_HIP_SET_HIPPROXY_OFF, 0);
         		/* warning: passing argument 2 of 'hip_sendto' from
 			   incompatible pointer type. 04.07.2008. */
-        		n = hip_sendto_user(msg, &sock_addr);
+        		n = hip_sendto_user(msg, (struct sockaddr *) &sock_addr);
 
         		HIP_IFEL(n < 0, 0, "sendto() failed on agent socket.\n");
 
@@ -491,9 +510,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
         		if(hip_get_hip_proxy_status() == 1)
         			hip_build_user_hdr(msg, SO_HIP_SET_HIPPROXY_ON, 0);
 
-        		/* warning: passing argument 2 of 'hip_sendto' from
-			   incompatible pointer type. 04.07.2008. */
-        		n = hip_sendto_user(msg, &sock_addr);
+        		n = hip_sendto_user(msg, (struct sockaddr *)  &sock_addr);
 
         		HIP_IFEL(n < 0, 0, "sendto() failed on agent socket.\n");
 
@@ -985,20 +1002,12 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		break;
 #endif /* CONFIG_HIP_RVS */
 	case SO_HIP_GET_HITS:
-		/**
-		 * @todo passing argument 1 of 'hip_for_each_hi' from incompatible
-		 * pointer type
-		 */
 		hip_msg_init(msg);
 		err = hip_for_each_hi(hip_host_id_entry_to_endpoint, msg);
 		break;
 	case SO_HIP_GET_HA_INFO:
 		hip_msg_init(msg);
 		hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0);
-		/**
-		 * @todo passing argument 1 of 'hip_for_each_ha' from incompatible
-		 * pointer type
-		 */
 		err = hip_for_each_ha(hip_handle_get_ha_info, msg);
 		break;
 	case SO_HIP_DEFAULT_HIT:
@@ -1044,7 +1053,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		HIP_DEBUG("GET HIP PROXY LOCAL ADDRESS\n");
 		hip_get_local_addr(msg);
                 //hip_build_user_hdr(msg, HIP_HIPPROXY_LOCAL_ADDRESS, 0);
-		n = hip_sendto_user(msg, &sock_addr);
+		n = hip_sendto_user(msg, (struct sockaddr *) &sock_addr);
 		HIP_IFEL(n < 0, 0, "sendto() failed on fw socket.\n");
 		if (err == 0) {
 			HIP_DEBUG("SEND HIPPROXY LOCAL ADDRESS OK.\n");
@@ -1055,7 +1064,15 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		HIP_DEBUG("SO_HIP_TRIGGER_BEX\n");
 		hip_firewall_status = 1;
 		err = hip_netdev_trigger_bex_msg(msg);
+		goto out_err;
 		break;
+	case SO_HIP_VERIFY_DHT_HDRR_RESP: // Added by Pardeep to verify signature and host id
+        	/* This case verifies host id in the value (HDRR) against HIT used as a key for DHT
+	        * And it also verifies the signature in HDRR
+        	* This works on the hip common message sent to the daemon
+        	* */
+       		verify_hdrr (msg,NULL);
+        	break;
 	case SO_HIP_USERSPACE_IPSEC:
 		HIP_DUMP_MSG(msg);
 		err = hip_userspace_ipsec_activate(msg);
@@ -1101,6 +1118,19 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		        }
 		}
 	        break;
+	case SO_HIP_BUDDIES_ON:
+		HIP_DEBUG("Setting BUDDIES ON\n");
+		hip_buddies_inuse = SO_HIP_BUDDIES_ON;
+		HIP_DEBUG("hip_buddies_inuse =  %d (should be %d)\n", 
+		hip_buddies_inuse, SO_HIP_BUDDIES_ON);
+		break;
+           
+	case SO_HIP_BUDDIES_OFF:
+		HIP_DEBUG("Setting BUDDIES OFF\n");
+		hip_buddies_inuse = SO_HIP_BUDDIES_OFF;
+		HIP_DEBUG("hip_buddies_inuse =  %d (should be %d)\n", 
+			hip_buddies_inuse, SO_HIP_BUDDIES_OFF);
+		break;
 #ifdef CONFIG_HIP_MIDAUTH
 	case SO_HIP_MANUAL_UPDATE_PACKET:
 		err = hip_manual_update(msg);
@@ -1120,7 +1150,7 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		len = hip_get_msg_total_len(msg);
 		HIP_DEBUG("Sending message response to port %d \n", ntohs(src->sin6_port));
 		HIP_DEBUG_HIT("To address", src);
-		n = hip_sendto_user(msg, src);
+		n = hip_sendto_user(msg, (struct sockaddr *)  src);
 		if(n != len)
 			err = -1;
 		else

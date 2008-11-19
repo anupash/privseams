@@ -28,15 +28,19 @@ public class HipAddress {
 	nativeInit();
     }
 
-    private short value;
+    private byte[] address = new byte[16];
 
     /*
      * I'm not yet sure how useful it would be for an application to
      * construct HipAddress objects itself.  The factory methods below
      * should suffice.
      */
-    private HipAddress (short value) {
-	this.value = value;
+    private HipAddress (byte[] address) {
+	if (address.length == 16) {
+	    for (int i = 0; i < 16; i++) {
+		this.address[i] = address[i];
+	    }
+	}
     }
 
     private native static void nativeInit ();

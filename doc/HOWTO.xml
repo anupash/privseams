@@ -1926,6 +1926,96 @@ $ make V=99
 	<ulink url="http://hipl.hiit.fi/hipl/hip-native-api-final.pdf" />
       </para>
     </section>
+
+    <section id="sec_opendht_bamboo">
+      <title>HIP with Bamboo opendht server (IPv4 and IPv6 support)</title>
+      <para>
+	To start the Bamboo opendht server, first the code has to be obtained.
+ 	You can obtain Bamboo with IPv4 support from the Bamboo website,
+	http://www.bamboo-dht.org/download.html. Bamboo with IPv6 support can
+	be obtained from http://lxpworkroom.googlepages.com/bambooipv6version.
+	The code is compiled by executing make in the downloaded directory.
+      </para>
+      <para>
+	In order to run the Bamboo server, a configuration file needs to be
+	created. You can find a sample in this link:
+	http://www.cs.helsinki.fi/u/sklvarjo/sample.cfg.
+      </para>
+      <para>
+	Bamboo opendht server for a single machine:
+      </para>
+      <para>
+	If you want to try the bamboo opendht server on a single machine,
+	you have to assign 1 to the min_replica_count argument.
+      </para>
+      <para>
+	For IPV6 Bamboo:
+      </para>
+      <para>
+	Sample configuration files for IPv6 Bamboo can also be found at
+	http://lxpworkroom.googlepages.com/bambooipv6version. One change to
+	notice is that the ipv6 addresses are enclosed inside [] braces. IPv6
+	Bamboo configuration file requires also the setting of the network
+	argument, as shown in the IPv6 configuration samples.
+      </para>
+      <para>
+	In case you want to configure Bamboo based on HIP, you have to put a HIT
+	in the configuration file insted of the IPv6 address. 
+      </para>
+    </section>
+
+    <section id="sec_opendht_several_bamboos">
+      <title>Configuration of several Bamboo opendht servers together</title>
+      <para>
+	The first thing to note is that Bamboo servers that support different
+	ip versions cannot be configured to run together successfully.
+	All Bamboo servers should suport either ipv4 or ipv6.
+      </para>
+      <para>
+	In order to configure several bamboo servers together, there are several
+	changes to be made to each configuration file of each instance.
+      </para>
+      <para>
+	First of all, inside 'Router', in the 'initargs', we have to add the
+	'gateway_count' argument followed by the overall number of servers to be
+	configured together. After that, we should specify a list of the gateways.
+	The following paragraph illustrates a sample for configuring two servers
+	together, at the configuration file of one of the servers.
+      </para>
+      <para>
+        &lt;Router&gt;</para><para>
+            class bamboo.router.Router</para><para>
+            &lt;initargs&gt;</para><para>
+		gateway_count 2</para><para>
+                gateway_0 193.167.187.133:5850</para><para>
+		gateway_1 193.167.187.31:5850</para><para>
+                leaf_set_size  4</para><para>
+                digit_values   2</para><para>
+                immediate_join true</para><para>
+            &lt;/initargs&gt;</para><para>
+        &lt;/Router&gt;</para><para>
+      </para>
+
+      <para>
+      </para>
+
+      <para>
+	An additional change to be made is assigning the 'min_replica_count'
+	argument to the overall number of servers that are to be configured
+	together. This is illustrated below:
+      </para>
+      <para>
+        &lt;Dht&gt;</para><para>
+            class bamboo.dht.Dht</para><para>
+            &lt;initargs&gt;</para><para>
+                storage_manager_stage StorageManager</para><para>
+                min_replica_count     2</para><para>
+            &lt;/initargs&gt;</para><para>
+        &lt;/Dht&gt;</para><para>
+      </para>
+
+    </section>
+
   </chapter>
   <chapter id="ch_tips_for_hip">
     <title>Tips for Using HIP with Some Applications</title>

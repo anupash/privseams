@@ -100,6 +100,7 @@ int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m,
 	struct in6_addr src_addr, dst_addr;
 	struct in_addr src_v4, dst_v4;
 	struct ip6_hdr* ip6_hdr = (struct ip6_hdr*) m->payload;
+	firewall_port_cache_hl_t *port_cache_entry = NULL;
 
 	ip_hdr_size = sizeof(struct ip6_hdr);
 
@@ -122,18 +123,10 @@ int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m,
 		break;
 	}
 
-	/* @todo: think about caching this (note: how to notice changes?) */
-	if (proto)
-		bind6 = hip_get_proto_info(ntohs(portDest), proto);
-
-	/* If IPv6 app has bind() to the port number, skip LSI and
-	   system-based opportunistic mode (currently IPv4-only)
-	   handling */
-	HIP_IFE((bind6 == 1), 0);
-
-	/* The socket is bound to LSI, cannot use system-based opp mode */
-	HIP_IFE((bind6 == 2 && (sys_opp_support &&
-				!lsi_support)), 0);
+	/* port caching */
+	port_cache_entry = firewall_port_cache_db_match(
+				((struct tcphdr*)((m->payload) + ip_hdr_size))->dest,
+				ip6_hdr->ip6_nxt);
 
 	if (sys_opp_support && lsi_support) {
 		/* Currently preferring LSIs over opp. connections */

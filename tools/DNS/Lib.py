@@ -60,6 +60,9 @@ def addr2bin(addr):
 def bin2addr(n):
     return inet_ntoa(struct_pack('!L', n))
 
+def inet_pton_v4(s):
+    return socket.inet_pton(socket.AF_INET, s)
+
 if hasattr(socket,'has_ipv6') and socket.has_ipv6:
     def inet_ntop(s):
         return socket.inet_ntop(socket.AF_INET6,s)
@@ -87,8 +90,8 @@ class Packer:
     def add32bit(self, n):
         self.buf = self.buf + pack32bit(n)
     def addaddr(self, addr):
-        n = addr2bin(addr)
-        self.buf = self.buf + pack32bit(n)
+	n = inet_pton_v4(addr)
+        self.buf = self.buf + n
     def addaddr6(self, addr):
         n = inet_pton(addr)
         self.buf = self.buf + n

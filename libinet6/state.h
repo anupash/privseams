@@ -113,10 +113,8 @@ typedef struct hip_stateless_info
 {
 	in_port_t src_port; /**< The source port of an incoming packet. */
 	in_port_t dst_port; /**< The destination port of an incoming packet. */
-#ifdef CONFIG_HIP_HI3
 	int hi3_in_use; /**< A boolean to indicate whether this message was
                              sent through I3 or not .*/
-#endif
 } hip_portpair_t;
 
 /**
@@ -443,6 +441,10 @@ struct hip_hadb_state
 	uint64_t                     puzzle_i;
 	/** For base exchange or CLOSE. @b Not for UPDATE. */
 	char                         echo_data[4];
+	/** Temp storage for peer addresses list until
+ 	SPIs are formed. After SPIs the list is copied to SPI out's
+	Peer address list */
+	HIP_HASHTABLE                *peer_addr_list_to_be_added;
 	/** For storing retransmission related data. */
 	hip_msg_retrans_t            hip_msg_retrans;
 	/** Receive function set.
@@ -477,14 +479,16 @@ struct hip_hadb_state
 	    @note Do not modify this value directly. Use
 	    hip_hadb_set_output_filter_function_set() instead. */
 	hip_output_filter_func_set_t *hadb_output_filter_func;
+	/** peer hostname */
+	uint8_t peer_hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
 	/** True when agent is prompting user and fall back is disabled. */
 	int                          hip_opp_fallback_disable;
-#ifdef CONFIG_HIP_HI3
 	/** If the state for hi3, then this flag is 1, otherwise it is zero. */
 	int                          is_hi3_state ;
-#endif
 	/** Non-zero if opportunistic TCP mode is on. */
 	int                          hip_is_opptcp_on;
+	/** Non-zero if hi3 mode is on. */
+	int                          hip_is_hi3_on;
 	/** The local port from where the TCP SYN I1 packet will be sent */
 	in_port_t                    tcp_opptcp_src_port;
 	/** the port at the peer where the TCP SYN I1 packet will be sent */
@@ -525,18 +529,19 @@ struct hip_hadb_state
     to the userspace */
 struct hip_hadb_user_info_state
 {
-	hip_hit_t            hit_our;
-	hip_hit_t            hit_peer;
-	struct in6_addr      ip_our;
-	struct in6_addr      ip_peer;
-        hip_lsi_t            lsi_our;
-        hip_lsi_t            lsi_peer;
-	int                  state;
-	int                  heartbeats_on;
-	int                  heartbeats_sent;
-	int                  heartbeats_received;
-	double            heartbeats_mean;
-	double              heartbeats_variance;
+	hip_hit_t	hit_our;
+	hip_hit_t	hit_peer;
+	struct in6_addr	ip_our;
+	struct in6_addr	ip_peer;
+        hip_lsi_t	lsi_our;
+        hip_lsi_t	lsi_peer;
+	uint8_t		peer_hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
+	int		state;
+	int		heartbeats_on;
+	int		heartbeats_sent;
+	int		heartbeats_received;
+	double		heartbeats_mean;
+	double		heartbeats_variance;
 };
 
 /** @addtogroup hadb_func

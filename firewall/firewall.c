@@ -632,6 +632,9 @@ int firewall_init_rules(){
 	// Initializing local cache database
 	firewall_cache_init_hldb();
 
+	// Initializing local port cache database
+	firewall_port_cache_init_hldb();
+
 	system("iptables -I INPUT -j HIPFW-INPUT");
 	system("iptables -I OUTPUT -j HIPFW-OUTPUT");
 	system("iptables -I FORWARD -j HIPFW-FORWARD");
@@ -2152,7 +2155,8 @@ int main(int argc, char **argv){
 		_HIP_DEBUG("HIP fw select\n");
 
 		// get handle with queued packet and process
-		if ((err = HIPD_SELECT((highest_descriptor + 1), &read_fdset,
+		/* @todo: using HIPD_SELECT blocks hipfw with R1 */
+		if ((err = select((highest_descriptor + 1), &read_fdset,
 				       NULL, NULL, &timeout)) < 0) {
 			HIP_PERROR("select error, ignoring\n");
 			continue;

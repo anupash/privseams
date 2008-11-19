@@ -99,6 +99,11 @@ extern int hip_blind_status;
 /* For switch userspace / kernel IPsec */
 extern int hip_use_userspace_ipsec;
 
+extern int hip_send_i3(struct in6_addr *src_addr, struct in6_addr *peer_addr,
+		       in_port_t not_used, in_port_t not_used2,
+		       struct hip_common *msg,
+		       hip_ha_t *not_used3, int not_used4);
+
 void hip_hadb_hold_entry(void *entry);
 void hip_hadb_put_entry(void *entry);
 
@@ -207,11 +212,15 @@ void hip_hadb_delete_peer_addrlist_one(hip_ha_t *entry, struct in6_addr *addr);
 
 int hip_add_peer_map(const struct hip_common *input);
 
-int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr, hip_lsi_t *peer_lsi);
+int hip_hadb_add_peer_info(hip_hit_t *hit, struct in6_addr *addr, hip_lsi_t *peer_lsi,
+			   const char *peer_hostname);
 
-int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit, hip_hit_t *peer_hit,
-				    hip_lsi_t *peer_lsi, struct in6_addr *local_addr,
-				    struct in6_addr *peer_addr);
+int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
+				hip_hit_t *peer_hit,
+				hip_lsi_t *peer_lsi,
+				struct in6_addr *local_addr,
+				struct in6_addr *peer_addr,
+				const char *peer_hostname);
 
 int hip_del_peer_info(hip_hit_t *, hip_hit_t *);
 
@@ -284,7 +293,8 @@ struct hip_peer_map_info {
 	hip_hit_t peer_hit;
         struct in6_addr peer_addr;
 	hip_lsi_t peer_lsi;
-	struct in6_addr our_addr;	
+	struct in6_addr our_addr;
+	uint8_t peer_hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
 };
 
 void hip_hadb_remove_hs(uint32_t spi);
@@ -367,7 +377,7 @@ hip_ha_t *hip_hadb_find_rvs_candidate_entry(hip_hit_t *, hip_hit_t *);
 hip_ha_t *hip_hadb_find_by_blind_hits(hip_hit_t *local_blind_hit,
 				      hip_hit_t *peer_blind_hit);
 
-int hip_handle_get_ha_info(hip_ha_t *entry, struct hip_common *msg);
+int hip_handle_get_ha_info(hip_ha_t *entry, void *);
 int hip_hadb_find_peer_address(hip_ha_t *entry, void *id);
 int hip_hadb_map_ip_to_hit(hip_ha_t *entry, void *id2);
 
