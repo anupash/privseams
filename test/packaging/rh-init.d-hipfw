@@ -20,7 +20,7 @@ BASENAME="hipfw"
 
 #PID_FILE=/var/run/hipfw.pid
 LOCK_FILE=/var/lock/subsys/hipfw
-OPTIONS="-bkl"
+OPTIONS="-bklp"
 
 start()
 {
