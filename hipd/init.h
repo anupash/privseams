@@ -59,7 +59,16 @@
 /** end ICMPV6_FILTER related stuff **/
 
 #define USER_NOBODY "nobody"
- 
+
+
+/* the /etc/hip/dhtservers file*/
+#define HIPD_DHTSERVERS_FILE     "/etc/hip/dhtservers"
+#define HIPD_DHTSERVERS_FILE_EX \
+"193.167.187.130 hipdht1.infrahip.net\n\
+193.167.187.134 hipdht2.infrahip.net\n\
+193.167.187.133 hipdht3.infrahip.net"
+
+
 extern char *i3_config_file;
 //extern char *hip_i3_config_file;
 extern int hip_use_i3;

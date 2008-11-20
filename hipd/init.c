@@ -130,7 +130,8 @@ void hip_load_configuration()
 	size_t items = 0;
 	int len_con = strlen(HIPD_CONFIG_FILE_EX),
 	    len_hos = strlen(HIPD_HOSTS_FILE_EX),
-	    len_i3  = strlen(HIPD_HI3_FILE_EX);
+	    len_i3  = strlen(HIPD_HI3_FILE_EX),
+	    len_dhtservers  = strlen(HIPD_DHTSERVERS_FILE_EX);
 
 	/* HIPD_CONFIG_FILE, HIPD_CONFIG_FILE_EX, HIPD_HOSTS_FILE and
 	   HIPD_HOSTS_FILE_EX are defined in /libinet6/hipconf.h */
@@ -165,6 +166,16 @@ void hip_load_configuration()
 		fclose(fp);
 	}
 	//hip_i3_init();
+
+	/* Create /etc/hip/dhtservers file if does not exist */
+	if (stat(HIPD_DHTSERVERS_FILE, &status) && errno == ENOENT) {
+		errno = 0;
+		fp = fopen(HIPD_DHTSERVERS_FILE, "w");
+		HIP_ASSERT(fp);
+		items = fwrite(HIPD_DHTSERVERS_FILE_EX, len_dhtservers, 1, fp);
+		HIP_ASSERT(items > 0);
+		fclose(fp);
+	}
 
 	/* Load the configuration. The configuration is loaded as a sequence
 	   of hipd system calls. Assumably the user socket buffer is large
@@ -438,7 +449,7 @@ out_err:
  */
 int hip_init_dht()
 {
-        int err = 0, lineno = 0, i = 0, randomno = 0;
+        int err = 0, lineno = 0, i = 0, randomno = -1;
         extern struct addrinfo * opendht_serving_gateway;
         extern char opendht_name_mapping;
         extern int hip_opendht_inuse;
@@ -478,7 +489,8 @@ int hip_init_dht()
                 }
 
                 fp = fopen(OPENDHT_SERVERS_FILE, "r");
-                if (fp == NULL) {
+
+                /*if (fp == NULL) {
                         HIP_DEBUG("No dhtservers file, using %s\n", OPENDHT_GATEWAY);
                         err = resolve_dht_gateway_info(OPENDHT_GATEWAY, &opendht_serving_gateway, opendht_serving_gateway_port, AF_INET);
                         if (err < 0) 
@@ -490,14 +502,18 @@ int hip_init_dht()
                         memset(&opendht_name_mapping, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
                         if (gethostname(&opendht_name_mapping, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1))
                                 HIP_DEBUG("gethostname failed\n");
-                } else {
+                } else {*/
                         /* dhtservers exists */
                         while (fp && getwithoutnewline(line, 500, fp) != NULL) {
                                 lineno++;
                         }
-                        fclose(fp);
+			if(fp){
+                        	fclose(fp);
+			}
                         srand(time(NULL));
-                        randomno = rand() % lineno;
+			if(lineno != 0){
+                        	randomno = rand() % lineno;
+			}
                         fp = fopen(OPENDHT_SERVERS_FILE, "r");
                         for (i = 0; i <= randomno; i++)
                                 getwithoutnewline(line, 500, fp);
@@ -505,7 +521,7 @@ int hip_init_dht()
                         extractsubstrings(line, &list);
                         servername_str = getitem(&list,0);
                         serveraddr_str = getitem(&list,1);
-                        HIP_DEBUG("DHT gateway from dhtservers: %s (%s)\n",
+                        HIP_DEBUG("##### DHT gateway from dhtservers: %s (%s)\n",
                                   servername_str, serveraddr_str);
                         /* resolve it */
                         memset(opendht_host_name, '\0', sizeof(opendht_host_name));
@@ -528,7 +544,7 @@ int hip_init_dht()
 						init_dht_sockets(&hip_opendht_sock_fqdn, &hip_opendht_fqdn_sent); 
 						init_dht_sockets(&hip_opendht_sock_hit, &hip_opendht_hit_sent);
                         destroy(&list);
-                }
+                /*}*/
         } else {
                 HIP_DEBUG("DHT is not in use");
         }
