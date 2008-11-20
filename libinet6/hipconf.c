@@ -1587,7 +1587,12 @@ int hip_conf_handle_gw(hip_common_t *msg, int action, const char *opt[], int opt
     if(ret_IP)
 	IPV4_TO_IPV6_MAP(&ip_gw, &ip_gw_mapped);
 
-    HIP_DEBUG_IN6ADDR("Address ", &ip_gw_mapped);
+    if(ret_IP || ret_HIT){
+    	HIP_DEBUG_IN6ADDR("Address ", &ip_gw_mapped);
+    }
+    else{
+	HIP_DEBUG("Host name : %s\n", hostname);
+    }
 
     err = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped,
 					  atoi(opt[2]), atoi(opt[1]), hostname);
