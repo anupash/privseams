@@ -67,15 +67,6 @@ if HIP_PERFORMANCE
   LDADD += ../performance/.libs/libperformance.a
 endif
 
-if HIP_OPENWRT
-LDADD += $(OPENWRT_LIB_STATIC)
-else
-CFLAGS += -L$(HIPL_LIBINET6_LIB)
-LDADD += ../libinet6/.libs/libinet6.a
-LDADD += ../libhiptool/.libs/libhiptool.a
-INCLUDES += -I$(HIPL_LIBINET6_INCLUDE)
-endif
-
 LDADD += ../opendht/.libs/libhipopendht.a
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
