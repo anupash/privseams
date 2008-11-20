@@ -117,7 +117,9 @@ uint8_t esp_prot_transforms[NUM_TRANSFORMS];
 
 int hip_use_opptcp = 0; // false
 int hip_use_hi3    = 0; // false
+#ifdef CONFIG_HIP_AGENT
 sqlite3 *daemon_db ;
+#endif
 
 /* the opp tcp */
 void hip_set_opportunistic_tcp_status(struct hip_common *msg){
@@ -304,6 +306,7 @@ int hip_recv_agent(struct hip_common *msg)
 			HIP_IFEL(err, 0, "for_each_ha err.\n");
 #endif
 		}
+#ifdef CONFIG_HIP_AGENT
 		/*Store the accepted HIT info from agent*/
 		uadb_info = hip_get_param(msg, HIP_PARAM_UADB_INFO);
 		if (uadb_info)
@@ -313,12 +316,14 @@ int hip_recv_agent(struct hip_common *msg)
         	_HIP_DEBUG("Value: %s\n", hit);
         	add_cert_and_hits_to_db(uadb_info);
 		}
+#endif	/* CONFIG_HIP_AGENT */
 	}
 		
 out_err:
 	return err;
 }
 
+#ifdef CONFIG_HIP_AGENT
 /**
  * add_cert_and_hits_to_db - Adds information recieved from the agent to
  * the daemon database
@@ -345,6 +350,7 @@ int add_cert_and_hits_to_db (struct hip_uadb_info *uadb_info)
 out_err:
 	return (err) ;
 }
+#endif	/* CONFIG_HIP_AGENT */
 
 int hip_sendto_firewall(const struct hip_common *msg){
 #ifdef CONFIG_HIP_FIREWALL
