@@ -8,7 +8,9 @@
 #include <pwd.h>
 #include "debug.h"
 #include "ife.h"
-#include "sqlitedbapi.h"
+#ifdef CONFIG_HIP_AGENT
+# include "sqlitedbapi.h"
+#endif
 
 #ifdef CONFIG_HIP_PRIVSEP
 

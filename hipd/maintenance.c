@@ -37,7 +37,9 @@ extern char opendht_host_name[];
 extern struct addrinfo * opendht_serving_gateway; 
 extern int hip_icmp_interval;
 extern int hip_icmp_sock;
+#ifdef CONFIG_HIP_AGENT
 extern sqlite3* daemon_db;
+#endif
 
 /**
  * Handle packet retransmissions.
@@ -1220,9 +1222,11 @@ static int hip_sqlite_callback(void *NotUsed, int argc, char **argv, char **azCo
  */
 int publish_certificates ()
 {
+#ifdef CONFIG_HIP_AGENT
 	 int err = 0 ;
 	 
 	 err = hip_sqlite_select(daemon_db, HIP_CERT_DB_SELECT_HITS,hip_sqlite_callback);
+#endif
 }
 
 /**

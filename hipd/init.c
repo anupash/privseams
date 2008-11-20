@@ -406,8 +406,10 @@ int hipd_init(int flush_ipsec, int killold)
 #endif
 	
 	hitdberr = 0;
+#ifdef CONFIG_HIP_AGENT
 	hitdberr = hip_init_daemon_hitdb();
 	if (hitdberr < 0) HIP_DEBUG("Initializing daemon hit database returned error\n");
+#endif	/* CONFIG_HIP_AGENT */
 
 #ifdef CONFIG_HIP_PRIVSEP
 	/* Fix to bug id 668 */
@@ -1032,6 +1034,7 @@ out_err:
 	return NULL;
 }
 
+#ifdef CONFIG_HIP_AGENT
 /**
  * hip_init_daemon_hitdb - The function initialzies the database at daemon
  * which recives the information from agent to be stored
@@ -1050,3 +1053,4 @@ int hip_init_daemon_hitdb()
 out_err:
 	return (err);
 }
+#endif	/* CONFIG_HIP_AGENT */

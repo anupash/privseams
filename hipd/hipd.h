@@ -26,7 +26,9 @@
 #include "accessor.h"
 #include "message.h"
 #include "esp_prot_common.h"
-#include "sqlitedbapi.h"
+#ifdef CONFIG_HIP_AGENT
+# include "sqlitedbapi.h"
+#endif
 #include "hipqueue.h"
 
 #include "i3_client_api.h"
