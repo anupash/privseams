@@ -182,13 +182,12 @@
 # add server rvs [RVS-HIT] <RVS-IP-OR-HOSTNAME> <lifetime-secs> # register to rendezvous server\n\
 # heartbeat 10 # send ICMPv6 messages inside HIP tunnels\n\
 # add server rvs hiprvs.infrahip.net 50000 # Register to free RVS at infrahip\n\
-# dht gw host port TTL # set dht gw hostname|ipv4/ipv6 port(default=5851) TTL\n\
-#      Example:   dht gw hipdht.infrahip.net 5851 60000\n\
+# dht gw hipdht.infrahip.net 5851 60000 # dht gw to host port ttl\n\
+# opendht on # turn DHT support on (dht gw is not enough)\n\
 # locator on        # host sends all of its locators in base exchange\n\
 # opp normal|advanced|none\n\
 # transform order 213 # crypto preference order (1=AES, 2=3DES, 3=NULL)\n\
 \n\
-opendht off # Jan 2007: OpenDHT infrastructure is flaky -Samu/Miika\n\
 nat plain-udp       # use UDP capsulation (for NATted environments)\n\
 debug medium        # debug verbosity: all, medium or none\n"
 
