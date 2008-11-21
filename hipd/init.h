@@ -7,7 +7,6 @@
 #include <sys/resource.h>
 #include <sys/wait.h>
 #include <sys/utsname.h>
-#include <sys/types.h>
 #include <linux/icmpv6.h>
 #include "xfrmapi.h"
 #include "hipconf.h"
@@ -17,8 +16,8 @@
 #include "escrow.h"
 /* added by Tao Wan on 14.Jan.2008 */
 #include "tcptimeout.h"
-
 #include "hadb.h"
+#include "hi3.h"
 
 /*
  * HIP daemon initialization functions.
@@ -32,18 +31,6 @@
 #define HIP_DAEMON_LOCK_FILE	"/var/lock/hipd.lock"
 #define USER_NOBODY "nobody"
 
-#include <sys/types.h>
-#include <sys/stat.h> 
-#include <sys/socket.h>
-#include <sys/time.h>
-#include <sys/resource.h>
-#include <sys/wait.h>
-#include <sys/utsname.h>
-
-#include "xfrmapi.h"
-#include "hipconf.h"
-#include "oppipdb.h"
-#include "hi3.h"
 
 /** ICMPV6_FILTER related stuff **/
 #define BIT_CLEAR(nr, addr) do { ((__u32 *)(addr))[(nr) >> 5] &= ~(1U << ((nr) & 31)); } while(0)
@@ -72,9 +59,16 @@
 /** end ICMPV6_FILTER related stuff **/
 
 #define USER_NOBODY "nobody"
- 
+
+
+/* the /etc/hip/dhtservers file*/
+#define HIPD_DHTSERVERS_FILE     "/etc/hip/dhtservers"
+#define HIPD_DHTSERVERS_FILE_EX \
+"193.167.187.134 hipdht2.infrahip.net\n"
+
+
 extern char *i3_config_file;
-extern char *hip_i3_config_file;
+//extern char *hip_i3_config_file;
 extern int hip_use_i3;
 extern hip_ipsec_func_set_t default_ipsec_func_set;
 extern int hip_firewall_sock_fd;

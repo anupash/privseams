@@ -87,7 +87,7 @@ int handle_sa_add_request(struct hip_common * msg)
 
 	param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_UINT);
 	spi = *((uint32_t *) hip_get_param_contents_direct(param));
-	HIP_DEBUG("the spi value is : %u \n", spi);
+	HIP_DEBUG("the spi value is : 0x%lx \n", spi);
 
 	param = hip_get_next_param(msg, param);
 	encap_mode = *((uint8_t *) hip_get_param_contents_direct(param));
@@ -151,7 +151,7 @@ int handle_sa_delete_request(struct hip_common * msg)
 
 	param = hip_get_param(msg, HIP_PARAM_UINT);
 	spi = *((uint32_t *) hip_get_param_contents_direct(param));
-	HIP_DEBUG("spi value: %u \n", spi);
+	HIP_DEBUG("spi value: 0x%lx \n", spi);
 
 	param = hip_get_param(msg, HIP_PARAM_IPV6_ADDR);
 	peer_addr = (struct in6_addr *) hip_get_param_contents_direct(param);
