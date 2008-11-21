@@ -169,7 +169,6 @@ void hip_load_configuration()
 
 	/* Create /etc/hip/dhtservers file if does not exist */
 	if (stat(HIPD_DHTSERVERS_FILE, &status) && errno == ENOENT) {
-		exit(1);
 		errno = 0;
 		fp = fopen(HIPD_DHTSERVERS_FILE, "w");
 		HIP_ASSERT(fp);
