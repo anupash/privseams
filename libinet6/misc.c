@@ -2453,6 +2453,32 @@ int hip_map_first_hostname_to_ip_from_hosts(const struct hosts_file_line *entry,
 
   return err;
 }
+
+
+int hip_calc_lines_in_hosts(const struct hosts_file_line *entry,
+				 const void *arg,
+				 void *result) {
+	int *res = (int *) result;
+	(*res)++;
+	return 1;
+}
+
+int hip_get_nth_id_from_hosts(const struct hosts_file_line *entry,
+			      const void *arg,
+			      void *result) {
+  int err = 1;
+  const int *nth = (const int *) arg;
+  int *total_past = (int *) result;
+
+  if (*nth == *total_past) {
+	  ipv6_addr_copy(result, &entry->id);
+	  err = 0;
+  } else {
+	  (*total_past)++;
+  }
+  return err;
+}
+
 #ifndef __KERNEL__
 int hip_for_each_hosts_file_line(char *hosts_file,
 				 int (*func)(const struct hosts_file_line *line,
@@ -2577,31 +2603,78 @@ int hip_for_each_hosts_file_line(char *hosts_file,
 
 int hip_map_lsi_to_hit_from_hosts_files(hip_lsi_t *lsi, hip_hit_t *hit)
 {
-  int err = 0;
-  uint8_t hostname[HOST_NAME_MAX];
-  struct in6_addr mapped_lsi;
-  
-  memset(hostname, 0, sizeof(hostname));
-  HIP_ASSERT(lsi && hit);
+	int err = 0;
+	uint8_t hostname[HOST_NAME_MAX];
+	struct in6_addr mapped_lsi;
+	
+	memset(hostname, 0, sizeof(hostname));
+	HIP_ASSERT(lsi && hit);
+	
+	IPV4_TO_IPV6_MAP(lsi, &mapped_lsi);
+	
+	err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+					   hip_map_first_id_to_hostname_from_hosts,
+					   &mapped_lsi, hostname);
+	HIP_IFEL(err, -1, "Failed to map id to hostname\n");
+	
+	err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+					   hip_map_first_hostname_to_hit_from_hosts,
+					   hostname, hit);
+	HIP_IFEL(err, -1, "Failed to map id to hostname\n");
+	
+	HIP_DEBUG_HIT("Found hit: ", hit);
+	
+ out_err:
+	
+	return err;
+}
 
-  IPV4_TO_IPV6_MAP(lsi, &mapped_lsi);
+int hip_get_random_hostname_id_from_hosts(char *filename,
+					  char *hostname,
+					  char *id_str) {
 
-  err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
-				     hip_map_first_id_to_hostname_from_hosts,
-				     &mapped_lsi, hostname);
-  HIP_IFEL(err, -1, "Failed to map id to hostname\n");
+	int lines = 0, err = 0, nth;
+	struct in6_addr id = {0};
 
-  err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
-				     hip_map_first_hostname_to_hit_from_hosts,
-				     hostname, hit);
-  HIP_IFEL(err, -1, "Failed to map id to hostname\n");
+	/* ignore return value, returns always error */
+	hip_for_each_hosts_file_line(filename,
+				     hip_calc_lines_in_hosts,
+				     NULL,
+				     &lines);
+	HIP_IFEL((lines == 0), -1,
+		 "No lines in host file %s\n", filename);
 
-  HIP_DEBUG_HIT("Found hit: ", hit);
+	srand(time(NULL));
+	nth = rand() % lines;
+
+	err = hip_for_each_hosts_file_line(filename,
+					   hip_get_nth_id_from_hosts,
+					   &nth,
+					   &id);
+	HIP_IFEL(err, -1, "Failed to get random id\n");
+
+	err = hip_for_each_hosts_file_line(filename,
+					   hip_map_first_id_to_hostname_from_hosts,
+					   &id,
+					   hostname);
+	HIP_IFEL(err, -1, "Failed to map to hostname\n");
+
+	if (IN6_IS_ADDR_V4MAPPED(&id)) {
+		struct in_addr id4;
+		IPV6_TO_IPV4_MAP(&id, &id4);
+		HIP_IFEL(!inet_ntop(AF_INET, &id4, id_str,
+				    INET_ADDRSTRLEN), -1,
+			 "inet_ntop failed\n");
+	} else {
+		HIP_IFEL(!inet_ntop(AF_INET6, &id, id_str,
+				    INET6_ADDRSTRLEN), -1,
+			 "inet_ntop failed\n");
+	}
 
  out_err:
-
-  return err;
+	return err;
 }
+
 
 /**
  *
@@ -2612,33 +2685,33 @@ int hip_map_lsi_to_hit_from_hosts_files(hip_lsi_t *lsi, hip_hit_t *hit)
  *
  */
 int hip_map_id_to_ip_from_hosts_files(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *ip) {
-  int err = 0;
-  uint8_t hostname[HOST_NAME_MAX];
-
-  HIP_ASSERT((hit || lsi) && ip);
-
-  memset(hostname, 0, sizeof(hostname));
-
-  if (hit) {
-    err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
-				       hip_map_first_id_to_hostname_from_hosts,
-				       hit, hostname);
-  } else {
-    struct in6_addr mapped_lsi;
-    IPV4_TO_IPV6_MAP(lsi, &mapped_lsi)
-    err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
-				       hip_map_first_id_to_hostname_from_hosts,
-				       &mapped_lsi, hostname);
-  }
-  HIP_IFEL(err, -1, "Failed to map id to hostname\n");
-
-  err = hip_for_each_hosts_file_line(HOSTS_FILE,
-				     hip_map_first_hostname_to_ip_from_hosts,
-				     hostname, ip);
-  HIP_IFEL(err, -1, "Failed to map id to ip\n");
+	int err = 0;
+	uint8_t hostname[HOST_NAME_MAX];
+	
+	HIP_ASSERT((hit || lsi) && ip);
+	
+	memset(hostname, 0, sizeof(hostname));
+	
+	if (hit) {
+		err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+						   hip_map_first_id_to_hostname_from_hosts,
+						   hit, hostname);
+	} else {
+		struct in6_addr mapped_lsi;
+		IPV4_TO_IPV6_MAP(lsi, &mapped_lsi)
+			err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+							   hip_map_first_id_to_hostname_from_hosts,
+							   &mapped_lsi, hostname);
+	}
+	HIP_IFEL(err, -1, "Failed to map id to hostname\n");
+	
+	err = hip_for_each_hosts_file_line(HOSTS_FILE,
+					   hip_map_first_hostname_to_ip_from_hosts,
+					   hostname, ip);
+	HIP_IFEL(err, -1, "Failed to map id to ip\n");
 
  out_err:
-  return err;
+	return err;
 }
 #endif /* !__KERNEL__ */
 

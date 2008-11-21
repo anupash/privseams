@@ -3732,6 +3732,13 @@ combo-newgroup=&lt;create new...&gt;
     </itemizedlist>
 
     <para>
+    HIP daemon creates a file called /etc/hip/dhtservers when you
+    execute it. You can add there Bamboo servers. The file has the
+    same format as hosts files.
+    </para>
+
+    <!--
+    <para>
     By default OpenDHT support uses opendht.nyuld.net to resolve
     proximate gateway address. Some times this returns unstable servers
     address. After a few connection or status errors from DHT, will the
@@ -3745,6 +3752,7 @@ combo-newgroup=&lt;create new...&gt;
     url="http://www.opendht.org/servers.txt" />. The wget-dht-servers.sh
     script can create you the list automatically (in tools directory).
     </para>
+    -->
 
     <para>
     There is multiple OpenDHT related hipconf commands that you can
