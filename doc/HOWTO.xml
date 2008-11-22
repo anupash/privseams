@@ -60,6 +60,10 @@
     <para>
     The last two rules basically allow the whole orchid namespace. You can set up more specific rules for HITs or use the hipfw to filter traffic (as explained in a later section).
     </para>
+    <para>
+    SElinux should be disabled with HIPL in /etc/selinux/config (you have to reboot the machine after this). We don't have yet instructions on
+    configuring SElinux yet. Contributions are welcome.
+    </para>
   </chapter>
   <chapter id="ch_building_doc">
     <title> Building the HIPL Documentation</title>
@@ -312,10 +316,27 @@ SHELLOPTS=braceexpand:emacs:hashall:histexpand:interactive-comments:monitor:nocl
         Checkout and build the openWRT sources following this manual: <ulink url="http://wiki.openwrt.org/OpenWrtDocs/BuildingKamikazeHowTo" /> It is not much different for each version, no matter the 7.09 release or the svn devel tree.
           </para>
         </listitem>
+        <listitem>
+          <para>
+        It's a good idea to make a directory named as 'files' under your OpenWRT tree, and get your own custom configuration files under that directory, maintaining the hierarchy on Linux. For example:
+          </para>
+          <para>
+<programlisting>
+$ ls
+svn   kamikaze-7.09
+$ mkdir kamikaze-7.09/files
+$ mkdir kamikaze-7.09/files/etc kamikaze-7.09/files/bin
+$ cp &lt;somewhere&gt;/etc/* kamikaze-7.09/files/etc/
+</programlisting>
+          </para>
+          <para>
+        This way of customization is really convenient, because you need neither to find proper locations for them in your build directory, nor to place those files there. It means all the files under 'kamikaze-7.09/files' directory is automatically copied into your build directory, every time you build an OpenWRT image.
+          </para>
+        </listitem>
       </orderedlist>
     </section>
     <section id="build_openwrt_fonera">
-      <title>Building OpenWRT on La Fonera</title>
+      <title>Building HIPL for OpenWRT on La Fonera</title>
       <para>
         This part is just for La Fonera. For WGT634U, please refer to <xref linkend="build_openwrt_wgt" />.
       </para>
@@ -419,7 +440,10 @@ $ ls -l bin/
       </orderedlist>
     </section>
     <section id="load_on_openwrt_fonera">
-      <title>Loading HIPL on OpenWRT</title>
+      <title>Loading HIPL for OpenWRT on La Fonera</title>
+      <para>
+        This part is just for La Fonera. For WGT634U, please refer to <xref linkend="load_on_openwrt_wgt" />.
+      </para>
       <formalpara><title>For building HIPL on the kamikaze release 7.09</title><para></para></formalpara>
       <orderedlist>
         <listitem>
@@ -440,7 +464,7 @@ $ ls -l bin/
   64 etc_config_dhcp.diff      64 etc_firewall_user.diff
   64 etc_config_network.diff   64 etc_hostapd.diff
   64 etc_config_wireless.diff  64 hipl_openwrt-7.09.diff
-  64 kamikaze_7.09
+  64 lib_wifi_madwifi.sh.diff  64 kamikaze_7.09
   $ cd kamikaze_7.09
   $ patch -p1 &lt; ../hipl_openwrt-7.09.diff
   $ patch -p1 &lt; ../etc_config_dhcp.diff
@@ -448,6 +472,7 @@ $ ls -l bin/
   $ patch -p1 &lt; ../etc_config_wireless.diff
   $ patch -p1 &lt; ../etc_firewall_user.diff
   $ patch -p1 &lt; ../etc_hostapd.diff
+  $ patch -p1 &lt; ../lib_wifi_madwifi.sh.diff
   $ ls package/hipl/Makefile
   Makefile
   </programlisting>
@@ -469,7 +494,7 @@ $ ls -l bin/
           <para>
   <programlisting>
   $ tla get hipl--openwrt--2.6 hipl--openwrt--2.6
-  $ mkdir path/to/kamikaze/dl
+  $ mkdir -p path/to/kamikaze/dl
   $ tar czf path/to/kamikaze/dl/hipl--openwrt--2.6.tar.gz --exclude=\{arch\} hipl--openwrt--2.6
   </programlisting>
           </para>
@@ -635,8 +660,8 @@ $ wget http://hipl.hiit.fi/hipl/contrib/openwrt/hipl--openwrt--2.6.tar.gz -O kam
           <para>
 <programlisting>
 $ tla get hipl--openwrt--2.6 hipl--openwrt--2.6
-$ rm -rf hipl--openwrt--2.6/{arch}
-$ tar czf kamikaze/dl/hipl--openwrt--2.6.tar.gz hipl--openwrt--2.6
+$ mkdir -p path/to/kamikaze/dl
+$ tar czf path/to/kamikaze/dl/hipl--openwrt--2.6.tar.gz --exclude=\{arch\} hipl--openwrt--2.6
 </programlisting>
           </para>
         </listitem>
@@ -722,7 +747,7 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
 </programlisting>
           </para>
           <para>
-            Don't panic even though some of those modules do not exist. Chances are, the missing modules are already embedded in your kernel image. To know whether a certain object is configured as a module or not, refer to the configuration file kamikaze_7.09/target/linux/atheros-2.6/config/default.
+            Don't panic even though some of those modules do not exist. Chances are, the missing modules are already embedded in your kernel image. To know whether a particular object is already configured as a module or not, refer to the configuration file 'kamikaze/target/linux/atheros/config-2.6.21'.
           </para>
         </listitem>
       </orderedlist>
@@ -743,9 +768,6 @@ define Package/hipl/install
     $(INSTALL_DIR) $(1)/etc/hip/test/
     $(INSTALL_DIR) $(1)/etc/modules.d/
     $(INSTALL_DIR) $(1)/usr/bin/
-    $(INSTALL_DIR) $(1)/usr/include/
-    $(INSTALL_DIR) $(1)/usr/include/libipsec
-    $(INSTALL_DIR) $(1)/usr/lib/
     $(INSTALL_DIR) $(1)/usr/sbin/
 
     $(INSTALL_DATA) ./files/hipd.init $(1)/etc/init.d/hipd
@@ -756,9 +778,6 @@ define Package/hipl/install
     $(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/hipsetup* $(1)/usr/bin/
     $(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/libinet6test* $(1)/usr/bin/
     $(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/listifaces* $(1)/usr/bin/
-    $(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libhip* $(1)/usr/lib/
-    $(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libinet6* $(1)/usr/lib/
-    $(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libopphip* $(1)/usr/lib/
     $(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/* $(1)/usr/sbin/
 endif
 </programlisting>
@@ -775,9 +794,12 @@ endif
         <para>
         Building hipl under the kamikaze devel tree does not go well always. It could cause you to correct numerous errors while building it. You are warned!
         </para>
+        <para>
+        If you encounter an error like "SHA: undefined reference", use the macro HIP_SHA() instead of SHA(). Using SHA() does not make any problem with a native compiler, but it causes errors with a cross compiler. For that reason HIP_SHA() is defined in `libhiptool/crypto.h` to be used for any calls to SHA().
+        </para>
     </section>
     <section id="build_openwrt_wgt">
-      <title>Building OpenWRT on Netgear WGT634U</title>
+      <title>Building HIP for OpenWRT on Netgear WGT634U</title>
       <para>
         This part is just for Netgear WGT634U. For La Fonera, please refer to <xref linkend="build_openwrt_fonera" />.
       </para>
@@ -917,7 +939,7 @@ $ bin/openwrt-wgt*
   64 etc_config_dhcp.diff      64 etc_firewall_user.diff
   64 etc_config_network.diff   64 etc_hostapd.diff
   64 etc_config_wireless.diff  64 hipl_openwrt-7.09.diff
-  64 kamikaze_7.09
+  64 lib_wifi_madwifi.sh.diff  64 kamikaze_7.09
   $ cd kamikaze_7.09
   $ patch -p1 &lt; ../hipl_openwrt-7.09.diff
   $ patch -p1 &lt; ../etc_config_dhcp.diff
@@ -925,6 +947,7 @@ $ bin/openwrt-wgt*
   $ patch -p1 &lt; ../etc_config_wireless.diff
   $ patch -p1 &lt; ../etc_firewall_user.diff
   $ patch -p1 &lt; ../etc_hostapd.diff
+  $ patch -p1 &lt; ../lib_wifi_madwifi.sh.diff
   $ ls package/hipl/Makefile
   Makefile
   </programlisting>
@@ -946,8 +969,8 @@ $ bin/openwrt-wgt*
           <para>
   <programlisting>
   $ tla get hipl--openwrt--2.6 hipl--openwrt--2.6
-  $ rm -rf hipl--openwrt--2.6/{arch}
-  $ tar czf kamikaze_7.09/dl/hipl--openwrt--2.6.tar.gz hipl--openwrt--2.6
+  $ mkdir -p kamikaze_7.09/dl
+  $ tar czf kamikaze_7.09/dl/hipl--openwrt--2.6.tar.gz --exclude=\{arch\} hipl--openwrt--2.6
   </programlisting>
           </para>
         </listitem>
@@ -1049,6 +1072,209 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
           </para>
           <para>
             Don't panic even though some of those modules do not exist. Chances are, the missing modules are already embedded in your kernel image. To know whether a certain object is configured as a module or not, refer to the configuration file kamikaze_7.09/target/linux/brcm47xx-2.6/config/default.
+          </para>
+        </listitem>
+      </orderedlist>
+    </section>
+    <section id="build_openwrt_wl500w">
+      <title>Building HIP for OpenWRT on ASUS WL500W</title>
+      <para>
+        This part is just for ASUS WL500W. For La Fonera, please refer to <xref linkend="build_openwrt_fonera" />.
+      </para>
+      <para>
+        For preparation, refer to <xref linkend="build_preparation" />.
+      </para>
+      <para>
+        You cannot use Kamikaze 7.09 for ASUS WL500W. Please stick to the latest Kamikaze development version, like r12983, downloading from the subversion repository.
+      </para>
+      <formalpara>
+        <title>For kernel 2.6.25.x</title>
+        <para></para>
+      </formalpara>
+      <orderedlist>
+        <listitem>
+          <para>
+            If you want to build OpenWRT with kernel 2.6.25.x, e.g. 2.6.25.17, get hipl patches from the userspace branch of hipl.
+          </para>
+          <para>
+<programlisting>
+$ cd hipl--userspace--2.6/patches/kernel/2.6.25
+$ ls
+beet-bugfix-2.6.25.patch  ipproto_hip.patch
+hipmod-2.6.25.patch       orchid-router-src-addr-sel.patch
+$ cp beet-bugfix-2.6.25.patch path/to/kamikaze/target/linux/brcm47xx/patches-2.6.25/800-beet-bugfix.patch
+$ cp hipmod-2.6.25.patch path/to/kamikaze/target/linux/brcm47xx/patches-2.6.25/810-hipmod.patch
+$ cp ipproto_hip.patch path/to/kamikaze/target/linux/brcm47xx/patches-2.6.25/820-ipproto_hip.patch
+$ cp orchid-router-src-addr-sel.patch path/to/kamikaze/target/linux/brcm47xx/patches-2.6.25/830-orchid-router-src-addr-sel.patch
+</programlisting>
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            Fortunately you don't need to add those patches in other configuration files. Those patches are automatically applied during kernel build. 
+          </para>
+        </listitem>
+      </orderedlist>
+      <formalpara>
+        <title>For kernel 2.6.27</title>
+        <para></para>
+      </formalpara>
+      <orderedlist>
+        <listitem>
+          <para>
+            If you want to build OpenWRT with kernel 2.6.27, do the following steps. <emphasis>NOTE: this instruction is currently not working.</emphasis>
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            First we need to upgrade kernel from 2.6.25.17 to 2.6.27, because the BEET patch needed for HIPL is natively supported from 2.6.27. Edit target/linux/brcm47xx-2.6/Makefile and set '2.6.27' as LINUX_VERSION.
+          </para>
+          <para>
+<programlisting>
+LINUX_VERSION:=2.6.27
+</programlisting>
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            Copy corresponding files for the kernel version 2.6.27.
+          </para>
+          <para>
+<programlisting>
+$ cd path/to/kamikaze/target/linux/brcm47xx-2.6
+$ cp config-2.6.25 config-2.6.27
+$ cp -r files-2.6.25 files-2.6.27
+$ cp -r patches-2.6.25 patches-2.6.27
+$ cd ../../..
+</programlisting>
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            Configure kernel options.
+          </para>
+          <para>
+<programlisting>
+$ make kernel_menuconfig
+</programlisting>
+          </para>
+          <para>
+            and also make sure that the below options are included in the configuration.
+          </para>
+          <para>
+<programlisting>
+Device Drivers  --->
+ [*] Network device support  --->
+  &lt;*&gt;  Dummy net driver support
+Networking  --->
+ Networking support
+  Networking options  --->
+   TCP/IP networking
+    &lt;M&gt;   IP: IPsec BEET mode
+    &lt;M&gt;   IPv6: IPsec BEET mode
+</programlisting>
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            Make sure that the below options are not selected. This causes a compilation error.
+          </para>
+          <para>
+<programlisting>
+Networking support  --->
+ Networking options  --->
+  Network packet filtering framework (Netfilter)  --->
+   Core Netfilter Configuration  --->
+    [ ] "layer7" match support
+Kernel modules  --->
+ Netfilter extensions  --->
+  [ ] kmod-ipt-filter
+ Network support  --->
+  [ ] kmod-sched
+</programlisting>
+          </para>
+        </listitem>
+      </orderedlist>
+      <formalpara>
+        <title>Building the entire tree</title>
+        <para></para>
+      </formalpara>
+      <para>
+            Now you have finished configuring kernel. Then you need to choose your target profile according to your WiFi interface. You have two options for that: one is using the original Broadcom 4321 wifi card, the another is replacing the existing card with an Atheros card.
+      </para>
+      <formalpara>
+        <title>For the original Broadcom 4321 Wi-Fi card</title>
+        <para></para>
+      </formalpara>
+      <para>
+        NOTE: This way is not guaranteed to work. Do it at your own risk!
+      </para>
+      <orderedlist>
+        <listitem>
+          <para>
+            Run menuconfig and choose the following options.
+          </para>
+          <para>
+<programlisting>
+Target System (Broadcom BCM947xx/953xx [2.6])
+Target Profile (Broadcom BCM43xx WiFi (default))
+Kernel modules  --->
+  Wireless Drivers  --->
+    &lt;*&gt; kmod-b43
+    &lt;*&gt; kmod-hostap
+    &lt;*&gt; kmod-ieee80211-softmac
+    &lt;*&gt; kmod-mac80211
+</programlisting>
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            Build OpenWRT.
+          </para>
+          <para>
+<programlisting>
+$ make V=99
+</programlisting>
+          </para>
+          <para>
+            Then you can get the final image in `bin/openwrt-brcm47xx-squashfs.trx`. Load it on your device. Then you can use ASUS WL-500W with an Atheros card.
+          </para>
+        </listitem>
+      </orderedlist>
+      <formalpara>
+        <title>For Atheros Wi-Fi card</title>
+        <para></para>
+      </formalpara>
+      <para>
+        This is the recommended option for you, because Atheros cards are really stable, supported by madwifi device driver. Make sure that you already replaced your existing Broadcom miniPCI card with a new Atheros card.
+      </para>
+      <orderedlist>
+        <listitem>
+          <para>
+            Run menuconfig and choose the following options.
+          </para>
+          <para>
+<programlisting>
+Target System (Broadcom BCM947xx/953xx [2.6])
+Target Profile (Atheros WiFi)
+Kernel modules  --->
+  Wireless Drivers  --->
+    &lt;*&gt; kmod-madwifi
+    &lt;*&gt; kmod-hostap
+</programlisting>
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            Build OpenWRT.
+          </para>
+          <para>
+<programlisting>
+$ make V=99
+</programlisting>
+          </para>
+          <para>
+            Then you can get the final image in bin/openwrt-brcm47xx-squashfs.trx. Load it on your device. Then you can use ASUS WL-500W with an Atheros card.
           </para>
         </listitem>
       </orderedlist>
@@ -1700,6 +1926,96 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
 	<ulink url="http://hipl.hiit.fi/hipl/hip-native-api-final.pdf" />
       </para>
     </section>
+
+    <section id="sec_opendht_bamboo">
+      <title>HIP with Bamboo opendht server (IPv4 and IPv6 support)</title>
+      <para>
+	To start the Bamboo opendht server, first the code has to be obtained.
+ 	You can obtain Bamboo with IPv4 support from the Bamboo website,
+	http://www.bamboo-dht.org/download.html. Bamboo with IPv6 support can
+	be obtained from http://lxpworkroom.googlepages.com/bambooipv6version.
+	The code is compiled by executing make in the downloaded directory.
+      </para>
+      <para>
+	In order to run the Bamboo server, a configuration file needs to be
+	created. You can find a sample in this link:
+	http://www.cs.helsinki.fi/u/sklvarjo/sample.cfg.
+      </para>
+      <para>
+	Bamboo opendht server for a single machine:
+      </para>
+      <para>
+	If you want to try the bamboo opendht server on a single machine,
+	you have to assign 1 to the min_replica_count argument.
+      </para>
+      <para>
+	For IPV6 Bamboo:
+      </para>
+      <para>
+	Sample configuration files for IPv6 Bamboo can also be found at
+	http://lxpworkroom.googlepages.com/bambooipv6version. One change to
+	notice is that the ipv6 addresses are enclosed inside [] braces. IPv6
+	Bamboo configuration file requires also the setting of the network
+	argument, as shown in the IPv6 configuration samples.
+      </para>
+      <para>
+	In case you want to configure Bamboo based on HIP, you have to put a HIT
+	in the configuration file insted of the IPv6 address. 
+      </para>
+    </section>
+
+    <section id="sec_opendht_several_bamboos">
+      <title>Configuration of several Bamboo opendht servers together</title>
+      <para>
+	The first thing to note is that Bamboo servers that support different
+	ip versions cannot be configured to run together successfully.
+	All Bamboo servers should suport either ipv4 or ipv6.
+      </para>
+      <para>
+	In order to configure several bamboo servers together, there are several
+	changes to be made to each configuration file of each instance.
+      </para>
+      <para>
+	First of all, inside 'Router', in the 'initargs', we have to add the
+	'gateway_count' argument followed by the overall number of servers to be
+	configured together. After that, we should specify a list of the gateways.
+	The following paragraph illustrates a sample for configuring two servers
+	together, at the configuration file of one of the servers.
+      </para>
+      <para>
+        &lt;Router&gt;</para><para>
+            class bamboo.router.Router</para><para>
+            &lt;initargs&gt;</para><para>
+		gateway_count 2</para><para>
+                gateway_0 193.167.187.133:5850</para><para>
+		gateway_1 193.167.187.31:5850</para><para>
+                leaf_set_size  4</para><para>
+                digit_values   2</para><para>
+                immediate_join true</para><para>
+            &lt;/initargs&gt;</para><para>
+        &lt;/Router&gt;</para><para>
+      </para>
+
+      <para>
+      </para>
+
+      <para>
+	An additional change to be made is assigning the 'min_replica_count'
+	argument to the overall number of servers that are to be configured
+	together. This is illustrated below:
+      </para>
+      <para>
+        &lt;Dht&gt;</para><para>
+            class bamboo.dht.Dht</para><para>
+            &lt;initargs&gt;</para><para>
+                storage_manager_stage StorageManager</para><para>
+                min_replica_count     2</para><para>
+            &lt;/initargs&gt;</para><para>
+        &lt;/Dht&gt;</para><para>
+      </para>
+
+    </section>
+
   </chapter>
   <chapter id="ch_tips_for_hip">
     <title>Tips for Using HIP with Some Applications</title>
@@ -3416,6 +3732,13 @@ combo-newgroup=&lt;create new...&gt;
     </itemizedlist>
 
     <para>
+    HIP daemon creates a file called /etc/hip/dhtservers when you
+    execute it. You can add there Bamboo servers. The file has the
+    same format as hosts files.
+    </para>
+
+    <!--
+    <para>
     By default OpenDHT support uses opendht.nyuld.net to resolve
     proximate gateway address. Some times this returns unstable servers
     address. After a few connection or status errors from DHT, will the
@@ -3429,6 +3752,7 @@ combo-newgroup=&lt;create new...&gt;
     url="http://www.opendht.org/servers.txt" />. The wget-dht-servers.sh
     script can create you the list automatically (in tools directory).
     </para>
+    -->
 
     <para>
     There is multiple OpenDHT related hipconf commands that you can

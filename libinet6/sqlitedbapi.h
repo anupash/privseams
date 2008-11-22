@@ -19,6 +19,14 @@
 
 #define HIP_CERT_DB_PATH_AND_NAME "/etc/hip/certdb.db"
 
+#define HIP_CERT_DB_CREATE_TBLS "CREATE TABLE hits (" \
+                                 "lhit VARCHAR(41), " \
+                                 "rhit VARCHAR(41), " \
+                                 "cert VARCHAR(1048) " \
+                                 "); " \
+
+#define HIP_CERT_DB_SELECT_HITS "SELECT * FROM hits;"
+                                 
 #define HIP_AGENT_DB_CREATE_TBLS "CREATE TABLE local (" \
                                  "lname VARCHAR(65), " \
                                  "lhit VARCHAR(41)" \

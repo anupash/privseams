@@ -99,7 +99,7 @@ typedef struct
 } HIT_Group;
 
 /** This structure stores one remote HIT and information needed for it. */
-typedef struct
+typedef struct 
 {
 	/**
 		Stores HIT item 'human' identifier, it's name.
@@ -126,6 +126,8 @@ typedef struct
 	/* Next remote item. */
 	void *next;
 } HIT_Remote;
+
+
 
 
 /******************************************************************************/

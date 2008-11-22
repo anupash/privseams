@@ -24,8 +24,7 @@ unsigned int opportunistic_mode = 1;
  * Set global daemon state.
  * @param state @see daemon_states
  */
-void hipd_set_state(unsigned int state)
-{
+void hipd_set_state(unsigned int state){
 	hipd_state = (state & HIPD_STATE_MASK) | (hipd_state & ~HIPD_STATE_MASK);
 }
 
@@ -35,8 +34,7 @@ void hipd_set_state(unsigned int state)
  * @param state @see daemon_states
  * @return 1 if flag is on, 0 if not.
  */
-int hipd_get_flag(unsigned int flag)
-{
+int hipd_get_flag(unsigned int flag){
 	return (hipd_state & flag) ? 1 : 0;
 }
 
@@ -45,8 +43,7 @@ int hipd_get_flag(unsigned int flag)
  * Set global daemon flag.
  * @param state @see daemon_states
  */
-void hipd_set_flag(unsigned int flag)
-{
+void hipd_set_flag(unsigned int flag){
 	hipd_state = hipd_state | flag;
 }
 
@@ -55,8 +52,7 @@ void hipd_set_flag(unsigned int flag)
  * Clear global daemon flag.
  * @param state @see daemon_states
  */
-void hipd_clear_flag(unsigned int flag)
-{
+void hipd_clear_flag(unsigned int flag){
 	hipd_state = hipd_state & ~flag;
 }
 
@@ -65,8 +61,7 @@ void hipd_clear_flag(unsigned int flag)
  * Get global daemon state.
  * @return @see daemon_states
  */
-unsigned int hipd_get_state(void)
-{
+unsigned int hipd_get_state(void){
 	return (hipd_state & HIPD_STATE_MASK);
 }
 
@@ -76,8 +71,7 @@ unsigned int hipd_get_state(void)
  *
  * @return non-zero, if agent is alive.
  */
-int hip_agent_is_alive()
-{
+int hip_agent_is_alive(){
 #ifdef CONFIG_HIP_AGENT
 //	if (hip_agent_status) HIP_DEBUG("Agent is alive.\n");
 //	else HIP_DEBUG("Agent is not alive.\n");
@@ -93,8 +87,7 @@ int hip_agent_is_alive()
 /**
  * No description.
  */
-int hip_set_opportunistic_mode(const struct hip_common *msg)
-{
+int hip_set_opportunistic_mode(const struct hip_common *msg){
 	int err =  0;
 	unsigned int *mode = NULL;
 	
@@ -127,8 +120,7 @@ int hip_set_opportunistic_mode(const struct hip_common *msg)
 /**
  * No description.
  */
-int hip_query_opportunistic_mode(struct hip_common *msg)
-{
+int hip_query_opportunistic_mode(struct hip_common *msg){
 	int err = 0;
 	unsigned int opp_mode = opportunistic_mode;
 	
@@ -150,8 +142,7 @@ int hip_query_opportunistic_mode(struct hip_common *msg)
 /**
  * No description.
  */
-int hip_query_ip_hit_mapping(struct hip_common *msg)
-{
+int hip_query_ip_hit_mapping(struct hip_common *msg){
 	int err = 0;
 	unsigned int mapping = 0;
 	struct in6_addr *hit = NULL;
@@ -182,13 +173,11 @@ int hip_query_ip_hit_mapping(struct hip_common *msg)
 }
 #endif // CONFIG_HIP_OPPORTUNISTIC
 
-int hip_get_hip_proxy_status(void)
-{
+int hip_get_hip_proxy_status(void){
 	return hipproxy;
 }
 
-int hip_set_hip_proxy_on(void)
-{
+int hip_set_hip_proxy_on(void){
 	int err = 0;
 	hipproxy = 1;
 	HIP_DEBUG("hip_set_hip_proxy_on() invoked.\n");
@@ -196,8 +185,7 @@ int hip_set_hip_proxy_on(void)
 	return err;
 }
 
-int hip_set_hip_proxy_off(void)
-{
+int hip_set_hip_proxy_off(void){
 	int err = 0;
 	hipproxy = 0;
 	HIP_DEBUG("hip_set_hip_proxy_off() invoked.\n");

@@ -44,7 +44,7 @@ int main(int argc,char *argv[]) {
 	const char *cfile = "default";
 
 	hip_set_logtype(LOGTYPE_STDERR);
-	hip_set_logfmt(LOGFMT_SHORT);
+	//hip_set_logfmt(LOGFMT_SHORT);
 	HIP_IFEL(hip_set_auto_logdebug(cfile), -1,
 	  "Error: Cannot set the debugging parameter.\n");
 
