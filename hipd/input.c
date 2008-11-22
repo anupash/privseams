@@ -2332,8 +2332,8 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 		if(r2_info->hi3_in_use){
 			/* In hi3 real addresses should already be in entry, received on
 			   r1 phase. */
-			memcpy(r2_saddr, &entry->preferred_address, sizeof(struct in6_addr));
-			memcpy(r2_daddr, &entry->local_address, sizeof(struct in6_addr));
+			memcpy(r2_saddr, &entry->peer_addr, sizeof(struct in6_addr));
+			memcpy(r2_daddr, &entry->our_addr, sizeof(struct in6_addr));
 		}
 	}
 
@@ -3353,7 +3353,7 @@ int handle_locator(struct hip_locator *locator,
 
 			struct in6_addr daddr;
 
-			memcpy(&entry->local_address, r1_daddr, sizeof(struct in6_addr));
+			memcpy(&entry->our_addr, r1_daddr, sizeof(struct in6_addr));
 
 			hip_hadb_get_peer_addr(entry, &daddr);
 			hip_hadb_delete_peer_addrlist_one(entry, &daddr);
