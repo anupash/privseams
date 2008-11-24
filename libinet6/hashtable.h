@@ -1,5 +1,6 @@
 #ifndef HIP_LHASHTABLE_H
 #define HIP_LHASHTABLE_H
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -23,11 +24,6 @@ static uint reclength=37;
 typedef LHASH hip_ht_common;
 typedef hip_ht_common HIP_HASHTABLE;
 
-/*typedef struct lhash_st HIP_LHASH;*/
-
-// typedef unsigned long (*LHASH_HASH_FN_TYPE)(const void *);
-// typedef int (*LHASH_COMP_FN_TYPE)(const void *, const void *);
-
 static inline HIP_HASHTABLE *hip_ht_init(LHASH_HASH_FN_TYPE hashfunc, LHASH_COMP_FN_TYPE cmpfunc)
 {
 	return lh_new(hashfunc, cmpfunc);
@@ -39,7 +35,7 @@ static inline HIP_HASHTABLE *hip_ht_init(LHASH_HASH_FN_TYPE hashfunc, LHASH_COMP
 static inline int hip_ht_add(HIP_HASHTABLE *head, void *data)
 {
 	if (lh_insert(head, data)) {
-		_HIP_DEBUG("hash replace occured\n");
+	        HIP_DEBUG("hash replace not occured\n");
 	}
 	return 0;
 }

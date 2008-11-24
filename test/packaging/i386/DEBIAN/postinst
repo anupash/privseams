@@ -1,8 +1,12 @@
 #!/bin/sh
 
-ldconfig
+# Note: hipd must be currently started before hipfw (runlevel 21)
+#update-rc.d hipd defaults 
+update-rc.d hipd multiuser 20
 
-invoke-rc.d --force --quiet hipd stopinvoke-rc.d --force --quiet hipd stop
-update-rc.d -f hipd remove
-update-rc.d hipd defaults 
-invoke-rc.d hipd start
+# For some weird reason, hipd is killed silently in ubuntu hardy and gutsy
+# without the at kludge when installing the package with apt-get/aptitude
+# from a remote repository. Until the problem is properly solved, this
+# workaround stays here. --miika
+echo "hip daemon starts in one minute"
+echo "invoke-rc.d --quiet hipd start" | at now + 1 min 2>/dev/null

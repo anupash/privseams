@@ -1,0 +1,8 @@
+#!/bin/sh
+
+invoke-rc.d --force --quiet dnshipproxy stop 
+update-rc.d -f dnshipproxy remove 
+
+exit 0 
+
+ 

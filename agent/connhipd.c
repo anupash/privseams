@@ -31,50 +31,45 @@ int hip_agent_connected = 0;
 
 	@return 0 on success, -1 on errors.
 */
-int connhipd_init(void)
+int connhipd_init_sock(void)
 {
-	/* Variables. */
-	int err = 0, n, len;
-	struct sockaddr_un agent_addr;
-	struct hip_common *msg = NULL;
-	socklen_t alen;
+	int err = 0;
+	struct sockaddr_in6 agent_addr;
 
-	/* Allocate message. */
-	HIP_IFE(((msg = hip_msg_alloc()) == NULL), -1);
-
-	/* Create and bind daemon socket. */
-	hip_agent_sock = socket(AF_LOCAL, SOCK_DGRAM, 0);
+	hip_agent_sock = socket(AF_INET6, SOCK_DGRAM, 0);
 	HIP_IFEL(hip_agent_sock < 0, -1, "Failed to create socket.\n");
 
-	bzero(&agent_addr, sizeof(agent_addr));
-	agent_addr.sun_family = AF_LOCAL;
-	HIP_IFE((hip_tmpname(agent_addr.sun_path)), -1);
-	HIP_IFEL(bind(hip_agent_sock, (struct sockaddr *)&agent_addr,
-	         sizeof(agent_addr)), -1, "Bind failed.\n");
-	chmod(agent_addr.sun_path, 0777);
+	memset(&agent_addr, 0, sizeof(agent_addr));
+        agent_addr.sin6_family = AF_INET6;
+        agent_addr.sin6_addr = in6addr_loopback;
+	agent_addr.sin6_port = htons(HIP_AGENT_PORT);
 
-/*	bzero(&agent_addr, sizeof(agent_addr));
-	alen = sizeof(agent_addr);
-	n = recvfrom(hip_agent_sock, msg, sizeof(struct hip_common), 0,
-	             (struct sockaddr *)&agent_addr, &alen);
-	HIP_IFEL(n < 0, -1,  "Did not receive ping reply from daemon.\n");
+	HIP_IFEL(hip_daemon_bind_socket(hip_agent_sock, &agent_addr), -1,
+		 "bind failed\n");
 
-	/* Start thread for connection handling. */
-/*	HIP_DEBUG("Received %d bytes of ping reply message from daemon.\n"
-	          "Starting thread for HIP daemon connection handling\n", n);*/
+  out_err:
+	return err;
+}
+	
 
-	pthread_create(&connhipd_pthread, NULL, connhipd_thread, msg);
+int connhipd_run_thread(void)
+{
+	int err = 0;
+	struct hip_common *msg = NULL;
+
+	HIP_IFEL(!(msg = hip_msg_alloc()), -1, "Failed to Allocate message.\n");
 
 	hip_agent_thread_started = 0;
-	while (hip_agent_thread_started == 0) usleep(100 * 1000);
+	pthread_create(&connhipd_pthread, NULL, connhipd_thread, msg);
+
+	while (hip_agent_thread_started == 0)
+		usleep(100 * 1000);
 	usleep(100 * 1000);
 
-	return (0);
-
 out_err:
-	if (hip_agent_sock)
+	if (err && hip_agent_sock)
 		close(hip_agent_sock);
-	if (msg != NULL)
+	if (err && msg)
 		HIP_FREE(msg);
 
 	return err;
@@ -87,14 +82,17 @@ out_err:
 int connhipd_sendto_hipd(char *msg, size_t len)
 {
 	/* Variables. */
-	struct sockaddr_un agent_addr;
+	struct sockaddr_in6 hipd_addr;
 	int n, alen;
 
-	bzero(&agent_addr, sizeof(agent_addr));
-	agent_addr.sun_family = AF_LOCAL;
-	strcpy(agent_addr.sun_path, HIP_AGENTADDR_PATH);
-	alen = sizeof(agent_addr);
-	n = sendto(hip_agent_sock, msg, len, 0, (struct sockaddr *)&agent_addr, alen);
+	bzero(&hipd_addr, sizeof(hipd_addr));
+	hipd_addr.sin6_family = AF_INET6;
+	hipd_addr.sin6_port = htons(HIP_DAEMON_LOCAL_PORT);
+	hipd_addr.sin6_addr = in6addr_loopback;
+
+	alen = sizeof(hipd_addr);
+	n = sendto(hip_agent_sock, msg, len, 0,
+		   (struct sockaddr *)&hipd_addr, alen);
 
 	return (n);
 }
@@ -118,32 +116,33 @@ int connhipd_handle_msg(struct hip_common *msg,
 	struct in6_addr *lhit, *rhit;
 	int err = 0, ret, n, direction, check;
 	char chit[128], *type_s;
-
+	
+	struct in6_addr hitr ;
 	type = hip_get_msg_type(msg);
 
-	if (type == HIP_AGENT_PING_REPLY)
+	if (type == SO_HIP_AGENT_PING_REPLY)
 	{
 		HIP_DEBUG("Received ping reply from daemon. Connection to daemon established.\n");
 		gui_set_info(lang_get("gui-info-000"));
 		hip_agent_connected = 1;
 	}
-	else if (type == HIP_NAT_ON)
+	else if (type == SO_HIP_SET_NAT_ON)
 	{
 		gui_update_nat(1);
 		HIP_DEBUG("NAT extensions on.\n");
 	}
-	else if (type == HIP_NAT_OFF)
+	else if (type == SO_HIP_SET_NAT_OFF)
 	{
 		gui_update_nat(0);
 		HIP_DEBUG("NAT extensions off.\n");
 	}
-	else if (type == HIP_DAEMON_QUIT)
+	else if (type == SO_HIP_DAEMON_QUIT)
 	{
 		HIP_DEBUG("Daemon quit. Waiting daemon to wake up again...\n");
 		gui_set_info(lang_get("gui-info-001"));
 		hip_agent_connected = 0;
 	}
-	else if (type == HIP_ADD_DB_HI)
+	else if (type == SO_HIP_ADD_DB_HI)
 	{
 		HIP_DEBUG("Message received successfully from daemon with type"
 		          " HIP_ADD_DB_HI (%d).\n", type);
@@ -161,7 +160,7 @@ int connhipd_handle_msg(struct hip_common *msg,
 			}
 		}
 	}
-	else if (type == HIP_UPDATE_HIU)
+	else if (type == SO_HIP_UPDATE_HIU)
 	{
 		n = 0;
 		
@@ -225,8 +224,14 @@ int connhipd_handle_msg(struct hip_common *msg,
 		/* Check the remote HIT from database. */
 		if (l) 
 		{
+			memcpy(&hitr,&hit.hit, sizeof(struct in6_addr));
 			ret = check_hit(&hit, 0);
-			
+			/*Send our hits -- peer hit to daemon*/
+			if (ret == 1)
+				ret = 0; /*hit already exist in the database and is accepted
+							so no need to send it to daemon*/
+			else if (ret == 0)
+				connhipd_send_hitdata_to_daemon (msg, &hitr, &hit.g->l->lhit) ;
 			/* Reset local HIT, if outgoing I1. */
 			/*HIP_HEXDUMP("Old local HIT: ", &msg->hits, 16);
 			HIP_HEXDUMP("New local HIT: ", &hit.g->l->lhit, 16);
@@ -287,7 +292,7 @@ void *connhipd_thread(void *data)
 {
 	/* Variables. */
 	int err = 0, n, len, ret, max_fd;
-	struct sockaddr_un agent_addr;
+	struct sockaddr_in6 agent_addr;
 	struct hip_common *msg = (struct hip_common *)data;
 	socklen_t alen;
 	fd_set read_fdset;
@@ -310,7 +315,7 @@ void *connhipd_thread(void *data)
 			/* Test connection. */
 			//HIP_IFEL(hip_agent_connected < -60, -1, "Could not connect to daemon.\n");
 			//HIP_DEBUG("Pinging daemon...\n");
-			hip_build_user_hdr(msg, HIP_AGENT_PING, 0);
+			hip_build_user_hdr(msg, SO_HIP_AGENT_PING, 0);
 			n = connhipd_sendto_hipd((char *)msg, sizeof(struct hip_common));
 			//if (n < 0) HIP_DEBUG("Could not send ping to daemon, waiting.\n");
 			hip_agent_connected--;
@@ -327,7 +332,7 @@ void *connhipd_thread(void *data)
 		if (!hip_agent_thread_started) continue;
 		if (!FD_ISSET(hip_agent_sock, &read_fdset)) continue;
 
-		bzero(&agent_addr, sizeof(agent_addr));
+		memset(&agent_addr, 0, sizeof(agent_addr));
 		alen = sizeof(agent_addr);
 		n = recvfrom(hip_agent_sock, msg, sizeof(struct hip_common), MSG_PEEK,
 		             (struct sockaddr *)&agent_addr, &alen);
@@ -355,7 +360,15 @@ void *connhipd_thread(void *data)
 		//HIP_DEBUG("Received message from daemon (%d bytes)\n", n);
 
 		//HIP_ASSERT(n == len);
-		if (n != len) HIP_ERROR("Received packet length and HIP msg len dont match %d != %d!!!\n", n, len);
+		if (n != len) {
+			HIP_ERROR("Received packet length and HIP msg len dont match %d != %d!!!\n", n, len);
+			continue;
+		}
+
+		if (agent_addr.sin6_port != ntohs(HIP_DAEMON_LOCAL_PORT)) {
+			HIP_DEBUG("Drop, message not from hipd");
+			continue;
+		}
 
 		connhipd_handle_msg(msg, &agent_addr);
 	}
@@ -363,12 +376,15 @@ void *connhipd_thread(void *data)
 
 out_err:
 	/* Send quit message to daemon. */
-	hip_build_user_hdr(msg, HIP_AGENT_QUIT, 0);
+	hip_build_user_hdr(msg, SO_HIP_AGENT_QUIT, 0);
 	n = connhipd_sendto_hipd((char *)msg, hip_get_msg_total_len(msg));
-	if (n < 0) HIP_ERROR("Could not send quit message to daemon.\n");
+	if (n < 0)
+		HIP_ERROR("Could not send quit message to daemon.\n");
 
-	if (hip_agent_sock) close(hip_agent_sock);
-	if (msg != NULL) HIP_FREE(msg);
+	if (hip_agent_sock)
+		close(hip_agent_sock);
+	if (msg != NULL)
+		HIP_FREE(msg);
 
 	hip_agent_thread_started = 0;
 	agent_exit();
@@ -395,6 +411,35 @@ void connhipd_quit(void)
 	pthread_join(connhipd_pthread, NULL);
 }
 /* END OF FUNCTION */
+
+/**
+ * connhipd_send_hitdata_to_daemon - builds a param containing hits to be
+ * sent to the daemon
+ * @param *msg packet to be sent to daemon
+ * @param *hitr remote hit accepted
+ * @param *hitl local hit used
+ * @return 0 on success, -1 on error
+ */
+int connhipd_send_hitdata_to_daemon(struct hip_common * msg , struct in6_addr * hitr, struct in6_addr * hitl)
+{
+	int err = 0;
+	struct hip_uadb_info uadb_info ;
+	char hittest[40];
+	HIP_DEBUG("Building User Agent DB info message to be sent to daemon.\n");
+	memcpy(&uadb_info.hitr,hitr, sizeof(struct in6_addr)) ;
+	memcpy(&uadb_info.hitl,hitl, sizeof(struct in6_addr)) ;
+	hip_in6_ntop(&uadb_info.hitr, hittest);
+    HIP_DEBUG("Value: %s\n", hittest);
+	
+	memcpy(uadb_info.cert,"certificate\0",sizeof("certificate\0"));
+	
+	hip_build_param_hip_uadb_info(msg, &uadb_info);
+	HIP_DUMP_MSG (msg);
+out_err:
+	return (err);
+}
+
+
 
 
 /* END OF SOURCE FILE */

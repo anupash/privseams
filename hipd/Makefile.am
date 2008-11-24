@@ -1,44 +1,68 @@
+
 AUTOMAKE_OPTIONS = foreign
 
 # Note: .. is included because libinet6/debug.h is included; otherwise this
 # won't build because there is also the linux/net/ipv6/hip/debug.h include.
 CFLAGS = $(hipl_common_cflags)
+CFLAGS += $(OPTIMIZATIONS_CFLAGS)
+CFLAGS += $(GPROF_CFLAGS)
+CFLAGS += -DHIPL_DEFAULT_PREFIX=\"$(prefix)\"
 
 # Note: libinet6 cannot be included here because it has a bad dependency
 # with netlink headers.
-include_HEADERS =  hadb.h oppdb.h hipd.h netdev.h rvs.h user.h
+include_HEADERS =  hadb.h oppdb.h hipd.h netdev.h user.h hiprelay.h
 include_HEADERS += bos.h input.h output.h icookie.h blind.h
-include_HEADERS += close.h hi3.h keymat.h timer.h
-include_HEADERS += cookie.h hidb.h nat.h update.h dh.h
-include_HEADERS += escrow.h reg.h init.h maintenance.h accessor.h oppipdb.h nsupdate.h
-INCLUDES = $(hipl_common_include_paths)
+include_HEADERS += close.h hi3.h keymat.h hiptimer.h configfilereader.h
+include_HEADERS += cookie.h hidb.h nat.h update.h dh.h registration.h
+include_HEADERS += escrow.h init.h maintenance.h accessor.h oppipdb.h
+include_HEADERS += tcptimeout.h cert.h user_ipsec_sadb_api.h user_ipsec_hipd_msg.h
+include_HEADERS += esp_prot_hipd_msg.h esp_prot_anchordb.h hipqueue.h esp_prot_light_update.h
+include_HEADERS += nsupdate.h
+
+INCLUDES = $(hipl_common_include_paths)  -I$(HIPL_PJPROJECT_NATH)/include -I$(HIPL_PJPROJECT_LIB)/include -I$(HIPL_PJPROJECT_LIB_UTIL)/include -I$(HIPL_PJPROJECT_MEDIA)/include
 
 sbin_PROGRAMS = hipd
-hipd_SOURCES = reg.c rvs.c update.c hipd.c keymat.c blind.c
-hipd_SOURCES += user.c hadb.c oppdb.c close.c
+hipd_SOURCES = update.c hipd.c keymat.c blind.c hiprelay.c registration.c
+hipd_SOURCES += user.c hadb.c oppdb.c close.c configfilereader.c
 hipd_SOURCES += input.c output.c hidb.c cookie.c netdev.c bos.c nat.c icookie.c
-hipd_SOURCES += escrow.c init.c maintenance.c accessor.c oppipdb.c dh.c nsupdate.c
+hipd_SOURCES += escrow.c init.c maintenance.c accessor.c oppipdb.c dh.c
+hipd_SOURCES += tcptimeout.c cert.c user_ipsec_sadb_api.c user_ipsec_hipd_msg.c
+hipd_SOURCES += esp_prot_hipd_msg.c esp_prot_anchordb.c hipqueue.c esp_prot_light_update.c
+hipd_SOURCES += nsupdate.c
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
-hipd_LDADD = ../libinet6/.libs/libinet6.a
+hipd_LDADD = $(OPENWRT_LIB_STATIC) ../libinet6/.libs/libinet6.a
 if HIP_CORPORATE
   hipd_LDADD += -lhiptool
 else
   hipd_LDADD += ../libhiptool/.libs/libhiptool.a
 endif
 
-hipd_LDFLAGS = -lcrypto $(HIP_XMLL)
+# Required for pjsip
+hipd_LDADD += -lpthread -luuid
+hipd_LDADD += ../pjproject/pjnath/lib/libpjnath-hipl.a
+hipd_LDADD += ../pjproject/pjlib/lib/libpj-hipl.a
+hipd_LDADD += ../pjproject/pjlib-util/lib/libpjlib-util-hipl.a
 
-if HIP_HI3
- hipd_SOURCES += hi3.c
- INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
-# hipd_LDADD += ../i3/utils/libutils.a ../i3/i3/libi3.a ../i3/i3_client/libi3client.a ../i3/aeshash/libaes.a
- hipd_LDADD += ../i3/i3_client/libi3client.a ../i3/i3/libi3.a ../i3/utils/libutils.a ../i3/aeshash/libaes.a -lpthread
+../pjproject/pjlib/lib/libpj-hipl.a:
+../pjproject/pjlib-util/lib/libpjlib-util-hipl.a:
+../pjproject/pjnath/lib/libpjnath-hipl.a:
+
+hipd_LDFLAGS = -lcrypto $(HIPL_XMLL) -lm -DHIPL_HIPD
+
+if HIP_PRIVSEP
+if HIP_OPENWRT
+  hipd_LDFLAGS += 
+else
+  hipd_LDFLAGS += -lcap
+endif
 endif
 
-if HIP_OPENDHT
- hipd_LDADD += ../opendht/.libs/libhipopendht.a
-endif
+hipd_SOURCES += hi3.c
+INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
+hipd_LDADD += ../i3/i3_client/libi3client.a ../i3/i3/libi3.a ../i3/utils/libutils.a ../i3/aeshash/libaes.a -lpthread
+
+hipd_LDADD += ../opendht/.libs/libhipopendht.a
 
 if HIP_PFKEY
 hipd_LDADD += ../libipsec/.libs/libipsec.a
@@ -75,9 +99,12 @@ output.c: output.h
 nat.c : nat.h
 netdev.c: netdev.h
 update.c: update.h
-rvs.c: rvs.h
 icookie.c: icookie.h
 escrow.c: escrow.h
-reg.c: reg.h
+registration.c: registration.h
 blind.c: blind.h
-nsupdate.c: nsupdate.h
+tcptimeout.c: tcptimeout.h
+hiprelay.c: hiprelay.h
+configfilereader.c: configfilereader.h
+registration.c: registration.h
+linkedlist.c: linkedlist.h

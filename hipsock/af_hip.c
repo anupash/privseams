@@ -10,6 +10,7 @@
 *   - Miika Komu <miika@iki.fi>
 *   - Laura Takkinen <laura.takkinen@hut.fi>
 * Licence: GNU/GPL
+* @note HIPU: This is a kernel module specifically for Linux. It needs to be rewritten for MAC OS X.
 *
 */
 
@@ -31,14 +32,13 @@ out_err:
 	return err;
 }
 
-
 void hsock_cleanup_module(void)
 {
 	int err = 0;
 	HIP_IFEL(hip_uninit_socket_handler(), -1, "HIP clean-up failed\n"); 
  out_err:
 	return;
-}	
+}
 
 module_init(hsock_init_module);
 module_exit(hsock_cleanup_module);
@@ -78,14 +78,14 @@ int hip_select_socket_handler(struct socket *sock,
 
         return err;
 }
-
+#if 0
 int hip_socket_get_eid_info(struct socket *sock,
                             struct proto_ops **socket_handler,
                             const struct sockaddr_eid *eid,
                             int eid_is_local,
                             struct hip_lhi *lhi)
 {
-        struct hip_eid_owner_info owner_info;
+	struct hip_eid_owner_info owner_info;
         int err = 0;
 
         err = hip_select_socket_handler(sock, socket_handler);
@@ -115,34 +115,33 @@ int hip_socket_get_eid_info(struct socket *sock,
                 if(owner_info.flags & HIP_HI_REUSE_ANY) {
                         HIP_DEBUG("Access control check to ED, REUSE_ANY\n");
                         goto out_err;   
-                        
+
                 } else if((owner_info.flags & HIP_HI_REUSE_GID) && 
                           (current->gid == owner_info.gid)) {
                         HIP_DEBUG("Access control check to ED, REUSE_GID\n");
                         goto out_err;   
-                        
+
                 } else if((owner_info.flags & HIP_HI_REUSE_UID) && 
                           (current->uid == owner_info.uid)) {
                         HIP_DEBUG("Access control check to ED, REUSE_UID\n");
                         goto out_err;
-                        
+
                 } else if(current->pid == owner_info.pid) {
                         HIP_DEBUG("Access control check to ED, PID ok\n");
                         goto out_err;
-                        
+
                 } else {
                         err = -EACCES;
                         HIP_INFO("Access denied to ED\n");
                         goto out_err;
                 }
         }
-        
+
  out_err:
 
         return err;
 }
-
-
+#endif
 /** hip_init_socket_handler - initialize socket handler
  *  @return 	returns -1 in case of an error, 0 otherwise
  */ 
@@ -161,12 +160,10 @@ out_err:
  */ 
 int hip_uninit_socket_handler(void)
 {
-	int err = 0;
-	HIP_IFEL(sock_unregister(PF_HIP), -1,
-		"PF_HIP registration failed\n");
-out_err:
-	return -1;
-	
+	/* Returns void */
+	sock_unregister(PF_HIP);
+
+	return 0;
 }
 
 /** hip_create_socket - create a new HIP socket
@@ -175,26 +172,26 @@ out_err:
  *  @param protocol protocol number
  *  @return returns 1 in case of an error, 0 otherwise
  */ 
-int hip_create_socket(struct socket *sock, int protocol)
+int hip_create_socket(struct net *net, struct socket *sock, int protocol)
 {
 	int err = 0;
 	HIP_DEBUG("HIP socket handler: create socket!\n");
-	
+
 	// XX TODO: REPLACE WITH A SELECTOR
-	HIP_IFEL(inet6_create(sock, protocol), -1, "inet6_create\n");
+	HIP_IFEL(inet6_create(net, sock, protocol), -1, "inet6_create\n");
 
 	// XX LOCK AND UNLOCK?
 	sock->ops = &hip_socket_ops;
 	/* Note: we cannot set sock->sk->family ever to PF_HIP because it
 	   simply does not work if we want to use inet6 sockets. */
-	   
+
  out_err:
 	return err;
 }
 
 
 int hip_socket_release(struct socket *sock)
-{	
+{
 	int err = 0;
 	struct proto_ops *socket_handler;
 
@@ -228,55 +225,35 @@ int hip_socket_bind(struct socket *sock,
 	int err = 0;
 	struct sockaddr_in6 sockaddr_in6;
 	struct proto_ops *socket_handler;
-	//struct sock *sk = sock->sk;
-	//struct ipv6_pinfo *pinfo = inet6_sk(sk); TH: removed because unused
 	struct hip_lhi lhi;
-	struct sockaddr_eid *sockaddr_eid = (struct sockaddr_eid *) umyaddr;
+	struct sockaddr_hip *sockaddr_hip = (struct sockaddr_hip *) umyaddr;
 
 	HIP_DEBUG("hip_socket_bind called\n");
 
-	err = hip_socket_get_eid_info(sock, &socket_handler, sockaddr_eid,
-				      1, &lhi);
-	if (err) {
-		HIP_ERROR("Failed to get socket eid info.\n");
-		goto out_err;
-	}
-	HIP_DEBUG_HIT("hip_socket_bind(): HIT", &lhi.hit);
-	HIP_DEBUG("binding to eid with value %d\n",
-		  ntohs(sockaddr_eid->eid_val));
+        err = hip_select_socket_handler(sock, &socket_handler);
+        if (err) {
+                HIP_ERROR("Failed to select a socket handler\n");
+                goto out_err;
+        }
 
-	/* XX FIXME: select the IP address based on the mappings or interfaces
-	   from db and do not use in6_addr_any. */
-
-	/* Use in6_addr_any (= all zeroes) for bind. Offering a HIT to bind
-	   does not work without modifications into the bind code because
-	   bind_v6 returns an error when it does address type checks. */
 	memset(&sockaddr_in6, 0, sizeof(struct sockaddr_in6));
-	sockaddr_in6.sin6_addr = in6addr_any;
-	//memcpy(&sockaddr_in6.sin6_addr, &lhi.hit, sizeof(struct in6_addr));
 	sockaddr_in6.sin6_family = PF_INET6;
-	sockaddr_in6.sin6_port = sockaddr_eid->eid_port;
-	memcpy(&sockaddr_in6.sin6_addr, &lhi.hit, sizeof(struct in6_addr));
-	
-	/* XX FIX: check access permissions from eid_owner_info */
+	sockaddr_in6.sin6_port = sockaddr_hip->ship_port;
+	memcpy(&sockaddr_in6.sin6_addr, &sockaddr_hip->ship_hit, sizeof(struct in6_addr));
 
+	HIP_DEBUG_HIT("hip_socket_bind(): HIT", &sockaddr_in6.sin6_addr);
 	err = socket_handler->bind(sock, (struct sockaddr *) &sockaddr_in6,
 				   sizeof(struct sockaddr_in6));
 	if (err) {
 		HIP_ERROR("Socket handler failed (%d).\n", err);
 		goto out_err;
 	}
-
-	/*
-	memcpy(&pinfo->rcv_saddr, &lhi.hit,
-	       sizeof(struct in6_addr));
-	memcpy(&pinfo->saddr, &lhi.hit,
-	sizeof(struct in6_addr));*/
 	
  out_err:
 	
 	return err;
 }
+
 
 int hip_socket_socketpair(struct socket *sock1, 
 			  struct socket *sock2)
@@ -311,33 +288,20 @@ int hip_socket_connect(struct socket *sock,
 	struct sockaddr_in6 sockaddr_in6;
 	struct proto_ops *socket_handler;
 	struct hip_lhi lhi;
-	struct sockaddr_eid *sockaddr_eid = (struct sockaddr_eid *) uservaddr;
+	struct sockaddr_hip *sockaddr_hip = (struct sockaddr_hip *) uservaddr;
 
 	HIP_DEBUG("hip_socket_connect called\n");
 
-	err = hip_socket_get_eid_info(sock, &socket_handler, sockaddr_eid,
-				      0, &lhi);
-	if (err) {
-		HIP_ERROR("Failed to get socket eid info.\n");
-		goto out_err;
-	}
-
-	HIP_DEBUG("connecting to eid with value %d\n",
-		  ntohs(sockaddr_eid->eid_val));
-	//sock->peer_ed = ntohs(sockaddr_eid->eid_val);
-	//HIP_DEBUG("socket.local_ed: %d, socket.peer_ed: %d\n",sock->local_ed,
-	//	  sock->peer_ed);
+	err = hip_select_socket_handler(sock, &socket_handler);
 
 	memset(&sockaddr_in6, 0, sizeof(struct sockaddr_in6));
 	sockaddr_in6.sin6_family = PF_INET6;
-	memcpy(&sockaddr_in6.sin6_addr, &lhi.hit, sizeof(struct in6_addr));
-	sockaddr_in6.sin6_port = sockaddr_eid->eid_port;
+	sockaddr_in6.sin6_port = sockaddr_hip->ship_port;
+	memcpy(&sockaddr_in6.sin6_addr, &sockaddr_hip->ship_hit, sizeof(struct in6_addr));
 
-	HIP_DEBUG_HIT("connecting to the source HIT\n", &lhi.hit);
+	HIP_DEBUG_HIT("connecting to the source HIT\n", &sockaddr_in6.sin6_addr);
 	/* Note: connect calls autobind if the application has not already
 	   called bind manually. */
-
-	/* XX CHECK: what about autobind src eid ? */
 
 	/* XX CHECK: check does the autobind actually bind to an IPv6 address
 	   or HIT? Or inaddr_any? Should we do the autobind manually here? */
@@ -396,20 +360,23 @@ int hip_socket_accept(struct socket *sock,
 	return err;
 }
 
+
 int hip_socket_getname(struct socket *sock, 
 		       struct sockaddr *uaddr,
 		       int *usockaddr_len,
 		       int peer)
 {
 	int err = 0;
+
 	struct proto_ops *socket_handler;
-	struct hip_lhi lhi;
-	struct hip_eid_owner_info owner_info;
+	//struct hip_lhi lhi;
+	//struct hip_eid_owner_info owner_info;
 	struct sock *sk = sock->sk;
 	struct ipv6_pinfo *pinfo = inet6_sk(sk);
 	struct inet_sock *inet = inet_sk(sk);
 	struct sockaddr_in6 sockaddr_in6_tmp;
-	struct sockaddr_eid *sockaddr_eid = (struct sockaddr_eid *) uaddr;
+	//struct sockaddr_eid *sockaddr_eid = (struct sockaddr_eid *) uaddr;
+	struct sockaddr_hip *sockaddr_hip = (struct sockaddr_hip *) uaddr;
 	int sockaddr_in6_tmp_len;
 
 	HIP_DEBUG("\n");
@@ -442,7 +409,7 @@ int hip_socket_getname(struct socket *sock,
 	HIP_ASSERT(sockaddr_in6_tmp_len == sizeof(struct sockaddr_in6));
 	HIP_DEBUG_IN6ADDR("inet6 getname returned addr",
 			  &sockaddr_in6_tmp.sin6_addr);
-
+#if 0
 	owner_info.uid = current->uid;
 	owner_info.gid = current->gid;
 	owner_info.pid = current->pid;
@@ -460,13 +427,20 @@ int hip_socket_getname(struct socket *sock,
 	}
 
 	sockaddr_eid->eid_port = (peer) ? inet->dport : inet->sport;
-
 	*usockaddr_len = sizeof(struct sockaddr_eid);
+#endif
+
+	memcpy(&sockaddr_hip->ship_hit, &sockaddr_in6_tmp.sin6_addr,
+						sizeof(struct in6_addr));
+	sockaddr_hip->ship_port = sockaddr_in6_tmp.sin6_port;
+	HIP_DEBUG("port %d\n", sockaddr_hip->ship_port);
+	*usockaddr_len = sizeof(struct sockaddr_hip);
 
  out_err:
 
 	return err;
 }
+
 
 /*
  * XX TODO: fall back to IPV6 POLL
@@ -567,6 +541,7 @@ int hip_socket_shutdown(struct socket *sock, int flags)
 	return err;
 }
 
+
 int hip_socket_setsockopt(struct socket *sock,
 			  int   level,
 			  int   optname,
@@ -574,7 +549,6 @@ int hip_socket_setsockopt(struct socket *sock,
 			  int   optlen)
 {
 	int err = 0;
-#if 0
 	struct proto_ops *socket_handler;
 	struct hip_common *msg = (struct hip_common *) optval;
 	int msg_type;
@@ -607,6 +581,7 @@ int hip_socket_setsockopt(struct socket *sock,
 
 	msg_type = hip_get_msg_type(msg);
 	switch(msg_type) {
+#if 0
 	case SO_HIP_ADD_LOCAL_HI:
 		err = hip_wrap_handle_add_local_hi(msg);
 		break;
@@ -622,25 +597,26 @@ int hip_socket_setsockopt(struct socket *sock,
 	case SO_HIP_RST:
 		err = hip_socket_handle_rst(msg);
 		break;
-	case SO_HIP_ADD_RENDEZVOUS:
+	case SO_HIP_ADD_DEL_SERVER:
 		err = hip_socket_handle_rvs(msg);
 		break;
-// XX TODO: not supported for now, this message should be moved as
-// such to the userspace anyway i.e. create WORKORDER:
-// HIP_WO_SUBTYPE_SEND_BOS:
+        /** @todo Not supported for now, this message should be moved as
+	    such to the userspace anyway i.e. create WORKORDER: */
+        // HIP_WO_SUBTYPE_SEND_BOS:
 	case SO_HIP_BOS:
 		err = hip_socket_bos_wo(msg);
 		//err = hip_socket_send_bos(msg);
 		break;
+#endif
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;
 	}
 
  out_err:
-#endif
 	return err;
 }
+
 
 /*
  * The socket options that need a return value.
@@ -691,7 +667,6 @@ int hip_socket_getsockopt(struct socket *sock,
 		goto out_err;
 	}
 
-
 	HIP_DEBUG("Debug3\n");
 
 	err = hip_check_userspace_msg(msg);
@@ -701,10 +676,6 @@ int hip_socket_getsockopt(struct socket *sock,
 	}
 
 	HIP_DEBUG("Debug4\n");
-
-	if(msg == NULL)
-	  HIP_DEBUG("msg is NULL\n");
-
    
 	HIP_DEBUG("optlen = %d\n", *optlen);
 
@@ -724,7 +695,7 @@ int hip_socket_getsockopt(struct socket *sock,
         case SO_HIP_RUN_UNIT_TEST:
 	  err = hip_socket_handle_unit_test(msg);
 	  break;
-#endif
+//#endif
 	case SO_HIP_SET_MY_EID:
 	  HIP_DEBUG("SO_HIP_SET_MY_EID option found\n");
 	  err = hip_socket_handle_set_my_eid(msg);
@@ -733,6 +704,7 @@ int hip_socket_getsockopt(struct socket *sock,
 	  HIP_DEBUG("SO_HIP_PEER_EID option found\n");
 	    err = hip_socket_handle_set_peer_eid(msg);
 		break;
+#endif
 	default:
 		err = -ESOCKTNOSUPPORT;
 	}
@@ -742,8 +714,6 @@ int hip_socket_getsockopt(struct socket *sock,
 
 	return err;
 }
-
-
 
 
 int hip_socket_sendmsg(struct kiocb *iocb, struct socket *sock, 
@@ -770,13 +740,9 @@ int hip_socket_sendmsg(struct kiocb *iocb, struct socket *sock,
 	HIP_HEXDUMP("rcv_saddr", &pinfo->rcv_saddr,
 		    sizeof(struct in6_addr));
 
+	/* Returns the number of bytes sent on success */
 	err = socket_handler->sendmsg(iocb, sock, m, total_len);
-	if (err) {
-		/* The socket handler can return EIO or EINTR which are not
-		   "real" errors. */
-		HIP_DEBUG("Socket handler returned (%d)\n", err);
-		goto out_err;
-	}
+	HIP_DEBUG("Socket handler returned (%d)\n", err);
 
  out_err:
 
@@ -809,13 +775,10 @@ int hip_socket_recvmsg(struct kiocb *iocb, struct socket *sock,
 	HIP_HEXDUMP("rcv_saddr", &pinfo->rcv_saddr,
 		    sizeof(struct in6_addr));
 
+	/* Returns the number of bytes received on success */
 	err = socket_handler->recvmsg(iocb, sock, m, total_len, flags);
-	if (err) {
-		/* The socket handler can return EIO or EINTR which are not
-		   "real" errors. */
-		HIP_DEBUG("Socket socket handler returned (%d)\n", err);
-		goto out_err;
-	}
+	HIP_DEBUG("Socket handler returned (%d)\n", err);
+
 
  out_err:
 

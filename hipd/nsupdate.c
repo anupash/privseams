@@ -9,11 +9,21 @@
 
 #define VAR_IPS "IPS"
 #define VAR_HIT "HIT"
-#define NSUPDATE "/etc/hip/nsupdate.pl"
+#define NSUPDATE HIPL_DEFAULT_PREFIX "/sbin/" "nsupdate.pl"
 #define NSUPDATE_ARG0 "nsupdate.pl"
 
+int hip_nsupdate_status = 0;
 
 #define ERR -1
+
+void hip_set_nsupdate_status(int status) {
+  hip_nsupdate_status = status;
+}
+
+int hip_get_nsupdate_status(void) {
+  return hip_nsupdate_status;
+}
+
 
 /*
  * return string "name=value"

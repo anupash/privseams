@@ -1,5 +1,5 @@
 Name: hipl
-Version: 1.0.2
+Version: 1.0.4
 Release: 1
 Summary: HIP IPsec key management and mobility daemon.
 URL: http://infrahip.hiit.fi/hipl/
@@ -8,7 +8,8 @@ Packager: hipl-dev@freelists.org
 Vendor: InfraHIP
 License: GPL
 Group: System Environment/Kernel
-Requires: openssl
+Requires: openssl gtk2 libxml2 glib2 iptables-devel
+BuildRequires: openssl-devel gtk2-devel libxml2-devel glib2-devel iptables-devel xmlto libtool libcap-devel 
 ExclusiveOS: linux
 BuildRoot: %{_tmppath}/%{name}-%{version}-root
 Prefix: /usr
@@ -26,9 +27,21 @@ other related tools and test software.
 %prep
 %setup
 
+#added by CentOS
+%ifarch x86_64 ppc64 sparc64 ia64
+%{__perl} -p -i -e 's,/usr/lib/libipq.a,/usr/lib64/libipq.a,g' firewall/Makefile.in
+%endif
+
+%{__perl} -p -i -e 's,/usr/share/pixmaps,\$(DESTDIR)/usr/share/pixmaps,g' libhipgui/Makefile.in
+#end CentOS changes
+
 # Note: in subsequent releases me may want to use --disable-debugging
+# TBD: The pjproject needs to glued in better (convert it to automake).
+#      That way we can get rid of the double configure (the second one is
+#      currently required for bug id 524)
 %build
-./configure --prefix=%{buildroot}/%{prefix} --enable-opportunistic --enable-rvs && make
+./autogen.sh --target=hipl --prefix=/usr
+%configure
 make -C doc all
 
 # Currently we are not going to install all includes and test software.
@@ -40,52 +53,182 @@ make -C doc all
 #
 #%define _unpackaged_files_terminate_build 0
 #%define _missing_doc_files_terminate_build 0
+%define python_sitelib %(%{__python} -c 'from distutils import sysconfig; print sysconfig.get_python_lib()')
+
+
+# Note: we are not distributing everything from test directory, just essentials
+
+# create subpackage
+# list of files with the name of subpackage
+
+%package lib
+Summary: hip library files
+Group: System Environment/Kernel
+%description lib
+
+%package daemon
+Requires: hipl-lib
+Summary: hip daemon files
+Group: System Environment/Kernel
+%description daemon
+
+%package agent
+Requires: hipl-lib, hipl-daemon
+Summary: hip agent files
+Group: System Environment/Kernel
+%description agent
+
+%package tools
+Requires: hipl-lib, hipl-daemon
+Summary: hip tools files
+Group: System Environment/Kernel
+%description tools
+
+%package firewall
+Summary: hip firewall files
+Group: System Environment/Kernel
+%description firewall
+
+%package test
+Requires: hipl-lib, hipl-daemon
+Summary: hip test files
+Group: System Environment/Kernel
+%description test
+
+%package doc
+Summary: hip doc files
+Group: System Environment/Kernel
+%description doc
+
+%package dnsproxy
+Summary: dns proxy for hip
+Group: System Environment/Kernel
+%description dnsproxy
 
 %install
 rm -rf %{buildroot}
-install -d %{buildroot}/%{prefix}/bin
-install -d %{buildroot}/%{prefix}/sbin
-install -d %{buildroot}/%{prefix}/lib
-install -d %{buildroot}/doc
+
+#added by CentOS
+install -d %{buildroot}%{prefix}/share/pixmaps
+#end CentOS add
+
+# XX FIXME: add more python stuff from tools directory
+
+install -d %{buildroot}%{prefix}/bin
+install -d %{buildroot}%{prefix}/sbin
+install -d %{buildroot}%{prefix}/lib
 install -d %{buildroot}/etc/rc.d/init.d
-make install
-install -m 644 doc/HOWTO.txt %{buildroot}/doc
+install -d %{buildroot}/doc
+make DESTDIR=%{buildroot} install
+install -m 700 test/packaging/rh-init.d-hipfw %{buildroot}/etc/rc.d/init.d/hipfw
 install -m 700 test/packaging/rh-init.d-hipd %{buildroot}/etc/rc.d/init.d/hipd
+install -m 700 test/packaging/rh-init.d-dnsproxy %{buildroot}/etc/rc.d/init.d/dnshipproxy
+install -m 644 doc/HOWTO.txt %{buildroot}/doc
+install -d %{buildroot}%{python_sitelib}/DNS
+install -t %{buildroot}%{python_sitelib}/DNS tools/DNS/*py*
+install -d %{buildroot}%{python_sitelib}/dnshipproxy
+install -t %{buildroot}%{python_sitelib}/dnshipproxy tools/dnsproxy.py*
+install -t %{buildroot}%{python_sitelib}/dnshipproxy tools/pyip6.py*
+install -t %{buildroot}%{python_sitelib}/dnshipproxy tools/hosts.py*
+install -t %{buildroot}%{python_sitelib}/dnshipproxy tools/util.py*
+install -d %{buildroot}%{python_sitelib}/parsehipkey
+install -t %{buildroot}%{python_sitelib}/parsehipkey tools/parse-key-3.py*
+install -t %{buildroot}%{python_sitelib}/parsehipkey tools/myasn.py*
+# required in CentOS release 5.2
+install -m 700 tools/parsehipkey %{buildroot}%{prefix}/sbin/parsehipkey
+install -m 700 tools/dnshipproxy %{buildroot}%{prefix}/sbin/dnshipproxy
 
-%pre
+%post lib
+/sbin/ldconfig 
 
-%post
+%post daemon
 /sbin/chkconfig --add hipd
+/sbin/chkconfig --level 2 hipd on
 /sbin/service hipd start
 
-%preun
+#%post
+#/sbin/chkconfig --add hipfw
+#/sbin/chkconfig --level 2 hipfw on
+#/sbin/service hipfw start
+#`/usr/sbin/hipfw -bk`
+
+%post firewall
+/sbin/chkconfig --add hipfw
+/sbin/chkconfig --level 2 hipfw on
+/sbin/service hipfw start
+#/etc/rc.d/init.d/hipfw start
+#/usr/sbin/hipfw -bk`
+
+%post dnsproxy
+/sbin/chkconfig --add dnshipproxy
+/sbin/chkconfig --level 2 dnshipproxy on
+/sbin/service dnshipproxy start
+
+%preun daemon
 /sbin/service hipd stop
 /sbin/chkconfig --del hipd
 
-%postun
+%preun firewall
+/sbin/service hipfw stop
+/sbin/chkconfig --del hipfw
+#/etc/rc.d/init.d/hipfw stop
 
+%preun dnsproxy
+/sbin/service dnshiproxy stop
+/sbin/chkconfig --del dnshipproxy
 
 %clean
 rm -rf %{buildroot}
 
-# Note: we are not distributing everything from test directory, just essentials
-%files
-%defattr (-, root, root)
-%{prefix}/sbin/hipconf
+%files lib
+%{_libdir}
+
+%files daemon
 %{prefix}/sbin/hipd
 %{prefix}/bin/hipsetup
+%config /etc/rc.d/init.d/hipd
+
+%files agent
 %{prefix}/bin/hipagent
-%{prefix}/bin/conntest-client
-%{prefix}/bin/conntest-client-gai
+
+%files dnsproxy
+%{prefix}/sbin/dnshipproxy
+%{prefix}/sbin/parsehipkey
+%{python_sitelib}/dnshipproxy
+%{python_sitelib}/parsehipkey
+%{python_sitelib}/DNS
+%defattr(755,root,root)
+
+%files tools
+%{prefix}/sbin/hipconf
+%{prefix}/sbin/nsupdate.pl
+%defattr(755,root,root)
+
+%files test
+%{prefix}/bin/conntest-client-opp
+%{prefix}/bin/conntest-client-hip
 %{prefix}/bin/conntest-client-native
 %{prefix}/bin/conntest-client-native-user-key
 %{prefix}/bin/conntest-server
 %{prefix}/bin/conntest-server-native
-%{prefix}/lib/*
-%config /etc/rc.d/init.d/hipd
+
+%files firewall
+%{prefix}/sbin/hipfw
+%config /etc/rc.d/init.d/hipfw
+
+%files doc
 %doc doc/HOWTO.txt doc/howto-html
 
 %changelog
+* Wed Aug 20 2008 Miika Komu <miika@iki.fi>
+- Dnsproxy separated into a separate package. Python packaging improvements.
+* Mon Jul 21 2008 Miika Komu <miika@iki.fi>
+- Rpmbuild fixes for Fedora 8 build
+* Thu Jul 17 2008 Johnny Hughes <johnny@centos.org>
+- added two perl searches and installed one directory in the spec file
+- added libtool, libcap-devel and xmlto to BuildRequires 
+* Thu May 29 2008 Juha Jylhakoski <juha.jylhakoski@hiit.fi>
+- Split hipl.spec was split to different packages
 * Tue May 9 2006 Miika Komu <miika@iki.fi>
 - init.d script, buildroot
 * Mon May 6 2006 Miika Komu <miika@iki.fi>
@@ -94,3 +237,4 @@ rm -rf %{buildroot}
 - Renamed to hipl.spec (original was from Mika) and modularized
 * Tue Feb 14 2006 Miika Komu <miika@iki.fi>
 - added changelog
+

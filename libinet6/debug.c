@@ -1,57 +1,50 @@
-/*
- * Debugging functions for HIPL userspace applications. Use them as follows:
+/**
+ * @file
+ * Debugging functions for HIPL userspace applications. Production of quality
+ * code prints debugging stuff via syslog, testing code prints interactively on
+ * stderr. This is done automatically using DEBUG flag in Makefile (see logtype
+ * variable below).
  *
- *   INFO("test foobar");
- *   INFO("%s\n", "debug test");
- *   _INFO("%s\n", "this is not printed, but may be important in future");
- *   ERROR("%s%d\n", "serious error!", 123);
- *   DIE("%s\n", "really bad error, exiting!");
- *   PERROR("socket");
- *   HEXDUMP("foobar", data, len);
+ * Examples:
+ *<pre>
+ * INFO("test foobar");
+ * INFO("%s\n", "debug test");
+ * _INFO("%s\n", "this is not printed, but may be important in future");
+ * ERROR("%s%d\n", "serious error!", 123);
+ * DIE("%s\n", "really bad error, exiting!");
+ * PERROR("socket");
+ * HEXDUMP("foobar", data, len);
+ *</pre>
+ * 
+ * Adjusting of log types and format dynamically. (there really should not be a
+ * reason to call these in the code, because default settings should be
+ * reasonable)
  *
- *   adjust log types and format dynamically (there really should not
- *   be a reason to call these in the code, because default settings
- *   should be reasonable)
+ *<pre>
+ * hip_set_logtype(LOGTYPE_STDERR); // set logging output to stderr
+ * hip_set_logfmt(LOGFMT_SHORT);    // set short logging format
+ *</pre>
+ * 
+ * @todo debug messages should not be compiled at all in a production release
+ * @todo set_log{type|format}(XX_DEFAULT)
+ * @todo locking (is it really needed?)
+ * @todo optimize: openlog() and closelog() called only when needed
+ * @todo ifdef gcc (in vararg macro)?
+ * @todo production use: disable info messages?
+ * @todo move file+line from prefix to the actual message body
+ * @todo handle_log_error(): add different policies (exit(), ignore, etc)
+ * @todo check what vlog("xx\nxx\n") does with syslog
+ * @todo struct info { char *file, int line, char *function } ?
+ * @todo macro for ASSERT
+ * @todo change char * to void * in hexdump ?
+ * @todo HIP_ASSERT()
  *
- *   hip_set_logtype(LOGTYPE_STDERR); // set logging output to stderr
- *   hip_set_logfmt(LOGFMT_SHORT);    // set short logging format
- *
- * TODO: 
- * - debug messages should not be compiled at all in a production release
- * - set_log{type|format}(XX_DEFAULT)
- * - locking (is it really needed?)
- * - optimize: openlog() and closelog() called only when needed
- * - ifdef gcc (in vararg macro)?
- * - production use: disable info messages?
- * - move file+line from prefix to the actual message body
- * - handle_log_error(): add different policies (exit(), ignore, etc)
- * - check what vlog("xx\nxx\n") does with syslog
- * - struct info { char *file, int line, char *function } ?
- * - macro for ASSERT
- * - change char * to void * in hexdump ?
- * - HIP_ASSERT()
- *
- * Production quality code prints debugging stuff via syslog, testing code
- * prints interactively on stderr. This is done automatically using DEBUG
- * flag in Makefile (see logtype variable below).
- *
- * A note about the newlines: PERROR() appends always a newline after message
- * to be printed as in perror(3). In the rest of the functions, you have to
- * append a newline (as in fprinf(3)).
- *
- * BUGS
- * - XX
+ * @note About the newlines: PERROR() appends always a newline after message to
+ *       be printed as in perror(3). In the rest of the functions, you have to
+ *       append a newline (as in fprinf(3)).
  */
-
 #include "debug.h"
 #include "util.h"
-
-/* differentiate between die(), error() and debug() error levels */
-enum debug_level { DEBUG_LEVEL_DIE,
-		   DEBUG_LEVEL_ERROR,
-		   DEBUG_LEVEL_INFO,
-		   DEBUG_LEVEL_DEBUG,
-		   DEBUG_LEVEL_MAX };
 
 /* must be in the same order as enum debug_level (straight mapping) */
 const int debug2syslog_map[] = { LOG_ALERT,
@@ -82,30 +75,34 @@ static enum logfmt_t logfmt = LOGFMT_SHORT;
 static enum logdebug_t logdebug = LOGDEBUG_ALL;
 
 /**
- * hip_set_logtype - set logging to to stderr or syslog
+ * @brief Sets logging to stderr or syslog.
+ * 
+ * Defines where HIP daemon DEBUG, INFO, ERROR etc. messages are printed. 
+ * 
  * @param new_logtype the type of logging output, either LOGTYPE_STDERR or
- *               LOGTYPE_SYSLOG
- *
+ *                    LOGTYPE_SYSLOG
  */
 void hip_set_logtype(int new_logtype) {
   logtype = new_logtype;
 }
 
 /**
- * hip_set_logfmt - set the formatting of log output (short or long)
- * @param new_logfmt the format of the log output, either LOGFMT_SHORT or
- *              LOGFMT_LONG
+ * @brief Sets the formatting of log output.
  *
+ * Defines whether the messages should include file name and line number or not. 
+ * 
+ * @param new_logfmt the format of the log output, either LOGFMT_SHORT or
+ *                    LOGFMT_LONG
  */
 void hip_set_logfmt(int new_logfmt) {
   logfmt = new_logfmt;
 }
 
 /**
- * hip_set_logdebug - selects what logging messages to display
- * @param new_logdebug: either LOGDEBUG_ALL, LOGDEBUG_MEDIUM or LOGDEBUG_NONE
- * @return       zero on success.
- *
+ * @brief Selects what logging messages to display.
+ * 
+ * @param new_logdebug either LOGDEBUG_ALL, LOGDEBUG_MEDIUM or LOGDEBUG_NONE
+ * @return             always zero.
  */
 int hip_set_logdebug(int new_logdebug) {
   logdebug = new_logdebug;
@@ -131,7 +128,7 @@ int hip_set_auto_logdebug(const char *cfile){
 	if (!strcmp(cfile, "default"))
 		fname = HIPD_CONFIG_FILE;
 	else
-		fname = cfile;
+	  fname = (char *) cfile;
 
 	HIP_IFEL(!(hip_config = fopen(fname, "r")), -1, 
 		 "Error: can't open config file %s.\n", fname);
@@ -206,7 +203,7 @@ int hip_set_auto_logdebug(const char *cfile){
  *
  */
 void hip_handle_log_error(int logtype) {
-  fprintf(stderr, "log (type=%d) failed, ignoring", logtype);
+  fprintf(stderr, "log (type=%d) failed, ignoring\n", logtype);
 }
 
 /**
@@ -279,48 +276,16 @@ void hip_vlog(int debug_level, const char *file, const int line,
 
 }
 
-/**
- * hip_info - output informative (medium level) debugging messages
- * @param file the file from where the debug call was made        
- * @param line the line of the debug call in the source file
- * @param function the name of function where the debug call is located
- * @param fmt the output format of the debug message as in printf(3)
- *
- * The variable size argument list (...) is used as in printf(3).
- * Do not call this function from the outside of the debug module,
- * use the HIP_INFO macro instead.
- */
-void hip_info(const char *file, int line, const char *function,
-	      const char *fmt, ...) {
-
-  if ( logdebug != LOGDEBUG_NONE ){
-    va_list args;
-    va_start(args, fmt);
-    hip_vlog(DEBUG_LEVEL_INFO, file, line, function, fmt, args);
-    va_end(args);
-  }
-}
-
-/**
- * hip_debug - output development (low level) debugging messages
- * @param file the file from where the debug call was made        
- * @param line the line of the debug call in the source file
- * @param function the name of function where the debug call is located
- * @param fmt the output format of the debug message as in printf(3)
- *
- * The variable size argument list (...) is used as in printf(3).
- * Do not call this function from the outside of the debug module,
- * use the HIP_DEBUG macro instead.
- */
-void hip_debug(const char *file, int line, const char *function,
-	       const char *fmt, ...) {
-
-  if ( logdebug == LOGDEBUG_ALL ){
+void hip_print_str(int debug_level, const char *file, int line, const char *function, const char *fmt, ...)
+{
 	va_list args;
 	va_start(args, fmt);
-	hip_vlog(DEBUG_LEVEL_DEBUG, file, line, function, fmt, args);
+	if ((debug_level == DEBUG_LEVEL_INFO && logdebug != LOGDEBUG_NONE) ||
+	    (debug_level == DEBUG_LEVEL_DEBUG && logdebug == LOGDEBUG_ALL) ||
+	    (debug_level == DEBUG_LEVEL_ERROR && logdebug != LOGDEBUG_NONE) ||
+	    (debug_level == DEBUG_LEVEL_DIE))
+	  hip_vlog(debug_level, file, line, function, fmt, args);
 	va_end(args);
-  }
 }
 
 /**
@@ -352,6 +317,7 @@ void hip_debug_gl(int debug_group, int debug_level,
 		va_end(args);
 	}
 }
+
 /**
  * hip_die - output a fatal error and exit
  * @param file the file from where the debug call was made        
@@ -367,10 +333,11 @@ void hip_die(const char *file, int line, const char *function,
 	     const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
-  hip_vlog(DEBUG_LEVEL_DIE, file, line, function, fmt, args);
+  hip_print_str(DEBUG_LEVEL_DIE, file, line, function, fmt, args);
   va_end(args);
   exit(1);
 }
+
 
 /**
  * hip_error - output an error message (high level)
@@ -406,20 +373,20 @@ void hip_error(const char *file, int line, const char *function,
  */
 void hip_perror_wrapper(const char *file, int line, const char *function,
 			const char *s) {
-	hip_error(file, line, function, "%s %s\n", s, strerror(errno));
+	hip_error(file, line, function, "%s%s\n", s, strerror(errno));
 }
 
 /**
- * hip_hexdump - print hexdump starting from address @str of length @len
- * @param file the file from where the debug call was made        
- * @param line the line of the debug call in the source file
+ * Prints a hexdump starting from address @c str of length @c len. Do not call
+ * this function from the outside of the debug module, use the HIP_HEXDUMP macro
+ * instead.
+ * 
+ * @param file     the file from where the debug call was made        
+ * @param line     the line of the debug call in the source file
  * @param function the name of function where the debug call is located
- * @param prefix the prefix string will printed before the hexdump
- * @param str pointer to the beginning of the data to be hexdumped
- * @param len the length of the data to be hexdumped
- *
- * Do not call this function from the outside of the debug module,
- * use the HIP_HEXDUMP macro instead.
+ * @param prefix   the prefix string will printed before the hexdump
+ * @param str      pointer to the beginning of the data to be hexdumped
+ * @param len      the length of the data to be hexdumped
  */
 void hip_hexdump(const char *file, int line, const char *function,
 		 const char *prefix, const void *str, int len) {
@@ -452,14 +419,14 @@ void hip_hexdump(const char *file, int line, const char *function,
 	HIP_DIE("hexdump msg too long(%d)", hexdump_written);
 	} else {
 	hexdump_count -= hexdump_written;
-	assert(hexdump_count >=0);
+	HIP_ASSERT(hexdump_count >=0);
 	hexdump_index += hexdump_written;
-	assert(hexdump_index + hexdump_count == hexdump_max_size);
+	HIP_ASSERT(hexdump_index + hexdump_count == hexdump_max_size);
 	}
 	char_index++;
 	} while(char_index < len);
 	
-	hip_info(file, line, function, "%s0x%s\n", prefix, hexdump);
+	hip_print_str(DEBUG_LEVEL_DEBUG, file, line, function, "%s0x%s\n", prefix, hexdump);
   }
 
   free(hexdump);
@@ -535,9 +502,9 @@ int hip_hexdump_parsed(const char *file, int line, const char *function,
 				HIP_DIE("hexdump msg too long(%d)", hexdump_written);
 			}
 			hexdump_count -= hexdump_written;
-			assert(hexdump_count >=0);
+			HIP_ASSERT(hexdump_count >=0);
 			hexdump_index += hexdump_written;
-			assert(hexdump_index + hexdump_count == hexdump_total_size);
+			HIP_ASSERT(hexdump_index + hexdump_count == hexdump_total_size);
 			
 			// Wite the character in ascii to asciidump line	
 			if (written > 32 && written < 127)
@@ -585,7 +552,7 @@ int hip_hexdump_parsed(const char *file, int line, const char *function,
 			}
 			char_index++;
 		} 
-		hip_info(file, line, function, "%s%s\n", prefix, hexdump);
+		hip_print_str(DEBUG_LEVEL_DEBUG, file, line, function, "%s%s\n", prefix, hexdump);
   	}
 	else {
 	  HIP_ERROR("hexdump length was 0\n");  
@@ -645,21 +612,23 @@ void hip_print_sockaddr(const char *file, int line, const char *function,
 	HIP_DEBUG("%s\n", addr_str);
 }
 
-void hip_print_lsi(const char *str, const struct in_addr *lsi)
+void hip_print_lsi(int debug_level, const char *file, int line, const char *function,
+		   const char *str, const struct in_addr *lsi)
 {
 	char dst[INET_ADDRSTRLEN];
 	inet_ntop(AF_INET, lsi, dst, sizeof(dst));
-	HIP_DEBUG("%s: %s\n", str, dst);
+	hip_print_str(debug_level, file, line, function, "%s: %s\n", str, dst);
 }
 /**
  * hip_print_hit - print a HIT
  * @param str string to be printed before the HIT
  * @param hit the HIT to be printed
  */
-void hip_print_hit(const char *str, const struct in6_addr *hit)
+void hip_print_hit(int debug_level, const char *file, int line, const char *function,
+		   const char *str, const struct in6_addr *hit)
 {
 	if(hit == NULL) {
-		HIP_DEBUG("%s: NULL\n", str);
+	        HIP_DEBUG("%s: NULL\n", str);
 		return;
 	}
 	else {
@@ -668,18 +637,190 @@ void hip_print_hit(const char *str, const struct in6_addr *hit)
 		if (IN6_IS_ADDR_V4MAPPED(hit)) {
 			struct in_addr in_addr;
 			IPV6_TO_IPV4_MAP(hit, &in_addr);
-			hip_print_lsi(str, &in_addr);
+			hip_print_lsi(debug_level, file, line, function, str, &in_addr);
 		} else {
 			hip_in6_ntop(hit, dst);
-			HIP_DEBUG("%s: %s\n", str, dst);
+			hip_print_str(debug_level, file, line, function, "%s: %s\n", str, dst);
 		}
 		return;
 	}
 }
 
-void hip_print_key(const char *str, const struct hip_crypto_key *key, int key_len)
+#if 0
+void hip_print_key(int debug_level, const char *file, int line, const char *function,
+		   const char *str, const struct hip_crypto_key *key,
+		   int key_len)
 {
-	char dst[key_len];
+	char dst[key_len]; // THIS ALLOCATION IS NOT OK.
 	strncpy(dst, key->key, key_len);
-	HIP_DEBUG("%s: %s\n", str, dst);
+	hip_print_str(debug_level, file, line, function, "%s: %s\n", str, dst);
+}
+#endif
+
+void uint8_to_binstring(uint8_t val, char *buffer) 
+{
+	int i = 0;
+	for(; i < 8; i++) {
+		if(val & 0x80)
+			buffer[i] = '1';
+		else
+			buffer[i] = '0';
+		val <<= 1;
+	}
+	
+	buffer[i] = '\0';
+}
+
+void uint16_to_binstring(uint16_t val, char *buffer) 
+{
+	int i = 0;
+	for(; i < 16; i++) {
+		if(val & 0x8000)
+			buffer[i] = '1';
+		else
+			buffer[i] = '0';
+		val <<= 1;
+	}
+	
+	buffer[i] = '\0';
+}
+     
+void uint32_to_binstring(uint32_t val, char *buffer) 
+{
+	int i = 0;
+	for(; i < 32; i++) {
+		if(val & 0x80000000)
+			buffer[i] = '1';
+		else
+			buffer[i] = '0';
+		val <<= 1;
+	}
+	
+	buffer[i] = '\0';
+}
+
+
+/* THIS ONE WORKS -SAMU */
+void hip_print_locator_addresses(struct hip_common * in_msg) {
+    struct hip_locator *locator;
+    int i = 0;
+    unsigned char * tmp = NULL;
+    struct hip_locator_info_addr_item *item = NULL;
+    struct hip_locator_info_addr_item2 *item2 = NULL;
+    char *address_pointer; 
+	
+    _HIP_DUMP_MSG(in_msg);
+
+    locator = hip_get_param((struct hip_common *)in_msg,
+                            HIP_PARAM_LOCATOR);
+    if (locator) {	
+	address_pointer =(char*) (locator + 1);
+       
+	for(;address_pointer < ((char*)locator) + hip_get_param_contents_len(locator); ) {
+		if (((struct hip_locator_info_addr_item*)address_pointer)->locator_type 
+                    == HIP_LOCATOR_LOCATOR_TYPE_UDP) {
+			item2 = (struct hip_locator_info_addr_item2 *)address_pointer;
+			HIP_DEBUG_HIT("LOCATOR", (struct in6_addr *)&item2->address);
+                        address_pointer += sizeof(struct hip_locator_info_addr_item2);
+                }
+                else if(((struct hip_locator_info_addr_item*)address_pointer)->locator_type 
+                        == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI) {
+			item = (struct hip_locator_info_addr_item *)address_pointer;
+			HIP_DEBUG_HIT("LOCATOR", (struct in6_addr *)&item->address);
+                        address_pointer += sizeof(struct hip_locator_info_addr_item);
+                } 
+                else if(((struct hip_locator_info_addr_item*)address_pointer)->locator_type 
+                        == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
+			item = (struct hip_locator_info_addr_item *)address_pointer;
+			HIP_DEBUG_HIT("LOCATOR", (struct in6_addr *)&item->address);
+                        address_pointer += sizeof(struct hip_locator_info_addr_item);
+                } 
+                else
+                        address_pointer += sizeof(struct hip_locator_info_addr_item);
+	}	
+    }
+}
+
+void hip_print_peer_addresses(hip_ha_t *entry) {
+	hip_list_t *item = NULL, *tmp = NULL, *item_outer = NULL, *tmp_outer = NULL; 
+	struct hip_peer_addr_list_item *addr_li;
+	struct hip_spi_out_item *spi_out;
+	int i = 0, ii = 0;
+
+	list_for_each_safe(item_outer, tmp_outer, entry->spis_out, i) {
+		spi_out = list_entry(item_outer);
+		HIP_DEBUG("SPI out is %d\n", spi_out->spi);
+		ii = 0;
+		tmp = NULL;
+		item = NULL;
+		list_for_each_safe(item, tmp, spi_out->peer_addr_list, ii) {
+			addr_li = list_entry(item);
+			HIP_DEBUG_HIT("SPI out address", &addr_li->address);
+		
+		}
+	}
+}
+
+//add  by santtu
+/**
+ * hip_print_hit - print a HIT
+ * @param str string to be printed before the HIT
+ * @param hit the HIT to be printed
+ */
+void hip_print_locator(int debug_level, const char *file, int line, const char *function,
+		   const char *str, const struct in6_addr *locator)
+{
+
+/* XXTRASHXX Totally useless does anything but what it is supposed to do -SAMU */
+
+	int n_addrs = 0, i = 0;
+	struct hip_locator_info_addr_item *first_address_item = NULL, 
+		*locator_address_item = NULL;
+	struct hip_locator_info_addr_item2 * locator_address_item2 = NULL;
+	   /* locator = hip_get_param((struct hip_common *)in_msg,
+	HIP_PARAM_LOCATOR);*/
+	if (locator) {
+		HIP_DEBUG("%s: \n", str);
+	
+	n_addrs = hip_get_locator_addr_item_count(locator);
+	HIP_DEBUG("there are  %d locator items \n", n_addrs);
+	first_address_item = hip_get_locator_first_addr_item(locator);
+	               
+	for (i = 0; i < n_addrs; i++) {
+		locator_address_item = (struct hip_locator_info_addr_item *) 
+			hip_get_locator_item(first_address_item, i);
+	    _HIP_HEXDUMP("LOC HEX", &locator_address_item[i],
+	                           sizeof(struct hip_locator_info_addr_item));
+	HIP_DEBUG("locator items index %d, type is %d \n", i,
+		  locator_address_item->locator_type );
+	if (locator_address_item->locator_type == HIP_LOCATOR_LOCATOR_TYPE_IPV6) {
+	    
+		HIP_INFO_HIT("LOCATOR from DHT",
+	              (struct in6_addr *)&locator_address_item->address);
+		_HIP_HEXDUMP("Should be in6_addr", 
+	                 &locator_address_item[i].address,
+	                 sizeof(struct in6_addr));
+	    
+	}
+	if (locator_address_item->locator_type == HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI) {
+		
+			HIP_INFO_HIT("LOCATOR from ESP SPI(type 1)",
+	                 (struct in6_addr *)&locator_address_item->address);
+			_HIP_HEXDUMP("Should be in6_addr", 
+	                            &locator_address_item[i].address,
+	                            sizeof(struct in6_addr));
+	               
+	           }
+	if (locator_address_item->locator_type == HIP_LOCATOR_LOCATOR_TYPE_UDP) {
+		locator_address_item2 = (struct hip_locator_info_addr_item2 *) locator_address_item;
+			HIP_INFO_HIT("LOCATOR from UDP",
+	               (struct in6_addr *)&locator_address_item2->address);
+			HIP_DEBUG("LOCATOR port for UDP: %d\n",  ntohs(locator_address_item2->port));
+			_HIP_HEXDUMP("Should be in6_addr", 
+	                                  &locator_address_item[i].address,
+	                                  sizeof(struct in6_addr));
+	                     
+	                 }
+	    }
+	}
 }

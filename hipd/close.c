@@ -2,20 +2,45 @@
 
 int hip_send_close(struct hip_common *msg)
 {
-	int err = 0;
+	int err = 0, retry, n;
 	hip_hit_t *hit = NULL;
 	hip_ha_t *entry;
+	struct sockaddr_in6 sock_addr;
+	struct hip_common *msg_to_firewall = NULL;
 
 	HIP_DEBUG("msg=%p\n", msg);
 
-	if (msg)
+	if(msg)
 		hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
 
-	HIP_IFEL(hip_for_each_ha(&hip_xmit_close, (void *) hit), -1,
-		 "Failed to reset all HAs\n");
+	HIP_IFEL(hip_for_each_ha(&hip_xmit_close, (void *) hit),
+		-1, "Failed to reset all HAs\n");
 
- out_err:
+	/* send msg to firewall to reset
+	 * the db entries there too */
+	msg_to_firewall = hip_msg_alloc();
+	memset(msg_to_firewall, 0, HIP_MAX_PACKET);
+	hip_msg_init(msg_to_firewall);
+	HIP_IFE(hip_build_user_hdr(msg_to_firewall, SO_HIP_RESET_FIREWALL_DB, 0),
+		-1);
+	bzero(&sock_addr, sizeof(sock_addr));
+	sock_addr.sin6_family = AF_INET6;
+	sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
+	sock_addr.sin6_addr = in6addr_loopback;
 
+	for(retry = 0; retry < 3; retry++){
+		n = hip_sendto_user(msg_to_firewall, &sock_addr);
+		if(n <= 0){
+			HIP_ERROR("resetting firewall db failed (round %d)\n", retry);
+			HIP_DEBUG("Sleeping few seconds to wait for fw\n");
+			sleep(2);
+		}else{
+			HIP_DEBUG("resetting firewall db ok (sent %d bytes)\n", n);
+			break;
+		}
+	}
+
+out_err:
 	return err;
 }
 
@@ -43,6 +68,8 @@ int hip_xmit_close(hip_ha_t *entry, void *opaque)
 
 	HIP_DEBUG("State is ESTABLISHED in current host association, sending "\
 		  "CLOSE message to peer.\n");
+
+	hip_firewall_set_bex_data(SO_HIP_FW_UPDATE_DB, entry, &entry->hit_our, &entry->hit_peer);
 	
 	HIP_IFE(!(close = hip_msg_alloc()), -ENOMEM);
 
@@ -72,7 +99,7 @@ int hip_xmit_close(hip_ha_t *entry, void *opaque)
 		 -ECOMM, "Sending CLOSE message failed.\n");
 	
 	entry->state = HIP_STATE_CLOSING;
-
+	
  out_err:
 	if (close)
 		HIP_FREE(close);
@@ -134,24 +161,26 @@ int hip_handle_close(struct hip_common *close, hip_ha_t *entry)
 
 	HIP_DEBUG("CLOSED.\n");
 
-/* If this machine is a rendezvous server, then we need to delete the rendezvous
-   association matching the sender's HIT. */
+/* If this host has a relay hashtable, i.e. the host is a HIP UDP relay or RVS,
+   then we need to delete the relay record matching the sender's HIT. */
 #ifdef CONFIG_HIP_RVS
-	hip_rva_t *rva = hip_rvs_get(&(close->hits));
-	if (rva != NULL) {
-		HIP_DEBUG_HIT("Deleting rendezvous association for HIT",
-			      &(close->hits));
-		hip_rvs_remove(rva);
+	if(hip_relay_get_status())
+	{
+	     hip_relrec_t *rec = NULL, dummy;
+	     memcpy(&(dummy.hit_r), &(close->hits),
+		    sizeof(close->hits));
+	     hip_relht_rec_free(&dummy);
+	     /* Check that the element really got deleted. */
+	     if(hip_relht_get(&dummy) == NULL)
+	     {
+		  HIP_DEBUG_HIT("Deleted relay record for HIT",
+				&(close->hits));
+	     }
 	}
 #endif
 	
 	HIP_IFEL(hip_del_peer_info(&entry->hit_our, &entry->hit_peer), -1,
 				   "Deleting peer info failed.\n");
-
-	/* by now, if everything is according to plans, the refcnt should
-	   be 1 */
-	//hip_put_ha(entry);
-
  out_err:
 
 	if (close_ack)
@@ -165,7 +194,7 @@ int hip_receive_close(struct hip_common *close,
 {
 	int state = 0;
 	int err = 0;
-	uint16_t mask = HIP_CONTROL_HIT_ANON;
+	uint16_t mask = HIP_PACKET_CTRL_ANON;
 
 	/* XX FIX: CHECK THE SIGNATURE */
 
@@ -258,7 +287,7 @@ int hip_receive_close_ack(struct hip_common *close_ack,
 {
 	int state = 0;
 	int err = 0;
-	uint16_t mask = HIP_CONTROL_HIT_ANON;
+	uint16_t mask = HIP_PACKET_CTRL_ANON;
 
 	/* XX FIX:  */
 
@@ -268,8 +297,7 @@ int hip_receive_close_ack(struct hip_common *close_ack,
 		 "Received NULL receiver HIT in CLOSE ACK. Dropping\n");
 
 	if (!hip_controls_sane(ntohs(close_ack->control), mask
-		       //HIP_CONTROL_CERTIFICATES | HIP_CONTROL_HIT_ANON |
-		       //HIP_CONTROL_RVS_CAPABLE
+		       //HIP_CONTROL_CERTIFICATES | HIP_PACKET_CTRL_ANON |
 		       // | HIP_CONTROL_SHT_MASK | HIP_CONTROL_DHT_MASK)) {
 		               )) {
 		HIP_ERROR("Received illegal controls in CLOSE ACK: 0x%x. Dropping\n",

@@ -1,19 +1,23 @@
-/*
- * Key escrow functionality for HIP.
- *
- * Authors:
- * - Anu Markkola
- *
- * Licence: GNU/GPL
+/**
+ * @file
+ * This file defines key escrow functionality for HIP.
+ * 
+ * @author  Anu Markkola
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
+ * @note    Since the creation of this file, implementations of both the
+ *          registration extension and UPDATE packet support have changed quite
+ *          a lot. This extension has not been tested since 2006 and therefore
+ *          is most likely be defunct. -Lauri 01.07.2008
  */
-
 #include "escrow.h"
 
 HIP_HASHTABLE *kea_table;
 HIP_HASHTABLE *kea_endpoints;
 
-// static hip_list_t keadb[HIP_KEA_SIZE];
-// static hip_list_t kea_endpointdb[HIP_KEA_EP_SIZE];
+/** Minimum relay record life time as a 8-bit integer. */
+uint8_t escrow_min_lifetime = HIP_ESCROW_MIN_LIFETIME;
+/** Maximum relay record life time as a 8-bit integer. */
+uint8_t escrow_max_lifetime = HIP_ESCROW_MAX_LIFETIME;
 
 static void *hip_keadb_get_key(void *entry)
 {
@@ -98,7 +102,7 @@ int hip_kea_create_base_entry(struct hip_host_id_entry *entry,
  * op = 0/1 (zero for cancelling registration)
  */
 int hip_launch_escrow_registration(struct hip_host_id_entry * id_entry, 
-	void * server_hit_void)
+				   void * server_hit_void)
 {
 	int err = 0;
 	hip_ha_t * entry = NULL;	
@@ -106,66 +110,43 @@ int hip_launch_escrow_registration(struct hip_host_id_entry * id_entry,
 	HIP_KEA * kea = NULL;
 	
 	HIP_IFEL(!(entry = hip_hadb_find_byhits(&id_entry->lhi.hit, server_hit_void)),
-			 -1, "internal error: no hadb entry found\n");
+		 -1, "Internal error: no haDB entry found.\n");
 	HIP_IFEL(!(kea = hip_kea_find(&entry->hit_our)), -1, "No KEA base entry found\n");
 	HIP_DEBUG_HIT("Registering to server from ", &entry->hit_our);
 	
         kea->keastate = HIP_KEASTATE_REGISTERING;
         hip_keadb_put_entry(kea);
 	
-        if (entry->state == HIP_STATE_UNASSOCIATED) {
-                HIP_IFEL(hip_send_i1(&entry->hit_our, server_hit, entry), 
-                        -1, "sending i1 failed\n");
-        }
-        else if (entry->state == HIP_STATE_ESTABLISHED) {
-                int reg_types[1] = { HIP_ESCROW_SERVICE }; 
-                /* Sending registration in update packet. TODO: maybe this
-                 * should be done somewhere else */
-                HIP_IFEL(hip_update_send_registration_request(entry, server_hit, 
-                        reg_types, 1, 1), -1, "Sending registration on update failed\n");
-        }
-		
-out_err:
-        if (entry)
+ out_err:
+        if (entry != NULL) {
                 hip_hadb_put_entry(entry);
+	}
+
 	return err;		
 }
 
 int hip_launch_cancel_escrow_registration(struct hip_host_id_entry * id_entry, 
-        void * server_hit_void)
+					  void * server_hit_void)
 {
         int err = 0;
         hip_ha_t * entry = NULL;        
         struct in6_addr * server_hit = server_hit_void;
         HIP_KEA * kea = NULL;
+	in_port_t *peer_port;
         
         HIP_IFEL(!(entry = hip_hadb_find_byhits(&id_entry->lhi.hit, server_hit_void)),
-                         -1, "internal error: no hadb entry found\n");
+		 -1, "Internal error: no haDB entry found\n");
         HIP_IFEL(!(kea = hip_kea_find(&entry->hit_our)), -1, "No KEA base entry found\n");
         HIP_DEBUG_HIT("Cancelling registration of ", &entry->hit_our);
         
         kea->keastate = HIP_KEASTATE_UNREGISTERING;
-               
+	
         hip_keadb_put_entry(kea);
-        
-        if (entry->state == HIP_STATE_UNASSOCIATED) {
-                /* TODO: can this situation ever happen? */
-                HIP_DEBUG("Cancelling registration but state is unassociated!\n");
-                HIP_IFEL(hip_send_i1(&entry->hit_our, server_hit, entry), 
-                        -1, "sending i1 failed\n");
-        }
-        else if (entry->state == HIP_STATE_ESTABLISHED) {
-                int reg_types[1] = { HIP_ESCROW_SERVICE }; 
-                /* Sending registration in update packet. TODO: maybe this
-                 * should be done somewhere else */
-                HIP_IFEL(hip_update_send_registration_request(entry, server_hit, 
-                        reg_types, 1, 0), -1, 
-                        "Sending registration on update failed\n");
-        }
-                
-out_err:
-        if (entry)
+	
+ out_err:
+        if (entry != NULL)
                 hip_put_ha(entry);
+	
         return err;             
 }
 
@@ -174,7 +155,8 @@ int hip_remove_escrow_data(hip_ha_t * entry, void * data)
 {
 	int err = 0;
 	entry->escrow_used = 0;
-out_err:	
+	
+ out_err:	
 	return err;
 }
 
@@ -440,7 +422,7 @@ int hip_kea_add_endpoint(HIP_KEA *kea, HIP_KEA_EP *kea_ep)
 		 "Cannot insert KEA_EP entry with NULL hit\n");
 		 
 	// Create key
-	memcpy(&kea_ep->ep_id.value, &kea_ep->hit.in6_u.u6_addr32, 
+	memcpy(&kea_ep->ep_id.value, &kea_ep->hit.s6_addr32, 
 		   sizeof(struct in6_addr));
 	memcpy(&kea_ep->ep_id.value[4], &kea_ep->spi, sizeof(int));
 	
@@ -484,6 +466,20 @@ void hip_kea_remove_endpoint(HIP_KEA_EP *kea_ep)
 	HIP_UNLOCK_HA(kea_ep); 	
 }
 
+int hip_escrow_validate_lifetime(uint8_t requested_lifetime,
+				uint8_t *granted_lifetime)
+{
+	if(requested_lifetime < escrow_min_lifetime){
+		*granted_lifetime = escrow_min_lifetime;
+		return -1;
+	}else if(requested_lifetime > escrow_max_lifetime){
+		*granted_lifetime = escrow_max_lifetime;
+		return -1;
+	}else{
+		*granted_lifetime = requested_lifetime;
+		return 0;
+	}
+}
 
 void hip_kea_delete_endpoint(HIP_KEA_EP *kea_ep)
 {
@@ -497,7 +493,7 @@ HIP_KEA_EP *hip_kea_ep_find(struct in6_addr *hit, uint32_t spi)
 	
 	key = HIP_MALLOC(sizeof(struct hip_kea_ep_id), GFP_KERNEL);
 	
-	memcpy(&key->value, &hit->in6_u.u6_addr32, sizeof(struct in6_addr));
+	memcpy(&key->value, &hit->s6_addr32, sizeof(struct in6_addr));
 	memcpy(&key->value[4], &spi, sizeof(int));
 
 	HIP_HEXDUMP("Searching KEA endpoint with key:", key, 18);
@@ -793,7 +789,7 @@ int hip_cancel_escrow_service(void)
 	HIP_KEA *kea = NULL;
 	hip_ha_t *entry = NULL;
 	struct in6_addr saddr = { 0 }, daddr = { 0 };
-	uint8_t services[1] = { HIP_ESCROW_SERVICE };
+	uint8_t services[1] = { HIP_SERVICE_ESCROW };
 	int i = 0;
 	hip_list_t *item, *tmp;
 
@@ -808,8 +804,12 @@ int hip_cancel_escrow_service(void)
 		HIP_IFEL(hip_hadb_get_peer_addr(entry, &daddr), -1, 
 				"Failed to get peer address");
 		memcpy(&saddr, &entry->local_address, sizeof(saddr));
-		HIP_IFEL(hip_create_reg_response(entry, NULL, services, 1, &saddr, &daddr),
-				-1, "Error creating reg_response\n");
+		
+		/* Here we should send an UPDATE with REG_RESPONSE to current
+		   peer. The sending of the UPDATE was removed when the update.c
+		   was revised.
+		   -Lauri 01.07.2008 */
+		
 		hip_keadb_put_entry(kea);
 		HIP_IFEL(hip_cancel_escrow_registration(&entry->hit_peer), 
 				-1, "Error cancelling registration\n");

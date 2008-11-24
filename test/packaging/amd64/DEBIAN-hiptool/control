@@ -7,4 +7,4 @@ Build-Depends: debhelper (>= 4.0.0), autotools-dev
 Standards-Version: 3.6.2
 Package: libhiptool
 Architecture: amd64
-Description: This package contains GPL binary for HIPL. For corporate use.
+Description: This package contains GPL binary for HIPL.
