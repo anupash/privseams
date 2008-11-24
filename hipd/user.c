@@ -1127,6 +1127,12 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		HIP_DEBUG("hip_buddies_inuse =  %d (should be %d)\n", 
 			hip_buddies_inuse, SO_HIP_BUDDIES_OFF);
 		break;
+	case SO_HIP_NSUPDATE_OFF:
+	case SO_HIP_NSUPDATE_ON:
+		hip_set_nsupdate_status(((msg_type == SO_HIP_NSUPDATE_OFF) ? 0 : 1));
+		if (msg_type == SO_HIP_NSUPDATE_ON)
+			nsupdate();
+		break;
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;
