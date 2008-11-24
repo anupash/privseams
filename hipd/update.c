@@ -2664,6 +2664,9 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 
 	HIP_DEBUG_SOCKADDR("addr", addr);
 
+	if (hip_get_nsupdate_status)
+		nsupdate();
+
 	/** @todo check UPDATE also with radvd (i.e. same address is added
 	    twice). */
 
