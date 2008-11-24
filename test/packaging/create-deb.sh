@@ -293,6 +293,8 @@ copy_and_package_files ()
     sh tools/gen-python-starter.sh $PYEXECDIR/dnshipproxy dnsproxy.py $PKGDIR/usr/sbin/dnshipproxy
     sh tools/gen-python-starter.sh $PYEXECDIR/parsehipkey parse-key-3.py $PKGDIR/usr/sbin/parsehipkey
 
+    cp tools/nsupdate.pl $PKGDIR/usr/sbin
+
     echo "** Copying init.d script to $PKGDIR"
     cp test/packaging/debian-init.d-dnsproxy $PKGDIR/etc/init.d/dnshipproxy
 
