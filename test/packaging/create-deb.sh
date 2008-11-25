@@ -90,7 +90,7 @@ copy_tarball ()
 	
 	echo "** Copying the tarball"
 	#cd ${PKGDIR}
-        inst ${HIPL}/hipl-main.tar.gz ${PKGDIR_SRC}/${NAME}_${VERSION}.orig.tar.gz
+        cp ${HIPL}/hipl-main.tar.gz ${PKGDIR_SRC}/${NAME}_${VERSION}.orig.tar.gz
 
 	echo "** Copying Debian control files to '${SRCDIR}/debian'"
 
@@ -631,6 +631,7 @@ if [ $TYPE = "binary" ];then
       echo "------------------- $i ----------------------------"
       dpkg -c $i
     done
+
 fi
 
 if [ $TYPE = "source" ];then
@@ -678,6 +679,8 @@ if [ $TYPE = "source" ];then
 	rm -rf "${PKGDIR_SRC}"
 	exit 1
     fi
+
+    $SUDO rmdir $PKGROOT/libhiptool-1.0-deb
 fi
 
 exit 0
