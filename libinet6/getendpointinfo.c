@@ -2070,6 +2070,7 @@ out_err:
 	return err;
 }
 
+/* getendpointfo() modified for sockaddr_hip instead of sockaddr__eid */
 
 int get_hit_addrinfo(const char *nodename, const char *servname,
 		    const struct addrinfo *hints,
@@ -2084,17 +2085,10 @@ int get_hit_addrinfo(const char *nodename, const char *servname,
 
   initlist(&list);
 
-  /* Only HIP is currently supported */
-  if (hints && hints->ai_family != PF_HIP) {
-    err = -EEI_FAMILY;
-    HIP_ERROR("Only HIP is currently supported\n");
-    goto err_out;
-  }
-
   if (hints) {
-    memcpy(&modified_hints, hints, sizeof(struct endpointinfo));
+    memcpy(&modified_hints, hints, sizeof(struct addrinfo));
   } else {
-    memset(&modified_hints, 0, sizeof(struct endpointinfo));
+    memset(&modified_hints, 0, sizeof(struct addrinfo));
     modified_hints.ai_family = PF_HIP;
   }
 
@@ -2127,7 +2121,7 @@ int get_hit_addrinfo(const char *nodename, const char *servname,
       err = -EINVAL;
       goto err_out;
     }
-    err = get_localhost_hit(filenamebase, servname, 
+    err = get_addrinfo_from_key(filenamebase, servname, 
 				     &modified_hints, &first);
 
     free(filenamebase);
@@ -2154,7 +2148,7 @@ int get_hit_addrinfo(const char *nodename, const char *servname,
 	goto err_out;
       }
 
-      err = get_localhost_hit(filenamebase, servname, 
+      err = get_addrinfo_from_key(filenamebase, servname, 
 				       &modified_hints, &new);
       if (err) {
 	HIP_ERROR("get_localhost_endpointinfo() failed\n");
@@ -2168,10 +2162,19 @@ int get_hit_addrinfo(const char *nodename, const char *servname,
 
     *res = first;
 
+  } else if (!strcmp(nodename, "0.0.0.0")) {
+
+    (*res) = calloc(sizeof(struct addrinfo), 1);
+    (*res)->ai_addr = calloc(sizeof(struct sockaddr_hip), 1);
+    (*res)->ai_family = PF_HIP;
+    (*res)->ai_socktype = hints->ai_socktype;
+    (*res)->ai_protocol = hints->ai_protocol;
+    (*res)->ai_addrlen = sizeof(struct sockaddr_hip);
+
   } else {
-    /*_PATH_HIP_HOSTS=/etc/hip/hosts*/
-    //err = get_peer_endpointinfo(_PATH_HIP_HOSTS, nodename, servname,
-	//			&modified_hints, res);
+
+    err = get_peer_addrinfo_hit(_PATH_HIP_HOSTS, nodename, servname,
+				&modified_hints, res);
   }
 
  err_out:
@@ -2185,7 +2188,7 @@ int get_hit_addrinfo(const char *nodename, const char *servname,
 }
 
 
-int get_localhost_hit(const char *basename,
+int get_addrinfo_from_key(const char *basename,
 			       const char *servname,
 			       struct addrinfo *hints,
 			       struct addrinfo **res)
@@ -2255,7 +2258,6 @@ int get_localhost_hit(const char *basename,
   }
 
   sock_hip = (*res)->ai_addr;
-
   if (algo == HIP_HI_RSA)
     err = hip_public_rsa_to_hit(rsa, NULL, anon, &sock_hip->ship_hit);
   else
@@ -2285,18 +2287,14 @@ int get_localhost_hit(const char *basename,
   (*res)->ai_protocol = hints->ai_protocol;
   (*res)->ai_addrlen = sizeof(struct sockaddr_hip);
   /* ai_addr, ai_canonname already set */
-  (*res)->ai_next = NULL;
 
  out_err:
 
   if (rsa)
     RSA_free(rsa);
-
   if (dsa)
     DSA_free(dsa);
 
-  /* Free allocated memory on error. Nullify the result in case the
-     caller tries to deallocate the result twice with free_endpointinfo. */
   if (err && *res) {
     if ((*res)->ai_addr)
       free((*res)->ai_addr);
@@ -2309,3 +2307,101 @@ int get_localhost_hit(const char *basename,
   return err;
 }
 
+int get_sockaddr_hip_from_key(const char *filename, struct sockaddr_hip **hit)
+{
+  int err = 0;
+  struct addrinfo hints;
+  struct addrinfo *res = NULL;
+
+  memset(&hints, 0, sizeof(hints));
+
+  err = get_addrinfo_from_key(filename, NULL, &hints, &res);
+  if (err)
+    goto out_err;
+
+  *hit = res->ai_addr;
+  res->ai_addr = NULL;
+
+ out_err:
+  if (res)
+    freeaddrinfo(res);
+  return err;
+}
+
+int get_peer_addrinfo_hit(const char *hostsfile,
+			  const char *nodename,
+			  const char *servname,
+			  const struct addrinfo *hints,
+			  struct addrinfo **res)
+{
+  int err = 0, ret = 0, i=0;
+  unsigned int lineno = 0, fqdn_str_len = 0;
+  FILE *hosts = NULL;
+  char fqdn_str[HOST_NAME_MAX];
+  struct in6_addr hit;
+
+  HIP_DEBUG("Called, nodename: %s\n", nodename);
+
+  HIP_ASSERT(nodename);
+  HIP_ASSERT(hints);
+
+  hosts = fopen(hostsfile, "r");
+  if (!hosts) {
+    err = EEI_SYSTEM;
+    HIP_ERROR("Failed to open %s\n", _PATH_HIP_HOSTS);
+    goto out_err;
+  }
+
+  memset(fqdn_str, 0, sizeof(fqdn_str));
+  if (inet_pton(AF_INET6, nodename, &hit) > 0) {
+    HIP_DEBUG("Nodename is numerical address\n");
+    err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+				       hip_map_first_id_to_hostname_from_hosts,
+				       &hit, fqdn_str);
+  } else {
+    strncpy(fqdn_str, nodename, HOST_NAME_MAX);
+  }
+  fqdn_str_len = strlen(fqdn_str);
+
+  if (!err && hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+				   hip_map_first_hostname_to_hit_from_hosts,
+				   fqdn_str, &hit) == 0) {
+      (*res) = calloc(1, sizeof(struct addrinfo));
+      HIP_IFE(!(*res), EEI_MEMORY);
+      
+      (*res)->ai_addr = calloc(1, sizeof(struct sockaddr_hip));
+      HIP_IFE(!(*res)->ai_addr, EEI_MEMORY);
+
+      if (hints->ai_flags & AI_CANONNAME) {
+	(*res)->ai_canonname = malloc(fqdn_str_len + 1);
+	HIP_IFE(!(*res)->ai_canonname, EEI_MEMORY);
+	HIP_ASSERT(strlen(fqdn_str) == fqdn_str_len);
+	strcpy((*res)->ai_canonname, fqdn_str);
+	/* XX FIX: we should append the domain name if it does not exist */
+      }
+
+      memcpy((*res)->ai_addr, &hit, sizeof(hit));
+
+      (*res)->ai_flags = hints->ai_flags;
+      (*res)->ai_family = PF_HIP;
+      (*res)->ai_socktype = hints->ai_socktype;
+      (*res)->ai_protocol = hints->ai_protocol;
+      (*res)->ai_addrlen = sizeof(struct sockaddr_hip);
+  }
+
+ out_err:
+
+  if (hosts)
+    fclose(hosts);
+
+  if (err && *res) {
+      if((*res)->ai_addr)
+        free((*res)->ai_addr);
+      if((*res)->ai_canonname)
+	free((*res)->ai_canonname);
+      free(*res);
+      *res = NULL;
+  }
+
+  return err;
+}

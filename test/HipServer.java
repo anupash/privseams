@@ -32,7 +32,7 @@ public class HipServer {
 	    // begin PC
 	    ServerSocket ss = hipFactory.createServerSocket();
 	    // end PC
-	    ss.bind(new InetSocketAddress("", port));
+	    ss.bind(new InetSocketAddress(port));
 	    System.out.println(ss.toString());
 	    Socket s = ss.accept();
 	    System.out.println(s.toString());
@@ -44,6 +44,7 @@ public class HipServer {
 	    PrintWriter out = new PrintWriter(os);
 	    String line;
 	    while ((line = in.readLine()) != null) {
+		System.out.println("Received: " + line);
 		out.println(line);
 		out.flush();
 	    }
