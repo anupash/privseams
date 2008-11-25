@@ -128,6 +128,13 @@ int hip_fw_handle_incoming_hit(ipq_packet_msg_t *m,
 				((struct tcphdr*)((m->payload) + ip_hdr_size))->dest,
 				ip6_hdr->ip6_nxt);
 
+	if( port_cache_entry &&
+	    (port_cache_entry->traffic_type ==
+	     FIREWALL_PORT_CACHE_IPV6_TRAFFIC) ){
+		verdict = 1;
+		goto out_err;
+	}
+
 	if (sys_opp_support && lsi_support) {
 		/* Currently preferring LSIs over opp. connections */
 		process_as_lsi = 1;
