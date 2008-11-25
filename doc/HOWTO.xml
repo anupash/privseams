@@ -4114,13 +4114,8 @@ parsehipkey &lt; felwood/hip_host_dsa_key_pub.pub felwood2.hip-test1.infrahip.ne
     </para>
     <para>
       If you are running already an existing dnsproxy on the host, you
-      need to "chain" them together. For example, you have to do the
-      following with dnsmasq:
+      need to "chain" them together. For example, with dnsmasq you have to start it with: you have to start it with --background --no-resolv --port 5050 --server 127.0.0.1
     </para>
-    <itemizedlist>
-      <listitem><para>Start the dnsmasq with --no-resolv --port 5050 --server 127.0.0.1</para></listitem>
-      <listitem><para>Start dnsmasq with --background</para></listitem>
-    </itemizedlist>
   </chapter>
 </book>
 
