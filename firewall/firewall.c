@@ -1596,8 +1596,6 @@ int hip_fw_handle_esp_input(hip_fw_context_t *ctx){
 
 	HIP_DEBUG("\n");
 
-	/* XX FIXME: ADD LSI INPUT AFTER USERSPACE IPSEC */
-
 	if (filter_traffic)
 	{
 		// first of all check if this belongs to one of our connections
