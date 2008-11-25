@@ -1880,8 +1880,8 @@ $ make V=99
 	previous point. Works only with IPv6-enabled applications.
       </para>
       <para>
-	7. Use external nameservices for HIT-IP mapping. For example, you can use
-	AAAA records in DNS for testing (HI records are not supported yet).
+	7. Use external nameservices for HIT-IP mapping, such as DNS
+        as instructed in <xref linkend="ch_dns_data" />.
 	Alternatively, use the free OpenDHT name service for automatic host
 	naming as described in <xref linkend="ch_opendht" />.
       </para>
