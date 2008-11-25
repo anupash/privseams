@@ -17,9 +17,9 @@
 #include "protodefs.h"
 
 //#define HIP_DAEMONADDR_PATH		        "/tmp/hip_daemonaddr_path.tmp"
-#define HIP_DAEMON_LOCAL_PORT                  970
 #define HIP_FIREWALL_PORT                      971
 #define HIP_AGENT_PORT                         972
+#define HIP_DAEMON_LOCAL_PORT                  973
 //#define HIP_AGENTADDR_PATH			"/tmp/hip_agentaddr_path.tmp"
 //#define HIP_USERADDR_PATH		        "/tmp/hip_useraddr_path.tmp"
 //#define HIP_FIREWALLADDR_PATH			"/tmp/hip_firewalladdr_path.tmp"

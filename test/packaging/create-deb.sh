@@ -60,20 +60,20 @@ copy_tarball ()
 	
 	echo "** Copying the tarball"
 	#cd ${PKGDIR}
-        cp ${HIPL}/hipl-main.tar.gz ${PKGDIR_SRC}/${NAME}_${VERSION}.orig.tar.gz
+        install ${HIPL}/hipl-main.tar.gz ${PKGDIR_SRC}/${NAME}_${VERSION}.orig.tar.gz
 
 	echo "** Copying Debian control files to '${SRCDIR}/debian'"
 
-	mkdir -p "${SRCDIR}/debian"
-	cp ${PKGROOT}/$DEBIAN/control-src ${SRCDIR}/debian/control
+	install -d "${SRCDIR}/debian"
+	install ${PKGROOT}/$DEBIAN/control-src ${SRCDIR}/debian/control
 	for f in changelog copyright rules preinst postinst prerm postrm;do
-		cp ${PKGROOT}/$DEBIAN/$f "${SRCDIR}/debian"
+		install ${PKGROOT}/$DEBIAN/$f "${SRCDIR}/debian"
 	done
 
-        if [ $TMP = "firewall" ]; then
-		mkdir -p "${SRCDIR}/debian"
+        if [ x"$TMP" = x"firewall" ]; then
+		install -d "${SRCDIR}/debian"
 		for f in preinst postinst prerm postrm;do
-		cp "${PKGROOT}/$DEBIAN-FW/$f" "${SRCDIR}/debian"
+		install "${PKGROOT}/$DEBIAN-FW/$f" "${SRCDIR}/debian"
 		done
 	fi
 
@@ -88,26 +88,26 @@ copy_files_gpl()
 	
 	set -e
 
-	mkdir -p "$PKGDIRGPL/DEBIAN"
+	install -d "$PKGDIRGPL/DEBIAN"
 	for f in control changelog copyright preinst postinst prerm postrm;do
-		cp $DEBIANGPL/$f "$PKGDIRGPL/DEBIAN"
+		install $DEBIANGPL/$f "$PKGDIRGPL/DEBIAN"
 	done
 
         if [ $TMP = "firewall" ]; then
-		mkdir -p "$PKGDIRGPL/DEBIAN-FW"
+		install -d "$PKGDIRGPL/DEBIAN-FW"
 		for f in preinst postinst prerm postrm;do
-			cp $DEBIANGPL/$f "$PKGDIRGPL/DEBIAN-FW"
+			install $DEBIANGPL/$f "$PKGDIRGPL/DEBIAN-FW"
 		done
         fi
 
 	
 	
 	echo "** Copying binary files to '$PKGDIRGPL'"
-	mkdir -p "$PKGDIRGPL/usr"
+	install -d "$PKGDIRGPL/usr"
 	cd "$PKGDIRGPL"
 	
 	# create directory structure
-	mkdir -p usr/lib
+	install -d usr/lib
 	cd "$HIPL"
 	
 	for suffix in a so so.0 so.0.0.0;do
@@ -122,11 +122,11 @@ init_files ()
 {
     echo "** Copying Debian control files to '$PKGDIR/DEBIAN'"
     set -e
-    mkdir -p "$PKGDIR/DEBIAN"
+    install -d "$PKGDIR/DEBIAN"
     
     if [ $TMP = "daemon" ]; then
     	for f in preinst postinst prerm postrm;do
-		cp $DEBIAN/$f "$PKGDIR/DEBIAN" 
+		install $DEBIAN/$f "$PKGDIR/DEBIAN" 
     	done
     fi
 
@@ -139,18 +139,18 @@ init_files ()
   
     if [ $TMP = "firewall" ]; then
         for f in preinst postinst prerm postrm;do
-	    cp $DEBIAN-FW/$f "$PKGDIR/DEBIAN" 
+	    install $DEBIAN-FW/$f "$PKGDIR/DEBIAN" 
     	done
     fi
 
     if [ $TMP = "dnsproxy" ]; then
         for f in preinst postinst prerm postrm;do
-	    cp $DEBIAN-dnsproxy/$f "$PKGDIR/DEBIAN" 
+	    install $DEBIAN-dnsproxy/$f "$PKGDIR/DEBIAN" 
     	done
     fi
 
     for f in control changelog copyright;do
-	cp $DEBIAN/$f "$PKGDIR/DEBIAN" 
+	install $DEBIAN/$f "$PKGDIR/DEBIAN" 
     done
 
     echo "** Modifying Debian control file for $DEBLIB $TMP and $DEBARCH"
@@ -164,10 +164,10 @@ init_files ()
     sed -i '/'"$LINE2"'/ s/.*/&\-'"$TMP"'/' $PKGDIR\/DEBIAN\/control
     sed -i 's/"$LINE3"/&'" $DEBARCH"'/' $PKGDIR\/DEBIAN\/control
 
-    	# cp $PKGDIR/DEBIAN/postinst $PKGROOT/postinst-$TMP
+    	# install $PKGDIR/DEBIAN/postinst $PKGROOT/postinst-$TMP
        
     #for f in postinst;do
-    #	cp $DEBIAN/$f "$PKGDIR/DEBIAN" 
+    #	install $DEBIAN/$f "$PKGDIR/DEBIAN" 
     #done
     #sed -i '2,10d' $PKGDIR\/DEBIAN\/postinst
     #sed -i '$a\ldconfig\' $PKGDIR\/DEBIAN\/postinst
@@ -183,12 +183,12 @@ copy_and_package_files ()
     init_files;
     
     echo "** Copying library files to '$PKGDIR'"
-    mkdir -p "$PKGDIR/usr"
+    install -d "$PKGDIR/usr"
     cd "$PKGDIR"
    
     echo "$PKGDIR"
 
-    mkdir -p usr/lib
+    install -d usr/lib
 
     cd "$HIPL"
     
@@ -223,21 +223,21 @@ copy_and_package_files ()
     init_files;
     
     echo "** Copying binary files to '$PKGDIR'"
-    mkdir -p "$PKGDIR/usr"
+    install -d "$PKGDIR/usr"
     cd "$PKGDIR"
 
     echo "$PKGDIR"
 
     # create directory structure
-    # mkdir -p usr/sbin usr/bin usr/lib etc/hip usr/share/doc etc/init.d
-    mkdir -p usr/sbin usr/bin etc/init.d etc/hip
+    # install -d usr/sbin usr/bin usr/lib etc/hip usr/share/doc etc/init.d
+    install -d usr/sbin usr/bin etc/init.d etc/hip
     cd "$HIPL"
     
     echo "$HIPL"
 
-    cp hipd/hipd $PKGDIR/usr/sbin/
+    install hipd/hipd $PKGDIR/usr/sbin/
     echo "** Copying init.d script to $PKGDIR"
-    cp test/packaging/debian-init.d-hipd $PKGDIR/etc/init.d/hipd
+    install test/packaging/debian-init.d-hipd $PKGDIR/etc/init.d/hipd
     
     PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
     create_sub_package;
@@ -247,18 +247,18 @@ copy_and_package_files ()
     init_files;
     
     echo "** Making directory to '$PKGDIR'"
-    mkdir -p "$PKGDIR/usr"
+    install -d "$PKGDIR/usr"
     cd "$PKGDIR"
 
-    # mkdir -p usr/sbin
-    mkdir -p usr/sbin usr/bin etc/init.d etc/hipfw
+    # install -d usr/sbin
+    install -d usr/sbin usr/bin etc/init.d etc/hipfw
     cd "$HIPL"
 
     echo "** Copying firewall to $PKGDIR"
-    cp firewall/hipfw $PKGDIR/usr/sbin/
+    install firewall/hipfw $PKGDIR/usr/sbin/
 
     echo "** Copying init.d script to $PKGDIR"
-    cp test/packaging/debian-init.d-hipfw $PKGDIR/etc/init.d/hipfw
+    install test/packaging/debian-init.d-hipfw $PKGDIR/etc/init.d/hipfw
 
     PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
     create_sub_package;
@@ -268,33 +268,35 @@ copy_and_package_files ()
     init_files;
     
     echo "** Making directory to '$PKGDIR'"
-    mkdir -p "$PKGDIR/usr"
+    install -d "$PKGDIR/usr"
     cd "$PKGDIR"
 
-    # mkdir -p usr/sbin
-    mkdir -p usr usr/sbin usr/bin etc/init.d
+    # install -d usr/sbin
+    install -d usr usr/sbin usr/bin etc/init.d
     cd "$HIPL"
 
     echo "** Copying dnsproxy to $PKGDIR"
-    mkdir -p $PKGDIR/$PYEXECDIR
-    mkdir -p $PKGDIR/$PYEXECDIR/dnshipproxy
-    mkdir -p $PKGDIR/$PYEXECDIR/parsehipkey
-    mkdir -p $PKGDIR/$PYEXECDIR/DNS
+    install -d $PKGDIR/$PYEXECDIR
+    install -d $PKGDIR/$PYEXECDIR/dnshipproxy
+    install -d $PKGDIR/$PYEXECDIR/parsehipkey
+    install -d $PKGDIR/$PYEXECDIR/DNS
 
-    cp tools/dnsproxy.py* $PKGDIR/$PYEXECDIR/dnshipproxy
-    cp tools/pyip6.py* $PKGDIR/$PYEXECDIR/dnshipproxy
-    cp tools/hosts.py* $PKGDIR/$PYEXECDIR/dnshipproxy
-    cp tools/util.py* $PKGDIR/$PYEXECDIR/dnshipproxy
-    cp tools/parse-key-3.py* $PKGDIR/$PYEXECDIR/dnshipproxy
+    install tools/dnsproxy.py* $PKGDIR/$PYEXECDIR/dnshipproxy
+    install tools/pyip6.py* $PKGDIR/$PYEXECDIR/dnshipproxy
+    install tools/hosts.py* $PKGDIR/$PYEXECDIR/dnshipproxy
+    install tools/util.py* $PKGDIR/$PYEXECDIR/dnshipproxy
+    install tools/parse-key-3.py* $PKGDIR/$PYEXECDIR/dnshipproxy
 
-    cp tools/myasn.py* $PKGDIR/$PYEXECDIR/parsehipkey
-    cp tools/DNS/*py* $PKGDIR/$PYEXECDIR/DNS
+    install tools/myasn.py* $PKGDIR/$PYEXECDIR/parsehipkey
+    install tools/DNS/*py* $PKGDIR/$PYEXECDIR/DNS
 
     sh tools/gen-python-starter.sh $PYEXECDIR/dnshipproxy dnsproxy.py $PKGDIR/usr/sbin/dnshipproxy
     sh tools/gen-python-starter.sh $PYEXECDIR/parsehipkey parse-key-3.py $PKGDIR/usr/sbin/parsehipkey
 
+    install tools/nsupdate.pl $PKGDIR/usr/sbin
+
     echo "** Copying init.d script to $PKGDIR"
-    cp test/packaging/debian-init.d-dnsproxy $PKGDIR/etc/init.d/dnshipproxy
+    install test/packaging/debian-init.d-dnsproxy $PKGDIR/etc/init.d/dnshipproxy
 
     PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
     create_sub_package;
@@ -305,17 +307,17 @@ copy_and_package_files ()
     init_files;
 
     echo "** Making directory to '$PKGDIR'"
-    mkdir -p "$PKGDIR/usr"
+    install -d "$PKGDIR/usr"
     cd "$PKGDIR"
 
-    mkdir -p usr/sbin usr/bin
+    install -d usr/sbin usr/bin
 
     cd "$HIPL"
 
-    cp tools/hipconf $PKGDIR/usr/sbin/
+    install tools/hipconf $PKGDIR/usr/sbin/
 
     echo "** Copying init.d script to $PKGDIR"
-    cp test/packaging/debian-init.d-dnsproxy $PKGDIR/etc/init.d/dnshipproxy
+    install test/packaging/debian-init.d-dnsproxy $PKGDIR/etc/init.d/dnshipproxy
 
     PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
     create_sub_package;
@@ -325,21 +327,21 @@ copy_and_package_files ()
     init_files;
     
     echo "** Making directory to '$PKGDIR'"
-    mkdir -p "$PKGDIR/usr"
+    install -d "$PKGDIR/usr"
     cd "$PKGDIR"
 
-    mkdir -p usr/bin usr/sbin
+    install -d usr/bin usr/sbin
     cd "$HIPL"
 
     for suffix in -opp -hip -native -native-user-key;do
-	cp test/conntest-client$suffix $PKGDIR/usr/bin/
+	install test/conntest-client$suffix $PKGDIR/usr/bin/
     done
 
     for suffix in "" -native;do
-	cp test/conntest-server$suffix $PKGDIR/usr/bin/
+	install test/conntest-server$suffix $PKGDIR/usr/bin/
     done
 
-    cp test/hipsetup $PKGDIR/usr/sbin/
+    install test/hipsetup $PKGDIR/usr/sbin/
 
     PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
     create_sub_package;
@@ -349,28 +351,28 @@ copy_and_package_files ()
     init_files;
 
     echo "** Making directory to '$PKGDIR'"
-    #mkdir -p "$PKGDIR/usr"
+    #install -d "$PKGDIR/usr"
     #cd "$PKGDIR"
 
-    mkdir -p "$PKGDIR/usr"
-    mkdir -p "$PKGDIR/usr/sbin"
-    mkdir -p "$PKGDIR/usr/lib"
-    mkdir -p "$PKGDIR/usr/share"
-    mkdir -p "$PKGDIR/usr/share/hipl"
-    mkdir -p "$PKGDIR/usr/share/hipl/libhipgui"
-    mkdir -p "$PKGDIR/usr/share/menu"
-    mkdir -p "$PKGDIR/usr/share/pixmaps"
-    mkdir -p "$PKGDIR/usr/share/applications"
-    mkdir -p "$PKGDIR/etc"
-    mkdir -p "$PKGDIR/etc/xdg"
-    mkdir -p "$PKGDIR/etc/xdg/autostart"
+    install -d "$PKGDIR/usr"
+    install -d "$PKGDIR/usr/sbin"
+    install -d "$PKGDIR/usr/lib"
+    install -d "$PKGDIR/usr/share"
+    install -d "$PKGDIR/usr/share/hipl"
+    install -d "$PKGDIR/usr/share/hipl/libhipgui"
+    install -d "$PKGDIR/usr/share/menu"
+    install -d "$PKGDIR/usr/share/pixmaps"
+    install -d "$PKGDIR/usr/share/applications"
+    install -d "$PKGDIR/etc"
+    install -d "$PKGDIR/etc/xdg"
+    install -d "$PKGDIR/etc/xdg/autostart"
 
-    #mkdir -p usr/sbin
+    #install -d usr/sbin
     
     cd "$HIPL"
 
     echo "** Copying hipagent to '$PKGDIR'"
-    cp agent/hipagent $PKGDIR/usr/sbin/
+    install agent/hipagent $PKGDIR/usr/sbin/
 
     cp -d libhipgui/hipmanager.png $PKGDIR/usr/share/pixmaps/hipmanager.png
 
@@ -383,12 +385,12 @@ copy_and_package_files ()
     DEBLIB=""
     init_files;
 
-    mkdir -p "$PKGDIR/usr"
+    install -d "$PKGDIR/usr"
     cd "$PKGDIR"
 
     if [ $DEBARCH != "armel" ]; then
 
-    	mkdir -p usr/share/doc
+    	install -d usr/share/doc
     	#cd "$HIPL"
 
     	echo "** Copying documentation to '$PKGDIR'"
@@ -556,12 +558,12 @@ if [ $TYPE = "binary" ];then
 	fi
     fi
 
-    if ! mkdir "$PKGDIR";then
+    if ! install -d "$PKGDIR";then
 	echo "** Error: unable to create directory '$PKGDIR', exiting"
 	exit 1
     fi
 
-    if ! mkdir "$PKGDIRGPL";then
+    if ! install -d "$PKGDIRGPL";then
 	echo "** Error: unable to create directory '$PKGDIRGPL', exiting"
 	exit 1
     fi
@@ -594,7 +596,7 @@ fi
 if [ $TYPE = "source" ];then
 # Debian SOURCE package
 
-    if ! mkdir -p "$PKGDIR_SRC";then
+    if ! install -d "$PKGDIR_SRC";then
 	echo "** Error: unable to create directory '$PKGDIR_SRC', exiting"
 	exit 1
     fi
