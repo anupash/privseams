@@ -25,7 +25,10 @@ CLEANFILES = pjproject/pjlib/lib/libpj-hipl.a \
 
 # Note: libinet6 has to be the first one
 #
-SUBDIRS = pjproject libinet6 libhiptool libopphip libipsec opendht i3 tools hipd test firewall libhipgui agent hipfwmi
+SUBDIRS = pjproject libinet6 libhiptool libopphip libipsec opendht tools hipd test firewall libhipgui agent hipfwmi
+if HIP_I3
+SUBDIRS += i3
+endif
 
 showip:
 	cd showip && sh create.sh

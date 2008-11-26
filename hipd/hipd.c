@@ -171,6 +171,7 @@ int hip_get_opportunistic_tcp_status(){
 
 
 /* hi3 */
+#ifdef CONFIG_HIP_I3
 void hip_set_hi3_status(struct hip_common *msg){
 	struct sockaddr_in6 sock_addr;
 	int retry, type, n;
@@ -214,7 +215,7 @@ void hip_set_hi3_status(struct hip_common *msg){
 int hip_get_hi3_status(){
         return hip_use_hi3;
 }
-
+#endif
 
 void usage() {
   //	fprintf(stderr, "HIPL Daemon %.2f\n", HIPL_VERSION);

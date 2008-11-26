@@ -139,6 +139,17 @@ if test x"$ac_cv_use_agent" = x"no"; then
 	fi
 fi
 
+AC_ARG_ENABLE(i3,
+              AC_HELP_STRING([--enable-i3],
+              [HIP i3  (default is YES)]),
+              [ac_cv_use_i3=$enableval],)
+AC_CACHE_CHECK([whether to use i3],
+               [ac_cv_use_i3], [ac_cv_use_i3=yes])
+if test x"$ac_cv_use_i3" = x"yes"; then
+	AC_DEFINE(CONFIG_HIP_I3, AC_PREREQ(2.53))
+fi
+AM_CONDITIONAL(HIP_I3, test x"$ac_cv_use_i3" = x"yes")
+
 AC_ARG_ENABLE(agent,
               AC_HELP_STRING([--enable-agent],
               [HIP user agent]),
