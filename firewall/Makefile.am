@@ -53,8 +53,10 @@ if HIP_PERFORMANCE
   hipfw_LDADD += ../performance/.libs/libperformance.a
 endif
 
+if HIP_I3
 INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
 hipfw_LDADD += ../i3/i3_client/libi3client.a ../i3/i3/libi3.a ../i3/utils/libutils.a ../i3/aeshash/libaes.a -lpthread
+endif
 
 endif
 

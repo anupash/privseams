@@ -1831,7 +1831,7 @@ int hip_receive_update(hip_common_t *msg, in6_addr_t *update_saddr,
 	   move to state ESTABLISHED (see table 5 under section 4.4.2. HIP
 	   State Processes). */
 	else if(entry->state == HIP_STATE_R2_SENT) {
-		entry->state = HIP_STATE_ESTABLISHED;
+		entry->state == HIP_STATE_ESTABLISHED;
 		HIP_DEBUG("Received UPDATE in state %s, moving to "\
 			  "ESTABLISHED.\n", hip_state_str(entry->state));
 	} else if(entry->state != HIP_STATE_ESTABLISHED) {
@@ -2830,6 +2830,9 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 	struct in6_addr ipv6;
 
 	HIP_DEBUG_SOCKADDR("addr", addr);
+
+	if (hip_get_nsupdate_status())
+		nsupdate();
 
 	/** @todo check UPDATE also with radvd (i.e. same address is added
 	    twice). */

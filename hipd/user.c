@@ -182,12 +182,14 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
 		hip_dec_cookie_difficulty(dst_hit);
 		break;
+#ifdef CONFIG_HIP_I3
 	case SO_HIP_SET_HI3_ON:
 		err = hip_set_hi3_status(msg);
 	break;
 	case SO_HIP_SET_HI3_OFF:
 		err = hip_set_hi3_status(msg);
 	break;
+#endif
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	case SO_HIP_SET_OPPORTUNISTIC_MODE:
 	  	err = hip_set_opportunistic_mode(msg);
@@ -1130,6 +1132,12 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		hip_buddies_inuse = SO_HIP_BUDDIES_OFF;
 		HIP_DEBUG("hip_buddies_inuse =  %d (should be %d)\n", 
 			hip_buddies_inuse, SO_HIP_BUDDIES_OFF);
+		break;
+	case SO_HIP_NSUPDATE_OFF:
+	case SO_HIP_NSUPDATE_ON:
+		hip_set_nsupdate_status(((msg_type == SO_HIP_NSUPDATE_OFF) ? 0 : 1));
+		if (msg_type == SO_HIP_NSUPDATE_ON)
+			nsupdate();
 		break;
 #ifdef CONFIG_HIP_MIDAUTH
 	case SO_HIP_MANUAL_UPDATE_PACKET:

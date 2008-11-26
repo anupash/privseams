@@ -1831,30 +1831,25 @@ $ make V=99
     <section id="sec_easy_methods">
       <title>Easy Methods</title>
       <para>
-	1. Run the dnshipproxy to handle mapping from hostnames to HITs.
+	1. Run the dnshipproxy to handle mapping from hostnames to HITs from hosts files.
 	See <xref linkend="sec_dns_proxy" /> for more details.
       </para>
       <para>
-	2. Use the opportunistic mode as described in
-	<xref linkend="opportunistic" />. This method works with both IPv4 and
-	IPv6 applications. It does not require HIT configuration at all.
-      </para>
-      <para>
-	a. Running a single IPv6-enabled application using HIP: <emphasis>hipconf run opp &lt;EXECUTABLE&gt;</emphasis>
-      </para>
-      <para>
-	b. Enabling HIP for all applications in bash shell (add to bashrc if you want to set this permanently): <emphasis>export LD_PRELOAD=libopphip.so:libinet6.so:libhiptool.so:libhipopendht.so</emphasis>
+	2. Use external nameservices for HIT-IP mapping, such as HIP DNS records
+        as instructed in <xref linkend="ch_dns_data" /> (requires the use of the DNS proxy).
+	Alternatively, use the free OpenDHT name service for automatic host
+	naming as described in <xref linkend="ch_opendht" />.
       </para>
       <para>
 	3. Override the resolver library dynamically:
       </para>
       <para>
-	a. Running a single application using HIP: <emphasis>hipconf run normal &lt;EXECUTABLE&gt;</emphasis>
+	3a. Running a single application using HIP: <emphasis>hipconf run normal &lt;EXECUTABLE&gt;</emphasis>
       </para>
       <!-- http://www-106.ibm.com/developerworks/linux/library/l-glibc.html?ca=3Ddgr-ln= -->
 
       <para>
-	b. Enabling HIP for all applications in bash shell (add to bashrc if you want to set this permanently): <emphasis>export LD_PRELOAD=libinet6.so:libhiptool.so:libhipopendht.so</emphasis>
+	3b. Enabling HIP for all applications in bash shell (add to bashrc if you want to set this permanently): <emphasis>export LD_PRELOAD=libinet6.so:libhiptool.so:libhipopendht.so</emphasis>
       </para>
 
       <para>
@@ -1863,27 +1858,31 @@ $ make V=99
 	able to see list of processes you have executed from GUI.
       </para>
       <para>
-	5. You can also use HITs directly in the application. For example, you can
+	5. You can also use HITs (or LSIs) directly in the application. For example, you can
 	do "ping6 PEER_HIT". However, hipd must know the mapping from the
 	PEER_HIT to the corresponding IP address. You can tell this mapping to
 	hipd using several ways. First way is to configure the HIT-hostname
 	pair to /etc/hip/hosts and the IP-hostname pair to /etc/hosts. Second
 	way is execute "hipconf add map PEER_HIT PEER_IP". You can insert the
 	hipconf command also to /etc/hip/hipd_config and restart hipd when you
-	want the mapping to be permanent. Works only with IPv6-enabled
-	applications.
+	want the mapping to be permanent.
       </para>
       <para>
-	6. Overload your /etc/hosts files by inserting HIT-hostname pair into the
+	6. Overload your /etc/hosts files by adding HITs or LSIs to the
 	file and use the hostname in your application. You need to make sure
 	that hipd finds the corresponding IP address as instructed in the
-	previous point. Works only with IPv6-enabled applications.
+	previous point.
       </para>
       <para>
-	7. Use external nameservices for HIT-IP mapping. For example, you can use
-	AAAA records in DNS for testing (HI records are not supported yet).
-	Alternatively, use the free OpenDHT name service for automatic host
-	naming as described in <xref linkend="ch_opendht" />.
+	7. Use the opportunistic mode as described in
+	<xref linkend="opportunistic" />. This method works with both IPv4 and
+	IPv6 applications. It does not require HIT configuration at all.
+      </para>
+      <para>
+	7a. Running a single IPv6-enabled application using HIP: <emphasis>hipconf run opp &lt;EXECUTABLE&gt;</emphasis>
+      </para>
+      <para>
+	7b. Enabling HIP for all applications in bash shell (add to bashrc if you want to set this permanently): <emphasis>export LD_PRELOAD=libopphip.so:libinet6.so:libhiptool.so:libhipopendht.so</emphasis>
       </para>
     </section>
     <section id="sec_advanced_methods">
@@ -1899,13 +1898,13 @@ $ make V=99
 	ping6, tla, svn.
       </para>
       <para>
-	5. Relink the application to use the libinet6 library provided in the
+	8. Relink the application to use the libinet6 library provided in the
 	HIPL software bundle Configure the HIT of the peer to /etc/hip/hosts and
 	add the corresponding address to /etc/hosts. Then, use either of the
 	following methods:
       </para>
       <para>
-	a) Run the application by using the hostname you just configured to
+	8a) Run the application by using the hostname you just configured to
 	the hosts files. It will use HIP for those hostnames. For hostnames
 	that are not present in /etc/hip/hosts, the application will just
 	use normal IPv4 or IPv6 connectivity. Good for environments where
@@ -1913,7 +1912,7 @@ $ make V=99
 	compatibility is more important that the security of the connections.
       </para>
       <para>
-	b) Set the AI_HIP flag in the getaddrinfo call and recompile the
+	8b) Set the AI_HIP flag in the getaddrinfo call and recompile the
 	application (see test/conntest.c). This will make the getaddrinfo
 	function to return <emphasis>only</emphasis> HITs in the place of IP
 	addresses (no IP addresses are returned). This option good for
@@ -1921,7 +1920,7 @@ $ make V=99
 	use of HIP.
       </para>
       <para>
-	c. Port it to use the native HIP API. See the telnet code for a
+	8c. Port it to use the native HIP API. See the telnet code for a
 	practical example. The API is documented in url:
 	<ulink url="http://hipl.hiit.fi/hipl/hip-native-api-final.pdf" />
       </para>
@@ -3732,6 +3731,13 @@ combo-newgroup=&lt;create new...&gt;
     </itemizedlist>
 
     <para>
+    HIP daemon creates a file called /etc/hip/dhtservers when you
+    execute it. You can add there Bamboo servers. The file has the
+    same format as hosts files.
+    </para>
+
+    <!--
+    <para>
     By default OpenDHT support uses opendht.nyuld.net to resolve
     proximate gateway address. Some times this returns unstable servers
     address. After a few connection or status errors from DHT, will the
@@ -3745,6 +3751,7 @@ combo-newgroup=&lt;create new...&gt;
     url="http://www.opendht.org/servers.txt" />. The wget-dht-servers.sh
     script can create you the list automatically (in tools directory).
     </para>
+    -->
 
     <para>
     There is multiple OpenDHT related hipconf commands that you can
@@ -4107,13 +4114,8 @@ parsehipkey &lt; felwood/hip_host_dsa_key_pub.pub felwood2.hip-test1.infrahip.ne
     </para>
     <para>
       If you are running already an existing dnsproxy on the host, you
-      need to "chain" them together. For example, you have to do the
-      following with dnsmasq:
+      need to "chain" them together. For example, with dnsmasq you have to start it with: you have to start it with --background --no-resolv --port 5050 --server 127.0.0.1
     </para>
-    <itemizedlist>
-      <listitem><para>Start the dnsmasq with --no-resolv --port 5050 --server 127.0.0.1</para></listitem>
-      <listitem><para>Start dnsmasq with --background</para></listitem>
-    </itemizedlist>
   </chapter>
 </book>
 

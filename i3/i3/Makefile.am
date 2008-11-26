@@ -10,7 +10,7 @@ noinst_HEADERS = i3_config.h  i3_header.h  i3_options.h \
 		 i3_trigger.h  i3_addr.h  i3_fun.h  i3_id.h \
 		 i3_stack.h  i3_utils.h  i3_api.h  i3.h  i3_misc.h \
 		 i3_tcp_fns.h i3_debug.h token_bucket.h \
-		 i3_ping.h
+		 i3_ping.h debug_fns.h
 
 utils_SOURCES = ../utils/byteorder.c
 libi3_a_SOURCES = i3_addr.c  i3_config.c  i3_id.c  i3_options.c \

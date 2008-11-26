@@ -38,6 +38,8 @@ struct hip_update_kludge {
 	int length;
 };
 
+void empty_oppipdb();
+
 /**
  * Iterate a list of locators using a function. The list handling is interrupted
  * if the give function returns an error.

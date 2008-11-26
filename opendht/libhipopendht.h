@@ -4,8 +4,8 @@
 
 
 /* Resolve the gateway address using opendht.nyuld.net */
-#define OPENDHT_GATEWAY "opendht.nyuld.net"
-//#define OPENDHT_GATEWAY "openlookup.net"
+//#define OPENDHT_GATEWAY "opendht.nyuld.net"
+#define OPENDHT_GATEWAY "hipdht2.infrahip.net"
 // change to 5851 for opendht and 80 for openlookup XX TODO
 #define OPENDHT_PORT 5851
 #define OPENDHT_TTL 120

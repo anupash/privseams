@@ -86,6 +86,7 @@ const char *hipconf_usage =
 "manual-update <interface>\n"
 #endif
 "hi3 on|off\n"
+"nsupdate on|off\n"
 "buddies on|off\n"
 ;
 
@@ -133,6 +134,8 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc, 
 	hip_conf_handle_hi3,
 	hip_conf_handle_get_dnsproxy,
 	hip_conf_handle_buddies_toggle,
+	NULL, /* reserved for sava */
+	hip_conf_handle_nsupdate,
 	hip_conf_handle_manual_update,
 	NULL /* run */
 };
@@ -216,6 +219,8 @@ int hip_conf_get_action(char *text)
 		ret = ACTION_DNS_PROXY;
 	else if (!strcmp("buddies", text))
 		ret = ACTION_BUDDIES;
+	else if (!strcmp("nsupdate", text))
+		ret = ACTION_NSUPDATE;
 	
 	return ret;
 }
@@ -237,7 +242,7 @@ int hip_conf_check_action_argc(int action) {
 	case ACTION_BOS: case ACTION_LOCATOR: case ACTION_OPENDHT: case ACTION_HEARTBEAT:
                 break;
 	case ACTION_DEBUG: case ACTION_RESTART: case ACTION_REINIT:
-	case ACTION_TCPTIMEOUT: case ACTION_DNS_PROXY:
+	case ACTION_TCPTIMEOUT: case ACTION_DNS_PROXY: case ACTION_NSUPDATE:
 	case ACTION_MANUAL_UPDATE:
 		count = 1;
 		break;
@@ -346,6 +351,8 @@ int hip_conf_get_type(char *text,char *argv[]) {
                 ret = TYPE_DNS_PROXY;
 	else if (strcmp("buddies", argv[1])==0)
 		ret = TYPE_BUDDIES;
+	else if (strcmp("nsupdate", argv[1])==0)
+		ret = TYPE_NSUPDATE;
 	else 
 	  HIP_DEBUG("ERROR: NO MATCHES FOUND \n");
 
@@ -395,6 +402,7 @@ int hip_conf_get_type_arg(int action)
 	case ACTION_HI3:
 	case ACTION_DNS_PROXY:
 	case ACTION_RESTART:
+	case ACTION_NSUPDATE:
 		type_arg = 2;
 		break;
 #ifdef CONFIG_HIP_MIDAUTH
@@ -1650,7 +1658,12 @@ int hip_conf_handle_gw(hip_common_t *msg, int action, const char *opt[], int opt
     if(ret_IP)
 	IPV4_TO_IPV6_MAP(&ip_gw, &ip_gw_mapped);
 
-    HIP_DEBUG_IN6ADDR("Address ", &ip_gw_mapped);
+    if(ret_IP || ret_HIT){
+    	HIP_DEBUG_IN6ADDR("Address ", &ip_gw_mapped);
+    }
+    else{
+	HIP_DEBUG("Host name : %s\n", hostname);
+    }
 
     err = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped,
 					  atoi(opt[2]), atoi(opt[1]), hostname);
@@ -2621,19 +2634,40 @@ int hip_conf_handle_hi3(hip_common_t *msg,
 			int action,
 			const char *opt[],
 			int optc, int send_only){
-    int err = 0, status = 0;
+	int err = 0, status = 0;
+	
+	if (!strcmp("on",opt[0])) {
+		status = SO_HIP_SET_HI3_ON; 
+	} else if (!strcmp("off",opt[0])) {
+		status = SO_HIP_SET_HI3_OFF;
+	} else {
+		HIP_IFEL(1, -1, "bad args\n");
+	}
+	HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1,
+		 "Failed to build user message header.: %s\n", strerror(err));
     
-    if (!strcmp("on",opt[0])) {
-        status = SO_HIP_SET_HI3_ON; 
-    } else if (!strcmp("off",opt[0])) {
-        status = SO_HIP_SET_HI3_OFF;
-    } else {
-        HIP_IFEL(1, -1, "bad args\n");
-    }
-    HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, "Failed to build user message header.: %s\n", strerror(err));
-    
- out_err:
-    return err;
+out_err:
+	return err;
+}
+
+int hip_conf_handle_nsupdate(hip_common_t *msg,
+			     int action,
+			     const char *opt[],
+			     int optc, int send_only) {
+	int err = 0, status;
+
+	if (!strcmp("on",opt[0])) {
+		status = SO_HIP_NSUPDATE_ON; 
+	} else if (!strcmp("off",opt[0])) {
+		status = SO_HIP_NSUPDATE_OFF;
+	} else {
+		HIP_IFEL(1, -1, "bad args\n");
+	}
+	HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1,
+		 "Failed to build user message header.: %s\n", strerror(err));
+	
+out_err:
+	return err;
 }
 
 #if 0

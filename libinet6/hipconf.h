@@ -119,9 +119,10 @@
 #define ACTION_HI3 27
 #define ACTION_DNS_PROXY 28
 #define ACTION_BUDDIES 29
-#define ACTION_HANDOVER 30
-#define ACTION_MANUAL_UPDATE 31
-#define ACTION_MAX 32 /* exclusive */
+#define ACTION_NSUPDATE 30
+#define ACTION_HANDOVER 31
+#define ACTION_MANUAL_UPDATE 32
+#define ACTION_MAX 33 /* exclusive */
 
 /**
  * TYPE_ constant list, as an index for each action_handler function.
@@ -164,9 +165,10 @@
 #define TYPE_DNS_PROXY     29
 #define TYPE_BUDDIES	   30
 #define TYPE_SAVAHR        31 /* SAVA router HIT IP pair */
-#define TYPE_HANDOVER      32
-#define TYPE_MANUAL_UPDATE 33
-#define TYPE_MAX           34 /* exclusive */
+#define TYPE_NSUPDATE      32
+#define TYPE_HANDOVER      33
+#define TYPE_MANUAL_UPDATE 34
+#define TYPE_MAX           35 /* exclusive */
 
 /* #define TYPE_RELAY         22 */
 
@@ -186,12 +188,12 @@
 # add server rvs [RVS-HIT] <RVS-IP-OR-HOSTNAME> <lifetime-secs> # register to rendezvous server\n\
 # heartbeat 10 # send ICMPv6 messages inside HIP tunnels\n\
 # add server rvs hiprvs.infrahip.net 50000 # Register to free RVS at infrahip\n\
-# dht gw host port port TTL # set dht gw hostname|ip port default=5851\n\
+# dht gw hipdht.infrahip.net 5851 60000 # dht gw to host port ttl\n\
+# opendht on # turn DHT support on (dht gw is not enough)\n\
 # locator on        # host sends all of its locators in base exchange\n\
 # opp normal|advanced|none\n\
 # transform order 213 # crypto preference order (1=AES, 2=3DES, 3=NULL)\n\
 \n\
-opendht off # Jan 2007: OpenDHT infrastructure is flaky -Samu/Miika\n\
 nat plain-udp       # use UDP capsulation (for NATted environments)\n\
 debug medium        # debug verbosity: all, medium or none\n"
 
@@ -254,6 +256,10 @@ int hip_conf_handle_hi3(hip_common_t *, int type, const char *opt[], int optc, i
 int hip_conf_handle_manual_update(hip_common_t *msg, int action, const char *opt[], int optc, int send_only);
 int hip_conf_handle_sava (struct hip_common * msg, int action, 
 			  const char * opt[], int optc, int send_only); 
+int hip_conf_handle_nsupdate(hip_common_t *msg,
+			     int action,
+			     const char *opt[],
+			     int optc, int send_only);
 
 /**
  * Prints the HIT values in use. Prints either all or the default HIT value to

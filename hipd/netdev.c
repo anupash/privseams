@@ -836,11 +836,13 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit,
 	err = 1;
 	HIP_DEBUG("No entry found; find first IP matching\n");
 
+#ifdef CONFIG_HIP_I3
 	if(hip_get_hi3_status()){
 		struct in6_addr lpback = IN6ADDR_LOOPBACK_INIT;
 		memcpy(dst_addr, &lpback, sizeof(struct in6_addr));
 		err = 0;
 	}
+#endif
 
 	if (err && !ipv6_addr_any(dst_addr)) {
 			/* Destination address given; no need to look up */

@@ -174,14 +174,23 @@ Java_jip_HipSocketImpl_bind (JNIEnv *env, jobject obj, jobject addr, jint port)
     int fd = (*env)->GetIntField(env, obj, native_fd_id);
     //struct sockaddr_eid eid_addr;
 struct sockaddr_hip sock_addr;
-jbyte *hit;
+jbyte hit[16];
+jbyteArray j_hit;
+jfieldID hit_id;
+jclass cls;
     printf("Bind: <%d> %d\n", port, fd);
     fflush(stdout);
     (*env)->CallVoidMethod(env, obj, dump_id);
+
+cls = (*env)->GetObjectClass(env, addr);
+hit_id = (*env)->GetFieldID(env, cls, "address", "[B");
+j_hit = (*env)->GetObjectField(env, addr, hit_id);
+(*env)->GetByteArrayRegion(env, j_hit, 0, 16, hit);
+
+memset(&sock_addr, 0, sizeof(sock_addr));
+memcpy(&sock_addr.ship_hit, &hit, sizeof(hit));
 sock_addr.ship_family = PF_HIP;
 sock_addr.ship_port = htons(port);
-hit = (*env)->GetByteArrayElements(env, addr, ha_address_id);
-memcpy(&sock_addr.ship_hit, &hit, sizeof(struct in6_addr));
 CHECK(bind(fd, (struct sockaddr *)&sock_addr, sizeof(sock_addr)), "Bind failed\n");
     //eid_addr.eid_family = PF_HIP;
     //eid_addr.eid_port = htons(port);
@@ -223,8 +232,9 @@ Java_jip_HipSocketImpl_accept (JNIEnv *env, jobject obj, jobject impl)
 {
     int fd = (*env)->GetIntField(env, obj, native_fd_id);
     int s;
-    struct sockaddr_eid local_addr, remote_addr;
-    socklen_t local_len = sizeof local_addr, remote_len = sizeof remote_addr;
+//    struct sockaddr_eid local_addr, remote_addr;
+struct sockaddr_hip local_addr, remote_addr;
+    socklen_t local_len = sizeof(local_addr), remote_len = sizeof(remote_addr);
     printf("Accept: %d\n", fd);
     fflush(stdout);
     (*env)->CallVoidMethod(env, obj, dump_id);
@@ -233,8 +243,8 @@ Java_jip_HipSocketImpl_accept (JNIEnv *env, jobject obj, jobject impl)
     CHECK(getsockname(s, (struct sockaddr *) &local_addr, &local_len),
 	  "Sockname failed");
     (*env)->SetIntField(env, impl, native_fd_id, s);
-    (*env)->SetIntField(env, impl, localport_id, ntohs(local_addr.eid_port));
-    (*env)->SetIntField(env, impl, port_id, ntohs(remote_addr.eid_port));
+    (*env)->SetIntField(env, impl, localport_id, ntohs(local_addr.ship_port));
+    (*env)->SetIntField(env, impl, port_id, ntohs(remote_addr.ship_port));
 }
 
 JNIEXPORT jint JNICALL
