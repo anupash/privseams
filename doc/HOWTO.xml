@@ -198,6 +198,12 @@
 	[*] IPv6: Multiple Routing Tables
       </para></listitem>
       <listitem><para>
+       Network packet filtering framework (Netfilter) Core
+      </para></listitem>
+      <listitem><para>
+       &lt;M&gt;  Netfilter NFQUEUE over NFNETLINK interface 
+      </para></listitem>
+      <listitem><para>
 	Cryptographic options
       </para></listitem>
       <listitem><para>
