@@ -39,7 +39,7 @@ else
 endif
 
 # Required for pjsip
-hipd_LDADD += -lpthread 
+hipd_LDADD += -lpthread -luuid
 hipd_LDADD += ../pjproject/pjnath/lib/libpjnath-hipl.a
 hipd_LDADD += ../pjproject/pjlib/lib/libpj-hipl.a
 hipd_LDADD += ../pjproject/pjlib-util/lib/libpjlib-util-hipl.a

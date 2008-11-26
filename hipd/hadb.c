@@ -2409,7 +2409,7 @@ void hip_init_hadb(void)
      if(hip_get_hi3_status()){
 	  default_xmit_func_set.hip_send_pkt = hip_send_i3;
      }
-     else{
+     else
 #endif
 	  default_xmit_func_set.hip_send_pkt = hip_send_raw;
      

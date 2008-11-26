@@ -926,7 +926,7 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 				 -ECOMM,
 				 "Sending R1 packet through i3 failed.\n");
 		}
-		else{
+		else
 #endif
 			HIP_IFEL(hip_send_raw(
 					 i1_daddr,

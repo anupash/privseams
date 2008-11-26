@@ -3180,7 +3180,7 @@ int hip_handle_firewall_i1_request(struct hip_common *msg,
 		IPV4_TO_IPV6_MAP(&lpback, &dst_addr);
 		err = 0;
 	}
-	else {
+	else
 #endif
 		err = hip_map_id_to_addr(dst_hit, NULL, &dst_addr);
 
