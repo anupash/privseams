@@ -33,7 +33,9 @@ SRCDIR=${PKGDIR_SRC}/${NAME}${SUFFIX}
 HIPL=$PWD
 POSTFIX="deb"
 # Comment this out if you want to install without sudo (see bug id 603)
-SUDO=sudo
+if [ $DEBARCH != "armel" ]; then
+    SUDO=sudo
+fi
 
 # The current debian compilation does not use a fresh copy of files,
 # but instead relies on older execution of configure. Therefore $pyexecdir
@@ -80,7 +82,11 @@ remove()
 
 inst()
 {
-    $SUDO install --mode=$DEFAULT_MODE --owner=$DEFAULT_OWNER --group=$DEFAULT_GROUP $@
+    if [ $DEBARCH = "armel" ]; then
+	$SUDO install --mode=$DEFAULT_MODE $@
+    else
+	$SUDO install --mode=$DEFAULT_MODE --owner=$DEFAULT_OWNER --group=$DEFAULT_GROUP $@
+    fi
 }
 
 # copy the tarball from the HIPL directory
