@@ -60,8 +60,6 @@ static void pisa_generate_random()
 
 	memcpy(p0, p1, PISA_RANDOM_LEN);
 	get_random_bytes(p1, PISA_RANDOM_LEN);
-
-	HIP_DEBUG("updated pisa_random_data.\n");
 }
 
 void pisa_check_for_random_update()
@@ -136,7 +134,7 @@ static int pisa_insert_nonce_1spi(hip_fw_context_t *ctx)
 	/* The nonce looks like this:
 	 *    4 bytes SPI
 	 *   20 bytes HMAC of everything before
-	 * As we only use the data in the firewall, byteorder is not an issue.
+	 * As we only memcpy the data we do not care about byteorder.
 	 */
 
 	memcpy(nonce, &spi, sizeof(u32));
@@ -171,7 +169,7 @@ static int pisa_insert_nonce_2spi(hip_fw_context_t *ctx,
 	 *    4 bytes first SPI
 	 *    4 bytes second SPI
 	 *   20 bytes HMAC of everything before
-	 * As we only use the data in the firewall, byteorder is not an issue.
+	 * As we only memcpy the data we do not care about byteorder.
 	 */
 
 	memcpy(nonce, &spi[0], sizeof(u32));
@@ -217,7 +215,6 @@ static struct hip_tlv_common *pisa_check_nonce(hip_fw_context_t *ctx)
 	struct hip_tlv_common *nonce;
 	struct hip_common *hip = ctx->transport_hdr.hip;
 	u8 valid[PISA_NONCE_LEN_2SPI], *nonce_data;
-	u32 spi;
 	int nonce_len;
 
 	nonce = hip_get_param(hip, HIP_PARAM_ECHO_RESPONSE_M);
@@ -239,7 +236,6 @@ static struct hip_tlv_common *pisa_check_nonce(hip_fw_context_t *ctx)
 				data_size = sizeof(u32) * 2;
 
 			memcpy(valid, nonce_data, data_size);
-			spi = *((u32 *)nonce_data);
 
 			/* ... first check the current random value ... */
 			pisa_append_hmac(&hip->hitr, &hip->hits, 1, valid,
@@ -646,7 +642,7 @@ static int pisa_handler_u2(hip_fw_context_t *ctx)
 }
 
 /**
- * Check for a PISA nonce in the U3 packet.
+ * Check for a PISA nonce and a valid signature in the U3 packet.
  *
  * @param ctx context of the packet to check
  * @return verdict, either NF_ACCEPT or NF_DROP
