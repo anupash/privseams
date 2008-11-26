@@ -34,7 +34,7 @@ hipfw_SOURCES += sava_api.c cache.c cache_port.c
 hipfw_LDADD = -lipq ../libinet6/.libs/libinet6.a
 hipfw_LDADD += -lpthread
 if HIP_UUIDLIB
-hipd_LDADD += -luuid
+hipfw_LDADD += -luuid
 endif
 hipfw_LDADD += ../pjproject/pjnath/lib/libpjnath-hipl.a
 hipfw_LDADD += ../pjproject/pjlib/lib/libpj-hipl.a
