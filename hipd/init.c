@@ -7,9 +7,6 @@
 
 
 
-#ifndef OPENWRT
-//#include <sys/capability.h>
-#endif
 #include <sys/prctl.h>
 #include "common_defines.h"
 #include <sys/types.h>

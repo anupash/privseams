@@ -26,7 +26,6 @@ AM_PROG_LIBTOOL
 AC_CHECK_LIB(crypto, DSA_generate_key,, AC_MSG_ERROR(openssl lib not found))
 # We need the math lib in the registration extension.
 AC_CHECK_LIB(m, pow,, AC_MSG_ERROR(Math lib not found))
-AC_CHECK_LIB(uuid, uuid_generate,, AC_MSG_ERROR(Uuid lib not found))
 #AC_CHECK_LIB([gcrypt], [gcry_pk_sign])
 #AC_CHECK_LIB([pthread], [sem_open])
 AC_HEADER_SYS_WAIT
@@ -215,21 +214,6 @@ if test x"$ac_cv_use_rvs" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_RVS, AC_PREREQ(2.53))
 fi
 
-AC_ARG_ENABLE(openwrt,
-             AC_HELP_STRING([--enable-openwrt],
-                            [OpenWRT (default is NO)]),
-             [ac_cv_use_openwrt=$enableval], [ac_cv_use_openwrt=no])
-AC_CACHE_CHECK([whether to use OpenWRT],
-               [ac_cv_use_openwrt], [ac_cv_use_openwrt=no])
-if test x"$ac_cv_use_openwrt" = x"yes"; then
-        AC_DEFINE(CONFIG_HIP_OPENWRT, AC_PREREQ(2.53))
-        AC_SUBST(OPENWRT_CFLAGS, "-lc")
-        if test x"$TARGET" = x"MIPS_LINUX"; then
-                AC_DEFINE(CONFIG_HIP_OPENWRT_MIPSLINUX, AC_PREREQ(2.53))
-        fi
-fi
-AM_CONDITIONAL(HIP_OPENWRT, test x"$ac_cv_use_openwrt" = x"yes")
-
 AC_ARG_ENABLE(hipproxy,
              AC_HELP_STRING([--enable-hipproxy],
                             [HIP Proxy (default is YES)]),
@@ -260,6 +244,48 @@ if test x"$ac_cv_use_buggyprefix" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_BUGGYPREFIX, AC_PREREQ(2.53))
 fi
 
+AC_ARG_ENABLE(maemo,
+             AC_HELP_STRING([--enable-maemo],
+                            [Maemo (default is NO)]),
+             [ac_cv_use_maemo=$enableval \
+	      ac_cv_use_altsep=$enableval], [ac_cv_use_maemo=no])
+AC_CACHE_CHECK([whether to use Maemo],
+               [ac_cv_use_maemo], [ac_cv_use_maemo=no])
+if test x"$ac_cv_use_maemo" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_MAEMO, AC_PREREQ(2.53))
+fi
+AM_CONDITIONAL(HIP_MAEMO, test x"$ac_cv_use_maemo" = x"yes")
+
+AC_ARG_ENABLE(openwrt,
+             AC_HELP_STRING([--enable-openwrt],
+                            [OpenWRT (default is NO)]),
+             [ac_cv_use_openwrt=$enableval \
+	      ac_cv_use_altsep=$enableval], [ac_cv_use_openwrt=no])
+AC_CACHE_CHECK([whether to use OpenWRT],
+               [ac_cv_use_openwrt], [ac_cv_use_openwrt=no])
+if test x"$ac_cv_use_openwrt" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_OPENWRT, AC_PREREQ(2.53))
+        AC_SUBST(OPENWRT_CFLAGS, "-lc")
+        if test x"$TARGET" = x"MIPS_LINUX"; then
+                AC_DEFINE(CONFIG_HIP_OPENWRT_MIPSLINUX, AC_PREREQ(2.53))
+        fi
+fi
+AM_CONDITIONAL(HIP_OPENWRT, test x"$ac_cv_use_openwrt" = x"yes")
+
+# if we already set altsep, then don't check the flags anymore
+if test x"$ac_cv_use_altsep" != x"yes"; then
+AC_ARG_ENABLE(altsep,
+             AC_HELP_STRING([--enable-altsep],
+                            [Alternative privilege separation (default is NO)]),
+             [ac_cv_use_altsep=$enableval], [ac_cv_use_altsep=no])
+fi
+AC_CACHE_CHECK([whether to use Alternative privilege separation],
+               [ac_cv_use_altsep], [ac_cv_use_altsep=no])
+if test x"$ac_cv_use_altsep" = x"yes"; then
+        AC_DEFINE(CONFIG_HIP_ALTSEP, AC_PREREQ(2.53))
+fi
+AM_CONDITIONAL(HIP_ALTSEP, test x"$ac_cv_use_altsep" = x"yes")
+
 AM_CONDITIONAL(HIP_PRIVSEP, test x"$ac_cv_use_privsep" = x"yes")
 AC_ARG_ENABLE(privsep,
              AC_HELP_STRING([--enable-privsep],
@@ -268,7 +294,7 @@ AC_ARG_ENABLE(privsep,
 AC_CACHE_CHECK([whether to use privsep],
                [ac_cv_use_privsep], [ac_cv_use_privsep=yes])
 if test x"$ac_cv_use_privsep" = x"yes"; then
-	if test x"$ac_cv_use_openwrt" != x"yes"; then
+	if test x"$ac_cv_use_altsep" != x"yes"; then
 		AC_CHECK_LIB(cap, cap_get_proc,, AC_MSG_ERROR(libcap-dev developer headers not found))
 	fi
         AC_DEFINE(CONFIG_HIP_PRIVSEP, AC_PREREQ(2.53))

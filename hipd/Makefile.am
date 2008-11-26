@@ -39,7 +39,7 @@ else
 endif
 
 # Required for pjsip
-hipd_LDADD += -lpthread -luuid
+hipd_LDADD += -lpthread 
 hipd_LDADD += ../pjproject/pjnath/lib/libpjnath-hipl.a
 hipd_LDADD += ../pjproject/pjlib/lib/libpj-hipl.a
 hipd_LDADD += ../pjproject/pjlib-util/lib/libpjlib-util-hipl.a
@@ -51,7 +51,7 @@ hipd_LDADD += ../pjproject/pjlib-util/lib/libpjlib-util-hipl.a
 hipd_LDFLAGS = -lcrypto $(HIPL_XMLL) -lm -DHIPL_HIPD
 
 if HIP_PRIVSEP
-if HIP_OPENWRT
+if HIP_ALTSEP
   hipd_LDFLAGS += 
 else
   hipd_LDFLAGS += -lcap
