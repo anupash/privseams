@@ -26,7 +26,8 @@ AM_PROG_LIBTOOL
 AC_CHECK_LIB(crypto, DSA_generate_key,, AC_MSG_ERROR(openssl lib not found))
 # We need the math lib in the registration extension.
 AC_CHECK_LIB(m, pow,, AC_MSG_ERROR(Math lib not found))
-AC_CHECK_LIB(uuid, uuid_generate,, AC_MSG_ERROR(Uuid lib not found))
+#AC_CHECK_LIB(uuid, uuid_generate,, AC_MSG_ERROR(Uuid lib not found))
+AC_CHECK_LIB(uuid,uuid_generate,[ac_has_uuid_lib=1])
 #AC_CHECK_LIB([gcrypt], [gcry_pk_sign])
 #AC_CHECK_LIB([pthread], [sem_open])
 AC_HEADER_SYS_WAIT
@@ -276,6 +277,9 @@ if test x"$ac_cv_use_altsep" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_ALTSEP, AC_PREREQ(2.53))
 fi
 AM_CONDITIONAL(HIP_ALTSEP, test x"$ac_cv_use_altsep" = x"yes")
+
+# define this iff we have uuid lib
+AM_CONDITIONAL(HIP_UUIDLIB, test "$ac_has_uuid_lib" = "1")
 
 # if we already set i3, then don't check the flags anymore
 if test x"$ac_cv_use_i3" != x"no"; then
