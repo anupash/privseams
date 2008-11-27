@@ -44,7 +44,10 @@ if HIP_PERFORMANCE
 endif
 
 # Required for pjsip
-hipd_LDADD += -lpthread -luuid
+hipd_LDADD += -lpthread 
+if HIP_UUIDLIB
+hipd_LDADD += -luuid
+endif
 hipd_LDADD += ../pjproject/pjnath/lib/libpjnath-hipl.a
 hipd_LDADD += ../pjproject/pjlib/lib/libpj-hipl.a
 hipd_LDADD += ../pjproject/pjlib-util/lib/libpjlib-util-hipl.a
