@@ -25,7 +25,7 @@ CLEANFILES = pjproject/pjlib/lib/libpj-hipl.a \
 
 # Note: libinet6 has to be the first one
 #
-SUBDIRS = pjproject libinet6 performance libhiptool libopphip libipsec opendht tools hipd test firewall libhipgui agent hipfwmi
+SUBDIRS = pjproject libinet6 performance libhiptool libopphip libipsec opendht tools
 if HIP_I3
 SUBDIRS += i3
 endif
