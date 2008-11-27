@@ -2339,11 +2339,9 @@ int get_peer_addrinfo_hit(const char *hostsfile,
   FILE *hosts = NULL;
   char fqdn_str[HOST_NAME_MAX];
   struct in6_addr hit;
+  struct sockaddr_hip *addr;
 
   HIP_DEBUG("Called, nodename: %s\n", nodename);
-
-  HIP_ASSERT(nodename);
-  HIP_ASSERT(hints);
 
   hosts = fopen(hostsfile, "r");
   if (!hosts) {
@@ -2380,7 +2378,8 @@ int get_peer_addrinfo_hit(const char *hostsfile,
 	/* XX FIX: we should append the domain name if it does not exist */
       }
 
-      memcpy((*res)->ai_addr, &hit, sizeof(hit));
+      addr = (struct sockaddr_hip *)(*res)->ai_addr;
+      memcpy(&addr->ship_hit, &hit, sizeof(hit));
 
       (*res)->ai_flags = hints->ai_flags;
       (*res)->ai_family = PF_HIP;

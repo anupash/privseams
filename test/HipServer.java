@@ -44,7 +44,7 @@ public class HipServer {
 	    PrintWriter out = new PrintWriter(os);
 	    String line;
 	    while ((line = in.readLine()) != null) {
-		System.out.println("Received: " + line);
+		System.out.println(line);
 		out.println(line);
 		out.flush();
 	    }
