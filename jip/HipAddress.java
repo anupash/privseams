@@ -101,21 +101,14 @@ public class HipAddress {
     }
 
     /**
-     * Read an application-specified EID for this host.  This method
-     * reads a private or a public key from a file, associates it with
-     * an endpoint on this host and constructs a
-     * <code>HipAddress</code> representing that endpoint.
+     * Read an application-specified EID for a host.  This method
+     * reads a private or a public key from a file, and constructs a
+     * <code>HipAddress</code> representing the HIT.
      *
      * @param fileName the name of the file to read the key from
      * @return an object representing the given application-specified
      * endpoint
      */
     public native static HipAddress getFromFile (String fileName);
-
-    /*
-    public native byte[] getMyHostIdentity ();
-
-    public native byte[] getPeerHostIdentity ();
-    */
 
 }

@@ -21,8 +21,8 @@ public class HipServer {
 	    // begin PC
 	    ServerSocketFactory hipFactory = new HipServerSocketFactory();
 	    // end PC
-	    if (args.length != 1) {
-		System.err.println("Usage: HipServer <port>");
+	    if (args.length != 1 && args.length != 2) {
+		System.err.println("Usage: HipServer <port> [<local_addr>]");
 		System.exit(1);
 	    }
 	    int port = Integer.parseInt(args[0]);
@@ -32,7 +32,10 @@ public class HipServer {
 	    // begin PC
 	    ServerSocket ss = hipFactory.createServerSocket();
 	    // end PC
-	    ss.bind(new InetSocketAddress(port));
+	    if (args.length == 1)
+		ss.bind(new InetSocketAddress(port));
+	    else
+		ss.bind(new InetSocketAddress(args[1], port));
 	    System.out.println(ss.toString());
 	    Socket s = ss.accept();
 	    System.out.println(s.toString());

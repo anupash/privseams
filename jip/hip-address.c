@@ -9,17 +9,7 @@
 #include <string.h>
 #include <netdb.h>
 
-/*
- * Temporarily declare them here while waiting for them to get into
- * the proper headers.
- */
-int load_hip_endpoint_pem (const char *, struct endpoint **);
-/*
-int getmyeidinfo (const struct sockaddr_eid *, struct endpoint **,
-		  struct if_nameindex **);
-int getpeereidinfo (const struct sockaddr_eid *, struct endpoint **,
-		    struct addrinfo **);
-*/
+#define HIT_LEN sizeof(struct in6_addr)
 
 static jfieldID address_id;
 static jmethodID init_id;
@@ -37,9 +27,8 @@ JNIEXPORT jobjectArray JNICALL
 Java_jip_HipAddress_getAllByName (JNIEnv *env, jclass cls, jstring host)
 {
     const jbyte *s = (*env)->GetStringUTFChars(env, host, NULL);
-//    struct endpointinfo hints, *res, *ai;
-struct addrinfo hints, *res, *ai;
-jbyteArray hit;
+    struct addrinfo hints, *res, *ai;
+    jbyteArray hit;
     int error, size, i;
     jobjectArray result;
     const jbyte *khost = NULL, *kport = NULL;
@@ -60,7 +49,6 @@ jbyteArray hit;
     printf("flags: %d\n", hints.ai_flags);
     fflush(stdout);
 
-//    error = getendpointinfo(khost, kport, &hints, &res);
     error = get_hit_addrinfo(khost, kport, &hints, &res);
 
     printf("getAllByName() called, error=%d\n", error);
@@ -69,8 +57,8 @@ jbyteArray hit;
 	char buffer[256];
 	jclass uh_ex_cls =
 	    (*env)->FindClass(env, "java/net/UnknownHostException");
-	snprintf(buffer, sizeof buffer, "Getendpointinfo failed %d: %s", error,
-		 gepi_strerror(error));
+	snprintf(buffer, sizeof buffer, "get_hit_addrinfo() failed %d: %s",
+					error, strerror(error));
 	if (uh_ex_cls != NULL) {
 	    (*env)->ThrowNew(env, uh_ex_cls, buffer);
 	}
@@ -94,11 +82,10 @@ jbyteArray hit;
     for (ai = res, i = 0; ai != NULL; ai = ai->ai_next, i++) {
 	struct sockaddr_hip *addr = (struct sockaddr_hip *) ai->ai_addr;
 
-hit = (*env)->NewByteArray(env, 16);
-(*env)->SetByteArrayRegion(env, hit, 0, 16, &addr->ship_hit);
+	hit = (*env)->NewByteArray(env, HIT_LEN);
+	(*env)->SetByteArrayRegion(env, hit, 0, HIT_LEN, &addr->ship_hit);
 
 	jobject hip_addr = (*env)->NewObject(env, cls, init_id, hit);
-//	jobject hip_addr = (*env)->NewObject(env, cls, init_id, addr->eid_val);
 
 	(*env)->SetObjectArrayElement(env, result, i, hip_addr);
 	(*env)->DeleteLocalRef(env, hip_addr);
@@ -110,9 +97,10 @@ JNIEXPORT jobject JNICALL
 Java_jip_HipAddress_getFromFile (JNIEnv *env, jclass cls, jstring file)
 {
     const jbyte *s = (*env)->GetStringUTFChars(env, file, NULL);
-    struct sockaddr_hip *local_hit;
+    struct sockaddr_hip *addr;
+    jbyteArray j_hit;
     jobject ret;
-    int err = get_sockaddr_hip_from_key(s, &local_hit);
+    int err = get_sockaddr_hip_from_key(s, &addr);
     if (err) {
 	jclass io_ex_cls = (*env)->FindClass(env, "java/io/IOException");
 	if (io_ex_cls != NULL) {
@@ -125,8 +113,11 @@ Java_jip_HipAddress_getFromFile (JNIEnv *env, jclass cls, jstring file)
     }
     (*env)->ReleaseStringUTFChars(env, file, s);
 
-    ret = (*env)->NewObject(env, cls, init_id, &local_hit->ship_hit);
-    free(local_hit);
+    j_hit = (*env)->NewByteArray(env, HIT_LEN);
+    (*env)->SetByteArrayRegion(env, j_hit, 0, HIT_LEN, &addr->ship_hit);
+
+    ret = (*env)->NewObject(env, cls, init_id, j_hit);
+    free(addr);
     return ret;
 }
 
