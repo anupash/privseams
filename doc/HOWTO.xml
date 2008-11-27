@@ -4122,7 +4122,8 @@ parsehipkey &lt; felwood/hip_host_dsa_key_pub.pub felwood2.hip-test1.infrahip.ne
       If you are running already dnsmasq on the host, it will occupy
       the DNS port 53 and prevent DNS proxy start up with default
       options.  In such a case, you need to either disable the dnsmasq
-      (--port=0) or "chain" it with DNS proxy. Due to the current
+      (--port=0) or "chain" it with DNS proxy (which is then used as
+      a DNS cache). Due to the current
       implementation design of the DNS proxy (which overwrites
       /etc/resolv.conf), you need chain it with DNS proxy. First is
       are the network applications, second dnsmasq, third DNS proxy
