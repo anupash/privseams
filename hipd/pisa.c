@@ -5,8 +5,6 @@
  * @author Thomas Jansen
  */
 
-#ifdef CONFIG_HIP_MIDAUTH
-
 #include "hipd.h"
 
 #define CERT_MAX_SIZE 1024
@@ -44,4 +42,3 @@ char *hip_pisa_get_certificate(void)
 		hip_pisa_load_certificate();
 	return midauth_cert;
 }
-#endif

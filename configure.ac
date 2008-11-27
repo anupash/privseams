@@ -452,6 +452,7 @@ AC_CACHE_CHECK([whether to have middlebox authentification],
 if test x"$ac_cv_use_midauth" = x"yes"; then
         AC_DEFINE(CONFIG_HIP_MIDAUTH, AC_PREREQ(2.53))
 fi
+AM_CONDITIONAL(HIP_MIDAUTH, test x"$ac_cv_use_midauth" = x"yes")
 
 AC_ARG_ENABLE(performance,
              AC_HELP_STRING([--enable-performance],

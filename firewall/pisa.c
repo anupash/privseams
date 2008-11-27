@@ -8,8 +8,6 @@
  * This code is GNU/GPL.
  */
 
-#ifdef CONFIG_HIP_MIDAUTH
-
 #include "ife.h"
 #include "midauth.h"
 #include "misc.h"
@@ -697,6 +695,3 @@ void pisa_init(struct midauth_handlers *h)
 	pisa_generate_random();
 	pisa_generate_random();
 }
-
-#endif
-

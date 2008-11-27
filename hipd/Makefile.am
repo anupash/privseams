@@ -18,7 +18,9 @@ include_HEADERS += escrow.h init.h maintenance.h accessor.h oppipdb.h
 include_HEADERS += tcptimeout.h cert.h user_ipsec_sadb_api.h user_ipsec_hipd_msg.h
 include_HEADERS += esp_prot_hipd_msg.h esp_prot_anchordb.h hipqueue.h esp_prot_light_update.h
 include_HEADERS += nsupdate.h
+if HIP_MIDAUTH
 include_HEADERS += pisa.h
+endif
 
 INCLUDES = $(hipl_common_include_paths)  -I$(HIPL_PJPROJECT_NATH)/include -I$(HIPL_PJPROJECT_LIB)/include -I$(HIPL_PJPROJECT_LIB_UTIL)/include -I$(HIPL_PJPROJECT_MEDIA)/include
 
@@ -30,7 +32,9 @@ hipd_SOURCES += escrow.c init.c maintenance.c accessor.c oppipdb.c dh.c
 hipd_SOURCES += tcptimeout.c cert.c user_ipsec_sadb_api.c user_ipsec_hipd_msg.c
 hipd_SOURCES += esp_prot_hipd_msg.c esp_prot_anchordb.c hipqueue.c esp_prot_light_update.c
 hipd_SOURCES += nsupdate.c
+if HIP_MIDAUTH
 hipd_SOURCES += pisa.c
+endif
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
 hipd_LDADD = $(OPENWRT_LIB_STATIC) ../libinet6/.libs/libinet6.a

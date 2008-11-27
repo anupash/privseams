@@ -12,8 +12,6 @@
  * Currently we do neither.
  */
 
-#ifdef CONFIG_HIP_MIDAUTH
-
 #include "ife.h"
 #include "midauth.h"
 #include "pisa.h"
@@ -395,6 +393,3 @@ void midauth_init(void)
 {
 	pisa_init(&handlers);
 }
-
-#endif
-
