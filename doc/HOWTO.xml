@@ -4097,16 +4097,21 @@ parsehipkey &lt; felwood/hip_host_dsa_key_pub.pub felwood2.hip-test1.infrahip.ne
   </chapter>
   <chapter id="sec_dns_proxy">
     <title>DNS proxy</title>
+
     <para>
-      In tools directory, there is dnshipproxy script, which provides DNS
-      proxy functionality. The script has to be started with root priviledges.
+      One way to support transparent HIT look up for the whole system
+      is to use the python-based DNS proxy daemon.  It is located in
+      the tools directory (dnsproxy.py) and has to be started with
+      root priviledges. After you start the script, it will rewrite
+      /etc/resolv.conf to redirect all DNS look ups to itself so that
+      it can return HITs to applications when applicable.
     </para>
+
     <para>
-      The DNS proxy can read HIT information from HIP hosts
-      files and provide corresponding AAAA records. If it is asked an
-      AAAA record for a FQDN and there is no real existing AAAA for
-      the name, it tries to find a HIP RR for the name. If it finds
-      one, it responds with an AAAA response.
+     The dnsproxy tries to find host identities from three places:
+     "hosts" files (/etc/hosts and /etc/hip/hosts), HI records in DNS
+     and Bamboo DHT (experimental). It returns the host identities as
+     HITs or LSIs to the requesting application.
     </para>
     <para>
       For faster DNS look ups, you can optionally run the DNS proxy
