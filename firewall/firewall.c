@@ -1380,29 +1380,29 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 	if (hip_sava_client && 
 	    !hip_lsi_support && 
 	    !hip_userspace_ipsec) {
-	  //check if HA exists with the router then 
-	  //encrypt source IP and reinject packet to 
-	  //the network stack
-	  //else register with the sava router 
-	  //to register first try to find if sava router IP present in configuration
-	  //if not try to broadcast SD HIP packets and wait for the response
-	  //upon registration repeat the procedure described above for sending 
-	  //out the packet
-
-	  HIP_DEBUG("Handling normal traffic in SAVA mode \n ");
-
-	  verdict = hip_sava_handle_output(ctx);
+		/* check if HA exists with the router then 
+		   encrypt source IP and reinject packet to 
+		   the network stack
+		   else register with the sava router 
+		   to register first try to find if sava router IP present in configuration
+		   if not try to broadcast SD HIP packets and wait for the response
+		   upon registration repeat the procedure described above for sending 
+		   out the packet */
+		
+		HIP_DEBUG("Handling normal traffic in SAVA mode \n ");
+		
+		verdict = hip_sava_handle_output(ctx);
 
 	} else if (ctx->ip_version == 6 && hip_userspace_ipsec) {
-	  HIP_DEBUG_HIT("destination hit: ", &ctx->dst);
-	  // XX TODO: hip_fw_get_default_hit() returns an unfreed value
-	  HIP_DEBUG_HIT("default hit: ", hip_fw_get_default_hit());
-	  // check if this is a reinjected packet
-	  if (IN6_ARE_ADDR_EQUAL(&ctx->dst, hip_fw_get_default_hit()))
-	    // let the packet pass through directly
-	    verdict = 1;
-	  else
-	    verdict = !hip_fw_userspace_ipsec_output(ctx);
+		HIP_DEBUG_HIT("destination hit: ", &ctx->dst);
+		// XX TODO: hip_fw_get_default_hit() returns an unfreed value
+		HIP_DEBUG_HIT("default hit: ", hip_fw_get_default_hit());
+		// check if this is a reinjected packet
+		if (IN6_ARE_ADDR_EQUAL(&ctx->dst, hip_fw_get_default_hit()))
+			// let the packet pass through directly
+			verdict = 1;
+		else
+			verdict = !hip_fw_userspace_ipsec_output(ctx);
 	} else if(ctx->ip_version == 4) {
 		hip_lsi_t src_lsi, dst_lsi;
 
@@ -1595,8 +1595,6 @@ int hip_fw_handle_esp_input(hip_fw_context_t *ctx){
 	int verdict = accept_hip_esp_traffic_by_default;
 
 	HIP_DEBUG("\n");
-
-	/* XX FIXME: ADD LSI INPUT AFTER USERSPACE IPSEC */
 
 	if (filter_traffic)
 	{
@@ -2061,7 +2059,8 @@ int main(int argc, char **argv){
 		_HIP_DEBUG("HIP fw select\n");
 
 		// get handle with queued packet and process
-		if ((err = HIPD_SELECT((highest_descriptor + 1), &read_fdset,
+		/* @todo: using HIPD_SELECT blocks hipfw with R1 */
+		if ((err = select((highest_descriptor + 1), &read_fdset,
 				       NULL, NULL, &timeout)) < 0) {
 			HIP_PERROR("select error, ignoring\n");
 			continue;
@@ -2343,7 +2342,9 @@ int hip_fw_handle_outgoing_system_based_opp(hip_fw_context_t *ctx) {
 		else if (entry_peer->bex_state == FIREWALL_STATE_BEX_NOT_SUPPORTED)
 			verdict = accept_normal_traffic_by_default;
 		else if (entry_peer->bex_state == FIREWALL_STATE_BEX_ESTABLISHED){
-			if (hit_is_local_hit(&entry_peer->hit_our)) {
+			if( &entry_peer->hit_our                       &&
+			    (ipv6_addr_cmp(hip_fw_get_default_hit(),
+					   &entry_peer->hit_our) == 0)    ){
 				reinject_packet(&entry_peer->hit_our,
 						&entry_peer->hit_peer,
 						ctx->ipq_packet, 4, 0);

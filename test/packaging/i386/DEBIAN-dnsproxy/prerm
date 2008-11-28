@@ -1,4 +1,27 @@
 #!/bin/sh
 
+DEFAULT_MASQ=/etc/default/dnsmasq
+BACKUP_MASQ=/etc/default/dnsmasq.backup.dnshipproxy
+INITD=/etc/init.d/dnshipproxy
+INITD_BACKUP=/etc/init.d/dnshipproxy.backup.dnshipproxy
+
 invoke-rc.d --force --quiet dnshipproxy stop 
+
+if test -r $BACKUP_MASQ
+then
+    # Revert to original configurations (reverse of postints)
+    if test -r $DEFAULT_MASQ
+    then
+	echo "Trying to unchain dnsmasq and dnshipproxy"
+	echo "Reverting dnsmasq configuration ($DEFAULT_MASQ)"
+	cp $INITD $INITD_BACKUP.old
+	mv $INITD_BACKUP $INITD
+	invoke-rc.d --quiet dnsmasq restart
+	cp $BACKUP_MASQ $BACKUP_MASQ.old
+	mv $BACKUP_MASQ $DEFAULT_MASQ
+    else
+        echo "*** Warning! Did not find /etc/default/dnsmasq ***"
+        echo "*** Warning: DNS proxy removal may be incomplete! ***"
+    fi
+fi
 

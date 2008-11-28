@@ -198,6 +198,12 @@
 	[*] IPv6: Multiple Routing Tables
       </para></listitem>
       <listitem><para>
+       Network packet filtering framework (Netfilter) Core
+      </para></listitem>
+      <listitem><para>
+       &lt;M&gt;  Netfilter NFQUEUE over NFNETLINK interface 
+      </para></listitem>
+      <listitem><para>
 	Cryptographic options
       </para></listitem>
       <listitem><para>
@@ -1831,30 +1837,25 @@ $ make V=99
     <section id="sec_easy_methods">
       <title>Easy Methods</title>
       <para>
-	1. Run the dnshipproxy to handle mapping from hostnames to HITs.
+	1. Run the dnshipproxy to handle mapping from hostnames to HITs from hosts files.
 	See <xref linkend="sec_dns_proxy" /> for more details.
       </para>
       <para>
-	2. Use the opportunistic mode as described in
-	<xref linkend="opportunistic" />. This method works with both IPv4 and
-	IPv6 applications. It does not require HIT configuration at all.
-      </para>
-      <para>
-	a. Running a single IPv6-enabled application using HIP: <emphasis>hipconf run opp &lt;EXECUTABLE&gt;</emphasis>
-      </para>
-      <para>
-	b. Enabling HIP for all applications in bash shell (add to bashrc if you want to set this permanently): <emphasis>export LD_PRELOAD=libopphip.so:libinet6.so:libhiptool.so:libhipopendht.so</emphasis>
+	2. Use external nameservices for HIT-IP mapping, such as HIP DNS records
+        as instructed in <xref linkend="ch_dns_data" /> (requires the use of the DNS proxy).
+	Alternatively, use the free OpenDHT name service for automatic host
+	naming as described in <xref linkend="ch_opendht" />.
       </para>
       <para>
 	3. Override the resolver library dynamically:
       </para>
       <para>
-	a. Running a single application using HIP: <emphasis>hipconf run normal &lt;EXECUTABLE&gt;</emphasis>
+	3a. Running a single application using HIP: <emphasis>hipconf run normal &lt;EXECUTABLE&gt;</emphasis>
       </para>
       <!-- http://www-106.ibm.com/developerworks/linux/library/l-glibc.html?ca=3Ddgr-ln= -->
 
       <para>
-	b. Enabling HIP for all applications in bash shell (add to bashrc if you want to set this permanently): <emphasis>export LD_PRELOAD=libinet6.so:libhiptool.so:libhipopendht.so</emphasis>
+	3b. Enabling HIP for all applications in bash shell (add to bashrc if you want to set this permanently): <emphasis>export LD_PRELOAD=libinet6.so:libhiptool.so:libhipopendht.so</emphasis>
       </para>
 
       <para>
@@ -1863,27 +1864,31 @@ $ make V=99
 	able to see list of processes you have executed from GUI.
       </para>
       <para>
-	5. You can also use HITs directly in the application. For example, you can
+	5. You can also use HITs (or LSIs) directly in the application. For example, you can
 	do "ping6 PEER_HIT". However, hipd must know the mapping from the
 	PEER_HIT to the corresponding IP address. You can tell this mapping to
 	hipd using several ways. First way is to configure the HIT-hostname
 	pair to /etc/hip/hosts and the IP-hostname pair to /etc/hosts. Second
 	way is execute "hipconf add map PEER_HIT PEER_IP". You can insert the
 	hipconf command also to /etc/hip/hipd_config and restart hipd when you
-	want the mapping to be permanent. Works only with IPv6-enabled
-	applications.
+	want the mapping to be permanent.
       </para>
       <para>
-	6. Overload your /etc/hosts files by inserting HIT-hostname pair into the
+	6. Overload your /etc/hosts files by adding HITs or LSIs to the
 	file and use the hostname in your application. You need to make sure
 	that hipd finds the corresponding IP address as instructed in the
-	previous point. Works only with IPv6-enabled applications.
+	previous point.
       </para>
       <para>
-	7. Use external nameservices for HIT-IP mapping. For example, you can use
-	AAAA records in DNS for testing (HI records are not supported yet).
-	Alternatively, use the free OpenDHT name service for automatic host
-	naming as described in <xref linkend="ch_opendht" />.
+	7. Use the opportunistic mode as described in
+	<xref linkend="opportunistic" />. This method works with both IPv4 and
+	IPv6 applications. It does not require HIT configuration at all.
+      </para>
+      <para>
+	7a. Running a single IPv6-enabled application using HIP: <emphasis>hipconf run opp &lt;EXECUTABLE&gt;</emphasis>
+      </para>
+      <para>
+	7b. Enabling HIP for all applications in bash shell (add to bashrc if you want to set this permanently): <emphasis>export LD_PRELOAD=libopphip.so:libinet6.so:libhiptool.so:libhipopendht.so</emphasis>
       </para>
     </section>
     <section id="sec_advanced_methods">
@@ -1899,13 +1904,13 @@ $ make V=99
 	ping6, tla, svn.
       </para>
       <para>
-	5. Relink the application to use the libinet6 library provided in the
+	8. Relink the application to use the libinet6 library provided in the
 	HIPL software bundle Configure the HIT of the peer to /etc/hip/hosts and
 	add the corresponding address to /etc/hosts. Then, use either of the
 	following methods:
       </para>
       <para>
-	a) Run the application by using the hostname you just configured to
+	8a) Run the application by using the hostname you just configured to
 	the hosts files. It will use HIP for those hostnames. For hostnames
 	that are not present in /etc/hip/hosts, the application will just
 	use normal IPv4 or IPv6 connectivity. Good for environments where
@@ -1913,7 +1918,7 @@ $ make V=99
 	compatibility is more important that the security of the connections.
       </para>
       <para>
-	b) Set the AI_HIP flag in the getaddrinfo call and recompile the
+	8b) Set the AI_HIP flag in the getaddrinfo call and recompile the
 	application (see test/conntest.c). This will make the getaddrinfo
 	function to return <emphasis>only</emphasis> HITs in the place of IP
 	addresses (no IP addresses are returned). This option good for
@@ -1921,11 +1926,101 @@ $ make V=99
 	use of HIP.
       </para>
       <para>
-	c. Port it to use the native HIP API. See the telnet code for a
+	8c. Port it to use the native HIP API. See the telnet code for a
 	practical example. The API is documented in url:
 	<ulink url="http://hipl.hiit.fi/hipl/hip-native-api-final.pdf" />
       </para>
     </section>
+
+    <section id="sec_opendht_bamboo">
+      <title>HIP with Bamboo opendht server (IPv4 and IPv6 support)</title>
+      <para>
+	To start the Bamboo opendht server, first the code has to be obtained.
+ 	You can obtain Bamboo with IPv4 support from the Bamboo website,
+	http://www.bamboo-dht.org/download.html. Bamboo with IPv6 support can
+	be obtained from http://lxpworkroom.googlepages.com/bambooipv6version.
+	The code is compiled by executing make in the downloaded directory.
+      </para>
+      <para>
+	In order to run the Bamboo server, a configuration file needs to be
+	created. You can find a sample in this link:
+	http://www.cs.helsinki.fi/u/sklvarjo/sample.cfg.
+      </para>
+      <para>
+	Bamboo opendht server for a single machine:
+      </para>
+      <para>
+	If you want to try the bamboo opendht server on a single machine,
+	you have to assign 1 to the min_replica_count argument.
+      </para>
+      <para>
+	For IPV6 Bamboo:
+      </para>
+      <para>
+	Sample configuration files for IPv6 Bamboo can also be found at
+	http://lxpworkroom.googlepages.com/bambooipv6version. One change to
+	notice is that the ipv6 addresses are enclosed inside [] braces. IPv6
+	Bamboo configuration file requires also the setting of the network
+	argument, as shown in the IPv6 configuration samples.
+      </para>
+      <para>
+	In case you want to configure Bamboo based on HIP, you have to put a HIT
+	in the configuration file insted of the IPv6 address. 
+      </para>
+    </section>
+
+    <section id="sec_opendht_several_bamboos">
+      <title>Configuration of several Bamboo opendht servers together</title>
+      <para>
+	The first thing to note is that Bamboo servers that support different
+	ip versions cannot be configured to run together successfully.
+	All Bamboo servers should suport either ipv4 or ipv6.
+      </para>
+      <para>
+	In order to configure several bamboo servers together, there are several
+	changes to be made to each configuration file of each instance.
+      </para>
+      <para>
+	First of all, inside 'Router', in the 'initargs', we have to add the
+	'gateway_count' argument followed by the overall number of servers to be
+	configured together. After that, we should specify a list of the gateways.
+	The following paragraph illustrates a sample for configuring two servers
+	together, at the configuration file of one of the servers.
+      </para>
+      <para>
+        &lt;Router&gt;</para><para>
+            class bamboo.router.Router</para><para>
+            &lt;initargs&gt;</para><para>
+		gateway_count 2</para><para>
+                gateway_0 193.167.187.133:5850</para><para>
+		gateway_1 193.167.187.31:5850</para><para>
+                leaf_set_size  4</para><para>
+                digit_values   2</para><para>
+                immediate_join true</para><para>
+            &lt;/initargs&gt;</para><para>
+        &lt;/Router&gt;</para><para>
+      </para>
+
+      <para>
+      </para>
+
+      <para>
+	An additional change to be made is assigning the 'min_replica_count'
+	argument to the overall number of servers that are to be configured
+	together. This is illustrated below:
+      </para>
+      <para>
+        &lt;Dht&gt;</para><para>
+            class bamboo.dht.Dht</para><para>
+            &lt;initargs&gt;</para><para>
+                storage_manager_stage StorageManager</para><para>
+                min_replica_count     2</para><para>
+            &lt;/initargs&gt;</para><para>
+        &lt;/Dht&gt;</para><para>
+      </para>
+
+    </section>
+
   </chapter>
   <chapter id="ch_tips_for_hip">
     <title>Tips for Using HIP with Some Applications</title>
@@ -3642,6 +3737,13 @@ combo-newgroup=&lt;create new...&gt;
     </itemizedlist>
 
     <para>
+    HIP daemon creates a file called /etc/hip/dhtservers when you
+    execute it. You can add there Bamboo servers. The file has the
+    same format as hosts files.
+    </para>
+
+    <!--
+    <para>
     By default OpenDHT support uses opendht.nyuld.net to resolve
     proximate gateway address. Some times this returns unstable servers
     address. After a few connection or status errors from DHT, will the
@@ -3655,6 +3757,7 @@ combo-newgroup=&lt;create new...&gt;
     url="http://www.opendht.org/servers.txt" />. The wget-dht-servers.sh
     script can create you the list automatically (in tools directory).
     </para>
+    -->
 
     <para>
     There is multiple OpenDHT related hipconf commands that you can
@@ -4012,18 +4115,34 @@ parsehipkey &lt; felwood/hip_host_dsa_key_pub.pub felwood2.hip-test1.infrahip.ne
       used to provide some necessary environment variables (see comments
       in dnshipproxy). It acts as a DNS cache 
       (see <ulink url="http://cr.yp.to/djbdns.html" />) in front of
-      dnshipproxy. The use of DNS proxy without DNS cache results in longer
+      DNS proxy. The use of DNS proxy without DNS cache results in longer
       look up latencies.
     </para>
     <para>
-      If you are running already an existing dnsproxy on the host, you
-      need to "chain" them together. For example, you have to do the
-      following with dnsmasq:
+      If you are running already dnsmasq on the host, it will occupy
+      the DNS port 53 and prevent DNS proxy start up with default
+      options.  In such a case, you need to either disable the dnsmasq
+      (--port=0) or "chain" it with DNS proxy (which is then used as
+      a DNS cache). Due to the current
+      implementation design of the DNS proxy (which overwrites
+      /etc/resolv.conf), you need chain it with DNS proxy. First is
+      are the network applications, second dnsmasq, third DNS proxy
+      and finally the DNS in the Internet. This can be accomplished using the
+      following command line options to dnsmasq and DNS proxy:
     </para>
     <itemizedlist>
-      <listitem><para>Start the dnsmasq with --no-resolv --port 5050 --server 127.0.0.1</para></listitem>
-      <listitem><para>Start dnsmasq with --background</para></listitem>
+      <listitem><para>
+      Dnsmasq: --no-resolv --server=127.0.0.1#5000</para></listitem>
+      <listitem><para>
+      </para></listitem>
+      <listitem><para>
+	  Dns proxy: --port 5000</para></listitem>
     </itemizedlist>
+    <para>
+      The easiest way to configure the options is to append them to
+      OPTIONS variable in "/etc/init.d/dnsmasq" file and run
+      "/etc/init.d/dnsmasq restart".
+    </para>
   </chapter>
 </book>
 

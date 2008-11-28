@@ -17,7 +17,7 @@ if dpkg --print-architecture|grep armel;then DEBARCH=armel;fi
 REVISION=`/usr/bin/lsb_release -c | /usr/bin/awk '{print $2}'`
 # The latest SDK is diablo, the previous one - chinook. One may specify here whatever preferred more.
 # Better, we have to find out how to detect SDK version installed on a PC automatically -- Andrey Khurri
-if [ $DEBARCH = "armel" ]; then REVISION=diablo; fi
+if [ $DEBARCH = "armel" ]; then REVISION=chinook; fi
 
 SUFFIX="-$VERSION-$RELEASE-$REVISION"
 PKG_SUFFIX="-$VERSION-$RELEASE"
@@ -32,6 +32,10 @@ PKGDIR_SRC=$PKGROOT/${NAME}${PKG_SUFFIX}-deb-src
 SRCDIR=${PKGDIR_SRC}/${NAME}${SUFFIX}
 HIPL=$PWD
 POSTFIX="deb"
+# Comment this out if you want to install without sudo (see bug id 603)
+if [ $DEBARCH != "armel" ]; then
+    SUDO=sudo
+fi
 
 # The current debian compilation does not use a fresh copy of files,
 # but instead relies on older execution of configure. Therefore $pyexecdir
@@ -53,6 +57,38 @@ LINE3="Architecture:"
 PKGDIRGPL=$PKGROOT/${NAMEGPL}-${VERSION}-deb
 PKGNAMEGPL="${NAMEGPL}-${VERSION}-${RELEASE}-${DEBARCH}.deb"
 
+DEFAULT_MODE=0755 # default umask
+DEFAULT_OWNER=root # default owner root
+DEFAULT_GROUP=root # default group root
+
+copy()
+{
+    if test $# -ne 3
+    then
+	echo "Function 'copy' assumes three args"
+	echo "Internal failure"
+	exit 1
+    fi
+
+    $SUDO cp $@
+    $SUDO chown $DEFAULT_OWNER:$DEFAULT_GROUP $3
+    $SUDO chmod $DEFAULT_MODE $3
+}
+
+remove()
+{
+    $SUDO rm $@
+}
+
+inst()
+{
+    if [ $DEBARCH = "armel" ]; then
+	$SUDO install --mode=$DEFAULT_MODE $@
+    else
+	$SUDO install --mode=$DEFAULT_MODE --owner=$DEFAULT_OWNER --group=$DEFAULT_GROUP $@
+    fi
+}
+
 # copy the tarball from the HIPL directory
 copy_tarball ()
 {
@@ -64,16 +100,16 @@ copy_tarball ()
 
 	echo "** Copying Debian control files to '${SRCDIR}/debian'"
 
-	mkdir -p "${SRCDIR}/debian"
-	cp ${PKGROOT}/$DEBIAN/control-src ${SRCDIR}/debian/control
+	inst -d "${SRCDIR}/debian"
+	inst ${PKGROOT}/$DEBIAN/control-src ${SRCDIR}/debian/control
 	for f in changelog copyright rules preinst postinst prerm postrm;do
-		cp ${PKGROOT}/$DEBIAN/$f "${SRCDIR}/debian"
+		inst ${PKGROOT}/$DEBIAN/$f "${SRCDIR}/debian"
 	done
 
-        if [ $TMP = "firewall" ]; then
-		mkdir -p "${SRCDIR}/debian"
+        if [ x"$TMP" = x"firewall" ]; then
+		inst -d "${SRCDIR}/debian"
 		for f in preinst postinst prerm postrm;do
-		cp "${PKGROOT}/$DEBIAN-FW/$f" "${SRCDIR}/debian"
+		inst "${PKGROOT}/$DEBIAN-FW/$f" "${SRCDIR}/debian"
 		done
 	fi
 
@@ -88,32 +124,32 @@ copy_files_gpl()
 	
 	set -e
 
-	mkdir -p "$PKGDIRGPL/DEBIAN"
+	inst -d "$PKGDIRGPL/DEBIAN"
 	for f in control changelog copyright preinst postinst prerm postrm;do
-		cp $DEBIANGPL/$f "$PKGDIRGPL/DEBIAN"
+		inst $DEBIANGPL/$f "$PKGDIRGPL/DEBIAN"
 	done
 
         if [ $TMP = "firewall" ]; then
-		mkdir -p "$PKGDIRGPL/DEBIAN-FW"
+		inst -d "$PKGDIRGPL/DEBIAN-FW"
 		for f in preinst postinst prerm postrm;do
-			cp $DEBIANGPL/$f "$PKGDIRGPL/DEBIAN-FW"
+			inst $DEBIANGPL/$f "$PKGDIRGPL/DEBIAN-FW"
 		done
         fi
 
 	
 	
 	echo "** Copying binary files to '$PKGDIRGPL'"
-	mkdir -p "$PKGDIRGPL/usr"
+	inst -d "$PKGDIRGPL/usr"
 	cd "$PKGDIRGPL"
 	
 	# create directory structure
-	mkdir -p usr/lib
+	inst -d usr/lib
 	cd "$HIPL"
 	
 	for suffix in a so so.0 so.0.0.0;do
-		cp -d libhiptool/.libs/libhiptool.$suffix $PKGDIRGPL/usr/lib/
+		copy -d libhiptool/.libs/libhiptool.$suffix $PKGDIRGPL/usr/lib/
 	done
-	cp -L libhiptool/.libs/libhiptool.la $PKGDIRGPL/usr/lib/
+	copy -L libhiptool/.libs/libhiptool.la $PKGDIRGPL/usr/lib/
 	
 	set +e
 }
@@ -122,11 +158,11 @@ init_files ()
 {
     echo "** Copying Debian control files to '$PKGDIR/DEBIAN'"
     set -e
-    mkdir -p "$PKGDIR/DEBIAN"
+    inst -d "$PKGDIR/DEBIAN"
     
     if [ $TMP = "daemon" ]; then
     	for f in preinst postinst prerm postrm;do
-		cp $DEBIAN/$f "$PKGDIR/DEBIAN" 
+		inst $DEBIAN/$f "$PKGDIR/DEBIAN" 
     	done
     fi
 
@@ -139,35 +175,35 @@ init_files ()
   
     if [ $TMP = "firewall" ]; then
         for f in preinst postinst prerm postrm;do
-	    cp $DEBIAN-FW/$f "$PKGDIR/DEBIAN" 
+	    inst $DEBIAN-FW/$f "$PKGDIR/DEBIAN" 
     	done
     fi
 
     if [ $TMP = "dnsproxy" ]; then
         for f in preinst postinst prerm postrm;do
-	    cp $DEBIAN-dnsproxy/$f "$PKGDIR/DEBIAN" 
+	    inst $DEBIAN-dnsproxy/$f "$PKGDIR/DEBIAN" 
     	done
     fi
 
     for f in control changelog copyright;do
-	cp $DEBIAN/$f "$PKGDIR/DEBIAN" 
+	inst $DEBIAN/$f "$PKGDIR/DEBIAN" 
     done
 
     echo "** Modifying Debian control file for $DEBLIB $TMP and $DEBARCH"
     
     if [ "$DEBLIB" = "" ]; then
-     	sed -i '/'"$LINE0"'/d' $PKGDIR\/DEBIAN\/control
+     	$SUDO sed -i '/'"$LINE0"'/d' $PKGDIR\/DEBIAN\/control
     else
-     	sed -i '/'"$LINE1"'/a\'"$LINE0"' '"$DEBLIB"'' $PKGDIR\/DEBIAN\/control
+     	$SUDO sed -i '/'"$LINE1"'/a\'"$LINE0"' '"$DEBLIB"'' $PKGDIR\/DEBIAN\/control
     fi
 
-    sed -i '/'"$LINE2"'/ s/.*/&\-'"$TMP"'/' $PKGDIR\/DEBIAN\/control
-    sed -i 's/"$LINE3"/&'" $DEBARCH"'/' $PKGDIR\/DEBIAN\/control
+    $SUDO sed -i '/'"$LINE2"'/ s/.*/&\-'"$TMP"'/' $PKGDIR\/DEBIAN\/control
+    $SUDO sed -i 's/"$LINE3"/&'" $DEBARCH"'/' $PKGDIR\/DEBIAN\/control
 
-    	# cp $PKGDIR/DEBIAN/postinst $PKGROOT/postinst-$TMP
+    	# inst $PKGDIR/DEBIAN/postinst $PKGROOT/postinst-$TMP
        
     #for f in postinst;do
-    #	cp $DEBIAN/$f "$PKGDIR/DEBIAN" 
+    #	inst $DEBIAN/$f "$PKGDIR/DEBIAN" 
     #done
     #sed -i '2,10d' $PKGDIR\/DEBIAN\/postinst
     #sed -i '$a\ldconfig\' $PKGDIR\/DEBIAN\/postinst
@@ -183,36 +219,36 @@ copy_and_package_files ()
     init_files;
     
     echo "** Copying library files to '$PKGDIR'"
-    mkdir -p "$PKGDIR/usr"
+    inst -d "$PKGDIR/usr"
     cd "$PKGDIR"
    
     echo "$PKGDIR"
 
-    mkdir -p usr/lib
+    inst -d usr/lib
 
     cd "$HIPL"
     
     echo "$HIPL"
 
     for suffix in a so so.0 so.0.0.0;do
-	cp -d libinet6/.libs/libinet6.$suffix $PKGDIR/usr/lib/
+	copy -d libinet6/.libs/libinet6.$suffix $PKGDIR/usr/lib/
 	if [ ! "$CORPORATE" ];then
-		cp -d libhiptool/.libs/libhiptool.$suffix $PKGDIR/usr/lib/
+		copy -d libhiptool/.libs/libhiptool.$suffix $PKGDIR/usr/lib/
 	fi
-	cp -d libopphip/.libs/libopphip.$suffix $PKGDIR/usr/lib/
-	cp -d opendht/.libs/libhipopendht.$suffix $PKGDIR/usr/lib/
+	copy -d libopphip/.libs/libopphip.$suffix $PKGDIR/usr/lib/
+	copy -d opendht/.libs/libhipopendht.$suffix $PKGDIR/usr/lib/
     done
 
-    cp -L libinet6/.libs/libinet6.la $PKGDIR/usr/lib/
+    copy -L libinet6/.libs/libinet6.la $PKGDIR/usr/lib/
 	if [ ! "$CORPORATE" ];then
-	    cp -L libhiptool/.libs/libhiptool.la $PKGDIR/usr/lib/
+	    copy -L libhiptool/.libs/libhiptool.la $PKGDIR/usr/lib/
 	fi
    
-    cp -L libopphip/.libs/libopphip.la $PKGDIR/usr/lib/
+    copy -L libopphip/.libs/libopphip.la $PKGDIR/usr/lib/
     
-    cp -L opendht/.libs/libhipopendht.la $PKGDIR/usr/lib/
+    copy -L opendht/.libs/libhipopendht.la $PKGDIR/usr/lib/
     
-    cp -d libhipgui/libhipgui.a $PKGDIR/usr/lib/
+    copy -d libhipgui/libhipgui.a $PKGDIR/usr/lib/
 
     PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
     create_sub_package;
@@ -223,21 +259,21 @@ copy_and_package_files ()
     init_files;
     
     echo "** Copying binary files to '$PKGDIR'"
-    mkdir -p "$PKGDIR/usr"
+    inst -d "$PKGDIR/usr"
     cd "$PKGDIR"
 
     echo "$PKGDIR"
 
     # create directory structure
-    # mkdir -p usr/sbin usr/bin usr/lib etc/hip usr/share/doc etc/init.d
-    mkdir -p usr/sbin usr/bin etc/init.d etc/hip
+    # inst -d usr/sbin usr/bin usr/lib etc/hip usr/share/doc etc/init.d
+    inst -d usr/sbin usr/bin etc/init.d etc/hip
     cd "$HIPL"
     
     echo "$HIPL"
 
-    cp hipd/hipd $PKGDIR/usr/sbin/
+    inst hipd/hipd $PKGDIR/usr/sbin/
     echo "** Copying init.d script to $PKGDIR"
-    cp test/packaging/debian-init.d-hipd $PKGDIR/etc/init.d/hipd
+    inst test/packaging/debian-init.d-hipd $PKGDIR/etc/init.d/hipd
     
     PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
     create_sub_package;
@@ -247,18 +283,18 @@ copy_and_package_files ()
     init_files;
     
     echo "** Making directory to '$PKGDIR'"
-    mkdir -p "$PKGDIR/usr"
+    inst -d "$PKGDIR/usr"
     cd "$PKGDIR"
 
-    # mkdir -p usr/sbin
-    mkdir -p usr/sbin usr/bin etc/init.d etc/hipfw
+    # inst -d usr/sbin
+    inst -d usr/sbin usr/bin etc/init.d etc/hipfw
     cd "$HIPL"
 
     echo "** Copying firewall to $PKGDIR"
-    cp firewall/hipfw $PKGDIR/usr/sbin/
+    inst firewall/hipfw $PKGDIR/usr/sbin/
 
     echo "** Copying init.d script to $PKGDIR"
-    cp test/packaging/debian-init.d-hipfw $PKGDIR/etc/init.d/hipfw
+    inst test/packaging/debian-init.d-hipfw $PKGDIR/etc/init.d/hipfw
 
     PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
     create_sub_package;
@@ -268,33 +304,35 @@ copy_and_package_files ()
     init_files;
     
     echo "** Making directory to '$PKGDIR'"
-    mkdir -p "$PKGDIR/usr"
+    inst -d "$PKGDIR/usr"
     cd "$PKGDIR"
 
-    # mkdir -p usr/sbin
-    mkdir -p usr usr/sbin usr/bin etc/init.d
+    # inst -d usr/sbin
+    inst -d usr usr/sbin usr/bin etc/init.d
     cd "$HIPL"
 
     echo "** Copying dnsproxy to $PKGDIR"
-    mkdir -p $PKGDIR/$PYEXECDIR
-    mkdir -p $PKGDIR/$PYEXECDIR/dnshipproxy
-    mkdir -p $PKGDIR/$PYEXECDIR/parsehipkey
-    mkdir -p $PKGDIR/$PYEXECDIR/DNS
+    inst -d $PKGDIR/$PYEXECDIR
+    inst -d $PKGDIR/$PYEXECDIR/dnshipproxy
+    inst -d $PKGDIR/$PYEXECDIR/parsehipkey
+    inst -d $PKGDIR/$PYEXECDIR/DNS
 
-    cp tools/dnsproxy.py* $PKGDIR/$PYEXECDIR/dnshipproxy
-    cp tools/pyip6.py* $PKGDIR/$PYEXECDIR/dnshipproxy
-    cp tools/hosts.py* $PKGDIR/$PYEXECDIR/dnshipproxy
-    cp tools/util.py* $PKGDIR/$PYEXECDIR/dnshipproxy
-    cp tools/parse-key-3.py* $PKGDIR/$PYEXECDIR/dnshipproxy
+    inst tools/dnsproxy.py* $PKGDIR/$PYEXECDIR/dnshipproxy
+    inst tools/pyip6.py* $PKGDIR/$PYEXECDIR/dnshipproxy
+    inst tools/hosts.py* $PKGDIR/$PYEXECDIR/dnshipproxy
+    inst tools/util.py* $PKGDIR/$PYEXECDIR/dnshipproxy
+    inst tools/parse-key-3.py* $PKGDIR/$PYEXECDIR/dnshipproxy
 
-    cp tools/myasn.py* $PKGDIR/$PYEXECDIR/parsehipkey
-    cp tools/DNS/*py* $PKGDIR/$PYEXECDIR/DNS
+    inst tools/myasn.py* $PKGDIR/$PYEXECDIR/parsehipkey
+    inst tools/DNS/*py* $PKGDIR/$PYEXECDIR/DNS
 
-    sh tools/gen-python-starter.sh $PYEXECDIR/dnshipproxy dnsproxy.py $PKGDIR/usr/sbin/dnshipproxy
-    sh tools/gen-python-starter.sh $PYEXECDIR/parsehipkey parse-key-3.py $PKGDIR/usr/sbin/parsehipkey
+    $SUDO tools/gen-python-starter.sh $PYEXECDIR/dnshipproxy dnsproxy.py $PKGDIR/usr/sbin/dnshipproxy
+    $SUDO tools/gen-python-starter.sh $PYEXECDIR/parsehipkey parse-key-3.py $PKGDIR/usr/sbin/parsehipkey
+
+    inst tools/nsupdate.pl $PKGDIR/usr/sbin
 
     echo "** Copying init.d script to $PKGDIR"
-    cp test/packaging/debian-init.d-dnsproxy $PKGDIR/etc/init.d/dnshipproxy
+    inst test/packaging/debian-init.d-dnsproxy $PKGDIR/etc/init.d/dnshipproxy
 
     PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
     create_sub_package;
@@ -305,17 +343,17 @@ copy_and_package_files ()
     init_files;
 
     echo "** Making directory to '$PKGDIR'"
-    mkdir -p "$PKGDIR/usr"
+    inst -d "$PKGDIR/usr"
     cd "$PKGDIR"
 
-    mkdir -p usr/sbin usr/bin
+    inst -d usr/sbin usr/bin
 
     cd "$HIPL"
 
-    cp tools/hipconf $PKGDIR/usr/sbin/
+    inst tools/hipconf $PKGDIR/usr/sbin/
 
     echo "** Copying init.d script to $PKGDIR"
-    cp test/packaging/debian-init.d-dnsproxy $PKGDIR/etc/init.d/dnshipproxy
+    inst test/packaging/debian-init.d-dnsproxy $PKGDIR/etc/init.d/dnshipproxy
 
     PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
     create_sub_package;
@@ -325,21 +363,21 @@ copy_and_package_files ()
     init_files;
     
     echo "** Making directory to '$PKGDIR'"
-    mkdir -p "$PKGDIR/usr"
+    inst -d "$PKGDIR/usr"
     cd "$PKGDIR"
 
-    mkdir -p usr/bin usr/sbin
+    inst -d usr/bin usr/sbin
     cd "$HIPL"
 
     for suffix in -opp -hip -native -native-user-key;do
-	cp test/conntest-client$suffix $PKGDIR/usr/bin/
+	inst test/conntest-client$suffix $PKGDIR/usr/bin/
     done
 
     for suffix in "" -native;do
-	cp test/conntest-server$suffix $PKGDIR/usr/bin/
+	inst test/conntest-server$suffix $PKGDIR/usr/bin/
     done
 
-    cp test/hipsetup $PKGDIR/usr/sbin/
+    inst test/hipsetup $PKGDIR/usr/sbin/
 
     PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
     create_sub_package;
@@ -349,30 +387,30 @@ copy_and_package_files ()
     init_files;
 
     echo "** Making directory to '$PKGDIR'"
-    #mkdir -p "$PKGDIR/usr"
+    #inst -d "$PKGDIR/usr"
     #cd "$PKGDIR"
 
-    mkdir -p "$PKGDIR/usr"
-    mkdir -p "$PKGDIR/usr/sbin"
-    mkdir -p "$PKGDIR/usr/lib"
-    mkdir -p "$PKGDIR/usr/share"
-    mkdir -p "$PKGDIR/usr/share/hipl"
-    mkdir -p "$PKGDIR/usr/share/hipl/libhipgui"
-    mkdir -p "$PKGDIR/usr/share/menu"
-    mkdir -p "$PKGDIR/usr/share/pixmaps"
-    mkdir -p "$PKGDIR/usr/share/applications"
-    mkdir -p "$PKGDIR/etc"
-    mkdir -p "$PKGDIR/etc/xdg"
-    mkdir -p "$PKGDIR/etc/xdg/autostart"
+    inst -d "$PKGDIR/usr"
+    inst -d "$PKGDIR/usr/sbin"
+    inst -d "$PKGDIR/usr/lib"
+    inst -d "$PKGDIR/usr/share"
+    inst -d "$PKGDIR/usr/share/hipl"
+    inst -d "$PKGDIR/usr/share/hipl/libhipgui"
+    inst -d "$PKGDIR/usr/share/menu"
+    inst -d "$PKGDIR/usr/share/pixmaps"
+    inst -d "$PKGDIR/usr/share/applications"
+    inst -d "$PKGDIR/etc"
+    inst -d "$PKGDIR/etc/xdg"
+    inst -d "$PKGDIR/etc/xdg/autostart"
 
-    #mkdir -p usr/sbin
+    #inst -d usr/sbin
     
     cd "$HIPL"
 
     echo "** Copying hipagent to '$PKGDIR'"
-    cp agent/hipagent $PKGDIR/usr/sbin/
+    inst agent/hipagent $PKGDIR/usr/sbin/
 
-    cp -d libhipgui/hipmanager.png $PKGDIR/usr/share/pixmaps/hipmanager.png
+    copy -d libhipgui/hipmanager.png $PKGDIR/usr/share/pixmaps/hipmanager.png
 
     set +e
 
@@ -383,12 +421,12 @@ copy_and_package_files ()
     DEBLIB=""
     init_files;
 
-    mkdir -p "$PKGDIR/usr"
+    inst -d "$PKGDIR/usr"
     cd "$PKGDIR"
 
     if [ $DEBARCH != "armel" ]; then
 
-    	mkdir -p usr/share/doc
+    	inst -d usr/share/doc
     	#cd "$HIPL"
 
     	echo "** Copying documentation to '$PKGDIR'"
@@ -407,7 +445,7 @@ error_cleanup()
 {
     if [ -n "$PKGDIR" -a -d "$PKGDIR" ];then
 	echo "** Removing '$PKGDIR'"
-	if ! rm -rf "$PKGDIR";then
+	if ! remove -rf "$PKGDIR";then
 	    echo "** Warning: Some error occurred while removing directory '$PKGDIR'"
 	fi
     fi
@@ -428,7 +466,7 @@ create_sub_package()
 	exit 1
     fi
 
-    rm -rf ${PKGDIR}
+    remove -rf ${PKGDIR}
 }
 
 error_cleanup_src()
@@ -500,6 +538,10 @@ echo "** Using directory '$HIPL' as the HIPL installation directory"
 echo "** Package building root is '$PKGROOT'" 
 echo "** Temporary Debian package root is '$PKGDIR'" 
 
+echo "**"
+echo "** NOTICE THAT PACKAGE BUILDING REQUIRES SUDO PRIVILEGES!!!"
+echo "**"
+
 if [ ! -d "$HIPL" ];then
   echo "** Error: '$HIPL' is not a directory, exiting"
   exit 1
@@ -520,7 +562,7 @@ if [ $TYPE = "binary" ];then
 			echo "** Error while running make in $HIPL/libhiptool, exiting"
 			exit 1
 		fi
-		if ! sudo make install;then
+		if ! $SUDO make install;then
 			echo "** Error while running make install in $HIPL/libhiptool, exiting"
 			exit 1
 		fi
@@ -543,25 +585,25 @@ if [ $TYPE = "binary" ];then
 
 	cd "$PKGROOT"
     if [ -d "$PKGDIR" ];then
-	if ! rm -rf "$PKGDIR";then
+	if ! remove -rf "$PKGDIR";then
 	    echo "** Error: unable to remove directory '$PKGDIR', exiting"
 	    exit 1
 	fi
     fi
 	cd "$PKGROOT"
     if [ -d "$PKGDIRGPL" ];then
-	if ! rm -rf "$PKGDIRGPL";then
+	if ! remove -rf "$PKGDIRGPL";then
 	    echo "** Error: unable to remove directory '$PKGDIRGPL', exiting"
 	    exit 1
 	fi
     fi
 
-    if ! mkdir "$PKGDIR";then
+    if ! inst -d "$PKGDIR";then
 	echo "** Error: unable to create directory '$PKGDIR', exiting"
 	exit 1
     fi
 
-    if ! mkdir "$PKGDIRGPL";then
+    if ! inst -d "$PKGDIRGPL";then
 	echo "** Error: unable to create directory '$PKGDIRGPL', exiting"
 	exit 1
     fi
@@ -573,28 +615,35 @@ if [ $TYPE = "binary" ];then
     fi
 
     cd "$PKGROOT"
-    	if [ "$CORPORATE" = 1 ];then
-    		if ! copy_files_gpl;then
-    		echo "** Error: unable to copy GPL files, exiting"
-    		exit 1
-    		fi
-	
-    		cd "$PKGROOT"
-    		if dpkg-deb -b "$PKGDIRGPL" "$PKGNAMEGPL";then
-    		echo "** Successfully finished building the binary GPL Debian package"
-    		else
-		echo "** Error!"
-		echo "** Error: Unable to build the binary GPL Debian package!"
-		echo "** Error!"
-		exit 1
-		fi
+    if [ "$CORPORATE" = 1 ];then
+	if ! copy_files_gpl;then
+	    echo "** Error: unable to copy GPL files, exiting"
+	    exit 1
 	fi
+	
+	cd "$PKGROOT"
+	if dpkg-deb -b "$PKGDIRGPL" "$PKGNAMEGPL";then
+	    echo "** Successfully finished building the binary GPL Debian package"
+	else
+	    echo "** Error!"
+	    echo "** Error: Unable to build the binary GPL Debian package!"
+	    echo "** Error!"
+	    exit 1
+	fi
+    fi
+
+    for i in $PKGROOT/*.deb
+    do
+      echo "------------------- $i ----------------------------"
+      dpkg -c $i
+    done
+
 fi
 
 if [ $TYPE = "source" ];then
 # Debian SOURCE package
 
-    if ! mkdir -p "$PKGDIR_SRC";then
+    if ! install -d "$PKGDIR_SRC";then
 	echo "** Error: unable to create directory '$PKGDIR_SRC', exiting"
 	exit 1
     fi
@@ -620,7 +669,7 @@ if [ $TYPE = "source" ];then
     
     if dpkg-source -b "${NAME}${SUFFIX}";then
 
-	rm -rf "${NAME}${SUFFIX}"
+	remove -rf "${NAME}${SUFFIX}"
 
 	dpkg-scansources . /dev/null | gzip -9c > Sources.gz
 
@@ -636,6 +685,8 @@ if [ $TYPE = "source" ];then
 	rm -rf "${PKGDIR_SRC}"
 	exit 1
     fi
+
+    $SUDO rmdir $PKGROOT/libhiptool-1.0-deb
 fi
 
 exit 0

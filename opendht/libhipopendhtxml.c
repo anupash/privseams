@@ -92,10 +92,10 @@ int build_packet_put_rm(unsigned char * key,
 
     memset(out_buffer, '\0', sizeof(out_buffer));
     sprintf(out_buffer, 
-            "POST /RPC2 HTTP/1.0\r\nUser-Agent: "
-            "hipl\r\nHost: %s:%d\r\nContent-Type: "
+            "POST / HTTP/1.0\r\nHost: %s:%d\r\nUser-Agent: "
+            "hipl\r\nContent-Type: "
             "text/xml\r\nContent-length: %d\r\n\r\n", 
-            host_ip, port, xml_len); 
+            host_ip, port, xml_len);
     memcpy(&out_buffer[strlen(out_buffer)], xml_buffer, xml_len);
     /*
     HIP_DEBUG("\n\n%s\n\n", out_buffer);
@@ -183,10 +183,10 @@ int build_packet_get(unsigned char * key,
 
     memset(out_buffer, '\0', sizeof(out_buffer));
     sprintf(out_buffer, 
-            "POST /RPC2 HTTP/1.0\r\nUser-Agent: "
-            "hipl\r\nHost: %s:%d\r\nContent-Type: "
+            "POST / HTTP/1.0\r\nHost: %s:%d\r\nUser-Agent: "
+            "hipl\r\nContent-Type: "
             "text/xml\r\nContent-length: %d\r\n\r\n", 
-            host_ip, port, xml_len); 
+            host_ip, port, xml_len);
     memcpy(&out_buffer[strlen(out_buffer)], xml_buffer, xml_len);
     /*
     HIP_DEBUG("\n\n%s\n\n", out_buffer);
@@ -265,10 +265,10 @@ int build_packet_rm(unsigned char * key,
 
     memset(out_buffer, '\0', sizeof(out_buffer));
     sprintf(out_buffer, 
-            "POST /RPC2 HTTP/1.0\r\nUser-Agent: "
-            "hipl\r\nHost: %s:%d\r\nContent-Type: "
+            "POST / HTTP/1.0\r\nHost: %s:%d\r\nUser-Agent: "
+            "hipl\r\nContent-Type: "
             "text/xml\r\nContent-length: %d\r\n\r\n", 
-            host_ip, port, xml_len); 
+            host_ip, port, xml_len);
     memcpy(&out_buffer[strlen(out_buffer)], xml_buffer, xml_len);
     /*
     HIP_DEBUG("\n\n%s\n\n", out_buffer);
@@ -435,12 +435,12 @@ int read_packet_content(char * in_buffer, char * out_value)
             xml_node_value->children &&
             !strcmp((char *)xml_node_value->children->name, "data"))
             xml_node = xml_node_value->children->children;
-                      
+
          if (!strcmp((char *)xml_node->name, "value") &&
             xml_node->children &&
             !strcmp((char *)xml_node->children->name, "array"))
             xml_node = xml_node->children->children; /* inner data element */
-         
+
          /* check if there was no corresponging data for the key (<data> has no children) */
          if (!xml_node->children && !strcmp((char *)xml_node->name, "data")) 
          {
@@ -454,15 +454,19 @@ int read_packet_content(char * in_buffer, char * out_value)
            if (!strcmp((char *)xml_node->children->name, "base64"))
              {         
                xml_node_value = xml_node->children->children;
+
                xml_data = xmlNodeGetContent(xml_node_value);
-               _HIP_DEBUG("XML_DATA %s len = %d\n", (char *)xml_data, strlen((char *)xml_data));
+
+               HIP_DEBUG("XML_DATA %s len = %d\n", (char *)xml_data, strlen((char *)xml_data));
+
                evpret = EVP_DecodeBlock((unsigned char *)out_value, xml_data, 
                                         strlen((char *)xml_data));
                _HIP_HEXDUMP("LOC from DHT", out_value, evpret);
-               out_value[evpret] = '\0'; 
+               out_value[evpret] = '\0';
                memcpy(answers.addrs, out_value, strlen(out_value));
                _HIP_DEBUG("Values under the key in DHT: %s\n",out_value);
                answers.count = 1;
+
                if (evpret > 1) 
                    hip_print_locator_addresses((struct hip_common *)out_value);
                ret = 0;
