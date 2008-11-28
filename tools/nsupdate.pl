@@ -1,10 +1,5 @@
 #!/usr/bin/perl
 ##########################################################
-#
-#		    Oleg Ponomarev
-# Helsinki Institute for Information Technology
-#
-##########################################################
 # 
 # Executed by hipd after address changes on the interfaces
 # It expects parameters in the environment variables: 
@@ -18,7 +13,7 @@
 
 $CONFIG_PATH = "/etc/hip/nsupdate.conf";
 
-# default values, please change in config
+# default values, please change in /etc/hip/nsupdate.conf
 $HIT_TO_IP_ZONE = 'hit-to-ip.infrahip.net.';
 $NSUPDATE_PATH = '|/usr/bin/nsupdate';
 
@@ -53,7 +48,7 @@ if (($KEY_NAME ne '') && ($KEY_SECRET ne ''))
 }
 
 print NSUPDATE <<_EOF1_;
-update delete ${rev_hit}.hit-to-ip.infrahip.net
+update delete ${rev_hit}.${HIT_TO_IP_ZONE}
 _EOF1_
 
 @ips = split(/ /,$env_IPS);
@@ -62,11 +57,11 @@ foreach $ip (@ips)
 {
 	if (ip_is_ipv6($ip))
 	{
-		print NSUPDATE "update add ${rev_hit}.hit-to-ip.infrahip.net 1 IN AAAA $ip\n";
+		print NSUPDATE "update add ${rev_hit}.${HIT_TO_IP_ZONE} 1 IN AAAA $ip\n";
 	}
  	elsif (ip_is_ipv4($ip))
  	{
-		print NSUPDATE "update add ${rev_hit}.hit-to-ip.infrahip.net 1 IN A $ip\n";
+		print NSUPDATE "update add ${rev_hit}.${HIT_TO_IP_ZONE} 1 IN A $ip\n";
 	}
 }
 
