@@ -4079,7 +4079,7 @@ combo-newgroup=&lt;create new...&gt;
       key file contents to different DNS zone file formats. To convert
       to unpatched BIND9 format, run the following:
       <programlisting>
-parsehipkey &lt; felwood/hip_host_dsa_key_pub.pub felwood2.hip-test1.infrahip.net felwood.infrahip.net crossroads.infrahip.net | sed -n -e '/^9BIND */s///p'
+parsehipkey &lt; /etc/hip/hip_host_rsa_key_pub.pub hostname.domain.org | sed -n -e '/^9BIND */s///p'
       </programlisting>
       This outputs a line which can be inserted to a zone
       file. Similarly, with sed command:
