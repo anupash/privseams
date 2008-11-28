@@ -16,6 +16,7 @@
 #else
 #  include "kerncompat.h"
 #  include "hidb.h"
+#  include <string.h>
 #endif
 
 #include "registration.h"

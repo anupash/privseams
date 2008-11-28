@@ -6,12 +6,12 @@
 #  define IPV6_2292PKTINFO 2
 #endif
 
+#ifndef __KERNEL__
 /* Do not move this before the definition of struct endpoint, as i3
    headers refer to libinet6 headers which in turn require the
    definition of the struct. */
-#   include "i3_client_api.h"
+#include "i3_client_api.h"
 
-#ifndef __KERNEL__
 #include <netinet/in.h>
 #endif
 #include "protodefs.h"
