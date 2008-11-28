@@ -67,13 +67,14 @@ struct in6_addr *hip_hit_to_ip(hip_hit_t *hit) {
 
 	memset(&hints, 0, sizeof(struct addrinfo));
 	hints.ai_family = AF_UNSPEC;    /* Allow IPv4 or IPv6 */
-	hints.ai_socktype = SOCK_DGRAM; /* Datagram socket */
+	hints.ai_socktype = SOCK_DGRAM; /* Datagram socket. Right? */
 	hints.ai_flags = AI_PASSIVE;    /* For wildcard IP address */
 	hints.ai_protocol = 0;          /* Any protocol */
 	hints.ai_canonname = NULL;
 	hints.ai_addr = NULL;
 	hints.ai_next = NULL;
 
+	/* getaddrinfo is too complex for DNS lookup, but let us use it for now */
 	int res = getaddrinfo( hit_to_ip_hostname, NULL, &hints, &result );
 	HIP_DEBUG("getaddrinfo(%s) = %d", hit_to_ip_hostname, res);
 

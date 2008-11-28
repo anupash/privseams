@@ -39,7 +39,8 @@ $rev_hit=$1;
 open(NSUPDATE,$NSUPDATE_PATH) or die "Can't open $NSUPDATE_PATH";
 
 # send update from HIT
-print NSUPDATE "local ${env_HIT}\n"; 
+# commented due to "request.c:887: REQUIRE(isc_sockaddr_pf(srcaddr) == isc_sockaddr_pf(destaddr)) failed"
+# print NSUPDATE "local ${env_HIT}\n"; 
 
 if ($SERVER ne '')
 {
