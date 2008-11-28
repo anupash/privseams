@@ -40,7 +40,7 @@ public class HipUserkeyClient {
 	    // begin PC
 	    HipSocket s = (HipSocket) hipFactory.createSocket();
 	    // end PC
-	    HipAddress addr = HipAddress.getOwnFromFile(file);
+	    HipAddress addr = HipAddress.getFromFile(file);
 	    s.bind(addr, localport);
 	    s.connect(new InetSocketAddress(host, port));
 	    System.out.println(s.toString());

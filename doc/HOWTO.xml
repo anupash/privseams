@@ -198,6 +198,12 @@
 	[*] IPv6: Multiple Routing Tables
       </para></listitem>
       <listitem><para>
+       Network packet filtering framework (Netfilter) Core
+      </para></listitem>
+      <listitem><para>
+       &lt;M&gt;  Netfilter NFQUEUE over NFNETLINK interface 
+      </para></listitem>
+      <listitem><para>
 	Cryptographic options
       </para></listitem>
       <listitem><para>
@@ -4109,18 +4115,34 @@ parsehipkey &lt; felwood/hip_host_dsa_key_pub.pub felwood2.hip-test1.infrahip.ne
       used to provide some necessary environment variables (see comments
       in dnshipproxy). It acts as a DNS cache 
       (see <ulink url="http://cr.yp.to/djbdns.html" />) in front of
-      dnshipproxy. The use of DNS proxy without DNS cache results in longer
+      DNS proxy. The use of DNS proxy without DNS cache results in longer
       look up latencies.
     </para>
     <para>
-      If you are running already an existing dnsproxy on the host, you
-      need to "chain" them together. For example, you have to do the
-      following with dnsmasq:
+      If you are running already dnsmasq on the host, it will occupy
+      the DNS port 53 and prevent DNS proxy start up with default
+      options.  In such a case, you need to either disable the dnsmasq
+      (--port=0) or "chain" it with DNS proxy (which is then used as
+      a DNS cache). Due to the current
+      implementation design of the DNS proxy (which overwrites
+      /etc/resolv.conf), you need chain it with DNS proxy. First is
+      are the network applications, second dnsmasq, third DNS proxy
+      and finally the DNS in the Internet. This can be accomplished using the
+      following command line options to dnsmasq and DNS proxy:
     </para>
     <itemizedlist>
-      <listitem><para>Start the dnsmasq with --no-resolv --port 5050 --server 127.0.0.1</para></listitem>
-      <listitem><para>Start dnsmasq with --background</para></listitem>
+      <listitem><para>
+      Dnsmasq: --no-resolv --server=127.0.0.1#5000</para></listitem>
+      <listitem><para>
+      </para></listitem>
+      <listitem><para>
+	  Dns proxy: --port 5000</para></listitem>
     </itemizedlist>
+    <para>
+      The easiest way to configure the options is to append them to
+      OPTIONS variable in "/etc/init.d/dnsmasq" file and run
+      "/etc/init.d/dnsmasq restart".
+    </para>
   </chapter>
 </book>
 

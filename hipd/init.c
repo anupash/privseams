@@ -7,9 +7,6 @@
 
 
 
-#ifndef OPENWRT
-//#include <sys/capability.h>
-#endif
 #include <sys/prctl.h>
 #include "common_defines.h"
 #include <sys/types.h>
@@ -130,7 +127,9 @@ void hip_load_configuration()
 	size_t items = 0;
 	int len_con = strlen(HIPD_CONFIG_FILE_EX),
 	    len_hos = strlen(HIPD_HOSTS_FILE_EX),
+#ifdef CONFIG_HIP_I3
 	    len_i3  = strlen(HIPD_HI3_FILE_EX),
+#endif
 	    len_dhtservers  = strlen(HIPD_DHTSERVERS_FILE_EX);
 
 	/* HIPD_CONFIG_FILE, HIPD_CONFIG_FILE_EX, HIPD_HOSTS_FILE and
@@ -156,6 +155,7 @@ void hip_load_configuration()
 		fclose(fp);
 	}
 
+#ifdef CONFIG_HIP_I3
 	/* Create /etc/hip/hi3_conf file if does not exist */
 	if (stat(HIPD_HI3_FILE, &status) && errno == ENOENT) {
 		errno = 0;
@@ -166,6 +166,7 @@ void hip_load_configuration()
 		fclose(fp);
 	}
 	//hip_i3_init();
+#endif
 
 	/* Create /etc/hip/dhtservers file if does not exist */
 	if (stat(HIPD_DHTSERVERS_FILE, &status) && errno == ENOENT) {
@@ -804,7 +805,9 @@ void hip_exit(int signal)
 	hip_oppdb_uninit();
 #endif
 
+#ifdef CONFIG_HIP_I3
 	hip_hi3_clean();
+#endif
 
 #ifdef CONFIG_HIP_RVS
 	HIP_INFO("Uninitializing RVS / HIP relay database and whitelist.\n");
