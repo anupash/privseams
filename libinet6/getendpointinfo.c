@@ -2078,12 +2078,15 @@ int get_hit_addrinfo(const char *nodename, const char *servname,
 {
   int err = 0;
   struct addrinfo modified_hints;
-  struct addrinfo *first, *current, *new;
-  char *filenamebase = NULL;
-  int filenamebase_len, ret, i;
-  List list;
+  struct addrinfo *current = NULL;
 
-  initlist(&list);
+  struct sockaddr_hip *sock_hip;
+  struct hip_tlv_common *current_param = NULL;
+  hip_tlv_type_t param_type = 0;
+  struct endpoint_hip *endp = NULL;
+  struct hip_common *msg;
+
+  *res = NULL;
 
   if (hints) {
     memcpy(&modified_hints, hints, sizeof(struct addrinfo));
@@ -2092,77 +2095,39 @@ int get_hit_addrinfo(const char *nodename, const char *servname,
     modified_hints.ai_family = PF_HIP;
   }
 
-  if (nodename == NULL) {
-    *res = calloc(1, sizeof(struct addrinfo));
-    if (!*res) {
-      err = EEI_MEMORY;
-      goto err_out;
-    }
+  if (!nodename) { /* Query local hits from daemon */
 
-    /* DEFAULT_CONFIG_DIR = /etc/hip/ */
-    findkeyfiles(DEFAULT_CONFIG_DIR, &list);
-    
-    /* allocate the first addrinfo 
-       and then link the others to it */
-    
-    filenamebase_len = strlen(DEFAULT_CONFIG_DIR) + 1 +
-      strlen(getitem(&list,0)) + 1;
-    
-    filenamebase = malloc(filenamebase_len);
-    if (!filenamebase) {
-      HIP_ERROR("Couldn't allocate file name\n");
-      err = -ENOMEM;
-      goto err_out;
-    }
-    ret = snprintf(filenamebase, filenamebase_len, "%s/%s",
-		   DEFAULT_CONFIG_DIR, getitem(&list,0));
-    if (ret <= 0) {
-      err = -EINVAL;
-      goto err_out;
-    }
-    err = get_addrinfo_from_key(filenamebase, servname, 
-				     &modified_hints, &first);
+    HIP_IFE(!(msg = hip_msg_alloc()), -ENOMEM);
+    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HITS, 0), -1,
+			"Failed to build message to daemon\n");
+    HIP_IFE(hip_send_recv_daemon_info(msg), -1, 
+			"Failed to receive message from daemon\n");
 
-    free(filenamebase);
-    filenamebase = NULL;
-    current = first;
+    while((current_param = hip_get_next_param(msg, current_param)) != NULL) {
+      param_type = hip_get_param_type(current_param);
+      if (param_type == HIP_PARAM_EID_ENDPOINT){
+	if(!current) {
+	  *res = calloc(1, sizeof(struct addrinfo));
+	  HIP_IFE(!*res, -ENOMEM);
+	  current = *res;
+	} else {
+	  current->ai_next = calloc(1, sizeof(struct addrinfo));
+	  HIP_IFE(!current->ai_next, -ENOMEM);
+	  current = current->ai_next;
+	}
 
-    for(i=1; i<length(&list); i++) {
-      _HIP_DEBUG ("%s\n", getitem(&list,i));
+	sock_hip = calloc(1, sizeof(struct sockaddr_hip));
+	HIP_IFE(!sock_hip, -ENOMEM);
+	endp = hip_get_param_contents_direct(current_param);
+	memcpy(&sock_hip->ship_hit , &endp->id.hit, sizeof(struct in6_addr));
 
-      filenamebase_len = strlen(DEFAULT_CONFIG_DIR) + 1 +
-	strlen(getitem(&list,i)) + 1;
-
-      filenamebase = malloc(filenamebase_len);
-      if (!filenamebase) {
-	HIP_ERROR("Couldn't allocate file name\n");
-	err = -ENOMEM;
-	goto err_out;
-      }
-
-      ret = snprintf(filenamebase, filenamebase_len, "%s/%s",
-		     DEFAULT_CONFIG_DIR, getitem(&list,i));
-      if (ret <= 0) {
-	err = -EINVAL;
-	goto err_out;
-      }
-
-      err = get_addrinfo_from_key(filenamebase, servname, 
-				       &modified_hints, &new);
-      if (err) {
-	HIP_ERROR("get_localhost_endpointinfo() failed\n");
-	goto err_out;
-      }
-
-      current->ai_next = new;
-      current = new;
-
-      free(filenamebase);
-      filenamebase = NULL;
-
-    }
-
-    *res = first;
+	current->ai_addr = sock_hip;
+	current->ai_family = PF_HIP;
+	current->ai_socktype = hints->ai_socktype;
+	current->ai_protocol = hints->ai_protocol;
+	current->ai_addrlen = sizeof(struct sockaddr_hip);
+	}
+  }
 
   } else if (!strcmp(nodename, "0.0.0.0")) {
 
@@ -2178,13 +2143,7 @@ int get_hit_addrinfo(const char *nodename, const char *servname,
     err = get_peer_addrinfo_hit(_PATH_HIP_HOSTS, nodename, servname,
 				&modified_hints, res);
   }
-
- err_out:
-
-  if(filenamebase)
-    free(filenamebase);
-  if(length(&list)>0) 
-    destroy(&list);
+ out_err:
 
   return err;
 }
@@ -2344,27 +2303,26 @@ int get_peer_addrinfo_hit(const char *hostsfile,
   struct sockaddr_hip *addr;
 
   HIP_DEBUG("Called, nodename: %s\n", nodename);
-
+  *res = NULL;
   memset(fqdn_str, 0, sizeof(fqdn_str));
+
   if (inet_pton(AF_INET6, nodename, &hit) > 0) {
     HIP_DEBUG("Nodename is numerical address\n");
-/*    err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+    hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
 				       hip_map_first_id_to_hostname_from_hosts,
-				       &hit, fqdn_str);*/
+				       &hit, fqdn_str);
   } else {
     strncpy(fqdn_str, nodename, HOST_NAME_MAX);
 
-    if (err = hip_for_each_hosts_file_line(hostsfile,
-				   hip_map_first_hostname_to_hit_from_hosts,
-				   fqdn_str, &hit))
-	goto out_err;
-
+    HIP_IFEL(hip_for_each_hosts_file_line(hostsfile,
+		hip_map_first_hostname_to_hit_from_hosts, fqdn_str, &hit), -1,
+		"Couldn't map nodename to HIT\n");
   }
+
   fqdn_str_len = strlen(fqdn_str);
 
   (*res) = calloc(1, sizeof(struct addrinfo));
   HIP_IFE(!(*res), EEI_MEMORY);
-      
   (*res)->ai_addr = calloc(1, sizeof(struct sockaddr_hip));
   HIP_IFE(!(*res)->ai_addr, EEI_MEMORY);
 

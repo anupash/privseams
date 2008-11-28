@@ -183,6 +183,7 @@ Java_jip_HipSocketImpl_bind (JNIEnv *env, jobject obj, jobject addr, jint port)
     fflush(stdout);
     (*env)->CallVoidMethod(env, obj, dump_id);
 
+    memset(&hit, 0, sizeof(hit));
     cls = (*env)->GetObjectClass(env, addr);
     hit_id = (*env)->GetFieldID(env, cls, "address", "[B");
     j_hit = (*env)->GetObjectField(env, addr, hit_id);

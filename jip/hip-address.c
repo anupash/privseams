@@ -90,6 +90,7 @@ Java_jip_HipAddress_getAllByName (JNIEnv *env, jclass cls, jstring host)
 	(*env)->SetObjectArrayElement(env, result, i, hip_addr);
 	(*env)->DeleteLocalRef(env, hip_addr);
     }
+    freeaddrinfo(res);
     return result;
 }
 

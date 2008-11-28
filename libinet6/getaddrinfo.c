@@ -666,8 +666,11 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 				memset(aux, 0, sizeof(struct gaih_addrtuple));
 
 				/* Get the last element in the list */
-				for (last_pat = **pat; last_pat->next != NULL; last_pat = last_pat->next)
-					;
+				if (**pat) {
+					for (last_pat = **pat; last_pat->next != NULL;
+								last_pat = last_pat->next)
+						;
+				}
 
                                 /* Place the HIT/LSI to the end of the list.*/                                
 
@@ -676,7 +679,10 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
                                         aux->scopeid = 0;
 				        aux->family = AF_INET6;
 					memcpy(aux->addr, &hit, sizeof(struct in6_addr));
-					last_pat->next = aux;
+					if (**pat)
+						last_pat->next = aux;
+					else
+						**pat = aux;
 				}
 				else if (inet_pton(AF_INET, getitem(&list,i), &lsi)){
 				        /* IPv4 to IPV6 in order to be supported by the daemon */
@@ -685,7 +691,10 @@ int gethosts_hit(const char *name, struct gaih_addrtuple ***pat, int flags)
 					HIP_DEBUG_LSI(" lsi to add", &lsi);
 					//IPV4_TO_IPV6_MAP(&lsi, &lsi_ip6);
 					memcpy(aux->addr, &lsi, sizeof(lsi));
-					last_pat->next = aux;
+					if (**pat)
+						last_pat->next = aux;
+					else
+						**pat = aux;
 				} else {
 					free(aux);
 				}

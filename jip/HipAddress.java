@@ -36,11 +36,7 @@ public class HipAddress {
      * should suffice.
      */
     private HipAddress (byte[] address) {
-	if (address.length == 16) {
-	    for (int i = 0; i < 16; i++) {
-		this.address[i] = address[i];
-	    }
-	}
+	this.address = address;
     }
 
     private native static void nativeInit ();
@@ -63,7 +59,10 @@ public class HipAddress {
      * @return an endpoint for <code>host</code>
      */
     public static HipAddress getByName (String host) {
-	return getAllByName(host)[0];
+	HipAddress ret[] = getAllByName(host);
+	if (ret.length == 0)
+	    return null;
+	return ret[0];
     }
 
     /**
@@ -97,7 +96,10 @@ public class HipAddress {
      * @return an endpoint for <code>addr</code>
      */
     public static HipAddress getByAddress (InetAddress addr) {
-	return getAllByAddress(addr)[0];
+	HipAddress ret[] = getAllByAddress(addr);
+	if (ret.length == 0)
+	    return null;
+	return ret[0];
     }
 
     /**
