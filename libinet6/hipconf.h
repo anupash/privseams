@@ -120,7 +120,8 @@
 #define ACTION_DNS_PROXY 28
 #define ACTION_BUDDIES 29
 #define ACTION_NSUPDATE 30
-#define ACTION_MAX 31 /* exclusive */
+#define ACTION_HIT_TO_IP 31
+#define ACTION_MAX 32 /* exclusive */
 
 /**
  * TYPE_ constant list, as an index for each action_handler function.
@@ -164,7 +165,8 @@
 #define TYPE_BUDDIES	   30
 #define TYPE_SAVAHR        31 /* SAVA router HIT IP pair */
 #define TYPE_NSUPDATE      32
-#define TYPE_MAX           33 /* exclusive */
+#define TYPE_HIT_TO_IP     33
+#define TYPE_MAX           34 /* exclusive */
 
 /* #define TYPE_RELAY         22 */
 
@@ -251,6 +253,10 @@ int hip_conf_handle_hi3(hip_common_t *, int type, const char *opt[], int optc, i
 int hip_conf_handle_sava (struct hip_common * msg, int action, 
 			  const char * opt[], int optc, int send_only); 
 int hip_conf_handle_nsupdate(hip_common_t *msg,
+			     int action,
+			     const char *opt[],
+			     int optc, int send_only);
+int hip_conf_handle_hit_to_ip(hip_common_t *msg,
 			     int action,
 			     const char *opt[],
 			     int optc, int send_only);

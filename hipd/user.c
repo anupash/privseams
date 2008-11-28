@@ -1129,10 +1129,15 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		break;
 	case SO_HIP_NSUPDATE_OFF:
 	case SO_HIP_NSUPDATE_ON:
-		hip_set_nsupdate_status(((msg_type == SO_HIP_NSUPDATE_OFF) ? 0 : 1));
+		hip_set_nsupdate_status((msg_type == SO_HIP_NSUPDATE_OFF) ? 0 : 1);
 		if (msg_type == SO_HIP_NSUPDATE_ON)
 			nsupdate();
 		break;
+        case SO_HIP_HIT_TO_IP_OFF:
+        case SO_HIP_HIT_TO_IP_ON:
+		hip_set_hit_to_ip_status ((msg_type == SO_HIP_NSUPDATE_OFF) ? 0 : 1);
+	        break;
+
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;

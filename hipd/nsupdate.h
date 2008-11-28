@@ -6,4 +6,11 @@ int hip_get_nsupdate_status(void);
 int run_nsupdate_for_hit (struct hip_host_id_entry *entry, void *opaq);
 int nsupdate();
 
+#define VAR_IPS "IPS"
+#define VAR_HIT "HIT"
+#define NSUPDATE_PL HIPL_DEFAULT_PREFIX "/sbin/" "nsupdate.pl"
+#define NSUPDATE_ARG0 "nsupdate.pl"
+#define ERR -1
+
+
 #endif /* HIP_NSUPDATE_H */

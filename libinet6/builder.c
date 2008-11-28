@@ -1067,6 +1067,8 @@ char* hip_message_type_name(const uint8_t msg_type){
 	case SO_HIP_DHT_SET:		return "SO_HIP_DHT_SET";
 	case SO_HIP_DHT_ON:		return "SO_HIP_DHT_ON";
 	case SO_HIP_DHT_OFF:		return "SO_HIP_DHT_OFF";
+	case SO_HIP_HIT_TO_IP_ON:	return "SO_HIP_HIT_TO_IP_ON";
+	case SO_HIP_HIT_TO_IP_OFF:	return "SO_HIP_HIT_TO_IP_OFF";
 	case SO_HIP_SET_OPPTCP_ON:	return "SO_HIP_SET_OPPTCP_ON";
 	case SO_HIP_SET_OPPTCP_OFF:	return "SO_HIP_SET_OPPTCP_OFF";
 	case SO_HIP_OPPTCP_SEND_TCP_PACKET: return "SO_HIP_OPPTCP_SEND_TCP_PACKET";
