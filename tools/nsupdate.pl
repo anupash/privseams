@@ -62,11 +62,11 @@ foreach $ip (@ips)
 {
 	if (ip_is_ipv6($ip))
 	{
-		print NSUPDATE "update add ${rev_hit}.hit-to-ip.infrahip.net 60 IN AAAA $ip\n";
+		print NSUPDATE "update add ${rev_hit}.hit-to-ip.infrahip.net 1 IN AAAA $ip\n";
 	}
  	elsif (ip_is_ipv4($ip))
  	{
-		print NSUPDATE "update add ${rev_hit}.hit-to-ip.infrahip.net 60 IN A $ip\n";
+		print NSUPDATE "update add ${rev_hit}.hit-to-ip.infrahip.net 1 IN A $ip\n";
 	}
 }
 

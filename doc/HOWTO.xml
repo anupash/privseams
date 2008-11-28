@@ -3709,6 +3709,33 @@ combo-newgroup=&lt;create new...&gt;
           kernel module.
      </para>
    </chapter>
+
+  <chapter id="nsupdate">
+    <title>Dynamic DNS Support (Experimental!)</title>
+    <itemizedlist>
+    <listitem><para>
+	With dynamic DNS support, the hip daemon maintains DNS records for domain name m.y.h.i.t.i.n.r.e.v.e.r.s.e.n.o.t.a.t.i.o.n.hit-to-ip.infrahip.net and tries to
+	resolve such domain names when connecting to unknown HITs
+     </para></listitem>
+    <listitem><para>
+           Once you start hipd, it will call nsupdate.pl with HIT and IP address for every HIT of your host. It will be called on address changes as well. Currently we are 
+using zone hit-to-ip.infrahip.net for experiments, that has HIT in SOA resource record, which causes HIP base exchange with its master dns server first and then update is 
+submitted via HIP. This allows to authenticate the clients and allow to modify location information only about their own identifiers.
+    </para></listitem>
+
+    <listitem><para>
+    Example of a generated script for nsupdate at the host with HIT 2001:1e:574e:2505:264a:b360:d8cc:1d75 and IP addresses 193.167.187.1 and 2001:708:140:220:215:60ff:fe9f:60c4
+   <programlisting>
+update delete 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net
+update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net 60 IN A 193.167.187.1
+update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net 60 IN AAAA 2001:708:140:220:215:60ff:fe9f:60c4
+send
+  </programlisting>
+    </para></listitem>
+
+    </itemizedlist>
+  </chapter>
+
   <chapter id="ch_opendht">
     <title>OpenDHT Support (Experimental!)</title>
     <itemizedlist>
