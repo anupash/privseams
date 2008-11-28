@@ -2100,7 +2100,7 @@ int get_hit_addrinfo(const char *nodename, const char *servname,
     HIP_IFE(!(msg = hip_msg_alloc()), -ENOMEM);
     HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HITS, 0), -1,
 			"Failed to build message to daemon\n");
-    HIP_IFE(hip_send_recv_daemon_info(msg), -1, 
+    HIP_IFEL(hip_send_recv_daemon_info(msg), -1, 
 			"Failed to receive message from daemon\n");
 
     while((current_param = hip_get_next_param(msg, current_param)) != NULL) {
