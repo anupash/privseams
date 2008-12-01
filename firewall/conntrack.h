@@ -59,4 +59,12 @@ void init_timeout_checking(long int timeout_val);
 
 struct esp_tuple * find_esp_tuple(const SList * esp_list, uint32_t spi);
 
+#ifdef CONFIG_HIP_OPPORTUNISTIC
+/*
+ * replaces the pseudo-hits of the opportunistic entries
+ * related to a particular peer with the real hit
+*/
+void update_peer_opp_info(struct hip_data * data,
+			  struct in6_addr * ip6_from);
+#endif
 #endif

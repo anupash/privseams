@@ -7,7 +7,7 @@
 #include "builder.h"
 //#include "hidb.h"
 #include "misc.h"
-#include "timer.h"
+//#include "timer.h"
 
 struct hip_eid_owner_info {
 	uid_t            uid;

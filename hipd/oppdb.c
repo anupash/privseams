@@ -376,8 +376,9 @@ int hip_receive_opp_r1(struct hip_common *msg,
 	entry->local_controls = opp_entry->local_controls;
 	entry->peer_controls = opp_entry->peer_controls;
 
-	HIP_IFEL(hip_replace_pending_requests(opp_entry, entry), -1, 
-		 "Error moving the pending requests to a new HA");
+	if(hip_replace_pending_requests(opp_entry, entry) == -1){
+		HIP_DEBUG("RVS: Error moving the pending requests to a new HA");
+	}
 
 	//memcpy(sava_serving_gateway, &msg->hits, sizeof(struct in6_addr));
 	

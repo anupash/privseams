@@ -2342,7 +2342,9 @@ int hip_fw_handle_outgoing_system_based_opp(hip_fw_context_t *ctx) {
 		else if (entry_peer->bex_state == FIREWALL_STATE_BEX_NOT_SUPPORTED)
 			verdict = accept_normal_traffic_by_default;
 		else if (entry_peer->bex_state == FIREWALL_STATE_BEX_ESTABLISHED){
-			if (hit_is_local_hit(&entry_peer->hit_our)) {
+			if( &entry_peer->hit_our                       &&
+			    (ipv6_addr_cmp(hip_fw_get_default_hit(),
+					   &entry_peer->hit_our) == 0)    ){
 				reinject_packet(&entry_peer->hit_our,
 						&entry_peer->hit_peer,
 						ctx->ipq_packet, 4, 0);

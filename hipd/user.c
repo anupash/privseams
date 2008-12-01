@@ -182,12 +182,14 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		dst_hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
 		hip_dec_cookie_difficulty(dst_hit);
 		break;
+#ifdef CONFIG_HIP_I3
 	case SO_HIP_SET_HI3_ON:
 		err = hip_set_hi3_status(msg);
 	break;
 	case SO_HIP_SET_HI3_OFF:
 		err = hip_set_hi3_status(msg);
 	break;
+#endif
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	case SO_HIP_SET_OPPORTUNISTIC_MODE:
 	  	err = hip_set_opportunistic_mode(msg);
