@@ -129,6 +129,7 @@ class ResolvConf:
     def stop(self):
         self.oktowrite = 0
         self.restore_resolvconf()
+	os.system("/sbin/ifconfig lo:53 down")
 
 class Global:
     default_hiphosts = "/etc/hip/hosts"
