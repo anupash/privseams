@@ -3,6 +3,14 @@
 
 #include "hipd.h"
 
+#include "hashtable.h"
+
+#include <sys/time.h>
+
+
+#include <openssl/sha.h>
+#include <openssl/md5.h>
+#include <openssl/des.h>
 
 /** @addtogroup daemon_states
  * @{
@@ -25,6 +33,9 @@
 
 /* @}  */
 
+#define INDEX_HASH_LENGTH	SHA_DIGEST_LENGTH
+
+#define INDEX_HASH_FN		HIP_DIGEST_SHA1
 
 unsigned int hipd_get_state(void);
 void hipd_set_state(unsigned int);
@@ -55,6 +66,38 @@ extern int hipproxy;
 /*SAVAH modes*/
 extern int hipsava_client;
 extern int hipsava_server;
+
+/*Measurements*/
+
+extern HIP_HASHTABLE *bex_timestamp_db;
+
+typedef struct hip_bex_timestamp {
+  struct in6_addr * addr;
+  struct timeval * timestamp;
+} hip_bex_timestamp_t;
+
+static DECLARE_LHASH_HASH_FN(hip_bex_timestamp_hash, const hip_bex_timestamp_t *)
+static DECLARE_LHASH_COMP_FN(hip_bex_timestamp_compare, const hip_bex_timestamp_t *)
+
+unsigned long hip_bex_timestamp_hash(const hip_bex_timestamp_t * entry);
+
+int hip_bex_timestamp_compare(const hip_bex_timestamp_t * entry1,
+			      const hip_bex_timestamp_t * entry2);
+
+int hip_bex_timestamp_db_init();
+int hip_bex_timestamp_db_uninit();
+
+hip_bex_timestamp_t * hip_bex_timestamp_find(struct in6_addr * addr);
+
+int hip_bex_timestamp_db_add(const struct in6_addr * addr, const struct timeval * time);
+
+int hip_bex_timestamp_db_delete(const struct in6_addr * addr);
+
+/*initializes the timestamp at startup of base exchange*/
+int bex_add_initial_timestamp(const struct in6_addr *);
+
+/*Return base exchange for given host*/
+unsigned long bex_get_duration_timestamp(const struct in6_addr *);
 
 #endif /* _HIPD_ACCESSOR */
 

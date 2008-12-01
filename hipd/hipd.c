@@ -114,6 +114,9 @@ uint8_t esp_prot_transforms[NUM_TRANSFORMS];
 
 int hip_use_opptcp = 0; // false
 
+
+HIP_HASHTABLE *bex_timestamp_db = NULL;
+
 void hip_set_opportunistic_tcp_status(struct hip_common *msg)
 {
 	struct sockaddr_in6 sock_addr;

@@ -231,6 +231,10 @@ int hipd_init(int flush_ipsec, int killold)
 
 	hip_set_os_dep_variables();
 
+	//#ifdef CONFIG_MEASURES
+	hip_bex_timestamp_db_init();
+	//#endif
+
 #ifndef CONFIG_HIP_OPENWRT
 #ifdef CONFIG_HIP_DEBUG
 	hip_print_sysinfo();

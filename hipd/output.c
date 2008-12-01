@@ -349,6 +349,7 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	uint16_t mask = 0;
 	int err = 0, n=0;
 
+
 	HIP_IFEL((entry->state == HIP_STATE_ESTABLISHED), 0,
 		 "State established, not triggering bex\n");
 
@@ -402,6 +403,10 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 
 	HIP_IFEL(hip_hadb_get_peer_addr(entry, &daddr), -1,
 		 "No preferred IP address for the peer.\n");
+
+	//#ifdef CONFIG_MEASURES
+	bex_add_initial_timestamp(&daddr);
+	//endif
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	// if hitr is hashed null hit, send it as null on the wire

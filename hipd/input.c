@@ -2246,6 +2246,17 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		entry->hip_msg_retrans.buf = NULL;
 	}
 
+		
+        //#ifdef CONFIG_MEASURES
+	{
+	  unsigned long duration = bex_get_duration_timestamp(i2_saddr);
+	  HIP_DEBUG_HIT("Base exchange duration with host ", i2_saddr);
+	  HIP_DEBUG("took %d miliseconds\n ", duration);
+	}
+	//endif
+		 
+ 
+
  out_err:
 	/* 'ha' is not NULL if hip_receive_i2() fetched the HA for us. In that
 	   case we must not release our reference to it. Otherwise, if 'ha' is
@@ -2653,6 +2664,14 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	hip_oppipdb_delentry(&(entry->preferred_address));
 #endif
 	HIP_DEBUG("Reached ESTABLISHED state\n");
+	//#ifdef CONFIG_MEASURES
+	{
+	  unsigned long duration = bex_get_duration_timestamp(r2_saddr);
+	  HIP_DEBUG_HIT("Base exchange duration with host ", r2_saddr);
+	  HIP_DEBUG("took %d miliseconds\n ", duration);
+	}
+	//endif
+	
 	if (entry->hip_msg_retrans.buf) {
 		free(entry->hip_msg_retrans.buf);
 		entry->hip_msg_retrans.buf = NULL;
@@ -2700,6 +2719,9 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
      HIP_DEBUG("hip_handle_i1() invoked.\n");
 
      ipv6_addr_copy(&dest, &in6addr_any);
+     //#ifdef CONFIG_MEASURES
+     bex_add_initial_timestamp(i1_daddr);
+     //endif
 
 #ifdef CONFIG_HIP_RVS
      if(hip_relay_get_status() == HIP_RELAY_OFF) {
