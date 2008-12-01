@@ -18,7 +18,6 @@
 #include "utils.h"
 
 #define HIT_TO_IP_ZONE_DEFAULT "hit-to-ip.infrahip.net"
-#define HIT_TO_IP_ZONE_MAX_LEN 256
 
 struct in6_addr *hip_hit_to_ip(hip_hit_t *hit);
 

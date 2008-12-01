@@ -917,10 +917,12 @@ struct hip_opendht_set {
 } __attribute__ ((packed));
 
 
+#define HIT_TO_IP_ZONE_MAX_LEN 256
+
 struct hip_hit_to_ip_set {
 	hip_tlv_type_t 	type;
 	hip_tlv_len_t 	length;
-        char name[256];
+        char name[HIT_TO_IP_ZONE_MAX_LEN];
 } __attribute__ ((packed));
 
 struct hip_hdrr_info {

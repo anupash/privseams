@@ -3722,8 +3722,11 @@ combo-newgroup=&lt;create new...&gt;
 		<listitem><para>in hit-to-ip.infrahip.net zone</para></listitem>
 		<listitem><para>in OpenDHT</para></listitem>
 	</itemizedlist>
-	With "hipconf hit-to-ip on" it uses IP addresses of 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net
+	With "hipconf hit-to-ip on" it uses IP addresses of 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net.
 	to contact host with HIT 2001:1e:574e:2505:264a:b360:d8cc:1d75
+     </para>
+     <para>Default hit-to-ip.infrahip.net. suffix can be changed with "hipconf hit-to-ip-set &lt;new.hit-to-ip.zone.&gt;. Please note it is independent from HIT_TO_IP_ZONE 
+	in /etc/hip/nsupdate.conf"
      </para></listitem>
     <listitem><para>
 	With "hipconf nsupdate on" the HIP daemon also maintains records in hit-to-ip.infrahip.net. Once you start hipd, it will call nsupdate.pl with HIT and IP 
