@@ -11,3 +11,5 @@ fi
 
 echo "invoke-rc.d --quiet dnshipproxy start" | at now + 1 min 2>/dev/null 
 echo "DNS proxy for HIP starts in 60 secs"
+
+exit 0
