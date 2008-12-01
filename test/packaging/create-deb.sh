@@ -17,7 +17,12 @@ if dpkg --print-architecture|grep armel;then DEBARCH=armel;fi
 REVISION=`/usr/bin/lsb_release -c | /usr/bin/awk '{print $2}'`
 # The latest SDK is diablo, the previous one - chinook. One may specify here whatever preferred more.
 # Better, we have to find out how to detect SDK version installed on a PC automatically -- Andrey Khurri
-if [ $DEBARCH = "armel" ]; then REVISION=chinook; fi
+if [ $DEBARCH = "armel" ]; then 
+    REVISION=diablo;
+    
+    # this doesn't seem to get set by automake in maemo
+    PYEXECDIR=/usr/lib/python2.5
+fi
 
 SUFFIX="-$VERSION-$RELEASE-$REVISION"
 PKG_SUFFIX="-$VERSION-$RELEASE"
@@ -300,7 +305,11 @@ copy_and_package_files ()
     create_sub_package;
 
     TMP="dnsproxy"
-    DEBLIB=""
+    if [ $DEBARCH = "armel" ]; then 
+	DEBLIB="python2.5"
+    else
+	DEBLIB=""
+    fi
     init_files;
     
     echo "** Making directory to '$PKGDIR'"
