@@ -3657,8 +3657,14 @@ combo-newgroup=&lt;create new...&gt;
     <para>
       The goal of Dynamic DNS extensions is that a local host can
       establish initial contact with a peer host when the local host
-      knows only the HIT of the peer but not the IP address.
-      Currently HIP daemon performs name resolution in the following order:
+      knows only the HIT of the peer but not the IP address. The
+      extensions do not provide hostname-to-HIT look up support (see
+      section <xref linkend="sec_dns_proxy" />), just HIT-to-IP look
+      up.
+    </para>
+
+    <para>
+       Currently HIP daemon performs name resolution in the following order:
     </para>
 
     <para>
