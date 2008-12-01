@@ -44,7 +44,9 @@ libinet6_la_SOURCES += sa_len.c tempname.c
 # HIP additions
 libinet6_la_SOURCES += getendpointinfo.c util.c debug.c builder.c misc.c
 libinet6_la_SOURCES += hipconf.c message.c certtools.c sqlitedbapi.c
+if HIP_PRIVSEP
 libinet6_la_SOURCES += capability.c
+endif
 
 # Original flags.
 CFLAGS  = -D_LIBC_REENTRANT -D_USAGI -D_GNU_SOURCE
@@ -74,9 +76,7 @@ EXTRA_DIST = include_glibc21 include_glibc22 include_glibc23 include_glibc
 INCLUDES += -I../opendht
 LDADD += ../opendht/.libs/libhipopendht.a 
 
-if HIP_HI3
- INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
-endif
+INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
 
 getendpointinfo.c: include/netdb.h
 

@@ -1,6 +1,7 @@
 #ifndef HIP_TIMER_H
 #define HIP_TIMER_H
 
+#if 0
 #ifdef __KERNEL__
 
 /* XX TODO: hipmod */
@@ -25,4 +26,5 @@ typedef struct timeval hip_timer_t;
  } while(0)
 
 #endif /* !__KERNEL__ */
+#endif
 #endif /* HIP_TIMER_H  */

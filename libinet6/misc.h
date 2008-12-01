@@ -12,13 +12,15 @@
 
 #ifdef __KERNEL__
 #  include "usercompat.h"
+#  include <linux/list.h>
 #else
 #  include "kerncompat.h"
+#  include "hidb.h"
+#  include <string.h>
 #endif
 
 #include "registration.h"
 #include "utils.h"
-#include "hidb.h"
 #include "icomm.h"
 
 #ifdef CONFIG_HIP_LIBHIPTOOL
@@ -94,11 +96,13 @@ int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip,
    file. It still remains as useless abstraction, but at least we eliminate the
    need for a call and return sequence. -Lauri 06.08.2008
 */
+#ifndef __KERNEL__
 static inline int hip_rsa_host_id_to_hit(const struct hip_host_id *host_id,
 					 struct in6_addr *hit, int hit_type)
 {
 	return hip_dsa_host_id_to_hit(host_id, hit, hit_type);
 }
+#endif
 
 int hip_dsa_host_id_to_hit(const struct hip_host_id *host_id,
 			   struct in6_addr *hit, int hit_type);
@@ -148,8 +152,10 @@ int maxof(int num_args, ...);
 int addr2ifindx(struct in6_addr *local_address);
 void get_random_bytes(void *buf, int n);
 
+#ifndef __KERNEL__
 int hip_build_digest(const int type, const void *in, int in_len, void *out);
 int dsa_to_dns_key_rr(DSA *dsa, unsigned char **buf);
+#endif
 
 void *hip_cast_sa_addr(void *sockaddr);
 int hip_sockaddr_len(const void *sockaddr);

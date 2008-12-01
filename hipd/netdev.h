@@ -38,4 +38,12 @@ int hip_get_default_hit(struct in6_addr *hit);
 int hip_get_default_lsi(struct in_addr *lsi);
 
 void add_address_to_list(struct sockaddr *addr, int ifindex);
+
+void hip_attach_locator_addresses(struct hip_common * in_msg,
+				  struct hip_common *msg);
+
+void hip_get_suitable_locator_address(struct hip_common * in_msg,
+				      struct in6_addr *addr);
+
+
 #endif /* NETDEV_H */

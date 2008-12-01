@@ -163,6 +163,10 @@ install -m 700 tools/dnshipproxy %{buildroot}%{prefix}/sbin/dnshipproxy
 /sbin/chkconfig --add dnshipproxy
 /sbin/chkconfig --level 2 dnshipproxy on
 /sbin/service dnshipproxy start
+/bin/netstat -lanu|/bin/awk '$4 ~ /:53$/ {print $4}'|/bin/grep -q 53 && \
+/bin/echo "*** Warning: DNS software detected running on port 53" && \
+/bin/echo "*** Warning: HIP DNS proxy overrides system default DNS server" && \
+/bin/echo "*** Warning: Check HIPL manual on DNS proxy for further info"
 
 %preun daemon
 /sbin/service hipd stop
@@ -174,7 +178,7 @@ install -m 700 tools/dnshipproxy %{buildroot}%{prefix}/sbin/dnshipproxy
 #/etc/rc.d/init.d/hipfw stop
 
 %preun dnsproxy
-/sbin/service dnshiproxy stop
+/sbin/service dnshipproxy stop
 /sbin/chkconfig --del dnshipproxy
 
 %clean
@@ -198,9 +202,11 @@ rm -rf %{buildroot}
 %{python_sitelib}/parsehipkey
 %{python_sitelib}/DNS
 %defattr(755,root,root)
+%config /etc/rc.d/init.d/dnshipproxy
 
 %files tools
 %{prefix}/sbin/hipconf
+%{prefix}/sbin/nsupdate.pl
 %defattr(755,root,root)
 
 %files test

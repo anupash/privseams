@@ -76,29 +76,27 @@ out_err:
 }
 /* END OF FUNCTION */
 
+
 /******************************************************************************/
 /** Send packet to HIP daemon. */
-int connhipd_sendto_hipd(char *msg)
+int connhipd_sendto_hipd(char *msg, size_t len)
 {
-       /* Variables. */
+	/* Variables. */
 	struct sockaddr_in6 hipd_addr;
-	int n, alen, len;
-	
+	int n, alen;
+
 	bzero(&hipd_addr, sizeof(hipd_addr));
 	hipd_addr.sin6_family = AF_INET6;
 	hipd_addr.sin6_port = htons(HIP_DAEMON_LOCAL_PORT);
 	hipd_addr.sin6_addr = in6addr_loopback;
-	
-	len = hip_get_msg_total_len(msg);
 
 	alen = sizeof(hipd_addr);
 	n = sendto(hip_agent_sock, msg, len, 0,
 		   (struct sockaddr *)&hipd_addr, alen);
-	
-	return !(n == len);
+
+	return (n);
 }
 /* END OF FUNCTION */
-
 
 
 /******************************************************************************/
@@ -118,7 +116,8 @@ int connhipd_handle_msg(struct hip_common *msg,
 	struct in6_addr *lhit, *rhit;
 	int err = 0, ret, n, direction, check;
 	char chit[128], *type_s;
-
+	
+	struct in6_addr hitr ;
 	type = hip_get_msg_type(msg);
 
 	if (type == SO_HIP_AGENT_PING_REPLY)
@@ -225,8 +224,14 @@ int connhipd_handle_msg(struct hip_common *msg,
 		/* Check the remote HIT from database. */
 		if (l) 
 		{
+			memcpy(&hitr,&hit.hit, sizeof(struct in6_addr));
 			ret = check_hit(&hit, 0);
-			
+			/*Send our hits -- peer hit to daemon*/
+			if (ret == 1)
+				ret = 0; /*hit already exist in the database and is accepted
+							so no need to send it to daemon*/
+			else if (ret == 0)
+				connhipd_send_hitdata_to_daemon (msg, &hitr, &hit.g->l->lhit) ;
 			/* Reset local HIT, if outgoing I1. */
 			/*HIP_HEXDUMP("Old local HIT: ", &msg->hits, 16);
 			HIP_HEXDUMP("New local HIT: ", &hit.g->l->lhit, 16);
@@ -249,9 +254,11 @@ int connhipd_handle_msg(struct hip_common *msg,
 		*/
 		if (ret == 0)
 		{
-			HIP_DEBUG("Message accepted, sending back to daemon\n");
-			HIP_IFEL(connhipd_sendto_hipd(msg), -1,
-				 "Could not send message back to daemon\n");
+			HIP_DEBUG("Message accepted, sending back to daemon, %d bytes.\n",
+                      hip_get_msg_total_len(msg));
+			n = connhipd_sendto_hipd((char *)msg, hip_get_msg_total_len(msg));
+			HIP_IFEL(n < 0, -1, "Could not send message back to daemon"
+			                    " (%d: %s).\n", errno, strerror(errno));
 			HIP_DEBUG("Reply sent successfully.\n");
 		}
 		else if (type == HIP_R1)
@@ -259,7 +266,9 @@ int connhipd_handle_msg(struct hip_common *msg,
 			HIP_DEBUG("Message rejected.\n");
 			n = 1;
 			HIP_IFE(hip_build_param_contents(msg, &n, HIP_PARAM_AGENT_REJECT, sizeof(n)), -1);
-			HIP_IFEL(connhipd_sendto_hipd(msg), -1, "Could not send message back to daemon\n");
+			n = connhipd_sendto_hipd((char *)msg, hip_get_msg_total_len(msg));
+			HIP_IFEL(n < 0, -1, "Could not send message back to daemon"
+			                    " (%d: %s).\n", errno, strerror(errno));
 			HIP_DEBUG("Reply sent successfully.\n");
 		}
 		else
@@ -307,7 +316,7 @@ void *connhipd_thread(void *data)
 			//HIP_IFEL(hip_agent_connected < -60, -1, "Could not connect to daemon.\n");
 			//HIP_DEBUG("Pinging daemon...\n");
 			hip_build_user_hdr(msg, SO_HIP_AGENT_PING, 0);
-			n = connhipd_sendto_hipd(msg);
+			n = connhipd_sendto_hipd((char *)msg, sizeof(struct hip_common));
 			//if (n < 0) HIP_DEBUG("Could not send ping to daemon, waiting.\n");
 			hip_agent_connected--;
 		}
@@ -368,8 +377,8 @@ void *connhipd_thread(void *data)
 out_err:
 	/* Send quit message to daemon. */
 	hip_build_user_hdr(msg, SO_HIP_AGENT_QUIT, 0);
-	n = connhipd_sendto_hipd(msg);
-	if (n)
+	n = connhipd_sendto_hipd((char *)msg, hip_get_msg_total_len(msg));
+	if (n < 0)
 		HIP_ERROR("Could not send quit message to daemon.\n");
 
 	if (hip_agent_sock)
@@ -402,6 +411,35 @@ void connhipd_quit(void)
 	pthread_join(connhipd_pthread, NULL);
 }
 /* END OF FUNCTION */
+
+/**
+ * connhipd_send_hitdata_to_daemon - builds a param containing hits to be
+ * sent to the daemon
+ * @param *msg packet to be sent to daemon
+ * @param *hitr remote hit accepted
+ * @param *hitl local hit used
+ * @return 0 on success, -1 on error
+ */
+int connhipd_send_hitdata_to_daemon(struct hip_common * msg , struct in6_addr * hitr, struct in6_addr * hitl)
+{
+	int err = 0;
+	struct hip_uadb_info uadb_info ;
+	char hittest[40];
+	HIP_DEBUG("Building User Agent DB info message to be sent to daemon.\n");
+	memcpy(&uadb_info.hitr,hitr, sizeof(struct in6_addr)) ;
+	memcpy(&uadb_info.hitl,hitl, sizeof(struct in6_addr)) ;
+	hip_in6_ntop(&uadb_info.hitr, hittest);
+    HIP_DEBUG("Value: %s\n", hittest);
+	
+	memcpy(uadb_info.cert,"certificate\0",sizeof("certificate\0"));
+	
+	hip_build_param_hip_uadb_info(msg, &uadb_info);
+	HIP_DUMP_MSG (msg);
+out_err:
+	return (err);
+}
+
+
 
 
 /* END OF SOURCE FILE */

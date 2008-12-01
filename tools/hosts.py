@@ -84,16 +84,18 @@ class Hosts:
                 continue
             aa = l.split()
             addr = aa.pop(0)
-            aa2 = []
+            #aa2 = []
             for n in aa:
                 n = self.sani(n)
-                aa2.append(n)
+                #aa2.append(n)
                 a2 = n.split('.')
                 if len(a2) <= 1:
                     for s in self.suffixes:
                         d['%s.%s' % (n,s)] = addr
                 d[n] = addr
-            aaaa[self.sani_aaaa(addr)] = aa2
+            #aaaa[self.sani_aaaa(addr)] = aa2
+	    if addr[0:8] == "2001:001":	#check if it is a HIT
+		aaaa[n] = addr
         self.d = d
         self.aaaa = aaaa
         return
