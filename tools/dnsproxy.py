@@ -496,7 +496,7 @@ class Global:
 
 		#add mapping using the hipconf cmd
 		if cmd_worked == 1:
-		    result = result + " 1>/dev/null 2>/dev/null 3>/dev/null"
+		    result = result + " 1>/dev/null 2>/dev/null"
 		    fout.write('CMD - %s\n' % (result,))
 		    p = os.popen(result)
 		#else:
@@ -529,7 +529,7 @@ class Global:
 		commands = line.split(':')
 		cmd_worked = 0
 		for c in commands:
-			cmd = c + "/hipconf dht get " + nam + " 3>&1 2>&1 "   #| grep hipconf "
+			cmd = c + "/hipconf dht get " + nam + " 2>&1 "   #| grep hipconf "
 			p = os.popen(cmd, "r")
 			result = p.readline()
 			if result[0:3] == "sh:" and result[len(result)-10:len(result)-1] == "not found":

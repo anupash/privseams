@@ -1563,7 +1563,7 @@ $ make V=99
     <title>HIPL Internet Test Servers</title>
     <para>
     Below is a list of public InfraHIP test servers. The servers are also running
-    a free rendezvous service which you can use according to the instructions in <xref linkend="ch_rvs_relay" />.
+    free name look up Bamboo service (<xref linkend="ch_opendht" />) and HIP rendezvous service which you can use according to the instructions in <xref linkend="ch_rvs_relay" />.
     </para>
     <table id="table_servers" frame="all"><title>Test Servers</title>
     <tgroup cols="1">
@@ -1935,11 +1935,20 @@ $ make V=99
     <section id="sec_opendht_bamboo">
       <title>HIP with Bamboo opendht server (IPv4 and IPv6 support)</title>
       <para>
+	This section describes how to up an own IPv6 enabled Bamboo server
+	to look up hostnames, HITs and IP addresses. Bamboo can be used
+	as an alternative name look up instructure to DNS. InfraHIP servers
+	are also already running bamboo service if you don't want to run
+	your own service (see <xref linkend="ch_opendht" />).
+      </para>
+      <para>
 	To start the Bamboo opendht server, first the code has to be obtained.
  	You can obtain Bamboo with IPv4 support from the Bamboo website,
 	http://www.bamboo-dht.org/download.html. Bamboo with IPv6 support can
 	be obtained from http://lxpworkroom.googlepages.com/bambooipv6version.
 	The code is compiled by executing make in the downloaded directory.
+	Some instructions and patches are also in patches/opendht directory of
+	HIPL software bundle.
       </para>
       <para>
 	In order to run the Bamboo server, a configuration file needs to be
@@ -1971,6 +1980,10 @@ $ make V=99
 
     <section id="sec_opendht_several_bamboos">
       <title>Configuration of several Bamboo opendht servers together</title>
+      <para>
+	This section describes how to join two or more bamboo servers to a
+	single ring.
+      </para>
       <para>
 	The first thing to note is that Bamboo servers that support different
 	ip versions cannot be configured to run together successfully.
