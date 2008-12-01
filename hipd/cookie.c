@@ -144,7 +144,7 @@ struct hip_common *hip_get_r1(struct in6_addr *ip_i, struct in6_addr *ip_r,
 	/* Create a copy of the found entry */
 	len = hip_get_msg_total_len(hip_r1table[idx].r1);
 	r1 = hip_msg_alloc();
-	memcpy(r1, hip_r1table[idx].r1, len);
+	memcpy( (char *)r1, hip_r1table[idx].r1, len);
 	err = r1;
 
  out_err:	
@@ -350,9 +350,9 @@ int hip_recreate_r1s_for_entry_move(struct hip_host_id_entry *entry, void *new_h
 	len = hip_get_param_total_len(entry->host_id);
 	HIP_IFEL(!(private = (struct hip_host_id *) HIP_MALLOC(len, 0)), 
 		 -ENOMEM, "pubkey mem alloc failed\n");
-	memcpy(private, entry->host_id, len);
+	memcpy( (char *)private, entry->host_id, len);
 
-	memcpy(&lhi, &entry->lhi, sizeof(lhi));
+	memcpy( (char *)&lhi, &entry->lhi, sizeof(lhi));
 
 	HIP_IFEL(hip_del_host_id(HIP_DB_LOCAL_HID, &lhi), -1,
 		 "Failed to delete host id\n");

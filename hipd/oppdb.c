@@ -178,7 +178,7 @@ int hip_oppdb_add_entry(const hip_hit_t *phit_peer,
 		ipv6_addr_copy(&new_item->peer_ip, ip_peer);
 	if (ip_our)
 		ipv6_addr_copy(&new_item->our_ip, ip_our);
-	memcpy(&new_item->caller, caller, sizeof(struct sockaddr_in6));
+	memcpy( (char *)&new_item->caller, caller, sizeof(struct sockaddr_in6));
 	
 	err = hip_ht_add(oppdb, new_item);
 	hip_oppdb_dump();
@@ -379,7 +379,7 @@ int hip_receive_opp_r1(struct hip_common *msg,
 	HIP_IFEL(hip_replace_pending_requests(opp_entry, entry), -1, 
 		 "Error moving the pending requests to a new HA");
 
-	//memcpy(sava_serving_gateway, &msg->hits, sizeof(struct in6_addr));
+	//memcpy( (char *)sava_serving_gateway, &msg->hits, sizeof(struct in6_addr));
 	
 	HIP_DEBUG_HIT("!!!! peer hit=", &msg->hits);
 	HIP_DEBUG_HIT("!!!! local hit=", &msg->hitr);
@@ -511,13 +511,13 @@ int hip_opp_get_peer_hit(struct hip_common *msg,
 	} else {
 		ptr = hip_get_param_contents(msg, HIP_PARAM_HIT_LOCAL);
 		HIP_IFEL(!ptr, -1, "No local hit in msg\n");
-		memcpy(&hit_our, ptr, sizeof(hit_our));
+		memcpy( (char *)&hit_our, ptr, sizeof(hit_our));
 	}
 
 	HIP_DEBUG_HIT("hit_our=", &hit_our);
 	ptr = hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR_PEER);
 	HIP_IFEL(!ptr, -1, "No ip in msg\n");
-	memcpy(&dst_ip, ptr, sizeof(dst_ip));
+	memcpy( (char *)&dst_ip, ptr, sizeof(dst_ip));
 	HIP_DEBUG_HIT("dst_ip=", &dst_ip);
 
 	HIP_IFEL(hip_select_source_address(&our_addr,
@@ -627,7 +627,7 @@ int hip_opptcp_unblock_and_blacklist(struct hip_common *msg, const struct sockad
         memset(&dst_ip, 0, sizeof(struct in6_addr *));
         ptr = (struct in6_addr *) hip_get_param_contents(msg, HIP_PARAM_IPV6_ADDR);
         HIP_IFEL(!ptr, -1, "No ip in msg\n");
-        memcpy(&dst_ip, ptr, sizeof(dst_ip));
+        memcpy( (char *)&dst_ip, ptr, sizeof(dst_ip));
         HIP_DEBUG_HIT("dst ip = ", &dst_ip);
 
         //hip_msg_init(msg);//?????
@@ -672,32 +672,32 @@ int hip_opptcp_send_tcp_packet(struct hip_common *msg, const struct sockaddr_in6
 	memset(&packet_size, 0, sizeof(int));
 	ptr = (int *) hip_get_param_contents(msg, HIP_PARAM_PACKET_SIZE);
 	HIP_IFEL(!ptr, -1, "No packet size in msg\n");
-	memcpy(&packet_size, ptr, sizeof(packet_size));
+	memcpy( (char *)&packet_size, ptr, sizeof(packet_size));
 
 	//get the pointer to the ip header that is to be sent
 	hdr = HIP_MALLOC((int)packet_size, 0);
 	memset(hdr, 0, (int)packet_size);
 	ptr = (void *) hip_get_param_contents(msg, HIP_PARAM_IP_HEADER);
 	HIP_IFEL(!ptr, -1, "No ip header in msg\n");
-	memcpy(hdr, ptr, (int)packet_size);
+	memcpy( (char *)hdr, ptr, (int)packet_size);
 
 	//get the type of traffic
 	memset(&trafficType, 0, sizeof(int));
 	ptr = (int *) hip_get_param_contents(msg, HIP_PARAM_TRAFFIC_TYPE);
 	HIP_IFEL(!ptr, -1, "No traffic type in msg\n");
-	memcpy(&trafficType, ptr, sizeof(trafficType));
+	memcpy( (char *)&trafficType, ptr, sizeof(trafficType));
 
 	//get whether hit option is to be added
 	memset(&addHit, 0, sizeof(int));
 	ptr = (int *) hip_get_param_contents(msg, HIP_PARAM_ADD_HIT);
 	HIP_IFEL(!ptr, -1, "No add Hit in msg\n");
-	memcpy(&addHit, ptr, sizeof(addHit));
+	memcpy( (char *)&addHit, ptr, sizeof(addHit));
 
 	//get the size of the packet
 	memset(&addOption, 0, sizeof(int));
 	ptr = (int *) hip_get_param_contents(msg, HIP_PARAM_ADD_OPTION);
 	HIP_IFEL(!ptr, -1, "No add Hit in msg\n");
-	memcpy(&addOption, ptr, sizeof(addOption));
+	memcpy( (char *)&addOption, ptr, sizeof(addOption));
 
 	hip_msg_init(msg);
 

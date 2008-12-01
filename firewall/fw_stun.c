@@ -54,13 +54,13 @@ int hip_fw_handle_stun_packet(hip_fw_context_t* ctx){
 	
 	memset(new_ip_msg, 0, new_ip_len);
 	//copy the ip and udp header into the new msg
-	memcpy(new_ip_msg, incoming_ip_msg, sizeof(struct ip) + sizeof(struct udphdr));
+	memcpy( (char *)new_ip_msg, (char *)incoming_ip_msg, sizeof(struct ip) + sizeof(struct udphdr));
 	// copy the stun into the end of the msg
-	memcpy(((char *)new_ip_msg)+sizeof(struct ip) + sizeof(struct udphdr) 
+	memcpy( (char *)((char *)new_ip_msg)+sizeof(struct ip) + sizeof(struct udphdr) 
 			+ HIP_UDP_ZERO_BYTES_LEN,
-			hip_msg, hip_get_msg_total_len(hip_msg));
+		(char *)hip_msg, hip_get_msg_total_len(hip_msg));
 
-	//memcpy(((char *)new_ip_msg)+sizeof(struct udphdr)+ sizeof(struct ip)
+	//memcpy( (char *)((char *)new_ip_msg)+sizeof(struct udphdr)+ sizeof(struct ip)
 	//		+HIP_UDP_ZERO_BYTES_LEN + sizeof(struct hip_common), 
 	//		incoming_udp_msg +1, udp_len-sizeof(struct udphdr));
 	

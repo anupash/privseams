@@ -152,8 +152,8 @@ hip_conn_t *hip_conn_find_by_portinfo(struct in6_addr *hit_proxy,
 				      int port_peer)
 {
 	hip_conn_t p, *ret;
-	memcpy(&p.key.hit_proxy, hit_proxy, sizeof(struct in6_addr));
-	memcpy(&p.key.hit_peer, hit_peer, sizeof(struct in6_addr));
+	memcpy( (char *)&p.key.hit_proxy, (char *)hit_proxy, sizeof(struct in6_addr));
+	memcpy( (char *)&p.key.hit_peer, (char *)hit_peer, sizeof(struct in6_addr));
 	p.key.protocol = protocol;
 	p.key.port_client = port_client;
 	p.key.port_peer = port_peer;
@@ -178,8 +178,8 @@ int hip_conn_update_state(struct in6_addr *src_addr,
 		p->state = state;
 	
 		HIP_DEBUG("Update connection state successfully!\n");
-		//		memcpy(&p->hit_our, src_hit, sizeof(struct in6_addr));
-		//		memcpy(&p->hit_peer, dst_hit, sizeof(struct in6_aadr));
+		//		memcpy( (char *)&p->hit_our, src_hit, sizeof(struct in6_addr));
+		//		memcpy( (char *)&p->hit_peer, dst_hit, sizeof(struct in6_aadr));
 		//		ipv6_addr_copy(&p->hit_our, addr_our);
 		//		ipv6_addr_copy(&p->hit_peer, addr_peer);				
 		return 0;

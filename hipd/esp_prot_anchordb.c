@@ -86,7 +86,7 @@ int anchor_db_update(struct hip_common *msg)
 					anchor_lengths[i])), -1, "failed to allocate memory\n");
 
 			anchor = (unsigned char *) hip_get_param_contents_direct(param);
-			memcpy(anchor_db.anchors[i][j], anchor, anchor_db.anchor_lengths[i]);
+			memcpy( (char *)anchor_db.anchors[i][j], anchor, anchor_db.anchor_lengths[i]);
 			HIP_HEXDUMP("adding anchor: ", anchor_db.anchors[i][j],
 					anchor_db.anchor_lengths[i]);
 

@@ -17,6 +17,9 @@
 #  include "list.h"
 #endif
 
+
+#include "libinet6/debug.h"
+
 #define HIP_TMP_FNAME_TEMPLATE "/tmp/hip_XXXXXX"
 #define HIP_TMP_FNAME_LEN strlen(HIP_TMP_FNAME_TEMPLATE)
 
@@ -38,7 +41,7 @@ struct hosts_file_line {
  */
 #if 0
 static int hip_tmpname(char *fname) {
-	memcpy(fname, HIP_TMP_FNAME_TEMPLATE, HIP_TMP_FNAME_LEN);     
+  memcpy(fname, (char *)HIP_TMP_FNAME_TEMPLATE, HIP_TMP_FNAME_LEN);     
 	return(mkstemp(fname));      
 } 
 #endif
@@ -84,7 +87,7 @@ typedef uint32_t hip_closest_prefix_type_t;
 static int ipv6_addr_is_hit(const struct in6_addr *hit)
 {
 	hip_closest_prefix_type_t hit_begin;
-	memcpy(&hit_begin, hit, sizeof(hip_closest_prefix_type_t));
+	memcpy((char *)&hit_begin, (char *)hit, sizeof(hip_closest_prefix_type_t));
 	hit_begin = ntohl(hit_begin);
 	hit_begin &= HIP_HIT_TYPE_MASK_INV;
 	return (hit_begin == HIP_HIT_PREFIX);
@@ -93,7 +96,7 @@ static int ipv6_addr_is_hit(const struct in6_addr *hit)
 static int ipv6_addr_is_teredo(const struct in6_addr *teredo)
 {
 	hip_closest_prefix_type_t teredo_begin;
-	memcpy(&teredo_begin, teredo, sizeof(hip_closest_prefix_type_t));
+	memcpy((char *)&teredo_begin, (char *)teredo, sizeof(hip_closest_prefix_type_t));
 	teredo_begin = ntohl(teredo_begin);
 	teredo_begin &= HIP_TEREDO_TYPE_MASK_INV;
 	return (teredo_begin == HIP_TEREDO_PREFIX);
@@ -149,19 +152,19 @@ static inline int hit_is_opportunistic_null(const struct in6_addr *hit){
 static inline void set_hit_prefix(struct in6_addr *hit)
 {
 	hip_closest_prefix_type_t hit_begin;
-	memcpy(&hit_begin, hit, sizeof(hip_closest_prefix_type_t));
+	memcpy((char *)&hit_begin, (char *)hit, sizeof(hip_closest_prefix_type_t));
 	hit_begin &= htonl(HIP_HIT_TYPE_MASK_CLEAR);
 	hit_begin |= htonl(HIP_HIT_PREFIX);
-	memcpy(hit, &hit_begin, sizeof(hip_closest_prefix_type_t));
+	memcpy((char *)hit, (char *)&hit_begin, sizeof(hip_closest_prefix_type_t));
 }
 
 static inline void set_lsi_prefix(hip_lsi_t *lsi)
 {
 	hip_closest_prefix_type_t lsi_begin;
-	memcpy(&lsi_begin, lsi, sizeof(hip_closest_prefix_type_t));
+	memcpy((char *)&lsi_begin, (char *)lsi, sizeof(hip_closest_prefix_type_t));
 	lsi_begin &= htonl(HIP_LSI_TYPE_MASK_CLEAR);
 	lsi_begin |= htonl(HIP_LSI_PREFIX);
-	memcpy(lsi, &lsi_begin, sizeof(hip_closest_prefix_type_t));
+	memcpy((char *)lsi, (char *)&lsi_begin, sizeof(hip_closest_prefix_type_t));
 }
 
 /* IN6_IS_ADDR_V4MAPPED(a) is defined in /usr/include/netinet/in.h */

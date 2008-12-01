@@ -282,7 +282,7 @@ int hip_cvl_add(hip_configvaluelist_t *linkedlist, const void *data)
 		return HIP_EVAL;
 	}
 	
-	memcpy(newnode->data, data, sizeof(newnode->data));
+	memcpy( (char *)newnode->data, data, sizeof(newnode->data));
 	newnode->next = NULL;
 
 	/* Item to add is the first item of the list. */

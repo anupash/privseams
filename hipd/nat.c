@@ -511,7 +511,7 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 				
 				
 				hip_hadb_add_udp_addr_to_spi(entry, spi_out, &peer_addr, 1, 0, 1,addr.ipv4.sin_port, HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY);
-				memcpy(&entry->preferred_address, &peer_addr, sizeof(struct in6_addr));
+				memcpy( (char *)&entry->preferred_address, &peer_addr, sizeof(struct in6_addr));
 				entry->peer_udp_port = ntohs(addr.ipv4.sin_port);
 				HIP_DEBUG("set prefered the peer_addr port: %d\n",ntohs(addr.ipv4.sin_port ));
 				
@@ -533,7 +533,7 @@ void  hip_on_ice_complete (pj_ice_sess *ice, pj_status_t status){
 							peer_addr_list_item->address_state = PEER_ADDR_STATE_ACTIVE;
 							peer_addr_list_item->is_preferred = 1;
 							
-							memcpy(&entry->preferred_address, &peer_addr_list_item->address, sizeof(struct in6_addr));
+							memcpy( (char *)&entry->preferred_address, &peer_addr_list_item->address, sizeof(struct in6_addr));
 							entry->peer_udp_port = peer_addr_list_item->port;
 						}
 						
@@ -648,7 +648,7 @@ pj_status_t hip_on_tx_pkt(pj_ice_sess *ice, unsigned comp_id, const void *pkt, p
 	
 	//hip len convert
 	msg->payload_len = size;
-	memcpy(msg +1, pkt, size );  
+	memcpy( (char *)msg +1, pkt, size );  
 		
 	HIP_DEBUG("hip_on_tx_pkt : \n");
 	
@@ -667,7 +667,7 @@ pj_status_t hip_on_tx_pkt(pj_ice_sess *ice, unsigned comp_id, const void *pkt, p
 	peer_addr.in6_u.u6_addr32[2] = (uint32_t)htonl (0xffff);
 	peer_addr.in6_u.u6_addr32[3] = (uint32_t)addr->sin_addr.s_addr;
 	HIP_DEBUG("hip_on_tx_pkt 2: \n");
-	//memcpy(peer_addr.in6_u.u6_addr32+3, &addr->sin_addr.s_addr, 4);
+	//memcpy( (char *)peer_addr.in6_u.u6_addr32+3, &addr->sin_addr.s_addr, 4);
 	
 
 	HIP_DEBUG("length of the stun package is %d\n", size );
@@ -1142,8 +1142,8 @@ int hip_nat_create_pj_session_cand(pj_ice_sess_cand *pj_cand,in6_addr_t * hip_ad
 	pj_cand->foundation = pj_str("ice");
 	pj_cand->prio = *priority;
 	
-	memcpy(&pj_cand->addr, addr, sizeof(pj_sockaddr));
-	memcpy(&pj_cand->base_addr, base_addr, sizeof(pj_sockaddr));
+	memcpy( (char *)&pj_cand->addr, addr, sizeof(pj_sockaddr));
+	memcpy( (char *)&pj_cand->base_addr, base_addr, sizeof(pj_sockaddr));
 	
 out_err:	
 	return err;

@@ -8,6 +8,7 @@
 #include <arpa/inet.h>
 #include "debug.h"
 
+
 int main(int argc,char *argv[]) {
   struct ifaddrs *g_ifaces = NULL, *g_iface;
   struct if_nameindex *i_ifaces = NULL, *i_iface;
@@ -45,3 +46,4 @@ int main(int argc,char *argv[]) {
   if (i_ifaces)
     if_freenameindex(i_ifaces);
 }
+

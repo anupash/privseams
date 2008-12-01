@@ -210,13 +210,13 @@ int connhipd_handle_msg(struct hip_common *msg,
 			l = hit_db_find_local(NULL, &emsg->hitr);
 			if (l)
 			{
-				memcpy(&hit.hit, &emsg->hits, sizeof(hit.hit));
+			  memcpy((char *)&hit.hit, (char *)&emsg->hits, sizeof(hit.hit));
 			}
 			HIP_IFEL(!l, -1, "Did not find local HIT for message!\n");
 		}
 		else
 		{
-			memcpy(&hit.hit, &emsg->hitr, sizeof(hit.hit));
+		        memcpy( (char *)&hit.hit, (char *)&emsg->hitr, sizeof(hit.hit));
 		}
 
 		HIP_DEBUG("Received %s %s from daemon.\n", "incoming",

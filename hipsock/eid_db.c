@@ -98,19 +98,19 @@ int hip_db_set_eid(struct sockaddr_eid *eid,
                         htons(hip_create_unique_local_eid()) :
                         htons(hip_create_unique_peer_eid()));
                 entry->eid.eid_family = PF_HIP;
-                memcpy(eid, &entry->eid, sizeof(struct sockaddr_eid));
+                memcpy( (char *)eid, &entry->eid, sizeof(struct sockaddr_eid));
 
                 HIP_DEBUG("Generated eid val %d\n", entry->eid.eid_val);
 
-                memcpy(&entry->lhi, lhi, sizeof(struct hip_lhi));
-                memcpy(&entry->owner_info, owner_info,
+                memcpy( (char *)&entry->lhi, lhi, sizeof(struct hip_lhi));
+                memcpy( (char *)&entry->owner_info, owner_info,
                        sizeof(struct hip_eid_owner_info));
 
                 /* Finished. Add the entry to the list. */
                 list_add(&entry->next, &db->db_head);
         } else {
                 /*! \todo Ownership is not changed here; should it? */
-                memcpy(eid, &entry->eid, sizeof(struct sockaddr_eid));
+                memcpy( (char *)eid, &entry->eid, sizeof(struct sockaddr_eid));
         }
 
  out_err:
@@ -274,7 +274,7 @@ int hip_socket_handle_set_peer_eid(struct hip_common *msg)
         }
         
         if (eid_endpoint->endpoint.flags & HIP_ENDPOINT_FLAG_HIT) {
-                memcpy(&lhi.hit, &eid_endpoint->endpoint.id.hit,
+                memcpy( (char *)&lhi.hit, &eid_endpoint->endpoint.id.hit,
                        sizeof(struct in6_addr));
                 HIP_DEBUG_HIT("Peer HIT: ", &lhi.hit);
         } else {
@@ -383,8 +383,8 @@ int hip_db_get_lhi_by_eid(const struct sockaddr_eid *eid,
                 goto out_err;
         }
 
-        memcpy(lhi, &entry->lhi, sizeof(struct hip_lhi));
-        memcpy(owner_info, &entry->owner_info,
+        memcpy( (char *)lhi, &entry->lhi, sizeof(struct hip_lhi));
+        memcpy( (char *)owner_info, &entry->owner_info,
                sizeof(struct hip_eid_owner_info));
 
  out_err:

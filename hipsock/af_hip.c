@@ -254,10 +254,10 @@ int hip_socket_bind(struct socket *sock,
 	   bind_v6 returns an error when it does address type checks. */
 	memset(&sockaddr_in6, 0, sizeof(struct sockaddr_in6));
 	sockaddr_in6.sin6_addr = in6addr_any;
-	//memcpy(&sockaddr_in6.sin6_addr, &lhi.hit, sizeof(struct in6_addr));
+	//memcpy( (char *)&sockaddr_in6.sin6_addr, &lhi.hit, sizeof(struct in6_addr));
 	sockaddr_in6.sin6_family = PF_INET6;
 	sockaddr_in6.sin6_port = sockaddr_eid->eid_port;
-	memcpy(&sockaddr_in6.sin6_addr, &lhi.hit, sizeof(struct in6_addr));
+	memcpy( (char *)&sockaddr_in6.sin6_addr, &lhi.hit, sizeof(struct in6_addr));
 	
 	/* XX FIX: check access permissions from eid_owner_info */
 
@@ -269,9 +269,9 @@ int hip_socket_bind(struct socket *sock,
 	}
 
 	/*
-	memcpy(&pinfo->rcv_saddr, &lhi.hit,
+	memcpy( (char *)&pinfo->rcv_saddr, &lhi.hit,
 	       sizeof(struct in6_addr));
-	memcpy(&pinfo->saddr, &lhi.hit,
+	memcpy( (char *)&pinfo->saddr, &lhi.hit,
 	sizeof(struct in6_addr));*/
 	
  out_err:
@@ -331,7 +331,7 @@ int hip_socket_connect(struct socket *sock,
 
 	memset(&sockaddr_in6, 0, sizeof(struct sockaddr_in6));
 	sockaddr_in6.sin6_family = PF_INET6;
-	memcpy(&sockaddr_in6.sin6_addr, &lhi.hit, sizeof(struct in6_addr));
+	memcpy( (char *)&sockaddr_in6.sin6_addr, &lhi.hit, sizeof(struct in6_addr));
 	sockaddr_in6.sin6_port = sockaddr_eid->eid_port;
 
 	HIP_DEBUG_HIT("connecting to the source HIT\n", &lhi.hit);
@@ -449,7 +449,7 @@ int hip_socket_getname(struct socket *sock,
 	owner_info.pid = current->pid;
 	owner_info.flags = 0;
 
-	memcpy(&lhi.hit, &pinfo->daddr,
+	memcpy( (char *)&lhi.hit, &pinfo->daddr,
 	       sizeof(struct in6_addr));
 	lhi.anonymous = 0; /* XX FIXME: should be really set to -1 */
 

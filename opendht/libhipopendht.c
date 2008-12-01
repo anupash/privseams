@@ -407,11 +407,11 @@ int opendht_get_key(struct addrinfo * gateway, const unsigned char * key,
                 locator_item_count--;
                 locator_address_item = hip_get_locator_first_addr_item(locator);
                 /*
-                memcpy(&addr6, 
+                memcpy( (char *)&addr6, 
                        (struct in6_addr*)&locator_address_item[0].address, 
                        sizeof(struct in6_addr));
                 */
-                memcpy(&addr6, 
+                memcpy( (char *)&addr6, 
                        (struct in6_addr*)&locator_address_item[locator_item_count].address, 
                        sizeof(struct in6_addr));
                 if (IN6_IS_ADDR_V4MAPPED(&addr6)) {
@@ -426,7 +426,7 @@ int opendht_get_key(struct addrinfo * gateway, const unsigned char * key,
                         /* if IPv6 must be HIT */
                         hip_in6_ntop((struct in6_addr *)dht_response, value);
                 } else {
-                        memcpy(value, dht_response, strlen(dht_response));
+                        memcpy( (char *)value, dht_response, strlen(dht_response));
                 }
         }
  out_err:
@@ -458,10 +458,10 @@ int opendht_handle_value(char * value, char * out_value)
     else 
         {
             /* value was in IPv6 format so propably is a HIT */
-            memcpy(tmp_value, addrvalue.s6_addr, sizeof(addrvalue.s6_addr));
+            memcpy( (char *)tmp_value, addrvalue.s6_addr, sizeof(addrvalue.s6_addr));
             value_len = sizeof(addrvalue.s6_addr);
             err = value_len;
-            memcpy(out_value, tmp_value, sizeof(tmp_value));
+            memcpy( (char *)out_value, tmp_value, sizeof(tmp_value));
         }
  out_err:
     return(err);
@@ -507,11 +507,11 @@ int opendht_handle_key(char * key, char * out_key)
     else 
         {
             /* key was in IPv6 format so propably is a HIT */
-            memcpy(tmp_key, addrkey.s6_addr, sizeof(addrkey.s6_addr));
+            memcpy( (char *)tmp_key, addrkey.s6_addr, sizeof(addrkey.s6_addr));
             key_len = sizeof(addrkey.s6_addr);
             err = key_len;
         }
-    memcpy(out_key, tmp_key, sizeof(tmp_key));
+    memcpy( (char *)out_key, tmp_key, sizeof(tmp_key));
  out_err:
     return(err);
 }
@@ -539,7 +539,7 @@ int opendht_read_response(int sockfd, char * answer)
             memset(tmp_buffer, '\0', sizeof(tmp_buffer));
             bytes_read = recv(sockfd, tmp_buffer, sizeof(tmp_buffer), 0);
             if (bytes_read > 0)
-                memcpy(&read_buffer[strlen(read_buffer)], tmp_buffer, sizeof(tmp_buffer));
+                memcpy( (char *)&read_buffer[strlen(read_buffer)], tmp_buffer, sizeof(tmp_buffer));
         }
     while (bytes_read > 0);
     

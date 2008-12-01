@@ -124,7 +124,7 @@ int hip_hidb_get_lsi_by_hit(const hip_hit_t *our, hip_lsi_t *our_lsi){
 	list_for_each(item, hip_local_hostid_db, c) {
 		id_entry = list_entry(item);
 		if (hip_hit_are_equal(&id_entry->lhi.hit, our)){
-			memcpy(our_lsi, &id_entry->lsi, sizeof(hip_lsi_t));
+			memcpy( (char *)our_lsi, &id_entry->lsi, sizeof(hip_lsi_t));
 			return 0;
 		}		
 	}
@@ -205,8 +205,8 @@ int hip_add_host_id(hip_db_struct_t *db,
 	/* copy lhi and host_id (host_id is already in network byte order) */
 	ipv6_addr_copy(&id_entry->lhi.hit, &lhi->hit);
 	id_entry->lhi.anonymous = lhi->anonymous;
-	memcpy(id_entry->host_id, host_id, len);
-	memcpy(pubkey, host_id, len);
+	memcpy( (char *)id_entry->host_id, host_id, len);
+	memcpy( (char *)pubkey, host_id, len);
 
 	HIP_WRITE_LOCK_DB(db);
 
@@ -223,7 +223,7 @@ int hip_add_host_id(hip_db_struct_t *db,
 	/* assign a free lsi address */
 	HIP_IFEL((hip_hidb_add_lsi(db, id_entry))<0, -EEXIST, "No LSI free\n");
 	
-	memcpy(lsi, &id_entry->lsi, sizeof(hip_lsi_t));
+	memcpy( (char *)lsi, &id_entry->lsi, sizeof(hip_lsi_t));
 	id_entry->insert = insert;
 	id_entry->remove = remove;
 	id_entry->arg = arg;
@@ -512,7 +512,7 @@ struct hip_host_id *hip_get_host_id(hip_db_struct_t *db,
 		return NULL;
 	}
 
-	memcpy(result, tmp->host_id, t);
+	memcpy( (char *)result, tmp->host_id, t);
 	HIP_READ_UNLOCK_DB(db);
 
 	return result;
@@ -762,7 +762,7 @@ int hip_hidb_add_lsi(hip_db_struct_t *db, const struct hip_host_id_entry *id_ent
 		}
 
 		if (!used_lsi){
-			memcpy(&id_entry->lsi, &lsi_aux, sizeof(hip_lsi_t));
+			memcpy( (char *)&id_entry->lsi, &lsi_aux, sizeof(hip_lsi_t));
 			_HIP_DEBUG("LSI assigned:%s\n",inet_ntoa(id_entry->lsi));
 			break;
 		}
@@ -854,8 +854,8 @@ int hip_hidb_associate_default_hit_lsi(hip_hit_t *default_hit, hip_lsi_t *defaul
       		HIP_IFEL(!(tmp2 = hip_hidb_get_entry_by_lsi(HIP_DB_LOCAL_HID, default_lsi)), -1,
 			 "Default lsi not found in hidb\n");
 
-      		memcpy(&tmp2->lsi, &tmp1->lsi, sizeof(tmp1->lsi));
-      		memcpy(&tmp1->lsi, default_lsi, sizeof(tmp2->lsi));
+      		memcpy( (char *)&tmp2->lsi, &tmp1->lsi, sizeof(tmp1->lsi));
+      		memcpy( (char *)&tmp1->lsi, default_lsi, sizeof(tmp2->lsi));
 	}
 
  out_err:
@@ -889,8 +889,8 @@ int hip_blind_find_local_hi(uint16_t *nonce,  struct in6_addr *test_hit,
       HIP_HEXDUMP("Found HIT", &tmp->lhi.hit, 16);
       
       // let's test the hit
-      memcpy(key, &tmp->lhi.hit, sizeof(struct in6_addr));
-      memcpy(key + sizeof(struct in6_addr), &nonce, sizeof(uint16_t));
+      memcpy( (char *)key, &tmp->lhi.hit, sizeof(struct in6_addr));
+      memcpy( (char *)key + sizeof(struct in6_addr), &nonce, sizeof(uint16_t));
       HIP_IFEL(hip_do_blind(key, key_len, blind_hit), -1, "hip_do_blind failed \n");
       if (blind_hit == NULL) {
 	err = -1;
@@ -899,7 +899,7 @@ int hip_blind_find_local_hi(uint16_t *nonce,  struct in6_addr *test_hit,
       HIP_HEXDUMP("test HIT:", test_hit, 16);
       if (hip_match_hit(test_hit, blind_hit)) {
 	HIP_HEXDUMP("Plain HIT found:", &tmp->lhi.hit, 16);
-	memcpy(local_hit, &tmp->lhi.hit, sizeof(struct in6_addr));
+	memcpy( (char *)local_hit, &tmp->lhi.hit, sizeof(struct in6_addr));
 	goto out_err;
       }
     }

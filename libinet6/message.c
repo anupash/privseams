@@ -444,9 +444,9 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
 	} else /* IPv6 addresses */ {
 		struct sockaddr_in6 *addr_to6 =
 			(struct sockaddr_in6 *) &addr_to;
-		memcpy(saddr, &addr_from6->sin6_addr,
+		memcpy( (char *)saddr, &addr_from6->sin6_addr,
 		       sizeof(struct in6_addr));
-		memcpy(daddr, &pktinfo.pktinfo_in6->ipi6_addr,
+		memcpy( (char *)daddr, &pktinfo.pktinfo_in6->ipi6_addr,
 		       sizeof(struct in6_addr));
 		addr_to6->sin6_family = AF_INET6;
 		ipv6_addr_copy(&addr_to6->sin6_addr, daddr);

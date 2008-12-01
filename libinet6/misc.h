@@ -57,27 +57,27 @@ int hip_sockaddr_is_v6_mapped(struct sockaddr *sa);
 static inline int ipv4_addr_cmp(const struct in_addr *a1,
 				const struct in_addr *a2)
 {
-	return memcmp((const void *) a1, (const void *) a2,
+	return memcmp((const char *) a1, (const char *) a2,
 		      sizeof(struct in_addr));
 }
 
 static inline void ipv4_addr_copy(struct in_addr *a1,
 				  const struct in_addr *a2)
 {
-	memcpy((void *) a1, (const void *) a2, sizeof(struct in_addr));
+	memcpy((char *) a1, (const char *) a2, sizeof(struct in_addr));
 }
 
 static inline int ipv6_addr_cmp(const struct in6_addr *a1,
 				const struct in6_addr *a2)
 {
-	return memcmp((const void *) a1, (const void *) a2,
+	return memcmp((const char *) a1, (const char *) a2,
 		      sizeof(struct in6_addr));
 }
 
 static inline void ipv6_addr_copy(struct in6_addr *a1,
 				  const struct in6_addr *a2)
 {
-	memcpy((void *) a1, (const void *) a2, sizeof(struct in6_addr));
+	memcpy((char *) a1, (const char *) a2, sizeof(struct in6_addr));
 }
 
 static inline int ipv6_addr_any(const struct in6_addr *a)

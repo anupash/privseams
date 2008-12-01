@@ -446,7 +446,7 @@ int firewall_send_incoming_pkt(struct in6_addr *src_hit,
 		   		udp->check = htons(0);
 				udp->check = ipv4_checksum(IPPROTO_UDP, &(sock_src4->sin_addr), 
 							   &(sock_dst4->sin_addr), udp, len);		
-				memcpy((msg+sizeof(struct ip)), (u8*)udp, len);
+				memcpy( (char *)(msg+sizeof(struct ip)), (u8*)udp, len);
 			}
 			break;
 		case IPPROTO_TCP:
@@ -468,7 +468,7 @@ int firewall_send_incoming_pkt(struct in6_addr *src_hit,
 
 				tcp->check = ipv4_checksum(IPPROTO_TCP, &(sock_src4->sin_addr), 
 							   &(sock_dst4->sin_addr), tcp, len);		
-				memcpy((msg+sizeof(struct ip)), (u8*)tcp, len);
+				memcpy( (char *)(msg+sizeof(struct ip)), (u8*)tcp, len);
 			}	
 			break;
 		case IPPROTO_ICMP:
@@ -478,7 +478,7 @@ int firewall_send_incoming_pkt(struct in6_addr *src_hit,
 			memset(msg, 0, (len + sizeof(struct ip)));
 			icmp->checksum = htons(0);
 			icmp->checksum = inchksum(icmp, len);
-			memcpy((msg+sizeof(struct ip)), (u8*)icmp, len);
+			memcpy( (char *)(msg+sizeof(struct ip)), (u8*)icmp, len);
 			_HIP_DEBUG("icmp->type = %d\n",icmp->type);
 			_HIP_DEBUG("icmp->code = %d\n",icmp->code);
 			break;

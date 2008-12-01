@@ -35,7 +35,7 @@ int check_hit(HIT_Remote *hit, int inout)
 
 		if (fhit->g->accept == HIT_ACCEPT) err = 0;
 		else err = -1;
-		memcpy(hit, fhit, sizeof(HIT_Remote));
+		memcpy( (char *)hit, (char *)fhit, sizeof(HIT_Remote));
 
 		goto out_err;
 	}

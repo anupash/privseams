@@ -172,7 +172,7 @@ int hip_relht_put(hip_relrec_t *rec)
 	   the hashtable is replaced and the reference to the previous element
 	   is lost resulting in a memory leak. */
 	hip_relrec_t key, *match;
-	memcpy(&(key.hit_r), &(rec->hit_r), sizeof(rec->hit_r));
+	memcpy( (char *)&(key.hit_r), &(rec->hit_r), sizeof(rec->hit_r));
 	match = hip_relht_get(rec);
 
 	if(match != NULL) {
@@ -279,10 +279,10 @@ hip_relrec_t *hip_relrec_alloc(const hip_relrec_type_t type,
 		return NULL;
 	}
 	rec->type = type;
-	memcpy(&(rec->hit_r), hit_r, sizeof(*hit_r));
-	memcpy(&(rec->ip_r), ip_r, sizeof(*ip_r));
+	memcpy( (char *)&(rec->hit_r), hit_r, sizeof(*hit_r));
+	memcpy( (char *)&(rec->ip_r), ip_r, sizeof(*ip_r));
 	rec->udp_port_r = port;
-	memcpy(&(rec->hmac_relay), hmac, sizeof(*hmac));
+	memcpy( (char *)&(rec->hmac_relay), hmac, sizeof(*hmac));
 	rec->send_fn = func;
 	hip_relrec_set_lifetime(rec, lifetime);
 	rec->created = time(NULL);
@@ -631,7 +631,7 @@ int hip_relay_handle_from(hip_common_t *source_msg,
 		return 0;
 	} else if(from != NULL) {
 		HIP_DEBUG("Found FROM parameter in I1.\n");
-		memcpy(dest_ip, &from->address, sizeof(from->address));
+		memcpy( (char *)dest_ip, &from->address, sizeof(from->address));
 	}
 	/*
 	 * 
@@ -641,10 +641,10 @@ int hip_relay_handle_from(hip_common_t *source_msg,
 	 return 0;
 	 } else if(from != NULL) {
 	 HIP_DEBUG("Found FROM parameter in I1.\n");
-	 memcpy(dest_ip, &from->address, sizeof(from->address));
+	 memcpy( (char *)dest_ip, &from->address, sizeof(from->address));
 	 } else {
 	 HIP_DEBUG("Found RELAY_FROM parameter in I1.\n");
-	 memcpy(dest_ip, &relay_from->address, sizeof(relay_from->address));
+	 memcpy( (char *)dest_ip, &relay_from->address, sizeof(relay_from->address));
 	 *dest_port = ntohs(relay_from->port);
 	 }*/
 	
@@ -732,7 +732,7 @@ int hip_relay_read_config(){
 								  "HIT.\n");
 							break;
 						}
-						memcpy(wl_hit, &hit, sizeof(hit));
+						memcpy( (char *)wl_hit, &hit, sizeof(hit));
 						hip_relwl_put(wl_hit);
 						print_node(current);
 					}
@@ -963,7 +963,7 @@ int hip_relay_handle_relay_to(struct hip_common * msg,
 	   I's HIT. We should find one, if the I is
 	   registered to relay.*/
 	HIP_DEBUG_HIT("Searching relay record on HIT:", &msg->hits);
-	memcpy(&(dummy.hit_r), &msg->hits, sizeof(msg->hits));
+	memcpy( (char *)&(dummy.hit_r), &msg->hits, sizeof(msg->hits));
 	rec = hip_relht_get(&dummy);
 	
 	if(rec == NULL) {
@@ -1098,7 +1098,7 @@ int hip_relay_handle_from(hip_common_t *source_msg,
 		return 0;
 	} else {
 		param_type = HIP_PARAM_FROM;
-		memcpy(dest_ip, &from->address, sizeof(from->address));
+		memcpy( (char *)dest_ip, &from->address, sizeof(from->address));
 	} 
      
 	/* The relayed I1 packet has the initiator's HIT as source HIT, and the
@@ -1168,7 +1168,7 @@ int hip_relay_handle_relay_from(hip_common_t *source_msg,
 		// set the relay ip and port to the destination address and port.
 		param_type = HIP_PARAM_RELAY_FROM;
 		  
-		memcpy(dest_ip, &relay_from->address, sizeof(relay_from->address));
+		memcpy( (char *)dest_ip, &relay_from->address, sizeof(relay_from->address));
 		*dest_port = ntohs(relay_from->port);
 		//	*dest_port = relay_from->port;
 		HIP_DEBUG("RELAY_FROM port in I. %d \n", *dest_port);

@@ -81,7 +81,7 @@ int hip_verify_packet_hmac(struct hip_common *msg,
 		    hip_hmac_key_length(HIP_ESP_AES_SHA1));
 	_HIP_HEXDUMP("HMACced data:", msg, len);
 
-	memcpy(&tmpkey, crypto_key, sizeof(tmpkey));
+	memcpy( (char *)&tmpkey, (char *)crypto_key, sizeof(tmpkey));
 	HIP_IFEL(hip_verify_hmac(msg, hmac->hmac_data, tmpkey.key,
 				 HIP_DIGEST_SHA1_HMAC),
 		 -1, "HMAC validation failed\n");
@@ -122,7 +122,7 @@ int hip_verify_packet_hmac_general(struct hip_common *msg,
 		    hip_hmac_key_length(HIP_ESP_AES_SHA1));
 	_HIP_HEXDUMP("HMACced data:", msg, len);
 
-	memcpy(&tmpkey, crypto_key, sizeof(tmpkey));
+	memcpy( (char *)&tmpkey, (char *)crypto_key, sizeof(tmpkey));
 	HIP_IFEL(hip_verify_hmac(msg, hmac->hmac_data, tmpkey.key,
 				 HIP_DIGEST_SHA1_HMAC),
 		 -1, "HMAC validation failed\n");
@@ -166,7 +166,7 @@ int hip_verify_packet_rvs_hmac(struct hip_common *msg,
 		    hip_hmac_key_length(HIP_ESP_AES_SHA1));
 
 	HIP_HEXDUMP("HMACced data", msg, len);
-	memcpy(&tmpkey, crypto_key, sizeof(tmpkey));
+	memcpy( (char *)&tmpkey, (char *)crypto_key, sizeof(tmpkey));
 
 	HIP_IFEL(hip_verify_hmac(msg, hmac->hmac_data, tmpkey.key,
 				 HIP_DIGEST_SHA1_HMAC),
@@ -192,7 +192,7 @@ int hip_verify_packet_hmac2(struct hip_common *msg,
 
 	_HIP_DEBUG("hip_verify_packet_hmac2() invoked.\n");
 	HIP_IFE(!(msg_copy = hip_msg_alloc()), -ENOMEM);
-	memcpy(msg_copy, msg, sizeof(struct hip_common));
+	memcpy( (char *)msg_copy, (char *)msg, sizeof(struct hip_common));
 	hip_set_msg_total_len(msg_copy, 0);
 	hip_zero_msg_checksum(msg_copy);
 
@@ -203,7 +203,7 @@ int hip_verify_packet_hmac2(struct hip_common *msg,
 
 	HIP_IFEL(!(hmac = hip_get_param(msg, HIP_PARAM_HMAC2)), -ENOMSG, "Packet contained no HMAC parameter\n");
 	HIP_HEXDUMP("HMAC data", msg_copy, hip_get_msg_total_len(msg_copy));
-	memcpy(&tmpkey, crypto_key, sizeof(tmpkey));
+	memcpy( (char *)&tmpkey, (char *)crypto_key, sizeof(tmpkey));
 
 	HIP_IFEL(hip_verify_hmac(msg_copy, hmac->hmac_data, tmpkey.key, HIP_DIGEST_SHA1_HMAC),
 		-1, "HMAC validation failed\n");
@@ -432,7 +432,7 @@ int hip_produce_keying_material(struct hip_common *msg, struct hip_context *ctx,
 	ctx->keymat_calc_index = (ctx->current_keymat_index / HIP_AH_SHA_LEN) + 1;
 	ctx->esp_keymat_index = esp_keymat_index;
 
-	memcpy(ctx->current_keymat_K, keymat+(ctx->keymat_calc_index-1)*HIP_AH_SHA_LEN, HIP_AH_SHA_LEN);
+	memcpy( (char *)ctx->current_keymat_K, (char *)keymat+(ctx->keymat_calc_index-1)*HIP_AH_SHA_LEN, HIP_AH_SHA_LEN);
 
 	_HIP_DEBUG("ctx: keymat_calc_index=%u current_keymat_index=%u\n",
 		   ctx->keymat_calc_index, ctx->current_keymat_index);
@@ -1139,13 +1139,13 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
                     (n_addrs * sizeof(struct hip_locator_info_addr_item));
                 HIP_IFEL(!(entry->locator = malloc(loc_size)),
                        -1, "Malloc for entry->locators failed\n");
-                memcpy(entry->locator, locator, loc_size);
+                memcpy( (char *)entry->locator, (char *)locator, loc_size);
 
 #ifdef CONFIG_HIP_HI3
 		if( r1_info->hi3_in_use && n_addrs > 0 )
 		{
 			first = (char*)locator+sizeof(struct hip_locator);
-			memcpy(r1_saddr, &first->address, sizeof(struct in6_addr));
+			memcpy( (char *)r1_saddr, (char *)&first->address, sizeof(struct in6_addr));
 
 			list_for_each_safe(item, tmp, addresses, ii)
 				{
@@ -1154,7 +1154,7 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 						continue;
 					if (!hip_sockaddr_is_v6_mapped(&n->addr)))
 					{
-						memcpy(r1_daddr, hip_cast_sa_addr(&n->addr),
+					        memcpy( (char *)r1_daddr, (char *)hip_cast_sa_addr(&n->addr),
 						       hip_sa_addr_len(&n->addr));
 						ii = -1;
 						use_ip4 = 0;
@@ -1170,7 +1170,7 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 							continue;
 						if (hip_sockaddr_is_v6_mapped(&n->addr))
 						{
-							memcpy(r1_daddr, hip_cast_sa_addr(&n->addr),
+						        memcpy( (char *)r1_daddr, (char *)hip_cast_sa_addr(&n->addr),
 							       hip_sa_addr_len(&n->addr));
 							ii = -1;
 							break;
@@ -1180,7 +1180,7 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 
 			struct in6_addr daddr;
 
-			memcpy(&entry->local_address, r1_daddr, sizeof(struct in6_addr));
+			memcpy( (char *)&entry->local_address, (char *)r1_daddr, sizeof(struct in6_addr));
 
 			hip_hadb_get_peer_addr(entry, &daddr);
 			hip_hadb_delete_peer_addrlist_one(entry, &daddr);
@@ -1456,7 +1456,7 @@ int hip_create_r2(struct hip_context *ctx, in6_addr_t *i2_saddr,
 			     hip_get_param_total_len(entry->our_pub));
 	}
 
-	memcpy(&hmac, &entry->hip_hmac_out, sizeof(hmac));
+	memcpy( (char *)&hmac, (char *)&entry->hip_hmac_out, sizeof(hmac));
 	HIP_IFEL(hip_build_param_hmac2_contents(r2, &hmac, entry->our_pub), -1,
 		 "Failed to build parameter HMAC2 contents.\n");
 
@@ -1731,7 +1731,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 			  "ENCRYPTED parameter. Dropping the I2 packet.\n");
 		goto out_err;
 	}
-	memcpy(tmp_enc, enc, hip_get_param_total_len(enc));
+	memcpy( (char *)tmp_enc, (char *)enc, hip_get_param_total_len(enc));
 
 	hip_transform = hip_get_param(i2, HIP_PARAM_HIP_TRANSFORM);
 	if (hip_transform == NULL) {
@@ -1929,7 +1929,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		addr = (struct sockaddr*) &ss_addr;
 		addr->sa_family = AF_INET6;
 
-		memcpy(hip_cast_sa_addr(addr), &entry->local_address,
+		memcpy( (char *)hip_cast_sa_addr(addr), (char *)&entry->local_address,
 		       hip_sa_addr_len(addr));
 		add_address_to_list(addr, if_index);
 	}
@@ -1970,8 +1970,8 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
 #ifdef CONFIG_HIP_BLIND
 	if (use_blind) {
-		memcpy(&entry->hit_our_blind, &i2->hitr, sizeof(struct in6_addr));
-		memcpy(&entry->hit_peer_blind, &i2->hits, sizeof(struct in6_addr));
+	  memcpy( (char *)&entry->hit_our_blind, (char *)&i2->hitr, sizeof(struct in6_addr));
+	  memcpy( (char *)&entry->hit_peer_blind, (char *)&i2->hits, sizeof(struct in6_addr));
 	  	entry->blind_nonce_i = nonce;
 	  	entry->blind = 1;
 	}
@@ -2290,7 +2290,7 @@ int hip_receive_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		     Responder's HIT. We should find one, if the Responder is
 		     registered to relay.*/
 		  HIP_DEBUG_HIT("Searching relay record on HIT ", &i2->hitr);
-		  memcpy(&(dummy.hit_r), &i2->hitr, sizeof(i2->hitr));
+		  memcpy( (char *)&(dummy.hit_r), (char *)&i2->hitr, sizeof(i2->hitr));
 		  rec = hip_relht_get(&dummy);
 		  if(rec == NULL)
  		       HIP_INFO("No matching relay record found.\n");
@@ -2383,8 +2383,8 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	if( r2_info->hi3_in_use ) {
 		/* In hi3 real addresses should already be in entry, received on
 		   r1 phase. */
-		memcpy(r2_saddr, &entry->preferred_address, sizeof(struct in6_addr));
-		memcpy(r2_daddr, &entry->local_address, sizeof(struct in6_addr));
+	  memcpy( (char *)r2_saddr, (char *)&entry->preferred_address, sizeof(struct in6_addr));
+	  memcpy( (char *)r2_daddr, (char *)&entry->local_address, sizeof(struct in6_addr));
 	}
 #endif
 	if (entry->state == HIP_STATE_ESTABLISHED) {
@@ -2430,8 +2430,8 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	spi_out_data.spi = spi_recvd;
 	HIP_IFE(hip_hadb_add_spi(entry, HIP_SPI_DIRECTION_OUT, &spi_out_data), -1);
 
-	memcpy(&ctx->esp_out, &entry->esp_out, sizeof(ctx->esp_out));
-	memcpy(&ctx->auth_out, &entry->auth_out, sizeof(ctx->auth_out));
+	memcpy( (char *)&ctx->esp_out, (char *)&entry->esp_out, sizeof(ctx->esp_out));
+	memcpy( (char *)&ctx->auth_out, (char *)&entry->auth_out, sizeof(ctx->auth_out));
 	HIP_DEBUG("entry should have only one spi_in now, test\n");
 
 	spi_in = hip_hadb_get_latest_inbound_spi(entry);
@@ -2811,7 +2811,7 @@ int hip_receive_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
 		     Responder's HIT. We should find one, if the Responder is
 		     registered to relay.*/
 		  HIP_DEBUG_HIT("Searching relay record on HIT ", &i1->hitr);
-		  memcpy(&(dummy.hit_r), &i1->hitr, sizeof(i1->hitr));
+		  memcpy( (char *)&(dummy.hit_r), (char *)&i1->hitr, sizeof(i1->hitr));
 		  rec = hip_relht_get(&dummy);
 		  if(rec == NULL)
  		       HIP_INFO("No matching relay record found.\n");
@@ -3076,7 +3076,7 @@ int hip_handle_notify(const struct hip_common *notify,
 				ipv6_addr_copy(&responder_ip, (struct in6_addr *)
 					       &(notification->
 						 data[sizeof(struct in6_addr)]));
-				memcpy(&port, &(notification->
+				memcpy( (char *)&port, (char *)&(notification->
 						data[2 * sizeof(struct in6_addr)]),
 				       sizeof(in_port_t));
 
@@ -3327,7 +3327,7 @@ skip_entry_creation:
 
 		}
 
-	memcpy(hip_cast_sa_addr(addr), &entry->local_address,
+	memcpy( (char *)hip_cast_sa_addr(addr), (char *)&entry->local_address,
 	       hip_sa_addr_len(addr));
 
 	HIP_DEBUG_HIT("our hit", &entry->hit_our);

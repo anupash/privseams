@@ -181,7 +181,7 @@ test1sub2(policy, family)
 	}
 
 	memset(getbuf, 0, sizeof(getbuf));
-	memcpy(getbuf, policy, sizeof(struct sadb_x_policy));
+	memcpy( (char *)getbuf, policy, sizeof(struct sadb_x_policy));
 	if (getsockopt(so, proto, optname, getbuf, &len) < 0) {
 		printf("fail to get sockopt; %s\n", strerror(errno));
 		close(so);

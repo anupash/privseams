@@ -229,13 +229,13 @@ int esp_prot_conntrack_I2_anchor(const struct hip_common *common,
 				// store the anchor
 				HIP_IFEL(!(esp_tuple->active_anchor = (unsigned char *)
 						malloc(hash_length)), -1, "failed to allocate memory\n");
-				memcpy(esp_tuple->active_anchor, &prot_anchor->anchors[0],
+				memcpy( (char *)esp_tuple->active_anchor, (char *)&prot_anchor->anchors[0],
 						hash_length);
 
 				// ...and make a backup of it for later verification of UPDATEs
 				HIP_IFEL(!(esp_tuple->first_active_anchor = (unsigned char *)
 						malloc(hash_length)), -1, "failed to allocate memory\n");
-				memcpy(esp_tuple->first_active_anchor, &prot_anchor->anchors[0],
+				memcpy( (char *)esp_tuple->first_active_anchor, (char *)&prot_anchor->anchors[0],
 						hash_length);
 
 				HIP_HEXDUMP("received anchor: ", esp_tuple->active_anchor,
@@ -351,13 +351,13 @@ int esp_prot_conntrack_R2_anchor(const struct hip_common *common,
 				// store the anchor
 				HIP_IFEL(!(esp_tuple->active_anchor = (unsigned char *)
 						malloc(hash_length)), -1, "failed to allocate memory\n");
-				memcpy(esp_tuple->active_anchor, &prot_anchor->anchors[0],
+				memcpy( (char *)esp_tuple->active_anchor, (char *)&prot_anchor->anchors[0],
 						hash_length);
 
 				// ...and make a backup of it for later verification of UPDATEs
 				HIP_IFEL(!(esp_tuple->first_active_anchor = (unsigned char *)
 						malloc(hash_length)), -1, "failed to allocate memory\n");
-				memcpy(esp_tuple->first_active_anchor, &prot_anchor->anchors[0],
+				memcpy( (char *)esp_tuple->first_active_anchor, (char *)&prot_anchor->anchors[0],
 						hash_length);
 
 				HIP_HEXDUMP("received anchor: ", esp_tuple->active_anchor,
@@ -484,7 +484,7 @@ int esp_prot_conntrack_cache_anchor(struct tuple * tuple, struct hip_seq *seq,
 	HIP_DEBUG("setting active_anchor\n");
 	anchor_item->seq = seq->update_id;
 	anchor_item->transform = esp_anchor->transform;
-	memcpy(anchor_item->active_anchor, &esp_anchor->anchors[0], hash_length);
+	memcpy( (char *)anchor_item->active_anchor, (char *)&esp_anchor->anchors[0], hash_length);
 
 	// check if next_anchor is set
 	if (memcmp(&esp_anchor->anchors[hash_length], cmp_value, hash_length))
@@ -495,7 +495,7 @@ int esp_prot_conntrack_cache_anchor(struct tuple * tuple, struct hip_seq *seq,
 		HIP_IFEL(!(anchor_item->next_anchor = (unsigned char *)
 				malloc(hash_length)), -1, "failed to allocate memory\n");
 
-		memcpy(anchor_item->next_anchor, &esp_anchor->anchors[hash_length],
+		memcpy( (char *)anchor_item->next_anchor, (char *)&esp_anchor->anchors[hash_length],
 				hash_length);
 
 	} else
@@ -653,9 +653,9 @@ int esp_prot_conntrack_verify(struct esp_tuple *esp_tuple, struct hip_esp *esp)
 			HIP_DEBUG("anchor change occurred, handled now\n");
 
 			// don't copy the next anchor, but the already verified hash
-			memcpy(esp_tuple->active_anchor, ((unsigned char *) esp) + sizeof(struct hip_esp),
+			memcpy( (char *)esp_tuple->active_anchor, ((unsigned char *) esp) + sizeof(struct hip_esp),
 					conntrack_tfm->hash_length);
-			memcpy(esp_tuple->first_active_anchor, esp_tuple->next_anchor,
+			memcpy( (char *)esp_tuple->first_active_anchor, (char *)esp_tuple->next_anchor,
 					conntrack_tfm->hash_length);
 			free(esp_tuple->next_anchor);
 			esp_tuple->next_anchor = NULL;

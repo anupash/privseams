@@ -214,7 +214,7 @@ int main(int argc,char **argv) {
   } else {
     /* printf("using fixed packet\n"); */
     packetlen = sizeof(fixedpacket);
-    memcpy(&packet, fixedpacket, packetlen);
+    memcpy( (char *)&packet, fixedpacket, packetlen);
   }
 
   printf("packetlen = %d\nhexdump of packet:\n\n", packetlen);

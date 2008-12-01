@@ -66,7 +66,7 @@ int hip_query_ha_info(struct in6_addr *hit_our, struct in6_addr *hit_peer,
 	}
 
 	HIP_IFEL(!ha_match, -1, "No HA match\n");
-	memcpy(&ha_cache, ha_match, sizeof(ha_cache));
+	memcpy( (char *)&ha_cache, (char *)ha_match, sizeof(ha_cache));
 
 copy_ha:
 
@@ -75,10 +75,10 @@ copy_ha:
 	if (hit_peer)
 		ipv6_addr_copy(hit_peer, &ha_match->hit_peer);
 	if (lsi_our)
-		memcpy(lsi_our, &ha_match->lsi_our,
+	  memcpy( (char *)lsi_our, (char *)&ha_match->lsi_our,
 		       sizeof(hip_lsi_t));
 	if (lsi_peer)
-		memcpy(lsi_peer, &ha_match->lsi_peer,
+	  memcpy( (char *)lsi_peer, (char *)&ha_match->lsi_peer,
 		       sizeof(hip_lsi_t));
 	if (loc_our)
 		ipv6_addr_copy(loc_our, &ha_match->ip_our);
@@ -101,7 +101,7 @@ int hip_fw_get_default_lsi(hip_lsi_t *lsi) {
 
 	/* Use cached LSI if possible */
 	if (local_lsi.s_addr != 0) {
-		memcpy(lsi, &local_lsi, sizeof(*lsi));
+	  memcpy( (char *)lsi, (char *)&local_lsi, sizeof(*lsi));
 		goto out_err;
 	}
 
@@ -120,9 +120,9 @@ int hip_fw_get_default_lsi(hip_lsi_t *lsi) {
 
 	HIP_IFEL(!(param = hip_get_param(msg, HIP_PARAM_LSI)), -1,
 		 "Did not find LSI\n");
-	memcpy(&local_lsi, hip_get_param_contents_direct(param),
+	memcpy( (char *)&local_lsi, (char *)hip_get_param_contents_direct(param),
 	       sizeof(local_lsi));
-	memcpy(lsi, &local_lsi, sizeof(*lsi));
+	memcpy( (char *)lsi, (char *)&local_lsi, sizeof(*lsi));
 
 out_err:
         if(msg)
@@ -483,7 +483,7 @@ int reinject_packet(struct in6_addr *src_hit, struct in6_addr *dst_hit,
 	_HIP_DEBUG("      ipOrigTraffic %d \n", ipOrigTraffic);
 
 	msg = (u8 *)HIP_MALLOC(packet_length, 0);
-	memcpy(msg, (m->payload)+ip_hdr_size, packet_length);
+	memcpy( (char *)msg, (char *)(m->payload)+ip_hdr_size, packet_length);
 
 	if (protocol == IPPROTO_ICMP && incoming) {
 		  icmp = (struct icmphdr *)msg;

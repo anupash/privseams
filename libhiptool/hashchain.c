@@ -83,7 +83,7 @@ int hchain_verify(const unsigned char * current_hash, const unsigned char * last
 	HIP_ASSERT(hash_length > 0 && tolerance >= 0);
 
 	// init buffer with the hash we want to verify
-	memcpy(buffer, current_hash, hash_length);
+	memcpy( (char *)buffer, current_hash, hash_length);
 
 	_HIP_HEXDUMP("comparing given hash: ", buffer, hash_length);
 	_HIP_DEBUG("\t<->\n");
@@ -160,7 +160,7 @@ hash_chain_t * hchain_create(hash_function_t hash_function, int hash_length,
 			HIP_IFEL(!(hash_function(last_element->hash, hash_length, hash_value)), -1,
 					"failed to calculate hash\n");
 			// only consider DEFAULT_HASH_LENGTH highest bytes
-			memcpy(current_element->hash, hash_value, hash_length);
+			memcpy( (char *)current_element->hash, hash_value, hash_length);
 		} else
 		{
 			// random bytes as seed
@@ -407,7 +407,7 @@ int concat_n_hash_SHA(unsigned char* hash, unsigned char** parts, int* part_leng
 		return -1;
 	/* copy the parts to the buffer */
 	for(i = 0; i < num_parts; i++){
-		memcpy(buffer + position, parts[i], part_length[i]);
+		memcpy( (char *)buffer + position, parts[i], part_length[i]);
 		position += part_length[i];
 	}
 	HIP_HEXDUMP("Buffer: ", buffer, total_len);

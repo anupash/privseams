@@ -88,7 +88,7 @@ int esp_prot_handle_trigger_update_msg(struct hip_common *msg)
 
 	// set the update anchor
 	//memset(entry->esp_local_update_anchor, 0, MAX_HASH_LENGTH);
-	memcpy(entry->esp_local_update_anchor, esp_prot_anchor, hash_length);
+	memcpy( (char *)entry->esp_local_update_anchor, esp_prot_anchor, hash_length);
 
 	/* this should send an update only containing the mandatory params
 	 * HMAC and HIP_SIGNATURE as well as the ESP_PROT_ANCHOR and the
@@ -162,7 +162,7 @@ int esp_prot_handle_anchor_change_msg(struct hip_common *msg)
 
 		// set update anchor as new active local anchor
 		//memset(entry->esp_local_anchor, 0, MAX_HASH_LENGTH);
-		memcpy(entry->esp_local_anchor, entry->esp_local_update_anchor, hash_length);
+		memcpy( (char *)entry->esp_local_anchor, entry->esp_local_update_anchor, hash_length);
 		memset(entry->esp_local_update_anchor, 0, MAX_HASH_LENGTH);
 
 		HIP_DEBUG("changed update_anchor to local_anchor\n");
@@ -180,7 +180,7 @@ int esp_prot_handle_anchor_change_msg(struct hip_common *msg)
 
 		// set update anchor as new active local anchor
 		//memset(entry->esp_peer_anchor, 0, MAX_HASH_LENGTH);
-		memcpy(entry->esp_peer_anchor, entry->esp_peer_update_anchor, hash_length);
+		memcpy( (char *)entry->esp_peer_anchor, entry->esp_peer_update_anchor, hash_length);
 		memset(entry->esp_peer_update_anchor, 0, MAX_HASH_LENGTH);
 	}
 #endif
@@ -362,7 +362,7 @@ int esp_prot_i2_add_anchor(hip_common_t *i2, hip_ha_t *entry, struct hip_context
 
 			// store local_anchor
 			memset(entry->esp_local_anchor, 0, MAX_HASH_LENGTH);
-			memcpy(entry->esp_local_anchor, anchor, hash_length);
+			memcpy( (char *)entry->esp_local_anchor, anchor, hash_length);
 
 			HIP_HEXDUMP("stored local anchor: ", entry->esp_local_anchor, hash_length);
 
@@ -440,13 +440,13 @@ int esp_prot_i2_handle_anchor(hip_ha_t *entry, struct hip_context *ctx)
 
 					// store peer_anchor
 					memset(entry->esp_peer_anchor, 0, MAX_HASH_LENGTH);
-					memcpy(entry->esp_peer_anchor, &prot_anchor->anchors[0],
+					memcpy( (char *)entry->esp_peer_anchor, &prot_anchor->anchors[0],
 							hash_length);
 
 					// ignore a possible update anchor
 #if 0
 					memset(entry->esp_peer_update_anchor, 0, MAX_HASH_LENGTH);
-					memcpy(entry->esp_peer_update_anchor,
+					memcpy( (char *)entry->esp_peer_update_anchor,
 							&prot_anchor->anchor[hash_length], hash_length);
 #endif
 
@@ -497,7 +497,7 @@ int esp_prot_r2_add_anchor(hip_common_t *r2, hip_ha_t *entry)
 
 			// store local_anchor
 			memset(entry->esp_local_anchor, 0, MAX_HASH_LENGTH);
-			memcpy(entry->esp_local_anchor, anchor, hash_length);
+			memcpy( (char *)entry->esp_local_anchor, anchor, hash_length);
 
 			HIP_HEXDUMP("stored local anchor: ", entry->esp_local_anchor, hash_length);
 		} else
@@ -547,12 +547,12 @@ int esp_prot_r2_handle_anchor(hip_ha_t *entry, struct hip_context *ctx)
 				hash_length = anchor_db_get_anchor_length(entry->esp_prot_transform);
 
 				memset(entry->esp_peer_anchor, 0, MAX_HASH_LENGTH);
-				memcpy(entry->esp_peer_anchor, &prot_anchor->anchors[0], hash_length);
+				memcpy( (char *)entry->esp_peer_anchor, &prot_anchor->anchors[0], hash_length);
 
 				// ignore a possible update anchor
 #if 0
 				memset(entry->esp_peer_update_anchor, 0, MAX_HASH_LENGTH);
-				memcpy(entry->esp_peer_update_anchor,
+				memcpy( (char *)entry->esp_peer_update_anchor,
 						&prot_anchor->anchors[hash_length], hash_length);
 #endif
 
@@ -726,7 +726,7 @@ uint32_t esp_prot_update_handle_anchor(hip_common_t *recv_update, hip_ha_t *entr
 
 			// set the update anchor as the peer's update anchor
 			//memset(entry->esp_peer_update_anchor, 0, MAX_HASH_LENGTH);
-			memcpy(entry->esp_peer_update_anchor, &prot_anchor->anchors[hash_length],
+			memcpy( (char *)entry->esp_peer_update_anchor, &prot_anchor->anchors[hash_length],
 					hash_length);
 			HIP_DEBUG("peer_update_anchor set\n");
 
@@ -739,11 +739,11 @@ uint32_t esp_prot_update_handle_anchor(hip_common_t *recv_update, hip_ha_t *entr
 			HIP_DEBUG("last received esp prot update peer anchor and sent one match\n");
 
 			// track the anchor updates by moving one anchor forward
-			memcpy(entry->esp_peer_anchor, entry->esp_peer_update_anchor, hash_length);
+			memcpy( (char *)entry->esp_peer_anchor, entry->esp_peer_update_anchor, hash_length);
 
 			// set the update anchor as the peer's update anchor
 			//memset(entry->esp_peer_update_anchor, 0, MAX_HASH_LENGTH);
-			memcpy(entry->esp_peer_update_anchor, &prot_anchor->anchors[hash_length],
+			memcpy( (char *)entry->esp_peer_update_anchor, &prot_anchor->anchors[hash_length],
 					hash_length);
 			HIP_DEBUG("peer_update_anchor set\n");
 		}

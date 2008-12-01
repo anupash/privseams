@@ -236,7 +236,7 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 						malloc(hash_length)), -1, "failed to allocate memory\n");
 
 				// set anchor for inbound SA
-				memcpy(entry->next_anchor, esp_prot_anchor, hash_length);
+				memcpy( (char *)entry->next_anchor, (char *)esp_prot_anchor, hash_length);
 
 				HIP_DEBUG("next_anchor set for inbound SA\n");
 
@@ -280,7 +280,7 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 						malloc(hash_length)), -1, "failed to allocate memory\n");
 
 				// set anchor for inbound SA
-				memcpy(entry->active_anchor, esp_prot_anchor, hash_length);
+				memcpy( (char *)entry->active_anchor, (char *)esp_prot_anchor, hash_length);
 
 				entry->esp_prot_tolerance = DEFAULT_VERIFY_WINDOW;
 			} else
@@ -350,7 +350,7 @@ int esp_prot_add_hash(unsigned char *out_hash, int *out_length,
 					"unable to retrieve hash element from hash-chain\n");
 		}
 
-		memcpy(out_hash, tmp_hash, *out_length);
+		memcpy( (char *)out_hash, (char *)tmp_hash, *out_length);
 
 		HIP_HEXDUMP("added esp protection hash: ", out_hash, *out_length);
 
@@ -391,7 +391,7 @@ int esp_prot_verify(hip_sa_entry_t *entry, unsigned char *hash_value)
 		{
 			HIP_DEBUG("anchor change occurred, handled now\n");
 
-			memcpy(entry->active_anchor, entry->next_anchor, hash_length);
+			memcpy( (char *)entry->active_anchor, (char *)entry->next_anchor, hash_length);
 			free(entry->next_anchor);
 			entry->next_anchor = NULL;
 
@@ -439,7 +439,7 @@ int esp_prot_verify_hash(hash_function_t hash_function, int hash_length,
 			hash_length, tolerance))
 	{
 		// this will allow only increasing elements to be accepted
-		memcpy(active_anchor, hash_value, hash_length);
+	        memcpy( (char *)active_anchor, (char *)hash_value, hash_length);
 
 		HIP_DEBUG("hash matches element in active hash-chain\n");
 

@@ -1062,7 +1062,7 @@ int hip_icmp_recvmsg(int sockfd) {
 
 	/* Get the timestamp as the sent time*/
 	ptr = (struct timeval *)(icmph + 1);
-	memcpy(stval, ptr, sizeof(struct timeval));
+	memcpy( (char *)stval, ptr, sizeof(struct timeval));
 
 	/* gather addresses */
 	memcpy (src, &src_sin6.sin6_addr, sizeof (struct in6_addr));

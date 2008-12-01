@@ -55,7 +55,7 @@ int filter_address(struct sockaddr *addr)
 	char s[INET6_ADDRSTRLEN];
 	struct in6_addr *a_in6 = NULL;
 	in_addr_t a_in;
-	
+	HIP_DEBUG("Filtering the address family %d \n", addr->sa_family); 
 	switch (addr->sa_family) {
 	case AF_INET6:
 	        a_in6 = hip_cast_sa_addr(addr);
@@ -246,15 +246,15 @@ void add_address_to_list(struct sockaddr *addr, int ifindex)
 		temp.sin6_family = AF_INET6;
 		IPV4_TO_IPV6_MAP(&(((struct sockaddr_in *)addr)->sin_addr),
 				 &temp.sin6_addr);
-	        memcpy(&n->addr, &temp, hip_sockaddr_len(&temp));
+	        memcpy( (char *)&n->addr, (char *)&temp, hip_sockaddr_len(&temp));
 	} else {
-		memcpy(&n->addr, addr, hip_sockaddr_len(addr));
+	        memcpy( (char *)&n->addr, (char *)addr, hip_sockaddr_len(addr));
 	}
 	
         /* Add secret to address. Used with openDHT removable puts. */        
         memset(tmp_secret, 0, sizeof(tmp_secret));
         err_rand = RAND_bytes(tmp_secret,40);
-        memcpy(&n->secret, &tmp_secret, sizeof(tmp_secret));
+        memcpy( (char *)&n->secret, (char *)&tmp_secret, sizeof(tmp_secret));
 
         /* Clear the timestamp, initially 0 so everything will be sent. */
         memset(&n->timestamp, 0, sizeof(time_t));
@@ -280,7 +280,7 @@ static void delete_address_from_list(struct sockaddr *addr, int ifindex)
             IPV4_TO_IPV6_MAP(((struct in_addr *) hip_cast_sa_addr(addr)),
                              ((struct in6_addr *) hip_cast_sa_addr(&addr_sin6)));
 	} else if (addr && addr->sa_family == AF_INET6) {
-            memcpy(&addr_sin6, addr, sizeof(addr_sin6));
+	    memcpy( (char *)&addr_sin6, (char *)addr, sizeof(addr_sin6));
 	}       
 
         HIP_DEBUG_HIT("deleting_address=",hip_cast_sa_addr(&addr_sin6));
@@ -478,7 +478,7 @@ int static add_address(const struct nlmsghdr *h, int len, void *arg)
 		if (tb[IFA_LOCAL])
 		{
 			addr->sa_family = ifa->ifa_family;
-			memcpy(hip_cast_sa_addr(addr), RTA_DATA(tb[IFA_LOCAL]),
+			memcpy( (char *)hip_cast_sa_addr(addr), (char *)RTA_DATA(tb[IFA_LOCAL]),
 			       RTA_PAYLOAD(tb[IFA_LOCAL]));
                                 add_address_to_list(addr, ifa->ifa_index);
                                 _HIP_DEBUG("ifindex=%d\n", ifa->ifa_index);
@@ -782,7 +782,7 @@ int hip_netdev_trigger_bex(hip_hit_t *src_hit,
 
 	if (hip_use_i3) {
 		struct in6_addr lpback = IN6ADDR_LOOPBACK_INIT;
-		memcpy(dst_addr, &lpback, sizeof(struct in6_addr));
+		memcpy( (char *)dst_addr, (char *)&lpback, sizeof(struct in6_addr));
 		err = 0;
 	}
 
@@ -878,7 +878,7 @@ send_i1:
 		ipv6_addr_copy(&entry->local_address, src_addr);
 	}
 
-	memcpy(hip_cast_sa_addr(addr), &entry->local_address,
+	memcpy( (char *)hip_cast_sa_addr(addr), (char *)&entry->local_address,
 	       hip_sa_addr_len(addr));
 
 	HIP_DEBUG_HIT("our hit", &entry->hit_our);
@@ -1087,7 +1087,7 @@ int hip_netdev_event(const struct nlmsghdr *msg, int len, void *arg)
 			if (!tb[IFA_LOCAL])
 				continue;
 			addr->sa_family = ifa->ifa_family;
-			memcpy(hip_cast_sa_addr(addr), RTA_DATA(tb[IFA_LOCAL]),
+			memcpy( (char *)hip_cast_sa_addr(addr), (char *)RTA_DATA(tb[IFA_LOCAL]),
 			       RTA_PAYLOAD(tb[IFA_LOCAL]) );
 			HIP_DEBUG("Address event=%s ifindex=%d\n",
 				  is_add ? "add" : "del", ifa->ifa_index);

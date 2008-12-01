@@ -126,8 +126,8 @@ int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
 			tmpl->saddr.a4 = tmpl_saddr->s6_addr32[3];
 			tmpl->id.daddr.a4 = tmpl_daddr->s6_addr32[3];
 		} else {
-			memcpy(&tmpl->saddr, tmpl_saddr, sizeof(tmpl->saddr));
-			memcpy(&tmpl->id.daddr, tmpl_daddr, sizeof(tmpl->id.daddr));
+			memcpy( (char *)&tmpl->saddr, tmpl_saddr, sizeof(tmpl->saddr));
+			memcpy( (char *)&tmpl->id.daddr, tmpl_daddr, sizeof(tmpl->id.daddr));
 		}
 	}
 
@@ -139,7 +139,7 @@ int hip_xfrm_policy_modify(struct rtnl_handle *rth, int cmd,
 
 	{
 		/*void *x = malloc(sizeof(req.n) * 10);
-		memcpy(x, &req.n, sizeof(req.n));*/
+		memcpy( (char *)x, &req.n, sizeof(req.n));*/
 		HIP_IFEL((netlink_talk(rth, &req.n, 0, 0, NULL, NULL, NULL) < 0), -1,
 			 "netlink_talk failed\n");
 		///if (x)
@@ -298,8 +298,8 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 		req.xsinfo.id.daddr.a4 = daddr->s6_addr32[3];
 		req.xsinfo.family = AF_INET;
 	} else {
-		memcpy(&req.xsinfo.saddr, saddr, sizeof(req.xsinfo.saddr));
-	        memcpy(&req.xsinfo.id.daddr, daddr, sizeof(req.xsinfo.id.daddr));
+		memcpy( (char *)&req.xsinfo.saddr, saddr, sizeof(req.xsinfo.saddr));
+	        memcpy( (char *)&req.xsinfo.id.daddr, daddr, sizeof(req.xsinfo.id.daddr));
 		req.xsinfo.family = preferred_family;
  	}
 
@@ -312,8 +312,8 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 	req.xsinfo.mode = XFRM_MODE_BEET;
 	req.xsinfo.id.proto = IPPROTO_ESP;
 
-	//memcpy(&req.xsinfo.saddr, saddr, sizeof(req.xsinfo.saddr));
-	//memcpy(&req.xsinfo.id.daddr, daddr, sizeof(req.xsinfo.id.daddr));
+	//memcpy( (char *)&req.xsinfo.saddr, saddr, sizeof(req.xsinfo.saddr));
+	//memcpy( (char *)&req.xsinfo.id.daddr, daddr, sizeof(req.xsinfo.id.daddr));
 	req.xsinfo.id.spi = htonl(spi);
 
 	/* Selector */
@@ -409,7 +409,7 @@ int hip_xfrm_state_delete(struct rtnl_handle *rth,
 	else
 	{
 		HIP_DEBUG("IPV6 SA deletion\n");
-		memcpy(&req.xsid.daddr, peer_addr, sizeof(req.xsid.daddr));
+		memcpy( (char *)&req.xsid.daddr, peer_addr, sizeof(req.xsid.daddr));
 				req.xsid.family = preferred_family;
 	}
 

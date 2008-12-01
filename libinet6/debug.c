@@ -599,7 +599,7 @@ void hip_print_sockaddr(const char *file, int line, const char *function,
       }
       
       if (maxlen == 0) {
-	memcpy(addr_str, default_str, strlen(default_str) + 1);
+	memcpy( (char *)addr_str, default_str, strlen(default_str) + 1);
       } else {
 	if (!inet_ntop(family, addr, addr_str, maxlen)) {
 	  HIP_ERROR("inet_ntop");
