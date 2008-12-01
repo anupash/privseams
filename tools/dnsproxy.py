@@ -167,7 +167,7 @@ class Global:
             if s_ip:
                 gp.server_ip = s_ip
             else:
-                gp.server_ip = '127.0.0.1' # xx fixme
+                gp.server_ip = '127.0.0.53' # xx fixme
 	if gp.server_port == None:
             server_port = env.get('SERVERPORT',None)
             if server_port != None:
@@ -177,7 +177,7 @@ class Global:
 	if gp.bind_ip == None:
             gp.bind_ip = env.get('IP',None)
 	if gp.bind_ip == None:
-            gp.bind_ip = '127.0.0.1'
+            gp.bind_ip = '127.0.0.53'
 	if gp.bind_port == None:
             bind_port = env.get('PORT',None)
             if bind_port != None:
@@ -253,11 +253,15 @@ class Global:
         util.init_wantdown()
         util.init_wantdown_int()        # Keyboard interrupts
         fout = gp.fout
+
+	# Default virtual interface and address for dnsproxy to
+	# avoid problems with other dns forwarders (dnsmasq)
+	os.system("/sbin/ifconfig lo:53 127.0.0.53")
+
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.bind((gp.bind_ip,gp.bind_port))
 
-
-        args0 = {'server': '127.0.0.1',
+        args0 = {'server': '127.0.0.53',
                 }
 
         d2 = DNS.DnsRequest(server=gp.server_ip,port=gp.server_port,timeout=0.2)
