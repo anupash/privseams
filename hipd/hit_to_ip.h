@@ -11,17 +11,19 @@
 /* Fedore Core 3/4 and Enterprise linux 4 is broken. */
 #  include <linux/types.h>
 #endif
-#include <netinet/ip6.h>
+//#include <netinet/ip6.h>
 
 #include "list.h"
 #include "debug.h"
 #include "utils.h"
 
-#define HIT_TO_IP_ZONE "hit-to-ip.infrahip.net"
+#define HIT_TO_IP_ZONE_DEFAULT "hit-to-ip.infrahip.net"
+#define HIT_TO_IP_ZONE_MAX_LEN 256
 
 struct in6_addr *hip_hit_to_ip(hip_hit_t *hit);
 
 void hip_set_hit_to_ip_status(int status);
 int hip_get_hit_to_ip_status(void);
+void hip_hit_to_ip_set(char *zone);
 
 #endif /* HIT_TO_IP_H */

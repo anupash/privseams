@@ -8,8 +8,11 @@
 #include "libinet6/include/netdb.h"
 #include "libinet6/hipconf.h"
 #include <netinet/in.h>
+#include <string.h>
 
 int hip_hit_to_ip_status = 1;
+
+char *hip_hit_to_ip_zone = NULL;
 
 void hip_set_hit_to_ip_status(int status) {
   hip_hit_to_ip_status = status;
@@ -17,6 +20,18 @@ void hip_set_hit_to_ip_status(int status) {
 
 int hip_get_hit_to_ip_status(void) {
   return hip_hit_to_ip_status;
+}
+
+void hip_hit_to_ip_set(char *zone) {
+  char *tmp = hip_hit_to_ip_zone;
+
+//  hip_hit_to_ip_zone = strndup(zone, HIT_TO_IP_ZONE_MAX_LEN); no strndup without _GNU_SOURCE
+
+  
+  hip_hit_to_ip_zone = strdup(zone);
+
+  if (tmp!=NULL)
+	free(tmp);
 }
 
 static char hex_digits[] = {
@@ -32,7 +47,7 @@ char *hip_get_hit_to_ip_hostname(hip_hit_t *hit) {
 	if (hit == NULL)
 		return NULL;
 
-	#define hostname_LEN 64+strlen(HIT_TO_IP_ZONE)+1
+	#define hostname_LEN 64+HIT_TO_IP_ZONE_MAX_LEN+1
 	static char hostname[hostname_LEN];
 
         uint8_t *bytes = hit->s6_addr;
@@ -44,7 +59,10 @@ char *hip_get_hit_to_ip_hostname(hip_hit_t *hit) {
                 *cp++ = hex_digits[(bytes[i] >> 4) & 0x0f];
                 *cp++ = '.';
         }
-	strncpy(cp, HIT_TO_IP_ZONE,hostname_LEN-64);
+	if (hip_hit_to_ip_zone!=NULL)
+		strncpy(cp, hip_hit_to_ip_zone, hostname_LEN-64);
+	else
+		strncpy(cp, HIT_TO_IP_ZONE_DEFAULT,hostname_LEN-64);
 
 	return hostname;
 }
@@ -97,6 +115,6 @@ struct in6_addr *hip_hit_to_ip(hip_hit_t *hit) {
 
 	freeaddrinfo(result);
 
-//	free(hit_to_ip_hostname);
+	free(hit_to_ip_hostname);
 	return retval;	
 }

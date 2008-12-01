@@ -121,6 +121,7 @@
 #define ACTION_BUDDIES 29
 #define ACTION_NSUPDATE 30
 #define ACTION_HIT_TO_IP 31
+#define ACTION_HIT_TO_IP_SET 32
 #define ACTION_MAX 32 /* exclusive */
 
 /**
@@ -166,6 +167,7 @@
 #define TYPE_SAVAHR        31 /* SAVA router HIT IP pair */
 #define TYPE_NSUPDATE      32
 #define TYPE_HIT_TO_IP     33
+#define TYPE_HIT_TO_IP_SET 34
 #define TYPE_MAX           34 /* exclusive */
 
 /* #define TYPE_RELAY         22 */
@@ -185,6 +187,9 @@
 # add service rvs   # the host acts as HIP rendezvous (see also /etc/hip/relay_config)\n\
 # add server rvs [RVS-HIT] <RVS-IP-OR-HOSTNAME> <lifetime-secs> # register to rendezvous server\n\
 # heartbeat 10 # send ICMPv6 messages inside HIP tunnels\n\
+# hit-to-ip on # resolve HITs to locators in dynamic DNS zone\n\
+# hit-to-ip set hit-to-ip.infrahip.net. # resolve HITs to locators in dynamic DNS zone\n\
+# dnsupdate on # send dynamic DNS updates\n\
 # add server rvs hiprvs.infrahip.net 50000 # Register to free RVS at infrahip\n\
 # dht gw hipdht.infrahip.net 5851 60000 # dht gw to host port ttl\n\
 # opendht on # turn DHT support on (dht gw is not enough)\n\
@@ -202,6 +207,38 @@ debug medium        # debug verbosity: all, medium or none\n"
 # The aliases are optional.  Examples:\n\
 #2001:1e:361f:8a55:6730:6f82:ef36:2fff kyle kyle.com # This is a HIT with alias\n\
 #2001:17:53ab:9ff1:3cba:15f:86d6:ea2e kenny       # This is a HIT without alias\n"
+
+#define HIPD_NSUPDATE_CONF_FILE     "/etc/hip/nsupdate.conf"
+#define HIPD_NSUPDATE_CONF_FILE_EX \
+"##########################################################\n\
+# configuration examples\n\
+#\n\
+# update records for 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net.\n\
+# $HIT_TO_IP_ZONE = 'hit-to-ip.infrahip.net.';\n\
+# or in some other zone\n\
+# $HIT_TO_IP_ZONE = 'hit-to-ip.example.org';\n\
+\n\
+# update is sent to SOA if server empty\n\
+# $SERVER = '';\n\
+# or you may define it \n\
+# $SERVER = 'ns.example.net.';\n\
+\n\
+# name of key if you configured it on the server\n\
+# please also chown this file to nobody and chmod 400\n\
+# $KEY_NAME='key.hit-to-ip';\n\
+# $KEY_NAME = '';\n\
+\n\
+# secret of that key\n\
+# $KEY_SECRET='Ousu6700S9sfYSL4UIKtvnxY4FKwYdgXrnEgDAu/rmUAoyBGFwGs0eY38KmYGLT1UbcL/O0igGFpm+NwGftdEQ==';\n\
+# $KEY_SECRET = '';\n\
+\n\
+# executed to update the records\n\
+# $NSUPDATE_PATH = '|/usr/bin/nsupdate';\n\
+# or can be redirected to a file\n\
+# $NSUPDATE_PATH = '>>/tmp/nsupdate.txt';\n\
+###########################################################"
+
+
 
 /**
  * A list of prototypes for handler functions.
@@ -257,6 +294,10 @@ int hip_conf_handle_nsupdate(hip_common_t *msg,
 			     const char *opt[],
 			     int optc, int send_only);
 int hip_conf_handle_hit_to_ip(hip_common_t *msg,
+			     int action,
+			     const char *opt[],
+			     int optc, int send_only);
+int hip_conf_handle_hit_to_ip_set(hip_common_t *msg,
 			     int action,
 			     const char *opt[],
 			     int optc, int send_only);

@@ -3714,17 +3714,20 @@ combo-newgroup=&lt;create new...&gt;
     <title>Dynamic DNS Support (Experimental!)</title>
     <itemizedlist>
     <listitem><para>
-	With dynamic DNS support, the hip daemon maintains DNS records for domain name m.y.h.i.t.i.n.r.e.v.e.r.s.e.n.o.t.a.t.i.o.n.hit-to-ip.infrahip.net and tries to
-	resolve such domain names when connecting to unknown HITs
+	Our goal is to be able to communicate with a host if we know only its HIT. When an application sends a packet to ORCHID ip6 address, it is received by the HIP 
+	daemon. Unless it has performed base exchange before, daemon needs to find out the current location of the host. Currently HIP daemon performs resolution in the 
+	following order: 
+	<itemizedlist>
+		<listitem><para>in /etc/hipd/hosts</para></listitem>
+		<listitem><para>in hit-to-ip.infrahip.net zone</para></listitem>
+		<listitem><para>in OpenDHT</para></listitem>
+	</itemizedlist>
+	With "hipconf hit-to-ip on" it uses IP addresses of 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net
+	to contact host with HIT 2001:1e:574e:2505:264a:b360:d8cc:1d75
      </para></listitem>
     <listitem><para>
-           Once you start hipd, it will call nsupdate.pl with HIT and IP address for every HIT of your host. It will be called on address changes as well. Currently we are 
-using zone hit-to-ip.infrahip.net for experiments, that has HIT in SOA resource record, which causes HIP base exchange with its master dns server first and then update is 
-submitted via HIP. This allows to authenticate the clients and allow to modify location information only about their own identifiers.
-    </para></listitem>
-
-    <listitem><para>
-    Example of a generated script for nsupdate at the host with HIT 2001:1e:574e:2505:264a:b360:d8cc:1d75 and IP addresses 193.167.187.1 and 2001:708:140:220:215:60ff:fe9f:60c4
+	With "hipconf nsupdate on" the HIP daemon also maintains records in hit-to-ip.infrahip.net. Once you start hipd, it will call nsupdate.pl with HIT and IP 
+	address for every HIT of your host. It is executed on addresses changes later on. There is an example of the script fed to nsupdate:
    <programlisting>
 update delete 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net
 update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net 60 IN A 193.167.187.1
@@ -3733,6 +3736,11 @@ send
   </programlisting>
     </para></listitem>
 
+    <listitem><para>
+	hit-to-ip.infrahip.net used for experiments has HIT in SOA record, therefore updates are sent to HIT and cause HIP base exchange
+	with the master DNS server. You system should resolve its location by HIT. After the base exchange update is submitted via HIP,
+	which allows to authenticate the clients and permit updates only of their own location.
+    </para></listitem>
     </itemizedlist>
   </chapter>
 

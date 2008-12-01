@@ -207,6 +207,7 @@
 #define SO_HIP_NSUPDATE_ON                      180
 #define SO_HIP_HIT_TO_IP_OFF                    181
 #define SO_HIP_HIT_TO_IP_ON                     182
+#define SO_HIP_HIT_TO_IP_SET                    183
 
 /** @} */
 /* inclusive */
