@@ -706,9 +706,9 @@ hip_sava_peer_info_t * hip_sava_get_key_params(hip_common_t * msg) {
 
   struct hip_crypto_key *auth_key = NULL;
   
-  //peer_info = (hip_sava_peer_info_t *)malloc(sizeof(hip_sava_peer_info_t));
+  peer_info = (hip_sava_peer_info_t *)malloc(sizeof(hip_sava_peer_info_t));
   
-  //memset (peer_info, 0, sizeof(hip_sava_peer_info_t));
+  memset (peer_info, 0, sizeof(hip_sava_peer_info_t));
   
   param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_KEYS);
 
@@ -726,6 +726,7 @@ hip_sava_peer_info_t * hip_sava_get_key_params(hip_common_t * msg) {
   HIP_DEBUG("ealg value is %d \n", ealg);
 
   peer_info->ip_enc_key = auth_key;
+
   peer_info->ealg = ealg;
     
   return peer_info;
@@ -1543,13 +1544,16 @@ int hip_sava_handle_bex_completed (struct in6_addr * src, struct in6_addr * hitr
     HIP_DEBUG("Secret key acquired. Lets encrypt the src IP address \n");
 		  
     info_entry = hip_sava_get_key_params(msg);
-    
+    HIP_DEBUG("info_entry null? %s \n", (info_entry == NULL?"true":"false"));
     enc_addr = hip_sava_auth_ip(src, info_entry);
+    HIP_DEBUG("Address encrypted \n");
 
 #ifdef CONFIG_SAVAH_IP_OPTION
+    HIP_DEBUG("CONFIG_SAVAH_IP_OPTION");
     //Since the IP option have space for 128 bits we can store the whole IPv6 address
     //enc_addr_no = map_enc_ip_addr_to_network_order(enc_addr, 6);
 #else
+    HIP_DEBUG("CONFIG_SAVAH_IP_OPTION");
     if(IN6_IS_ADDR_V4MAPPED(src))
       enc_addr_no = map_enc_ip_addr_to_network_order(enc_addr, 4);
     else 
