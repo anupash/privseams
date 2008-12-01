@@ -2,5 +2,6 @@
 
 invoke-rc.d --force --quiet dnshipproxy stop 
 
+exit 0
 
 

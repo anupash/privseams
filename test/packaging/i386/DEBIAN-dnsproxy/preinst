@@ -1,9 +1,9 @@
 #!/bin/sh
 
-if invoke-rc.d --quiet dnshipproxy status
-then
-    invoke-rc.d --force --quiet dnshipproxy stop 
-fi
+#if invoke-rc.d --quiet dnshipproxy status
+#then
+#    invoke-rc.d --force --quiet dnshipproxy stop 
+#fi
 
 if test -x /etc/init.d/dnshipproxy
 then
