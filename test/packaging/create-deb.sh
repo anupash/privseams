@@ -78,7 +78,7 @@ copy()
 
     $SUDO cp $@
     $SUDO chown $DEFAULT_OWNER:$DEFAULT_GROUP $3
-    $SUDO chmod $DEFAULT_MODE $3
+    #$SUDO chmod $DEFAULT_MODE $3
 }
 
 remove()
