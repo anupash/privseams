@@ -818,7 +818,7 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 			//from RVS, answer to I
 			r1_dst_addr =  dst_ip;
 			if(i1_info->src_port)
-				// R and RVS is in the UDP mode or I send UDP to RVS with incoming port 50500
+				// R and RVS is in the UDP mode or I send UDP to RVS with incoming port hip_get_nat_udp_port()
 				r1_dst_port =  hip_get_nat_udp_port();
 			else
 				// connection between R & RVS is in hip raw mode
@@ -906,7 +906,7 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 	}
 #endif
 
-	/* R1 is send on UDP if R1 destination port is 50500. This is if:
+	/* R1 is send on UDP if R1 destination port is hip_get_nat_udp_port(). This is if:
 	   a) the I1 was received on UDP.
 	   b) the received I1 packet had a RELAY_FROM parameter. */
 	if(r1_dst_port)
@@ -1417,7 +1417,7 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	cmsg->cmsg_type = IP_PKTINFO;
 	pkt_info = (struct in_pktinfo *) CMSG_DATA(cmsg);
 	pkt_info->ipi_addr.s_addr = src4.sin_addr.s_addr;
-
+	
 	memset(&hdr, 0, sizeof(hdr)); /* fixes bug id 621 */
 
 	hdr.msg_name = &dst4;

@@ -1113,7 +1113,7 @@ int hip_handle_r1(hip_common_t *r1, in6_addr_t *r1_saddr, in6_addr_t *r1_daddr,
 			 "Verification of R1 signature failed\n");
         }
 
-	/* R1 packet had destination port 50500, which means that the peer is
+	/* R1 packet had destination port hip_get_nat_udp_port(), which means that the peer is
 	   behind NAT. We set NAT mode "on" and set the send funtion to
 	   "hip_send_udp". The client UDP port is not stored until the handling
 	   of R2 packet. Don't know if the entry is already locked... */
@@ -1898,7 +1898,7 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		hip_init_us(entry, &i2->hitr);
 #endif
 	}
-	/* If the incoming I2 packet has 50500 as destination port, NAT
+	/* If the incoming I2 packet has hip_get_nat_udp_port() as destination port, NAT
 	   mode is set on for the host association, I2 source port is
 	   stored as the peer UDP port and send function is set to
 	   "hip_send_udp()". Note that we must store the port not until
@@ -3033,7 +3033,7 @@ int hip_handle_notify(const struct hip_common *notify,
 				       sizeof(in_port_t));
 
 				/* If port is zero (the responder is not behind
-				   a NAT) we use 50500 as the destination
+				   a NAT) we use hip_get_nat_udp_port() as the destination
 				   port. */
 				if(port == 0) {
 					port = hip_get_nat_udp_port();

@@ -119,7 +119,8 @@
 #define ACTION_HI3 27
 #define ACTION_DNS_PROXY 28
 #define ACTION_BUDDIES 29
-#define ACTION_MAX 30 /* exclusive */
+#define ACTION_NAT_PORT 30
+#define ACTION_MAX 31 /* exclusive */
 
 /**
  * TYPE_ constant list, as an index for each action_handler function.
@@ -161,8 +162,9 @@
 #define TYPE_HI3           28
 #define TYPE_DNS_PROXY     29
 #define TYPE_BUDDIES	   30
-#define TYPE_SAVAHR        31 /* SAVA router HIT IP pair */
-#define TYPE_MAX           32 /* exclusive */
+#define TYPE_NAT_PORT	   31
+#define TYPE_SAVAHR        32 /* SAVA router HIT IP pair */
+#define TYPE_MAX           33 /* exclusive */
 
 /* #define TYPE_RELAY         22 */
 
@@ -218,6 +220,7 @@ int hip_conf_handle_debug(hip_common_t *, int type, const char *opt[], int optc,
 int hip_conf_handle_bos(hip_common_t *, int type, const char *opt[], int optc, int send_only);
 int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[], int optc, int send_only);
 int hip_conf_handle_del(hip_common_t *, int type, const char *opt[], int optc, int send_only);
+int hip_conf_handle_nat_port(hip_common_t *, int type, const char *opt[], int optc, int send_only);
 int hip_conf_handle_nat(hip_common_t *, int type, const char *opt[], int optc, int send_only);
 int hip_conf_handle_locator(hip_common_t *, int type, const char *opt[], int optc, int send_only);
 int hip_conf_handle_puzzle(hip_common_t *, int type, const char *opt[], int optc, int send_only);

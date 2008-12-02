@@ -80,7 +80,15 @@ int hipd_init(int flush_ipsec, int killold);
 int hip_init_host_ids();
 int hip_init_raw_sock_v6(int *hip_raw_sock_v6);
 int hip_init_nat_sock_udp(int *hip_nat_sock_udp);
-int hip_init_nat_sock_udp_data(int *hip_nat_sock_udp_data);
+/**
+ * Creates a UDP socket for NAT traversal.
+ *
+ * @param  hip_nat_sock_udp	a pointer to the UDP socket.
+ * @param  close_		the socket will be closed before recreation
+ * 				if close_ is nonzero
+ * @return zero on success, negative error value on error.
+ */
+int hip_create_nat_sock_udp(int *hip_nat_sock_udp, char close_);
 int init_random_seed();
 void hip_close(int signal);
 void hip_exit(int signal);

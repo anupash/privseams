@@ -699,13 +699,26 @@ int hip_init_icmp_v6(int *icmpsockfd)
  */
 int hip_init_nat_sock_udp(int *hip_nat_sock_udp)
 {
+	HIP_DEBUG("hip_init_nat_sock_udp() invoked.\n");
+
+	return hip_create_nat_sock_udp(&hip_nat_sock_udp, 0);
+}
+
+int hip_create_nat_sock_udp(int *hip_nat_sock_udp, char close_)
+{
 	int on = 1, err = 0;
 	int off = 0;
 	int encap_on = HIP_UDP_ENCAP_ESPINUDP;
 	struct sockaddr_in myaddr;
-
-	HIP_DEBUG("hip_init_nat_sock_udp() invoked.\n");
-
+	
+	HIP_DEBUG("hip_create_nat_sock_udp() invoked.\n");
+	
+	if (close_)
+	{
+		err = close(*hip_nat_sock_udp);
+		HIP_IFEL(err, -1, "closing the socket failed\n");
+	}
+	
 	if((*hip_nat_sock_udp = socket(AF_INET, SOCK_DGRAM, 0))<0)
 	{
 		HIP_ERROR("Can not open socket for UDP\n");
@@ -716,20 +729,20 @@ int hip_init_nat_sock_udp(int *hip_nat_sock_udp)
 	/* see bug id 212 why RECV_ERR is off */
 	err = setsockopt(*hip_nat_sock_udp, IPPROTO_IP, IP_RECVERR, &off, sizeof(on));
 	HIP_IFEL(err, -1, "setsockopt udp recverr failed\n");
-#ifndef CONFIG_HIP_OPENWRT
+	#ifndef CONFIG_HIP_OPENWRT
 	err = setsockopt(*hip_nat_sock_udp, SOL_UDP, HIP_UDP_ENCAP, &encap_on, sizeof(encap_on));
 	HIP_IFEL(err, -1, "setsockopt udp encap failed\n");
-#endif
+	#endif
 	err = setsockopt(*hip_nat_sock_udp, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
 	HIP_IFEL(err, -1, "setsockopt udp reuseaddr failed\n");
 	err = setsockopt(*hip_nat_sock_udp, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on));
 	HIP_IFEL(err, -1, "setsockopt udp reuseaddr failed\n");
-
+	
 	myaddr.sin_family=AF_INET;
 	/** @todo Change this inaddr_any -- Abi */
 	myaddr.sin_addr.s_addr = INADDR_ANY;
 	myaddr.sin_port=htons(hip_get_nat_udp_port());
-
+	
 	err = bind(*hip_nat_sock_udp, (struct sockaddr *)&myaddr, sizeof(myaddr));
 	if (err < 0)
 	{
@@ -737,10 +750,10 @@ int hip_init_nat_sock_udp(int *hip_nat_sock_udp)
 		err = -1;
 		goto out_err;
 	}
-
+	
 	HIP_DEBUG_INADDR("UDP socket created and bound to addr", &myaddr.sin_addr.s_addr);
 	return 0;
-
+	
 out_err:
 	return err;
 }

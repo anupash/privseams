@@ -129,6 +129,7 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc, 
 	hip_conf_handle_hi3,
 	hip_conf_handle_get_dnsproxy,
 	hip_conf_handle_buddies_toggle,
+	hip_conf_handle_nat_port,
 	NULL /* run */
 };
 
@@ -165,6 +166,8 @@ int hip_conf_get_action(char *text)
 		ret = ACTION_INC;
 	else if (!strcmp("dec", text))
 		ret = ACTION_DEC;
+	else if (!strcmp("nat port", text))
+		ret = ACTION_NAT_PORT;
 	else if (!strcmp("nat", text))
 		ret = ACTION_NAT;
 	else if (!strcmp("bos", text))
@@ -231,7 +234,7 @@ int hip_conf_check_action_argc(int action) {
 		break;
 	case ACTION_ADD: case ACTION_DEL: case ACTION_SET: case ACTION_INC:
 	case ACTION_GET: case ACTION_RUN: case ACTION_LOAD: case ACTION_DHT:
-	case ACTION_HA: case ACTION_HANDOFF: case ACTION_TRANSORDER:
+	case ACTION_HA: case ACTION_HANDOFF: case ACTION_TRANSORDER: case ACTION_NAT_PORT:
 		count = 2;
 		break;
 #ifdef CONFIG_HIP_HIPPROXY
@@ -275,7 +278,12 @@ int hip_conf_get_type(char *text,char *argv[]) {
 	else if ((!strcmp("peer_hit", text)) && (strcmp("rst",argv[1])==0))
 		ret = TYPE_RST;
 	else if	(strcmp("nat",argv[1])==0)
-		ret = TYPE_NAT;
+	{
+		if (argv[2] && strcmp("port", argv[2]) == 0)
+			ret = TYPE_NAT_PORT;
+		else
+			ret = TYPE_NAT;
+	}
         else if (strcmp("locator", argv[1])==0)
                 ret = TYPE_LOCATOR;
 	/* Tao Wan added tcptimeout on 08.Jan.2008 */
@@ -353,6 +361,7 @@ int hip_conf_get_type_arg(int action)
 	case ACTION_ADD:
 	case ACTION_DEL:
 	case ACTION_NEW:
+	case ACTION_NAT_PORT:
 	case ACTION_NAT:
 	case ACTION_INC:
 	case ACTION_DEC:
@@ -1151,6 +1160,44 @@ int hip_conf_handle_bos(hip_common_t *msg, int action,
 }
 
 /**
+ * Handles the hipconf commands where the type is @c nat port.
+ *
+ * @param msg    a pointer to the buffer where the message for hipd will
+ *               be written.
+ * @param action the numeric action identifier for the action to be performed.
+ * @param opt    an array of pointers to the command line arguments after
+ *               the action and type.
+ * @param optc   the number of elements in the array (@b 0).
+ * @return       zero on success, or negative error value on error.
+ */
+
+int hip_conf_handle_nat_port(hip_common_t * msg, int action, 
+			     const char *opt[], int optc, int send_only)
+{
+	int err = 0;
+	
+	in_port_t port = (in_port_t)atoi(opt[0]);
+	if (port < 0 || port > 65535) 
+		goto inv_arg;		
+
+	HIP_IFEL(hip_build_param_nat_port(msg, port), -1,
+		"Failed to build nat port parameter.: %s\n", strerror(err));
+	
+	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_SET_NAT_PORT, 0), -1, 
+		"Failed to build user message header.: %s\n", strerror(err));
+	
+	goto out_err;
+
+inv_arg:
+	HIP_ERROR("Invalid argument\n");
+	err = -EINVAL;
+	     
+out_err:
+     return err;
+}
+
+
+/**
  * Handles the hipconf commands where the type is @c nat.
  *
  * @param msg    a pointer to the buffer where the message for hipd will
@@ -1167,12 +1214,10 @@ int hip_conf_handle_nat(hip_common_t *msg, int action,
 	int err = 0;
 	int status = 0;
 	in6_addr_t hit;
-
- //    if (!strcmp("on",opt[0]))
+	
 	if (!strcmp("plain-udp",opt[0]))
 	{
 		memset(&hit,0,sizeof(in6_addr_t));
-		//  status = SO_HIP_SET_NAT_ON;
 		status = SO_HIP_SET_NAT_PLAIN_UDP;
 	} else if (!strcmp("none",opt[0]))
 	{
@@ -1182,24 +1227,8 @@ int hip_conf_handle_nat(hip_common_t *msg, int action,
 	{
 		memset(&hit,0,sizeof(struct in6_addr));
 		status = SO_HIP_SET_NAT_ICE_UDP;
-	} else if (!strcmp("port",opt[0]))
-	{
-		if (opt[1] == '\0')
-		{
-			HIP_ERROR("Invalid argument\n");
-			err = -EINVAL;
-			goto out_err;
-		}
-	
-		in_port_t port = (in_port_t)atoi(opt[1]);
-		if (port < 0 || port > 65535) {
-			HIP_ERROR("Invalid argument\n");
-			err = -EINVAL;
-			goto out_err;
-		}
-
-		hip_set_nat_udp_port(port);
 	}
+
 #if 0 /* Not used currently */
      else {
 	  ret = inet_pton(AF_INET6, opt[0], &hit);
@@ -1222,10 +1251,10 @@ int hip_conf_handle_nat(hip_common_t *msg, int action,
 	      "build param hit failed: %s\n", strerror(err));
 #endif
 
-     HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, 
-	      "Failed to build user message header.: %s\n", strerror(err));
-
- out_err:
+	HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, 
+		"Failed to build user message header.: %s\n", strerror(err));
+     
+out_err:
      return err;
 
 }

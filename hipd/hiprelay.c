@@ -489,7 +489,7 @@ int hip_relay_rvs(const hip_common_t *i1, const in6_addr_t *i1_saddr,
 	HIP_DEBUG("I1 source port: %u, destination port: %u\n",
 		  i1_info->src_port, i1_info->dst_port);
 		
-	/* If the incoming I1 packet was destined to port 50500, we know that
+	/* If the incoming I1 packet was destined to port hip_get_nat_udp_port(), we know that
 	   there is a NAT between (I->NAT->RVS->R). 
 	   if(i1_info->dst_port == hip_get_nat_udp_port()) {
 	   builder_function = hip_build_param_relay_from;
@@ -839,7 +839,7 @@ int hip_relay_forward_I(const hip_common_t *i1, const in6_addr_t *i1_saddr,
 	HIP_DEBUG("I1 source port: %u, destination port: %u\n",
 		  i1_info->src_port, i1_info->dst_port);
 		
-	/* If the incoming I1 packet was destined to port 50500, we know that
+	/* If the incoming I1 packet was destined to port hip_get_nat_udp_port(), we know that
 	   there is a NAT between (I->NAT->RVS->R). */
 	// if(i1_info->dst_port == hip_get_nat_udp_port()) {
 	builder_function = hip_build_param_relay_from;

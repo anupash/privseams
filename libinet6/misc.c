@@ -2758,7 +2758,7 @@ int hip_set_nat_udp_port(in_port_t port)
 
 	HIP_DEBUG("set nat udp port %d\n", port);
 	hip_nat_udp_port = port;
-
+	
 out_err:
 	return err;
 }

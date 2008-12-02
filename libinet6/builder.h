@@ -284,4 +284,13 @@ int hip_build_param_nat_transform(struct hip_common *msg,
 int hip_build_param_reg_failed(struct hip_common *msg, uint8_t failure_type,
 			       uint8_t *type_list, int type_count);
 
+/**
+ * Builds NAT port parameter
+ *
+ * @param msg	a pointer to a HIP packet common header
+ * @param port	NAT port number
+ * @return	zero on success, non-zero otherwise.
+ */
+int hip_build_param_nat_port(hip_common_t *msg, const in_port_t port);
+
 #endif /* HIP_BUILDER */
