@@ -4,12 +4,12 @@ Release: 1
 Summary: HIP IPsec key management and mobility daemon.
 URL: http://infrahip.hiit.fi/hipl/
 Source: http://infrahip.hiit.fi/hipl/release/sources/%{version}/hipl-%{version}.tar.gz
-Packager: hipl-dev@freelists.org
+Packager: miika@iki.fi
 Vendor: InfraHIP
-License: GPL
+License: GPLv2
 Group: System Environment/Kernel
 Requires: openssl gtk2 libxml2 glib2 iptables-devel
-BuildRequires: openssl-devel gtk2-devel libxml2-devel glib2-devel iptables-devel xmlto libtool libcap-devel 
+BuildRequires: openssl-devel gtk2-devel libxml2-devel glib2-devel iptables-devel xmlto libtool libcap-devel sqlite-devel autoconf automake xmlto rpmbuild uuid-devel
 ExclusiveOS: linux
 BuildRoot: %{_tmppath}/%{name}-%{version}-root
 Prefix: /usr
@@ -64,10 +64,11 @@ make -C doc all
 %package lib
 Summary: hip library files
 Group: System Environment/Kernel
+Requires: openssl libxml2 gtk2 iptables libcap sqlite uuid
 %description lib
 
 %package daemon
-Requires: hipl-lib
+Requires: hipl-lib iproute perl-Net-IP perl-Net-DNS perl-Socket6 perl-IO-Socket-INET6 # miredo
 Summary: hip daemon files
 Group: System Environment/Kernel
 %description daemon
@@ -163,6 +164,10 @@ install -m 700 tools/dnshipproxy %{buildroot}%{prefix}/sbin/dnshipproxy
 /sbin/chkconfig --add dnshipproxy
 /sbin/chkconfig --level 2 dnshipproxy on
 /sbin/service dnshipproxy start
+/bin/netstat -lanu|/bin/awk '$4 ~ /:53$/ {print $4}'|/bin/grep -q 53 && \
+/bin/echo "*** Warning: DNS software detected running on port 53" && \
+/bin/echo "*** Warning: HIP DNS proxy overrides system default DNS server" && \
+/bin/echo "*** Warning: Check HIPL manual on DNS proxy for further info"
 
 %preun daemon
 /sbin/service hipd stop
@@ -174,7 +179,7 @@ install -m 700 tools/dnshipproxy %{buildroot}%{prefix}/sbin/dnshipproxy
 #/etc/rc.d/init.d/hipfw stop
 
 %preun dnsproxy
-/sbin/service dnshiproxy stop
+/sbin/service dnshipproxy stop
 /sbin/chkconfig --del dnshipproxy
 
 %clean
@@ -198,6 +203,7 @@ rm -rf %{buildroot}
 %{python_sitelib}/parsehipkey
 %{python_sitelib}/DNS
 %defattr(755,root,root)
+%config /etc/rc.d/init.d/dnshipproxy
 
 %files tools
 %{prefix}/sbin/hipconf

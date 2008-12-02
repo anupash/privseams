@@ -24,9 +24,9 @@ links:
 	$(LN) $(LIBINET6)/state.h
 	$(LN) $(LIBINET6)/icomm.h
 	$(LN) $(LIBINET6)/ife.h
-	$(LN) $(HIPD)/timer.h
 	$(LN) $(HIPD)/hidb.h
 	$(LN) $(HIPD)/registration.h
+#	$(LN) $(HIPD)/timer.h
 
 warn:
 	@echo ""

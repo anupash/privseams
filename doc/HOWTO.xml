@@ -1563,7 +1563,7 @@ $ make V=99
     <title>HIPL Internet Test Servers</title>
     <para>
     Below is a list of public InfraHIP test servers. The servers are also running
-    a free rendezvous service which you can use according to the instructions in <xref linkend="ch_rvs_relay" />.
+    free name look up Bamboo service (<xref linkend="ch_opendht" />) and HIP rendezvous service which you can use according to the instructions in <xref linkend="ch_rvs_relay" />.
     </para>
     <table id="table_servers" frame="all"><title>Test Servers</title>
     <tgroup cols="1">
@@ -1930,95 +1930,6 @@ $ make V=99
 	practical example. The API is documented in url:
 	<ulink url="http://hipl.hiit.fi/hipl/hip-native-api-final.pdf" />
       </para>
-    </section>
-
-    <section id="sec_opendht_bamboo">
-      <title>HIP with Bamboo opendht server (IPv4 and IPv6 support)</title>
-      <para>
-	To start the Bamboo opendht server, first the code has to be obtained.
- 	You can obtain Bamboo with IPv4 support from the Bamboo website,
-	http://www.bamboo-dht.org/download.html. Bamboo with IPv6 support can
-	be obtained from http://lxpworkroom.googlepages.com/bambooipv6version.
-	The code is compiled by executing make in the downloaded directory.
-      </para>
-      <para>
-	In order to run the Bamboo server, a configuration file needs to be
-	created. You can find a sample in this link:
-	http://www.cs.helsinki.fi/u/sklvarjo/sample.cfg.
-      </para>
-      <para>
-	Bamboo opendht server for a single machine:
-      </para>
-      <para>
-	If you want to try the bamboo opendht server on a single machine,
-	you have to assign 1 to the min_replica_count argument.
-      </para>
-      <para>
-	For IPV6 Bamboo:
-      </para>
-      <para>
-	Sample configuration files for IPv6 Bamboo can also be found at
-	http://lxpworkroom.googlepages.com/bambooipv6version. One change to
-	notice is that the ipv6 addresses are enclosed inside [] braces. IPv6
-	Bamboo configuration file requires also the setting of the network
-	argument, as shown in the IPv6 configuration samples.
-      </para>
-      <para>
-	In case you want to configure Bamboo based on HIP, you have to put a HIT
-	in the configuration file insted of the IPv6 address. 
-      </para>
-    </section>
-
-    <section id="sec_opendht_several_bamboos">
-      <title>Configuration of several Bamboo opendht servers together</title>
-      <para>
-	The first thing to note is that Bamboo servers that support different
-	ip versions cannot be configured to run together successfully.
-	All Bamboo servers should suport either ipv4 or ipv6.
-      </para>
-      <para>
-	In order to configure several bamboo servers together, there are several
-	changes to be made to each configuration file of each instance.
-      </para>
-      <para>
-	First of all, inside 'Router', in the 'initargs', we have to add the
-	'gateway_count' argument followed by the overall number of servers to be
-	configured together. After that, we should specify a list of the gateways.
-	The following paragraph illustrates a sample for configuring two servers
-	together, at the configuration file of one of the servers.
-      </para>
-      <para>
-        &lt;Router&gt;</para><para>
-            class bamboo.router.Router</para><para>
-            &lt;initargs&gt;</para><para>
-		gateway_count 2</para><para>
-                gateway_0 193.167.187.133:5850</para><para>
-		gateway_1 193.167.187.31:5850</para><para>
-                leaf_set_size  4</para><para>
-                digit_values   2</para><para>
-                immediate_join true</para><para>
-            &lt;/initargs&gt;</para><para>
-        &lt;/Router&gt;</para><para>
-      </para>
-
-      <para>
-      </para>
-
-      <para>
-	An additional change to be made is assigning the 'min_replica_count'
-	argument to the overall number of servers that are to be configured
-	together. This is illustrated below:
-      </para>
-      <para>
-        &lt;Dht&gt;</para><para>
-            class bamboo.dht.Dht</para><para>
-            &lt;initargs&gt;</para><para>
-                storage_manager_stage StorageManager</para><para>
-                min_replica_count     2</para><para>
-            &lt;/initargs&gt;</para><para>
-        &lt;/Dht&gt;</para><para>
-      </para>
-
     </section>
 
   </chapter>
@@ -3120,24 +3031,6 @@ $ make V=99
       </section>
     </section>
   </chapter>
-  <chapter id="teredo">
-    <title>Teredo and HIP</title>
-    <para>
-    Teredo is a traversal solution for HIP. You can expirement with Teredo
-    by installing the Miredo client software. Then, establish HIP connections
-    to Teredo addresses (check ifconfig teredo) at the client side as
-    instructed in <xref linkend="ch_basictest" />. As Teredo is a NAT traversal
-    solution by itself, you don't have use UDP encapsulation for HIP (hipconf nnat none).
-    </para>
-    <para>
-    See
-    <ulink url="http://www.cs.helsinki.fi/u/sklvarjo/miredo.htm" />
-    for further information on Teredo configuration with HIP.
-    <xref linkend="table_servers" /> lists addresses
-    of the public InfraHIP test servers with Teredo addresses. The servers
-    provide also free rendezvous service that can be combined with Teredo.
-    </para>    
-  </chapter>
   <chapter id="ch_hip_bos">
     <title> Using HIP BOS support</title>
     <para>
@@ -3336,55 +3229,99 @@ $ make V=99
   </chapter>
 
   <chapter id="ch_hip_nat">
-    <title>HIP NAT Extensions</title>
-    <para>HIPL supports also initiating connections from behind a NAT. The
-          basic idea is that the initiator encapsulates HIP control packets
-          and ESP data packets within UDP. This way, the packets can traverse
-          the NAT box. However, both the initiator and responder have to
-          support NAT extensions in order to make this work. Currently, the
-          responder cannot be located behind a NAT.
-    </para>
-    <para>The NAT traversal can be experimented in a similar way as depicted
-          in earlier sections. The only difference is that you have to
-          tell the initiator manually that it is behind a NAT using "hipconf
-          nat on". After this, you can initiate the base exchange
-          according to the previous instructions. The manual configuration is
-          currently required because support for automatic NAT detection (STUN)
-          has not been implemented yet.
-    </para>
-    <para>If you have problems in even getting I1 triggered using NAT code
-          e.g. with conntest-client-hip (occurred on 2.6.16.5), you may have
-          to specify the source HIT explicitly. The procedure to initiate a connection
-	  behind NAT is as follows:
-    </para>
-    <itemizedlist>
-    <listitem><para>
-      &nbsp;tools/hipconf nat plain-udp
-    </para>    </listitem>
-    <listitem><para>
-      &nbsp;tools/hipconf add map peer_hit peer_ipv4_addr
-    </para> </listitem>   
-    <listitem><para>
-      &nbsp; ping6 -I source_hit dst_hit
-    </para>  </listitem>  
-    </itemizedlist>
-    <para>Make sure that the source is the same as in "ip xfrm policy" output.
-          We are aware of the problem (see bug id 161) and it is being solved.
-          Also, it seemed like the responder could not route packets
-          automatically to the NAT, so a "ip route add nat_ipv4_addr dev xx"
-          was necessary at the responder (occurred on 2.6.16.5).
-    </para>
-    <para>
+    <title>HIP NAT Traversal</title>
+    <section id="basic_nat">
+      <title>Client-side-only NAT traversal</title>
+      <para>HIPL supports also initiating connections from behind a NAT. The
+        basic idea is that the initiator encapsulates HIP control packets
+        and ESP data packets within UDP. This way, the packets can traverse
+        the NAT box. However, both the initiator and responder have to
+        support NAT extensions in order to make this work. Currently, the
+        responder cannot be located behind a NAT.
+      </para>
+      <para>The NAT traversal can be experimented in a similar way as depicted
+        in earlier sections. The only difference is that you have to
+        tell the initiator manually that it is behind a NAT using "hipconf
+        nat on". After this, you can initiate the base exchange
+        according to the previous instructions. The manual configuration is
+        currently required because support for automatic NAT detection (STUN)
+        has not been implemented yet.
+      </para>
+      <para>If you have problems in even getting I1 triggered using NAT code
+        e.g. with conntest-client-hip (occurred on 2.6.16.5), you may have
+        to specify the source HIT explicitly. The procedure to initiate a connection
+	behind NAT is as follows:
+      </para>
+      <itemizedlist>
+	<listitem><para>
+	    &nbsp;tools/hipconf nat plain-udp
+	</para>    </listitem>
+	<listitem><para>
+	    &nbsp;tools/hipconf add map peer_hit peer_ipv4_addr
+	</para> </listitem>   
+	<listitem><para>
+	    &nbsp; ping6 -I source_hit dst_hit
+	</para>  </listitem>  
+      </itemizedlist>
+      <para>Make sure that the source is the same as in "ip xfrm policy" output.
+        We are aware of the problem (see bug id 161) and it is being solved.
+        Also, it seemed like the responder could not route packets
+        automatically to the NAT, so a "ip route add nat_ipv4_addr dev xx"
+        was necessary at the responder (occurred on 2.6.16.5).
+      </para>
+      <para>
 	Three cases of mobility of the initiator have been implemented for the NAT code.
+      </para>
+      <para>Mobility from behind NAT to behind the same NAT:
+	For this case, the use the standard procedure for update after the base exchange is completed. The update would be UDP encapsulated.
+      </para>
+      <para>Mobility from public addressable network to behind NAT: Once a hip association is set up between two hosts, both on the public network and one of them wishes to move behind a NAT, then that node should first delete the public ip address, then turn the NAT on using hipconf and then add the ip address behind NAT along with the route to the interface. The update would be done using UDP now and future communications would be UDP encapsulated (both HIP control traffic and ESP packets). </para>
+      <para>Mobility from behind NAT to publically addressable network: If a node has setup hip association from behind NAT and now wishes to move to public IP domain, then it should first delete the ip behind NAT, turn off the NAT using hipconf and then add the public IP along with the route to the interface. HIP association then would not use UDP encapsulation and the update would be done using normal HIP packets (without UDP encapsulation).</para>
+  </section>
+  
+    <section id="teredo">
+      <title>Teredo and HIP</title>
+      <para>
+	Teredo is a traversal solution for HIP. You can expirement with Teredo
+	by installing the Miredo client software. Then, establish HIP connections
+	to Teredo addresses (check ifconfig teredo) at the client side as
+	instructed in <xref linkend="ch_basictest" />. As Teredo is a NAT traversal
+	solution by itself, you don't have use UDP encapsulation for HIP (hipconf nnat none).
+      </para>
+      <para>
+	See
+	<ulink url="http://www.cs.helsinki.fi/u/sklvarjo/miredo.htm" />
+	for further information on Teredo configuration with HIP.
+	<xref linkend="table_servers" /> lists addresses
+	of the public InfraHIP test servers with Teredo addresses. The servers
+	provide also free rendezvous service that can be combined with Teredo.
+      </para>
+    </section>
+
+  <section id="ice">
+    <title>ICE-based NAT traversal (experimental)</title>
+    
+    <para>
+      HIPL includes also experimental support for ICE-based NAT
+      traversal. The use of the service requires a HIP Relay
+      middlebox that relays HIP control traffic (see
+      <xref linkend="ch_rvs_relay" />) where the Responder
+      registers itself to. Then the HIP Initiator can run
+      connect to the Responder through the Relay server.  The
+      Initiator and Responder the ICE mode dynamically during
+      the base exhange. Therefore "hipconf ice ice-udp" is
+      needed for the both end-hosts.
     </para>
-	<para>Mobility from behind NAT to behind the same NAT:
-		For this case, the use the standard procedure for update after the base exchange is completed. The update would be UDP encapsulated.
-	</para>
-	<para>Mobility from public addressable network to behind NAT: Once a hip association is set up between two hosts, both on the public network and one of them wishes to move behind a NAT, then that node should first delete the public ip address, then turn the NAT on using hipconf and then add the ip address behind NAT along with the route to the interface. The update would be done using UDP now and future communications would be UDP encapsulated (both HIP control traffic and ESP packets). </para>
-	<para>Mobility from behind NAT to publically addressable network: If a node has setup hip association from behind NAT and now wishes to move to public IP domain, then it should first delete the ip behind NAT, turn off the NAT using hipconf and then add the public IP along with the route to the interface. HIP association then would not use UDP encapsulation and the update would be done using normal HIP packets (without UDP encapsulation).</para>
-
+    
+    <para>
+      The current implementation supports only NAT traversal for
+      base exchange and ESP traffic. TURN media relay support is
+      work in progress. Mobility support is not implemented yet.
+    </para>
+  </section>
+    
   </chapter>
-
+  
 <chapter id="ch_hip_configuration_gui">
   <title>HIP configuration GUI</title>
 	<section id="sec_hip_conf_gui_general">
@@ -3713,28 +3650,30 @@ combo-newgroup=&lt;create new...&gt;
           LINUX variable) for the system in which you are going to use the
           kernel module.
      </para>
-   </chapter>
-  <chapter id="ch_opendht">
-    <title>OpenDHT Support (Experimental!)</title>
+  </chapter>
+<chapter id="ch_opendht">
+  <title>Bamboo-based Name Lookup for HIP</title>
+  <section>
+    <title>OpenDHT Client Support (Experimental!)</title>
     <itemizedlist>
-    <listitem><para>
-           With OpenDHT support, the hip daemon pushes the hostname,
-           RSA public HIT and public IP address to the OpenDHT. The resolver
-           can then look up this information automatically without DNS or manual
-           /etc/(hip)/hosts configuration.
-    </para></listitem>
-    <listitem><para>
-           Once you start hipd, it will send its hostname, HIT and IP address
-           to OpenDHT. You can query this information with
-           "hipconf dht get &lt;hostname|HIT&gt;".
-    </para></listitem>
-    <listitem><para>
-           To test, just run normally conntest-server 
-	and conntest-client-hip between hosts. You would see messages 
-	from hipd and conntest showing DNS->HIT->IP lookups. Everything 
-        should work without additional actions.
-    </para></listitem>
-    </itemizedlist>
+      <listitem><para>
+          With OpenDHT support, the hip daemon pushes the hostname,
+          RSA public HIT and public IP address to the OpenDHT. The resolver
+          can then look up this information automatically without DNS or manual
+          /etc/(hip)/hosts configuration.
+      </para></listitem>
+      <listitem><para>
+          Once you start hipd, it will send its hostname, HIT and IP address
+          to OpenDHT. You can query this information with
+          "hipconf dht get &lt;hostname|HIT&gt;".
+      </para></listitem>
+      <listitem><para>
+          To test, just run normally conntest-server 
+	  and conntest-client-hip between hosts. You would see messages 
+	  from hipd and conntest showing DNS->HIT->IP lookups. Everything 
+          should work without additional actions.
+      </para></listitem>
+     </itemizedlist>
 
     <para>
     HIP daemon creates a file called /etc/hip/dhtservers when you
@@ -3793,6 +3732,111 @@ combo-newgroup=&lt;create new...&gt;
     For documentation,
     please also check <ulink url="http://kom.aau.dk/group/05gr680/" />
     </para>
+</section>
+
+    <section id="sec_opendht_bamboo">
+      <title>Bamboo OpenDHT server with IPv6 Support</title>
+      <para>
+	This section describes how to set up up an own IPv6 enabled
+	Bamboo server to look up hostnames, HITs and IP addresses.
+	Bamboo can be used as an alternative name look up instructure
+	to DNS. InfraHIP servers are also already running bamboo
+	service if you don't want to run your own service (see
+	<xref linkend="ch_opendht" />).  The clients can contact the
+	server through HIP if necessary.
+      </para>
+      <para>
+	To start the Bamboo opendht server, first the code has to be obtained.
+ 	You can obtain Bamboo with IPv4 support from the Bamboo website,
+	http://www.bamboo-dht.org/download.html. Bamboo with IPv6 support can
+	be obtained from http://lxpworkroom.googlepages.com/bambooipv6version.
+	The code is compiled by executing make in the downloaded directory.
+	Some instructions and patches are also in patches/opendht directory of
+	HIPL software bundle.
+      </para>
+      <para>
+	In order to run the Bamboo server, a configuration file needs to be
+	created. You can find a sample in this link:
+	http://www.cs.helsinki.fi/u/sklvarjo/sample.cfg.
+      </para>
+      <para>
+	Bamboo opendht server for a single machine:
+      </para>
+      <para>
+	If you want to try the bamboo opendht server on a single machine,
+	you have to assign 1 to the min_replica_count argument.
+      </para>
+      <para>
+	For IPV6 Bamboo:
+      </para>
+      <para>
+	Sample configuration files for IPv6 Bamboo can also be found at
+	http://lxpworkroom.googlepages.com/bambooipv6version. One change to
+	notice is that the ipv6 addresses are enclosed inside [] braces. IPv6
+	Bamboo configuration file requires also the setting of the network
+	argument, as shown in the IPv6 configuration samples.
+      </para>
+      <para>
+	In case you want to configure Bamboo based on HIP, you have to put a HIT
+	in the configuration file insted of the IPv6 address. 
+      </para>
+    </section>
+
+    <section id="sec_opendht_several_bamboos">
+      <title>Joining Several Bamboo Servers into a Single Ring</title>
+      <para>
+	This section describes how to join two or more bamboo servers to a
+	single ring.
+      </para>
+      <para>
+	The first thing to note is that Bamboo servers that support different
+	ip versions cannot be configured to run together successfully.
+	All Bamboo servers should suport either ipv4 or ipv6.
+      </para>
+      <para>
+	In order to configure several bamboo servers together, there are several
+	changes to be made to each configuration file of each instance.
+      </para>
+      <para>
+	First of all, inside 'Router', in the 'initargs', we have to add the
+	'gateway_count' argument followed by the overall number of servers to be
+	configured together. After that, we should specify a list of the gateways.
+	The following paragraph illustrates a sample for configuring two servers
+	together, at the configuration file of one of the servers.
+      </para>
+      <para>
+        &lt;Router&gt;</para><para>
+            class bamboo.router.Router</para><para>
+            &lt;initargs&gt;</para><para>
+		gateway_count 2</para><para>
+                gateway_0 193.167.187.133:5850</para><para>
+		gateway_1 193.167.187.31:5850</para><para>
+                leaf_set_size  4</para><para>
+                digit_values   2</para><para>
+                immediate_join true</para><para>
+            &lt;/initargs&gt;</para><para>
+        &lt;/Router&gt;</para><para>
+      </para>
+
+      <para>
+      </para>
+
+      <para>
+	An additional change to be made is assigning the 'min_replica_count'
+	argument to the overall number of servers that are to be configured
+	together. This is illustrated below:
+      </para>
+      <para>
+        &lt;Dht&gt;</para><para>
+            class bamboo.dht.Dht</para><para>
+            &lt;initargs&gt;</para><para>
+                storage_manager_stage StorageManager</para><para>
+                min_replica_count     2</para><para>
+            &lt;/initargs&gt;</para><para>
+        &lt;/Dht&gt;</para><para>
+      </para>
+
+    </section>
 
   </chapter>
 
@@ -4079,7 +4123,7 @@ combo-newgroup=&lt;create new...&gt;
       key file contents to different DNS zone file formats. To convert
       to unpatched BIND9 format, run the following:
       <programlisting>
-parsehipkey &lt; felwood/hip_host_dsa_key_pub.pub felwood2.hip-test1.infrahip.net felwood.infrahip.net crossroads.infrahip.net | sed -n -e '/^9BIND */s///p'
+parsehipkey &lt; /etc/hip/hip_host_rsa_key_pub.pub hostname.domain.org | sed -n -e '/^9BIND */s///p'
       </programlisting>
       This outputs a line which can be inserted to a zone
       file. Similarly, with sed command:
@@ -4097,16 +4141,21 @@ parsehipkey &lt; felwood/hip_host_dsa_key_pub.pub felwood2.hip-test1.infrahip.ne
   </chapter>
   <chapter id="sec_dns_proxy">
     <title>DNS proxy</title>
+
     <para>
-      In tools directory, there is dnshipproxy script, which provides DNS
-      proxy functionality. The script has to be started with root priviledges.
+      One way to support transparent HIT look up for the whole system
+      is to use the python-based DNS proxy daemon.  It is located in
+      the tools directory (dnsproxy.py) and has to be started with
+      root priviledges. After you start the script, it will rewrite
+      /etc/resolv.conf to redirect all DNS look ups to itself so that
+      it can return HITs to applications when applicable.
     </para>
+
     <para>
-      The DNS proxy can read HIT information from HIP hosts
-      files and provide corresponding AAAA records. If it is asked an
-      AAAA record for a FQDN and there is no real existing AAAA for
-      the name, it tries to find a HIP RR for the name. If it finds
-      one, it responds with an AAAA response.
+     The dnsproxy tries to find host identities from three places:
+     "hosts" files (/etc/hosts and /etc/hip/hosts), HI records in DNS
+     and Bamboo DHT (experimental). It returns the host identities as
+     HITs or LSIs to the requesting application.
     </para>
     <para>
       For faster DNS look ups, you can optionally run the DNS proxy

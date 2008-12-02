@@ -2,7 +2,7 @@ Source: hipl
 Version: 1.0
 Section: user/Development
 Priority: optional
-Maintainer: InfraHIP <infrahip@hiit.fi>
+Maintainer: Miika Komu <miika@iki.fi>
 Build-Depends: debhelper (>= 4.0.0), autotools-dev
 Standards-Version: 3.6.2
 Package: hipl

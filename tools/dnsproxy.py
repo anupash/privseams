@@ -129,6 +129,7 @@ class ResolvConf:
     def stop(self):
         self.oktowrite = 0
         self.restore_resolvconf()
+	os.system("/sbin/ifconfig lo:53 down")
 
 class Global:
     default_hiphosts = "/etc/hip/hosts"
@@ -167,7 +168,7 @@ class Global:
             if s_ip:
                 gp.server_ip = s_ip
             else:
-                gp.server_ip = '127.0.0.1' # xx fixme
+                gp.server_ip = '127.0.0.53' # xx fixme
 	if gp.server_port == None:
             server_port = env.get('SERVERPORT',None)
             if server_port != None:
@@ -177,7 +178,7 @@ class Global:
 	if gp.bind_ip == None:
             gp.bind_ip = env.get('IP',None)
 	if gp.bind_ip == None:
-            gp.bind_ip = '127.0.0.1'
+            gp.bind_ip = '127.0.0.53'
 	if gp.bind_port == None:
             bind_port = env.get('PORT',None)
             if bind_port != None:
@@ -253,11 +254,15 @@ class Global:
         util.init_wantdown()
         util.init_wantdown_int()        # Keyboard interrupts
         fout = gp.fout
+
+	# Default virtual interface and address for dnsproxy to
+	# avoid problems with other dns forwarders (dnsmasq)
+	os.system("/sbin/ifconfig lo:53 127.0.0.53")
+
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.bind((gp.bind_ip,gp.bind_port))
 
-
-        args0 = {'server': '127.0.0.1',
+        args0 = {'server': '127.0.0.53',
                 }
 
         d2 = DNS.DnsRequest(server=gp.server_ip,port=gp.server_port,timeout=0.2)
@@ -491,7 +496,7 @@ class Global:
 
 		#add mapping using the hipconf cmd
 		if cmd_worked == 1:
-		    result = result + " 1>/dev/null 2>/dev/null 3>/dev/null"
+		    result = result + " 1>/dev/null 2>/dev/null"
 		    fout.write('CMD - %s\n' % (result,))
 		    p = os.popen(result)
 		#else:
@@ -524,7 +529,7 @@ class Global:
 		commands = line.split(':')
 		cmd_worked = 0
 		for c in commands:
-			cmd = c + "/hipconf dht get " + nam + " 3>&1 2>&1 "   #| grep hipconf "
+			cmd = c + "/hipconf dht get " + nam + " 2>&1 "   #| grep hipconf "
 			p = os.popen(cmd, "r")
 			result = p.readline()
 			if result[0:3] == "sh:" and result[len(result)-10:len(result)-1] == "not found":

@@ -1,38 +1,15 @@
 #!/bin/sh
 
-DEFAULT_MASQ=/etc/default/dnsmasq
-BACKUP_MASQ=/etc/default/dnsmasq.backup.dnshipproxy
-INITD=/etc/init.d/dnshipproxy
-INITD_BACKUP=/etc/init.d/dnshipproxy.backup.dnshipproxy
-DNS_PORT_APP=`netstat -lanup|awk '$4 ~ /:53$/ {print $6}'`
-ALT_PORT=5000
-
 update-rc.d dnshipproxy defaults
 
-# If dnsmasq is occupying port 53, chain it with dnshipproxy
-if echo $DNS_PORT_APP | grep -q dnsmasq
+if netstat -lanu|awk '$4 ~ /:53$/ {print $4}'|grep -q 53
 then
-    if test -r $DEFAULT_MASQ
-    then
-	echo "Dns port occupied by dnsmasq"
-	echo "Trying to chain dnsmasq and dnshipproxy"
-	echo "Changing dnsmasq configuration $DEFAULT_MASQ"
-	mv $DEFAULT_MASQ $BACKUP_MASQ
-	echo "DNSMASQ_OPTS=\"--no-resolv --server=127.0.0.1#${ALT_PORT}\"" \
-	    > $DEFAULT_MASQ
-	invoke-rc.d --quiet dnsmasq restart
-	mv $INITD $INITD_BACKUP
-	cat $INITD_BACKUP | sed s/-bk/-bk\ -l\ $ALT_PORT/ > $INITD
-	chmod 0755 $INITD
-    else
-	echo "*** Warning! Did not find /etc/default/dnsmasq ***"
-	echo "*** Warning: DNS proxy may not be functional! ***"
-    fi
-elif test x"$DNS_PORT_APP" != "x"
-then
-    echo "*** Warning! Dns port occupied by pid/app $DNS_PORT_APP ***"
-    echo "*** Warning: DNS proxy may not be functional! ***"
+    echo "*** Warning: DNS software detected running on port 53          ***"
+    echo "*** Warning: HIP DNS proxy overrides system default DNS server ***"
+    echo "*** Warning: Check HIPL manual on DNS proxy for further info   ***"
 fi
 
 echo "invoke-rc.d --quiet dnshipproxy start" | at now + 1 min 2>/dev/null 
 echo "DNS proxy for HIP starts in 60 secs"
+
+exit 0

@@ -616,45 +616,56 @@ out_err:
          else
             found_hits = 1;
                         
-         /* "add every HIT to linked list"
-          What do you mean by "every"? We only have one HIT per
-          line, don't we? Also, why do we loop through the list
-          again when we already have the hit stored from the
-          previous loop?
-          18.01.2008 16:49 -Lauri. */				
-         for(i = 0; i <length(&list); i++){
-            struct gaih_addrtuple *last_pat;	
+                        /* "add every HIT to linked list"
+			   What do you mean by "every"? We only have one HIT per
+			   line, don't we? Also, why do we loop through the list
+			   again when we already have the hit stored from the
+			   previous loop?
+			   18.01.2008 16:49 -Lauri. */				
+                        for(i = 0; i <length(&list); i++) {
+                                struct gaih_addrtuple *last_pat;	
 
-            aux = (struct gaih_addrtuple *)
-			malloc(sizeof(struct gaih_addrtuple));
-            if (aux == NULL){
-               HIP_ERROR("Memory allocation error\n");
-               return -EAI_MEMORY;
-            }
-            memset(aux, 0, sizeof(struct gaih_addrtuple));
+				aux = (struct gaih_addrtuple *)
+					malloc(sizeof(struct gaih_addrtuple));
+                                if (aux == NULL){
+                                        HIP_ERROR("Memory allocation error\n");
+                                        return -EAI_MEMORY;
+                                }
+				memset(aux, 0, sizeof(struct gaih_addrtuple));
 
-            /* Get the last element in the list */
-            for (last_pat = **pat; last_pat->next != NULL; last_pat = last_pat->next);
+				/* Get the last element in the list */
+				if (**pat) {
+					for (last_pat = **pat; last_pat->next != NULL;
+								last_pat = last_pat->next)
+						;
+				}
 
-            /* Place the HIT/LSI to the end of the list.*/                                
+                                /* Place the HIT/LSI to the end of the list.*/                                
 
-            if (inet_pton(AF_INET6, getitem(&list,i), &hit)) {
-               /* It's a HIT */
-               aux->scopeid = 0;
-               aux->family = AF_INET6;
-               memcpy(aux->addr, &hit, sizeof(struct in6_addr));
-               last_pat->next = aux;
-            }else if (inet_pton(AF_INET, getitem(&list,i), &lsi)){
-               /* IPv4 to IPV6 in order to be supported by the daemon */
-               aux->scopeid = 0;
-               aux->family = AF_INET;
-               HIP_DEBUG_LSI(" lsi to add", &lsi);
-               //IPV4_TO_IPV6_MAP(&lsi, &lsi_ip6);
-               memcpy(aux->addr, &lsi, sizeof(lsi));
-               last_pat->next = aux;
-            }else{
-               free(aux);
-            }
+				if (inet_pton(AF_INET6, getitem(&list,i), &hit)) {
+				        /* It's a HIT */
+                                        aux->scopeid = 0;
+				        aux->family = AF_INET6;
+					memcpy(aux->addr, &hit, sizeof(struct in6_addr));
+					if (**pat)
+						last_pat->next = aux;
+					else
+						**pat = aux;
+				}
+				else if (inet_pton(AF_INET, getitem(&list,i), &lsi)){
+				        /* IPv4 to IPV6 in order to be supported by the daemon */
+					aux->scopeid = 0;
+					aux->family = AF_INET;
+					HIP_DEBUG_LSI(" lsi to add", &lsi);
+					//IPV4_TO_IPV6_MAP(&lsi, &lsi_ip6);
+					memcpy(aux->addr, &lsi, sizeof(lsi));
+					if (**pat)
+						last_pat->next = aux;
+					else
+						**pat = aux;
+				} else {
+					free(aux);
+				}
 
          }
       } // end of if

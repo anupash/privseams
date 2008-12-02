@@ -17,7 +17,12 @@ if dpkg --print-architecture|grep armel;then DEBARCH=armel;fi
 REVISION=`/usr/bin/lsb_release -c | /usr/bin/awk '{print $2}'`
 # The latest SDK is diablo, the previous one - chinook. One may specify here whatever preferred more.
 # Better, we have to find out how to detect SDK version installed on a PC automatically -- Andrey Khurri
-if [ $DEBARCH = "armel" ]; then REVISION=chinook; fi
+if [ $DEBARCH = "armel" ]; then 
+    REVISION=diablo;
+    
+    # this doesn't seem to get set by automake in maemo
+    PYEXECDIR=/usr/lib/python2.5
+fi
 
 SUFFIX="-$VERSION-$RELEASE-$REVISION"
 PKG_SUFFIX="-$VERSION-$RELEASE"
@@ -49,6 +54,11 @@ PKGNAME="${NAME}-${TMPNAME}.${POSTFIX}"
 TMP=""
 DEBLIB="$NAME-$TMP"
 
+LIBDEPS="libgtk2.0-0, libssl0.9.8, libxml2, iptables, libsqlite3-0"
+if [ $DEBARCH != "armel" ]; then
+    LIBDEPS="$LIBDEPS, libcap2, libuuid1, libnet-ip-perl, libsocket6-perl, libio-socket-inet6-perl"
+fi
+
 LINE0="Depends:"
 LINE1="Build-Depends:"
 LINE2="Package:"
@@ -72,7 +82,7 @@ copy()
 
     $SUDO cp $@
     $SUDO chown $DEFAULT_OWNER:$DEFAULT_GROUP $3
-    $SUDO chmod $DEFAULT_MODE $3
+    #$SUDO chmod $DEFAULT_MODE $3
 }
 
 remove()
@@ -189,24 +199,30 @@ init_files ()
 	inst $DEBIAN/$f "$PKGDIR/DEBIAN" 
     done
 
-    echo "** Modifying Debian control file for $DEBLIB $TMP and $DEBARCH"
+    echo "** Modifying Debian control file for "$DEBLIB" "$TMP" and "$DEBARCH""
     
-    if [ "$DEBLIB" = "" ]; then
-     	$SUDO sed -i '/'"$LINE0"'/d' $PKGDIR\/DEBIAN\/control
+    echo "Before:"
+    cat $PKGDIR\/DEBIAN\/control
+
+    if [ x"$DEBLIB" = x"" ]; then
+	if [ x"$TMP" = x"lib" ]; then
+	    echo "Adding main dependencies to hipl-lib"
+     	    $SUDO sed -i '/'"$LINE0"'/a\'"$LINE0"' '"$LIBDEPS"'' $PKGDIR\/DEBIAN\/control
+	else
+	    echo "No dependency to hipl-lib"
+     	    $SUDO sed -i '/'"$LINE0"'/d' $PKGDIR\/DEBIAN\/control
+	fi
     else
+	echo "Adding dependency to hipl-lib"
      	$SUDO sed -i '/'"$LINE1"'/a\'"$LINE0"' '"$DEBLIB"'' $PKGDIR\/DEBIAN\/control
     fi
 
     $SUDO sed -i '/'"$LINE2"'/ s/.*/&\-'"$TMP"'/' $PKGDIR\/DEBIAN\/control
     $SUDO sed -i 's/"$LINE3"/&'" $DEBARCH"'/' $PKGDIR\/DEBIAN\/control
 
-    	# inst $PKGDIR/DEBIAN/postinst $PKGROOT/postinst-$TMP
-       
-    #for f in postinst;do
-    #	inst $DEBIAN/$f "$PKGDIR/DEBIAN" 
-    #done
-    #sed -i '2,10d' $PKGDIR\/DEBIAN\/postinst
-    #sed -i '$a\ldconfig\' $PKGDIR\/DEBIAN\/postinst
+    echo "After:"
+    cat $PKGDIR\/DEBIAN\/control
+
 }
 
 # copy and build package files
@@ -300,7 +316,11 @@ copy_and_package_files ()
     create_sub_package;
 
     TMP="dnsproxy"
-    DEBLIB=""
+    if [ $DEBARCH = "armel" ]; then 
+	DEBLIB="python2.5"
+    else
+	DEBLIB=""
+    fi
     init_files;
     
     echo "** Making directory to '$PKGDIR'"
