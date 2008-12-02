@@ -68,7 +68,7 @@ Requires: openssl libxml2 gtk2 iptables libcap sqlite uuid
 %description lib
 
 %package daemon
-Requires: hipl-lib iproute # miredo
+Requires: hipl-lib iproute perl-Net-IP perl-Net-DNS perl-Socket6 perl-IO-Socket-INET6 # miredo
 Summary: hip daemon files
 Group: System Environment/Kernel
 %description daemon
@@ -80,7 +80,7 @@ Group: System Environment/Kernel
 %description agent
 
 %package tools
-Requires: hipl-lib, hipl-daemon perl-Net-IP
+Requires: hipl-lib, hipl-daemon
 Summary: hip tools files
 Group: System Environment/Kernel
 %description tools
