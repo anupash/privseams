@@ -405,9 +405,9 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 		 "No preferred IP address for the peer.\n");
 
 	hip_set_bex_start_timestamp(entry);
-	//#ifdef CONFIG_MEASURES
+#if 0
 	bex_add_initial_timestamp(&daddr);
-	//endif
+#endif
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	// if hitr is hashed null hit, send it as null on the wire

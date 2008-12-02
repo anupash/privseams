@@ -11,6 +11,7 @@
 #include "esp_prot_common.h"
 #include "hip_statistics.h"
 
+
 #define HIP_HIT_KNOWN 1
 #define HIP_HIT_ANON  2
 
@@ -478,7 +479,9 @@ struct hip_hadb_state
 	/** Heartbeat current variance RTT **/
 	u_int32_t                    heartbeats_variance;
 #endif
-        struct timeval               * bex_timestamp;
+        struct timeval               bex_start;
+        struct timeval               bex_end;
+        
 //NAT Branch
 	//pointer for ice engine
 	void* ice_session;
@@ -509,7 +512,7 @@ struct hip_hadb_user_info_state
 	int                  heartbeats_received;
 	double               heartbeats_mean;
 	double               heartbeats_variance;
-        unsigned long        bex_duration;
+        struct timeval       bex_duration;
 };
 
 /** @addtogroup hadb_func

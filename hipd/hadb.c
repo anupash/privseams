@@ -2918,7 +2918,9 @@ int hip_handle_get_ha_info(hip_ha_t *entry, struct hip_common *msg)
 #endif
 	hid.heartbeats_sent = entry->heartbeats_sent;
 
-	hid.bex_duration = entry->bex_timestamp->tv_sec*100000 + entry->bex_timestamp->tv_usec;
+	hip_timeval_diff(&entry->bex_start, 
+			 &entry->bex_end,
+			 &hid.bex_duration);
 
 	_HIP_HEXDUMP("HEXHID ", &hid, sizeof(struct hip_hadb_user_info_state));
 
