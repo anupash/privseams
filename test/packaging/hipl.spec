@@ -9,7 +9,7 @@ Vendor: InfraHIP
 License: GPL
 Group: System Environment/Kernel
 Requires: openssl gtk2 libxml2 glib2 iptables-devel
-BuildRequires: openssl-devel gtk2-devel libxml2-devel glib2-devel iptables-devel xmlto libtool libcap-devel 
+BuildRequires: openssl-devel gtk2-devel libxml2-devel glib2-devel iptables-devel xmlto libtool libcap-devel sqlite-devel autoconf automake xmlto rpmbuild uuid-devel
 ExclusiveOS: linux
 BuildRoot: %{_tmppath}/%{name}-%{version}-root
 Prefix: /usr
@@ -64,10 +64,11 @@ make -C doc all
 %package lib
 Summary: hip library files
 Group: System Environment/Kernel
+Requires: openssl libxml2 gtk2 iptables libcap sqlite uuid
 %description lib
 
 %package daemon
-Requires: hipl-lib
+Requires: hipl-lib iproute # miredo
 Summary: hip daemon files
 Group: System Environment/Kernel
 %description daemon
@@ -79,7 +80,7 @@ Group: System Environment/Kernel
 %description agent
 
 %package tools
-Requires: hipl-lib, hipl-daemon
+Requires: hipl-lib, hipl-daemon perl-Net-IP
 Summary: hip tools files
 Group: System Environment/Kernel
 %description tools
