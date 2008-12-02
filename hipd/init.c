@@ -118,30 +118,30 @@ void hip_print_sysinfo()
 }
 #endif
 
-
 /*
- * Create a file with the given contents unless it already exists 
- */  
+ * Create a file with the given contents unless it already exists
+ */
 void hip_create_file_unless_exists(const char *path, const char *contents)
 {
-	struct stat status;
-	if (stat(path, &status)  == 0) 
-		return;
+        struct stat status;
+        if (stat(path, &status)  == 0)
+                return;
 
-	FILE *fp = fopen(path, "w");
-	HIP_ASSERT(fp);
-	size_t items = fwrite(contents, strlen(contents), 1, fp);
-	HIP_ASSERT(items > 0);
-	fclose(fp);
+        FILE *fp = fopen(path, "w");
+        HIP_ASSERT(fp);
+        size_t items = fwrite(contents, strlen(contents), 1, fp);
+        HIP_ASSERT(items > 0);
+        fclose(fp);
 }
+
 
 void hip_load_configuration()
 {
 	const char *cfile = "default";
 
-	/* HIPD_CONFIG_FILE, HIPD_CONFIG_FILE_EX and so on are defined in libinet6/hipconf.h */
+        /* HIPD_CONFIG_FILE, HIPD_CONFIG_FILE_EX and so on are defined in libinet6/hipconf.h */
 
-	hip_create_file_unless_exists(HIPD_CONFIG_FILE, HIPD_CONFIG_FILE_EX);
+        hip_create_file_unless_exists(HIPD_CONFIG_FILE, HIPD_CONFIG_FILE_EX);
 
 	hip_create_file_unless_exists(HIPD_HOSTS_FILE, HIPD_HOSTS_FILE_EX);
 

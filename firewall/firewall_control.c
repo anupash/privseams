@@ -208,6 +208,7 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 		break;
 	case SO_HIP_SET_SAVAH_CLIENT_ON:
 	        HIP_DEBUG("Received HIP_SAVAH_CLIENT_STATUS: ON message from hipd \n");
+		restore_filter_traffic = filter_traffic;
 		filter_traffic = 0;
 	        if (!hip_sava_client && !hip_sava_router) {
 		  hip_sava_client = 1;
@@ -215,15 +216,15 @@ int handle_msg(struct hip_common * msg, struct sockaddr_in6 * sock_addr)
 		} 
 	        break;
 	case SO_HIP_SET_SAVAH_CLIENT_OFF:
-	        HIP_DEBUG("Received HIP_SAVAH_CLIENT_STATUS: OFF message from hipd \n");
-		filter_traffic = 0;
+	        _HIP_DEBUG("Received HIP_SAVAH_CLIENT_STATUS: OFF message from hipd \n");
+		filter_traffic = restore_filter_traffic;
                 if (hip_sava_client) {
 		  hip_sava_client = 0;
 		  hip_fw_uninit_sava_client();
 		} 
 	        break;
 	case SO_HIP_SET_SAVAH_SERVER_OFF:
-	        HIP_DEBUG("Received HIP_SAVAH_SERVER_STATUS: OFF message from hipd \n");
+	        _HIP_DEBUG("Received HIP_SAVAH_SERVER_STATUS: OFF message from hipd \n");
                 if (!hip_sava_client && !hip_sava_router) {
 		  hip_sava_router = 0;
 		  accept_hip_esp_traffic_by_default = 0;

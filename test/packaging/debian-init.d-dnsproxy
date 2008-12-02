@@ -6,7 +6,7 @@
 #
 # processname: dnsproxy.py
 # pidfile: /var/run/dnsproxy.pid
-# chkconfig: 2345 20 80
+# chkconfig: 2345 21 79
 
 DNSPROXY_OPTS="-bk"
 PID_FILE=/var/run/dnshipproxy.pid
