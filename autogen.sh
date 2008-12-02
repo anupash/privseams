@@ -10,12 +10,12 @@ display_dependencies() {
 iptables-dev libcap-dev libsqlite3-dev uuid-dev miredo libnet-ip-perl libnet-dns-perl"
     elif test -e /etc/redhat-release
 	then
-	echo "yum install tla openssl-devel libxml2-devel autoconf automake libtool iproute gtk2-devel xmlto doxygen iptables-devel libcap-devel sqlite-devel uuid-devel rpm-build miredo perl-Net-IP perl-Net-DNS"
+	echo "yum install tla openssl-devel libxml2-devel autoconf automake libtool iproute gtk2-devel xmlto doxygen iptables-devel libcap-devel sqlite-devel uuid-devel rpm-build miredo perl-Net-IP perl-Net-DNS perl-Socket6 perl-IO-Socket-INET6"
     else
 	echo -n "Unknown linux system:"
 	cat /etc/lsb-release
 	echo "You should install the following software:"
-	echo "tla, autoreconf, automake, autoconf, libtool, g++, xmlto, doxygen, iproute, netcat6, miredo, Net::IP and Net::DNS modules for perl"
+	echo "tla, autoreconf, automake, autoconf, libtool, g++, xmlto, doxygen, iproute, netcat6, miredo, Socket6, IO::Socket::INET6, Net::IP and Net::DNS modules for perl"
 	echo "And the following packages with their development headers:"
 	echo "libncurses5,libgtk2.0, openssl, libxml2, iptables, libcap, libsqlite3, uuid"
     fi
