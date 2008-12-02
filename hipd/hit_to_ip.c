@@ -109,6 +109,7 @@ struct in6_addr *hip_hit_to_ip(hip_hit_t *hit) {
 		} else if (rp->ai_family == AF_INET) {
 			struct sockaddr_in *tmp_sockaddr_in_ptr = (struct sockaddr_in *) (rp->ai_addr);
 			IPV4_TO_IPV6_MAP(&(tmp_sockaddr_in_ptr->sin_addr), &tmp_in6_addr)
+			  HIP_DEBUG_IN6ADDR("addr", &tmp_in6_addr);
 			retval = &tmp_in6_addr; // and continue to look for ipv6 address
 		}
 	}
@@ -116,8 +117,10 @@ struct in6_addr *hip_hit_to_ip(hip_hit_t *hit) {
 	if (result)
 		freeaddrinfo(result);
 
+#if 0 // XX FIXME
 	if (hit_to_ip_hostname)
 		free(hit_to_ip_hostname);
+#endif
 
 	return retval;	
 }
