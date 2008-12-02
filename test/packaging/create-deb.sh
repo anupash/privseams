@@ -53,7 +53,7 @@ if dpkg --print-architecture|grep armel;then TMPNAME="${VERSION}-${RELEASE}-${RE
 PKGNAME="${NAME}-${TMPNAME}.${POSTFIX}"
 TMP=""
 DEBLIB="$NAME-$TMP"
-LIBDEPS="libgtk2.0-0, libssl0.9.8, libxml2, iptables, libcap2, libsqlite3-0, libuuid1, libnet-ip-perl"
+LIBDEPS="libgtk2.0-0, libssl0.9.8, libxml2, iptables, libcap2, libsqlite3-0, libuuid1, libnet-ip-perl libsocket6-perl libio-socket-inet6-perl"
 
 LINE0="Depends:"
 LINE1="Build-Depends:"
