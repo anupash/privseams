@@ -231,11 +231,6 @@ debug medium        # debug verbosity: all, medium or none\n"
 # secret of that key\n\
 # $KEY_SECRET='Ousu6700S9sfYSL4UIKtvnxY4FKwYdgXrnEgDAu/rmUAoyBGFwGs0eY38KmYGLT1UbcL/O0igGFpm+NwGftdEQ==';\n\
 # $KEY_SECRET = '';\n\
-\n\
-# executed to update the records\n\
-# $NSUPDATE_PATH = '|/usr/bin/nsupdate';\n\
-# or can be redirected to a file\n\
-# $NSUPDATE_PATH = '>>/tmp/nsupdate.txt';\n\
 ###########################################################"
 
 

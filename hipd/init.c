@@ -139,71 +139,15 @@ void hip_load_configuration()
 {
 	const char *cfile = "default";
 
-	struct stat status;
-	pid_t pid;
-	FILE *fp = NULL;
-	size_t items = 0;
-	int len_con = strlen(HIPD_CONFIG_FILE_EX),
-	    len_hos = strlen(HIPD_HOSTS_FILE_EX),
-#ifdef CONFIG_HIP_I3
-	    len_i3  = strlen(HIPD_HI3_FILE_EX),
-#endif
-	    len_dhtservers  = strlen(HIPD_DHTSERVERS_FILE_EX);
-
-	/* HIPD_CONFIG_FILE, HIPD_CONFIG_FILE_EX, HIPD_HOSTS_FILE and
-	   HIPD_HOSTS_FILE_EX are defined in /libinet6/hipconf.h */
-
-	/* Create config file if does not exist */
-	if (stat(HIPD_CONFIG_FILE, &status) && errno == ENOENT) {
-		errno = 0;
-		fp = fopen(HIPD_CONFIG_FILE, "w" /* mode */);
-		HIP_ASSERT(fp);
-		items = fwrite(HIPD_CONFIG_FILE_EX, len_con, 1, fp);
-		HIP_ASSERT(items > 0);
-		fclose(fp);
-	}
-
-	/* Create /etc/hip/hosts file if does not exist */
-	if (stat(HIPD_HOSTS_FILE, &status) && errno == ENOENT) {
-		errno = 0;
-		fp = fopen(HIPD_HOSTS_FILE, "w" /* mode */);
-		HIP_ASSERT(fp);
-		items = fwrite(HIPD_HOSTS_FILE_EX, len_hos, 1, fp);
-		HIP_ASSERT(items > 0);
-		fclose(fp);
-	}
-
-#ifdef CONFIG_HIP_I3
-	/* Create /etc/hip/hi3_conf file if does not exist */
-	if (stat(HIPD_HI3_FILE, &status) && errno == ENOENT) {
-		errno = 0;
-		fp = fopen(HIPD_HI3_FILE, "w" /* mode */);
-		HIP_ASSERT(fp);
-		items = fwrite(HIPD_HI3_FILE_EX, len_i3, 1, fp);
-		HIP_ASSERT(items > 0);
-		fclose(fp);
-	}
-	//hip_i3_init();
-#endif
-
-	/* Create /etc/hip/dhtservers file if does not exist */
-	if (stat(HIPD_DHTSERVERS_FILE, &status) && errno == ENOENT) {
-		errno = 0;
-		fp = fopen(HIPD_DHTSERVERS_FILE, "w");
-		HIP_ASSERT(fp);
-		items = fwrite(HIPD_DHTSERVERS_FILE_EX, len_dhtservers, 1, fp);
-		HIP_ASSERT(items > 0);
-		fclose(fp);
-	}
-
 	/* HIPD_CONFIG_FILE, HIPD_CONFIG_FILE_EX and so on are defined in libinet6/hipconf.h */
 
 	hip_create_file_unless_exists(HIPD_CONFIG_FILE, HIPD_CONFIG_FILE_EX);
 
 	hip_create_file_unless_exists(HIPD_HOSTS_FILE, HIPD_HOSTS_FILE_EX);
 
+#ifdef CONFIG_HIP_I3
 	hip_create_file_unless_exists(HIPD_HI3_FILE, HIPD_HI3_FILE_EX);
-
+#endif
 	hip_create_file_unless_exists(HIPD_DHTSERVERS_FILE, HIPD_DHTSERVERS_FILE_EX);
 
 	hip_create_file_unless_exists(HIPD_NSUPDATE_CONF_FILE, HIPD_NSUPDATE_CONF_FILE_EX);
