@@ -81,7 +81,7 @@ struct in6_addr *hip_hit_to_ip(hip_hit_t *hit) {
 	if (hit_to_ip_hostname==NULL)
 		return NULL;
 
-	struct addrinfo *result, *rp, hints;
+	struct addrinfo *result = NULL, *rp = NULL, hints;
 
 	memset(&hints, 0, sizeof(struct addrinfo));
 	hints.ai_family = AF_UNSPEC;    /* Allow IPv4 or IPv6 */
@@ -113,8 +113,11 @@ struct in6_addr *hip_hit_to_ip(hip_hit_t *hit) {
 		}
 	}
 
-	freeaddrinfo(result);
+	if (result)
+		freeaddrinfo(result);
 
-	free(hit_to_ip_hostname);
+	if (hit_to_ip_hostname)
+		free(hit_to_ip_hostname);
+
 	return retval;	
 }
