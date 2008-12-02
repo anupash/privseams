@@ -10,8 +10,9 @@
 # HIT='2001:1e:574e:2505:264a:b360:d8cc:1d75'
 #
 ##########################################################
+use strict;
 
-$CONFIG_PATH = "/etc/hip/nsupdate.conf";
+my $CONFIG_PATH = "/etc/hip/nsupdate.conf";
 
 # default values, please change in /etc/hip/nsupdate.conf 
 my $HIT_TO_IP_ZONE = 'hit-to-ip.infrahip.net.';
@@ -21,7 +22,6 @@ my $KEY_SECRET = '';
 
 do $CONFIG_PATH;
 
-use strict;
 use Net::DNS;
 use Net::IP qw/ip_is_ipv6 ip_is_ipv4/;
 use Sys::Syslog;
@@ -30,6 +30,15 @@ openlog('nsupdate.pl', 'ndelay,pid', 'local6');
 
 my $env_IPS = $ENV{IPS};
 my $env_HIT = $ENV{HIT};
+
+unless ($env_HIT) {
+	log_and_die("HIT environment variable is empty");
+}
+
+unless ($env_IPS) {
+	log_error("warning IPS environment variable is empty");
+	$env_IPS='';
+}
 
 my $res = Net::DNS::Resolver->new;
 
@@ -55,7 +64,7 @@ if ($SERVER) {
 	log_debug("Using $server from SOA");
 }
 
-# NB: we don't put symbolic name to Resolver->nameservers because it will not use AAAA then
+# we don't put symbolic name to Resolver->nameservers because it will not use AAAA then
 @server_ips = find_server_addresses($server, $res);
 log_debug("Resolved nameserver to " . join(',', @server_ips));
 
@@ -70,7 +79,6 @@ if ($KEY_NAME) {
 	log_debug("Signing using $KEY_NAME");
 	$update->sign_tsig($KEY_NAME, $KEY_SECRET);
 }
-
 
 log_debug("Using $env_HIT as local address");
 $res->srcaddr($env_HIT);
@@ -114,7 +122,7 @@ sub find_server_addresses
 		return @addresses;
 	}
 
-	my $query = $res->query($server, "A");
+	$query = $res->query($server, "A");
 	if ($query) {
 		foreach my $rr ($query->answer) {
         		next unless ($rr->type eq "A");

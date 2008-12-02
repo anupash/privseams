@@ -21,8 +21,8 @@
 
 int hip_hit_to_ip(hip_hit_t *hit, struct in6_addr *retval);
 
-void hip_set_hit_to_ip_status(int status);
+void hip_set_hit_to_ip_status(const int status);
 int hip_get_hit_to_ip_status(void);
-void hip_hit_to_ip_set(char *zone);
+void hip_hit_to_ip_set(const char *zone);
 
 #endif /* HIT_TO_IP_H */
