@@ -58,6 +58,8 @@ void  hip_set_sava_client_on(void);
 void hip_set_sava_server_on(void);
 void hip_set_sava_client_off(void);
 void hip_set_sava_server_off(void);
+void hip_set_bex_start_timestamp(hip_ha_t *entry);
+void hip_set_bex_end_timestamp(hip_ha_t * entry);
 
 /** Specifies the NAT status of the daemon. This value indicates if the current
     machine is behind a NAT. Defined in hipd.c */

@@ -478,7 +478,7 @@ struct hip_hadb_state
 	/** Heartbeat current variance RTT **/
 	u_int32_t                    heartbeats_variance;
 #endif
-
+        struct timeval               * bex_timestamp;
 //NAT Branch
 	//pointer for ice engine
 	void* ice_session;
@@ -507,8 +507,9 @@ struct hip_hadb_user_info_state
 	int                  heartbeats_on;
 	int                  heartbeats_sent;
 	int                  heartbeats_received;
-	double            heartbeats_mean;
-	double              heartbeats_variance;
+	double               heartbeats_mean;
+	double               heartbeats_variance;
+        unsigned long        bex_duration;
 };
 
 /** @addtogroup hadb_func

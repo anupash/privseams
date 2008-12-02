@@ -1786,6 +1786,9 @@ int hip_conf_print_info_ha(struct hip_hadb_user_info_state *ha)
 			  ha->heartbeats_received,
 			  (ha->heartbeats_sent - ha->heartbeats_received));
         }
+	if (ha->state == HIP_STATE_ESTABLISHED) {
+	  HIP_DEBUG("HIP base exchange duration %d ms \n", ha->bex_duration);
+	}
 	HIP_INFO("\n");
 
 }

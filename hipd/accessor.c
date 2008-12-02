@@ -231,6 +231,31 @@ void hip_set_sava_server_off(void) {
   hipsava_server = 0;
 }
 
+void hip_set_bex_start_timestamp(hip_ha_t *entry) {
+  HIP_ASSERT(entry != NULL);
+  if (entry->bex_timestamp == NULL) {
+    entry->bex_timestamp = (struct timeval *)malloc(sizeof(struct timeval));
+    memset(entry->bex_timestamp, 0, sizeof(struct timeval));
+  }
+  gettimeofday(entry->bex_timestamp, NULL);
+}
+
+
+void hip_set_bex_end_timestamp(hip_ha_t * entry) {
+  struct timeval *init = NULL;
+  unsigned long duration = 0;
+  HIP_ASSERT(entry != NULL || entry->bex_timestamp);
+  init = entry->bex_timestamp;
+  gettimeofday(entry->bex_timestamp, NULL);
+  duration = (entry->bex_timestamp->tv_sec - init->tv_sec)*1000000 +
+    (entry->bex_timestamp->tv_usec - init->tv_usec);
+
+  entry->bex_timestamp->tv_sec = duration / 1000000;
+  entry->bex_timestamp->tv_usec = duration % 1000000;
+}
+
+
+
 static IMPLEMENT_LHASH_HASH_FN(hip_bex_timestamp_hash, const hip_bex_timestamp_t *)
 static IMPLEMENT_LHASH_COMP_FN(hip_bex_timestamp_compare, const hip_bex_timestamp_t *)
 

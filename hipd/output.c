@@ -404,6 +404,7 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	HIP_IFEL(hip_hadb_get_peer_addr(entry, &daddr), -1,
 		 "No preferred IP address for the peer.\n");
 
+	hip_set_bex_start_timestamp(entry);
 	//#ifdef CONFIG_MEASURES
 	bex_add_initial_timestamp(&daddr);
 	//endif

@@ -317,7 +317,7 @@ void hip_print_debug_info(struct in6_addr *local_addr,
 				    struct in6_addr *peer_addr,
 				    hip_hit_t *local_hit,
 				    hip_hit_t *peer_hit,
-				    hip_lsi_t *peer_lsi){
+			            hip_lsi_t *peer_lsi){
 	if (local_addr)
 		HIP_DEBUG_IN6ADDR("Our addr", local_addr);
 	if (peer_addr)
@@ -2917,6 +2917,8 @@ int hip_handle_get_ha_info(hip_ha_t *entry, struct hip_common *msg)
 	hid.heartbeats_received = entry->heartbeats_statistics.num_items;
 #endif
 	hid.heartbeats_sent = entry->heartbeats_sent;
+
+	hid.bex_duration = entry->bex_timestamp->tv_sec*100000 + entry->bex_timestamp->tv_usec;
 
 	_HIP_HEXDUMP("HEXHID ", &hid, sizeof(struct hip_hadb_user_info_state));
 

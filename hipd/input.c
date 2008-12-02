@@ -2245,8 +2245,11 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 		free(entry->hip_msg_retrans.buf);
 		entry->hip_msg_retrans.buf = NULL;
 	}
+	
+	hip_set_bex_end_timestamp(entry);
 
 		
+	 
         //#ifdef CONFIG_MEASURES
 	{
 	  unsigned long duration = bex_get_duration_timestamp(i2_saddr);
@@ -2664,6 +2667,9 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	hip_oppipdb_delentry(&(entry->preferred_address));
 #endif
 	HIP_DEBUG("Reached ESTABLISHED state\n");
+
+	hip_set_bex_end_timestamp(entry);	
+
 	//#ifdef CONFIG_MEASURES
 	{
 	  unsigned long duration = bex_get_duration_timestamp(r2_saddr);
@@ -2721,6 +2727,7 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
      ipv6_addr_copy(&dest, &in6addr_any);
      //#ifdef CONFIG_MEASURES
      bex_add_initial_timestamp(i1_daddr);
+     hip_set_bex_start_timestamp(entry);
      //endif
 
 #ifdef CONFIG_HIP_RVS
