@@ -53,6 +53,7 @@ if dpkg --print-architecture|grep armel;then TMPNAME="${VERSION}-${RELEASE}-${RE
 PKGNAME="${NAME}-${TMPNAME}.${POSTFIX}"
 TMP=""
 DEBLIB="$NAME-$TMP"
+LIBDEPS="libgtk2.0-0, libssl0.9.8, libxml2, iptables, libcap2, libsqlite3-0, libuuid1, libnet-ip-perl libsocket6-perl libio-socket-inet6-perl"
 
 LINE0="Depends:"
 LINE1="Build-Depends:"
@@ -77,7 +78,7 @@ copy()
 
     $SUDO cp $@
     $SUDO chown $DEFAULT_OWNER:$DEFAULT_GROUP $3
-    $SUDO chmod $DEFAULT_MODE $3
+    #$SUDO chmod $DEFAULT_MODE $3
 }
 
 remove()
@@ -194,24 +195,30 @@ init_files ()
 	inst $DEBIAN/$f "$PKGDIR/DEBIAN" 
     done
 
-    echo "** Modifying Debian control file for $DEBLIB $TMP and $DEBARCH"
+    echo "** Modifying Debian control file for "$DEBLIB" "$TMP" and "$DEBARCH""
     
-    if [ "$DEBLIB" = "" ]; then
-     	$SUDO sed -i '/'"$LINE0"'/d' $PKGDIR\/DEBIAN\/control
+    echo "Before:"
+    cat $PKGDIR\/DEBIAN\/control
+
+    if [ x"$DEBLIB" = x"" ]; then
+	if [ x"$TMP" = x"lib" ]; then
+	    echo "Adding main dependencies to hipl-lib"
+     	    $SUDO sed -i '/'"$LINE0"'/a\'"$LINE0"' '"$LIBDEPS"'' $PKGDIR\/DEBIAN\/control
+	else
+	    echo "No dependency to hipl-lib"
+     	    $SUDO sed -i '/'"$LINE0"'/d' $PKGDIR\/DEBIAN\/control
+	fi
     else
+	echo "Adding dependency to hipl-lib"
      	$SUDO sed -i '/'"$LINE1"'/a\'"$LINE0"' '"$DEBLIB"'' $PKGDIR\/DEBIAN\/control
     fi
 
     $SUDO sed -i '/'"$LINE2"'/ s/.*/&\-'"$TMP"'/' $PKGDIR\/DEBIAN\/control
     $SUDO sed -i 's/"$LINE3"/&'" $DEBARCH"'/' $PKGDIR\/DEBIAN\/control
 
-    	# inst $PKGDIR/DEBIAN/postinst $PKGROOT/postinst-$TMP
-       
-    #for f in postinst;do
-    #	inst $DEBIAN/$f "$PKGDIR/DEBIAN" 
-    #done
-    #sed -i '2,10d' $PKGDIR\/DEBIAN\/postinst
-    #sed -i '$a\ldconfig\' $PKGDIR\/DEBIAN\/postinst
+    echo "After:"
+    cat $PKGDIR\/DEBIAN\/control
+
 }
 
 # copy and build package files
