@@ -4,9 +4,9 @@ Release: 1
 Summary: HIP IPsec key management and mobility daemon.
 URL: http://infrahip.hiit.fi/hipl/
 Source: http://infrahip.hiit.fi/hipl/release/sources/%{version}/hipl-%{version}.tar.gz
-Packager: hipl-dev@freelists.org
+Packager: miika@iki.fi
 Vendor: InfraHIP
-License: GPL
+License: GPLv2
 Group: System Environment/Kernel
 Requires: openssl gtk2 libxml2 glib2 iptables-devel
 BuildRequires: openssl-devel gtk2-devel libxml2-devel glib2-devel iptables-devel xmlto libtool libcap-devel sqlite-devel autoconf automake xmlto rpmbuild uuid-devel
