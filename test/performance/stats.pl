@@ -18,7 +18,10 @@
 ### MODULES ##################################################################
 
 use English;
-use strict;
+# Use strict causes:
+# Can't use string ("17") as an ARRAY ref while "strict refs" in use at 
+# test/performance/stats.pl line 84, <STDIN> line 19
+#use strict;
 use Statistics::Distributions qw(udistr);
 use Scalar::Util::Numeric qw(:all);
 
