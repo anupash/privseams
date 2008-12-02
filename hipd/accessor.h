@@ -73,6 +73,12 @@ extern int hipsava_server;
 
 extern HIP_HASHTABLE *bex_timestamp_db;
 
+typedef struct hip_bex_duration {
+  unsigned int sec;
+  unsigned int msec;
+  unsigned int mrsec;
+} hip_bex_duration_t;
+
 typedef struct hip_bex_timestamp {
   struct in6_addr * addr;
   struct timeval * timestamp;
@@ -99,7 +105,7 @@ int hip_bex_timestamp_db_delete(const struct in6_addr * addr);
 int bex_add_initial_timestamp(const struct in6_addr *);
 
 /*Return base exchange for given host*/
-unsigned long bex_get_duration_timestamp(const struct in6_addr *);
+struct timeval * bex_get_duration_timestamp(const struct in6_addr *);
 
 #endif /* _HIPD_ACCESSOR */
 

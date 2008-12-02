@@ -2203,7 +2203,10 @@ void firewall_probe_kernel_modules(){
 void firewall_increase_netlink_buffers(){
 	HIP_DEBUG("Increasing the netlink buffers\n");
 
-	popen("echo 1048576 > /proc/sys/net/core/rmem_default; echo 1048576 > /proc/sys/net/core/rmem_max;echo 1048576 > /proc/sys/net/core/wmem_default;echo 1048576 > /proc/sys/net/core/wmem_max", "r");
+	system("echo 1048576 > /proc/sys/net/core/rmem_default"); 
+	system("echo 1048576 > /proc/sys/net/core/rmem_max"); 
+	system("echo 1048576 > /proc/sys/net/core/wmem_default");
+	system("echo 1048576 > /proc/sys/net/core/wmem_max");
 }
 
 

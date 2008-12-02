@@ -232,16 +232,37 @@ void hip_set_sava_server_off(void) {
 }
 
 void hip_set_bex_start_timestamp(hip_ha_t *entry) {
-  HIP_ASSERT(entry != NULL);
+  if(entry == NULL) return;
   memset(&entry->bex_start, 0, sizeof(struct timeval));
-  do_gettimeofday(&entry->bex_start);
+  gettimeofday(&entry->bex_start, NULL);
 }
 
 
 void hip_set_bex_end_timestamp(hip_ha_t * entry) {
-  HIP_ASSERT(entry != NULL);
+  if(entry != NULL) return;
   memset(&entry->bex_end, 0, sizeof(struct timeval));
-  do_gettimeofday(&entry->bex_end);
+  gettimeofday(&entry->bex_end, NULL);
+}
+
+struct timeval * hip_get_duration(struct timeval * t0,
+		      struct timeval * t1) {
+
+  int err = 0;
+
+  long duration = 0;
+
+  struct timeval time;
+  HIP_ASSERT(t1 != NULL && t0 != NULL);
+  duration = (t1->tv_sec - t0->tv_sec)*1000000
+    + (t1->tv_usec - t0->tv_usec);
+  
+  memset(&time, 0, sizeof(struct timeval));
+
+  time.tv_sec = duration / 1000000;
+  time.tv_usec  = duration % 1000000;
+  
+ out_err:
+  return &time;
 }
 
 
@@ -395,7 +416,7 @@ int bex_add_initial_timestamp(const struct in6_addr * addr) {
 }
 
 /*Return base exchange for given host*/
-unsigned long bex_get_duration_timestamp(const struct in6_addr * addr) {
+struct timeval * bex_get_duration_timestamp(const struct in6_addr * addr) {
 
   int err = 0;
 
@@ -416,7 +437,12 @@ unsigned long bex_get_duration_timestamp(const struct in6_addr * addr) {
     + (time.tv_usec - stored_link->timestamp->tv_usec);
   
   hip_bex_timestamp_db_delete(addr);
+
+  memset(&time, 0, sizeof(struct timeval));
+
+  time.tv_sec = duration / 1000000;
+  time.tv_usec  = duration % 1000000;
   
  out_err:
-  return duration;  
+  return &time;  
 }

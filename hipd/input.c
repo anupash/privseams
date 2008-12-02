@@ -2250,13 +2250,13 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 
 		
 	 
-#if 0
+		 //f 0
 	{
-	  unsigned long duration = bex_get_duration_timestamp(i2_saddr);
+	  struct timeval * duration = bex_get_duration_timestamp(i2_saddr);
 	  HIP_DEBUG_HIT("Base exchange duration with host ", i2_saddr);
-	  HIP_DEBUG("took %d ms\n ", duration);
+	  HIP_DEBUG("took %ld.%ld ms\n ", duration->tv_sec, duration->tv_usec);
 	}
-#endif
+		 //ndif
 		 
  
 
@@ -2670,13 +2670,10 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 
 	hip_set_bex_end_timestamp(entry);	
 
-#if 0
-	{
-	  unsigned long duration = bex_get_duration_timestamp(r2_saddr);
-	  HIP_DEBUG_HIT("Base exchange duration with host ", r2_saddr);
-	  HIP_DEBUG("took %d ms\n ", duration);
-	}
-#endif
+	struct timeval * duration = bex_get_duration_timestamp(r2_saddr);
+	HIP_DEBUG_HIT("Base exchange duration with host ", r2_saddr);
+	HIP_DEBUG("took %ld.%ld ms\n ", duration->tv_sec, duration->tv_usec);
+	//ndif
 	
 	if (entry->hip_msg_retrans.buf) {
 		free(entry->hip_msg_retrans.buf);
@@ -2725,9 +2722,9 @@ int hip_handle_i1(struct hip_common *i1, struct in6_addr *i1_saddr,
      HIP_DEBUG("hip_handle_i1() invoked.\n");
 
      ipv6_addr_copy(&dest, &in6addr_any);
-#if 0
-     bex_add_initial_timestamp(i1_daddr);
-#endif
+     //#if 0
+     bex_add_initial_timestamp(i1_saddr);
+     //#endif
      hip_set_bex_start_timestamp(entry);
 
 

@@ -2923,11 +2923,11 @@ int hip_handle_get_ha_info(hip_ha_t *entry, struct hip_common *msg)
 			 &entry->bex_end,
 			 &hid.bex_duration);*/
 
-	unsigned long duration =  
-	  (entry->bex_end.tv_sec - entry->bex_start.tv_sec)*1000000 
-	  + (entry->bex_end.tv_usec - entry->bex_start.tv_usec);
-	hid.bex_duration.tv_sec = duration / 1000000;
-	hid.bex_duration.tv_usec = duration % 1000000;
+
+	//	struct timeval * duration = hip_get_duration(entry->bex_start, entry->bex_end);
+	//	HIP_ASSERT(duration != NULL);
+	//	memcpy((char *)&hid.bex_duration, (char *) duration, sizeof(struct timeval));
+
 
 	
 	_HIP_HEXDUMP("HEXHID ", &hid, sizeof(struct hip_hadb_user_info_state));
@@ -3314,7 +3314,7 @@ int hip_hadb_add_udp_addr_to_spi(hip_ha_t *entry, uint32_t spi,
 	do_gettimeofday(&new_addr->modified_time);
 	new_addr->is_preferred = is_preferred_addr;
 	if(is_preferred_addr){
-            //HIP_DEBUG("Since the address is preferred, we set the entry preferred_address as such\n");
+            //IP_DEBUG("Since the address is preferred, we set the entry preferred_address as such\n");
               ipv6_addr_copy(&entry->preferred_address, &new_addr->address);
               entry->peer_udp_port = new_addr->port;
 	}
