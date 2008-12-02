@@ -681,13 +681,12 @@ int hip_map_id_to_addr(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *addr) {
 	/* Check for 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net records in DNS */
 	if (hip_get_hit_to_ip_status()) {
 		HIP_DEBUG("looking for hit-to-ip record in dns");
-		struct in6_addr tmp_in6_addr;
-		struct in6_addr *tmp_in6_addr_ptr = &tmp_in6_addr;
-		int res = hip_hit_to_ip(hit, &tmp_in6_addr_ptr);
+		//struct in6_addr tmp_in6_addr;
+		//struct in6_addr *tmp_in6_addr_ptr = &tmp_in6_addr;
+		int res = hip_hit_to_ip(hit, addr);
 
 		if (res==OK) {
-			HIP_DEBUG_IN6ADDR("found hit-to-ip addr ", tmp_in6_addr_ptr);
-			memcpy(addr, tmp_in6_addr_ptr, sizeof(struct in6_addr));
+			HIP_DEBUG_IN6ADDR("found hit-to-ip addr ", addr);
 			err = 0;
 			goto out_err;
 		}
