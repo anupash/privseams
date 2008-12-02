@@ -2918,10 +2918,18 @@ int hip_handle_get_ha_info(hip_ha_t *entry, struct hip_common *msg)
 #endif
 	hid.heartbeats_sent = entry->heartbeats_sent;
 
-	hip_timeval_diff(&entry->bex_start, 
+	/*For some reason this gives negative result*/
+	/*hip_timeval_diff(&entry->bex_start, 
 			 &entry->bex_end,
-			 &hid.bex_duration);
+			 &hid.bex_duration);*/
 
+	unsigned long duration =  
+	  (entry->bex_end.tv_sec - entry->bex_start.tv_sec)*1000000 
+	  + (entry->bex_end.tv_usec - entry->bex_start.tv_usec);
+	hid.bex_duration.tv_sec = duration / 1000000;
+	hid.bex_duration.tv_usec = duration % 1000000;
+
+	
 	_HIP_HEXDUMP("HEXHID ", &hid, sizeof(struct hip_hadb_user_info_state));
 
 	/* does not print heartbeat info, but I do not think it even should -Samu*/
