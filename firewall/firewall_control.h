@@ -36,5 +36,6 @@ extern int hip_fw_sock;
 extern int accept_hip_esp_traffic_by_default;
 extern int filter_traffic;
 extern int restore_filter_traffic;
+extern int restore_accept_hip_esp_traffic;
 
 #endif /*FIREWALL_CONTROL_H_*/
