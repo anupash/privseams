@@ -71,7 +71,7 @@ char *hip_get_hit_to_ip_hostname(hip_hit_t *hit) {
  * checks for ip address for hit
  * returns NULL if not found
  */
-struct in6_addr *hip_hit_to_ip(hip_hit_t *hit) {
+int hip_hit_to_ip(hip_hit_t *hit, struct in6_addr *ip) {
 
 	if (hit == NULL)
 		return NULL;
@@ -99,18 +99,17 @@ struct in6_addr *hip_hit_to_ip(hip_hit_t *hit) {
 	if (res!=0)
 		return NULL;
 
-	struct in6_addr tmp_in6_addr, *retval = NULL;
+	struct in6_addr tmp_in6_addr;
 	/* Look at the list and return only one address, let us prefer AF_INET6 */
 	for (rp = result; rp != NULL; rp = rp->ai_next) {
 		if (rp->ai_family == AF_INET6) {
 			struct sockaddr_in6 *tmp_sockaddr_in6_ptr = (struct sockaddr_in6 *) (rp->ai_addr);
-			retval = &(tmp_sockaddr_in6_ptr->sin6_addr);
+			ipv6_addr_copy(ip, &(tmp_sockaddr_in6_ptr->sin6_addr));
 			break; // return ipv6 address if found
 		} else if (rp->ai_family == AF_INET) {
 			struct sockaddr_in *tmp_sockaddr_in_ptr = (struct sockaddr_in *) (rp->ai_addr);
-			IPV4_TO_IPV6_MAP(&(tmp_sockaddr_in_ptr->sin_addr), &tmp_in6_addr)
+			IPV4_TO_IPV6_MAP(&(tmp_sockaddr_in_ptr->sin_addr), ip)
 			  HIP_DEBUG_IN6ADDR("addr", &tmp_in6_addr);
-			retval = &tmp_in6_addr; // and continue to look for ipv6 address
 		}
 	}
 
@@ -121,6 +120,5 @@ struct in6_addr *hip_hit_to_ip(hip_hit_t *hit) {
 	if (hit_to_ip_hostname)
 		free(hit_to_ip_hostname);
 #endif
-
-	return retval;	
+	return 0;
 }
