@@ -19,7 +19,7 @@
 
 #define HIT_TO_IP_ZONE_DEFAULT "hit-to-ip.infrahip.net"
 
-struct in6_addr *hip_hit_to_ip(hip_hit_t *hit);
+int hip_hit_to_ip(hip_hit_t *hit, struct in6_addr **retval);
 
 void hip_set_hit_to_ip_status(int status);
 int hip_get_hit_to_ip_status(void);
