@@ -1895,7 +1895,7 @@ int main(int argc, char **argv){
 			break;
 		case 'F':
 			filter_traffic = 0;
-			restore_filter_traffic = 1;
+			restore_filter_traffic = filter_traffic;
 			break;
 		case 'p':
 			limit_capabilities = 1;
