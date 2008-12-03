@@ -251,6 +251,7 @@ class Global:
                 fout.write("Skip: %s\n" % (result))
             result = p.readline()
 
+    # XX REMOVE
     def lsi_lookup(nam, addrtype):
     	cmd = "hipconf dnsproxy " + nam + " 2>&1"
      	fout.write("cmd - %s %s\n" % (cmd,nam))
@@ -337,26 +338,27 @@ class Global:
                                     1, 1, 0, 0)
                         m.addQuestion(nam,qtype,1)
                     else:
-                        r1 = d2.req(name=q1['qname'],qtype=55) # 55 is HIP RR
-                        fout.write('r1: %s\n' % (dir(r1),))
-                        fout.write('r1.answers: %s\n' % (r1.answers,))
-                        if r1.answers:
-                            a1 = r1.answers[0]
-                            aa1d = a1['data']
-                            aa1 = aa1d[4:4+16]
-                            a2 = {'name': a1['name'],
-                                  'data': pyip6.inet_ntop(aa1),
-                                  'type': 28,
-                                  'class': 1,
-                                  'ttl': a1['ttl'],
-                                  }
-                            fout.write('DNS A  %s\n' % (a2,))
-                            m = DNS.Lib.Mpacker()
-                            m.addHeader(r.header['id'],
-                                        0, r1.header['opcode'], 0, 0, r1.header['rd'], 0, 0, 0,
-                                        1, 1, 0, 0)
-                            m.addQuestion(a1['name'],qtype,1)
-                        else:
+			# Disabled: fails with e.g. dig www.google.com
+                        #r1 = d2.req(name=q1['qname'],qtype=55) # 55 is HIP RR
+                        #fout.write('r1: %s\n' % (dir(r1),))
+                        #fout.write('r1.answers: %s\n' % (r1.answers,))
+                        #if r1.answers:
+                        #    a1 = r1.answers[0]
+                        #    aa1d = a1['data']
+                        #    aa1 = aa1d[4:4+16]
+                        #    a2 = {'name': a1['name'],
+                        #          'data': pyip6.inet_ntop(aa1),
+                        #          'type': 28,
+                        #          'class': 1,
+                        #          'ttl': a1['ttl'],
+                        #          }
+                        #    fout.write('DNS A  %s\n' % (a2,))
+                        #    m = DNS.Lib.Mpacker()
+                        #    m.addHeader(r.header['id'],
+                        #            0, r1.header['opcode'], 0, 0, r1.header['rd'], 0, 0, 0,
+                        #            1, 1, 0, 0)
+                        #    m.addQuestion(a1['name'],qtype,1)
+                        #else:
                             m = None
 		    if m:
 			try:
