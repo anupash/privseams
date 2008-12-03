@@ -2018,6 +2018,7 @@ int main(int argc, char **argv){
 			break;
 		case 'm':
 #ifdef CONFIG_HIP_MIDAUTH
+			filter_traffic = 1;
 			use_midauth = 1;
 			break;
 #endif
