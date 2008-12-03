@@ -86,6 +86,7 @@ bin_PROGRAMS += opendhtteststub
 bin_PROGRAMS += certteststub
 bin_PROGRAMS += sqliteteststub
 bin_PROGRAMS += hc_performance
+bin_PROGRAMS += auth_performance
 
 #sbin_SCRIPTS = hipsetup
 
