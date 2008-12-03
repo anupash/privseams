@@ -202,6 +202,13 @@ class Global:
                 return r
         return None
 
+    def getbya(gp,ahn):
+        for h in gp.hosts:
+            r = h.getbya(ahn)
+            if r:
+                return r
+        return None
+
     def forkme(gp):
         pid = os.fork()
         if pid:
@@ -321,9 +328,10 @@ class Global:
 
 		# IPv4 A record
                 if qtype == 1:
-		    fout.write('Query type A\n')
+		    fout.write('Query type A: LSI look up\n')
                     nam = q1['qname']
-                    lr = gp.getbyname(nam)
+                    #lr = gp.getbyname(nam)
+	            lr = gp.getbya(nam)
                     if lr:
                         a2 = {'name': nam,
                               'data': lr,
@@ -331,35 +339,15 @@ class Global:
                               'class': 1,
                               'ttl': 10,
                               }
-                        fout.write('Hosts A  %s\n' % (a2,))
+                        fout.write('Hosts file A  %s\n' % (a2,))
                         m = DNS.Lib.Mpacker()
                         m.addHeader(r.header['id'],
                                     0, 0, 0, 0, 1, 0, 0, 0,
                                     1, 1, 0, 0)
                         m.addQuestion(nam,qtype,1)
                     else:
-			# Disabled: fails with e.g. dig www.google.com
-                        #r1 = d2.req(name=q1['qname'],qtype=55) # 55 is HIP RR
-                        #fout.write('r1: %s\n' % (dir(r1),))
-                        #fout.write('r1.answers: %s\n' % (r1.answers,))
-                        #if r1.answers:
-                        #    a1 = r1.answers[0]
-                        #    aa1d = a1['data']
-                        #    aa1 = aa1d[4:4+16]
-                        #    a2 = {'name': a1['name'],
-                        #          'data': pyip6.inet_ntop(aa1),
-                        #          'type': 28,
-                        #          'class': 1,
-                        #          'ttl': a1['ttl'],
-                        #          }
-                        #    fout.write('DNS A  %s\n' % (a2,))
-                        #    m = DNS.Lib.Mpacker()
-                        #    m.addHeader(r.header['id'],
-                        #            0, r1.header['opcode'], 0, 0, r1.header['rd'], 0, 0, 0,
-                        #            1, 1, 0, 0)
-                        #    m.addQuestion(a1['name'],qtype,1)
-                        #else:
-                            m = None
+		        # No reason to query DNS for LSIs
+                    	m = None
 		    if m:
 			try:
 			    fout.write('sending A answer\n')
@@ -371,7 +359,7 @@ class Global:
 
 		# IPv6 AAAA record
 		if qtype == 28:
-		    fout.write('Query type AAAA\n')
+		    fout.write('Query type AAAA: HIT look up\n')
                     nam = q1['qname']
                     lr = gp.getbyaaaa(nam)
                     if lr:
@@ -448,7 +436,7 @@ class Global:
 		    nam = q1['qname']
                     lr = gp.getbyname(nam)
                     if lr:
-			fout.write('HERE 1 a any \n')
+			fout.write('match on hosts file\n')
                         a2 = {'name': nam,
                               'data': lr,
                               'type': 28,
@@ -464,23 +452,23 @@ class Global:
                         r1 = d2.req(name=q1['qname'],qtype=55) # 55 is HIP RR
                         fout.write('r1: %s\n' % (dir(r1),))
                         fout.write('r1.answers: %s\n' % (r1.answers,))
-                        if r1.answers:
-                            a1 = r1.answers[0]
-                            aa1d = a1['data']
-                            aa1 = aa1d[4:4+16]
-                            a2 = {'name': a1['name'],
-                                  'data': pyip6.inet_ntop(aa1),
-                                  'type': 28,
-                                  'class': 1,
-                                  'ttl': a1['ttl'],}
-                            fout.write('DNS A or AAAA  %s\n' % (a2,))
-                            m = DNS.Lib.Mpacker()
-                            m.addHeader(r.header['id'],
+                        for a1 in r1.answers:
+			    print a1['typename']
+                            if a1['typename'] == '55':
+                            	data = a1['data']
+                            	aa1 = data[4:4+16]
+	                    	a2 = {'name': a1['name'],
+                            	'data': pyip6.inet_ntop(aa1),
+                            	'type': 28,
+                            	'class': 1,
+                            	'ttl': a1['ttl'],}
+                            	fout.write('DNS A or AAAA  %s\n' % (a2,))
+                            	m = DNS.Lib.Mpacker()
+                            	m.addHeader(r.header['id'],
                                         0, r1.header['opcode'], 0, 0, r1.header['rd'], 0, 0, 0,
                                         1, 1, 0, 0)
-                            m.addQuestion(a1['name'],qtype,1)
-                        else:
-                            m = None
+                            	m.addQuestion(a1['name'],qtype,1)
+				break;
                     if m:
 			#try ipv4 address by default
 			try:
