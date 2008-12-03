@@ -25,7 +25,6 @@ struct midauth_handlers {
 	midauth_handler u1;
 	midauth_handler u2;
 	midauth_handler u3;
-	midauth_handler esp;
 	midauth_handler close;
 	midauth_handler close_ack;
 };

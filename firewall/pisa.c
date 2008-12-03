@@ -688,7 +688,6 @@ void pisa_init(struct midauth_handlers *h)
 	h->u1 = pisa_handler_u1;
 	h->u2 = pisa_handler_u2;
 	h->u3 = pisa_handler_u3;
-	h->esp = midauth_handler_drop; /* no longer handled in pisa.c */
 	h->close = midauth_handler_accept;
 	h->close_ack = pisa_handler_close_ack;
 
