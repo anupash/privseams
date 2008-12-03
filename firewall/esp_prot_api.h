@@ -14,7 +14,7 @@
 /* if unused hchain element count of the active_hchain falls below
  * this threshold (% of max count), it will trigger the setup of
  * a new next_hchain */
-#define REMAIN_HASHES_TRESHOLD		0.5
+#define REMAIN_HASHES_TRESHOLD		0.0
 #if 0
 #define REMAIN_HASHES_TRESHOLD		0.5
 #endif
@@ -25,7 +25,7 @@
 #define NUM_UPDATE_HCHAIN_LENGTHS	1
 /* number of hierarchies used to link hchains */
 #define NUM_BEX_HIERARCHIES			1
-#define NUM_UPDATE_HIERARCHIES		3
+#define NUM_UPDATE_HIERARCHIES		1
 
 
 /* maps from the transform_id defined above to the hash-function id

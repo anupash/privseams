@@ -30,13 +30,15 @@
  * @note we are using a list here, so we might also use some other
  *       mechanism to stop the hcstore_refill() */
 // TODO move this to esp_prot_api
-#define MAX_HCHAINS_PER_ITEM	8
+//#define MAX_HCHAINS_PER_ITEM	8
+#define MAX_HCHAINS_PER_ITEM	2
 
 /* determines when to refill a store
  *
  * @note this is a reverse threshold -> 1 - never refill, 0 - always
  */
-#define ITEM_THRESHOLD			0.5
+//#define ITEM_THRESHOLD			0.5
+#define ITEM_THRESHOLD			1.0
 
 
 typedef struct hchain_shelf
