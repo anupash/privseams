@@ -3,14 +3,16 @@
 #include <unistd.h>
 #include "hip_statistics.h"
 #include "crypto.h"
+#include <openssl/ecdsa.h>
 
 #define PACKET_LENGTH 1280
 
 int num_measurements = 1000;
 int key_pool_size = 10;
 
-int rsa_key_len = 1024;
-int dsa_key_len = 1024;
+int rsa_key_len = 2048;
+int dsa_key_len = 2048;
+#define ECDSA_CURVE NID_X9_62_prime192v3
 
 /*!
  * \brief 	Determine and print the gettimeofday time resolution.
@@ -65,6 +67,9 @@ int main(int argc, char ** argv)
 	DSA * dsa_key_pool[key_pool_size];
 	DSA_SIG * dsa_sig_pool[num_measurements];
 
+	EC_KEY * ecdsa_key_pool[key_pool_size];
+	ECDSA_SIG * ecdsa_sig_pool[num_measurements];
+
 
 	hip_set_logdebug(LOGDEBUG_NONE);
 
@@ -83,7 +88,8 @@ int main(int argc, char ** argv)
 			"SHA1 performance test\n"
 			"-------------------------------\n");
 
-	printf("Calculating hashes over %d packets\n", num_measurements);
+	printf("Calculating hashes over %d packets...\n", num_measurements);
+
 	for(i = 0; i < num_measurements; i++)
 	{
 		gettimeofday(&start_time, NULL);
@@ -96,6 +102,7 @@ int main(int argc, char ** argv)
 		timediff = calc_timeval_diff(&start_time, &stop_time);
 		add_statistics_item(&creation_stats, timediff);
 	}
+
 	calc_statistics(&creation_stats, &num_items, &min, &max, &avg, &std_dev,
 					STATS_IN_MSECS);
 	printf("generation statistics - num_data_items: %u, min: %.3fms, max: %.3fms, avg: %.3fms, std_dev: %.3fms\n",
@@ -249,7 +256,7 @@ int main(int argc, char ** argv)
 		timediff = calc_timeval_diff(&start_time, &stop_time);
 		add_statistics_item(&verify_stats, timediff);
 
-		if(!err)
+		if(err <= 0)
 		{
 			printf("Verification failed\n");
 		}
@@ -272,5 +279,75 @@ int main(int argc, char ** argv)
 			"ECDSA performance test\n"
 			"-------------------------------\n");
 
+	printf("Creating key pool of %d keys for curve ECDSA_CURVE...\n", key_pool_size);
+	for(i = 0; i < key_pool_size; i++)
+	{
+		ecdsa_key_pool[i] = EC_KEY_new_by_curve_name(ECDSA_CURVE);
+		if (!ecdsa_key_pool[i])
+		{
+			printf("ec key setup failed!\n");
+		}
 
+		if (!EC_KEY_generate_key(ecdsa_key_pool[i]))
+		{
+			printf("ec key generation failed!\n");
+		}
+	}
+
+	printf("Calculating %d ECDSA signatures\n", num_measurements);
+	for(i = 0; i < num_measurements; i++)
+	{
+		sig_len = ECDSA_size(ecdsa_key_pool[i % key_pool_size]);
+
+		ecdsa_sig_pool[i] = malloc(sig_len);
+
+		gettimeofday(&start_time, NULL);
+
+		// SHA1 on data
+		SHA1(&data[i * PACKET_LENGTH], PACKET_LENGTH, &hashed_data[i * SHA_DIGEST_LENGTH]);
+
+		// sign
+		ecdsa_sig_pool[i] = ECDSA_do_sign(&hashed_data[i * SHA_DIGEST_LENGTH],
+				SHA_DIGEST_LENGTH, ecdsa_key_pool[i % key_pool_size]);
+
+		gettimeofday(&stop_time, NULL);
+
+		timediff = calc_timeval_diff(&start_time, &stop_time);
+		add_statistics_item(&creation_stats, timediff);
+
+		if(!ecdsa_sig_pool[i])
+		{
+			printf("ECDSA signature not successful\n");
+		}
+	}
+	calc_statistics(&creation_stats, &num_items, &min, &max, &avg, &std_dev,
+					STATS_IN_MSECS);
+	printf("generation statistics - num_data_items: %u, min: %.3fms, max: %.3fms, avg: %.3fms, std_dev: %.3fms\n",
+				num_items, min, max, avg, std_dev);
+
+	printf("Verifying %d ECDSA signatures\n", num_measurements);
+	for(i = 0; i < num_measurements; i++)
+	{
+		gettimeofday(&start_time, NULL);
+
+		SHA1(&data[i * PACKET_LENGTH], PACKET_LENGTH, &hashed_data[i * SHA_DIGEST_LENGTH]);
+
+		err = ECDSA_do_verify(&hashed_data[i * SHA_DIGEST_LENGTH], SHA_DIGEST_LENGTH,
+				ecdsa_sig_pool[i], ecdsa_key_pool[i % key_pool_size]);
+
+		gettimeofday(&stop_time, NULL);
+
+		timediff = calc_timeval_diff(&start_time, &stop_time);
+		add_statistics_item(&verify_stats, timediff);
+
+		if(err <= 0)
+		{
+			printf("Verification failed\n");
+		}
+	}
+
+	calc_statistics(&verify_stats, &num_items, &min, &max, &avg, &std_dev,
+			STATS_IN_MSECS);
+	printf("verification statistics - num_data_items: %u, min: %.3fms, max: %.3fms, avg: %.3fms, std_dev: %.3fms\n",
+				num_items, min, max, avg, std_dev);
 }
