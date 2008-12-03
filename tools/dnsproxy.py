@@ -1,8 +1,5 @@
 #! /usr/bin/env python
 
-# TBD: stderr/stdout should go via syslog if forked
-# Will fix soon. Basically just redirect fout.write and stderr.writes to syslog
-
 import sys
 import getopt
 import os
@@ -463,47 +460,50 @@ class Global:
 			    s.sendto(m.buf,from_a)
 			    sent_answer = 1
 
-		#******************************************
-		# 'hipconf dnsproxy ... ' command execution
-		#******************************************
-		#get the PATH env variable
-		cmd = "echo $PATH"
+		###### LSI handling ############################
+
+                # XX TODO:
+                # * query hostname: return the LSI as A
+                # * query LSI: what to do?
+
+                cmd = "hipconf dnsproxy " + nam + " 2>&1"
+                fout.write("cmd - %s %s\n" % (cmd,nam))
 		p = os.popen(cmd, "r")
-		line = p.readline()
-
-		#append the PATH env variable
-		line = "/sbin:/usr/sbin/:/usr/local/sbin:" + line[0:len(line) - 1]
-
-		#obtain the commands
-		commands = line.split(':')
-		cmd_worked = 0
-		#fout.write("cmds   %s\n" % (commands,))
-		for c in commands:
-			cmd = c + "/hipconf dnsproxy " + nam + " 3>&1 2>&1 | grep hipconf "
-			#fout.write("cmd - %s\n" % (cmd,))
-			p = os.popen(cmd, "r")
-			result = p.readline()
-			if result[0:3] == "sh:" and result[len(result)-10:len(result)-1] == "not found":
-				#fout.write("not found   %s\n" % (result,))
-				continue;	#try the next command
-			elif result[1:13] == "Check syntax":
-				#fout.write("not found   %s\n" % (result,))
-				continue;	#try the next command
-			else:
-				#fout.write(" -  found   %s\n" % (result,))
-				cmd_worked = 1
-				break;		#this cmd worked
-
-		#add mapping using the hipconf cmd
-		if cmd_worked == 1:
-		    result = result + " 1>/dev/null 2>/dev/null"
-		    fout.write('CMD - %s\n' % (result,))
+		result = p.readline()
+                fout.write("Result: %s" % (result))
+		if result.find("hipconf") != -1:
+                    # the result of "hipconf dnsproxy" gives us
+                    # an "hipconf add map" command which we can
+                    # directly add
+                    fout.write("Found LSI\n")
+		    result = result + " >/dev/null 2>&1"
+		    fout.write('CMD - %s\n' % (result))
 		    p = os.popen(result)
-		#else:
-		#    fout.write('No command - %s\n' % (result,))
-		#***********************************************
+		else:
+                    fout.write("did not find\n")
+
+                ######## OpenDHT code ############################
+
+                # XX TODO:
+                # * query hostname: return the HIT as AAAA
+                # * query HIT: what to do?
+
+       		fout.write("DHT code\n")
+                fout.write("Command: - %s\n" % (cmd))
+                cmd = "hipconf dht get " + nam + " 2>&1"
+                p = os.popen(cmd, "r")
+                result = p.readline()
+                while result:
+                    if result.find("Result") != -1:
+                        fout.write("Found id: %s\n" % (result));
+                    else:
+                        fout.write("Skip: %s\n" % (result))
+                    result = p.readline()
+
+                #######################################
 
 		if not sent_answer:
+		    fout.write('Not sent answer\n')
                     s2.send(buf)
                     r2 = s2.recv(2048)
                     u = DNS.Lib.Munpacker(r2)
@@ -513,48 +513,10 @@ class Global:
                         s.sendto(r2,from_a)
 
                 fout.flush()
+
             except Exception,e:
-		#********************************************
-		# 'hipconf dht get hostname'command execution
-		#********************************************
-		#get the PATH env variable
-		cmd = "echo $PATH"
-		p = os.popen(cmd, "r")
-		line = p.readline()
+                fout.write('Exception ignored: %s\n' % (e,))
 
-		#append the PATH env variable
-		line = "/sbin:/usr/sbin/:/usr/local/sbin:" + line[0:len(line) - 1]
-
-		#obtain the commands
-		commands = line.split(':')
-		cmd_worked = 0
-		for c in commands:
-			cmd = c + "/hipconf dht get " + nam + " 2>&1 "   #| grep hipconf "
-			p = os.popen(cmd, "r")
-			result = p.readline()
-			if result[0:3] == "sh:" and result[len(result)-10:len(result)-1] == "not found":
-				#fout.write("not found   %s\n" % (result,))
-				continue;	#try the next command
-			else:
-				#fout.write("EXECUTED - %s\n" % (cmd,))
-				fout.write('Result from command: %s\n' % (cmd[0:len(cmd)-10],))
-				fout.write("    %s" % (result,))
-				result = p.readline()
-				while result:
-				    fout.write("   %s" % (result,))
-				    result = p.readline()
-				cmd_worked = 1
-				break;		#this cmd worked
-
-		#add mapping using the hipconf cmd
-		#if cmd_worked == 1:
-		#    result = result + " 1>/dev/null 2>/dev/null 3>/dev/null"
-		#    p = os.popen(result)
-		#else:
-		#    fout.write('No command - %s\n' % (result,))
-		#***********************************************
-
-                fout.write('Exception %s\n' % (e,))
                 
         fout.write('Wants down\n')
         fout.flush()
