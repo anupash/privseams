@@ -1,8 +1,5 @@
 #! /usr/bin/env python
 
-# TBD: stderr/stdout should go via syslog if forked
-# Will fix soon. Basically just redirect fout.write and stderr.writes to syslog
-
 import sys
 import getopt
 import os
@@ -241,6 +238,36 @@ class Global:
             f.write('%d\n' % (os.getpid(),))
             f.close()
 
+    def bamboo_lookup(nam, addrtype):
+    	fout.write("DHT look up\n")
+        fout.write("Command: - %s\n" % (cmd))
+        cmd = "hipconf dht get " + nam + " 2>&1"
+        p = os.popen(cmd, "r")
+        result = p.readline()
+        while result:
+            if result.find("Result") != -1:
+            	fout.write("Found id: %s\n" % (result));
+            else:
+                fout.write("Skip: %s\n" % (result))
+            result = p.readline()
+
+    def lsi_lookup(nam, addrtype):
+    	cmd = "hipconf dnsproxy " + nam + " 2>&1"
+     	fout.write("cmd - %s %s\n" % (cmd,nam))
+	p = os.popen(cmd, "r")
+	result = p.readline()
+        fout.write("Result: %s" % (result))
+	if result.find("hipconf") != -1:
+      	    # the result of "hipconf dnsproxy" gives us
+            # an "hipconf add map" command which we can
+            # directly add
+            fout.write("Found LSI\n")
+	    result = result + " >/dev/null 2>&1"
+	    fout.write('Command: %s\n' % (result))
+	    p = os.popen(result)
+	else:
+            fout.write("did not find\n")
+
     def doit(gp,args):
         gp.read_resolv_conf()
         gp.parameter_defaults()
@@ -291,8 +318,9 @@ class Global:
                 sent_answer = 0
                 m = None
 
-		# a
+		# IPv4 A record
                 if qtype == 1:
+		    fout.write('Query type A\n')
                     nam = q1['qname']
                     lr = gp.getbyname(nam)
                     if lr:
@@ -332,17 +360,18 @@ class Global:
                             m = None
 		    if m:
 			try:
+			    fout.write('sending A answer\n')
 			    m.addA(a2['name'],a2['class'],a2['ttl'],a2['data'])
                             s.sendto(m.buf,from_a)
                             sent_answer = 1
 			except:
-			    fout.write('except a\n')
+			    fout.write('except A\n')
 
-		# aaaa
+		# IPv6 AAAA record
 		if qtype == 28:
+		    fout.write('Query type AAAA\n')
                     nam = q1['qname']
                     lr = gp.getbyaaaa(nam)
-		    #print lr
                     if lr:
                         a2 = {'name': nam,
                               'data': lr,
@@ -380,15 +409,16 @@ class Global:
                             m = None
 		    if m:
 			try:
+			    fout.write('sending AAAA answer\n')
 			    m.addAAAA(a2['name'],a2['class'],a2['ttl'],a2['data'])
                             s.sendto(m.buf,from_a)
                             sent_answer = 1
 			except:
-			    fout.write('except aaaa\n')
-			    fout.write('BBBBBBBB  55\n')
+			    fout.write('except AAAA\n')
 
-		# PTR
+		# PTR record
                 elif qtype == 12:
+		    fout.write('Query type PTR\n')
                     nam = q1['qname']
                     lr = gp.getbyaaaa(nam)
                     fout.write('Hosts PTR 1 (%s)\n' % (lr,))
@@ -406,12 +436,13 @@ class Global:
                         m.addQuestion(nam,qtype,1)
                         fout.write('Hosts PTR 5 (%s)\n' % (lr,))
                     if m:
+			fout.write('sending PTR answer\n')
                         fout.write('Hosts PTR 6 (%s)\n' % (a2,))
                         m.addPTR(a2['name'],a2['class'],a2['ttl'],a2['data'])
                         s.sendto(m.buf,from_a)
                         sent_answer = 1
 
-		elif qtype == 255:#any
+		elif qtype == 255: # ANY address
 		    nam = q1['qname']
                     lr = gp.getbyname(nam)
                     if lr:
@@ -428,7 +459,6 @@ class Global:
                                     1, 1, 0, 0)
                         m.addQuestion(nam,qtype,1)
                     else:
-			fout.write('HERE 2 a any \n')
                         r1 = d2.req(name=q1['qname'],qtype=55) # 55 is HIP RR
                         fout.write('r1: %s\n' % (dir(r1),))
                         fout.write('r1.answers: %s\n' % (r1.answers,))
@@ -452,58 +482,22 @@ class Global:
                     if m:
 			#try ipv4 address by default
 			try:
+			    fout.write('sending ANY answer as A\n')
 			    ip = socket.inet_pton(socket.AF_INET, a2['data'])
 			    fout.write('try\n')
 			    m.addA(a2['name'], a2['class'], a2['ttl'], a2['data'])
 			    s.sendto(m.buf,from_a)
 			    sent_answer = 1
 			except:
+			    fout.write('sending ANY answer as AAAA\n')
 			    fout.write('except\n')
 			    m.addAAAA(a2['name'], a2['class'], a2['ttl'], a2['data'])
 			    s.sendto(m.buf,from_a)
 			    sent_answer = 1
 
-		#******************************************
-		# 'hipconf dnsproxy ... ' command execution
-		#******************************************
-		#get the PATH env variable
-		cmd = "echo $PATH"
-		p = os.popen(cmd, "r")
-		line = p.readline()
-
-		#append the PATH env variable
-		line = "/sbin:/usr/sbin/:/usr/local/sbin:" + line[0:len(line) - 1]
-
-		#obtain the commands
-		commands = line.split(':')
-		cmd_worked = 0
-		#fout.write("cmds   %s\n" % (commands,))
-		for c in commands:
-			cmd = c + "/hipconf dnsproxy " + nam + " 3>&1 2>&1 | grep hipconf "
-			#fout.write("cmd - %s\n" % (cmd,))
-			p = os.popen(cmd, "r")
-			result = p.readline()
-			if result[0:3] == "sh:" and result[len(result)-10:len(result)-1] == "not found":
-				#fout.write("not found   %s\n" % (result,))
-				continue;	#try the next command
-			elif result[1:13] == "Check syntax":
-				#fout.write("not found   %s\n" % (result,))
-				continue;	#try the next command
-			else:
-				#fout.write(" -  found   %s\n" % (result,))
-				cmd_worked = 1
-				break;		#this cmd worked
-
-		#add mapping using the hipconf cmd
-		if cmd_worked == 1:
-		    result = result + " 1>/dev/null 2>/dev/null"
-		    fout.write('CMD - %s\n' % (result,))
-		    p = os.popen(result)
-		#else:
-		#    fout.write('No command - %s\n' % (result,))
-		#***********************************************
 
 		if not sent_answer:
+		    fout.write('Not sent answer\n')
                     s2.send(buf)
                     r2 = s2.recv(2048)
                     u = DNS.Lib.Munpacker(r2)
@@ -513,48 +507,10 @@ class Global:
                         s.sendto(r2,from_a)
 
                 fout.flush()
+
             except Exception,e:
-		#********************************************
-		# 'hipconf dht get hostname'command execution
-		#********************************************
-		#get the PATH env variable
-		cmd = "echo $PATH"
-		p = os.popen(cmd, "r")
-		line = p.readline()
+                fout.write('Exception ignored: %s\n' % (e,))
 
-		#append the PATH env variable
-		line = "/sbin:/usr/sbin/:/usr/local/sbin:" + line[0:len(line) - 1]
-
-		#obtain the commands
-		commands = line.split(':')
-		cmd_worked = 0
-		for c in commands:
-			cmd = c + "/hipconf dht get " + nam + " 2>&1 "   #| grep hipconf "
-			p = os.popen(cmd, "r")
-			result = p.readline()
-			if result[0:3] == "sh:" and result[len(result)-10:len(result)-1] == "not found":
-				#fout.write("not found   %s\n" % (result,))
-				continue;	#try the next command
-			else:
-				#fout.write("EXECUTED - %s\n" % (cmd,))
-				fout.write('Result from command: %s\n' % (cmd[0:len(cmd)-10],))
-				fout.write("    %s" % (result,))
-				result = p.readline()
-				while result:
-				    fout.write("   %s" % (result,))
-				    result = p.readline()
-				cmd_worked = 1
-				break;		#this cmd worked
-
-		#add mapping using the hipconf cmd
-		#if cmd_worked == 1:
-		#    result = result + " 1>/dev/null 2>/dev/null 3>/dev/null"
-		#    p = os.popen(result)
-		#else:
-		#    fout.write('No command - %s\n' % (result,))
-		#***********************************************
-
-                fout.write('Exception %s\n' % (e,))
                 
         fout.write('Wants down\n')
         fout.flush()
