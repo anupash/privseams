@@ -69,7 +69,7 @@ extern int __gen_tempname (char *, int);
 #define __libc_lock_lock(NAME)						\
 	pthread_mutex_lock(&(NAME))
 #define __libc_lock_unlock(NAME)					\
-	pthread_mutex_unlcok(&(NAME))
+	pthread_mutex_unlock(&(NAME))
 
 #if _USAGI_LIBINET6 == 21
 # define _LIBC

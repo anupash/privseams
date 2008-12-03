@@ -725,7 +725,7 @@ int main_client_native(int socktype, char *peer_name, char *peer_port_name)
 {
 	//struct endpointinfo hints, *epinfo = NULL, *res = NULL;
 	//struct endpointinfo *epinfo;
-	//struct addrinfo hints, *res = NULL;
+	struct addrinfo hints, *res = NULL;
 	struct timeval stats_before, stats_after;
 	struct sockaddr_hip peer_sock;
 	unsigned long stats_diff_sec, stats_diff_usec;
@@ -748,24 +748,24 @@ int main_client_native(int socktype, char *peer_name, char *peer_port_name)
 #if 0
 	/* set up host lookup information  */
 	memset(&hints, 0, sizeof(hints));
-	hints.ei_socktype = socktype;
-	hints.ei_family = endpoint_family;
-	//hints.ai_socktype = socktype;
-	//hints.ai_family = endpoint_family;
+	//hints.ei_socktype = socktype;
+	//hints.ei_family = endpoint_family;
+	hints.ai_socktype = socktype;
+	hints.ai_family = endpoint_family;
 	/* Use the following flags to use only the kernel list for name resolution
 	 * hints.ei_flags = AI_HIP | AI_KERNEL_LIST;
 	 */
 
 	/* lookup host */
-	err = getendpointinfo(peer_name, peer_port_name, &hints, &res);
+	//err = getendpointinfo(peer_name, peer_port_name, &hints, &res);
 	if (err) {
 		HIP_ERROR("getendpointfo failed\n");
 		goto out_err;
 	}
-	hints.ai_flags |= AI_EXTFLAGS;
-	hints.ai_eflags |= HIP_PREFER_ORCHID;
+	//hints.ai_flags |= AI_EXTFLAGS;
+	//hints.ai_eflags |= HIP_PREFER_ORCHID;
 
-	//err = getaddrinfo(peer_name, peer_port_name, &hints, &res);
+	err = getaddrinfo(peer_name, peer_port_name, &hints, &res);
 	if (err) {
 		HIP_ERROR("getaddrinfo failed (%d): %s\n", err, gepi_strerror(err));
 		goto out_err;
@@ -774,6 +774,7 @@ int main_client_native(int socktype, char *peer_name, char *peer_port_name)
 		HIP_ERROR("NULL result, TODO\n");
 		goto out_err;
 	}
+
 /*
 	HIP_DEBUG("family=%d value=%d\n", res->ei_family,
 		  ntohs(((struct sockaddr_eid *) res->ei_endpoint)->eid_val));

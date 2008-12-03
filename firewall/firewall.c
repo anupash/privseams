@@ -17,14 +17,15 @@
 int statefulFiltering = 1;
 int escrow_active = 0;
 int accept_normal_traffic_by_default = 1;
-int accept_hip_esp_traffic_by_default = 0;
+int accept_hip_esp_traffic_by_default =
+  HIP_FW_ACCEPT_HIP_ESP_TRAFFIC_BY_DEFAULT;
 int system_based_opp_mode = 0;
 int log_level = LOGDEBUG_NONE;
 
 int counter = 0;
 int hip_proxy_status = 0;
 int foreground = 1;
-int filter_traffic = 1;
+int filter_traffic = HIP_FW_FILTER_TRAFFIC_BY_DEFAULT;
 int hip_opptcp = 0;
 int hip_userspace_ipsec = 0;
 int hip_kernel_ipsec_fallback = 0;
@@ -33,11 +34,12 @@ int hip_stun = 0;
 int hip_lsi_support = 0;
 int hip_sava_router = 0;
 int hip_sava_client = 0;
+int restore_filter_traffic = HIP_FW_FILTER_TRAFFIC_BY_DEFAULT;
+int restore_accept_hip_esp_traffic = HIP_FW_ACCEPT_HIP_ESP_TRAFFIC_BY_DEFAULT;
 
 #ifdef CONFIG_HIP_MIDAUTH
 int use_midauth = 0;
 #endif
-
 
 /* Default HIT - do not access this directly, call hip_fw_get_default_hit() */
 struct in6_addr default_hit;
@@ -1958,6 +1960,7 @@ int main(int argc, char **argv){
 			break;
 		case 'A':
 			accept_hip_esp_traffic_by_default = 1;
+			restore_accept_hip_esp_traffic = 1;
 			break;
 		case 'f':
 			rule_file = optarg;
@@ -1980,6 +1983,7 @@ int main(int argc, char **argv){
 			break;
 		case 'F':
 			filter_traffic = 0;
+			restore_filter_traffic = filter_traffic;
 			break;
 		case 'p':
 			limit_capabilities = 1;
@@ -2441,7 +2445,9 @@ int hip_fw_handle_outgoing_system_based_opp(hip_fw_context_t *ctx) {
 		else if (entry_peer->bex_state == FIREWALL_STATE_BEX_NOT_SUPPORTED)
 			verdict = accept_normal_traffic_by_default;
 		else if (entry_peer->bex_state == FIREWALL_STATE_BEX_ESTABLISHED){
-			if (hit_is_local_hit(&entry_peer->hit_our)) {
+			if( &entry_peer->hit_our                       &&
+			    (ipv6_addr_cmp(hip_fw_get_default_hit(),
+					   &entry_peer->hit_our) == 0)    ){
 				reinject_packet(&entry_peer->hit_our,
 						&entry_peer->hit_peer,
 						ctx->ipq_packet, 4, 0);

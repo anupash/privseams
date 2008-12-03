@@ -58,7 +58,7 @@ public class HipUserkeyClient {
 		sout.println(line);
 		sout.flush();
 		line = sin.readLine();
-		System.out.println(line);
+		System.out.println("Received: " + line);
 	    }
 	} catch (Exception ex) {
 	    ex.printStackTrace();
