@@ -238,6 +238,36 @@ class Global:
             f.write('%d\n' % (os.getpid(),))
             f.close()
 
+    def bamboo_lookup(nam, addrtype):
+    	fout.write("DHT look up\n")
+        fout.write("Command: - %s\n" % (cmd))
+        cmd = "hipconf dht get " + nam + " 2>&1"
+        p = os.popen(cmd, "r")
+        result = p.readline()
+        while result:
+            if result.find("Result") != -1:
+            	fout.write("Found id: %s\n" % (result));
+            else:
+                fout.write("Skip: %s\n" % (result))
+            result = p.readline()
+
+    def lsi_lookup(nam, addrtype):
+    	cmd = "hipconf dnsproxy " + nam + " 2>&1"
+     	fout.write("cmd - %s %s\n" % (cmd,nam))
+	p = os.popen(cmd, "r")
+	result = p.readline()
+        fout.write("Result: %s" % (result))
+	if result.find("hipconf") != -1:
+      	    # the result of "hipconf dnsproxy" gives us
+            # an "hipconf add map" command which we can
+            # directly add
+            fout.write("Found LSI\n")
+	    result = result + " >/dev/null 2>&1"
+	    fout.write('Command: %s\n' % (result))
+	    p = os.popen(result)
+	else:
+            fout.write("did not find\n")
+
     def doit(gp,args):
         gp.read_resolv_conf()
         gp.parameter_defaults()
@@ -288,8 +318,9 @@ class Global:
                 sent_answer = 0
                 m = None
 
-		# a
+		# IPv4 A record
                 if qtype == 1:
+		    fout.write('Query type A\n')
                     nam = q1['qname']
                     lr = gp.getbyname(nam)
                     if lr:
@@ -329,17 +360,18 @@ class Global:
                             m = None
 		    if m:
 			try:
+			    fout.write('sending A answer\n')
 			    m.addA(a2['name'],a2['class'],a2['ttl'],a2['data'])
                             s.sendto(m.buf,from_a)
                             sent_answer = 1
 			except:
-			    fout.write('except a\n')
+			    fout.write('except A\n')
 
-		# aaaa
+		# IPv6 AAAA record
 		if qtype == 28:
+		    fout.write('Query type AAAA\n')
                     nam = q1['qname']
                     lr = gp.getbyaaaa(nam)
-		    #print lr
                     if lr:
                         a2 = {'name': nam,
                               'data': lr,
@@ -377,15 +409,16 @@ class Global:
                             m = None
 		    if m:
 			try:
+			    fout.write('sending AAAA answer\n')
 			    m.addAAAA(a2['name'],a2['class'],a2['ttl'],a2['data'])
                             s.sendto(m.buf,from_a)
                             sent_answer = 1
 			except:
-			    fout.write('except aaaa\n')
-			    fout.write('BBBBBBBB  55\n')
+			    fout.write('except AAAA\n')
 
-		# PTR
+		# PTR record
                 elif qtype == 12:
+		    fout.write('Query type PTR\n')
                     nam = q1['qname']
                     lr = gp.getbyaaaa(nam)
                     fout.write('Hosts PTR 1 (%s)\n' % (lr,))
@@ -403,12 +436,13 @@ class Global:
                         m.addQuestion(nam,qtype,1)
                         fout.write('Hosts PTR 5 (%s)\n' % (lr,))
                     if m:
+			fout.write('sending PTR answer\n')
                         fout.write('Hosts PTR 6 (%s)\n' % (a2,))
                         m.addPTR(a2['name'],a2['class'],a2['ttl'],a2['data'])
                         s.sendto(m.buf,from_a)
                         sent_answer = 1
 
-		elif qtype == 255:#any
+		elif qtype == 255: # ANY address
 		    nam = q1['qname']
                     lr = gp.getbyname(nam)
                     if lr:
@@ -425,7 +459,6 @@ class Global:
                                     1, 1, 0, 0)
                         m.addQuestion(nam,qtype,1)
                     else:
-			fout.write('HERE 2 a any \n')
                         r1 = d2.req(name=q1['qname'],qtype=55) # 55 is HIP RR
                         fout.write('r1: %s\n' % (dir(r1),))
                         fout.write('r1.answers: %s\n' % (r1.answers,))
@@ -449,58 +482,19 @@ class Global:
                     if m:
 			#try ipv4 address by default
 			try:
+			    fout.write('sending ANY answer as A\n')
 			    ip = socket.inet_pton(socket.AF_INET, a2['data'])
 			    fout.write('try\n')
 			    m.addA(a2['name'], a2['class'], a2['ttl'], a2['data'])
 			    s.sendto(m.buf,from_a)
 			    sent_answer = 1
 			except:
+			    fout.write('sending ANY answer as AAAA\n')
 			    fout.write('except\n')
 			    m.addAAAA(a2['name'], a2['class'], a2['ttl'], a2['data'])
 			    s.sendto(m.buf,from_a)
 			    sent_answer = 1
 
-		###### LSI handling ############################
-
-                # XX TODO:
-                # * query hostname: return the LSI as A
-                # * query LSI: what to do?
-
-                cmd = "hipconf dnsproxy " + nam + " 2>&1"
-                fout.write("cmd - %s %s\n" % (cmd,nam))
-		p = os.popen(cmd, "r")
-		result = p.readline()
-                fout.write("Result: %s" % (result))
-		if result.find("hipconf") != -1:
-                    # the result of "hipconf dnsproxy" gives us
-                    # an "hipconf add map" command which we can
-                    # directly add
-                    fout.write("Found LSI\n")
-		    result = result + " >/dev/null 2>&1"
-		    fout.write('CMD - %s\n' % (result))
-		    p = os.popen(result)
-		else:
-                    fout.write("did not find\n")
-
-                ######## OpenDHT code ############################
-
-                # XX TODO:
-                # * query hostname: return the HIT as AAAA
-                # * query HIT: what to do?
-
-       		fout.write("DHT code\n")
-                fout.write("Command: - %s\n" % (cmd))
-                cmd = "hipconf dht get " + nam + " 2>&1"
-                p = os.popen(cmd, "r")
-                result = p.readline()
-                while result:
-                    if result.find("Result") != -1:
-                        fout.write("Found id: %s\n" % (result));
-                    else:
-                        fout.write("Skip: %s\n" % (result))
-                    result = p.readline()
-
-                #######################################
 
 		if not sent_answer:
 		    fout.write('Not sent answer\n')
