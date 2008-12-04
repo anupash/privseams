@@ -31,9 +31,7 @@
 /* #include <libiptc/libiptc.h> */
 #include "esp_prot_hipd_msg.h"
 
-#ifdef CONFIG_HIP_HI3
 //#include "i3_id.h"
-#endif
 
 #define HIP_MAX_ICMP_PACKET 512
 
@@ -93,17 +91,14 @@ int hip_send_r2_response(struct hip_common *r2,
 		hip_portpair_t *r2_info);
 
 int hip_build_locators(struct hip_common *);
-
+int hip_build_host_id_and_signature(struct hip_common *msg,  unsigned char * key);
 int hip_send_i1(hip_hit_t *, hip_hit_t *, hip_ha_t *);
 void hip_send_notify_all(void);
 
-#ifdef CONFIG_HIP_HI3
 static void no_matching_trigger(void *, void *, void *);
 int hip_send_i3(struct in6_addr *, struct in6_addr *, in_port_t, in_port_t,
 		struct hip_common *, hip_ha_t *, int);
 
 int hip_build_locators(struct hip_common *);
-
-#endif /* CONFIG_HIP_HI3 */
 
 #endif /* HIP_OUTPUT_H */

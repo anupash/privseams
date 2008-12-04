@@ -12,6 +12,8 @@
 /* for second dimension of hash_lengths[][] */
 #define NUM_HASH_LENGTHS			1
 
+#define MAX_TREE_DEPTH				5
+
 // changed for measurements
 #if 0
 /* IDs for all supported transforms

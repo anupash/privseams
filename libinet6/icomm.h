@@ -6,20 +6,20 @@
 #  define IPV6_2292PKTINFO 2
 #endif
 
+#ifndef __KERNEL__
 /* Do not move this before the definition of struct endpoint, as i3
    headers refer to libinet6 headers which in turn require the
    definition of the struct. */
-#ifdef CONFIG_HIP_HI3
-#   include "i3_client_api.h"
-#endif
+#include "i3_client_api.h"
 
 #include <netinet/in.h>
+#endif
 #include "protodefs.h"
 
 //#define HIP_DAEMONADDR_PATH		        "/tmp/hip_daemonaddr_path.tmp"
-#define HIP_DAEMON_LOCAL_PORT                  970
 #define HIP_FIREWALL_PORT                      971
 #define HIP_AGENT_PORT                         972
+#define HIP_DAEMON_LOCAL_PORT                  973
 //#define HIP_AGENTADDR_PATH			"/tmp/hip_agentaddr_path.tmp"
 //#define HIP_USERADDR_PATH		        "/tmp/hip_useraddr_path.tmp"
 //#define HIP_FIREWALLADDR_PATH			"/tmp/hip_firewalladdr_path.tmp"
@@ -55,7 +55,7 @@
 #define SO_HIP_SET_PEER_HIT			15
 #define SO_HIP_DEFAULT_HIT			16
 #define SO_HIP_GET_PEER_LIST                    17
-#define SO_HIP_CONF_PUZZLE_GET                  18
+/* One free slot here */
 #define SO_HIP_GET_PSEUDO_HIT                   19
 #define SO_HIP_GET_LOCAL_HI                     20
 #define SO_HIP_GET_HITS                         21
@@ -86,10 +86,11 @@
 #define SO_HIP_BOS                              70
 #define SO_HIP_NETLINK_DUMMY                    71
 #define SO_HIP_CONF_PUZZLE_NEW                  72
-#define SO_HIP_CONF_PUZZLE_SET                  73
-#define SO_HIP_CONF_PUZZLE_INC                  74
-#define SO_HIP_CONF_PUZZLE_DEC                  75
-/* Three free slots here */
+#define SO_HIP_CONF_PUZZLE_GET                  73
+#define SO_HIP_CONF_PUZZLE_SET                  74
+#define SO_HIP_CONF_PUZZLE_INC                  75
+#define SO_HIP_CONF_PUZZLE_DEC                  76
+/* slot 77 is FREE */
 #define SO_HIP_SET_OPPORTUNISTIC_MODE           78
 #define SO_HIP_SET_BLIND_ON                     79
 #define SO_HIP_SET_BLIND_OFF                    80
@@ -111,9 +112,10 @@
 #define SO_HIP_DHT_OFF                          93
 #define SO_HIP_SET_OPPTCP_ON			94
 #define SO_HIP_SET_OPPTCP_OFF			95
-/* slot 96 is FREE */
-/* slot 97 is FREE */
-/* slot 98 is FREE */
+#define SO_HIP_SET_HI3_ON			96
+#define SO_HIP_SET_HI3_OFF			97
+#define SO_HIP_RESET_FIREWALL_DB		98
+
 #define SO_HIP_OPPTCP_SEND_TCP_PACKET		99
 #define SO_HIP_TRANSFORM_ORDER                  100
 
@@ -175,17 +177,35 @@
 #define SO_HIP_ESP_PROT_TFM			146
 #define SO_HIP_BEX_STORE_UPDATE			147
 #define SO_HIP_TRIGGER_UPDATE			148
-#define SO_HIP_ADD_PEER_MAP_HIT_IP_LSI          149
-#define SO_HIP_RESTART_DUMMY_INTERFACE		150
-#define SO_HIP_FW_BEX_DONE                      151
 #define SO_HIP_FW_UPDATE_DB                     152
 #define SO_HIP_IPSEC_DELETE_SA                  153
 #define SO_HIP_IPSEC_FLUSH_ALL_SA          	154
 #define SO_HIP_ANCHOR_CHANGE			155
+#define SO_HIP_ADD_PEER_MAP_HIT_IP_LSI          156
+#define SO_HIP_FW_BEX_DONE                      157
+#define SO_HIP_RESTART_DUMMY_INTERFACE		158
+#define SO_HIP_VERIFY_DHT_HDRR_RESP             159
+#define SO_HIP_ADD_UADB_INFO			160
+#define SO_HIP_BUDDIES_SET			161
+#define SO_HIP_BUDDIES_ON                       162
+#define SO_HIP_BUDDIES_OFF                      163
+#define SO_HIP_INFO_FOR_DNS_PROXY		164
+#define SO_HIP_REGISTER_SAVAHR                   165
+#define SO_HIP_GET_SAVAHR_HIT                    166
+#define SO_HIP_GET_SAVAHR_IN_KEYS                167
+#define SO_HIP_GET_SAVAHR_OUT_KEYS               168
+#define SO_HIP_OFFER_SAVAH                       169
+#define SO_HIP_CANCEL_SAVAH                      170
+#define SO_HIP_FW_I2_DONE                        171
+#define SO_HIP_SAVAH_CLIENT_STATUS_REQUEST       172
+#define SO_HIP_SAVAH_SERVER_STATUS_REQUEST       173
+#define SO_HIP_SET_SAVAH_CLIENT_OFF              174
+#define SO_HIP_SET_SAVAH_CLIENT_ON               175
+#define SO_HIP_SET_SAVAH_SERVER_OFF              176
+#define SO_HIP_SET_SAVAH_SERVER_ON               178
+#define SO_HIP_NSUPDATE_OFF                      179
+#define SO_HIP_NSUPDATE_ON                       180
 
-//#define SO_HIP_ESP_PROT_EXT_TRANSFORM		xx
-//#define SO_HIP_IPSEC_UPDATE_ANCHOR_LIST	xx
-//#define SO_HIP_IPSEC_NEXT_ANCHOR		xx
 /** @} */
 /* inclusive */
 #define HIP_SO_ROOT_MAX 			255
@@ -203,12 +223,44 @@
 //definition of firewall db records
 struct firewall_hl{
 	struct in6_addr ip_peer;
-	hip_lsi_t lsi;
-	hip_hit_t hit_our;
-        hip_hit_t hit_peer;
-        int       bex_state;
+	hip_lsi_t 	lsi;
+	hip_hit_t 	hit_our;
+        hip_hit_t 	hit_peer;
+        int       	bex_state;
 };
 typedef struct firewall_hl firewall_hl_t;
+
+struct firewall_cache_hl
+{
+	hip_hit_t	hit_peer;
+	hip_hit_t	hit_our;
+	struct in6_addr	ip_our;
+	struct in6_addr	ip_peer;
+        hip_lsi_t	lsi_our;
+        hip_lsi_t	lsi_peer;
+	int		state;
+	int		heartbeats_on;
+	int		heartbeats_sent;
+	int		heartbeats_received;
+	double		heartbeats_mean;
+	double		heartbeats_variance;
+};
+typedef struct firewall_cache_hl firewall_cache_hl_t;
+
+
+/*----Firewall cache----*/
+/*Values for the port cache of the firewall*/
+#define FIREWALL_PORT_CACHE_IPV6_TRAFFIC	1
+#define FIREWALL_PORT_CACHE_LSI_TRAFFIC		2
+#define FIREWALL_PORT_CACHE_IPV4_TRAFFIC	3
+#define FIREWALL_PORT_CACHE_KEY_LENGTH		20
+
+struct firewall_port_cache_hl
+{
+	char port_and_protocol[FIREWALL_PORT_CACHE_KEY_LENGTH];	//key
+	int  traffic_type;					//value
+};
+typedef struct firewall_port_cache_hl firewall_port_cache_hl_t;
 
 #endif /* _HIP_ICOMM */
 

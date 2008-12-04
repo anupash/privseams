@@ -26,10 +26,12 @@
 #include "accessor.h"
 #include "message.h"
 #include "esp_prot_common.h"
-
-#ifdef CONFIG_HIP_HI3
-#include "i3_client_api.h"
+#ifdef CONFIG_HIP_AGENT
+# include "sqlitedbapi.h"
 #endif
+#include "hipqueue.h"
+
+#include "i3_client_api.h"
 
 #ifdef CONFIG_HIP_BLIND
 #include "blind.h"
@@ -39,7 +41,7 @@
 
 #define HIP_HIT_DEV "dummy0"
 
-#ifdef CONFIG_HIP_HI3
+#ifdef CONFIG_HIP_I3
 #  define HIPD_SELECT(a,b,c,d,e) cl_select(a,b,c,d,e)
 #else
 #  define HIPD_SELECT(a,b,c,d,e) select(a,b,c,d,e)
@@ -62,9 +64,15 @@
 #define HIP_R1_PRECREATE_INTERVAL 60*60 /* seconds */
 #define HIP_R1_PRECREATE_INIT \
            (HIP_R1_PRECREATE_INTERVAL / HIP_SELECT_TIMEOUT)
-#define OPENDHT_REFRESH_INTERVAL 60 /* seconds Original 60 using 1 with sockaddrs */
+#define OPENDHT_REFRESH_INTERVAL 30 /* seconds Original 60 using 1 with sockaddrs */
 #define OPENDHT_REFRESH_INIT \
            (OPENDHT_REFRESH_INTERVAL / HIP_SELECT_TIMEOUT)
+
+#define QUEUE_CHECK_INTERVAL 15 /* seconds */
+#define QUEUE_CHECK_INIT \
+           (QUEUE_CHECK_INTERVAL / HIP_SELECT_TIMEOUT)
+
+#define CERTIFICATE_PUBLISH_INTERVAL OPENDHT_TTL /* seconds */
 
 /* How many duplicates to send simultaneously: 1 means no duplicates */
 #define HIP_PACKET_DUPLICATES                1
@@ -92,7 +100,7 @@ extern struct sockaddr_un hip_agent_addr;
 extern int hip_firewall_sock, hip_firewall_status;
 extern struct sockaddr_in6 hip_firewall_addr;
 
-
+extern int hit_db_lock ;
 extern int is_active_handover;
 
 int hip_agent_is_alive();

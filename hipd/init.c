@@ -5,16 +5,13 @@
  * @note    HIPU: BSD platform needs to be autodetected in hip_set_lowcapability
  */
 
-#include "init.h"
 
-#ifndef OPENWRT
-//#include <sys/capability.h>
-#endif
+
 #include <sys/prctl.h>
 #include "common_defines.h"
 #include <sys/types.h>
 #include "debug.h"
-#include "hi3.h"
+#include "init.h"
 
 extern struct hip_common *hipd_msg;
 extern struct hip_common *hipd_msg_v4;
@@ -121,44 +118,41 @@ void hip_print_sysinfo()
 }
 #endif
 
+/*
+ * Create a file with the given contents unless it already exists
+ */
+void hip_create_file_unless_exists(const char *path, const char *contents)
+{
+        struct stat status;
+        if (stat(path, &status)  == 0)
+                return;
+
+        FILE *fp = fopen(path, "w");
+        HIP_ASSERT(fp);
+        size_t items = fwrite(contents, strlen(contents), 1, fp);
+        HIP_ASSERT(items > 0);
+        fclose(fp);
+}
+
+
 void hip_load_configuration()
 {
-	const char *cfile = "default";
-	struct stat status;
-	pid_t pid;
-	FILE *fp = NULL;
-	size_t items = 0;
-	int len_con = strlen(HIPD_CONFIG_FILE_EX),
-	  len_hos = strlen(HIPD_HOSTS_FILE_EX);
+        /* HIPD_CONFIG_FILE, HIPD_CONFIG_FILE_EX and so on are defined in libinet6/hipconf.h */
 
-	/* HIPD_CONFIG_FILE, HIPD_CONFIG_FILE_EX, HIPD_HOSTS_FILE and
-	   HIPD_HOSTS_FILE_EX are defined in /libinet6/hipconf.h */
+        hip_create_file_unless_exists(HIPD_CONFIG_FILE, HIPD_CONFIG_FILE_EX);
 
-	/* Create config file if does not exist */
+        hip_create_file_unless_exists(HIPD_HOSTS_FILE, HIPD_HOSTS_FILE_EX);
 
-	if (stat(HIPD_CONFIG_FILE, &status) && errno == ENOENT) {
-		errno = 0;
-		fp = fopen(HIPD_CONFIG_FILE, "w" /* mode */);
-		HIP_ASSERT(fp);
-		items = fwrite(HIPD_CONFIG_FILE_EX, len_con, 1, fp);
-		HIP_ASSERT(items > 0);
-		fclose(fp);
-	}
-
-	/* Create /etc/hip/hosts file if does not exist */
-
-	if (stat(HIPD_HOSTS_FILE, &status) && errno == ENOENT) {
-		errno = 0;
-		fp = fopen(HIPD_HOSTS_FILE, "w" /* mode */);
-		HIP_ASSERT(fp);
-		items = fwrite(HIPD_HOSTS_FILE_EX, len_hos, 1, fp);
-		HIP_ASSERT(items > 0);
-		fclose(fp);
-	}
+#ifdef CONFIG_HIP_I3
+        hip_create_file_unless_exists(HIPD_HI3_FILE, HIPD_HI3_FILE_EX);
+#endif
+        hip_create_file_unless_exists(HIPD_DHTSERVERS_FILE, HIPD_DHTSERVERS_FILE_EX);
 
 	/* Load the configuration. The configuration is loaded as a sequence
 	   of hipd system calls. Assumably the user socket buffer is large
 	   enough to buffer all of the hipconf commands.. */
+
+	const char *cfile = "default";
 
 	hip_conf_handle_load(NULL, ACTION_LOAD, &cfile, 1, 1);
 }
@@ -207,7 +201,7 @@ void hip_set_os_dep_variables()
 int hipd_init(int flush_ipsec, int killold)
 {
 	hip_hit_t peer_hit;
-	int err = 0, certerr = 0, dhterr = 0;
+	int err = 0, certerr = 0, dhterr = 0, hitdberr = 0;
 	char str[64];
 	char mtu[16];
 	struct sockaddr_in6 daemon_addr;
@@ -380,8 +374,8 @@ int hipd_init(int flush_ipsec, int killold)
 	}
 #endif
 
-	hip_opendht_sock_fqdn = init_dht_gateway_socket(hip_opendht_sock_fqdn);
-	hip_opendht_sock_hit = init_dht_gateway_socket(hip_opendht_sock_hit);
+	hip_opendht_sock_fqdn = init_dht_gateway_socket_gw(hip_opendht_sock_fqdn, opendht_serving_gateway);
+	hip_opendht_sock_hit = init_dht_gateway_socket_gw(hip_opendht_sock_hit, opendht_serving_gateway);
 
 	certerr = 0;
 	certerr = hip_init_certs();
@@ -393,13 +387,19 @@ int hipd_init(int flush_ipsec, int killold)
 	HIP_IFEL(set_new_tcptimeout_parameters_value(), -1,
 			"set new tcptimeout parameters error\n");
 #endif
+	
+	hitdberr = 0;
+#ifdef CONFIG_HIP_AGENT
+	hitdberr = hip_init_daemon_hitdb();
+	if (hitdberr < 0) HIP_DEBUG("Initializing daemon hit database returned error\n");
+#endif	/* CONFIG_HIP_AGENT */
 
 #ifdef CONFIG_HIP_PRIVSEP
 	/* Fix to bug id 668 */
 	getaddrinfo_disable_hit_lookup();
+	HIP_IFEL(hip_set_lowcapability(0), -1, "Failed to set capabilities\n");
 #endif /* CONFIG_HIP_PRIVSEP */
 
-	HIP_IFEL(hip_set_lowcapability(0), -1, "Failed to set capabilities\n");
 
 #ifdef CONFIG_HIP_HI3
 	if( hip_use_i3 )
@@ -408,6 +408,7 @@ int hipd_init(int flush_ipsec, int killold)
 		hip_i3_init(/*&peer_hit*/);
 	}
 #endif
+
 	hip_firewall_sock_lsi_fd = hip_user_sock;
 
 out_err:
@@ -421,78 +422,81 @@ out_err:
  */
 int hip_init_dht()
 {
-        int err = 0, lineno = 0, i = 0, randomno = 0;
+        int err = 0, lineno = 0, i = 0, randomno = -1;
         extern struct addrinfo * opendht_serving_gateway;
         extern char opendht_name_mapping;
         extern int hip_opendht_inuse;
         extern int hip_opendht_error_count;
-        extern int hip_opendht_sock_fqdn;
-        extern int hip_opendht_sock_hit;
-        char *serveraddr_str;
-        char *servername_str;
-        FILE *fp = NULL;
+        extern int hip_opendht_sock_fqdn;  
+        extern int hip_opendht_sock_hit;  
+        extern int hip_opendht_fqdn_sent;
+        extern int hip_opendht_hit_sent;
+        extern int opendht_serving_gateway_port;
+        extern char opendht_serving_gateway_port_str[7];
+        extern char opendht_host_name[256];
+        char serveraddr_str[INET6_ADDRSTRLEN];
+        char servername_str[HOST_NAME_MAX];
         char line[500];
         List list;
 
-        if (hip_opendht_inuse == SO_HIP_DHT_ON) {
-                hip_opendht_error_count = 0;
-                /* check the condition of the sockets, we may have come here in middle
-                 of something so re-initializing might be needed */
-                if (hip_opendht_sock_fqdn > 0) {
-                        close(hip_opendht_sock_fqdn);
-                         hip_opendht_sock_fqdn = init_dht_gateway_socket(hip_opendht_sock_fqdn);
-                         hip_opendht_fqdn_sent = STATE_OPENDHT_IDLE;
-                }
+        HIP_IFEL((hip_opendht_inuse == SO_HIP_DHT_OFF), 0, "No DHT\n");
 
-                if (hip_opendht_sock_hit > 0) {
-                        close(hip_opendht_sock_hit);
-                         hip_opendht_sock_hit = init_dht_gateway_socket(hip_opendht_sock_hit);
-                         hip_opendht_hit_sent = STATE_OPENDHT_IDLE;
-                }
+	hip_opendht_error_count = 0;
+	/* Initializing variable for dht gateway port used in
+	   resolve_dht_gateway_info in libhipopendht */
 
-                fp = fopen(OPENDHT_SERVERS_FILE, "r");
-                if (fp == NULL) {
-                        HIP_DEBUG("No dhtservers file, using %s\n", OPENDHT_GATEWAY);
-                        err = resolve_dht_gateway_info(OPENDHT_GATEWAY, &opendht_serving_gateway);
-                        if (err < 0) HIP_DEBUG("Error resolving openDHT gateway!\n");
-                        err = 0;
-                        memset(&opendht_name_mapping, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
-                        if (gethostname(&opendht_name_mapping, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1))
-                                HIP_DEBUG("gethostname failed\n");
-                } else {
-                        /* dhtservers exists */
-                        while (fp && getwithoutnewline(line, 500, fp) != NULL) {
-                                lineno++;
-                        }
-                        fclose(fp);
-                        srand(time(NULL));
-                        randomno = rand() % lineno;
-                        fp = fopen(OPENDHT_SERVERS_FILE, "r");
-                        for (i = 0; i <= randomno; i++)
-                                getwithoutnewline(line, 500, fp);
-                        initlist(&list);
-                        extractsubstrings(line, &list);
-                        servername_str = getitem(&list,0);
-                        serveraddr_str = getitem(&list,1);
-                        HIP_DEBUG("DHT gateway from dhtservers: %s (%s)\n",
-                                  servername_str, serveraddr_str);
-                        /* resolve it */
-                        err = resolve_dht_gateway_info(serveraddr_str, &opendht_serving_gateway);
-                        if (err < 0) HIP_DEBUG("Error resolving openDHT gateway!\n");
-                        err = 0;
-                        memset(&opendht_name_mapping, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
-                        if (gethostname(&opendht_name_mapping, HIP_HOST_ID_HOSTNAME_LEN_MAX - 1))
-                                HIP_DEBUG("gethostname failed\n");
-			register_to_dht();
-                        destroy(&list);
-                }
-        } else {
-                HIP_DEBUG("DHT is not in use");
-        }
+       /* Needs to be init here, because of gateway change after
+	  threshold error count*/
+	opendht_serving_gateway_port = OPENDHT_PORT;
+
+	memcpy(opendht_host_name, OPENDHT_GATEWAY, strlen(OPENDHT_GATEWAY)); 
+
+	/* check the condition of the sockets, we may have come here in middle
+	   of something so re-initializing might be needed */
+	if (hip_opendht_sock_fqdn > 0) {
+		close(hip_opendht_sock_fqdn);
+		hip_opendht_sock_fqdn = init_dht_gateway_socket_gw(hip_opendht_sock_fqdn, opendht_serving_gateway);
+		hip_opendht_fqdn_sent = STATE_OPENDHT_IDLE;
+	}
+	
+	if (hip_opendht_sock_hit > 0) {
+		close(hip_opendht_sock_hit);
+		hip_opendht_sock_hit = init_dht_gateway_socket_gw(hip_opendht_sock_hit, opendht_serving_gateway);
+		hip_opendht_hit_sent = STATE_OPENDHT_IDLE;
+	}
+
+	memset(servername_str, 0, sizeof(servername_str));
+	memset(serveraddr_str, 0, sizeof(serveraddr_str));
+	err = hip_get_random_hostname_id_from_hosts(OPENDHT_SERVERS_FILE,
+						    servername_str, serveraddr_str);
+	HIP_IFEL(err, 0, "Failed to get random dht server\n");
+	HIP_DEBUG("DHT gateway from dhtservers: %s (%s)\n",
+		  servername_str, serveraddr_str);
+	/* resolve it */
+	memset(opendht_host_name, '\0', sizeof(opendht_host_name));
+	memcpy(opendht_host_name, servername_str, strlen(servername_str));
+	err = resolve_dht_gateway_info(serveraddr_str,
+				       &opendht_serving_gateway,
+				       opendht_serving_gateway_port, AF_INET);  
+	if (err < 0) 
+	{
+		hip_opendht_error_count++;
+		HIP_DEBUG("Error resolving openDHT gateway!\n");
+	}
+	err = 0;
+	memset(&opendht_name_mapping, '\0',
+	       HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
+	if (gethostname(&opendht_name_mapping,
+			HIP_HOST_ID_HOSTNAME_LEN_MAX - 1))
+		HIP_DEBUG("gethostname failed\n");
+	register_to_dht();
+	init_dht_sockets(&hip_opendht_sock_fqdn, &hip_opendht_fqdn_sent); 
+	init_dht_sockets(&hip_opendht_sock_hit, &hip_opendht_hit_sent);
+	destroy(&list);
+	
  out_err:
-        if (fp)
-                fclose(fp);
-        return (err);
+
+        return err;
 }
 
 /**
@@ -773,7 +777,7 @@ void hip_exit(int signal)
 	hip_oppdb_uninit();
 #endif
 
-#ifdef CONFIG_HIP_HI3
+#ifdef CONFIG_HIP_I3
 	hip_hi3_clean();
 #endif
 
@@ -986,3 +990,24 @@ out_err:
 	if (algo == HIP_HI_RSA) return (tmp);
 	return NULL;
 }
+
+#ifdef CONFIG_HIP_AGENT
+/**
+ * hip_init_daemon_hitdb - The function initialzies the database at daemon
+ * which recives the information from agent to be stored
+ */
+int hip_init_daemon_hitdb()
+{
+	extern sqlite3* daemon_db;
+	char *file = HIP_CERT_DB_PATH_AND_NAME;
+	int err = 0 ;
+	extern sqlite3* daemon_db;
+	
+	_HIP_DEBUG("Loading HIT database from %s.\n", file);
+	daemon_db = hip_sqlite_open_db(file, HIP_CERT_DB_CREATE_TBLS);
+	HIP_IFE(!daemon_db, -1);
+
+out_err:
+	return (err);
+}
+#endif	/* CONFIG_HIP_AGENT */

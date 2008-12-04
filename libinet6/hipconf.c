@@ -19,7 +19,6 @@
  * @todo    read the output message from send_msg?
  */
 #include "hipconf.h"
-#include "libhipopendht.h"
 
 /**
  * A help string containing the usage of @c hipconf.
@@ -39,16 +38,18 @@ const char *hipconf_usage =
 "new|add hi default (HI must be created as root)\n"
 "new hi default rsa_keybits dsa_keybits\n"
 #ifdef CONFIG_HIP_ICOOKIE
-"get|set|inc|dec|new puzzle all|<hit>\n"
+"get|inc|dec|new puzzle all|<hit>\n"
+"set puzzle all|<hit> new_value\n"
 #else
-"get|set|inc|dec|new puzzle all\n"
+"get|inc|dec|new puzzle all\n"
+"set puzzle all new_value\n"
 #endif
 "bos all\n"
 //modify by santtu
 //"nat on|off|<peer_hit>\n"
 "nat none|plain-udp|ice-udp\n"
 //end modify
-"rst all|<peer_hit>\n"
+"rst all|peer_hit <peer_HIT>\n"
 "load config default\n"
 "handoff mode lazy|active\n"
 "run normal|opp <binary>\n"
@@ -56,8 +57,8 @@ const char *hipconf_usage =
 "\tadd|del service escrow|rvs|relay\n"
 "\treinit service rvs|relay\n"
 "Client side:\n"
-"\tadd server rvs|relay|escrow <HIT> <IP address> <lifetime in seconds>\n"
-"\tdel server rvs|relay|escrow <HIT> <IP address>\n"
+"\tadd server rvs|relay|escrow [HIT] <IP|hostname> <lifetime in seconds>\n"
+"\tdel server rvs|relay|escrow [HIT] <IP|hostname>\n"
 #ifdef CONFIG_HIP_BLIND
 "set blind on|off\n"
 #endif
@@ -80,6 +81,9 @@ const char *hipconf_usage =
 #ifdef CONFIG_HIP_HIPPROXY
 "hipproxy on|off\n"
 #endif
+"hi3 on|off\n"
+"nsupdate on|off\n"
+"buddies on|off\n"
 ;
 
 /**
@@ -122,6 +126,11 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc, 
 	hip_conf_handle_tcptimeout, /* added by Tao Wan*/
         hip_conf_handle_hipproxy,
 	hip_conf_handle_heartbeat,
+	hip_conf_handle_hi3,
+	hip_conf_handle_get_dnsproxy,
+	hip_conf_handle_buddies_toggle,
+	NULL, /* reserved for sava */
+	hip_conf_handle_nsupdate,
 	NULL /* run */
 };
 
@@ -188,12 +197,20 @@ int hip_conf_get_action(char *text)
 		ret = ACTION_TCPTIMEOUT;
 	else if (!strcmp("reinit", text))
 		ret = ACTION_REINIT;
+	else if (!strcmp("hi3", text))
+		ret = ACTION_HI3;
 #ifdef CONFIG_HIP_HIPPROXY
 	else if (!strcmp("hipproxy", text))
 		ret = ACTION_HIPPROXY;
 #endif
-
-        return ret;
+	else if (!strcmp("dnsproxy", text))
+		ret = ACTION_DNS_PROXY;
+	else if (!strcmp("buddies", text))
+		ret = ACTION_BUDDIES;
+	else if (!strcmp("nsupdate", text))
+		ret = ACTION_NSUPDATE;
+	
+	return ret;
 }
 
 /**
@@ -206,14 +223,15 @@ int hip_conf_get_action(char *text)
  * @return how many arguments needs to be given at least
  */
 int hip_conf_check_action_argc(int action) {
-	int count = -1;
+	int count = 0;
 
 	switch (action) {
 	case ACTION_NEW: case ACTION_NAT: case ACTION_DEC: case ACTION_RST:
 	case ACTION_BOS: case ACTION_LOCATOR: case ACTION_OPENDHT: case ACTION_HEARTBEAT:
-                break;
+		count = 1;
+		break;
 	case ACTION_DEBUG: case ACTION_RESTART: case ACTION_REINIT:
-	case ACTION_TCPTIMEOUT:
+	case ACTION_TCPTIMEOUT: case ACTION_DNS_PROXY: case ACTION_NSUPDATE:
 		count = 1;
 		break;
 	case ACTION_ADD: case ACTION_DEL: case ACTION_SET: case ACTION_INC:
@@ -223,6 +241,7 @@ int hip_conf_check_action_argc(int action) {
 		break;
 #ifdef CONFIG_HIP_HIPPROXY
     case ACTION_HIPPROXY:
+	        count = 1;
 		break;
 #endif
 	default:
@@ -298,7 +317,7 @@ int hip_conf_get_type(char *text,char *argv[]) {
 		ret = TYPE_HEARTBEAT;
 	else if (!strcmp("ttl", text))
 		ret = TYPE_TTL;
-	else if (!strcmp("gw", text))
+	else if (!strcmp("gw", text)) 
 		ret = TYPE_GW;
 	else if (!strcmp("get", text))
 		ret = TYPE_GET;
@@ -310,7 +329,18 @@ int hip_conf_get_type(char *text,char *argv[]) {
 	else if (strcmp("hipproxy", argv[1])==0)
 		ret = TYPE_HIPPROXY;
 #endif
-     return ret;
+        else if (strcmp("hi3", argv[1])==0)
+                ret = TYPE_HI3;
+	else if (strcmp("dnsproxy", argv[1])==0)
+                ret = TYPE_DNS_PROXY;
+	else if (strcmp("buddies", argv[1])==0)
+		ret = TYPE_BUDDIES;
+	else if (strcmp("nsupdate", argv[1])==0)
+		ret = TYPE_NSUPDATE;
+	else 
+	  HIP_DEBUG("ERROR: NO MATCHES FOUND \n");
+
+	return ret;
 }
 
 /**
@@ -340,6 +370,7 @@ int hip_conf_get_type_arg(int action)
 	case ACTION_LOAD:
 	case ACTION_DHT:
 	case ACTION_OPENDHT:
+	case ACTION_BUDDIES:
         case ACTION_HEARTBEAT:
 	case ACTION_LOCATOR:
 	case ACTION_RST:
@@ -351,19 +382,62 @@ int hip_conf_get_type_arg(int action)
 #ifdef CONFIG_HIP_HIPPROXY
 	case ACTION_HIPPROXY:
 #endif
+	case ACTION_HI3:
+	case ACTION_DNS_PROXY:
 	case ACTION_RESTART:
+	case ACTION_NSUPDATE:
 		type_arg = 2;
 		break;
-
 	case ACTION_DEBUG:
 		type_arg = 1;
 		break;
-
 	default:
 		break;
 	}
 
 	return type_arg;
+}
+
+/**
+ * Resolves a given hostname to a HIT/LSI or IP address depending on match_hip flag
+ */
+int resolve_hostname_to_id(const char *hostname, struct in6_addr *id,
+	                   int match_hip) {
+	int err = 1;
+	struct addrinfo *res = NULL, *rp;
+	struct in_addr *in4;
+	struct in6_addr *in6;
+
+	HIP_IFEL(getaddrinfo(hostname, NULL, NULL, &res), -1,
+		 "getaddrinfo failed\n");
+	for (rp = res; rp != NULL; rp = rp->ai_next) {
+			in4 = &((struct sockaddr_in *) rp->ai_addr)->sin_addr;
+			in6 = &((struct sockaddr_in6 *) rp->ai_addr)->sin6_addr;
+		if (rp->ai_family == AF_INET6)
+			HIP_DEBUG_IN6ADDR("addr", in6);
+		if (rp->ai_family == AF_INET)
+			HIP_DEBUG_INADDR("addr", in4);
+		if (rp->ai_family == AF_INET6 &&
+		    (ipv6_addr_is_hit(in6) ? match_hip : !match_hip)) {
+			ipv6_addr_copy(id, in6);
+			err = 0;
+			HIP_DEBUG("Match\n");
+			break;
+		} else if (rp->ai_family == AF_INET &&
+			   (IS_LSI32(in4->s_addr) ? match_hip : !match_hip)) {
+			IPV4_TO_IPV6_MAP(in4, id);
+			err = 0;
+			break;
+			HIP_DEBUG("Match\n");
+		}
+			
+	}
+
+out_err:
+	if (res)
+		freeaddrinfo(res);
+
+	return err;
 }
 
 /**
@@ -405,7 +479,8 @@ int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[],
 	uint8_t lifetime = 0, *reg_types = NULL;
 	time_t seconds_from_lifetime = 0;
 	char lowercase[30];
-
+	int opp_mode = 0;
+		
 	_HIP_DEBUG("hip_conf_handle_server() invoked.\n");
 
 	if(action != ACTION_ADD && action != ACTION_DEL) {
@@ -415,27 +490,37 @@ int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[],
 		goto out_err;
 	} else if (action == ACTION_ADD) {
 		if(optc < 4) {
+		  if (optc < 3) { 
 			HIP_ERROR("Missing arguments.\n");
 			err = -1;
 			goto out_err;
+		  } else {
+		    HIP_DEBUG("Opportunistic mode for server registration \n");
+		    opp_mode = 1;
+		  }
 		}
-		number_of_regtypes = optc - 3;
-		index_of_hit = optc - 3;
-		index_of_ip  = optc - 2;
 
-		/* The last commandline argument has the lifetime. */
+		if (!opp_mode) {
+		  number_of_regtypes = optc - 3;
+		  index_of_hit = optc - 3;
+		  index_of_ip  = optc - 2;		 
+		} else {
+		  number_of_regtypes = optc - 2;
+		  index_of_ip = optc - 2;
+		}
+
 		HIP_IFEL(hip_string_is_digit(opt[optc - 1]), -1,
-			 "Invalid lifetime value \"%s\" given.\n"\
-			 "Please give a lifetime value between 1 and "\
+			 "Invalid lifetime value \"%s\" given.\n"	\
+			 "Please give a lifetime value between 1 and "	\
 			 "15384774 seconds.\n", opt[optc - 1]);
-
+		
 		seconds = atoi(opt[optc - 1]);
 
 		if(seconds <= 0 || seconds > 15384774) {
-			HIP_ERROR("Invalid lifetime value \"%s\" given.\n"\
-				  "Please give a lifetime value between 1 and "\
-				  "15384774 seconds.\n", opt[optc - 1]);
-			goto out_err;
+		  HIP_ERROR("Invalid lifetime value \"%s\" given.\n"	\
+			    "Please give a lifetime value between 1 and " \
+			    "15384774 seconds.\n", opt[optc - 1]);
+		  goto out_err;
 		}
 
 		HIP_IFEL(hip_get_lifetime_value(seconds, &lifetime), -1,
@@ -453,25 +538,36 @@ int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[],
 		index_of_hit = optc - 2;
 		index_of_ip  = optc - 1;
 	}
-	/* Check the HIT value. */
- 	if(inet_pton(AF_INET6, opt[index_of_hit], &hit) <= 0) {
-		HIP_ERROR("'%s' is not a valid HIT.\n", opt[index_of_hit]);
-		err = -1;
-		goto out_err;
-	} /* Check the IPv4 or IPV6 value. */
-	else if(inet_pton(AF_INET6, opt[index_of_ip], &ipv6) <= 0) {
+
+	if (!opp_mode) {
+	  /* Check the HIT value. */
+	  if(inet_pton(AF_INET6, opt[index_of_hit], &hit) <= 0) {
+		  if (resolve_hostname_to_id(opt[index_of_hit], &hit, 1)) {
+			  HIP_ERROR("'%s' is not a valid HIT.\n", opt[index_of_hit]);
+			  err = -1;
+			  goto out_err;
+		  }
+	  }
+	}
+	/* Check the IPv4 or IPV6 value. */
+
+	if(inet_pton(AF_INET6, opt[index_of_ip], &ipv6) <= 0) {
 		struct in_addr ipv4;
 		if(inet_pton(AF_INET, opt[index_of_ip], &ipv4) <= 0) {
-			HIP_ERROR("'%s' is not a valid IPv4 or IPv6 address.\n",
-				  opt[index_of_ip]);
-			err = -1;
-			goto out_err;
+			if (resolve_hostname_to_id(opt[index_of_ip], &ipv6, 0)) {
+					HIP_ERROR("'%s' is not a valid IPv4 or IPv6 address.\n",
+						  opt[index_of_ip]);
+					err = -1;
+
+					goto out_err;
+				}
 		} else {
 			IPV4_TO_IPV6_MAP(&ipv4, &ipv6);
 		}
 	}
 
 	reg_types = malloc(number_of_regtypes * sizeof(uint8_t));
+
 	if(reg_types == NULL) {
 		err = -1;
 		HIP_ERROR("Unable to allocate memory for registration "\
@@ -502,9 +598,11 @@ int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[],
 			reg_types[i] = HIP_SERVICE_RELAY;
 		} else if(strcmp("escrow", lowercase) == 0) {
 			reg_types[i] = HIP_SERVICE_ESCROW;
+		} else if(strcmp("savah", lowercase) == 0) {
+		        reg_types[i] = HIP_SERVICE_SAVAH;
 		} /* To cope with the atoi() error value we handle the 'zero'
 		     case here. */
-		else if(strcmp("0", lowercase) == 0) {
+		 else if(strcmp("0", lowercase) == 0) {
 			reg_types[i] = 0;
 		} else {
 			reg_type = atoi(lowercase);
@@ -518,11 +616,12 @@ int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[],
 			}
 		}
 	}
-
-	HIP_IFEL(hip_build_param_contents(msg, &hit, HIP_PARAM_HIT,
-					  sizeof(in6_addr_t)), -1,
-		 "Failed to build HIT parameter to hipconf user message.\n");
-
+		
+	if (!opp_mode) 
+	  HIP_IFEL(hip_build_param_contents(msg, &hit, HIP_PARAM_HIT,
+					    sizeof(in6_addr_t)), -1, 
+		   "Failed to build HIT parameter to hipconf user message.\n");
+	
 	HIP_IFEL(hip_build_param_contents(msg, &ipv6, HIP_PARAM_IPV6_ADDR,
 					  sizeof(in6_addr_t)), -1,
 		 "Failed to build IPv6 parameter to hipconf user message.\n");
@@ -1181,16 +1280,25 @@ int hip_conf_handle_locator(hip_common_t *msg, int action,
  * @return       zero on success, or negative error value on error.
  */
 int hip_conf_handle_puzzle(hip_common_t *msg, int action,
-			   const char *opt[], int optc, int send_only)
-{
-     int err = 0, ret, msg_type, all;
-     hip_hit_t hit = {0};
+			   const char *opt[], int optc, int send_only){
+     int err = 0, ret, msg_type, all, *diff = NULL, newVal = 0;
+     hip_hit_t hit = {0}, all_zero_hit = {0};
+     struct hip_tlv_common *current_param = NULL;
+     hip_tlv_type_t param_type = 0;
+     char hit_s[INET6_ADDRSTRLEN];
+     in6_addr_t *defhit = NULL;
 
-     if (optc != 1)
-     {
+     if(action == ACTION_SET){
+          if(optc != 2){
+	       HIP_ERROR("Missing arguments\n");
+	       err = -EINVAL;
+	       goto out_err;
+          }
+     }
+     else if (optc != 1){
 	  HIP_ERROR("Missing arguments\n");
 	  err = -EINVAL;
-	  goto out;
+	  goto out_err;
      }
 
      switch (action)
@@ -1206,66 +1314,109 @@ int hip_conf_handle_puzzle(hip_common_t *msg, int action,
 	  break;
      case ACTION_SET:
 	  msg_type = SO_HIP_CONF_PUZZLE_SET;
-	  err = -1; /* Not supported yet */
 	  break;
      case ACTION_GET:
 	  msg_type = SO_HIP_CONF_PUZZLE_GET;
-	  err = -1; /* Not supported yet */
 	  break;
      default:
 	  err = -1;
      }
 
-     if (err)
-     {
+     if(err){
 	  HIP_ERROR("Action (%d) not supported yet\n", action);
-	  goto out;
+	  goto out_err;
      }
 
      all = !strcmp("all", opt[0]);
 
-     if (!all)
-     {
+     if(!all){
 	  ret = inet_pton(AF_INET6, opt[0], &hit);
-	  if (ret < 0 && errno == EAFNOSUPPORT)
-	  {
+	  if (ret < 0 && errno == EAFNOSUPPORT){
 	       HIP_PERROR("inet_pton: not a valid address family\n");
 	       err = -EAFNOSUPPORT;
-	       goto out;
-	  } else if (ret == 0)
-	  {
+	       goto out_err;
+	  } else if (ret == 0){
 	       HIP_ERROR("inet_pton: %s: not a valid network address\n", opt[0]);
 	       err = -EINVAL;
-	       goto out;
+	       goto out_err;
 	  }
      }
 
+     //obtain the new value for set
+     if((msg_type == SO_HIP_CONF_PUZZLE_SET) && (optc == 2)){
+          newVal = atoi(opt[1]);
+     }
+
+     //attach the hit into the message
      err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
 				    sizeof(in6_addr_t));
-     if (err)
-     {
+     if(err){
 	  HIP_ERROR("build param hit failed: %s\n", strerror(err));
-	  goto out;
+	  goto out_err;
      }
 
-     err = hip_build_user_hdr(msg, msg_type, 0);
-     if (err)
-     {
+     //attach new val for the set action
+     if(msg_type == SO_HIP_CONF_PUZZLE_SET){
+          err = hip_build_param_contents(msg, (void *) &newVal, HIP_PARAM_INT,
+				    sizeof(int));
+          if(err){
+	       HIP_ERROR("build param int failed: %s\n", strerror(err));
+	       goto out_err;
+          }
+     }
+
+     //obtain the result for the get action
+     if(msg_type == SO_HIP_CONF_PUZZLE_GET){
+          /* Build a HIP message with socket option to get puzzle difficulty. */
+          HIP_IFE(hip_build_user_hdr(msg, msg_type, 0), -1);
+          /* Send the message to the daemon. The daemon fills the message. */
+          HIP_IFE(hip_send_daemon_info_wrapper(msg, send_only), -ECOMM);
+
+          /* Loop through all the parameters in the message just filled. */
+          while((current_param = hip_get_next_param(msg, current_param)) != NULL){
+               param_type = hip_get_param_type(current_param);
+               if(param_type == HIP_PARAM_HIT){
+                    //no need to get the hit from msg
+               }else if(param_type == HIP_PARAM_INT){
+                    diff = (int *)hip_get_param_contents_direct(current_param);
+               }else{
+			HIP_ERROR("Unrelated parameter in user "\
+				  "message.\n");
+               }
+          }
+
+          HIP_INFO("Puzzle difficulty is: %d\n", *diff);
+
+          if(ipv6_addr_cmp(&all_zero_hit, &hit) != 0){
+               inet_ntop(AF_INET6, &hit, hit_s, INET6_ADDRSTRLEN);
+               HIP_INFO("for peer hit: %s\n", hit_s);
+          }
+     }
+     else{
+          err = hip_build_user_hdr(msg, msg_type, 0);
+     }
+
+     if(err){
 	  HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
-	  goto out;
+	  goto out_err;
      }
 
-     if (all)
-     {
+     if((msg_type == SO_HIP_CONF_PUZZLE_GET)
+	     || (msg_type == SO_HIP_CONF_PUZZLE_SET)){
+	  goto out_err;
+     }
+
+     if(all){
 	  HIP_INFO("New puzzle difficulty effective immediately\n");
-     } else
-     {
+     }else{
 	  HIP_INFO("New puzzle difficulty is effective in %d seconds\n",
 		 HIP_R1_PRECREATE_INTERVAL);
      }
 
- out:
-     return err;
+out_err:
+	if(msg_type == SO_HIP_CONF_PUZZLE_GET)
+		memset(msg, 0, HIP_MAX_PACKET);
+	return err;
 }
 
 /**
@@ -1402,72 +1553,169 @@ int hip_conf_handle_set(hip_common_t *msg, int action, const char *opt[], int op
 
 /**
  * Function that is used to set the used gateway addr port and ttl with DHT
+    - hipconf dht gw <HIT>/<IP> 5851 600
  *
  * @return       zero on success, or negative error value on error.
  */
-int hip_conf_handle_gw(hip_common_t *msg, int action, const char *opt[], int optc, int send_only)
-{
-        int err,out_err;
-        int status = 0;
-        int ret;
-        struct in_addr ip_gw;
-        in6_addr_t ip_gw_mapped;
-        struct addrinfo new_gateway;
-        struct hip_opendht_gw_info *gw_info;
+int hip_conf_handle_gw(hip_common_t *msg, int action, const char *opt[], int optc, int send_only){
+    int err, out_err;
+    int status = 0;
+    int ret_HIT = 0, ret_IP = 0, ret_HOSTNAME = 0, ret = 0;
+    struct in_addr ip_gw;
+    struct in6_addr ip_gw_mapped;
+    struct addrinfo *new_gateway = NULL;
+    struct hip_opendht_gw_info *gw_info;
+    char hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
 
-        HIP_INFO("Resolving new gateway for openDHT %s\n", opt[0]);
+    HIP_INFO("Resolving new gateway for openDHT %s\n", opt[0]);
 
-        if (optc != 3) {
-                HIP_ERROR("Missing arguments\n");
-                err = -EINVAL;
-                goto out_err;
-        }
+    memset(hostname, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX);
 
-        memset(&new_gateway, '0', sizeof(new_gateway));
-        ret = 0;
-        /* resolve the new gateway */
-        /* warning: passing argument 1 of 'resolve_dht_gateway_info' discards
-	   qualifiers from pointer target type. 04.07.2008 */
-	/* warning: passing argument 2 of 'resolve_dht_gateway_info' from
-	   incompatible pointer type. 04.07.2008 */
-        ret = resolve_dht_gateway_info(opt[0], &new_gateway);
-        if (ret < 0) goto out_err;
-        struct sockaddr_in *sa = (struct sockaddr_in *)new_gateway.ai_addr;
+    if(optc != 3){
+	HIP_ERROR("Missing arguments\n");
+	err = -EINVAL;
+	goto out_err;
+    }
 
-        HIP_INFO("Gateway addr %s, port %s, TTL %s\n",
-		 inet_ntoa(sa->sin_addr), opt[1], opt[2]);
+    if(strlen(opt[0]) > 39){//address longer than size of ipv6 address
+	HIP_ERROR("Address longer than maximum allowed\n");
+	err = -EINVAL;
+	goto out_err;
+    }
 
-        ret = 0;
-        ret = inet_pton(AF_INET, inet_ntoa(sa->sin_addr), &ip_gw);
-        IPV4_TO_IPV6_MAP(&ip_gw, &ip_gw_mapped);
-        if (ret < 0 && errno == EAFNOSUPPORT) {
-                HIP_PERROR("inet_pton: not a valid address family\n");
-                err = -EAFNOSUPPORT;
-                goto out_err;
-        } else if (ret == 0) {
-                HIP_ERROR("inet_pton: %s: not a valid network address\n", opt[0]);
-                err = -EINVAL;
-                goto out_err;
-        }
+    ret_IP = inet_pton(AF_INET, opt[0], &ip_gw);
+    ret_HIT = inet_pton(AF_INET6, opt[0], &ip_gw_mapped);
 
+    if(!(ret_IP || ret_HIT)){
+	//HIP_ERROR("Gateway address not correct\n");
+	//goto out_err;
+	memcpy(hostname, opt[0], HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
+	hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX] = '\0';
+	ret_HOSTNAME = 1;
+    }
 
-        err = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped, atoi(opt[2]), atoi(opt[1]));
-        if (err) {
-                HIP_ERROR("build param hit failed: %s\n", strerror(err));
-                goto out_err;
-        }
+    if(ret_IP)
+	IPV4_TO_IPV6_MAP(&ip_gw, &ip_gw_mapped);
 
-        err = hip_build_user_hdr(msg, SO_HIP_DHT_GW, 0);
-        if (err) {
-                HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
-                goto out_err;
-        }
+    if(ret_IP || ret_HIT){
+    	HIP_DEBUG_IN6ADDR("Address ", &ip_gw_mapped);
+    }
+    else{
+	HIP_DEBUG("Host name : %s\n", hostname);
+    }
 
- out_err:
-        return err;
+    err = hip_build_param_opendht_gw_info(msg, &ip_gw_mapped,
+					  atoi(opt[2]), atoi(opt[1]), hostname);
+    if(err){
+	HIP_ERROR("build param hit failed: %s\n", strerror(err));
+	goto out_err;
+    }
+
+    err = hip_build_user_hdr(msg, SO_HIP_DHT_GW, 0);
+    if(err){
+	HIP_ERROR("Failed to build user message header.: %s\n", strerror(err));
+	goto out_err;
+    }
+
+out_err:
+    return err;
 }
 
 
+/**
+ * Function that gets data from DHT - hipconf dht get <HIT> - returns IP mappings
+ *
+ * @return       zero on success, or negative error value on error.
+ */
+int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int optc, int send_only){
+    int err = 0, ret = 0, ret_HIT = 0, ret_HOSTNAME = 0;
+    hip_hit_t hit = {0};
+    struct in_addr  *reply_ipv4;
+    struct in6_addr *reply_ipv6 = {0};
+	
+    hip_tlv_type_t         param_type = 0;
+    struct hip_tlv_common *current_param = NULL;
+    char hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
+
+    HIP_INFO("Asking serving gateway info from daemon...\n");
+
+    memset(hostname, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX);
+
+    //obtain the hit
+    ret = inet_pton(AF_INET6, opt[0], &hit);
+    ret_HIT = 1;
+    if(ret < 0 && errno == EAFNOSUPPORT){
+	HIP_PERROR("inet_pton: not a valid address family\n");
+	err = -EAFNOSUPPORT;
+	goto out_err;
+    }else if(ret == 0){
+	memcpy(hostname, opt[0], HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
+	hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX] = '\0';
+	ret_HIT = 0;
+	ret_HOSTNAME = 1;
+    }
+    ret = 0;
+
+    //attach the hit into the message
+    if(ret_HIT){
+	err = hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
+					sizeof(in6_addr_t));
+	if(err){
+	    HIP_ERROR("build param hit failed: %s\n", strerror(err));
+	    goto out_err;
+	}
+    }
+
+    //attach the hostname into the message
+    if(ret_HOSTNAME){
+	err = hip_build_param_contents(msg, (void *) hostname,
+					HIP_PARAM_HOSTNAME,
+					HIP_HOST_ID_HOSTNAME_LEN_MAX);
+	if(err){
+	    HIP_ERROR("build param hostname failed: %s\n", strerror(err));
+	    goto out_err;
+	}
+    }
+
+    //Build a HIP message to get ip mapping
+    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW, 0),-1,
+				"Building daemon header failed\n");
+
+    // Send the message to the daemon. Wait for reply
+    HIP_IFE(hip_send_daemon_info_wrapper(msg, send_only), -ECOMM);
+
+    // Loop through all the parameters in the message just filled.
+    while((current_param = hip_get_next_param(msg, current_param)) != NULL){
+	param_type = hip_get_param_type(current_param);
+	if(param_type == HIP_PARAM_SRC_ADDR){
+	    reply_ipv6 = (struct in6_addr *)hip_get_param_contents_direct(
+						current_param);
+
+	    HIP_DEBUG_IN6ADDR("Result IP ", reply_ipv6);
+	}else if(param_type == HIP_PARAM_INT){
+	    //TO DO, get int that indicates error 
+	    ret = *(int *)hip_get_param_contents_direct(current_param);
+	}
+    }
+
+    switch(ret){
+    case 1: HIP_INFO("Connection to the DHT gateway did not succeed.\n");
+    break;
+    case 2: HIP_INFO("Getting a response DHT gateway failed.\n");
+    break;
+    case 3: HIP_INFO("Entry not found at DHT gateway.\n");
+    break;
+    case 4: HIP_INFO("DHT gateway not configured yet.\n");
+    break;
+    case 5: HIP_INFO("DHT support not turned on.\n");
+    break;
+    }
+
+out_err:
+    memset(msg, 0, HIP_MAX_PACKET);
+    return(err);
+}
+#if 0 /* Original from Pardeep from OpenDHT branch */
 /**
  * Function that gets data from DHT
  *
@@ -1476,15 +1724,15 @@ int hip_conf_handle_gw(hip_common_t *msg, int action, const char *opt[], int opt
 int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int optc, int send_only)
 {
         int err = 0;
-        char dht_response[1024];
+        char dht_response[HIP_MAX_PACKET];
         struct addrinfo * serving_gateway;
         struct hip_opendht_gw_info *gw_info;
         struct in_addr tmp_v4;
         char tmp_ip_str[21];
         int tmp_ttl, tmp_port;
         int *pret;
-
-        /* ASK THIS INFO FROM DAEMON */
+		
+		/* ASK THIS INFO FROM DAEMON */
         HIP_INFO("Asking serving gateway info from daemon...\n");
         HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_DHT_SERVING_GW,0),-1,
                  "Building daemon header failed\n");
@@ -1498,23 +1746,23 @@ int hip_conf_handle_get(hip_common_t *msg, int action, const char *opt[], int op
                 HIP_INFO("DHT is not in use\n");
                 goto out_err;
         }
-        memset(&tmp_ip_str,'\0',20);
+        memset(&tmp_ip_str,'\0',sizeof(tmp_ip_str));
         tmp_ttl = gw_info->ttl;
         tmp_port = htons(gw_info->port);
         IPV6_TO_IPV4_MAP(&gw_info->addr, &tmp_v4);
-	/* warning: assignment from incompatible pointer type. 04.07.2008. */
         pret = inet_ntop(AF_INET, &tmp_v4, tmp_ip_str, 20);
         HIP_INFO("Got address %s, port %d, TTL %d from daemon\n",
                   tmp_ip_str, tmp_port, tmp_ttl);
 
-        HIP_IFEL(resolve_dht_gateway_info(tmp_ip_str, &serving_gateway),0,
+        HIP_IFEL(resolve_dht_gateway_info(tmp_ip_str, &serving_gateway,tmp_port),0,
                  "Resolve error!\n");
-        HIP_IFEL(opendht_get_key(serving_gateway, opt[0], dht_response), 0,
+        HIP_IFEL(hip_opendht_get_key(&handle_hdrr_value,serving_gateway, opt[0], dht_response,0), 0,
                  "Get error!\n");
-        HIP_INFO("Value received from the DHT %s\n",dht_response);
+        HIP_INFO("Value received from the DHT.\n");
  out_err:
         return(err);
 }
+#endif /* 0 */
 
 
 /**
@@ -1539,6 +1787,144 @@ int hip_conf_handle_dht_toggle(hip_common_t *msg, int action, const char *opt[],
  out_err:
         return(err);
 }
+
+/**
+ * Function that is used to set BUDDIES on or off
+ *
+ * @return       zero on success, or negative error value on error.
+ */
+int hip_conf_handle_buddies_toggle(hip_common_t *msg, int action, const char *opt[], int optc, int send_only)
+{
+        int err = 0, status = 0;
+        
+        if (!strcmp("on",opt[0])) {
+                status = SO_HIP_BUDDIES_ON; 
+        } else if (!strcmp("off",opt[0])) {
+                status = SO_HIP_BUDDIES_OFF;
+        } else {
+                HIP_IFEL(1, -1, "bad args\n");
+        }
+        HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1, 
+                 "Failed to build user message header.: %s\n", strerror(err));        
+        
+ out_err:
+        return(err);
+}
+
+
+/**
+ * Function that gets data from hipd for the dns proxy - hipconf dnsproxy IP/hostname
+ *
+ * @return       zero on success, or negative error value on error.
+ */
+int hip_conf_handle_get_dnsproxy(hip_common_t *msg, int action, const char *opt[], int optc, int send_only) {
+    int err = 0, ret4 = 0, ret6 = 0, ret = 0;
+    struct in_addr  ipv4_addr = {0}, ipv4_addr_all_zero = {0}, lsi;
+    struct in6_addr ipv6_addr = {0}, ipv6_addr_all_zero = {0};
+    //char hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
+    char hostname[HOST_NAME_MAX];
+    char *hit_str = NULL, *lsi_str = NULL, *ip_str = NULL;
+    hip_hit_t hit = {0};
+    struct in6_addr mapped_lsi;
+
+    /*HIP_INFO("Asking dnsproxy info from daemon...\n");*/
+
+    memset(hostname, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX);
+
+    //initialize ip string
+    HIP_IFE((!(ip_str = HIP_MALLOC(INET_ADDRSTRLEN, 0))), -1);
+    memset(ip_str, 0, INET_ADDRSTRLEN);
+
+    //initialize lsi string
+    HIP_IFE((!(lsi_str = HIP_MALLOC(INET_ADDRSTRLEN, 0))), -1);
+    memset(lsi_str, 0, INET_ADDRSTRLEN);
+
+    //initialize hit string
+    HIP_IFE((!(hit_str = HIP_MALLOC(INET6_ADDRSTRLEN, 0))), -1);
+    memset(hit_str, 0, INET6_ADDRSTRLEN);
+
+    //obtain ipv4/ipv6 address
+    ret4 = inet_pton(AF_INET,  opt[0], &ipv4_addr);
+    ret6 = inet_pton(AF_INET6, opt[0], &ipv6_addr);
+    if(ret4)
+	IPV4_TO_IPV6_MAP(&ipv4_addr, &ipv6_addr);
+    if(!(ret4 || ret6)){
+	memcpy(hostname, opt[0], HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
+	hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX] = '\0';
+    }
+
+    //hostname provided
+    if(!(ret4 || ret6)){
+	/*map hostname to hit*/
+	err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+		hip_map_first_hostname_to_hit_from_hosts,
+		hostname, &hit);
+	//hit string
+	hit_str =  hip_convert_hit_to_str(&hit, NULL);
+
+	/*map hostname to ip*/
+	err = hip_for_each_hosts_file_line(HOSTS_FILE,
+		hip_map_first_hostname_to_ip_from_hosts,
+		hostname, &ipv6_addr);
+
+	/*map hostname to lsi*/
+	err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+		hip_map_first_hostname_to_lsi_from_hosts,
+		hostname, &mapped_lsi);
+	IPV6_TO_IPV4_MAP(&mapped_lsi, &lsi);
+    }
+    else{
+	if(IS_LSI32(ipv4_addr.s_addr)){/*map lsi to hit*/
+		err = hip_for_each_hosts_file_line(HOSTS_FILE,
+			hip_map_lsi_to_hit_from_hosts_files,
+			&ipv6_addr, hostname);
+	}
+	else{/*map ipv4/ipv6 to hit*/
+		err = hip_for_each_hosts_file_line(HOSTS_FILE,
+			hip_map_first_id_to_hostname_from_hosts,
+			&ipv6_addr, hostname);
+	}
+
+	if(strlen(hostname) == 0)
+	    goto out_err;
+
+	/*map hostname to hit*/
+	err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+		hip_map_first_hostname_to_hit_from_hosts,
+		hostname, &hit);
+	//hit string
+	hit_str =  hip_convert_hit_to_str(&hit, NULL);
+
+	/*map hostname to lsi*/
+	err = hip_for_each_hosts_file_line(HIPD_HOSTS_FILE,
+		hip_map_first_hostname_to_lsi_from_hosts,
+		hostname, &mapped_lsi);
+    }
+
+    //set the ip string
+    IPV6_TO_IPV4_MAP(&ipv6_addr, &ipv4_addr);
+    if(ipv4_addr_cmp(&ipv4_addr_all_zero, &ipv4_addr) != 0)
+	inet_ntop(AF_INET, &ipv4_addr, ip_str, INET_ADDRSTRLEN);
+
+    //set the ip string
+    IPV6_TO_IPV4_MAP(&mapped_lsi, &lsi);
+    if(IS_LSI32(lsi.s_addr))
+	inet_ntop(AF_INET, &lsi, lsi_str, INET_ADDRSTRLEN);
+
+////HIP_DEBUG("**** strings -  %s - %s - %s\n", hit_str, ip_str, lsi_str);
+    if( (ipv4_addr_cmp(&ipv4_addr_all_zero, &ipv4_addr) != 0) &&
+	(ipv6_addr_cmp(&ipv6_addr_all_zero, &hit) != 0)    ){
+	HIP_DEBUG("hipconf add map %s %s %s\n", hit_str, ip_str, lsi_str);
+    }
+    else{
+	HIP_DEBUG("No ip or hit in hosts files\n");
+    }
+
+out_err:
+    memset(msg, 0, HIP_MAX_PACKET);
+    return 0;
+}
+
 
 /**
  * Handles @c service commands received from @c hipconf.
@@ -1581,6 +1967,10 @@ int hip_conf_handle_service(hip_common_t *msg, int action, const char *opt[],
 			HIP_INFO("Adding HIP UDP relay service.\n");
 			HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OFFER_HIPRELAY, 0), -1,
 				 "Failed to build user message header.\n");
+		} else if(strcmp(opt[0], "savah") == 0) { 
+		        HIP_INFO("Adding HIP SAVA service.\n");
+			HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_OFFER_SAVAH, 0), -1,
+				 "Failed to build user message header.\n");
 		} else {
 			HIP_ERROR("Unknown service \"%s\".\n", opt[0]);
 		}
@@ -1609,6 +1999,11 @@ int hip_conf_handle_service(hip_common_t *msg, int action, const char *opt[],
 			HIP_INFO("Deleting HIP UDP relay service.\n");
 			HIP_IFEL(hip_build_user_hdr(
 					 msg, SO_HIP_CANCEL_HIPRELAY, 0), -1,
+				 "Failed to build user message header.\n");
+		} else if (strcmp(opt[0], "sava") == 0) {
+			HIP_INFO("Deleting SAVAH service.\n");
+			HIP_IFEL(hip_build_user_hdr(
+					 msg, SO_HIP_CANCEL_SAVAH, 0), -1,
 				 "Failed to build user message header.\n");
 		} else {
 			HIP_ERROR("Unknown service \"%s\".\n", opt[0]);
@@ -1655,7 +2050,7 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
 
 	type = hip_conf_get_type(argv[type_arg],argv);
 	HIP_IFEL((type <= 0 || type >= TYPE_MAX), -1,
-		 "Invalid type argument '%s'\n", argv[type_arg]);
+		 "Invalid type argument '%s' %d\n", argv[type_arg], type);
 
 	/* Get the type argument for the given action. */
 	HIP_IFEL(!(msg = malloc(HIP_MAX_PACKET)), -1, "malloc failed.\n");
@@ -1744,6 +2139,7 @@ int hip_conf_print_info_ha(struct hip_hadb_user_info_state *ha)
         HIP_DEBUG_LSI(" Peer  LSI", &ha->lsi_peer);
         HIP_INFO_IN6ADDR(" Local IP", &ha->ip_our);
         HIP_INFO_IN6ADDR(" Peer  IP", &ha->ip_peer);
+	HIP_INFO(" Peer  hostname: %s\n", &ha->peer_hostname);
 	if (ha->heartbeats_on > 0 && ha->state == HIP_STATE_ESTABLISHED) {
 		HIP_DEBUG(" Heartbeat %.3f ms mean RTT, "
 			  "%.3f ms std dev,\n"
@@ -2138,3 +2534,96 @@ int hip_conf_handle_hipproxy(struct hip_common *msg, int action, const char *opt
  out_err:
         return(err);
 }
+
+
+/**
+ * Handles the hipconf commands where the type is @c locator.
+ *
+ * @param msg    a pointer to the buffer where the message for hipd will
+ *               be written.
+ * @param action the numeric action identifier for the action to be performed.
+ * @param opt    an array of pointers to the command line arguments after
+ *               the action and type.
+ * @param optc   the number of elements in the array (@b 0).
+ * @return       zero on success, or negative error value on error.
+ */
+int hip_conf_handle_hi3(hip_common_t *msg,
+			int action,
+			const char *opt[],
+			int optc, int send_only){
+	int err = 0, status = 0;
+	
+	if (!strcmp("on",opt[0])) {
+		status = SO_HIP_SET_HI3_ON; 
+	} else if (!strcmp("off",opt[0])) {
+		status = SO_HIP_SET_HI3_OFF;
+	} else {
+		HIP_IFEL(1, -1, "bad args\n");
+	}
+	HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1,
+		 "Failed to build user message header.: %s\n", strerror(err));
+    
+out_err:
+	return err;
+}
+
+int hip_conf_handle_nsupdate(hip_common_t *msg,
+			     int action,
+			     const char *opt[],
+			     int optc, int send_only) {
+	int err = 0, status;
+
+	if (!strcmp("on",opt[0])) {
+		status = SO_HIP_NSUPDATE_ON; 
+	} else if (!strcmp("off",opt[0])) {
+		status = SO_HIP_NSUPDATE_OFF;
+	} else {
+		HIP_IFEL(1, -1, "bad args\n");
+	}
+	HIP_IFEL(hip_build_user_hdr(msg, status, 0), -1,
+		 "Failed to build user message header.: %s\n", strerror(err));
+	
+out_err:
+	return err;
+}
+
+#if 0
+int hip_conf_handle_sava (struct hip_common * msg, int action, 
+				   const char * opt[], int optc) {
+  int err = 0;
+
+  struct in_addr lsi, aux;
+  in6_addr_t hit, ip6;
+
+  HIP_DEBUG("action=%d optc=%d\n", action, optc);
+  if (action == ACTION_REGISTER) {
+    //HIP_IFEL((optc != 0 || optc != 2), -1, "Missing arguments\n");
+ 
+    if (optc == 2) {
+      HIP_IFEL(convert_string_to_address(opt[0], &hit), -1,
+	       "string to address conversion failed\n");
+      
+      HIP_IFEL(err = convert_string_to_address(opt[1], &ip6), -1,
+	       "string to address conversion failed\n");
+      
+      HIP_IFEL(hip_build_param_contents(msg, (void *) &hit, HIP_PARAM_HIT,
+					sizeof(in6_addr_t)), -1,
+	       "build param hit failed\n");
+
+      HIP_IFEL(hip_build_param_contents(msg, (void *) &ip6,
+					HIP_PARAM_IPV6_ADDR,
+					sizeof(in6_addr_t)), -1,
+	       "build param hit failed\n");
+    }
+    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_REGISTER_SAVAHR, 
+				0), -1, "add peer map failed\n");
+  } else if (action == ACTION_GET) {
+    HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_SAVAHR_HIT,
+				0), -1, "add peer map failed\n");
+  } else {
+    HIP_IFEL(1, -1, "bad args\n");
+  }
+ out_err:
+  return err;
+}
+#endif

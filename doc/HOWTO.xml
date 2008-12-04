@@ -16,96 +16,17 @@
     <title>Software Requirements</title>
     <para>
       You need to modify your kernel and install HIPL userspace software along
-      with its dependencies in order to run HIP. You can patch your
+      with its dependencies in order to run HIP only if you want to use kernel
+      version below 2.6.27 (check "uname -a"). You can patch your
       kernel by installing the binary kernel images (Ubuntu and Fedora)
       from here: <ulink url="http://hipl.hiit.fi/hipl/release/" />. The
       binary kernel images are based on vanilla kernel and therefore do
       not include any proprietary drivers or firmware images. As a result,
     you may have to install software for your WLAN interface manually.</para>
     <para>
-      This section describes how to build a custom kernel image with
-      HIP-related patches and how to build the HIPL userspace software
-      manually.  If you don't want to build the HIPL software manually,
-      you can install the userspace binary images from the
-      release. Before reporting any bugs with last release, please
-      build the bleeding edge software from the source because your issue
-      may have been already resolved there.
+    The software dependencies are not listed here. Type "./autogen.sh --help"
+    to see what software you need to install before compilation of HIPL.
     </para>
-    <para>
-      As the first requirement, you also need know the basics on Linux kernel
-      compilation and usage. Refer to linux/README for further instructions.
-    </para>
-    <para>
-      You need the following software to build and run the HIPL 
-      software bundle:
-    </para>
-    <para>
-      Mandatory:
-    </para>
-    <itemizedlist>
-      <listitem><para>
-	Linux Operating System
-      </para></listitem>
-      <listitem><para>
-	OpenSSL-library and developer headers
-      </para></listitem>
-      <listitem><para>
-	libxml2 and its development headers for OpenDHT support
-      </para></listitem>
-      <listitem><para>
-	GNU make
-      </para></listitem>
-      <listitem><para>
-	the latest versions of autoconf, automake, autoreconf and libtool
-      </para></listitem>
-      <listitem><para>
-	iproute
-      </para></listitem>
-      <listitem><para>
-	gtk2 library and development headers
-      </para></listitem>
-      <listitem><para>
-	Check that you DON'T have libpthread-dev installed (Ubuntu/debian)
-	because at least in Ubuntu Feisty it messes up the compilation.
-      </para></listitem>
-    </itemizedlist>
-    <para>
-      Optional Software Requirements:
-    </para>
-    <itemizedlist>
-      <listitem><para>
-	A BEET patched Linux 2.6 kernel with the modules listed in
-	<xref linkend="ch_kernel" />. Otherwise, you can use
-	userspace ipsec.
-      </para></listitem>
-      <listitem><para>
-	iputils-ping (or netkit-ping): ping, ping6
-      </para></listitem>
-      <listitem><para>
-	ipsec-tools: setkey
-      </para></listitem>
-      <listitem><para>
-	ip6tables userspace tools and IPv6 netfilter in the kernel
-	(for the HIP firewall only)
-      </para></listitem>
-      <listitem><para>
-	iptables development headers (HIP firewall)
-      </para></listitem>
-      <listitem><para>
-	glib (www.gtk.org) and development headers (HIP firewall)
-      </para></listitem>
-      <listitem><para>
-	netcat6
-      </para></listitem>
-      <listitem><para>
-	latex, dvips, dvipdf, fig2dev, doxygen (for building the
-	HIPL source code documentation)
-      </para></listitem>
-      <listitem><para>
-	java compiler for "jip" (java hip resolver) if you want to
-	build HIP enabled java programs
-      </para></listitem>
-    </itemizedlist>
     <para> Network Requirements</para>
     <itemizedlist>
       <listitem><para>
@@ -124,18 +45,6 @@
       </para></listitem>
     </itemizedlist>
     <para>
-      As an example, this was what was required to type in Ubuntu Gutsy
-      Gibbon for compiling the kernel and userspace software:
-    </para>
-    <para>
-      apt-get install tla libncurses5-dev kernel-package autoreconf automake autoconf libtool g++ libgtk2.0-dev libssl-dev libxml2-dev xmlto doxygen iproute netcat6 iptables-dev libcap-dev libsqlite3-dev uuid-dev
-    </para>
-    <para>
-      On Fedora: yum install tla openssl-devel libxml2-devel autoconf automake libtool iproute gtk2-devel xmlto doxygen iptables-devel libcap-devel sqlite-devel uuid-devel rpm-build
-    </para>
-    <para>On 64-bit Fedora 8, ln -s /usr/lib64/libipq.a /usr/lib/libipq.a was necessary. This has not been fixed in the HIPL build properly yet.
-    </para>
-    <para>
     You should allow also HIP related traffic in your firewall. For example:
     </para>
     <itemizedlist>
@@ -150,6 +59,10 @@
     </itemizedlist>
     <para>
     The last two rules basically allow the whole orchid namespace. You can set up more specific rules for HITs or use the hipfw to filter traffic (as explained in a later section).
+    </para>
+    <para>
+    SElinux should be disabled with HIPL in /etc/selinux/config (you have to reboot the machine after this). We don't have yet instructions on
+    configuring SElinux yet. Contributions are welcome.
     </para>
   </chapter>
   <chapter id="ch_building_doc">
@@ -285,6 +198,12 @@
 	[*] IPv6: Multiple Routing Tables
       </para></listitem>
       <listitem><para>
+       Network packet filtering framework (Netfilter) Core
+      </para></listitem>
+      <listitem><para>
+       &lt;M&gt;  Netfilter NFQUEUE over NFNETLINK interface 
+      </para></listitem>
+      <listitem><para>
 	Cryptographic options
       </para></listitem>
       <listitem><para>
@@ -403,10 +322,27 @@ SHELLOPTS=braceexpand:emacs:hashall:histexpand:interactive-comments:monitor:nocl
         Checkout and build the openWRT sources following this manual: <ulink url="http://wiki.openwrt.org/OpenWrtDocs/BuildingKamikazeHowTo" /> It is not much different for each version, no matter the 7.09 release or the svn devel tree.
           </para>
         </listitem>
+        <listitem>
+          <para>
+        It's a good idea to make a directory named as 'files' under your OpenWRT tree, and get your own custom configuration files under that directory, maintaining the hierarchy on Linux. For example:
+          </para>
+          <para>
+<programlisting>
+$ ls
+svn   kamikaze-7.09
+$ mkdir kamikaze-7.09/files
+$ mkdir kamikaze-7.09/files/etc kamikaze-7.09/files/bin
+$ cp &lt;somewhere&gt;/etc/* kamikaze-7.09/files/etc/
+</programlisting>
+          </para>
+          <para>
+        This way of customization is really convenient, because you need neither to find proper locations for them in your build directory, nor to place those files there. It means all the files under 'kamikaze-7.09/files' directory is automatically copied into your build directory, every time you build an OpenWRT image.
+          </para>
+        </listitem>
       </orderedlist>
     </section>
     <section id="build_openwrt_fonera">
-      <title>Building OpenWRT on La Fonera</title>
+      <title>Building HIPL for OpenWRT on La Fonera</title>
       <para>
         This part is just for La Fonera. For WGT634U, please refer to <xref linkend="build_openwrt_wgt" />.
       </para>
@@ -510,7 +446,10 @@ $ ls -l bin/
       </orderedlist>
     </section>
     <section id="load_on_openwrt_fonera">
-      <title>Loading HIPL on OpenWRT</title>
+      <title>Loading HIPL for OpenWRT on La Fonera</title>
+      <para>
+        This part is just for La Fonera. For WGT634U, please refer to <xref linkend="load_on_openwrt_wgt" />.
+      </para>
       <formalpara><title>For building HIPL on the kamikaze release 7.09</title><para></para></formalpara>
       <orderedlist>
         <listitem>
@@ -531,7 +470,7 @@ $ ls -l bin/
   64 etc_config_dhcp.diff      64 etc_firewall_user.diff
   64 etc_config_network.diff   64 etc_hostapd.diff
   64 etc_config_wireless.diff  64 hipl_openwrt-7.09.diff
-  64 kamikaze_7.09
+  64 lib_wifi_madwifi.sh.diff  64 kamikaze_7.09
   $ cd kamikaze_7.09
   $ patch -p1 &lt; ../hipl_openwrt-7.09.diff
   $ patch -p1 &lt; ../etc_config_dhcp.diff
@@ -539,6 +478,7 @@ $ ls -l bin/
   $ patch -p1 &lt; ../etc_config_wireless.diff
   $ patch -p1 &lt; ../etc_firewall_user.diff
   $ patch -p1 &lt; ../etc_hostapd.diff
+  $ patch -p1 &lt; ../lib_wifi_madwifi.sh.diff
   $ ls package/hipl/Makefile
   Makefile
   </programlisting>
@@ -560,7 +500,7 @@ $ ls -l bin/
           <para>
   <programlisting>
   $ tla get hipl--openwrt--2.6 hipl--openwrt--2.6
-  $ mkdir path/to/kamikaze/dl
+  $ mkdir -p path/to/kamikaze/dl
   $ tar czf path/to/kamikaze/dl/hipl--openwrt--2.6.tar.gz --exclude=\{arch\} hipl--openwrt--2.6
   </programlisting>
           </para>
@@ -726,8 +666,8 @@ $ wget http://hipl.hiit.fi/hipl/contrib/openwrt/hipl--openwrt--2.6.tar.gz -O kam
           <para>
 <programlisting>
 $ tla get hipl--openwrt--2.6 hipl--openwrt--2.6
-$ rm -rf hipl--openwrt--2.6/{arch}
-$ tar czf kamikaze/dl/hipl--openwrt--2.6.tar.gz hipl--openwrt--2.6
+$ mkdir -p path/to/kamikaze/dl
+$ tar czf path/to/kamikaze/dl/hipl--openwrt--2.6.tar.gz --exclude=\{arch\} hipl--openwrt--2.6
 </programlisting>
           </para>
         </listitem>
@@ -813,7 +753,7 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
 </programlisting>
           </para>
           <para>
-            Don't panic even though some of those modules do not exist. Chances are, the missing modules are already embedded in your kernel image. To know whether a certain object is configured as a module or not, refer to the configuration file kamikaze_7.09/target/linux/atheros-2.6/config/default.
+            Don't panic even though some of those modules do not exist. Chances are, the missing modules are already embedded in your kernel image. To know whether a particular object is already configured as a module or not, refer to the configuration file 'kamikaze/target/linux/atheros/config-2.6.21'.
           </para>
         </listitem>
       </orderedlist>
@@ -834,9 +774,6 @@ define Package/hipl/install
     $(INSTALL_DIR) $(1)/etc/hip/test/
     $(INSTALL_DIR) $(1)/etc/modules.d/
     $(INSTALL_DIR) $(1)/usr/bin/
-    $(INSTALL_DIR) $(1)/usr/include/
-    $(INSTALL_DIR) $(1)/usr/include/libipsec
-    $(INSTALL_DIR) $(1)/usr/lib/
     $(INSTALL_DIR) $(1)/usr/sbin/
 
     $(INSTALL_DATA) ./files/hipd.init $(1)/etc/init.d/hipd
@@ -847,9 +784,6 @@ define Package/hipl/install
     $(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/hipsetup* $(1)/usr/bin/
     $(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/libinet6test* $(1)/usr/bin/
     $(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/listifaces* $(1)/usr/bin/
-    $(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libhip* $(1)/usr/lib/
-    $(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libinet6* $(1)/usr/lib/
-    $(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libopphip* $(1)/usr/lib/
     $(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/* $(1)/usr/sbin/
 endif
 </programlisting>
@@ -866,9 +800,12 @@ endif
         <para>
         Building hipl under the kamikaze devel tree does not go well always. It could cause you to correct numerous errors while building it. You are warned!
         </para>
+        <para>
+        If you encounter an error like "SHA: undefined reference", use the macro HIP_SHA() instead of SHA(). Using SHA() does not make any problem with a native compiler, but it causes errors with a cross compiler. For that reason HIP_SHA() is defined in `libhiptool/crypto.h` to be used for any calls to SHA().
+        </para>
     </section>
     <section id="build_openwrt_wgt">
-      <title>Building OpenWRT on Netgear WGT634U</title>
+      <title>Building HIP for OpenWRT on Netgear WGT634U</title>
       <para>
         This part is just for Netgear WGT634U. For La Fonera, please refer to <xref linkend="build_openwrt_fonera" />.
       </para>
@@ -1008,7 +945,7 @@ $ bin/openwrt-wgt*
   64 etc_config_dhcp.diff      64 etc_firewall_user.diff
   64 etc_config_network.diff   64 etc_hostapd.diff
   64 etc_config_wireless.diff  64 hipl_openwrt-7.09.diff
-  64 kamikaze_7.09
+  64 lib_wifi_madwifi.sh.diff  64 kamikaze_7.09
   $ cd kamikaze_7.09
   $ patch -p1 &lt; ../hipl_openwrt-7.09.diff
   $ patch -p1 &lt; ../etc_config_dhcp.diff
@@ -1016,6 +953,7 @@ $ bin/openwrt-wgt*
   $ patch -p1 &lt; ../etc_config_wireless.diff
   $ patch -p1 &lt; ../etc_firewall_user.diff
   $ patch -p1 &lt; ../etc_hostapd.diff
+  $ patch -p1 &lt; ../lib_wifi_madwifi.sh.diff
   $ ls package/hipl/Makefile
   Makefile
   </programlisting>
@@ -1037,8 +975,8 @@ $ bin/openwrt-wgt*
           <para>
   <programlisting>
   $ tla get hipl--openwrt--2.6 hipl--openwrt--2.6
-  $ rm -rf hipl--openwrt--2.6/{arch}
-  $ tar czf kamikaze_7.09/dl/hipl--openwrt--2.6.tar.gz hipl--openwrt--2.6
+  $ mkdir -p kamikaze_7.09/dl
+  $ tar czf kamikaze_7.09/dl/hipl--openwrt--2.6.tar.gz --exclude=\{arch\} hipl--openwrt--2.6
   </programlisting>
           </para>
         </listitem>
@@ -1140,6 +1078,209 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
           </para>
           <para>
             Don't panic even though some of those modules do not exist. Chances are, the missing modules are already embedded in your kernel image. To know whether a certain object is configured as a module or not, refer to the configuration file kamikaze_7.09/target/linux/brcm47xx-2.6/config/default.
+          </para>
+        </listitem>
+      </orderedlist>
+    </section>
+    <section id="build_openwrt_wl500w">
+      <title>Building HIP for OpenWRT on ASUS WL500W</title>
+      <para>
+        This part is just for ASUS WL500W. For La Fonera, please refer to <xref linkend="build_openwrt_fonera" />.
+      </para>
+      <para>
+        For preparation, refer to <xref linkend="build_preparation" />.
+      </para>
+      <para>
+        You cannot use Kamikaze 7.09 for ASUS WL500W. Please stick to the latest Kamikaze development version, like r12983, downloading from the subversion repository.
+      </para>
+      <formalpara>
+        <title>For kernel 2.6.25.x</title>
+        <para></para>
+      </formalpara>
+      <orderedlist>
+        <listitem>
+          <para>
+            If you want to build OpenWRT with kernel 2.6.25.x, e.g. 2.6.25.17, get hipl patches from the userspace branch of hipl.
+          </para>
+          <para>
+<programlisting>
+$ cd hipl--userspace--2.6/patches/kernel/2.6.25
+$ ls
+beet-bugfix-2.6.25.patch  ipproto_hip.patch
+hipmod-2.6.25.patch       orchid-router-src-addr-sel.patch
+$ cp beet-bugfix-2.6.25.patch path/to/kamikaze/target/linux/brcm47xx/patches-2.6.25/800-beet-bugfix.patch
+$ cp hipmod-2.6.25.patch path/to/kamikaze/target/linux/brcm47xx/patches-2.6.25/810-hipmod.patch
+$ cp ipproto_hip.patch path/to/kamikaze/target/linux/brcm47xx/patches-2.6.25/820-ipproto_hip.patch
+$ cp orchid-router-src-addr-sel.patch path/to/kamikaze/target/linux/brcm47xx/patches-2.6.25/830-orchid-router-src-addr-sel.patch
+</programlisting>
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            Fortunately you don't need to add those patches in other configuration files. Those patches are automatically applied during kernel build. 
+          </para>
+        </listitem>
+      </orderedlist>
+      <formalpara>
+        <title>For kernel 2.6.27</title>
+        <para></para>
+      </formalpara>
+      <orderedlist>
+        <listitem>
+          <para>
+            If you want to build OpenWRT with kernel 2.6.27, do the following steps. <emphasis>NOTE: this instruction is currently not working.</emphasis>
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            First we need to upgrade kernel from 2.6.25.17 to 2.6.27, because the BEET patch needed for HIPL is natively supported from 2.6.27. Edit target/linux/brcm47xx-2.6/Makefile and set '2.6.27' as LINUX_VERSION.
+          </para>
+          <para>
+<programlisting>
+LINUX_VERSION:=2.6.27
+</programlisting>
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            Copy corresponding files for the kernel version 2.6.27.
+          </para>
+          <para>
+<programlisting>
+$ cd path/to/kamikaze/target/linux/brcm47xx-2.6
+$ cp config-2.6.25 config-2.6.27
+$ cp -r files-2.6.25 files-2.6.27
+$ cp -r patches-2.6.25 patches-2.6.27
+$ cd ../../..
+</programlisting>
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            Configure kernel options.
+          </para>
+          <para>
+<programlisting>
+$ make kernel_menuconfig
+</programlisting>
+          </para>
+          <para>
+            and also make sure that the below options are included in the configuration.
+          </para>
+          <para>
+<programlisting>
+Device Drivers  --->
+ [*] Network device support  --->
+  &lt;*&gt;  Dummy net driver support
+Networking  --->
+ Networking support
+  Networking options  --->
+   TCP/IP networking
+    &lt;M&gt;   IP: IPsec BEET mode
+    &lt;M&gt;   IPv6: IPsec BEET mode
+</programlisting>
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            Make sure that the below options are not selected. This causes a compilation error.
+          </para>
+          <para>
+<programlisting>
+Networking support  --->
+ Networking options  --->
+  Network packet filtering framework (Netfilter)  --->
+   Core Netfilter Configuration  --->
+    [ ] "layer7" match support
+Kernel modules  --->
+ Netfilter extensions  --->
+  [ ] kmod-ipt-filter
+ Network support  --->
+  [ ] kmod-sched
+</programlisting>
+          </para>
+        </listitem>
+      </orderedlist>
+      <formalpara>
+        <title>Building the entire tree</title>
+        <para></para>
+      </formalpara>
+      <para>
+            Now you have finished configuring kernel. Then you need to choose your target profile according to your WiFi interface. You have two options for that: one is using the original Broadcom 4321 wifi card, the another is replacing the existing card with an Atheros card.
+      </para>
+      <formalpara>
+        <title>For the original Broadcom 4321 Wi-Fi card</title>
+        <para></para>
+      </formalpara>
+      <para>
+        NOTE: This way is not guaranteed to work. Do it at your own risk!
+      </para>
+      <orderedlist>
+        <listitem>
+          <para>
+            Run menuconfig and choose the following options.
+          </para>
+          <para>
+<programlisting>
+Target System (Broadcom BCM947xx/953xx [2.6])
+Target Profile (Broadcom BCM43xx WiFi (default))
+Kernel modules  --->
+  Wireless Drivers  --->
+    &lt;*&gt; kmod-b43
+    &lt;*&gt; kmod-hostap
+    &lt;*&gt; kmod-ieee80211-softmac
+    &lt;*&gt; kmod-mac80211
+</programlisting>
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            Build OpenWRT.
+          </para>
+          <para>
+<programlisting>
+$ make V=99
+</programlisting>
+          </para>
+          <para>
+            Then you can get the final image in `bin/openwrt-brcm47xx-squashfs.trx`. Load it on your device. Then you can use ASUS WL-500W with an Atheros card.
+          </para>
+        </listitem>
+      </orderedlist>
+      <formalpara>
+        <title>For Atheros Wi-Fi card</title>
+        <para></para>
+      </formalpara>
+      <para>
+        This is the recommended option for you, because Atheros cards are really stable, supported by madwifi device driver. Make sure that you already replaced your existing Broadcom miniPCI card with a new Atheros card.
+      </para>
+      <orderedlist>
+        <listitem>
+          <para>
+            Run menuconfig and choose the following options.
+          </para>
+          <para>
+<programlisting>
+Target System (Broadcom BCM947xx/953xx [2.6])
+Target Profile (Atheros WiFi)
+Kernel modules  --->
+  Wireless Drivers  --->
+    &lt;*&gt; kmod-madwifi
+    &lt;*&gt; kmod-hostap
+</programlisting>
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            Build OpenWRT.
+          </para>
+          <para>
+<programlisting>
+$ make V=99
+</programlisting>
+          </para>
+          <para>
+            Then you can get the final image in bin/openwrt-brcm47xx-squashfs.trx. Load it on your device. Then you can use ASUS WL-500W with an Atheros card.
           </para>
         </listitem>
       </orderedlist>
@@ -1422,7 +1563,7 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
     <title>HIPL Internet Test Servers</title>
     <para>
     Below is a list of public InfraHIP test servers. The servers are also running
-    a free rendezvous service which you can use according to the instructions in <xref linkend="ch_rvs_relay" />.
+    free name look up Bamboo service (<xref linkend="ch_opendht" />) and HIP rendezvous service which you can use according to the instructions in <xref linkend="ch_rvs_relay" />.
     </para>
     <table id="table_servers" frame="all"><title>Test Servers</title>
     <tgroup cols="1">
@@ -1522,10 +1663,15 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
     </para>
   </chapter>
   <chapter id="ch_compiling_java">
-    <title> Compiling Java Applications</title>
+    <title>Java API</title>
     <para>
+      HIP works also with java applications. If you are using the DNS proxy
+      for HIP, no changes to the (HIP-unaware) application are needed.
+      This  section decribes how you can make a java application aware of HIP.
+   </para>
+   <para>   
       HIPL software bundle includes also a java wrapper library to the HIP
-      enabled libinet6 resolver library. The library is called "jip" and it
+      native API.  The library is called "jip" and it
       is located in "path-to-hipl/jip". The use of the java library requires
       the HIP socket handler defined elsewhere in this document.
     </para>
@@ -1691,30 +1837,25 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
     <section id="sec_easy_methods">
       <title>Easy Methods</title>
       <para>
-	1. Run the dnshipproxy to handle mapping from hostnames to HITs.
+	1. Run the dnshipproxy to handle mapping from hostnames to HITs from hosts files.
 	See <xref linkend="sec_dns_proxy" /> for more details.
       </para>
       <para>
-	2. Use the opportunistic mode as described in
-	<xref linkend="opportunistic" />. This method works with both IPv4 and
-	IPv6 applications. It does not require HIT configuration at all.
-      </para>
-      <para>
-	a. Running a single IPv6-enabled application using HIP: <emphasis>hipconf run opp &lt;EXECUTABLE&gt;</emphasis>
-      </para>
-      <para>
-	b. Enabling HIP for all applications in bash shell (add to bashrc if you want to set this permanently): <emphasis>export LD_PRELOAD=libopphip.so:libinet6.so:libhiptool.so:libhipopendht.so</emphasis>
+	2. Use external nameservices for HIT-IP mapping, such as HIP DNS records
+        as instructed in <xref linkend="ch_dns_data" /> (requires the use of the DNS proxy).
+	Alternatively, use the free OpenDHT name service for automatic host
+	naming as described in <xref linkend="ch_opendht" />.
       </para>
       <para>
 	3. Override the resolver library dynamically:
       </para>
       <para>
-	a. Running a single application using HIP: <emphasis>hipconf run normal &lt;EXECUTABLE&gt;</emphasis>
+	3a. Running a single application using HIP: <emphasis>hipconf run normal &lt;EXECUTABLE&gt;</emphasis>
       </para>
       <!-- http://www-106.ibm.com/developerworks/linux/library/l-glibc.html?ca=3Ddgr-ln= -->
 
       <para>
-	b. Enabling HIP for all applications in bash shell (add to bashrc if you want to set this permanently): <emphasis>export LD_PRELOAD=libinet6.so:libhiptool.so:libhipopendht.so</emphasis>
+	3b. Enabling HIP for all applications in bash shell (add to bashrc if you want to set this permanently): <emphasis>export LD_PRELOAD=libinet6.so:libhiptool.so:libhipopendht.so</emphasis>
       </para>
 
       <para>
@@ -1723,27 +1864,31 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
 	able to see list of processes you have executed from GUI.
       </para>
       <para>
-	5. You can also use HITs directly in the application. For example, you can
+	5. You can also use HITs (or LSIs) directly in the application. For example, you can
 	do "ping6 PEER_HIT". However, hipd must know the mapping from the
 	PEER_HIT to the corresponding IP address. You can tell this mapping to
 	hipd using several ways. First way is to configure the HIT-hostname
 	pair to /etc/hip/hosts and the IP-hostname pair to /etc/hosts. Second
 	way is execute "hipconf add map PEER_HIT PEER_IP". You can insert the
 	hipconf command also to /etc/hip/hipd_config and restart hipd when you
-	want the mapping to be permanent. Works only with IPv6-enabled
-	applications.
+	want the mapping to be permanent.
       </para>
       <para>
-	6. Overload your /etc/hosts files by inserting HIT-hostname pair into the
+	6. Overload your /etc/hosts files by adding HITs or LSIs to the
 	file and use the hostname in your application. You need to make sure
 	that hipd finds the corresponding IP address as instructed in the
-	previous point. Works only with IPv6-enabled applications.
+	previous point.
       </para>
       <para>
-	7. Use external nameservices for HIT-IP mapping. For example, you can use
-	AAAA records in DNS for testing (HI records are not supported yet).
-	Alternatively, use the free OpenDHT name service for automatic host
-	naming as described in <xref linkend="ch_opendht" />.
+	7. Use the opportunistic mode as described in
+	<xref linkend="opportunistic" />. This method works with both IPv4 and
+	IPv6 applications. It does not require HIT configuration at all.
+      </para>
+      <para>
+	7a. Running a single IPv6-enabled application using HIP: <emphasis>hipconf run opp &lt;EXECUTABLE&gt;</emphasis>
+      </para>
+      <para>
+	7b. Enabling HIP for all applications in bash shell (add to bashrc if you want to set this permanently): <emphasis>export LD_PRELOAD=libopphip.so:libinet6.so:libhiptool.so:libhipopendht.so</emphasis>
       </para>
     </section>
     <section id="sec_advanced_methods">
@@ -1759,13 +1904,13 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
 	ping6, tla, svn.
       </para>
       <para>
-	5. Relink the application to use the libinet6 library provided in the
+	8. Relink the application to use the libinet6 library provided in the
 	HIPL software bundle Configure the HIT of the peer to /etc/hip/hosts and
 	add the corresponding address to /etc/hosts. Then, use either of the
 	following methods:
       </para>
       <para>
-	a) Run the application by using the hostname you just configured to
+	8a) Run the application by using the hostname you just configured to
 	the hosts files. It will use HIP for those hostnames. For hostnames
 	that are not present in /etc/hip/hosts, the application will just
 	use normal IPv4 or IPv6 connectivity. Good for environments where
@@ -1773,7 +1918,7 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
 	compatibility is more important that the security of the connections.
       </para>
       <para>
-	b) Set the AI_HIP flag in the getaddrinfo call and recompile the
+	8b) Set the AI_HIP flag in the getaddrinfo call and recompile the
 	application (see test/conntest.c). This will make the getaddrinfo
 	function to return <emphasis>only</emphasis> HITs in the place of IP
 	addresses (no IP addresses are returned). This option good for
@@ -1781,11 +1926,12 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
 	use of HIP.
       </para>
       <para>
-	c. Port it to use the native HIP API. See the telnet code for a
+	8c. Port it to use the native HIP API. See the telnet code for a
 	practical example. The API is documented in url:
 	<ulink url="http://hipl.hiit.fi/hipl/hip-native-api-final.pdf" />
       </para>
     </section>
+
   </chapter>
   <chapter id="ch_tips_for_hip">
     <title>Tips for Using HIP with Some Applications</title>
@@ -2885,24 +3031,6 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
       </section>
     </section>
   </chapter>
-  <chapter id="teredo">
-    <title>Teredo and HIP</title>
-    <para>
-    Teredo is a traversal solution for HIP. You can expirement with Teredo
-    by installing the Miredo client software. Then, establish HIP connections
-    to Teredo addresses (check ifconfig teredo) at the client side as
-    instructed in <xref linkend="ch_basictest" />. As Teredo is a NAT traversal
-    solution by itself, you don't have use UDP encapsulation for HIP (hipconf nnat none).
-    </para>
-    <para>
-    See
-    <ulink url="http://www.cs.helsinki.fi/u/sklvarjo/miredo.htm" />
-    for further information on Teredo configuration with HIP.
-    <xref linkend="table_servers" /> lists addresses
-    of the public InfraHIP test servers with Teredo addresses. The servers
-    provide also free rendezvous service that can be combined with Teredo.
-    </para>    
-  </chapter>
   <chapter id="ch_hip_bos">
     <title> Using HIP BOS support</title>
     <para>
@@ -3101,55 +3229,99 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
   </chapter>
 
   <chapter id="ch_hip_nat">
-    <title>HIP NAT Extensions</title>
-    <para>HIPL supports also initiating connections from behind a NAT. The
-          basic idea is that the initiator encapsulates HIP control packets
-          and ESP data packets within UDP. This way, the packets can traverse
-          the NAT box. However, both the initiator and responder have to
-          support NAT extensions in order to make this work. Currently, the
-          responder cannot be located behind a NAT.
-    </para>
-    <para>The NAT traversal can be experimented in a similar way as depicted
-          in earlier sections. The only difference is that you have to
-          tell the initiator manually that it is behind a NAT using "hipconf
-          nat on". After this, you can initiate the base exchange
-          according to the previous instructions. The manual configuration is
-          currently required because support for automatic NAT detection (STUN)
-          has not been implemented yet.
-    </para>
-    <para>If you have problems in even getting I1 triggered using NAT code
-          e.g. with conntest-client-hip (occurred on 2.6.16.5), you may have
-          to specify the source HIT explicitly. The procedure to initiate a connection
-	  behind NAT is as follows:
-    </para>
-    <itemizedlist>
-    <listitem><para>
-      &nbsp;tools/hipconf nat plain-udp
-    </para>    </listitem>
-    <listitem><para>
-      &nbsp;tools/hipconf add map peer_hit peer_ipv4_addr
-    </para> </listitem>   
-    <listitem><para>
-      &nbsp; ping6 -I source_hit dst_hit
-    </para>  </listitem>  
-    </itemizedlist>
-    <para>Make sure that the source is the same as in "ip xfrm policy" output.
-          We are aware of the problem (see bug id 161) and it is being solved.
-          Also, it seemed like the responder could not route packets
-          automatically to the NAT, so a "ip route add nat_ipv4_addr dev xx"
-          was necessary at the responder (occurred on 2.6.16.5).
-    </para>
-    <para>
+    <title>HIP NAT Traversal</title>
+    <section id="basic_nat">
+      <title>Client-side-only NAT traversal</title>
+      <para>HIPL supports also initiating connections from behind a NAT. The
+        basic idea is that the initiator encapsulates HIP control packets
+        and ESP data packets within UDP. This way, the packets can traverse
+        the NAT box. However, both the initiator and responder have to
+        support NAT extensions in order to make this work. Currently, the
+        responder cannot be located behind a NAT.
+      </para>
+      <para>The NAT traversal can be experimented in a similar way as depicted
+        in earlier sections. The only difference is that you have to
+        tell the initiator manually that it is behind a NAT using "hipconf
+        nat on". After this, you can initiate the base exchange
+        according to the previous instructions. The manual configuration is
+        currently required because support for automatic NAT detection (STUN)
+        has not been implemented yet.
+      </para>
+      <para>If you have problems in even getting I1 triggered using NAT code
+        e.g. with conntest-client-hip (occurred on 2.6.16.5), you may have
+        to specify the source HIT explicitly. The procedure to initiate a connection
+	behind NAT is as follows:
+      </para>
+      <itemizedlist>
+	<listitem><para>
+	    &nbsp;tools/hipconf nat plain-udp
+	</para>    </listitem>
+	<listitem><para>
+	    &nbsp;tools/hipconf add map peer_hit peer_ipv4_addr
+	</para> </listitem>   
+	<listitem><para>
+	    &nbsp; ping6 -I source_hit dst_hit
+	</para>  </listitem>  
+      </itemizedlist>
+      <para>Make sure that the source is the same as in "ip xfrm policy" output.
+        We are aware of the problem (see bug id 161) and it is being solved.
+        Also, it seemed like the responder could not route packets
+        automatically to the NAT, so a "ip route add nat_ipv4_addr dev xx"
+        was necessary at the responder (occurred on 2.6.16.5).
+      </para>
+      <para>
 	Three cases of mobility of the initiator have been implemented for the NAT code.
+      </para>
+      <para>Mobility from behind NAT to behind the same NAT:
+	For this case, the use the standard procedure for update after the base exchange is completed. The update would be UDP encapsulated.
+      </para>
+      <para>Mobility from public addressable network to behind NAT: Once a hip association is set up between two hosts, both on the public network and one of them wishes to move behind a NAT, then that node should first delete the public ip address, then turn the NAT on using hipconf and then add the ip address behind NAT along with the route to the interface. The update would be done using UDP now and future communications would be UDP encapsulated (both HIP control traffic and ESP packets). </para>
+      <para>Mobility from behind NAT to publically addressable network: If a node has setup hip association from behind NAT and now wishes to move to public IP domain, then it should first delete the ip behind NAT, turn off the NAT using hipconf and then add the public IP along with the route to the interface. HIP association then would not use UDP encapsulation and the update would be done using normal HIP packets (without UDP encapsulation).</para>
+  </section>
+  
+    <section id="teredo">
+      <title>Teredo and HIP</title>
+      <para>
+	Teredo is a traversal solution for HIP. You can expirement with Teredo
+	by installing the Miredo client software. Then, establish HIP connections
+	to Teredo addresses (check ifconfig teredo) at the client side as
+	instructed in <xref linkend="ch_basictest" />. As Teredo is a NAT traversal
+	solution by itself, you don't have use UDP encapsulation for HIP (hipconf nnat none).
+      </para>
+      <para>
+	See
+	<ulink url="http://www.cs.helsinki.fi/u/sklvarjo/miredo.htm" />
+	for further information on Teredo configuration with HIP.
+	<xref linkend="table_servers" /> lists addresses
+	of the public InfraHIP test servers with Teredo addresses. The servers
+	provide also free rendezvous service that can be combined with Teredo.
+      </para>
+    </section>
+
+  <section id="ice">
+    <title>ICE-based NAT traversal (experimental)</title>
+    
+    <para>
+      HIPL includes also experimental support for ICE-based NAT
+      traversal. The use of the service requires a HIP Relay
+      middlebox that relays HIP control traffic (see
+      <xref linkend="ch_rvs_relay" />) where the Responder
+      registers itself to. Then the HIP Initiator can run
+      connect to the Responder through the Relay server.  The
+      Initiator and Responder the ICE mode dynamically during
+      the base exhange. Therefore "hipconf ice ice-udp" is
+      needed for the both end-hosts.
     </para>
-	<para>Mobility from behind NAT to behind the same NAT:
-		For this case, the use the standard procedure for update after the base exchange is completed. The update would be UDP encapsulated.
-	</para>
-	<para>Mobility from public addressable network to behind NAT: Once a hip association is set up between two hosts, both on the public network and one of them wishes to move behind a NAT, then that node should first delete the public ip address, then turn the NAT on using hipconf and then add the ip address behind NAT along with the route to the interface. The update would be done using UDP now and future communications would be UDP encapsulated (both HIP control traffic and ESP packets). </para>
-	<para>Mobility from behind NAT to publically addressable network: If a node has setup hip association from behind NAT and now wishes to move to public IP domain, then it should first delete the ip behind NAT, turn off the NAT using hipconf and then add the public IP along with the route to the interface. HIP association then would not use UDP encapsulation and the update would be done using normal HIP packets (without UDP encapsulation).</para>
-
+    
+    <para>
+      The current implementation supports only NAT traversal for
+      base exchange and ESP traffic. TURN media relay support is
+      work in progress. Mobility support is not implemented yet.
+    </para>
+  </section>
+    
   </chapter>
-
+  
 <chapter id="ch_hip_configuration_gui">
   <title>HIP configuration GUI</title>
 	<section id="sec_hip_conf_gui_general">
@@ -3478,29 +3650,38 @@ combo-newgroup=&lt;create new...&gt;
           LINUX variable) for the system in which you are going to use the
           kernel module.
      </para>
-   </chapter>
-  <chapter id="ch_opendht">
-    <title>OpenDHT Support (Experimental!)</title>
+  </chapter>
+<chapter id="ch_opendht">
+  <title>Bamboo-based Name Lookup for HIP</title>
+  <section>
+    <title>OpenDHT Client Support (Experimental!)</title>
     <itemizedlist>
-    <listitem><para>
-           With OpenDHT support, the hip daemon pushes the hostname,
-           RSA public HIT and public IP address to the OpenDHT. The resolver
-           can then look up this information automatically without DNS or manual
-           /etc/(hip)/hosts configuration.
-    </para></listitem>
-    <listitem><para>
-           Once you start hipd, it will send its hostname, HIT and IP address
-           to OpenDHT. You can query this information with
-           "hipconf dht get &lt;hostname|HIT&gt;".
-    </para></listitem>
-    <listitem><para>
-           To test, just run normally conntest-server 
-	and conntest-client-hip between hosts. You would see messages 
-	from hipd and conntest showing DNS->HIT->IP lookups. Everything 
-        should work without additional actions.
-    </para></listitem>
-    </itemizedlist>
+      <listitem><para>
+          With OpenDHT support, the hip daemon pushes the hostname,
+          RSA public HIT and public IP address to the OpenDHT. The resolver
+          can then look up this information automatically without DNS or manual
+          /etc/(hip)/hosts configuration.
+      </para></listitem>
+      <listitem><para>
+          Once you start hipd, it will send its hostname, HIT and IP address
+          to OpenDHT. You can query this information with
+          "hipconf dht get &lt;hostname|HIT&gt;".
+      </para></listitem>
+      <listitem><para>
+          To test, just run normally conntest-server 
+	  and conntest-client-hip between hosts. You would see messages 
+	  from hipd and conntest showing DNS->HIT->IP lookups. Everything 
+          should work without additional actions.
+      </para></listitem>
+     </itemizedlist>
 
+    <para>
+    HIP daemon creates a file called /etc/hip/dhtservers when you
+    execute it. You can add there Bamboo servers. The file has the
+    same format as hosts files.
+    </para>
+
+    <!--
     <para>
     By default OpenDHT support uses opendht.nyuld.net to resolve
     proximate gateway address. Some times this returns unstable servers
@@ -3515,6 +3696,7 @@ combo-newgroup=&lt;create new...&gt;
     url="http://www.opendht.org/servers.txt" />. The wget-dht-servers.sh
     script can create you the list automatically (in tools directory).
     </para>
+    -->
 
     <para>
     There is multiple OpenDHT related hipconf commands that you can
@@ -3550,6 +3732,111 @@ combo-newgroup=&lt;create new...&gt;
     For documentation,
     please also check <ulink url="http://kom.aau.dk/group/05gr680/" />
     </para>
+</section>
+
+    <section id="sec_opendht_bamboo">
+      <title>Bamboo OpenDHT server with IPv6 Support</title>
+      <para>
+	This section describes how to set up up an own IPv6 enabled
+	Bamboo server to look up hostnames, HITs and IP addresses.
+	Bamboo can be used as an alternative name look up instructure
+	to DNS. InfraHIP servers are also already running bamboo
+	service if you don't want to run your own service (see
+	<xref linkend="ch_opendht" />).  The clients can contact the
+	server through HIP if necessary.
+      </para>
+      <para>
+	To start the Bamboo opendht server, first the code has to be obtained.
+ 	You can obtain Bamboo with IPv4 support from the Bamboo website,
+	http://www.bamboo-dht.org/download.html. Bamboo with IPv6 support can
+	be obtained from http://lxpworkroom.googlepages.com/bambooipv6version.
+	The code is compiled by executing make in the downloaded directory.
+	Some instructions and patches are also in patches/opendht directory of
+	HIPL software bundle.
+      </para>
+      <para>
+	In order to run the Bamboo server, a configuration file needs to be
+	created. You can find a sample in this link:
+	http://www.cs.helsinki.fi/u/sklvarjo/sample.cfg.
+      </para>
+      <para>
+	Bamboo opendht server for a single machine:
+      </para>
+      <para>
+	If you want to try the bamboo opendht server on a single machine,
+	you have to assign 1 to the min_replica_count argument.
+      </para>
+      <para>
+	For IPV6 Bamboo:
+      </para>
+      <para>
+	Sample configuration files for IPv6 Bamboo can also be found at
+	http://lxpworkroom.googlepages.com/bambooipv6version. One change to
+	notice is that the ipv6 addresses are enclosed inside [] braces. IPv6
+	Bamboo configuration file requires also the setting of the network
+	argument, as shown in the IPv6 configuration samples.
+      </para>
+      <para>
+	In case you want to configure Bamboo based on HIP, you have to put a HIT
+	in the configuration file insted of the IPv6 address. 
+      </para>
+    </section>
+
+    <section id="sec_opendht_several_bamboos">
+      <title>Joining Several Bamboo Servers into a Single Ring</title>
+      <para>
+	This section describes how to join two or more bamboo servers to a
+	single ring.
+      </para>
+      <para>
+	The first thing to note is that Bamboo servers that support different
+	ip versions cannot be configured to run together successfully.
+	All Bamboo servers should suport either ipv4 or ipv6.
+      </para>
+      <para>
+	In order to configure several bamboo servers together, there are several
+	changes to be made to each configuration file of each instance.
+      </para>
+      <para>
+	First of all, inside 'Router', in the 'initargs', we have to add the
+	'gateway_count' argument followed by the overall number of servers to be
+	configured together. After that, we should specify a list of the gateways.
+	The following paragraph illustrates a sample for configuring two servers
+	together, at the configuration file of one of the servers.
+      </para>
+      <para>
+        &lt;Router&gt;</para><para>
+            class bamboo.router.Router</para><para>
+            &lt;initargs&gt;</para><para>
+		gateway_count 2</para><para>
+                gateway_0 193.167.187.133:5850</para><para>
+		gateway_1 193.167.187.31:5850</para><para>
+                leaf_set_size  4</para><para>
+                digit_values   2</para><para>
+                immediate_join true</para><para>
+            &lt;/initargs&gt;</para><para>
+        &lt;/Router&gt;</para><para>
+      </para>
+
+      <para>
+      </para>
+
+      <para>
+	An additional change to be made is assigning the 'min_replica_count'
+	argument to the overall number of servers that are to be configured
+	together. This is illustrated below:
+      </para>
+      <para>
+        &lt;Dht&gt;</para><para>
+            class bamboo.dht.Dht</para><para>
+            &lt;initargs&gt;</para><para>
+                storage_manager_stage StorageManager</para><para>
+                min_replica_count     2</para><para>
+            &lt;/initargs&gt;</para><para>
+        &lt;/Dht&gt;</para><para>
+      </para>
+
+    </section>
 
   </chapter>
 
@@ -3836,7 +4123,7 @@ combo-newgroup=&lt;create new...&gt;
       key file contents to different DNS zone file formats. To convert
       to unpatched BIND9 format, run the following:
       <programlisting>
-parsehipkey &lt; felwood/hip_host_dsa_key_pub.pub felwood2.hip-test1.infrahip.net felwood.infrahip.net crossroads.infrahip.net | sed -n -e '/^9BIND */s///p'
+parsehipkey &lt; /etc/hip/hip_host_rsa_key_pub.pub hostname.domain.org | sed -n -e '/^9BIND */s///p'
       </programlisting>
       This outputs a line which can be inserted to a zone
       file. Similarly, with sed command:
@@ -3854,16 +4141,21 @@ parsehipkey &lt; felwood/hip_host_dsa_key_pub.pub felwood2.hip-test1.infrahip.ne
   </chapter>
   <chapter id="sec_dns_proxy">
     <title>DNS proxy</title>
+
     <para>
-      In tools directory, there is dnshipproxy script, which provides DNS
-      proxy functionality. The script has to be started with root priviledges.
+      One way to support transparent HIT look up for the whole system
+      is to use the python-based DNS proxy daemon.  It is located in
+      the tools directory (dnsproxy.py) and has to be started with
+      root priviledges. After you start the script, it will rewrite
+      /etc/resolv.conf to redirect all DNS look ups to itself so that
+      it can return HITs to applications when applicable.
     </para>
+
     <para>
-      The DNS proxy can read HIT information from HIP hosts
-      files and provide corresponding AAAA records. If it is asked an
-      AAAA record for a FQDN and there is no real existing AAAA for
-      the name, it tries to find a HIP RR for the name. If it finds
-      one, it responds with an AAAA response.
+     The dnsproxy tries to find host identities from three places:
+     "hosts" files (/etc/hosts and /etc/hip/hosts), HI records in DNS
+     and Bamboo DHT (experimental). It returns the host identities as
+     HITs or LSIs to the requesting application.
     </para>
     <para>
       For faster DNS look ups, you can optionally run the DNS proxy
@@ -3872,18 +4164,34 @@ parsehipkey &lt; felwood/hip_host_dsa_key_pub.pub felwood2.hip-test1.infrahip.ne
       used to provide some necessary environment variables (see comments
       in dnshipproxy). It acts as a DNS cache 
       (see <ulink url="http://cr.yp.to/djbdns.html" />) in front of
-      dnshipproxy. The use of DNS proxy without DNS cache results in longer
+      DNS proxy. The use of DNS proxy without DNS cache results in longer
       look up latencies.
     </para>
     <para>
-      If you are running already an existing dnsproxy on the host, you
-      need to "chain" them together. For example, you have to do the
-      following with dnsmasq:
+      If you are running already dnsmasq on the host, it will occupy
+      the DNS port 53 and prevent DNS proxy start up with default
+      options.  In such a case, you need to either disable the dnsmasq
+      (--port=0) or "chain" it with DNS proxy (which is then used as
+      a DNS cache). Due to the current
+      implementation design of the DNS proxy (which overwrites
+      /etc/resolv.conf), you need chain it with DNS proxy. First is
+      are the network applications, second dnsmasq, third DNS proxy
+      and finally the DNS in the Internet. This can be accomplished using the
+      following command line options to dnsmasq and DNS proxy:
     </para>
     <itemizedlist>
-      <listitem><para>Start the dnsmasq with --no-resolv --port 5050 --server 127.0.0.1</para></listitem>
-      <listitem><para>Start dnsmasq with --background</para></listitem>
+      <listitem><para>
+      Dnsmasq: --no-resolv --server=127.0.0.1#5000</para></listitem>
+      <listitem><para>
+      </para></listitem>
+      <listitem><para>
+	  Dns proxy: --port 5000</para></listitem>
     </itemizedlist>
+    <para>
+      The easiest way to configure the options is to append them to
+      OPTIONS variable in "/etc/init.d/dnsmasq" file and run
+      "/etc/init.d/dnsmasq restart".
+    </para>
   </chapter>
 </book>
 

@@ -2,20 +2,45 @@
 
 int hip_send_close(struct hip_common *msg)
 {
-	int err = 0;
+	int err = 0, retry, n;
 	hip_hit_t *hit = NULL;
 	hip_ha_t *entry;
+	struct sockaddr_in6 sock_addr;
+	struct hip_common *msg_to_firewall = NULL;
 
 	HIP_DEBUG("msg=%p\n", msg);
 
-	if (msg)
+	if(msg)
 		hit = hip_get_param_contents(msg, HIP_PARAM_HIT);
 
-	HIP_IFEL(hip_for_each_ha(&hip_xmit_close, (void *) hit), -1,
-		 "Failed to reset all HAs\n");
+	HIP_IFEL(hip_for_each_ha(&hip_xmit_close, (void *) hit),
+		-1, "Failed to reset all HAs\n");
 
- out_err:
+	/* send msg to firewall to reset
+	 * the db entries there too */
+	msg_to_firewall = hip_msg_alloc();
+	memset(msg_to_firewall, 0, HIP_MAX_PACKET);
+	hip_msg_init(msg_to_firewall);
+	HIP_IFE(hip_build_user_hdr(msg_to_firewall, SO_HIP_RESET_FIREWALL_DB, 0),
+		-1);
+	bzero(&sock_addr, sizeof(sock_addr));
+	sock_addr.sin6_family = AF_INET6;
+	sock_addr.sin6_port = htons(HIP_FIREWALL_PORT);
+	sock_addr.sin6_addr = in6addr_loopback;
 
+	for(retry = 0; retry < 3; retry++){
+		n = hip_sendto_user(msg_to_firewall, &sock_addr);
+		if(n <= 0){
+			HIP_ERROR("resetting firewall db failed (round %d)\n", retry);
+			HIP_DEBUG("Sleeping few seconds to wait for fw\n");
+			sleep(2);
+		}else{
+			HIP_DEBUG("resetting firewall db ok (sent %d bytes)\n", n);
+			break;
+		}
+	}
+
+out_err:
 	return err;
 }
 

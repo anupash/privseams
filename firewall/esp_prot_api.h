@@ -25,7 +25,7 @@
 #define NUM_UPDATE_HCHAIN_LENGTHS	1
 /* number of hierarchies used to link hchains */
 #define NUM_BEX_HIERARCHIES			1
-#define NUM_UPDATE_HIERARCHIES		1
+#define NUM_UPDATE_HIERARCHIES		3
 
 
 /* maps from the transform_id defined above to the hash-function id
@@ -46,6 +46,8 @@ struct esp_anchor_item
 	uint8_t transform;
 	unsigned char *active_anchor;
 	unsigned char *next_anchor;
+	uint8_t root_length;
+	unsigned char *root;
 };
 
 
@@ -59,7 +61,8 @@ int esp_prot_add_hash(unsigned char *out_hash, int *out_length,
 int esp_prot_verify(hip_sa_entry_t *entry, unsigned char *hash_value);
 int esp_prot_verify_hash(hash_function_t hash_function, int hash_length,
 		unsigned char *active_anchor, unsigned char *next_anchor,
-		unsigned char *hash_value, int tolerance);
+		unsigned char *hash_value, int tolerance, unsigned char *active_root,
+		int active_root_length, unsigned char *next_root, int next_root_length);
 esp_prot_tfm_t * esp_prot_resolve_transform(uint8_t transform);
 hash_function_t esp_prot_get_hash_function(uint8_t transform);
 int esp_prot_get_hash_length(uint8_t transform);

@@ -21,6 +21,7 @@ class Hosts:
             resolv_conf = '/etc/resolv.conf'
         self.resolv_conf = resolv_conf
         self.d = {}
+        self.a = {}
         self.aaaa = {}
         self.recheck()
         return
@@ -75,6 +76,7 @@ class Hosts:
         f = file(self.hostsfile)
         d = {}
         aaaa = {}
+	a = {}
         while 1:
             l = f.readline()
             if not l:
@@ -84,17 +86,23 @@ class Hosts:
                 continue
             aa = l.split()
             addr = aa.pop(0)
-            aa2 = []
+            #aa2 = []
             for n in aa:
                 n = self.sani(n)
-                aa2.append(n)
+                #aa2.append(n)
                 a2 = n.split('.')
                 if len(a2) <= 1:
                     for s in self.suffixes:
                         d['%s.%s' % (n,s)] = addr
                 d[n] = addr
-            aaaa[self.sani_aaaa(addr)] = aa2
+            #aaaa[self.sani_aaaa(addr)] = aa2
+	    #print addr
+	    if addr[0:8] == "2001:001" or addr[0:6] == "2001:1":
+		aaaa[n] = addr # HIT
+	    elif addr[0:2] == "1.":
+		a[n] = addr # LSI
         self.d = d
+	self.a = a
         self.aaaa = aaaa
         return
 
@@ -102,8 +110,12 @@ class Hosts:
         r = self.d.get(self.sani(n))
         return r
 
-    def getbyaaaa(self,a):
-        r = self.aaaa.get(self.sani(a))
+    def getbya(self,n):
+        r = self.a.get(self.sani(n))
+        return r
+
+    def getbyaaaa(self,n):
+        r = self.aaaa.get(self.sani(n))
         return r
 
 class Global:

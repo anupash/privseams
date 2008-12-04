@@ -33,8 +33,13 @@ int check_hit(HIT_Remote *hit, int inout)
 	{
 		HIP_DEBUG("Found HIT from database.\n");
 
-		if (fhit->g->accept == HIT_ACCEPT) err = 0;
-		else err = -1;
+		if (fhit->g->accept == HIT_ACCEPT) 
+			err = 1; /*Changing this to 1 here for letting the callee
+						know that hit already exist and is accepted
+						this is again changed to zero in callee for this
+						case.*/
+		else 
+			err = -1;
 		memcpy(hit, fhit, sizeof(HIT_Remote));
 
 		goto out_err;

@@ -15,11 +15,13 @@
 #define HIP_REGISTRATION_H
 
 #include "misc.h"
-#include "hiprelay.h" // For relrec lifetimes.
-#include "escrow.h" // For escrow lifetimes and other escrow stuff.
 #include "builder.h" // For lifetime conversions.
 #include "protodefs.h" // For service type values and hip_ha_t
+#ifndef __KERNEL__
+#include "hiprelay.h" // For relrec lifetimes.
+#include "escrow.h" // For escrow lifetimes and other escrow stuff.
 #include "linkedlist.h" // For pending service requests.
+#endif
 
 /**
  * Pending request lifetime. Pending requests are created when the requester
@@ -165,6 +167,19 @@ int hip_add_pending_request(hip_pending_request_t *request);
  *               otherwise.
  */ 
 int hip_del_pending_request(hip_ha_t *entry);
+
+/**
+ * Moves a pending request to a new entry. This is handy for opportunistic mode
+ *
+ * @param  entry_old a pointer to the old  host association from which the pending request
+ *                   to be moved is bound.
+ * @param  entry_new a pointer to the new  host association to which the pending request
+                     to be moved
+ * @return       zero if the pending request was succesfully moved, -1
+ *               otherwise.
+ */ 
+int hip_replace_pending_requests(hip_ha_t * entry_old, 
+				 hip_ha_t * entry_new);
 
 /**
  * Deletes a pending request of given type. Deletes a pending request identified
