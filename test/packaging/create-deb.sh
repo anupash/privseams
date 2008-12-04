@@ -18,7 +18,13 @@ REVISION=`/usr/bin/lsb_release -c | /usr/bin/awk '{print $2}'`
 # The latest SDK is diablo, the previous one - chinook. One may specify here whatever preferred more.
 # Better, we have to find out how to detect SDK version installed on a PC automatically -- Andrey Khurri
 if [ $DEBARCH = "armel" ]; then 
-    REVISION=diablo;
+    # jk: this isn't by any way 100%, but works for now. just use the 
+    # the first repository's revision
+    
+    REVISION=`grep '[^#]*deb http://repository.maemo.org/' /etc/apt/sources.list|head -n1|awk '{print $3}'|sed 's/\/.*$//'`
+    if [ -z "$REVISION" ]; then
+	REVISION=unknown;
+    fi
     
     # this doesn't seem to get set by automake in maemo
     PYEXECDIR=/usr/lib/python2.5
