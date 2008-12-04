@@ -2373,7 +2373,7 @@ int hip_map_first_id_to_hostname_from_hosts(const struct hosts_file_line *entry,
   int err = 1;
 
   if (!ipv6_addr_cmp((struct in6_addr *) arg, &entry->id)) {
-    HIP_DEBUG("Match on line %d\n", entry->lineno);
+    _HIP_DEBUG("Match on line %d\n", entry->lineno);
     memcpy(result, entry->hostname, strnlen(entry->hostname, HOST_NAME_MAX));
     err = 0; /* Stop at the first match */
   }
@@ -2395,7 +2395,7 @@ int hip_map_first_hostname_to_hit_from_hosts(const struct hosts_file_line *entry
 
     HIP_IFE(!is_hit, 1);
 
-    HIP_DEBUG("Match on line %d\n", entry->lineno);
+    _HIP_DEBUG("Match on line %d\n", entry->lineno);
     ipv6_addr_copy(result, &entry->id);
     err = 0; /* Stop at the first match */
   }
@@ -2419,7 +2419,7 @@ int hip_map_first_hostname_to_lsi_from_hosts(const struct hosts_file_line *entry
 
     HIP_IFE(!is_lsi, 1);
 
-    HIP_DEBUG("Match on line %d\n", entry->lineno);
+    _HIP_DEBUG("Match on line %d\n", entry->lineno);
     ipv6_addr_copy(result, &entry->id);
     err = 0; /* Stop at the first match */
   }
@@ -2443,7 +2443,7 @@ int hip_map_first_hostname_to_ip_from_hosts(const struct hosts_file_line *entry,
 
     HIP_IFE((is_hit || is_lsi), 1);
 
-    HIP_DEBUG("Match on line %d\n", entry->lineno);
+    _HIP_DEBUG("Match on line %d\n", entry->lineno);
     ipv6_addr_copy(result, &entry->id);
     err = 0; /* Stop at the first match */
   }
@@ -2583,7 +2583,7 @@ int hip_for_each_hosts_file_line(char *hosts_file,
     /* Finally, call the handler function to handle the line */
 
     if (func(&entry, arg, result) == 0) {
-      HIP_DEBUG("Match on line %d in %s\n", lineno, hosts_file);
+      _HIP_DEBUG("Match on line %d in %s\n", lineno, hosts_file);
       err = 0;
       break;
     }
