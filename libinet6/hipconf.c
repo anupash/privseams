@@ -1936,7 +1936,7 @@ int hip_conf_handle_get_dnsproxy(hip_common_t *msg, int action, const char *opt[
 
 out_err:
     memset(msg, 0, HIP_MAX_PACKET);
-    return(err);
+    return 0;
 }
 
 
