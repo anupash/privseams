@@ -420,8 +420,8 @@ then
     fi
 
     # client-side output post-processing
-    grep 'MBytes' $OUTPUT_DIR/$FILE | $STATS_DIR/stats.pl 95 type '(MBytes)\s+(\S+)' | tee $STAGING_DIR/$FILE
-    grep 'MBytes' $STAGING_DIR/$FILE | awk '{printf("#avg\tstd_dev\n"); printf("%.3f\t%.3f\n", $2, $3)}' | tee $RESULTS_DIR/$FILE
+    grep 'sec' $OUTPUT_DIR/$FILE | awk '{printf("Mbits/sec "); printf("%.3f\n", $7)}' | $STATS_DIR/stats.pl 95 type '(Mbits/sec)\s+(\S+)' | tee $STAGING_DIR/$FILE
+    grep 'Mbits/sec' $STAGING_DIR/$FILE | awk '{printf("#avg\tstd_dev\n"); printf("%.3f\t%.3f\n", $2, $3)}' | tee $RESULTS_DIR/$FILE
     # symlink newest results to plot_data dir
     ln -sf $RESULTS_DIR/$FILE $PLOT_DATA_DIR/$FILE
 
@@ -496,8 +496,8 @@ then
     fi
 
     # client-side output post-processing
-    grep '%' $OUTPUT_DIR/$FILE | $STATS_DIR/stats.pl 95 type '(MBytes)\s+(\S+)' | tee $STAGING_DIR/$FILE
-    grep 'MBytes' $STAGING_DIR/$FILE | awk '{printf("#avg\tstd_dev\n"); printf("%.3f\t%.3f\n", $2, $3)}' | tee $RESULTS_DIR/$FILE
+    grep '%' $OUTPUT_DIR/$FILE | awk '{printf("Mbits/sec "); printf("%.3f\n", $7)}' | $STATS_DIR/stats.pl 95 type '(Mbits/sec)\s+(\S+)' | tee $STAGING_DIR/$FILE
+    grep 'Mbits/sec' $STAGING_DIR/$FILE | awk '{printf("#avg\tstd_dev\n"); printf("%.3f\t%.3f\n", $2, $3)}' | tee $RESULTS_DIR/$FILE
     # symlink newest results to plot_data dir
     ln -sf $RESULTS_DIR/$FILE $PLOT_DATA_DIR/$FILE
 
