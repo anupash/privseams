@@ -210,30 +210,41 @@ debug medium        # debug verbosity: all, medium or none\n"
 
 #define HIPD_NSUPDATE_CONF_FILE     "/etc/hip/nsupdate.conf"
 #define HIPD_NSUPDATE_CONF_FILE_EX \
-"##########################################################\n\
-# configuration examples\n\
-#\n\
-# update records for 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net.\n\
-# $HIT_TO_IP_ZONE = 'hit-to-ip.infrahip.net.';\n\
-# or in some other zone\n\
-# $HIT_TO_IP_ZONE = 'hit-to-ip.example.org';\n\
-\n\
-# update is sent to SOA if server empty\n\
-# $SERVER = '';\n\
-# or you may define it \n\
-# $SERVER = 'ns.example.net.';\n\
-\n\
-# name of key if you configured it on the server\n\
-# please also chown this file to nobody and chmod 400\n\
-# $KEY_NAME='key.hit-to-ip';\n\
-# $KEY_NAME = '';\n\
-\n\
-# secret of that key\n\
-# $KEY_SECRET='Ousu6700S9sfYSL4UIKtvnxY4FKwYdgXrnEgDAu/rmUAoyBGFwGs0eY38KmYGLT1UbcL/O0igGFpm+NwGftdEQ==';\n\
-# $KEY_SECRET = '';\n\
-###########################################################"
-
-
+"##########################################################\n"\
+"# configuration examples\n"\
+"##########################################################\n"\
+"# update records for 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net.\n"\
+"# $HIT_TO_IP_ZONE = 'hit-to-ip.infrahip.net.';\n"\
+"# or in some other zone\n"\
+"# $HIT_TO_IP_ZONE = 'hit-to-ip.example.org.';\n"\
+"\n"\
+"# update is sent to SOA if server empty\n"\
+"# $HIT_TO_IP_SERVER = '';\n"\
+"# or you may define it \n"\
+"# $HIT_TO_IP_SERVER = 'ns.example.net.';\n"\
+"\n"\
+"# name of key if you configured it on the server\n"\
+"# please also chown this file to nobody and chmod 400\n"\
+"# $HIT_TO_IP_KEY_NAME='key.hit-to-ip';\n"\
+"# $HIT_TO_IP_KEY_NAME = '';\n"\
+"\n"\
+"# secret of that key\n"\
+"# $HIT_TO_IP_KEY_SECRET='Ousu6700S9sfYSL4UIKtvnxY4FKwYdgXrnEgDAu/rmUAoyBGFwGs0eY38KmYGLT1UbcL/O0igGFpm+NwGftdEQ==';\n"\
+"# $HIT_TO_IP_KEY_SECRET = '';\n"\
+"\n"\
+"# TTL inserted for the records\n"\
+"# $HIT_TO_IP_TTL = 1;\n"\
+"###########################################################\n"\
+"# domain with ORCHID prefix \n"\
+"# $REVERSE_ZONE = '1.0.0.1.0.0.2.ip6.arpa.'; \n"\
+"# \n"\
+"# $REVERSE_SERVER = 'ptr-soa-hit.infrahip.net.'; # since SOA 1.0.0.1.0.0.2.ip6.arpa. is dns1.icann.org. now\n"\
+"# $REVERSE_KEY_NAME = '';\n"\
+"# $REVERSE_KEY_SECRET = '';\n"\
+"# $REVERSE_TTL = 86400;\n"\
+"# System hostname is used if empty\n"\
+"# $REVERSE_HOSTNAME = 'stargazer-hit.pc.infrahip.net';\n"\
+"###########################################################"
 
 /**
  * A list of prototypes for handler functions.

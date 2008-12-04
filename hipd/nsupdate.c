@@ -53,7 +53,7 @@ static void sig_chld (int signo)
 /*
  * Execute nsupdate.pl with IP and HIT given as environment variables
  */
-int run_nsupdate(char *ips, char *hit)
+int run_nsupdate(char *ips, char *hit, int update_reverse)
 {
 	struct sigaction act;
 	pid_t child_pid;
@@ -89,12 +89,20 @@ int run_nsupdate(char *ips, char *hit)
 		/* Sorry, no input */
 		fclose(stdin);
 
+#define update_reverse_str_MAX_LEN 2
+		char update_reverse_str[update_reverse_str_MAX_LEN];
+		snprintf(update_reverse_str, update_reverse_str_MAX_LEN, "%i", update_reverse);
+
 		char *env_ips = make_env(VAR_IPS, ips);
 		char *env_hit = make_env(VAR_HIT, hit);
+		char *env_update_reverse = make_env(VAR_UPDATE_REVERSE, update_reverse_str);
+
 		char *cmd[] = { NSUPDATE_ARG0, NULL };
-		char *env[] = { env_ips, env_hit, NULL };
-		HIP_DEBUG("Starting %s with %s and %s", NSUPDATE_PL, env_hit, env_ips);
+		char *env[] = { env_ips, env_hit, env_update_reverse, NULL };
+
+		HIP_DEBUG("Starting %s with %s and %s", NSUPDATE_PL, env_hit, env_ips, env_update_reverse);
 		execve (NSUPDATE_PL, cmd, env);
+
 		/* Executed only if error */
 		HIP_PERROR("execve");
 		exit(1); // just in case
@@ -112,6 +120,12 @@ int run_nsupdate(char *ips, char *hit)
 int run_nsupdate_for_hit (struct hip_host_id_entry *entry, void *opaq)
 {
 	HIP_DEBUG("run_nsupdate");
+	int update_reverse = 0;
+	if (opaq != NULL)
+		update_reverse = * (int *) opaq;
+
+	HIP_DEBUG("update_reverse: %d", update_reverse);
+
 	char *hit = hip_convert_hit_to_str(&entry->lhi.hit,NULL);
 
 #define ip_str_LEN 40 // buffer for one IP address 
@@ -157,7 +171,7 @@ int run_nsupdate_for_hit (struct hip_host_id_entry *entry, void *opaq)
 		}
 	}
 
-	run_nsupdate(ips_str, hit);
+	run_nsupdate(ips_str, hit, update_reverse);
 	free(hit);
 	return 0;
 }
@@ -165,20 +179,21 @@ int run_nsupdate_for_hit (struct hip_host_id_entry *entry, void *opaq)
 /*
  * Update records for all hits. The host should be able to send packets to HITs to modify the DNS records
  */ 
-int nsupdate(void)
+int nsupdate(const int update_reverse)
 {
 	HIP_DEBUG("Updating dns records...");
-	hip_for_each_hi(run_nsupdate_for_hit, NULL);
+	hip_for_each_hi(run_nsupdate_for_hit, (void *) &update_reverse);
 }
 
 /*
  * Just call run_nsupdate with some values for debugging
  */
-int junk_main(void)
+#if 0
+int main(void)
 {
 	int ret;
 
-	ret = run_nsupdate("193.167.187.3 193.167.187.5","def");
+	ret = run_nsupdate("193.167.187.3 193.167.187.5","def",1);
 	printf("ret=%d\n", ret);
 	sleep(1);
 
@@ -189,3 +204,4 @@ int junk_main(void)
 	}
 	return 0;
 }
+#endif

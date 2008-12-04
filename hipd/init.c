@@ -414,7 +414,7 @@ int hipd_init(int flush_ipsec, int killold)
 	hip_firewall_sock_lsi_fd = hip_user_sock;
 
 	if (hip_get_nsupdate_status())
-		nsupdate();
+		nsupdate(1);
 
 out_err:
 	return err;
