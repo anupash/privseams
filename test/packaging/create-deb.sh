@@ -54,9 +54,15 @@ PKGNAME="${NAME}-${TMPNAME}.${POSTFIX}"
 TMP=""
 DEBLIB="$NAME-$TMP"
 
-LIBDEPS="libgtk2.0-0, libssl0.9.8, libxml2, iptables, libsqlite3-0"
-if [ $DEBARCH != "armel" ]; then
-    LIBDEPS="$LIBDEPS, libcap2, libuuid1, libinet-dns-perl, libnet-ip-perl, libsocket6-perl, libio-socket-inet6-perl"
+LIBDEPS="libgtk2.0-0, libxml2, iptables, libsqlite3-0"
+if [ $DEBARCH = "armel" ]; then
+    if [ $REVISION = "diablo" ]; then
+	LIBDEPS="$LIBDEPS, libssl0.9.8"
+    else
+	LIBDEPS="$LIBDEPS, libssl0.9.7"
+    fi
+else
+    LIBDEPS="$LIBDEPS, libssl0.9.8, libcap2, libuuid1, libinet-dns-perl, libnet-ip-perl, libsocket6-perl, libio-socket-inet6-perl"
 fi
 
 LINE0="Depends:"
