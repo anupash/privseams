@@ -29,7 +29,7 @@ char *make_env(char *name, char *value)
 
  if (result == NULL)
  {
-  perror("malloc");
+  HIP_PERROR("malloc");
   return NULL;
  }
 
@@ -89,9 +89,8 @@ int run_nsupdate(char *ips, char *hit, int update_reverse)
 		/* Sorry, no input */
 		fclose(stdin);
 
-#define update_reverse_str_MAX_LEN 2
-		char update_reverse_str[update_reverse_str_MAX_LEN];
-		snprintf(update_reverse_str, update_reverse_str_MAX_LEN, "%i", update_reverse);
+		char update_reverse_str[2];
+		snprintf(update_reverse_str, sizeof(update_reverse_str), "%i", update_reverse);
 
 		char *env_ips = make_env(VAR_IPS, ips);
 		char *env_hit = make_env(VAR_HIT, hit);
@@ -128,13 +127,9 @@ int run_nsupdate_for_hit (struct hip_host_id_entry *entry, void *opaq)
 
 	char *hit = hip_convert_hit_to_str(&entry->lhi.hit,NULL);
 
-#define ip_str_LEN 40 // buffer for one IP address 
-	char ip_str[ip_str_LEN];
+	char ip_str[40]; // buffer for one IP address
+	char ips_str[1024] = ""; // list of IP addresses
 
-#define ips_str_LEN 1024 
-	char ips_str[ips_str_LEN];
-	ips_str[0]=0;
-	
   	hip_list_t *item, *tmp;
   	int i;
 
@@ -150,23 +145,23 @@ int run_nsupdate_for_hit (struct hip_host_id_entry *entry, void *opaq)
 		switch (tmp_sockaddr_ptr->sa_family)
 		{
 			case AF_INET:
-				inet_ntop(AF_INET, & tmp_sockaddr_in_ptr->sin_addr, ip_str, ip_str_LEN);
+				inet_ntop(AF_INET, & tmp_sockaddr_in_ptr->sin_addr, ip_str, sizeof(ip_str));
 				if (ips_str[0]!=0) // not empty
-					strncat(ips_str, " ", ips_str_LEN-strlen(ips_str));
-				strncat(ips_str, ip_str, ips_str_LEN-strlen(ips_str));
+					strncat(ips_str, " ", sizeof(ips_str)-strlen(ips_str));
+				strncat(ips_str, ip_str, sizeof(ips_str)-strlen(ips_str));
 				break;
 			case AF_INET6:
 				if (IN6_IS_ADDR_V4MAPPED(&tmp_sockaddr_in6_ptr->sin6_addr)) {
 					struct in_addr tmp_in_addr;
 					IPV6_TO_IPV4_MAP(&tmp_sockaddr_in6_ptr->sin6_addr, &tmp_in_addr)
-					inet_ntop(AF_INET, &tmp_in_addr, ip_str, ip_str_LEN);
+					inet_ntop(AF_INET, &tmp_in_addr, ip_str, sizeof(ip_str));
 				} else {
-					inet_ntop(AF_INET6, &tmp_sockaddr_in6_ptr->sin6_addr, ip_str, ip_str_LEN);
+					inet_ntop(AF_INET6, &tmp_sockaddr_in6_ptr->sin6_addr, ip_str, sizeof(ip_str));
 				}
 
 				if (ips_str[0]!=0) // not empty
-					strncat(ips_str, " ", ips_str_LEN-strlen(ips_str));
-				strncat(ips_str, ip_str, ips_str_LEN-strlen(ips_str));
+					strncat(ips_str, " ", sizeof(ips_str)-strlen(ips_str));
+				strncat(ips_str, ip_str, sizeof(ips_str)-strlen(ips_str));
 				break;
 		}
 	}

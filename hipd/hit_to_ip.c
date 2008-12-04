@@ -70,10 +70,9 @@ int hip_hit_to_ip(hip_hit_t *hit, struct in6_addr *retval) {
 	if ((hit == NULL)||(retval == NULL))
 		return ERR;
 
-#define hit_to_ip_hostname_LEN 64+HIT_TO_IP_ZONE_MAX_LEN+1
-	char hit_to_ip_hostname[hit_to_ip_hostname_LEN];
+	char hit_to_ip_hostname[64+HIT_TO_IP_ZONE_MAX_LEN+1];
 
-	if (hip_get_hit_to_ip_hostname(hit, hit_to_ip_hostname, hit_to_ip_hostname_LEN)!=OK)
+	if (hip_get_hit_to_ip_hostname(hit, hit_to_ip_hostname, sizeof(hit_to_ip_hostname))!=OK)
 		return ERR;
 
 	struct addrinfo hints;
