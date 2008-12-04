@@ -413,12 +413,14 @@ void register_to_dht()
 		// param value in HTTP header
 		publish_hit(&opendht_name_mapping, tmp_hit_str);
 		pub_addr_ret = publish_addr(tmp_hit_str);
+		free(tmp_hit_str);
+		tmp_hit_str = NULL;
 		continue;
 	}
              
  out_err:
-	if (tmp_hit_str)
-		free(tmp_hit_str);
+	//if (tmp_hit_str)
+		//free(tmp_hit_str);
 	return;
 }
 /**
@@ -995,6 +997,7 @@ int opendht_put_locator(unsigned char * key,
     HIP_DEBUG("Actual OpenDHT send starts here\n");
    err = 0;
  out_err:
+    HIP_FREE(fake_msg);
     return(err);
 }
 
