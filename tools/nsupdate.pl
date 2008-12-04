@@ -50,8 +50,9 @@ my $env_UPDATE_REVERSE = $ENV{UPDATE_REVERSE};
 
 unless ($env_HIT) {log_and_die("HIT environment variable is empty");}
 
-# globally used resolver
+# globally used resolvers
 my $RES = Net::DNS::Resolver->new;
+my $RES_DEFAULT = Net::DNS::Resolver->new;
 
 if ($env_IPS) {update_hit_to_ip($env_HIT, $env_IPS);}
 
@@ -202,7 +203,7 @@ sub find_server_addresses
 
 	my @addresses;
 
-	my $query = $RES->query($server, "AAAA");
+	my $query = ${RES_DEFAULT}->query($server, "AAAA");
 	if ($query) {
 		foreach my $rr ($query->answer) {
         		next unless ($rr->type eq "AAAA");
@@ -211,7 +212,7 @@ sub find_server_addresses
 		return @addresses;
 	}
 
-	$query = $RES->query($server, "A");
+	$query = ${RES_DEFAULT}->query($server, "A");
 	if ($query) {
 		foreach my $rr ($query->answer) {
         		next unless ($rr->type eq "A");
@@ -219,7 +220,7 @@ sub find_server_addresses
         	}
 		return @addresses;
 	} else {
-		log_and_die("address of $server not found: " . $RES->errorstring);
+		log_and_die("address of $server not found: " . ${RES_DEFAULT}->errorstring);
 	}
 }
 
