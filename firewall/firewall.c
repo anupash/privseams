@@ -556,14 +556,17 @@ int firewall_init_rules(){
 			// make DROP the default behavior of all chains
 			// TODO don't drop LSIs -> else IPv4 apps won't work
 			// -> also messaging between HIPd and firewall is blocked here
-			system("iptables -I HIPFW-FORWARD -j DROP");  /* @todo: ! LSI PREFIX */
-			system("iptables -I HIPFW-INPUT -j DROP");  /* @todo: ! LSI PREFIX */
-			system("iptables -I HIPFW-OUTPUT -j DROP");  /* @todo: ! LSI PREFIX */
+			system("iptables -I HIPFW-FORWARD ! -d 127.0.0.1 -j DROP");  /* @todo: ! LSI PREFIX */
+			system("iptables -I HIPFW-INPUT ! -d 127.0.0.1 -j DROP");  /* @todo: ! LSI PREFIX */
+			system("iptables -I HIPFW-OUTPUT ! -d 127.0.0.1 -j DROP");  /* @todo: ! LSI PREFIX */
 
-			// but still allow packets with HITs as destination
+			// but still allow loopback and HITs as destination
 			system("ip6tables -I HIPFW-FORWARD ! -d 2001:0010::/28 -j DROP");
 			system("ip6tables -I HIPFW-INPUT ! -d 2001:0010::/28 -j DROP");
 			system("ip6tables -I HIPFW-OUTPUT ! -d 2001:0010::/28 -j DROP");
+			system("ip6tables -I HIPFW-FORWARD -d ::1 -j ACCEPT");
+			system("ip6tables -I HIPFW-INPUT -d ::1 -j ACCEPT");
+			system("ip6tables -I HIPFW-OUTPUT -d ::1 -j ACCEPT");
 		}
 
 		// this will allow the firewall to handle HIP traffic
