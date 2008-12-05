@@ -53,6 +53,8 @@ int hip_beet_mode_output(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
 
 	_HIP_DEBUG("original packet length: %i \n", ctx->ipq_packet->data_len);
 
+	printf("esp seq: %u\n", entry->sequence);
+
 	if (entry->sequence != cmp_seq)
 	{
 		printf("seq changed, loc 0\n");
