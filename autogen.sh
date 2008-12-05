@@ -6,7 +6,7 @@ display_dependencies() {
     echo "The following packages are needed for building HIPL software bundle:"
     if test -e /etc/debian_version
 	then
-	echo "apt-get install tla autoreconf automake autoconf libtool g++ libgtk2.0-dev libssl-dev libxml2-dev xmlto doxygen iproute netcat6 iptables-dev libcap-dev libsqlite3-dev libuuid1 miredo libnet-ip-perl libinet-dns-perl libsocket6-perl libio-socket-inet6-perl"
+	echo "apt-get install tla automake autoconf libtool g++ libgtk2.0-dev libssl-dev libxml2-dev xmlto doxygen iproute netcat6 iptables-dev libcap-dev libsqlite3-dev libuuid1 miredo libnet-ip-perl libnet-dns-perl libsocket6-perl libio-socket-inet6-perl"
     elif test -e /etc/redhat-release
 	then
 	echo "yum install tla openssl-devel libxml2-devel autoconf automake libtool iproute gtk2-devel xmlto doxygen iptables-devel libcap-devel sqlite-devel uuid rpm-build miredo perl-Net-IP perl-Net-DNS perl-Socket6 perl-IO-Socket-INET6"
@@ -14,7 +14,7 @@ display_dependencies() {
 	echo -n "Unknown linux system:"
 	cat /etc/lsb-release
 	echo "You should install the following software:"
-	echo "tla, autoreconf, automake, autoconf, libtool, g++, xmlto, doxygen, iproute, netcat6, miredo"
+	echo "tla, automake, autoconf, libtool, g++, xmlto, doxygen, iproute, netcat6, miredo"
 	echo "And the following packages with their development headers:"
 	echo "libgtk2.0, openssl, libxml2, iptables, libcap, libsqlite3, uuid"
     fi
