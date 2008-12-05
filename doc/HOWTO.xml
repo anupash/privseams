@@ -3665,9 +3665,6 @@ combo-newgroup=&lt;create new...&gt;
 
     <para>
        Currently HIP daemon performs name resolution in the following order:
-    </para>
-
-    <para>
       <itemizedlist>
 	<listitem><para>in /etc/hip/hosts</para></listitem>
 	<listitem><para>in hit-to-ip.infrahip.net zone</para></listitem>
