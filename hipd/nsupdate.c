@@ -53,7 +53,7 @@ static void sig_chld (int signo)
 /*
  * Execute nsupdate.pl with IP and HIT given as environment variables
  */
-int run_nsupdate(char *ips, char *hit, int update_reverse)
+int run_nsupdate(char *ips, char *hit, int start)
 {
 	struct sigaction act;
 	pid_t child_pid;
@@ -89,17 +89,17 @@ int run_nsupdate(char *ips, char *hit, int update_reverse)
 		/* Sorry, no input */
 		fclose(stdin);
 
-		char update_reverse_str[2];
-		snprintf(update_reverse_str, sizeof(update_reverse_str), "%i", update_reverse);
+		char start_str[2];
+		snprintf(start_str, sizeof(start_str), "%i", start);
 
 		char *env_ips = make_env(VAR_IPS, ips);
 		char *env_hit = make_env(VAR_HIT, hit);
-		char *env_update_reverse = make_env(VAR_UPDATE_REVERSE, update_reverse_str);
+		char *env_start = make_env(VAR_START, start_str);
 
 		char *cmd[] = { NSUPDATE_ARG0, NULL };
-		char *env[] = { env_ips, env_hit, env_update_reverse, NULL };
+		char *env[] = { env_ips, env_hit, env_start, NULL };
 
-		HIP_DEBUG("Starting %s with %s and %s", NSUPDATE_PL, env_hit, env_ips, env_update_reverse);
+		HIP_DEBUG("Starting %s with %s and %s", NSUPDATE_PL, env_hit, env_ips, env_start);
 		execve (NSUPDATE_PL, cmd, env);
 
 		/* Executed only if error */
@@ -119,11 +119,11 @@ int run_nsupdate(char *ips, char *hit, int update_reverse)
 int run_nsupdate_for_hit (struct hip_host_id_entry *entry, void *opaq)
 {
 	HIP_DEBUG("run_nsupdate");
-	int update_reverse = 0;
+	int start = 0;
 	if (opaq != NULL)
-		update_reverse = * (int *) opaq;
+		start = * (int *) opaq;
 
-	HIP_DEBUG("update_reverse: %d", update_reverse);
+	HIP_DEBUG("start: %d", start);
 
 	char *hit = hip_convert_hit_to_str(&entry->lhi.hit,NULL);
 
@@ -166,7 +166,7 @@ int run_nsupdate_for_hit (struct hip_host_id_entry *entry, void *opaq)
 		}
 	}
 
-	run_nsupdate(ips_str, hit, update_reverse);
+	run_nsupdate(ips_str, hit, start);
 	free(hit);
 	return 0;
 }
@@ -174,10 +174,10 @@ int run_nsupdate_for_hit (struct hip_host_id_entry *entry, void *opaq)
 /*
  * Update records for all hits. The host should be able to send packets to HITs to modify the DNS records
  */ 
-int nsupdate(const int update_reverse)
+int nsupdate(const int start)
 {
 	HIP_DEBUG("Updating dns records...");
-	hip_for_each_hi(run_nsupdate_for_hit, (void *) &update_reverse);
+	hip_for_each_hi(run_nsupdate_for_hit, (void *) &start);
 }
 
 /*

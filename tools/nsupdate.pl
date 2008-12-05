@@ -4,14 +4,15 @@
 # Executed by hipd after address changes
 #
 # It expects parameters in the environment variables: 
-# IPS with space-separated list of ip addreses
-# HIT with Host Identitity Tag 
+# HIPD_IPS with space-separated list of ip addreses
+# HIPD_HIT with Host Identitity Tag 
+# HIPD_START with 0 or 1 
 # for example,
-# IPS='192.168.187.1 2001:db8:140:220:215:60ff:fe9f:60c4'
-# HIT='2001:1e:574e:2505:264a:b360:d8cc:1d75'
+# HIPD_IPS='192.168.187.1 2001:db8:140:220:215:60ff:fe9f:60c4'
+# HIPD_HIT='2001:1e:574e:2505:264a:b360:d8cc:1d75'
+# HIPD_START='1'
 #
-# update reverse zone if UPDATE_REVERSE variable is set
-##########################################################
+###########################################################
 use strict;
 
 my $CONFIG_PATH = "/etc/hip/nsupdate.conf";
@@ -44,57 +45,90 @@ use Sys::Hostname;
 
 openlog('nsupdate.pl', 'ndelay,pid', 'local6');
 
-my $env_HIT = $ENV{HIT};
-my $env_IPS = $ENV{IPS};
-my $env_UPDATE_REVERSE = $ENV{UPDATE_REVERSE};
+my $env_HIT = $ENV{HIPD_HIT};
+my $env_IPS = $ENV{HIPD_IPS};
+my $env_START = $ENV{HIPD_START};
 
-unless ($env_HIT) {log_and_die("HIT environment variable is empty");}
+my($HIT, $REV_HIT, $REV_HIT_WITHOUT_ORCHID);
 
-# globally used resolvers
-my $RES = Net::DNS::Resolver->new;
-my $RES_DEFAULT = Net::DNS::Resolver->new;
+parse_hit();
 
-if ($env_IPS) {update_hit_to_ip($env_HIT, $env_IPS);}
+# globally used resolver
+my $RES_DEFAULT = Net::DNS::Resolver->new();
 
-$RES = Net::DNS::Resolver->new;
+if ($env_IPS) {update_hit_to_ip($env_IPS, $env_START);}
 
-if ($env_UPDATE_REVERSE) {
+if ($env_START) {
 	unless ($REVERSE_HOSTNAME) { $REVERSE_HOSTNAME = hostname(); }
-	update_reverse($env_HIT, $REVERSE_HOSTNAME);
+	update_reverse($REVERSE_HOSTNAME);
 }
 
 exit 0;
 
 ####################################################################################################
+sub parse_hit
+{
+	unless ($env_HIT) {log_and_die("HIPD_HIT environment variable is empty");}
+	$HIT = $env_HIT;
+	my $hit_ip = new Net::IP($HIT) or log_and_die("$HIT does not look like IP address");
+	my $r = $hit_ip->reverse_ip();
+	$r =~ /^(.+)\.ip6\.arpa\.$/ or log_and_die("$HIT does not look like IPv6 address");
+	$REV_HIT = $1;
+	unless ($REV_HIT =~ /(.+)\.1\.0\.0\.1\.0\.0\.2$/) {log_and_die("$REV_HIT does not end with ORCHID prefix");}
+	$REV_HIT_WITHOUT_ORCHID = $1;
+}
+
+####################################################################################################
 sub update_hit_to_ip
 {
-	my $hit = $_[0];
-	my $ips = $_[1];
+	my @new_ips = split(/\s/,$_[0]);
+	my $compare_first = $_[1];
 
-	$RES->nameservers(nameservers($HIT_TO_IP_ZONE, $HIT_TO_IP_SERVER));
+	my $hit_to_ip_domain = ${REV_HIT} . "." . ${HIT_TO_IP_ZONE};
 
-	my $update = prepare_hit_to_ip_update($hit, $ips);
+	my $res = Net::DNS::Resolver->new();
+
+	if ($HIT_TO_IP_SERVER) {$res->nameservers(resolve_nameservers($HIT_TO_IP_SERVER));}
+
+	if ($compare_first) {
+		my @current_ips = query_addresses($hit_to_ip_domain, $res);
+		my $current_ips_str = join(',',sort @current_ips);
+		my $new_ips_str = join(',',sort @new_ips);
+
+		log_debug("compared current: ${current_ips_str} and desired: ${new_ips_str}");
+
+		if ($current_ips_str eq $new_ips_str) {
+			log_debug("No hit-to-ip update needed");
+			return;
+		}
+	}
+
+	my $update = prepare_hit_to_ip_update($hit_to_ip_domain, \@new_ips);
 
 	sign_update($update, $HIT_TO_IP_KEY_NAME, $HIT_TO_IP_KEY_SECRET);
 
-	send_update_from_hit($update, $hit);
+	unless ($HIT_TO_IP_SERVER) {
+		$res->nameservers(query_addresses(query_soa($HIT_TO_IP_ZONE), $RES_DEFAULT));
+	}
+
+	send_update_from_hit($update, $HIT, $res);
 }
 
 ####################################################################################################
 sub prepare_hit_to_ip_update
 {
-	my $rev_hit = reverse_hit($_[0]);
-	my @ips = split(/\s/,$_[1]);
+	my $domain = $_[0];
+	my $ips_ref = $_[1];
 
 	my $update = Net::DNS::Update->new($HIT_TO_IP_ZONE);
 
-	$update->push(update => rr_del("${rev_hit}.${HIT_TO_IP_ZONE}"));
+	$update->push(update => rr_del($domain));
 
-	foreach my $ip (@ips) {
+	foreach my $ip (@$ips_ref) {
         	if (ip_is_ipv6($ip)) {
-			$update->push(update => rr_add("${rev_hit}.${HIT_TO_IP_ZONE} ${HIT_TO_IP_TTL} AAAA $ip"));
+			$update->push(update => rr_add("$domain ${HIT_TO_IP_TTL} AAAA $ip"));
 		} elsif (ip_is_ipv4($ip)) {			
-			$update->push(update => rr_add("${rev_hit}.${HIT_TO_IP_ZONE} ${HIT_TO_IP_TTL} A $ip"));
+			$update->push(update => rr_add("$domain ${HIT_TO_IP_TTL} A $ip"));
 		} else {
 			log_error("Don't know how to add $ip");
 		}
@@ -106,134 +140,119 @@ sub prepare_hit_to_ip_update
 ####################################################################################################
 sub update_reverse
 {
-	my $hit = $_[0];
-	my $hostname = $_[1];
+	my $hostname = $_[0];
 
 	log_debug("Desired reverse: $hostname");
-	my $rev_hit = reverse_hit($hit);
 
-	unless ($rev_hit =~ /(.+)\.1\.0\.0\.1\.0\.0\.2$/) {log_and_die("$rev_hit does not end with ORCHID prefix");}
-	my $rev_hit_without_orchid = $1;
+	my $reverse_domain = ${REV_HIT_WITHOUT_ORCHID} . "." . ${REVERSE_ZONE};
 
-	my @ptrs = find_ptrs($rev_hit_without_orchid);
+	my $res = Net::DNS::Resolver->new();
+
+	if ($REVERSE_SERVER) {$res->nameservers(resolve_nameservers($REVERSE_SERVER));}
+
+	my @ptrs = query_ptrs($reverse_domain, $res);
 	
 	log_debug("Found reverse: " . join(',',@ptrs));
 
 # Check if it already contains desired PTR 
 	if (grep {$_ eq $hostname} @ptrs) {log_debug("No reverse update needed");return;}
 
-	$RES->nameservers(nameservers($REVERSE_ZONE, $REVERSE_SERVER));
-
-	my $update = prepare_reverse_update($rev_hit_without_orchid, $hostname);
+	my $update = prepare_reverse_update($reverse_domain, $hostname);
 
 	sign_update($update, $REVERSE_KEY_NAME, $REVERSE_KEY_SECRET);
 
-	send_update_from_hit($update, $hit);
+	unless ($REVERSE_SERVER) {$res->nameservers(query_addresses(query_soa($REVERSE_ZONE), $RES_DEFAULT));}
+
+	send_update_from_hit($update, $HIT, $res);
 }
 
 ####################################################################################################
 sub prepare_reverse_update
 {
-	my $rev_hit_without_orchid = $_[0];
+	my $domain = $_[0];
 	my $hostname = $_[1];
 
 	my $update = Net::DNS::Update->new($REVERSE_ZONE);
 
 	unless ($hostname =~ /\.$/) {$hostname .= ".";}
 
-	$update->push(update => rr_del("${rev_hit_without_orchid}.${REVERSE_ZONE}"));
-	$update->push(update => rr_add("${rev_hit_without_orchid}.${REVERSE_ZONE} ${REVERSE_TTL} PTR ${hostname}"));
+	$update->push(update => rr_del($domain));
+	$update->push(update => rr_add("$domain ${REVERSE_TTL} PTR $hostname"));
 
 	return $update;
 }
 
 ####################################################################################################
-sub nameservers
+sub resolve_nameservers
 {
-	my $zone = $_[0];
-	my $server = $_[1];
+	my $server = $_[0];
 
-	log_debug("Updating records in $zone");
-
-	if ($server) {
-		log_debug("Using $server from config");
-		if (ip_is_ipv6($server)) {
-			log_debug("which is ipv6 address");
-			return ($server);
-		} elsif (ip_is_ipv4($server)) {		
-			log_debug("which is ipv4 address");
-			return ($server);
-		}
-	} else {
-		$server = find_soa($zone);
-		log_debug("Using $server from SOA");
+	if (ip_is_ipv6($server)) {
+		return ($server);
+	} elsif (ip_is_ipv4($server)) {		
+		return ($server);
 	}
 
 	# we can't put symbolic name to Resolver->nameservers because it would not use AAAA then
-	my @server_ips = find_server_addresses($server);
+	my @server_ips = query_addresses($server, $RES_DEFAULT);
 	log_debug("Resolved nameserver to " . join(',', @server_ips));
 
 	return @server_ips;
 }
 
 ####################################################################################################
-sub find_soa
+sub query_soa
 {
 	my $zone = $_[0];
 
-	my $query = $RES->query($zone, "SOA");
+	my $query = ${RES_DEFAULT}->query($zone, "SOA");
 
 	if ($query) {
 		foreach my $rr ($query->answer) {
         		next unless ($rr->type eq "SOA");
-			if ($rr->mname =~ /icann\.org/) {log_and_die("Will not send update to $rr->mname");}
+			if ($rr->mname =~ /icann\.org/) {log_error("Will not send update to $rr->mname");return;}
 			return $rr->mname;
         	}
-		log_and_die("SOA for $zone not found in the answer: " . $query->print());
+		log_error("SOA for $zone not found in the answer: " . $query->print());
 	} else {
-		log_and_die("SOA for $zone not found: " . $RES->errorstring);
+		log_erorr("SOA for $zone not found: " . ${RES_DEFAULT}->errorstring);
 	}
 }
 
 ####################################################################################################
-sub find_server_addresses
+sub query_addresses
 {
 	my $server = $_[0];
-	my $ip;
+	my $res = $_[1];
 
 	my @addresses;
 
-	my $query = ${RES_DEFAULT}->query($server, "AAAA");
+	my $query = $res->query($server, "AAAA");
 	if ($query) {
 		foreach my $rr ($query->answer) {
         		next unless ($rr->type eq "AAAA");
 			push @addresses, $rr->address();
         	}
-		return @addresses;
 	}
 
-	$query = ${RES_DEFAULT}->query($server, "A");
+	$query = $res->query($server, "A");
 	if ($query) {
 		foreach my $rr ($query->answer) {
         		next unless ($rr->type eq "A");
 			push @addresses, $rr->address();
         	}
-		return @addresses;
-	} else {
-		log_and_die("address of $server not found: " . ${RES_DEFAULT}->errorstring);
-	}
+	} 
+
+	return @addresses;
 }
 
 ####################################################################################################
-sub find_ptrs
+sub query_ptrs
 {
-	my $rev_hit_without_orchid = $_[0];
+	my $domain = $_[0];
+	my $res = $_[1];
 
-	if ($REVERSE_SERVER) {
-		$RES->nameservers(find_server_addresses($REVERSE_SERVER));
-	}
-
-	my $query = $RES->query($rev_hit_without_orchid . "." . $REVERSE_ZONE , "PTR");
+	my $query = $res->query($domain , "PTR");
 
 	my @ptrs;
 
@@ -250,10 +269,6 @@ sub find_ptrs
 ####################################################################################################
 sub reverse_hit
 {
- my $hit = new Net::IP($_[0]);
- my $r = $hit->reverse_ip();
- $r =~ /^(.+)\.ip6\.arpa\.$/ or log_and_die("\"$env_HIT\" does not look like HIT -- $r");
- return $1;
 }
 
 ####################################################################################################
@@ -275,11 +290,12 @@ sub send_update_from_hit
 {
 	my $update = $_[0];
 	my $hit = $_[1];
+	my $res = $_[2];
 
 	log_debug("Using $hit as local address");
-	$RES->srcaddr($hit);
+	$res->srcaddr($hit);
 
-	my $reply = $RES->send($update);
+	my $reply = $res->send($update);
 
         if ($reply) {
             if ($reply->header->rcode eq 'NOERROR') {
@@ -288,7 +304,7 @@ sub send_update_from_hit
                 log_error('Update failed: ' . $reply->header->rcode);
             }
         } else {
-            log_error('Update failed: ' . $RES->errorstring);
+            log_error('Update failed: ' . $res->errorstring);
         }
 }
 
