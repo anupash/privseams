@@ -28,7 +28,7 @@
 /* for some reason the ICV for ESP authentication is truncated to 12 bytes */
 #define ICV_LENGTH 12
 
-uint32_t cmp_seq = 0;
+uint32_t cmp_seq = 1;
 
 
 int hip_beet_mode_output(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
