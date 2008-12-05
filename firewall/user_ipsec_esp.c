@@ -28,6 +28,8 @@
 /* for some reason the ICV for ESP authentication is truncated to 12 bytes */
 #define ICV_LENGTH 12
 
+uint32_t cmp_seq = 0;
+
 
 int hip_beet_mode_output(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
 		struct in6_addr *preferred_local_addr, struct in6_addr *preferred_peer_addr,
@@ -48,11 +50,14 @@ int hip_beet_mode_output(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
 	// length of the hash value used by the esp protection extension
 	int esp_prot_hash_length = 0;
 	int err = 0;
-	uint32_t cmp_seq = 0;
 
 	_HIP_DEBUG("original packet length: %i \n", ctx->ipq_packet->data_len);
 
-	cmp_seq = entry->sequence;
+	if (entry->sequence != cmp_seq)
+	{
+		printf("seq changed, loc 0\n");
+		exit(1);
+	}
 
 	// distinguish IPv4 and IPv6 output
 	if (IN6_IS_ADDR_V4MAPPED(preferred_peer_addr))
@@ -93,7 +98,7 @@ int hip_beet_mode_output(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
 
 		out_esp_hdr->esp_seq = htonl(entry->sequence++);
 
-		if (entry->sequence != cmp_seq + 1)
+		if (entry->sequence != ++cmp_seq)
 		{
 			printf("seq changed, loc 4\n");
 			exit(1);
@@ -116,7 +121,7 @@ int hip_beet_mode_output(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
 		// ... and the eventual hash
 		*esp_packet_len += esp_prot_hash_length;
 
-		if (entry->sequence != cmp_seq + 1)
+		if (entry->sequence != cmp_seq)
 		{
 			printf("seq changed, loc 5\n");
 			exit(1);
@@ -137,7 +142,7 @@ int hip_beet_mode_output(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
 		 * starting at the transport layer header */
 		elen = ctx->ipq_packet->data_len - sizeof(struct ip6_hdr);
 
-		if (entry->sequence != cmp_seq + 1)
+		if (entry->sequence != cmp_seq)
 		{
 			printf("seq changed, loc 6\n");
 			exit(1);
@@ -157,8 +162,8 @@ int hip_beet_mode_output(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
 				      -1, "failed to encrypt data");
 
 		pthread_mutex_unlock(&entry->rw_lock);
-		
-		if (entry->sequence != cmp_seq + 1)
+
+		if (entry->sequence != cmp_seq)
 		{
 			printf("seq changed, loc 7\n");
 			exit(1);
@@ -181,13 +186,13 @@ int hip_beet_mode_output(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
 			add_ipv4_header(out_ip_hdr, preferred_local_addr, preferred_peer_addr,
 								*esp_packet_len, IPPROTO_ESP);
 		}
-		
-		if (entry->sequence != cmp_seq + 1)
+
+		if (entry->sequence != cmp_seq)
 		{
 			printf("seq changed, loc 8\n");
 			exit(1);
 		}
-		
+
 	} else
 	{
 		/* this is IPv6 */
