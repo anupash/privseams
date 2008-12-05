@@ -68,7 +68,7 @@ if [ $DEBARCH = "armel" ]; then
 	LIBDEPS="$LIBDEPS, libssl0.9.7"
     fi
 else
-    LIBDEPS="$LIBDEPS, libssl0.9.8, libcap2, libuuid1, libinet-dns-perl, libnet-ip-perl, libsocket6-perl, libio-socket-inet6-perl"
+    LIBDEPS="$LIBDEPS, libssl0.9.8, libcap2, libuuid1, libnet-dns-perl, libnet-ip-perl, libsocket6-perl, libio-socket-inet6-perl"
 fi
 
 LINE0="Depends:"
