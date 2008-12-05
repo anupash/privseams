@@ -284,8 +284,8 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 
 	// XX TODO implement check with seq window
 	// check for correct SEQ no.
-	HIP_DEBUG("SEQ no. of entry: %u \n", entry->sequence);
-	HIP_DEBUG("SEQ no. of incoming packet: %u \n", seq_no);
+	_HIP_DEBUG("SEQ no. of entry: %u \n", entry->sequence);
+	_HIP_DEBUG("SEQ no. of incoming packet: %u \n", seq_no);
 	//HIP_IFEL(entry->sequence != seq_no, -1, "ESP sequence numbers do not match\n");
 
 // this is not needed at the endhost as there's the HMAC to auth packets

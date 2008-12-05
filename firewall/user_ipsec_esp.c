@@ -48,8 +48,11 @@ int hip_beet_mode_output(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
 	// length of the hash value used by the esp protection extension
 	int esp_prot_hash_length = 0;
 	int err = 0;
+	uint32_t cmp_seq = 0;
 
 	_HIP_DEBUG("original packet length: %i \n", ctx->ipq_packet->data_len);
+
+	cmp_seq = entry->sequence;
 
 	// distinguish IPv4 and IPv6 output
 	if (IN6_IS_ADDR_V4MAPPED(preferred_peer_addr))
@@ -59,6 +62,12 @@ int hip_beet_mode_output(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
 		out_ip_hdr = (struct ip *)esp_packet;
 		next_hdr_offset = sizeof(struct ip);
 
+		if (entry->sequence != cmp_seq)
+		{
+			printf("seq changed, loc 1\n");
+			exit(1);
+		}
+
 		// check whether to use UDP encapsulation or not
 		if (entry->encap_mode == 1)
 		{
@@ -66,10 +75,29 @@ int hip_beet_mode_output(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
 			next_hdr_offset += sizeof(struct udphdr);
 		}
 
+		if (entry->sequence != cmp_seq)
+		{
+			printf("seq changed, loc 2\n");
+			exit(1);
+		}
+
 		// set up esp header
 		out_esp_hdr = (struct hip_esp *) (esp_packet + next_hdr_offset);
 		out_esp_hdr->esp_spi = htonl(entry->spi);
+
+		if (entry->sequence != cmp_seq)
+		{
+			printf("seq changed, loc 3\n");
+			exit(1);
+		}
+
 		out_esp_hdr->esp_seq = htonl(entry->sequence++);
+
+		if (entry->sequence != cmp_seq + 1)
+		{
+			printf("seq changed, loc 4\n");
+			exit(1);
+		}
 
 		// packet to be re-inserted into network stack has at least
 		// length of all defined headers
@@ -88,6 +116,12 @@ int hip_beet_mode_output(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
 		// ... and the eventual hash
 		*esp_packet_len += esp_prot_hash_length;
 
+		if (entry->sequence != cmp_seq + 1)
+		{
+			printf("seq changed, loc 5\n");
+			exit(1);
+		}
+
 
 		/***** Set up information needed for ESP encryption *****/
 
@@ -103,6 +137,12 @@ int hip_beet_mode_output(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
 		 * starting at the transport layer header */
 		elen = ctx->ipq_packet->data_len - sizeof(struct ip6_hdr);
 
+		if (entry->sequence != cmp_seq + 1)
+		{
+			printf("seq changed, loc 6\n");
+			exit(1);
+		}
+
 		/* encrypt data now */
 		pthread_mutex_lock(&entry->rw_lock);
 
@@ -117,6 +157,12 @@ int hip_beet_mode_output(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
 				      -1, "failed to encrypt data");
 
 		pthread_mutex_unlock(&entry->rw_lock);
+		
+		if (entry->sequence != cmp_seq + 1)
+		{
+			printf("seq changed, loc 7\n");
+			exit(1);
+		}
 
 		// this also includes the ESP tail
 		*esp_packet_len += encryption_len;
@@ -135,6 +181,13 @@ int hip_beet_mode_output(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
 			add_ipv4_header(out_ip_hdr, preferred_local_addr, preferred_peer_addr,
 								*esp_packet_len, IPPROTO_ESP);
 		}
+		
+		if (entry->sequence != cmp_seq + 1)
+		{
+			printf("seq changed, loc 8\n");
+			exit(1);
+		}
+		
 	} else
 	{
 		/* this is IPv6 */
