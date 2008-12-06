@@ -1658,9 +1658,10 @@ int filter_esp_state(const struct in6_addr *dst_addr,
 	if (ntohl(esp->esp_seq) > esp_tuple->seq_no)
 	{
 		// seq no. bug testing -> remove when done
-		if (ntohl(esp->esp_seq) - esp_tuple->seq_no > 50)
+		if (ntohl(esp->esp_seq) - esp_tuple->seq_no > 100)
 		{
 			printf("seq no. diff = %i\n", ntohl(esp->esp_seq) - esp_tuple->seq_no);
+			exit(1);
 		}
 
 		esp_tuple->seq_no = ntohl(esp->esp_seq);
