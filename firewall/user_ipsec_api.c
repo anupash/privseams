@@ -56,6 +56,13 @@ int userspace_ipsec_init()
 			err = 1;
 			goto out_err;
 		}
+		if (setsockopt(raw_sock_v4, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)))
+		{
+			HIP_DEBUG("*** setsockopt() error for IPv4 raw socket\n");
+
+			err = 1;
+			goto out_err;
+		}
 
 		// open IPv6 raw socket, no options needed here
 		raw_sock_v6 = socket(AF_INET6, SOCK_RAW, IPPROTO_RAW);
@@ -68,6 +75,13 @@ int userspace_ipsec_init()
 		// this option allows us to add the IP header ourselves
 		if (setsockopt(raw_sock_v6, IPPROTO_IPV6, IP_HDRINCL, (char *)&on,
 					sizeof(on)) < 0)
+		{
+			HIP_DEBUG("*** setsockopt() error for IPv6 raw socket\n");
+
+			err = 1;
+			goto out_err;
+		}
+		if (setsockopt(raw_sock_v6, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)))
 		{
 			HIP_DEBUG("*** setsockopt() error for IPv6 raw socket\n");
 
