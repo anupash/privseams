@@ -157,7 +157,7 @@ int main(int argc, char ** argv)
 		timediff = calc_timeval_diff(&start_time, &stop_time);
 		//add_statistics_item(&creation_stats, timediff);
 
-		if(!err)
+		if(err <= 0)
 		{
 			printf("RSA signature unsuccessful\n");
 		}
@@ -198,7 +198,7 @@ int main(int argc, char ** argv)
 		timediff = calc_timeval_diff(&start_time, &stop_time);
 		//add_statistics_item(&verify_stats, timediff);
 
-		if(!err)
+		if(err <= 0)
 		{
 			printf("Verification failed\n");
 		}
