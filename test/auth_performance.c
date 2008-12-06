@@ -7,8 +7,8 @@
 
 #define PACKET_LENGTH 1280
 
-int num_measurements = 1000;
-int key_pool_size = 10;
+int num_measurements = 100;
+int key_pool_size = 5;
 
 int rsa_key_len = 2048;
 int dsa_key_len = 2048;
@@ -50,12 +50,14 @@ int main(int argc, char ** argv)
 	int err = 0;
 	struct timeval start_time;
 	struct timeval stop_time;
+	uint64_t timediff = 0;
+#if 0
 	statistics_data_t creation_stats;
 	statistics_data_t verify_stats;
-	uint64_t timediff = 0;
 	uint32_t num_items = 0;
 	double min = 0.0, max = 0.0, avg = 0.0;
 	double std_dev = 0.0;
+#endif
 
 	int sig_len = 0;
 	unsigned char data[PACKET_LENGTH * num_measurements];
@@ -73,8 +75,10 @@ int main(int argc, char ** argv)
 
 	hip_set_logdebug(LOGDEBUG_NONE);
 
+#if 0
 	memset(&creation_stats, 0, sizeof(statistics_data_t));
 	memset(&verify_stats, 0, sizeof(statistics_data_t));
+#endif
 
 	print_timeres();
 
@@ -100,19 +104,24 @@ int main(int argc, char ** argv)
 		gettimeofday(&stop_time, NULL);
 
 		timediff = calc_timeval_diff(&start_time, &stop_time);
-		add_statistics_item(&creation_stats, timediff);
+		//add_statistics_item(&creation_stats, timediff);
+		printf("%i. sha1: %.3f ms\n", i + 1, timediff / 1000.0);
 	}
 
+#if 0
 	calc_statistics(&creation_stats, &num_items, &min, &max, &avg, &std_dev,
 					STATS_IN_MSECS);
 	printf("generation statistics - num_data_items: %u, min: %.3fms, max: %.3fms, avg: %.3fms, std_dev: %.3fms\n",
 				num_items, min, max, avg, std_dev);
+#endif
 
 
 
 	// reinitialize statistics
+#if 0
 	memset(&creation_stats, 0, sizeof(statistics_data_t));
 	memset(&verify_stats, 0, sizeof(statistics_data_t));
+#endif
 
 
 
@@ -127,7 +136,7 @@ int main(int argc, char ** argv)
 		rsa_key_pool[i] = create_rsa_key(rsa_key_len);
 	}
 
-	printf("Calculating %d RSA signatures\n", num_measurements);
+	printf("\nCalculating %d RSA signatures\n", num_measurements);
 	for(i = 0; i < num_measurements; i++)
 	{
 		sig_len = RSA_size(rsa_key_pool[i % key_pool_size]);
@@ -146,17 +155,23 @@ int main(int argc, char ** argv)
 		gettimeofday(&stop_time, NULL);
 
 		timediff = calc_timeval_diff(&start_time, &stop_time);
-		add_statistics_item(&creation_stats, timediff);
+		//add_statistics_item(&creation_stats, timediff);
 
 		if(!err)
 		{
 			printf("RSA signature unsuccessful\n");
 		}
+		else
+		{
+			printf("%i. rsa signature: %.3f ms\n", i + 1, timediff / 1000.0);
+		}
 	}
+#if 0
 	calc_statistics(&creation_stats, &num_items, &min, &max, &avg, &std_dev,
 					STATS_IN_MSECS);
 	printf("generation statistics - num_data_items: %u, min: %.3fms, max: %.3fms, avg: %.3fms, std_dev: %.3fms\n",
 				num_items, min, max, avg, std_dev);
+#endif
 
 #if 0
 	printf("\n");
@@ -167,7 +182,7 @@ int main(int argc, char ** argv)
 #endif
 
 
-	printf("Verifying %d RSA signatures\n", num_measurements);
+	printf("\nVerifying %d RSA signatures\n", num_measurements);
 	for(i = 0; i < num_measurements; i++)
 	{
 		gettimeofday(&start_time, NULL);
@@ -181,23 +196,31 @@ int main(int argc, char ** argv)
 		gettimeofday(&stop_time, NULL);
 
 		timediff = calc_timeval_diff(&start_time, &stop_time);
-		add_statistics_item(&verify_stats, timediff);
+		//add_statistics_item(&verify_stats, timediff);
 
 		if(!err)
 		{
 			printf("Verification failed\n");
 		}
+		else
+		{
+			printf("%i. rsa verification: %.3f ms\n", i + 1, timediff / 1000.0);
+		}
 	}
 
+#if 0
 	calc_statistics(&verify_stats, &num_items, &min, &max, &avg, &std_dev,
 			STATS_IN_MSECS);
 	printf("verification statistics - num_data_items: %u, min: %.3fms, max: %.3fms, avg: %.3fms, std_dev: %.3fms\n",
 				num_items, min, max, avg, std_dev);
+#endif
 
 
 	// reinitialize statistics
+#if 0
 	memset(&creation_stats, 0, sizeof(statistics_data_t));
 	memset(&verify_stats, 0, sizeof(statistics_data_t));
+#endif
 
 
 
@@ -211,7 +234,7 @@ int main(int argc, char ** argv)
 		dsa_key_pool[i] = create_dsa_key(dsa_key_len);
 	}
 
-	printf("Calculating %d DSA signatures\n", num_measurements);
+	printf("\nCalculating %d DSA signatures\n", num_measurements);
 	for(i = 0; i < num_measurements; i++)
 	{
 		sig_len = sizeof(DSA_SIG *);
@@ -230,18 +253,24 @@ int main(int argc, char ** argv)
 		gettimeofday(&stop_time, NULL);
 
 		timediff = calc_timeval_diff(&start_time, &stop_time);
-		add_statistics_item(&creation_stats, timediff);
+		//add_statistics_item(&creation_stats, timediff);
 
 		if(!dsa_sig_pool[i]){
-			printf("DSA signature is crap\n");
+			printf("DSA signature not successful\n");
+		}
+		else
+		{
+			printf("%i. dsa signature: %.3f ms\n", i + 1, timediff / 1000.0);
 		}
 	}
+#if 0
 	calc_statistics(&creation_stats, &num_items, &min, &max, &avg, &std_dev,
 					STATS_IN_MSECS);
 	printf("generation statistics - num_data_items: %u, min: %.3fms, max: %.3fms, avg: %.3fms, std_dev: %.3fms\n",
 				num_items, min, max, avg, std_dev);
+#endif
 
-	printf("Verifying %d DSA signatures\n", num_measurements);
+	printf("\nVerifying %d DSA signatures\n", num_measurements);
 	for(i = 0; i < num_measurements; i++)
 	{
 		gettimeofday(&start_time, NULL);
@@ -254,24 +283,31 @@ int main(int argc, char ** argv)
 		gettimeofday(&stop_time, NULL);
 
 		timediff = calc_timeval_diff(&start_time, &stop_time);
-		add_statistics_item(&verify_stats, timediff);
+		//add_statistics_item(&verify_stats, timediff);
 
 		if(err <= 0)
 		{
 			printf("Verification failed\n");
 		}
+		else
+		{
+			printf("%i. dsa verification: %.3f ms\n", i + 1, timediff / 1000.0);
+		}
 	}
-
+#if 0
 	calc_statistics(&verify_stats, &num_items, &min, &max, &avg, &std_dev,
 			STATS_IN_MSECS);
 	printf("verification statistics - num_data_items: %u, min: %.3fms, max: %.3fms, avg: %.3fms, std_dev: %.3fms\n",
 				num_items, min, max, avg, std_dev);
+#endif
 
 
 
 	// reinitialize statistics
+#if 0
 	memset(&creation_stats, 0, sizeof(statistics_data_t));
 	memset(&verify_stats, 0, sizeof(statistics_data_t));
+#endif
 
 
 
@@ -294,7 +330,7 @@ int main(int argc, char ** argv)
 		}
 	}
 
-	printf("Calculating %d ECDSA signatures\n", num_measurements);
+	printf("\nCalculating %d ECDSA signatures\n", num_measurements);
 	for(i = 0; i < num_measurements; i++)
 	{
 		sig_len = ECDSA_size(ecdsa_key_pool[i % key_pool_size]);
@@ -313,19 +349,25 @@ int main(int argc, char ** argv)
 		gettimeofday(&stop_time, NULL);
 
 		timediff = calc_timeval_diff(&start_time, &stop_time);
-		add_statistics_item(&creation_stats, timediff);
+		//add_statistics_item(&creation_stats, timediff);
 
 		if(!ecdsa_sig_pool[i])
 		{
 			printf("ECDSA signature not successful\n");
 		}
+		else
+		{
+			printf("%i. ecdsa signature: %.3f ms\n", i + 1, timediff / 1000.0);
+		}
 	}
+#if 0
 	calc_statistics(&creation_stats, &num_items, &min, &max, &avg, &std_dev,
 					STATS_IN_MSECS);
 	printf("generation statistics - num_data_items: %u, min: %.3fms, max: %.3fms, avg: %.3fms, std_dev: %.3fms\n",
 				num_items, min, max, avg, std_dev);
+#endif
 
-	printf("Verifying %d ECDSA signatures\n", num_measurements);
+	printf("\nVerifying %d ECDSA signatures\n", num_measurements);
 	for(i = 0; i < num_measurements; i++)
 	{
 		gettimeofday(&start_time, NULL);
@@ -338,16 +380,22 @@ int main(int argc, char ** argv)
 		gettimeofday(&stop_time, NULL);
 
 		timediff = calc_timeval_diff(&start_time, &stop_time);
-		add_statistics_item(&verify_stats, timediff);
+		//add_statistics_item(&verify_stats, timediff);
 
 		if(err <= 0)
 		{
 			printf("Verification failed\n");
 		}
+		else
+		{
+			printf("%i. ecdsa verification: %.3f ms\n", i + 1, timediff / 1000.0);
+		}
 	}
 
+#if 0
 	calc_statistics(&verify_stats, &num_items, &min, &max, &avg, &std_dev,
 			STATS_IN_MSECS);
 	printf("verification statistics - num_data_items: %u, min: %.3fms, max: %.3fms, avg: %.3fms, std_dev: %.3fms\n",
 				num_items, min, max, avg, std_dev);
+#endif
 }
