@@ -1144,10 +1144,37 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	}
 	case SO_HIP_NSUPDATE_OFF:
 	case SO_HIP_NSUPDATE_ON:
-		hip_set_nsupdate_status(((msg_type == SO_HIP_NSUPDATE_OFF) ? 0 : 1));
+		hip_set_nsupdate_status((msg_type == SO_HIP_NSUPDATE_OFF) ? 0 : 1);
 		if (msg_type == SO_HIP_NSUPDATE_ON)
-			nsupdate();
+			nsupdate(1);
 		break;
+
+        case SO_HIP_HIT_TO_IP_OFF:
+        case SO_HIP_HIT_TO_IP_ON:
+		hip_set_hit_to_ip_status ((msg_type == SO_HIP_NSUPDATE_OFF) ? 0 : 1);
+	        break;
+
+        case SO_HIP_HIT_TO_IP_SET:
+	{
+                err = 0;
+                struct hip_hit_to_ip_set *name_info;
+                HIP_IFEL(!(name_info = hip_get_param(msg, HIP_PARAM_HIT_TO_IP_SET)), -1,
+                         "no name struct found\n");
+                HIP_DEBUG("Name in name_info %s\n" , name_info->name);
+		int name_len = strlen(name_info->name);
+		if (name_len>=1)
+			if (name_info->name[name_len-1]!='.') {
+				HIP_DEBUG("final dot is missing");
+				if (name_len < HIT_TO_IP_ZONE_MAX_LEN-2) {
+					HIP_DEBUG("adding final dot");
+					name_info->name[name_len]='.';
+					name_info->name[name_len+1]=0;
+					HIP_DEBUG("new name %s\n" , name_info->name);
+				}
+			}
+                hip_hit_to_ip_set(name_info->name);
+	}
+	break;
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;
