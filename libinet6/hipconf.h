@@ -119,8 +119,9 @@
 #define ACTION_HI3 27
 #define ACTION_DNS_PROXY 28
 #define ACTION_BUDDIES 29
-#define ACTION_NAT_PORT 30
-#define ACTION_MAX 31 /* exclusive */
+#define ACTION_NSUPDATE 30
+#define ACTION_NAT_PORT 31
+#define ACTION_MAX 32 /* exclusive */
 
 /**
  * TYPE_ constant list, as an index for each action_handler function.
@@ -162,9 +163,10 @@
 #define TYPE_HI3           28
 #define TYPE_DNS_PROXY     29
 #define TYPE_BUDDIES	   30
-#define TYPE_NAT_PORT	   31
-#define TYPE_SAVAHR        32 /* SAVA router HIT IP pair */
-#define TYPE_MAX           33 /* exclusive */
+#define TYPE_SAVAHR        31 /* SAVA router HIT IP pair */
+#define TYPE_NSUPDATE      32
+#define TYPE_NAT_PORT	   33
+#define TYPE_MAX           34 /* exclusive */
 
 /* #define TYPE_RELAY         22 */
 
@@ -251,6 +253,10 @@ int hip_conf_handle_buddies_toggle(hip_common_t *msg, int action, const char *op
 int hip_conf_handle_hi3(hip_common_t *, int type, const char *opt[], int optc, int);
 int hip_conf_handle_sava (struct hip_common * msg, int action, 
 			  const char * opt[], int optc, int send_only); 
+int hip_conf_handle_nsupdate(hip_common_t *msg,
+			     int action,
+			     const char *opt[],
+			     int optc, int send_only);
 
 /**
  * Prints the HIT values in use. Prints either all or the default HIT value to

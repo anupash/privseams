@@ -18,6 +18,7 @@
 #include "tcptimeout.h"
 #include "hadb.h"
 #include "hi3.h"
+#include "nsupdate.h"
 
 /*
  * HIP daemon initialization functions.

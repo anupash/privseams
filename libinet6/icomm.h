@@ -203,8 +203,9 @@
 #define SO_HIP_SET_SAVAH_CLIENT_ON               175
 #define SO_HIP_SET_SAVAH_SERVER_OFF              176
 #define SO_HIP_SET_SAVAH_SERVER_ON               178
-#define SO_HIP_SET_NAT_PORT			 179
-
+#define SO_HIP_NSUPDATE_OFF                      179
+#define SO_HIP_NSUPDATE_ON                       180
+#define SO_HIP_SET_NAT_PORT			 181
 
 /** @} */
 /* inclusive */

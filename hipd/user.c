@@ -1140,6 +1140,12 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		hip_create_nat_sock_udp(&hip_nat_sock_udp, 1);
 		break;
 	}
+	case SO_HIP_NSUPDATE_OFF:
+	case SO_HIP_NSUPDATE_ON:
+		hip_set_nsupdate_status(((msg_type == SO_HIP_NSUPDATE_OFF) ? 0 : 1));
+		if (msg_type == SO_HIP_NSUPDATE_ON)
+			nsupdate();
+		break;
 	default:
 		HIP_ERROR("Unknown socket option (%d)\n", msg_type);
 		err = -ESOCKTNOSUPPORT;
