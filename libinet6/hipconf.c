@@ -227,12 +227,13 @@ int hip_conf_get_action(char *text)
  * @return how many arguments needs to be given at least
  */
 int hip_conf_check_action_argc(int action) {
-	int count = -1;
+	int count = 0;
 
 	switch (action) {
 	case ACTION_NEW: case ACTION_NAT: case ACTION_DEC: case ACTION_RST:
 	case ACTION_BOS: case ACTION_LOCATOR: case ACTION_OPENDHT: case ACTION_HEARTBEAT:
-                break;
+		count = 1;
+		break;
 	case ACTION_DEBUG: case ACTION_RESTART: case ACTION_REINIT:
 	case ACTION_TCPTIMEOUT: case ACTION_DNS_PROXY: case ACTION_NSUPDATE:
 		count = 1;
@@ -244,6 +245,7 @@ int hip_conf_check_action_argc(int action) {
 		break;
 #ifdef CONFIG_HIP_HIPPROXY
     case ACTION_HIPPROXY:
+	        count = 1;
 		break;
 #endif
 	default:
@@ -1964,7 +1966,7 @@ int hip_conf_handle_get_dnsproxy(hip_common_t *msg, int action, const char *opt[
 
 out_err:
     memset(msg, 0, HIP_MAX_PACKET);
-    return(err);
+    return 0;
 }
 
 
@@ -2137,7 +2139,7 @@ int hip_conf_handle_ha(hip_common_t *msg, int action,const char *opt[], int optc
      struct hip_tlv_common *current_param = NULL;
      int err = 0, state, ret;
      in6_addr_t arg1, hit1;
-HIP_DEBUG("HERE\n");
+
      HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_GET_HA_INFO, 0), -1,
 	      "Building of daemon header failed\n");
 

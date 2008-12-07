@@ -1068,7 +1068,8 @@ void read_file(char * file_name)
 	  //remove trailing new line
 	  line = (char *) strtok(line, "\n");
 
-	  rule = parse_rule(line);
+	  if (line)
+		  rule = parse_rule(line);
 	  if(rule)
 	    {
 	      if(rule->state)
@@ -1093,7 +1094,7 @@ void read_file(char * file_name)
 		}
 	      rule = NULL;
 	    }
-	  else 
+	  else if (line)
 	    HIP_DEBUG("unable to parse rule: %s\n", original_line);
 	  free(original_line);
 	  original_line = NULL;

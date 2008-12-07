@@ -419,7 +419,10 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 		if (aux && &(aux->lsi_peer).s_addr != 0){
 		        // Exists: Assign its lsi to the new entry created
 		        ipv4_addr_copy(&entry->lsi_peer, &aux->lsi_peer);
-		}else{
+		} else if (!hip_map_hit_to_lsi_from_hosts_files(peer_hit, &lsi_aux)) {
+			ipv4_addr_copy(&entry->lsi_peer, &lsi_aux);
+			
+		} else {
 		  	// No exists: Call to the automatic generation
 		        hip_generate_peer_lsi(&lsi_aux);
 			ipv4_addr_copy(&entry->lsi_peer, &lsi_aux);
@@ -449,8 +452,9 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	}
 
      	entry->hip_is_opptcp_on = hip_get_opportunistic_tcp_status();
+#ifdef CONFIG_HIP_I3
 	entry->hip_is_hi3_on =    hip_get_hi3_status();
-
+#endif
 #ifdef CONFIG_HIP_HIPPROXY
      	entry->hipproxy = hip_get_hip_proxy_status();
 #endif
@@ -2403,12 +2407,14 @@ void hip_init_hadb(void)
      default_update_func_set.hip_update_send_echo	     = hip_update_send_echo;
 
      /* xmit function set */
+#ifdef CONFIG_HIP_I3
      if(hip_get_hi3_status()){
 	  default_xmit_func_set.hip_send_pkt = hip_send_i3;
      }
-     else{
+     else
+#endif
 	  default_xmit_func_set.hip_send_pkt = hip_send_raw;
-     }
+     
 
      nat_xmit_func_set.hip_send_pkt = hip_send_udp;
 
@@ -3106,11 +3112,13 @@ hip_ha_t *hip_hadb_find_by_blind_hits(hip_hit_t *local_blind_hit,
 int hip_generate_peer_lsi(hip_lsi_t *lsi)
 {
 	struct in_addr lsi_prefix;
+	uint8_t hostname[HOST_NAME_MAX];
 	int index = 1;
 
 	do {
 		lsi_prefix.s_addr = htonl(HIP_LSI_PREFIX|index++);
-	} while (lsi_assigned(lsi_prefix));
+	} while (lsi_assigned(lsi_prefix) ||
+		 !hip_map_lsi_to_hostname_from_hosts(lsi, hostname));
 
 	_HIP_DEBUG_LSI("lsi free final value is ", &lsi_prefix);
 

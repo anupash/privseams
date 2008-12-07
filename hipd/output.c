@@ -918,6 +918,7 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 	/* Else R1 is send on raw HIP. */
 	else
 	{
+#ifdef CONFIG_HIP_I3
 		if(i1_info->hi3_in_use){
 			HIP_IFEL(hip_send_i3(i1_daddr,
 					     r1_dst_addr, 0, 0,
@@ -925,14 +926,15 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 				 -ECOMM,
 				 "Sending R1 packet through i3 failed.\n");
 		}
-		else{
+		else
+#endif
 			HIP_IFEL(hip_send_raw(
 					 i1_daddr,
 					 r1_dst_addr, 0, 0,
 					 r1pkt, NULL, 0),
 				 -ECOMM,
 				 "Sending R1 packet on raw HIP failed.\n");
-		}
+		
 	}
 
  out_err:
@@ -1586,6 +1588,7 @@ out_err:
 }
 
 
+#ifdef CONFIG_HIP_I3
 /**
  * Hi3 outbound traffic processing.
  *
@@ -1659,7 +1662,7 @@ int hip_send_i3(struct in6_addr *src_addr, struct in6_addr *peer_addr,
  out_err:
 	return err;
 }
-
+#endif
 
 /**
  * Sends a HIP message using User Datagram Protocol (UDP).

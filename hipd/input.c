@@ -1604,10 +1604,12 @@ int hip_handle_i2(hip_common_t *i2, in6_addr_t *i2_saddr, in6_addr_t *i2_daddr,
 	HIP_IFEL(hip_verify_cookie(i2_saddr, i2_daddr, i2, solution), -EPROTO,
 		 "Cookie solution rejected. Dropping the I2 packet.\n");
 
+#ifdef CONFIG_HIP_I3
 	if(entry && entry->hip_is_hi3_on){
 		locator = hip_get_param(i2, HIP_PARAM_LOCATOR);
 		hip_do_i3_stuff_for_i2(locator, i2_info, i2_saddr, i2_daddr);
 	}
+#endif
 
 	if(entry != NULL) {
 		/* If the I2 packet is a retransmission, we need reuse the
@@ -2328,6 +2330,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 	extern int hip_icmp_interval;
 	extern int hip_icmp_sock;
 
+#ifdef CONFIG_HIP_I3
 	if(entry && entry->hip_is_hi3_on){
 		if(r2_info->hi3_in_use){
 			/* In hi3 real addresses should already be in entry, received on
@@ -2336,6 +2339,7 @@ int hip_handle_r2(hip_common_t *r2, in6_addr_t *r2_saddr, in6_addr_t *r2_daddr,
 			memcpy(r2_daddr, &entry->our_addr, sizeof(struct in6_addr));
 		}
 	}
+#endif
 
 	if (entry->state == HIP_STATE_ESTABLISHED) {
 		retransmission = 1;
@@ -3170,14 +3174,15 @@ int hip_handle_firewall_i1_request(struct hip_common *msg,
 
 	/* No entry found; find first IP matching to the HIT and then
 	   create the entry */
+#ifdef CONFIG_HIP_I3
 	if(hip_get_hi3_status()){
 		struct in_addr lpback = { htonl(INADDR_LOOPBACK) };
 		IPV4_TO_IPV6_MAP(&lpback, &dst_addr);
 		err = 0;
 	}
-	else {
+	else
+#endif
 		err = hip_map_id_to_addr(dst_hit, NULL, &dst_addr);
-	}
 
 
 	if (err) {
@@ -3320,6 +3325,7 @@ int handle_locator(struct hip_locator *locator,
                -1, "Malloc for entry->locators failed\n");
         memcpy(entry->locator, locator, loc_size);
 
+#ifdef CONFIG_HIP_I3
 	if(entry && entry->hip_is_hi3_on){
 		if( r1_info->hi3_in_use && n_addrs > 0 ){
 			first = (char*)locator+sizeof(struct hip_locator);
@@ -3361,7 +3367,7 @@ int handle_locator(struct hip_locator *locator,
 					       PEER_ADDR_STATE_ACTIVE);
 		}
 	}
-
+#endif
 out_err:
 	return err;
 }

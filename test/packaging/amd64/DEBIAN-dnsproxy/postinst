@@ -2,5 +2,14 @@
 
 update-rc.d dnshipproxy defaults
 
+if netstat -lanu|awk '$4 ~ /:53$/ {print $4}'|grep -q 53
+then
+    echo "*** Warning: DNS software detected running on port 53          ***"
+    echo "*** Warning: HIP DNS proxy overrides system default DNS server ***"
+    echo "*** Warning: Check HIPL manual on DNS proxy for further info   ***"
+fi
+
 echo "invoke-rc.d --quiet dnshipproxy start" | at now + 1 min 2>/dev/null 
-echo "dns proxy for hip starts in one minute"
+echo "DNS proxy for HIP starts in 60 secs"
+
+exit 0

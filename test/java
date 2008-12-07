@@ -28,7 +28,7 @@ if [ -z "$HIPL_HOME" ] ; then
     HIPL_HOME=..
 fi
 
-export LD_LIBRARY_PATH=$HIPL_HOME/libinet6:$HIPL_HOME/jip:$HIPL_HOME/libhiptool
+export LD_LIBRARY_PATH=$HIPL_HOME/libinet6:$HIPL_HOME/jip:$HIPL_HOME/libhiptool:$HIPL_HOME/jip/jip.jar
 export LD_PRELOAD=libinet6.so:libhiptool.so
 
 opts=''

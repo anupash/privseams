@@ -9,7 +9,7 @@
 
 #define VAR_IPS "IPS"
 #define VAR_HIT "HIT"
-#define NSUPDATE "/etc/hip/nsupdate.pl"
+#define NSUPDATE HIPL_DEFAULT_PREFIX "/sbin/" "nsupdate.pl"
 #define NSUPDATE_ARG0 "nsupdate.pl"
 
 int hip_nsupdate_status = 0;

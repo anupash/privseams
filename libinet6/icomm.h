@@ -6,20 +6,20 @@
 #  define IPV6_2292PKTINFO 2
 #endif
 
+#ifndef __KERNEL__
 /* Do not move this before the definition of struct endpoint, as i3
    headers refer to libinet6 headers which in turn require the
    definition of the struct. */
-#   include "i3_client_api.h"
+#include "i3_client_api.h"
 
-#ifndef __KERNEL__
 #include <netinet/in.h>
 #endif
 #include "protodefs.h"
 
 //#define HIP_DAEMONADDR_PATH		        "/tmp/hip_daemonaddr_path.tmp"
-#define HIP_DAEMON_LOCAL_PORT                  970
 #define HIP_FIREWALL_PORT                      971
 #define HIP_AGENT_PORT                         972
+#define HIP_DAEMON_LOCAL_PORT                  973
 //#define HIP_AGENTADDR_PATH			"/tmp/hip_agentaddr_path.tmp"
 //#define HIP_USERADDR_PATH		        "/tmp/hip_useraddr_path.tmp"
 //#define HIP_FIREWALLADDR_PATH			"/tmp/hip_firewalladdr_path.tmp"

@@ -32,7 +32,10 @@ hipfw_SOURCES += proxy.c opptcp.c firewalldb.c lsi.c fw_stun.c
 hipfw_SOURCES += sava_api.c cache.c cache_port.c
 
 hipfw_LDADD = -lipq ../libinet6/.libs/libinet6.a
-hipfw_LDADD += -lpthread -luuid
+hipfw_LDADD += -lpthread
+if HIP_UUIDLIB
+hipfw_LDADD += -luuid
+endif
 hipfw_LDADD += ../pjproject/pjnath/lib/libpjnath-hipl.a
 hipfw_LDADD += ../pjproject/pjlib/lib/libpj-hipl.a
 hipfw_LDADD += ../pjproject/pjlib-util/lib/libpjlib-util-hipl.a
@@ -47,8 +50,10 @@ else
   hipfw_LDADD += ../libhiptool/.libs/libhiptool.a
 endif
 
+if HIP_I3
 INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
 hipfw_LDADD += ../i3/i3_client/libi3client.a ../i3/i3/libi3.a ../i3/utils/libutils.a ../i3/aeshash/libaes.a -lpthread
+endif
 
 endif
 

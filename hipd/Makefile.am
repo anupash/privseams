@@ -6,6 +6,7 @@ AUTOMAKE_OPTIONS = foreign
 CFLAGS = $(hipl_common_cflags)
 CFLAGS += $(OPTIMIZATIONS_CFLAGS)
 CFLAGS += $(GPROF_CFLAGS)
+CFLAGS += -DHIPL_DEFAULT_PREFIX=\"$(prefix)\"
 
 # Note: libinet6 cannot be included here because it has a bad dependency
 # with netlink headers.
@@ -38,7 +39,10 @@ else
 endif
 
 # Required for pjsip
-hipd_LDADD += -lpthread -luuid
+hipd_LDADD += -lpthread 
+if HIP_UUIDLIB
+hipd_LDADD += -luuid
+endif
 hipd_LDADD += ../pjproject/pjnath/lib/libpjnath-hipl.a
 hipd_LDADD += ../pjproject/pjlib/lib/libpj-hipl.a
 hipd_LDADD += ../pjproject/pjlib-util/lib/libpjlib-util-hipl.a
@@ -50,16 +54,18 @@ hipd_LDADD += ../pjproject/pjlib-util/lib/libpjlib-util-hipl.a
 hipd_LDFLAGS = -lcrypto $(HIPL_XMLL) -lm -DHIPL_HIPD
 
 if HIP_PRIVSEP
-if HIP_OPENWRT
+if HIP_ALTSEP
   hipd_LDFLAGS += 
 else
   hipd_LDFLAGS += -lcap
 endif
 endif
 
+if HIP_I3
 hipd_SOURCES += hi3.c
 INCLUDES += -I../i3/i3_client -I../i3/utils -I../i3/i3
 hipd_LDADD += ../i3/i3_client/libi3client.a ../i3/i3/libi3.a ../i3/utils/libutils.a ../i3/aeshash/libaes.a -lpthread
+endif
 
 hipd_LDADD += ../opendht/.libs/libhipopendht.a
 

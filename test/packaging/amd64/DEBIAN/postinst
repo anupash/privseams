@@ -8,5 +8,5 @@ update-rc.d hipd multiuser 20
 # without the at kludge when installing the package with apt-get/aptitude
 # from a remote repository. Until the problem is properly solved, this
 # workaround stays here. --miika
-echo "hip daemon starts in one minute"
+echo "hip daemon starts in 60 secs"
 echo "invoke-rc.d --quiet hipd start" | at now + 1 min 2>/dev/null

@@ -9,21 +9,21 @@
 . /etc/rc.d/init.d/functions
 
 RETVAL=0
+PIDFILE=/var/run/bamboo/bamboo_v4.pid
 process_no=-1
 check_previous=""
 
-start() {
-        # Check that we're a privileged user
-        [ `id -u` = 0 ] || exit 4
+BAMBOO_SHUTDOWN_TIMEOUT=5
 
+start() {
         #Check if it is already running
         check_previous=`ps ax |grep -c "/bamboo_v4/bin/"`
         if [ $check_previous == 1 ]; then
-                echo -n $"Starting bamboo_v4 daemon: "            
-                daemon /home/bishaj/bamboo_v4/bin/run-java bamboo.lss.DustDevil /home/bishaj/gateway_v4.cfg 2>>/var/log/bamboo_v4 #3>>/var/log/bamboo_v4 1>>/var/log/bamboo_v4
+                echo -n $"Starting bamboo_v4: "
+                daemon --user=nobody /opt/bamboo_v4/bin/run-java bamboo.lss.DustDevil /opt/gateway_v4.cfg 2>>/var/log/bamboo_v4 #3>>/var/log/bamboo_v4 1>>/var/log/bamboo_v4
                 RETVAL=$?
         else
-                echo -n $"Not starting, bamboo_v4 daemon is already running:"
+                echo -n $"Bamboo_v4 daemon is already running:"
         fi
 
         echo
@@ -31,15 +31,26 @@ start() {
 }
 
 stop() {
-        echo -n $"Stopping bamboo_v4 daemon: "
-        process_no=`cat /var/run/bamboo_v4.pid`
-
-        #kill the process
-        kill -9 $process_no 2>/dev/null
-        RETVAL=$?
-
-	echo "" > /var/run/bamboo_v4.pid
-
+        echo -n $"Stopping bamboo_v4: "
+        timeout=0
+        RETVAL=1
+        process_no=`cat /var/run/bamboo/bamboo_v4.pid` && kill $process_no 2>/dev/null && \
+        while /bin/ps  -p ${process_no} >/dev/null; do
+                if [ $timeout -ge $BAMBOO_SHUTDOWN_TIMEOUT ]; then
+                        RETVAL=1
+                        break
+                else
+                        sleep 2 && echo -n "."
+                        timeout=$((timeout+2))
+                fi;
+        done && RETVAL=0
+        if [ $RETVAL -eq 0 ]; then
+                echo "" > /var/run/bamboo/bamboo_v4.pid
+                success
+        else
+                failure
+                RETVAL=1
+        fi;
         echo
         return $RETVAL
 }
@@ -51,7 +62,7 @@ restart() {
 
 reload() {
         trap "" SIGHUP
-        action $"Reloading bamboo_v4 daemon:" killall -HUP /home/bishaj/bamboo/bin/run-java
+        action $"Reloading bamboo_v4 daemon:" killall -HUP XXX
         RETVAL=$?
         return $RETVAL
 }
