@@ -2164,7 +2164,7 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 	   change family).
 	   -samu
 	*/
-	if( !is_add && ipv6_addr_cmp(&entry->local_address, comp_addr) == 0 ) {
+	if( !is_add && ipv6_addr_cmp(&entry->our_addr, comp_addr) == 0 ) {
 		choose_random = 1;
 	}
 
@@ -2539,7 +2539,7 @@ int hip_send_update(struct hip_hadb_state *entry,
 	}
 
 	/* Some address was added and BEX address is nulled */
-	if (is_add && !ipv6_addr_cmp(&entry->local_address, &zero_addr))
+	if (is_add && !ipv6_addr_cmp(&entry->our_addr, &zero_addr))
 	{
 		ipv6_addr_copy(&entry->our_addr, hip_cast_sa_addr(addr));
 		err = hip_update_src_address_list(entry, addr_list, &daddr,
