@@ -81,7 +81,7 @@ Group: System Environment/Kernel
 %description agent
 
 %package tools
-Requires: hipl-lib, hipl-daemon
+Requires: hipl-lib, hipl-daemon perl-Net-IP
 Summary: hip tools files
 Group: System Environment/Kernel
 %description tools

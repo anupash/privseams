@@ -14,7 +14,7 @@ display_dependencies() {
 	echo -n "Unknown linux system:"
 	cat /etc/lsb-release
 	echo "You should install the following software:"
-	echo "tla, automake, autoconf, libtool, g++, xmlto, doxygen, iproute, netcat6, miredo"
+	echo "tla, autoreconf, automake, autoconf, libtool, g++, xmlto, doxygen, iproute, netcat6, miredo, Socket6, IO::Socket::INET6, Net::IP and Net::DNS modules for perl"
 	echo "And the following packages with their development headers:"
 	echo "libgtk2.0, openssl, libxml2, iptables, libcap, libsqlite3, uuid"
     fi
