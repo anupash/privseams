@@ -442,7 +442,7 @@ int hip_init_dht()
         char serveraddr_str[INET6_ADDRSTRLEN];
         char servername_str[HOST_NAME_MAX];
         char line[500];
-        List list;
+//        List list;
 
         HIP_IFEL((hip_opendht_inuse == SO_HIP_DHT_OFF), 0, "No DHT\n");
 
@@ -497,10 +497,10 @@ int hip_init_dht()
 	register_to_dht();
 	init_dht_sockets(&hip_opendht_sock_fqdn, &hip_opendht_fqdn_sent); 
 	init_dht_sockets(&hip_opendht_sock_hit, &hip_opendht_hit_sent);
-	destroy(&list);
 	
  out_err:
-
+/*	if (length(&list) > 0)
+		destroy(&list); */
         return err;
 }
 

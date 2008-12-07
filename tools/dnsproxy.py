@@ -245,36 +245,35 @@ class Global:
             f.write('%d\n' % (os.getpid(),))
             f.close()
 
-    def bamboo_lookup(nam, addrtype):
-    	fout.write("DHT look up\n")
-        fout.write("Command: - %s\n" % (cmd))
+    def bamboo_lookup(gp, nam, addrtype):
+    	#fout.write("DHT look up\n")
+        #fout.write("Command: - %s\n" % (cmd))
         cmd = "hipconf dht get " + nam + " 2>&1"
         p = os.popen(cmd, "r")
         result = p.readline()
         while result:
-            if result.find("Result") != -1:
-            	fout.write("Found id: %s\n" % (result));
-            else:
-                fout.write("Skip: %s\n" % (result))
+            #if result.find("Result") != -1:
+            	#fout.write("Found id: %s\n" % (result));
+            #else:
+                #fout.write("Skip: %s\n" % (result))
             result = p.readline()
 
-    # XX REMOVE
-    def lsi_lookup(nam, addrtype):
+    def send_id_map_to_hipd(gp, nam):
     	cmd = "hipconf dnsproxy " + nam + " 2>&1"
-     	fout.write("cmd - %s %s\n" % (cmd,nam))
+     	#fout.write("cmd - %s %s\n" % (cmd,nam))
 	p = os.popen(cmd, "r")
 	result = p.readline()
-        fout.write("Result: %s" % (result))
+        #fout.write("Result: %s" % (result))
 	if result.find("hipconf") != -1:
       	    # the result of "hipconf dnsproxy" gives us
             # an "hipconf add map" command which we can
-            # directly add
-            fout.write("Found LSI\n")
+            # directly invoke from command line
+            #fout.write("Mapping to hipd\n")
 	    result = result + " >/dev/null 2>&1"
-	    fout.write('Command: %s\n' % (result))
+	    #fout.write('Command: %s\n' % (result))
 	    p = os.popen(result)
-	else:
-            fout.write("did not find\n")
+	#else:
+            #fout.write("did not find\n")
 
     def doit(gp,args):
         gp.read_resolv_conf()
@@ -379,22 +378,24 @@ class Global:
                         r1 = d2.req(name=q1['qname'],qtype=55) # 55 is HIP RR
                         fout.write('r1: %s\n' % (dir(r1),))
                         fout.write('r1.answers: %s\n' % (r1.answers,))
-                        if r1.answers:
-                            a1 = r1.answers[0]
-                            aa1d = a1['data']
-                            aa1 = aa1d[4:4+16]
-                            a2 = {'name': a1['name'],
-                                  'data': pyip6.inet_ntop(aa1),
-                                  'type': 28,
-                                  'class': 1,
-                                  'ttl': a1['ttl'],
-                                  }
-                            fout.write('DNS AAAA  %s\n' % (a2,))
-                            m = DNS.Lib.Mpacker()
-                            m.addHeader(r.header['id'],
+                        for a1 in r1.answers:
+			    print a1['typename']
+                            if a1['typename'] == '55':
+                                aa1d = a1['data']
+                                aa1 = aa1d[4:4+16]
+                                a2 = {'name': a1['name'],
+                                      'data': pyip6.inet_ntop(aa1),
+                                      'type': 28,
+                                      'class': 1,
+                                      'ttl': a1['ttl'],
+                                      }
+                                fout.write('DNS AAAA  %s\n' % (a2,))
+                                m = DNS.Lib.Mpacker()
+                                m.addHeader(r.header['id'],
                                         0, r1.header['opcode'], 0, 0, r1.header['rd'], 0, 0, 0,
                                         1, 1, 0, 0)
-                            m.addQuestion(a1['name'],qtype,1)
+                                m.addQuestion(a1['name'],qtype,1)
+                                gp.send_id_map_to_hipd(nam)
                         else:
                             m = None
 		    if m:
@@ -468,6 +469,7 @@ class Global:
                                         0, r1.header['opcode'], 0, 0, r1.header['rd'], 0, 0, 0,
                                         1, 1, 0, 0)
                             	m.addQuestion(a1['name'],qtype,1)
+                                gp.send_id_map_to_hipd(nam)
 				break;
                     if m:
 			#try ipv4 address by default
