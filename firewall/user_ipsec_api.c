@@ -116,6 +116,8 @@ int userspace_ipsec_uninit()
 	// uninit sadb
 	HIP_IFEL(hip_sadb_uninit(), -1, "failed to uninit sadb\n");
 
+	// TODO close socket?
+
 	// free the members
 	if (esp_packet)
 		free(esp_packet);
@@ -229,7 +231,7 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 						(struct sockaddr *)&preferred_peer_sockaddr,
 						hip_sockaddr_len(&preferred_peer_sockaddr));
 
-	if (err < 0) {
+	if (err < esp_packet_len) {
 		HIP_DEBUG("sendto() failed\n");
 		printf("sendto() failed\n");
 	} else
