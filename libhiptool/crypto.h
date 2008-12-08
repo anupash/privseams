@@ -18,7 +18,6 @@
 #include <openssl/md5.h>
 #include <openssl/aes.h>
 #include <openssl/des.h>
-#include <openssl/ecdsa.h>
 #include <limits.h>
 #include <sys/types.h>
 #include <sys/stat.h>
