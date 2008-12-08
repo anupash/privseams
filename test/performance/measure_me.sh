@@ -1,4 +1,4 @@
-#!/bin/bash -xv
+#!/bin/bash
 # useful for debugging: -xv
 
 DST_IPv4=192.168.1.103
