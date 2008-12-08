@@ -9,7 +9,7 @@ display_dependencies() {
 	echo "apt-get install tla automake autoconf libtool g++ libgtk2.0-dev libssl-dev libxml2-dev xmlto doxygen iproute netcat6 iptables-dev libcap-dev libsqlite3-dev libuuid1 miredo libnet-ip-perl libnet-dns-perl libsocket6-perl libio-socket-inet6-perl"
     elif test -e /etc/redhat-release
 	then
-	echo "yum install tla openssl-devel libxml2-devel autoconf automake libtool iproute gtk2-devel xmlto doxygen iptables-devel libcap-devel sqlite-devel uuid rpm-build miredo perl-Net-IP perl-Net-DNS perl-Socket6 perl-IO-Socket-INET6"
+	echo "yum install gcc-c++ tla openssl-devel libxml2-devel autoconf automake libtool iproute gtk2-devel xmlto doxygen iptables-devel libcap-devel sqlite-devel uuid rpm-build miredo perl-Net-IP perl-Net-DNS perl-Socket6 perl-IO-Socket-INET6"
     else
 	echo -n "Unknown linux system:"
 	cat /etc/lsb-release
