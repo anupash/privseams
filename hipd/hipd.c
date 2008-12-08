@@ -20,12 +20,24 @@ int hip_blind_status = 0; /**< Blind status */
     0 = none = default, AF_INET, AF_INET6 */
 int suppress_af_family = 0;
 
-/* For receiving of HIP control messages */
-int hip_raw_sock_v6 = 0;
-int hip_raw_sock_v4 = 0;
-/** File descriptor of the socket used for HIP control packet NAT traversal on
-    UDP/IPv4 */
-int hip_nat_sock_udp = 0;
+/* For sending HIP control messages */
+int hip_raw_sock_output_v6 = 0;
+int hip_raw_sock_output_v4 = 0;
+
+/* For receiving HIP control messages */
+int hip_raw_sock_input_v6 = 0;
+int hip_raw_sock_input_v4 = 0;
+
+/** File descriptor of the socket used for sending HIP control packet 
+ *  NAT traversal on UDP/IPv4 
+ */
+int hip_nat_sock_output_udp = 0;
+
+/** File descriptor of the socket used for receiving HIP control packet 
+ *  NAT traversal on UDP/IPv4 
+ */
+int hip_nat_sock_input_udp = 0;
+
 /** Specifies the NAT status of the daemon. This value indicates if the current
     machine is behind a NAT. */
 int hip_nat_status = 0;
@@ -439,13 +451,13 @@ int hipd_main(int argc, char *argv[])
 
 	HIP_INFO("hipd pid=%d starting\n", getpid());
 	time(&load_time);
-
-	/* Default initialization function. */
+	
+	/* Default initialman sization function. */
 	HIP_IFEL(hipd_init(flush_ipsec, killold), 1, "hipd_init() failed!\n");
 
-	highest_descriptor = maxof(9, hip_nl_route.fd, hip_raw_sock_v6,
+	highest_descriptor = maxof(9, hip_nl_route.fd, hip_raw_sock_input_v6,
 				   hip_user_sock, hip_nl_ipsec.fd,
-				   hip_raw_sock_v4, hip_nat_sock_udp,
+				   hip_raw_sock_input_v4, hip_nat_sock_input_udp,
 				   hip_opendht_sock_fqdn, hip_opendht_sock_hit,
 		                   hip_icmp_sock);
 
@@ -471,9 +483,9 @@ int hipd_main(int argc, char *argv[])
 		}
 		FD_ZERO(&read_fdset);
 		FD_SET(hip_nl_route.fd, &read_fdset);
-		FD_SET(hip_raw_sock_v6, &read_fdset);
-		FD_SET(hip_raw_sock_v4, &read_fdset);
-		FD_SET(hip_nat_sock_udp, &read_fdset);
+		FD_SET(hip_raw_sock_input_v6, &read_fdset);
+		FD_SET(hip_raw_sock_input_v4, &read_fdset);
+		FD_SET(hip_nat_sock_input_udp, &read_fdset);
 		FD_SET(hip_user_sock, &read_fdset);
 		FD_SET(hip_nl_ipsec.fd, &read_fdset);	
 		FD_SET(hip_icmp_sock, &read_fdset);
@@ -530,8 +542,8 @@ int hipd_main(int argc, char *argv[])
                 }
 
                 /* see bugzilla bug id 392 to see why */
-                if (FD_ISSET(hip_raw_sock_v6, &read_fdset) &&
-                    FD_ISSET(hip_raw_sock_v4, &read_fdset)) {
+                if (FD_ISSET(hip_raw_sock_input_v6, &read_fdset) &&
+                    FD_ISSET(hip_raw_sock_input_v4, &read_fdset)) {
                     int type, err_v6 = 0, err_v4 = 0;
                     struct in6_addr saddr, daddr;
                     struct in6_addr saddr_v4, daddr_v4;
@@ -539,10 +551,10 @@ int hipd_main(int argc, char *argv[])
                     HIP_DEBUG("Receiving messages on raw HIP from IPv6/HIP and IPv4/HIP\n");
                     hip_msg_init(hipd_msg);
                     hip_msg_init(hipd_msg_v4);
-                    err_v4 = hip_read_control_msg_v4(hip_raw_sock_v4, hipd_msg_v4,
+                    err_v4 = hip_read_control_msg_v4(hip_raw_sock_input_v4, hipd_msg_v4,
                                                      &saddr_v4, &daddr_v4,
                                                      &pkt_info, IPV4_HDR_SIZE);
-                    err_v6 = hip_read_control_msg_v6(hip_raw_sock_v6, hipd_msg,
+                    err_v6 = hip_read_control_msg_v6(hip_raw_sock_input_v6, hipd_msg,
                                                      &saddr, &daddr, &pkt_info, 0);
                     if (err_v4 > -1) {
                         type = hip_get_msg_type(hipd_msg_v4);
@@ -563,15 +575,15 @@ int hipd_main(int argc, char *argv[])
                         }
                     }
                 } else {
-                    if (FD_ISSET(hip_raw_sock_v6, &read_fdset)) {
+                    if (FD_ISSET(hip_raw_sock_input_v6, &read_fdset)) {
                         /* Receiving of a raw HIP message from IPv6 socket. */
 			struct in6_addr saddr, daddr;
 			hip_portpair_t pkt_info;
 			HIP_DEBUG("Receiving a message on raw HIP from "\
 				  "IPv6/HIP socket (file descriptor: %d).\n",
-				  hip_raw_sock_v6);
+				  hip_raw_sock_input_v6);
 			hip_msg_init(hipd_msg);
-			if (hip_read_control_msg_v6(hip_raw_sock_v6, hipd_msg,
+			if (hip_read_control_msg_v6(hip_raw_sock_input_v6, hipd_msg,
 			                            &saddr, &daddr, &pkt_info, 0)) {
                             HIP_ERROR("Reading network msg failed\n");
 			} else {
@@ -580,19 +592,19 @@ int hipd_main(int argc, char *argv[])
 			}
                     }
 
-                    if (FD_ISSET(hip_raw_sock_v4, &read_fdset)){
+                    if (FD_ISSET(hip_raw_sock_input_v4, &read_fdset)){
 		        HIP_DEBUG("HIP RAW SOCKET\n");
 			/* Receiving of a raw HIP message from IPv4 socket. */
 			struct in6_addr saddr, daddr;
 			hip_portpair_t pkt_info;
 			HIP_DEBUG("Receiving a message on raw HIP from "\
 				  "IPv4/HIP socket (file descriptor: %d).\n",
-				  hip_raw_sock_v4);
+				  hip_raw_sock_input_v4);
 			hip_msg_init(hipd_msg);
 			HIP_DEBUG("Getting a msg on v4\n");
 			/* Assuming that IPv4 header does not include any
 			   options */
-			if (hip_read_control_msg_v4(hip_raw_sock_v4, hipd_msg,
+			if (hip_read_control_msg_v4(hip_raw_sock_input_v4, hipd_msg,
 			                            &saddr, &daddr, &pkt_info, IPV4_HDR_SIZE)) {
                             HIP_ERROR("Reading network msg failed\n");
 			} else {
@@ -610,7 +622,7 @@ int hipd_main(int argc, char *argv[])
 				 "Failed to recvmsg from ICMPv6\n");
 		}
 
-		if (FD_ISSET(hip_nat_sock_udp, &read_fdset))
+		if (FD_ISSET(hip_nat_sock_input_udp, &read_fdset))
 		{
 			/* Data structures for storing the source and
 			   destination addresses and ports of the incoming
@@ -621,7 +633,7 @@ int hipd_main(int argc, char *argv[])
 			/* Receiving of a UDP message from NAT socket. */
 			HIP_DEBUG("Receiving a message on UDP from NAT "\
 				  "socket (file descriptor: %d).\n",
-				  hip_nat_sock_udp);
+				  hip_nat_sock_input_udp);
 
 			/* Initialization of the hip_common header struct. We'll
 			   store the HIP header data here. */
@@ -630,7 +642,7 @@ int hipd_main(int argc, char *argv[])
 			/* Read in the values to hip_msg, saddr, daddr and
 			   pkt_info. */
         		/* if ( hip_read_control_msg_v4(hip_nat_sock_udp, hipd_msg,&saddr, &daddr,&pkt_info, 0) ) */
-			err = hip_read_control_msg_v4(hip_nat_sock_udp, hipd_msg,&saddr, &daddr,&pkt_info, HIP_UDP_ZERO_BYTES_LEN);
+			err = hip_read_control_msg_v4(hip_nat_sock_input_udp, hipd_msg,&saddr, &daddr,&pkt_info, HIP_UDP_ZERO_BYTES_LEN);
 			if (err)
 			{
                                 HIP_ERROR("Reading network msg failed\n");

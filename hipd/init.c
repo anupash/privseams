@@ -324,14 +324,20 @@ int hipd_init(int flush_ipsec, int killold)
 	}
 #endif
 
-	HIP_IFEL(hip_init_raw_sock_v6(&hip_raw_sock_v6), -1, "raw sock v6\n");
-	HIP_IFEL(hip_init_raw_sock_v4(&hip_raw_sock_v4), -1, "raw sock v4\n");
-	HIP_IFEL(hip_init_nat_sock_udp(&hip_nat_sock_udp), -1, "raw sock udp\n");
+	HIP_IFEL(hip_init_raw_sock_v6(&hip_raw_sock_input_v6), -1, "raw sock input v6\n");
+	HIP_IFEL(hip_init_raw_sock_v4(&hip_raw_sock_input_v4), -1, "raw sock input v4\n");
+	HIP_IFEL(hip_init_nat_sock_udp(&hip_nat_sock_input_udp), -1, "raw sock input udp\n");
+	HIP_IFEL(hip_init_raw_sock_v6(&hip_raw_sock_output_v6), -1, "raw sock output v6\n");
+	HIP_IFEL(hip_init_raw_sock_v4(&hip_raw_sock_output_v4), -1, "raw sock output v4\n");
+	HIP_IFEL(hip_init_nat_sock_udp(&hip_nat_sock_output_udp), -1, "raw sock output udp\n");
 	HIP_IFEL(hip_init_icmp_v6(&hip_icmp_sock), -1, "icmpv6 sock\n");
 
-	HIP_DEBUG("hip_raw_sock = %d\n", hip_raw_sock_v6);
-	HIP_DEBUG("hip_raw_sock_v4 = %d\n", hip_raw_sock_v4);
-	HIP_DEBUG("hip_nat_sock_udp = %d\n", hip_nat_sock_udp);
+	HIP_DEBUG("hip_raw_sock_v6 input = %d\n", hip_raw_sock_input_v6);
+	HIP_DEBUG("hip_raw_sock_v6 output = %d\n", hip_raw_sock_output_v6);
+	HIP_DEBUG("hip_raw_sock_v4 input = %d\n", hip_raw_sock_input_v4);
+	HIP_DEBUG("hip_raw_sock_v4 output = %d\n", hip_raw_sock_output_v4);
+	HIP_DEBUG("hip_nat_sock_udp input = %d\n", hip_nat_sock_input_udp);
+	HIP_DEBUG("hip_nat_sock_udp output = %d\n", hip_nat_sock_output_udp);
 	HIP_DEBUG("hip_icmp_sock = %d\n", hip_icmp_sock);
 
 	if (flush_ipsec)
@@ -808,18 +814,36 @@ void hip_exit(int signal)
 	hip_uninit_kea_endpoints();
 #endif
 
-	if (hip_raw_sock_v6){
-		HIP_INFO("hip_raw_sock_v6\n");
-		close(hip_raw_sock_v6);
+	if (hip_raw_sock_input_v6){
+		HIP_INFO("hip_raw_sock_input_v6\n");
+		close(hip_raw_sock_input_v6);
 	}
-	if (hip_raw_sock_v4){
-		HIP_INFO("hip_raw_sock_v4\n");
-		close(hip_raw_sock_v4);
+	
+	if (hip_raw_sock_output_v6){
+		HIP_INFO("hip_raw_sock_output_v6\n");
+		close(hip_raw_sock_output_v6);
 	}
-	if(hip_nat_sock_udp){
-		HIP_INFO("hip_nat_sock_udp\n");
-		close(hip_nat_sock_udp);
+
+	if (hip_raw_sock_input_v4){
+		HIP_INFO("hip_raw_sock_input_v4\n");
+		close(hip_raw_sock_input_v4);
 	}
+
+	if (hip_raw_sock_output_v4){
+		HIP_INFO("hip_raw_sock_output_v4\n");
+		close(hip_raw_sock_output_v4);
+	}
+	
+	if (hip_nat_sock_input_udp){
+		HIP_INFO("hip_nat_sock_input_udp\n");
+		close(hip_nat_sock_input_udp);
+	}
+
+	if (hip_nat_sock_output_udp){
+		HIP_INFO("hip_nat_sock_output_udp\n");
+		close(hip_nat_sock_output_udp);
+	}
+	
 	if (hip_user_sock){
 		HIP_INFO("hip_user_sock\n");
 		close(hip_user_sock);

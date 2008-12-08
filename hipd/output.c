@@ -324,9 +324,9 @@ void hip_send_opp_tcp_i1(hip_ha_t *entry){
 	tcphdr->check = 0;//will be set right when sent, no need to calculate it here
 	//tcphdr->urg_ptr = ???????? TO BE FIXED
 	if(ipType == 0)
-		send_tcp_packet(&bytes[0], hdr_size + 4*tcphdr->doff, 4, hip_raw_sock_v4, 1, 0);
+		send_tcp_packet(&bytes[0], hdr_size + 4*tcphdr->doff, 4, hip_raw_sock_output_v4, 1, 0);
 	else if(ipType == 1)
-		send_tcp_packet(&bytes[0], hdr_size + 4*tcphdr->doff, 6, hip_raw_sock_v6, 1, 0);
+		send_tcp_packet(&bytes[0], hdr_size + 4*tcphdr->doff, 6, hip_raw_sock_output_v6, 1, 0);
 }
 
 
@@ -1119,7 +1119,7 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	struct sockaddr_in *src4, *dst4;
 	struct in6_addr my_addr;
 	/* Points either to v4 or v6 raw sock */
-	int hip_raw_sock = 0;
+	int hip_raw_sock_output = 0;
 
 	_HIP_DEBUG("hip_send_raw() invoked.\n");
 
@@ -1155,11 +1155,11 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 
 	if (dst_is_ipv4) {
 	        HIP_DEBUG("Using IPv4 raw socket\n");
-		hip_raw_sock = hip_raw_sock_v4;
+		hip_raw_sock_output = hip_raw_sock_output_v4;
 		sa_size = sizeof(struct sockaddr_in);
 	} else {
 		HIP_DEBUG("Using IPv6 raw socket\n");
-		hip_raw_sock = hip_raw_sock_v6;
+		hip_raw_sock_output = hip_raw_sock_output_v6;
 		sa_size = sizeof(struct sockaddr_in6);
 	}
 
@@ -1226,7 +1226,7 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	/* Handover may cause e.g. on-link duplicate address detection
 	   which may cause bind to fail. */
 
-	HIP_IFEL(bind(hip_raw_sock, (struct sockaddr *) &src, sa_size),
+	HIP_IFEL(bind(hip_raw_sock_output, (struct sockaddr *) &src, sa_size),
 		 -1, "Binding to raw sock failed\n");
 
 	if (HIP_SIMULATE_PACKET_LOSS && HIP_SIMULATE_PACKET_IS_LOST()) {
@@ -1243,7 +1243,7 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 
 	for (dupl = 0; dupl < HIP_PACKET_DUPLICATES; dupl++) {
 		for (try_again = 0; try_again < 2; try_again++) {
-			sent = sendto(hip_raw_sock, msg, len, 0,
+			sent = sendto(hip_raw_sock_output, msg, len, 0,
 				      (struct sockaddr *) &dst, sa_size);
 			if (sent != len) {
 				HIP_ERROR("Could not send the all requested"\
@@ -1275,7 +1275,7 @@ int hip_send_raw(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		ipv6_addr_copy(&src6->sin6_addr, &any);
 		sa_size = sizeof(struct sockaddr_in6);
 	}
-	bind(hip_raw_sock, (struct sockaddr *) &src, sa_size);
+	bind(hip_raw_sock_output, (struct sockaddr *) &src, sa_size);
 
 	if (err)
 		HIP_ERROR("strerror: %s\n", strerror(errno));
@@ -1433,7 +1433,7 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 
 	/* Try to send the data. */
 	do {
-		chars_sent = sendmsg(hip_nat_sock_udp, &hdr, 0);
+		chars_sent = sendmsg(hip_nat_sock_output_udp, &hdr, 0);
 		if(chars_sent < 0) {
 			HIP_DEBUG("Problem in sending UDP packet. Sleeping "\
 				  "for %d seconds and trying again.\n",
@@ -1827,7 +1827,7 @@ int hip_send_udp_stun(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	do {
 		//chars_sent = sendto(hip_nat_sock_udp, msg, packet_length, 0,
 				    //(struct sockaddr *) &dst4, sizeof(dst4));
-		chars_sent = sendmsg(hip_nat_sock_udp, &hdr, 0);
+		chars_sent = sendmsg(hip_nat_sock_output_udp, &hdr, 0);
 		if(chars_sent < 0)
 		{
 			/* Failure. */
