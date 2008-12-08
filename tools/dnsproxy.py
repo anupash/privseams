@@ -396,8 +396,6 @@ class Global:
                                         1, 1, 0, 0)
                                 m.addQuestion(a1['name'],qtype,1)
                                 gp.send_id_map_to_hipd(nam)
-                        else:
-                            m = None
 		    if m:
 			try:
 			    fout.write('sending AAAA answer\n')
@@ -487,9 +485,8 @@ class Global:
 			    s.sendto(m.buf,from_a)
 			    sent_answer = 1
 
-
 		if not sent_answer:
-		    fout.write('Not sent answer\n')
+		    fout.write('Did not send answer\n')
                     s2.send(buf)
                     r2 = s2.recv(2048)
                     u = DNS.Lib.Munpacker(r2)

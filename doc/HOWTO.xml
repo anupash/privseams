@@ -4233,11 +4233,9 @@ parsehipkey &lt; /etc/hip/hip_host_rsa_key_pub.pub hostname.domain.org | sed -n 
     </para>
     <itemizedlist>
       <listitem><para>
-      Dnsmasq: --no-resolv --server=127.0.0.1#5000</para></listitem>
+      Dnsmasq: --no-hosts --no-resolv --server=127.0.0.1#5000</para></listitem>
       <listitem><para>
-      </para></listitem>
-      <listitem><para>
-	  Dns proxy: --port 5000</para></listitem>
+      Dns proxy: --port 5000</para></listitem>
     </itemizedlist>
     <para>
       The easiest way to configure the options is to append them to
