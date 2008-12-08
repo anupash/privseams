@@ -11,7 +11,7 @@ extern const int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS]
 				   = {{20}};
 
 
-static const int bex_hchain_length = 5000000;
+static const int bex_hchain_length = 3000000;
 static const int update_hchain_lengths[NUM_UPDATE_HCHAIN_LENGTHS] = {10};
 
 // changed for measurements

@@ -525,14 +525,14 @@ if [ $RUN_HIPD -eq "1" -o $RUN_HIPFW -eq "1" ]
 then
   read -p "Clean up: [ENTER]"
 
-  if [ $RUN_HIPD -eq "1" ]
-  then
-    killall hipd
-  fi
-
   if [ $RUN_HIPFW -eq "1" ]
   then
     killall hipfw
+  fi
+
+  if [ $RUN_HIPD -eq "1" ]
+  then
+    killall hipd
   fi
 fi
 
