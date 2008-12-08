@@ -234,7 +234,8 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	if (err < esp_packet_len) {
 		HIP_DEBUG("sendto() failed\n");
 		printf("sendto() failed\n");
-		exit(1);
+
+		err = -1;
 	} else
 	{
 		HIP_DEBUG("new packet SUCCESSFULLY re-inserted into network stack\n");
@@ -248,9 +249,17 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 		entry->usetime_ka.tv_sec = now.tv_sec;
 		entry->usetime_ka.tv_usec = now.tv_usec;
 		pthread_mutex_unlock(&entry->rw_lock);
+
+		// the original packet has to be dropped
+		err = 1;
 	}
 
   out_err:
+	if (err == -1)
+	{
+		exit(1);
+	}
+
   	return err;
 }
 
@@ -340,8 +349,11 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	err = sendto(raw_sock_v6, decrypted_packet, decrypted_packet_len, 0,
 					(struct sockaddr *)&local_sockaddr,
 					hip_sockaddr_len(&local_sockaddr));
-	if (err < 0) {
+	if (err < decrypted_packet_len) {
 		HIP_DEBUG("sendto() failed\n");
+		printf("sendto() failed\n");
+
+		err = -1;
 	} else
 	{
 		HIP_DEBUG("new packet SUCCESSFULLY re-inserted into network stack\n");
@@ -354,10 +366,16 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 		entry->usetime_ka.tv_sec = now.tv_sec;
 		entry->usetime_ka.tv_usec = now.tv_usec;
 		pthread_mutex_unlock(&entry->rw_lock);
+
+		// the original packet has to be dropped
+		err = 1;
 	}
 
   out_err:
-  	return err;
+	if (err == -1)
+	{
+		exit(1);
+	}
 }
 
 #if 0

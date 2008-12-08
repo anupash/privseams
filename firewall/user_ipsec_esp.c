@@ -51,8 +51,6 @@ int hip_beet_mode_output(hip_fw_context_t *ctx, hip_sa_entry_t *entry,
 
 	_HIP_DEBUG("original packet length: %i \n", ctx->ipq_packet->data_len);
 
-	printf("esp seq: %u\n", entry->sequence);
-
 	// distinguish IPv4 and IPv6 output
 	if (IN6_IS_ADDR_V4MAPPED(preferred_peer_addr))
 	{
