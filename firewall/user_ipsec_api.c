@@ -234,6 +234,7 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	if (err < esp_packet_len) {
 		HIP_DEBUG("sendto() failed\n");
 		printf("sendto() failed\n");
+		exit(1);
 	} else
 	{
 		HIP_DEBUG("new packet SUCCESSFULLY re-inserted into network stack\n");
