@@ -256,8 +256,6 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 
 		// the original packet has to be dropped
 		err = 1;
-
-		//sent_esp_count++;
 	}
 
   out_err:
@@ -375,8 +373,6 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 
 		// the original packet has to be dropped
 		err = 1;
-
-		//recv_esp_count++;
 	}
 
   out_err:
