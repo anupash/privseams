@@ -1,15 +1,19 @@
-/*
-    HIP Agent
-    
-    License: GNU/GPL
-    Authors: Antti Partanen <aehparta@cc.hut.fi>
-*/
+/** @file
+ *  HIP Agent
+ *  
+ * @author: Antti Partanen <aehparta@cc.hut.fi>
+ * @note:   Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
+ * @note:   HIPU: use --disable-agent to get rid of the gtk and gthread dependencies
+ */
 
 /******************************************************************************/
 /* INCLUDES */
 #include "agent.h"
 
 
+/* global db for agent to see */
+sqlite3 * agent_db = NULL;
+int init_in_progress = 0;
 /******************************************************************************/
 /** Catch SIGINT. */
 void sig_catch_int(int signum)
@@ -23,6 +27,7 @@ void sig_catch_int(int signum)
 	else
 	{
 		HIP_ERROR("SIGINT (CTRL-C) caught, terminating!\n");
+                hip_sqlite_close_db(agent_db);    
 		exit(1);
 	}
 
@@ -82,7 +87,12 @@ int main(int argc, char *argv[])
 	int err = 0, fd, c;
 	char lock_file[MAX_PATH];
 
-	/* Initialize string variables. */
+	HIP_IFEL((geteuid() != 0), -1, "agent must be started with sudo\n");
+
+	/* Open socket to communicate with daemon, then drop from root to user */
+	HIP_IFE(connhipd_init_sock(), -1);
+	//HIP_IFEL(hip_set_lowcapability(1), -1, "Failed to reduce priviledges\n");
+
 	HIP_IFEL(str_var_init(), -1, "str_var_init() failed!\n");
 	/* Create config path. */
 	str_var_set("config-path", "%s/.hipagent", getenv("HOME"));
@@ -104,11 +114,11 @@ int main(int argc, char *argv[])
 		sprintf(str, "%d\n", getpid());
 		write(fd, str, strlen(str)); /* record pid to lockfile */
 	}
-	
+
 	/* Create config filename. */
 	str_var_set("config-file", "%s/.hipagent/config", getenv("HOME"));
 	/* Create database filename. */
-	str_var_set("db-file", "%s/.hipagent/database", getenv("HOME"));
+	str_var_set("db-file", "%s/.hipagent/database.db", getenv("HOME"));
 
 	/* Read config. */
 	err = config_read(str_var_get("config-file"));
@@ -123,12 +133,11 @@ int main(int argc, char *argv[])
 	signal(SIGTERM, sig_catch_term);
 
 	/* Parse command line options. */
-	while ((c = getopt(argc, argv, ":hl:bd")) != -1)
+	while ((c = getopt(argc, argv, ":hl")) != -1)
 	{
 		switch (c)
 		{
 		case ':':
-		case '?':
 		case 'h':
 			fprintf(stderr, "no help available currently\n");
 			goto out_err;
@@ -136,50 +145,26 @@ int main(int argc, char *argv[])
 		case 'l':
 			str_var_set("lang-file", optarg);
 			break;
-		
-		case 'd':
-		case 'b':
-			str_var_set("daemon", "yes");
-			break;
 		}
 	}
 
 	/* Load language variables. */
 	lang_init(str_var_get("lang"), str_var_get("lang-file"));
 
-	if (str_var_is("daemon", "yes"))
-	{
-		int i = fork();
-		HIP_IFEL(i < 0, -1, "fork() failed!\n");
-		if (i > 0) exit(0); /* parent exits */
-		setsid();
-		for (i = getdtablesize(); i >= 0; --i) close(i);
-		i = open("/dev/null", O_RDWR); /* open stdin */
-		dup(i); /* stdout */
-		dup(i); /* stderr */
-		umask(027);
-		chdir("/tmp");
-	}
-
-	/* Initialize GUI. */
 	_HIP_DEBUG("##### 1. Initializing GUI...\n");
 	HIP_IFEL(gui_init(), -1, "Failed to initialize GUI!\n");
 
-	/* Initialize database. */
 	_HIP_DEBUG("##### 2. Initializing database...\n");
 	HIP_IFEL(hit_db_init(str_var_get("db-file")), -1, "Failed to load agent database!\n");
 	//hit_db_add_rgroup(lang_get("default-group-name"), NULL, HIT_ACCEPT, 0);
 	hit_db_add_rgroup(" deny", NULL, HIT_DENY, 0);
 
-	/* Initialize connection to HIP daemon. */
-	_HIP_DEBUG("##### 3. Initializing connection to HIP daemon...\n");
-	HIP_IFEL(connhipd_init(), -1, "Failed to open connection to HIP daemon!\n");
+	_HIP_DEBUG("##### 3. Connecting to HIP daemon...\n");
+	HIP_IFEL(connhipd_run_thread(), -1, "Failed to connect to daemon\n");
 
-	/* Start GUI itself. */
 	_HIP_DEBUG("##### 4. Executing GUI main.\n");
 	gui_main();
-	
-	/* Quit GUI. */
+
 	gui_quit();
 	agent_exit();
 	hit_db_quit(str_var_get("db-file"));

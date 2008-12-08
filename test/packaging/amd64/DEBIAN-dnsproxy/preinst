@@ -1,0 +1,13 @@
+#!/bin/sh
+
+#if invoke-rc.d --quiet dnshipproxy status
+#then
+#    invoke-rc.d --force --quiet dnshipproxy stop 
+#fi
+
+if test -x /etc/init.d/dnshipproxy
+then
+    update-rc.d -f dnshipproxy remove 
+fi
+
+exit 0 

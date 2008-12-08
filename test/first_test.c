@@ -50,7 +50,7 @@ int send_bos()
 	hip_msg_init(msg);
 
 	printf("Sending BOS... ");
-	err = hip_conf_handle_bos(msg, 0, (const char **) NULL, 0);
+	err = hip_conf_handle_bos(msg, 0, (const char **) NULL, 0, 0);
 	if (err) {
 		HIP_ERROR("\nfailed to handle msg\n");
 		goto out_err;
@@ -170,11 +170,11 @@ int handle_single_connection()
 			if (ipv6_addr_cmp(&my_hit, &sin6->sin6_addr) > 0) {
 				/* my_hit is greater ---> I am the initiator */
 				printf("Initiator mode ...\n");
-
+				
 				hip_set_logtype(LOGTYPE_STDERR);
 				hip_set_logfmt(LOGFMT_SHORT);
 
-				sock = hip_connect_func(res, "/tmp/results.txt");
+				hip_connect_func(res, &sock);
 				if (sock)
 					close(sock);
 				

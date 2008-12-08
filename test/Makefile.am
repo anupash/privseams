@@ -4,46 +4,68 @@ AUTOMAKE_OPTIONS = foreign
 # won't build because there is also the linux/net/ipv6/hip/debug.h include.
 #
 CFLAGS = $(hipl_common_cflags) -DHIP_UNITTEST_MODE -L$(HIPL_LIBINET6_LIB)
+CFLAGS += $(OPTIMIZATIONS_CFLAGS)
+CFLAGS += $(GPROF_CFLAGS)
+
+if HIP_AGENT
+CFLAGS += -lsqlite3
+endif
 
 include_HEADERS = checksum.h first_test.h hipsetup.h start-stop-daemon.h
 include_HEADERS += unittest.h conntest.h hipconftool.h misc_install.h unit.h
 
-INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
+INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)  -I$(HIPL_PJPROJECT_NATH)/include -I$(HIPL_PJPROJECT_LIB)/include -I$(HIPL_PJPROJECT_LIB_UTIL)/include -I$(HIPL_PJPROJECT_MEDIA)/include
 
-conntest_client_LDADD = 
+conntest_client_opp_LDADD = 
 if HIP_OPPORTUNISTIC
-  # currently opp. library does not work with conntest-client-gai
-  conntest_client_LDADD += ../libopphip/.libs/libopphip.a
+  # currently opp. library does not work with conntest-client-hip
+  conntest_client_opp_LDADD += ../libopphip/.libs/libopphip.a
 endif
 
-conntest_client_LDADD += ../libinet6/.libs/libinet6.a
-hashtest_LDADD = ../libinet6/.libs/libinet6.a
-listtest_LDADD =
+conntest_client_opp_LDADD += $(OPENWRT_LIB_STATIC)
+
+conntest_client_opp_LDADD += ../libinet6/.libs/libinet6.a
+hashtest_LDADD = $(OPENWRT_LIB_STATIC) ../libinet6/.libs/libinet6.a
+listtest_LDADD = $(OPENWRT_LIB_STATIC)
 
 # For some weird reason, you cannot use $(HIPL_LIBINET6_LIB_STATIC) below
 # Note: libhiptool needs to be the last library in LDADD!!
 #
-LDADD  = ../libinet6/.libs/libinet6.a
+LDADD  = $(OPENWRT_LIB_STATIC) ../libinet6/.libs/libinet6.a
 
 if HIP_CORPORATE
-  conntest_client_LDADD += -lhiptool
+  conntest_client_opp_LDADD += -lhiptool
   hashtest_LDADD += -lhiptool
   LDADD += -lhiptool
 else
-  conntest_client_LDADD += ../libhiptool/.libs/libhiptool.a
+  conntest_client_opp_LDADD += ../libhiptool/.libs/libhiptool.a
   hashtest_LDADD += ../libhiptool/.libs/libhiptool.a
   LDADD += ../libhiptool/.libs/libhiptool.a
 endif
 
-if HIP_OPENDHT
-  conntest_client_LDADD += ../opendht/.libs/libhipopendht.a
-  LDADD += ../opendht/.libs/libhipopendht.a
-  CFLAGS += $(HIPL_XMLL)
+conntest_client_opp_LDADD += ../opendht/.libs/libhipopendht.a
+LDADD += ../opendht/.libs/libhipopendht.a
+CFLAGS += $(HIPL_XMLL)
+
+# XX FIXME: conntest-client-hip fails to link to libinet6 because of this
+#LDFLAGS = -lc -lcrypto $(HIP_XMLL) $(OPENWRT)
+
+opendhtteststub_LDFLAGS= -lcrypto  $(HIP_XMLL) 
+
+if HIP_OPENWRT
+	opendhtteststub_LDFLAGS+= -lc
 endif
 
-bin_PROGRAMS = conntest-client
+opendhtteststub_LDADD = ../opendht/.libs/libhipopendht.a $(OPENWRT_LIB_STATIC) ../libinet6/.libs/libinet6.a
+if HIP_CORPORATE
+  opendhtteststub_LDADD += -lhiptool
+else
+  opendhtteststub_LDADD += ../libhiptool/.libs/libhiptool.a
+endif
+
+bin_PROGRAMS = conntest-client-opp
 bin_PROGRAMS += conntest-server
-bin_PROGRAMS += conntest-client-gai
+bin_PROGRAMS += conntest-client-hip
 bin_PROGRAMS += conntest-client-native
 bin_PROGRAMS += conntest-client-native-user-key
 bin_PROGRAMS += conntest-server-native
@@ -60,12 +82,16 @@ bin_PROGRAMS += keygentest
 bin_PROGRAMS += hashtest
 #bin_PROGRAMS += hipconf
 bin_PROGRAMS += listtest
+bin_PROGRAMS += opendhtteststub
+bin_PROGRAMS += certteststub
+bin_PROGRAMS += sqliteteststub
+bin_PROGRAMS += hc_performance
 
 #sbin_SCRIPTS = hipsetup
 
 #ttcp_SOURCES = ttcp.c
-conntest_client_SOURCES = conntest-client.c  conntest.c
-conntest_client_gai_SOURCES = conntest-client-gai.c conntest.c
+conntest_client_opp_SOURCES = conntest-client-opp.c  conntest.c
+conntest_client_hip_SOURCES = conntest-client-hip.c conntest.c
 conntest_client_native_SOURCES = conntest-client-native.c conntest.c
 conntest_client_native_user_key_SOURCES = \
                         conntest-client-native-user-key.c
@@ -82,6 +108,10 @@ keygentest_SOURCES = keygentest.c
 hashtest_SOURCES = hashtest.c
 #hipconf_SOURCE = hipconftool.c
 listtest_SOURCES = listtest.c
+opendhtteststub_SOURCES = opendhtteststub.c
+certteststub_SOURCES = certteststub.c
+sqliteteststub_SOURCES = sqliteteststub.c
+hc_performance_SOURCES = hc_performance.c debug.c
 
 #EXTRA_DIST = $(sbin_SCRIPTS)
 
@@ -93,6 +123,10 @@ hipconftool.h:
 	$(LN_S) -f $(HIPL_TOOLS)/hipconftool.h .
 hipconftool.c: hipconftool.h
 	$(LN_S) -f $(HIPL_TOOLS)/hipconftool.c .
+debug.h:
+	$(LN_S) -f $(HIPL_LIBINET6)/debug.h .
+debug.c: debug.h
+	$(LN_S) -f $(HIPL_LIBINET6)/debug.c .
 $(HIPL_LIBINET6_LIB_STATIC):
 	$(MAKE) -C $(HIPL)/libinet6
 

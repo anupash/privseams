@@ -1,5 +1,15 @@
-#! /bin/sh
-# /etc/init.d/hipd: start and stop the HIP daemon
+#!/bin/sh
+#
+# Init file for hip daemon
+#
+# description: HIPL IPsec key and mobility management daemon
+#
+# processname: hipd
+# pidfile: /var/run/hipd.pid
+# chkconfig: 2345 20 80
+
+#DAEMON="/usr/sbin/hipd"
+#OPTIONS="-bk"
 
 HIPD_OPTS="-bk"
 #PIDFILE=/var/run/hipd.pid
@@ -28,6 +38,7 @@ case "$1" in
   start)
         echo -n "Starting hipd"
 	start-stop-daemon --start --quiet --exec /usr/sbin/hipd -- $HIPD_OPTS
+        #$DAEMON $OPTIONS
         echo "."
 	;;
   stop)

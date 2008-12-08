@@ -34,10 +34,12 @@
     JAVA_##name = (*env)->GetStaticIntField(env, cls, fid); \
     } while (0)
 
+#define HIT_LEN sizeof(struct in6_addr)
+
 static jfieldID native_fd_id;
 static jfieldID localport_id;
 static jfieldID port_id;
-static jfieldID ha_value_id;
+static jfieldID ha_address_id;
 static jmethodID dump_id;
 static jmethodID set_address_id;
 static jmethodID ia_get_host_address_id;
@@ -136,7 +138,7 @@ Java_jip_HipSocketImpl_nativeInit (JNIEnv *env, jclass cls)
     native_fd_id = (*env)->GetFieldID(env, cls, "native_fd", "I");
     localport_id = (*env)->GetFieldID(env, cls, "localport", "I");
     port_id = (*env)->GetFieldID(env, cls, "port", "I");
-    ha_value_id = (*env)->GetFieldID(env, ha_cls, "value", "S");
+    ha_address_id = (*env)->GetFieldID(env, ha_cls, "address", "[B");
     dump_id = (*env)->GetMethodID(env, cls, "dump", "()V");
     set_address_id = (*env)->GetMethodID(env, cls, "setAddress", "([B)V");
     ia_get_host_address_id = (*env)->GetMethodID(env, ia_cls, "getHostAddress",
@@ -172,31 +174,56 @@ JNIEXPORT void JNICALL
 Java_jip_HipSocketImpl_bind (JNIEnv *env, jobject obj, jobject addr, jint port)
 {
     int fd = (*env)->GetIntField(env, obj, native_fd_id);
-    struct sockaddr_eid eid_addr;
+    struct sockaddr_hip sock_addr;
+    struct in6_addr hit;
+    jbyteArray j_hit;
+    jfieldID hit_id;
+    jclass cls;
     printf("Bind: <%d> %d\n", port, fd);
     fflush(stdout);
     (*env)->CallVoidMethod(env, obj, dump_id);
-    eid_addr.eid_family = PF_HIP;
-    eid_addr.eid_port = htons(port);
-    eid_addr.eid_val = (*env)->GetShortField(env, addr, ha_value_id);
-    CHECK(bind(fd, (struct sockaddr *) &eid_addr, sizeof eid_addr),
-	  "Bind failed");
+
+    memset(&hit, 0, sizeof(hit));
+    cls = (*env)->GetObjectClass(env, addr);
+    hit_id = (*env)->GetFieldID(env, cls, "address", "[B");
+    j_hit = (*env)->GetObjectField(env, addr, hit_id);
+    (*env)->GetByteArrayRegion(env, j_hit, 0, HIT_LEN, &hit);
+
+    memset(&sock_addr, 0, sizeof(sock_addr));
+    memcpy(&sock_addr.ship_hit, &hit, sizeof(hit));
+    sock_addr.ship_family = PF_HIP;
+    sock_addr.ship_port = htons(port);
+
+    CHECK(bind(fd, (struct sockaddr *)&sock_addr, sizeof(sock_addr)),
+	  "Bind failed\n");
     (*env)->SetIntField(env, obj, localport_id, port);
 }
 
 JNIEXPORT void JNICALL
-Java_jip_HipSocketImpl_connect (JNIEnv *env, jobject obj, jobject address,
+Java_jip_HipSocketImpl_connect (JNIEnv *env, jobject obj, jobject addr,
 				jint port)
 {
     int fd = (*env)->GetIntField(env, obj, native_fd_id);
-    struct sockaddr_eid eid_addr;
+    struct sockaddr_hip sock_addr;
+    struct in6_addr hit;
+    jbyteArray j_hit;
+    jfieldID hit_id;
+    jclass cls;
     printf("Connect: <%d> %d\n", port, fd);
     fflush(stdout);
     (*env)->CallVoidMethod(env, obj, dump_id);
-    eid_addr.eid_family = PF_HIP;
-    eid_addr.eid_port = htons(port);
-    eid_addr.eid_val = (*env)->GetShortField(env, address, ha_value_id);
-    CHECK(connect(fd, (struct sockaddr *) &eid_addr, sizeof eid_addr),
+
+    cls = (*env)->GetObjectClass(env, addr);
+    hit_id = (*env)->GetFieldID(env, cls, "address", "[B");
+    j_hit = (*env)->GetObjectField(env, addr, hit_id);
+    (*env)->GetByteArrayRegion(env, j_hit, 0, HIT_LEN, &hit);
+
+    memset(&sock_addr, 0, sizeof(sock_addr));
+    memcpy(&sock_addr.ship_hit, &hit, sizeof(hit));
+    sock_addr.ship_family = PF_HIP;
+    sock_addr.ship_port = htons(port);
+
+    CHECK(connect(fd, (struct sockaddr *) &sock_addr, sizeof sock_addr),
 	  "Connect failed");
     (*env)->SetIntField(env, obj, port_id, port);
 }
@@ -216,8 +243,8 @@ Java_jip_HipSocketImpl_accept (JNIEnv *env, jobject obj, jobject impl)
 {
     int fd = (*env)->GetIntField(env, obj, native_fd_id);
     int s;
-    struct sockaddr_eid local_addr, remote_addr;
-    socklen_t local_len = sizeof local_addr, remote_len = sizeof remote_addr;
+    struct sockaddr_hip local_addr, remote_addr;
+    socklen_t local_len = sizeof(local_addr), remote_len = sizeof(remote_addr);
     printf("Accept: %d\n", fd);
     fflush(stdout);
     (*env)->CallVoidMethod(env, obj, dump_id);
@@ -226,8 +253,8 @@ Java_jip_HipSocketImpl_accept (JNIEnv *env, jobject obj, jobject impl)
     CHECK(getsockname(s, (struct sockaddr *) &local_addr, &local_len),
 	  "Sockname failed");
     (*env)->SetIntField(env, impl, native_fd_id, s);
-    (*env)->SetIntField(env, impl, localport_id, ntohs(local_addr.eid_port));
-    (*env)->SetIntField(env, impl, port_id, ntohs(remote_addr.eid_port));
+    (*env)->SetIntField(env, impl, localport_id, ntohs(local_addr.ship_port));
+    (*env)->SetIntField(env, impl, port_id, ntohs(remote_addr.ship_port));
 }
 
 JNIEXPORT jint JNICALL

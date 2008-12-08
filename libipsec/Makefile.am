@@ -1,7 +1,9 @@
 # HIP additions.
 AUTOMAKE_OPTIONS = foreign
-INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
+INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)  -I$(HIPL_PJPROJECT_NATH)/include -I$(HIPL_PJPROJECT_LIB)/include -I$(HIPL_PJPROJECT_LIB_UTIL)/include -I$(HIPL_PJPROJECT_MEDIA)/include
 CFLAGS = $(hipl_common_cflags) # -DHAVE_NETINET6_IPSEC
+CFLAGS += $(OPTIMIZATIONS_CFLAGS)
+CFLAGS += $(GPROF_CFLAGS)
 
 #bin_PROGRAMS = test-policy test-policy-priority
 lib_LTLIBRARIES = libipsec.la
@@ -57,4 +59,4 @@ noinst_HEADERS = ipsec_strerror.h policy_parse.h
 
 #EXTRA_DIST = ${man3_MANS} test-policy.c
 
-DISTCLEANFILES = policy_parse.c policy_parse.h policy_token.c policy_token.h
+DISTCLEANFILES = policy_parse.c policy_token.c policy_token.h

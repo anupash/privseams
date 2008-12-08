@@ -2,16 +2,22 @@
  * This file defines Host Identity Protocol (HIP) header and parameter related
  * constants and structures.
  *
- * @note Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>.
+ * @note Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>.
  */
 #ifndef _HIP_STATE
 #define _HIP_STATE
 
+#ifndef __KERNEL__
 #include "hashtable.h"
+#include "esp_prot_common.h"
+#include "hip_statistics.h"
+
+#endif
 
 #define HIP_HIT_KNOWN 1
 #define HIP_HIT_ANON  2
 
+#define HIP_ENDPOINT_FLAG_PUBKEY           0
 #define HIP_ENDPOINT_FLAG_HIT              1
 #define HIP_ENDPOINT_FLAG_ANON             2
 #define HIP_HI_REUSE_UID                   4
@@ -19,32 +25,31 @@
 #define HIP_HI_REUSE_ANY                  16
 /* Other flags: keep them to the power of two! */
 
-/* when adding new states update debug.h hip_state_str() */
-#define HIP_STATE_NONE              0      /* No state, structure unused */
-#define HIP_STATE_UNASSOCIATED      1      /* ex-E0 */
-#define HIP_STATE_I1_SENT           2      /* ex-E1 */
-#define HIP_STATE_I2_SENT           3      /* ex-E2 */
-#define HIP_STATE_R2_SENT           4
-#define HIP_STATE_ESTABLISHED       5      /* ex-E3 */
-#define HIP_STATE_FAILED            7
-#define HIP_STATE_CLOSING           8
-#define HIP_STATE_CLOSED            9
-#define HIP_STATE_FILTERING_I1	    10
-#define HIP_STATE_FILTERING_R2		11
-#define HIP_STATE_FILTERED_I1	    12
-#define HIP_STATE_FILTERED_R2		13
-#define HIP_STATE_FILTERING_I2	    14
-#define HIP_STATE_FILTERED_I2	    15
+/** @addtogroup hip_ha_state
+ * @{
+ */
+/* When adding new states update debug.h hip_state_str(). Doxygen comments to
+   these states are available at doc/doxygen.h */
+#define HIP_STATE_NONE                   0
+#define HIP_STATE_UNASSOCIATED           1
+#define HIP_STATE_I1_SENT                2
+#define HIP_STATE_I2_SENT                3
+#define HIP_STATE_R2_SENT                4
+#define HIP_STATE_ESTABLISHED            5
+#define HIP_STATE_FAILED                 7
+#define HIP_STATE_CLOSING                8
+#define HIP_STATE_CLOSED                 9
+/* @} */
 
-#define HIP_UPDATE_STATE_REKEYING    1      /** @todo REMOVE */
-#define HIP_UPDATE_STATE_DEPRECATING 2
+#define HIP_UPDATE_STATE_REKEYING        1 /**< @todo REMOVE */
+#define HIP_UPDATE_STATE_DEPRECATING     2
 
-#define PEER_ADDR_STATE_UNVERIFIED 1
-#define PEER_ADDR_STATE_ACTIVE 2
-#define PEER_ADDR_STATE_DEPRECATED 3
+#define PEER_ADDR_STATE_UNVERIFIED       1
+#define PEER_ADDR_STATE_ACTIVE           2
+#define PEER_ADDR_STATE_DEPRECATED       3
 
-#define ADDR_STATE_ACTIVE 1
-#define ADDR_STATE_WAITING_ECHO_REQ 2
+#define ADDR_STATE_ACTIVE                1
+#define ADDR_STATE_WAITING_ECHO_REQ      2
 
 #define HIP_LOCATOR_TRAFFIC_TYPE_DUAL    0
 #define HIP_LOCATOR_TRAFFIC_TYPE_SIGNAL  1
@@ -52,23 +57,43 @@
 
 #define HIP_LOCATOR_LOCATOR_TYPE_IPV6    0
 #define HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI 1
+//NAT branch
+#define HIP_LOCATOR_LOCATOR_TYPE_UDP 2
 
-#define SEND_UPDATE_ESP_INFO (1 << 0)
-#define SEND_UPDATE_LOCATOR (1 << 1)
+#define HIP_LOCATOR_LOCATOR_TYPE_ESP_SPI_PRIORITY 126
+#define HIP_LOCATOR_LOCATOR_TYPE_REFLEXIVE_PRIORITY 120
+/** for the triple nat mode*/
+#define HIP_NAT_MODE_NONE               0
+#define HIP_NAT_MODE_PLAIN_UDP          1
+#define HIP_NAT_MODE_ICE_UDP            2
+//end NAT branch
 
-#define HIP_SPI_DIRECTION_OUT 1
-#define HIP_SPI_DIRECTION_IN 2
+#define SEND_UPDATE_ESP_INFO             (1 << 0)
+#define SEND_UPDATE_LOCATOR              (1 << 1)
+#define SEND_UPDATE_ESP_ANCHOR           (1 << 2)
 
-#define HIP_ESCROW_OPERATION_ADD	1
-#define HIP_ESCROW_OPERATION_MODIFY	2
-#define HIP_ESCROW_OPERATION_DELETE	3
+#define HIP_SPI_DIRECTION_OUT            1
+#define HIP_SPI_DIRECTION_IN             2
 
-/* Some default settings for HIPL */
-#define HIP_DEFAULT_AUTH             HIP_AUTH_SHA    /* AUTH transform in R1 */
-#define HIP_DEFAULT_RVA_LIFETIME     600             /* in seconds? */
+#define HIP_ESCROW_OPERATION_ADD         1
+#define HIP_ESCROW_OPERATION_MODIFY      2
+#define HIP_ESCROW_OPERATION_DELETE      3
 
-/** @todo remove HIP_HASTATE_SPIOK */
-typedef enum { 
+#define HIP_DEFAULT_AUTH                 HIP_AUTH_SHA /**< AUTH transform in R1 */
+/**
+ * Default rendezvous association lifetime in seconds. The lifetime should be
+ * calculated using formula <code>2^((lifetime - 64)/8)</code> as instructed in
+ * draft-ietf-hip-registration-02. But since we are just in the test phase of
+ * HIP, we settle for a constant value of 600 seconds. Lauri 23.01.2008.
+ */
+#define HIP_DEFAULT_RVA_LIFETIME         600
+
+/**
+ * HIP host association state.
+ *
+ * @todo remove HIP_HASTATE_SPIOK
+ */
+typedef enum {
 	HIP_HASTATE_INVALID = 0,
 	HIP_HASTATE_SPIOK = 1,
 	HIP_HASTATE_HITOK = 2,
@@ -82,14 +107,15 @@ typedef int (*hip_xmit_func_t)(struct in6_addr *, struct in6_addr *, in_port_t,
 
 /**
  * A data structure for storing the source and destination ports of an incoming
- * packet. 
+ * packet.
  */
-typedef struct hip_stateless_info 
+typedef struct hip_stateless_info
 {
 	in_port_t src_port; /**< The source port of an incoming packet. */
 	in_port_t dst_port; /**< The destination port of an incoming packet. */
-#ifdef CONFIG_HIP_HI3
-	int hi3_in_use; // varibale says is the received message sent through i3 or not
+#ifdef CONFIG_HIP_I3
+	int hi3_in_use; /**< A boolean to indicate whether this message was
+                             sent through I3 or not .*/
 #endif
 } hip_portpair_t;
 
@@ -105,10 +131,10 @@ typedef struct hip_msg_retrans{
 	struct hip_common *buf;
 } hip_msg_retrans_t;
 
-/** 
+/**
  * A binder structure for storing an IPv6 address and transport layer port
  * number. This structure is used in hip_build_param_relay_to_old().
- * 
+ *
  * @note This has to be packed since it is used in building @c RELAY_FROM and
  *       @c RELAY_TO parameters.
  * @note obsolete
@@ -142,6 +168,8 @@ struct hip_context
 				      during the keymat calculation. */
 	uint16_t keymat_index; /**< KEYMAT offset. */
 	uint16_t esp_keymat_index; /**< A pointer to the esp keymat index. */
+
+	int esp_prot_param;
 };
 
 /*
@@ -154,7 +182,7 @@ struct hip_peer_addr_list_item
 	uint32_t padding;
 	unsigned long    hash_key;
 	struct in6_addr  address;
-	
+
 	int              address_state; /* current state of the
 					 * address (PEER_ADDR_STATE_xx) */
 	int              is_preferred;  /* 1 if this address was set as
@@ -165,6 +193,13 @@ struct hip_peer_addr_list_item
 	uint32_t         seq_update_id; /* the Update ID in SEQ parameter
 					   this address is related to */
 	uint8_t          echo_data[4];  /* data put into the ECHO_REQUEST parameter */
+//NAT branch
+	uint8_t  		transport_protocol; /*value 1 for UDP*/
+
+	uint16_t 		port /*port number for transport protocol*/;
+
+	uint32_t 		priority;
+//end NAT branch
 };
 
 /* for HIT-SPI hashtable only */
@@ -204,6 +239,7 @@ struct hip_spi_in_item
 	int addresses_n; /* number of addresses */
 };
 
+#ifndef __KERNEL__
 struct hip_spi_out_item
 {
 //	hip_list_t list;
@@ -215,158 +251,301 @@ struct hip_spi_out_item
 	HIP_HASHTABLE *peer_addr_list; /* Peer's IPv6 addresses */
 	struct in6_addr  preferred_address; /* check */
 };
+#endif
 
 /* this struct is here instead of hidb.h to avoid some weird compilation
    warnings */
 struct hip_host_id_entry {
-	/* this needs to be first (list_for_each_entry, list 
+	/* this needs to be first (list_for_each_entry, list
 	   head being of different type) */
-	//hip_list_t next; 
+	//hip_list_t next;
 	struct hip_lhi lhi;
 	hip_lsi_t lsi;
 	/* struct in6_addr ipv6_addr[MAXIP]; */
 	struct hip_host_id *host_id; /* allocated dynamically */
 	struct hip_r1entry *r1; /* precreated R1s */
-	struct hip_r1entry *blindr1; /* precreated R1s for blind*/
+	struct hip_r1entry *blindr1; /* pre-created R1s for blind*/
 	/* Handler to call after insert with an argument, return 0 if OK*/
 	int (*insert)(struct hip_host_id_entry *, void **arg);
 	/* Handler to call before remove with an argument, return 0 if OK*/
 	int (*remove)(struct hip_host_id_entry *, void **arg);
 	void *arg;
 };
-
-/** A data structure defining host association database state. */
+#ifndef __KERNEL__
+/* If you need to add a new boolean type variable to this structure, consider
+   adding a control value to the local_controls and/or peer_controls bitmask
+   field(s) instead of adding yet another integer. Lauri 24.01.2008. */
+/** A data structure defining host association database state i.e.\ a HIP
+    association between two hosts. Each successful base exchange between two
+    different hosts leads to a new @c hip_hadb_state with @c state set to
+    @c HIP_STATE_ESTABLISHED. */
 struct hip_hadb_state
 {
-     hip_hit_t            hit_our; /**< Our HIT. */
-     hip_hit_t            hit_peer;  /**< Peer HIT. */
-     hip_hastate_t        hastate;
-     int                  state;
-     int                  retrans_state; /**< This guarantees that
-					    retransmissions work properly
-					    also in non-established state.*/
-     int                  update_state;
-     hip_controls_t       local_controls; /**< @see hip_ha_controls */
-     hip_controls_t       peer_controls; /**< @see hip_ha_controls */
-     int                  is_loopback;
-     HIP_HASHTABLE        *spis_in; /**< SPIs for inbound SAs, hip_spi_in_item. */
-     HIP_HASHTABLE        *spis_out; /**< SPIs for outbound SAs, hip_spi_out_item */
-     uint32_t             default_spi_out;
-     struct in6_addr      preferred_address; /**< Preferred peer address to use
-						when sending data to peer. */
-     struct  in6_addr     local_address; /**< Our IP address. */
-     hip_lsi_t            lsi_peer;
-     hip_lsi_t            lsi_our;
-     int                  esp_transform;
-     int                  hip_transform;
-     uint64_t             birthday;
-     char                 *dh_shared_key;
-     size_t               dh_shared_key_len;
-     uint8_t	          nat_mode; /**< A boolean value indicating whether
-				       there is a NAT between this
-				       host and the peer. */
-     in_port_t	          peer_udp_port; /**< NAT mangled port (source port of
-					    I2 packet). */
-     int                  escrow_used;
-     struct in6_addr	  escrow_server_hit;
-     /* The initiator computes the keys when it receives R1.
-      * The keys are needed only when R2 is received. We store them
-      * here in the mean time. */
-     /** Outgoing HIP packets. */
-     struct hip_crypto_key hip_enc_out;
-     struct hip_crypto_key hip_hmac_out;
-     /** Outgoing ESP packets. */
-     struct hip_crypto_key esp_out;
-     struct hip_crypto_key auth_out;
-     /** Incoming HIP packets. */
-     struct hip_crypto_key hip_enc_in;
-     struct hip_crypto_key hip_hmac_in;
-     /** Incoming ESP packets. */
-     struct hip_crypto_key esp_in;
-     struct hip_crypto_key auth_in;
-     /** The byte offset index in draft chapter HIP KEYMAT. */
-     uint16_t current_keymat_index;
-     /** The one byte index number used during the keymat calculation. */
-     uint8_t keymat_calc_index;
-     /** For @c esp_info. */
-     uint16_t esp_keymat_index;
-     /* Last Kn, where n is @c keymat_calc_index. */
-     unsigned char current_keymat_K[HIP_AH_SHA_LEN];
-     /** Stored outgoing UPDATE ID counter. */
-     uint32_t update_id_out;
-     /** Stored incoming UPDATE ID counter. */
-     uint32_t update_id_in;
-
-     /* Our host identity functions */
-     struct hip_host_id *our_pub;
-     struct hip_host_id *our_priv;
-     int (*sign)(struct hip_host_id *, struct hip_common *);
-     /* Peer host identity functions */
-     struct hip_host_id *peer_pub;
-     int (*verify)(struct hip_host_id *, struct hip_common *);
-     /** For retransmission. */
-     uint64_t puzzle_solution;
-
-     /* Blind */           
-     uint16_t	     blind;  /* 1, if hadb_state uses blind protocol*/
-     hip_hit_t            hit_our_blind; /* The HIT we use with this host */
-     hip_hit_t            hit_peer_blind; /* Peer's HIT */
-     uint16_t             blind_nonce_i;
-
-     /* LOCATOR PARAMETER just tmp save if sent in R1 no 
-	esp_info so keeping it here 'till the 
-	hip_update_locator_parameter can be done*/
-     struct hip_locator *locator;
- 
-     /** For retransmission. */
-     uint64_t puzzle_i;
-     /** For base exchange or CLOSE. @b Not for UPDATE. */
-     char echo_data[4];
-     /** For storing retransmission related data. */
-     hip_msg_retrans_t hip_msg_retrans;
-
-     /* receive func set. Do not modify these values directly.
-	Use hip_hadb_set_rcv_function_set instead */
-     hip_rcv_func_set_t *hadb_rcv_func;
-	
-     /* handle func set. Do not modify these values directly. 
-	Use hip_hadb_set_handle_function_set instead */
-     hip_handle_func_set_t *hadb_handle_func;
-
-     /* handle func set. Do not modify these values directly. 
-	Use hip_hadb_set_handle_function_set instead */
-     hip_misc_func_set_t *hadb_misc_func;	
-
-     /* handle func set. Do not modify these values directly. 
-	Use hip_hadb_set_handle_function_set instead */
-     hip_update_func_set_t *hadb_update_func;	
-
-     /* transmission func set. Do not modify these values directly. 
-	Use hip_hadb_set_handle_function_set instead */
-     hip_xmit_func_set_t *hadb_xmit_func;
-
-     /* For e.g. GUI agent */
-     hip_input_filter_func_set_t *hadb_input_filter_func;
-     hip_output_filter_func_set_t *hadb_output_filter_func;
-     /* true when agent is prompting user and fallback is disabled */
-     int hip_opp_fallback_disable; 
-#ifdef CONFIG_HIP_HI3
-	int is_hi3_state ; /* If the state for hi3, then this flag is 1, otherwise it is zero*/
+        /** Our Host Identity Tag (HIT). */
+	hip_hit_t                    hit_our;
+	/** Peer's Host Identity Tag (HIT). */
+	hip_hit_t                    hit_peer;
+	/** Information about the usage of the host association related to
+	    locking stuff which is currently unimplemented because the daemon
+	    is single threaded. When zero, the host association can be freed.
+	    @date 24.01.2008 */
+	hip_hastate_t                hastate;
+	/** The state of this host association. @see hip_ha_state */
+	int                          state;
+	/** This guarantees that retransmissions work properly also in
+	    non-established state.*/
+	int                          retrans_state;
+	/** A kludge to get the UPDATE retransmission to work.
+	    @todo Remove this kludge. */
+	int                          update_state;
+	/** Our control values related to this host association.
+	    @see hip_ha_controls */
+	hip_controls_t               local_controls;
+	/** Peer control values related to this host association.
+	    @see hip_ha_controls */
+	hip_controls_t               peer_controls;
+	/** If this host association is from a local HIT to a local HIT this
+	    is non-zero, otherwise zero. */
+	int                          is_loopback;
+	/** Security Parameter Indices (SPI) for incoming Security Associations
+	    (SA). A SPI is an identification tag added to the packet header
+	    while using IPsec for tunneling IP traffic.
+	    @see hip_spi_in_item. */
+	HIP_HASHTABLE                *spis_in;
+	/** Security Parameter Indices (SPI) for outbound Security Associations
+	    (SA). A SPI is an identification tag added to the packet header
+	    while using IPsec for tunneling IP traffic.
+	    @see hip_spi_in_item. */
+	HIP_HASHTABLE                *spis_out;
+	/** Default SPI for outbound SAs. */
+	uint32_t                     default_spi_out;
+	/** Preferred peer IP address to use when sending data to peer. */
+	struct in6_addr              preferred_address;
+	/** Our IP address. */
+	struct in6_addr              local_address;
+	/** Peer's Local Scope Identifier (LSI). A Local Scope Identifier is a
+	    32-bit localized representation for a Host Identity.*/
+	hip_lsi_t                    lsi_peer;
+	/** Our Local Scope Identifier (LSI). A Local Scope Identifier is a
+	    32-bit localized representation for a Host Identity.*/
+	hip_lsi_t                    lsi_our;
+	/** ESP transform type */
+	int                          esp_transform;
+	/** HIP transform type */
+	int                          hip_transform;
+	/** ESP extension protection transform */
+	uint8_t						 esp_prot_transform;
+	/** ESP extension protection local_anchor */
+	unsigned char				 esp_local_anchor[MAX_HASH_LENGTH];
+	/** another local anchor used for UPDATE messages */
+	unsigned char				 esp_local_update_anchor[MAX_HASH_LENGTH];
+	/** ESP extension protection peer_anchor */
+	unsigned char				 esp_peer_anchor[MAX_HASH_LENGTH];
+	/** another peer anchor used for UPDATE messages */
+	unsigned char				 esp_peer_update_anchor[MAX_HASH_LENGTH];
+	/** root needed in case of hierarchical hchain linking */
+	uint8_t						 esp_root_length;
+	unsigned char				 esp_root[MAX_HASH_LENGTH];
+	/** parameters needed for soft-updates of hchains */
+	/** Stored outgoing UPDATE ID counter. */
+	uint32_t                     light_update_id_out;
+	/** Stored incoming UPDATE ID counter. */
+	uint32_t                     light_update_id_in;
+	/** retranmission */
+	uint8_t						 light_update_retrans;
+#if 0
+	/** the offset of the anchor in the link tree */
+	int							 anchor_offset;
+	/* length of the secret hashed concatenated with this update_anchor */
+	int							 secret_length;
+	/** the secret itself */
+	unsigned char				 secret[MAX_HASH_LENGTH];
+	/** length of the branch for verifying the new anchor */
+	int							 branch_length;
+	/** the branch itself */
+	unsigned char				 branch_nodes[MAX_TREE_DEPTH * MAX_HASH_LENGTH];
 #endif
-#ifdef CONFIG_HIP_OPPTCP
-	int hip_is_opptcp_on;
+	/** Something to do with the birthday paradox.
+	    @todo Please clarify what this field is. */
+	uint64_t                     birthday;
+	/** A pointer to the Diffie-Hellman shared key. */
+	char                         *dh_shared_key;
+	/** The length of the Diffie-Hellman shared key. */
+	size_t                       dh_shared_key_len;
+	/** A boolean value indicating whether there is a NAT between this host
+	    and the peer. */
+	uint8_t	                     nat_mode;
+	/* this might seem redundant as dst_port == HIP_NAT_UDP_PORT, but it makes
+	 * port handling easier in other functions */
+	in_port_t		     local_udp_port;
+	 /** NAT mangled port (source port of I2 packet). */
+	in_port_t	             	 peer_udp_port;
+	/** Non-zero if the escrow service is in use. */
+	int                          escrow_used;
+	/** Escrow server HIT. */
+	struct in6_addr	             escrow_server_hit;
+	/* The Initiator computes the keys when it receives R1. The keys are
+	   needed only when R2 is received. We store them here in the mean
+	   time. */
+	/** For outgoing HIP packets. */
+	struct hip_crypto_key        hip_enc_out;
+	/** For outgoing HIP packets. */
+	struct hip_crypto_key        hip_hmac_out;
+	/** For outgoing ESP packets. */
+	struct hip_crypto_key        esp_out;
+	/** For outgoing ESP packets. */
+	struct hip_crypto_key        auth_out;
+	/** For incoming HIP packets. */
+	struct hip_crypto_key        hip_enc_in;
+	/** For incoming HIP packets. */
+	struct hip_crypto_key        hip_hmac_in;
+	/** For incoming ESP packets. */
+	struct hip_crypto_key        esp_in;
+	/** For incoming ESP packets. */
+	struct hip_crypto_key        auth_in;
+	/** The byte offset index in draft chapter HIP KEYMAT. */
+	uint16_t                     current_keymat_index;
+	/** The one byte index number used during the keymat calculation. */
+	uint8_t                      keymat_calc_index;
+	/** For @c esp_info. */
+	uint16_t                     esp_keymat_index;
+	/* Last Kn, where n is @c keymat_calc_index. */
+	unsigned char                current_keymat_K[HIP_AH_SHA_LEN];
+	/** Stored outgoing UPDATE ID counter. */
+	uint32_t                     update_id_out;
+	/** Stored incoming UPDATE ID counter. */
+	uint32_t                     update_id_in;
+	/** Our public host identity. */
+	struct hip_host_id           *our_pub;
+	/** Our private host identity. */
+	struct hip_host_id           *our_priv;
+        /** A function pointer to a function that signs our host identity. */
+	int                          (*sign)(struct hip_host_id *, struct hip_common *);
+	/** Peer's public host identity. */
+	struct hip_host_id           *peer_pub;
+	/** A function pointer to a function that verifies peer's host identity. */
+	int                          (*verify)(struct hip_host_id *, struct hip_common *);
+	/** For retransmission. */
+	uint64_t                     puzzle_solution;
+	/** 1, if hadb_state uses BLIND protocol. */
+	uint16_t	             blind;
+	/** The HIT we use with this host when BLIND is in use. */
+	hip_hit_t                    hit_our_blind;
+	/** The HIT the peer uses when BLIND is in use. */
+	hip_hit_t                    hit_peer_blind;
+	/** BLIND nonce. */
+	uint16_t                     blind_nonce_i;
+	/** LOCATOR parameter. Just tmp save if sent in R1 no @c esp_info so
+	    keeping it here 'till the hip_update_locator_parameter can be done.
+	    @todo Remove this kludge. */
+	struct hip_locator           *locator;
+ 	/** For retransmission. */
+	uint64_t                     puzzle_i;
+	/** For base exchange or CLOSE. @b Not for UPDATE. */
+	char                         echo_data[4];
+	/** Temp storage for peer addresses list until
+ 	SPIs are formed. After SPIs the list is copied to SPI out's
+	Peer address list */
+	HIP_HASHTABLE                *peer_addr_list_to_be_added;
+	/** For storing retransmission related data. */
+	hip_msg_retrans_t            hip_msg_retrans;
+	/** Receive function set.
+	    @note Do not modify this value directly. Use
+	    hip_hadb_set_rcv_function_set() instead. */
+	hip_rcv_func_set_t           *hadb_rcv_func;
+	/** Handle function set.
+	    @note Do not modify this value directly. Use
+	    hip_hadb_set_handle_function_set() instead. */
+	hip_handle_func_set_t        *hadb_handle_func;
+	/** Miscellaneous function set.
+	    @note Do not modify this value directly. Use
+	    hip_hadb_set_handle_function_set() instead. */
+	hip_misc_func_set_t          *hadb_misc_func;
+	/** Update function set.
+	    @note Do not modify this value directly. Use
+	    hip_hadb_set_handle_function_set() instead. */
+	hip_update_func_set_t        *hadb_update_func;
+	/** Transmission function set.
+	    @note Do not modify this value directly. Use
+	    hip_hadb_set_handle_function_set() instead. */
+	hip_xmit_func_set_t          *hadb_xmit_func;
+        /** IPsec function set.
+            @note Do not modify this value directly. Use
+            hip_ipsec_set_handle_function_set() instead. */
+        hip_ipsec_func_set_t *hadb_ipsec_func;
+	/** Input filter function set. Input filter used in the GUI agent.
+	    @note Do not modify this value directly. Use
+	    hip_hadb_set_input_filter_function_set() instead. */
+	hip_input_filter_func_set_t  *hadb_input_filter_func;
+	/** Output filter function set. Output filter used in the GUI agent.
+	    @note Do not modify this value directly. Use
+	    hip_hadb_set_output_filter_function_set() instead. */
+	hip_output_filter_func_set_t *hadb_output_filter_func;
+	/** peer hostname */
+	uint8_t peer_hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
+	/** True when agent is prompting user and fall back is disabled. */
+	int                          hip_opp_fallback_disable;
+#ifdef CONFIG_HIP_I3
+	/** If the state for hi3, then this flag is 1, otherwise it is zero. */
+	int                          is_hi3_state ;
+	/** Non-zero if hi3 mode is on. */
+	int                          hip_is_hi3_on;
 #endif
+	/** Non-zero if opportunistic TCP mode is on. */
+	int                          hip_is_opptcp_on;
+	/** The local port from where the TCP SYN I1 packet will be sent */
+	in_port_t                    tcp_opptcp_src_port;
+	/** the port at the peer where the TCP SYN I1 packet will be sent */
+	in_port_t                    tcp_opptcp_dst_port;
+#ifdef CONFIG_HIP_HIPPROXY
+	int hipproxy;
+#endif
+        /** Counters of heartbeats (ICMPv6s) **/
+	int                          heartbeats_sent;
+	statistics_data_t			 heartbeats_statistics;
+#if 0
+	int                          heartbeats_received;
+	/* sum of all RTTs to calculate the two following */
+	u_int32_t                    heartbeats_total_rtt;
+	u_int32_t                    heartbeats_total_rtt2;
+	/** Heartbeat current mean RTT **/
+        u_int32_t                    heartbeats_mean;
+	/** Heartbeat current variance RTT **/
+	u_int32_t                    heartbeats_variance;
+#endif
+
+//NAT Branch
+	//pointer for ice engine
+	void* ice_session;
+	/** a 16 bits flag for nat connectiviy checking engine control*/
+	uint16_t nat_control;
+
+	/**reflexive address(NAT box out bound) when register to relay or RVS */
+	struct in6_addr              local_reflexive_address;
+	/**reflexive address port (NAT box out bound) when register to relay or RVS */
+	in_port_t local_reflexive_udp_port;
+//end NAT Branch
+
 };
+#endif /* ndef __KERNEL__ */
 
 /** A data structure defining host association information that is sent
     to the userspace */
 struct hip_hadb_user_info_state
 {
-	hip_hit_t            hit_our;
-	hip_hit_t            hit_peer;
-	struct in6_addr      ip_our;
-	struct in6_addr      ip_peer;
-	int                  state;
+	hip_hit_t	hit_our;
+	hip_hit_t	hit_peer;
+	struct in6_addr	ip_our;
+	struct in6_addr	ip_peer;
+        hip_lsi_t	lsi_our;
+        hip_lsi_t	lsi_peer;
+	uint8_t		peer_hostname[HIP_HOST_ID_HOSTNAME_LEN_MAX];
+	int		state;
+	int		heartbeats_on;
+	int		heartbeats_sent;
+	int		heartbeats_received;
+	double		heartbeats_mean;
+	double		heartbeats_variance;
 };
 
 /** @addtogroup hadb_func
@@ -374,58 +553,57 @@ struct hip_hadb_user_info_state
  */
 struct hip_hadb_rcv_func_set {
 	int (*hip_receive_i1)(struct hip_common *,
-			      struct in6_addr *, 
+			      struct in6_addr *,
 			      struct in6_addr *,
 			      hip_ha_t*,
 			      hip_portpair_t *);
 
 	int (*hip_receive_r1)(struct hip_common *,
-				 struct in6_addr *, 
+				 struct in6_addr *,
 				 struct in6_addr *,
 				 hip_ha_t*,
 			      hip_portpair_t *);
-				 
+
 	/* as there is possibly no state established when i2
 	messages are received, the hip_handle_i2 function pointer
 	is not executed during the establishment of a new connection*/
 	int (*hip_receive_i2)(struct hip_common *,
-				 struct in6_addr *, 
+				 struct in6_addr *,
 				 struct in6_addr *,
 				 hip_ha_t*,
 			     hip_portpair_t *);
-				 
+
 	int (*hip_receive_r2)(struct hip_common *,
 				 struct in6_addr *,
 				 struct in6_addr *,
-				 hip_ha_t*,
-			     hip_portpair_t *);
-				 
+				 hip_ha_t*,			     hip_portpair_t *);
+
 	int (*hip_receive_update)(struct hip_common *,
 				  struct in6_addr *,
 				  struct in6_addr *,
 				  hip_ha_t*,
 				  hip_portpair_t *);
-				     
+
 	int (*hip_receive_notify)(const struct hip_common *,
 				  const struct in6_addr *,
 				  const struct in6_addr *,
 				  hip_ha_t*);
-  
+
 	int (*hip_receive_bos)(struct hip_common *,
 			       struct in6_addr *,
 			       struct in6_addr *,
 			       hip_ha_t*,
 			       hip_portpair_t *);
-				     
+
 	int (*hip_receive_close)(struct hip_common *,
 				 hip_ha_t*);
-				       
+
 	int (*hip_receive_close_ack)(struct hip_common *,
-				     hip_ha_t*);	 
-	
+				     hip_ha_t*);
+
 };
 
-struct hip_hadb_handle_func_set{   
+struct hip_hadb_handle_func_set{
 	int (*hip_handle_i1)(struct hip_common *r1,
 			     struct in6_addr *r1_saddr,
 			     struct in6_addr *r1_daddr,
@@ -437,7 +615,7 @@ struct hip_hadb_handle_func_set{
 			     struct in6_addr *r1_daddr,
 			     hip_ha_t *entry,
 			     hip_portpair_t *);
-			     
+
 	/* as there is possibly no state established when i2
 	   messages are received, the hip_handle_i2 function pointer
 	   is not executed during the establishment of a new connection*/
@@ -446,7 +624,7 @@ struct hip_hadb_handle_func_set{
 			     struct in6_addr *i2_daddr,
 			     hip_ha_t *ha,
 			     hip_portpair_t *i2_info);
-			     
+
 	int (*hip_handle_r2)(struct hip_common *r2,
 			     struct in6_addr *r2_saddr,
 			     struct in6_addr *r2_daddr,
@@ -463,8 +641,8 @@ struct hip_hadb_handle_func_set{
 				    hip_ha_t *entry);
 };
 
-struct hip_hadb_update_func_set{   
-	int (*hip_handle_update_plain_locator)(hip_ha_t *entry, 
+struct hip_hadb_update_func_set{
+	int (*hip_handle_update_plain_locator)(hip_ha_t *entry,
 					       struct hip_common *msg,
 					       struct in6_addr *src_ip,
 					       struct in6_addr *dst_ip,
@@ -478,7 +656,7 @@ struct hip_hadb_update_func_set{
 
 	void (*hip_update_handle_ack)(hip_ha_t *entry,
 				      struct hip_ack *ack,
-				      int have_nes);				      
+				      int have_nes);
 
 	int (*hip_handle_update_established)(hip_ha_t *entry,
 					     struct hip_common *msg,
@@ -499,16 +677,16 @@ struct hip_hadb_update_func_set{
 				    struct hip_peer_addr_list_item *addr);
 };
 
-struct hip_hadb_misc_func_set{ 
+struct hip_hadb_misc_func_set{
 	uint64_t (*hip_solve_puzzle)(void *puzzle,
 				  struct hip_common *hdr,
-				  int mode);  
+				  int mode);
 	int (*hip_produce_keying_material)(struct hip_common *msg,
 					   struct hip_context *ctx,
 					   uint64_t I,
 					   uint64_t J,
 					   struct hip_dh_public_value **);
-	int (*hip_create_i2)(struct hip_context *ctx, uint64_t solved_puzzle, 
+	int (*hip_create_i2)(struct hip_context *ctx, uint64_t solved_puzzle,
 			     struct in6_addr *r1_saddr,
 			     struct in6_addr *r1_daddr,
 			     hip_ha_t *entry,
@@ -518,7 +696,12 @@ struct hip_hadb_misc_func_set{
 			     struct in6_addr *i2_saddr,
 			     struct in6_addr *i2_daddr,
 			     hip_ha_t *entry,
-			     hip_portpair_t *);
+			     hip_portpair_t *,
+//add by santtu for the relay address and port
+			     struct in6_addr *,
+			     const in_port_t
+//end add
+				);
 	void (*hip_build_network_hdr)(struct hip_common *msg, uint8_t type_hdr,
 				      uint16_t control,
 				      const struct in6_addr *hit_sender,
@@ -536,11 +719,38 @@ struct hip_hadb_xmit_func_set{
 			    int retransmit);
 };
 
-struct hip_hadb_input_filter_func_set { 
+struct hip_ipsec_func_set {
+	/** A function pointer for userspace/kernelspace ipsec */
+	uint32_t (*hip_add_sa)(struct in6_addr *saddr, struct in6_addr *daddr,
+			       struct in6_addr *src_hit, struct in6_addr *dst_hit,
+			       uint32_t spi, int ealg,
+			       struct hip_crypto_key *enckey,
+			       struct hip_crypto_key *authkey,
+			       int already_acquired,
+			       int direction, int update,
+			       hip_ha_t *entry);
+	void (*hip_delete_sa)(uint32_t spi, struct in6_addr *peer_addr,
+	                   struct in6_addr *dst_addr,
+	                   int family, int sport, int dport);
+	int (*hip_flush_all_sa)();
+	int (*hip_setup_hit_sp_pair)(hip_hit_t *src_hit, hip_hit_t *dst_hit,
+				     struct in6_addr *src_addr,
+				     struct in6_addr *dst_addr, u8 proto,
+				     int use_full_prefix, int update);
+	void (*hip_delete_hit_sp_pair)(hip_hit_t *src_hit, hip_hit_t *dst_hit, u8 proto,
+				       int use_full_prefix);
+	int (*hip_flush_all_policy)();
+	uint32_t (*hip_acquire_spi)(hip_hit_t *srchit, hip_hit_t *dsthit);
+	void (*hip_delete_default_prefix_sp_pair)();
+	int (*hip_setup_default_sp_prefix_pair)();
+};
+
+
+struct hip_hadb_input_filter_func_set {
 	int (*hip_input_filter)(struct hip_common *msg);
 };
 
-struct hip_hadb_output_filter_func_set { 
+struct hip_hadb_output_filter_func_set {
 	int (*hip_output_filter)(struct hip_common *msg);
 };
 

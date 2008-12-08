@@ -9,7 +9,8 @@
  * @author  Bing Zhou <bingzhou_cc.hut.fi>
  * @author  Anu Markkola
  * @author  Lauri Silvennoinen
- * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl.txt">GNU/GPL</a>
+ * @author  Tao Wan <twan@cc.hut.fi>
+ * @note    Distributed under <a href="http://www.gnu.org/licenses/gpl2.txt">GNU/GPL</a>
  */
 #ifndef HIPCONF_H
 #define HIPCONF_H
@@ -39,9 +40,10 @@
 #include "crypto.h"
 #include "builder.h"
 #include "hipd.h"
-
 #include "util.h"
 #include "libhipopendht.h"
+#include "registration.h"
+
 
 /*
  * DO NOT TOUCH THESE, unless you know what you are doing.
@@ -78,13 +80,15 @@
 #define LIB_LENGTH	200
 /** @} addtogroup exec_app_types */
 
-/* hipconf tool actions. These are numerical values for the first commandline
-   argument. For example in "tools/hipconf get hi default" -command "get"
-   is the action. */
+/**
+ * hipconf tool actions. These are numerical values for the first commandline
+ * argument. For example in "tools/hipconf get hi default" -command "get"
+ * is the action. If you want a new action named as 'NEWACT', define a
+ * constant variable which has value between 0 and ACTION_MAX.
+ * Probably you also need to increase the value of ACTION_MAX.
+ * @see hip_conf_get_action()
+ */
 
-
-/* Important! These values are used as array indexes, so keep in this order.
-   Add values after the last value and increment TYPE_MAX. */
 /* 0 is reserved */
 #define ACTION_ADD 1
 #define ACTION_DEL 2
@@ -105,49 +109,96 @@
 #define ACTION_HANDOFF 17
 #define ACTION_RESTART 18
 #define ACTION_LOCATOR 19
-#define ACTION_OPPTCP  20
-#define ACTION_MAX 21 /* exclusive */
+#define ACTION_OPENDHT 20
+#define ACTION_OPPTCP  21
+#define ACTION_TRANSORDER 22
+#define ACTION_TCPTIMEOUT 23 /* add By Tao Wan, on 04.01.2008 */
+#define ACTION_HIPPROXY 24
+#define ACTION_REINIT 25
+#define ACTION_HEARTBEAT 26
+#define ACTION_HI3 27
+#define ACTION_DNS_PROXY 28
+#define ACTION_BUDDIES 29
+#define ACTION_NSUPDATE 30
+#define ACTION_HIT_TO_IP 31
+#define ACTION_HIT_TO_IP_SET 32
+#define ACTION_MAX 32 /* exclusive */
 
+/**
+ * TYPE_ constant list, as an index for each action_handler function.
+ * 
+ * @note Important! These values are used as array indexes, so keep these
+ *       in order. If you add a constant TYPE_NEWTYPE here, the value of
+ *       TYPE_NEWTYPE must be a correct index for looking up its corresponding
+ *       handler function in action_handler[]. Add values after the last value
+ *       and increment TYPE_MAX.
+ */
 /* 0 is reserved */
-#define TYPE_HI      	1
-#define TYPE_MAP     	2
-#define TYPE_RST     	3
-#define TYPE_RVS     	4
-#define TYPE_BOS     	5
-#define TYPE_PUZZLE  	6
-#define TYPE_NAT     	7
-#define TYPE_OPP     	EXEC_LOADLIB_OPP /* Should be 8 */
-#define TYPE_ESCROW  	9
-#define TYPE_SERVICE 	10
-#define TYPE_CONFIG     11
-#define TYPE_RUN     	EXEC_LOADLIB_HIP /* Should be 12 */
-#define TYPE_TTL        13
-#define TYPE_GW         14
-#define TYPE_GET        15
-#define TYPE_BLIND      16
-#define TYPE_HA         17
-#define TYPE_MODE       18
-#define TYPE_DEBUG      19
-#define TYPE_DAEMON     20
-#define TYPE_LOCATOR 21
-#define TYPE_RELAY_UDP_HIP             22
-#define TYPE_OPPTCP		23
-#define TYPE_MAX    	24 /* exclusive */
+#define TYPE_HI      	   1
+#define TYPE_MAP     	   2
+#define TYPE_RST           3
+#define TYPE_SERVER        4
+#define TYPE_BOS     	   5
+#define TYPE_PUZZLE  	   6
+#define TYPE_NAT           7
+#define TYPE_OPP     	   EXEC_LOADLIB_OPP /* Should be 8 */
+#define TYPE_BLIND  	   9
+#define TYPE_SERVICE 	   10
+#define TYPE_CONFIG        11
+#define TYPE_RUN     	   EXEC_LOADLIB_HIP /* Should be 12 */
+#define TYPE_TTL           13
+#define TYPE_GW            14
+#define TYPE_GET           15
+#define TYPE_HA            16
+#define TYPE_MODE          17
+#define TYPE_DEBUG         18
+#define TYPE_DAEMON        19
+#define TYPE_LOCATOR       20
+#define TYPE_SET           21 /* DHT set <name> */
+#define TYPE_DHT           22
+#define TYPE_OPPTCP	   23
+#define TYPE_ORDER         24
+#define TYPE_TCPTIMEOUT	   25 /* add By Tao Wan, on 04.01.2008*/
+#define TYPE_HIPPROXY	   26
+#define TYPE_HEARTBEAT     27
+#define TYPE_HI3           28
+#define TYPE_DNS_PROXY     29
+#define TYPE_BUDDIES	   30
+#define TYPE_SAVAHR        31 /* SAVA router HIT IP pair */
+#define TYPE_NSUPDATE      32
+#define TYPE_HIT_TO_IP     33
+#define TYPE_HIT_TO_IP_SET 34
+#define TYPE_MAX           34 /* exclusive */
+
+/* #define TYPE_RELAY         22 */
+
 
 /* for handle_hi() only */
 #define OPT_HI_TYPE 0
 #define OPT_HI_FMT  1
 #define OPT_HI_FILE 2
+#define OPT_HI_KEYLEN 3
 
 #define HIPD_CONFIG_FILE     "/etc/hip/hipd_config"
 #define HIPD_CONFIG_FILE_EX \
-"# Format of this file is as with hipconf, but without hipconf prefix.\n\
-# add map HIT IP    # preload some HIT-to-IP mappings to hipd \n\
-# add service rvs   # the host acts as HIP rendezvous\n\
-# nat on            # the host is behind a NAT\n\
-# dht gw host port port TTL # set dht gw hostname|ip port default=5851\n\
-# locator on # host sends all of its locators in base exchange \n\
-debug medium        # no debugging messages will be displayed\n"
+"# Format of this file is as with hipconf, but without hipconf prefix\n\
+# add hi default    # add all four HITs (see bug id 522)\n\
+# add map HIT IP    # preload some HIT-to-IP mappings to hipd\n\
+# add service rvs   # the host acts as HIP rendezvous (see also /etc/hip/relay_config)\n\
+# add server rvs [RVS-HIT] <RVS-IP-OR-HOSTNAME> <lifetime-secs> # register to rendezvous server\n\
+# heartbeat 10 # send ICMPv6 messages inside HIP tunnels\n\
+# hit-to-ip on # resolve HITs to locators in dynamic DNS zone\n\
+# hit-to-ip set hit-to-ip.infrahip.net. # resolve HITs to locators in dynamic DNS zone\n\
+# dnsupdate on # send dynamic DNS updates\n\
+# add server rvs hiprvs.infrahip.net 50000 # Register to free RVS at infrahip\n\
+# dht gw hipdht.infrahip.net 5851 60000 # dht gw to host port ttl\n\
+# opendht on # turn DHT support on (dht gw is not enough)\n\
+# locator on        # host sends all of its locators in base exchange\n\
+# opp normal|advanced|none\n\
+# transform order 213 # crypto preference order (1=AES, 2=3DES, 3=NULL)\n\
+\n\
+nat plain-udp       # use UDP capsulation (for NATted environments)\n\
+debug medium        # debug verbosity: all, medium or none\n"
 
 #define HIPD_HOSTS_FILE     "/etc/hip/hosts"
 #define HOSTS_FILE "/etc/hosts"
@@ -157,37 +208,114 @@ debug medium        # no debugging messages will be displayed\n"
 #2001:1e:361f:8a55:6730:6f82:ef36:2fff kyle kyle.com # This is a HIT with alias\n\
 #2001:17:53ab:9ff1:3cba:15f:86d6:ea2e kenny       # This is a HIT without alias\n"
 
+#define HIPD_NSUPDATE_CONF_FILE     "/etc/hip/nsupdate.conf"
+#define HIPD_NSUPDATE_CONF_FILE_EX \
+"##########################################################\n"\
+"# configuration examples\n"\
+"##########################################################\n"\
+"# update records for 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net.\n"\
+"# $HIT_TO_IP_ZONE = 'hit-to-ip.infrahip.net.';\n"\
+"# or in some other zone\n"\
+"# $HIT_TO_IP_ZONE = 'hit-to-ip.example.org.';\n"\
+"\n"\
+"# update is sent to SOA if server empty\n"\
+"# $HIT_TO_IP_SERVER = '';\n"\
+"# or you may define it \n"\
+"# $HIT_TO_IP_SERVER = 'ns.example.net.';\n"\
+"\n"\
+"# name of key if you configured it on the server\n"\
+"# please also chown this file to nobody and chmod 400\n"\
+"# $HIT_TO_IP_KEY_NAME='key.hit-to-ip';\n"\
+"# $HIT_TO_IP_KEY_NAME = '';\n"\
+"\n"\
+"# secret of that key\n"\
+"# $HIT_TO_IP_KEY_SECRET='Ousu6700S9sfYSL4UIKtvnxY4FKwYdgXrnEgDAu/rmUAoyBGFwGs0eY38KmYGLT1UbcL/O0igGFpm+NwGftdEQ==';\n"\
+"# $HIT_TO_IP_KEY_SECRET = '';\n"\
+"\n"\
+"# TTL inserted for the records\n"\
+"# $HIT_TO_IP_TTL = 1;\n"\
+"###########################################################\n"\
+"# domain with ORCHID prefix \n"\
+"# $REVERSE_ZONE = '1.0.0.1.0.0.2.ip6.arpa.'; \n"\
+"# \n"\
+"# $REVERSE_SERVER = 'ptr-soa-hit.infrahip.net.'; # since SOA 1.0.0.1.0.0.2.ip6.arpa. is dns1.icann.org. now\n"\
+"# $REVERSE_KEY_NAME = '';\n"\
+"# $REVERSE_KEY_SECRET = '';\n"\
+"# $REVERSE_TTL = 86400;\n"\
+"# System hostname is used if empty\n"\
+"# $REVERSE_HOSTNAME = 'stargazer-hit.pc.infrahip.net';\n"\
+"###########################################################"
+
+/**
+ * A list of prototypes for handler functions.
+ *
+ * @note If you added a handler function in libinet6/hipconf.c, you also
+ *       need to declare its prototype here.
+ *       If you added a SO_HIP_NEWMODE in libinet6/icomm.h, you also need to
+ *       add a case block for your SO_HIP_NEWMODE constant in the
+ *       switch(msg_type) block in this function.
+ */
 int hip_handle_exec_application(int fork, int type, int argc, char **argv);
-int hip_conf_handle_restart(struct hip_common *, int type, const char *opt[], int optc);
+int hip_conf_handle_restart(hip_common_t *, int type, const char *opt[], int optc, int send_only);
 int hip_append_pathtolib(char **libs, char *lib_all, int lib_all_length);
-int hip_conf_handle_hi(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_map(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_rst(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_debug(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_bos(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_rvs(struct hip_common *msg, int action, const char *opt[], int optc);
-int hip_conf_handle_hipudprelay(struct hip_common *msg, int action, const char *opt[], int optc);
-int hip_conf_handle_del(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_nat(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_locator(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_puzzle(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_opp(struct hip_common *msg, int action, const char *opt[], int optc);
-int hip_conf_handle_blind(struct hip_common *, int type, const char **opt, int optc);
-int hip_conf_handle_escrow(struct hip_common *msg, int action, const char *opt[], int optc);
-int hip_conf_handle_service(struct hip_common *msg, int action, const char *opt[], int optc);
-int hip_conf_handle_load(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_ttl(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_gw(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_get(struct hip_common *, int type, const char *opt[], int optc);
-int hip_conf_handle_run_normal(struct hip_common *msg, int action,
-			       const char *opt[], int optc);
-int hip_get_all_hits(struct hip_common *msg,char *argv[]);
+int hip_conf_handle_hi(hip_common_t *, int type, const char *opt[], int optc, int send_only);
+int hip_conf_handle_map(hip_common_t *, int type, const char *opt[], int optc, int send_only);
+int hip_conf_handle_rst(hip_common_t *, int type, const char *opt[], int optc, int send_only);
+int hip_conf_handle_debug(hip_common_t *, int type, const char *opt[], int optc, int send_only);
+int hip_conf_handle_bos(hip_common_t *, int type, const char *opt[], int optc, int send_only);
+int hip_conf_handle_server(hip_common_t *msg, int action, const char *opt[], int optc, int send_only);
+int hip_conf_handle_del(hip_common_t *, int type, const char *opt[], int optc, int send_only);
+int hip_conf_handle_nat(hip_common_t *, int type, const char *opt[], int optc, int send_only);
+int hip_conf_handle_locator(hip_common_t *, int type, const char *opt[], int optc, int send_only);
+int hip_conf_handle_puzzle(hip_common_t *, int type, const char *opt[], int optc, int send_only);
+int hip_conf_handle_opp(hip_common_t *msg, int action, const char *opt[], int optc, int send_only);
+int hip_conf_handle_blind(hip_common_t *, int type, const char **opt, int optc, int send_only);
+int hip_conf_handle_service(hip_common_t *msg, int action, const char *opt[], int optc, int send_only);
+int hip_conf_handle_load(hip_common_t *, int type, const char *opt[], int optc, int send_only);
+int hip_conf_handle_ttl(hip_common_t *, int type, const char *opt[], int optc, int send_only);
+int hip_conf_handle_gw(hip_common_t *, int type, const char *opt[], int optc, int send_only);
+int hip_conf_handle_trans_order(hip_common_t *, int type, const char *opt[], int optc, int send_only);
+int hip_conf_handle_get(hip_common_t *, int type, const char *opt[], int optc, int send_only);
+int hip_conf_handle_set(hip_common_t *, int type, const char *opt[], int optc, int send_only);
+int hip_conf_handle_dht_toggle(hip_common_t *, int type, const char *opt[], int optc, int send_only);
+int hip_conf_handle_run_normal(hip_common_t *msg, int action,
+			       const char *opt[], int optc, int send_only);
 int hip_get_action(char *action);
 int hip_get_type(char *type);
-int hip_conf_handle_ha(struct hip_common *msg, int action,const char *opt[], int optc);
-int hip_conf_handle_handoff(struct hip_common *msg, int action,const char *opt[], int optc);
+int hip_conf_handle_ha(hip_common_t *msg, int action,const char *opt[], int optc, int send_only);
+int hip_conf_handle_handoff(hip_common_t *msg, int action,const char *opt[], int optc, int send_only);
+int hip_conf_handle_opptcp(hip_common_t *, int type, const char *opt[], int optc, int send_only);
 int hip_do_hipconf(int argc, char *argv[], int send_only);
-#ifdef CONFIG_HIP_OPPTCP
-	int hip_conf_handle_opptcp(struct hip_common *, int type, const char *opt[], int optc);
-#endif /*OPPTCP*/
+int hip_conf_handle_opptcp(struct hip_common *, int type, const char *opt[], int optc, int);
+int hip_conf_handle_tcptimeout(struct hip_common *, int type, const char *opt[], int optc, int); /*added by Tao Wan, 04.Jan.2008*/
+int hip_conf_handle_hipproxy(struct hip_common *msg, int action, const char *opt[], int optc, int);
+int hip_conf_handle_heartbeat(hip_common_t *msg, int action, const char *opt[], int optc, int);
+int hip_conf_handle_get_dnsproxy(hip_common_t *, int action, const char *opt[], int optc, int);
+int hip_conf_handle_buddies_toggle(hip_common_t *msg, int action, const char *opt[], int optc, int);
+int hip_conf_handle_hi3(hip_common_t *, int type, const char *opt[], int optc, int);
+int hip_conf_handle_sava (struct hip_common * msg, int action, 
+			  const char * opt[], int optc, int send_only); 
+int hip_conf_handle_nsupdate(hip_common_t *msg,
+			     int action,
+			     const char *opt[],
+			     int optc, int send_only);
+int hip_conf_handle_hit_to_ip(hip_common_t *msg,
+			     int action,
+			     const char *opt[],
+			     int optc, int send_only);
+int hip_conf_handle_hit_to_ip_set(hip_common_t *msg,
+			     int action,
+			     const char *opt[],
+			     int optc, int send_only);
+
+/**
+ * Prints the HIT values in use. Prints either all or the default HIT value to
+ * stdout.
+ *
+ * @param  a pointer to a message to be sent to the HIP daemon.
+ * @param  a pointer to a commman line option. Either "default" or "all".
+ * @return zero if the HITs were printed successfully, negative otherwise.
+ */ 
+int hip_get_hits(hip_common_t *msg, char *opt, int optc, int send_only);
+
 #endif /* HIPCONF */

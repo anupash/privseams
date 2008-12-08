@@ -2,9 +2,9 @@ Source: libhiptool
 Version: 1.0
 Section: devel
 Priority: optional
-Maintainer: InfraHIP <infrahip@hiit.fi>
+Maintainer: Miika Komu <miika@iki.fi>
 Build-Depends: debhelper (>= 4.0.0), autotools-dev
 Standards-Version: 3.6.2
 Package: libhiptool
 Architecture: amd64
-Description: This package contains GPL binary for HIPL. For corporate use.
+Description: This package contains GPL binary for HIPL.

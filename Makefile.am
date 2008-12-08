@@ -1,45 +1,52 @@
+
 AUTOMAKE_OPTIONS = foreign
 
 # For "make dist"
 EXTRA_DIST =  doc/COPYING doc/HACKING doc/HOWTO.xml doc/drafts doc/Makefile
 EXTRA_DIST += doc/README doc/design_choices.bib test/configs patches
+EXTRA_DIST += doc/base-exchange-relay.png doc/base-exchange-rvs.png
 EXTRA_DIST += hipsock jip
 EXTRA_DIST += test/packaging/create-deb.sh test/packaging/create-rpm.sh test/packaging/hipl.spec
-EXTRA_DIST += test/packaging/rh-init.d-hipd test/packaging/debian-init.d-hipd
+EXTRA_DIST += test/packaging/rh-init.d-hipd test/packaging/rh-init.d-hipfw test/packaging/debian-init.d-hipd test/packaging/rh-init.d-dnsproxy
 # The design choices doc is currently depracated
 EXTRA_DIST += doc/design_choices.tex doc/hipl.tex doc/acronyms.tex
 EXTRA_DIST += doc/design_choices_macros.tex doc/catalogue.tex doc/fig
 EXTRA_DIST += libhipgui/hipmanager.png
 EXTRA_DIST += doc/doxygen.h doc/Doxyfile showip/showip-hipmod-0.8.02-fx-mz.xpi
 EXTRA_DIST += doc/docshot-agent-main-window.png doc/docshot-agent-tray-icon.png
+EXTRA_DIST += test/packaging/i386 test/packaging/amd64 test/packaging/armel
 EXTRA_DIST += i3-cfg-PL.xml
+EXTRA_DIST += autogen.sh
+EXTRA_DIST += @PJPROJECT_FILES@
+
+CLEANFILES = pjproject/pjlib/lib/libpj-hipl.a \
+             pjproject/pjnath/lib/libpjnath-hipl.a \
+             pjproject/pjlib-util/lib/libpjlib-util-hipl.a
 
 # Note: libinet6 has to be the first one
 #
-SUBDIRS = libinet6 libhiptool libopphip libipsec opendht i3 tools hipd test firewall libhipgui agent dnsmasq
+SUBDIRS = pjproject libinet6 libhiptool libopphip libipsec opendht tools
+if HIP_I3
+SUBDIRS += i3
+endif
+SUBDIRS += hipd test firewall libhipgui agent hipfwmi
 
 showip:
 	cd showip && sh create.sh
 doxygen:
 	cd doc && doxygen
-
 rpm:
 	test/packaging/create-rpm.sh
 deb:
-	test/packaging/create-deb.sh
-#	test/packaging/create-deb.sh -s
-
-armel-deb:
-	test/packaging/create-deb.sh -a
-
+	env PYEXECDIR=$(pyexecdir) test/packaging/create-deb.sh
+	env PYEXECDIR=$(pyexecdir) test/packaging/create-deb.sh -s
+#	cd test/packaging && dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz
 source-deb:
-	test/packaging/create-deb.sh -s
-
-agent-deb:
-	test/packaging/create-agent-deb.sh -s
-
+	env PYEXECDIR=$(pyexecdir) test/packaging/create-deb.sh -s
 corporate-deb:
-	test/packaging/create-deb.sh -c
-
+	env PYEXECDIR=$(pyexecdir) test/packaging/create-deb.sh -c
+agent-deb:
+	env PYEXECDIR=$(pyexecdir) test/packaging/create-agent-deb.sh
 dist-hook:
 	rm -rf `find $(distdir) -name .arch-ids`
+

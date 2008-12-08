@@ -1,0 +1,46 @@
+#!/bin/sh
+#
+# Init file for hip dns proxy
+#
+# description: HIP DNS proxy
+#
+# processname: dnsproxy.py
+# pidfile: /var/run/dnsproxy.pid
+# chkconfig: 2345 21 79
+
+DNSPROXY_OPTS="-bk"
+PID_FILE=/var/run/dnshipproxy.pid
+EXEC=/usr/sbin/dnshipproxy
+
+set -e
+
+test -x $EXEC || exit 0
+
+if test -f /etc/default/dnsproxy; then
+    . /etc/default/dnsproxy
+fi
+
+case "$1" in
+  start)
+        echo -n "Starting hip dnsproxy"
+	start-stop-daemon --start --quiet --exec $EXEC -- $DNSPROXY_OPTS
+        echo "."
+	;;
+  stop)
+        echo -n "Stopping hip dnsproxy"
+	start-stop-daemon --stop --pidfile $PID_FILE --quiet -- $DNSPROXY_OPTS
+        echo "."
+	;;
+
+#  restart)
+#        echo -n "Restarting hip dnsproxy"
+#        # Daemon waits N seconds for closing of connections - just kill it
+#	echo "."
+#	;;
+
+  *)
+	echo "Usage: /etc/init.d/dnsproxy {start|stop|reload|force-reload|restart}"
+	exit 1
+esac
+
+exit 0

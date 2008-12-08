@@ -1,5 +1,5 @@
 #!/bin/sh
 
 #invoke-rc.d --force --quiet hipd stop
-#update-rc.d -f hipd remove
-exit 0
+update-rc.d -f hipd remove
+#exit 0

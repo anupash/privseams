@@ -57,6 +57,7 @@ DOCDIR = $(DOCDIR_PREFIX)/hipl
 %.html:  %.xml
 	$(XMLTO) -o $(HOWTO_HTML_DIR) html $<
 	cp docshot-*.png $(HOWTO_HTML_DIR)
+	cp base-exchange-*.png $(HOWTO_HTML_DIR)
 
 ### TARGETS ##################################################################
 
