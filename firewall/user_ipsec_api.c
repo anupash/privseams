@@ -116,7 +116,11 @@ int userspace_ipsec_uninit()
 	// uninit sadb
 	HIP_IFEL(hip_sadb_uninit(), -1, "failed to uninit sadb\n");
 
-	// TODO close socket?
+	// close sockets used for reinjection
+	if (raw_sock_v4)
+		close(raw_sock_v4);
+	if (raw_sock_v6)
+		close(raw_sock_v6);
 
 	// free the members
 	if (esp_packet)
@@ -252,6 +256,8 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 
 		// the original packet has to be dropped
 		err = 1;
+
+		//sent_esp_count++;
 	}
 
   out_err:
@@ -369,6 +375,8 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 
 		// the original packet has to be dropped
 		err = 1;
+
+		//recv_esp_count++;
 	}
 
   out_err:

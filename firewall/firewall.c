@@ -41,6 +41,12 @@ struct in6_addr default_hit;
 struct in6_addr sava_router_hit;
 struct in6_addr sava_router_ip;
 
+uint32_t ipq_packet_count = 0;
+uint32_t hipd_packet_count = 0;
+uint32_t recv_esp_count = 0;
+uint32_t sent_esp_count = 0;
+uint32_t other_packet_count = 0;
+
 /*
  * The firewall handlers do not accept rules directly. They should return
  * zero when they transformed packet and the original should be dropped.
@@ -569,39 +575,42 @@ int firewall_init_rules(){
 			system("ip6tables -I HIPFW-OUTPUT -d ::1 -j ACCEPT");
 		}
 
-		// this will allow the firewall to handle HIP traffic
-		// HIP protocol
-		system("iptables -I HIPFW-FORWARD -p 139 -j QUEUE");
-		// ESP protocol
-		system("iptables -I HIPFW-FORWARD -p 50 -j QUEUE");
-		// UDP encapsulation for HIP
-		system("iptables -I HIPFW-FORWARD -p 17 --dport 50500 -j QUEUE");
-		system("iptables -I HIPFW-FORWARD -p 17 --sport 50500 -j QUEUE");
+		if (filter_traffic)
+		{
+			// this will allow the firewall to handle HIP traffic
+			// HIP protocol
+			system("iptables -I HIPFW-FORWARD -p 139 -j QUEUE");
+			// ESP protocol
+			system("iptables -I HIPFW-FORWARD -p 50 -j QUEUE");
+			// UDP encapsulation for HIP
+			system("iptables -I HIPFW-FORWARD -p 17 --dport 50500 -j QUEUE");
+			system("iptables -I HIPFW-FORWARD -p 17 --sport 50500 -j QUEUE");
 
-		system("iptables -I HIPFW-INPUT -p 139 -j QUEUE");
-		system("iptables -I HIPFW-INPUT -p 50 -j QUEUE");
-		system("iptables -I HIPFW-INPUT -p 17 --dport 50500 -j QUEUE");
-		system("iptables -I HIPFW-INPUT -p 17 --sport 50500 -j QUEUE");
+			system("iptables -I HIPFW-INPUT -p 139 -j QUEUE");
+			system("iptables -I HIPFW-INPUT -p 50 -j QUEUE");
+			system("iptables -I HIPFW-INPUT -p 17 --dport 50500 -j QUEUE");
+			system("iptables -I HIPFW-INPUT -p 17 --sport 50500 -j QUEUE");
 
-		system("iptables -I HIPFW-OUTPUT -p 139 -j QUEUE");
-		system("iptables -I HIPFW-OUTPUT -p 50 -j QUEUE");
-		system("iptables -I HIPFW-OUTPUT -p 17 --dport 50500 -j QUEUE");
-		system("iptables -I HIPFW-OUTPUT -p 17 --sport 50500 -j QUEUE");
+			system("iptables -I HIPFW-OUTPUT -p 139 -j QUEUE");
+			system("iptables -I HIPFW-OUTPUT -p 50 -j QUEUE");
+			system("iptables -I HIPFW-OUTPUT -p 17 --dport 50500 -j QUEUE");
+			system("iptables -I HIPFW-OUTPUT -p 17 --sport 50500 -j QUEUE");
 
-		system("ip6tables -I HIPFW-FORWARD -p 139 -j QUEUE");
-		system("ip6tables -I HIPFW-FORWARD -p 50 -j QUEUE");
-		system("ip6tables -I HIPFW-FORWARD -p 17 --dport 50500 -j QUEUE");
-		system("ip6tables -I HIPFW-FORWARD -p 17 --sport 50500 -j QUEUE");
+			system("ip6tables -I HIPFW-FORWARD -p 139 -j QUEUE");
+			system("ip6tables -I HIPFW-FORWARD -p 50 -j QUEUE");
+			system("ip6tables -I HIPFW-FORWARD -p 17 --dport 50500 -j QUEUE");
+			system("ip6tables -I HIPFW-FORWARD -p 17 --sport 50500 -j QUEUE");
 
-		system("ip6tables -I HIPFW-INPUT -p 139 -j QUEUE");
-		system("ip6tables -I HIPFW-INPUT -p 50 -j QUEUE");
-		system("ip6tables -I HIPFW-INPUT -p 17 --dport 50500 -j QUEUE");
-		system("ip6tables -I HIPFW-INPUT -p 17 --sport 50500 -j QUEUE");
+			system("ip6tables -I HIPFW-INPUT -p 139 -j QUEUE");
+			system("ip6tables -I HIPFW-INPUT -p 50 -j QUEUE");
+			system("ip6tables -I HIPFW-INPUT -p 17 --dport 50500 -j QUEUE");
+			system("ip6tables -I HIPFW-INPUT -p 17 --sport 50500 -j QUEUE");
 
-		system("ip6tables -I HIPFW-OUTPUT -p 139 -j QUEUE");
-		system("ip6tables -I HIPFW-OUTPUT -p 50 -j QUEUE");
-		system("ip6tables -I HIPFW-OUTPUT -p 17 --dport 50500 -j QUEUE");
-		system("ip6tables -I HIPFW-OUTPUT -p 17 --sport 50500 -j QUEUE");
+			system("ip6tables -I HIPFW-OUTPUT -p 139 -j QUEUE");
+			system("ip6tables -I HIPFW-OUTPUT -p 50 -j QUEUE");
+			system("ip6tables -I HIPFW-OUTPUT -p 17 --dport 50500 -j QUEUE");
+			system("ip6tables -I HIPFW-OUTPUT -p 17 --sport 50500 -j QUEUE");
+		}
 	}
 
 	if (system_based_opp_mode)
@@ -645,6 +654,11 @@ void firewall_close(int signal){
 	//hip_uninit_proxy_db();
 	//hip_uninit_conn_db();
 	firewall_exit();
+
+	printf("ipq_packet_count: %u\n", ipq_packet_count);
+	printf("hipd_packet_count: %u\n", hipd_packet_count);
+	printf("received_packet_count: %u\n", ipq_packet_count + hipd_packet_count);
+
 	exit(signal);
 }
 
@@ -1400,6 +1414,8 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 
 		verdict = hip_sava_handle_output(ctx);
 
+		other_packet_count++;
+
 	} else if (ctx->ip_version == 6 && hip_userspace_ipsec) {
 		HIP_DEBUG_HIT("destination hit: ", &ctx->dst);
 		// XX TODO: hip_fw_get_default_hit() returns an unfreed value
@@ -2078,16 +2094,25 @@ int main(int argc, char **argv){
 
 		if (FD_ISSET(h4->fd, &read_fdset)) {
 			HIP_DEBUG("received IPv4 packet from iptables queue\n");
+
+			ipq_packet_count++;
+
 			err = hip_fw_handle_packet(buf, h4, 4, &ctx);
 		}
 
 		if (FD_ISSET(h6->fd, &read_fdset)) {
 			HIP_DEBUG("received IPv6 packet from iptables queue\n");
+
+			ipq_packet_count++;
+
 			err = hip_fw_handle_packet(buf, h6, 6, &ctx);
 		}
 
 		if (FD_ISSET(hip_fw_sock, &read_fdset)) {
 			HIP_DEBUG("****** Received HIPD message ******\n");
+
+			hipd_packet_count++;
+
 			bzero(&sock_addr, sizeof(sock_addr));
 			alen = sizeof(sock_addr);
 			n = recvfrom(hip_fw_sock, msg, sizeof(struct hip_common), MSG_PEEK,
