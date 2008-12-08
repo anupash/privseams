@@ -3,7 +3,6 @@
 #include <unistd.h>
 #include "hip_statistics.h"
 #include "crypto.h"
-#include <openssl/ecdsa.h>
 
 #define PACKET_LENGTH 1280
 

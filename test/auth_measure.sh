@@ -3,15 +3,21 @@
 
 HIPL_DIR=~/dev/hipl--esp--2.6
 BASE_DIR=~/dev/measurements
-MB_TYPE=test
+DEVICE_TYPE=endhost
 
 # needed by the script - don't change these variables
+EXT_BASE_DIR=$BASE_DIR/auth_performance
 TEST_DIR=$HIPL_DIR/test
-OUTPUT_DIR=$BASE_DIR/output
+OUTPUT_DIR=$EXT_BASE_DIR/output
 
 if [ ! -e $BASE_DIR ]
 then
   mkdir $BASE_DIR
+fi
+
+if [ ! -e $EXT_BASE_DIR ]
+then
+  mkdir $EXT_BASE_DIR
 fi
 
 if [ ! -e $OUTPUT_DIR ]
@@ -20,4 +26,4 @@ then
 fi
 
 
-$TEST_DIR/auth_performance | tee $OUTPUT_DIR/$MB_TYPE
+$TEST_DIR/auth_performance | tee $OUTPUT_DIR/$DEVICE_TYPE
