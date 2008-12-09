@@ -46,19 +46,19 @@ then
   echo "  -d           = start hipd (only client/server)"
   echo "  -i           = start hipfw with userspace ipsec (no conntrack)"
   echo "  -e           = start hipfw with ESP extension (no conntrack)"
-  echo "  -r           = measure RTT"
-  echo "  -p <type>    = measure throughput (1 - TCP, 2 - UDP)"
+  echo "  -r <value>   = measure RTT (1 - plain, 2 - with load)"
+  echo "  -p <value>   = measure throughput (1 - TCP, 2 - UDP)"
   echo "  -b <value>   = bandwith to be used for UDP measurements (include K or M)"
-  echo "  -w <value>   = tests are run with WANem on the route (0 - off, 1 - passive, 2 - reorder, 3 - drop)"
   echo "  -m <value>   = tests are run with a router (0 - hipfw off, 1 - hipfw on)"
   echo "  -c <value>   = tests are run with a corporate FW (0 - hipfw off, 1 - hipfw on)"
   echo "  -M <value>   = tests are run with middlebox-PC (0 - hipfw off, 1 - hipfw on)"
+  echo "  -w <value>   = tests are run with WANem on the route (0 - off, 1 - passive, 2 - reorder, 3 - drop)"
   echo "  -v           = verify path"
   echo
   exit 0
 fi
 
-while getopts ":a:b:c:deit:m:M:p:rvw:" CMD_OPT
+while getopts ":a:b:c:deit:m:M:p:r:vw:" CMD_OPT
 do
   case $CMD_OPT in
     a) ADDR_FAMILY=$OPTARG;;
@@ -79,7 +79,7 @@ do
     M) WITH_MID=3
        WITH_HIPFW=$OPTARG;;
     p) MEASURE_TPUT=$OPTARG;;
-    r) MEASURE_RTT=1;;
+    r) MEASURE_RTT=$OPTARG
     v) VERIFY_PATH=1;;
     w) WITH_WANEM=1
        WANEM_TYPE=$OPTARG;;
@@ -119,7 +119,12 @@ then
 
   if [ $MEASURE_RTT -eq "1" ] 
   then
-    EXT_BASE_DIR=$EXT_BASE_DIR/rtt
+    EXT_BASE_DIR=$EXT_BASE_DIR/rtt-no_load
+  fi
+  
+  if [ $MEASURE_RTT -eq "2" ] 
+  then
+    EXT_BASE_DIR=$EXT_BASE_DIR/rtt-with_load
   fi
 
   if [ $MEASURE_TPUT -eq "1" ] 
@@ -138,10 +143,13 @@ then
   fi
 
   OUTPUT_DIR=$EXT_BASE_DIR/$OUTPUT_DIR
-
-  if [ ! -e  $OUTPUT_DIR ]
+  
+  if [ $MEASURE_RTT -geq "0" -o $MEASURE_TPUT -geq "0" ]
   then
-    mkdir $OUTPUT_DIR
+    if [ ! -e  $OUTPUT_DIR ]
+    then
+      mkdir $OUTPUT_DIR
+    fi
   fi
 fi
 
