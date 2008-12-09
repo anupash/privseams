@@ -305,11 +305,18 @@ class Global:
  	    m.addA(a2['name'],a2['class'],a2['ttl'],a2['data'])
         return m
 
-    def dns_aaaa_lookup(gp, q1, r, qtype, d2):
-        gp.fout.write('Query type AAAA: HIT look up\n')
-        nam = q1['qname']
-        lr = gp.getbyaaaa(nam)
+    def hip_lookup(gp, q1, r, qtype, d2):
+        gp.fout.write('Query type %d\n' % qtype)
         m = None
+        lr = None
+        nam = q1['qname']
+        lr_a =  gp.getbya(nam)
+        lr_aaaa = gp.getbyaaaa(nam)
+
+        if qtype == 1:
+            lr = lr_a
+        elif qtype == 28 or qtype == 55 or qtype == 255:
+            lr = lr_aaaa
 
         if lr:
             a2 = {'name': nam,
@@ -318,14 +325,18 @@ class Global:
                   'class': 1,
                   'ttl': 10,
                   }
-            gp.fout.write('Hosts AAAA  %s\n' % (a2,))
+            gp.fout.write('Hosts file match %s\n' % (a2,))
             m = DNS.Lib.Mpacker()
             m.addHeader(r.header['id'],
                         0, 0, 0, 0, 1, 0, 0, 0,
                         1, 1, 0, 0)
             m.addQuestion(nam,qtype,1)
-            m.addAAAA(a2['name'],a2['class'],a2['ttl'],a2['data'])
-        else:
+
+            if qtype == 1:
+ 	        m.addA(a2['name'],a2['class'],a2['ttl'],a2['data'])
+            elif qtype == 28 or qtype == 55 or qtype == 255:
+                m.addAAAA(a2['name'],a2['class'],a2['ttl'],a2['data'])
+        elif qtype != 1:
             r1 = d2.req(name=q1['qname'],qtype=55) # 55 is HIP RR
             gp.fout.write('r1: %s\n' % (dir(r1),))
             gp.fout.write('r1.answers: %s\n' % (r1.answers,))
@@ -403,28 +414,19 @@ class Global:
                 m = None
 
 		# IPv4 A record
-                if qtype == 1:
-		    m = gp.dns_a_lookup(q1, r, qtype)
-                    if m:
-                        try:
-		            fout.write('sending A answer\n')
-                            s.sendto(m.buf,from_a)
-                            sent_answer = 1
-		        except Exception,e:
-		            fout.write('except A: %s\n' % e)
-
 		# IPv6 AAAA record
-		elif qtype == 28:
-		    m = gp.dns_aaaa_lookup(q1, r, qtype, d2)
+                # ANY address
+		if qtype == 1 or qtype == 28 or qtype == 255:
+		    m = gp.hip_lookup(q1, r, qtype, d2)
 		    if m:
 			try:
 			    fout.write('sending AAAA answer\n')
                             s.sendto(m.buf,from_a)
                             sent_answer = 1
 		        except Exception,e:
-		            fout.write('except AAAA: %s\n' % e)
+		            fout.write('Exception: %s\n' % e)
 
-		# PTR record
+		# PTR record: XX TEST (AND INTEGRATE WITH HIP_LOOKUP??)
                 elif qtype == 12:
 		    fout.write('Query type PTR\n')
                     nam = q1['qname']
@@ -449,12 +451,6 @@ class Global:
                         m.addPTR(a2['name'],a2['class'],a2['ttl'],a2['data'])
                         s.sendto(m.buf,from_a)
                         sent_answer = 1
-
-		elif qtype == 255: # ANY address
-                    m = gp.dns_any_lookup(q1, r, qtype, d2)
-                    if m:
-			s.sendto(m.buf,from_a)
-			sent_answer = 1
 
 		if not sent_answer:
 		    fout.write('Did not send answer\n')
