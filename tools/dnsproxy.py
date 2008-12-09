@@ -142,6 +142,8 @@ class Global:
         gp.pidfile = '/var/run/dnshipproxy.pid'
         gp.kill = False
         gp.fout = sys.stdout
+        # required for hipconf in Fedora (rpm and "make install" targets)
+        os.environ['PATH'] += ':/usr/sbin:/usr/local/sbin'
         return
 
     def read_resolv_conf(gp):
