@@ -350,7 +350,7 @@ fi
 
 
 # measure RTTs only on the client
-if [ $MEASURE_RTT -eq "1" -a $DEVICE_TYPE -eq "1" ]
+if [ $MEASURE_RTT -ne "0" -a $DEVICE_TYPE -eq "1" ]
 then
   read -p "Measure RTT: [ENTER]"
 
