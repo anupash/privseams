@@ -502,46 +502,41 @@ int hipd_main(int argc, char *argv[])
 		//HIP_DEBUG("select loop value hip_raw_socket_v4 = %d \n",hip_raw_sock_v4);
 		/* wait for socket activity */
 
-                /* If DHT is on have to use write sets for asynchronic communication */
-		if (hip_opendht_inuse == SO_HIP_DHT_ON) {
-			/*if(hip_get_hi3_status()){
-				err = cl_select((highest_descriptor + 1), &read_fdset,
-                                               &write_fdset, NULL, &timeout);
-			}
-			else{*/
-				err = select((highest_descriptor + 1), &read_fdset,
-                                               &write_fdset, NULL, &timeout);
-			/*}*/
+		err = select((highest_descriptor + 1), &read_fdset,
+                                       &write_fdset, NULL, &timeout);
 
-                        if(err < 0){
-				HIP_ERROR("select() error: %s.\n", strerror(errno));
-				goto to_maintenance;
-                        } else if (err == 0) {
-                                /* idle cycle - select() timeout */
-                                _HIP_DEBUG("Idle.\n");
-                                goto to_maintenance;
-                        }
-                } else {
-			/*if(hip_get_hi3_status()){
-				err = cl_select((highest_descriptor + 1), &read_fdset,
-                                               NULL, NULL, &timeout);
-			}
-			else{*/
-				err = select((highest_descriptor + 1), &read_fdset,
-                                               NULL, NULL, &timeout);
-			/*}*/
-
-                        if (err < 0) {
-                                HIP_ERROR("select() error: %s.\n", strerror(errno));
-                                goto to_maintenance;
-                        } else if (err == 0) {
-                                // idle cycle - select() timeout
-                                _HIP_DEBUG("Idle.\n");
-                                goto to_maintenance;
-                        }
+                if(err < 0){
+			HIP_ERROR("select() error: %s.\n", strerror(errno));
+			goto to_maintenance;
+                } else if (err == 0) {
+                        /* idle cycle - select() timeout */
+                        _HIP_DEBUG("Idle.\n");
+                        goto to_maintenance;
                 }
 
-                /* see bugzilla bug id 392 to see why */
+		
+		/* If DHT is on have to use write sets for asynchronic communication */
+		if (hip_opendht_inuse == SO_HIP_DHT_ON) 
+		{
+			err = select((highest_descriptor + 1), &read_fdset,
+                                               &write_fdset, NULL, &timeout);
+		}
+		else
+			err = select((highest_descriptor + 1), &read_fdset,
+                                               &write_fdset, NULL, &timeout);
+		}
+
+		if (err < 0) 
+		{
+			HIP_ERROR("select() error: %s.\n", strerror(errno));
+			goto to_maintenance;
+		} else if (err == 0) 
+		{
+			/* idle cycle - select() timeout */
+			_HIP_DEBUG("Idle.\n");
+			goto to_maintenance;
+		}
+                 /* see bugzilla bug id 392 to see why */
                 if (FD_ISSET(hip_raw_sock_input_v6, &read_fdset) &&
                     FD_ISSET(hip_raw_sock_input_v4, &read_fdset)) {
                     int type, err_v6 = 0, err_v4 = 0;
