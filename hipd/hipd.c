@@ -501,20 +501,7 @@ int hipd_main(int argc, char *argv[])
 
 		//HIP_DEBUG("select loop value hip_raw_socket_v4 = %d \n",hip_raw_sock_v4);
 		/* wait for socket activity */
-
-		err = select((highest_descriptor + 1), &read_fdset,
-                                       &write_fdset, NULL, &timeout);
-
-                if(err < 0){
-			HIP_ERROR("select() error: %s.\n", strerror(errno));
-			goto to_maintenance;
-                } else if (err == 0) {
-                        /* idle cycle - select() timeout */
-                        _HIP_DEBUG("Idle.\n");
-                        goto to_maintenance;
-                }
-
-		
+	
 		/* If DHT is on have to use write sets for asynchronic communication */
 		if (hip_opendht_inuse == SO_HIP_DHT_ON) 
 		{
@@ -522,8 +509,9 @@ int hipd_main(int argc, char *argv[])
                                                &write_fdset, NULL, &timeout);
 		}
 		else
+		{
 			err = select((highest_descriptor + 1), &read_fdset,
-                                               &write_fdset, NULL, &timeout);
+                                               NULL, NULL, &timeout);
 		}
 
 		if (err < 0) 
