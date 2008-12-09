@@ -3,10 +3,12 @@
 
 BASE_DIR=~/dev/measurements
 HIPL_DIR=~/dev/hipl--esp--2.6
+#LEVEL_1_DIRS=no_mb router corp_fw pc_fw
+#LEVEL_2_DIRS=rtt-no_load rtt-with_load tcp udp
 
 # needed by the script - don't change these variables
 STATS_DIR=$HIPL_DIR/test/performance
-EXT_BASE_DIR=$BASE_DIR
+EXT_BASE_DIR=$BASE_DIR/networking
 OUTPUT_DIR=output
 STAGING_DIR=staging
 RESULTS_DIR=results
@@ -24,43 +26,63 @@ then
   exit 1
 fi
 
-if [ ! -e  $OUTPUT_DIR ]
-then
-  mkdir $OUTPUT_DIR
-fi
+for dir_level_1 in $EXT_BASE_DIR/*
+do
+  for dir_level_2 in $dir_level_1/*
+  do
 
-if [ ! -e $STAGING_DIR ]
-then
-  mkdir $STAGING_DIR
-fi
+        if [ -e $dir_level_2/$OUTPUT_DIR ]
+        then
+      
+          if [ ! -e $dir_level_2/$STAGING_DIR ]
+          then
+            mkdir $dir_level_2/$STAGING_DIR
+          fi
 
-if [ ! -e $RESULTS_DIR ]
-then
-  mkdir $RESULTS_DIR
-fi
+          if [ ! -e $dir_level_2/$RESULTS_DIR ]
+          then
+            mkdir $dir_level_2/$RESULTS_DIR
+          fi
 
-if [ ! -e $PLOT_DATA_DIR ]
-then
-  mkdir $PLOT_DATA_DIR
-fi
+          # do post-processing
+          for file_name in $dir_level_2/$OUTPUT_DIR/*
+          do
+            
+            file_name=`basename $file_name` 
 
-# RTT output post-processing
-grep 'from' $OUTPUT_DIR/$FILE | tr '=' ' ' | $STATS_DIR/stats.pl 95 type '(time)\s+(\S+)' | tee $STAGING_DIR/$FILE
-grep 'time' $STAGING_DIR/$FILE | awk '{printf("#avg\tstd_dev\n"); printf("%.3f\t%.3f\n", $2, $3)}' | tee $RESULTS_DIR/$FILE
-# symlink newest results to plot_data dir
-ln -sf $RESULTS_DIR/$FILE $PLOT_DATA_DIR/$FILE
+            if [ $dir_level_2 == $dir_level_1/rtt-no_load -o $dir_level_2 == $dir_level_1/rtt-with_load ]
+            then
+              # RTT output post-processing
+              grep 'from' $dir_level_2/$OUTPUT_DIR/$file_name | tr '=' ' ' | awk '{printf("%.3f ms\n", $10)}' | tee $dir_level_2/$STAGING_DIR/$file_name | $STATS_DIR/stats.pl 95 value '(\S+)\s+(ms)' | awk '{if ($1 == "ms") {printf("avg\tstd_dev\n"); printf("%.3f\t%.3f\n", $2, $3)}}' | tee $dir_level_2/$RESULTS_DIR/$file_name
+              # symlink newest results to plot_data dir
+              #ln -sf $RESULTS_DIR/$FILE $PLOT_DATA_DIR/$FILE
 
-# TCP output post-processing
-grep 'sec' $OUTPUT_DIR/$FILE | awk '{printf("Mbits/sec "); printf("%.3f\n", $7)}' | $STATS_DIR/stats.pl 95 type '(Mbits/sec)\s+(\S+)' | tee $STAGING_DIR/$FILE
-grep 'Mbits/sec' $STAGING_DIR/$FILE | awk '{printf("#avg\tstd_dev\n"); printf("%.3f\t%.3f\n", $2, $3)}' | tee $RESULTS_DIR/$FILE
-# symlink newest results to plot_data dir
-ln -sf $RESULTS_DIR/$FILE $PLOT_DATA_DIR/$FILE
+            elif [ $dir_level_2 == $dir_level_1/tcp ]
+            then
+              # TCP output post-processing
+              grep 'sec' $dir_level_2/$OUTPUT_DIR/$file_name | awk '{printf("%.3f Mbits/sec\n", $7)}' | tee $dir_level_2/$STAGING_DIR/$file_name | $STATS_DIR/stats.pl 95 value '(\S+)\s+(Mbits/sec)' | awk '{if ($1 == "Mbits/sec") {printf("avg\tstd_dev\n"); printf("%.3f\t%.3f\n", $2, $3)}}' | tee $dir_level_2/$RESULTS_DIR/$file_name
+              # symlink newest results to plot_data dir
+              #ln -sf $RESULTS_DIR/$FILE $PLOT_DATA_DIR/$FILE
 
-# UDP output post-processing
-grep '%' $OUTPUT_DIR/$FILE | awk '{printf("Mbits/sec "); printf("%.3f\n", $7)}' | $STATS_DIR/stats.pl 95 type '(Mbits/sec)\s+(\S+)' | tee $STAGING_DIR/$FILE
-grep 'Mbits/sec' $STAGING_DIR/$FILE | awk '{printf("#avg\tstd_dev\n"); printf("%.3f\t%.3f\n", $2, $3)}' | tee $RESULTS_DIR/$FILE
-# symlink newest results to plot_data dir
-ln -sf $RESULTS_DIR/$FILE $PLOT_DATA_DIR/$FILE
+            elif [ $dir_level_2 == $dir_level_1/udp ]
+            then
+              # UDP output post-processing
+              #echo "udp" $file_name
+              grep '%' $dir_level_2/$OUTPUT_DIR/$file_name | awk '{printf("%.3f Mbits/sec\n", $7)}' | tee $dir_level_2/$STAGING_DIR/$file_name | $STATS_DIR/stats.pl 95 value '(\S+)\s+(Mbits/sec)' | awk '{if ($1 == "Mbits/sec") {printf("avg\tstd_dev\n"); printf("%.3f\t%.3f\n", $2, $3)}}' | tee $dir_level_2/$RESULTS_DIR/$file_name
+              # symlink newest results to plot_data dir
+              #ln -sf $RESULTS_DIR/$FILE $PLOT_DATA_DIR/$FILE
+            else
+              echo "unknown" $file_name
+              echo "ERROR: unknown measurement type!"
+              exit 1
+            fi
+
+          done
+        fi
+  done
+done
+
+
 
 #if [ $DO_PLOT -eq "1" ]
 #then
