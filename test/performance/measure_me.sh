@@ -16,7 +16,7 @@ HIPL_DIR=~/dev/hipl--esp--2.6
 # needed by the script - don't change these variables
 HIPD_DIR=$HIPL_DIR/hipd
 HIPFW_DIR=$HIPL_DIR/firewall
-EXT_BASE_DIR=
+EXT_BASE_DIR=$BASE_DIR/networking
 OUTPUT_DIR=output
 
 DEVICE_TYPE=0
@@ -79,7 +79,7 @@ do
     M) WITH_MID=3
        WITH_HIPFW=$OPTARG;;
     p) MEASURE_TPUT=$OPTARG;;
-    r) MEASURE_RTT=$OPTARG
+    r) MEASURE_RTT=$OPTARG;;
     v) VERIFY_PATH=1;;
     w) WITH_WANEM=1
        WANEM_TYPE=$OPTARG;;
@@ -99,17 +99,22 @@ then
     mkdir $BASE_DIR
   fi
 
+  if [ ! -e $EXT_BASE_DIR ]
+  then
+    mkdir $EXT_BASE_DIR
+  fi
+
   if [ $WITH_MID -eq "1" ]
   then
-    EXT_BASE_DIR=$BASE_DIR/router
+    EXT_BASE_DIR=$EXT_BASE_DIR/router
   elif [ $WITH_MID -eq "2" ]
   then
-    EXT_BASE_DIR=$BASE_DIR/corp_fw
+    EXT_BASE_DIR=$EXT_BASE_DIR/corp_fw
   elif [ $WITH_MID -eq "3" ]
   then
-    EXT_BASE_DIR=$BASE_DIR/pc_fw
+    EXT_BASE_DIR=$EXT_BASE_DIR/pc_fw
   else
-    EXT_BASE_DIR=$BASE_DIR/no_mb
+    EXT_BASE_DIR=$EXT_BASE_DIR/no_mb
   fi
 
   if [ ! -e $EXT_BASE_DIR ]
@@ -144,7 +149,7 @@ then
 
   OUTPUT_DIR=$EXT_BASE_DIR/$OUTPUT_DIR
   
-  if [ $MEASURE_RTT -geq "0" -o $MEASURE_TPUT -geq "0" ]
+  if [ $MEASURE_RTT -ne "0" -o $MEASURE_TPUT -ne "0" ]
   then
     if [ ! -e  $OUTPUT_DIR ]
     then
