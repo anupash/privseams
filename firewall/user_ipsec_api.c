@@ -259,11 +259,6 @@ int hip_fw_userspace_ipsec_output(hip_fw_context_t *ctx)
 	}
 
   out_err:
-	if (err == -1)
-	{
-		exit(1);
-	}
-
   	return err;
 }
 
@@ -376,10 +371,7 @@ int hip_fw_userspace_ipsec_input(hip_fw_context_t *ctx)
 	}
 
   out_err:
-	if (err == -1)
-	{
-		exit(1);
-	}
+	return err;
 }
 
 #if 0
