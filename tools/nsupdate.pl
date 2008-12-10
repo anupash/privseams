@@ -95,6 +95,7 @@ sub update_hit_to_ip
 		my $current_ips_str = join(',',sort @current_ips);
 		my $new_ips_str = join(',',sort @new_ips);
 
+# TODO: compare properly, now 2001:708:140:220:0:0:0:6 != 2001:708:140:220::6
 		log_debug("compared current: ${current_ips_str} and desired: ${new_ips_str}");
 
 		if ($current_ips_str eq $new_ips_str) {
