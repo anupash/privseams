@@ -2356,6 +2356,8 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 	   remember the address set we have advertised to the peer 
 	*/
 	err = hip_copy_spi_in_addresses(addr_list, spi_in, addr_count);
+#if 0
+	/* Do not need anymore -samu*/
 	loc_addr_item = addr_list;
 	for(i = 0; i < addr_count; i++, loc_addr_item++) {
 		int j, addr_exists = 0;
@@ -2372,6 +2374,8 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 			//loc_addr_item->state = ADDR_STATE_WAITING_ECHO_REQ;
 		//}
 	}
+#endif
+
  out_err:
 	HIP_DEBUG_IN6ADDR("Saddr: ", &entry->our_addr);
 	HIP_DEBUG_IN6ADDR("Daddr: ", &entry->peer_addr);

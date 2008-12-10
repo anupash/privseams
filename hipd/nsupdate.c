@@ -9,7 +9,7 @@
 
 #include "nsupdate.h"
 
-int hip_nsupdate_status = 1;
+int hip_nsupdate_status = 0;
 
 void hip_set_nsupdate_status(int status) {
   hip_nsupdate_status = status;

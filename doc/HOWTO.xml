@@ -1088,10 +1088,13 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
         This part is just for ASUS WL500W. For La Fonera, please refer to <xref linkend="build_openwrt_fonera" />.
       </para>
       <para>
+        You cannot use Kamikaze 7.09 for ASUS WL500W. Please stick to the latest Kamikaze development version, like r12983, downloading from the subversion repository.
+      </para>
+      <para>
         For preparation, refer to <xref linkend="build_preparation" />.
       </para>
       <para>
-        You cannot use Kamikaze 7.09 for ASUS WL500W. Please stick to the latest Kamikaze development version, like r12983, downloading from the subversion repository.
+        Additionally, you need to download <ulink url="http://hipl.hiit.fi/hipl/contrib/openwrt/devel/package/iptables/Makefile" /> and replace the iptables Makefile with the new one, to build libipq.a and install it. Without it you cannot build hipl.
       </para>
       <formalpara>
         <title>For kernel 2.6.25.x</title>
@@ -4233,11 +4236,9 @@ parsehipkey &lt; /etc/hip/hip_host_rsa_key_pub.pub hostname.domain.org | sed -n 
     </para>
     <itemizedlist>
       <listitem><para>
-      Dnsmasq: --no-resolv --server=127.0.0.1#5000</para></listitem>
+      Dnsmasq: --no-hosts --no-resolv --server=127.0.0.1#5000</para></listitem>
       <listitem><para>
-      </para></listitem>
-      <listitem><para>
-	  Dns proxy: --port 5000</para></listitem>
+      Dns proxy: --port 5000</para></listitem>
     </itemizedlist>
     <para>
       The easiest way to configure the options is to append them to
