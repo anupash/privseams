@@ -66,6 +66,7 @@ class Logger:
         return
 
 class ResolvConf:
+    re_nameserver = re.compile(r'nameserver\s([0-9\.]+)$')
     def guess_resolvconf(self):
         if (os.path.isdir('/etc/resolvconf/.') and
             os.path.exists('/sbin/resolvconf') and
@@ -79,8 +80,31 @@ class ResolvConf:
         if filetowatch == None:
             filetowatch = self.guess_resolvconf()
         self.resolvconf_orig = filetowatch
+        self.filetowatch = filetowatch
+        self.old_rc_mtime = os.stat(self.filetowatch).st_mtime
         self.resolvconf_towrite = '/etc/resolv.conf'
         return
+    def reread_old_rc(self):
+        d = {}
+        self.resolvconfd = d
+        f = file(self.filetowatch)
+        for l in f.xreadlines():
+            l = l.strip()
+            if not d.has_key('nameserver'):
+                r1 = self.re_nameserver.match(l)
+                if r1:
+                    d['nameserver'] = r1.group(1)
+        return d
+    def old_has_changed(self):
+        old_rc_mtime = os.stat(self.filetowatch).st_mtime
+        sys.stderr.write('old_has_changed 1\n')
+        if old_rc_mtime > self.old_rc_mtime:
+            sys.stderr.write('old_has_changed 2\n')
+            self.reread_old_rc()
+            self.old_rc_mtime = old_rc_mtime
+            return 1
+        else:
+            return 0
     def save_resolvconf(self):
         st1 = os.lstat(self.resolvconf_towrite)
         self.resolvconf_bkname = '%s-%s' % (self.resolvconf_towrite,myid)
@@ -160,12 +184,14 @@ class Global:
 
     def parameter_defaults(gp):
         env = os.environ
+        gp.server_ip_from_old_rc = 0
         if gp.server_ip == None:
             gp.server_ip = env.get('SERVER',None)
         if gp.server_ip == None:
             s_ip = gp.resolvconfd.get('nameserver')
             if s_ip:
                 gp.server_ip = s_ip
+                gp.server_ip_from_old_rc = 1
             else:
                 gp.server_ip = '127.0.0.53' # xx fixme
 	if gp.server_port == None:
@@ -363,6 +389,7 @@ class Global:
 
         return m
 
+
     def doit(gp,args):
         gp.read_resolv_conf()
         gp.parameter_defaults()
@@ -402,6 +429,11 @@ class Global:
             try:
                 gp.hosts_recheck()
                 buf,from_a = s.recvfrom(2048)
+                if gp.server_ip_from_old_rc:
+                    if rc1.old_has_changed():
+                        gp.server_ip = rc1.resolvconfd.get('nameserver')
+                        s2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                        s2.connect((gp.server_ip,gp.server_port))
                 fout.write('Up %s\n' % (util.tstamp(),))
                 fout.write('%s %s\n' % (from_a,repr(buf)))
                 fout.flush()
