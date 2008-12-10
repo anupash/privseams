@@ -99,7 +99,7 @@ int run_nsupdate(char *ips, char *hit, int start)
 		char *cmd[] = { NSUPDATE_ARG0, NULL };
 		char *env[] = { env_ips, env_hit, env_start, NULL };
 
-		HIP_DEBUG("Starting %s with %s and %s", NSUPDATE_PL, env_hit, env_ips, env_start);
+		HIP_DEBUG("Starting %s with %s;%s;%s", NSUPDATE_PL, env_hit, env_ips, env_start);
 		execve (NSUPDATE_PL, cmd, env);
 
 		/* Executed only if error */
