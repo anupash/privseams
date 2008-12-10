@@ -11,7 +11,7 @@
 #include <netinet/in.h>
 #include <string.h>
 
-int hip_hit_to_ip_status = 0;
+int hip_hit_to_ip_status = 1;
 
 char *hip_hit_to_ip_zone = NULL;
 
