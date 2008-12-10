@@ -10,8 +10,8 @@
 int num_measurements = 100;
 int key_pool_size = 5;
 
-int rsa_key_len = 2048;
-int dsa_key_len = 2048;
+int rsa_key_len = 1024;
+int dsa_key_len = 1024;
 #define ECDSA_CURVE NID_X9_62_prime192v3
 
 /*!
