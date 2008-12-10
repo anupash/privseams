@@ -7,6 +7,9 @@
 
 #include "firewall.h"
 
+#include <sys/time.h>
+#include <stdio.h>
+
 /* NOTE: if buffer size is changed, make sure to check
  * 		 the HIP packet size in hip_fw_init_context() */
 #define BUFSIZE HIP_MAX_PACKET
@@ -39,12 +42,26 @@ struct in6_addr default_hit;
 struct in6_addr sava_router_hit;
 struct in6_addr sava_router_ip;
 
+struct timeval packet_proc_start;
+struct timeval packet_proc_end;
+
+#define ESP_STATS   "/tmp/esp_stat.log"
+#define HIP_STATS   "/tmp/hip_stat.log"
+#define SAVAH_STATS "/tmp/savah_stat.log"
+#define SAVAH_C_STATS "/tmp/savah_client_stat.log"
+
+FILE * esp_stats = NULL;
+FILE * hip_stats = NULL;
+FILE * savah_stats = NULL;
+FILE * savah_c_stats = NULL;
+
 /*
  * The firewall handlers do not accept rules directly. They should return
  * zero when they transformed packet and the original should be dropped.
  * Non-zero means that there was an error or the packet handler did not
  * know what to do with the packet.
  */
+
 hip_fw_handler_t hip_fw_handler[NF_IP_NUMHOOKS][FW_PROTO_NUM];
 
 extern struct hip_hadb_user_info_state ha_cache;
@@ -629,6 +646,12 @@ void firewall_close(int signal){
 	HIP_DEBUG("Closing firewall...\n");
 	//hip_uninit_proxy_db();
 	//hip_uninit_conn_db();
+
+	fclose(esp_stats);
+	fclose(hip_stats);
+	fclose(savah_stats);
+	fclose(savah_c_stats);
+
 	firewall_exit();
 	exit(signal);
 }
@@ -775,6 +798,8 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version)
 
 	// add whole packet to context and ip version
 	ctx->ipq_packet = ipq_get_packet(buf);
+
+	gettimeofday(&packet_proc_start, NULL);
 
 	// check if packet is to big for the buffer
 	if (ctx->ipq_packet->data_len > BUFSIZE)
@@ -1152,6 +1177,12 @@ int filter_esp(const struct in6_addr * dst_addr,
 
 		HIP_DEBUG("ESP packet NOT authed in ESP filtering\n");
 	}
+	memset(&packet_proc_end, 0, sizeof(struct timeval));
+	gettimeofday(&packet_proc_end, NULL);
+
+	int duration = (packet_proc_end.tv_sec - packet_proc_start.tv_sec)*1000000 +
+	  (packet_proc_end.tv_usec - packet_proc_start.tv_usec);
+	fprintf(esp_stats, "%d \n", duration);
 
   out_err:
   	return verdict;
@@ -1320,7 +1351,15 @@ int filter_hip(const struct in6_addr * ip6_src,
 		// else proceed with next rule
 		list = list->next;
 	}
+	
+	memset(&packet_proc_end, 0, sizeof(struct timeval));
+	gettimeofday(&packet_proc_end, NULL);
 
+	int duration = (packet_proc_end.tv_sec - packet_proc_start.tv_sec)*1000000 +
+	  (packet_proc_end.tv_usec - packet_proc_start.tv_usec);
+
+	fprintf(hip_stats, " %d \n", duration);
+	
   	// if we found a matching rule, use its verdict
   	if(rule && match)
 	{
@@ -1343,7 +1382,10 @@ int filter_hip(const struct in6_addr * ip6_src,
 		conntrack(ip6_src, ip6_dst, buf);
   	}
 
+
+
   	return verdict;
+
 }
 
 
@@ -1382,6 +1424,13 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 	  HIP_DEBUG("Handling normal traffic in SAVA mode \n ");
 
 	  verdict = hip_sava_handle_output(ctx);
+
+	  memset(&packet_proc_end, 0, sizeof(struct timeval));
+	  gettimeofday(&packet_proc_end, NULL);
+
+	  int duration = (packet_proc_end.tv_sec - packet_proc_start.tv_sec)*1000000 +
+	    (packet_proc_end.tv_usec - packet_proc_start.tv_usec);
+	  fprintf(savah_c_stats, "%d \n", duration);
 
 	} else if (ctx->ip_version == 6 && hip_userspace_ipsec) {
 	  HIP_DEBUG_HIT("destination hit: ", &ctx->dst);
@@ -1651,6 +1700,12 @@ int hip_fw_handle_other_forward(hip_fw_context_t *ctx){
 	} else if (hip_sava_router) {
 	  HIP_DEBUG("hip_sava_router \n");
 	  verdict = hip_sava_handle_router_forward(ctx);
+	  memset(&packet_proc_end, 0, sizeof(struct timeval));
+	  gettimeofday(&packet_proc_end, NULL);
+	  
+	  int duration = (packet_proc_end.tv_sec - packet_proc_start.tv_sec)*1000000 +
+	    (packet_proc_end.tv_usec - packet_proc_start.tv_usec);
+	  fprintf(savah_stats, "%d \n", duration);
 	}
 
  out_err:
@@ -1827,6 +1882,11 @@ int main(int argc, char **argv){
 	   Otherwise may get warnings from system() commands.
 	   @todo: should append, not overwrite  */
 	setenv("PATH", HIP_DEFAULT_EXEC_PATH, 1);
+
+	esp_stats = fopen(ESP_STATS, "a");
+	hip_stats = fopen(HIP_STATS, "a");
+	savah_stats = fopen(SAVAH_STATS, "a");
+	savah_c_stats = fopen(SAVAH_C_STATS, "a");
 
 	if (geteuid() != 0) {
 		HIP_ERROR("firewall must be run as root\n");
