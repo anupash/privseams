@@ -131,8 +131,8 @@ static void update_hip_checksum_ipv4(struct iphdr *ip)
 
 	hip_zero_msg_checksum(msg);
 	msg->checksum = hip_checksum_packet((char*)msg,
-	                                    (struct sockaddr *) &src,
-	                                    (struct sockaddr *) &dst);
+					    (struct sockaddr *) &src,
+					    (struct sockaddr *) &dst);
 }
 
 /**
@@ -144,7 +144,7 @@ static void update_hip_checksum_ipv6(struct ip6_hdr *ip)
 {
 	struct sockaddr_in6 src, dst;
 	struct hip_common *msg = (struct hip_common *)((char*)ip +
-	                         sizeof(struct ip6_hdr));
+				 sizeof(struct ip6_hdr));
 
 	memset(&src, 0, sizeof(src));
 	memset(&dst, 0, sizeof(dst));
@@ -157,8 +157,8 @@ static void update_hip_checksum_ipv6(struct ip6_hdr *ip)
 
 	hip_zero_msg_checksum(msg);
 	msg->checksum = hip_checksum_packet((char*)msg,
-	                                    (struct sockaddr *) &src,
-	                                    (struct sockaddr *) &dst);
+					    (struct sockaddr *) &src,
+					    (struct sockaddr *) &dst);
 }
 
 /**
@@ -195,7 +195,7 @@ static void midauth_update_all_headers(hip_fw_context_t *ctx)
 		break;
 	default:
 		HIP_ERROR("Unknown IP version. %i, expected 4 or 6.\n",
-		          ctx->ip_version);
+			  ctx->ip_version);
 		break;
 	}
 
@@ -213,7 +213,7 @@ int midauth_verify_solution_m(struct hip_common *hip, struct hip_solution_m *s)
 	solution.J = s->J;
 
 	HIP_IFEL(hip_solve_puzzle(&solution, hip, HIP_VERIFY_PUZZLE) == 0,
-	         -1, "Solution is wrong\n");
+		 -1, "Solution is wrong\n");
 
 out_err:
 	return err;
@@ -244,7 +244,7 @@ static int midauth_relocate_last_hip_parameter(struct hip_common *hip)
 	type = hip_get_param_type(last);
 
 	HIP_IFEL(len > sizeof(buffer), -1,
-	         "Last parameter's length exceeds HIP_MAX_PACKET\n");
+		 "Last parameter's length exceeds HIP_MAX_PACKET\n");
 
 	/* @todo check for signature parameter to avoid broken packets */
 
@@ -291,9 +291,9 @@ int midauth_add_puzzle_m(hip_fw_context_t *ctx, uint8_t val_K, uint8_t ltime,
 	ctx->modified = 1;
 
 	HIP_IFEL(hip_build_param_puzzle_m(hip, val_K, ltime, opaque, random_i),
-	         -1, "Failed to build puzzle_m parameter\n");
+		 -1, "Failed to build puzzle_m parameter\n");
 	HIP_IFEL(midauth_relocate_last_hip_parameter(hip), -1,
-	         "Failed to relocate new puzzle_m parameter\n");
+		 "Failed to relocate new puzzle_m parameter\n");
 
 out_err:
 	return err;

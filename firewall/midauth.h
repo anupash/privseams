@@ -75,7 +75,7 @@ int midauth_add_echo_request_m(hip_fw_context_t *ctx, void *nonce, int len);
  * @return 0 on success
  */
 int midauth_add_puzzle_m(hip_fw_context_t *ctx, uint8_t val_K, uint8_t ltime,
-                         uint8_t *opaque, uint64_t random_i);
+			 uint8_t *opaque, uint64_t random_i);
 
 /**
  * Initialize midauth infrastructure.

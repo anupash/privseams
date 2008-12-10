@@ -55,7 +55,7 @@ int create_certificate(time_t *not_before, time_t *not_after,
 		       struct in6_addr *hit, char *certificate, size_t size)
 {
 	int err = 0;
-        struct hip_cert_spki_info cert = { 0 };
+	struct hip_cert_spki_info cert = { 0 };
 
 	HIP_IFEL(!not_before || !not_after || !hit || !certificate, -1,
 		 "NULL parameter found.\n");
@@ -63,7 +63,7 @@ int create_certificate(time_t *not_before, time_t *not_after,
 	hip_cert_spki_create_cert(&cert, "hit", hit, "hit", hit, not_before,
 				  not_after);
 
-        snprintf(certificate, size, "(sequence %s%s%s)", cert.public_key,
+	snprintf(certificate, size, "(sequence %s%s%s)", cert.public_key,
 		 cert.cert, cert.signature);
 out_err:
 	if (err != 0 && certificate)

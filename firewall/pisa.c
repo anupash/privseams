@@ -196,7 +196,7 @@ static int pisa_insert_puzzle(hip_fw_context_t *ctx)
 	pisa_append_hmac(&hip->hitr, &hip->hits, 1, &hash, 4);
 
 	return midauth_add_puzzle_m(ctx, 3, 4, hash.u.pz.opaque,
-	                            hash.u.pz.random);
+				    hash.u.pz.random);
 }
 
 /**

@@ -116,7 +116,7 @@ static void pisa_cert_get_content(char *cert, char *name, char *r, size_t size)
 	if (*start == '\0')
 		goto out_err;
 
-	len = strlen(start) - 1; 
+	len = strlen(start) - 1;
 	if (*(start + len) != ')')
 		goto out_err;
 	strncpy(r, start, len);
