@@ -3650,6 +3650,58 @@ combo-newgroup=&lt;create new...&gt;
           LINUX variable) for the system in which you are going to use the
           kernel module.
      </para>
+   </chapter>
+
+  <chapter id="nsupdate">
+    <title>Dynamic DNS Support (Experimental!)</title>
+    <para>
+      The goal of Dynamic DNS extensions is that a local host can
+      establish initial contact with a peer host when the local host
+      knows only the HIT of the peer but not the IP address. The
+      extensions do not provide hostname-to-HIT look up support (see
+      section <xref linkend="sec_dns_proxy" />), just HIT-to-IP look
+      up.
+    </para>
+
+    <para>
+       Currently HIP daemon performs name resolution in the following order:
+      <itemizedlist>
+	<listitem><para>in /etc/hip/hosts</para></listitem>
+	<listitem><para>in hit-to-ip.infrahip.net zone</para></listitem>
+	<listitem><para>in OpenDHT</para></listitem>
+      </itemizedlist>
+      </para>
+
+    <para>
+      With "hipconf hit-to-ip on", the HIP daemon uses IP addresses of 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net.
+      to contact peer host with HIT 2001:1e:574e:2505:264a:b360:d8cc:1d75
+    </para>
+    <para>Default hit-to-ip.infrahip.net. suffix can be changed with "hipconf hit-to-ip-set &lt;new.hit-to-ip.zone.&gt;. Please note it is independent from HIT_TO_IP_ZONE in /etc/hip/nsupdate.conf"
+    </para>
+    <para>
+      With "hipconf nsupdate on", the HIP daemon also maintains
+      records in hit-to-ip.infrahip.net. Once you start hipd, it will
+      call nsupdate.pl with HIT and IP address for every HIT of your
+      host. It is executed upon mobility events (i.e. address changes)
+      later on. There is an example of the script fed to nsupdate:
+      </para>
+
+   <programlisting>
+update delete 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net
+update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net 60 IN A 193.167.187.1
+update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net 60 IN AAAA 2001:708:140:220:215:60ff:fe9f:60c4
+send
+  </programlisting>
+
+   <para>
+     hit-to-ip.infrahip.net used for experiments has HIT in SOA
+     record, therefore updates are sent to HIT and cause HIP base
+     exchange with the master DNS server. Your system should resolve
+     its location by HIT. After the base exchange update is submitted
+     via HIP, which allows to authenticate the clients and permit
+     updates only of their own location.
+  </para>
+
   </chapter>
 <chapter id="ch_opendht">
   <title>Bamboo-based Name Lookup for HIP</title>
@@ -4181,11 +4233,9 @@ parsehipkey &lt; /etc/hip/hip_host_rsa_key_pub.pub hostname.domain.org | sed -n 
     </para>
     <itemizedlist>
       <listitem><para>
-      Dnsmasq: --no-resolv --server=127.0.0.1#5000</para></listitem>
+      Dnsmasq: --no-hosts --no-resolv --server=127.0.0.1#5000</para></listitem>
       <listitem><para>
-      </para></listitem>
-      <listitem><para>
-	  Dns proxy: --port 5000</para></listitem>
+      Dns proxy: --port 5000</para></listitem>
     </itemizedlist>
     <para>
       The easiest way to configure the options is to append them to

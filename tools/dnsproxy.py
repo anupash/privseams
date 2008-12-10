@@ -66,6 +66,7 @@ class Logger:
         return
 
 class ResolvConf:
+    re_nameserver = re.compile(r'nameserver\s([0-9\.]+)$')
     def guess_resolvconf(self):
         if (os.path.isdir('/etc/resolvconf/.') and
             os.path.exists('/sbin/resolvconf') and
@@ -79,8 +80,31 @@ class ResolvConf:
         if filetowatch == None:
             filetowatch = self.guess_resolvconf()
         self.resolvconf_orig = filetowatch
+        self.filetowatch = filetowatch
+        self.old_rc_mtime = os.stat(self.filetowatch).st_mtime
         self.resolvconf_towrite = '/etc/resolv.conf'
         return
+    def reread_old_rc(self):
+        d = {}
+        self.resolvconfd = d
+        f = file(self.filetowatch)
+        for l in f.xreadlines():
+            l = l.strip()
+            if not d.has_key('nameserver'):
+                r1 = self.re_nameserver.match(l)
+                if r1:
+                    d['nameserver'] = r1.group(1)
+        return d
+    def old_has_changed(self):
+        old_rc_mtime = os.stat(self.filetowatch).st_mtime
+        sys.stderr.write('old_has_changed 1\n')
+        if old_rc_mtime > self.old_rc_mtime:
+            sys.stderr.write('old_has_changed 2\n')
+            self.reread_old_rc()
+            self.old_rc_mtime = old_rc_mtime
+            return 1
+        else:
+            return 0
     def save_resolvconf(self):
         st1 = os.lstat(self.resolvconf_towrite)
         self.resolvconf_bkname = '%s-%s' % (self.resolvconf_towrite,myid)
@@ -142,6 +166,8 @@ class Global:
         gp.pidfile = '/var/run/dnshipproxy.pid'
         gp.kill = False
         gp.fout = sys.stdout
+        # required for hipconf in Fedora (rpm and "make install" targets)
+        os.environ['PATH'] += ':/usr/sbin:/usr/local/sbin'
         return
 
     def read_resolv_conf(gp):
@@ -158,12 +184,14 @@ class Global:
 
     def parameter_defaults(gp):
         env = os.environ
+        gp.server_ip_from_old_rc = 0
         if gp.server_ip == None:
             gp.server_ip = env.get('SERVER',None)
         if gp.server_ip == None:
             s_ip = gp.resolvconfd.get('nameserver')
             if s_ip:
                 gp.server_ip = s_ip
+                gp.server_ip_from_old_rc = 1
             else:
                 gp.server_ip = '127.0.0.53' # xx fixme
 	if gp.server_port == None:
@@ -245,36 +273,122 @@ class Global:
             f.write('%d\n' % (os.getpid(),))
             f.close()
 
-    def bamboo_lookup(nam, addrtype):
-    	fout.write("DHT look up\n")
-        fout.write("Command: - %s\n" % (cmd))
+    def bamboo_lookup(gp, nam, addrtype):
+    	gp.fout.write("DHT look up\n")
+        gp.fout.write("Command: - %s\n" % (cmd))
         cmd = "hipconf dht get " + nam + " 2>&1"
         p = os.popen(cmd, "r")
         result = p.readline()
         while result:
             if result.find("Result") != -1:
-            	fout.write("Found id: %s\n" % (result));
+            	gp.fout.write("Found id: %s\n" % (result));
             else:
-                fout.write("Skip: %s\n" % (result))
+                gp.fout.write("Skip: %s\n" % (result))
             result = p.readline()
 
-    # XX REMOVE
-    def lsi_lookup(nam, addrtype):
+    def send_id_map_to_hipd(gp, nam):
     	cmd = "hipconf dnsproxy " + nam + " 2>&1"
-     	fout.write("cmd - %s %s\n" % (cmd,nam))
+     	#fout.write("cmd - %s %s\n" % (cmd,nam))
 	p = os.popen(cmd, "r")
 	result = p.readline()
-        fout.write("Result: %s" % (result))
+        #fout.write("Result: %s" % (result))
 	if result.find("hipconf") != -1:
       	    # the result of "hipconf dnsproxy" gives us
             # an "hipconf add map" command which we can
-            # directly add
-            fout.write("Found LSI\n")
+            # directly invoke from command line
+            #fout.write("Mapping to hipd\n")
 	    result = result + " >/dev/null 2>&1"
-	    fout.write('Command: %s\n' % (result))
+	    #fout.write('Command: %s\n' % (result))
 	    p = os.popen(result)
-	else:
-            fout.write("did not find\n")
+	#else:
+            #fout.write("did not find\n")
+
+    def dns_any_lookup(gp, q1, r, qtype, d2):
+        m = gp.dns_aaaa_lookup(q1, r, qtype, d2)
+        if m == None:
+	    m = gp.dns_a_lookup(q1, r, qtype)
+        return m
+
+    def dns_a_lookup(gp, q1, r, qtype):
+        gp.fout.write('Query type A: LSI look up\n')
+	nam = q1['qname']
+        #lr = gp.getbyname(nam)
+	lr = gp.getbya(nam)
+        m = None        
+        if lr:
+            a2 = {'name': nam,
+                  'data': lr,
+                  'type': 28,
+                  'class': 1,
+                  'ttl': 10,
+                 }
+            gp.fout.write('Hosts file A  %s\n' % (a2,))
+            m = DNS.Lib.Mpacker()
+            m.addHeader(r.header['id'],
+                        0, 0, 0, 0, 1, 0, 0, 0,
+                        1, 1, 0, 0)
+            m.addQuestion(nam,qtype,1)
+ 	    m.addA(a2['name'],a2['class'],a2['ttl'],a2['data'])
+        return m
+
+    def hip_lookup(gp, q1, r, qtype, d2):
+        gp.fout.write('Query type %d\n' % qtype)
+        m = None
+        lr = None
+        nam = q1['qname']
+        lr_a =  gp.getbya(nam)
+        lr_aaaa = gp.getbyaaaa(nam)
+
+        if qtype == 1:
+            lr = lr_a
+        elif qtype == 28 or qtype == 55 or qtype == 255:
+            lr = lr_aaaa
+
+        if lr:
+            a2 = {'name': nam,
+                  'data': lr,
+                  'type': 28,
+                  'class': 1,
+                  'ttl': 10,
+                  }
+            gp.fout.write('Hosts file match %s\n' % (a2,))
+            m = DNS.Lib.Mpacker()
+            m.addHeader(r.header['id'],
+                        0, 0, 0, 0, 1, 0, 0, 0,
+                        1, 1, 0, 0)
+            m.addQuestion(nam,qtype,1)
+
+            if qtype == 1:
+ 	        m.addA(a2['name'],a2['class'],a2['ttl'],a2['data'])
+            elif qtype == 28 or qtype == 55 or qtype == 255:
+                m.addAAAA(a2['name'],a2['class'],a2['ttl'],a2['data'])
+        elif qtype != 1:
+            r1 = d2.req(name=q1['qname'],qtype=55) # 55 is HIP RR
+            gp.fout.write('r1: %s\n' % (dir(r1),))
+            gp.fout.write('r1.answers: %s\n' % (r1.answers,))
+            for a1 in r1.answers:
+                 if a1['typename'] == '55':
+                     aa1d = a1['data']
+                     aa1 = aa1d[4:4+16]
+                     a2 = {'name': a1['name'],
+                           'data': pyip6.inet_ntop(aa1),
+                           'type': 28,
+                           'class': 1,
+                           'ttl': a1['ttl'],
+                           }
+                     gp.fout.write('DNS AAAA  %s\n' % (a2,))
+                     m = DNS.Lib.Mpacker()
+                     m.addHeader(r.header['id'],
+                                 0, r1.header['opcode'], 0, 0,
+                                 r1.header['rd'], 0, 0, 0,
+                                 1, 1, 0, 0)
+                     m.addQuestion(a1['name'],qtype,1)
+		     m.addAAAA(a2['name'],a2['class'],a2['ttl'],a2['data'])
+                     gp.send_id_map_to_hipd(nam)
+                     break
+
+        return m
+
 
     def doit(gp,args):
         gp.read_resolv_conf()
@@ -315,6 +429,11 @@ class Global:
             try:
                 gp.hosts_recheck()
                 buf,from_a = s.recvfrom(2048)
+                if gp.server_ip_from_old_rc:
+                    if rc1.old_has_changed():
+                        gp.server_ip = rc1.resolvconfd.get('nameserver')
+                        s2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                        s2.connect((gp.server_ip,gp.server_port))
                 fout.write('Up %s\n' % (util.tstamp(),))
                 fout.write('%s %s\n' % (from_a,repr(buf)))
                 fout.flush()
@@ -327,86 +446,19 @@ class Global:
                 m = None
 
 		# IPv4 A record
-                if qtype == 1:
-		    fout.write('Query type A: LSI look up\n')
-                    nam = q1['qname']
-                    #lr = gp.getbyname(nam)
-	            lr = gp.getbya(nam)
-                    if lr:
-                        a2 = {'name': nam,
-                              'data': lr,
-                              'type': 28,
-                              'class': 1,
-                              'ttl': 10,
-                              }
-                        fout.write('Hosts file A  %s\n' % (a2,))
-                        m = DNS.Lib.Mpacker()
-                        m.addHeader(r.header['id'],
-                                    0, 0, 0, 0, 1, 0, 0, 0,
-                                    1, 1, 0, 0)
-                        m.addQuestion(nam,qtype,1)
-                    else:
-		        # No reason to query DNS for LSIs
-                    	m = None
-		    if m:
-			try:
-			    fout.write('sending A answer\n')
-			    m.addA(a2['name'],a2['class'],a2['ttl'],a2['data'])
-                            s.sendto(m.buf,from_a)
-                            sent_answer = 1
-			except:
-			    fout.write('except A\n')
-
 		# IPv6 AAAA record
-		if qtype == 28:
-		    fout.write('Query type AAAA: HIT look up\n')
-                    nam = q1['qname']
-                    lr = gp.getbyaaaa(nam)
-                    if lr:
-                        a2 = {'name': nam,
-                              'data': lr,
-                              'type': 28,
-                              'class': 1,
-                              'ttl': 10,
-                              }
-                        fout.write('Hosts AAAA  %s\n' % (a2,))
-                        m = DNS.Lib.Mpacker()
-                        m.addHeader(r.header['id'],
-                                    0, 0, 0, 0, 1, 0, 0, 0,
-                                    1, 1, 0, 0)
-                        m.addQuestion(nam,qtype,1)
-                    else:
-                        r1 = d2.req(name=q1['qname'],qtype=55) # 55 is HIP RR
-                        fout.write('r1: %s\n' % (dir(r1),))
-                        fout.write('r1.answers: %s\n' % (r1.answers,))
-                        if r1.answers:
-                            a1 = r1.answers[0]
-                            aa1d = a1['data']
-                            aa1 = aa1d[4:4+16]
-                            a2 = {'name': a1['name'],
-                                  'data': pyip6.inet_ntop(aa1),
-                                  'type': 28,
-                                  'class': 1,
-                                  'ttl': a1['ttl'],
-                                  }
-                            fout.write('DNS AAAA  %s\n' % (a2,))
-                            m = DNS.Lib.Mpacker()
-                            m.addHeader(r.header['id'],
-                                        0, r1.header['opcode'], 0, 0, r1.header['rd'], 0, 0, 0,
-                                        1, 1, 0, 0)
-                            m.addQuestion(a1['name'],qtype,1)
-                        else:
-                            m = None
+                # ANY address
+		if qtype == 1 or qtype == 28 or qtype == 255:
+		    m = gp.hip_lookup(q1, r, qtype, d2)
 		    if m:
 			try:
 			    fout.write('sending AAAA answer\n')
-			    m.addAAAA(a2['name'],a2['class'],a2['ttl'],a2['data'])
                             s.sendto(m.buf,from_a)
                             sent_answer = 1
-			except:
-			    fout.write('except AAAA\n')
+		        except Exception,e:
+		            fout.write('Exception: %s\n' % e)
 
-		# PTR record
+		# PTR record: XX TEST (AND INTEGRATE WITH HIP_LOOKUP??)
                 elif qtype == 12:
 		    fout.write('Query type PTR\n')
                     nam = q1['qname']
@@ -432,62 +484,8 @@ class Global:
                         s.sendto(m.buf,from_a)
                         sent_answer = 1
 
-		elif qtype == 255: # ANY address
-		    nam = q1['qname']
-                    lr = gp.getbyname(nam)
-                    if lr:
-			fout.write('match on hosts file\n')
-                        a2 = {'name': nam,
-                              'data': lr,
-                              'type': 28,
-                              'class': 1,
-                              'ttl': 10,}
-                        fout.write('Hosts A or AAAA  %s\n' % (a2,))
-                        m = DNS.Lib.Mpacker()
-                        m.addHeader(r.header['id'],
-                                    0, 0, 0, 0, 1, 0, 0, 0,
-                                    1, 1, 0, 0)
-                        m.addQuestion(nam,qtype,1)
-                    else:
-                        r1 = d2.req(name=q1['qname'],qtype=55) # 55 is HIP RR
-                        fout.write('r1: %s\n' % (dir(r1),))
-                        fout.write('r1.answers: %s\n' % (r1.answers,))
-                        for a1 in r1.answers:
-			    print a1['typename']
-                            if a1['typename'] == '55':
-                            	data = a1['data']
-                            	aa1 = data[4:4+16]
-	                    	a2 = {'name': a1['name'],
-                            	'data': pyip6.inet_ntop(aa1),
-                            	'type': 28,
-                            	'class': 1,
-                            	'ttl': a1['ttl'],}
-                            	fout.write('DNS A or AAAA  %s\n' % (a2,))
-                            	m = DNS.Lib.Mpacker()
-                            	m.addHeader(r.header['id'],
-                                        0, r1.header['opcode'], 0, 0, r1.header['rd'], 0, 0, 0,
-                                        1, 1, 0, 0)
-                            	m.addQuestion(a1['name'],qtype,1)
-				break;
-                    if m:
-			#try ipv4 address by default
-			try:
-			    fout.write('sending ANY answer as A\n')
-			    ip = socket.inet_pton(socket.AF_INET, a2['data'])
-			    fout.write('try\n')
-			    m.addA(a2['name'], a2['class'], a2['ttl'], a2['data'])
-			    s.sendto(m.buf,from_a)
-			    sent_answer = 1
-			except:
-			    fout.write('sending ANY answer as AAAA\n')
-			    fout.write('except\n')
-			    m.addAAAA(a2['name'], a2['class'], a2['ttl'], a2['data'])
-			    s.sendto(m.buf,from_a)
-			    sent_answer = 1
-
-
 		if not sent_answer:
-		    fout.write('Not sent answer\n')
+		    fout.write('Did not send answer\n')
                     s2.send(buf)
                     r2 = s2.recv(2048)
                     u = DNS.Lib.Munpacker(r2)
