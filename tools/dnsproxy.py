@@ -72,8 +72,9 @@ class ResolvConf:
             os.path.exists('/sbin/resolvconf') and
             os.path.exists('/etc/resolvconf/run/resolv.conf')):
             # We have probably resoconf package installed
-            return '/etc/resolvconf/run/resolv.conf'
-        return None
+           return '/etc/resolvconf/run/resolv.conf'
+        else:
+           return '/etc/resolv.conf'
     def __init__(self,filetowatch = None):
         self.oktowrite = 0
         self.resolvconf_towrite = None
@@ -131,6 +132,7 @@ class ResolvConf:
                 tf.write('%-10s %s\n' % (k,v2))
         tf.close()
         os.rename(tmp,self.resolvconf_towrite)
+        self.old_rc_mtime = os.stat(self.filetowatch).st_mtime
 
     def start(self):
         self.save_resolvconf()
@@ -150,7 +152,7 @@ class ResolvConf:
     def stop(self):
         self.oktowrite = 0
         self.restore_resolvconf()
-	os.system("/sbin/ifconfig lo:53 down")
+	os.system("ifconfig lo:53 down")
 
 class Global:
     default_hiphosts = "/etc/hip/hosts"
@@ -166,13 +168,13 @@ class Global:
         gp.pidfile = '/var/run/dnshipproxy.pid'
         gp.kill = False
         gp.fout = sys.stdout
-        # required for hipconf in Fedora (rpm and "make install" targets)
-        os.environ['PATH'] += ':/usr/sbin:/usr/local/sbin'
+        # required for ifconfig and hipconf in Fedora
+        # (rpm and "make install" targets)
+        os.environ['PATH'] += ':/sbin:/usr/sbin:/usr/local/sbin'
         return
 
     def read_resolv_conf(gp):
         d = {}
-        gp.resolvconfd = d
         f = file(gp.resolv_conf)
         for l in f.xreadlines():
             l = l.strip()
@@ -180,6 +182,7 @@ class Global:
                 r1 = gp.re_nameserver.match(l)
                 if r1:
                     d['nameserver'] = r1.group(1)
+        gp.resolvconfd = d
         return d
 
     def parameter_defaults(gp):
@@ -406,7 +409,7 @@ class Global:
 
 	# Default virtual interface and address for dnsproxy to
 	# avoid problems with other dns forwarders (dnsmasq)
-	os.system("/sbin/ifconfig lo:53 127.0.0.53")
+	os.system("ifconfig lo:53 127.0.0.53")
 
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.bind((gp.bind_ip,gp.bind_port))
@@ -485,7 +488,7 @@ class Global:
                         sent_answer = 1
 
 		if not sent_answer:
-		    fout.write('Did not send answer\n')
+		    fout.write('No HIP-related records found\n')
                     s2.send(buf)
                     r2 = s2.recv(2048)
                     u = DNS.Lib.Munpacker(r2)
