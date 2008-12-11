@@ -13,6 +13,8 @@
 # HIPD_START='1'
 #
 ###########################################################
+# Oleg Ponomarev, Helsinki Institute for Information Technology
+###########################################################
 use strict;
 
 my $CONFIG_PATH = "/etc/hip/nsupdate.conf";

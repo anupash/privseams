@@ -1,3 +1,8 @@
+/*
+ * Execute nsupdate.pl with HIT and IP addresses in environment variables
+ * Oleg Ponomarev, Helsinki Institute for Information Technology
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -26,12 +31,14 @@ int hip_get_nsupdate_status(void) {
  */
 char *make_env(char *name, char *value)
 {
+ if ((name==NULL) || (value==NULL))
+	return NULL;
+
  char *result = malloc(strlen(name) + 1 + strlen(value) + 1); // name,'=',value,0
 
- if (result == NULL)
- {
-  HIP_PERROR("malloc");
-  return NULL;
+ if (result == NULL) {
+	HIP_PERROR("malloc");
+	return NULL;
  }
 
  strcpy(result, name);
@@ -48,9 +55,12 @@ static void sig_chld (int signo)
 	pid_t child_pid;
 	int child_status; // child exit code
 	child_pid = waitpid (0, &child_status, WNOHANG);
-	HIP_DEBUG("pid: %d, status: %d\n", child_pid, child_status);
+	HIP_DEBUG("child pid: %d, status: %d\n", child_pid, child_status);
 }
 
+/*
+ * Close file descriptors except for the standard output and the standard error
+ */
 int close_all_fds_except_stdout_and_stderr()
 {
 	/* get maximum file descriptor number that can be opened */
@@ -69,6 +79,41 @@ int close_all_fds_except_stdout_and_stderr()
 		}
 
 	return OK;
+}
+
+/*
+ * This function converts the netdev_address structure src into
+ * a character string, which is copied to a character buffer dst, which is cnt bytes long.
+ */
+const char *netdev_address_to_str(struct netdev_address *src, char *dst, socklen_t cnt)
+{
+	struct sockaddr *tmp_sockaddr_ptr = (struct sockaddr*) &(src->addr);
+	struct sockaddr_in *tmp_sockaddr_in_ptr = (struct sockaddr_in*) tmp_sockaddr_ptr;
+	struct sockaddr_in6 *tmp_sockaddr_in6_ptr = (struct sockaddr_in6*) tmp_sockaddr_ptr;
+
+	struct in_addr tmp_in_addr;
+	struct in6_addr *tmp_in6_addr_ptr = NULL;
+
+	void *inet_ntop_src = NULL;
+	int af = tmp_sockaddr_ptr->sa_family ; // might be changed because of ip4->ip6 mapping
+
+	switch (af) {
+		case AF_INET:
+			inet_ntop_src = & (tmp_sockaddr_in_ptr->sin_addr);
+			break;
+
+		case AF_INET6:
+			tmp_in6_addr_ptr = & (tmp_sockaddr_in6_ptr->sin6_addr);
+			if (IN6_IS_ADDR_V4MAPPED(tmp_in6_addr_ptr)) {
+				IPV6_TO_IPV4_MAP(tmp_in6_addr_ptr, &tmp_in_addr)
+				af = AF_INET;
+				inet_ntop_src = &tmp_in_addr;
+			} else
+				inet_ntop_src = tmp_in6_addr_ptr;
+			break;
+	}
+	
+	return inet_ntop(af, inet_ntop_src, dst, cnt);
 }
 
 /*
@@ -91,24 +136,20 @@ int run_nsupdate(char *ips, char *hit, int start)
 	act.sa_flags = SA_NOCLDSTOP | SA_RESTART;
 
 	/* Make the handler effective */
-	if (sigaction(SIGCHLD, &act, NULL) < 0) 
-	{
-		perror("sigaction");
+	if (sigaction(SIGCHLD, &act, NULL) < 0) {
+		HIP_PERROR("sigaction");
         	return ERR;
 	}
 
 	/* Let us fork to execute nsupdate as a separate process */
 	child_pid=fork();
 
-	if (child_pid<0)
-	{
-		perror("fork");
+	if (child_pid<0) {
+		HIP_PERROR("fork");
 		return ERR;
 	}
-	else if (child_pid == 0) // CHILD
-	{
-
-		/* Close open sockets since FD_CLOEXEC was not used*/
+	else if (child_pid == 0) {// CHILD
+		/* Close open sockets since FD_CLOEXEC was not used */
 		close_all_fds_except_stdout_and_stderr();
 
 		char start_str[2];
@@ -128,12 +169,12 @@ int run_nsupdate(char *ips, char *hit, int start)
 		HIP_PERROR("execve");
 		exit(1); // just in case
 	}
-	else // PARENT
-	{
+	else {// PARENT
 		/* We execute waitpid in SIGCHLD handler */
 		return OK;
 	}
 }
+
 
 /*
  * Called from hip_for_each_hi
@@ -152,39 +193,19 @@ int run_nsupdate_for_hit (struct hip_host_id_entry *entry, void *opaq)
 	char ip_str[40]; // buffer for one IP address
 	char ips_str[1024] = ""; // list of IP addresses
 
-  	hip_list_t *item, *tmp;
+  	hip_list_t *item, *tmp_hip_list_t;
   	int i;
 
-
-  	list_for_each_safe(item, tmp, addresses, i)
-	{
+	/* make space-separated list of IP addresses in ips_str */
+  	list_for_each_safe(item, tmp_hip_list_t, addresses, i) {
 		struct netdev_address *n = list_entry(item);
 
-		struct sockaddr* tmp_sockaddr_ptr = (struct sockaddr*)&n->addr;
-		struct sockaddr_in* tmp_sockaddr_in_ptr = (struct sockaddr_in*) tmp_sockaddr_ptr;
-		struct sockaddr_in6* tmp_sockaddr_in6_ptr = (struct sockaddr_in6*) tmp_sockaddr_ptr;
-
-		switch (tmp_sockaddr_ptr->sa_family)
-		{
-			case AF_INET:
-				inet_ntop(AF_INET, & tmp_sockaddr_in_ptr->sin_addr, ip_str, sizeof(ip_str));
-				if (ips_str[0]!=0) // not empty
-					strncat(ips_str, " ", sizeof(ips_str)-strlen(ips_str));
-				strncat(ips_str, ip_str, sizeof(ips_str)-strlen(ips_str));
-				break;
-			case AF_INET6:
-				if (IN6_IS_ADDR_V4MAPPED(&tmp_sockaddr_in6_ptr->sin6_addr)) {
-					struct in_addr tmp_in_addr;
-					IPV6_TO_IPV4_MAP(&tmp_sockaddr_in6_ptr->sin6_addr, &tmp_in_addr)
-					inet_ntop(AF_INET, &tmp_in_addr, ip_str, sizeof(ip_str));
-				} else {
-					inet_ntop(AF_INET6, &tmp_sockaddr_in6_ptr->sin6_addr, ip_str, sizeof(ip_str));
-				}
-
-				if (ips_str[0]!=0) // not empty
-					strncat(ips_str, " ", sizeof(ips_str)-strlen(ips_str));
-				strncat(ips_str, ip_str, sizeof(ips_str)-strlen(ips_str));
-				break;
+		if (netdev_address_to_str(n, ip_str, sizeof(ip_str))==NULL)
+			HIP_PERROR("netdev_address_to_str");
+		else {
+			if (ips_str[0]!=0) // not empty
+				strncat(ips_str, " ", sizeof(ips_str)-strlen(ips_str));
+			strncat(ips_str, ip_str, sizeof(ips_str)-strlen(ips_str));
 		}
 	}
 
@@ -200,10 +221,12 @@ int nsupdate(const int start)
 {
 	HIP_DEBUG("Updating dns records...");
 	hip_for_each_hi(run_nsupdate_for_hit, (void *) &start);
+	return OK;
 }
 
+
 /*
- * Just call run_nsupdate with some values for debugging
+ * Just calls run_nsupdate with some values for debugging
  */
 #if 0
 int main(void)
@@ -215,8 +238,7 @@ int main(void)
 	sleep(1);
 
 	/* wait for children */	
-	while (1)
-	{
+	while (1) {
 		sleep(1);
 	}
 	return 0;
