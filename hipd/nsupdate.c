@@ -4,6 +4,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <string.h>
+#include <sys/resource.h> // for getrlimit
 
 #include "hidb.h"
 
@@ -50,6 +51,26 @@ static void sig_chld (int signo)
 	HIP_DEBUG("pid: %d, status: %d\n", child_pid, child_status);
 }
 
+int close_all_fds_except_stdio_and_stderr()
+{
+	/* get maximum file descriptor number that can be opened */
+        struct rlimit rlim;
+        if (getrlimit(RLIMIT_NOFILE, &rlim)!=0) {
+                HIP_PERROR("getrlimit");
+		return ERR;
+	}
+
+	int fd; // no C99 :(
+	for (fd = 0; fd < rlim.rlim_cur; fd++)
+		switch (fd) {
+			case STDOUT_FILENO: break;
+			case STDERR_FILENO: break;
+			default: close(fd);
+		}
+
+	return OK;
+}
+
 /*
  * Execute nsupdate.pl with IP and HIT given as environment variables
  */
@@ -86,8 +107,9 @@ int run_nsupdate(char *ips, char *hit, int start)
 	}
 	else if (child_pid == 0) // CHILD
 	{
-		/* Sorry, no input */
-		fclose(stdin);
+
+		/* Close open sockets since FD_CLOEXEC was not used*/
+		close_all_fds_except_stdio_and_stderr();
 
 		char start_str[2];
 		snprintf(start_str, sizeof(start_str), "%i", start);
@@ -99,7 +121,7 @@ int run_nsupdate(char *ips, char *hit, int start)
 		char *cmd[] = { NSUPDATE_ARG0, NULL };
 		char *env[] = { env_ips, env_hit, env_start, NULL };
 
-		HIP_DEBUG("Starting %s with %s and %s", NSUPDATE_PL, env_hit, env_ips, env_start);
+		HIP_DEBUG("Starting %s with %s;%s;%s", NSUPDATE_PL, env_hit, env_ips, env_start);
 		execve (NSUPDATE_PL, cmd, env);
 
 		/* Executed only if error */
