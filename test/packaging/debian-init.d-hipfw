@@ -8,7 +8,7 @@
 # pidfile: /var/run/hipfw.pid
 # chkconfig: 2345 21 79
 
-HIPFW_OPTS="-bklp"
+HIPFW_OPTS="-bklpF"
 #PIDFILE=/var/run/hipfw.pid
 PID=`pidof -o $$ hipfw`
 

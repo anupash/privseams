@@ -38,6 +38,7 @@ extern int hip_locator_status;
 extern int hip_tcptimeout_status; /* Tao added, 09.Jan.2008 for tcp timeout*/
 extern int hip_opendht_inuse;
 extern int hip_opendht_error_count;
+extern int hip_hit_to_ip_inuse;
 extern int hip_buddies_inuse;
 extern int hip_opendht_sock_fqdn;  
 extern int hip_opendht_sock_hit;

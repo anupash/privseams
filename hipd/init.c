@@ -137,22 +137,24 @@ void hip_create_file_unless_exists(const char *path, const char *contents)
 
 void hip_load_configuration()
 {
+	const char *cfile = "default";
+
         /* HIPD_CONFIG_FILE, HIPD_CONFIG_FILE_EX and so on are defined in libinet6/hipconf.h */
 
         hip_create_file_unless_exists(HIPD_CONFIG_FILE, HIPD_CONFIG_FILE_EX);
 
-        hip_create_file_unless_exists(HIPD_HOSTS_FILE, HIPD_HOSTS_FILE_EX);
+	hip_create_file_unless_exists(HIPD_HOSTS_FILE, HIPD_HOSTS_FILE_EX);
 
 #ifdef CONFIG_HIP_I3
-        hip_create_file_unless_exists(HIPD_HI3_FILE, HIPD_HI3_FILE_EX);
+	hip_create_file_unless_exists(HIPD_HI3_FILE, HIPD_HI3_FILE_EX);
 #endif
-        hip_create_file_unless_exists(HIPD_DHTSERVERS_FILE, HIPD_DHTSERVERS_FILE_EX);
+	hip_create_file_unless_exists(HIPD_DHTSERVERS_FILE, HIPD_DHTSERVERS_FILE_EX);
 
+	hip_create_file_unless_exists(HIPD_NSUPDATE_CONF_FILE, HIPD_NSUPDATE_CONF_FILE_EX);
+	
 	/* Load the configuration. The configuration is loaded as a sequence
 	   of hipd system calls. Assumably the user socket buffer is large
 	   enough to buffer all of the hipconf commands.. */
-
-	const char *cfile = "default";
 
 	hip_conf_handle_load(NULL, ACTION_LOAD, &cfile, 1, 1);
 }
@@ -411,6 +413,9 @@ int hipd_init(int flush_ipsec, int killold)
 
 	hip_firewall_sock_lsi_fd = hip_user_sock;
 
+	if (hip_get_nsupdate_status())
+		nsupdate(1);
+
 out_err:
 	return err;
 }
@@ -437,7 +442,7 @@ int hip_init_dht()
         char serveraddr_str[INET6_ADDRSTRLEN];
         char servername_str[HOST_NAME_MAX];
         char line[500];
-        List list;
+//        List list;
 
         HIP_IFEL((hip_opendht_inuse == SO_HIP_DHT_OFF), 0, "No DHT\n");
 
@@ -492,10 +497,10 @@ int hip_init_dht()
 	register_to_dht();
 	init_dht_sockets(&hip_opendht_sock_fqdn, &hip_opendht_fqdn_sent); 
 	init_dht_sockets(&hip_opendht_sock_hit, &hip_opendht_hit_sent);
-	destroy(&list);
 	
  out_err:
-
+/*	if (length(&list) > 0)
+		destroy(&list); */
         return err;
 }
 
