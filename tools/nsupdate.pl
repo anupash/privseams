@@ -20,7 +20,7 @@ my $CONFIG_PATH = "/etc/hip/nsupdate.conf";
 ##########################################################
 # default values, please change in /etc/hip/nsupdate.conf 
 our $DEBUG = 0;
-
+our $LOG_FACILITY = 'local6';
 our $HIT_TO_IP_ZONE = 'hit-to-ip.infrahip.net.';
 our $HIT_TO_IP_SERVER = '';
 our $HIT_TO_IP_KEY_NAME = '';
@@ -43,7 +43,7 @@ use Net::IP qw/ip_is_ipv6 ip_is_ipv4/;
 use Sys::Syslog;
 use Sys::Hostname;
 
-openlog('nsupdate.pl', 'ndelay,pid', 'local6');
+openlog('nsupdate.pl', 'ndelay,pid', $LOG_FACILITY);
 
 my $env_HIT = $ENV{HIPD_HIT}; log_debug("HIPD_HIT=${env_HIT}");
 my $env_IPS = $ENV{HIPD_IPS}; log_debug("HIPD_IPS=${env_IPS}");
