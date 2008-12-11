@@ -51,7 +51,7 @@ static void sig_chld (int signo)
 	HIP_DEBUG("pid: %d, status: %d\n", child_pid, child_status);
 }
 
-int close_all_fds_except_stdio_and_stderr()
+int close_all_fds_except_stdout_and_stderr()
 {
 	/* get maximum file descriptor number that can be opened */
         struct rlimit rlim;
@@ -109,7 +109,7 @@ int run_nsupdate(char *ips, char *hit, int start)
 	{
 
 		/* Close open sockets since FD_CLOEXEC was not used*/
-		close_all_fds_except_stdio_and_stderr();
+		close_all_fds_except_stdout_and_stderr();
 
 		char start_str[2];
 		snprintf(start_str, sizeof(start_str), "%i", start);
