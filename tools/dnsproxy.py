@@ -164,6 +164,7 @@ class Global:
         gp.fout = sys.stdout
         gp.app_timeout = 1
         gp.dns_timeout = 10
+        gp.hosts_ttl = 122
         # required for ifconfig and hipconf in Fedora
         # (rpm and "make install" targets)
         os.environ['PATH'] += ':/sbin:/usr/sbin:/usr/local/sbin'
@@ -218,6 +219,13 @@ class Global:
     def getbyname(gp,hn):
         for h in gp.hosts:
             r = h.getbyname(hn)
+            if r:
+                return r
+        return None
+
+    def getbyaddr(gp,ahn):
+        for h in gp.hosts:
+            r = h.getbyaddr(ahn)
             if r:
                 return r
         return None
@@ -331,24 +339,27 @@ class Global:
         return m
 
     def hip_lookup(gp, q1, r, qtype, d2):
-        gp.fout.write('Query type %d\n' % qtype)
         m = None
         lr = None
         nam = q1['qname']
+        gp.fout.write('Query type %d for %s\n' % (qtype, nam))
         lr_a =  gp.getbya(nam)
         lr_aaaa = gp.getbyaaaa(nam)
+        lr_ptr = gp.getbyaddr(nam)
 
         if qtype == 1:
             lr = lr_a
         elif qtype == 28 or qtype == 55 or qtype == 255:
             lr = lr_aaaa
+        elif qtype == 12:
+            lr = lr_ptr
 
         if lr:
             a2 = {'name': nam,
                   'data': lr,
-                  'type': 28,
+                  'type': qtype,
                   'class': 1,
-                  'ttl': 10,
+                  'ttl': gp.hosts_ttl,
                   }
             gp.fout.write('Hosts file match %s\n' % (a2,))
             m = DNS.Lib.Mpacker()
@@ -361,7 +372,9 @@ class Global:
  	        m.addA(a2['name'],a2['class'],a2['ttl'],a2['data'])
             elif qtype == 28 or qtype == 55 or qtype == 255:
                 m.addAAAA(a2['name'],a2['class'],a2['ttl'],a2['data'])
-        elif qtype != 1:
+            elif qtype == 12:
+                m.addPTR(a2['name'],a2['class'],a2['ttl'],a2['data'])
+        elif qtype != 1 and qtype != 12:
             r1 = d2.req(name=q1['qname'],qtype=55) # 55 is HIP RR
             gp.fout.write('r1: %s\n' % (dir(r1),))
             gp.fout.write('r1.answers: %s\n' % (r1.answers,))
@@ -371,7 +384,7 @@ class Global:
                      aa1 = aa1d[4:4+16]
                      a2 = {'name': a1['name'],
                            'data': pyip6.inet_ntop(aa1),
-                           'type': 28,
+                           'type': qtype,
                            'class': 1,
                            'ttl': a1['ttl'],
                            }
@@ -456,7 +469,7 @@ class Global:
 		# IPv4 A record
 		# IPv6 AAAA record
                 # ANY address
-		if qtype == 1 or qtype == 28 or qtype == 255:
+		if qtype == 1 or qtype == 28 or qtype == 255 or qtype == 12:
 		    m = gp.hip_lookup(q1, r, qtype, d2)
 		    if m:
 			try:
@@ -466,31 +479,8 @@ class Global:
 		        except Exception,e:
 		            fout.write('Exception: %s\n' % e)
 
-		# PTR record: XX TEST (AND INTEGRATE WITH HIP_LOOKUP??)
-                elif qtype == 12:
-		    fout.write('Query type PTR\n')
-                    nam = q1['qname']
-                    lr = gp.getbyaaaa(nam)
-                    fout.write('Hosts PTR 1 (%s)\n' % (lr,))
-                    if lr:
-                        a2 = {'name': nam,
-                              'data': lr,
-                              'type': 12,
-                              'class': 1,
-                              'ttl': 10,
-                              }
-                        m = DNS.Lib.Mpacker()
-                        m.addHeader(r.header['id'],
-                                    0, 0, 0, 0, 1, 0, 0, 0,
-                                    1, 1, 0, 0)
-                        m.addQuestion(nam,qtype,1)
-                        fout.write('Hosts PTR 5 (%s)\n' % (lr,))
-                    if m:
-			fout.write('sending PTR answer\n')
-                        fout.write('Hosts PTR 6 (%s)\n' % (a2,))
-                        m.addPTR(a2['name'],a2['class'],a2['ttl'],a2['data'])
-                        s.sendto(m.buf,from_a)
-                        sent_answer = 1
+                else
+			fout.write('Unhandled type %d\n' % qtype)
 
 		if not sent_answer:
 		    fout.write('No HIP-related records found\n')

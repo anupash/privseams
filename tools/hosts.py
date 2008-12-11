@@ -106,6 +106,12 @@ class Hosts:
         self.aaaa = aaaa
         return
 
+    def getbyaddr(self,addr):
+        for name in self.d:
+            if addr == self.d[name]:
+                return name
+        return None
+
     def getbyname(self,n):
         return self.d.get(self.sani(n))
 
