@@ -203,6 +203,8 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 					(struct sockaddr *) &addr), -1,
 		 "bind failed\n");
 
+	/* Connect to hipd. Otherwise e.g. "hipconf get ha all"
+	   blocks when hipd is not running. */
 	HIP_IFEL(hip_daemon_connect(hip_user_sock), -1,
 		 "connect failed\n");
 
