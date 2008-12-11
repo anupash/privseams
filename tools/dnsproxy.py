@@ -340,7 +340,7 @@ class Global:
             gp.fout.write('Hosts file match %s\n' % (a2,))
             m = DNS.Lib.Mpacker()
             m.addHeader(r.header['id'],
-                        0, 0, 0, 0, 1, 0, 0, 0,
+                        1, 0, 0, 0, 1, 1, 0, 0,
                         1, 1, 0, 0)
             m.addQuestion(nam,qtype,1)
 
