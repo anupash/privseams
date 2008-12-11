@@ -31,17 +31,6 @@ else:
 # Done: forking affects this. Fixed in forkme
 myid = '%d-%d' % (time.time(),os.getpid())
 
-def has_resolvconf0():
-    path2 = list(path)
-    if not '/sbin' in path2:
-        path2.append('/sbin')
-    for d in path2:
-        if os.path.exists(os.path.join(d,'resolvconf')):
-            return True
-    return False
-
-has_resolvconf = has_resolvconf0()
-
 class ResolvConfError(Exception):
     pass
 
@@ -98,16 +87,15 @@ class ResolvConf:
         return d
     def old_has_changed(self):
         old_rc_mtime = os.stat(self.filetowatch).st_mtime
-        sys.stderr.write('old_has_changed 1\n')
         if old_rc_mtime > self.old_rc_mtime:
-            sys.stderr.write('old_has_changed 2\n')
+            #gp.fout.write('old has changed\n')
             self.reread_old_rc()
             self.old_rc_mtime = old_rc_mtime
             return 1
         else:
             return 0
     def save_resolvconf(self):
-        st1 = os.lstat(self.resolvconf_towrite)
+        #st1 = os.lstat(self.resolvconf_towrite)
         self.resolvconf_bkname = '%s-%s' % (self.resolvconf_towrite,myid)
         os.link(self.resolvconf_towrite,self.resolvconf_bkname)
         return
@@ -149,6 +137,12 @@ class ResolvConf:
             f2.close()
             os.rename(tmp,self.resolvconf_towrite)
             self.oktowrite = 1
+    def restart(self):
+        if os.path.exists(self.resolvconf_bkname):
+            os.remove(self.resolvconf_bkname)
+        self.start()
+        self.old_rc_mtime = os.stat(self.filetowatch).st_mtime
+
     def stop(self):
         self.oktowrite = 0
         self.restore_resolvconf()
@@ -413,6 +407,7 @@ class Global:
 
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.bind((gp.bind_ip,gp.bind_port))
+        s.settimeout(2)
 
         args0 = {'server': '127.0.0.53',
                 }
@@ -424,19 +419,25 @@ class Global:
 
         rc1 = ResolvConf()
         rc1.start()
-
         rc1.write({'nameserver': gp.bind_ip})
 
         fout.write('Dns proxy for HIP started\n')
         while not util.wantdown():
             try:
                 gp.hosts_recheck()
-                buf,from_a = s.recvfrom(2048)
                 if gp.server_ip_from_old_rc:
                     if rc1.old_has_changed():
+                        s2.close()
                         gp.server_ip = rc1.resolvconfd.get('nameserver')
                         s2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                         s2.connect((gp.server_ip,gp.server_port))
+                        fout.write('Rewriting resolv.conf\n')
+                        rc1.restart()
+                        rc1.write({'nameserver': gp.bind_ip})
+                try:
+                    buf,from_a = s.recvfrom(2048)
+                except socket.timeout:
+                    continue;
                 fout.write('Up %s\n' % (util.tstamp(),))
                 fout.write('%s %s\n' % (from_a,repr(buf)))
                 fout.flush()
@@ -502,7 +503,6 @@ class Global:
             except Exception,e:
                 fout.write('Exception ignored: %s\n' % (e,))
 
-                
         fout.write('Wants down\n')
         fout.flush()
         rc1.stop()
