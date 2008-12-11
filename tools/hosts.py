@@ -108,7 +108,7 @@ class Hosts:
 
     def getbyaddr(self,addr):
         for name in self.d:
-            if addr == self.d[name]:
+            if self.sani(addr) == self.d[name]:
                 return name
         return None
 

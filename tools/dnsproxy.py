@@ -479,7 +479,7 @@ class Global:
 		        except Exception,e:
 		            fout.write('Exception: %s\n' % e)
 
-                else
+                else:
 			fout.write('Unhandled type %d\n' % qtype)
 
 		if not sent_answer:
