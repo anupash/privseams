@@ -31,17 +31,6 @@ else:
 # Done: forking affects this. Fixed in forkme
 myid = '%d-%d' % (time.time(),os.getpid())
 
-def has_resolvconf0():
-    path2 = list(path)
-    if not '/sbin' in path2:
-        path2.append('/sbin')
-    for d in path2:
-        if os.path.exists(os.path.join(d,'resolvconf')):
-            return True
-    return False
-
-has_resolvconf = has_resolvconf0()
-
 class ResolvConfError(Exception):
     pass
 
@@ -72,8 +61,9 @@ class ResolvConf:
             os.path.exists('/sbin/resolvconf') and
             os.path.exists('/etc/resolvconf/run/resolv.conf')):
             # We have probably resoconf package installed
-            return '/etc/resolvconf/run/resolv.conf'
-        return None
+           return '/etc/resolvconf/run/resolv.conf'
+        else:
+           return '/etc/resolv.conf'
     def __init__(self,filetowatch = None):
         self.oktowrite = 0
         self.resolvconf_towrite = None
@@ -97,16 +87,15 @@ class ResolvConf:
         return d
     def old_has_changed(self):
         old_rc_mtime = os.stat(self.filetowatch).st_mtime
-        sys.stderr.write('old_has_changed 1\n')
         if old_rc_mtime > self.old_rc_mtime:
-            sys.stderr.write('old_has_changed 2\n')
+            #gp.fout.write('old has changed\n')
             self.reread_old_rc()
             self.old_rc_mtime = old_rc_mtime
             return 1
         else:
             return 0
     def save_resolvconf(self):
-        st1 = os.lstat(self.resolvconf_towrite)
+        #st1 = os.lstat(self.resolvconf_towrite)
         self.resolvconf_bkname = '%s-%s' % (self.resolvconf_towrite,myid)
         os.link(self.resolvconf_towrite,self.resolvconf_bkname)
         return
@@ -131,6 +120,7 @@ class ResolvConf:
                 tf.write('%-10s %s\n' % (k,v2))
         tf.close()
         os.rename(tmp,self.resolvconf_towrite)
+        self.old_rc_mtime = os.stat(self.filetowatch).st_mtime
 
     def start(self):
         self.save_resolvconf()
@@ -147,10 +137,16 @@ class ResolvConf:
             f2.close()
             os.rename(tmp,self.resolvconf_towrite)
             self.oktowrite = 1
+    def restart(self):
+        if os.path.exists(self.resolvconf_bkname):
+            os.remove(self.resolvconf_bkname)
+        self.start()
+        self.old_rc_mtime = os.stat(self.filetowatch).st_mtime
+
     def stop(self):
         self.oktowrite = 0
         self.restore_resolvconf()
-	os.system("/sbin/ifconfig lo:53 down")
+	os.system("ifconfig lo:53 down")
 
 class Global:
     default_hiphosts = "/etc/hip/hosts"
@@ -166,13 +162,13 @@ class Global:
         gp.pidfile = '/var/run/dnshipproxy.pid'
         gp.kill = False
         gp.fout = sys.stdout
-        # required for hipconf in Fedora (rpm and "make install" targets)
-        os.environ['PATH'] += ':/usr/sbin:/usr/local/sbin'
+        # required for ifconfig and hipconf in Fedora
+        # (rpm and "make install" targets)
+        os.environ['PATH'] += ':/sbin:/usr/sbin:/usr/local/sbin'
         return
 
     def read_resolv_conf(gp):
         d = {}
-        gp.resolvconfd = d
         f = file(gp.resolv_conf)
         for l in f.xreadlines():
             l = l.strip()
@@ -180,6 +176,7 @@ class Global:
                 r1 = gp.re_nameserver.match(l)
                 if r1:
                     d['nameserver'] = r1.group(1)
+        gp.resolvconfd = d
         return d
 
     def parameter_defaults(gp):
@@ -406,10 +403,11 @@ class Global:
 
 	# Default virtual interface and address for dnsproxy to
 	# avoid problems with other dns forwarders (dnsmasq)
-	os.system("/sbin/ifconfig lo:53 127.0.0.53")
+	os.system("ifconfig lo:53 127.0.0.53")
 
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.bind((gp.bind_ip,gp.bind_port))
+        s.settimeout(2)
 
         args0 = {'server': '127.0.0.53',
                 }
@@ -421,19 +419,25 @@ class Global:
 
         rc1 = ResolvConf()
         rc1.start()
-
         rc1.write({'nameserver': gp.bind_ip})
 
         fout.write('Dns proxy for HIP started\n')
         while not util.wantdown():
             try:
                 gp.hosts_recheck()
-                buf,from_a = s.recvfrom(2048)
                 if gp.server_ip_from_old_rc:
                     if rc1.old_has_changed():
+                        s2.close()
                         gp.server_ip = rc1.resolvconfd.get('nameserver')
                         s2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                         s2.connect((gp.server_ip,gp.server_port))
+                        fout.write('Rewriting resolv.conf\n')
+                        rc1.restart()
+                        rc1.write({'nameserver': gp.bind_ip})
+                try:
+                    buf,from_a = s.recvfrom(2048)
+                except socket.timeout:
+                    continue;
                 fout.write('Up %s\n' % (util.tstamp(),))
                 fout.write('%s %s\n' % (from_a,repr(buf)))
                 fout.flush()
@@ -485,7 +489,7 @@ class Global:
                         sent_answer = 1
 
 		if not sent_answer:
-		    fout.write('Did not send answer\n')
+		    fout.write('No HIP-related records found\n')
                     s2.send(buf)
                     r2 = s2.recv(2048)
                     u = DNS.Lib.Munpacker(r2)
@@ -499,7 +503,6 @@ class Global:
             except Exception,e:
                 fout.write('Exception ignored: %s\n' % (e,))
 
-                
         fout.write('Wants down\n')
         fout.flush()
         rc1.stop()

@@ -655,7 +655,7 @@ out_err:
 }
 
 int hip_map_id_to_addr(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *addr) {
-	int err = -1; /* Assume that resolving fails */
+	int err = -1, skip_namelookup = 0; /* Assume that resolving fails */
     	extern int hip_opendht_inuse;
         extern int hip_opendht_inuse;
 	hip_hit_t hit2;
@@ -677,22 +677,6 @@ int hip_map_id_to_addr(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *addr) {
 		goto out_err;
 	}
 
-
-	/* Check for 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net records in DNS */
-	if (hip_get_hit_to_ip_status()) {
-		HIP_DEBUG("looking for hit-to-ip record in dns");
-		//struct in6_addr tmp_in6_addr;
-		//struct in6_addr *tmp_in6_addr_ptr = &tmp_in6_addr;
-		int res = hip_hit_to_ip(hit, addr);
-
-		if (res==OK) {
-			HIP_DEBUG_IN6ADDR("found hit-to-ip addr ", addr);
-			err = 0;
-			goto out_err;
-		}
-	}
-
-
 	/* Try to resolve the HIT or LSI to a hostname from /etc/hip/hosts,
 	   then resolve the hostname to an IP, and a HIT or LSI,
 	   depending on dst_hit value.
@@ -710,17 +694,28 @@ int hip_map_id_to_addr(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *addr) {
 		 0, "hip_map_id_to_ip_from_hosts_files succeeded\n");
 
 	if (hit) {
-		HIP_DEBUG("Looking up with HIT from hosts files\n");
 		ipv6_addr_copy(&hit2, hit);
 	} else {
-		HIP_DEBUG("Looking up with LSI from hosts files\n");
-		HIP_IFEL(hip_map_lsi_to_hit_from_hosts_files(lsi, &hit2), -1,
-			 "LSI->HIT conversion failed, skipping opendht look up\n")
+		if (hip_map_lsi_to_hit_from_hosts_files(lsi, &hit2))
+			skip_namelookup = 1;
 	}
 
+	/* Check for 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net records in DNS */
+	if (hip_get_hit_to_ip_status() && !skip_namelookup) {
+		HIP_DEBUG("looking for hit-to-ip record in dns");
+		//struct in6_addr tmp_in6_addr;
+		//struct in6_addr *tmp_in6_addr_ptr = &tmp_in6_addr;
+		int res = hip_hit_to_ip(hit, addr);
+
+		if (res==OK) {
+			HIP_DEBUG_IN6ADDR("found hit-to-ip addr ", addr);
+			err = 0;
+			goto out_err;
+		}
+	}
 	
 	/* Try to resolve HIT to IPv4/IPv6 address with OpenDHT server */
-        if (hip_opendht_inuse == SO_HIP_DHT_ON) {
+        if (hip_opendht_inuse == SO_HIP_DHT_ON && !skip_namelookup) {
 		char hit_str[INET6_ADDRSTRLEN];    
 
 		memset(hit_str, 0, sizeof(hit_str));
