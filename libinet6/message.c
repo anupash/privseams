@@ -86,7 +86,6 @@ int hip_daemon_connect(int hip_user_sock) {
 	// We're using system call here add thus reseting errno.
 	errno = 0;
 
-
 	memset(&daemon_addr, 0, sizeof(daemon_addr));
 	daemon_addr.sin6_family = AF_INET6;
 	daemon_addr.sin6_port = htons(HIP_DAEMON_LOCAL_PORT);
@@ -95,7 +94,6 @@ int hip_daemon_connect(int hip_user_sock) {
 	HIP_IFEL(connect(hip_user_sock, (struct sockaddr *) &daemon_addr,
 			 sizeof(daemon_addr)), -1,
 		 "connection to daemon failed\n");
-
 
  out_err:
 
@@ -168,7 +166,7 @@ hip_sendto_hipd(int socket, struct hip_common *msg, int len)
 {
 	/* Variables. */
 	struct sockaddr_in6 sock_addr;
-	int n, alen;
+	int n = -1, alen;
 
 	memset(&sock_addr, 0, sizeof(sock_addr));
 	sock_addr.sin6_family = AF_INET6;
@@ -182,6 +180,7 @@ hip_sendto_hipd(int socket, struct hip_common *msg, int len)
 	n = sendto(socket, msg, /*hip_get_msg_total_len(msg)*/ len, MSG_NOSIGNAL,
 		   (struct sockaddr *)&sock_addr, alen);
 	HIP_DEBUG("Sent %d bytes\n", n);
+
 	return n;
 }
 
@@ -194,16 +193,6 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 	// We're using system call here and thus reseting errno.
 	errno = 0;
 
-/* Rene says: why would we want to change the debug level as soon as
- *            user-messages are sent? There's a command line option
- *            for doing that! */
-#if 0
-	// Displays all debugging messages.
-	HIP_DEBUG("Handling DEBUG ALL user message.\n");
-	HIP_IFEL(hip_set_logdebug(LOGDEBUG_ALL), -1,
-			 "Error when setting daemon DEBUG status to ALL\n");
-#endif
-
 	HIP_IFE(((hip_user_sock = socket(AF_INET6, SOCK_DGRAM, 0)) < 0), EHIP);
 
 	memset(&addr, 0, sizeof(addr));
@@ -213,16 +202,16 @@ int hip_send_recv_daemon_info(struct hip_common *msg) {
 	HIP_IFEL(hip_daemon_bind_socket(hip_user_sock,
 					(struct sockaddr *) &addr), -1,
 		 "bind failed\n");
-	/*
+
 	HIP_IFEL(hip_daemon_connect(hip_user_sock), -1,
 		 "connect failed\n");
-	*/
+
 	if ((len = hip_get_msg_total_len(msg)) < 0) {
 		err = -EBADMSG;
 		goto out_err;
 	}
 
-	n = hip_sendto_hipd (hip_user_sock, msg, len);
+	n = hip_sendto_hipd(hip_user_sock, msg, len);
 	//n = send(hip_user_sock, msg, len, 0);
 
 	if (n < len) {

@@ -299,7 +299,7 @@ class Global:
 
     def send_id_map_to_hipd(gp, nam):
     	cmd = "hipconf dnsproxy " + nam + " 2>&1"
-     	#fout.write("cmd - %s %s\n" % (cmd,nam))
+     	#gp.fout.write("cmd - %s\n" % (cmd,))
 	p = os.popen(cmd, "r")
 	result = p.readline()
         #fout.write("Result: %s" % (result))
@@ -377,6 +377,7 @@ class Global:
                 m.addAAAA(a2['name'],a2['class'],a2['ttl'],a2['data'])
             elif qtype == 12:
                 m.addPTR(a2['name'],a2['class'],a2['ttl'],a2['data'])
+            gp.send_id_map_to_hipd(nam)
         elif qtype != 1 and qtype != 12:
             r1 = d2.req(name=q1['qname'],qtype=55) # 55 is HIP RR
             gp.fout.write('Query DNS for %s\n' % nam)
