@@ -88,7 +88,6 @@ class ResolvConf:
     def old_has_changed(self):
         old_rc_mtime = os.stat(self.filetowatch).st_mtime
         if old_rc_mtime > self.old_rc_mtime:
-            #gp.fout.write('old has changed\n')
             self.reread_old_rc()
             self.old_rc_mtime = old_rc_mtime
             return 1
@@ -137,6 +136,7 @@ class ResolvConf:
             f2.close()
             os.rename(tmp,self.resolvconf_towrite)
             self.oktowrite = 1
+
     def restart(self):
         if os.path.exists(self.resolvconf_bkname):
             os.remove(self.resolvconf_bkname)
@@ -162,6 +162,8 @@ class Global:
         gp.pidfile = '/var/run/dnshipproxy.pid'
         gp.kill = False
         gp.fout = sys.stdout
+        gp.app_timeout = 1
+        gp.dns_timeout = 10
         # required for ifconfig and hipconf in Fedora
         # (rpm and "make install" targets)
         os.environ['PATH'] += ':/sbin:/usr/sbin:/usr/local/sbin'
@@ -407,7 +409,7 @@ class Global:
 
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.bind((gp.bind_ip,gp.bind_port))
-        s.settimeout(2)
+        s.settimeout(gp.app_timeout)
 
         args0 = {'server': '127.0.0.53',
                 }
@@ -415,10 +417,12 @@ class Global:
         d2 = DNS.DnsRequest(server=gp.server_ip,port=gp.server_port,timeout=0.2)
 
         s2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s2.settimeout(gp.dns_timeout)
         s2.connect((gp.server_ip,gp.server_port))
 
         rc1 = ResolvConf()
         rc1.start()
+        fout.write('Rewriting resolv.conf\n')
         rc1.write({'nameserver': gp.bind_ip})
 
         fout.write('Dns proxy for HIP started\n')
@@ -430,10 +434,10 @@ class Global:
                         s2.close()
                         gp.server_ip = rc1.resolvconfd.get('nameserver')
                         s2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                        s2.settimeout(gp.dns_timeout)
                         s2.connect((gp.server_ip,gp.server_port))
                         fout.write('Rewriting resolv.conf\n')
                         rc1.restart()
-                        rc1.write({'nameserver': gp.bind_ip})
                 try:
                     buf,from_a = s.recvfrom(2048)
                 except socket.timeout:
