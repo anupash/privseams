@@ -314,33 +314,6 @@ class Global:
 	#else:
             #fout.write("did not find\n")
 
-    def dns_any_lookup(gp, q1, r, qtype, d2):
-        m = gp.dns_aaaa_lookup(q1, r, qtype, d2)
-        if m == None:
-	    m = gp.dns_a_lookup(q1, r, qtype)
-        return m
-
-    def dns_a_lookup(gp, q1, r, qtype):
-        gp.fout.write('Query type A: LSI look up\n')
-	nam = q1['qname']
-	lr = gp.geta(nam)
-        m = None        
-        if lr:
-            a2 = {'name': nam,
-                  'data': lr,
-                  'type': 28,
-                  'class': 1,
-                  'ttl': 10,
-                 }
-            gp.fout.write('Hosts file A  %s\n' % (a2,))
-            m = DNS.Lib.Mpacker()
-            m.addHeader(r.header['id'],
-                        0, 0, 0, 0, 1, 0, 0, 0,
-                        1, 1, 0, 0)
-            m.addQuestion(nam,qtype,1)
- 	    m.addA(a2['name'],a2['class'],a2['ttl'],a2['data'])
-        return m
-
     def hip_lookup(gp, q1, r, qtype, d2):
         m = None
         lr = None
