@@ -216,30 +216,34 @@ class Global:
             h.recheck()
         return
 
-    def getbyname(gp,hn):
+    def getname(gp,hn):
         for h in gp.hosts:
-            r = h.getbyname(hn)
+            r = h.getname(hn)
             if r:
                 return r
         return None
 
-    def getbyaddr(gp,ahn):
+    def getaddr(gp,ahn):
         for h in gp.hosts:
-            r = h.getbyaddr(ahn)
+            r = h.getaddr(ahn)
             if r:
                 return r
         return None
 
-    def getbyaaaa(gp,ahn):
+    def getaaaa(gp,ahn):
         for h in gp.hosts:
-            r = h.getbyaaaa(ahn)
+            r = h.getaaaa(ahn)
             if r:
                 return r
         return None
 
-    def getbya(gp,ahn):
+    def cache_name(gp, name, addr):
         for h in gp.hosts:
-            r = h.getbya(ahn)
+            h.cache_name(name, addr)
+
+    def geta(gp,ahn):
+        for h in gp.hosts:
+            r = h.geta(ahn)
             if r:
                 return r
         return None
@@ -319,8 +323,7 @@ class Global:
     def dns_a_lookup(gp, q1, r, qtype):
         gp.fout.write('Query type A: LSI look up\n')
 	nam = q1['qname']
-        #lr = gp.getbyname(nam)
-	lr = gp.getbya(nam)
+	lr = gp.geta(nam)
         m = None        
         if lr:
             a2 = {'name': nam,
@@ -343,9 +346,9 @@ class Global:
         lr = None
         nam = q1['qname']
         gp.fout.write('Query type %d for %s\n' % (qtype, nam))
-        lr_a =  gp.getbya(nam)
-        lr_aaaa = gp.getbyaaaa(nam)
-        lr_ptr = gp.getbyaddr(nam)
+        lr_a =  gp.geta(nam)
+        lr_aaaa = gp.getaaaa(nam)
+        lr_ptr = gp.getaddr(nam)
 
         if qtype == 1:
             lr = lr_a
@@ -376,6 +379,7 @@ class Global:
                 m.addPTR(a2['name'],a2['class'],a2['ttl'],a2['data'])
         elif qtype != 1 and qtype != 12:
             r1 = d2.req(name=q1['qname'],qtype=55) # 55 is HIP RR
+            gp.fout.write('Query DNS for %s\n' % nam)
             gp.fout.write('r1: %s\n' % (dir(r1),))
             gp.fout.write('r1.answers: %s\n' % (r1.answers,))
             for a1 in r1.answers:
@@ -388,7 +392,7 @@ class Global:
                            'class': 1,
                            'ttl': a1['ttl'],
                            }
-                     gp.fout.write('DNS AAAA  %s\n' % (a2,))
+                     gp.fout.write('%s\n' % (a2,))
                      m = DNS.Lib.Mpacker()
                      m.addHeader(r.header['id'],
                                  0, r1.header['opcode'], 0, 0,
@@ -397,6 +401,7 @@ class Global:
                      m.addQuestion(a1['name'],qtype,1)
 		     m.addAAAA(a2['name'],a2['class'],a2['ttl'],a2['data'])
                      gp.send_id_map_to_hipd(nam)
+                     gp.cache_name(a2['name'], a2['data'])
                      break
 
         return m
@@ -455,6 +460,7 @@ class Global:
                     buf,from_a = s.recvfrom(2048)
                 except socket.timeout:
                     continue;
+
                 fout.write('Up %s\n' % (util.tstamp(),))
                 fout.write('%s %s\n' % (from_a,repr(buf)))
                 fout.flush()
@@ -473,14 +479,14 @@ class Global:
 		    m = gp.hip_lookup(q1, r, qtype, d2)
 		    if m:
 			try:
-			    fout.write('sending AAAA answer\n')
+			    fout.write("sending %d answer\n" % qtype)
                             s.sendto(m.buf,from_a)
                             sent_answer = 1
 		        except Exception,e:
 		            fout.write('Exception: %s\n' % e)
 
                 else:
-			fout.write('Unhandled type %d\n' % qtype)
+                    fout.write('Unhandled type %d\n' % qtype)
 
 		if not sent_answer:
 		    fout.write('No HIP-related records found\n')
