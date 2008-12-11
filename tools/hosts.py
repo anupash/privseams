@@ -107,16 +107,13 @@ class Hosts:
         return
 
     def getbyname(self,n):
-        r = self.d.get(self.sani(n))
-        return r
+        return self.d.get(self.sani(n))
 
     def getbya(self,n):
-        r = self.a.get(self.sani(n))
-        return r
+        return self.a.get(self.sani(n))
 
     def getbyaaaa(self,n):
-        r = self.aaaa.get(self.sani(n))
-        return r
+        return self.aaaa.get(self.sani(n))
 
 class Global:
     def __init__(gp):
