@@ -712,13 +712,17 @@ hip_sava_peer_info_t * hip_sava_get_key_params(hip_common_t * msg) {
   
   param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_KEYS);
 
-  if (param == NULL) 
+  if (param == NULL) {
+    free(peer_info);
     return NULL;
+  }
 
   auth_key = (struct hip_crypto_key *) hip_get_param_contents_direct(param);
 
-  if (auth_key == NULL)
+  if (auth_key == NULL) {
+    free(peer_info);
     return NULL;
+  }
   HIP_HEXDUMP("crypto key:", auth_key, sizeof(struct hip_crypto_key));
   
   param = (struct hip_tlv_common *) hip_get_param(msg, HIP_PARAM_INT);
@@ -788,8 +792,8 @@ struct in6_addr * hip_sava_auth_ip(struct in6_addr * orig_addr,
   } else {
     goto out_err;
   }
-  
  out_err:
+  free(enc_addr);
   return NULL;
 }
 
@@ -877,6 +881,8 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
   
   HIP_IFEL((sava_hit = hip_get_param_contents(msg,HIP_PARAM_HIT)) == NULL, DROP,
 	   "Failed to get SAVA HIT from the daemon \n");
+
+  free(msg);
   
   HIP_DEBUG_HIT("SAVAH HIT ", sava_hit);
   
@@ -888,7 +894,11 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
   HIP_IFEL((info_entry = hip_sava_get_key_params(msg)) == NULL, DROP,
 	   "Error parsing user message");
 
+  free(msg);
+
   enc_addr = hip_sava_auth_ip(&ctx->src, info_entry);
+
+  free(info_entry);
   
   if (ctx->ip_version == 6) { //IPv6
     
@@ -931,6 +941,8 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
 	     buff_len - 42 - hbh_len);
 
       buff_len += 24; //add 24 bytes of sava option
+
+      free(sava_ip6_opt);
 #endif
 
     } else { //No HBH option found in the packet
@@ -1056,6 +1068,8 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
 	   buff + sizeof(struct ip), buff_len - sizeof(struct ip));
 
     buff_len += 20;
+
+    free(opt);
 #else
     IPV6_TO_IPV4_MAP(enc_addr, &iphdr->ip_src);
     
@@ -1121,6 +1135,10 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
     HIP_DEBUG("Packet sent ok\n");
   }
 
+  free(sava_hit);
+  free(msg);
+  free(enc_addr);
+
  out_err:
   return verdict; 
 }
@@ -1159,8 +1177,6 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
   int hdr_offset = 0;
 
   int hdr_len = 0;
-
-  char * tmp_buff = NULL;
 
   char * buff_no_opt = NULL;
 
@@ -1254,6 +1270,7 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
 #ifdef CONFIG_SAVAH_IP_OPTION    
     enc_addr = hip_sava_auth_ip(enc_entry->ip_link->src_addr, enc_entry->peer_info);
     HIP_DEBUG_HIT("Found encrypted address ", enc_addr);
+    HIP_DEBUG_HIT("Address found in IP option ", opt_addr);
 #else 
     enc_addr = hip_sava_auth_ip(enc_entry->ip_link->src_addr, 
 				enc_entry->peer_info);
@@ -1274,9 +1291,11 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
       //PLACE ORIGINAL IP, RECALCULATE CHECKSUM AND REINJECT THE PACKET 
       //VERDICT DROP PACKET BECAUSE IT CONTAINS ENCRYPTED IP
       //ONLY NEW PACKET WILL GO OUT
-      _HIP_DEBUG("Adding <src, dst> tuple to connection db \n");
-
-      hip_sava_conn_entry_add(enc_entry->ip_link->src_addr, &ctx->dst);
+      _HIP_DEBUG("Adding <src, dst> tuple to connectio db \n");
+      if (hip_sava_conn_entry_find(enc_entry->ip_link->src_addr, &ctx->dst) == NULL) {
+	hip_sava_conn_entry_add(enc_entry->ip_link->src_addr, &ctx->dst);
+      }  
+      
       HIP_DEBUG("Source address is authenticated \n");
       _HIP_DEBUG("Reinject the traffic to network stack \n");
       if (ctx->ip_version == 6) { //IPv6
@@ -1401,6 +1420,7 @@ int hip_sava_handle_router_forward(struct hip_fw_context *ctx) {
       sent = sendto(ip_raw_sock, buff_no_opt, buff_len, 0,
 		    (struct sockaddr *) &dst, dst_len);
       free(buff_no_opt);
+      free(enc_addr);
 #else
       sent = sendto(ip_raw_sock, buff, buff_len, 0,
 		    (struct sockaddr *) &dst, dst_len);
@@ -1544,7 +1564,7 @@ int hip_sava_handle_bex_completed (struct in6_addr * src, struct in6_addr * hitr
     HIP_DEBUG("Secret key acquired. Lets encrypt the src IP address \n");
 		  
     info_entry = hip_sava_get_key_params(msg);
-    HIP_DEBUG("info_entry null? %s \n", (info_entry == NULL?"true":"false"));
+    _HIP_DEBUG("info_entry null? %s \n", (info_entry == NULL?"true":"false"));
     enc_addr = hip_sava_auth_ip(src, info_entry);
     HIP_DEBUG("Address encrypted \n");
 
@@ -1584,6 +1604,8 @@ int hip_sava_handle_bex_completed (struct in6_addr * src, struct in6_addr * hitr
     enc_entry = hip_sava_enc_ip_entry_find(enc_addr);
 
     free(enc_addr);
+    //free(msg);
+    free(info_entry);
     
   } else {
     HIP_DEBUG("<HIT, IP> NOT FOUND ERROR!! \n");
