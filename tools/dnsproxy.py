@@ -393,8 +393,8 @@ class Global:
                      #gp.fout.write('%s\n' % (a2,))
                      m = DNS.Lib.Mpacker()
                      m.addHeader(r.header['id'],
-                                 0, r1.header['opcode'], 0, 0,
-                                 r1.header['rd'], 0, 0, 0,
+                                 1, r1.header['opcode'], 0, 0,
+                                 r1.header['rd'], 1, 0, 0,
                                  1, 1, 0, 0)
                      m.addQuestion(a1['name'],qtype,1)
 		     m.addAAAA(a2['name'],a2['class'],a2['ttl'],a2['data'])
