@@ -882,7 +882,7 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
   HIP_IFEL((sava_hit = hip_get_param_contents(msg,HIP_PARAM_HIT)) == NULL, DROP,
 	   "Failed to get SAVA HIT from the daemon \n");
 
-  free(msg);
+  //free(msg);
   
   HIP_DEBUG_HIT("SAVAH HIT ", sava_hit);
   
@@ -894,7 +894,7 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
   HIP_IFEL((info_entry = hip_sava_get_key_params(msg)) == NULL, DROP,
 	   "Error parsing user message");
 
-  free(msg);
+  //free(msg);
 
   enc_addr = hip_sava_auth_ip(&ctx->src, info_entry);
 
@@ -1135,7 +1135,6 @@ int hip_sava_handle_output (struct hip_fw_context *ctx) {
     HIP_DEBUG("Packet sent ok\n");
   }
 
-  free(sava_hit);
   free(msg);
   free(enc_addr);
 
