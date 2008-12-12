@@ -284,18 +284,20 @@ class Global:
             f.write('%d\n' % (os.getpid(),))
             f.close()
 
-    def bamboo_lookup(gp, nam, addrtype):
-    	gp.fout.write("DHT look up\n")
-        gp.fout.write("Command: - %s\n" % (cmd))
+    def dht_lookup(gp, nam):
+    	#gp.fout.write("DHT look up\n")
         cmd = "hipconf dht get " + nam + " 2>&1"
+        #gp.fout.write("Command: %s\n" % (cmd))
         p = os.popen(cmd, "r")
         result = p.readline()
         while result:
-            if result.find("Result") != -1:
-            	gp.fout.write("Found id: %s\n" % (result));
-            else:
-                gp.fout.write("Skip: %s\n" % (result))
+            result.replace
+            start = result.find("2001:001")
+            end = result.find("\n") -1
+            if start != -1 and end != -1:
+                return result[start:end]
             result = p.readline()
+        return None
 
     def send_id_map_to_hipd(gp, nam):
     	cmd = "hipconf dnsproxy " + nam + " 2>&1"
@@ -318,7 +320,7 @@ class Global:
         m = None
         lr = None
         nam = q1['qname']
-        gp.fout.write('Query type %d for %s\n' % (qtype, nam))
+        #gp.fout.write('Query type %d for %s\n' % (qtype, nam))
         lr_a =  gp.geta(nam)
         lr_aaaa = gp.getaaaa(nam)
         lr_ptr = gp.getaddr(nam)
@@ -337,7 +339,8 @@ class Global:
                   'class': 1,
                   'ttl': gp.hosts_ttl,
                   }
-            gp.fout.write('Hosts file match %s\n' % (a2,))
+            gp.fout.write('Hosts file or cache match: %s %s\n' %
+                          (a2['name'],a2['data']))
             m = DNS.Lib.Mpacker()
             m.addHeader(r.header['id'],
                         1, 0, 0, 0, 1, 1, 0, 0,
@@ -352,21 +355,42 @@ class Global:
                 m.addPTR(a2['name'],a2['class'],a2['ttl'],a2['data'])
             gp.send_id_map_to_hipd(nam)
         elif qtype != 1 and qtype != 12:
+            dhthit = None
             r1 = d2.req(name=q1['qname'],qtype=55) # 55 is HIP RR
-            gp.fout.write('Query DNS for %s\n' % nam)
-            gp.fout.write('r1: %s\n' % (dir(r1),))
-            gp.fout.write('r1.answers: %s\n' % (r1.answers,))
+            #gp.fout.write('Query DNS for %s\n' % nam)
+            #gp.fout.write('r1: %s\n' % (dir(r1),))
+
+            if not r1.answers:
+                dhthit = gp.dht_lookup(nam)
+                if dhthit:
+                    gp.fout.write('DHT match: %s %s\n' %
+                                  (nam, dhthit))
+                    dhtres = {'typename' : '55',
+                              'name': nam,
+                              'data': dhthit,
+                              'type': qtype,
+                              'class': 1,
+                              'ttl': gp.hosts_ttl,
+                           }
+                    r1.answers.append(dhtres)
+
             for a1 in r1.answers:
                  if a1['typename'] == '55':
-                     aa1d = a1['data']
-                     aa1 = aa1d[4:4+16]
+                     if dhthit:
+                         # dht query returns string
+                         hit = dhthit
+                     else:
+                         # dns query returns binary, convert
+                         # to string
+                         aa1d = a1['data']
+                         hit = pyip6.inet_ntop(aa1d[4:4+16])
                      a2 = {'name': a1['name'],
-                           'data': pyip6.inet_ntop(aa1),
+                           'data': hit,
                            'type': qtype,
                            'class': 1,
                            'ttl': a1['ttl'],
                            }
-                     gp.fout.write('%s\n' % (a2,))
+                     #gp.fout.write('%s\n' % (a2,))
                      m = DNS.Lib.Mpacker()
                      m.addHeader(r.header['id'],
                                  0, r1.header['opcode'], 0, 0,
@@ -435,12 +459,12 @@ class Global:
                 except socket.timeout:
                     continue;
 
-                fout.write('Up %s\n' % (util.tstamp(),))
-                fout.write('%s %s\n' % (from_a,repr(buf)))
+                #fout.write('Up %s\n' % (util.tstamp(),))
+                #fout.write('%s %s\n' % (from_a,repr(buf)))
                 fout.flush()
                 u = DNS.Lib.Munpacker(buf)
                 r = DNS.Lib.DnsResult(u,args0)
-                fout.write('%s %s\n' % (r.header,r.questions,))
+                #fout.write('%s %s\n' % (r.header,r.questions,))
                 q1 = r.questions[0]
                 qtype = q1['qtype']
                 sent_answer = 0
@@ -453,7 +477,7 @@ class Global:
 		    m = gp.hip_lookup(q1, r, qtype, d2)
 		    if m:
 			try:
-			    fout.write("sending %d answer\n" % qtype)
+			    #fout.write("sending %d answer\n" % qtype)
                             s.sendto(m.buf,from_a)
                             sent_answer = 1
 		        except Exception,e:
@@ -463,12 +487,12 @@ class Global:
                     fout.write('Unhandled type %d\n' % qtype)
 
 		if not sent_answer:
-		    fout.write('No HIP-related records found\n')
+		    #fout.write('No HIP-related records found\n')
                     s2.send(buf)
                     r2 = s2.recv(2048)
                     u = DNS.Lib.Munpacker(r2)
                     r = DNS.Lib.DnsResult(u,args0)
-                    fout.write('Bypass %s %s %s\n' % (r.header,r.questions,r.answers,))
+                    #fout.write('Bypass %s %s %s\n' % (r.header,r.questions,r.answers,))
                     if r.header.get('status') != 'NXDOMAIN':
                         s.sendto(r2,from_a)
 
