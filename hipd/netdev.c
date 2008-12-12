@@ -546,7 +546,7 @@ int hip_find_address(char *fqdn_str, struct in6_addr *res){
 		goto out_err;
 	}
 
-	HIP_DEBUG("Looking up for hostname %s in /etc/hosts",fqdn_str);
+	HIP_DEBUG("Looking up for hostname %s in /etc/hosts\n",fqdn_str);
 
 	while(getwithoutnewline(line, 500, hosts) != NULL ) {
 	        lineno++;
@@ -702,7 +702,8 @@ int hip_map_id_to_addr(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *addr) {
 
 	/* Check for 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net records in DNS */
 	if (hip_get_hit_to_ip_status() && !skip_namelookup) {
-		HIP_DEBUG("looking for hit-to-ip record in dns");
+		HIP_DEBUG("looking for hit-to-ip record in dns\n");
+		HIP_DEBUG("operation may take a while..\n");
 		//struct in6_addr tmp_in6_addr;
 		//struct in6_addr *tmp_in6_addr_ptr = &tmp_in6_addr;
 		int res = hip_hit_to_ip(hit, addr);

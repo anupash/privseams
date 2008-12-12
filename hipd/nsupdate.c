@@ -162,7 +162,7 @@ int run_nsupdate(char *ips, char *hit, int start)
 		char *cmd[] = { NSUPDATE_ARG0, NULL };
 		char *env[] = { env_ips, env_hit, env_start, NULL };
 
-		HIP_DEBUG("Starting %s with %s;%s;%s", NSUPDATE_PL, env_hit, env_ips, env_start);
+		HIP_DEBUG("Starting %s with %s;%s;%s\n", NSUPDATE_PL, env_hit, env_ips, env_start);
 		execve (NSUPDATE_PL, cmd, env);
 
 		/* Executed only if error */
@@ -181,20 +181,20 @@ int run_nsupdate(char *ips, char *hit, int start)
  */
 int run_nsupdate_for_hit (struct hip_host_id_entry *entry, void *opaq)
 {
-	HIP_DEBUG("run_nsupdate");
 	int start = 0;
+	char ip_str[40]; // buffer for one IP address
+	char ips_str[1024] = ""; // list of IP addresses
+  	hip_list_t *item, *tmp_hip_list_t;
+  	int i;
+	char *hit;
+
+	HIP_DEBUG("run_nsupdate\n");
 	if (opaq != NULL)
 		start = * (int *) opaq;
 
 	HIP_DEBUG("start: %d", start);
 
-	char *hit = hip_convert_hit_to_str(&entry->lhi.hit,NULL);
-
-	char ip_str[40]; // buffer for one IP address
-	char ips_str[1024] = ""; // list of IP addresses
-
-  	hip_list_t *item, *tmp_hip_list_t;
-  	int i;
+	hit = hip_convert_hit_to_str(&entry->lhi.hit,NULL);
 
 	/* make space-separated list of IP addresses in ips_str */
   	list_for_each_safe(item, tmp_hip_list_t, addresses, i) {

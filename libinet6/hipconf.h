@@ -189,7 +189,7 @@
 # heartbeat 10 # send ICMPv6 messages inside HIP tunnels\n\
 # hit-to-ip on # resolve HITs to locators in dynamic DNS zone\n\
 # hit-to-ip set hit-to-ip.infrahip.net. # resolve HITs to locators in dynamic DNS zone\n\
-# dnsupdate on # send dynamic DNS updates\n\
+# nsupdate on # send dynamic DNS updates\n\
 # add server rvs hiprvs.infrahip.net 50000 # Register to free RVS at infrahip\n\
 # dht gw hipdht.infrahip.net 5851 60000 # dht gw to host port ttl\n\
 # opendht on # turn DHT support on (dht gw is not enough)\n\
