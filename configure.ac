@@ -306,9 +306,6 @@ if test x"$ac_cv_use_privsep" = x"yes"; then
 	if test x"$ac_cv_use_altsep" != x"yes"; then
 		AC_CHECK_LIB(cap, cap_get_proc,, AC_MSG_ERROR(libcap-dev developer headers not found))
 	fi
-	if test x"$ac_cv_use_openwrt" != x"yes"; then
-		AC_CHECK_LIB(cap, cap_get_proc,, AC_MSG_ERROR(libcap-dev developer headers not found))
-	fi
         AC_DEFINE(CONFIG_HIP_PRIVSEP, AC_PREREQ(2.53))
 fi
 AM_CONDITIONAL(HIP_PRIVSEP, test x"$ac_cv_use_privsep" = x"yes")
