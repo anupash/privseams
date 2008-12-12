@@ -45,7 +45,7 @@ import re
 import signal
 import syslog
 import popen2
-
+import fileinput
 
 def usage(utyp, *msg):
     sys.stderr.write('Usage: %s\n' % os.path.split(sys.argv[0])[1])
@@ -100,7 +100,25 @@ class ResolvConf:
             return '/etc/resolv.conf'
 
     def __init__(self, alt_port = 0, filetowatch = None):
-        self.dnsmasq_defaults = '/etc/default/dnsmasq'
+	self.dnsmasq_initd_script = '/etc/init.d/dnsmasq'
+ 	if os.path.exists('/etc/redhat-release'):
+		self.distro = 'redhat'
+		self.rh_before = '# See how we were called.'
+		self.rh_inject = '. /etc/sysconfig/dnsmasq # Added by hipdnsproxy'
+	elif os.path.exists('/etc/debian_version'):
+		self.distro = 'debian'
+	else:
+		self.distro = 'unknown'
+
+	if self.distro == 'redhat':
+	        self.dnsmasq_defaults = '/etc/sysconfig/dnsmasq'
+		if not os.path.exists(self.dnsmasq_defaults):
+			open(self.dnsmasq_defaults, 'w').close()
+	else:
+	        self.dnsmasq_defaults = '/etc/default/dnsmasq'
+
+        self.dnsmasq_defaults_backup = self.dnsmasq_defaults + '.backup.hipdnsproxy'
+
         if (os.path.isdir('/etc/resolvconf/.') and
             os.path.exists('/sbin/resolvconf') and
             os.path.exists('/etc/resolvconf/run/resolv.conf')):
@@ -115,15 +133,17 @@ class ResolvConf:
             self.use_dnsmasq_hook = False
 
         self.alt_port = alt_port
-        self.dnsmasq_defaults_backup = '/etc/default/dnsmasq.backup.hipdnsproxy'
         self.dnsmasq_resolv = '/var/run/dnsmasq/resolv.conf'
         self.resolvconf_run = '/etc/resolvconf/run/resolv.conf'
         if self.use_resolvconf:
             self.resolvconf_towrite = '/etc/resolvconf/run/resolv.conf'
         else:
             self.resolvconf_towrite = '/etc/resolv.conf'
-        self.dnsmasq_hook = 'DNSMASQ_OPTS="--no-hosts --no-resolv --server=127.0.0.53#' + str(self.alt_port) + '"\n'
-        self.dnsmasq_restart = '/etc/init.d/dnsmasq restart'
+	if self.distro == 'redhat':
+	        self.dnsmasq_hook = 'OPTIONS+="--no-hosts --no-resolv --server=127.0.0.53#' + str(self.alt_port) + '"\n'
+	else:
+        	self.dnsmasq_hook = 'DNSMASQ_OPTS="--no-hosts --no-resolv --server=127.0.0.53#' + str(self.alt_port) + '"\n'
+        self.dnsmasq_restart = self.dnsmasq_initd_script + ' restart'
         if filetowatch == None:
             self.filetowatch = self.guess_resolvconf()
         self.resolvconf_orig = self.filetowatch
@@ -155,10 +175,17 @@ class ResolvConf:
             return 0
     def save_resolvconf(self):
         if self.use_dnsmasq_hook:
-            os.rename(self.dnsmasq_defaults, self.dnsmasq_defaults_backup)
+	    if os.path.exists(self.dnsmasq_defaults):
+                os.rename(self.dnsmasq_defaults, 
+                          self.dnsmasq_defaults_backup)
             dmd = file(self.dnsmasq_defaults, 'w')
             dmd.write(self.dnsmasq_hook)
             dmd.close()
+	    if self.distro == 'redhat':
+		for line in fileinput.input(self.dnsmasq_initd_script, inplace=1):
+			if line.find(self.rh_before) == 0:
+				print self.rh_inject
+			print line,
             os.system(self.dnsmasq_restart)
         if not (self.use_dnsmasq_hook and self.use_resolvconf):
             os.link(self.resolvconf_towrite,self.resolvconf_bkname)
@@ -166,8 +193,13 @@ class ResolvConf:
 
     def restore_resolvconf(self):
         if self.use_dnsmasq_hook:
-            os.rename(self.dnsmasq_defaults_backup, self.dnsmasq_defaults)
-            os.system(self.dnsmasq_restart)
+            if os.path.exists(self.dnsmasq_defaults_backup):
+              os.rename(self.dnsmasq_defaults_backup,
+                        self.dnsmasq_defaults)
+	    if self.distro == 'redhat':
+		for line in fileinput.input(self.dnsmasq_initd_script, inplace=1):
+			if line.find(self.rh_inject) == -1:
+				print line,
         if not (self.use_dnsmasq_hook and self.use_resolvconf):
             os.rename(self.resolvconf_bkname, self.resolvconf_towrite)
 
