@@ -149,10 +149,10 @@ int run_nsupdate(char *ips, char *hit, int start)
 		return ERR;
 	}
 	else if (child_pid == 0) {// CHILD
+		char start_str[2];
 		/* Close open sockets since FD_CLOEXEC was not used */
 		close_all_fds_except_stdout_and_stderr();
 
-		char start_str[2];
 		snprintf(start_str, sizeof(start_str), "%i", start);
 
 		char *env_ips = make_env(VAR_IPS, ips);
