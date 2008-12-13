@@ -40,7 +40,7 @@ other related tools and test software.
 #      That way we can get rid of the double configure (the second one is
 #      currently required for bug id 524)
 %build
-./autogen.sh --target=hipl --prefix=/usr
+./autogen.sh --prefix=/usr
 %configure
 make -C doc all
 
