@@ -247,9 +247,9 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 		char hito[INET6_ADDRSTRLEN], hitp[INET6_ADDRSTRLEN];
 		inet_ntop(AF_INET6, &ha->hit_our, hito, INET6_ADDRSTRLEN);
 		inet_ntop(AF_INET6, &ha->hit_peer, hitp, INET6_ADDRSTRLEN);
-		HIP_DEBUG("\nTrying to insert a new state to the HIP "\
-			  "association database.\n\tOur HIT: %s\n"\
-			  "\tPeer HIT: %s\n\tHIP association state: %d\n",
+		HIP_DEBUG("Trying to insert a new state to the HIP "\
+			  "association database. Our HIT: %s,"\
+			  "Peer HIT: %s, HIP association state: %d\n",
 			  hito, hitp, ha->hastate);
 	}
 #endif
@@ -314,20 +314,23 @@ int hip_print_info_hadb(hip_ha_t *entry, void *cntr)
 
 
 void hip_print_debug_info(struct in6_addr *local_addr,
-				    struct in6_addr *peer_addr,
-				    hip_hit_t *local_hit,
-				    hip_hit_t *peer_hit,
-				    hip_lsi_t *peer_lsi){
-	if (local_addr)
+			  struct in6_addr *peer_addr,
+			  hip_hit_t  *local_hit,
+			  hip_hit_t  *peer_hit,
+			  hip_lsi_t  *peer_lsi,
+			  const char *peer_hostname){
+	if(local_addr)
 		HIP_DEBUG_IN6ADDR("Our addr", local_addr);
-	if (peer_addr)
+	if(peer_addr)
 		HIP_DEBUG_IN6ADDR("Peer addr", peer_addr);
-	if (local_hit)
+	if(local_hit)
 		HIP_DEBUG_HIT("Our HIT", local_hit);
-	if (peer_hit)
+	if(peer_hit)
 		HIP_DEBUG_HIT("Peer HIT", peer_hit);
-	if (peer_lsi)
+	if(peer_lsi)
 		HIP_DEBUG_LSI("Peer LSI", peer_lsi);
+	if(peer_hostname)
+		HIP_DEBUG("Peer hostname: %s\n", peer_hostname);
 }
 
 
@@ -365,29 +368,32 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 				    hip_hit_t *peer_hit,
 				    hip_lsi_t *peer_lsi,
 				    struct in6_addr *local_addr,
-				    struct in6_addr *peer_addr)
+				    struct in6_addr *peer_addr,
+				    const char *peer_hostname)
 {
 	int err = 0, n=0;
 	hip_ha_t *entry = NULL, *aux = NULL;
 	hip_lsi_t local_lsi, lsi_aux;
 
 	HIP_DEBUG_INADDR("Local IP address ", local_addr);
-	hip_print_debug_info(local_addr, peer_addr,local_hit, peer_hit, peer_lsi);
-
-	hip_print_debug_info(local_addr, peer_addr,local_hit, peer_hit,
-			     peer_lsi);
+	hip_print_debug_info(local_addr, peer_addr,
+			     local_hit,  peer_hit,
+			     peer_lsi,   peer_hostname);
 
 	entry = hip_hadb_find_byhits(local_hit, peer_hit);
 
 	if (entry) {
 		hip_hadb_dump_spis_out(entry);
 		HIP_DEBUG_LSI("    Peer lsi   ",&entry->lsi_peer);
-		/*Compare if different lsi's*/
-		if (peer_lsi){
+
+#if 0 /* Required for OpenDHT code of Pardeep?  */
+		/* Check if LSIs are different */
+		if (peer_lsi) {
 			HIP_IFEL(hip_lsi_are_equal(&entry->lsi_peer, peer_lsi) ||
 				 peer_lsi->s_addr == 0 , 0,
 				 "Ignoring new mapping, old one exists\n");
 		}
+#endif
 	}
 
 	if (!entry){
@@ -400,8 +406,9 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	ipv6_addr_copy(&entry->hit_peer, peer_hit);
 	ipv6_addr_copy(&entry->hit_our, local_hit);
 	ipv6_addr_copy(&entry->local_address, local_addr);
-	HIP_IFEL(hip_hidb_get_lsi_by_hit(local_hit, &entry->lsi_our), -1,
-		 "Unable to find local hit");
+
+	HIP_IFEL(hip_hidb_get_lsi_by_hit(local_hit, &entry->lsi_our),
+		 -1, "Unable to find local hit");
 
 	/*Copying peer_lsi*/
 	if (peer_lsi != NULL && peer_lsi->s_addr != 0){
@@ -413,7 +420,10 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 		if (aux && &(aux->lsi_peer).s_addr != 0){
 		        // Exists: Assign its lsi to the new entry created
 		        ipv4_addr_copy(&entry->lsi_peer, &aux->lsi_peer);
-		}else{
+		} else if (!hip_map_hit_to_lsi_from_hosts_files(peer_hit, &lsi_aux)) {
+			ipv4_addr_copy(&entry->lsi_peer, &lsi_aux);
+			
+		} else {
 		  	// No exists: Call to the automatic generation
 		        hip_generate_peer_lsi(&lsi_aux);
 			ipv4_addr_copy(&entry->lsi_peer, &lsi_aux);
@@ -443,7 +453,9 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	}
 
      	entry->hip_is_opptcp_on = hip_get_opportunistic_tcp_status();
-
+#ifdef CONFIG_HIP_I3
+	entry->hip_is_hi3_on =    hip_get_hi3_status();
+#endif
 #ifdef CONFIG_HIP_HIPPROXY
      	entry->hipproxy = hip_get_hip_proxy_status();
 #endif
@@ -490,7 +502,8 @@ int hip_hadb_add_peer_info_wrapper(struct hip_host_id_entry *entry,
 						 &peer_map->peer_hit,
 						 &peer_map->peer_lsi,
 						 &peer_map->our_addr,
-						 &peer_map->peer_addr), -1,
+						 &peer_map->peer_addr,
+						 &peer_map->peer_hostname), -1,
 		 "Failed to add peer info\n");
 
  out_err:
@@ -498,7 +511,7 @@ int hip_hadb_add_peer_info_wrapper(struct hip_host_id_entry *entry,
 }
 
 int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr,
-			   hip_lsi_t *peer_lsi)
+			   hip_lsi_t *peer_lsi, const char *peer_hostname)
 {
 	int err = 0;
 	hip_ha_t *entry;
@@ -506,7 +519,9 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr,
 
 	HIP_DEBUG("hip_hadb_add_peer_info() invoked.\n");
 
- 	hip_print_debug_info(NULL, peer_addr, NULL, peer_hit, peer_lsi);
+ 	hip_print_debug_info(NULL, peer_addr, NULL, peer_hit, peer_lsi, peer_hostname);
+
+	HIP_IFEL(!ipv6_addr_is_hit(peer_hit), -1, "Not a HIT\n");
 
 	HIP_IFEL(!ipv6_addr_is_hit(peer_hit), -1, "Not a HIT\n");
 
@@ -514,9 +529,14 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr,
 
 	memcpy(&peer_map.peer_hit, peer_hit, sizeof(hip_hit_t));
 	memcpy(&peer_map.peer_addr, peer_addr, sizeof(struct in6_addr));
+	memset(peer_map.peer_hostname, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX);
 
-	if (peer_lsi)
+	if(peer_lsi)
 	        memcpy(&peer_map.peer_lsi, peer_lsi, sizeof(struct in6_addr));
+
+	if(peer_hostname)
+	        memcpy(peer_map.peer_hostname, peer_hostname,
+		       HIP_HOST_ID_HOSTNAME_LEN_MAX - 1);
 
 	HIP_IFEL(hip_select_source_address(
 			 &peer_map.our_addr, &peer_map.peer_addr),
@@ -533,6 +553,7 @@ int hip_add_peer_map(const struct hip_common *input)
 {
 	struct in6_addr *hit = NULL , *ip = NULL;
 	hip_lsi_t *lsi = NULL;
+	char *peer_hostname = NULL;
 	int err = 0;
 	_HIP_HEXDUMP("packet", input,  hip_get_msg_total_len(input));
 
@@ -545,6 +566,9 @@ int hip_add_peer_map(const struct hip_common *input)
 	ip = (struct in6_addr *)
 		hip_get_param_contents(input, HIP_PARAM_IPV6_ADDR);
 
+	peer_hostname = (char *)
+		hip_get_param_contents(input, HIP_PARAM_HOSTNAME);
+
 	if (!ip && (!lsi || !hit)){
 		HIP_ERROR("handle async map: no ip and maybe no lsi or hit\n");
 		err = -ENODATA;
@@ -554,7 +578,10 @@ int hip_add_peer_map(const struct hip_common *input)
 	if (lsi)
 	  	HIP_DEBUG_LSI("lsi value is\n",lsi);
 
-	err = hip_hadb_add_peer_info(hit, ip, lsi);
+	if (peer_hostname)
+	  	HIP_DEBUG("Peer hostname value is %s\n", peer_hostname);
+
+	err = hip_hadb_add_peer_info(hit, ip, lsi, peer_hostname);
 
 	_HIP_DEBUG_HIT("hip_add_map_info peer's real hit=", hit);
 	_HIP_ASSERT(hit_is_opportunistic_hashed_hit(hit));
@@ -597,6 +624,16 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
 
 	entry->spis_in = hip_ht_init(hip_hash_spi, hip_match_spi);
 	entry->spis_out = hip_ht_init(hip_hash_spi, hip_match_spi);
+
+	entry->peer_addr_list_to_be_added =
+	  hip_ht_init(hip_hash_peer_addr, hip_match_peer_addr);
+
+#ifdef CONFIG_HIP_HIPPROXY
+	entry->hipproxy = 0;
+#endif
+	//HIP_LOCK_INIT(entry);
+	//atomic_set(&entry->refcnt,0);
+
 	entry->state = HIP_STATE_UNASSOCIATED;
 	entry->hastate = HIP_HASTATE_INVALID;
 
@@ -628,8 +665,10 @@ hip_ha_t *hip_hadb_create_state(int gfpmask)
 	/* added by Tao Wan, on 24, Jan, 2008 */
 	entry->hadb_ipsec_func = &default_ipsec_func_set;
 
- out_err:
+	//initialize the peer hostname
+	memset(entry->peer_hostname, '\0', HIP_HOST_ID_HOSTNAME_LEN_MAX);
 
+ out_err:
 	return entry;
 }
 
@@ -894,6 +933,23 @@ int hip_hadb_add_peer_udp_addr(hip_ha_t *entry, struct in6_addr *new_addr,in_por
 		}
 		ipv6_addr_copy(&entry->preferred_address, new_addr);
 		HIP_DEBUG_IN6ADDR("entry->preferred_address \n", &entry->preferred_address);
+		
+		/*Adding the peer address to the entry->peer_addr_list_to_be_added
+		 * So that later aftre base exchange it can be transfered to 
+		 * SPI OUT's peer address list*/
+		a_item = (struct hip_peer_addr_list_item *)HIP_MALLOC(sizeof(struct hip_peer_addr_list_item), GFP_KERNEL);
+		if (!a_item)
+		{
+			HIP_ERROR("item HIP_MALLOC failed\n");
+			err = -ENOMEM;
+			goto out_err;
+		}
+		a_item->lifetime = lifetime;
+		ipv6_addr_copy(&a_item->address, new_addr);
+		a_item->address_state = state;
+		do_gettimeofday(&a_item->modified_time);
+
+		list_add(a_item, entry->peer_addr_list_to_be_added);
 		goto out_err;
 	}
 
@@ -982,6 +1038,9 @@ void hip_hadb_delete_peer_addrlist_one(hip_ha_t *entry, struct in6_addr *addr)
 
 int hip_del_peer_info_entry(hip_ha_t *ha)
 {
+	hip_opp_block_t *opp_entry   = NULL;
+	hip_oppip_t     *oppip_entry = NULL;
+
 	hip_hadb_remove_state_hit(ha);
 	/* by now, if everything is according to plans, the refcnt
 	   should be 1 */
@@ -995,6 +1054,22 @@ int hip_del_peer_info_entry(hip_ha_t *ha)
 	hip_hadb_delete_state(ha);
 	//hip_db_put_ha(ha, hip_hadb_delete_state);
 	/* and now zero --> deleted*/
+
+	//if the ha entry is there, the opp entry
+	//has already been removed
+
+	/*empty the two opp dbs*/
+
+	//delete entry from oppdb
+	opp_entry = hip_oppdb_find_by_ip(&ha->preferred_address);
+	if(opp_entry)
+		hip_oppdb_entry_clean_up(opp_entry);
+
+	//delete entry from oppipdb
+	oppip_entry = hip_oppipdb_find_byip(&ha->preferred_address);
+	if(oppip_entry)
+		hip_oppipdb_del_entry_by_entry(oppip_entry);
+
 	return 0;
 }
 
@@ -2333,14 +2408,15 @@ void hip_init_hadb(void)
      default_update_func_set.hip_update_send_echo	     = hip_update_send_echo;
 
      /* xmit function set */
-     /** @todo Add support for i3. */
-     default_xmit_func_set.hip_send_pkt = hip_send_raw;
-#ifdef CONFIG_HIP_HI3
-     if( hip_use_i3 )
-     {
+#ifdef CONFIG_HIP_I3
+     if(hip_get_hi3_status()){
 	  default_xmit_func_set.hip_send_pkt = hip_send_i3;
      }
+     else
 #endif
+	  default_xmit_func_set.hip_send_pkt = hip_send_raw;
+     
+
      nat_xmit_func_set.hip_send_pkt = hip_send_udp;
 
      /* filter function sets */
@@ -2890,13 +2966,13 @@ int hip_count_open_connections(void)
 	return n;
 }
 
-int hip_handle_get_ha_info(hip_ha_t *entry, struct hip_common *msg)
+int hip_handle_get_ha_info(hip_ha_t *entry, void *opaq)
 {
-
 	int err = 0;
-    struct hip_hadb_user_info_state hid;
+	struct hip_hadb_user_info_state hid;
 	extern int hip_icmp_interval;
-
+	struct hip_common *msg = (struct hip_common *) opaq;
+	
 	memset(&hid, 0, sizeof(hid));
 	hid.state = entry->state;
     	ipv6_addr_copy(&hid.hit_our, &entry->hit_our);
@@ -2905,6 +2981,7 @@ int hip_handle_get_ha_info(hip_ha_t *entry, struct hip_common *msg)
 	ipv6_addr_copy(&hid.ip_peer, &entry->preferred_address);
 	ipv4_addr_copy(&hid.lsi_our, &entry->lsi_our);
 	ipv4_addr_copy(&hid.lsi_peer, &entry->lsi_peer);
+	memcpy(&hid.peer_hostname, &entry->peer_hostname, HIP_HOST_ID_HOSTNAME_LEN_MAX);
 
 	_HIP_HEXDUMP("HEXHID ", &hid, sizeof(struct hip_hadb_user_info_state));
 
@@ -2921,7 +2998,9 @@ int hip_handle_get_ha_info(hip_ha_t *entry, struct hip_common *msg)
 	_HIP_HEXDUMP("HEXHID ", &hid, sizeof(struct hip_hadb_user_info_state));
 
 	/* does not print heartbeat info, but I do not think it even should -Samu*/
-	hip_print_debug_info(&hid.ip_our,&hid.ip_peer,&hid.hit_our,&hid.hit_peer,&hid.lsi_peer);
+	hip_print_debug_info(&hid.ip_our,   &hid.ip_peer,
+			     &hid.hit_our,  &hid.hit_peer,
+			     &hid.lsi_peer, &hid.peer_hostname);
 
 	err = hip_build_param_contents(msg, &hid, HIP_PARAM_HA_INFO,
 				       sizeof(hid));
@@ -3034,11 +3113,13 @@ hip_ha_t *hip_hadb_find_by_blind_hits(hip_hit_t *local_blind_hit,
 int hip_generate_peer_lsi(hip_lsi_t *lsi)
 {
 	struct in_addr lsi_prefix;
+	uint8_t hostname[HOST_NAME_MAX];
 	int index = 1;
 
 	do {
 		lsi_prefix.s_addr = htonl(HIP_LSI_PREFIX|index++);
-	} while (lsi_assigned(lsi_prefix));
+	} while (lsi_assigned(lsi_prefix) ||
+		 !hip_map_lsi_to_hostname_from_hosts(lsi, hostname));
 
 	_HIP_DEBUG_LSI("lsi free final value is ", &lsi_prefix);
 

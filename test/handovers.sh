@@ -227,7 +227,7 @@ function print_statistics {
 	    printf "\tHard handover from IPv6 to IPv6: before %s after %s\n" $BSTAT_H66 $STAT_H66
 	    ;;
 	"s44")      
-	    printf "\tSoft handover from IPv4 to IPv6: before %s after %s\n" $BSTAT_S46 $STAT_S46
+	    printf "\tSoft handover from IPv4 to IPv6: before %s after %s\n" $BSTAT_S44 $STAT_S44
 	    ;;
 	"s66")      
 	    printf "\tSoft handover from IPv6 to IPv6: before %s after %s\n" $BSTAT_S66 $STAT_S66

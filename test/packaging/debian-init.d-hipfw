@@ -1,10 +1,14 @@
-#! /bin/sh
-# /etc/init.d/hipfw: start and stop the HIP hipfw
+#!/bin/sh
+#
+# Init file for hip firewall
+#
+# description: HIPL firewall daemon
+#
+# processname: hipfw
+# pidfile: /var/run/hipfw.pid
+# chkconfig: 2345 21 79
 
-#hipfw="/usr/sbin/hipfw"
-#OPTIONS="-bk"
-
-HIPFW_OPTS="-bkl"
+HIPFW_OPTS="-bklpF"
 #PIDFILE=/var/run/hipfw.pid
 PID=`pidof -o $$ hipfw`
 

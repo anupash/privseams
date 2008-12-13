@@ -5,8 +5,15 @@
 #ifndef _HIP_PROTODEFS
 #define _HIP_PROTODEFS
 
-#include "hashchain.h"
-#include "esp_prot_common.h"
+#ifdef __KERNEL__
+#  include "usercompat.h"
+   typedef uint16_t in_port_t;
+  #define MAX_HASH_LENGTH 0
+  #define MAX_TREE_DEPTH 0
+#else
+#  include "hashchain.h"
+#  include "esp_prot_common.h"
+#endif
 
 #define HIP_MAX_PACKET 4096
 #define HIP_MAX_NETWORK_PACKET 2048
@@ -23,9 +30,10 @@
 #define HIP_NOTIFY              17
 #define HIP_CLOSE               18
 #define HIP_CLOSE_ACK           19
-#define HIP_PSIG                20 /* lightweight HIP pre signature */
-#define HIP_TRIG                21 /* lightweight HIP signature trigger*/
-#define HIP_LUPDATE             22
+#define HIP_HDRR                20 /* 20 was already occupied by HIP_PSIG so shifting HIP_PSIG and HIP_TRIG plus 1*/
+#define HIP_PSIG                21 /* lightweight HIP pre signature */ 
+#define HIP_TRIG                22 /* lightweight HIP signature trigger*/
+#define HIP_LUPDATE             23
 #define HIP_PAYLOAD             64
 /* only hip network message types here */
 /* @} */
@@ -92,8 +100,8 @@
 #define HIP_PARAM_ESP_PROT_SECRET      4123
 #define HIP_PARAM_ESP_PROT_ROOT		   4124
 
-/* Range 32768 - 49141 can be used for HIPL private parameters i.e. to
-   parameters passed from hipconf to hipdaemon.
+/* Range 32768 - 49141 for HIPL private network parameters. Please add
+   here only network messages, not internal messages!
    @todo: move these to icomm.h */
 #define HIP_PARAM_HIT                   32768
 #define HIP_PARAM_IPV6_ADDR             32769
@@ -136,30 +144,34 @@
 #define HIP_PARAM_CERT_X509_REQ         32810
 #define HIP_PARAM_CERT_X509_RESP        32811
 #define HIP_PARAM_ESP_PROT_TFM		32812
-#define HIP_PARAM_TRANSFORM_ORDER       32813
-#define HIP_PARAM_SECRET				32814
-#define HIP_PARAM_BRANCH_NODES			32815
-#define HIP_PARAM_ROOT					32816
-#define HIP_PARAM_SAVA_CRYPTO_INFO      32817
+#define HIP_PARAM_TRANSFORM_ORDER       32813                                 
+#define HIP_PARAM_HDRR_INFO		32814
+#define HIP_PARAM_UADB_INFO		32815
+#define HIP_PARAM_SAVA_CRYPTO_INFO      32816
+#define HIP_PARAM_SECRET		32817
+#define HIP_PARAM_BRANCH_NODES		32818
+#define HIP_PARAM_ROOT		        32819
+#define HIP_PARAM_HIT_TO_IP_SET         32820
 /* End of HIPL private parameters. */
 
-#define HIP_PARAM_HMAC                 61505
-#define HIP_PARAM_HMAC2                61569
-#define HIP_PARAM_HIP_SIGNATURE2       61633
-#define HIP_PARAM_HIP_SIGNATURE        61697
-#define HIP_PARAM_ECHO_RESPONSE        63425
-#define HIP_PARAM_ECHO_REQUEST         63661
-#define HIP_PARAM_RELAY_FROM           63998
-#define HIP_PARAM_RELAY_TO             64002
-#define HIP_PARAM_TO_PEER              64006
-#define HIP_PARAM_FROM_PEER            64008
-#define HIP_PARAM_REG_FROM             64010
-#define HIP_PARAM_FROM                 65498
-#define HIP_PARAM_RVS_HMAC             65500
-#define HIP_PARAM_VIA_RVS              65502
-#define HIP_PARAM_RELAY_HMAC           65520
+#define HIP_PARAM_HMAC			61505
+#define HIP_PARAM_HMAC2			61569
+#define HIP_PARAM_HIP_SIGNATURE2	61633
+#define HIP_PARAM_HIP_SIGNATURE		61697
+#define HIP_PARAM_ECHO_RESPONSE		63425
+#define HIP_PARAM_ECHO_REQUEST		63661
+#define HIP_PARAM_RELAY_FROM		63998
+#define HIP_PARAM_RELAY_TO		64002
+#define HIP_PARAM_TO_PEER		64006
+#define HIP_PARAM_FROM_PEER		64008
+#define HIP_PARAM_REG_FROM		64010
+#define HIP_PARAM_FROM			65498
+#define HIP_PARAM_RVS_HMAC		65500
+#define HIP_PARAM_VIA_RVS		65502
+#define HIP_PARAM_RELAY_HMAC		65520
+#define HIP_PARAM_HOSTNAME		65521
 
-#define HIP_PARAM_MAX                  65536
+#define HIP_PARAM_MAX			65536
 /* @} */
 
 /** @addtogroup notification
@@ -425,6 +437,7 @@ struct hip_keymat_keymat
 	void *keymatdst;  /**< Pointer to beginning of key material */
 };
 
+#ifndef __KERNEL__
 struct esp_prot_preferred_tfms {
 	hip_tlv_type_t     type;
 	hip_tlv_len_t      length;
@@ -440,6 +453,7 @@ struct esp_prot_anchor {
 	// contains active and next anchor
 	unsigned char  	   anchors[2 * MAX_HASH_LENGTH];
 } __attribute__ ((packed));
+#endif
 
 struct esp_prot_branch {
 	hip_tlv_type_t     type;
@@ -874,6 +888,7 @@ struct hip_opendht_gw_info {
 	struct in6_addr addr;
 	uint32_t        ttl;
 	uint16_t        port;
+	char 			host_name[256];
 } __attribute__ ((packed));
 
 struct hip_cert_x509_req {
@@ -900,6 +915,32 @@ struct hip_opendht_set {
 	hip_tlv_len_t 	length;
         char name[256];
 } __attribute__ ((packed));
+
+
+#define HIT_TO_IP_ZONE_MAX_LEN 256
+
+struct hip_hit_to_ip_set {
+	hip_tlv_type_t 	type;
+	hip_tlv_len_t 	length;
+        char name[HIT_TO_IP_ZONE_MAX_LEN];
+} __attribute__ ((packed));
+
+struct hip_hdrr_info {
+	hip_tlv_type_t    type;
+	hip_tlv_len_t     length;
+        struct in6_addr dht_key;
+	    /* 0 if succesfully verified otherwise negative */
+        int sig_verified;
+        int hit_verified;
+}__attribute__ ((packed));
+
+struct hip_uadb_info {
+	hip_tlv_type_t		type;
+	hip_tlv_len_t		length;
+	struct in6_addr		hitr ;
+	struct in6_addr		hitl ;
+    char				cert[512] ;
+}__attribute__ ((packed)) ;
 
 struct hip_heartbeat {
 	hip_tlv_type_t 	type;
@@ -928,6 +969,15 @@ struct hip_reg_from {
 struct hip_stun {
      hip_tlv_type_t type; /**< Type code for the parameter. */
      hip_tlv_len_t  length; /**< Length of the parameter contents in bytes. */
+} __attribute__ ((packed));
+
+struct sockaddr_hip {
+	sa_family_t    ship_family;
+	in_port_t      ship_port;
+	uint32_t       ship_pad;
+	uint64_t       ship_flags;
+	hip_hit_t      ship_hit;
+	uint8_t        ship_reserved[16];
 } __attribute__ ((packed));
 
 #endif /* _HIP_PROTODEFS */

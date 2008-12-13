@@ -5,8 +5,6 @@ CFLAGS += $(OPTIMIZATIONS_CFLAGS)
 CFLAGS += $(GPROF_CFLAGS)
 INCLUDES = $(hipl_common_include_paths) -I$(HIPL_LIBINET6_INCLUDE)
 
-if HIP_HI3
-
 # chord compilation
 noinst_LIBRARIES = libchord.a
 noinst_HEADERS = chord_api.h  chord.h  debug.h  eprintf.h
@@ -34,8 +32,6 @@ chord_getfingers_LDADD = $(APP_LADD)
 
 chord_traceroute_SOURCES = chord_traceroute.c ${libchord_a_SOURCES}
 chord_traceroute_LDADD = $(APP_LADD)
-
-endif
 
 CLEANFILES = core *.core *~
 MAINTAINERCLEANFILES = Makefile.in

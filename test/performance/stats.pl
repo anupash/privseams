@@ -18,6 +18,7 @@
 ### MODULES ##################################################################
 
 use English;
+# Use strict causes:
 use strict;
 use Statistics::Distributions qw(udistr);
 use Scalar::Util::Numeric qw(:all);
@@ -81,7 +82,7 @@ foreach my $type (keys(%val)) {
 
     # Average/stddev cannot be calculated if there are no values left
     # (division by zero).
-    if ($#{ @{ $filt_val{$type} } } != -1) {
+    if ($#{ $filt_val{$type} } != -1) {
 	$filt_avg{$type}     = average(@{ $filt_val{$type} });
 	$filt_std_dev{$type} = standard_deviation($filt_avg{$type},
 						  @{ $filt_val{$type} });
@@ -98,8 +99,8 @@ foreach my $type (keys(%filt_val)) {
     $filt_sum{'avg'}     += $filt_avg{$type} if (defined($filt_avg{$type}));
     $filt_sum{'std_dev'} += $filt_std_dev{$type}
     if (defined($filt_std_dev{$type}));
-    $filt_sum{'dropped'} += $#{@{$val{$type}}} - $#{@{$filt_val{$type}}};
-    $filt_sum{'nbr'}     += $#{@{$val{$type}}} + 1;
+    $filt_sum{'dropped'} += $#{$val{$type}} - $#{$filt_val{$type}};
+    $filt_sum{'nbr'}     += $#{$val{$type}} + 1;
 }
 
 # Print the results.
@@ -113,8 +114,8 @@ foreach my $type (keys(%filt_val)) {
 	  $type                                          . "\t" .
 	  $filt_avg                                      . "\t" .
 	  $filt_std_dev                                  . "\t" .
-	  ($#{@{$val{$type}}} - $#{@{$filt_val{$type}}}) . "\t" .
-	  ($#{@{$val{$type}}} + 1) . "\n");
+	  ($#{$val{$type}} - $#{$filt_val{$type}}) . "\t" .
+	  ($#{$val{$type}} + 1) . "\n");
 }
 
 # Print sums.

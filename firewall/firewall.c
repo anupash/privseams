@@ -14,14 +14,15 @@
 int statefulFiltering = 1;
 int escrow_active = 0;
 int accept_normal_traffic_by_default = 1;
-int accept_hip_esp_traffic_by_default = 0;
+int accept_hip_esp_traffic_by_default =
+  HIP_FW_ACCEPT_HIP_ESP_TRAFFIC_BY_DEFAULT;
 int system_based_opp_mode = 0;
 int log_level = LOGDEBUG_NONE;
 
 int counter = 0;
 int hip_proxy_status = 0;
 int foreground = 1;
-int filter_traffic = 1;
+int filter_traffic = HIP_FW_FILTER_TRAFFIC_BY_DEFAULT;
 int hip_opptcp = 0;
 int hip_userspace_ipsec = 0;
 int hip_kernel_ipsec_fallback = 0;
@@ -30,7 +31,8 @@ int hip_stun = 0;
 int hip_lsi_support = 0;
 int hip_sava_router = 0;
 int hip_sava_client = 0;
-
+int restore_filter_traffic = HIP_FW_FILTER_TRAFFIC_BY_DEFAULT;
+int restore_accept_hip_esp_traffic = HIP_FW_ACCEPT_HIP_ESP_TRAFFIC_BY_DEFAULT;
 
 /* Default HIT - do not access this directly, call hip_fw_get_default_hit() */
 struct in6_addr default_hit;
@@ -419,7 +421,11 @@ int hip_fw_uninit_lsi_support(){
 
 		system("ip6tables -D HIPFW-INPUT -d 2001:0010::/28 -j QUEUE 2>/dev/null");
 
+		//empty the firewall db
 		hip_firewall_delete_hldb();
+
+		//empty tha firewall cache
+		hip_firewall_cache_delete_hldb();
 	}
 
   out_err:
@@ -550,14 +556,17 @@ int firewall_init_rules(){
 			// make DROP the default behavior of all chains
 			// TODO don't drop LSIs -> else IPv4 apps won't work
 			// -> also messaging between HIPd and firewall is blocked here
-			system("iptables -I HIPFW-FORWARD -j DROP");  /* @todo: ! LSI PREFIX */
-			system("iptables -I HIPFW-INPUT -j DROP");  /* @todo: ! LSI PREFIX */
-			system("iptables -I HIPFW-OUTPUT -j DROP");  /* @todo: ! LSI PREFIX */
+			system("iptables -I HIPFW-FORWARD ! -d 127.0.0.1 -j DROP");  /* @todo: ! LSI PREFIX */
+			system("iptables -I HIPFW-INPUT ! -d 127.0.0.1 -j DROP");  /* @todo: ! LSI PREFIX */
+			system("iptables -I HIPFW-OUTPUT ! -d 127.0.0.1 -j DROP");  /* @todo: ! LSI PREFIX */
 
-			// but still allow packets with HITs as destination
+			// but still allow loopback and HITs as destination
 			system("ip6tables -I HIPFW-FORWARD ! -d 2001:0010::/28 -j DROP");
 			system("ip6tables -I HIPFW-INPUT ! -d 2001:0010::/28 -j DROP");
 			system("ip6tables -I HIPFW-OUTPUT ! -d 2001:0010::/28 -j DROP");
+			system("ip6tables -I HIPFW-FORWARD -d ::1 -j ACCEPT");
+			system("ip6tables -I HIPFW-INPUT -d ::1 -j ACCEPT");
+			system("ip6tables -I HIPFW-OUTPUT -d ::1 -j ACCEPT");
 		}
 
 		// this will allow the firewall to handle HIP traffic
@@ -610,6 +619,12 @@ int firewall_init_rules(){
 	
 	// Initializing local database for mapping LSI-HIT in the firewall
 	firewall_init_hldb();
+
+	// Initializing local cache database
+	firewall_cache_init_hldb();
+
+	// Initializing local port cache database
+	firewall_port_cache_init_hldb();
 
 	system("iptables -I INPUT -j HIPFW-INPUT");
 	system("iptables -I OUTPUT -j HIPFW-OUTPUT");
@@ -1370,29 +1385,29 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 	if (hip_sava_client && 
 	    !hip_lsi_support && 
 	    !hip_userspace_ipsec) {
-	  //check if HA exists with the router then 
-	  //encrypt source IP and reinject packet to 
-	  //the network stack
-	  //else register with the sava router 
-	  //to register first try to find if sava router IP present in configuration
-	  //if not try to broadcast SD HIP packets and wait for the response
-	  //upon registration repeat the procedure described above for sending 
-	  //out the packet
-
-	  HIP_DEBUG("Handling normal traffic in SAVA mode \n ");
-
-	  verdict = hip_sava_handle_output(ctx);
+		/* check if HA exists with the router then 
+		   encrypt source IP and reinject packet to 
+		   the network stack
+		   else register with the sava router 
+		   to register first try to find if sava router IP present in configuration
+		   if not try to broadcast SD HIP packets and wait for the response
+		   upon registration repeat the procedure described above for sending 
+		   out the packet */
+		
+		HIP_DEBUG("Handling normal traffic in SAVA mode \n ");
+		
+		verdict = hip_sava_handle_output(ctx);
 
 	} else if (ctx->ip_version == 6 && hip_userspace_ipsec) {
-	  HIP_DEBUG_HIT("destination hit: ", &ctx->dst);
-	  // XX TODO: hip_fw_get_default_hit() returns an unfreed value
-	  HIP_DEBUG_HIT("default hit: ", hip_fw_get_default_hit());
-	  // check if this is a reinjected packet
-	  if (IN6_ARE_ADDR_EQUAL(&ctx->dst, hip_fw_get_default_hit()))
-	    // let the packet pass through directly
-	    verdict = 1;
-	  else
-	    verdict = !hip_fw_userspace_ipsec_output(ctx);
+		HIP_DEBUG_HIT("destination hit: ", &ctx->dst);
+		// XX TODO: hip_fw_get_default_hit() returns an unfreed value
+		HIP_DEBUG_HIT("default hit: ", hip_fw_get_default_hit());
+		// check if this is a reinjected packet
+		if (IN6_ARE_ADDR_EQUAL(&ctx->dst, hip_fw_get_default_hit()))
+			// let the packet pass through directly
+			verdict = 1;
+		else
+			verdict = !hip_fw_userspace_ipsec_output(ctx);
 	} else if(ctx->ip_version == 4) {
 		hip_lsi_t src_lsi, dst_lsi;
 
@@ -1585,8 +1600,6 @@ int hip_fw_handle_esp_input(hip_fw_context_t *ctx){
 	int verdict = accept_hip_esp_traffic_by_default;
 
 	HIP_DEBUG("\n");
-
-	/* XX FIXME: ADD LSI INPUT AFTER USERSPACE IPSEC */
 
 	if (filter_traffic)
 	{
@@ -1865,6 +1878,7 @@ int main(int argc, char **argv){
 			break;
 		case 'A':
 			accept_hip_esp_traffic_by_default = 1;
+			restore_accept_hip_esp_traffic = 1;
 			break;
 		case 'f':
 			rule_file = optarg;
@@ -1887,6 +1901,7 @@ int main(int argc, char **argv){
 			break;
 		case 'F':
 			filter_traffic = 0;
+			restore_filter_traffic = filter_traffic;
 			break;
 		case 'p':
 			limit_capabilities = 1;
@@ -2014,10 +2029,11 @@ int main(int argc, char **argv){
 	HIP_IFEL(bind(hip_fw_sock, (struct sockaddr *)& sock_addr,
 		      sizeof(sock_addr)), -1, "Bind on firewall socket addr failed\n");
 
+#ifdef CONFIG_HIP_PRIVSEP
 	if (limit_capabilities) {
 		HIP_IFEL(hip_set_lowcapability(0), -1, "Failed to reduce priviledges");
 	}
-
+#endif
 	//init_timeout_checking(timeout);
 
 #ifdef CONFIG_HIP_HIPPROXY
@@ -2050,7 +2066,8 @@ int main(int argc, char **argv){
 		_HIP_DEBUG("HIP fw select\n");
 
 		// get handle with queued packet and process
-		if ((err = HIPD_SELECT((highest_descriptor + 1), &read_fdset,
+		/* @todo: using HIPD_SELECT blocks hipfw with R1 */
+		if ((err = select((highest_descriptor + 1), &read_fdset,
 				       NULL, NULL, &timeout)) < 0) {
 			HIP_PERROR("select error, ignoring\n");
 			continue;
@@ -2332,7 +2349,9 @@ int hip_fw_handle_outgoing_system_based_opp(hip_fw_context_t *ctx) {
 		else if (entry_peer->bex_state == FIREWALL_STATE_BEX_NOT_SUPPORTED)
 			verdict = accept_normal_traffic_by_default;
 		else if (entry_peer->bex_state == FIREWALL_STATE_BEX_ESTABLISHED){
-			if (hit_is_local_hit(&entry_peer->hit_our)) {
+			if( &entry_peer->hit_our                       &&
+			    (ipv6_addr_cmp(hip_fw_get_default_hit(),
+					   &entry_peer->hit_our) == 0)    ){
 				reinject_packet(&entry_peer->hit_our,
 						&entry_peer->hit_peer,
 						ctx->ipq_packet, 4, 0);

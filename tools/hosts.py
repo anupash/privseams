@@ -21,6 +21,7 @@ class Hosts:
             resolv_conf = '/etc/resolv.conf'
         self.resolv_conf = resolv_conf
         self.d = {}
+        self.a = {}
         self.aaaa = {}
         self.recheck()
         return
@@ -71,10 +72,23 @@ class Hosts:
                 self.suffixes = tuple([i.lower() for i in aa])
         return
 
+    def str_is_hit(self, addr_str):
+        if addr_str[0:8] == "2001:001" or addr_str[0:6] == "2001:1":
+            return True
+        else:
+            return False
+
+    def str_is_lsi(self, addr_str):
+        if addr_str[0:2] == "1.":
+            return True
+        else:
+            return False
+
     def reread(self):
         f = file(self.hostsfile)
         d = {}
         aaaa = {}
+	a = {}
         while 1:
             l = f.readline()
             if not l:
@@ -84,27 +98,44 @@ class Hosts:
                 continue
             aa = l.split()
             addr = aa.pop(0)
-            aa2 = []
             for n in aa:
                 n = self.sani(n)
-                aa2.append(n)
                 a2 = n.split('.')
                 if len(a2) <= 1:
                     for s in self.suffixes:
                         d['%s.%s' % (n,s)] = addr
                 d[n] = addr
-            aaaa[self.sani_aaaa(addr)] = aa2
+	    if self.str_is_hit(addr):
+		aaaa[n] = addr
+	    elif self.str_is_lsi(addr):
+		a[n] = addr
         self.d = d
+	self.a = a
         self.aaaa = aaaa
         return
 
-    def getbyname(self,n):
-        r = self.d.get(self.sani(n))
-        return r
+    def getaddr(self,addr):
+        for name in self.d:
+            if self.sani(addr) == self.d[name]:
+                return name
+        return None
 
-    def getbyaaaa(self,a):
-        r = self.aaaa.get(self.sani(a))
-        return r
+    def getname(self,n):
+        return self.d.get(self.sani(n))
+
+    def geta(self,n):
+        return self.a.get(self.sani(n))
+
+    def getaaaa(self,n):
+        return self.aaaa.get(self.sani(n))
+
+    # Overload hosts file as cache for hostname->HIT/LSI
+    def cache_name(self, hostname, addr):
+        self.d[hostname] = addr
+        if self.str_is_hit(addr):
+            self.aaaa[hostname] = addr
+        elif self.str_is_lsi(addr):
+            self.a[hostname] = addr
 
 class Global:
     def __init__(gp):

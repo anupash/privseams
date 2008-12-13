@@ -1,13 +1,18 @@
-#ifdef CONFIG_HIP_OPENWRT
+#ifdef CONFIG_HIP_PRIVSEP
+#ifdef CONFIG_HIP_ALTSEP
 # include <linux/capability.h>
 #else
 # include <sys/capability.h>
 #endif
+#endif /* CONFIG_HIP_PRIVSEP */
 #include <sys/prctl.h>
 #include <sys/types.h>
 #include <pwd.h>
 #include "debug.h"
 #include "ife.h"
+#ifdef CONFIG_HIP_AGENT
+# include "sqlitedbapi.h"
+#endif
 
 #ifdef CONFIG_HIP_PRIVSEP
 
@@ -16,11 +21,11 @@
 
 #endif /* CONFIG_HIP_PRIVSEP */
 
+#ifndef CONFIG_HIP_OPENWRT
 int hip_user_to_uid(char *name) {
 	int uid = -1, i;
 
 	//Added by Dmitriy
-#ifndef CONFIG_HIP_OPENWRT
 	struct passwd *pwp, pw;
 	char buf[4096];
 
@@ -37,11 +42,11 @@ int hip_user_to_uid(char *name) {
 		}
 	}
 	endpwent();
-#endif
 	return uid;
 }
+#endif
 
-#ifdef CONFIG_HIP_OPENWRT
+#ifdef CONFIG_HIP_ALTSEP
 
 #define _LINUX_CAPABILITY_VERSION_HIPL	0x19980330
 
@@ -68,7 +73,12 @@ int hip_set_lowcapability(int run_as_sudo) {
 
   HIP_DEBUG("Now PR_SET_KEEPCAPS=%d\n", prctl(PR_GET_KEEPCAPS));
 
+#ifndef CONFIG_HIP_OPENWRT
   uid = hip_user_to_uid(USER_NOBODY);
+#else
+  /* todo: hardcode the uid for a suitable user for openwrt */
+  uid = -1;
+#endif
   HIP_IFEL((uid < 0), -1,
 	   "Error while retrieving USER 'nobody' uid\n"); 
 
@@ -119,7 +129,7 @@ int hip_set_lowcapability(int run_as_sudo) {
 
 }
 
-#else /* ! OPENWRT */
+#else /* ! ALTSEP */
 
 /*
  * Note: this function does not go well with valgrind
