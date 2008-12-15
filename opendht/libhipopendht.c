@@ -45,8 +45,8 @@ connect_alarm(int signo)
  */
 int init_dht_gateway_socket(int sockfd){
     if ((sockfd = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP)) < 0)
-        HIP_PERROR("OpenDHT socket:");
-    else HIP_DEBUG("\nOpenDHT communication socket created successfully.\n");
+        HIP_PERROR("OpenDHT socket:\n");
+    else HIP_DEBUG("OpenDHT communication socket created successfully.\n");
     
     return(sockfd);      
 }
@@ -68,9 +68,9 @@ int init_dht_gateway_socket_gw(int sockfd, struct addrinfo *gateway) {
 	af = gateway->ai_family;
 
     if ((sockfd = socket(af, SOCK_STREAM, IPPROTO_TCP)) < 0)
-        HIP_PERROR("OpenDHT socket:");
+        HIP_PERROR("OpenDHT socket\n");
     else
-	HIP_DEBUG("\nOpenDHT communication socket created successfully.\n");
+	HIP_DEBUG("OpenDHT communication socket created successfully.\n");
     
     return(sockfd);      
 }

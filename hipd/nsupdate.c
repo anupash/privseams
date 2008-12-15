@@ -124,6 +124,8 @@ int run_nsupdate(char *ips, char *hit, int start)
 	struct sigaction act;
 	pid_t child_pid;
 
+	HIP_DEBUG("Updating dns records...\n");
+
 	act.sa_handler = sig_chld;
 
 	/* We don't want to block any other signals */

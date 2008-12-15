@@ -247,9 +247,9 @@ int hip_hadb_insert_state(hip_ha_t *ha)
 		char hito[INET6_ADDRSTRLEN], hitp[INET6_ADDRSTRLEN];
 		inet_ntop(AF_INET6, &ha->hit_our, hito, INET6_ADDRSTRLEN);
 		inet_ntop(AF_INET6, &ha->hit_peer, hitp, INET6_ADDRSTRLEN);
-		HIP_DEBUG("\nTrying to insert a new state to the HIP "\
-			  "association database.\n\tOur HIT: %s\n"\
-			  "\tPeer HIT: %s\n\tHIP association state: %d\n",
+		HIP_DEBUG("Trying to insert a new state to the HIP "\
+			  "association database. Our HIT: %s,"\
+			  "Peer HIT: %s, HIP association state: %d\n",
 			  hito, hitp, ha->hastate);
 	}
 #endif
