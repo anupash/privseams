@@ -12,6 +12,7 @@ display_dependencies() {
 	then
 	echo "yum install gcc-c++ openssl-devel libxml2-devel autoconf automake libtool iproute gtk2-devel xmlto doxygen iptables-devel libcap-devel sqlite-devel uuid rpm-build perl-Net-IP perl-Net-DNS perl-Socket6 perl-IO-Socket-INET6"
 	echo "Optional: yum install miredo tla"
+	echo "If yum does not find a package, try searching 'rpm.pbone.net' or 'rpmfind.net' or install from sources"
     else
 	echo -n "Unknown linux system:"
 	cat /etc/lsb-release
