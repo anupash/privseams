@@ -3,7 +3,7 @@
 
 HIPL_DIR=~/dev/hipl--esp--2.6
 BASE_DIR=~/dev/measurements
-DEVICE_TYPE=endhost
+DEVICE_TYPE=endhost-256_3072
 
 # needed by the script - don't change these variables
 EXT_BASE_DIR=$BASE_DIR/auth_performance
