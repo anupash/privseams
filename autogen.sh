@@ -6,17 +6,21 @@ display_dependencies() {
     echo "The following packages are needed for building HIPL software bundle:"
     if test -e /etc/debian_version
 	then
-	echo "apt-get install tla automake autoconf libtool g++ libgtk2.0-dev libssl-dev libxml2-dev xmlto doxygen iproute netcat6 iptables-dev libcap-dev libsqlite3-dev libuuid1 miredo libnet-ip-perl libnet-dns-perl libsocket6-perl libio-socket-inet6-perl"
+	echo "apt-get install automake autoconf libtool g++ libgtk2.0-dev libssl-dev libxml2-dev xmlto doxygen iproute netcat6 iptables-dev libcap-dev libsqlite3-dev libuuid1 libnet-ip-perl libnet-dns-perl libsocket6-perl libio-socket-inet6-perl"
+	echo "Optional: apt-get install miredo tla"
     elif test -e /etc/redhat-release
 	then
-	echo "yum install gcc-c++ tla openssl-devel libxml2-devel autoconf automake libtool iproute gtk2-devel xmlto doxygen iptables-devel libcap-devel sqlite-devel uuid rpm-build miredo perl-Net-IP perl-Net-DNS perl-Socket6 perl-IO-Socket-INET6"
+	echo "yum install gcc-c++ openssl-devel libxml2-devel autoconf automake libtool iproute gtk2-devel xmlto doxygen iptables-devel libcap-devel sqlite-devel uuid rpm-build perl-Net-IP perl-Net-DNS perl-Socket6 perl-IO-Socket-INET6"
+	echo "Optional: yum install miredo tla"
+	echo "If yum does not find a package, try searching 'rpm.pbone.net' or 'rpmfind.net' or install from sources"
     else
 	echo -n "Unknown linux system:"
 	cat /etc/lsb-release
 	echo "You should install the following software:"
-	echo "tla, autoreconf, automake, autoconf, libtool, g++, xmlto, doxygen, iproute, netcat6, miredo, Socket6, IO::Socket::INET6, Net::IP and Net::DNS modules for perl"
+	echo "autoreconf, automake, autoconf, libtool, g++, xmlto, doxygen, iproute, netcat6, Socket6, IO::Socket::INET6, Net::IP and Net::DNS modules for perl"
 	echo "And the following packages with their development headers:"
 	echo "libgtk2.0, openssl, libxml2, iptables, libcap, libsqlite3, uuid"
+	echo "Optionally you can install also miredo, tla"
     fi
 }
 

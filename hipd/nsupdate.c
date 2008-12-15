@@ -107,11 +107,10 @@ int run_nsupdate(char *ips, char *hit, int start)
 	}
 	else if (child_pid == 0) // CHILD
 	{
-
+		char start_str[2];
 		/* Close open sockets since FD_CLOEXEC was not used*/
 		close_all_fds_except_stdout_and_stderr();
 
-		char start_str[2];
 		snprintf(start_str, sizeof(start_str), "%i", start);
 
 		char *env_ips = make_env(VAR_IPS, ips);
@@ -121,7 +120,7 @@ int run_nsupdate(char *ips, char *hit, int start)
 		char *cmd[] = { NSUPDATE_ARG0, NULL };
 		char *env[] = { env_ips, env_hit, env_start, NULL };
 
-		HIP_DEBUG("Starting %s with %s;%s;%s", NSUPDATE_PL, env_hit, env_ips, env_start);
+		HIP_DEBUG("Starting %s with %s;%s;%s\n", NSUPDATE_PL, env_hit, env_ips, env_start);
 		execve (NSUPDATE_PL, cmd, env);
 
 		/* Executed only if error */
@@ -140,21 +139,20 @@ int run_nsupdate(char *ips, char *hit, int start)
  */
 int run_nsupdate_for_hit (struct hip_host_id_entry *entry, void *opaq)
 {
-	HIP_DEBUG("run_nsupdate");
 	int start = 0;
+	char ip_str[40]; // buffer for one IP address
+	char ips_str[1024] = ""; // list of IP addresses
+  	hip_list_t *item, *tmp;
+  	int i;
+	char *hit;
+
+	HIP_DEBUG("run_nsupdate\n");
 	if (opaq != NULL)
 		start = * (int *) opaq;
 
 	HIP_DEBUG("start: %d", start);
 
-	char *hit = hip_convert_hit_to_str(&entry->lhi.hit,NULL);
-
-	char ip_str[40]; // buffer for one IP address
-	char ips_str[1024] = ""; // list of IP addresses
-
-  	hip_list_t *item, *tmp;
-  	int i;
-
+	hit = hip_convert_hit_to_str(&entry->lhi.hit,NULL);
 
   	list_for_each_safe(item, tmp, addresses, i)
 	{
@@ -198,7 +196,7 @@ int run_nsupdate_for_hit (struct hip_host_id_entry *entry, void *opaq)
  */ 
 int nsupdate(const int start)
 {
-	HIP_DEBUG("Updating dns records...");
+	HIP_DEBUG("Updating dns records...\n");
 	hip_for_each_hi(run_nsupdate_for_hit, (void *) &start);
 }
 
