@@ -10,8 +10,8 @@ display_dependencies() {
 	echo "Optional: apt-get install miredo tla"
     elif test -e /etc/redhat-release
 	then
-	echo "yum install gcc-c++ openssl-devel libxml2-devel autoconf automake libtool iproute gtk2-devel xmlto doxygen iptables-devel libcap-devel sqlite-devel uuid rpm-build perl-Net-IP perl-Net-DNS perl-Socket6 perl-IO-Socket-INET6"
-	echo "Optional: yum install miredo tla"
+	echo "yum install gcc-c++ openssl-devel libxml2-devel autoconf automake libtool iproute gtk2-devel xmlto doxygen iptables-devel libcap-devel sqlite-devel rpm-build perl-Net-IP perl-Net-DNS perl-Socket6 perl-IO-Socket-INET6"
+	echo "Optional: yum install uuid miredo tla"
 	echo "If yum does not find a package, try searching 'rpm.pbone.net' or 'rpmfind.net' or install from sources"
     else
 	echo -n "Unknown linux system:"
@@ -19,8 +19,8 @@ display_dependencies() {
 	echo "You should install the following software:"
 	echo "autoreconf, automake, autoconf, libtool, g++, xmlto, doxygen, iproute, netcat6, Socket6, IO::Socket::INET6, Net::IP and Net::DNS modules for perl"
 	echo "And the following packages with their development headers:"
-	echo "libgtk2.0, openssl, libxml2, iptables, libcap, libsqlite3, uuid"
-	echo "Optionally you can install also miredo, tla"
+	echo "libgtk2.0, openssl, libxml2, iptables, libcap, libsqlite3"
+	echo "Optionally you can install also uuid, miredo, tla"
     fi
 }
 

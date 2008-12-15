@@ -64,7 +64,8 @@ make -C doc all
 %package lib
 Summary: hip library files
 Group: System Environment/Kernel
-Requires: openssl libxml2 gtk2 iptables libcap sqlite uuid
+# uuid
+Requires: openssl libxml2 gtk2 iptables libcap sqlite
 %description lib
 
 %package daemon
