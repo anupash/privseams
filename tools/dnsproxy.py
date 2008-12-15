@@ -1,5 +1,35 @@
 #! /usr/bin/env python
 
+# HIP namelook up daemon for /etc/hip/hosts and DNS and Bamboo servers
+#
+# Usage: Basic usage without any command line options.
+#        See getopt() for the options.
+#
+# Working test cases with dnshipproxy
+# - Resolvconf(on/off) + dnsmasq (on/off)
+#    - initial look up (check HIP and non-hip look up)
+#      - check that ctrl+c restores /etc/resolv.conf
+#    - change access network (check HIP and non-hip look up)
+#      - check that ctrl+c restores /etc/resolv.conf
+# - Watch out for cached entries! Restart dnmasq and dnshipproxy after
+#   each test.
+# - Test name resolution with following methods:
+#   - Non-HIP records
+#   - Hostname to HIT resolution
+#     - HITs and LSIs from /etc/hip/hosts
+#     - HI records from DNS
+#     - HITs from Bamboo via hipd
+#   - PTR records: maps HITs to hostnames from /etc/hip/hosts
+# - Interoperates with libc and dnsmasq
+#
+# Actions to resolv.conf files and dnsproxy hooking:
+# - Dnsmasq=on, revolvconf=on: only hooks dnsmasq
+# - Dnsmasq=off, revolvconf=on: rewrites /etc/resolvconf/run/resolv.conf
+# - Dnsmasq=on, revolvconf=off: hooks dnsmasq and rewrites /etc/resolv.conf
+# - Dnsmasq=off, revolvconf=off: rewrites /etc/resolv.conf
+#
+# TBD: the use of alternative dns servers
+
 import sys
 import getopt
 import os
@@ -15,6 +45,7 @@ import re
 import signal
 import syslog
 import popen2
+
 
 def usage(utyp, *msg):
     sys.stderr.write('Usage: %s\n' % os.path.split(sys.argv[0])[1])
@@ -56,24 +87,53 @@ class Logger:
 
 class ResolvConf:
     re_nameserver = re.compile(r'nameserver\s([0-9\.]+)$')
+
+    def is_resolvconf_in_use(self):
+        return self.use_resolvconf
+            
     def guess_resolvconf(self):
+        if self.use_dnsmasq_hook and self.use_resolvconf:
+            return self.dnsmasq_resolv
+        elif self.use_resolvconf:
+            return self.resolvconf_run
+        else:
+            return '/etc/resolv.conf'
+
+    def __init__(self, alt_port = 0, filetowatch = None):
+        self.dnsmasq_defaults = '/etc/default/dnsmasq'
         if (os.path.isdir('/etc/resolvconf/.') and
             os.path.exists('/sbin/resolvconf') and
             os.path.exists('/etc/resolvconf/run/resolv.conf')):
-            # We have probably resoconf package installed
-           return '/etc/resolvconf/run/resolv.conf'
+            self.use_resolvconf = True
         else:
-           return '/etc/resolv.conf'
-    def __init__(self,filetowatch = None):
-        self.oktowrite = 0
-        self.resolvconf_towrite = None
+            self.use_resolvconf = False
+
+        if (alt_port > 0 and
+            os.path.exists(self.dnsmasq_defaults)):
+            self.use_dnsmasq_hook = True
+        else:
+            self.use_dnsmasq_hook = False
+
+        self.alt_port = alt_port
+        self.dnsmasq_defaults_backup = '/etc/default/dnsmasq.backup.dnshipproxy'
+        self.dnsmasq_resolv = '/var/run/dnsmasq/resolv.conf'
+        self.resolvconf_run = '/etc/resolvconf/run/resolv.conf'
+        if self.use_resolvconf:
+            self.resolvconf_towrite = '/etc/resolvconf/run/resolv.conf'
+        else:
+            self.resolvconf_towrite = '/etc/resolv.conf'
+        self.dnsmasq_hook = 'DNSMASQ_OPTS="--no-hosts --no-resolv --server=127.0.0.53#' + str(self.alt_port) + '"\n'
+        self.dnsmasq_restart = '/etc/init.d/dnsmasq restart'
         if filetowatch == None:
-            filetowatch = self.guess_resolvconf()
-        self.resolvconf_orig = filetowatch
-        self.filetowatch = filetowatch
+            self.filetowatch = self.guess_resolvconf()
+        self.resolvconf_orig = self.filetowatch
         self.old_rc_mtime = os.stat(self.filetowatch).st_mtime
-        self.resolvconf_towrite = '/etc/resolv.conf'
+        self.resolvconf_bkname = '%s-%s' % (self.resolvconf_towrite,myid)
         return
+
+    def get_dnsmasq_hook_status(self):
+        return self.use_dnsmasq_hook;
+
     def reread_old_rc(self):
         d = {}
         self.resolvconfd = d
@@ -94,17 +154,30 @@ class ResolvConf:
         else:
             return 0
     def save_resolvconf(self):
-        #st1 = os.lstat(self.resolvconf_towrite)
-        self.resolvconf_bkname = '%s-%s' % (self.resolvconf_towrite,myid)
-        os.link(self.resolvconf_towrite,self.resolvconf_bkname)
+        if self.use_dnsmasq_hook:
+            os.rename(self.dnsmasq_defaults, self.dnsmasq_defaults_backup)
+            dmd = file(self.dnsmasq_defaults, 'w')
+            dmd.write(self.dnsmasq_hook)
+            dmd.close()
+            os.system(self.dnsmasq_restart)
+        if not (self.use_dnsmasq_hook and self.use_resolvconf):
+            os.link(self.resolvconf_towrite,self.resolvconf_bkname)
         return
+
     def restore_resolvconf(self):
-        os.remove(self.resolvconf_towrite)
-        os.rename(self.resolvconf_bkname,self.resolvconf_towrite)
+        if self.use_dnsmasq_hook:
+            os.rename(self.dnsmasq_defaults_backup, self.dnsmasq_defaults)
+            os.system(self.dnsmasq_restart)
+        if not (self.use_dnsmasq_hook and self.use_resolvconf):
+            os.rename(self.resolvconf_bkname, self.resolvconf_towrite)
+
         return
+
     def write(self,params):
-        if not self.oktowrite:
-            throw(ResolvConfError('Cannot write resolv.conf'))
+        self.old_rc_mtime = os.stat(self.filetowatch).st_mtime
+
+        if (self.use_dnsmasq_hook and self.use_resolvconf):
+            return
 
         keys = params.keys()
         keys.sort()
@@ -119,32 +192,33 @@ class ResolvConf:
                 tf.write('%-10s %s\n' % (k,v2))
         tf.close()
         os.rename(tmp,self.resolvconf_towrite)
-        self.old_rc_mtime = os.stat(self.filetowatch).st_mtime
+
+    def overwrite_resolv_conf(self):
+        tmp = '%s.tmp-%s' % (self.resolvconf_towrite,myid)
+        f1 = file(self.resolvconf_towrite,'r')
+        f2 = file(tmp,'w')
+        while 1:
+            d = f1.read(16384)
+            if not d:
+                break
+            f2.write(d)
+        f1.close()
+        f2.close()
+        os.rename(tmp,self.resolvconf_towrite)
 
     def start(self):
         self.save_resolvconf()
-        if self.resolvconf_towrite:
-            tmp = '%s.tmp-%s' % (self.resolvconf_towrite,myid)
-            f1 = file(self.resolvconf_towrite,'r')
-            f2 = file(tmp,'w')
-            while 1:
-                d = f1.read(16384)
-                if not d:
-                    break
-                f2.write(d)
-            f1.close()
-            f2.close()
-            os.rename(tmp,self.resolvconf_towrite)
-            self.oktowrite = 1
+        if not (self.use_dnsmasq_hook and self.use_resolvconf):
+            self.overwrite_resolv_conf()
 
     def restart(self):
-        if os.path.exists(self.resolvconf_bkname):
-            os.remove(self.resolvconf_bkname)
-        self.start()
+        if not (self.use_dnsmasq_hook and self.use_resolvconf):
+            self.overwrite_resolv_conf()
+            #if os.path.exists(self.resolvconf_bkname):
+            #    os.remove(self.resolvconf_bkname)
         self.old_rc_mtime = os.stat(self.filetowatch).st_mtime
 
     def stop(self):
-        self.oktowrite = 0
         self.restore_resolvconf()
 	os.system("ifconfig lo:53 down")
 
@@ -158,6 +232,8 @@ class Global:
 	gp.server_port = None
 	gp.bind_ip = None
 	gp.bind_port = None
+        gp.bind_alt_port = None
+        gp.use_alt_port = False
         gp.fork = False
         gp.pidfile = '/var/run/dnshipproxy.pid'
         gp.kill = False
@@ -170,9 +246,11 @@ class Global:
         os.environ['PATH'] += ':/sbin:/usr/sbin:/usr/local/sbin'
         return
 
-    def read_resolv_conf(gp):
+    def read_resolv_conf(gp, cfile=None):
         d = {}
-        f = file(gp.resolv_conf)
+        if not cfile:
+            cfile = gp.resolv_conf
+        f = file(cfile)
         for l in f.xreadlines():
             l = l.strip()
             if not d.has_key('nameserver'):
@@ -180,13 +258,6 @@ class Global:
                 if r1:
                     d['nameserver'] = r1.group(1)
         gp.resolvconfd = d
-        return d
-
-    def parameter_defaults(gp):
-        env = os.environ
-        gp.server_ip_from_old_rc = 0
-        if gp.server_ip == None:
-            gp.server_ip = env.get('SERVER',None)
         if gp.server_ip == None:
             s_ip = gp.resolvconfd.get('nameserver')
             if s_ip:
@@ -194,6 +265,13 @@ class Global:
                 gp.server_ip_from_old_rc = 1
             else:
                 gp.server_ip = '127.0.0.53' # xx fixme
+        return d
+
+    def parameter_defaults(gp):
+        env = os.environ
+        gp.server_ip_from_old_rc = 0
+        if gp.server_ip == None:
+            gp.server_ip = env.get('SERVER',None)
 	if gp.server_port == None:
             server_port = env.get('SERVERPORT',None)
             if server_port != None:
@@ -210,6 +288,8 @@ class Global:
                 gp.bind_port = int(bind_port)
 	if gp.bind_port == None:
             gp.bind_port = 53
+	if gp.bind_alt_port == None:
+            gp.bind_alt_port = 5000
 
     def hosts_recheck(gp):
         for h in gp.hosts:
@@ -291,7 +371,6 @@ class Global:
         p = os.popen(cmd, "r")
         result = p.readline()
         while result:
-            result.replace
             start = result.find("2001:001")
             end = result.find("\n") -1
             if start != -1 and end != -1:
@@ -406,8 +485,42 @@ class Global:
 
 
     def doit(gp,args):
-        gp.read_resolv_conf()
+        fout = gp.fout
+
+        fout.write('Dns proxy for HIP started\n')
+
         gp.parameter_defaults()
+
+	# Default virtual interface and address for dnsproxy to
+	# avoid problems with other dns forwarders (e.g. dnsmasq)
+	os.system("ifconfig lo:53 127.0.0.53")
+
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            s.bind((gp.bind_ip, gp.bind_port))
+        except:
+            fout.write('Port %d occupied, falling back to port %d\n' %
+                       (gp.bind_port, gp.bind_alt_port))
+            s.bind((gp.bind_ip, gp.bind_alt_port))
+            gp.use_alt_port = True
+            
+        s.settimeout(gp.app_timeout)
+
+        if (gp.use_alt_port):
+            alt_port = gp.bind_alt_port
+        else:
+            alt_port = 0
+
+        rc1 = ResolvConf(alt_port)
+
+        if (rc1.get_dnsmasq_hook_status() and rc1.is_resolvconf_in_use()):
+            fout.write('Dnsmasq-resolvconf installation detected\n')
+            conf_file = rc1.guess_resolvconf()
+        else:
+            conf_file = None
+            
+        gp.read_resolv_conf(conf_file)
+
         gp.hosts = []
         if gp.hostsnames:
             for hn in gp.hostsnames:
@@ -415,33 +528,26 @@ class Global:
         else:
             if os.path.exists(gp.default_hiphosts):
                 gp.hosts.append(hosts.Hosts(gp.default_hiphosts))
+
         util.init_wantdown()
         util.init_wantdown_int()        # Keyboard interrupts
-        fout = gp.fout
-
-	# Default virtual interface and address for dnsproxy to
-	# avoid problems with other dns forwarders (dnsmasq)
-	os.system("ifconfig lo:53 127.0.0.53")
-
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.bind((gp.bind_ip,gp.bind_port))
-        s.settimeout(gp.app_timeout)
 
         args0 = {'server': '127.0.0.53',
                 }
-
         d2 = DNS.DnsRequest(server=gp.server_ip,port=gp.server_port,timeout=0.2)
+
+        rc1.start()
+        rc1.write({'nameserver': gp.bind_ip})
+
+        if not (rc1.is_resolvconf_in_use() and rc1.get_dnsmasq_hook_status()):
+            fout.write('Rewrote resolv.conf\n')
+        if rc1.get_dnsmasq_hook_status():
+            fout.write('Hooked with dnsmasq\n')
 
         s2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s2.settimeout(gp.dns_timeout)
         s2.connect((gp.server_ip,gp.server_port))
 
-        rc1 = ResolvConf()
-        rc1.start()
-        fout.write('Rewriting resolv.conf\n')
-        rc1.write({'nameserver': gp.bind_ip})
-
-        fout.write('Dns proxy for HIP started\n')
         while not util.wantdown():
             try:
                 gp.hosts_recheck()
@@ -452,8 +558,12 @@ class Global:
                         s2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                         s2.settimeout(gp.dns_timeout)
                         s2.connect((gp.server_ip,gp.server_port))
-                        fout.write('Rewriting resolv.conf\n')
+
                         rc1.restart()
+                        rc1.write({'nameserver': gp.bind_ip})
+                        if not (rc1.is_resolvconf_in_use() and
+                                rc1.get_dnsmasq_hook_status()):
+                            fout.write('Rewrote resolv.conf\n')
                 try:
                     buf,from_a = s.recvfrom(2048)
                 except socket.timeout:
@@ -499,12 +609,15 @@ class Global:
                 fout.flush()
 
             except Exception,e:
-                fout.write('Exception ignored: %s\n' % (e,))
+                fout.write('Exception: %s\n' % (e,))
 
+        if rc1.get_dnsmasq_hook_status():
+            fout.write('Removing dnsmasq hooks\n')
         fout.write('Wants down\n')
         fout.flush()
         rc1.stop()
-        fout.write('resolv.conf restored\n')
+        if not (rc1.is_resolvconf_in_use() and rc1.get_dnsmasq_hook_status()):
+            fout.write('resolv.conf restored\n')
         fout.flush()
         return
 
