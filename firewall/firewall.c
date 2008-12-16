@@ -1956,8 +1956,8 @@ int main(int argc, char **argv){
 
 	if (!foreground)
 	{
-		HIP_DEBUG("Forking into background\n");
 		hip_set_logtype(LOGTYPE_SYSLOG);
+		HIP_DEBUG("Forking into background\n");
 		if (fork() > 0)
 			return 0;
 	}
