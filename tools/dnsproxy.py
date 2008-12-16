@@ -546,7 +546,8 @@ class Global:
 
         s2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s2.settimeout(gp.dns_timeout)
-        s2.connect((gp.server_ip,gp.server_port))
+        if (gp.server_ip != None):
+            s2.connect((gp.server_ip,gp.server_port))
 
         while not util.wantdown():
             try:
@@ -557,7 +558,8 @@ class Global:
                         gp.server_ip = rc1.resolvconfd.get('nameserver')
                         s2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                         s2.settimeout(gp.dns_timeout)
-                        s2.connect((gp.server_ip,gp.server_port))
+                        if (gp.server_ip != None):
+                            s2.connect((gp.server_ip,gp.server_port))
 
                         rc1.restart()
                         rc1.write({'nameserver': gp.bind_ip})
