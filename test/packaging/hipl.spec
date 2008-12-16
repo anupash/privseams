@@ -41,7 +41,7 @@ other related tools and test software.
 #      currently required for bug id 524)
 %build
 ./autogen.sh --prefix=/usr
-%configure
+%configure --prefix=/usr
 make -C doc all
 
 # Currently we are not going to install all includes and test software.
