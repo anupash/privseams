@@ -1603,7 +1603,7 @@ $ make V=99
     <title>Closing HIP Security Associations Manually</title>
     <para>
       You can use the hipconf tool to reset HIP SAs manually. Type
-      "hipconf hip rst all" to close all SAs. 
+      "hipconf rst all" to close all SAs. 
     </para>
   </chapter>
   <chapter id="ch_handover">
