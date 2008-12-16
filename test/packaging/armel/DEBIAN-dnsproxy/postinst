@@ -1,6 +1,6 @@
 #!/bin/sh
 
-update-rc.d dnshipproxy defaults
+update-rc.d dnshipproxy defaults 99
 
 if netstat -lanu|awk '$4 ~ /:53$/ {print $4}'|grep 53 > /dev/null
 then
