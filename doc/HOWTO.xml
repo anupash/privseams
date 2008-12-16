@@ -3088,6 +3088,14 @@ $ make V=99
 	an example usage template.
 	</para>
 
+	<para>
+	The hipfw must be started before making any HIP
+	connectivity. If you restart hipfw, you must also reset
+	existing HIP connections. If you are running the hipfw in a
+	router, you may also need to set
+	/proc/sys/net/ipv6/conf/all/forwarding and
+	/proc/sys/net/ipv4/conf/all/forwarding to 1.</para>
+
         <para>Rules follow (loosely) the syntax of Linux Iptables with
         following syntax.</para>
 
