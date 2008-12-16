@@ -88,6 +88,7 @@ Group: System Environment/Kernel
 %description tools
 
 %package firewall
+Requires: hipl-lib
 Summary: hip firewall files
 Group: System Environment/Kernel
 %description firewall
