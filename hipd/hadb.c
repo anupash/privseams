@@ -318,7 +318,9 @@ void hip_print_debug_info(struct in6_addr *local_addr,
 			  hip_hit_t  *local_hit,
 			  hip_hit_t  *peer_hit,
 			  hip_lsi_t  *peer_lsi,
-			  const char *peer_hostname){
+			  const char *peer_hostname,
+			  in_port_t *local_nat_udp_port,
+			  in_port_t *peer_nat_udp_port){
 	if(local_addr)
 		HIP_DEBUG_IN6ADDR("Our addr", local_addr);
 	if(peer_addr)
@@ -331,6 +333,12 @@ void hip_print_debug_info(struct in6_addr *local_addr,
 		HIP_DEBUG_LSI("Peer LSI", peer_lsi);
 	if(peer_hostname)
 		HIP_DEBUG("Peer hostname: %s\n", peer_hostname);
+	
+	if (local_nat_udp_port)
+		HIP_DEBUG("Local NAT traversal UDP port: %d\n", *local_nat_udp_port);
+	
+	if (peer_nat_udp_port)
+		HIP_DEBUG("Peer NAT traversal UDP port: %d\n", *peer_nat_udp_port);
 }
 
 
@@ -376,9 +384,14 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	hip_lsi_t local_lsi, lsi_aux;
 
 	HIP_DEBUG_INADDR("Local IP address ", local_addr);
+	
+	in_port_t nat_udp_port_local = hip_get_nat_udp_port();
+	in_port_t nat_udp_port_peer = hip_get_nat_udp_port();
 	hip_print_debug_info(local_addr, peer_addr,
 			     local_hit,  peer_hit,
-			     peer_lsi,   peer_hostname);
+			     peer_lsi,   peer_hostname,
+			     &nat_udp_port_local,
+			     &nat_udp_port_peer);
 
 	entry = hip_hadb_find_byhits(local_hit, peer_hit);
 
@@ -435,6 +448,7 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	if(hip_nat_status && IN6_IS_ADDR_V4MAPPED(peer_addr)) {
 		entry->nat_mode = hip_nat_status;
 		entry->peer_udp_port = hip_get_nat_udp_port();
+		entry->local_udp_port = hip_get_nat_udp_port();
 		entry->hadb_xmit_func = &nat_xmit_func_set;
 	}
 	else {
@@ -518,7 +532,10 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr,
 
 	HIP_DEBUG("hip_hadb_add_peer_info() invoked.\n");
 
- 	hip_print_debug_info(NULL, peer_addr, NULL, peer_hit, peer_lsi, peer_hostname);
+ 	in_port_t nat_udp_port_local = hip_get_nat_udp_port();
+	in_port_t nat_udp_port_peer = hip_get_nat_udp_port();
+ 	hip_print_debug_info(NULL, peer_addr, NULL, peer_hit, peer_lsi, peer_hostname,
+ 			&nat_udp_port_local, &nat_udp_port_peer);
 
 	HIP_IFEL(!ipv6_addr_is_hit(peer_hit), -1, "Not a HIT\n");
 
@@ -2995,11 +3012,15 @@ int hip_handle_get_ha_info(hip_ha_t *entry, void *opaq)
 	hid.heartbeats_sent = entry->heartbeats_sent;
 
 	_HIP_HEXDUMP("HEXHID ", &hid, sizeof(struct hip_hadb_user_info_state));
+	
+	hid.nat_udp_port_peer = entry->peer_udp_port;
+	hid.nat_udp_port_local = entry->local_udp_port;
 
 	/* does not print heartbeat info, but I do not think it even should -Samu*/
 	hip_print_debug_info(&hid.ip_our,   &hid.ip_peer,
 			     &hid.hit_our,  &hid.hit_peer,
-			     &hid.lsi_peer, &hid.peer_hostname);
+			     &hid.lsi_peer, &hid.peer_hostname,
+			     &hid.nat_udp_port_local, &hid.nat_udp_port_peer);
 
 	err = hip_build_param_contents(msg, &hid, HIP_PARAM_HA_INFO,
 				       sizeof(hid));

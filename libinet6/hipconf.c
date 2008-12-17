@@ -2196,7 +2196,9 @@ int hip_conf_print_info_ha(struct hip_hadb_user_info_state *ha)
 	HIP_DEBUG_LSI(" Local LSI", &ha->lsi_our);
         HIP_DEBUG_LSI(" Peer  LSI", &ha->lsi_peer);
         HIP_INFO_IN6ADDR(" Local IP", &ha->ip_our);
+        HIP_INFO(" Local NAT traversal UDP port: %d\n", ha->nat_udp_port_local);
         HIP_INFO_IN6ADDR(" Peer  IP", &ha->ip_peer);
+        HIP_INFO(" Peer  NAT traversal UDP port: %d\n", ha->nat_udp_port_peer);
 	HIP_INFO(" Peer  hostname: %s\n", &ha->peer_hostname);
 	if (ha->heartbeats_on > 0 && ha->state == HIP_STATE_ESTABLISHED) {
 		HIP_DEBUG(" Heartbeat %.3f ms mean RTT, "

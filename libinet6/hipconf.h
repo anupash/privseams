@@ -44,7 +44,6 @@
 #include "libhipopendht.h"
 #include "registration.h"
 
-
 /*
  * DO NOT TOUCH THESE, unless you know what you are doing.
  * These values are used for TYPE_xxx macros.

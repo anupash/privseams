@@ -546,6 +546,8 @@ struct hip_hadb_user_info_state
 	int		heartbeats_received;
 	double		heartbeats_mean;
 	double		heartbeats_variance;
+	in_port_t	nat_udp_port_local;
+	in_port_t	nat_udp_port_peer;
 };
 
 /** @addtogroup hadb_func
