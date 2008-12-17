@@ -254,17 +254,6 @@ int hipd_init(int flush_ipsec, int killold)
 #if 0
 	hip_init_puzzle_defaults();
 #endif
-	/* Service initialization. */
-	hip_init_services();
-
-#ifdef CONFIG_HIP_RVS
-	HIP_INFO("Initializing HIP relay / RVS.\n");
-	hip_relay_init();
-#endif
-#ifdef CONFIG_HIP_ESCROW
-	hip_init_keadb();
-	hip_init_kea_endpoints();
-#endif
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 	hip_init_opp_db();
@@ -396,6 +385,18 @@ int hipd_init(int flush_ipsec, int killold)
 	hitdberr = hip_init_daemon_hitdb();
 	if (hitdberr < 0) HIP_DEBUG("Initializing daemon hit database returned error\n");
 #endif	/* CONFIG_HIP_AGENT */
+
+	/* Service initialization. */
+	hip_init_services();
+
+#ifdef CONFIG_HIP_RVS
+	HIP_INFO("Initializing HIP relay / RVS.\n");
+	hip_relay_init();
+#endif
+#ifdef CONFIG_HIP_ESCROW
+	hip_init_keadb();
+	hip_init_kea_endpoints();
+#endif
 
 #ifdef CONFIG_HIP_PRIVSEP
 	/* Fix to bug id 668 */

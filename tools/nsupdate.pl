@@ -13,6 +13,8 @@
 # HIPD_START='1'
 #
 ###########################################################
+# Oleg Ponomarev, Helsinki Institute for Information Technology
+###########################################################
 use strict;
 
 my $CONFIG_PATH = "/etc/hip/nsupdate.conf";
@@ -20,7 +22,7 @@ my $CONFIG_PATH = "/etc/hip/nsupdate.conf";
 ##########################################################
 # default values, please change in /etc/hip/nsupdate.conf 
 our $DEBUG = 0;
-
+our $LOG_FACILITY = 'local6';
 our $HIT_TO_IP_ZONE = 'hit-to-ip.infrahip.net.';
 our $HIT_TO_IP_SERVER = '';
 our $HIT_TO_IP_KEY_NAME = '';
@@ -43,11 +45,11 @@ use Net::IP qw/ip_is_ipv6 ip_is_ipv4/;
 use Sys::Syslog;
 use Sys::Hostname;
 
-openlog('nsupdate.pl', 'ndelay,pid', 'local6');
+openlog('nsupdate.pl', 'ndelay,pid', $LOG_FACILITY);
 
-my $env_HIT = $ENV{HIPD_HIT};
-my $env_IPS = $ENV{HIPD_IPS};
-my $env_START = $ENV{HIPD_START};
+my $env_HIT = $ENV{HIPD_HIT}; log_debug("HIPD_HIT=${env_HIT}");
+my $env_IPS = $ENV{HIPD_IPS}; log_debug("HIPD_IPS=${env_IPS}");
+my $env_START = $ENV{HIPD_START}; log_debug("HIPD_START=${env_START}"); 
 
 my($HIT, $REV_HIT, $REV_HIT_WITHOUT_ORCHID);
 
@@ -59,7 +61,7 @@ my $RES_DEFAULT = Net::DNS::Resolver->new();
 if ($env_IPS) {update_hit_to_ip($env_IPS, $env_START);}
 
 if ($env_START) {
-	unless ($REVERSE_HOSTNAME) { $REVERSE_HOSTNAME = hostname(); }
+	unless ($REVERSE_HOSTNAME) { $REVERSE_HOSTNAME = fqdn(); }
 	update_reverse($REVERSE_HOSTNAME);
 }
 
@@ -72,7 +74,7 @@ sub parse_hit
 	$HIT = $env_HIT;
 	my $hit_ip = new Net::IP($HIT) or log_and_die("$HIT does not look like IP address");
 	my $r = $hit_ip->reverse_ip();
-	$r =~ /^(.+)\.ip6\.arpa\.$/ or log_and_die("$HIT does not look like IPv6 address");
+	$r =~ /^(.+)\.ip6\.arpa\.$/ or log_and_die("reverse $HIT ($r) does not look like reverse IPv6 address");
 	$REV_HIT = $1;
 	unless ($REV_HIT =~ /(.+)\.1\.0\.0\.1\.0\.0\.2$/) {log_and_die("$REV_HIT does not end with ORCHID prefix");}
 	$REV_HIT_WITHOUT_ORCHID = $1;
@@ -84,6 +86,8 @@ sub update_hit_to_ip
 	my @new_ips = split(/\s/,$_[0]);
 	my $compare_first = $_[1];
 
+	normalize_ips(\@new_ips);
+
 	my $hit_to_ip_domain = ${REV_HIT} . "." . ${HIT_TO_IP_ZONE};
 
 	my $res = Net::DNS::Resolver->new();
@@ -92,10 +96,10 @@ sub update_hit_to_ip
 
 	if ($compare_first) {
 		my @current_ips = query_addresses($hit_to_ip_domain, $res);
+		normalize_ips(\@current_ips);
 		my $current_ips_str = join(',',sort @current_ips);
 		my $new_ips_str = join(',',sort @new_ips);
 
-# TODO: compare properly, now 2001:708:140:220:0:0:0:6 != 2001:708:140:220::6
 		log_debug("compared current: ${current_ips_str} and desired: ${new_ips_str}");
 
 		if ($current_ips_str eq $new_ips_str) {
@@ -196,7 +200,7 @@ sub resolve_nameservers
 
 	# we can't put symbolic name to Resolver->nameservers because it would not use AAAA then
 	my @server_ips = query_addresses($server, $RES_DEFAULT);
-	log_debug("Resolved nameserver to " . join(',', @server_ips));
+	log_debug("nameservers set to " . join(',', @server_ips));
 
 	return @server_ips;
 }
@@ -206,12 +210,15 @@ sub query_soa
 {
 	my $zone = $_[0];
 
+	log_debug("query_soa($zone)");
+
 	my $query = ${RES_DEFAULT}->query($zone, "SOA");
 
 	if ($query) {
 		foreach my $rr ($query->answer) {
         		next unless ($rr->type eq "SOA");
 			if ($rr->mname =~ /icann\.org/) {log_error("Will not send update to $rr->mname");return;}
+			log_debug("query_soa found " . $rr->mname);
 			return $rr->mname;
         	}
 		log_error("SOA for $zone not found in the answer: " . $query->print());
@@ -223,24 +230,28 @@ sub query_soa
 ####################################################################################################
 sub query_addresses
 {
-	my $server = $_[0];
+	my $host = $_[0];
 	my $res = $_[1];
+	
+	log_debug("query_addresses($host):");
 
 	my @addresses;
 
-	my $query = $res->query($server, "AAAA");
+	my $query = $res->query($host, "AAAA");
 	if ($query) {
 		foreach my $rr ($query->answer) {
         		next unless ($rr->type eq "AAAA");
 			push @addresses, $rr->address();
+			log_debug("query_addresses found AAAA " . $rr->address());
         	}
 	}
 
-	$query = $res->query($server, "A");
+	$query = $res->query($host, "A");
 	if ($query) {
 		foreach my $rr ($query->answer) {
         		next unless ($rr->type eq "A");
 			push @addresses, $rr->address();
+			log_debug("query_addresses found A " . $rr->address());
         	}
 	} 
 
@@ -253,6 +264,8 @@ sub query_ptrs
 	my $domain = $_[0];
 	my $res = $_[1];
 
+	log_debug("query_ptrs($domain)");
+
 	my $query = $res->query($domain , "PTR");
 
 	my @ptrs;
@@ -260,16 +273,12 @@ sub query_ptrs
 	if ($query) {
 		foreach my $rr ($query->answer) {
         		next unless ($rr->type eq "PTR");
+			log_debug("query_ptrs found " . $rr->ptrdname());
 			push @ptrs, $rr->ptrdname();
         	}
 	}
 
 	return @ptrs;
-}
-
-####################################################################################################
-sub reverse_hit
-{
 }
 
 ####################################################################################################
@@ -282,7 +291,7 @@ sub sign_update
 	if ($key_name) {
 		unless ($key_secret) {log_and_and('KEY_NAME is defined, but KEY_SECRET is empty');}
 		log_debug("Signing using $key_name");
-		$update->sign_tsig($key_name, $key_secret);
+		$update->sign_tsig($key_name, $key_secret) or log_error("sign_tsig failed");
 	}
 }
 
@@ -329,4 +338,23 @@ sub log_and_die
 	my $message = $_[0];
 	log_error($message);
 	die $message;
+}
+
+####################################################################################################
+sub fqdn {
+  my $sys_hostname = hostname(); # may be short
+  my @hostent = gethostbyname($sys_hostname);
+  return $hostent[0];
+}
+
+
+####################################################################################################
+sub normalize_ips {
+	my $ips_ref = $_[0];
+
+	foreach my $ip (@$ips_ref) {
+		$ip = new Net::IP($ip)->ip();
+	}
+	
+	return $ips_ref;
 }
