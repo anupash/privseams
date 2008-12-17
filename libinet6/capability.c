@@ -136,16 +136,14 @@ int hip_set_lowcapability(int run_as_sudo) {
  */
 int hip_set_lowcapability(int run_as_sudo) {
 	int err = 0;
-	uid_t uid;
+
 #ifdef CONFIG_HIP_PRIVSEP
+	uid_t uid = -1;
 	cap_value_t cap_list[] = {CAP_NET_RAW, CAP_NET_ADMIN };
 	int ncap_list = 2; 
-	//uid_t ruid,euid;
-	cap_t cap_p;
-	char *cap_s;
-	char *name;
-	//struct passwd *pswd = NULL;
-	//struct passwd *hpswd = NULL;
+	cap_t cap_p = NULL;
+	char *cap_s = NULL;
+	char *name = NULL;
 
 	/* @todo: does this work when you start hipd as root (without sudo) */
          
@@ -174,10 +172,11 @@ int hip_set_lowcapability(int run_as_sudo) {
 	HIP_IFEL(!(cap_p = cap_get_proc()), -1,
 		 "Error getting capabilities\n");
 	HIP_DEBUG("cap_p %s\n", cap_s = cap_to_text(cap_p, NULL));
-	cap_free(cap_s);
-
-	//ruid = uid;
-	//euid = uid;
+	/* It would be better to use #if DEBUG */
+	if (cap_s != NULL) {
+		cap_free(cap_s);
+		cap_s = NULL;
+	}
 
 	HIP_DEBUG("Before setreuid UID=%d and EFF_UID=%d\n",
 		  getuid(), geteuid());
@@ -197,7 +196,11 @@ int hip_set_lowcapability(int run_as_sudo) {
 	HIP_IFEL(cap_set_proc(cap_p)<0, -1, "Error modifying capabilities\n");
 	HIP_DEBUG("UID=%d EFF_UID=%d\n", getuid(), geteuid());	
 	HIP_DEBUG("cap_p %s\n", cap_s = cap_to_text(cap_p, NULL));
-	cap_free(cap_s);
+	/* It would be better to use #if DEBUG */
+	if (cap_s != NULL) {
+		cap_free(cap_s);
+		cap_s = NULL;
+	}
 
 out_err:
 	cap_free(cap_p);

@@ -6,7 +6,7 @@
 #
 # processname: hipd
 # pidfile: /var/run/hipd.pid
-# chkconfig: 2345 20 80
+# chkconfig: 2345 21 79
 
 # source function library
 . /etc/rc.d/init.d/functions
