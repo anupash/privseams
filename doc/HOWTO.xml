@@ -489,20 +489,20 @@ $ ls -l bin/
         </listitem>
         <listitem>
           <para>
-          Get a hipl tarball from <ulink url="http://hipl.hiit.fi/hipl/contrib/openwrt/" />, and place it in the directory kamikaze_7.09/dl/
-          </para>
-          <para>
-          $ wget http://hipl.hiit.fi/hipl/contrib/openwrt/hipl--openwrt--2.6.tar.gz -O kamikaze_7.09/dl/hipl--openwrt--2.6.tar.gz
-          </para>
-          <para>
-          Or you can get the newest hipl source tree from the hipl repository, pack them as a tarball and place it under the dl directory.
+          Get the newest hipl source tree from the hipl repository, pack them as a tarball and place it under the dl directory.
           </para>
           <para>
   <programlisting>
-  $ tla get hipl--openwrt--2.6 hipl--openwrt--2.6
+  $ tla get hipl--main--2.6 hipl--main--2.6
   $ mkdir -p path/to/kamikaze/dl
-  $ tar czf path/to/kamikaze/dl/hipl--openwrt--2.6.tar.gz --exclude=\{arch\} hipl--openwrt--2.6
+  $ tar czf path/to/kamikaze/dl/hipl--openwrt--2.6.tar.gz --exclude=\{arch\} hipl--main--2.6
   </programlisting>
+          </para>
+          <para>
+          An alternative to that is to get a hipl tarball from <ulink url="http://hipl.hiit.fi/hipl/contrib/openwrt/" />, and to place it in the directory kamikaze_7.09/dl/. However, this tarball is currently too old. Do that only when you get in trouble with the first method with the newest sources.
+          </para>
+          <para>
+          $ wget http://hipl.hiit.fi/hipl/contrib/openwrt/hipl--openwrt--2.6.tar.gz -O kamikaze_7.09/dl/hipl--openwrt--2.6.tar.gz
           </para>
         </listitem>
         <listitem>
@@ -653,21 +653,21 @@ Network  --->
         </listitem>
         <listitem>
           <para>
-          Get a hipl tarball from <ulink url="http://hipl.hiit.fi/hipl/contrib/openwrt/hipl--openwrt--2.6.tar.gz" />, and place it in the directory kamikaze/dl/.
+          Get the newest hipl source tree from the hipl repository, pack them as a tarball and place it under the dl directory.
+          </para>
+          <para>
+<programlisting>
+$ tla get hipl--main--2.6 hipl--main--2.6
+$ mkdir -p path/to/kamikaze/dl
+$ tar czf path/to/kamikaze/dl/hipl--openwrt--2.6.tar.gz --exclude=\{arch\} hipl--main--2.6
+</programlisting>
+          </para>
+          <para>
+          An alternative to that is to get a hipl tarball from <ulink url="http://hipl.hiit.fi/hipl/contrib/openwrt/" />, and to place it in the directory kamikaze_7.09/dl/. However, this tarball is currently too old. Do that only when you get in trouble with the first method with the newest sources.
           </para>
           <para>
 <programlisting>
 $ wget http://hipl.hiit.fi/hipl/contrib/openwrt/hipl--openwrt--2.6.tar.gz -O kamikaze/dl/hipl--openwrt--2.6.tar.gz
-</programlisting>
-          </para>
-          <para>
-          Or you can get the newest hipl source tree from the hipl repository, pack them as a tarball and place it under the dl directory.
-          </para>
-          <para>
-<programlisting>
-$ tla get hipl--openwrt--2.6 hipl--openwrt--2.6
-$ mkdir -p path/to/kamikaze/dl
-$ tar czf path/to/kamikaze/dl/hipl--openwrt--2.6.tar.gz --exclude=\{arch\} hipl--openwrt--2.6
 </programlisting>
           </para>
         </listitem>
@@ -964,20 +964,20 @@ $ bin/openwrt-wgt*
         </listitem>
         <listitem>
           <para>
-          Get a hipl tarball from <ulink url="http://hipl.hiit.fi/hipl/contrib/openwrt/" />, and place it in the directory kamikaze_7.09/dl/
-          </para>
-          <para>
-          $ wget http://hipl.hiit.fi/hipl/contrib/openwrt/hipl--openwrt--2.6.tar.gz -O kamikaze_7.09/dl/hipl--openwrt--2.6.tar.gz
-          </para>
-          <para>
-          Or you can get the newest hipl source tree from the hipl repository, pack them as a tarball and place it under the dl directory.
+          Get the newest hipl source tree from the hipl repository, pack them as a tarball and place it under the dl directory.
           </para>
           <para>
   <programlisting>
-  $ tla get hipl--openwrt--2.6 hipl--openwrt--2.6
+  $ tla get hipl--main--2.6 hipl--main--2.6
   $ mkdir -p kamikaze_7.09/dl
-  $ tar czf kamikaze_7.09/dl/hipl--openwrt--2.6.tar.gz --exclude=\{arch\} hipl--openwrt--2.6
+  $ tar czf kamikaze_7.09/dl/hipl--openwrt--2.6.tar.gz --exclude=\{arch\} hipl--main--2.6
   </programlisting>
+          </para>
+          <para>
+          An alternative to that is to get a hipl tarball from <ulink url="http://hipl.hiit.fi/hipl/contrib/openwrt/" />, and to place it in the directory kamikaze_7.09/dl/. However, this tarball is currently too old. Do that only when you get in trouble with the first method with the newest sources.
+          </para>
+          <para>
+          $ wget http://hipl.hiit.fi/hipl/contrib/openwrt/hipl--openwrt--2.6.tar.gz -O kamikaze_7.09/dl/hipl--openwrt--2.6.tar.gz
           </para>
         </listitem>
         <listitem>
@@ -1603,7 +1603,7 @@ $ make V=99
     <title>Closing HIP Security Associations Manually</title>
     <para>
       You can use the hipconf tool to reset HIP SAs manually. Type
-      "hipconf hip rst all" to close all SAs. 
+      "hipconf rst all" to close all SAs. 
     </para>
   </chapter>
   <chapter id="ch_handover">
@@ -3087,6 +3087,14 @@ $ make V=99
 	the first time, it creates /etc/hip/firewall.conf file which contains
 	an example usage template.
 	</para>
+
+	<para>
+	The hipfw must be started before making any HIP
+	connectivity. If you restart hipfw, you must also reset
+	existing HIP connections. If you are running the hipfw in a
+	router, you may also need to set
+	/proc/sys/net/ipv6/conf/all/forwarding and
+	/proc/sys/net/ipv4/conf/all/forwarding to 1.</para>
 
         <para>Rules follow (loosely) the syntax of Linux Iptables with
         following syntax.</para>

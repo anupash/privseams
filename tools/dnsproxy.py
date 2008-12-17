@@ -485,6 +485,7 @@ class Global:
 
 
     def doit(gp,args):
+        connected = False
         fout = gp.fout
 
         fout.write('Dns proxy for HIP started\n')
@@ -546,18 +547,23 @@ class Global:
 
         s2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s2.settimeout(gp.dns_timeout)
-        s2.connect((gp.server_ip,gp.server_port))
+        if (gp.server_ip != None):
+            s2.connect((gp.server_ip,gp.server_port))
+            connected = True
 
         while not util.wantdown():
             try:
                 gp.hosts_recheck()
                 if gp.server_ip_from_old_rc:
                     if rc1.old_has_changed():
+                        connected = False
                         s2.close()
                         gp.server_ip = rc1.resolvconfd.get('nameserver')
                         s2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                         s2.settimeout(gp.dns_timeout)
-                        s2.connect((gp.server_ip,gp.server_port))
+                        if (gp.server_ip != None):
+                            s2.connect((gp.server_ip,gp.server_port))
+                            connected = True
 
                         rc1.restart()
                         rc1.write({'nameserver': gp.bind_ip})
@@ -596,7 +602,7 @@ class Global:
                 else:
                     fout.write('Unhandled type %d\n' % qtype)
 
-		if not sent_answer:
+		if connected and not sent_answer:
 		    #fout.write('No HIP-related records found\n')
                     s2.send(buf)
                     r2 = s2.recv(2048)
