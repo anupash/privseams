@@ -41,7 +41,7 @@ other related tools and test software.
 #      currently required for bug id 524)
 %build
 ./autogen.sh --prefix=/usr
-%configure
+%configure --prefix=/usr
 make -C doc all
 
 # Currently we are not going to install all includes and test software.
@@ -88,6 +88,7 @@ Group: System Environment/Kernel
 %description tools
 
 %package firewall
+Requires: hipl-lib
 Summary: hip firewall files
 Group: System Environment/Kernel
 %description firewall
@@ -166,10 +167,6 @@ install -m 700 tools/dnshipproxy %{buildroot}%{prefix}/sbin/dnshipproxy
 /sbin/chkconfig --add dnshipproxy
 /sbin/chkconfig --level 2 dnshipproxy on
 /sbin/service dnshipproxy start
-/bin/netstat -lanu|/bin/awk '$4 ~ /:53$/ {print $4}'|/bin/grep -q 53 && \
-/bin/echo "*** Warning: DNS software detected running on port 53" && \
-/bin/echo "*** Warning: HIP DNS proxy overrides system default DNS server" && \
-/bin/echo "*** Warning: Check HIPL manual on DNS proxy for further info"
 
 %preun daemon
 /sbin/service hipd stop

@@ -11,7 +11,7 @@
 #include <netinet/in.h>
 #include <string.h>
 
-int hip_hit_to_ip_status = 1;
+int hip_hit_to_ip_status = 0;
 
 char *hip_hit_to_ip_zone = NULL;
 
@@ -98,15 +98,16 @@ int hip_hit_to_ip(hip_hit_t *hit, struct in6_addr *retval) {
 
 	/* Look at the list and return only one address, let us prefer AF_INET6 */
 	for (rp = result; rp != NULL; rp = rp->ai_next) {
-		if (rp->ai_family == AF_INET6) {
+		if (rp->ai_family == AF_INET) {
+			struct sockaddr_in *tmp_sockaddr_in_ptr = (struct sockaddr_in *) (rp->ai_addr);
+			IPV4_TO_IPV6_MAP(&(tmp_sockaddr_in_ptr->sin_addr), retval)
+			found_addr = 1;
+			break;
+		} else if (rp->ai_family == AF_INET6) {
 			struct sockaddr_in6 *tmp_sockaddr_in6_ptr = (struct sockaddr_in6 *) (rp->ai_addr);
 			ipv6_addr_copy(retval, &(tmp_sockaddr_in6_ptr->sin6_addr));
 			found_addr = 1;
-			break; // return this ipv6 address
-		} else if (rp->ai_family == AF_INET) {
-			struct sockaddr_in *tmp_sockaddr_in_ptr = (struct sockaddr_in *) (rp->ai_addr);
-			IPV4_TO_IPV6_MAP(&(tmp_sockaddr_in_ptr->sin_addr), retval)
-			found_addr = 1; // but continue to search for ipv6 address
+			break;
 		}
 	}
 

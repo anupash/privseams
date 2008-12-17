@@ -1603,7 +1603,7 @@ $ make V=99
     <title>Closing HIP Security Associations Manually</title>
     <para>
       You can use the hipconf tool to reset HIP SAs manually. Type
-      "hipconf hip rst all" to close all SAs. 
+      "hipconf rst all" to close all SAs. 
     </para>
   </chapter>
   <chapter id="ch_handover">
@@ -3087,6 +3087,14 @@ $ make V=99
 	the first time, it creates /etc/hip/firewall.conf file which contains
 	an example usage template.
 	</para>
+
+	<para>
+	The hipfw must be started before making any HIP
+	connectivity. If you restart hipfw, you must also reset
+	existing HIP connections. If you are running the hipfw in a
+	router, you may also need to set
+	/proc/sys/net/ipv6/conf/all/forwarding and
+	/proc/sys/net/ipv4/conf/all/forwarding to 1.</para>
 
         <para>Rules follow (loosely) the syntax of Linux Iptables with
         following syntax.</para>
