@@ -1129,15 +1129,29 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 		HIP_DEBUG("hip_buddies_inuse =  %d (should be %d)\n", 
 			hip_buddies_inuse, SO_HIP_BUDDIES_OFF);
 		break;
-	case SO_HIP_SET_NAT_PORT:
+	case SO_HIP_SET_NAT_LOCAL_PORT:
 	{
 		struct hip_port_info *nat_port;
 
-		HIP_DEBUG("Setting NAT port\n");	  
+		HIP_DEBUG("Setting NAT local port\n");	  
 		HIP_IFEL(!(nat_port = hip_get_param(msg, HIP_PARAM_NAT_PORT)),
 				-1, "No nat port param found\n");
 		
-		hip_set_nat_udp_port(nat_port->port);
+		hip_set_nat_local_udp_port(nat_port->port);
+		// We need to recreate the NAT UDP sockets to bind to the new port.
+		hip_create_nat_sock_udp(&hip_nat_sock_output_udp, 1);
+		hip_create_nat_sock_udp(&hip_nat_sock_input_udp, 1);
+		break;
+	}
+	case SO_HIP_SET_NAT_PEER_PORT:
+	{
+		struct hip_port_info *nat_port;
+
+		HIP_DEBUG("Setting NAT peer port\n");	  
+		HIP_IFEL(!(nat_port = hip_get_param(msg, HIP_PARAM_NAT_PORT)),
+				-1, "No nat port param found\n");
+		
+		hip_set_nat_peer_udp_port(nat_port->port);
 		// We need to recreate the NAT UDP sockets to bind to the new port.
 		hip_create_nat_sock_udp(&hip_nat_sock_output_udp, 1);
 		hip_create_nat_sock_udp(&hip_nat_sock_input_udp, 1);

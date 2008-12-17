@@ -1379,7 +1379,7 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 
         src4.sin_port = htons(src_port); //< src4.sin_port is not used     
         if (src_port != hip_get_nat_udp_port())
-        	hip_set_nat_udp_port(src_port);
+        	hip_set_nat_local_udp_port(src_port);
 
         /* Destination address. */
 	HIP_IFEL(!IN6_IS_ADDR_V4MAPPED(peer_addr), -EPFNOSUPPORT,
@@ -1391,7 +1391,7 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	if(dst_port != 0) {
 		dst4.sin_port = htons(dst_port);
 	} else {
-		dst4.sin_port = htons(hip_get_nat_udp_port());
+		dst4.sin_port = htons(hip_get_nat_peer_udp_port());
 	}
 
 	hip_zero_msg_checksum(msg);
@@ -1777,7 +1777,7 @@ int hip_send_udp_stun(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		dst4.sin_port = htons(dst_port);
 	}
 	else {
-		dst4.sin_port = htons(hip_get_nat_udp_port());
+		dst4.sin_port = htons(hip_get_nat_peer_udp_port());
 	}
 
 	/* Zero message HIP checksum. */

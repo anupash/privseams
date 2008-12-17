@@ -1125,7 +1125,7 @@ char* hip_message_type_name(const uint8_t msg_type){
 	case SO_HIP_SET_HI3_OFF:	return "SO_HIP_SET_HI3_OFF";
 	case SO_HIP_HEARTBEAT: 		return "SO_HIP_HEARTBEAT";
 	case SO_HIP_DHT_SERVING_GW: 	return "SO_HIP_DHT_SERVING_GW";
-	case SO_HIP_SET_NAT_PORT:	return "SO_HIP_SET_NAT_PORT";
+	case SO_HIP_SET_NAT_LOCAL_PORT:	return "SO_HIP_SET_NAT_LOCAL_PORT";
 	default:
 		return "UNDEFINED";
 	}
@@ -4256,12 +4256,12 @@ int hip_build_param_reg_from(struct hip_common *msg,
 
 }
 
-int hip_build_param_nat_port(hip_common_t *msg, const in_port_t port)
+int hip_build_param_nat_port(hip_common_t *msg, const in_port_t port, hip_tlv_type_t hipparam)
 {
 	int err = 0;
 	struct hip_port_info nat_port;
 	
-	hip_set_param_type(&nat_port, HIP_PARAM_NAT_PORT);
+	hip_set_param_type(&nat_port, hipparam);
 	nat_port.port = port;
 	hip_calc_generic_param_len(&nat_port, sizeof(nat_port), 0);
 	err = hip_build_param(msg, &nat_port);

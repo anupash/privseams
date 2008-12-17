@@ -322,11 +322,11 @@ int hip_update_deprecate_unlisted(hip_ha_t *entry,
 
 	default_ipsec_func_set.hip_delete_sa(entry->default_spi_out, &list_item->address,
 		      &entry->our_addr, AF_INET6,
-		      (entry->nat_mode ? hip_get_nat_udp_port() : 0),
+		      (entry->nat_mode ? hip_get_nat_local_udp_port() : 0),
 		      (int)entry->peer_udp_port);
 	default_ipsec_func_set.hip_delete_sa(spi_in, &entry->our_addr, &list_item->address,
 		      AF_INET6, (int)entry->peer_udp_port,
-		      (entry->nat_mode ? hip_get_nat_udp_port() : 0));
+		      (entry->nat_mode ? hip_get_nat_local_udp_port() : 0));
 
 	list_del(list_item, entry->spis_out);
  out_err:
@@ -615,11 +615,11 @@ int hip_update_finish_rekeying(hip_common_t *msg, hip_ha_t *entry,
 
 	default_ipsec_func_set.hip_delete_sa(prev_spi_out, &entry->peer_addr,
 		      &entry->our_addr, AF_INET6,
-		      (entry->nat_mode ? hip_get_nat_udp_port() : 0),
+		      (entry->nat_mode ? hip_get_nat_local_udp_port() : 0),
 		      entry->peer_udp_port);
 	default_ipsec_func_set.hip_delete_sa(prev_spi_in, &entry->our_addr,
 		      &entry->peer_addr, AF_INET6, entry->peer_udp_port,
-		      (entry->nat_mode ? hip_get_nat_udp_port() : 0));
+		      (entry->nat_mode ? hip_get_nat_local_udp_port() : 0));
 
 	/* SP and SA are always added, not updated, due to the xfrm api limitation */
 	HIP_IFEL(entry->hadb_ipsec_func->hip_setup_hit_sp_pair(hits, hitr,
@@ -631,7 +631,7 @@ int hip_update_finish_rekeying(hip_common_t *msg, hip_ha_t *entry,
 	HIP_DEBUG("Setting up new outbound SA, SPI=0x%x\n", new_spi_out);
 	/** @todo Currently NULLing the stateless info. Send port info through
 	    entry parameter --Abi */
-	entry->local_udp_port = entry->nat_mode ? hip_get_nat_udp_port() : 0;
+	entry->local_udp_port = entry->nat_mode ? hip_get_nat_local_udp_port() : 0;
 
 	err = entry->hadb_ipsec_func->hip_add_sa(&entry->peer_addr, &entry->our_addr, hits,
 			 hitr,  &new_spi_in, esp_transform,

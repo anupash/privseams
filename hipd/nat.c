@@ -250,7 +250,7 @@ int hip_nat_send_keep_alive(hip_ha_t *entry, void *not_used)
 	   hip_get_nat_udp_port() as source port also, we choose to do so here. */
 	entry->hadb_xmit_func->
 		hip_send_pkt(&entry->our_addr, &entry->peer_addr,
-			     hip_get_nat_udp_port(), hip_get_nat_udp_port(), msg,
+			     hip_get_nat_local_udp_port(), hip_get_nat_peer_udp_port(), msg,
 			     entry, 0);
 
 out_err:

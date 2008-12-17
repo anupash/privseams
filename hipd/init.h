@@ -87,9 +87,12 @@ int hip_init_nat_sock_udp(int *hip_nat_sock_udp);
  * @param  hip_nat_sock_udp	a pointer to the UDP socket.
  * @param  close_		the socket will be closed before recreation
  * 				if close_ is nonzero
+ * @param  output		the socket will be an output socket,
+ * 				if output is nonzero	
+ * 
  * @return zero on success, negative error value on error.
  */
-int hip_create_nat_sock_udp(int *hip_nat_sock_udp, char close_);
+int hip_create_nat_sock_udp(int *hip_nat_sock_udp, char close_, char output);
 int init_random_seed();
 void hip_close(int signal);
 void hip_exit(int signal);

@@ -385,8 +385,8 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 
 	HIP_DEBUG_INADDR("Local IP address ", local_addr);
 	
-	in_port_t nat_udp_port_local = hip_get_nat_udp_port();
-	in_port_t nat_udp_port_peer = hip_get_nat_udp_port();
+	in_port_t nat_udp_port_local = hip_get_nat_local_udp_port();
+	in_port_t nat_udp_port_peer = hip_get_nat_peer_udp_port();
 	hip_print_debug_info(local_addr, peer_addr,
 			     local_hit,  peer_hit,
 			     peer_lsi,   peer_hostname,
@@ -447,8 +447,8 @@ int hip_hadb_add_peer_info_complete(hip_hit_t *local_hit,
 	   function set is set to "nat_xmit_func_set". */
 	if(hip_nat_status && IN6_IS_ADDR_V4MAPPED(peer_addr)) {
 		entry->nat_mode = hip_nat_status;
-		entry->peer_udp_port = hip_get_nat_udp_port();
-		entry->local_udp_port = hip_get_nat_udp_port();
+		entry->peer_udp_port = hip_get_nat_peer_udp_port();
+		entry->local_udp_port = hip_get_nat_local_udp_port();
 		entry->hadb_xmit_func = &nat_xmit_func_set;
 	}
 	else {
@@ -532,10 +532,10 @@ int hip_hadb_add_peer_info(hip_hit_t *peer_hit, struct in6_addr *peer_addr,
 
 	HIP_DEBUG("hip_hadb_add_peer_info() invoked.\n");
 
- 	in_port_t nat_udp_port_local = hip_get_nat_udp_port();
-	in_port_t nat_udp_port_peer = hip_get_nat_udp_port();
+ 	in_port_t nat_local_udp_port = hip_get_nat_local_udp_port();
+	in_port_t nat_peer_udp_port = hip_get_nat_peer_udp_port();
  	hip_print_debug_info(NULL, peer_addr, NULL, peer_hit, peer_lsi, peer_hostname,
- 			&nat_udp_port_local, &nat_udp_port_peer);
+ 			&nat_local_udp_port, &nat_peer_udp_port);
 
 	HIP_IFEL(!ipv6_addr_is_hit(peer_hit), -1, "Not a HIT\n");
 
