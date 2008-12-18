@@ -15,11 +15,11 @@
 [ -f /etc/sysconfig/dnsproxy ] && . /etc/sysconfig/dnsproxy
 
 RETVAL=0
-DNSPROXY="/usr/sbin/dnshipproxy"
-BASENAME="dnsproxy"
+DNSPROXY="/usr/sbin/hipdnsproxy"
+BASENAME="dnshiproxy"
 
 #PID_FILE=/var/run/dnsproxy.pid
-LOCK_FILE=/var/lock/subsys/dnshipproxy
+LOCK_FILE=/var/lock/subsys/hipdnsproxy
 OPTIONS="-bk"
 
 start()

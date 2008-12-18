@@ -1,6 +1,6 @@
 #!/bin/sh
 
-invoke-rc.d --force --quiet dnshipproxy stop 
+invoke-rc.d --force --quiet hipdnsproxy stop 
 
 exit 0
 
