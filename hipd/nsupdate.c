@@ -110,7 +110,6 @@ const char *netdev_address_to_str(struct netdev_address *src, char *dst, socklen
 				inet_ntop_src = &tmp_in_addr;
 			} else
 				inet_ntop_src = tmp_in6_addr_ptr;
-			break;
 	}
 	
 	return inet_ntop(af, inet_ntop_src, dst, cnt);
