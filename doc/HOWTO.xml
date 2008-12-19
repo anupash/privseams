@@ -489,20 +489,20 @@ $ ls -l bin/
         </listitem>
         <listitem>
           <para>
-          Get a hipl tarball from <ulink url="http://hipl.hiit.fi/hipl/contrib/openwrt/" />, and place it in the directory kamikaze_7.09/dl/
-          </para>
-          <para>
-          $ wget http://hipl.hiit.fi/hipl/contrib/openwrt/hipl--openwrt--2.6.tar.gz -O kamikaze_7.09/dl/hipl--openwrt--2.6.tar.gz
-          </para>
-          <para>
-          Or you can get the newest hipl source tree from the hipl repository, pack them as a tarball and place it under the dl directory.
+          Get the newest hipl source tree from the hipl repository, pack them as a tarball and place it under the dl directory.
           </para>
           <para>
   <programlisting>
-  $ tla get hipl--openwrt--2.6 hipl--openwrt--2.6
+  $ tla get hipl--main--2.6 hipl--main--2.6
   $ mkdir -p path/to/kamikaze/dl
-  $ tar czf path/to/kamikaze/dl/hipl--openwrt--2.6.tar.gz --exclude=\{arch\} hipl--openwrt--2.6
+  $ tar czf path/to/kamikaze/dl/hipl--openwrt--2.6.tar.gz --exclude=\{arch\} hipl--main--2.6
   </programlisting>
+          </para>
+          <para>
+          An alternative to that is to get a hipl tarball from <ulink url="http://hipl.hiit.fi/hipl/contrib/openwrt/" />, and to place it in the directory kamikaze_7.09/dl/. However, this tarball is currently too old. Do that only when you get in trouble with the first method with the newest sources.
+          </para>
+          <para>
+          $ wget http://hipl.hiit.fi/hipl/contrib/openwrt/hipl--openwrt--2.6.tar.gz -O kamikaze_7.09/dl/hipl--openwrt--2.6.tar.gz
           </para>
         </listitem>
         <listitem>
@@ -653,21 +653,21 @@ Network  --->
         </listitem>
         <listitem>
           <para>
-          Get a hipl tarball from <ulink url="http://hipl.hiit.fi/hipl/contrib/openwrt/hipl--openwrt--2.6.tar.gz" />, and place it in the directory kamikaze/dl/.
+          Get the newest hipl source tree from the hipl repository, pack them as a tarball and place it under the dl directory.
+          </para>
+          <para>
+<programlisting>
+$ tla get hipl--main--2.6 hipl--main--2.6
+$ mkdir -p path/to/kamikaze/dl
+$ tar czf path/to/kamikaze/dl/hipl--openwrt--2.6.tar.gz --exclude=\{arch\} hipl--main--2.6
+</programlisting>
+          </para>
+          <para>
+          An alternative to that is to get a hipl tarball from <ulink url="http://hipl.hiit.fi/hipl/contrib/openwrt/" />, and to place it in the directory kamikaze_7.09/dl/. However, this tarball is currently too old. Do that only when you get in trouble with the first method with the newest sources.
           </para>
           <para>
 <programlisting>
 $ wget http://hipl.hiit.fi/hipl/contrib/openwrt/hipl--openwrt--2.6.tar.gz -O kamikaze/dl/hipl--openwrt--2.6.tar.gz
-</programlisting>
-          </para>
-          <para>
-          Or you can get the newest hipl source tree from the hipl repository, pack them as a tarball and place it under the dl directory.
-          </para>
-          <para>
-<programlisting>
-$ tla get hipl--openwrt--2.6 hipl--openwrt--2.6
-$ mkdir -p path/to/kamikaze/dl
-$ tar czf path/to/kamikaze/dl/hipl--openwrt--2.6.tar.gz --exclude=\{arch\} hipl--openwrt--2.6
 </programlisting>
           </para>
         </listitem>
@@ -964,20 +964,20 @@ $ bin/openwrt-wgt*
         </listitem>
         <listitem>
           <para>
-          Get a hipl tarball from <ulink url="http://hipl.hiit.fi/hipl/contrib/openwrt/" />, and place it in the directory kamikaze_7.09/dl/
-          </para>
-          <para>
-          $ wget http://hipl.hiit.fi/hipl/contrib/openwrt/hipl--openwrt--2.6.tar.gz -O kamikaze_7.09/dl/hipl--openwrt--2.6.tar.gz
-          </para>
-          <para>
-          Or you can get the newest hipl source tree from the hipl repository, pack them as a tarball and place it under the dl directory.
+          Get the newest hipl source tree from the hipl repository, pack them as a tarball and place it under the dl directory.
           </para>
           <para>
   <programlisting>
-  $ tla get hipl--openwrt--2.6 hipl--openwrt--2.6
+  $ tla get hipl--main--2.6 hipl--main--2.6
   $ mkdir -p kamikaze_7.09/dl
-  $ tar czf kamikaze_7.09/dl/hipl--openwrt--2.6.tar.gz --exclude=\{arch\} hipl--openwrt--2.6
+  $ tar czf kamikaze_7.09/dl/hipl--openwrt--2.6.tar.gz --exclude=\{arch\} hipl--main--2.6
   </programlisting>
+          </para>
+          <para>
+          An alternative to that is to get a hipl tarball from <ulink url="http://hipl.hiit.fi/hipl/contrib/openwrt/" />, and to place it in the directory kamikaze_7.09/dl/. However, this tarball is currently too old. Do that only when you get in trouble with the first method with the newest sources.
+          </para>
+          <para>
+          $ wget http://hipl.hiit.fi/hipl/contrib/openwrt/hipl--openwrt--2.6.tar.gz -O kamikaze_7.09/dl/hipl--openwrt--2.6.tar.gz
           </para>
         </listitem>
         <listitem>
@@ -1088,10 +1088,13 @@ $ ls -l kmod-crypto* kmod-ipsec* kmod-ipv6* kmod-tun*
         This part is just for ASUS WL500W. For La Fonera, please refer to <xref linkend="build_openwrt_fonera" />.
       </para>
       <para>
+        You cannot use Kamikaze 7.09 for ASUS WL500W. Please stick to the latest Kamikaze development version, like r12983, downloading from the subversion repository.
+      </para>
+      <para>
         For preparation, refer to <xref linkend="build_preparation" />.
       </para>
       <para>
-        You cannot use Kamikaze 7.09 for ASUS WL500W. Please stick to the latest Kamikaze development version, like r12983, downloading from the subversion repository.
+        Additionally, you need to download <ulink url="http://hipl.hiit.fi/hipl/contrib/openwrt/devel/package/iptables/Makefile" /> and replace the iptables Makefile with the new one, to build libipq.a and install it. Without it you cannot build hipl.
       </para>
       <formalpara>
         <title>For kernel 2.6.25.x</title>
@@ -1600,7 +1603,7 @@ $ make V=99
     <title>Closing HIP Security Associations Manually</title>
     <para>
       You can use the hipconf tool to reset HIP SAs manually. Type
-      "hipconf hip rst all" to close all SAs. 
+      "hipconf rst all" to close all SAs. 
     </para>
   </chapter>
   <chapter id="ch_handover">
@@ -3085,6 +3088,14 @@ $ make V=99
 	an example usage template.
 	</para>
 
+	<para>
+	The hipfw must be started before making any HIP
+	connectivity. If you restart hipfw, you must also reset
+	existing HIP connections. If you are running the hipfw in a
+	router, you may also need to set
+	/proc/sys/net/ipv6/conf/all/forwarding and
+	/proc/sys/net/ipv4/conf/all/forwarding to 1.</para>
+
         <para>Rules follow (loosely) the syntax of Linux Iptables with
         following syntax.</para>
 
@@ -3650,6 +3661,66 @@ combo-newgroup=&lt;create new...&gt;
           LINUX variable) for the system in which you are going to use the
           kernel module.
      </para>
+   </chapter>
+
+  <chapter id="nsupdate">
+    <title>Dynamic DNS Support (Experimental!)</title>
+    <para>
+      The goal of Dynamic DNS extensions is that a local host can
+      establish initial contact with a peer host when the local host
+      knows only the HIT of the peer but not the IP address or domain name. The
+      extensions do not provide hostname-to-HIT look up support (see
+      section <xref linkend="sec_dns_proxy" />), just HIT-to-IP look
+      up.
+    </para>
+
+    <para>
+       Currently HIP daemon performs name resolution in the following order:
+      <itemizedlist>
+	<listitem><para>in /etc/hip/hosts</para></listitem>
+	<listitem><para>in hit-to-ip.infrahip.net zone</para></listitem>
+	<listitem><para>in OpenDHT</para></listitem>
+      </itemizedlist>
+      </para>
+
+    <para>
+      With "hipconf hit-to-ip on", the HIP daemon uses IP addresses of 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net.
+      to contact peer host with HIT 2001:1e:574e:2505:264a:b360:d8cc:1d75
+    </para>
+    <para>Default hit-to-ip.infrahip.net. suffix can be changed with "hipconf hit-to-ip-set &lt;new.hit-to-ip.zone.&gt;.
+	  Please note it is independent from HIT_TO_IP_ZONE in /etc/hip/nsupdate.conf"
+    </para>
+    <para>
+      With "hipconf nsupdate on", the HIP daemon also maintains
+      records in hit-to-ip.infrahip.net. Once you start hipd, it will
+      call nsupdate.pl with HIT and IP address for every HIT of your
+      host. It is executed upon mobility events (i.e. address changes)
+      later on. There is an example of update query:
+    </para>
+
+    <programlisting>
+update delete 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net
+update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net 1 IN A 193.167.187.1
+update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-to-ip.infrahip.net 1 IN AAAA 2001:708:140:220:215:60ff:fe9f:60c4
+   </programlisting>
+
+   <para>
+     hit-to-ip.infrahip.net used for experiments has HIT in SOA
+     record, therefore updates are sent to HIT and cause HIP base
+     exchange with the master DNS server. Your system should resolve
+     its location by HIT. After the base exchange update is submitted
+     via HIP, which allows DNS server to authenticate the clients and permit
+     updates only of their own location. Changes made to ISC BIND can be found in 
+     patches/bind directory.
+  </para>
+
+   <para>
+     We also try to assign domain name pointers for HITs. On daemon start nsupdate.pl will
+     query 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.ip6.arpa and send
+     update if needed. Unfortunately we modify information in 1.0.0.1.0.0.2.ip6.arpa only on 
+     our DNS server as we do not have global delegation yet.
+  </para>
+
   </chapter>
 <chapter id="ch_opendht">
   <title>Bamboo-based Name Lookup for HIP</title>
@@ -4181,11 +4252,9 @@ parsehipkey &lt; /etc/hip/hip_host_rsa_key_pub.pub hostname.domain.org | sed -n 
     </para>
     <itemizedlist>
       <listitem><para>
-      Dnsmasq: --no-resolv --server=127.0.0.1#5000</para></listitem>
+      Dnsmasq: --no-hosts --no-resolv --server=127.0.0.1#5000</para></listitem>
       <listitem><para>
-      </para></listitem>
-      <listitem><para>
-	  Dns proxy: --port 5000</para></listitem>
+      Dns proxy: --port 5000</para></listitem>
     </itemizedlist>
     <para>
       The easiest way to configure the options is to append them to

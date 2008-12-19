@@ -1399,11 +1399,13 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 		verdict = hip_sava_handle_output(ctx);
 
 	} else if (ctx->ip_version == 6 && hip_userspace_ipsec) {
+		hip_hit_t *def_hit = hip_fw_get_default_hit();
 		HIP_DEBUG_HIT("destination hit: ", &ctx->dst);
 		// XX TODO: hip_fw_get_default_hit() returns an unfreed value
-		HIP_DEBUG_HIT("default hit: ", hip_fw_get_default_hit());
+		if (def_hit)
+			HIP_DEBUG_HIT("default hit: ", def_hit);
 		// check if this is a reinjected packet
-		if (IN6_ARE_ADDR_EQUAL(&ctx->dst, hip_fw_get_default_hit()))
+		if (def_hit && IN6_ARE_ADDR_EQUAL(&ctx->dst, def_hit))
 			// let the packet pass through directly
 			verdict = 1;
 		else
@@ -1442,10 +1444,13 @@ int hip_fw_handle_other_output(hip_fw_context_t *ctx){
 int hip_fw_handle_hip_output(hip_fw_context_t *ctx){
         int err = 0;
 	int verdict = accept_hip_esp_traffic_by_default;
+	hip_common_t * buf = ctx->transport_hdr.hip;
 
 	HIP_DEBUG("hip_fw_handle_hip_output \n");
 
-	hip_common_t * buf = ctx->transport_hdr.hip;
+	if (hip_userspace_ipsec)
+		HIP_IFEL(hip_fw_userspace_ipsec_init_hipd(1), 0,
+			 "Drop ESP packet until hipd is available\n");
 
 	if (filter_traffic)
 	{
@@ -1786,8 +1791,24 @@ void check_and_write_default_config(){
 	FILE *fp= NULL;
 	ssize_t items;
 	char *file= HIP_FW_DEFAULT_RULE_FILE;
+	int i = 0;
 
-	_HIP_DEBUG("\n");
+	HIP_DEBUG("\n");
+
+	/* Firewall depends on hipd to create /etc/hip */
+	for (i=0; i<5; i++) {
+        	if (stat(DEFAULT_CONFIG_DIR, &status) &&
+			errno == ENOENT) {
+			HIP_INFO("%s does not exist. Waiting for hipd to start...\n",
+ 					DEFAULT_CONFIG_DIR);
+			sleep(2);
+		} else {
+			break;
+		}
+	}
+
+	if (i == 5)
+		HIP_DIE("Please start hipd or execute 'hipd -c'\n");
 
 	rename("/etc/hip/firewall.conf", HIP_FW_DEFAULT_RULE_FILE);
 
@@ -1854,9 +1875,11 @@ int main(int argc, char **argv){
 	// XX TODO change proxy to use hip_fw_get_default_hit() instead of own variable
 	if (hip_proxy_status)
 	{
-		if (!hip_query_default_local_hit_from_hipd())
-			ipv6_addr_copy(&proxy_hit, (struct in6_addr *) hip_fw_get_default_hit());
-		HIP_DEBUG_HIT("Default hit is ",  &proxy_hit);
+		hip_hit_t *def_hit = hip_fw_get_default_hit();
+		if (!hip_query_default_local_hit_from_hipd() && def_hit) {
+			ipv6_addr_copy(&proxy_hit, def_hit);
+			HIP_DEBUG_HIT("Default hit is ",  &proxy_hit);
+		}
 	}
 
 	hip_set_logdebug(LOGDEBUG_ALL);
@@ -1949,8 +1972,8 @@ int main(int argc, char **argv){
 
 	if (!foreground)
 	{
-		HIP_DEBUG("Forking into background\n");
 		hip_set_logtype(LOGTYPE_SYSLOG);
+		HIP_DEBUG("Forking into background\n");
 		if (fork() > 0)
 			return 0;
 	}
@@ -2349,8 +2372,9 @@ int hip_fw_handle_outgoing_system_based_opp(hip_fw_context_t *ctx) {
 		else if (entry_peer->bex_state == FIREWALL_STATE_BEX_NOT_SUPPORTED)
 			verdict = accept_normal_traffic_by_default;
 		else if (entry_peer->bex_state == FIREWALL_STATE_BEX_ESTABLISHED){
+			hip_hit_t *def_hit = hip_fw_get_default_hit();
 			if( &entry_peer->hit_our                       &&
-			    (ipv6_addr_cmp(hip_fw_get_default_hit(),
+			    (def_hit && ipv6_addr_cmp(def_hit,
 					   &entry_peer->hit_our) == 0)    ){
 				reinject_packet(&entry_peer->hit_our,
 						&entry_peer->hit_peer,
@@ -2369,12 +2393,13 @@ int hip_fw_handle_outgoing_system_based_opp(hip_fw_context_t *ctx) {
 						      &src_hit, &dst_hit,
 						      &src_lsi, &dst_lsi);
 		if (state_ha == -1) {
+			hip_hit_t *def_hit = hip_fw_get_default_hit();
 			HIP_DEBUG("Initiate bex at firewall\n");
 			memset(&all_zero_hit, 0, sizeof(struct sockaddr_in6));
 			hip_request_peer_hit_from_hipd_at_firewall(
 				&ctx->dst,
 				&all_zero_hit.sin6_addr,
-				(const struct in6_addr *)hip_fw_get_default_hit(),
+				(const struct in6_addr *) def_hit,
 				(in_port_t *) &(ctx->transport_hdr.tcp)->source,
 				(in_port_t *) &(ctx->transport_hdr.tcp)->dest,
 				&fallback,

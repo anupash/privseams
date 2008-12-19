@@ -345,26 +345,26 @@ copy_and_package_files ()
 
     echo "** Copying dnsproxy to $PKGDIR"
     inst -d $PKGDIR/$PYEXECDIR
-    inst -d $PKGDIR/$PYEXECDIR/dnshipproxy
+    inst -d $PKGDIR/$PYEXECDIR/hipdnsproxy
     inst -d $PKGDIR/$PYEXECDIR/parsehipkey
     inst -d $PKGDIR/$PYEXECDIR/DNS
 
-    inst tools/dnsproxy.py* $PKGDIR/$PYEXECDIR/dnshipproxy
-    inst tools/pyip6.py* $PKGDIR/$PYEXECDIR/dnshipproxy
-    inst tools/hosts.py* $PKGDIR/$PYEXECDIR/dnshipproxy
-    inst tools/util.py* $PKGDIR/$PYEXECDIR/dnshipproxy
-    inst tools/parse-key-3.py* $PKGDIR/$PYEXECDIR/dnshipproxy
+    inst tools/dnsproxy.py* $PKGDIR/$PYEXECDIR/hipdnsproxy
+    inst tools/pyip6.py* $PKGDIR/$PYEXECDIR/hipdnsproxy
+    inst tools/hosts.py* $PKGDIR/$PYEXECDIR/hipdnsproxy
+    inst tools/util.py* $PKGDIR/$PYEXECDIR/hipdnsproxy
+    inst tools/parse-key-3.py* $PKGDIR/$PYEXECDIR/hipdnsproxy
 
     inst tools/myasn.py* $PKGDIR/$PYEXECDIR/parsehipkey
     inst tools/DNS/*py* $PKGDIR/$PYEXECDIR/DNS
 
-    $SUDO tools/gen-python-starter.sh $PYEXECDIR/dnshipproxy dnsproxy.py $PKGDIR/usr/sbin/dnshipproxy
+    $SUDO tools/gen-python-starter.sh $PYEXECDIR/hipdnsproxy dnsproxy.py $PKGDIR/usr/sbin/hipdnsproxy
     $SUDO tools/gen-python-starter.sh $PYEXECDIR/parsehipkey parse-key-3.py $PKGDIR/usr/sbin/parsehipkey
 
     inst tools/nsupdate.pl $PKGDIR/usr/sbin
 
     echo "** Copying init.d script to $PKGDIR"
-    inst test/packaging/debian-init.d-dnsproxy $PKGDIR/etc/init.d/dnshipproxy
+    inst test/packaging/debian-init.d-dnsproxy $PKGDIR/etc/init.d/hipdnsproxy
 
     PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
     create_sub_package;
@@ -385,7 +385,7 @@ copy_and_package_files ()
     inst tools/hipconf $PKGDIR/usr/sbin/
 
     echo "** Copying init.d script to $PKGDIR"
-    inst test/packaging/debian-init.d-dnsproxy $PKGDIR/etc/init.d/dnshipproxy
+    inst test/packaging/debian-init.d-dnsproxy $PKGDIR/etc/init.d/hipdnsproxy
 
     PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
     create_sub_package;

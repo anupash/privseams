@@ -2334,6 +2334,8 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 	   remember the address set we have advertised to the peer 
 	*/
 	err = hip_copy_spi_in_addresses(addr_list, spi_in, addr_count);
+#if 0
+	/* Do not need anymore -samu*/
 	loc_addr_item = addr_list;
 	for(i = 0; i < addr_count; i++, loc_addr_item++) {
 		int j, addr_exists = 0;
@@ -2350,6 +2352,8 @@ int hip_update_src_address_list(struct hip_hadb_state *entry,
 			//loc_addr_item->state = ADDR_STATE_WAITING_ECHO_REQ;
 		//}
 	}
+#endif
+
  out_err:
 	return err;
 }
@@ -2797,7 +2801,7 @@ void hip_send_update_all(struct hip_locator_info_addr_item *addr_list,
 	HIP_DEBUG_SOCKADDR("addr", addr);
 
 	if (hip_get_nsupdate_status())
-		nsupdate();
+		nsupdate(0);
 
 	/** @todo check UPDATE also with radvd (i.e. same address is added
 	    twice). */

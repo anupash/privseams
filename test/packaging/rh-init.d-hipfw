@@ -6,7 +6,7 @@
 #
 # processname: hipfw
 # pidfile: /var/run/hipfw.pid
-# chkconfig: 2345 21 79
+# chkconfig: 2345 20 80
 
 # source function library
 . /etc/rc.d/init.d/functions
@@ -20,7 +20,7 @@ BASENAME="hipfw"
 
 #PID_FILE=/var/run/hipfw.pid
 LOCK_FILE=/var/lock/subsys/hipfw
-OPTIONS="-bklp"
+OPTIONS="-bklpF"
 
 start()
 {

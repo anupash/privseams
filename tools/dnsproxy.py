@@ -1,5 +1,35 @@
 #! /usr/bin/env python
 
+# HIP namelook up daemon for /etc/hip/hosts and DNS and Bamboo servers
+#
+# Usage: Basic usage without any command line options.
+#        See getopt() for the options.
+#
+# Working test cases with hipdnsproxy
+# - Resolvconf(on/off) + dnsmasq (on/off)
+#    - initial look up (check HIP and non-hip look up)
+#      - check that ctrl+c restores /etc/resolv.conf
+#    - change access network (check HIP and non-hip look up)
+#      - check that ctrl+c restores /etc/resolv.conf
+# - Watch out for cached entries! Restart dnmasq and hipdnsproxy after
+#   each test.
+# - Test name resolution with following methods:
+#   - Non-HIP records
+#   - Hostname to HIT resolution
+#     - HITs and LSIs from /etc/hip/hosts
+#     - HI records from DNS
+#     - HITs from Bamboo via hipd
+#   - PTR records: maps HITs to hostnames from /etc/hip/hosts
+# - Interoperates with libc and dnsmasq
+#
+# Actions to resolv.conf files and dnsproxy hooking:
+# - Dnsmasq=on, revolvconf=on: only hooks dnsmasq
+# - Dnsmasq=off, revolvconf=on: rewrites /etc/resolvconf/run/resolv.conf
+# - Dnsmasq=on, revolvconf=off: hooks dnsmasq and rewrites /etc/resolv.conf
+# - Dnsmasq=off, revolvconf=off: rewrites /etc/resolv.conf
+#
+# TBD: the use of alternative dns servers
+
 import sys
 import getopt
 import os
@@ -15,6 +45,7 @@ import re
 import signal
 import syslog
 import popen2
+import fileinput
 
 def usage(utyp, *msg):
     sys.stderr.write('Usage: %s\n' % os.path.split(sys.argv[0])[1])
@@ -30,17 +61,6 @@ else:
 
 # Done: forking affects this. Fixed in forkme
 myid = '%d-%d' % (time.time(),os.getpid())
-
-def has_resolvconf0():
-    path2 = list(path)
-    if not '/sbin' in path2:
-        path2.append('/sbin')
-    for d in path2:
-        if os.path.exists(os.path.join(d,'resolvconf')):
-            return True
-    return False
-
-has_resolvconf = has_resolvconf0()
 
 class ResolvConfError(Exception):
     pass
@@ -66,33 +86,130 @@ class Logger:
         return
 
 class ResolvConf:
+    re_nameserver = re.compile(r'nameserver\s([0-9\.]+)$')
+
+    def is_resolvconf_in_use(self):
+        return self.use_resolvconf
+            
     def guess_resolvconf(self):
+        if self.use_dnsmasq_hook and self.use_resolvconf:
+            return self.dnsmasq_resolv
+        elif self.use_resolvconf:
+            return self.resolvconf_run
+        else:
+            return '/etc/resolv.conf'
+
+    def __init__(self, alt_port = 0, filetowatch = None):
+	self.dnsmasq_initd_script = '/etc/init.d/dnsmasq'
+ 	if os.path.exists('/etc/redhat-release'):
+		self.distro = 'redhat'
+		self.rh_before = '# See how we were called.'
+		self.rh_inject = '. /etc/sysconfig/dnsmasq # Added by hipdnsproxy'
+	elif os.path.exists('/etc/debian_version'):
+		self.distro = 'debian'
+	else:
+		self.distro = 'unknown'
+
+	if self.distro == 'redhat':
+	        self.dnsmasq_defaults = '/etc/sysconfig/dnsmasq'
+		if not os.path.exists(self.dnsmasq_defaults):
+			open(self.dnsmasq_defaults, 'w').close()
+	else:
+	        self.dnsmasq_defaults = '/etc/default/dnsmasq'
+
+        self.dnsmasq_defaults_backup = self.dnsmasq_defaults + '.backup.hipdnsproxy'
+
         if (os.path.isdir('/etc/resolvconf/.') and
             os.path.exists('/sbin/resolvconf') and
             os.path.exists('/etc/resolvconf/run/resolv.conf')):
-            # We have probably resoconf package installed
-            return '/etc/resolvconf/run/resolv.conf'
-        return None
-    def __init__(self,filetowatch = None):
-        self.oktowrite = 0
-        self.resolvconf_towrite = None
+            self.use_resolvconf = True
+        else:
+            self.use_resolvconf = False
+
+        if (alt_port > 0 and
+            os.path.exists(self.dnsmasq_defaults)):
+            self.use_dnsmasq_hook = True
+        else:
+            self.use_dnsmasq_hook = False
+
+        self.alt_port = alt_port
+        self.dnsmasq_resolv = '/var/run/dnsmasq/resolv.conf'
+        self.resolvconf_run = '/etc/resolvconf/run/resolv.conf'
+        if self.use_resolvconf:
+            self.resolvconf_towrite = '/etc/resolvconf/run/resolv.conf'
+        else:
+            self.resolvconf_towrite = '/etc/resolv.conf'
+	if self.distro == 'redhat':
+	        self.dnsmasq_hook = 'OPTIONS+="--no-hosts --no-resolv --server=127.0.0.53#' + str(self.alt_port) + '"\n'
+	else:
+        	self.dnsmasq_hook = 'DNSMASQ_OPTS="--no-hosts --no-resolv --server=127.0.0.53#' + str(self.alt_port) + '"\n'
+        self.dnsmasq_restart = self.dnsmasq_initd_script + ' restart'
         if filetowatch == None:
-            filetowatch = self.guess_resolvconf()
-        self.resolvconf_orig = filetowatch
-        self.resolvconf_towrite = '/etc/resolv.conf'
-        return
-    def save_resolvconf(self):
-        st1 = os.lstat(self.resolvconf_towrite)
+            self.filetowatch = self.guess_resolvconf()
+        self.resolvconf_orig = self.filetowatch
+        self.old_rc_mtime = os.stat(self.filetowatch).st_mtime
         self.resolvconf_bkname = '%s-%s' % (self.resolvconf_towrite,myid)
-        os.link(self.resolvconf_towrite,self.resolvconf_bkname)
         return
+
+    def get_dnsmasq_hook_status(self):
+        return self.use_dnsmasq_hook;
+
+    def reread_old_rc(self):
+        d = {}
+        self.resolvconfd = d
+        f = file(self.filetowatch)
+        for l in f.xreadlines():
+            l = l.strip()
+            if not d.has_key('nameserver'):
+                r1 = self.re_nameserver.match(l)
+                if r1:
+                    d['nameserver'] = r1.group(1)
+        return d
+    def old_has_changed(self):
+        old_rc_mtime = os.stat(self.filetowatch).st_mtime
+        if old_rc_mtime > self.old_rc_mtime:
+            self.reread_old_rc()
+            self.old_rc_mtime = old_rc_mtime
+            return 1
+        else:
+            return 0
+    def save_resolvconf(self):
+        if self.use_dnsmasq_hook:
+	    if os.path.exists(self.dnsmasq_defaults):
+                os.rename(self.dnsmasq_defaults, 
+                          self.dnsmasq_defaults_backup)
+            dmd = file(self.dnsmasq_defaults, 'w')
+            dmd.write(self.dnsmasq_hook)
+            dmd.close()
+	    if self.distro == 'redhat':
+		for line in fileinput.input(self.dnsmasq_initd_script, inplace=1):
+			if line.find(self.rh_before) == 0:
+				print self.rh_inject
+			print line,
+            os.system(self.dnsmasq_restart)
+        if not (self.use_dnsmasq_hook and self.use_resolvconf):
+            os.link(self.resolvconf_towrite,self.resolvconf_bkname)
+        return
+
     def restore_resolvconf(self):
-        os.remove(self.resolvconf_towrite)
-        os.rename(self.resolvconf_bkname,self.resolvconf_towrite)
+        if self.use_dnsmasq_hook:
+            if os.path.exists(self.dnsmasq_defaults_backup):
+              os.rename(self.dnsmasq_defaults_backup,
+                        self.dnsmasq_defaults)
+	    if self.distro == 'redhat':
+		for line in fileinput.input(self.dnsmasq_initd_script, inplace=1):
+			if line.find(self.rh_inject) == -1:
+				print line,
+        if not (self.use_dnsmasq_hook and self.use_resolvconf):
+            os.rename(self.resolvconf_bkname, self.resolvconf_towrite)
+
         return
+
     def write(self,params):
-        if not self.oktowrite:
-            throw(ResolvConfError('Cannot write resolv.conf'))
+        self.old_rc_mtime = os.stat(self.filetowatch).st_mtime
+
+        if (self.use_dnsmasq_hook and self.use_resolvconf):
+            return
 
         keys = params.keys()
         keys.sort()
@@ -108,25 +225,34 @@ class ResolvConf:
         tf.close()
         os.rename(tmp,self.resolvconf_towrite)
 
+    def overwrite_resolv_conf(self):
+        tmp = '%s.tmp-%s' % (self.resolvconf_towrite,myid)
+        f1 = file(self.resolvconf_towrite,'r')
+        f2 = file(tmp,'w')
+        while 1:
+            d = f1.read(16384)
+            if not d:
+                break
+            f2.write(d)
+        f1.close()
+        f2.close()
+        os.rename(tmp,self.resolvconf_towrite)
+
     def start(self):
         self.save_resolvconf()
-        if self.resolvconf_towrite:
-            tmp = '%s.tmp-%s' % (self.resolvconf_towrite,myid)
-            f1 = file(self.resolvconf_towrite,'r')
-            f2 = file(tmp,'w')
-            while 1:
-                d = f1.read(16384)
-                if not d:
-                    break
-                f2.write(d)
-            f1.close()
-            f2.close()
-            os.rename(tmp,self.resolvconf_towrite)
-            self.oktowrite = 1
+        if not (self.use_dnsmasq_hook and self.use_resolvconf):
+            self.overwrite_resolv_conf()
+
+    def restart(self):
+        if not (self.use_dnsmasq_hook and self.use_resolvconf):
+            self.overwrite_resolv_conf()
+            #if os.path.exists(self.resolvconf_bkname):
+            #    os.remove(self.resolvconf_bkname)
+        self.old_rc_mtime = os.stat(self.filetowatch).st_mtime
+
     def stop(self):
-        self.oktowrite = 0
         self.restore_resolvconf()
-	os.system("/sbin/ifconfig lo:53 down")
+	os.system("ifconfig lo:53 down")
 
 class Global:
     default_hiphosts = "/etc/hip/hosts"
@@ -138,34 +264,46 @@ class Global:
 	gp.server_port = None
 	gp.bind_ip = None
 	gp.bind_port = None
+        gp.bind_alt_port = None
+        gp.use_alt_port = False
         gp.fork = False
-        gp.pidfile = '/var/run/dnshipproxy.pid'
+        gp.pidfile = '/var/run/hipdnsproxy.pid'
         gp.kill = False
         gp.fout = sys.stdout
+        gp.app_timeout = 1
+        gp.dns_timeout = 10
+        gp.hosts_ttl = 122
+        # required for ifconfig and hipconf in Fedora
+        # (rpm and "make install" targets)
+        os.environ['PATH'] += ':/sbin:/usr/sbin:/usr/local/sbin'
         return
 
-    def read_resolv_conf(gp):
+    def read_resolv_conf(gp, cfile=None):
         d = {}
-        gp.resolvconfd = d
-        f = file(gp.resolv_conf)
+        if not cfile:
+            cfile = gp.resolv_conf
+        f = file(cfile)
         for l in f.xreadlines():
             l = l.strip()
             if not d.has_key('nameserver'):
                 r1 = gp.re_nameserver.match(l)
                 if r1:
                     d['nameserver'] = r1.group(1)
-        return d
-
-    def parameter_defaults(gp):
-        env = os.environ
-        if gp.server_ip == None:
-            gp.server_ip = env.get('SERVER',None)
+        gp.resolvconfd = d
         if gp.server_ip == None:
             s_ip = gp.resolvconfd.get('nameserver')
             if s_ip:
                 gp.server_ip = s_ip
+                gp.server_ip_from_old_rc = 1
             else:
                 gp.server_ip = '127.0.0.53' # xx fixme
+        return d
+
+    def parameter_defaults(gp):
+        env = os.environ
+        gp.server_ip_from_old_rc = 0
+        if gp.server_ip == None:
+            gp.server_ip = env.get('SERVER',None)
 	if gp.server_port == None:
             server_port = env.get('SERVERPORT',None)
             if server_port != None:
@@ -182,29 +320,42 @@ class Global:
                 gp.bind_port = int(bind_port)
 	if gp.bind_port == None:
             gp.bind_port = 53
+	if gp.bind_alt_port == None:
+            gp.bind_alt_port = 5000
 
     def hosts_recheck(gp):
         for h in gp.hosts:
             h.recheck()
         return
 
-    def getbyname(gp,hn):
+    def getname(gp,hn):
         for h in gp.hosts:
-            r = h.getbyname(hn)
+            r = h.getname(hn)
             if r:
                 return r
         return None
 
-    def getbyaaaa(gp,ahn):
+    def getaddr(gp,ahn):
         for h in gp.hosts:
-            r = h.getbyaaaa(ahn)
+            r = h.getaddr(ahn)
             if r:
                 return r
         return None
 
-    def getbya(gp,ahn):
+    def getaaaa(gp,ahn):
         for h in gp.hosts:
-            r = h.getbya(ahn)
+            r = h.getaaaa(ahn)
+            if r:
+                return r
+        return None
+
+    def cache_name(gp, name, addr):
+        for h in gp.hosts:
+            h.cache_name(name, addr)
+
+    def geta(gp,ahn):
+        for h in gp.hosts:
+            r = h.geta(ahn)
             if r:
                 return r
         return None
@@ -245,22 +396,23 @@ class Global:
             f.write('%d\n' % (os.getpid(),))
             f.close()
 
-    def bamboo_lookup(gp, nam, addrtype):
-    	#fout.write("DHT look up\n")
-        #fout.write("Command: - %s\n" % (cmd))
+    def dht_lookup(gp, nam):
+    	#gp.fout.write("DHT look up\n")
         cmd = "hipconf dht get " + nam + " 2>&1"
+        #gp.fout.write("Command: %s\n" % (cmd))
         p = os.popen(cmd, "r")
         result = p.readline()
         while result:
-            #if result.find("Result") != -1:
-            	#fout.write("Found id: %s\n" % (result));
-            #else:
-                #fout.write("Skip: %s\n" % (result))
+            start = result.find("2001:001")
+            end = result.find("\n") -1
+            if start != -1 and end != -1:
+                return result[start:end]
             result = p.readline()
+        return None
 
     def send_id_map_to_hipd(gp, nam):
     	cmd = "hipconf dnsproxy " + nam + " 2>&1"
-     	#fout.write("cmd - %s %s\n" % (cmd,nam))
+     	#gp.fout.write("cmd - %s\n" % (cmd,))
 	p = os.popen(cmd, "r")
 	result = p.readline()
         #fout.write("Result: %s" % (result))
@@ -275,9 +427,133 @@ class Global:
 	#else:
             #fout.write("did not find\n")
 
+    def hip_lookup(gp, q1, r, qtype, d2):
+        m = None
+        lr = None
+        nam = q1['qname']
+        #gp.fout.write('Query type %d for %s\n' % (qtype, nam))
+        lr_a =  gp.geta(nam)
+        lr_aaaa = gp.getaaaa(nam)
+        lr_ptr = gp.getaddr(nam)
+
+        if qtype == 1:
+            lr = lr_a
+        elif qtype == 28 or qtype == 55 or qtype == 255:
+            lr = lr_aaaa
+        elif qtype == 12:
+            lr = lr_ptr
+
+        if lr:
+            a2 = {'name': nam,
+                  'data': lr,
+                  'type': qtype,
+                  'class': 1,
+                  'ttl': gp.hosts_ttl,
+                  }
+            gp.fout.write('Hosts file or cache match: %s %s\n' %
+                          (a2['name'],a2['data']))
+            m = DNS.Lib.Mpacker()
+            m.addHeader(r.header['id'],
+                        1, 0, 0, 0, 1, 1, 0, 0,
+                        1, 1, 0, 0)
+            m.addQuestion(nam,qtype,1)
+
+            if qtype == 1:
+ 	        m.addA(a2['name'],a2['class'],a2['ttl'],a2['data'])
+            elif qtype == 28 or qtype == 55 or qtype == 255:
+                m.addAAAA(a2['name'],a2['class'],a2['ttl'],a2['data'])
+            elif qtype == 12:
+                m.addPTR(a2['name'],a2['class'],a2['ttl'],a2['data'])
+            gp.send_id_map_to_hipd(nam)
+        elif qtype != 1 and qtype != 12:
+            dhthit = None
+            r1 = d2.req(name=q1['qname'],qtype=55) # 55 is HIP RR
+            #gp.fout.write('Query DNS for %s\n' % nam)
+            #gp.fout.write('r1: %s\n' % (dir(r1),))
+
+            if not r1.answers:
+                dhthit = gp.dht_lookup(nam)
+                if dhthit:
+                    gp.fout.write('DHT match: %s %s\n' %
+                                  (nam, dhthit))
+                    dhtres = {'typename' : '55',
+                              'name': nam,
+                              'data': dhthit,
+                              'type': qtype,
+                              'class': 1,
+                              'ttl': gp.hosts_ttl,
+                           }
+                    r1.answers.append(dhtres)
+
+            for a1 in r1.answers:
+                 if a1['typename'] == '55':
+                     if dhthit:
+                         # dht query returns string
+                         hit = dhthit
+                     else:
+                         # dns query returns binary, convert
+                         # to string
+                         aa1d = a1['data']
+                         hit = pyip6.inet_ntop(aa1d[4:4+16])
+                     a2 = {'name': a1['name'],
+                           'data': hit,
+                           'type': qtype,
+                           'class': 1,
+                           'ttl': a1['ttl'],
+                           }
+                     #gp.fout.write('%s\n' % (a2,))
+                     m = DNS.Lib.Mpacker()
+                     m.addHeader(r.header['id'],
+                                 1, r1.header['opcode'], 0, 0,
+                                 r1.header['rd'], 1, 0, 0,
+                                 1, 1, 0, 0)
+                     m.addQuestion(a1['name'],qtype,1)
+		     m.addAAAA(a2['name'],a2['class'],a2['ttl'],a2['data'])
+                     gp.send_id_map_to_hipd(nam)
+                     gp.cache_name(a2['name'], a2['data'])
+                     break
+
+        return m
+
+
     def doit(gp,args):
-        gp.read_resolv_conf()
+        connected = False
+        fout = gp.fout
+
+        fout.write('Dns proxy for HIP started\n')
+
         gp.parameter_defaults()
+
+	# Default virtual interface and address for dnsproxy to
+	# avoid problems with other dns forwarders (e.g. dnsmasq)
+	os.system("ifconfig lo:53 127.0.0.53")
+
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            s.bind((gp.bind_ip, gp.bind_port))
+        except:
+            fout.write('Port %d occupied, falling back to port %d\n' %
+                       (gp.bind_port, gp.bind_alt_port))
+            s.bind((gp.bind_ip, gp.bind_alt_port))
+            gp.use_alt_port = True
+            
+        s.settimeout(gp.app_timeout)
+
+        if (gp.use_alt_port):
+            alt_port = gp.bind_alt_port
+        else:
+            alt_port = 0
+
+        rc1 = ResolvConf(alt_port)
+
+        if (rc1.get_dnsmasq_hook_status() and rc1.is_resolvconf_in_use()):
+            fout.write('Dnsmasq-resolvconf installation detected\n')
+            conf_file = rc1.guess_resolvconf()
+        else:
+            conf_file = None
+            
+        gp.read_resolv_conf(conf_file)
+
         gp.hosts = []
         if gp.hostsnames:
             for hn in gp.hostsnames:
@@ -285,229 +561,101 @@ class Global:
         else:
             if os.path.exists(gp.default_hiphosts):
                 gp.hosts.append(hosts.Hosts(gp.default_hiphosts))
+
         util.init_wantdown()
         util.init_wantdown_int()        # Keyboard interrupts
-        fout = gp.fout
-
-	# Default virtual interface and address for dnsproxy to
-	# avoid problems with other dns forwarders (dnsmasq)
-	os.system("/sbin/ifconfig lo:53 127.0.0.53")
-
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.bind((gp.bind_ip,gp.bind_port))
 
         args0 = {'server': '127.0.0.53',
                 }
-
         d2 = DNS.DnsRequest(server=gp.server_ip,port=gp.server_port,timeout=0.2)
 
-        s2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s2.connect((gp.server_ip,gp.server_port))
-
-        rc1 = ResolvConf()
         rc1.start()
-
         rc1.write({'nameserver': gp.bind_ip})
 
-        fout.write('Dns proxy for HIP started\n')
+        if not (rc1.is_resolvconf_in_use() and rc1.get_dnsmasq_hook_status()):
+            fout.write('Rewrote resolv.conf\n')
+        if rc1.get_dnsmasq_hook_status():
+            fout.write('Hooked with dnsmasq\n')
+
+        s2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s2.settimeout(gp.dns_timeout)
+        if (gp.server_ip != None):
+            s2.connect((gp.server_ip,gp.server_port))
+            connected = True
+
         while not util.wantdown():
             try:
                 gp.hosts_recheck()
-                buf,from_a = s.recvfrom(2048)
-                fout.write('Up %s\n' % (util.tstamp(),))
-                fout.write('%s %s\n' % (from_a,repr(buf)))
+                if gp.server_ip_from_old_rc:
+                    if rc1.old_has_changed():
+                        connected = False
+                        s2.close()
+                        gp.server_ip = rc1.resolvconfd.get('nameserver')
+                        s2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                        s2.settimeout(gp.dns_timeout)
+                        if (gp.server_ip != None):
+                            s2.connect((gp.server_ip,gp.server_port))
+                            connected = True
+
+                        rc1.restart()
+                        rc1.write({'nameserver': gp.bind_ip})
+                        if not (rc1.is_resolvconf_in_use() and
+                                rc1.get_dnsmasq_hook_status()):
+                            fout.write('Rewrote resolv.conf\n')
+                try:
+                    buf,from_a = s.recvfrom(2048)
+                except socket.timeout:
+                    continue;
+
+                #fout.write('Up %s\n' % (util.tstamp(),))
+                #fout.write('%s %s\n' % (from_a,repr(buf)))
                 fout.flush()
                 u = DNS.Lib.Munpacker(buf)
                 r = DNS.Lib.DnsResult(u,args0)
-                fout.write('%s %s\n' % (r.header,r.questions,))
+                #fout.write('%s %s\n' % (r.header,r.questions,))
                 q1 = r.questions[0]
                 qtype = q1['qtype']
                 sent_answer = 0
                 m = None
 
 		# IPv4 A record
-                if qtype == 1:
-		    fout.write('Query type A: LSI look up\n')
-                    nam = q1['qname']
-                    #lr = gp.getbyname(nam)
-	            lr = gp.getbya(nam)
-                    if lr:
-                        a2 = {'name': nam,
-                              'data': lr,
-                              'type': 28,
-                              'class': 1,
-                              'ttl': 10,
-                              }
-                        fout.write('Hosts file A  %s\n' % (a2,))
-                        m = DNS.Lib.Mpacker()
-                        m.addHeader(r.header['id'],
-                                    0, 0, 0, 0, 1, 0, 0, 0,
-                                    1, 1, 0, 0)
-                        m.addQuestion(nam,qtype,1)
-                    else:
-		        # No reason to query DNS for LSIs
-                    	m = None
-		    if m:
-			try:
-			    fout.write('sending A answer\n')
-			    m.addA(a2['name'],a2['class'],a2['ttl'],a2['data'])
-                            s.sendto(m.buf,from_a)
-                            sent_answer = 1
-			except:
-			    fout.write('except A\n')
-
 		# IPv6 AAAA record
-		if qtype == 28:
-		    fout.write('Query type AAAA: HIT look up\n')
-                    nam = q1['qname']
-                    lr = gp.getbyaaaa(nam)
-                    if lr:
-                        a2 = {'name': nam,
-                              'data': lr,
-                              'type': 28,
-                              'class': 1,
-                              'ttl': 10,
-                              }
-                        fout.write('Hosts AAAA  %s\n' % (a2,))
-                        m = DNS.Lib.Mpacker()
-                        m.addHeader(r.header['id'],
-                                    0, 0, 0, 0, 1, 0, 0, 0,
-                                    1, 1, 0, 0)
-                        m.addQuestion(nam,qtype,1)
-                    else:
-                        r1 = d2.req(name=q1['qname'],qtype=55) # 55 is HIP RR
-                        fout.write('r1: %s\n' % (dir(r1),))
-                        fout.write('r1.answers: %s\n' % (r1.answers,))
-                        for a1 in r1.answers:
-			    print a1['typename']
-                            if a1['typename'] == '55':
-                                aa1d = a1['data']
-                                aa1 = aa1d[4:4+16]
-                                a2 = {'name': a1['name'],
-                                      'data': pyip6.inet_ntop(aa1),
-                                      'type': 28,
-                                      'class': 1,
-                                      'ttl': a1['ttl'],
-                                      }
-                                fout.write('DNS AAAA  %s\n' % (a2,))
-                                m = DNS.Lib.Mpacker()
-                                m.addHeader(r.header['id'],
-                                        0, r1.header['opcode'], 0, 0, r1.header['rd'], 0, 0, 0,
-                                        1, 1, 0, 0)
-                                m.addQuestion(a1['name'],qtype,1)
-                                gp.send_id_map_to_hipd(nam)
-                        else:
-                            m = None
+                # ANY address
+		if qtype == 1 or qtype == 28 or qtype == 255 or qtype == 12:
+		    m = gp.hip_lookup(q1, r, qtype, d2)
 		    if m:
 			try:
-			    fout.write('sending AAAA answer\n')
-			    m.addAAAA(a2['name'],a2['class'],a2['ttl'],a2['data'])
+			    #fout.write("sending %d answer\n" % qtype)
                             s.sendto(m.buf,from_a)
                             sent_answer = 1
-			except:
-			    fout.write('except AAAA\n')
+		        except Exception,e:
+		            fout.write('Exception: %s\n' % e)
 
-		# PTR record
-                elif qtype == 12:
-		    fout.write('Query type PTR\n')
-                    nam = q1['qname']
-                    lr = gp.getbyaaaa(nam)
-                    fout.write('Hosts PTR 1 (%s)\n' % (lr,))
-                    if lr:
-                        a2 = {'name': nam,
-                              'data': lr,
-                              'type': 12,
-                              'class': 1,
-                              'ttl': 10,
-                              }
-                        m = DNS.Lib.Mpacker()
-                        m.addHeader(r.header['id'],
-                                    0, 0, 0, 0, 1, 0, 0, 0,
-                                    1, 1, 0, 0)
-                        m.addQuestion(nam,qtype,1)
-                        fout.write('Hosts PTR 5 (%s)\n' % (lr,))
-                    if m:
-			fout.write('sending PTR answer\n')
-                        fout.write('Hosts PTR 6 (%s)\n' % (a2,))
-                        m.addPTR(a2['name'],a2['class'],a2['ttl'],a2['data'])
-                        s.sendto(m.buf,from_a)
-                        sent_answer = 1
+                else:
+                    fout.write('Unhandled type %d\n' % qtype)
 
-		elif qtype == 255: # ANY address
-		    nam = q1['qname']
-                    lr = gp.getbyname(nam)
-                    if lr:
-			fout.write('match on hosts file\n')
-                        a2 = {'name': nam,
-                              'data': lr,
-                              'type': 28,
-                              'class': 1,
-                              'ttl': 10,}
-                        fout.write('Hosts A or AAAA  %s\n' % (a2,))
-                        m = DNS.Lib.Mpacker()
-                        m.addHeader(r.header['id'],
-                                    0, 0, 0, 0, 1, 0, 0, 0,
-                                    1, 1, 0, 0)
-                        m.addQuestion(nam,qtype,1)
-                    else:
-                        r1 = d2.req(name=q1['qname'],qtype=55) # 55 is HIP RR
-                        fout.write('r1: %s\n' % (dir(r1),))
-                        fout.write('r1.answers: %s\n' % (r1.answers,))
-                        for a1 in r1.answers:
-			    print a1['typename']
-                            if a1['typename'] == '55':
-                            	data = a1['data']
-                            	aa1 = data[4:4+16]
-	                    	a2 = {'name': a1['name'],
-                            	'data': pyip6.inet_ntop(aa1),
-                            	'type': 28,
-                            	'class': 1,
-                            	'ttl': a1['ttl'],}
-                            	fout.write('DNS A or AAAA  %s\n' % (a2,))
-                            	m = DNS.Lib.Mpacker()
-                            	m.addHeader(r.header['id'],
-                                        0, r1.header['opcode'], 0, 0, r1.header['rd'], 0, 0, 0,
-                                        1, 1, 0, 0)
-                            	m.addQuestion(a1['name'],qtype,1)
-                                gp.send_id_map_to_hipd(nam)
-				break;
-                    if m:
-			#try ipv4 address by default
-			try:
-			    fout.write('sending ANY answer as A\n')
-			    ip = socket.inet_pton(socket.AF_INET, a2['data'])
-			    fout.write('try\n')
-			    m.addA(a2['name'], a2['class'], a2['ttl'], a2['data'])
-			    s.sendto(m.buf,from_a)
-			    sent_answer = 1
-			except:
-			    fout.write('sending ANY answer as AAAA\n')
-			    fout.write('except\n')
-			    m.addAAAA(a2['name'], a2['class'], a2['ttl'], a2['data'])
-			    s.sendto(m.buf,from_a)
-			    sent_answer = 1
-
-
-		if not sent_answer:
-		    fout.write('Not sent answer\n')
+		if connected and not sent_answer:
+		    #fout.write('No HIP-related records found\n')
                     s2.send(buf)
                     r2 = s2.recv(2048)
                     u = DNS.Lib.Munpacker(r2)
                     r = DNS.Lib.DnsResult(u,args0)
-                    fout.write('Bypass %s %s %s\n' % (r.header,r.questions,r.answers,))
+                    #fout.write('Bypass %s %s %s\n' % (r.header,r.questions,r.answers,))
                     if r.header.get('status') != 'NXDOMAIN':
                         s.sendto(r2,from_a)
 
                 fout.flush()
 
             except Exception,e:
-                fout.write('Exception ignored: %s\n' % (e,))
+                fout.write('Exception: %s\n' % (e,))
 
-                
+        if rc1.get_dnsmasq_hook_status():
+            fout.write('Removing dnsmasq hooks\n')
         fout.write('Wants down\n')
         fout.flush()
         rc1.stop()
-        fout.write('resolv.conf restored\n')
+        if not (rc1.is_resolvconf_in_use() and rc1.get_dnsmasq_hook_status()):
+            fout.write('resolv.conf restored\n')
         fout.flush()
         return
 

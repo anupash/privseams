@@ -62,9 +62,10 @@ int hip_xmit_close(hip_ha_t *entry, void *opaque)
 	}
 
         if (!(entry->state == HIP_STATE_ESTABLISHED)) {
-		HIP_ERROR("Not sending CLOSE message, invalid hip state "\
+		HIP_DEBUG("Not sending CLOSE message, invalid hip state "\
 			  "in current host association. State is %s.\n", 
 			  hip_state_str(entry->state));
+		err = hip_del_peer_info_entry(entry);
 		goto out_err;
 	}
 
