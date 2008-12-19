@@ -737,7 +737,14 @@ void add_udp_header(struct udphdr *udp_hdr, uint16_t packet_len, hip_sa_entry_t 
 	udp_hdr->len = htons((uint16_t)packet_len);
 
 	// this will create a pseudo header using some information from the ip layer
+
+#if 0
+	/* Disabled checksum because it is incorrect. My NAT drops the packets
+	   and wireshark complains about bad checksum */
 	udp_hdr->check = checksum_udp(udp_hdr, src_addr, dst_addr);
+#endif
+
+	udp_hdr->check = 0;
 }
 
 /* XX TODO create one generic checksum function */
