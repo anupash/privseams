@@ -53,12 +53,12 @@ fi
 # (from configure) points /usr/local/.. and we must remove the "local".
 PYEXECDIR=`echo $PYEXECDIR|sed s/local//`
 
-TMPNAME="${VERSION}-${RELEASE}-${REVISION}-${DEBARCH}"
-if dpkg --print-architecture|grep armel;then TMPNAME="${VERSION}-${RELEASE}-${REVISION}-armel"; fi
+PKGNAME="${VERSION}-${RELEASE}-${REVISION}-${DEBARCH}"
+if dpkg --print-architecture|grep armel;then PKGNAME="${VERSION}-${RELEASE}-${REVISION}-armel"; fi
 
-PKGNAME="${NAME}-${TMPNAME}.${POSTFIX}"
-TMP=""
-DEBLIB="$NAME-$TMP"
+PKGNAME="${NAME}-${PKGNAME}.${POSTFIX}"
+PKG=""
+DEBLIB="$NAME-$PKG"
 
 LIBDEPS="libgtk2.0-0, libxml2, iptables, libsqlite3-0"
 if [ $DEBARCH = "armel" ]; then
@@ -128,7 +128,7 @@ copy_tarball ()
 		inst ${PKGROOT}/$DEBIAN/$f "${SRCDIR}/debian"
 	done
 
-        if [ x"$TMP" = x"firewall" ]; then
+        if [ x"$PKG" = x"firewall" ]; then
 		inst -d "${SRCDIR}/debian"
 		for f in preinst postinst prerm postrm;do
 		inst "${PKGROOT}/$DEBIAN-FW/$f" "${SRCDIR}/debian"
@@ -151,7 +151,7 @@ copy_files_gpl()
 		inst $DEBIANGPL/$f "$PKGDIRGPL/DEBIAN"
 	done
 
-        if [ $TMP = "firewall" ]; then
+        if [ $PKG = "firewall" ]; then
 		inst -d "$PKGDIRGPL/DEBIAN-FW"
 		for f in preinst postinst prerm postrm;do
 			inst $DEBIANGPL/$f "$PKGDIRGPL/DEBIAN-FW"
@@ -182,26 +182,26 @@ init_files ()
     set -e
     inst -d "$PKGDIR/DEBIAN"
     
-    if [ $TMP = "daemon" ]; then
+    if [ $PKG = "daemon" ]; then
     	for f in preinst postinst prerm postrm;do
 		inst $DEBIAN/$f "$PKGDIR/DEBIAN" 
     	done
     fi
 
-    if [ $TMP = "lib" ]; then
+    if [ $PKG = "lib" ]; then
 	echo '#!/bin/sh' > $PKGDIR/DEBIAN/postinst
 	chmod a+rx  $PKGDIR/DEBIAN/postinst
 	echo "ldconfig" >> $PKGDIR/DEBIAN/postinst
     fi
 
   
-    if [ $TMP = "firewall" ]; then
+    if [ $PKG = "firewall" ]; then
         for f in preinst postinst prerm postrm;do
 	    inst $DEBIAN-FW/$f "$PKGDIR/DEBIAN" 
     	done
     fi
 
-    if [ $TMP = "dnsproxy" ]; then
+    if [ $PKG = "dnsproxy" ]; then
         for f in preinst postinst prerm postrm;do
 	    inst $DEBIAN-dnsproxy/$f "$PKGDIR/DEBIAN" 
     	done
@@ -211,13 +211,13 @@ init_files ()
 	inst $DEBIAN/$f "$PKGDIR/DEBIAN" 
     done
 
-    echo "** Modifying Debian control file for "$DEBLIB" "$TMP" and "$DEBARCH""
+    echo "** Modifying Debian control file for "$DEBLIB" "$PKG" and "$DEBARCH""
     
     echo "Before:"
     cat $PKGDIR\/DEBIAN\/control
 
     if [ x"$DEBLIB" = x"" ]; then
-	if [ x"$TMP" = x"lib" ]; then
+	if [ x"$PKG" = x"lib" ]; then
 	    echo "Adding main dependencies to hipl-lib"
      	    $SUDO sed -i '/'"$LINE0"'/a\'"$LINE0"' '"$LIBDEPS"'' $PKGDIR\/DEBIAN\/control
 	else
@@ -229,7 +229,7 @@ init_files ()
      	$SUDO sed -i '/'"$LINE1"'/a\'"$LINE0"' '"$DEBLIB"'' $PKGDIR\/DEBIAN\/control
     fi
 
-    $SUDO sed -i '/'"$LINE2"'/ s/.*/&\-'"$TMP"'/' $PKGDIR\/DEBIAN\/control
+    $SUDO sed -i '/'"$LINE2"'/ s/.*/&\-'"$PKG"'/' $PKGDIR\/DEBIAN\/control
     $SUDO sed -i 's/"$LINE3"/&'" $DEBARCH"'/' $PKGDIR\/DEBIAN\/control
 
     echo "After:"
@@ -242,7 +242,7 @@ copy_and_package_files ()
 {
     echo "copying and packaging files"
 
-    TMP="lib"
+    PKG="lib"
     DEBLIB=""
     init_files;
     
@@ -278,10 +278,10 @@ copy_and_package_files ()
     
     copy -d libhipgui/libhipgui.a $PKGDIR/usr/lib/
 
-    PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
+    PKGNAME="${NAME}-$PKG-${PKGNAME}.${POSTFIX}"
     create_sub_package;
 
-    TMP="daemon"
+    PKG="daemon"
     #hipl-daemon hipd: depends on hipl-lib
     DEBLIB="$NAME-lib"
     init_files;
@@ -303,10 +303,10 @@ copy_and_package_files ()
     echo "** Copying init.d script to $PKGDIR"
     inst test/packaging/debian-init.d-hipd $PKGDIR/etc/init.d/hipd
     
-    PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
+    PKGNAME="${NAME}-$PKG-${PKGNAME}.${POSTFIX}"
     create_sub_package;
     
-    TMP="firewall"
+    PKG="firewall"
     DEBLIB="$NAME-lib"
     init_files;
     
@@ -324,10 +324,10 @@ copy_and_package_files ()
     echo "** Copying init.d script to $PKGDIR"
     inst test/packaging/debian-init.d-hipfw $PKGDIR/etc/init.d/hipfw
 
-    PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
+    PKGNAME="${NAME}-$PKG-${PKGNAME}.${POSTFIX}"
     create_sub_package;
 
-    TMP="dnsproxy"
+    PKG="dnsproxy"
     if [ $DEBARCH = "armel" ]; then 
 	DEBLIB="python2.5"
     else
@@ -366,10 +366,10 @@ copy_and_package_files ()
     echo "** Copying init.d script to $PKGDIR"
     inst test/packaging/debian-init.d-dnsproxy $PKGDIR/etc/init.d/hipdnsproxy
 
-    PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
+    PKGNAME="${NAME}-$PKG-${PKGNAME}.${POSTFIX}"
     create_sub_package;
 
-    TMP="tools"
+    PKG="tools"
     #hipl-tools (depends on hipl-lib and hipl-daemon)
     DEBLIB="$NAME-lib, $NAME-daemon"
     init_files;
@@ -387,10 +387,10 @@ copy_and_package_files ()
     echo "** Copying init.d script to $PKGDIR"
     inst test/packaging/debian-init.d-dnsproxy $PKGDIR/etc/init.d/hipdnsproxy
 
-    PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
+    PKGNAME="${NAME}-$PKG-${PKGNAME}.${POSTFIX}"
     create_sub_package;
    
-    TMP="test"
+    PKG="test"
     DEBLIB="$NAME-lib, $NAME-daemon"
     init_files;
     
@@ -411,10 +411,10 @@ copy_and_package_files ()
 
     inst test/hipsetup $PKGDIR/usr/sbin/
 
-    PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
+    PKGNAME="${NAME}-$PKG-${PKGNAME}.${POSTFIX}"
     create_sub_package;
 
-    TMP="agent"
+    PKG="agent"
     DEBLIB="$NAME-lib, $NAME-daemon"
     init_files;
 
@@ -446,10 +446,10 @@ copy_and_package_files ()
 
     set +e
 
-    PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
+    PKGNAME="${NAME}-$PKG-${PKGNAME}.${POSTFIX}"
     create_sub_package;
   
-    TMP="doc"
+    PKG="doc"
     DEBLIB=""
     init_files;
 
@@ -466,7 +466,7 @@ copy_and_package_files ()
     	DOCDIR_PREFIX=$PKGDIR/usr/share/doc make -e install
     	set +e
     
-    	PKGNAME="${NAME}-$TMP-${TMPNAME}.${POSTFIX}"
+    	PKGNAME="${NAME}-$PKG-${PKGNAME}.${POSTFIX}"
     	create_sub_package;
     fi
 
