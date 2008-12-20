@@ -23,7 +23,6 @@ extensions support also mobility and multihoming, and traversal of NATs.
 HIP for Linux (HIPL) is an implementation of a HIP implementation that
 consists of the key and mobility management daemon. It includes also
 other related tools and test software.
-
 %prep
 %setup
 
@@ -105,6 +104,7 @@ Group: System Environment/Kernel
 %description doc
 
 %package dnsproxy
+Requires: python
 Summary: dns proxy for hip
 Group: System Environment/Kernel
 %description dnsproxy
