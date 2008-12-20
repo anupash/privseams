@@ -1791,8 +1791,24 @@ void check_and_write_default_config(){
 	FILE *fp= NULL;
 	ssize_t items;
 	char *file= HIP_FW_DEFAULT_RULE_FILE;
+	int i = 0;
 
-	_HIP_DEBUG("\n");
+	HIP_DEBUG("\n");
+
+	/* Firewall depends on hipd to create /etc/hip */
+	for (i=0; i<5; i++) {
+        	if (stat(DEFAULT_CONFIG_DIR, &status) &&
+			errno == ENOENT) {
+			HIP_INFO("%s does not exist. Waiting for hipd to start...\n",
+ 					DEFAULT_CONFIG_DIR);
+			sleep(2);
+		} else {
+			break;
+		}
+	}
+
+	if (i == 5)
+		HIP_DIE("Please start hipd or execute 'hipd -c'\n");
 
 	rename("/etc/hip/firewall.conf", HIP_FW_DEFAULT_RULE_FILE);
 

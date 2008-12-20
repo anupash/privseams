@@ -96,7 +96,7 @@ int hip_hit_to_ip(hip_hit_t *hit, struct in6_addr *retval) {
 	if (res!=0)
 		return ERR;
 
-	/* Look at the list and return only one address, let us prefer AF_INET6 */
+	/* Look at the list and return only one address, let us prefer AF_INET */
 	for (rp = result; rp != NULL; rp = rp->ai_next) {
 		if (rp->ai_family == AF_INET) {
 			struct sockaddr_in *tmp_sockaddr_in_ptr = (struct sockaddr_in *) (rp->ai_addr);
@@ -107,7 +107,6 @@ int hip_hit_to_ip(hip_hit_t *hit, struct in6_addr *retval) {
 			struct sockaddr_in6 *tmp_sockaddr_in6_ptr = (struct sockaddr_in6 *) (rp->ai_addr);
 			ipv6_addr_copy(retval, &(tmp_sockaddr_in6_ptr->sin6_addr));
 			found_addr = 1;
-			break;
 		}
 	}
 

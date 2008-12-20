@@ -9,8 +9,8 @@
 # chkconfig: 2345 21 79
 
 DNSPROXY_OPTS="-bk"
-PID_FILE=/var/run/dnshipproxy.pid
-EXEC=/usr/sbin/dnshipproxy
+PID_FILE=/var/run/hipdnsproxy.pid
+EXEC=/usr/sbin/hipdnsproxy
 
 set -e
 

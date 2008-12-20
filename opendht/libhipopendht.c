@@ -322,6 +322,7 @@ int opendht_send(int sockfd, void *packet)
 {
 	/*size of packet ???*/
     char put_packet[2048];
+    memset(put_packet, 0, sizeof(put_packet));
     memcpy (put_packet, (char*)packet, strlen((char*)packet)+1);    
     HIP_DEBUG("Actual OpenDHT send starts here\n");
     _HIP_DEBUG("Packet: %s\n",put_packet);
