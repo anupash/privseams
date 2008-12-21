@@ -22,6 +22,12 @@ die()
     exit 1
 }
 
+build_maemo_deb()
+{
+    env PYEXECDIR=$(PYEXECDIR) $PKGEXE/create-deb.sh
+    env PYEXECDIR=$(PYEXECDIR) $PKGEXE/create-deb.sh -s
+}
+
 build_rpm()
 {
     test -e ~/.rpmmacros && die "Move ~/.rpmmacros out of the way"
@@ -32,6 +38,12 @@ build_rpm()
 
 build_deb()
 {
+    if dpkg --print-architecture|grep -q armel
+    then
+	build_maemo_deb
+	exit 0
+    fi
+
     test -e ~/.debmacros && die "Move ~/.rpmmacros out of the way"
 
     if test ! -x /usr/bin/pax

@@ -39,8 +39,9 @@ doxygen:
 	cd doc && doxygen
 rpm:
 	test/packaging/create-package.sh rpm
+
 deb:
-	test/packaging/create-package.sh deb
+	env PYEXECDIR=$(pyexecdir) test/packaging/create-package.sh deb
 
 dist-hook:
 	rm -rf `find $(distdir) -name .arch-ids`
