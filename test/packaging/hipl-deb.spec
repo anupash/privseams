@@ -140,9 +140,9 @@ install -t %{buildroot}%{python_sitelib}/hipdnsproxy tools/util.py*
 install -d %{buildroot}%{python_sitelib}/parsehipkey
 install -t %{buildroot}%{python_sitelib}/parsehipkey tools/parse-key-3.py*
 install -t %{buildroot}%{python_sitelib}/parsehipkey tools/myasn.py*
-# required in CentOS release 5.2
 install -m 700 tools/parsehipkey %{buildroot}/usr/sbin/parsehipkey
 install -m 700 tools/hipdnsproxy %{buildroot}/usr/sbin/hipdnsproxy
+install -m 700 agent/hipagent %{buildroot}/usr/sbin/hipagent
 
 
 %post lib
