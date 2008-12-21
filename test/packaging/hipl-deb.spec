@@ -8,12 +8,10 @@ Packager: miika@iki.fi
 Vendor: InfraHIP
 License: GPLv2
 Group: System Environment/Kernel
-Requires: openssl gtk2 libxml2 glib2 iptables-devel
-BuildRequires: openssl-devel gtk2-devel libxml2-devel glib2-devel iptables-devel xmlto libtool libcap-devel sqlite-devel autoconf automake xmlto rpm-build
+BuildRequires: automake, autoconf, libtool, gcc, g++, libgtk2.0-dev, libssl-dev, libxml2-dev, xmlto, doxygen, iptables-dev, libcap-dev, libsqlite3-dev, libuuid1
 ExclusiveOS: linux
 BuildRoot: %{_tmppath}/%{name}-%{version}-root
 Prefix: /usr
-
 %description
 
 Host Identity Protocol (HIP) provides cryptographic authentication to
@@ -26,12 +24,12 @@ other related tools and test software.
 %prep
 %setup
 
-#added by CentOS
-%ifarch x86_64 ppc64 sparc64 ia64
-%{__perl} -p -i -e 's,/usr/lib/libipq.a,/usr/lib64/libipq.a,g' firewall/Makefile.in
-%endif
+##added by CentOS
+#ifarch x86_64 ppc64 sparc64 ia64
+#__perl -p -i -e 's,/usr/lib/libipq.a,/usr/lib64/libipq.a,g' firewall/Makefile.in
+#endif
 
-%{__perl} -p -i -e 's,/usr/share/pixmaps,\$(DESTDIR)/usr/share/pixmaps,g' libhipgui/Makefile.in
+#__perl -p -i -e 's,/usr/share/pixmaps,DESTDIR/usr/share/pixmaps,g' libhipgui/Makefile.in
 #end CentOS changes
 
 # Note: in subsequent releases me may want to use --disable-debugging
@@ -50,9 +48,9 @@ make -C doc all
 # before building the final release just to check that you have not discarded
 # any essential files.
 #
-#%define _unpackaged_files_terminate_build 0
-#%define _missing_doc_files_terminate_build 0
-%define python_sitelib %(%{__python} -c 'from distutils import sysconfig; print sysconfig.get_python_lib()')
+#define _unpackaged_files_terminate_build 0
+#define _missing_doc_files_terminate_build 0
+#define python_sitelib __python -c 'from distutils import sysconfig; print sysconfig.get_python_lib()')
 
 
 # Note: we are not distributing everything from test directory, just essentials
@@ -60,67 +58,68 @@ make -C doc all
 # create subpackage
 # list of files with the name of subpackage
 
-%package lib
-Summary: hip library files
+%package all
+Summary: HIPL virtual package
 Group: System Environment/Kernel
-# uuid
-Requires: openssl libxml2 gtk2 iptables libcap sqlite
+Requires: hipl-lib, hipl-firewall, hipl-daemon, hipl-agent, hipl-tools, hipl-test, hipl-doc, hipl-dnsproxy
+%description lib
+
+%package lib
+Summary: HIPL libraries
+Group: System Environment/Kernel
+Requires: openssl, libxml2, libgtk2.0, iptables, libcap, libsqlite3
 %description lib
 
 %package daemon
- # miredo
-Requires: hipl-lib iproute perl-Net-IP perl-Net-DNS perl-Socket6 perl-IO-Socket-INET6
-Summary: hip daemon files
+Requires: hipl-lib, iproute, libnet-ip-perl, libnet-dns-perl, libsocket6-perl, libio-socket-inet6-perl
+Summary: HIPL IPsec key management and mobility daemon
 Group: System Environment/Kernel
 %description daemon
 
 %package agent
-Requires: hipl-lib, hipl-daemon
-Summary: hip agent files
+Requires: hipl-lib
+Summary: HIPL graphical user interface
 Group: System Environment/Kernel
 %description agent
 
 %package tools
-Requires: hipl-lib, hipl-daemon perl-Net-IP
-Summary: hip tools files
+Requires: hipl-lib, hipl-daemon
+Summary: HIPL command line tools
 Group: System Environment/Kernel
 %description tools
 
 %package firewall
 Requires: hipl-lib
-Summary: hip firewall files
+Summary: HIPL hipfw daemon
 Group: System Environment/Kernel
 %description firewall
 
 %package test
-Requires: hipl-lib, hipl-daemon
-Summary: hip test files
+Requires: hipl-daemon
+Summary: HIPL developer test software
 Group: System Environment/Kernel
 %description test
 
 %package doc
-Summary: hip doc files
+Summary: HIPL documentation
 Group: System Environment/Kernel
 %description doc
 
 %package dnsproxy
 Requires: python
-Summary: dns proxy for hip
+Summary: HIPL DNS proxy
 Group: System Environment/Kernel
 %description dnsproxy
 
 %install
 rm -rf %{buildroot}
 
-#added by CentOS
-install -d %{buildroot}%{prefix}/share/pixmaps
-#end CentOS add
-
 # XX FIXME: add more python stuff from tools directory
 
-install -d %{buildroot}%{prefix}/bin
-install -d %{buildroot}%{prefix}/sbin
-install -d %{buildroot}%{prefix}/lib
+install -d %{buildroot}/prefix/share/pixmaps
+install -d %{buildroot}/usr/bin
+install -d %{buildroot}/usr/sbin
+install -d %{buildroot}/usr/lib
 install -d %{buildroot}/etc/rc.d/init.d
 install -d %{buildroot}/doc
 make DESTDIR=%{buildroot} install
@@ -139,8 +138,8 @@ install -d %{buildroot}%{python_sitelib}/parsehipkey
 install -t %{buildroot}%{python_sitelib}/parsehipkey tools/parse-key-3.py*
 install -t %{buildroot}%{python_sitelib}/parsehipkey tools/myasn.py*
 # required in CentOS release 5.2
-install -m 700 tools/parsehipkey %{buildroot}%{prefix}/sbin/parsehipkey
-install -m 700 tools/hipdnsproxy %{buildroot}%{prefix}/sbin/hipdnsproxy
+install -m 700 tools/parsehipkey %{buildroot}/usr/sbin/parsehipkey
+install -m 700 tools/hipdnsproxy %{buildroot}/usr/sbin/hipdnsproxy
 
 %post lib
 /sbin/ldconfig 
@@ -188,16 +187,16 @@ rm -rf %{buildroot}
 %{_libdir}
 
 %files daemon
-%{prefix}/sbin/hipd
-%{prefix}/bin/hipsetup
+/usr/sbin/hipd
+/usr/bin/hipsetup
 %config /etc/rc.d/init.d/hipd
 
 %files agent
-%{prefix}/bin/hipagent
+/usr/bin/hipagent
 
 %files dnsproxy
-%{prefix}/sbin/hipdnsproxy
-%{prefix}/sbin/parsehipkey
+/usr/sbin/hipdnsproxy
+/usr/sbin/parsehipkey
 %{python_sitelib}/hipdnsproxy
 %{python_sitelib}/parsehipkey
 %{python_sitelib}/DNS
@@ -205,20 +204,20 @@ rm -rf %{buildroot}
 %config /etc/rc.d/init.d/hipdnsproxy
 
 %files tools
-%{prefix}/sbin/hipconf
-%{prefix}/sbin/nsupdate.pl
+/usr/sbin/hipconf
+/usr/sbin/nsupdate.pl
 %defattr(755,root,root)
 
 %files test
-%{prefix}/bin/conntest-client-opp
-%{prefix}/bin/conntest-client-hip
-%{prefix}/bin/conntest-client-native
-%{prefix}/bin/conntest-client-native-user-key
-%{prefix}/bin/conntest-server
-%{prefix}/bin/conntest-server-native
+/usr/bin/conntest-client-opp
+/usr/bin/conntest-client-hip
+/usr/bin/conntest-client-native
+/usr/bin/conntest-client-native-user-key
+/usr/bin/conntest-server
+/usr/bin/conntest-server-native
 
 %files firewall
-%{prefix}/sbin/hipfw
+/usr/sbin/hipfw
 %config /etc/rc.d/init.d/hipfw
 
 %files doc

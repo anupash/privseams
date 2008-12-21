@@ -6,8 +6,11 @@ EXTRA_DIST =  doc/COPYING doc/HACKING doc/HOWTO.xml doc/drafts doc/Makefile
 EXTRA_DIST += doc/README doc/design_choices.bib test/configs patches
 EXTRA_DIST += doc/base-exchange-relay.png doc/base-exchange-rvs.png
 EXTRA_DIST += hipsock jip
-EXTRA_DIST += test/packaging/create-deb.sh test/packaging/create-rpm.sh test/packaging/hipl.spec
-EXTRA_DIST += test/packaging/rh-init.d-hipd test/packaging/rh-init.d-hipfw test/packaging/debian-init.d-hipd test/packaging/rh-init.d-dnsproxy
+EXTRA_DIST += test/packaging/create-package.sh
+EXTRA_DIST += test/packaging/hipl-rpm.spec test/packaging/hipl-deb.spec 
+EXTRA_DIST += test/packaging/debbuild
+EXTRA_DIST += test/packaging/rh-init.d-hipd test/packaging/rh-init.d-hipfw test/packaging/rh-init.d-dnsproxy
+EXTRA_DIST += test/packaging/debian-init.d-hipd test/packaging/debian-init.d-hipfw test/packaging/debian-init.d-dnsproxy
 # The design choices doc is currently depracated
 EXTRA_DIST += doc/design_choices.tex doc/hipl.tex doc/acronyms.tex
 EXTRA_DIST += doc/design_choices_macros.tex doc/catalogue.tex doc/fig
@@ -36,17 +39,10 @@ showip:
 doxygen:
 	cd doc && doxygen
 rpm:
-	test/packaging/create-rpm.sh
+	test/packaging/create-package.sh rpm
 deb:
-	env PYEXECDIR=$(pyexecdir) test/packaging/create-deb.sh
-	env PYEXECDIR=$(pyexecdir) test/packaging/create-deb.sh -s
-#	cd test/packaging && dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz
-source-deb:
-	env PYEXECDIR=$(pyexecdir) test/packaging/create-deb.sh -s
-corporate-deb:
-	env PYEXECDIR=$(pyexecdir) test/packaging/create-deb.sh -c
-agent-deb:
-	env PYEXECDIR=$(pyexecdir) test/packaging/create-agent-deb.sh
+	test/packaging/create-package.sh deb
+
 dist-hook:
 	rm -rf `find $(distdir) -name .arch-ids`
 

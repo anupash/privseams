@@ -1,8 +1,0 @@
-#!/bin/sh
-
-update-rc.d hipdnsproxy multiuser 22
-
-echo "invoke-rc.d --quiet hipdnsproxy start" | at now + 1 min 2>/dev/null 
-echo "DNS proxy for HIP starts in 60 secs"
-
-exit 0
