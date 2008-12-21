@@ -27,7 +27,7 @@ build_rpm()
     test -e ~/.rpmmacros && die "Move ~/.rpmmacros out of the way"
     # The RPMs can be found from /usr/src/redhat/ SRPMS and RPMS
     $SUDO mv -f $PKGROOT/hipl${SUFFIX}.tar.gz /usr/src/redhat/SOURCES
-    $SUDO $PKGROOT/rpmbuild -ba $SPECFILE
+    $SUDO rpmbuild -ba $SPECFILE
 }
 
 build_deb()
