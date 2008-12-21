@@ -62,7 +62,7 @@ make -C doc all
 Summary: HIPL virtual package
 Group: System Environment/Kernel
 Requires: hipl-lib, hipl-firewall, hipl-daemon, hipl-agent, hipl-tools, hipl-test, hipl-doc, hipl-dnsproxy
-%description lib
+%description all
 
 %package lib
 Summary: HIPL libraries
@@ -75,12 +75,6 @@ Requires: hipl-lib, iproute, libnet-ip-perl, libnet-dns-perl, libsocket6-perl, l
 Summary: HIPL IPsec key management and mobility daemon
 Group: System Environment/Kernel
 %description daemon
-
-%package agent
-Requires: hipl-lib
-Summary: HIPL graphical user interface
-Group: System Environment/Kernel
-%description agent
 
 %package tools
 Requires: hipl-lib, hipl-daemon
@@ -110,6 +104,12 @@ Requires: python
 Summary: HIPL DNS proxy
 Group: System Environment/Kernel
 %description dnsproxy
+
+%package agent
+Requires: hipl-lib
+Summary: HIPL graphical user interface
+Group: System Environment/Kernel
+%description agent
 
 %install
 rm -rf %{buildroot}
