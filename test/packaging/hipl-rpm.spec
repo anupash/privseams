@@ -64,7 +64,7 @@ make -C doc all
 Summary: HIPL virtual package
 Group: System Environment/Kernel
 Requires: hipl-lib hipl-firewall hipl-daemon hipl-agent hipl-tools hipl-test hipl-doc hipl-dnsproxy
-%description lib
+%description all
 
 %package lib
 Summary: HIPL libraries
