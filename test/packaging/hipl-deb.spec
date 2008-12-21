@@ -144,6 +144,7 @@ install -t %{buildroot}%{python_sitelib}/parsehipkey tools/myasn.py*
 install -m 700 tools/parsehipkey %{buildroot}/usr/sbin/parsehipkey
 install -m 700 tools/hipdnsproxy %{buildroot}/usr/sbin/hipdnsproxy
 
+
 %post lib
 /sbin/ldconfig 
 
@@ -183,7 +184,7 @@ rm -rf %{buildroot}
 %config /etc/init.d/hipd
 
 %files agent
-/usr/share/share/pixmaps/hipmanager.png
+/usr/share/pixmaps/hipmanager.png
 /usr/sbin/hipagent
 
 %files dnsproxy
