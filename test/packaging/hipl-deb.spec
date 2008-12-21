@@ -102,7 +102,7 @@ Group: System Environment/Kernel
 %description doc
 
 %package dnsproxy
-Requires: python
+Requires: python, hipl-lib
 Summary: HIPL DNS proxy
 Group: System Environment/Kernel
 %description dnsproxy
