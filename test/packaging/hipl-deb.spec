@@ -1,3 +1,5 @@
+# To check that this file is in correct format, type
+# ./debbuild --showpkgs hipl-deb.spec
 Name: hipl
 Version: 1.0.4
 Release: 1
@@ -116,7 +118,8 @@ rm -rf %{buildroot}
 
 # XX FIXME: add more python stuff from tools directory
 
-install -d %{buildroot}/prefix/share/pixmaps
+install -d %{buildroot}/usr/share/pixmaps
+install -m 644 libhipgui/hipmanager.png %{buildroot}/usr/share/pixmaps
 install -d %{buildroot}/usr/bin
 install -d %{buildroot}/usr/sbin
 install -d %{buildroot}/usr/lib
@@ -180,7 +183,8 @@ rm -rf %{buildroot}
 %config /etc/init.d/hipd
 
 %files agent
-#/usr/bin/hipagent
+/usr/share/share/pixmaps/hipmanager.png
+/usr/sbin/hipagent
 
 %files dnsproxy
 /usr/sbin/hipdnsproxy

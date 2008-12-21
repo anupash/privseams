@@ -198,7 +198,7 @@ rm -rf %{buildroot}
 %config /etc/rc.d/init.d/hipd
 
 %files agent
-%{prefix}/bin/hipagent
+%{prefix}/sbin/hipagent
 
 %files dnsproxy
 %{prefix}/sbin/hipdnsproxy
