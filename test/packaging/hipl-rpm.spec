@@ -9,7 +9,7 @@ Vendor: InfraHIP
 License: GPLv2
 Group: System Environment/Kernel
 #Requires: openssl gtk2 libxml2 glib2 iptables-devel
-BuildRequires: gcc g++ openssl-devel gtk2-devel libxml2-devel glib2-devel iptables-devel xmlto libtool libcap-devel sqlite-devel autoconf automake xmlto rpm-build
+BuildRequires: gcc gcc-c++ openssl-devel gtk2-devel libxml2-devel glib2-devel iptables-devel xmlto libtool libcap-devel sqlite-devel autoconf automake xmlto rpm-build
 ExclusiveOS: linux
 BuildRoot: %{_tmppath}/%{name}-%{version}-root
 Prefix: /usr
