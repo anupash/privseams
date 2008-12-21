@@ -67,7 +67,7 @@ Requires: hipl-lib, hipl-firewall, hipl-daemon, hipl-agent, hipl-tools, hipl-tes
 %package lib
 Summary: HIPL libraries
 Group: System Environment/Kernel
-Requires: openssl, libxml2, libgtk2.0, iptables, libcap, libsqlite3
+Requires: openssl, libxml2, libgtk2.0-0, iptables, libcap1, libsqlite3-0
 %description lib
 
 %package daemon
