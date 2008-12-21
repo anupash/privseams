@@ -120,12 +120,12 @@ install -d %{buildroot}/prefix/share/pixmaps
 install -d %{buildroot}/usr/bin
 install -d %{buildroot}/usr/sbin
 install -d %{buildroot}/usr/lib
-install -d %{buildroot}/etc/rc.d/init.d
+install -d %{buildroot}/etc/init.d
 install -d %{buildroot}/doc
 make DESTDIR=%{buildroot} install
-install -m 700 test/packaging/rh-init.d-hipfw %{buildroot}/etc/rc.d/init.d/hipfw
-install -m 700 test/packaging/rh-init.d-hipd %{buildroot}/etc/rc.d/init.d/hipd
-install -m 700 test/packaging/rh-init.d-dnsproxy %{buildroot}/etc/rc.d/init.d/hipdnsproxy
+install -m 700 test/packaging/debian-init.d-hipfw %{buildroot}/etc/init.d/hipfw
+install -m 700 test/packaging/debian-init.d-hipd %{buildroot}/etc/init.d/hipd
+install -m 700 test/packaging/debian-init.d-dnsproxy %{buildroot}/etc/init.d/hipdnsproxy
 install -m 644 doc/HOWTO.txt %{buildroot}/doc
 install -d %{buildroot}%{python_sitelib}/DNS
 install -t %{buildroot}%{python_sitelib}/DNS tools/DNS/*py*
@@ -145,40 +145,28 @@ install -m 700 tools/hipdnsproxy %{buildroot}/usr/sbin/hipdnsproxy
 /sbin/ldconfig 
 
 %post daemon
-/sbin/chkconfig --add hipd
-/sbin/chkconfig --level 2 hipd on
-/sbin/service hipd start
-
-#%post
-#/sbin/chkconfig --add hipfw
-#/sbin/chkconfig --level 2 hipfw on
-#/sbin/service hipfw start
-#`/usr/sbin/hipfw -bk`
+update-rc.d hipd multiuser 21
+invoke-rc.d --quiet hipd start
 
 %post firewall
-/sbin/chkconfig --add hipfw
-/sbin/chkconfig --level 2 hipfw on
-/sbin/service hipfw start
-#/etc/rc.d/init.d/hipfw start
-#/usr/sbin/hipfw -bk`
+update-rc.d hipfw multiuser 20
+invoke-rc.d --quiet hipfw start
 
 %post dnsproxy
-/sbin/chkconfig --add hipdnsproxy
-/sbin/chkconfig --level 2 hipdnsproxy on
-/sbin/service hipdnsproxy start
+update-rc.d hipdnsproxy multiuser 22
+invoke-rc.d --quiet hipdnsproxy start
 
 %preun daemon
-/sbin/service hipd stop
-/sbin/chkconfig --del hipd
+invoke-rc.d --force --quiet hipd stop 
+update-rc.d -f hipd remove
 
 %preun firewall
-/sbin/service hipfw stop
-/sbin/chkconfig --del hipfw
-#/etc/rc.d/init.d/hipfw stop
+invoke-rc.d --force --quiet hipfw stop
+update-rc.d -f hipfw remove 
 
 %preun dnsproxy
-/sbin/service hipdnsproxy stop
-/sbin/chkconfig --del hipdnsproxy
+invoke-rc.d --force --quiet hipdnsproxy stop 
+update-rc.d -f hipdnsproxy remove 
 
 %clean
 rm -rf %{buildroot}
@@ -189,7 +177,7 @@ rm -rf %{buildroot}
 %files daemon
 /usr/sbin/hipd
 /usr/bin/hipsetup
-%config /etc/rc.d/init.d/hipd
+%config /etc/init.d/hipd
 
 %files agent
 /usr/bin/hipagent
@@ -201,7 +189,7 @@ rm -rf %{buildroot}
 %{python_sitelib}/parsehipkey
 %{python_sitelib}/DNS
 %defattr(755,root,root)
-%config /etc/rc.d/init.d/hipdnsproxy
+%config /etc/init.d/hipdnsproxy
 
 %files tools
 /usr/sbin/hipconf
@@ -218,7 +206,7 @@ rm -rf %{buildroot}
 
 %files firewall
 /usr/sbin/hipfw
-%config /etc/rc.d/init.d/hipfw
+%config /etc/init.d/hipfw
 
 %files doc
 %doc doc/HOWTO.txt doc/howto-html
