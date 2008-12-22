@@ -1793,7 +1793,7 @@ void check_and_write_default_config(){
 	char *file= HIP_FW_DEFAULT_RULE_FILE;
 	int i = 0;
 
-	HIP_DEBUG("\n");
+	_HIP_DEBUG("\n");
 
 	/* Firewall depends on hipd to create /etc/hip */
 	for (i=0; i<5; i++) {
