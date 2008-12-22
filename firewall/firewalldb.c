@@ -380,7 +380,7 @@ int firewall_send_incoming_pkt(struct in6_addr *src_hit,
 			       u8 *msg, u16 len,
 			       int proto,
 			       int ttl){
-        int err, dupl, try_again, sent, sa_size;
+        int err = 0, dupl, try_again, sent, sa_size;
 	int firewall_raw_sock = 0, is_ipv6 = 0, on = 1;
 	struct ip *iphdr = NULL;
 	struct udphdr *udp = NULL;
@@ -534,7 +534,7 @@ int firewall_send_outgoing_pkt(struct in6_addr *src_hit,
 			       struct in6_addr *dst_hit,
 			       u8 *msg, u16 len,
 			       int proto){
-        int err, dupl, try_again, sent, sa_size;
+        int err = 0, dupl, try_again, sent, sa_size;
 	int firewall_raw_sock = 0, is_ipv6 = 0, on = 1;
 	struct ip *iphdr = NULL;
 
