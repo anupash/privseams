@@ -550,10 +550,10 @@ class Global:
         else:
             conf_file = None
             
-        if (conf_file):
+        if (conf_file != None):
             fout.write("Using conf file %s\n" % conf_file)
         gp.read_resolv_conf(conf_file)
-        if (gp.server_ip):
+        if (gp.server_ip != None):
             fout.write("DNS server is %s\n" % gp.server_ip)
 
         gp.hosts = []
