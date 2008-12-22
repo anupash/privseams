@@ -294,14 +294,12 @@ class Global:
             s_ip = gp.resolvconfd.get('nameserver')
             if s_ip:
                 gp.server_ip = s_ip
-                gp.server_ip_from_old_rc = 1
             else:
-                gp.server_ip = '127.0.0.53' # xx fixme
+                gp.server_ip = '127.0.0.53'
         return d
 
     def parameter_defaults(gp):
         env = os.environ
-        gp.server_ip_from_old_rc = 0
         if gp.server_ip == None:
             gp.server_ip = env.get('SERVER',None)
 	if gp.server_port == None:
@@ -552,7 +550,9 @@ class Global:
         else:
             conf_file = None
             
+        fout.write("Using conf file %s\n" % conf_file)
         gp.read_resolv_conf(conf_file)
+        fout.write("DNS server is %s\n" % gp.server_ip)
 
         gp.hosts = []
         if gp.hostsnames:
@@ -586,22 +586,22 @@ class Global:
         while not util.wantdown():
             try:
                 gp.hosts_recheck()
-                if gp.server_ip_from_old_rc:
-                    if rc1.old_has_changed():
-                        connected = False
-                        s2.close()
-                        gp.server_ip = rc1.resolvconfd.get('nameserver')
-                        s2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                        s2.settimeout(gp.dns_timeout)
-                        if (gp.server_ip != None):
-                            s2.connect((gp.server_ip,gp.server_port))
-                            connected = True
+                if rc1.old_has_changed():
+                    connected = False
+                    s2.close()
+                    gp.server_ip = rc1.resolvconfd.get('nameserver')
+                    s2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                    s2.settimeout(gp.dns_timeout)
+                    if (gp.server_ip != None):
+                        s2.connect((gp.server_ip,gp.server_port))
+                        connected = True
+                        fout.write("DNS server is %s\n" % gp.server_ip)
 
-                        rc1.restart()
-                        rc1.write({'nameserver': gp.bind_ip})
-                        if not (rc1.is_resolvconf_in_use() and
-                                rc1.get_dnsmasq_hook_status()):
-                            fout.write('Rewrote resolv.conf\n')
+                    rc1.restart()
+                    rc1.write({'nameserver': gp.bind_ip})
+                    if not (rc1.is_resolvconf_in_use() and
+                            rc1.get_dnsmasq_hook_status()):
+                        fout.write('Rewrote resolv.conf\n')
                 try:
                     buf,from_a = s.recvfrom(2048)
                 except socket.timeout:
