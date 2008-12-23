@@ -98,8 +98,9 @@
 #define HIP_PARAM_ESP_PROT_ANCHOR      4121
 #define HIP_PARAM_ESP_PROT_BRANCH      4122
 #define HIP_PARAM_ESP_PROT_SECRET      4123
-#define HIP_PARAM_ESP_PROT_ROOT		   4124
-#define HIP_PARAM_NAT_PORT	       4125
+#define HIP_PARAM_ESP_PROT_ROOT        4124
+#define HIP_PARAM_LOCAL_NAT_PORT       4125
+#define HIP_PARAM_PEER_NAT_PORT	       4126
 
 /* Range 32768 - 49141 for HIPL private network parameters. Please add
    here only network messages, not internal messages!

@@ -15,8 +15,8 @@
 #endif
 
 /** Port numbers for NAT traversal of hip control packets. */
-in_port_t hip_nat_local_udp_port = 50500;
-in_port_t hip_nat_peer_udp_port = 50500;
+in_port_t hip_local_nat_udp_port = 50500;
+in_port_t hip_peer_nat_udp_port = 50500;
 
 #ifdef CONFIG_HIP_OPPORTUNISTIC
 int hip_opportunistic_ipv6_to_hit(const struct in6_addr *ip,
@@ -2783,17 +2783,17 @@ void hip_copy_inaddr_null_check(struct in_addr *to, struct in_addr *from) {
 		memset(to, 0, sizeof(*to));
 }
 
-in_port_t hip_get_nat_local_udp_port()
+in_port_t hip_get_local_nat_udp_port()
 {
-	return hip_nat_local_udp_port;
+	return hip_local_nat_udp_port;
 }
 
-in_port_t hip_get_nat_peer_udp_port()
+in_port_t hip_get_peer_nat_udp_port()
 {
-	return hip_nat_peer_udp_port;
+	return hip_peer_nat_udp_port;
 }
 
-int hip_set_nat_local_udp_port(in_port_t port)
+int hip_set_local_nat_udp_port(in_port_t port)
 {
 	int err = 0;
 
@@ -2804,14 +2804,14 @@ int hip_set_nat_local_udp_port(in_port_t port)
 		goto out_err;
 	}
 
-	HIP_DEBUG("set nat local udp port %d\n", port);
-	hip_nat_local_udp_port = port;
+	HIP_DEBUG("set local nat udp port %d\n", port);
+	hip_local_nat_udp_port = port;
 	
 out_err:
 	return err;
 }
 
-int hip_set_nat_peer_udp_port(in_port_t port)
+int hip_set_peer_nat_udp_port(in_port_t port)
 {
 	int err = 0;
 
@@ -2822,8 +2822,8 @@ int hip_set_nat_peer_udp_port(in_port_t port)
 		goto out_err;
 	}
 
-	HIP_DEBUG("set nat peer udp port %d\n", port);
-	hip_nat_peer_udp_port = port;
+	HIP_DEBUG("set peer nat udp port %d\n", port);
+	hip_peer_nat_udp_port = port;
 	
 out_err:
 	return err;

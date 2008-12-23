@@ -250,7 +250,7 @@ int hip_nat_send_keep_alive(hip_ha_t *entry, void *not_used)
 	   hip_get_nat_udp_port() as source port also, we choose to do so here. */
 	entry->hadb_xmit_func->
 		hip_send_pkt(&entry->our_addr, &entry->peer_addr,
-			     hip_get_nat_local_udp_port(), hip_get_nat_peer_udp_port(), msg,
+			     hip_get_local_nat_udp_port(), hip_get_peer_nat_udp_port(), msg,
 			     entry, 0);
 
 out_err:
@@ -656,7 +656,7 @@ pj_status_t hip_on_tx_pkt(pj_ice_sess *ice, unsigned comp_id, const void *pkt, p
 	
 	struct in6_addr *local_addr = 0;
 	struct in6_addr peer_addr;
-	in_port_t src_port = hip_get_nat_udp_port(); 
+	in_port_t src_port = hip_get_local_nat_udp_port(); 
 	in_port_t dst_port ;
 	pj_sockaddr_in *addr;
 	
@@ -905,6 +905,7 @@ out_err:
 *this function is called after the local candidates are added. 
 * the check list will created inside the seesion object. 
 */
+/// @todo: Check this function for the hip_get_nat_xxx_udp_port() calls!!!
 int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list){
 	
 	pj_ice_sess *   	 ice = session;
@@ -957,7 +958,7 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 			if( peer_addr_list_item->port)
 				temp_cand->addr.ipv4.sin_port = htons(peer_addr_list_item->port);
 			else 
-				temp_cand->addr.ipv4.sin_port = htons(hip_get_nat_udp_port());
+				temp_cand->addr.ipv4.sin_port = htons(hip_get_local_nat_udp_port());
 			temp_cand->addr.ipv4.sin_addr.s_addr = *((pj_uint32_t *) &peer_addr_list_item->address.s6_addr32[3]) ;
 			
 		
@@ -966,13 +967,13 @@ int hip_external_ice_add_remote_candidates( void * session, HIP_HASHTABLE*  list
 			if( peer_addr_list_item->port)
 				temp_cand->base_addr.ipv4.sin_port = htons(peer_addr_list_item->port);
 			else 
-				temp_cand->base_addr.ipv4.sin_port = htons(hip_get_nat_udp_port());
+				temp_cand->base_addr.ipv4.sin_port = htons(hip_get_peer_nat_udp_port());
 			temp_cand->base_addr.ipv4.sin_addr.s_addr = *((pj_uint32_t*) &peer_addr_list_item->address.s6_addr32[3]);
 						
 			
 			
 			temp_cand->comp_id = 1;
-			if(peer_addr_list_item->port== 0 || peer_addr_list_item->port == hip_get_nat_udp_port()){
+			if(peer_addr_list_item->port== 0 || peer_addr_list_item->port == hip_get_local_nat_udp_port()){
 				temp_cand->type = ICE_CAND_TYPE_HOST;
 			}
 			else{			
@@ -1276,7 +1277,7 @@ int hip_nat_start_ice(hip_ha_t *entry, struct hip_esp_info *esp_info, int ice_co
         		if (hip_sockaddr_is_v6_mapped(&n->addr)) {
         			hip_external_ice_add_local_candidates(ice_session,
         					hip_cast_sa_addr(&n->addr),hip_cast_sa_addr(&n->addr),
-        					hip_get_nat_udp_port(),hip_get_nat_udp_port(),
+        					hip_get_local_nat_udp_port(),hip_get_peer_nat_udp_port(),
         					ICE_CAND_TYPE_HOST);
         		}		
         		
@@ -1293,7 +1294,7 @@ int hip_nat_start_ice(hip_ha_t *entry, struct hip_esp_info *esp_info, int ice_co
 	        					&ha_n->local_reflexive_address,
 	        					&ha_n->our_addr,
 	        					ha_n->local_reflexive_udp_port,
-	        					hip_get_nat_udp_port(),
+	        					hip_get_local_nat_udp_port(),
 	        					ICE_CAND_TYPE_PRFLX);
                 	        		}
 

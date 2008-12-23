@@ -218,23 +218,23 @@ int hip_map_lsi_to_hit_from_hosts_files(hip_lsi_t *lsi, hip_hit_t *hit);
 int hip_map_id_to_ip_from_hosts_files(hip_hit_t *hit, hip_lsi_t *lsi, struct in6_addr *ip);
 
 /**
- * Get HIP NAT local UDP port.
+ * Get HIP local NAT UDP port.
  */
-in_port_t hip_get_nat_local_udp_port();
+in_port_t hip_get_local_nat_udp_port();
 
 /**
- * Get HIP NAT peer UDP port.
+ * Get HIP peer NAT UDP port.
  */
-in_port_t hip_get_nat_peer_udp_port();
+in_port_t hip_get_peer_nat_udp_port();
 
 /**
- * Set HIP NAT local UDP port.
+ * Set HIP local NAT UDP port.
  */
-int hip_set_nat_local_udp_port(in_port_t port);
+int hip_set_local_nat_udp_port(in_port_t port);
 
 /**
- * Set HIP NAT peer UDP port.
+ * Set HIP peer NAT UDP port.
  */
-int hip_set_nat_peer_udp_port(in_port_t port);
+int hip_set_peer_nat_udp_port(in_port_t port);
 
 #endif /* HIP_MISC_H */

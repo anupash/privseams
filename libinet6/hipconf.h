@@ -121,8 +121,9 @@
 #define ACTION_NSUPDATE 30
 #define ACTION_HIT_TO_IP 31
 #define ACTION_HIT_TO_IP_SET 32
-#define ACTION_NAT_PORT 33
-#define ACTION_MAX 34 /* exclusive */
+#define ACTION_NAT_LOCAL_PORT 33
+#define ACTION_NAT_PEER_PORT 34
+#define ACTION_MAX 35 /* exclusive */
 
 /**
  * TYPE_ constant list, as an index for each action_handler function.
@@ -168,8 +169,9 @@
 #define TYPE_NSUPDATE      32
 #define TYPE_HIT_TO_IP     33
 #define TYPE_HIT_TO_IP_SET 34
-#define TYPE_NAT_PORT	   35
-#define TYPE_MAX           36 /* exclusive */
+#define TYPE_NAT_LOCAL_PORT 35
+#define TYPE_NAT_PEER_PORT 36	
+#define TYPE_MAX           37 /* exclusive */
 
 /* #define TYPE_RELAY         22 */
 

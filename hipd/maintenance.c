@@ -74,7 +74,7 @@ int hip_handle_retransmission(hip_ha_t *entry, void *current_time)
 			err = entry->hadb_xmit_func->
 				hip_send_pkt(&entry->hip_msg_retrans.saddr,
 					     &entry->hip_msg_retrans.daddr,
-					     (entry->nat_mode ? hip_get_nat_udp_port() : 0),
+					     (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
 						     entry->peer_udp_port,
 					     entry->hip_msg_retrans.buf,
 					     entry, 0);

@@ -322,11 +322,11 @@ int hip_update_deprecate_unlisted(hip_ha_t *entry,
 
 	default_ipsec_func_set.hip_delete_sa(entry->default_spi_out, &list_item->address,
 		      &entry->our_addr, AF_INET6,
-		      (entry->nat_mode ? hip_get_nat_local_udp_port() : 0),
+		      (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
 		      (int)entry->peer_udp_port);
 	default_ipsec_func_set.hip_delete_sa(spi_in, &entry->our_addr, &list_item->address,
 		      AF_INET6, (int)entry->peer_udp_port,
-		      (entry->nat_mode ? hip_get_nat_local_udp_port() : 0));
+		      (entry->nat_mode ? hip_get_local_nat_udp_port() : 0));
 
 	list_del(list_item, entry->spis_out);
  out_err:
@@ -615,11 +615,11 @@ int hip_update_finish_rekeying(hip_common_t *msg, hip_ha_t *entry,
 
 	default_ipsec_func_set.hip_delete_sa(prev_spi_out, &entry->peer_addr,
 		      &entry->our_addr, AF_INET6,
-		      (entry->nat_mode ? hip_get_nat_local_udp_port() : 0),
+		      (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
 		      entry->peer_udp_port);
 	default_ipsec_func_set.hip_delete_sa(prev_spi_in, &entry->our_addr,
 		      &entry->peer_addr, AF_INET6, entry->peer_udp_port,
-		      (entry->nat_mode ? hip_get_nat_local_udp_port() : 0));
+		      (entry->nat_mode ? hip_get_local_nat_udp_port() : 0));
 
 	/* SP and SA are always added, not updated, due to the xfrm api limitation */
 	HIP_IFEL(entry->hadb_ipsec_func->hip_setup_hit_sp_pair(hits, hitr,
@@ -631,7 +631,7 @@ int hip_update_finish_rekeying(hip_common_t *msg, hip_ha_t *entry,
 	HIP_DEBUG("Setting up new outbound SA, SPI=0x%x\n", new_spi_out);
 	/** @todo Currently NULLing the stateless info. Send port info through
 	    entry parameter --Abi */
-	entry->local_udp_port = entry->nat_mode ? hip_get_nat_local_udp_port() : 0;
+	entry->local_udp_port = entry->nat_mode ? hip_get_local_nat_udp_port() : 0;
 
 	err = entry->hadb_ipsec_func->hip_add_sa(&entry->peer_addr, &entry->our_addr, hits,
 			 hitr,  &new_spi_in, esp_transform,
@@ -831,7 +831,7 @@ int hip_handle_update_rekeying(hip_ha_t *entry, hip_common_t *msg,
 
 	HIP_IFEL(entry->hadb_xmit_func->
 		 hip_send_pkt(&entry->our_addr, &daddr,
-			      (entry->nat_mode ? hip_get_nat_udp_port() : 0),
+			      (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
 			      entry->peer_udp_port,
 			      update_packet, entry, 1),
 		 -ECOMM, "Sending UPDATE packet failed.\n");
@@ -975,7 +975,7 @@ int hip_update_send_addr_verify_packet_all(hip_ha_t *entry,
 
 	HIP_IFEL(entry->hadb_xmit_func->
 		 hip_send_pkt(src_ip, &addr->address,
-			      (entry->nat_mode ? hip_get_nat_udp_port() : 0),
+			      (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
 			      entry->peer_udp_port, update_packet, entry, 1),
 		 -ECOMM, "Sending UPDATE packet failed.\n");
 
@@ -1079,11 +1079,11 @@ int hip_handle_update_plain_locator(hip_ha_t *entry, hip_common_t *msg,
 		spi_in = hip_hadb_get_latest_inbound_spi(entry);
 		default_ipsec_func_set.hip_delete_sa(spi_in, &entry->our_addr,
 			      &entry->peer_addr, AF_INET6,
-			      (entry->nat_mode ? hip_get_nat_udp_port() : 0),
+			      (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
 			      (int)entry->peer_udp_port);
 		default_ipsec_func_set.hip_delete_sa(entry->default_spi_out, &entry->peer_addr,
 			      &entry->our_addr, AF_INET6,
-			      (entry->nat_mode ? hip_get_nat_udp_port() : 0),
+			      (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
 			      (int)entry->peer_udp_port);
 		ipv6_addr_copy(&entry->peer_addr, src_ip);
 	}
@@ -1176,7 +1176,7 @@ int hip_handle_update_addr_verify(hip_ha_t *entry, hip_common_t *msg,
 	HIP_DEBUG("Sending ECHO RESPONSE/UPDATE packet (address check).\n");
 	HIP_IFEL(entry->hadb_xmit_func->
 		 hip_send_pkt(dst_ip, src_ip,
-			      (entry->nat_mode ? hip_get_nat_udp_port() : 0),
+			      (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
 			      entry->peer_udp_port, update_packet, entry, 0),
 		 -ECOMM, "Sending UPDATE packet failed.\n");
 
@@ -1548,7 +1548,7 @@ int hip_update_peer_preferred_address(hip_ha_t *entry,
                                                        &entry->hit_peer, IPPROTO_ESP, 1);
 
 	default_ipsec_func_set.hip_delete_sa(entry->default_spi_out, &addr->address, &local_addr,
-		      AF_INET6, (entry->nat_mode ? hip_get_nat_udp_port() : 0),
+		      AF_INET6, (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
 		      (int)entry->peer_udp_port);
 #endif
 
@@ -1559,7 +1559,7 @@ int hip_update_peer_preferred_address(hip_ha_t *entry,
 
 	default_ipsec_func_set.hip_delete_sa(spi_in, &addr->address, &local_addr, AF_INET6,
 		      (int)entry->peer_udp_port,
-		      (entry->nat_mode ? hip_get_nat_udp_port() : 0));
+		      (entry->nat_mode ? hip_get_local_nat_udp_port() : 0));
 
 	HIP_IFEL(entry->hadb_ipsec_func->hip_setup_hit_sp_pair(&entry->hit_our,
                                                                &entry->hit_peer,
@@ -1567,7 +1567,7 @@ int hip_update_peer_preferred_address(hip_ha_t *entry,
 				       IPPROTO_ESP, 1, 0), -1,
 		 "Setting up SP pair failed\n");
 
-	entry->local_udp_port = entry->nat_mode ? hip_get_nat_udp_port() : 0;
+	entry->local_udp_port = entry->nat_mode ? hip_get_local_nat_udp_port() : 0;
 
 	HIP_IFEL(entry->hadb_ipsec_func->hip_add_sa(&local_addr, &addr->address,
                                                     &entry->hit_our,
@@ -1955,7 +1955,7 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
      entry->hadb_ipsec_func->hip_delete_hit_sp_pair(&entry->hit_our, &entry->hit_peer, IPPROTO_ESP, 1);
 
      default_ipsec_func_set.hip_delete_sa(entry->default_spi_out, daddr, &entry->our_addr,
-		   AF_INET6, (entry->nat_mode ? hip_get_nat_udp_port() : 0),
+		   AF_INET6, (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
 		   (int)entry->peer_udp_port);
 #if 1
      entry->hadb_ipsec_func->hip_delete_hit_sp_pair(&entry->hit_peer, &entry->hit_our, IPPROTO_ESP, 1);
@@ -1963,7 +1963,7 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
      /** @todo Check that this works with the pfkey API. */
      default_ipsec_func_set.hip_delete_sa(spi_in, &entry->our_addr, &entry->hit_our, AF_INET6,
 		   (int)entry->peer_udp_port,
-		   (entry->nat_mode ? hip_get_nat_udp_port() : 0));
+		   (entry->nat_mode ? hip_get_local_nat_udp_port() : 0));
 
      /* THIS IS JUST A GRUDE FIX -> FIX THIS PROPERLY LATER
         check for a mismatch in addresses and fix the situation
@@ -2006,7 +2006,7 @@ int hip_update_preferred_address(struct hip_hadb_state *entry,
 				    &srcaddr, &destaddr, IPPROTO_ESP, 1, 0),
 	      -1, "Setting up SP pair failed\n");
 
-     entry->local_udp_port = entry->nat_mode ? hip_get_nat_udp_port() : 0;
+     entry->local_udp_port = entry->nat_mode ? hip_get_local_nat_udp_port() : 0;
 
      _HIP_DEBUG("SPI out =0x%x\n", entry->default_spi_out);
      _HIP_DEBUG("SPI in =0x%x\n", spi_in);
@@ -2565,11 +2565,11 @@ int hip_send_update(struct hip_hadb_state *entry,
 			  "this entry\n");
 		default_ipsec_func_set.hip_delete_sa(esp_info_old_spi, hip_cast_sa_addr(addr),
 			      &entry->peer_addr, AF_INET6,
-			      (entry->nat_mode ? hip_get_nat_udp_port() : 0),
+			      (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
 			      (int)entry->peer_udp_port);
 		default_ipsec_func_set.hip_delete_sa(entry->default_spi_out, &entry->peer_addr,
 			      hip_cast_sa_addr(addr), AF_INET6,
-			      (entry->nat_mode ? hip_get_nat_udp_port() : 0),
+			      (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
 			      (int)entry->peer_udp_port);
 
 		/* and we have to do it before this changes the local_address */
@@ -2765,12 +2765,12 @@ skip_src_addr_change:
      if (!is_add && (was_bex_addr == 0)) {
 	  err = entry->hadb_xmit_func->
 	       hip_send_pkt(&saddr, &daddr,
-			    (entry->nat_mode ? hip_get_nat_udp_port() : 0),
+			    (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
 			    entry->peer_udp_port, update_packet, entry, 1);
      } else {
 	  err = entry->hadb_xmit_func->
 	       hip_send_pkt(&entry->our_addr, &entry->peer_addr,
-			    (entry->nat_mode ? hip_get_nat_udp_port() : 0),
+			    (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
 			    entry->peer_udp_port, update_packet, entry, 1);
      }
      HIP_DEBUG("Send_pkt returned %d\n", err);

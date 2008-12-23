@@ -416,8 +416,8 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	if (hip_blind_get_status()) {
 	  err = entry->hadb_xmit_func->hip_send_pkt(&entry->our_addr,
 						    &daddr,
-						    (entry->nat_mode ? hip_get_nat_udp_port() : 0),
-						    hip_get_nat_udp_port(),
+						    (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
+						    hip_get_peer_nat_udp_port(),
 						    i1_blind, entry, 1);
 	}
 #endif
@@ -426,8 +426,8 @@ int hip_send_i1(hip_hit_t *src_hit, hip_hit_t *dst_hit, hip_ha_t *entry)
 	if (!hip_blind_get_status()) {
 		err = entry->hadb_xmit_func->
 			hip_send_pkt(&entry->our_addr, &daddr,
-				     (entry->nat_mode ? hip_get_nat_udp_port() : 0),
-				     hip_get_nat_udp_port(),
+				     (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
+				     hip_get_peer_nat_udp_port(),
 				     i1, entry, 1);
 	}
 
@@ -818,8 +818,8 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 			//from RVS, answer to I
 			r1_dst_addr =  dst_ip;
 			if(i1_info->src_port)
-				// R and RVS is in the UDP mode or I send UDP to RVS with incoming port hip_get_nat_udp_port()
-				r1_dst_port =  hip_get_nat_udp_port();
+				// R and RVS is in the UDP mode or I send UDP to RVS with incoming port hip_get_peer_nat_udp_port()
+				r1_dst_port =  hip_get_peer_nat_udp_port();
 			else
 				// connection between R & RVS is in hip raw mode
 				r1_dst_port =  0;
@@ -906,12 +906,12 @@ int hip_xmit_r1(hip_common_t *i1, in6_addr_t *i1_saddr, in6_addr_t *i1_daddr,
 	}
 #endif
 
-	/* R1 is send on UDP if R1 destination port is hip_get_nat_udp_port(). This is if:
+	/* R1 is send on UDP if R1 destination port is hip_get_peer_nat_udp_port(). This is if:
 	   a) the I1 was received on UDP.
 	   b) the received I1 packet had a RELAY_FROM parameter. */
 	if(r1_dst_port)
 	{
-		HIP_IFEL(hip_send_udp(i1_daddr, r1_dst_addr, hip_get_nat_udp_port(),
+		HIP_IFEL(hip_send_udp(i1_daddr, r1_dst_addr, hip_get_local_nat_udp_port(),
 				      r1_dst_port, r1pkt, NULL, 0),
 			 -ECOMM, "Sending R1 packet on UDP failed.\n");
 	}
@@ -971,7 +971,7 @@ void hip_send_notify(hip_ha_t *entry)
 
 
 	HIP_IFEL(entry->hadb_xmit_func->
-		 hip_send_pkt(NULL, &daddr, (entry->nat_mode ? hip_get_nat_udp_port() : 0),
+		 hip_send_pkt(NULL, &daddr, (entry->nat_mode ? hip_get_local_nat_udp_port() : 0),
 			      entry->peer_udp_port, notify_packet,
 			      entry, 0),
 		 -ECOMM, "Sending NOTIFY packet failed.\n");
@@ -1378,8 +1378,8 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	}
 
         src4.sin_port = htons(src_port); //< src4.sin_port is not used     
-        if (src_port != hip_get_nat_udp_port())
-        	hip_set_nat_local_udp_port(src_port);
+        if (src_port != hip_get_local_nat_udp_port())
+        	hip_set_local_nat_udp_port(src_port);
 
         /* Destination address. */
 	HIP_IFEL(!IN6_IS_ADDR_V4MAPPED(peer_addr), -EPFNOSUPPORT,
@@ -1391,7 +1391,7 @@ int hip_send_udp(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 	if(dst_port != 0) {
 		dst4.sin_port = htons(dst_port);
 	} else {
-		dst4.sin_port = htons(hip_get_nat_peer_udp_port());
+		dst4.sin_port = htons(hip_get_peer_nat_udp_port());
 	}
 
 	hip_zero_msg_checksum(msg);
@@ -1777,7 +1777,7 @@ int hip_send_udp_stun(struct in6_addr *local_addr, struct in6_addr *peer_addr,
 		dst4.sin_port = htons(dst_port);
 	}
 	else {
-		dst4.sin_port = htons(hip_get_nat_peer_udp_port());
+		dst4.sin_port = htons(hip_get_peer_nat_udp_port());
 	}
 
 	/* Zero message HIP checksum. */

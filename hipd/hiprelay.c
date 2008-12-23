@@ -581,11 +581,11 @@ int hip_relay_rvs(const hip_common_t *i1, const in6_addr_t *i1_saddr,
 //add by Santtu
 	if(i1_info->src_port) {
 		// if the incoming message is via UDP, the RVS relay must use UDP also.
-		HIP_IFEL(hip_send_udp(NULL, &(rec->ip_r), hip_get_nat_udp_port(),
+		HIP_IFEL(hip_send_udp(NULL, &(rec->ip_r), hip_get_local_nat_udp_port(),
 				      rec->udp_port_r, i1_to_be_relayed, NULL, 0),
 			 -ECOMM, "Relaying I1 failed.\n");
 	} else {
-		HIP_IFEL(rec->send_fn(NULL, &(rec->ip_r), hip_get_nat_udp_port(),
+		HIP_IFEL(rec->send_fn(NULL, &(rec->ip_r), hip_get_local_nat_udp_port(),
 				      rec->udp_port_r, i1_to_be_relayed, NULL, 0),
 			 -ECOMM, "Relaying I1 failed.\n");
 	}
@@ -917,7 +917,7 @@ int hip_relay_forward_I(const hip_common_t *i1, const in6_addr_t *i1_saddr,
 	   that we use NULL as source IP address instead of
 	   i1_daddr. A source address is selected in the corresponding
 	   send-function. */
-	HIP_IFEL(rec->send_fn(NULL, &(rec->ip_r), hip_get_nat_udp_port(),
+	HIP_IFEL(rec->send_fn(NULL, &(rec->ip_r), hip_get_local_nat_udp_port(),
 			      rec->udp_port_r, i1_to_be_relayed, NULL, 0),
 		 -ECOMM, "Relaying I1 failed.\n");
 
@@ -1045,7 +1045,7 @@ int hip_relay_forward_response(const hip_common_t *r,
 		   hiprelay.c:1037: warning: passing argument 2 of
 		   'hip_send_raw' discards qualifiers from pointer target type.
 		*/
-		HIP_IFEL(hip_send_raw(NULL, relay_to_addr, hip_get_nat_udp_port(),
+		HIP_IFEL(hip_send_raw(NULL, relay_to_addr, hip_get_local_nat_udp_port(),
 				      relay_to_port, r_to_be_relayed, NULL, 0),
 			 -ECOMM, "forwarding response failed in raw\n");
 	} else {
@@ -1054,7 +1054,7 @@ int hip_relay_forward_response(const hip_common_t *r,
 		   hiprelay.c:1041: warning: passing argument 2 of
 		   'hip_send_udp' discards qualifiers from pointer target type.
 		*/
-		HIP_IFEL(hip_send_udp(NULL, relay_to_addr, hip_get_nat_udp_port(),
+		HIP_IFEL(hip_send_udp(NULL, relay_to_addr, hip_get_local_nat_udp_port(),
 				      relay_to_port, r_to_be_relayed, NULL, 0),
 			 -ECOMM, "forwarding response failed in UDP\n");
 	}

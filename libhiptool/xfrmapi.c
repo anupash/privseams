@@ -321,8 +321,8 @@ int hip_xfrm_state_modify(struct rtnl_handle *rth,
 			   0, hip_xfrmapi_sa_default_prefix, 0,0, AF_INET6), -1);
 	if(req.xsinfo.family == AF_INET && (sport || dport))
 	{
-		xfrm_fill_encap(&encap, (sport ? sport : hip_get_nat_udp_port()),
-			(dport ? dport : hip_get_nat_udp_port()), saddr);
+		xfrm_fill_encap(&encap, (sport ? sport : hip_get_local_nat_udp_port()),
+			(dport ? dport : hip_get_peer_nat_udp_port()), saddr);
 		HIP_IFE(addattr_l(&req.n, sizeof(req.buf), XFRMA_ENCAP,
                                   (void *)&encap, sizeof(encap)), -1);
 	}
@@ -419,8 +419,8 @@ int hip_xfrm_state_delete(struct rtnl_handle *rth,
 	if (req.xsid.family == AF_INET && (sport || dport))
 	{
 		HIP_DEBUG("FILLING UDP Port info while deleting\n");
-		xfrm_fill_encap(&encap, (sport ? sport : hip_get_nat_udp_port()),
-			(dport ? dport : hip_get_nat_udp_port()), peer_addr);
+		xfrm_fill_encap(&encap, (sport ? sport : hip_get_local_nat_udp_port()),
+			(dport ? dport : hip_get_peer_nat_udp_port()), peer_addr);
 		HIP_IFE(addattr_l(&req.n, sizeof(req.buf), XFRMA_ENCAP,
                                   (void *)&encap, sizeof(encap)), -1);
 	}

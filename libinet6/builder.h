@@ -288,10 +288,14 @@ int hip_build_param_reg_failed(struct hip_common *msg, uint8_t failure_type,
 /**
  * Builds NAT port parameter
  *
- * @param msg	a pointer to a HIP packet common header
- * @param port	NAT port number
+ * @param msg		a pointer to a HIP packet common header
+ * @param port		NAT port number
+ * @param param		parameter to create. Currently it is either
+ * 			HIP_SET_SRC_NAT_PORT or HIP_SET_DST_NAT_PORT
+ * 
  * @return	zero on success, non-zero otherwise.
  */
-int hip_build_param_nat_port(hip_common_t *msg, const in_port_t port);
+int hip_build_param_nat_port(hip_common_t *msg, const in_port_t port, 
+		hip_tlv_type_t hipparam);
 
 #endif /* HIP_BUILDER */

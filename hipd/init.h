@@ -80,7 +80,6 @@ int hip_associate_default_hit_lsi();
 int hipd_init(int flush_ipsec, int killold);
 int hip_init_host_ids();
 int hip_init_raw_sock_v6(int *hip_raw_sock_v6);
-int hip_init_nat_sock_udp(int *hip_nat_sock_udp);
 /**
  * Creates a UDP socket for NAT traversal.
  *

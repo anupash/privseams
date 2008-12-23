@@ -417,7 +417,7 @@ int hip_read_control_msg_all(int socket, struct hip_common *hip_msg,
 		HIP_DEBUG("hip_read_control_msg_all() source port = %d\n",
 			  ntohs(addr_from4->sin_port));
 		msg_info->src_port = ntohs(addr_from4->sin_port);
-		msg_info->dst_port = hip_get_nat_peer_udp_port();
+		msg_info->dst_port = hip_get_peer_nat_udp_port();
 	}
 
 	/* IPv4 addresses */

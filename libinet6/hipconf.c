@@ -48,7 +48,8 @@ const char *hipconf_usage =
 //modify by santtu
 //"nat on|off|<peer_hit>\n"
 "nat none|plain-udp|ice-udp\n"
-"nat port <port>\n"
+"nat port local <port>\n"
+"nat port peer <port>\n"	
 //end modify
 "rst all|peer_hit <peer_HIT>\n"
 "load config default\n"
@@ -137,6 +138,7 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc, 
 	hip_conf_handle_hit_to_ip,
 	hip_conf_handle_hit_to_ip_set,
 	hip_conf_handle_nat_port,
+	hip_conf_handle_nat_port,
 	NULL /* run */
 };
 
@@ -173,8 +175,10 @@ int hip_conf_get_action(char *text)
 		ret = ACTION_INC;
 	else if (!strcmp("dec", text))
 		ret = ACTION_DEC;
-	else if (!strcmp("nat port", text))
-		ret = ACTION_NAT_PORT;
+	else if (!strcmp("nat port local", text))
+		ret = ACTION_NAT_LOCAL_PORT;
+	else if (!strcmp("nat port peer", text))
+		ret = ACTION_NAT_PEER_PORT;
 	else if (!strcmp("nat", text))
 		ret = ACTION_NAT;
 	else if (!strcmp("bos", text))
@@ -248,7 +252,8 @@ int hip_conf_check_action_argc(int action) {
 		break;
 	case ACTION_ADD: case ACTION_DEL: case ACTION_SET: case ACTION_INC:
 	case ACTION_GET: case ACTION_RUN: case ACTION_LOAD: case ACTION_DHT:
-	case ACTION_HA: case ACTION_HANDOFF: case ACTION_TRANSORDER: case ACTION_NAT_PORT:
+	case ACTION_HA: case ACTION_HANDOFF: case ACTION_TRANSORDER: case ACTION_NAT_LOCAL_PORT:
+	case ACTION_NAT_PEER_PORT:
 		count = 2;
 		break;
 #ifdef CONFIG_HIP_HIPPROXY
@@ -295,9 +300,16 @@ int hip_conf_get_type(char *text,char *argv[]) {
 	else if	(strcmp("nat",argv[1])==0)
 	{
 		if (argv[2] && strcmp("port", argv[2]) == 0)
-			ret = TYPE_NAT_PORT;
+		{
+			if (argv[3] && strcmp("local", argv[3]) == 0)		
+				ret = TYPE_NAT_LOCAL_PORT;
+			else if (argv[3] && strcmp("peer", argv[3]) == 0)
+				ret = TYPE_NAT_PEER_PORT;
+		}
 		else
+		{
 			ret = TYPE_NAT;
+		}
 	}
         else if (strcmp("locator", argv[1])==0)
                 ret = TYPE_LOCATOR;
@@ -382,7 +394,8 @@ int hip_conf_get_type_arg(int action)
 	case ACTION_ADD:
 	case ACTION_DEL:
 	case ACTION_NEW:
-	case ACTION_NAT_PORT:
+	case ACTION_NAT_LOCAL_PORT:
+	case ACTION_NAT_PEER_PORT:	
 	case ACTION_NAT:
 	case ACTION_INC:
 	case ACTION_DEC:
@@ -1204,8 +1217,16 @@ int hip_conf_handle_nat_port(hip_common_t * msg, int action,
 	if (port < 0 || port > 65535) 
 		goto inv_arg;		
 
-	HIP_IFEL(hip_build_param_nat_port(msg, port), -1,
-		"Failed to build nat port parameter.: %s\n", strerror(err));
+	if (action == ACTION_NAT_LOCAL_PORT)
+	{
+		HIP_IFEL(hip_build_param_nat_port(msg, port, HIP_PARAM_LOCAL_NAT_PORT), -1,
+			"Failed to build nat port parameter.: %s\n", strerror(err));
+	}
+	else
+	{
+		HIP_IFEL(hip_build_param_nat_port(msg, port, HIP_PARAM_PEER_NAT_PORT), -1,
+			"Failed to build nat port parameter.: %s\n", strerror(err));			
+	}
 	
 	HIP_IFEL(hip_build_user_hdr(msg, SO_HIP_SET_NAT_PORT, 0), -1, 
 		"Failed to build user message header.: %s\n", strerror(err));

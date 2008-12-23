@@ -993,8 +993,8 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version)
 
 	// HIP packets have zero bytes (IPv4 only right now)
 	if(ctx->ip_version == 4 && udphdr
-			&& ((udphdr->source == ntohs(hip_get_nat_udp_port())) ||
-		        (udphdr->dest == ntohs(hip_get_nat_udp_port())))
+			&& ((udphdr->source == ntohs(hip_get_local_nat_udp_port())) ||
+		        (udphdr->dest == ntohs(hip_get_peer_nat_udp_port())))
 		    && udp_encap_zero_bytes)
 
 	{
@@ -1033,8 +1033,8 @@ int hip_fw_init_context(hip_fw_context_t *ctx, char *buf, int ip_version)
 
 	// ESP does not have zero bytes (IPv4 only right now)
 	else if (ctx->ip_version == 4 && udphdr
-		   && ((udphdr->source == ntohs(hip_get_nat_udp_port())) ||
-		       (udphdr->dest == ntohs(hip_get_nat_udp_port())))
+		   && ((udphdr->source == ntohs(hip_get_local_nat_udp_port())) ||
+		       (udphdr->dest == ntohs(hip_get_peer_nat_udp_port())))
 		   && !udp_encap_zero_bytes)
 	{
 
