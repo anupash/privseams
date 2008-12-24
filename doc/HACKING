@@ -478,7 +478,7 @@ binary packages. The aim for these packages is for easier testing of HIPL
 software. With the scripts, RPM (e.g. for Fedora Core) and DEB (for Debian)
 packages can be created. 
 
-To create the RPM package, type: "./autogen && ./configure && make rpm".
+To create the RPM package, type: "./autogen && ./configure && make bin".
 This will create a source package (in tar.gz form in the same
 directory) which will be used when building the RPM file. After the
 script has run successfully, follow the instructions given by the
@@ -500,13 +500,16 @@ Debian
 ------
 
 DEB package is created similarly: "./autogen && ./configure && make
-deb". Correspondingly, the binary packages are written to /usr/src/debian
+bin". Correspondingly, the binary packages are written to /usr/src/debian
 
 FEDORA REPOSITORY MANAGEMENT
 ============================
 
 Updating server repository
 --------------------------
+
+Remember update version number hipl.spec and create-package.sh before
+uploading any binaries!!!
 
 - install repository tool to the web server 
 
@@ -518,9 +521,7 @@ $ mkdir -p /var/www/html/fedora/base/10/i386
 
 $ mkdir -p /var/www/html/fedora/base/10/x86_64
 
-- update version number hipl.spec and create-rpm-sh
-
-- make rpm
+- make bin
 
 - copy all hipl packages to the repository depending on the architecture
 

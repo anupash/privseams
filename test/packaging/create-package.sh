@@ -2,18 +2,14 @@
 
 # XX FIXME: read major, minor and release from spec file
 
-MAJOR=1
-MINOR=0
-RELEASE=4
-VERSION="$MAJOR.$MINOR"
-SUFFIX="-$VERSION.$RELEASE"
+VERSION=
 NAME=hipl
 PKGROOT=$PWD
 PKGEXE=$PKGROOT/test/packaging
 PKG_INDEX_NAME=Packages.gz
 PKG_INDEX_DIR=$PKGEXE
 PKG_INDEX=$PKG_INDEX_DIR/$PKG_INDEX_NAME
-PKGDIR=$PKGROOT/${NAME}$SUFFIX
+PKGDIR=$PKGROOT/${NAME}$VERSION
 PKG_WEB_DIR=
 PKG_SERVER_DIR=
 DEBDIR=/usr/src/debian
@@ -43,7 +39,7 @@ build_rpm()
 {
     test -e ~/.rpmmacros && die "Move ~/.rpmmacros out of the way"
     # The RPMs can be found from /usr/src/redhat/ SRPMS and RPMS
-    $SUDO mv -f $PKGROOT/hipl${SUFFIX}.tar.gz /usr/src/redhat/SOURCES
+    $SUDO mv -f $PKGROOT/hipl${VERSION}.tar.gz /usr/src/redhat/SOURCES
     $SUDO rpmbuild -ba $SPECFILE
 }
 
@@ -55,7 +51,16 @@ syncrepo_deb()
     scp $PKG_DIR/*.deb $REPO_SERVER:$TEMPDIR/
     ssh $REPO_SERVER \
 	sudo mv $TEMPDIR/* $PKG_SERVER_DIR/
-    #ssh $REPO_SERVER "chown apache.apache PACKAGES_GZ_DIR"
+}
+
+syncrepo_rpm()
+{
+    die "Unimplemented"
+}
+
+createrepo_rpm()
+{
+    die "Unimplemented"
 }
 
 scanpackages_deb()
@@ -93,7 +98,7 @@ build_deb()
 
     $SUDO cp $SPECFILE $DEBDIR/SPECS
 
-    $SUDO mv -f $PKGROOT/hipl${SUFFIX}.tar.gz /usr/src/debian/SOURCES
+    $SUDO mv -f $PKGROOT/hipl${VERSION}.tar.gz /usr/src/debian/SOURCES
     # http://www.deepnet.cx/debbuild/
     $SUDO $PKGEXE/debbuild -ba $SPECFILE
 }
@@ -114,28 +119,47 @@ set -e
 if test -r /etc/debian_version
 then
     DISTROBASE=debian
+    SPECFILE=$PKGEXE/hipl-deb.spec 
     ARCH=`dpkg --print-architecture`
     PKG_DIR=$DEBDIR/DEBS/$ARCH 
     DISTRO_RELEASE=`lsb_release -c|cut -f2`
     DISTRO=`lsb_release -d|cut -f2|tr '[:upper:]' '[:lower:]'|cut -d" " -f1`
     PKG_WEB_DIR=dists/$DISTRO_RELEASE/main/binary-${ARCH}
     PKG_SERVER_DIR=$REPO_BASE/$DISTRO/$PKG_WEB_DIR
+    VERSION=`grep Version: $PKGEXE/$SPECFILE|cut -d" " -f2`
 elif test -r /etc/redhat-release
 then
     DISTROBASE=redhat
-    ARCH=`uname -m` # xx test i386
+    SPECFILE=$PKGEXE/hipl-rpm.spec 
+    ARCH=`uname -i`
+    PKG_DIR=xx
+    DISTRO_RELEASE=xx
+    DISTRO=xx
+    PKG_WEB_DIR=xx
+    PKG_SERVER_DIR=xx
+    VERSION=`grep Version: $PKGEXE/$SPECFILE|cut -d" " -f2`
 else
     die "Unknown architecture"
 fi
 
 # Determine action
-if test x"$1" = x"scanpackages"
+if test x"$1" = x"indexrepo"
 then
-    scanpackages_deb # xx fix rpm
+    if test x"$DISTROBASE" = x"debian"
+    then
+	scanpackages_deb
+    else
+	createrepo_rpm
+    fi
     exit
 elif test x"$1" = x"syncrepo"
 then
-    syncrepo_deb # xx fix rpm
+    if test x"$DISTROBASE" = x"debian"
+    then
+	syncrepo_deb
+    else
+	syncrepo_rpm
+    fi
     exit
 elif test x"$1" = x"bin"
 then
@@ -156,7 +180,7 @@ echo <<EOF
 ** source package needed for RPM package containing HIPL
 ** user space software
 **
-** Version $VERSION (release $RELEASE)
+** Version $VERSION
 **
 EOF
 
@@ -168,9 +192,9 @@ tar xzf ${NAME}-main.tar.gz
 find ${NAME}-main -name '.arch*' | xargs rm -rf
 mv -v ${NAME}-main $PKGDIR
 
-echo "** Creating source package $PKGROOT/${NAME}${SUFFIX}.tar.gz"
-tar czf $PKGROOT/hipl${SUFFIX}.tar.gz ${NAME}$SUFFIX
-ls -l $PKGROOT/hipl${SUFFIX}.tar.gz
+echo "** Creating source package $PKGROOT/${NAME}${VERSION}.tar.gz"
+tar czf $PKGROOT/hipl${VERSION}.tar.gz ${NAME}$VERSION
+ls -l $PKGROOT/hipl${VERSION}.tar.gz
 
 cat <<EOF
 
@@ -182,11 +206,9 @@ EOF
 
 if test x"$1" = x"rpm" || test x"$BIN_FORMAT" = x"rpm"
 then
-    SPECFILE=$PKGEXE/hipl-rpm.spec 
     build_rpm
 elif test x"$1" = x"deb" || test x"$BIN_FORMAT" = x"deb"
 then
-    SPECFILE=$PKGEXE/hipl-deb.spec 
     build_deb
     scanpackages_deb
 else
