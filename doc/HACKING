@@ -505,8 +505,8 @@ deb". Correspondingly, the binary packages are written to /usr/src/debian
 FEDORA REPOSITORY MANAGEMENT
 ============================
 
-Server-side configuration
--------------------------
+Updating server repository
+--------------------------
 
 - install repository tool to the web server 
 
@@ -514,9 +514,9 @@ $ yum -y install createrepo
 
 - create a directory tree for yum repository
 
-$ mkdir -p /var/www/html/fedora/base/8/i386
+$ mkdir -p /var/www/html/fedora/base/10/i386
 
-$ mkdir -p /var/www/html/fedora/base/8/x86_64
+$ mkdir -p /var/www/html/fedora/base/10/x86_64
 
 - update version number hipl.spec and create-rpm-sh
 
@@ -540,7 +540,7 @@ $ createrepo repository
 
 - for example to create yum repository for all packages 
 
-$ createrepo fedora/base/8/i386
+$ createrepo fedora/base/10/i386
 
 Client-side configuration
 -------------------------
@@ -559,7 +559,7 @@ baseurl=http://packages.infrahip.net/fedora/base/$releasever/$basearch/RPMS
 
 - install hipl package by command yum
 
-$ sudo yum install hipl-lib hipl-daemon hipl-tools
+$ sudo yum install hipl-lib hipl-hipfw hipl-daemon hipl-dnsproxy hipl-tools hipl-doc hipl-test
 
 UBUNTU REPOSITORY MANAGEMENT
 ============================
@@ -589,7 +589,7 @@ older versions. Also, source packages are not yet supported. -miika
 Client-side configuration
 -------------------------
 
-- to configure apt-get for Debian modify sources.list 
+To configure apt-get for Debian modify sources.list 
 
 $ nano /etc/apt/sources.list
 
@@ -598,13 +598,7 @@ deb http://packages.infrahip.net/ubuntu/ intrepid main
 - update and install hipl packages 
 
 $ apt-get update 
-
-$ apt-get install hipl-lib hipl-core hipl-tools hipl-doc
-
-- to fetch source package by apt-get
-
-$ apt-get source hipl 
-
+$ apt-get install hipl-lib hipl-hipfw hipl-daemon hipl-dnsproxy hipl-tools hipl-doc hipl-test
 
 HOW TO CREATE KERNEL PACKAGES
 =============================
