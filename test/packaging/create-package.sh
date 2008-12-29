@@ -48,7 +48,7 @@ syncrepo_deb()
     ssh $REPO_SERVER sudo mkdir -p $PKG_SERVER_DIR
     TEMPDIR=`ssh $REPO_SERVER mktemp -d`
     scp $PKG_INDEX $REPO_SERVER:$TEMPDIR/
-    scp $PKG_DIR/*.deb $REPO_SERVER:$TEMPDIR/
+    scp $PKG_DIR/hipl*.deb $REPO_SERVER:$TEMPDIR/
     ssh $REPO_SERVER \
 	sudo mv $TEMPDIR/* $PKG_SERVER_DIR/
 }
@@ -57,7 +57,7 @@ syncrepo_rpm()
 {
     ssh $REPO_SERVER mkdir -p $PKG_SERVER_DIR
     TEMPDIR=`ssh $REPO_SERVER mktemp -d`
-    scp $PKG_DIR/*.rpm $REPO_SERVER:$TEMPDIR/
+    scp $PKG_DIR/hipl*.rpm $REPO_SERVER:$TEMPDIR/
     ssh $REPO_SERVER \
 	sudo mv $TEMPDIR/* $PKG_SERVER_DIR/
     ssh sudo $REPO_SERVER createrepo --update $PKG_SERVER_DIR/
