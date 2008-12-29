@@ -55,12 +55,12 @@ syncrepo_deb()
 
 syncrepo_rpm()
 {
-    ssh $REPO_SERVER mkdir -p $PKG_SERVER_DIR
+    ssh $REPO_SERVER sudo mkdir -p $PKG_SERVER_DIR
     TEMPDIR=`ssh $REPO_SERVER mktemp -d`
     scp $PKG_DIR/hipl*.rpm $REPO_SERVER:$TEMPDIR/
     ssh $REPO_SERVER \
 	sudo mv $TEMPDIR/* $PKG_SERVER_DIR/
-    ssh sudo $REPO_SERVER createrepo --update $PKG_SERVER_DIR/
+    ssh $REPO_SERVER sudo createrepo --update $PKG_SERVER_DIR/
 }
 
 scanpackages_deb()
@@ -135,7 +135,7 @@ then
     PKG_DIR=$RPMDIR/RPMS/$ARCH
     DISTRO_RELEASE=`lsb_release -r|cut -f2`
     DISTRO=`lsb_release -d|cut -f2|tr '[:upper:]' '[:lower:]'|cut -d" " -f1`
-    PKG_WEB_DIR=fedora/base/$DISTRO_RELEASE
+    PKG_WEB_DIR=fedora/base/$DISTRO_RELEASE/$ARCH
     PKG_SERVER_DIR=$REPO_BASE/$PKG_WEB_DIR
     VERSION=`grep Version: $SPECFILE|cut -d" " -f2`
 else
