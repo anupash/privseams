@@ -1,7 +1,5 @@
 #!/bin/sh -xv
 
-# XX FIXME: read major, minor and release from spec file
-
 VERSION=
 NAME=hipl
 PKGROOT=$PWD
@@ -126,7 +124,7 @@ then
     DISTRO=`lsb_release -d|cut -f2|tr '[:upper:]' '[:lower:]'|cut -d" " -f1`
     PKG_WEB_DIR=dists/$DISTRO_RELEASE/main/binary-${ARCH}
     PKG_SERVER_DIR=$REPO_BASE/$DISTRO/$PKG_WEB_DIR
-    VERSION=`grep Version: $PKGEXE/$SPECFILE|cut -d" " -f2`
+    VERSION=`grep Version: $SPECFILE|cut -d" " -f2`
 elif test -r /etc/redhat-release
 then
     DISTROBASE=redhat
@@ -137,7 +135,7 @@ then
     DISTRO=xx
     PKG_WEB_DIR=xx
     PKG_SERVER_DIR=xx
-    VERSION=`grep Version: $PKGEXE/$SPECFILE|cut -d" " -f2`
+    VERSION=`grep Version: $SPECFILE|cut -d" " -f2`
 else
     die "Unknown architecture"
 fi
