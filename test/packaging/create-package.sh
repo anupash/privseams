@@ -20,6 +20,7 @@ DISTROBASE=
 REPO_SERVER=packages.infrahip.net
 REPO_BASE=/var/www/html
 BIN_FORMAT=
+TARBALL=
 
 die()
 {
@@ -37,7 +38,7 @@ build_rpm()
 {
     test -e ~/.rpmmacros && die "Move ~/.rpmmacros out of the way"
     # The RPMs can be found from /usr/src/redhat/ SRPMS and RPMS
-    $SUDO mv -f $PKGROOT/hipl${VERSION}.tar.gz /usr/src/redhat/SOURCES
+    $SUDO mv -f $TARBALL /usr/src/redhat/SOURCES
     $SUDO rpmbuild -ba $SPECFILE
 }
 
@@ -96,7 +97,7 @@ build_deb()
 
     $SUDO cp $SPECFILE $DEBDIR/SPECS
 
-    $SUDO mv -f $PKGROOT/hipl${VERSION}.tar.gz /usr/src/debian/SOURCES
+    $SUDO mv -f $TARBALL /usr/src/debian/SOURCES
     # http://www.deepnet.cx/debbuild/
     $SUDO $PKGEXE/debbuild -ba $SPECFILE
 }
@@ -139,6 +140,8 @@ then
 else
     die "Unknown architecture"
 fi
+
+TARBALL=$PKGROOT/hipl-${VERSION}.tar.gz
 
 # Determine action
 if test x"$1" = x"indexrepo"
@@ -186,13 +189,11 @@ cleanup
 
 make dist
 
-tar xzf ${NAME}-main.tar.gz
-find ${NAME}-main -name '.arch*' | xargs rm -rf
-mv -v ${NAME}-main $PKGDIR
-
-echo "** Creating source package $PKGROOT/${NAME}${VERSION}.tar.gz"
-tar czf $PKGROOT/hipl${VERSION}.tar.gz ${NAME}$VERSION
-ls -l $PKGROOT/hipl${VERSION}.tar.gz
+#tar xzf ${NAME}-main.tar.gz
+#find ${NAME}-main -name '.arch*' | xargs rm -rf
+#mv -v ${NAME}-main $PKGDIR
+mv $PKGROOT/${NAME}-main.tar.gz $TARBALL
+ls -ld $PKGROOT/hipl-${VERSION}.tar.gz
 
 cat <<EOF
 
