@@ -188,12 +188,13 @@ EOF
 cleanup
 
 make dist
-
-#tar xzf ${NAME}-main.tar.gz
+rm -rf ${NAME}-${VERSION}
+tar xzf ${NAME}-main.tar.gz
 #find ${NAME}-main -name '.arch*' | xargs rm -rf
-#mv -v ${NAME}-main $PKGDIR
+mv -v ${NAME}-main ${NAME}-${VERSION}
+tar czf $TARBALL ${NAME}-${VERSION}
 mv $PKGROOT/${NAME}-main.tar.gz $TARBALL
-ls -ld $PKGROOT/hipl-${VERSION}.tar.gz
+ls -ld $TARBALL
 
 cat <<EOF
 
