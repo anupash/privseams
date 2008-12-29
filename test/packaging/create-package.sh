@@ -11,6 +11,7 @@ PKGDIR=$PKGROOT/${NAME}$VERSION
 PKG_WEB_DIR=
 PKG_SERVER_DIR=
 DEBDIR=/usr/src/debian
+RPMDIR=/usr/src/redhat
 SUBDEBDIRS="BUILD DEBS SOURCES SPECS SDEBS"
 SUDO=sudo
 ARCH=
@@ -131,11 +132,11 @@ then
     DISTROBASE=redhat
     SPECFILE=$PKGEXE/hipl-rpm.spec 
     ARCH=`uname -i`
-    PKG_DIR=xx
-    DISTRO_RELEASE=xx
-    DISTRO=xx
-    PKG_WEB_DIR=xx
-    PKG_SERVER_DIR=xx
+    PKG_DIR=$RPMDIR/RPMS/$ARCH
+    DISTRO_RELEASE=`lsb_release -c|cut -f2`
+    DISTRO=`lsb_release -d|cut -f2|tr '[:upper:]' '[:lower:]'|cut -d" " -f1`
+    PKG_WEB_DIR=XX_TODO
+    PKG_SERVER_DIR=XX_TODO
     VERSION=`grep Version: $SPECFILE|cut -d" " -f2`
 else
     die "Unknown architecture"
@@ -193,7 +194,7 @@ tar xzf ${NAME}-main.tar.gz
 #find ${NAME}-main -name '.arch*' | xargs rm -rf
 mv -v ${NAME}-main ${NAME}-${VERSION}
 tar czf $TARBALL ${NAME}-${VERSION}
-mv $PKGROOT/${NAME}-main.tar.gz $TARBALL
+#mv $PKGROOT/${NAME}-main.tar.gz $TARBALL
 ls -ld $TARBALL
 
 cat <<EOF
