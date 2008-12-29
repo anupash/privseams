@@ -508,45 +508,30 @@ FEDORA REPOSITORY MANAGEMENT
 Updating server repository
 --------------------------
 
-Remember update version number hipl.spec and create-package.sh before
+It is advisable to do the following things first at the server:
+* Copy your ssh pub key to the server
+* Bypass password prompting in /etc/sudoers
+* Comment out "Defaults    requiretty"
+
+Install repository tool at the repository server if not present:
+* yum -y install createrepo
+
+Remember update version number in hipl.spec before
 uploading any binaries!!!
 
-- install repository tool to the web server 
+Create a directory tree for yum repository if not present:
+* mkdir -p /var/www/html/fedora/base/10/i386
+* mkdir -p /var/www/html/fedora/base/10/x86_64
 
-$ yum -y install createrepo
+Create binaries and synchronise to repository:
+* make bin syncrepo
 
-- create a directory tree for yum repository
-
-$ mkdir -p /var/www/html/fedora/base/10/i386
-
-$ mkdir -p /var/www/html/fedora/base/10/x86_64
-
-- make bin
-
-- copy all hipl packages to the repository depending on the architecture
-
-- for example copy all packages to directory /var/www/html/fedora/base/hipl/i386/
-
-hipl-agent-1.0.3-1.i386.rpm
-hipl-daemon-1.0.3-1.i386.rpm
-hipl-doc-1.0.3-1.i386.rpm
-hipl-firewall-1.0.3-1.i386.rpm
-hipl-lib-1.0.3-1.i386.rpm
-hipl-test-1.0.3-1.i386.rpm
-hipl-tools-1.0.3-1.i386.rpm
-
-- create yum repository for all packages 
-
-$ createrepo repository
-
-- for example to create yum repository for all packages 
-
-$ createrepo fedora/base/10/i386
+###createrepo fedora/base/10/i386
 
 Client-side configuration
 -------------------------
 
-- to configure yum for Fedora modify configuration
+- to configure yum for Fedora modify configuration /etc/yum.conf
 
 [hipl]
 name=HIPL
@@ -569,7 +554,7 @@ Updating server repository
 --------------------------
 
 Note: if you are doing a version upgrade, remember to update the
-version number in test/packaging/hipl-deb.spec!!!
+version number in hipl-deb.spec!!!
 
 It is advisable to do the following things first at the server:
 * Copy your ssh pub key to the server

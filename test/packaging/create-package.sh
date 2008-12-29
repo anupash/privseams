@@ -19,7 +19,7 @@ DISTRO_RELEASE=
 DISTRO=
 DISTROBASE=
 REPO_SERVER=packages.infrahip.net
-REPO_BASE=/var/www/html
+REPO_BASE=/var/www/html/
 BIN_FORMAT=
 TARBALL=
 
@@ -55,12 +55,12 @@ syncrepo_deb()
 
 syncrepo_rpm()
 {
-    die "Unimplemented"
-}
-
-createrepo_rpm()
-{
-    die "Unimplemented"
+    ssh $REPO_SERVER mkdir -p $PKG_SERVER_DIR
+    TEMPDIR=`ssh $REPO_SERVER mktemp -d`
+    scp $PKG_DIR/*.rpm $REPO_SERVER:$TEMPDIR/
+    ssh $REPO_SERVER \
+	sudo mv $TEMPDIR/* $PKG_SERVER_DIR/
+    ssh sudo $REPO_SERVER createrepo --update $PKG_SERVER_DIR/
 }
 
 scanpackages_deb()
@@ -133,10 +133,10 @@ then
     SPECFILE=$PKGEXE/hipl-rpm.spec 
     ARCH=`uname -i`
     PKG_DIR=$RPMDIR/RPMS/$ARCH
-    DISTRO_RELEASE=`lsb_release -c|cut -f2`
+    DISTRO_RELEASE=`lsb_release -r|cut -f2`
     DISTRO=`lsb_release -d|cut -f2|tr '[:upper:]' '[:lower:]'|cut -d" " -f1`
-    PKG_WEB_DIR=XX_TODO
-    PKG_SERVER_DIR=XX_TODO
+    PKG_WEB_DIR=fedora/base/$DISTRO_RELEASE
+    PKG_SERVER_DIR=$REPO_BASE/$PKG_WEB_DIR
     VERSION=`grep Version: $SPECFILE|cut -d" " -f2`
 else
     die "Unknown architecture"
@@ -145,16 +145,7 @@ fi
 TARBALL=$PKGROOT/hipl-${VERSION}.tar.gz
 
 # Determine action
-if test x"$1" = x"indexrepo"
-then
-    if test x"$DISTROBASE" = x"debian"
-    then
-	scanpackages_deb
-    else
-	createrepo_rpm
-    fi
-    exit
-elif test x"$1" = x"syncrepo"
+if test x"$1" = x"syncrepo"
 then
     if test x"$DISTROBASE" = x"debian"
     then
