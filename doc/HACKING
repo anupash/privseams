@@ -526,12 +526,10 @@ Create a directory tree for yum repository if not present:
 Create binaries and synchronise to repository:
 * make bin syncrepo
 
-###createrepo fedora/base/10/i386
-
 Client-side configuration
 -------------------------
 
-- to configure yum for Fedora modify configuration /etc/yum.conf
+To install the packages from the repo, modify /etc/yum.conf:
 
 [hipl]
 name=HIPL
@@ -539,13 +537,9 @@ baseurl=http://packages.infrahip.net/fedora/base/$releasever/$basearch
 gpgcheck=0
 enabled=1
 
-- if exists sub-directory for packages in repository tree
+Install hipl package by command yum:
 
-baseurl=http://packages.infrahip.net/fedora/base/$releasever/$basearch/RPMS
-
-- install hipl package by command yum
-
-$ sudo yum install hipl-lib hipl-hipfw hipl-daemon hipl-dnsproxy hipl-tools hipl-doc hipl-test
+* sudo yum install hipl-lib hipl-hipfw hipl-daemon hipl-dnsproxy hipl-tools hipl-doc hipl-test
 
 UBUNTU REPOSITORY MANAGEMENT
 ============================
