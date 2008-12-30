@@ -163,7 +163,7 @@ then
     exit
 elif test x"$1" = x"bin"
 then
-    if test test x"$DISTROBASE" = x"redhat"
+    if test x"$DISTROBASE" = x"redhat"
     then
 	BIN_FORMAT=rpm
     elif test x"$DISTROBASE" = x"debian"
