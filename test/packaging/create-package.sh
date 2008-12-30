@@ -71,7 +71,6 @@ syncrepo()
 
     # create repo dir if it does not exist
     ssh ${REPO_USER}@${REPO_SERVER} mkdir -p $PKG_SERVER_DIR
-    #ssh ${REPO_USER}@${REPO_SERVER} "chgrp $REPO_GROUP $PKG_SERVER_DIR 2>/dev/null; exit 0"
     # (over)write package to the repository
     rsync $RSYNC_OPTS $PKG_DIR/${NAME}-*${VERSION}*.${DISTRO_PKG_SUFFIX} ${REPO_USER}@${REPO_SERVER}:$PKG_SERVER_DIR/
     # fetch all versions of packages to build complete repo index
@@ -90,8 +89,6 @@ syncrepo()
 
     # Copy all packages and repo index to the repository
     rsync $RSYNC_OPTS $PKG_DIR/${NAME}-*${VERSION}*.${DISTRO_PKG_SUFFIX} $PKG_INDEX ${REPO_USER}@${REPO_SERVER}:$PKG_SERVER_DIR/
-    # /usr/src deb files are owned by root; change this at the server
-#    ssh $REPO_SERVER "chgrp $REPO_GROUP $PKG_SERVER_DIR/${NAME}-*${VERSION}*.${DISTRO_PKG_SUFFIX} $PKG_SERVER_DIR/$PKG_INDEX_NAME "
 
     # Restore file priviledges on /usr/src/somewhere
     $SUDO chown root -R $PKG_DIR
