@@ -513,15 +513,11 @@ It is advisable to do the following things first at the server:
 * Comment out "Defaults    requiretty"
 * Add yourself to the hipl group at packages.infrahip.net if not already
 
-Install repository tool at the repository server if not present:
+Install repository tool at the host where you are building packages:
 * yum -y install createrepo
 
 Remember update version number in hipl.spec before
 uploading any binaries!!!
-
-Create a directory tree for yum repository if not present:
-* mkdir -p /var/www/html/fedora/base/10/i386
-* mkdir -p /var/www/html/fedora/base/10/x86_64
 
 Create binaries and synchronise to repository:
 * make bin syncrepo
@@ -555,7 +551,11 @@ It is advisable to do the following things first at the server:
 * Comment out "Defaults    requiretty"
 * Add yourself to the hipl group at packages.infrahip.net if not already
 
-make bin syncrepo
+Install the following tool to the host where building packages:
+* apt-get install dpkg-scanpackages
+
+Build the binaries and synchronize to repository:
+* make bin syncrepo
 
 Packages are copied to hipl.hiit.fi:
   * /var/www/html/ubuntu/dists/<release>/main/binary-<arch>
