@@ -109,8 +109,7 @@ Group: System Environment/Kernel
 
 %package agent
 Requires: hipl-lib, hipl-daemon
-Summary: Graphical user interface for HIP for Linux. Provides user-friendly
-access control "buddy" lists for HIP.
+Summary: Graphical user interface for HIP for Linux. Provides user-friendly access control "buddy" lists for HIP.
 Group: System Environment/Kernel
 %description agent
 
