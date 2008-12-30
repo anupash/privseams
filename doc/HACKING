@@ -479,7 +479,7 @@ software. With the scripts, RPM (e.g. for Fedora Core) and DEB (for Debian)
 packages can be created. 
 
 To create the RPM package, type: "./autogen && ./configure && make bin".
-This will create a source package (in tar.gz form in the same
+This will create a source tar.gz (in the same
 directory) which will be used when building the RPM file. After the
 script has run successfully, follow the instructions given by the
 script. That is, login as root and copy the source package (e.g.
@@ -510,8 +510,8 @@ Updating server repository
 
 It is advisable to do the following things first at the server:
 * Copy your ssh pub key to the server
-* Bypass password prompting in /etc/sudoers
 * Comment out "Defaults    requiretty"
+* Add yourself to the hipl group at packages.infrahip.net if not already
 
 Install repository tool at the repository server if not present:
 * yum -y install createrepo
@@ -552,8 +552,8 @@ version number in hipl-deb.spec!!!
 
 It is advisable to do the following things first at the server:
 * Copy your ssh pub key to the server
-* Bypass password prompting in /etc/sudoers
 * Comment out "Defaults    requiretty"
+* Add yourself to the hipl group at packages.infrahip.net if not already
 
 make bin syncrepo
 
