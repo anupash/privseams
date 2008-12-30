@@ -509,9 +509,8 @@ Updating server repository
 --------------------------
 
 It is advisable to do the following things first at the server:
-* Copy your ssh pub key to the server
+* Copy your ssh pub key to the server to "hipl" user
 * Comment out "Defaults    requiretty"
-* Add yourself to the hipl group at packages.infrahip.net if not already
 
 Install repository tool at the host where you are building packages:
 * yum -y install createrepo
@@ -547,9 +546,8 @@ Note: if you are doing a version upgrade, remember to update the
 version number in hipl-deb.spec!!!
 
 It is advisable to do the following things first at the server:
-* Copy your ssh pub key to the server
+* Copy your ssh pub key to the server to "hipl" user
 * Comment out "Defaults    requiretty"
-* Add yourself to the hipl group at packages.infrahip.net if not already
 
 Install the following tool to the host where building packages:
 * apt-get install dpkg-scanpackages
