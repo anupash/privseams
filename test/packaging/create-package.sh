@@ -4,10 +4,6 @@ VERSION=
 NAME=hipl
 PKGROOT=$PWD
 PKGEXE=$PKGROOT/test/packaging
-PKG_INDEX_NAME=Packages.gz
-PKG_INDEX_DIR=$PKGEXE
-PKG_INDEX=$PKG_INDEX_DIR/$PKG_INDEX_NAME
-PKGDIR=$PKGROOT/${NAME}$VERSION
 PKG_WEB_DIR=
 PKG_SERVER_DIR=
 DEBDIR=/usr/src/debian
@@ -18,10 +14,13 @@ ARCH=
 DISTRO_RELEASE=
 DISTRO=
 DISTROBASE=
+DISTRO_PKG_SUFFIX=
 REPO_SERVER=packages.infrahip.net
 REPO_BASE=/var/www/html/
 BIN_FORMAT=
 TARBALL=
+RSYNC_OPTS=-uv
+REPO_GROUP=hipl
 
 die()
 {
@@ -43,34 +42,47 @@ build_rpm()
     $SUDO rpmbuild -ba $SPECFILE
 }
 
-syncrepo_deb()
+mkindex_rpm()
 {
-    ssh $REPO_SERVER sudo mkdir -p $PKG_SERVER_DIR
-    TEMPDIR=`ssh $REPO_SERVER mktemp -d`
-    scp $PKG_INDEX $REPO_SERVER:$TEMPDIR/
-    scp $PKG_DIR/hipl*.deb $REPO_SERVER:$TEMPDIR/
-    ssh $REPO_SERVER \
-	sudo mv $TEMPDIR/* $PKG_SERVER_DIR/
+    createrepo --update $PKG_DIR
 }
 
-syncrepo_rpm()
-{
-    ssh $REPO_SERVER sudo mkdir -p $PKG_SERVER_DIR
-    TEMPDIR=`ssh $REPO_SERVER mktemp -d`
-    scp $PKG_DIR/hipl*.rpm $REPO_SERVER:$TEMPDIR/
-    ssh $REPO_SERVER \
-	sudo mv $TEMPDIR/* $PKG_SERVER_DIR/
-    ssh $REPO_SERVER sudo createrepo --update $PKG_SERVER_DIR/
-}
-
-scanpackages_deb()
+mkindex_deb()
 {
     ORIG=$PWD
     cd $PKG_DIR
     WD=`echo $PKG_WEB_DIR|sed 's/\//\\\\\//g'`
-    dpkg-scanpackages . | sed "s/Filename: \./Filename: $WD/" | \
+    dpkg-scanpackages --multiversion . | \
+	sed "s/Filename: \./Filename: $WD/" | \
 	gzip -9c > $PKG_INDEX
     cd $ORIG
+}
+
+syncrepo()
+{
+    # create repo dir if it does not exist
+    ssh $REPO_SERVER mkdir -p $PKG_SERVER_DIR
+    ssh $REPO_SERVER "chgrp $REPO_GROUP $PKG_SERVER_DIR 2>/dev/null; exit 0"
+    # (over)write package to the repository
+    rsync $RSYNC_OPTS $PKG_DIR/${NAME}-*${VERSION}*.${DISTRO_PKG_SUFFIX} $REPO_SERVER:$PKG_SERVER_DIR/
+    # fetch all versions of packages to build complete repo index
+    rsync $RSYNC_OPTS $REPO_SERVER:$PKG_SERVER_DIR/ $PKG_DIR/
+
+    # build index of all packages
+    if test x"$DISTROBASE" = x"debian"
+    then
+	mkindex_deb
+    elif test x"$DISTROBASE" = x"redhat"
+    then
+	mkindex_rpm
+    else
+	die "Unhandled distro $DISTROBASE"
+    fi
+
+    # Copy all packages and repo index to the repository
+    rsync $RSYNC_OPTS $PKG_DIR/${NAME}-*${VERSION}*.${DISTRO_PKG_SUFFIX} $PKG_INDEX $REPO_SERVER:$PKG_SERVER_DIR/
+    # /usr/src deb files are owned by root; change this at the server
+    ssh $REPO_SERVER "chgrp $REPO_GROUP $PKG_SERVER_DIR/${NAME}-*${VERSION}*.${DISTRO_PKG_SUFFIX} $PKG_SERVER_DIR/$PKG_INDEX_NAME"
 }
 
 build_deb()
@@ -103,14 +115,6 @@ build_deb()
     $SUDO $PKGEXE/debbuild -ba $SPECFILE
 }
 
-cleanup()
-{
-    if [ -n "$PKGDIR" -a -d "$PKGDIR" ];then
-	echo "removing '$PKGDIR'"
-	rm -rf "$PKGDIR"
-    fi
-}
-
 ############### Main program #####################
 
 set -e
@@ -127,6 +131,10 @@ then
     PKG_WEB_DIR=dists/$DISTRO_RELEASE/main/binary-${ARCH}
     PKG_SERVER_DIR=$REPO_BASE/$DISTRO/$PKG_WEB_DIR
     VERSION=`grep Version: $SPECFILE|cut -d" " -f2`
+    DISTRO_PKG_SUFFIX=deb
+    PKG_INDEX_NAME=Packages.gz
+    PKG_INDEX_DIR=$PKGEXE
+    PKG_INDEX=$PKG_INDEX_DIR/$PKG_INDEX_NAME
 elif test -r /etc/redhat-release
 then
     DISTROBASE=redhat
@@ -138,6 +146,10 @@ then
     PKG_WEB_DIR=fedora/base/$DISTRO_RELEASE/$ARCH
     PKG_SERVER_DIR=$REPO_BASE/$PKG_WEB_DIR
     VERSION=`grep Version: $SPECFILE|cut -d" " -f2`
+    DISTRO_PKG_SUFFIX=rpm
+    PKG_INDEX_NAME=repodata
+    PKG_INDEX_DIR=$PKGEXE
+    PKG_INDEX=$PKG_INDEX_DIR/$PKG_INDEX_NAME
 else
     die "Unknown architecture"
 fi
@@ -147,12 +159,7 @@ TARBALL=$PKGROOT/hipl-${VERSION}.tar.gz
 # Determine action
 if test x"$1" = x"syncrepo"
 then
-    if test x"$DISTROBASE" = x"debian"
-    then
-	syncrepo_deb
-    else
-	syncrepo_rpm
-    fi
+    syncrepo
     exit
 elif test x"$1" = x"bin"
 then
@@ -177,8 +184,6 @@ echo <<EOF
 **
 EOF
 
-cleanup
-
 make dist
 rm -rf ${NAME}-${VERSION}
 tar xzf ${NAME}-main.tar.gz
@@ -202,9 +207,7 @@ then
 elif test x"$1" = x"deb" || test x"$BIN_FORMAT" = x"deb"
 then
     build_deb
-    scanpackages_deb
 else
     die "*** Unknown platform, aborting ***"
 fi
 
-cleanup

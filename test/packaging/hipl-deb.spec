@@ -61,57 +61,67 @@ make -C doc all
 # list of files with the name of subpackage
 
 %package all
-Summary: HIPL virtual package
+Summary: HIPL software bundle
 Group: System Environment/Kernel
 Requires: hipl-lib, hipl-firewall, hipl-daemon, hipl-agent, hipl-tools, hipl-test, hipl-doc, hipl-dnsproxy
-%description all
+%description HIP for Linux libraries, daemons and documentation
 
 %package lib
 Summary: HIPL libraries
 Group: System Environment/Kernel
 Requires: openssl, libxml2, libgtk2.0-0, iptables, libcap1, libsqlite3-0
-%description lib
+%description HIP for Linux libraries
 
 %package daemon
 Requires: hipl-lib, iproute, libnet-ip-perl, libnet-dns-perl, libsocket6-perl, libio-socket-inet6-perl
-Summary: HIPL IPsec key management and mobility daemon
+Summary: HIPL security and mobility management daemon
 Group: System Environment/Kernel
-%description daemon
+%description HIP for Linux IPsec key management and mobility daemon
 
 %package tools
 Requires: hipl-lib, hipl-daemon
 Summary: HIPL command line tools
 Group: System Environment/Kernel
-%description tools
+%description Command line tools to control hipd from command line
 
 %package firewall
 Requires: hipl-lib
-Summary: HIPL hipfw daemon
+Summary: HIPL multi-purpose firewall daemon
 Group: System Environment/Kernel
-%description firewall
+%description
+Public-key/HIT-based access control, Local Scope Identifier support,
+userspace BEET-mode IPsec (for kernels below < 2.6.27) and
+system-based opportunistic mode for HIP
 
 %package test
 Requires: hipl-daemon
-Summary: HIPL developer test software
+Summary: HIPL test software for developers
 Group: System Environment/Kernel
-%description test
+%description
+netcat-like command line tools with built-in HIP support
+for developers 
 
 %package doc
 Summary: HIPL documentation
 Group: System Environment/Kernel
-%description doc
+%description documentation for HIP for Linux
 
 %package dnsproxy
 Requires: python, hipl-lib
 Summary: HIPL DNS proxy
 Group: System Environment/Kernel
-%description dnsproxy
+%description
+Name look-up proxy for HIP for Linux. Intercepts DNS look-ups
+and returns HIT or LSIs when corresponding entries are found in
+DNS, DHT or hosts files.
 
 %package agent
-Requires: hipl-lib
+Requires: hipl-lib, hipl-daemon
 Summary: HIPL graphical user interface
 Group: System Environment/Kernel
-%description agent
+%description
+Graphical user interface for HIP for Linux. Provides user-friendly
+access control "buddy" lists for HIP.
 
 %install
 rm -rf %{buildroot}
@@ -219,7 +229,12 @@ rm -rf %{buildroot}
 %files doc
 %doc doc/HOWTO.txt doc/howto-html
 
+%files all
+# nada
+
 %changelog
+* Wed Dec 31 2008 Miika Komu <miika@iki.fi>
+- Packaging improvements and lots of testing
 * Wed Aug 20 2008 Miika Komu <miika@iki.fi>
 - Dnsproxy separated into a separate package. Python packaging improvements.
 * Mon Jul 21 2008 Miika Komu <miika@iki.fi>
