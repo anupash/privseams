@@ -137,10 +137,10 @@ install -t %{buildroot}%{python_sitelib}/hipdnsproxy tools/dnsproxy.py*
 install -t %{buildroot}%{python_sitelib}/hipdnsproxy tools/pyip6.py*
 install -t %{buildroot}%{python_sitelib}/hipdnsproxy tools/hosts.py*
 install -t %{buildroot}%{python_sitelib}/hipdnsproxy tools/util.py*
-install -d %{buildroot}%{python_sitelib}/parsehipkey
-install -t %{buildroot}%{python_sitelib}/parsehipkey tools/parse-key-3.py*
-install -t %{buildroot}%{python_sitelib}/parsehipkey tools/myasn.py*
-install -m 700 tools/parsehipkey %{buildroot}/usr/sbin/parsehipkey
+install -d %{buildroot}%{python_sitelib}/hipdnskeyparse
+install -t %{buildroot}%{python_sitelib}/hipdnskeyparse tools/parse-key-3.py*
+install -t %{buildroot}%{python_sitelib}/hipdnskeyparse tools/myasn.py*
+install -m 700 tools/hipdnskeyparse %{buildroot}/usr/sbin/hipdnskeyparse
 install -m 700 tools/hipdnsproxy %{buildroot}/usr/sbin/hipdnsproxy
 install -m 700 agent/hipagent %{buildroot}/usr/sbin/hipagent
 
@@ -192,9 +192,9 @@ rm -rf %{buildroot}
 
 %files dnsproxy
 /usr/sbin/hipdnsproxy
-/usr/sbin/parsehipkey
+/usr/sbin/hipdnskeyparse
 %{python_sitelib}/hipdnsproxy
-%{python_sitelib}/parsehipkey
+%{python_sitelib}/hipdnskeyparse
 %{python_sitelib}/DNS
 %defattr(755,root,root)
 %config /etc/init.d/hipdnsproxy
