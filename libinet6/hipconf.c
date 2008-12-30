@@ -157,73 +157,75 @@ int (*action_handler[])(hip_common_t *, int action,const char *opt[], int optc, 
  * @param  text the action as a string.
  * @return the numeric action id correspoding to the symbolic text.
  */
-int hip_conf_get_action(char *text)
+int hip_conf_get_action(char *argv[])
 {
         int ret = -1;
 
-	if (!strcmp("add", text))
+	if (!strcmp("add", argv[1]))
 		ret = ACTION_ADD;
-	else if (!strcmp("del", text))
+	else if (!strcmp("del", argv[1]))
 		ret = ACTION_DEL;
-	else if (!strcmp("new", text))
+	else if (!strcmp("new", argv[1]))
 		ret = ACTION_NEW;
-	else if (!strcmp("get", text))
+	else if (!strcmp("get", argv[1]))
 		ret = ACTION_GET;
-	else if (!strcmp("set", text))
+	else if (!strcmp("set", argv[1]))
 		ret = ACTION_SET;
-	else if (!strcmp("inc", text))
+	else if (!strcmp("inc", argv[1]))
 		ret = ACTION_INC;
-	else if (!strcmp("dec", text))
+	else if (!strcmp("dec", argv[1]))
 		ret = ACTION_DEC;
-	else if (!strcmp("nat port local", text))
-		ret = ACTION_NAT_LOCAL_PORT;
-	else if (!strcmp("nat port peer", text))
-		ret = ACTION_NAT_PEER_PORT;
-	else if (!strcmp("nat", text))
-		ret = ACTION_NAT;
-	else if (!strcmp("bos", text))
+	else if (!strcmp("nat", argv[1]))
+		if (!strcmp("port", argv[2]))
+			if (!strcmp("local", argv[3]))
+				ret = ACTION_NAT_LOCAL_PORT;
+			else if (!strcmp("peer", argv[3]))
+				ret = ACTION_NAT_PEER_PORT;
+		else	
+			ret = ACTION_NAT;
+	else if (!strcmp("bos", argv[1]))
 		ret = ACTION_BOS;
-	else if (!strcmp("rst", text))
+	else if (!strcmp("rst", argv[1]))
 		ret = ACTION_RST;
-	else if (!strcmp("run", text))
+	else if (!strcmp("run", argv[1]))
 		ret = ACTION_RUN;
-	else if (!strcmp("load", text))
+	else if (!strcmp("load", argv[1]))
 		ret = ACTION_LOAD;
-	else if (!strcmp("dht", text))
+	else if (!strcmp("dht", argv[1]))
 		ret = ACTION_DHT;
-	else if (!strcmp("opendht", text))
+	else if (!strcmp("opendht", argv[1]))
 		ret = ACTION_OPENDHT;
-	else if (!strcmp("heartbeat", text))
+	else if (!strcmp("heartbeat", argv[1]))
 		ret = ACTION_HEARTBEAT;
-	else if (!strcmp("locator", text))
+	else if (!strcmp("locator", argv[1]))
 		ret = ACTION_LOCATOR;
-	else if (!strcmp("debug", text))
+	else if (!strcmp("debug", argv[1]))
 		ret = ACTION_DEBUG;
-	else if (!strcmp("handoff", text))
+	else if (!strcmp("handoff", argv[1]))
 		ret = ACTION_HANDOFF;
-	else if (!strcmp("transform", text))
+	else if (!strcmp("transform", argv[1]))
 		ret = ACTION_TRANSORDER;
-	else if (!strcmp("restart", text))
+	else if (!strcmp("restart", argv[1]))
 		ret = ACTION_RESTART;
-	else if (!strcmp("tcptimeout", text)) /*added by Tao Wan, 08.Jan.2008 */
+	else if (!strcmp("tcptimeout", argv[1])) /*added by Tao Wan, 08.Jan.2008 */
 		ret = ACTION_TCPTIMEOUT;
-	else if (!strcmp("reinit", text))
+	else if (!strcmp("reinit", argv[1]))
 		ret = ACTION_REINIT;
-	else if (!strcmp("hi3", text))
+	else if (!strcmp("hi3", argv[1]))
 		ret = ACTION_HI3;
 #ifdef CONFIG_HIP_HIPPROXY
-	else if (!strcmp("hipproxy", text))
+	else if (!strcmp("hipproxy", argv[1]))
 		ret = ACTION_HIPPROXY;
 #endif
-	else if (!strcmp("dnsproxy", text))
+	else if (!strcmp("dnsproxy", argv[1]))
 		ret = ACTION_DNS_PROXY;
-	else if (!strcmp("buddies", text))
+	else if (!strcmp("buddies", argv[1]))
 		ret = ACTION_BUDDIES;
-	else if (!strcmp("nsupdate", text))
+	else if (!strcmp("nsupdate", argv[1]))
 		ret = ACTION_NSUPDATE;
-	else if (!strcmp("hit-to-ip-set", text))
+	else if (!strcmp("hit-to-ip-set", argv[1]))
 		ret = ACTION_HIT_TO_IP_SET;
-	else if (!strcmp("hit-to-ip", text))
+	else if (!strcmp("hit-to-ip", argv[1]))
 		ret = ACTION_HIT_TO_IP;
 	
 	return ret;
@@ -394,9 +396,9 @@ int hip_conf_get_type_arg(int action)
 	case ACTION_ADD:
 	case ACTION_DEL:
 	case ACTION_NEW:
-	case ACTION_NAT_LOCAL_PORT:
-	case ACTION_NAT_PEER_PORT:	
 	case ACTION_NAT:
+	case ACTION_NAT_LOCAL_PORT:
+	case ACTION_NAT_PEER_PORT:
 	case ACTION_INC:
 	case ACTION_DEC:
 	case ACTION_SET:
@@ -2113,7 +2115,7 @@ int hip_do_hipconf(int argc, char *argv[], int send_only)
 		 argv[0], hipconf_usage);
 
 	/* Get a numeric value representing the action. */
-	action = hip_conf_get_action(argv[1]);
+	action = hip_conf_get_action(argv);
 	HIP_IFEL((action == -1), -1,
 		 "Invalid action argument '%s'\n", argv[1]);
 
