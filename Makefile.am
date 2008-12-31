@@ -82,8 +82,8 @@ deb:
 bin:
 	env PYEXECDIR=$(pyexecdir) test/packaging/create-package.sh bin
 
-indexrepo:
-	test/packaging/create-package.sh indexrepo
+increl:
+	test/packaging/create-package.sh increl
 
 syncrepo:
 	test/packaging/create-package.sh syncrepo

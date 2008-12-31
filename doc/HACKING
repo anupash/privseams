@@ -517,6 +517,7 @@ Install repository tool at the host where you are building packages:
 
 Remember update version number in hipl.spec before
 uploading any binaries!!!
+* make increl
 
 Create binaries and synchronise to repository:
 * make bin syncrepo
@@ -542,15 +543,16 @@ UBUNTU REPOSITORY MANAGEMENT
 Updating server repository
 --------------------------
 
-Note: if you are doing a version upgrade, remember to update the
-version number in hipl-deb.spec!!!
-
 It is advisable to do the following things first at the server:
 * Copy your ssh pub key to the server to "hipl" user
 * Comment out "Defaults    requiretty"
 
 Install the following tool to the host where building packages:
 * apt-get install dpkg-scanpackages
+
+Note: if you are doing a version upgrade, remember to update the
+version number in hipl-deb.spec!!!
+* make increl
 
 Build the binaries and synchronize to repository:
 * make bin syncrepo

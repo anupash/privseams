@@ -1,10 +1,9 @@
+Name: hipl
+Summary: HIP IPsec key management and mobility daemon.
+# Note: Version and Release are read automatically from topdir release.version
 # To check that this file is in correct format, type
 # ./debbuild --showpkgs hipl-deb.spec
-Name: hipl
-Version: 1.0.4
-Release: 1
-Summary: HIP IPsec key management and mobility daemon.
-URL: http://infrahip.hiit.fi/hipl/
+URL: http://infrahip.hiit.fi
 Source: http://infrahip.hiit.fi/hipl/release/sources/%{version}/hipl-%{version}.tar.gz
 Packager: miika@iki.fi
 Vendor: InfraHIP
@@ -150,7 +149,7 @@ install -m 700 agent/hipagent %{buildroot}/usr/sbin/hipagent
 
 %post daemon
 update-rc.d hipd multiuser 21
-echo "invoke-rc.d --quiet hipd start" | at now + 1 min 2>/dev/null 
+echo "invoke-rc.d --quiet hipd start" | at now + 1 min 2>/dev/null
 echo "hipd starts in a minute"
 
 %post firewall
@@ -220,7 +219,6 @@ rm -rf %{buildroot}
 %doc doc/HOWTO.txt doc/howto-html
 
 %files all
-# nada
 
 %changelog
 * Wed Dec 31 2008 Miika Komu <miika@iki.fi>
