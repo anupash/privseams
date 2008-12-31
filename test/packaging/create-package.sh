@@ -158,7 +158,7 @@ then
     DISTRO=`lsb_release -d|cut -f2|tr '[:upper:]' '[:lower:]'|cut -d" " -f1`
     PKG_WEB_DIR=fedora/base/$DISTRO_RELEASE/$ARCH
     PKG_SERVER_DIR=$REPO_BASE/$PKG_WEB_DIR
-    cat $PKGEXE/hipl-deb.spec >> $SPECFILE
+    cat $PKGEXE/hipl-rpm.spec >> $SPECFILE
     VERSION=`grep Version: $SPECFILE|cut -d" " -f2`
     DISTRO_PKG_SUFFIX=rpm
     PKG_INDEX_NAME=repodata
