@@ -175,14 +175,6 @@ int hip_conf_get_action(char *argv[])
 		ret = ACTION_INC;
 	else if (!strcmp("dec", argv[1]))
 		ret = ACTION_DEC;
-	else if (!strcmp("nat", argv[1]))
-		if (!strcmp("port", argv[2]))
-			if (!strcmp("local", argv[3]))
-				ret = ACTION_NAT_LOCAL_PORT;
-			else if (!strcmp("peer", argv[3]))
-				ret = ACTION_NAT_PEER_PORT;
-		else	
-			ret = ACTION_NAT;
 	else if (!strcmp("bos", argv[1]))
 		ret = ACTION_BOS;
 	else if (!strcmp("rst", argv[1]))
@@ -227,6 +219,21 @@ int hip_conf_get_action(char *argv[])
 		ret = ACTION_HIT_TO_IP_SET;
 	else if (!strcmp("hit-to-ip", argv[1]))
 		ret = ACTION_HIT_TO_IP;
+	else if (!strcmp("nat", argv[1]))
+	{
+		if (!strcmp("port", argv[2]))
+		{
+			if (!strcmp("local", argv[3]))
+				ret = ACTION_NAT_LOCAL_PORT;
+			else if (!strcmp("peer", argv[3]))
+				ret = ACTION_NAT_PEER_PORT;
+		}
+		else	
+		{
+			ret = ACTION_NAT;
+		}
+	}
+
 	
 	return ret;
 }
@@ -1215,7 +1222,7 @@ int hip_conf_handle_nat_port(hip_common_t * msg, int action,
 {
 	int err = 0;
 	
-	in_port_t port = (in_port_t)atoi(opt[0]);
+	in_port_t port = (in_port_t)atoi(opt[1]);
 	if (port < 0 || port > 65535) 
 		goto inv_arg;		
 

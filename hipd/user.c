@@ -1133,16 +1133,17 @@ int hip_handle_user_msg(hip_common_t *msg, struct sockaddr_in6 *src)
 	{
 		struct hip_port_info *nat_port;
 
-		HIP_DEBUG("Setting NAT local port\n");	  
 		nat_port = hip_get_param(msg, HIP_PARAM_LOCAL_NAT_PORT);
 		if (nat_port)
 		{
+			HIP_DEBUG("Setting local NAT port\n");	  
 			hip_set_local_nat_udp_port(nat_port->port);	
 			// We need to recreate the NAT UDP sockets to bind to the new port.
 			hip_create_nat_sock_udp(&hip_nat_sock_input_udp, 1, 0);
 		}
 		else
 		{
+			HIP_DEBUG("Setting peer NAT port\n");	  
 			HIP_IFEL(!(nat_port = hip_get_param(msg, HIP_PARAM_PEER_NAT_PORT)),
 					-1, "No nat port param found\n");
 			hip_set_peer_nat_udp_port(nat_port->port);
