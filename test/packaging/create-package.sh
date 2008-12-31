@@ -22,6 +22,8 @@ TARBALL=
 RSYNC_OPTS=-uvr
 REPO_USER=hipl
 REPO_GROUP=hipl
+SPECFILE_DIR=`mktemp -d`
+SPECFILE=$SPECFILE_DIR/hipl.spec 
 
 die()
 {
@@ -128,17 +130,19 @@ build_deb()
 
 set -e
 
+cp $PKGROOT/release.version $SPECFILE
+
 # Set architecture, distro and repo details
 if test -r /etc/debian_version
 then
     DISTROBASE=debian
-    SPECFILE=$PKGEXE/hipl-deb.spec 
     ARCH=`dpkg --print-architecture`
     PKG_DIR=$DEBDIR/DEBS/$ARCH 
     DISTRO_RELEASE=`lsb_release -c|cut -f2`
     DISTRO=`lsb_release -d|cut -f2|tr '[:upper:]' '[:lower:]'|cut -d" " -f1`
     PKG_WEB_DIR=dists/$DISTRO_RELEASE/main/binary-${ARCH}
     PKG_SERVER_DIR=$REPO_BASE/$DISTRO/$PKG_WEB_DIR
+    cat $PKGEXE/hipl-deb.spec >> $SPECFILE
     VERSION=`grep Version: $SPECFILE|cut -d" " -f2`
     DISTRO_PKG_SUFFIX=deb
     PKG_INDEX_NAME=Packages.gz
@@ -154,6 +158,7 @@ then
     DISTRO=`lsb_release -d|cut -f2|tr '[:upper:]' '[:lower:]'|cut -d" " -f1`
     PKG_WEB_DIR=fedora/base/$DISTRO_RELEASE/$ARCH
     PKG_SERVER_DIR=$REPO_BASE/$PKG_WEB_DIR
+    cat $PKGEXE/hipl-deb.spec >> $SPECFILE
     VERSION=`grep Version: $SPECFILE|cut -d" " -f2`
     DISTRO_PKG_SUFFIX=rpm
     PKG_INDEX_NAME=repodata
