@@ -346,7 +346,7 @@ copy_and_package_files ()
     echo "** Copying dnsproxy to $PKGDIR"
     inst -d $PKGDIR/$PYEXECDIR
     inst -d $PKGDIR/$PYEXECDIR/hipdnsproxy
-    inst -d $PKGDIR/$PYEXECDIR/parsehipkey
+    inst -d $PKGDIR/$PYEXECDIR/hipdnskeyparse
     inst -d $PKGDIR/$PYEXECDIR/DNS
 
     inst tools/dnsproxy.py* $PKGDIR/$PYEXECDIR/hipdnsproxy
@@ -355,11 +355,11 @@ copy_and_package_files ()
     inst tools/util.py* $PKGDIR/$PYEXECDIR/hipdnsproxy
     inst tools/parse-key-3.py* $PKGDIR/$PYEXECDIR/hipdnsproxy
 
-    inst tools/myasn.py* $PKGDIR/$PYEXECDIR/parsehipkey
+    inst tools/myasn.py* $PKGDIR/$PYEXECDIR/hipdnskeyparse
     inst tools/DNS/*py* $PKGDIR/$PYEXECDIR/DNS
 
     $SUDO tools/gen-python-starter.sh $PYEXECDIR/hipdnsproxy dnsproxy.py $PKGDIR/usr/sbin/hipdnsproxy
-    $SUDO tools/gen-python-starter.sh $PYEXECDIR/parsehipkey parse-key-3.py $PKGDIR/usr/sbin/parsehipkey
+    $SUDO tools/gen-python-starter.sh $PYEXECDIR/hipdnskeyparse parse-key-3.py $PKGDIR/usr/sbin/hipdnskeyparse
 
     inst tools/nsupdate.pl $PKGDIR/usr/sbin
 

@@ -60,14 +60,16 @@ make -C doc all
 # create subpackage
 # list of files with the name of subpackage
 
+# XX TODO: copy descriptions from hipl-deb.spec and make sure rpm still builds
+
 %package all
-Summary: HIPL virtual package
+Summary: HIPL software bundle: HIP for Linux libraries, daemons and documentation
 Group: System Environment/Kernel
 Requires: hipl-lib hipl-firewall hipl-daemon hipl-agent hipl-tools hipl-test hipl-doc hipl-dnsproxy
 %description all
 
 %package lib
-Summary: HIPL libraries
+Summary: HIP for Linux libraries
 Group: System Environment/Kernel
 Requires: openssl libxml2 gtk2 iptables libcap sqlite
 %description lib
@@ -75,44 +77,44 @@ Requires: openssl libxml2 gtk2 iptables libcap sqlite
 %package daemon
  # miredo
 Requires: hipl-lib iproute perl-Net-IP perl-Net-DNS perl-Socket6 perl-IO-Socket-INET6
-Summary: HIPL IPsec key management and mobility daemon
+Summary: HIP for Linux IPsec key management and mobility daemon
 Group: System Environment/Kernel
 %description daemon
 
-%package agent
-Requires: hipl-lib hipl-daemon
-Summary: HIPL graphical user interface
-Group: System Environment/Kernel
-%description agent
-
 %package tools
 Requires: hipl-lib hipl-daemon
-Summary: HIPL command line tools
+Summary: Command line tools to control hipd from command line
 Group: System Environment/Kernel
 %description tools
 
 %package firewall
 Requires: hipl-lib
-Summary: HIPL hipfw daemon
+Summary: HIPL multi-purpose firewall daemon. Public-key/HIT-based access control, Local Scope Identifier support, userspace BEET-mode IPsec (for kernels below < 2.6.27) and system-based opportunistic mode for HIP.
 Group: System Environment/Kernel
 %description firewall
 
 %package test
 Requires: hipl-lib hipl-daemon
-Summary: HIPL developer test software
+Summary: netcat-like command line tools with built-in HIP support for developers 
 Group: System Environment/Kernel
 %description test
 
 %package doc
-Summary: HIPL documentation
+Summary: documentation for HIP for Linux
 Group: System Environment/Kernel
 %description doc
 
 %package dnsproxy
 Requires: python hipl-lib
-Summary: HIPL DNS proxy
+Summary: Name look-up proxy for HIP for Linux. Intercepts DNS look-ups and returns HIT or LSIs when corresponding entries are found in DNS, DHT or hosts files
 Group: System Environment/Kernel
 %description dnsproxy
+
+%package agent
+Requires: hipl-lib hipl-daemon
+Summary: Graphical user interface for HIP for Linux. Provides user-friendly access control "buddy" lists for HIP.
+Group: System Environment/Kernel
+%description agent
 
 %install
 rm -rf %{buildroot}
@@ -140,11 +142,11 @@ install -t %{buildroot}%{python_sitelib}/hipdnsproxy tools/dnsproxy.py*
 install -t %{buildroot}%{python_sitelib}/hipdnsproxy tools/pyip6.py*
 install -t %{buildroot}%{python_sitelib}/hipdnsproxy tools/hosts.py*
 install -t %{buildroot}%{python_sitelib}/hipdnsproxy tools/util.py*
-install -d %{buildroot}%{python_sitelib}/parsehipkey
-install -t %{buildroot}%{python_sitelib}/parsehipkey tools/parse-key-3.py*
-install -t %{buildroot}%{python_sitelib}/parsehipkey tools/myasn.py*
+install -d %{buildroot}%{python_sitelib}/hipdnskeyparse
+install -t %{buildroot}%{python_sitelib}/hipdnskeyparse tools/parse-key-3.py*
+install -t %{buildroot}%{python_sitelib}/hipdnskeyparse tools/myasn.py*
 # required in CentOS release 5.2
-install -m 700 tools/parsehipkey %{buildroot}%{prefix}/sbin/parsehipkey
+install -m 700 tools/hipdnskeyparse %{buildroot}%{prefix}/sbin/hipdnskeyparse
 install -m 700 tools/hipdnsproxy %{buildroot}%{prefix}/sbin/hipdnsproxy
 
 %post lib
@@ -202,9 +204,9 @@ rm -rf %{buildroot}
 
 %files dnsproxy
 %{prefix}/sbin/hipdnsproxy
-%{prefix}/sbin/parsehipkey
+%{prefix}/sbin/hipdnskeyparse
 %{python_sitelib}/hipdnsproxy
-%{python_sitelib}/parsehipkey
+%{python_sitelib}/hipdnskeyparse
 %{python_sitelib}/DNS
 %defattr(755,root,root)
 %config /etc/rc.d/init.d/hipdnsproxy
@@ -229,7 +231,12 @@ rm -rf %{buildroot}
 %files doc
 %doc doc/HOWTO.txt doc/howto-html
 
+#%files all
+#nada
+
 %changelog
+* Wed Dec 31 2008 Miika Komu <miika@iki.fi>
+- Packaging improvements and lots of testing
 * Wed Aug 20 2008 Miika Komu <miika@iki.fi>
 - Dnsproxy separated into a separate package. Python packaging improvements.
 * Mon Jul 21 2008 Miika Komu <miika@iki.fi>

@@ -1,6 +1,6 @@
 AUTOMAKE_OPTIONS = foreign
 
-CLEANFILES = hipdnsproxy parsehipkey
+CLEANFILES = hipdnsproxy hipdnskeyparse
 
 EXTRA_DIST = gen-python-starter.sh
 
@@ -8,7 +8,7 @@ if HAVE_PYTHON
 
 # These two scripts are generated in the end to get the python paths correct.
 # Currently, I don't know a better way to deal with the python code. -miika
-dist_sbin_SCRIPTS = hipdnsproxy parsehipkey nsupdate.pl
+dist_sbin_SCRIPTS = hipdnsproxy hipdnskeyparse nsupdate.pl
 
 dns_PYTHON = DNS/Base.py DNS/Lib.py DNS/Type.py DNS/Class.py
 dns_PYTHON += DNS/Opcode.py DNS/win32dns.py DNS/__init__.py
@@ -18,8 +18,8 @@ dnsdir = $(pyexecdir)/DNS
 hipdnsproxy_PYTHON = dnsproxy.py pyip6.py hosts.py util.py
 hipdnsproxydir = $(pyexecdir)/hipdnsproxy
 
-parsehipkey_PYTHON = parse-key-3.py myasn.py
-parsehipkeydir = $(pyexecdir)/parsehipkey
+hipdnskeyparse_PYTHON = parse-key-3.py myasn.py
+hipdnskeyparsedir = $(pyexecdir)/hipdnskeyparse
 
 endif
 
@@ -90,14 +90,14 @@ $(HIPL_LIBINET6_LIB_STATIC):
 hipdnsproxy:
 	@sh gen-python-starter.sh $(pyexecdir)/hipdnsproxy dnsproxy.py hipdnsproxy
 
-parsehipkey:
-	@sh gen-python-starter.sh $(pyexecdir)/parsehipkey parse-key-3.py parsehipkey
+hipdnskeyparse:
+	@sh gen-python-starter.sh $(pyexecdir)/hipdnskeyparse parse-key-3.py hipdnskeyparse
 
 # This workaround forces automake to generate the scripts on each run. It is
 # necessary because otherwise "make rpm" target has the old $pyexecdir from
 # "make dist" and it refuses to build the scripts again.
 all-local:
 	@rm -f hipdnsproxy
-	@rm -f parsehipkey
+	@rm -f hipdnskeyparse
 	@sh gen-python-starter.sh $(pyexecdir)/hipdnsproxy dnsproxy.py hipdnsproxy
-	@sh gen-python-starter.sh $(pyexecdir)/parsehipkey parse-key-3.py parsehipkey
+	@sh gen-python-starter.sh $(pyexecdir)/hipdnskeyparse parse-key-3.py hipdnskeyparse

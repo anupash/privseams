@@ -1289,6 +1289,74 @@ $ make V=99
       </orderedlist>
     </section>
   </chapter>
+  <chapter id="quick">
+    <title>Quick Install and Test with Binaries</title>
+
+    <para>
+     The other sections of this document describe technical
+     installation and usage of HIPL software in an elaborate way. This
+     section gives more brief instructions for the brave and impatient.
+    </para>
+
+    <para>
+      The quickest way to install HIPL on your linux system is use the
+      precompiled release packages. Binary packages exist for Ubuntu
+      and Fedora, and possibly later also for Debian and
+      CentOS. Install all of the binary packages to your linux system
+      according to instructions on the download pages:
+      <ulink url="http://infrahip.hiit.fi/index.php?index=download" />
+    </para>
+
+    <para>
+      After installing all of the the binaries, you can test the
+      installation by opening firefox web browser. Type
+      "crossroads.infrahip.net" in the address bar, hit enter and wait few
+      seconds. If the web page tells you that the connection was
+      established using HIP, then you have a successful installation,
+      congratulations! If not, you have to browse through the
+      document. You can also ask questions on the hipl-users mailing
+      list (<ulink url="http://www.freelists.org/list/hipl-users" />) if you did not find a satisfying 
+      answer in this document.
+    </para>
+
+  </chapter>
+  <chapter id="ch_test_servers">
+    <title>HIPL Internet Test Servers</title>
+    <para>
+    Below is a list of public InfraHIP test servers. The servers are also running
+    free name look up Bamboo service (<xref linkend="ch_opendht" />) and HIP rendezvous service which you can use according to the instructions in <xref linkend="ch_rvs_relay" />.
+    </para>
+    <table id="table_servers" frame="all"><title>Test Servers</title>
+    <tgroup cols="1">
+      <thead>
+	<row><entry>Server</entry><entry>HIT</entry><entry>HI algo</entry><entry>IPv4 address</entry><entry>IPv6 address</entry></row>
+      </thead>
+      <tbody>
+	<row><entry>felwood.infrahip.net</entry><entry>2001:1d:392e:a450:2cd3:75e1:6098:8104</entry><entry>RSA</entry><entry>193.167.187.130</entry><entry>2001:708:140:220::3</entry></row>
+	<row><entry>crossroads.infrahip.net</entry><entry>2001:1b:a9be:c6a6:34e5:8361:c07f:a990</entry><entry>RSA</entry><entry>193.167.187.134</entry><entry>2001:708:140:220::7</entry></row>
+	<row><entry>ashenvale.infrahip.net</entry><entry>2001:1c:cbae:47ae:2871:f9c:eb94:c8e3</entry><entry>RSA</entry><entry>193.167.187.133</entry><entry>2001:708:140:220::6</entry></row>
+      </tbody>
+    </tgroup>
+    </table>
+
+    <para>
+      The servers are running public http service and respond to ICMPv4 and ICMPv6. They are not running "conntest-server" software as described elsewhere in this document.
+    </para>
+
+    <para>To use access the servers using HIP behind a NAT box, you
+          have two alternatives. Firstly, you enable the UDP
+          encapsulation using "hipconf nat plain-udp". See <xref
+          linkend="ch_hip_nat" /> for more information. Secondly,
+	  you can install miredo on your machine and make sure that HIP
+	  uses the IPv6 address of the server.</para>
+	  
+
+    <para>To register to the rendezvous servers behind a NAT box,
+          you need to install "miredo" on your machine. Then you register to
+          one of the test servers using its IPv6 address.</para>
+
+  </chapter>
+
   <chapter id="ch_basictest">
     <title>Testing a HIP connection between two locally connected hosts</title>
     <para>
@@ -1561,42 +1629,6 @@ $ make V=99
 		<listitem><para>nc OOPS_LSI -u 5555 # oops must be running nc -l -u 5555</para></listitem>
 	      </itemizedlist>
     </section>
-  </chapter>
-  <chapter id="ch_test_servers">
-    <title>HIPL Internet Test Servers</title>
-    <para>
-    Below is a list of public InfraHIP test servers. The servers are also running
-    free name look up Bamboo service (<xref linkend="ch_opendht" />) and HIP rendezvous service which you can use according to the instructions in <xref linkend="ch_rvs_relay" />.
-    </para>
-    <table id="table_servers" frame="all"><title>Test Servers</title>
-    <tgroup cols="1">
-      <thead>
-	<row><entry>Server</entry><entry>HIT</entry><entry>HI algo</entry><entry>IPv4 address</entry><entry>IPv6 address</entry></row>
-      </thead>
-      <tbody>
-	<row><entry>felwood.infrahip.net</entry><entry>2001:1d:392e:a450:2cd3:75e1:6098:8104</entry><entry>RSA</entry><entry>193.167.187.130</entry><entry>2001:708:140:220::3</entry></row>
-	<row><entry>crossroads.infrahip.net</entry><entry>2001:1b:a9be:c6a6:34e5:8361:c07f:a990</entry><entry>RSA</entry><entry>193.167.187.134</entry><entry>2001:708:140:220::7</entry></row>
-	<row><entry>ashenvale.infrahip.net</entry><entry>2001:1c:cbae:47ae:2871:f9c:eb94:c8e3</entry><entry>RSA</entry><entry>193.167.187.133</entry><entry>2001:708:140:220::6</entry></row>
-      </tbody>
-    </tgroup>
-    </table>
-
-    <para>
-      The servers are running ssh and http. They are not running "conntest-server" software as described elsewhere in this document.
-    </para>
-
-    <para>To use access the servers using HIP behind a NAT box, you
-          have two alternatives. Firstly, you enable the UDP
-          encapsulation using "hipconf nat plain-udp". See <xref
-          linkend="ch_hip_nat" /> for more information. Secondly,
-	  you can install miredo on your machine and make sure that HIP
-	  uses the IPv6 address of the server.</para>
-	  
-
-    <para>To register to the rendezvous servers behind a NAT box,
-          you need to install "miredo" on your machine. Then you register to
-          one of the test servers using its IPv6 address.</para>
-
   </chapter>
 
   <chapter id="ch_closing_hip">
@@ -4190,11 +4222,11 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
   <chapter id="ch_dns_data">
     <title>DNS data manipulation</title>
     <para>
-      Tools directory contains parsehipkey a script (after running ./autogens.h) which converts public
+      Tools directory contains hipdnskeyparse a script (after running ./autogens.h) which converts public
       key file contents to different DNS zone file formats. To convert
       to unpatched BIND9 format, run the following:
       <programlisting>
-parsehipkey &lt; /etc/hip/hip_host_rsa_key_pub.pub hostname.domain.org | sed -n -e '/^9BIND */s///p'
+hipdnskeyparse &lt; /etc/hip/hip_host_rsa_key_pub.pub hostname.domain.org | sed -n -e '/^9BIND */s///p'
       </programlisting>
       This outputs a line which can be inserted to a zone
       file. Similarly, with sed command:

@@ -14,7 +14,7 @@ EXTRA_DIST += test/packaging/debian-init.d-hipd test/packaging/debian-init.d-hip
 # The design choices doc is currently depracated
 EXTRA_DIST += doc/design_choices.tex doc/hipl.tex doc/acronyms.tex
 EXTRA_DIST += doc/design_choices_macros.tex doc/catalogue.tex doc/fig
-EXTRA_DIST += libhipgui/hipmanager.png
+EXTRA_DIST += libhipgui/hipmanager.png doc/HACKING
 EXTRA_DIST += doc/doxygen.h doc/Doxyfile showip/showip-hipmod-0.8.02-fx-mz.xpi
 EXTRA_DIST += doc/docshot-agent-main-window.png doc/docshot-agent-tray-icon.png
 EXTRA_DIST += i3-cfg-PL.xml
@@ -29,8 +29,6 @@ EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/rules
 EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/changelog
 EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/postinst
 EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/control-src
-EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/postinst.orig
-EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/postinst.rej
 EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/postrm
 EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/copyright
 EXTRA_DIST += test/packaging/armel/DEBIAN-dnsproxy/preinst
@@ -80,6 +78,15 @@ rpm:
 
 deb:
 	env PYEXECDIR=$(pyexecdir) test/packaging/create-package.sh deb
+
+bin:
+	env PYEXECDIR=$(pyexecdir) test/packaging/create-package.sh bin
+
+indexrepo:
+	test/packaging/create-package.sh indexrepo
+
+syncrepo:
+	test/packaging/create-package.sh syncrepo
 
 dist-hook:
 	rm -rf `find $(distdir) -name .arch-ids`
