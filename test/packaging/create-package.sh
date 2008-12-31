@@ -9,6 +9,7 @@ PKG_SERVER_DIR=
 DEBDIR=/usr/src/debian
 RPMDIR=/usr/src/redhat
 SUBDEBDIRS="BUILD DEBS SOURCES SPECS SDEBS"
+SUBRPMDIR="BUILD RPMS SOURCES SPECS SRPMS"
 SUDO=sudo
 ARCH=
 DISTRO_RELEASE=
@@ -57,6 +58,15 @@ build_maemo_deb()
 build_rpm()
 {
     test -e ~/.rpmmacros && die "Move ~/.rpmmacros out of the way"
+
+    for SUBDIR in $SUBRPMDIRS
+    do
+	if test ! -d $RPMDIR/$SUBDIR
+	then
+	    $SUDO mkdir -p $RPMDIR/$SUBDIR
+	fi
+    done
+
     # The RPMs can be found from /usr/src/redhat/ SRPMS and RPMS
     $SUDO mv -f $TARBALL /usr/src/redhat/SOURCES
     $SUDO rpmbuild -ba $SPECFILE
@@ -128,13 +138,13 @@ build_deb()
 	die "apt-get install pax"
     fi
 
-    if test ! -d $DEBDIR
-    then
-	for SUBDIR in $SUBDEBDIRS
-	do
+    for SUBDIR in $SUBDEBDIRS
+    do
+	if test ! -d $DEBDIR/$SUBDIR
+	then
 	    $SUDO mkdir -p $DEBDIR/$SUBDIR
-	done
-    fi
+	fi
+    done
 
     $SUDO cp $SPECFILE $DEBDIR/SPECS
 
