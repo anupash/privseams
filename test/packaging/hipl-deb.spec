@@ -150,7 +150,7 @@ install -m 700 agent/hipagent %{buildroot}/usr/sbin/hipagent
 
 %post daemon
 update-rc.d hipd multiuser 21
-echo "invoke-rc.d --quiet hipd start" | at now + 1 min 2>/dev/null 
+echo "invoke-rc.d --quiet hipd start" | at now + 1 min 2>/dev/null
 echo "hipd starts in a minute"
 
 %post firewall
@@ -220,7 +220,6 @@ rm -rf %{buildroot}
 %doc doc/HOWTO.txt doc/howto-html
 
 %files all
-# nada
 
 %changelog
 * Wed Dec 31 2008 Miika Komu <miika@iki.fi>

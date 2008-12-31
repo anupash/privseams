@@ -88,7 +88,7 @@ syncrepo()
     fi
 
     # Copy all packages and repo index to the repository
-    rsync $RSYNC_OPTS $PKG_DIR/${NAME}-*${VERSION}*.${DISTRO_PKG_SUFFIX} $PKG_INDEX ${REPO_USER}@${REPO_SERVER}:$PKG_SERVER_DIR/
+    rsync $RSYNC_OPTS $PKG_DIR/${NAME}-*${VERSION}*.${DISTRO_PKG_SUFFIX} ${PKG_INDEX} ${REPO_USER}@${REPO_SERVER}:${PKG_SERVER_DIR}/
 
     # Restore file priviledges on /usr/src/somewhere
     $SUDO chown root -R $PKG_DIR
@@ -102,7 +102,7 @@ build_deb()
 	exit 0
     fi
 
-    test -e ~/.debmacros && die "Move ~/.rpmmacros out of the way"
+    test -e ~/.debmacros && die "Move ~/.debmacros out of the way"
 
     if test ! -x /usr/bin/pax
     then
