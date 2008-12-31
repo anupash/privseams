@@ -174,6 +174,11 @@ if test x"$1" = x"syncrepo"
 then
     syncrepo
     exit
+elif test x"$1" = x"increl"
+then
+    # XX FIX: inc release number
+    # XX FIX: tla blah blah
+    exit
 elif test x"$1" = x"bin"
 then
     if test x"$DISTROBASE" = x"redhat"
