@@ -151,7 +151,6 @@ then
 elif test -r /etc/redhat-release
 then
     DISTROBASE=redhat
-    SPECFILE=$PKGEXE/hipl-rpm.spec 
     ARCH=`uname -i`
     PKG_DIR=$RPMDIR/RPMS/$ARCH
     DISTRO_RELEASE=`lsb_release -r|cut -f2`
