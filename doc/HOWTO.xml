@@ -18,8 +18,8 @@
       You need to modify your kernel and install HIPL userspace software along
       with its dependencies in order to run HIP only if you want to use kernel
       version below 2.6.27 (check "uname -a"). You can patch your
-      kernel by installing the binary kernel images (Ubuntu and Fedora)
-      from here: <ulink url="http://hipl.hiit.fi/hipl/release/" />. The
+      kernel by installing the binary kernel images (debian and redhat based distributions)
+      from here: <ulink url="http://infrahip.hiit.fi/index.php?index=download" />. The
       binary kernel images are based on vanilla kernel and therefore do
       not include any proprietary drivers or firmware images. As a result,
     you may have to install software for your WLAN interface manually.</para>
@@ -1300,10 +1300,10 @@ $ make V=99
 
     <para>
       The quickest way to install HIPL on your linux system is use the
-      precompiled release packages. Binary packages exist for Ubuntu
-      and Fedora, and possibly later also for Debian and
-      CentOS. Install all of the binary packages to your linux system
-      according to instructions on the download pages:
+      precompiled release packages. Binary packages exist for a number
+      of debian and redhat based linux distributions. Install all of
+      the binary packages to your linux system according to
+      instructions on the download pages:
       <ulink url="http://infrahip.hiit.fi/index.php?index=download" />
     </para>
 

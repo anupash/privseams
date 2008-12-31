@@ -24,6 +24,23 @@ REPO_USER=hipl
 REPO_GROUP=hipl
 SPECFILE_DIR=`mktemp -d`
 SPECFILE=$SPECFILE_DIR/hipl.spec 
+RELEASE_VERSION_FILE=$PKGROOT/release.version
+
+inc_release_number()
+{
+    TMPFILE=`mktemp`
+    awk \
+    '{ \
+        if ($1 == "Release:") { \
+            print $1 " " ($2 + 1) \
+        } else {                  \
+            print              \
+        } \
+    }' < $RELEASE_VERSION_FILE >$TMPFILE
+    mv $TMPFILE $RELEASE_VERSION_FILE
+    echo "Now type:"
+    echo "tla replay; tla commit -s 'Increased release version number'"
+}
 
 die()
 {
@@ -130,7 +147,7 @@ build_deb()
 
 set -e
 
-cp $PKGROOT/release.version $SPECFILE
+cp $RELEASE_VERSION_FILE $SPECFILE
 
 # Set architecture, distro and repo details
 if test -r /etc/debian_version
@@ -176,8 +193,7 @@ then
     exit
 elif test x"$1" = x"increl"
 then
-    # XX FIX: inc release number
-    # XX FIX: tla blah blah
+    inc_release_number
     exit
 elif test x"$1" = x"bin"
 then
