@@ -57,8 +57,8 @@ build_maemo_deb()
 
 build_rpm()
 {
-    test -e ~/.rpmmacros && die "Move ~/.rpmmacros out of the way"
-    test -e ~/rpmbuild && die "Move ~/rpmbuild out of the way"
+    test -e ~/.rpmmacros && echo "Warning: ~/.rpmmacros found, could be a problem"
+    test -e ~/rpmbuild && echo "Warning: ~/rpmbuild found, could be a problem"
 
     for SUBDIR in $SUBRPMDIRS
     do
@@ -132,8 +132,8 @@ build_deb()
 	exit 0
     fi
 
-    test -e ~/.debmacros && die "Move ~/.debmacros out of the way"
-    test -e ~/debbuild && die "Move ~/debbuild out of the way"
+    test -e ~/.debmacros && echo "Warning: ~/.debmacros found, could be a problem"
+    test -e ~/debbuild && echo "Warning: ~/debbuild found, could be a problem"
 
     if test ! -x /usr/bin/pax
     then
