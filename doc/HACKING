@@ -524,7 +524,6 @@ For server configuration, you must first do the following things:
   * hipl@hipl.hiit.fi can login to hipl@build.host
   * hipl@build.host can login to hipl@packages.infrahip.net
 * Add hipl to /etc/sudoers at build host: hipl ALL=(ALL) NOPASSWD: ALL
-
 * Comment out "Defaults    requiretty" from /etc/sudoers
 
 Updating Fedora Server Repository
