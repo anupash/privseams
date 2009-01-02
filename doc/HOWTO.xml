@@ -2641,13 +2641,14 @@ $ make V=99
 	  </para></listitem>
 	  <listitem id="listitem_rvs"><para>
 	    At the responder, we have to register to the rendezvous server:
-	    <programlisting>tools/hipconf add server rvs &lt;RVS-HIT&gt; &lt;RVS-IP&gt; &lt;LIFETIME-IN-SECONDS&gt;</programlisting>
+	    <programlisting>tools/hipconf add server rvs [RVS-HIT] &lt;RVS-IP or hostname&gt; &lt;LIFETIME-IN-SECONDS&gt;</programlisting>
 	    This will launch a base exchange i.e. establish a HIP SA between the
 	    rendezvous server and the responder. Please use the default HIT of
 	    the rendezvous server ("<emphasis>tools/hipconf get hi default</emphasis>" at the RVS).
 	    The &lt;LIFETIME-IN-SECONDS&gt; value represents the number of seconds
 	    we would like our service registration to last, but it is not
 	    necessarily the number of seconds we are granted the service.
+	    Notice that opportunistic mode will be used if you don't specify rendezvous HIT.
 	  </para></listitem>
 	  <listitem><para>
 	    At the responder, start a server listening for incoming connections
