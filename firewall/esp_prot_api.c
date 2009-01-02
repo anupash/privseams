@@ -3,16 +3,22 @@
 #include "firewall_defines.h"
 
 extern const uint8_t preferred_transforms[NUM_TRANSFORMS + 1] =
-		{ESP_PROT_TFM_SHA1_20, ESP_PROT_TFM_UNUSED};
+		{ESP_PROT_TFM_SHA1_20_TREE, ESP_PROT_TFM_UNUSED};
 
+// right now only either hchain or htree supported
+#if 0
+extern const uint8_t preferred_transforms[NUM_TRANSFORMS + 1] =
+		{ESP_PROT_TFM_SHA1_20, ESP_PROT_TFM_UNUSED};
+#endif
+
+// is used for hash chains and trees simultaneously
 extern const hash_function_t hash_functions[NUM_HASH_FUNCTIONS]
 				   = {SHA1};
 extern const int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS]
 				   = {{20}};
 
-
-static const int bex_hchain_length = 3000000;
-static const int update_hchain_lengths[NUM_UPDATE_HCHAIN_LENGTHS] = {10};
+static const int bex_hchain_length = 16;
+static const int update_hchain_lengths[NUM_UPDATE_HCHAIN_LENGTHS] = {16};
 
 // changed for measurements
 #if 0
@@ -38,7 +44,7 @@ static const int update_hchain_lengths[NUM_UPDATE_HCHAIN_LENGTHS] = {100000};
 /* stores the mapping transform_id -> (function_id, hash_length_id)
  *
  * @note no mapping for UNUSED transform */
-esp_prot_tfm_t esp_prot_transforms[NUM_TRANSFORMS];
+esp_prot_tfm_t esp_prot_transforms[sizeof(uint8_t)];
 
 
 // this store only contains hchains used when negotiating esp protection in BEX
@@ -58,6 +64,7 @@ int esp_prot_init()
 	int bex_function_id = 0, update_function_id = 0;
 	int bex_hash_length_id = 0, update_hash_length_id = 0;
 	int transform_id = 0;
+	int use_hash_trees = 0;
 	int err = 0, i, j, g;
 	int activate = 1;
 
@@ -80,7 +87,21 @@ int esp_prot_init()
 	HIP_IFEL(hcstore_init(&bex_store), -1, "failed to initialize the bex-store\n");
 	HIP_IFEL(hcstore_init(&update_store), -1, "failed to initialize the update-store\n");
 
-	/* set up meta-info for each store and init the esp protection transforms */
+	// init all possible transforms
+	memset(esp_prot_transforms, 0, sizeof(uint8_t) * sizeof(esp_prot_tfm_t));
+	// set available transforms to used
+	for (i = 0; i < NUM_TRANSFORMS + 1; i++)
+	{
+		if (preferred_transforms[i] > 0)
+		{
+			esp_prot_transforms[preferred_transforms[i] - 1].is_used = 1;
+		}
+	}
+
+	/* set up meta-info for each store and init the esp protection transforms
+	 *
+	 * NOTE: this only covers the hash chains!
+	 */
 	for (i = 0; i < NUM_HASH_FUNCTIONS; i++)
 	{
 		// first we have to register the function
@@ -115,8 +136,21 @@ int esp_prot_init()
 				// store these IDs in the transforms array
 				HIP_DEBUG("adding transform: %i\n", transform_id + 1);
 
-				esp_prot_transforms[transform_id].hash_func_id = bex_function_id;
-				esp_prot_transforms[transform_id].hash_length_id = bex_hash_length_id;
+				if (esp_prot_transforms[transform_id].is_used)
+				{
+					esp_prot_transforms[transform_id].hash_func_id = bex_function_id;
+					esp_prot_transforms[transform_id].hash_length_id = bex_hash_length_id;
+				}
+				// register the same hash function and hash length for the htree
+				if (esp_prot_transforms[transform_id + ESP_PROT_TFM_HTREE_OFFSET].is_used)
+				{
+					use_hash_trees = 1;
+
+					esp_prot_transforms[transform_id + ESP_PROT_TFM_HTREE_OFFSET]
+					                    .hash_func_id = bex_function_id;
+					esp_prot_transforms[transform_id + ESP_PROT_TFM_HTREE_OFFSET]
+					                    .hash_length_id = bex_hash_length_id;
+				}
 
 				transform_id++;
 
@@ -150,11 +184,14 @@ int esp_prot_init()
 	}
 
 	/* finally we can fill the stores */
-	HIP_IFEL(hcstore_refill(&bex_store) < 0, -1, "failed to fill the bex-store\n");
-	HIP_IFEL(hcstore_refill(&update_store) < 0, -1, "failed to fill the update-store\n");
+	HIP_IFEL(hcstore_refill(&bex_store, use_hash_trees) < 0, -1,
+			"failed to fill the bex-store\n");
+	HIP_IFEL(hcstore_refill(&update_store, use_hash_trees) < 0, -1,
+			"failed to fill the update-store\n");
 
+	// TODO get this right
 	/* ...and send the bex-store anchors to hipd */
-	HIP_IFEL(send_bex_store_update_to_hipd(&bex_store), -1,
+	HIP_IFEL(send_bex_store_update_to_hipd(&bex_store, use_hash_trees), -1,
 		"failed to send bex-store update to hipd\n");
 
   out_err:
@@ -165,20 +202,26 @@ int esp_prot_uninit()
 {
 	int err = 0, i;
 	int activate = 0;
+	int use_hash_trees = 0;
 #ifdef CONFIG_HIP_MEASUREMENTS
 	uint32_t num_items = 0;
 	double min = 0.0, max = 0.0, avg = 0.0, std_dev = 0.0;
 #endif
 
-	// uninit hcstores
-	hcstore_uninit(&bex_store);
-	hcstore_uninit(&update_store);
-	// ...and set transforms to 0/NULL
-	for (i = 0; i < NUM_TRANSFORMS; i++)
+	for (i = 0; i < NUM_TRANSFORMS + 1; i++)
 	{
-		esp_prot_transforms[i].hash_func_id = 0;
-		esp_prot_transforms[i].hash_length_id = 0;
+		if (preferred_transforms[i] > ESP_PROT_TFM_HTREE_OFFSET)
+		{
+			use_hash_trees = 1;
+			break;
+		}
 	}
+
+	// uninit hcstores
+	hcstore_uninit(&bex_store, use_hash_trees);
+	hcstore_uninit(&update_store, use_hash_trees);
+	// ...and set transforms to 0/NULL
+	memset(esp_prot_transforms, 0, sizeof(uint8_t) * sizeof(esp_prot_tfm_t));
 
 	// also deactivate the extension in hipd
 	HIP_IFEL(send_esp_prot_to_hipd(activate), -1,
@@ -196,6 +239,7 @@ int esp_prot_uninit()
 	return err;
 }
 
+// TODO modify this to support htrees
 int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 		unsigned char *esp_prot_anchor, int update)
 {
@@ -302,6 +346,7 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
   	return err;
 }
 
+// TODO modify this to support htrees
 void esp_prot_sa_entry_free(hip_sa_entry_t *entry)
 {
 	if (entry->active_anchor)
@@ -314,6 +359,7 @@ void esp_prot_sa_entry_free(hip_sa_entry_t *entry)
 		hchain_free(entry->next_hchain);
 }
 
+// TODO modify this to support htrees
 int esp_prot_add_hash(unsigned char *out_hash, int *out_length,
 		hip_sa_entry_t *entry)
 {
@@ -366,6 +412,7 @@ int esp_prot_add_hash(unsigned char *out_hash, int *out_length,
     return err;
 }
 
+// TODO modify this to support htrees
 int esp_prot_verify(hip_sa_entry_t *entry, unsigned char *hash_value)
 {
 	hash_function_t hash_function = NULL;
@@ -409,6 +456,7 @@ int esp_prot_verify(hip_sa_entry_t *entry, unsigned char *hash_value)
 	return err;
 }
 
+// TODO modify this to support htrees
 /* verifies received hchain-elements - should only be called with ESP
  * extension in use
  *
@@ -508,12 +556,9 @@ int esp_prot_verify_hash(hash_function_t hash_function, int hash_length,
 /* returns NULL for UNUSED transform */
 esp_prot_tfm_t * esp_prot_resolve_transform(uint8_t transform)
 {
-	// esp_prot_transform >= 0 due to data-type
-	HIP_ASSERT(transform <= NUM_TRANSFORMS);
-
 	HIP_DEBUG("resolving transform: %u\n", transform);
 
-	if (transform > ESP_PROT_TFM_UNUSED)
+	if (transform > ESP_PROT_TFM_UNUSED && esp_prot_transforms[transform - 1].is_used)
 		return &esp_prot_transforms[transform - 1];
 	else
 		return NULL;
@@ -528,11 +573,8 @@ hash_function_t esp_prot_get_hash_function(uint8_t transform)
 	hash_function_t hash_function = NULL;
 	int err = 0;
 
-	// esp_prot_transform >= 0 due to data-type
-	HIP_ASSERT(transform <= NUM_TRANSFORMS);
-
 	HIP_IFEL(!(prot_transform = esp_prot_resolve_transform(transform)), 1,
-			"tried to resolve UNUSED transform\n");
+			"tried to resolve UNUSED or UNKNOWN transform\n");
 
 	// as both stores' meta-data are in sync, we can use any
 	hash_function = hcstore_get_hash_function(&bex_store, prot_transform->hash_func_id);
@@ -550,9 +592,6 @@ int esp_prot_get_hash_length(uint8_t transform)
 	esp_prot_tfm_t *prot_transform = NULL;
 	int err = 0;
 
-	// esp_prot_transform >= 0 due to data-type
-	HIP_ASSERT(transform <= NUM_TRANSFORMS);
-
 	// return length 0 for UNUSED transform
 	HIP_IFEL(!(prot_transform = esp_prot_resolve_transform(transform)), 0,
 			"tried to resolve UNUSED transform\n");
@@ -565,6 +604,7 @@ int esp_prot_get_hash_length(uint8_t transform)
 	return err;
 }
 
+// TODO modify this to support htrees
 /* returns corresponding hash-chain, refills bex_store and sends update
  * message to hipd
  */
@@ -588,13 +628,13 @@ hash_chain_t * esp_prot_get_bex_hchain_by_anchor(unsigned char *hchain_anchor,
 			-1, "unable to retrieve hchain from bex store\n");
 
 	// refill bex-store if necessary
-	HIP_IFEL((err = hcstore_refill(&bex_store)) < 0, -1,
+	HIP_IFEL((err = hcstore_refill(&bex_store, 0)) < 0, -1,
 			"failed to refill the bex-store\n");
 
 	// some elements have been added, tell hipd about them
 	if (err > 0)
 	{
-		HIP_IFEL(send_bex_store_update_to_hipd(&bex_store), -1,
+		HIP_IFEL(send_bex_store_update_to_hipd(&bex_store, 0), -1,
 				"unable to send bex-store update to hipd\n");
 
 		// this is not an error condition
@@ -611,12 +651,11 @@ hash_chain_t * esp_prot_get_bex_hchain_by_anchor(unsigned char *hchain_anchor,
 int esp_prot_get_data_offset(hip_sa_entry_t *entry)
 {
 	HIP_ASSERT(entry != NULL);
-	// esp_prot_transform >= 0 due to data-type
-	HIP_ASSERT(entry->esp_prot_transform <= NUM_TRANSFORMS);
 
 	return (sizeof(struct hip_esp) + esp_prot_get_hash_length(entry->esp_prot_transform));
 }
 
+// TODO modify this to support htrees
 /* sets entry->next_hchain, if necessary
  * changes to next_hchain
  * refills the update_store
@@ -755,7 +794,7 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 #endif
 
 			// refill update-store
-			HIP_IFEL((err = hcstore_refill(&update_store)) < 0, -1,
+			HIP_IFEL((err = hcstore_refill(&update_store, 0)) < 0, -1,
 					"failed to refill the update-store\n");
 		}
 

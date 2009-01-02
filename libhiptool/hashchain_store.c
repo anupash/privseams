@@ -54,7 +54,7 @@ int hcstore_init(hchain_store_t *hcstore)
 }
 
 // this does the same as init but additionally destructs the hchains
-void hcstore_uninit(hchain_store_t *hcstore)
+void hcstore_uninit(hchain_store_t *hcstore, int use_hash_trees)
 {
 	int err = 0, i, j, g, h;
 
@@ -79,8 +79,15 @@ void hcstore_uninit(hchain_store_t *hcstore)
 
 				for (h = 0; h < MAX_NUM_HIERARCHIES; h++)
 				{
-					hip_ll_uninit(&hcstore->hchain_shelves[i][j].hchains[g][h],
-							hcstore_free_hchain);
+					if (use_hash_trees)
+					{
+						hip_ll_uninit(&hcstore->hchain_shelves[i][j].hchains[g][h],
+														hcstore_free_htree);
+					} else
+					{
+						hip_ll_uninit(&hcstore->hchain_shelves[i][j].hchains[g][h],
+								hcstore_free_hchain);
+					}
 				}
 			}
 		}
@@ -92,6 +99,11 @@ void hcstore_uninit(hchain_store_t *hcstore)
 void hcstore_free_hchain(void *hchain)
 {
 	hchain_free((hash_chain_t *) hchain);
+}
+
+void hcstore_free_htree(void *htree)
+{
+	htree_free((hash_tree_t *) htree);
 }
 
 /* >= 0 - function id in store
@@ -266,14 +278,16 @@ int hcstore_register_hchain_hierarchy(hchain_store_t *hcstore, int function_id,
 }
 
 int hcstore_fill_item(hchain_store_t *hcstore, int hash_func_id, int hash_length_id,
-		int hchain_length_id, int hierarchy_level, int update_higher_level)
+		int hchain_length_id, int hierarchy_level, int update_higher_level, int use_hash_trees)
 {
 	hash_chain_t *hchain = NULL;
+	hash_tree_t *htree = NULL;
 	hash_tree_t *link_tree = NULL;
 	hash_function_t hash_function = NULL;
 	int hash_length = 0, hchain_length = 0;
 	int create_hchains = 0;
 	hash_chain_t *tmp_hchain = NULL;
+	hash_tree_t *tmp_htree = NULL;
 	unsigned char *root = NULL;
 	int root_length = 0;
 	int err = 0, i, j;
@@ -298,7 +312,7 @@ int hcstore_fill_item(hchain_store_t *hcstore, int hash_func_id, int hash_length
 			/* if we refill a higher level, first make sure the lower levels
 			 * are full */
 			HIP_IFEL((err = hcstore_fill_item(hcstore, hash_func_id, hash_length_id,
-					hchain_length_id, hierarchy_level - 1, 1)) < 0, -1,
+					hchain_length_id, hierarchy_level - 1, 1, use_hash_trees)) < 0, -1,
 					"failed to fill item\n");
 		}
 
@@ -329,12 +343,23 @@ int hcstore_fill_item(hchain_store_t *hcstore, int hash_func_id, int hash_length
 				// add the anchors of the next lower level as data
 				for (j = 0; j < MAX_HCHAINS_PER_ITEM; j++)
 				{
-					tmp_hchain = (hash_chain_t *) hip_ll_get(
-							&hcstore->hchain_shelves[hash_func_id][hash_length_id].
-							hchains[hchain_length_id][hierarchy_level - 1], j);
+					if (use_hash_trees)
+					{
+						tmp_htree = (hash_tree_t *) hip_ll_get(
+								&hcstore->hchain_shelves[hash_func_id][hash_length_id].
+								hchains[hchain_length_id][hierarchy_level - 1], j);
 
-					htree_add_data(link_tree, tmp_hchain->anchor_element->hash,
-							hash_length);
+						htree_add_data(link_tree, tmp_htree->root,
+								hash_length);
+					} else
+					{
+						tmp_hchain = (hash_chain_t *) hip_ll_get(
+								&hcstore->hchain_shelves[hash_func_id][hash_length_id].
+								hchains[hchain_length_id][hierarchy_level - 1], j);
+
+						htree_add_data(link_tree, tmp_hchain->anchor_element->hash,
+								hash_length);
+					}
 				}
 
 				// calculate the tree
@@ -342,11 +367,41 @@ int hcstore_fill_item(hchain_store_t *hcstore, int hash_func_id, int hash_length
 						htree_node_generator, NULL);
 			}
 
-			// create a new hchain
-			HIP_IFEL(!(hchain = hchain_create(hash_function, hash_length,
-					hchain_length, hierarchy_level, link_tree)), -1,
-					"failed to create new hchain\n");
+			if (use_hash_trees)
+			{
+				// create a new htree
+				HIP_IFEL(!(htree = htree_init(hchain_length, hash_length,
+						hash_length, 0)), -1,
+						"failed to alloc memory or to init htree\n");
+				HIP_IFEL(htree_add_random_data(htree, hchain_length), -1,
+						"failed to add random secrets\n");
 
+				// calculate the tree
+				HIP_IFEL(htree_calc_nodes(htree, htree_leaf_generator,
+						htree_node_generator, NULL), -1,
+						"failed to calculate tree nodes\n");
+
+				// add it as last element to have some circulation
+				HIP_IFEL(hip_ll_add_last(
+						&hcstore->hchain_shelves[hash_func_id][hash_length_id].
+						hchains[hchain_length_id][hierarchy_level], htree), -1,
+						"failed to store new htree\n");
+			}
+			else {
+				// create a new hchain
+				HIP_IFEL(!(hchain = hchain_create(hash_function, hash_length,
+						hchain_length, hierarchy_level, link_tree)), -1,
+						"failed to create new hchain\n");
+
+				// add it as last element to have some circulation
+				HIP_IFEL(hip_ll_add_last(
+						&hcstore->hchain_shelves[hash_func_id][hash_length_id].
+						hchains[hchain_length_id][hierarchy_level], hchain), -1,
+						"failed to store new hchain\n");
+			}
+
+// useful for testing
+#if 0
 			if (hchain->link_tree)
 			{
 				/* if the next_hchain has got a link_tree, we need its root for
@@ -354,8 +409,6 @@ int hcstore_fill_item(hchain_store_t *hcstore, int hash_func_id, int hash_length
 				root = htree_get_root(hchain->link_tree, &root_length);
 			}
 
-// useful for testing
-#if 0
 			if (!hchain_verify(hchain->source_element->hash,
 					hchain->anchor_element->hash, hash_function,
 					hash_length, hchain->hchain_length,
@@ -365,11 +418,6 @@ int hcstore_fill_item(hchain_store_t *hcstore, int hash_func_id, int hash_length
 			}
 #endif
 
-			// add it as last element to have some circulation
-			HIP_IFEL(hip_ll_add_last(
-					&hcstore->hchain_shelves[hash_func_id][hash_length_id].
-					hchains[hchain_length_id][hierarchy_level], hchain), -1,
-					"failed to store new hchain\n");
 		}
 
 		err += create_hchains;
@@ -381,7 +429,7 @@ int hcstore_fill_item(hchain_store_t *hcstore, int hash_func_id, int hash_length
 	return err;
 }
 
-int hcstore_refill(hchain_store_t *hcstore)
+int hcstore_refill(hchain_store_t *hcstore, int use_hash_trees)
 {
 	int err = 0, i, j, g, h;
 
@@ -397,7 +445,7 @@ int hcstore_refill(hchain_store_t *hcstore)
 			{
 				for (h = 0; h < hcstore->hchain_shelves[i][j].num_hierarchies[g]; h++)
 				{
-					HIP_IFEL((err = hcstore_fill_item(hcstore, i, j, g, h, 0)) < 0,
+					HIP_IFEL((err = hcstore_fill_item(hcstore, i, j, g, h, 0, use_hash_trees)) < 0,
 							-1, "failed to refill hchain_store\n");
 				}
 			}
@@ -410,6 +458,7 @@ int hcstore_refill(hchain_store_t *hcstore)
 	return err;
 }
 
+// TODO modify this to support htrees
 hash_chain_t * hcstore_get_hchain(hchain_store_t *hcstore, int function_id,
 		int hash_length_id, int hchain_length)
 {
@@ -465,6 +514,7 @@ hash_chain_t * hcstore_get_hchain(hchain_store_t *hcstore, int function_id,
 	return stored_hchain;
 }
 
+// TODO modify this to support htrees
 hash_chain_t * hcstore_get_hchain_by_anchor(hchain_store_t *hcstore, int function_id,
 		int hash_length_id, int hierarchy_level, unsigned char *anchor)
 {

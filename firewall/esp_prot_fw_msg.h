@@ -14,8 +14,8 @@
 #include "user_ipsec_sadb.h"
 
 int send_esp_prot_to_hipd(int active);
-int send_bex_store_update_to_hipd(hchain_store_t *hcstore);
-hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore);
+int send_bex_store_update_to_hipd(hchain_store_t *hcstore, int use_hash_trees);
+hip_common_t *create_bex_store_update_msg(hchain_store_t *hcstore, int use_hash_trees);
 int send_trigger_update_to_hipd(hip_sa_entry_t *entry, int soft_update,
 		int anchor_offset, unsigned char *secret, int secret_length,
 		unsigned char *branch_nodes, int branch_length, unsigned char * root,

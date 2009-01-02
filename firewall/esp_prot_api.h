@@ -36,6 +36,7 @@
  */
 typedef struct esp_prot_tfm
 {
+	int is_used;
 	int hash_func_id;
 	int hash_length_id;
 } esp_prot_tfm_t;

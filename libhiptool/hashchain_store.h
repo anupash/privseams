@@ -13,6 +13,7 @@
 #define HASHCHAIN_STORE_H
 
 #include "hashchain.h"
+#include "hashtree.h"
 #include "builder.h"
 #include "linkedlist.h"
 
@@ -73,8 +74,9 @@ typedef struct hchain_store
 
 
 int hcstore_init(hchain_store_t *hcstore);
-void hcstore_uninit(hchain_store_t *hcstore);
+void hcstore_uninit(hchain_store_t *hcstore, int use_hash_trees);
 void hcstore_free_hchain(void *hchain);
+void hcstore_free_htree(void *htree);
 int hcstore_register_function(hchain_store_t *hcstore, hash_function_t hash_function);
 int hcstore_register_hash_length(hchain_store_t *hcstore, int function_id,
 		int hash_length);
@@ -83,8 +85,8 @@ int hcstore_register_hchain_length(hchain_store_t *hcstore, int function_id,
 int hcstore_register_hchain_hierarchy(hchain_store_t *hcstore, int function_id,
 		int hash_length_id, int hchain_length, int addtional_hierarchies);
 int hcstore_fill_item(hchain_store_t *hcstore, int hash_func_id, int hash_length_id,
-		int hchain_length_id, int hierarchy_level, int update_higher_level);
-int hcstore_refill(hchain_store_t *hcstore);
+		int hchain_length_id, int hierarchy_level, int update_higher_level, int use_hash_trees);
+int hcstore_refill(hchain_store_t *hcstore, int use_hash_trees);
 hash_chain_t * hcstore_get_hchain(hchain_store_t *hcstore, int function_id,
 		int hash_length_id, int hchain_length);
 hash_chain_t * hcstore_get_hchain_by_anchor(hchain_store_t *hcstore, int function_id,

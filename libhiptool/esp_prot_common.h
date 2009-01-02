@@ -3,8 +3,14 @@
 
 #include <inttypes.h>
 
+#define ESP_PROT_TFM_HTREE_OFFSET	128
+
+/* 0 is special purpose transform representing no hash case */
 #define ESP_PROT_TFM_UNUSED			0
-#define ESP_PROT_TFM_SHA1_20		1
+/* hash chains have transforms > 0 and <= 128 */
+//#define ESP_PROT_TFM_SHA1_20		1
+/* hash trees have transforms > 128 and <= 255 */
+#define ESP_PROT_TFM_SHA1_20_TREE	1 + ESP_PROT_TFM_HTREE_OFFSET
 /* for transforms array, ESP_PROT_TFM_UNUSED is not counted here */
 #define NUM_TRANSFORMS				1
 /* for first dimension of hash_lengths[][] */
@@ -12,7 +18,7 @@
 /* for second dimension of hash_lengths[][] */
 #define NUM_HASH_LENGTHS			1
 
-#define MAX_TREE_DEPTH				5
+#define MAX_HIERARCHY_LEVELS		5
 
 // changed for measurements
 #if 0

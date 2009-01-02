@@ -9,7 +9,7 @@
 #  include "usercompat.h"
    typedef uint16_t in_port_t;
   #define MAX_HASH_LENGTH 0
-  #define MAX_TREE_DEPTH 0
+  #define MAX_HIERARCHY_LEVELS 0
 #else
 #  include "hashchain.h"
 #  include "esp_prot_common.h"
@@ -31,7 +31,7 @@
 #define HIP_CLOSE               18
 #define HIP_CLOSE_ACK           19
 #define HIP_HDRR                20 /* 20 was already occupied by HIP_PSIG so shifting HIP_PSIG and HIP_TRIG plus 1*/
-#define HIP_PSIG                21 /* lightweight HIP pre signature */ 
+#define HIP_PSIG                21 /* lightweight HIP pre signature */
 #define HIP_TRIG                22 /* lightweight HIP signature trigger*/
 #define HIP_LUPDATE             23
 #define HIP_PAYLOAD             64
@@ -144,7 +144,7 @@
 #define HIP_PARAM_CERT_X509_REQ         32810
 #define HIP_PARAM_CERT_X509_RESP        32811
 #define HIP_PARAM_ESP_PROT_TFM		32812
-#define HIP_PARAM_TRANSFORM_ORDER       32813                                 
+#define HIP_PARAM_TRANSFORM_ORDER       32813
 #define HIP_PARAM_HDRR_INFO		32814
 #define HIP_PARAM_UADB_INFO		32815
 #define HIP_PARAM_SAVA_CRYPTO_INFO      32816
@@ -459,7 +459,7 @@ struct esp_prot_branch {
 	hip_tlv_len_t      length;
 	uint32_t     	   anchor_offset;
 	uint32_t		   branch_length;
-	unsigned char  	   branch_nodes[MAX_TREE_DEPTH * MAX_HASH_LENGTH];
+	unsigned char  	   branch_nodes[MAX_HIERARCHY_LEVELS * MAX_HASH_LENGTH];
 } __attribute__ ((packed));
 
 struct esp_prot_secret {
