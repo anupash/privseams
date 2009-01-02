@@ -78,7 +78,7 @@ mkindex_rpm()
     then
 	mkdir $PKG_INDEX
     fi
-    createrepo --update --outputdir $PKG_INDEX $PKG_DIR
+    createrepo --update --outputdir=$PKG_INDEX_DIR $PKG_DIR
 }
 
 mkindex_deb()

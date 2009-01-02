@@ -519,6 +519,8 @@ Prequisites for Server Configuration
 
 For server configuration, you must first do the following things:
 * Make sure that you set up authorized keys for ssh as follows:
+  * @build.host: adduser hipl
+  * @build.host: su hipl and then ssh-keygen
   * hipl@hipl.hiit.fi can login to hipl@build.host
   * hipl@build.host can login to hipl@packages.infrahip.net
 * Add hipl to /etc/sudoers at build host: hipl ALL=(ALL) NOPASSWD: ALL
