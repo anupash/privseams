@@ -185,6 +185,8 @@ void firewall_increase_netlink_buffers();
 int hip_query_default_local_hit_from_hipd(void);
 hip_hit_t *hip_fw_get_default_hit(void);
 
+void hip_fw_flush_system_based_opp_chains(void);
+
 // has been moved here for the following reason: dependent on typedefs above
 #include "user_ipsec_api.h"
 

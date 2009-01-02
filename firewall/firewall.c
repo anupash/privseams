@@ -434,13 +434,13 @@ void hip_fw_init_system_based_opp_mode(void) {
 	system("iptables -I HIPFW-OUTPUT -d ! 127.0.0.1 -j QUEUE");
 	system("ip6tables -I HIPFW-INPUT -d 2001:0010::/28 -j QUEUE");
 
-	system("iptables -I HIPFW-INPUT -p tcp -j HIPFWOPP-INPUT");
-	system("iptables -I HIPFW-OUTPUT -p tcp -j HIPFWOPP-OUTPUT");
+	system("iptables -I HIPFW-INPUT -j HIPFWOPP-INPUT");
+	system("iptables -I HIPFW-OUTPUT -j HIPFWOPP-OUTPUT");
 }
 
 void hip_fw_uninit_system_based_opp_mode(void) {
-	system("iptables -D HIPFW-INPUT -p tcp -j HIPFWOPP-INPUT");
-	system("iptables -D HIPFW-OUTPUT -p tcp -j HIPFWOPP-OUTPUT");
+	system("iptables -D HIPFW-INPUT -j HIPFWOPP-INPUT");
+	system("iptables -D HIPFW-OUTPUT -j HIPFWOPP-OUTPUT");
 
 	system("iptables -D HIPFW-OUTPUT -d ! 127.0.0.1 -j QUEUE");
 	system("ip6tables -D HIPFW-INPUT -d 2001:0010::/28 -j QUEUE");
@@ -2458,7 +2458,7 @@ void hip_fw_flush_system_based_opp_chains(void)
 	system("iptables -F HIPFWOPP-INPUT");
 	system("iptables -F HIPFWOPP-OUTPUT");
 }
-
+ip
 void hip_fw_add_non_hip_peer(hip_fw_context_t *ctx)
 {
 	char command[64];

@@ -354,7 +354,7 @@ int firewall_init_raw_sock_icmp_outbound(int *firewall_raw_sock_v6){
     err = setsockopt(*firewall_raw_sock_v6, IPPROTO_IPV6, IPV6_RECVERR, &off, sizeof(on));
     HIP_IFEL(err, -1, "setsockopt recverr failed\n");
     err = setsockopt(*firewall_raw_sock_v6, IPPROTO_IPV6, IPV6_2292PKTINFO, &on, sizeof(on));
-    HIP_IFEL(err, -1, "setsockopt pktinfo failed\n");
+    HIP_IFEL(err, -1, "setsockopt pktinfo failiped\n");
     err = setsockopt(*firewall_raw_sock_v6, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
     HIP_IFEL(err, -1, "setsockopt v6 reuseaddr failed\n");
 
