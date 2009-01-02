@@ -451,6 +451,102 @@ $ ls -l bin/
         This part is just for La Fonera. For WGT634U, please refer to <xref linkend="load_on_openwrt_wgt" />.
       </para>
       <formalpara><title>For building HIPL on the kamikaze release 7.09</title><para></para></formalpara>
+      <para>
+      NEW preferred way to build and install HIPL on OpenWRT:
+      </para>
+      <para>
+      NOTE: Automatic package dependency selection is only verified for hipfw! Please report missing dependencies for the other packages.
+      </para>
+      <orderedlist>
+        <listitem>
+          <para>
+          Get and extract OpenWRT kamikaze 7.09 source, untar it and create the download directory for packages that should be built.
+          </para>
+  <programlisting>
+  $ wget http://downloads.openwrt.org/kamikaze/7.09/kamikaze_7.09.tar.bz2
+  $ tar xzf kamikaze_7.09.tar.gz
+  $ mkdir -p path/to/kamikaze/dl
+  </programlisting>
+        </listitem>
+        <listitem>
+          <para>
+          Get the newest hipl source tree from the hipl repository and place the tarball that you are going to create in the kamikaze download directory.
+          </para>
+          <para>
+  <programlisting>
+  $ tla get hipl--main--2.6 hipl--main--2.6
+  $ cd hipl--main--2.6
+  $ ./autogen.sh
+  $ make dist
+  $ cp hipl-main.tar.gz path/to/kamikaze/dl
+  </programlisting>
+          </para>
+          <para>
+          NOTE: The "main" repository contains the most stable sources. If you encounter problems when running HIPL on OpenWRT, you may want to try the "userspace" repository instead. However, "userspace" is more experimental and might not compile for OpenWRT.
+          </para>
+        </listitem>
+
+        <listitem>
+          <para>
+          Apply patches for HIPL on OpenWRT into the kamikaze_7.09 source tree, which produce Makefiles and configuration files for the required packages.
+          </para>
+          <para>
+  <programlisting>
+  $ cd /path/to/kamikaze
+  $ patch -p1 &lt; /path/to/hipl/patches/openwrt/2.6.23/kamikaze_7.09-kernel.patch
+  $ patch -p1 &lt; /path/to/hipl/patches/openwrt/2.6.23/kamikaze_7.09-hipl.patch
+  </programlisting>
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+          Select the packages, which you want to build for OpenWRT. The following command will allow you to do this in a similar way to configuring a custom kernel.
+          </para>
+          <para>
+  <programlisting>
+  $ make menuconfig
+  </programlisting>
+          </para>
+          <para>
+          Ensure that you select the HIPL-package that you require to run. You might only need the hipfw or only hipd. Your selection will automatically select all necessary dependencies. Below we give an example on how to select hipfw only, the hipd will not be installed. 
+          </para>
+          <para>
+  <programlisting>
+  Network  --->
+  &lt;*&gt; hipl-hipfw
+  </programlisting>
+          </para>
+          <para>
+          NOTE: Due to dependency issues with the build system, you still have to select kmod-ipsec4 and kmod-ipsec6 manually.
+          </para>
+          <para>
+  <programlisting>
+Kernel modules  ---> 
+ Network Support  ---> 
+  &lt;*&gt;  kmod-ipsec4 
+  &lt;*&gt;  kmod-ipsec6
+  </programlisting>
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+          Now build OpenWRT.
+          </para>
+          <para>
+  <programlisting>
+  $ make V=99
+  </programlisting>
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+          Load the images on La Fonera and reboot.
+          </para>
+        </listitem>
+      </orderedlist>
+      <para>
+        Old way to build and install HIPL on OpenWRT (in case the above is not working):
+      </para>
       <orderedlist>
         <listitem>
           <para>
@@ -2545,13 +2641,14 @@ $ make V=99
 	  </para></listitem>
 	  <listitem id="listitem_rvs"><para>
 	    At the responder, we have to register to the rendezvous server:
-	    <programlisting>tools/hipconf add server rvs &lt;RVS-HIT&gt; &lt;RVS-IP&gt; &lt;LIFETIME-IN-SECONDS&gt;</programlisting>
+	    <programlisting>tools/hipconf add server rvs [RVS-HIT] &lt;RVS-IP or hostname&gt; &lt;LIFETIME-IN-SECONDS&gt;</programlisting>
 	    This will launch a base exchange i.e. establish a HIP SA between the
 	    rendezvous server and the responder. Please use the default HIT of
 	    the rendezvous server ("<emphasis>tools/hipconf get hi default</emphasis>" at the RVS).
 	    The &lt;LIFETIME-IN-SECONDS&gt; value represents the number of seconds
 	    we would like our service registration to last, but it is not
 	    necessarily the number of seconds we are granted the service.
+	    Notice that opportunistic mode will be used if you don't specify rendezvous HIT.
 	  </para></listitem>
 	  <listitem><para>
 	    At the responder, start a server listening for incoming connections
@@ -3297,13 +3394,13 @@ $ make V=99
       </para>
       <itemizedlist>
 	<listitem><para>
-	    &nbsp;tools/hipconf nat plain-udp
+	    tools/hipconf nat plain-udp
 	</para>    </listitem>
 	<listitem><para>
-	    &nbsp;tools/hipconf add map peer_hit peer_ipv4_addr
+	    tools/hipconf add map peer_hit peer_ipv4_addr
 	</para> </listitem>   
 	<listitem><para>
-	    &nbsp; ping6 -I source_hit dst_hit
+	    ping6 -I source_hit dst_hit
 	</para>  </listitem>  
       </itemizedlist>
       <para>Make sure that the source is the same as in "ip xfrm policy" output.
@@ -4133,20 +4230,20 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
     <title>Mozilla/firefox showip addon</title> <itemizedlist>
 
      <listitem><para>
-		&nbsp; HIP modified firefox showip addon can be used for firefox to show when
+		HIP modified firefox showip addon can be used for firefox to show when
 		HIP is used instead of ipv4 or ipv6 addresses. HITs are simply determined from
 		IP-address information trough HIP prefix. If using opportunistic mode, detecting
 		whether using HIP or not wont work.
 	</para></listitem>
      <listitem><para>
-		&nbsp; If you have HIPL source code:
+		If you have HIPL source code:
 		To install addon, open firefox and browse to folder where you have 
 		HIPL sources and go to folder showip. Then select showip*.xpi from that folder
 		(example: "file:///path/to/hipl/showip/showip-hipmod-0.8.02-fx-mz.xpi").
 		Firefox should now prompt you with installation instructions.
 	</para></listitem>
      <listitem><para>
-		&nbsp; Another way to get showip-package, is to download it from:
+		Another way to get showip-package, is to download it from:
 		<ulink url="http://hipl.hiit.fi/hipl/release/latest/showip-hipmod-latest-fx-mz.xpi" />.
 		After download, firefox should prompt you with installation instructions.
 	</para></listitem>
