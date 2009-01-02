@@ -532,6 +532,7 @@ Updating Fedora Server Repository
 You must do the following things first at the server:
 * yum install <./autogen.sh --help>
 * yum install createrepo
+* ln -s /usr/src/redhat /home/hipl
 
 Install repository tool at the host where you are building packages:
 * yum -y install createrepo
