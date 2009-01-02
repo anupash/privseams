@@ -9,7 +9,7 @@ PKG_SERVER_DIR=
 DEBDIR=/usr/src/debian
 RPMDIR=/usr/src/redhat
 SUBDEBDIRS="BUILD DEBS SOURCES SPECS SDEBS"
-SUBRPMDIR="BUILD RPMS SOURCES SPECS SRPMS"
+SUBRPMDIRS="BUILD RPMS SOURCES SPECS SRPMS"
 SUDO=sudo
 ARCH=
 DISTRO_RELEASE=
@@ -58,6 +58,7 @@ build_maemo_deb()
 build_rpm()
 {
     test -e ~/.rpmmacros && die "Move ~/.rpmmacros out of the way"
+    test -e ~/rpmbuild && die "Move ~/rpmbuild out of the way"
 
     for SUBDIR in $SUBRPMDIRS
     do
@@ -132,6 +133,7 @@ build_deb()
     fi
 
     test -e ~/.debmacros && die "Move ~/.debmacros out of the way"
+    test -e ~/debbuild && die "Move ~/debbuild out of the way"
 
     if test ! -x /usr/bin/pax
     then
