@@ -230,8 +230,8 @@ rm -rf %{buildroot}
 %files doc
 %doc doc/HOWTO.txt doc/howto-html
 
-#%files all
-#nada
+%files all
+
 
 %changelog
 * Wed Dec 31 2008 Miika Komu <miika@iki.fi>
