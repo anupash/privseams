@@ -143,7 +143,6 @@ install -m 700 tools/hipdnskeyparse %{buildroot}/usr/sbin/hipdnskeyparse
 install -m 700 tools/hipdnsproxy %{buildroot}/usr/sbin/hipdnsproxy
 install -m 700 agent/hipagent %{buildroot}/usr/sbin/hipagent
 
-
 %post lib
 /sbin/ldconfig 
 
@@ -219,6 +218,7 @@ rm -rf %{buildroot}
 %doc doc/HOWTO.txt doc/howto-html
 
 %files all
+.
 
 %changelog
 * Wed Dec 31 2008 Miika Komu <miika@iki.fi>
