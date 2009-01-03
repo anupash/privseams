@@ -58,7 +58,11 @@ build_maemo_deb()
 build_rpm()
 {
     test -e ~/.rpmmacros && echo "Warning: ~/.rpmmacros found, could be a problem"
-    test -e ~/rpmbuild && echo "Warning: ~/rpmbuild found, could be a problem"
+    if test -e ~/rpmbuild
+    then
+	echo "Warning: ~/rpmbuild found, could be a problem"
+	echo "It should be a link to /usr/src/redhat"
+    fi
 
     for SUBDIR in $SUBRPMDIRS
     do
@@ -133,7 +137,11 @@ build_deb()
     fi
 
     test -e ~/.debmacros && echo "Warning: ~/.debmacros found, could be a problem"
-    test -e ~/debbuild && echo "Warning: ~/debbuild found, could be a problem"
+    if test -e ~/debbuild
+    then
+	echo "Warning: ~/debbuild found, could be a problem"
+	echo "It should be a link to /usr/src/debian"
+    fi
 
     if test ! -x /usr/bin/pax
     then
