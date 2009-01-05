@@ -331,7 +331,7 @@ int hcstore_fill_item(hchain_store_t *hcstore, int hash_func_id, int hash_length
 
 				// create a link tree for each hchain on level > 0
 				link_tree = htree_init(MAX_HCHAINS_PER_ITEM, hash_length,
-						hash_length, hash_length);
+						hash_length, hash_length, NULL);
 				htree_add_random_secrets(link_tree);
 
 				// lower hchain items should be full by now
@@ -371,7 +371,7 @@ int hcstore_fill_item(hchain_store_t *hcstore, int hash_func_id, int hash_length
 			{
 				// create a new htree
 				HIP_IFEL(!(htree = htree_init(hchain_length, hash_length,
-						hash_length, 0)), -1,
+						hash_length, 0, link_tree)), -1,
 						"failed to alloc memory or to init htree\n");
 				HIP_IFEL(htree_add_random_data(htree, hchain_length), -1,
 						"failed to add random secrets\n");
@@ -514,12 +514,13 @@ hash_chain_t * hcstore_get_hchain(hchain_store_t *hcstore, int function_id,
 	return stored_hchain;
 }
 
-// TODO modify this to support htrees
-hash_chain_t * hcstore_get_hchain_by_anchor(hchain_store_t *hcstore, int function_id,
-		int hash_length_id, int hierarchy_level, unsigned char *anchor)
+void * hcstore_get_item_by_anchor(hchain_store_t *hcstore, int function_id,
+		int hash_length_id, int hierarchy_level, unsigned char *anchor, int use_hash_trees)
 {
 	int hash_length = 0;
-	hash_chain_t *stored_hchain = NULL;
+	hash_chain_t *hchain = NULL;
+	hash_tree_t *htree = NULL;
+	void *stored_item = NULL;
 	int err = 0, i, j;
 
 	HIP_ASSERT(hcstore != NULL);
@@ -529,55 +530,75 @@ hash_chain_t * hcstore_get_hchain_by_anchor(hchain_store_t *hcstore, int functio
 	HIP_ASSERT(hierarchy_level >= 0);
 	HIP_ASSERT(anchor != NULL);
 
-
 	hash_length = hcstore_get_hash_length(hcstore, function_id, hash_length_id);
 
 	HIP_ASSERT(hash_length > 0);
 
-	HIP_HEXDUMP("searching hchain with anchor: ", anchor, hash_length);
+	HIP_HEXDUMP("searching item with anchor: ", anchor, hash_length);
 
 	for (i = 0; i < hcstore->hchain_shelves[function_id][hash_length_id].
 			num_hchain_lengths; i++)
 	{
-		// looks for the anchor at each hchain_length with the respective hierarchy level
+		// look for the anchor at each hchain_length with the respective hierarchy level
 		HIP_ASSERT(hierarchy_level < hcstore->hchain_shelves[function_id][hash_length_id].
 				num_hierarchies[i]);
 
 		for (j = 0; j < hip_ll_get_size(&hcstore->hchain_shelves[function_id]
 		        [hash_length_id].hchains[i][hierarchy_level]); j++)
 		{
-			stored_hchain = (hash_chain_t *) hip_ll_get(&hcstore->
+			stored_item = hip_ll_get(&hcstore->
 					hchain_shelves[function_id][hash_length_id].
 					hchains[i][hierarchy_level], j);
 
-			if (!memcmp(anchor, stored_hchain->anchor_element->hash, hash_length))
+			if (use_hash_trees)
 			{
-				stored_hchain = (hash_chain_t *) hip_ll_del(&hcstore->
-						hchain_shelves[function_id][hash_length_id].
-						hchains[i][hierarchy_level], j, NULL);
+				htree = (hash_tree_t *)stored_item;
 
-				HIP_DEBUG("hash-chain matching the anchor found\n");
-				//hchain_print(stored_hchain);
+				if (!memcmp(anchor, htree->root, hash_length))
+				{
+					stored_item = hip_ll_del(&hcstore->
+							hchain_shelves[function_id][hash_length_id].
+							hchains[i][hierarchy_level], j, NULL);
 
-				goto out_err;
+					HIP_DEBUG("hash-tree matching the anchor found\n");
+					//hchain_print(stored_hchain);
+
+					goto out_err;
+				}
+			} else
+			{
+				hchain = (hash_chain_t *)stored_item;
+
+				if (!memcmp(anchor, hchain->anchor_element->hash, hash_length))
+				{
+					stored_item = hip_ll_del(&hcstore->
+							hchain_shelves[function_id][hash_length_id].
+							hchains[i][hierarchy_level], j, NULL);
+
+					HIP_DEBUG("hash-chain matching the anchor found\n");
+					//hchain_print(stored_hchain);
+
+					goto out_err;
+				}
 			}
 		}
 	}
 
 	HIP_ERROR("hash-chain matching the anchor NOT found\n");
-	stored_hchain = NULL;
+	stored_item = NULL;
 	err = -1;
 
   out_err:
 	if (err)
 	{
-		if (stored_hchain)
-			hchain_free(stored_hchain);
+		// TODO modify this to support htrees
+		//if (stored_item)
+		//	hchain_free(stored_hchain);
 
-		stored_hchain = NULL;
+		stored_item = NULL;
 	}
 
-	return stored_hchain;
+	return stored_item;
 }
 
 hash_function_t hcstore_get_hash_function(hchain_store_t *hcstore, int function_id)

@@ -72,12 +72,13 @@ typedef struct hip_sa_entry
 	/*********** esp protection extension params *************/
 	/* hash chain parameters for this SA used in secure ESP extension */
 	/* for outgoing SA */
-	hash_chain_t *active_hchain;
-	hash_chain_t *next_hchain;
+	// can be a hchain or a htree
+	void *active_hash_item;
+	void *next_hash_item;
 	/* for incoming SA */
 	int esp_prot_tolerance;
-	unsigned char *active_anchor;
-	unsigned char *next_anchor;
+	unsigned char *active_hash_element;
+	unsigned char *next_hash_element;
 	/* for both */
 	uint8_t esp_prot_transform;
 } hip_sa_entry_t;

@@ -701,7 +701,6 @@ int esp_prot_conntrack_lupdate(const struct in6_addr * ip6_src,
 				esp_secret), -1, "failed to verify branch\n");
 
 		// cache update_anchor and root
-		// TODO check if this is doing the right thing
 		HIP_IFEL(esp_prot_conntrack_cache_anchor(tuple, seq, esp_anchor, esp_root), -1,
 				"failed to cache the anchor\n");
 
@@ -712,7 +711,6 @@ int esp_prot_conntrack_lupdate(const struct in6_addr * ip6_src,
 		esp_info = (struct hip_esp_info *) hip_get_param(common, HIP_PARAM_ESP_INFO);
 
 		// lookup cached ANCHOR and update corresponding esp_tuple
-		// TODO check if this is doing the right thing
 		HIP_IFEL(esp_prot_conntrack_update_anchor(tuple, ack, esp_info), -1,
 				"failed to update anchor\n");
 
@@ -731,10 +729,8 @@ int esp_prot_conntrack_verify(struct esp_tuple *esp_tuple, struct hip_esp *esp)
 {
 	esp_prot_conntrack_tfm_t * conntrack_tfm = NULL;
 	uint32_t num_verify = 0;
+	int use_hash_trees = 0;
 	int err = 0;
-
-	// esp_prot_transform >= 0 due to data-type
-	HIP_ASSERT(esp_tuple->esp_prot_tfm <= NUM_TRANSFORMS);
 
 	if (esp_tuple->esp_prot_tfm > ESP_PROT_TFM_UNUSED)
 	{
@@ -744,41 +740,65 @@ int esp_prot_conntrack_verify(struct esp_tuple *esp_tuple, struct hip_esp *esp)
 		_HIP_DEBUG("stored seq no: %u\n", esp_tuple->seq_no);
 		_HIP_DEBUG("received seq no: %u\n", ntohl(esp->esp_seq));
 
-		/* calculate difference of SEQ no in order to determine how many hashes
-		 * we have to calculate */
-		if (ntohl(esp->esp_seq) - esp_tuple->seq_no > 0 &&
-				ntohl(esp->esp_seq) - esp_tuple->seq_no <= DEFAULT_VERIFY_WINDOW)
+		if (esp_tuple->esp_prot_tfm > ESP_PROT_TFM_HTREE_OFFSET)
 		{
-			num_verify = ntohl(esp->esp_seq) - esp_tuple->seq_no;
+			use_hash_trees = 1;
+
+			/* check ESP protection anchor if extension is in use */
+			HIP_IFEL((err = esp_prot_verify_htree_element(conntrack_tfm->hash_function,
+					conntrack_tfm->hash_length, esp_tuple->hash_tree_depth,
+					esp_tuple->active_anchor, esp_tuple->next_anchor,
+					((unsigned char *) esp) + sizeof(struct hip_esp),
+					esp_tuple->active_root, esp_tuple->active_root_length,
+					esp_tuple->next_root, esp_tuple->next_root_length)) < 0, -1,
+					"failed to verify ESP protection hash\n");
 		} else
 		{
-			/* either we received a previous packet (-> dropped) or the difference is
-			 * so big that the packet would not be verified */
-			HIP_DEBUG("seq no difference < 0 or too high\n");
+			/* calculate difference of SEQ no in order to determine how many hashes
+			 * we have to calculate */
+			if (ntohl(esp->esp_seq) - esp_tuple->seq_no > 0 &&
+					ntohl(esp->esp_seq) - esp_tuple->seq_no <= DEFAULT_VERIFY_WINDOW)
+			{
+				num_verify = ntohl(esp->esp_seq) - esp_tuple->seq_no;
+			} else
+			{
+				/* either we received a previous packet (-> dropped) or the difference is
+				 * so big that the packet would not be verified */
+				HIP_DEBUG("seq no difference < 0 or too high\n");
 
-			err = -1;
-			goto out_err;
+				err = -1;
+				goto out_err;
+			}
+
+			/* check ESP protection anchor if extension is in use */
+			HIP_IFEL((err = esp_prot_verify_hchain_element(conntrack_tfm->hash_function,
+					conntrack_tfm->hash_length,
+					esp_tuple->active_anchor, esp_tuple->next_anchor,
+					((unsigned char *) esp) + sizeof(struct hip_esp),
+					num_verify, esp_tuple->active_root, esp_tuple->active_root_length,
+					esp_tuple->next_root, esp_tuple->next_root_length)) < 0, -1,
+					"failed to verify ESP protection hash\n");
 		}
-
-		/* check ESP protection anchor if extension is in use */
-		HIP_IFEL((err = esp_prot_verify_hash(conntrack_tfm->hash_function,
-				conntrack_tfm->hash_length,
-				esp_tuple->active_anchor, esp_tuple->next_anchor,
-				((unsigned char *) esp) + sizeof(struct hip_esp),
-				num_verify, esp_tuple->active_root, esp_tuple->active_root_length,
-				esp_tuple->next_root, esp_tuple->next_root_length)) < 0, -1,
-				"failed to verify ESP protection hash\n");
 
 		// this means there was a change in the anchors
 		if (err > 0)
 		{
 			HIP_DEBUG("anchor change occurred, handled now\n");
 
-			// don't copy the next anchor, but the already verified hash
-			memcpy(esp_tuple->active_anchor, ((unsigned char *) esp) + sizeof(struct hip_esp),
-					conntrack_tfm->hash_length);
-			memcpy(esp_tuple->first_active_anchor, esp_tuple->next_anchor,
-					conntrack_tfm->hash_length);
+			if (use_hash_trees)
+			{
+				memcpy(esp_tuple->active_anchor, esp_tuple->next_anchor,
+						conntrack_tfm->hash_length);
+				memcpy(esp_tuple->first_active_anchor, esp_tuple->next_anchor,
+						conntrack_tfm->hash_length);
+			} else
+			{
+				// don't copy the next anchor, but the already verified hash
+				memcpy(esp_tuple->active_anchor, ((unsigned char *) esp) + sizeof(struct hip_esp),
+						conntrack_tfm->hash_length);
+				memcpy(esp_tuple->first_active_anchor, esp_tuple->next_anchor,
+						conntrack_tfm->hash_length);
+			}
 
 			// change roots
 			/* the BEX-store does not have hierarchies, so no root is used for

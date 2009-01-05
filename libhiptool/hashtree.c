@@ -27,9 +27,10 @@
  * \note The memory must be freed elsewhere.
  */
 hash_tree_t* htree_init(int num_data_blocks, int max_data_length, int node_length,
-		int secret_length)
+		int secret_length, hash_tree_t *link_tree)
 {
     hash_tree_t *tree = NULL;
+    int i;
     int err = 0;
 
     // check here that it's a power of 2
@@ -48,12 +49,28 @@ hash_tree_t* htree_init(int num_data_blocks, int max_data_length, int node_lengt
     HIP_IFEL(!(tree->nodes = (unsigned char *) malloc(node_length * num_data_blocks * 2)), -1,
     		"failed to allocate memory\n");
 
+    // if link_tree is set, overwrite secret_length
+	if (link_tree)
+		secret_length = link_tree->node_length;
+
     if (secret_length > 0)
     {
     	HIP_IFEL(!(tree->secrets = (unsigned char *) malloc(secret_length * num_data_blocks)), -1,
     			"failed to allocate memory\n");
 
-    	bzero(tree->secrets, secret_length * num_data_blocks);
+    	if (link_tree)
+    	{
+    		// add the root as secret for each leaf
+    		for (i = 0; i < num_data_blocks; i++)
+			{
+				HIP_IFEL(htree_add_secret(tree, link_tree->root, secret_length, i), -1,
+						"failed to add linking root as secrets\n");
+			}
+
+    	} else
+    	{
+    		bzero(tree->secrets, secret_length * num_data_blocks);
+    	}
     }
 
     // init array elements to 0
@@ -67,6 +84,8 @@ hash_tree_t* htree_init(int num_data_blocks, int max_data_length, int node_lengt
     tree->node_length = node_length;
     tree->secret_length = secret_length;
     tree->depth = ceil(log_x(2, num_data_blocks));
+    // set the link tree
+	tree->link_tree = link_tree;
 
     HIP_DEBUG("tree->depth: %i\n", tree->depth);
 
@@ -111,7 +130,7 @@ void htree_free(hash_tree_t *tree)
  *
  * \return 0.
  */
-int htree_add_data(hash_tree_t *tree, char *data, size_t data_length)
+int htree_add_data(hash_tree_t *tree, char *data, int data_length)
 {
 	HIP_ASSERT(tree != NULL);
 	HIP_ASSERT(data != NULL);
@@ -160,6 +179,19 @@ int htree_add_random_data(hash_tree_t *tree, int num_random_blocks)
         tree->is_open = 0;
         tree->data_position = 0;
     }
+
+    return 0;
+}
+
+int htree_add_secret(hash_tree_t *tree, char *secret, int secret_length, int secret_index)
+{
+	HIP_ASSERT(tree != NULL);
+	HIP_ASSERT(secret != NULL);
+	HIP_ASSERT(secret_length == tree->secret_length);
+    HIP_ASSERT(tree->is_open > 0);
+
+    memcpy(&tree->secrets[secret_index * secret_length], secret, secret_length);
+    HIP_DEBUG("added secret block\n");
 
     return 0;
 }
@@ -486,7 +518,7 @@ int htree_verify_branch(unsigned char *root, int root_length,
     {
     	HIP_DEBUG("branch invalid\n");
 
-		err = -1;
+		err = 1;
     }
 
   out_err:

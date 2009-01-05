@@ -189,7 +189,6 @@ int esp_prot_init()
 	HIP_IFEL(hcstore_refill(&update_store, use_hash_trees) < 0, -1,
 			"failed to fill the update-store\n");
 
-	// TODO get this right
 	/* ...and send the bex-store anchors to hipd */
 	HIP_IFEL(send_bex_store_update_to_hipd(&bex_store, use_hash_trees), -1,
 		"failed to send bex-store update to hipd\n");
@@ -239,19 +238,19 @@ int esp_prot_uninit()
 	return err;
 }
 
-// TODO modify this to support htrees
 int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 		unsigned char *esp_prot_anchor, int update)
 {
 	int hash_length = 0, err = 0;
+	int use_hash_trees = 0;
+	hash_chain_t *hchain = NULL;
+	hash_tree_t *htree = NULL;
 #ifdef CONFIG_HIP_MEASUREMENTS
 	uint64_t update_time = 0;
 	struct timeval now;
 #endif
 
 	HIP_ASSERT(entry != 0);
-	// esp_prot_transform >= 0 due to datatype
-	HIP_ASSERT(esp_prot_transform <= NUM_TRANSFORMS);
 	HIP_ASSERT(entry->direction == 1 || entry->direction == 2);
 
 	// only set up the anchor or hchain, if esp extension is used
@@ -259,6 +258,10 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 	{
 		// if the extension is used, an anchor should be provided by the peer
 		HIP_ASSERT(esp_prot_anchor != NULL);
+
+		// check if we should use hash trees
+		if (esp_prot_transform > ESP_PROT_TFM_HTREE_OFFSET)
+			use_hash_trees = 1;
 
 		// distinguish the creation of a new entry and the update of an old one
 		if (update)
@@ -276,13 +279,13 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 			/* set up hash chains or anchors depending on the direction */
 			if (entry->direction == HIP_SPI_DIRECTION_IN)
 			{
-				HIP_IFEL(!(entry->next_anchor = (unsigned char *)
+				HIP_IFEL(!(entry->next_hash_element = (unsigned char *)
 						malloc(hash_length)), -1, "failed to allocate memory\n");
 
 				// set anchor for inbound SA
-				memcpy(entry->next_anchor, esp_prot_anchor, hash_length);
+				memcpy(entry->next_hash_element, esp_prot_anchor, hash_length);
 
-				HIP_DEBUG("next_anchor set for inbound SA\n");
+				HIP_DEBUG("next_hash_element set for inbound SA\n");
 
 			} else
 			{
@@ -296,13 +299,24 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 				}
 #endif
 
-				HIP_ASSERT(entry->next_hchain != NULL);
+				HIP_ASSERT(entry->next_hash_item != NULL);
 
 				/* esp_prot_sadb_maintenance should have already set up the next_hchain,
 				 * check that the anchor belongs to the one that is set */
-				HIP_IFEL(memcmp(esp_prot_anchor, entry->next_hchain->anchor_element->hash,
-						hash_length), -1,
-						"received a non-matching anchor from hipd for next_hchain\n");
+				if (use_hash_trees)
+				{
+					htree = (hash_tree_t *)entry->next_hash_item;
+
+					HIP_IFEL(memcmp(esp_prot_anchor, htree->root, hash_length), -1,
+							"received a non-matching root from hipd for next_hchain\n");
+				} else
+				{
+					hchain = (hash_chain_t *)entry->next_hash_item;
+
+					HIP_IFEL(memcmp(esp_prot_anchor, hchain->anchor_element->hash,
+							hash_length), -1,
+							"received a non-matching anchor from hipd for next_hchain\n");
+				}
 
 				HIP_DEBUG("next_hchain-anchor and received anchor from hipd match\n");
 			}
@@ -320,18 +334,18 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
 				// we have to get the hash_length
 				hash_length = esp_prot_get_hash_length(esp_prot_transform);
 
-				HIP_IFEL(!(entry->active_anchor = (unsigned char *)
+				HIP_IFEL(!(entry->active_hash_element = (unsigned char *)
 						malloc(hash_length)), -1, "failed to allocate memory\n");
 
 				// set anchor for inbound SA
-				memcpy(entry->active_anchor, esp_prot_anchor, hash_length);
+				memcpy(entry->active_hash_element, esp_prot_anchor, hash_length);
 
 				entry->esp_prot_tolerance = DEFAULT_VERIFY_WINDOW;
 			} else
 			{
 				// set hchain for outbound SA
-				HIP_IFEL(!(entry->active_hchain =
-					esp_prot_get_bex_hchain_by_anchor(esp_prot_anchor, esp_prot_transform)),
+				HIP_IFEL(!(entry->active_hash_item =
+					esp_prot_get_bex_item_by_anchor(esp_prot_anchor, esp_prot_transform)),
 					-1, "corresponding hchain not found\n");
 			}
 		}
@@ -346,25 +360,37 @@ int esp_prot_sa_entry_set(hip_sa_entry_t *entry, uint8_t esp_prot_transform,
   	return err;
 }
 
-// TODO modify this to support htrees
+
 void esp_prot_sa_entry_free(hip_sa_entry_t *entry)
 {
-	if (entry->active_anchor)
-		free(entry->active_anchor);
-	if (entry->next_anchor)
-		free(entry->next_anchor);
-	if (entry->active_hchain)
-		hchain_free(entry->active_hchain);
-	if (entry->next_hchain)
-		hchain_free(entry->next_hchain);
+	if (entry->active_hash_element)
+		free(entry->active_hash_element);
+	if (entry->next_hash_element)
+		free(entry->next_hash_element);
+	if (entry->esp_prot_transform > ESP_PROT_TFM_HTREE_OFFSET)
+	{
+		if (entry->active_hash_item)
+			htree_free((hash_tree_t *)entry->active_hash_item);
+		if (entry->next_hash_item)
+			htree_free((hash_tree_t *)entry->next_hash_item);
+	} else
+	{
+		if (entry->active_hash_item)
+			hchain_free((hash_chain_t *)entry->active_hash_item);
+		if (entry->next_hash_item)
+			hchain_free((hash_chain_t *)entry->next_hash_item);
+	}
 }
 
-// TODO modify this to support htrees
-int esp_prot_add_hash(unsigned char *out_hash, int *out_length,
-		hip_sa_entry_t *entry)
+int esp_prot_add_hash(unsigned char *out_hash, int *out_length, hip_sa_entry_t *entry)
 {
 	unsigned char *tmp_hash = NULL;
 	int err = 0;
+	int use_hash_trees = 0;
+	uint32_t htree_index = 0;
+	hash_chain_t *hchain = NULL;
+	hash_tree_t *htree = NULL;
+	int branch_length = 0;
 
 	HIP_ASSERT(out_hash != NULL);
 	HIP_ASSERT(*out_length == 0);
@@ -372,32 +398,54 @@ int esp_prot_add_hash(unsigned char *out_hash, int *out_length,
 
 	if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED)
 	{
-		// esp_prot_transform >= 0 due to data-type
-		HIP_ASSERT(entry->esp_prot_transform <= NUM_TRANSFORMS);
-
 		HIP_DEBUG("adding hash chain element to outgoing packet...\n");
 
-		// first determine hash length
-		*out_length = entry->active_hchain->hash_length;
-		HIP_DEBUG("hash length is %i\n", *out_length);
-
-		HIP_IFEL(!(tmp_hash = hchain_pop(entry->active_hchain)), -1,
-				"unable to retrieve hash element from hash-chain\n");
-
-		/* don't send anchor as it could be known to third party
-		 * -> other end-host will not accept it */
-		if (!memcmp(tmp_hash, entry->active_hchain->anchor_element->hash,
-				*out_length))
+		// determine whether to use htrees or hchains
+		if (entry->esp_prot_transform > ESP_PROT_TFM_HTREE_OFFSET)
 		{
-			HIP_DEBUG("this is the hchain anchor -> get next element\n");
+			htree = (hash_tree_t *)entry->active_hash_item;
 
-			// get next element
-			HIP_IFEL(!(tmp_hash = hchain_pop(entry->active_hchain)), -1,
+			// get the index of the next hash token and add it
+			htree_index = htree_get_next_data_offset(htree);
+			memcpy(out_hash, &htree_index, sizeof(uint32_t));
+
+			// get hash token and add it
+			tmp_hash = htree_get_data(htree, htree_index, out_length);
+			memcpy(out_hash, tmp_hash, *out_length);
+
+			// add the verification branch
+			tmp_hash = htree_get_branch(htree, htree_index,
+					&branch_length);
+			memcpy(out_hash + *out_length, tmp_hash, branch_length);
+
+			*out_length += sizeof(uint32_t) + branch_length;
+
+		} else
+		{
+			hchain = (hash_chain_t *)entry->active_hash_item;
+
+			// first determine hash length
+			*out_length = esp_prot_get_hash_length(entry->esp_prot_transform);
+
+			HIP_IFEL(!(tmp_hash = hchain_pop(hchain)), -1,
 					"unable to retrieve hash element from hash-chain\n");
+
+			/* don't send anchor as it could be known to third party
+			 * -> other end-host will not accept it */
+			if (!memcmp(tmp_hash, hchain->anchor_element->hash,
+					*out_length))
+			{
+				HIP_DEBUG("this is the hchain anchor -> get next element\n");
+
+				// get next element
+				HIP_IFEL(!(tmp_hash = hchain_pop(hchain)), -1,
+						"unable to retrieve hash element from hash-chain\n");
+			}
+
+			memcpy(out_hash, tmp_hash, *out_length);
 		}
 
-		memcpy(out_hash, tmp_hash, *out_length);
-
+		HIP_DEBUG("hash length is %i\n", *out_length);
 		HIP_HEXDUMP("added esp protection hash: ", out_hash, *out_length);
 
 		// now do some maintenance operations
@@ -412,25 +460,27 @@ int esp_prot_add_hash(unsigned char *out_hash, int *out_length,
     return err;
 }
 
-// TODO modify this to support htrees
+#if 0
 int esp_prot_verify(hip_sa_entry_t *entry, unsigned char *hash_value)
 {
 	hash_function_t hash_function = NULL;
 	int hash_length = 0;
+	int use_hash_trees = 0;
 	int err = 0;
 
 	HIP_ASSERT(entry != NULL);
 	HIP_ASSERT(hash_value != NULL);
-	// esp_prot_transform >= 0 due to data-type
-	HIP_ASSERT(entry->esp_prot_transform <= NUM_TRANSFORMS);
 
 	if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED)
 	{
+		if (entry->esp_prot_transform > ESP_PROT_TFM_HTREE_OFFSET)
+			use_hash_trees = 1;
+
 		hash_function = esp_prot_get_hash_function(entry->esp_prot_transform);
 		hash_length = esp_prot_get_hash_length(entry->esp_prot_transform);
 
 		HIP_IFEL((err = esp_prot_verify_hash(hash_function, hash_length,
-				entry->active_anchor, entry->next_anchor, hash_value,
+				entry->active_hash_element, entry->next_hash_element, hash_value,
 				entry->esp_prot_tolerance, NULL, 0, NULL, 0)) < 0, -1,
 				"failed to verify hash\n");
 
@@ -439,9 +489,9 @@ int esp_prot_verify(hip_sa_entry_t *entry, unsigned char *hash_value)
 		{
 			HIP_DEBUG("anchor change occurred, handled now\n");
 
-			memcpy(entry->active_anchor, entry->next_anchor, hash_length);
-			free(entry->next_anchor);
-			entry->next_anchor = NULL;
+			memcpy(entry->active_hash_element, entry->next_hash_element, hash_length);
+			free(entry->next_hash_element);
+			entry->next_hash_element = NULL;
 
 			/* notify hipd about the switch to the next hash-chain for
 			 * consistency reasons */
@@ -455,13 +505,13 @@ int esp_prot_verify(hip_sa_entry_t *entry, unsigned char *hash_value)
   out_err:
 	return err;
 }
+#endif
 
-// TODO modify this to support htrees
 /* verifies received hchain-elements - should only be called with ESP
  * extension in use
  *
  * returns 0 - ok or UNUSED, < 0 err, > 0 anchor change */
-int esp_prot_verify_hash(hash_function_t hash_function, int hash_length,
+int esp_prot_verify_hchain_element(hash_function_t hash_function, int hash_length,
 		unsigned char *active_anchor, unsigned char *next_anchor,
 		unsigned char *hash_value, int tolerance, unsigned char *active_root,
 		int active_root_length, unsigned char *next_root, int next_root_length)
@@ -487,9 +537,7 @@ int esp_prot_verify_hash(hash_function_t hash_function, int hash_length,
 	HIP_DEBUG("checking active_anchor...\n");
 
 	if (active_root)
-	{
 		HIP_HEXDUMP("active_root: ", active_root, active_root_length);
-	}
 
 	if (tmp_distance = hchain_verify(hash_value, active_anchor, hash_function,
 			hash_length, tolerance, active_root, active_root_length))
@@ -553,6 +601,72 @@ int esp_prot_verify_hash(hash_function_t hash_function, int hash_length,
     return err;
 }
 
+int esp_prot_verify_htree_element(hash_function_t hash_function, int hash_length,
+		uint32_t hash_tree_depth, unsigned char *active_root, unsigned char *next_root,
+		unsigned char *hash_value, unsigned char *active_uroot,
+		int active_uroot_length, unsigned char *next_uroot, int next_uroot_length)
+{
+	int err = 0;
+
+	HIP_ASSERT(hash_function != NULL);
+	HIP_ASSERT(hash_length > 0);
+	HIP_ASSERT(hash_tree_depth > 0);
+	HIP_ASSERT(active_root != NULL);
+	// next_root may be NULL
+	HIP_ASSERT(hash_value != NULL);
+
+	HIP_DEBUG("checking active_root...\n");
+
+	if (active_uroot)
+		HIP_HEXDUMP("active_uroot: ", active_uroot, active_uroot_length);
+
+	if (err = htree_verify_branch(active_root, hash_length,
+				hash_value + (sizeof(uint32_t) + hash_length), hash_tree_depth,
+				hash_value + sizeof(uint32_t), hash_length, (uint32_t)hash_value,
+				active_uroot, active_uroot_length,
+				htree_leaf_generator, htree_node_generator, NULL))
+	{
+		HIP_IFEL(err < 0, -1, "failure during tree verification\n");
+
+		HIP_DEBUG("active htree could not verify hash element\n");
+
+		if (next_root)
+		{
+			HIP_IFEL((err = htree_verify_branch(next_root, hash_length,
+					hash_value + (sizeof(uint32_t) + hash_length), hash_tree_depth,
+					hash_value + sizeof(uint32_t), hash_length, (uint32_t)hash_value,
+					next_uroot, next_uroot_length,
+					htree_leaf_generator, htree_node_generator, NULL)) < 0, -1,
+					"failure during tree verification\n");
+
+			if (err)
+			{
+				HIP_DEBUG("neither active nor update htree could verify hash element\n");
+
+				err = -1;
+				goto out_err;
+
+			} else
+			{
+				HIP_DEBUG("branch successfully verified with next_htree\n");
+			}
+		} else
+		{
+			HIP_DEBUG("active htree could not verify hash element, update htree not set\n");
+
+			err = -1;
+			goto out_err;
+		}
+
+	} else
+	{
+		HIP_DEBUG("branch successfully verified with active_htree\n");
+	}
+
+  out_err:
+	return err;
+}
+
 /* returns NULL for UNUSED transform */
 esp_prot_tfm_t * esp_prot_resolve_transform(uint8_t transform)
 {
@@ -563,8 +677,6 @@ esp_prot_tfm_t * esp_prot_resolve_transform(uint8_t transform)
 	else
 		return NULL;
 }
-
-
 
 /* returns NULL for UNUSED transform */
 hash_function_t esp_prot_get_hash_function(uint8_t transform)
@@ -604,37 +716,38 @@ int esp_prot_get_hash_length(uint8_t transform)
 	return err;
 }
 
-// TODO modify this to support htrees
 /* returns corresponding hash-chain, refills bex_store and sends update
  * message to hipd
  */
-hash_chain_t * esp_prot_get_bex_hchain_by_anchor(unsigned char *hchain_anchor,
+void * esp_prot_get_bex_item_by_anchor(unsigned char *item_anchor,
 		uint8_t transform)
 {
 	esp_prot_tfm_t *prot_transform = NULL;
-	hash_chain_t *return_hchain = NULL;
+	void *return_item = NULL;
+	int use_hash_trees = 0;
 	int err = 0;
 
-	HIP_ASSERT(hchain_anchor != NULL);
-	// esp_prot_transform >= 0 due to data-type
-	HIP_ASSERT(transform <= NUM_TRANSFORMS);
+	HIP_ASSERT(item_anchor != NULL);
 
 	HIP_IFEL(!(prot_transform = esp_prot_resolve_transform(transform)), 1,
-			"tried to resolve UNUSED transform\n");
+			"tried to resolve UNUSED or UNKNOWN transform\n");
 
-	HIP_IFEL(!(return_hchain = hcstore_get_hchain_by_anchor(&bex_store,
+	HIP_IFEL(!(return_item = hcstore_get_item_by_anchor(&bex_store,
 			prot_transform->hash_func_id, prot_transform->hash_length_id,
-			NUM_BEX_HIERARCHIES - 1, hchain_anchor)),
+			NUM_BEX_HIERARCHIES - 1, item_anchor, use_hash_trees)),
 			-1, "unable to retrieve hchain from bex store\n");
 
+	if (transform > ESP_PROT_TFM_HTREE_OFFSET)
+			use_hash_trees = 1;
+
 	// refill bex-store if necessary
-	HIP_IFEL((err = hcstore_refill(&bex_store, 0)) < 0, -1,
+	HIP_IFEL((err = hcstore_refill(&bex_store, use_hash_trees)) < 0, -1,
 			"failed to refill the bex-store\n");
 
 	// some elements have been added, tell hipd about them
 	if (err > 0)
 	{
-		HIP_IFEL(send_bex_store_update_to_hipd(&bex_store, 0), -1,
+		HIP_IFEL(send_bex_store_update_to_hipd(&bex_store, use_hash_trees), -1,
 				"unable to send bex-store update to hipd\n");
 
 		// this is not an error condition
@@ -643,9 +756,9 @@ hash_chain_t * esp_prot_get_bex_hchain_by_anchor(unsigned char *hchain_anchor,
 
   out_err:
 	if (err)
-		return_hchain = NULL;
+		return_item = NULL;
 
-  	return return_hchain;
+  	return return_item;
 }
 
 int esp_prot_get_data_offset(hip_sa_entry_t *entry)
@@ -672,22 +785,36 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 #endif
 	hash_function_t hash_function = NULL;
 	int hash_length = 0;
-
+	hash_tree_t *htree = NULL;
+	hash_chain_t *hchain = NULL;
+	int remaining = 0;
+	int threshold = 0;
+	int use_hash_trees = 0;
 
 	HIP_ASSERT(entry != NULL);
-	// esp_prot_transform >= 0 due to data-type
-	HIP_ASSERT(entry->esp_prot_transform <= NUM_TRANSFORMS);
 
 	// first check the extension is used for this connection
 	if (entry->esp_prot_transform > ESP_PROT_TFM_UNUSED)
 	{
-		// entry->esp_prot_transform > 0 due to data type
-		HIP_ASSERT(entry->esp_prot_transform <= NUM_TRANSFORMS);
+		if (entry->esp_prot_transform > ESP_PROT_TFM_HTREE_OFFSET)
+		{
+			use_hash_trees = 1;
+			htree = (hash_tree_t *)entry->active_hash_item;
 
-		/* make sure that the next hash-chain is set up before the active one
+			remaining = htree->num_data_blocks - htree->data_position;
+			threshold = htree->num_data_blocks * REMAIN_HASHES_TRESHOLD;
+
+		} else
+		{
+			hchain = (hash_chain_t *)entry->active_hash_item;
+
+			remaining = hchain->remaining;
+			threshold = hchain->hchain_length * REMAIN_HASHES_TRESHOLD;
+		}
+
+		/* make sure that the next hash-item is set up before the active one
 		 * depletes */
-		if (!entry->next_hchain && entry->active_hchain->remaining
-					<= entry->active_hchain->hchain_length * REMAIN_HASHES_TRESHOLD)
+		if (!entry->next_hash_item && remaining <= threshold)
 		{
 			HIP_IFEL(!(prot_transform = esp_prot_resolve_transform(entry->esp_prot_transform)),
 					1, "tried to resolve UNUSED transform\n");
@@ -794,7 +921,7 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 #endif
 
 			// refill update-store
-			HIP_IFEL((err = hcstore_refill(&update_store, 0)) < 0, -1,
+			HIP_IFEL((err = hcstore_refill(&update_store, use_hash_trees)) < 0, -1,
 					"failed to refill the update-store\n");
 		}
 
