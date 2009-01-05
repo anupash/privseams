@@ -318,10 +318,10 @@ int hipd_init(int flush_ipsec, int killold)
 	// Notice that hip_nat_sock_input should be initialized after hip_nat_sock_output
 	// because for the sockets bound to the same address/port, only the last socket seems
 	// to receive the packets. 
-	HIP_IFEL(hip_create_nat_sock_udp(&hip_nat_sock_output_udp, 0, 1), -1, "raw sock output udp\n");
+	HIP_IFEL(hip_create_nat_sock_udp(&hip_nat_sock_output_udp, 0), -1, "raw sock output udp\n");
 	HIP_IFEL(hip_init_raw_sock_v6(&hip_raw_sock_input_v6), -1, "raw sock input v6\n");
 	HIP_IFEL(hip_init_raw_sock_v4(&hip_raw_sock_input_v4), -1, "raw sock input v4\n");
-	HIP_IFEL(hip_create_nat_sock_udp(&hip_nat_sock_input_udp, 0, 0), -1, "raw sock input udp\n");
+	HIP_IFEL(hip_create_nat_sock_udp(&hip_nat_sock_input_udp, 0), -1, "raw sock input udp\n");
 	HIP_IFEL(hip_init_icmp_v6(&hip_icmp_sock), -1, "icmpv6 sock\n");
 
 	HIP_DEBUG("hip_raw_sock_v6 input = %d\n", hip_raw_sock_input_v6);
