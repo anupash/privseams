@@ -682,7 +682,7 @@ int hip_init_icmp_v6(int *icmpsockfd)
 	return err;
 }
 
-int hip_create_nat_sock_udp(int *hip_nat_sock_udp, char close_, char output)
+int hip_create_nat_sock_udp(int *hip_nat_sock_udp, char close_)
 {
 	int on = 1, err = 0;
 	int off = 0;
@@ -719,10 +719,7 @@ int hip_create_nat_sock_udp(int *hip_nat_sock_udp, char close_, char output)
 	myaddr.sin_family=AF_INET;
 	/** @todo Change this inaddr_any -- Abi */
 	myaddr.sin_addr.s_addr = INADDR_ANY;
-	if (output)
-		myaddr.sin_port=htons(hip_get_peer_nat_udp_port());
-	else
-		myaddr.sin_port=htons(hip_get_local_nat_udp_port());	
+	myaddr.sin_port=htons(hip_get_local_nat_udp_port());	
 	
 	err = bind(*hip_nat_sock_udp, (struct sockaddr *)&myaddr, sizeof(myaddr));
 	if (err < 0)
