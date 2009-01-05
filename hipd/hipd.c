@@ -769,7 +769,10 @@ int main(int argc, char *argv[])
 	uid_t euid;
 
 	euid = geteuid();
-	HIP_IFEL((euid != 0), -1, "hipd must be started as root\n");
+	HIP_IFEL((euid != 0), -1, "hipd must be started as root\n");			// We need to recreate the NAT UDP sockets to bind to the new port.
+	hip_create_nat_sock_udp(&hip_nat_sock_input_udp, 1, 1);
+	hip_create_nat_sock_udp(&hip_nat_sock_output_udp, 1, 1);
+
 
 	HIP_IFE(hipd_main(argc, argv), -1);
 	if (hipd_get_flag(HIPD_FLAG_RESTART))
