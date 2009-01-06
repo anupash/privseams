@@ -44,7 +44,7 @@ static const int update_hchain_lengths[NUM_UPDATE_HCHAIN_LENGTHS] = {100000};
 /* stores the mapping transform_id -> (function_id, hash_length_id)
  *
  * @note no mapping for UNUSED transform */
-esp_prot_tfm_t esp_prot_transforms[sizeof(uint8_t)];
+esp_prot_tfm_t esp_prot_transforms[MAX_NUM_ESP_PROT_TFMS];
 
 
 // this store only contains hchains used when negotiating esp protection in BEX
@@ -88,7 +88,7 @@ int esp_prot_init()
 	HIP_IFEL(hcstore_init(&update_store), -1, "failed to initialize the update-store\n");
 
 	// init all possible transforms
-	memset(esp_prot_transforms, 0, sizeof(uint8_t) * sizeof(esp_prot_tfm_t));
+	memset(esp_prot_transforms, 0, MAX_NUM_ESP_PROT_TFMS * sizeof(esp_prot_tfm_t));
 	// set available transforms to used
 	for (i = 0; i < NUM_TRANSFORMS + 1; i++)
 	{
@@ -768,7 +768,6 @@ int esp_prot_get_data_offset(hip_sa_entry_t *entry)
 	return (sizeof(struct hip_esp) + esp_prot_get_hash_length(entry->esp_prot_transform));
 }
 
-// TODO modify this to support htrees
 /* sets entry->next_hchain, if necessary
  * changes to next_hchain
  * refills the update_store
@@ -787,9 +786,11 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 	int hash_length = 0;
 	hash_tree_t *htree = NULL;
 	hash_chain_t *hchain = NULL;
+	hash_tree_t *link_tree = NULL;
 	int remaining = 0;
 	int threshold = 0;
 	int use_hash_trees = 0;
+	int hierarchy_level = 0;
 
 	HIP_ASSERT(entry != NULL);
 
@@ -804,12 +805,18 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 			remaining = htree->num_data_blocks - htree->data_position;
 			threshold = htree->num_data_blocks * REMAIN_HASHES_TRESHOLD;
 
+			link_tree = htree->link_tree;
+			hierarchy_level = htree->hierarchy_level;
+
 		} else
 		{
 			hchain = (hash_chain_t *)entry->active_hash_item;
 
 			remaining = hchain->remaining;
 			threshold = hchain->hchain_length * REMAIN_HASHES_TRESHOLD;
+
+			link_tree = hchain->link_tree;
+			hierarchy_level = hchain->hchain_hierarchy;
 		}
 
 		/* make sure that the next hash-item is set up before the active one
@@ -820,31 +827,29 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 					1, "tried to resolve UNUSED transform\n");
 
 			// soft-update vs. PK-update
-			if (entry->active_hchain->link_tree)
+			if (link_tree)
 			{
 				// do a soft-update
 				HIP_DEBUG("found link_tree, looking for soft-update anchor...\n");
 
 				/* several hash-trees are linking to the same anchors, so it
 				 * might happen that an anchor is already used */
-				while (htree_has_more_data(entry->active_hchain->link_tree))
+				while (htree_has_more_data(link_tree))
 				{
 					// get the next hchain from the link_tree
-					anchor_offset = htree_get_next_data_offset(
-							entry->active_hchain->link_tree);
-					anchor = htree_get_data(entry->active_hchain->link_tree,
-							anchor_offset, &anchor_length);
+					anchor_offset = htree_get_next_data_offset(link_tree);
+					anchor = htree_get_data(link_tree, anchor_offset, &anchor_length);
 
-					if (entry->next_hchain = hcstore_get_hchain_by_anchor(
+					if (entry->next_hash_item = hcstore_get_item_by_anchor(
 							&update_store,
 							prot_transform->hash_func_id, prot_transform->hash_length_id,
-							entry->active_hchain->hchain_hierarchy - 1, anchor))
+							hierarchy_level - 1, anchor, use_hash_trees))
 					{
 						break;
 					}
 				}
 
-				if (!entry->next_hchain)
+				if (!entry->next_hash_item)
 				{
 					HIP_DEBUG("unable to get linked hchain from store, need PK-UPDATE\n");
 
@@ -857,9 +862,9 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 				{
 					HIP_DEBUG("linked hchain found in store, soft-update\n");
 
-					secret = htree_get_secret(entry->active_hchain->link_tree,
+					secret = htree_get_secret(link_tree,
 							anchor_offset, &secret_length);
-					branch_nodes = htree_get_branch(entry->active_hchain->link_tree,
+					branch_nodes = htree_get_branch(link_tree,
 							anchor_offset, &branch_length);
 
 					soft_update = 1;
@@ -877,7 +882,7 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 				 * @note this needs to be extended when implementing usage of different
 				 *       hchain lengths
 				 */
-				HIP_IFEL(!(entry->next_hchain = hcstore_get_hchain(&update_store,
+				HIP_IFEL(!(entry->next_hash_item = hcstore_get_hash_item(&update_store,
 						prot_transform->hash_func_id, prot_transform->hash_length_id,
 						update_hchain_lengths[DEFAULT_HCHAIN_LENGTH_ID])),
 						-1, "unable to retrieve hchain from store\n");
@@ -885,11 +890,22 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 				soft_update = 0;
 			}
 
-			if (entry->next_hchain->link_tree)
+			if (use_hash_trees)
+			{
+				htree = (hash_tree_t *)entry->next_hash_item;
+				link_tree = htree->link_tree;
+
+			} else
+			{
+				hchain = (hash_chain_t *)entry->next_hash_item;
+				link_tree = hchain->link_tree;
+			}
+
+			if (link_tree)
 			{
 				/* if the next_hchain has got a link_tree, we need its root for
 				 * the verification of the next_hchain's elements */
-				root = htree_get_root(entry->next_hchain->link_tree, &root_length);
+				root = htree_get_root(link_tree, &root_length);
 			}
 
 // useful for testing
@@ -905,7 +921,6 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 				HIP_DEBUG("failed to verify next_hchain\n");
 			}
 #endif
-
 
 			// issue UPDATE message to be sent by hipd
 			HIP_IFEL(send_trigger_update_to_hipd(entry, soft_update, anchor_offset,
@@ -926,14 +941,20 @@ int esp_prot_sadb_maintenance(hip_sa_entry_t *entry)
 		}
 
 		// activate next hchain if current one is depleted
-		if (entry->next_hchain && entry->active_hchain->remaining == 0)
+		if (entry->next_hash_item && remaining == 0)
 		{
 			// this will free all linked elements in the hchain
-			hchain_free(entry->active_hchain);
+			if (use_hash_trees)
+			{
+				htree_free((hash_tree_t *)entry->active_hash_item);
+			} else
+			{
+				hchain_free((hash_chain_t *)entry->active_hash_item);
+			}
 
 			HIP_DEBUG("changing to next_hchain\n");
-			entry->active_hchain = entry->next_hchain;
-			entry->next_hchain = NULL;
+			entry->active_hash_item = entry->next_hash_item;
+			entry->next_hash_item = NULL;
 
 			/* notify hipd about the switch to the next hash-chain for
 			 * consistency reasons */

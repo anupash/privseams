@@ -45,6 +45,7 @@ struct esp_anchor_item
 {
 	uint32_t seq;
 	uint8_t transform;
+	uint32_t hash_item_length;
 	unsigned char *active_anchor;
 	unsigned char *next_anchor;
 	uint8_t root_length;

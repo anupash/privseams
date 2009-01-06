@@ -27,7 +27,7 @@
  * \note The memory must be freed elsewhere.
  */
 hash_tree_t* htree_init(int num_data_blocks, int max_data_length, int node_length,
-		int secret_length, hash_tree_t *link_tree)
+		int secret_length, hash_tree_t *link_tree, int hierarchy_level)
 {
     hash_tree_t *tree = NULL;
     int i;
@@ -86,6 +86,7 @@ hash_tree_t* htree_init(int num_data_blocks, int max_data_length, int node_lengt
     tree->depth = ceil(log_x(2, num_data_blocks));
     // set the link tree
 	tree->link_tree = link_tree;
+	tree->hierarchy_level = hierarchy_level;
 
     HIP_DEBUG("tree->depth: %i\n", tree->depth);
 

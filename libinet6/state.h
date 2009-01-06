@@ -346,6 +346,7 @@ struct hip_hadb_state
 	/** root needed in case of hierarchical hchain linking */
 	uint8_t						 esp_root_length;
 	unsigned char				 esp_root[MAX_HASH_LENGTH];
+	int							 hash_item_length;
 	/** parameters needed for soft-updates of hchains */
 	/** Stored outgoing UPDATE ID counter. */
 	uint32_t                     light_update_id_out;

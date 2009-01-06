@@ -449,6 +449,7 @@ struct esp_prot_anchor {
 	hip_tlv_type_t     type;
 	hip_tlv_len_t      length;
 	uint8_t     	   transform;
+	uint32_t		   hash_item_length;
 	// contains active and next anchor
 	unsigned char  	   anchors[2 * MAX_HASH_LENGTH];
 } __attribute__ ((packed));

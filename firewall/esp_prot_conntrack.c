@@ -10,7 +10,7 @@
 #include "hslist.h"
 #include "hip_statistics.h"
 
-esp_prot_conntrack_tfm_t esp_prot_conntrack_tfms[NUM_TRANSFORMS];
+esp_prot_conntrack_tfm_t esp_prot_conntrack_tfms[MAX_NUM_ESP_PROT_TFMS];
 
 #ifdef CONFIG_HIP_MEASUREMENTS
 // for measuring the amount of hashes calculated during a connection
@@ -23,9 +23,10 @@ uint64_t subseq_failed_hashes;
 
 int esp_prot_conntrack_init()
 {
-	int transform_id = 0;
+	int transform_id = 1;
 	extern const hash_function_t hash_functions[NUM_HASH_FUNCTIONS];
 	extern const int hash_lengths[NUM_HASH_FUNCTIONS][NUM_HASH_LENGTHS];
+	extern const uint8_t preferred_transforms[NUM_TRANSFORMS + 1];
 	int err = 0, i, j, g;
 
 	HIP_DEBUG("Initializing conntracking of esp protection extension...\n");
@@ -36,6 +37,15 @@ int esp_prot_conntrack_init()
 	subseq_failed_hashes = 0;
 #endif
 
+	// init all possible transforms
+	memset(esp_prot_conntrack_tfms, 0, MAX_NUM_ESP_PROT_TFMS
+			* sizeof(esp_prot_conntrack_tfm_t));
+	// set available transforms to used
+	for (i = 0; i < NUM_TRANSFORMS + 1; i++)
+	{
+		esp_prot_conntrack_tfms[preferred_transforms[i]].is_used = 1;
+	}
+
 	/* set up mapping of esp protection transforms to hash functions and lengths */
 	for (i = 0; i < NUM_HASH_FUNCTIONS; i++)
 	{
@@ -44,13 +54,24 @@ int esp_prot_conntrack_init()
 			if (hash_lengths[i][j] > 0)
 			{
 				// ensure correct boundaries
-				HIP_ASSERT(transform_id < NUM_TRANSFORMS);
+				HIP_ASSERT(transform_id <= NUM_TRANSFORMS);
 
 				// store these IDs in the transforms array
 				HIP_DEBUG("adding transform: %i\n", transform_id + 1);
 
-				esp_prot_conntrack_tfms[transform_id].hash_function = hash_functions[i];
-				esp_prot_conntrack_tfms[transform_id].hash_length = hash_lengths[i][j];
+				if (esp_prot_conntrack_tfms[transform_id].is_used)
+				{
+					esp_prot_conntrack_tfms[transform_id].hash_function = hash_functions[i];
+					esp_prot_conntrack_tfms[transform_id].hash_length = hash_lengths[i][j];
+				}
+				// register the same hash function and hash length for the htree
+				if (esp_prot_conntrack_tfms[transform_id + ESP_PROT_TFM_HTREE_OFFSET].is_used)
+				{
+					esp_prot_conntrack_tfms[transform_id + ESP_PROT_TFM_HTREE_OFFSET]
+					                        .hash_function = hash_functions[i];
+					esp_prot_conntrack_tfms[transform_id + ESP_PROT_TFM_HTREE_OFFSET]
+					                        .hash_length = hash_lengths[i][j];
+				}
 
 				transform_id++;
 			}
@@ -69,12 +90,9 @@ int esp_prot_conntrack_uninit()
 	double min = 0.0, max = 0.0, avg = 0.0, std_dev = 0.0;
 #endif
 
-	// set transforms to 0/NULL
-	for (i = 0; i < NUM_TRANSFORMS; i++)
-	{
-		esp_prot_conntrack_tfms[i].hash_function = NULL;
-		esp_prot_conntrack_tfms[i].hash_length = 0;
-	}
+	// uninit all possible transforms
+	memset(esp_prot_conntrack_tfms, 0, MAX_NUM_ESP_PROT_TFMS
+			* sizeof(esp_prot_conntrack_tfm_t));
 
 #ifdef CONFIG_HIP_MEASUREMENTS
 	//calculate statistics for distance measurements
@@ -109,13 +127,10 @@ int esp_prot_conntrack_uninit()
 /* returns NULL for UNUSED transform */
 esp_prot_conntrack_tfm_t * esp_prot_conntrack_resolve_transform(uint8_t transform)
 {
-	// esp_prot_transform >= 0 due to data-type
-	HIP_ASSERT(transform <= NUM_TRANSFORMS);
-
 	HIP_DEBUG("resolving transform: %u\n", transform);
 
 	if (transform > ESP_PROT_TFM_UNUSED)
-		return &esp_prot_conntrack_tfms[transform - 1];
+		return &esp_prot_conntrack_tfms[transform];
 	else
 		return NULL;
 }
@@ -156,8 +171,8 @@ int esp_prot_conntrack_R1_tfms(struct hip_common * common, const struct tuple * 
 		// store the transforms
 		for (i = 0; i < tuple->connection->num_esp_prot_tfms; i++)
 		{
-			// only store transforms we support, >= UNUSED true to data-type
-			if (prot_transforms->transforms[i] <= NUM_TRANSFORMS)
+			// only store transforms we support
+			if (esp_prot_conntrack_tfms[prot_transforms->transforms[i]].is_used)
 			{
 				tuple->connection->esp_prot_tfms[i] = prot_transforms->transforms[i];
 
@@ -225,6 +240,14 @@ int esp_prot_conntrack_I2_anchor(const struct hip_common *common,
 				conntrack_tfm = esp_prot_conntrack_resolve_transform(
 						esp_tuple->esp_prot_tfm);
 				hash_length = conntrack_tfm->hash_length;
+
+				esp_tuple->hash_item_length = prot_anchor->hash_item_length;
+
+				if (esp_tuple->esp_prot_tfm > ESP_PROT_TFM_HTREE_OFFSET)
+				{
+					esp_tuple->hash_tree_depth = floor(
+							log_x(2, esp_tuple->hash_item_length));
+				}
 
 				// store the anchor
 				HIP_IFEL(!(esp_tuple->active_anchor = (unsigned char *)
@@ -348,6 +371,14 @@ int esp_prot_conntrack_R2_anchor(const struct hip_common *common,
 				conntrack_tfm = esp_prot_conntrack_resolve_transform(
 						esp_tuple->esp_prot_tfm);
 				hash_length = conntrack_tfm->hash_length;
+
+				esp_tuple->hash_item_length = prot_anchor->hash_item_length;
+
+				if (esp_tuple->esp_prot_tfm > ESP_PROT_TFM_HTREE_OFFSET)
+				{
+					esp_tuple->hash_tree_depth = floor(
+							log_x(2, esp_tuple->hash_item_length));
+				}
 
 				// store the anchor
 				HIP_IFEL(!(esp_tuple->active_anchor = (unsigned char *)
@@ -491,6 +522,7 @@ int esp_prot_conntrack_cache_anchor(struct tuple * tuple, struct hip_seq *seq,
 	HIP_DEBUG("setting active_anchor\n");
 	anchor_item->seq = seq->update_id;
 	anchor_item->transform = esp_anchor->transform;
+	anchor_item->hash_item_length = esp_anchor->hash_item_length;
 	memcpy(anchor_item->active_anchor, &esp_anchor->anchors[0], hash_length);
 
 	// malloc and set cmp_value to be 0
@@ -607,6 +639,7 @@ int esp_prot_conntrack_update_anchor(struct tuple *tuple, struct hip_ack *ack,
 
 			// update the esp_tuple
 			esp_tuple->next_anchor = anchor_item->next_anchor;
+			esp_tuple->hash_item_length = anchor_item->hash_item_length;
 			esp_tuple->next_root_length = anchor_item->root_length;
 			esp_tuple->next_root = anchor_item->root;
 

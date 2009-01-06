@@ -87,7 +87,7 @@ int hcstore_register_hchain_hierarchy(hchain_store_t *hcstore, int function_id,
 int hcstore_fill_item(hchain_store_t *hcstore, int hash_func_id, int hash_length_id,
 		int hchain_length_id, int hierarchy_level, int update_higher_level, int use_hash_trees);
 int hcstore_refill(hchain_store_t *hcstore, int use_hash_trees);
-hash_chain_t * hcstore_get_hchain(hchain_store_t *hcstore, int function_id,
+void * hcstore_get_hash_item(hchain_store_t *hcstore, int function_id,
 		int hash_length_id, int hchain_length);
 void * hcstore_get_item_by_anchor(hchain_store_t *hcstore, int function_id,
 		int hash_length_id, int hierarchy_level, unsigned char *anchor, int use_hash_trees);

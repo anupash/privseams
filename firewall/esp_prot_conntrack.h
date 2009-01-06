@@ -15,6 +15,7 @@ typedef struct esp_prot_conntrack_tfm
 {
 	hash_function_t hash_function;
 	int hash_length;
+	int is_used;
 } esp_prot_conntrack_tfm_t;
 
 int esp_prot_conntrack_init();

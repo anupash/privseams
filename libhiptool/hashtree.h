@@ -42,6 +42,7 @@ typedef struct hash_tree
 	unsigned char *secrets; /* individual secrets to be revealed with each data block */
 
 	struct hash_tree *link_tree;
+	int hierarchy_level;
 
 	// tree elements variables
 	int node_length; /* length of a single node element */
@@ -69,7 +70,7 @@ typedef struct ht_root
 
 
 hash_tree_t* htree_init(int num_data_blocks, int max_data_length, int node_length,
-		int secret_length, hash_tree_t *link_tree);
+		int secret_length, hash_tree_t *link_tree, int hierarchy_level);
 void htree_free(hash_tree_t *tree);
 int htree_add_data(hash_tree_t *tree, char *data, int data_length);
 int htree_add_random_data(hash_tree_t *tree, int num_random_blocks);

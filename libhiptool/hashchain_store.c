@@ -331,7 +331,7 @@ int hcstore_fill_item(hchain_store_t *hcstore, int hash_func_id, int hash_length
 
 				// create a link tree for each hchain on level > 0
 				link_tree = htree_init(MAX_HCHAINS_PER_ITEM, hash_length,
-						hash_length, hash_length, NULL);
+						hash_length, hash_length, NULL, 0);
 				htree_add_random_secrets(link_tree);
 
 				// lower hchain items should be full by now
@@ -371,7 +371,7 @@ int hcstore_fill_item(hchain_store_t *hcstore, int hash_func_id, int hash_length
 			{
 				// create a new htree
 				HIP_IFEL(!(htree = htree_init(hchain_length, hash_length,
-						hash_length, 0, link_tree)), -1,
+						hash_length, 0, link_tree, hierarchy_level)), -1,
 						"failed to alloc memory or to init htree\n");
 				HIP_IFEL(htree_add_random_data(htree, hchain_length), -1,
 						"failed to add random secrets\n");
@@ -458,13 +458,12 @@ int hcstore_refill(hchain_store_t *hcstore, int use_hash_trees)
 	return err;
 }
 
-// TODO modify this to support htrees
-hash_chain_t * hcstore_get_hchain(hchain_store_t *hcstore, int function_id,
+void * hcstore_get_hash_item(hchain_store_t *hcstore, int function_id,
 		int hash_length_id, int hchain_length)
 {
 	// inited to invalid values
 	int item_offset = -1;
-	hash_chain_t *stored_hchain = NULL;
+	void *stored_item = NULL;
 	int hierarchy_level = 0;
 	int err = 0, i;
 
@@ -498,20 +497,21 @@ hash_chain_t * hcstore_get_hchain(hchain_store_t *hcstore, int function_id,
 
 	HIP_DEBUG("hierarchy_level: %i\n", hierarchy_level);
 
-	HIP_IFEL(!(stored_hchain = hip_ll_del_first(&hcstore->hchain_shelves[function_id]
+	HIP_IFEL(!(stored_item = hip_ll_del_first(&hcstore->hchain_shelves[function_id]
 	        [hash_length_id].hchains[item_offset][hierarchy_level], NULL)), -1,
 			"no hchain available\n");
 
   out_err:
 	if (err)
 	{
-		if (stored_hchain)
-			hchain_free(stored_hchain);
+		// TODO modify this to support htrees
+		//if (stored_hchain)
+		//	hchain_free(stored_hchain);
 
-		stored_hchain = NULL;
+		stored_item = NULL;
 	}
 
-	return stored_hchain;
+	return stored_item;
 }
 
 void * hcstore_get_item_by_anchor(hchain_store_t *hcstore, int function_id,

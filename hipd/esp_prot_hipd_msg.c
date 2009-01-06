@@ -55,6 +55,7 @@ int esp_prot_handle_trigger_update_msg(struct hip_common *msg)
 	int anchor_length = 0, secret_length = 0, branch_length = 0, root_length = 0;
 	unsigned char *secret = NULL, *branch_nodes = NULL, *root = NULL;
 	hip_ha_t *entry = NULL;
+	int hash_item_length = 0;
 	int err = 0;
 
 	param = hip_get_param(msg, HIP_PARAM_HIT);
@@ -74,6 +75,10 @@ int esp_prot_handle_trigger_update_msg(struct hip_common *msg)
 	HIP_HEXDUMP("anchor: ", esp_prot_anchor, hash_length);
 
 	param = hip_get_param(msg, HIP_PARAM_INT);
+	hash_item_length  = *((int *) hip_get_param_contents_direct(param));
+	HIP_DEBUG("hash_item_length: %i\n", hash_item_length);
+
+	param = hip_get_next_param(msg, param);
 	root_length  = *((int *) hip_get_param_contents_direct(param));
 	HIP_DEBUG("root_length: %i\n", root_length);
 
@@ -144,6 +149,9 @@ int esp_prot_handle_trigger_update_msg(struct hip_common *msg)
 		entry->esp_root_length = 0;
 		memset(entry->esp_root, 0, root_length);
 	}
+
+	// set the hash_item_length of the item used for this update
+	entry->hash_item_length = hash_item_length;
 
 	if (soft_update)
 	{
@@ -376,9 +384,6 @@ int esp_prot_r1_handle_transforms(hip_ha_t *entry, struct hip_context *ctx)
 			entry->esp_prot_transform = esp_prot_select_transform(prot_transforms->num_transforms,
 					prot_transforms->transforms);
 
-			// transform >= 0 due to data-type
-			HIP_ASSERT(entry->esp_prot_transform <= NUM_TRANSFORMS);
-
 		} else
 		{
 			HIP_DEBUG("R1 does not contain preferred ESP protection transforms, " \
@@ -407,6 +412,7 @@ int esp_prot_i2_add_anchor(hip_common_t *i2, hip_ha_t *entry, struct hip_context
 	struct hip_param *param = NULL;
 	unsigned char *anchor = NULL;
 	int hash_length = 0;
+	int hash_item_length = 0;
 	int err = 0;
 
 	/* only add, if extension in use and we agreed on a transform
@@ -420,8 +426,9 @@ int esp_prot_i2_add_anchor(hip_common_t *i2, hip_ha_t *entry, struct hip_context
 
 			HIP_IFEL(!(anchor = anchor_db_get_anchor(entry->esp_prot_transform)), -1,
 					"no anchor elements available, threading?\n");
+			hash_item_length = anchor_db_get_hash_item_length(entry->esp_prot_transform);
 			HIP_IFEL(hip_build_param_esp_prot_anchor(i2, entry->esp_prot_transform,
-					anchor, NULL, hash_length), -1,
+					anchor, NULL, hash_length, hash_item_length), -1,
 					"Building of ESP protection anchor failed\n");
 
 			// store local_anchor
@@ -439,7 +446,7 @@ int esp_prot_i2_add_anchor(hip_common_t *i2, hip_ha_t *entry, struct hip_context
 
 			// inform our peer
 			HIP_IFEL(hip_build_param_esp_prot_anchor(i2, entry->esp_prot_transform,
-					NULL, NULL, 0), -1,
+					NULL, NULL, 0, 0), -1,
 					"Building of ESP protection anchor failed\n");
 		}
 	} else
@@ -452,7 +459,7 @@ int esp_prot_i2_add_anchor(hip_common_t *i2, hip_ha_t *entry, struct hip_context
 			entry->esp_prot_transform = ESP_PROT_TFM_UNUSED;
 
 			HIP_IFEL(hip_build_param_esp_prot_anchor(i2, entry->esp_prot_transform,
-					NULL, NULL, 0), -1,
+					NULL, NULL, 0, 0), -1,
 					"Building of ESP protection anchor failed\n");
 		} else
 		{
@@ -544,6 +551,7 @@ int esp_prot_r2_add_anchor(hip_common_t *r2, hip_ha_t *entry)
 {
 	unsigned char *anchor = NULL;
 	int hash_length = 0;
+	int hash_item_length = 0;
 	int err = 0;
 
 	// only add, if extension in use, we agreed on a transform and no error until now
@@ -555,8 +563,11 @@ int esp_prot_r2_add_anchor(hip_common_t *r2, hip_ha_t *entry)
 
 			HIP_IFEL(!(anchor = anchor_db_get_anchor(entry->esp_prot_transform)),
 					-1, "no anchor elements available, threading?\n");
+
+			hash_item_length = anchor_db_get_hash_item_length(entry->esp_prot_transform);
+
 			HIP_IFEL(hip_build_param_esp_prot_anchor(r2, entry->esp_prot_transform,
-					anchor, NULL, hash_length), -1,
+					anchor, NULL, hash_length, hash_item_length), -1,
 					"Building of ESP protection anchor failed\n");
 
 			// store local_anchor
@@ -573,7 +584,7 @@ int esp_prot_r2_add_anchor(hip_common_t *r2, hip_ha_t *entry)
 
 			// inform our peer
 			HIP_IFEL(hip_build_param_esp_prot_anchor(r2, entry->esp_prot_transform,
-					NULL, NULL, 0), -1,
+					NULL, NULL, 0, 0), -1,
 					"Building of ESP protection anchor failed\n");
 		}
 	} else
@@ -741,8 +752,8 @@ int esp_prot_update_add_anchor(hip_common_t *update, hip_ha_t *entry)
 			 *         pure anchor-update */
 			HIP_IFEL(hip_build_param_esp_prot_anchor(update,
 					entry->esp_prot_transform, entry->esp_local_anchor,
-					entry->esp_local_update_anchor, hash_length), -1,
-					"building of ESP protection ANCHOR failed\n");
+					entry->esp_local_update_anchor, hash_length, entry->hash_item_length),
+					-1, "building of ESP protection ANCHOR failed\n");
 
 			// only add the root if it is specified
 			if (entry->esp_root_length > 0)

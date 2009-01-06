@@ -37,7 +37,7 @@ int esp_prot_send_light_update(hip_ha_t *entry, int anchor_offset, unsigned char
 
 	 HIP_IFEL(hip_build_param_esp_prot_anchor(light_update,
 			entry->esp_prot_transform, entry->esp_local_anchor,
-			entry->esp_local_update_anchor, hash_length), -1,
+			entry->esp_local_update_anchor, hash_length, entry->hash_item_length), -1,
 			"building of ESP ANCHOR failed\n");
 
 	 HIP_IFEL(hip_build_param_esp_prot_branch(light_update,
