@@ -1,15 +1,14 @@
 Name: hipl
-Version: 1.0.4
-Release: 1
 Summary: HIP IPsec key management and mobility daemon.
-URL: http://infrahip.hiit.fi/hipl/
+# Note: Version and Release are read automatically from topdir release.version
+URL: http://infrahip.hiit.fi/
 Source: http://infrahip.hiit.fi/hipl/release/sources/%{version}/hipl-%{version}.tar.gz
 Packager: miika@iki.fi
 Vendor: InfraHIP
 License: GPLv2
 Group: System Environment/Kernel
-Requires: openssl gtk2 libxml2 glib2 iptables-devel
-BuildRequires: openssl-devel gtk2-devel libxml2-devel glib2-devel iptables-devel xmlto libtool libcap-devel sqlite-devel autoconf automake xmlto rpm-build
+#Requires: openssl gtk2 libxml2 glib2 iptables-devel
+BuildRequires: gcc gcc-c++ openssl-devel gtk2-devel libxml2-devel glib2-devel iptables-devel xmlto libtool libcap-devel sqlite-devel autoconf automake xmlto rpm-build
 ExclusiveOS: linux
 BuildRoot: %{_tmppath}/%{name}-%{version}-root
 Prefix: /usr
@@ -23,7 +22,6 @@ extensions support also mobility and multihoming, and traversal of NATs.
 HIP for Linux (HIPL) is an implementation of a HIP implementation that
 consists of the key and mobility management daemon. It includes also
 other related tools and test software.
-
 %prep
 %setup
 
@@ -61,53 +59,61 @@ make -C doc all
 # create subpackage
 # list of files with the name of subpackage
 
-%package lib
-Summary: hip library files
+# XX TODO: copy descriptions from hipl-deb.spec and make sure rpm still builds
+
+%package all
+Summary: HIPL software bundle: HIP for Linux libraries, daemons and documentation
 Group: System Environment/Kernel
-# uuid
+Requires: hipl-lib hipl-firewall hipl-daemon hipl-agent hipl-tools hipl-test hipl-doc hipl-dnsproxy
+%description all
+
+%package lib
+Summary: HIP for Linux libraries
+Group: System Environment/Kernel
 Requires: openssl libxml2 gtk2 iptables libcap sqlite
 %description lib
 
 %package daemon
  # miredo
 Requires: hipl-lib iproute perl-Net-IP perl-Net-DNS perl-Socket6 perl-IO-Socket-INET6
-Summary: hip daemon files
+Summary: HIP for Linux IPsec key management and mobility daemon
 Group: System Environment/Kernel
 %description daemon
 
-%package agent
-Requires: hipl-lib, hipl-daemon
-Summary: hip agent files
-Group: System Environment/Kernel
-%description agent
-
 %package tools
-Requires: hipl-lib, hipl-daemon perl-Net-IP
-Summary: hip tools files
+Requires: hipl-lib hipl-daemon
+Summary: Command line tools to control hipd from command line
 Group: System Environment/Kernel
 %description tools
 
 %package firewall
 Requires: hipl-lib
-Summary: hip firewall files
+Summary: HIPL multi-purpose firewall daemon. Public-key/HIT-based access control, Local Scope Identifier support, userspace BEET-mode IPsec (for kernels below < 2.6.27) and system-based opportunistic mode for HIP.
 Group: System Environment/Kernel
 %description firewall
 
 %package test
-Requires: hipl-lib, hipl-daemon
-Summary: hip test files
+Requires: hipl-lib hipl-daemon
+Summary: netcat-like command line tools with built-in HIP support for developers 
 Group: System Environment/Kernel
 %description test
 
 %package doc
-Summary: hip doc files
+Summary: documentation for HIP for Linux
 Group: System Environment/Kernel
 %description doc
 
 %package dnsproxy
-Summary: dns proxy for hip
+Requires: python hipl-lib
+Summary: Name look-up proxy for HIP for Linux. Intercepts DNS look-ups and returns HIT or LSIs when corresponding entries are found in DNS, DHT or hosts files
 Group: System Environment/Kernel
 %description dnsproxy
+
+%package agent
+Requires: hipl-lib hipl-daemon
+Summary: Graphical user interface for HIP for Linux. Provides user-friendly access control "buddy" lists for HIP.
+Group: System Environment/Kernel
+%description agent
 
 %install
 rm -rf %{buildroot}
@@ -126,21 +132,21 @@ install -d %{buildroot}/doc
 make DESTDIR=%{buildroot} install
 install -m 700 test/packaging/rh-init.d-hipfw %{buildroot}/etc/rc.d/init.d/hipfw
 install -m 700 test/packaging/rh-init.d-hipd %{buildroot}/etc/rc.d/init.d/hipd
-install -m 700 test/packaging/rh-init.d-dnsproxy %{buildroot}/etc/rc.d/init.d/dnshipproxy
+install -m 700 test/packaging/rh-init.d-dnsproxy %{buildroot}/etc/rc.d/init.d/hipdnsproxy
 install -m 644 doc/HOWTO.txt %{buildroot}/doc
 install -d %{buildroot}%{python_sitelib}/DNS
 install -t %{buildroot}%{python_sitelib}/DNS tools/DNS/*py*
-install -d %{buildroot}%{python_sitelib}/dnshipproxy
-install -t %{buildroot}%{python_sitelib}/dnshipproxy tools/dnsproxy.py*
-install -t %{buildroot}%{python_sitelib}/dnshipproxy tools/pyip6.py*
-install -t %{buildroot}%{python_sitelib}/dnshipproxy tools/hosts.py*
-install -t %{buildroot}%{python_sitelib}/dnshipproxy tools/util.py*
-install -d %{buildroot}%{python_sitelib}/parsehipkey
-install -t %{buildroot}%{python_sitelib}/parsehipkey tools/parse-key-3.py*
-install -t %{buildroot}%{python_sitelib}/parsehipkey tools/myasn.py*
+install -d %{buildroot}%{python_sitelib}/hipdnsproxy
+install -t %{buildroot}%{python_sitelib}/hipdnsproxy tools/dnsproxy.py*
+install -t %{buildroot}%{python_sitelib}/hipdnsproxy tools/pyip6.py*
+install -t %{buildroot}%{python_sitelib}/hipdnsproxy tools/hosts.py*
+install -t %{buildroot}%{python_sitelib}/hipdnsproxy tools/util.py*
+install -d %{buildroot}%{python_sitelib}/hipdnskeyparse
+install -t %{buildroot}%{python_sitelib}/hipdnskeyparse tools/parse-key-3.py*
+install -t %{buildroot}%{python_sitelib}/hipdnskeyparse tools/myasn.py*
 # required in CentOS release 5.2
-install -m 700 tools/parsehipkey %{buildroot}%{prefix}/sbin/parsehipkey
-install -m 700 tools/dnshipproxy %{buildroot}%{prefix}/sbin/dnshipproxy
+install -m 700 tools/hipdnskeyparse %{buildroot}%{prefix}/sbin/hipdnskeyparse
+install -m 700 tools/hipdnsproxy %{buildroot}%{prefix}/sbin/hipdnsproxy
 
 %post lib
 /sbin/ldconfig 
@@ -164,9 +170,9 @@ install -m 700 tools/dnshipproxy %{buildroot}%{prefix}/sbin/dnshipproxy
 #/usr/sbin/hipfw -bk`
 
 %post dnsproxy
-/sbin/chkconfig --add dnshipproxy
-/sbin/chkconfig --level 2 dnshipproxy on
-/sbin/service dnshipproxy start
+/sbin/chkconfig --add hipdnsproxy
+/sbin/chkconfig --level 2 hipdnsproxy on
+/sbin/service hipdnsproxy start
 
 %preun daemon
 /sbin/service hipd stop
@@ -178,8 +184,8 @@ install -m 700 tools/dnshipproxy %{buildroot}%{prefix}/sbin/dnshipproxy
 #/etc/rc.d/init.d/hipfw stop
 
 %preun dnsproxy
-/sbin/service dnshipproxy stop
-/sbin/chkconfig --del dnshipproxy
+/sbin/service hipdnsproxy stop
+/sbin/chkconfig --del hipdnsproxy
 
 %clean
 rm -rf %{buildroot}
@@ -193,16 +199,16 @@ rm -rf %{buildroot}
 %config /etc/rc.d/init.d/hipd
 
 %files agent
-%{prefix}/bin/hipagent
+%{prefix}/sbin/hipagent
 
 %files dnsproxy
-%{prefix}/sbin/dnshipproxy
-%{prefix}/sbin/parsehipkey
-%{python_sitelib}/dnshipproxy
-%{python_sitelib}/parsehipkey
+%{prefix}/sbin/hipdnsproxy
+%{prefix}/sbin/hipdnskeyparse
+%{python_sitelib}/hipdnsproxy
+%{python_sitelib}/hipdnskeyparse
 %{python_sitelib}/DNS
 %defattr(755,root,root)
-%config /etc/rc.d/init.d/dnshipproxy
+%config /etc/rc.d/init.d/hipdnsproxy
 
 %files tools
 %{prefix}/sbin/hipconf
@@ -224,7 +230,12 @@ rm -rf %{buildroot}
 %files doc
 %doc doc/HOWTO.txt doc/howto-html
 
+%files all
+
+
 %changelog
+* Wed Dec 31 2008 Miika Komu <miika@iki.fi>
+- Packaging improvements and lots of testing
 * Wed Aug 20 2008 Miika Komu <miika@iki.fi>
 - Dnsproxy separated into a separate package. Python packaging improvements.
 * Mon Jul 21 2008 Miika Komu <miika@iki.fi>

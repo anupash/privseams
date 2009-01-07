@@ -1,8 +1,0 @@
-#!/bin/sh
-
-update-rc.d -f dnshipproxy remove 
-
-exit 0
-
-
-

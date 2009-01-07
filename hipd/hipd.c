@@ -98,6 +98,9 @@ int hip_locator_status = SO_HIP_SET_LOCATOR_OFF;
 /* It tells the daemon to set tcp timeout parameters. Added By Tao Wan, on 09.Jan.2008 */
 int hip_tcptimeout_status = SO_HIP_SET_TCPTIMEOUT_ON;
 
+/* Create /etc/hip stuff and exit (used for binary hipfw packaging) */
+int create_configs_and_exit = 0;
+
 /* We are caching the IP addresses of the host here. The reason is that during
    in hip_handle_acquire it is not possible to call getifaddrs (it creates
    a new netlink socket and seems like only one can be open per process).
@@ -443,7 +446,7 @@ int hipd_main(int argc, char *argv[])
 	struct msghdr msg;
 
 	/* Parse command-line options */
-	while ((ch = getopt(argc, argv, ":bk")) != -1)
+	while ((ch = getopt(argc, argv, ":bkNch")) != -1)
 	{
 		switch (ch)
 		{
@@ -455,6 +458,9 @@ int hipd_main(int argc, char *argv[])
 			break;
 		case 'N':
 			flush_ipsec = 0;
+			break;
+		case 'c':
+			create_configs_and_exit = 1;
 			break;
 		case '?':
 		case 'h':
@@ -484,6 +490,9 @@ int hipd_main(int argc, char *argv[])
 
 	/* Default initialization function. */
 	HIP_IFEL(hipd_init(flush_ipsec, killold), 1, "hipd_init() failed!\n");
+
+	HIP_IFEL(create_configs_and_exit, 0,
+		 "Configs created, exiting\n");
 
 	highest_descriptor = maxof(9, hip_nl_route.fd, hip_raw_sock_v6,
 				   hip_user_sock, hip_nl_ipsec.fd,

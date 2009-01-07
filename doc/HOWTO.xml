@@ -18,8 +18,8 @@
       You need to modify your kernel and install HIPL userspace software along
       with its dependencies in order to run HIP only if you want to use kernel
       version below 2.6.27 (check "uname -a"). You can patch your
-      kernel by installing the binary kernel images (Ubuntu and Fedora)
-      from here: <ulink url="http://hipl.hiit.fi/hipl/release/" />. The
+      kernel by installing the binary kernel images (debian and redhat based distributions)
+      from here: <ulink url="http://infrahip.hiit.fi/index.php?index=download" />. The
       binary kernel images are based on vanilla kernel and therefore do
       not include any proprietary drivers or firmware images. As a result,
     you may have to install software for your WLAN interface manually.</para>
@@ -451,6 +451,102 @@ $ ls -l bin/
         This part is just for La Fonera. For WGT634U, please refer to <xref linkend="load_on_openwrt_wgt" />.
       </para>
       <formalpara><title>For building HIPL on the kamikaze release 7.09</title><para></para></formalpara>
+      <para>
+      NEW preferred way to build and install HIPL on OpenWRT:
+      </para>
+      <para>
+      NOTE: Automatic package dependency selection is only verified for hipfw! Please report missing dependencies for the other packages.
+      </para>
+      <orderedlist>
+        <listitem>
+          <para>
+          Get and extract OpenWRT kamikaze 7.09 source, untar it and create the download directory for packages that should be built.
+          </para>
+  <programlisting>
+  $ wget http://downloads.openwrt.org/kamikaze/7.09/kamikaze_7.09.tar.bz2
+  $ tar xzf kamikaze_7.09.tar.gz
+  $ mkdir -p path/to/kamikaze/dl
+  </programlisting>
+        </listitem>
+        <listitem>
+          <para>
+          Get the newest hipl source tree from the hipl repository and place the tarball that you are going to create in the kamikaze download directory.
+          </para>
+          <para>
+  <programlisting>
+  $ tla get hipl--main--2.6 hipl--main--2.6
+  $ cd hipl--main--2.6
+  $ ./autogen.sh
+  $ make dist
+  $ cp hipl-main.tar.gz path/to/kamikaze/dl
+  </programlisting>
+          </para>
+          <para>
+          NOTE: The "main" repository contains the most stable sources. If you encounter problems when running HIPL on OpenWRT, you may want to try the "userspace" repository instead. However, "userspace" is more experimental and might not compile for OpenWRT.
+          </para>
+        </listitem>
+
+        <listitem>
+          <para>
+          Apply patches for HIPL on OpenWRT into the kamikaze_7.09 source tree, which produce Makefiles and configuration files for the required packages.
+          </para>
+          <para>
+  <programlisting>
+  $ cd /path/to/kamikaze
+  $ patch -p1 &lt; /path/to/hipl/patches/openwrt/2.6.23/kamikaze_7.09-kernel.patch
+  $ patch -p1 &lt; /path/to/hipl/patches/openwrt/2.6.23/kamikaze_7.09-hipl.patch
+  </programlisting>
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+          Select the packages, which you want to build for OpenWRT. The following command will allow you to do this in a similar way to configuring a custom kernel.
+          </para>
+          <para>
+  <programlisting>
+  $ make menuconfig
+  </programlisting>
+          </para>
+          <para>
+          Ensure that you select the HIPL-package that you require to run. You might only need the hipfw or only hipd. Your selection will automatically select all necessary dependencies. Below we give an example on how to select hipfw only, the hipd will not be installed. 
+          </para>
+          <para>
+  <programlisting>
+  Network  --->
+  &lt;*&gt; hipl-hipfw
+  </programlisting>
+          </para>
+          <para>
+          NOTE: Due to dependency issues with the build system, you still have to select kmod-ipsec4 and kmod-ipsec6 manually.
+          </para>
+          <para>
+  <programlisting>
+Kernel modules  ---> 
+ Network Support  ---> 
+  &lt;*&gt;  kmod-ipsec4 
+  &lt;*&gt;  kmod-ipsec6
+  </programlisting>
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+          Now build OpenWRT.
+          </para>
+          <para>
+  <programlisting>
+  $ make V=99
+  </programlisting>
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+          Load the images on La Fonera and reboot.
+          </para>
+        </listitem>
+      </orderedlist>
+      <para>
+        Old way to build and install HIPL on OpenWRT (in case the above is not working):
+      </para>
       <orderedlist>
         <listitem>
           <para>
@@ -489,20 +585,20 @@ $ ls -l bin/
         </listitem>
         <listitem>
           <para>
-          Get a hipl tarball from <ulink url="http://hipl.hiit.fi/hipl/contrib/openwrt/" />, and place it in the directory kamikaze_7.09/dl/
-          </para>
-          <para>
-          $ wget http://hipl.hiit.fi/hipl/contrib/openwrt/hipl--openwrt--2.6.tar.gz -O kamikaze_7.09/dl/hipl--openwrt--2.6.tar.gz
-          </para>
-          <para>
-          Or you can get the newest hipl source tree from the hipl repository, pack them as a tarball and place it under the dl directory.
+          Get the newest hipl source tree from the hipl repository, pack them as a tarball and place it under the dl directory.
           </para>
           <para>
   <programlisting>
-  $ tla get hipl--openwrt--2.6 hipl--openwrt--2.6
+  $ tla get hipl--main--2.6 hipl--main--2.6
   $ mkdir -p path/to/kamikaze/dl
-  $ tar czf path/to/kamikaze/dl/hipl--openwrt--2.6.tar.gz --exclude=\{arch\} hipl--openwrt--2.6
+  $ tar czf path/to/kamikaze/dl/hipl--openwrt--2.6.tar.gz --exclude=\{arch\} hipl--main--2.6
   </programlisting>
+          </para>
+          <para>
+          An alternative to that is to get a hipl tarball from <ulink url="http://hipl.hiit.fi/hipl/contrib/openwrt/" />, and to place it in the directory kamikaze_7.09/dl/. However, this tarball is currently too old. Do that only when you get in trouble with the first method with the newest sources.
+          </para>
+          <para>
+          $ wget http://hipl.hiit.fi/hipl/contrib/openwrt/hipl--openwrt--2.6.tar.gz -O kamikaze_7.09/dl/hipl--openwrt--2.6.tar.gz
           </para>
         </listitem>
         <listitem>
@@ -653,21 +749,21 @@ Network  --->
         </listitem>
         <listitem>
           <para>
-          Get a hipl tarball from <ulink url="http://hipl.hiit.fi/hipl/contrib/openwrt/hipl--openwrt--2.6.tar.gz" />, and place it in the directory kamikaze/dl/.
+          Get the newest hipl source tree from the hipl repository, pack them as a tarball and place it under the dl directory.
+          </para>
+          <para>
+<programlisting>
+$ tla get hipl--main--2.6 hipl--main--2.6
+$ mkdir -p path/to/kamikaze/dl
+$ tar czf path/to/kamikaze/dl/hipl--openwrt--2.6.tar.gz --exclude=\{arch\} hipl--main--2.6
+</programlisting>
+          </para>
+          <para>
+          An alternative to that is to get a hipl tarball from <ulink url="http://hipl.hiit.fi/hipl/contrib/openwrt/" />, and to place it in the directory kamikaze_7.09/dl/. However, this tarball is currently too old. Do that only when you get in trouble with the first method with the newest sources.
           </para>
           <para>
 <programlisting>
 $ wget http://hipl.hiit.fi/hipl/contrib/openwrt/hipl--openwrt--2.6.tar.gz -O kamikaze/dl/hipl--openwrt--2.6.tar.gz
-</programlisting>
-          </para>
-          <para>
-          Or you can get the newest hipl source tree from the hipl repository, pack them as a tarball and place it under the dl directory.
-          </para>
-          <para>
-<programlisting>
-$ tla get hipl--openwrt--2.6 hipl--openwrt--2.6
-$ mkdir -p path/to/kamikaze/dl
-$ tar czf path/to/kamikaze/dl/hipl--openwrt--2.6.tar.gz --exclude=\{arch\} hipl--openwrt--2.6
 </programlisting>
           </para>
         </listitem>
@@ -964,20 +1060,20 @@ $ bin/openwrt-wgt*
         </listitem>
         <listitem>
           <para>
-          Get a hipl tarball from <ulink url="http://hipl.hiit.fi/hipl/contrib/openwrt/" />, and place it in the directory kamikaze_7.09/dl/
-          </para>
-          <para>
-          $ wget http://hipl.hiit.fi/hipl/contrib/openwrt/hipl--openwrt--2.6.tar.gz -O kamikaze_7.09/dl/hipl--openwrt--2.6.tar.gz
-          </para>
-          <para>
-          Or you can get the newest hipl source tree from the hipl repository, pack them as a tarball and place it under the dl directory.
+          Get the newest hipl source tree from the hipl repository, pack them as a tarball and place it under the dl directory.
           </para>
           <para>
   <programlisting>
-  $ tla get hipl--openwrt--2.6 hipl--openwrt--2.6
+  $ tla get hipl--main--2.6 hipl--main--2.6
   $ mkdir -p kamikaze_7.09/dl
-  $ tar czf kamikaze_7.09/dl/hipl--openwrt--2.6.tar.gz --exclude=\{arch\} hipl--openwrt--2.6
+  $ tar czf kamikaze_7.09/dl/hipl--openwrt--2.6.tar.gz --exclude=\{arch\} hipl--main--2.6
   </programlisting>
+          </para>
+          <para>
+          An alternative to that is to get a hipl tarball from <ulink url="http://hipl.hiit.fi/hipl/contrib/openwrt/" />, and to place it in the directory kamikaze_7.09/dl/. However, this tarball is currently too old. Do that only when you get in trouble with the first method with the newest sources.
+          </para>
+          <para>
+          $ wget http://hipl.hiit.fi/hipl/contrib/openwrt/hipl--openwrt--2.6.tar.gz -O kamikaze_7.09/dl/hipl--openwrt--2.6.tar.gz
           </para>
         </listitem>
         <listitem>
@@ -1289,6 +1385,162 @@ $ make V=99
       </orderedlist>
     </section>
   </chapter>
+
+  <chapter id="maemo">
+      <title>Installing HIPL on the Nokia N810 Internet tablet (version 4.1.x, aka. 'diablo')</title>
+
+      <para>
+      This section explains how to install HIP for Linux in the Nokia N810
+      Internet tablets loaded with the version 4.1 (diablo) version of the
+      firmware.
+      </para>
+
+      <section><title>Prerequisites</title>
+
+      <para>The kernel needs to be updated to support the various
+            features required by HIPL that aren't present in the
+            standard distribution. These include ipv6 support and
+            various IPSec- and packet filtering related options.</para>
+
+      <para>A pre-compiled version of the kernel for the 2008, r.36
+            firmware can be found <ulink
+            url="http://hipl.hiit.fi/MERCoNe/diablo/kernel/">here</ulink>
+            </para>
+
+      <para>Instructions on installing a new kernel can be found from
+            the maemo documentation (wiki) at <ulink
+            url="http://www.maemo.org/">www.maemo.org</ulink>.</para>
+
+      <para>Note that the firmware loaded on the device must match the
+      versio for which the kernel is compiled. In case you do not know
+      which firmware you have, you should re-flash the whole device
+      image with the correct version (found from the maemo-release
+      downloads at <ulink url="http://tablets-dev.nokia.com/">Nokia's tablet development site</ulink>).</para>
+
+      <para>Alternatively, in case a further customized kernel is
+      needed, or a kernel for another firmware release, you can
+      compile the kernel yourself.</para>
+
+      <para>The wiki <ulink url="http://wiki.maemo.org/Compiling_the_kernel">page</ulink> at the maemo.org contains good instructions
+            on how to do this. However, to enable HIPL, the kernel
+            needs to be patched to fix a couple of issues in the IPSec
+            stack. These patches can be found from the HIPL arch
+            repository under patches/kernel/2.6.21. Instructions on
+            enabling the HIPL-required options in the kernel can be
+            found in the HIPL manual.</para>
+
+
+      <para>Note that the kernel sources got from the maemo repository
+            usually corresponds only to the latest firmware release.
+      </para>
+
+      </section>
+
+      <section><title>Installing from Pre-compiled Packages</title>
+
+      <para>Instructions on installing HIPL using the pre-compiled
+            packages can be found from the
+            <ulink url="http://hipl.hiit.fi/index.php?index=download">download
+            section</ulink> of the HIPL homepage.</para>
+
+      </section>
+
+      <section><title>Compiling HIPL from Source</title>
+
+      <para>
+      HIPL can be compiled from source for maemo with the following
+      commands (assuming a clean source tree): </para>
+
+      <para><programlisting>
+        ./autogen.sh
+        ./configure --enable-maemo
+        make
+      </programlisting></para>
+ 
+     <para>
+     The maemo packages are created with the 'olddeb' make target;
+      </para>
+
+      <para><programlisting>
+      make olddeb
+      </programlisting></para>
+
+      <para>
+      The packages will be created in test/packaging/ 
+      </para>
+
+      </section>
+
+  </chapter>
+
+  <chapter id="quick">
+    <title>Quick Install and Test with Binaries</title>
+
+    <para>
+     The other sections of this document describe technical
+     installation and usage of HIPL software in an elaborate way. This
+     section gives more brief instructions for the brave and impatient.
+    </para>
+
+    <para>
+      The quickest way to install HIPL on your linux system is use the
+      precompiled release packages. Binary packages exist for a number
+      of debian and redhat based linux distributions. Install all of
+      the binary packages to your linux system according to
+      instructions on the download pages:
+      <ulink url="http://infrahip.hiit.fi/index.php?index=download" />
+    </para>
+
+    <para>
+      After installing all of the the binaries, you can test the
+      installation by opening firefox web browser. Type
+      "crossroads.infrahip.net" in the address bar, hit enter and wait few
+      seconds. If the web page tells you that the connection was
+      established using HIP, then you have a successful installation,
+      congratulations! If not, you have to browse through the
+      document. You can also ask questions on the hipl-users mailing
+      list (<ulink url="http://www.freelists.org/list/hipl-users" />) if you did not find a satisfying 
+      answer in this document.
+    </para>
+
+  </chapter>
+  <chapter id="ch_test_servers">
+    <title>HIPL Internet Test Servers</title>
+    <para>
+    Below is a list of public InfraHIP test servers. The servers are also running
+    free name look up Bamboo service (<xref linkend="ch_opendht" />) and HIP rendezvous service which you can use according to the instructions in <xref linkend="ch_rvs_relay" />.
+    </para>
+    <table id="table_servers" frame="all"><title>Test Servers</title>
+    <tgroup cols="1">
+      <thead>
+	<row><entry>Server</entry><entry>HIT</entry><entry>HI algo</entry><entry>IPv4 address</entry><entry>IPv6 address</entry></row>
+      </thead>
+      <tbody>
+	<row><entry>felwood.infrahip.net</entry><entry>2001:1d:392e:a450:2cd3:75e1:6098:8104</entry><entry>RSA</entry><entry>193.167.187.130</entry><entry>2001:708:140:220::3</entry></row>
+	<row><entry>crossroads.infrahip.net</entry><entry>2001:1b:a9be:c6a6:34e5:8361:c07f:a990</entry><entry>RSA</entry><entry>193.167.187.134</entry><entry>2001:708:140:220::7</entry></row>
+	<row><entry>ashenvale.infrahip.net</entry><entry>2001:1c:cbae:47ae:2871:f9c:eb94:c8e3</entry><entry>RSA</entry><entry>193.167.187.133</entry><entry>2001:708:140:220::6</entry></row>
+      </tbody>
+    </tgroup>
+    </table>
+
+    <para>
+      The servers are running public http service and respond to ICMPv4 and ICMPv6. They are not running "conntest-server" software as described elsewhere in this document.
+    </para>
+
+    <para>To use access the servers using HIP behind a NAT box, you
+          have two alternatives. Firstly, you enable the UDP
+          encapsulation using "hipconf nat plain-udp". See <xref
+          linkend="ch_hip_nat" /> for more information. Secondly,
+	  you can install miredo on your machine and make sure that HIP
+	  uses the IPv6 address of the server.</para>
+	  
+
+    <para>To register to the rendezvous servers behind a NAT box,
+          you need to install "miredo" on your machine. Then you register to
+          one of the test servers using its IPv6 address.</para>
+
+  </chapter>
+
   <chapter id="ch_basictest">
     <title>Testing a HIP connection between two locally connected hosts</title>
     <para>
@@ -1561,42 +1813,6 @@ $ make V=99
 		<listitem><para>nc OOPS_LSI -u 5555 # oops must be running nc -l -u 5555</para></listitem>
 	      </itemizedlist>
     </section>
-  </chapter>
-  <chapter id="ch_test_servers">
-    <title>HIPL Internet Test Servers</title>
-    <para>
-    Below is a list of public InfraHIP test servers. The servers are also running
-    free name look up Bamboo service (<xref linkend="ch_opendht" />) and HIP rendezvous service which you can use according to the instructions in <xref linkend="ch_rvs_relay" />.
-    </para>
-    <table id="table_servers" frame="all"><title>Test Servers</title>
-    <tgroup cols="1">
-      <thead>
-	<row><entry>Server</entry><entry>HIT</entry><entry>HI algo</entry><entry>IPv4 address</entry><entry>IPv6 address</entry></row>
-      </thead>
-      <tbody>
-	<row><entry>felwood.infrahip.net</entry><entry>2001:1d:392e:a450:2cd3:75e1:6098:8104</entry><entry>RSA</entry><entry>193.167.187.130</entry><entry>2001:708:140:220::3</entry></row>
-	<row><entry>crossroads.infrahip.net</entry><entry>2001:1b:a9be:c6a6:34e5:8361:c07f:a990</entry><entry>RSA</entry><entry>193.167.187.134</entry><entry>2001:708:140:220::7</entry></row>
-	<row><entry>ashenvale.infrahip.net</entry><entry>2001:1c:cbae:47ae:2871:f9c:eb94:c8e3</entry><entry>RSA</entry><entry>193.167.187.133</entry><entry>2001:708:140:220::6</entry></row>
-      </tbody>
-    </tgroup>
-    </table>
-
-    <para>
-      The servers are running ssh and http. They are not running "conntest-server" software as described elsewhere in this document.
-    </para>
-
-    <para>To use access the servers using HIP behind a NAT box, you
-          have two alternatives. Firstly, you enable the UDP
-          encapsulation using "hipconf nat plain-udp". See <xref
-          linkend="ch_hip_nat" /> for more information. Secondly,
-	  you can install miredo on your machine and make sure that HIP
-	  uses the IPv6 address of the server.</para>
-	  
-
-    <para>To register to the rendezvous servers behind a NAT box,
-          you need to install "miredo" on your machine. Then you register to
-          one of the test servers using its IPv6 address.</para>
-
   </chapter>
 
   <chapter id="ch_closing_hip">
@@ -2513,13 +2729,14 @@ $ make V=99
 	  </para></listitem>
 	  <listitem id="listitem_rvs"><para>
 	    At the responder, we have to register to the rendezvous server:
-	    <programlisting>tools/hipconf add server rvs &lt;RVS-HIT&gt; &lt;RVS-IP&gt; &lt;LIFETIME-IN-SECONDS&gt;</programlisting>
+	    <programlisting>tools/hipconf add server rvs [RVS-HIT] &lt;RVS-IP or hostname&gt; &lt;LIFETIME-IN-SECONDS&gt;</programlisting>
 	    This will launch a base exchange i.e. establish a HIP SA between the
 	    rendezvous server and the responder. Please use the default HIT of
 	    the rendezvous server ("<emphasis>tools/hipconf get hi default</emphasis>" at the RVS).
 	    The &lt;LIFETIME-IN-SECONDS&gt; value represents the number of seconds
 	    we would like our service registration to last, but it is not
 	    necessarily the number of seconds we are granted the service.
+	    Notice that opportunistic mode will be used if you don't specify rendezvous HIT.
 	  </para></listitem>
 	  <listitem><para>
 	    At the responder, start a server listening for incoming connections
@@ -3265,13 +3482,13 @@ $ make V=99
       </para>
       <itemizedlist>
 	<listitem><para>
-	    &nbsp;tools/hipconf nat plain-udp
+	    tools/hipconf nat plain-udp
 	</para>    </listitem>
 	<listitem><para>
-	    &nbsp;tools/hipconf add map peer_hit peer_ipv4_addr
+	    tools/hipconf add map peer_hit peer_ipv4_addr
 	</para> </listitem>   
 	<listitem><para>
-	    &nbsp; ping6 -I source_hit dst_hit
+	    ping6 -I source_hit dst_hit
 	</para>  </listitem>  
       </itemizedlist>
       <para>Make sure that the source is the same as in "ip xfrm policy" output.
@@ -4101,20 +4318,20 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
     <title>Mozilla/firefox showip addon</title> <itemizedlist>
 
      <listitem><para>
-		&nbsp; HIP modified firefox showip addon can be used for firefox to show when
+		HIP modified firefox showip addon can be used for firefox to show when
 		HIP is used instead of ipv4 or ipv6 addresses. HITs are simply determined from
 		IP-address information trough HIP prefix. If using opportunistic mode, detecting
 		whether using HIP or not wont work.
 	</para></listitem>
      <listitem><para>
-		&nbsp; If you have HIPL source code:
+		If you have HIPL source code:
 		To install addon, open firefox and browse to folder where you have 
 		HIPL sources and go to folder showip. Then select showip*.xpi from that folder
 		(example: "file:///path/to/hipl/showip/showip-hipmod-0.8.02-fx-mz.xpi").
 		Firefox should now prompt you with installation instructions.
 	</para></listitem>
      <listitem><para>
-		&nbsp; Another way to get showip-package, is to download it from:
+		Another way to get showip-package, is to download it from:
 		<ulink url="http://hipl.hiit.fi/hipl/release/latest/showip-hipmod-latest-fx-mz.xpi" />.
 		After download, firefox should prompt you with installation instructions.
 	</para></listitem>
@@ -4190,11 +4407,11 @@ update add 5.7.d.1.c.c.8.d.0.6.3.b.a.4.6.2.5.0.5.2.e.4.7.5.e.1.0.0.1.0.0.2.hit-t
   <chapter id="ch_dns_data">
     <title>DNS data manipulation</title>
     <para>
-      Tools directory contains parsehipkey a script (after running ./autogens.h) which converts public
+      Tools directory contains hipdnskeyparse a script (after running ./autogens.h) which converts public
       key file contents to different DNS zone file formats. To convert
       to unpatched BIND9 format, run the following:
       <programlisting>
-parsehipkey &lt; /etc/hip/hip_host_rsa_key_pub.pub hostname.domain.org | sed -n -e '/^9BIND */s///p'
+hipdnskeyparse &lt; /etc/hip/hip_host_rsa_key_pub.pub hostname.domain.org | sed -n -e '/^9BIND */s///p'
       </programlisting>
       This outputs a line which can be inserted to a zone
       file. Similarly, with sed command:
