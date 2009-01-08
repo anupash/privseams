@@ -16,9 +16,8 @@
 
 RETVAL=0
 DNSPROXY="/usr/sbin/hipdnsproxy"
-BASENAME="dnshiproxy"
 
-#PID_FILE=/var/run/dnsproxy.pid
+PID_FILE=/var/run/hipdnsproxy.pid
 LOCK_FILE=/var/lock/subsys/hipdnsproxy
 OPTIONS="-bk"
 
@@ -34,7 +33,7 @@ start()
 stop()
 {
 	echo -n $"Stopping $BASENAME:"
-	killall $BASENAME
+	kill `cat $PID_FILE`
 	RETVAL=$?
 	[ "$RETVAL" = 0 ] && rm -f $LOCK_FILE
 	echo
