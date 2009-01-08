@@ -72,6 +72,12 @@ class Hosts:
                 self.suffixes = tuple([i.lower() for i in aa])
         return
 
+    def str_is_ipv6(self, addr_str):
+        if addr_str.find(':') == -1:
+            return False
+        else:
+            return True
+
     def str_is_hit(self, addr_str):
         if addr_str[0:8] == "2001:001" or addr_str[0:6] == "2001:1":
             return True
@@ -105,9 +111,9 @@ class Hosts:
                     for s in self.suffixes:
                         d['%s.%s' % (n,s)] = addr
                 d[n] = addr
-	    if self.str_is_hit(addr):
+	    if self.str_is_ipv6(addr):
 		aaaa[n] = addr
-	    elif self.str_is_lsi(addr):
+	    else:
 		a[n] = addr
         self.d = d
 	self.a = a
