@@ -35,6 +35,7 @@
 #   - host files: forever (purged when the file is changed)
 #   - dns records: follow DNS TTL
 # - bind to ::1, not 127.0.0.1 (setsockopt blah blah)
+# - remove hardcoded addresses from ifconfig commands
 
 import sys
 import getopt
@@ -92,8 +93,6 @@ class Logger:
         return
 
 class ResolvConf:
-    re_nameserver = re.compile(r'nameserver\s([0-9\.]+)$')
-
     def is_resolvconf_in_use(self):
         return self.use_resolvconf
             
@@ -263,7 +262,7 @@ class ResolvConf:
 class Global:
     default_hiphosts = "/etc/hip/hosts"
     default_hosts = "/etc/hosts"
-    re_nameserver = re.compile(r'nameserver\s([0-9\.]+)$')
+    re_nameserver = re.compile(r'nameserver\s+(\S+)$')
     def __init__(gp):
         gp.resolv_conf = '/etc/resolv.conf'
         gp.hostsnames = []
@@ -532,6 +531,7 @@ class Global:
 	# Default virtual interface and address for dnsproxy to
 	# avoid problems with other dns forwarders (e.g. dnsmasq)
 	os.system("ifconfig lo:53 127.0.0.53")
+	#os.system("ifconfig lo:53 inet6 add ::53/128")
 
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try:
@@ -587,25 +587,39 @@ class Global:
         if rc1.get_dnsmasq_hook_status():
             fout.write('Hooked with dnsmasq\n')
 
-        s2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s2.settimeout(gp.dns_timeout)
         if (gp.server_ip != None):
-            s2.connect((gp.server_ip,gp.server_port))
-            connected = True
+            if gp.server_ip.find(':') == -1:
+                server_family = socket.AF_INET
+            else:
+                server_family = socket.AF_INET6
+            s2 = socket.socket(server_family, socket.SOCK_DGRAM)
+            s2.settimeout(gp.dns_timeout)
+            try:
+                s2.connect((gp.server_ip,gp.server_port))
+                connected = True
+            except:
+                connected = False
 
         while not util.wantdown():
             try:
                 gp.hosts_recheck()
                 if rc1.old_has_changed():
                     connected = False
-                    s2.close()
                     gp.server_ip = rc1.resolvconfd.get('nameserver')
-                    s2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                    s2.settimeout(gp.dns_timeout)
+                    if gp.server_ip != None:
+                        if gp.server_ip.find(':') == -1:
+                            server_family = socket.AF_INET
+                        else:
+                            server_family = socket.AF_INET6
+                        s2 = socket.socket(server_family, socket.SOCK_DGRAM)
+                        s2.settimeout(gp.dns_timeout)
                     if (gp.server_ip != None):
-                        s2.connect((gp.server_ip,gp.server_port))
-                        connected = True
-                        fout.write("DNS server is %s\n" % gp.server_ip)
+                        try:
+                            s2.connect((gp.server_ip,gp.server_port))
+                            connected = True
+                            fout.write("DNS server is %s\n" % gp.server_ip)
+                        except:
+                            connected = False
 
                     rc1.restart()
                     rc1.write({'nameserver': gp.bind_ip})
