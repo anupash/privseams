@@ -1385,6 +1385,94 @@ $ make V=99
       </orderedlist>
     </section>
   </chapter>
+
+  <chapter id="maemo">
+      <title>Installing HIPL on the Nokia N810 Internet tablet (version 4.1.x, aka. 'diablo')</title>
+
+      <para>
+      This section explains how to install HIP for Linux in the Nokia N810
+      Internet tablets loaded with the version 4.1 (diablo) version of the
+      firmware.
+      </para>
+
+      <section><title>Prerequisites</title>
+
+      <para>The kernel needs to be updated to support the various
+            features required by HIPL that aren't present in the
+            standard distribution. These include ipv6 support and
+            various IPSec- and packet filtering related options.</para>
+
+      <para>A pre-compiled version of the kernel for the 2008, r.36
+            firmware can be found <ulink
+            url="http://hipl.hiit.fi/MERCoNe/diablo/kernel/">here</ulink>
+            </para>
+
+      <para>Instructions on installing a new kernel can be found from
+            the maemo documentation (wiki) at <ulink
+            url="http://www.maemo.org/">www.maemo.org</ulink>.</para>
+
+      <para>Note that the firmware loaded on the device must match the
+      versio for which the kernel is compiled. In case you do not know
+      which firmware you have, you should re-flash the whole device
+      image with the correct version (found from the maemo-release
+      downloads at <ulink url="http://tablets-dev.nokia.com/">Nokia's tablet development site</ulink>).</para>
+
+      <para>Alternatively, in case a further customized kernel is
+      needed, or a kernel for another firmware release, you can
+      compile the kernel yourself.</para>
+
+      <para>The wiki <ulink url="http://wiki.maemo.org/Compiling_the_kernel">page</ulink> at the maemo.org contains good instructions
+            on how to do this. However, to enable HIPL, the kernel
+            needs to be patched to fix a couple of issues in the IPSec
+            stack. These patches can be found from the HIPL arch
+            repository under patches/kernel/2.6.21. Instructions on
+            enabling the HIPL-required options in the kernel can be
+            found in the HIPL manual.</para>
+
+
+      <para>Note that the kernel sources got from the maemo repository
+            usually corresponds only to the latest firmware release.
+      </para>
+
+      </section>
+
+      <section><title>Installing from Pre-compiled Packages</title>
+
+      <para>Instructions on installing HIPL using the pre-compiled
+            packages can be found from the
+            <ulink url="http://hipl.hiit.fi/index.php?index=download">download
+            section</ulink> of the HIPL homepage.</para>
+
+      </section>
+
+      <section><title>Compiling HIPL from Source</title>
+
+      <para>
+      HIPL can be compiled from source for maemo with the following
+      commands (assuming a clean source tree): </para>
+
+      <para><programlisting>
+        ./autogen.sh
+        ./configure --enable-maemo
+        make
+      </programlisting></para>
+ 
+     <para>
+     The maemo packages are created with the 'olddeb' make target;
+      </para>
+
+      <para><programlisting>
+      make olddeb
+      </programlisting></para>
+
+      <para>
+      The packages will be created in test/packaging/ 
+      </para>
+
+      </section>
+
+  </chapter>
+
   <chapter id="quick">
     <title>Quick Install and Test with Binaries</title>
 
