@@ -472,9 +472,9 @@ class Global:
             gp.send_id_map_to_hipd(nam)
         elif connected and qtype != 1 and qtype != 12:
             dhthit = None
-            # gp.fout.write('Query DNS for %s\n' % nam)
+            #gp.fout.write('Query DNS for %s\n' % nam)
             r1 = d2.req(name=q1['qname'],qtype=55) # 55 is HIP RR
-            # gp.fout.write('r1: %s\n' % (dir(r1),))
+            #gp.fout.write('r1: %s\n' % (dir(r1),))
 
             if not r1.answers:
                 dhthit = gp.dht_lookup(nam)
