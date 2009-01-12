@@ -476,16 +476,26 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 	int aalg = ealg;
 	int cmd = update ? XFRM_MSG_UPDSA : XFRM_MSG_NEWSA;
 	in_port_t port1, port2;
+	int portsel = 1;
 
 	HIP_ASSERT(spi != 0);
 	HIP_ASSERT(entry);
+	
+	if (direction == HIP_SPI_DIRECTION_OUT && (!hip_hidb_hit_is_our(src_hit)))
+		portsel = 0;		
 
-	if (direction == HIP_SPI_DIRECTION_OUT){
-		port1 = entry->peer_udp_port;
-		port2 = entry->local_udp_port;
-	} else {
+	if (direction != HIP_SPI_DIRECTION_OUT && hip_hidb_hit_is_our(src_hit))
+		portsel = 0;
+		
+	if (portsel)
+	{
 		port1 = entry->local_udp_port;
 		port2 = entry->peer_udp_port;
+	}
+	else
+	{
+		port1 = entry->peer_udp_port;
+		port2 = entry->local_udp_port;
 	}
 
 	authkey_len = hip_auth_key_length_esp(aalg);
