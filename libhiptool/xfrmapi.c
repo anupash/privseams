@@ -481,10 +481,10 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 	HIP_ASSERT(spi != 0);
 	HIP_ASSERT(entry);
 	
-	if (direction == HIP_SPI_DIRECTION_OUT && (!hip_hidb_hit_is_our(src_hit)))
+	if (direction == HIP_SPI_DIRECTION_OUT && hip_hidb_hit_is_our(src_hit))
 		portsel = 0;		
 
-	if (direction != HIP_SPI_DIRECTION_OUT && hip_hidb_hit_is_our(src_hit))
+	if (direction != HIP_SPI_DIRECTION_OUT && !hip_hidb_hit_is_our(src_hit))
 		portsel = 0;
 		
 	if (portsel)
