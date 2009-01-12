@@ -93,6 +93,7 @@ class Logger:
         return
 
 class ResolvConf:
+    re_nameserver = re.compile(r'nameserver\s+(\S+)$')
     def is_resolvconf_in_use(self):
         return self.use_resolvconf
             
