@@ -481,11 +481,11 @@ uint32_t hip_add_sa(struct in6_addr *saddr, struct in6_addr *daddr,
 	HIP_ASSERT(entry);
 
 	if (direction == HIP_SPI_DIRECTION_OUT){
-		port1 = entry->local_udp_port;
-		port2 = entry->peer_udp_port;
-	} else {
 		port1 = entry->peer_udp_port;
 		port2 = entry->local_udp_port;
+	} else {
+		port1 = entry->local_udp_port;
+		port2 = entry->peer_udp_port;
 	}
 
 	authkey_len = hip_auth_key_length_esp(aalg);
