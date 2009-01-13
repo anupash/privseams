@@ -11,9 +11,6 @@
 # source function library
 . /etc/rc.d/init.d/functions
 
-# pull in sysconfig settings
-[ -f /etc/sysconfig/hipfw ] && . /etc/sysconfig/hipfw
-
 RETVAL=0
 DAEMON="/usr/sbin/hipfw"
 BASENAME="hipfw"
@@ -21,6 +18,9 @@ BASENAME="hipfw"
 #PID_FILE=/var/run/hipfw.pid
 LOCK_FILE=/var/lock/subsys/hipfw
 OPTIONS="-bklpF"
+
+# pull in sysconfig settings
+[ -f /etc/sysconfig/hipfw ] && . /etc/sysconfig/hipfw
 
 start()
 {
