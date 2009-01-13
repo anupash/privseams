@@ -2860,6 +2860,13 @@ int hip_receive_r2(struct hip_common *hip_common,
 
 	HIP_LOCK_HA(entry);
 	state = entry->state;
+	
+	// if the NAT mode is used, update the port numbers of the host association 
+	if (r2_info->dst_port == hip_get_local_nat_udp_port())
+	{
+		entry->local_udp_port = r2_info->dst_port;
+		entry->peer_udp_port = r2_info->src_port;
+	}
 
 	HIP_DEBUG("Received R2 in state %s\n", hip_state_str(state));
  	switch(state) {
