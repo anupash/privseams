@@ -11,4 +11,5 @@ for i in `baz missing hipl--userspace--2.6`
   LAST_PATCH=$i
 done
 
-echo "baz commit -s 'Synchronized to $LAST_PATCH'"
+echo -n "baz commit -s 'Synchronized to "
+echo "$LAST_PATCH'"|cut -d/ -f2
