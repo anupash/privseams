@@ -11,9 +11,6 @@
 # source function library
 . /etc/rc.d/init.d/functions
 
-# pull in sysconfig settings
-[ -f /etc/sysconfig/hipd ] && . /etc/sysconfig/hipd
-
 RETVAL=0
 DAEMON="/usr/sbin/hipd"
 BASENAME="hipd"
@@ -21,6 +18,9 @@ BASENAME="hipd"
 #PID_FILE=/var/run/hipd.pid
 LOCK_FILE=/var/lock/subsys/hipd
 OPTIONS="-bk"
+
+# pull in sysconfig settings
+[ -f /etc/sysconfig/hipd ] && . /etc/sysconfig/hipd
 
 start()
 {
