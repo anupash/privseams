@@ -29,6 +29,7 @@
 # - Dnsmasq=off, revolvconf=off: rewrites /etc/resolv.conf
 #
 # TBD:
+# - make the code look more like object oriented
 # - the use of alternative (multiple) dns servers
 # - implement TTLs for cache
 #   - applicable to HITs, LSIs and IP addresses
@@ -37,6 +38,9 @@
 # - bind to ::1, not 127.0.0.1 (setsockopt blah blah)
 # - remove hardcoded addresses from ifconfig commands
 # - "dig dsfds" takes too long with dnsproxy
+# - hip_lookup is doing a qtype=255 search; the result of this
+#   could be used instead of doing look up redundantly in
+#   bypass
 
 import sys
 import getopt
@@ -437,7 +441,7 @@ class Global:
         m = None
         lr = None
         nam = q1['qname']
-        gp.fout.write('Query type %d for %s\n' % (qtype, nam))
+        #gp.fout.write('Query type %d for %s\n' % (qtype, nam))
         lr_a =  gp.geta(nam)
         lr_aaaa = gp.getaaaa(nam)
         lr_ptr = gp.getaddr(nam)
@@ -474,10 +478,16 @@ class Global:
         elif connected and qtype != 1 and qtype != 12:
             dhthit = None
             #gp.fout.write('Query DNS for %s\n' % nam)
-            r1 = d2.req(name=q1['qname'],qtype=55) # 55 is HIP RR
+            r1 = d2.req(name=q1['qname'],qtype=255) # 55 is HIP RR
             #gp.fout.write('r1: %s\n' % (dir(r1),))
 
-            if not r1.answers:
+            dns_hit_found = False
+            for a1 in r1.answers:
+                if a1['typename'] == '55':
+                    dns_hit_found = True
+                    break
+                
+            if not dns_hit_found:
                 dhthit = gp.dht_lookup(nam)
                 if dhthit:
                     gp.fout.write('DHT match: %s %s\n' %
@@ -491,8 +501,10 @@ class Global:
                            }
                     r1.answers.append(dhtres)
 
+            hit_found = False
             for a1 in r1.answers:
                  if a1['typename'] == '55':
+                     hit_found = True
                      if dhthit:
                          # dht query returns string
                          hit = dhthit
@@ -515,7 +527,25 @@ class Global:
                                  1, 1, 0, 0)
                      m.addQuestion(a1['name'],qtype,1)
 		     m.addAAAA(a2['name'],a2['class'],a2['ttl'],a2['data'])
+
+                     # To avoid forgetting IP address corresponding to HIT,
+                     # store the mapping to hipd
+                     for id in r1.answers:
+                         ip = None
+                         if id['type'] == 1:
+                             ip = id['data']
+                         elif id['type'] == 28:
+                             aa1d = id['data']
+                             ip = pyip6.inet_ntop(aa1d[0:0+16])
+                         if ip != None:
+                             cmd = "hipconf add map " + hit + " " + ip + \
+                                   " >/dev/null 2>&1"
+                             gp.fout.write('Associating DNS HIT %s with IP %s\n' %\
+                                           (hit, ip))
+                             os.system(cmd)
+
                      gp.send_id_map_to_hipd(nam)
+
                      gp.cache_name(a2['name'], a2['data'])
                      break
 
