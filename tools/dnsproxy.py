@@ -479,7 +479,6 @@ class Global:
             dhthit = None
             #gp.fout.write('Query DNS for %s\n' % nam)
             r1 = d2.req(name=q1['qname'],qtype=255) # 55 is HIP RR
-#            r2 = d2.req(name=q1['qname'],qtype=255)
             #gp.fout.write('r1: %s\n' % (dir(r1),))
 
             dns_hit_found = False
